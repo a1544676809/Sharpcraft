@@ -24,6 +24,7 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-010 | 方块状态全局 id 生成器 | `docs/analysis/common/registry-order.md` §5、§7.1 | `BlockStateIdTests.cs`（含 1442 个原版状态 id 与 35723 总数） | `src/MinecraftCSharp.Common/Registries/`（BlockStateDefinition / BlockStateLayout） | 已完成 |
 | T-019 | 全阶段包 id 表导出与交叉校验 | `docs/specs/network/protocol-phases.md` §3 | `PacketIdTableTests.cs`（3 项：id 对照、连续性、唯一性） | `tests/.../TestData/vanilla-packet-ids.txt`（260 条） | 已完成 |
 | T-018 | 启动器 CLI 垂直切片（login / probe / help） | `docs/modules/launcher.md` §3–§5 | `LauncherCommandLineTests.cs`（10 项）、手工验收：`probe mcf.ddger.top` 输出 protocol 777 | `src/MinecraftCSharp.Launcher/` | 已完成 |
+| T-024 | NBT 读写（含上限与两种根） | `docs/modules/nbt.md` §3 | `NbtTests.cs`（13 项：全类型往返、畸形输入、深度/长度上限） | `Common/Nbt/`（NbtTagType / NbtTags / NbtReader / NbtWriter） | 已完成 |
 | T-023 | 世界存储层与客户端世界骨架 | `docs/modules/world.md` §3 | `WorldStorageTests.cs`（12 项）、`ClientWorldTests.cs`（9 项） | `Common/World/`（PalettedContainer / ChunkSection / LevelChunk）、`Client/World/ClientWorld` | 已完成 |
 | T-022 | play 阶段最小闭环（JoinGame 解析 / keep-alive / ping） | `docs/specs/network/protocol-phases.md` §5.2 | `PlayPacketTests.cs`（6 项）；实测 45 秒存活、回复 2 次 keep-alive | `Common/Network/PlayPackets`、`PlaySession` | 已完成 |
 | T-021 | 真实进服：登录 + 配置阶段 + play 阶段入口 | `docs/modules/launcher.md` §8；`docs/specs/network/protocol-phases.md` §5.1 | `play mcf.ddger.top` 实测到达 play（`minecraft:login`）；`TokenStore` 路径守卫由实现保证 | `Common/Network/MinecraftConnection`、`MinecraftLoginClient`；`Launcher/ConfigurationProbe`；`Auth/TokenStore`、`SessionServerClient` | 已完成 |

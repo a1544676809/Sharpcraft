@@ -101,6 +101,7 @@
 | [`modules/auth.md`](modules/auth.md) | 认证模块：设备码流程、Xbox Live、Minecraft 会话、令牌安全 | 已评审 |
 | [`modules/launcher.md`](modules/launcher.md) | 启动器（本阶段：认证与探测 CLI 垂直切片） | 已评审 |
 | [`modules/world.md`](modules/world.md) | 客户端世界数据：调色板容器、区块段与列、坐标查询 | 已评审 |
+| [`modules/nbt.md`](modules/nbt.md) | NBT 读写（网络/存储两种根、读取上限） | 已评审 |
 | [`_templates/module-doc.md`](_templates/module-doc.md) | 模块设计文档模板 | 已评审 |
 | [`_templates/state.md`](_templates/state.md) | STATE 模板 | 已评审 |
 | [`traceability.md`](traceability.md) | 追踪矩阵：规格章节 ↔ 测试 ↔ 代码目录 | 活文档 |
