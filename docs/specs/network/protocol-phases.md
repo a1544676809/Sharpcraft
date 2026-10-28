@@ -6,6 +6,11 @@
 证据：`ref://mc-26.3-analysis/src/net/minecraft/network/{ConnectionProtocol.java,protocol/ProtocolInfoBuilder.java,protocol/handshake/*,protocol/status/*,CompressionEncoder.java,CompressionDecoder.java}`
 最后更新：2026-10-28
 
+<!-- doc
+title: 连接阶段、数据包表与压缩
+summary: 握手 / 状态 / 登录 / 配置 / 游戏五阶段、包 id 表与压缩规则
+-->
+
 # 连接阶段、数据包表与压缩
 
 ## 1. 五个阶段

@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 Sharpcraft contributors -->
 
+<!-- doc
+title: ADR 模板
+summary: 背景 / 决策 / 影响面 / 替代方案 / 复查条件
+status: 模板
+-->
+
 # NNNN：标题
 
 - 状态：提议 / 已采纳 / 已废弃 / 被 NNNN 取代

@@ -12,7 +12,8 @@
     /tests/   unit, architecture and allocation tests
 
   Rules for adding a project:
-    1. Directory must be src/<AssemblyName>/ or tests/<AssemblyName>/, matching the .csproj name.
+    1. Directory must be src/<AssemblyName>/, tests/<AssemblyName>/ or tools/<AssemblyName>/,
+       matching the .csproj name.
     2. Add the <Project> entry to the matching folder, keeping entries alphabetical.
     3. Project references must satisfy B1-B3; tests/Sharpcraft.Architecture.Tests fails the build otherwise.
 -->
@@ -40,5 +41,8 @@
   </Folder>
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/Sharpcraft.Benchmarks/Sharpcraft.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Sharpcraft.Docs.Indexer/Sharpcraft.Docs.Indexer.csproj" />
   </Folder>
 </Solution>

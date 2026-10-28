@@ -12,12 +12,16 @@
 
 ## 文档清单
 
-| 文档 | 主题 | 状态 |
-| --- | --- | --- |
-| [`primitives-varint.md`](primitives-varint.md) | VarInt / VarLong 编码与帧长度前缀 | 草稿 |
-| [`primitives-strings.md`](primitives-strings.md) | UTF-8 字符串与标识符编码 | 草稿 |
-| `protocol-phases.md` | 握手 / 状态 / 登录 / 配置 / 游戏五阶段与数据包表 | 待写 |
-| [`encryption.md`](encryption.md) | 登录加密：服务端哈希、RSA、AES/CFB8 流 | 草稿 |
+<!-- BEGIN GENERATED: docs/specs/network -->
+
+| 文档 | 摘要 | 状态 | 最后更新 |
+| --- | --- | --- | --- |
+| [`encryption.md`](encryption.md) | 服务端哈希、RSA 密钥交换、AES/CFB8 流 | 草稿 | 2026-10-28 |
+| [`primitives-strings.md`](primitives-strings.md) | UTF-8 字符串、长度前缀与标识符的字节编码 | 草稿 | 2026-10-28 |
+| [`primitives-varint.md`](primitives-varint.md) | VarInt / VarLong 编码与三字节帧长度前缀 | 草稿 | 2026-10-28 |
+| [`protocol-phases.md`](protocol-phases.md) | 握手 / 状态 / 登录 / 配置 / 游戏五阶段、包 id 表与压缩规则 | 草稿 | 2026-10-28 |
+
+<!-- END GENERATED: docs/specs/network -->
 
 ## 已核对的关键常量
 

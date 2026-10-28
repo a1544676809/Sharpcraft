@@ -7,11 +7,15 @@
 
 ## 清单
 
-| 文件 | 主题 |
-| --- | --- |
-| [`jar-entry-map.md`](jar-entry-map.md) | jar 条目分类与资产清单（顶层分布、assets 分类、纹理格式、未决问题） |
-| [`block-models.md`](block-models.md) | 方块状态与模型：变体、`parent` 继承、`#变量`、面→纹理、`uv` 缺省 |
-| [`resource-resolution.md`](resource-resolution.md) | 资源解析语义：路径推导、包栈优先级、`.mcmeta` 兄弟、合并方向、过滤与缺失行为 |
+<!-- BEGIN GENERATED: docs/analysis/assets -->
+
+| 文档 | 摘要 | 状态 | 最后更新 |
+| --- | --- | --- | --- |
+| [`block-models.md`](block-models.md) | 变体、parent 继承、#变量、面→纹理、uv 缺省 | 草稿 | - |
+| [`jar-entry-map.md`](jar-entry-map.md) | jar 条目分类与资产清单（顶层分布、assets 分类、纹理格式） | 草稿 | - |
+| [`resource-resolution.md`](resource-resolution.md) | 路径推导、包栈优先级、元数据兄弟、合并方向 | 草稿 | - |
+
+<!-- END GENERATED: docs/analysis/assets -->
 
 ## 与其它文档的关系
 

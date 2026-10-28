@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 Sharpcraft contributors -->
 
+<!-- doc
+title: 里程碑规划
+summary: M1–M6 的划分、出口条件与验收标准
+status: 已评审
+-->
+
 # 里程碑规划（Roadmap）
 
 本文件回答"整体任务拆成哪些里程碑、每个的出口条件是什么、现在在哪"。**易变状态不写在这里**（那是 `docs/STATE.md` 的职责），这里只写稳定的阶段划分与验收标准。

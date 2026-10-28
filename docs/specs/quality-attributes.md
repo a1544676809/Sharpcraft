@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 Sharpcraft contributors -->
 
+<!-- doc
+title: 可测质量属性
+summary: 性能、协议一致性、模组热加载、跨平台的指标、阈值与失败判定
+status: 草稿
+-->
+
 # 可测质量属性（Quality Attributes）
 
 AGENTS.md 原则 12：质量需求必须写成"指标 + 阈值 + 测量方法 + 失败判定"。**不可测的描述不得作为验收标准。**

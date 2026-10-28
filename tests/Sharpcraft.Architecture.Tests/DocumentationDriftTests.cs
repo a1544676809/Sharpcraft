@@ -48,17 +48,59 @@ public sealed partial class DocumentationDriftTests
     [Fact]
     public void EveryDocumentIsReachableFromTheIndex()
     {
-        var index = File.ReadAllText(Path.Combine(RepositoryRoot(), "docs", "README.md"));
+        // The root index links to each directory README, and each README lists its own documents,
+        // so reachability is a walk over links, not a substring search in one file
+        // (docs/modules/doc-indexer.md).
+        var docsRoot = Path.Combine(RepositoryRoot(), "docs");
+        var reachable = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var queue = new Queue<string>();
+        queue.Enqueue(Path.Combine(docsRoot, "README.md"));
+
+        while (queue.Count > 0)
+        {
+            var file = queue.Dequeue();
+            if (!reachable.Add(Path.GetFullPath(file)))
+            {
+                continue;
+            }
+
+            foreach (Match match in MarkdownLink().Matches(File.ReadAllText(file)))
+            {
+                var target = match.Groups[1].Value;
+                if (target.StartsWith("http", StringComparison.OrdinalIgnoreCase) || target.StartsWith('#'))
+                {
+                    continue;
+                }
+
+                var anchor = target.IndexOf('#');
+                if (anchor >= 0)
+                {
+                    target = target[..anchor];
+                }
+
+                var resolved = Path.GetFullPath(Path.Combine(
+                    Path.GetDirectoryName(file)!,
+                    target.Replace('/', Path.DirectorySeparatorChar)));
+
+                if (!resolved.StartsWith(docsRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
+                    !File.Exists(resolved) ||
+                    !resolved.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                queue.Enqueue(resolved);
+            }
+        }
 
         var missing = EnumerateFiles("docs", "*.md")
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}_templates{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .Where(file => !reachable.Contains(Path.GetFullPath(file)))
             .Select(Relative)
-            .Where(relative => !relative.Contains("_templates/", StringComparison.Ordinal))
-            .Where(relative => !relative.EndsWith("docs/README.md", StringComparison.Ordinal))
-            .Where(relative => !index.Contains(relative["docs/".Length..], StringComparison.Ordinal))
             .ToList();
 
         Assert.True(missing.Count == 0,
-            "documents missing from docs/README.md index (AGENTS.md 3.5):\n" + string.Join("\n", missing));
+            "documents unreachable from docs/README.md (AGENTS.md 3.5):\n" + string.Join("\n", missing));
     }
 
     [Fact]

@@ -35,6 +35,9 @@ jobs:
       - name: Test (architecture + drift + unit)
         run: dotnet test Sharpcraft.slnx -c Release --no-build --logger "trx;LogFileName=results.trx"
 
+      - name: Documentation gates (generated indexes + module coverage)
+        run: dotnet run --project tools/Sharpcraft.Docs.Indexer -c Release --no-build -- --check --check-coverage
+
       - name: Compliance guard (no jars, no assets, no decompiled sources)
         shell: pwsh
         run: |

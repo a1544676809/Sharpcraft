@@ -10,6 +10,22 @@
 
 本目录存放对 Minecraft 26.3 jar 的**行为级**分析结果。分析的目的是回答"这个子系统做什么、边界在哪、对应到 C# 的哪个模块"，不是复述实现。
 
+## 文档清单
+
+<!-- BEGIN GENERATED: docs/analysis -->
+
+（本目录暂无文档。）
+
+子目录：
+
+| 目录 | 文档数 |
+| --- | --- |
+| [`architecture/`](architecture/README.md) | 2 |
+| [`assets/`](assets/README.md) | 3 |
+| [`common/`](common/README.md) | 5 |
+
+<!-- END GENERATED: docs/analysis -->
+
 ## 组织原则
 
 - 第一层按**子系统**分目录，第二层按**主题**分文件。禁止"一个大文件装下整个子系统"。

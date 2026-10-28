@@ -12,13 +12,17 @@
 
 ## 文档清单
 
-| 文档 | 主题 | 状态 |
-| --- | --- | --- |
-| [`identifier.md`](identifier.md) | 标识符的解析、校验、等值、排序、序列化 | 草稿 |
-| [`random.md`](random.md) | 随机源家族、算法参数、种子派生、位置化随机与战利品序列 | 草稿 |
-| [`registry-order.md`](registry-order.md) | 注册表元素顺序、方块状态全局 id 的生成链 | 草稿 |
-| [`coordinates.md`](coordinates.md) | 坐标换算与负数取整规则 | 草稿 |
-| [`random-vectors.md`](random-vectors.md) | 参考向量的取真值方法、覆盖范围与回放约定 | 草稿 |
+<!-- BEGIN GENERATED: docs/analysis/common -->
+
+| 文档 | 摘要 | 状态 | 最后更新 |
+| --- | --- | --- | --- |
+| [`coordinates.md`](coordinates.md) | 坐标换算看着简单，但负数取整是最经典的错误源：Java 的 >> 是算术右移（等价于向下取整除以 2^n），而 C# 的整数除法 / 是向零截断。 | 草稿 | 2026-10-28 |
+| [`identifier.md`](identifier.md) | Identifier 的解析、校验、等值、排序与序列化 | 草稿 | 2026-10-28 |
+| [`random-vectors.md`](random-vectors.md) | 随机数算法无法靠"读源码"验证正确性：LCG 与 xoroshiro128++ 的每一位都必须一致，而源码推导无法排除理解偏差。 | 草稿 | 2026-10-28 |
+| [`random.md`](random.md) | 随机数必须逐位复刻：同一世界种子必须产出同一地形、同一战利品。 | 草稿 | 2026-10-28 |
+| [`registry-order.md`](registry-order.md) | "注册表元素顺序"不是实现细节：它决定网络注册表同步的包体顺序、方块状态全局 id、以及数据包加载后的可复现性。 | 草稿 | 2026-10-28 |
+
+<!-- END GENERATED: docs/analysis/common -->
 
 ## 为什么这三块必须先做
 

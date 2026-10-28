@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 Sharpcraft contributors -->
 
+<!-- doc
+title: 方块模型与方块状态
+summary: 变体、parent 继承、#变量、面→纹理、uv 缺省
+status: 草稿
+-->
+
 # 方块模型与方块状态（行为规格）
 
 回答一个问题：**给定一个方块，它的六个面各用哪张纹理？** 这是把 53% 覆盖率的"名字猜测"换成"数据驱动"的前提（`docs/modules/render.md` §6.1 片二）。

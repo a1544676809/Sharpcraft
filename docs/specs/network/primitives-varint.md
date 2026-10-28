@@ -6,6 +6,11 @@
 证据：`ref://mc-26.3-analysis/src/net/minecraft/network/{VarInt.java,VarLong.java,Varint21LengthFieldPrepender.java,Varint21FrameDecoder.java}`
 最后更新：2026-10-28
 
+<!-- doc
+title: VarInt / VarLong 与帧长度前缀
+summary: VarInt / VarLong 编码与三字节帧长度前缀
+-->
+
 # VarInt / VarLong 与帧长度前缀
 
 ## 1. VarInt（32 位）

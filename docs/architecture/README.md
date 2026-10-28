@@ -12,9 +12,13 @@
 
 ## 文档清单
 
-| 文档 | 职责 | 状态 |
-| --- | --- | --- |
-| [`boundaries.md`](boundaries.md) | 三侧（Client / Server / Common）+ 外围宿主层的划分规则、证据、必须拆分的区域、C# 程序集映射 | 草稿 |
+<!-- BEGIN GENERATED: docs/architecture -->
+
+| 文档 | 摘要 | 状态 | 最后更新 |
+| --- | --- | --- | --- |
+| [`boundaries.md`](boundaries.md) | 本文是原则 5 的落地依据：每个子系统归属哪一侧、证据是什么、哪些必须拆分。 | 草稿 | 2026-10-28 |
+
+<!-- END GENERATED: docs/architecture -->
 
 ## 当前生效的边界规则（摘要）
 

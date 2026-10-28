@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 Sharpcraft contributors -->
 
+<!-- doc
+title: 资源解析语义
+summary: 路径推导、包栈优先级、元数据兄弟、合并方向
+status: 草稿
+-->
+
 # 资源解析语义（行为规格）
 
 本文件回答"原版如何把 `namespace:path` 变成一个可读文件、多个来源冲突时谁赢、找不到时怎么办"。它是资产解析层（`docs/modules/asset-resolution.md`）的设计依据。

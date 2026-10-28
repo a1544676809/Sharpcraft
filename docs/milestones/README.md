@@ -3,9 +3,13 @@
 
 # 里程碑文档入口
 
-| 文件 | 内容 | 状态 |
-| --- | --- | --- |
-| [`roadmap.md`](roadmap.md) | M1–M6 的划分、出口条件与验收标准 | 已评审（M1/M2 已达成） |
+<!-- BEGIN GENERATED: docs/milestones -->
+
+| 文档 | 摘要 | 状态 | 最后更新 |
+| --- | --- | --- | --- |
+| [`roadmap.md`](roadmap.md) | M1–M6 的划分、出口条件与验收标准 | 已评审 | - |
+
+<!-- END GENERATED: docs/milestones -->
 
 ## 约定
 

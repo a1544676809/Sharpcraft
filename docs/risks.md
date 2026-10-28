@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 Sharpcraft contributors -->
 
+<!-- doc
+title: 风险登记册
+summary: 未解决的不确定性：概率 / 影响 / 缓解 / 复查条件
+status: 活文档
+-->
+
 # 风险登记册（Risk Register）
 
 AGENTS.md 原则 12：未解决的不确定性必须在此登记（概率 / 影响 / 缓解 / 复查条件）。**关闭后保留记录，不删除**。

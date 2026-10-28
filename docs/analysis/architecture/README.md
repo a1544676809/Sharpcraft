@@ -12,10 +12,14 @@
 
 ## 文档清单
 
-| 文档 | 职责 | 状态 |
-| --- | --- | --- |
-| [`overview.md`](overview.md) | 基线标识、分层结构、入口与启动、渲染栈概况、三侧初判、风险 | 草稿 |
-| [`package-map.md`](package-map.md) | 包级计数地图与各子树职责/归属倾向 | 草稿 |
+<!-- BEGIN GENERATED: docs/analysis/architecture -->
+
+| 文档 | 摘要 | 状态 | 最后更新 |
+| --- | --- | --- | --- |
+| [`overview.md`](overview.md) | 本轮目标只有一个：搞清楚 Minecraft 到底是个什么架构，不涉及任何实现决策。 | 草稿 | 2026-10-28 |
+| [`package-map.md`](package-map.md) | 包级计数地图与各子树职责、归属倾向 | 草稿 | 2026-10-28 |
+
+<!-- END GENERATED: docs/analysis/architecture -->
 
 ## 第一轮得出的关键事实
 

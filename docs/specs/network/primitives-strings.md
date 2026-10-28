@@ -6,6 +6,11 @@
 证据：`ref://mc-26.3-analysis/src/net/minecraft/network/{Utf8String.java,FriendlyByteBuf.java}`
 最后更新：2026-10-28
 
+<!-- doc
+title: UTF-8 字符串与标识符编码
+summary: UTF-8 字符串、长度前缀与标识符的字节编码
+-->
+
 # UTF-8 字符串与标识符编码
 
 ## 1. 编码格式

@@ -6,6 +6,11 @@
 证据：`ref://mc-26.3-analysis/src/net/minecraft/{util/Crypt.java,network/protocol/login/*}`；向量由 `ref://mc-26.3-analysis/vectors/LoginCrypto.java` 产生
 最后更新：2026-10-28
 
+<!-- doc
+title: 登录阶段的加密
+summary: 服务端哈希、RSA 密钥交换、AES/CFB8 流
+-->
+
 # 登录阶段的加密
 
 ## 1. 报文序列

@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 Sharpcraft contributors -->
 
+<!-- doc
+title: jar 条目地图
+summary: jar 条目分类与资产清单（顶层分布、assets 分类、纹理格式）
+status: 草稿
+-->
+
 # jar 条目地图（Asset Inventory Source）
 
 本文件回答"26.3 客户端 jar 里有什么、哪些属于资产、提取时该取什么"，用于支撑资产提取器与资源加载层的设计（原则 3、原则 3.4 第 3 项）。

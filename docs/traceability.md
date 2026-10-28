@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 Sharpcraft contributors -->
 
+<!-- doc
+title: 追踪矩阵
+summary: 规格章节 ↔ 测试 ↔ 代码目录，一行一个任务
+status: 活文档
+-->
+
 # 追踪矩阵（Traceability）
 
 AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"规格章节 ↔ 测试 ↔ 代码目录"。三列任一为空即视为未就绪或未完成。
@@ -24,6 +30,7 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-010 | 方块状态全局 id 生成器 | `docs/analysis/common/registry-order.md` §5、§7.1 | `BlockStateIdTests.cs`（含 1442 个原版状态 id 与 35723 总数） | `src/Sharpcraft.Common/Registries/`（BlockStateDefinition / BlockStateLayout） | 已完成 |
 | T-019 | 全阶段包 id 表导出与交叉校验 | `docs/specs/network/protocol-phases.md` §3 | `PacketIdTableTests.cs`（3 项：id 对照、连续性、唯一性） | `tests/.../TestData/vanilla-packet-ids.txt`（260 条） | 已完成 |
 | T-018 | 启动器 CLI 垂直切片（login / probe / help） | `docs/modules/launcher.md` §3–§5 | `LauncherCommandLineTests.cs`（10 项）、手工验收：`probe mcf.ddger.top` 输出 protocol 777 | `src/Sharpcraft.Launcher/` | 已完成 |
+| T-043 | 文档索引生成与源码模块覆盖门禁 | `docs/modules/doc-indexer.md`；ADR-0008 | `DocIndexTests`（2 项：索引最新、覆盖合规）；真实运行：11 个目录 README 由生成器接管、`--check` / `--check-coverage` 通过、基线 26 个模块 | `tools/Sharpcraft.Docs.Indexer`、`tests/Sharpcraft.Architecture.Tests/DocIndexTests.cs` | 已完成 |
 | T-042 | `registry_data` → `BlockStateLayout` 动态装配（服务器增删/重排方块时的 state id → 方块名） | `docs/modules/render.md` §6.1；`docs/analysis/common/registry-order.md` §5 | 待补（先测：注册表条目顺序与基线不同、缺条目、id 越界） | 未开始（当前用 `VanillaBlockRegistry` 基线快照） | 规格已就绪 |
 | T-041 | 特殊渲染方块（流体/火把/箱子/活塞等 267 个） | 待写：流体与实体渲染规格 | 待补 | 未开始 | 规格不足 |
 | T-040 | `blockstates` + `models` 解析（按面取纹理） | `docs/analysis/assets/block-models.md`；`docs/modules/render.md` §6.1 | `BlockModelResolverTests`（7 项：cube_all 链、column 的 end/side、`#变量`链、数组变体取首个、缺 blockstate、坏 JSON、模型优先于名字启发）；真实覆盖率 682 → **1019/1286** | `Client/Assets/BlockModelResolver` | 已完成 |

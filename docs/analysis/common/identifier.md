@@ -6,6 +6,11 @@
 证据：`ref://mc-26.3-analysis/src/net/minecraft/resources/Identifier.java`、`ref://mc-26.3-analysis/src/net/minecraft/IdentifierException.java`
 最后更新：2026-10-28
 
+<!-- doc
+title: 标识符行为规格
+summary: Identifier 的解析、校验、等值、排序与序列化
+-->
+
 # 标识符（Identifier）行为规格
 
 26.3 中该类名为 `net.minecraft.resources.Identifier`（旧名 `ResourceLocation` 已不再使用）。它是全项目的通用命名引用：注册表键、纹理路径、数据包条目、进度 ID 等。
