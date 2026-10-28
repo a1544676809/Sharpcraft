@@ -125,6 +125,7 @@
 | [`decisions/0002-dnsclient-dependency.md`](decisions/0002-dnsclient-dependency.md) | ADR-0002：引入 DnsClient.NET 做 SRV 查询 | 已采纳 |
 | [`decisions/0003-wgpu-binding.md`](decisions/0003-wgpu-binding.md) | ADR-0003：WGPU 绑定（Brew.Wgpu）与离屏首帧 | 已采纳 |
 | [`decisions/0004-window-layer.md`](decisions/0004-window-layer.md) | ADR-0004：窗口层（Silk.NET.Windowing）与原生句柄抽象 | 已接受 |
+| [`decisions/0005-asset-pack-and-official-index.md`](decisions/0005-asset-pack-and-official-index.md) | ADR-0005：资产打包为单文件 pack，音频沿用官方索引 | 待评审 |
 | [`repro/README.md`](repro/README.md) | 最小复现用例库约定 | 活文档 |
 
 （`milestones/` 已创建：入口见 [`milestones/README.md`](milestones/README.md)，阶段划分见 [`milestones/roadmap.md`](milestones/roadmap.md)。）

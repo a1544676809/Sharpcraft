@@ -47,17 +47,18 @@
 | 1 | 里程碑规划与资产清单（本文件 + `docs/analysis/assets/jar-entry-map.md`） | 完成 |
 | 2 | 资产模块设计文档 `docs/modules/assets.md` | 待评审 |
 | 3 | T-032 版本清单解析 + jar SHA-1 校验 | 待开始 |
-| 4 | T-033 资产提取器（白名单、增量、幂等、zip-slip 防护） | 待开始 |
-| 5 | T-034 产物清单与资源加载层（路径映射、模组覆盖接口点） | 待开始 |
+| 4 | T-033 资产打包器：白名单 → 单文件 pack（zip + manifest、原子、幂等、zip-slip 防护） | 待开始 |
+| 5 | T-034 资源解析层：`IAssetSource`（pack 读取器 + 官方 objects 只读挂载）+ 覆盖顺序 | 待开始 |
 | 6 | T-035 启动器承接：`assets` / `launch` 子命令 | 待开始 |
 | 7 | T-036 纹理接入渲染（图集、UV、采样器、着色器采样） | 待开始 |
 
 出口验收：
 
-- `launcher assets --jar <path>` 完成校验与提取并打印报告；
+- `launcher assets --jar <path>` 完成校验与打包，产出单个 pack 并打印报告；
 - `launcher window <address>` 显示带纹理的世界（截图存档）；
 - 仓库内不出现任何资产，`git status` 干净；
-- 测试覆盖：合成 jar 全链路、篡改场景、幂等、zip-slip、成对 `.mcmeta`。
+- 测试覆盖：合成 jar 全链路、篡改场景、幂等、zip-slip、成对 `.mcmeta`、pack 读回一致；
+- 音频走官方索引只读挂载，缺失时报错可诊断。
 
 ## M4 —— 交互与动态世界（未开始）
 

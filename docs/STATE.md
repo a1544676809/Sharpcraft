@@ -15,7 +15,8 @@ M1（基础逻辑）与 M2（世界数据闭环）已达成并留有可执行证
 
 ## 进行中
 
-- **M3 文档阶段**：`docs/modules/assets.md`（资产模块设计，状态 `[待评审]`）与 `docs/analysis/assets/jar-entry-map.md`（jar 条目清单）已落盘，等你评审后开始编码。
+- **M3 文档阶段**：`docs/modules/assets.md`（资产模块设计）、`docs/analysis/assets/jar-entry-map.md`（jar 条目清单）、`docs/decisions/0005-asset-pack-and-official-index.md`（资产打包 + 官方索引只读挂载）三份均为 `[待评审]`，等你评审后开始编码。
+- ADR-0005 有两个待决项等你裁决：① 索引资产缺失时是否允许启动器从官方端点补全；② pack 内路径是否扁平化（当前倾向扁平化）。
 
 ## 已完成（近期，按时间倒序）
 
@@ -35,8 +36,8 @@ M1（基础逻辑）与 M2（世界数据闭环）已达成并留有可执行证
 
 1. 你评审 `docs/modules/assets.md`；通过后把状态改为 `[已评审]`。
 2. T-032：版本清单解析 + jar SHA-1 校验（合成 jar 篡改必须失败，报错含期望/实际哈希）。
-3. T-033：资产提取器（白名单、增量幂等、`.mcmeta` 成对、zip-slip 防护、输出目录不得在仓库内）。
-4. T-034 / T-035 / T-036 依次：产物清单与资源加载层 → 启动器 `assets`/`launch` 子命令 → 纹理接入渲染。
+3. T-033：资产**打包器**（白名单 → 单文件 zip pack + manifest，原子发布、幂等、`.mcmeta` 成对、zip-slip 防护、输出不得在仓库内）。
+4. T-034 / T-035 / T-036 依次：`IAssetSource` 解析层（pack 读取器 + 官方 objects 只读挂载）→ 启动器 `assets`/`launch` 子命令 → 纹理接入渲染。
 5. 可选并行：把 `quality-attributes.md` QA-1 的 `[待定]` 阈值定稿（候选值见 `performance-baseline.md` §5）。
 
 ## 未提交改动 / 后台任务
