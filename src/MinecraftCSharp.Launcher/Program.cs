@@ -160,7 +160,7 @@ internal static class Program
                     },
                     onChunk: parsed =>
                     {
-                        world?.AddChunk(parsed.Chunk);
+                        world?.AddChunk(parsed);
                         lightArrays += parsed.Light.ArrayCount;
                         for (var i = 0; i < parsed.Chunk.SectionCount; i++)
                         {

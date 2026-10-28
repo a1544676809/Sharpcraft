@@ -102,17 +102,52 @@ public sealed class ChunkMesherTests
     }
 
     [Fact]
-    public void VertexLayoutInterleavesPositionAndColour()
+    public void VertexLayoutInterleavesPositionAndShadedColour()
     {
         var world = SingleBlockWorld(2);
 
         var mesh = ChunkMesher.Mesh(world);
 
         Assert.Equal(0, mesh.Vertices.Length % ChunkMesher.FloatsPerVertex);
+
+        // Colour is the state colour scaled by the light and facing shade, so the hue must survive
+        // while the magnitude may differ from the raw state colour.
         var (red, green, blue) = ChunkMesher.ColourOf(2);
-        Assert.Equal(red, mesh.Vertices[3]);
-        Assert.Equal(green, mesh.Vertices[4]);
-        Assert.Equal(blue, mesh.Vertices[5]);
+        var scale = mesh.Vertices[3] / red;
+
+        Assert.InRange(scale, 0f, 1f);
+        Assert.Equal(green * scale, mesh.Vertices[4], 4);
+        Assert.Equal(blue * scale, mesh.Vertices[5], 4);
+    }
+
+    [Fact]
+    public void FacesAreShadedByFacingSoTopIsBrightest()
+    {
+        var world = SingleBlockWorld(2);
+
+        var mesh = ChunkMesher.Mesh(world);
+
+        // Quad order is -X, +X, -Y, +Y, -Z, +Z; the first vertex of each quad carries its colour.
+        var topColour = mesh.Vertices[(3 * ChunkMesher.VerticesPerQuad * ChunkMesher.FloatsPerVertex) + 3];
+        var bottomColour = mesh.Vertices[(2 * ChunkMesher.VerticesPerQuad * ChunkMesher.FloatsPerVertex) + 3];
+        var sideColour = mesh.Vertices[3];
+
+        Assert.True(topColour > sideColour, $"top {topColour} should be brighter than side {sideColour}");
+        Assert.True(sideColour > bottomColour, $"side {sideColour} should be brighter than bottom {bottomColour}");
+    }
+
+    [Fact]
+    public void UnlitBlocksAreDarkerThanLitBlocks()
+    {
+        var dark = SingleBlockWorld(2);
+        var lit = SingleBlockWorld(2);
+        lit.GetChunk(0, 0)!.Light.FillSkyLight(15);
+
+        var darkColour = ChunkMesher.Mesh(dark).Vertices[3];
+        var litColour = ChunkMesher.Mesh(lit).Vertices[3];
+
+        Assert.True(litColour > darkColour, $"lit {litColour} should be brighter than dark {darkColour}");
+        Assert.True(darkColour > 0f, "unlit geometry must not go pure black");
     }
 
     [Fact]

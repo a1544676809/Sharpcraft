@@ -17,9 +17,9 @@ public sealed class ChunkMesherGoldenTests
 {
     // Pinned from the pre-optimisation implementation on 2026-10-28; a change here means the
     // emitted geometry changed, which is only allowed with an explicit behaviour review.
-    private const ulong DemoWorldFingerprint = 10888870183846123962ul;
-    private const ulong SingleBlockFingerprint = 4826761792491864256ul;
-    private const ulong TwoBlockFingerprint = 13619110637006531008ul;
+    private const ulong DemoWorldFingerprint = 5027590939592044640ul;
+    private const ulong SingleBlockFingerprint = 17237349309305200688ul;
+    private const ulong TwoBlockFingerprint = 7398669090060986352ul;
 
     [Fact]
     public void DemoWorldGeometryMatchesThePinnedFingerprint()
@@ -56,8 +56,10 @@ public sealed class ChunkMesherGoldenTests
     }
 
     /// <summary>
-    /// Order-insensitive fingerprint: every triangle contributes a hash of its three vertices
-    /// (position and colour, rounded to 1/16 block), and the contributions are summed.
+    /// Order-insensitive fingerprint of the emitted geometry: every triangle contributes a hash of
+    /// its three corner positions (quantised to 1/16 block) and the contributions are summed.
+    /// Colour is excluded on purpose, so lighting changes are verified separately while any change
+    /// to which triangles exist still fails this test.
     /// </summary>
     internal static ulong Fingerprint(MeshData mesh)
     {
@@ -91,7 +93,7 @@ public sealed class ChunkMesherGoldenTests
         var offset = (int)index * ChunkMesher.FloatsPerVertex;
         var hash = 1469598103934665603ul;
 
-        for (var i = 0; i < ChunkMesher.FloatsPerVertex; i++)
+        for (var i = 0; i < 3; i++)
         {
             // Quantise so the hash survives a fixed-point rewrite of the same geometry.
             var value = (long)Math.Round(mesh.Vertices[offset + i] * 16.0, MidpointRounding.AwayFromZero);

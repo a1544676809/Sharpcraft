@@ -72,6 +72,14 @@ public sealed class ClientWorld
     }
 
     /// <summary>Installs an externally built chunk.</summary>
+    /// <summary>Adds a chunk parsed from the network together with its light data.</summary>
+    public void AddChunk(Common.Network.ParsedChunk parsed)
+    {
+        ArgumentNullException.ThrowIfNull(parsed);
+        parsed.Chunk.ApplyLight(parsed.Light);
+        AddChunk(parsed.Chunk);
+    }
+
     public void AddChunk(LevelChunk chunk)
     {
         ArgumentNullException.ThrowIfNull(chunk);
@@ -89,6 +97,44 @@ public sealed class ClientWorld
     /// Block state at block coordinates. Negative coordinates rely on the arithmetic-shift
     /// conversions, not on naive division (docs/analysis/common/coordinates.md).
     /// </summary>
+    /// <summary>
+    /// Sky light (0..15) at world coordinates. Cells outside a loaded chunk read as 0.
+    /// </summary>
+    public byte GetSkyLight(int x, int y, int z)
+    {
+        var chunk = GetChunk(x >> 4, z >> 4);
+        return chunk is null ? (byte)0 : chunk.GetSkyLight(x & 15, y, z & 15);
+    }
+
+    /// <summary>
+    /// Block light (0..15) at world coordinates. Cells outside a loaded chunk read as 0.
+    /// </summary>
+    public byte GetBlockLight(int x, int y, int z)
+    {
+        var chunk = GetChunk(x >> 4, z >> 4);
+        return chunk is null ? (byte)0 : chunk.GetBlockLight(x & 15, y, z & 15);
+    }
+
+    /// <summary>
+    /// Light levels at world coordinates, reporting whether the cell belongs to a loaded chunk.
+    /// Callers use this to distinguish "dark" from "not loaded", which matters at the edge of the
+    /// loaded region where 0 would render a wall pitch black.
+    /// </summary>
+    public bool TryGetLight(int x, int y, int z, out byte sky, out byte block)
+    {
+        var chunk = GetChunk(x >> 4, z >> 4);
+        if (chunk is null)
+        {
+            sky = 0;
+            block = 0;
+            return false;
+        }
+
+        sky = chunk.GetSkyLight(x & 15, y, z & 15);
+        block = chunk.GetBlockLight(x & 15, y, z & 15);
+        return true;
+    }
+
     public int GetBlockState(int x, int y, int z, int fallbackState = 0)
     {
         var chunk = GetChunk(BlockCoordinates.ToSectionCoord(x), BlockCoordinates.ToSectionCoord(z));

@@ -91,7 +91,7 @@ internal static class FrameCommand
                 onChunk: parsed =>
                 {
                     world ??= new ClientWorld(-4, 24);
-                    world.AddChunk(parsed.Chunk);
+                    world.AddChunk(parsed);
                     return true;
                 }).ConfigureAwait(false);
 
@@ -115,6 +115,10 @@ internal static class FrameCommand
         var stone = new Common.World.ChunkSection(0, -1);
         chunk.SetSection(solid);
         chunk.SetSection(stone);
+
+        // The demo world has no network light payload, so light it fully; otherwise every face
+        // renders at the minimum brightness and the scene is unreadable.
+        chunk.Light.FillSkyLight(15);
 
         for (var x = 0; x < 16; x++)
         {
@@ -152,7 +156,7 @@ internal static class FrameCommand
             $"{parsed.BlockEntityCount} block entities, {parsed.Light.ArrayCount} light arrays");
 
         var world = new ClientWorld(parsed.Chunk.MinSectionY, parsed.Chunk.SectionCount);
-        world.AddChunk(parsed.Chunk);
+        world.AddChunk(parsed);
         return world;
     }
 

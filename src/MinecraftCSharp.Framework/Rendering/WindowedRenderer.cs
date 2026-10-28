@@ -230,7 +230,7 @@ public static class WindowedRenderer
             "fs_main"u8,
             [new ColorTargetState(format)],
             layout: default,
-            primitive: PrimitiveState.Default,
+            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CW },
             multisample: MultisampleState.Default,
             depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float),
             vertexStride: (ulong)ClipSpaceTransform.VertexStride,

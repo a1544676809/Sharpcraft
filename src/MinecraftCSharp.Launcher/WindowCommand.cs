@@ -149,7 +149,7 @@ internal static class WindowCommand
                 onChunk: parsed =>
                 {
                     world ??= new ClientWorld(-4, 24);
-                    world.AddChunk(parsed.Chunk);
+                    world.AddChunk(parsed);
                     return true;
                 }).ConfigureAwait(false);
 

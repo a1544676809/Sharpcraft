@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 MinecraftCSharp contributors
 
+using MinecraftCSharp.Common.Network;
+
 namespace MinecraftCSharp.Common.World;
 
 /// <summary>
@@ -24,6 +26,7 @@ public sealed class LevelChunk
         ChunkZ = chunkZ;
         MinSectionY = minSectionY;
         _sections = new ChunkSection[sectionCount];
+        Light = new ChunkLight(minSectionY, sectionCount);
     }
 
     /// <summary>Chunk coordinate along X.</summary>
@@ -43,6 +46,9 @@ public sealed class LevelChunk
 
     /// <summary>Whether the chunk has been filled from the network.</summary>
     public bool Loaded { get; private set; }
+
+    /// <summary>Light storage for this column (sky and block light nibble arrays).</summary>
+    public ChunkLight Light { get; }
 
     /// <summary>Section at an index, or null when absent.</summary>
     public ChunkSection? GetSection(int sectionY) =>
@@ -86,4 +92,39 @@ public sealed class LevelChunk
         var localY = y & 15;
         GetSection(sectionY)?.Set(x, localY, z, state, airState);
     }
+
+    /// <summary>
+    /// Copies the sky and block light arrays out of a <c>level_chunk_with_light</c> payload.
+    /// Arrays arrive in mask order, so the masks are walked in ascending section order.
+    /// </summary>
+    public void ApplyLight(LightData light)
+    {
+        ArgumentNullException.ThrowIfNull(light);
+
+        var sky = 0;
+        var block = 0;
+
+        for (var section = 0; section < Light.LightSectionCount; section++)
+        {
+            if (LightData.IsSet(light.SkyMask, section) && sky < light.SkyUpdates.Count)
+            {
+                Light.SetSkyLight(section, light.SkyUpdates[sky]);
+                sky++;
+            }
+
+            if (LightData.IsSet(light.BlockMask, section) && block < light.BlockUpdates.Count)
+            {
+                Light.SetBlockLight(section, light.BlockUpdates[block]);
+                block++;
+            }
+        }
+    }
+
+    /// <summary>Sky light at chunk-local coordinates (0 outside the modelled range).</summary>
+    public byte GetSkyLight(int x, int y, int z) =>
+        Light.GetSkyLight((y >> ChunkSection.SideBits) - MinSectionY + 1, x & 15, y & 15, z & 15);
+
+    /// <summary>Block light at chunk-local coordinates (0 outside the modelled range).</summary>
+    public byte GetBlockLight(int x, int y, int z) =>
+        Light.GetBlockLight((y >> ChunkSection.SideBits) - MinSectionY + 1, x & 15, y & 15, z & 15);
 }

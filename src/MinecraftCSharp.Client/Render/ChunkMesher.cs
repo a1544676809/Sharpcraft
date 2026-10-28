@@ -135,8 +135,8 @@ public static class ChunkMesher
     }
 
     /// <summary>
-    /// Writes a chunk's geometry into <paramref name="buffer"/> without touching the world model,
-    /// for callers that already know the neighbouring states (section rebuilds).
+    /// Emits the visible faces of one block. Each face samples the light of the cell it is
+    /// exposed to and is shaded by its facing, which is what makes a flat block field readable.
     /// </summary>
     public static void EmitFaces(
         ClientWorld world,
@@ -149,54 +149,96 @@ public static class ChunkMesher
     {
         var (red, green, blue) = ColourOf(state);
 
+        // Faces along the edge of the loaded region sample a cell that belongs to no chunk; fall
+        // back to the block's own light there instead of rendering the wall pitch black.
+        var (selfSky, selfBlock) = LightOf(world, x, y, z);
+        float ShadeAt(int sampleX, int sampleY, int sampleZ) =>
+            Brightness(world.TryGetLight(sampleX, sampleY, sampleZ, out var sky, out var block)
+                ? (sky, block)
+                : (selfSky, selfBlock));
+
         // -X
         if (world.GetBlockState(x - 1, y, z, airState) == airState)
         {
+            var shade = ShadeAt(x - 1, y, z) * SideShade;
             buffer.AppendQuad(
                 (x, y, z), (x, y, z + 1), (x, y + 1, z + 1), (x, y + 1, z),
-                red, green, blue);
+                red * shade, green * shade, blue * shade);
         }
 
         // +X
         if (world.GetBlockState(x + 1, y, z, airState) == airState)
         {
+            var shade = ShadeAt(x + 1, y, z) * SideShade;
             buffer.AppendQuad(
                 (x + 1, y, z), (x + 1, y + 1, z), (x + 1, y + 1, z + 1), (x + 1, y, z + 1),
-                red, green, blue);
+                red * shade, green * shade, blue * shade);
         }
 
         // -Y
         if (world.GetBlockState(x, y - 1, z, airState) == airState)
         {
+            var shade = ShadeAt(x, y - 1, z) * BottomShade;
             buffer.AppendQuad(
                 (x, y, z), (x, y, z + 1), (x + 1, y, z + 1), (x + 1, y, z),
-                red, green, blue);
+                red * shade, green * shade, blue * shade);
         }
 
         // +Y
         if (world.GetBlockState(x, y + 1, z, airState) == airState)
         {
+            var shade = ShadeAt(x, y + 1, z) * TopShade;
             buffer.AppendQuad(
                 (x, y + 1, z), (x + 1, y + 1, z), (x + 1, y + 1, z + 1), (x, y + 1, z + 1),
-                red, green, blue);
+                red * shade, green * shade, blue * shade);
         }
 
         // -Z
         if (world.GetBlockState(x, y, z - 1, airState) == airState)
         {
+            var shade = ShadeAt(x, y, z - 1) * SideShade;
             buffer.AppendQuad(
                 (x, y, z), (x + 1, y, z), (x + 1, y + 1, z), (x, y + 1, z),
-                red, green, blue);
+                red * shade, green * shade, blue * shade);
         }
 
         // +Z
         if (world.GetBlockState(x, y, z + 1, airState) == airState)
         {
+            var shade = ShadeAt(x, y, z + 1) * SideShade;
             buffer.AppendQuad(
                 (x, y, z + 1), (x, y + 1, z + 1), (x + 1, y + 1, z + 1), (x + 1, y, z + 1),
-                red, green, blue);
+                red * shade, green * shade, blue * shade);
         }
+
     }
+
+    /// <summary>Darkest a face can get; keeps unlit caves legible instead of pure black.</summary>
+    public const float MinimumBrightness = 0.12f;
+
+    /// <summary>Shading applied to faces looking up.</summary>
+    public const float TopShade = 1.0f;
+
+    /// <summary>Shading applied to faces looking down.</summary>
+    public const float BottomShade = 0.5f;
+
+    /// <summary>Shading applied to the four horizontal facings.</summary>
+    public const float SideShade = 0.75f;
+
+    /// <summary>
+    /// Brightness of a cell from its light levels. Sky and block light are combined with max,
+    /// normalised over 0..15 and floored, which is close enough to the vanilla lightmap for a
+    /// first pass without claiming to match it exactly.
+    /// </summary>
+    public static float Brightness((byte Sky, byte Block) light)
+    {
+        var level = light.Sky > light.Block ? light.Sky : light.Block;
+        return MinimumBrightness + (1f - MinimumBrightness) * (level / 15f);
+    }
+
+    /// <summary>Light levels of a cell that is known to be inside a loaded chunk.</summary>
+    private static (byte Sky, byte Block) LightOf(ClientWorld world, int x, int y, int z) =>
+        world.TryGetLight(x, y, z, out var sky, out var block) ? (sky, block) : ((byte)0, (byte)0);
 
     /// <summary>Deterministic colour from a block state id, so the same world always looks the same.</summary>
     public static (float Red, float Green, float Blue) ColourOf(int state)
