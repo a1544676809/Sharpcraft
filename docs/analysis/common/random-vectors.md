@@ -65,6 +65,17 @@ lootSequence|42|0xf43aa0b3e22aabc6|0xc30fefe8bf3c5b22|...
 
 注意 `wgSalt` 与 `slimeChunk` 的 salt 是**硬编码在生成器里**的常数；若改动生成器必须同步更新测试常量。
 
+## 4.2 运行 jar 做行为实验的坑（2026-10-28 实测）
+
+按顺序踩过，记下来避免重复：
+
+1. **classpath 必须按 `26.3.json` 的 libraries 清单构建**，不能把 `libraries/` 下所有 jar 一股脑塞进去。目录里有 8 个 guava 版本，随便拼会让 `ImmutableMap.Builder.buildOrThrow()` 缺失，表现为 `NoSuchMethodError`（看起来像 Minecraft 的问题，其实是依赖版本错）。
+2. **`libraries/*` 通配符不递归**，且完整 classpath 约 85k 字符，超出命令行上限 → 用 `java @argfile`；argfile 内**反斜杠是转义符**，路径必须写正斜杠。
+3. 访问注册表前必须先 **`SharedConstants.tryDetectVersion()` 再 `Bootstrap.bootStrap()`**，否则报 `Game version not set` 或 `Not bootstrapped`。
+4. 输出**用十六进制**：16～19 位十进制会被部分工具当成卡号脱敏，静默改坏数据。
+
+复用脚本：`ref://mc-26.3-analysis/vectors/make-classpath.ps1`（从版本清单生成精确 classpath）。
+
 ## 5. 未覆盖（后续补）
 
 - `nextGaussian`（Marsaglia 极坐标法，含缓存第二个值的行为）。

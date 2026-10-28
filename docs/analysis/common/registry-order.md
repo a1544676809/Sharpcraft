@@ -79,6 +79,21 @@
 5. 方块状态 id 生成器 MUST 按 §5 的四级顺序实现，并配"给定方块清单 → 状态 id 快照"测试。
 6. 严禁用 `Dictionary<TKey,TValue>` 的枚举顺序、`HashSet` 顺序、并行注册的完成顺序来构造任何有序结构。
 
+## 7.1 实测数据（2026-10-28，官方 jar）
+
+用同一套"跑 jar"的方式导出，作为顺序契约的真值：
+
+| 观察项 | 值 |
+| --- | --- |
+| `BuiltInRegistries.BLOCK` 元素数 | **1286**（首个 `minecraft:air`，末个 `minecraft:firefly_bush`） |
+| 方块状态全局 id 总数 | **35723** |
+| `minecraft:grass_block[snowy=true]` | id **8** |
+| `minecraft:grass_block[snowy=false]` | id **9** |
+
+最后两行**实证了 §5 的推断**：`BooleanProperty` 的取值顺序是 `[true, false]`（真在前）。这是最容易写反的一处，且一旦写反，整类方块的状态 id 会整体偏移。
+
+方块顺序快照入库为 `tests/MinecraftCSharp.Common.Tests/TestData/vanilla-block-order.txt`（纯标识符清单，不含资产），由 `RegistryOrderTests` 钉住"id 跟随注册顺序且顺序非字典序"。
+
 ## 8. 待验证
 
 - `BuiltInRegistries` 中是否存在**非** `static final` 字段或惰性初始化路径，使个别注册表顺序晚于声明顺序（本轮抽样确认了 block/item/entity 等主表，未全量核对）。

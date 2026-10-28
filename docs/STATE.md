@@ -38,15 +38,16 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 
 ## 下一步具体动作
 
-1. 注册表顺序链（T-007）：先做"顺序快照"数据结构，再实现 `Registry` / `IdMapper`，并配顺序快照测试。
-2. `nextGaussian`（Marsaglia 极坐标法 + 缓存第二值）——向量已在 `gaussianLegacy` / `gaussianXoro` 行中，尚未实现。
-3. `fork()` / `consumeCount` 的链式派生向量仍未取，等用到时补。
-4. T-008 坐标基元（负数取整规则待补规格）。
+1. T-007 已完成：`IdMapper` / `Registry` + 1286 条原版 block 顺序快照测试。
+2. T-010（待开工）：方块状态全局 id 生成器，已知锚点 35723 个状态、grass_block 的 8/9。
+3. `nextGaussian`（Marsaglia 极坐标法 + 缓存第二值）——向量已在 `gaussianLegacy` / `gaussianXoro` 行中，尚未实现。
+4. `fork()` / `consumeCount` 的链式派生向量仍未取，等用到时补。
+5. T-008 坐标基元（负数取整规则待补规格）。
 ## 未提交改动 / 后台任务
 
 - 本次提交内容见下；无运行中的后台任务。
 
 ## 最近提交
 
-- `cb13137` feat(common): bit-exact LCG and xoroshiro128++ with reference-vector replay
-- 本次提交：T-009 位置化随机 / 世界生成混合器 / 战利品序列（含 WorldgenRandom 委托语义修正）
+- `e3a6a8a` feat(common): positional factories, worldgen seed mixers and loot sequences
+- 本次提交：T-007 注册表与 IdMapper + 原版 block 顺序快照（附 grass_block 状态 id 实证）
