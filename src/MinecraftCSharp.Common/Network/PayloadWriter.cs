@@ -53,6 +53,20 @@ public ref struct PayloadWriter
         Position += 16;
     }
 
+    /// <summary>Writes a single raw byte.</summary>
+    public void WriteByte(byte value)
+    {
+        Remaining[0] = value;
+        Position++;
+    }
+
+    /// <summary>Writes a big-endian 32-bit integer.</summary>
+    public void WriteInt(int value)
+    {
+        BinaryPrimitives.WriteInt32BigEndian(Remaining, value);
+        Position += sizeof(int);
+    }
+
     /// <summary>Writes a big-endian unsigned short.</summary>
     public void WriteUnsignedShort(ushort value)
     {

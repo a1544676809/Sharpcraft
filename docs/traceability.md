@@ -24,6 +24,7 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-010 | 方块状态全局 id 生成器 | `docs/analysis/common/registry-order.md` §5、§7.1 | `BlockStateIdTests.cs`（含 1442 个原版状态 id 与 35723 总数） | `src/MinecraftCSharp.Common/Registries/`（BlockStateDefinition / BlockStateLayout） | 已完成 |
 | T-019 | 全阶段包 id 表导出与交叉校验 | `docs/specs/network/protocol-phases.md` §3 | `PacketIdTableTests.cs`（3 项：id 对照、连续性、唯一性） | `tests/.../TestData/vanilla-packet-ids.txt`（260 条） | 已完成 |
 | T-018 | 启动器 CLI 垂直切片（login / probe / help） | `docs/modules/launcher.md` §3–§5 | `LauncherCommandLineTests.cs`（10 项）、手工验收：`probe mcf.ddger.top` 输出 protocol 777 | `src/MinecraftCSharp.Launcher/` | 已完成 |
+| T-021 | 真实进服：登录 + 配置阶段 + play 阶段入口 | `docs/modules/launcher.md` §8；`docs/specs/network/protocol-phases.md` §5.1 | `play mcf.ddger.top` 实测到达 play（`minecraft:login`）；`TokenStore` 路径守卫由实现保证 | `Common/Network/MinecraftConnection`、`MinecraftLoginClient`；`Launcher/ConfigurationProbe`；`Auth/TokenStore`、`SessionServerClient` | 已完成 |
 | T-020 | 真实账号登录验收（设备码端到端） | `docs/modules/auth.md` §3.1、§3.2、§10 | 手工验收 2026-10-28 成功；`IdentityEndpoints` 预设 + 22 项离线测试 | `src/MinecraftCSharp.Auth/`、`src/MinecraftCSharp.Launcher/` | 已完成 |
 | T-017 | 认证链路：设备码 / XBL / XSTS / Minecraft 会话 | `docs/modules/auth.md` §3–§6 | `DeviceCodeFlowTests.cs`（10 项）、`XboxAndServicesTests.cs`（9 项） | `src/MinecraftCSharp.Auth/` | 已完成 |
 | T-016 | 登录阶段报文（LoginStart / Hello / Key / Disconnect） | `docs/specs/network/encryption.md` §1、§6.1 | `LoginPacketTests.cs`（11 项）、`LoginProbeIntegrationTests`（真实服务器加密验证） | `src/MinecraftCSharp.Common/Network/LoginPackets.cs` | 已完成 |

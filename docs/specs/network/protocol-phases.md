@@ -88,6 +88,28 @@
 
 `threshold = 0` 表示"全部压缩"（不存在原始的短包路径）。
 
+## 5.1 配置阶段实测（真实服务器）
+
+进入配置阶段后**必须立刻发送 `client_information`**（serverbound id 0），否则服务端会在 `ping` 之后直接断开，且断开原因是二进制组件（NBT），不解释原因。
+
+字段顺序（对应 `ClientInformation`）：
+
+```
+VarInt id(0) | string language(≤16) | byte viewDistance | VarInt chatVisibility
+| bool chatColors | byte modelCustomisation | VarInt mainHand
+| bool textFilteringEnabled | bool allowsListing | VarInt particleStatus
+```
+
+默认值可用 `en_us / 2 / FULL(0) / true / 0 / RIGHT(1) / false / false / ALL(0)`。
+
+其余要点：
+
+- **`ping` / `pong` 用 int32**（4 字节大端），不是 VarInt；写错会被当作协议错误断开。
+- `keep_alive` 用 long（8 字节大端）。
+- 服务端会连续下发 **30+ 个 `registry_data`**，随后 `update_tags`、`finish_configuration`。
+- `select_known_packs` 需要回包（可原样回显服务端列表）。
+- 回 `finish_configuration` 后收到的第一个包就是 play 阶段的 `minecraft:login`（JoinGame，clientbound id 50）。
+
 ## 6. 实现要求
 
 1. 阶段是**显式状态**，不允许用布尔标志拼装；每次状态切换都要能说明触发包。

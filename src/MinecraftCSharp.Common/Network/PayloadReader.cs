@@ -102,6 +102,20 @@ public ref struct PayloadReader
         return DecodeStatus.Success;
     }
 
+    /// <summary>Reads a big-endian 32-bit integer.</summary>
+    public DecodeStatus TryReadInt(out int value)
+    {
+        if (Remaining.Length < sizeof(int))
+        {
+            value = 0;
+            return DecodeStatus.NeedMoreData;
+        }
+
+        value = BinaryPrimitives.ReadInt32BigEndian(Remaining);
+        Position += sizeof(int);
+        return DecodeStatus.Success;
+    }
+
     /// <summary>Reads a big-endian unsigned short.</summary>
     public DecodeStatus TryReadUnsignedShort(out ushort value)
     {

@@ -88,6 +88,107 @@ public static class PacketIds
         public const int CookieResponse = 4;
     }
 
+    /// <summary>Client to server, <see cref="ConnectionState.Configuration"/>.</summary>
+    public static class ConfigurationServerbound
+    {
+        /// <summary>Client information.</summary>
+        public const int ClientInformation = 0;
+
+        /// <summary>Cookie response.</summary>
+        public const int CookieResponse = 1;
+
+        /// <summary>Custom payload.</summary>
+        public const int CustomPayload = 2;
+
+        /// <summary>Finish configuration.</summary>
+        public const int FinishConfiguration = 3;
+
+        /// <summary>Keep alive reply.</summary>
+        public const int KeepAlive = 4;
+
+        /// <summary>Pong reply.</summary>
+        public const int Pong = 5;
+
+        /// <summary>Resource pack status.</summary>
+        public const int ResourcePack = 6;
+
+        /// <summary>Select known packs.</summary>
+        public const int SelectKnownPacks = 7;
+
+        /// <summary>Custom click action.</summary>
+        public const int CustomClickAction = 8;
+
+        /// <summary>Accept code of conduct.</summary>
+        public const int AcceptCodeOfConduct = 9;
+    }
+
+    /// <summary>Server to client, <see cref="ConnectionState.Configuration"/>.</summary>
+    public static class ConfigurationClientbound
+    {
+        /// <summary>Cookie request.</summary>
+        public const int CookieRequest = 0;
+
+        /// <summary>Custom payload.</summary>
+        public const int CustomPayload = 1;
+
+        /// <summary>Disconnect.</summary>
+        public const int Disconnect = 2;
+
+        /// <summary>Finish configuration.</summary>
+        public const int FinishConfiguration = 3;
+
+        /// <summary>Keep alive ping.</summary>
+        public const int KeepAlive = 4;
+
+        /// <summary>Ping.</summary>
+        public const int Ping = 5;
+
+        /// <summary>Reset chat.</summary>
+        public const int ResetChat = 6;
+
+        /// <summary>Registry data.</summary>
+        public const int RegistryData = 7;
+
+        /// <summary>Resource pack pop.</summary>
+        public const int ResourcePackPop = 8;
+
+        /// <summary>Resource pack push.</summary>
+        public const int ResourcePackPush = 9;
+
+        /// <summary>Post effects.</summary>
+        public const int PostEffects = 10;
+
+        /// <summary>Store cookie.</summary>
+        public const int StoreCookie = 11;
+
+        /// <summary>Transfer.</summary>
+        public const int Transfer = 12;
+
+        /// <summary>Update enabled features.</summary>
+        public const int UpdateEnabledFeatures = 13;
+
+        /// <summary>Update tags.</summary>
+        public const int UpdateTags = 14;
+
+        /// <summary>Select known packs.</summary>
+        public const int SelectKnownPacks = 15;
+
+        /// <summary>Custom report details.</summary>
+        public const int CustomReportDetails = 16;
+
+        /// <summary>Server links.</summary>
+        public const int ServerLinks = 17;
+
+        /// <summary>Clear dialog.</summary>
+        public const int ClearDialog = 18;
+
+        /// <summary>Show dialog.</summary>
+        public const int ShowDialog = 19;
+
+        /// <summary>Code of conduct.</summary>
+        public const int CodeOfConduct = 20;
+    }
+
     /// <summary>Server to client, <see cref="ConnectionState.Login"/>.</summary>
     public static class LoginClientbound
     {

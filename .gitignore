@@ -45,3 +45,8 @@ desktop.ini
 .env
 *.log
 /.dsh/
+
+# Token caches must never enter the repository (docs/modules/auth.md 5).
+tokens.json
+*tokens.json
+msa-tokens.json

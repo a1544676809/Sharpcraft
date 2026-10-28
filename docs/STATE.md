@@ -50,7 +50,8 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 9. T-018 启动器 CLI 已完成：`login` / `probe` / `help`；`probe mcf.ddger.top` 实测通过（protocol 777）。
 10. **真实账号登录已验收成功**（2026-10-28，设备码 → MSA → XBL → XSTS → 会话 → 档案）。身份端点踩坑已固化：MSA 应用必须走 `login.live.com` 且用表单编码。
 11. T-019 全阶段包 id 表已入库（260 条）并与硬编码常量交叉校验。
-12. 下一步：用真实会话令牌做游戏登录（握手 + LoginStart + joinServer + 加密 + 配置阶段），需要用户同意短暂加入其服务器。
+12. **真实进服已打通**：`play mcf.ddger.top` 到达 play 阶段（首个包 `minecraft:login`）。令牌缓存于仓库外。
+13. 下一步：play 阶段最小处理（KeepAlive、JoinGame 字段解析）→ 稳定长连接；然后进入渲染/世界数据准备。
 ## 未提交改动 / 后台任务
 
 - 本次提交内容见下；无运行中的后台任务。

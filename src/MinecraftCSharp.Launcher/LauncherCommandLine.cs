@@ -12,8 +12,14 @@ public enum LauncherCommand
     /// <summary>Run the device code login flow.</summary>
     Login,
 
+    /// <summary>Delete the cached tokens.</summary>
+    Logout,
+
     /// <summary>Query a server's status.</summary>
-    Probe
+    Probe,
+
+    /// <summary>Sign in and walk a server's login/configuration phases.</summary>
+    Play
 }
 
 /// <summary>Parsed command line.</summary>
@@ -27,10 +33,12 @@ public sealed record LauncherCommandLine(LauncherCommand Command, string? Target
         MinecraftCSharp launcher (vertical slice)
 
           login              sign in through the Microsoft device code flow
+          logout             delete the cached tokens
           probe <address>    query a server's status (SRV aware)
+          play <address>     sign in, then walk login and configuration phases
           help               show this text
 
-        Tokens are never printed or persisted by this build.
+        Tokens are cached only outside the repository, under the user's local app data.
         """;
 
     /// <summary>Parses arguments; never throws.</summary>
@@ -54,16 +62,27 @@ public sealed record LauncherCommandLine(LauncherCommand Command, string? Target
                     ? new LauncherCommandLine(LauncherCommand.Login, null, null)
                     : new LauncherCommandLine(LauncherCommand.Login, null, "login takes no arguments");
 
+            case "logout":
+                return args.Count == 1
+                    ? new LauncherCommandLine(LauncherCommand.Logout, null, null)
+                    : new LauncherCommandLine(LauncherCommand.Logout, null, "logout takes no arguments");
+
             case "probe":
-                return args.Count switch
-                {
-                    1 => new LauncherCommandLine(LauncherCommand.Probe, null, "probe needs a server address"),
-                    2 => new LauncherCommandLine(LauncherCommand.Probe, args[1], null),
-                    _ => new LauncherCommandLine(LauncherCommand.Probe, null, "probe takes exactly one address")
-                };
+                return WithAddress(LauncherCommand.Probe, args, "probe");
+
+            case "play":
+                return WithAddress(LauncherCommand.Play, args, "play");
 
             default:
                 return new LauncherCommandLine(LauncherCommand.Help, null, $"unknown command '{head}'");
         }
     }
+
+    private static LauncherCommandLine WithAddress(LauncherCommand command, IReadOnlyList<string> args, string name) =>
+        args.Count switch
+        {
+            1 => new LauncherCommandLine(command, null, $"{name} needs a server address"),
+            2 => new LauncherCommandLine(command, args[1], null),
+            _ => new LauncherCommandLine(command, null, $"{name} takes exactly one address")
+        };
 }
