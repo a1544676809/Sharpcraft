@@ -15,6 +15,7 @@ M1（基础逻辑）与 M2（世界数据闭环）已达成并留有可执行证
 
 ## 进行中
 
+- **T-034 待评审**：已产出行为规格 `docs/analysis/assets/resource-resolution.md` 与模块设计 `docs/modules/asset-resolution.md`（来源栈优先级 300/200/100/0、`.mcmeta` 兄弟规则、语言合并方向、缺失策略），评审通过后开始编码。
 - **M3 文档阶段完成**：`docs/modules/assets.md` `[已评审]`、ADR-0005 `[已接受]`（两项裁决：索引只读+缺失警告、pack 保留原始层级）、`docs/analysis/assets/jar-entry-map.md` 已补实测证据。可以开始编码。
 - 实测事实：本机 26.2 用资产索引 **32**（5,057 条 / 约 458 MB），索引内含 `sounds/`、`sounds.json`、全部 `lang/*.json`，**不含** `textures/block/`——印证"音频与语言走索引、纹理与模型打包"。
 
@@ -36,7 +37,7 @@ M1（基础逻辑）与 M2（世界数据闭环）已达成并留有可执行证
 
 1. T-032 **已完成**：`VersionManifest`（id / assetIndex.id+sha1 / downloads.client.sha1）+ `JarVerifier`（流式 SHA-1、尺寸预检、篡改不可绕过、报错含期望与实际哈希）。
 2. T-033 **已完成**：`launcher assets <jar> <version-json>` 产出单文件 pack。真实 26.3 jar 实测 11,533 条目 / 5.6 MB / 768 ms，复用 164 ms；跳过 net 11,267、data 10,449、com 690、META-INF 5。
-3. T-034 / T-035 / T-036 依次：`IAssetSource` 解析层（pack 读取器 + 官方 objects 只读挂载）→ 启动器 `assets`/`launch` 子命令 → 纹理接入渲染。
+3. T-034：`IAssetSource` 解析层（评审通过后编码）→ T-035 启动器 `assets`/`launch` 子命令 → T-036 纹理接入渲染。
 4. 可选并行：把 `quality-attributes.md` QA-1 的 `[待定]` 阈值定稿（候选值见 `performance-baseline.md` §5）。
 
 ## 未提交改动 / 后台任务

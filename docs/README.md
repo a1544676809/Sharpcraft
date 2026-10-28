@@ -90,6 +90,7 @@
 | [`analysis/common/README.md`](analysis/common/README.md) | 基础类型子系统入口 | 草稿 |
 | [`analysis/assets/README.md`](analysis/assets/README.md) | 资产子系统分析入口（jar 条目清单） | 草稿 |
 | [`analysis/assets/jar-entry-map.md`](analysis/assets/jar-entry-map.md) | jar 条目分类与资产清单（顶层分布、assets 分类） | 草稿 |
+| [`analysis/assets/resource-resolution.md`](analysis/assets/resource-resolution.md) | 资源解析语义：路径推导、包栈优先级、元数据兄弟、合并方向 | 草稿 |
 | [`analysis/common/identifier.md`](analysis/common/identifier.md) | 标识符：解析、校验、等值、排序、序列化 | 草稿 |
 | [`analysis/common/random.md`](analysis/common/random.md) | 随机源家族、算法参数、种子派生、战利品序列 | 草稿 |
 | [`analysis/common/registry-order.md`](analysis/common/registry-order.md) | 注册表顺序与方块状态全局 id 的生成链 | 草稿 |
@@ -105,6 +106,7 @@
 | [`modules/world.md`](modules/world.md) | 客户端世界数据：调色板容器、区块段与列、坐标查询 | 已评审 |
 | [`modules/nbt.md`](modules/nbt.md) | NBT 读写（网络/存储两种根、读取上限） | 已评审 |
 | [`modules/assets.md`](modules/assets.md) | 资产管线：jar 校验、白名单提取、增量幂等、产物清单 | 待评审 |
+| [`modules/asset-resolution.md`](modules/asset-resolution.md) | 资产解析层：来源栈、优先级、元数据兄弟、语言合并 | 待评审 |
 | [`modules/render.md`](modules/render.md) | 渲染层：网格生成、相机数学、离屏 WGPU 渲染与 PNG | 已评审 |
 | [`_templates/module-doc.md`](_templates/module-doc.md) | 模块设计文档模板 | 已评审 |
 | [`_templates/state.md`](_templates/state.md) | STATE 模板 | 已评审 |

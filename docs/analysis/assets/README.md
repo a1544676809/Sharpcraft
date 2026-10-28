@@ -10,6 +10,7 @@
 | 文件 | 主题 |
 | --- | --- |
 | [`jar-entry-map.md`](jar-entry-map.md) | jar 条目分类与资产清单（顶层分布、assets 分类、纹理格式、未决问题） |
+| [`resource-resolution.md`](resource-resolution.md) | 资源解析语义：路径推导、包栈优先级、`.mcmeta` 兄弟、合并方向、过滤与缺失行为 |
 
 ## 与其它文档的关系
 
