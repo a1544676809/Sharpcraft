@@ -79,7 +79,10 @@
 
 | 文档 | 职责 | 状态 |
 | --- | --- | --- |
-| [`analysis/README.md`](analysis/README.md) | jar 分析文档的组织方式与进度 | 草稿 |
+| [`analysis/README.md`](analysis/README.md) | jar 分析的组织方式与总进度 | 草稿 |
+| [`analysis/architecture/README.md`](analysis/architecture/README.md) | 整体架构分析入口与第一轮关键结论 | 草稿 |
+| [`analysis/architecture/overview.md`](analysis/architecture/overview.md) | 基线标识、分层、入口、渲染栈、三侧初判 | 草稿 |
+| [`analysis/architecture/package-map.md`](analysis/architecture/package-map.md) | 包级计数地图与子树职责/归属倾向 | 草稿 |
 | [`_templates/module-doc.md`](_templates/module-doc.md) | 模块设计文档模板 | 已评审 |
 
-（其余目录在首份文档落盘时创建，届时同步更新本表。）
+（`architecture/`、`specs/`、`modules/`、`decisions/`、`milestones/` 目录在首份文档落盘时创建，届时同步更新本表。）

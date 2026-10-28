@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
+<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!--
+  Solution entry point for Visual Studio 2026 / dotnet CLI.
+
+  Projects are added as they are created, following the layout in AGENTS.md 3.3.
+  Keep folder names identical to the directory names so that `dotnet sln` and
+  Visual Studio show the same tree.
+-->
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+  </Configurations>
+</Solution>
