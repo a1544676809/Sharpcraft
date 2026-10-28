@@ -38,6 +38,12 @@
 | `play <address>` | 登录 → 连接服务器 → 登录阶段 → 配置阶段 → 进入 play 后断开 | 登录结果（加密/压缩/哈希前缀）与配置阶段的包序列 |
 | `probe <address>` | 状态查询（支持 SRV） | 协议版本、版本名、在线人数、延迟、MOTD |
 | `help` / 无参数 | 用法 | 用法文本 |
+| `assets <jar> [<version-json>]` | 校验 jar 并打包/复用资产 pack | pack 路径、条目数、跳过的顶层目录 |
+| `launch <jar> <version-json>` | 校验 → 打包 → 挂载 → 登录 → 启动客户端 | 计划（令牌脱敏）与客户端退出码 |
+| `accounts` | 列出本机账号与离线可用性 | 类型、名字、UUID、最近校验时间 |
+| `accounts add-offline <name>` | 新增离线账号（受闸门约束） | 成功或拒绝原因 |
+| `accounts remove <name>` | 删除账号 | 成功或"不存在" |
+| `launch ... --offline <name>` | 用离线账号启动（受闸门约束） | 同 `launch` |
 | 未知命令 | 报错 | 用法 + 退出码 2 |
 
 ## 4. 令牌处理

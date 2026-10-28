@@ -107,6 +107,7 @@
 | [`modules/nbt.md`](modules/nbt.md) | NBT 读写（网络/存储两种根、读取上限） | 已评审 |
 | [`modules/assets.md`](modules/assets.md) | 资产管线：jar 校验、白名单提取、增量幂等、产物清单 | 待评审 |
 | [`modules/asset-resolution.md`](modules/asset-resolution.md) | 资产解析层：来源栈、优先级、元数据兄弟、语言合并 | 待评审 |
+| [`modules/accounts.md`](modules/accounts.md) | 多账号与离线登录闸门：账号模型、实时闸门、离线身份派生、防篡改 | 待评审 |
 | [`modules/render.md`](modules/render.md) | 渲染层：网格生成、相机数学、离屏 WGPU 渲染与 PNG | 已评审 |
 | [`_templates/module-doc.md`](_templates/module-doc.md) | 模块设计文档模板 | 已评审 |
 | [`_templates/state.md`](_templates/state.md) | STATE 模板 | 已评审 |
@@ -128,6 +129,7 @@
 | [`decisions/0003-wgpu-binding.md`](decisions/0003-wgpu-binding.md) | ADR-0003：WGPU 绑定（Brew.Wgpu）与离屏首帧 | 已采纳 |
 | [`decisions/0004-window-layer.md`](decisions/0004-window-layer.md) | ADR-0004：窗口层（Silk.NET.Windowing）与原生句柄抽象 | 已接受 |
 | [`decisions/0005-asset-pack-and-official-index.md`](decisions/0005-asset-pack-and-official-index.md) | ADR-0005：资产打包为单文件 pack，音频沿用官方索引 | 待评审 |
+| [`decisions/0006-offline-login-gating.md`](decisions/0006-offline-login-gating.md) | ADR-0006：离线登录闸门、身份派生与防篡改边界 | 待评审 |
 | [`repro/README.md`](repro/README.md) | 最小复现用例库约定 | 活文档 |
 
 （`milestones/` 已创建：入口见 [`milestones/README.md`](milestones/README.md)，阶段划分见 [`milestones/roadmap.md`](milestones/roadmap.md)。）
