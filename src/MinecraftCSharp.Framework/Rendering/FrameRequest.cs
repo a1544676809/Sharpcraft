@@ -68,6 +68,30 @@ public static class CameraMath
     }
 
     /// <summary>
+    /// Same as the aspect-ratio overload, but takes pixel dimensions so callers cannot disagree
+    /// with the surface they render into.
+    /// </summary>
+    public static Matrix4x4 BuildViewProjection(
+        Vector3 eye,
+        Vector3 target,
+        float fieldOfViewDegrees,
+        int width,
+        int height)
+    {
+        if (width <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(width), width, "width must be positive");
+        }
+
+        if (height <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(height), height, "height must be positive");
+        }
+
+        return BuildViewProjection(eye, target, fieldOfViewDegrees, (float)width / height);
+    }
+
+    /// <summary>
     /// Perspective projection mapped to WebGPU's clip space: z in 0..1 instead of -1..1.
     /// </summary>
     public static Matrix4x4 BuildProjection(float fieldOfViewDegrees, float aspectRatio, float near, float far)

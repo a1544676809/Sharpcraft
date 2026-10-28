@@ -47,11 +47,21 @@ internal static class WindowCommand
         var request = FrameCommand.BuildRequest(world, width, height, out var mesh);
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
-        var format = WindowedRenderer.Run(request, frames, visibleFor, index =>
+        var selfResize = ParseSelfResize();
+
+        var format = WindowedRenderer.Run(request, frames, visibleFor, (index, window) =>
         {
             if (index == 0)
             {
                 Console.WriteLine("window: first frame presented");
+            }
+
+            // Deterministic resize exercise (MC_WINDOW_SELFRESIZE=640x360): the renderer has to
+            // rebuild the swapchain, the depth texture and the aspect-dependent vertices.
+            if (selfResize is { } target && index == 30)
+            {
+                Console.WriteLine($"window: self-resize to {target.Width}x{target.Height}");
+                window.Resize(target.Width, target.Height);
             }
         });
 
@@ -60,6 +70,22 @@ internal static class WindowCommand
         // Swapchain textures are not guaranteed copyable, so the screenshot comes from the
         // offscreen path with the identical camera and geometry.
         return FrameCommand.RenderWorld(world, width, height);
+    }
+
+    private static (int Width, int Height)? ParseSelfResize()
+    {
+        if (Environment.GetEnvironmentVariable("MC_WINDOW_SELFRESIZE") is not { Length: > 0 } raw)
+        {
+            return null;
+        }
+
+        var parts = raw.Split('x');
+        if (parts.Length == 2 && int.TryParse(parts[0], out var width) && int.TryParse(parts[1], out var height))
+        {
+            return (width, height);
+        }
+
+        throw new InvalidOperationException($"MC_WINDOW_SELFRESIZE must look like 640x360, got '{raw}'");
     }
 
     private static async Task<ClientWorld> ServerWorldAsync(

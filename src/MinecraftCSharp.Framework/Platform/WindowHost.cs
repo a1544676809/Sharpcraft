@@ -90,6 +90,13 @@ public sealed class WindowHost : IDisposable
         throw new PlatformNotSupportedException("this platform exposes no window handle the renderer knows how to bind");
     }
 
+    /// <summary>Resizes the window in logical pixels; the framebuffer follows on the next frame.</summary>
+    public void Resize(int width, int height)
+    {
+        ObjectDisposedException.ThrowIf(!_initialised, this);
+        _window.Size = new Vector2D<int>(width, height);
+    }
+
     /// <summary>Processes pending window events; returns false once the user closed the window.</summary>
     public bool Pump()
     {

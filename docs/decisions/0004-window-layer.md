@@ -45,3 +45,15 @@
 - 需要在 Linux/macOS 上验收窗口时（触发 R-011 复查）。
 - 引入输入系统时（窗口层将扩展为事件源）。
 - `Brew.Wgpu` 修复 `NeedsReconfigure` 后，可简化状态判断。
+
+## 修订记录
+
+### 2026-10-28 — resize 与宽高比缺口补齐
+
+首次落地时窗口只跟随初始尺寸，投影矩阵用的是请求的逻辑尺寸而非 framebuffer 尺寸。补正内容：
+
+- 相机投影改用像素重载 `CameraMath.BuildViewProjection(eye, target, fov, width, height)`，与交换链共用同一尺寸来源；
+- 每帧检测 framebuffer 尺寸变化，变化时**同时**重建交换链配置、深度纹理与顶点缓冲（顶点烘焙了宽高比）；
+- 新增确定性验证开关 `MC_WINDOW_SELFRESIZE=WxH`：第 30 帧触发生成 resize，实测 `960x540 -> 640x360` 后继续正常呈现。
+
+结论未变：窗口层仍为 Silk.NET.Windowing + 原生句柄抽象。

@@ -57,6 +57,40 @@ public sealed class CameraMathTests
     }
 
     [Fact]
+    public void PixelDimensionsMatchTheExplicitAspectRatio()
+    {
+        var eye = new Vector3(0, 10, 20);
+        var target = Vector3.Zero;
+
+        var fromPixels = CameraMath.BuildViewProjection(eye, target, 60f, width: 960, height: 540);
+        var fromAspect = CameraMath.BuildViewProjection(eye, target, 60f, 960f / 540f);
+
+        Assert.Equal(fromAspect, fromPixels);
+    }
+
+    [Fact]
+    public void PixelDimensionsDriveTheAspectRatio()
+    {
+        var eye = new Vector3(0, 0, 30);
+        var target = Vector3.Zero;
+
+        // A tall framebuffer must widen the vertical extent, so the matrices cannot match.
+        var square = CameraMath.BuildViewProjection(eye, target, 60f, width: 500, height: 500);
+        var wide = CameraMath.BuildViewProjection(eye, target, 60f, width: 1000, height: 500);
+
+        Assert.NotEqual(square.M11, wide.M11);
+    }
+
+    [Fact]
+    public void NonPositivePixelDimensionsAreRejected()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => CameraMath.BuildViewProjection(Vector3.Zero, Vector3.UnitZ, 60f, width: 0, height: 10));
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => CameraMath.BuildViewProjection(Vector3.Zero, Vector3.UnitZ, 60f, width: 10, height: 0));
+    }
+
+    [Fact]
     public void InvalidArgumentsAreRejected()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => CameraMath.BuildProjection(60f, 0f, 0.1f, 10f));

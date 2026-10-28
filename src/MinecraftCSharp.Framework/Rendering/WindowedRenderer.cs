@@ -3,6 +3,7 @@
 
 using Brew.Wgpu;
 using Brew.Wgpu.Native;
+using WgpuBuffer = Brew.Wgpu.Buffer;
 using MinecraftCSharp.Framework.Platform;
 
 namespace MinecraftCSharp.Framework.Rendering;
@@ -16,6 +17,11 @@ namespace MinecraftCSharp.Framework.Rendering;
 /// geometry, but the colour target is the surface texture instead of an offscreen one. Offscreen
 /// rendering stays the path used for screenshots, because swapchain textures are not guaranteed to
 /// be copyable.
+/// <para>
+/// Everything that depends on the framebuffer size — the swapchain configuration, the depth
+/// texture and the clip-space vertices (they bake in the aspect ratio) — is rebuilt whenever the
+/// framebuffer size changes, so DPI scaling and window resizing stay correct.
+/// </para>
 /// </remarks>
 public static class WindowedRenderer
 {
@@ -23,13 +29,16 @@ public static class WindowedRenderer
     /// <param name="request">Frame request; width and height are overridden by the window size.</param>
     /// <param name="frames">How many frames to present before closing (0 means until the user closes it).</param>
     /// <param name="maxDuration">Optional wall-clock limit, so an unthrottled window cannot flash by.</param>
-    /// <param name="onFrame">Optional callback invoked after each presented frame index.</param>
+    /// <param name="onFrame">
+    /// Optional callback invoked after each presented frame with the frame index and the window,
+    /// which lets callers drive the window (for example to exercise resizing).
+    /// </param>
     /// <returns>The surface format that was used, for diagnostics.</returns>
     public static WGPUTextureFormat Run(
         FrameRequest request,
         int frames,
         TimeSpan? maxDuration = null,
-        Action<int>? onFrame = null)
+        Action<int, WindowHost>? onFrame = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -43,63 +52,67 @@ public static class WindowedRenderer
 
         Console.WriteLine($"window: surface ready on {adapter.GetInfo().Description}");
         var format = surface.GetPreferredFormat(adapter);
-        // A DPI-scaled display reports a logical size smaller than the framebuffer; the swapchain
-        // must be configured in physical pixels or every acquire reports "outdated".
-        var width = (uint)window.FramebufferWidth;
-        var height = (uint)window.FramebufferHeight;
-        Console.WriteLine($"window: framebuffer {width}x{height}, logical {window.Width}x{window.Height}");
-        surface.Configure(device, format, TextureUsage.RenderAttachment, width, height);
 
         using var pipeline = CreatePipeline(device, format);
-        using var vertexBuffer = device.CreateBufferInit(
-            new BufferInitDescriptor { Usage = BufferUsage.Vertex },
-            ClipSpaceTransform.Build(request, CameraMath.BuildViewProjection(
-                request.CameraPosition,
-                request.CameraTarget,
-                request.FieldOfViewDegrees,
-                (float)request.Width / request.Height)).AsSpan());
-        using var indexBuffer = device.CreateBufferInit(
+        var indexBuffer = device.CreateBufferInit(
             new BufferInitDescriptor { Usage = BufferUsage.Index },
             request.Indices.AsSpan());
 
-        using var depth = device.CreateTexture(new TextureDescriptor
-        {
-            Size = new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 },
-            MipLevelCount = 1,
-            SampleCount = 1,
-            Dimension = WGPUTextureDimension._2D,
-            Format = WGPUTextureFormat.Depth32Float,
-            Usage = TextureUsage.RenderAttachment
-        });
-        using var depthView = depth.CreateView();
+        // A DPI-scaled display reports a logical size smaller than the framebuffer; the swapchain
+        // must be configured in physical pixels or every acquire reports "outdated".
+        var frameWidth = (uint)window.FramebufferWidth;
+        var frameHeight = (uint)window.FramebufferHeight;
+        Console.WriteLine($"window: framebuffer {frameWidth}x{frameHeight}, logical {window.Width}x{window.Height}");
+
+        surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight);
+
+        var vertexBuffer = UploadVertices(device, request, frameWidth, frameHeight);
+        var depthTexture = CreateDepthTexture(device, frameWidth, frameHeight);
+        var depthView = depthTexture.CreateView();
 
         var colour = request.ClearColour;
         var presented = 0;
+        var deadline = maxDuration is { } duration
+            ? Environment.TickCount64 + (long)duration.TotalMilliseconds
+            : long.MaxValue;
 
-        Console.WriteLine($"window: swapchain configured ({format}, {width}x{height})");
-
-        var deadline = maxDuration is { } duration ? Environment.TickCount64 + (long)duration.TotalMilliseconds : long.MaxValue;
+        Console.WriteLine($"window: swapchain configured ({format}, {frameWidth}x{frameHeight})");
 
         while (true)
         {
-            if (!window.Pump())
+            if (!window.Pump() || Environment.TickCount64 > deadline)
             {
                 break;
             }
 
-            if (Environment.TickCount64 > deadline)
+            var nextWidth = (uint)window.FramebufferWidth;
+            var nextHeight = (uint)window.FramebufferHeight;
+            if (nextWidth != frameWidth || nextHeight != frameHeight)
             {
-                break;
+                Console.WriteLine($"window: resize {frameWidth}x{frameHeight} -> {nextWidth}x{nextHeight}");
+                frameWidth = nextWidth;
+                frameHeight = nextHeight;
+
+                // Everything sized to the old framebuffer is rebuilt: surface, depth, and the
+                // vertices, which carry the aspect ratio in their clip coordinates.
+                surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight);
+                depthView.Dispose();
+                depthTexture.Dispose();
+                depthTexture = CreateDepthTexture(device, frameWidth, frameHeight);
+                depthView = depthTexture.CreateView();
+                vertexBuffer.Dispose();
+                vertexBuffer = UploadVertices(device, request, frameWidth, frameHeight);
             }
 
             var acquired = surface.GetCurrentTexture();
+
             // Brew's NeedsReconfigure wraps around on the uint enum (SuccessOptimal reports as
             // needing a reconfigure), so the statuses are compared explicitly instead.
             if (acquired.Status is WGPUSurfaceGetCurrentTextureStatus.Outdated or WGPUSurfaceGetCurrentTextureStatus.Lost)
             {
                 // The surface output must be released before the surface is reconfigured.
                 acquired.Texture.Dispose();
-                surface.Configure(device, format, TextureUsage.RenderAttachment, width, height);
+                surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight);
                 continue;
             }
 
@@ -137,7 +150,7 @@ public static class WindowedRenderer
             encoder.Dispose();
             acquired.Texture.Dispose();
 
-            onFrame?.Invoke(presented);
+            onFrame?.Invoke(presented, window);
             presented++;
 
             if (frames > 0 && presented >= frames)
@@ -146,8 +159,35 @@ public static class WindowedRenderer
             }
         }
 
+        vertexBuffer.Dispose();
+        depthView.Dispose();
+        depthTexture.Dispose();
+        indexBuffer.Dispose();
+
         return format;
     }
+
+    /// <summary>Uploads clip-space vertices built for the current framebuffer aspect ratio.</summary>
+    private static WgpuBuffer UploadVertices(Device device, FrameRequest request, uint width, uint height) =>
+        device.CreateBufferInit(
+            new BufferInitDescriptor { Usage = BufferUsage.Vertex },
+            ClipSpaceTransform.Build(request, CameraMath.BuildViewProjection(
+                request.CameraPosition,
+                request.CameraTarget,
+                request.FieldOfViewDegrees,
+                (int)width,
+                (int)height)).AsSpan());
+
+    private static Texture CreateDepthTexture(Device device, uint width, uint height) =>
+        device.CreateTexture(new TextureDescriptor
+        {
+            Size = new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 },
+            MipLevelCount = 1,
+            SampleCount = 1,
+            Dimension = WGPUTextureDimension._2D,
+            Format = WGPUTextureFormat.Depth32Float,
+            Usage = TextureUsage.RenderAttachment
+        });
 
     private static SurfaceSource ToSurfaceSource(NativeSurfaceSource source) => source.Tag switch
     {

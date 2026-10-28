@@ -62,14 +62,28 @@
 
 ### 5.1 窗口呈现
 
-`WindowedRenderer.Run(request, frames)` 打开窗口、按 framebuffer 物理像素配置交换链、每帧清屏并绘制同一批次后 `Present()`。截图仍由离屏路径产出（交换链纹理不保证可拷贝）。平台句柄由 `WindowHost` 统一给出，渲染器只消费 `NativeSurfaceSource`。
+`WindowedRenderer.Run(request, frames, maxDuration, onFrame)` 打开窗口、按 framebuffer 物理像素配置交换链、每帧清屏并绘制同一批次后 `Present()`。截图仍由离屏路径产出（交换链纹理不保证可拷贝）。平台句柄由 `WindowHost` 统一给出，渲染器只消费 `NativeSurfaceSource`。
+
+**尺寸相关的三件事一起重建**：交换链配置、深度纹理、顶点缓冲（裁剪空间顶点烘焙了宽高比）。任一者在 framebuffer 尺寸变化时不同步，就会出现拉伸、深度错位或每帧 `Outdated`。相机投影统一用 `CameraMath.BuildViewProjection(eye, target, fov, width, height)` 的**像素重载**，与交换链取同一个尺寸源。
+
+**两套库的接口约定**（换掉任一方时的对照清单）：
+
+| 项 | 约定 | 违反的后果 |
+| --- | --- | --- |
+| 窗口图形 API | 必须是 `GraphicsAPI.None`（不建 GL/Vulkan 上下文） | 两套图形栈争用同一窗口 |
+| 尺寸来源 | 一律 framebuffer 物理像素，不用逻辑尺寸 | DPI 缩放下每帧 `Outdated`、画面不上屏 |
+| 句柄形态 | Win32 `(Hwnd, HInstance)` / X11 `(Display, Window)` / Wayland `(Display, Surface)` / macOS `MetalLayer` | 表面创建失败或崩溃 |
+| 表面输出生命周期 | 重配前必须先释放已获取的纹理 | wgpu-native 直接 abort |
+| 纹理用途 | 交换链纹理只当渲染目标，不做拷贝源 | 截图走离屏路径的原因 |
+| 表面状态判定 | 显式比较 `Outdated` / `Lost`，不用 `NeedsReconfigure` | `SuccessOptimal` 被误判，无限重配 |
 
 ## 6. 当前限制
 
 - 无纹理：颜色由方块状态 id 哈希得到，稳定但不代表材质。
 - 无光照传播：`LightData` 已解析但只统计数量，未参与着色。
 - 无背面剔除：`CullMode.None`，靠深度测试保证结果正确，代价是多余的片段着色。
-- 窗口只有呈现：无输入、无 resize 事件；帧循环是"呈现 N 帧后关闭"。
+- 窗口只有呈现：无输入系统；帧循环是"呈现 N 帧 / 到点关闭"，尚未接入正式主循环。
+- resize 已支持（交换链 + 深度 + 顶点一起重建），但只做了被动跟随，没有最小尺寸、纵横比锁定等策略。
 - 每帧重建设备与管线（未做资源复用）。
 - 网格未合批优化：每个非空气方块最多 6 个四边形，未做贪婪合并。
 
@@ -90,3 +104,4 @@
 | 集成 | `launcher frame local` | 本地合成世界出图（不依赖网络） |
 | 集成 | `launcher frame replay <file>` | 用已捕获的真实区块包回放，验证"真实数据能画出来" |
 | 集成 | `launcher window <address>` / `window local` | 窗口呈现真实世界（180 帧，BGRA8UnormSrgb）并落盘 PNG |
+| 集成 | `MC_WINDOW_SELFRESIZE=640x360 launcher window local` | 第 30 帧时窗口自缩到 640×360，验证交换链/深度/顶点三者一起重建 |
