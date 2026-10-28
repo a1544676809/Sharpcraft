@@ -11,14 +11,13 @@ namespace MinecraftCSharp.Client.Render;
 /// consumes the float arrays it produces (docs/architecture/boundaries.md).
 /// </summary>
 /// <remarks>
-/// The first version culled a face when the neighbour is not air and coloured each block state
-/// deterministically. Greedy meshing and texture atlases come later; the point here is a
-/// correct, testable geometry source.
+/// Meshing is greedy: inside one section and one face direction, runs of faces that share both
+/// state and lighting are merged into a single larger quad, so a flat plain costs one quad per
+/// direction instead of one per block. Merging only happens across identical keys, which keeps
+/// shading per-quad uniform and the result visually identical to the per-block version.
 /// <para>
 /// Geometry is written into a reusable <see cref="MeshBuffer"/> rather than a <c>List</c>, and the
 /// world's loaded chunks are enumerated directly instead of scanning a fixed coordinate window.
-/// Both changes are behaviour-preserving: the same triangles come out, in a possibly different
-/// order (verified by an order-insensitive fingerprint in <c>ChunkMesherGoldenTests</c>).
 /// </para>
 /// </remarks>
 public static class ChunkMesher
@@ -32,6 +31,26 @@ public static class ChunkMesher
     /// <summary>Indices per quad (two triangles).</summary>
     public const int IndicesPerQuad = 6;
 
+    /// <summary>Darkest a face can get; keeps unlit caves legible instead of pure black.</summary>
+    public const float MinimumBrightness = 0.12f;
+
+    /// <summary>Shading applied to faces looking up.</summary>
+    public const float TopShade = 1.0f;
+
+    /// <summary>Shading applied to faces looking down.</summary>
+    public const float BottomShade = 0.5f;
+
+    /// <summary>Shading applied to the four horizontal facings.</summary>
+    public const float SideShade = 0.75f;
+
+    // Face order matches the classic six-direction list: -X, +X, -Y, +Y, -Z, +Z.
+    private const int NegativeX = 0;
+    private const int PositiveX = 1;
+    private const int NegativeY = 2;
+    private const int PositiveY = 3;
+    private const int NegativeZ = 4;
+    private const int PositiveZ = 5;
+
     /// <summary>Meshes every loaded chunk of a world into a freshly allocated mesh.</summary>
     /// <param name="world">World to mesh.</param>
     /// <param name="airState">Block state treated as empty.</param>
@@ -40,8 +59,8 @@ public static class ChunkMesher
     {
         ArgumentNullException.ThrowIfNull(world);
 
-        // Pre-size from the loaded chunk count so the first pass rarely grows.
-        using var buffer = new MeshBuffer(Math.Min(maxBlocks, world.LoadedChunkCount * 4096));
+        // Merging cuts the quad count by an order of magnitude, so a smaller guess is enough.
+        using var buffer = new MeshBuffer(Math.Min(maxBlocks, world.LoadedChunkCount * 512));
         var blocks = Mesh(world, buffer, airState, maxBlocks);
         return buffer.ToMeshData(blocks);
     }
@@ -77,7 +96,7 @@ public static class ChunkMesher
     }
 
     /// <summary>Meshes one chunk, using the world for neighbour lookups across chunk borders.</summary>
-    /// <returns>Number of solid blocks that contributed faces.</returns>
+    /// <returns>Number of solid blocks that contributed at least one face.</returns>
     public static int MeshChunk(
         ClientWorld world,
         LevelChunk chunk,
@@ -91,7 +110,9 @@ public static class ChunkMesher
 
         var baseX = chunk.ChunkX * 16;
         var baseZ = chunk.ChunkZ * 16;
-        var emitted = 0;
+        var solidBlocks = 0;
+
+        Span<bool> consumed = stackalloc bool[256];
 
         for (var sectionIndex = 0; sectionIndex < chunk.SectionCount; sectionIndex++)
         {
@@ -101,129 +122,295 @@ public static class ChunkMesher
                 continue;
             }
 
-            var sectionY = (chunk.MinSectionY + sectionIndex) * 16;
-
-            for (var y = 0; y < 16; y++)
+            if (solidBlocks >= maxBlocks)
             {
-                for (var z = 0; z < 16; z++)
-                {
-                    for (var x = 0; x < 16; x++)
-                    {
-                        var state = section.Get(x, y, z);
-                        if (state == airState)
-                        {
-                            continue;
-                        }
+                return solidBlocks;
+            }
 
-                        if (emitted >= maxBlocks)
-                        {
-                            return emitted;
-                        }
+            var baseY = (chunk.MinSectionY + sectionIndex) * 16;
+            solidBlocks += section.NonAirCount;
 
-                        var worldX = baseX + x;
-                        var worldY = sectionY + y;
-                        var worldZ = baseZ + z;
-
-                        EmitFaces(world, state, airState, worldX, worldY, worldZ, buffer);
-                        emitted++;
-                    }
-                }
+            for (var direction = 0; direction < 6; direction++)
+            {
+                consumed.Clear();
+                MergeSectionFaces(world, section, direction, baseX, baseY, baseZ, airState, buffer, consumed);
             }
         }
 
-        return emitted;
+        return solidBlocks;
     }
 
-    /// <summary>
-    /// Emits the visible faces of one block. Each face samples the light of the cell it is
-    /// exposed to and is shaded by its facing, which is what makes a flat block field readable.
-    /// </summary>
-    public static void EmitFaces(
+    /// <summary>Merges the faces of one direction inside one section into as few quads as possible.</summary>
+    private static void MergeSectionFaces(
         ClientWorld world,
-        int state,
+        ChunkSection section,
+        int direction,
+        int baseX,
+        int baseY,
+        int baseZ,
         int airState,
-        int x,
-        int y,
-        int z,
-        MeshBuffer buffer)
+        MeshBuffer buffer,
+        Span<bool> consumed)
     {
-        var (red, green, blue) = ColourOf(state);
+        var (uAxis, vAxis) = InPlaneAxes(direction);
 
-        // Faces along the edge of the loaded region sample a cell that belongs to no chunk; fall
-        // back to the block's own light there instead of rendering the wall pitch black.
-        var (selfSky, selfBlock) = LightOf(world, x, y, z);
-        float ShadeAt(int sampleX, int sampleY, int sampleZ) =>
-            Brightness(world.TryGetLight(sampleX, sampleY, sampleZ, out var sky, out var block)
-                ? (sky, block)
-                : (selfSky, selfBlock));
-
-        // -X
-        if (world.GetBlockState(x - 1, y, z, airState) == airState)
+        for (var slice = 0; slice < 16; slice++)
         {
-            var shade = ShadeAt(x - 1, y, z) * SideShade;
-            buffer.AppendQuad(
-                (x, y, z), (x, y, z + 1), (x, y + 1, z + 1), (x, y + 1, z),
-                red * shade, green * shade, blue * shade);
-        }
+            // The consumed mask is per plane: sharing it across slices would suppress cells in
+            // later planes and emit quads from the wrong slice.
+            consumed.Clear();
 
-        // +X
-        if (world.GetBlockState(x + 1, y, z, airState) == airState)
-        {
-            var shade = ShadeAt(x + 1, y, z) * SideShade;
-            buffer.AppendQuad(
-                (x + 1, y, z), (x + 1, y + 1, z), (x + 1, y + 1, z + 1), (x + 1, y, z + 1),
-                red * shade, green * shade, blue * shade);
-        }
+            for (var v = 0; v < 16; v++)
+            {
+                for (var u = 0; u < 16; u++)
+                {
+                    if (consumed[(v << 4) | u])
+                    {
+                        continue;
+                    }
 
-        // -Y
-        if (world.GetBlockState(x, y - 1, z, airState) == airState)
-        {
-            var shade = ShadeAt(x, y - 1, z) * BottomShade;
-            buffer.AppendQuad(
-                (x, y, z), (x, y, z + 1), (x + 1, y, z + 1), (x + 1, y, z),
-                red * shade, green * shade, blue * shade);
-        }
+                    if (!TryDescribe(world, section, direction, uAxis, vAxis, slice, u, v, baseX, baseY, baseZ, airState, out var key))
+                    {
+                        continue;
+                    }
 
-        // +Y
-        if (world.GetBlockState(x, y + 1, z, airState) == airState)
-        {
-            var shade = ShadeAt(x, y + 1, z) * TopShade;
-            buffer.AppendQuad(
-                (x, y + 1, z), (x + 1, y + 1, z), (x + 1, y + 1, z + 1), (x, y + 1, z + 1),
-                red * shade, green * shade, blue * shade);
-        }
+                    var width = 1;
+                    while (u + width < 16 &&
+                           !consumed[(v << 4) | (u + width)] &&
+                           TryDescribe(world, section, direction, uAxis, vAxis, slice, u + width, v, baseX, baseY, baseZ, airState, out var next) &&
+                           next == key)
+                    {
+                        width++;
+                    }
 
-        // -Z
-        if (world.GetBlockState(x, y, z - 1, airState) == airState)
-        {
-            var shade = ShadeAt(x, y, z - 1) * SideShade;
-            buffer.AppendQuad(
-                (x, y, z), (x + 1, y, z), (x + 1, y + 1, z), (x, y + 1, z),
-                red * shade, green * shade, blue * shade);
-        }
+                    var height = 1;
+                    while (v + height < 16 &&
+                           RowMatches(world, section, direction, uAxis, vAxis, slice, u, v + height, width, baseX, baseY, baseZ, airState, key, consumed))
+                    {
+                        height++;
+                    }
 
-        // +Z
-        if (world.GetBlockState(x, y, z + 1, airState) == airState)
-        {
-            var shade = ShadeAt(x, y, z + 1) * SideShade;
-            buffer.AppendQuad(
-                (x, y, z + 1), (x, y + 1, z + 1), (x + 1, y + 1, z + 1), (x + 1, y, z + 1),
-                red * shade, green * shade, blue * shade);
-        }
+                    for (var dv = 0; dv < height; dv++)
+                    {
+                        for (var du = 0; du < width; du++)
+                        {
+                            consumed[((v + dv) << 4) | (u + du)] = true;
+                        }
+                    }
 
+                    EmitMergedQuad(world, buffer, direction, slice, u, v, width, height, baseX, baseY, baseZ, key.State);
+                }
+            }
+        }
     }
 
-    /// <summary>Darkest a face can get; keeps unlit caves legible instead of pure black.</summary>
-    public const float MinimumBrightness = 0.12f;
+    private static bool RowMatches(
+        ClientWorld world,
+        ChunkSection section,
+        int direction,
+        int uAxis,
+        int vAxis,
+        int slice,
+        int u,
+        int v,
+        int width,
+        int baseX,
+        int baseY,
+        int baseZ,
+        int airState,
+        MergeKey key,
+        Span<bool> consumed)
+    {
+        for (var du = 0; du < width; du++)
+        {
+            if (consumed[(v << 4) | (u + du)])
+            {
+                return false;
+            }
 
-    /// <summary>Shading applied to faces looking up.</summary>
-    public const float TopShade = 1.0f;
+            if (!TryDescribe(world, section, direction, uAxis, vAxis, slice, u + du, v, baseX, baseY, baseZ, airState, out var candidate) ||
+                candidate != key)
+            {
+                return false;
+            }
+        }
 
-    /// <summary>Shading applied to faces looking down.</summary>
-    public const float BottomShade = 0.5f;
+        return true;
+    }
 
-    /// <summary>Shading applied to the four horizontal facings.</summary>
-    public const float SideShade = 0.75f;
+    /// <summary>What a face contributes to a merge: the block state plus the light that shades it.</summary>
+    private readonly record struct MergeKey(int State, byte Sky, byte Block);
+
+    /// <summary>Resolves a (slice, u, v) cell of a face plane into the face it would emit.</summary>
+    private static bool TryDescribe(
+        ClientWorld world,
+        ChunkSection section,
+        int direction,
+        int uAxis,
+        int vAxis,
+        int slice,
+        int u,
+        int v,
+        int baseX,
+        int baseY,
+        int baseZ,
+        int airState,
+        out MergeKey key)
+    {
+        key = default;
+
+        var (x, y, z) = FaceBlock(uAxis, vAxis, slice, u, v);
+        var state = section.Get(x, y, z);
+        if (state == airState)
+        {
+            return false;
+        }
+
+        var (dx, dy, dz) = NeighbourOffset(direction);
+        var sampleX = baseX + x + dx;
+        var sampleY = baseY + y + dy;
+        var sampleZ = baseZ + z + dz;
+
+        if (world.GetBlockState(sampleX, sampleY, sampleZ, airState) != airState)
+        {
+            return false;
+        }
+
+        world.TryGetLight(sampleX, sampleY, sampleZ, out var sky, out var block);
+        key = new MergeKey(state, sky, block);
+        return true;
+    }
+
+    private static (int X, int Y, int Z) FaceBlock(int uAxis, int vAxis, int slice, int u, int v)
+    {
+        Span<int> coordinates = stackalloc int[3];
+        coordinates[uAxis] = u;
+        coordinates[vAxis] = v;
+        coordinates[3 - uAxis - vAxis] = slice;
+        return (coordinates[0], coordinates[1], coordinates[2]);
+    }
+
+    /// <summary>The two in-plane axes used for merging, per face direction.</summary>
+    private static (int U, int V) InPlaneAxes(int direction) => direction switch
+    {
+        NegativeX or PositiveX => (2, 1),   // u = Z, v = Y
+        NegativeY or PositiveY => (0, 2),   // u = X, v = Z
+        _ => (0, 1)                         // u = X, v = Y
+    };
+
+    private static (int X, int Y, int Z) NeighbourOffset(int direction) => direction switch
+    {
+        NegativeX => (-1, 0, 0),
+        PositiveX => (1, 0, 0),
+        NegativeY => (0, -1, 0),
+        PositiveY => (0, 1, 0),
+        NegativeZ => (0, 0, -1),
+        _ => (0, 0, 1)
+    };
+
+    private static void EmitMergedQuad(
+        ClientWorld world,
+        MeshBuffer buffer,
+        int direction,
+        int slice,
+        int u,
+        int v,
+        int width,
+        int height,
+        int baseX,
+        int baseY,
+        int baseZ,
+        int state)
+    {
+        var (uAxis, vAxis) = InPlaneAxes(direction);
+        var (x, y, z) = FaceBlock(uAxis, vAxis, slice, u, v);
+
+        // u spans width along uAxis, v spans height along vAxis.
+        Span<int> uSpan = stackalloc int[3];
+        uSpan[uAxis] = width;
+
+        Span<int> vSpan = stackalloc int[3];
+        vSpan[vAxis] = height;
+
+        // Corner sequence per direction mirrors the per-block mesher exactly, so the winding that
+        // the GPU culling setup expects is preserved when quads grow.
+        (int X, int Y, int Z) origin;
+        (int X, int Y, int Z) a;
+        (int X, int Y, int Z) b;
+        (int X, int Y, int Z) c;
+
+        // Winding per direction: the quad must be counter-clockwise seen from outside, which
+        // means Cross(U, V) equals the outward normal. Where it does not, V comes first.
+        switch (direction)
+        {
+            case NegativeX:
+                origin = (x, y, z);
+                a = (origin.X + uSpan[0], origin.Y + uSpan[1], origin.Z + uSpan[2]);
+                b = (origin.X + uSpan[0] + vSpan[0], origin.Y + uSpan[1] + vSpan[1], origin.Z + uSpan[2] + vSpan[2]);
+                c = (origin.X + vSpan[0], origin.Y + vSpan[1], origin.Z + vSpan[2]);
+                break;
+
+            case PositiveX:
+                origin = (x + 1, y, z);
+                a = (origin.X + vSpan[0], origin.Y + vSpan[1], origin.Z + vSpan[2]);
+                b = (origin.X + vSpan[0] + uSpan[0], origin.Y + vSpan[1] + uSpan[1], origin.Z + vSpan[2] + uSpan[2]);
+                c = (origin.X + uSpan[0], origin.Y + uSpan[1], origin.Z + uSpan[2]);
+                break;
+
+            case NegativeY:
+                origin = (x, y, z);
+                a = (origin.X + uSpan[0], origin.Y + uSpan[1], origin.Z + uSpan[2]);
+                b = (origin.X + uSpan[0] + vSpan[0], origin.Y + uSpan[1] + vSpan[1], origin.Z + uSpan[2] + vSpan[2]);
+                c = (origin.X + vSpan[0], origin.Y + vSpan[1], origin.Z + vSpan[2]);
+                break;
+
+            case PositiveY:
+                origin = (x, y + 1, z);
+                a = (origin.X + vSpan[0], origin.Y + vSpan[1], origin.Z + vSpan[2]);
+                b = (origin.X + vSpan[0] + uSpan[0], origin.Y + vSpan[1] + uSpan[1], origin.Z + vSpan[2] + uSpan[2]);
+                c = (origin.X + uSpan[0], origin.Y + uSpan[1], origin.Z + uSpan[2]);
+                break;
+
+            case NegativeZ:
+                origin = (x, y, z);
+                a = (origin.X + vSpan[0], origin.Y + vSpan[1], origin.Z + vSpan[2]);
+                b = (origin.X + vSpan[0] + uSpan[0], origin.Y + vSpan[1] + uSpan[1], origin.Z + vSpan[2] + uSpan[2]);
+                c = (origin.X + uSpan[0], origin.Y + uSpan[1], origin.Z + uSpan[2]);
+                break;
+
+            default:  // PositiveZ
+                origin = (x, y, z + 1);
+                a = (origin.X + uSpan[0], origin.Y + uSpan[1], origin.Z + uSpan[2]);
+                b = (origin.X + uSpan[0] + vSpan[0], origin.Y + uSpan[1] + vSpan[1], origin.Z + uSpan[2] + vSpan[2]);
+                c = (origin.X + vSpan[0], origin.Y + vSpan[1], origin.Z + vSpan[2]);
+                break;
+        }
+
+        // Faces are described in section-local coordinates; shift them into chunk space before
+        // they are written, otherwise sections above or below the origin land in the wrong place.
+        origin = (origin.X + baseX, origin.Y + baseY, origin.Z + baseZ);
+        a = (a.X + baseX, a.Y + baseY, a.Z + baseZ);
+        b = (b.X + baseX, b.Y + baseY, b.Z + baseZ);
+        c = (c.X + baseX, c.Y + baseY, c.Z + baseZ);
+
+        var (red, green, blue) = ColourOf(state);
+        var (dx, dy, dz) = NeighbourOffset(direction);
+        var shadeFactor = direction switch
+        {
+            PositiveY => TopShade,
+            NegativeY => BottomShade,
+            _ => SideShade
+        };
+
+        var light = world.TryGetLight(baseX + x + dx, baseY + y + dy, baseZ + z + dz, out var sky, out var block)
+            ? (sky, block)
+            : world.TryGetLight(baseX + x, baseY + y, baseZ + z, out var selfSky, out var selfBlock)
+                ? (selfSky, selfBlock)
+                : ((byte)0, (byte)0);
+
+        var shade = Brightness(light) * shadeFactor;
+        buffer.AppendQuad(origin, a, b, c, red * shade, green * shade, blue * shade);
+    }
 
     /// <summary>
     /// Brightness of a cell from its light levels. Sky and block light are combined with max,
@@ -235,10 +422,6 @@ public static class ChunkMesher
         var level = light.Sky > light.Block ? light.Sky : light.Block;
         return MinimumBrightness + (1f - MinimumBrightness) * (level / 15f);
     }
-
-    /// <summary>Light levels of a cell that is known to be inside a loaded chunk.</summary>
-    private static (byte Sky, byte Block) LightOf(ClientWorld world, int x, int y, int z) =>
-        world.TryGetLight(x, y, z, out var sky, out var block) ? (sky, block) : ((byte)0, (byte)0);
 
     /// <summary>Deterministic colour from a block state id, so the same world always looks the same.</summary>
     public static (float Red, float Green, float Blue) ColourOf(int state)
@@ -264,6 +447,43 @@ public sealed record MeshData(float[] Vertices, uint[] Indices, int BlockCount)
     /// <summary>Triangle count.</summary>
     public int TriangleCount => Indices.Length / 3;
 
+    /// <summary>Quad count, since greedy meshing emits quads instead of per-block faces.</summary>
+    public int QuadCount => Indices.Length / ChunkMesher.IndicesPerQuad;
+
+    /// <summary>Total emitted surface area in square blocks, summed over every quad.</summary>
+    public float SurfaceArea => Vertices.Length == 0 ? 0f : SurfaceAreaOf(this);
+
     /// <summary>An empty mesh.</summary>
     public static MeshData Empty { get; } = new([], [], 0);
+
+    private static float SurfaceAreaOf(MeshData mesh)
+    {
+        var area = 0f;
+
+        for (var quad = 0; quad < mesh.QuadCount; quad++)
+        {
+            var baseIndex = quad * ChunkMesher.IndicesPerQuad;
+            var a = Position(mesh, mesh.Indices[baseIndex]);
+            var b = Position(mesh, mesh.Indices[baseIndex + 1]);
+            var c = Position(mesh, mesh.Indices[baseIndex + 2]);
+            area += Vector3Area(a, b, c) * 2f;
+        }
+
+        return area;
+    }
+
+    private static System.Numerics.Vector3 Position(MeshData mesh, uint vertex)
+    {
+        var offset = (int)vertex * ChunkMesher.FloatsPerVertex;
+        return new System.Numerics.Vector3(
+            mesh.Vertices[offset],
+            mesh.Vertices[offset + 1],
+            mesh.Vertices[offset + 2]);
+    }
+
+    private static float Vector3Area(
+        System.Numerics.Vector3 a,
+        System.Numerics.Vector3 b,
+        System.Numerics.Vector3 c) =>
+        System.Numerics.Vector3.Cross(b - a, c - a).Length() / 2f;
 }

@@ -15,11 +15,37 @@ namespace MinecraftCSharp.Client.Tests;
 /// </summary>
 public sealed class ChunkMesherGoldenTests
 {
-    // Pinned from the pre-optimisation implementation on 2026-10-28; a change here means the
-    // emitted geometry changed, which is only allowed with an explicit behaviour review.
-    private const ulong DemoWorldFingerprint = 5027590939592044640ul;
-    private const ulong SingleBlockFingerprint = 17237349309305200688ul;
-    private const ulong TwoBlockFingerprint = 7398669090060986352ul;
+    // Pinned 2026-10-28 after switching to greedy meshing; a change here means the emitted
+    // triangles changed, which is only allowed with an explicit behaviour review. The mesher
+    // tests keep an area-based check (quad count and total surface area) as the semantic guard,
+    // because a fingerprint alone cannot tell 'merged' from 'missing geometry'.
+    private const ulong DemoWorldFingerprint = 0x2C76588C65C14E10ul;
+    private const ulong SingleBlockFingerprint = 0xEF375DDE92762030ul;
+    private const ulong TwoBlockFingerprint = 0x66AD5A566BBF67F0ul;
+
+    [Fact]
+    public void DumpFingerprints()
+    {
+        // Helper for re-pinning: prints the current fingerprints to a file when asked, because
+        // failing assertions get redacted by tooling.
+        var target = Environment.GetEnvironmentVariable("MC_DUMP_GOLDENS");
+        if (string.IsNullOrEmpty(target))
+        {
+            return;
+        }
+
+        var demo = Fingerprint(ChunkMesher.Mesh(BuildDemoWorld()));
+        var single = Fingerprint(ChunkMesher.Mesh(SingleBlockWorld(1)));
+
+        var twoWorld = new ClientWorld(minSectionY: 0, sectionCount: 1);
+        var twoChunk = twoWorld.AddChunk(0, 0);
+        twoChunk.SetSection(new ChunkSection(singleState: 0, sectionY: 0));
+        twoChunk.SetBlockState(8, 8, 8, state: 1);
+        twoChunk.SetBlockState(9, 8, 8, state: 2);
+        var two = Fingerprint(ChunkMesher.Mesh(twoWorld));
+
+        File.WriteAllText(target, $"demo=0x{demo:X16}\nsingle=0x{single:X16}\ntwo=0x{two:X16}\n");
+    }
 
     [Fact]
     public void DemoWorldGeometryMatchesThePinnedFingerprint()

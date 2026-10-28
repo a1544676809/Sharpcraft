@@ -71,7 +71,7 @@ public static class OffscreenRenderer
             "fs_main"u8,
             [new ColorTargetState(WGPUTextureFormat.RGBA8Unorm)],
             layout: default,
-            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CW },
+            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
             multisample: MultisampleState.Default,
             depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float),
             vertexStride: (ulong)ClipSpaceTransform.VertexStride,

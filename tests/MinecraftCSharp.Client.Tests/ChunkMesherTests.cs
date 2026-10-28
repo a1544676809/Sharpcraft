@@ -34,6 +34,8 @@ public sealed class ChunkMesherTests
         Assert.Equal(6 * ChunkMesher.VerticesPerQuad, mesh.VertexCount);
         Assert.Equal(6 * ChunkMesher.IndicesPerQuad, mesh.Indices.Length);
         Assert.Equal(12, mesh.TriangleCount);
+        Assert.Equal(6, mesh.QuadCount);
+        Assert.Equal(6f, mesh.SurfaceArea, 3);
     }
 
     [Fact]
@@ -47,9 +49,11 @@ public sealed class ChunkMesherTests
 
         var mesh = ChunkMesher.Mesh(world);
 
-        // Two blocks, ten faces: the two touching faces are hidden.
+        // Two blocks, ten unit faces: the two touching faces are hidden, and greedy meshing merges
+        // the remaining coplanar pairs into four double-size quads plus two single ones.
         Assert.Equal(2, mesh.BlockCount);
-        Assert.Equal(10 * ChunkMesher.VerticesPerQuad, mesh.VertexCount);
+        Assert.Equal(6, mesh.QuadCount);
+        Assert.Equal(10f, mesh.SurfaceArea, 3);
     }
 
     [Fact]
@@ -68,7 +72,7 @@ public sealed class ChunkMesherTests
 
         // The faces at x=16 are shared and must be culled even though they live in different chunks.
         Assert.Equal(2, mesh.BlockCount);
-        Assert.Equal(10 * ChunkMesher.VerticesPerQuad, mesh.VertexCount);
+        Assert.Equal(10f, mesh.SurfaceArea, 3);
     }
 
     [Fact]
@@ -86,19 +90,27 @@ public sealed class ChunkMesherTests
     }
 
     [Fact]
-    public void BlockCapStopsMeshing()
+    public void BlockCapStopsMeshingBeforeTheNextSection()
     {
-        var world = new ClientWorld(minSectionY: 0, sectionCount: 1);
+        var world = new ClientWorld(minSectionY: 0, sectionCount: 2);
         var chunk = world.AddChunk(0, 0);
-        chunk.SetSection(new ChunkSection(singleState: 0, sectionY: 0));
+        var lower = new ChunkSection(singleState: 0, sectionY: 0);
+        var upper = new ChunkSection(singleState: 0, sectionY: 1);
+        chunk.SetSection(lower);
+        chunk.SetSection(upper);
         for (var i = 0; i < 8; i++)
         {
-            chunk.SetBlockState(i, 0, 0, state: 1);
+            lower.Set(i, 0, 0, 1);
+            upper.Set(i, 0, 0, 1);
         }
 
-        var mesh = ChunkMesher.Mesh(world, maxBlocks: 3);
+        // The cap is section-granular: a merged quad can span many blocks, so the mesher stops
+        // before a section rather than mid-quad.
+        var capped = ChunkMesher.Mesh(world, maxBlocks: 4);
+        var full = ChunkMesher.Mesh(world);
 
-        Assert.Equal(3, mesh.BlockCount);
+        Assert.Equal(8, capped.BlockCount);
+        Assert.True(capped.SurfaceArea < full.SurfaceArea, "the cap must drop the second section");
     }
 
     [Fact]

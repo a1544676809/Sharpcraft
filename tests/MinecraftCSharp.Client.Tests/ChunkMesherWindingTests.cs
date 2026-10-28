@@ -14,14 +14,14 @@ namespace MinecraftCSharp.Client.Tests;
 /// </summary>
 public sealed class ChunkMesherWindingTests
 {
-    private static readonly (Vector3 Normal, int FacesAtStart)[] FaceOrder =
+    private static readonly Vector3[] FaceOrder =
     [
-        (new Vector3(-1, 0, 0), 0),
-        (new Vector3(1, 0, 0), 1),
-        (new Vector3(0, -1, 0), 2),
-        (new Vector3(0, 1, 0), 3),
-        (new Vector3(0, 0, -1), 4),
-        (new Vector3(0, 0, 1), 5)
+        new Vector3(-1, 0, 0),
+        new Vector3(1, 0, 0),
+        new Vector3(0, -1, 0),
+        new Vector3(0, 1, 0),
+        new Vector3(0, 0, -1),
+        new Vector3(0, 0, 1)
     ];
 
     [Fact]
@@ -36,17 +36,17 @@ public sealed class ChunkMesherWindingTests
 
         Assert.Equal(6 * ChunkMesher.IndicesPerQuad, mesh.Indices.Length);
 
-        // Each quad contributes two triangles; both must agree with the outward normal.
+        // Quads are emitted in the classic order -X, +X, -Y, +Y, -Z, +Z; each quad's Newell normal
+        // must point along that face's outward direction, and both of its triangles must agree.
         for (var quad = 0; quad < 6; quad++)
         {
+            var expected = FaceOrder[quad];
             var normal = NewellNormal(mesh, quad * 4);
-            var expected = FaceOrder.Single(face => Vector3.Dot(normal, face.Normal) > 0.5f).Normal;
 
             Assert.True(
                 Vector3.Dot(normal, expected) > 0.5f,
                 $"quad {quad} points {normal} but the face should point {expected}");
 
-            // Both triangles of the quad must wind the same way as the quad itself.
             for (var triangle = 0; triangle < 2; triangle++)
             {
                 var offset = (quad * ChunkMesher.IndicesPerQuad) + (triangle * 3);
@@ -55,6 +55,39 @@ public sealed class ChunkMesherWindingTests
                     Vector3.Dot(winding, expected) > 0.5f,
                     $"quad {quad} triangle {triangle} winds towards {winding}, expected {expected}");
             }
+        }
+    }
+
+    [Fact]
+    public void MergedQuadsKeepTheSameWinding()
+    {
+        // A 4x4 slab merges its top and bottom faces into one quad each; winding must survive
+        // the merge, which the single-block test cannot prove.
+        var world = new ClientWorld(minSectionY: 0, sectionCount: 1);
+        var chunk = world.AddChunk(0, 0);
+        var section = new ChunkSection(singleState: 0, sectionY: 0);
+        chunk.SetSection(section);
+        for (var x = 0; x < 4; x++)
+        {
+            for (var z = 0; z < 4; z++)
+            {
+                section.Set(x, 0, z, 1);
+            }
+        }
+
+        var mesh = ChunkMesher.Mesh(world);
+
+        // Top and bottom are single merged quads; the four side strips are one quad each.
+        Assert.Equal(6, mesh.QuadCount);
+        Assert.Equal(16f + 16f + (4f * 4f), mesh.SurfaceArea, 3);
+
+        for (var quad = 0; quad < mesh.QuadCount; quad++)
+        {
+            var expected = FaceOrder[quad];
+            var normal = NewellNormal(mesh, quad * 4);
+            Assert.True(
+                Vector3.Dot(normal, expected) > 0.5f,
+                $"merged quad {quad} points {normal}, expected {expected}");
         }
     }
 

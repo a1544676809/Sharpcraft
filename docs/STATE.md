@@ -65,8 +65,9 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 25. 性能基线套件已落地：`benchmarks/MinecraftCSharp.Benchmarks`（自研计时，无额外依赖），实测 P50/P95 与分配量写入 `benchmarks/results/2026-10-28-baseline.md`，口径见 `docs/specs/performance-baseline.md`。当前最大瓶颈是网格生成（P95 152 ms / 14.8 MB 分配）。
 26. 几何路径零分配改造完成：`MeshBuffer`（ArrayPool）+ 遍历已加载区块 + `ClipSpaceTransform` 的 Span 重载。实测网格 P95 132.9→**22.2 ms**、分配 14.8 MB→**0**；变换 P50 1.89→1.47 ms、分配 4 MB→0。等效性由 `ChunkMesherGoldenTests` 的顺序无关指纹锁定。热路径此后一律使用池化重载。
 27. 光照与背面剔除已落地：`ChunkLight` 保存 nibble 光照，网格按"面朝向格光照 × 朝向系数（上 1.0 / 侧 0.75 / 下 0.5，下限 0.12）"着色；管线开启 `CullMode.Back` + `FrontFace.CW`（WebGPU 在 framebuffer 空间判定正面，只改 culling 会把可见面剔掉）。实测代价：网格 +13%。未做 AO 与平滑光照。
-28. 待你确认：`quality-attributes.md` QA-1 的阈值仍为 `[待定]`，建议值在 `performance-baseline.md` §5；确认后我把数值转成回归判定线。
-29. 下一步（M3 候选）：① 光照数组→顶点亮度；② 背面剔除与按区块合批；③ 帧循环接入输入与 resize；④ 跨平台窗口验收（R-011）。
+28. 贪婪合并完成：同段同朝向、状态与光照一致的面合并成矩形；真实世界三角形 110,868→**51,402**（-54%），CPU 网格生成 23.5→35.1 ms（+49%，换 GPU 每帧开销）。过程中修掉两个只有渲染才暴露的 bug：掩码需每切片重置、四边形坐标漏加段基址（表现为石层浮在地形上方）。绕序改为按 `Cross(U,V)==外法线` 推导的显式表，管线 `FrontFace` 相应改成 CCW。
+29. 待你确认：`quality-attributes.md` QA-1 的阈值仍为 `[待定]`，建议值在 `performance-baseline.md` §5；确认后我把数值转成回归判定线。
+30. 下一步（M3 候选）：① 光照数组→顶点亮度；② 背面剔除与按区块合批；③ 帧循环接入输入与 resize；④ 跨平台窗口验收（R-011）。
 ## 未提交改动 / 后台任务
 
 - 本次提交内容见下；无运行中的后台任务。
