@@ -18,6 +18,7 @@
 | [`common-primitives.md`](common-primitives.md) | Common 基础类型 | Common | 草稿 |
 | [`auth.md`](auth.md) | 认证链路（设备码优先） | 已评审 |
 | [`launcher.md`](launcher.md) | 启动器（认证/探测 CLI 切片） | 已评审 |
+| [`world.md`](world.md) | 客户端世界数据（不含渲染） | 已评审 |
 
 ## 当前进度
 
