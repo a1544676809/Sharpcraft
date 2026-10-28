@@ -31,7 +31,10 @@ public enum LauncherCommand
     Assets,
 
     /// <summary>Verify, pack, sign in, then start the client.</summary>
-    Launch
+    Launch,
+
+    /// <summary>List, add or remove accounts (docs/modules/accounts.md).</summary>
+    Accounts
 }
 
 /// <summary>Parsed command line.</summary>
@@ -52,8 +55,10 @@ public sealed record LauncherCommandLine(LauncherCommand Command, string? Target
           window <address>   collect chunks, then present them in a window (also writes the PNG)
           assets <jar> [<version-json>]
                              verify a client jar, then build or reuse its asset pack
-          launch <jar> <version-json>
+          launch <jar> <version-json> [--offline <name>]
                              verify, pack, sign in, then start the client
+          accounts [add-offline <name> | remove <name>]
+                             list accounts and whether offline login is available
           help               show this text
 
         The asset pack is written outside the repository, under the user's local app data,
@@ -104,11 +109,43 @@ public sealed record LauncherCommandLine(LauncherCommand Command, string? Target
                 return WithJar(LauncherCommand.Assets, args);
 
             case "launch":
-                return WithJar(LauncherCommand.Launch, args);
+                return WithLaunch(args);
+
+            case "accounts":
+                return new LauncherCommandLine(
+                    LauncherCommand.Accounts,
+                    string.Join(' ', args.Skip(1)),
+                    null);
 
             default:
                 return new LauncherCommandLine(LauncherCommand.Help, null, $"unknown command '{head}'");
         }
+    }
+
+    private static LauncherCommandLine WithLaunch(IReadOnlyList<string> args)
+    {
+        // launch <jar> <version-json> [--offline <name>]
+        if (args.Count < 3)
+        {
+            return new LauncherCommandLine(LauncherCommand.Launch, null, "launch needs <jar> <version-json>");
+        }
+
+        var target = args[1] + "|" + args[2];
+
+        if (args.Count == 3)
+        {
+            return new LauncherCommandLine(LauncherCommand.Launch, target, null);
+        }
+
+        if (args.Count == 5 && args[3] == "--offline")
+        {
+            return new LauncherCommandLine(LauncherCommand.Launch, target + "|" + args[4], null);
+        }
+
+        return new LauncherCommandLine(
+            LauncherCommand.Launch,
+            null,
+            "launch takes <jar> <version-json> and an optional --offline <name>");
     }
 
     private static LauncherCommandLine WithJar(LauncherCommand command, IReadOnlyList<string> args) =>

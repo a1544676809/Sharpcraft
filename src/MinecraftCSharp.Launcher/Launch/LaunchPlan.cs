@@ -35,7 +35,9 @@ public sealed record LaunchPlan(
             $"  game dir:    {GameDirectory}",
             $"  pack:        {PackPath}",
             $"  asset index: {AssetIndexId ?? "(none)"}",
-            $"  session:     {SessionFilePath} (token in file, not on the command line)",
+            string.IsNullOrEmpty(SessionFilePath)
+                ? "  session:     (none — offline launch, no token)"
+                : $"  session:     {SessionFilePath} (token in file, not on the command line)",
             "  arguments:"
         };
 

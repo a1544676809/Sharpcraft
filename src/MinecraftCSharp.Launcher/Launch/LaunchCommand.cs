@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Globalization;
 using MinecraftCSharp.Auth;
 using MinecraftCSharp.Common.Lifecycle;
+using MinecraftCSharp.Launcher.Accounts;
 using MinecraftCSharp.Launcher.Assets;
 using MinecraftCSharp.Launcher.Assets.Resolution;
 
@@ -33,6 +34,7 @@ public static class LaunchCommand
         string jarPath,
         string manifestPath,
         HttpClient http,
+        string? offlineName = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(jarPath);
@@ -111,6 +113,11 @@ public static class LaunchCommand
             }
         }
 
+        if (offlineName is not null)
+        {
+            return RunOffline(manifest, pack, assetsDirectory, offlineName);
+        }
+
         AuthenticationFlow.SignedIn signedIn;
         try
         {
@@ -182,6 +189,71 @@ public static class LaunchCommand
         }
 
         Console.WriteLine(plan.Describe());
+
+        if (Environment.GetEnvironmentVariable(DryRunVariable) is "1")
+        {
+            Console.WriteLine("[launch] dry run: client not started");
+            return 0;
+        }
+
+        return StartClient(plan);
+    }
+
+    /// <summary>
+    /// Offline launch: the gate from AGENTS.md principle 7.1 runs here, and the client is told to
+    /// skip online services. No token is produced or passed (docs/modules/accounts.md §11).
+    /// </summary>
+    private static int RunOffline(
+        VersionManifest manifest,
+        AssetPackResult pack,
+        string assetsDirectory,
+        string name)
+    {
+        (string Name, string Uuid) account;
+        try
+        {
+            account = AccountsCommand.ResolveOfflineAccount(name);
+        }
+        catch (InvalidOperationException exception)
+        {
+            Console.Error.WriteLine($"[launch] {exception.Message}");
+            return 4;
+        }
+
+        var gameDirectory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "MinecraftCSharp",
+            "instances",
+            manifest.Id);
+
+        var arguments = new List<string>
+        {
+            "--version", manifest.Id,
+            "--gameDir", gameDirectory,
+            "--assetsDir", assetsDirectory,
+            "--pack", pack.PackPath,
+            "--offlineDeveloperMode",
+            "--username", account.Name,
+            "--uuid", account.Uuid
+        };
+
+        if (!string.IsNullOrWhiteSpace(manifest.AssetIndexId))
+        {
+            arguments.Add("--assetIndex");
+            arguments.Add(manifest.AssetIndexId);
+        }
+
+        var plan = new LaunchPlan(
+            manifest.Id,
+            LaunchPlanBuilder.ResolveClientPath(),
+            arguments,
+            gameDirectory,
+            pack.PackPath,
+            manifest.AssetIndexId,
+            SessionFilePath: string.Empty);
+
+        Console.WriteLine(plan.Describe());
+        Console.WriteLine("[launch] offline session: no token is produced; the launcher approved this account");
 
         if (Environment.GetEnvironmentVariable(DryRunVariable) is "1")
         {

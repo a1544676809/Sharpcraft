@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 MinecraftCSharp contributors -->
 
-状态：[待评审]
+状态：[已评审]
 基线：Minecraft 26.3
 依据：AGENTS.md 原则 7.1；`docs/decisions/0006-offline-login-gating.md`
 最后更新：2026-10-28
@@ -43,7 +43,7 @@ AccountRecord
 ```
 
 - `Kind = Premium` 只由**官方认证成功**写入，用户不能手工添加（没有"导入正版账号"的入口）。
-- `Kind = Offline` 不能携带任何令牌字段；其会话令牌是一个固定哨兵值，客户端与服务端客户端代码 MUST 拒绝用它做在线鉴权。
+- `Kind = Offline` 不携带任何令牌字段：离线启动时**根本不给客户端传令牌**（与原版一致，见 §11）。
 
 ## 4. 闸门判定（唯一入口）
 
@@ -64,7 +64,8 @@ OfflineLoginGate.Evaluate(IReadOnlyList<AccountRecord> accounts) -> GateResult
 
 - MUST 复现同一规则，否则同一离线名在不同客户端/服务端会得到不同 UUID，玩家数据会对不上。
 - 名字校验：长度与字符集按原版档案名规则（3–16，`[A-Za-z0-9_]`）；不合法直接拒绝并给出原因。
-- 本地会话：`Username` = 输入名，`Uuid` = 派生值，`AccessToken` = 哨兵（见 §3），`VersionId` = 目标版本。
+- 启动形态：启动器传 `--offlineDeveloperMode --username <name> --uuid <派生值>`，**不传任何令牌参数**。
+- 由启动器显式传 `--uuid` 而不是让客户端自己算，是为了让"启动器算出的身份"与"客户端实际使用的身份"只有一处来源。
 
 ## 6. 持久化与防篡改（SHOULD 项）
 
@@ -83,7 +84,7 @@ OfflineLoginGate.Evaluate(IReadOnlyList<AccountRecord> accounts) -> GateResult
 | 离线名非法 | 拒绝并说明规则（长度 3–16、字符集），退出码 2 |
 | 账号文件缺失 | 视为空列表（离线不可用），不当作错误 |
 | 账号文件完整性校验失败 | 视为空列表 + 警告，要求重新登录正版账号 |
-| 离线账号尝试在线鉴权 | 哨兵令牌被服务端客户端拒绝；作为缺陷处理，MUST 有测试守住 |
+| 客户端收到离线启动 | 客户端**不判定合法性**，只按 `--offlineDeveloperMode` 关闭在线服务（与原版一致，见 §11） |
 | 同时存在多个正版与离线账号 | 允许切换；闸门只看"是否存在已验证正版账号" |
 
 ## 8. 命令契约（与 §3 的命令表衔接）
@@ -102,13 +103,40 @@ OfflineLoginGate.Evaluate(IReadOnlyList<AccountRecord> accounts) -> GateResult
 2. 删除最后一个正版账号后，同一进程内再次判定必须为不可用（证明没有缓存布尔值）。
 3. 离线 UUID 派生：对若干已知名字断言与 MD5-v3 规则一致，且大小写与首尾空格**不**被静默修正（原样参与派生）。
 4. 名字校验边界：2/3/16/17 字符、含空格/中文/连字符。
-5. 会话文件不含任何在线令牌字段或被写入哨兵值；断言离线会话无法通过"需要在线令牌"的校验路径。
+5. 离线启动参数中不含任何令牌（`--accessToken`、`--sessionFile` 都不得出现）；断言启动器产出的参数列表满足该约束。
 6. 完整性：篡改 `accounts.json` 任一字节后判定为不可用；HMAC 密钥缺失时同样不可用。
 7. 原子写：模拟中断（写临时文件后不重命名）不产生可用账号文件。
 
 ## 10. 验收标准
 
 - 有正版账号时 `accounts add-offline` 与 `launch --offline` 可用；删掉全部正版账号后两者**立即**拒绝；
-- 离线会话能启动客户端到"交接已验证"（与 T-035 同一条路径），且**没有**任何网络请求携带离线令牌；
+- 离线启动能到达客户端"交接已验证"（与 T-035 同一条路径），且命令行与会话文件中**没有**任何令牌；
 - 上述 7 组测试全绿；`accounts.json` 不在仓库内、被 `.gitignore` 覆盖；
 - 代码中不存在跳过闸门的开关、隐藏参数或"仅测试"分支（评审时逐条核对）。
+
+## 11. 与原版对齐的证据
+
+原版的客户端**不判断离线是否合法**，它只是被启动器告知要不要用在线服务：
+
+| 行为 | 证据（`ref://mc-26.3-analysis/`） |
+| --- | --- |
+| 命令行开关 `--offlineDeveloperMode` | `src/net/minecraft/client/main/Main.java` |
+| 开关决定在线服务是否启用 | `src/net/minecraft/client/Minecraft.java`：`offlineDeveloperMode ? UserApiService.OFFLINE : discovery.createUserApiService(token)` |
+| `--uuid` 缺省时用离线规则派生 | 同上 `Main.java`：`UUIDUtil.createOfflinePlayerUUID(username)` |
+| 派生规则 | `src/net/minecraft/core/UUIDUtil.java`：`nameUUIDFromBytes("OfflinePlayer:" + name, UTF-8)` |
+
+因此本项目的分工是：**闸门只在启动器**（原则 7.1 属于启动器职责），客户端只是"被告知离线"，不重复判定。
+
+## 12. 实测记录（2026-10-28）
+
+| 场景 | 结果 |
+| --- | --- |
+| `accounts`（无账号文件） | `no accounts recorded yet` / `offline login: locked` |
+| `accounts add-offline Notch`（闸门关闭） | 拒绝，退出码 4：`refused: no verified premium account` |
+| `launch <jar> <json> --offline Notch`（闸门关闭） | 拒绝，退出码 4，提示需先登录正版账号 |
+| 客户端 `--offlineDeveloperMode --username Notch` | `Notch (b50ad385-829d-3141-a216-7e7d7539ba7f)`、`services: offline`，退出码 0 |
+| 客户端只给 `--username jeb_`（无 `--uuid`） | 自己派生 `a762f560-4fce-3236-812a-b80efff0b62b`，与原版回退一致 |
+| 离线启动参数 | 不含 `--accessToken`、不含 `--sessionFile`（有测试守护） |
+
+**未完成的一环**：闸门放行后的实机验证需要一次成功的正版登录（本机此前登录过一次，但早于本模块落地，未写入账号文件）。当前 `xsts.auth.xboxlive.com` 持续 RST（R-017），因此"有正版账号后可离线"目前只有单元测试证据（闸门真值表、删除即失效），没有实机证据。未采用任何手段伪造正版账号记录。
+

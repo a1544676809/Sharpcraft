@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 MinecraftCSharp contributors
 
+using MinecraftCSharp.Common.Lifecycle;
+
 namespace MinecraftCSharp.Client;
 
 /// <summary>
@@ -25,6 +27,8 @@ public sealed record ClientArguments(
     string? SessionFilePath,
     string? Username,
     string? Uuid,
+    bool OfflineDeveloperMode,
+    string? AccessToken,
     IReadOnlyList<string> Errors)
 {
     /// <summary>Usage text, printed when parsing fails or help is requested.</summary>
@@ -38,7 +42,9 @@ public sealed record ClientArguments(
           --pack <path>           base asset pack
           --sessionFile <path>    session file holding the token
           --username <name>       profile name (alternative to the session file)
-          --uuid <uuid>           profile UUID (alternative to the session file)
+          --uuid <uuid>           profile UUID; derived from the name when absent
+          --offlineDeveloperMode  start without online services (launcher decides, as in vanilla)
+          --accessToken <token>   accepted for launcher compatibility; never required
 
         Tokens travel in the session file, not on the command line.
         """;
@@ -52,7 +58,8 @@ public sealed record ClientArguments(
         "--pack",
         "--sessionFile",
         "--username",
-        "--uuid"
+        "--uuid",
+        "--accessToken"
     };
 
     /// <summary>True when the handoff carries everything needed to start.</summary>
@@ -64,7 +71,8 @@ public sealed record ClientArguments(
         ArgumentNullException.ThrowIfNull(args);
 
         string? version = null, gameDir = null, assetsDir = null, assetIndex = null;
-        string? pack = null, session = null, username = null, uuid = null;
+        string? pack = null, session = null, username = null, uuid = null, accessToken = null;
+        var offline = false;
         var errors = new List<string>();
 
         for (var i = 0; i < args.Count; i++)
@@ -73,6 +81,13 @@ public sealed record ClientArguments(
             if (!argument.StartsWith("--", StringComparison.Ordinal))
             {
                 errors.Add($"unexpected argument '{argument}'");
+                continue;
+            }
+
+            // Boolean switches take no value.
+            if (argument == "--offlineDeveloperMode")
+            {
+                offline = true;
                 continue;
             }
 
@@ -121,6 +136,9 @@ public sealed record ClientArguments(
                 case "--uuid":
                     uuid = value;
                     break;
+                case "--accessToken":
+                    accessToken = value;
+                    break;
                 default:
                     break;
             }
@@ -141,6 +159,21 @@ public sealed record ClientArguments(
             errors.Add("either --sessionFile or --username is required");
         }
 
-        return new ClientArguments(version, gameDir, assetsDir, assetIndex, pack, session, username, uuid, errors);
+        // Vanilla derives a name-based UUID when none is supplied; a third-party launcher that
+        // omits --uuid must keep working, so the same fallback applies here.
+        if (string.IsNullOrWhiteSpace(uuid) && !string.IsNullOrWhiteSpace(username))
+        {
+            if (OfflineIdentity.IsValidName(username))
+            {
+                uuid = OfflineIdentity.FormatUuid(OfflineIdentity.DeriveUuid(username));
+            }
+            else
+            {
+                errors.Add($"--username '{username}' is not a valid profile name");
+            }
+        }
+
+        return new ClientArguments(
+            version, gameDir, assetsDir, assetIndex, pack, session, username, uuid, offline, accessToken, errors);
     }
 }

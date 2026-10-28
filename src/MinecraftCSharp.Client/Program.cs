@@ -74,6 +74,17 @@ internal static class Program
             username ?? "(unknown)",
             uuid ?? "(unknown)"));
 
+        // The launcher decides whether offline is allowed (principle 7.1); the client only reacts
+        // to being told, exactly like vanilla's --offlineDeveloperMode flag.
+        if (parsed.OfflineDeveloperMode)
+        {
+            Console.WriteLine("[client] services:    offline (no online services, no tokens)");
+        }
+        else if (string.IsNullOrWhiteSpace(parsed.AccessToken) && string.IsNullOrWhiteSpace(parsed.SessionFilePath))
+        {
+            Console.WriteLine("[client] services:    none (no token supplied)");
+        }
+
         if (string.IsNullOrWhiteSpace(parsed.PackPath) || !File.Exists(parsed.PackPath))
         {
             Console.Error.WriteLine("[client] asset pack missing; the launcher must build it before starting the client");

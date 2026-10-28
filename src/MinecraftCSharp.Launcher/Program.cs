@@ -3,6 +3,7 @@
 
 using MinecraftCSharp.Auth;
 using MinecraftCSharp.Common.Identifiers;
+using MinecraftCSharp.Launcher.Accounts;
 using MinecraftCSharp.Launcher.Assets;
 using MinecraftCSharp.Launcher.Assets.Resolution;
 using MinecraftCSharp.Launcher.Launch;
@@ -41,6 +42,7 @@ internal static class Program
             LauncherCommand.Window => await WindowAsync(commandLine.Target).ConfigureAwait(false),
             LauncherCommand.Assets => Assets(commandLine.Target!),
             LauncherCommand.Launch => await LaunchAsync(commandLine.Target).ConfigureAwait(false),
+            LauncherCommand.Accounts => AccountsCommand.Run(commandLine.Target),
             _ => 2
         };
     }
@@ -75,6 +77,7 @@ internal static class Program
                 cancellation.Token).ConfigureAwait(false);
 
             Console.WriteLine($"Signed in as {signedIn.Profile.Name} ({signedIn.Profile.Id})");
+            AccountsCommand.RecordPremiumSignIn(signedIn.Profile.Name, signedIn.Profile.Id);
             Console.WriteLine(signedIn.FromCache ? "token source: local cache" : "token source: device code flow");
             Console.WriteLine($"Minecraft session valid until {signedIn.Session.ExpiresAt:u}");
             return 0;
@@ -130,6 +133,7 @@ internal static class Program
                 cancellation.Token).ConfigureAwait(false);
 
             Console.WriteLine($"Signed in as {signedIn.Profile.Name} ({signedIn.Profile.Id})");
+            AccountsCommand.RecordPremiumSignIn(signedIn.Profile.Name, signedIn.Profile.Id);
 
             var join = new SessionServerClient(http);
             var (outcome, connection) = await MinecraftLoginClient.LoginAsync(
@@ -280,14 +284,18 @@ internal static class Program
         using var cancellation = CancelOnCtrlC();
         using var http = CreateHttpClient();
 
-        var parts = (target ?? string.Empty).Split('|', 2);
-        if (parts.Length != 2)
+        var parts = (target ?? string.Empty).Split('|');
+        if (parts.Length < 2)
         {
             Console.Error.WriteLine("launch needs <jar> <version-json>");
             return 2;
         }
 
-        return await LaunchCommand.RunAsync(parts[0], parts[1], http, cancellation.Token).ConfigureAwait(false);
+        var offlineName = parts.Length >= 3 ? parts[2] : null;
+
+        return await LaunchCommand
+            .RunAsync(parts[0], parts[1], http, offlineName, cancellation.Token)
+            .ConfigureAwait(false);
     }
 
     /// <summary>Builds or reuses the asset pack for a client jar (docs/modules/assets.md).</summary>
