@@ -3,6 +3,7 @@
 
 using System.Buffers.Binary;
 using System.Text;
+using MinecraftCSharp.Common.Network;
 
 namespace MinecraftCSharp.Common.Nbt;
 
@@ -26,17 +27,49 @@ public static class NbtReader
     /// <exception cref="InvalidDataException">The data is malformed or exceeds a limit.</exception>
     public static NbtCompound ReadNetworkRoot(ReadOnlySpan<byte> source)
     {
+        var status = TryReadNetworkRoot(source, out var root, out _);
+        if (status == DecodeStatus.Success && root is not null)
+        {
+            return root;
+        }
+
+        throw new InvalidDataException(status == DecodeStatus.NeedMoreData ? "truncated NBT payload" : "malformed NBT payload");
+    }
+
+    /// <summary>Parses a network NBT root and reports how many bytes it consumed.</summary>
+    public static DecodeStatus TryReadNetworkRoot(ReadOnlySpan<byte> source, out NbtCompound? root, out int consumed)
+    {
+        root = null;
+        consumed = 0;
+
+        if (source.Length < 1)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
         var offset = 0;
         var type = (NbtTagType)source[offset];
         offset++;
 
         if (type != NbtTagType.Compound)
         {
-            throw new InvalidDataException($"root tag must be a compound, got {type}");
+            return DecodeStatus.Invalid;
         }
 
-        var root = ReadCompound(source, ref offset, depth: 1);
-        return root;
+        try
+        {
+            root = ReadCompound(source, ref offset, depth: 1);
+            consumed = offset;
+            return DecodeStatus.Success;
+        }
+        catch (InvalidDataException exception) when (exception.Message.Contains("truncated", StringComparison.Ordinal))
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+        catch (InvalidDataException)
+        {
+            return DecodeStatus.Invalid;
+        }
     }
 
     /// <summary>Parses a named root compound (the on-disk flavour).</summary>

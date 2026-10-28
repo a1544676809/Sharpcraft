@@ -39,7 +39,11 @@ internal static class ConfigurationProbe
     };
 
     /// <summary>Result of the configuration walk.</summary>
-    internal sealed record Result(bool ReachedPlay, string Reason, IReadOnlyList<string> Sequence);
+    internal sealed record Result(
+        bool ReachedPlay,
+        string Reason,
+        IReadOnlyList<string> Sequence,
+        DynamicRegistries Registries);
 
     /// <summary>Acknowledges the login and runs the configuration phase.</summary>
     internal static async Task<Result> RunAsync(
@@ -57,6 +61,7 @@ internal static class ConfigurationProbe
         SendClientInformation(connection, log);
 
         var sequence = new List<string>();
+        var registries = new DynamicRegistries();
         var deadline = DateTime.UtcNow + timeout;
 
         using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -77,9 +82,19 @@ internal static class ConfigurationProbe
 
             switch (packetId)
             {
+                case PacketIds.ConfigurationClientbound.RegistryData:
+                    if (RegistryDataPackets.TryRead(body, out var registryId, out var entries) == DecodeStatus.Success)
+                    {
+                        registries.Apply(registryId, entries);
+                    }
+
+                    break;
+
                 case PacketIds.ConfigurationClientbound.SelectKnownPacks:
-                    // Echo the server's list back; an empty list is the safe universal answer.
-                    SendWithPayload(connection, PacketIds.ConfigurationServerbound.SelectKnownPacks, reader.Position < body.Length ? body[reader.Position..] : []);
+                    // Declare no known packs: this client ships no bundled data pack yet, so the
+                    // server must send full registry payloads instead of skipping them.
+                    // Echoing the server's list here silently strips every registry payload.
+                    SendKnownPacksEmpty(connection);
                     break;
 
                 case PacketIds.ConfigurationClientbound.KeepAlive:
@@ -149,7 +164,7 @@ internal static class ConfigurationProbe
                         reason = "raw: " + MinecraftLoginCrypto.ToHex(body);
                     }
 
-                    return new Result(false, reason, sequence);
+                    return new Result(false, reason, sequence, registries);
                 }
 
                 case PacketIds.ConfigurationClientbound.FinishConfiguration:
@@ -158,12 +173,12 @@ internal static class ConfigurationProbe
 
                     // Do not read further: the next packet is already play-phase data (JoinGame)
                     // and belongs to the play loop, which parses it.
-                    return new Result(true, string.Empty, sequence);
+                    return new Result(true, string.Empty, sequence, registries);
                 }
             }
         }
 
-        return new Result(false, "configuration timeout", sequence);
+        return new Result(false, "configuration timeout", sequence, registries);
     }
 
     private static void SendWithPayload(MinecraftConnection connection, int packetId, ReadOnlySpan<byte> payload)
@@ -173,6 +188,15 @@ internal static class ConfigurationProbe
         var written = VarInt.Write(body, packetId);
         payload.CopyTo(body.AsSpan(written));
         connection.Send(body);
+    }
+
+    private static void SendKnownPacksEmpty(MinecraftConnection connection)
+    {
+        Span<byte> buffer = stackalloc byte[8];
+        var writer = new PayloadWriter(buffer);
+        writer.WriteVarInt(PacketIds.ConfigurationServerbound.SelectKnownPacks);
+        writer.WriteVarInt(0);
+        connection.Send(buffer[..writer.Position]);
     }
 
     private static void SendClientInformation(MinecraftConnection connection, Action<string>? log)

@@ -2,6 +2,8 @@
 // Copyright (C) 2026 MinecraftCSharp contributors
 
 using MinecraftCSharp.Auth;
+using MinecraftCSharp.Client.World;
+using MinecraftCSharp.Common.Identifiers;
 using MinecraftCSharp.Common.Network;
 
 namespace MinecraftCSharp.Launcher;
@@ -134,16 +136,43 @@ internal static class Program
                     return 1;
                 }
 
+                Console.WriteLine(
+                    $"registries: {probe.Registries.RegistryKeys.Count} registries, {probe.Registries.TotalEntries} entries");
                 var holdSeconds = PlayHoldSeconds();
+                var layout = ResolveDimensionLayout(probe.Registries);
+                ClientWorld? world = null;
+                long nonAirBlocks = 0;
                 Console.WriteLine($"reached the play phase; holding the connection for {holdSeconds}s...");
                 var stats = await PlaySession.RunAsync(
                     connection!,
                     TimeSpan.FromSeconds(holdSeconds),
                     cancellation.Token,
-                    log: line => Console.WriteLine($"  {line}")).ConfigureAwait(false);
+                    log: line => Console.WriteLine($"  {line}"),
+                    dimensionLayout: joinGame =>
+                    {
+                        var info = layout(joinGame.DimensionTypeId);
+                        world ??= new ClientWorld(info.MinSectionY, info.SectionCount);
+                        return (info.SectionCount, info.MinSectionY, 0);
+                    },
+                    onChunk: parsed =>
+                    {
+                        world?.AddChunk(parsed.Chunk);
+                        for (var i = 0; i < parsed.Chunk.SectionCount; i++)
+                        {
+                            nonAirBlocks += parsed.Chunk.GetSection(parsed.Chunk.MinSectionY + i)?.NonAirCount ?? 0;
+                        }
+
+                        return true;
+                    }).ConfigureAwait(false);
 
                 Console.WriteLine($"play stats: packets={stats.TotalPackets} keepAlive={stats.KeepAlivesAnswered} " +
                                   $"ping={stats.PingsAnswered} survived={stats.Survived}");
+                Console.WriteLine($"chunks: received={stats.ChunksReceived} failed={stats.ChunksFailed} " +
+                                  $"world={world?.LoadedChunkCount ?? 0} nonAirBlocks={nonAirBlocks}");
+                if (world is not null)
+                {
+                    Console.WriteLine($"  block at (0,64,0) = state {world.GetBlockState(0, 64, 0)}");
+                }
                 if (stats.JoinGame is { } joinGame)
                 {
                     Console.WriteLine($"  join: entity={joinGame.PlayerId} hardcore={joinGame.Hardcore} " +
@@ -203,6 +232,27 @@ internal static class Program
             Console.Error.WriteLine($"probe failed: {exception.Message}");
             return 1;
         }
+    }
+
+    private static Func<int, (int SectionCount, int MinSectionY)> ResolveDimensionLayout(DynamicRegistries registries)
+    {
+        var registryKey = Identifier.Parse("minecraft:dimension_type");
+
+        return dimensionTypeId =>
+        {
+            var entry = registries.ById(registryKey, dimensionTypeId);
+            var info = DimensionTypeInfo.TryRead(entry?.Data);
+            if (info is null)
+            {
+                Console.WriteLine($"  dimension type {dimensionTypeId} unknown; assuming 384 blocks at -64");
+                return (24, -4);
+            }
+
+            Console.WriteLine(
+                $"  dimension type {dimensionTypeId} -> minY={info.MinY} height={info.Height} " +
+                $"sections={info.SectionCount}");
+            return (info.SectionCount, info.MinSectionY);
+        };
     }
 
     private static int PlayHoldSeconds()

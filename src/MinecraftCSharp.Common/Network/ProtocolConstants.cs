@@ -153,6 +153,9 @@ public static class PacketIds
         /// <summary>JoinGame.</summary>
         public const int Login = 50;
 
+        /// <summary>Chunk with block states, biomes, heightmaps and light.</summary>
+        public const int LevelChunkWithLight = 46;
+
         /// <summary>Ping.</summary>
         public const int Ping = 62;
 

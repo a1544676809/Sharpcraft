@@ -102,6 +102,52 @@ public ref struct PayloadReader
         return DecodeStatus.Success;
     }
 
+    /// <summary>Reads a fixed number of raw bytes.</summary>
+    public DecodeStatus TryReadBytes(int count, out byte[] value)
+    {
+        value = [];
+
+        if (count < 0)
+        {
+            return DecodeStatus.Invalid;
+        }
+
+        if (Remaining.Length < count)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        value = Remaining[..count].ToArray();
+        Position += count;
+        return DecodeStatus.Success;
+    }
+
+    /// <summary>Advances past bytes already parsed by another reader.</summary>
+    public void Skip(int count)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+        if (Position + count > _buffer.Length)
+        {
+            throw new ArgumentOutOfRangeException(nameof(count), count, "skip beyond the buffer");
+        }
+
+        Position += count;
+    }
+
+    /// <summary>Reads a single raw byte.</summary>
+    public DecodeStatus TryReadByte(out byte value)
+    {
+        if (Remaining.Length < 1)
+        {
+            value = 0;
+            return DecodeStatus.NeedMoreData;
+        }
+
+        value = Remaining[0];
+        Position++;
+        return DecodeStatus.Success;
+    }
+
     /// <summary>Reads a big-endian 32-bit integer.</summary>
     public DecodeStatus TryReadInt(out int value)
     {

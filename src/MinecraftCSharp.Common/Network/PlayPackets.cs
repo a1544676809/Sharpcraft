@@ -13,6 +13,9 @@ namespace MinecraftCSharp.Common.Network;
 /// <param name="ReducedDebugInfo">Whether debug info is restricted.</param>
 /// <param name="ShowDeathScreen">Whether the death screen is shown.</param>
 /// <param name="LimitedCrafting">Whether recipes are restricted.</param>
+/// <param name="DimensionTypeId">Positional id into the synchronised dimension_type registry.</param>
+/// <param name="Seed">World seed as sent to the client.</param>
+/// <param name="GameMode">Game mode id.</param>
 public sealed record JoinGameInfo(
     int PlayerId,
     bool Hardcore,
@@ -22,19 +25,24 @@ public sealed record JoinGameInfo(
     int SimulationDistance,
     bool ReducedDebugInfo,
     bool ShowDeathScreen,
-    bool LimitedCrafting);
+    bool LimitedCrafting,
+    int DimensionTypeId = 0,
+    string DimensionId = "",
+    long Seed = 0,
+    byte GameMode = 0);
 
 /// <summary>
-/// Play-phase packet helpers (docs/specs/network/protocol-phases.md): the subset needed to hold
-/// a connection open, plus the JoinGame header.
+/// Play-phase packet helpers: the JoinGame header plus the keep-alive and ping replies needed to
+/// hold a connection open (docs/specs/network/protocol-phases.md 5.2).
 /// </summary>
 /// <remarks>
-/// Only the leading JoinGame fields are decoded; the spawn-info block is skipped deliberately
-/// until the world layer needs it, but the reader still validates the header it does parse.
+/// Every enum inside the spawn info is a <b>VarInt</b>: game type uses an id mapper and the
+/// previous game type uses an optional VarInt where 0 means absent. Treating them as bytes
+/// desynchronises the rest of the packet, which is how this was found.
 /// </remarks>
 public static class PlayPackets
 {
-    /// <summary>Decodes the JoinGame header.</summary>
+    /// <summary>Decodes the JoinGame header including the spawn info prefix.</summary>
     public static DecodeStatus TryReadJoinGame(ReadOnlySpan<byte> body, out JoinGameInfo info)
     {
         info = new JoinGameInfo(0, false, [], 0, 0, 0, false, false, false);
@@ -96,6 +104,35 @@ public static class PlayPackets
             return DecodeStatus.NeedMoreData;
         }
 
+        // Spawn info: dimension type (registry reference), dimension key (identifier), seed,
+        // game mode, previous game mode (0 = none), debug flag, flat flag, optional death
+        // location, portal cooldown, sea level. Missing the dimension key here shifts every
+        // following field, which is exactly how this was found.
+        if (reader.TryReadVarInt(out var dimensionTypeId) != DecodeStatus.Success ||
+            reader.TryReadString(out var dimensionId, 32767) != DecodeStatus.Success ||
+            reader.TryReadLong(out var seed) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out var gameMode) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out _) != DecodeStatus.Success ||
+            reader.TryReadBool(out _) != DecodeStatus.Success ||
+            reader.TryReadBool(out _) != DecodeStatus.Success ||
+            reader.TryReadBool(out var hasDeathLocation) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        if (hasDeathLocation &&
+            (reader.TryReadString(out _, 32767) != DecodeStatus.Success ||
+             reader.TryReadLong(out _) != DecodeStatus.Success))
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        if (reader.TryReadVarInt(out _) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out _) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
         info = new JoinGameInfo(
             playerId,
             hardcore,
@@ -105,7 +142,11 @@ public static class PlayPackets
             simulationDistance,
             reducedDebugInfo,
             showDeathScreen,
-            limitedCrafting);
+            limitedCrafting,
+            dimensionTypeId,
+            dimensionId,
+            seed,
+            unchecked((byte)gameMode));
         return DecodeStatus.Success;
     }
 

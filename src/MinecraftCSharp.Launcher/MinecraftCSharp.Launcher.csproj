@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MinecraftCSharp.Auth\MinecraftCSharp.Auth.csproj" />
+    <ProjectReference Include="..\MinecraftCSharp.Client\MinecraftCSharp.Client.csproj" />
     <ProjectReference Include="..\MinecraftCSharp.Common\MinecraftCSharp.Common.csproj" />
     <ProjectReference Include="..\MinecraftCSharp.Framework\MinecraftCSharp.Framework.csproj" />
   </ItemGroup>

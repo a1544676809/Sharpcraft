@@ -114,7 +114,19 @@ public sealed class PlayPacketTests
         writer.WriteBool(true);    // show death screen
         writer.WriteBool(false);   // limited crafting
 
-        // The spawn info block follows on the wire; the header parser stops before it.
+        // Spawn info: dimension type id, dimension key, seed, game mode, previous game mode,
+        // debug flag, flat flag, optional death location, portal cooldown, sea level.
+        writer.WriteVarInt(0);
+        writer.WriteString("minecraft:overworld", 32767);
+        writer.WriteLong(0x1234_5678_9ABC_DEF0L);
+        writer.WriteVarInt(0);
+        writer.WriteVarInt(0);
+        writer.WriteBool(false);
+        writer.WriteBool(false);
+        writer.WriteBool(false);
+        writer.WriteVarInt(0);
+        writer.WriteVarInt(63);
+
         return buffer.AsSpan(0, writer.Position).ToArray();
     }
 }

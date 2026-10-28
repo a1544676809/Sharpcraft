@@ -110,6 +110,15 @@ VarInt id(0) | string language(≤16) | byte viewDistance | VarInt chatVisibilit
 - `select_known_packs` 需要回包（可原样回显服务端列表）。
 - 回 `finish_configuration` 后收到的第一个包就是 play 阶段的 `minecraft:login`（JoinGame，clientbound id 50）。
 
+## 5.1.1 已知数据包声明（实测踩坑）
+
+`select_known_packs` 的回复决定服务端是否**省略注册表 payload**：
+
+- 客户端声明"我认识 `minecraft:core` 等包" → 服务端认为客户端本地已有同名数据文件，于是 `registry_data` 里的条目**只发 id、不发 NBT**。
+- 本项目当前没有内置数据包，因此**必须回复空列表**。第一版代码把服务端的清单原样回显，结果 67 个生物群系、4 个维度类型全部没有 payload，维度高度无从得知（表现为 `dimension type 0 unknown`）。
+
+结论：`select_known_packs` 不是"礼貌性握手"，它直接改变后续数据包的内容。空回复是当前阶段的正确选择。
+
 ## 5.2 play 阶段实测（真实服务器，45 秒）
 
 | 观察项 | 值 |
@@ -124,6 +133,39 @@ VarInt id(0) | string language(≤16) | byte viewDistance | VarInt chatVisibilit
 - JoinGame 头部字段顺序：`int playerId` → `bool hardcore` → `VarInt` 维度数 → 每项 Identifier → `VarInt maxPlayers` → `VarInt chunkRadius` → `VarInt simulationDistance` → 三个 bool。**其后的 spawn info 是复杂结构**，本阶段刻意跳过。
 - `keep_alive` 是 **long**（8 字节大端），`ping` 是 **int32**；两者都只是回显标识，不要编码成 VarInt。
 - play 阶段起始流量巨大（实体/方块更新），客户端必须能"边收边丢"未实现内容，否则会被推理速度拖死。
+
+## 5.3 区块包布局（实测）
+
+`level_chunk_with_light`（clientbound id 46）组成：
+
+```
+int chunkX | int chunkZ
+map<heightmap type, long[]>        // VarInt 数量，每项 VarInt 类型 + VarInt long 数 + longs
+byte[] chunkData                   // 段数据，见下
+list<block entity>                 // VarInt 数量，每项 1 字节 XZ + 2 字节 Y + VarInt 类型 + NBT
+light data                         // 尚未解析（本轮只保存原始字节的入口预留）
+```
+
+`chunkData` 中**每个段**的顺序（`LevelChunkSection.write`）：
+
+```
+ushort nonEmptyBlockCount | ushort fluidCount
+PalettedContainer blockStates | PalettedContainer biomes
+```
+
+两个容器的线上格式：
+
+```
+byte bitsPerEntry
+bits == 0        → VarInt 单值
+bits <= 上限     → VarInt 调色板大小 + 每个 VarInt 条目   （方块状态上限 8，生物群系上限 3）
+超过上限          → 直接模式，无调色板（值是全局 id）
+long[ExpectedLongs(size,bits)]   // 固定长度，**没有长度前缀**
+```
+
+段数不是包里的字段，而由维度类型的 `height / 16` 决定，`min_y / 16` 给最小段索引——所以必须先从 `dimension_type` 注册表拿到高度。
+
+**实测结果**：24 段（minY=-64, height=384）、9 个区块中 8 个解析成功、合计 243,819 个非空气方块；1 个失败仍待定位（疑似直接模式或调色板上限边界）。
 
 ## 6. 实现要求
 

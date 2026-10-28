@@ -25,6 +25,7 @@ public sealed class PalettedContainer
     public const int DirectBits = 15;
 
     private readonly int _size;
+    private readonly bool _direct;
     private int[] _palette;
     private long[] _data;
     private int _bitsPerEntry;
@@ -40,7 +41,12 @@ public sealed class PalettedContainer
     }
 
     /// <summary>Wraps already unpacked data (parsing path).</summary>
-    public PalettedContainer(int size, int bitsPerEntry, int[] palette, long[] data)
+    /// <param name="size">Number of entries.</param>
+    /// <param name="bitsPerEntry">Width of one entry.</param>
+    /// <param name="palette">Local palette, or empty when <paramref name="direct"/>.</param>
+    /// <param name="data">Packed entries.</param>
+    /// <param name="direct">True when packed values are global ids rather than palette indices.</param>
+    public PalettedContainer(int size, int bitsPerEntry, int[] palette, long[] data, bool direct = false)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
 
@@ -48,6 +54,7 @@ public sealed class PalettedContainer
         _bitsPerEntry = bitsPerEntry;
         _palette = palette;
         _data = data;
+        _direct = direct;
 
         if (bitsPerEntry < 0 || bitsPerEntry > 32)
         {
@@ -77,6 +84,9 @@ public sealed class PalettedContainer
     /// <summary>True when a single value covers the whole container.</summary>
     public bool IsSingleValue => _bitsPerEntry == 0;
 
+    /// <summary>True when packed values are global ids without a palette.</summary>
+    public bool IsDirect => _direct;
+
     /// <summary>Number of longs needed for a size/bits combination.</summary>
     public static int ExpectedLongs(int size, int bitsPerEntry)
     {
@@ -104,8 +114,13 @@ public sealed class PalettedContainer
 
         var (longIndex, offset) = Locate(index, _bitsPerEntry);
         var mask = (1L << _bitsPerEntry) - 1L;
-        var paletteIndex = (int)((ulong)(_data[longIndex] >> offset) & (ulong)mask);
-        return paletteIndex < _palette.Length ? _palette[paletteIndex] : 0;
+        var packed = (int)((ulong)(_data[longIndex] >> offset) & (ulong)mask);
+        if (_direct)
+        {
+            return packed;
+        }
+
+        return packed < _palette.Length ? _palette[packed] : 0;
     }
 
     /// <summary>Writes a value, growing the palette when a new value appears.</summary>

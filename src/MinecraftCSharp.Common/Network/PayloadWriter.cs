@@ -35,6 +35,13 @@ public ref struct PayloadWriter
     public void WriteString(string value, int maxLength = Utf8StringCodec.DefaultMaxLength) =>
         Position += Utf8StringCodec.Write(Remaining, value, maxLength);
 
+    /// <summary>Writes raw bytes without a length prefix.</summary>
+    public void WriteRaw(ReadOnlySpan<byte> value)
+    {
+        value.CopyTo(Remaining);
+        Position += value.Length;
+    }
+
     /// <summary>Writes a VarInt-prefixed byte array.</summary>
     public void WriteByteArray(ReadOnlySpan<byte> value)
     {

@@ -16,7 +16,9 @@ public sealed record PlaySessionStats(
     int PingsAnswered,
     IReadOnlyDictionary<int, int> PacketCounts,
     string DisconnectedReason,
-    bool Survived)
+    bool Survived,
+    int ChunksReceived = 0,
+    int ChunksFailed = 0)
 {
     /// <summary>Total packets received.</summary>
     public int TotalPackets => PacketCounts.Values.Sum();
@@ -38,7 +40,9 @@ public static class PlaySession
         MinecraftConnection connection,
         TimeSpan duration,
         CancellationToken cancellationToken,
-        Action<string>? log = null)
+        Action<string>? log = null,
+        Func<JoinGameInfo, (int SectionCount, int MinSectionY, int AirState)>? dimensionLayout = null,
+        Func<ParsedChunk, bool>? onChunk = null)
     {
         ArgumentNullException.ThrowIfNull(connection);
 
@@ -48,6 +52,10 @@ public static class PlaySession
         var pings = 0;
         var disconnected = string.Empty;
         var survived = false;
+        var chunksReceived = 0;
+        var chunksFailed = 0;
+        var layout = (SectionCount: 24, MinSectionY: -4, AirState: 0);
+        var haveLayout = false;
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(duration);
@@ -67,6 +75,43 @@ public static class PlaySession
 
                 switch (packetId)
                 {
+                    case PacketIds.PlayClientbound.LevelChunkWithLight:
+                    {
+                        if (!haveLayout && dimensionLayout is not null)
+                        {
+                            layout = dimensionLayout(joinGame ?? new JoinGameInfo(0, false, [], 0, 0, 0, false, false, false));
+                            haveLayout = true;
+                        }
+
+                        var status = ChunkPacketParser.TryRead(
+                            body, layout.SectionCount, layout.MinSectionY, layout.AirState, out var parsed);
+                        if (chunksReceived == 0 && chunksFailed == 0 &&
+                            Environment.GetEnvironmentVariable("MC_DUMP_CHUNK") is { Length: > 0 } dumpPath)
+                        {
+                            File.WriteAllBytes(dumpPath, body.ToArray());
+                            log?.Invoke($"chunk packet dumped to {dumpPath} ({body.Length} bytes)");
+                        }
+
+                        if (chunksReceived == 0 && status != DecodeStatus.Success)
+                        {
+                            var preview = body.Length > 48 ? MinecraftLoginCrypto.ToHex(body[..48]) : MinecraftLoginCrypto.ToHex(body);
+                            log?.Invoke($"chunk packet diagnostic: len={body.Length} head={preview}");
+                        }
+
+                        if (status == DecodeStatus.Success && parsed is not null)
+                        {
+                            chunksReceived++;
+                            onChunk?.Invoke(parsed);
+                        }
+                        else
+                        {
+                            chunksFailed++;
+                            log?.Invoke($"chunk packet failed: {status}");
+                        }
+
+                        break;
+                    }
+
                     case PacketIds.PlayClientbound.KeepAlive:
                         if (reader.TryReadLong(out var keepAliveId) == DecodeStatus.Success)
                         {
@@ -96,7 +141,9 @@ public static class PlaySession
                         }
                         else
                         {
-                            log?.Invoke("join game: header could not be parsed");
+                            var preview = body;
+                            log?.Invoke(
+                                $"join game: header could not be parsed; len={body.Length} head={MinecraftLoginCrypto.ToHex(preview)}");
                         }
 
                         break;
@@ -108,12 +155,12 @@ public static class PlaySession
                             ? "raw: " + MinecraftLoginCrypto.ToHex(body)
                             : reason;
                         log?.Invoke($"disconnected by the server: {disconnected}");
-                        return new PlaySessionStats(joinGame, keepAlives, pings, counts, disconnected, false);
+                        return new PlaySessionStats(joinGame, keepAlives, pings, counts, disconnected, false, chunksReceived, chunksFailed);
                     }
 
                     case PacketIds.PlayClientbound.StartConfiguration:
                         log?.Invoke("server asked to reconfigure; stopping");
-                        return new PlaySessionStats(joinGame, keepAlives, pings, counts, "start_configuration", false);
+                        return new PlaySessionStats(joinGame, keepAlives, pings, counts, "start_configuration", false, chunksReceived, chunksFailed);
 
                     default:
                         log?.Invoke($"play <- id {packetId} ({body.Length} bytes)");
@@ -129,6 +176,6 @@ public static class PlaySession
             survived = true;
         }
 
-        return new PlaySessionStats(joinGame, keepAlives, pings, counts, disconnected, survived);
+        return new PlaySessionStats(joinGame, keepAlives, pings, counts, disconnected, survived, chunksReceived, chunksFailed);
     }
 }

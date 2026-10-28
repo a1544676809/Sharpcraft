@@ -54,7 +54,8 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 13. T-022 play 阶段最小闭环已完成：JoinGame 解析 + keep-alive/ping 回复，45 秒实测存活（2 次 keep-alive）。
 14. T-023 世界存储层与客户端世界骨架已完成（调色板容器 / 区块段 / 区块列 / ClientWorld）。
 15. T-024 NBT 读写已完成（网络/存储两种根 + 深度与长度上限）。
-16. 下一步：解析 `level_chunk_with_light`，把区块段数据写入 `LevelChunk`；同时保存配置阶段的 `registry_data` 用于维度高度与方块状态语义。
+16. T-025 完成：`registry_data` 同步 + `level_chunk_with_light` 解析 → `ClientWorld`；实测 8/9 区块、243,819 非空气方块。
+17. M2 剩余：定位 1 个失败区块 → 光照数据 → WGPU 最小渲染（第 4 步）。
 ## 未提交改动 / 后台任务
 
 - 本次提交内容见下；无运行中的后台任务。
