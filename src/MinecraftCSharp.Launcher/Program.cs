@@ -3,6 +3,7 @@
 
 using MinecraftCSharp.Auth;
 using MinecraftCSharp.Common.Identifiers;
+using MinecraftCSharp.Common.Imaging;
 using MinecraftCSharp.Launcher.Accounts;
 using MinecraftCSharp.Launcher.Assets;
 using MinecraftCSharp.Launcher.Assets.Resolution;
@@ -408,6 +409,42 @@ internal static class Program
 
         var meta = stack.ReadMetadata(ResourceKind.Texture, new Identifier("minecraft", "block/water_still"));
         Console.WriteLine($"  {"meta water_still",-22} {meta?.Length ?? 0,9} bytes");
+
+        // Prove the decode path on real textures, not just synthetic fixtures.
+        foreach (var probe in new[] { "block/stone", "block/water_still", "block/grass_block_top" })
+        {
+            var bytes = stack.Read(ResourceKind.Texture, new Identifier("minecraft", probe));
+            if (bytes is null)
+            {
+                continue;
+            }
+
+            try
+            {
+                var image = PngDecoder.Decode(bytes);
+                var opaque = 0;
+                var transparent = 0;
+                for (var i = 3; i < image.Pixels.Length; i += RgbaImage.BytesPerPixel)
+                {
+                    if (image.Pixels[i] == 0)
+                    {
+                        transparent++;
+                    }
+                    else
+                    {
+                        opaque++;
+                    }
+                }
+
+                Console.WriteLine(
+                    $"  decode {probe,-22} {image.Width}x{image.Height}  " +
+                    $"opaque {opaque} / transparent {transparent}");
+            }
+            catch (InvalidDataException exception)
+            {
+                Console.WriteLine($"  decode {probe,-22} failed: {exception.Message}");
+            }
+        }
 
         var textures = stack.ListAll(ResourcePath.Prefix(ResourceKind.Texture)).Count;
         var languages = stack.ListAll(ResourcePath.Prefix(ResourceKind.Language)).Count;

@@ -125,7 +125,7 @@
 
 ## 6. 当前限制
 
-- 无纹理：颜色由方块状态 id 哈希得到，稳定但不代表材质。
+- 无纹理：颜色由方块状态 id 哈希得到，稳定但不代表材质（片一完成后此项被替换）。
 - 无光照传播：只消费服务端下发的光照数组，客户端不计算光照传播（挖方块后不会实时变亮/变暗）。
 - 无环境光遮蔽与平滑光照：面亮度只按朝向与所在格光照，顶点之间不做插值。
 - 窗口只有呈现：无输入系统；帧循环是"呈现 N 帧 / 到点关闭"，尚未接入正式主循环。
@@ -133,6 +133,49 @@
 - 每帧重建设备与管线（未做资源复用）。
 - 合并只发生在单个段内：跨段的同状态平面不会合并（原版同样如此）。
 - 合并键不含面朝向之外的信息（例如环境光遮蔽），后续做 AO 时需要把 AO 采样并入键。
+
+## 6.1 纹理通路设计（T-037）
+
+目标：方块面从"颜色由状态 id 哈希"改为"采样原版纹理"。分两片推进，避免一次把模型解析和 GPU 采样搅在一起。
+
+### 片一：单纹理端到端
+
+| 步骤 | 归属 | 说明 |
+| --- | --- | --- |
+| 解码 PNG | `Common.Imaging.PngDecoder` | 支持 8 位、非隔行的灰度/真彩/索引/带 alpha；其它形态给可诊断报错 |
+| 选取纹理 | 启动器 | 按 `assets/minecraft/textures/block/<名字>.png` 取一小批（方块 id → 纹理由一张显式表决定，暂不解析模型） |
+| 打包图集 | 启动器 | 输出 `atlas.png`（等宽格子）+ `atlas.json`（方块 id → 格子索引），落在实例目录 |
+| 上传与采样 | `Framework.Rendering` | 顶点格式增加 UV（stride 7 → 9），管线增加采样器与纹理绑定，着色器按 UV 采样 |
+| 缺失兜底 | 渲染层 | 表里没有的方块用内置紫黑格子（与资产解析层的兜底一致） |
+
+- 图集与 `atlas.json` 都是**派生产物**，不进仓库、可随时重建（与 ADR-0005 的 pack 同一原则）。
+- 纹理坐标约定：图集格子内留 0 边距（不做 mipmap 时会渗色，先用"最近邻 + 无 mipmap"规避；后续需要时再加 padding 或 mip 链）。
+
+### 片一实测（真实 26.3 资产）
+
+| 纹理 | 解码结果 | 说明 |
+| --- | --- | --- |
+| `block/stone` | 16×16，256 不透明 | 普通方块纹理 |
+| `block/grass_block_top` | 16×16，256 不透明 | 同上 |
+| `block/water_still` | **16×512**，8192 不透明 | 动画纹理：竖向 32 帧条带；且是 **4 位索引** PNG |
+
+两个只有真机才暴露的事实：
+
+1. **位深不止 8**：水面/岩浆这类是 4 位索引 PNG。首版"只支持 8 位"的解码器直接拒绝了 `water_still`，因此支持范围扩到 1/2/4/8/16 位 + 索引调色板 + `tRNS`。
+2. **动画纹理是竖向条带**：`16×512` = 32 帧。图集只能取**首帧**（顶部 16×16），帧切换按 `.mcmeta` 的 `animation` 字段另行实现（不在本任务范围）。
+
+### 片二：模型驱动
+
+用 `blockstates/<id>.json` → `models/block/<model>.json`（含 `parent` 链与 `textures.all` / 按面覆盖）决定每个面用哪张纹理，取代片一的显式表。
+
+- 需要的行为规格：`parent` 继承与覆盖顺序、`cube_all`/`cube` 这类基础父模型、`uv` 缺省时的推导、模型里 `elements` 的旋转支持范围。
+- 依据：证据指针见 `docs/analysis/assets/resource-resolution.md` 与 jar 内的模型文件；具体继承规则在片二开工前补一节行为规格。
+
+### 不在本任务范围
+
+- 动画纹理（`.mcmeta` 的 `animation`）：本任务只记录元数据存在，不驱动帧切换。
+- mipmap、各向异性过滤、纹理数组。
+- 透明度排序（alpha 混合的树叶/玻璃留在后续）。
 
 ## 7. 后续
 
@@ -148,6 +191,7 @@
 | 单元 | `tests/MinecraftCSharp.Client.Tests/ChunkMesherTests.cs` | 面数、跨区块剔除、方块上限、颜色稳定性 |
 | 单元 | `tests/MinecraftCSharp.Framework.Tests/CameraMathTests.cs` | 近/远平面映射、目标居中、默认相机取景、参数校验、顶点布局 |
 | 单元 | `tests/MinecraftCSharp.Common.Tests/PngEncoderTests.cs` | 与独立实现对齐的 CRC、IHDR 结构、扫描线往返 |
+| 单元 | `tests/MinecraftCSharp.Common.Tests/PngDecoderTests.cs` | 灰度/真彩/索引/带 alpha 解码、过滤器还原、损坏报错、与编码器往返 |
 | 集成 | `launcher frame local` | 本地合成世界出图（不依赖网络） |
 | 集成 | `launcher frame replay <file>` | 用已捕获的真实区块包回放，验证"真实数据能画出来" |
 | 集成 | `launcher window <address>` / `window local` | 窗口呈现真实世界（180 帧，BGRA8UnormSrgb）并落盘 PNG |
