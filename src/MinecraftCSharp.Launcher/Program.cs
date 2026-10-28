@@ -6,7 +6,7 @@ using MinecraftCSharp.Common.Identifiers;
 using MinecraftCSharp.Common.Imaging;
 using MinecraftCSharp.Launcher.Accounts;
 using MinecraftCSharp.Launcher.Assets;
-using MinecraftCSharp.Launcher.Assets.Resolution;
+using MinecraftCSharp.Client.Assets;
 using MinecraftCSharp.Launcher.Launch;
 using MinecraftCSharp.Launcher.Transport;
 using MinecraftCSharp.Client.World;

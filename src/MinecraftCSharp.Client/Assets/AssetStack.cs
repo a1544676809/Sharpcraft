@@ -3,7 +3,7 @@
 
 using MinecraftCSharp.Common.Identifiers;
 
-namespace MinecraftCSharp.Launcher.Assets.Resolution;
+namespace MinecraftCSharp.Client.Assets;
 
 /// <summary>How a missing resource is treated (docs/modules/asset-resolution.md §6).</summary>
 public enum MissingResourcePolicy

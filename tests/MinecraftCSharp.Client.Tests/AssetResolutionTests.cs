@@ -6,10 +6,10 @@ using System.Text;
 using System.Text.Json;
 using MinecraftCSharp.Common.Identifiers;
 using MinecraftCSharp.Common.Imaging;
-using MinecraftCSharp.Launcher.Assets.Resolution;
+using MinecraftCSharp.Client.Assets;
 using Xunit;
 
-namespace MinecraftCSharp.Launcher.Tests;
+namespace MinecraftCSharp.Client.Tests;
 
 /// <summary>
 /// Asset resolution: stack order, overrides, listing, metadata siblings, language merge direction,

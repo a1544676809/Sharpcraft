@@ -29,15 +29,17 @@
 
 ## 2. 侧别归属
 
-- 归属：**外围宿主层**（与资产打包、启动器同层）。
-- 判定依据：原则 5 把资产管线列在外围宿主层；游戏逻辑不得读 jar，也不应直接持有来源实现。
-- 消费方向：`Client`/`Framework` 通过一个**只读接口**取资源，接口定义在宿主层程序集，避免 Client 反向依赖宿主。
+- 归属：**`MinecraftCSharp.Client`**（`Client/Assets/`），与 ADR-0007 一致。
+- 判定依据：用户资源包会替换纹理，图集必须随包栈在客户端重建；原版同样由客户端持有资源管理器与拼图逻辑（证据见 ADR-0007）。
+- 启动器复用：`Launcher` 已引用 `Client`，其 `assets` / `launch` 校验命令调用同一份解析代码，不存在第二套实现。
+- 反方向仍然禁止：`Client` MUST NOT 引用 `Launcher`（架构门禁强制）。
 
 ## 3. 依赖关系
 
 | 方向 | 对象 | 说明 |
 | --- | --- | --- |
 | 依赖 | `Common.Identifiers` | 复用既有 `Identifier`，不新建位置类型 |
+| 被复用 | `Launcher`（校验与打包命令） | 通过已有的 `Launcher → Client` 引用调用 |
 | 依赖 | `System.IO.Compression` / `System.Text.Json` | zip 与索引 JSON |
 | 被依赖 | 渲染层（纹理）、语言层 | 只读消费 |
 | 不依赖 | 任何来源实现的调用方 | 通过接口注入，便于测试与替换 |

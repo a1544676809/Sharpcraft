@@ -7,7 +7,7 @@ using System.Text.Json;
 using MinecraftCSharp.Common.Identifiers;
 using MinecraftCSharp.Common.Imaging;
 
-namespace MinecraftCSharp.Launcher.Assets.Resolution;
+namespace MinecraftCSharp.Client.Assets;
 
 /// <summary>
 /// Assets stored in a zip: either our own pack (with <c>manifest.json</c> and per-entry hashes) or a

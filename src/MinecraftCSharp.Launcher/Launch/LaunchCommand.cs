@@ -7,7 +7,7 @@ using MinecraftCSharp.Auth;
 using MinecraftCSharp.Common.Lifecycle;
 using MinecraftCSharp.Launcher.Accounts;
 using MinecraftCSharp.Launcher.Assets;
-using MinecraftCSharp.Launcher.Assets.Resolution;
+using MinecraftCSharp.Client.Assets;
 
 namespace MinecraftCSharp.Launcher.Launch;
 

@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using MinecraftCSharp.Common.Identifiers;
 
-namespace MinecraftCSharp.Launcher.Assets.Resolution;
+namespace MinecraftCSharp.Client.Assets;
 
 /// <summary>The resource families this client loads.</summary>
 public enum ResourceKind

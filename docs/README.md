@@ -130,6 +130,7 @@
 | [`decisions/0004-window-layer.md`](decisions/0004-window-layer.md) | ADR-0004：窗口层（Silk.NET.Windowing）与原生句柄抽象 | 已接受 |
 | [`decisions/0005-asset-pack-and-official-index.md`](decisions/0005-asset-pack-and-official-index.md) | ADR-0005：资产打包为单文件 pack，音频沿用官方索引 | 待评审 |
 | [`decisions/0006-offline-login-gating.md`](decisions/0006-offline-login-gating.md) | ADR-0006：离线登录闸门、身份派生与防篡改边界 | 待评审 |
+| [`decisions/0007-resources-live-in-the-client.md`](decisions/0007-resources-live-in-the-client.md) | ADR-0007：资源加载与图集归客户端，启动器只做校验与打包 | 已接受 |
 | [`repro/README.md`](repro/README.md) | 最小复现用例库约定 | 活文档 |
 
 （`milestones/` 已创建：入口见 [`milestones/README.md`](milestones/README.md)，阶段划分见 [`milestones/roadmap.md`](milestones/roadmap.md)。）
