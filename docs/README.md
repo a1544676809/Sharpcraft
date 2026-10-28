@@ -83,6 +83,8 @@
 | [`analysis/architecture/README.md`](analysis/architecture/README.md) | 整体架构分析入口与第一轮关键结论 | 草稿 |
 | [`analysis/architecture/overview.md`](analysis/architecture/overview.md) | 基线标识、分层、入口、渲染栈、三侧初判 | 草稿 |
 | [`analysis/architecture/package-map.md`](analysis/architecture/package-map.md) | 包级计数地图与子树职责/归属倾向 | 草稿 |
+| [`architecture/README.md`](architecture/README.md) | 架构目录入口与生效中的边界规则 | 草稿 |
+| [`architecture/boundaries.md`](architecture/boundaries.md) | 三侧 + 外围宿主层的判定规则、证据、拆分清单、程序集映射 | 草稿 |
 | [`_templates/module-doc.md`](_templates/module-doc.md) | 模块设计文档模板 | 已评审 |
 
-（`architecture/`、`specs/`、`modules/`、`decisions/`、`milestones/` 目录在首份文档落盘时创建，届时同步更新本表。）
+（`specs/`、`modules/`、`decisions/`、`milestones/` 目录在首份文档落盘时创建，届时同步更新本表。）
