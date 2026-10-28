@@ -41,7 +41,6 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 1. M1-a 已完成（T-007 / T-008 / T-010 / T-011）。
 2. M1-b 网络协议底座：T-012 编码原语、T-013 握手/状态包与帧缓冲/压缩、T-014 状态查询客户端 + SRV 解析已完成。
 3. 规格已落盘：`docs/specs/network/{README,primitives-varint,primitives-strings,protocol-phases}.md`。
-3. `nextGaussian` 已实现并回放向量（T-011）。
 4. `fork()` / `consumeCount` 的链式派生向量仍未取；`coordinates.md` 还有两项待验证（ChunkPos 主构造器、超范围饱和）。
 5. **链路已打通**：对 `mcf.ddger.top` 实测得到 protocol=777 / version=26.3 / RTT=21ms（证据见 `protocol-phases.md` §8）。SRV 解析已实现。
 6. T-015 登录加密原语已完成（服务端哈希 / RSA / AES-CFB8，向量来自 JVM 参考实现）。
@@ -58,7 +57,7 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 17. 区块与光照解析全部通过（9/9 区块、97 个光照数组）。
 18. T-026 渲染已完成：绑定切到 `Brew.Wgpu 29.0.0.5`（Silk.NET 原生包的回读是未实现桩，已废弃），`launcher frame` 产出 960x540 PNG，清屏色 140,184,242、方块面颜色正确。
 19. 深度缓冲已加（`Depth32Float` + `Less`），相机改为按网格实际包围盒取景；`launcher frame replay <file>` 用已捕获的真实区块包出图（现场网络到 xsts 不可用时仍可验收）。
-20. `tests/MinecraftCSharp.Framework.Tests`（6 项相机/裁剪空间测试）已入解决方案；`docs/modules/render.md` 状态为 **[待评审]**，需你确认后改 `[已评审]`。
+20. 文档已批准：`docs/modules/render.md` → `[已评审]`，`docs/decisions/0004-window-layer.md` → `[已接受]`；`AGENTS.md` §5 已按授权写入绑定与窗口层定稿结论。
 21. **真实世界出图已达成**：`launcher frame mcf.ddger.top` 现场跑通——9/9 区块、275,142 方块、110,868 三角形，输出 3×3 区块的岛屿（草地/沙滩/水体/树木），证明"能画出自己收到的世界"。
 22. **窗口呈现已达成**：`launcher window <address|local>` 打开真实窗口（默认停留 8 秒，`MC_WINDOW_SECONDS` 可调），呈现 180 帧（BGRA8UnormSrgb）并落盘同一帧 PNG；现场跑真实服务器时显示 9/9 区块、275,142 方块、110,868 三角形——M2 四步全部有可执行证据。
 23. 下一步（M3 候选）：① 光照数组→顶点亮度；② 背面剔除与按区块合批；③ 帧循环接入输入与 resize；④ 跨平台窗口验收（R-011）。

@@ -333,7 +333,10 @@ LICENSE                        # LGPL-3.0-or-later 附加许可 + 并入的 GPL-
 ## 5. 待决事项（需评审后定稿）
 
 - [ ] 运行时形态：JIT / AOT / 单文件，与模组热加载、WGPU 绑定、**LGPL §4 可替换义务**（原则 10）的兼容性取舍，结论须落 ADR。
-- [ ] WGPU 绑定与窗口层选型。
+- [x] WGPU 绑定与窗口层选型（2026-10-28 定稿）：
+  - **绑定**：`Brew.Wgpu`（托管绑定由 wgpu-native 头文件生成，原生库与绑定同包同版本）。理由与对照证据见 `docs/decisions/0003-wgpu-binding.md`；核心事实是"绑定与原生必须同源同版本"，Silk.NET 旧原生包的回读为未实现桩。
+  - **窗口层**：`Silk.NET.Windowing`，平台句柄经 `Framework.Platform.WindowHost` 收敛为平台无关的 `NativeSurfaceSource`，渲染器不得直接接触窗口 API。见 `docs/decisions/0004-window-layer.md`。
+  - **截图路径**：离屏渲染后回读（交换链纹理不保证可拷贝）；窗口呈现与截图共用同一相机与几何。
 - [ ] 模组清单格式、API 版本策略、热重载的卸载验证方式。
 - [ ] 集成服务端（单人模式）的实现范围与边界归属。
 - [ ] 认证流程选型：授权码 + 回环重定向 vs 设备码。

@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 MinecraftCSharp contributors -->
 
-状态：[待评审]
+状态：[已接受]
 日期：2026-10-28
 
 # ADR-0004：窗口层选用 Silk.NET.Windowing，并抽象出原生句柄

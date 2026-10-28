@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 MinecraftCSharp contributors -->
 
-状态：[待评审]
+状态：[已评审]
 基线：Minecraft 26.3
 证据：ADR-0003（WGPU 绑定与首帧路径）；实测输出 `minecraftcsharp-frame.png`
 最后更新：2026-10-28

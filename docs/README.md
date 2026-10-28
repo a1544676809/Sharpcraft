@@ -102,7 +102,7 @@
 | [`modules/launcher.md`](modules/launcher.md) | 启动器（本阶段：认证与探测 CLI 垂直切片） | 已评审 |
 | [`modules/world.md`](modules/world.md) | 客户端世界数据：调色板容器、区块段与列、坐标查询 | 已评审 |
 | [`modules/nbt.md`](modules/nbt.md) | NBT 读写（网络/存储两种根、读取上限） | 已评审 |
-| [`modules/render.md`](modules/render.md) | 渲染层：网格生成、相机数学、离屏 WGPU 渲染与 PNG | 待评审 |
+| [`modules/render.md`](modules/render.md) | 渲染层：网格生成、相机数学、离屏 WGPU 渲染与 PNG | 已评审 |
 | [`_templates/module-doc.md`](_templates/module-doc.md) | 模块设计文档模板 | 已评审 |
 | [`_templates/state.md`](_templates/state.md) | STATE 模板 | 已评审 |
 | [`traceability.md`](traceability.md) | 追踪矩阵：规格章节 ↔ 测试 ↔ 代码目录 | 活文档 |
@@ -118,7 +118,7 @@
 | [`decisions/0001-architecture-rules-as-tests.md`](decisions/0001-architecture-rules-as-tests.md) | ADR-0001：架构规则以测试门禁落地 | 已采纳 |
 | [`decisions/0002-dnsclient-dependency.md`](decisions/0002-dnsclient-dependency.md) | ADR-0002：引入 DnsClient.NET 做 SRV 查询 | 已采纳 |
 | [`decisions/0003-wgpu-binding.md`](decisions/0003-wgpu-binding.md) | ADR-0003：WGPU 绑定（Brew.Wgpu）与离屏首帧 | 已采纳 |
-| [`decisions/0004-window-layer.md`](decisions/0004-window-layer.md) | ADR-0004：窗口层（Silk.NET.Windowing）与原生句柄抽象 | 待评审 |
+| [`decisions/0004-window-layer.md`](decisions/0004-window-layer.md) | ADR-0004：窗口层（Silk.NET.Windowing）与原生句柄抽象 | 已接受 |
 | [`repro/README.md`](repro/README.md) | 最小复现用例库约定 | 活文档 |
 
 （`milestones/` 目录在首个里程碑文档落盘时创建并同步更新本表。）
