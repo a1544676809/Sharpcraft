@@ -33,8 +33,8 @@
 | 方法 | 定义 |
 | --- | --- |
 | `nextInt()` | `next(32)` |
-| `nextFloat()` | `next(24) × 2^-24` |
-| `nextDouble()` | `((next(26) << 27) + next(27)) × 2^-53` |
+| `nextFloat()` | `next(24) × 2^-24`（float 运算） |
+| `nextDouble()` | `((next(26) << 27) + next(27)) × DOUBLE_MULTIPLIER`（常量声明为 double、由 float 字面量加宽，**运算在 double 精度**） |
 | `nextBoolean()` | `next(1) != 0` |
 | `nextLong()` | `(next(32) << 32) + next(32)` — 后者以 **int 带符号扩展**参与加法，不是按位或 |
 | `nextInt(bound)` | 见下，两条路径结果不同 |
@@ -56,7 +56,7 @@
 | `nextInt()` | `(int)nextLong()` |
 | `nextBoolean()` | `(nextLong() & 1) != 0` |
 | `nextFloat()` | `nextBits(24) × 2^-24` |
-| `nextDouble()` | `nextBits(53) × 2^-53` |
+| `nextDouble()` | `nextBits(53) × DOUBLE_MULTIPLIER`（同上，double 精度） |
 | `nextBits(n)` | `nextLong() >>> (64 − n)`（无符号右移） |
 | `nextInt(bound)` | 乘法高位法：32 位无符号随机数 × bound，低 32 位为小数部分；小数 < bound 时用 `(−bound mod 2^32) mod bound` 修正，再取高 32 位 |
 
@@ -141,3 +141,5 @@ Marsaglia 极坐标法：循环取两个 `nextDouble` 映射到 [−1, 1)，直�
 - `GAUSSIAN_SPREAD_FACTOR` 的实际使用点未查。
 
 - 参考向量已取（`random-vectors.md`）：覆盖 LCG、xoroshiro、`intBound` 两条路径、位置化随机、两种 `fromHashOf`、战利品序列；`nextGaussian` 与 `fork` 链尚未覆盖。
+
+- **已实证的实现陷阱（2026-10-28）**：`DOUBLE_MULTIPLIER` 在 26.3 中声明为 `double`、以 float 字面量初始化，因此乘法是 **double 精度**且常量是"float 舍入后的 2^-53"。若误用 float 运算，`nextDouble` 的低 29 位会被抹平（参考向量逐位比对当场暴露）；若误用精确 2^-53，低数位同样不同。`nextFloat` 则是 float 运算。

@@ -26,7 +26,7 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 ## 进行中
 
 - T-005 已完成：`Identifier` + 18 项测试（`src/MinecraftCSharp.Common/Identifiers/`、`tests/.../IdentifierTests.cs`）。
-- 下一项 T-006：两套随机数 + 向量回放。
+- T-006 已完成：`LegacyRandomSource`、`Xoroshiro128PlusPlus`、`XoroshiroRandomSource`、`SeedSupport`、`RandomSource` 工厂；向量回放 840 值全绿，三项分配测试通过。
 
 ## 阻塞项
 
@@ -38,10 +38,10 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 
 ## 下一步具体动作
 
-1. 实现 `LegacyRandom`（48 位 LCG，含 `nextInt(bound)` 两条路径）与 `Xoroshiro128PlusPlus`（含 `nextBits`、乘法高位法 `nextInt(bound)`）。
-2. 写 `RandomVectorTests` 回放 `TestData/random-vectors.txt`：按 kind 分组、按记录顺序消费、十六进制解析。
-3. 为这两个类型标注 `[HotPath]` 并补分配测试（热路径零分配）。
-4. 之后再实现种子派生（`RandomSupport`、位置化工厂、`WorldgenRandom` 混合器、`RandomSequence`）。
+1. 位置化随机：`PositionalRandomFactory`（Legacy 用 Java 字符串哈希，Xoroshiro 用 MD5）+ `Mth.getSeed` 等价实现，用 `posHash` / `*PosAt` / `*PosHashOf` 向量回放。
+2. `WorldgenRandom` 的五个种子混合器（`setDecorationSeed` 等）与 `Algorithm` 选择。
+3. `RandomSequence`（战利品序列）+ `lootSequence` 向量。
+4. 补齐 `nextGaussian`、`fork`、`consumeCount` 的向量后实现。
 5. 注册表顺序链：先做"顺序快照"数据结构，再实现 `Registry`。
 ## 未提交改动 / 后台任务
 
@@ -49,5 +49,5 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 
 ## 最近提交
 
-- `7839c78` feat: executable engineering governance (principle 12)
-- 本次提交：`Identifier` 实现与测试，矩阵 T-005 完成
+- `ba47d10` feat(common): Identifier with vanilla parse, ordering and traversal guard
+- 本次提交：T-006 随机数实现 + 向量回放 + 分配测试
