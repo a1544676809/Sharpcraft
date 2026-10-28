@@ -86,10 +86,13 @@ public sealed class SpriteAtlasTests
 
         var sprite = atlas.Sprites[new Identifier("minecraft", "a")];
 
-        Assert.Equal((float)sprite.X / atlas.Width, sprite.U0, 5);
-        Assert.Equal((float)(sprite.X + 32) / atlas.Width, sprite.U1, 5);
-        Assert.Equal((float)sprite.Y / atlas.Height, sprite.V0, 5);
-        Assert.Equal((float)(sprite.Y + 16) / atlas.Height, sprite.V1, 5);
+        // Half a texel of inset keeps nearest-neighbour sampling inside the cell.
+        Assert.Equal((sprite.X + 0.5f) / atlas.Width, sprite.U0, 5);
+        Assert.Equal((sprite.X + 32 - 0.5f) / atlas.Width, sprite.U1, 5);
+        Assert.Equal((sprite.Y + 0.5f) / atlas.Height, sprite.V0, 5);
+        Assert.Equal((sprite.Y + 16 - 0.5f) / atlas.Height, sprite.V1, 5);
+        Assert.True(sprite.U1 > sprite.U0);
+        Assert.True(sprite.V1 > sprite.V0);
     }
 
     [Fact]

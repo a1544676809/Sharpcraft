@@ -62,6 +62,18 @@ public sealed class MeshBuffer : IDisposable
     }
 
     /// <summary>Appends one quad: four vertices in winding order plus two triangles.</summary>
+    /// <param name="a">First corner (the quad origin).</param>
+    /// <param name="b">Second corner.</param>
+    /// <param name="c">Third corner.</param>
+    /// <param name="d">Fourth corner.</param>
+    /// <param name="red">Red component of the lit colour.</param>
+    /// <param name="green">Green component of the lit colour.</param>
+    /// <param name="blue">Blue component of the lit colour.</param>
+    /// <param name="uvA">UV of the first corner, in sprite repeats.</param>
+    /// <param name="uvB">UV of the second corner, in sprite repeats.</param>
+    /// <param name="uvC">UV of the third corner, in sprite repeats.</param>
+    /// <param name="uvD">UV of the fourth corner, in sprite repeats.</param>
+    /// <param name="sprite">Atlas cell to sample; null covers the whole texture.</param>
     public void AppendQuad(
         (int X, int Y, int Z) a,
         (int X, int Y, int Z) b,
@@ -70,8 +82,10 @@ public sealed class MeshBuffer : IDisposable
         float red,
         float green,
         float blue,
-        float tileU = 1f,
-        float tileV = 1f,
+        (float U, float V) uvA,
+        (float U, float V) uvB,
+        (float U, float V) uvC,
+        (float U, float V) uvD,
         SpriteRect? sprite = null)
     {
         const int floatsPerQuad = 4 * ChunkMesher.FloatsPerVertex;
@@ -80,10 +94,10 @@ public sealed class MeshBuffer : IDisposable
 
         var rect = sprite ?? WholeAtlas;
         var first = (uint)(_vertexFloats / ChunkMesher.FloatsPerVertex);
-        WriteVertex(a, red, green, blue, tileU, tileV, rect);
-        WriteVertex(b, red, green, blue, tileU, tileV, rect);
-        WriteVertex(c, red, green, blue, tileU, tileV, rect);
-        WriteVertex(d, red, green, blue, tileU, tileV, rect);
+        WriteVertex(a, red, green, blue, uvA, rect);
+        WriteVertex(b, red, green, blue, uvB, rect);
+        WriteVertex(c, red, green, blue, uvC, rect);
+        WriteVertex(d, red, green, blue, uvD, rect);
 
         _indices[_indexCount++] = first;
         _indices[_indexCount++] = first + 1;
@@ -137,8 +151,7 @@ public sealed class MeshBuffer : IDisposable
         float red,
         float green,
         float blue,
-        float tileU,
-        float tileV,
+        (float U, float V) uv,
         SpriteRect sprite)
     {
         var offset = _vertexFloats;
@@ -149,9 +162,9 @@ public sealed class MeshBuffer : IDisposable
         _vertices[offset + 4] = green;
         _vertices[offset + 5] = blue;
 
-        // How many sprite repeats this quad covers, and where the sprite sits inside the atlas.
-        _vertices[offset + 6] = tileU;
-        _vertices[offset + 7] = tileV;
+        // Local UV in sprite repeats, plus where the sprite sits inside the atlas.
+        _vertices[offset + 6] = uv.U;
+        _vertices[offset + 7] = uv.V;
         _vertices[offset + 8] = sprite.U0;
         _vertices[offset + 9] = sprite.V0;
         _vertices[offset + 10] = sprite.U1;

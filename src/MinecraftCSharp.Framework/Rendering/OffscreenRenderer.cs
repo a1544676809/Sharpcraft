@@ -19,25 +19,39 @@ public static class OffscreenRenderer
 {
 
     internal const string ShaderSourceText = """
+        @group(0) @binding(0) var atlasTexture : texture_2d<f32>;
+        @group(0) @binding(1) var atlasSampler : sampler;
+
         struct VertexOutput {
             @builtin(position) clipPosition : vec4<f32>,
             @location(0) colour : vec3<f32>,
+            @location(1) uv : vec2<f32>,
+            @location(2) spriteRect : vec4<f32>,
         };
 
         @vertex
         fn vs_main(
             @location(0) clipPosition : vec4<f32>,
             @location(1) colour : vec3<f32>,
+            @location(2) uv : vec2<f32>,
+            @location(3) spriteRect : vec4<f32>,
         ) -> VertexOutput {
             var output : VertexOutput;
             output.clipPosition = clipPosition;
             output.colour = colour;
+            output.uv = uv;
+            output.spriteRect = spriteRect;
             return output;
         }
 
         @fragment
         fn fs_main(input : VertexOutput) -> @location(0) vec4<f32> {
-            return vec4<f32>(input.colour, 1.0);
+            // Tile inside the sprite cell: the fractional part repeats the sprite, and using the
+            // cell rect keeps sampling away from neighbouring sprites (render.md 6.1).
+            let repeated = input.uv - floor(input.uv);
+            let atlasUv = input.spriteRect.xy + repeated * (input.spriteRect.zw - input.spriteRect.xy);
+            let sampled = textureSample(atlasTexture, atlasSampler, atlasUv);
+            return vec4<f32>(sampled.rgb * input.colour, 1.0);
         }
         """;
 
@@ -57,7 +71,7 @@ public static class OffscreenRenderer
         }
     }
 
-    private static RenderPipeline CreatePipeline(Device device)
+    private static RenderPipeline CreatePipeline(Device device, PipelineLayout layout)
     {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
         {
@@ -70,7 +84,7 @@ public static class OffscreenRenderer
             shader,
             "fs_main"u8,
             [new ColorTargetState(WGPUTextureFormat.RGBA8Unorm)],
-            layout: default,
+            layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
             multisample: MultisampleState.Default,
             depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float),
@@ -133,6 +147,70 @@ public static class OffscreenRenderer
 
             using var depthView = depthTexture.CreateView();
 
+            // Atlas upload: nearest sampling with no mipmaps keeps pixel art crisp and stops the
+            // half-texel inset from blending across sprite borders.
+            var atlasData = request.Atlas ?? TextureData.White;
+            using var atlasTexture = device.CreateTexture(new TextureDescriptor
+            {
+                Size = new WGPUExtent3D
+                {
+                    width = (uint)atlasData.Width,
+                    height = (uint)atlasData.Height,
+                    depthOrArrayLayers = 1
+                },
+                MipLevelCount = 1,
+                SampleCount = 1,
+                Dimension = WGPUTextureDimension._2D,
+                Format = WGPUTextureFormat.RGBA8Unorm,
+                Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
+            });
+
+            device.Queue.WriteTexture(
+                atlasTexture,
+                atlasData.Rgba,
+                (uint)(atlasData.Width * 4),
+                (uint)atlasData.Height,
+                new WGPUExtent3D
+                {
+                    width = (uint)atlasData.Width,
+                    height = (uint)atlasData.Height,
+                    depthOrArrayLayers = 1
+                },
+                0,
+                new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+
+            using var atlasView = atlasTexture.CreateView();
+
+            using var atlasSampler = device.CreateSampler(new SamplerDescriptor
+            {
+                AddressModeU = WGPUAddressMode.ClampToEdge,
+                AddressModeV = WGPUAddressMode.ClampToEdge,
+                AddressModeW = WGPUAddressMode.ClampToEdge,
+                MagFilter = WGPUFilterMode.Nearest,
+                MinFilter = WGPUFilterMode.Nearest,
+                MipmapFilter = WGPUMipmapFilterMode.Nearest,
+                LodMinClamp = 0f,
+                LodMaxClamp = 1f,
+                MaxAnisotropy = 1
+            });
+
+            using var bindGroupLayout = device.CreateBindGroupLayout(
+            [
+                BindGroupLayoutEntry.Texture(
+                    0,
+                    ShaderStage.Fragment,
+                    WGPUTextureSampleType.Float,
+                    WGPUTextureViewDimension._2D,
+                    false),
+                BindGroupLayoutEntry.Sampler(1, ShaderStage.Fragment, WGPUSamplerBindingType.Filtering)
+            ]);
+
+            using var pipelineLayout = device.CreatePipelineLayout([bindGroupLayout]);
+
+            using var bindGroup = device.CreateBindGroup(
+                bindGroupLayout,
+                [BindGroupEntry.TextureView(0, atlasView), BindGroupEntry.Sampler(1, atlasSampler)]);
+
             // Readback rows must be padded to 256 bytes.
             var unpadded = (int)width * 4;
             var padded = (unpadded + 255) / 256 * 256;
@@ -148,7 +226,7 @@ public static class OffscreenRenderer
             var vertexBytes = hasGeometry ? ClipSpaceTransform.Build(request, viewProjection) : [];
             var indexBytes = hasGeometry ? BuildIndexBytes(request) : [];
 
-            using var pipeline = hasGeometry ? CreatePipeline(device) : default;
+            using var pipeline = hasGeometry ? CreatePipeline(device, pipelineLayout) : default;
             using var vertexBuffer = hasGeometry
                 ? device.CreateBufferInit(new BufferInitDescriptor { Usage = BufferUsage.Vertex }, vertexBytes.AsSpan())
                 : default;
@@ -173,6 +251,7 @@ public static class OffscreenRenderer
             if (hasGeometry)
             {
                 pass.SetPipeline(pipeline);
+                pass.SetBindGroup(0, bindGroup, []);
                 pass.SetVertexBuffer(0, vertexBuffer);
                 pass.SetIndexBuffer(indexBuffer, WGPUIndexFormat.Uint32);
                 pass.DrawIndexed((uint)request.Indices.Length);

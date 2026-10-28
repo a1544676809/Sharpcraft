@@ -195,11 +195,39 @@
 
 | 项 | 状态 |
 | --- | --- |
-| 顶点格式扩到 12/13 float，管线声明四个属性 | 完成（`dotnet test` 全绿，`frame local` 仍可出图） |
+| 顶点格式扩到 12/13 float，管线声明四个属性 | 完成 |
 | `BlockSpriteMap`：方块 → 精灵（约定 `block/<名字>`，缺失回落 missing） | 完成（5 项测试） |
 | 布局预计算：有 `BlockStateLayout` 时 state id → 精灵是数组下标，无每面开销 | 完成 |
-| 着色器采样（绑定组、采样器、`fract` 平铺） | 未完成 |
+| 着色器采样（绑定组、采样器、`fract` 平铺、半纹素内缩） | **完成**（本地世界已出带纹理的截图） |
 | `registry_data` → `BlockStateLayout` 装配（真实世界的 state id → 方块名） | 未完成，见 T-039 |
+
+### 带纹理的实机画面（2026-10-28 实测）
+
+```
+$ MC_FRAME_LOCAL=1 launcher frame local
+sprites: 1024x1024 atlas, 1301 sprites, layout present, 55 ms
+local demo: 2045 blocks, 1606 triangles
+rendered on adapter: 101.7088
+frame written to ...\minecraftcsharp-frame.png
+```
+
+- 画面上石头是石头纹理、底部泥土是泥土纹理，不再是"状态 id 哈希出的纯色"。
+- 用 `MC_DEBUG_SPRITES=1` 打印 `state → 精灵矩形 + 图集中心像素`，实测映射正确：
+  `0 air → missing(255,0,255)`、`1 stone → 848,336 rgba(143,143,143)`、`2 dirt → 688,176 rgba(121,85,58)`、`3 cobblestone → 160,144 rgba(181,181,181)`。
+- 用 `MC_DEMO_STATE=1` 把整个世界刷成石头后采样渲染结果：`rgba(143,143,143)`，与图集里石头的像素**完全一致**。
+
+### 这轮抓到的两个真 bug
+
+1. **顶点颜色不能再用状态哈希色**。有了纹理之后，albedo 来自图集，顶点颜色只应承载光照；最初仍乘上 `ColourOf(state)`，结果石头被染成棕色。是靠"强制单一方块 + 采样渲染像素对比图集像素"这条诊断链定位的，肉眼看图只会觉得"颜色有点怪"。
+2. **图集 UV 需要半纹素内缩**。最近邻采样落在格子边界会取到隔壁精灵的纹素，因此 `U0/V0` 向内缩 0.5 纹素、`U1/V1` 向内缩 0.5 纹素；对应测试断言了内缩后的坐标。
+
+### 诊断开关
+
+| 变量 | 作用 |
+| --- | --- |
+| `MC_FRAME_LOCAL=1` | 用本地合成世界出图，不联网、不认证 |
+| `MC_DEBUG_SPRITES=1` | 打印精灵映射与图集像素，并采样渲染结果的若干像素 |
+| `MC_DEMO_STATE=<id>` | 把本地世界所有方块刷成同一状态，用于隔离"某个方块纹理错"的问题 |
 
 ### 片二：模型驱动
 
@@ -230,6 +258,7 @@
 | 单元 | `tests/MinecraftCSharp.Common.Tests/PngEncoderTests.cs` | 与独立实现对齐的 CRC、IHDR 结构、扫描线往返 |
 | 单元 | `tests/MinecraftCSharp.Client.Tests/SpriteAtlasTests.cs` | 图集：真实尺寸、不重叠、UV、missing 回落、动画首帧、可复现、包栈覆盖 |
 | 单元 | `tests/MinecraftCSharp.Client.Tests/BlockSpriteMapTests.cs` | 方块 → 精灵：命名约定、缺失回落、布局预计算、无布局行为 |
+| 单元 | `tests/MinecraftCSharp.Client.Tests/TexturedMesherTests.cs` | 带纹理网格：顶点颜色只承载光照、UV 在格子内平铺、精灵矩形进顶点流 |
 | 单元 | `tests/MinecraftCSharp.Common.Tests/PngDecoderTests.cs` | 灰度/真彩/索引/带 alpha 解码、过滤器还原、损坏报错、与编码器往返 |
 | 集成 | `launcher frame local` | 本地合成世界出图（不依赖网络） |
 | 集成 | `launcher frame replay <file>` | 用已捕获的真实区块包回放，验证"真实数据能画出来" |

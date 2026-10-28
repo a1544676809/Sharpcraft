@@ -3,11 +3,14 @@
 
 using System.Numerics;
 using MinecraftCSharp.Auth;
+using MinecraftCSharp.Launcher.Assets;
+using MinecraftCSharp.Client.Assets;
 using MinecraftCSharp.Client.Render;
 using MinecraftCSharp.Client.World;
 using MinecraftCSharp.Common.Imaging;
 using MinecraftCSharp.Common.Identifiers;
 using MinecraftCSharp.Common.Network;
+using MinecraftCSharp.Common.Registries;
 using MinecraftCSharp.Framework.Rendering;
 
 namespace MinecraftCSharp.Launcher;
@@ -160,10 +163,93 @@ internal static class FrameCommand
         return world;
     }
 
-    /// <summary>Builds the frame request (mesh plus camera) for a world.</summary>
-    internal static FrameRequest BuildRequest(ClientWorld world, int width, int height, out MeshData mesh)
+    /// <summary>
+    /// Builds the sprite atlas and state mapping for a frame. The client owns stitching (ADR-0007);
+    /// the launcher only supplies the pack path it already manages.
+    /// </summary>
+    /// <param name="layout">Block state layout, or null when it is not known yet.</param>
+    /// <returns>Atlas plus mapping, or null when no pack is installed.</returns>
+    internal static (SpriteAtlas Atlas, BlockSpriteMap Map)? PrepareSprites(BlockStateLayout? layout)
     {
-        mesh = ChunkMesher.Mesh(world);
+        var packPath = FindPack();
+        if (packPath is null)
+        {
+            Console.WriteLine("sprites: no asset pack found; rendering colour-only faces");
+            return null;
+        }
+
+        using var stack = new AssetStack { Policy = MissingResourcePolicy.Warn }
+            .Add(new BuiltInFallbackSource())
+            .Add(new ZipAssetSource(packPath, "base-pack"));
+
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        var atlas = SpriteAtlasBuilder.Build(stack);
+        timer.Stop();
+
+        var map = new BlockSpriteMap(atlas, layout);
+
+        if (Environment.GetEnvironmentVariable("MC_DEBUG_SPRITES") is "1" && layout is not null)
+        {
+            for (var block = 0; block < layout.Blocks.Count; block++)
+            {
+                var entry = layout.Blocks[block];
+                var sprite = map.ForState(entry.BaseId);
+                var offset = (((sprite.Y + (sprite.Height / 2)) * atlas.Width) + sprite.X + (sprite.Width / 2))
+                             * 4;
+                Console.WriteLine(
+                    $"  state {entry.BaseId,3} {entry.Id,-28} {sprite} " +
+                    $"rgba({atlas.Pixels[offset]},{atlas.Pixels[offset + 1]},{atlas.Pixels[offset + 2]})");
+            }
+        }
+        Console.WriteLine(
+            $"sprites: {atlas.Width}x{atlas.Height} atlas, {atlas.Sprites.Count} sprites, " +
+            $"layout {(map.HasLayout ? "present" : "missing")}, {timer.Elapsed.TotalMilliseconds:F0} ms");
+
+        return (atlas, map);
+    }
+
+    /// <summary>Finds the newest asset pack the launcher produced.</summary>
+    internal static string? FindPack()
+    {
+        var configured = Environment.GetEnvironmentVariable("MC_ASSETS_PACK");
+        if (!string.IsNullOrWhiteSpace(configured) && File.Exists(configured))
+        {
+            return configured;
+        }
+
+        var directory = Environment.GetEnvironmentVariable("MC_ASSETS_OUT") is { Length: > 0 } output
+            ? output
+            : HostPaths.DefaultPacksDirectory();
+
+        return Directory.Exists(directory)
+            ? Directory.EnumerateFiles(directory, "*.pack.zip")
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .FirstOrDefault()
+            : null;
+    }
+
+    /// <summary>
+    /// The demo world's block state layout. Ids match the states the demo world writes, so the same
+    /// texture path a real server would use is exercised here as well.
+    /// </summary>
+    internal static BlockStateLayout DemoLayout() => new(
+    [
+        (new Identifier("minecraft", "air"), 1),
+        (new Identifier("minecraft", "stone"), 1),
+        (new Identifier("minecraft", "dirt"), 1),
+        (new Identifier("minecraft", "cobblestone"), 1)
+    ]);
+
+    /// <summary>Builds the frame request (mesh plus camera) for a world.</summary>
+    internal static FrameRequest BuildRequest(
+        ClientWorld world,
+        int width,
+        int height,
+        out MeshData mesh,
+        BlockSpriteMap? sprites = null,
+        TextureData? atlas = null)
+    {
+        mesh = ChunkMesher.Mesh(world, airState: 0, maxBlocks: 2_000_000, sprites: sprites);
 
         var bounds = BoundsOf(mesh);
 
@@ -186,13 +272,23 @@ internal static class FrameCommand
             mesh.Indices,
             new Vector4(0.55f, 0.72f, 0.95f, 1f),
             eye,
-            target);
+            target)
+        {
+            Atlas = atlas
+        };
     }
 
     /// <summary>Renders the world to an offscreen frame and writes a PNG.</summary>
-    internal static string RenderWorld(ClientWorld world, int width, int height)
+    internal static string RenderWorld(ClientWorld world, int width, int height, BlockStateLayout? layout = null)
     {
-        var request = BuildRequest(world, width, height, out var mesh);
+        var prepared = PrepareSprites(layout);
+        var request = BuildRequest(
+            world,
+            width,
+            height,
+            out var mesh,
+            prepared?.Map,
+            prepared is null ? null : new TextureData(prepared.Value.Atlas.Width, prepared.Value.Atlas.Height, prepared.Value.Atlas.Pixels));
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
         var frame = OffscreenRenderer.Render(request);
@@ -207,7 +303,45 @@ internal static class FrameCommand
     private static string RenderLocal(int width, int height)
     {
         var world = BuildDemoWorld();
-        var mesh = ChunkMesher.Mesh(world);
+
+        if (Environment.GetEnvironmentVariable("MC_DEMO_STATE") is { Length: > 0 } forced &&
+            int.TryParse(forced, out var forcedState))
+        {
+            // Diagnostic: paint every block with one state so a wrong sprite is unmistakable.
+            var forcedChunk = world.GetChunks().First();
+            for (var y = 0; y < 11; y++)
+            {
+                var section = forcedChunk.GetSection(y >> 4);
+                if (section is null)
+                {
+                    continue;
+                }
+
+                for (var x = 0; x < 16; x++)
+                {
+                    for (var z = 0; z < 16; z++)
+                    {
+                        if (section.Get(x, y & 15, z) != 0)
+                        {
+                            section.Set(x, y & 15, z, forcedState);
+                        }
+                    }
+                }
+            }
+        }
+
+        // The demo world's states are laid out explicitly, so the same sprite path a real server
+        // would exercise is used here as well.
+        var prepared = PrepareSprites(DemoLayout());
+
+        if (Environment.GetEnvironmentVariable("MC_DEBUG_SPRITES") is "1")
+        {
+            for (var y = 0; y < 12; y++)
+            {
+                Console.WriteLine($"  demo block (0,{y},0) state {world.GetBlockState(0, y, 0)}");
+            }
+        }
+        var mesh = ChunkMesher.Mesh(world, airState: 0, maxBlocks: 2_000_000, sprites: prepared?.Map);
         Console.WriteLine($"local demo: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
         var bounds = (Min: new Vector3(0, -16, 0), Max: new Vector3(16, 16, 16));
@@ -221,9 +355,32 @@ internal static class FrameCommand
             mesh.Indices,
             new Vector4(0.55f, 0.72f, 0.95f, 1f),
             eye,
-            target));
+            target)
+        {
+            Atlas = prepared is null
+                ? null
+                : new TextureData(prepared.Value.Atlas.Width, prepared.Value.Atlas.Height, prepared.Value.Atlas.Pixels)
+        });
 
         Console.WriteLine($"rendered on adapter: {frame.AdapterName}");
+
+        if (Environment.GetEnvironmentVariable("MC_DEBUG_SPRITES") is "1")
+        {
+            // Sample a few pixels so a wrong sprite shows up as a number, not as an impression.
+            foreach (var (label, x, y) in new[]
+                     {
+                         ("top-centre", frame.Width / 2, (frame.Height / 2) - 60),
+                         ("top-mid", frame.Width / 2, frame.Height / 2),
+                         ("left-side", (frame.Width / 2) - 120, (frame.Height / 2) + 60),
+                         ("sky", 10, 10)
+                     })
+            {
+                var offset = (((y * frame.Width) + x) * 4);
+                Console.WriteLine(
+                    $"  pixel {label,-12} ({x},{y}) rgba({frame.Rgba[offset]},{frame.Rgba[offset + 1]},{frame.Rgba[offset + 2]})");
+            }
+        }
+
         var png = PngEncoder.EncodeRgba(frame.Width, frame.Height, frame.Rgba);
         var path = Path.Combine(Path.GetTempPath(), "minecraftcsharp-frame.png");
         File.WriteAllBytes(path, png);

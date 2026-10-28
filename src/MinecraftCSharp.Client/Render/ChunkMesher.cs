@@ -4,6 +4,8 @@
 using MinecraftCSharp.Client.World;
 using MinecraftCSharp.Common.World;
 
+using MinecraftCSharp.Client.Assets;
+
 namespace MinecraftCSharp.Client.Render;
 
 /// <summary>
@@ -55,13 +57,18 @@ public static class ChunkMesher
     /// <param name="world">World to mesh.</param>
     /// <param name="airState">Block state treated as empty.</param>
     /// <param name="maxBlocks">Safety cap so a huge world cannot exhaust memory.</param>
-    public static MeshData Mesh(ClientWorld world, int airState = 0, int maxBlocks = 2_000_000)
+    /// <param name="sprites">Atlas mapping; without it quads carry the whole-atlas rect.</param>
+    public static MeshData Mesh(
+        ClientWorld world,
+        int airState = 0,
+        int maxBlocks = 2_000_000,
+        BlockSpriteMap? sprites = null)
     {
         ArgumentNullException.ThrowIfNull(world);
 
         // Merging cuts the quad count by an order of magnitude, so a smaller guess is enough.
         using var buffer = new MeshBuffer(Math.Min(maxBlocks, world.LoadedChunkCount * 512));
-        var blocks = Mesh(world, buffer, airState, maxBlocks);
+        var blocks = Mesh(world, buffer, airState, maxBlocks, sprites);
         return buffer.ToMeshData(blocks);
     }
 
@@ -74,7 +81,8 @@ public static class ChunkMesher
         ClientWorld world,
         MeshBuffer buffer,
         int airState = 0,
-        int maxBlocks = 2_000_000)
+        int maxBlocks = 2_000_000,
+        BlockSpriteMap? sprites = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(buffer);
@@ -89,7 +97,7 @@ public static class ChunkMesher
                 break;
             }
 
-            blocks += MeshChunk(world, chunk, airState, buffer, maxBlocks - blocks);
+            blocks += MeshChunk(world, chunk, airState, buffer, maxBlocks - blocks, sprites);
         }
 
         return blocks;
@@ -102,7 +110,8 @@ public static class ChunkMesher
         LevelChunk chunk,
         int airState,
         MeshBuffer buffer,
-        int maxBlocks)
+        int maxBlocks,
+        BlockSpriteMap? sprites = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(chunk);
@@ -133,7 +142,7 @@ public static class ChunkMesher
             for (var direction = 0; direction < 6; direction++)
             {
                 consumed.Clear();
-                MergeSectionFaces(world, section, direction, baseX, baseY, baseZ, airState, buffer, consumed);
+                MergeSectionFaces(world, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites);
             }
         }
 
@@ -150,7 +159,8 @@ public static class ChunkMesher
         int baseZ,
         int airState,
         MeshBuffer buffer,
-        Span<bool> consumed)
+        Span<bool> consumed,
+        BlockSpriteMap? sprites)
     {
         var (uAxis, vAxis) = InPlaneAxes(direction);
 
@@ -198,7 +208,7 @@ public static class ChunkMesher
                         }
                     }
 
-                    EmitMergedQuad(world, buffer, direction, slice, u, v, width, height, baseX, baseY, baseZ, key.State);
+                    EmitMergedQuad(world, buffer, direction, slice, u, v, width, height, baseX, baseY, baseZ, key.State, sprites);
                 }
             }
         }
@@ -320,7 +330,8 @@ public static class ChunkMesher
         int baseX,
         int baseY,
         int baseZ,
-        int state)
+        int state,
+        BlockSpriteMap? sprites)
     {
         var (uAxis, vAxis) = InPlaneAxes(direction);
         var (x, y, z) = FaceBlock(uAxis, vAxis, slice, u, v);
@@ -393,7 +404,10 @@ public static class ChunkMesher
         b = (b.X + baseX, b.Y + baseY, b.Z + baseZ);
         c = (c.X + baseX, c.Y + baseY, c.Z + baseZ);
 
-        var (red, green, blue) = ColourOf(state);
+        // With textures the albedo comes from the atlas, so the vertex colour carries only light:
+        // multiplying a texture by the state hash colour would tint every block (found by sampling
+        // rendered pixels against the atlas cell of a forced stone world).
+        var (red, green, blue) = sprites is null ? ColourOf(state) : (1f, 1f, 1f);
         var (dx, dy, dz) = NeighbourOffset(direction);
         var shadeFactor = direction switch
         {
@@ -409,7 +423,45 @@ public static class ChunkMesher
                 : ((byte)0, (byte)0);
 
         var shade = Brightness(light) * shadeFactor;
-        buffer.AppendQuad(origin, a, b, c, red * shade, green * shade, blue * shade);
+
+        // Corner order follows the winding: where U came first the horizontal corner comes first,
+        // where V came first the vertical one does. UVs stay in sprite repeats so a merged quad
+        // tiles its texture instead of stretching it.
+        var uFirst = direction is NegativeX or NegativeY or PositiveZ;
+        var w = (float)width;
+        var h = (float)height;
+
+        (float U, float V) uvOrigin = (0f, 0f);
+        (float U, float V) uvA;
+        (float U, float V) uvB;
+        (float U, float V) uvC;
+
+        if (uFirst)
+        {
+            uvA = (w, 0f);
+            uvB = (w, h);
+            uvC = (0f, h);
+        }
+        else
+        {
+            uvA = (0f, h);
+            uvB = (w, h);
+            uvC = (w, 0f);
+        }
+
+        buffer.AppendQuad(
+            origin,
+            a,
+            b,
+            c,
+            red * shade,
+            green * shade,
+            blue * shade,
+            uvOrigin,
+            uvA,
+            uvB,
+            uvC,
+            sprites?.ForState(state));
     }
 
     /// <summary>

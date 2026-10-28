@@ -231,12 +231,15 @@ public static class SpriteAtlasBuilder
                     image.Width * RgbaImage.BytesPerPixel);
             }
 
+            // Half-texel inset: sampling exactly on a cell edge would let nearest-neighbour pick a
+            // texel from the neighbouring sprite, so the UV range stops just inside the cell.
+            const float HalfTexel = 0.5f;
             index[location] = new SpriteRect(x, y, image.Width, image.Height, frames)
             {
-                U0 = (float)x / size,
-                U1 = (float)(x + image.Width) / size,
-                V0 = (float)y / size,
-                V1 = (float)(y + image.Height) / size
+                U0 = (x + HalfTexel) / size,
+                U1 = (x + image.Width - HalfTexel) / size,
+                V0 = (y + HalfTexel) / size,
+                V1 = (y + image.Height - HalfTexel) / size
             };
         }
 
