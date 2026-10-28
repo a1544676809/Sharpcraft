@@ -139,3 +139,5 @@ Marsaglia 极坐标法：循环取两个 `nextDouble` 映射到 [−1, 1)，直�
 - 各调用点实际选用的实现（实体、方块刻、粒子、结构、战利品、附魔）需逐子系统确认；本轮只确认了工厂默认返回值与世界生成/战利品的算法。
 - `RandomSource` 接口上其余辅助方法（区间取整、三角形分布等）未展开。
 - `GAUSSIAN_SPREAD_FACTOR` 的实际使用点未查。
+
+- 参考向量已取（`random-vectors.md`）：覆盖 LCG、xoroshiro、`intBound` 两条路径、位置化随机、两种 `fromHashOf`、战利品序列；`nextGaussian` 与 `fork` 链尚未覆盖。

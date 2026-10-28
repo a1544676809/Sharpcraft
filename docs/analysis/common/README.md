@@ -17,6 +17,7 @@
 | [`identifier.md`](identifier.md) | 标识符的解析、校验、等值、排序、序列化 | 草稿 |
 | [`random.md`](random.md) | 随机源家族、算法参数、种子派生、位置化随机与战利品序列 | 草稿 |
 | [`registry-order.md`](registry-order.md) | 注册表元素顺序、方块状态全局 id 的生成链 | 草稿 |
+| [`random-vectors.md`](random-vectors.md) | 参考向量的取真值方法、覆盖范围与回放约定 | 草稿 |
 
 ## 为什么这三块必须先做
 
