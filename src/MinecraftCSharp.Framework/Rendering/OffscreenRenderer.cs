@@ -220,8 +220,10 @@ public static unsafe class OffscreenRenderer
         return result;
     }
 
+    // WGPUBool is a 4-byte integer, so declaring the wait flag as C# bool would corrupt the
+    // call frame and make wgpu-native dispatch into a stub.
     [DllImport("wgpu_native", EntryPoint = "wgpuDevicePoll", CallingConvention = CallingConvention.Cdecl)]
-    private static extern unsafe bool RawDevicePoll(Device* device, bool wait, void* wrappedSubmissionIndex);
+    private static extern unsafe uint RawDevicePoll(Device* device, uint wait, void* wrappedSubmissionIndex);
 
     private static void PollDevice(Device* device)
     {
@@ -230,7 +232,7 @@ public static unsafe class OffscreenRenderer
         var wait = Environment.GetEnvironmentVariable("MC_FRAME_POLL") == "wait";
         try
         {
-            RawDevicePoll(device, wait, null);
+            RawDevicePoll(device, wait ? 1u : 0u, null);
         }
         catch (EntryPointNotFoundException exception)
         {
