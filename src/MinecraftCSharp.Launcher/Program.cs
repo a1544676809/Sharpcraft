@@ -128,19 +128,41 @@ internal static class Program
                     log: line => Console.WriteLine($"  {line}")).ConfigureAwait(false);
 
                 Console.WriteLine($"configuration packets: {probe.Sequence.Count}");
-                foreach (var name in probe.Sequence)
+                if (!probe.ReachedPlay)
                 {
-                    Console.WriteLine($"  - {name}");
+                    Console.Error.WriteLine($"did not reach play: {probe.Reason}");
+                    return 1;
                 }
 
-                if (probe.ReachedPlay)
+                var holdSeconds = PlayHoldSeconds();
+                Console.WriteLine($"reached the play phase; holding the connection for {holdSeconds}s...");
+                var stats = await PlaySession.RunAsync(
+                    connection!,
+                    TimeSpan.FromSeconds(holdSeconds),
+                    cancellation.Token,
+                    log: line => Console.WriteLine($"  {line}")).ConfigureAwait(false);
+
+                Console.WriteLine($"play stats: packets={stats.TotalPackets} keepAlive={stats.KeepAlivesAnswered} " +
+                                  $"ping={stats.PingsAnswered} survived={stats.Survived}");
+                if (stats.JoinGame is { } joinGame)
                 {
-                    Console.WriteLine("reached the play phase; disconnecting as planned");
-                    return 0;
+                    Console.WriteLine($"  join: entity={joinGame.PlayerId} hardcore={joinGame.Hardcore} " +
+                                      $"max={joinGame.MaxPlayers} view={joinGame.ChunkRadius} sim={joinGame.SimulationDistance}");
+                    Console.WriteLine($"  levels: {string.Join(", ", joinGame.Levels)}");
                 }
 
-                Console.Error.WriteLine($"did not reach play: {probe.Reason}");
-                return 1;
+                var top = stats.PacketCounts.OrderByDescending(pair => pair.Value).Take(8)
+                    .Select(pair => $"id {pair.Key} x{pair.Value}");
+                Console.WriteLine($"  most frequent: {string.Join(", ", top)}");
+
+                if (!string.IsNullOrEmpty(stats.DisconnectedReason))
+                {
+                    Console.Error.WriteLine($"server disconnected us: {stats.DisconnectedReason}");
+                    return 1;
+                }
+
+                Console.WriteLine(stats.Survived ? "connection stayed healthy; disconnecting as planned" : "connection ended early");
+                return stats.Survived ? 0 : 1;
             }
         }
         catch (OperationCanceledException)
@@ -181,6 +203,12 @@ internal static class Program
             Console.Error.WriteLine($"probe failed: {exception.Message}");
             return 1;
         }
+    }
+
+    private static int PlayHoldSeconds()
+    {
+        var raw = Environment.GetEnvironmentVariable("MC_PLAY_SECONDS");
+        return int.TryParse(raw, out var seconds) && seconds > 0 && seconds <= 600 ? seconds : 10;
     }
 
     private static HttpClient CreateHttpClient() => new() { Timeout = TimeSpan.FromSeconds(30) };

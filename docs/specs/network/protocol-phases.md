@@ -110,6 +110,21 @@ VarInt id(0) | string language(≤16) | byte viewDistance | VarInt chatVisibilit
 - `select_known_packs` 需要回包（可原样回显服务端列表）。
 - 回 `finish_configuration` 后收到的第一个包就是 play 阶段的 `minecraft:login`（JoinGame，clientbound id 50）。
 
+## 5.2 play 阶段实测（真实服务器，45 秒）
+
+| 观察项 | 值 |
+| --- | --- |
+| JoinGame（`login`，id 50）字段 | entity id 24617、hardcore=false、levels=`[overworld, the_end, the_nether]`、max=20、view=16、sim=10 |
+| keep_alive 间隔 | 45 秒内 **2 次**（约 15–20 秒一次），回复后连接保持 |
+| 45 秒内收到的包 | **8787 个**，最频繁的是 id 85（2729）、id 55（2450）、id 103（1844）、id 54（1111） |
+| 稳定性 | 持续 45 秒无断开，随后由客户端主动断开 |
+
+要点：
+
+- JoinGame 头部字段顺序：`int playerId` → `bool hardcore` → `VarInt` 维度数 → 每项 Identifier → `VarInt maxPlayers` → `VarInt chunkRadius` → `VarInt simulationDistance` → 三个 bool。**其后的 spawn info 是复杂结构**，本阶段刻意跳过。
+- `keep_alive` 是 **long**（8 字节大端），`ping` 是 **int32**；两者都只是回显标识，不要编码成 VarInt。
+- play 阶段起始流量巨大（实体/方块更新），客户端必须能"边收边丢"未实现内容，否则会被推理速度拖死。
+
 ## 6. 实现要求
 
 1. 阶段是**显式状态**，不允许用布尔标志拼装；每次状态切换都要能说明触发包。

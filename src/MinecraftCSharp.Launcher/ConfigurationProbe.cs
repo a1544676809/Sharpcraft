@@ -156,12 +156,8 @@ internal static class ConfigurationProbe
                 {
                     connection.Send([PacketIds.ConfigurationServerbound.FinishConfiguration]);
 
-                    // The very next packet is the first play packet: that is the proof we are in.
-                    var firstPlay = await connection.ReceiveAsync(timeoutSource.Token).ConfigureAwait(false);
-                    var playReader = new PayloadReader(firstPlay);
-                    playReader.TryReadVarInt(out var playId);
-                    sequence.Add($"play <- id {playId}");
-                    log?.Invoke($"play <- first packet id {playId}");
+                    // Do not read further: the next packet is already play-phase data (JoinGame)
+                    // and belongs to the play loop, which parses it.
                     return new Result(true, string.Empty, sequence);
                 }
             }

@@ -122,6 +122,47 @@ public static class PacketIds
         public const int AcceptCodeOfConduct = 9;
     }
 
+    /// <summary>Client to server, <see cref="ConnectionState.Play"/> (only used ids listed).</summary>
+    public static class PlayServerbound
+    {
+        /// <summary>Chat message.</summary>
+        public const int Chat = 9;
+
+        /// <summary>Client information update.</summary>
+        public const int ClientInformation = 14;
+
+        /// <summary>Keep alive reply.</summary>
+        public const int KeepAlive = 28;
+
+        /// <summary>Position update.</summary>
+        public const int MovePlayerPos = 30;
+
+        /// <summary>Pong reply.</summary>
+        public const int Pong = 45;
+    }
+
+    /// <summary>Server to client, <see cref="ConnectionState.Play"/> (only used ids listed).</summary>
+    public static class PlayClientbound
+    {
+        /// <summary>Disconnect with a component reason.</summary>
+        public const int Disconnect = 32;
+
+        /// <summary>Keep alive ping.</summary>
+        public const int KeepAlive = 45;
+
+        /// <summary>JoinGame.</summary>
+        public const int Login = 50;
+
+        /// <summary>Ping.</summary>
+        public const int Ping = 62;
+
+        /// <summary>Start configuration (reconfiguration handshake).</summary>
+        public const int StartConfiguration = 120;
+
+        /// <summary>Transfer to another server.</summary>
+        public const int Transfer = 132;
+    }
+
     /// <summary>Server to client, <see cref="ConnectionState.Configuration"/>.</summary>
     public static class ConfigurationClientbound
     {
