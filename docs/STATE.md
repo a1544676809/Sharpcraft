@@ -27,16 +27,19 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 
 ## 阻塞项
 
-- 无。
-- 开工前的四项已闭环，证据为 `docs/analysis/common/`：`identifier.md`（等值/排序/长度/空串）与 `random.md`（LCG、xoroshiro128++、种子升级、位置化随机、WorldgenRandom 混合器、RandomSequence）。
-- 新发现的前置项（**注册表**开工前必须解决）：`Registry` 的元素顺序由注册顺序还是标识符排序决定，尚未确认。`Identifier` 本身可以直接开工。
+- 无。四项开工前置 + 注册表顺序均已闭环：
+  - `docs/analysis/common/identifier.md`：等值/排序/长度/空串。
+  - `docs/analysis/common/random.md`：LCG、xoroshiro128++、种子升级、位置化随机、WorldgenRandom 混合器、RandomSequence。
+  - `docs/analysis/common/registry-order.md`：迭代顺序 = 注册顺序；内置表顺序 = 代码顺序；数据包表排序后注册；方块状态全局 id 的四级链。
+- 仍需外部输入：随机数的"参考向量"真值必须由运行原版 jar 产出（所有者已允许运行 jar，产物不得入库）。
 
 ## 下一步具体动作
 
-1. 等所有者评审 `docs/modules/common-primitives.md`；通过后置 `[已评审]`。
-2. 实现 `Identifier`（`readonly struct`，`Parse`/`TryParse`，校验含空串通过、拒绝 `..`、无长度上限；`CompareTo` 先 path 后 namespace），补单元测试覆盖：非法字符、空路径、冒号位置、排序键顺序、默认命名空间等价。
-3. 实现 `LegacyRandom`（48 位 LCG）与 `Xoroshiro128PlusPlus`，先在测试中用固定种子建立"参考向量"基线（需从原版运行取真实输出值，属未验证项，见 `analysis/common/random.md` §10）。
-4. 注册表顺序问题解决后再动 `Registry`。
+1. 用仓库外的 Java 程序调用 jar 内随机类，导出固定种子的参考向量（LCG 与 xoroshiro 各若干 `nextLong` / `nextInt(bound)`），产物放 `ref://mc-26.3-analysis/vectors/`，仓库内只记录数值与生成方法。
+2. 请所有者评审 `docs/modules/common-primitives.md`（含 Registry 章节），通过后置 `[已评审]`。
+3. 实现 `Identifier`（`readonly struct`、`Parse`/`TryParse`、`CompareTo` 先 path 后 namespace、空路径合法、无长度上限、拒绝 `..`）+ 单元测试。
+4. 实现 `LegacyRandom` 与 `Xoroshiro128PlusPlus`，用第 1 步的向量做回归基线。
+5. 注册表顺序链落地时先做"顺序快照"数据结构，再实现 `Registry`。
 
 ## 未提交改动 / 后台任务
 
@@ -44,5 +47,5 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 
 ## 最近提交
 
-- `59ecb3f` feat: project scaffolding with build-time side-boundary guards
-- 本次提交：宪章 3.6/4.2 修订、工作区迁移、HotPath 机制、STATE 建立
+- `11d522b` docs: close the four common-primitives blockers with source evidence
+- 本次提交：注册表顺序分析（registry-order.md）与索引同步

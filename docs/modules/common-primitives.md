@@ -53,9 +53,14 @@
 
 ### 4.2 `RegistryKey<T>` 与 `Registry<T>`
 
-- 键 = `(registryNamespace:path, valueIdentifier)` 的组合；容器保证 `Identifier → T` 单射。
-- 必须支持：按标识符查找、按标识符前缀过滤、**有序遍历**（顺序必须可复现，影响协议与数据包加载）、冻结（加载完成后拒绝再注册）。
-- `[待验证]` 原版注册表的元素顺序由什么决定（注册顺序 / 排序后的标识符），实现前需确认，因为它决定协议包体与存档一致性。
+已闭环（详见 [`docs/analysis/common/registry-order.md`](../analysis/common/registry-order.md)）：
+
+- 迭代 / 有序枚举 = **注册顺序**（内部有序列表下标），`keySet` / `entrySet` 的字典顺序**不是契约**。
+- 内置注册表顺序 = 代码中的注册调用顺序（不是排序、不是字典序）→ C# 侧必须准备**显式顺序表**并在启动时做顺序自检。
+- 数据包注册表 = 加载前按 `(registryKey, identifier)` **排序后注册** → 天然可复现。
+- 网络同步按注册顺序打包；方块状态全局 id = 方块注册顺序 × 状态笛卡尔积顺序（属性名排序、`BooleanProperty` 取值 `[true,false]`）。
+
+契约要求：`Registry<T>` 只暴露 `IReadOnlyList<Entry>` 作为枚举入口；字典仅用于查找，不得对外暴露枚举顺序。
 
 ### 4.3 坐标与几何基元
 
