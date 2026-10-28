@@ -39,17 +39,17 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 ## 下一步具体动作
 
 1. M1-a 已完成（T-007 / T-008 / T-010 / T-011）。
-2. M1-b 网络协议底座进行中：T-012 编码原语已完成（118 项单元测试 + 18 项门禁全绿）。
-3. 规格已落盘：`docs/specs/network/{README,primitives-varint,primitives-strings}.md`。
+2. M1-b 网络协议底座：T-012 编码原语、T-013 握手/状态包与帧缓冲/压缩已完成（131 项单元测试 + 18 项门禁全绿）。
+3. 规格已落盘：`docs/specs/network/{README,primitives-varint,primitives-strings,protocol-phases}.md`。
 3. `nextGaussian` 已实现并回放向量（T-011）。
 4. `fork()` / `consumeCount` 的链式派生向量仍未取；`coordinates.md` 还有两项待验证（ChunkPos 主构造器、超范围饱和）。
-5. 下一步：写 `docs/specs/network/protocol-phases.md`（五阶段 + 数据包表），再实现阶段状态机与最小握手/状态查询（拿到 MOTD 即算链路打通）。
-6. 之后：登录流程 + 压缩阈值 + 加密（`encryption.md`）。
+5. 下一步：接真实 TCP——用 `PacketFrameBuffer` 做状态查询客户端（连服务器拿 MOTD），这一步才算链路打通；需要用户提供一个可连的服务器地址（或本地原版服务端）。
+6. 之后：登录流程 + 加密（`encryption.md`），以及导出 Login/Configuration/Play 三个方向的包 id 全表。
 ## 未提交改动 / 后台任务
 
 - 本次提交内容见下；无运行中的后台任务。
 
 ## 最近提交
 
-- `2daa5de` feat(common): block-state ids, gaussian draws and coordinate rounding (M1-a)
-- 本次提交：M1-b 第一步（T-012 协议编码原语 + 网络规格文档）
+- `725d1d6` feat(network): protocol codec primitives and network spec (M1-b start)
+- 本次提交：T-013 握手/状态包 + 帧缓冲 + 压缩
