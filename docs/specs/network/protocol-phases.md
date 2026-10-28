@@ -26,17 +26,32 @@
 - body = `VarInt(packetId)` + payload。**包 id 在 body 内，不在帧头**。
 - 包 id 由协议注册顺序决定（`ProtocolInfoBuilder.listPackets` 用列表下标作 id），不是手写常量表；因此**改动注册顺序就会改协议**。
 
-## 3. 已核对的包 id（握手 / 状态）
+## 3. 包 id 表
+
+包 id 由注册顺序决定，已从 jar 导出全表（纯标识符清单，入库为
+`tests/MinecraftCSharp.Common.Tests/TestData/vanilla-packet-ids.txt`）。
+
+| 阶段 | 方向 | 包数 |
+| --- | --- | --- |
+| Handshaking | C→S | 1 |
+| Status | C→S / S→C | 2 / 2 |
+| Login | C→S / S→C | 5 / 6 |
+| Configuration | C→S / S→C | 10 / 21 |
+| Play | C→S / S→C | 69 / 144 |
+
+握手 / 状态 / 登录三个阶段的 id（我们已实现的部分）：
 
 | 方向 | 包 | id |
 | --- | --- | --- |
-| C→S | `ClientIntention` | 0 |
-| C→S | `StatusRequest` | 0 |
-| C→S | `PingRequest` | 1 |
-| S→C | `StatusResponse` | 0 |
-| S→C | `PongResponse` | 1 |
+| C→S | `intention` | 0 |
+| C→S | `status_request` / `ping_request` | 0 / 1 |
+| S→C | `status_response` / `pong_response` | 0 / 1 |
+| C→S | `hello`（LoginStart）/ `key` / `custom_query_answer` / `login_acknowledged` / `cookie_response` | 0–4 |
+| S→C | `login_disconnect` / `hello`（加密请求）/ `login_finished` / `login_compression` / `custom_query` / `cookie_request` | 0–5 |
 
-`Login` / `Configuration` / `Play` 的表**尚未整理**（数量大，需按注册顺序导出，见 §7）。
+注意两处同名不同义：`minecraft:hello` 在 C→S 是 LoginStart、在 S→C 是加密请求；`minecraft:intention` 只存在于握手阶段。方向必须由状态机提供，包名不能自证。
+
+`PacketIdTableTests` 会把我们硬编码的常量与这张表逐条比对，任何漂移都会让测试失败。
 
 ## 4. 握手包字段
 
