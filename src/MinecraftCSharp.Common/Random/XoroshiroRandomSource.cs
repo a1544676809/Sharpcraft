@@ -95,5 +95,12 @@ public sealed class XoroshiroRandomSource : IRandomSource
     public double NextDouble() => NextBits(53) * DoubleMultiplier;
 
     /// <summary>Top <paramref name="bits"/> bits of the next value (logical shift).</summary>
+
+    /// <summary>Creates an independent child source (vanilla <c>fork()</c>).</summary>
+    public IRandomSource Fork() => new XoroshiroRandomSource(NextLong(), NextLong());
+
+    /// <summary>Creates a positional factory seeded from two draws (vanilla <c>forkPositional()</c>).</summary>
+    public IPositionalRandomFactory ForkPositional() => new XoroshiroPositionalRandomFactory(NextLong(), NextLong());
+
     public long NextBits(int bits) => unchecked((long)((ulong)NextLong() >> (64 - bits)));
 }

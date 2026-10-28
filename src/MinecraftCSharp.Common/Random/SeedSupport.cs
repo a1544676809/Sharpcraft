@@ -41,6 +41,24 @@ public static class SeedSupport
         return (MixStafford13(lo), MixStafford13(hi));
     }
 
+    /// <summary>
+    /// Derives a 128-bit seed from a name using MD5: digest bytes 0..7 form the low
+    /// word and bytes 8..15 the high word, both big-endian (vanilla layout).
+    /// </summary>
+    public static (long Lo, long Hi) SeedFromHashOf(string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+
+        var bytes = System.Text.Encoding.UTF8.GetBytes(name);
+        var digest = System.Security.Cryptography.MD5.HashData(bytes);
+        var lo = System.Buffers.Binary.BinaryPrimitives.ReadInt64BigEndian(digest.AsSpan(0, 8));
+        var hi = System.Buffers.Binary.BinaryPrimitives.ReadInt64BigEndian(digest.AsSpan(8, 8));
+        return (lo, hi);
+    }
+
+    /// <summary>Hashes a block position into a seed (equivalent to <c>Mth.getSeed</c>).</summary>
+    public static long PositionSeed(int x, int y, int z) => PositionalSeed.Of(x, y, z);
+
     /// <summary>Applies the unsigned (logical) right shift used by the Java implementation.</summary>
     public static long UnsignedShiftRight(long value, int bits) => unchecked((long)((ulong)value >> bits));
 }

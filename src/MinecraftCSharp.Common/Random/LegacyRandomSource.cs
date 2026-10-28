@@ -87,6 +87,13 @@ public sealed class LegacyRandomSource : IRandomSource
     [HotPath("per-tick random draws")]
     public bool NextBoolean() => NextBits(1) != 0;
 
+    /// <summary>Creates an independent child source (vanilla <c>fork()</c>).</summary>
+    public IRandomSource Fork() => new LegacyRandomSource(NextLong());
+
+    /// <summary>Creates a positional factory seeded from the next draw (vanilla <c>forkPositional()</c>).</summary>
+    public IPositionalRandomFactory ForkPositional() => new LegacyPositionalRandomFactory(NextLong());
+
+
     /// <inheritdoc />
     [HotPath("per-tick random draws")]
     public float NextFloat() => NextBits(24) * FloatMultiplier;

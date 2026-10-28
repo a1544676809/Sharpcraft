@@ -38,16 +38,15 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 
 ## 下一步具体动作
 
-1. 位置化随机：`PositionalRandomFactory`（Legacy 用 Java 字符串哈希，Xoroshiro 用 MD5）+ `Mth.getSeed` 等价实现，用 `posHash` / `*PosAt` / `*PosHashOf` 向量回放。
-2. `WorldgenRandom` 的五个种子混合器（`setDecorationSeed` 等）与 `Algorithm` 选择。
-3. `RandomSequence`（战利品序列）+ `lootSequence` 向量。
-4. 补齐 `nextGaussian`、`fork`、`consumeCount` 的向量后实现。
-5. 注册表顺序链：先做"顺序快照"数据结构，再实现 `Registry`。
+1. 注册表顺序链（T-007）：先做"顺序快照"数据结构，再实现 `Registry` / `IdMapper`，并配顺序快照测试。
+2. `nextGaussian`（Marsaglia 极坐标法 + 缓存第二值）——向量已在 `gaussianLegacy` / `gaussianXoro` 行中，尚未实现。
+3. `fork()` / `consumeCount` 的链式派生向量仍未取，等用到时补。
+4. T-008 坐标基元（负数取整规则待补规格）。
 ## 未提交改动 / 后台任务
 
 - 本次提交内容见下；无运行中的后台任务。
 
 ## 最近提交
 
-- `ba47d10` feat(common): Identifier with vanilla parse, ordering and traversal guard
-- 本次提交：T-006 随机数实现 + 向量回放 + 分配测试
+- `cb13137` feat(common): bit-exact LCG and xoroshiro128++ with reference-vector replay
+- 本次提交：T-009 位置化随机 / 世界生成混合器 / 战利品序列（含 WorldgenRandom 委托语义修正）

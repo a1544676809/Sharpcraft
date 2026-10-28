@@ -50,6 +50,21 @@ posHash|1|2|3|0xffffe15fa16d39f8
 lootSequence|42|0xf43aa0b3e22aabc6|0xc30fefe8bf3c5b22|...
 ```
 
+## 4.1 第二节（位置化、世界生成混合器、战利品、史莱姆）
+
+同一文件追加了第二段向量（`# --- section 2 ...` 之后）：
+
+| kind | 覆盖内容 |
+| --- | --- |
+| `posHash` | `Mth.getSeed` 位置哈希（含 32 位回绕与符号扩展） |
+| `legacyPosAt` / `xoroPosAt` | `forkPositional()` 后 `at(x,y,z)` 的首个值，两种工厂 |
+| `posHashOfName` | 两种工厂的 `fromHashOf`：**Legacy 用 Java 字符串哈希，Xoroshiro 用 MD5 大端切分** |
+| `wgDecoration` / `wgLargeFeature` / `wgSalt` / `wgFeature` | `WorldgenRandom` 的四个种子混合器（salt 固定 34187） |
+| `slimeChunk` | 史莱姆区块种子（salt 固定 987234911） |
+| `lootSequenceV2` | `RandomSequence(seed, tableId)` 的前 4 个 `nextLong` |
+
+注意 `wgSalt` 与 `slimeChunk` 的 salt 是**硬编码在生成器里**的常数；若改动生成器必须同步更新测试常量。
+
 ## 5. 未覆盖（后续补）
 
 - `nextGaussian`（Marsaglia 极坐标法，含缓存第二个值的行为）。
