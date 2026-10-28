@@ -24,6 +24,7 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-010 | 方块状态全局 id 生成器 | `docs/analysis/common/registry-order.md` §5、§7.1 | `BlockStateIdTests.cs`（含 1442 个原版状态 id 与 35723 总数） | `src/MinecraftCSharp.Common/Registries/`（BlockStateDefinition / BlockStateLayout） | 已完成 |
 | T-019 | 全阶段包 id 表导出与交叉校验 | `docs/specs/network/protocol-phases.md` §3 | `PacketIdTableTests.cs`（3 项：id 对照、连续性、唯一性） | `tests/.../TestData/vanilla-packet-ids.txt`（260 条） | 已完成 |
 | T-018 | 启动器 CLI 垂直切片（login / probe / help） | `docs/modules/launcher.md` §3–§5 | `LauncherCommandLineTests.cs`（10 项）、手工验收：`probe mcf.ddger.top` 输出 protocol 777 | `src/MinecraftCSharp.Launcher/` | 已完成 |
+| T-026 | 网格生成与离屏渲染（PNG 首帧） | `docs/decisions/0003-wgpu-binding.md` | `ChunkMesherTests.cs`（7 项）、`PngEncoderTests.cs`（4 项）；GPU 回读受阻 | `Client/Render/ChunkMesher`、`Common/Imaging/PngEncoder`、`Framework/Rendering/` | 进行中 |
 | T-025 | 注册表同步与区块包解析 | `docs/specs/network/protocol-phases.md` §5.1.1、§5.3、§5.3.1；`docs/modules/world.md` §3 | `ChunkPacketTests.cs`（10 项）；实测 9/9 区块、275,141 非空气方块、97 个光照数组 | `Common/Network/`（DynamicRegistries / RegistryDataPackets / ChunkPacketParser / PalettedContainerCodec / LightDataCodec） | 已完成 |
 | T-024 | NBT 读写（含上限与两种根） | `docs/modules/nbt.md` §3 | `NbtTests.cs`（13 项：全类型往返、畸形输入、深度/长度上限） | `Common/Nbt/`（NbtTagType / NbtTags / NbtReader / NbtWriter） | 已完成 |
 | T-023 | 世界存储层与客户端世界骨架 | `docs/modules/world.md` §3 | `WorldStorageTests.cs`（12 项）、`ClientWorldTests.cs`（9 项） | `Common/World/`（PalettedContainer / ChunkSection / LevelChunk）、`Client/World/ClientWorld` | 已完成 |

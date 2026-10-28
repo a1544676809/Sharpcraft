@@ -19,7 +19,10 @@ public enum LauncherCommand
     Probe,
 
     /// <summary>Sign in and walk a server's login/configuration phases.</summary>
-    Play
+    Play,
+
+    /// <summary>Collect chunks and render one offscreen frame.</summary>
+    Frame
 }
 
 /// <summary>Parsed command line.</summary>
@@ -36,6 +39,7 @@ public sealed record LauncherCommandLine(LauncherCommand Command, string? Target
           logout             delete the cached tokens
           probe <address>    query a server's status (SRV aware)
           play <address>     sign in, then walk login and configuration phases
+          frame <address>    collect chunks, then render one offscreen frame to a PNG
           help               show this text
 
         Tokens are cached only outside the repository, under the user's local app data.
@@ -72,6 +76,9 @@ public sealed record LauncherCommandLine(LauncherCommand Command, string? Target
 
             case "play":
                 return WithAddress(LauncherCommand.Play, args, "play");
+
+            case "frame":
+                return WithAddress(LauncherCommand.Frame, args, "frame");
 
             default:
                 return new LauncherCommandLine(LauncherCommand.Help, null, $"unknown command '{head}'");

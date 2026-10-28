@@ -5,6 +5,7 @@ using MinecraftCSharp.Auth;
 using MinecraftCSharp.Client.World;
 using MinecraftCSharp.Common.Identifiers;
 using MinecraftCSharp.Common.Network;
+using MinecraftCSharp.Framework.Rendering;
 
 namespace MinecraftCSharp.Launcher;
 
@@ -32,6 +33,7 @@ internal static class Program
             LauncherCommand.Probe => await ProbeAsync(commandLine.Target!).ConfigureAwait(false),
             LauncherCommand.Login => await LoginAsync().ConfigureAwait(false),
             LauncherCommand.Play => await PlayAsync(commandLine.Target!).ConfigureAwait(false),
+            LauncherCommand.Frame => await FrameAsync(commandLine.Target!).ConfigureAwait(false),
             _ => 2
         };
     }
@@ -209,6 +211,37 @@ internal static class Program
         catch (Exception exception) when (exception is IOException or InvalidDataException or TimeoutException)
         {
             Console.Error.WriteLine($"connection failed: {exception.Message}");
+            return 1;
+        }
+    }
+
+    private static async Task<int> FrameAsync(string address)
+    {
+        using var cancellation = CancelOnCtrlC();
+        using var http = CreateHttpClient();
+
+        var seconds = Environment.GetEnvironmentVariable("MC_FRAME_SECONDS") is { } raw && int.TryParse(raw, out var parsed)
+            ? parsed
+            : 8;
+
+        try
+        {
+            var path = await FrameCommand.RunAsync(address, http, 960, 540, seconds, cancellation.Token).ConfigureAwait(false);
+            Console.WriteLine($"frame written to {path}");
+            return 0;
+        }
+        catch (RenderingUnavailableException exception)
+        {
+            Console.Error.WriteLine($"rendering unavailable: {exception.Message}");
+            return 3;
+        }
+        catch (AuthException exception)
+        {
+            return ReportAuthFailure(exception);
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or InvalidDataException or TimeoutException)
+        {
+            Console.Error.WriteLine($"frame failed: {exception.Message}");
             return 1;
         }
     }

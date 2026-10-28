@@ -1,0 +1,97 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// Copyright (C) 2026 MinecraftCSharp contributors
+
+using System.Numerics;
+
+namespace MinecraftCSharp.Framework.Rendering;
+
+/// <summary>
+/// One offscreen frame request: geometry plus the camera and clear colour
+/// (docs/decisions/0003-wgpu-binding.md).
+/// </summary>
+/// <param name="Width">Target width in pixels.</param>
+/// <param name="Height">Target height in pixels.</param>
+/// <param name="Vertices">Interleaved position (3) and colour (3) floats.</param>
+/// <param name="Indices">Triangle indices.</param>
+/// <param name="ClearColour">Background colour (linear RGBA).</param>
+/// <param name="CameraPosition">Eye position in world space.</param>
+/// <param name="CameraTarget">Look-at target in world space.</param>
+/// <param name="FieldOfViewDegrees">Vertical field of view.</param>
+public sealed record FrameRequest(
+    int Width,
+    int Height,
+    float[] Vertices,
+    uint[] Indices,
+    Vector4 ClearColour,
+    Vector3 CameraPosition,
+    Vector3 CameraTarget,
+    float FieldOfViewDegrees = 60f)
+{
+    /// <summary>Floats per vertex.</summary>
+    public const int FloatsPerVertex = 6;
+
+    /// <summary>Vertex count.</summary>
+    public int VertexCount => Vertices.Length / FloatsPerVertex;
+}
+
+/// <summary>Result of an offscreen render: RGBA8 pixels plus the matrix used.</summary>
+/// <param name="Width">Frame width.</param>
+/// <param name="Height">Frame height.</param>
+/// <param name="Rgba">Row-major RGBA8 pixels.</param>
+/// <param name="ViewProjection">Camera matrix that was applied.</param>
+/// <param name="AdapterName">Adapter that rendered the frame, for diagnostics.</param>
+public sealed record FrameResult(int Width, int Height, byte[] Rgba, Matrix4x4 ViewProjection, string AdapterName);
+
+/// <summary>
+/// Software-side camera math, kept separate from the GPU calls so it can be unit tested without
+/// an adapter.
+/// </summary>
+public static class CameraMath
+{
+    /// <summary>Builds a right-handed look-at view-projection matrix with a WebGPU depth range (0..1).</summary>
+    public static Matrix4x4 BuildViewProjection(
+        Vector3 eye,
+        Vector3 target,
+        float fieldOfViewDegrees,
+        float aspectRatio,
+        float near = 0.1f,
+        float far = 2000f)
+    {
+        if (aspectRatio <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(aspectRatio), aspectRatio, "aspect ratio must be positive");
+        }
+
+        var view = Matrix4x4.CreateLookAt(eye, target, Vector3.UnitY);
+        var projection = BuildProjection(fieldOfViewDegrees, aspectRatio, near, far);
+        return view * projection;
+    }
+
+    /// <summary>
+    /// Perspective projection mapped to WebGPU's clip space: z in 0..1 instead of -1..1.
+    /// </summary>
+    public static Matrix4x4 BuildProjection(float fieldOfViewDegrees, float aspectRatio, float near, float far)
+    {
+        if (fieldOfViewDegrees is <= 0f or >= 180f)
+        {
+            throw new ArgumentOutOfRangeException(nameof(fieldOfViewDegrees), fieldOfViewDegrees, "field of view must be in (0, 180)");
+        }
+
+        var f = 1f / MathF.Tan(fieldOfViewDegrees * (MathF.PI / 180f) / 2f);
+        var range = far / (near - far);
+
+        return new Matrix4x4(
+            f / aspectRatio, 0, 0, 0,
+            0, f, 0, 0,
+            0, 0, range, -1,
+            0, 0, range * near, 0);
+    }
+
+    /// <summary>Builds a camera placed above a world centre, looking slightly down.</summary>
+    public static (Vector3 Eye, Vector3 Target) DefaultCamera(Vector3 centre, float radius)
+    {
+        var distance = MathF.Max(24f, radius * 2.2f);
+        var eye = centre + new Vector3(distance * 0.7f, distance * 0.85f, distance * 0.7f);
+        return (eye, centre);
+    }
+}
