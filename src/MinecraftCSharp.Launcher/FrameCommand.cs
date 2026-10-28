@@ -171,6 +171,17 @@ internal static class FrameCommand
     /// <returns>Atlas plus mapping, or null when no pack is installed.</returns>
     internal static (SpriteAtlas Atlas, BlockSpriteMap Map)? PrepareSprites(BlockStateLayout? layout)
     {
+        if (layout is null)
+        {
+            // Without a block state layout every state would resolve to the missing sprite, which
+            // paints the whole world purple. Colour-only faces are the honest fallback until the
+            // layout arrives (T-039).
+            Console.WriteLine(
+                "sprites: block state layout not assembled yet (T-039); rendering colour-only faces " +
+                "instead of an all-missing-sprite world");
+            return null;
+        }
+
         var packPath = FindPack();
         if (packPath is null)
         {
