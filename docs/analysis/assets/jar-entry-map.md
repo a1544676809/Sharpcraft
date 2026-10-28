@@ -49,11 +49,31 @@
 - **`data/` 与 `net/` 一律不提取**：前者是服务端语义数据，后者是字节码，两者都受原则 3 与原则 5 约束。
 - **两个来源**（ADR-0005）：jar 内资产打成单文件 pack；音频等走官方资产索引的类别直接只读挂载官方 `objects/`，不复制。
 
-## 4. 未决问题（需实测确认，已进风险清单）
+## 4. 索引资产（实测）
 
-1. **音效不在 jar 内**：本次条目里**没有** `assets/minecraft/sounds/` 与 `sounds.json`。合理推断是音效走官方**资产索引**（`indexes/<id>.json` + `objects/<hash>`）单独下载。若成立，资产管线要区分"jar 内资产"与"索引资产"两条来源。
-2. **语言只有 3 条**：预期原版有多种语言。需确认是否同样走资产索引。
-3. **签名与完整性**：jar 带 `MOJANGCS.SF` / 签名块，可作为"来源校验"的补充，但不能替代 SHA-1 版本比对。
-4. **`.mcassetsroot`**：`assets/.mcassetsroot` 是空标记文件，提取时应忽略。
+用户本机 `E:/games/minecraft/.minecraft/assets` 提供了一手证据（2026-10-28）：
 
-以上第 1、2 条直接影响"客户端能否显示中文/播放声音"，但都不阻塞纹理化管线。
+| 项 | 实测值 |
+| --- | --- |
+| 本机 26.2 版本的 `assetIndex.id` | **32** |
+| 索引 SHA-1 | `d6540f46a8fec49e45fb7312cdcf401a8e4e15ff` |
+| 索引 `totalSize` | 480,496,538 字节（约 458 MB） |
+| 索引条目数 | 5,057 |
+| 本机 `objects/` 文件数 | 14,705（多版本共享累积） |
+
+索引里有什么（决定"哪些类别该走索引"）：
+
+| 类别 | 在索引中 | 结论 |
+| --- | --- | --- |
+| `minecraft/sounds/…`（`.ogg`） | 有 | 音频走索引 |
+| `minecraft/sounds.json` | 有 | 音效事件表走索引 |
+| `minecraft/lang/<locale>.json` | 有（多语言齐全） | 语言走索引；jar 内只有 `en_us`/`deprecated` 可作兜底 |
+| `minecraft/textures/block/…` | 无（0 条） | 纹理只在 jar 内 |
+
+**结论**：jar 内资产（模型、纹理、blockstates、items、font、particles、shaders）打进 pack；音频与语言从官方索引只读挂载。
+
+## 5. 仍未确认的点
+
+1. **基线版本的索引 id**：本机装的是 26.2（索引 32），26.3 的 id 需在拿到 26.3 版本清单后确认；索引 id 与 `version.json` 的 `assetIndex.id` 必须一致，否则拒绝挂载。
+2. **`skins/`、`log_configs/`、`virtual/` 与根下的 zip/hex**：属于官方或第三方启动器（PCL）产物，与客户端运行时无关，不读。
+3. **签名验证**：jar 带 `MOJANGCS.SF`，当前结论是不必要（SHA-1 已足够判定版本）。

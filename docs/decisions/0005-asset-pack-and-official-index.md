@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 MinecraftCSharp contributors -->
 
-状态：[待评审]
+状态：[已接受]
 日期：2026-10-28
 
 # ADR-0005：jar 内置资产打包为单文件容器，音频沿用官方资产索引
@@ -42,14 +42,24 @@
 - **负面**：单资源变更要重建整包（当前只在基线变更时发生）；调试需 `launcher assets extract <条目>` 一类工具；随机读多一次"打开容器 + 定位条目"的成本（zip 中央目录可缓存）。
 - **影响其它文档**：`docs/modules/assets.md` §5 输出布局重写；`docs/analysis/assets/jar-entry-map.md` §3 资源来源分两类；`docs/milestones/roadmap.md` 的 M3 任务拆分调整（原 T-034 资源加载层要加 pack 读取器）。
 
-## 待决（需所有者确认）
+## 已裁决（2026-10-28，所有者确认）
 
-1. **缺失的索引资产是否允许启动器从官方端点下载？**
-   - 允许：与官方启动器行为一致，但引入下载器与进度/断点逻辑；
-   - 不允许：只读挂载，缺就报错（更简单，但用户从官方安装以外的环境无法补齐音效）。
-2. **pack 内是否保留原始目录层级**（`assets/minecraft/textures/block/x.png`）还是扁平化（`textures/block/x.png`）？
-   - 保留：与 jar 一一对应，便于对照；
-   - 扁平化：去掉恒定的 `assets/minecraft/` 前缀，条目名更短。当前倾向**扁平化**，命名空间作为可选前缀保留。
+1. **索引资产只读，缺失只提示不阻断**：不做下载器；缺失时打印警告（期望路径 + 索引 id）后继续运行，表现为无音效/仅英文。
+2. **pack 内路径保持原始层级**：条目名保留 `assets/minecraft/…`，与 jar 一一对应，便于对照与手工检查，不做扁平化。
+
+## 实测证据（2026-10-28）
+
+本机 `E:/games/minecraft/.minecraft/assets`：
+
+| 项 | 值 |
+| --- | --- |
+| 26.2 的 `assetIndex.id` | `32` |
+| 索引 SHA-1 | `d6540f46a8fec49e45fb7312cdcf401a8e4e15ff` |
+| 索引条目 / 总量 | 5,057 条 / 约 458 MB |
+| 索引内含 | `sounds/…`、`sounds.json`、`lang/<locale>.json`（多语言齐全） |
+| 索引不含 | `textures/block/…`（0 条，纹理只在 jar 内） |
+
+这直接支撑"音频与语言走索引、纹理与模型打包"的划分。
 
 ## 复查条件
 

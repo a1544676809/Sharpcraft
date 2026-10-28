@@ -15,8 +15,8 @@ M1（基础逻辑）与 M2（世界数据闭环）已达成并留有可执行证
 
 ## 进行中
 
-- **M3 文档阶段**：`docs/modules/assets.md`（资产模块设计）、`docs/analysis/assets/jar-entry-map.md`（jar 条目清单）、`docs/decisions/0005-asset-pack-and-official-index.md`（资产打包 + 官方索引只读挂载）三份均为 `[待评审]`，等你评审后开始编码。
-- ADR-0005 有两个待决项等你裁决：① 索引资产缺失时是否允许启动器从官方端点补全；② pack 内路径是否扁平化（当前倾向扁平化）。
+- **M3 文档阶段完成**：`docs/modules/assets.md` `[已评审]`、ADR-0005 `[已接受]`（两项裁决：索引只读+缺失警告、pack 保留原始层级）、`docs/analysis/assets/jar-entry-map.md` 已补实测证据。可以开始编码。
+- 实测事实：本机 26.2 用资产索引 **32**（5,057 条 / 约 458 MB），索引内含 `sounds/`、`sounds.json`、全部 `lang/*.json`，**不含** `textures/block/`——印证"音频与语言走索引、纹理与模型打包"。
 
 ## 已完成（近期，按时间倒序）
 
@@ -34,11 +34,10 @@ M1（基础逻辑）与 M2（世界数据闭环）已达成并留有可执行证
 
 ## 下一步具体动作
 
-1. 你评审 `docs/modules/assets.md`；通过后把状态改为 `[已评审]`。
-2. T-032：版本清单解析 + jar SHA-1 校验（合成 jar 篡改必须失败，报错含期望/实际哈希）。
-3. T-033：资产**打包器**（白名单 → 单文件 zip pack + manifest，原子发布、幂等、`.mcmeta` 成对、zip-slip 防护、输出不得在仓库内）。
-4. T-034 / T-035 / T-036 依次：`IAssetSource` 解析层（pack 读取器 + 官方 objects 只读挂载）→ 启动器 `assets`/`launch` 子命令 → 纹理接入渲染。
-5. 可选并行：把 `quality-attributes.md` QA-1 的 `[待定]` 阈值定稿（候选值见 `performance-baseline.md` §5）。
+1. T-032 **已完成**：`VersionManifest`（id / assetIndex.id+sha1 / downloads.client.sha1）+ `JarVerifier`（流式 SHA-1、尺寸预检、篡改不可绕过、报错含期望与实际哈希）。
+2. T-033：资产**打包器**（白名单 → 单文件 zip pack + manifest，原子发布、幂等、`.mcmeta` 成对、zip-slip 防护、输出不得在仓库内）。
+3. T-034 / T-035 / T-036 依次：`IAssetSource` 解析层（pack 读取器 + 官方 objects 只读挂载）→ 启动器 `assets`/`launch` 子命令 → 纹理接入渲染。
+4. 可选并行：把 `quality-attributes.md` QA-1 的 `[待定]` 阈值定稿（候选值见 `performance-baseline.md` §5）。
 
 ## 未提交改动 / 后台任务
 
