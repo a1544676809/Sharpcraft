@@ -76,6 +76,19 @@ CFB8 是逐字节反馈：每字节用 16 字节寄存器加密，取首字节�
 - RSA：公钥 DER 解析 + PKCS#1 填充往返。
 - 端到端：登录成功后继续收发至少一个加密包（尚未覆盖，等登录实现完成）。
 
+## 6.1 实测记录（真实服务器，无凭据）
+
+| 日期 | 步骤 | 结果 |
+| --- | --- | --- |
+| 2026-10-28 | 握手(intention=2) → `LoginStart` → 解析 `Hello` → 发送 RSA 加密的 `Key` | 服务端接受 Key，**加密通道建立** |
+| 2026-10-28 | 读取服务端的加密断开包 | 成功解密为 `{"translate":"multiplayer.disconnect.unverified_username"}` |
+
+意义：这一步不需要账号就能验证"加密是否真的对得上"——如果 AES/CFB8 的寄存器或方向有问题，收到的会是一堆乱码而不是可解析的 JSON。
+
+**同时抓到一个真实协议错误**：第一版把 UUID 按"字节数组"写（VarInt 长度前缀 + 16 字节），服务端直接回
+`Packet login/serverbound/minecraft:hello ... was larger than I expected, found 1 bytes extra`。
+`readUUID()` 是**裸 16 字节**（两个大端 long），没有长度前缀。已修正并加了断言（名字 "abc" 的包体必须是 21 字节）。
+
 ## 7. 待办
 
 - 真实账号登录需要凭据：认证流程（设备码 / 授权码 + 回环）选型未定，见 `docs/STATE.md` 与 AGENTS.md 第 5 节。

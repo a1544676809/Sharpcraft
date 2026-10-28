@@ -45,8 +45,9 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 4. `fork()` / `consumeCount` 的链式派生向量仍未取；`coordinates.md` 还有两项待验证（ChunkPos 主构造器、超范围饱和）。
 5. **链路已打通**：对 `mcf.ddger.top` 实测得到 protocol=777 / version=26.3 / RTT=21ms（证据见 `protocol-phases.md` §8）。SRV 解析已实现。
 6. T-015 登录加密原语已完成（服务端哈希 / RSA / AES-CFB8，向量来自 JVM 参考实现）。
-7. 下一步：登录阶段状态机（LoginStart → Hello → Key → 启用加密 → Compression → LoginFinished）。**真实账号登录需要凭据与认证选型确认，动之前会先问。**
-8. 仍需：导出 Login/Configuration/Play 三个方向的包 id 全表（工具待写）。
+7. T-016 登录报文已完成；**真实服务器验证了加密通道**（收到并解密 unverified_username 断开包）。
+8. 下一步：登录状态机（含 Compression 启用与 LoginAcknowledged）。真实账号登录需要凭据与认证选型确认，动之前会先问。
+9. 仍需：导出 Configuration/Play 两个方向的包 id 全表（工具待写）。
 ## 未提交改动 / 后台任务
 
 - 本次提交内容见下；无运行中的后台任务。

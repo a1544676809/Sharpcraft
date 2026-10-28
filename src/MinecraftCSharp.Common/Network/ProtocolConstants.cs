@@ -69,6 +69,47 @@ public static class PacketIds
         public const int PingRequest = 1;
     }
 
+    /// <summary>Client to server, <see cref="ConnectionState.Login"/>.</summary>
+    public static class LoginServerbound
+    {
+        /// <summary>Login start with name and profile id.</summary>
+        public const int LoginStart = 0;
+
+        /// <summary>Encrypted shared secret and challenge.</summary>
+        public const int Key = 1;
+
+        /// <summary>Answer to a custom query.</summary>
+        public const int CustomQueryAnswer = 2;
+
+        /// <summary>Acknowledgement that login finished.</summary>
+        public const int LoginAcknowledged = 3;
+
+        /// <summary>Cookie response.</summary>
+        public const int CookieResponse = 4;
+    }
+
+    /// <summary>Server to client, <see cref="ConnectionState.Login"/>.</summary>
+    public static class LoginClientbound
+    {
+        /// <summary>Disconnect with a JSON reason.</summary>
+        public const int LoginDisconnect = 0;
+
+        /// <summary>Encryption request.</summary>
+        public const int Hello = 1;
+
+        /// <summary>Login finished.</summary>
+        public const int LoginFinished = 2;
+
+        /// <summary>Compression threshold advertisement.</summary>
+        public const int LoginCompression = 3;
+
+        /// <summary>Custom query.</summary>
+        public const int CustomQuery = 4;
+
+        /// <summary>Cookie request.</summary>
+        public const int CookieRequest = 5;
+    }
+
     /// <summary>Server to client, <see cref="ConnectionState.Status"/>.</summary>
     public static class StatusClientbound
     {

@@ -61,6 +61,47 @@ public ref struct PayloadReader
         return status;
     }
 
+    /// <summary>Reads a VarInt-prefixed byte array, rejecting lengths above <paramref name="maxLength"/>.</summary>
+    public DecodeStatus TryReadByteArray(out byte[] value, int maxLength)
+    {
+        value = [];
+
+        var status = VarInt.TryRead(Remaining, out var length, out var prefixLength);
+        if (status != DecodeStatus.Success)
+        {
+            return status;
+        }
+
+        if (length < 0 || length > maxLength)
+        {
+            return DecodeStatus.Invalid;
+        }
+
+        if (Remaining.Length - prefixLength < length)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        value = Remaining.Slice(prefixLength, length).ToArray();
+        Position += prefixLength + length;
+        return DecodeStatus.Success;
+    }
+
+    /// <summary>Reads a UUID encoded as 16 raw big-endian bytes (no length prefix).</summary>
+    public DecodeStatus TryReadUuid(out Guid value)
+    {
+        value = Guid.Empty;
+
+        if (Remaining.Length < 16)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        value = new Guid(Remaining[..16], bigEndian: true);
+        Position += 16;
+        return DecodeStatus.Success;
+    }
+
     /// <summary>Reads a big-endian unsigned short.</summary>
     public DecodeStatus TryReadUnsignedShort(out ushort value)
     {

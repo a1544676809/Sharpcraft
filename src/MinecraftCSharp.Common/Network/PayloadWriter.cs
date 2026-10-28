@@ -35,6 +35,24 @@ public ref struct PayloadWriter
     public void WriteString(string value, int maxLength = Utf8StringCodec.DefaultMaxLength) =>
         Position += Utf8StringCodec.Write(Remaining, value, maxLength);
 
+    /// <summary>Writes a VarInt-prefixed byte array.</summary>
+    public void WriteByteArray(ReadOnlySpan<byte> value)
+    {
+        WriteVarInt(value.Length);
+        value.CopyTo(Remaining);
+        Position += value.Length;
+    }
+
+    /// <summary>
+    /// Writes a UUID as 16 raw big-endian bytes (Java writes two longs; there is no length
+    /// prefix, unlike a byte array).
+    /// </summary>
+    public void WriteUuid(Guid value)
+    {
+        value.TryWriteBytes(Remaining, bigEndian: true, out _);
+        Position += 16;
+    }
+
     /// <summary>Writes a big-endian unsigned short.</summary>
     public void WriteUnsignedShort(ushort value)
     {
