@@ -22,6 +22,7 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-009 | 位置化随机、世界生成混合器、战利品序列 | `docs/analysis/common/random.md` §5–§7；`random-vectors.md` §4.1 | `PositionalAndWorldgenVectorTests.cs`（105 值） | `src/MinecraftCSharp.Common/Random/`（PositionalSeed / JavaStringHash / *PositionalRandomFactory / WorldgenRandom / RandomSequence） | 已完成 |
 | T-007 | 注册表顺序与 `Registry` | `docs/modules/common-primitives.md` §4.2；`docs/analysis/common/registry-order.md` | `RegistryOrderTests.cs`（含 1286 条原版 block 顺序快照） | `src/MinecraftCSharp.Common/Registries/` | 已完成 |
 | T-010 | 方块状态全局 id 生成器 | `docs/analysis/common/registry-order.md` §5、§7.1 | `BlockStateIdTests.cs`（含 1442 个原版状态 id 与 35723 总数） | `src/MinecraftCSharp.Common/Registries/`（BlockStateDefinition / BlockStateLayout） | 已完成 |
+| T-018 | 启动器 CLI 垂直切片（login / probe / help） | `docs/modules/launcher.md` §3–§5 | `LauncherCommandLineTests.cs`（10 项）、手工验收：`probe mcf.ddger.top` 输出 protocol 777 | `src/MinecraftCSharp.Launcher/` | 已完成 |
 | T-017 | 认证链路：设备码 / XBL / XSTS / Minecraft 会话 | `docs/modules/auth.md` §3–§6 | `DeviceCodeFlowTests.cs`（10 项）、`XboxAndServicesTests.cs`（9 项） | `src/MinecraftCSharp.Auth/` | 已完成 |
 | T-016 | 登录阶段报文（LoginStart / Hello / Key / Disconnect） | `docs/specs/network/encryption.md` §1、§6.1 | `LoginPacketTests.cs`（11 项）、`LoginProbeIntegrationTests`（真实服务器加密验证） | `src/MinecraftCSharp.Common/Network/LoginPackets.cs` | 已完成 |
 | T-015 | 登录加密原语（服务端哈希 / RSA / AES-CFB8） | `docs/specs/network/encryption.md` | `LoginCryptoTests.cs`（13 项，向量来自 JVM 参考实现） | `src/MinecraftCSharp.Common/Network/`（MinecraftLoginCrypto / AesCfb8） | 已完成 |

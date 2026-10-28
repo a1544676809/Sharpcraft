@@ -17,6 +17,7 @@
 | [`build-scaffolding.md`](build-scaffolding.md) | 构建骨架与程序集划分 | 外围（工程） | 草稿（已实施，待评审） |
 | [`common-primitives.md`](common-primitives.md) | Common 基础类型 | Common | 草稿 |
 | [`auth.md`](auth.md) | 认证链路（设备码优先） | 已评审 |
+| [`launcher.md`](launcher.md) | 启动器（认证/探测 CLI 切片） | 已评审 |
 
 ## 当前进度
 

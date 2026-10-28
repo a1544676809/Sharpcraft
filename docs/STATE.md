@@ -47,7 +47,9 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 6. T-015 登录加密原语已完成（服务端哈希 / RSA / AES-CFB8，向量来自 JVM 参考实现）。
 7. T-016 登录报文已完成；**真实服务器验证了加密通道**（收到并解密 unverified_username 断开包）。
 8. T-017 认证模块（设备码流程）已完成：4 个阶段客户端 + 19 项离线测试；真实登录需人工输入设备码，属手工验收项。
-9. 下一步：① 导出 Configuration/Play 包 id 表；② 登录状态机（Compression 启用 + LoginAcknowledged）；③ 认证模块接启动器 CLI 做手工端到端验收。
+9. T-018 启动器 CLI 已完成：`login` / `probe` / `help`；`probe mcf.ddger.top` 实测通过（protocol 777）。
+10. 待用户手工验收：`dotnet run --project src/MinecraftCSharp.Launcher -- login`（需微软账号输码）。
+11. 下一步：导出 Configuration/Play 包 id 表；再实现登录状态机（Compression + LoginAcknowledged）。
 ## 未提交改动 / 后台任务
 
 - 本次提交内容见下；无运行中的后台任务。
