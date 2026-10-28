@@ -6,30 +6,44 @@ using MinecraftCSharp.Common.Registries;
 
 namespace MinecraftCSharp.Client.Assets;
 
+/// <summary>Which face of a block is being textured.</summary>
+public enum BlockFace
+{
+    /// <summary>+Y face.</summary>
+    Top,
+
+    /// <summary>The four vertical faces.</summary>
+    Side,
+
+    /// <summary>-Y face.</summary>
+    Bottom
+}
+
 /// <summary>
-/// Maps a block state id to the atlas sprite that represents it. The convention is vanilla's:
-/// block <c>minecraft:stone</c> uses <c>minecraft:block/stone</c>. Anything without a sprite falls
-/// back to the missing sprite, which is how a vanilla client shows an unknown texture.
+/// Maps a block state id to the atlas sprite for a given face. The primary convention is vanilla's:
+/// block <c>minecraft:stone</c> uses <c>minecraft:block/stone</c>. Blocks whose texture names differ
+/// (<c>grass_block</c> is drawn from <c>grass_block_top</c>, <c>grass_block_side</c> and <c>dirt</c>)
+/// fall back to face-suffixed lookups, and anything unmatched uses the missing sprite.
 /// </summary>
 /// <remarks>
-/// Two modes exist because state ids only carry meaning together with the block layout from
-/// <c>registry_data</c>: with a layout the lookup is a precomputed array (no per-face cost), without
-/// one every state resolves to the missing sprite. Real-server texturing therefore depends on the
-/// layout being assembled, which is tracked as a separate task.
+/// This is the bridge to full model resolution: it only uses what the resource stack provides, but it
+/// does not yet read <c>blockstates</c> or <c>models</c> JSON, so the fallback chain is documented
+/// rather than assumed (docs/modules/render.md §6.1).
 /// </remarks>
 public sealed class BlockSpriteMap
 {
-    /// <summary>Directory prefix every block sprite is expected under.</summary>
+    /// <summary>Directory prefix every block sprite lives under.</summary>
     public const string TextureDirectory = "block/";
 
     private readonly SpriteAtlas _atlas;
     private readonly BlockStateLayout? _layout;
-    private readonly SpriteRect[]? _spritesByState;
-    private readonly Dictionary<Identifier, SpriteRect> _cache = new();
+    private readonly int[]? _blockByState;
+    private readonly SpriteRect[][]? _facesByBlock;
+    private readonly Dictionary<Identifier, SpriteRect[]> _cache = new();
 
     /// <summary>Creates a map over an atlas, optionally backed by a block state layout.</summary>
     /// <param name="atlas">Stitched atlas; must contain the missing sprite.</param>
-    /// <param name="layout">Block state layout, or null when it has not been assembled yet.</param>
+    /// <param name="layout">Block state layout, or null when it is not known yet.</param>
     public BlockSpriteMap(SpriteAtlas atlas, BlockStateLayout? layout = null)
     {
         ArgumentNullException.ThrowIfNull(atlas);
@@ -37,18 +51,22 @@ public sealed class BlockSpriteMap
         _atlas = atlas;
         _layout = layout;
 
-        if (layout is not null)
+        if (layout is null)
         {
-            _spritesByState = new SpriteRect[layout.TotalStates];
-            for (var block = 0; block < layout.Blocks.Count; block++)
-            {
-                var entry = layout.Blocks[block];
-                var sprite = ForBlock(entry.Id);
+            return;
+        }
 
-                for (var offset = 0; offset < entry.StateCount; offset++)
-                {
-                    _spritesByState[entry.BaseId + offset] = sprite;
-                }
+        _blockByState = new int[layout.TotalStates];
+        _facesByBlock = new SpriteRect[layout.Blocks.Count][];
+
+        for (var block = 0; block < layout.Blocks.Count; block++)
+        {
+            var entry = layout.Blocks[block];
+            _facesByBlock[block] = ResolveFaces(entry.Id);
+
+            for (var offset = 0; offset < entry.StateCount; offset++)
+            {
+                _blockByState[entry.BaseId + offset] = block;
             }
         }
     }
@@ -56,40 +74,90 @@ public sealed class BlockSpriteMap
     /// <summary>True when a layout is present, meaning state ids resolve to real blocks.</summary>
     public bool HasLayout => _layout is not null;
 
-    /// <summary>Number of distinct block identifiers seen while building the map.</summary>
+    /// <summary>Number of distinct block identifiers resolved so far.</summary>
     public int BlockCount => _cache.Count;
 
-    /// <summary>Resolves the sprite for a block state id.</summary>
-    public SpriteRect ForState(int stateId)
+    /// <summary>Resolves the sprite for a block state id and face.</summary>
+    public SpriteRect ForState(int stateId, BlockFace face = BlockFace.Side)
     {
-        if (_spritesByState is not null && (uint)stateId < (uint)_spritesByState.Length)
+        if (_blockByState is not null && _facesByBlock is not null && (uint)stateId < (uint)_blockByState.Length)
         {
-            return _spritesByState[stateId];
+            var faces = _facesByBlock[_blockByState[stateId]];
+            return face switch
+            {
+                BlockFace.Top => faces[0],
+                BlockFace.Bottom => faces[2],
+                _ => faces[1]
+            };
         }
 
         return _atlas.Get(SpriteAtlas.MissingSprite);
     }
 
-    /// <summary>Resolves the sprite for a block identifier, using the vanilla naming convention.</summary>
-    public SpriteRect ForBlock(Identifier blockId)
+    /// <summary>Resolves the sprite for a block identifier and face.</summary>
+    public SpriteRect ForBlock(Identifier blockId, BlockFace face = BlockFace.Side)
+    {
+        var faces = ResolveFaces(blockId);
+        return face switch
+        {
+            BlockFace.Top => faces[0],
+            BlockFace.Bottom => faces[2],
+            _ => faces[1]
+        };
+    }
+
+    /// <summary>Resolves by texture path, for callers that already know the exact texture.</summary>
+    public SpriteRect ForTexture(string texturePath) =>
+        _atlas.Get(new Identifier("minecraft", TextureDirectory + texturePath));
+
+    private SpriteRect[] ResolveFaces(Identifier blockId)
     {
         if (_cache.TryGetValue(blockId, out var cached))
         {
             return cached;
         }
 
-        // minecraft:stone -> minecraft:block/stone
-        var candidate = new Identifier(blockId.Namespace, TextureDirectory + blockId.Path);
-        var sprite = _atlas.Get(candidate);
+        var path = blockId.Path;
 
-        _cache[blockId] = sprite;
-        return sprite;
+        // 1) A texture named exactly like the block covers every face.
+        var direct = new Identifier("minecraft", TextureDirectory + path);
+        if (_atlas.Contains(direct))
+        {
+            var sprite = _atlas.Get(direct);
+            var uniform = new[] { sprite, sprite, sprite };
+            _cache[blockId] = uniform;
+            return uniform;
+        }
+
+        // 2) Face-suffixed textures, as grass and many other blocks use.
+        var top = Lookup($"{path}_top");
+        var side = Lookup($"{path}_side");
+        var bottom = Lookup($"{path}_bottom");
+
+        if (top is not null || side is not null || bottom is not null)
+        {
+            var missing = _atlas.Get(SpriteAtlas.MissingSprite);
+            var faces = new[]
+            {
+                top ?? side ?? missing,
+                side ?? top ?? missing,
+                bottom ?? side ?? top ?? missing
+            };
+
+            _cache[blockId] = faces;
+            return faces;
+        }
+
+        // 3) Nothing matched: the missing sprite, which is how vanilla shows an unknown texture.
+        var fallbackSprite = _atlas.Get(SpriteAtlas.MissingSprite);
+        var fallback = new[] { fallbackSprite, fallbackSprite, fallbackSprite };
+        _cache[blockId] = fallback;
+        return fallback;
     }
 
-    /// <summary>
-    /// Resolves by texture path instead of block id, for blocks whose texture name differs from the
-    /// block name (for example a block that uses <c>grass_block_top</c>).
-    /// </summary>
-    public SpriteRect ForTexture(string texturePath) =>
-        _atlas.Get(new Identifier("minecraft", TextureDirectory + texturePath));
+    private SpriteRect? Lookup(string texturePath)
+    {
+        var id = new Identifier("minecraft", TextureDirectory + texturePath);
+        return _atlas.Contains(id) ? _atlas.Get(id) : null;
+    }
 }

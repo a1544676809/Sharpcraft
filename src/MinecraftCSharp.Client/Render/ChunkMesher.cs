@@ -461,8 +461,16 @@ public static class ChunkMesher
             uvA,
             uvB,
             uvC,
-            sprites?.ForState(state));
+            sprites?.ForState(state, FaceOf(direction)));
     }
+
+    /// <summary>Maps a face direction to the atlas face bucket a block uses.</summary>
+    private static BlockFace FaceOf(int direction) => direction switch
+    {
+        PositiveY => BlockFace.Top,
+        NegativeY => BlockFace.Bottom,
+        _ => BlockFace.Side
+    };
 
     /// <summary>
     /// Brightness of a cell from its light levels. Sky and block light are combined with max,

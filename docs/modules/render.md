@@ -229,6 +229,36 @@ frame written to ...\minecraftcsharp-frame.png
 | `MC_DEBUG_SPRITES=1` | 打印精灵映射与图集像素，并采样渲染结果的若干像素 |
 | `MC_DEMO_STATE=<id>` | 把本地世界所有方块刷成同一状态，用于隔离"某个方块纹理错"的问题 |
 
+### 基线布局与真实数据（2026-10-28）
+
+真实服务器发来的是**数字 state id**，要变成方块名必须有注册表布局。基线布局可以离线重建：仓库里已有 26.3 的
+方块注册顺序与状态数快照（T-007 抓自 jar，只有标识符与计数，不含任何资产），因此：
+
+| 项 | 值 |
+| --- | --- |
+| 方块数 | 1,286 |
+| 全局方块状态数 | 35,723 |
+| 抽样校验 | `minecraft:air` = 0 且 1 个状态；`minecraft:redstone_wire` = 1,296 个状态（与原版一致） |
+
+这条布局由 `VanillaBlockRegistry`（`Common/Registries/`，嵌入式快照）提供，`frame replay` 与真实服务器路径默认使用它。
+**注意**：它只是基线；服务器若增删或重排方块，必须以运行时 `registry_data` 为准（T-039 的动态部分仍未做）。
+
+按面取纹理：`BlockSpriteMap` 现在区分顶/侧/底。规则顺序是
+① 与方块同名的纹理 → ② `<名字>_top` / `<名字>_side` / `<名字>_bottom` → ③ missing 精灵。
+`grass_block` 因此能正确取到 `grass_block_side`（此前整块是紫黑格子）。
+
+**实测覆盖率**——用真实抓包（`failed-0-47760.bin`，真实服务器区块）跑 `frame replay`：
+
+```
+replay: chunk (7,7) 2 block entities, 11 light arrays
+sprite coverage: 682/1286 blocks textured, 604 missing
+    no texture: minecraft:oak_wood / minecraft:water / minecraft:lava / ...
+mesh: 31321 blocks, 7354 triangles
+```
+
+**682/1286（53%）的方块已有纹理**，其余 604 个的纹理名与方块名不同（`oak_wood` 用 `oak_log`、`water` 用
+`water_still` 等），必须靠 `blockstates` + `models` 解析才能对上——这就是"片二"的价值，也是一个可量化的缺口，而不是猜。
+
 ### 片二：模型驱动
 
 用 `blockstates/<id>.json` → `models/block/<model>.json`（含 `parent` 链与 `textures.all` / 按面覆盖）决定每个面用哪张纹理，取代片一的显式表。

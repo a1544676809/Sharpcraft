@@ -37,7 +37,8 @@ internal static class FrameCommand
 
         if (Environment.GetEnvironmentVariable("MC_FRAME_REPLAY") is { Length: > 0 } replayPath)
         {
-            return RenderWorld(LoadReplay(replayPath), width, height);
+            // Real chunk data uses the baseline block layout so state ids resolve to blocks.
+            return RenderWorld(LoadReplay(replayPath), width, height, VanillaBlockRegistry.Layout);
         }
 
         var signedIn = await AuthenticationFlow.EnsureSignedInAsync(
@@ -105,7 +106,7 @@ internal static class FrameCommand
             }
 
             Console.WriteLine($"adapter: {OffscreenRenderer.DescribeAdapter()}");
-            return RenderWorld(world, width, height);
+            return RenderWorld(world, width, height, VanillaBlockRegistry.Layout);
         }
     }
 
@@ -201,15 +202,26 @@ internal static class FrameCommand
 
         if (Environment.GetEnvironmentVariable("MC_DEBUG_SPRITES") is "1" && layout is not null)
         {
+            // Which blocks still have no texture, so the gap is measured instead of guessed.
+            var missing = atlas.Sprites[SpriteAtlas.MissingSprite];
+            var unresolved = new List<string>();
+
             for (var block = 0; block < layout.Blocks.Count; block++)
             {
                 var entry = layout.Blocks[block];
-                var sprite = map.ForState(entry.BaseId);
-                var offset = (((sprite.Y + (sprite.Height / 2)) * atlas.Width) + sprite.X + (sprite.Width / 2))
-                             * 4;
-                Console.WriteLine(
-                    $"  state {entry.BaseId,3} {entry.Id,-28} {sprite} " +
-                    $"rgba({atlas.Pixels[offset]},{atlas.Pixels[offset + 1]},{atlas.Pixels[offset + 2]})");
+                if (map.ForState(entry.BaseId) == missing && entry.Id.Path != "air")
+                {
+                    unresolved.Add(entry.Id.ToString());
+                }
+            }
+
+            Console.WriteLine(
+                $"  sprite coverage: {layout.Blocks.Count - unresolved.Count}/{layout.Blocks.Count} blocks textured, " +
+                $"{unresolved.Count} missing");
+
+            foreach (var blockId in unresolved.Take(8))
+            {
+                Console.WriteLine($"    no texture: {blockId}");
             }
         }
         Console.WriteLine(

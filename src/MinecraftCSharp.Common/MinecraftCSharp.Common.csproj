@@ -10,4 +10,12 @@
     <PackageReference Include="DnsClient" Version="1.8.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!--
+      Baseline block registry metadata (identifiers and state counts only) captured from the
+      26.3 jar. It is metadata, not assets: no textures, models or code (AGENTS.md principle 3).
+    -->
+    <EmbeddedResource Include="Registries\Data\vanilla-block-states-26.3.tsv" />
+  </ItemGroup>
+
 </Project>
