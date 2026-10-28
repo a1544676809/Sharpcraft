@@ -102,32 +102,7 @@ internal static class FrameCommand
             }
 
             Console.WriteLine($"adapter: {OffscreenRenderer.DescribeAdapter()}");
-
-            var mesh = ChunkMesher.Mesh(world);
-
-            Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
-
-            var bounds = WorldBounds(world);
-            var centre = (bounds.Min + bounds.Max) / 2f;
-            var radius = Vector3.Distance(bounds.Min, bounds.Max) / 2f;
-            var (eye, target) = CameraMath.DefaultCamera(centre, radius);
-
-            var request = new FrameRequest(
-                width,
-                height,
-                mesh.Vertices,
-                mesh.Indices,
-                new Vector4(0.55f, 0.72f, 0.95f, 1f),
-                eye,
-                target);
-
-            var frame = OffscreenRenderer.Render(request);
-            Console.WriteLine($"rendered on adapter: {frame.AdapterName}");
-
-            var png = PngEncoder.EncodeRgba(frame.Width, frame.Height, frame.Rgba);
-            var path = Path.Combine(Path.GetTempPath(), "minecraftcsharp-frame.png");
-            File.WriteAllBytes(path, png);
-            return path;
+            return RenderWorld(world, width, height);
         }
     }
 
@@ -187,8 +162,18 @@ internal static class FrameCommand
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
         var bounds = BoundsOf(mesh);
-        var centre = (bounds.Min + bounds.Max) / 2f;
-        var radius = Vector3.Distance(bounds.Min, bounds.Max) / 2f;
+
+        // Frame the horizontal footprint: a tall dimension range (y from -64 to 320) would
+        // otherwise push the camera so far out that the terrain becomes a sliver.
+        // Aim at the top surface and size the sphere by the footprint: a world column can be
+        // hundreds of blocks tall, which would otherwise swamp the framing.
+        var centre = new Vector3(
+            (bounds.Min.X + bounds.Max.X) / 2f,
+            bounds.Max.Y,
+            (bounds.Min.Z + bounds.Max.Z) / 2f);
+        var footprintX = bounds.Max.X - bounds.Min.X;
+        var footprintZ = bounds.Max.Z - bounds.Min.Z;
+        var radius = MathF.Max(4f, MathF.Sqrt(footprintX * footprintX + footprintZ * footprintZ) / 2f);
         var (eye, target) = CameraMath.DefaultCamera(centre, radius);
 
         var frame = OffscreenRenderer.Render(new FrameRequest(
@@ -249,32 +234,6 @@ internal static class FrameCommand
             var position = new Vector3(mesh.Vertices[i], mesh.Vertices[i + 1], mesh.Vertices[i + 2]);
             min = Vector3.Min(min, position);
             max = Vector3.Max(max, position);
-        }
-
-        return (min, max);
-    }
-
-    private static (Vector3 Min, Vector3 Max) WorldBounds(ClientWorld world)
-    {
-        var min = new Vector3(float.MaxValue);
-        var max = new Vector3(float.MinValue);
-
-        // Sample the loaded chunks' extents; block-level bounds come with the renderer later.
-        for (var chunkX = -64; chunkX <= 64; chunkX++)
-        {
-            for (var chunkZ = -64; chunkZ <= 64; chunkZ++)
-            {
-                var chunk = world.GetChunk(chunkX, chunkZ);
-                if (chunk is null)
-                {
-                    continue;
-                }
-
-                var low = new Vector3(chunk.ChunkX * 16, chunk.MinSectionY * 16, chunk.ChunkZ * 16);
-                var high = new Vector3(low.X + 16, (chunk.MaxSectionY + 1) * 16, low.Z + 16);
-                min = Vector3.Min(min, low);
-                max = Vector3.Max(max, high);
-            }
         }
 
         return (min, max);

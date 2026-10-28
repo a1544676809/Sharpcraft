@@ -98,9 +98,10 @@ public static class CameraMath
     /// </summary>
     public static (Vector3 Eye, Vector3 Target) DefaultCamera(Vector3 centre, float radius)
     {
-        // Half of the vertical extent divided by tan(30 deg) keeps the subject inside the frustum.
-        var distance = MathF.Max(6f, radius / MathF.Tan(30f * MathF.PI / 180f));
-        var direction = Vector3.Normalize(new Vector3(0.62f, 0.72f, 0.62f));
+        // Half of the subject extent divided by tan(30 deg) keeps it inside a 60 degree view; the
+        // extra 1.35 leaves a margin so the subject is not clipped by the frame edges.
+        var distance = MathF.Max(6f, radius / MathF.Tan(30f * MathF.PI / 180f) * 1.35f);
+        var direction = Vector3.Normalize(new Vector3(0.55f, 1f, 0.55f));
         var eye = centre + direction * distance;
         return (eye, centre);
     }
