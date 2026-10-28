@@ -43,9 +43,13 @@
 | 非法字符 | 抛 `IdentifierException`，消息区分命名空间与路径两类 |
 | 序列化 | 字符串形式 `namespace:path`；网络编码为 UTF-8 字符串 |
 
-`[待验证]` 以下三点尚未核实，实现前必须确认：等值/哈希的构成、`compareTo` 的排序语义（影响注册表有序同步）、路径是否允许空串或存在长度上限。
+已闭环（详见 [`docs/analysis/common/identifier.md`](../analysis/common/identifier.md)）：
 
-设计取向：`readonly struct` 持有两个 `string`，解析走 `ReadOnlySpan<char>` 校验以避免中间分配；合法性校验失败用**不抛异常**的 `TryParse` 与抛异常的 `Parse` 两个入口（原版只有抛异常版本，属允许的实现差异，不改变可观测行为）。
+- 等值：命名空间与路径都相等；哈希构成 `31 × hash(namespace) + hash(path)`。
+- 排序：**先比 path 再比 namespace**（直接决定注册表遍历顺序）。
+- 长度与空串：**无长度上限**，且**空路径合法**；命名空间单独拒绝字面量 `..`。
+
+设计取向：`readonly struct` 持有两个 `string`，解析走 `ReadOnlySpan<char>` 校验以避免中间分配；提供 `TryParse`（不抛）与 `Parse`（抛）双入口。哈希数值不必与 Java 相同（不跨协议边界），但**等值与排序语义必须一致**。
 
 ### 4.2 `RegistryKey<T>` 与 `Registry<T>`
 
@@ -60,7 +64,13 @@
 
 ### 4.4 随机数
 
-- `[待分析]` 原版使用的随机源与算法。**不得**用 `System.Random` 顶替：世界生成与战利品必须与原版序列一致，否则同种子不同结果。此项在实现前必须补齐分析，未确认前不提供该类型。
+已闭环（详见 [`docs/analysis/common/random.md`](../analysis/common/random.md)）。结论要点：
+
+- 必须实现三类算法，且各自逐位一致：**48 位 LCG**（`RandomSource.create` 的默认返回，实体/方块刻/粒子用）、**xoroshiro128++**（世界生成与战利品序列）、以及种子升级混合（Stafford 13 + MD5 摘要）。
+- 同一 `nextInt(bound)` 在两种算法上语义不同，不可共用实现。
+- 战利品走 `RandomSequence`：`(世界种子, 战利品表 ID)` 派生独立序列，与调用顺序无关。
+
+分层：`RandomSource` 门面 + `LegacyRandom` + `Xoroshiro128PlusPlus` + `PositionalRandomFactory`（两实现）+ `WorldgenRandom` + `RandomSequence`。每个实现必须配"参考向量测试"（固定种子断言前若干个输出值）。
 
 ## 5. 关键数据结构
 
@@ -77,11 +87,15 @@
 
 ## 7. 未解决问题与风险
 
-- 上述三处 `[待验证]` 与一处 `[待分析]`（随机数）是**开工前必须闭环**的项，否则上层会建立在错误假设上。
-- `Identifier` 若采用结构体，需评估在字典键高频使用下的哈希成本与装箱风险；取值类型后 `Equals`/`GetHashCode` 必须手写并缓存哈希（原版按字符串拼接计算，我们不复制其实现但需保证等值语义一致）。
+- 开工前的四项阻塞已闭环（三处 `[待验证]` + 一处 `[待分析]`），证据见 `docs/analysis/common/`。
+- 仍待确认：注册表元素顺序的决定因素（`RegistryKey`/`Registry` 一节），它影响协议包体与存档一致性，**不得**在弄清前实现注册表。
+- `Identifier` 采用结构体后需评估字典键的哈希成本；`Equals`/`GetHashCode` 手写，等值语义必须与 Java 一致，哈希数值可不同。
+- 随机数实现的主要风险是 Java 语义细节（`unchecked` 溢出、符号扩展、`>>>` 与 `>>`）；参考向量测试是唯一可靠的验收手段，必须在实现同时落地。
 - 与 `docs/specs/network/` 的交界：字符串编解码的字节级细节属于协议规格，不在本模块。
 
 ## 8. 参考资料
 
 - `docs/architecture/boundaries.md`（侧别判定）
+- [`docs/analysis/common/identifier.md`](../analysis/common/identifier.md)
+- [`docs/analysis/common/random.md`](../analysis/common/random.md)
 - `docs/specs/network/`（后续产出，届时补链接）

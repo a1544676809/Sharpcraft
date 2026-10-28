@@ -84,6 +84,9 @@
 | [`analysis/architecture/README.md`](analysis/architecture/README.md) | 整体架构分析入口与第一轮关键结论 | 草稿 |
 | [`analysis/architecture/overview.md`](analysis/architecture/overview.md) | 基线标识、分层、入口、渲染栈、三侧初判 | 草稿 |
 | [`analysis/architecture/package-map.md`](analysis/architecture/package-map.md) | 包级计数地图与子树职责/归属倾向 | 草稿 |
+| [`analysis/common/README.md`](analysis/common/README.md) | 基础类型子系统入口 | 草稿 |
+| [`analysis/common/identifier.md`](analysis/common/identifier.md) | 标识符：解析、校验、等值、排序、序列化 | 草稿 |
+| [`analysis/common/random.md`](analysis/common/random.md) | 随机源家族、算法参数、种子派生、战利品序列 | 草稿 |
 | [`architecture/README.md`](architecture/README.md) | 架构目录入口与生效中的边界规则 | 草稿 |
 | [`architecture/boundaries.md`](architecture/boundaries.md) | 三侧 + 外围宿主层的判定规则、证据、拆分清单、程序集映射 | 草稿 |
 | [`modules/README.md`](modules/README.md) | 模块文档入口与进度 | 草稿 |

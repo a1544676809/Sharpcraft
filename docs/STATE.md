@@ -23,27 +23,24 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 
 ## 进行中
 
-- 无。`docs/modules/common-primitives.md` 状态仍为 `[草稿]`，代码未开工。
+- `docs/modules/common-primitives.md`：四项阻塞已全部闭环（见下），文档等待所有者评审后置为 `[已评审]`；尚未写代码。
 
 ## 阻塞项
 
-`common-primitives` 开工前必须闭环（证据都在 `ref://mc-26.3-analysis/src`）：
-
-1. `Identifier` 的等值 / 哈希构成。
-2. `Identifier` 的排序语义（决定注册表遍历顺序与协议一致性）。
-3. 路径是否允许空串 / 是否有长度上限。
-4. 随机数算法与种子派生（不确认就无法对齐世界生成与战利品）。
+- 无。
+- 开工前的四项已闭环，证据为 `docs/analysis/common/`：`identifier.md`（等值/排序/长度/空串）与 `random.md`（LCG、xoroshiro128++、种子升级、位置化随机、WorldgenRandom 混合器、RandomSequence）。
+- 新发现的前置项（**注册表**开工前必须解决）：`Registry` 的元素顺序由注册顺序还是标识符排序决定，尚未确认。`Identifier` 本身可以直接开工。
 
 ## 下一步具体动作
 
-1. 读 `ref://mc-26.3-analysis/src/net/minecraft/resources/Identifier.java` 与其比较/序列化相关类型，产出 `docs/analysis/common/identifier.md`（一文件一主题）。
-2. 读随机源实现，产出 `docs/analysis/common/random.md`。
-3. 回填 `docs/modules/common-primitives.md` 的 `[待验证]` / `[待分析]`，请所有者评审后置为 `[已评审]`。
-4. 实现 `Identifier` + 单元测试（含负号/边界/非法字符）；为标注 `[HotPath]` 的实现补分配测试。
+1. 等所有者评审 `docs/modules/common-primitives.md`；通过后置 `[已评审]`。
+2. 实现 `Identifier`（`readonly struct`，`Parse`/`TryParse`，校验含空串通过、拒绝 `..`、无长度上限；`CompareTo` 先 path 后 namespace），补单元测试覆盖：非法字符、空路径、冒号位置、排序键顺序、默认命名空间等价。
+3. 实现 `LegacyRandom`（48 位 LCG）与 `Xoroshiro128PlusPlus`，先在测试中用固定种子建立"参考向量"基线（需从原版运行取真实输出值，属未验证项，见 `analysis/common/random.md` §10）。
+4. 注册表顺序问题解决后再动 `Registry`。
 
 ## 未提交改动 / 后台任务
 
-- 无未提交改动；无运行中的后台任务。
+- 本次提交内容见下；无运行中的后台任务。
 
 ## 最近提交
 
