@@ -91,6 +91,7 @@
 | [`analysis/common/identifier.md`](analysis/common/identifier.md) | 标识符：解析、校验、等值、排序、序列化 | 草稿 |
 | [`analysis/common/random.md`](analysis/common/random.md) | 随机源家族、算法参数、种子派生、战利品序列 | 草稿 |
 | [`analysis/common/registry-order.md`](analysis/common/registry-order.md) | 注册表顺序与方块状态全局 id 的生成链 | 草稿 |
+| [`analysis/common/coordinates.md`](analysis/common/coordinates.md) | 坐标换算与负数取整规则 | 草稿 |
 | [`analysis/common/random-vectors.md`](analysis/common/random-vectors.md) | 随机数参考向量：取真值方法、覆盖范围、回放约定 | 草稿 |
 | [`architecture/README.md`](architecture/README.md) | 架构目录入口与生效中的边界规则 | 草稿 |
 | [`architecture/boundaries.md`](architecture/boundaries.md) | 三侧 + 外围宿主层的判定规则、证据、拆分清单、程序集映射 | 草稿 |

@@ -30,11 +30,15 @@ public sealed class WorldgenRandom : IRandomSource
     private const double DoubleMultiplier = 1.110223E-16f;
 
     private readonly IRandomSource _source;
+    private readonly MarsagliaPolarGaussian _gaussian;
     private int _count;
 
     /// <summary>Wraps an existing source.</summary>
-    public WorldgenRandom(IRandomSource source) =>
+    public WorldgenRandom(IRandomSource source)
+    {
         _source = source ?? throw new ArgumentNullException(nameof(source));
+        _gaussian = new MarsagliaPolarGaussian(this);
+    }
 
     /// <summary>Number of <c>next(bits)</c> calls, mirroring vanilla's counter.</summary>
     public int Count => _count;
@@ -48,7 +52,11 @@ public sealed class WorldgenRandom : IRandomSource
     };
 
     /// <inheritdoc />
-    public void SetSeed(long seed) => _source.SetSeed(seed);
+    public void SetSeed(long seed)
+    {
+        _source.SetSeed(seed);
+        _gaussian.Reset();
+    }
 
     /// <summary>
     /// Next <paramref name="bits"/> bits. Legacy delegates keep their own bit extraction;
@@ -109,6 +117,9 @@ public sealed class WorldgenRandom : IRandomSource
         var combined = unchecked(((long)upper << 27) + lower);
         return combined * DoubleMultiplier;
     }
+
+    /// <inheritdoc />
+    public double NextGaussian() => _gaussian.Next();
 
     /// <summary>Derives a decoration seed for a chunk and re-seeds the source with it.</summary>
     public long SetDecorationSeed(long seed, int chunkX, int chunkZ)

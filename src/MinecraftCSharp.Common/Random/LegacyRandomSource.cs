@@ -31,13 +31,22 @@ public sealed class LegacyRandomSource : IRandomSource
     /// </summary>
     private const double DoubleMultiplier = 1.110223E-16f;
 
+    private readonly MarsagliaPolarGaussian _gaussian;
     private long _seed;
 
     /// <summary>Creates a generator seeded exactly like vanilla.</summary>
-    public LegacyRandomSource(long seed) => SetSeed(seed);
+    public LegacyRandomSource(long seed)
+    {
+        _gaussian = new MarsagliaPolarGaussian(this);
+        SetSeed(seed);
+    }
 
     /// <inheritdoc />
-    public void SetSeed(long seed) => _seed = unchecked((seed ^ Multiplier) & ModulusMask);
+    public void SetSeed(long seed)
+    {
+        _seed = unchecked((seed ^ Multiplier) & ModulusMask);
+        _gaussian.Reset();
+    }
 
     /// <summary>Advances the state and returns the top <paramref name="bits"/> bits.</summary>
     [HotPath("per-tick random draws")]
@@ -86,6 +95,9 @@ public sealed class LegacyRandomSource : IRandomSource
     /// <inheritdoc />
     [HotPath("per-tick random draws")]
     public bool NextBoolean() => NextBits(1) != 0;
+
+    /// <inheritdoc />
+    public double NextGaussian() => _gaussian.Next();
 
     /// <summary>Creates an independent child source (vanilla <c>fork()</c>).</summary>
     public IRandomSource Fork() => new LegacyRandomSource(NextLong());

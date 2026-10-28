@@ -26,6 +26,7 @@ public sealed class XoroshiroRandomSource : IRandomSource
 
     private const ulong LowWordMask = 0xFFFF_FFFFUL;
 
+    private readonly MarsagliaPolarGaussian _gaussian;
     private Xoroshiro128PlusPlus _generator;
 
     /// <summary>Seeds from a single 64-bit value, upgrading it like vanilla.</summary>
@@ -33,10 +34,15 @@ public sealed class XoroshiroRandomSource : IRandomSource
     {
         var (lo, hi) = SeedSupport.UpgradeTo128Bit(seed);
         _generator = new Xoroshiro128PlusPlus(lo, hi);
+        _gaussian = new MarsagliaPolarGaussian(this);
     }
 
     /// <summary>Seeds from the two halves of a 128-bit seed.</summary>
-    public XoroshiroRandomSource(long seedLo, long seedHi) => _generator = new Xoroshiro128PlusPlus(seedLo, seedHi);
+    public XoroshiroRandomSource(long seedLo, long seedHi)
+    {
+        _generator = new Xoroshiro128PlusPlus(seedLo, seedHi);
+        _gaussian = new MarsagliaPolarGaussian(this);
+    }
 
     /// <summary>Current 128-bit state, for snapshots and tests.</summary>
     public (long Lo, long Hi) State => (_generator.StateLo, _generator.StateHi);
@@ -46,6 +52,7 @@ public sealed class XoroshiroRandomSource : IRandomSource
     {
         var (lo, hi) = SeedSupport.UpgradeTo128Bit(seed);
         _generator = new Xoroshiro128PlusPlus(lo, hi);
+        _gaussian.Reset();
     }
 
     /// <inheritdoc />
@@ -95,6 +102,9 @@ public sealed class XoroshiroRandomSource : IRandomSource
     public double NextDouble() => NextBits(53) * DoubleMultiplier;
 
     /// <summary>Top <paramref name="bits"/> bits of the next value (logical shift).</summary>
+
+    /// <inheritdoc />
+    public double NextGaussian() => _gaussian.Next();
 
     /// <summary>Creates an independent child source (vanilla <c>fork()</c>).</summary>
     public IRandomSource Fork() => new XoroshiroRandomSource(NextLong(), NextLong());

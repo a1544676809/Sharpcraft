@@ -135,6 +135,24 @@ public sealed class PositionalAndWorldgenVectorTests
                 return parts.Length - 3;
             }
 
+
+            case "gaussianLegacy":
+            case "gaussianXoro":
+            {
+                IRandomSource source = parts[0] == "gaussianLegacy"
+                    ? new LegacyRandomSource(Long(parts[1]))
+                    : new XoroshiroRandomSource(Long(parts[1]));
+
+                var count = 0;
+                for (var i = 2; i < parts.Length; i++)
+                {
+                    Assert.Equal(Hex64(parts[i]), BitConverter.DoubleToInt64Bits(source.NextGaussian()));
+                    count++;
+                }
+
+                return count;
+            }
+
             default:
                 return 0;
         }

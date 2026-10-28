@@ -29,4 +29,7 @@ public interface IRandomSource
 
     /// <summary>Next double in <c>[0, 1)</c>.</summary>
     double NextDouble();
+
+    /// <summary>Next normally distributed value (Marsaglia polar, cached second sample).</summary>
+    double NextGaussian();
 }

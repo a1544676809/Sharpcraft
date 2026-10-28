@@ -21,8 +21,9 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-006 | 随机数 `LegacyRandom` / `Xoroshiro128PlusPlus` | `docs/modules/common-primitives.md` §4.4；`docs/analysis/common/random.md`、`random-vectors.md` | `RandomVectorTests.cs`（回放 840 值）、`RandomAllocationTests.cs` | `src/MinecraftCSharp.Common/Random/` | 已完成 |
 | T-009 | 位置化随机、世界生成混合器、战利品序列 | `docs/analysis/common/random.md` §5–§7；`random-vectors.md` §4.1 | `PositionalAndWorldgenVectorTests.cs`（105 值） | `src/MinecraftCSharp.Common/Random/`（PositionalSeed / JavaStringHash / *PositionalRandomFactory / WorldgenRandom / RandomSequence） | 已完成 |
 | T-007 | 注册表顺序与 `Registry` | `docs/modules/common-primitives.md` §4.2；`docs/analysis/common/registry-order.md` | `RegistryOrderTests.cs`（含 1286 条原版 block 顺序快照） | `src/MinecraftCSharp.Common/Registries/` | 已完成 |
-| T-010 | 方块状态全局 id 生成器 | `docs/analysis/common/registry-order.md` §5、§7.1 | 待写（35723 个状态、grass_block 8/9 为已知锚点） | 待写：`Registries/BlockStateIdMapper` | 规格已就绪 |
-| T-008 | 坐标与几何基元（负数取整规则待补） | `docs/modules/common-primitives.md` §4.3 | 待写 | 待写：`src/MinecraftCSharp.Common/Math/` | 规格不足 |
+| T-010 | 方块状态全局 id 生成器 | `docs/analysis/common/registry-order.md` §5、§7.1 | `BlockStateIdTests.cs`（含 1442 个原版状态 id 与 35723 总数） | `src/MinecraftCSharp.Common/Registries/`（BlockStateDefinition / BlockStateLayout） | 已完成 |
+| T-011 | `nextGaussian`（Marsaglia 极坐标） | `docs/analysis/common/random.md` §8 | `PositionalAndWorldgenVectorTests`（gaussianLegacy / gaussianXoro 向量） | `src/MinecraftCSharp.Common/Random/MarsagliaPolarGaussian.cs` | 已完成 |
+| T-008 | 坐标换算与负数取整 | `docs/analysis/common/coordinates.md`；`docs/modules/common-primitives.md` §4.3 | `BlockCoordinatesTests.cs`（20 项，含负数六连） | `src/MinecraftCSharp.Common/Coordinates/` | 已完成 |
 
 ## 使用规则
 
