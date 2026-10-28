@@ -77,6 +77,15 @@ public static class JarVerifier
         return actual;
     }
 
+    /// <summary>Streaming SHA-256 of a file, used for pack payload verification.</summary>
+    public static string ComputeSha256OfFile(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        using var stream = File.OpenRead(path);
+        return Convert.ToHexStringLower(SHA256.HashData(stream));
+    }
+
     /// <summary>Formats a hash for messages, keeping the first eight characters readable.</summary>
     internal static string Shorten(string sha1) =>
         sha1.Length <= 12 ? sha1 : string.Concat(sha1.AsSpan(0, 12), "…");

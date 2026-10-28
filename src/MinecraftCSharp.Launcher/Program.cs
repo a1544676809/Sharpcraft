@@ -2,6 +2,7 @@
 // Copyright (C) 2026 MinecraftCSharp contributors
 
 using MinecraftCSharp.Auth;
+using MinecraftCSharp.Launcher.Assets;
 using MinecraftCSharp.Client.World;
 using MinecraftCSharp.Common.Identifiers;
 using MinecraftCSharp.Common.Network;
@@ -35,6 +36,7 @@ internal static class Program
             LauncherCommand.Play => await PlayAsync(commandLine.Target!).ConfigureAwait(false),
             LauncherCommand.Frame => await FrameAsync(commandLine.Target!).ConfigureAwait(false),
             LauncherCommand.Window => await WindowAsync(commandLine.Target).ConfigureAwait(false),
+            LauncherCommand.Assets => Assets(commandLine.Target!),
             _ => 2
         };
     }
@@ -246,6 +248,64 @@ internal static class Program
             return 1;
         }
     }
+
+    /// <summary>Builds or reuses the asset pack for a client jar (docs/modules/assets.md).</summary>
+    private static int Assets(string target)
+    {
+        var parts = target.Split('|', 2);
+        var jarPath = parts[0];
+        VersionManifest? manifest = null;
+
+        if (parts.Length == 2)
+        {
+            manifest = VersionManifest.ReadFile(parts[1]);
+        }
+
+        var versionId = manifest?.Id ?? versionIdFromJar(jarPath);
+        var output = Environment.GetEnvironmentVariable("MC_ASSETS_OUT") is { Length: > 0 } configured
+            ? configured
+            : HostPaths.DefaultPacksDirectory();
+
+        try
+        {
+            if (manifest is not null)
+            {
+                Console.WriteLine($"manifest: version {manifest.Id}, asset index {manifest.AssetIndexId}, " +
+                                  $"client sha1 {manifest.ClientJarSha1}");
+            }
+
+            var result = AssetPackBuilder.Build(jarPath, output, versionId, manifest?.ClientJarSha1);
+
+            Console.WriteLine(result.Describe());
+            Console.WriteLine($"  jar sha1:  {result.JarSha1}");
+            Console.WriteLine($"  pack path: {result.PackPath}");
+
+            foreach (var (category, count) in result.ExcludedCounts.OrderByDescending(pair => pair.Value))
+            {
+                Console.WriteLine($"  skipped {category}: {count}");
+            }
+
+            return 0;
+        }
+        catch (JarVerificationException exception)
+        {
+            Console.Error.WriteLine(exception.Message);
+            return 4;
+        }
+        catch (InvalidOperationException exception)
+        {
+            Console.Error.WriteLine($"assets failed: {exception.Message}");
+            return 1;
+        }
+        catch (IOException exception)
+        {
+            Console.Error.WriteLine($"assets failed: {exception.Message}");
+            return 1;
+        }
+    }
+
+    private static string versionIdFromJar(string jarPath) =>
+        Path.GetFileNameWithoutExtension(jarPath) is { Length: > 0 } name ? name : "unknown";
 
     private static async Task<int> WindowAsync(string? address)
     {

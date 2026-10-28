@@ -25,7 +25,10 @@ public enum LauncherCommand
     Frame,
 
     /// <summary>Collect chunks and present them in a window.</summary>
-    Window
+    Window,
+
+    /// <summary>Build (or reuse) the asset pack for a client jar.</summary>
+    Assets
 }
 
 /// <summary>Parsed command line.</summary>
@@ -44,7 +47,12 @@ public sealed record LauncherCommandLine(LauncherCommand Command, string? Target
           play <address>     sign in, then walk login and configuration phases
           frame <address>    collect chunks, then render one offscreen frame to a PNG
           window <address>   collect chunks, then present them in a window (also writes the PNG)
+          assets <jar> [<version-json>]
+                             verify a client jar, then build or reuse its asset pack
           help               show this text
+
+        The asset pack is written outside the repository, under the user's local app data,
+        unless MC_ASSETS_OUT names another directory.
 
         Tokens are cached only outside the repository, under the user's local app data.
         """;
@@ -87,10 +95,22 @@ public sealed record LauncherCommandLine(LauncherCommand Command, string? Target
             case "window":
                 return WithAddress(LauncherCommand.Window, args, "window");
 
+            case "assets":
+                return WithJar(LauncherCommand.Assets, args);
+
             default:
                 return new LauncherCommandLine(LauncherCommand.Help, null, $"unknown command '{head}'");
         }
     }
+
+    private static LauncherCommandLine WithJar(LauncherCommand command, IReadOnlyList<string> args) =>
+        args.Count switch
+        {
+            1 => new LauncherCommandLine(command, null, "assets needs a client jar path"),
+            2 => new LauncherCommandLine(command, args[1], null),
+            3 => new LauncherCommandLine(command, args[1] + "|" + args[2], null),
+            _ => new LauncherCommandLine(command, null, "assets takes <jar> and an optional <version-json>")
+        };
 
     private static LauncherCommandLine WithAddress(LauncherCommand command, IReadOnlyList<string> args, string name) =>
         args.Count switch

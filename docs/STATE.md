@@ -35,7 +35,7 @@ M1（基础逻辑）与 M2（世界数据闭环）已达成并留有可执行证
 ## 下一步具体动作
 
 1. T-032 **已完成**：`VersionManifest`（id / assetIndex.id+sha1 / downloads.client.sha1）+ `JarVerifier`（流式 SHA-1、尺寸预检、篡改不可绕过、报错含期望与实际哈希）。
-2. T-033：资产**打包器**（白名单 → 单文件 zip pack + manifest，原子发布、幂等、`.mcmeta` 成对、zip-slip 防护、输出不得在仓库内）。
+2. T-033 **已完成**：`launcher assets <jar> <version-json>` 产出单文件 pack。真实 26.3 jar 实测 11,533 条目 / 5.6 MB / 768 ms，复用 164 ms；跳过 net 11,267、data 10,449、com 690、META-INF 5。
 3. T-034 / T-035 / T-036 依次：`IAssetSource` 解析层（pack 读取器 + 官方 objects 只读挂载）→ 启动器 `assets`/`launch` 子命令 → 纹理接入渲染。
 4. 可选并行：把 `quality-attributes.md` QA-1 的 `[待定]` 阈值定稿（候选值见 `performance-baseline.md` §5）。
 

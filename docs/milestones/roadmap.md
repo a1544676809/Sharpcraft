@@ -47,7 +47,7 @@
 | 1 | 里程碑规划与资产清单（本文件 + `docs/analysis/assets/jar-entry-map.md`） | 完成 |
 | 2 | 资产模块设计 `docs/modules/assets.md` + ADR-0005 | 已评审 |
 | 3 | T-032 版本清单解析 + jar SHA-1 校验 | 待开始 |
-| 4 | T-033 资产打包器：白名单 → 单文件 pack（zip + manifest、原子、幂等、zip-slip 防护） | 待开始 |
+| 4 | T-033 资产打包器：白名单 → 单文件 pack（zip + manifest、原子、幂等、zip-slip 防护） | 完成 |
 | 5 | T-034 资源解析层：`IAssetSource`（pack 读取器 + 官方 objects 只读挂载）+ 覆盖顺序 | 待开始 |
 | 6 | T-035 启动器承接：`assets` / `launch` 子命令 | 待开始 |
 | 7 | T-036 纹理接入渲染（图集、UV、采样器、着色器采样） | 待开始 |
