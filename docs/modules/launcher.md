@@ -74,3 +74,18 @@
 | 2026-10-28 | **成功**：缓存令牌 → 登录（`encrypted=true`、`compression=256`）→ joinServer → 配置阶段 32 个 `registry_data` → `update_tags` → `finish_configuration` → 进入 play，首个 play 包为 `minecraft:login`（JoinGame），随后按计划断开 |
 
 同一个服务器上的两次失败也值得记录：漏发 `client_information` 会在 `ping` 之后被断开；`ping`/`pong` 用 **int32** 而非 VarInt，写错同样被断开（服务端只给一个二进制断开原因，不会解释）。
+
+### 8.1 `launch` 验收记录（2026-10-28）
+
+| 阶段 | 结果 |
+| --- | --- |
+| 版本清单 | `26.3`，assetIndex `34`，client sha1 `e877b6a0…` |
+| jar 校验 | 通过（41,483,720 字节，与清单一致） |
+| 资产 pack | 复用已有 pack（11,533 条目 / 5.6 MB / 163 ms） |
+| 官方索引挂载 | `official index 34: 5147 objects (read-only mount)` |
+| 认证 | **受网络阻塞**：`request to xsts.auth.xboxlive.com failed`（环境问题，非代码问题） |
+| 交接（手工验证） | 用启动器同形参数直接运行客户端：会话文件解析成功、退出码 0；缺 pack 退出码 3；缺参数退出码 2 |
+
+- 客户端退出码与 §5 一致：`2` 参数不合法、`3` 交接不可用、`0` 成功。
+- `launch` 的完整链路（含真实认证与进程启动）待网络恢复后再跑一次；**不提供跳过认证的开关**（原则 7.1：不得存在未登录即可启动游戏的路径）。
+

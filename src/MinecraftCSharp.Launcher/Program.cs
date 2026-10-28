@@ -5,6 +5,7 @@ using MinecraftCSharp.Auth;
 using MinecraftCSharp.Common.Identifiers;
 using MinecraftCSharp.Launcher.Assets;
 using MinecraftCSharp.Launcher.Assets.Resolution;
+using MinecraftCSharp.Launcher.Launch;
 using MinecraftCSharp.Client.World;
 using MinecraftCSharp.Common.Network;
 using MinecraftCSharp.Framework.Rendering;
@@ -38,6 +39,7 @@ internal static class Program
             LauncherCommand.Frame => await FrameAsync(commandLine.Target!).ConfigureAwait(false),
             LauncherCommand.Window => await WindowAsync(commandLine.Target).ConfigureAwait(false),
             LauncherCommand.Assets => Assets(commandLine.Target!),
+            LauncherCommand.Launch => await LaunchAsync(commandLine.Target).ConfigureAwait(false),
             _ => 2
         };
     }
@@ -248,6 +250,22 @@ internal static class Program
             Console.Error.WriteLine($"frame failed: {exception.Message}");
             return 1;
         }
+    }
+
+    /// <summary>Runs the launch flow: verify, pack, sign in, start the client (docs/modules/launcher.md §5.1).</summary>
+    private static async Task<int> LaunchAsync(string? target)
+    {
+        using var cancellation = CancelOnCtrlC();
+        using var http = CreateHttpClient();
+
+        var parts = (target ?? string.Empty).Split('|', 2);
+        if (parts.Length != 2)
+        {
+            Console.Error.WriteLine("launch needs <jar> <version-json>");
+            return 2;
+        }
+
+        return await LaunchCommand.RunAsync(parts[0], parts[1], http, cancellation.Token).ConfigureAwait(false);
     }
 
     /// <summary>Builds or reuses the asset pack for a client jar (docs/modules/assets.md).</summary>

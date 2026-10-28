@@ -61,7 +61,7 @@ public sealed class LauncherCommandLineTests
     [Fact]
     public void UnknownCommandsFailWithUsage()
     {
-        var line = LauncherCommandLine.Parse(["launch"]);
+        var line = LauncherCommandLine.Parse(["frobnicate"]);
 
         Assert.Equal(LauncherCommand.Help, line.Command);
         Assert.Contains("unknown command", line.Error);

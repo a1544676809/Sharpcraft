@@ -28,7 +28,10 @@ public enum LauncherCommand
     Window,
 
     /// <summary>Build (or reuse) the asset pack for a client jar.</summary>
-    Assets
+    Assets,
+
+    /// <summary>Verify, pack, sign in, then start the client.</summary>
+    Launch
 }
 
 /// <summary>Parsed command line.</summary>
@@ -49,6 +52,8 @@ public sealed record LauncherCommandLine(LauncherCommand Command, string? Target
           window <address>   collect chunks, then present them in a window (also writes the PNG)
           assets <jar> [<version-json>]
                              verify a client jar, then build or reuse its asset pack
+          launch <jar> <version-json>
+                             verify, pack, sign in, then start the client
           help               show this text
 
         The asset pack is written outside the repository, under the user's local app data,
@@ -97,6 +102,9 @@ public sealed record LauncherCommandLine(LauncherCommand Command, string? Target
 
             case "assets":
                 return WithJar(LauncherCommand.Assets, args);
+
+            case "launch":
+                return WithJar(LauncherCommand.Launch, args);
 
             default:
                 return new LauncherCommandLine(LauncherCommand.Help, null, $"unknown command '{head}'");
