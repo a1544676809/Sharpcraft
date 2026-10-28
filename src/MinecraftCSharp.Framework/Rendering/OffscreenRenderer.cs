@@ -79,7 +79,9 @@ public static class OffscreenRenderer
             vertexAttributes:
             [
                 new VertexAttribute(WGPUVertexFormat.Float32x4, 0, 0),
-                new VertexAttribute(WGPUVertexFormat.Float32x3, 16, 1)
+                new VertexAttribute(WGPUVertexFormat.Float32x3, 16, 1),
+                new VertexAttribute(WGPUVertexFormat.Float32x2, 28, 2),
+                new VertexAttribute(WGPUVertexFormat.Float32x4, 36, 3)
             ]);
     }
 

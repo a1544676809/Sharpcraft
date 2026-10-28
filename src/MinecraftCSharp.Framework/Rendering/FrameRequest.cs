@@ -11,7 +11,7 @@ namespace MinecraftCSharp.Framework.Rendering;
 /// </summary>
 /// <param name="Width">Target width in pixels.</param>
 /// <param name="Height">Target height in pixels.</param>
-/// <param name="Vertices">Interleaved position (3) and colour (3) floats.</param>
+/// <param name="Vertices">Interleaved position (3), colour (3), tile (2) and sprite rect (4) floats.</param>
 /// <param name="Indices">Triangle indices.</param>
 /// <param name="ClearColour">Background colour (linear RGBA).</param>
 /// <param name="CameraPosition">Eye position in world space.</param>
@@ -28,10 +28,26 @@ public sealed record FrameRequest(
     float FieldOfViewDegrees = 60f)
 {
     /// <summary>Floats per vertex.</summary>
-    public const int FloatsPerVertex = 6;
+    public const int FloatsPerVertex = 12;
 
     /// <summary>Vertex count.</summary>
     public int VertexCount => Vertices.Length / FloatsPerVertex;
+
+    /// <summary>
+    /// Atlas sampled by the shader, or null for a colour-only frame. UVs stay relative to the sprite
+    /// rect so a greedy quad can tile its texture inside one atlas cell.
+    /// </summary>
+    public TextureData? Atlas { get; init; }
+}
+
+/// <summary>An RGBA8 image uploaded as a texture, typically the stitched sprite atlas.</summary>
+/// <param name="Width">Pixel width.</param>
+/// <param name="Height">Pixel height.</param>
+/// <param name="Rgba">Pixels, four bytes per texel.</param>
+public sealed record TextureData(int Width, int Height, byte[] Rgba)
+{
+    /// <summary>A single white texel, used when a frame samples no atlas.</summary>
+    public static TextureData White { get; } = new(1, 1, [255, 255, 255, 255]);
 }
 
 /// <summary>Result of an offscreen render: RGBA8 pixels plus the matrix used.</summary>

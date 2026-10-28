@@ -11,8 +11,10 @@ namespace MinecraftCSharp.Framework.Rendering;
 /// </summary>
 public static class ClipSpaceTransform
 {
-    /// <summary>Floats per transformed vertex: clip position (4) plus colour (3).</summary>
-    public const int FloatsPerVertex = 7;
+    /// <summary>
+    /// Floats per transformed vertex: clip position (4), colour (3), tile (2) and sprite rect (4).
+    /// </summary>
+    public const int FloatsPerVertex = 13;
 
     /// <summary>Stride of one transformed vertex in bytes.</summary>
     public const int VertexStride = FloatsPerVertex * sizeof(float);
@@ -76,6 +78,14 @@ public static class ClipSpaceTransform
             destination[target + 4] = request.Vertices[offset + 3];
             destination[target + 5] = request.Vertices[offset + 4];
             destination[target + 6] = request.Vertices[offset + 5];
+
+            // tile (how many sprite repeats the quad covers) and the sprite rect in the atlas
+            destination[target + 7] = request.Vertices[offset + 6];
+            destination[target + 8] = request.Vertices[offset + 7];
+            destination[target + 9] = request.Vertices[offset + 8];
+            destination[target + 10] = request.Vertices[offset + 9];
+            destination[target + 11] = request.Vertices[offset + 10];
+            destination[target + 12] = request.Vertices[offset + 11];
         }
     }
 }

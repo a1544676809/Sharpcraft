@@ -23,7 +23,7 @@ namespace MinecraftCSharp.Client.Render;
 public static class ChunkMesher
 {
     /// <summary>Floats per vertex: position (3) plus colour (3).</summary>
-    public const int FloatsPerVertex = 6;
+    public const int FloatsPerVertex = 12;
 
     /// <summary>Vertices per quad.</summary>
     public const int VerticesPerQuad = 4;

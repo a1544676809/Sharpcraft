@@ -178,6 +178,29 @@
 
 写测试时抓到的一个真 bug：`ResourceLookup.TryParseUnderPrefix` 原本假设前缀只有 `assets/<ns>/<dir>/` 三层，遇到 `textures/block/` 这种更深的列举前缀就返回 false，于是**图集一个精灵都发现不了**。现在按"类型根目录 + 剩余路径"解析，深层前缀可用。
 
+### 顶点布局与映射（实现进度）
+
+网格顶点 12 个 float，变换后 13 个 float：
+
+| 段 | 数量 | 含义 |
+| --- | --- | --- |
+| position | 3 | 世界坐标（入管线前做视图投影） |
+| colour | 3 | 光照 × 朝向系数（已有） |
+| tile | 2 | 该四边形覆盖多少个精灵重复（贪心合并后 4×2 的面就是 4,2） |
+| sprite | 4 | 精灵在图集里的 `u0,v0,u1,v1` |
+
+设计意图：贪心合并会把多个方块的面合成一张大四边形，纹理必须在**该四边形内重复**；把"重复次数"和"精灵矩形"一起传给着色器，就能用 `fract(tile)` 在图集单元内部平铺，不需要在图集里做 mipmap 或 padding（最近邻 + 无 mip 时不会渗色）。
+
+已完成 / 未完成：
+
+| 项 | 状态 |
+| --- | --- |
+| 顶点格式扩到 12/13 float，管线声明四个属性 | 完成（`dotnet test` 全绿，`frame local` 仍可出图） |
+| `BlockSpriteMap`：方块 → 精灵（约定 `block/<名字>`，缺失回落 missing） | 完成（5 项测试） |
+| 布局预计算：有 `BlockStateLayout` 时 state id → 精灵是数组下标，无每面开销 | 完成 |
+| 着色器采样（绑定组、采样器、`fract` 平铺） | 未完成 |
+| `registry_data` → `BlockStateLayout` 装配（真实世界的 state id → 方块名） | 未完成，见 T-039 |
+
 ### 片二：模型驱动
 
 用 `blockstates/<id>.json` → `models/block/<model>.json`（含 `parent` 链与 `textures.all` / 按面覆盖）决定每个面用哪张纹理，取代片一的显式表。
@@ -205,6 +228,8 @@
 | 单元 | `tests/MinecraftCSharp.Client.Tests/ChunkMesherTests.cs` | 面数、跨区块剔除、方块上限、颜色稳定性 |
 | 单元 | `tests/MinecraftCSharp.Framework.Tests/CameraMathTests.cs` | 近/远平面映射、目标居中、默认相机取景、参数校验、顶点布局 |
 | 单元 | `tests/MinecraftCSharp.Common.Tests/PngEncoderTests.cs` | 与独立实现对齐的 CRC、IHDR 结构、扫描线往返 |
+| 单元 | `tests/MinecraftCSharp.Client.Tests/SpriteAtlasTests.cs` | 图集：真实尺寸、不重叠、UV、missing 回落、动画首帧、可复现、包栈覆盖 |
+| 单元 | `tests/MinecraftCSharp.Client.Tests/BlockSpriteMapTests.cs` | 方块 → 精灵：命名约定、缺失回落、布局预计算、无布局行为 |
 | 单元 | `tests/MinecraftCSharp.Common.Tests/PngDecoderTests.cs` | 灰度/真彩/索引/带 alpha 解码、过滤器还原、损坏报错、与编码器往返 |
 | 集成 | `launcher frame local` | 本地合成世界出图（不依赖网络） |
 | 集成 | `launcher frame replay <file>` | 用已捕获的真实区块包回放，验证"真实数据能画出来" |

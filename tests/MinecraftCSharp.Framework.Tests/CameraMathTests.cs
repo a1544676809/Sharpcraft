@@ -104,7 +104,12 @@ public sealed class CameraMathTests
         var request = new FrameRequest(
             Width: 32,
             Height: 32,
-            Vertices: [0f, 0f, 0f, 0.25f, 0.5f, 0.75f, 1f, 2f, 3f, 1f, 0f, 0f],
+            // Two vertices of position(3) + colour(3) + tile(2) + sprite rect(4).
+            Vertices:
+            [
+                0f, 0f, 0f, 0.25f, 0.5f, 0.75f, 2f, 3f, 0.125f, 0.25f, 0.5f, 0.75f,
+                1f, 1f, 1f, 1f, 0f, 0f, 1f, 1f, 0.125f, 0.25f, 0.5f, 0.75f
+            ],
             Indices: [0, 1, 1],
             ClearColour: new Vector4(0, 0, 0, 1),
             CameraPosition: new Vector3(0, 0, 10),
@@ -115,11 +120,17 @@ public sealed class CameraMathTests
 
         Assert.Equal(2 * ClipSpaceTransform.FloatsPerVertex, data.Length);
 
-        // Colour is copied verbatim; position comes from the matrix.
+        // Colour, tile factor and sprite rect are copied verbatim; position comes from the matrix.
         Assert.Equal(0.25f, data[4]);
         Assert.Equal(0.5f, data[5]);
         Assert.Equal(0.75f, data[6]);
-        Assert.Equal(1f, data[11]);
+        Assert.Equal(2f, data[7]);
+        Assert.Equal(3f, data[8]);
+        Assert.Equal(0.125f, data[9]);
+        Assert.Equal(0.25f, data[10]);
+        Assert.Equal(0.5f, data[11]);
+        Assert.Equal(0.75f, data[12]);
+        Assert.Equal(1f, data[13 + 4]);
 
         // The origin sits behind the eye at z=10 in a right-handed view, so w is positive.
         Assert.True(data[3] > 0f);

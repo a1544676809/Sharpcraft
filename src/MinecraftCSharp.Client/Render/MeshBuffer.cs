@@ -2,6 +2,7 @@
 // Copyright (C) 2026 MinecraftCSharp contributors
 
 using System.Buffers;
+using MinecraftCSharp.Client.Assets;
 
 namespace MinecraftCSharp.Client.Render;
 
@@ -68,17 +69,21 @@ public sealed class MeshBuffer : IDisposable
         (int X, int Y, int Z) d,
         float red,
         float green,
-        float blue)
+        float blue,
+        float tileU = 1f,
+        float tileV = 1f,
+        SpriteRect? sprite = null)
     {
         const int floatsPerQuad = 4 * ChunkMesher.FloatsPerVertex;
         EnsureVertexRoom(floatsPerQuad);
         EnsureIndexRoom(ChunkMesher.IndicesPerQuad);
 
+        var rect = sprite ?? WholeAtlas;
         var first = (uint)(_vertexFloats / ChunkMesher.FloatsPerVertex);
-        WriteVertex(a, red, green, blue);
-        WriteVertex(b, red, green, blue);
-        WriteVertex(c, red, green, blue);
-        WriteVertex(d, red, green, blue);
+        WriteVertex(a, red, green, blue, tileU, tileV, rect);
+        WriteVertex(b, red, green, blue, tileU, tileV, rect);
+        WriteVertex(c, red, green, blue, tileU, tileV, rect);
+        WriteVertex(d, red, green, blue, tileU, tileV, rect);
 
         _indices[_indexCount++] = first;
         _indices[_indexCount++] = first + 1;
@@ -118,7 +123,23 @@ public sealed class MeshBuffer : IDisposable
         _indexCount = 0;
     }
 
-    private void WriteVertex((int X, int Y, int Z) position, float red, float green, float blue)
+    /// <summary>Default sprite rect: the whole texture, used when no atlas entry is known.</summary>
+    private static readonly SpriteRect WholeAtlas = new(0, 0, 1, 1, 1)
+    {
+        U0 = 0f,
+        V0 = 0f,
+        U1 = 1f,
+        V1 = 1f
+    };
+
+    private void WriteVertex(
+        (int X, int Y, int Z) position,
+        float red,
+        float green,
+        float blue,
+        float tileU,
+        float tileV,
+        SpriteRect sprite)
     {
         var offset = _vertexFloats;
         _vertices[offset] = position.X;
@@ -127,6 +148,15 @@ public sealed class MeshBuffer : IDisposable
         _vertices[offset + 3] = red;
         _vertices[offset + 4] = green;
         _vertices[offset + 5] = blue;
+
+        // How many sprite repeats this quad covers, and where the sprite sits inside the atlas.
+        _vertices[offset + 6] = tileU;
+        _vertices[offset + 7] = tileV;
+        _vertices[offset + 8] = sprite.U0;
+        _vertices[offset + 9] = sprite.V0;
+        _vertices[offset + 10] = sprite.U1;
+        _vertices[offset + 11] = sprite.V1;
+
         _vertexFloats = offset + ChunkMesher.FloatsPerVertex;
     }
 
