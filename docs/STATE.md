@@ -46,8 +46,8 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 5. **链路已打通**：对 `mcf.ddger.top` 实测得到 protocol=777 / version=26.3 / RTT=21ms（证据见 `protocol-phases.md` §8）。SRV 解析已实现。
 6. T-015 登录加密原语已完成（服务端哈希 / RSA / AES-CFB8，向量来自 JVM 参考实现）。
 7. T-016 登录报文已完成；**真实服务器验证了加密通道**（收到并解密 unverified_username 断开包）。
-8. 下一步：登录状态机（含 Compression 启用与 LoginAcknowledged）。真实账号登录需要凭据与认证选型确认，动之前会先问。
-9. 仍需：导出 Configuration/Play 两个方向的包 id 全表（工具待写）。
+8. T-017 认证模块（设备码流程）已完成：4 个阶段客户端 + 19 项离线测试；真实登录需人工输入设备码，属手工验收项。
+9. 下一步：① 导出 Configuration/Play 包 id 表；② 登录状态机（Compression 启用 + LoginAcknowledged）；③ 认证模块接启动器 CLI 做手工端到端验收。
 ## 未提交改动 / 后台任务
 
 - 本次提交内容见下；无运行中的后台任务。

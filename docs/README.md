@@ -98,6 +98,7 @@
 | [`modules/README.md`](modules/README.md) | 模块文档入口与进度 | 草稿 |
 | [`modules/build-scaffolding.md`](modules/build-scaffolding.md) | 构建骨架：程序集划分、依赖规则、构建与测试配置 | 草稿（已实施） |
 | [`modules/common-primitives.md`](modules/common-primitives.md) | Common 基础类型：标识符、注册表、几何基元 | 草稿 |
+| [`modules/auth.md`](modules/auth.md) | 认证模块：设备码流程、Xbox Live、Minecraft 会话、令牌安全 | 已评审 |
 | [`_templates/module-doc.md`](_templates/module-doc.md) | 模块设计文档模板 | 已评审 |
 | [`_templates/state.md`](_templates/state.md) | STATE 模板 | 已评审 |
 | [`traceability.md`](traceability.md) | 追踪矩阵：规格章节 ↔ 测试 ↔ 代码目录 | 活文档 |
