@@ -1,0 +1,22 @@
+<Project>
+
+  <!-- Shared build settings for every project in the repository (AGENTS.md 3.5 / docs/modules/build-scaffolding.md). -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <Company>MinecraftCSharp contributors</Company>
+    <Product>MinecraftCSharp</Product>
+    <NeutralLanguage>en</NeutralLanguage>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <!-- Every map/targets file stays explicit: no hidden SDK magic beyond the above. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+
+</Project>

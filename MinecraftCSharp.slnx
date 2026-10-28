@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 MinecraftCSharp contributors -->
 <!--
@@ -13,4 +13,17 @@
     <Platform Name="Any CPU" />
     <Platform Name="x64" />
   </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/MinecraftCSharp.Auth/MinecraftCSharp.Auth.csproj" />
+    <Project Path="src/MinecraftCSharp.Client/MinecraftCSharp.Client.csproj" />
+    <Project Path="src/MinecraftCSharp.Common/MinecraftCSharp.Common.csproj" />
+    <Project Path="src/MinecraftCSharp.Framework/MinecraftCSharp.Framework.csproj" />
+    <Project Path="src/MinecraftCSharp.Launcher/MinecraftCSharp.Launcher.csproj" />
+    <Project Path="src/MinecraftCSharp.Modding/MinecraftCSharp.Modding.csproj" />
+    <Project Path="src/MinecraftCSharp.Server/MinecraftCSharp.Server.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MinecraftCSharp.Architecture.Tests/MinecraftCSharp.Architecture.Tests.csproj" />
+    <Project Path="tests/MinecraftCSharp.Common.Tests/MinecraftCSharp.Common.Tests.csproj" />
+  </Folder>
 </Solution>

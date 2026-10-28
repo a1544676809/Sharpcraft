@@ -85,6 +85,9 @@
 | [`analysis/architecture/package-map.md`](analysis/architecture/package-map.md) | 包级计数地图与子树职责/归属倾向 | 草稿 |
 | [`architecture/README.md`](architecture/README.md) | 架构目录入口与生效中的边界规则 | 草稿 |
 | [`architecture/boundaries.md`](architecture/boundaries.md) | 三侧 + 外围宿主层的判定规则、证据、拆分清单、程序集映射 | 草稿 |
+| [`modules/README.md`](modules/README.md) | 模块文档入口与进度 | 草稿 |
+| [`modules/build-scaffolding.md`](modules/build-scaffolding.md) | 构建骨架：程序集划分、依赖规则、构建与测试配置 | 草稿（已实施） |
+| [`modules/common-primitives.md`](modules/common-primitives.md) | Common 基础类型：标识符、注册表、几何基元 | 草稿 |
 | [`_templates/module-doc.md`](_templates/module-doc.md) | 模块设计文档模板 | 已评审 |
 
-（`specs/`、`modules/`、`decisions/`、`milestones/` 目录在首份文档落盘时创建，届时同步更新本表。）
+（`specs/`、`decisions/`、`milestones/` 目录在首份文档落盘时创建，届时同步更新本表。）
