@@ -446,6 +446,21 @@ internal static class Program
             }
         }
 
+        // The client owns stitching (ADR-0007); the launcher reuses it to prove real data works.
+        var stitchTimer = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            var atlas = SpriteAtlasBuilder.Build(stack);
+            stitchTimer.Stop();
+            Console.WriteLine(
+                $"  atlas                  {atlas.Width}x{atlas.Height}  " +
+                $"{atlas.Sprites.Count} sprites  {stitchTimer.Elapsed.TotalMilliseconds:F0} ms");
+        }
+        catch (InvalidOperationException exception)
+        {
+            Console.WriteLine($"  atlas failed: {exception.Message}");
+        }
+
         var textures = stack.ListAll(ResourcePath.Prefix(ResourceKind.Texture)).Count;
         var languages = stack.ListAll(ResourcePath.Prefix(ResourceKind.Language)).Count;
         Console.WriteLine($"  listed textures        {textures,9}");

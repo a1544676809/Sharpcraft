@@ -139,13 +139,16 @@ public static class ResourceLookup
     {
         location = default;
 
-        if (!filePath.StartsWith(prefix, StringComparison.Ordinal) || filePath.EndsWith(".mcmeta", StringComparison.Ordinal))
+        if (!filePath.StartsWith(prefix, StringComparison.Ordinal) ||
+            filePath.EndsWith(".mcmeta", StringComparison.Ordinal))
         {
             return false;
         }
 
         var segments = prefix.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        if (segments.Length != 3 || segments[0] != ResourcePath.ClientRoot)
+
+        // assets/<namespace>/<directory>/... — anything below the directory belongs to the id path.
+        if (segments.Length < 3 || segments[0] != ResourcePath.ClientRoot)
         {
             return false;
         }
@@ -168,14 +171,20 @@ public static class ResourceLookup
             return false;
         }
 
-        var relative = filePath[prefix.Length..];
         var extension = ResourcePath.Extension(kind.Value);
-        if (!relative.EndsWith(extension, StringComparison.Ordinal))
+        if (!filePath.EndsWith(extension, StringComparison.Ordinal))
         {
             return false;
         }
 
-        var path = relative[..^extension.Length];
+        // Rebuild the id path from the kind root so nested prefixes such as textures/block still work.
+        var kindRoot = string.Concat(segments[0], "/", segments[1], "/", segments[2], "/");
+        if (!filePath.StartsWith(kindRoot, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var path = filePath[kindRoot.Length..^extension.Length];
         return path.Length > 0 && Identifier.TryParse(@namespace + ":" + path, out location);
     }
 }

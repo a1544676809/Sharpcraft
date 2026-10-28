@@ -40,7 +40,7 @@ M1（基础逻辑）与 M2（世界数据闭环）已达成并留有可执行证
 1. T-032 **已完成**：`VersionManifest`（id / assetIndex.id+sha1 / downloads.client.sha1）+ `JarVerifier`（流式 SHA-1、尺寸预检、篡改不可绕过、报错含期望与实际哈希）。
 2. T-033 **已完成**：`launcher assets <jar> <version-json>` 产出单文件 pack。真实 26.3 jar 实测 11,533 条目 / 5.6 MB / 768 ms，复用 164 ms；跳过 net 11,267、data 10,449、com 690、META-INF 5。
 3. **架构调整（ADR-0007）**：资源解析层与图集归客户端，启动器只做校验与打包——这是为了将来加载用户资源包时图集能随包栈重建。解析层已从 `Launcher/Assets/Resolution` 迁到 `Client/Assets`，测试同步迁入 `Client.Tests`。
-4. T-037 **进行中**：PNG 解码器已完成（1/2/4/8/16 位、索引调色板、五种过滤器），真实资产已解码；下一步是图集打包与 GPU 采样（顶点加 UV、管线加采样器）。
+4. T-037 **进行中**：PNG 解码与图集拼装已完成（真实包：1024×1024 / 1300 张方块纹理 + missing 精灵 / 52 ms，资源包覆盖有测试）。剩余：GPU 采样（顶点 7→9 加 UV、纹理绑定与采样器、方块 id → 精灵映射）。
 4. T-037：纹理接入渲染（图集、UV、采样器、着色器采样）——画面质变的一步。
 5. 待网络恢复：复跑 `launch` 的完整链路（含真实认证与客户端进程启动）。
 6. 可选并行：把 `quality-attributes.md` QA-1 的 `[待定]` 阈值定稿（候选值见 `performance-baseline.md` §5）。
