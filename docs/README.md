@@ -16,6 +16,7 @@
 | `specs/` | 对外契约：网络协议、渲染管线、资产格式、启动与认证、命令行参数 | 规格梳理阶段 |
 | `modules/` | 每个待实现模块的设计文档（一份一个模块） | **写该模块代码之前** |
 | `decisions/` | 决策记录 ADR，一条决策一个文件，只追加不修改历史 | 做出决策的当下 |
+| `repro/` | 最小复现用例库的约定（用例本体放在 `tests/<工程>/Repro/`） | 报缺陷与修缺陷时 |
 | `milestones/` | 里程碑范围、验收标准、性能基线数据 | 规划与收尾时 |
 | `_templates/` | 文档模板，新建文档时复制 | 新建文档时 |
 
@@ -80,6 +81,8 @@
 | 文档 | 职责 | 状态 |
 | --- | --- | --- |
 | [`STATE.md`](STATE.md) | 跨会话进度锚点：里程碑、进行中、阻塞、下一步、未提交改动 | 活文档 |
+| [`traceability.md`](traceability.md) | 追踪矩阵：规格章节 ↔ 测试 ↔ 代码目录 | 活文档 |
+| [`risks.md`](risks.md) | 风险登记册 | 活文档 |
 | [`analysis/README.md`](analysis/README.md) | jar 分析的组织方式与总进度 | 草稿 |
 | [`analysis/architecture/README.md`](analysis/architecture/README.md) | 整体架构分析入口与第一轮关键结论 | 草稿 |
 | [`analysis/architecture/overview.md`](analysis/architecture/overview.md) | 基线标识、分层、入口、渲染栈、三侧初判 | 草稿 |
@@ -96,5 +99,12 @@
 | [`modules/common-primitives.md`](modules/common-primitives.md) | Common 基础类型：标识符、注册表、几何基元 | 草稿 |
 | [`_templates/module-doc.md`](_templates/module-doc.md) | 模块设计文档模板 | 已评审 |
 | [`_templates/state.md`](_templates/state.md) | STATE 模板 | 已评审 |
+| [`traceability.md`](traceability.md) | 追踪矩阵：规格章节 ↔ 测试 ↔ 代码目录 | 活文档 |
+| [`risks.md`](risks.md) | 风险登记册 | 活文档 |
+| [`specs/quality-attributes.md`](specs/quality-attributes.md) | 可测质量属性：性能、协议、热加载、跨平台 | 草稿 |
+| [`decisions/README.md`](decisions/README.md) | ADR 索引与写作规则 | 活文档 |
+| [`decisions/0000-template.md`](decisions/0000-template.md) | ADR 模板 | 已评审 |
+| [`decisions/0001-architecture-rules-as-tests.md`](decisions/0001-architecture-rules-as-tests.md) | ADR-0001：架构规则以测试门禁落地 | 已采纳 |
+| [`repro/README.md`](repro/README.md) | 最小复现用例库约定 | 活文档 |
 
-（`specs/`、`decisions/`、`milestones/` 目录在首份文档落盘时创建，届时同步更新本表。）
+（`milestones/` 目录在首个里程碑文档落盘时创建并同步更新本表。）

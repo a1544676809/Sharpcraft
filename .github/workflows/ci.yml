@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# Copyright (C) 2026 MinecraftCSharp contributors
+#
+# CI gate (AGENTS.md 3.6 + principle 12):
+#   - warnings are errors (enforced by Directory.Build.props)
+#   - architecture and documentation drift tests must pass
+#   - no Minecraft assets, jars or decompiled sources may ever be vendored
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore MinecraftCSharp.slnx
+
+      - name: Build (warnings as errors)
+        run: dotnet build MinecraftCSharp.slnx -c Release --no-restore
+
+      - name: Test (architecture + drift + unit)
+        run: dotnet test MinecraftCSharp.slnx -c Release --no-build --logger "trx;LogFileName=results.trx"
+
+      - name: Compliance guard (no jars, no assets, no decompiled sources)
+        shell: pwsh
+        run: |
+          $bad = git ls-files | Where-Object {
+            $_ -match '\.(jar|class|java)$' -or $_ -match '(^|/)assets/' -or $_ -match '(^|/)unpacked/'
+          }
+          if ($bad) {
+            Write-Error "forbidden files tracked: $($bad -join ', ')"
+            exit 1
+          }
+          Write-Host "compliance guard passed"

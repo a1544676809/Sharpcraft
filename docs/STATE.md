@@ -20,6 +20,8 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 - 工程骨架：7 个 src 工程 + 2 个测试工程，`MinecraftCSharp.slnx` 作为唯一构建与调试入口（分组模板已就位）。
 - 构建防线：`TreatWarningsAsErrors=true`；架构守卫 11 项（含 csproj 声明引用检查，已实测可拦截）；热路径机制 3 项（`[HotPath]` + 分配测试，已实测有区分度）。
 - 分析工作区迁移至 `../mc-26.3-analysis`；依赖扫描脚本可 `MC_ANALYSIS_ROOT` 覆盖且输出可复现。
+- 治理设施（原则 12）：追踪矩阵 `docs/traceability.md`、风险登记册 `docs/risks.md`、ADR（`docs/decisions/`，含 0001）、可测质量属性 `docs/specs/quality-attributes.md`、缺陷模板 `.github/ISSUE_TEMPLATE/bug_report.md`、复现库约定 `docs/repro/README.md`、CI `.github/workflows/ci.yml`。
+- 文档漂移门禁已可执行：SPDX 头、索引完整性、断链、绝对路径、STATE 必备章节、矩阵状态词表，共 7 项断言。
 
 ## 进行中
 
@@ -46,5 +48,5 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 
 ## 最近提交
 
-- `090ed1f` docs: registry ordering analysis
-- 本次提交：随机数参考向量（取真值方法 + 入库数据）
+- `3a96646` docs: capture random reference vectors by running the official jar
+- 本次提交：原则 12 与治理设施（矩阵 / 风险 / ADR / 质量属性 / 缺陷模板 / CI / 漂移门禁）

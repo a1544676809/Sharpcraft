@@ -144,4 +144,4 @@ jar 根还有一个 `assets/.mcassetsroot` 与 `data/.mcassetsroot`（0 字节�
 - 条目清单：`ref://mc-26.3-analysis/entries.csv`（34,227 条，含路径/大小/压缩后大小）。
 - 反编译源码：`ref://mc-26.3-analysis/src`（7,301 个 .java，Vineflower 1.12.0）。
 - 反编译日志：`ref://mc-26.3-analysis/logs/decompile-vineflower.log`。
-- 启动器元数据：`E:\Games\minecraft\.minecraft\versions\26.3\26.3.json`。
+- 启动器元数据：版本目录下的 `26.3.json`（用户本机 `.minecraft/versions/26.3/`；不记录机器绝对路径）。
