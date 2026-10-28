@@ -107,6 +107,7 @@
 | [`specs/network/primitives-varint.md`](specs/network/primitives-varint.md) | VarInt / VarLong 与帧长度前缀 | 草稿 |
 | [`specs/network/primitives-strings.md`](specs/network/primitives-strings.md) | UTF-8 字符串与标识符编码 | 草稿 |
 | [`specs/network/protocol-phases.md`](specs/network/protocol-phases.md) | 五阶段、包 id 表、帧与压缩规则 | 草稿 |
+| [`specs/network/encryption.md`](specs/network/encryption.md) | 登录加密：服务端哈希、RSA 密钥交换、AES/CFB8 流 | 草稿 |
 | [`decisions/README.md`](decisions/README.md) | ADR 索引与写作规则 | 活文档 |
 | [`decisions/0000-template.md`](decisions/0000-template.md) | ADR 模板 | 已评审 |
 | [`decisions/0001-architecture-rules-as-tests.md`](decisions/0001-architecture-rules-as-tests.md) | ADR-0001：架构规则以测试门禁落地 | 已采纳 |

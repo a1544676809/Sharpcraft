@@ -17,7 +17,7 @@
 | [`primitives-varint.md`](primitives-varint.md) | VarInt / VarLong 编码与帧长度前缀 | 草稿 |
 | [`primitives-strings.md`](primitives-strings.md) | UTF-8 字符串与标识符编码 | 草稿 |
 | `protocol-phases.md` | 握手 / 状态 / 登录 / 配置 / 游戏五阶段与数据包表 | 待写 |
-| `encryption.md` | 登录加密与压缩阈值 | 待写 |
+| [`encryption.md`](encryption.md) | 登录加密：服务端哈希、RSA、AES/CFB8 流 | 草稿 |
 
 ## 已核对的关键常量
 
