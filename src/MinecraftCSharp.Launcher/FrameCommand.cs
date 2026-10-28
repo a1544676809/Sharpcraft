@@ -99,11 +99,6 @@ internal static class FrameCommand
             Console.WriteLine($"adapter: {OffscreenRenderer.DescribeAdapter()}");
 
             var mesh = ChunkMesher.Mesh(world);
-            if (Environment.GetEnvironmentVariable("MC_FRAME_CLEAR") is { Length: > 0 })
-            {
-                Console.WriteLine("clear-only mode: geometry skipped");
-                mesh = MeshData.Empty;
-            }
 
             Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
