@@ -37,6 +37,7 @@ public sealed class BlockSpriteMap
 
     private readonly SpriteAtlas _atlas;
     private readonly BlockStateLayout? _layout;
+    private readonly BlockModelResolver? _models;
     private readonly int[]? _blockByState;
     private readonly SpriteRect[][]? _facesByBlock;
     private readonly Dictionary<Identifier, SpriteRect[]> _cache = new();
@@ -44,12 +45,14 @@ public sealed class BlockSpriteMap
     /// <summary>Creates a map over an atlas, optionally backed by a block state layout.</summary>
     /// <param name="atlas">Stitched atlas; must contain the missing sprite.</param>
     /// <param name="layout">Block state layout, or null when it is not known yet.</param>
-    public BlockSpriteMap(SpriteAtlas atlas, BlockStateLayout? layout = null)
+    /// <param name="models">Model resolver; when present it takes precedence over name heuristics.</param>
+    public BlockSpriteMap(SpriteAtlas atlas, BlockStateLayout? layout = null, BlockModelResolver? models = null)
     {
         ArgumentNullException.ThrowIfNull(atlas);
 
         _atlas = atlas;
         _layout = layout;
+        _models = models;
 
         if (layout is null)
         {
@@ -119,7 +122,21 @@ public sealed class BlockSpriteMap
 
         var path = blockId.Path;
 
-        // 1) A texture named exactly like the block covers every face.
+        // 1) blockstates -> model -> parent chain -> #variables (block-models.md 4).
+        if (_models?.Resolve(blockId) is { } fromModel)
+        {
+            var modelled = new[]
+            {
+                _atlas.Get(fromModel.Top),
+                _atlas.Get(fromModel.Side),
+                _atlas.Get(fromModel.Bottom)
+            };
+
+            _cache[blockId] = modelled;
+            return modelled;
+        }
+
+        // 2) A texture named exactly like the block covers every face.
         var direct = new Identifier("minecraft", TextureDirectory + path);
         if (_atlas.Contains(direct))
         {
@@ -129,7 +146,7 @@ public sealed class BlockSpriteMap
             return uniform;
         }
 
-        // 2) Face-suffixed textures, as grass and many other blocks use.
+        // 3) Face-suffixed textures, as grass and many other blocks use.
         var top = Lookup($"{path}_top");
         var side = Lookup($"{path}_side");
         var bottom = Lookup($"{path}_bottom");
@@ -148,7 +165,7 @@ public sealed class BlockSpriteMap
             return faces;
         }
 
-        // 3) Nothing matched: the missing sprite, which is how vanilla shows an unknown texture.
+        // 4) Nothing matched: the missing sprite, which is how vanilla shows an unknown texture.
         var fallbackSprite = _atlas.Get(SpriteAtlas.MissingSprite);
         var fallback = new[] { fallbackSprite, fallbackSprite, fallbackSprite };
         _cache[blockId] = fallback;

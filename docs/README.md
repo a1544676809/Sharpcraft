@@ -91,6 +91,7 @@
 | [`analysis/assets/README.md`](analysis/assets/README.md) | 资产子系统分析入口（jar 条目清单） | 草稿 |
 | [`analysis/assets/jar-entry-map.md`](analysis/assets/jar-entry-map.md) | jar 条目分类与资产清单（顶层分布、assets 分类） | 草稿 |
 | [`analysis/assets/resource-resolution.md`](analysis/assets/resource-resolution.md) | 资源解析语义：路径推导、包栈优先级、元数据兄弟、合并方向 | 草稿 |
+| [`analysis/assets/block-models.md`](analysis/assets/block-models.md) | 方块状态与模型：变体、继承、`#变量`、面→纹理 | 草稿 |
 | [`analysis/common/identifier.md`](analysis/common/identifier.md) | 标识符：解析、校验、等值、排序、序列化 | 草稿 |
 | [`analysis/common/random.md`](analysis/common/random.md) | 随机源家族、算法参数、种子派生、战利品序列 | 草稿 |
 | [`analysis/common/registry-order.md`](analysis/common/registry-order.md) | 注册表顺序与方块状态全局 id 的生成链 | 草稿 |

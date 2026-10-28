@@ -256,8 +256,20 @@ sprite coverage: 682/1286 blocks textured, 604 missing
 mesh: 31321 blocks, 7354 triangles
 ```
 
-**682/1286（53%）的方块已有纹理**，其余 604 个的纹理名与方块名不同（`oak_wood` 用 `oak_log`、`water` 用
-`water_still` 等），必须靠 `blockstates` + `models` 解析才能对上——这就是"片二"的价值，也是一个可量化的缺口，而不是猜。
+链路接通后覆盖率（同一抓包、同一命令）的变化：
+
+| 阶段 | 已纹理方块 | 比例 |
+| --- | --- | --- |
+| 仅名字约定 | 682 / 1286 | 53% |
+| **加入 `blockstates` + `models` 解析** | **1019 / 1286** | **79%** |
+
+剩余 267 个是**特殊渲染**的方块，不属于立方体模型链：`water` / `lava`（流体，用 `_still`/`_flow` 贴图与专属渲染）、
+`moving_piston`、`wall_torch`、`fire` / `soul_fire`、`chest`（实体或位移渲染）。它们需要各自的渲染实现，
+不是"模型没解析对"。
+
+模型解析的行为规格见 `docs/analysis/assets/block-models.md`：解析顺序是
+① blockstate → 首个变体 → 模型 → `parent` 链合并 `textures` → 递归解析 `#变量`；② 与方块同名的纹理；
+③ `<名字>_top/_side/_bottom`；④ missing。
 
 ### 片二：模型驱动
 

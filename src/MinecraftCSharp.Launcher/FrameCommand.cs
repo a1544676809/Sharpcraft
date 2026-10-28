@@ -190,6 +190,7 @@ internal static class FrameCommand
             return null;
         }
 
+        // The stack stays alive until the atlas and mapping are built, then it is released.
         using var stack = new AssetStack { Policy = MissingResourcePolicy.Warn }
             .Add(new BuiltInFallbackSource())
             .Add(new ZipAssetSource(packPath, "base-pack"));
@@ -198,7 +199,8 @@ internal static class FrameCommand
         var atlas = SpriteAtlasBuilder.Build(stack);
         timer.Stop();
 
-        var map = new BlockSpriteMap(atlas, layout);
+        var models = new BlockModelResolver(stack);
+        var map = new BlockSpriteMap(atlas, layout, models);
 
         if (Environment.GetEnvironmentVariable("MC_DEBUG_SPRITES") is "1" && layout is not null)
         {
