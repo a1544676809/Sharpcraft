@@ -60,12 +60,17 @@
 | 取景 | 以网格实际包围盒的水平足迹定半径、瞄准顶面 | 384 格高的维度不再把主体压成细条 |
 | 绑定选型 | `Brew.Wgpu`（Silk.NET 原生包回读为未实现桩） | ADR-0003 对照表 |
 
+### 5.1 窗口呈现
+
+`WindowedRenderer.Run(request, frames)` 打开窗口、按 framebuffer 物理像素配置交换链、每帧清屏并绘制同一批次后 `Present()`。截图仍由离屏路径产出（交换链纹理不保证可拷贝）。平台句柄由 `WindowHost` 统一给出，渲染器只消费 `NativeSurfaceSource`。
+
 ## 6. 当前限制
 
 - 无纹理：颜色由方块状态 id 哈希得到，稳定但不代表材质。
 - 无光照传播：`LightData` 已解析但只统计数量，未参与着色。
 - 无背面剔除：`CullMode.None`，靠深度测试保证结果正确，代价是多余的片段着色。
-- 单帧、无窗口、无输入；每帧重建设备与管线（未做资源复用）。
+- 窗口只有呈现：无输入、无 resize 事件；帧循环是"呈现 N 帧后关闭"。
+- 每帧重建设备与管线（未做资源复用）。
 - 网格未合批优化：每个非空气方块最多 6 个四边形，未做贪婪合并。
 
 ## 7. 后续
@@ -84,3 +89,4 @@
 | 单元 | `tests/MinecraftCSharp.Common.Tests/PngEncoderTests.cs` | 与独立实现对齐的 CRC、IHDR 结构、扫描线往返 |
 | 集成 | `launcher frame local` | 本地合成世界出图（不依赖网络） |
 | 集成 | `launcher frame replay <file>` | 用已捕获的真实区块包回放，验证"真实数据能画出来" |
+| 集成 | `launcher window <address>` / `window local` | 窗口呈现真实世界（180 帧，BGRA8UnormSrgb）并落盘 PNG |

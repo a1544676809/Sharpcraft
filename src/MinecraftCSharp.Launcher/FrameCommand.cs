@@ -34,7 +34,7 @@ internal static class FrameCommand
 
         if (Environment.GetEnvironmentVariable("MC_FRAME_REPLAY") is { Length: > 0 } replayPath)
         {
-            return RenderReplay(replayPath, width, height);
+            return RenderWorld(LoadReplay(replayPath), width, height);
         }
 
         var signedIn = await AuthenticationFlow.EnsureSignedInAsync(
@@ -138,7 +138,7 @@ internal static class FrameCommand
     /// Renders a chunk packet captured earlier, so the render path can be exercised on genuine
     /// server data without a live session (docs/specs/quality-attributes.md).
     /// </summary>
-    private static string RenderReplay(string path, int width, int height)
+    internal static ClientWorld LoadReplay(string path)
     {
         var body = File.ReadAllBytes(path);
         var status = ChunkPacketParser.TryRead(body, sectionCount: 24, minSectionY: -64, airState: 0, out var parsed);
@@ -153,13 +153,13 @@ internal static class FrameCommand
 
         var world = new ClientWorld(parsed.Chunk.MinSectionY, parsed.Chunk.SectionCount);
         world.AddChunk(parsed.Chunk);
-        return RenderWorld(world, width, height);
+        return world;
     }
 
-    private static string RenderWorld(ClientWorld world, int width, int height)
+    /// <summary>Builds the frame request (mesh plus camera) for a world.</summary>
+    internal static FrameRequest BuildRequest(ClientWorld world, int width, int height, out MeshData mesh)
     {
-        var mesh = ChunkMesher.Mesh(world);
-        Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
+        mesh = ChunkMesher.Mesh(world);
 
         var bounds = BoundsOf(mesh);
 
@@ -175,15 +175,23 @@ internal static class FrameCommand
         var footprintZ = bounds.Max.Z - bounds.Min.Z;
         var radius = MathF.Max(4f, MathF.Sqrt(footprintX * footprintX + footprintZ * footprintZ) / 2f);
         var (eye, target) = CameraMath.DefaultCamera(centre, radius);
-
-        var frame = OffscreenRenderer.Render(new FrameRequest(
+        return new FrameRequest(
             width,
             height,
             mesh.Vertices,
             mesh.Indices,
             new Vector4(0.55f, 0.72f, 0.95f, 1f),
             eye,
-            target));
+            target);
+    }
+
+    /// <summary>Renders the world to an offscreen frame and writes a PNG.</summary>
+    internal static string RenderWorld(ClientWorld world, int width, int height)
+    {
+        var request = BuildRequest(world, width, height, out var mesh);
+        Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
+
+        var frame = OffscreenRenderer.Render(request);
 
         Console.WriteLine($"rendered on adapter: {frame.AdapterName}");
         var png = PngEncoder.EncodeRgba(frame.Width, frame.Height, frame.Rgba);
@@ -239,7 +247,7 @@ internal static class FrameCommand
         return (min, max);
     }
 
-    private static Func<int, (int SectionCount, int MinSectionY)> ResolveDimensionLayout(DynamicRegistries registries)
+    internal static Func<int, (int SectionCount, int MinSectionY)> ResolveDimensionLayout(DynamicRegistries registries)
     {
         var registryKey = Identifier.Parse("minecraft:dimension_type");
 

@@ -117,7 +117,8 @@
 | [`decisions/0000-template.md`](decisions/0000-template.md) | ADR 模板 | 已评审 |
 | [`decisions/0001-architecture-rules-as-tests.md`](decisions/0001-architecture-rules-as-tests.md) | ADR-0001：架构规则以测试门禁落地 | 已采纳 |
 | [`decisions/0002-dnsclient-dependency.md`](decisions/0002-dnsclient-dependency.md) | ADR-0002：引入 DnsClient.NET 做 SRV 查询 | 已采纳 |
-| [`decisions/0003-wgpu-binding.md`](decisions/0003-wgpu-binding.md) | ADR-0003：WGPU 绑定（Silk.NET）与离屏首帧 | 已采纳 |
+| [`decisions/0003-wgpu-binding.md`](decisions/0003-wgpu-binding.md) | ADR-0003：WGPU 绑定（Brew.Wgpu）与离屏首帧 | 已采纳 |
+| [`decisions/0004-window-layer.md`](decisions/0004-window-layer.md) | ADR-0004：窗口层（Silk.NET.Windowing）与原生句柄抽象 | 待评审 |
 | [`repro/README.md`](repro/README.md) | 最小复现用例库约定 | 活文档 |
 
 （`milestones/` 目录在首个里程碑文档落盘时创建并同步更新本表。）

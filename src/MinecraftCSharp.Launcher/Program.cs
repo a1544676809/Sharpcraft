@@ -34,6 +34,7 @@ internal static class Program
             LauncherCommand.Login => await LoginAsync().ConfigureAwait(false),
             LauncherCommand.Play => await PlayAsync(commandLine.Target!).ConfigureAwait(false),
             LauncherCommand.Frame => await FrameAsync(commandLine.Target!).ConfigureAwait(false),
+            LauncherCommand.Window => await WindowAsync(commandLine.Target).ConfigureAwait(false),
             _ => 2
         };
     }
@@ -242,6 +243,49 @@ internal static class Program
         catch (Exception exception) when (exception is IOException or InvalidOperationException or InvalidDataException or TimeoutException)
         {
             Console.Error.WriteLine($"frame failed: {exception.Message}");
+            return 1;
+        }
+    }
+
+    private static async Task<int> WindowAsync(string? address)
+    {
+        using var cancellation = CancelOnCtrlC();
+        using var http = CreateHttpClient();
+
+        var seconds = Environment.GetEnvironmentVariable("MC_FRAME_SECONDS") is { } raw && int.TryParse(raw, out var parsed)
+            ? parsed
+            : 8;
+        var frames = Environment.GetEnvironmentVariable("MC_WINDOW_FRAMES") is { } frameRaw && int.TryParse(frameRaw, out var frameCount)
+            ? frameCount
+            : 0;
+        var visibleFor = Environment.GetEnvironmentVariable("MC_WINDOW_SECONDS") is { } secondsRaw && int.TryParse(secondsRaw, out var windowSeconds)
+            ? TimeSpan.FromSeconds(windowSeconds)
+            : TimeSpan.FromSeconds(8);
+
+        try
+        {
+            var path = await WindowCommand.RunAsync(address, http, 960, 540, seconds, frames, visibleFor, cancellation.Token)
+                .ConfigureAwait(false);
+            Console.WriteLine($"frame written to {path}");
+            return 0;
+        }
+        catch (RenderingUnavailableException exception)
+        {
+            Console.Error.WriteLine($"rendering unavailable: {exception.Message}");
+            return 3;
+        }
+        catch (PlatformNotSupportedException exception)
+        {
+            Console.Error.WriteLine($"window unavailable on this platform: {exception.Message}");
+            return 3;
+        }
+        catch (AuthException exception)
+        {
+            return ReportAuthFailure(exception);
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or InvalidDataException or TimeoutException)
+        {
+            Console.Error.WriteLine($"window failed: {exception.Message}");
             return 1;
         }
     }

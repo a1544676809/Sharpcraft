@@ -18,7 +18,7 @@ namespace MinecraftCSharp.Framework.Rendering;
 public static class OffscreenRenderer
 {
 
-    private const string ShaderSourceText = """
+    internal const string ShaderSourceText = """
         struct VertexOutput {
             @builtin(position) clipPosition : vec4<f32>,
             @location(0) colour : vec3<f32>,

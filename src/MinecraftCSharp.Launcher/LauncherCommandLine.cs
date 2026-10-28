@@ -22,7 +22,10 @@ public enum LauncherCommand
     Play,
 
     /// <summary>Collect chunks and render one offscreen frame.</summary>
-    Frame
+    Frame,
+
+    /// <summary>Collect chunks and present them in a window.</summary>
+    Window
 }
 
 /// <summary>Parsed command line.</summary>
@@ -40,6 +43,7 @@ public sealed record LauncherCommandLine(LauncherCommand Command, string? Target
           probe <address>    query a server's status (SRV aware)
           play <address>     sign in, then walk login and configuration phases
           frame <address>    collect chunks, then render one offscreen frame to a PNG
+          window <address>   collect chunks, then present them in a window (also writes the PNG)
           help               show this text
 
         Tokens are cached only outside the repository, under the user's local app data.
@@ -79,6 +83,9 @@ public sealed record LauncherCommandLine(LauncherCommand Command, string? Target
 
             case "frame":
                 return WithAddress(LauncherCommand.Frame, args, "frame");
+
+            case "window":
+                return WithAddress(LauncherCommand.Window, args, "window");
 
             default:
                 return new LauncherCommandLine(LauncherCommand.Help, null, $"unknown command '{head}'");
