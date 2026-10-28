@@ -25,7 +25,8 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 
 ## 进行中
 
-- `docs/modules/common-primitives.md`：四项阻塞已全部闭环（见下），文档等待所有者评审后置为 `[已评审]`；尚未写代码。
+- T-005 已完成：`Identifier` + 18 项测试（`src/MinecraftCSharp.Common/Identifiers/`、`tests/.../IdentifierTests.cs`）。
+- 下一项 T-006：两套随机数 + 向量回放。
 
 ## 阻塞项
 
@@ -37,10 +38,10 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 
 ## 下一步具体动作
 
-1. 请所有者评审 `docs/modules/common-primitives.md`（含 Registry 章节），通过后置 `[已评审]`。
-2. 实现 `Identifier`（`readonly struct`、`Parse`/`TryParse`、`CompareTo` 先 path 后 namespace、空路径合法、无长度上限、拒绝 `..`）+ 单元测试。
-3. 实现 `LegacyRandom` 与 `Xoroshiro128PlusPlus`，用 `tests/.../TestData/random-vectors.txt` 回放（十六进制、按记录顺序消费）。
-4. `<see cref="HotPathAttribute"/>` 标注的实现补分配测试。
+1. 实现 `LegacyRandom`（48 位 LCG，含 `nextInt(bound)` 两条路径）与 `Xoroshiro128PlusPlus`（含 `nextBits`、乘法高位法 `nextInt(bound)`）。
+2. 写 `RandomVectorTests` 回放 `TestData/random-vectors.txt`：按 kind 分组、按记录顺序消费、十六进制解析。
+3. 为这两个类型标注 `[HotPath]` 并补分配测试（热路径零分配）。
+4. 之后再实现种子派生（`RandomSupport`、位置化工厂、`WorldgenRandom` 混合器、`RandomSequence`）。
 5. 注册表顺序链：先做"顺序快照"数据结构，再实现 `Registry`。
 ## 未提交改动 / 后台任务
 
@@ -48,5 +49,5 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 
 ## 最近提交
 
-- `3a96646` docs: capture random reference vectors by running the official jar
-- 本次提交：原则 12 与治理设施（矩阵 / 风险 / ADR / 质量属性 / 缺陷模板 / CI / 漂移门禁）
+- `7839c78` feat: executable engineering governance (principle 12)
+- 本次提交：`Identifier` 实现与测试，矩阵 T-005 完成

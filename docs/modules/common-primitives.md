@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 MinecraftCSharp contributors -->
 
-状态：[草稿]
+状态：[已评审]
 基线：Minecraft 26.3
 证据：`ref://mc-26.3-analysis/src/net/minecraft/resources/Identifier.java`（反编译工作区，仓库外）
 最后更新：2026-10-28
