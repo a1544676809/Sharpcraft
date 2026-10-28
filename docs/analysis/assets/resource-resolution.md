@@ -42,6 +42,20 @@
 
 结论：**列表末尾的包优先级最高**（即用户资源包覆盖原版），原版是兜底。
 
+### 3.1 原版的排序原语（没有数值优先级）
+
+原版**不使用数值优先级**，而是**有序列表 + 每个包的声明**：
+
+- 选中列表是一个 `List<Pack>`，顺序即优先级顺序（配合 §3 的反向扫描，末尾最高）。
+- 每个包带 `PackSelectionConfig(required, defaultPosition, fixedPosition)`：
+  - `required = true`：原版必需包，必须在列表里；
+  - `defaultPosition` ∈ {`TOP`, `BOTTOM`}：默认插入位置，必需包为 `BOTTOM`；
+  - `fixedPosition = true`：锁定位置，不允许用户拖动。
+- `Position.insert(list, …)` 的语义：`BOTTOM` 从索引 0 开始找第一个"非固定在底部"的位置插入，因此**原版包落在索引 0**；`TOP` 反向从末尾插。
+- 用户资源包默认按"选中顺序"叠在原版之上，列表顺序就是覆盖顺序。
+
+本项目因此**用有序列表建模**，不引入数值优先级（数值会掩盖"顺序即语义"这件事，接错顺序时是静默改变画面）。
+
 ## 4. 元数据兄弟文件
 
 查找资源 `X` 时，同包的元数据位置是 **`X + ".mcmeta"`**（`getMetadataLocation`）。这正是纹理动画元数据（`textures/block/water_still.png.mcmeta`）的定位规则，也解释了 jar 里为什么有 218 个 `.mcmeta`（见 `jar-entry-map.md` §2）。

@@ -2,9 +2,10 @@
 // Copyright (C) 2026 MinecraftCSharp contributors
 
 using MinecraftCSharp.Auth;
-using MinecraftCSharp.Launcher.Assets;
-using MinecraftCSharp.Client.World;
 using MinecraftCSharp.Common.Identifiers;
+using MinecraftCSharp.Launcher.Assets;
+using MinecraftCSharp.Launcher.Assets.Resolution;
+using MinecraftCSharp.Client.World;
 using MinecraftCSharp.Common.Network;
 using MinecraftCSharp.Framework.Rendering;
 
@@ -285,6 +286,8 @@ internal static class Program
                 Console.WriteLine($"  skipped {category}: {count}");
             }
 
+            VerifyResolution(result.PackPath, jarPath, manifest?.AssetIndexId);
+
             return 0;
         }
         catch (JarVerificationException exception)
@@ -302,6 +305,66 @@ internal static class Program
             Console.Error.WriteLine($"assets failed: {exception.Message}");
             return 1;
         }
+    }
+
+    /// <summary>
+    /// Proves the resolution stack works against the real install: the base pack answers textures,
+    /// the official index answers languages, and the built-in fallback answers anything missing.
+    /// </summary>
+    private static void VerifyResolution(string packPath, string jarPath, string? assetIndexId)
+    {
+        var assetsDirectory = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(jarPath)!, "..", "..", "assets"));
+        var probes = new List<(string Label, ResourceKind Kind, Identifier Id)>
+        {
+            ("texture block/stone", ResourceKind.Texture, new Identifier("minecraft", "block/stone")),
+            ("texture block/debug", ResourceKind.Texture, new Identifier("minecraft", "block/debug")),
+            ("model block/stone", ResourceKind.Model, new Identifier("minecraft", "block/stone")),
+            ("lang en_us", ResourceKind.Language, new Identifier("minecraft", "en_us")),
+            ("lang zh_cn", ResourceKind.Language, new Identifier("minecraft", "zh_cn"))
+        };
+
+        using var stack = new AssetStack { Policy = MissingResourcePolicy.Warn }
+            .Add(new BuiltInFallbackSource())
+            .Add(new ZipAssetSource(packPath, "base-pack"));
+
+        if (assetIndexId is not null)
+        {
+            var indexPath = Path.Combine(assetsDirectory, "indexes", assetIndexId + ".json");
+            if (File.Exists(indexPath))
+            {
+                stack.Add(OfficialObjectsSource.Open(indexPath, assetIndexId));
+            }
+            else
+            {
+                Console.WriteLine($"[assets] official index not found, skipping mount: {indexPath}");
+            }
+        }
+
+        Console.WriteLine("resolution:");
+
+        foreach (var (label, kind, id) in probes)
+        {
+            var present = stack.TryOpen(kind, id, out var stream, out var sourceId);
+            if (present)
+            {
+                using (stream)
+                {
+                    Console.WriteLine($"  {label,-22} {stream.Length,9} bytes  <- {sourceId}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"  {label,-22} {'-',9}        <- missing");
+            }
+        }
+
+        var meta = stack.ReadMetadata(ResourceKind.Texture, new Identifier("minecraft", "block/water_still"));
+        Console.WriteLine($"  {"meta water_still",-22} {meta?.Length ?? 0,9} bytes");
+
+        var textures = stack.ListAll(ResourcePath.Prefix(ResourceKind.Texture)).Count;
+        var languages = stack.ListAll(ResourcePath.Prefix(ResourceKind.Language)).Count;
+        Console.WriteLine($"  listed textures        {textures,9}");
+        Console.WriteLine($"  listed languages       {languages,9}");
     }
 
     private static string versionIdFromJar(string jarPath) =>
@@ -352,6 +415,9 @@ internal static class Program
 
     private static async Task<int> ProbeAsync(string address)
     {
+        using var cancellation = CancelOnCtrlC();
+        using var http = CreateHttpClient();
+
         try
         {
             var result = await Task.Run(() => StatusPingClient.Query(address, TimeSpan.FromSeconds(15)))

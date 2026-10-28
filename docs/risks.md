@@ -22,6 +22,7 @@ AGENTS.md 原则 12：未解决的不确定性必须在此登记（概率 / 影�
 | R-009 | 文档与实现漂移（矩阵/索引/状态滞后） | 中 | 低 | 漂移检查已自动化（`DocumentationDriftTests`）+ 收工同提交规则 | 每次新增文档类型时 | 开放 |
 | R-011 | 窗口层只在 Windows 上实测，X11/Wayland/macOS 的句柄分支未验证 | 中 | 中 | 句柄映射已集中在 `WindowHost`；跨平台验收前不改渲染代码 | 在 Linux/macOS 上跑 `launcher window` 时 | 开放 |
 | R-013 | 音效与多语言可能不在客户端 jar 内（条目清单里无 `sounds/`、`sounds.json`，`lang/` 只有 3 条），推测走官方资产索引 | 中 | 中 | 已决定只读挂载官方 `objects/`（ADR-0005）；索引 id 与 `version.json` 比对，不匹配即拒绝 | 实测资产索引内容时 | 开放 |
+| R-016 | 自定义资源包兼容性：`pack_format` 版本区间、`overlays`、过滤节等特性未实现，用户包可能被静默加载但不生效 | 中 | 中 | 本阶段只解析并记录 `pack_format`，不做判定；M6 做资源包管理时补齐并给出可诊断提示 | 开始支持外部资源包时 | 开放 |
 | R-015 | 官方 `assets/objects` 目录可能缺失或被其它版本覆盖，导致索引资产读取失败 | 中 | 中 | 校验索引 id 与实际 objects 存在性；报错指明缺失项与官方启动器修复方式；是否自动补全待决（ADR-0005 待决 1） | 实测索引挂载时 | 开放 |
 | R-014 | 资产提取输出目录若被误配到仓库内，会把 Minecraft 资产写进工作区，触碰原则 3 红线 | 低 | 高 | 提取器拒绝仓库内输出路径；`.gitignore` 兜底；提交前自检 `git status` | 每次资产相关提交 | 开放 |
 | R-012 | `Brew.Wgpu` 的 `SurfaceAcquireResult.NeedsReconfigure` 使用有符号比较，`SuccessOptimal` 被误判为需要重建，导致画面永不上屏 | 高 | 中 | 已改为显式比较 `Outdated`/`Lost`；升级该包时复查是否修复 | 升级 `Brew.Wgpu` 时 | 开放 |

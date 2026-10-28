@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 MinecraftCSharp contributors -->
 
-状态：[待评审]
+状态：[已评审]
 基线：Minecraft 26.3
 证据：`docs/analysis/assets/resource-resolution.md`（行为规格）、`docs/analysis/assets/jar-entry-map.md`（来源清单）、ADR-0005
 最后更新：2026-10-28
@@ -57,18 +57,23 @@ interface IAssetSource {
 - `ResourceLocator`：把 `(资源类型, Identifier)` 变成文件位置（`blockstates/x` → `assets/minecraft/blockstates/x.json`），规则集中在这一点，测试只测这里。
 - `MissingResourcePolicy`：`Warn`（默认，打印一次并回退兜底）、`Throw`（测试与严格模式）。
 
-## 5. 来源与优先级
+## 5. 来源与栈顺序
 
-| 优先级 | 来源 | 实现 | 说明 |
+**原版用有序列表表达优先级（没有数值）**，见 `docs/analysis/assets/resource-resolution.md` §3.1。本层同样用有序列表：索引 0 是兜底，越往后优先级越高，查找从末尾向前。
+
+默认装配顺序（低 → 高）：
+
+| 位置 | 来源 | 实现 | 说明 |
 | --- | --- | --- | --- |
-| 300 | 模组/调试散装目录 | `DirectoryAssetSource` | 目录结构 `<dir>/assets/<namespace>/…`；支持多目录叠加 |
-| 200 | 基础 pack | `PackAssetSource` | 读 ADR-0005 产出的 zip；按 manifest 校验条目哈希 |
-| 100 | 官方索引 objects | `OfficialObjectsSource` | 只读：`indexes/<id>.json` + `objects/<ab>/<hash>`；缺失只警告 |
-| 0 | 内置兜底 | `BuiltInFallbackSource` | 编译进程序集的占位纹理/空语言；**不是 Minecraft 资产** |
+| 0 | 内置兜底 | `BuiltInFallbackSource` | **紫黑格子**占位纹理（代码生成，非 Minecraft 资产） |
+| 1 | 官方索引 objects | `OfficialObjectsSource` | 只读挂载 `indexes/<id>.json` + `objects/`；缺失只警告 |
+| 2 | 基础 pack | `PackAssetSource` | ADR-0005 的单文件 pack；按 manifest 校验条目 |
+| 3+ | 自定义资源包 | `PackAssetSource`（zip）/ `DirectoryAssetSource`（目录） | 用户安装的资源包，按选中顺序依次叠放，后选中的在上 |
 
-- 优先级数值固定，不依赖注册顺序，避免"接错顺序就静默改变画面"。
+- **自定义资源包是预留能力**：本阶段提供加载与叠放（zip 与目录两种形态都支持），`pack.mcmeta` 的 `pack_format` 只**解析并记录**，不做版本区间判定；等 M6 做资源包管理界面时再补兼容策略。
+- 模组资源走 `DirectoryAssetSource`，可以叠在用户资源包之上；两者用同一实现，区别只在装配顺序。
 - 索引 id 必须与 `version.json` 的 `assetIndex.id` 一致，否则 `OfficialObjectsSource` 拒绝挂载并说明原因。
-- **语言特例**：按原版语义（§5 高→低、后写覆盖），合并时**低优先级覆盖高优先级**；我们对 en_us 之外的 locale 采用"索引优先、pack 兜底"的取用顺序，并在实现处注明这与渲染资源的方向相反的原因。
+- **语言特例**：语言按原版 `getResourceStack` 语义合并（高→低依次写入，**后写覆盖先写** ⇒ 低优先级胜出），与渲染资源的方向相反，实现处必须注明原因。
 
 ## 6. 关键行为
 
@@ -95,6 +100,7 @@ interface IAssetSource {
 6. 断言语言合并方向与 §5 一致（构造两份 lang，检查哪个键胜出）。
 7. 断言索引 id 不匹配时拒绝挂载。
 8. 断言缺失策略：`Warn` 不抛、`Throw` 抛，且警告只打印一次/资源。
+9. 断言自定义资源包叠放：低层的同名资源被高层的覆盖；`pack.mcmeta` 的 `pack_format` 被解析但暂不据此拒绝。
 
 ## 8. 性能约束
 
@@ -107,4 +113,23 @@ interface IAssetSource {
 - `docs/analysis/assets/resource-resolution.md` 的每条规则都有对应测试；
 - 渲染层能在真实数据下取到 `textures/block/stone.png` 与对应 `.mcmeta`；
 - 缺失索引资产时只有警告、不崩溃；
-- 同一个资源在两个来源都存在时，结果由 §5 的优先级表决定（有测试守护）。
+- 同一个资源在两个来源都存在时，结果由 §5 的栈顺序决定（有测试守护）；
+- 紫黑格子占位纹理在纹理缺失时可见，且**不含任何 Minecraft 资产**。
+
+## 10. 实测（真实安装，2026-10-28）
+
+`launcher assets <jar> <version-json>` 在打包之后会跑一次解析自检，输入为本机 26.3 安装（jar 已校验为基线 SHA-1，资产索引 34）：
+
+| 探针 | 结果 | 来源 |
+| --- | --- | --- |
+| `textures/block/stone.png` | 151 字节 | base-pack |
+| `textures/block/debug.png` | 500 字节 | base-pack |
+| `models/block/stone.json` | 98 字节 | base-pack |
+| `lang/en_us.json` | 546,577 字节 | base-pack |
+| `lang/zh_cn.json` | 562,928 字节 | **official-objects:34** |
+| `textures/block/water_still.png.mcmeta` | 44 字节 | base-pack（`.mcmeta` 兄弟规则生效） |
+| 列举纹理 | **3,964** | 与 `jar-entry-map.md` 的 `.png` 数一致 |
+| 列举语言 | **144** | 索引多语言 + pack 内 en_us |
+
+结论：纹理/模型来自 pack，语言按设计从官方索引读取，两者共存于同一有序栈且互不干扰。
+
