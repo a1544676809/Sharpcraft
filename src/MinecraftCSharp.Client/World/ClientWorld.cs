@@ -40,6 +40,19 @@ public sealed class ClientWorld
     /// <summary>Number of loaded chunks.</summary>
     public int LoadedChunkCount => _chunks.Count;
 
+    /// <summary>
+    /// The chunks currently loaded. Convenient for callers that accept an allocation (for example
+    /// LINQ over the world); hot paths use <see cref="GetChunks"/> instead, whose struct enumerator
+    /// does not box.
+    /// </summary>
+    public IReadOnlyCollection<LevelChunk> LoadedChunks => _chunks.Values;
+
+    /// <summary>
+    /// Allocation-free view of the loaded chunks. The returned collection is a struct, so `foreach`
+    /// over it never boxes the enumerator, which matters for per-frame meshing.
+    /// </summary>
+    public Dictionary<long, LevelChunk>.ValueCollection GetChunks() => _chunks.Values;
+
     /// <summary>Applies the JoinGame header.</summary>
     public void ApplyJoin(JoinGameInfo joinGame)
     {

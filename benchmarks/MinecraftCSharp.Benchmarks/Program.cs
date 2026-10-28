@@ -55,6 +55,9 @@ internal static class Program
                           $"mesh={mesh.BlockCount} blocks / {mesh.TriangleCount} triangles, nbt={nbt.Length} bytes");
         Console.WriteLine();
 
+        using var meshBuffer = new MeshBuffer(expectedBlocks: 400_000);
+        var transformDestination = new float[ClipSpaceTransform.RequiredFloats(frame)];
+
         var results = new List<Measurement>
         {
             Measure("B-1 chunk packet parse", _iterations, _warmup, () =>
@@ -72,10 +75,20 @@ internal static class Program
                 var data = ChunkMesher.Mesh(world);
                 return data.BlockCount;
             }),
+            Measure("B-2b chunk meshing (pooled)", Math.Max(10, _iterations / 2), 2, () =>
+            {
+                var blocks = ChunkMesher.Mesh(world, meshBuffer);
+                return blocks;
+            }),
             Measure("B-3 clip-space transform", _iterations, _warmup, () =>
             {
                 var data = ClipSpaceTransform.Build(frame, Matrix4x4.Identity);
                 return data.Length;
+            }),
+            Measure("B-3b clip-space (span dest)", _iterations, _warmup, () =>
+            {
+                ClipSpaceTransform.Build(frame, Matrix4x4.Identity, transformDestination);
+                return transformDestination.Length;
             }),
             Measure("B-4 png encode 960x540", _iterations, _warmup, () =>
             {

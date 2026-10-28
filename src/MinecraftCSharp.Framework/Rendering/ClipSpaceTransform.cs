@@ -17,6 +17,32 @@ public static class ClipSpaceTransform
     /// <summary>Stride of one transformed vertex in bytes.</summary>
     public const int VertexStride = FloatsPerVertex * sizeof(float);
 
+    /// <summary>Number of floats a frame needs in its destination span.</summary>
+    public static int RequiredFloats(FrameRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return request.VertexCount * FloatsPerVertex;
+    }
+
+    /// <summary>
+    /// Writes interleaved clip-space positions and colours into <paramref name="destination"/>.
+    /// Callers that own a pooled buffer use this to avoid allocating a fresh array per frame.
+    /// </summary>
+    public static void Build(FrameRequest request, Matrix4x4 viewProjection, Span<float> destination)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var required = RequiredFloats(request);
+        if (destination.Length < required)
+        {
+            throw new ArgumentException(
+                $"destination holds {destination.Length} floats but {required} are required",
+                nameof(destination));
+        }
+
+        WriteVertices(request, viewProjection, destination);
+    }
+
     /// <summary>Builds interleaved clip-space positions and colours from a frame request.</summary>
     public static float[] Build(FrameRequest request, Matrix4x4 viewProjection)
     {
@@ -24,6 +50,14 @@ public static class ClipSpaceTransform
 
         var count = request.VertexCount;
         var data = new float[count * FloatsPerVertex];
+
+        WriteVertices(request, viewProjection, data);
+        return data;
+    }
+
+    private static void WriteVertices(FrameRequest request, Matrix4x4 viewProjection, Span<float> destination)
+    {
+        var count = request.VertexCount;
 
         for (var i = 0; i < count; i++)
         {
@@ -34,16 +68,14 @@ public static class ClipSpaceTransform
                 request.Vertices[offset + 2]);
             var clip = Vector4.Transform(position, viewProjection);
 
-            var destination = i * FloatsPerVertex;
-            data[destination] = clip.X;
-            data[destination + 1] = clip.Y;
-            data[destination + 2] = clip.Z;
-            data[destination + 3] = clip.W;
-            data[destination + 4] = request.Vertices[offset + 3];
-            data[destination + 5] = request.Vertices[offset + 4];
-            data[destination + 6] = request.Vertices[offset + 5];
+            var target = i * FloatsPerVertex;
+            destination[target] = clip.X;
+            destination[target + 1] = clip.Y;
+            destination[target + 2] = clip.Z;
+            destination[target + 3] = clip.W;
+            destination[target + 4] = request.Vertices[offset + 3];
+            destination[target + 5] = request.Vertices[offset + 4];
+            destination[target + 6] = request.Vertices[offset + 5];
         }
-
-        return data;
     }
 }

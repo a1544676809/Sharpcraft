@@ -11,9 +11,15 @@ namespace MinecraftCSharp.Client.Render;
 /// consumes the float arrays it produces (docs/architecture/boundaries.md).
 /// </summary>
 /// <remarks>
-/// The first version culls a face when the neighbour is not air and colours each block state
+/// The first version culled a face when the neighbour is not air and coloured each block state
 /// deterministically. Greedy meshing and texture atlases come later; the point here is a
 /// correct, testable geometry source.
+/// <para>
+/// Geometry is written into a reusable <see cref="MeshBuffer"/> rather than a <c>List</c>, and the
+/// world's loaded chunks are enumerated directly instead of scanning a fixed coordinate window.
+/// Both changes are behaviour-preserving: the same triangles come out, in a possibly different
+/// order (verified by an order-insensitive fingerprint in <c>ChunkMesherGoldenTests</c>).
+/// </para>
 /// </remarks>
 public static class ChunkMesher
 {
@@ -26,7 +32,7 @@ public static class ChunkMesher
     /// <summary>Indices per quad (two triangles).</summary>
     public const int IndicesPerQuad = 6;
 
-    /// <summary>Meshes every loaded chunk of a world.</summary>
+    /// <summary>Meshes every loaded chunk of a world into a freshly allocated mesh.</summary>
     /// <param name="world">World to mesh.</param>
     /// <param name="airState">Block state treated as empty.</param>
     /// <param name="maxBlocks">Safety cap so a huge world cannot exhaust memory.</param>
@@ -34,40 +40,54 @@ public static class ChunkMesher
     {
         ArgumentNullException.ThrowIfNull(world);
 
-        var vertices = new List<float>();
-        var indices = new List<uint>();
+        // Pre-size from the loaded chunk count so the first pass rarely grows.
+        using var buffer = new MeshBuffer(Math.Min(maxBlocks, world.LoadedChunkCount * 4096));
+        var blocks = Mesh(world, buffer, airState, maxBlocks);
+        return buffer.ToMeshData(blocks);
+    }
+
+    /// <summary>
+    /// Meshes every loaded chunk into <paramref name="buffer"/>, which is cleared first. A warm
+    /// buffer performs no steady-state allocation.
+    /// </summary>
+    /// <returns>Number of solid blocks that contributed faces.</returns>
+    public static int Mesh(
+        ClientWorld world,
+        MeshBuffer buffer,
+        int airState = 0,
+        int maxBlocks = 2_000_000)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        ArgumentNullException.ThrowIfNull(buffer);
+
+        buffer.Clear();
         var blocks = 0;
 
-        for (var chunkX = -512; chunkX <= 512 && blocks < maxBlocks; chunkX++)
+        foreach (var chunk in world.GetChunks())
         {
-            for (var chunkZ = -512; chunkZ <= 512 && blocks < maxBlocks; chunkZ++)
+            if (blocks >= maxBlocks)
             {
-                var chunk = world.GetChunk(chunkX, chunkZ);
-                if (chunk is null)
-                {
-                    continue;
-                }
-
-                blocks += MeshChunk(world, chunk, airState, vertices, indices, maxBlocks - blocks);
+                break;
             }
+
+            blocks += MeshChunk(world, chunk, airState, buffer, maxBlocks - blocks);
         }
 
-        return new MeshData(vertices.ToArray(), indices.ToArray(), blocks);
+        return blocks;
     }
 
     /// <summary>Meshes one chunk, using the world for neighbour lookups across chunk borders.</summary>
+    /// <returns>Number of solid blocks that contributed faces.</returns>
     public static int MeshChunk(
         ClientWorld world,
         LevelChunk chunk,
         int airState,
-        List<float> vertices,
-        List<uint> indices,
+        MeshBuffer buffer,
         int maxBlocks)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(chunk);
-        ArgumentNullException.ThrowIfNull(vertices);
-        ArgumentNullException.ThrowIfNull(indices);
+        ArgumentNullException.ThrowIfNull(buffer);
 
         var baseX = chunk.ChunkX * 16;
         var baseZ = chunk.ChunkZ * 16;
@@ -80,6 +100,8 @@ public static class ChunkMesher
             {
                 continue;
             }
+
+            var sectionY = (chunk.MinSectionY + sectionIndex) * 16;
 
             for (var y = 0; y < 16; y++)
             {
@@ -99,10 +121,10 @@ public static class ChunkMesher
                         }
 
                         var worldX = baseX + x;
-                        var worldY = (chunk.MinSectionY + sectionIndex) * 16 + y;
+                        var worldY = sectionY + y;
                         var worldZ = baseZ + z;
 
-                        EmitFaces(world, state, airState, worldX, worldY, worldZ, vertices, indices);
+                        EmitFaces(world, state, airState, worldX, worldY, worldZ, buffer);
                         emitted++;
                     }
                 }
@@ -112,95 +134,68 @@ public static class ChunkMesher
         return emitted;
     }
 
-    private static void EmitFaces(
+    /// <summary>
+    /// Writes a chunk's geometry into <paramref name="buffer"/> without touching the world model,
+    /// for callers that already know the neighbouring states (section rebuilds).
+    /// </summary>
+    public static void EmitFaces(
         ClientWorld world,
         int state,
         int airState,
         int x,
         int y,
         int z,
-        List<float> vertices,
-        List<uint> indices)
+        MeshBuffer buffer)
     {
         var (red, green, blue) = ColourOf(state);
 
         // -X
-        if (world.GetBlockState(x - 1, y, z) == airState)
+        if (world.GetBlockState(x - 1, y, z, airState) == airState)
         {
-            AddQuad(vertices, indices, red, green, blue,
-                (x, y, z), (x, y, z + 1), (x, y + 1, z + 1), (x, y + 1, z));
+            buffer.AppendQuad(
+                (x, y, z), (x, y, z + 1), (x, y + 1, z + 1), (x, y + 1, z),
+                red, green, blue);
         }
 
         // +X
-        if (world.GetBlockState(x + 1, y, z) == airState)
+        if (world.GetBlockState(x + 1, y, z, airState) == airState)
         {
-            AddQuad(vertices, indices, red, green, blue,
-                (x + 1, y, z), (x + 1, y + 1, z), (x + 1, y + 1, z + 1), (x + 1, y, z + 1));
+            buffer.AppendQuad(
+                (x + 1, y, z), (x + 1, y + 1, z), (x + 1, y + 1, z + 1), (x + 1, y, z + 1),
+                red, green, blue);
         }
 
         // -Y
-        if (world.GetBlockState(x, y - 1, z) == airState)
+        if (world.GetBlockState(x, y - 1, z, airState) == airState)
         {
-            AddQuad(vertices, indices, red, green, blue,
-                (x, y, z), (x, y, z + 1), (x + 1, y, z + 1), (x + 1, y, z));
+            buffer.AppendQuad(
+                (x, y, z), (x, y, z + 1), (x + 1, y, z + 1), (x + 1, y, z),
+                red, green, blue);
         }
 
         // +Y
-        if (world.GetBlockState(x, y + 1, z) == airState)
+        if (world.GetBlockState(x, y + 1, z, airState) == airState)
         {
-            AddQuad(vertices, indices, red, green, blue,
-                (x, y + 1, z), (x + 1, y + 1, z), (x + 1, y + 1, z + 1), (x, y + 1, z + 1));
+            buffer.AppendQuad(
+                (x, y + 1, z), (x + 1, y + 1, z), (x + 1, y + 1, z + 1), (x, y + 1, z + 1),
+                red, green, blue);
         }
 
         // -Z
-        if (world.GetBlockState(x, y, z - 1) == airState)
+        if (world.GetBlockState(x, y, z - 1, airState) == airState)
         {
-            AddQuad(vertices, indices, red, green, blue,
-                (x, y, z), (x + 1, y, z), (x + 1, y + 1, z), (x, y + 1, z));
+            buffer.AppendQuad(
+                (x, y, z), (x + 1, y, z), (x + 1, y + 1, z), (x, y + 1, z),
+                red, green, blue);
         }
 
         // +Z
-        if (world.GetBlockState(x, y, z + 1) == airState)
+        if (world.GetBlockState(x, y, z + 1, airState) == airState)
         {
-            AddQuad(vertices, indices, red, green, blue,
-                (x, y, z + 1), (x, y + 1, z + 1), (x + 1, y + 1, z + 1), (x + 1, y, z + 1));
+            buffer.AppendQuad(
+                (x, y, z + 1), (x, y + 1, z + 1), (x + 1, y + 1, z + 1), (x + 1, y, z + 1),
+                red, green, blue);
         }
-    }
-
-    private static void AddQuad(
-        List<float> vertices,
-        List<uint> indices,
-        float red,
-        float green,
-        float blue,
-        (int X, int Y, int Z) a,
-        (int X, int Y, int Z) b,
-        (int X, int Y, int Z) c,
-        (int X, int Y, int Z) d)
-    {
-        var start = (uint)(vertices.Count / FloatsPerVertex);
-
-        AddVertex(vertices, a, red, green, blue);
-        AddVertex(vertices, b, red, green, blue);
-        AddVertex(vertices, c, red, green, blue);
-        AddVertex(vertices, d, red, green, blue);
-
-        indices.Add(start);
-        indices.Add(start + 1);
-        indices.Add(start + 2);
-        indices.Add(start);
-        indices.Add(start + 2);
-        indices.Add(start + 3);
-    }
-
-    private static void AddVertex(List<float> vertices, (int X, int Y, int Z) position, float red, float green, float blue)
-    {
-        vertices.Add(position.X);
-        vertices.Add(position.Y);
-        vertices.Add(position.Z);
-        vertices.Add(red);
-        vertices.Add(green);
-        vertices.Add(blue);
     }
 
     /// <summary>Deterministic colour from a block state id, so the same world always looks the same.</summary>

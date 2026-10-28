@@ -167,16 +167,34 @@ public static class WindowedRenderer
         return format;
     }
 
-    /// <summary>Uploads clip-space vertices built for the current framebuffer aspect ratio.</summary>
-    private static WgpuBuffer UploadVertices(Device device, FrameRequest request, uint width, uint height) =>
-        device.CreateBufferInit(
-            new BufferInitDescriptor { Usage = BufferUsage.Vertex },
-            ClipSpaceTransform.Build(request, CameraMath.BuildViewProjection(
-                request.CameraPosition,
-                request.CameraTarget,
-                request.FieldOfViewDegrees,
-                (int)width,
-                (int)height)).AsSpan());
+    /// <summary>
+    /// Uploads clip-space vertices built for the current framebuffer aspect ratio. The staging
+    /// array is pooled, so a resize (or a frame with a moving camera) does not allocate megabytes.
+    /// </summary>
+    private static WgpuBuffer UploadVertices(Device device, FrameRequest request, uint width, uint height)
+    {
+        var matrix = CameraMath.BuildViewProjection(
+            request.CameraPosition,
+            request.CameraTarget,
+            request.FieldOfViewDegrees,
+            (int)width,
+            (int)height);
+
+        var required = ClipSpaceTransform.RequiredFloats(request);
+        var staged = System.Buffers.ArrayPool<float>.Shared.Rent(Math.Max(required, 1));
+
+        try
+        {
+            ClipSpaceTransform.Build(request, matrix, staged.AsSpan(0, required));
+            return device.CreateBufferInit(
+                new BufferInitDescriptor { Usage = BufferUsage.Vertex },
+                staged.AsSpan(0, required));
+        }
+        finally
+        {
+            System.Buffers.ArrayPool<float>.Shared.Return(staged);
+        }
+    }
 
     private static Texture CreateDepthTexture(Device device, uint width, uint height) =>
         device.CreateTexture(new TextureDescriptor
