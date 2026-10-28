@@ -49,6 +49,14 @@
 
 注意 hostName 上限是 **255**，不是默认的 32767——许多客户端实现会退化为默认上限，服务端仍会接受，但一旦超过就是协议错误。
 
+## 4.1 地址解析与 SRV
+
+- 地址形如 `host[:port]`；**显式给了端口就不查 SRV**。
+- 未给端口时查询 `_minecraft._tcp.<host>` 的 SRV 记录：取 **优先级最小**者，同优先级取**权重最大**者。
+- TCP 连接使用 SRV 的 target / port；**握手包里的 host 字段仍发用户输入的地址**（转发型服务端按它匹配，改了就掉线）。
+- SRV 不存在或查询失败时回退到 `host:25565`，不得让地址解析变成硬失败。
+- 实现依赖 `DnsClient`（见 `docs/decisions/0002-dnsclient-dependency.md`）。
+
 ## 5. 压缩
 
 登录阶段服务端可发 `LoginCompression(threshold)`，此后**双向**都进入压缩模式：
@@ -71,6 +79,16 @@
 2. 包 id 集中在一处常量表中，并注明"来自注册顺序"，禁止散落在各 handler。
 3. 压缩开关在收到 `LoginCompression` 后对**双向**生效，且必须在同一状态切换点启用，不能只改发送侧。
 4. 解压前必须按上表校验长度，禁止"先解压再检查"（压缩炸弹）。
+
+## 8. 实测记录
+
+| 日期 | 目标 | 结果 |
+| --- | --- | --- |
+| 2026-10-28 | `mcf.ddger.top`（SRV → `home.loli.fun:60224`） | **protocol=777、version=26.3、players=0/20、RTT=21ms**，MOTD 正常返回 |
+
+这条记录的意义：它证明 `VarInt`/`UTF-8`/帧前缀/握手/状态响应/JSON 解析这一整条链路与**真实原版 26.3 服务端**互通，而不是"自己编码自己解码"的自证。
+
+复现方式：`MC_TEST_SERVER=mcf.ddger.top dotnet test --filter StatusPingIntegrationTests`（`StatusPingIntegrationTests` 在无环境变量时为空操作）。
 
 ## 7. 待办
 
