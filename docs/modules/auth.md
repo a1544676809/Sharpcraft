@@ -35,14 +35,36 @@
 
 | 步骤 | 端点 | 关键点 |
 | --- | --- | --- |
-| 1 设备码 | `POST login.microsoftonline.com/consumers/oauth2/v2.0/devicecode` | 返回 `user_code` / `verification_uri` / `interval` / `expires_in` |
-| 2 轮询 | `POST .../oauth2/v2.0/token`（`grant_type=urn:ietf:params:oauth:grant-type:device_code`） | `authorization_pending` 继续等；`slow_down` 增加间隔 |
-| 3 XBL | `POST user.auth.xboxlive.com/user/authenticate` | 请求体 `RpsTicket: "d=<msa_token>"` |
-| 4 XSTS | `POST xsts.auth.xboxlive.com/xsts/authorize` | 依赖 XBL token |
-| 5 MC 登录 | `POST api.minecraftservices.com/authentication/login_with_xbox` | `identityToken = "XBL3.0 x=<userHash>;<xsts>"` |
+| 1 设备码 | `POST login.live.com/oauth20_connect.srf` | 表单编码；`response_type=device_code`；返回 `user_code` / `verification_uri` / `interval` / `expires_in` |
+| 2 轮询 | `POST login.live.com/oauth20_token.srf`（`grant_type=urn:ietf:params:oauth:grant-type:device_code`） | `authorization_pending` 继续等；`slow_down` 增加间隔 |
+| 3 XBL | `POST user.auth.xboxlive.com/user/authenticate` | JSON（PascalCase）；`RpsTicket: "d=<msa_token>"` |
+| 4 XSTS | `POST xsts.auth.xboxlive.com/xsts/authorize` | JSON；依赖 XBL token |
+| 5 MC 登录 | `POST api.minecraftservices.com/authentication/login_with_xbox` | JSON；`identityToken = "XBL3.0 x=<userHash>;<xsts>"` |
 | 6 档案 | `GET api.minecraftservices.com/minecraft/profile` | 404 = 无游戏权益 / 无档案 |
 
+### 3.1 两套身份端点不可混用（实测踩过）
+
+| 客户端 ID 形态 | 端点族 | 设备码请求体 |
+| --- | --- | --- |
+| MSA 应用（如 `00000000402b5328`，非 GUID） | `login.live.com`（`oauth20_connect.srf` / `oauth20_token.srf`） | 需加 `response_type=device_code` |
+| Azure AD 应用注册（GUID） | `login.microsoftonline.com/{tenant}/oauth2/v2.0/{devicecode,token}` | 不要 `response_type` |
+
+实测错误链（两次都真实发生）：
+
+1. 把 MSA 应用 ID 发到 AAD v2 端点 → `AADSTS700016: Application with identifier ... was not found in the directory ...`；
+2. 用 **JSON** 而不是表单编码 → `AADSTS900144: The request body must contain the following parameter: 'client_id'`。
+
+两项都已由 `IdentityEndpoints` 的预设（`MicrosoftAccount` / `AzureAd`）与表单编码固定住，并有测试守住。
+
 作用域：`XboxLive.signin offline_access`（`offline_access` 是拿到刷新令牌的前提）。
+
+### 3.2 真实登录验收记录
+
+| 日期 | 结果 |
+| --- | --- |
+| 2026-10-28 | **成功**：设备码 → MSA 令牌 → XBL → XSTS → Minecraft 会话 → 档案，返回玩家档案名与 UUID，会话有效期约 24 小时 |
+
+档案名与 UUID 按隐私要求不写入文档；验收方式见下文"手工验收"。
 
 ## 4. 错误分类（必须可区分）
 
@@ -84,3 +106,15 @@
 
 - 令牌安全存储的平台实现细节（原则 7 待决项）。
 - 账号列表与离线解锁策略的持久化格式（原则 7.1），本模块只提供"是否已登录正版"的事实，不实现解锁策略。
+
+## 10. 手工验收
+
+```
+dotnet run --project src/MinecraftCSharp.Launcher -- login
+```
+
+1. 打开输出提示的 `https://www.microsoft.com/link`，输入显示的用户码；
+2. 用微软账号登录并同意；
+3. 期望输出 `Signed in as <名字> (<UUID>)`，退出码 0。
+
+失败时输出会带分类原因（`[NoXboxProfile]` / `[AccountRestricted]` / `[NoGameOwnership]` / `[RefreshTokenRejected]`）与微软的服务端描述，便于定位。

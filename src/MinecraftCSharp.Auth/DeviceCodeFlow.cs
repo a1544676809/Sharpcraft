@@ -16,48 +16,58 @@ public sealed class DeviceCodeFlow
     public const string DefaultScope = "XboxLive.signin offline_access";
 
     /// <summary>Community client id used by third-party launchers; override for your own app.</summary>
-    public const string DefaultClientId = "00000000402b5328";
+    public const string DefaultClientId = IdentityEndpoints.DefaultMicrosoftAccountClientId;
 
-    private static readonly Uri DeviceCodeUri =
-        new("https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode");
-
-    private static readonly Uri TokenUri =
-        new("https://login.microsoftonline.com/consumers/oauth2/v2.0/token");
+    private const string DeviceCodeGrant = "urn:ietf:params:oauth:grant-type:device_code";
 
     private readonly HttpClient _http;
-    private readonly string _clientId;
+    private readonly IdentityEndpoints _endpoints;
     private readonly string _scope;
     private readonly Func<TimeSpan, CancellationToken, Task> _delay;
     private readonly TimeProvider _time;
 
-    /// <summary>Creates the flow, optionally overriding the client id, clock and delay.</summary>
+    /// <summary>Creates the flow; defaults to the Microsoft account endpoints.</summary>
     public DeviceCodeFlow(
         HttpClient http,
-        string clientId = DefaultClientId,
+        IdentityEndpoints? endpoints = null,
         string scope = DefaultScope,
         Func<TimeSpan, CancellationToken, Task>? delay = null,
         TimeProvider? timeProvider = null)
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
-        if (string.IsNullOrWhiteSpace(clientId))
+        _endpoints = endpoints ?? IdentityEndpoints.MicrosoftAccount();
+        if (string.IsNullOrWhiteSpace(_endpoints.ClientId))
         {
-            throw new ArgumentException("client id is required", nameof(clientId));
+            throw new ArgumentException("client id is required", nameof(endpoints));
         }
 
-        _clientId = clientId;
         _scope = scope;
         _delay = delay ?? ((duration, token) => Task.Delay(duration, token));
         _time = timeProvider ?? TimeProvider.System;
     }
 
+    /// <summary>Endpoints in use, exposed for diagnostics.</summary>
+    public IdentityEndpoints Endpoints => _endpoints;
+
     /// <summary>Requests a device code and returns the instructions for the user.</summary>
     /// <exception cref="AuthException">The identity service rejected the request.</exception>
     public async Task<DeviceCodeChallenge> RequestCodeAsync(CancellationToken cancellationToken = default)
     {
-        var (status, body) = await AuthHttp.PostJsonAsync(
+        var fields = new Dictionary<string, string>
+        {
+            ["client_id"] = _endpoints.ClientId,
+            ["scope"] = _scope
+        };
+
+        if (_endpoints.UsesMicrosoftAccountEndpoint)
+        {
+            fields["response_type"] = "device_code";
+        }
+
+        var (status, body) = await AuthHttp.PostFormAsync(
             _http,
-            DeviceCodeUri,
-            new { client_id = _clientId, scope = _scope },
+            _endpoints.DeviceCodeUri,
+            fields,
             cancellationToken).ConfigureAwait(false);
 
         using (body)
@@ -66,7 +76,7 @@ public sealed class DeviceCodeFlow
             {
                 throw new AuthException(
                     AuthError.UnexpectedResponse,
-                    $"device code request failed with {(int)status}",
+                    $"device code request failed: {AuthHttp.Describe(body.RootElement, status)}",
                     (int)status);
             }
 
@@ -104,14 +114,14 @@ public sealed class DeviceCodeFlow
 
         while (_time.GetUtcNow() < deadline)
         {
-            var (status, body) = await AuthHttp.PostJsonAsync(
+            var (status, body) = await AuthHttp.PostFormAsync(
                 _http,
-                TokenUri,
-                new
+                _endpoints.TokenUri,
+                new Dictionary<string, string>
                 {
-                    grant_type = "urn:ietf:params:oauth:grant-type:device_code",
-                    client_id = _clientId,
-                    device_code = challenge.DeviceCode
+                    ["grant_type"] = DeviceCodeGrant,
+                    ["client_id"] = _endpoints.ClientId,
+                    ["device_code"] = challenge.DeviceCode
                 },
                 cancellationToken).ConfigureAwait(false);
 
@@ -121,17 +131,7 @@ public sealed class DeviceCodeFlow
 
                 if (status == HttpStatusCode.OK)
                 {
-                    var accessToken = AuthHttp.String(root, "access_token");
-                    if (string.IsNullOrEmpty(accessToken))
-                    {
-                        throw new AuthException(AuthError.UnexpectedResponse, "token response is missing access_token");
-                    }
-
-                    var expiresIn = AuthHttp.Int(root, "expires_in") ?? 3600;
-                    return new MicrosoftToken(
-                        accessToken,
-                        AuthHttp.String(root, "refresh_token"),
-                        _time.GetUtcNow().AddSeconds(expiresIn));
+                    return ReadToken(root);
                 }
 
                 var error = AuthHttp.String(root, "error") ?? string.Empty;
@@ -157,7 +157,7 @@ public sealed class DeviceCodeFlow
                     default:
                         throw new AuthException(
                             AuthError.UnexpectedResponse,
-                            $"token request failed: {(string.IsNullOrEmpty(error) ? description : error)}",
+                            $"token request failed: {AuthHttp.Describe(root, status)}",
                             (int)status);
                 }
             }
@@ -181,15 +181,15 @@ public sealed class DeviceCodeFlow
             throw new ArgumentException("refresh token is required", nameof(refreshToken));
         }
 
-        var (status, body) = await AuthHttp.PostJsonAsync(
+        var (status, body) = await AuthHttp.PostFormAsync(
             _http,
-            TokenUri,
-            new
+            _endpoints.TokenUri,
+            new Dictionary<string, string>
             {
-                grant_type = "refresh_token",
-                client_id = _clientId,
-                refresh_token = refreshToken,
-                scope = _scope
+                ["grant_type"] = "refresh_token",
+                ["client_id"] = _endpoints.ClientId,
+                ["refresh_token"] = refreshToken,
+                ["scope"] = _scope
             },
             cancellationToken).ConfigureAwait(false);
 
@@ -201,20 +201,28 @@ public sealed class DeviceCodeFlow
                 var error = AuthHttp.String(root, "error") ?? string.Empty;
                 throw error == "invalid_grant"
                     ? new AuthException(AuthError.RefreshTokenRejected, "refresh token was rejected")
-                    : new AuthException(AuthError.UnexpectedResponse, $"refresh failed with {(int)status}", (int)status);
+                    : new AuthException(
+                        AuthError.UnexpectedResponse,
+                        $"refresh failed: {AuthHttp.Describe(root, status)}",
+                        (int)status);
             }
 
-            var accessToken = AuthHttp.String(root, "access_token");
-            if (string.IsNullOrEmpty(accessToken))
-            {
-                throw new AuthException(AuthError.UnexpectedResponse, "refresh response is missing access_token");
-            }
-
-            var expiresIn = AuthHttp.Int(root, "expires_in") ?? 3600;
-            return new MicrosoftToken(
-                accessToken,
-                AuthHttp.String(root, "refresh_token") ?? refreshToken,
-                _time.GetUtcNow().AddSeconds(expiresIn));
+            return ReadToken(root, refreshToken);
         }
+    }
+
+    private MicrosoftToken ReadToken(JsonElement root, string? fallbackRefreshToken = null)
+    {
+        var accessToken = AuthHttp.String(root, "access_token");
+        if (string.IsNullOrEmpty(accessToken))
+        {
+            throw new AuthException(AuthError.UnexpectedResponse, "token response is missing access_token");
+        }
+
+        var expiresIn = AuthHttp.Int(root, "expires_in") ?? 3600;
+        return new MicrosoftToken(
+            accessToken,
+            AuthHttp.String(root, "refresh_token") ?? fallbackRefreshToken,
+            _time.GetUtcNow().AddSeconds(expiresIn));
     }
 }

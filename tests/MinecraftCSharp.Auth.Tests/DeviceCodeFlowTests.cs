@@ -39,10 +39,39 @@ public sealed class DeviceCodeFlowTests
         Assert.Equal("enter the code", challenge.Message);
         Assert.Contains("ABCD-EFGH", challenge.ToString());
 
-        // The request must carry our client id and the offline_access scope.
-        using var sent = JsonDocument.Parse(stub.Requests[0]);
-        Assert.Equal(DeviceCodeFlow.DefaultClientId, sent.RootElement.GetProperty("client_id").GetString());
-        Assert.Contains("offline_access", sent.RootElement.GetProperty("scope").GetString());
+        // The request must be form-urlencoded (the identity endpoint rejects JSON) and carry
+        // our client id plus the offline_access scope.
+        var sent = ParseForm(stub.Requests[0]);
+        Assert.Equal(DeviceCodeFlow.DefaultClientId, sent["client_id"]);
+        Assert.Contains("offline_access", sent["scope"]);
+        // The Microsoft account endpoint needs response_type=device_code; AAD rejects it.
+        Assert.Equal("device_code", sent["response_type"]);
+    }
+
+    [Fact]
+    public async Task AzureAdPresetOmitsResponseTypeAndUsesTheV2Endpoints()
+    {
+        var stub = new StubHandler().RespondOk(ChallengeBody);
+        var flow = new DeviceCodeFlow(stub.CreateClient(), IdentityEndpoints.AzureAd("11111111-2222-3333-4444-555555555555"));
+
+        await flow.RequestCodeAsync();
+
+        Assert.Contains("/oauth2/v2.0/devicecode", stub.Uris[0].AbsolutePath);
+        var sent = ParseForm(stub.Requests[0]);
+        Assert.False(sent.ContainsKey("response_type"));
+        Assert.Equal("11111111-2222-3333-4444-555555555555", sent["client_id"]);
+    }
+
+    [Fact]
+    public async Task DefaultPresetTargetsTheMicrosoftAccountEndpoints()
+    {
+        var stub = new StubHandler().RespondOk(ChallengeBody);
+        var flow = new DeviceCodeFlow(stub.CreateClient());
+
+        await flow.RequestCodeAsync();
+
+        Assert.Equal("login.live.com", stub.Uris[0].Host);
+        Assert.Equal("/oauth20_connect.srf", stub.Uris[0].AbsolutePath);
     }
 
     [Fact]
@@ -138,9 +167,10 @@ public sealed class DeviceCodeFlowTests
         Assert.Equal("new-access", token.AccessToken);
         Assert.Equal("old-refresh", token.RefreshToken);
 
-        using var sent = JsonDocument.Parse(stub.Requests[0]);
-        Assert.Equal("refresh_token", sent.RootElement.GetProperty("grant_type").GetString());
-        Assert.Equal("old-refresh", sent.RootElement.GetProperty("refresh_token").GetString());
+        var sent = ParseForm(stub.Requests[0]);
+        Assert.Equal("refresh_token", sent["grant_type"]);
+        Assert.Equal("old-refresh", sent["refresh_token"]);
+        Assert.Equal(DeviceCodeFlow.DefaultClientId, sent["client_id"]);
     }
 
     [Fact]
@@ -151,6 +181,33 @@ public sealed class DeviceCodeFlowTests
 
         var failure = await Assert.ThrowsAsync<AuthException>(() => flow.RefreshAsync("stale"));
         Assert.Equal(AuthError.RefreshTokenRejected, failure.Error);
+    }
+
+    [Fact]
+    public async Task PollSendsTheDeviceCodeGrantAsAForm()
+    {
+        var stub = new StubHandler().RespondOk("""{"access_token":"a","expires_in":60}""");
+        var flow = new DeviceCodeFlow(stub.CreateClient(), delay: (_, _) => Task.CompletedTask);
+
+        await flow.PollAsync(Challenge(5));
+
+        var sent = ParseForm(stub.Requests[0]);
+        Assert.Equal("urn:ietf:params:oauth:grant-type:device_code", sent["grant_type"]);
+        Assert.Equal("device-code", sent["device_code"]);
+    }
+
+    private static Dictionary<string, string> ParseForm(string body)
+    {
+        var fields = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var pair in body.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separator = pair.IndexOf('=');
+            var key = Uri.UnescapeDataString(pair[..separator].Replace('+', ' '));
+            var value = Uri.UnescapeDataString(pair[(separator + 1)..].Replace('+', ' '));
+            fields[key] = value;
+        }
+
+        return fields;
     }
 
     private static DeviceCodeChallenge Challenge(int intervalSeconds) =>

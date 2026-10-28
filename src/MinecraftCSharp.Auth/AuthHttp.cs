@@ -38,6 +38,47 @@ internal static class AuthHttp
         return (response.StatusCode, Parse(text));
     }
 
+    /// <summary>
+    /// Posts a form-urlencoded body. The Microsoft identity endpoints reject JSON with
+    /// AADSTS900144 ("body must contain client_id"), so the encoding is not a preference.
+    /// </summary>
+    internal static async Task<(HttpStatusCode Status, JsonDocument Body)> PostFormAsync(
+        HttpClient http,
+        Uri uri,
+        IEnumerable<KeyValuePair<string, string>> fields,
+        CancellationToken cancellationToken)
+    {
+        using var content = new FormUrlEncodedContent(fields);
+
+        HttpResponseMessage response;
+        try
+        {
+            response = await http.PostAsync(uri, content, cancellationToken).ConfigureAwait(false);
+        }
+        catch (HttpRequestException exception)
+        {
+            throw new AuthException(AuthError.Transport, $"request to {uri.Host} failed", inner: exception);
+        }
+
+        var text = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        return (response.StatusCode, Parse(text));
+    }
+
+    /// <summary>Extracts the provider error description, used to make failures diagnosable.</summary>
+    internal static string Describe(JsonElement root, HttpStatusCode status)
+    {
+        var error = String(root, "error");
+        var description = String(root, "error_description");
+        if (string.IsNullOrEmpty(error) && string.IsNullOrEmpty(description))
+        {
+            return $"HTTP {(int)status}";
+        }
+
+        var code = String(root, "trace_id");
+        var text = string.IsNullOrEmpty(description) ? error : $"{error}: {description}";
+        return string.IsNullOrEmpty(code) ? text! : $"{text} (trace {code})";
+    }
+
     /// <summary>Parses a JSON body, tolerating empty payloads.</summary>
     internal static JsonDocument Parse(string text) =>
         string.IsNullOrWhiteSpace(text) ? JsonDocument.Parse("{}") : JsonDocument.Parse(text);
