@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 状态：[待评审]
 最后更新：2026-10-28
@@ -12,14 +12,14 @@ AGENTS.md 原则 9：先有可复现基线，才谈优化；原则 12：性能�
 
 | 工具 | 位置 | 说明 |
 | --- | --- | --- |
-| 基准套件 | `benchmarks/MinecraftCSharp.Benchmarks` | 控制台程序，纯自研计时（不引入 BenchmarkDotNet，避免额外依赖与噪声） |
+| 基准套件 | `benchmarks/Sharpcraft.Benchmarks` | 控制台程序，纯自研计时（不引入 BenchmarkDotNet，避免额外依赖与噪声） |
 | 计时口径 | 同上 | 先做 `Warmup` 轮，再采样 `Iterations` 轮；报告 P50 / P95 / 最小 / 最大；分配量用 `GC.GetAllocatedBytesForCurrentThread` 前后差 |
-| 端到端阶段计时 | `MinecraftCSharp.Launcher frame` | 认证 / 收区块 / 网格 / 离屏渲染 / PNG 编码各自耗时 |
+| 端到端阶段计时 | `Sharpcraft.Launcher frame` | 认证 / 收区块 / 网格 / 离屏渲染 / PNG 编码各自耗时 |
 
 运行方式：
 
 ```
-dotnet run -c Release --project benchmarks/MinecraftCSharp.Benchmarks
+dotnet run -c Release --project benchmarks/Sharpcraft.Benchmarks
 ```
 
 可选参数：

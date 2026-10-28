@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 状态：[已评审]
 基线：Minecraft 26.3
@@ -29,7 +29,7 @@
 
 ## 2. 侧别归属
 
-- 归属：**`MinecraftCSharp.Client`**（`Client/Assets/`），与 ADR-0007 一致。
+- 归属：**`Sharpcraft.Client`**（`Client/Assets/`），与 ADR-0007 一致。
 - 判定依据：用户资源包会替换纹理，图集必须随包栈在客户端重建；原版同样由客户端持有资源管理器与拼图逻辑（证据见 ADR-0007）。
 - 启动器复用：`Launcher` 已引用 `Client`，其 `assets` / `launch` 校验命令调用同一份解析代码，不存在第二套实现。
 - 反方向仍然禁止：`Client` MUST NOT 引用 `Launcher`（架构门禁强制）。

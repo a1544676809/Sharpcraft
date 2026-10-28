@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 # 0001：架构规则以测试门禁落地，而非文档约定
 
@@ -14,7 +14,7 @@
 
 ## 决策
 
-1. 边界规则（B1–B3）以 `tests/MinecraftCSharp.Architecture.Tests` 中的测试执行，**构建即失败**。
+1. 边界规则（B1–B3）以 `tests/Sharpcraft.Architecture.Tests` 中的测试执行，**构建即失败**。
 2. 检查同时覆盖两个来源：**IL 引用**（真实耦合）与 **csproj 声明引用**（意图）。只查其一都不够——实测发现仅声明引用、尚无代码使用时，IL 里根本没有该引用，单靠反射会静默放过越界。
 3. 文档一致性同样自动化：SPDX 头、索引完整性、禁止绝对路径、STATE 存在，全部由测试断言，失败等同构建失败。
 4. 新增架构规则时，规则与被否原因写进 `boundaries.md`，检查写进测试，二者在同一次提交内落地。

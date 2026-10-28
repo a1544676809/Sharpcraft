@@ -1,0 +1,44 @@
+
+<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
+<!--
+  Solution template for Visual Studio 2026 / dotnet CLI.
+
+  This file is the single entry point for build and debug (AGENTS.md 3.6), and it
+  fixes the layout up front so new projects slot into an existing group instead of
+  being appended ad hoc:
+
+    /src/     game and host assemblies   (docs/architecture/boundaries.md)
+    /tests/   unit, architecture and allocation tests
+
+  Rules for adding a project:
+    1. Directory must be src/<AssemblyName>/ or tests/<AssemblyName>/, matching the .csproj name.
+    2. Add the <Project> entry to the matching folder, keeping entries alphabetical.
+    3. Project references must satisfy B1-B3; tests/Sharpcraft.Architecture.Tests fails the build otherwise.
+-->
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/Sharpcraft.Auth/Sharpcraft.Auth.csproj" />
+    <Project Path="src/Sharpcraft.Client/Sharpcraft.Client.csproj" />
+    <Project Path="src/Sharpcraft.Common/Sharpcraft.Common.csproj" />
+    <Project Path="src/Sharpcraft.Framework/Sharpcraft.Framework.csproj" />
+    <Project Path="src/Sharpcraft.Launcher/Sharpcraft.Launcher.csproj" />
+    <Project Path="src/Sharpcraft.Modding/Sharpcraft.Modding.csproj" />
+    <Project Path="src/Sharpcraft.Server/Sharpcraft.Server.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Sharpcraft.Architecture.Tests/Sharpcraft.Architecture.Tests.csproj" />
+    <Project Path="tests/Sharpcraft.Auth.Tests/Sharpcraft.Auth.Tests.csproj" />
+    <Project Path="tests/Sharpcraft.Launcher.Tests/Sharpcraft.Launcher.Tests.csproj" />
+    <Project Path="tests/Sharpcraft.Client.Tests/Sharpcraft.Client.Tests.csproj" />
+    <Project Path="tests/Sharpcraft.Framework.Tests/Sharpcraft.Framework.Tests.csproj" />
+    <Project Path="tests/Sharpcraft.Common.Tests/Sharpcraft.Common.Tests.csproj" />
+  </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Sharpcraft.Benchmarks/Sharpcraft.Benchmarks.csproj" />
+  </Folder>
+</Solution>

@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 状态：[已接受]
 日期：2026-10-28

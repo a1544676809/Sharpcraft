@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 状态：[已接受]
 日期：2026-10-28
@@ -40,7 +40,7 @@ Minecraft 服务器地址可以不带端口（`mcf.ddger.top`），此时客户�
 
 ## 后果
 
-- `MinecraftCSharp.Common` 增加一个直接依赖；启动器与客户端共享。
+- `Sharpcraft.Common` 增加一个直接依赖；启动器与客户端共享。
 - SRV 查询失败（NXDOMAIN / 超时）**必须**回退到字面主机 + 25565，不得让地址解析变成硬失败。
 - 显式给了端口时**不查 SRV**（与 vanilla 行为一致）。
 - 握手包中仍然通告**用户输入的地址**，只有 TCP 目标使用 SRV 结果——转发型服务端依赖这一点。

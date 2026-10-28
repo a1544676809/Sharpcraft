@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 # STATE —— 跨会话进度锚点
 
@@ -26,7 +26,7 @@ M1（基础逻辑）与 M2（世界数据闭环）已达成并留有可执行证
 1. T-031 贪婪合并：真实世界三角形 110,868 → **51,402**（-54%）；修掉两个只有出图才暴露的 bug（掩码需每切片重置、四边形坐标漏加段基址），绕序改为按 `Cross(U,V)==外法线` 推导的显式表，管线 `FrontFace` 改为 CCW。
 2. T-030 光照→顶点亮度 + 背面剔除：nibble 光照存进 `ChunkLight`，面亮度 = 采样格光照 × 朝向系数（上 1.0/侧 0.75/下 0.5，下限 0.12）；管线 `CullMode.Back`。代价 +13%。
 3. T-029 几何路径零分配：`MeshBuffer`（ArrayPool）+ 遍历已加载区块 + `ClipSpaceTransform` 的 Span 重载；P95 132.9 → **22.2 ms**、分配 14.8 MB → **0**。
-4. T-028 性能基线套件：`benchmarks/MinecraftCSharp.Benchmarks`，读数入 `benchmarks/results/`，口径见 `docs/specs/performance-baseline.md`。
+4. T-028 性能基线套件：`benchmarks/Sharpcraft.Benchmarks`，读数入 `benchmarks/results/`，口径见 `docs/specs/performance-baseline.md`。
 5. T-026 / T-027 渲染与窗口：`Brew.Wgpu` 绑定 + `Silk.NET.Windowing`（ADR-0003 / ADR-0004 已接受）；`launcher frame|window` 可对真实服务器出图与呈现。
 6. T-025 区块与光照解析：真实会话 9/9 区块、275,141 非空气方块、97 个光照数组。
 

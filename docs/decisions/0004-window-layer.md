@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 状态：[已接受]
 日期：2026-10-28
@@ -13,7 +13,7 @@
 ## 决策
 
 1. **窗口库**：`Silk.NET.Windowing` 2.23.0（GLFW/SDL 后端由包依赖决定，Windows 上为 GLFW）。
-2. **抽象边界**：`MinecraftCSharp.Framework.Platform.WindowHost` 是唯一接触窗口 API 的类，对外只暴露与平台无关的 `NativeSurfaceSource`（Windows / X11 / Wayland / MetalLayer 四种句柄形态）。渲染器只消费 `NativeSurfaceSource`，不了解窗口库。
+2. **抽象边界**：`Sharpcraft.Framework.Platform.WindowHost` 是唯一接触窗口 API 的类，对外只暴露与平台无关的 `NativeSurfaceSource`（Windows / X11 / Wayland / MetalLayer 四种句柄形态）。渲染器只消费 `NativeSurfaceSource`，不了解窗口库。
 3. **呈现**：`WindowedRenderer` 用交换链呈现；**截图仍走离屏路径**（`OffscreenRenderer`），因为交换链纹理不保证可拷贝。
 4. **尺寸**：交换链按 **framebuffer 物理像素**配置，而非逻辑尺寸（DPI 缩放下列两者不同，按逻辑尺寸配置会导致每帧 `Outdated`）。
 
@@ -35,7 +35,7 @@
 
 ## 后果
 
-- `MinecraftCSharp.Framework` 新增 `Silk.NET.Windowing` 依赖；渲染代码仍是唯一持有 WGPU 句柄的地方。
+- `Sharpcraft.Framework` 新增 `Silk.NET.Windowing` 依赖；渲染代码仍是唯一持有 WGPU 句柄的地方。
 - 目前只在 Windows 上实测；X11/Wayland/macOS 分支代码存在但**未验证**（登记 R-011）。
 - 窗口只有呈现能力：无输入、无 resize 事件处理（尺寸变化时重建配置的逻辑已就位，但未接入事件）。
 - 帧循环是"呈现 N 帧后关闭"的临时形态，正式的主循环（输入 → 更新 → 渲染）留到后续里程碑。

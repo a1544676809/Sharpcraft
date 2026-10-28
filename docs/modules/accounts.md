@@ -1,12 +1,12 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 状态：[已评审]
 基线：Minecraft 26.3
 依据：AGENTS.md 原则 7.1；`docs/decisions/0006-offline-login-gating.md`
 最后更新：2026-10-28
 
-# 账号模块（MinecraftCSharp.Launcher.Accounts）
+# 账号模块（Sharpcraft.Launcher.Accounts）
 
 启动器的多账号与离线登录闸门。**这是产品策略模块，不是便利功能**：它决定"谁能启动游戏"，任何削弱都必须由项目所有者书面确认（AGENTS 原则 7.1）。
 
@@ -22,7 +22,7 @@
 
 明确不负责：
 
-- 在线认证链路本身（`MinecraftCSharp.Auth`）。
+- 在线认证链路本身（`Sharpcraft.Auth`）。
 - 游戏内玩家档案同步、皮肤（属于客户端/协议）。
 - 服务端侧验证（服务器自己决定是否接受离线玩家，我们不干预）。
 
@@ -69,7 +69,7 @@ OfflineLoginGate.Evaluate(IReadOnlyList<AccountRecord> accounts) -> GateResult
 
 ## 6. 持久化与防篡改（SHOULD 项）
 
-- 位置：`<userData>/MinecraftCSharp/accounts.json`，仓库外，启动时校验路径不得落在仓库内（复用 `HostPaths`）。
+- 位置：`<userData>/Sharpcraft/accounts.json`，仓库外，启动时校验路径不得落在仓库内（复用 `HostPaths`）。
 - 完整性：整文件用 **HMAC-SHA256** 保护，密钥保存在平台安全存储（Windows DPAPI / 其它平台受限权限文件）；校验失败视为**列表不可信**，直接禁用离线登录并要求重新登录，不做"尽力修复"。
 - 原子写：先写 `.tmp` 再重命名，避免半写坏文件。
 - 该机制是**本地策略**，不承诺抵抗有内核权限的攻击者（原则 7.1 明确"非 DRM 承诺"）。

@@ -1,9 +1,9 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 状态：[草稿]
 基线：Minecraft 26.3
-证据：`ref://mc-26.3-analysis/vectors/`（生成器与原始输出）；入库数据 `tests/MinecraftCSharp.Common.Tests/TestData/random-vectors.txt`
+证据：`ref://mc-26.3-analysis/vectors/`（生成器与原始输出）；入库数据 `tests/Sharpcraft.Common.Tests/TestData/random-vectors.txt`
 最后更新：2026-10-28
 
 # 随机数参考向量（reference vectors）
@@ -85,6 +85,6 @@ lootSequence|42|0xf43aa0b3e22aabc6|0xc30fefe8bf3c5b22|...
 
 ## 6. 与 C# 测试的关系
 
-- 向量文件入库为测试数据：`tests/MinecraftCSharp.Common.Tests/TestData/random-vectors.txt`（纯数值，不含任何资产或反编译内容）。
+- 向量文件入库为测试数据：`tests/Sharpcraft.Common.Tests/TestData/random-vectors.txt`（纯数值，不含任何资产或反编译内容）。
 - 实现 `LegacyRandom` / `Xoroshiro128PlusPlus` 时，每个 kind 至少一条用例；`*_intBound` 必须同时覆盖 2 的幂与非 2 的幂路径。
 - 向量回放测试属于"行为对齐证据"，不得为了让测试通过而修改向量——向量只能重新生成。

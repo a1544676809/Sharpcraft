@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 状态：[已评审]
 基线：Minecraft 26.3
@@ -28,7 +28,7 @@
 
 ## 2. 侧别归属
 
-- 归属：网格生成与相机数学属于 `Client`（表现层）；WGPU 调用属于引擎层 `MinecraftCSharp.Framework`。
+- 归属：网格生成与相机数学属于 `Client`（表现层）；WGPU 调用属于引擎层 `Sharpcraft.Framework`。
 - 判定依据：AGENTS 原则 5、6——游戏逻辑不得持有 WGPU 句柄，所有图形调用收敛在引擎层。
 
 ## 3. 依赖关系
@@ -36,8 +36,8 @@
 | 方向 | 对象 | 说明 |
 | --- | --- | --- |
 | 依赖 | `Brew.Wgpu` | 托管绑定与 `wgpu_native`，二者同版本（ADR-0003） |
-| 依赖 | `MinecraftCSharp.Common`（PNG 编码） | `Common/Imaging/PngEncoder` |
-| 被依赖 | `MinecraftCSharp.Launcher`（`frame` 命令） | 组装链路并落盘 |
+| 依赖 | `Sharpcraft.Common`（PNG 编码） | `Common/Imaging/PngEncoder` |
+| 被依赖 | `Sharpcraft.Launcher`（`frame` 命令） | 组装链路并落盘 |
 | 不依赖 | `Client` / `Auth` / `Launcher` | 引擎层不得反向引用（架构门禁 `FrameworkMustNotReferenceGameOrHostAssemblies`） |
 
 ## 4. 对外契约
@@ -295,13 +295,13 @@ mesh: 31321 blocks, 7354 triangles
 
 | 类型 | 位置 | 覆盖 |
 | --- | --- | --- |
-| 单元 | `tests/MinecraftCSharp.Client.Tests/ChunkMesherTests.cs` | 面数、跨区块剔除、方块上限、颜色稳定性 |
-| 单元 | `tests/MinecraftCSharp.Framework.Tests/CameraMathTests.cs` | 近/远平面映射、目标居中、默认相机取景、参数校验、顶点布局 |
-| 单元 | `tests/MinecraftCSharp.Common.Tests/PngEncoderTests.cs` | 与独立实现对齐的 CRC、IHDR 结构、扫描线往返 |
-| 单元 | `tests/MinecraftCSharp.Client.Tests/SpriteAtlasTests.cs` | 图集：真实尺寸、不重叠、UV、missing 回落、动画首帧、可复现、包栈覆盖 |
-| 单元 | `tests/MinecraftCSharp.Client.Tests/BlockSpriteMapTests.cs` | 方块 → 精灵：命名约定、缺失回落、布局预计算、无布局行为 |
-| 单元 | `tests/MinecraftCSharp.Client.Tests/TexturedMesherTests.cs` | 带纹理网格：顶点颜色只承载光照、UV 在格子内平铺、精灵矩形进顶点流 |
-| 单元 | `tests/MinecraftCSharp.Common.Tests/PngDecoderTests.cs` | 灰度/真彩/索引/带 alpha 解码、过滤器还原、损坏报错、与编码器往返 |
+| 单元 | `tests/Sharpcraft.Client.Tests/ChunkMesherTests.cs` | 面数、跨区块剔除、方块上限、颜色稳定性 |
+| 单元 | `tests/Sharpcraft.Framework.Tests/CameraMathTests.cs` | 近/远平面映射、目标居中、默认相机取景、参数校验、顶点布局 |
+| 单元 | `tests/Sharpcraft.Common.Tests/PngEncoderTests.cs` | 与独立实现对齐的 CRC、IHDR 结构、扫描线往返 |
+| 单元 | `tests/Sharpcraft.Client.Tests/SpriteAtlasTests.cs` | 图集：真实尺寸、不重叠、UV、missing 回落、动画首帧、可复现、包栈覆盖 |
+| 单元 | `tests/Sharpcraft.Client.Tests/BlockSpriteMapTests.cs` | 方块 → 精灵：命名约定、缺失回落、布局预计算、无布局行为 |
+| 单元 | `tests/Sharpcraft.Client.Tests/TexturedMesherTests.cs` | 带纹理网格：顶点颜色只承载光照、UV 在格子内平铺、精灵矩形进顶点流 |
+| 单元 | `tests/Sharpcraft.Common.Tests/PngDecoderTests.cs` | 灰度/真彩/索引/带 alpha 解码、过滤器还原、损坏报错、与编码器往返 |
 | 集成 | `launcher frame local` | 本地合成世界出图（不依赖网络） |
 | 集成 | `launcher frame replay <file>` | 用已捕获的真实区块包回放，验证"真实数据能画出来" |
 | 集成 | `launcher window <address>` / `window local` | 窗口呈现真实世界（180 帧，BGRA8UnormSrgb）并落盘 PNG |

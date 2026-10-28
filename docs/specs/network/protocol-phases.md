@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 状态：[草稿]
 基线：Minecraft 26.3（协议 777）
@@ -29,7 +29,7 @@
 ## 3. 包 id 表
 
 包 id 由注册顺序决定，已从 jar 导出全表（纯标识符清单，入库为
-`tests/MinecraftCSharp.Common.Tests/TestData/vanilla-packet-ids.txt`）。
+`tests/Sharpcraft.Common.Tests/TestData/vanilla-packet-ids.txt`）。
 
 | 阶段 | 方向 | 包数 |
 | --- | --- | --- |

@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 状态：[草稿]
 基线：Minecraft 26.3
@@ -25,13 +25,13 @@
 
 | 工程 | 侧别 | 允许引用 | 说明 |
 | --- | --- | --- | --- |
-| `MinecraftCSharp.Common` | Common | Framework（仅抽象） | 标识符、注册表、数学、NBT、协议编解码、世界数据结构 |
-| `MinecraftCSharp.Framework` | 外围（引擎） | 无（只依赖 BCL） | WGPU 抽象、窗口、输入、资源加载、音频后端、性能基建 |
-| `MinecraftCSharp.Client` | Client | Common, Framework | 渲染表现、UI、输入、音频播放、多人会话 |
-| `MinecraftCSharp.Server` | Server | Common | 世界模拟、刻推进、命令、存档（仅服务原版对齐与集成服务端） |
-| `MinecraftCSharp.Auth` | 外围（在线服务） | Framework（存储抽象） | MSA / Xbox Live / XSTS / Minecraft 服务链路 |
-| `MinecraftCSharp.Launcher` | 外围（宿主） | Auth, Framework | 版本与资产获取、启动编排、多账号 |
-| `MinecraftCSharp.Modding` | 外围（mod API） | Common（契约类型） | 模组 API 契约、加载器、热加载宿主 |
+| `Sharpcraft.Common` | Common | Framework（仅抽象） | 标识符、注册表、数学、NBT、协议编解码、世界数据结构 |
+| `Sharpcraft.Framework` | 外围（引擎） | 无（只依赖 BCL） | WGPU 抽象、窗口、输入、资源加载、音频后端、性能基建 |
+| `Sharpcraft.Client` | Client | Common, Framework | 渲染表现、UI、输入、音频播放、多人会话 |
+| `Sharpcraft.Server` | Server | Common | 世界模拟、刻推进、命令、存档（仅服务原版对齐与集成服务端） |
+| `Sharpcraft.Auth` | 外围（在线服务） | Framework（存储抽象） | MSA / Xbox Live / XSTS / Minecraft 服务链路 |
+| `Sharpcraft.Launcher` | 外围（宿主） | Auth, Framework | 版本与资产获取、启动编排、多账号 |
+| `Sharpcraft.Modding` | 外围（mod API） | Common（契约类型） | 模组 API 契约、加载器、热加载宿主 |
 
 目标框架统一 `net10.0`。
 
@@ -41,7 +41,7 @@
 | --- | --- | --- |
 | B1 | `Client` 不得引用 `Server`，`Server` 不得引用 `Client` | 架构测试（反射读程序集引用） |
 | B2 | `Common` 不得引用 `Client` / `Server` / `Launcher` / `Auth` | 架构测试 |
-| B3 | `Framework` 不得引用任何 `MinecraftCSharp.*` 工程 | 架构测试 |
+| B3 | `Framework` 不得引用任何 `Sharpcraft.*` 工程 | 架构测试 |
 | B4 | `Common` 的公开 API 中不得出现 `System.Windows` / WGPU 类型 | 架构测试（类型扫描） |
 | B5 | 所有源文件首部带 SPDX 头 | 构建期脚本检查（后续加入 CI） |
 
@@ -60,13 +60,13 @@
 
 ## 6. 测试基础设施
 
-- `tests/MinecraftCSharp.Common.Tests`：Common 的单元测试与**分配测试**（xUnit，版本由 SDK 模板生成）。
-- `tests/MinecraftCSharp.Architecture.Tests`：架构规则测试，**不依赖第三方库**，同时检查 IL 引用与 csproj 声明引用。
+- `tests/Sharpcraft.Common.Tests`：Common 的单元测试与**分配测试**（xUnit，版本由 SDK 模板生成）。
+- `tests/Sharpcraft.Architecture.Tests`：架构规则测试，**不依赖第三方库**，同时检查 IL 引用与 csproj 声明引用。
 - 命名：`<被测类型>Tests`；一个测试类只覆盖一个类型；断言用 xUnit 原生 `Assert`，不引入断言库。
 
 ### 6.1 热路径分配测试（对应 AGENTS.md 3.6）
 
-- 机制：`[HotPath]`（`MinecraftCSharp.Common.Diagnostics.HotPathAttribute`）+ `AllocationAssert`（`GC.GetAllocatedBytesForCurrentThread` 差值）证明零分配。
+- 机制：`[HotPath]`（`Sharpcraft.Common.Diagnostics.HotPathAttribute`）+ `AllocationAssert`（`GC.GetAllocatedBytesForCurrentThread` 差值）证明零分配。
 - `AllocationAssert.MeasureBytes` 先执行一次预热（JIT、静态初始化、委托缓存），再测量，避免把首次调用成本计入热路径。
 - 一个 `[HotPath]` 成员没有对应分配测试 = 未验证，评审不通过。
 
@@ -89,7 +89,7 @@
 
 ## 8. 验收标准
 
-1. `dotnet build MinecraftCSharp.slnx` 全绿。
+1. `dotnet build Sharpcraft.slnx` 全绿。
 2. `dotnet test` 全绿，且架构测试能**实际拦截**越界引用（用一次故意的临时越界验证后删除）。
 3. 解决方案内 7 个游戏/宿主工程 + 2 个测试工程，无空壳歧义（每个工程至少有一个带 SPDX 头的占位文件，说明其职责）。
 4. `git status` 干净，无资产、jar、反编译产物。

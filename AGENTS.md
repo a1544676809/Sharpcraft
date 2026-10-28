@@ -1,4 +1,4 @@
-# AGENTS.md —— MinecraftCSharp 项目宪章
+# AGENTS.md —— Sharpcraft 项目宪章
 
 > 本文件是项目的**最高约束**。任何人（包括 AI 代理）在本仓库内工作前必须先阅读本文件。
 > 规则分两级：**MUST / MUST NOT** 为硬性约束，不得为"方便实现"而妥协；**SHOULD** 为默认做法，偏离时需在 PR / 提交说明中写明理由。
@@ -144,7 +144,7 @@
 ### 原则 10：许可证为 LGPL-3.0-or-later
 
 - 项目以 **GNU Lesser General Public License v3.0 or later** 发布。SPDX 标识统一写作 `LGPL-3.0-or-later`。
-- 版权声明主体为 `Copyright (C) 2026 MinecraftCSharp contributors`。
+- 版权声明主体为 `Copyright (C) 2026 Sharpcraft contributors`。
 - `LICENSE` MUST 同时包含 LGPL-3.0 附加许可全文与被其并入的 GPL-3.0 全文（只放前者是无完整授权文本的）。MUST NOT 改动许可证原文；只允许在文件头部追加项目专属说明。
 - MUST NOT 引入与本许可证不兼容的依赖（例如 GPL-2.0-only、专有许可、无许可证）。新增第三方依赖 MUST 在 `docs/decisions/` 记录许可证、版本与兼容性判断。
 - MUST 持续满足 LGPL §4 的"可替换 / 可重新链接"义务：
@@ -202,11 +202,11 @@
 
 ```
 /src
-  MinecraftCSharp.Launcher/    # 独立启动器：多账号认证、版本/资产获取、启动编排
-  MinecraftCSharp.Client/      # 客户端（可被任意启动器以命令行启动）
-  MinecraftCSharp.Server/      # 服务端侧（集成服务端 / 权威逻辑）
-  MinecraftCSharp.Common/      # 跨侧共享
-  MinecraftCSharp.Auth/        # 认证库：MSA / Xbox Live / XSTS / Minecraft 服务
+  Sharpcraft.Launcher/    # 独立启动器：多账号认证、版本/资产获取、启动编排
+  Sharpcraft.Client/      # 客户端（可被任意启动器以命令行启动）
+  Sharpcraft.Server/      # 服务端侧（集成服务端 / 权威逻辑）
+  Sharpcraft.Common/      # 跨侧共享
+  Sharpcraft.Auth/        # 认证库：MSA / Xbox Live / XSTS / Minecraft 服务
 /src/Framework                 # 引擎层：WGPU 渲染、窗口、输入、资源、音频、性能基建
 /src/Modding                   # 模组 API 契约 + 加载器 + 热加载宿主
 /tools                         # jar 分析工具、资产提取器（不含产物）
@@ -217,7 +217,7 @@ LICENSE                        # LGPL-3.0-or-later 附加许可 + 并入的 GPL-
 ```
 
 - 目录名、程序集划分 `[待定]`，待分析结果与评审确认后定稿。
-- `MinecraftCSharp.Auth` 被启动器与客户端共用，但 MUST NOT 被 `Common` / 游戏逻辑依赖。
+- `Sharpcraft.Auth` 被启动器与客户端共用，但 MUST NOT 被 `Common` / 游戏逻辑依赖。
 - `tools`、`docs`、`benchmarks` MUST NOT 承载任何原始代码或资产。
 
 ### 3.4 分析与文档产出
@@ -255,7 +255,7 @@ LICENSE                        # LGPL-3.0-or-later 附加许可 + 并入的 GPL-
   - 单元测试：`dotnet test --no-build`
 - **禁止压制编译器警告**：代理 MUST NOT 使用 `#pragma warning disable` 或工程级 `NoWarn` 掩盖任何警告；`[SuppressMessage]` 仅允许在**确属误报或有意为之**时使用，且 MUST 满足：带 `Justification`、同一次提交内在 `docs/decisions/` 记录理由、经人工批准。测试工程同样适用，不得整工程放行。
 - **Trim / AOT 分析器随运行时形态定稿启用**：运行时形态（原则 1、待决项 1）未定前，`EnableAotAnalyzer` / `EnableTrimAnalyzer` 保持关闭，避免为"可能永不采用的形态"产出无法抑制的警告。定稿时随 ADR 一并启用并清偿存量。
-- **热路径编码禁令**：热路径指被 `<see cref="HotPathAttribute"/>`（`MinecraftCSharp.Common.Diagnostics.HotPathAttribute`）标记的方法，或其直接调用的稳态循环体。热路径内的判定标准是**稳态零分配**：
+- **热路径编码禁令**：热路径指被 `<see cref="HotPathAttribute"/>`（`Sharpcraft.Common.Diagnostics.HotPathAttribute`）标记的方法，或其直接调用的稳态循环体。热路径内的判定标准是**稳态零分配**：
   - MUST NOT 使用 LINQ、`string.Format`、非常量字符串拼接、装箱、闭包捕获、未池化的集合分配。
   - `yield return`、`foreach` 等语法形态本身不构成违规，判定依据是"是否产生分配"，由分配测试证明，不靠语法直觉。
   - 每个 `[HotPath]` 成员 MUST 有对应的分配测试（`GC.GetAllocatedBytesForCurrentThread` 前后差值 = 0），否则视为未验证。

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sharpcraft.Auth\Sharpcraft.Auth.csproj" />
+    <ProjectReference Include="..\Sharpcraft.Client\Sharpcraft.Client.csproj" />
+    <ProjectReference Include="..\Sharpcraft.Common\Sharpcraft.Common.csproj" />
+    <ProjectReference Include="..\Sharpcraft.Framework\Sharpcraft.Framework.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 状态：[已接受]
 日期：2026-10-28
@@ -14,7 +14,7 @@ T-034 把资源解析层放在启动器（外围宿主层），并计划由启�
 
 ## 决策
 
-1. **资源加载归 `MinecraftCSharp.Client`**：`IAssetSource`、`AssetStack`、`ResourcePath`/`ResourceLookup`、zip/目录/官方索引/内置兜底四个来源、以及包容器契约（`AssetPackManifest`）全部落在 `Client/Assets/`。
+1. **资源加载归 `Sharpcraft.Client`**：`IAssetSource`、`AssetStack`、`ResourcePath`/`ResourceLookup`、zip/目录/官方索引/内置兜底四个来源、以及包容器契约（`AssetPackManifest`）全部落在 `Client/Assets/`。
 2. **图集在客户端构建**：从包栈发现精灵 → 拼图 → 上传纹理。启动器**不再**预生成图集。
 3. **启动器保留校验与打包职责**：`launch` / `assets` 仍由启动器驱动（jar 校验、pack 打包、索引 id 比对），它通过**已有的** `Launcher → Client` 引用复用同一份解析代码，不存在两套实现。
 4. **边界不变**：`Client` 不得引用 `Launcher`（架构门禁 B1-B3 继续强制）；资源层只用 `Common`（`Identifier`）与 `System.*`，不引入宿主类型。
@@ -26,7 +26,7 @@ T-034 把资源解析层放在启动器（外围宿主层），并计划由启�
 | --- | --- | --- | --- |
 | **客户端持有资源层与图集**（采纳） | 与原版一致；资源包天然生效；一处实现 | 客户端要认识 pack 容器格式 | 采纳 |
 | 启动器预生成图集 | 客户端最简单 | 资源包一变就失效，正是所有者指出的问题 | 否决 |
-| 新建独立 `MinecraftCSharp.Resources` 项目 | 归属更中性 | 现有 `Launcher → Client` 引用已存在，多一个项目只增加门禁与文档成本，收益不明确 | 暂不采纳，若将来换启动器再考虑 |
+| 新建独立 `Sharpcraft.Resources` 项目 | 归属更中性 | 现有 `Launcher → Client` 引用已存在，多一个项目只增加门禁与文档成本，收益不明确 | 暂不采纳，若将来换启动器再考虑 |
 | 客户端与启动器各写一份解析 | 互不牵连 | 两套路径规则必然漂移 | 否决 |
 
 ## 后果

@@ -1,12 +1,12 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 状态：[已评审]
 基线：Minecraft 26.3（认证链路不随游戏版本变化，按官方公开接口实现）
 最后更新：2026-10-28
 授权：用户于 2026-10-28 明确要求"优先走设备码流程，可以继续做"，作为本模块评审通过依据。
 
-# 认证模块（MinecraftCSharp.Auth）
+# 认证模块（Sharpcraft.Auth）
 
 负责"从微软账号到 Minecraft 会话令牌"的完整链路，供启动器与客户端共用。
 
@@ -83,7 +83,7 @@
 
 - 令牌、刷新令牌、会话令牌**一律不得**出现在日志、异常消息、遥测中；日志只允许出现账号标识的哈希或长度。
 - **开发阶段允许持久化令牌**（用户 2026-10-28 明确授权），但必须同时满足：
-  - 位置在仓库之外：默认 `%LOCALAPPDATA%/MinecraftCSharp/tokens.json`；
+  - 位置在仓库之外：默认 `%LOCALAPPDATA%/Sharpcraft/tokens.json`；
   - `TokenStore.EnsureOutsideRepository` 会向上查找 `.git`，一旦路径落在工作树内直接抛错；
   - `.gitignore` 额外屏蔽 `tokens.json` / `*tokens.json` 作为第二道防线；
   - 非 Windows 平台把文件权限收窄到当前用户（best effort）。
@@ -116,7 +116,7 @@
 ## 10. 手工验收
 
 ```
-dotnet run --project src/MinecraftCSharp.Launcher -- login
+dotnet run --project src/Sharpcraft.Launcher -- login
 ```
 
 1. 打开输出提示的 `https://www.microsoft.com/link`，输入显示的用户码；

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sharpcraft.Framework\Sharpcraft.Framework.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Transport retry and request shaping are internal plumbing; the tests exercise them directly. -->
+    <InternalsVisibleTo Include="Sharpcraft.Auth.Tests" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

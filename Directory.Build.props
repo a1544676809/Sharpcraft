@@ -10,8 +10,8 @@
     <AnalysisLevel>latest</AnalysisLevel>
     <!-- AGENTS.md 3.6: warnings are errors by default. Suppressions require a recorded justification. -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <Company>MinecraftCSharp contributors</Company>
-    <Product>MinecraftCSharp</Product>
+    <Company>Sharpcraft contributors</Company>
+    <Product>Sharpcraft</Product>
     <NeutralLanguage>en</NeutralLanguage>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>

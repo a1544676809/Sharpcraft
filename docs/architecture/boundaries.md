@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 状态：[草稿]
 基线：Minecraft 26.3
@@ -115,12 +115,12 @@
 
 | C# 目标 | 承接内容 |
 | --- | --- |
-| `MinecraftCSharp.Common` | `core`（registry/组件）、`util`、`nbt`、`tags`、`resources`、`network`（协议与编解码）、`world.phys`、`world.item` 数据部分、`world.entity` 类型与同步数据、`world.level` 数据结构 |
-| `MinecraftCSharp.Client` | `client.*` 全部、`gizmos`、`realms`、实体/方块/物品的模型与渲染、UI、输入、音频表现 |
-| `MinecraftCSharp.Server` | `server.*`、`commands`、`advancements`、`world.level.block` 行为部分、`world.entity.ai`、区块刻与光照重算、存档 |
+| `Sharpcraft.Common` | `core`（registry/组件）、`util`、`nbt`、`tags`、`resources`、`network`（协议与编解码）、`world.phys`、`world.item` 数据部分、`world.entity` 类型与同步数据、`world.level` 数据结构 |
+| `Sharpcraft.Client` | `client.*` 全部、`gizmos`、`realms`、实体/方块/物品的模型与渲染、UI、输入、音频表现 |
+| `Sharpcraft.Server` | `server.*`、`commands`、`advancements`、`world.level.block` 行为部分、`world.entity.ai`、区块刻与光照重算、存档 |
 | `/src/Framework` | WGPU 渲染抽象、窗口、输入、资源加载、音频后端、性能基础设施 |
 | `/src/Modding` | 模组 API 契约与热加载宿主 |
-| `MinecraftCSharp.Auth` / `Launcher` | 认证链路、版本与资产获取、启动编排 |
+| `Sharpcraft.Auth` / `Launcher` | 认证链路、版本与资产获取、启动编排 |
 
 此表与 AGENTS.md 3.3 的目录草案一致；程序集是否进一步细拆（如 `Common.World` / `Common.Network`）留待模块文档评审时决定。
 

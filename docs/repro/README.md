@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 # 最小复现用例库（Repro）
 
@@ -16,7 +16,7 @@ AGENTS.md 原则 12：修复缺陷前必须先落一个**最小复现用例**，
 
 ```csharp
 // SPDX-License-Identifier: LGPL-3.0-or-later
-// Copyright (C) 2026 MinecraftCSharp contributors
+// Copyright (C) 2026 Sharpcraft contributors
 
 using Xunit;
 

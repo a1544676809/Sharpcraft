@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 状态：[已接受]
 日期：2026-10-28
@@ -18,7 +18,7 @@
 
 1. **jar 内置资产 → 单文件包（pack）**，不再散装。
    - 容器：**zip（deflate）**，内含 `manifest.json`（条目 → 源条目、长度、SHA-256、提取时间）与 payload 条目。
-   - 命名与位置：`<userData>/MinecraftCSharp/packs/minecraft-<基线版本>-<packSha256 前 12 位>.pack.zip`，仓库外。
+   - 命名与位置：`<userData>/Sharpcraft/packs/minecraft-<基线版本>-<packSha256 前 12 位>.pack.zip`，仓库外。
    - 原子发布：先写 `*.tmp`，校验通过后重命名；pack 名含自身哈希，因此"同名即同内容"。
 2. **音频（以及经实测确认走索引的其它类别）沿用官方资产索引**，不复制、不转存。
    - 读取官方 `indexes/<id>.json` + `assets/objects/<前两位>/<哈希>`，只读挂载。

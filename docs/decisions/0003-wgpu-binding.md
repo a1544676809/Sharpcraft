@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 状态：[已接受]
 日期：2026-10-28
@@ -14,7 +14,7 @@
 
 1. **绑定**：`Brew.Wgpu` 29.0.0.5（ClangSharp 从 wgpu-native 头文件生成的托管绑定 + 同版本 `wgpu_native` 二进制）。
 2. **首帧路径**：**离屏渲染**（离屏纹理 → 渲染一个方块面批次 → `copy_texture_to_buffer` → 回读 → 存 PNG）。窗口与输入层留到后续里程碑。
-3. 所有 WGPU 调用只出现在 `MinecraftCSharp.Framework`（引擎层），游戏逻辑与 `Client` 不得持有 wgpu 句柄。
+3. 所有 WGPU 调用只出现在 `Sharpcraft.Framework`（引擎层），游戏逻辑与 `Client` 不得持有 wgpu 句柄。
 
 ## 许可与合规
 
@@ -46,7 +46,7 @@
 
 ## 后果
 
-- `MinecraftCSharp.Framework` 依赖 `Brew.Wgpu`；`Client` / `Common` 不变。
+- `Sharpcraft.Framework` 依赖 `Brew.Wgpu`；`Client` / `Common` 不变。
 - 顶点由 CPU 变换到裁剪空间，着色器只做直通；uniform / 绑定组留到相机与光照跟进时引入。
 - 首帧验收为"生成 PNG 并与预期特征比对"（清屏色、方块面占比），不依赖窗口系统，可在无显示环境运行（有 GPU/驱动即可）。
 - 无可用 adapter 时必须**明确报错并给出可操作提示**，不得静默降级为软件渲染（原则 9：行为偏差需受控）。

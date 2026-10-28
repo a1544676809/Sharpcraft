@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 状态：[草稿]
 基线：Minecraft 26.3
@@ -92,7 +92,7 @@
 
 最后两行**实证了 §5 的推断**：`BooleanProperty` 的取值顺序是 `[true, false]`（真在前）。这是最容易写反的一处，且一旦写反，整类方块的状态 id 会整体偏移。
 
-方块顺序快照入库为 `tests/MinecraftCSharp.Common.Tests/TestData/vanilla-block-order.txt`（纯标识符清单，不含资产），由 `RegistryOrderTests` 钉住"id 跟随注册顺序且顺序非字典序"。
+方块顺序快照入库为 `tests/Sharpcraft.Common.Tests/TestData/vanilla-block-order.txt`（纯标识符清单，不含资产），由 `RegistryOrderTests` 钉住"id 跟随注册顺序且顺序非字典序"。
 
 ## 8. 待验证
 

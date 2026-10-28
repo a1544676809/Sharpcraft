@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 状态：[已评审]
 基线：Minecraft 26.3
@@ -52,7 +52,7 @@
 ## 5. 输出布局（全部在仓库外）
 
 ```
-<userData>/MinecraftCSharp/
+<userData>/Sharpcraft/
   packs/
     minecraft-26.3-<packSha256 前 12 位>.pack.zip     # 单个包，内含 manifest.json 与资产条目
   cache/

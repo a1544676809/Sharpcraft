@@ -1,12 +1,12 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Copyright (C) 2026 MinecraftCSharp contributors -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
 
 状态：[已评审]
 基线：Minecraft 26.3
 最后更新：2026-10-28
 授权：用户 2026-10-28 要求"优先走设备码流程，可以继续做"，并同意用最小 CLI 做人工验收。
 
-# 启动器模块（MinecraftCSharp.Launcher）
+# 启动器模块（Sharpcraft.Launcher）
 
 独立跨平台启动器：认证、版本/资产获取、参数装配、进程启动。**本阶段只实现"认证验收切片"**，其余待决策项就绪后再做。
 
@@ -15,7 +15,7 @@
 负责：
 
 - 命令行入口与子命令分发（`login` / `probe` / `help`）。
-- `login`：驱动 `MinecraftCSharp.Auth` 完成设备码登录，输出账号档案名与 UUID。
+- `login`：驱动 `Sharpcraft.Auth` 完成设备码登录，输出账号档案名与 UUID。
 - `probe`：对服务器做状态查询（复用 `Common` 的网络层），用于诊断。
 
 明确不负责（本阶段）：
@@ -48,7 +48,7 @@
 
 ## 4. 令牌处理
 
-- 开发阶段**允许本机缓存**（用户 2026-10-28 授权）：默认 `%LOCALAPPDATA%/MinecraftCSharp/tokens.json`，仓库外、`TokenStore` 拒绝工作树内路径、`.gitignore` 二次屏蔽。
+- 开发阶段**允许本机缓存**（用户 2026-10-28 授权）：默认 `%LOCALAPPDATA%/Sharpcraft/tokens.json`，仓库外、`TokenStore` 拒绝工作树内路径、`.gitignore` 二次屏蔽。
 - 令牌不出现在日志与异常中；`play`/`login` 输出只含档案名与 UUID。
 - 错误输出只包含分类原因与服务码，不含令牌片段。
 - 持久化与安全存储属于后续工作（原则 7），需先有平台实现方案。

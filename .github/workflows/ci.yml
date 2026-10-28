@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-# Copyright (C) 2026 MinecraftCSharp contributors
+# Copyright (C) 2026 Sharpcraft contributors
 #
 # CI gate (AGENTS.md 3.6 + principle 12):
 #   - warnings are errors (enforced by Directory.Build.props)
@@ -27,13 +27,13 @@ jobs:
           global-json-file: global.json
 
       - name: Restore
-        run: dotnet restore MinecraftCSharp.slnx
+        run: dotnet restore Sharpcraft.slnx
 
       - name: Build (warnings as errors)
-        run: dotnet build MinecraftCSharp.slnx -c Release --no-restore
+        run: dotnet build Sharpcraft.slnx -c Release --no-restore
 
       - name: Test (architecture + drift + unit)
-        run: dotnet test MinecraftCSharp.slnx -c Release --no-build --logger "trx;LogFileName=results.trx"
+        run: dotnet test Sharpcraft.slnx -c Release --no-build --logger "trx;LogFileName=results.trx"
 
       - name: Compliance guard (no jars, no assets, no decompiled sources)
         shell: pwsh
