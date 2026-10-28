@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# Copyright (C) 2026 MinecraftCSharp contributors
+
+# ---- Minecraft assets, jars, extracted data (AGENTS.md principle 3) ----
+# These must never enter the repository or its history.
+*.jar
+/assets/
+/minecraft/
+/versions/
+/libraries/
+/extracted/
+/extracted-assets/
+/run/assets/
+
+# ---- Analysis workspace (decompiler output, unpacked jars) ----
+# Must live outside the repo; these entries are a safety net, not a permission.
+/analysis-workspace/
+/decompiled/
+/unpacked/
+/workbench/
+*.class
+
+# ---- .NET build output ----
+bin/
+obj/
+artifacts/
+publish/
+*.user
+*.suo
+.vs/
+.idea/
+*.nupkg
+*.binlog
+TestResults/
+
+# ---- OS / editor noise ----
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# ---- Local secrets and logs ----
+.env
+*.log
+/.dsh/
