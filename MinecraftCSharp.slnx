@@ -38,4 +38,7 @@
     <Project Path="tests/MinecraftCSharp.Framework.Tests/MinecraftCSharp.Framework.Tests.csproj" />
     <Project Path="tests/MinecraftCSharp.Common.Tests/MinecraftCSharp.Common.Tests.csproj" />
   </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/MinecraftCSharp.Benchmarks/MinecraftCSharp.Benchmarks.csproj" />
+  </Folder>
 </Solution>

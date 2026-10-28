@@ -108,6 +108,7 @@
 | [`traceability.md`](traceability.md) | 追踪矩阵：规格章节 ↔ 测试 ↔ 代码目录 | 活文档 |
 | [`risks.md`](risks.md) | 风险登记册 | 活文档 |
 | [`specs/quality-attributes.md`](specs/quality-attributes.md) | 可测质量属性：性能、协议、热加载、跨平台 | 草稿 |
+| [`specs/performance-baseline.md`](specs/performance-baseline.md) | 性能基线与测量口径（基准套件、噪声源、阈值建议） | 待评审 |
 | [`specs/network/README.md`](specs/network/README.md) | 网络协议规格入口（协议 777 契约） | 草稿 |
 | [`specs/network/primitives-varint.md`](specs/network/primitives-varint.md) | VarInt / VarLong 与帧长度前缀 | 草稿 |
 | [`specs/network/primitives-strings.md`](specs/network/primitives-strings.md) | UTF-8 字符串与标识符编码 | 草稿 |
