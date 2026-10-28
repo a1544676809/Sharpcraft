@@ -3,7 +3,7 @@
 
 状态：[草稿]
 基线：Minecraft 26.3
-证据：`E:\mcanalysis\26.3`（entries.csv、src 反编译工作区、logs）
+证据：`ref://mc-26.3-analysis`（entries.csv、src 反编译工作区、logs）
 最后更新：2026-10-28
 
 # 26.3 jar 架构总览（第一轮：结构摸底）
@@ -141,7 +141,7 @@ jar 根还有一个 `assets/.mcassetsroot` 与 `data/.mcassetsroot`（0 字节�
 
 ## 10. 证据指针
 
-- 条目清单：`E:\mcanalysis\26.3\entries.csv`（34,227 条，含路径/大小/压缩后大小）。
-- 反编译源码：`E:\mcanalysis\26.3\src`（7,301 个 .java，Vineflower 1.12.0）。
-- 反编译日志：`E:\mcanalysis\26.3\logs\decompile-vineflower.log`。
+- 条目清单：`ref://mc-26.3-analysis/entries.csv`（34,227 条，含路径/大小/压缩后大小）。
+- 反编译源码：`ref://mc-26.3-analysis/src`（7,301 个 .java，Vineflower 1.12.0）。
+- 反编译日志：`ref://mc-26.3-analysis/logs/decompile-vineflower.log`。
 - 启动器元数据：`E:\Games\minecraft\.minecraft\versions\26.3\26.3.json`。

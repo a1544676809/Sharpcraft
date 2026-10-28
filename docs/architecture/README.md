@@ -3,7 +3,7 @@
 
 状态：[草稿]
 基线：Minecraft 26.3
-证据：`E:\mcanalysis\26.3\reports`
+证据：`ref://mc-26.3-analysis/reports`
 最后更新：2026-10-28
 
 # 架构（Architecture）

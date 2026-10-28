@@ -2,11 +2,19 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 MinecraftCSharp contributors -->
 <!--
-  Solution entry point for Visual Studio 2026 / dotnet CLI.
+  Solution template for Visual Studio 2026 / dotnet CLI.
 
-  Projects are added as they are created, following the layout in AGENTS.md 3.3.
-  Keep folder names identical to the directory names so that `dotnet sln` and
-  Visual Studio show the same tree.
+  This file is the single entry point for build and debug (AGENTS.md 3.6), and it
+  fixes the layout up front so new projects slot into an existing group instead of
+  being appended ad hoc:
+
+    /src/     game and host assemblies   (docs/architecture/boundaries.md)
+    /tests/   unit, architecture and allocation tests
+
+  Rules for adding a project:
+    1. Directory must be src/<AssemblyName>/ or tests/<AssemblyName>/, matching the .csproj name.
+    2. Add the <Project> entry to the matching folder, keeping entries alphabetical.
+    3. Project references must satisfy B1-B3; tests/MinecraftCSharp.Architecture.Tests fails the build otherwise.
 -->
 <Solution>
   <Configurations>

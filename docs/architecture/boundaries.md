@@ -3,7 +3,7 @@
 
 状态：[草稿]
 基线：Minecraft 26.3
-证据：`E:\mcanalysis\26.3\reports\{edges.csv, summary.json, client_coupled.csv}`，工具 `tools/analysis/package_deps.py`
+证据：`ref://mc-26.3-analysis/reports/{edges.csv, summary.json, client_coupled.csv}`，工具 `tools/analysis/package_deps.py`
 最后更新：2026-10-28
 
 # 三侧边界划分（Client / Server / Common / 外围宿主层）
@@ -15,7 +15,7 @@
 | 编号 | 规则 | 依据 |
 | --- | --- | --- |
 | R1 | 引用 `net.minecraft.client.*` 的代码**不可能是 Common 或 Server**，必须归 Client 或拆分 | 原则 5 单向依赖；原版自身遵守（见 R2） |
-| R2 | 原版事实：`net.minecraft.*` 中除 `client` 自身外，**只有 `net.minecraft.realms`（4 类 / 10 次引用）** 触碰客户端类型 | 全量扫描 565 个包、8,692 条包级依赖边 |
+| R2 | 原版事实：`net.minecraft.*` 中除 `client` 自身外，**只有 `net.minecraft.realms`（4 类 / 10 次引用）** 触碰客户端类型 | 全量扫描 565 个包、9,745 条包级依赖边 |
 | R3 | 引擎与平台设施（`com.mojang.renderpearl`、`com.mojang.blaze3d`、`com.mojang.math`）不属于三侧，归**外围宿主层** | 它们被客户端与整合服务端共用，但语义上不是游戏逻辑 |
 | R4 | 工具链（`net.minecraft.data`、`gametest`、`client.data`、`server.dedicated`）归外围宿主层，不进入运行时客户端 | 数据生成器与测试框架不是运行时路径 |
 | R5 | 依赖方向只允许 `Client` / `Server` → `Common`；`Common` 内不得出现反向引用 | 原则 5 |
@@ -23,7 +23,7 @@
 
 ## 2. 证据方法与局限
 
-- 方法：对 7,301 个反编译源文件提取 `package` 声明、`import` 与全限定名引用，构建包级依赖图（8,692 条边），按前缀统计"依赖 Client / 依赖 Server / 被 Client 引用 / 被 Server 引用"。
+- 方法：对 7,301 个反编译源文件提取 `package` 声明、`import` 与全限定名引用，构建包级依赖图（9,745 条边，565 个包），按方向统计"依赖 Client / 依赖 Server / 被 Client 引用 / 被 Server 引用"。引用解析以**已知类型全名**为锚点（不是前缀表），因此同一输入重复运行结果逐字节一致。
 - 局限 1：只看 import 与全限定名，**接口回调式的运行期耦合不可见**。
 - 局限 2：反编译器可能内联全限定名，个别边权偏高；因此本文只用"是否为 0"这类方向性判据，不用绝对数值下强结论。
 - 结论强度：R2 属"零 vs 非零"级证据，可直接作为规则；其余归属判断为方向性证据 + 结构判断，标注置信度。
@@ -34,37 +34,38 @@
 
 | 包 | 类数 | 依赖 Client | 依赖 Server | 依赖引擎 | 被 Client 用 | 被 Server 用 | 判定 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `net.minecraft.client` | 1,891 | 4,340 | 188 | 743 | — | 0 | Client |
-| `net.minecraft.world.level` | 1,418 | 0 | 287 | 5 | 499 | 242 | Common（偏客户端消费） |
-| `net.minecraft.util` | 735 | 0 | 15 | 0 | 723 | 149 | Common |
-| `net.minecraft.world.entity` | 727 | 0 | 310 | 1 | 466 | 101 | Common（数据在此，行为需拆） |
-| `net.minecraft.server` | 432 | 0 | 612 | 0 | 188 | — | Server |
-| `net.minecraft.network` | 416 | 0 | 18 | 0 | 392 | 245 | Common |
-| `net.minecraft.world.item` | 323 | 0 | 78 | 0 | 291 | 53 | Common |
-| `net.minecraft.data` | 174 | 0 | 10 | 0 | 14 | 3 | 外围（数据生成） |
-| `com.mojang.renderpearl` | 146 | 2 | 0 | 249 | 193 | 0 | 外围（渲染引擎） |
-| `com.mojang.realmsclient` | 137 | 184 | 0 | 218 | 13 | 0 | 外围（在线服务，客户端侧） |
-| `net.minecraft.commands` | 124 | 0 | 34 | 0 | 11 | 250 | Server |
-| `net.minecraft.core` | 123 | 0 | 27 | 1 | 376 | 135 | Common |
+| `net.minecraft.client` | 1,891 | 4,411 | 193 | 755 | — | 0 | Client |
+| `net.minecraft.world.level` | 1,418 | 0 | 287 | 5 | 557 | 279 | Common（偏客户端消费） |
+| `net.minecraft.util` | 735 | 0 | 15 | 0 | 748 | 161 | Common |
+| `net.minecraft.world.entity` | 727 | 0 | 310 | 1 | 467 | 104 | Common（数据在此，行为需拆） |
+| `net.minecraft.server` | 432 | 0 | 415 | 0 | 193 | — | Server |
+| `net.minecraft.network` | 416 | 0 | 18 | 0 | 404 | 257 | Common |
+| `net.minecraft.world.item` | 323 | 0 | 78 | 0 | 291 | 41 | Common |
+| `net.minecraft.data` | 174 | 0 | 11 | 0 | 14 | 3 | 外围（数据生成） |
+| `com.mojang.renderpearl` | 146 | 2 | 0 | 230 | 194 | 0 | 外围（渲染引擎） |
+| `com.mojang.realmsclient` | 137 | 206 | 0 | 205 | 14 | 0 | 外围（在线服务） |
+| `net.minecraft.commands` | 124 | 0 | 35 | 0 | 11 | 257 | Server |
+| `net.minecraft.core` | 123 | 0 | 29 | 1 | 385 | 141 | Common |
 | `net.minecraft.advancements` | 115 | 0 | 83 | 0 | 8 | 12 | Server |
-| `com.mojang.blaze3d` | 86 | 26 | 5 | 69 | 433 | 0 | 外围（渲染引擎） |
+| `com.mojang.blaze3d` | 86 | 26 | 5 | 67 | 443 | 0 | 外围（渲染引擎） |
 | `net.minecraft.world.inventory` | 64 | 0 | 16 | 0 | 47 | 2 | Common（菜单/容器定义） |
-| `net.minecraft.gametest` | 48 | 0 | 26 | 0 | 1 | 2 | 外围（测试框架） |
+| `net.minecraft.gametest` | 48 | 0 | 27 | 0 | 1 | 2 | 外围（测试框架） |
 | `net.minecraft.nbt` | 43 | 0 | 0 | 0 | 17 | 20 | Common |
 | `net.minecraft.world.attribute` | 30 | 0 | 0 | 0 | 10 | 3 | Common |
 | `net.minecraft.tags` | 29 | 0 | 3 | 0 | 26 | 11 | Common |
 | `net.minecraft.world.phys` | 28 | 0 | 0 | 2 | 151 | 31 | Common |
+| `net.minecraft.world` | 25 | 0 | 1 | 0 | 24 | 25 | Common |
 | `net.minecraft.world.effect` | 20 | 0 | 16 | 0 | 14 | 6 | Common |
-| `net.minecraft.world.scores` | 16 | 0 | 0 | 0 | 10 | 14 | Common（Server 权威、Client 读取） |
-| `net.minecraft.gizmos` | 15 | 0 | 0 | 0 | 34 | 0 | Common（仅客户端消费，26.3 新增） |
+| `net.minecraft.scores` | 16 | 0 | 0 | 0 | 10 | 14 | Common（Server 权威、Client 读取） |
+| `net.minecraft.gizmos` | 15 | 0 | 0 | 0 | 34 | 0 | Common（仅客户端消费） |
 | `net.minecraft.resources` | 12 | 0 | 7 | 0 | 466 | 68 | Common |
-| `net.minecraft.stats` | 10 | 0 | 3 | 0 | 8 | 2 | Common |
 | `net.minecraft.world.clock` | 11 | 0 | 2 | 0 | 2 | 3 | Common（26.3 新增） |
-| `net.minecraft.world.waypoints` | 9 | 0 | 1 | 0 | 6 | 3 | Common（26.3 新增） |
 | `com.mojang.math` | 10 | 0 | 0 | 0 | 104 | 0 | 外围（数学库） |
+| `net.minecraft.stats` | 10 | 0 | 3 | 0 | 8 | 2 | Common |
+| `net.minecraft.world.waypoints` | 9 | 0 | 1 | 0 | 6 | 3 | Common（26.3 新增） |
 | `net.minecraft.world.food` | 6 | 0 | 1 | 0 | 1 | 0 | Common |
 | `net.minecraft.sounds` | 6 | 0 | 0 | 0 | 49 | 7 | Common |
-| `net.minecraft.references` | 5 | 0 | 0 | 0 | 0 | 0 | `[待分析]`（无引用，可能为注册表常量） |
+| `net.minecraft.references` | 5 | 0 | 0 | 0 | 0 | 0 | `[待分析]` |
 | `net.minecraft.world.timeline` | 5 | 0 | 0 | 0 | 1 | 1 | `[待分析]` |
 | `net.minecraft.realms` | 4 | 10 | 1 | 1 | 0 | 0 | **Client**（唯一违反 R1 的非 client 包） |
 
@@ -72,8 +73,8 @@
 
 1. **原版本身就严守 R1**：除 `net.minecraft.realms` 外，所有共享与服务端包对客户端类型的引用次数为 **0**。这意味着"以是否引用客户端类型划界"不是我们发明的规则，而是原版结构的直接反映，可以直接作为 C# 工程的强制检查项。
 2. **`world.*` 不是 Common 的同义词**：它们零客户端依赖（可以进 Common），但同时大量引用 Server（`world.entity.ai` 100、`world.level.block` 201），说明**权威逻辑混在共享命名空间里**。这是本项目要拆分的主体。
-3. **客户端消费面很宽**：`world.entity.animal` 被客户端引用 271 次、`resources` 466 次、`world.item` 291 次。实体/物品的具体类型必须放在 Common，客户端只做表现层引用——若把这些类型放 Client，Common 与 Server 立刻不可用。
-4. **`commands` / `advancements` 应归 Server**：被 Server 引用 250 / 12，被 Client 引用仅 11 / 8，且它们引用 Server 34 / 83。客户端侧只需要"命令补全建议"这类窄接口，不引入命令实现。
+3. **客户端消费面很宽**：`world.entity.animal` 被客户端引用 81 次、`resources` 466 次、`world.item` 291 次。实体/物品的具体类型必须放在 Common，客户端只做表现层引用——若把这些类型放 Client，Common 与 Server 立刻不可用。
+4. **`commands` / `advancements` 应归 Server**：被 Server 引用 257 / 12，被 Client 引用仅 11 / 8，且它们引用 Server 35 / 83。客户端侧只需要"命令补全建议"这类窄接口，不引入命令实现。
 5. **`gizmos` 是纯客户端消费**（34 次引用全部来自客户端）：可作为 Client 侧调试绘制模块，不需要进 Common。
 
 ## 5. 必须拆分的区域（按工作量排序）
@@ -123,7 +124,7 @@
 
 ## 9. 证据指针
 
-- 包级依赖明细：`E:\mcanalysis\26.3\reports\edges.csv`
+- 包级依赖明细：`ref://mc-26.3-analysis/reports/edges.csv`
 - 聚合表：`summary.json`、`summary.md`
 - 客户端耦合清单：`client_coupled.csv`（仅 1 条：`net.minecraft.realms`）
 - 复现：`python tools/analysis/package_deps.py --src <反编译目录> --out <报告目录>`

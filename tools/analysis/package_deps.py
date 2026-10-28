@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import re
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -35,43 +36,40 @@ SERVER_ROOT = "net.minecraft.server"
 ENGINE_PREFIX = "com.mojang."
 
 
-def known_packages(root: Path) -> tuple[set[str], dict[str, int]]:
-    """Return the set of packages that own at least one source file, plus file counts."""
+def known_packages(root: Path) -> tuple[set[str], dict[str, int], dict[str, str]]:
+    """Return owning packages, per-package file counts, and a type-name index."""
     packages: Counter[str] = Counter()
-    for path in root.rglob("*.java"):
+    type_index: dict[str, str] = {}
+    for path in sorted(root.rglob("*.java")):
         rel = path.relative_to(root)
         if len(rel.parts) < 2:
             continue
-        packages[".".join(rel.parts[:-1])] += 1
-    return set(packages), dict(packages)
+        package = ".".join(rel.parts[:-1])
+        packages[package] += 1
+        type_index.setdefault(package + "." + path.stem, package)
+    return set(packages), dict(packages), type_index
 
 
-def load_known_prefixes(packages: set[str]) -> dict[str, str]:
-    """Map every dotted package prefix (longest first) back to a known package."""
-    table: dict[str, str] = {}
-    for pkg in packages:
-        parts = pkg.split(".")
-        for i in range(len(parts), 2, -1):
-            table.setdefault(".".join(parts[:i]), pkg)
-    return table
+def resolve_package(reference: str, type_index: dict[str, str]) -> str | None:
+    """Resolve a reference to the package that owns it.
 
-
-def resolve_package(reference: str, table: dict[str, str]) -> str | None:
-    """Resolve a type/member reference to the package that owns it."""
+    Resolution is anchored on known *type* names (package + file stem) instead of
+    dotted prefixes: prefix tables depend on iteration order and made the whole
+    report non-reproducible between runs.
+    """
     parts = reference.split(".")
     for i in range(len(parts), 2, -1):
-        candidate = ".".join(parts[:i])
-        if candidate in table:
-            return table[candidate]
+        owner = type_index.get(".".join(parts[:i]))
+        if owner is not None:
+            return owner
     return None
 
 
 def scan(root: Path) -> tuple[Counter[tuple[str, str]], dict[str, int]]:
-    packages, file_counts = known_packages(root)
-    prefixes = load_known_prefixes(packages)
+    packages, file_counts, type_index = known_packages(root)
     edges: Counter[tuple[str, str]] = Counter()
 
-    for path in root.rglob("*.java"):
+    for path in sorted(root.rglob("*.java")):
         rel = path.relative_to(root)
         if len(rel.parts) < 2:
             continue
@@ -83,11 +81,11 @@ def scan(root: Path) -> tuple[Counter[tuple[str, str]], dict[str, int]]:
 
         targets: set[str] = set()
         for match in IMPORT_DECL.finditer(text):
-            resolved = resolve_package(match.group(1), prefixes)
+            resolved = resolve_package(match.group(1), type_index)
             if resolved:
                 targets.add(resolved)
         for match in FULLY_QUALIFIED.finditer(text):
-            resolved = resolve_package(match.group(1), prefixes)
+            resolved = resolve_package(match.group(1), type_index)
             if resolved:
                 targets.add(resolved)
 
@@ -171,22 +169,42 @@ def classify(pkg: str, stats: dict) -> str:
     return "Common(isolated)"
 
 
+def default_analysis_root() -> Path:
+    """Resolve the external analysis workspace (AGENTS.md 3.6).
+
+    ``MC_ANALYSIS_ROOT`` wins; otherwise the sibling directory of the repository
+    checkout is used, i.e. ``ref://mc-26.3-analysis`` -> ``<repo>/../mc-26.3-analysis``.
+    """
+    configured = os.environ.get("MC_ANALYSIS_ROOT")
+    if configured:
+        return Path(configured)
+    repository_root = Path(__file__).resolve().parents[2]
+    return repository_root.parent / "mc-26.3-analysis"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--src", required=True, type=Path)
-    parser.add_argument("--out", required=True, type=Path)
+    parser.add_argument("--root", type=Path, default=default_analysis_root(),
+                        help="analysis workspace root (default: $MC_ANALYSIS_ROOT or ../mc-26.3-analysis)")
+    parser.add_argument("--src", type=Path, default=None, help="decompiled sources (default: <root>/src)")
+    parser.add_argument("--out", type=Path, default=None, help="report directory (default: <root>/reports)")
+    parser.add_argument("--quiet", action="store_true", help="suppress the markdown tables (CI friendly)")
     args = parser.parse_args()
 
-    root: Path = args.src
+    root_arg: Path = args.root
+    src_dir: Path = args.src or (root_arg / "src")
+    out_dir: Path = args.out or (root_arg / "reports")
+
+    root: Path = src_dir
     if not root.is_dir():
         print(f"source directory not found: {root}")
         return 2
 
     edges, file_counts = scan(root)
     stats = summarize(edges, file_counts)
-    args.out.mkdir(parents=True, exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    with (args.out / "edges.csv").open("w", newline="", encoding="utf-8") as handle:
+    with (out_dir / "edges.csv").open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
         writer.writerow(["source_package", "target_package", "weight"])
         for (src, dst), weight in sorted(edges.items(), key=lambda kv: (-kv[1], kv[0])):
@@ -237,7 +255,7 @@ def main() -> int:
         rows.append({"package": key, **bucket, "side": classify(key, synthetic)})
     rows.sort(key=lambda row: -row["classes"])
 
-    with (args.out / "summary.json").open("w", encoding="utf-8") as handle:
+    with (out_dir / "summary.json").open("w", encoding="utf-8") as handle:
         json.dump({"groups": rows, "edge_count": len(edges),
                    "package_count": len(file_counts)}, handle, indent=2, ensure_ascii=False)
 
@@ -252,7 +270,7 @@ def main() -> int:
         return header + body
 
     top = [r for r in rows if r["classes"] >= 8]
-    (args.out / "summary.md").write_text(md_table(top), encoding="utf-8")
+    (out_dir / "summary.md").write_text(md_table(top), encoding="utf-8")
 
     print(f"packages={len(file_counts)} edges={len(edges)} groups={len(rows)}")
 
@@ -262,15 +280,16 @@ def main() -> int:
     for (src, dst), weight in edges.items():
         if is_client(dst) and not is_client(src) and not is_engine(src):
             coupled[src] += weight
-    with (args.out / "client_coupled.csv").open("w", newline="", encoding="utf-8") as handle:
+    with (out_dir / "client_coupled.csv").open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
         writer.writerow(["package", "client_reference_weight"])
         for pkg, weight in coupled.most_common():
             writer.writerow([pkg, weight])
     print(f"client_coupled_packages={len(coupled)}")
-    for pkg, weight in coupled.most_common(20):
-        print(f"  {pkg} {weight}")
-    print("\n" + md_table(rows[:45]))
+    if not args.quiet:
+        for pkg, weight in coupled.most_common(20):
+            print(f"  {pkg} {weight}")
+        print("\n" + md_table(rows[:45]))
     return 0
 
 

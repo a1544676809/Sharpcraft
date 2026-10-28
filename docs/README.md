@@ -5,7 +5,7 @@
 
 本目录是本项目的唯一知识库。**代码之前先有文档**：任何模块在写下第一行代码之前，其设计与分析文档必须已经落盘在这里，并且已经过评审。
 
-本文件只讲"文档怎么组织"；项目级规则以 [AGENTS.md](../AGENTS.md) 为准。
+本文件只讲"文档怎么组织"；项目级规则以 [AGENTS.md](../AGENTS.md) 为准。新会话的阅读顺序见 AGENTS.md 4.2：`AGENTS.md` → [`STATE.md`](STATE.md) → 目标模块文档，并核对 `git status` / `git log -1`。
 
 ## 目录结构
 
@@ -79,6 +79,7 @@
 
 | 文档 | 职责 | 状态 |
 | --- | --- | --- |
+| [`STATE.md`](STATE.md) | 跨会话进度锚点：里程碑、进行中、阻塞、下一步、未提交改动 | 活文档 |
 | [`analysis/README.md`](analysis/README.md) | jar 分析的组织方式与总进度 | 草稿 |
 | [`analysis/architecture/README.md`](analysis/architecture/README.md) | 整体架构分析入口与第一轮关键结论 | 草稿 |
 | [`analysis/architecture/overview.md`](analysis/architecture/overview.md) | 基线标识、分层、入口、渲染栈、三侧初判 | 草稿 |
@@ -89,5 +90,6 @@
 | [`modules/build-scaffolding.md`](modules/build-scaffolding.md) | 构建骨架：程序集划分、依赖规则、构建与测试配置 | 草稿（已实施） |
 | [`modules/common-primitives.md`](modules/common-primitives.md) | Common 基础类型：标识符、注册表、几何基元 | 草稿 |
 | [`_templates/module-doc.md`](_templates/module-doc.md) | 模块设计文档模板 | 已评审 |
+| [`_templates/state.md`](_templates/state.md) | STATE 模板 | 已评审 |
 
 （`specs/`、`decisions/`、`milestones/` 目录在首份文档落盘时创建，届时同步更新本表。）

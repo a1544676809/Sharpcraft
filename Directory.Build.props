@@ -1,6 +1,6 @@
 <Project>
 
-  <!-- Shared build settings for every project in the repository (AGENTS.md 3.5 / docs/modules/build-scaffolding.md). -->
+  <!-- Shared build settings for every project in the repository (AGENTS.md 3.5 / 3.6 / docs/modules/build-scaffolding.md). -->
   <PropertyGroup>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
@@ -8,11 +8,26 @@
     <Deterministic>true</Deterministic>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
+    <!-- AGENTS.md 3.6: warnings are errors by default. Suppressions require a recorded justification. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Company>MinecraftCSharp contributors</Company>
     <Product>MinecraftCSharp</Product>
     <NeutralLanguage>en</NeutralLanguage>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
+
+  <!--
+    AGENTS.md 3.6: trim/AOT compatibility analyzers are intentionally NOT enabled yet.
+    They cannot be enabled while the runtime form (JIT / AOT / single-file) is still
+    undecided (AGENTS.md 1, open item 1), because every pattern they flag would be a
+    warning we are not allowed to suppress.
+  -->
+  <PropertyGroup>
+    <IsTrimmable>false</IsTrimmable>
+    <EnableAotAnalyzer>false</EnableAotAnalyzer>
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+  </PropertyGroup>
+
 
   <!-- Every map/targets file stays explicit: no hidden SDK magic beyond the above. -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">

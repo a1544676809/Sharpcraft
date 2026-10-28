@@ -3,7 +3,7 @@
 
 状态：[草稿]
 基线：Minecraft 26.3
-证据：jar SHA-1 `e877b6a07acd633fb3bb475002175cec036e7b87`；Vineflower 1.12.0；GraalVM JDK 25；.NET SDK 10.0.401；工作区 `E:\mcanalysis\26.3`；提取日期 2026-10-28
+证据：jar SHA-1 `e877b6a07acd633fb3bb475002175cec036e7b87`；Vineflower 1.12.0；GraalVM JDK 25；.NET SDK 10.0.401；工作区 `ref://mc-26.3-analysis`；提取日期 2026-10-28
 最后更新：2026-10-28
 
 # jar 分析文档的组织方式

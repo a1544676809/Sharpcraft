@@ -12,6 +12,9 @@
 /extracted-assets/
 /run/assets/
 
+# Standard analysis workspace name, in case it is ever nested inside the repo by mistake
+mc-26.3-analysis/
+
 # ---- Analysis workspace (decompiler output, unpacked jars) ----
 # Must live outside the repo; these entries are a safety net, not a permission.
 /analysis-workspace/

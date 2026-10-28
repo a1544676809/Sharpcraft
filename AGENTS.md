@@ -234,6 +234,21 @@ LICENSE                        # LGPL-3.0-or-later 附加许可 + 并入的 GPL-
 - 文档同样受原则 3 约束：只写行为与架构，不粘贴原始实现；证据以指针形式引用仓库外的分析工作区。
 - 文档体系细节（目录划分、状态标记、写作规范）以 `docs/README.md` 为准，二者冲突时以本文件为准。
 
+### 3.6 工具链与自动化防线（机器硬约束）
+
+- **构建与测试标准命令**：
+  - 全量构建：`dotnet build`（默认开启 `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`）
+  - 单元测试：`dotnet test --no-build`
+- **禁止压制编译器警告**：代理 MUST NOT 使用 `#pragma warning disable` 或工程级 `NoWarn` 掩盖任何警告；`[SuppressMessage]` 仅允许在**确属误报或有意为之**时使用，且 MUST 满足：带 `Justification`、同一次提交内在 `docs/decisions/` 记录理由、经人工批准。测试工程同样适用，不得整工程放行。
+- **Trim / AOT 分析器随运行时形态定稿启用**：运行时形态（原则 1、待决项 1）未定前，`EnableAotAnalyzer` / `EnableTrimAnalyzer` 保持关闭，避免为"可能永不采用的形态"产出无法抑制的警告。定稿时随 ADR 一并启用并清偿存量。
+- **热路径编码禁令**：热路径指被 `<see cref="HotPathAttribute"/>`（`MinecraftCSharp.Common.Diagnostics.HotPathAttribute`）标记的方法，或其直接调用的稳态循环体。热路径内的判定标准是**稳态零分配**：
+  - MUST NOT 使用 LINQ、`string.Format`、非常量字符串拼接、装箱、闭包捕获、未池化的集合分配。
+  - `yield return`、`foreach` 等语法形态本身不构成违规，判定依据是"是否产生分配"，由分配测试证明，不靠语法直觉。
+  - 每个 `[HotPath]` 成员 MUST 有对应的分配测试（`GC.GetAllocatedBytesForCurrentThread` 前后差值 = 0），否则视为未验证。
+- **外部工作区标准路径**：原则 3 所述的仓库外分析工作区统一固定为仓库同级目录 `../mc-26.3-analysis/`。文档中的证据指针统一使用相对该目录的逻辑路径 `ref://mc-26.3-analysis/<相对路径>`。
+  - 解析规则：`ref://mc-26.3-analysis/X` ⇒ `<MC_ANALYSIS_ROOT>/X`；`MC_ANALYSIS_ROOT` 未设置时默认仓库同级目录 `../mc-26.3-analysis`。
+  - 工具（分析脚本等）MUST 支持该环境变量覆盖，不得把机器绝对路径写死进仓库文件。
+
 ---
 
 ## 4. 代理行为准则
@@ -286,6 +301,18 @@ LICENSE                        # LGPL-3.0-or-later 附加许可 + 并入的 GPL-
 - 声称"已验证 / 已测试"但实际未运行；
 - 为了让检查变绿而绕过失败（注释掉断言、吞异常、硬编码期望值）；
 - 在未确认的情况下擅自放宽原则（尤其是原则 3 与原则 7.1）。
+
+### 4.2 会话交接与上下文管理
+
+- **状态锚点**：`docs/STATE.md` 是跨会话的**唯一进度真相源**，只记录**易变**状态：当前里程碑、进行中的模块、已阻塞项、下一步具体动作、未提交改动与后台任务。
+  - 稳定的设计内容属于 `docs/modules/<模块>.md`，索引属于 `docs/README.md`，决策属于 `docs/decisions/`；`STATE.md` 不得复述它们，避免第四份真相源漂移。
+- **开机动作**：新会话开始时，代理 MUST 依次读取 `AGENTS.md` → `docs/STATE.md` → 当前目标模块的 `docs/modules/<模块>.md`，并执行 `git status` 与 `git log -1` 核对工作区实际状态（未提交改动与最近提交是比文档更硬的证据），确认上下文对齐后再动手。
+- **收工动作**：完成一个子任务或准备结束会话前，MUST 同步更新 `docs/STATE.md` 与对应模块文档，且**与代码同一提交**（否则状态立刻过期）。状态必须包含：下一步可执行的具体动作，而不是"继续开发"这类空话。
+- **量化熔断阈值**：将 4.1 中的时间阈值量化为以下任一命中即触发结构化上报，停止盲目试错：
+  - 同一编译 / 测试错误连续修复 **3 次**未果；
+  - 同一目标连续 **5 次写入、构建或测试类调用**均无实质进展；
+  - 只读操作（读取、搜索、查询类调用）**不计入**熔断计数——信息收集本身不是空转。
+
 
 ---
 

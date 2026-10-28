@@ -3,7 +3,7 @@
 
 状态：[草稿]
 基线：Minecraft 26.3
-证据：`docs/architecture/boundaries.md`；`E:\mcanalysis\26.3\entries.csv`
+证据：`docs/architecture/boundaries.md`；`ref://mc-26.3-analysis/entries.csv`
 最后更新：2026-10-28
 
 # 模块：构建骨架（build scaffolding）
@@ -50,15 +50,35 @@
 ## 5. 构建配置
 
 - `global.json` 固定 SDK 10 系列并允许前滚到最新特性带，避免不同机器编译差异。
-- `Directory.Build.props` 统一：`net10.0`、`Nullable=enable`、`ImplicitUsings=enable`、`LangVersion=latest`、`Deterministic=true`、`EnableNETAnalyzers=true`、警告级别 `AnalysisLevel=latest`。
-- 不开启 `TreatWarningsAsErrors`（现阶段会与探索性代码冲突），待基础层稳定后再逐工程打开并逐步收紧。
+- `Directory.Build.props` 统一：`net10.0`、`Nullable=enable`、`ImplicitUsings=enable`、`LangVersion=latest`、`Deterministic=true`、`EnableNETAnalyzers=true`、`AnalysisLevel=latest`。
+- **`TreatWarningsAsErrors=true`**（AGENTS.md 3.6）：警告即错误，全库生效。当前实测 0 警告，开启无额外成本；此后新增警告必须修掉而不是压掉。
+  - 豁免通道（仅在确有必要时）：允许带 `Justification` 的 `[SuppressMessage]`，但必须在同一次提交内把理由记入 `docs/decisions/`；`NoWarn` 与 `#pragma warning disable` 仍然严禁。
+  - 测试工程与**有意为之**的分析器误报同样走上述通道，不做整工程 `NoWarn`。
+- **Trim / AOT 兼容性分析器暂不启用**：运行时形态（JIT / AOT / 单文件）仍是 `[待定]`（原则 1、待决项 1），现在开启会为"可能永不采用的形态"持续刷警告，而 3.6 又不允许压制，形成死锁。待运行时形态定稿后随 ADR 一起启用。
+- 标准命令：本地 `dotnet build` + `dotnet test`（含编译）；CI 用 `dotnet build` 后 `dotnet test --no-build`。**不要**在没有先构建的情况下用 `--no-build`，否则会跑旧二进制得到假绿。
 - 不设置中央包管理（`Directory.Packages.props`）：当前测试依赖少，引入正式第三方依赖时再统一（见待决项）。
 
 ## 6. 测试基础设施
 
-- `tests/MinecraftCSharp.Common.Tests`：Common 的单元测试（xUnit，由 SDK 模板生成版本，避免手写版本号导致还原失败）。
-- `tests/MinecraftCSharp.Architecture.Tests`：架构规则测试，**不依赖第三方库**，直接读程序集 `ReferencedAssemblies` 断言。
+- `tests/MinecraftCSharp.Common.Tests`：Common 的单元测试与**分配测试**（xUnit，版本由 SDK 模板生成）。
+- `tests/MinecraftCSharp.Architecture.Tests`：架构规则测试，**不依赖第三方库**，同时检查 IL 引用与 csproj 声明引用。
 - 命名：`<被测类型>Tests`；一个测试类只覆盖一个类型；断言用 xUnit 原生 `Assert`，不引入断言库。
+
+### 6.1 热路径分配测试（对应 AGENTS.md 3.6）
+
+- 机制：`[HotPath]`（`MinecraftCSharp.Common.Diagnostics.HotPathAttribute`）+ `AllocationAssert`（`GC.GetAllocatedBytesForCurrentThread` 差值）证明零分配。
+- `AllocationAssert.MeasureBytes` 先执行一次预热（JIT、静态初始化、委托缓存），再测量，避免把首次调用成本计入热路径。
+- 一个 `[HotPath]` 成员没有对应分配测试 = 未验证，评审不通过。
+
+### 6.2 已实测结论：按语法禁 LINQ 不可行
+
+.NET 10 实测：`int[].Sum()` **不分配**，因为它绑定到 `MemoryExtensions.Sum(ReadOnlySpan<int>)` 而非 `Enumerable.Sum`；而 `values.Where(...).Sum()` 这类阶段式管道确实分配。
+
+因此热路径规则必须以**测量**为准：按语法判定会误杀零分配写法，也会放过真正分配的写法。
+
+### 6.3 跨会话状态
+
+`docs/STATE.md` 由 AGENTS.md 4.2 定义，模板见 `docs/_templates/state.md`。它只承载易变状态（里程碑、进行中、阻塞、下一步、未提交改动），不与本文档职责重叠。
 
 ## 7. 非目标（本轮不做）
 

@@ -3,7 +3,7 @@
 
 状态：[草稿]
 基线：Minecraft 26.3
-证据：`E:\mcanalysis\26.3\entries.csv`（class 条目统计）
+证据：`ref://mc-26.3-analysis/entries.csv`（class 条目统计）
 最后更新：2026-10-28
 
 # 包级地图（class 条目计数）
@@ -135,4 +135,4 @@
 - 需要具体类名/文件路径时，在外部工作区执行：
   - 过滤包：`Import-Csv entries.csv | Where-Object Path -like 'net/minecraft/world/level/block/*'`
   - 统计：按 `Split('/')` 前缀分组计数。
-- 反编译源码位于 `E:\mcanalysis\26.3\src`，**不得复制进仓库**（原则 3）。
+- 反编译源码位于 `ref://mc-26.3-analysis/src`，**不得复制进仓库**（原则 3）。

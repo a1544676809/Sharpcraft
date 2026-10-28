@@ -3,7 +3,7 @@
 
 状态：[草稿]
 基线：Minecraft 26.3
-证据：`E:\mcanalysis\26.3\src\net\minecraft\resources\Identifier.java`（反编译工作区，仓库外）
+证据：`ref://mc-26.3-analysis/src/net/minecraft/resources/Identifier.java`（反编译工作区，仓库外）
 最后更新：2026-10-28
 
 # 模块：Common 基础类型（common-primitives）
