@@ -85,11 +85,13 @@ public static class PlaySession
 
                         var status = ChunkPacketParser.TryRead(
                             body, layout.SectionCount, layout.MinSectionY, layout.AirState, out var parsed);
-                        if (chunksReceived == 0 && chunksFailed == 0 &&
-                            Environment.GetEnvironmentVariable("MC_DUMP_CHUNK") is { Length: > 0 } dumpPath)
+                        if (Environment.GetEnvironmentVariable("MC_DUMP_CHUNK_DIR") is { Length: > 0 } dumpDir &&
+                            status != DecodeStatus.Success)
                         {
-                            File.WriteAllBytes(dumpPath, body.ToArray());
-                            log?.Invoke($"chunk packet dumped to {dumpPath} ({body.Length} bytes)");
+                            Directory.CreateDirectory(dumpDir);
+                            var path = Path.Combine(dumpDir, $"failed-{chunksFailed}-{body.Length}.bin");
+                            File.WriteAllBytes(path, body.ToArray());
+                            log?.Invoke($"failed chunk dumped to {path} ({body.Length} bytes, {status})");
                         }
 
                         if (chunksReceived == 0 && status != DecodeStatus.Success)

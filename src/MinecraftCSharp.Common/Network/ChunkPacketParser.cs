@@ -13,7 +13,8 @@ namespace MinecraftCSharp.Common.Network;
 public sealed record ParsedChunk(
     LevelChunk Chunk,
     IReadOnlyDictionary<int, long[]> Heightmaps,
-    int BlockEntityCount);
+    int BlockEntityCount,
+    LightData Light);
 
 /// <summary>
 /// Parses the play-phase <c>level_chunk_with_light</c> packet (id 46)
@@ -141,6 +142,13 @@ public static class ChunkPacketParser
             }
         }
 
+        // Light arrays follow the block entities; they are stored raw for now.
+        status = LightDataCodec.TryRead(ref reader, out var light);
+        if (status != DecodeStatus.Success)
+        {
+            return status;
+        }
+
         var chunk = new LevelChunk(chunkX, chunkZ, minSectionY, sectionCount);
         var sectionReader = new PayloadReader(buffer);
         for (var i = 0; i < sectionCount; i++)
@@ -178,7 +186,7 @@ public static class ChunkPacketParser
         }
 
         chunk.MarkLoaded();
-        parsed = new ParsedChunk(chunk, heightmaps, blockEntityCount);
+        parsed = new ParsedChunk(chunk, heightmaps, blockEntityCount, light);
         return DecodeStatus.Success;
     }
 
@@ -199,6 +207,13 @@ public static class ChunkPacketParser
 
         status = reader.TryReadVarInt(out _);
         if (status != DecodeStatus.Success)
+        {
+            return status;
+        }
+
+        // The tag is optional: a false flag means the block entity has no payload at all.
+        status = reader.TryReadBool(out var hasTag);
+        if (status != DecodeStatus.Success || !hasTag)
         {
             return status;
         }

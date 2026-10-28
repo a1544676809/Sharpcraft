@@ -142,6 +142,7 @@ internal static class Program
                 var layout = ResolveDimensionLayout(probe.Registries);
                 ClientWorld? world = null;
                 long nonAirBlocks = 0;
+                long lightArrays = 0;
                 Console.WriteLine($"reached the play phase; holding the connection for {holdSeconds}s...");
                 var stats = await PlaySession.RunAsync(
                     connection!,
@@ -157,6 +158,7 @@ internal static class Program
                     onChunk: parsed =>
                     {
                         world?.AddChunk(parsed.Chunk);
+                        lightArrays += parsed.Light.ArrayCount;
                         for (var i = 0; i < parsed.Chunk.SectionCount; i++)
                         {
                             nonAirBlocks += parsed.Chunk.GetSection(parsed.Chunk.MinSectionY + i)?.NonAirCount ?? 0;
@@ -168,7 +170,8 @@ internal static class Program
                 Console.WriteLine($"play stats: packets={stats.TotalPackets} keepAlive={stats.KeepAlivesAnswered} " +
                                   $"ping={stats.PingsAnswered} survived={stats.Survived}");
                 Console.WriteLine($"chunks: received={stats.ChunksReceived} failed={stats.ChunksFailed} " +
-                                  $"world={world?.LoadedChunkCount ?? 0} nonAirBlocks={nonAirBlocks}");
+                                  $"world={world?.LoadedChunkCount ?? 0} nonAirBlocks={nonAirBlocks} " +
+                                  $"lightArrays={lightArrays}");
                 if (world is not null)
                 {
                     Console.WriteLine($"  block at (0,64,0) = state {world.GetBlockState(0, 64, 0)}");

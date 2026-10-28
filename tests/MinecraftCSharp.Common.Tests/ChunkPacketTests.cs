@@ -46,7 +46,14 @@ public sealed class ChunkPacketTests
 
         Assert.True(parsed.Heightmaps.ContainsKey(0));
         Assert.Equal([0b1010L, 0b0101L], parsed.Heightmaps[0]);
-        Assert.Equal(0, parsed.BlockEntityCount);
+        Assert.Equal(1, parsed.BlockEntityCount);
+        Assert.Equal(2, parsed.Light.SkyUpdates.Count);
+        Assert.Empty(parsed.Light.BlockUpdates);
+        Assert.True(LightData.IsSet(parsed.Light.SkyMask, 0));
+        Assert.True(LightData.IsSet(parsed.Light.SkyMask, 1));
+        Assert.False(LightData.IsSet(parsed.Light.SkyMask, 2));
+        Assert.Equal(2, LightData.CountSet(parsed.Light.SkyMask));
+        Assert.Equal(2 * LightDataCodec.LightArrayBytes, parsed.Light.ByteCount);
     }
 
     [Fact]
@@ -202,7 +209,7 @@ public sealed class ChunkPacketTests
             sectionBuffer.AddRange(VarIntBytes(1));     // single biome
         }
 
-        var buffer = new byte[1024];
+        var buffer = new byte[16 + (4 * LightDataCodec.LightArrayBytes) + 512];
         var writer = new PayloadWriter(buffer);
         writer.WriteVarInt(PacketIds.PlayClientbound.LevelChunkWithLight);
         writer.WriteInt(chunkX);
@@ -220,7 +227,26 @@ public sealed class ChunkPacketTests
 
         var sectionBytes = sectionBuffer.ToArray();
         writer.WriteByteArray(sectionBytes);
-        writer.WriteVarInt(0);                          // no block entities
+
+        // One block entity without a tag: the tag is optional (bool flag first).
+        writer.WriteVarInt(1);
+        writer.WriteByte(0x21);                          // packed XZ
+        writer.WriteRaw([0x00, 0x41]);                   // Y as a big-endian short
+        writer.WriteVarInt(0);                           // block entity type id
+        writer.WriteBool(false);                         // no tag
+
+        // Light: four masks encoded as length-prefixed byte arrays (a Java BitSet.toByteArray),
+        // then the sky and block light array lists.
+        var oneSectionMask = new byte[] { 0b0000_0011 };   // sections 0 and 1
+        writer.WriteByteArray(oneSectionMask);             // sky mask
+        writer.WriteByteArray(oneSectionMask);             // block mask
+        writer.WriteByteArray([]);                         // empty sky mask
+        writer.WriteByteArray([]);                         // empty block mask
+        writer.WriteVarInt(2);
+        writer.WriteByteArray(new byte[LightDataCodec.LightArrayBytes]);
+        writer.WriteByteArray(new byte[LightDataCodec.LightArrayBytes]);
+        writer.WriteVarInt(0);
+
         return buffer.AsSpan(0, writer.Position).ToArray();
     }
 
