@@ -14,6 +14,83 @@ internal static class AuthHttp
     // endpoints, PascalCase for Xbox Live), so no naming policy may be applied.
     internal static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.General);
 
+    /// <summary>
+    /// Set MC_TRANSPORT_DEBUG=1 to log each request URI. Transport failures classify by host, and
+    /// knowing which call failed is what makes them actionable.
+    /// </summary>
+    private static readonly bool TraceRequests =
+        Environment.GetEnvironmentVariable("MC_TRANSPORT_DEBUG") is "1";
+
+    /// <summary>Attempts per request; transport failures are usually transient on flaky networks.</summary>
+    internal const int TransportAttempts = 3;
+
+    /// <summary>Delay before each retry, in milliseconds.</summary>
+    internal static readonly int[] RetryDelays = [400, 1200];
+
+    /// <summary>
+    /// Sends a request, retrying a bounded number of times on transport failures. Endpoints in this
+    /// chain are safe to repeat: signing in again simply issues a fresh session.
+    /// </summary>
+    internal static async Task<HttpResponseMessage> SendWithRetryAsync(
+        string method,
+        Uri uri,
+        Func<HttpRequestMessage> buildRequest,
+        HttpClient http,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(buildRequest);
+        ArgumentNullException.ThrowIfNull(http);
+
+        Exception? last = null;
+
+        for (var attempt = 1; attempt <= TransportAttempts; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            using var request = buildRequest();
+            try
+            {
+                Trace(method, uri);
+                return await http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (IsTransient(exception, cancellationToken))
+            {
+                last = exception;
+
+                if (attempt == TransportAttempts)
+                {
+                    break;
+                }
+
+                if (TraceRequests)
+                {
+                    Console.Error.WriteLine(
+                        $"  [debug] {method} {uri.Host} attempt {attempt} failed: {exception.Message}; retrying");
+                }
+
+                await Task.Delay(RetryDelays[attempt - 1], cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        throw new AuthException(
+            AuthError.Transport,
+            $"request to {uri.Host} failed after {TransportAttempts} attempts",
+            inner: last);
+    }
+
+    private static bool IsTransient(Exception exception, CancellationToken cancellationToken) =>
+        !cancellationToken.IsCancellationRequested &&
+        exception is HttpRequestException or IOException or TimeoutException ||
+        (exception is TaskCanceledException && !cancellationToken.IsCancellationRequested);
+
+    private static void Trace(string method, Uri uri)
+    {
+        if (TraceRequests)
+        {
+            Console.Error.WriteLine($"  [debug] {method} {uri}");
+        }
+    }
+
     /// <summary>Posts a JSON body and returns the parsed response document.</summary>
     internal static async Task<(HttpStatusCode Status, JsonDocument Body)> PostJsonAsync(
         HttpClient http,
@@ -24,15 +101,17 @@ internal static class AuthHttp
         using var content = new StringContent(
             JsonSerializer.Serialize(payload, JsonOptions), Encoding.UTF8, "application/json");
 
-        HttpResponseMessage response;
-        try
-        {
-            response = await http.PostAsync(uri, content, cancellationToken).ConfigureAwait(false);
-        }
-        catch (HttpRequestException exception)
-        {
-            throw new AuthException(AuthError.Transport, $"request to {uri.Host} failed", inner: exception);
-        }
+        var payloadJson = JsonSerializer.Serialize(payload, JsonOptions);
+
+        using var response = await SendWithRetryAsync(
+            "POST",
+            uri,
+            () => new HttpRequestMessage(HttpMethod.Post, uri)
+            {
+                Content = new StringContent(payloadJson, Encoding.UTF8, "application/json")
+            },
+            http,
+            cancellationToken).ConfigureAwait(false);
 
         var text = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         return (response.StatusCode, Parse(text));

@@ -49,11 +49,25 @@ public sealed class LaunchPlanTests
     }
 
     [Fact]
-    public void DescribeRedactsLongOpaqueValues()
+    public void DescribeMasksOnlyTheTokenValue()
     {
-        Assert.Equal("abcdefgh…(redacted)", LaunchPlan.Redact("abcdefgh" + new string('X', 70)));
-        Assert.Equal("--username", LaunchPlan.Redact("--username"));
-        Assert.Equal("C:/games/minecraft/.minecraft/assets", LaunchPlan.Redact("C:/games/minecraft/.minecraft/assets"));
+        using var fixture = new LaunchFixture();
+        var plan = LaunchPlanBuilder.Build(fixture.Context()) with
+        {
+            Arguments =
+            [
+                "--version", "26.3",
+                "--pack", @"C:\Users\someone\packs\minecraft-26.3.pack.zip",
+                LaunchPlan.SecretSwitch, Token
+            ]
+        };
+
+        var described = plan.Describe();
+
+        Assert.Contains(@"C:\Users\someone\packs\minecraft-26.3.pack.zip", described, StringComparison.Ordinal);
+        Assert.DoesNotContain(Token, described, StringComparison.Ordinal);
+        Assert.Contains("…(redacted)", described, StringComparison.Ordinal);
+        Assert.Equal("…(redacted)", LaunchPlan.Mask("short"));
     }
 
     [Fact]

@@ -6,6 +6,7 @@ using MinecraftCSharp.Common.Identifiers;
 using MinecraftCSharp.Launcher.Assets;
 using MinecraftCSharp.Launcher.Assets.Resolution;
 using MinecraftCSharp.Launcher.Launch;
+using MinecraftCSharp.Launcher.Transport;
 using MinecraftCSharp.Client.World;
 using MinecraftCSharp.Common.Network;
 using MinecraftCSharp.Framework.Rendering;
@@ -85,12 +86,31 @@ internal static class Program
         }
         catch (AuthException exception)
         {
+            PrintExceptionChain(exception);
             return ReportAuthFailure(exception);
         }
         catch (HttpRequestException exception)
         {
             Console.Error.WriteLine($"network failure: {exception.Message}");
             return 1;
+        }
+    }
+
+    /// <summary>
+    /// Prints the exception chain when MC_TRANSPORT_DEBUG=1. Transport failures are classified by
+    /// endpoint but the underlying socket or TLS reason is what makes them fixable.
+    /// </summary>
+    private static void PrintExceptionChain(Exception exception)
+    {
+        if (Environment.GetEnvironmentVariable("MC_TRANSPORT_DEBUG") is not "1")
+        {
+            return;
+        }
+
+        var depth = 0;
+        for (var current = exception; current is not null && depth < 6; current = current.InnerException, depth++)
+        {
+            Console.Error.WriteLine($"  [debug] {current.GetType().Name}: {current.Message}");
         }
     }
 
@@ -212,6 +232,7 @@ internal static class Program
         }
         catch (AuthException exception)
         {
+            PrintExceptionChain(exception);
             return ReportAuthFailure(exception);
         }
         catch (Exception exception) when (exception is IOException or InvalidDataException or TimeoutException)
@@ -243,6 +264,7 @@ internal static class Program
         }
         catch (AuthException exception)
         {
+            PrintExceptionChain(exception);
             return ReportAuthFailure(exception);
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or InvalidDataException or TimeoutException)
@@ -422,6 +444,7 @@ internal static class Program
         }
         catch (AuthException exception)
         {
+            PrintExceptionChain(exception);
             return ReportAuthFailure(exception);
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or InvalidDataException or TimeoutException)
@@ -485,7 +508,7 @@ internal static class Program
         return int.TryParse(raw, out var seconds) && seconds > 0 && seconds <= 600 ? seconds : 10;
     }
 
-    private static HttpClient CreateHttpClient() => new() { Timeout = TimeSpan.FromSeconds(30) };
+    private static HttpClient CreateHttpClient() => HostTransport.Create();
 
     private static CancellationTokenSource CancelOnCtrlC()
     {

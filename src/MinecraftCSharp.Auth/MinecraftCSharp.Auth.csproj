@@ -4,6 +4,11 @@
     <ProjectReference Include="..\MinecraftCSharp.Framework\MinecraftCSharp.Framework.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Transport retry and request shaping are internal plumbing; the tests exercise them directly. -->
+    <InternalsVisibleTo Include="MinecraftCSharp.Auth.Tests" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

@@ -39,26 +39,33 @@ public sealed record LaunchPlan(
             "  arguments:"
         };
 
-        foreach (var argument in Arguments)
+        for (var i = 0; i < Arguments.Count; i++)
         {
-            lines.Add("    " + Redact(argument));
+            var argument = Arguments[i];
+
+            // Only the token is a secret; paths and identifiers must stay readable for diagnosis.
+            if (i > 0 && Arguments[i - 1] == SecretSwitch)
+            {
+                lines.Add("    " + Mask(argument));
+            }
+            else
+            {
+                lines.Add("    " + argument);
+            }
         }
 
         return string.Join(Environment.NewLine, lines);
     }
 
-    /// <summary>Masks token-looking values so plans can be printed safely.</summary>
-    public static string Redact(string argument)
+    /// <summary>The one switch whose value must never be printed.</summary>
+    public const string SecretSwitch = "--accessToken";
+
+    /// <summary>Masks a secret value so plans can be printed safely.</summary>
+    public static string Mask(string secret)
     {
-        ArgumentNullException.ThrowIfNull(argument);
+        ArgumentNullException.ThrowIfNull(secret);
 
-        // A raw access token is a long base64-ish run; keep it out of logs even if a caller opted in.
-        if (argument.Length > 60 && !argument.StartsWith("--", StringComparison.Ordinal) && !argument.Contains('/'))
-        {
-            return argument[..8] + "…(redacted)";
-        }
-
-        return argument;
+        return secret.Length <= 8 ? "…(redacted)" : secret[..8] + "…(redacted)";
     }
 }
 

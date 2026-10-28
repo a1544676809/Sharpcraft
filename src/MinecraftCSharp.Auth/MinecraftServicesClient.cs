@@ -70,6 +70,10 @@ public sealed class MinecraftServicesClient
         ArgumentNullException.ThrowIfNull(session);
 
         using var request = new HttpRequestMessage(HttpMethod.Get, ProfileUri);
+        if (Environment.GetEnvironmentVariable("MC_TRANSPORT_DEBUG") is "1")
+        {
+            Console.Error.WriteLine($"  [debug] GET {ProfileUri}");
+        }
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", session.AccessToken);
 
         HttpResponseMessage response;
