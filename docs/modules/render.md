@@ -3,8 +3,8 @@
 
 状态：[已评审]
 基线：Minecraft 26.3
-证据：ADR-0003（WGPU 绑定与首帧路径）；实测输出 `minecraftcsharp-frame.png`
-最后更新：2026-10-28
+证据：ADR-0003（WGPU 绑定与首帧路径）；实测输出 `sharpcraft-frame.png`
+最后更新：2026-10-29
 
 # 渲染层（Framework / Client.Render）
 
@@ -23,7 +23,8 @@
 明确不负责：
 
 - 窗口系统、输入、交换链（后续里程碑，见 §7）。
-- 纹理 / 图集与光照传播（当前只做状态配色，见 §6）。
+- 光照传播（客户端不计算光照传播，只消费服务端下发的数组）。
+- 特殊渲染方块（流体、火把、箱子等，见 T-041）。
 - 原版着色器语义的对齐（原则 11，见 `docs/specs/render/`）。
 
 ## 2. 侧别归属
@@ -42,9 +43,9 @@
 
 ## 4. 对外契约
 
-- `ChunkMesher.Mesh(ClientWorld) -> MeshData`：`float[]`（位置 3 + 颜色 3）与 `uint[]` 索引。
+- `ChunkMesher.Mesh(ClientWorld, sprites) -> MeshData`：每顶点 12 个 `float`（位置 3 + 光照颜色 3 + 平铺次数 2 + 精灵矩形 4），`uint[]` 索引；无精灵映射时后 6 个分量为零。
 - `CameraMath.BuildViewProjection(eye, target, fov, aspect)` / `DefaultCamera(centre, radius)`。
-- `ClipSpaceTransform.Build(FrameRequest, Matrix4x4)`：裁剪空间顶点（位置 4 + 颜色 3）。
+- `ClipSpaceTransform.Build(FrameRequest, Matrix4x4)`：裁剪空间顶点（位置 4 + 颜色 3 + 平铺 2 + 精灵矩形 4）。
 - `OffscreenRenderer.Render(FrameRequest) -> FrameResult`：`byte[]` RGBA8 + 适配器名。
 - `PngEncoder.EncodeRgba(width, height, rgba) -> byte[]`。
 
@@ -125,7 +126,8 @@
 
 ## 6. 当前限制
 
-- 无纹理：颜色由方块状态 id 哈希得到，稳定但不代表材质（片一完成后此项被替换）。
+- 纹理只覆盖立方体模型链：267 个特殊渲染方块（水/岩浆/火把/箱子/活塞等）仍是 missing 精灵，见 T-041。
+- 动画纹理只取首帧（`.mcmeta` 的 `animation` 尚未驱动帧切换）。
 - 无光照传播：只消费服务端下发的光照数组，客户端不计算光照传播（挖方块后不会实时变亮/变暗）。
 - 无环境光遮蔽与平滑光照：面亮度只按朝向与所在格光照，顶点之间不做插值。
 - 窗口只有呈现：无输入系统；帧循环是"呈现 N 帧 / 到点关闭"，尚未接入正式主循环。
@@ -199,17 +201,20 @@
 | `BlockSpriteMap`：方块 → 精灵（约定 `block/<名字>`，缺失回落 missing） | 完成（5 项测试） |
 | 布局预计算：有 `BlockStateLayout` 时 state id → 精灵是数组下标，无每面开销 | 完成 |
 | 着色器采样（绑定组、采样器、`fract` 平铺、半纹素内缩） | **完成**（本地世界已出带纹理的截图） |
-| `registry_data` → `BlockStateLayout` 装配（真实世界的 state id → 方块名） | 未完成，见 T-039 |
+| `registry_data` → `BlockStateLayout` 装配（真实世界的 state id → 方块名） | 未完成，见 T-042（当前用 `VanillaBlockRegistry` 的基线快照） |
 
-### 带纹理的实机画面（2026-10-28 实测）
+### 带纹理的实机画面（2026-10-29 复验）
 
 ```
 $ MC_FRAME_LOCAL=1 launcher frame local
-sprites: 1024x1024 atlas, 1301 sprites, layout present, 55 ms
+  sprite coverage: 4/4 blocks textured, 0 missing
+sprites: 1024x1024 atlas, 1301 sprites, layout present, 82 ms
 local demo: 2045 blocks, 1606 triangles
-rendered on adapter: 101.7088
-frame written to ...\minecraftcsharp-frame.png
+rendered on adapter: 101.9150
+frame written to ...\sharpcraft-frame.png
 ```
+
+复验链路：从官方 `piston-meta` 取 26.3 版本清单与 client.jar（41,483,720 字节，SHA-1 与清单一致），`launcher assets` 重建 pack（11,533 条目 / 5,854,134 字节 / 681 ms），再出图。像素采样 `top-mid (480,270) = rgba(143,143,143)`，与图集里石头的像素一致。
 
 - 画面上石头是石头纹理、底部泥土是泥土纹理，不再是"状态 id 哈希出的纯色"。
 - 用 `MC_DEBUG_SPRITES=1` 打印 `state → 精灵矩形 + 图集中心像素`，实测映射正确：
@@ -271,12 +276,9 @@ mesh: 31321 blocks, 7354 triangles
 ① blockstate → 首个变体 → 模型 → `parent` 链合并 `textures` → 递归解析 `#变量`；② 与方块同名的纹理；
 ③ `<名字>_top/_side/_bottom`；④ missing。
 
-### 片二：模型驱动
+### 片二：模型驱动（已完成，T-040）
 
-用 `blockstates/<id>.json` → `models/block/<model>.json`（含 `parent` 链与 `textures.all` / 按面覆盖）决定每个面用哪张纹理，取代片一的显式表。
-
-- 需要的行为规格：`parent` 继承与覆盖顺序、`cube_all`/`cube` 这类基础父模型、`uv` 缺省时的推导、模型里 `elements` 的旋转支持范围。
-- 依据：证据指针见 `docs/analysis/assets/resource-resolution.md` 与 jar 内的模型文件；具体继承规则在片二开工前补一节行为规格。
+用 `blockstates/<id>.json` → `models/block/<model>.json`（含 `parent` 链与 `textures.all` / 按面覆盖）决定每个面用哪张纹理，取代片一的显式表。真实抓包回放：已纹理方块 682/1286 → **1019/1286（79%）**。
 
 ### 不在本任务范围
 
@@ -286,10 +288,10 @@ mesh: 31321 blocks, 7354 triangles
 
 ## 7. 后续
 
-1. 深度已就位后引入背面剔除与按区块的合批。
-2. 光照数组映射为顶点亮度（`LightData` → 顶点颜色），需要先定义"亮度进颜色"的行为规格。
-3. 窗口 / 交换链：另立 ADR，并把 `FrameRequest` 扩展为持续帧循环。
-4. 纹理图集属于原版资产，必须由启动器从用户自备 jar 提取（原则 3），渲染层只消费提取结果。
+1. 正式帧循环与输入系统（M4），渲染从"呈现 N 帧 / 到点关闭"改成按时间步进。
+2. 每帧重建设备与管线改为资源复用；按区块合批。
+3. 特殊渲染方块（T-041）与运行时 `registry_data` 装配（T-042）。
+4. 环境光遮蔽、平滑光照与动画纹理帧推进。
 
 ## 8. 测试与验收
 

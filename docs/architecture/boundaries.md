@@ -30,6 +30,7 @@
 | R4 | 工具链（`net.minecraft.data`、`gametest`、`client.data`、`server.dedicated`）归外围宿主层，不进入运行时客户端 | 数据生成器与测试框架不是运行时路径 |
 | R5 | 依赖方向只允许 `Client` / `Server` → `Common`；`Common` 内不得出现反向引用 | 原则 5 |
 | R6 | 同一包内既有共享数据又有权威逻辑时，**必须拆分**而不是整包归类 | 原版单 jar 结构的历史耦合，不能继承到 C# |
+| R7 | 宿主层库（`Sharpcraft.Auth`）不得引用引擎层（`Sharpcraft.Framework`）；只有确实需要渲染/窗口的宿主组件（`Launcher` 的 `frame` / `window`）可以引用 | 原则 5 单向依赖 + 原则 8 启动器与客户端解耦；机器检查 `AssemblyBoundaryTests.HostLibrariesMustNotReferenceTheEngine` |
 
 ## 2. 证据方法与局限
 

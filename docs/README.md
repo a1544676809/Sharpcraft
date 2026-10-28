@@ -101,19 +101,17 @@
 | [`architecture/boundaries.md`](architecture/boundaries.md) | 三侧 + 外围宿主层的判定规则、证据、拆分清单、程序集映射 | 草稿 |
 | [`modules/README.md`](modules/README.md) | 模块文档入口与进度 | 草稿 |
 | [`modules/build-scaffolding.md`](modules/build-scaffolding.md) | 构建骨架：程序集划分、依赖规则、构建与测试配置 | 草稿（已实施） |
-| [`modules/common-primitives.md`](modules/common-primitives.md) | Common 基础类型：标识符、注册表、几何基元 | 草稿 |
+| [`modules/common-primitives.md`](modules/common-primitives.md) | Common 基础类型：标识符、注册表、随机数、坐标 | 已评审 |
 | [`modules/auth.md`](modules/auth.md) | 认证模块：设备码流程、Xbox Live、Minecraft 会话、令牌安全 | 已评审 |
 | [`modules/launcher.md`](modules/launcher.md) | 启动器（本阶段：认证与探测 CLI 垂直切片） | 已评审 |
 | [`modules/world.md`](modules/world.md) | 客户端世界数据：调色板容器、区块段与列、坐标查询 | 已评审 |
 | [`modules/nbt.md`](modules/nbt.md) | NBT 读写（网络/存储两种根、读取上限） | 已评审 |
-| [`modules/assets.md`](modules/assets.md) | 资产管线：jar 校验、白名单提取、增量幂等、产物清单 | 待评审 |
-| [`modules/asset-resolution.md`](modules/asset-resolution.md) | 资产解析层：来源栈、优先级、元数据兄弟、语言合并 | 待评审 |
-| [`modules/accounts.md`](modules/accounts.md) | 多账号与离线登录闸门：账号模型、实时闸门、离线身份派生、防篡改 | 待评审 |
+| [`modules/assets.md`](modules/assets.md) | 资产管线：jar 校验、白名单打包、产物清单 | 已评审 |
+| [`modules/asset-resolution.md`](modules/asset-resolution.md) | 资产解析层：来源栈、优先级、元数据兄弟、语言合并 | 已评审 |
+| [`modules/accounts.md`](modules/accounts.md) | 多账号与离线登录闸门：账号模型、实时闸门、离线身份派生、防篡改 | 已评审 |
 | [`modules/render.md`](modules/render.md) | 渲染层：网格生成、相机数学、离屏 WGPU 渲染与 PNG | 已评审 |
 | [`_templates/module-doc.md`](_templates/module-doc.md) | 模块设计文档模板 | 已评审 |
 | [`_templates/state.md`](_templates/state.md) | STATE 模板 | 已评审 |
-| [`traceability.md`](traceability.md) | 追踪矩阵：规格章节 ↔ 测试 ↔ 代码目录 | 活文档 |
-| [`risks.md`](risks.md) | 风险登记册 | 活文档 |
 | [`milestones/README.md`](milestones/README.md) | 里程碑文档入口与约定 | 已评审 |
 | [`milestones/roadmap.md`](milestones/roadmap.md) | M1–M6 里程碑划分、出口条件与验收标准 | 已评审 |
 | [`specs/quality-attributes.md`](specs/quality-attributes.md) | 可测质量属性：性能、协议、热加载、跨平台 | 草稿 |
@@ -129,8 +127,8 @@
 | [`decisions/0002-dnsclient-dependency.md`](decisions/0002-dnsclient-dependency.md) | ADR-0002：引入 DnsClient.NET 做 SRV 查询 | 已采纳 |
 | [`decisions/0003-wgpu-binding.md`](decisions/0003-wgpu-binding.md) | ADR-0003：WGPU 绑定（Brew.Wgpu）与离屏首帧 | 已采纳 |
 | [`decisions/0004-window-layer.md`](decisions/0004-window-layer.md) | ADR-0004：窗口层（Silk.NET.Windowing）与原生句柄抽象 | 已接受 |
-| [`decisions/0005-asset-pack-and-official-index.md`](decisions/0005-asset-pack-and-official-index.md) | ADR-0005：资产打包为单文件 pack，音频沿用官方索引 | 待评审 |
-| [`decisions/0006-offline-login-gating.md`](decisions/0006-offline-login-gating.md) | ADR-0006：离线登录闸门、身份派生与防篡改边界 | 待评审 |
+| [`decisions/0005-asset-pack-and-official-index.md`](decisions/0005-asset-pack-and-official-index.md) | ADR-0005：资产打包为单文件 pack，音频沿用官方索引 | 已接受 |
+| [`decisions/0006-offline-login-gating.md`](decisions/0006-offline-login-gating.md) | ADR-0006：离线登录闸门、身份派生与防篡改边界 | 已接受 |
 | [`decisions/0007-resources-live-in-the-client.md`](decisions/0007-resources-live-in-the-client.md) | ADR-0007：资源加载与图集归客户端，启动器只做校验与打包 | 已接受 |
 | [`repro/README.md`](repro/README.md) | 最小复现用例库约定 | 活文档 |
 

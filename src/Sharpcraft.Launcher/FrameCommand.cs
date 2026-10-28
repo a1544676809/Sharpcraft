@@ -320,7 +320,7 @@ internal static class FrameCommand
 
         Console.WriteLine($"rendered on adapter: {frame.AdapterName}");
         var png = PngEncoder.EncodeRgba(frame.Width, frame.Height, frame.Rgba);
-        var path = Path.Combine(Path.GetTempPath(), "minecraftcsharp-frame.png");
+        var path = Path.Combine(Path.GetTempPath(), "sharpcraft-frame.png");
         File.WriteAllBytes(path, png);
         return path;
     }
@@ -407,7 +407,7 @@ internal static class FrameCommand
         }
 
         var png = PngEncoder.EncodeRgba(frame.Width, frame.Height, frame.Rgba);
-        var path = Path.Combine(Path.GetTempPath(), "minecraftcsharp-frame.png");
+        var path = Path.Combine(Path.GetTempPath(), "sharpcraft-frame.png");
         File.WriteAllBytes(path, png);
         return path;
     }

@@ -4,7 +4,7 @@
 状态：[已评审]
 基线：Minecraft 26.3
 证据：`docs/analysis/assets/jar-entry-map.md`（来自 `ref://mc-26.3-analysis/entries.csv`）
-最后更新：2026-10-28
+最后更新：2026-10-29
 
 # 资产管线（Assets）
 
@@ -44,10 +44,12 @@
 
 ## 4. 对外契约
 
-- `AssetPaths`：输出目录布局常量（见 §5），资源加载层与测试共用同一份定义。
-- `JarVerifier.VerifyAsync(path, expectedSha1)`：返回校验结果或带修复建议的错误。
-- `AssetExtractor.ExtractAsync(jarPath, outputRoot, options)`：返回 `ExtractionReport`（新增/跳过/过期项计数与耗时）。
-- `AssetManifest`：产物清单的读写；每项含 `path`、`sourceEntry`、`size`、`sha256`、`extractedAt`。
+- `VersionManifest.ReadFile(path)` / `Parse(json)`：版本 `id`、`assetIndex.id`、`downloads.client.sha1`；缺字段或 JSON 无效时报可诊断错误。
+- `JarVerifier.Verify(path, expectedSha1, expectedSize)`：流式 SHA-1，返回实际哈希或抛 `JarVerificationException`（含期望/实际值，不提供绕过开关）。
+- `AssetPackBuilder.Build(jarPath, outputDirectory, versionId, expectedJarSha1)` → `AssetPackResult`（条目数、字节数、pack 路径、pack SHA-256、耗时）；输出目录在仓库内时拒绝执行。
+- `AssetPackBuilder.ReadManifest(packPath)` → `AssetPackManifest`：读回 pack 内的清单。
+- `AssetSelection.IsIncluded` / `ExcludedCategory` / `IsSafeEntryName`：白名单、跳过分类与 zip-slip 防护。
+- `HostPaths.DefaultPacksDirectory()` / `IsInsideRepository(path)`：仓库外输出目录规则。
 
 ## 5. 输出布局（全部在仓库外）
 
@@ -55,9 +57,9 @@
 <userData>/Sharpcraft/
   packs/
     minecraft-26.3-<packSha256 前 12 位>.pack.zip     # 单个包，内含 manifest.json 与资产条目
-  cache/
-    pack-index/<packSha256>.json                      # 可重建的条目索引缓存（删掉无害）
 ```
+
+条目索引缓存（原设计里的 `cache/pack-index/`）尚未实现：当前每次构建直接读 jar 并重算哈希。
 
 官方索引资产不进上述目录：运行时直接读用户机器上的 `assets/indexes/<id>.json` 与 `assets/objects/<前两位>/<哈希>`，只读挂载。
 
@@ -101,7 +103,7 @@
 
 ## 8. 未决问题
 
-1. **基线版本的索引 id**：本机 26.2 为 `32`；26.3 的 id 需拿到版本清单后确认，并要求与 `version.json` 一致。
+1. **（已关闭）基线版本的索引 id**：26.3 为 `34`，与官方 `version_manifest_v2.json` 中该版本的 `assetIndex.id` 一致（2026-10-29 复验）。
 2. **索引下载补齐**：已裁决不做（只读 + 警告），若后续需要再立 ADR。
 3. **签名验证**：jar 带 `MOJANGCS.SF`；当前结论是不必要，SHA-1 已足够判定版本。
 4. **着色器是否进 pack**：当前取"进 pack 但不参与运行时加载"，仅作行为参考。
@@ -111,7 +113,7 @@
 - `launcher assets --jar <path>` 能完成校验与提取并打印报告；
 - 上述 7 项测试全绿（真实验收除外）；
 - `git status` 中不出现任何资产（提取产物目录在仓库外，且被 `.gitignore` 覆盖）；
-- 输出目录可被资源加载层直接读取（下一里程碑 T-036 消费）。
+- 输出目录可被 `Client/Assets` 的资源栈直接读取（T-034 / T-038）。
 
 ## 10. 实测（真实 26.3 jar）
 
@@ -127,4 +129,6 @@
 | 跳过 | `net` 11,267、`data` 10,449、`com` 690、`META-INF` 5 |
 | 内容核对 | 3,964 个 `.png`、218 个 `.mcmeta`，条目路径全部保留 `assets/minecraft/…` |
 | 仓库保护 | 输出指向仓库内时拒绝执行，且**不留任何目录** |
+
+2026-10-29 复验：从官方 `piston-meta` 重新取 26.3 清单与 jar（同一 SHA-1），重建 pack 耗时 681 ms，条目数与 pack 字节数、SHA-256 与上表逐字节一致；解析探针：`texture block/stone` 151 字节、`model block/stone` 98 字节、图集 1024×1024 / 1301 精灵 / 74 ms。官方索引 `34` 在本机未安装，故语言/音频走索引的探针跳过（只警告）。
 

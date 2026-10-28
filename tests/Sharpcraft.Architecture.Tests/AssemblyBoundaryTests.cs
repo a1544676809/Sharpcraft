@@ -50,6 +50,17 @@ public sealed class AssemblyBoundaryTests
         Assert.DoesNotContain(dependencies, name => name.StartsWith("Sharpcraft.", StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// The authentication library is host plumbing: it must not pull the engine (WGPU, windowing)
+    /// into every consumer. Only host components that actually render (the launcher's frame and
+    /// window commands) may reference the engine (boundaries.md R7).
+    /// </summary>
+    [Fact]
+    public void HostLibrariesMustNotReferenceTheEngine()
+    {
+        Assert.DoesNotContain(Framework, DependenciesOf(Auth));
+    }
+
     [Theory]
     [InlineData(Server, Framework)]
     [InlineData(Server, Auth)]
