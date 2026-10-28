@@ -77,6 +77,11 @@ public static class CameraMath
             throw new ArgumentOutOfRangeException(nameof(fieldOfViewDegrees), fieldOfViewDegrees, "field of view must be in (0, 180)");
         }
 
+        if (aspectRatio <= 0f)
+        {
+            throw new ArgumentOutOfRangeException(nameof(aspectRatio), aspectRatio, "aspect ratio must be positive");
+        }
+
         var f = 1f / MathF.Tan(fieldOfViewDegrees * (MathF.PI / 180f) / 2f);
         var range = far / (near - far);
 
@@ -87,11 +92,16 @@ public static class CameraMath
             0, 0, range * near, 0);
     }
 
-    /// <summary>Builds a camera placed above a world centre, looking slightly down.</summary>
+    /// <summary>
+    /// Places an eye so a sphere of the given radius roughly fills a 60 degree view, looking down
+    /// at about 35 degrees from the south-east.
+    /// </summary>
     public static (Vector3 Eye, Vector3 Target) DefaultCamera(Vector3 centre, float radius)
     {
-        var distance = MathF.Max(24f, radius * 2.2f);
-        var eye = centre + new Vector3(distance * 0.7f, distance * 0.85f, distance * 0.7f);
+        // Half of the vertical extent divided by tan(30 deg) keeps the subject inside the frustum.
+        var distance = MathF.Max(6f, radius / MathF.Tan(30f * MathF.PI / 180f));
+        var direction = Vector3.Normalize(new Vector3(0.62f, 0.72f, 0.62f));
+        var eye = centre + direction * distance;
         return (eye, centre);
     }
 }

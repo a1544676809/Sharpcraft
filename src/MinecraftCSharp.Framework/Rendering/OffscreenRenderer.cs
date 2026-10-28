@@ -18,12 +18,6 @@ namespace MinecraftCSharp.Framework.Rendering;
 public static class OffscreenRenderer
 {
 
-    /// <summary>Floats per transformed vertex: clip position (4) plus colour (3).</summary>
-    public const int FloatsPerVertex = 7;
-
-    /// <summary>Stride of one transformed vertex in bytes.</summary>
-    public const int VertexStride = FloatsPerVertex * sizeof(float);
-
     private const string ShaderSourceText = """
         struct VertexOutput {
             @builtin(position) clipPosition : vec4<f32>,
@@ -79,42 +73,14 @@ public static class OffscreenRenderer
             layout: default,
             primitive: PrimitiveState.Default,
             multisample: MultisampleState.Default,
-            depthStencil: default,
-            vertexStride: (ulong)VertexStride,
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float),
+            vertexStride: (ulong)ClipSpaceTransform.VertexStride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
             vertexAttributes:
             [
                 new VertexAttribute(WGPUVertexFormat.Float32x4, 0, 0),
                 new VertexAttribute(WGPUVertexFormat.Float32x3, 16, 1)
             ]);
-    }
-
-    /// <summary>Transforms positions to clip space on the CPU, then interleaves colours.</summary>
-    private static float[] BuildVertexBytes(FrameRequest request, System.Numerics.Matrix4x4 viewProjection)
-    {
-        var count = request.VertexCount;
-        var data = new float[count * FloatsPerVertex];
-
-        for (var i = 0; i < count; i++)
-        {
-            var offset = i * FrameRequest.FloatsPerVertex;
-            var position = new System.Numerics.Vector3(
-                request.Vertices[offset],
-                request.Vertices[offset + 1],
-                request.Vertices[offset + 2]);
-            var clip = System.Numerics.Vector4.Transform(position, viewProjection);
-
-            var destination = i * FloatsPerVertex;
-            data[destination] = clip.X;
-            data[destination + 1] = clip.Y;
-            data[destination + 2] = clip.Z;
-            data[destination + 3] = clip.W;
-            data[destination + 4] = request.Vertices[offset + 3];
-            data[destination + 5] = request.Vertices[offset + 4];
-            data[destination + 6] = request.Vertices[offset + 5];
-        }
-
-        return data;
     }
 
     private static uint[] BuildIndexBytes(FrameRequest request) => request.Indices;
@@ -153,6 +119,18 @@ public static class OffscreenRenderer
 
             using var view = texture.CreateView();
 
+            var depthTexture = device.CreateTexture(new TextureDescriptor
+            {
+                Size = new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 },
+                MipLevelCount = 1,
+                SampleCount = 1,
+                Dimension = WGPUTextureDimension._2D,
+                Format = WGPUTextureFormat.Depth32Float,
+                Usage = TextureUsage.RenderAttachment
+            });
+
+            using var depthView = depthTexture.CreateView();
+
             // Readback rows must be padded to 256 bytes.
             var unpadded = (int)width * 4;
             var padded = (unpadded + 255) / 256 * 256;
@@ -165,7 +143,7 @@ public static class OffscreenRenderer
             });
 
             var hasGeometry = request.Indices.Length > 0 && request.Vertices.Length > 0;
-            var vertexBytes = hasGeometry ? BuildVertexBytes(request, viewProjection) : [];
+            var vertexBytes = hasGeometry ? ClipSpaceTransform.Build(request, viewProjection) : [];
             var indexBytes = hasGeometry ? BuildIndexBytes(request) : [];
 
             using var pipeline = hasGeometry ? CreatePipeline(device) : default;
@@ -187,7 +165,8 @@ public static class OffscreenRenderer
                     StoreOp = WGPUStoreOp.Store,
                     ClearValue = new WGPUColor { r = colour.X, g = colour.Y, b = colour.Z, a = colour.W }
                 }
-            ]);
+            ],
+            DepthStencilAttachment.DepthClear(depthView));
 
             if (hasGeometry)
             {
@@ -226,6 +205,7 @@ public static class OffscreenRenderer
             readback.Dispose();
             commands.Dispose();
             encoder.Dispose();
+            depthTexture.Dispose();
             texture.Dispose();
 
             return new FrameResult(request.Width, request.Height, pixels, viewProjection, adapterName);

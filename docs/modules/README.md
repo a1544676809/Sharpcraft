@@ -20,6 +20,7 @@
 | [`launcher.md`](launcher.md) | 启动器（认证/探测 CLI 切片） | 已评审 |
 | [`world.md`](world.md) | 客户端世界数据（不含渲染） | 已评审 |
 | [`nbt.md`](nbt.md) | NBT 读写与上限 | 已评审 |
+| [`render.md`](render.md) | 渲染层：网格、相机、离屏渲染 | 待评审 |
 
 ## 当前进度
 

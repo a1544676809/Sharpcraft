@@ -57,7 +57,9 @@ M1 —— **基础逻辑**（Common 地基 + 工程防线）。渲染、网络�
 16. T-025 完成：`registry_data` 同步 + `level_chunk_with_light` 解析 → `ClientWorld`；实测 8/9 区块、243,819 非空气方块。
 17. 区块与光照解析全部通过（9/9 区块、97 个光照数组）。
 18. T-026 渲染已完成：绑定切到 `Brew.Wgpu 29.0.0.5`（Silk.NET 原生包的回读是未实现桩，已废弃），`launcher frame` 产出 960x540 PNG，清屏色 140,184,242、方块面颜色正确。
-19. 下一步（M2 收尾）：① 加深度缓冲，消除无深度时的面遮挡错误；② 网络恢复后用真实服务器世界出图作为第 3+4 步的联合验收；③ 清理 `MC_FRAME_LOCAL` 之外的临时开关（已清）。
+19. 深度缓冲已加（`Depth32Float` + `Less`），相机改为按网格实际包围盒取景；`launcher frame replay <file>` 用已捕获的真实区块包出图（现场网络到 xsts 不可用时仍可验收）。
+20. `tests/MinecraftCSharp.Framework.Tests`（6 项相机/裁剪空间测试）已入解决方案；`docs/modules/render.md` 状态为 **[待评审]**，需你确认后改 `[已评审]`。
+21. 下一步：① 网络恢复后跑 `launcher frame mcf.ddger.top` 出多区块真实帧；② 光照数组→顶点亮度；③ 背面剔除与按区块合批。
 ## 未提交改动 / 后台任务
 
 - 本次提交内容见下；无运行中的后台任务。

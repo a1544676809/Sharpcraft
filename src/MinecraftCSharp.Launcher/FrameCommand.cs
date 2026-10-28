@@ -32,6 +32,11 @@ internal static class FrameCommand
             return RenderLocal(width, height);
         }
 
+        if (Environment.GetEnvironmentVariable("MC_FRAME_REPLAY") is { Length: > 0 } replayPath)
+        {
+            return RenderReplay(replayPath, width, height);
+        }
+
         var signedIn = await AuthenticationFlow.EnsureSignedInAsync(
             http,
             TokenStore.CreateDefault(),
@@ -154,6 +159,54 @@ internal static class FrameCommand
         return world;
     }
 
+    /// <summary>
+    /// Renders a chunk packet captured earlier, so the render path can be exercised on genuine
+    /// server data without a live session (docs/specs/quality-attributes.md).
+    /// </summary>
+    private static string RenderReplay(string path, int width, int height)
+    {
+        var body = File.ReadAllBytes(path);
+        var status = ChunkPacketParser.TryRead(body, sectionCount: 24, minSectionY: -64, airState: 0, out var parsed);
+        if (status != DecodeStatus.Success || parsed is null)
+        {
+            throw new InvalidDataException($"replay packet could not be parsed: {status}");
+        }
+
+        Console.WriteLine(
+            $"replay: chunk ({parsed.Chunk.ChunkX},{parsed.Chunk.ChunkZ}) " +
+            $"{parsed.BlockEntityCount} block entities, {parsed.Light.ArrayCount} light arrays");
+
+        var world = new ClientWorld(parsed.Chunk.MinSectionY, parsed.Chunk.SectionCount);
+        world.AddChunk(parsed.Chunk);
+        return RenderWorld(world, width, height);
+    }
+
+    private static string RenderWorld(ClientWorld world, int width, int height)
+    {
+        var mesh = ChunkMesher.Mesh(world);
+        Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
+
+        var bounds = BoundsOf(mesh);
+        var centre = (bounds.Min + bounds.Max) / 2f;
+        var radius = Vector3.Distance(bounds.Min, bounds.Max) / 2f;
+        var (eye, target) = CameraMath.DefaultCamera(centre, radius);
+
+        var frame = OffscreenRenderer.Render(new FrameRequest(
+            width,
+            height,
+            mesh.Vertices,
+            mesh.Indices,
+            new Vector4(0.55f, 0.72f, 0.95f, 1f),
+            eye,
+            target));
+
+        Console.WriteLine($"rendered on adapter: {frame.AdapterName}");
+        var png = PngEncoder.EncodeRgba(frame.Width, frame.Height, frame.Rgba);
+        var path = Path.Combine(Path.GetTempPath(), "minecraftcsharp-frame.png");
+        File.WriteAllBytes(path, png);
+        return path;
+    }
+
     private static string RenderLocal(int width, int height)
     {
         var world = BuildDemoWorld();
@@ -178,6 +231,27 @@ internal static class FrameCommand
         var path = Path.Combine(Path.GetTempPath(), "minecraftcsharp-frame.png");
         File.WriteAllBytes(path, png);
         return path;
+    }
+
+    /// <summary>Exact extent of the emitted geometry, so the camera frames what is actually drawn.</summary>
+    private static (Vector3 Min, Vector3 Max) BoundsOf(MeshData mesh)
+    {
+        if (mesh.VertexCount == 0)
+        {
+            return (Vector3.Zero, Vector3.Zero);
+        }
+
+        var min = new Vector3(float.MaxValue);
+        var max = new Vector3(float.MinValue);
+
+        for (var i = 0; i < mesh.Vertices.Length; i += ChunkMesher.FloatsPerVertex)
+        {
+            var position = new Vector3(mesh.Vertices[i], mesh.Vertices[i + 1], mesh.Vertices[i + 2]);
+            min = Vector3.Min(min, position);
+            max = Vector3.Max(max, position);
+        }
+
+        return (min, max);
     }
 
     private static (Vector3 Min, Vector3 Max) WorldBounds(ClientWorld world)
