@@ -14,7 +14,8 @@ public sealed record ParsedChunk(
     LevelChunk Chunk,
     IReadOnlyDictionary<int, long[]> Heightmaps,
     int BlockEntityCount,
-    LightData Light);
+    LightData Light,
+    bool BlockEntitiesSkipped = false);
 
 /// <summary>
 /// Parses the play-phase <c>level_chunk_with_light</c> packet (id 46)
@@ -59,7 +60,7 @@ public static DecodeStatus TryRead(
         out ParsedChunk? parsed)
     {
         parsed = null;
-        BlockEntitiesSkipped = false;
+        var blockEntitiesSkipped = false;
 
         if (sectionCount <= 0)
         {
@@ -162,7 +163,7 @@ public static DecodeStatus TryRead(
                 // packet we only partly understand into a permanent hole in the world, so the chunk is kept
                 // without block entity data and without light instead
                 // (docs/specs/network/play-movement.md 7.28).
-                BlockEntitiesSkipped = true;
+                blockEntitiesSkipped = true;
                 blockEntitiesBroken = true;
                 break;
             }
@@ -221,7 +222,7 @@ public static DecodeStatus TryRead(
         }
 
         chunk.MarkLoaded();
-        parsed = new ParsedChunk(chunk, heightmaps, blockEntityCount, light);
+        parsed = new ParsedChunk(chunk, heightmaps, blockEntityCount, light, blockEntitiesSkipped);
         return DecodeStatus.Success;
     }
 

@@ -28,7 +28,7 @@ public sealed class Repro_007_ChunkWithUnreadableBlockEntityTests
         Assert.Equal(DecodeStatus.Success, status);
         Assert.NotNull(parsed);
         Assert.Equal(24, parsed!.Chunk.SectionCount);
-        Assert.True(ChunkPacketParser.BlockEntitiesSkipped, "the block entity should have been reported as skipped");
+        Assert.True(parsed.BlockEntitiesSkipped, "the block entity should have been reported as skipped");
     }
 
     [Fact]
@@ -40,7 +40,7 @@ public sealed class Repro_007_ChunkWithUnreadableBlockEntityTests
 
         Assert.Equal(DecodeStatus.Success, status);
         Assert.NotNull(parsed);
-        Assert.False(ChunkPacketParser.BlockEntitiesSkipped);
+        Assert.False(parsed.BlockEntitiesSkipped);
     }
 
     private static byte[] BuildChunkWithBrokenBlockEntity() =>
