@@ -155,6 +155,31 @@ public sealed class VerticalMovementTests
         Assert.Equal(0.2807f, perTick, 3);
     }
 
+    [Fact]
+    public void JumpingWhileRunningAndSprintingStillLeavesTheGround()
+    {
+        // Reported from a play session: pressing jump while running seemed to do nothing. The physics path is
+        // the first thing to rule out, because a jump that works standing still must also work at speed.
+        var player = new PlayerEntity(new FlatGround(), new Vector3(0.5f, 0f, 0.5f));
+
+        for (var tick = 0; tick < 20; tick++)
+        {
+            player.Tick(forward: 1f, strafe: 0f, jumping: false, sprinting: true, yaw: 0f);
+        }
+
+        var restY = player.Position.Y;
+        var apex = restY;
+
+        player.Tick(forward: 1f, strafe: 0f, jumping: true, sprinting: true, yaw: 0f);
+        for (var tick = 0; tick < 30; tick++)
+        {
+            player.Tick(forward: 1f, strafe: 0f, jumping: false, sprinting: true, yaw: 0f);
+            apex = MathF.Max(apex, player.Position.Y);
+        }
+
+        Assert.True(apex - restY > 1.0f, $"jump while sprinting only reached {apex - restY:F3} blocks");
+    }
+
     /// <summary>Solid floor at y = 0 and nothing else.</summary>
     private sealed class FlatGround : IEntityWorld
     {

@@ -37,6 +37,8 @@ public sealed class ChunkMeshCacheTests
         var chunk = world.AddChunk(0, 0);
         chunk.SetSection(new ChunkSection(singleState: 0, sectionY: 0));
 
+        // Adding the chunk already marked it, so start from a clean slate before the block change.
+        world.TakeDirtyChunks();
         world.SetBlockState(8, 8, 8, state: 1);
 
         var dirty = world.TakeDirtyChunks();
@@ -54,16 +56,16 @@ public sealed class ChunkMeshCacheTests
         second.SetSection(new ChunkSection(singleState: 2, sectionY: 0));
 
         var cache = new ChunkMeshCache();
-        cache.Build(world);
+        cache.Build(world, maxChunksPerBuild: 64);
         Assert.Equal(2, cache.LastRemeshedChunks);
 
         // Nothing changed: the next build must not touch the mesher at all.
-        cache.Build(world);
+        cache.Build(world, maxChunksPerBuild: 64);
         Assert.Equal(0, cache.LastRemeshedChunks);
 
         // One interior block changes, so exactly one chunk is re-meshed.
         world.SetBlockState(8, 8, 8, state: 3);
-        cache.Build(world);
+        cache.Build(world, maxChunksPerBuild: 64);
         Assert.Equal(1, cache.LastRemeshedChunks);
         Assert.Equal(2, cache.LastTotalChunks);
     }
@@ -78,7 +80,7 @@ public sealed class ChunkMeshCacheTests
         second.SetSection(new ChunkSection(singleState: 2, sectionY: 0));
 
         var cache = new ChunkMeshCache();
-        var mesh = cache.Build(world);
+        var mesh = cache.Build(world, maxChunksPerBuild: 64);
 
         var vertexCount = mesh.Vertices.Length / ChunkMesher.FloatsPerVertex;
         Assert.All(mesh.Indices, index => Assert.InRange(index, 0u, (uint)vertexCount - 1));

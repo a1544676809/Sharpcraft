@@ -135,9 +135,6 @@ public static class WindowedRenderer
             ]);
 
         using var pipeline = CreatePipeline(device, format, pipelineLayout);
-        var indexBuffer = device.CreateBufferInit(
-            new BufferInitDescriptor { Usage = BufferUsage.Index },
-            request.Indices.AsSpan());
 
         // A DPI-scaled display reports a logical size smaller than the framebuffer; the swapchain
         // must be configured in physical pixels or every acquire reports "outdated".
@@ -148,7 +145,21 @@ public static class WindowedRenderer
         surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight);
 
         var currentRequest = request;
-        var vertexBuffer = UploadVertices(device, currentRequest, frameWidth, frameHeight);
+
+        // Geometry lives in persistent buffers that are rewritten in place, so a rebuild costs one upload
+        // instead of two allocations plus a GPU sync. They only grow, and the grown-out buffers are released
+        // when the window closes (a rebuild that needs more room is rare)
+        // (docs/specs/network/play-movement.md 7.23).
+        var retiredVertex = new List<WgpuBuffer>();
+        var retiredIndex = new List<WgpuBuffer>();
+
+        var vertexCapacity = Math.Max((ulong)currentRequest.Vertices.Length * sizeof(float), MinimumBufferBytes);
+        var indexCapacity = Math.Max((ulong)currentRequest.Indices.Length * sizeof(uint), MinimumBufferBytes);
+
+        var vertexBuffer = CreateGeometryBuffer(device, vertexCapacity, BufferUsage.Vertex | BufferUsage.CopyDst);
+        var indexBuffer = CreateGeometryBuffer(device, indexCapacity, BufferUsage.Index | BufferUsage.CopyDst);
+        device.Queue.WriteBuffer(vertexBuffer, 0, currentRequest.Vertices.AsSpan());
+        device.Queue.WriteBuffer(indexBuffer, 0, currentRequest.Indices.AsSpan());
         var depthTexture = CreateDepthTexture(device, frameWidth, frameHeight);
         var depthView = depthTexture.CreateView();
 
@@ -157,6 +168,9 @@ public static class WindowedRenderer
 
         var colour = request.ClearColour;
         var presented = 0;
+        var worstFrameMs = 0d;
+        var frameClock = System.Diagnostics.Stopwatch.StartNew();
+        var lastFrameAt = frameClock.Elapsed.TotalMilliseconds;
         var deadline = maxDuration is { } duration
             ? Environment.TickCount64 + (long)duration.TotalMilliseconds
             : long.MaxValue;
@@ -178,16 +192,52 @@ public static class WindowedRenderer
                 frameWidth = nextWidth;
                 frameHeight = nextHeight;
 
-                // Everything sized to the old framebuffer is rebuilt: surface, depth, and the
-                // vertices, which carry the aspect ratio in their clip coordinates.
+                // Everything sized to the old framebuffer is rebuilt: surface and depth. The geometry must be
+                // taken from the live request, not the one captured at startup: after a resize the draw call
+                // uses the current index count, and a vertex buffer from an older mesh would make those
+                // indices point past it, drawing stray triangles that look like overlapping texture.
                 surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight);
                 depthView.Dispose();
                 depthTexture.Dispose();
                 depthTexture = CreateDepthTexture(device, frameWidth, frameHeight);
                 depthView = depthTexture.CreateView();
-                vertexBuffer.Dispose();
-                vertexBuffer = UploadVertices(device, request, frameWidth, frameHeight);
+
+                // The geometry is world-space and the camera travels in a uniform, so a resize needs no
+                // re-upload at all.
             }
+
+            // Rewriting the persistent buffers costs one upload; nothing is allocated or freed in the
+            // steady state, so streaming new terrain does not hitch.
+            if (rebuildRequest is not null && rebuildRequest() is { } rebuilt && rebuilt.Vertices.Length > 0)
+            {
+                currentRequest = rebuilt;
+
+                var neededVertex = (ulong)rebuilt.Vertices.Length * sizeof(float);
+                var neededIndex = (ulong)rebuilt.Indices.Length * sizeof(uint);
+
+                if (neededVertex > vertexCapacity)
+                {
+                    retiredVertex.Add(vertexBuffer);
+                    vertexCapacity = Math.Max(neededVertex * 2, MinimumBufferBytes);
+                    vertexBuffer = CreateGeometryBuffer(device, vertexCapacity, BufferUsage.Vertex | BufferUsage.CopyDst);
+                }
+
+                if (neededIndex > indexCapacity)
+                {
+                    retiredIndex.Add(indexBuffer);
+                    indexCapacity = Math.Max(neededIndex * 2, MinimumBufferBytes);
+                    indexBuffer = CreateGeometryBuffer(device, indexCapacity, BufferUsage.Index | BufferUsage.CopyDst);
+                }
+
+                device.Queue.WriteBuffer(vertexBuffer, 0, rebuilt.Vertices.AsSpan());
+                device.Queue.WriteBuffer(indexBuffer, 0, rebuilt.Indices.AsSpan());
+            }
+
+            // Frame pacing: the worst gap is what a dropped frame feels like, and it is the number that
+            // regressed when meshing moved between threads.
+            var nowMs = frameClock.Elapsed.TotalMilliseconds;
+            worstFrameMs = Math.Max(worstFrameMs, nowMs - lastFrameAt);
+            lastFrameAt = nowMs;
 
             var acquired = surface.GetCurrentTexture();
 
@@ -206,18 +256,6 @@ public static class WindowedRenderer
                 Console.WriteLine($"window: acquire status {acquired.Status}");
                 acquired.Texture.Dispose();
                 break;
-            }
-
-            // A block change rebuilds the geometry; swapping the buffers is cheap, the meshing is not.
-            if (rebuildRequest is not null && rebuildRequest() is { } rebuilt)
-            {
-                vertexBuffer.Dispose();
-                indexBuffer.Dispose();
-                currentRequest = rebuilt;
-                vertexBuffer = UploadVertices(device, currentRequest, frameWidth, frameHeight);
-                indexBuffer = device.CreateBufferInit(
-                    new BufferInitDescriptor { Usage = BufferUsage.Index },
-                    currentRequest.Indices.AsSpan());
             }
 
             using var view = acquired.Texture.CreateView();
@@ -266,6 +304,9 @@ public static class WindowedRenderer
             surface.Present();
             commands.Dispose();
             encoder.Dispose();
+
+            // The acquired texture must be released each frame; leaving it alive makes the next acquire fail
+            // when the swapchain reuses its semaphore.
             acquired.Texture.Dispose();
 
             onFrame?.Invoke(presented, window);
@@ -276,6 +317,25 @@ public static class WindowedRenderer
                 break;
             }
         }
+
+        if (retiredVertex.Count > 0 || retiredIndex.Count > 0)
+        {
+            // Retired buffers may still be referenced by the last submissions; wait before freeing.
+            device.Queue.OnSubmittedWorkDoneBlocking(instance);
+        }
+
+        foreach (var buffer in retiredVertex)
+        {
+            buffer.Dispose();
+        }
+
+        foreach (var buffer in retiredIndex)
+        {
+            buffer.Dispose();
+        }
+
+        Console.WriteLine(
+            $"window: {presented} frames in {frameClock.Elapsed.TotalSeconds:F1}s, worst frame {worstFrameMs:F1} ms");
 
         vertexBuffer.Dispose();
         depthView.Dispose();
@@ -289,16 +349,11 @@ public static class WindowedRenderer
     /// Uploads clip-space vertices built for the current framebuffer aspect ratio. The staging
     /// array is pooled, so a resize (or a frame with a moving camera) does not allocate megabytes.
     /// </summary>
-    private static WgpuBuffer UploadVertices(Device device, FrameRequest request, uint width, uint height)
-    {
-        // World-space vertices: the shader applies the camera uniform, so this buffer is independent of
-        // the camera and only the geometry decides its contents.
-        _ = width;
-        _ = height;
-        return device.CreateBufferInit(
-            new BufferInitDescriptor { Usage = BufferUsage.Vertex },
-            request.Vertices.AsSpan());
-    }
+    /// <summary>Smallest geometry buffer, so tiny meshes do not force a reallocation on the next change.</summary>
+    private const ulong MinimumBufferBytes = 1 << 20;
+
+    private static WgpuBuffer CreateGeometryBuffer(Device device, ulong sizeBytes, BufferUsage usage) =>
+        device.CreateBuffer(new BufferDescriptor { Size = sizeBytes, Usage = usage });
 
     private static Texture CreateDepthTexture(Device device, uint width, uint height) =>
         device.CreateTexture(new TextureDescriptor

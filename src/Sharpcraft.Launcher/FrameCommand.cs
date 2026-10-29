@@ -275,13 +275,17 @@ internal static class FrameCommand
         out MeshData mesh,
         BlockSpriteMap? sprites = null,
         TextureData? atlas = null,
-        ChunkMeshCache? cache = null)
+        ChunkMeshCache? cache = null,
+        bool meshSynchronously = true)
     {
         // With a cache only the chunks whose blocks changed are re-meshed; without one the whole world is
         // scanned, which is what the offscreen paths still do (docs/specs/network/play-movement.md 7.19).
+        // The windowed path passes meshSynchronously false and lets the background worker do the meshing.
         mesh = cache is null
             ? ChunkMesher.Mesh(world, airState: 0, maxBlocks: 2_000_000, sprites: sprites)
-            : cache.Build(world, sprites, maxBlocks: 2_000_000);
+            : meshSynchronously
+                ? cache.Build(world, sprites, maxBlocks: 2_000_000)
+                : cache.Snapshot();
 
         var bounds = BoundsOf(mesh);
 

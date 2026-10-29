@@ -53,6 +53,12 @@ internal static class WindowCommand
             : VanillaBlockRegistry.Layout);
 
         var meshCache = new ChunkMeshCache();
+
+        // Meshing runs on a worker thread so drawing never waits for it; a short synchronous warm-up gives the
+        // first frame something to show (docs/specs/network/play-movement.md 7.20).
+        meshCache.Build(world, prepared?.Map, maxChunksPerBuild: 8, maxMillisecondsPerBuild: 250);
+        meshCache.StartBackground(world, prepared?.Map);
+
         var request = FrameCommand.BuildRequest(
             world,
             width,
@@ -61,7 +67,9 @@ internal static class WindowCommand
             prepared?.Map,
             prepared is null
                 ? null
-                : new TextureData(prepared.Value.Atlas.Width, prepared.Value.Atlas.Height, prepared.Value.Atlas.Pixels));
+                : new TextureData(prepared.Value.Atlas.Width, prepared.Value.Atlas.Height, prepared.Value.Atlas.Pixels),
+            cache: meshCache,
+            meshSynchronously: false);
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
         var selfResize = ParseSelfResize();
@@ -112,17 +120,29 @@ internal static class WindowCommand
             session.CaptureMouse(window, index == 0);
         },
             (window) => session.UpdateCamera(window),
-            () =>
+            Environment.GetEnvironmentVariable("MC_NO_REBUILD") == "1" ? null : () =>
             {
-                if (!session.TakeGeometryDirty())
+                // Hand fresh work to the worker, then take whatever it finished. Both steps are cheap; the
+                // meshing itself never happens on this thread.
+                var changedBlocks = false;
+                foreach (var key in world.TakeDirtyChunks())
+                {
+                    meshCache.Invalidate(key);
+                    changedBlocks = true;
+                }
+
+                if (session.TakeGeometryDirty())
+                {
+                    meshCache.QueueMissing(world);
+                }
+
+                if (!meshCache.Drain() && !changedBlocks)
                 {
                     return null;
                 }
 
-                var rebuilt = FrameCommand.BuildRequest(world, width, height, out _, prepared?.Map, cache: meshCache);
-                Console.WriteLine(
-                    $"remesh: {meshCache.LastRemeshedChunks}/{meshCache.LastTotalChunks} chunks in {meshCache.LastBuildMilliseconds:F1} ms");
-                return rebuilt;
+                return FrameCommand.BuildRequest(
+                    world, width, height, out _, prepared?.Map, cache: meshCache, meshSynchronously: false);
             });
 
         Console.WriteLine($"window closed after presenting frames; surface format {format}");

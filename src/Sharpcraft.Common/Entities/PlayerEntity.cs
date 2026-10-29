@@ -46,8 +46,18 @@ public sealed class PlayerEntity : LivingEntity
         }
     }
 
-    /// <summary>True while the sprint action is held.</summary>
+    /// <summary>
+    /// True while the player is sprinting. Vanilla keeps this as a state rather than a key: once started it
+    /// lasts while the player keeps moving forward, even if the sprint key is released
+    /// (docs/specs/network/play-movement.md 7.21).
+    /// </summary>
     public bool Sprinting { get; set; }
+
+    /// <inheritdoc />
+    protected override float AirImpulse => Sprinting ? 0.026f : 0.02f;
+
+    /// <inheritdoc />
+    protected override bool SprintingNow => Sprinting;
 
     /// <summary>True while the sneak action is held; it shrinks the box and slows the player.</summary>
     public bool Sneaking { get; set; }
@@ -63,7 +73,16 @@ public sealed class PlayerEntity : LivingEntity
     /// <param name="sneaking">True while sneak is held.</param>
     public void Tick(float forward, float strafe, bool jumping, bool sprinting, float yaw, bool sneaking = false)
     {
-        Sprinting = sprinting;
+        // Latch: a sprint key press starts it, moving forward keeps it, stopping or crouching ends it.
+        if (sneaking || forward <= 0f)
+        {
+            Sprinting = false;
+        }
+        else if (sprinting)
+        {
+            Sprinting = true;
+        }
+
         Sneaking = sneaking;
         Jumping = jumping;
 

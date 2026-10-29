@@ -38,6 +38,11 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-068 | 区块更新包解析与应用 + 重网格化 | `docs/specs/network/play-movement.md` §7.17 | `BlockUpdateTests`（5 项：两种打包往返含负坐标、X 在高位、单方块包、多方块包）+ 实测 blockChanges=2 与窗口重建 mesh 585216→2003969 | `Common/Network/BlockPositionCodec`、`BlockUpdatePackets`、`Framework/Rendering/WindowedRenderer` | 已完成 |
 | T-070 | 挖方块（`ServerboundPlayerAction`）与地形变化闭环 | `docs/specs/network/play-movement.md` §7.18 | 实测：创造模式每 20 tick 破坏目标格，目标 `state=9`（实体方块），`blockChanges=13` 回传并被应用 | `Common/Network/PlayPackets.BuildPlayerAction`、`Launcher/WalkCommand` | 已完成 |
 | T-069 | 按区块增量重网格化（替代整世界重建） | `docs/specs/network/play-movement.md` §7.19 | `ChunkMeshCacheTests`（4 项：边界脏两列、内部脏一列、只重建脏区块、拼接索引不越界）+ 实测 1 个区块 50 ms 对 329 个 13.8 s | `Client/Render/ChunkMeshCache`、`Client/World/ClientWorld` | 已完成 |
+| T-072 | 渲染与模拟分离：后台重网格化 | `docs/specs/network/play-movement.md` §7.20 | `ChunkMeshCacheTests`（4 项）+ 实测掉帧消失 | `Client/Render/ChunkMeshCache`、`Launcher/WindowCommand` | 已完成 |
+| T-074 | 贴图纹素中心采样（修方块边缘半像素渗色） | `docs/specs/network/play-movement.md` §7.22 | 实测：方块边缘完整 16 纹素、无相邻贴图渗色 | `Framework/Rendering/OffscreenRenderer`（着色器）| 已完成 |
+| T-075 | GPU 缓冲生命周期：退役列表 + 队列空闲后释放 | `docs/specs/network/play-movement.md` §7.23 | 实测：崩溃前第 2 帧 panic，修正后连跑 20 秒并干净退出 | `Framework/Rendering/WindowedRenderer` | 已完成 |
+| T-076 | 用常驻缓冲 + `Queue.WriteBuffer` 更新几何，避免每次重建分配 | `docs/specs/network/play-movement.md` §7.23 | 待补 | 未开始 | 进行中 |
+| T-073 | 疾跑锁存与冲刺跳跃加成 | `docs/specs/network/play-movement.md` §7.21 | `SprintBehaviourTests`（4 项：锁存、松前进取消、潜行取消、连跳均速 >0.26） | `Common/Entities/LivingEntity`、`PlayerEntity` | 已完成 |
 | T-071 | 按 section 细分重网格化并降低单区块耗时 | `docs/specs/network/play-movement.md` §7.19 | 待补 | 未开始 | 进行中 |
 | T-067 | 冲刺与潜行的等效（含潜行碰撞盒与眼高） | `docs/specs/network/play-movement.md` §7.16 | `VerticalMovementTests`（潜行 0.0648/tick + 蹲伏盒 0.6×1.5/眼高 1.27、冲刺 0.2807/tick）+ 官方实测潜行 1.296、冲刺 5.623 | `Common/Entities/PlayerEntity`、`EntityDimensions`、`Client/Input` | 已完成 |
 | T-066 | 跳跃与下落的等效（含终端速度渐近性） | `docs/specs/network/play-movement.md` §7.15 | `VerticalMovementTests`（4 项：顶点 1.2522、长距离终端 3.90–3.921、短距离 3.25–3.40、快速上升不被压低）+ 官方 1.2492 + 服务端连跳 10s 仅 1 次修正 | `Common/Entities/LivingEntity` | 已完成 |

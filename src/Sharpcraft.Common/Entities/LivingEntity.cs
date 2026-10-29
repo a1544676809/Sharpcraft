@@ -19,6 +19,9 @@ public abstract class LivingEntity : Entity
     /// <summary>Input friction applied to the movement impulse every tick (vanilla <c>INPUT_FRICTION</c>).</summary>
     public const float InputFriction = 0.98f;
 
+    /// <summary>Horizontal push along the facing applied when jumping while sprinting.</summary>
+    public const float SprintJumpBoost = 0.2f;
+
     /// <summary>Upward speed applied by a jump (vanilla <c>BASE_JUMP_POWER</c>).</summary>
     public const float BaseJumpPower = 0.42f;
 
@@ -45,6 +48,12 @@ public abstract class LivingEntity : Entity
     /// <summary>Movement speed attribute, in blocks per tick at full impulse.</summary>
     public abstract float MovementSpeed { get; }
 
+    /// <summary>Movement impulse used while airborne (vanilla <c>getFlyingSpeed</c>).</summary>
+    protected virtual float AirImpulse => 0.02f;
+
+    /// <summary>True when the entity is sprinting; drives the air impulse and the sprint jump.</summary>
+    protected virtual bool SprintingNow => false;
+
     /// <summary>True while the entity wants to jump.</summary>
     protected bool Jumping { get; set; }
 
@@ -67,6 +76,13 @@ public abstract class LivingEntity : Entity
                 DeltaMovement.X,
                 MathF.Max(BaseJumpPower, DeltaMovement.Y),
                 DeltaMovement.Z));
+
+            // A sprint jump also pushes along the facing, which is what makes bunny hopping faster than
+            // walking instead of slower (docs/specs/network/play-movement.md 7.21).
+            if (SprintingNow)
+            {
+                AddDeltaMovement(new Vector3(MathF.Sin(yaw) * SprintJumpBoost, 0f, -MathF.Cos(yaw) * SprintJumpBoost));
+            }
         }
 
         // 2) Block friction only matters while standing on something; in the air vanilla uses 1.0.
@@ -111,7 +127,10 @@ public abstract class LivingEntity : Entity
     {
         if (!OnGround)
         {
-            return MovementSpeed * 0.1f;
+            // Vanilla applies a flat air impulse: 0.02, or 0.026 while sprinting. It is not scaled by the
+            // movement speed attribute, which is why our first attempt (speed times a tenth) decayed toward
+            // walking speed mid-jump (docs/specs/network/play-movement.md 7.21).
+            return AirImpulse;
         }
 
         return blockFriction > DefaultBlockFriction

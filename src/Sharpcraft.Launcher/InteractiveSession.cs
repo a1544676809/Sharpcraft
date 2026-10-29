@@ -30,6 +30,10 @@ internal sealed class InteractiveSession
     private readonly ClientWorld? _world;
     private bool _streamingRequested;
     private bool _geometryDirty;
+    private int _jumpPressed;
+    private int _jumpAccepted;
+    private int _jumpInAir;
+    private int _tickCounter;
     private readonly PlayerSync? _sync;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private TimeSpan _last;
@@ -61,6 +65,9 @@ internal sealed class InteractiveSession
     /// True once and then false: reports that a block changed since the last call, so the renderer knows to
     /// rebuild the geometry (docs/specs/network/play-movement.md 7.17).
     /// </summary>
+    /// <summary>Diagnostic counters: jump ticks seen, accepted on the ground, and ignored while airborne.</summary>
+    public (int Pressed, int Accepted, int InAir) JumpStats => (_jumpPressed, _jumpAccepted, _jumpInAir);
+
     public bool TakeGeometryDirty()
     {
         if (!_geometryDirty)
@@ -103,6 +110,29 @@ internal sealed class InteractiveSession
             elapsed,
             () =>
             {
+                if (frame.Jump)
+                {
+                    _jumpPressed++;
+                    if (_player.OnGround)
+                    {
+                        _jumpAccepted++;
+                    }
+                    else
+                    {
+                        _jumpInAir++;
+                    }
+                }
+
+                _tickCounter++;
+                if (_tickCounter % 40 == 0)
+                {
+                    var (pressed, accepted, inAir) = JumpStats;
+                    Console.WriteLine(
+                        $"diag: tick={_tickCounter} fwd={frame.Forward:F0} sprint={frame.Sprint} sneak={frame.Sneak} "
+                        + $"jump presses={pressed} accepted={accepted} inAir={inAir} ground={_player.OnGround} "
+                        + $"y={_player.Position.Y:F2} vy={_player.DeltaMovement.Y:F3}");
+                }
+
                 _player.Tick(frame.Forward, frame.Strafe, frame.Jump, frame.Sprint, _camera.Yaw, frame.Sneak);
                 _interpolator.Push(_player, _camera.Yaw);
                 PublishTick();

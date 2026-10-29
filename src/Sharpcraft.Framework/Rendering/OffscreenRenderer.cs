@@ -54,10 +54,23 @@ public static class OffscreenRenderer
 
         @fragment
         fn fs_main(input : VertexOutput) -> @location(0) vec4<f32> {
-            // Tile inside the sprite cell: the fractional part repeats the sprite, and using the
-            // cell rect keeps sampling away from neighbouring sprites (render.md 6.1).
+            // The sprite rectangle runs from the centre of the first texel to the centre of the last, so
+            // interpolating across it directly spans one texel less than the sprite: a sixteen pixel tile
+            // covers fifteen, and the half texel lost at each edge shows the neighbouring sprite along block
+            // borders. Recover the texel count from the rectangle, then sample texel centres, which keeps the
+            // whole tile and never steps outside it (render.md 6.1,
+            // docs/specs/network/play-movement.md 7.22).
+            let atlasSize = vec2<f32>(textureDimensions(atlasTexture));
+            let rectMin = input.spriteRect.xy;
+            let rectMax = input.spriteRect.zw;
+
+            // Centre-to-centre, so the number of texels is the span plus one.
+            let spriteTexels = max(round((rectMax - rectMin) * atlasSize) + vec2<f32>(1.0), vec2<f32>(1.0));
+
             let repeated = input.uv - floor(input.uv);
-            let atlasUv = input.spriteRect.xy + repeated * (input.spriteRect.zw - input.spriteRect.xy);
+            let texel = clamp(floor(repeated * spriteTexels), vec2<f32>(0.0), spriteTexels - vec2<f32>(1.0));
+            let atlasUv = rectMin + texel / atlasSize;
+
             let sampled = textureSample(atlasTexture, atlasSampler, atlasUv);
             return vec4<f32>(sampled.rgb * input.colour, 1.0);
         }

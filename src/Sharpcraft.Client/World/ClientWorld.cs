@@ -13,7 +13,15 @@ namespace Sharpcraft.Client.World;
 /// </summary>
 public sealed class ClientWorld
 {
-    private readonly Dictionary<long, LevelChunk> _chunks = [];
+    /// <summary>
+    /// Kept for callers that still need to serialise a multi-step world update. The chunk table itself is
+    /// concurrent, so the background mesher reads it without taking this
+    /// (docs/specs/network/play-movement.md 7.20).
+    /// </summary>
+    public object Sync { get; } = new();
+
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<long, LevelChunk> _chunks = new();
+    private volatile LevelChunk[] _snapshot = [];
     private readonly HashSet<long> _dirtyChunks = [];
     private readonly int _minSectionY;
     private readonly int _sectionCount;
@@ -91,13 +99,13 @@ public sealed class ClientWorld
     /// LINQ over the world); hot paths use <see cref="GetChunks"/> instead, whose struct enumerator
     /// does not box.
     /// </summary>
-    public IReadOnlyCollection<LevelChunk> LoadedChunks => _chunks.Values;
+    public IReadOnlyCollection<LevelChunk> LoadedChunks => _snapshot;
 
     /// <summary>
-    /// Allocation-free view of the loaded chunks. The returned collection is a struct, so `foreach`
-    /// over it never boxes the enumerator, which matters for per-frame meshing.
+    /// View of the loaded chunks. The table is concurrent, so this is a snapshot that is safe to read while
+    /// the game thread inserts a newly streamed chunk.
     /// </summary>
-    public Dictionary<long, LevelChunk>.ValueCollection GetChunks() => _chunks.Values;
+    public LevelChunk[] GetChunks() => _snapshot;
 
     /// <summary>Applies the JoinGame header.</summary>
     public void ApplyJoin(JoinGameInfo joinGame)
@@ -113,7 +121,12 @@ public sealed class ClientWorld
     public LevelChunk AddChunk(int chunkX, int chunkZ)
     {
         var chunk = new LevelChunk(chunkX, chunkZ, _minSectionY, _sectionCount);
+
         _chunks[Pack(chunkX, chunkZ)] = chunk;
+        RefreshSnapshot();
+
+        // Same rule as the other overload: a new column changes which border faces its neighbours can hide.
+        MarkChunkDirty(chunkX, chunkZ, borderX: true, borderZ: true);
         return chunk;
     }
 
@@ -129,7 +142,14 @@ public sealed class ClientWorld
     public void AddChunk(LevelChunk chunk)
     {
         ArgumentNullException.ThrowIfNull(chunk);
+
         _chunks[Pack(chunk.ChunkX, chunk.ChunkZ)] = chunk;
+        RefreshSnapshot();
+
+        // A new neighbour changes which border faces are hidden, so any column already meshed beside it must be
+        // rebuilt. Without this its stale border faces stay coplanar with the new chunk's faces, which shows up
+        // as overlapping texture along the seam (docs/specs/network/play-movement.md 7.22).
+        MarkChunkDirty(chunk.ChunkX, chunk.ChunkZ, borderX: true, borderZ: true);
     }
 
     /// <summary>True when the chunk covering a block position has been downloaded.</summary>
@@ -143,7 +163,23 @@ public sealed class ClientWorld
         _chunks.TryGetValue(Pack(chunkX, chunkZ), out var chunk) ? chunk : null;
 
     /// <summary>Removes a chunk; returns true when one was present.</summary>
-    public bool RemoveChunk(int chunkX, int chunkZ) => _chunks.Remove(Pack(chunkX, chunkZ));
+    public bool RemoveChunk(int chunkX, int chunkZ)
+    {
+        var removed = _chunks.TryRemove(Pack(chunkX, chunkZ), out _);
+        if (removed)
+        {
+            RefreshSnapshot();
+        }
+
+        return removed;
+    }
+
+    /// <summary>
+    /// Rebuilds the immutable view the mesher iterates. The array reference is swapped atomically, so a reader
+    /// on another thread either sees the whole previous snapshot or the whole new one
+    /// (docs/specs/network/play-movement.md 7.20).
+    /// </summary>
+    private void RefreshSnapshot() => _snapshot = [.. _chunks.Values];
 
     /// <summary>
     /// Block state at block coordinates. Negative coordinates rely on the arithmetic-shift
@@ -202,6 +238,7 @@ public sealed class ClientWorld
     public bool SetBlockState(int x, int y, int z, int state, int airState = 0)
     {
         var chunk = GetChunk(BlockCoordinates.ToSectionCoord(x), BlockCoordinates.ToSectionCoord(z));
+
         if (chunk is null)
         {
             return false;
