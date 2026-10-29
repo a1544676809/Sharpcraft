@@ -350,6 +350,18 @@ public static class ChunkMesher
         (int X, int Y, int Z) b;
         (int X, int Y, int Z) c;
 
+        // Projects a corner onto the face's texture axes. The reference derives each face's coordinates from world
+        // axes with a fixed flip, so expressing them the same way keeps every face aligned with the original.
+        (float U, float V) Uv((int X, int Y, int Z) corner) => direction switch
+        {
+            PositiveZ => ((float)(corner.X - x), (float)((y + 1) - corner.Y)),
+            NegativeZ => ((float)((x + 1) - corner.X), (float)((y + 1) - corner.Y)),
+            PositiveX => ((float)((z + 1) - corner.Z), (float)((y + 1) - corner.Y)),
+            NegativeX => ((float)(corner.Z - z), (float)((y + 1) - corner.Y)),
+            PositiveY => ((float)(corner.X - x), (float)(corner.Z - z)),
+            _ => ((float)(corner.X - x), (float)((z + 1) - corner.Z))
+        };
+
         // Winding per direction: the quad must be counter-clockwise seen from outside, which
         // means Cross(U, V) equals the outward normal. Where it does not, V comes first.
         switch (direction)
@@ -427,27 +439,15 @@ public static class ChunkMesher
         // Corner order follows the winding: where U came first the horizontal corner comes first,
         // where V came first the vertical one does. UVs stay in sprite repeats so a merged quad
         // tiles its texture instead of stretching it.
-        var uFirst = direction is NegativeX or NegativeY or PositiveZ;
-        var w = (float)width;
-        var h = (float)height;
-
-        (float U, float V) uvOrigin = (0f, 0f);
-        (float U, float V) uvA;
-        (float U, float V) uvB;
-        (float U, float V) uvC;
-
-        if (uFirst)
-        {
-            uvA = (w, 0f);
-            uvB = (w, h);
-            uvC = (0f, h);
-        }
-        else
-        {
-            uvA = (0f, h);
-            uvB = (w, h);
-            uvC = (w, 0f);
-        }
+        // Texture axes per face, taken from the reference model baker: it derives each face's coordinates from the
+        // world axes with a fixed flip per direction. Down is lower on the screen for every side face, and the
+        // horizontal axis runs opposite between opposing sides, which is what makes a wrapped texture read the
+        // same way round as the original rather than mirrored on half the faces
+        // (docs/analysis/render/face-uv.md, ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/model/FaceBakery.java).
+        (float U, float V) uvOrigin = Uv((origin.X - baseX, origin.Y - baseY, origin.Z - baseZ));
+        (float U, float V) uvA = Uv((a.X - baseX, a.Y - baseY, a.Z - baseZ));
+        (float U, float V) uvB = Uv((b.X - baseX, b.Y - baseY, b.Z - baseZ));
+        (float U, float V) uvC = Uv((c.X - baseX, c.Y - baseY, c.Z - baseZ));
 
         buffer.AppendQuad(
             origin,

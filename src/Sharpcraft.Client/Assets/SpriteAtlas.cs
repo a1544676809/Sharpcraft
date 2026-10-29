@@ -234,6 +234,8 @@ public static class SpriteAtlasBuilder
             // Half-texel inset: sampling exactly on a cell edge would let nearest-neighbour pick a
             // texel from the neighbouring sprite, so the UV range stops just inside the cell.
             const float HalfTexel = 0.5f;
+            // V0 names the sprite's top row because row zero of the atlas is its top row, and the mesh emits v = 0
+            // at the top edge of a face, following the reference model baker.
             index[location] = new SpriteRect(x, y, image.Width, image.Height, frames)
             {
                 U0 = (x + HalfTexel) / size,

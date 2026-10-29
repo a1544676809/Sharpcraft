@@ -32,8 +32,9 @@ public sealed class Repro_003_AtlasUvInsetTests
 
         // Convert the UV edges back to texel space and compare with the cell rectangle.
         var left = (sprite.U0 * atlas.Width) - sprite.X;
-        var top = (sprite.V0 * atlas.Height) - sprite.Y;
         var right = (sprite.U1 * atlas.Width) - (sprite.X + sprite.Width);
+
+        var top = (sprite.V0 * atlas.Height) - sprite.Y;
         var bottom = (sprite.V1 * atlas.Height) - (sprite.Y + sprite.Height);
 
         Assert.Equal(0.5, left, 4);

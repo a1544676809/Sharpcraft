@@ -134,3 +134,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-107 | 渲染间歇性 wgpu 断言（`src/lib.rs:422`）：文字管线首次绘制时偶发，尚未定位 | `docs/modules/ui.md` §13.1 | 待补（需拿到完整 validation 文本）| 未开始 | 规格不足 |
 | T-108 | UI P0：热加载**状态迁移**（按 `x:Name` → 位置路径回退，保留滚动/焦点/输入）| `docs/modules/ui.md` §8、§8.1 | 待补 | 未开始 | 规格已就绪 |
 | T-109 | UI P0：热加载七条判据的自动化（坏文件批量、半写文件、1000 帧交换压力）| `docs/modules/ui.md` §8.1 | 待补 | 未开始 | 规格已就绪 |
+| T-110 | 纹理方向：全体面上下颠倒 + 一半面左右镜像（改为按原版烤面器逐面投影 UV）| `docs/modules/render.md` 5.4 | `MeshTextureOrientationTests`（6 项参数化：每面 u 轴与 v=0 方向对齐原版 FaceBakery）；`SpriteAtlasTests`/`Repro_003` 保持 V0=顶部约定 | `Client/Render/ChunkMesher`（逐面 UV 投影）、`Client/Assets/SpriteAtlas` | 已完成 |
