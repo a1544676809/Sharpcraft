@@ -24,6 +24,7 @@
 | [`common-primitives.md`](common-primitives.md) | 提供全项目最底层、无副作用、无 IO 的值类型与容器。 | 已评审 | 2026-10-28 |
 | [`doc-indexer.md`](doc-indexer.md) | 从文档与源码目录生成目录索引，并在 CI 检查索引与模块覆盖 | 已评审 | 2026-10-29 |
 | [`launcher.md`](launcher.md) | 独立跨平台启动器：认证、版本/资产获取、参数装配、进程启动。 | 已评审 | 2026-10-28 |
+| [`modding.md`](modding.md) | 把"模组"做成宿主结构的一部分：模组程序集加载进可卸载的 AssemblyLoadContext，卸载后必须能真正被 GC 回收。 | 已评审 | 2026-10-29 |
 | [`nbt.md`](nbt.md) | 网络与数据包里的 NBT 读写：标签类型表、复合/列表、数组、字符串，以及读取上限。 | 已评审 | 2026-10-28 |
 | [`render.md`](render.md) | 把 ClientWorld 的方块数据变成 GPU 可绘制的几何，并产出可验证的图像。 | 已评审 | 2026-10-29 |
 | [`world.md`](world.md) | 客户端的世界数据表示：区块存储、方块状态查询、维度与本地玩家标识。 | 已评审 | 2026-10-28 |

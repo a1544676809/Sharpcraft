@@ -38,6 +38,8 @@
     <Project Path="tests/Sharpcraft.Client.Tests/Sharpcraft.Client.Tests.csproj" />
     <Project Path="tests/Sharpcraft.Framework.Tests/Sharpcraft.Framework.Tests.csproj" />
     <Project Path="tests/Sharpcraft.Common.Tests/Sharpcraft.Common.Tests.csproj" />
+    <Project Path="tests/Sharpcraft.Modding.Tests/Sharpcraft.Modding.Tests.csproj" />
+    <Project Path="tests/Sharpcraft.Modding.UnloadProbe/Sharpcraft.Modding.UnloadProbe.csproj" />
   </Folder>
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/Sharpcraft.Benchmarks/Sharpcraft.Benchmarks.csproj" />
