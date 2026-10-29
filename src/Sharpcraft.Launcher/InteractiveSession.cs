@@ -8,6 +8,7 @@ using Sharpcraft.Client.Game;
 using Sharpcraft.Client.Input;
 using Sharpcraft.Client.World;
 using Sharpcraft.Common.Entities;
+using Sharpcraft.Common.Network;
 using Sharpcraft.Framework.Platform;
 using Sharpcraft.Framework.Rendering;
 
@@ -25,27 +26,31 @@ internal sealed class InteractiveSession
     private readonly CameraController _camera = new();
     private readonly TickLoop _loop = new();
     private readonly PlayerInterpolator _interpolator;
+    private readonly LivePlaySession? _live;
+    private readonly PlayerSync? _sync;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private TimeSpan _last;
     private bool _captureRequested;
 
-    private InteractiveSession(PlayerEntity player)
+    private InteractiveSession(PlayerEntity player, LivePlaySession? live)
     {
         _player = player;
         _interpolator = new PlayerInterpolator(player, _camera.Yaw);
+        _live = live;
+        _sync = live is null ? null : new PlayerSync();
     }
 
     /// <summary>Creates a session with the player standing on the highest block under the view centre.</summary>
     /// <param name="world">World the player walks in.</param>
     /// <param name="request">Frame request, used for the spawn area and the vertex count.</param>
-    public static InteractiveSession Create(ClientWorld world, FrameRequest request)
+    public static InteractiveSession Create(ClientWorld world, FrameRequest request, LivePlaySession? live = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(request);
 
         var adapter = new EntityWorldAdapter(world);
         var spawn = FindSpawn(world, request);
-        return new InteractiveSession(new PlayerEntity(adapter, spawn));
+        return new InteractiveSession(new PlayerEntity(adapter, spawn), live);
     }
 
     /// <summary>Player being simulated.</summary>
@@ -60,11 +65,19 @@ internal sealed class InteractiveSession
         ArgumentNullException.ThrowIfNull(window);
 
         var frame = _mapper.Map(window.Input);
+
+        // Verification hook: walk forward without a keyboard so an unattended run exercises the network path.
+        if (Environment.GetEnvironmentVariable("MC_WINDOW_AUTOWALK") == "1")
+        {
+            frame = frame with { Forward = 1f };
+        }
         _camera.ApplyLook(frame.LookDelta, _mapper.LookSensitivity);
 
         var now = _clock.Elapsed;
         var elapsed = now - _last;
         _last = now;
+
+        DrainIncoming();
 
         _loop.Advance(
             elapsed,
@@ -72,6 +85,7 @@ internal sealed class InteractiveSession
             {
                 _player.Tick(frame.Forward, frame.Strafe, frame.Jump, frame.Sprint, _camera.Yaw);
                 _interpolator.Push(_player, _camera.Yaw);
+                PublishTick();
             });
 
         if (frame.ReleaseCursor)
@@ -124,5 +138,87 @@ internal sealed class InteractiveSession
         }
 
         return new Vector3(x + 0.5f, 1f, z + 0.5f);
+    }
+
+    /// <summary>
+    /// Sends this tick's movement and the end-of-tick marker. The marker is not optional: the server resets
+    /// its per-tick movement guards there and disconnects a client whose second position packet arrives
+    /// without it (docs/specs/network/play-movement.md 6.5).
+    /// </summary>
+    private void PublishTick()
+    {
+        if (_live is null || _sync is null || !_live.IsAlive)
+        {
+            return;
+        }
+
+        var yawDegrees = _camera.Yaw * (180f / MathF.PI);
+        var pitchDegrees = _camera.Pitch * (180f / MathF.PI);
+
+        if (_sync.Build(_sync.Decide(_player, yawDegrees, pitchDegrees), _player, yawDegrees, pitchDegrees) is { } packet)
+        {
+            _live.Send(packet);
+        }
+
+        _live.Send(PlayPackets.BuildClientTickEnd());
+    }
+
+    /// <summary>
+    /// Applies everything the server sent since the previous frame: keep-alives, pings, position
+    /// corrections and a disconnect. Runs on the render thread so the player is never touched concurrently.
+    /// </summary>
+    private void DrainIncoming()
+    {
+        if (_live is null)
+        {
+            return;
+        }
+
+        while (_live.TryDequeue(out var body))
+        {
+            var reader = new PayloadReader(body);
+            if (reader.TryReadVarInt(out var packetId) != DecodeStatus.Success)
+            {
+                continue;
+            }
+
+            switch (packetId)
+            {
+                case PacketIds.PlayClientbound.KeepAlive:
+                    reader.TryReadLong(out var keepAliveId);
+                    _live.Send(PlayPackets.BuildKeepAliveReply(keepAliveId));
+                    break;
+
+                case PacketIds.PlayClientbound.Ping:
+                    reader.TryReadInt(out var pingId);
+                    _live.Send(PlayPackets.BuildPongReply(pingId));
+                    break;
+
+                case PacketIds.PlayClientbound.PlayerPosition:
+                    if (_sync is not null &&
+                        PlayMovementPackets.TryReadPlayerPosition(body[reader.Position..], out var correction) == DecodeStatus.Success &&
+                        correction is not null)
+                    {
+                        var outcome = _sync.ApplyServerPosition(_player, correction, isTeleport: true);
+                        _interpolator.Snap(_player, _camera.Yaw);
+
+                        if (outcome.TeleportId is { } teleportId)
+                        {
+                            _live.Send(PlayMovementPackets.BuildAcceptTeleportation(
+                                teleportId,
+                                _player.Position.X,
+                                _player.Position.Y,
+                                _player.Position.Z,
+                                _camera.Yaw * (180f / MathF.PI),
+                                _camera.Pitch * (180f / MathF.PI)));
+                        }
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.Disconnect:
+                    return;
+            }
+        }
     }
 }

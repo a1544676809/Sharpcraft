@@ -66,7 +66,27 @@ internal static class WindowCommand
 
         // Interactive session: the player entity is advanced on a fixed tick while the camera follows its
         // eye, so the window shows a body that can actually be walked (docs/modules/input.md 6).
-        var session = InteractiveSession.Create(world, request);
+        // A real server keeps the session live while the window runs, so movement is actually sent and the
+        // server's corrections come back through the same code path the walk command verified
+        // (docs/specs/network/play-movement.md 6.5).
+        LivePlaySession? live = null;
+        if (address is not null &&
+            Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is not { Length: > 0 } &&
+            Environment.GetEnvironmentVariable("MC_FRAME_REPLAY") is not { Length: > 0 })
+        {
+            try
+            {
+                live = await LivePlaySession.ConnectAsync(address, http, cancellationToken).ConfigureAwait(false);
+                Console.WriteLine("live: connected, movement will be sent while the window runs");
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or IOException)
+            {
+                Console.WriteLine($"live: connection failed ({exception.Message}); running without movement");
+            }
+        }
+
+        using var liveScope = live;
+        var session = InteractiveSession.Create(world, request, live);
 
         var format = WindowedRenderer.Run(
             request,
