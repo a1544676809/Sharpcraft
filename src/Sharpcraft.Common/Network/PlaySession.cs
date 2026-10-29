@@ -171,9 +171,9 @@ public static class PlaySession
                         {
                             connection.Send(PlayMovementPackets.BuildAcceptTeleportation(
                                 teleportId,
-                                PlayMovementPackets.Quantize(player.Position.X),
-                                PlayMovementPackets.Quantize(player.Position.Y),
-                                PlayMovementPackets.Quantize(player.Position.Z),
+                                player.Position.X,
+                                player.Position.Y,
+                                player.Position.Z,
                                 yaw,
                                 pitch));
 

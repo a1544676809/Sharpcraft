@@ -52,7 +52,9 @@ status: 已评审
 
 - 每个 tick 结束、位置或朝向变化时才发（`MovePlayerPosRot`）；只变了朝向发 `MovePlayerRot`；
   只变了落地状态发 `MovePlayerStatusOnly`；都没变则**不发**。
-- 位置在服务端以 1/4096 格精度量化，发送前按该精度取整，避免"本地算出的微小抖动"变成持续发包。
+- 发包判据照原版 `LocalPlayer.sendPosition`：位移平方 > `Mth.square(2.0E-4)` 才发位置包；
+  连续 20 个 tick 没动也强制补发一次（`positionReminder >= 20`），避免丢包让服务端失去同步。
+  **原版不做量化**，协议里位置就是原始 double——本项目早期版本臆断过"1/4096 量化"，已于 2026-10-29 更正。
 - 收到 `PlayerPosition` 时：把实体位置与速度设为服务端值，回 `AcceptTeleportation`（带 id 与当前位置朝向），
   并**丢弃本地预测**（见 §4）。
 
@@ -269,3 +271,31 @@ status: 已评审
 
 这不是协议问题，而是**碰撞求解的等效**问题，需要单独一轮：抓同一段路径上服务端每次回拉的残差向量，
 定位是我们的哪一类几何情形先偏。已登记为 **R-023**。
+
+### 7.9 原版是怎么"解决"这些问题的
+
+**一句话：原版不需要容差，因为客户端和服务端跑的是同一份移动代码。**
+
+`Entity.move`、`Entity.collide`、`LivingEntity.travel`、`Player.maybeBackOffFromEdge` 在两侧是同一份实现、
+同样的浮点顺序、同样的常量。客户端不是"近似预测"，而是"同一算法跑第二遍"，所以服务端重算的残差天然为 0。
+
+具体机制（均已核对源码）：
+
+| 环节 | 原版做法 |
+| --- | --- |
+| 客户端发包 | `LocalPlayer.sendPosition`：位移平方 > `Mth.square(2.0E-4)` 才发；`positionReminder >= 20` 强制每秒补发；按需选 `PosRot`/`Pos`/`Rot`/`StatusOnly` |
+| 移动求解 | `Entity.move` → `maybeBackOffFromEdge`（潜行/贴边保护）→ `collide`（逐轴扫掠 + 台阶候选高度 `maxUpStep`） |
+| 服务端校验 | 用申报增量从 `firstGood` 重算 `move()`，残差 > 0.0625 记 `moved wrongly`；`movedDist − expectedDist > 100` 记 `moved too quickly` |
+| 判定失败 | 若与旧包围盒冲突或穿入新碰撞体 → `absSnapTo(lastGood)` 并下发修正包（**硬吸附，没有平滑**） |
+| 悬空检测 | `clientIsFloating` 连续 `aboveGroundTickCount` 超限 → 踢 `Flying is not enabled` |
+
+**因此本项目与原版有一处结构性差异必须承认**：我们的服务端是**真正的原版服务端**，而我们的
+`Entity.Move` 是 C# 独立实现（原则 3 禁止照抄）。两侧不可能逐位一致，残差必然非零，回拉是**必然现象**
+而非缺陷。
+
+**结论性的验收口径（建议采纳）**：
+
+1. 目标不是"零修正"，而是**修正幅度小且不可见**；
+2. 修正次数是**可观测的等效指标**，应记录并跟踪趋势，而不是当作失败；
+3. "平滑修正"是**有意偏离原版**（原版硬吸附），必须留在偏差清单里（见 `play-movement.md` §4）；
+4. 真正该对齐的是**求解顺序与常量**（轴顺序、`maxUpStep`、贴边保护），因为它们直接决定残差大小。

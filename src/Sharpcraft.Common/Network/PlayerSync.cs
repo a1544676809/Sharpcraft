@@ -44,6 +44,15 @@ public sealed class PlayerSync
     /// <summary>Fraction of the remaining deviation corrected per tick when blending.</summary>
     public const float BlendFraction = 0.2f;
 
+    /// <summary>
+    /// Squared movement below which nothing is sent, matching vanilla's <c>Mth.square(2.0E-4)</c> test in
+    /// <c>LocalPlayer.sendPosition</c>. Vanilla writes raw doubles, so there is no quantisation step.
+    /// </summary>
+    public const double MovementEpsilonSquared = 4.0E-8;
+
+    /// <summary>Vanilla resends the position at least this often even when standing still.</summary>
+    public const int PositionReminderTicks = 20;
+
     private double _lastX = double.NaN;
     private double _lastY;
     private double _lastZ;
@@ -51,6 +60,7 @@ public sealed class PlayerSync
     private float _lastPitch;
     private bool _lastOnGround;
     private bool _lastHorizontalCollision;
+    private int _positionReminder;
 
     /// <summary>Decides which packet must be sent for the current entity state.</summary>
     /// <param name="player">Player entity after its tick.</param>
@@ -61,14 +71,22 @@ public sealed class PlayerSync
         ArgumentNullException.ThrowIfNull(player);
 
         var position = player.Position;
-        var x = PlayMovementPackets.Quantize(position.X);
-        var y = PlayMovementPackets.Quantize(position.Y);
-        var z = PlayMovementPackets.Quantize(position.Z);
 
-        var moved = double.IsNaN(_lastX) ||
-                    x != _lastX ||
-                    y != _lastY ||
-                    z != _lastZ;
+        var moved = double.IsNaN(_lastX);
+        if (!moved)
+        {
+            var dx = position.X - _lastX;
+            var dy = position.Y - _lastY;
+            var dz = position.Z - _lastZ;
+            moved = (dx * dx) + (dy * dy) + (dz * dz) > MovementEpsilonSquared;
+        }
+
+        // Standing still still reports once a second, so a dropped packet cannot leave the server guessing.
+        _positionReminder++;
+        if (_positionReminder >= PositionReminderTicks)
+        {
+            moved = true;
+        }
 
         var rotated = yawDegrees != _lastYaw || pitchDegrees != _lastPitch;
         var flagsChanged = player.OnGround != _lastOnGround ||
@@ -103,15 +121,17 @@ public sealed class PlayerSync
         ArgumentNullException.ThrowIfNull(player);
 
         var position = player.Position;
-        var x = PlayMovementPackets.Quantize(position.X);
-        var y = PlayMovementPackets.Quantize(position.Y);
-        var z = PlayMovementPackets.Quantize(position.Z);
         var onGround = player.OnGround;
         var collided = player.HorizontalCollision;
 
-        _lastX = x;
-        _lastY = y;
-        _lastZ = z;
+        _lastX = position.X;
+        _lastY = position.Y;
+        _lastZ = position.Z;
+
+        if (kind is MovePacketKind.Position or MovePacketKind.PositionAndRotation)
+        {
+            _positionReminder = 0;
+        }
         _lastYaw = yawDegrees;
         _lastPitch = pitchDegrees;
         _lastOnGround = onGround;
@@ -119,9 +139,9 @@ public sealed class PlayerSync
 
         return kind switch
         {
-            MovePacketKind.Position => PlayMovementPackets.BuildMovePlayerPos(x, y, z, onGround, collided),
+            MovePacketKind.Position => PlayMovementPackets.BuildMovePlayerPos(position.X, position.Y, position.Z, onGround, collided),
             MovePacketKind.PositionAndRotation =>
-                PlayMovementPackets.BuildMovePlayerPosRot(x, y, z, yawDegrees, pitchDegrees, onGround, collided),
+                PlayMovementPackets.BuildMovePlayerPosRot(position.X, position.Y, position.Z, yawDegrees, pitchDegrees, onGround, collided),
             MovePacketKind.Rotation => PlayMovementPackets.BuildMovePlayerRot(yawDegrees, pitchDegrees, onGround, collided),
             MovePacketKind.StatusOnly => PlayMovementPackets.BuildMovePlayerStatusOnly(onGround, collided),
             _ => null

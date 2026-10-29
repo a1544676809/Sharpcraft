@@ -10,13 +10,6 @@ namespace Sharpcraft.Common.Network;
 /// </summary>
 public static class PlayMovementPackets
 {
-    /// <summary>Server-side position granularity of 1/4096 of a block.</summary>
-    public const double PositionGranularity = 1d / 4096d;
-
-    /// <summary>Rounds a coordinate to the precision the server stores, so tiny jitter does not resend.</summary>
-    /// <param name="value">Coordinate in blocks.</param>
-    public static double Quantize(double value) => Math.Round(value / PositionGranularity) * PositionGranularity;
-
     /// <summary>Builds a position-only update.</summary>
     /// <param name="x">X in blocks.</param>
     /// <param name="y">Y in blocks.</param>

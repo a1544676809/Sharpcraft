@@ -104,21 +104,35 @@ public sealed class PlayMovementTests
     }
 
     [Fact]
-    public void QuantisingSnapsToTheServerGrid()
+    public void SubMillimetreJitterDoesNotResend()
     {
-        // The grid is 1/4096 of a block, not a quarter block: quantising keeps the nearest grid point and
-        // therefore moves a coordinate by at most half a step.
-        foreach (var value in new[] { 0.2501, 0.00001, -1.5002, 123.456 })
+        // Vanilla sends only when the squared movement exceeds Mth.square(2.0E-4); there is no quantisation
+        // grid on the wire, the packet carries raw doubles.
+        var sync = new PlayerSync();
+        var player = Player();
+        sync.Build(sync.Decide(player, 0f, 0f), player, 0f, 0f);
+
+        player.SetPosition(player.Position + new Vector3(0.00005f, 0f, 0f));
+        Assert.Equal(MovePacketKind.None, sync.Decide(player, 0f, 0f));
+
+        player.SetPosition(player.Position + new Vector3(0.01f, 0f, 0f));
+        Assert.Equal(MovePacketKind.Position, sync.Decide(player, 0f, 0f));
+    }
+
+    [Fact]
+    public void StandingStillStillReportsOncePerSecond()
+    {
+        var sync = new PlayerSync();
+        var player = Player();
+        sync.Build(sync.Decide(player, 0f, 0f), player, 0f, 0f);
+
+        // Twenty idle ticks force a resend, so a lost packet cannot leave the server guessing.
+        for (var tick = 1; tick < PlayerSync.PositionReminderTicks; tick++)
         {
-            var quantized = PlayMovementPackets.Quantize(value);
-
-            Assert.True(
-                Math.Abs(quantized - value) <= PlayMovementPackets.PositionGranularity / 2 + 1e-12,
-                $"quantised {quantized} drifted too far from {value}");
-
-            var steps = quantized / PlayMovementPackets.PositionGranularity;
-            Assert.Equal(Math.Round(steps), steps, 6);
+            Assert.Equal(MovePacketKind.None, sync.Decide(player, 0f, 0f));
         }
+
+        Assert.Equal(MovePacketKind.Position, sync.Decide(player, 0f, 0f));
     }
 
     [Fact]
