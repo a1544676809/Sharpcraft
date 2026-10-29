@@ -163,6 +163,16 @@ public sealed class WindowHost : IDisposable
         });
     }
 
+    /// <summary>Reads whether the window currently has keyboard focus.</summary>
+    /// <remarks>
+    /// Queried from the backend rather than tracked from the focus callback alone: the callback may not have fired
+    /// when the first frame runs, and the state field defaults to true, which would make the very first frame
+    /// capture the pointer into an unfocused window.
+    /// </remarks>
+    public unsafe bool QueryFocus() =>
+        _glfw is not null && _handle is not null &&
+        _glfw.GetWindowAttrib(_handle, WindowAttributeGetter.Focused);
+
     /// <summary>Turns relative mouse capture on or off.</summary>
     /// <param name="captured">True to capture the cursor for look control.</param>
     public unsafe void SetMouseCaptured(bool captured)
@@ -172,6 +182,10 @@ public sealed class WindowHost : IDisposable
         {
             return;
         }
+
+        // Refuse to take the pointer while the window is unfocused: the player's other applications must keep
+        // working, and a captured cursor in a background window cannot even be seen.
+        captured &= QueryFocus();
 
         _glfw.SetInputMode(
             _handle,
@@ -190,6 +204,7 @@ public sealed class WindowHost : IDisposable
     {
         ObjectDisposedException.ThrowIf(!_initialised, this);
         _window.DoEvents();
+        Input.HasFocus = QueryFocus();
         return !_window.IsClosing;
     }
 

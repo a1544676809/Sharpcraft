@@ -32,6 +32,8 @@ internal sealed class InteractiveSession
     private bool _geometryDirty;
     private readonly ChunkWorkerPool? _pool;
     private readonly EntityTracker _entities = new();
+    private readonly bool _diagEnabled = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
+    private int _diagFrames;
 
     /// <summary>
     /// Chunks of view distance requested from the server. It bounds how much terrain can be resident, which is
@@ -129,6 +131,15 @@ internal sealed class InteractiveSession
         {
             frame = frame with { Forward = 1f };
         }
+        // Objective record of the input state, so a capture problem can be diagnosed from the log instead of from
+        // impressions (docs/modules/input.md 7).
+        if (_diagEnabled && (_diagFrames++ % 60) == 0)
+        {
+            Console.WriteLine(
+                $"look diag: captured={window.Input.MouseCaptured} focus={window.Input.HasFocus} "
+                + $"delta=({frame.LookDelta.X:F2},{frame.LookDelta.Y:F2}) release={frame.ReleaseCursor}");
+        }
+
         _camera.ApplyLook(frame.LookDelta, _mapper.LookSensitivity);
 
         var now = _clock.Elapsed;
