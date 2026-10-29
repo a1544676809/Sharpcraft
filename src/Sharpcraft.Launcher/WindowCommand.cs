@@ -211,6 +211,18 @@ internal static class WindowCommand
                 }
 
                 UiScreenLayout.Build(screen.Root, screen.Styles, width, height, uiGeometry, uiFont);
+
+                // The player list is drawn from the roster the session keeps, in the same batch as the document so
+                // the submission budget does not grow with it.
+                PlayerListPanel.Draw(
+                    session.PlayerList.Entries,
+                    width,
+                    top: 10f,
+                    slotWidth: 140f,
+                    uiGeometry,
+                    uiFont,
+                    textScale: 1f);
+
                 return uiGeometry;
             });
 

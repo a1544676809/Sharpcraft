@@ -32,6 +32,7 @@ internal sealed class InteractiveSession
     private bool _geometryDirty;
     private readonly ChunkWorkerPool? _pool;
     private readonly EntityTracker _entities = new();
+    private readonly PlayerListRoster _playerList = new();
     private readonly bool _diagEnabled = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
     private int _diagFrames;
 
@@ -94,6 +95,9 @@ internal sealed class InteractiveSession
 
     /// <summary>Entities the server told us about, updated as packets arrive.</summary>
     public EntityTracker Entities => _entities;
+
+    /// <summary>The player list the server described.</summary>
+    public PlayerListRoster PlayerList => _playerList;
 
     /// <summary>Fraction into the current tick, for callers that interpolate between ticks.</summary>
     public float PartialTick => _loop.Alpha;
@@ -429,6 +433,24 @@ internal sealed class InteractiveSession
 
                     break;
 
+
+                case PacketIds.PlayClientbound.PlayerInfoUpdate:
+                    if (PlayerListPackets.TryReadPlayerInfoUpdate(body[reader.Position..], out _, out var profileUpdates) ==
+                        DecodeStatus.Success)
+                    {
+                        _playerList.Apply(profileUpdates);
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.PlayerInfoRemove:
+                    if (PlayerListPackets.TryReadPlayerInfoRemove(body[reader.Position..], out var removedProfiles) ==
+                        DecodeStatus.Success)
+                    {
+                        _playerList.Remove(removedProfiles);
+                    }
+
+                    break;
 
                 case PacketIds.PlayClientbound.AddEntity:
                     if (EntityPackets.TryReadAddEntity(body[reader.Position..], out var added) == DecodeStatus.Success &&

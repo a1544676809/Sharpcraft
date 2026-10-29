@@ -308,6 +308,51 @@ public static class UiScreenLayout
         return font is null ? LineHeight : font.Height * textScale;
     }
 
+
+    /// <summary>Adds one line of text as textured quads, starting at <paramref name="x"/> and <paramref name="y"/>.</summary>
+    /// <param name="geometry">Receives the quads.</param>
+    /// <param name="font">Glyph metrics.</param>
+    /// <param name="content">Text to draw.</param>
+    /// <param name="x">Left edge.</param>
+    /// <param name="y">Top edge of the glyph cell.</param>
+    /// <param name="textScale">Scale from font pixels to virtual pixels.</param>
+    /// <param name="colour">Ink colour.</param>
+    /// <remarks>
+    /// Every glyph draws its whole cell and the pen advances by the glyph's own advance, so the transparent margin
+    /// of a narrow glyph overlaps the next cell without adding ink.
+    /// </remarks>
+    public static void AddText(
+        UiGeometry geometry,
+        BitmapFont font,
+        string content,
+        float x,
+        float y,
+        float textScale,
+        uint colour)
+    {
+        var cellWidth = font.CellWidth * textScale;
+        var cellHeight = font.CellHeight * textScale;
+        var pen = x;
+
+        for (var index = 0; index < content.Length; index++)
+        {
+            var character = content[index];
+
+            if (!font.TryGet(character, out var glyph))
+            {
+                continue;
+            }
+
+            if (character != ' ')
+            {
+                var (u0, v0, u1, v1) = font.Uv(glyph);
+                geometry.AddTexturedRectangle(pen, y, cellWidth, cellHeight, u0, v0, u1, v1, colour);
+            }
+
+            pen += glyph.Advance * textScale;
+        }
+    }
+
     private static void LayoutText(
         UiNode text,
         UiStyles styles,
@@ -346,31 +391,7 @@ public static class UiScreenLayout
             return;
         }
 
-        // Each character becomes one textured quad. The whole cell is drawn and the pen advances by the glyph's own
-        // advance, so the transparent margin of a narrow glyph overlaps the next cell without adding ink.
-        var cellWidth = font.CellWidth * textScale;
-        var cellHeight = font.CellHeight * textScale;
-        var top = cursor + ((lineHeight - cellHeight) / 2f);
-        var pen = left;
-
-        for (var index = 0; index < content.Length; index++)
-        {
-            var character = content[index];
-
-            if (!font.TryGet(character, out var glyph))
-            {
-                continue;
-            }
-
-            if (character != ' ')
-            {
-                var (u0, v0, u1, v1) = font.Uv(glyph);
-                geometry.AddTexturedRectangle(pen, top, cellWidth, cellHeight, u0, v0, u1, v1, colour);
-            }
-
-            pen += glyph.Advance * textScale;
-        }
-
+        AddText(geometry, font, content, left, cursor + ((lineHeight - (font.CellHeight * textScale)) / 2f), textScale, colour);
         cursor += lineHeight;
     }
 }

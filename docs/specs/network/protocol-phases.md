@@ -200,3 +200,10 @@ long[ExpectedLongs(size,bits)]   // 固定长度，**没有长度前缀**
 - 按注册顺序导出 `Login` / `Configuration` / `Play` 三个方向的包 id 全表（工具待写，输出为文本表）。
 - 加密（`encryption.md`）：登录阶段的 RSA 握手与 AES/CFB8 流加密。
 - 状态查询响应 JSON 的字段子集（`version`、`players`、`description`，含 `favicon` 处理）。
+
+## 包 ID 的来源
+
+play 阶段客户端绑定包 ID 一律取自原版运行时导出的注册表 dump：
+`ref://mc-26.3-analysis/vectors/packet-tables.txt`（`phase direction id name` 四列）。
+每次取用 MUST 先用**仓库中已有**的包 ID 反向校验该 dump（例如 `level_chunk_with_light`=46、`login`=50、
+`player_position`=73），校验通过再取新值；不得按注册顺序自行推导（实测推导会漏项并整体错位）。

@@ -229,6 +229,15 @@ public static class PacketIds
         /// <summary>Chunk with block states, biomes, heightmaps and light.</summary>
         public const int LevelChunkWithLight = 46;
 
+        /// <summary>Player list additions and updates.</summary>
+        /// <remarks>Ids come from the reference's own registration dump
+        /// (ref://mc-26.3-analysis/vectors/packet-tables.txt, play/clientbound). That dump also reproduces every
+        /// id already used here, which is how the mapping was checked rather than assumed.</remarks>
+        public const int PlayerInfoUpdate = 71;
+
+        /// <summary>Player list removals.</summary>
+        public const int PlayerInfoRemove = 70;
+
         /// <summary>Ping.</summary>
         public const int Ping = 62;
 

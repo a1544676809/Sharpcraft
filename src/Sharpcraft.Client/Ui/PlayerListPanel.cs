@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using Sharpcraft.Framework.Rendering;
+
 namespace Sharpcraft.Client.Ui;
 
 /// <summary>One entry of the player list as it will be drawn.</summary>
-/// <param name="Name">Player name.</param>
+/// <param name="Index">Position in the ordered players; the name is looked up from there.</param>
 /// <param name="Latency">Latency in milliseconds, negative when unknown.</param>
 /// <param name="PingBars">Filled signal bars, 0 when unknown.</param>
 /// <param name="X">Left edge.</param>
 /// <param name="Y">Top edge.</param>
 /// <param name="Width">Row width.</param>
 public readonly record struct PlayerListRow(
-    string Name,
+    int Index,
     int Latency,
     int PingBars,
     float X,
@@ -137,7 +139,7 @@ public static class PlayerListPanel
             var row = index % MaxRowsPerColumn;
 
             rows[index] = new PlayerListRow(
-                ordered[index].Name,
+                index,
                 ordered[index].Latency,
                 PingBarsFor(ordered[index].Latency),
                 left + (column * (slotWidth + ColumnGap)),
@@ -146,6 +148,104 @@ public static class PlayerListPanel
         }
 
         return Math.Min(ordered.Length, rows.Length);
+    }
+
+
+    /// <summary>Adds the player list to the interface geometry.</summary>
+    /// <param name="roster">Every player the server described.</param>
+    /// <param name="screenWidth">Virtual width, used to centre the columns.</param>
+    /// <param name="top">Top edge of the first row.</param>
+    /// <param name="slotWidth">Width of one row.</param>
+    /// <param name="geometry">Receives the quads.</param>
+    /// <param name="font">Glyph metrics, or null to draw names as placeholder bars.</param>
+    /// <param name="textScale">Scale from font pixels to virtual pixels.</param>
+    /// <remarks>
+    /// Row background, name and signal bars are added in that order so the background sits behind the text, and
+    /// everything lands in the same batch as the rest of the interface.
+    /// </remarks>
+    public static void Draw(
+        ReadOnlySpan<World.PlayerListEntry> roster,
+        float screenWidth,
+        float top,
+        float slotWidth,
+        UiGeometry geometry,
+        BitmapFont? font,
+        float textScale)
+    {
+        // Entries carry strings, so they cannot live on the stack; the pool keeps this path allocation free once
+        // it is warm. Rows hold only numbers and an index, so they do.
+        var ordered = System.Buffers.ArrayPool<World.PlayerListEntry>.Shared.Rent(MaxPlayers);
+
+        try
+        {
+            var count = Order(roster, ordered);
+
+            if (count == 0)
+            {
+                return;
+            }
+
+            Span<PlayerListRow> rows = stackalloc PlayerListRow[MaxPlayers];
+            var written = BuildRows(ordered.AsSpan(0, count), screenWidth, top, slotWidth, rows);
+            DrawRows(rows[..written], ordered, geometry, font, textScale);
+        }
+        finally
+        {
+            System.Buffers.ArrayPool<World.PlayerListEntry>.Shared.Return(ordered, clearArray: true);
+        }
+    }
+
+    private static void DrawRows(
+        ReadOnlySpan<PlayerListRow> rows,
+        World.PlayerListEntry[] ordered,
+        UiGeometry geometry,
+        BitmapFont? font,
+        float textScale)
+    {
+
+        for (var index = 0; index < rows.Length; index++)
+        {
+            var row = rows[index];
+            geometry.AddRectangle(row.X, row.Y, row.Width, RowHeight - 1f, RowBackground);
+
+            if (font is not null)
+            {
+                UiScreenLayout.AddText(
+                    geometry, font, ordered[row.Index].Name, row.X + 2f, row.Y + 0.5f, textScale, 0xFFFFFFFFu);
+            }
+
+            DrawSignalBars(geometry, row);
+        }
+    }
+
+    /// <summary>Draws the five signal bars, filling as many as the latency earns.</summary>
+    private static void DrawSignalBars(UiGeometry geometry, PlayerListRow row)
+    {
+        // Placeholder colouring until the pack's own signal icons are wired in; the bar count is already the
+        // reference's, so what changes later is the artwork, not the meaning.
+        var colour = row.PingBars switch
+        {
+            >= 4 => 0xFF00E000u,
+            3 => 0xFFFFFF00u,
+            2 => 0xFFFF8000u,
+            1 => 0xFFFF0000u,
+            _ => 0xFF808080u
+        };
+
+        var right = row.X + row.Width - 11f;
+
+        for (var bar = 0; bar < 5; bar++)
+        {
+            // Bars grow left to right, and only the filled ones are lit.
+            var height = 2f + bar;
+            var x = right + (bar * 2f);
+            var y = row.Y + (RowHeight - 1f - height);
+
+            if (bar < row.PingBars)
+            {
+                geometry.AddRectangle(x, y, 1.5f, height, colour);
+            }
+        }
     }
 
     /// <summary>The reference's ordering, reduced to the fields the roster carries.</summary>

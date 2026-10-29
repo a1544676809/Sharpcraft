@@ -137,3 +137,5 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-110 | 纹理方向：全体面上下颠倒 + 一半面左右镜像（改为按原版烤面器逐面投影 UV）| `docs/modules/render.md` 5.4 | `MeshTextureOrientationTests`（6 项参数化：每面 u 轴与 v=0 方向对齐原版 FaceBakery）；`SpriteAtlasTests`/`Repro_003` 保持 V0=顶部约定 | `Client/Render/ChunkMesher`（逐面 UV 投影）、`Client/Assets/SpriteAtlas` | 已完成 |
 | T-111 | M5.2 P1：玩家列表数据通路（`player_info_update` 动作位集与八种负载、`player_info_remove`、名册合并）| `docs/modules/ui.md` 8.2 | `PlayerListTests`（8 项：载荷按序数读取、名字+延迟、截断报 NeedMoreData、移除列表、仅延迟更新保留名字、移除后紧凑、未知 id 无害、扩容）| `Common/Network/PlayerListPackets`、`Client/World/PlayerListRoster` | 已完成 |
 | T-112 | M5.2 P1：玩家列表排序与布局**对齐原版**（三级比较器、80 上限取最优、20 行/列、延迟阈值）| `docs/modules/ui.md` 8.3 | `PlayerListPanelTests`（17 项：listOrder、旁观者后置、名字忽略大小写、未 listed 过滤、80 上限取最优、11 个延迟边界、两列布局坐标）| `Client/Ui/PlayerListPanel` | 已完成 |
+| T-113 | M5.2 P1：玩家列表接入会话与窗口（包 ID 校验、分发进名册、行绘制同批次）| `docs/modules/ui.md` 8.2/8.3；`docs/specs/network/protocol-phases.md` | 包 ID 用 9 个既有 ID 反向校验注册表 dump（全部一致）；全量测试绿 | `Common/Network/ProtocolConstants`、`Launcher/InteractiveSession`、`Client/Ui/PlayerListPanel` | 已完成 |
+| T-114 | 已知抖动：`ChunkSeamTests` 在并行全量运行时偶发失败，单独运行与再次全量均通过 | `docs/risks.md` | 待补（需稳定复现条件）| 未开始 | 规格不足 |
