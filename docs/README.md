@@ -110,7 +110,7 @@
 | [`milestones/`](milestones/README.md) | 1 |
 | [`modules/`](modules/README.md) | 15 |
 | [`repro/`](repro/README.md) | 0 |
-| [`specs/`](specs/README.md) | 7 |
+| [`specs/`](specs/README.md) | 8 |
 | [`src/`](src/README.md) | 6 |
 
 <!-- END GENERATED: docs -->

@@ -17,6 +17,7 @@
 | 文档 | 摘要 | 状态 | 最后更新 |
 | --- | --- | --- | --- |
 | [`encryption.md`](encryption.md) | 服务端哈希、RSA 密钥交换、AES/CFB8 流 | 草稿 | 2026-10-28 |
+| [`play-movement.md`](play-movement.md) | 移动包的字段、id 来源与"吸附/插值"的决策规则 | 已评审 | - |
 | [`primitives-strings.md`](primitives-strings.md) | UTF-8 字符串、长度前缀与标识符的字节编码 | 草稿 | 2026-10-28 |
 | [`primitives-varint.md`](primitives-varint.md) | VarInt / VarLong 编码与三字节帧长度前缀 | 草稿 | 2026-10-28 |
 | [`protocol-phases.md`](protocol-phases.md) | 握手 / 状态 / 登录 / 配置 / 游戏五阶段、包 id 表与压缩规则 | 草稿 | 2026-10-28 |

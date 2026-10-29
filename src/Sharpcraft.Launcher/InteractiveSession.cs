@@ -24,11 +24,16 @@ internal sealed class InteractiveSession
     private readonly InputMapper _mapper = new();
     private readonly CameraController _camera = new();
     private readonly TickLoop _loop = new();
+    private readonly PlayerInterpolator _interpolator;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private TimeSpan _last;
     private bool _captureRequested;
 
-    private InteractiveSession(PlayerEntity player) => _player = player;
+    private InteractiveSession(PlayerEntity player)
+    {
+        _player = player;
+        _interpolator = new PlayerInterpolator(player, _camera.Yaw);
+    }
 
     /// <summary>Creates a session with the player standing on the highest block under the view centre.</summary>
     /// <param name="world">World the player walks in.</param>
@@ -61,7 +66,13 @@ internal sealed class InteractiveSession
         var elapsed = now - _last;
         _last = now;
 
-        _loop.Advance(elapsed, () => _player.Tick(frame.Forward, frame.Strafe, frame.Jump, frame.Sprint, _camera.Yaw));
+        _loop.Advance(
+            elapsed,
+            () =>
+            {
+                _player.Tick(frame.Forward, frame.Strafe, frame.Jump, frame.Sprint, _camera.Yaw);
+                _interpolator.Push(_player, _camera.Yaw);
+            });
 
         if (frame.ReleaseCursor)
         {
@@ -69,7 +80,8 @@ internal sealed class InteractiveSession
             _captureRequested = false;
         }
 
-        var eye = _player.EyePosition;
+        // Frames arrive faster than ticks; drawing the interpolated eye is what keeps walking smooth.
+        var eye = _interpolator.Eye(_loop.Alpha);
         return (eye, _camera.Target(eye));
     }
 
