@@ -123,3 +123,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-095 | 启动只连一次 + 区块够用即开窗（消除幽灵加入、缩短启动）| `docs/specs/network/play-movement.md` §7.32 | 实测：服务端日志单次加入/离开；`chunks: 9 ok` 后立即首帧 | `Launcher/WindowCommand.ServerWorldAsync`、`Launcher/LivePlaySession.Adopt`、`Common/Network/PlaySession` | 已完成 |
 | T-096 | 会话持有注册表并在 `Login`/`Respawn` 创建世界（完全对齐原版，首帧不阻塞）| `docs/specs/network/play-movement.md` §7.32 | 待补（需 ADR）| 未开始 | 规格已就绪 |
 | T-097 | `walk` 工具收集区块后仍二次登录 | `docs/specs/network/play-movement.md` §7.32 | 待补 | 未开始 | 规格已就绪 |
+| T-098 | 渲染管线规格（阶段划分、实体/方块实体、天空与雾、半透明、2D 合成、预算、分期）| `docs/specs/render/pipeline.md` | 待补（本行即规划产出，实现随 P1 起）| 未开始 | 阻塞于评审 |

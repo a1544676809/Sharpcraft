@@ -9,6 +9,7 @@
 
 | 文档 | 摘要 | 状态 | 最后更新 |
 | --- | --- | --- | --- |
+| [`pipeline.md`](pipeline.md) | 阶段划分、几何与缓冲区策略、实体与方块实体、2D 合成、预算与分期 | 草稿 | 2026-10-29 |
 | [`shader-packs.md`](shader-packs.md) | 渲染目标、阶段、顺序、采样与 uniform 的声明模型，以及失败回退规则 | 已评审 | - |
 
 <!-- END GENERATED: docs/specs/render -->
