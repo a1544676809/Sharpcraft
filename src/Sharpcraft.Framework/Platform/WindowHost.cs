@@ -104,6 +104,13 @@ public sealed class WindowHost : IDisposable
         _window.Size = new Vector2D<int>(width, height);
     }
 
+    private int _scaleOption;
+    private int _framebufferSeenWidth;
+    private int _framebufferSeenHeight;
+
+    /// <summary>The interface scale and the virtual canvas it produces (docs/modules/ui.md 9.1).</summary>
+    public GuiCanvas Gui { get; private set; } = new(1, 1, 1);
+
     /// <summary>Input state collected from the platform, refreshed by <see cref="Pump"/>.</summary>
     public WindowInputState Input { get; } = new();
 
@@ -124,6 +131,13 @@ public sealed class WindowHost : IDisposable
         var glfw = Glfw.GetApi();
         _glfw = glfw;
         _handle = handle;
+
+        // Zero means "as large as fits", which is the reference's default. A fixed value is honoured for testing.
+        _scaleOption = int.TryParse(Environment.GetEnvironmentVariable("MC_GUI_SCALE"), out var configured)
+            ? configured
+            : GuiScale.Auto;
+
+        RefreshGuiScale();
 
         glfw.SetKeyCallback(handle, (window, key, _, action, _) =>
         {
@@ -215,10 +229,33 @@ public sealed class WindowHost : IDisposable
         }
     }
 
+    /// <summary>Recomputes the interface scale when the framebuffer size changes.</summary>
+    private void RefreshGuiScale()
+    {
+        var width = FramebufferWidth;
+        var height = FramebufferHeight;
+
+        if (width == _framebufferSeenWidth && height == _framebufferSeenHeight && Gui.Width > 1)
+        {
+            return;
+        }
+
+        _framebufferSeenWidth = width;
+        _framebufferSeenHeight = height;
+
+        var scale = GuiScale.Calculate(width, height, _scaleOption);
+        var (scaledWidth, scaledHeight) = GuiScale.ScaledSize(width, height, scale);
+        Gui = new GuiCanvas(scale, scaledWidth, scaledHeight);
+    }
+
     /// <summary>Processes pending window events; returns false once the user closed the window.</summary>
     public bool Pump()
     {
         ObjectDisposedException.ThrowIf(!_initialised, this);
+
+        // The reference recomputes the interface scale when the framebuffer changes, so the virtual canvas follows a
+        // resize instead of stretching.
+        RefreshGuiScale();
 
         // Snapshot before processing, so this frame's edges describe what changed since the caller last looked.
         Input.BeginFrame();

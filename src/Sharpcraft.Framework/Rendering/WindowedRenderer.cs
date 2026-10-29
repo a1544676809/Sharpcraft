@@ -45,7 +45,7 @@ public static class WindowedRenderer
         Func<IReadOnlyList<(long Key, GeometryData Mesh)>?>? geometryUpdates = null,
         int expectedChunks = 0,
         Func<DynamicGeometry?>? dynamicGeometry = null,
-        Func<WindowInputState, UiGeometry?>? uiGeometry = null,
+        Func<UiFrame, UiGeometry?>? uiGeometry = null,
         TextureData? glyphTexture = null)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -200,7 +200,8 @@ public static class WindowedRenderer
         // must be configured in physical pixels or every acquire reports "outdated".
         var frameWidth = (uint)window.FramebufferWidth;
         var frameHeight = (uint)window.FramebufferHeight;
-        Console.WriteLine($"window: framebuffer {frameWidth}x{frameHeight}, logical {window.Width}x{window.Height}");
+        Console.WriteLine($"window: framebuffer {frameWidth}x{frameHeight}, logical {window.Width}x{window.Height}, "
+                + $"gui scale {window.Gui.Scale} -> canvas {window.Gui.Width}x{window.Gui.Height}");
 
         surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight);
 
@@ -313,7 +314,7 @@ public static class WindowedRenderer
             var dynamicIndexCount = 0u;
             uiIndexCount = 0u;
 
-            if (uiGeometry is not null && uiGeometry(window.Input) is { Ranges.Length: > 0 } ui)
+            if (uiGeometry is not null && uiGeometry(new UiFrame(window.Input, window.Gui.Width, window.Gui.Height)) is { Ranges.Length: > 0 } ui)
             {
                 var neededVertex = (ulong)ui.Vertices.Length * sizeof(float);
                 var neededIndex = (ulong)ui.Indices.Length * sizeof(uint);
@@ -335,11 +336,13 @@ public static class WindowedRenderer
                 device.Queue.WriteBuffer(uiVertex, 0, ui.Vertices);
                 device.Queue.WriteBuffer(uiIndex, 0, ui.Indices);
 
-                // The layout is expressed in virtual pixels; the window draws them one to one for now, so a single
-                // scale factor converts both the projection and the scissor rectangles.
-                uiScale = frameWidth / (float)Math.Max(1u, frameWidth);
+                // The layout is expressed in interface pixels, and the canvas is the framebuffer divided by the
+                // interface scale (docs/modules/ui.md 9.1). One factor converts both the projection and the
+                // scissor rectangles, so a resize or a scale change moves the whole interface coherently.
+                var canvas = window.Gui;
+                uiScale = frameWidth / (float)Math.Max(1, canvas.Width);
                 var matrix = new float[UiProjection.FloatsPerMatrix];
-                UiProjection.WriteOrthographic(frameWidth, frameHeight, matrix);
+                UiProjection.WriteOrthographic(canvas.Width, canvas.Height, matrix);
 
                 var transformBytes = new byte[VertexLayout.CameraUniformSize];
                 for (var element = 0; element < UiProjection.FloatsPerMatrix; element++)

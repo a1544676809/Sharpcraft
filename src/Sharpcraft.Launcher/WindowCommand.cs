@@ -201,7 +201,7 @@ internal static class WindowCommand
             expectedChunks: InteractiveSession.ExpectedChunkCount(),
             dynamicGeometry: entitySource,
             glyphTexture: glyphTexture,
-            uiGeometry: input =>
+            uiGeometry: frame =>
             {
                 var screen = uiLoader.Current ?? fallback;
 
@@ -211,7 +211,9 @@ internal static class WindowCommand
                     return uiGeometry;
                 }
 
-                UiScreenLayout.Build(screen.Root, screen.Styles, width, height, uiGeometry, uiFont);
+                var canvasWidth = frame.Width;
+                var canvasHeight = frame.Height;
+                UiScreenLayout.Build(screen.Root, screen.Styles, canvasWidth, canvasHeight, uiGeometry, uiFont);
 
                 // The reference shows the list only while the key is held, so it is drawn from the current input
                 // rather than unconditionally. It joins the same batch as the document, so the submission budget
@@ -220,7 +222,7 @@ internal static class WindowCommand
                 // which is what the reference does so nothing disappears while it is being read.
                 if (uiFont is not null)
                 {
-                    session.ChatLog.Draw(uiGeometry, uiFont, height, session.ChatTicks, session.Chat.IsOpen);
+                    session.ChatLog.Draw(uiGeometry, uiFont, canvasHeight, session.ChatTicks, session.Chat.IsOpen);
                 }
 
                 // The prompt sits where the reference puts it: a two pixel inset, twelve pixel box at the foot of
@@ -228,23 +230,23 @@ internal static class WindowCommand
                 if (session.Chat.IsOpen)
                 {
                     const uint promptBackground = 0x80000000u;
-                    uiGeometry.AddRectangle(2f, height - 14f, width - 4f, 12f, promptBackground);
+                    uiGeometry.AddRectangle(2f, canvasHeight - 14f, canvasWidth - 4f, 12f, promptBackground);
 
                     if (uiFont is not null)
                     {
                         var typed = session.Chat.Text;
-                        UiScreenLayout.AddText(uiGeometry, uiFont, typed, 4f, height - 13f, 1f, 0xFFFFFFFFu);
+                        UiScreenLayout.AddText(uiGeometry, uiFont, typed, 4f, canvasHeight - 13f, 1f, 0xFFFFFFFFu);
 
                         var caretX = 4f + (uiFont.MeasureWidth(typed) * 1f);
-                        uiGeometry.AddRectangle(caretX + 1f, height - 13f, 1f, 8f, 0xFFE0E0E0u);
+                        uiGeometry.AddRectangle(caretX + 1f, canvasHeight - 13f, 1f, 8f, 0xFFE0E0E0u);
                     }
                 }
 
-                if (KeyBindings.Default.IsDown(input, InputAction.PlayerList))
+                if (KeyBindings.Default.IsDown(frame.Input, InputAction.PlayerList))
                 {
                     PlayerListPanel.Draw(
                         session.PlayerList.Entries,
-                        width,
+                        canvasWidth,
                         top: 10f,
                         slotWidth: 140f,
                         uiGeometry,
