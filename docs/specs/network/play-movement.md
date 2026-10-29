@@ -299,3 +299,58 @@ status: 已评审
 2. 修正次数是**可观测的等效指标**，应记录并跟踪趋势，而不是当作失败；
 3. "平滑修正"是**有意偏离原版**（原版硬吸附），必须留在偏差清单里（见 `play-movement.md` §4）；
 4. 真正该对齐的是**求解顺序与常量**（轴顺序、`maxUpStep`、贴边保护），因为它们直接决定残差大小。
+
+### 7.10 原版如何处理"客户端与服务端位置不一致"（R-023 的参照实现）
+
+原版把这套逻辑写成三道闸门，**它从不试图让客户端"算得更准"，而是定义清楚什么情况该纠正**。
+
+#### 闸门一：容忍残差
+
+```java
+if (!noPhysics && movedDist > 0.0625 && !sleeping && !creative && !spectator && !postImpulseGrace) {
+    fail = true;
+    LOGGER.warn("{} moved wrongly!", name);
+}
+```
+
+残差超过 **1/16 格**只记一条 WARN，**并不回拉**。
+
+#### 闸门二：只有"可能穿墙"才回拉
+
+```java
+if (noPhysics || sleeping || ((!fail || !noCollision(player, oldAABB)) && !isEntityCollidingWithAnythingNew(...)))
+    accept: player.absSnapTo(target); lastGood = 当前位置;
+else
+    teleport(startX, startY, startZ, ...);   // 拉回原处并重同步
+```
+
+即：**只要目标位置没有引入新的碰撞体，残差多大都接受**。回拉的唯一理由是"这个位置会让玩家穿进/卡进方块"。
+
+#### 闸门三：带 id 的传送握手 + 20 tick 重试
+
+```java
+public void teleport(PositionMoveRotation destination, Set<Relative> relatives) {
+    awaitingTeleport++;                       // id 递增
+    awaitingTeleportTime = tickCount;
+    player.teleportSetPosition(destination, relatives);   // 按 Relative 位集合应用
+    awaitingPositionFromClient = player.position();
+    send(ClientboundPlayerPositionPacket.of(awaitingTeleport, destination, relatives));
+}
+```
+
+客户端必须回 `AcceptTeleportation(id, x, y, z, yRot, xRot)`；若 `tickCount − awaitingTeleportTime > 20`
+仍未确认，服务端**重发**该传送（不踢人）。这就是"位置重同步"的完整状态机。
+
+#### 对我们的直接含义
+
+我们此前统计到的 ~25 次/12 秒修正，日志里**没有任何 `moved wrongly`**，因此 `fail = false`，
+回拉只可能来自 `isEntityCollidingWithAnythingNew` 为真：
+
+> **我们的客户端申报的目标位置，让玩家包围盒与"旧包围盒未接触过"的方块发生了重叠。**
+
+也就是说：不是"我们算的位置和原版差一点距离"，而是**我们的碰撞求解允许我们贴得比原版更近**，
+最可能是离地高度钳制留了极小穿透（浮点贴面误差）。据此 R-023 的排查方向明确为：
+
+1. 记录每次修正前后的「目标位置 / 旧包围盒 / 新包围盒重叠了哪些方块」，确认是否恒定是脚下方块；
+2. 若是，则修 `Entity.Move` 的贴面钳制（让 Y 停在方块顶面而非面内），而不是去改速度或节拍；
+3. 这与"残差大小"无关，与"是否穿透"有关——**这正是原版闸门二告诉我们的**。
