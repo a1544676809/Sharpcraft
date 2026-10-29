@@ -35,6 +35,16 @@ M1（基础逻辑）与 M2（世界数据闭环）已达成并留有可执行证
 - 无硬阻塞。
 - **待你提供**：26.3 客户端 jar 的本地路径（原则 3：只在你本地、不进仓库）。缺它只影响"真实提取验收"，不影响 T-032/T-033 的编码与合成 jar 测试。
 
+## 换机继续开发（交接清单）
+
+换到另一台机器只需三件事，仓库里没有绑定任何本地路径或产物：
+
+1. `git clone https://github.com/a1544676809/Sharpcraft` + 安装 **.NET 10 SDK**（`global.json` 固定 `10.0.100`，`rollForward: latestFeature`）；
+2. `dotnet build Sharpcraft.slnx && dotnet test Sharpcraft.slnx`（会还原 `Brew.Wgpu` / `Silk.NET.Windowing` / `DnsClient`）；
+3. 把**你自己的** 26.3 jar 路径传给启动器（`launcher assets <jar> <json>`），产出 pack 落在仓库外的用户数据目录。
+
+不在仓库、也不需要在仓库里的东西：分析工作区（`../mc-26.3-analysis`，仅用于文档里的 `ref://` 证据指针）、资产 pack（`%TEMP%` 或 `%LOCALAPPDATA%`）、令牌缓存与账号文件（用户数据目录）、抓包回放文件。
+
 ## 下一步具体动作
 
 1. T-032 **已完成**：`VersionManifest`（id / assetIndex.id+sha1 / downloads.client.sha1）+ `JarVerifier`（流式 SHA-1、尺寸预检、篡改不可绕过、报错含期望与实际哈希）。
