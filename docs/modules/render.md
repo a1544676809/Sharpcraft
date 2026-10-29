@@ -221,6 +221,31 @@ frame written to ...\sharpcraft-frame.png
   `0 air → missing(255,0,255)`、`1 stone → 848,336 rgba(143,143,143)`、`2 dirt → 688,176 rgba(121,85,58)`、`3 cobblestone → 160,144 rgba(181,181,181)`。
 - 用 `MC_DEMO_STATE=1` 把整个世界刷成石头后采样渲染结果：`rgba(143,143,143)`，与图集里石头的像素**完全一致**。
 
+### 真实服务器的带纹理画面（2026-10-29 实测）
+
+```
+$ launcher frame <address>
+Signed in as <profile>
+chunks: 9 ok, 0 failed
+sprite coverage: 1021/1286 blocks textured, 265 missing
+sprites: 1024x1024 atlas, 1301 sprites, layout present, 56 ms
+mesh: 275142 blocks, 51402 triangles
+frame written to sharpcraft-frame.png
+```
+
+- 一次完整链路：真实登录 → 握手 → 配置阶段注册表 → 9 个区块 → 图集 → 网格 → 离屏渲染 → PNG。
+- 与本地演示世界相比，真实世界的 **275,142 个方块 / 51,402 个三角形**是数量级的差别，也第一次验证了"真实 state id → 方块名 → 每面纹理"这条链在真实数据上成立。
+- 会话令牌缓存生效：再次运行直接 `Signed in as …`，**没有再次要求设备码**（见 `docs/modules/auth.md` §5.1）。
+
+### 流体：`<名字>_still`
+
+流体的方块状态文件指向的模型只声明 `particle`，没有任何面变量（`models/block/water.json` 只有 `particle: block/water_still`），
+因此模型链解析不出面纹理。流体没有独立模型，原版由流体渲染器画，静态画面用的就是 `_still` 那一帧。
+解析顺序因此在"与方块同名"之前增加一步：`<名字>_still` 命中时三面同用该精灵。
+
+效果：`water` / `lava` 从紫黑格子变成真实贴图（覆盖率 1019 → 1021），剩余 265 个未解析方块集中在
+`chest`、`wall_torch`、`fire`、`redstone_wire`、作物等**非立方体或实体渲染**的方块（T-041）。
+
 ### 这轮抓到的两个真 bug
 
 1. **顶点颜色不能再用状态哈希色**。有了纹理之后，albedo 来自图集，顶点颜色只应承载光照；最初仍乘上 `ColourOf(state)`，结果石头被染成棕色。是靠"强制单一方块 + 采样渲染像素对比图集像素"这条诊断链定位的，肉眼看图只会觉得"颜色有点怪"。

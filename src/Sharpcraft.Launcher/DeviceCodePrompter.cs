@@ -35,6 +35,63 @@ internal static class DeviceCodePrompter
             : baseUrl + "?otc=" + Uri.EscapeDataString(challenge.UserCode);
     }
 
+    /// <summary>Browser executables probed on Windows, in order, before the shell default.</summary>
+    private static readonly string[] WindowsBrowserCandidates =
+    [
+        "msedge.exe",
+        "chrome.exe",
+        "firefox.exe"
+    ];
+
+    /// <summary>Resolves a browser executable that actually exists on Windows, or null.</summary>
+    /// <param name="candidates">Executables to probe.</param>
+    /// <param name="exists">Existence predicate, injected so tests need no real installation.</param>
+    public static string? FindWindowsBrowser(
+        IEnumerable<string> candidates,
+        Func<string, bool> exists)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+        ArgumentNullException.ThrowIfNull(exists);
+
+        var roots = new[]
+        {
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+        };
+
+        foreach (var candidate in candidates)
+        {
+            foreach (var root in roots)
+            {
+                if (string.IsNullOrEmpty(root))
+                {
+                    continue;
+                }
+
+                var path = System.IO.Path.Combine(root, "Microsoft", "Edge", "Application", candidate);
+                if (exists(path))
+                {
+                    return path;
+                }
+
+                path = System.IO.Path.Combine(root, "Google", "Chrome", "Application", candidate);
+                if (exists(path))
+                {
+                    return path;
+                }
+
+                path = System.IO.Path.Combine(root, "Mozilla Firefox", candidate);
+                if (exists(path))
+                {
+                    return path;
+                }
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>Chooses the opener command for a platform.</summary>
     /// <param name="url">URL to open.</param>
     /// <param name="platform">Platform name, as reported by the runtime.</param>
@@ -42,7 +99,7 @@ internal static class DeviceCodePrompter
     public static (string FileName, string[] Arguments) OpenerFor(string url, OSPlatformKind platform, string? windowsBrowser) =>
         platform switch
         {
-            OSPlatformKind.Windows when windowsBrowser is { Length: > 0 } => (windowsBrowser, ["--single-argument", url]),
+            OSPlatformKind.Windows when windowsBrowser is { Length: > 0 } => (windowsBrowser, [url]),
             OSPlatformKind.Windows => ("cmd.exe", ["/c", "start", string.Empty, url]),
             OSPlatformKind.MacOS => ("open", [url]),
             _ => ("xdg-open", [url])
@@ -63,28 +120,60 @@ internal static class DeviceCodePrompter
             return;
         }
 
-        var browser = Environment.GetEnvironmentVariable("SHARPCRAFT_BROWSER");
-        var (fileName, arguments) = OpenerFor(url, CurrentPlatform(), browser);
+        var platform = CurrentPlatform();
+        var configured = Environment.GetEnvironmentVariable("SHARPCRAFT_BROWSER");
 
-        try
+        // An explicit setting wins; otherwise probe the usual install locations, then the shell.
+        var candidates = new List<string>();
+        if (configured is { Length: > 0 })
         {
-            var startInfo = new ProcessStartInfo(fileName) { UseShellExecute = false };
-            foreach (var argument in arguments)
+            candidates.Add(configured);
+        }
+        else if (platform == OSPlatformKind.Windows)
+        {
+            if (FindWindowsBrowser(WindowsBrowserCandidates, File.Exists) is { } installed)
             {
-                startInfo.ArgumentList.Add(argument);
-            }
-
-            using var process = Process.Start(startInfo);
-            if (process is null)
-            {
-                Console.WriteLine($"  (could not open a browser; please open {url} manually)");
+                candidates.Add(installed);
             }
         }
-        catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException)
+
+        if (platform == OSPlatformKind.Windows)
         {
-            Console.WriteLine($"  (could not open a browser: {exception.Message})");
-            Console.WriteLine($"  please open {url} manually");
+            candidates.Add("cmd.exe");
         }
+
+        if (candidates.Count == 0)
+        {
+            candidates.Add(OpenerFor(url, platform, null).FileName);
+        }
+
+        foreach (var candidate in candidates)
+        {
+            var browser = candidate == "cmd.exe" ? null : candidate;
+            var (fileName, arguments) = OpenerFor(url, platform, browser);
+
+            try
+            {
+                var startInfo = new ProcessStartInfo(fileName) { UseShellExecute = false };
+                foreach (var argument in arguments)
+                {
+                    startInfo.ArgumentList.Add(argument);
+                }
+
+                using var process = Process.Start(startInfo);
+                if (process is not null)
+                {
+                    return;
+                }
+            }
+            catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException)
+            {
+                // Try the next candidate; the printed URL stays the fallback.
+                _ = exception;
+            }
+        }
+
+        Console.WriteLine($"  (could not open a browser; please open {url} manually)");
     }
 
     /// <summary>Platform the process is running on, in the shape the opener selection needs.</summary>

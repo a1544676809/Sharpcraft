@@ -35,7 +35,7 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-045 | HTTP 代理支持（裸连 / 代理 / 直连三条路径可选） | `docs/modules/auth.md` §传输层 | `HostTransportProxyTests`（5 项：显式变量优先、`HTTPS_PROXY` 兜底、裸 host:port、坏值回退、无配置=直连） | `Launcher/Transport/HostTransport` | 已完成 |
 | T-043 | 文档索引生成与源码模块覆盖门禁 | `docs/modules/doc-indexer.md`；ADR-0008 | `DocIndexTests`（2 项：索引最新、覆盖合规）；真实运行：11 个目录 README 由生成器接管、`--check` / `--check-coverage` 通过、基线 26 个模块 | `tools/Sharpcraft.Docs.Indexer`、`tests/Sharpcraft.Architecture.Tests/DocIndexTests.cs` | 已完成 |
 | T-042 | `registry_data` → `BlockStateLayout` 动态装配（服务器增删/重排方块时的 state id → 方块名） | `docs/modules/render.md` §6.1；`docs/analysis/common/registry-order.md` §5 | 待补（先测：注册表条目顺序与基线不同、缺条目、id 越界） | 未开始（当前用 `VanillaBlockRegistry` 基线快照） | 规格已就绪 |
-| T-041 | 特殊渲染方块（流体/火把/箱子/活塞等 267 个） | 待写：流体与实体渲染规格 | 待补 | 未开始 | 规格不足 |
+| T-041 | 特殊渲染方块（火把/箱子/活塞/作物等 265 个；流体已由 `_still` 回退覆盖） | 待写：流体与实体渲染规格 | 待补 | 未开始 | 规格不足 |
 | T-040 | `blockstates` + `models` 解析（按面取纹理） | `docs/analysis/assets/block-models.md`；`docs/modules/render.md` §6.1 | `BlockModelResolverTests`（7 项：cube_all 链、column 的 end/side、`#变量`链、数组变体取首个、缺 blockstate、坏 JSON、模型优先于名字启发）；真实覆盖率 682 → **1019/1286** | `Client/Assets/BlockModelResolver` | 已完成 |
 | T-039 | 基线 `BlockStateLayout` 装配（state id → 方块名） | `docs/modules/render.md` §6.1；`docs/analysis/common/registry-order.md` §5 | `VanillaBlockLayoutTests`（13 项：总数、基准 id 累加、air 首位、redstone_wire=1296、标识符唯一） | `Common/Registries/VanillaBlockRegistry`（嵌入式基线快照） | 已完成 |
 | T-038 | 资源层迁至客户端（ADR-0007） | `docs/decisions/0007-resources-live-in-the-client.md`；`docs/modules/asset-resolution.md` §2 | `AssetResolutionTests`（12 项随代码迁入 `Client.Tests`）；`dotnet test` 全绿 | `Client/Assets/`（`AssetStack`、`ResourcePath`、`AssetSources`、`AssetPackManifest`） | 已完成 |

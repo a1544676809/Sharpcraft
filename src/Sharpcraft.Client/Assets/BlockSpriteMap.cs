@@ -136,7 +136,16 @@ public sealed class BlockSpriteMap
             return modelled;
         }
 
-        // 2) A texture named exactly like the block covers every face.
+        // 2) Fluids have no blockstates file: their textures are <name>_still and <name>_flow, and
+        // the still frame is what a static render shows (docs/analysis/assets/block-models.md 4).
+        if (Lookup($"{path}_still") is { } still)
+        {
+            var fluid = new[] { still, still, still };
+            _cache[blockId] = fluid;
+            return fluid;
+        }
+
+        // 3) A texture named exactly like the block covers every face.
         var direct = new Identifier("minecraft", TextureDirectory + path);
         if (_atlas.Contains(direct))
         {
@@ -146,7 +155,7 @@ public sealed class BlockSpriteMap
             return uniform;
         }
 
-        // 3) Face-suffixed textures, as grass and many other blocks use.
+        // 4) Face-suffixed textures, as grass and many other blocks use.
         var top = Lookup($"{path}_top");
         var side = Lookup($"{path}_side");
         var bottom = Lookup($"{path}_bottom");
@@ -165,7 +174,7 @@ public sealed class BlockSpriteMap
             return faces;
         }
 
-        // 4) Nothing matched: the missing sprite, which is how vanilla shows an unknown texture.
+        // 5) Nothing matched: the missing sprite, which is how vanilla shows an unknown texture.
         var fallbackSprite = _atlas.Get(SpriteAtlas.MissingSprite);
         var fallback = new[] { fallbackSprite, fallbackSprite, fallbackSprite };
         _cache[blockId] = fallback;
