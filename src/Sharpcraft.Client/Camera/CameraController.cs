@@ -7,7 +7,8 @@ namespace Sharpcraft.Client.Camera;
 
 /// <summary>
 /// First-person camera: yaw and pitch driven by relative mouse movement, eye taken from the player.
-/// Yaw 0 looks towards −Z, matching the entity convention (docs/modules/input.md 5).
+/// Yaw 0 looks towards −Z and grows clockwise, which is the mirror of the wire convention; LookConvention
+/// converts both angles at that boundary (docs/modules/input.md 5).
 /// </summary>
 public sealed class CameraController
 {
@@ -27,8 +28,8 @@ public sealed class CameraController
     {
         const float degreesToRadians = MathF.PI / 180f;
 
-        // Moving the mouse right turns right and moving it down looks down. The pitch stored here therefore grows
-        // upwards, which is the opposite of the wire convention; LookConvention converts at that boundary.
+        // Moving the mouse right turns right and moving it down looks down. Both stored angles therefore run the
+        // opposite way to the wire convention; LookConvention converts them at that boundary.
         Yaw += pixels.X * degreesPerPixel * degreesToRadians;
         Pitch -= pixels.Y * degreesPerPixel * degreesToRadians;
 

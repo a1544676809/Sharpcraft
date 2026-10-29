@@ -189,6 +189,14 @@ internal sealed class InteractiveSession
                         + $"y={_player.Position.Y:F2} vy={_player.DeltaMovement.Y:F3}");
                 }
 
+                // Diagnostic hook: sweep the pitch so the head direction can be checked from a second client
+                // without driving two windows at once.
+                if (Environment.GetEnvironmentVariable("MC_CAMERA_SWEEP") == "1")
+                {
+                    var sweep = MathF.Sin(_tickCounter * 0.05f * 0.9f) * (80f * (MathF.PI / 180f));
+                    _camera.SetLook(_camera.Yaw, sweep);
+                }
+
                 _player.Tick(frame.Forward, frame.Strafe, frame.Jump, frame.Sprint, _camera.Yaw, frame.Sneak);
 
                 // Remote entities approach the position the server reported over a few ticks, so the tracker
@@ -293,8 +301,7 @@ internal sealed class InteractiveSession
     /// <param name="pitchDegrees">Pitch in degrees.</param>
     private void AdoptRotation(float yawDegrees, float pitchDegrees)
     {
-        const float degreesToRadians = MathF.PI / 180f;
-        _camera.SetLook(yawDegrees * degreesToRadians, LookConvention.FromWirePitchDegrees(pitchDegrees));
+        _camera.SetLook(LookConvention.FromWireYawDegrees(yawDegrees), LookConvention.FromWirePitchDegrees(pitchDegrees));
     }
 
     private void PublishTick()
@@ -304,7 +311,7 @@ internal sealed class InteractiveSession
             return;
         }
 
-        var yawDegrees = _camera.Yaw * (180f / MathF.PI);
+        var yawDegrees = LookConvention.ToWireYawDegrees(_camera.Yaw);
         var pitchDegrees = LookConvention.ToWirePitchDegrees(_camera.Pitch);
 
         if (_sync.Build(_sync.Decide(_player, yawDegrees, pitchDegrees), _player, yawDegrees, pitchDegrees) is { } packet)
