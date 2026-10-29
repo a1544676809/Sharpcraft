@@ -49,7 +49,8 @@ internal static class WalkCommand
         var survived = false;
 
         var clock = Stopwatch.StartNew();
-        var interval = TimeSpan.FromMilliseconds(50);
+        var interval = TimeSpan.FromMilliseconds(int.TryParse(Environment.GetEnvironmentVariable("MC_WALK_INTERVAL_MS"), out var intervalMs) ? intervalMs : 50);
+        var lastSend = TimeSpan.Zero;
 
         // The server teleports a joining player to spawn and waits for the acknowledgement. Moving before
         // answering that teleport is a protocol violation, so the walk waits for it first.
@@ -85,7 +86,40 @@ internal static class WalkCommand
                             var (id, snapped, distance) = ApplyTeleport(connection, sync, player, joinCorrection);
                             corrections++;
                             joinTeleportSeen = true;
-                            log($"join teleport {id}: deviation {distance:F2} snapped={snapped} (accepted)");
+
+                            // The server ignores position updates until the client reports that the world is
+                            // loaded. The packet has an empty body, so the id is the whole payload.
+                            // Probe mode: send one id with a deliberately oversized body, then stop. The server names the
+            // packet it tried to decode in its log, which is the only authoritative id table we have.
+            if (int.TryParse(Environment.GetEnvironmentVariable("MC_PROBE_ID"), out var probeId) && probeId > 0)
+            {
+                var probe = new byte[64];
+                var probeWriter = new PayloadWriter(probe);
+                probeWriter.WriteVarInt(probeId);
+                for (var index = 0; index < 40; index++)
+                {
+                    probeWriter.WriteByte(0xFF);
+                }
+
+                TrySend(connection, probe.AsSpan(0, probeWriter.Position), ref reason);
+                log($"probed id {probeId} with 40 body bytes");
+                await Task.Delay(600, cancellationToken).ConfigureAwait(false);
+                return new Result(0, corrections, 0, reason, true);
+            }
+            if (int.TryParse(Environment.GetEnvironmentVariable("MC_LOAD_ID"), out var loadId) && loadId > 0)
+                            {
+                                var loadPacket = new byte[2];
+                                var loadWriter = new PayloadWriter(loadPacket);
+                                loadWriter.WriteVarInt(loadId);
+                                TrySend(connection, loadPacket.AsSpan(0, loadWriter.Position), ref reason);
+                                log($"sent player loaded (id {loadId})");
+                            }
+                            log(
+                                $"join teleport {id}: pos=({joinCorrection.X:F3},{joinCorrection.Y:F3},{joinCorrection.Z:F3}) " +
+                                $"delta=({joinCorrection.DeltaX:F3},{joinCorrection.DeltaY:F3},{joinCorrection.DeltaZ:F3}) " +
+                                $"yaw={joinCorrection.Yaw:F2} pitch={joinCorrection.Pitch:F2} relatives={joinCorrection.RelativeFlags} " +
+                                $"deviation={distance:F2} snapped={snapped}");
+                            log($"  accepted at ({player.Position.X:F3},{player.Position.Y:F3},{player.Position.Z:F3})");
                         }
 
                         break;
@@ -157,10 +191,15 @@ internal static class WalkCommand
             // One tick at a time, sent only when something actually changed. MC_WALK_MODE=status sends the
             // status packet instead, which isolates "is the id right" from "are the coordinates legal".
             player.Tick(forward: 1f, strafe: 0f, jumping: false, sprinting: false, yaw: 0f);
+            // The server rejects a second position packet in the same tick as an invalid move, so movement is
+            // paced to one packet per 50 ms no matter how fast the loop spins.
             var kind = Environment.GetEnvironmentVariable("MC_WALK_MODE") == "status"
                 ? MovePacketKind.StatusOnly
                 : sync.Decide(player, 0f, 0f);
-            if (sync.Build(kind, player, 0f, 0f) is { } packet)
+
+            var idle = Environment.GetEnvironmentVariable("MC_WALK_IDLE") == "1";
+            var sinceLastSend = clock.Elapsed - lastSend;
+            if (!idle && sinceLastSend >= interval && sync.Build(kind, player, 0f, 0f) is { } packet)
             {
                 if (!TrySend(connection, packet, ref reason))
                 {
@@ -168,6 +207,7 @@ internal static class WalkCommand
                     break;
                 }
 
+                lastSend = clock.Elapsed;
                 sent++;
             }
 
@@ -213,8 +253,8 @@ internal static class WalkCommand
                 player.Position.X,
                 player.Position.Y,
                 player.Position.Z,
-                0f,
-                0f));
+                correction.Yaw,
+                correction.Pitch));
         }
 
         return (outcome.TeleportId, outcome.Snapped, outcome.Distance);

@@ -73,17 +73,50 @@ status: 已评审
 验证环境服务端不开 `online-mode`，因此进服不需要会话令牌；即便如此，**移动包的格式与 id 不变**，
 同步逻辑全部可验证。离线服务器只影响认证链，不影响本规格。
 
-## 6. 实测记录（本地 offline-mode 服务端，2026-10-29）
+## 6. 实测记录（本地 offline-mode 服务端，Minecraft 26.3）
 
-| 环节 | 结果 |
+### 6.1 服务端权威 id 表（27–45，逐一探针确认）
+
+服务端在解码失败时会**点名它读的是哪个包**，因此可以逐个 id 发一个超长包体，从服务端日志读回真实映射：
+
+| id | 包 | id | 包 |
+| --- | --- | --- | --- |
+| 27 | `jigsaw_generate` | 37 | `pick_item_from_entity` |
+| 28 | `keep_alive` | 38 | `ping_request` |
+| 29 | `lock_difficulty` | 39 | `place_recipe` |
+| 30 | （未命名，解码通过） | 40 | `player_abilities` |
+| 31 | `move_player_pos_rot` | 41 | `player_action` |
+| 32 | `move_player_rot` | 42 | `player_command` |
+| 33 | `move_player_status_only` | 43 | `player_input` |
+| 34 | `move_vehicle` | 44 | `player_loaded` |
+| 35 | `paddle_boat` | 45 | `pong` |
+| 36 | `pick_item_from_block` | | |
+
+**结论**：我们此前的序号从 27 起整体少 1（分析用的客户端 jar 与服务端构建差一个注册项）。
+本表以服务端为准，因为它才是判定方。
+
+### 6.2 已验证通过
+
+| 环节 | 证据 |
 | --- | --- |
-| 登录 / 配置 / 进 play | 通过（`frame` 收到 9/9 区块） |
-| 收到 `PlayerPosition`（id 73） | 通过：偏差 190.32 格，吸附并回 `AcceptTeleportation` |
-| 发送任意 `MovePlayer*` | **失败**：发出 2–3 个包后服务端直接关闭连接，无 disconnect 包 |
-| 仅发 `MovePlayerStatusOnly`（3 字节） | **同样失败** |
+| 登录 → 配置 → play | `frame` 收到 9/9 区块 |
+| 接 `PlayerPosition` | id **73**，位置与日志一致（1.596, 190.0, 11.498） |
+| 回 `AcceptTeleportation` | 服务端不报错；**不发移动包时可稳定保持连接 4 秒以上** |
+| `MovePlayerPosRot` 编码 | 探针：40 字节包体中服务端只多出 7 字节（=1 id + 3 double + 2 float + 1 标志）→ 布局正确 |
 
-**结论**：失败与坐标无关（纯标志包一样被关），问题在移动包本身的 id 或编码。
-按 4.1 已停止试错，等待服务端日志给出确切原因（kick 原因会直接指明是解码错误还是移动校验）。
+### 6.3 仍然失败：移动包被判非法
+
+服务端日志：`lost connection: Invalid move player packet received`。
+
+`handlePlayerPositionChange` 的判定：服务端按我们的增量自己 `move()` 一次，若最终位置与我们申报的相差超过
+0.0625²（0.25 格）即判非法。
+
+**原因**：`walk` 命令里的玩家踩在一个**虚构的平地**（`y < 0` 为实体）上，而服务端的世界在 y≈190 处有真实地形。
+两边物理从第一帧就分叉，服务端每次重算都得不到我们的位置，于是判非法。
+
+**修法（下一步）**：让 `walk` 用服务端下发的区块构建真实世界（`frame` 已经在做），并把玩家放到传送包给定的位置。
+
+**这不是"坐标不对"，而是"世界不对"** —— 记下来，避免下次又去调 id 或发包频率。
 
 ## 7. 实现状态
 

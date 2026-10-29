@@ -136,25 +136,25 @@ public static class PacketIds
         /// chain also contains the shared "common" packets, so a count that only looks at game packets is
         /// off by the number of common packets registered before it.
         /// </summary>
-        public const int KeepAlive = 27;
+        public const int KeepAlive = 28;
 
         /// <summary>Accept a server teleport, carrying the id and the accepted position.</summary>
         public const int AcceptTeleportation = 0;
 
         /// <summary>Position update.</summary>
-        public const int MovePlayerPos = 29;
+        public const int MovePlayerPos = 30;
 
         /// <summary>Position and rotation update, sent while turning and walking.</summary>
-        public const int MovePlayerPosRot = 30;
+        public const int MovePlayerPosRot = 31;
 
         /// <summary>Rotation-only update.</summary>
-        public const int MovePlayerRot = 31;
+        public const int MovePlayerRot = 32;
 
         /// <summary>Status-only update: the ground and collision flags changed.</summary>
-        public const int MovePlayerStatusOnly = 32;
+        public const int MovePlayerStatusOnly = 33;
 
         /// <summary>Pong reply.</summary>
-        public const int Pong = 44;
+        public const int Pong = 45;
     }
 
     /// <summary>Server to client, <see cref="ConnectionState.Play"/> (only used ids listed).</summary>
