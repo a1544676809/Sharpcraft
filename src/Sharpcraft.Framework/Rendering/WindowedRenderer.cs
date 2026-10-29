@@ -254,6 +254,9 @@ public static class WindowedRenderer
         var colour = request.ClearColour;
         var presented = 0;
         var worstFrameMs = 0d;
+        var worstFrameIndex = 0;
+        var framesOver33 = 0;
+        var lastUploadedAt = 0L;
         var rebuildTotalMs = 0d;
         var rebuildCount = 0;
         var worstRebuildMs = 0d;
@@ -373,9 +376,13 @@ public static class WindowedRenderer
                 dynamicIndexCount = (uint)dynamic.IndexCount;
             }
 
+            var updatesThisFrame = 0;
+
             if (arena is not null)
             {
                 var updates = geometryUpdates!();
+                updatesThisFrame = updates?.Count ?? 0;
+
                 if (updates is { Count: > 0 })
                 {
                     foreach (var (key, mesh) in updates)
@@ -429,7 +436,28 @@ public static class WindowedRenderer
             // Frame pacing: the worst gap is what a dropped frame feels like, and it is the number that
             // regressed when meshing moved between threads.
             var nowMs = frameClock.Elapsed.TotalMilliseconds;
-            worstFrameMs = Math.Max(worstFrameMs, nowMs - lastFrameAt);
+            var gapMs = nowMs - lastFrameAt;
+            var uploadedNow = arena?.UploadedBytes ?? 0;
+            var uploadedDelta = uploadedNow - lastUploadedAt;
+            lastUploadedAt = uploadedNow;
+
+            // Which frame was worst matters as much as how bad it was: a spike in the first few frames is startup
+            // work, a spike in the middle is something that happens while playing.
+            if (gapMs > worstFrameMs)
+            {
+                worstFrameMs = gapMs;
+                worstFrameIndex = presented;
+            }
+
+            if (gapMs > 33.3)
+            {
+                framesOver33++;
+
+                // A slow frame is either collection or upload; the counters tell them apart without a profiler.
+                Console.WriteLine(
+                    $"frame #{presented} gap {gapMs:F1} ms, updates {updatesThisFrame}, uploaded +{uploadedDelta / 1024} KiB, gc {GC.CollectionCount(0)}/{GC.CollectionCount(1)}/{GC.CollectionCount(2)}");
+            }
+
             lastFrameAt = nowMs;
 
             var acquired = surface.GetCurrentTexture();
@@ -599,7 +627,7 @@ public static class WindowedRenderer
         }
 
         Console.WriteLine(
-            $"window: {presented} frames in {frameClock.Elapsed.TotalSeconds:F1}s, worst frame {worstFrameMs:F1} ms");
+            $"window: {presented} frames in {frameClock.Elapsed.TotalSeconds:F1}s, worst frame {worstFrameMs:F1} ms at #{worstFrameIndex}, {framesOver33} frames over 33 ms");
         if (arena is not null)
         {
             Console.WriteLine(
