@@ -59,6 +59,7 @@ internal static class WalkCommand
         var lastTrace = TimeSpan.Zero;
         var sendEveryTicks = int.TryParse(Environment.GetEnvironmentVariable("MC_WALK_SEND_EVERY_TICKS"), out var every) && every > 0 ? every : 1;
         var tickCounter = 0;
+        var blockChanges = 0;
         const float desiredChunksPerTick = 8f;
         var tickWatch = new Stopwatch();
         var tickCostMs = 0d;
@@ -256,6 +257,30 @@ internal static class WalkCommand
 
                             break;
 
+                        case PacketIds.PlayClientbound.BlockUpdate:
+                            if (world is not null &&
+                                BlockUpdatePackets.TryReadBlockUpdate(body[reader.Position..], out var block) == DecodeStatus.Success)
+                            {
+                                world.SetBlockState(block.X, block.Y, block.Z, block.State);
+                                blockChanges++;
+                            }
+
+                            break;
+
+                        case PacketIds.PlayClientbound.SectionBlocksUpdate:
+                            if (world is not null &&
+                                BlockUpdatePackets.TryReadSectionBlocksUpdate(body[reader.Position..], out var blocks) == DecodeStatus.Success)
+                            {
+                                foreach (var change in blocks)
+                                {
+                                    world.SetBlockState(change.X, change.Y, change.Z, change.State);
+                                }
+
+                                blockChanges += blocks.Length;
+                            }
+
+                            break;
+
                         case PacketIds.PlayClientbound.PlayerRotation:
                             if (PlayMovementPackets.TryReadPlayerRotation(body[reader.Position..], out var rotation) == DecodeStatus.Success &&
                                 rotation is not null)
@@ -343,7 +368,7 @@ internal static class WalkCommand
             }
         }
 
-        log($"ticks={tickCounter} in {tickWatch.Elapsed.TotalSeconds:F2}s => {tickCounter / Math.Max(0.001, tickWatch.Elapsed.TotalSeconds):F1} ticks/sec, cost {tickCostMs / Math.Max(1, tickCounter):F2} ms/tick, sent={sent}, chunks={world?.LoadedChunkCount ?? 0}");
+        log($"ticks={tickCounter} in {tickWatch.Elapsed.TotalSeconds:F2}s => {tickCounter / Math.Max(0.001, tickWatch.Elapsed.TotalSeconds):F1} ticks/sec, cost {tickCostMs / Math.Max(1, tickCounter):F2} ms/tick, sent={sent}, chunks={world?.LoadedChunkCount ?? 0}, blockChanges={blockChanges}");
         return new Result(sent, corrections, Distance(start, player.Position), reason, survived);
 
     }

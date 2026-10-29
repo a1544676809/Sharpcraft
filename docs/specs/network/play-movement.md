@@ -591,3 +591,44 @@ server rotation: yaw=90.00 pitch=0.00
 #### 实测
 
 窗口与 `walk` 两条路径都在真实服务端跑过：潜行行走 10 秒 **1 次修正**、冲刺 10 秒 1 次修正，均无踢人。
+
+### 7.17 区块更新与重网格化
+
+世界发完之后，方块变化由两个包下发。位布局是这里唯一的风险点——**写错不会报错，只会把方块改到别处**。
+
+#### 包与字段
+
+| 包 | id | 字段 |
+| --- | --- | --- |
+| `ClientboundBlockUpdate` | 8 | `BlockPos`（打包 long）+ `VarInt` 状态 id |
+| `ClientboundSectionBlocksUpdate` | 86 | `SectionPos`（打包 long）+ `VarInt` 条数 + 每条 `VarLong`：`状态 id << 12 \| 局部偏移` |
+
+打包规则（源码常量）：
+
+| 打包 | 位宽 | 偏移 |
+| --- | --- | --- |
+| `BlockPos` | X 26 / Y 12 / Z 26 | X 38、Z 12、Y 0 |
+| `SectionPos` | X 22 / Y 20 / Z 22 | X 42、Z 20、Y 0 |
+
+**最容易写错的一条**：section 内的局部偏移是 **X 在高 4 位**（`sectionRelativeX` 右移 8）、Z 在 4–7 位、Y 在低 4 位。按"X 在低位"的直觉写，同一 section 内所有方块都会落到错误坐标。
+
+实现：`BlockPositionCodec`（打包/解包全部三种）与 `BlockUpdatePackets`（两个包的解析），分别有单元测试钉住，
+包括负坐标往返与"X 在高位"这一条。
+
+#### 应用到世界与重网格化
+
+- 解析出的变化直接 `ClientWorld.SetBlockState` 写入；
+- 写入会把几何标记为脏；窗口路径在下一帧调用 `FrameCommand.BuildRequest` 重建网格，
+  `WindowedRenderer` 负责替换顶点/索引缓冲（**缓冲替换很便宜，网格重建不便宜**）。
+
+#### 实测
+
+- 服务端控制台 `execute at Blue_Coast run setblock ^ ^ ^2 minecraft:glowstone`；
+  服务端日志 `Changed the block at -168, 190, -978`；
+- 我们的 `walk` 统计到 `blockChanges=2`（收到并解析成功）；
+- 窗口运行中在首帧之后出现第二次 `mesh:`，方块数 585,216 → **2,003,969**，即改动触发了重建。
+
+#### 已知不足
+
+目前是**整世界重建**（一次约 2M 方块），只在偶发方块变化时可接受。正式做法应按 section 做脏标记，
+只重建受影响的 section 并复用其余顶点区间——已登记为 T-069。

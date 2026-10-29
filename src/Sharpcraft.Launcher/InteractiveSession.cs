@@ -29,6 +29,7 @@ internal sealed class InteractiveSession
     private readonly LivePlaySession? _live;
     private readonly ClientWorld? _world;
     private bool _streamingRequested;
+    private bool _geometryDirty;
     private readonly PlayerSync? _sync;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private TimeSpan _last;
@@ -54,6 +55,21 @@ internal sealed class InteractiveSession
         var adapter = new EntityWorldAdapter(world);
         var spawn = FindSpawn(world, request);
         return new InteractiveSession(new PlayerEntity(adapter, spawn), live, world);
+    }
+
+    /// <summary>
+    /// True once and then false: reports that a block changed since the last call, so the renderer knows to
+    /// rebuild the geometry (docs/specs/network/play-movement.md 7.17).
+    /// </summary>
+    public bool TakeGeometryDirty()
+    {
+        if (!_geometryDirty)
+        {
+            return false;
+        }
+
+        _geometryDirty = false;
+        return true;
     }
 
     /// <summary>Player being simulated.</summary>
@@ -269,6 +285,30 @@ internal sealed class InteractiveSession
                         parsed is not null)
                     {
                         _world.AddChunk(parsed);
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.BlockUpdate:
+                    if (_world is not null &&
+                        BlockUpdatePackets.TryReadBlockUpdate(body[reader.Position..], out var block) == DecodeStatus.Success)
+                    {
+                        _world.SetBlockState(block.X, block.Y, block.Z, block.State);
+                        _geometryDirty = true;
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.SectionBlocksUpdate:
+                    if (_world is not null &&
+                        BlockUpdatePackets.TryReadSectionBlocksUpdate(body[reader.Position..], out var blocks) == DecodeStatus.Success)
+                    {
+                        foreach (var change in blocks)
+                        {
+                            _world.SetBlockState(change.X, change.Y, change.Z, change.State);
+                        }
+
+                        _geometryDirty = true;
                     }
 
                     break;

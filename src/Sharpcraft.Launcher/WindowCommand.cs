@@ -109,7 +109,10 @@ internal static class WindowCommand
 
             session.CaptureMouse(window, index == 0);
         },
-            (window) => session.UpdateCamera(window));
+            (window) => session.UpdateCamera(window),
+            () => session.TakeGeometryDirty()
+                ? FrameCommand.BuildRequest(world, width, height, out _, prepared?.Map)
+                : null);
 
         Console.WriteLine($"window closed after presenting frames; surface format {format}");
 

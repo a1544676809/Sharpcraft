@@ -181,6 +181,12 @@ public static class PacketIds
         /// <summary>Rotation-only update, used for server-driven turning such as a forced facing.</summary>
         public const int PlayerRotation = 74;
 
+        /// <summary>Single block change: packed position plus a state id.</summary>
+        public const int BlockUpdate = 8;
+
+        /// <summary>Multi-block change inside one section.</summary>
+        public const int SectionBlocksUpdate = 86;
+
         /// <summary>Chunk batch start marker.</summary>
         public const int ChunkBatchStart = 12;
 

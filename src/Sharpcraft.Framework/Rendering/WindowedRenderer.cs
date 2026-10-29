@@ -40,7 +40,8 @@ public static class WindowedRenderer
         int frames,
         TimeSpan? maxDuration = null,
         Action<int, WindowHost>? onFrame = null,
-        Func<WindowHost, (Vector3 Eye, Vector3 Target)>? cameraPerFrame = null)
+        Func<WindowHost, (Vector3 Eye, Vector3 Target)>? cameraPerFrame = null,
+        Func<FrameRequest?>? rebuildRequest = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -146,7 +147,8 @@ public static class WindowedRenderer
 
         surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight);
 
-        var vertexBuffer = UploadVertices(device, request, frameWidth, frameHeight);
+        var currentRequest = request;
+        var vertexBuffer = UploadVertices(device, currentRequest, frameWidth, frameHeight);
         var depthTexture = CreateDepthTexture(device, frameWidth, frameHeight);
         var depthView = depthTexture.CreateView();
 
@@ -206,6 +208,18 @@ public static class WindowedRenderer
                 break;
             }
 
+            // A block change rebuilds the geometry; swapping the buffers is cheap, the meshing is not.
+            if (rebuildRequest is not null && rebuildRequest() is { } rebuilt)
+            {
+                vertexBuffer.Dispose();
+                indexBuffer.Dispose();
+                currentRequest = rebuilt;
+                vertexBuffer = UploadVertices(device, currentRequest, frameWidth, frameHeight);
+                indexBuffer = device.CreateBufferInit(
+                    new BufferInitDescriptor { Usage = BufferUsage.Index },
+                    currentRequest.Indices.AsSpan());
+            }
+
             using var view = acquired.Texture.CreateView();
             var encoder = device.CreateCommandEncoder();
             var pass = encoder.BeginRenderPass(
@@ -244,7 +258,7 @@ public static class WindowedRenderer
             pass.SetBindGroup(0, bindGroup);
             pass.SetVertexBuffer(0, vertexBuffer);
             pass.SetIndexBuffer(indexBuffer, WGPUIndexFormat.Uint32);
-            pass.DrawIndexed((uint)request.Indices.Length);
+            pass.DrawIndexed((uint)currentRequest.Indices.Length);
             pass.End();
 
             var commands = encoder.Finish();
