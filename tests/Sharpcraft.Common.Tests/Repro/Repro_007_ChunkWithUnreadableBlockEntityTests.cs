@@ -76,8 +76,7 @@ public sealed class Repro_007_ChunkWithUnreadableBlockEntityTests
             buffer.Add(0);
             buffer.Add(0);            // y
             WriteVarInt(buffer, 1);   // block entity type
-            buffer.Add(1);            // a payload follows
-            buffer.Add(0x02);         // ... but it opens with a Short tag, so it is not a compound
+            buffer.Add(0x02);         // the payload opens with a Short tag, so it is not a compound
         }
         else
         {

@@ -54,6 +54,14 @@ public static class NbtReader
         var type = (NbtTagType)source[offset];
         offset++;
 
+        // Vanilla encodes an absent tag as a lone End byte (writeNbt(null)), so this is a valid one byte root
+        // rather than a malformed payload (docs/specs/network/play-movement.md 7.28).
+        if (type == NbtTagType.End)
+        {
+            consumed = offset;
+            return DecodeStatus.Success;
+        }
+
         if (type != NbtTagType.Compound)
         {
             LastFailure = $"root tag {type} is not a compound at {offset - 1}";

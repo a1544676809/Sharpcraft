@@ -1032,8 +1032,46 @@ pool: parsed 312 ok / 10 failed     ← 10 个区块包被拒
 1. 方块实体 NBT 以 `Short` 开头（非 compound）时，**区块仍解析成功**且 `BlockEntitiesSkipped` 为真；
 2. 无方块实体的正常区块解析成功且不置标记。
 
-#### 仍未解决
+#### 真正的根因：多读了一个"布尔"
 
-剩下 1 例失败，日志显示另一个实体的 NBT 起点落在字符串中间（`6F 6E 65 6E 74 73` = `"onents"`），
-属于**另一种**错位形态，尚未定位。注意诊断用的静态字符串在多 worker 下会互相覆盖，只能作为线索，
-不能作为结论——要彻底查清需要按线程隔离的跟踪（见 T-084）。
+那 25 例和随后剩下的 1 例是**同一个 1 字节错位**的两种表象。
+
+方块实体的载荷是 `ByteBufCodecs.OPTIONAL_COMPOUND_TAG`。名字里有 "optional"，但 26.3 的实现
+**没有布尔标志**：
+
+```java
+// ByteBufCodecs.OPTIONAL_COMPOUND_TAG
+encode: FriendlyByteBuf.writeNbt(output, value.orElse(null));
+
+// FriendlyByteBuf.writeNbt(tag)
+if (tag == null) tag = EndTag.INSTANCE;   // "没有 tag" 就是一个 0x00
+```
+
+于是线上格式是：
+
+```
+packedXZ(byte) | y(short) | type(VarInt) | NBT(类型字节 + 载荷；0x00 表示没有 tag)
+```
+
+我们却按"布尔 + NBT"读，把 NBT 的**类型字节当成了布尔**，导致每条记录错位 1 字节：
+
+- 被吃掉的若是 `0x0A`（Compound），NBT 起点落到 `0x02`（Short）→ 报 "root tag Short is not a compound"；
+- 被吃掉的若落在字符串中间，就得到 `"onents"`（`components` 的尾部）这类偏移。
+
+**为什么长期没暴露**：97% 的区块没有方块实体，这段代码不执行；空 tag 的实体其首字节恰好是 `0x00`，
+既能当 End 也能当"false"，所以"碰巧读对"。只有**带 NBT 的方块实体**（刷怪笼、箱子等）才暴露。
+
+#### 修正
+
+- `NbtReader.TryReadNetworkRoot`：根类型为 `End`（`0x00`）时视为"没有 tag"，消费 1 字节并成功返回；
+- `SkipBlockEntity`：**删除那个不存在的布尔**，直接读 NBT。
+
+#### 验证（同一放大化存档）
+
+| 阶段 | 解析失败 |
+| --- | --- |
+| 修前 | 25 / 752 |
+| 仅"保留地形"兜底 | 1 / 384 |
+| **修正 1 字节错位** | **0 / 328** |
+
+光照段随之也能正常解析（不再被跳过），缓冲区整体重建次数同时降到 1 次。

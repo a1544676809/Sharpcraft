@@ -246,13 +246,10 @@ public static DecodeStatus TryRead(
             return status;
         }
 
-        // The tag is optional: a false flag means the block entity has no payload at all.
-        status = reader.TryReadBool(out var hasTag);
-        if (status != DecodeStatus.Success || !hasTag)
-        {
-            return status;
-        }
-
+        // No "payload follows" flag exists in 26.3: OPTIONAL_COMPOUND_TAG delegates straight to writeNbt, which
+        // encodes an absent tag as a lone End byte. Reading a boolean here shifted every record by one byte,
+        // which is what produced the unreadable block entities and the chunks that never appeared
+        // (docs/specs/network/play-movement.md 7.28).
         var nbtStart = reader.Position;
         status = NbtReader.TryReadNetworkRoot(body[reader.Position..], out _, out var consumed);
         if (status != DecodeStatus.Success)
