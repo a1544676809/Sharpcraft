@@ -36,6 +36,7 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-062 | tick 精度（计时器精度 + 绝对截止时间） | `docs/specs/network/play-movement.md` §7.7 | `walk` 实测 tick 19.8/s、位移 4.399 格/秒（官方 4.291，+2.5%） | `Framework/Platform/TimerResolution`、`Client/Game/PreciseWait` | 已完成 |
 | T-064 | 采纳服务端下发的朝向与速度（传送包逐分量合并） | `docs/specs/network/play-movement.md` §7.14 | `PlayMovementTests`（4 项：绝对朝向、相对朝向相加、仅标位轴为偏移、速度随传送下发）| `Common/Network/PlayerSync`、`PlayerPositionInfo` | 已完成 |
 | T-068 | 区块更新包解析与应用 + 重网格化 | `docs/specs/network/play-movement.md` §7.17 | `BlockUpdateTests`（5 项：两种打包往返含负坐标、X 在高位、单方块包、多方块包）+ 实测 blockChanges=2 与窗口重建 mesh 585216→2003969 | `Common/Network/BlockPositionCodec`、`BlockUpdatePackets`、`Framework/Rendering/WindowedRenderer` | 已完成 |
+| T-070 | 挖方块（`ServerboundPlayerAction`）与地形变化闭环 | `docs/specs/network/play-movement.md` §7.18 | 实测：创造模式每 20 tick 破坏目标格，目标 `state=9`（实体方块），`blockChanges=13` 回传并被应用 | `Common/Network/PlayPackets.BuildPlayerAction`、`Launcher/WalkCommand` | 已完成 |
 | T-069 | 分 section 脏标记重网格化（替代整世界重建） | `docs/specs/network/play-movement.md` §7.17 | 待补 | 未开始 | 进行中 |
 | T-067 | 冲刺与潜行的等效（含潜行碰撞盒与眼高） | `docs/specs/network/play-movement.md` §7.16 | `VerticalMovementTests`（潜行 0.0648/tick + 蹲伏盒 0.6×1.5/眼高 1.27、冲刺 0.2807/tick）+ 官方实测潜行 1.296、冲刺 5.623 | `Common/Entities/PlayerEntity`、`EntityDimensions`、`Client/Input` | 已完成 |
 | T-066 | 跳跃与下落的等效（含终端速度渐近性） | `docs/specs/network/play-movement.md` §7.15 | `VerticalMovementTests`（4 项：顶点 1.2522、长距离终端 3.90–3.921、短距离 3.25–3.40、快速上升不被压低）+ 官方 1.2492 + 服务端连跳 10s 仅 1 次修正 | `Common/Entities/LivingEntity` | 已完成 |

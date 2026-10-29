@@ -632,3 +632,43 @@ server rotation: yaw=90.00 pitch=0.00
 
 目前是**整世界重建**（一次约 2M 方块），只在偶发方块变化时可接受。正式做法应按 section 做脏标记，
 只重建受影响的 section 并复用其余顶点区间——已登记为 T-069。
+
+### 7.18 挖方块（`ServerboundPlayerAction`）
+
+验收标准里的"挖掉一个方块"需要这个包。
+
+#### 字段（源码 `ServerboundPlayerActionPacket`）
+
+```
+VarInt  action        // 26.3 枚举：0 START_DESTROY_BLOCK, 1 CHANGE_DESTROY_DIRECTION,
+                      //           2 ABORT_DESTROY_BLOCK,  3 STOP_DESTROY_BLOCK, 4 DROP_ALL_ITEMS,
+                      //           5 DROP_ITEM, 6 RELEASE_USE_ITEM, 7 SWAP_ITEM_WITH_OFFHAND, 8 STAB
+BlockPos pos          // 打包 long，与方块更新包同一套规则
+byte    direction     // 面：0 下 1 上 2 北 3 南 4 西 5 东
+VarInt  sequence      // 单调递增，服务端用于预测排序
+```
+
+**注意**：26.3 的枚举顺序与旧版本不同（多了 `CHANGE_DESTROY_DIRECTION`），照旧版写会把
+`STOP_DESTROY_BLOCK` 当成 `ABORT`。
+
+#### 与服务端的关系
+
+`handlePlayerAction` 同样受 `hasClientLoaded()` 门控；该函数是
+`!waitingForRespawn && clientLoadedTimeoutTimer <= 0`，计数从出生起约 60 tick 后归零，
+所以**进服最初约 3 秒内的交互会被忽略**（移动不受影响，因为行走时早已过了这段时间）。
+
+#### 实测
+
+创造模式下由 `MC_WALK_BREAK=1` 每 20 tick 对"前方脚下那格"发 `START_DESTROY_BLOCK`：
+
+```
+broke block at (-165,189,-1214) state=9 yaw=-91.6 feet=(-165.5,190.0,-1213.4)
+...
+walk: sent=239 corrections=2 chunks=367 blockChanges=13
+```
+
+`state=9` 说明目标确实是实体方块（不是空气）；`blockChanges=13` 说明服务端接受了破坏，
+并把 `ClientboundBlockUpdate` 发回来、我们已写入世界——**"挖掉一个方块并看到地形变化"闭环成立**。
+
+（玩家挖方块时服务端**不会**打印 `Changed the block at ...`，那是 `/setblock` 命令的日志；
+判断依据应该是客户端收到并应用的 `blockChanges` 计数。）

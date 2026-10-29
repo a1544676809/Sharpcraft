@@ -277,6 +277,15 @@ M1（基础逻辑）与 M2（世界数据闭环）已达成并留有可执行证
 - **不足**：目前整世界重建（~2M 方块），已登记 T-069 改为按 section 脏标记增量重建。
 - M4 剩余：T-069（增量重网格化）、挖方块交互（打破/放置）、相机跟随已有。
 
+## 2026-10-29 M4 验收闭环已打通（挖方块）
+
+- 实现 `ServerboundPlayerAction`（id 41）：`VarInt action / BlockPos / byte face / VarInt sequence`；
+  26.3 的 action 枚举与旧版不同（多了 `CHANGE_DESTROY_DIRECTION`，START=0、STOP=3）。
+- 实测（创造模式，`MC_WALK_BREAK=1` 每 20 tick 破坏前方脚下那格）：目标 `state=9`（实体方块），
+  `blockChanges=13` 回传并应用 → **"走进去 → 挖掉方块 → 地形变化"闭环成立**。
+- 注意：`handlePlayerAction` 受 `hasClientLoaded()` 门控，进服最初约 3 秒内的交互会被忽略。
+- 剩余：T-069（按 section 增量重网格化，替代整世界重建）。
+
 ## 阻塞项
 
 - 无硬阻塞。

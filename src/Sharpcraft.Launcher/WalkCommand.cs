@@ -60,6 +60,7 @@ internal static class WalkCommand
         var sendEveryTicks = int.TryParse(Environment.GetEnvironmentVariable("MC_WALK_SEND_EVERY_TICKS"), out var every) && every > 0 ? every : 1;
         var tickCounter = 0;
         var blockChanges = 0;
+        var breakSequence = 0;
         const float desiredChunksPerTick = 8f;
         var tickWatch = new Stopwatch();
         var tickCostMs = 0d;
@@ -334,6 +335,38 @@ internal static class WalkCommand
                         }
 
                         sent++;
+                    }
+
+                    // Verification hook: destroy the ground block one step ahead, so the server answers
+                    // with a block update and the remesh path gets exercised end to end.
+                    if (Environment.GetEnvironmentVariable("MC_WALK_BREAK") == "1" && tickCounter % 20 == 0)
+                    {
+                        var yawRadians = sync.CurrentYawDegrees * (MathF.PI / 180f);
+                        var ahead = new Vector3(
+                            player.Position.X - MathF.Sin(yawRadians),
+                            player.Position.Y - 1f,
+                            player.Position.Z - MathF.Cos(yawRadians));
+
+                        var target = new Vector3(
+                            MathF.Floor(ahead.X),
+                            MathF.Floor(ahead.Y),
+                            MathF.Floor(ahead.Z));
+
+                        if (!TrySend(
+                                connection,
+                                PlayPackets.BuildPlayerAction(
+                                    action: 0,
+                                    (int)target.X,
+                                    (int)target.Y,
+                                    (int)target.Z,
+                                    face: 1,
+                                    breakSequence++),
+                                ref reason))
+                        {
+                            return new Result(sent, corrections, Distance(start, player.Position), reason, false);
+                        }
+
+                        log($"broke block at ({target.X:F0},{target.Y:F0},{target.Z:F0}) state={(world is null ? -1 : world.GetBlockState((int)target.X, (int)target.Y, (int)target.Z))} yaw={sync.CurrentYawDegrees:F1} feet=({player.Position.X:F1},{player.Position.Y:F1},{player.Position.Z:F1})");
                     }
 
                     if (!TrySend(connection, PlayPackets.BuildClientTickEnd(), ref reason))

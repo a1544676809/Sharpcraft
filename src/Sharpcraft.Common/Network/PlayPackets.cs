@@ -236,4 +236,26 @@ public static class PlayPackets
         writer.WriteFloat(desiredChunksPerTick);
         return buffer[..writer.Position].ToArray();
     }
+
+    /// <summary>
+    /// Builds a block interaction packet. The action ordinal, the packed position, the face and the sequence
+    /// counter are written in that order (docs/specs/network/play-movement.md 7.18).
+    /// </summary>
+    /// <param name="action">Action ordinal; 0 starts destroying a block.</param>
+    /// <param name="x">Block x.</param>
+    /// <param name="y">Block y.</param>
+    /// <param name="z">Block z.</param>
+    /// <param name="face">Face the click hit: 0 down, 1 up, 2 north, 3 south, 4 west, 5 east.</param>
+    /// <param name="sequence">Monotonic counter the server uses to order predictions.</param>
+    public static byte[] BuildPlayerAction(int action, int x, int y, int z, int face, int sequence)
+    {
+        var buffer = new byte[32];
+        var writer = new PayloadWriter(buffer);
+        writer.WriteVarInt(PacketIds.PlayServerbound.PlayerAction);
+        writer.WriteVarInt(action);
+        writer.WriteLong(BlockPositionCodec.PackBlockPosition(x, y, z));
+        writer.WriteByte((byte)face);
+        writer.WriteVarInt(sequence);
+        return buffer[..writer.Position].ToArray();
+    }
 }

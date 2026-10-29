@@ -134,6 +134,9 @@ public static class PacketIds
         /// </summary>
         public const int ClientTickEnd = 13;
 
+        /// <summary>Block interaction: start or stop destroying, drops, item use.</summary>
+        public const int PlayerAction = 41;
+
         /// <summary>Asks the server for the next chunk batch; the server waits for it.</summary>
         public const int ChunkBatchReceived = 11;
 
