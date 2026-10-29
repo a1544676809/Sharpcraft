@@ -256,6 +256,16 @@ internal static class WalkCommand
 
                             break;
 
+                        case PacketIds.PlayClientbound.PlayerRotation:
+                            if (PlayMovementPackets.TryReadPlayerRotation(body[reader.Position..], out var rotation) == DecodeStatus.Success &&
+                                rotation is not null)
+                            {
+                                var (yaw, pitch) = sync.ApplyServerRotation(rotation);
+                                log($"server rotation: yaw={yaw:F2} pitch={pitch:F2}");
+                            }
+
+                            break;
+
                         case PacketIds.PlayClientbound.ChunkBatchFinished:
                             // The server waits for this before sending the next batch.
                             TrySend(connection, PlayPackets.BuildChunkBatchReceived(desiredChunksPerTick), ref reason);

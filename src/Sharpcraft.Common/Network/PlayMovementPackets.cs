@@ -149,6 +149,26 @@ public static class PlayMovementPackets
         return DecodeStatus.Success;
     }
 
+    /// <summary>Parses a rotation-only packet by its body, everything after the id.</summary>
+    /// <param name="body">Packet body without the id.</param>
+    /// <param name="info">Parsed rotation when successful.</param>
+    public static DecodeStatus TryReadPlayerRotation(ReadOnlySpan<byte> body, out PlayerRotationInfo? info)
+    {
+        info = null;
+        var reader = new PayloadReader(body);
+
+        if (reader.TryReadFloat(out var yaw) != DecodeStatus.Success ||
+            reader.TryReadBool(out var relativeYaw) != DecodeStatus.Success ||
+            reader.TryReadFloat(out var pitch) != DecodeStatus.Success ||
+            reader.TryReadBool(out var relativePitch) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        info = new PlayerRotationInfo(yaw, relativeYaw, pitch, relativePitch);
+        return DecodeStatus.Success;
+    }
+
     private static bool TryReadVec3(ref PayloadReader reader, out (double X, double Y, double Z) value)
     {
         value = default;

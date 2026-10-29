@@ -178,6 +178,9 @@ public static class PacketIds
         /// <summary>Absolute player position: a teleport or a server correction.</summary>
         public const int PlayerPosition = 73;
 
+        /// <summary>Rotation-only update, used for server-driven turning such as a forced facing.</summary>
+        public const int PlayerRotation = 74;
+
         /// <summary>Chunk batch start marker.</summary>
         public const int ChunkBatchStart = 12;
 

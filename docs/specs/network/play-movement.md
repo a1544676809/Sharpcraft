@@ -498,7 +498,19 @@ connection.send(new ServerboundAcceptTeleportationPacket(packet.id(), x, y, z, y
 
 修复后 `walk` 实测：传送的 yaw/pitch 被采纳并原样回执，行走 10 秒修正仍为 **2 次**、区块 348 个。
 
-#### 尚未覆盖
+#### 仅旋转包 `ClientboundPlayerRotationPacket`（id 74）
 
-服务端还有**仅旋转**的包 `ClientboundPlayerRotationPacket`（`handleRotatePlayer`，带 `relativeY`/`relativeX`
-两个布尔），用于服务端驱动的转向（如 `/tp ... facing`、载具）。我们尚未处理，已登记为待办。
+用于服务端驱动的转向（`/tp ... facing`、载具等）。字段顺序有个坑——**两个布尔夹在浮点之间**：
+
+```
+float yRot, bool relativeY, float xRot, bool relativeX
+```
+
+按顺序读成"两个 float 再两个 bool"会把 `relativeY` 当成 xRot 的高位字节，整条包错位。
+已实现：`PlayMovementPackets.TryReadPlayerRotation` + `PlayerSync.ApplyServerRotation`
+（yaw/pitch 各自按自己的布尔决定绝对还是相加），并接进 `walk` 与窗口两条路径。
+
+id 74 由已验证的 `PlayerPosition = 73` 邻位推导（同一 builder 链相邻注册），并用同一套锚点方法交叉核对。
+
+**测试**：3 项——交错字段解析、绝对采纳、相对相加。**实测状态**：单元测试覆盖；服务端驱动转向的
+端到端实测需要一次真实的 `/tp ... facing` 事件，暂未触发。

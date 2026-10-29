@@ -218,6 +218,17 @@ public sealed class PlayerSync
         return new ServerPositionOutcome(null, Snapped: false, distance, (float)yaw, (float)pitch);
     }
 
+    /// <summary>Applies a rotation-only update and returns the resulting facing in degrees.</summary>
+    /// <param name="info">Parsed rotation.</param>
+    public (float YawDegrees, float PitchDegrees) ApplyServerRotation(PlayerRotationInfo info)
+    {
+        ArgumentNullException.ThrowIfNull(info);
+
+        CurrentYawDegrees = (float)Axis(CurrentYawDegrees, info.Yaw, info.RelativeYaw);
+        CurrentPitchDegrees = (float)Axis(CurrentPitchDegrees, info.Pitch, info.RelativePitch);
+        return (CurrentYawDegrees, CurrentPitchDegrees);
+    }
+
     /// <summary>Resolves one component: relative means add to the current value, absolute means replace.</summary>
     private static double Axis(double current, double value, bool relative) => relative ? current + value : value;
 }

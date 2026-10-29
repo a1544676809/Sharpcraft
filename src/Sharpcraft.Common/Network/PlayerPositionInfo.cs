@@ -61,3 +61,14 @@ public sealed record PlayerPositionInfo(
     /// <param name="bit">One of the <c>Relative*</c> constants.</param>
     public bool Has(int bit) => (RelativeFlags & bit) != 0;
 }
+
+/// <summary>
+/// A rotation-only update from the server. Yaw and pitch each carry their own relative flag, which is why the
+/// two booleans sit between the floats on the wire
+/// (docs/specs/network/play-movement.md 7.14).
+/// </summary>
+/// <param name="Yaw">Yaw in degrees.</param>
+/// <param name="RelativeYaw">True when yaw is an offset from the current facing.</param>
+/// <param name="Pitch">Pitch in degrees.</param>
+/// <param name="RelativePitch">True when pitch is an offset.</param>
+public sealed record PlayerRotationInfo(float Yaw, bool RelativeYaw, float Pitch, bool RelativePitch);

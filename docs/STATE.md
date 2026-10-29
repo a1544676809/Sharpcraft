@@ -243,6 +243,14 @@ M1（基础逻辑）与 M2（世界数据闭环）已达成并留有可执行证
   （bit0/1/2=XYZ、bit3/4=yRot/xRot、bit5/6/7=速度、bit8=速度随旋转），4 项测试钉住。
 - 待办：仅旋转包 `ClientboundPlayerRotationPacket` 尚未处理（T-065）。
 
+## 2026-10-29 仅旋转包已实现（T-065）
+
+- `ClientboundPlayerRotationPacket`（id 74）字段顺序为 `float yRot, bool relativeY, float xRot, bool relativeX`
+  ——**布尔夹在浮点之间**，按"两 float 再两 bool"读会整包错位。
+- 已实现解析与合并（yaw/pitch 各按自己的布尔决定绝对/相加），接进 `walk` 与窗口两条路径；3 项测试覆盖。
+- 待实测：服务端驱动转向（`/tp ... facing`）的端到端验证需要一次真实事件，暂未触发。
+- `walk` 回归：8 秒 159 tick、修正 2 次、区块 367，功能未受影响。
+
 ## 阻塞项
 
 - 无硬阻塞。

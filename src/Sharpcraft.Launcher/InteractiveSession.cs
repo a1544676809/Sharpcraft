@@ -179,10 +179,16 @@ internal sealed class InteractiveSession
     /// the join teleport, so a client that keeps its own heading after joining reports a facing the server
     /// never gave it (docs/specs/network/play-movement.md 7.14).
     /// </summary>
-    private void AdoptServerRotation(ServerPositionOutcome outcome)
+    private void AdoptServerRotation(ServerPositionOutcome outcome) =>
+        AdoptRotation(outcome.YawDegrees, outcome.PitchDegrees);
+
+    /// <summary>Adopts a facing the server dictated, converting degrees to the camera's radians.</summary>
+    /// <param name="yawDegrees">Yaw in degrees.</param>
+    /// <param name="pitchDegrees">Pitch in degrees.</param>
+    private void AdoptRotation(float yawDegrees, float pitchDegrees)
     {
         const float degreesToRadians = MathF.PI / 180f;
-        _camera.SetLook(outcome.YawDegrees * degreesToRadians, outcome.PitchDegrees * degreesToRadians);
+        _camera.SetLook(yawDegrees * degreesToRadians, pitchDegrees * degreesToRadians);
     }
 
     private void PublishTick()
@@ -263,6 +269,18 @@ internal sealed class InteractiveSession
                         parsed is not null)
                     {
                         _world.AddChunk(parsed);
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.PlayerRotation:
+                    // Server-driven turning, for example a forced facing: the facing is authoritative.
+                    if (_sync is not null &&
+                        PlayMovementPackets.TryReadPlayerRotation(body[reader.Position..], out var rotation) == DecodeStatus.Success &&
+                        rotation is not null)
+                    {
+                        var (yaw, pitch) = _sync.ApplyServerRotation(rotation);
+                        AdoptRotation(yaw, pitch);
                     }
 
                     break;

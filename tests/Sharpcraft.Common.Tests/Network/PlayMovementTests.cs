@@ -305,6 +305,51 @@ public sealed class PlayMovementTests
         Assert.Equal(-0.08f, player.DeltaMovement.Y, 3);
     }
 
+
+    [Fact]
+    public void TheRotationOnlyPacketParsesItsInterleavedFlags()
+    {
+        Span<byte> buffer = stackalloc byte[16];
+        var writer = new PayloadWriter(buffer);
+        writer.WriteFloat(120f);
+        writer.WriteBool(true);
+        writer.WriteFloat(-30f);
+        writer.WriteBool(false);
+
+        var status = PlayMovementPackets.TryReadPlayerRotation(buffer[..writer.Position], out var info);
+
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.NotNull(info);
+        Assert.Equal(120f, info!.Yaw, 3);
+        Assert.True(info.RelativeYaw);
+        Assert.Equal(-30f, info.Pitch, 3);
+        Assert.False(info.RelativePitch);
+    }
+
+    [Fact]
+    public void AServerDrivenRotationIsAdoptedAbsolutely()
+    {
+        var sync = new PlayerSync();
+
+        var (yaw, pitch) = sync.ApplyServerRotation(new PlayerRotationInfo(90f, RelativeYaw: false, 15f, RelativePitch: false));
+
+        Assert.Equal(90f, yaw, 3);
+        Assert.Equal(15f, pitch, 3);
+        Assert.Equal(90f, sync.CurrentYawDegrees, 3);
+    }
+
+    [Fact]
+    public void ARelativeServerRotationAddsToTheCurrentFacing()
+    {
+        var sync = new PlayerSync();
+        sync.ApplyServerRotation(new PlayerRotationInfo(90f, false, 10f, false));
+
+        var (yaw, pitch) = sync.ApplyServerRotation(new PlayerRotationInfo(-30f, RelativeYaw: true, 5f, RelativePitch: true));
+
+        Assert.Equal(60f, yaw, 3);
+        Assert.Equal(15f, pitch, 3);
+    }
+
     private static PlayerEntity Player() =>
         new(EmptyEntityWorld.Instance, new Vector3(0.5f, 1f, 0.5f));
     [Fact]
