@@ -122,10 +122,28 @@ unpack(v) = min(v & 32767, 32766) * 2.0 / 32766.0 - 1.0
 
 即分量是 `[-1, 1]` 的归一化值，真实值 = 归一化值 × `scale`。
 
-### 4.4 仍需确认的一项
+### 4.4 `TeleportEntity`：位置 + 速度 + 朝向 + 相对位集
 
-`TeleportEntity` 中的 `PositionMoveRotation` 与 `Relative` 位集的具体字段顺序与宽度，
-以及 `MoveEntityPosRot` 里朝向字节的相对顺序。确认后补入本节，再动手写这两个包的解析。
+已确认的顺序：
+
+```
+VarInt id
+double x, y, z              // 绝对位置
+double vx, vy, vz           // 传送后的速度
+float  yaw                  // 偏航（度）
+float  pitch                // 俯仰（度）
+int    relatives            // 4 字节位集：bit0 x, bit1 y, bit2 z, bit3 yaw, bit4 pitch
+bool   onGround
+```
+
+相对位的含义：置位的分量是**相对当前值**（相加），未置位是**绝对覆盖**。
+
+`MoveEntityPosRot` 的尾部位序也已确认：`id`、`properties`、`VecDelta`、`yRot`、`xRot`。
+
+### 4.5 已知简化
+
+`VecDelta` 的分段形态（`stepCount > 0`）在服务端表示"接下来若干刻逐段位移"。当前实现把各段**求和后一次
+应用**，终点位置一致，但缺少逐刻的播放动画。对快速实体（箭、掉落物）会有观感差异，已登记为后续项。
 
 ## 5. 客户端跟踪模型
 

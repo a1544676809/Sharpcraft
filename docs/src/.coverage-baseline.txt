@@ -3,7 +3,6 @@
 src/Sharpcraft.Auth
 src/Sharpcraft.Client
 src/Sharpcraft.Client/Render
-src/Sharpcraft.Client/World
 src/Sharpcraft.Common
 src/Sharpcraft.Common/Coordinates
 src/Sharpcraft.Common/Diagnostics
@@ -11,7 +10,6 @@ src/Sharpcraft.Common/Identifiers
 src/Sharpcraft.Common/Imaging
 src/Sharpcraft.Common/Lifecycle
 src/Sharpcraft.Common/Nbt
-src/Sharpcraft.Common/Network
 src/Sharpcraft.Common/Random
 src/Sharpcraft.Common/Registries
 src/Sharpcraft.Common/World
