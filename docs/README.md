@@ -108,9 +108,9 @@
 | [`architecture/`](architecture/README.md) | 1 |
 | [`decisions/`](decisions/README.md) | 10 |
 | [`milestones/`](milestones/README.md) | 1 |
-| [`modules/`](modules/README.md) | 12 |
+| [`modules/`](modules/README.md) | 14 |
 | [`repro/`](repro/README.md) | 0 |
 | [`specs/`](specs/README.md) | 7 |
-| [`src/`](src/README.md) | 2 |
+| [`src/`](src/README.md) | 3 |
 
 <!-- END GENERATED: docs -->
