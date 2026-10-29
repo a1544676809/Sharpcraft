@@ -30,6 +30,7 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-010 | 方块状态全局 id 生成器 | `docs/analysis/common/registry-order.md` §5、§7.1 | `BlockStateIdTests.cs`（含 1442 个原版状态 id 与 35723 总数） | `src/Sharpcraft.Common/Registries/`（BlockStateDefinition / BlockStateLayout） | 已完成 |
 | T-019 | 全阶段包 id 表导出与交叉校验 | `docs/specs/network/protocol-phases.md` §3 | `PacketIdTableTests.cs`（3 项：id 对照、连续性、唯一性） | `tests/.../TestData/vanilla-packet-ids.txt`（260 条） | 已完成 |
 | T-018 | 启动器 CLI 垂直切片（login / probe / help） | `docs/modules/launcher.md` §3–§5 | `LauncherCommandLineTests.cs`（10 项）、手工验收：`probe mcf.ddger.top` 输出 protocol 777 | `src/Sharpcraft.Launcher/` | 已完成 |
+| T-051 | 着色器包一等接入点（目标/阶段/顺序/uniform 契约 + 校验与回退） | `docs/specs/render/shader-packs.md`；AGENTS 原则 11 | `ShaderPackValidatorTests`（8 项：内置管线可表达为包、按依赖排序、缺最终阶段被拒、未声明目标被拒、循环依赖被拒、未知 uniform 被拒、重名目标被拒、相对尺寸缩放不塌陷） | `src/Sharpcraft.Framework/Rendering/ShaderPacks/` | 已完成 |
 | T-050 | 模组宿主与可卸载验证（契约 + collectible ALC + 引用纪律） | `docs/modules/modding.md`；AGENTS 原则 2 | `ModHostUnloadTests`（4 项：宿主只持弱引用、句柄只持弱引用、无入口类型被拒且不残留上下文、缺文件报错清晰）+ 独立探针 `Sharpcraft.Modding.UnloadProbe` | `src/Sharpcraft.Modding/` | 进行中 |
 | T-049 | 缺陷最小复现用例库（Repro 约定落地） | `docs/repro/README.md`；AGENTS 原则 12 | `tests/*/Repro/Repro_00*Tests.cs`（5 个用例：顶点布局单一来源、流体 still 回退、UV 内缩、顶点色仅光照、缓存登录登记账号） | `tests/Sharpcraft.{Framework,Client,Launcher}.Tests/Repro/` | 已完成 |
 | T-047 | 窗口呈现路径带纹理（共享顶点布局 + 图集绑定） | `docs/modules/render.md` §6.1 | `VertexLayoutTests`（3 项：步长与属性数、偏移首尾相接、格式顺序）；运行时验证 `window <address>` 出帧 | `Framework/Rendering/WindowedRenderer`、`VertexLayout` | 已完成 |

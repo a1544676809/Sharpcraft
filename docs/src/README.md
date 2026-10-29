@@ -14,5 +14,6 @@
 | 目录 | 文档数 |
 | --- | --- |
 | [`sharpcraft-client/`](sharpcraft-client/README.md) | 1 |
+| [`sharpcraft-framework/`](sharpcraft-framework/README.md) | 1 |
 
 <!-- END GENERATED: docs/src -->
