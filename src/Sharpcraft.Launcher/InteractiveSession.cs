@@ -294,7 +294,7 @@ internal sealed class InteractiveSession
     private void AdoptRotation(float yawDegrees, float pitchDegrees)
     {
         const float degreesToRadians = MathF.PI / 180f;
-        _camera.SetLook(yawDegrees * degreesToRadians, pitchDegrees * degreesToRadians);
+        _camera.SetLook(yawDegrees * degreesToRadians, LookConvention.FromWirePitchDegrees(pitchDegrees));
     }
 
     private void PublishTick()
@@ -305,7 +305,7 @@ internal sealed class InteractiveSession
         }
 
         var yawDegrees = _camera.Yaw * (180f / MathF.PI);
-        var pitchDegrees = _camera.Pitch * (180f / MathF.PI);
+        var pitchDegrees = LookConvention.ToWirePitchDegrees(_camera.Pitch);
 
         if (_sync.Build(_sync.Decide(_player, yawDegrees, pitchDegrees), _player, yawDegrees, pitchDegrees) is { } packet)
         {

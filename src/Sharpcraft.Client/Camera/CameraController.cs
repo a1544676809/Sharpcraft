@@ -27,8 +27,8 @@ public sealed class CameraController
     {
         const float degreesToRadians = MathF.PI / 180f;
 
-        // Moving the mouse right turns right, moving it down looks down; vanilla's pitch grows upwards so
-        // the vertical delta is negated.
+        // Moving the mouse right turns right and moving it down looks down. The pitch stored here therefore grows
+        // upwards, which is the opposite of the wire convention; LookConvention converts at that boundary.
         Yaw += pixels.X * degreesPerPixel * degreesToRadians;
         Pitch -= pixels.Y * degreesPerPixel * degreesToRadians;
 

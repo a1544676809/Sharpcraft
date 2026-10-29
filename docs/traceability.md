@@ -119,3 +119,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 - 与 `docs/STATE.md` 的分工：STATE 说"现在做什么"，矩阵说"每个任务的规格/测试/代码在哪"。
 | T-092 | tick 线程上的控制台 I/O 造成周期性停顿（实测每秒一次、间隔 >55ms 由 1 次增至 11 次）| `docs/specs/network/play-movement.md` §7.29 | `walk` 节奏统计对比（静音前后 >55ms 次数）| `Launcher/InteractiveSession`（`MC_DIAG` 门控）| 已完成 |
 | T-093 | 实体朝向插值未归一化（实测 `yaw=-825.5`）| `docs/specs/network/play-movement.md` §7.29 | `EntityAngleWrappingTests`（200 轮跨零交替，角度始终在 [0,360)）| `Client/World/EntityTracker.Wrap360` | 已完成 |
+| T-094 | 仰俯符号与原版相反（他人看到抬头显示为低头）| `docs/specs/network/play-movement.md` §7.30 | `LookConventionTests`（4 项：+90/-90、往返、符号到达大端报文）| `Client/Camera/LookConvention`、`Launcher/InteractiveSession` | 已完成 |
