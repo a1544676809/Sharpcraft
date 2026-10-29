@@ -3,6 +3,7 @@
 
 using Sharpcraft.Auth;
 using Sharpcraft.Common.Registries;
+using Sharpcraft.Launcher.Assets;
 using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.Ui;
@@ -116,12 +117,13 @@ internal static class WindowCommand
         using var liveScope = live;
         var session = InteractiveSession.Create(world, request, live, workerPool);
 
-        // The interface document is parsed and its values are read once; building a frame is then arithmetic
-        // only (docs/modules/ui.md 10). MC_UI_FILE allows pointing at a document instead of the built in screen.
-        var uiPath = Environment.GetEnvironmentVariable("MC_UI_FILE");
-        var uiSource = uiPath is { Length: > 0 } && File.Exists(uiPath) ? File.ReadAllText(uiPath) : UiScreenLayout.DefaultDocument;
-        var uiDocument = UiMarkup.Parse(uiSource);
-        var uiStyles = UiStyles.Compile(uiDocument);
+        // The document comes from one managed location and nowhere else: no environment variable and no command
+        // line option can point the client at an arbitrary file (docs/decisions/0010). Editing that file reloads
+        // the interface while the game runs; a broken edit keeps the previous screen.
+        var uiPath = UiDocumentFile.EnsureExists(HostPaths.DefaultUiDirectory(), UiScreenLayout.DefaultDocument);
+        using var uiLoader = new UiDocumentLoader(uiPath);
+        uiLoader.Start();
+
         var uiGeometry = new UiGeometry();
         var uiFont = FrameCommand.PrepareFont();
         var glyphTexture = uiFont is null
@@ -189,7 +191,15 @@ internal static class WindowCommand
             glyphTexture: glyphTexture,
             uiGeometry: () =>
             {
-                UiScreenLayout.Build(uiDocument, uiStyles, width, height, uiGeometry, uiFont);
+                var screen = uiLoader.Current;
+
+                if (screen is null)
+                {
+                    uiGeometry.Clear();
+                    return uiGeometry;
+                }
+
+                UiScreenLayout.Build(screen.Root, screen.Styles, width, height, uiGeometry, uiFont);
                 return uiGeometry;
             });
 

@@ -65,4 +65,14 @@ public static class HostPaths
         var root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         return Path.Combine(root, "Sharpcraft", "packs");
     }
+
+    /// <summary>
+    /// The one directory interface documents are read from. Customisation is offered here and nowhere else, so a
+    /// running game cannot be repointed at a file in some other process's directory (docs/decisions/0010).
+    /// </summary>
+    public static string DefaultUiDirectory()
+    {
+        var root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return Path.Combine(root, "Sharpcraft");
+    }
 }
