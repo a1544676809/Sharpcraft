@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: LGPL-3.0-or-later
-# Copyright (C) 2026 MinecraftCSharp contributors
+# Copyright (C) 2026 Sharpcraft contributors
 """Package-level dependency scan over decompiled Minecraft sources.
 
 Purpose: collect evidence for side attribution (Client / Server / Common /

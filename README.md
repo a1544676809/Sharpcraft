@@ -59,7 +59,7 @@ src/Sharpcraft.Client/      客户端：渲染、资源栈与图集、客户端�
 src/Sharpcraft.Server/      服务端侧（集成服务端，当前为空壳）
 src/Sharpcraft.Auth/        MSA / Xbox Live / XSTS / Minecraft 服务认证
 src/Sharpcraft.Launcher/    独立启动器：认证、资产管线、启动编排
-src/Sharpcraft.Framework/   引擎层：WGPU、窗口、相机（不引用任何 MinecraftCSharp.* 程序集）
+src/Sharpcraft.Framework/   引擎层：WGPU、窗口、相机（不引用任何游戏或宿主程序集）
 src/Sharpcraft.Modding/     模组 API 契约与热加载宿主（预留）
 docs/                       分析与规格、模块设计、ADR、里程碑、状态锚点
 tests/                      单元、架构（边界/文档漂移）与分配测试
