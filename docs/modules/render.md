@@ -237,6 +237,34 @@ frame written to sharpcraft-frame.png
 - 与本地演示世界相比，真实世界的 **275,142 个方块 / 51,402 个三角形**是数量级的差别，也第一次验证了"真实 state id → 方块名 → 每面纹理"这条链在真实数据上成立。
 - 会话令牌缓存生效：再次运行直接 `Signed in as …`，**没有再次要求设备码**（见 `docs/modules/auth.md` §5.1）。
 
+### 带纹理的窗口（2026-10-29 实测）
+
+```
+$ launcher window <address>
+window: surface ready on <adapter>
+window: framebuffer 960x540, logical 960x540
+window: swapchain configured (BGRA8UnormSrgb, 960x540)
+window: first frame presented
+window closed after presenting frames; surface format BGRA8UnormSrgb
+sprites: 1024x1024 atlas, 1301 sprites, layout present, 24 ms
+mesh: 275141 blocks, 51396 triangles
+```
+
+至此 M3 的出口条件"一条命令从本地 jar 走到带纹理的窗口画面"成立：登录 → 握手 → 配置阶段 → 区块 → 图集 →
+网格 → 交换链呈现，同一条链既出窗口也出 PNG（截图仍走离屏路径，因为交换链纹理不保证可拷贝）。
+
+窗口路径曾有两个**只有 GPU 才能暴露**的缺陷，都已修：
+
+1. **管线顶点属性缺两项**：加纹理时只改了离屏管线的属性列表，窗口管线仍声明 `position + colour`，
+   于是 `wgpuDeviceCreateRenderPipeline` 报
+   `Location[2] Float32x2 … is not provided by the previous stage outputs`。
+2. **没有绑定图集**：修好属性后报
+   `The current set RenderPipeline … expects a BindGroup to be set at index 0`——窗口渲染器从未上传图集、也没建绑定组。
+
+根因是**同一条顶点布局存在两份拷贝**。现在它只有一份：`Framework/Rendering/VertexLayout`（`Stride` + `Attributes()`），
+两条管线共用，并由 `VertexLayoutTests` 钉死"偏移首尾相接、location 递增、格式顺序为 4/3/2/4、步长 52 字节"。
+这类"改一处漏一处"的缺陷靠代码评审很难发现，靠共享定义 + 测试才守得住。
+
 ### 流体：`<名字>_still`
 
 流体的方块状态文件指向的模型只声明 `particle`，没有任何面变量（`models/block/water.json` 只有 `particle: block/water_still`），

@@ -24,7 +24,8 @@ internal static class AuthenticationFlow
         TokenStore store,
         bool forceInteractive,
         Func<DeviceCodeChallenge, CancellationToken, Task>? onChallenge,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<string, string>? onSignedIn = null)
     {
         var flow = new DeviceCodeFlow(http);
         var stored = forceInteractive ? null : store.Load();
@@ -34,24 +35,25 @@ internal static class AuthenticationFlow
             // 1) A still-valid session needs nothing at all.
             if (TryReuseValidSession(stored) is { } valid)
             {
+                onSignedIn?.Invoke(valid.Profile.Name, valid.Profile.Id);
                 return valid;
             }
 
             // 2) An expired session is extended without Xbox Live.
-            if (await TryExtendSessionAsync(http, store, stored, cancellationToken).ConfigureAwait(false) is { } extended)
+            if (await TryExtendSessionAsync(http, store, stored, onSignedIn, cancellationToken).ConfigureAwait(false) is { } extended)
             {
                 return extended;
             }
 
             // 3) The Microsoft grant, which runs the Xbox chain.
-            if (await TryCachedGrantAsync(http, store, flow, stored, cancellationToken).ConfigureAwait(false) is { } fromGrant)
+            if (await TryCachedGrantAsync(http, store, flow, stored, onSignedIn, cancellationToken).ConfigureAwait(false) is { } fromGrant)
             {
                 return fromGrant;
             }
         }
 
         // 4) Interactive sign-in.
-        return await InteractiveAsync(http, store, flow, onChallenge, cancellationToken).ConfigureAwait(false);
+        return await InteractiveAsync(http, store, flow, onChallenge, onSignedIn, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Reuses a cached session with no network activity at all.</summary>
@@ -77,6 +79,7 @@ internal static class AuthenticationFlow
         HttpClient http,
         TokenStore store,
         TokenStore.StoredTokens stored,
+        Action<string, string>? onSignedIn,
         CancellationToken cancellationToken)
     {
         if (!HasSession(stored))
@@ -101,6 +104,7 @@ internal static class AuthenticationFlow
 
         var profile = new MinecraftProfile(stored.ProfileId!, stored.ProfileName!, Skins: true);
         store.SaveSession(refreshed, profile);
+        onSignedIn?.Invoke(profile.Name, profile.Id);
 
         return new SignedIn(
             new MicrosoftToken(stored.AccessToken, stored.RefreshToken, stored.ExpiresAt),
@@ -115,6 +119,7 @@ internal static class AuthenticationFlow
         TokenStore store,
         DeviceCodeFlow flow,
         TokenStore.StoredTokens stored,
+        Action<string, string>? onSignedIn,
         CancellationToken cancellationToken)
     {
         MicrosoftToken microsoft;
@@ -135,7 +140,7 @@ internal static class AuthenticationFlow
             return null;
         }
 
-        return await CompleteAsync(http, store, flow, microsoft, fromCache: true, cancellationToken).ConfigureAwait(false);
+        return await CompleteAsync(http, store, flow, microsoft, fromCache: true, onSignedIn, cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task<SignedIn> InteractiveAsync(
@@ -143,6 +148,7 @@ internal static class AuthenticationFlow
         TokenStore store,
         DeviceCodeFlow flow,
         Func<DeviceCodeChallenge, CancellationToken, Task>? onChallenge,
+        Action<string, string>? onSignedIn,
         CancellationToken cancellationToken)
     {
         var challenge = await flow.RequestCodeAsync(cancellationToken).ConfigureAwait(false);
@@ -156,7 +162,7 @@ internal static class AuthenticationFlow
         // Persisted before the Xbox chain: a downstream failure must never cost another device code.
         Persist(store, microsoft, flow);
 
-        return await CompleteAsync(http, store, flow, microsoft, fromCache: false, cancellationToken).ConfigureAwait(false);
+        return await CompleteAsync(http, store, flow, microsoft, fromCache: false, onSignedIn, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Walks Xbox Live, then stores the session next to the grant that produced it.</summary>
@@ -166,6 +172,7 @@ internal static class AuthenticationFlow
         DeviceCodeFlow flow,
         MicrosoftToken microsoft,
         bool fromCache,
+        Action<string, string>? onSignedIn,
         CancellationToken cancellationToken)
     {
         Persist(store, microsoft, flow);
@@ -179,6 +186,12 @@ internal static class AuthenticationFlow
         var profile = await services.GetProfileAsync(session, cancellationToken).ConfigureAwait(false);
 
         store.SaveSession(session, profile);
+
+        // Every successful official sign-in refreshes the account list, because the offline gate is a
+        // pure function of that list (AGENTS.md principle 7.1). A diagnostic command that signs in is
+        // still a real sign-in.
+        onSignedIn?.Invoke(profile.Name, profile.Id);
+
         return new SignedIn(microsoft, session, profile, fromCache);
     }
 

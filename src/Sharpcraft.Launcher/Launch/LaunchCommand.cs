@@ -130,7 +130,8 @@ public static class LaunchCommand
                     DeviceCodePrompter.Show(challenge);
                     return Task.CompletedTask;
                 },
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken,
+                onSignedIn: AccountsCommand.RecordPremiumSignIn).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

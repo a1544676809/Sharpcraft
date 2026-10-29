@@ -3,6 +3,7 @@
 
 using System.Numerics;
 using Sharpcraft.Auth;
+using Sharpcraft.Launcher.Accounts;
 using Sharpcraft.Launcher.Assets;
 using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
@@ -50,7 +51,8 @@ internal static class FrameCommand
                 DeviceCodePrompter.Show(challenge);
                 return Task.CompletedTask;
             },
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken,
+            onSignedIn: AccountsCommand.RecordPremiumSignIn).ConfigureAwait(false);
 
         Console.WriteLine($"Signed in as {signedIn.Profile.Name}");
 

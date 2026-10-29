@@ -88,15 +88,9 @@ public static class OffscreenRenderer
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
             multisample: MultisampleState.Default,
             depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float),
-            vertexStride: (ulong)ClipSpaceTransform.VertexStride,
+            vertexStride: (ulong)VertexLayout.Stride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
-            vertexAttributes:
-            [
-                new VertexAttribute(WGPUVertexFormat.Float32x4, 0, 0),
-                new VertexAttribute(WGPUVertexFormat.Float32x3, 16, 1),
-                new VertexAttribute(WGPUVertexFormat.Float32x2, 28, 2),
-                new VertexAttribute(WGPUVertexFormat.Float32x4, 36, 3)
-            ]);
+            vertexAttributes: VertexLayout.Attributes());
     }
 
     private static uint[] BuildIndexBytes(FrameRequest request) => request.Indices;

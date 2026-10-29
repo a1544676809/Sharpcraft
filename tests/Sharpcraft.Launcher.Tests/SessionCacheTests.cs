@@ -84,6 +84,23 @@ public sealed class SessionCacheTests
         Assert.Equal("msa-refresh", stored!.RefreshToken);
     }
 
+    [Fact]
+    public void ReusingACachedSessionStillRefreshesTheAccountList()
+    {
+        using var fixture = new Fixture();
+        fixture.StoreWithSession(expiresAt: DateTimeOffset.UtcNow.AddHours(12));
+
+        var recorded = new List<(string Name, string Id)>();
+        using var http = new HttpClient(new Fixture.Handler(fixture));
+        AuthenticationFlowProbe.SignIn(http, fixture.Store, (name, id) => recorded.Add((name, id)));
+
+        // The offline gate is a pure function of the account list, so a cached sign-in must still
+        // refresh it (AGENTS.md principle 7.1).
+        Assert.Single(recorded);
+        Assert.Equal("Notch", recorded[0].Name);
+        Assert.Equal("069a79f444e94726a5befca90e38aaf5", recorded[0].Id);
+    }
+
     private sealed class Fixture : IDisposable
     {
         private readonly string _root;
@@ -128,7 +145,7 @@ public sealed class SessionCacheTests
             return (result, Requests);
         }
 
-        private sealed class Handler(Fixture fixture) : HttpMessageHandler
+        internal sealed class Handler(Fixture fixture) : HttpMessageHandler
         {
             protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             {
@@ -173,11 +190,15 @@ public sealed class SessionCacheTests
 /// <summary>Exposes the internal sign-in entry point to the tests.</summary>
 internal static class AuthenticationFlowProbe
 {
-    public static AuthenticationFlow.SignedIn SignIn(HttpClient http, TokenStore store) =>
+    public static AuthenticationFlow.SignedIn SignIn(
+        HttpClient http,
+        TokenStore store,
+        Action<string, string>? onSignedIn = null) =>
         AuthenticationFlow.EnsureSignedInAsync(
             http,
             store,
             forceInteractive: false,
             onChallenge: null,
-            CancellationToken.None).GetAwaiter().GetResult();
+            CancellationToken.None,
+            onSignedIn).GetAwaiter().GetResult();
 }

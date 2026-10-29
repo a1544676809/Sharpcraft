@@ -53,7 +53,71 @@ public static class WindowedRenderer
         Console.WriteLine($"window: surface ready on {adapter.GetInfo().Description}");
         var format = surface.GetPreferredFormat(adapter);
 
-        using var pipeline = CreatePipeline(device, format);
+        // Atlas resources: the fragment shader samples it, so the pipeline layout and the bind group
+        // have to exist before anything is drawn (docs/modules/render.md 6.1).
+        var atlasData = request.Atlas ?? TextureData.White;
+        using var atlasTexture = device.CreateTexture(new TextureDescriptor
+        {
+            Size = new WGPUExtent3D
+            {
+                width = (uint)atlasData.Width,
+                height = (uint)atlasData.Height,
+                depthOrArrayLayers = 1
+            },
+            MipLevelCount = 1,
+            SampleCount = 1,
+            Dimension = WGPUTextureDimension._2D,
+            Format = WGPUTextureFormat.RGBA8Unorm,
+            Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
+        });
+
+        device.Queue.WriteTexture(
+            atlasTexture,
+            atlasData.Rgba,
+            (uint)(atlasData.Width * 4),
+            (uint)atlasData.Height,
+            new WGPUExtent3D
+            {
+                width = (uint)atlasData.Width,
+                height = (uint)atlasData.Height,
+                depthOrArrayLayers = 1
+            },
+            0,
+            new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+
+        using var atlasView = atlasTexture.CreateView();
+
+        using var atlasSampler = device.CreateSampler(new SamplerDescriptor
+        {
+            AddressModeU = WGPUAddressMode.ClampToEdge,
+            AddressModeV = WGPUAddressMode.ClampToEdge,
+            AddressModeW = WGPUAddressMode.ClampToEdge,
+            MagFilter = WGPUFilterMode.Nearest,
+            MinFilter = WGPUFilterMode.Nearest,
+            MipmapFilter = WGPUMipmapFilterMode.Nearest,
+            LodMinClamp = 0f,
+            LodMaxClamp = 1f,
+            MaxAnisotropy = 1
+        });
+
+        using var bindGroupLayout = device.CreateBindGroupLayout(
+        [
+            BindGroupLayoutEntry.Texture(
+                0,
+                ShaderStage.Fragment,
+                WGPUTextureSampleType.Float,
+                WGPUTextureViewDimension._2D,
+                false),
+            BindGroupLayoutEntry.Sampler(1, ShaderStage.Fragment, WGPUSamplerBindingType.Filtering)
+        ]);
+
+        using var pipelineLayout = device.CreatePipelineLayout([bindGroupLayout]);
+
+        using var bindGroup = device.CreateBindGroup(
+            bindGroupLayout,
+            [BindGroupEntry.TextureView(0, atlasView), BindGroupEntry.Sampler(1, atlasSampler)]);
+
+        using var pipeline = CreatePipeline(device, format, pipelineLayout);
         var indexBuffer = device.CreateBufferInit(
             new BufferInitDescriptor { Usage = BufferUsage.Index },
             request.Indices.AsSpan());
@@ -138,6 +202,7 @@ public static class WindowedRenderer
             DepthStencilAttachment.DepthClear(depthView));
 
             pass.SetPipeline(pipeline);
+            pass.SetBindGroup(0, bindGroup);
             pass.SetVertexBuffer(0, vertexBuffer);
             pass.SetIndexBuffer(indexBuffer, WGPUIndexFormat.Uint32);
             pass.DrawIndexed((uint)request.Indices.Length);
@@ -216,7 +281,7 @@ public static class WindowedRenderer
         _ => throw new PlatformNotSupportedException($"no surface source for {source.Tag}")
     };
 
-    private static RenderPipeline CreatePipeline(Device device, WGPUTextureFormat format)
+    private static RenderPipeline CreatePipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
     {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
         {
@@ -229,16 +294,21 @@ public static class WindowedRenderer
             shader,
             "fs_main"u8,
             [new ColorTargetState(format)],
-            layout: default,
+            layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
             multisample: MultisampleState.Default,
             depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float),
             vertexStride: (ulong)ClipSpaceTransform.VertexStride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
+            // The vertex stream carries position, light colour, tile UV and the sprite rect; the shader
+            // samples the atlas, so every attribute must be declared or pipeline creation fails with a
+            // missing location (docs/modules/render.md 6.1).
             vertexAttributes:
             [
                 new VertexAttribute(WGPUVertexFormat.Float32x4, 0, 0),
-                new VertexAttribute(WGPUVertexFormat.Float32x3, 16, 1)
+                new VertexAttribute(WGPUVertexFormat.Float32x3, 16, 1),
+                new VertexAttribute(WGPUVertexFormat.Float32x2, 28, 2),
+                new VertexAttribute(WGPUVertexFormat.Float32x4, 36, 3)
             ]);
     }
 }

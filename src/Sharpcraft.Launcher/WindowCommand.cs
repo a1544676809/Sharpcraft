@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using Sharpcraft.Auth;
+using Sharpcraft.Common.Registries;
 using Sharpcraft.Client.World;
 using Sharpcraft.Common.Network;
 using Sharpcraft.Framework.Rendering;
@@ -44,7 +45,21 @@ internal static class WindowCommand
             throw new InvalidOperationException("window needs an address, MC_FRAME_LOCAL=1 or MC_FRAME_REPLAY=<file>");
         }
 
-        var request = FrameCommand.BuildRequest(world, width, height, out var mesh);
+        // The windowed path uses the same atlas and block layout as the offscreen path, otherwise the
+        // window would show colour-only faces while the saved PNG is textured (docs/modules/render.md 6.1).
+        var prepared = FrameCommand.PrepareSprites(Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 }
+            ? FrameCommand.DemoLayout()
+            : VanillaBlockRegistry.Layout);
+
+        var request = FrameCommand.BuildRequest(
+            world,
+            width,
+            height,
+            out var mesh,
+            prepared?.Map,
+            prepared is null
+                ? null
+                : new TextureData(prepared.Value.Atlas.Width, prepared.Value.Atlas.Height, prepared.Value.Atlas.Pixels));
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
         var selfResize = ParseSelfResize();
@@ -69,7 +84,13 @@ internal static class WindowCommand
 
         // Swapchain textures are not guaranteed copyable, so the screenshot comes from the
         // offscreen path with the identical camera and geometry.
-        return FrameCommand.RenderWorld(world, width, height);
+        return FrameCommand.RenderWorld(
+            world,
+            width,
+            height,
+            Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 }
+                ? FrameCommand.DemoLayout()
+                : VanillaBlockRegistry.Layout);
     }
 
     private static (int Width, int Height)? ParseSelfResize()
