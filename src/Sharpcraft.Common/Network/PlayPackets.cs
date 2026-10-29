@@ -182,6 +182,7 @@ public static class PlayPackets
     /// <param name="mainHand">0 = left, 1 = right.</param>
     /// <param name="textFiltering">Whether server-side text filtering is enabled.</param>
     /// <param name="allowListing">Whether the player allows server listing.</param>
+    /// <param name="particleStatus">Particle setting: 0 all, 1 decreased, 2 minimal.</param>
     public static byte[] BuildClientInformation(
         string locale,
         byte viewDistance,
@@ -190,7 +191,8 @@ public static class PlayPackets
         byte skinParts,
         int mainHand,
         bool textFiltering,
-        bool allowListing)
+        bool allowListing,
+        int particleStatus = 0)
     {
         var buffer = new byte[256];
         var writer = new PayloadWriter(buffer);
@@ -203,6 +205,10 @@ public static class PlayPackets
         writer.WriteVarInt(mainHand);
         writer.WriteBool(textFiltering);
         writer.WriteBool(allowListing);
+
+        // 26.3 added a particle-status field at the end of this packet; omitting it makes the server fail to
+        // decode the whole packet and drop the connection.
+        writer.WriteVarInt(particleStatus);
         return buffer[..writer.Position].ToArray();
     }
     /// <summary>
@@ -214,6 +220,20 @@ public static class PlayPackets
         var buffer = new byte[2];
         var writer = new PayloadWriter(buffer);
         writer.WriteVarInt(PacketIds.PlayServerbound.ClientTickEnd);
+        return buffer[..writer.Position].ToArray();
+    }
+
+    /// <summary>
+    /// Builds the acknowledgement that asks the server for the next chunk batch. The server waits for it,
+    /// so a client that never sends it stops receiving chunks.
+    /// </summary>
+    /// <param name="desiredChunksPerTick">How many chunks the client can take per tick.</param>
+    public static byte[] BuildChunkBatchReceived(float desiredChunksPerTick)
+    {
+        var buffer = new byte[8];
+        var writer = new PayloadWriter(buffer);
+        writer.WriteVarInt(PacketIds.PlayServerbound.ChunkBatchReceived);
+        writer.WriteFloat(desiredChunksPerTick);
         return buffer[..writer.Position].ToArray();
     }
 }

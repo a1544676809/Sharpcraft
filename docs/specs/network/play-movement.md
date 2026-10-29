@@ -355,7 +355,7 @@ public void teleport(PositionMoveRotation destination, Set<Relative> relatives) 
 2. 若是，则修 `Entity.Move` 的贴面钳制（让 Y 停在方块顶面而非面内），而不是去改速度或节拍；
 3. 这与"残差大小"无关，与"是否穿透"有关——**这正是原版闸门二告诉我们的**。
 
-### 7.11 R-023 的根因与修复：未下载区块被当成空气
+### 7.11 R-023 的首次定位（方案已被 §7.12 取代）
 
 按 §7.10 的闸门二推下去，回拉只可能来自"目标位置引入了新碰撞体"。真正的原因不在碰撞求解的精度，
 而在**世界数据**：
@@ -364,8 +364,10 @@ public void teleport(PositionMoveRotation destination, Set<Relative> relatives) 
 > 于是实体把"服务器有实地的区域"当成虚空，一路走过去；服务端拿到这个位置后，用自己已知的方块判定
 > 包围盒与**新方块重叠**，于是回拉。
 
-修复：`ClientWorld.IsChunkLoaded(x, z)` + `EntityWorldAdapter.IsSolid` 在区块未加载时返回 **true**。
-未下载的地形不可通行——这是保守且正确的语义：客户端没有数据，就不该替服务端假设那里是空气。
+~~修复：`EntityWorldAdapter.IsSolid` 在区块未加载时返回 true。~~
+
+**这个方案是错的**（所有者指出，已改）：把未加载当成实体，等于在"已下载区域的边缘"竖起一堵看不见的墙，
+原版没有这种行为。正确做法见 §7.12。
 
 **实测效果**（同一服务器、同一账号、10 秒行走）：
 
@@ -379,3 +381,45 @@ public void teleport(PositionMoveRotation destination, Set<Relative> relatives) 
 
 **方法论结论**：这次不是"物理公式差一点"，而是"数据缺失被当成了合法状态"。查原版闸门的价值在于
 ——它把排查方向从"求解精度"直接指到了"碰撞语义"。
+
+### 7.12 正确做法：按原版语义流式加载区块
+
+原版不让玩家"撞上看不见的墙"，而是**持续把玩家周围的区块送到客户端**：
+
+1. 客户端发 `client_information`，其中 `viewDistance` 告诉服务端要看多远；
+2. 服务端按视距把区块成批下发（`chunk_batch_start` → N× `level_chunk_with_light` → `chunk_batch_finished`）；
+3. 客户端每收完一批回 `chunk_batch_received(desiredChunksPerTick)`，服务端才继续下一批；
+4. 玩家移动导致跟踪范围变化时，上述流程重复。
+
+因此 `EntityWorldAdapter` 对未加载区块仍按**空气**处理（与原版 `getBlockState` 的 fallback 一致），
+"看不到的地方不能走"这件事由**服务端保证视距内已加载**来达成，而不是靠客户端臆断。
+
+#### 实现与踩到的两个坑
+
+| 坑 | 现象 | 原因 |
+| --- | --- | --- |
+| 未发 `client_information` | 走 20 秒区块数仍是 9，修正 190+ | 服务端不知道客户端视距，不下发新区块 |
+| `client_information` 少写一个字段 | 进服即被断：`Failed to decode packet 'serverbound/minecraft:client_information'` | **26.3 在该包末尾新增了 `particle_status`**，旧版本没有 |
+| 区块包解析传错切片 | 收到区块但全部解析失败 | `ChunkPacketParser.TryRead` 需要**完整 body（含包 id）**，不能先剥掉 id |
+
+#### 实测
+
+| 指标 | 修复前 | 修复后 |
+| --- | --- | --- |
+| 行走 20 秒后的区块数 | 9（不变） | **405**（持续增长） |
+| 服务端位置修正 | 190–223 次 / 20 s | **2 次 / 20 s** |
+| 水平速度 | 4.3–4.5 格/秒 | 4.3–4.5 格/秒 |
+
+**结论**：R-023 的真正解法不是"改碰撞"，而是"**把世界补齐**"。碰撞求解本身的差异在这一轮里没有成为
+瓶颈——之前所有回拉都能用"客户端世界里没有那块地形"解释。
+
+#### 接入正式客户端循环
+
+同一条链路已接进窗口路径（`Launcher/LivePlaySession` + `InteractiveSession`）：
+
+- 第一帧发 `client_information` + 首个 `chunk_batch_received`；
+- 每帧排空收到的包，`level_chunk_with_light` 直接并入 `ClientWorld`；
+- 收到 `chunk_batch_finished` 即回 `chunk_batch_received`。
+
+实测：窗口运行 12 秒，网格方块数由 585,216 增长到 **2,003,968**（区块持续流入），无踢人。
+

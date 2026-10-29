@@ -9,25 +9,23 @@ using Xunit;
 namespace Sharpcraft.Client.Tests.World;
 
 /// <summary>
-/// The world adapter decides what stops an entity. Unknown terrain must block movement: reading a missing
-/// chunk as air lets the player walk into space the server has blocks in, and the server then reports a
-/// position overlapping its own terrain (docs/specs/network/play-movement.md 7.10).
+/// The world adapter decides what stops an entity. Unknown terrain reads as air, matching vanilla, whose
+/// block lookup falls back to void air for a missing chunk: vanilla keeps the player inside loaded terrain by
+/// streaming chunks, not by turning the edge of what has arrived into a wall
+/// (docs/specs/network/play-movement.md 7.12).
 /// </summary>
 public sealed class EntityWorldAdapterTests
 {
     [Fact]
-    public void TerrainOutsideTheDownloadedChunksBlocksMovement()
+    public void TerrainOutsideTheDownloadedChunksReadsAsAir()
     {
         var world = new ClientWorld(-4, 24);
         world.AddChunk(0, 0);
 
         var adapter = new EntityWorldAdapter(world);
 
-        // Chunk (0,0) is loaded and empty here, so it is walkable air.
-        Assert.False(adapter.IsSolid(0, 70, 0));
-
-        // A thousand blocks away nothing is downloaded; that must not read as air.
-        Assert.True(adapter.IsSolid(1000, 70, 0));
+        Assert.False(world.IsChunkLoaded(1000, 0));
+        Assert.False(adapter.IsSolid(1000, 70, 0));
     }
 
     [Fact]
@@ -45,12 +43,18 @@ public sealed class EntityWorldAdapterTests
     }
 
     [Fact]
-    public void AnEntityCannotWalkIntoUndownloadedTerrain()
+    public void AChunkArrivingWhileWalkingMakesItsGroundSolid()
     {
         var world = new ClientWorld(-4, 24);
-        var chunk = world.AddChunk(0, 0);
+        var adapter = new EntityWorldAdapter(world);
+        var player = new PlayerEntity(adapter, new Vector3(10.5f, 64f, 0.5f));
 
-        // A floor across the loaded chunk so the player has something to stand on.
+        // Nothing is downloaded yet, so the player falls through the unknown column.
+        player.Move(new Vector3(0f, -1f, 0f));
+        Assert.Equal(63f, player.Position.Y, 3);
+
+        // The server streams the chunk in; its floor now exists and stops the fall.
+        var chunk = world.AddChunk(0, 0);
         chunk.SetSection(new Sharpcraft.Common.World.ChunkSection(singleState: 0, sectionY: 3));
         for (var x = 0; x < 16; x++)
         {
@@ -60,14 +64,9 @@ public sealed class EntityWorldAdapterTests
             }
         }
 
-        var player = new PlayerEntity(new EntityWorldAdapter(world), new Vector3(0.5f, 64f, 0.5f));
-
-        for (var tick = 0; tick < 200; tick++)
-        {
-            player.Move(new Vector3(0.3f, 0f, 0f));
-        }
-
-        // Chunk 0 spans x 0..15, so the wall of unknown terrain must stop the player before x = 16.
-        Assert.True(player.Position.X < 16f, $"walked to x={player.Position.X}, past the loaded chunk");
+        // A fresh player standing just above the freshly streamed floor lands on it.
+        var afterStreaming = new PlayerEntity(adapter, new Vector3(10.5f, 64.5f, 0.5f));
+        afterStreaming.Move(new Vector3(0f, -1f, 0f));
+        Assert.Equal(64f, afterStreaming.Position.Y, 3);
     }
 }

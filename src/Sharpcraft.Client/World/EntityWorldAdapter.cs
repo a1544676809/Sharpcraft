@@ -11,10 +11,11 @@ namespace Sharpcraft.Client.World;
 /// slippery the ground is. Air is state 0 in this world, so solidity is "not air" for now; per-block
 /// friction arrives with the block registry (docs/modules/entities.md 1).
 ///
-/// Terrain that has not been downloaded is treated as solid. Reading a missing chunk as air lets the
-/// entity walk off the loaded region into space the server does have blocks in, and the server then sees a
-/// position whose bounding box overlaps blocks it knows about and pulls the player back
-/// (docs/specs/network/play-movement.md 7.10).
+/// Terrain that has not been downloaded reads as air, matching the vanilla client, whose block lookup falls
+/// back to void air for a missing chunk. Vanilla never relies on that fallback to hold a player in place:
+/// the server keeps the chunks around every player loaded and streams them, so the client's view is always
+/// populated ahead of the player. Treating unknown terrain as solid instead would build an invisible wall at
+/// the edge of whatever happens to be downloaded (docs/specs/network/play-movement.md 7.12).
 /// </summary>
 public sealed class EntityWorldAdapter : IEntityWorld
 {
@@ -31,16 +32,7 @@ public sealed class EntityWorldAdapter : IEntityWorld
     }
 
     /// <inheritdoc />
-    public bool IsSolid(int x, int y, int z)
-    {
-        // Unknown terrain blocks movement instead of reading as air; see the class remarks.
-        if (!_world.IsChunkLoaded(x, z))
-        {
-            return true;
-        }
-
-        return _world.GetBlockState(x, y, z) != 0;
-    }
+    public bool IsSolid(int x, int y, int z) => _world.GetBlockState(x, y, z) != 0;
 
     /// <inheritdoc />
     public float Friction(int x, int y, int z) => DefaultFriction;

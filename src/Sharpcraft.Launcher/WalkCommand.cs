@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using System.Numerics;
 using Sharpcraft.Client.Game;
+using Sharpcraft.Client.World;
 using Sharpcraft.Common.Entities;
 using Sharpcraft.Common.Network;
 
@@ -34,7 +35,7 @@ internal static class WalkCommand
         double seconds,
         Action<string> log,
         CancellationToken cancellationToken,
-        IEntityWorld? world = null)
+        ClientWorld? world = null)
     {
         ArgumentNullException.ThrowIfNull(connection);
         ArgumentNullException.ThrowIfNull(log);
@@ -42,7 +43,8 @@ internal static class WalkCommand
         // The server re-runs the move on its own terrain and rejects a client that ends up more than a
         // quarter block away, so the walk must happen in the same world the server has. A flat world is only
         // a fallback when no chunks were collected.
-        var player = new PlayerEntity(world ?? new FlatWorld(), new Vector3(0.5f, 0f, 0.5f));
+        IEntityWorld adapter = world is null ? new FlatWorld() : new EntityWorldAdapter(world);
+        var player = new PlayerEntity(adapter, new Vector3(0.5f, 0f, 0.5f));
         var sync = new PlayerSync();
         var start = player.Position;
 
@@ -57,6 +59,7 @@ internal static class WalkCommand
         var lastTrace = TimeSpan.Zero;
         var sendEveryTicks = int.TryParse(Environment.GetEnvironmentVariable("MC_WALK_SEND_EVERY_TICKS"), out var every) && every > 0 ? every : 1;
         var tickCounter = 0;
+        const float desiredChunksPerTick = 8f;
         var tickWatch = new Stopwatch();
         var tickCostMs = 0d;
         var maxSends = int.TryParse(Environment.GetEnvironmentVariable("MC_WALK_MAX_SENDS"), out var max) ? max : int.MaxValue;
@@ -185,6 +188,24 @@ internal static class WalkCommand
 
         try
         {
+            // Announce the client's view distance before asking for chunks: the server streams terrain around
+            // the player only once it knows how far the client wants to see, which is what keeps the world
+            // loaded ahead of us instead of walking on air (docs/specs/network/play-movement.md 7.12).
+            TrySend(
+                connection,
+                PlayPackets.BuildClientInformation(
+                    locale: "en_us",
+                    viewDistance: 8,
+                    chatVisibility: 0,
+                    chatColors: true,
+                    skinParts: 0x7F,
+                    mainHand: 1,
+                    textFiltering: false,
+                    allowListing: true),
+                ref reason);
+
+            TrySend(connection, PlayPackets.BuildChunkBatchReceived(desiredChunksPerTick), ref reason);
+
             tickWatch.Start();
             while (clock.Elapsed.TotalSeconds < seconds && !cancellationToken.IsCancellationRequested)
             {
@@ -215,6 +236,29 @@ internal static class WalkCommand
                                 log($"correction {corrections}: deviation {distance:F2} snapped={snapped}");
                             }
 
+                            break;
+
+                        case PacketIds.PlayClientbound.LevelChunkWithLight:
+                            // Chunks keep arriving while we walk; adding them is what lets the player move
+                            // into terrain the server has instead of walking on air
+                            // (docs/specs/network/play-movement.md 7.12).
+                            if (world is not null &&
+                                ChunkPacketParser.TryRead(
+                                    body,
+                                    world.SectionCount,
+                                    world.MinSectionY,
+                                    airState: 0,
+                                    out var parsed) == DecodeStatus.Success &&
+                                parsed is not null)
+                            {
+                                world.AddChunk(parsed);
+                            }
+
+                            break;
+
+                        case PacketIds.PlayClientbound.ChunkBatchFinished:
+                            // The server waits for this before sending the next batch.
+                            TrySend(connection, PlayPackets.BuildChunkBatchReceived(desiredChunksPerTick), ref reason);
                             break;
 
                         case PacketIds.PlayClientbound.Disconnect:
@@ -287,7 +331,7 @@ internal static class WalkCommand
             }
         }
 
-        log($"ticks={tickCounter} in {tickWatch.Elapsed.TotalSeconds:F2}s => {tickCounter / Math.Max(0.001, tickWatch.Elapsed.TotalSeconds):F1} ticks/sec, cost {tickCostMs / Math.Max(1, tickCounter):F2} ms/tick, sent={sent}");
+        log($"ticks={tickCounter} in {tickWatch.Elapsed.TotalSeconds:F2}s => {tickCounter / Math.Max(0.001, tickWatch.Elapsed.TotalSeconds):F1} ticks/sec, cost {tickCostMs / Math.Max(1, tickCounter):F2} ms/tick, sent={sent}, chunks={world?.LoadedChunkCount ?? 0}");
         return new Result(sent, corrections, Distance(start, player.Position), reason, survived);
 
     }

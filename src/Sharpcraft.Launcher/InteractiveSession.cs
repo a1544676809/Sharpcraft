@@ -27,14 +27,17 @@ internal sealed class InteractiveSession
     private readonly TickLoop _loop = new();
     private readonly PlayerInterpolator _interpolator;
     private readonly LivePlaySession? _live;
+    private readonly ClientWorld? _world;
+    private bool _streamingRequested;
     private readonly PlayerSync? _sync;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private TimeSpan _last;
     private bool _captureRequested;
 
-    private InteractiveSession(PlayerEntity player, LivePlaySession? live)
+    private InteractiveSession(PlayerEntity player, LivePlaySession? live, ClientWorld? world)
     {
         _player = player;
+        _world = world;
         _interpolator = new PlayerInterpolator(player, _camera.Yaw);
         _live = live;
         _sync = live is null ? null : new PlayerSync();
@@ -50,7 +53,7 @@ internal sealed class InteractiveSession
 
         var adapter = new EntityWorldAdapter(world);
         var spawn = FindSpawn(world, request);
-        return new InteractiveSession(new PlayerEntity(adapter, spawn), live);
+        return new InteractiveSession(new PlayerEntity(adapter, spawn), live, world);
     }
 
     /// <summary>Player being simulated.</summary>
@@ -77,6 +80,7 @@ internal sealed class InteractiveSession
         var elapsed = now - _last;
         _last = now;
 
+        EnsureStreaming();
         DrainIncoming();
 
         _loop.Advance(
@@ -145,6 +149,31 @@ internal sealed class InteractiveSession
     /// its per-tick movement guards there and disconnects a client whose second position packet arrives
     /// without it (docs/specs/network/play-movement.md 6.5).
     /// </summary>
+    /// <summary>
+    /// Tells the server how far we want to see, then asks for the first chunk batch. Without this the server
+    /// never streams terrain and the player walks off the end of whatever was downloaded at join
+    /// (docs/specs/network/play-movement.md 7.12).
+    /// </summary>
+    private void EnsureStreaming()
+    {
+        if (_live is null || _streamingRequested)
+        {
+            return;
+        }
+
+        _streamingRequested = true;
+        _live.Send(PlayPackets.BuildClientInformation(
+            locale: "en_us",
+            viewDistance: 8,
+            chatVisibility: 0,
+            chatColors: true,
+            skinParts: 0x7F,
+            mainHand: 1,
+            textFiltering: false,
+            allowListing: true));
+        _live.Send(PlayPackets.BuildChunkBatchReceived(8f));
+    }
+
     private void PublishTick()
     {
         if (_live is null || _sync is null || !_live.IsAlive)
@@ -214,6 +243,21 @@ internal sealed class InteractiveSession
                         }
                     }
 
+                    break;
+
+                case PacketIds.PlayClientbound.LevelChunkWithLight:
+                    if (_world is not null &&
+                        ChunkPacketParser.TryRead(body, _world.SectionCount, _world.MinSectionY, airState: 0, out var parsed) == DecodeStatus.Success &&
+                        parsed is not null)
+                    {
+                        _world.AddChunk(parsed);
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.ChunkBatchFinished:
+                    // The server waits for the acknowledgement before sending the next batch.
+                    _live.Send(PlayPackets.BuildChunkBatchReceived(8f));
                     break;
 
                 case PacketIds.PlayClientbound.Disconnect:

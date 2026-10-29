@@ -203,7 +203,7 @@ internal static class Program
                         seconds,
                         line => Console.WriteLine($"  {line}"),
                         cancellation.Token,
-                        world is null ? null : new EntityWorldAdapter(world))
+                        world)
                     .ConfigureAwait(false);
 
                 // The server is the judge: it accepts movement, corrects it, or drops the connection.

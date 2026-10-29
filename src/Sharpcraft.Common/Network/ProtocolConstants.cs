@@ -134,6 +134,9 @@ public static class PacketIds
         /// </summary>
         public const int ClientTickEnd = 13;
 
+        /// <summary>Asks the server for the next chunk batch; the server waits for it.</summary>
+        public const int ChunkBatchReceived = 11;
+
         /// <summary>Client information update.</summary>
         public const int ClientInformation = 14;
 
@@ -174,6 +177,15 @@ public static class PacketIds
 
         /// <summary>Absolute player position: a teleport or a server correction.</summary>
         public const int PlayerPosition = 73;
+
+        /// <summary>Chunk batch start marker.</summary>
+        public const int ChunkBatchStart = 12;
+
+        /// <summary>Chunk batch finished marker, carrying the batch size.</summary>
+        public const int ChunkBatchFinished = 11;
+
+        /// <summary>Drops a chunk the server no longer tracks.</summary>
+        public const int ForgetLevelChunk = 38;
 
         /// <summary>JoinGame.</summary>
         public const int Login = 50;

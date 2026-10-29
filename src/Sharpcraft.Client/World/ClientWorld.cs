@@ -37,6 +37,12 @@ public sealed class ClientWorld
     /// <summary>Dimensions the server offers, as identifiers.</summary>
     public IReadOnlyList<string> Dimensions { get; private set; } = [];
 
+    /// <summary>Lowest section index of every column.</summary>
+    public int MinSectionY => _minSectionY;
+
+    /// <summary>Sections per column.</summary>
+    public int SectionCount => _sectionCount;
+
     /// <summary>Number of loaded chunks.</summary>
     public int LoadedChunkCount => _chunks.Count;
 
