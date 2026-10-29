@@ -139,3 +139,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-112 | M5.2 P1：玩家列表排序与布局**对齐原版**（三级比较器、80 上限取最优、20 行/列、延迟阈值）| `docs/modules/ui.md` 8.3 | `PlayerListPanelTests`（17 项：listOrder、旁观者后置、名字忽略大小写、未 listed 过滤、80 上限取最优、11 个延迟边界、两列布局坐标）| `Client/Ui/PlayerListPanel` | 已完成 |
 | T-113 | M5.2 P1：玩家列表接入会话与窗口（包 ID 校验、分发进名册、行绘制同批次）| `docs/modules/ui.md` 8.2/8.3；`docs/specs/network/protocol-phases.md` | 包 ID 用 9 个既有 ID 反向校验注册表 dump（全部一致）；全量测试绿 | `Common/Network/ProtocolConstants`、`Launcher/InteractiveSession`、`Client/Ui/PlayerListPanel` | 已完成 |
 | T-114 | 已知抖动：`ChunkSeamTests` 在并行全量运行时偶发失败，单独运行与再次全量均通过 | `docs/risks.md` | 待补（需稳定复现条件）| 未开始 | 规格不足 |
+| T-115 | 帧尖峰：接入玩家列表绘制后一次 25 秒运行报 `worst frame 93.3 ms`（此前同类运行 24.1 ms），未定位 | `docs/specs/quality-attributes.md` QA-1.3 | 待补（需对比有/无列表绘制的帧分布）| 未开始 | 规格不足 |
