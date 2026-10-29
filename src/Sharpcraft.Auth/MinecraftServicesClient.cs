@@ -15,6 +15,7 @@ public sealed class MinecraftServicesClient
 {
     private static readonly Uri LoginUri = new("https://api.minecraftservices.com/authentication/login_with_xbox");
     private static readonly Uri ProfileUri = new("https://api.minecraftservices.com/minecraft/profile");
+    private static readonly Uri RefreshUri = new("https://api.minecraftservices.com/authentication/refresh");
 
     private readonly HttpClient _http;
     private readonly TimeProvider _time;
@@ -57,6 +58,59 @@ public sealed class MinecraftServicesClient
             if (string.IsNullOrEmpty(accessToken))
             {
                 throw new AuthException(AuthError.UnexpectedResponse, "Minecraft login response is missing access_token");
+            }
+
+            var expiresIn = AuthHttp.Int(root, "expires_in") ?? 86_400;
+            return new MinecraftSession(accessToken, _time.GetUtcNow().AddSeconds(expiresIn));
+        }
+    }
+
+    /// <summary>
+    /// Trades a still-valid session token for a fresh one without touching Xbox Live
+    /// (docs/modules/auth.md 5.1, step 2). Throws <see cref="AuthException"/> with
+    /// <see cref="AuthError.RefreshTokenRejected"/> when the token can no longer be extended, which is
+    /// the caller's signal to fall back to the Xbox chain.
+    /// </summary>
+    /// <param name="session">Session whose token should be extended.</param>
+    /// <param name="clientToken">Stable identifier for this installation.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public async Task<MinecraftSession> RefreshAsync(
+        MinecraftSession session,
+        string clientToken,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientToken);
+
+        var (status, body) = await AuthHttp.PostJsonAsync(
+            _http,
+            RefreshUri,
+            new { accessToken = session.AccessToken, clientToken },
+            cancellationToken).ConfigureAwait(false);
+
+        using (body)
+        {
+            var root = body.RootElement;
+            if (status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+            {
+                throw new AuthException(
+                    AuthError.RefreshTokenRejected,
+                    $"Minecraft session refresh rejected with {(int)status}",
+                    (int)status);
+            }
+
+            if (status != HttpStatusCode.OK)
+            {
+                throw new AuthException(
+                    AuthError.UnexpectedResponse,
+                    $"Minecraft session refresh failed with {(int)status}",
+                    (int)status);
+            }
+
+            var accessToken = AuthHttp.String(root, "access_token");
+            if (string.IsNullOrEmpty(accessToken))
+            {
+                throw new AuthException(AuthError.UnexpectedResponse, "refresh response is missing access_token");
             }
 
             var expiresIn = AuthHttp.Int(root, "expires_in") ?? 86_400;

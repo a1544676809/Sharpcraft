@@ -77,6 +77,38 @@ public sealed class TokenStore
         RestrictToCurrentUser(_path);
     }
 
+    /// <summary>
+    /// Stores the Minecraft session and profile alongside the existing Microsoft token, keeping one
+    /// file so a partial cache can never hold a session without the grant that produced it.
+    /// </summary>
+    /// <param name="session">Minecraft session to cache.</param>
+    /// <param name="profile">Profile the session belongs to.</param>
+    public void SaveSession(MinecraftSession session, MinecraftProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(profile);
+
+        var existing = Load();
+        if (existing is null)
+        {
+            // Without a Microsoft grant the session alone is not enough to renew anything, so it is
+            // not written on its own.
+            return;
+        }
+
+        var payload = existing with
+        {
+            MinecraftAccessToken = session.AccessToken,
+            MinecraftExpiresAt = session.ExpiresAt,
+            ProfileId = profile.Id,
+            ProfileName = profile.Name
+        };
+
+        EnsureOutsideRepository(_path);
+        File.WriteAllText(_path, JsonSerializer.Serialize(payload, JsonOptions));
+        RestrictToCurrentUser(_path);
+    }
+
     /// <summary>Loads tokens, or null when absent or unreadable.</summary>
     public StoredTokens? Load()
     {
@@ -137,14 +169,24 @@ public sealed class TokenStore
     /// <param name="AccessToken">Cached access token.</param>
     /// <param name="RefreshToken">Refresh token; sensitive.</param>
     /// <param name="ExpiresAt">Access token expiry.</param>
+    /// <param name="MinecraftAccessToken">Minecraft session token; the only credential that can be
+    /// renewed without Xbox Live (docs/modules/auth.md 5.1).</param>
+    /// <param name="MinecraftExpiresAt">Minecraft session expiry.</param>
+    /// <param name="ProfileId">Profile id of the signed-in account, without dashes.</param>
+    /// <param name="ProfileName">Profile name of the signed-in account.</param>
     public sealed record StoredTokens(
         string ClientId,
         string Scope,
         string AccessToken,
         string? RefreshToken,
-        DateTimeOffset ExpiresAt)
+        DateTimeOffset ExpiresAt,
+        string? MinecraftAccessToken = null,
+        DateTimeOffset? MinecraftExpiresAt = null,
+        string? ProfileId = null,
+        string? ProfileName = null)
     {
         /// <inheritdoc />
-        public override string ToString() => $"StoredTokens(expires={ExpiresAt:u})";
+        public override string ToString() =>
+            $"StoredTokens(expires={ExpiresAt:u}, minecraft={(MinecraftAccessToken is null ? "none" : "cached")})";
     }
 }

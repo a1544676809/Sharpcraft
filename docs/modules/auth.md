@@ -92,6 +92,24 @@
 - 内存中的令牌在使用后尽量清零；不足以保证时必须在文档中承认（.NET 字符串不可清零）。
 - `logout` 命令删除缓存；刷新令牌失效时缓存会被自动丢弃并回落到交互登录。
 
+### 5.1 令牌缓存与续期顺序
+
+链路有四段，但**并非每次启动都要走完四段**。续期顺序按"代价从低到高"排列，任一步成功即停止：
+
+| 顺序 | 判据 | 动作 | 是否会碰 XSTS |
+| --- | --- | --- | --- |
+| 1 | 缓存的 Minecraft 会话令牌仍未过期（留 5 分钟余量） | 直接使用，不发任何请求 | 否 |
+| 2 | 有缓存的 Minecraft 令牌但已过期 | `POST api.minecraftservices.com/authentication/refresh`，用当前令牌换新令牌 | 否 |
+| 3 | 有缓存的微软刷新令牌 | `login.live.com` 续期 → Xbox 用户认证 → XSTS → Minecraft 登录 | **是** |
+| 4 | 以上都失败 | 设备码流程交互登录 | 是 |
+
+两条硬要求（来自原则 7 的"令牌缓存与静默刷新"）：
+
+- **微软令牌一拿到手就落盘，不等整条链路成功。** 否则 XSTS 一次失败就要用户重新输一次设备码，而设备码有效期只有约 15 分钟。落盘时机在设备码轮询成功之后、Xbox 认证之前。
+- **Minecraft 会话令牌单独持久化**（access token + 过期时间 + 档案 uuid/name）。它是唯一能免掉 XSTS 的凭据；只存微软令牌等于每次启动都把整条链路重走一遍。
+
+`/authentication/refresh` 的请求体形状（`accessToken` + `clientToken`）**尚未在本项目实测确认**，按官方公开契约实现，并在 `docs/risks.md` 登记为待验证假设；首次成功登录后必须实测复核，失败时按上表回落到第 3 步，不得因此中断登录。
+
 ## 6. 客户端 ID
 
 - 设备码流程需要一个 OAuth 客户端 ID。本项目**不**申请专有 Azure 应用（需要项目所有者操作），默认使用社区通用客户端 ID，并允许通过配置覆盖。
@@ -126,6 +144,18 @@ dotnet run --project src/Sharpcraft.Launcher -- login
 失败时输出会带分类原因（`[NoXboxProfile]` / `[AccountRestricted]` / `[NoGameOwnership]` / `[RefreshTokenRejected]`）与微软的服务端描述，便于定位。
 
 ## 传输层（重试、诊断、连接）
+
+### 代理选择
+
+三个环境变量按顺序生效：`SHARPCRAFT_PROXY` → `HTTPS_PROXY` → `HTTP_PROXY` → `ALL_PROXY`，都支持裸 `host:port`。
+设置了代理时**地址竞速会关闭**，原因很实在：竞速依赖 `SocketsHttpHandler.ConnectCallback`，而该回调直接连目标地址、
+会完全绕过代理，两者不能共存。`MC_TRANSPORT_DEBUG=1` 会打印当前模式（`direct, address racing` 或
+`proxy host:port (address racing disabled)`）。
+
+不同网络环境下各端点的可达性差异很大（有的能直连、有的只能走代理），因此这三条路径都必须保留：直连、代理、离线。
+判断顺序是"先直连，再代理，最后才考虑离线"，且每一步的失败都要能看出卡在哪个端点。
+
+
 
 认证链路对网络抖动敏感，以下三条是实测逼出来的，不是预设：
 

@@ -20,12 +20,70 @@ public static class HostTransport
     /// <summary>User agent sent with every request; the endpoints reject anonymous clients.</summary>
     public const string UserAgent = "Sharpcraft/0.1 (+https://github.com/; launcher)";
 
+    /// <summary>Environment variable naming an explicit proxy for this application.</summary>
+    public const string ProxyVariable = "SHARPCRAFT_PROXY";
+
+    /// <summary>
+    /// Resolves the proxy to use, in order: <c>SHARPCRAFT_PROXY</c>, <c>HTTPS_PROXY</c>,
+    /// <c>HTTP_PROXY</c>, <c>ALL_PROXY</c>. Returns null when none is configured, which means the
+    /// racing direct connection is used.
+    /// </summary>
+    /// <param name="readVariable">Reads an environment variable; injected so tests can fake it.</param>
+    public static Uri? ResolveProxy(Func<string, string?> readVariable)
+    {
+        ArgumentNullException.ThrowIfNull(readVariable);
+
+        foreach (var name in new[] { ProxyVariable, "HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY" })
+        {
+            var value = readVariable(name);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            // Bare "host:port" is accepted, as proxy environment variables are often written that way.
+            if (!value.Contains("://", StringComparison.Ordinal))
+            {
+                value = "http://" + value;
+            }
+
+            if (Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri))
+            {
+                return uri;
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>Creates an HTTP client with address racing enabled.</summary>
     /// <param name="timeout">Overall request timeout; defaults to 30 seconds.</param>
-    public static HttpClient Create(TimeSpan? timeout = null) =>
+    /// <remarks>
+    /// When a proxy is configured the racing connect is dropped on purpose: <see cref="ConnectCallback"/>
+    /// connects directly and therefore bypasses proxies entirely, so honouring a proxy and racing
+    /// addresses are mutually exclusive. The proxy path keeps every other setting.
+    /// </remarks>
+    public static HttpClient Create(TimeSpan? timeout = null)
+    {
+        var proxy = ResolveProxy(Environment.GetEnvironmentVariable);
+
+        if (Environment.GetEnvironmentVariable("MC_TRANSPORT_DEBUG") is "1")
+        {
+            Console.Error.WriteLine(
+                proxy is null
+                    ? "[debug] transport: direct, address racing"
+                    : $"[debug] transport: proxy {proxy.Host}:{proxy.Port} (address racing disabled)");
+        }
+
+        return Build(proxy, timeout);
+    }
+
+    private static HttpClient Build(Uri? proxy, TimeSpan? timeout) =>
         new(new SocketsHttpHandler
         {
-            ConnectCallback = ConnectAsync,
+            ConnectCallback = proxy is null ? ConnectAsync : null,
+            Proxy = proxy is null ? null : new WebProxy(proxy),
+            UseProxy = proxy is not null,
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
             AutomaticDecompression = DecompressionMethods.All
         })
