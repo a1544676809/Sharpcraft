@@ -64,6 +64,12 @@ internal static class WalkCommand
         const float desiredChunksPerTick = 8f;
         var tickWatch = new Stopwatch();
         var tickCostMs = 0d;
+    var lastTickTimestamp = 0L;
+    var minIntervalMs = double.MaxValue;
+    var maxIntervalMs = 0d;
+    var gapsOver55 = 0;
+    var backToBackTicks = 0;
+    var tickIntervals = 0;
         var maxSends = int.TryParse(Environment.GetEnvironmentVariable("MC_WALK_MAX_SENDS"), out var max) ? max : int.MaxValue;
 
         // The server teleports a joining player to spawn and waits for the acknowledgement. Moving before
@@ -375,10 +381,34 @@ internal static class WalkCommand
                     }
 
                     tickCostMs += (Stopwatch.GetTimestamp() - tickStart) * 1000d / Stopwatch.Frequency;
+
+                    // Pacing diagnostics: the interval between tick starts is what an observer sees as motion
+                    // smoothness, so it matters more than the average rate.
+                    var tickNow = Stopwatch.GetTimestamp();
+
+                    if (lastTickTimestamp != 0)
+                    {
+                        var tickIntervalMeasuredMs = (tickNow - lastTickTimestamp) * 1000d / Stopwatch.Frequency;
+                        tickIntervals++;
+                        minIntervalMs = Math.Min(minIntervalMs, tickIntervalMeasuredMs);
+                        maxIntervalMs = Math.Max(maxIntervalMs, tickIntervalMeasuredMs);
+
+                        if (tickIntervalMeasuredMs > 55d)
+                        {
+                            gapsOver55++;
+                        }
+
+                        if (tickIntervalMeasuredMs < 20d)
+                        {
+                            backToBackTicks++;
+                        }
+                    }
+
+                    lastTickTimestamp = tickNow;
                     deadline = startTimestamp + (tickCounter * tickPeriodTicks);
                 }
 
-                if (clock.Elapsed - lastTrace >= TimeSpan.FromSeconds(1))
+                if (Environment.GetEnvironmentVariable("MC_WALK_QUIET") != "1" && clock.Elapsed - lastTrace >= TimeSpan.FromSeconds(1))
                 {
                     lastTrace = clock.Elapsed;
                     log($"t={clock.Elapsed.TotalSeconds:F3} at ({player.Position.X:F2},{player.Position.Y:F2},{player.Position.Z:F2}) " +
@@ -402,6 +432,7 @@ internal static class WalkCommand
         }
 
         log($"ticks={tickCounter} in {tickWatch.Elapsed.TotalSeconds:F2}s => {tickCounter / Math.Max(0.001, tickWatch.Elapsed.TotalSeconds):F1} ticks/sec, cost {tickCostMs / Math.Max(1, tickCounter):F2} ms/tick, sent={sent}, chunks={world?.LoadedChunkCount ?? 0}, blockChanges={blockChanges}");
+                        log($"pacing: interval min={(tickIntervals == 0 ? 0 : minIntervalMs):F2}ms avg={(tickIntervals == 0 ? 0 : 1000d * tickIntervals / Math.Max(0.001, tickWatch.Elapsed.TotalMilliseconds - 50)):F2}ms max={maxIntervalMs:F2}ms, >55ms={gapsOver55}, <20ms={backToBackTicks}, samples={tickIntervals}");
         return new Result(sent, corrections, Distance(start, player.Position), reason, survived);
 
     }

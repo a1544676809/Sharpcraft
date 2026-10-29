@@ -278,7 +278,7 @@ public sealed class EntityTracker
         entity.TargetX = Relative(teleport.Relatives, 0) ? entity.TargetX + teleport.X : teleport.X;
         entity.TargetY = Relative(teleport.Relatives, 1) ? entity.TargetY + teleport.Y : teleport.Y;
         entity.TargetZ = Relative(teleport.Relatives, 2) ? entity.TargetZ + teleport.Z : teleport.Z;
-        entity.TargetYaw = Relative(teleport.Relatives, 3) ? entity.TargetYaw + teleport.Yaw : teleport.Yaw;
+        entity.TargetYaw = Wrap360(Relative(teleport.Relatives, 3) ? entity.TargetYaw + teleport.Yaw : teleport.Yaw);
         entity.TargetPitch = Relative(teleport.Relatives, 4) ? entity.TargetPitch + teleport.Pitch : teleport.Pitch;
         entity.LerpSteps = InterpolationSteps;
 
@@ -361,7 +361,7 @@ public sealed class EntityTracker
             entity.X += (entity.TargetX - entity.X) * alpha;
             entity.Y += (entity.TargetY - entity.Y) * alpha;
             entity.Z += (entity.TargetZ - entity.Z) * alpha;
-            entity.Yaw = LerpAngle(entity.Yaw, entity.TargetYaw, alpha);
+            entity.Yaw = Wrap360(LerpAngle(entity.Yaw, entity.TargetYaw, alpha));
             entity.Pitch += (entity.TargetPitch - entity.Pitch) * alpha;
             entity.LerpSteps--;
         }
@@ -393,7 +393,7 @@ public sealed class EntityTracker
                 (float)(entity.PreviousX + ((entity.X - entity.PreviousX) * t)),
                 (float)(entity.PreviousY + ((entity.Y - entity.PreviousY) * t)),
                 (float)(entity.PreviousZ + ((entity.Z - entity.PreviousZ) * t)),
-                LerpAngle(entity.PreviousYaw, entity.Yaw, t),
+                Wrap360(LerpAngle(entity.PreviousYaw, entity.Yaw, t)),
                 entity.PreviousPitch + ((entity.Pitch - entity.PreviousPitch) * t)));
         }
 
@@ -401,6 +401,13 @@ public sealed class EntityTracker
     }
 
     private static bool Relative(int relatives, int bit) => (relatives & (1 << bit)) != 0;
+
+    /// <summary>Normalises an angle into [0, 360).</summary>
+    private static float Wrap360(float degrees)
+    {
+        var wrapped = degrees % 360f;
+        return wrapped < 0f ? wrapped + 360f : wrapped;
+    }
 
     /// <summary>Interpolates an angle along the shortest arc, so 350° to 10° passes through 0°.</summary>
     private static float LerpAngle(float from, float to, float t)

@@ -177,7 +177,10 @@ internal sealed class InteractiveSession
                     }
                 }
 
-                if (_tickCounter % 40 == 0)
+                // Console writes block for tens of milliseconds on Windows, and this runs on the tick thread,
+                // where a stall shows up as a hitch once per interval. Diagnostics are therefore opt in, so the
+                // shipping path never performs I/O while ticking.
+                if (Environment.GetEnvironmentVariable("MC_DIAG") == "1" && _tickCounter % 40 == 0)
                 {
                     var (pressed, accepted, inAir) = JumpStats;
                     Console.WriteLine(
