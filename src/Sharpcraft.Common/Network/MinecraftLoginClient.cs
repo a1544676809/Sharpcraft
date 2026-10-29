@@ -60,7 +60,14 @@ public static class MinecraftLoginClient
 
             var profileId = ParseProfileId(profile.ProfileId);
             var loginStart = new byte[64];
-            var loginStartLength = LoginPackets.WriteLoginStart(loginStart, profile.Name, profileId);
+            // Diagnostic hook: an offline-mode server accepts any name, which is what makes it possible to run two
+        // clients side by side for equivalence checks. An online-mode server rejects a name that does not match
+        // the authenticated session, so this cannot be used to impersonate anyone.
+        var loginName = Environment.GetEnvironmentVariable("MC_LOGIN_NAME") is { Length: > 0 } overrideName
+            ? overrideName
+            : profile.Name;
+
+        var loginStartLength = LoginPackets.WriteLoginStart(loginStart, loginName, profileId);
             connection.Send(loginStart.AsSpan(0, loginStartLength));
 
             var serverHash = string.Empty;

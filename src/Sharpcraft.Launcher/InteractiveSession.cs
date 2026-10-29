@@ -31,6 +31,7 @@ internal sealed class InteractiveSession
     private bool _streamingRequested;
     private bool _geometryDirty;
     private readonly ChunkWorkerPool? _pool;
+    private readonly EntityTracker _entities = new();
 
     /// <summary>
     /// Chunks of view distance requested from the server. It bounds how much terrain can be resident, which is
@@ -90,6 +91,9 @@ internal sealed class InteractiveSession
     /// <summary>Diagnostic counters: jump ticks seen, accepted on the ground, and ignored while airborne.</summary>
     public (int Pressed, int Accepted, int InAir) JumpStats => (_jumpPressed, _jumpAccepted, _jumpInAir);
 
+    /// <summary>Entities the server told us about, updated as packets arrive.</summary>
+    public EntityTracker Entities => _entities;
+
     public bool TakeGeometryDirty()
     {
         if (!_geometryDirty)
@@ -147,6 +151,25 @@ internal sealed class InteractiveSession
                 }
 
                 _tickCounter++;
+
+                // Verification hook: print the tracked entities so their positions can be compared against the
+                // other client's own report of where it is (docs/specs/network/entity-sync.md 7).
+                if (Environment.GetEnvironmentVariable("MC_ENTITY_LOG") == "1" && _tickCounter % 20 == 0)
+                {
+                    var states = _entities.Interpolate(0f);
+                    var self = _player.Position;
+                    var stamp = Environment.TickCount64;
+                    Console.WriteLine(
+                        $"entities: {states.Length} tracked at={stamp} self=({self.X:F3},{self.Y:F3},{self.Z:F3})");
+
+                    foreach (var state in states)
+                    {
+                        Console.WriteLine(
+                            $"entity {state.Id} type={state.TypeId} at={stamp} "
+                            + $"pos=({state.X:F3},{state.Y:F3},{state.Z:F3}) yaw={state.Yaw:F1}");
+                    }
+                }
+
                 if (_tickCounter % 40 == 0)
                 {
                     var (pressed, accepted, inAir) = JumpStats;
@@ -369,6 +392,72 @@ internal sealed class InteractiveSession
                     {
                         _world.AddChunk(parsed);
                         _geometryDirty = true;
+                    }
+
+                    break;
+
+
+                case PacketIds.PlayClientbound.AddEntity:
+                    if (EntityPackets.TryReadAddEntity(body[reader.Position..], out var added) == DecodeStatus.Success &&
+                        added is not null)
+                    {
+                        _entities.Add(added);
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.RemoveEntities:
+                    if (EntityPackets.TryReadRemoveEntities(body[reader.Position..], out var removedIds) == DecodeStatus.Success)
+                    {
+                        _entities.Remove(removedIds);
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.MoveEntityPos:
+                    if (EntityPackets.TryReadMoveEntity(body[reader.Position..], hasPosition: true, hasRotation: false, out var moved) == DecodeStatus.Success)
+                    {
+                        _entities.ApplyMove(moved);
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.MoveEntityPosRot:
+                    if (EntityPackets.TryReadMoveEntity(body[reader.Position..], hasPosition: true, hasRotation: true, out var movedRot) == DecodeStatus.Success)
+                    {
+                        _entities.ApplyMove(movedRot);
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.MoveEntityRot:
+                    if (EntityPackets.TryReadMoveEntity(body[reader.Position..], hasPosition: false, hasRotation: true, out var rotated) == DecodeStatus.Success)
+                    {
+                        _entities.ApplyMove(rotated);
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.RotateHead:
+                    if (EntityPackets.TryReadRotateHead(body[reader.Position..], out var headId, out var headYaw) == DecodeStatus.Success)
+                    {
+                        _entities.ApplyHeadYaw(headId, headYaw);
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.SetEntityMotion:
+                    if (EntityPackets.TryReadSetEntityMotion(body[reader.Position..], out var motion) == DecodeStatus.Success)
+                    {
+                        _entities.ApplyMotion(motion);
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.TeleportEntity:
+                    if (EntityPackets.TryReadTeleportEntity(body[reader.Position..], out var teleport) == DecodeStatus.Success)
+                    {
+                        _entities.ApplyTeleport(teleport);
                     }
 
                     break;

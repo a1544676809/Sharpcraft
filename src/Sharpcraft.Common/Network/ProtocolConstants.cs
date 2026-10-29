@@ -184,6 +184,30 @@ public static class PacketIds
         /// <summary>Rotation-only update, used for server-driven turning such as a forced facing.</summary>
         public const int PlayerRotation = 74;
 
+        /// <summary>Introduces an entity: identity, type, position, velocity, three angles.</summary>
+        public const int AddEntity = 1;
+
+        /// <summary>Drops entities by id.</summary>
+        public const int RemoveEntities = 78;
+
+        /// <summary>Delta movement for an existing entity.</summary>
+        public const int MoveEntityPos = 54;
+
+        /// <summary>Delta movement plus rotation.</summary>
+        public const int MoveEntityPosRot = 55;
+
+        /// <summary>Rotation only; unlike its siblings it carries a plain ground flag.</summary>
+        public const int MoveEntityRot = 57;
+
+        /// <summary>Head rotation, driven separately from body rotation.</summary>
+        public const int RotateHead = 85;
+
+        /// <summary>Absolute velocity for an existing entity.</summary>
+        public const int SetEntityMotion = 103;
+
+        /// <summary>Absolute repositioning with velocity, angles and relative flags.</summary>
+        public const int TeleportEntity = 128;
+
         /// <summary>Single block change: packed position plus a state id.</summary>
         public const int BlockUpdate = 8;
 

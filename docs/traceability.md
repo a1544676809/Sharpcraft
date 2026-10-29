@@ -47,7 +47,7 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-083 | 区块解析失败不再丢弃整块地形 | `docs/specs/network/play-movement.md` §7.28 | `Repro_007_ChunkWithUnreadableBlockEntityTests`（2 项）+ 实测失败 25 → 1、空洞消失 | `Common/Network/ChunkPacketParser`、`Client/World/ChunkWorkerPool` | 已完成 |
 | T-088 | 实体同步规格：id 表、26.3 编码变化、跟踪模型、M5 第一步范围 | `docs/specs/network/entity-sync.md` | 由 T-089 的解析测试共同验证 | — | 已完成 |
 | T-089 | 实体包解析与 `EntityTracker`（增量/绝对/移除/未知 id） | `docs/specs/network/entity-sync.md` §3、§4.4、§5 | `EntityPacketsTests`（10 项：三角度字节、压缩向量、打包属性、定点增量、分段增量、Rot 用布尔、传送全字段）+ `EntityTrackerTests`（7 项：累加与零轴保持、未知 id、相对传送、移除、上限、短弧插值、零分配）| `Common/Network/EntityPackets`、`Client/World/EntityTracker` | 已完成 |
-| T-090 | 实体占位渲染与插值（看得到别人在动） | `docs/specs/network/entity-sync.md` §5、§6 | 待补 | 未开始 | 规格已就绪 |
+| T-090 | 实体占位渲染 + **3 刻插值**（原版对远端实体用 `lerpPositionAndRotationStep(3)`）| `docs/specs/network/entity-sync.md` §6、§9.4 | 待补 | 未开始 | 规格已就绪 |
 | T-091 | `VecDelta` 分段逐刻播放（替代求和后一次应用） | `docs/specs/network/entity-sync.md` §4.5 | 待补 | 未开始 | 规格已就绪 |
 | T-085 | UI 模块规划：XAML 声明式结构 + 代码化行为 + 热加载边界 + 性能预算 | `docs/modules/ui.md` | 待补（P0 落地时补）| 未开始 | 已完成 |
 | T-086 | UI P0 内核：2D 批次 + 位图字体 + 裁剪 + 最小声明式 + 文件热加载 | `docs/modules/ui.md` §7、§9、§10 | 待补 | 未开始 | 规格已就绪 |
