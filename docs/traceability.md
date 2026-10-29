@@ -33,6 +33,8 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-055 | 相机改为统一矩阵（世界空间顶点 + camera uniform） | `docs/modules/render.md` §6.1 | `CameraUniformTests`（1 项：uniform 与行向量变换逐分量一致）+ `VertexLayoutTests`（步长 48）| `Framework/Rendering/CameraUniform` | 已完成 |
 | T-057 | 渲染插值（tick 之间平滑移动 + 传送吸附） | `docs/src/sharpcraft-client/game.md` §5 | `PlayerInterpolatorTests`（4 项：平滑插值、alpha 夹紧、yaw 短弧、Snap 丢弃旧样本） | `Client/Game/PlayerInterpolator`、`Launcher/InteractiveSession` | 已完成 |
 | T-060 | 正式客户端循环接入移动同步（LivePlaySession） | `docs/specs/network/play-movement.md` §6.5 | `window` 实测：live 会话在服务端存活 14 秒、零踢人；`walk` 连续行走 12 秒 | `Launcher/LivePlaySession`、`Launcher/InteractiveSession` | 已完成 |
+| T-062 | tick 精度（计时器精度 + 绝对截止时间） | `docs/specs/network/play-movement.md` §7.7 | `walk` 实测 tick 19.8/s、位移 4.399 格/秒（官方 4.291，+2.5%） | `Framework/Platform/TimerResolution`、`Client/Game/PreciseWait` | 已完成 |
+| T-063 | 碰撞求解等效（降低服务端回拉次数） | `docs/specs/network/play-movement.md` §7.8 | 待补 | 未开始 | 进行中 |
 | T-061 | 移动位移等效验证（对照官方客户端） | `docs/specs/network/play-movement.md` §7 | 官方 4.258 格/秒 vs 我们 2.201 格/秒；协议等效通过、手感等效未通过（R-022） | `Launcher/WalkCommand` | 进行中 |
 | T-059 | 移动同步的真实服务端验证（`walk` 命令） | `docs/specs/network/play-movement.md` §6 | `walk` 实测：登录/传送接受通过，移动包被拒（阻塞） | `Launcher/WalkCommand` | 进行中 |
 | T-058 | Play 移动同步（构建/解析/决策/偏差处理/接进 PlaySession） | `docs/specs/network/play-movement.md` | `PlayMovementTests`（12 项：包 id 与字段顺序、服务端位置往返、Relative 位、量化、发送决策、传送吸附、小幅平滑、大幅吸附、相对坐标按偏移） | `Common/Network/PlayMovementPackets`、`PlayerSync`、`PlaySession` | 已完成 |

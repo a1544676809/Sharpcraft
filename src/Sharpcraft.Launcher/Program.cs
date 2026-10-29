@@ -23,6 +23,11 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
+        // Real-time loops need finer sleep granularity than the default; on Windows that is about
+        // 15.6 ms, which makes a 50 ms tick wait overshoot and the simulation run slow
+        // (docs/specs/network/play-movement.md 7.5).
+        using var timerResolution = Sharpcraft.Framework.Platform.TimerResolution.Elevate();
+
         var commandLine = LauncherCommandLine.Parse(args);
         if (commandLine.Error is { } error)
         {

@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Numerics;
+using Sharpcraft.Client.Game;
 using Sharpcraft.Common.Entities;
 using Sharpcraft.Common.Network;
 
@@ -154,6 +155,8 @@ internal static class WalkCommand
         // terrain and rejects a client whose reported position drifts more than a quarter block from the
         // result, so the client tick rate and the send rate have to agree with the server's tick.
         var tickInterval = TimeSpan.FromMilliseconds(50);
+        var tickPeriodTicks = PreciseWait.ToTimestampDelta(tickInterval);
+        var startTimestamp = Stopwatch.GetTimestamp();
         var accumulator = TimeSpan.Zero;
         var lastFrame = clock.Elapsed;
 
@@ -224,18 +227,12 @@ internal static class WalkCommand
                     return new Result(sent, corrections, Distance(start, player.Position), pumpFailure, false);
                 }
 
-                var now = clock.Elapsed;
-                accumulator += now - lastFrame;
-                lastFrame = now;
+                // Deadline arithmetic instead of an accumulator: the n-th tick is due at
+                // start + n * period, so a late wake-up is corrected instead of accumulating drift.
+                var deadline = startTimestamp + (tickCounter * tickPeriodTicks);
 
-                if (accumulator > TimeSpan.FromMilliseconds(250))
+                while (Stopwatch.GetTimestamp() >= deadline)
                 {
-                    accumulator = TimeSpan.FromMilliseconds(250);
-                }
-
-                while (accumulator >= tickInterval)
-                {
-                    accumulator -= tickInterval;
                     tickCounter++;
                     var tickStart = Stopwatch.GetTimestamp();
 
@@ -264,25 +261,17 @@ internal static class WalkCommand
                     }
 
                     tickCostMs += (Stopwatch.GetTimestamp() - tickStart) * 1000d / Stopwatch.Frequency;
+                    deadline = startTimestamp + (tickCounter * tickPeriodTicks);
                 }
 
-                if (now - lastTrace >= TimeSpan.FromSeconds(1))
+                if (clock.Elapsed - lastTrace >= TimeSpan.FromSeconds(1))
                 {
-                    lastTrace = now;
+                    lastTrace = clock.Elapsed;
                     log($"at ({player.Position.X:F2},{player.Position.Y:F2},{player.Position.Z:F2}) " +
                         $"ground={player.OnGround} wall={player.HorizontalCollision} speed={player.DeltaMovement.Length():F3}");
                 }
 
-                // Sleep only until the next tick is due; anything more throttles the simulation.
-                var untilNextTick = tickInterval - accumulator;
-                if (untilNextTick > TimeSpan.FromMilliseconds(1))
-                {
-                    await Task.Delay(untilNextTick, cancellationToken).ConfigureAwait(false);
-                }
-                else
-                {
-                    await Task.Yield();
-                }
+                await PreciseWait.UntilAsync(deadline, cancellationToken).ConfigureAwait(false);
 
                 survived = true;
             }
