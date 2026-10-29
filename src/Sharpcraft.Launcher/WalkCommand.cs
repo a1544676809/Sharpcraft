@@ -54,6 +54,8 @@ internal static class WalkCommand
         var interval = TimeSpan.FromMilliseconds(int.TryParse(Environment.GetEnvironmentVariable("MC_WALK_INTERVAL_MS"), out var intervalMs) ? intervalMs : 50);
         var lastSend = TimeSpan.Zero;
         var lastTrace = TimeSpan.Zero;
+        var sendEveryTicks = int.TryParse(Environment.GetEnvironmentVariable("MC_WALK_SEND_EVERY_TICKS"), out var every) && every > 0 ? every : 1;
+        var tickCounter = 0;
         var maxSends = int.TryParse(Environment.GetEnvironmentVariable("MC_WALK_MAX_SENDS"), out var max) ? max : int.MaxValue;
 
         // The server teleports a joining player to spawn and waits for the acknowledgement. Moving before
@@ -151,9 +153,11 @@ internal static class WalkCommand
         // result, so the client tick rate and the send rate have to agree with the server's tick.
         var tickInterval = TimeSpan.FromMilliseconds(50);
         var accumulator = TimeSpan.Zero;
-        // Anchored to the moment walking starts: counting from zero would treat the whole join sequence
-        // as a backlog and burst dozens of ticks, which is exactly what the server rejects.
         var lastFrame = clock.Elapsed;
+
+        // Drop any backlog instead of catching up: a burst of ticks would send several position
+        // packets inside one server tick, which the server rejects as an invalid move.
+
 
         while (clock.Elapsed.TotalSeconds < seconds && !cancellationToken.IsCancellationRequested)
         {
@@ -214,14 +218,29 @@ internal static class WalkCommand
             var now = clock.Elapsed;
             accumulator += now - lastFrame;
             lastFrame = now;
+            if (accumulator > TimeSpan.FromMilliseconds(250))
+            {
+                accumulator = TimeSpan.FromMilliseconds(250);
+            }
 
             while (accumulator >= tickInterval)
             {
                 accumulator -= tickInterval;
-                player.Tick(forward: 1f, strafe: 0f, jumping: false, sprinting: false, yaw: 0f);
+                if (Environment.GetEnvironmentVariable("MC_WALK_FREEZE") != "1")
+                {
+                    player.Tick(forward: 1f, strafe: 0f, jumping: false, sprinting: false, yaw: 0f);
+                }
 
-                var kind = sync.Decide(player, 0f, 0f);
-                if (sync.Build(kind, player, 0f, 0f) is { } packet)
+                var kind = Environment.GetEnvironmentVariable("MC_WALK_FORCE_POS") == "1"
+                    ? MovePacketKind.PositionAndRotation
+                    : sync.Decide(player, 0f, 0f);
+
+                // The simulation still ticks at 20 Hz; the send rate can be thinned to test whether the
+                // server is objecting to the packet rate rather than to the contents.
+                tickCounter++;
+                var shouldSend = tickCounter % sendEveryTicks == 0;
+
+                if (shouldSend && sync.Build(kind, player, 0f, 0f) is { } packet)
                 {
                     if (!TrySend(connection, packet, ref reason))
                     {
@@ -230,6 +249,14 @@ internal static class WalkCommand
                     }
 
                     sent++;
+                }
+
+                // Every client tick ends with the tick marker. The server resets its per-tick movement guards
+                // there, so omitting it makes the second position packet look like a duplicate in one tick.
+                if (!TrySend(connection, PlayPackets.BuildClientTickEnd(), ref reason))
+                {
+                    log(reason);
+                    return new Result(sent, corrections, Distance(start, player.Position), reason, false);
                 }
             }
 

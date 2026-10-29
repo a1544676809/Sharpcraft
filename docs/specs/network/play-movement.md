@@ -147,3 +147,27 @@ status: 已评审
 **下一步需要权威对照**：抓官方客户端的 serverbound 序列（是否先发 `client_information`(14)、
 `player_input`(43)、`player_loaded`(44)），或在服务端开启 `--debug` 观察 `handlePlayerPositionChange`
 走的是哪条分支。
+
+### 6.5 根因与修复：`client_tick_end`
+
+服务端 `receivedPositionThisTick` 只在 **`handleClientTickEnd`** 里重置（`ServerGamePacketListenerImpl`），
+也就是 26.3 要求客户端**在每个 tick 结束时发一个空的 `ServerboundClientTickEndPacket`**。
+
+客户端不发这个包时，该标志永远为真 → **第二个位置包必然被判 `invalid_player_movement`**。这一条把所有
+观测现象一次性解释清楚了：
+
+| 观察 | 解释 |
+| --- | --- |
+| 只发 1 个位置包，连接存活 | 标志被置真后再无第二个包 |
+| 只发 `StatusOnly`，70 个包存活 | 无 `hasPosition`，不经过该标志 |
+| 位置包 2 个以上必断 | 标志从未重置 |
+| 坐标冻结、发包降频都无效 | 与坐标和频率都无关 |
+
+**修复**：每个 tick 在位置包之后发 `client_tick_end`（id 13，空载荷）。
+
+**实测结果**：客户端在真实服务端上连续行走 12 秒，`ground=True`，沿 −Z 从 z=7.83 走到 z=−16.48；
+期间服务端下发多次位置修正（偏差 0.2–12 格），`PlayerSync` 全部正确吸附。移动同步**在真实原版服务端上
+验证通过**。
+
+**遗留**：客户端本地 tick 偶尔快于 20 Hz，会出现服务端 `moved too quickly!` 警告并回传修正。这属于节奏
+打磨，不阻塞协议正确性；修正本身也证明了服务端→客户端的纠偏链路可用。

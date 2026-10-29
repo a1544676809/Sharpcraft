@@ -128,6 +128,12 @@ public static class PacketIds
         /// <summary>Chat message.</summary>
         public const int Chat = 9;
 
+        /// <summary>
+        /// End of a client tick. The server resets its per-tick movement guards here, so a client that
+        /// never sends it is disconnected on its second position packet.
+        /// </summary>
+        public const int ClientTickEnd = 13;
+
         /// <summary>Client information update.</summary>
         public const int ClientInformation = 14;
 

@@ -205,4 +205,15 @@ public static class PlayPackets
         writer.WriteBool(allowListing);
         return buffer[..writer.Position].ToArray();
     }
+    /// <summary>
+    /// Builds the end-of-tick marker. It has an empty body; its only job is to tell the server that this
+    /// client tick is finished, which resets the per-tick movement guards (docs/specs/network/play-movement.md).
+    /// </summary>
+    public static byte[] BuildClientTickEnd()
+    {
+        var buffer = new byte[2];
+        var writer = new PayloadWriter(buffer);
+        writer.WriteVarInt(PacketIds.PlayServerbound.ClientTickEnd);
+        return buffer[..writer.Position].ToArray();
+    }
 }

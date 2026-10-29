@@ -220,4 +220,17 @@ public sealed class PlayMovementTests
 
     private static PlayerEntity Player() =>
         new(EmptyEntityWorld.Instance, new Vector3(0.5f, 1f, 0.5f));
+    [Fact]
+    public void TheTickEndPacketIsAnEmptyBodyWithItsId()
+    {
+        var packet = PlayPackets.BuildClientTickEnd();
+
+        var reader = new PayloadReader(packet);
+        Assert.Equal(DecodeStatus.Success, reader.TryReadVarInt(out var id));
+
+        // The id matters: the server resets its per-tick movement guards when this arrives, and a client
+        // that never sends it is disconnected on its second position packet.
+        Assert.Equal(PacketIds.PlayServerbound.ClientTickEnd, id);
+        Assert.Single(packet);
+    }
 }

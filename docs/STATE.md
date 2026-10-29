@@ -167,6 +167,16 @@ M1（基础逻辑）与 M2（世界数据闭环）已达成并留有可执行证
 - **下一步**：抓官方客户端 serverbound 序列对照，或服务端开 `--debug`。`MC_PROBE_ID` 与
   `PlayPackets.BuildClientInformation` 已备好作为实验基础。
 
+## 2026-10-29 移动同步已在真实服务端验证通过
+
+- **根因**：26.3 要求每个 tick 结束发送空的 `client_tick_end`（id 13）。服务端只在
+  `handleClientTickEnd` 里重置 `receivedPositionThisTick`，不发该包则第二个位置包必被判
+  `invalid_player_movement`。
+- **实测**：`walk` 在本地原版服务端连续行走 12 秒，ground=True，z 从 7.83 到 −16.48；服务端多次下发
+  位置修正，`PlayerSync` 正确吸附。**协议层验证通过。**
+- **遗留**：本地 tick 偶尔快于 20 Hz，触发服务端 `moved too quickly!` 并回传修正 → 节奏打磨项。
+- 新增测试 `TheTickEndPacketIsAnEmptyBodyWithItsId`（13 项移动同步测试全绿）。
+
 ## 阻塞项
 
 - 无硬阻塞。
