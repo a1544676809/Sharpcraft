@@ -120,7 +120,7 @@ internal static class WindowCommand
         throw new InvalidOperationException($"MC_WINDOW_SELFRESIZE must look like 640x360, got '{raw}'");
     }
 
-    private static async Task<ClientWorld> ServerWorldAsync(
+    internal static async Task<ClientWorld> ServerWorldAsync(
         string address,
         HttpClient http,
         int collectSeconds,

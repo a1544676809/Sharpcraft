@@ -127,6 +127,26 @@ internal static class Program
         using var cancellation = CancelOnCtrlC();
         using var http = CreateHttpClient();
 
+        // The server validates movement against its own terrain, so the walk first collects the chunks the
+        // same way the window does and then walks on that world.
+        var collectSeconds = Environment.GetEnvironmentVariable("MC_WALK_COLLECT") is { } rawCollect && int.TryParse(rawCollect, out var collect)
+            ? collect
+            : 6;
+
+        ClientWorld? world = null;
+        try
+        {
+            Console.WriteLine($"collecting chunks for {collectSeconds}s...");
+            world = await WindowCommand
+                .ServerWorldAsync(address, http, collectSeconds, cancellation.Token)
+                .ConfigureAwait(false);
+            Console.WriteLine($"world: {world.LoadedChunkCount} chunks, spawn will come from the teleport");
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or IOException)
+        {
+            Console.WriteLine($"chunk collection failed ({exception.Message}); walking on a flat world instead");
+        }
+
         var seconds = Environment.GetEnvironmentVariable("MC_WALK_SECONDS") is { } raw && double.TryParse(raw, out var parsed)
             ? parsed
             : 5d;
@@ -173,7 +193,12 @@ internal static class Program
 
                 Console.WriteLine($"walking forward for {seconds:0.#}s...");
                 var result = await WalkCommand
-                    .RunAsync(connection, seconds, line => Console.WriteLine($"  {line}"), cancellation.Token)
+                    .RunAsync(
+                        connection,
+                        seconds,
+                        line => Console.WriteLine($"  {line}"),
+                        cancellation.Token,
+                        world is null ? null : new EntityWorldAdapter(world))
                     .ConfigureAwait(false);
 
                 // The server is the judge: it accepts movement, corrects it, or drops the connection.

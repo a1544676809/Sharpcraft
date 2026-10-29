@@ -125,3 +125,25 @@ status: 已评审
 - [x] `PlayerSync`（发送决策、偏差分级、`AcceptTeleportation` 回应）
 - [x] 接进 `PlaySession` 的收发循环（`player` + `orientation` 可选参数）
 - [ ] 与真实服务器实测（本地 offline-mode 服务端已就绪）
+
+### 6.4 改用真实世界之后
+
+把 `walk` 换成"先收集区块、再在真实地形上走"之后：
+
+| 观察 | 结果 |
+| --- | --- |
+| 玩家物理 | **正确**：`ground=True`，沿 −Z 平稳移动，速度 0.10–0.13 格/秒 |
+| 只发 1 个位置包 | **连接存活** |
+| 只发 `StatusOnly`（70 个） | **连接存活** |
+| 持续发位置包 | 约 3 个包后连接结束；服务端日志 `lost connection: Disconnected`（**无踢人原因**），无 `moved wrongly` 警告，无异常栈 |
+
+**发现的节奏 bug**：`lastFrame` 从计时器零点起算，进服阶段耗时被当成积压，第一帧就爆发几十个 tick。
+已改为以开始行走的时刻为锚点，并按 50 ms 一包节流。
+
+**仍未解决**：持续发位置包时连接仍会在约 3 个包后结束，服务端**不给出任何原因**（既非解码错误，
+也非 `invalid_player_movement`）。已排除的假设：id 错、包体布局错、坐标含 NaN、同 tick 多发、
+世界不一致。
+
+**下一步需要权威对照**：抓官方客户端的 serverbound 序列（是否先发 `client_information`(14)、
+`player_input`(43)、`player_loaded`(44)），或在服务端开启 `--debug` 观察 `handlePlayerPositionChange`
+走的是哪条分支。

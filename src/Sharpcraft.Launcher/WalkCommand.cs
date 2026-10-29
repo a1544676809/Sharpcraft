@@ -32,14 +32,16 @@ internal static class WalkCommand
         MinecraftConnection connection,
         double seconds,
         Action<string> log,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IEntityWorld? world = null)
     {
         ArgumentNullException.ThrowIfNull(connection);
         ArgumentNullException.ThrowIfNull(log);
 
-        // A flat world at y = 0 keeps gravity honest without needing chunk data: standing on it exercises
-        // the same travel code as the real world.
-        var player = new PlayerEntity(new FlatWorld(), new Vector3(0.5f, 0f, 0.5f));
+        // The server re-runs the move on its own terrain and rejects a client that ends up more than a
+        // quarter block away, so the walk must happen in the same world the server has. A flat world is only
+        // a fallback when no chunks were collected.
+        var player = new PlayerEntity(world ?? new FlatWorld(), new Vector3(0.5f, 0f, 0.5f));
         var sync = new PlayerSync();
         var start = player.Position;
 
@@ -51,6 +53,8 @@ internal static class WalkCommand
         var clock = Stopwatch.StartNew();
         var interval = TimeSpan.FromMilliseconds(int.TryParse(Environment.GetEnvironmentVariable("MC_WALK_INTERVAL_MS"), out var intervalMs) ? intervalMs : 50);
         var lastSend = TimeSpan.Zero;
+        var lastTrace = TimeSpan.Zero;
+        var maxSends = int.TryParse(Environment.GetEnvironmentVariable("MC_WALK_MAX_SENDS"), out var max) ? max : int.MaxValue;
 
         // The server teleports a joining player to spawn and waits for the acknowledgement. Moving before
         // answering that teleport is a protocol violation, so the walk waits for it first.
@@ -142,11 +146,19 @@ internal static class WalkCommand
 
         log(joinTeleportSeen ? "join teleport accepted, walking" : "no join teleport arrived, walking anyway");
 
+        // Fixed 20 Hz simulation with one position packet per tick. The server re-runs every move on its own
+        // terrain and rejects a client whose reported position drifts more than a quarter block from the
+        // result, so the client tick rate and the send rate have to agree with the server's tick.
+        var tickInterval = TimeSpan.FromMilliseconds(50);
+        var accumulator = TimeSpan.Zero;
+        // Anchored to the moment walking starts: counting from zero would treat the whole join sequence
+        // as a backlog and burst dozens of ticks, which is exactly what the server rejects.
+        var lastFrame = clock.Elapsed;
+
         while (clock.Elapsed.TotalSeconds < seconds && !cancellationToken.IsCancellationRequested)
         {
-            // Receive whatever is pending, with a short timeout so the walk keeps its 20 Hz cadence.
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(TimeSpan.FromMilliseconds(20));
+            timeout.CancelAfter(TimeSpan.FromMilliseconds(5));
 
             try
             {
@@ -158,12 +170,16 @@ internal static class WalkCommand
                 {
                     case PacketIds.PlayClientbound.KeepAlive:
                         reader.TryReadLong(out var keepAliveId);
-                        connection.Send(PlayPackets.BuildKeepAliveReply(keepAliveId));
+                        if (!TrySend(connection, PlayPackets.BuildKeepAliveReply(keepAliveId), ref reason))
+                        {
+                            return new Result(sent, corrections, Distance(start, player.Position), reason, false);
+                        }
+
                         break;
 
                     case PacketIds.PlayClientbound.Ping:
                         reader.TryReadInt(out var pingId);
-                        connection.Send(PlayPackets.BuildPongReply(pingId));
+                        TrySend(connection, PlayPackets.BuildPongReply(pingId), ref reason);
                         break;
 
                     case PacketIds.PlayClientbound.PlayerPosition:
@@ -172,6 +188,7 @@ internal static class WalkCommand
                         {
                             var (_, snapped, distance) = ApplyTeleport(connection, sync, player, correction);
                             corrections++;
+                            accumulator = TimeSpan.Zero;
                             log($"correction {corrections}: deviation {distance:F2} snapped={snapped}");
                         }
 
@@ -187,40 +204,48 @@ internal static class WalkCommand
             {
                 // Nothing arrived in this window; that is normal for a quiet server.
             }
-
-            // One tick at a time, sent only when something actually changed. MC_WALK_MODE=status sends the
-            // status packet instead, which isolates "is the id right" from "are the coordinates legal".
-            player.Tick(forward: 1f, strafe: 0f, jumping: false, sprinting: false, yaw: 0f);
-            // The server rejects a second position packet in the same tick as an invalid move, so movement is
-            // paced to one packet per 50 ms no matter how fast the loop spins.
-            var kind = Environment.GetEnvironmentVariable("MC_WALK_MODE") == "status"
-                ? MovePacketKind.StatusOnly
-                : sync.Decide(player, 0f, 0f);
-
-            var idle = Environment.GetEnvironmentVariable("MC_WALK_IDLE") == "1";
-            var sinceLastSend = clock.Elapsed - lastSend;
-            if (!idle && sinceLastSend >= interval && sync.Build(kind, player, 0f, 0f) is { } packet)
+            catch (Exception exception) when (exception is IOException or System.Net.Sockets.SocketException or ObjectDisposedException)
             {
-                if (!TrySend(connection, packet, ref reason))
+                reason = $"server closed the connection: {exception.Message}";
+                log(reason);
+                return new Result(sent, corrections, Distance(start, player.Position), reason, false);
+            }
+
+            var now = clock.Elapsed;
+            accumulator += now - lastFrame;
+            lastFrame = now;
+
+            while (accumulator >= tickInterval)
+            {
+                accumulator -= tickInterval;
+                player.Tick(forward: 1f, strafe: 0f, jumping: false, sprinting: false, yaw: 0f);
+
+                var kind = sync.Decide(player, 0f, 0f);
+                if (sync.Build(kind, player, 0f, 0f) is { } packet)
                 {
-                    log(reason);
-                    break;
+                    if (!TrySend(connection, packet, ref reason))
+                    {
+                        log(reason);
+                        return new Result(sent, corrections, Distance(start, player.Position), reason, false);
+                    }
+
+                    sent++;
                 }
-
-                lastSend = clock.Elapsed;
-                sent++;
             }
 
-            var remaining = interval - TimeSpan.FromMilliseconds(clock.Elapsed.TotalMilliseconds % interval.TotalMilliseconds);
-            if (remaining > TimeSpan.Zero && remaining < interval)
+            if (now - lastTrace >= TimeSpan.FromSeconds(1))
             {
-                await Task.Delay(remaining, cancellationToken).ConfigureAwait(false);
+                lastTrace = now;
+                log($"at ({player.Position.X:F2},{player.Position.Y:F2},{player.Position.Z:F2}) " +
+                    $"ground={player.OnGround} wall={player.HorizontalCollision} speed={player.DeltaMovement.Length():F3}");
             }
 
+            await Task.Delay(1, cancellationToken).ConfigureAwait(false);
             survived = true;
         }
 
         return new Result(sent, corrections, Distance(start, player.Position), reason, survived);
+
     }
 
     /// <summary>Sends a packet, reporting a closed peer instead of throwing.</summary>

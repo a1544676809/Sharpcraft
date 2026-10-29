@@ -169,4 +169,40 @@ public static class PlayPackets
         writer.WriteInt(pingId);
         return body.AsSpan(0, writer.Position).ToArray();
     }
+
+    /// <summary>
+    /// Builds the client information packet. Vanilla sends it once the world is joined, and a server may
+    /// treat a client that never sends it as not fully initialised.
+    /// </summary>
+    /// <param name="locale">Language tag, for example "en_us".</param>
+    /// <param name="viewDistance">Render distance in chunks.</param>
+    /// <param name="chatVisibility">0 = full, 1 = commands only, 2 = hidden.</param>
+    /// <param name="chatColors">Whether chat colours are enabled.</param>
+    /// <param name="skinParts">Skin layer bitmask.</param>
+    /// <param name="mainHand">0 = left, 1 = right.</param>
+    /// <param name="textFiltering">Whether server-side text filtering is enabled.</param>
+    /// <param name="allowListing">Whether the player allows server listing.</param>
+    public static byte[] BuildClientInformation(
+        string locale,
+        byte viewDistance,
+        int chatVisibility,
+        bool chatColors,
+        byte skinParts,
+        int mainHand,
+        bool textFiltering,
+        bool allowListing)
+    {
+        var buffer = new byte[256];
+        var writer = new PayloadWriter(buffer);
+        writer.WriteVarInt(PacketIds.PlayServerbound.ClientInformation);
+        writer.WriteString(locale);
+        writer.WriteByte(viewDistance);
+        writer.WriteVarInt(chatVisibility);
+        writer.WriteBool(chatColors);
+        writer.WriteByte(skinParts);
+        writer.WriteVarInt(mainHand);
+        writer.WriteBool(textFiltering);
+        writer.WriteBool(allowListing);
+        return buffer[..writer.Position].ToArray();
+    }
 }
