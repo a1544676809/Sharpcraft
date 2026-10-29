@@ -18,19 +18,23 @@ namespace Sharpcraft.Client.Render;
 /// <see cref="StartBackground"/>, drains finished meshes once per frame with <see cref="Drain"/>, and combines
 /// the cached results itself, which is a cheap copy because greedy meshing keeps the vertex counts small.
 /// </remarks>
-public sealed class ChunkMeshCache : IDisposable
+public sealed class ChunkMeshCache
 {
     private readonly Dictionary<long, MeshData> _meshes = [];
-    private readonly Queue<long> _queue = new();
-    private readonly HashSet<long> _queued = [];
-    private readonly List<(long Key, MeshData Mesh)> _finished = [];
+    private readonly ChunkWorkerPool? _pool;
 
-    private readonly object _gate = new();
-    private Thread? _worker;
-    private volatile bool _stop;
-    private ClientWorld? _world;
-    private BlockSpriteMap? _sprites;
-    private int _maxBlocks = 2_000_000;
+    /// <summary>Creates a standalone cache that meshes on the calling thread.</summary>
+    public ChunkMeshCache()
+    {
+    }
+
+    /// <summary>Creates a cache fed by a background pool.</summary>
+    /// <param name="pool">Pool that produces the meshes.</param>
+    public ChunkMeshCache(ChunkWorkerPool pool)
+    {
+        ArgumentNullException.ThrowIfNull(pool);
+        _pool = pool;
+    }
 
     /// <summary>Chunks re-meshed by the last synchronous <see cref="Build"/> call.</summary>
     public int LastRemeshedChunks { get; private set; }
@@ -38,33 +42,14 @@ public sealed class ChunkMeshCache : IDisposable
     /// <summary>Chunks in the cache after the last build.</summary>
     public int LastTotalChunks => _meshes.Count;
 
-    /// <summary>Chunks still queued or being meshed by the worker.</summary>
-    public int PendingChunks
-    {
-        get
-        {
-            lock (_gate)
-            {
-                return _queued.Count;
-            }
-        }
-    }
+    /// <summary>Chunks still queued for the pool or waiting to be ingested.</summary>
+    public int PendingChunks => _pool is null ? 0 : _pool.MeshesPending + _pool.MeshesReady;
 
     /// <summary>Milliseconds the last synchronous <see cref="Build"/> call spent meshing.</summary>
     public double LastBuildMilliseconds { get; private set; }
 
     /// <summary>Drops every cached mesh; the next build re-meshes everything.</summary>
-    public void Clear()
-    {
-        _meshes.Clear();
-
-        lock (_gate)
-        {
-            _queue.Clear();
-            _queued.Clear();
-            _finished.Clear();
-        }
-    }
+    public void Clear() => _meshes.Clear();
 
     /// <summary>
     /// Meshes the missing chunks synchronously, at most <paramref name="maxChunksPerBuild"/> of them.
@@ -124,172 +109,55 @@ public sealed class ChunkMeshCache : IDisposable
         return Combine();
     }
 
-    /// <summary>Starts the background mesher and queues every chunk that has no mesh yet.</summary>
-    /// <param name="world">World to mesh; it must guard its own collections against concurrent reads.</param>
-    /// <param name="sprites">Atlas mapping.</param>
-    /// <param name="maxBlocks">Safety cap.</param>
-    public void StartBackground(ClientWorld world, BlockSpriteMap? sprites = null, int maxBlocks = 2_000_000)
-    {
-        ArgumentNullException.ThrowIfNull(world);
-
-        _world = world;
-        _sprites = sprites;
-        _maxBlocks = maxBlocks;
-        EnqueueMissing(world);
-
-        _worker = new Thread(WorkerLoop)
-        {
-            IsBackground = true,
-            Name = "chunk-mesher"
-        };
-        _worker.Start();
-    }
-
-    /// <summary>Queues a chunk for re-meshing on the worker.</summary>
+    /// <summary>Queues a chunk for re-meshing on the pool.</summary>
     /// <param name="chunkKey">Packed chunk key.</param>
     public void Invalidate(long chunkKey)
     {
-        // The stale mesh is kept on purpose: dropping it would leave a hole until the worker delivers the
-        // replacement, which shows as flicker (and once produced an empty mesh that could not be uploaded).
-        lock (_gate)
-        {
-            if (_queued.Add(chunkKey))
-            {
-                _queue.Enqueue(chunkKey);
-            }
-        }
-    }
-
-    /// <summary>Picks up whatever the worker finished; true when the cached geometry changed.</summary>
-    public bool Drain()
-    {
-        List<(long Key, MeshData Mesh)> ready;
-
-        lock (_gate)
-        {
-            if (_finished.Count == 0)
-            {
-                return false;
-            }
-
-            ready = [.. _finished];
-            _finished.Clear();
-        }
-
-        foreach (var (key, mesh) in ready)
-        {
-            _meshes[key] = mesh;
-        }
-
-        return true;
-    }
-
-    /// <summary>Combines the meshes currently cached; cheap, no meshing.</summary>
-    public MeshData Snapshot() => Combine();
-
-    /// <inheritdoc />
-    public void Dispose()
-    {
-        _stop = true;
-
-        lock (_gate)
-        {
-            Monitor.PulseAll(_gate);
-        }
-
-        _worker?.Join(2000);
-        _worker = null;
+        // The stale mesh is kept on purpose: dropping it would leave a hole until the replacement arrives.
+        _pool?.TryEnqueueMesh(chunkKey);
     }
 
     /// <summary>Queues every loaded chunk that has no mesh yet; called as terrain streams in.</summary>
     /// <param name="world">World to scan.</param>
-    public void QueueMissing(ClientWorld world) => EnqueueMissing(world);
-
-    private void EnqueueMissing(ClientWorld world)
+    public void QueueMissing(ClientWorld world)
     {
-        lock (_gate)
+        ArgumentNullException.ThrowIfNull(world);
+
+        if (_pool is null)
         {
-            foreach (var chunk in world.GetChunks())
-            {
-                var key = ClientWorld.Pack(chunk.ChunkX, chunk.ChunkZ);
-                if (_meshes.ContainsKey(key) || !_queued.Add(key))
-                {
-                    continue;
-                }
-
-                _queue.Enqueue(key);
-            }
+            return;
         }
-    }
 
-    private void WorkerLoop()
-    {
-        while (!_stop)
-        {
-            long key;
-
-            lock (_gate)
-            {
-                while (_queue.Count == 0 && !_stop)
-                {
-                    Monitor.Wait(_gate, 100);
-                }
-
-                if (_stop)
-                {
-                    return;
-                }
-
-                key = _queue.Dequeue();
-            }
-
-            var world = _world;
-            if (world is null)
-            {
-                return;
-            }
-
-            using var buffer = new MeshBuffer(512);
-
-            var chunk = FindChunk(world, key);
-            if (chunk is null)
-            {
-                lock (_gate)
-                {
-                    _queued.Remove(key);
-                }
-
-                continue;
-            }
-
-            // No world lock: meshing one column takes tens of milliseconds, and holding a lock for that long
-            // makes every block update and every incoming chunk wait for it, which showed up as multi-second
-            // frame stalls. The chunk table is concurrent and block writes are word-sized, so a mesh may see a
-            // slightly stale neighbour for one rebuild and be corrected on the next dirty mark.
-            ChunkMesher.MeshChunk(world, chunk, airState: 0, buffer, _maxBlocks, _sprites);
-
-            var mesh = buffer.ToMeshData(0);
-
-            lock (_gate)
-            {
-                _queued.Remove(key);
-                _finished.Add((key, mesh));
-            }
-        }
-    }
-
-    private static LevelChunk? FindChunk(ClientWorld world, long key)
-    {
         foreach (var chunk in world.GetChunks())
         {
-            if (ClientWorld.Pack(chunk.ChunkX, chunk.ChunkZ) == key)
+            var key = ClientWorld.Pack(chunk.ChunkX, chunk.ChunkZ);
+            if (!_meshes.ContainsKey(key))
             {
-                return chunk;
+                _pool.TryEnqueueMesh(key);
             }
         }
-
-        return null;
     }
+
+    /// <summary>Picks up the meshes the pool finished; true when the cached geometry changed.</summary>
+    public bool Drain()
+    {
+        if (_pool is null)
+        {
+            return false;
+        }
+
+        var changed = false;
+        while (_pool.TryTakeMesh(out var key, out var mesh))
+        {
+            _meshes[key] = mesh;
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    /// <summary>Combines the meshes currently cached; cheap, no meshing.</summary>
+    public MeshData Snapshot() => Combine();
 
     private MeshData Combine()
     {

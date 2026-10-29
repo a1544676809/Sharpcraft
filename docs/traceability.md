@@ -41,6 +41,9 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-072 | 渲染与模拟分离：后台重网格化 | `docs/specs/network/play-movement.md` §7.20 | `ChunkMeshCacheTests`（4 项）+ 实测掉帧消失 | `Client/Render/ChunkMeshCache`、`Launcher/WindowCommand` | 已完成 |
 | T-074 | 贴图纹素中心采样（修方块边缘半像素渗色） | `docs/specs/network/play-movement.md` §7.22 | 实测：方块边缘完整 16 纹素、无相邻贴图渗色 | `Framework/Rendering/OffscreenRenderer`（着色器）| 已完成 |
 | T-075 | GPU 缓冲生命周期：退役列表 + 队列空闲后释放 | `docs/specs/network/play-movement.md` §7.23 | 实测：崩溃前第 2 帧 panic，修正后连跑 20 秒并干净退出 | `Framework/Rendering/WindowedRenderer` | 已完成 |
+| T-077 | 多线程区块加载：解析与网格化共用工作池 | `docs/specs/network/play-movement.md` §7.24 | `ChunkWorkerPoolTests`（5 项：默认线程数随机器、显式线程数、网格在后台产出、缺失区块不产出、缓存接收）| `Client/World/ChunkWorkerPool`、`Launcher/InteractiveSession` | 已完成 |
+| T-078 | worker 线程数自适应并可配置 | `docs/specs/network/play-movement.md` §7.24 | `ChunkWorkerPoolTests.TheDefaultWorkerCountFollowsTheMachine`、`AnExplicitWorkerCountIsHonoured` | `Client/World/ChunkWorkerPool` | 已完成 |
+| T-079 | 区块定位由线性扫描改为字典查找 | `docs/specs/network/play-movement.md` §7.24 | `ChunkWorkerPoolTests.MeshingRunsOffTheCallingThreadAndComesBack`（按打包键定位）| `Client/World/ChunkWorkerPool` | 已完成 |
 | T-076 | 用常驻缓冲 + `Queue.WriteBuffer` 更新几何，避免每次重建分配 | `docs/specs/network/play-movement.md` §7.23 | 待补 | 未开始 | 进行中 |
 | T-073 | 疾跑锁存与冲刺跳跃加成 | `docs/specs/network/play-movement.md` §7.21 | `SprintBehaviourTests`（4 项：锁存、松前进取消、潜行取消、连跳均速 >0.26） | `Common/Entities/LivingEntity`、`PlayerEntity` | 已完成 |
 | T-071 | 按 section 细分重网格化并降低单区块耗时 | `docs/specs/network/play-movement.md` §7.19 | 待补 | 未开始 | 进行中 |

@@ -52,12 +52,16 @@ internal static class WindowCommand
             ? FrameCommand.DemoLayout()
             : VanillaBlockRegistry.Layout);
 
-        var meshCache = new ChunkMeshCache();
+        // One pool serves both decoding and meshing, sized from the machine
+        // (docs/specs/network/play-movement.md 7.24).
+        var workerPool = new ChunkWorkerPool(world, prepared?.Map);
+        Console.WriteLine($"chunk workers: {workerPool.WorkerCount} (of {Environment.ProcessorCount} logical processors)");
 
-        // Meshing runs on a worker thread so drawing never waits for it; a short synchronous warm-up gives the
-        // first frame something to show (docs/specs/network/play-movement.md 7.20).
+        var meshCache = new ChunkMeshCache(workerPool);
+
+        // A short synchronous warm-up gives the first frame something to show.
         meshCache.Build(world, prepared?.Map, maxChunksPerBuild: 8, maxMillisecondsPerBuild: 250);
-        meshCache.StartBackground(world, prepared?.Map);
+        meshCache.QueueMissing(world);
 
         var request = FrameCommand.BuildRequest(
             world,
@@ -96,7 +100,7 @@ internal static class WindowCommand
         }
 
         using var liveScope = live;
-        var session = InteractiveSession.Create(world, request, live);
+        var session = InteractiveSession.Create(world, request, live, workerPool);
 
         var format = WindowedRenderer.Run(
             request,

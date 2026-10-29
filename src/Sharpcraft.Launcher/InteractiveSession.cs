@@ -30,6 +30,10 @@ internal sealed class InteractiveSession
     private readonly ClientWorld? _world;
     private bool _streamingRequested;
     private bool _geometryDirty;
+    private readonly ChunkWorkerPool? _pool;
+
+    /// <summary>Decoded chunks installed per frame; keeps one batch from stalling the frame.</summary>
+    private const int ParsedChunksPerFrame = 8;
     private int _jumpPressed;
     private int _jumpAccepted;
     private int _jumpInAir;
@@ -39,10 +43,11 @@ internal sealed class InteractiveSession
     private TimeSpan _last;
     private bool _captureRequested;
 
-    private InteractiveSession(PlayerEntity player, LivePlaySession? live, ClientWorld? world)
+    private InteractiveSession(PlayerEntity player, LivePlaySession? live, ClientWorld? world, ChunkWorkerPool? pool)
     {
         _player = player;
         _world = world;
+        _pool = pool;
         _interpolator = new PlayerInterpolator(player, _camera.Yaw);
         _live = live;
         _sync = live is null ? null : new PlayerSync();
@@ -51,14 +56,18 @@ internal sealed class InteractiveSession
     /// <summary>Creates a session with the player standing on the highest block under the view centre.</summary>
     /// <param name="world">World the player walks in.</param>
     /// <param name="request">Frame request, used for the spawn area and the vertex count.</param>
-    public static InteractiveSession Create(ClientWorld world, FrameRequest request, LivePlaySession? live = null)
+    public static InteractiveSession Create(
+        ClientWorld world,
+        FrameRequest request,
+        LivePlaySession? live = null,
+        ChunkWorkerPool? pool = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(request);
 
         var adapter = new EntityWorldAdapter(world);
         var spawn = FindSpawn(world, request);
-        return new InteractiveSession(new PlayerEntity(adapter, spawn), live, world);
+        return new InteractiveSession(new PlayerEntity(adapter, spawn), live, world, pool);
     }
 
     /// <summary>
@@ -105,6 +114,7 @@ internal sealed class InteractiveSession
 
         EnsureStreaming();
         DrainIncoming();
+        ApplyParsedChunks();
 
         _loop.Advance(
             elapsed,
@@ -259,6 +269,24 @@ internal sealed class InteractiveSession
     /// Applies everything the server sent since the previous frame: keep-alives, pings, position
     /// corrections and a disconnect. Runs on the render thread so the player is never touched concurrently.
     /// </summary>
+    /// <summary>
+    /// Installs the chunks the pool decoded, a few per frame so a burst cannot stall the frame. Installing is
+    /// the only world mutation here, and it happens on the game thread.
+    /// </summary>
+    private void ApplyParsedChunks()
+    {
+        if (_pool is null || _world is null)
+        {
+            return;
+        }
+
+        for (var installed = 0; installed < ParsedChunksPerFrame && _pool.TryTakeParsed(out var parsed); installed++)
+        {
+            _world.AddChunk(parsed);
+            _geometryDirty = true;
+        }
+    }
+
     private void DrainIncoming()
     {
         if (_live is null)
@@ -310,14 +338,23 @@ internal sealed class InteractiveSession
                     break;
 
                 case PacketIds.PlayClientbound.LevelChunkWithLight:
-                    if (_world is not null &&
-                        ChunkPacketParser.TryRead(body, _world.SectionCount, _world.MinSectionY, airState: 0, out var parsed) == DecodeStatus.Success &&
+                    if (_world is null)
+                    {
+                        break;
+                    }
+
+                    // Decoding a chunk is the expensive half of streaming, so it runs on the pool. The world
+                    // itself is only ever written from this thread, which then installs the decoded chunk
+                    // (docs/specs/network/play-movement.md 7.24).
+                    if (_pool is not null && _pool.TryEnqueueParse(body))
+                    {
+                        break;
+                    }
+
+                    if (ChunkPacketParser.TryRead(body, _world.SectionCount, _world.MinSectionY, airState: 0, out var parsed) == DecodeStatus.Success &&
                         parsed is not null)
                     {
                         _world.AddChunk(parsed);
-
-                        // New terrain must reach the screen while it streams in, not only when a later block
-                        // change happens to trigger a rebuild (docs/specs/network/play-movement.md 7.19).
                         _geometryDirty = true;
                     }
 
