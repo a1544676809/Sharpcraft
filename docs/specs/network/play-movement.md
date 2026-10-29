@@ -941,3 +941,19 @@ WorkerCount = clamp(ProcessorCount - 1, 1, 8)
 
 那 7 次倍增会各自产生一次 ~88 ms 的尖峰。改法是用客户端 view distance 预估区块数、
 按平均网格大小预分配容量（已在 §7.25 记录为方向），把重建次数降到 1 次。
+
+### 7.26 关闭窗口时的帧缓冲尺寸
+
+关掉窗口会崩：
+
+```
+panicked at src/lib.rs:605:5
+Error in wgpuSurfaceConfigure: Validation Error
+```
+
+窗口关闭（或最小化）时帧缓冲尺寸会变成 0，而循环仍拿这个尺寸去 `surface.Configure`，wgpu 直接校验失败。
+
+修正：循环每帧先检查 `IsClosing` 与尺寸是否为 0，命中就退出循环，绝不把非法尺寸送进 swapchain 配置。
+`WindowHost` 因此增加 `IsClosing`（转发窗口自身的关闭状态）。
+
+实测：定时 20 秒运行与手动关窗都能干净退出（退出码 0、无 panic）。

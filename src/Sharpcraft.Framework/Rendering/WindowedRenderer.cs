@@ -198,6 +198,14 @@ public static class WindowedRenderer
 
             var nextWidth = (uint)window.FramebufferWidth;
             var nextHeight = (uint)window.FramebufferHeight;
+            // A closing or minimised window reports a zero-sized framebuffer; reconfiguring the swapchain with
+            // it fails validation inside wgpu, so the loop stops instead of pushing an invalid size through
+            // (docs/specs/network/play-movement.md 7.26).
+            if (window.IsClosing || nextWidth == 0 || nextHeight == 0)
+            {
+                break;
+            }
+
             if (nextWidth != frameWidth || nextHeight != frameHeight)
             {
                 Console.WriteLine($"window: resize {frameWidth}x{frameHeight} -> {nextWidth}x{nextHeight}");

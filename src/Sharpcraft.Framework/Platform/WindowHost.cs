@@ -32,6 +32,9 @@ public sealed class WindowHost : IDisposable
     /// <summary>Window height in pixels.</summary>
     public int Height => _window.Size.Y;
 
+    /// <summary>True once the user asked the window to close; the frame loop must stop presenting.</summary>
+    public bool IsClosing => _window.IsClosing;
+
     /// <summary>Framebuffer width in physical pixels (differs from the logical size under DPI scaling).</summary>
     public int FramebufferWidth => _window.FramebufferSize.X;
 
