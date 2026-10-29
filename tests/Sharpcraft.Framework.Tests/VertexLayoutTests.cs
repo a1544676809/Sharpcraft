@@ -19,12 +19,13 @@ public sealed class VertexLayoutTests
     [Fact]
     public void TheLayoutMatchesTheVertexStride()
     {
-        Assert.Equal(ClipSpaceTransform.VertexStride, VertexLayout.Stride);
+        Assert.Equal(48, VertexLayout.Stride);
 
         var attributes = VertexLayout.Attributes();
 
-        // position, light colour, tile uv, sprite rect: 4 + 3 + 2 + 4 floats.
-        Assert.Equal(4 + 3 + 2 + 4, VertexLayout.Stride / sizeof(float));
+        // World position, light colour, tile uv, sprite rect: 3 + 3 + 2 + 4 floats. The camera arrives
+        // as a uniform, so no clip-space w is baked into the vertex.
+        Assert.Equal(3 + 3 + 2 + 4, VertexLayout.Stride / sizeof(float));
         Assert.Equal(4, attributes.Length);
     }
 
@@ -49,7 +50,7 @@ public sealed class VertexLayoutTests
     {
         var attributes = VertexLayout.Attributes();
 
-        Assert.Equal(WGPUVertexFormat.Float32x4, attributes[0].Format);
+        Assert.Equal(WGPUVertexFormat.Float32x3, attributes[0].Format);
         Assert.Equal(WGPUVertexFormat.Float32x3, attributes[1].Format);
         Assert.Equal(WGPUVertexFormat.Float32x2, attributes[2].Format);
         Assert.Equal(WGPUVertexFormat.Float32x4, attributes[3].Format);
@@ -57,8 +58,8 @@ public sealed class VertexLayoutTests
 
     private static ulong SizeOf(WGPUVertexFormat format) => format switch
     {
-        WGPUVertexFormat.Float32x2 => 8,
         WGPUVertexFormat.Float32x3 => 12,
+        WGPUVertexFormat.Float32x2 => 8,
         WGPUVertexFormat.Float32x4 => 16,
         _ => throw new ArgumentOutOfRangeException(nameof(format), format, "unexpected format")
     };

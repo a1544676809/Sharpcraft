@@ -22,6 +22,11 @@ public static class OffscreenRenderer
         @group(0) @binding(0) var atlasTexture : texture_2d<f32>;
         @group(0) @binding(1) var atlasSampler : sampler;
 
+        struct Camera {
+            viewProjection : mat4x4<f32>,
+        };
+        @group(0) @binding(2) var<uniform> camera : Camera;
+
         struct VertexOutput {
             @builtin(position) clipPosition : vec4<f32>,
             @location(0) colour : vec3<f32>,
@@ -31,13 +36,16 @@ public static class OffscreenRenderer
 
         @vertex
         fn vs_main(
-            @location(0) clipPosition : vec4<f32>,
+            @location(0) position : vec3<f32>,
             @location(1) colour : vec3<f32>,
             @location(2) uv : vec2<f32>,
             @location(3) spriteRect : vec4<f32>,
         ) -> VertexOutput {
             var output : VertexOutput;
-            output.clipPosition = clipPosition;
+
+            // Vertices stay in world space; the camera moves by updating this uniform, so a moving camera
+            // never forces the mesh to be re-transformed and re-uploaded.
+            output.clipPosition = camera.viewProjection * vec4<f32>(position, 1.0);
             output.colour = colour;
             output.uv = uv;
             output.spriteRect = spriteRect;
@@ -196,14 +204,39 @@ public static class OffscreenRenderer
                     WGPUTextureSampleType.Float,
                     WGPUTextureViewDimension._2D,
                     false),
-                BindGroupLayoutEntry.Sampler(1, ShaderStage.Fragment, WGPUSamplerBindingType.Filtering)
+                BindGroupLayoutEntry.Sampler(1, ShaderStage.Fragment, WGPUSamplerBindingType.Filtering),
+                BindGroupLayoutEntry.Buffer(
+                    VertexLayout.CameraBinding,
+                    ShaderStage.Vertex,
+                    WGPUBufferBindingType.Uniform,
+                    false,
+                    VertexLayout.CameraUniformSize)
             ]);
 
             using var pipelineLayout = device.CreatePipelineLayout([bindGroupLayout]);
 
+            // Camera uniform: one 4×4 matrix, rewritten per frame.
+            using var cameraBuffer = device.CreateBufferInit(
+                new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
+                new byte[VertexLayout.CameraUniformSize].AsSpan());
+
+            Span<float> cameraBlock = stackalloc float[16];
+            CameraUniform.Write(cameraBlock, request.CameraPosition, request.CameraTarget, request.FieldOfViewDegrees, (int)width, (int)height);
+            var cameraBytes = new byte[VertexLayout.CameraUniformSize];
+            for (var index = 0; index < 16; index++)
+            {
+                BitConverter.TryWriteBytes(cameraBytes.AsSpan(index * sizeof(float)), cameraBlock[index]);
+            }
+
+            device.Queue.WriteBuffer(cameraBuffer, 0, cameraBytes.AsSpan());
+
             using var bindGroup = device.CreateBindGroup(
                 bindGroupLayout,
-                [BindGroupEntry.TextureView(0, atlasView), BindGroupEntry.Sampler(1, atlasSampler)]);
+                [
+                    BindGroupEntry.TextureView(0, atlasView),
+                    BindGroupEntry.Sampler(1, atlasSampler),
+                    BindGroupEntry.Buffer(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize)
+                ]);
 
             // Readback rows must be padded to 256 bytes.
             var unpadded = (int)width * 4;
@@ -217,7 +250,9 @@ public static class OffscreenRenderer
             });
 
             var hasGeometry = request.Indices.Length > 0 && request.Vertices.Length > 0;
-            var vertexBytes = hasGeometry ? ClipSpaceTransform.Build(request, viewProjection) : [];
+            // World-space vertices: the shader applies the camera, so the buffer only changes when the
+            // geometry changes.
+            var vertexBytes = hasGeometry ? request.Vertices : [];
             var indexBytes = hasGeometry ? BuildIndexBytes(request) : [];
 
             using var pipeline = hasGeometry ? CreatePipeline(device, pipelineLayout) : default;

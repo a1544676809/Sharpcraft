@@ -64,7 +64,15 @@ internal static class WindowCommand
 
         var selfResize = ParseSelfResize();
 
-        var format = WindowedRenderer.Run(request, frames, visibleFor, (index, window) =>
+        // Interactive session: the player entity is advanced on a fixed tick while the camera follows its
+        // eye, so the window shows a body that can actually be walked (docs/modules/input.md 6).
+        var session = InteractiveSession.Create(world, request);
+
+        var format = WindowedRenderer.Run(
+            request,
+            frames,
+            visibleFor,
+            (index, window) =>
         {
             if (index == 0)
             {
@@ -78,7 +86,10 @@ internal static class WindowCommand
                 Console.WriteLine($"window: self-resize to {target.Width}x{target.Height}");
                 window.Resize(target.Width, target.Height);
             }
-        });
+
+            session.CaptureMouse(window, index == 0);
+        },
+            (window) => session.UpdateCamera(window));
 
         Console.WriteLine($"window closed after presenting frames; surface format {format}");
 

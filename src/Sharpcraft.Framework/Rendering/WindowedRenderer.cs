@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using System.Numerics;
 using Brew.Wgpu;
 using Brew.Wgpu.Native;
 using WgpuBuffer = Brew.Wgpu.Buffer;
@@ -38,7 +39,8 @@ public static class WindowedRenderer
         FrameRequest request,
         int frames,
         TimeSpan? maxDuration = null,
-        Action<int, WindowHost>? onFrame = null)
+        Action<int, WindowHost>? onFrame = null,
+        Func<WindowHost, (Vector3 Eye, Vector3 Target)>? cameraPerFrame = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -108,14 +110,28 @@ public static class WindowedRenderer
                 WGPUTextureSampleType.Float,
                 WGPUTextureViewDimension._2D,
                 false),
-            BindGroupLayoutEntry.Sampler(1, ShaderStage.Fragment, WGPUSamplerBindingType.Filtering)
+            BindGroupLayoutEntry.Sampler(1, ShaderStage.Fragment, WGPUSamplerBindingType.Filtering),
+            BindGroupLayoutEntry.Buffer(
+                VertexLayout.CameraBinding,
+                ShaderStage.Vertex,
+                WGPUBufferBindingType.Uniform,
+                false,
+                VertexLayout.CameraUniformSize)
         ]);
 
         using var pipelineLayout = device.CreatePipelineLayout([bindGroupLayout]);
 
+        using var cameraBuffer = device.CreateBufferInit(
+            new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
+            new byte[VertexLayout.CameraUniformSize].AsSpan());
+
         using var bindGroup = device.CreateBindGroup(
             bindGroupLayout,
-            [BindGroupEntry.TextureView(0, atlasView), BindGroupEntry.Sampler(1, atlasSampler)]);
+            [
+                BindGroupEntry.TextureView(0, atlasView),
+                BindGroupEntry.Sampler(1, atlasSampler),
+                BindGroupEntry.Buffer(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize)
+            ]);
 
         using var pipeline = CreatePipeline(device, format, pipelineLayout);
         var indexBuffer = device.CreateBufferInit(
@@ -133,6 +149,9 @@ public static class WindowedRenderer
         var vertexBuffer = UploadVertices(device, request, frameWidth, frameHeight);
         var depthTexture = CreateDepthTexture(device, frameWidth, frameHeight);
         var depthView = depthTexture.CreateView();
+
+        Span<float> cameraBlock = stackalloc float[16];
+        var cameraBytes = new byte[VertexLayout.CameraUniformSize];
 
         var colour = request.ClearColour;
         var presented = 0;
@@ -202,6 +221,26 @@ public static class WindowedRenderer
             DepthStencilAttachment.DepthClear(depthView));
 
             pass.SetPipeline(pipeline);
+            // Rewriting 64 bytes is the whole cost of moving the camera; the staging buffers are reused.
+            var (eye, target) = cameraPerFrame is null
+                ? (request.CameraPosition, request.CameraTarget)
+                : cameraPerFrame(window);
+
+            CameraUniform.Write(
+                cameraBlock,
+                eye,
+                target,
+                request.FieldOfViewDegrees,
+                (int)frameWidth,
+                (int)frameHeight);
+
+            for (var index = 0; index < 16; index++)
+            {
+                BitConverter.TryWriteBytes(cameraBytes.AsSpan(index * sizeof(float)), cameraBlock[index]);
+            }
+
+            device.Queue.WriteBuffer(cameraBuffer, 0, cameraBytes.AsSpan());
+
             pass.SetBindGroup(0, bindGroup);
             pass.SetVertexBuffer(0, vertexBuffer);
             pass.SetIndexBuffer(indexBuffer, WGPUIndexFormat.Uint32);
@@ -238,27 +277,13 @@ public static class WindowedRenderer
     /// </summary>
     private static WgpuBuffer UploadVertices(Device device, FrameRequest request, uint width, uint height)
     {
-        var matrix = CameraMath.BuildViewProjection(
-            request.CameraPosition,
-            request.CameraTarget,
-            request.FieldOfViewDegrees,
-            (int)width,
-            (int)height);
-
-        var required = ClipSpaceTransform.RequiredFloats(request);
-        var staged = System.Buffers.ArrayPool<float>.Shared.Rent(Math.Max(required, 1));
-
-        try
-        {
-            ClipSpaceTransform.Build(request, matrix, staged.AsSpan(0, required));
-            return device.CreateBufferInit(
-                new BufferInitDescriptor { Usage = BufferUsage.Vertex },
-                staged.AsSpan(0, required));
-        }
-        finally
-        {
-            System.Buffers.ArrayPool<float>.Shared.Return(staged);
-        }
+        // World-space vertices: the shader applies the camera uniform, so this buffer is independent of
+        // the camera and only the geometry decides its contents.
+        _ = width;
+        _ = height;
+        return device.CreateBufferInit(
+            new BufferInitDescriptor { Usage = BufferUsage.Vertex },
+            request.Vertices.AsSpan());
     }
 
     private static Texture CreateDepthTexture(Device device, uint width, uint height) =>
