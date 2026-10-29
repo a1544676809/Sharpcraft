@@ -5,6 +5,7 @@ using Sharpcraft.Auth;
 using Sharpcraft.Common.Registries;
 using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
+using Sharpcraft.Client.Ui;
 using Sharpcraft.Client.World;
 using Sharpcraft.Common.Network;
 using Sharpcraft.Framework.Rendering;
@@ -115,6 +116,14 @@ internal static class WindowCommand
         using var liveScope = live;
         var session = InteractiveSession.Create(world, request, live, workerPool);
 
+        // The interface document is parsed and its values are read once; building a frame is then arithmetic
+        // only (docs/modules/ui.md 10). MC_UI_FILE allows pointing at a document instead of the built in screen.
+        var uiPath = Environment.GetEnvironmentVariable("MC_UI_FILE");
+        var uiSource = uiPath is { Length: > 0 } && File.Exists(uiPath) ? File.ReadAllText(uiPath) : UiScreenLayout.DefaultDocument;
+        var uiDocument = UiMarkup.Parse(uiSource);
+        var uiStyles = UiStyles.Compile(uiDocument);
+        var uiGeometry = new UiGeometry();
+
         // Without an atlas there is no cell to sample, so entity boxes are simply not drawn.
         var entitySource = entitySprite is { } sprite
             ? new Func<DynamicGeometry>(() => entityMesher.Build(session.EntityStates(session.PartialTick), sprite))
@@ -172,7 +181,12 @@ internal static class WindowCommand
                 return updates;
             },
             expectedChunks: InteractiveSession.ExpectedChunkCount(),
-            dynamicGeometry: entitySource);
+            dynamicGeometry: entitySource,
+            uiGeometry: () =>
+            {
+                UiScreenLayout.Build(uiDocument, uiStyles, width, height, uiGeometry);
+                return uiGeometry;
+            });
 
         Console.WriteLine(
             $"pool: parsed {workerPool.ParsedOk} ok / {workerPool.ParsedFailed} failed, "

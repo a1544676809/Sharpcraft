@@ -23,6 +23,25 @@ public static class VertexLayout
     /// <summary>Binding index of the camera uniform inside the shared bind group.</summary>
     public const uint CameraBinding = 2;
 
+    /// <summary>Bytes per interface vertex: position 2, texture coordinate 2, packed colour 1 word.</summary>
+    public const int UiStride = 20;
+
+    /// <summary>Offset of the interface position inside its vertex.</summary>
+    public const int UiPositionOffset = 0;
+
+    /// <summary>Offset of the packed colour inside the interface vertex.</summary>
+    public const int UiColourOffset = 16;
+
+    /// <summary>
+    /// Interface attributes. They live here rather than beside the interface pipeline so that every vertex layout
+    /// in the engine is declared in exactly one file, which a guard test enforces.
+    /// </summary>
+    public static VertexAttribute[] UiAttributes() =>
+    [
+        new(WGPUVertexFormat.Float32x2, UiPositionOffset, 0),
+        new(WGPUVertexFormat.Unorm8x4, UiColourOffset, 1)
+    ];
+
     /// <summary>Builds the attribute list; a fresh array each call because the API copies it.</summary>
     public static VertexAttribute[] Attributes() =>
     [

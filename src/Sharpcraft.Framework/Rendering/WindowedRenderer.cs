@@ -44,7 +44,8 @@ public static class WindowedRenderer
         Func<FrameRequest?>? rebuildRequest = null,
         Func<IReadOnlyList<(long Key, GeometryData Mesh)>?>? geometryUpdates = null,
         int expectedChunks = 0,
-        Func<DynamicGeometry?>? dynamicGeometry = null)
+        Func<DynamicGeometry?>? dynamicGeometry = null,
+        Func<UiGeometry?>? uiGeometry = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -138,6 +139,18 @@ public static class WindowedRenderer
             ]);
 
         using var pipeline = CreatePipeline(device, format, pipelineLayout);
+        using var uiPipeline = UiRenderer.CreatePipeline(device, format, pipelineLayout);
+
+        // The interface layer needs its own transform: one uniform buffer cannot hold both the world camera and
+        // the orthographic projection while a single pass reads from it.
+        var uiTransformBuffer = CreateGeometryBuffer(device, VertexLayout.CameraUniformSize, BufferUsage.Uniform | BufferUsage.CopyDst);
+        using var uiBindGroup = device.CreateBindGroup(
+            bindGroupLayout,
+            [
+                BindGroupEntry.TextureView(0, atlasView),
+                BindGroupEntry.Sampler(1, atlasSampler),
+                BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize)
+            ]);
 
         // A DPI-scaled display reports a logical size smaller than the framebuffer; the swapchain
         // must be configured in physical pixels or every acquire reports "outdated".
@@ -160,6 +173,14 @@ public static class WindowedRenderer
         // buffers so a per frame rewrite never touches the world arena.
         var dynamicVertex = CreateGeometryBuffer(device, MinimumBufferBytes, BufferUsage.Vertex | BufferUsage.CopyDst);
         var dynamicIndex = CreateGeometryBuffer(device, MinimumBufferBytes, BufferUsage.Index | BufferUsage.CopyDst);
+
+        var uiVertex = CreateGeometryBuffer(device, MinimumBufferBytes, BufferUsage.Vertex | BufferUsage.CopyDst);
+        var uiIndex = CreateGeometryBuffer(device, MinimumBufferBytes, BufferUsage.Index | BufferUsage.CopyDst);
+        var uiVertexCapacity = MinimumBufferBytes;
+        var uiIndexCapacity = MinimumBufferBytes;
+        var uiIndexCount = 0u;
+        var uiRanges = Array.Empty<UiGeometry.Range>();
+        var uiScale = 1f;
         var dynamicVertexCapacity = MinimumBufferBytes;
         var dynamicIndexCapacity = MinimumBufferBytes;
 
@@ -243,6 +264,46 @@ public static class WindowedRenderer
             // Rewriting the persistent buffers costs one upload; nothing is allocated or freed in the
             // steady state, so streaming new terrain does not hitch.
             var dynamicIndexCount = 0u;
+            uiIndexCount = 0u;
+
+            if (uiGeometry is not null && uiGeometry() is { Ranges.Length: > 0 } ui)
+            {
+                var neededVertex = (ulong)ui.Vertices.Length * sizeof(float);
+                var neededIndex = (ulong)ui.Indices.Length * sizeof(uint);
+
+                if (neededVertex > uiVertexCapacity)
+                {
+                    uiVertex.Dispose();
+                    uiVertexCapacity = Math.Max(neededVertex * 2, MinimumBufferBytes);
+                    uiVertex = CreateGeometryBuffer(device, uiVertexCapacity, BufferUsage.Vertex | BufferUsage.CopyDst);
+                }
+
+                if (neededIndex > uiIndexCapacity)
+                {
+                    uiIndex.Dispose();
+                    uiIndexCapacity = Math.Max(neededIndex * 2, MinimumBufferBytes);
+                    uiIndex = CreateGeometryBuffer(device, uiIndexCapacity, BufferUsage.Index | BufferUsage.CopyDst);
+                }
+
+                device.Queue.WriteBuffer(uiVertex, 0, ui.Vertices);
+                device.Queue.WriteBuffer(uiIndex, 0, ui.Indices);
+
+                // The layout is expressed in virtual pixels; the window draws them one to one for now, so a single
+                // scale factor converts both the projection and the scissor rectangles.
+                uiScale = frameWidth / (float)Math.Max(1u, frameWidth);
+                var matrix = new float[UiProjection.FloatsPerMatrix];
+                UiProjection.WriteOrthographic(frameWidth, frameHeight, matrix);
+
+                var transformBytes = new byte[VertexLayout.CameraUniformSize];
+                for (var element = 0; element < UiProjection.FloatsPerMatrix; element++)
+                {
+                    BitConverter.TryWriteBytes(transformBytes.AsSpan(element * sizeof(float)), matrix[element]);
+                }
+
+                device.Queue.WriteBuffer(uiTransformBuffer, 0, transformBytes);
+                uiIndexCount = (uint)ui.Indices.Length;
+                uiRanges = ui.Ranges.ToArray();
+            }
 
             if (dynamicGeometry is not null && dynamicGeometry() is { IndexCount: > 0 } dynamic)
             {
@@ -406,6 +467,38 @@ public static class WindowedRenderer
                 pass.DrawIndexed((uint)currentRequest.Indices.Length);
             }
 
+
+
+            if (uiIndexCount > 0 && uiRanges.Length > 0)
+            {
+                pass.SetPipeline(uiPipeline);
+                pass.SetBindGroup(0, uiBindGroup);
+                pass.SetVertexBuffer(0, uiVertex, 0, uiVertexCapacity);
+                pass.SetIndexBuffer(uiIndex, WGPUIndexFormat.Uint32, 0, (ulong)uiIndexCount * sizeof(uint));
+
+                // One draw per scissor range, which is what keeps a screen of many widgets down to a few draws.
+                foreach (var range in uiRanges)
+                {
+                    var left = Math.Max(0f, range.MinX * uiScale);
+                    var top = Math.Max(0f, range.MinY * uiScale);
+                    var right = Math.Min(frameWidth, range.MaxX * uiScale);
+                    var bottom = Math.Min(frameHeight, range.MaxY * uiScale);
+
+                    if (right <= left || bottom <= top)
+                    {
+                        continue;
+                    }
+
+                    pass.SetScissorRect(
+                        (uint)left,
+                        (uint)top,
+                        (uint)(right - left),
+                        (uint)(bottom - top));
+
+                    pass.DrawIndexed((uint)range.IndexCount, 1, (uint)range.FirstIndex, 0, 1);
+                }
+            }
+
             pass.End();
 
             var commands = encoder.Finish();
@@ -461,6 +554,9 @@ public static class WindowedRenderer
 
         dynamicVertex.Dispose();
         dynamicIndex.Dispose();
+        uiVertex.Dispose();
+        uiIndex.Dispose();
+        uiTransformBuffer.Dispose();
 
         vertexBuffer.Dispose();
         depthView.Dispose();

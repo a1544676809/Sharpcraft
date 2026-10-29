@@ -13,6 +13,7 @@
 | [`camera.md`](camera.md) | CameraController：维护 yaw/pitch，把鼠标位移变成旋转，并把实体眼位与朝向变成一条视线。 | 已评审 | 2026-10-29 |
 | [`game.md`](game.md) | TickLoop：把"帧"和"tick"分开。 | 已评审 | 2026-10-29 |
 | [`input.md`](input.md) | 把平台原始输入（键码、鼠标位移）变成客户端能消费的 FrameInput。 | 已评审 | 2026-10-29 |
+| [`ui.md`](ui.md) | 把声明式文档变成一个可绘制的 2D 批次。 | 已评审 | 2026-10-29 |
 | [`world.md`](world.md) | 客户端持有的世界视图：区块、方块状态、光照，以及"服务器告诉我们存在的实体"。 | 已评审 | 2026-10-29 |
 
 <!-- END GENERATED: docs/src/sharpcraft-client -->

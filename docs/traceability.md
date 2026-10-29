@@ -125,7 +125,7 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-097 | `walk` 工具收集区块后仍二次登录 | `docs/specs/network/play-movement.md` §7.32 | 待补 | 未开始 | 规格已就绪 |
 | T-098 | 渲染管线规格（阶段划分、实体/方块实体、天空与雾、半透明、2D 合成、预算、分期）| `docs/specs/render/pipeline.md` §1–§12；`docs/specs/quality-attributes.md` QA-1.3 | 所有者 2026-10-29 评审通过，四点裁决记录在 §12 | — | 已完成 |
 | T-099 | UI P0：2D 几何与批处理（20 字节顶点、正交投影、scissor 区间、零分配）| `docs/modules/ui.md` §9；`docs/src/sharpcraft-framework/rendering/README.md` | `UiGeometryTests`（7 项：顶点/索引计数与 20 字节预算、四角坐标、区间切分与去重、两面板四十行 = 两次区间、颜色打包、零分配、正交投影四角）| `Framework/Rendering/UiGeometry`、`UiProjection` | 已完成 |
-| T-100 | UI P0：2D GPU 管线（正交、无深度、alpha 混合、逐区间 scissor）| `docs/modules/ui.md` §9 | 待补 | 未开始 | 规格已就绪 |
+| T-100 | UI P0：2D GPU 管线（正交、无深度、alpha 混合、逐区间 scissor）| `docs/modules/ui.md` §9、§13.1 | 目视窗口验证（截图路径不含 UI，见 T-104）；顶点属性声明收敛到 `VertexLayout`（守卫测试通过）| `Framework/Rendering/UiRenderer`、`WindowedRenderer`（UI pass）| 已完成 |
 | T-101 | UI P0：位图字体（运行时从 jar 提取字形，仓库不存资产）+ 文本测量与排版缓存 | `docs/modules/ui.md` §5、§10 | 待补 | 未开始 | 规格已就绪 |
-| T-102 | UI P0：最小声明式（`Screen`/`StackPanel`/`TextBlock` + `{Binding}`/`{StaticResource}`）| `docs/modules/ui.md` §7 | 待补 | 未开始 | 规格已就绪 |
+| T-102 | UI P0：最小声明式内核（`Screen`/`StackPanel`/`TextBlock`，未知元素与属性拒绝）| `docs/modules/ui.md` §7、§13.1；`docs/src/sharpcraft-client/ui.md` | `UiMarkupTests`（9 项：树形、注释与自闭合、三类拒绝、颜色两种写法、布局落位、64 帧零分配）| `Client/Ui/UiMarkup`、`UiScreenLayout`、`UiColours`、`UiStyles` | 已完成 |
 | T-103 | UI P0：热加载（文件变更 → 后台解析校验 → 原子交换 + 按 `id` 迁移状态）| `docs/modules/ui.md` §8 | 待补 | 未开始 | 规格已就绪 |
