@@ -23,6 +23,7 @@ public sealed class AssemblyBoundaryTests
     private const string Framework = "Sharpcraft.Framework";
     private const string Auth = "Sharpcraft.Auth";
     private const string Launcher = "Sharpcraft.Launcher";
+    private const string DocsIndexer = "Sharpcraft.Docs.Indexer";
 
     [Theory]
     [InlineData(Client, Server)]
@@ -41,6 +42,29 @@ public sealed class AssemblyBoundaryTests
     public void CommonMustNotReferenceUpperLayers(string assemblyName, string forbidden)
     {
         Assert.DoesNotContain(forbidden, DependenciesOf(assemblyName));
+    }
+
+    /// <summary>
+    /// Engineering tooling is not part of the product: game code must never depend on it, and the
+    /// tool must stay free of product assemblies so it keeps building on its own (ADR-0008).
+    /// </summary>
+    [Theory]
+    [InlineData(Client, DocsIndexer)]
+    [InlineData(Server, DocsIndexer)]
+    [InlineData(Common, DocsIndexer)]
+    [InlineData(Framework, DocsIndexer)]
+    [InlineData(Auth, DocsIndexer)]
+    [InlineData(Launcher, DocsIndexer)]
+    public void ProductAssembliesMustNotReferenceEngineeringTooling(string assemblyName, string forbidden)
+    {
+        Assert.DoesNotContain(forbidden, DependenciesOf(assemblyName));
+    }
+
+    [Fact]
+    public void EngineeringToolingMustNotReferenceProductAssemblies()
+    {
+        var dependencies = DependenciesOf(DocsIndexer);
+        Assert.DoesNotContain(dependencies, name => name.StartsWith("Sharpcraft.", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -91,7 +115,14 @@ public sealed class AssemblyBoundaryTests
 
     private static string[] DeclaredProjectReferencesOf(string assemblyName)
     {
-        var projectFile = Path.Combine(RepositoryRoot(), "src", assemblyName, assemblyName + ".csproj");
+        // Product assemblies live under src/, engineering tooling under tools/.
+        var root = RepositoryRoot();
+        var projectFile = Path.Combine(root, "src", assemblyName, assemblyName + ".csproj");
+        if (!File.Exists(projectFile))
+        {
+            projectFile = Path.Combine(root, "tools", assemblyName, assemblyName + ".csproj");
+        }
+
         Assert.True(File.Exists(projectFile), $"project file not found: {projectFile}");
 
         return XDocument.Load(projectFile)

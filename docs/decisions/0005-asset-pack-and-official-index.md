@@ -49,7 +49,7 @@
 
 ## 实测证据（2026-10-28）
 
-本机 `E:/games/minecraft/.minecraft/assets`：
+对一份官方客户端安装的 `<.minecraft>/assets` 实测：
 
 | 项 | 值 |
 | --- | --- |

@@ -117,7 +117,7 @@
 
 ## 10. 实测（真实 26.3 jar）
 
-`launcher assets <jar> <version-json>`，输入为本机 26.3 客户端（41,483,720 字节，SHA-1 `e877b6a0…e7b87`，与基线一致）、26.3 版本清单（assetIndex 34）。
+`launcher assets <jar> <version-json>`，输入为官方 26.3 客户端（41,483,720 字节，SHA-1 `e877b6a0…e7b87`，与基线一致）与 26.3 版本清单（assetIndex 34）。
 
 | 项 | 值 |
 | --- | --- |
@@ -130,5 +130,5 @@
 | 内容核对 | 3,964 个 `.png`、218 个 `.mcmeta`，条目路径全部保留 `assets/minecraft/…` |
 | 仓库保护 | 输出指向仓库内时拒绝执行，且**不留任何目录** |
 
-2026-10-29 复验：从官方 `piston-meta` 重新取 26.3 清单与 jar（同一 SHA-1），重建 pack 耗时 681 ms，条目数与 pack 字节数、SHA-256 与上表逐字节一致；解析探针：`texture block/stone` 151 字节、`model block/stone` 98 字节、图集 1024×1024 / 1301 精灵 / 74 ms。官方索引 `34` 在本机未安装，故语言/音频走索引的探针跳过（只警告）。
+2026-10-29 复验：从官方 `piston-meta` 重新取 26.3 清单与 jar（同一 SHA-1），重建 pack 耗时 681 ms，条目数与 pack 字节数、SHA-256 与上表逐字节一致；解析探针：`texture block/stone` 151 字节、`model block/stone` 98 字节、图集 1024×1024 / 1301 精灵 / 74 ms。若验证环境没有安装官方资产索引，语言/音频走索引的探针会跳过（只警告，不阻断）。
 

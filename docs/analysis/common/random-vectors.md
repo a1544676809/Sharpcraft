@@ -15,7 +15,7 @@
 - 用客户端 jar 作为**库**：把 `26.3.jar` 与 `.minecraft/libraries` 下全部依赖 jar 放进 classpath，写一个只调用**公开 API** 的小程序（`LegacyRandomSource`、`XoroshiroRandomSource`、`RandomSource.create`、`Mth.getSeed`、`PositionalRandomFactory`、`RandomSequence`），打印输出。
 - 只记录**数值**；生成器与原始输出都留在仓库外（`ref://mc-26.3-analysis/vectors/`）。
 - 复现命令要点（踩过的坑都记下来）：
-  1. `libraries/*` 通配符**不递归**，必须把所有 jar 递归拼接成显式 classpath（本机 834 个 jar）。
+  1. `libraries/*` 通配符**不递归**，必须把所有 jar 递归拼接成显式 classpath（一次实测为 834 个 jar）。
   2. classpath 太长（约 85k 字符）超出命令行上限，需用 `java @argfile`。
   3. **argfile 里反斜杠是转义符**，路径必须写成正斜杠，否则 `\s` 会被吞掉导致 `ClassNotFoundException`。
   4. **用十六进制输出**：16～19 位十进制整数会被部分工具误判为卡号并脱敏，导致数据损坏。

@@ -133,7 +133,7 @@ dotnet run --project src/Sharpcraft.Launcher -- login
 | --- | --- | --- |
 | 有界重试 | 每次请求最多 3 次，间隔 400 ms / 1200 ms；只对传输类失败重试（`HttpRequestException` / `IOException` / 超时），调用方取消不重试 | 端点重复调用是安全的：再登录一次只是签发新会话；该端点实测会间歇性 RST |
 | 请求可诊断 | `MC_TRANSPORT_DEBUG=1` 时打印每次请求的方法与 URI、重试次数、异常链 | 失败按主机分类，定位到具体调用才能修 |
-| 连接策略 | 地址并发竞速（IPv4 优先但不排除 IPv6）、显式 HTTP/1.1、带 User-Agent | 本机 IPv6 路由不可达时，默认策略会等 21 秒再失败；竞速让可达地址立即胜出 |
+| 连接策略 | 地址并发竞速（IPv4 优先但不排除 IPv6）、显式 HTTP/1.1、带 User-Agent | 当某个地址族不可达时，逐地址串行连接会一路等到超时；竞速让可达地址立即胜出，省掉整段等待 |
 
 失败分类：重试耗尽后抛 `AuthError.Transport`，消息含尝试次数；令牌与刷新令牌一律不进消息与日志。
 

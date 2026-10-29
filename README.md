@@ -35,7 +35,7 @@ dotnet build Sharpcraft.slnx
 dotnet test  Sharpcraft.slnx
 ```
 
-## 快速上手（需要本机有 26.3 客户端 jar）
+## 快速上手（需要你有 26.3 客户端 jar）
 
 ```bash
 # 1) 校验 jar 并打包资产（输出在仓库外，默认 <userData>/Sharpcraft/packs）

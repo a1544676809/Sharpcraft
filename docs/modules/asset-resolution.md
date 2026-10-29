@@ -120,7 +120,7 @@ interface IAssetSource {
 
 ## 10. 实测（真实安装，2026-10-28）
 
-`launcher assets <jar> <version-json>` 在打包之后会跑一次解析自检，输入为本机 26.3 安装（jar 已校验为基线 SHA-1，资产索引 34）：
+`launcher assets <jar> <version-json>` 在打包之后会跑一次解析自检，输入为官方 26.3 客户端（jar 已校验为基线 SHA-1，资产索引 34）：
 
 | 探针 | 结果 | 来源 |
 | --- | --- | --- |
