@@ -45,7 +45,7 @@ public static class WindowedRenderer
         Func<IReadOnlyList<(long Key, GeometryData Mesh)>?>? geometryUpdates = null,
         int expectedChunks = 0,
         Func<DynamicGeometry?>? dynamicGeometry = null,
-        Func<UiGeometry?>? uiGeometry = null,
+        Func<WindowInputState, UiGeometry?>? uiGeometry = null,
         TextureData? glyphTexture = null)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -310,7 +310,7 @@ public static class WindowedRenderer
             var dynamicIndexCount = 0u;
             uiIndexCount = 0u;
 
-            if (uiGeometry is not null && uiGeometry() is { Ranges.Length: > 0 } ui)
+            if (uiGeometry is not null && uiGeometry(window.Input) is { Ranges.Length: > 0 } ui)
             {
                 var neededVertex = (ulong)ui.Vertices.Length * sizeof(float);
                 var neededIndex = (ulong)ui.Indices.Length * sizeof(uint);

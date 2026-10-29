@@ -6,6 +6,7 @@ using Sharpcraft.Common.Registries;
 using Sharpcraft.Launcher.Assets;
 using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
+using Sharpcraft.Client.Input;
 using Sharpcraft.Client.Ui;
 using Sharpcraft.Client.World;
 using Sharpcraft.Common.Network;
@@ -200,7 +201,7 @@ internal static class WindowCommand
             expectedChunks: InteractiveSession.ExpectedChunkCount(),
             dynamicGeometry: entitySource,
             glyphTexture: glyphTexture,
-            uiGeometry: () =>
+            uiGeometry: input =>
             {
                 var screen = uiLoader.Current ?? fallback;
 
@@ -212,16 +213,20 @@ internal static class WindowCommand
 
                 UiScreenLayout.Build(screen.Root, screen.Styles, width, height, uiGeometry, uiFont);
 
-                // The player list is drawn from the roster the session keeps, in the same batch as the document so
-                // the submission budget does not grow with it.
-                PlayerListPanel.Draw(
-                    session.PlayerList.Entries,
-                    width,
-                    top: 10f,
-                    slotWidth: 140f,
-                    uiGeometry,
-                    uiFont,
-                    textScale: 1f);
+                // The reference shows the list only while the key is held, so it is drawn from the current input
+                // rather than unconditionally. It joins the same batch as the document, so the submission budget
+                // does not grow with it.
+                if (KeyBindings.Default.IsDown(input, InputAction.PlayerList))
+                {
+                    PlayerListPanel.Draw(
+                        session.PlayerList.Entries,
+                        width,
+                        top: 10f,
+                        slotWidth: 140f,
+                        uiGeometry,
+                        uiFont,
+                        textScale: 1f);
+                }
 
                 return uiGeometry;
             });

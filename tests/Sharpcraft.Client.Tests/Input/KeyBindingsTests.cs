@@ -56,6 +56,23 @@ public sealed class KeyBindingsTests
     }
 
     [Fact]
+    public void TheListShowsWhileHeldAndHidesOnceReleased()
+    {
+        var input = new WindowInputState();
+        var bindings = KeyBindings.Default;
+
+        input.Press(WindowInputState.Translate(InputKey.Tab));
+        Assert.True(bindings.IsDown(input, InputAction.PlayerList));
+
+        // Still held on the next frame: the list stays up.
+        input.BeginFrame();
+        Assert.True(bindings.IsDown(input, InputAction.PlayerList));
+
+        input.Release(WindowInputState.Translate(InputKey.Tab));
+        Assert.False(bindings.IsDown(input, InputAction.PlayerList));
+    }
+
+    [Fact]
     public void AReboundTableKeepsTheOtherActions()
     {
         var rebound = KeyBindings.Default.With(InputAction.PlayerList, InputKey.T);
