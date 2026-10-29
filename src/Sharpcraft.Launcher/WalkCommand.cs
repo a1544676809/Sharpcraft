@@ -311,7 +311,7 @@ internal static class WalkCommand
                 if (clock.Elapsed - lastTrace >= TimeSpan.FromSeconds(1))
                 {
                     lastTrace = clock.Elapsed;
-                    log($"at ({player.Position.X:F2},{player.Position.Y:F2},{player.Position.Z:F2}) " +
+                    log($"t={clock.Elapsed.TotalSeconds:F3} at ({player.Position.X:F2},{player.Position.Y:F2},{player.Position.Z:F2}) " +
                         $"ground={player.OnGround} wall={player.HorizontalCollision} speed={player.DeltaMovement.Length():F3}");
                 }
 
