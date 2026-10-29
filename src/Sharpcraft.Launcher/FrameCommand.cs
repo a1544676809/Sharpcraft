@@ -274,9 +274,14 @@ internal static class FrameCommand
         int height,
         out MeshData mesh,
         BlockSpriteMap? sprites = null,
-        TextureData? atlas = null)
+        TextureData? atlas = null,
+        ChunkMeshCache? cache = null)
     {
-        mesh = ChunkMesher.Mesh(world, airState: 0, maxBlocks: 2_000_000, sprites: sprites);
+        // With a cache only the chunks whose blocks changed are re-meshed; without one the whole world is
+        // scanned, which is what the offscreen paths still do (docs/specs/network/play-movement.md 7.19).
+        mesh = cache is null
+            ? ChunkMesher.Mesh(world, airState: 0, maxBlocks: 2_000_000, sprites: sprites)
+            : cache.Build(world, sprites, maxBlocks: 2_000_000);
 
         var bounds = BoundsOf(mesh);
 

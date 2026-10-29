@@ -285,6 +285,10 @@ internal sealed class InteractiveSession
                         parsed is not null)
                     {
                         _world.AddChunk(parsed);
+
+                        // New terrain must reach the screen while it streams in, not only when a later block
+                        // change happens to trigger a rebuild (docs/specs/network/play-movement.md 7.19).
+                        _geometryDirty = true;
                     }
 
                     break;

@@ -14,6 +14,7 @@ namespace Sharpcraft.Client.World;
 public sealed class ClientWorld
 {
     private readonly Dictionary<long, LevelChunk> _chunks = [];
+    private readonly HashSet<long> _dirtyChunks = [];
     private readonly int _minSectionY;
     private readonly int _sectionCount;
 
@@ -36,6 +37,45 @@ public sealed class ClientWorld
 
     /// <summary>Dimensions the server offers, as identifiers.</summary>
     public IReadOnlyList<string> Dimensions { get; private set; } = [];
+
+    /// <summary>
+    /// Chunks whose geometry is stale. A block on a chunk border also dirties its neighbour, because face
+    /// culling across the seam depends on both sides (docs/specs/network/play-movement.md 7.19).
+    /// </summary>
+    /// <returns>Dirty chunk keys, cleared afterwards.</returns>
+    public IReadOnlyCollection<long> TakeDirtyChunks()
+    {
+        if (_dirtyChunks.Count == 0)
+        {
+            return [];
+        }
+
+        var keys = _dirtyChunks.ToArray();
+        _dirtyChunks.Clear();
+        return keys;
+    }
+
+    /// <summary>Marks a chunk dirty, plus the neighbours a border block affects.</summary>
+    /// <param name="chunkX">Chunk x.</param>
+    /// <param name="chunkZ">Chunk z.</param>
+    /// <param name="borderX">True when the block sits on the x border.</param>
+    /// <param name="borderZ">True when the block sits on the z border.</param>
+    public void MarkChunkDirty(int chunkX, int chunkZ, bool borderX = false, bool borderZ = false)
+    {
+        _dirtyChunks.Add(Pack(chunkX, chunkZ));
+
+        if (borderX)
+        {
+            _dirtyChunks.Add(Pack(chunkX - 1, chunkZ));
+            _dirtyChunks.Add(Pack(chunkX + 1, chunkZ));
+        }
+
+        if (borderZ)
+        {
+            _dirtyChunks.Add(Pack(chunkX, chunkZ - 1));
+            _dirtyChunks.Add(Pack(chunkX, chunkZ + 1));
+        }
+    }
 
     /// <summary>Lowest section index of every column.</summary>
     public int MinSectionY => _minSectionY;
@@ -167,7 +207,12 @@ public sealed class ClientWorld
             return false;
         }
 
-        chunk.SetBlockState(BlockCoordinates.SectionRelative(x), y, BlockCoordinates.SectionRelative(z), state, airState);
+        var localX = BlockCoordinates.SectionRelative(x);
+        var localZ = BlockCoordinates.SectionRelative(z);
+        chunk.SetBlockState(localX, y, localZ, state, airState);
+
+        // A change on a seam changes which faces the neighbour draws, so both columns go stale.
+        MarkChunkDirty(chunk.ChunkX, chunk.ChunkZ, borderX: localX == 0 || localX == 15, borderZ: localZ == 0 || localZ == 15);
         return true;
     }
 

@@ -3,6 +3,7 @@
 
 using Sharpcraft.Auth;
 using Sharpcraft.Common.Registries;
+using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
 using Sharpcraft.Common.Network;
 using Sharpcraft.Framework.Rendering;
@@ -51,6 +52,7 @@ internal static class WindowCommand
             ? FrameCommand.DemoLayout()
             : VanillaBlockRegistry.Layout);
 
+        var meshCache = new ChunkMeshCache();
         var request = FrameCommand.BuildRequest(
             world,
             width,
@@ -110,9 +112,18 @@ internal static class WindowCommand
             session.CaptureMouse(window, index == 0);
         },
             (window) => session.UpdateCamera(window),
-            () => session.TakeGeometryDirty()
-                ? FrameCommand.BuildRequest(world, width, height, out _, prepared?.Map)
-                : null);
+            () =>
+            {
+                if (!session.TakeGeometryDirty())
+                {
+                    return null;
+                }
+
+                var rebuilt = FrameCommand.BuildRequest(world, width, height, out _, prepared?.Map, cache: meshCache);
+                Console.WriteLine(
+                    $"remesh: {meshCache.LastRemeshedChunks}/{meshCache.LastTotalChunks} chunks in {meshCache.LastBuildMilliseconds:F1} ms");
+                return rebuilt;
+            });
 
         Console.WriteLine($"window closed after presenting frames; surface format {format}");
 
