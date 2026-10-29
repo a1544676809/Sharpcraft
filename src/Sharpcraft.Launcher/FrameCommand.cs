@@ -47,7 +47,7 @@ internal static class FrameCommand
             forceInteractive: false,
             onChallenge: (challenge, _) =>
             {
-                Console.WriteLine($"Open {challenge.VerificationUri} and enter the code: {challenge.UserCode}");
+                DeviceCodePrompter.Show(challenge);
                 return Task.CompletedTask;
             },
             cancellationToken).ConfigureAwait(false);

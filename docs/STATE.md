@@ -49,6 +49,13 @@ M1（基础逻辑）与 M2（世界数据闭环）已达成并留有可执行证
 - **T-045**：HTTP 代理支持。此前 `ConnectCallback` 会绕过代理，导致代理环境完全不可用。
 - **R-018**：`/authentication/refresh` 的请求体契约仍属未实测假设，首次成功登录后必须复核。
 
+## 2026-10-29 设备码体验与文档覆盖
+
+- **T-046**：设备码自动开浏览器并预填码（`SHARPCRAFT_NO_BROWSER` / `SHARPCRAFT_BROWSER` 可控）。此前只打印在控制台，
+  15 分钟一过就白费。
+- **文档覆盖棘轮**：首个源码模块文档 `docs/src/sharpcraft-client/assets.md` 落地，基线 26 → 25。
+- **索引器修正**：`docs/src/**/README.md` 是生成索引，不再被判为"不对应源码模块"（此前 `docs/src/` 为空，问题未暴露）。
+
 ## 阻塞项
 
 - 无硬阻塞。

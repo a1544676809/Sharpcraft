@@ -145,6 +145,18 @@ dotnet run --project src/Sharpcraft.Launcher -- login
 
 ## 传输层（重试、诊断、连接）
 
+### 设备码的呈现
+
+设备码流程只有约 15 分钟有效期，**只把码打印到控制台等于没通知**：用户离开键盘一会儿就要从头再来。因此：
+
+- 打印验证 URL 与验证码，并把码作为 `otc` 查询参数拼进 URL（`https://www.microsoft.com/link?otc=<code>`），
+  页面支持时会自动填入；
+- 自动打开浏览器：Windows 优先用 `SHARPCRAFT_BROWSER`（默认尝试 `msedge`），否则用 shell 默认程序；macOS 用 `open`；
+  Linux 用 `xdg-open`；
+- 打不开浏览器**不算失败**：仍然打印 URL 与码，headless 或受限环境照常可用；
+- `SHARPCRAFT_NO_BROWSER=1` 关闭自动打开（CI、远程终端）。
+- 微软令牌在设备码轮询成功后立即落盘（§5.1），所以即便后续 Xbox 链失败，也不需要再次输码。
+
 ### 代理选择
 
 三个环境变量按顺序生效：`SHARPCRAFT_PROXY` → `HTTPS_PROXY` → `HTTP_PROXY` → `ALL_PROXY`，都支持裸 `host:port`。

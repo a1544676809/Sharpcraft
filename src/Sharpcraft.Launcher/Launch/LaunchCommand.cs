@@ -127,7 +127,7 @@ public static class LaunchCommand
                 forceInteractive: false,
                 onChallenge: (challenge, _) =>
                 {
-                    Console.WriteLine($"[launch] sign in at {challenge.VerificationUri} with code {challenge.UserCode}");
+                    DeviceCodePrompter.Show(challenge);
                     return Task.CompletedTask;
                 },
                 cancellationToken).ConfigureAwait(false);

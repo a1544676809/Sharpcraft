@@ -583,7 +583,7 @@ internal static class Program
 
     private static Task PrintChallenge(DeviceCodeChallenge challenge, CancellationToken cancellationToken)
     {
-        Console.WriteLine($"Open {challenge.VerificationUri} and enter the code: {challenge.UserCode}");
+        DeviceCodePrompter.Show(challenge);
         if (!string.IsNullOrEmpty(challenge.Message))
         {
             Console.WriteLine(challenge.Message);

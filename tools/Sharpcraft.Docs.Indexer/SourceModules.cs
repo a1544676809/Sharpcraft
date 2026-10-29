@@ -128,6 +128,13 @@ public static class SourceModules
             foreach (var file in Directory.EnumerateFiles(docsRoot, "*.md", SearchOption.AllDirectories))
             {
                 var relative = Relative(repositoryRoot, file);
+
+                // README.md files are the generated directory indexes, not module documents.
+                if (Path.GetFileName(file).Equals("README.md", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
                 if (!expectedDocs.ContainsValue(relative))
                 {
                     violations.Add($"{relative}: does not correspond to a source module");
