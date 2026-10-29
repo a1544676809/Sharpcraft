@@ -71,6 +71,10 @@ public sealed class BitmapFont
     /// <summary>The decoded sheet, so it can be uploaded as a texture unchanged.</summary>
     public RgbaImage Sheet => _sheet;
 
+    /// <summary>Advance of one character in font pixels, zero when the sheet has no glyph for it.</summary>
+    /// <param name="character">Character to measure.</param>
+    public int AdvanceOf(char character) => TryGet(character, out var glyph) ? glyph.Advance : 0;
+
     /// <summary>Line height in font pixels.</summary>
     public int Height { get; }
 

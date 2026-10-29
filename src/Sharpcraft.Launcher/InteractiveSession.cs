@@ -35,6 +35,8 @@ internal sealed class InteractiveSession
     private readonly EntityTracker _entities = new();
     private readonly PlayerListRoster _playerList = new();
     private readonly ChatInput _chat = new();
+    private readonly ChatLog _chatLog = new();
+    private long _chatTicks;
     private readonly bool _diagEnabled = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
     private int _diagFrames;
 
@@ -103,6 +105,12 @@ internal sealed class InteractiveSession
 
     /// <summary>The chat prompt.</summary>
     public ChatInput Chat => _chat;
+
+    /// <summary>The chat log on screen.</summary>
+    public ChatLog ChatLog => _chatLog;
+
+    /// <summary>Ticks elapsed, used by the chat fade.</summary>
+    public long ChatTicks => _chatTicks;
 
     /// <summary>Fraction into the current tick, for callers that interpolate between ticks.</summary>
     public float PartialTick => _loop.Alpha;
@@ -300,6 +308,7 @@ internal sealed class InteractiveSession
                 // Remote entities approach the position the server reported over a few ticks, so the tracker
                 // has to advance once per tick (docs/specs/network/entity-sync.md 9.4).
                 _entities.Tick();
+            _chatTicks++;
                 _interpolator.Push(_player, _camera.Yaw);
                 PublishTick();
             });
@@ -517,6 +526,25 @@ internal sealed class InteractiveSession
 
                     break;
 
+
+                case PacketIds.PlayClientbound.SystemChat:
+                    if (ChatPackets.TryReadSystemChat(body[reader.Position..], out var chatText, out var overlay) ==
+                        DecodeStatus.Success)
+                    {
+                        // The overlay flag marks an action bar line, which is drawn elsewhere in the reference; until
+                        // that exists, keeping it out of the log is the honest choice.
+                        if (!overlay)
+                        {
+                            _chatLog.Add(chatText, _chatTicks);
+
+                            if (_diagEnabled)
+                            {
+                                Console.WriteLine($"chat received: {chatText}");
+                            }
+                        }
+                    }
+
+                    break;
 
                 case PacketIds.PlayClientbound.PlayerInfoUpdate:
                     if (PlayerListPackets.TryReadPlayerInfoUpdate(body[reader.Position..], out _, out var profileUpdates) ==

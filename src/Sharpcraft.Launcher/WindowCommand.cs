@@ -216,6 +216,13 @@ internal static class WindowCommand
                 // The reference shows the list only while the key is held, so it is drawn from the current input
                 // rather than unconditionally. It joins the same batch as the document, so the submission budget
                 // does not grow with it.
+                // Chat history sits above the hotbar and fades with age; opening the prompt pins it fully visible,
+                // which is what the reference does so nothing disappears while it is being read.
+                if (uiFont is not null)
+                {
+                    session.ChatLog.Draw(uiGeometry, uiFont, height, session.ChatTicks, session.Chat.IsOpen);
+                }
+
                 // The prompt sits where the reference puts it: a two pixel inset, twelve pixel box at the foot of
                 // the screen, half transparent black behind it, and the caret after the typed text.
                 if (session.Chat.IsOpen)

@@ -328,6 +328,24 @@ public static class UiScreenLayout
         float x,
         float y,
         float textScale,
+        uint colour) =>
+        AddText(geometry, font, content.AsSpan(), x, y, textScale, colour);
+
+    /// <summary>Adds one run of text, given as a span so wrapped chat lines need no substring.</summary>
+    /// <param name="geometry">Receives the quads.</param>
+    /// <param name="font">Glyph metrics.</param>
+    /// <param name="content">Characters to draw.</param>
+    /// <param name="x">Left edge.</param>
+    /// <param name="y">Top edge of the glyph cell.</param>
+    /// <param name="textScale">Scale from font pixels to virtual pixels.</param>
+    /// <param name="colour">Ink colour.</param>
+    public static void AddText(
+        UiGeometry geometry,
+        BitmapFont font,
+        ReadOnlySpan<char> content,
+        float x,
+        float y,
+        float textScale,
         uint colour)
     {
         var cellWidth = font.CellWidth * textScale;
