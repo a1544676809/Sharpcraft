@@ -56,6 +56,8 @@ internal static class WalkCommand
         var lastTrace = TimeSpan.Zero;
         var sendEveryTicks = int.TryParse(Environment.GetEnvironmentVariable("MC_WALK_SEND_EVERY_TICKS"), out var every) && every > 0 ? every : 1;
         var tickCounter = 0;
+        var tickWatch = new Stopwatch();
+        var tickCostMs = 0d;
         var maxSends = int.TryParse(Environment.GetEnvironmentVariable("MC_WALK_MAX_SENDS"), out var max) ? max : int.MaxValue;
 
         // The server teleports a joining player to spawn and waits for the acknowledgement. Moving before
@@ -155,122 +157,148 @@ internal static class WalkCommand
         var accumulator = TimeSpan.Zero;
         var lastFrame = clock.Elapsed;
 
-        // Drop any backlog instead of catching up: a burst of ticks would send several position
-        // packets inside one server tick, which the server rejects as an invalid move.
-
-
-        while (clock.Elapsed.TotalSeconds < seconds && !cancellationToken.IsCancellationRequested)
+        // Receiving runs on its own task so the simulation loop is a pure timer. Polling the socket inside
+        // the loop cost about a millisecond per turn and dragged the tick rate to 18.8 per second instead of
+        // the 20 the server runs at, which is exactly the drift that makes the server pull us back.
+        var inbound = new System.Collections.Concurrent.ConcurrentQueue<byte[]>();
+        var pumpFailure = string.Empty;
+        var pump = Task.Run(async () =>
         {
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(TimeSpan.FromMilliseconds(5));
-
             try
             {
-                var body = await connection.ReceiveAsync(timeout.Token).ConfigureAwait(false);
-                var reader = new PayloadReader(body);
-                reader.TryReadVarInt(out var packetId);
-
-                switch (packetId)
+                while (!cancellationToken.IsCancellationRequested)
                 {
-                    case PacketIds.PlayClientbound.KeepAlive:
-                        reader.TryReadLong(out var keepAliveId);
-                        if (!TrySend(connection, PlayPackets.BuildKeepAliveReply(keepAliveId), ref reason))
+                    inbound.Enqueue(await connection.ReceiveAsync(cancellationToken).ConfigureAwait(false));
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception) when (exception is IOException or System.Net.Sockets.SocketException or ObjectDisposedException)
+            {
+                pumpFailure = exception.Message;
+            }
+        }, CancellationToken.None);
+
+        try
+        {
+            tickWatch.Start();
+            while (clock.Elapsed.TotalSeconds < seconds && !cancellationToken.IsCancellationRequested)
+            {
+                while (inbound.TryDequeue(out var body))
+                {
+                    var reader = new PayloadReader(body);
+                    reader.TryReadVarInt(out var packetId);
+
+                    switch (packetId)
+                    {
+                        case PacketIds.PlayClientbound.KeepAlive:
+                            reader.TryReadLong(out var keepAliveId);
+                            TrySend(connection, PlayPackets.BuildKeepAliveReply(keepAliveId), ref reason);
+                            break;
+
+                        case PacketIds.PlayClientbound.Ping:
+                            reader.TryReadInt(out var pingId);
+                            TrySend(connection, PlayPackets.BuildPongReply(pingId), ref reason);
+                            break;
+
+                        case PacketIds.PlayClientbound.PlayerPosition:
+                            if (PlayMovementPackets.TryReadPlayerPosition(body[reader.Position..], out var correction) == DecodeStatus.Success &&
+                                correction is not null)
+                            {
+                                var (_, snapped, distance) = ApplyTeleport(connection, sync, player, correction);
+                                corrections++;
+                                accumulator = TimeSpan.Zero;
+                                log($"correction {corrections}: deviation {distance:F2} snapped={snapped}");
+                            }
+
+                            break;
+
+                        case PacketIds.PlayClientbound.Disconnect:
+                            return new Result(sent, corrections, Distance(start, player.Position), DescribeDisconnect(body, reader), false);
+                    }
+                }
+
+                if (pumpFailure.Length != 0)
+                {
+                    return new Result(sent, corrections, Distance(start, player.Position), pumpFailure, false);
+                }
+
+                var now = clock.Elapsed;
+                accumulator += now - lastFrame;
+                lastFrame = now;
+
+                if (accumulator > TimeSpan.FromMilliseconds(250))
+                {
+                    accumulator = TimeSpan.FromMilliseconds(250);
+                }
+
+                while (accumulator >= tickInterval)
+                {
+                    accumulator -= tickInterval;
+                    tickCounter++;
+                    var tickStart = Stopwatch.GetTimestamp();
+
+                    if (Environment.GetEnvironmentVariable("MC_WALK_FREEZE") != "1")
+                    {
+                        player.Tick(forward: 1f, strafe: 0f, jumping: false, sprinting: false, yaw: 0f);
+                    }
+
+                    var kind = Environment.GetEnvironmentVariable("MC_WALK_FORCE_POS") == "1"
+                        ? MovePacketKind.PositionAndRotation
+                        : sync.Decide(player, 0f, 0f);
+
+                    if (sync.Build(kind, player, 0f, 0f) is { } packet)
+                    {
+                        if (!TrySend(connection, packet, ref reason))
                         {
                             return new Result(sent, corrections, Distance(start, player.Position), reason, false);
                         }
 
-                        break;
+                        sent++;
+                    }
 
-                    case PacketIds.PlayClientbound.Ping:
-                        reader.TryReadInt(out var pingId);
-                        TrySend(connection, PlayPackets.BuildPongReply(pingId), ref reason);
-                        break;
-
-                    case PacketIds.PlayClientbound.PlayerPosition:
-                        if (PlayMovementPackets.TryReadPlayerPosition(body[reader.Position..], out var correction) == DecodeStatus.Success &&
-                            correction is not null)
-                        {
-                            var (_, snapped, distance) = ApplyTeleport(connection, sync, player, correction);
-                            corrections++;
-                            accumulator = TimeSpan.Zero;
-                            log($"correction {corrections}: deviation {distance:F2} snapped={snapped}");
-                        }
-
-                        break;
-
-                    case PacketIds.PlayClientbound.Disconnect:
-                        reason = DescribeDisconnect(body, reader);
-                        log($"disconnected: {reason}");
-                        return new Result(sent, corrections, Distance(start, player.Position), reason, false);
-                }
-            }
-            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-            {
-                // Nothing arrived in this window; that is normal for a quiet server.
-            }
-            catch (Exception exception) when (exception is IOException or System.Net.Sockets.SocketException or ObjectDisposedException)
-            {
-                reason = $"server closed the connection: {exception.Message}";
-                log(reason);
-                return new Result(sent, corrections, Distance(start, player.Position), reason, false);
-            }
-
-            var now = clock.Elapsed;
-            accumulator += now - lastFrame;
-            lastFrame = now;
-            if (accumulator > TimeSpan.FromMilliseconds(250))
-            {
-                accumulator = TimeSpan.FromMilliseconds(250);
-            }
-
-            while (accumulator >= tickInterval)
-            {
-                accumulator -= tickInterval;
-                if (Environment.GetEnvironmentVariable("MC_WALK_FREEZE") != "1")
-                {
-                    player.Tick(forward: 1f, strafe: 0f, jumping: false, sprinting: false, yaw: 0f);
-                }
-
-                var kind = Environment.GetEnvironmentVariable("MC_WALK_FORCE_POS") == "1"
-                    ? MovePacketKind.PositionAndRotation
-                    : sync.Decide(player, 0f, 0f);
-
-                // The simulation still ticks at 20 Hz; the send rate can be thinned to test whether the
-                // server is objecting to the packet rate rather than to the contents.
-                tickCounter++;
-                var shouldSend = tickCounter % sendEveryTicks == 0;
-
-                if (shouldSend && sync.Build(kind, player, 0f, 0f) is { } packet)
-                {
-                    if (!TrySend(connection, packet, ref reason))
+                    if (!TrySend(connection, PlayPackets.BuildClientTickEnd(), ref reason))
                     {
-                        log(reason);
                         return new Result(sent, corrections, Distance(start, player.Position), reason, false);
                     }
 
-                    sent++;
+                    tickCostMs += (Stopwatch.GetTimestamp() - tickStart) * 1000d / Stopwatch.Frequency;
                 }
 
-                // Every client tick ends with the tick marker. The server resets its per-tick movement guards
-                // there, so omitting it makes the second position packet look like a duplicate in one tick.
-                if (!TrySend(connection, PlayPackets.BuildClientTickEnd(), ref reason))
+                if (now - lastTrace >= TimeSpan.FromSeconds(1))
                 {
-                    log(reason);
-                    return new Result(sent, corrections, Distance(start, player.Position), reason, false);
+                    lastTrace = now;
+                    log($"at ({player.Position.X:F2},{player.Position.Y:F2},{player.Position.Z:F2}) " +
+                        $"ground={player.OnGround} wall={player.HorizontalCollision} speed={player.DeltaMovement.Length():F3}");
                 }
-            }
 
-            if (now - lastTrace >= TimeSpan.FromSeconds(1))
+                // Sleep only until the next tick is due; anything more throttles the simulation.
+                var untilNextTick = tickInterval - accumulator;
+                if (untilNextTick > TimeSpan.FromMilliseconds(1))
+                {
+                    await Task.Delay(untilNextTick, cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    await Task.Yield();
+                }
+
+                survived = true;
+            }
+        }
+        finally
+        {
+            try
             {
-                lastTrace = now;
-                log($"at ({player.Position.X:F2},{player.Position.Y:F2},{player.Position.Z:F2}) " +
-                    $"ground={player.OnGround} wall={player.HorizontalCollision} speed={player.DeltaMovement.Length():F3}");
+                pump.Wait(TimeSpan.FromMilliseconds(500));
             }
-
-            await Task.Delay(1, cancellationToken).ConfigureAwait(false);
-            survived = true;
+            catch (AggregateException)
+            {
+            }
         }
 
+        log($"ticks={tickCounter} in {tickWatch.Elapsed.TotalSeconds:F2}s => {tickCounter / Math.Max(0.001, tickWatch.Elapsed.TotalSeconds):F1} ticks/sec, cost {tickCostMs / Math.Max(1, tickCounter):F2} ms/tick, sent={sent}");
         return new Result(sent, corrections, Distance(start, player.Position), reason, survived);
 
     }
