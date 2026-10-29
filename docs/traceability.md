@@ -129,3 +129,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-101 | UI P0：位图字体（运行时从 jar 提取字形，仓库不存资产）+ 文本测量与排版缓存 | `docs/modules/ui.md` §5、§10 | 待补 | 未开始 | 规格已就绪 |
 | T-102 | UI P0：最小声明式内核（`Screen`/`StackPanel`/`TextBlock`，未知元素与属性拒绝）| `docs/modules/ui.md` §7、§13.1；`docs/src/sharpcraft-client/ui.md` | `UiMarkupTests`（9 项：树形、注释与自闭合、三类拒绝、颜色两种写法、布局落位、64 帧零分配）| `Client/Ui/UiMarkup`、`UiScreenLayout`、`UiColours`、`UiStyles` | 已完成 |
 | T-103 | UI P0：热加载（文件变更 → 后台解析校验 → 原子交换 + 按 `id` 迁移状态）| `docs/modules/ui.md` §8 | 待补 | 未开始 | 规格已就绪 |
+| T-105 | 光标捕获缺陷：无焦点也锁鼠标、Esc 后视角仍跟随、点击无法重捕获 | `docs/modules/input.md` §7 | `Repro_008_CursorCaptureTests`（5 项：释放后忽略移动、捕获时累加、重捕获无跳变、点击只报告一次、失焦清空含待处理点击）| `Framework/Platform/WindowInputState`、`WindowHost`、`Launcher/InteractiveSession` | 已完成 |

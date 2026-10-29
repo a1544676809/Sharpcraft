@@ -55,7 +55,6 @@ internal sealed class InteractiveSession
     private readonly PlayerSync? _sync;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private TimeSpan _last;
-    private bool _captureRequested;
 
     private InteractiveSession(PlayerEntity player, LivePlaySession? live, ClientWorld? world, ChunkWorkerPool? pool)
     {
@@ -206,10 +205,11 @@ internal sealed class InteractiveSession
                 PublishTick();
             });
 
-        if (frame.ReleaseCursor)
+        if (frame.ReleaseCursor && window.Input.MouseCaptured)
         {
+            // Escape hands the cursor back; the camera stops following because the input layer only accumulates
+            // movement while captured.
             window.SetMouseCaptured(false);
-            _captureRequested = false;
         }
 
         // Frames arrive faster than ticks; drawing the interpolated eye is what keeps walking smooth.
@@ -224,10 +224,11 @@ internal sealed class InteractiveSession
     {
         ArgumentNullException.ThrowIfNull(window);
 
-        if (first && !_captureRequested)
+        // Capture on the first frame only when the window already has focus, and afterwards only when the player
+        // clicks inside it. Capturing without focus would lock the pointer into a window they are not using.
+        if (!window.Input.MouseCaptured && window.Input.HasFocus && (first || window.Input.TakeClick()))
         {
             window.SetMouseCaptured(true);
-            _captureRequested = true;
         }
 
         var position = _player.Position;

@@ -140,12 +140,25 @@ public sealed class WindowHost : IDisposable
 
         glfw.SetCursorPosCallback(handle, (_, x, y) => Input.MoveCursor(new Vector2((float)x, (float)y)));
 
+        glfw.SetMouseButtonCallback(handle, (_, button, action, _) =>
+        {
+            if (action == InputAction.Press)
+            {
+                Input.PressButton((int)button);
+            }
+        });
+
         glfw.SetWindowFocusCallback(handle, (_, focused) =>
         {
             Input.HasFocus = focused;
+
             if (!focused)
             {
                 Input.Reset();
+
+                // Losing focus must also give the cursor back. Keeping it disabled would confine the pointer to a
+                // window the player is not using, which makes every other application unusable.
+                SetMouseCaptured(false);
             }
         });
     }

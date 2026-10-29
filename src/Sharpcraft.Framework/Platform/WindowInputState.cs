@@ -20,6 +20,9 @@ public sealed class WindowInputState
     /// <summary>Last reported absolute cursor position, used to derive the delta.</summary>
     private Vector2? _lastCursor;
 
+    /// <summary>Set when the primary button is pressed and cleared when the click is consumed.</summary>
+    private bool _clickPending;
+
     /// <summary>True while the window has focus.</summary>
     public bool HasFocus { get; internal set; } = true;
 
@@ -65,18 +68,43 @@ public sealed class WindowInputState
         _pressedKeys.Clear();
         _mouseDelta = Vector2.Zero;
         _lastCursor = null;
+        _clickPending = false;
     }
 
     /// <summary>Records a cursor position and accumulates the relative movement.</summary>
     /// <param name="position">Absolute cursor position in window pixels.</param>
+    /// <remarks>
+    /// Movement is only accumulated while the cursor is captured. Otherwise a released cursor would keep turning
+    /// the camera as it moves across the desktop, which is exactly the bug a player sees after pressing escape.
+    /// The last position is still tracked while released so the first delta after capturing is not a jump across
+    /// the window.
+    /// </remarks>
     internal void MoveCursor(Vector2 position)
     {
-        if (_lastCursor is { } last)
+        if (MouseCaptured && _lastCursor is { } last)
         {
             _mouseDelta += position - last;
         }
 
         _lastCursor = position;
+    }
+
+    /// <summary>Records a mouse button press from the backend.</summary>
+    /// <param name="button">Backend button index; zero is the primary button.</param>
+    internal void PressButton(int button)
+    {
+        if (button == 0)
+        {
+            _clickPending = true;
+        }
+    }
+
+    /// <summary>Takes the pending primary click, if any.</summary>
+    public bool TakeClick()
+    {
+        var clicked = _clickPending;
+        _clickPending = false;
+        return clicked;
     }
 
     /// <summary>Returns the accumulated relative movement and clears it.</summary>

@@ -73,7 +73,9 @@ public sealed class InputMapperTests
     [Fact]
     public void TheMouseDeltaIsConsumedOncePerFrame()
     {
-        var state = new WindowInputState();
+        // Movement only accumulates while the cursor is captured, which is what stops a released pointer from
+        // turning the camera; the capture itself is covered by Repro_008.
+        var state = new WindowInputState { MouseCaptured = true };
         state.MoveCursor(new Vector2(10f, 10f));
         state.MoveCursor(new Vector2(14f, 7f));
 
