@@ -30,6 +30,7 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-010 | 方块状态全局 id 生成器 | `docs/analysis/common/registry-order.md` §5、§7.1 | `BlockStateIdTests.cs`（含 1442 个原版状态 id 与 35723 总数） | `src/Sharpcraft.Common/Registries/`（BlockStateDefinition / BlockStateLayout） | 已完成 |
 | T-019 | 全阶段包 id 表导出与交叉校验 | `docs/specs/network/protocol-phases.md` §3 | `PacketIdTableTests.cs`（3 项：id 对照、连续性、唯一性） | `tests/.../TestData/vanilla-packet-ids.txt`（260 条） | 已完成 |
 | T-018 | 启动器 CLI 垂直切片（login / probe / help） | `docs/modules/launcher.md` §3–§5 | `LauncherCommandLineTests.cs`（10 项）、手工验收：`probe mcf.ddger.top` 输出 protocol 777 | `src/Sharpcraft.Launcher/` | 已完成 |
+| T-049 | 缺陷最小复现用例库（Repro 约定落地） | `docs/repro/README.md`；AGENTS 原则 12 | `tests/*/Repro/Repro_00*Tests.cs`（5 个用例：顶点布局单一来源、流体 still 回退、UV 内缩、顶点色仅光照、缓存登录登记账号） | `tests/Sharpcraft.{Framework,Client,Launcher}.Tests/Repro/` | 已完成 |
 | T-047 | 窗口呈现路径带纹理（共享顶点布局 + 图集绑定） | `docs/modules/render.md` §6.1 | `VertexLayoutTests`（3 项：步长与属性数、偏移首尾相接、格式顺序）；运行时验证 `window <address>` 出帧 | `Framework/Rendering/WindowedRenderer`、`VertexLayout` | 已完成 |
 | T-048 | 任何成功登录都刷新账号列表（离线闸门依据） | `docs/modules/accounts.md`；AGENTS 原则 7.1 | `SessionCacheTests`（5 项，含"缓存会话复用也要登记账号"） | `Launcher/AuthenticationFlow` | 已完成 |
 | T-046 | 设备码呈现（自动开浏览器 + 预填码） | `docs/modules/auth.md` §设备码的呈现 | `DeviceCodePrompterTests`（5 项：URL 携带码、追加查询串、Windows 指定浏览器、shell 兜底、mac/Linux 命令） | `Launcher/DeviceCodePrompter` | 已完成 |

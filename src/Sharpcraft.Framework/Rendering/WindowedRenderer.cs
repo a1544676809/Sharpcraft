@@ -298,17 +298,8 @@ public static class WindowedRenderer
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
             multisample: MultisampleState.Default,
             depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float),
-            vertexStride: (ulong)ClipSpaceTransform.VertexStride,
+            vertexStride: (ulong)VertexLayout.Stride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
-            // The vertex stream carries position, light colour, tile UV and the sprite rect; the shader
-            // samples the atlas, so every attribute must be declared or pipeline creation fails with a
-            // missing location (docs/modules/render.md 6.1).
-            vertexAttributes:
-            [
-                new VertexAttribute(WGPUVertexFormat.Float32x4, 0, 0),
-                new VertexAttribute(WGPUVertexFormat.Float32x3, 16, 1),
-                new VertexAttribute(WGPUVertexFormat.Float32x2, 28, 2),
-                new VertexAttribute(WGPUVertexFormat.Float32x4, 36, 3)
-            ]);
+            vertexAttributes: VertexLayout.Attributes());
     }
 }

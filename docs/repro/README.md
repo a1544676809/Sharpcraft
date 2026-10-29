@@ -38,6 +38,18 @@ public sealed class Repro_<编号>Tests
 }
 ```
 
+## 现有用例
+
+| 编号 | 缺陷（可观测现象） | 用例 |
+| --- | --- | --- |
+| 001 | 顶点布局被两条管线各写一份，加 UV 时只改了一份，窗口管线创建即失败 | `tests/Sharpcraft.Framework.Tests/Repro/Repro_001_VertexLayoutDeclaredOnceTests.cs` |
+| 002 | 流体没有 blockstates 面变量，水面整片渲染成紫黑格子 | `tests/Sharpcraft.Client.Tests/Repro/Repro_002_FluidUsesStillTextureTests.cs` |
+| 003 | 图集最近邻采样在格子边界渗色（UV 未内缩半纹素） | `tests/Sharpcraft.Client.Tests/Repro/Repro_003_AtlasAndVertexColourTests.cs` |
+| 004 | 有纹理后顶点颜色仍乘状态哈希色，石头被染成棕色 | `tests/Sharpcraft.Client.Tests/Repro/Repro_003_AtlasAndVertexColourTests.cs` |
+| 005 | `frame`/`window` 登录成功后不登记账号，离线闸门仍锁着 | `tests/Sharpcraft.Launcher.Tests/Repro/Repro_005_AccountRecordedOnCachedSignInTests.cs` |
+
+已修复但**尚未**补复现用例的缺陷（需要补，不要当成已完成）：无。
+
 ## 与追踪矩阵的关系
 
 - 缺陷修复完成后，在 `docs/traceability.md` 增加一行，把"规格章节"指向该缺陷对应的行为规格（没有就补一节），测试列指向本文件。

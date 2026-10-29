@@ -20,6 +20,7 @@ AGENTS.md 原则 12：不可逆或跨模块的决策必须在此留档，**只�
 | [`0006-offline-login-gating.md`](0006-offline-login-gating.md) | 原则 7.1 早已规定：启动器必须原生支持多账号；只有存在至少一个已通过官方认证的正版账号时才允许离线登录；正版账号全部删除后离线能力必须立即失效；不得留任何后门。 | 已接受 | - |
 | [`0007-resources-live-in-the-client.md`](0007-resources-live-in-the-client.md) | T-034 把资源解析层放在启动器（外围宿主层），并计划由启动器预生成 atlas.png + atlas.json 交给客户端采样。 | 已接受 | - |
 | [`0008-generated-documentation-index.md`](0008-generated-documentation-index.md) | 目录索引改为工具生成，CI 检查索引与源码模块覆盖 | 已接受 | - |
+| [`0009-access-control-applies-to-the-launcher.md`](0009-access-control-applies-to-the-launcher.md) | 澄清宪章 7.1 的适用范围，明确游戏侧不加严不判定 | 已接受 | - |
 
 <!-- END GENERATED: docs/decisions -->
 
