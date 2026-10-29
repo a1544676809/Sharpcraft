@@ -16,6 +16,9 @@ namespace Sharpcraft.Common.Network;
 /// </remarks>
 public static class PalettedContainerCodec
 {
+
+    /// <summary>Why the last container read failed, with the reader position; diagnostic only.</summary>
+    public static string LastFailure { get; private set; } = string.Empty;
     /// <summary>Local palette ceiling for block states.</summary>
     public const int BlockStateMaxLocalBits = 8;
 
@@ -39,6 +42,7 @@ public static class PalettedContainerCodec
 
         if (bits > 32)
         {
+            LastFailure = $"bits {bits} > 32 at {reader.Position - 1}";
             return DecodeStatus.Invalid;
         }
 
@@ -66,6 +70,8 @@ public static class PalettedContainerCodec
 
             if (paletteSize < 0 || paletteSize > 1 << maxLocalBits)
             {
+                LastFailure =
+                    $"palette {paletteSize} exceeds {1 << maxLocalBits} (bits {bits}, size {size}) at {reader.Position}";
                 return DecodeStatus.Invalid;
             }
 

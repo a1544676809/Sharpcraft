@@ -59,6 +59,9 @@ public sealed record LightData(
 /// </summary>
 public static class LightDataCodec
 {
+
+    /// <summary>Why the last light read failed, with its position; diagnostic only.</summary>
+    public static string LastFailure { get; private set; } = string.Empty;
     /// <summary>Bytes per light array (16x16x16 nibbles).</summary>
     public const int LightArrayBytes = 2048;
 
@@ -125,6 +128,7 @@ public static class LightDataCodec
 
         if (count < 0 || count > 64)
         {
+            LastFailure = $"light array count {count} at {reader.Position}";
             return DecodeStatus.Invalid;
         }
 
@@ -139,6 +143,7 @@ public static class LightDataCodec
 
             if (data.Length != LightArrayBytes)
             {
+                LastFailure = $"light array {i} is {data.Length} bytes, expected {LightArrayBytes}";
                 return DecodeStatus.Invalid;
             }
 

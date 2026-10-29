@@ -991,3 +991,49 @@ Error in wgpuSurfaceConfigure: Validation Error
 
 `ArenaSizingTests` 五项：无 view distance 时仍倍增、有 view distance 时按投影预分配且优于单次倍增、
 预分配只做一次、样本不足时仍倍增、**单块超大地形不会被估计值截断**（容量必须容得下传入几何）。
+
+### 7.28 区块空洞：解析失败就丢掉整个区块
+
+试玩时看到"周围都加载出来了，就它空在那"。§7.24 的计数器把现象量化了：
+
+```
+pool: parsed 312 ok / 10 failed     ← 10 个区块包被拒
+```
+
+服务端不会重发被拒的包，所以每个失败都是一个**永久空洞**（原版偶发的空洞是"晚到"，会自己补上）。
+
+#### 定位过程（按原版反编译源码逐层排除）
+
+| 步骤 | 结论 |
+| --- | --- |
+| 读 `LevelChunkSection.write` | 每段是 `short 非空数 + short 流体数 + 方块容器 + 生物群系容器`，与实现一致 |
+| 读 `PalettedContainer.Data.write` | `byte bits` + `palette.write` + `writeFixedSizeLongArray`（**无长度前缀**，长度由 bits 推出），与实现一致 |
+| 用 dump 的包做精确复刻解析 | 24 个 section **正好消费完** `dataSize`（delta 0），说明地形数据没问题 |
+| 给解析器加阶段断点 | `Invalid` 出现在 **方块实体** 段 |
+
+关键证据：把失败包 dump 到文件后，失败位置是第 2 个方块实体的 NBT 起点，字节为
+`02 00 11 "MaxNearbyEntities"`——那是 compound **内部**的字段（**刷怪笼**方块实体），
+说明第 1 个实体的 NBT 少消费了字节、停在 `0x00` 上被当成 compound 结束，于是后续整体错位。
+
+#### 修正：局部不理解不应毁掉整块地形
+
+地形（24 个 section）在方块实体之前就已解析完成。因此当方块实体走不下去时：
+
+- **保留该区块**（地形可用）；
+- 丢弃方块实体数据与**光照段**（光照在方块实体之后，位置已不可信）；
+- 用 `BlockEntitiesSkipped` 标记，计数器可观测。
+
+实测：`parsed ok 312 / failed 10` → **`384 ok / 1 failed`**，可见空洞消失。
+
+#### 回归测试
+
+`Repro_007_ChunkWithUnreadableBlockEntityTests`（合成包，不提交服务器数据）：
+
+1. 方块实体 NBT 以 `Short` 开头（非 compound）时，**区块仍解析成功**且 `BlockEntitiesSkipped` 为真；
+2. 无方块实体的正常区块解析成功且不置标记。
+
+#### 仍未解决
+
+剩下 1 例失败，日志显示另一个实体的 NBT 起点落在字符串中间（`6F 6E 65 6E 74 73` = `"onents"`），
+属于**另一种**错位形态，尚未定位。注意诊断用的静态字符串在多 worker 下会互相覆盖，只能作为线索，
+不能作为结论——要彻底查清需要按线程隔离的跟踪（见 T-084）。

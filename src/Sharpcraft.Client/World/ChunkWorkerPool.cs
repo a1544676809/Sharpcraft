@@ -87,6 +87,21 @@ public sealed class ChunkWorkerPool : IDisposable
     /// <summary>Meshes waiting for a worker.</summary>
     public int MeshesPending => Volatile.Read(ref _meshPending);
 
+    /// <summary>Chunks successfully decoded since creation.</summary>
+    public int ParsedOk { get; private set; }
+
+    /// <summary>Chunk packets that failed to decode; each one is a hole that never fills.</summary>
+    public int ParsedFailed { get; private set; }
+
+    /// <summary>Meshes produced since creation.</summary>
+    public int MeshesBuilt { get; private set; }
+
+    /// <summary>Meshes that came out empty; expected above the surface, suspicious below it.</summary>
+    public int MeshesEmpty { get; private set; }
+
+    /// <summary>Mesh jobs whose chunk was not in the world, usually a border key for an unloaded column.</summary>
+    public int MeshesMissingChunk { get; private set; }
+
     /// <summary>Chunks decoded and waiting for the game thread to install them.</summary>
     public int ParsedReady => _parsed.Count;
 
@@ -209,7 +224,42 @@ public sealed class ChunkWorkerPool : IDisposable
 
         if (status == DecodeStatus.Success && parsed is not null)
         {
+            ParsedOk++;
             _parsed.Enqueue(parsed);
+        }
+        else
+        {
+            // Worth counting rather than ignoring: a chunk that never decodes leaves a permanent hole in the
+            // world, which is exactly what a missing column looks like in game
+            // (docs/specs/network/play-movement.md 7.28). The first few are described in the log so the shape
+            // of the failing packet can be identified.
+            ParsedFailed++;
+
+            if (ParsedFailed <= 3)
+            {
+                // Dump the packet so the desync can be examined offline instead of by guesswork.
+                try
+                {
+                    var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"chunkfail_{ParsedFailed}.bin");
+                    System.IO.File.WriteAllBytes(path, body);
+                    Console.WriteLine($"chunk packet dumped to {path}");
+                }
+                catch (System.IO.IOException)
+                {
+                    // Diagnostics only; never let this break streaming.
+                }
+            }
+
+            if (ParsedFailed <= 5)
+            {
+                var reader = new PayloadReader(body);
+                reader.TryReadVarInt(out _);
+                reader.TryReadInt(out var chunkX);
+                reader.TryReadInt(out var chunkZ);
+
+                Console.WriteLine(
+                    $"chunk packet failed: status={status} bytes={body.Length} at ({chunkX},{chunkZ}) reason={ChunkPacketParser.LastFailure} {PalettedContainerCodec.LastFailure} {LightDataCodec.LastFailure}");
+            }
         }
     }
 
@@ -218,12 +268,21 @@ public sealed class ChunkWorkerPool : IDisposable
         var chunk = FindChunk(key);
         if (chunk is null)
         {
+            MeshesMissingChunk++;
             return;
         }
 
         using var buffer = new MeshBuffer(512);
         ChunkMesher.MeshChunk(_world, chunk, airState: 0, buffer, 2_000_000, _sprites);
-        _meshes.Enqueue((key, buffer.ToMeshData(0)));
+        var mesh = buffer.ToMeshData(0);
+
+        MeshesBuilt++;
+        if (mesh.Vertices.Length == 0)
+        {
+            MeshesEmpty++;
+        }
+
+        _meshes.Enqueue((key, mesh));
     }
 
     private LevelChunk? FindChunk(long key)

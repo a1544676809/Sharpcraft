@@ -34,7 +34,24 @@ public static class ChunkPacketParser
     public const int BiomeCount = 64;
 
     /// <summary>Reads a chunk packet. <paramref name="sectionCount"/> comes from the dimension type.</summary>
-    public static DecodeStatus TryRead(
+        /// <summary>
+    /// Description of why the last parse failed, with the reader position. Diagnostic only: a chunk that never
+    /// decodes leaves a permanent hole, so the reason has to be visible
+    /// (docs/specs/network/play-movement.md 7.28).
+    /// </summary>
+    public static string LastFailure { get; private set; } = string.Empty;
+
+    /// <summary>True when a chunk was kept without its block entities because their payload was unreadable.</summary>
+    public static bool BlockEntitiesSkipped { get; private set; }
+
+
+    private static DecodeStatus Fail(string stage, int position)
+    {
+        LastFailure = $"{stage} at {position}";
+        return DecodeStatus.Invalid;
+    }
+
+public static DecodeStatus TryRead(
         ReadOnlySpan<byte> body,
         int sectionCount,
         int minSectionY,
@@ -42,10 +59,11 @@ public static class ChunkPacketParser
         out ParsedChunk? parsed)
     {
         parsed = null;
+        BlockEntitiesSkipped = false;
 
         if (sectionCount <= 0)
         {
-            return DecodeStatus.Invalid;
+            return Fail("section-count", 0);
         }
 
         var reader = new PayloadReader(body);
@@ -57,7 +75,7 @@ public static class ChunkPacketParser
 
         if (packetId != PacketIds.PlayClientbound.LevelChunkWithLight)
         {
-            return DecodeStatus.Invalid;
+            return Fail("packet-id", reader.Position);
         }
 
         status = reader.TryReadInt(out var chunkX);
@@ -80,7 +98,7 @@ public static class ChunkPacketParser
 
         if (heightmapCount < 0 || heightmapCount > 16)
         {
-            return DecodeStatus.Invalid;
+            return Fail("heightmap-count", reader.Position);
         }
 
         var heightmaps = new Dictionary<int, long[]>(heightmapCount);
@@ -100,7 +118,7 @@ public static class ChunkPacketParser
 
             if (longCount < 0 || longCount > 4096)
             {
-                return DecodeStatus.Invalid;
+                return Fail("heightmap-longs", reader.Position);
             }
 
             var values = new long[longCount];
@@ -130,23 +148,40 @@ public static class ChunkPacketParser
 
         if (blockEntityCount < 0 || blockEntityCount > 4096)
         {
-            return DecodeStatus.Invalid;
+            return Fail("block-entity-count", reader.Position);
         }
 
+        var blockEntitiesBroken = false;
         for (var i = 0; i < blockEntityCount; i++)
         {
             status = SkipBlockEntity(body, ref reader);
             if (status != DecodeStatus.Success)
             {
-                return status;
+                // A block entity whose payload we cannot walk desynchronises everything after it, including the
+                // light section, but the terrain itself is already decoded. Dropping the whole chunk turns a
+                // packet we only partly understand into a permanent hole in the world, so the chunk is kept
+                // without block entity data and without light instead
+                // (docs/specs/network/play-movement.md 7.28).
+                BlockEntitiesSkipped = true;
+                blockEntitiesBroken = true;
+                break;
             }
         }
 
         // Light arrays follow the block entities; they are stored raw for now.
-        status = LightDataCodec.TryRead(ref reader, out var light);
-        if (status != DecodeStatus.Success)
+        LightData light;
+
+        if (blockEntitiesBroken)
         {
-            return status;
+            light = LightData.Empty;
+        }
+        else
+        {
+            status = LightDataCodec.TryRead(ref reader, out light);
+            if (status != DecodeStatus.Success)
+            {
+                return status;
+            }
         }
 
         var chunk = new LevelChunk(chunkX, chunkZ, minSectionY, sectionCount);
@@ -218,9 +253,13 @@ public static class ChunkPacketParser
             return status;
         }
 
+        var nbtStart = reader.Position;
         status = NbtReader.TryReadNetworkRoot(body[reader.Position..], out _, out var consumed);
         if (status != DecodeStatus.Success)
         {
+            var head = string.Join(' ', body.Slice(nbtStart, Math.Min(16, body.Length - nbtStart)).ToArray()
+                .Select(value => value.ToString("X2")));
+            LastFailure = $"block entity nbt at {nbtStart} head={head} {NbtReader.LastFailure}";
             return status;
         }
 

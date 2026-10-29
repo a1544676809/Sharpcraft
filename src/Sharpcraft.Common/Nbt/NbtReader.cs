@@ -17,6 +17,9 @@ namespace Sharpcraft.Common.Nbt;
 /// </remarks>
 public static class NbtReader
 {
+
+    /// <summary>Why the last read failed, with detail; diagnostic only.</summary>
+    public static string LastFailure { get; private set; } = string.Empty;
     /// <summary>Maximum nesting depth vanilla accepts.</summary>
     public const int MaxDepth = 512;
 
@@ -53,6 +56,7 @@ public static class NbtReader
 
         if (type != NbtTagType.Compound)
         {
+            LastFailure = $"root tag {type} is not a compound at {offset - 1}";
             return DecodeStatus.Invalid;
         }
 
@@ -66,8 +70,9 @@ public static class NbtReader
         {
             return DecodeStatus.NeedMoreData;
         }
-        catch (InvalidDataException)
+        catch (InvalidDataException exception)
         {
+            LastFailure = $"{exception.Message} at {offset}";
             return DecodeStatus.Invalid;
         }
     }
@@ -81,6 +86,7 @@ public static class NbtReader
 
         if (type != NbtTagType.Compound)
         {
+            LastFailure = $"root tag {type} is not a compound at {offset - 1}";
             throw new InvalidDataException($"root tag must be a compound, got {type}");
         }
 

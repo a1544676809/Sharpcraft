@@ -155,6 +155,10 @@ internal static class WindowCommand
             },
             expectedChunks: InteractiveSession.ExpectedChunkCount());
 
+        Console.WriteLine(
+            $"pool: parsed {workerPool.ParsedOk} ok / {workerPool.ParsedFailed} failed, "
+            + $"meshed {workerPool.MeshesBuilt} (empty {workerPool.MeshesEmpty}, missing chunk {workerPool.MeshesMissingChunk})");
+
         Console.WriteLine($"window closed after presenting frames; surface format {format}");
 
         // Swapchain textures are not guaranteed copyable, so the screenshot comes from the
