@@ -126,7 +126,8 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-098 | 渲染管线规格（阶段划分、实体/方块实体、天空与雾、半透明、2D 合成、预算、分期）| `docs/specs/render/pipeline.md` §1–§12；`docs/specs/quality-attributes.md` QA-1.3 | 所有者 2026-10-29 评审通过，四点裁决记录在 §12 | — | 已完成 |
 | T-099 | UI P0：2D 几何与批处理（20 字节顶点、正交投影、scissor 区间、零分配）| `docs/modules/ui.md` §9；`docs/src/sharpcraft-framework/rendering/README.md` | `UiGeometryTests`（7 项：顶点/索引计数与 20 字节预算、四角坐标、区间切分与去重、两面板四十行 = 两次区间、颜色打包、零分配、正交投影四角）| `Framework/Rendering/UiGeometry`、`UiProjection` | 已完成 |
 | T-100 | UI P0：2D GPU 管线（正交、无深度、alpha 混合、逐区间 scissor）| `docs/modules/ui.md` §9、§13.1 | 目视窗口验证（截图路径不含 UI，见 T-104）；顶点属性声明收敛到 `VertexLayout`（守卫测试通过）| `Framework/Rendering/UiRenderer`、`WindowedRenderer`（UI pass）| 已完成 |
-| T-101 | UI P0：位图字体（运行时从 jar 提取字形，仓库不存资产）+ 文本测量与排版缓存 | `docs/modules/ui.md` §5、§10 | 待补 | 未开始 | 规格已就绪 |
+| T-101 | UI P0：位图字体**度量**（槽位、墨迹宽度、步进、基线、行宽测量）| `docs/modules/ui.md` §5；`docs/src/sharpcraft-client/ui.md` §4.1 | `BitmapFontTests`（7 项：墨迹宽度、空格仍步进、最右列定义宽度、行宽求和、UV 覆盖一格、表外字符不臆造、行高与基线）| `Client/Ui/BitmapFont` | 已完成 |
 | T-102 | UI P0：最小声明式内核（`Screen`/`StackPanel`/`TextBlock`，未知元素与属性拒绝）| `docs/modules/ui.md` §7、§13.1；`docs/src/sharpcraft-client/ui.md` | `UiMarkupTests`（9 项：树形、注释与自闭合、三类拒绝、颜色两种写法、布局落位、64 帧零分配）| `Client/Ui/UiMarkup`、`UiScreenLayout`、`UiColours`、`UiStyles` | 已完成 |
 | T-103 | UI P0：热加载（文件变更 → 后台解析校验 → 原子交换 + 按 `id` 迁移状态）| `docs/modules/ui.md` §8 | 待补 | 未开始 | 规格已就绪 |
 | T-105 | 光标捕获缺陷：无焦点也锁鼠标、Esc 后视角仍跟随、点击无法重捕获 | `docs/modules/input.md` §7 | `Repro_008_CursorCaptureTests`（5 项：释放后忽略移动、捕获时累加、重捕获无跳变、点击只报告一次、失焦清空含待处理点击）| `Framework/Platform/WindowInputState`、`WindowHost`、`Launcher/InteractiveSession` | 已完成 |
+| T-106 | UI P0：文字**渲染**（带纹理的 2D 管线 + 字形图集 + 行布局缓存），替换占位竖条 | `docs/modules/ui.md` §9、§10 | 待补 | 未开始 | 规格已就绪 |
