@@ -87,7 +87,7 @@ internal sealed class InteractiveSession
             elapsed,
             () =>
             {
-                _player.Tick(frame.Forward, frame.Strafe, frame.Jump, frame.Sprint, _camera.Yaw);
+                _player.Tick(frame.Forward, frame.Strafe, frame.Jump, frame.Sprint, _camera.Yaw, frame.Sneak);
                 _interpolator.Push(_player, _camera.Yaw);
                 PublishTick();
             });

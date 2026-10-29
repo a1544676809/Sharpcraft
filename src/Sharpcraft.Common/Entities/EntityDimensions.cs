@@ -23,6 +23,12 @@ public readonly record struct EntityDimensions(float Width, float Height, float 
     /// <summary>Player dimensions: 0.6 wide, 1.8 tall, eyes at 1.62 (explicitly set, not derived).</summary>
     public static EntityDimensions Player => new(0.6f, 1.8f, 1.62f);
 
+    /// <summary>
+    /// Crouching player: same width, 1.5 tall with eyes at 1.27, straight out of vanilla's pose table
+    /// (docs/specs/network/play-movement.md 7.16).
+    /// </summary>
+    public static EntityDimensions PlayerCrouching => new(0.6f, 1.5f, 1.27f);
+
     /// <summary>Builds the box for a feet position, exactly as vanilla's <c>makeBoundingBox</c> does.</summary>
     public Aabb MakeBoundingBox(Vector3 feet)
     {

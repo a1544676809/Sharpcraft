@@ -104,6 +104,57 @@ public sealed class VerticalMovementTests
         Assert.True(player.DeltaMovement.Y > 0.42f, $"jump must not cap a faster rise, got {player.DeltaMovement.Y}");
     }
 
+    [Fact]
+    public void SneakingIsThirtyPercentSpeedWithACrouchedBox()
+    {
+        var player = new PlayerEntity(new FlatGround(), new Vector3(0.5f, 0f, 0.5f));
+
+        for (var tick = 0; tick < 100; tick++)
+        {
+            player.Tick(forward: 1f, strafe: 0f, jumping: false, sprinting: false, yaw: 0f, sneaking: true);
+        }
+
+        var before = player.Position;
+        for (var tick = 0; tick < 100; tick++)
+        {
+            player.Tick(forward: 1f, strafe: 0f, jumping: false, sprinting: false, yaw: 0f, sneaking: true);
+        }
+
+        var delta = player.Position - before;
+        var perTick = new Vector2(delta.X, delta.Z).Length() / 100f;
+
+        // Vanilla's SNEAKING_SPEED attribute is 0.3, so 0.2159 * 0.3 = 0.0648 blocks per tick, 1.296 per second.
+        Assert.Equal(0.0648f, perTick, 4);
+
+        // The crouched box is shorter and the eye drops to 1.27, which changes the camera height too.
+        Assert.Equal(1.5f, player.Dimensions.Height, 3);
+        Assert.Equal(1.27f, player.Dimensions.EyeHeight, 3);
+        Assert.Equal(0.6f, player.Dimensions.Width, 3);
+    }
+
+    [Fact]
+    public void SprintingIsOnePointThreeTimesWalking()
+    {
+        var player = new PlayerEntity(new FlatGround(), new Vector3(0.5f, 0f, 0.5f));
+
+        for (var tick = 0; tick < 100; tick++)
+        {
+            player.Tick(forward: 1f, strafe: 0f, jumping: false, sprinting: true, yaw: 0f);
+        }
+
+        var before = player.Position;
+        for (var tick = 0; tick < 100; tick++)
+        {
+            player.Tick(forward: 1f, strafe: 0f, jumping: false, sprinting: true, yaw: 0f);
+        }
+
+        var delta = player.Position - before;
+        var perTick = new Vector2(delta.X, delta.Z).Length() / 100f;
+
+        // 0.2159 * 1.3 = 0.2807 per tick, 5.614 per second; the vanilla client measured 5.623.
+        Assert.Equal(0.2807f, perTick, 3);
+    }
+
     /// <summary>Solid floor at y = 0 and nothing else.</summary>
     private sealed class FlatGround : IEntityWorld
     {

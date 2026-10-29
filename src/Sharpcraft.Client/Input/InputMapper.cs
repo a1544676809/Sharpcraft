@@ -79,6 +79,7 @@ public sealed class KeyBindings
 /// <param name="Strafe">−1 left … +1 right.</param>
 /// <param name="Jump">True while jump is held.</param>
 /// <param name="Sprint">True while sprint is held.</param>
+/// <param name="Sneak">True while sneak is held.</param>
 /// <param name="ReleaseCursor">True when escape was pressed this frame.</param>
 /// <param name="LookDelta">Mouse movement in pixels for this frame.</param>
 public readonly record struct FrameInput(
@@ -86,6 +87,7 @@ public readonly record struct FrameInput(
     float Strafe,
     bool Jump,
     bool Sprint,
+    bool Sneak,
     bool ReleaseCursor,
     Vector2 LookDelta)
 {
@@ -147,6 +149,7 @@ public sealed class InputMapper
             strafe,
             IsHeld(input, InputAction.Jump),
             IsHeld(input, InputAction.Sprint),
+            IsHeld(input, InputAction.Sneak),
             IsHeld(input, InputAction.ReleaseCursor),
             input.TakeMouseDelta());
     }

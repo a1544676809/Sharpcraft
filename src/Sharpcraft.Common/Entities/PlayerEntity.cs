@@ -17,6 +17,9 @@ public sealed class PlayerEntity : LivingEntity
     /// <summary>Sprint multiplier on the movement speed.</summary>
     public const float SprintMultiplier = 1.3f;
 
+    /// <summary>Vanilla's SNEAKING_SPEED attribute default, applied while crouching.</summary>
+    public const float SneakingSpeedMultiplier = 0.3f;
+
     /// <summary>Creates a player at a feet position.</summary>
     /// <param name="world">Collision and friction source.</param>
     /// <param name="feet">Initial feet position.</param>
@@ -26,13 +29,28 @@ public sealed class PlayerEntity : LivingEntity
     }
 
     /// <inheritdoc />
-    public override EntityDimensions Dimensions => EntityDimensions.Player;
+    public override EntityDimensions Dimensions =>
+        Sneaking ? EntityDimensions.PlayerCrouching : EntityDimensions.Player;
 
     /// <inheritdoc />
-    public override float MovementSpeed => PlayerMovementSpeed * (Sprinting ? SprintMultiplier : 1f);
+    public override float MovementSpeed => PlayerMovementSpeed * SpeedMultiplier;
+
+    /// <summary>Combined speed multiplier from the current posture.</summary>
+    private float SpeedMultiplier
+    {
+        get
+        {
+            // Crouching wins over sprinting in vanilla: the sneaking attribute scales the result.
+            var multiplier = Sprinting ? SprintMultiplier : 1f;
+            return Sneaking ? multiplier * SneakingSpeedMultiplier : multiplier;
+        }
+    }
 
     /// <summary>True while the sprint action is held.</summary>
     public bool Sprinting { get; set; }
+
+    /// <summary>True while the sneak action is held; it shrinks the box and slows the player.</summary>
+    public bool Sneaking { get; set; }
 
     /// <summary>
     /// Advances the player one tick from an input intent.
@@ -42,9 +60,11 @@ public sealed class PlayerEntity : LivingEntity
     /// <param name="jumping">True while jump is held.</param>
     /// <param name="sprinting">True while sprint is held.</param>
     /// <param name="yaw">Facing in radians; 0 looks towards −Z.</param>
-    public void Tick(float forward, float strafe, bool jumping, bool sprinting, float yaw)
+    /// <param name="sneaking">True while sneak is held.</param>
+    public void Tick(float forward, float strafe, bool jumping, bool sprinting, float yaw, bool sneaking = false)
     {
         Sprinting = sprinting;
+        Sneaking = sneaking;
         Jumping = jumping;
 
         // Vanilla's input vector uses −Z for forward, which is also the yaw-0 facing direction.
