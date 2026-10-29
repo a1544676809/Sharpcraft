@@ -248,7 +248,9 @@ M1（基础逻辑）与 M2（世界数据闭环）已达成并留有可执行证
 - `ClientboundPlayerRotationPacket`（id 74）字段顺序为 `float yRot, bool relativeY, float xRot, bool relativeX`
   ——**布尔夹在浮点之间**，按"两 float 再两 bool"读会整包错位。
 - 已实现解析与合并（yaw/pitch 各按自己的布尔决定绝对/相加），接进 `walk` 与窗口两条路径；3 项测试覆盖。
-- 待实测：服务端驱动转向（`/tp ... facing`）的端到端验证需要一次真实事件，暂未触发。
+- **端到端已实测通过**：服务端控制台 `rotate Blue_Coast 90 0`，`walk` 日志输出
+  `server rotation: yaw=90.00 pitch=0.00`（命令值即 90/0，若字段顺序读错会得到垃圾值）。
+  同一次 120 秒运行的稳定性数据：tick 19.9/s、修正 **2 次**、区块 918 个、行走 961.66 格。
 - `walk` 回归：8 秒 159 tick、修正 2 次、区块 367，功能未受影响。
 
 ## 阻塞项
