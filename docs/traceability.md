@@ -35,6 +35,7 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-060 | 正式客户端循环接入移动同步（LivePlaySession） | `docs/specs/network/play-movement.md` §6.5 | `window` 实测：live 会话在服务端存活 14 秒、零踢人；`walk` 连续行走 12 秒 | `Launcher/LivePlaySession`、`Launcher/InteractiveSession` | 已完成 |
 | T-062 | tick 精度（计时器精度 + 绝对截止时间） | `docs/specs/network/play-movement.md` §7.7 | `walk` 实测 tick 19.8/s、位移 4.399 格/秒（官方 4.291，+2.5%） | `Framework/Platform/TimerResolution`、`Client/Game/PreciseWait` | 已完成 |
 | T-064 | 采纳服务端下发的朝向与速度（传送包逐分量合并） | `docs/specs/network/play-movement.md` §7.14 | `PlayMovementTests`（4 项：绝对朝向、相对朝向相加、仅标位轴为偏移、速度随传送下发）| `Common/Network/PlayerSync`、`PlayerPositionInfo` | 已完成 |
+| T-066 | 跳跃与下落的等效（含终端速度渐近性） | `docs/specs/network/play-movement.md` §7.15 | `VerticalMovementTests`（4 项：顶点 1.2522、长距离终端 3.90–3.921、短距离 3.25–3.40、快速上升不被压低）+ 官方 1.2492 + 服务端连跳 10s 仅 1 次修正 | `Common/Entities/LivingEntity` | 已完成 |
 | T-065 | 处理仅旋转包 `ClientboundPlayerRotationPacket`（id 74） | `docs/specs/network/play-movement.md` §7.14 | `PlayMovementTests`（3 项：交错字段解析、绝对采纳、相对相加）| `Common/Network/PlayMovementPackets`、`PlayerSync` | 已完成 |
 | T-063 | 回拉归因与修复（区块流式加载） | `docs/specs/network/play-movement.md` §7.10–7.12 | `EntityWorldAdapterTests`（3 项：未加载读作空气、已加载实体方块、区块到达后地面生效）+ 实测 walk 区块 9→405、修正 190+→2；window 方块 585k→2.0M | `Launcher/LivePlaySession`、`InteractiveSession`、`WalkCommand` | 已完成 |
 | T-061 | 移动位移等效验证（对照官方客户端） | `docs/specs/network/play-movement.md` §7.13 | 官方 4.281 格/秒 vs 我们 4.443 格/秒（+3.8%，≤5% 达标），修正 2 次/15 秒 | `Launcher/WalkCommand`、MCP 桥实测 | 已完成 |

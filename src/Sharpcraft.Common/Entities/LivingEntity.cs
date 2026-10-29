@@ -60,7 +60,13 @@ public abstract class LivingEntity : Entity
         // 1) Jump is applied before the move so the first tick already rises.
         if (jumping && OnGround)
         {
-            SetDeltaMovement(new Vector3(DeltaMovement.X, BaseJumpPower, DeltaMovement.Z));
+            // Vanilla takes the larger of the jump power and the current vertical speed, so a jump cannot
+            // slow an entity that is already rising faster (a bounce, a piston launch)
+            // (docs/specs/network/play-movement.md 7.15).
+            SetDeltaMovement(new Vector3(
+                DeltaMovement.X,
+                MathF.Max(BaseJumpPower, DeltaMovement.Y),
+                DeltaMovement.Z));
         }
 
         // 2) Block friction only matters while standing on something; in the air vanilla uses 1.0.

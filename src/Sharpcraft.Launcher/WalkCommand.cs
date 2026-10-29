@@ -292,7 +292,7 @@ internal static class WalkCommand
 
                     if (Environment.GetEnvironmentVariable("MC_WALK_FREEZE") != "1")
                     {
-                        player.Tick(forward: 1f, strafe: 0f, jumping: false, sprinting: false, yaw: 0f);
+                        player.Tick(forward: 1f, strafe: 0f, jumping: Environment.GetEnvironmentVariable("MC_WALK_JUMP") == "1" && player.OnGround, sprinting: false, yaw: 0f);
                     }
 
                     var yawDegrees = sync.CurrentYawDegrees;
