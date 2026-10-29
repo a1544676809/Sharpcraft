@@ -1,12 +1,12 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 Sharpcraft contributors -->
 
-状态：[规划]
+状态：[已评审]
 基线：Minecraft 26.3
 证据：AGENTS.md 原则 2（模组原生 + 热加载）、原则 3（资产不得入库）、原则 6（图形后端隔离）、原则 9（行为对齐为下限、性能为一等目标）、原则 12（质量属性可测）；`docs/specs/quality-attributes.md`、`docs/modules/render.md`、`docs/modules/input.md`
 最后更新：2026-10-29
 授权：用户 2026-10-29 指示"UI 是否做成类 XAML 的声明式热加载，原版自绘方式对热加载是否方便"，并要求"先规划好，性能是重要问题"。
-评审：待项目所有者评审；评审通过前不得开始编码（原则 3.5）。
+评审：项目所有者 2026-10-29 **评审通过**。排期：属于 **M5 第二步**，M5 第一步（实体跟踪与可见性）完成后开工。
 
 # UI —— 界面层
 
@@ -21,7 +21,7 @@
 - 控件树（容器、标签、按钮、输入框、列表、物品槽）与布局
 - 声明式界面的解析、校验、版本兼容与热加载交换
 - 界面绘制：正交投影、纹理与形状批次、裁剪栈、位图字体排版
-- 输入路由：命中测试、焦点、捕获（拖拽）、键盘导航
+- 输入路由：命中测试、焦点、捕获（拖拽）、键盘导航；**首批只支持键盘与鼠标**（所有者 2026-10-29 决定）
 - 与游戏逻辑的**只读**接线（血量、物品栏、聊天记录、玩家列表）
 
 明确不负责：
@@ -66,6 +66,7 @@
 | `UiWidget` | 可变、池化 | 实例化后的控件；只在交换或结构变更时重建 |
 | `UiLayout` | 可变、池化 | 由控件树一次算出的矩形，供命中测试与绘制共用 |
 | `UiDrawList` | 每帧复用 | 四边形、文本运行、裁剪区间；**不分配** |
+| `UiTextRun` | 每帧复用 | 一段同一样式的文本；富文本由多段组成（颜色、粗体、点击事件） |
 | `UiGlyphAtlas` | 常驻 | 位图字体按需烘焙的字形；命中率可观测 |
 | `UiMetrics` | 常驻 | 布局次数、提交次数、四边形数、分配字节、解析耗时 |
 
@@ -89,30 +90,37 @@
 - **布局只在脏时执行**：控件树结构、尺寸、文本内容变化才置脏；空闲帧必须为零次。
 - **文本排版缓存**：按（字符串、样式、可用宽度）缓存行布局，内容不变不重算。
 
-## 7. 声明式格式（最小内核）
+## 7. 声明式格式：XAML
 
-自研的类 XAML 格式，**不是** WPF XAML（跨平台不可用，原则 6）。刻意保持极小，按需扩展。
+语法与**微软系产品一致，采用 XAML**（所有者 2026-10-29 决定）。注意这是**XAML 语言本身**，
+不是 WPF 的 XAML 实现：我们自研加载器，不引用 WPF / WinUI（跨平台不可用，且违反原则 6 的后端隔离）。
+
+采用 XAML 的理由：命名空间声明、属性元素、内容属性、标记扩展（`{Binding}`、`{StaticResource}`）
+都是现成约定，写界面的人不必学一套新语法；编辑器也有现成的高亮与格式化。
 
 ```xml
-<screen id="chat" version="1">
-  <import src="ui/style/default.xml"/>
-  <stack anchor="bottom" direction="vertical" margin="8">
-    <list id="messages" grow="1" item-template="chat-line"/>
-    <textbox id="input" hint="chat.hint" submit="SendChat"/>
-  </stack>
-</screen>
+<Screen xmlns="https://sharpcraft.dev/ui" xmlns:x="https://sharpcraft.dev/ui/xaml"
+        x:Class="Sharpcraft.Client.Ui.Screens.ChatScreen" Id="chat">
+  <StackPanel Anchor="Bottom" Margin="8">
+    <RichText Id="messages" Grow="1" Bind.Text="{Binding Messages}"/>
+    <TextBox Id="input" Hint="chat.hint" Submit="SendChat"/>
+  </StackPanel>
+</Screen>
 ```
 
-- 元素集合最小化：`screen / import / stack / grid / panel / label / button / textbox / list / item / texture`
-- 属性只描述**结构与外观**（锚点、方向、间距、尺寸约束、样式引用、本地化键）
-- `submit="SendChat"` 之类是**具名行为处理器**，实现留在代码里，二者通过名字绑定
-- 文案一律走本地化键，元素与属性名用英文（与其他代码标识符一致）
-- 布局数值**来源于原版的可观测布局**，因此像素级对照依然成立
+约定的最小面：
 
-校验与兼容：
+- **元素 = 控件类型**，**属性 = 控件属性**；大小写与 .NET 类型/属性一致
+- `x:Class` 指向行为侧类型（可选）；有它时可省略属性里的事件名绑定
+- 事件与命令以字符串绑定到具名处理器（`Submit="SendChat"`），行为留在代码
+- 标记扩展首批只支持两种：`{Binding 路径}`（单向到数据源）与 `{StaticResource 键}`（样式/贴图）
+- 文案一律走本地化键；元素与属性名用英文
 
-- 文档必须带 `version`；未知元素或未知属性 = **可定位的报错**，不静默忽略
-- 解析失败**原子回退**到上一份可用文档，屏幕不消失，错误进入诊断通道
+范围控制：
+
+- 首批控件类型限于 `Screen / StackPanel / Grid / Panel / TextBlock / RichText / Button / TextBox / List / Item / Image`
+- **不实现**依赖属性系统的完整语义（样式继承、触发器、模板重写）；需要时以代码屏幕解决
+- 未知元素或未知属性 = **可定位的报错**；文档必须带架构版本，解析失败**原子回退**到上一份可用文档
 - 解析在后台线程完成；**渲染线程不解析任何文件**
 
 ## 8. 热加载边界
@@ -198,7 +206,8 @@
 
 未决项：
 
-- 声明式格式的具体语法（XML 还是紧凑 JSON）待 P0 原型后定稿
-- 键盘导航与手柄支持的优先级待定
+- 标记扩展的扩展边界（`{Binding}` 之外还要不要 `{x:Reference}` / `{TemplateBinding}`）待 P2 决定
+- 手柄与触摸支持后置（首批只做键鼠）；键盘导航（Tab/方向键）在 P2 补
 - 是否引入可滚动的富文本（聊天分行、颜色、点击事件）细节待 P1
-- 与模组契约的具体形状（注册控件 vs 注册整屏）待 `docs/modules/modding.md` 对齐
+- **模组契约的具体形状未定**（所有者 2026-10-29：暂不确定）。倾向方向：只经公开界面接口注册控件与屏幕，
+  不暴露内部类型；定稿前不得在模组侧引入界面 API
