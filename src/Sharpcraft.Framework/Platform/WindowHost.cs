@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Numerics;
+using Silk.NET.GLFW;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
 
@@ -20,6 +21,8 @@ public sealed class WindowHost : IDisposable
 {
     private readonly IWindow _window;
     private bool _initialised;
+    private Glfw? _glfw;
+    private unsafe WindowHandle* _handle;
 
     private WindowHost(IWindow window) => _window = window;
 
@@ -58,6 +61,7 @@ public sealed class WindowHost : IDisposable
         var host = new WindowHost(Window.Create(options));
         host._window.Initialize();
         host._initialised = true;
+        host.AttachInput();
         return host;
     }
 
@@ -95,6 +99,74 @@ public sealed class WindowHost : IDisposable
     {
         ObjectDisposedException.ThrowIf(!_initialised, this);
         _window.Size = new Vector2D<int>(width, height);
+    }
+
+    /// <summary>Input state collected from the platform, refreshed by <see cref="Pump"/>.</summary>
+    public WindowInputState Input { get; } = new();
+
+    /// <summary>
+    /// Hooks the GLFW callbacks of the backend the window already uses. Silk.NET.Windowing exposes no key
+    /// or mouse surface of its own, and adding the separate input package would pull in another native
+    /// library; the windowing backend's own callbacks keep the dependency set unchanged
+    /// (docs/modules/input.md 3).
+    /// </summary>
+    private unsafe void AttachInput()
+    {
+        if (_window.Native?.Glfw is not { } handleValue)
+        {
+            return;
+        }
+
+        var handle = (WindowHandle*)handleValue;
+        var glfw = Glfw.GetApi();
+        _glfw = glfw;
+        _handle = handle;
+
+        glfw.SetKeyCallback(handle, (window, key, _, action, _) =>
+        {
+            _ = window;
+            if (action == InputAction.Press)
+            {
+                Input.Press((int)key);
+            }
+            else if (action == InputAction.Release)
+            {
+                Input.Release((int)key);
+            }
+        });
+
+        glfw.SetCursorPosCallback(handle, (_, x, y) => Input.MoveCursor(new Vector2((float)x, (float)y)));
+
+        glfw.SetWindowFocusCallback(handle, (_, focused) =>
+        {
+            Input.HasFocus = focused;
+            if (!focused)
+            {
+                Input.Reset();
+            }
+        });
+    }
+
+    /// <summary>Turns relative mouse capture on or off.</summary>
+    /// <param name="captured">True to capture the cursor for look control.</param>
+    public unsafe void SetMouseCaptured(bool captured)
+    {
+        ObjectDisposedException.ThrowIf(!_initialised, this);
+        if (_glfw is null || _handle is null)
+        {
+            return;
+        }
+
+        _glfw.SetInputMode(
+            _handle,
+            CursorStateAttribute.Cursor,
+            captured ? CursorModeValue.CursorDisabled : CursorModeValue.CursorNormal);
+
+        Input.MouseCaptured = captured;
+        if (!captured)
+        {
+            Input.Reset();
+        }
     }
 
     /// <summary>Processes pending window events; returns false once the user closed the window.</summary>

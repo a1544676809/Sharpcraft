@@ -1,5 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Sharpcraft.Framework.Tests" />
+    <InternalsVisibleTo Include="Sharpcraft.Client.Tests" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -10,6 +15,9 @@
   <ItemGroup>
     <PackageReference Include="Brew.Wgpu" Version="29.0.0.5" />
     <PackageReference Include="Silk.NET.Windowing" Version="2.23.0" />
+    <!-- Input: Silk.NET.Windowing 2.x exposes no key or mouse surface, so the GLFW callbacks of
+         the backend already in use are wired directly (docs/modules/input.md 3). -->
+    <PackageReference Include="Silk.NET.GLFW" Version="2.23.0" />
   </ItemGroup>
 
 </Project>

@@ -30,6 +30,7 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-010 | 方块状态全局 id 生成器 | `docs/analysis/common/registry-order.md` §5、§7.1 | `BlockStateIdTests.cs`（含 1442 个原版状态 id 与 35723 总数） | `src/Sharpcraft.Common/Registries/`（BlockStateDefinition / BlockStateLayout） | 已完成 |
 | T-019 | 全阶段包 id 表导出与交叉校验 | `docs/specs/network/protocol-phases.md` §3 | `PacketIdTableTests.cs`（3 项：id 对照、连续性、唯一性） | `tests/.../TestData/vanilla-packet-ids.txt`（260 条） | 已完成 |
 | T-018 | 启动器 CLI 垂直切片（login / probe / help） | `docs/modules/launcher.md` §3–§5 | `LauncherCommandLineTests.cs`（10 项）、手工验收：`probe mcf.ddger.top` 输出 protocol 777 | `src/Sharpcraft.Launcher/` | 已完成 |
+| T-054 | 输入采集与动作映射（GLFW 回调 + FrameInput） | `docs/modules/input.md` §4；`docs/src/sharpcraft-client/input.md` | `InputMapperTests`（7 项：前进/横移、相反抵消、跳跃/冲刺/释放、松键即停、位移只消费一次、失焦清空、重绑定） | `Framework/Platform/WindowHost` + `Client/Input/` | 已完成 |
 | T-053 | 实体系统根基（Aabb/尺寸/Entity/LivingEntity/PlayerEntity） | `docs/modules/entities.md` §3–§5；`docs/src/sharpcraft-common/entities.md` | `EntityMovementTests`（12 项：行走 4.317 b/s、冲刺 5.612 b/s、跳跃 1.25 格、加速曲线、冰面滑行、终端速度、贴面静止、墙体阻挡、不穿模、眼高） | `Common/Entities/` | 已完成 |
 | T-052 | 玩家物理原型（已被 T-053 取代，原型已删除） | `docs/modules/entities.md`（迁移后以该文为准） | 已并入 `EntityMovementTests`（12 项） | 无（原型删除） | 已完成 |
 | T-051 | 着色器包一等接入点（目标/阶段/顺序/uniform 契约 + 校验与回退） | `docs/specs/render/shader-packs.md`；AGENTS 原则 11 | `ShaderPackValidatorTests`（8 项：内置管线可表达为包、按依赖排序、缺最终阶段被拒、未声明目标被拒、循环依赖被拒、未知 uniform 被拒、重名目标被拒、相对尺寸缩放不塌陷） | `src/Sharpcraft.Framework/Rendering/ShaderPacks/` | 已完成 |
