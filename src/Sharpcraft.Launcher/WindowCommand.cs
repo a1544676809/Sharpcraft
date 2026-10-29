@@ -152,7 +152,8 @@ internal static class WindowCommand
                 }
 
                 return updates;
-            });
+            },
+            expectedChunks: InteractiveSession.ExpectedChunkCount());
 
         Console.WriteLine($"window closed after presenting frames; surface format {format}");
 

@@ -42,7 +42,8 @@ public static class WindowedRenderer
         Action<int, WindowHost>? onFrame = null,
         Func<WindowHost, (Vector3 Eye, Vector3 Target)>? cameraPerFrame = null,
         Func<FrameRequest?>? rebuildRequest = null,
-        Func<IReadOnlyList<(long Key, GeometryData Mesh)>?>? geometryUpdates = null)
+        Func<IReadOnlyList<(long Key, GeometryData Mesh)>?>? geometryUpdates = null,
+        int expectedChunks = 0)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -150,7 +151,9 @@ public static class WindowedRenderer
         // With per-chunk geometry the world is drawn from an arena: a chunk that arrives writes only its own
         // bytes, instead of the whole world being recomposed and re-uploaded every frame
         // (docs/specs/network/play-movement.md 7.25).
-        var arena = geometryUpdates is null ? null : new ChunkGeometryArena(device);
+        var arena = geometryUpdates is null
+            ? null
+            : new ChunkGeometryArena(device, expectedChunks: expectedChunks);
 
         // Geometry lives in persistent buffers that are rewritten in place, so a rebuild costs one upload
         // instead of two allocations plus a GPU sync. They only grow, and the grown-out buffers are released
@@ -401,7 +404,8 @@ public static class WindowedRenderer
         if (arena is not null)
         {
             Console.WriteLine(
-                $"window: arena {arena.ChunkCount} chunks, uploaded {arena.UploadedBytes / (1024d * 1024d):F1} MB, "
+                $"window: arena {arena.ChunkCount} chunks, presized={arena.Presized}, "
+                + $"uploaded {arena.UploadedBytes / (1024d * 1024d):F1} MB, "
                 + $"{arena.FullRebuilds} full rebuilds");
             arena.Dispose();
         }

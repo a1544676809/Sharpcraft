@@ -26,9 +26,17 @@ public sealed class ChunkGeometryArena : IDisposable
 {
     private const ulong MinimumBufferBytes = 1 << 20;
 
+    /// <summary>
+    /// Starting guess per chunk when the view distance is known. Deliberately generous: over-reserving costs
+    /// memory once, while under-reserving costs a full rewrite of every resident chunk, which is a frame spike.
+    /// </summary>
+    private const ulong AssumedBytesPerChunk = 96 * 1024;
+
     private readonly Device _device;
     private readonly Queue _queue;
     private readonly int _bytesPerVertex;
+    private readonly int _expectedChunks;
+    private bool _presized;
     private readonly Dictionary<long, Slice> _slices = [];
     private readonly Dictionary<long, GeometryData> _meshes = [];
     private readonly List<WgpuBuffer> _retired = [];
@@ -43,7 +51,10 @@ public sealed class ChunkGeometryArena : IDisposable
     /// <summary>Creates an empty arena.</summary>
     /// <param name="device">Device that owns the buffers.</param>
     /// <param name="bytesPerVertex">Stride of one vertex; defaults to the renderer's layout.</param>
-    public ChunkGeometryArena(Device device, int bytesPerVertex = VertexLayout.Stride)
+    /// <param name="expectedChunks">
+    /// Chunks the view distance can hold, used to presize instead of doubling repeatedly; 0 disables it.
+    /// </param>
+    public ChunkGeometryArena(Device device, int bytesPerVertex = VertexLayout.Stride, int expectedChunks = 0)
     {
         ArgumentNullException.ThrowIfNull(device);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(bytesPerVertex);
@@ -51,8 +62,16 @@ public sealed class ChunkGeometryArena : IDisposable
         _device = device;
         _queue = device.Queue;
         _bytesPerVertex = bytesPerVertex;
-        _vertexCapacity = MinimumBufferBytes;
-        _indexCapacity = MinimumBufferBytes;
+        _expectedChunks = expectedChunks;
+        // With a view distance the arena can start close to its final size, which removes the early doublings
+        // before enough chunks have arrived to measure an average
+        // (docs/specs/network/play-movement.md 7.27).
+        var initialCapacity = expectedChunks > 0
+            ? Math.Max(MinimumBufferBytes, (ulong)expectedChunks * AssumedBytesPerChunk)
+            : MinimumBufferBytes;
+
+        _vertexCapacity = initialCapacity;
+        _indexCapacity = Math.Max(MinimumBufferBytes, initialCapacity / 2);
         _vertex = CreateBuffer(vertexCapacity: _vertexCapacity, BufferUsage.Vertex);
         _index = CreateBuffer(vertexCapacity: _indexCapacity, BufferUsage.Index);
     }
@@ -65,6 +84,9 @@ public sealed class ChunkGeometryArena : IDisposable
 
     /// <summary>Times the buffers had to be grown and everything rewritten.</summary>
     public int FullRebuilds { get; private set; }
+
+    /// <summary>True once the arena sized itself for the whole view distance.</summary>
+    public bool Presized => _presized;
 
     /// <summary>Uploads one chunk's geometry, replacing whatever that chunk had.</summary>
     /// <param name="chunkKey">Packed chunk key.</param>
@@ -173,8 +195,20 @@ public sealed class ChunkGeometryArena : IDisposable
             indexTotal += (ulong)mesh.Indices.Length * sizeof(uint);
         }
 
-        var vertexCapacity = Math.Max(vertexTotal * 2, MinimumBufferBytes);
-        var indexCapacity = Math.Max(indexTotal * 2, MinimumBufferBytes);
+        // One deliberate presize for the whole view distance beats log2(n) doublings, each of which rewrites
+        // every resident chunk (docs/specs/network/play-movement.md 7.27).
+        var vertexCapacity = Math.Max(
+            ArenaSizing.NextCapacity(_vertexCapacity, _vertexUsed, (ulong)_vertexUsed, _meshes.Count, _expectedChunks, _presized),
+            MinimumBufferBytes);
+
+        var indexCapacity = Math.Max(
+            ArenaSizing.NextCapacity(_indexCapacity, _indexUsed, (ulong)_indexUsed, _meshes.Count, _expectedChunks, _presized),
+            MinimumBufferBytes);
+
+        if (!_presized && _expectedChunks > 0 && _meshes.Count >= ArenaSizing.SamplesForPresize)
+        {
+            _presized = true;
+        }
 
         _retired.Add(_vertex);
         _retired.Add(_index);

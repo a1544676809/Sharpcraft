@@ -32,6 +32,19 @@ internal sealed class InteractiveSession
     private bool _geometryDirty;
     private readonly ChunkWorkerPool? _pool;
 
+    /// <summary>
+    /// Chunks of view distance requested from the server. It bounds how much terrain can be resident, which is
+    /// what the geometry arena presizes for (docs/specs/network/play-movement.md 7.27).
+    /// </summary>
+    public const int ViewDistanceChunks = 8;
+
+    /// <summary>Chunks a square view of <see cref="ViewDistanceChunks"/> can hold.</summary>
+    public static int ExpectedChunkCount()
+    {
+        var side = (2 * ViewDistanceChunks) + 1;
+        return side * side;
+    }
+
     /// <summary>Decoded chunks installed per frame; keeps one batch from stalling the frame.</summary>
     private const int ParsedChunksPerFrame = 8;
     private int _jumpPressed;
@@ -220,7 +233,7 @@ internal sealed class InteractiveSession
         _streamingRequested = true;
         _live.Send(PlayPackets.BuildClientInformation(
             locale: "en_us",
-            viewDistance: 8,
+            viewDistance: ViewDistanceChunks,
             chatVisibility: 0,
             chatColors: true,
             skinParts: 0x7F,
