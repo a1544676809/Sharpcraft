@@ -45,6 +45,9 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-078 | worker 线程数自适应并可配置 | `docs/specs/network/play-movement.md` §7.24 | `ChunkWorkerPoolTests.TheDefaultWorkerCountFollowsTheMachine`、`AnExplicitWorkerCountIsHonoured` | `Client/World/ChunkWorkerPool` | 已完成 |
 | T-080 | 区块几何竞技场：只上传变化的区块 | `docs/specs/network/play-movement.md` §7.25 | 实测（放大化）：主线程重建 422 次/42.3 ms → **0 次**，上传 15,286 MB → 1,040 MB，帧数 422 → 3524 | `Framework/Rendering/ChunkGeometryArena`、`WindowedRenderer` | 已完成 |
 | T-083 | 区块解析失败不再丢弃整块地形 | `docs/specs/network/play-movement.md` §7.28 | `Repro_007_ChunkWithUnreadableBlockEntityTests`（2 项）+ 实测失败 25 → 1、空洞消失 | `Common/Network/ChunkPacketParser`、`Client/World/ChunkWorkerPool` | 已完成 |
+| T-085 | UI 模块规划：声明式结构与外观 + 代码化行为 + 热加载边界 + 性能预算 | `docs/modules/ui.md` | 待补（P0 落地时补）| 未开始 | 阻塞于评审 |
+| T-086 | UI P0 内核：2D 批次 + 位图字体 + 裁剪 + 最小声明式 + 文件热加载 | `docs/modules/ui.md` §7、§9、§10 | 待补 | 未开始 | 规格已就绪 |
+| T-087 | M5 出口的一半：聊天浮层 + 玩家列表 | `docs/modules/ui.md` §13 | 待补 | 未开始 | 规格已就绪 |
 | T-084 | 方块实体 1 字节错位（多读了一个不存在的布尔）| `docs/specs/network/play-movement.md` §7.28 | `Repro_007_ChunkWithUnreadableBlockEntityTests`（2 项）+ 实测失败 1 → **0**（328 个包全通过）| `Common/Nbt/NbtReader`、`Common/Network/ChunkPacketParser` | 已完成 |
 | T-082 | 关闭/最小化窗口时不再以零尺寸配置 swapchain | `docs/specs/network/play-movement.md` §7.26 | 实测：关窗与定时退出均干净退出（退出码 0，无 panic）| `Framework/Rendering/WindowedRenderer`、`Platform/WindowHost` | 已完成 |
 | T-081 | 按 view distance 预分配竞技场容量，消掉倍增尖峰 | `docs/specs/network/play-movement.md` §7.27 | `ArenaSizingTests`（5 项：无提示时倍增、按投影预分配、只预分配一次、样本不足、超大地形不被截断）+ 实测重建 7→2、上传 1278→588 MB | `Framework/Rendering/ArenaSizing`、`ChunkGeometryArena` | 已完成 |
