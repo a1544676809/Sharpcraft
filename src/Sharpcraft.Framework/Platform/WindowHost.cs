@@ -138,6 +138,22 @@ public sealed class WindowHost : IDisposable
             }
         });
 
+        // Characters come from the character callback rather than from key codes, so the keyboard layout and any
+        // input method are already applied. Keys give the actions, characters give the text.
+        glfw.SetCharCallback(handle, (_, codepoint) =>
+        {
+            if (codepoint is > 0 and <= 0xFFFF)
+            {
+                Input.AppendText((char)codepoint);
+            }
+            else if (codepoint > 0xFFFF)
+            {
+                var pair = char.ConvertFromUtf32((int)codepoint);
+                Input.AppendText(pair[0]);
+                Input.AppendText(pair[1]);
+            }
+        });
+
         glfw.SetCursorPosCallback(handle, (_, x, y) => Input.MoveCursor(new Vector2((float)x, (float)y)));
 
         glfw.SetMouseButtonCallback(handle, (_, button, action, _) =>
@@ -203,6 +219,9 @@ public sealed class WindowHost : IDisposable
     public bool Pump()
     {
         ObjectDisposedException.ThrowIf(!_initialised, this);
+
+        // Snapshot before processing, so this frame's edges describe what changed since the caller last looked.
+        Input.BeginFrame();
         _window.DoEvents();
         Input.HasFocus = QueryFocus();
         return !_window.IsClosing;

@@ -31,7 +31,19 @@ public enum InputAction
     Sneak,
 
     /// <summary>Release the cursor (escape).</summary>
-    ReleaseCursor
+    ReleaseCursor,
+
+    /// <summary>Show the player list while held (tab).</summary>
+    PlayerList,
+
+    /// <summary>Open the chat prompt (t).</summary>
+    OpenChat,
+
+    /// <summary>Submit the chat prompt (enter).</summary>
+    SendMessage,
+
+    /// <summary>Close the current screen (escape).</summary>
+    CloseScreen
 }
 
 /// <summary>
@@ -54,12 +66,47 @@ public sealed class KeyBindings
         [InputAction.Jump] = InputKey.Space,
         [InputAction.Sprint] = InputKey.LeftControl,
         [InputAction.Sneak] = InputKey.LeftShift,
-        [InputAction.ReleaseCursor] = InputKey.Escape
+        [InputAction.ReleaseCursor] = InputKey.Escape,
+        [InputAction.PlayerList] = InputKey.Tab,
+        [InputAction.OpenChat] = InputKey.T,
+        [InputAction.SendMessage] = InputKey.Enter,
+        [InputAction.CloseScreen] = InputKey.Escape
     });
 
     /// <summary>Key bound to an action, or null when it is unbound.</summary>
     /// <param name="action">Action to look up.</param>
-    public InputKey? this[InputAction action] => _keys.GetValueOrDefault(action);
+    /// <remarks>
+    /// TryGetValue rather than GetValueOrDefault: the latter returns the default of a value type, which here is the
+    /// first key in the enum, so an unbound action would silently behave as though that key were held.
+    /// </remarks>
+    public InputKey? this[InputAction action] => _keys.TryGetValue(action, out var key) ? key : null;
+
+    /// <summary>True while the key bound to the action is held.</summary>
+    /// <param name="input">Platform input state.</param>
+    /// <param name="action">Action to test.</param>
+    public bool IsDown(WindowInputState input, InputAction action)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        return this[action] is { } key && input.IsKeyDown(key);
+    }
+
+    /// <summary>True when the key bound to the action went down since the previous frame.</summary>
+    /// <param name="input">Platform input state.</param>
+    /// <param name="action">Action to test.</param>
+    public bool JustPressed(WindowInputState input, InputAction action)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        return this[action] is { } key && input.JustPressed(key);
+    }
+
+    /// <summary>True when the key bound to the action came up since the previous frame.</summary>
+    /// <param name="input">Platform input state.</param>
+    /// <param name="action">Action to test.</param>
+    public bool JustReleased(WindowInputState input, InputAction action)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        return this[action] is { } key && input.JustReleased(key);
+    }
 
     /// <summary>Creates a copy with one action rebound.</summary>
     /// <param name="action">Action to rebind.</param>

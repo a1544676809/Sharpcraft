@@ -30,6 +30,15 @@ public enum InputKey
     /// <summary>Left control — sprint.</summary>
     LeftControl,
 
-    /// <summary>Escape — release the cursor.</summary>
-    Escape
+    /// <summary>Escape — release the cursor, or close the current screen.</summary>
+    Escape,
+
+    /// <summary>Tab — hold to show the player list.</summary>
+    Tab,
+
+    /// <summary>T — open the chat prompt.</summary>
+    T,
+
+    /// <summary>Enter — submit the chat prompt.</summary>
+    Enter
 }
