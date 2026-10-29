@@ -174,6 +174,17 @@ internal sealed class InteractiveSession
         _live.Send(PlayPackets.BuildChunkBatchReceived(8f));
     }
 
+    /// <summary>
+    /// Adopts the rotation the server just sent. Vanilla sets yaw and pitch outright on a teleport, including
+    /// the join teleport, so a client that keeps its own heading after joining reports a facing the server
+    /// never gave it (docs/specs/network/play-movement.md 7.14).
+    /// </summary>
+    private void AdoptServerRotation(ServerPositionOutcome outcome)
+    {
+        const float degreesToRadians = MathF.PI / 180f;
+        _camera.SetLook(outcome.YawDegrees * degreesToRadians, outcome.PitchDegrees * degreesToRadians);
+    }
+
     private void PublishTick()
     {
         if (_live is null || _sync is null || !_live.IsAlive)
@@ -229,6 +240,7 @@ internal sealed class InteractiveSession
                         correction is not null)
                     {
                         var outcome = _sync.ApplyServerPosition(_player, correction, isTeleport: true);
+                        AdoptServerRotation(outcome);
                         _interpolator.Snap(_player, _camera.Yaw);
 
                         if (outcome.TeleportId is { } teleportId)
@@ -238,8 +250,8 @@ internal sealed class InteractiveSession
                                 _player.Position.X,
                                 _player.Position.Y,
                                 _player.Position.Z,
-                                _camera.Yaw * (180f / MathF.PI),
-                                _camera.Pitch * (180f / MathF.PI)));
+                                outcome.YawDegrees,
+                                outcome.PitchDegrees));
                         }
                     }
 

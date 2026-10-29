@@ -228,8 +228,81 @@ public sealed class PlayMovementTests
 
         sync.ApplyServerPosition(player, info, isTeleport: true);
 
+        // Bit 0 marks only X: Y and Z are absolute in this packet, so they take the packet values (zero here).
         Assert.Equal(11f, player.Position.X, 3);
-        Assert.Equal(5f, player.Position.Y, 3);
+        Assert.Equal(0f, player.Position.Y, 3);
+    }
+
+
+    [Fact]
+    public void AnAbsoluteTeleportAlsoSetsTheRotation()
+    {
+        var sync = new PlayerSync();
+        var player = Player();
+        var info = new PlayerPositionInfo(1, 10, 70, 10, 0, 0, 0, Yaw: 90f, Pitch: -20f, RelativeFlags: 0);
+
+        var outcome = sync.ApplyServerPosition(player, info, isTeleport: true);
+
+        // The join teleport carries the facing; keeping our own heading would leave us looking the wrong way.
+        Assert.Equal(90f, outcome.YawDegrees, 3);
+        Assert.Equal(-20f, outcome.PitchDegrees, 3);
+        Assert.Equal(90f, sync.CurrentYawDegrees, 3);
+    }
+
+    [Fact]
+    public void RelativeRotationIsAddedToTheCurrentFacing()
+    {
+        var sync = new PlayerSync();
+        var player = Player();
+
+        // Establish a facing first.
+        sync.ApplyServerPosition(
+            player,
+            new PlayerPositionInfo(0, 0, 0, 0, 0, 0, 0, Yaw: 30f, Pitch: 10f, RelativeFlags: 0),
+            isTeleport: true);
+
+        // Bits 3 and 4 mean yaw and pitch are offsets; both set here.
+        var info = new PlayerPositionInfo(
+            0, 0, 0, 0, 0, 0, 0, Yaw: 15f, Pitch: -5f,
+            RelativeFlags: PlayerPositionInfo.RelativeYaw | PlayerPositionInfo.RelativePitch);
+
+        var outcome = sync.ApplyServerPosition(player, info, isTeleport: true);
+
+        Assert.Equal(45f, outcome.YawDegrees, 3);
+        Assert.Equal(5f, outcome.PitchDegrees, 3);
+    }
+
+    [Fact]
+    public void OnlyTheAxesMarkedRelativeAreOffsets()
+    {
+        var sync = new PlayerSync();
+        var player = Player();
+        player.SetPosition(new Vector3(10f, 5f, 10f));
+
+        // Only X is relative; Y and Z are absolute.
+        var info = new PlayerPositionInfo(
+            0, 2, 70, 30, 0, 0, 0, 0, 0, RelativeFlags: PlayerPositionInfo.RelativeX);
+
+        sync.ApplyServerPosition(player, info, isTeleport: true);
+
+        Assert.Equal(12f, player.Position.X, 3);
+        Assert.Equal(70f, player.Position.Y, 3);
+        Assert.Equal(30f, player.Position.Z, 3);
+    }
+
+    [Fact]
+    public void TheTeleportAlsoCarriesTheVelocity()
+    {
+        var sync = new PlayerSync();
+        var player = Player();
+
+        var info = new PlayerPositionInfo(0, 0, 70, 0, DeltaX: 0.5, DeltaY: -0.08, DeltaZ: 0, 0, 0, RelativeFlags: 0);
+
+        sync.ApplyServerPosition(player, info, isTeleport: true);
+
+        // Knockback and fall velocity arrive the same way; ignoring them would leave stale motion.
+        Assert.Equal(0.5f, player.DeltaMovement.X, 3);
+        Assert.Equal(-0.08f, player.DeltaMovement.Y, 3);
     }
 
     private static PlayerEntity Player() =>

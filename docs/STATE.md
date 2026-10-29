@@ -235,6 +235,14 @@ M1（基础逻辑）与 M2（世界数据闭环）已达成并留有可执行证
 - 逐 tick 精度已由 WalkingSpeedPrecisionTests 钉死（0.2159）；斜向同速已由 DiagonalWalkingIsNotFasterThanStraightWalking 钉死
   （原版只在 lengthSqr>1 时归一化，斜向不会更快）。
 
+## 2026-10-29 已采纳服务端下发的朝向与速度
+
+- 查明进服传送包 `ClientboundPlayerPositionPacket` 携带 position + deltaMovement + yRot + xRot，
+  原版客户端直接 `setYRot/setXRot` 采纳并原样回执。
+- 我们此前只应用位置、忽略朝向与速度，且 `Relative` 只判断 bit0。已改为**逐分量**合并
+  （bit0/1/2=XYZ、bit3/4=yRot/xRot、bit5/6/7=速度、bit8=速度随旋转），4 项测试钉住。
+- 待办：仅旋转包 `ClientboundPlayerRotationPacket` 尚未处理（T-065）。
+
 ## 阻塞项
 
 - 无硬阻塞。

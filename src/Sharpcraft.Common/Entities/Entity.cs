@@ -111,6 +111,19 @@ public abstract class Entity
     /// <param name="feet">New feet position.</param>
     public void SetPosition(Vector3 feet) => Position = feet;
 
+    /// <summary>
+    /// Replaces position and velocity with an authoritative value from the server, which is what a teleport
+    /// or a correction means: the client does not blend, it adopts
+    /// (docs/specs/network/play-movement.md 7.14).
+    /// </summary>
+    /// <param name="feet">Authoritative feet position.</param>
+    /// <param name="deltaMovement">Authoritative velocity in blocks per tick.</param>
+    public void ApplyServerSnapshot(Vector3 feet, Vector3 deltaMovement)
+    {
+        Position = feet;
+        DeltaMovement = deltaMovement;
+    }
+
     /// <summary>True when the block below the feet is solid.</summary>
     protected bool TouchesGround()
     {

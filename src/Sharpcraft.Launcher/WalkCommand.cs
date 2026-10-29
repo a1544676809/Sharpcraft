@@ -285,11 +285,13 @@ internal static class WalkCommand
                         player.Tick(forward: 1f, strafe: 0f, jumping: false, sprinting: false, yaw: 0f);
                     }
 
+                    var yawDegrees = sync.CurrentYawDegrees;
+                    var pitchDegrees = sync.CurrentPitchDegrees;
                     var kind = Environment.GetEnvironmentVariable("MC_WALK_FORCE_POS") == "1"
                         ? MovePacketKind.PositionAndRotation
-                        : sync.Decide(player, 0f, 0f);
+                        : sync.Decide(player, yawDegrees, pitchDegrees);
 
-                    if (sync.Build(kind, player, 0f, 0f) is { } packet)
+                    if (sync.Build(kind, player, yawDegrees, pitchDegrees) is { } packet)
                     {
                         if (!TrySend(connection, packet, ref reason))
                         {
@@ -361,13 +363,14 @@ internal static class WalkCommand
         var outcome = sync.ApplyServerPosition(player, correction, isTeleport: true);
         if (outcome.TeleportId is { } teleportId)
         {
+            // Echo the rotation the server just gave us, not the one we had before.
             connection.Send(PlayMovementPackets.BuildAcceptTeleportation(
                 teleportId,
                 player.Position.X,
                 player.Position.Y,
                 player.Position.Z,
-                correction.Yaw,
-                correction.Pitch));
+                outcome.YawDegrees,
+                outcome.PitchDegrees));
         }
 
         return (outcome.TeleportId, outcome.Snapped, outcome.Distance);

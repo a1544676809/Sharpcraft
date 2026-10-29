@@ -454,3 +454,51 @@ public void teleport(PositionMoveRotation destination, Set<Relative> relatives) 
 
 **残余差异的已知来源**（不阻塞，记录备查）：本地 tick 实测 19.4–20.0/s（Windows 计时粒度），
 以及 1 秒采样的量化误差。
+
+### 7.14 进服时服务端是否下发视角——是，而且必须采纳
+
+**结论：会。** 但不在 `JoinGame` 里，而在紧随其后的 `ClientboundPlayerPositionPacket`：
+
+```
+ClientboundPlayerPositionPacket(int id, PositionMoveRotation change, Set<Relative> relatives)
+PositionMoveRotation = position(Vec3) + deltaMovement(Vec3) + yRot(float) + xRot(float)
+```
+
+即**进服的那次传送同时携带位置、速度、偏航、俯仰**。客户端处理（`ClientPacketListener.handleMovePlayer`）：
+
+```java
+setValuesFromPositionPacket(packet.change(), packet.relatives(), player, false);
+connection.send(new ServerboundAcceptTeleportationPacket(packet.id(), x, y, z, yRot, xRot));
+```
+
+`setValuesFromPositionPacket` 内部 `setPos` / `setDeltaMovement` / **`setYRot` / `setXRot`**，并把 old 值同步
+成同一结果，避免插值拖影。所以：**服务端给的朝向是权威值，客户端要直接采纳，不能保留自己的朝向。**
+
+#### `Relative` 是逐分量的（我们此前理解错了）
+
+| 位 | 含义 |
+| --- | --- |
+| 0 / 1 / 2 | X / Y / Z 位置是偏移 |
+| 3 / 4 | **yRot / xRot 是偏移** |
+| 5 / 6 / 7 | 速度分量是偏移 |
+| 8 | 速度向量随旋转一起旋转 |
+
+早期实现只判断 bit0 就把"整个位置"当成相对，且**完全忽略了朝向与速度**。已改为逐分量处理：
+`PlayerPositionInfo` 暴露每个位的常量与 `Has(bit)`，`PlayerSync.ApplyServerPosition` 对位置、速度、
+朝向分别按位合并（相对则相加，绝对则替换），并把权威朝向通过 `ServerPositionOutcome` 交给调用方。
+
+#### 我们曾经的偏差
+
+| 偏差 | 后果 |
+| --- | --- |
+| 不采纳传送里的 `yRot`/`xRot` | 进服后相机保留自己的朝向，向服务端申报一个它从未给过的视角 |
+| `AcceptTeleportation` 回的是本地朝向而非服务端朝向 | 同上，且与服务端记录不一致 |
+| 忽略传送里的 `deltaMovement` | 击退/位移后速度仍是旧值 |
+| 只判断 bit0 | 部分轴相对的包会把另两轴也当偏移，位置错误 |
+
+修复后 `walk` 实测：传送的 yaw/pitch 被采纳并原样回执，行走 10 秒修正仍为 **2 次**、区块 348 个。
+
+#### 尚未覆盖
+
+服务端还有**仅旋转**的包 `ClientboundPlayerRotationPacket`（`handleRotatePlayer`，带 `relativeY`/`relativeX`
+两个布尔），用于服务端驱动的转向（如 `/tp ... facing`、载具）。我们尚未处理，已登记为待办。

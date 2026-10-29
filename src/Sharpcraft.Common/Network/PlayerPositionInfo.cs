@@ -30,6 +30,34 @@ public sealed record PlayerPositionInfo(
     float Pitch,
     int RelativeFlags)
 {
-    /// <summary>True when the position components are offsets rather than absolute.</summary>
-    public bool IsPositionRelative => (RelativeFlags & 1) != 0;
+    /// <summary>Bit marking the X component (and its velocity) as relative.</summary>
+    public const int RelativeX = 1;
+
+    /// <summary>Bit marking the Y component as relative.</summary>
+    public const int RelativeY = 1 << 1;
+
+    /// <summary>Bit marking the Z component as relative.</summary>
+    public const int RelativeZ = 1 << 2;
+
+    /// <summary>Bit marking yaw as relative.</summary>
+    public const int RelativeYaw = 1 << 3;
+
+    /// <summary>Bit marking pitch as relative.</summary>
+    public const int RelativePitch = 1 << 4;
+
+    /// <summary>Bit marking the x velocity as relative.</summary>
+    public const int RelativeDeltaX = 1 << 5;
+
+    /// <summary>Bit marking the y velocity as relative.</summary>
+    public const int RelativeDeltaY = 1 << 6;
+
+    /// <summary>Bit marking the z velocity as relative.</summary>
+    public const int RelativeDeltaZ = 1 << 7;
+
+    /// <summary>Any of the position bits set.</summary>
+    public bool IsPositionRelative => (RelativeFlags & (RelativeX | RelativeY | RelativeZ)) != 0;
+
+    /// <summary>True when the given bit is set.</summary>
+    /// <param name="bit">One of the <c>Relative*</c> constants.</param>
+    public bool Has(int bit) => (RelativeFlags & bit) != 0;
 }

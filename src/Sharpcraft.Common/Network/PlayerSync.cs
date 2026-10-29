@@ -30,7 +30,14 @@ public enum MovePacketKind
 /// <param name="TeleportId">Id to echo back, or null when nothing should be sent.</param>
 /// <param name="Snapped">True when the local position was replaced outright.</param>
 /// <param name="Distance">Distance between the predicted and server position.</param>
-public sealed record ServerPositionOutcome(int? TeleportId, bool Snapped, double Distance);
+/// <param name="YawDegrees">Authoritative yaw in degrees after the correction.</param>
+/// <param name="PitchDegrees">Authoritative pitch in degrees after the correction.</param>
+public sealed record ServerPositionOutcome(
+    int? TeleportId,
+    bool Snapped,
+    double Distance,
+    float YawDegrees = 0f,
+    float PitchDegrees = 0f);
 
 /// <summary>
 /// Keeps a player entity and the server in step (docs/specs/network/play-movement.md 3-4): decides which
@@ -61,6 +68,12 @@ public sealed class PlayerSync
     private bool _lastOnGround;
     private bool _lastHorizontalCollision;
     private int _positionReminder;
+
+    /// <summary>Yaw in degrees as last set by the server or by the caller.</summary>
+    public float CurrentYawDegrees { get; private set; }
+
+    /// <summary>Pitch in degrees as last set by the server or by the caller.</summary>
+    public float CurrentPitchDegrees { get; private set; }
 
     /// <summary>Decides which packet must be sent for the current entity state.</summary>
     /// <param name="player">Player entity after its tick.</param>
@@ -163,27 +176,48 @@ public sealed class PlayerSync
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(info);
 
-        // Relative packets carry offsets; treating them as absolute puts the player in the wrong place.
+        // Vanilla merges the packet against the current state per component, so a packet may be absolute in
+        // some axes and relative in others, and the same applies to rotation and velocity.
+        var position = player.Position;
         var target = new Vector3(
-            info.IsPositionRelative ? player.Position.X + (float)info.X : (float)info.X,
-            info.IsPositionRelative ? player.Position.Y + (float)info.Y : (float)info.Y,
-            info.IsPositionRelative ? player.Position.Z + (float)info.Z : (float)info.Z);
+            (float)Axis(position.X, info.X, info.Has(PlayerPositionInfo.RelativeX)),
+            (float)Axis(position.Y, info.Y, info.Has(PlayerPositionInfo.RelativeY)),
+            (float)Axis(position.Z, info.Z, info.Has(PlayerPositionInfo.RelativeZ)));
+
+        var delta = player.DeltaMovement;
+        var velocity = new Vector3(
+            (float)Axis(delta.X, info.DeltaX, info.Has(PlayerPositionInfo.RelativeDeltaX)),
+            (float)Axis(delta.Y, info.DeltaY, info.Has(PlayerPositionInfo.RelativeDeltaY)),
+            (float)Axis(delta.Z, info.DeltaZ, info.Has(PlayerPositionInfo.RelativeDeltaZ)));
+
+        var currentYaw = CurrentYawDegrees;
+        var currentPitch = CurrentPitchDegrees;
+        var yaw = Axis(currentYaw, info.Yaw, info.Has(PlayerPositionInfo.RelativeYaw));
+        var pitch = Axis(currentPitch, info.Pitch, info.Has(PlayerPositionInfo.RelativePitch));
+
+        CurrentYawDegrees = (float)yaw;
+        CurrentPitchDegrees = (float)pitch;
 
         var distance = Vector3.Distance(player.Position, target);
 
         if (isTeleport || distance > SnapThreshold)
         {
-            player.SetPosition(target);
+            player.ApplyServerSnapshot(target, velocity);
             _lastX = double.NaN;
-            return new ServerPositionOutcome(info.TeleportId, Snapped: true, distance);
+            return new ServerPositionOutcome(info.TeleportId, Snapped: true, distance, (float)yaw, (float)pitch);
         }
 
         if (distance > 0f)
         {
+            // Small deviations are blended so the camera does not jump; the server treats the next packet as
+            // authoritative anyway, so this only smooths the visible path.
             player.SetPosition(Vector3.Lerp(player.Position, target, BlendFraction));
             _lastX = double.NaN;
         }
 
-        return new ServerPositionOutcome(null, Snapped: false, distance);
+        return new ServerPositionOutcome(null, Snapped: false, distance, (float)yaw, (float)pitch);
     }
+
+    /// <summary>Resolves one component: relative means add to the current value, absolute means replace.</summary>
+    private static double Axis(double current, double value, bool relative) => relative ? current + value : value;
 }
