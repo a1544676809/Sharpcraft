@@ -55,6 +55,89 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
 }
 """;
 
+    /// <summary>Shader for text: samples the glyph sheet and tints by the vertex colour.</summary>
+    public const string TextShaderSourceText = """
+struct Transform {
+    matrix: mat4x4<f32>,
+};
+
+@group(0) @binding(0) var glyphs: texture_2d<f32>;
+@group(0) @binding(1) var glyphSampler: sampler;
+@group(0) @binding(2) var<uniform> transform: Transform;
+
+struct VertexInput {
+    @location(0) position: vec2<f32>,
+    @location(1) colour: vec4<f32>,
+    @location(2) uv: vec2<f32>,
+};
+
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) colour: vec4<f32>,
+    @location(1) uv: vec2<f32>,
+};
+
+@vertex
+fn vs_main(input: VertexInput) -> VertexOutput {
+    var output: VertexOutput;
+    output.position = transform.matrix * vec4<f32>(input.position, 0.0, 1.0);
+    output.colour = input.colour;
+    output.uv = input.uv;
+    return output;
+}
+
+@fragment
+fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
+    let coverage = textureSample(glyphs, glyphSampler, input.uv).a;
+    // Glyph sheets carry coverage in alpha, so the vertex colour supplies the ink.
+    return vec4<f32>(input.colour.rgb, input.colour.a * coverage);
+}
+""";
+
+    /// <summary>Creates the textured interface pipeline used for text.</summary>
+    /// <param name="device">Device to create it on.</param>
+    /// <param name="format">Colour target format.</param>
+    /// <param name="layout">Pipeline layout; expects the glyph sheet, a sampler and the transform.</param>
+    public static RenderPipeline CreateTextPipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
+    {
+        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
+        {
+            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(TextShaderSourceText))
+        });
+
+        var blend = new WGPUBlendState
+        {
+            color = new WGPUBlendComponent
+            {
+                operation = WGPUBlendOperation.Add,
+                srcFactor = WGPUBlendFactor.SrcAlpha,
+                dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
+            },
+            alpha = new WGPUBlendComponent
+            {
+                operation = WGPUBlendOperation.Add,
+                srcFactor = WGPUBlendFactor.One,
+                dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
+            }
+        };
+
+        var depth = DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.Always, write: false);
+
+        return device.CreateRenderPipeline(
+            shader,
+            "vs_main"u8,
+            shader,
+            "fs_main"u8,
+            [new ColorTargetState(format) { Blend = blend }],
+            layout: layout,
+            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None, FrontFace = WGPUFrontFace.CCW },
+            multisample: MultisampleState.Default,
+            depthStencil: depth,
+            vertexStride: (ulong)VertexLayout.UiStride,
+            vertexStepMode: WGPUVertexStepMode.Vertex,
+            vertexAttributes: VertexLayout.UiTextAttributes());
+    }
+
     /// <summary>Creates the interface pipeline.</summary>
     /// <param name="device">Device to create it on.</param>
     /// <param name="format">Colour target format, which must match the surface.</param>

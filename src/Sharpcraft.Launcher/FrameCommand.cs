@@ -172,6 +172,43 @@ internal static class FrameCommand
     /// </summary>
     /// <param name="layout">Block state layout, or null when it is not known yet.</param>
     /// <returns>Atlas plus mapping, or null when no pack is installed.</returns>
+    /// <summary>
+    /// Loads the glyph sheet from the same asset pack the block textures come from, so text uses the game's own
+    /// font without any asset entering the repository (docs/modules/ui.md 5).
+    /// </summary>
+    internal static Sharpcraft.Client.Ui.BitmapFont? PrepareFont()
+    {
+        var packPath = FindPack();
+
+        if (packPath is null)
+        {
+            Console.WriteLine("font: no asset pack found; text uses placeholder bars");
+            return null;
+        }
+
+        using var stack = new AssetStack { Policy = MissingResourcePolicy.Warn }
+            .Add(new BuiltInFallbackSource())
+            .Add(new ZipAssetSource(packPath, "base-pack"));
+
+        var bytes = stack.Read(
+            ResourceKind.Texture,
+            new Sharpcraft.Common.Identifiers.Identifier("minecraft", "font/ascii"));
+
+        if (bytes is null)
+        {
+            Console.WriteLine("font: the ascii sheet is missing from the pack; text uses placeholder bars");
+            return null;
+        }
+
+        var started = System.Diagnostics.Stopwatch.StartNew();
+        var image = Sharpcraft.Common.Imaging.PngDecoder.Decode(bytes);
+        var font = Sharpcraft.Client.Ui.BitmapFont.FromSheet(image);
+        started.Stop();
+
+        Console.WriteLine($"font: {font.CellWidth}x{font.CellHeight} cells, line {font.Height}, {started.ElapsedMilliseconds} ms");
+        return font;
+    }
+
     internal static (SpriteAtlas Atlas, BlockSpriteMap Map)? PrepareSprites(BlockStateLayout? layout)
     {
         if (layout is null)

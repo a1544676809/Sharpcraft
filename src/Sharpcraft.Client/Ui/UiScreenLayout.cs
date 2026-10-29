@@ -85,9 +85,9 @@ public sealed class UiStyles
             ReadFloat(node, "Padding", 0f),
             ReadFloat(node, "Spacing", 0f));
 
-        foreach (var child in node.Children)
+        for (var index = 0; index < node.Children.Count; index++)
         {
-            Walk(child);
+            Walk(node.Children[index]);
         }
     }
 
@@ -102,32 +102,32 @@ public sealed class UiStyles
 /// </summary>
 /// <remarks>
 /// One pass, no measurement pass: heights come from the document or from the element kind, so a screen's layout
-/// never depends on a sibling's layout beyond the running cursor. Text is drawn as one cell per character until
-/// the bitmap font lands, which keeps batching and layout verifiable in the meantime.
+/// never depends on a sibling's layout beyond the running cursor. Given a font, text becomes textured quads from
+/// the glyph sheet; without one it falls back to one bar per character, which keeps the kernel testable and
+/// usable before assets are available.
 /// </remarks>
 public static class UiScreenLayout
 {
-    /// <summary>Height of one text line in virtual pixels.</summary>
+    /// <summary>Height of one text line when no font is supplied.</summary>
     public const float LineHeight = 12f;
 
-    /// <summary>Advance per character, in virtual pixels.</summary>
+    /// <summary>Advance per placeholder character.</summary>
     public const float CharacterAdvance = 7f;
 
-    /// <summary>Size of one character cell.</summary>
+    /// <summary>Width of one placeholder character cell.</summary>
     public const float CharacterWidth = 5f;
 
-    /// <summary>Height of one character cell.</summary>
+    /// <summary>Height of one placeholder character cell.</summary>
     public const float CharacterHeight = 7f;
 
     /// <summary>The screen shown when no document is supplied, so the layer is visible while it is built.</summary>
     public const string DefaultDocument = """
 <Screen Padding="8">
-  <!-- A HUD panel sits behind its text rather than tinting the whole screen; until documents ship with the
-       asset pack this is also the smoke test for the layout kernel. -->
+  <!-- A HUD panel sits behind its text rather than tinting the whole screen. -->
   <StackPanel Background="#A0000000" Padding="6" Spacing="2">
-    <TextBlock Text="SHARPCRAFT" Colour="#FFFFFFFF" Height="16" />
+    <TextBlock Text="SHARPCRAFT" Colour="#FFFFFFFF" Height="24" />
     <TextBlock Text="ui kernel online" Colour="#FF7FC4FF" />
-    <TextBlock Text="glyphs arrive with the font slice" Colour="#FFB0B0B0" />
+    <TextBlock Text="glyphs from the game font sheet" Colour="#FFB0B0B0" />
   </StackPanel>
 </Screen>
 """;
@@ -138,7 +138,16 @@ public static class UiScreenLayout
     /// <param name="width">Virtual width.</param>
     /// <param name="height">Virtual height.</param>
     /// <param name="geometry">Receives the quads; cleared first.</param>
-    public static void Build(UiNode screen, UiStyles styles, float width, float height, UiGeometry geometry)
+    /// <param name="font">Glyph metrics, or null to draw placeholder bars.</param>
+    /// <param name="textScale">Scale from font pixels to virtual pixels.</param>
+    public static void Build(
+        UiNode screen,
+        UiStyles styles,
+        float width,
+        float height,
+        UiGeometry geometry,
+        BitmapFont? font = null,
+        float textScale = 2f)
     {
         ArgumentNullException.ThrowIfNull(screen);
         ArgumentNullException.ThrowIfNull(styles);
@@ -160,7 +169,15 @@ public static class UiScreenLayout
         }
 
         var cursor = style.Padding;
-        LayoutChildren(screen, styles, style.Padding, ref cursor, width - (style.Padding * 2f), geometry);
+        LayoutChildren(
+            screen,
+            styles,
+            style.Padding,
+            ref cursor,
+            width - (style.Padding * 2f),
+            geometry,
+            font,
+            textScale);
     }
 
     private static void LayoutChildren(
@@ -169,7 +186,9 @@ public static class UiScreenLayout
         float left,
         ref float cursor,
         float available,
-        UiGeometry geometry)
+        UiGeometry geometry,
+        BitmapFont? font,
+        float textScale)
     {
         var spacing = styles.Of(parent).Spacing;
 
@@ -180,11 +199,11 @@ public static class UiScreenLayout
             switch (child.Name)
             {
                 case "StackPanel":
-                    LayoutPanel(child, styles, left, ref cursor, available, geometry);
+                    LayoutPanel(child, styles, left, ref cursor, available, geometry, font, textScale);
                     break;
 
                 case "TextBlock":
-                    LayoutText(child, styles, left, ref cursor, geometry);
+                    LayoutText(child, styles, left, ref cursor, geometry, font, textScale);
                     break;
 
                 default:
@@ -204,7 +223,9 @@ public static class UiScreenLayout
         float left,
         ref float cursor,
         float available,
-        UiGeometry geometry)
+        UiGeometry geometry,
+        BitmapFont? font,
+        float textScale)
     {
         var style = styles.Of(panel);
 
@@ -215,92 +236,141 @@ public static class UiScreenLayout
         {
             // Sized to its content rather than to the row: a HUD panel should frame its text, not tint the width
             // of the screen.
-            var panelHeight = MeasurePanel(panel, styles, style.Padding, style.Spacing);
-            var contentWidth = MeasurePanelWidth(panel, styles) + (style.Padding * 2f);
+            var panelHeight = MeasurePanel(panel, styles, font, textScale) + (style.Padding * 2f);
+            var contentWidth = MeasurePanelWidth(panel, styles, font, textScale) + (style.Padding * 2f);
             geometry.AddRectangle(left, cursor, Math.Min(available, contentWidth), panelHeight, style.Colour);
         }
 
         cursor += style.Padding;
-        LayoutChildren(panel, styles, innerLeft, ref cursor, innerWidth, geometry);
+        LayoutChildren(panel, styles, innerLeft, ref cursor, innerWidth, geometry, font, textScale);
         cursor += style.Padding;
     }
 
-    private static float MeasurePanelWidth(UiNode node, UiStyles styles)
+    private static float MeasurePanel(UiNode panel, UiStyles styles, BitmapFont? font, float textScale)
+    {
+        var total = 0f;
+        var spacing = styles.Of(panel).Spacing;
+
+        for (var index = 0; index < panel.Children.Count; index++)
+        {
+            total += spacing;
+            total += MeasureChild(panel.Children[index], styles, font, textScale);
+        }
+
+        return total;
+    }
+
+    private static float MeasureChild(UiNode node, UiStyles styles, BitmapFont? font, float textScale)
+    {
+        if (node.Name != "TextBlock")
+        {
+            return MeasurePanel(node, styles, font, textScale) + (styles.Of(node).Padding * 2f);
+        }
+
+        return LineHeightOf(node, styles, font, textScale);
+    }
+
+    private static float MeasurePanelWidth(UiNode node, UiStyles styles, BitmapFont? font, float textScale)
     {
         if (node.Name == "TextBlock")
         {
-            return node.Get("Text").Length * CharacterAdvance;
+            var text = node.Get("Text");
+
+            if (font is null)
+            {
+                return text.Length * CharacterAdvance;
+            }
+
+            return font.MeasureWidth(text) * textScale;
         }
 
         var widest = 0f;
 
         for (var index = 0; index < node.Children.Count; index++)
         {
-            widest = Math.Max(widest, MeasurePanelWidth(node.Children[index], styles));
+            widest = Math.Max(widest, MeasurePanelWidth(node.Children[index], styles, font, textScale));
         }
 
-        // The padding comes from the pre-parsed styles: reading the attribute here would parse a string on every
-        // frame, which the allocation test catches.
+        // Padding comes from the pre-parsed styles: reading the attribute here would parse a string every frame,
+        // which the allocation test catches.
         return widest + (styles.Of(node).Padding * 2f);
     }
 
-    private static float MeasurePanel(UiNode panel, UiStyles styles, float padding, float spacing)
+    private static float LineHeightOf(UiNode node, UiStyles styles, BitmapFont? font, float textScale)
     {
-        var total = padding * 2f;
+        var declared = styles.Of(node).Height;
 
-        // Indexed loops throughout: enumerating an IReadOnlyList through its interface allocates an enumerator,
-        // which the per frame allocation test catches.
-        for (var index = 0; index < panel.Children.Count; index++)
+        if (declared >= 0f)
         {
-            var child = panel.Children[index];
-            total += spacing;
-
-            if (child.Name == "TextBlock")
-            {
-                var height = styles.Of(child).Height;
-                total += height >= 0f ? height : LineHeight;
-            }
-            else
-            {
-                var inner = styles.Of(child);
-                total += MeasurePanel(child, styles, inner.Padding, inner.Spacing);
-            }
+            return declared;
         }
 
-        return total;
+        return font is null ? LineHeight : font.Height * textScale;
     }
 
-    private static void LayoutText(UiNode text, UiStyles styles, float left, ref float cursor, UiGeometry geometry)
+    private static void LayoutText(
+        UiNode text,
+        UiStyles styles,
+        float left,
+        ref float cursor,
+        UiGeometry geometry,
+        BitmapFont? font,
+        float textScale)
     {
         var content = text.Get("Text");
-        var style = styles.Of(text);
-        var colour = style.Colour == 0u ? 0xFFFFFFFFu : style.Colour;
-        var height = style.Height >= 0f ? style.Height : LineHeight;
+        var colour = styles.Of(text).Colour;
+        colour = colour == 0u ? 0xFFFFFFFFu : colour;
+        var lineHeight = LineHeightOf(text, styles, font, textScale);
 
-        // One cell per visible character; the advance is fixed until real glyph metrics arrive with the font.
-        var x = left;
+        if (font is null)
+        {
+            // Placeholder: one bar per character, so layout and batching stay verifiable without any asset.
+            var barPen = left;
 
-        // Indexed rather than foreach: enumerating a string allocates a CharEnumerator, which would show up in
-        // the per frame budget.
+            for (var index = 0; index < content.Length; index++)
+            {
+                if (content[index] != ' ')
+                {
+                    geometry.AddRectangle(
+                        barPen,
+                        cursor + ((lineHeight - CharacterHeight) / 2f),
+                        CharacterWidth,
+                        CharacterHeight,
+                        colour);
+                }
+
+                barPen += CharacterAdvance;
+            }
+
+            cursor += lineHeight;
+            return;
+        }
+
+        // Each character becomes one textured quad. The whole cell is drawn and the pen advances by the glyph's own
+        // advance, so the transparent margin of a narrow glyph overlaps the next cell without adding ink.
+        var cellWidth = font.CellWidth * textScale;
+        var cellHeight = font.CellHeight * textScale;
+        var top = cursor + ((lineHeight - cellHeight) / 2f);
+        var pen = left;
+
         for (var index = 0; index < content.Length; index++)
         {
             var character = content[index];
 
-            if (character != ' ')
+            if (!font.TryGet(character, out var glyph))
             {
-                // Placeholder glyph: a narrow bar per character, so the block reads as a line of text rather
-                // than as a row of squares until real glyphs arrive.
-                geometry.AddRectangle(
-                    x,
-                    cursor + ((height - CharacterHeight) / 2f),
-                    CharacterWidth,
-                    CharacterHeight,
-                    colour);
+                continue;
             }
 
-            x += CharacterAdvance;
+            if (character != ' ')
+            {
+                var (u0, v0, u1, v1) = font.Uv(glyph);
+                geometry.AddTexturedRectangle(pen, top, cellWidth, cellHeight, u0, v0, u1, v1, colour);
+            }
+
+            pen += glyph.Advance * textScale;
         }
 
-        cursor += height;
+        cursor += lineHeight;
     }
 }

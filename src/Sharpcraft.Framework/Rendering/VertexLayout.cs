@@ -42,6 +42,20 @@ public static class VertexLayout
         new(WGPUVertexFormat.Unorm8x4, UiColourOffset, 1)
     ];
 
+    /// <summary>Offset of the texture coordinate inside the interface vertex.</summary>
+    public const int UiTextureOffset = 8;
+
+    /// <summary>
+    /// Interface attributes for the textured pass. Same vertex as <see cref="UiAttributes"/>, with the texture
+    /// coordinate declared as location two so the two shaders can differ only where they must.
+    /// </summary>
+    public static VertexAttribute[] UiTextAttributes() =>
+    [
+        new(WGPUVertexFormat.Float32x2, UiPositionOffset, 0),
+        new(WGPUVertexFormat.Float32x2, UiTextureOffset, 2),
+        new(WGPUVertexFormat.Unorm8x4, UiColourOffset, 1)
+    ];
+
     /// <summary>Builds the attribute list; a fresh array each call because the API copies it.</summary>
     public static VertexAttribute[] Attributes() =>
     [

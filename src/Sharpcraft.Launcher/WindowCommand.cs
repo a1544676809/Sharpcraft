@@ -123,6 +123,10 @@ internal static class WindowCommand
         var uiDocument = UiMarkup.Parse(uiSource);
         var uiStyles = UiStyles.Compile(uiDocument);
         var uiGeometry = new UiGeometry();
+        var uiFont = FrameCommand.PrepareFont();
+        var glyphTexture = uiFont is null
+            ? null
+            : new TextureData(uiFont.Sheet.Width, uiFont.Sheet.Height, uiFont.Sheet.Pixels);
 
         // Without an atlas there is no cell to sample, so entity boxes are simply not drawn.
         var entitySource = entitySprite is { } sprite
@@ -182,9 +186,10 @@ internal static class WindowCommand
             },
             expectedChunks: InteractiveSession.ExpectedChunkCount(),
             dynamicGeometry: entitySource,
+            glyphTexture: glyphTexture,
             uiGeometry: () =>
             {
-                UiScreenLayout.Build(uiDocument, uiStyles, width, height, uiGeometry);
+                UiScreenLayout.Build(uiDocument, uiStyles, width, height, uiGeometry, uiFont);
                 return uiGeometry;
             });
 

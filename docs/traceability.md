@@ -130,4 +130,5 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-102 | UI P0：最小声明式内核（`Screen`/`StackPanel`/`TextBlock`，未知元素与属性拒绝）| `docs/modules/ui.md` §7、§13.1；`docs/src/sharpcraft-client/ui.md` | `UiMarkupTests`（9 项：树形、注释与自闭合、三类拒绝、颜色两种写法、布局落位、64 帧零分配）| `Client/Ui/UiMarkup`、`UiScreenLayout`、`UiColours`、`UiStyles` | 已完成 |
 | T-103 | UI P0：热加载（文件变更 → 后台解析校验 → 原子交换 + 按 `id` 迁移状态）| `docs/modules/ui.md` §8 | 待补 | 未开始 | 规格已就绪 |
 | T-105 | 光标捕获缺陷：无焦点也锁鼠标、Esc 后视角仍跟随、点击无法重捕获 | `docs/modules/input.md` §7 | `Repro_008_CursorCaptureTests`（5 项：释放后忽略移动、捕获时累加、重捕获无跳变、点击只报告一次、失焦清空含待处理点击）| `Framework/Platform/WindowInputState`、`WindowHost`、`Launcher/InteractiveSession` | 已完成 |
-| T-106 | UI P0：文字**渲染**（带纹理的 2D 管线 + 字形图集 + 行布局缓存），替换占位竖条 | `docs/modules/ui.md` §9、§10 | 待补 | 未开始 | 规格已就绪 |
+| T-106 | UI P0：文字渲染（带纹理 2D 管线 + 字形纹理 + 按材质分段），替换占位竖条 | `docs/modules/ui.md` §9；`docs/src/sharpcraft-client/ui.md` §4.2 | `UiTextRenderingTests`（5 项：纯色+文字=两区间、连续同材质合并、每可见字符一个四边形、按度量而非格宽前进、无字体时退回占位）| `Framework/Rendering/UiRenderer`（文字管线）、`VertexLayout.UiTextAttributes`、`WindowedRenderer`（材质分段绘制）、`Client/Ui/BitmapFont`、`Launcher/FrameCommand.PrepareFont` | 已完成 |
+| T-107 | 渲染间歇性 wgpu 断言（`src/lib.rs:422`）：文字管线首次绘制时偶发，尚未定位 | `docs/modules/ui.md` §13.1 | 待补（需拿到完整 validation 文本）| 未开始 | 规格不足 |

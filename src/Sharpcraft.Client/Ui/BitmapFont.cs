@@ -36,6 +36,7 @@ public sealed class BitmapFont
     public const int SheetColumns = 16;
 
     private readonly Dictionary<char, Glyph> _glyphs = [];
+    private readonly RgbaImage _sheet;
     private readonly int _sheetWidth;
     private readonly int _sheetHeight;
     private readonly int _cellWidth;
@@ -43,6 +44,7 @@ public sealed class BitmapFont
 
     private BitmapFont(RgbaImage sheet, int height, int ascent, int columns)
     {
+        _sheet = sheet;
         _sheetWidth = sheet.Width;
         _sheetHeight = sheet.Height;
         _cellWidth = Math.Max(1, sheet.Width / columns);
@@ -65,6 +67,9 @@ public sealed class BitmapFont
             _glyphs[(char)slot] = new Glyph(slotX, slotY, advance, width);
         }
     }
+
+    /// <summary>The decoded sheet, so it can be uploaded as a texture unchanged.</summary>
+    public RgbaImage Sheet => _sheet;
 
     /// <summary>Line height in font pixels.</summary>
     public int Height { get; }

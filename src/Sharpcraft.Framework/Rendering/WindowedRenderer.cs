@@ -45,7 +45,8 @@ public static class WindowedRenderer
         Func<IReadOnlyList<(long Key, GeometryData Mesh)>?>? geometryUpdates = null,
         int expectedChunks = 0,
         Func<DynamicGeometry?>? dynamicGeometry = null,
-        Func<UiGeometry?>? uiGeometry = null)
+        Func<UiGeometry?>? uiGeometry = null,
+        TextureData? glyphTexture = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -140,14 +141,57 @@ public static class WindowedRenderer
 
         using var pipeline = CreatePipeline(device, format, pipelineLayout);
         using var uiPipeline = UiRenderer.CreatePipeline(device, format, pipelineLayout);
+        using var uiTextPipeline = UiRenderer.CreateTextPipeline(device, format, pipelineLayout);
 
         // The interface layer needs its own transform: one uniform buffer cannot hold both the world camera and
         // the orthographic projection while a single pass reads from it.
         var uiTransformBuffer = CreateGeometryBuffer(device, VertexLayout.CameraUniformSize, BufferUsage.Uniform | BufferUsage.CopyDst);
+
+        // Glyphs live in their own sheet rather than the block atlas: the two have different sampling needs and
+        // mixing them would make text blurry at small sizes.
+        var glyphData = glyphTexture ?? TextureData.White;
+        using var glyphSheet = device.CreateTexture(new TextureDescriptor
+        {
+            Size = new WGPUExtent3D
+            {
+                width = (uint)glyphData.Width,
+                height = (uint)glyphData.Height,
+                depthOrArrayLayers = 1
+            },
+            MipLevelCount = 1,
+            SampleCount = 1,
+            Dimension = WGPUTextureDimension._2D,
+            Format = WGPUTextureFormat.RGBA8Unorm,
+            Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
+        });
+
+        device.Queue.WriteTexture(
+            glyphSheet,
+            glyphData.Rgba,
+            (uint)(glyphData.Width * 4),
+            (uint)glyphData.Height,
+            new WGPUExtent3D
+            {
+                width = (uint)glyphData.Width,
+                height = (uint)glyphData.Height,
+                depthOrArrayLayers = 1
+            },
+            0,
+            new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+
+        using var glyphView = glyphSheet.CreateView();
         using var uiBindGroup = device.CreateBindGroup(
             bindGroupLayout,
             [
                 BindGroupEntry.TextureView(0, atlasView),
+                BindGroupEntry.Sampler(1, atlasSampler),
+                BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize)
+            ]);
+
+        using var uiTextBindGroup = device.CreateBindGroup(
+            bindGroupLayout,
+            [
+                BindGroupEntry.TextureView(0, glyphView),
                 BindGroupEntry.Sampler(1, atlasSampler),
                 BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize)
             ]);
@@ -471,14 +515,32 @@ public static class WindowedRenderer
 
             if (uiIndexCount > 0 && uiRanges.Length > 0)
             {
-                pass.SetPipeline(uiPipeline);
-                pass.SetBindGroup(0, uiBindGroup);
                 pass.SetVertexBuffer(0, uiVertex, 0, uiVertexCapacity);
                 pass.SetIndexBuffer(uiIndex, WGPUIndexFormat.Uint32, 0, (ulong)uiIndexCount * sizeof(uint));
 
+                var boundMaterial = (UiMaterial?)null;
+
                 // One draw per scissor range, which is what keeps a screen of many widgets down to a few draws.
+                // The pipeline and bind group only change when the material does, so panels then text cost two
+                // bindings for the whole screen rather than one per range.
                 foreach (var range in uiRanges)
                 {
+                    if (boundMaterial != range.Material)
+                    {
+                        boundMaterial = range.Material;
+
+                        if (range.Material == UiMaterial.Text)
+                        {
+                            pass.SetPipeline(uiTextPipeline);
+                            pass.SetBindGroup(0, uiTextBindGroup);
+                        }
+                        else
+                        {
+                            pass.SetPipeline(uiPipeline);
+                            pass.SetBindGroup(0, uiBindGroup);
+                        }
+                    }
+
                     var left = Math.Max(0f, range.MinX * uiScale);
                     var top = Math.Max(0f, range.MinY * uiScale);
                     var right = Math.Min(frameWidth, range.MaxX * uiScale);

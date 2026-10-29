@@ -3,19 +3,27 @@
 
 namespace Sharpcraft.Framework.Rendering;
 
+/// <summary>Which pipeline a range must be drawn with.</summary>
+public enum UiMaterial
+{
+    /// <summary>Flat colour, no texture sampling.</summary>
+    Colour,
+
+    /// <summary>Textured, sampling the glyph atlas.</summary>
+    Text
+}
+
 /// <summary>
 /// Geometry for the two dimensional layer: quads, text runs and scissor ranges, rebuilt every frame
 /// (docs/modules/ui.md 9).
 /// </summary>
 /// <remarks>
-/// The layout is deliberately not the three dimensional one. A quad vertex is twenty bytes, position two floats,
+/// The layout is deliberately not the three dimensional one. A quad vertex is twenty bytes: position two floats,
 /// texture coordinate two floats, and one packed colour word, against forty eight bytes for world geometry.
-/// Packing the colour into a single word is what keeps the vertex small; the packed value travels through a float
-/// array unchanged.
 /// <para>
-/// Callers append data and never issue draw calls. Changing the scissor closes the current range and opens a new
-/// one, so the renderer can walk the ranges and bind each once; a screen made of a handful of panels therefore
-/// costs a handful of draws regardless of how many quads it contains.
+/// Callers append data and never issue draw calls. A range closes when the scissor rectangle or the material
+/// changes, so the renderer binds each range once; a screen made of a couple of panels plus their text therefore
+/// costs a couple of draws regardless of how many quads it contains.
 /// </para>
 /// </remarks>
 public sealed class UiGeometry
@@ -35,9 +43,17 @@ public sealed class UiGeometry
     private int _vertexFloats;
     private int _indexCount;
     private int _rangeCount;
+    private UiMaterial _material;
 
-    /// <summary>One contiguous run of indices sharing a scissor rectangle.</summary>
-    public readonly record struct Range(float MinX, float MinY, float MaxX, float MaxY, int FirstIndex, int IndexCount);
+    /// <summary>One contiguous run of indices sharing a scissor rectangle and a material.</summary>
+    public readonly record struct Range(
+        float MinX,
+        float MinY,
+        float MaxX,
+        float MaxY,
+        UiMaterial Material,
+        int FirstIndex,
+        int IndexCount);
 
     /// <summary>Vertex data in use.</summary>
     public ReadOnlySpan<float> Vertices => _vertices.AsSpan(0, _vertexFloats);
@@ -57,9 +73,10 @@ public sealed class UiGeometry
         _vertexFloats = 0;
         _indexCount = 0;
         _rangeCount = 0;
+        _material = UiMaterial.Colour;
     }
 
-    /// <summary>Starts a new scissor range. Calling it with the current rectangle again is a no-op.</summary>
+    /// <summary>Starts a new scissor range, or retargets the current one when it is still empty.</summary>
     /// <param name="minX">Left edge in virtual pixels.</param>
     /// <param name="minY">Top edge in virtual pixels.</param>
     /// <param name="maxX">Right edge.</param>
@@ -69,35 +86,77 @@ public sealed class UiGeometry
         if (_rangeCount > 0)
         {
             var current = _ranges[_rangeCount - 1];
-            var same = current.MinX == minX && current.MinY == minY && current.MaxX == maxX && current.MaxY == maxY;
-            var emptySoFar = current.IndexCount == 0;
-            var reused = _rangeCount - 1;
+            var same = current.MinX == minX && current.MinY == minY && current.MaxX == maxX && current.MaxY == maxY
+                && current.Material == _material;
 
             if (same)
             {
                 return;
             }
 
-            if (emptySoFar)
+            if (current.IndexCount == 0)
             {
                 // An unused range is simply retargeted, so opening and closing without drawing costs nothing.
-                _ranges[reused] = current with { MinX = minX, MinY = minY, MaxX = maxX, MaxY = maxY };
+                _ranges[_rangeCount - 1] = current with
+                {
+                    MinX = minX,
+                    MinY = minY,
+                    MaxX = maxX,
+                    MaxY = maxY,
+                    Material = _material
+                };
+
                 return;
             }
         }
 
         EnsureRangeRoom();
-        _ranges[_rangeCount++] = new Range(minX, minY, maxX, maxY, _indexCount, 0);
+        _ranges[_rangeCount++] = new Range(minX, minY, maxX, maxY, _material, _indexCount, 0);
     }
 
-    /// <summary>Appends a solid rectangle, optionally snapping its edges to whole pixels.</summary>
+    /// <summary>
+    /// Switches the material, closing the current range so the renderer can bind the right pipeline. Consecutive
+    /// quads of the same material and scissor stay in one range, which keeps a panel plus its text at two draws.
+    /// </summary>
+    /// <param name="material">Material the following quads use.</param>
+    public void UseMaterial(UiMaterial material)
+    {
+        if (_material == material)
+        {
+            return;
+        }
+
+        _material = material;
+
+        if (_rangeCount == 0)
+        {
+            // Nothing open yet; the first quad opens a range carrying this material.
+            return;
+        }
+
+        var last = _ranges[_rangeCount - 1];
+
+        if (last.IndexCount == 0)
+        {
+            _ranges[_rangeCount - 1] = last with { Material = material };
+            return;
+        }
+
+        EnsureRangeRoom();
+        _ranges[_rangeCount++] = last with { Material = material, FirstIndex = _indexCount, IndexCount = 0 };
+    }
+
+    /// <summary>Appends a solid rectangle.</summary>
     /// <param name="x">Left edge.</param>
     /// <param name="y">Top edge.</param>
     /// <param name="width">Width.</param>
     /// <param name="height">Height.</param>
     /// <param name="colour">Packed RGBA, red in the low byte.</param>
-    public void AddRectangle(float x, float y, float width, float height, uint colour) =>
+    public void AddRectangle(float x, float y, float width, float height, uint colour)
+    {
+        UseMaterial(UiMaterial.Colour);
         AppendQuad(x, y, x + width, y + height, 0f, 0f, 0f, 0f, colour);
+    }
 
     /// <summary>Appends a textured rectangle, such as one glyph from the font atlas.</summary>
     /// <param name="x">Left edge.</param>
@@ -118,8 +177,11 @@ public sealed class UiGeometry
         float v0,
         float u1,
         float v1,
-        uint colour) =>
+        uint colour)
+    {
+        UseMaterial(UiMaterial.Text);
         AppendQuad(x, y, x + width, y + height, u0, v0, u1, v1, colour);
+    }
 
     /// <summary>Packs a colour channel tuple into the word the vertex stores.</summary>
     /// <param name="red">Red 0-255.</param>
