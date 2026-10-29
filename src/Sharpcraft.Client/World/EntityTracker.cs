@@ -24,6 +24,11 @@ public sealed class TrackedEntity
         PreviousYaw = yaw;
         PreviousPitch = pitch;
         HeadYaw = yaw;
+        TargetX = x;
+        TargetY = y;
+        TargetZ = z;
+        TargetYaw = yaw;
+        TargetPitch = pitch;
     }
 
     /// <summary>Runtime entity id.</summary>
@@ -80,6 +85,28 @@ public sealed class TrackedEntity
     /// <summary>Whether the entity reports standing on ground.</summary>
     public bool OnGround { get; internal set; }
 
+    /// <summary>
+    /// Authoritative target position. Vanilla does not snap a remote entity to the position the server reports:
+    /// it approaches it over a few ticks, which is why the rendered entity trails slightly behind the
+    /// authoritative one (docs/specs/network/entity-sync.md 9.4).
+    /// </summary>
+    public double TargetX { get; internal set; }
+
+    /// <summary>Target y.</summary>
+    public double TargetY { get; internal set; }
+
+    /// <summary>Target z.</summary>
+    public double TargetZ { get; internal set; }
+
+    /// <summary>Target yaw in degrees.</summary>
+    public float TargetYaw { get; internal set; }
+
+    /// <summary>Target pitch in degrees.</summary>
+    public float TargetPitch { get; internal set; }
+
+    /// <summary>Ticks of interpolation left before the entity sits on its target.</summary>
+    public int LerpSteps { get; internal set; }
+
     /// <summary>Copies the current state into the previous one, so a later update interpolates from here.</summary>
     internal void PushPrevious()
     {
@@ -116,6 +143,13 @@ public sealed class EntityTracker
 {
     /// <summary>Upper bound on tracked entities; a runaway server must not grow this dictionary without limit.</summary>
     public const int MaxTrackedEntities = 4096;
+
+    /// <summary>
+    /// Ticks a remote entity takes to reach the position the server reported. Vanilla passes three to
+    /// <c>lerpPositionAndRotationStep</c> for remote movement
+    /// (docs/specs/network/entity-sync.md 9.4).
+    /// </summary>
+    public const int InterpolationSteps = 3;
 
     private readonly Dictionary<int, TrackedEntity> _entities = [];
     private readonly List<EntityRenderState> _renderStates = [];
@@ -172,6 +206,12 @@ public sealed class EntityTracker
         entity.Yaw = added.Yaw;
         entity.Pitch = added.Pitch;
         entity.HeadYaw = added.HeadYaw;
+        entity.TargetX = added.X;
+        entity.TargetY = added.Y;
+        entity.TargetZ = added.Z;
+        entity.TargetYaw = added.Yaw;
+        entity.TargetPitch = added.Pitch;
+        entity.LerpSteps = 0;
         entity.VelocityX = added.VelocityX;
         entity.VelocityY = added.VelocityY;
         entity.VelocityZ = added.VelocityZ;
@@ -196,27 +236,28 @@ public sealed class EntityTracker
             // Zero is "keep this axis", which is what the wire format means rather than "moved by nothing".
             if (move.DeltaX != 0d)
             {
-                entity.X += move.DeltaX;
+                entity.TargetX += move.DeltaX;
             }
 
             if (move.DeltaY != 0d)
             {
-                entity.Y += move.DeltaY;
+                entity.TargetY += move.DeltaY;
             }
 
             if (move.DeltaZ != 0d)
             {
-                entity.Z += move.DeltaZ;
+                entity.TargetZ += move.DeltaZ;
             }
         }
 
         if (move.HasRotation)
         {
-            entity.Yaw = move.Yaw;
-            entity.Pitch = move.Pitch;
+            entity.TargetYaw = move.Yaw;
+            entity.TargetPitch = move.Pitch;
         }
 
         entity.OnGround = move.OnGround;
+        entity.LerpSteps = InterpolationSteps;
         MovesApplied++;
         return true;
     }
@@ -234,11 +275,12 @@ public sealed class EntityTracker
 
         entity.PushPrevious();
 
-        entity.X = Relative(teleport.Relatives, 0) ? entity.X + teleport.X : teleport.X;
-        entity.Y = Relative(teleport.Relatives, 1) ? entity.Y + teleport.Y : teleport.Y;
-        entity.Z = Relative(teleport.Relatives, 2) ? entity.Z + teleport.Z : teleport.Z;
-        entity.Yaw = Relative(teleport.Relatives, 3) ? entity.Yaw + teleport.Yaw : teleport.Yaw;
-        entity.Pitch = Relative(teleport.Relatives, 4) ? entity.Pitch + teleport.Pitch : teleport.Pitch;
+        entity.TargetX = Relative(teleport.Relatives, 0) ? entity.TargetX + teleport.X : teleport.X;
+        entity.TargetY = Relative(teleport.Relatives, 1) ? entity.TargetY + teleport.Y : teleport.Y;
+        entity.TargetZ = Relative(teleport.Relatives, 2) ? entity.TargetZ + teleport.Z : teleport.Z;
+        entity.TargetYaw = Relative(teleport.Relatives, 3) ? entity.TargetYaw + teleport.Yaw : teleport.Yaw;
+        entity.TargetPitch = Relative(teleport.Relatives, 4) ? entity.TargetPitch + teleport.Pitch : teleport.Pitch;
+        entity.LerpSteps = InterpolationSteps;
 
         entity.VelocityX = teleport.VelocityX;
         entity.VelocityY = teleport.VelocityY;
@@ -297,6 +339,32 @@ public sealed class EntityTracker
 
         Removals += removed;
         return removed;
+    }
+
+    /// <summary>
+    /// Advances every entity one tick towards its target, the way vanilla moves a remote entity: a fraction
+    /// 1/steps of the remaining distance per tick, so the rendered entity trails the authoritative one by a few
+    /// ticks instead of jumping (docs/specs/network/entity-sync.md 9.4).
+    /// </summary>
+    public void Tick()
+    {
+        foreach (var entity in _entities.Values)
+        {
+            entity.PushPrevious();
+
+            if (entity.LerpSteps <= 0)
+            {
+                continue;
+            }
+
+            var alpha = 1f / entity.LerpSteps;
+            entity.X += (entity.TargetX - entity.X) * alpha;
+            entity.Y += (entity.TargetY - entity.Y) * alpha;
+            entity.Z += (entity.TargetZ - entity.Z) * alpha;
+            entity.Yaw = LerpAngle(entity.Yaw, entity.TargetYaw, alpha);
+            entity.Pitch += (entity.TargetPitch - entity.Pitch) * alpha;
+            entity.LerpSteps--;
+        }
     }
 
     /// <summary>Forgets every tracked entity.</summary>

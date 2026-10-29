@@ -94,6 +94,13 @@ internal sealed class InteractiveSession
     /// <summary>Entities the server told us about, updated as packets arrive.</summary>
     public EntityTracker Entities => _entities;
 
+    /// <summary>Fraction into the current tick, for callers that interpolate between ticks.</summary>
+    public float PartialTick => _loop.Alpha;
+
+    /// <summary>Entity render states interpolated for this frame.</summary>
+    /// <param name="alpha">Fraction into the current tick.</param>
+    public ReadOnlySpan<EntityRenderState> EntityStates(float alpha) => _entities.Interpolate(alpha);
+
     public bool TakeGeometryDirty()
     {
         if (!_geometryDirty)
@@ -180,6 +187,10 @@ internal sealed class InteractiveSession
                 }
 
                 _player.Tick(frame.Forward, frame.Strafe, frame.Jump, frame.Sprint, _camera.Yaw, frame.Sneak);
+
+                // Remote entities approach the position the server reported over a few ticks, so the tracker
+                // has to advance once per tick (docs/specs/network/entity-sync.md 9.4).
+                _entities.Tick();
                 _interpolator.Push(_player, _camera.Yaw);
                 PublishTick();
             });

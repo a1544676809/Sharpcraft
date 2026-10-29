@@ -15,20 +15,45 @@ namespace Sharpcraft.Client.Tests.World;
 public sealed class EntityTrackerTests
 {
     [Fact]
-    public void DeltasAccumulateAndAZeroAxisKeepsItsValue()
+    public void DeltasAccumulateOnTheTargetAndAZeroAxisKeepsItsValue()
     {
         var tracker = new EntityTracker();
         tracker.Add(Entity(1, x: 10, y: 64, z: 10));
 
-        // Only x moved: y and z must keep their values rather than collapse to zero.
+        // Only x and y moved: z must keep its value rather than collapse to zero.
         tracker.ApplyMove(new EntityMove(1, 1.0, 0, 0, HasPosition: true, 0f, 0f, HasRotation: false, OnGround: true));
         tracker.ApplyMove(new EntityMove(1, -0.5, 0.25, 0, HasPosition: true, 0f, 0f, HasRotation: false, OnGround: true));
 
         Assert.True(tracker.TryGet(1, out var entity));
-        Assert.Equal(10.5, entity!.X, 4);
-        Assert.Equal(64.25, entity.Y, 4);
-        Assert.Equal(10.0, entity.Z, 4);
+        Assert.Equal(10.5, entity!.TargetX, 4);
+        Assert.Equal(64.25, entity.TargetY, 4);
+        Assert.Equal(10.0, entity.TargetZ, 4);
         Assert.Equal(2, tracker.MovesApplied);
+    }
+
+    [Fact]
+    public void TheRenderedPositionApproachesTheTargetOverThreeTicks()
+    {
+        // Vanilla does not snap a remote entity to the reported position; it closes a third of the remaining
+        // gap per tick, so the rendered entity trails the authoritative one by a few ticks.
+        var tracker = new EntityTracker();
+        tracker.Add(Entity(7, x: 0, y: 0, z: 0));
+        tracker.ApplyMove(new EntityMove(7, 3.0, 0, 0, HasPosition: true, 0f, 0f, HasRotation: false, OnGround: true));
+
+        Assert.True(tracker.TryGet(7, out var entity));
+        Assert.Equal(0.0, entity!.X, 4);
+        Assert.Equal(3.0, entity.TargetX, 4);
+
+        tracker.Tick();
+        Assert.Equal(1.0, entity.X, 4);   // a third of the way
+
+        tracker.Tick();
+        Assert.Equal(2.0, entity.X, 4);   // a third of what is left
+
+        // The last step closes the remaining gap outright, so three ticks land exactly on the target.
+        tracker.Tick();
+        Assert.Equal(3.0, entity.X, 4);
+        Assert.Equal(0, entity.LerpSteps);
     }
 
     [Fact]
@@ -53,14 +78,14 @@ public sealed class EntityTrackerTests
         tracker.ApplyTeleport(new EntityTeleport(2, 5, 70, -8, 0, 0, 0, 0f, 0f, Relatives: 0b001, OnGround: true));
 
         Assert.True(tracker.TryGet(2, out var entity));
-        Assert.Equal(6.0, entity!.X, 4);
-        Assert.Equal(70.0, entity.Y, 4);
-        Assert.Equal(-8.0, entity.Z, 4);
+        Assert.Equal(6.0, entity!.TargetX, 4);
+        Assert.Equal(70.0, entity.TargetY, 4);
+        Assert.Equal(-8.0, entity.TargetZ, 4);
         Assert.True(entity.OnGround);
 
         // Without the relative bit the same value replaces the coordinate instead of adding.
         tracker.ApplyTeleport(new EntityTeleport(2, 5, 70, -8, 0, 0, 0, 0f, 0f, Relatives: 0, OnGround: true));
-        Assert.Equal(5.0, entity.X, 4);
+        Assert.Equal(5.0, entity.TargetX, 4);
     }
 
     [Fact]
@@ -99,17 +124,26 @@ public sealed class EntityTrackerTests
 
         // Rotating from 350 to 10 must pass through 0 rather than the long way round.
         tracker.ApplyMove(new EntityMove(5, 4.0, 0, 0, HasPosition: true, 10f, 0f, HasRotation: true, OnGround: true));
+        tracker.Tick();
 
         var atStart = tracker.Interpolate(0f)[0];
         var mid = tracker.Interpolate(0.5f)[0];
         var atEnd = tracker.Interpolate(1f)[0];
 
+        // One tick moves a third of the way, and interpolation spans the previous and current tick.
         Assert.Equal(0f, atStart.X, 4);
-        Assert.Equal(4f, atEnd.X, 4);
-        Assert.Equal(2f, mid.X, 4);
+        Assert.True(atEnd.X > 1.2f && atEnd.X < 1.4f, $"after one tick x was {atEnd.X}");
+        Assert.True(mid.X > atStart.X && mid.X < atEnd.X);
 
-        var midYaw = ((mid.Yaw % 360f) + 360f) % 360f;
-        Assert.True(MathF.Min(midYaw, 360f - midYaw) < 1f, $"mid yaw was {mid.Yaw}, expected the short arc");
+        // The approach takes three ticks, so the yaw is still short of the target after one of them; what
+        // matters is that it travelled the short way, staying near zero rather than swinging through 180.
+        var midway = ((mid.Yaw % 360f) + 360f) % 360f;
+        Assert.True(midway > 340f || midway < 20f, $"mid yaw was {midway}, expected the short arc near zero");
+
+        tracker.Tick();
+        tracker.Tick();
+        var settled = ((tracker.Interpolate(1f)[0].Yaw % 360f) + 360f) % 360f;
+        Assert.Equal(10f, settled, 1);
     }
 
     [Fact]
@@ -122,10 +156,12 @@ public sealed class EntityTrackerTests
         }
 
         tracker.Interpolate(0.5f); // warm the reusable buffer
+        tracker.Tick();
 
         var before = GC.GetAllocatedBytesForCurrentThread();
         for (var frame = 0; frame < 64; frame++)
         {
+            tracker.Tick();
             tracker.Interpolate(frame / 64f);
         }
 

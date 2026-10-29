@@ -3,6 +3,7 @@
 
 using Sharpcraft.Auth;
 using Sharpcraft.Common.Registries;
+using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
 using Sharpcraft.Common.Network;
@@ -54,6 +55,14 @@ internal static class WindowCommand
 
         // One pool serves both decoding and meshing, sized from the machine
         // (docs/specs/network/play-movement.md 7.24).
+        var entityMesher = new EntityPlaceholderMesher();
+
+        // Placeholder boxes sample one atlas cell and tint it, so no per entity texture lookup is needed.
+        SpriteRect? entitySprite = prepared is null
+            ? null
+            : prepared.Value.Map.ForBlock(new Sharpcraft.Common.Identifiers.Identifier("minecraft", "stone"));
+
+
         var workerPool = new ChunkWorkerPool(world, prepared?.Map);
         Console.WriteLine($"chunk workers: {workerPool.WorkerCount} (of {Environment.ProcessorCount} logical processors)");
 
@@ -101,6 +110,11 @@ internal static class WindowCommand
 
         using var liveScope = live;
         var session = InteractiveSession.Create(world, request, live, workerPool);
+
+        // Without an atlas there is no cell to sample, so entity boxes are simply not drawn.
+        var entitySource = entitySprite is { } sprite
+            ? new Func<DynamicGeometry>(() => entityMesher.Build(session.EntityStates(session.PartialTick), sprite))
+            : null;
 
         var format = WindowedRenderer.Run(
             request,
@@ -153,7 +167,8 @@ internal static class WindowCommand
 
                 return updates;
             },
-            expectedChunks: InteractiveSession.ExpectedChunkCount());
+            expectedChunks: InteractiveSession.ExpectedChunkCount(),
+            dynamicGeometry: entitySource);
 
         Console.WriteLine(
             $"pool: parsed {workerPool.ParsedOk} ok / {workerPool.ParsedFailed} failed, "

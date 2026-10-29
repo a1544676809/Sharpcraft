@@ -43,7 +43,8 @@ public static class WindowedRenderer
         Func<WindowHost, (Vector3 Eye, Vector3 Target)>? cameraPerFrame = null,
         Func<FrameRequest?>? rebuildRequest = null,
         Func<IReadOnlyList<(long Key, GeometryData Mesh)>?>? geometryUpdates = null,
-        int expectedChunks = 0)
+        int expectedChunks = 0,
+        Func<DynamicGeometry?>? dynamicGeometry = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -155,6 +156,16 @@ public static class WindowedRenderer
             ? null
             : new ChunkGeometryArena(device, expectedChunks: expectedChunks);
 
+        // Geometry that is rebuilt every frame, such as placeholder entity boxes. It gets its own small pair of
+        // buffers so a per frame rewrite never touches the world arena.
+        var dynamicVertex = CreateGeometryBuffer(device, MinimumBufferBytes, BufferUsage.Vertex | BufferUsage.CopyDst);
+        var dynamicIndex = CreateGeometryBuffer(device, MinimumBufferBytes, BufferUsage.Index | BufferUsage.CopyDst);
+        var dynamicVertexCapacity = MinimumBufferBytes;
+        var dynamicIndexCapacity = MinimumBufferBytes;
+
+        // The helper is defined further down; the buffers above are created eagerly so no nullable state leaks.
+
+
         // Geometry lives in persistent buffers that are rewritten in place, so a rebuild costs one upload
         // instead of two allocations plus a GPU sync. They only grow, and the grown-out buffers are released
         // when the window closes (a rebuild that needs more room is rare)
@@ -231,6 +242,32 @@ public static class WindowedRenderer
 
             // Rewriting the persistent buffers costs one upload; nothing is allocated or freed in the
             // steady state, so streaming new terrain does not hitch.
+            var dynamicIndexCount = 0u;
+
+            if (dynamicGeometry is not null && dynamicGeometry() is { IndexCount: > 0 } dynamic)
+            {
+                var neededVertex = (ulong)dynamic.VertexFloats * sizeof(float);
+                var neededIndex = (ulong)dynamic.IndexCount * sizeof(uint);
+
+                if (neededVertex > dynamicVertexCapacity)
+                {
+                    dynamicVertex.Dispose();
+                    dynamicVertexCapacity = Math.Max(neededVertex * 2, MinimumBufferBytes);
+                    dynamicVertex = CreateGeometryBuffer(device, dynamicVertexCapacity, BufferUsage.Vertex | BufferUsage.CopyDst);
+                }
+
+                if (neededIndex > dynamicIndexCapacity)
+                {
+                    dynamicIndex.Dispose();
+                    dynamicIndexCapacity = Math.Max(neededIndex * 2, MinimumBufferBytes);
+                    dynamicIndex = CreateGeometryBuffer(device, dynamicIndexCapacity, BufferUsage.Index | BufferUsage.CopyDst);
+                }
+
+                device.Queue.WriteBuffer(dynamicVertex, 0, dynamic.Vertices.AsSpan(0, dynamic.VertexFloats));
+                device.Queue.WriteBuffer(dynamicIndex, 0, dynamic.Indices.AsSpan(0, dynamic.IndexCount));
+                dynamicIndexCount = (uint)dynamic.IndexCount;
+            }
+
             if (arena is not null)
             {
                 var updates = geometryUpdates!();
@@ -355,6 +392,13 @@ public static class WindowedRenderer
             {
                 arena.Draw(pass);
             }
+
+            if (dynamicIndexCount > 0)
+            {
+                pass.SetVertexBuffer(0, dynamicVertex, 0, dynamicVertexCapacity);
+                pass.SetIndexBuffer(dynamicIndex, WGPUIndexFormat.Uint32, 0, (ulong)dynamicIndexCount * sizeof(uint));
+                pass.DrawIndexed(dynamicIndexCount, 1, 0, 0, 1);
+            }
             else
             {
                 pass.SetVertexBuffer(0, vertexBuffer);
@@ -414,6 +458,9 @@ public static class WindowedRenderer
             $"window: rebuild {rebuildCount} frames, avg {(rebuildCount == 0 ? 0 : rebuildTotalMs / rebuildCount):F1} ms, "
             + $"worst {worstRebuildMs:F1} ms, uploaded {uploadBytes / (1024d * 1024d):F1} MB; "
             + $"camera avg {(presented == 0 ? 0 : cameraTotalMs / presented):F1} ms, worst {worstCameraMs:F1} ms");
+
+        dynamicVertex.Dispose();
+        dynamicIndex.Dispose();
 
         vertexBuffer.Dispose();
         depthView.Dispose();
