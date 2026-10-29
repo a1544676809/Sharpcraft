@@ -86,6 +86,12 @@ public sealed class ClientWorld
         _chunks[Pack(chunk.ChunkX, chunk.ChunkZ)] = chunk;
     }
 
+    /// <summary>True when the chunk covering a block position has been downloaded.</summary>
+    /// <param name="x">Block x.</param>
+    /// <param name="z">Block z.</param>
+    public bool IsChunkLoaded(int x, int z) =>
+        GetChunk(BlockCoordinates.ToSectionCoord(x), BlockCoordinates.ToSectionCoord(z)) is not null;
+
     /// <summary>Chunk at chunk coordinates, or null.</summary>
     public LevelChunk? GetChunk(int chunkX, int chunkZ) =>
         _chunks.TryGetValue(Pack(chunkX, chunkZ), out var chunk) ? chunk : null;
