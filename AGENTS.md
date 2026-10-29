@@ -238,13 +238,16 @@ LICENSE                        # LGPL-3.0-or-later 附加许可 + 并入的 GPL-
 ### 3.5 文档先行（Documentation-First）
 
 - 任何模块在写第一行代码前，MUST 先在 `docs/modules/<模块>.md` 完成设计文档（模板见 `docs/_templates/module-doc.md`），状态标为 `[已评审]`。文档未就绪的模块 MUST NOT 开始编码。
-- jar 分析结果 MUST 分模块写入 `docs/analysis/<子系统>/`，**一文件一主题**；禁止用单个文件装下整个子系统。子系统目录 MUST 有 `README.md` 作为入口并维护清单。
+- jar 分析结果 MUST 分模块写入 `docs/analysis/<子系统>/`，**一文件一主题**；禁止用单个文件装下整个子系统。子系统目录 MUST 有 `README.md` 作为入口；其索引段由生成器维护（见下一条）。
+- **目录索引由生成器维护**：`docs/README.md` 与每个子目录 `README.md` 的索引段由 `tools/Sharpcraft.Docs.Indexer` 生成；`<!-- BEGIN GENERATED: <key> -->` 与 `<!-- END GENERATED: <key> -->` 之间 MUST NOT 手改。索引 MUST 随代码在同一提交内更新（ADR-0008）。
+- **代码文档的单位是源码目录模块**：`src/<项目>/<子目录>/` 对应 `docs/src/<project>/<module>.md`，工程根目录对应 `docs/src/<project>.md`。映射 MUST 由工具按路径推导，MUST NOT 维护手工映射清单；某个目录大到一篇文档装不下时，拆源码目录，而不是给映射加例外。
+- **覆盖是棘轮**：`docs/src/.coverage-baseline.txt` 记录尚未写文档的模块，MUST 只能缩小。新增源码目录 MUST 在同一提交内补对应文档并运行 `--update-baseline`；基线过期（已有文档却仍在基线里）同样视为失败。
 - 文档颗粒度以"30 秒内定位到一条结论"为标准：
   - 单文件 100–300 行，超过约 400 行 MUST 拆分，并在原位留一行指向新文件；
   - 单章节 15–60 行；大表格 / 大清单单独成文件，主文档只放摘要与链接；
-  - 文件名小写连字符、只用 ASCII；每个文档目录有 `README.md` 清单。
+  - 文件名小写连字符、只用 ASCII；每个文档目录有 `README.md`（索引段由生成器维护）。
 - 文档 MUST 随行为变更同步演进：改行为前先改文档，或至少在同一次提交内更新。文档与实现冲突时，先修文档并评审，再修代码。
-- `docs/README.md` 是总索引，MUST 与实际文件保持一致；新增 / 拆分 / 废弃文档时必须同步更新。
+- `docs/README.md` 是总索引，MUST 与实际文件保持一致；索引段由生成器写入，新增 / 拆分 / 废弃文档后 MUST 运行 `--write` 并在同一提交内更新。
 - 文档同样受原则 3 约束：只写行为与架构，不粘贴原始实现；证据以指针形式引用仓库外的分析工作区。
 - 文档体系细节（目录划分、状态标记、写作规范）以 `docs/README.md` 为准，二者冲突时以本文件为准。
 
@@ -253,6 +256,7 @@ LICENSE                        # LGPL-3.0-or-later 附加许可 + 并入的 GPL-
 - **构建与测试标准命令**：
   - 全量构建：`dotnet build`（默认开启 `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`）
   - 单元测试：`dotnet test --no-build`
+- **文档索引与覆盖门禁**：CI MUST 执行 `dotnet run --project tools/Sharpcraft.Docs.Indexer -- --check --check-coverage`；索引过期、源码模块缺文档、覆盖基线过期均等同构建失败。同一逻辑 MUST 以测试形式存在（`tests/Sharpcraft.Architecture.Tests/DocIndexTests.cs`），不得只依赖 CI 脚本。
 - **禁止压制编译器警告**：代理 MUST NOT 使用 `#pragma warning disable` 或工程级 `NoWarn` 掩盖任何警告；`[SuppressMessage]` 仅允许在**确属误报或有意为之**时使用，且 MUST 满足：带 `Justification`、同一次提交内在 `docs/decisions/` 记录理由、经人工批准。测试工程同样适用，不得整工程放行。
 - **Trim / AOT 分析器随运行时形态定稿启用**：运行时形态（原则 1、待决项 1）未定前，`EnableAotAnalyzer` / `EnableTrimAnalyzer` 保持关闭，避免为"可能永不采用的形态"产出无法抑制的警告。定稿时随 ADR 一并启用并清偿存量。
 - **热路径编码禁令**：热路径指被 `<see cref="HotPathAttribute"/>`（`Sharpcraft.Common.Diagnostics.HotPathAttribute`）标记的方法，或其直接调用的稳态循环体。热路径内的判定标准是**稳态零分配**：
