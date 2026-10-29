@@ -28,10 +28,9 @@ public sealed class PlayMovementTests
         Assert.Equal(64.0, y, 6);
         Assert.Equal(DecodeStatus.Success, reader.TryReadDouble(out var z));
         Assert.Equal(-3.25, z, 6);
-        Assert.Equal(DecodeStatus.Success, reader.TryReadBool(out var ground));
-        Assert.True(ground);
-        Assert.Equal(DecodeStatus.Success, reader.TryReadBool(out var collided));
-        Assert.False(collided);
+        // One packed byte, not two booleans: bit 0 is on-ground, bit 1 is horizontal collision.
+        Assert.Equal(DecodeStatus.Success, reader.TryReadByte(out var flags));
+        Assert.Equal(1, flags);
     }
 
     [Fact]
@@ -49,10 +48,8 @@ public sealed class PlayMovementTests
         Assert.Equal(90f, yaw, 4);
         Assert.Equal(DecodeStatus.Success, reader.TryReadFloat(out var pitch));
         Assert.Equal(-30f, pitch, 4);
-        Assert.Equal(DecodeStatus.Success, reader.TryReadBool(out var ground));
-        Assert.False(ground);
-        Assert.Equal(DecodeStatus.Success, reader.TryReadBool(out var collided));
-        Assert.True(collided);
+        Assert.Equal(DecodeStatus.Success, reader.TryReadByte(out var flags));
+        Assert.Equal(2, flags);
     }
 
     [Fact]

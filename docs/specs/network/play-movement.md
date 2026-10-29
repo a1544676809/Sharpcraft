@@ -16,15 +16,24 @@ status: 已评审
 
 | 方向 | 包 | id | 来源 |
 | --- | --- | --- | --- |
-| 客户端 → 服务端 | `AcceptTeleportation` | 0 | `GameProtocols` 中该 builder 链的第 0 条 |
-| 客户端 → 服务端 | `MovePlayerPos` | 30 | 已在本项目实测记录，且与链内序号一致 |
-| 客户端 → 服务端 | `MovePlayerPosRot` | 31 | 链内序号 |
-| 客户端 → 服务端 | `MovePlayerRot` | 32 | 链内序号 |
-| 客户端 → 服务端 | `MovePlayerStatusOnly` | 33 | 链内序号 |
-| 服务端 → 客户端 | `PlayerPosition`（绝对传送/重置） | 71 | 以 `LevelChunkWithLight = 46` 为锚点相对计数；同一方法算出 `Login = 50` 与已记录值一致，故可信 |
+| 客户端 → 服务端 | `AcceptTeleportation` | 0 | 链首 |
+| 客户端 → 服务端 | `KeepAlive` 回应 | 27 | 全链序号 |
+| 客户端 → 服务端 | `MovePlayerPos` | 29 | 全链序号 |
+| 客户端 → 服务端 | `MovePlayerPosRot` | 30 | 全链序号 |
+| 客户端 → 服务端 | `MovePlayerRot` | 31 | 全链序号 |
+| 客户端 → 服务端 | `MovePlayerStatusOnly` | 32 | 全链序号 |
+| 客户端 → 服务端 | `Pong` 回应 | 44 | 全链序号 |
+| 服务端 → 客户端 | `PlayerPosition`（绝对传送/重置） | 73 | 以 `LevelChunkWithLight = 46` 为锚点相对计数 |
 
-**校准方法**：id 等于该方向 builder 链内 `.addPacket(...)` 的出现序号。用已实测的 `MovePlayerPos = 30`、
-`AcceptTeleportation = 0`、`Login = 50` 三个锚点交叉验证，三处同时吻合后才采用其他序号。
+**校准方法**：id 等于该方向 builder 链内 `.addPacket(...)` 的出现序号。
+
+**此处曾经出过错，必须记住**：通用包（`CommonPacketTypes`：keepalive、ping/pong、client information 等）
+**也注册在同一条 play 链里**。只统计 `GamePacketTypes` 的计数会整体偏移，早期表中
+`KeepAlive = 28`、`MovePlayerPos = 30`、`Pong = 45` 就是这么来的（真实值 27 / 29 / 44）。
+统计时必须匹配任意 `*PacketTypes.` 前缀，而不是只匹配游戏包。
+
+已知锚点：`AcceptTeleportation = 0`（实测可用）、`Login = 50`、`LevelChunkWithLight = 46`、
+`PlayerPosition = 73`（实测收到并被接受）。
 
 ## 2. 字段布局
 
@@ -64,7 +73,19 @@ status: 已评审
 验证环境服务端不开 `online-mode`，因此进服不需要会话令牌；即便如此，**移动包的格式与 id 不变**，
 同步逻辑全部可验证。离线服务器只影响认证链，不影响本规格。
 
-## 6. 实现状态
+## 6. 实测记录（本地 offline-mode 服务端，2026-10-29）
+
+| 环节 | 结果 |
+| --- | --- |
+| 登录 / 配置 / 进 play | 通过（`frame` 收到 9/9 区块） |
+| 收到 `PlayerPosition`（id 73） | 通过：偏差 190.32 格，吸附并回 `AcceptTeleportation` |
+| 发送任意 `MovePlayer*` | **失败**：发出 2–3 个包后服务端直接关闭连接，无 disconnect 包 |
+| 仅发 `MovePlayerStatusOnly`（3 字节） | **同样失败** |
+
+**结论**：失败与坐标无关（纯标志包一样被关），问题在移动包本身的 id 或编码。
+按 4.1 已停止试错，等待服务端日志给出确切原因（kick 原因会直接指明是解码错误还是移动校验）。
+
+## 7. 实现状态
 
 - [x] 包 id 与字段布局（本节）
 - [x] `PlayMovementPackets.BuildMovePlayer*` 与 `TryReadPlayerPosition`（12 项测试）

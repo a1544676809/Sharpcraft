@@ -39,6 +39,7 @@ internal static class Program
             LauncherCommand.Probe => await ProbeAsync(commandLine.Target!).ConfigureAwait(false),
             LauncherCommand.Login => await LoginAsync().ConfigureAwait(false),
             LauncherCommand.Play => await PlayAsync(commandLine.Target!).ConfigureAwait(false),
+            LauncherCommand.Walk => await WalkAsync(commandLine.Target!).ConfigureAwait(false),
             LauncherCommand.Frame => await FrameAsync(commandLine.Target!).ConfigureAwait(false),
             LauncherCommand.Window => await WindowAsync(commandLine.Target).ConfigureAwait(false),
             LauncherCommand.Assets => Assets(commandLine.Target!),
@@ -115,6 +116,90 @@ internal static class Program
         for (var current = exception; current is not null && depth < 6; current = current.InnerException, depth++)
         {
             Console.Error.WriteLine($"  [debug] {current.GetType().Name}: {current.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Signs in, joins play, and walks forward for a bounded time so the movement packets meet a real server.
+    /// </summary>
+    private static async Task<int> WalkAsync(string address)
+    {
+        using var cancellation = CancelOnCtrlC();
+        using var http = CreateHttpClient();
+
+        var seconds = Environment.GetEnvironmentVariable("MC_WALK_SECONDS") is { } raw && double.TryParse(raw, out var parsed)
+            ? parsed
+            : 5d;
+
+        try
+        {
+            var signedIn = await AuthenticationFlow.EnsureSignedInAsync(
+                http,
+                TokenStore.CreateDefault(),
+                forceInteractive: false,
+                onChallenge: PrintChallenge,
+                cancellation.Token).ConfigureAwait(false);
+
+            Console.WriteLine($"Signed in as {signedIn.Profile.Name}");
+            AccountsCommand.RecordPremiumSignIn(signedIn.Profile.Name, signedIn.Profile.Id);
+
+            var join = new SessionServerClient(http);
+            var (outcome, connection) = await MinecraftLoginClient.LoginAsync(
+                address,
+                (signedIn.Profile.Name, signedIn.Profile.Id),
+                signedIn.Session.AccessToken,
+                (token, hash, token2) => join.JoinAsync(signedIn.Session, signedIn.Profile.Id, hash, token2),
+                cancellationToken: cancellation.Token).ConfigureAwait(false);
+
+            if (!outcome.Success || connection is null)
+            {
+                Console.Error.WriteLine($"server refused the login: {outcome.Reason}");
+                return 1;
+            }
+
+            using (connection)
+            {
+                var probe = await ConfigurationProbe.RunAsync(
+                    connection,
+                    TimeSpan.FromSeconds(20),
+                    cancellation.Token,
+                    log: line => Console.WriteLine($"  {line}")).ConfigureAwait(false);
+
+                if (!probe.ReachedPlay)
+                {
+                    Console.Error.WriteLine($"did not reach play: {probe.Reason}");
+                    return 1;
+                }
+
+                Console.WriteLine($"walking forward for {seconds:0.#}s...");
+                var result = await WalkCommand
+                    .RunAsync(connection, seconds, line => Console.WriteLine($"  {line}"), cancellation.Token)
+                    .ConfigureAwait(false);
+
+                // The server is the judge: it accepts movement, corrects it, or drops the connection.
+                Console.WriteLine(
+                    $"walk: sent={result.TicksSent} corrections={result.Corrections} " +
+                    $"distance={result.Distance:F2} blocks survived={result.Survived}");
+
+                if (!result.Survived)
+                {
+                    Console.Error.WriteLine($"server dropped us: {result.DisconnectReason}");
+                    return 1;
+                }
+
+                Console.WriteLine($"expected distance for {seconds:0.#}s of walking is about {4.317 * seconds:F1} blocks");
+                return 0;
+            }
+        }
+        catch (AuthException exception)
+        {
+            Console.Error.WriteLine($"login failed [{exception.Error}] {exception.Message}");
+            return 1;
+        }
+        catch (InvalidOperationException exception)
+        {
+            Console.Error.WriteLine(exception.Message);
+            return 1;
         }
     }
 

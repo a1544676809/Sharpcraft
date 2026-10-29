@@ -31,8 +31,7 @@ public static class PlayMovementPackets
         writer.WriteDouble(x);
         writer.WriteDouble(y);
         writer.WriteDouble(z);
-        writer.WriteBool(onGround);
-        writer.WriteBool(horizontalCollision);
+        writer.WriteByte(PackFlags(onGround, horizontalCollision));
         return buffer[..writer.Position].ToArray();
     }
 
@@ -61,8 +60,7 @@ public static class PlayMovementPackets
         writer.WriteDouble(z);
         writer.WriteFloat(yawDegrees);
         writer.WriteFloat(pitchDegrees);
-        writer.WriteBool(onGround);
-        writer.WriteBool(horizontalCollision);
+        writer.WriteByte(PackFlags(onGround, horizontalCollision));
         return buffer[..writer.Position].ToArray();
     }
 
@@ -78,8 +76,7 @@ public static class PlayMovementPackets
         WriteHeader(ref writer, PacketIds.PlayServerbound.MovePlayerRot);
         writer.WriteFloat(yawDegrees);
         writer.WriteFloat(pitchDegrees);
-        writer.WriteBool(onGround);
-        writer.WriteBool(horizontalCollision);
+        writer.WriteByte(PackFlags(onGround, horizontalCollision));
         return buffer[..writer.Position].ToArray();
     }
 
@@ -91,8 +88,7 @@ public static class PlayMovementPackets
         Span<byte> buffer = stackalloc byte[8];
         var writer = new PayloadWriter(buffer);
         WriteHeader(ref writer, PacketIds.PlayServerbound.MovePlayerStatusOnly);
-        writer.WriteBool(onGround);
-        writer.WriteBool(horizontalCollision);
+        writer.WriteByte(PackFlags(onGround, horizontalCollision));
         return buffer[..writer.Position].ToArray();
     }
 
@@ -175,4 +171,26 @@ public static class PlayMovementPackets
     }
 
     private static void WriteHeader(ref PayloadWriter writer, int packetId) => writer.WriteVarInt(packetId);
+
+    /// <summary>
+    /// Packs the two movement flags into the single byte the protocol uses. Writing them as two booleans
+    /// adds a byte the server does not expect, and the connection dies on the first move.
+    /// </summary>
+    /// <param name="onGround">Whether the player stands on something.</param>
+    /// <param name="horizontalCollision">Whether the last move hit a wall.</param>
+    public static byte PackFlags(bool onGround, bool horizontalCollision)
+    {
+        byte flags = 0;
+        if (onGround)
+        {
+            flags |= 1;
+        }
+
+        if (horizontalCollision)
+        {
+            flags |= 2;
+        }
+
+        return flags;
+    }
 }

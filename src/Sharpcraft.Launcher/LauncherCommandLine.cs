@@ -21,6 +21,9 @@ public enum LauncherCommand
     /// <summary>Sign in and walk a server's login/configuration phases.</summary>
     Play,
 
+    /// <summary>Walk forward on a live server to verify the movement packets.</summary>
+    Walk,
+
     /// <summary>Collect chunks and render one offscreen frame.</summary>
     Frame,
 
@@ -98,6 +101,9 @@ public sealed record LauncherCommandLine(LauncherCommand Command, string? Target
 
             case "play":
                 return WithAddress(LauncherCommand.Play, args, "play");
+
+            case "walk":
+                return WithAddress(LauncherCommand.Walk, args, "walk");
 
             case "frame":
                 return WithAddress(LauncherCommand.Frame, args, "frame");

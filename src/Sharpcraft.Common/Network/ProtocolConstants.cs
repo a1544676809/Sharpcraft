@@ -131,26 +131,30 @@ public static class PacketIds
         /// <summary>Client information update.</summary>
         public const int ClientInformation = 14;
 
-        /// <summary>Keep alive reply.</summary>
-        public const int KeepAlive = 28;
+        /// <summary>
+        /// Keep alive reply. Ids in this table are the position in the play registration chain, and that
+        /// chain also contains the shared "common" packets, so a count that only looks at game packets is
+        /// off by the number of common packets registered before it.
+        /// </summary>
+        public const int KeepAlive = 27;
 
         /// <summary>Accept a server teleport, carrying the id and the accepted position.</summary>
         public const int AcceptTeleportation = 0;
 
         /// <summary>Position update.</summary>
-        public const int MovePlayerPos = 30;
+        public const int MovePlayerPos = 29;
 
         /// <summary>Position and rotation update, sent while turning and walking.</summary>
-        public const int MovePlayerPosRot = 31;
+        public const int MovePlayerPosRot = 30;
 
         /// <summary>Rotation-only update.</summary>
-        public const int MovePlayerRot = 32;
+        public const int MovePlayerRot = 31;
 
         /// <summary>Status-only update: the ground and collision flags changed.</summary>
-        public const int MovePlayerStatusOnly = 33;
+        public const int MovePlayerStatusOnly = 32;
 
         /// <summary>Pong reply.</summary>
-        public const int Pong = 45;
+        public const int Pong = 44;
     }
 
     /// <summary>Server to client, <see cref="ConnectionState.Play"/> (only used ids listed).</summary>
@@ -163,7 +167,7 @@ public static class PacketIds
         public const int KeepAlive = 45;
 
         /// <summary>Absolute player position: a teleport or a server correction.</summary>
-        public const int PlayerPosition = 71;
+        public const int PlayerPosition = 73;
 
         /// <summary>JoinGame.</summary>
         public const int Login = 50;
