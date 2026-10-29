@@ -74,7 +74,10 @@ public sealed class UiDocumentLoader : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        LoadFromDisk();
+        // Synchronous on purpose: the caller decides between the managed document and the built in fallback the
+        // moment this returns, so a fire and forget read would always look like a failed load. Blocking here costs
+        // a file read during startup and cannot affect a frame.
+        LoadNow();
 
         var directory = Path.GetDirectoryName(_path);
         var fileName = Path.GetFileName(_path);
@@ -141,13 +144,34 @@ public sealed class UiDocumentLoader : IDisposable
         Volatile.Write(ref _appliedGeneration, generation);
         AppliedLoads++;
         LastError = string.Empty;
+
+        // Logged because "I changed the file and nothing happened" is otherwise ambiguous: the file may be fine
+        // and the change too subtle, or the edit may never have been picked up.
+        Console.WriteLine($"ui: applied document ({compiled.Root.Children.Count} blocks)");
         return true;
     }
 
     /// <summary>Reserves the next generation for a read that is about to happen.</summary>
     public long NextGeneration() => Interlocked.Increment(ref _requestedGeneration);
 
-    /// <summary>Reads the document from disk now, applying it when it is valid and stable.</summary>
+    /// <summary>Reads the document from disk on the calling thread and applies it when valid.</summary>
+    /// <returns>True when a document is on screen afterwards.</returns>
+    public bool LoadNow()
+    {
+        try
+        {
+            var text = File.ReadAllText(_path);
+            return TryApply(text, NextGeneration());
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            LastError = exception.Message;
+            Console.WriteLine($"ui: cannot read {_path} ({exception.Message})");
+            return false;
+        }
+    }
+
+    /// <summary>Reads the document in the background, applying it when it is valid and stable.</summary>
     public void LoadFromDisk() => ScheduleSettledRead(isInitial: true);
 
     /// <inheritdoc />

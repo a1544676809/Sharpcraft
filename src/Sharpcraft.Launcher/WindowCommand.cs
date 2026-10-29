@@ -124,6 +124,17 @@ internal static class WindowCommand
         using var uiLoader = new UiDocumentLoader(uiPath);
         uiLoader.Start();
 
+        // A document that is already broken at startup must not leave the screen blank: the built in screen is
+        // parsed as the fallback, so the player sees something usable and the reason in the log.
+        CompiledScreen? fallback = null;
+
+        if (uiLoader.Current is null)
+        {
+            var root = UiMarkup.Parse(UiScreenLayout.DefaultDocument);
+            fallback = new CompiledScreen(root, UiStyles.Compile(root));
+            Console.WriteLine("ui: managed document unusable at startup; showing the built in screen");
+        }
+
         var uiGeometry = new UiGeometry();
         var uiFont = FrameCommand.PrepareFont();
         var glyphTexture = uiFont is null
@@ -191,7 +202,7 @@ internal static class WindowCommand
             glyphTexture: glyphTexture,
             uiGeometry: () =>
             {
-                var screen = uiLoader.Current;
+                var screen = uiLoader.Current ?? fallback;
 
                 if (screen is null)
                 {
