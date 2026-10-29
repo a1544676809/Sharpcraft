@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 Sharpcraft contributors -->
 
-状态：[已评审]
+状态：[已评审]（**迁移中**：本目录的物理将并入 `Common/Entities`，见 `docs/modules/entities.md`）
 基线：Minecraft 26.3
 证据：`docs/modules/player.md`（设计规格）；AGENTS 原则 9（热路径）
 最后更新：2026-10-29
@@ -9,6 +9,13 @@
 # Client/Player —— 玩家物理实现
 
 `PlayerBody`：一个没有渲染、没有网络依赖的纯物理体，输入是"这一 tick 想怎么走"，输出是位置、速度与是否落地。
+
+## 0. 迁移说明（2026-10-29）
+
+所有者指出：原版中玩家是实体系统的一部分。因此本目录的 `PlayerBody` 是**原型**，其算法将迁入
+`Common/Entities`（`Entity` + `LivingEntity` + `PlayerEntity`），客户端只保留输入与相机。
+迁移时必须以 `docs/modules/entities.md` §3 的公式为准——原版的移动是"输入累加 + 摩擦阻尼"，
+不是本原型里的"地面直接赋值速度"。
 
 ## 1. 职责范围
 
