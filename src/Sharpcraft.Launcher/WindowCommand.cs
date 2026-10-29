@@ -124,15 +124,14 @@ internal static class WindowCommand
             session.CaptureMouse(window, index == 0);
         },
             (window) => session.UpdateCamera(window),
-            Environment.GetEnvironmentVariable("MC_NO_REBUILD") == "1" ? null : () =>
+            geometryUpdates: () =>
             {
-                // Hand fresh work to the worker, then take whatever it finished. Both steps are cheap; the
-                // meshing itself never happens on this thread.
-                var changedBlocks = false;
+                // Hand fresh work to the pool, then return only the chunks that finished. The renderer keeps a
+                // slice per chunk, so each arrival costs one small upload rather than a recomposition of the
+                // whole world (docs/specs/network/play-movement.md 7.25).
                 foreach (var key in world.TakeDirtyChunks())
                 {
                     meshCache.Invalidate(key);
-                    changedBlocks = true;
                 }
 
                 if (session.TakeGeometryDirty())
@@ -140,13 +139,19 @@ internal static class WindowCommand
                     meshCache.QueueMissing(world);
                 }
 
-                if (!meshCache.Drain() && !changedBlocks)
+                var drained = meshCache.DrainUpdates();
+                if (drained.Count == 0)
                 {
                     return null;
                 }
 
-                return FrameCommand.BuildRequest(
-                    world, width, height, out _, prepared?.Map, cache: meshCache, meshSynchronously: false);
+                var updates = new List<(long Key, GeometryData Mesh)>(drained.Count);
+                foreach (var (key, mesh) in drained)
+                {
+                    updates.Add((key, new GeometryData(mesh.Vertices, mesh.Indices)));
+                }
+
+                return updates;
             });
 
         Console.WriteLine($"window closed after presenting frames; surface format {format}");

@@ -21,6 +21,7 @@ namespace Sharpcraft.Client.Render;
 public sealed class ChunkMeshCache
 {
     private readonly Dictionary<long, MeshData> _meshes = [];
+    private readonly List<(long Key, MeshData Mesh)> _updates = [];
     private readonly ChunkWorkerPool? _pool;
 
     /// <summary>Creates a standalone cache that meshes on the calling thread.</summary>
@@ -138,23 +139,30 @@ public sealed class ChunkMeshCache
         }
     }
 
-    /// <summary>Picks up the meshes the pool finished; true when the cached geometry changed.</summary>
-    public bool Drain()
+    /// <summary>
+    /// Picks up the meshes the pool finished and returns them, so the renderer can upload only those chunks
+    /// instead of recomposing the whole world (docs/specs/network/play-movement.md 7.25).
+    /// </summary>
+    public IReadOnlyList<(long Key, MeshData Mesh)> DrainUpdates()
     {
+        _updates.Clear();
+
         if (_pool is null)
         {
-            return false;
+            return _updates;
         }
 
-        var changed = false;
         while (_pool.TryTakeMesh(out var key, out var mesh))
         {
             _meshes[key] = mesh;
-            changed = true;
+            _updates.Add((key, mesh));
         }
 
-        return changed;
+        return _updates;
     }
+
+    /// <summary>Picks up the meshes the pool finished; true when the cached geometry changed.</summary>
+    public bool Drain() => DrainUpdates().Count > 0;
 
     /// <summary>Combines the meshes currently cached; cheap, no meshing.</summary>
     public MeshData Snapshot() => Combine();

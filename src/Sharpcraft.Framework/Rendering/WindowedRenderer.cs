@@ -41,7 +41,8 @@ public static class WindowedRenderer
         TimeSpan? maxDuration = null,
         Action<int, WindowHost>? onFrame = null,
         Func<WindowHost, (Vector3 Eye, Vector3 Target)>? cameraPerFrame = null,
-        Func<FrameRequest?>? rebuildRequest = null)
+        Func<FrameRequest?>? rebuildRequest = null,
+        Func<IReadOnlyList<(long Key, GeometryData Mesh)>?>? geometryUpdates = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -146,6 +147,11 @@ public static class WindowedRenderer
 
         var currentRequest = request;
 
+        // With per-chunk geometry the world is drawn from an arena: a chunk that arrives writes only its own
+        // bytes, instead of the whole world being recomposed and re-uploaded every frame
+        // (docs/specs/network/play-movement.md 7.25).
+        var arena = geometryUpdates is null ? null : new ChunkGeometryArena(device);
+
         // Geometry lives in persistent buffers that are rewritten in place, so a rebuild costs one upload
         // instead of two allocations plus a GPU sync. They only grow, and the grown-out buffers are released
         // when the window closes (a rebuild that needs more room is rare)
@@ -169,6 +175,12 @@ public static class WindowedRenderer
         var colour = request.ClearColour;
         var presented = 0;
         var worstFrameMs = 0d;
+        var rebuildTotalMs = 0d;
+        var rebuildCount = 0;
+        var worstRebuildMs = 0d;
+        var uploadBytes = 0L;
+        var cameraTotalMs = 0d;
+        var worstCameraMs = 0d;
         var frameClock = System.Diagnostics.Stopwatch.StartNew();
         var lastFrameAt = frameClock.Elapsed.TotalMilliseconds;
         var deadline = maxDuration is { } duration
@@ -208,8 +220,24 @@ public static class WindowedRenderer
 
             // Rewriting the persistent buffers costs one upload; nothing is allocated or freed in the
             // steady state, so streaming new terrain does not hitch.
-            if (rebuildRequest is not null && rebuildRequest() is { } rebuilt && rebuilt.Vertices.Length > 0)
+            if (arena is not null)
             {
+                var updates = geometryUpdates!();
+                if (updates is { Count: > 0 })
+                {
+                    foreach (var (key, mesh) in updates)
+                    {
+                        arena.Apply(key, mesh);
+                    }
+                }
+            }
+
+            var rebuildStarted = System.Diagnostics.Stopwatch.GetTimestamp();
+            var rebuiltFrame = rebuildRequest?.Invoke();
+
+            if (rebuiltFrame is not null && rebuiltFrame.Vertices.Length > 0)
+            {
+                var rebuilt = rebuiltFrame;
                 currentRequest = rebuilt;
 
                 var neededVertex = (ulong)rebuilt.Vertices.Length * sizeof(float);
@@ -231,6 +259,18 @@ public static class WindowedRenderer
 
                 device.Queue.WriteBuffer(vertexBuffer, 0, rebuilt.Vertices.AsSpan());
                 device.Queue.WriteBuffer(indexBuffer, 0, rebuilt.Indices.AsSpan());
+
+                uploadBytes += (long)rebuilt.Vertices.Length * sizeof(float);
+                uploadBytes += (long)rebuilt.Indices.Length * sizeof(uint);
+            }
+
+            if (rebuildRequest is not null)
+            {
+                var rebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - rebuildStarted) * 1000d
+                    / System.Diagnostics.Stopwatch.Frequency;
+                rebuildTotalMs += rebuildMs;
+                worstRebuildMs = Math.Max(worstRebuildMs, rebuildMs);
+                rebuildCount++;
             }
 
             // Frame pacing: the worst gap is what a dropped frame feels like, and it is the number that
@@ -274,9 +314,14 @@ public static class WindowedRenderer
 
             pass.SetPipeline(pipeline);
             // Rewriting 64 bytes is the whole cost of moving the camera; the staging buffers are reused.
+            var cameraStarted = System.Diagnostics.Stopwatch.GetTimestamp();
             var (eye, target) = cameraPerFrame is null
                 ? (request.CameraPosition, request.CameraTarget)
                 : cameraPerFrame(window);
+            var cameraMs = (System.Diagnostics.Stopwatch.GetTimestamp() - cameraStarted) * 1000d
+                / System.Diagnostics.Stopwatch.Frequency;
+            cameraTotalMs += cameraMs;
+            worstCameraMs = Math.Max(worstCameraMs, cameraMs);
 
             CameraUniform.Write(
                 cameraBlock,
@@ -294,9 +339,18 @@ public static class WindowedRenderer
             device.Queue.WriteBuffer(cameraBuffer, 0, cameraBytes.AsSpan());
 
             pass.SetBindGroup(0, bindGroup);
-            pass.SetVertexBuffer(0, vertexBuffer);
-            pass.SetIndexBuffer(indexBuffer, WGPUIndexFormat.Uint32);
-            pass.DrawIndexed((uint)currentRequest.Indices.Length);
+
+            if (arena is not null)
+            {
+                arena.Draw(pass);
+            }
+            else
+            {
+                pass.SetVertexBuffer(0, vertexBuffer);
+                pass.SetIndexBuffer(indexBuffer, WGPUIndexFormat.Uint32);
+                pass.DrawIndexed((uint)currentRequest.Indices.Length);
+            }
+
             pass.End();
 
             var commands = encoder.Finish();
@@ -336,6 +390,18 @@ public static class WindowedRenderer
 
         Console.WriteLine(
             $"window: {presented} frames in {frameClock.Elapsed.TotalSeconds:F1}s, worst frame {worstFrameMs:F1} ms");
+        if (arena is not null)
+        {
+            Console.WriteLine(
+                $"window: arena {arena.ChunkCount} chunks, uploaded {arena.UploadedBytes / (1024d * 1024d):F1} MB, "
+                + $"{arena.FullRebuilds} full rebuilds");
+            arena.Dispose();
+        }
+
+        Console.WriteLine(
+            $"window: rebuild {rebuildCount} frames, avg {(rebuildCount == 0 ? 0 : rebuildTotalMs / rebuildCount):F1} ms, "
+            + $"worst {worstRebuildMs:F1} ms, uploaded {uploadBytes / (1024d * 1024d):F1} MB; "
+            + $"camera avg {(presented == 0 ? 0 : cameraTotalMs / presented):F1} ms, worst {worstCameraMs:F1} ms");
 
         vertexBuffer.Dispose();
         depthView.Dispose();
