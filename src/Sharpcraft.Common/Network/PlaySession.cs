@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using Sharpcraft.Common.Entities;
+
 namespace Sharpcraft.Common.Network;
 
 /// <summary>Statistics gathered while holding a play connection open.</summary>
@@ -42,7 +44,9 @@ public static class PlaySession
         CancellationToken cancellationToken,
         Action<string>? log = null,
         Func<JoinGameInfo, (int SectionCount, int MinSectionY, int AirState)>? dimensionLayout = null,
-        Func<ParsedChunk, bool>? onChunk = null)
+        Func<ParsedChunk, bool>? onChunk = null,
+        PlayerEntity? player = null,
+        Func<(float YawDegrees, float PitchDegrees)>? orientation = null)
     {
         ArgumentNullException.ThrowIfNull(connection);
 
@@ -53,6 +57,8 @@ public static class PlaySession
         var disconnected = string.Empty;
         var survived = false;
         var chunksReceived = 0;
+        var sync = player is null ? null : new PlayerSync();
+        var orientationProvider = orientation ?? (() => (0f, 0f));
         var chunksFailed = 0;
         var layout = (SectionCount: 24, MinSectionY: -4, AirState: 0);
         var haveLayout = false;
@@ -150,7 +156,35 @@ public static class PlaySession
 
                         break;
 
-                    case PacketIds.PlayClientbound.Disconnect:
+                    case PacketIds.PlayClientbound.PlayerPosition:
+                {
+                    // A server correction: teleports snap and are acknowledged, small deviations are blended
+                    // towards (docs/specs/network/play-movement.md 4).
+                    if (player is not null &&
+                        sync is not null &&
+                        PlayMovementPackets.TryReadPlayerPosition(body[reader.Position..], out var correction) == DecodeStatus.Success &&
+                        correction is not null)
+                    {
+                        var (yaw, pitch) = orientationProvider();
+                        var outcome = sync.ApplyServerPosition(player, correction, isTeleport: true);
+                        if (outcome.TeleportId is { } teleportId)
+                        {
+                            connection.Send(PlayMovementPackets.BuildAcceptTeleportation(
+                                teleportId,
+                                PlayMovementPackets.Quantize(player.Position.X),
+                                PlayMovementPackets.Quantize(player.Position.Y),
+                                PlayMovementPackets.Quantize(player.Position.Z),
+                                yaw,
+                                pitch));
+
+                            log?.Invoke($"play -> accept teleportation {teleportId} (snapped={outcome.Snapped}, deviation={outcome.Distance:F2})");
+                        }
+                    }
+
+                    break;
+                }
+
+                case PacketIds.PlayClientbound.Disconnect:
                     {
                         reader.TryReadString(out var reason, 262144);
                         disconnected = reason.Length == 0 || reason.Any(char.IsControl)
@@ -166,6 +200,16 @@ public static class PlaySession
 
                     default:
                         log?.Invoke($"play <- id {packetId} ({body.Length} bytes)");
+
+                if (player is not null && sync is not null)
+                {
+                    var (yaw, pitch) = orientationProvider();
+                    var kind = sync.Decide(player, yaw, pitch);
+                    if (sync.Build(kind, player, yaw, pitch) is { } movement)
+                    {
+                        connection.Send(movement);
+                    }
+                }
                         break;
                 }
             }

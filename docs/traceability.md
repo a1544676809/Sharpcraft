@@ -32,7 +32,7 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-018 | 启动器 CLI 垂直切片（login / probe / help） | `docs/modules/launcher.md` §3–§5 | `LauncherCommandLineTests.cs`（10 项）、手工验收：`probe mcf.ddger.top` 输出 protocol 777 | `src/Sharpcraft.Launcher/` | 已完成 |
 | T-055 | 相机改为统一矩阵（世界空间顶点 + camera uniform） | `docs/modules/render.md` §6.1 | `CameraUniformTests`（1 项：uniform 与行向量变换逐分量一致）+ `VertexLayoutTests`（步长 48）| `Framework/Rendering/CameraUniform` | 已完成 |
 | T-057 | 渲染插值（tick 之间平滑移动 + 传送吸附） | `docs/src/sharpcraft-client/game.md` §5 | `PlayerInterpolatorTests`（4 项：平滑插值、alpha 夹紧、yaw 短弧、Snap 丢弃旧样本） | `Client/Game/PlayerInterpolator`、`Launcher/InteractiveSession` | 已完成 |
-| T-058 | Play 移动同步规格（包 id、字段、吸附规则） | `docs/specs/network/play-movement.md` | 待补（实现时同时落解析/构建测试） | 未开始 | 规格已就绪 |
+| T-058 | Play 移动同步（构建/解析/决策/偏差处理/接进 PlaySession） | `docs/specs/network/play-movement.md` | `PlayMovementTests`（12 项：包 id 与字段顺序、服务端位置往返、Relative 位、量化、发送决策、传送吸附、小幅平滑、大幅吸附、相对坐标按偏移） | `Common/Network/PlayMovementPackets`、`PlayerSync`、`PlaySession` | 已完成 |
 | T-056 | 固定 20 Hz tick 循环与第一人称相机 | `docs/modules/input.md` §6；`docs/src/sharpcraft-client/{game,camera}.md` | `TickLoopAndCameraTests`（8 项：固定速率、补跑上限、插值因子、视角方向、俯仰夹紧、yaw 归一、相机与移动同向、眼位） | `Client/Game`、`Client/Camera`、`Launcher/InteractiveSession` | 已完成 |
 | T-054 | 输入采集与动作映射（GLFW 回调 + FrameInput） | `docs/modules/input.md` §4；`docs/src/sharpcraft-client/input.md` | `InputMapperTests`（7 项：前进/横移、相反抵消、跳跃/冲刺/释放、松键即停、位移只消费一次、失焦清空、重绑定） | `Framework/Platform/WindowHost` + `Client/Input/` | 已完成 |
 | T-053 | 实体系统根基（Aabb/尺寸/Entity/LivingEntity/PlayerEntity） | `docs/modules/entities.md` §3–§5；`docs/src/sharpcraft-common/entities.md` | `EntityMovementTests`（12 项：行走 4.317 b/s、冲刺 5.612 b/s、跳跃 1.25 格、加速曲线、冰面滑行、终端速度、贴面静止、墙体阻挡、不穿模、眼高） | `Common/Entities/` | 已完成 |

@@ -162,6 +162,34 @@ public ref struct PayloadReader
         return DecodeStatus.Success;
     }
 
+    /// <summary>Reads a big-endian single-precision float.</summary>
+    public DecodeStatus TryReadFloat(out float value)
+    {
+        if (Remaining.Length < sizeof(float))
+        {
+            value = 0f;
+            return DecodeStatus.NeedMoreData;
+        }
+
+        value = BinaryPrimitives.ReadSingleBigEndian(Remaining);
+        Position += sizeof(float);
+        return DecodeStatus.Success;
+    }
+
+    /// <summary>Reads a big-endian double.</summary>
+    public DecodeStatus TryReadDouble(out double value)
+    {
+        if (Remaining.Length < sizeof(double))
+        {
+            value = 0d;
+            return DecodeStatus.NeedMoreData;
+        }
+
+        value = BinaryPrimitives.ReadDoubleBigEndian(Remaining);
+        Position += sizeof(double);
+        return DecodeStatus.Success;
+    }
+
     /// <summary>Reads a big-endian unsigned short.</summary>
     public DecodeStatus TryReadUnsignedShort(out ushort value)
     {

@@ -67,6 +67,7 @@ status: 已评审
 ## 6. 实现状态
 
 - [x] 包 id 与字段布局（本节）
-- [ ] `PlayPackets.BuildMovePlayer*` 与 `TryReadPlayerPosition`
-- [ ] `PlayerSync`（发送决策、偏差分级、`AcceptTeleportation` 回应）
-- [ ] 接进 `PlaySession` 的收发循环
+- [x] `PlayMovementPackets.BuildMovePlayer*` 与 `TryReadPlayerPosition`（12 项测试）
+- [x] `PlayerSync`（发送决策、偏差分级、`AcceptTeleportation` 回应）
+- [x] 接进 `PlaySession` 的收发循环（`player` + `orientation` 可选参数）
+- [ ] 与真实服务器实测（本地 offline-mode 服务端已就绪）

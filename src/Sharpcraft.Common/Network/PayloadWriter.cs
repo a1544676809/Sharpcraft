@@ -74,6 +74,20 @@ public ref struct PayloadWriter
         Position += sizeof(int);
     }
 
+    /// <summary>Writes a big-endian single-precision float (protocol floats are big-endian).</summary>
+    public void WriteFloat(float value)
+    {
+        BinaryPrimitives.WriteSingleBigEndian(Remaining, value);
+        Position += sizeof(float);
+    }
+
+    /// <summary>Writes a big-endian double.</summary>
+    public void WriteDouble(double value)
+    {
+        BinaryPrimitives.WriteDoubleBigEndian(Remaining, value);
+        Position += sizeof(double);
+    }
+
     /// <summary>Writes a big-endian unsigned short.</summary>
     public void WriteUnsignedShort(ushort value)
     {

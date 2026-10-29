@@ -134,8 +134,20 @@ public static class PacketIds
         /// <summary>Keep alive reply.</summary>
         public const int KeepAlive = 28;
 
+        /// <summary>Accept a server teleport, carrying the id and the accepted position.</summary>
+        public const int AcceptTeleportation = 0;
+
         /// <summary>Position update.</summary>
         public const int MovePlayerPos = 30;
+
+        /// <summary>Position and rotation update, sent while turning and walking.</summary>
+        public const int MovePlayerPosRot = 31;
+
+        /// <summary>Rotation-only update.</summary>
+        public const int MovePlayerRot = 32;
+
+        /// <summary>Status-only update: the ground and collision flags changed.</summary>
+        public const int MovePlayerStatusOnly = 33;
 
         /// <summary>Pong reply.</summary>
         public const int Pong = 45;
@@ -149,6 +161,9 @@ public static class PacketIds
 
         /// <summary>Keep alive ping.</summary>
         public const int KeepAlive = 45;
+
+        /// <summary>Absolute player position: a teleport or a server correction.</summary>
+        public const int PlayerPosition = 71;
 
         /// <summary>JoinGame.</summary>
         public const int Login = 50;
