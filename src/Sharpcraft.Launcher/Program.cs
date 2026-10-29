@@ -142,9 +142,12 @@ internal static class Program
         try
         {
             Console.WriteLine($"collecting chunks for {collectSeconds}s...");
-            world = await WindowCommand
+            // The walk path opens its own session below, so the collected connection is released here.
+            var preparedWorld = await WindowCommand
                 .ServerWorldAsync(address, http, collectSeconds, cancellation.Token)
                 .ConfigureAwait(false);
+            world = preparedWorld.World;
+            preparedWorld.Live.Dispose();
             Console.WriteLine($"world: {world.LoadedChunkCount} chunks, spawn will come from the teleport");
         }
         catch (Exception exception) when (exception is InvalidOperationException or IOException)

@@ -81,6 +81,19 @@ internal sealed class LivePlaySession : IDisposable
         return session;
     }
 
+    /// <summary>
+    /// Takes over a connection that already finished its login and configuration, so the startup does not join
+    /// the world twice (docs/specs/network/play-movement.md 7.32).
+    /// </summary>
+    /// <param name="connection">A connection already in the play phase; ownership passes to the session.</param>
+    /// <param name="cancellationToken">Cancels the receive pump.</param>
+    internal static LivePlaySession Adopt(MinecraftConnection connection, CancellationToken cancellationToken)
+    {
+        var session = new LivePlaySession(connection);
+        session.Start(cancellationToken);
+        return session;
+    }
+
     /// <summary>Takes the next received packet body, if any.</summary>
     /// <param name="body">Packet body without the length prefix.</param>
     internal bool TryDequeue(out byte[] body) => _incoming.TryDequeue(out body!);

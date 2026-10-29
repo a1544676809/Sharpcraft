@@ -1138,3 +1138,29 @@ packedXZ(byte) | y(short) | type(VarInt) | NBT(类型字节 + 载荷；0x00 表�
 | tick 线程控制台 I/O | 确有影响：静音后 `>55ms` 由 11 次降到 1 次（T-092，已修）|
 
 即：本地均匀、发送均匀、tick 率正常；真正让观察端看起来顿挫的是**观察端缺少 3 刻逼近**（已修）。
+
+### 7.32 启动只连一次（2026-10-29）
+
+现象：启动时别人先看到"加入游戏"，随即"退出游戏"，等窗口真正出图后又"加入游戏"一次；启动也偏慢。
+
+根因：启动链路上**连接了两次**——先 `ServerWorldAsync` 登录并收集区块后 **dispose 掉连接**，
+随后 `LivePlaySession.ConnectAsync` 再登录一次进 Play。
+
+原版没有这个形态：`ConnectScreen.connect` 只调用一次 `Connection.connect`，登录完成后
+`ClientPacketListener.handleLogin` 直接创建 `ClientLevel`，**边收区块边渲染**，只在玩家脚下那一块
+就绪前显示加载界面。
+
+修复分两层：
+
+| 层 | 内容 |
+| --- | --- |
+| 连接复用 | `ServerWorldAsync` 不再 dispose，而是把**已进入 Play 的连接**交给 `LivePlaySession.Adopt` 接管收包泵 |
+| 提前收工 | `PlaySession.RunAsync` 尊重 `onChunk` 的返回值（`false` = 够了），窗口收到 **9 个区块**（3×3，`MC_START_CHUNKS` 可调）即开窗 |
+
+实测（全新离线名）：服务端日志**只有一次** `joined the game` 与一次 `left the game`，窗口正常出图。
+
+**仍与原版有差距**：我们的世界在登录**之前**按收集阶段推断的尺寸构造，而原版是在 `handleLogin` 里
+用登录包建 `ClientLevel` 并保留配置阶段的注册表。要完全对齐（首帧不阻塞、加载界面），需要让会话持有
+注册表并在 `Login`/`Respawn` 时创建或重配世界——已登记为 T-096，需先出 ADR。
+
+**另有一处同类问题未修**：`walk` 工具仍在收集后自行再登录一次（T-097）。

@@ -120,3 +120,6 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-092 | tick 线程上的控制台 I/O 造成周期性停顿（实测每秒一次、间隔 >55ms 由 1 次增至 11 次）| `docs/specs/network/play-movement.md` §7.29 | `walk` 节奏统计对比（静音前后 >55ms 次数）| `Launcher/InteractiveSession`（`MC_DIAG` 门控）| 已完成 |
 | T-093 | 实体朝向插值未归一化（实测 `yaw=-825.5`）| `docs/specs/network/play-movement.md` §7.29 | `EntityAngleWrappingTests`（200 轮跨零交替，角度始终在 [0,360)）| `Client/World/EntityTracker.Wrap360` | 已完成 |
 | T-094 | 朝向约定与原版不同（俯仰取反 + 偏航差 180°，他人看到上下颠倒且身体朝向相反）| `docs/specs/network/play-movement.md` §7.30 | `LookConventionTests`（14 项：符号、往返、9 组角度的**视线向量几何等价**、符号到达大端报文）| `Client/Camera/LookConvention`、`Launcher/InteractiveSession` | 已完成 |
+| T-095 | 启动只连一次 + 区块够用即开窗（消除幽灵加入、缩短启动）| `docs/specs/network/play-movement.md` §7.32 | 实测：服务端日志单次加入/离开；`chunks: 9 ok` 后立即首帧 | `Launcher/WindowCommand.ServerWorldAsync`、`Launcher/LivePlaySession.Adopt`、`Common/Network/PlaySession` | 已完成 |
+| T-096 | 会话持有注册表并在 `Login`/`Respawn` 创建世界（完全对齐原版，首帧不阻塞）| `docs/specs/network/play-movement.md` §7.32 | 待补（需 ADR）| 未开始 | 规格已就绪 |
+| T-097 | `walk` 工具收集区块后仍二次登录 | `docs/specs/network/play-movement.md` §7.32 | 待补 | 未开始 | 规格已就绪 |

@@ -29,6 +29,7 @@ internal static class WindowCommand
         CancellationToken cancellationToken)
     {
         ClientWorld world;
+        LivePlaySession? joinedEarly = null;
 
         if (Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 })
         {
@@ -40,7 +41,9 @@ internal static class WindowCommand
         }
         else if (address is not null)
         {
-            world = await ServerWorldAsync(address, http, collectSeconds, cancellationToken).ConfigureAwait(false);
+            var preparedWorld = await ServerWorldAsync(address, http, collectSeconds, cancellationToken).ConfigureAwait(false);
+            world = preparedWorld.World;
+            joinedEarly = preparedWorld.Live;
         }
         else
         {
@@ -92,8 +95,9 @@ internal static class WindowCommand
         // A real server keeps the session live while the window runs, so movement is actually sent and the
         // server's corrections come back through the same code path the walk command verified
         // (docs/specs/network/play-movement.md 6.5).
-        LivePlaySession? live = null;
-        if (address is not null &&
+        LivePlaySession? live = joinedEarly;
+        if (live is null &&
+            address is not null &&
             Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is not { Length: > 0 } &&
             Environment.GetEnvironmentVariable("MC_FRAME_REPLAY") is not { Length: > 0 })
         {
@@ -203,7 +207,12 @@ internal static class WindowCommand
         throw new InvalidOperationException($"MC_WINDOW_SELFRESIZE must look like 640x360, got '{raw}'");
     }
 
-    internal static async Task<ClientWorld> ServerWorldAsync(
+    /// <summary>A collected world together with the connection it was collected over.</summary>
+    /// <param name="World">The world holding the received chunks.</param>
+    /// <param name="Live">Session that owns the already joined connection.</param>
+    internal readonly record struct PreparedWorld(ClientWorld World, LivePlaySession Live);
+
+    internal static async Task<PreparedWorld> ServerWorldAsync(
         string address,
         HttpClient http,
         int collectSeconds,
@@ -235,7 +244,6 @@ internal static class WindowCommand
             throw new InvalidOperationException($"server refused the login: {outcome.Reason}");
         }
 
-        using (connection)
         {
             var probe = await ConfigurationProbe.RunAsync(
                 connection,
@@ -246,6 +254,13 @@ internal static class WindowCommand
             {
                 throw new InvalidOperationException($"did not reach play: {probe.Reason}");
             }
+
+            // Vanilla does not fill the whole view distance before showing the world, it waits for the ground
+            // near the player and renders while the rest streams in. Nine chunks is a three by three patch, which
+            // arrives in a fraction of a second and is enough for a first frame.
+            var startChunks = Environment.GetEnvironmentVariable("MC_START_CHUNKS") is { } rawStart && int.TryParse(rawStart, out var parsedStart)
+                ? parsedStart
+                : 9;
 
             Console.WriteLine("collecting chunks...");
             ClientWorld? world = null;
@@ -265,16 +280,21 @@ internal static class WindowCommand
                 {
                     world ??= new ClientWorld(-4, 24);
                     world.AddChunk(parsed);
-                    return true;
+
+                    // Keep going until the ground around the player exists, then let the window open.
+                    return world.LoadedChunkCount < startChunks;
                 }).ConfigureAwait(false);
 
             Console.WriteLine($"chunks: {stats.ChunksReceived} ok, {stats.ChunksFailed} failed");
             if (world is null || world.LoadedChunkCount == 0)
             {
+                connection.Dispose();
                 throw new InvalidOperationException("no chunks were received, nothing to show");
             }
 
-            return world;
+            // Hand the joined connection to the session instead of dropping it and logging in again. Joining
+            // twice made startup slower and showed a spurious join and leave to everyone else on the server.
+            return new PreparedWorld(world, LivePlaySession.Adopt(connection, cancellationToken));
         }
     }
 }

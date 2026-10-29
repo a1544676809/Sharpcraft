@@ -68,7 +68,12 @@ public static class PlaySession
 
         try
         {
-            while (!timeout.IsCancellationRequested)
+            // The callback returning false means the caller already has enough to start rendering, which is
+            // how vanilla behaves: it stops waiting as soon as the ground under the player exists rather than
+            // filling the whole view distance first.
+            var satisfied = true;
+
+            while (!timeout.IsCancellationRequested && satisfied)
             {
                 var body = await connection.ReceiveAsync(timeout.Token).ConfigureAwait(false);
                 var reader = new PayloadReader(body);
@@ -109,7 +114,11 @@ public static class PlaySession
                         if (status == DecodeStatus.Success && parsed is not null)
                         {
                             chunksReceived++;
-                            onChunk?.Invoke(parsed);
+
+                            if (onChunk is not null && !onChunk(parsed))
+                            {
+                                satisfied = false;
+                            }
                         }
                         else
                         {
