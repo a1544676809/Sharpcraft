@@ -6,6 +6,7 @@ using System.Numerics;
 using Sharpcraft.Client.Camera;
 using Sharpcraft.Client.Game;
 using Sharpcraft.Client.Input;
+using Sharpcraft.Client.Ui;
 using Sharpcraft.Client.World;
 using Sharpcraft.Common.Entities;
 using Sharpcraft.Common.Network;
@@ -33,6 +34,7 @@ internal sealed class InteractiveSession
     private readonly ChunkWorkerPool? _pool;
     private readonly EntityTracker _entities = new();
     private readonly PlayerListRoster _playerList = new();
+    private readonly ChatInput _chat = new();
     private readonly bool _diagEnabled = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
     private int _diagFrames;
 
@@ -99,6 +101,9 @@ internal sealed class InteractiveSession
     /// <summary>The player list the server described.</summary>
     public PlayerListRoster PlayerList => _playerList;
 
+    /// <summary>The chat prompt.</summary>
+    public ChatInput Chat => _chat;
+
     /// <summary>Fraction into the current tick, for callers that interpolate between ticks.</summary>
     public float PartialTick => _loop.Alpha;
 
@@ -120,6 +125,75 @@ internal sealed class InteractiveSession
     /// <summary>Player being simulated.</summary>
     public PlayerEntity Player => _player;
 
+
+    /// <summary>Reads the keyboard for the chat prompt and sends what the player submits.</summary>
+    /// <param name="window">Window whose input state is read.</param>
+    private void UpdateChat(WindowHost window)
+    {
+        var input = window.Input;
+        var bindings = KeyBindings.Default;
+
+        if (!_chat.IsOpen)
+        {
+            // Both keys open the prompt; the slash key leaves its slash behind so a command can be typed straight on.
+            if (bindings.JustPressed(input, InputAction.OpenCommand))
+            {
+                _chat.Open("/");
+                window.SetMouseCaptured(false);
+            }
+            else if (bindings.JustPressed(input, InputAction.OpenChat))
+            {
+                _chat.Open();
+                window.SetMouseCaptured(false);
+            }
+
+            return;
+        }
+
+        if (bindings.JustPressed(input, InputAction.CloseScreen))
+        {
+            _chat.Close();
+            return;
+        }
+
+        if (bindings.JustPressed(input, InputAction.SendMessage))
+        {
+            if (_chat.TrySubmit(out var message, out var isCommand))
+            {
+                SendChat(message, isCommand);
+            }
+
+            return;
+        }
+
+        if (input.JustPressed(InputKey.Backspace))
+        {
+            _chat.Backspace();
+        }
+
+        var typed = input.TakeText();
+
+        if (typed.Length > 0)
+        {
+            _chat.Append(typed.AsSpan());
+        }
+    }
+
+    /// <summary>Sends a submitted line as either a chat message or a command.</summary>
+    /// <param name="message">Line the player submitted.</param>
+    /// <param name="isCommand">True when it starts with a slash.</param>
+    private void SendChat(string message, bool isCommand)
+    {
+        if (_live is null)
+        {
+            return;
+        }
+
+        _live.Send(isCommand
+            ? PlayPackets.BuildChatCommand(message)
+            : PlayPackets.BuildChatMessage(message, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+    }
+
     /// <summary>
     /// Advances the simulation from the current input and returns the camera for this frame.
     /// </summary>
@@ -128,7 +202,17 @@ internal sealed class InteractiveSession
     {
         ArgumentNullException.ThrowIfNull(window);
 
+        // Chat runs before movement so a key that opened the prompt cannot also move the player on the same frame.
+        UpdateChat(window);
+
         var frame = _mapper.Map(window.Input);
+
+        if (_chat.IsOpen)
+        {
+            // While typing, the player does not move or look: the reference gives the screen the keyboard, and a
+            // stray step while writing a message is the sort of thing that gets people killed.
+            frame = FrameInput.None with { LookDelta = Vector2.Zero };
+        }
 
         // Verification hook: walk forward without a keyboard so an unattended run exercises the network path.
         if (Environment.GetEnvironmentVariable("MC_WINDOW_AUTOWALK") == "1")

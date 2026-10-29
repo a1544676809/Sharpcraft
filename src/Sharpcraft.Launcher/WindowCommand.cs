@@ -216,6 +216,23 @@ internal static class WindowCommand
                 // The reference shows the list only while the key is held, so it is drawn from the current input
                 // rather than unconditionally. It joins the same batch as the document, so the submission budget
                 // does not grow with it.
+                // The prompt sits where the reference puts it: a two pixel inset, twelve pixel box at the foot of
+                // the screen, half transparent black behind it, and the caret after the typed text.
+                if (session.Chat.IsOpen)
+                {
+                    const uint promptBackground = 0x80000000u;
+                    uiGeometry.AddRectangle(2f, height - 14f, width - 4f, 12f, promptBackground);
+
+                    if (uiFont is not null)
+                    {
+                        var typed = session.Chat.Text;
+                        UiScreenLayout.AddText(uiGeometry, uiFont, typed, 4f, height - 13f, 1f, 0xFFFFFFFFu);
+
+                        var caretX = 4f + (uiFont.MeasureWidth(typed) * 1f);
+                        uiGeometry.AddRectangle(caretX + 1f, height - 13f, 1f, 8f, 0xFFE0E0E0u);
+                    }
+                }
+
                 if (KeyBindings.Default.IsDown(input, InputAction.PlayerList))
                 {
                     PlayerListPanel.Draw(

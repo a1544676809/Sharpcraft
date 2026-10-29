@@ -39,6 +39,9 @@ public enum InputAction
     /// <summary>Open the chat prompt (t).</summary>
     OpenChat,
 
+    /// <summary>Open the chat prompt with a command prefix (slash).</summary>
+    OpenCommand,
+
     /// <summary>Submit the chat prompt (enter).</summary>
     SendMessage,
 
@@ -69,6 +72,7 @@ public sealed class KeyBindings
         [InputAction.ReleaseCursor] = InputKey.Escape,
         [InputAction.PlayerList] = InputKey.Tab,
         [InputAction.OpenChat] = InputKey.T,
+        [InputAction.OpenCommand] = InputKey.Slash,
         [InputAction.SendMessage] = InputKey.Enter,
         [InputAction.CloseScreen] = InputKey.Escape
     });

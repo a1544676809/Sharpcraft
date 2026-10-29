@@ -22,6 +22,7 @@ AGENTS.md 原则 12：不可逆或跨模块的决策必须在此留档，**只�
 | [`0008-generated-documentation-index.md`](0008-generated-documentation-index.md) | 目录索引改为工具生成，CI 检查索引与源码模块覆盖 | 已接受 | - |
 | [`0009-access-control-applies-to-the-launcher.md`](0009-access-control-applies-to-the-launcher.md) | 澄清宪章 7.1 的适用范围，明确游戏侧不加严不判定 | 已接受 | - |
 | [`0010-ui-hot-reload-scope.md`](0010-ui-hot-reload-scope.md) | 热加载的适用构建、路径边界与不可退化的约束 | 已接受 | - |
+| [`0011-accepted-frame-spike-on-bulk-upload.md`](0011-accepted-frame-spike-on-bulk-upload.md) | 以一个受控偏差换取更早出现的地形，并给出复查条件 | 已接受 | - |
 
 <!-- END GENERATED: docs/decisions -->
 

@@ -151,6 +151,62 @@ public static class PlayPackets
     }
 
     /// <summary>Builds a keep-alive reply echoing the server's id.</summary>
+    /// <summary>Longest chat or command line the reference accepts.</summary>
+    public const int MaxChatLength = 256;
+
+    /// <summary>
+    /// Builds an unsigned chat message.
+    /// </summary>
+    /// <param name="message">Line to send, without a leading slash.</param>
+    /// <param name="timestamp">Milliseconds since the epoch, as the reference sends it.</param>
+    /// <remarks>
+    /// The reference always sends a timestamp, a salt, an optional signature and a last-seen update. When no chat
+    /// session exists the signature is absent, and the last-seen update is an offset of zero, twenty acknowledged
+    /// bits that are all clear, and a checksum of zero, which the receiver treats as "ignore". Sending those fields
+    /// as zeros rather than omitting them is what keeps the packet well formed.
+    /// </remarks>
+    public static byte[] BuildChatMessage(string message, long timestamp)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+
+        if (message.Length > MaxChatLength)
+        {
+            throw new ArgumentException($"a chat line is at most {MaxChatLength} characters", nameof(message));
+        }
+
+        var body = new byte[(message.Length * 4) + 64];
+        var writer = new PayloadWriter(body);
+        writer.WriteVarInt(PacketIds.PlayServerbound.Chat);
+        writer.WriteString(message);
+        writer.WriteLong(timestamp);
+        writer.WriteLong(0L);        // salt
+        writer.WriteBool(false);     // no signature
+        writer.WriteVarInt(0);       // last seen offset
+        writer.WriteByte(0);         // twenty acknowledged bits, three bytes, all clear
+        writer.WriteByte(0);
+        writer.WriteByte(0);
+        writer.WriteByte(0);         // checksum: zero means ignore
+        return body.AsSpan(0, writer.Position).ToArray();
+    }
+
+    /// <summary>Builds a command line, which keeps its leading slash.</summary>
+    /// <param name="command">Command text including the slash.</param>
+    public static byte[] BuildChatCommand(string command)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        if (command.Length == 0 || command.Length > MaxChatLength)
+        {
+            throw new ArgumentException($"a command is between one and {MaxChatLength} characters", nameof(command));
+        }
+
+        var body = new byte[(command.Length * 4) + 8];
+        var writer = new PayloadWriter(body);
+        writer.WriteVarInt(PacketIds.PlayServerbound.ChatCommand);
+        writer.WriteString(command);
+        return body.AsSpan(0, writer.Position).ToArray();
+    }
+
     public static byte[] BuildKeepAliveReply(long keepAliveId)
     {
         var body = new byte[16];

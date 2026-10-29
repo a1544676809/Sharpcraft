@@ -40,5 +40,11 @@ public enum InputKey
     T,
 
     /// <summary>Enter — submit the chat prompt.</summary>
-    Enter
+    Enter,
+
+    /// <summary>Slash — open the chat prompt with a command prefix already typed.</summary>
+    Slash,
+
+    /// <summary>Backspace — delete the character before the caret in the chat prompt.</summary>
+    Backspace
 }

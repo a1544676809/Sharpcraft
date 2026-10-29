@@ -122,6 +122,8 @@ public sealed class WindowInputState
         InputKey.Tab => (int)Keys.Tab,
         InputKey.T => (int)Keys.T,
         InputKey.Enter => (int)Keys.Enter,
+        InputKey.Slash => (int)Keys.Slash,
+        InputKey.Backspace => (int)Keys.Backspace,
         _ => -1
     };
 

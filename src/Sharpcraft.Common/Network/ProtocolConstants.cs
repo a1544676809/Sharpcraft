@@ -128,6 +128,9 @@ public static class PacketIds
         /// <summary>Chat message.</summary>
         public const int Chat = 9;
 
+        /// <summary>A command, sent as one line with its leading slash.</summary>
+        public const int ChatCommand = 7;
+
         /// <summary>
         /// End of a client tick. The server resets its per-tick movement guards here, so a client that
         /// never sends it is disconnected on its second position packet.
@@ -237,6 +240,12 @@ public static class PacketIds
 
         /// <summary>Player list removals.</summary>
         public const int PlayerInfoRemove = 70;
+
+        /// <summary>A chat line from the server itself.</summary>
+        public const int SystemChat = 124;
+
+        /// <summary>A chat line from another player.</summary>
+        public const int PlayerChat = 66;
 
         /// <summary>Ping.</summary>
         public const int Ping = 62;
