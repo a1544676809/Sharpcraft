@@ -55,6 +55,11 @@ public static class UiMarkup
             throw new FormatException($"the root element must be Screen, found {root.Name}");
         }
 
+        // Structure is validated here rather than left to layout. A document that parses but cannot be laid out
+        // would fail while a frame is being built, which is the render thread: the whole point of rejecting bad
+        // documents is that the frame path never throws.
+        ValidateStructure(root);
+
         return root;
     }
 
@@ -145,6 +150,30 @@ public static class UiMarkup
             }
 
             children.Add(ParseElement(text, ref position));
+        }
+    }
+
+    /// <summary>Checks that every element holds only children the kernel can lay out.</summary>
+    /// <param name="node">Element to check, and its subtree.</param>
+    private static void ValidateStructure(UiNode node)
+    {
+        string[] allowedChildren = node.Name switch
+        {
+            "Screen" => ["StackPanel", "TextBlock"],
+            "StackPanel" => ["StackPanel", "TextBlock"],
+            _ => []
+        };
+
+        for (var index = 0; index < node.Children.Count; index++)
+        {
+            var child = node.Children[index];
+
+            if (!allowedChildren.Contains(child.Name))
+            {
+                throw new FormatException($"element {child.Name} cannot appear inside {node.Name}");
+            }
+
+            ValidateStructure(child);
         }
     }
 

@@ -133,5 +133,5 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-106 | UI P0：文字渲染（带纹理 2D 管线 + 字形纹理 + 按材质分段），替换占位竖条 | `docs/modules/ui.md` §9；`docs/src/sharpcraft-client/ui.md` §4.2 | `UiTextRenderingTests`（5 项：纯色+文字=两区间、连续同材质合并、每可见字符一个四边形、按度量而非格宽前进、无字体时退回占位）| `Framework/Rendering/UiRenderer`（文字管线）、`VertexLayout.UiTextAttributes`、`WindowedRenderer`（材质分段绘制）、`Client/Ui/BitmapFont`、`Launcher/FrameCommand.PrepareFont` | 已完成 |
 | T-107 | 渲染间歇性 wgpu 断言（`src/lib.rs:422`）：文字管线首次绘制时偶发，尚未定位 | `docs/modules/ui.md` §13.1 | 待补（需拿到完整 validation 文本）| 未开始 | 规格不足 |
 | T-108 | UI P0：热加载**状态迁移**（按 `x:Name` → 位置路径回退，保留滚动/焦点/输入）| `docs/modules/ui.md` §8、§8.1 | 待补 | 未开始 | 规格已就绪 |
-| T-109 | UI P0：热加载七条判据的自动化（坏文件批量、半写文件、1000 帧交换压力）| `docs/modules/ui.md` §8.1 | 待补 | 未开始 | 规格已就绪 |
+| T-109 | UI P0：热加载判据自动化（编译耗时、坏文件批量、半写文档、1000 次交换压力、帧路径不解析）| `docs/modules/ui.md` §8.1 | `UiHotReloadCriteriaTests`（5 项）+ **结构校验前移**（发现并修复：`TextBlock` 嵌套可解析却会在渲染线程布局时抛异常）| `Client/Ui/UiMarkup`（加载期结构校验）、`tests/.../UiHotReloadCriteriaTests` | 已完成 |
 | T-110 | 纹理方向：全体面上下颠倒 + 一半面左右镜像（改为按原版烤面器逐面投影 UV）| `docs/modules/render.md` 5.4 | `MeshTextureOrientationTests`（6 项参数化：每面 u 轴与 v=0 方向对齐原版 FaceBakery）；`SpriteAtlasTests`/`Repro_003` 保持 V0=顶部约定 | `Client/Render/ChunkMesher`（逐面 UV 投影）、`Client/Assets/SpriteAtlas` | 已完成 |
