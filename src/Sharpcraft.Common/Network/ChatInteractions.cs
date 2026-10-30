@@ -14,6 +14,18 @@ public enum ChatClickAction
     /// <summary>Opens a URL in the browser.</summary>
     OpenUrl,
 
+    /// <summary>Opens a local file; the reference opens it with the operating system.</summary>
+    OpenFile,
+
+    /// <summary>Jumps the chat history to a page.</summary>
+    ChangePage,
+
+    /// <summary>Opens a dialog; not implemented yet.</summary>
+    ShowDialog,
+
+    /// <summary>A mod-defined action; meaningless without that mod.</summary>
+    Custom,
+
     /// <summary>Runs a command as if typed.</summary>
     RunCommand,
 

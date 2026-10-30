@@ -100,4 +100,21 @@ public sealed class ActionBarTests
 
         return BitmapFont.FromSheet(sheet);
     }
+
+    [Fact]
+    public void TheCycledColourMatchesTheReferenceHsv()
+    {
+        // hue advances by one full turn every fifty ticks, saturation 0.7, value 0.6
+        Assert.Equal(0xFF992E2Eu, Sharpcraft.Client.Ui.ActionBar.CycledColour(0, 1f));
+        Assert.Equal(0xFF2E9999u, Sharpcraft.Client.Ui.ActionBar.CycledColour(25, 1f));
+        Assert.Equal(Sharpcraft.Client.Ui.ActionBar.CycledColour(0, 1f), Sharpcraft.Client.Ui.ActionBar.CycledColour(50, 1f));
+    }
+
+    [Fact]
+    public void TheCycledColourCarriesTheFadeAlpha()
+    {
+        var half = Sharpcraft.Client.Ui.ActionBar.CycledColour(0, 0.5f);
+
+        Assert.Equal(0x80u, (half >> 24) & 0xFFu);
+    }
 }

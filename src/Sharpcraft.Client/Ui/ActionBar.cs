@@ -34,6 +34,15 @@ public sealed class ActionBar
     /// <summary>True while something is on screen.</summary>
     public bool IsVisible => _remaining > 0 && _runs.Length > 0;
 
+    /// <summary>
+    /// True when the text colour cycles instead of being white.
+    /// </summary>
+    /// <remarks>
+    /// The reference's <c>set_overlay_message</c> arrives with <c>animate = true</c>, so the action bar cycles hue from the
+    /// moment it appears. Drawing it white is a visible difference, which is why this defaults to true.
+    /// </remarks>
+    public bool AnimateColour { get; set; } = true;
+
     /// <summary>Ticks left before the message has faded out.</summary>
     public int RemainingTicks => _remaining;
 
@@ -92,6 +101,46 @@ public sealed class ActionBar
     /// <param name="font">Glyph metrics.</param>
     /// <param name="canvasWidth">Width of the interface canvas.</param>
     /// <param name="canvasHeight">Height of the interface canvas.</param>
+    /// <summary>
+    /// Cycles the colour the way the reference does: hue advances with elapsed ticks, saturation 0.7, value 0.6.
+    /// </summary>
+    /// <param name="ticks">Ticks since the message appeared.</param>
+    /// <param name="alpha">Alpha in the range zero to one.</param>
+    public static uint CycledColour(int ticks, float alpha) =>
+        HsvToArgb(ticks / 50f, 0.7f, 0.6f, alpha);
+
+    /// <summary>Converts HSV to packed ARGB, matching the reference's own conversion.</summary>
+    /// <param name="hue">Hue; the whole part is discarded.</param>
+    /// <param name="saturation">Saturation, zero to one.</param>
+    /// <param name="value">Value, zero to one.</param>
+    /// <param name="alpha">Alpha, zero to one.</param>
+    public static uint HsvToArgb(float hue, float saturation, float value, float alpha)
+    {
+        var h = hue - MathF.Floor(hue);
+        var i = (int)(h * 6f) % 6;
+        var f = (h * 6f) - MathF.Floor(h * 6f);
+        var p = value * (1f - saturation);
+        var q = value * (1f - (saturation * f));
+        var t = value * (1f - (saturation * (1f - f)));
+
+        var (red, green, blue) = i switch
+        {
+            0 => (value, t, p),
+            1 => (q, value, p),
+            2 => (p, value, t),
+            3 => (p, q, value),
+            4 => (t, p, value),
+            _ => (value, p, q)
+        };
+
+        var a = (uint)Math.Clamp((int)((alpha * 255f) + 0.5f), 0, 255);
+        var r = (uint)Math.Clamp((int)((red * 255f) + 0.5f), 0, 255);
+        var g = (uint)Math.Clamp((int)((green * 255f) + 0.5f), 0, 255);
+        var b = (uint)Math.Clamp((int)((blue * 255f) + 0.5f), 0, 255);
+
+        return (a << 24) | (r << 16) | (g << 8) | b;
+    }
+
     public void Draw(UiGeometry geometry, BitmapFont font, float canvasWidth, float canvasHeight)
     {
         ArgumentNullException.ThrowIfNull(geometry);
@@ -125,7 +174,9 @@ public sealed class ActionBar
                 pen,
                 top,
                 1f,
-                Pack(run.Colour, alpha * (byte.MaxValue / 255f)),
+                AnimateColour
+                    ? CycledColour(LifetimeTicks - _remaining, alpha * (byte.MaxValue / 255f))
+                    : Pack(run.Colour, alpha * (byte.MaxValue / 255f)),
                 shadow: false);
 
             pen += font.MeasureWidth(run.Text);

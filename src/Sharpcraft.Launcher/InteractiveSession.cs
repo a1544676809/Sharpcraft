@@ -203,6 +203,23 @@ internal sealed class InteractiveSession
             return false;
         }
 
+        if (click.Action == Sharpcraft.Common.Network.ChatClickAction.ChangePage)
+        {
+            // An explicit page jump, independent of shift.
+            if (int.TryParse(click.Value, out var page))
+            {
+                _chatLog.ScrollToPage(page);
+            }
+
+            return true;
+        }
+
+        if (click.Action == Sharpcraft.Common.Network.ChatClickAction.OpenFile)
+        {
+            OpenLinkedFile(click.Value);
+            return true;
+        }
+
         if (shift)
         {
             // Holding shift turns the click into an insertion, using the text the style carries for that purpose.
@@ -817,6 +834,25 @@ internal sealed class InteractiveSession
     /// <summary>Sends a submitted line as either a chat message or a command.</summary>
     /// <param name="message">Line the player submitted.</param>
     /// <param name="isCommand">True when it starts with a slash.</param>
+    /// <summary>Opens a file the way the reference does, refusing paths that do not exist.</summary>
+    /// <param name="path">Path carried by the click event.</param>
+    private void OpenLinkedFile(string path)
+    {
+        if (!System.IO.File.Exists(path) && !System.IO.Directory.Exists(path))
+        {
+            Console.WriteLine($"chat: open_file target does not exist ({path})");
+            return;
+        }
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            Console.WriteLine($"chat: open_file failed ({exception.Message})");
+        }
+    }
     private void SendChat(string message, bool isCommand)
     {
         if (_live is null)

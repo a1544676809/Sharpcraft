@@ -211,6 +211,22 @@ public sealed class ChatLog
     /// <summary>Returns to the newest entry, which is what closing the prompt does.</summary>
     public void ResetScroll() => _scroll.Reset();
 
+    /// <summary>
+    /// Scrolls to a one-based page of history, the way a <c>change_page</c> click does.
+    /// </summary>
+    /// <param name="page">One-based page; page one is the newest.</param>
+    public void ScrollToPage(int page)
+    {
+        if (page < 1)
+        {
+            return;
+        }
+
+        var target = (page - 1) * LinesPerPage;
+        var current = _scroll.Offset;
+        ScrollBy(target - current);
+    }
+
     /// <summary>Forgets every line, used when leaving a world.</summary>
     public void Clear() => _lines.Clear();
 
