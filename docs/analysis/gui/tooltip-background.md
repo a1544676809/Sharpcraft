@@ -59,3 +59,11 @@ updated: 2026-10-30
 
 - 需要新增"GUI 贴图 + 九宫格"这一渲染能力，属跨模块特性，需 ADR（`0014`）。
 - 章节规格：`docs/modules/ui.md` §8.8（待评审）。
+
+## 5. 实现进度
+
+- 资产：已在 pack 内（`textures/` 本就在提取白名单），`AssetPackTests` 已断言
+- `mcmeta` 解析：`Client/Ui/GuiSpriteScaling`（`nine_slice` / `border` / `stretch_inner`）
+- 九宫格几何：`Client/Ui/NineSlice.Cells`（角不拉伸、边单向、中心双向；目标过小则收缩角）
+- **待做**：UI 渲染器目前只有 `Colour` 与 `Text`（字形图集）两种材质，绘制任意 GUI 贴图需要新增**贴图材质**
+  （独立绑定组 + 按材质切换绘制）。这是 T-167 的剩余部分，随后 T-168 让 `Tooltip` 使用它。
