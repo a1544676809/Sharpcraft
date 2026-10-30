@@ -21,7 +21,20 @@ internal sealed class LivePlaySession : IDisposable
     private Task _pump = Task.CompletedTask;
     private volatile string _failure = string.Empty;
 
-    private LivePlaySession(MinecraftConnection connection) => _connection = connection;
+    private LivePlaySession(MinecraftConnection connection, Sharpcraft.Common.Network.DynamicRegistries? registries = null)
+    {
+        _connection = connection;
+        Registries = registries;
+    }
+
+    /// <summary>
+    /// Registries the server sent during configuration, which is where the chat type decorations live.
+    /// </summary>
+    /// <remarks>
+    /// Entry ids are positional and per connection, so this has to come from the same connection that carries the
+    /// messages, not from an earlier probe of the same server.
+    /// </remarks>
+    internal Sharpcraft.Common.Network.DynamicRegistries? Registries { get; }
 
     /// <summary>Starts the receive pump on a background task.</summary>
     private void Start(CancellationToken cancellationToken) =>
@@ -76,7 +89,7 @@ internal sealed class LivePlaySession : IDisposable
             throw new InvalidOperationException($"did not reach play: {probe.Reason}");
         }
 
-        var session = new LivePlaySession(connection);
+        var session = new LivePlaySession(connection, probe.Registries);
         session.Start(cancellationToken);
         return session;
     }

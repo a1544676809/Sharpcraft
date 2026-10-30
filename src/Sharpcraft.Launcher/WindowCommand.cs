@@ -118,7 +118,18 @@ internal static class WindowCommand
         using var liveScope = live;
         // Loaded before the session because chat arrives as translation keys and the session resolves them.
         var language = FrameCommand.PrepareLanguage();
-        var session = InteractiveSession.Create(world, request, live, workerPool, language);
+
+        // Chat types decide how a player message is written, so they come from the same connection that carries the
+        // messages (docs/decisions/0012-chat-type-registry.md). Without them the reference's own default shape is used.
+        var chatTypes = new Sharpcraft.Common.Network.ChatTypeTable();
+
+        if (live?.Registries is { } registries)
+        {
+            chatTypes.Load(registries);
+            Console.WriteLine($"chat types: {chatTypes.Count} from the server");
+        }
+
+        var session = InteractiveSession.Create(world, request, live, workerPool, language, chatTypes);
 
         // The document comes from one managed location and nowhere else: no environment variable and no command
         // line option can point the client at an arbitrary file (docs/decisions/0010). Editing that file reloads

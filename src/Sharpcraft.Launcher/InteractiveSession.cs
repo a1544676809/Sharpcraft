@@ -63,6 +63,7 @@ internal sealed class InteractiveSession
     private int _jumpInAir;
     private int _tickCounter;
     private readonly PlayerSync? _sync;
+    private readonly Sharpcraft.Common.Network.ChatTypeTable? _chatTypes;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private TimeSpan _last;
 
@@ -71,8 +72,10 @@ internal sealed class InteractiveSession
         LivePlaySession? live,
         ClientWorld? world,
         ChunkWorkerPool? pool,
-        Sharpcraft.Common.Localization.LanguageTable? language = null)
+        Sharpcraft.Common.Localization.LanguageTable? language = null,
+        Sharpcraft.Common.Network.ChatTypeTable? chatTypes = null)
     {
+        _chatTypes = chatTypes;
         _player = player;
         _language = language ?? Sharpcraft.Common.Localization.LanguageTable.Empty;
         _world = world;
@@ -90,14 +93,15 @@ internal sealed class InteractiveSession
         FrameRequest request,
         LivePlaySession? live = null,
         ChunkWorkerPool? pool = null,
-        Sharpcraft.Common.Localization.LanguageTable? language = null)
+        Sharpcraft.Common.Localization.LanguageTable? language = null,
+        Sharpcraft.Common.Network.ChatTypeTable? chatTypes = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(request);
 
         var adapter = new EntityWorldAdapter(world);
         var spawn = FindSpawn(world, request);
-        var session = new InteractiveSession(new PlayerEntity(adapter, spawn), live, world, pool, language);
+        var session = new InteractiveSession(new PlayerEntity(adapter, spawn), live, world, pool, language, chatTypes);
         session.PrepareDebugPrompt();
         return session;
     }
@@ -705,26 +709,58 @@ internal sealed class InteractiveSession
 
                 case PacketIds.PlayClientbound.PlayerChat:
                     if (PlayerChatPackets.TryReadPlayerChat(
-                            body[reader.Position..], out var chatSender, out var chatMessage, out var chatSigned, _language) ==
-                        DecodeStatus.Success)
+                            body[reader.Position..], out var chatSender, out var chatMessage, out var chatSigned,
+                            out var chatTypeId, out var chatTarget, _language) == DecodeStatus.Success)
                     {
-                        // The decoration around a player message comes from the chat type registry, which is not read
-                        // yet, so the common shape is used and the gap is recorded rather than guessed at.
-                        var line = new System.Collections.Generic.List<Sharpcraft.Common.Network.TextRun>(chatSender.Length + chatMessage.Length + 1);
-                        line.AddRange(chatSender);
-                        line.Add(new Sharpcraft.Common.Network.TextRun(": ", Sharpcraft.Common.Network.ComponentRuns.DefaultColour, false));
-                        line.AddRange(chatMessage);
+                        // The shape of a player message comes from the chat type registry, never from an assumption: the
+                        // same packet renders as <name> text, name >> text or [name -> target] text depending on the
+                        // entry the server named. An id we were never told about cannot be displayed, and the reference
+                        // fails on it too, so the line is dropped with a diagnostic rather than shown in a wrong shape.
+                        // An empty table means the server sent no chat types, in which case the reference's own
+                        // default shape applies. A table with entries but no match for the id is a different matter:
+                        // the reference cannot display such a message at all.
+                        var decoration = _chatTypes is { Count: > 0 } table
+                            ? table.Get(chatTypeId)
+                            : Sharpcraft.Common.Network.ChatTypeDecoration.Default;
+
+                        if (decoration is null)
+                        {
+                            if (_diagEnabled)
+                            {
+                                Console.WriteLine($"chat dropped: unknown chat type {chatTypeId}");
+                            }
+
+                            break;
+                        }
+
+                        var arguments = new System.Collections.Generic.List<Sharpcraft.Common.Network.TextRun[]>(decoration.Parameters.Length);
+
+                        for (var argument = 0; argument < decoration.Parameters.Length; argument++)
+                        {
+                            arguments.Add(decoration.Parameters[argument] switch
+                            {
+                                Sharpcraft.Common.Network.ChatTypeDecoration.Sender => chatSender,
+                                Sharpcraft.Common.Network.ChatTypeDecoration.Content => chatMessage,
+                                Sharpcraft.Common.Network.ChatTypeDecoration.Target => chatTarget,
+                                _ => []
+                            });
+                        }
+
+                        var decorated = Sharpcraft.Common.Network.ComponentRuns.Decorate(
+                            _language,
+                            decoration.TranslationKey,
+                            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(arguments));
 
                         // A message without a signature comes from a server that does not sign chat; the reference
                         // marks those as not secure, which shows the same pale bar a system line gets.
                         _chatLog.Add(
-                            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(line),
+                            decorated,
                             _chatTicks,
                             chatSigned ? Sharpcraft.Client.Ui.ChatLog.MessageTag.None : Sharpcraft.Client.Ui.ChatLog.MessageTag.NotSecure);
 
                         if (_diagEnabled)
                         {
-                            Console.WriteLine($"chat received: {Plain(line)}");
+                            Console.WriteLine($"chat received: {Plain(decorated)}");
                         }
                     }
 

@@ -63,6 +63,81 @@ public static class ComponentRuns
     /// <summary>Looks up a colour name or hex value.</summary>
     /// <param name="value">A name such as <c>gold</c> or a value such as <c>#FFAA00</c>.</param>
     /// <param name="colour">Packed colour when recognised.</param>
+    /// <summary>
+    /// Applies a chat type decoration: a translation key whose <c>%s</c> placeholders are replaced by runs.
+    /// </summary>
+    /// <param name="language">Translation table, or null to leave the key itself visible.</param>
+    /// <param name="translationKey">Key such as <c>chat.type.text</c>.</param>
+    /// <param name="arguments">One run sequence per placeholder, in order.</param>
+    /// <returns>The decorated runs.</returns>
+    /// <remarks>
+    /// Substitution happens on runs rather than on text, otherwise a coloured sender name would lose its colour the
+    /// moment it is placed inside the decoration. Placeholders are matched in order, <c>%%</c> is a literal per cent
+    /// sign, and a placeholder with no argument is dropped rather than shown as <c>%s</c>.
+    /// </remarks>
+    public static TextRun[] Decorate(
+        LanguageTable? language,
+        string translationKey,
+        ReadOnlySpan<TextRun[]> arguments)
+    {
+        ArgumentNullException.ThrowIfNull(translationKey);
+
+        var format = language is not null && language.TryGet(translationKey, out var resolved)
+            ? resolved
+            : translationKey;
+
+        var runs = new List<TextRun>(8);
+        var pending = new System.Text.StringBuilder();
+        var next = 0;
+
+        void Flush()
+        {
+            if (pending.Length > 0)
+            {
+                runs.Add(new TextRun(pending.ToString(), DefaultColour, Bold: false));
+                pending.Clear();
+            }
+        }
+
+        for (var index = 0; index < format.Length; index++)
+        {
+            if (format[index] != '%' || index + 1 >= format.Length)
+            {
+                pending.Append(format[index]);
+                continue;
+            }
+
+            var marker = format[index + 1];
+
+            if (marker == '%')
+            {
+                pending.Append('%');
+                index++;
+                continue;
+            }
+
+            if (marker == 's')
+            {
+                index++;
+
+                if (next < arguments.Length)
+                {
+                    Flush();
+                    runs.AddRange(arguments[next]);
+                    next++;
+                }
+
+                continue;
+            }
+
+            pending.Append(format[index]);
+        }
+
+        Flush();
+
+        return [.. runs];
+    }
+
     public static bool TryParseColour(string value, out uint colour)
     {
         ArgumentNullException.ThrowIfNull(value);

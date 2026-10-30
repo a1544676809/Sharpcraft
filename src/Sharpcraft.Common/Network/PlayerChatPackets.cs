@@ -38,11 +38,15 @@ public static class PlayerChatPackets
         out TextRun[] senderName,
         out TextRun[] text,
         out bool signed,
+        out int chatTypeId,
+        out TextRun[] chatTarget,
         LanguageTable? language = null)
     {
         senderName = [];
         text = [];
         signed = false;
+        chatTypeId = -1;
+        chatTarget = [];
 
         var reader = new PayloadReader(body);
 
@@ -94,6 +98,7 @@ public static class PlayerChatPackets
             return DecodeStatus.NeedMoreData;
         }
 
+        chatTypeId = chatType;
         senderName = ComponentRuns.Flatten(nameComponent, language);
         reader.Skip(nameLength);
 
@@ -103,10 +108,16 @@ public static class PlayerChatPackets
             return DecodeStatus.NeedMoreData;
         }
 
-        if (hasTarget &&
-            NbtReader.TryReadNetworkRoot(body[reader.Position..], out _, out var targetLength) != DecodeStatus.Success)
+        if (hasTarget)
         {
-            return DecodeStatus.NeedMoreData;
+            if (NbtReader.TryReadNetworkRoot(body[reader.Position..], out var targetComponent, out var targetLength) !=
+                DecodeStatus.Success)
+            {
+                return DecodeStatus.NeedMoreData;
+            }
+
+            chatTarget = targetComponent is null ? [] : ComponentRuns.Flatten(targetComponent, language);
+            reader.Skip(targetLength);
         }
 
         text = unsignedContent ?? [new TextRun(content, ComponentRuns.DefaultColour, Bold: false)];
