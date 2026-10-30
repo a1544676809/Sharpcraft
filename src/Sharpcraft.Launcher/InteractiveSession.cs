@@ -1020,6 +1020,20 @@ internal sealed class InteractiveSession
 
                 case PacketIds.PlayClientbound.Disconnect:
                     return;
+
+                default:
+                    // Temporary: an unhandled id is worth seeing when a behaviour is missing, rather than guessing
+                    // which id the server used for it.
+                    if (_diagEnabled)
+                    {
+                        Console.WriteLine($"unhandled packet id={packetId} bytes={body.Length}");
+                    }
+                    else if (Environment.GetEnvironmentVariable("MC_PACKET_TRACE") == "1")
+                    {
+                        Console.WriteLine($"unhandled packet id={packetId} bytes={body.Length}");
+                    }
+
+                    break;
             }
         }
     }

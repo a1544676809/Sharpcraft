@@ -254,7 +254,10 @@ public static class PacketIds
         public const int DeleteChat = 31;
 
         /// <summary>Text shown above the hotbar, which is what a title command's action bar produces.</summary>
-        public const int SetActionBarText = 89;
+        // Derived from the reference's own registration order: the packet is the 89th entry of the clientbound play
+        // template, so its id is 88 when the first entry is zero. The generated table says 89, and the two disagree by
+        // one, so this is the value to re-check against real traffic (docs/modules/ui.md 8.4).
+        public const int SetActionBarText = 88;
 
         /// <summary>Ping.</summary>
         public const int Ping = 62;
