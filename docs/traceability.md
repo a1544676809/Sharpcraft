@@ -164,3 +164,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-137 | 聊天区边距：底框左边距 0→**2** canvas px（宽度 328、距底 40 已与原版一致）| `docs/modules/ui.md` 8.4 | 截图实测：原版框左 2c、宽 ~330c、距底 40c；我们改为框左 2c | `Client/Ui/ChatLog.LeftInset` | 已完成 |
 | T-138 | **消息标签竖条**：系统/错误/被修改行左侧 2 px 指示条，玩家消息无 | `docs/modules/ui.md` 8.4；`ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/chat/GuiMessageTag.java` | `ChatTagTests`（4 项：系统行有浅灰条、玩家行无条、错误行为红、条宽 2 且贴底框左边）| `Client/Ui/ChatLog`（`MessageTag` + 绘制）、`Launcher/InteractiveSession`（系统聊天打标签）| 已完成 |
 | T-139 | **原版对照接口（mcpfabric RPC）**：让原版发消息、跑命令、取帧缓冲，用于同条件比对 | `docs/tools/mcpfabric-rpc.md` | 实测：`chat.send` 成功、`vision.screenshot` 返回 854×480 帧缓冲、未知方法返回 `unknown_method`；据此比出两边行高均 21 设备px、笔画均 2 px | 无代码（仅验证工具文档）| 已完成 |
+| T-140 | **聊天换行**：超长单词硬断在列宽内；多段同一缩进、自下而上改为**自上而下** | `docs/modules/ui.md` 8.4 | `ChatWrapTests`（2 项：各段缩进一致、首段在最上）+ 原版帧缓冲对照（同一 80 字符消息两边换行位置一致）| `Client/Ui/ChatLog.Draw`（去掉跨段 pen 累加、片段行序反转）| 已完成 |

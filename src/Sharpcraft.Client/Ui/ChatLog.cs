@@ -199,16 +199,30 @@ public sealed class ChatLog
                 continue;
             }
 
-            var pen = 0f;
+            // A long entry wraps into several rows, and they read downwards: the first fragment belongs on the
+            // highest row of the group, the last on the lowest. Each fragment starts at the same indent, so the pen
+            // must not carry over from the previous one.
+            var wrapped = new Wrapped(line.Text, font, ColumnWidth);
+            var fragmentCount = 0;
 
-            foreach (var piece in new Wrapped(line.Text, font, ColumnWidth))
+            foreach (var _ in wrapped)
             {
-                if (row >= page)
+                fragmentCount++;
+            }
+
+            var fragment = 0;
+
+            foreach (var piece in wrapped)
+            {
+                var pieceRow = row + (fragmentCount - 1 - fragment);
+                fragment++;
+
+                if (pieceRow >= page)
                 {
-                    break;
+                    continue;
                 }
 
-                var entryBottom = bottom - (row * EntryHeight);
+                var entryBottom = bottom - (pieceRow * EntryHeight);
                 var entryTop = entryBottom - EntryHeight;
 
                 geometry.AddRectangle(
@@ -232,10 +246,10 @@ public sealed class ChatLog
                         Pack(UiGeometry.FromArgb(tagColour), alpha * TextOpacity));
                 }
 
-                DrawPiece(geometry, font, line, piece.Start, piece.Length, MessageIndent + pen, entryBottom - 8f, alpha);
-                pen += font.MeasureWidth(line.Text.AsSpan(piece.Start, piece.Length));
-                row++;
+                DrawPiece(geometry, font, line, piece.Start, piece.Length, MessageIndent, entryBottom - 8f, alpha);
             }
+
+            row += fragmentCount;
         }
 
         return row;
