@@ -48,6 +48,115 @@ public static class OffscreenRenderer
     /// <summary>Builds the sky pipeline: no vertex buffer, no depth, drawn first over the cleared target.</summary>
     /// <param name="device">Device.</param>
     /// <param name="format">Colour target format.</param>
+    /// <summary>
+    /// Compares sampled motion vectors against the same computation done here, pixel by pixel.
+    /// </summary>
+    private static void CompareMotion(
+        Instance instance,
+        Brew.Wgpu.Buffer depthReadback,
+        ulong depthSize,
+        int depthPadded,
+        Brew.Wgpu.Buffer motionReadback,
+        System.Numerics.Matrix4x4 viewProjection,
+        FrameRequest request,
+        int width,
+        int height)
+    {
+        System.Numerics.Matrix4x4.Invert(viewProjection, out var inverse);
+        var shiftText = Environment.GetEnvironmentVariable("MC_FRAME_MOTION_DX");
+        var shift = float.TryParse(shiftText, out var shiftValue) ? shiftValue : 1f;
+        var shiftBy = new System.Numerics.Vector3(shift, 0f, 0f);
+        var previous = CameraMath.BuildViewProjection(
+            request.CameraPosition + shiftBy,
+            request.CameraTarget + shiftBy,
+            request.FieldOfViewDegrees,
+            (float)request.Width / request.Height);
+
+        var motionBytes = (ulong)(width * height * 8);
+
+        if (depthReadback.MapBlocking(instance, MapMode.Read, 0, (nuint)depthSize) != WGPUMapAsyncStatus.Success ||
+            motionReadback.MapBlocking(instance, MapMode.Read, 0, (nuint)motionBytes) != WGPUMapAsyncStatus.Success)
+        {
+            Console.WriteLine("motion: map failed");
+            return;
+        }
+
+        var depthMapped = depthReadback.GetMappedRange<byte>(0, (nuint)depthSize);
+        var motionMapped = motionReadback.GetMappedRange<byte>(0, (nuint)motionBytes);
+        var samples = 0;
+        var mismatches = 0;
+        var worst = 0f;
+
+        for (var y = 16; y < height; y += 31)
+        {
+            for (var x = 16; x < width; x += 31)
+            {
+                var window = BitConverter.ToSingle(depthMapped.Slice((y * depthPadded) + (x * 4), 4));
+
+                if (window >= 1f)
+                {
+                    continue;
+                }
+
+                var u = (x + 0.5f) / width;
+                var v = (y + 0.5f) / height;
+                var clip = new System.Numerics.Vector4((u * 2f) - 1f, 1f - (v * 2f), window, 1f);
+                var world = System.Numerics.Vector4.Transform(clip, inverse);
+                var point = new System.Numerics.Vector3(world.X / world.W, world.Y / world.W, world.Z / world.W);
+                var projected = System.Numerics.Vector4.Transform(new System.Numerics.Vector4(point, 1f), previous);
+
+                if (projected.W <= 0f)
+                {
+                    continue;
+                }
+
+                var previousU = ((projected.X / projected.W) * 0.5f) + 0.5f;
+                var previousV = 0.5f - ((projected.Y / projected.W) * 0.5f);
+                var expectedX = (previousU - u) * width;
+                var expectedY = (previousV - v) * height;
+
+                var offset = ((y * width) + x) * 8;
+                var gpuX = BitConverter.ToSingle(motionMapped.Slice(offset, 4));
+                var gpuY = BitConverter.ToSingle(motionMapped.Slice(offset + 4, 4));
+
+                samples++;
+                var delta = MathF.Max(MathF.Abs(gpuX - expectedX), MathF.Abs(gpuY - expectedY));
+
+                if (delta > 0.01f)
+                {
+                    mismatches++;
+                    worst = MathF.Max(worst, delta);
+                }
+            }
+        }
+
+        depthReadback.Unmap();
+        motionReadback.Unmap();
+        Console.WriteLine($"motion: {samples} samples, mismatches {mismatches}, worst delta {worst:F4} px");
+    }
+
+    private static void WriteMatrix(System.Numerics.Matrix4x4 matrix, float[] target, int offset)
+    {
+        // The C# matrix transforms row vectors and WGSL transforms column vectors, so the rows are uploaded as columns:
+        // that transposes it, which is exactly the conversion needed.
+        target[offset + 0] = matrix.M11;
+        target[offset + 1] = matrix.M12;
+        target[offset + 2] = matrix.M13;
+        target[offset + 3] = matrix.M14;
+        target[offset + 4] = matrix.M21;
+        target[offset + 5] = matrix.M22;
+        target[offset + 6] = matrix.M23;
+        target[offset + 7] = matrix.M24;
+        target[offset + 8] = matrix.M31;
+        target[offset + 9] = matrix.M32;
+        target[offset + 10] = matrix.M33;
+        target[offset + 11] = matrix.M34;
+        target[offset + 12] = matrix.M41;
+        target[offset + 13] = matrix.M42;
+        target[offset + 14] = matrix.M43;
+        target[offset + 15] = matrix.M44;
+    }
+
     /// <summary>Reads the depth buffer back and prints its range, proving depth is available for the occlusion pass.</summary>
     private static float[]? ReportDepth(Instance instance, Brew.Wgpu.Buffer depthReadback, ulong depthSize, int depthPadded, int width, int height)
     {
@@ -574,6 +683,98 @@ public static class OffscreenRenderer
                 }
             }
 
+            Brew.Wgpu.Buffer motionOutput = default;
+            Brew.Wgpu.Buffer motionReadback = default;
+            var hasMotion = Environment.GetEnvironmentVariable("MC_FRAME_MOTION") == "1";
+
+            if (hasMotion)
+            {
+                var sourceBytes = (ulong)depthPadded * height;
+                var depthForMotion = device.CreateBuffer(new BufferDescriptor
+                {
+                    Size = sourceBytes,
+                    Usage = BufferUsage.Storage | BufferUsage.CopyDst
+                });
+
+                encoder.CopyTextureToBuffer(
+                    depthTexture,
+                    depthForMotion,
+                    (uint)depthPadded,
+                    height,
+                    new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 });
+
+                var motionBytes = (ulong)((int)width * (int)height * 8);
+                motionOutput = device.CreateBuffer(new BufferDescriptor
+                {
+                    Size = motionBytes,
+                    Usage = BufferUsage.Storage | BufferUsage.CopySrc
+                });
+                motionReadback = device.CreateBuffer(new BufferDescriptor
+                {
+                    Size = motionBytes,
+                    Usage = BufferUsage.MapRead | BufferUsage.CopyDst
+                });
+
+                var motionParameters = new uint[] { width, height, (uint)(depthPadded / 4), 0 };
+                var motionParameterBytes = new byte[16];
+                System.Runtime.InteropServices.MemoryMarshal.AsBytes(motionParameters.AsSpan()).CopyTo(motionParameterBytes);
+                using var motionParameterBuffer = device.CreateBufferInit(
+                    new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
+                    motionParameterBytes.AsSpan());
+
+                // Previous camera: the same view shifted along X, so the motion has a known sign and magnitude.
+                var shiftText = Environment.GetEnvironmentVariable("MC_FRAME_MOTION_DX");
+                var shift = float.TryParse(shiftText, out var shiftValue) ? shiftValue : 1f;
+                var shiftBy = new System.Numerics.Vector3(shift, 0f, 0f);
+                var previousViewProjection = CameraMath.BuildViewProjection(
+                    request.CameraPosition + shiftBy,
+                    request.CameraTarget + shiftBy,
+                    request.FieldOfViewDegrees,
+                    (float)request.Width / request.Height);
+
+                System.Numerics.Matrix4x4.Invert(viewProjection, out var inverseViewProjection);
+                var matrixBytes = new byte[128];
+                var matrixFloats = new float[32];
+                WriteMatrix(inverseViewProjection, matrixFloats, 0);
+                WriteMatrix(previousViewProjection, matrixFloats, 16);
+                System.Runtime.InteropServices.MemoryMarshal.AsBytes(matrixFloats.AsSpan()).CopyTo(matrixBytes);
+                using var motionMatrixBuffer = device.CreateBufferInit(
+                    new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
+                    matrixBytes.AsSpan());
+
+                using var motionLayout = device.CreateBindGroupLayout(
+                [
+                    BindGroupLayoutEntry.Buffer(4, ShaderStage.Compute, WGPUBufferBindingType.ReadOnlyStorage, false, 0),
+                    BindGroupLayoutEntry.Buffer(5, ShaderStage.Compute, WGPUBufferBindingType.Storage, false, 0),
+                    BindGroupLayoutEntry.Buffer(6, ShaderStage.Compute, WGPUBufferBindingType.Uniform, false, 16),
+                    BindGroupLayoutEntry.Buffer(7, ShaderStage.Compute, WGPUBufferBindingType.Uniform, false, 128)
+                ]);
+
+                using var motionPipelineLayout = device.CreatePipelineLayout([motionLayout]);
+                using var motionShader = device.CreateShaderModule(new ShaderModuleDescriptor
+                {
+                    Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("motion_vectors")))
+                });
+                using var motionPipeline = device.CreateComputePipeline(motionShader, "cs_motion"u8, motionPipelineLayout);
+                using var motionBindGroup = device.CreateBindGroup(
+                    motionLayout,
+                    [
+                        BindGroupEntry.Buffer(4, depthForMotion, 0, sourceBytes),
+                        BindGroupEntry.Buffer(5, motionOutput, 0, motionBytes),
+                        BindGroupEntry.Buffer(6, motionParameterBuffer, 0, 16),
+                        BindGroupEntry.Buffer(7, motionMatrixBuffer, 0, 128)
+                    ]);
+
+                using var motionPass = encoder.BeginComputePass();
+                motionPass.SetPipeline(motionPipeline);
+                motionPass.SetBindGroup(0, motionBindGroup, []);
+                motionPass.DispatchWorkgroups((uint)Math.Max(1, ((int)width + 7) / 8), (uint)Math.Max(1, ((int)height + 7) / 8));
+                motionPass.End();
+
+                encoder.CopyBufferToBuffer(motionOutput, 0, motionReadback, 0, motionBytes);
+                depthForMotion.Dispose();
+            }
+
             var commands = encoder.Finish();
             device.Queue.Submit(commands);
 
@@ -601,6 +802,11 @@ public static class OffscreenRenderer
             if (hasPyramid)
             {
                 ComparePyramidChain(instance, depthReadback, depthSize, depthPadded, pyramidReadbacks, pyramidSizes, (int)width, (int)height);
+            }
+
+            if (hasMotion)
+            {
+                CompareMotion(instance, depthReadback, depthSize, depthPadded, motionReadback, viewProjection, request, (int)width, (int)height);
             }
 
             depthReadback.Dispose();
