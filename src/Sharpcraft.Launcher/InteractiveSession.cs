@@ -303,6 +303,16 @@ internal sealed class InteractiveSession
             _chatLog.ScrollBy(-7);
         }
 
+        // The reference clamps one wheel event to a single step, then multiplies by seven unless shift is held, so a
+        // fast wheel scrolls steadily instead of jumping.
+        var wheel = input.TakeScroll();
+
+        if (wheel != 0)
+        {
+            var step = Math.Clamp(wheel, -1d, 1d);
+            _chatLog.ScrollBy((int)(step * 7d));
+        }
+
         if (UiFont is { } uiFont && input.TakeClick())
         {
             // A click inside the prompt places the caret; the text starts two pixels in from the inset.

@@ -70,4 +70,17 @@ public sealed class InputStateTests
         Assert.False(input.IsKeyDown(InputKey.W));
         Assert.Equal(0, input.PendingTextLength);
     }
+
+    [Fact]
+    public void TheWheelAccumulatesUntilItIsTaken()
+    {
+        var state = new Sharpcraft.Framework.Platform.WindowInputState();
+
+        state.AddScroll(1);
+        state.AddScroll(1);
+
+        // Two events between frames add up instead of the second replacing the first.
+        Assert.Equal(2d, state.TakeScroll());
+        Assert.Equal(0d, state.TakeScroll());
+    }
 }

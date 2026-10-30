@@ -185,6 +185,12 @@ public sealed class WindowHost : IDisposable
 
         glfw.SetCursorPosCallback(handle, (_, x, y) => Input.MoveCursor(new Vector2((float)x, (float)y)));
 
+        glfw.SetScrollCallback(handle, (_, _, yOffset) =>
+        {
+            // The wheel is consumed once per frame, so a fast flick is not lost between frames.
+            Input.AddScroll(yOffset);
+        });
+
         glfw.SetMouseButtonCallback(handle, (_, button, action, _) =>
         {
             if (action == InputAction.Press)

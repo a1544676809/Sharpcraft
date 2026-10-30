@@ -24,6 +24,7 @@ public sealed class WindowInputState
 
     /// <summary>Set when the primary button is pressed and cleared when the click is consumed.</summary>
     private bool _clickPending;
+    private double _scroll;
 
     /// <summary>The interface scale and canvas currently in force.</summary>
     public GuiCanvas Canvas { get; private set; } = new(1, 1, 1);
@@ -85,6 +86,22 @@ public sealed class WindowInputState
     /// <summary>Records a typed character from the backend's character callback.</summary>
     /// <param name="character">Character produced by the platform, which already accounts for layout and IME.</param>
     internal void AppendText(char character) => _text.Append(character);
+
+    /// <summary>Records a wheel movement from the backend.</summary>
+    /// <param name="offset">Vertical detents; positive is away from the user.</param>
+    internal void AddScroll(double offset) => _scroll += offset;
+
+    /// <summary>Takes the wheel movement since the last call and clears it.</summary>
+    /// <remarks>
+    /// Wheel events arrive between frames and can be several per frame, so they accumulate and are consumed once;
+    /// reading per event would let a fast wheel do nothing.
+    /// </remarks>
+    public double TakeScroll()
+    {
+        var offset = _scroll;
+        _scroll = 0;
+        return offset;
+    }
 
     /// <summary>
     /// Starts a frame by snapshotting the keys, so the edge queries describe what changed since the last frame the
