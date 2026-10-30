@@ -278,9 +278,9 @@ internal static class FrameCommand
     /// The pack format this client speaks, from <c>MC_PACK_FORMAT</c> or the snapshot default.
     /// </summary>
     /// <remarks>
-    /// 26.3 snapshot 8 is resource format 96.0 and the 26.3 release is 97.1 (Minecraft Wiki, Pack format). The value is
-    /// overridable because the baseline can move between a snapshot and a release, and a wrong number here would reject
-    /// packs that are in fact fine.
+    /// The baseline is the 26.3 release, whose resource format is 97.1 (Minecraft Wiki, Pack format). The folder name on a
+    /// machine may still say "snapshot 8" from before an upgrade, so the number must not be inferred from a path. The value
+    /// is overridable because a wrong number here would reject packs that are in fact fine.
     /// </remarks>
     private static Sharpcraft.Client.Assets.PackFormatVersion ResolveClientPackFormat()
     {
@@ -291,7 +291,7 @@ internal static class FrameCommand
             return parsed;
         }
 
-        return new Sharpcraft.Client.Assets.PackFormatVersion(96, 0);
+        return new Sharpcraft.Client.Assets.PackFormatVersion(97, 1);
     }
 
     /// <summary>Builds a stack from the base pack plus every installed pack.</summary>

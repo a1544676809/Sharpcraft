@@ -54,7 +54,7 @@
 | A2 | 优先级：后加入者胜；关闭时与原版一致 | 单测 |
 | A3 | `filter` 命中即遮蔽下层包 | 单测（已达成）|
 | A4 | `overlays` 按版本区间叠加，元数据只取 primary | ✅ `ResourcePackOverlayTests`（4 项）|
-| A5 | `pack_format` 不适用的包被跳过并记诊断 | 单测 + 日志断言 |
+| A5 | `pack_format` 不适用的包被跳过并记诊断 | ✅ `ResourcePackFormatTests`（5 项）|
 | A6 | 原始路径读取（`.mcmeta`）与贴图来自同一个包 | 单测（已达成）|
 | A7 | 重载：换栈生效、失败保留旧栈、监听器按序 | 单测（已达成）|
 | A8 | 重载后画面确实变化（改贴图 → 下一帧生效）| 端到端截图 |
@@ -66,12 +66,11 @@
 
 - **本模块"完成"的定义**：A1–A11 全部有证据、矩阵各行状态为 `已完成`、`STATE.md` 更新、`dotnet test` 全绿。
 - **推送时机**：达成上述条件后**整模块一次性推送**，不中途推送半成品（遵循所有者"完成一整个模块再推送"的规矩）。
-- 当前进度：A1/A3/A4/A6/A7 已达成；A2 部分；A5 机制未做、取值来源未解决；A8/A9/A10 未达成。
+- 当前进度：A1/A3/A4/A5/A6/A7 已达成；A2 部分；A8/A9/A10 未达成。
 
 ## 6. 未决
 
-- **`pack_format` 当前值从何而来（未解决，必须先定）**：26.3 的版本清单与 jar 内 `version.json` 都**没有**可直接读到的
-  `pack_version` 字段（已实测：`pack_version.resource/data` 皆为空，版本 json 顶层键为 arguments/assetIndex/assets/complianceLevel/…）。
-  因此 A5 只能先做**机制**：`pack.mcmeta` 的 `supported_formats`（单值或 `[min,max]`）解析 + 与外部给定的客户端格式比较；
-  客户端格式取值来源（`MC_PACK_FORMAT` 覆盖 / 启动器上下文 / 其它）待定，**未知时一律接受并记一条"未校验兼容性"诊断**，不假装校验过。
+- **`pack_format` 取值**：客户端格式 = **97.1**（26.3 正式版，Minecraft Wiki `Template:Resource_pack_format`；
+  本机目录名里的 snapshot 8 是升级后未改名，不可据此推断）。三种声明写法都解析；不匹配的包跳过并诊断；
+  `MC_PACK_FORMAT` 可覆盖。详见 `docs/analysis/assets/resource-pack-format.md`。
 - 热加载是否需要"仅在开发构建可用"之外的产品化开关（当前只做环境变量 + 命令行）。
