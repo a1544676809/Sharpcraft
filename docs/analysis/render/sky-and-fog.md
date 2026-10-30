@@ -1,0 +1,62 @@
+<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
+
+<!-- doc
+title: 原版天空与雾的行为（分析）
+summary: 26.3 的属性驱动雾与天空盘常量；我们的等效实现路径与验证方式
+status: 草稿
+-->
+
+# 原版天空与雾（26.3）
+
+证据指针：`ref://mc-26.3-analysis/src/net/minecraft/client/renderer/fog/FogRenderer.java`、
+`ref://mc-26.3-analysis/src/net/minecraft/client/renderer/SkyRenderer.java`。
+
+## 1. 雾：属性驱动，不是固定常量
+
+26.3 的雾不再是"按距离插值一个颜色"，而是**按环境（environment）分别定义**：
+
+- `FogRenderer.FOG_ENVIRONMENTS` 是环境列表（每个环境有自己的起止与形状）；
+- 雾数据写入 **UBO**：`FOG_UBO_SIZE = vec4 + 5 × float`（std140 计算器），即**颜色 vec4 + 五个标量**；
+- 颜色来自 `colorSourceEnvironment.getBaseColor(level, camera, renderDistance, partialTicks)`，
+  再经 `darkenWorldAmount` 调整 ⇒ **雾色是环境属性 + 世界明暗**的结果，不是硬编码；
+- 雾距离以**方块**计：`renderDistanceInBlocks = renderDistanceInChunks * 16`。
+
+对我们的含义：需要一张**环境属性表**（维度/生物群系/水下/岩浆/失明等），而不是几个常量。
+第一版只做**主世界地表 + 昼夜**，其余环境按"未实现即回退到地表雾"处理并记录。
+
+## 2. 天空：天空盘 + 日出条带
+
+`SkyRenderer` 的实测常量：
+
+| 常量 | 值 |
+| --- | --- |
+| 天空盘半径 `SKY_DISC_RADIUS` | 512 |
+| 天空盘顶点数 `SKY_VERTICES` | 10 |
+| 星星数 `STAR_COUNT` | 1500 |
+| 太阳尺寸 / 高度 | 30 / 100 |
+| 月亮尺寸 / 高度 | 20 / 100 |
+| 日出条带分段 `SUNRISE_STEPS` | 16 |
+| 末地天空四边形 `END_SKY_QUAD_COUNT` | 6 |
+| 末地闪光高度 / 缩放 | 100 / 60 |
+
+天空颜色取自环境属性 `EnvironmentAttributes.SKY_COLOR`（同样属性驱动）。
+
+## 3. 我们要做的等效实现（P2 第一片）
+
+1. **全屏渐变天空**：以 `SKY_COLOR` 为天顶色、雾色为地平线色，按视线与上方向的点积做插值（先不做天空盘与太阳/月亮）；
+2. **距离雾**：以 `renderDistanceInBlocks` 推起止，颜色用同一雾色；
+3. **属性来源**：先内置一组主世界昼/夜常量，后续换成从资源包/数据驱动的属性表；
+4. **不做**：天空盘、星星、日出条带、末地闪光——留到后续切片，且必须在文档里注明是"未实现"而非"等效"。
+
+## 4. 验收方式（与中期目标一致）
+
+- 用**录制场景**（`MC_FRAME_REPLAY`）渲染，两个固定相机位姿：
+  ①水平看地平线（取雾色）②垂直看天顶（取天空色）；
+- 断言像素与**预期属性色**一致（不透明天空须逐位相等，雾混合允许 ±1）；
+- 记录在 `benchmarks/render/`，作为后续阶段（半透明、实体）的对照基线。
+
+## 5. 风险
+
+- 环境属性数据尚未从 jar 提取 ⇒ 第一版用内置常量，属性表提取列入后续任务；
+- 若属性表缺失导致颜色不符，**不得**用"调参凑像素"掩盖，需回到数据来源。
