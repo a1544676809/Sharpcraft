@@ -3,7 +3,7 @@
 
 # 0012 聊天类型注册表的归属与解码
 
-状态：**待评审**
+状态：**已按原版核对**（实现前仍按流程提交评审）
 日期：2026-10-30
 相关：T-096、T-142、原则 5（三侧边界）、原则 12（规格即矩阵）
 
@@ -54,8 +54,17 @@
   且违反原则 4「不臆造协议语义」。
 - **在 `Common/Network` 里做装饰**：会让 Common 依赖本地化实现，破坏依赖方向（原则 5）。
 
-## 待确认
+## 依据原版核对（取代原先的"待确认"）
 
-1. 是否同意把**注册表快照**放在 `Common/Network`（只读、无本地化依赖）。
-2. 是否同意**装饰在会话层**完成，Common 只交出 id 与组件。
-3. 是否接受"注册表未到时退回 `名字: 内容`"的降级行为。
+| 问题 | 原版事实 | 证据 |
+| --- | --- | --- |
+| 注册表归属 | 聊天类型**按 id 经注册表解析**（`ByteBufCodecs.holder(Registries.CHAT_TYPE, …)`），是**每连接**状态 | `ChatType.STREAM_CODEC` |
+| 装饰在哪一层 | 编解码只产出 id 与 name/target 组件；装饰由客户端 `ChatListener.showMessageToPlayer` 调 `ChatType.Bound.decorate` 完成 | `ChatListener` / `ChatType.Bound.decorate` |
+| 注册表缺失时 | `registry.getOrThrow(chatType)` **直接抛异常**——原版**没有**"退回 `名字: 内容`"这种降级 | 同上 |
+| 参数代入 | `SENDER → chatType.name()`、`TARGET → targetName 或 EMPTY`、`CONTENT → content`，再 `translatable(key, params).withStyle(decoration.style)` | `ChatTypeDecoration.resolveParameters` |
+
+**据此修正第 4 条决策**：不再"退回 `名字: 内容`"。注册表缺少该 id 时，**丢弃该条消息并记录一次诊断**
+（原版会抛异常，我们选择不崩客户端，但绝不猜一个形态显示）。
+
+另外确认：`ChatType.DEFAULT_CHAT_DECORATION = withSender("chat.type.text")`，参数为 `[SENDER, CONTENT]`，
+与语言表里的 `<%s> %s` 对应。
