@@ -219,4 +219,5 @@ stack.add(primaryPackResources);                     // primary 最后
 | **统一资源管理器**（`ResourceManager`：一次发现、全局共用，对应原版单一 `ResourceManager` 角色）| 已实现；字体/贴图集/语言表/字体引用全部改为从它读取；端到端验证：日志 `resource packs: 1 installed`（由两行变一行），红色覆盖环仍在 |
 | 目录选择与启动器接线 | 暂用 `MC_RESOURCE_PACKS` 环境变量；启动器选项待做 |
 | 两阶段重载核心（T-173）：`ResourceManager.Reload` + 有序监听器 + 失败保留旧栈 | 已实现（4 项测试）；字体/贴图集监听器与触发源待接 |
+| `overlays` 叠加（A4）| 已实现：`ResourcePackOverlays` + `ResourcePack.Open`（overlay 逆序优先、primary 最后、`pack.mcmeta` 不叠加），4 项测试 |
 | 文件监听（T-174）| 待做 |

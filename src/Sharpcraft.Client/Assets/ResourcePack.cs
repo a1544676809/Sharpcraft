@@ -76,6 +76,59 @@ public sealed class ResourcePack : IDisposable
 
     private const string MetadataFileName = "pack.mcmeta";
 
+    private List<OverlayEntry>? _overlays;
+    private bool _overlaysRead;
+
+    /// <summary>
+    /// Pack format in use, which decides whether an overlay applies. Null means unknown, in which case no overlay is
+    /// applied and the pack root answers alone rather than guessing a version.
+    /// </summary>
+    public int? ClientFormat { get; set; }
+
+    /// <summary>
+    /// The overlay folders that apply to <see cref="ClientFormat"/>, in declaration order.
+    /// </summary>
+    /// <remarks>
+    /// Metadata is never overlaid in the reference, so this is consulted only for asset lookups.
+    /// </remarks>
+    public IReadOnlyList<string> OverlayDirectories()
+    {
+        if (ClientFormat is not { } format)
+        {
+            return [];
+        }
+
+        if (!_overlaysRead)
+        {
+            _overlaysRead = true;
+
+            using var metadata = Open(MetadataFileName, applyOverlays: false);
+
+            if (metadata is not null)
+            {
+                using var reader = new StreamReader(metadata);
+                _overlays = ResourcePackOverlays.TryParse(reader.ReadToEnd());
+            }
+        }
+
+        if (_overlays is null)
+        {
+            return [];
+        }
+
+        var directories = new List<string>(_overlays.Count);
+
+        foreach (var entry in _overlays)
+        {
+            if (entry.AppliesTo(format))
+            {
+                directories.Add(entry.Directory);
+            }
+        }
+
+        return directories;
+    }
+
     /// <summary>Opens a pack from a folder.</summary>
     /// <param name="root">Folder holding <c>pack.mcmeta</c>.</param>
     public static ResourcePack FromDirectory(string root) =>
@@ -97,7 +150,31 @@ public sealed class ResourcePack : IDisposable
     /// The comparison is ordinal and case sensitive, which is what a pack written for the reference expects; a
     /// case insensitive file system must not silently make a wrong-cased path resolve.
     /// </remarks>
-    public Stream? Open(string relativePath)
+    public Stream? Open(string relativePath) => Open(relativePath, applyOverlays: true);
+
+    private Stream? Open(string relativePath, bool applyOverlays)
+    {
+        if (applyOverlays && !string.Equals(relativePath, MetadataFileName, StringComparison.Ordinal))
+        {
+            // The reference builds a stack of the overlays reversed and the primary pack last, then takes the first hit,
+            // so the overlay declared last wins and every overlay beats the pack root.
+            var overlays = OverlayDirectories();
+
+            for (var index = overlays.Count - 1; index >= 0; index--)
+            {
+                var stream = OpenAt(Path.Combine(overlays[index], relativePath.Replace('/', Path.DirectorySeparatorChar)));
+
+                if (stream is not null)
+                {
+                    return stream;
+                }
+            }
+        }
+
+        return OpenAt(relativePath);
+    }
+
+    private Stream? OpenAt(string relativePath)
     {
         if (Kind == ResourcePackKind.Directory)
         {
