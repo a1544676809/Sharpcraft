@@ -99,5 +99,6 @@ G1 拆文件 → G2 include 组合器 → G3 绑定表 → G4 自检 → G5 条�
 | G2 include 组合器 | **完成** | `ShaderIncludeComposer`：只展开一次、缺失报"管线+行+目标"、深度上限 4（4 项测试）|
 | G3 绑定表 | **完成** | `ShaderBindings`（0/1/2/3 + 64B/32B 尺寸常量）|
 | G4 启动自检 | **完成（核心）** | `ShaderDescriptor.Validate`：多/少 binding 双向报错、入口缺失（2 项测试）|
-| G1 拆文件 / G5 条目表 | 待做 | 需把内联 WGSL 移入 `Shaders/pipelines/*.wgsl` 并接嵌入式资源 |
+| G1 拆文件 | **部分完成**（terrain、sky 已移入 `Shaders/pipelines/*.wgsl` 并改为**嵌入式资源** + `ShaderLibrary`；UI 两套待迁）| 帧比对 `identical (max channel delta 0)` 证明无行为变化 |
+| G5 条目表 | 待做 | 待 G1 完成后与门禁测试一并加 |
 | §7 门禁测试 | 待做 | 依赖 G1 完成 |
