@@ -163,10 +163,20 @@ public sealed record LauncherCommandLine(LauncherCommand Command, string? Target
             _ => new LauncherCommandLine(command, null, "assets takes <jar> and an optional <version-json>")
         };
 
+    /// <summary>
+    /// True when the caller supplied a local scene through the environment, so no server address is needed.
+    /// </summary>
+    private static bool HasLocalScene() =>
+        Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 } ||
+        Environment.GetEnvironmentVariable("MC_FRAME_WATER") == "1" ||
+        Environment.GetEnvironmentVariable("MC_FRAME_REPLAY") is { Length: > 0 };
+
     private static LauncherCommandLine WithAddress(LauncherCommand command, IReadOnlyList<string> args, string name) =>
         args.Count switch
         {
-            1 => new LauncherCommandLine(command, null, $"{name} needs a server address"),
+            1 when command is LauncherCommand.Window or LauncherCommand.Frame && HasLocalScene()
+            => new LauncherCommandLine(command, null, null),
+        1 => new LauncherCommandLine(command, null, $"{name} needs a server address"),
             2 => new LauncherCommandLine(command, args[1], null),
             _ => new LauncherCommandLine(command, null, $"{name} takes exactly one address")
         };

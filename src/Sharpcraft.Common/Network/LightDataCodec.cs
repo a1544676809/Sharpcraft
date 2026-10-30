@@ -24,6 +24,28 @@ public sealed record LightData(
     /// <summary>An empty light payload.</summary>
     public static LightData Empty { get; } = new([], [], [], [], [], []);
 
+    /// <summary>
+    /// Sky light at full strength for every section, for synthetic scenes that have no lighting data of their own.
+    /// </summary>
+    /// <param name="sectionCount">Number of sections the chunk holds.</param>
+    public static LightData FullSky(int sectionCount)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(sectionCount);
+
+        var mask = new byte[(sectionCount + 7) / 8];
+        var arrays = new List<byte[]>(sectionCount);
+
+        for (var index = 0; index < sectionCount; index++)
+        {
+            mask[index >> 3] |= (byte)(1 << (index & 7));
+            var array = new byte[2048];
+            Array.Fill(array, (byte)0xFF);
+            arrays.Add(array);
+        }
+
+        return new LightData(mask, [], [], [], arrays, []);
+    }
+
     /// <summary>Number of light arrays carried by this payload.</summary>
     public int ArrayCount => SkyUpdates.Count + BlockUpdates.Count;
 

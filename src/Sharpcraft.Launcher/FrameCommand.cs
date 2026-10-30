@@ -631,7 +631,7 @@ internal static class FrameCommand
     /// <param name="layout">Layout used to resolve the stone and water state ids.</param>
     internal static ClientWorld BuildWaterWorld(BlockStateLayout layout)
     {
-        var world = new ClientWorld(minSectionY: -1, sectionCount: 2);
+        var world = new ClientWorld(minSectionY: -1, sectionCount: 3);
 
         layout.TryGetBaseId(new Identifier("minecraft", "stone"), out var stone);
         layout.TryGetBaseId(new Identifier("minecraft", "water"), out var water);
@@ -647,14 +647,28 @@ internal static class FrameCommand
 
                 if (chunkX == 0 && chunkZ == 0)
                 {
+                    // Two water layers in front of the wall behind, so the blended layer has stone to show through.
                     chunk.SetSection(new Sharpcraft.Common.World.ChunkSection(singleState: water, sectionY: 0));
+                    chunk.SetSection(new Sharpcraft.Common.World.ChunkSection(singleState: water, sectionY: 1));
                 }
 
+                if (chunkX == 0 && chunkZ == 1)
+                {
+                    // A stone wall behind the water: without something behind it, transparency cannot be judged.
+                    chunk.SetSection(new Sharpcraft.Common.World.ChunkSection(singleState: stone, sectionY: 0));
+                    chunk.SetSection(new Sharpcraft.Common.World.ChunkSection(singleState: stone, sectionY: 1));
+                }
+
+                // No lighting data exists for a synthetic scene, so the mesher would shade everything to the minimum;
+                // full sky light makes the shapes readable.
+                chunk.ApplyLight(Sharpcraft.Common.Network.LightData.FullSky(chunk.Light.LightSectionCount));
                 chunk.MarkLoaded();
             }
         }
 
         world.AddChunk(1, 1).AddBlockEntity(new Sharpcraft.Common.World.BlockEntityRecord(8, 0, 8, 1));
+
+        Console.WriteLine($"sky light probe: {world.GetSkyLight(8, 8, 8)} / {world.GetSkyLight(8, 24, 8)}");
 
         return world;
     }

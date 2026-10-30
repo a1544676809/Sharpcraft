@@ -69,6 +69,7 @@ internal static class WindowCommand
         else if (Environment.GetEnvironmentVariable("MC_FRAME_WATER") == "1")
         {
             world = FrameCommand.BuildWaterWorld(VanillaBlockRegistry.Layout);
+            Console.WriteLine("window: water demo scene selected");
         }
         else if (Environment.GetEnvironmentVariable("MC_FRAME_REPLAY") is { Length: > 0 } replayPath)
         {
@@ -310,6 +311,13 @@ internal static class WindowCommand
             ? new Func<DynamicGeometry>(() => entityMesher.Build(session.EntityStates(session.PartialTick), sprite))
             : null;
 
+        // A local demo scene has no player to steer, so the fixed camera from the request is used instead of the
+        // one that follows the session player (whose position is meaningless without a server).
+        var hasLocalScene =
+            Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 } ||
+            Environment.GetEnvironmentVariable("MC_FRAME_WATER") == "1" ||
+            Environment.GetEnvironmentVariable("MC_FRAME_REPLAY") is { Length: > 0 };
+
         var format = WindowedRenderer.Run(
             request,
             frames,
@@ -331,7 +339,7 @@ internal static class WindowCommand
 
             session.CaptureMouse(window, index == 0);
         },
-            (window) => session.UpdateCamera(window),
+            hasLocalScene ? null : (window) => session.UpdateCamera(window),
             geometryUpdates: () =>
             {
                 // Hand fresh work to the pool, then return only the chunks that finished. The renderer keeps a
