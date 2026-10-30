@@ -200,6 +200,37 @@ internal sealed class InteractiveSession
         // Editing, with shift extending the selection the way the reference does.
         var model = _chat.Model;
         var extend = input.IsKeyDown(InputKey.LeftShift);
+        var control = input.IsKeyDown(InputKey.LeftControl);
+
+        if (control && input.JustPressed(InputKey.A))
+        {
+            model.SelectAll();
+        }
+
+        if (control && input.JustPressed(InputKey.C))
+        {
+            if (model.HasSelection)
+            {
+                window.ClipboardText = model.Value[model.SelectionStart..model.SelectionEnd];
+            }
+        }
+
+        if (control && input.JustPressed(InputKey.X))
+        {
+            if (model.HasSelection)
+            {
+                window.ClipboardText = model.Value[model.SelectionStart..model.SelectionEnd];
+                model.Delete();
+            }
+        }
+
+        if (control && input.JustPressed(InputKey.V))
+        {
+            if (window.ClipboardText is { Length: > 0 } pasted)
+            {
+                model.Insert(pasted.AsSpan());
+            }
+        }
 
         if (input.JustPressed(InputKey.Backspace))
         {
@@ -459,8 +490,10 @@ internal sealed class InteractiveSession
         }
 
         var position = _player.Position;
+        // The process id is in the title so that, when several copies are running, it is obvious which
+        // window is which.
         window.Title =
-            $"Sharpcraft | {position.X:F1} {position.Y:F1} {position.Z:F1} | " +
+            $"Sharpcraft #{Environment.ProcessId} | {position.X:F1} {position.Y:F1} {position.Z:F1} | " +
             $"{(_player.OnGround ? "ground" : "air")} | {window.Input.PressedKeys.Count} keys";
     }
 

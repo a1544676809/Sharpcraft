@@ -61,5 +61,14 @@ public enum InputKey
     End,
 
     /// <summary>Delete — remove the character at the caret.</summary>
-    Delete
+    Delete,
+
+    /// <summary>C — copy when combined with control.</summary>
+    C,
+
+    /// <summary>V — paste when combined with control.</summary>
+    V,
+
+    /// <summary>X — cut when combined with control.</summary>
+    X
 }

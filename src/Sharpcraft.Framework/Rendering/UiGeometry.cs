@@ -191,6 +191,21 @@ public sealed class UiGeometry
     public static uint PackColour(byte red, byte green, byte blue, byte alpha) =>
         red | ((uint)green << 8) | ((uint)blue << 16) | ((uint)alpha << 24);
 
+    /// <summary>
+    /// Converts a colour written as <c>AARRGGBB</c> into the word the vertex expects.
+    /// </summary>
+    /// <param name="argb">Colour with alpha in the top byte, then red, green and blue.</param>
+    /// <remarks>
+    /// Interface colours are written the readable way round, red first, while the vertex carries one byte per channel
+    /// in memory order. Converting in a single place stops the two from drifting, which is how a selection once came
+    /// out red: the literal was read as the vertex order instead of the written one.
+    /// </remarks>
+    public static uint FromArgb(uint argb) =>
+        (argb & 0xFF000000u)
+        | ((argb & 0x00FF0000u) >> 16)
+        | (argb & 0x0000FF00u)
+        | ((argb & 0x000000FFu) << 16);
+
     private void AppendQuad(
         float left,
         float top,

@@ -280,6 +280,35 @@ public sealed class WindowHost : IDisposable
         return !_window.IsClosing;
     }
 
+    /// <summary>
+    /// The system clipboard as text, which the interface needs for copy and paste (docs/modules/ui.md 5.2).
+    /// </summary>
+    /// <remarks>
+    /// Read and written through the windowing backend rather than through a platform specific API, so the same code
+    /// serves every platform the window layer supports.
+    /// </remarks>
+    public unsafe string? ClipboardText
+    {
+        get => _handle is null || _glfw is null ? null : _glfw.GetClipboardString((WindowHandle*)_handle);
+
+        set
+        {
+            if (_handle is null || _glfw is null)
+            {
+                return;
+            }
+
+            if (value is null)
+            {
+                _glfw.SetClipboardString((WindowHandle*)_handle, string.Empty);
+            }
+            else
+            {
+                _glfw.SetClipboardString((WindowHandle*)_handle, value);
+            }
+        }
+    }
+
     /// <summary>Requests the window to close.</summary>
     public void Close()
     {

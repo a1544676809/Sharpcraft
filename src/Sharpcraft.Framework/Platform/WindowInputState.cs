@@ -46,22 +46,77 @@ public sealed class WindowInputState
 
     /// <summary>True when the key is held.</summary>
     /// <param name="key">Platform-neutral key.</param>
-    public bool IsKeyDown(InputKey key) => _pressedKeys.Contains(Translate(key));
+    public bool IsKeyDown(InputKey key)
+    {
+        var codes = TranslateAliases(key);
+
+        for (var index = 0; index < codes.Length; index++)
+        {
+            if (_pressedKeys.Contains(codes[index]))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Every backend code that means the same logical key.
+    /// </summary>
+    /// <param name="key">Platform-neutral key.</param>
+    /// <remarks>
+    /// Navigation keys are reachable two ways on a PC keyboard: the dedicated keys, and the numeric keypad with NumLock
+    /// off, which is what an on-screen keyboard's arrows actually send. The windowing backend reports the keypad ones
+    /// as keypad keys, so both spellings are accepted or the arrows would appear dead to anyone using that layout.
+    /// </remarks>
+    public static int[] TranslateAliases(InputKey key) =>
+        key switch
+        {
+            InputKey.LeftArrow => [(int)Keys.Left, (int)Keys.Keypad4],
+            InputKey.RightArrow => [(int)Keys.Right, (int)Keys.Keypad6],
+            InputKey.Home => [(int)Keys.Home, (int)Keys.Keypad7],
+            InputKey.End => [(int)Keys.End, (int)Keys.Keypad1],
+            InputKey.Delete => [(int)Keys.Delete, (int)Keys.KeypadDecimal],
+            _ => [Translate(key)]
+        };
 
     /// <summary>True when the key went down since the previous frame.</summary>
     /// <param name="key">Platform-neutral key.</param>
     public bool JustPressed(InputKey key)
     {
-        var code = Translate(key);
-        return _pressedKeys.Contains(code) && !_previousKeys.Contains(code);
+        var codes = TranslateAliases(key);
+
+        for (var index = 0; index < codes.Length; index++)
+        {
+            var code = codes[index];
+
+            if (_pressedKeys.Contains(code) && !_previousKeys.Contains(code))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>True when the key came up since the previous frame.</summary>
     /// <param name="key">Platform-neutral key.</param>
     public bool JustReleased(InputKey key)
     {
-        var code = Translate(key);
-        return !_pressedKeys.Contains(code) && _previousKeys.Contains(code);
+        var codes = TranslateAliases(key);
+
+        for (var index = 0; index < codes.Length; index++)
+        {
+            var code = codes[index];
+
+            if (!_pressedKeys.Contains(code) && _previousKeys.Contains(code))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Characters typed since the last <see cref="TakeText"/>.</summary>
@@ -139,6 +194,9 @@ public sealed class WindowInputState
         InputKey.Home => (int)Keys.Home,
         InputKey.End => (int)Keys.End,
         InputKey.Delete => (int)Keys.Delete,
+        InputKey.C => (int)Keys.C,
+        InputKey.V => (int)Keys.V,
+        InputKey.X => (int)Keys.X,
         _ => -1
     };
 

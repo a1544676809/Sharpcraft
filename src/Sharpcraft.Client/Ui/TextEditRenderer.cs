@@ -19,11 +19,14 @@ public static class TextEditRenderer
     /// <summary>How long the caret stays on, and then off.</summary>
     public const long BlinkIntervalMs = 300;
 
-    /// <summary>Colour of ordinary text, the reference's own.</summary>
+    /// <summary>Colour of ordinary text, the reference's own, written as ARGB.</summary>
     public const uint TextColour = 0xFFE0E0E0u;
 
-    /// <summary>Colour behind a selection.</summary>
+    /// <summary>Colour behind a selection, written as ARGB: solid blue, the reference's own value.</summary>
     public const uint SelectionColour = 0xFF0000FFu;
+
+    /// <summary>Colour of selected text, which the reference produces by inverting the pixels underneath.</summary>
+    public const uint SelectedTextColour = 0xFFFFFFFFu;
 
     /// <summary>Height of a single line box.</summary>
     public const float LineHeight = 9f;
@@ -110,10 +113,46 @@ public static class TextEditRenderer
         {
             var start = CaretOffset(font, value, model.SelectionStart);
             var end = CaretOffset(font, value, model.SelectionEnd);
-            geometry.AddRectangle(x + start, y - 1f, Math.Max(1f, end - start), LineHeight + 2f, SelectionColour);
+            geometry.AddRectangle(
+                x + start,
+                y - 1f,
+                Math.Max(1f, end - start),
+                LineHeight + 2f,
+                UiGeometry.FromArgb(SelectionColour));
         }
 
-        UiScreenLayout.AddText(geometry, font, value, x, y, 1f, TextColour);
+        var textColour = UiGeometry.FromArgb(TextColour);
+
+        if (!model.HasSelection)
+        {
+            UiScreenLayout.AddText(geometry, font, value, x, y, 1f, textColour);
+        }
+        else
+        {
+            // The reference inverts the pixels under the selection, which reads as white text on blue. There is no
+            // invert blend here, so the selected run is drawn white over the blue instead; recorded in the module page.
+            var selectionStart = model.SelectionStart;
+            var selectionEnd = model.SelectionEnd;
+            var before = value[..selectionStart];
+
+            UiScreenLayout.AddText(geometry, font, before, x, y, 1f, textColour);
+            UiScreenLayout.AddText(
+                geometry,
+                font,
+                value[selectionStart..selectionEnd],
+                x + font.MeasureWidth(before),
+                y,
+                1f,
+                UiGeometry.FromArgb(SelectedTextColour));
+            UiScreenLayout.AddText(
+                geometry,
+                font,
+                value[selectionEnd..],
+                x + font.MeasureWidth(value.AsSpan(0, selectionEnd)),
+                y,
+                1f,
+                textColour);
+        }
 
         if (!focused || !IsCaretVisible(elapsedMs))
         {
@@ -125,12 +164,12 @@ public static class TextEditRenderer
         if (UsesInsertCaret(model))
         {
             // Vertical bar: one pixel wide, from just above the line to its foot, as the reference draws it.
-            geometry.AddRectangle(caretX, y - 1f, 1f, LineHeight + 2f, TextColour);
+            geometry.AddRectangle(caretX, y - 1f, 1f, LineHeight + 2f, textColour);
         }
         else
         {
             // At the end the reference draws the font's underscore, so the caret sits on the baseline.
-            UiScreenLayout.AddText(geometry, font, "_", caretX, y, 1f, TextColour);
+            UiScreenLayout.AddText(geometry, font, "_", caretX, y, 1f, textColour);
         }
     }
 }
