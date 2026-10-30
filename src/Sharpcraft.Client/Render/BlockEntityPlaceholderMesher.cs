@@ -65,8 +65,9 @@ public sealed class BlockEntityPlaceholderMesher
             var entity = entities[index];
             var size = entity.TypeId == ChestTypeId ? ChestSize : GenericSize;
 
-            // Sit the box on the floor of its block, centred horizontally, as the reference chest does.
-            var feet = new Vector3(entity.X + 0.5f, entity.Y + (1f - size) / 2f, entity.Z + 0.5f);
+            // The reference chest model spans one to fifteen pixels horizontally and sits on the block floor, so the
+            // placeholder is centred and starts at the block bottom (ref ChestModel: bottom addBox(1,0,1,14,10,14)).
+            var feet = new Vector3(entity.X + 0.5f, entity.Y, entity.Z + 0.5f);
 
             EntityPlaceholderMesher.AppendBox(
                 _geometry,

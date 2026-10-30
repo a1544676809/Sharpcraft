@@ -14,5 +14,6 @@
 | [`shader-pack-anatomy.md`](shader-pack-anatomy.md) | 真实 Iris 包的文件布局、阶段清单、包装层与共享翻译单元、选项系统；全部为行为级描述 | 草稿 | - |
 | [`sky-and-fog.md`](sky-and-fog.md) | 26.3 的属性驱动雾与天空盘常量；我们的等效实现路径与验证方式 | 草稿 | - |
 | [`upscaling-and-raytracing.md`](upscaling-and-raytracing.md) | 逐项核实 DLSS / XeSS / FSR / 硬件光追的可用性、依据，以及无论选谁都必须先具备的管线输入 | 草稿 | - |
+| [`vanilla-equivalence-check.md`](vanilla-equivalence-check.md) | 逐项把我们的实现与原版参考对照。 | 未标注 | - |
 
 <!-- END GENERATED: docs/analysis/render -->

@@ -88,3 +88,36 @@ status: 草稿
 
 **判定**：目标**保持未完成**。三条部分达成项（③④①）与半透明排序证据是下一步的明确清单；
 不把"带缺口的阶段"记成达成，是这份文档存在的意义。
+
+## 全面验证（2026-10-30 最终轮）
+
+### 一、工程状态
+
+| 检查 | 结果 |
+| --- | --- |
+| 全量构建（warnings as errors）| **0 warning / 0 error** |
+| 单元测试（7 个测试工程）| **1074 通过 / 0 失败** |
+| 文档门禁（索引 + 覆盖率 + SPDX + 漂移）| `source coverage: ok`、`generated indexes: ok` |
+| 仓库卫生 | 无 jar / png / ogg / nbt；`docs/analysis/assets/` 下仅 8 个 `.md`；无机器绝对路径 |
+| 工作区 | 干净（提交后 0 dirty）|
+
+### 二、六项测量（本轮全部重跑）
+
+| # | 项 | 结果 |
+| --- | --- | --- |
+| 1 | 确定性 | `fingerprint 0xD9F5D3A48E05E9A3`，`compare: identical (max delta 0)` |
+| 2 | 金字塔 | `9 levels, total mismatches 0, worst delta 0.000000` |
+| 3 | 运动矢量 | `14 samples, mismatches 0, worst delta 0.0000 px` |
+| 4 | 剔除 | `dropped 12 of 20, pixel mismatches 0`（60.0%，需 `MC_FRAME_DEPTH=1` 才有深度数据）|
+| 5 | 半透明 | `10 triangles, 97344 px changed @ (324,114)`；alpha 0.7 探针 `rgba(51,62,85)` vs alpha 1.0 `rgba(15,12,12)` |
+| 6 | 方块实体 | `1 boxes, 12 triangles`；`311 pixel(s) differ @ (461,70)` |
+
+### 三、原版等效性核查
+
+见 `docs/analysis/render/vanilla-equivalence-check.md`。本轮**发现并修正一处真偏差**：箱子占位整体抬高 1/16，
+与参考 `ChestModel` 的 `addBox(1,0,1,14,10,14)` + `PartPose.ZERO`（贴地）不符；改为贴地后证据由 329 → 311 像素、首个差异由 (461,68) → (461,70)。
+
+### 四、仍未达成的项（不因本轮验证而改变）
+
+方块实体数据包级用例、半透明排序效果证明、实体真实模型与纹理、天空天体、剔除率余量。
+**目标仍未完成。**

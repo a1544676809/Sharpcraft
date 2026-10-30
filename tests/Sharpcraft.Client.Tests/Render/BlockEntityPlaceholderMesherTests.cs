@@ -35,8 +35,8 @@ public sealed class BlockEntityPlaceholderMesherTests
 
         Assert.Equal(BlockEntityPlaceholderMesher.ChestSize, maxX - minX, 3);
         Assert.Equal(BlockEntityPlaceholderMesher.ChestSize, maxZ - minZ, 3);
-        // The reference chest starts one sixteenth above the block floor.
-        Assert.Equal(64.0625f, minY, 4);
+        // The reference chest model sits on the block floor.
+        Assert.Equal(64f, minY, 4);
         Assert.Equal(10.5f, (minX + maxX) / 2f, 3);
         Assert.Equal(-2.5f, (minZ + maxZ) / 2f, 3);
     }
