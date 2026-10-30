@@ -69,3 +69,17 @@ updated: 2026-10-30
 2. `MeshCache`/`ChunkWorkerPool`：支持整体作废并接收新 `BlockSpriteMap`；
 3. `WindowCommand`：重载监听器里重建图集 → 更新映射 → 作废全部区块 → 提升图集版本；
 4. 验收：同一窗口内把包从 16x 换成 32x（或用 Faithful 覆盖），画面贴图变细且**不残留旧 UV 的错位面**。
+
+## 8. 原版重载后如何让几何作废（已核对）
+
+`Minecraft.reloadResourcePacks` 的完成回调里，**成功**时执行：
+
+```java
+this.levelExtractor.allChanged();     // 26.3 中即"全部区块几何作废重建"
+this.reloadStateTracker.finishReload();
+```
+（失败时走 `rollbackResourcePacks` / `abortResourcePackRecovery`，见 §7。）
+
+结论：图集换了就**全量重建所有区块几何**，不做增量判断。这与我们的计划一致，也说明"部分作废"没有收益、只有出错风险。
+
+证据：`ref://mc-26.3-analysis/src/net/minecraft/client/Minecraft.java`（`reloadResourcePacks` 成功分支）。
