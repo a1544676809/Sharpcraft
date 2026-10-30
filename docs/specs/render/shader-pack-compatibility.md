@@ -22,17 +22,40 @@ status: 草稿
 | 可命名渲染目标与采样 | 按 `shader-packs.md` §1/§4 的名单 |
 | 失败回退 | 任何编译失败退回内置管线，**不崩溃** |
 
-## 2. 不支持范围与改写建议
+## 2. 兼容边界：三种不同原因，不可混为一谈
 
-| 特性 | 现状 | 建议改写 |
+### 2.1 硬性不可支持（引擎形态决定）
+
+| 项 | 原因 | 依据 |
 | --- | --- | --- |
-| 计算着色器 `*.csh`（如 `shadowcomp`）| 不支持 | 改为全屏片元阶段实现同类效果（多 pass 迭代），或关闭该特性开关 |
-| Distant Horizons `dh_*` | 不支持（无 DH 模组）| 删除或改为由 `gbuffers_terrain` 覆盖远景；包内保留文件无妨，会被跳过 |
-| Voxy `voxy_*` | 不支持 | 同上 |
-| `clrwl_*`（colorwheel 扩展阶段）| 不支持 | 移除，或在原版等价阶段内实现 |
-| 依赖型包（`pack.json` + `.placebo` 等前置库）| 仅识别并报错 | 提供**不含前置库依赖**的独立版本 |
-| 几何/细分着色器、`textureQueryLod` 等 GLSL 专有接口 | 不支持 | 用片元阶段近似；明细见 §3 |
-| 多遍反馈（同一目标既读又写）| 受限 | 拆成两个目标并显式 ping-pong |
+| `.gsh` 几何着色器 | **WebGPU 只有 vertex / fragment / compute 三阶段**，无几何阶段 | [Unity WebGPU 限制](https://discussions.unity.com/t/early-access-to-the-new-webgpu-backend/933493?page=10)、[gpuweb #1239](https://github.com/gpuweb/gpuweb/issues/1239) |
+| `.tcs` / `.tes` 细分着色器 | WebGPU 无细分阶段，社区方案仍是"CPU 预展开 + compute" | [gpuweb #445](https://github.com/gpuweb/gpuweb/issues/445) |
+
+影响与补救：这两类阶段提供的是**位移细分细节**（水面/地形波浪）与**每三角形效果**（点/线扩面、billboard、法线重算）。
+缺少它们不会让整包不可用，但相关效果消失。补救路径：①位移移到 vsh（多数包本就这么做）②需要更多顶点时用 compute 预展开到 storage buffer ③扩面类效果用实例化或 compute 预生成。
+
+实测（本机样本，`ref://` 见分析文档）：**Complementary Unbound r5.9.3 / Shaders v4.7.2 / Reimagined r5.9.3 三个包的 `.gsh`、`.tcs/.tes` 计数均为 0** ⇒ 对该族影响为零。
+
+### 2.2 可支持但首批未实现（范围决策，不是能力缺口）
+
+| 项 | WebGPU 具备 | 未做的原因 |
+| --- | --- | --- |
+| `.csh` 计算着色器 | **有** compute 阶段 | Iris 语义复杂：单 pass 最多 27 个计算、按字母序、`allowConcurrentCompute`、`imageStore` 写 colortex、`workGroups`/`indirect.pass`；且需核对设备 limits。实测 Unbound/Reimagined 各含 **3 个 `.csh`** ⇒ 这是本族**真正的**缺口 |
+| SSBO | 有 storage buffer（受 `max_storage_buffer_binding_size`）| 同上，随 compute 一起排期 |
+| 自定义 `image.*` | 有 storage texture | 同上 |
+
+### 2.3 依赖我们尚不存在的模组（与渲染能力无关）
+
+`dh_*`（Distant Horizons）、`voxy_*`（Voxy）、`clrwl_*`（Flywheel/Create）、Photonics：阶段只在对应模组存在时才有输入。
+我们客户端没有这些模组，故阶段不可达；包内文件存在即可**跳过并汇总一行日志**，不是错误。
+
+### 2.4 其余改写建议
+
+| 特性 | 建议 |
+| --- | --- |
+| 多遍反馈（同一目标既读又写）| 拆成两个目标显式 ping-pong |
+| 依赖型包（`pack.json` + `.placebo`）| 提供不含前置库的独立版本 |
+| GLSL 专有接口（`textureQueryLod` 等）| 用片元阶段近似 |
 
 ## 3. GLSL → WGSL 常见改写
 
