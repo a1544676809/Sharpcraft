@@ -94,6 +94,8 @@ public static class SpriteAtlasBuilder
     /// Builds an atlas from every <c>textures/block</c> sprite in the stack, plus the missing sprite.
     /// </summary>
     /// <param name="stack">Resource stack; higher sources win, as in the vanilla pack order.</param>
+    private static readonly SpriteImageCache ImageCache = new();
+
     public static SpriteAtlas Build(AssetStack stack)
     {
         ArgumentNullException.ThrowIfNull(stack);
@@ -114,7 +116,8 @@ public static class SpriteAtlasBuilder
                 continue;
             }
 
-            var image = PngDecoder.Decode(bytes);
+            // Only changed files are decoded; a reload that recolours one sprite should not decode thirteen hundred.
+            var image = ImageCache.GetOrDecode(location, bytes, data => PngDecoder.Decode(data));
 
             // The frame size is declared, not guessed: a square of the image width is only the common case.
             var declared = AnimationFrameSize.TryRead(stack.ReadMetadata(ResourceKind.Texture, location));

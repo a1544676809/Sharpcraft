@@ -155,8 +155,49 @@ public sealed class ChunkWorkerPool : IDisposable
     {
         lock (_meshGate)
         {
+            var dx = chunkX - _viewChunkX;
+            var dz = chunkZ - _viewChunkZ;
+
+            // Priorities are computed when a chunk is queued, so walking away from the queue ages it: once the player has
+            // moved far enough, the pending work is re-prioritised rather than served in the old order.
+            if ((dx * dx) + (dz * dz) < PriorityRefreshDistanceSquared)
+            {
+                _viewChunkX = chunkX;
+                _viewChunkZ = chunkZ;
+                return;
+            }
+
             _viewChunkX = chunkX;
             _viewChunkZ = chunkZ;
+            RebuildPriorities();
+        }
+    }
+
+    /// <summary>How far the player may move before pending work is re-ordered, in chunks.</summary>
+    private const float PriorityRefreshDistanceSquared = 4f;
+
+    private void RebuildPriorities()
+    {
+        if (_meshFifo || _meshQueue.Count == 0)
+        {
+            return;
+        }
+
+        var pending = new List<(long Key, long Sequence)>(_meshQueue.Count);
+        var sequence = _meshSequence;
+
+        while (_meshQueue.TryDequeue(out var key, out var priority))
+        {
+            pending.Add((key, priority.Sequence));
+        }
+
+        // Keep the original order as the tie breaker so equal distances do not shuffle between refreshes.
+        pending.Sort((left, right) => left.Sequence.CompareTo(right.Sequence));
+        _meshSequence = sequence;
+
+        foreach (var (key, _) in pending)
+        {
+            _meshQueue.Enqueue(key, (DistanceTo(key), ++_meshSequence));
         }
     }
 

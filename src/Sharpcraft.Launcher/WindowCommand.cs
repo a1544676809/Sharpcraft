@@ -104,7 +104,7 @@ internal static class WindowCommand
         var meshOrderSeen = 0;
         var meshOrderDistanceSum = 0f;
         var geometryEpoch = 0;
-        var replayAllMeshes = false;
+        Queue<(long Key, Sharpcraft.Client.Render.MeshData Mesh)>? replayQueue = null;
 
         // The block atlas the terrain samples. A reload replaces it; whether the geometry must be rebuilt depends on
         // whether the layout changed, so that comparison lives here where both atlases are known.
@@ -154,7 +154,7 @@ internal static class WindowCommand
 
                 meshClock.Stop();
                 geometryEpoch++;
-                replayAllMeshes = true;
+                replayQueue = new Queue<(long, Sharpcraft.Client.Render.MeshData)>(meshCache.SnapshotAll());
                 Console.WriteLine(
                     $"resource reload: layout changed; meshes {meshCache.LastTotalChunks}/{world.LoadedChunkCount} " +
                     $"after {passes} pass(es), candidate {candidateClock.Elapsed.TotalMilliseconds:F1} ms, " +
@@ -342,10 +342,28 @@ internal static class WindowCommand
 
                 // After a reset the renderer holds nothing, so every mesh is replayed once; the incremental queue would
                 // only carry what changed since the last frame and the world would stay empty.
-                var drained = replayAllMeshes
-                    ? meshCache.SnapshotAll()
-                    : meshCache.DrainUpdates();
-                replayAllMeshes = false;
+                // A full replay is spread over frames: sending every mesh at once is what produced the 160 ms spike, and a
+                // partly refilled world is correct because the old geometry was already dropped.
+                List<(long Key, Sharpcraft.Client.Render.MeshData Mesh)> drained;
+
+                if (replayQueue is { Count: > 0 } pendingReplay)
+                {
+                    drained = new List<(long, Sharpcraft.Client.Render.MeshData)>(64);
+
+                    while (drained.Count < 64 && pendingReplay.Count > 0)
+                    {
+                        drained.Add(pendingReplay.Dequeue());
+                    }
+
+                    if (pendingReplay.Count == 0)
+                    {
+                        replayQueue = null;
+                    }
+                }
+                else
+                {
+                    drained = [.. meshCache.DrainUpdates()];
+                }
                 if (drained.Count == 0)
                 {
                     return null;
