@@ -53,3 +53,19 @@ updated: 2026-10-30
 | 精灵索引 | 包增删精灵会让序号漂移 | 应按**精灵身份**绑定而非序号（当前提示框只用 0/1 固定槽，风险低）|
 
 全量区块重建只在重载发生时做一次，与参考实现一致，不进稳态热路径。
+
+## 7. 换图集的落地障碍（实测代码）
+
+- `WindowedRenderer` 只在**启动时**用 `request.Atlas` 创建一次 `atlasTexture`/`atlasView`（L71–101）；
+  `rebuildRequest` 只替换**几何请求**（L569 附近），**不会重新上传图集**。
+- 图集视图被多个绑定组引用（地形管线与 `uiBindGroup`），换图必须同时重建这些绑定组，不能只替换纹理。
+- 区块网格的 UV 来自图集，图集尺寸/拼接一变就必须**作废并重建全部区块**（`MeshCache`/`ChunkWorkerPool` 持有旧 `BlockSpriteMap` 引用）。
+
+结论：这是一次跨 `WindowedRenderer` + `MeshCache` + `WindowCommand` 的结构性改动，不能靠"顺手改两行"完成。
+落地顺序（建议）：
+
+1. `WindowedRenderer`：新增 `AtlasTextureSource`（`TextureData` + 版本号），版本变化时重建 `atlasTexture`/`atlasView`
+   并**重建所有引用它的绑定组**（地形与 UI 各一套），旧资源延后一帧释放；
+2. `MeshCache`/`ChunkWorkerPool`：支持整体作废并接收新 `BlockSpriteMap`；
+3. `WindowCommand`：重载监听器里重建图集 → 更新映射 → 作废全部区块 → 提升图集版本；
+4. 验收：同一窗口内把包从 16x 换成 32x（或用 Faithful 覆盖），画面贴图变细且**不残留旧 UV 的错位面**。
