@@ -275,3 +275,18 @@ P3 之前不谈包；但 §3 的 pass 划分必须**现在就按"可命名目标
 
 待办：查清绑定的混合类型（`ColorTargetState` 只有单参构造、`BlendState` 这个名字不存在），接入后再跑 alpha 0.7 / 1.0 对照，
 **两者必须不同**才算混合生效。
+
+### 混合已启用并数值验收（2026-10-30，闭合 T-243）
+
+绑定的真实形状（反射 `Brew.Wgpu` 得到）：`ColorTargetState` 是**结构体**，字段 `Format`、`Blend`（可空 `WGPUBlendState`）、`WriteMask`；
+`WGPUBlendState` 含 `color` 与 `alpha` 两个 `WGPUBlendComponent`（`operation`/`srcFactor`/`dstFactor`）。
+透明管线现为 `SrcAlpha / OneMinusSrcAlpha`（颜色）与 `One / OneMinusSrcAlpha`（alpha）。
+
+**验收数据**（水层 alpha 0.7，同一像素三帧对照）：
+
+| 像素 | 背景（无透明层）| 不透明水 `w`（alpha 1.0）| 预期 `0.7w+0.3bg` | 实测（alpha 0.7）|
+| --- | --- | --- | --- | --- |
+| (324,114) | (135,177,255) | (15,12,12) | (51.0, 62.1, 84.9) | **(51,62,85)** |
+| (400,150) | (140,180,255) | (21,16,16) | (57.0, 66.1, 88.0) | **(57,66,88)** |
+
+逐通道误差 ≤1（8 位量化），说明混合确实按 SrcAlpha 合成，而不是"画上去"。

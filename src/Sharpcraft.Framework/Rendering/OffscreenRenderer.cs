@@ -338,7 +338,28 @@ public static class OffscreenRenderer
             "vs_main"u8,
             shader,
             Environment.GetEnvironmentVariable("MC_FRAME_ALPHA_ONE") == "1" ? "fs_main"u8 : "fs_translucent"u8,
-            [new ColorTargetState(WGPUTextureFormat.RGBA8Unorm)],
+            [
+                new ColorTargetState
+                {
+                    Format = WGPUTextureFormat.RGBA8Unorm,
+                    WriteMask = ColorWriteMask.All,
+                    Blend = new WGPUBlendState
+                    {
+                        color = new WGPUBlendComponent
+                        {
+                            operation = WGPUBlendOperation.Add,
+                            srcFactor = WGPUBlendFactor.SrcAlpha,
+                            dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
+                        },
+                        alpha = new WGPUBlendComponent
+                        {
+                            operation = WGPUBlendOperation.Add,
+                            srcFactor = WGPUBlendFactor.One,
+                            dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
+                        }
+                    }
+                }
+            ],
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
             multisample: MultisampleState.Default,
