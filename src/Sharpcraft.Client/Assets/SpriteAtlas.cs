@@ -115,8 +115,29 @@ public static class SpriteAtlasBuilder
             }
 
             var image = PngDecoder.Decode(bytes);
-            var frames = Math.Max(1, image.Height / image.Width);
-            sprites.Add((location, TakeFirstFrame(image, frames), frames));
+
+            // The frame size is declared, not guessed: a square of the image width is only the common case.
+            var declared = AnimationFrameSize.TryRead(stack.ReadMetadata(ResourceKind.Texture, location));
+            var frameWidth = declared?.Width ?? image.Width;
+            var frameHeight = declared?.Height ?? image.Width;
+
+            if (frameWidth <= 0 || frameHeight <= 0 ||
+                image.Width % frameWidth != 0 || image.Height % frameHeight != 0)
+            {
+                Console.WriteLine($"sprites: {location} declares a frame of {frameWidth}x{frameHeight} that does not tile; using one frame");
+                frameWidth = image.Width;
+                frameHeight = image.Height;
+            }
+
+            // The frame count is what Stitch needs; the declared frame width is used when it is narrower than the sheet.
+            var frames = Math.Max(1, image.Height / frameHeight);
+
+            if (frameWidth != image.Width)
+            {
+                Console.WriteLine($"sprites: {location} declares a frame {frameWidth} wide in a {image.Width} wide sheet; using the sheet width");
+            }
+
+            sprites.Add((location, image, frames));
         }
 
         var missing = PngDecoder.Decode(new BuiltInFallbackSource().Checkerboard);
@@ -132,8 +153,14 @@ public static class SpriteAtlasBuilder
         ArgumentNullException.ThrowIfNull(sprites);
 
         // A 16x512 texture is 32 frames stacked vertically; only the first frame is stitched.
+        // Frames stack vertically, so the first frame is the top Height/frames rows; that holds for any frame aspect,
+        // including the non-square frames a pack may declare.
         var firstFrames = sprites
-            .Select(sprite => (sprite.Location, Image: TakeFirstFrame(sprite.Image, sprite.Frames), sprite.Frames))
+            .Select(sprite =>
+            {
+                var frameHeight = sprite.Frames > 1 ? sprite.Image.Height / sprite.Frames : sprite.Image.Height;
+                return (sprite.Location, Image: TakeFirstFrame(sprite.Image, sprite.Image.Width, frameHeight), sprite.Frames);
+            })
             .ToList();
 
         // Vanilla's stitcher sorts by height then width, so tall sprites claim rows first.
@@ -248,16 +275,26 @@ public static class SpriteAtlasBuilder
         return new SpriteAtlas(size, size, pixels, index);
     }
 
-    private static RgbaImage TakeFirstFrame(RgbaImage image, int frames)
+    private static RgbaImage TakeFirstFrame(RgbaImage image, int frameWidth, int frameHeight)
     {
-        if (frames <= 1)
+        if (frameWidth == image.Width && frameHeight == image.Height)
         {
             return image;
         }
 
-        var framePixels = new byte[image.Width * image.Width * RgbaImage.BytesPerPixel];
-        Buffer.BlockCopy(image.Pixels, 0, framePixels, 0, framePixels.Length);
-        return new RgbaImage(image.Width, image.Width, framePixels);
+        var framePixels = new byte[frameWidth * frameHeight * RgbaImage.BytesPerPixel];
+
+        for (var row = 0; row < frameHeight; row++)
+        {
+            Buffer.BlockCopy(
+                image.Pixels,
+                row * image.Width * RgbaImage.BytesPerPixel,
+                framePixels,
+                row * frameWidth * RgbaImage.BytesPerPixel,
+                frameWidth * RgbaImage.BytesPerPixel);
+        }
+
+        return new RgbaImage(frameWidth, frameHeight, framePixels);
     }
 
     private static int NextPowerOfTwo(int value)

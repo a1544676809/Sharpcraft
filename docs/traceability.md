@@ -210,5 +210,5 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-183 | 字体/贴图集重载：GPU 侧纹理换绑（渲染器按重载结果更新 glyph/贴图绑定组）| ADR-0016 §6、A8 | 待补 | 待落地 | 进行中|
 | T-184 | 高清字体：绘制乘 `pixelScale`（`BitmapFont.Scale`）+ 从 `font/default.json` 跟随 `reference` 读 `height`/`ascent`/`chars` 网格与贴图文件 | `docs/analysis/assets/font-slicing.md` §1/§2/§4.1、`BitmapProvider` | `BitmapFontDefinitionTests`(3) + 实测：Faithful→`16x16 cells, line 8` 清晰；自造包声明 height 10→`line 10` | `Client/Ui/BitmapFont`、`UiScreenLayout`、`Client/Assets/BitmapFontDefinition`、`Launcher/FrameCommand` | 已完成 |
 | T-185 | 方块图集/模型/blockstate 改走统一资源栈（PrepareSprites(layout, resources)）；重载时重建图集并作废区块网格待做 | docs/analysis/assets/texture-atlas-sizing.md §2/§3/§6 | 实测 Faithful 32x：图集 1024→2048、世界变 32x | Launcher/FrameCommand.PrepareSprites、Launcher/WindowCommand | 进行中 |
-| T-186 | 动画帧尺寸读 `animation` 元数据（`FrameSize`），缺省退回方帧假设并记诊断 | `docs/analysis/assets/texture-atlas-sizing.md` §1、`SpriteContents` | 待补 | 待落地 | 进行中 |
+| T-186 | 动画帧尺寸读 `animation` 元数据（`width`/`height`），帧数由高/帧高推导、首帧按帧高裁剪（支持非方帧） | `docs/analysis/assets/texture-atlas-sizing.md` §1、`SpriteContents` | `AnimationFrameSizeTests`(3) + 全量绿 | `Client/Assets/AnimationFrameSize`、`SpriteAtlas` | 已完成 |
 | T-187 | 关闭开关时与原版一致（`PackWatcher.IsEnabled` 默认 false、不创建监听器）| D-001、`docs/specs/deviations.md` | `PackWatcherTests.TheSwitchIsOffByDefault` | `Client/Assets/PackWatcher` | 已完成 |
