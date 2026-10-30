@@ -271,6 +271,11 @@ internal sealed class InteractiveSession
             ? $"chat probe ({x},{y}): no hover"
             : $"chat probe ({x},{y}): hover='{Plain(hover)}'");
 
+        var tagTip = ChatTagTipAt(x, y);
+        Console.WriteLine(tagTip is null
+            ? "chat probe: no tag tip"
+            : $"chat probe: tag tip='{Plain(tagTip)}'");
+
         if (UiFont is not { } font || CanvasHeight <= 0f || _chatLog.Count == 0)
         {
             return;
@@ -306,6 +311,50 @@ internal sealed class InteractiveSession
             var handled = TryClickChat(x, y, shift);
             Console.WriteLine($"chat probe: shift={shift} acted={handled} prompt='{_chat.Text}' open={_chat.IsOpen}");
         }
+    }
+
+    /// <summary>
+    /// Tooltip for the indicator bar under a point, or null when the pointer is not over a bar.
+    /// </summary>
+    /// <param name="x">Pointer x in canvas pixels.</param>
+    /// <param name="y">Pointer y in canvas pixels.</param>
+    /// <remarks>
+    /// The bar explains its own meaning when hovered, which is how the reference tells a player why a line is tinted.
+    /// The texts come from the language file under the reference's own keys.
+    /// </remarks>
+    public Sharpcraft.Common.Network.TextRun[]? ChatTagTipAt(float x, float y)
+    {
+        if (CanvasHeight <= 0f || _chatLog.Count == 0)
+        {
+            return null;
+        }
+
+        var bottom = CanvasHeight - Sharpcraft.Client.Ui.ChatLog.BottomMargin;
+        var entry = Sharpcraft.Client.Ui.ChatHitTest.EntryAt(
+            x, y, 0f, Sharpcraft.Client.Ui.ChatLog.TagBarWidth, bottom,
+            Sharpcraft.Client.Ui.ChatLog.EntryHeight, Sharpcraft.Client.Ui.ChatLog.LinesPerPage,
+            _chatLog.Count, _chatLog.Scroll.Offset);
+
+        if (entry < 0)
+        {
+            return null;
+        }
+
+        var key = _chatLog.TagFor(_chatLog.Count - 1 - entry) switch
+        {
+            Sharpcraft.Client.Ui.ChatLog.MessageTag.System => "chat.tag.system",
+            Sharpcraft.Client.Ui.ChatLog.MessageTag.NotSecure => "chat.tag.not_secure",
+            Sharpcraft.Client.Ui.ChatLog.MessageTag.Modified => "chat.tag.modified",
+            Sharpcraft.Client.Ui.ChatLog.MessageTag.Error => "chat.tag.error",
+            _ => null
+        };
+
+        if (key is null || !_language.TryGet(key, out var text))
+        {
+            return null;
+        }
+
+        return [new Sharpcraft.Common.Network.TextRun(text, Sharpcraft.Common.Network.ComponentRuns.DefaultColour, false)];
     }
 
     /// <summary>

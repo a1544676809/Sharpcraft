@@ -274,6 +274,12 @@ internal static class WindowCommand
                             Sharpcraft.Client.Ui.Tooltip.Draw(
                                 uiGeometry, uiFont, hover, pointer.X, pointer.Y, canvasWidth, canvasHeight);
                         }
+                        else if (session.ChatTagTipAt(pointer.X, pointer.Y) is { } tagTip)
+                        {
+                            // The indicator bar explains itself when hovered.
+                            Sharpcraft.Client.Ui.Tooltip.Draw(
+                                uiGeometry, uiFont, tagTip, pointer.X, pointer.Y, canvasWidth, canvasHeight);
+                        }
                     }
 
                     // The bar sits just right of the column, over the same rows the history occupies.

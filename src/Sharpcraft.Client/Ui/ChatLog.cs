@@ -157,6 +157,11 @@ public sealed class ChatLog
             _ => 0u
         };
 
+    /// <summary>Indicator tag of one entry, which is what its bar's tooltip describes.</summary>
+    /// <param name="index">Entry index, oldest first.</param>
+    public MessageTag TagFor(int index) =>
+        index >= 0 && index < _lines.Count ? _lines[index].Tag : MessageTag.None;
+
     /// <summary>Runs of one entry, for measuring where a pointer lands.</summary>
     /// <param name="index">Entry index, oldest first.</param>
     public TextRun[] RunsAt(int index) =>
