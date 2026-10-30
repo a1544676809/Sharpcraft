@@ -100,9 +100,12 @@ internal sealed class LivePlaySession : IDisposable
     /// </summary>
     /// <param name="connection">A connection already in the play phase; ownership passes to the session.</param>
     /// <param name="cancellationToken">Cancels the receive pump.</param>
-    internal static LivePlaySession Adopt(MinecraftConnection connection, CancellationToken cancellationToken)
+    internal static LivePlaySession Adopt(
+        MinecraftConnection connection,
+        CancellationToken cancellationToken,
+        Sharpcraft.Common.Network.DynamicRegistries? registries = null)
     {
-        var session = new LivePlaySession(connection);
+        var session = new LivePlaySession(connection, registries);
         session.Start(cancellationToken);
         return session;
     }

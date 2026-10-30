@@ -394,7 +394,9 @@ internal static class WindowCommand
 
             // Hand the joined connection to the session instead of dropping it and logging in again. Joining
             // twice made startup slower and showed a spurious join and leave to everyone else on the server.
-            return new PreparedWorld(world, LivePlaySession.Adopt(connection, cancellationToken));
+            // The registries are the ones this very connection received during configuration, which is where the
+            // chat type decorations live.
+            return new PreparedWorld(world, LivePlaySession.Adopt(connection, cancellationToken, probe.Registries));
         }
     }
 }
