@@ -356,18 +356,15 @@ public static class UiScreenLayout
         {
             var character = content[index];
 
-            if (!font.TryGet(character, out var glyph))
-            {
-                continue;
-            }
-
-            if (character != ' ')
+            // The advance comes from the font's lookup, not from the glyph: a space has no glyph width at all and
+            // takes its advance from the font definition, so reading the glyph directly would collapse every space.
+            if (font.TryGet(character, out var glyph) && character != ' ')
             {
                 var (u0, v0, u1, v1) = font.Uv(glyph);
                 geometry.AddTexturedRectangle(pen, y, cellWidth, cellHeight, u0, v0, u1, v1, colour);
             }
 
-            pen += glyph.Advance * textScale;
+            pen += font.AdvanceOf(character) * textScale;
         }
     }
 

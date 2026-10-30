@@ -214,13 +214,35 @@ internal static class FrameCommand
             .Add(new BuiltInFallbackSource())
             .Add(new ZipAssetSource(packPath, "base-pack"));
 
-        var bytes = stack.Read(
-            ResourceKind.Language,
-            new Sharpcraft.Common.Identifiers.Identifier("minecraft", "en_us"));
+        // The interface follows the machine's language, the way the reference does: on a Chinese machine the same
+        // message must not appear in English.
+        // MC_LANGUAGE pins the language for a run, which is how the Chinese path can be verified on an English
+        // machine; otherwise the machine's own language is used, as the reference does.
+        var forced = Environment.GetEnvironmentVariable("MC_LANGUAGE");
+        var candidates = Sharpcraft.Common.Localization.LocaleSelector.Candidates(
+            string.IsNullOrWhiteSpace(forced)
+                ? System.Globalization.CultureInfo.CurrentUICulture.Name
+                : forced);
+
+        byte[]? bytes = null;
+        string? chosen = null;
+
+        foreach (var candidate in candidates)
+        {
+            bytes = stack.Read(
+                ResourceKind.Language,
+                new Sharpcraft.Common.Identifiers.Identifier("minecraft", candidate));
+
+            if (bytes is not null)
+            {
+                chosen = candidate;
+                break;
+            }
+        }
 
         if (bytes is null)
         {
-            Console.WriteLine("language: en_us.json is missing from the pack; messages will show translation keys");
+            Console.WriteLine($"language: none of {string.Join(", ", candidates)} is in the pack; messages will show keys");
             return Sharpcraft.Common.Localization.LanguageTable.Empty;
         }
 
@@ -229,7 +251,7 @@ internal static class FrameCommand
             System.Text.Encoding.UTF8.GetString(bytes));
         started.Stop();
 
-        Console.WriteLine($"language: {table.Count} keys, {started.ElapsedMilliseconds} ms");
+        Console.WriteLine($"language: {chosen} ({table.Count} keys), {started.ElapsedMilliseconds} ms");
         return table;
     }
 

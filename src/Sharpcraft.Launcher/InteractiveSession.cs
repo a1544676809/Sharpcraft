@@ -152,6 +152,11 @@ internal sealed class InteractiveSession
 
         if (!_chat.IsOpen)
         {
+            // Characters typed while the prompt is closed are discarded. They are produced by every printable key,
+            // movement keys included, so without this the first thing a player sees on opening the prompt is the key
+            // they pressed to open it, and whatever they typed while walking.
+            input.TakeText();
+
             // Both keys open the prompt; the slash key leaves its slash behind so a command can be typed straight on.
             if (bindings.JustPressed(input, InputAction.OpenCommand))
             {
