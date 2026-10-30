@@ -94,3 +94,27 @@ this.reloadStateTracker.finishReload();
 | ② 布局改变 | 任一处不同 | 全量重建几何（允许卡一次）|
 
 判据是**比较**得出的，不靠猜；出错时退化为 ② 仍保证正确。
+
+## 10. 验证记录：错位的真正原因（线程亲和性）
+
+实测（`MC_RESOURCE_PACK_WATCH=1`，运行中放入 32x `stone.png`）三次结果：
+
+| 轮次 | 观察 |
+| --- | --- |
+| 1 | `listener atlas failed (ObjectDisposedException)` —— 读到写了一半的文件 |
+| 2 | `meshes 329/329, pending 1`，画面仍有局部错位 |
+| 3 | `listener atlas failed (InvalidOperationException: Collection was modified…)` |
+
+结论（已排查，不是猜测）：
+
+- **半应用**：监听器先 `prepared = next; workerPool.SetSprites(next.Map)` 再重建网格；一旦重建抛异常，就留下"新映射 + 旧图集"⇒ 采样错位。
+- **线程亲和性**：监听器运行在**文件监视线程**，而 `meshCache`/`world` 的脏标记由**渲染线程**消费；
+  两边同时触碰 `TakeDirtyChunks` 之类的集合，就出现 `Collection was modified`，也解释了为何失败是间歇的。
+
+因此正确的做法不是"再加一个 try"，而是**把重载的应用阶段搬回渲染线程**：
+
+1. 监听器只做"重建候选图集 + 布局比较"，把结果放进待应用槽位；
+2. 渲染线程在帧回调里取出待应用项：重建/作废网格（此时独占 world 与 meshCache）→ 确认 `pending == 0` → 换图集版本；
+3. 失败则丢弃候选、保持旧的一切。
+
+在此之前，**`MC_RESOURCE_PACK_WATCH` 不应开启**（默认关闭，不影响原版等效性）。
