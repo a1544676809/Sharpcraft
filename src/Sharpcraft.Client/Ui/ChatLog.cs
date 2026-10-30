@@ -222,9 +222,10 @@ public sealed class ChatLog
 
                 if (tagColour != 0u)
                 {
-                    // The reference places the bar one pixel left of the box, so half of it sits outside the wash.
+                    // The reference puts the bar entirely outside the box, its right edge against the box's left edge:
+                    // measured on its own framebuffer, the bar covers canvas 0..2 while the box starts at 2.
                     geometry.AddRectangle(
-                        LeftInset - 1f,
+                        LeftInset - TagBarWidth,
                         entryTop,
                         TagBarWidth,
                         EntryHeight,

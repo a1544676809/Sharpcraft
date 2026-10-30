@@ -70,7 +70,7 @@ public sealed class ChatTagTests
 
         // Quad zero is the background and quad one is the bar, whose left edge is the chat inset. A quad stores its
         // left and right edges one after the other, so the width is the second float of the same vertex.
-        Assert.Equal(ChatLog.LeftInset - 1f, geometry.Vertices[20], 3);
+        Assert.Equal(ChatLog.LeftInset - ChatLog.TagBarWidth, geometry.Vertices[20], 3);
         Assert.Equal(ChatLog.TagBarWidth, geometry.Vertices[30] - geometry.Vertices[20], 3);
     }
 
