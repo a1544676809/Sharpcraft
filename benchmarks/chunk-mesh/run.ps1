@@ -22,6 +22,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# Build node reuse leaves idle dotnet processes behind; disable it for the whole run.
+$env:MSBUILDDISABLENODEREUSE = "1"
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $assets = Join-Path $env:TEMP "mcs-assets-pack"
 
@@ -80,6 +83,12 @@ for ($i = 0; $i -lt $Bots; $i++) {
     $rows += [pscustomobject]@{ Bot = $name; Measurement = ($line.Line -replace "^\s+", "") }
 }
 
-Get-Process -Name "Sharpcraft.Launcher" -ErrorAction SilentlyContinue | ForEach-Object { taskkill /PID $_.Id /F 2>$null | Out-Null }
+# Kill whole trees: `dotnet run` starts the client as a child, so killing by name alone can miss the wrapper.
+foreach ($process in Get-Process -Name "Sharpcraft.Launcher","dotnet" -ErrorAction SilentlyContinue) {
+    taskkill /PID $process.Id /T /F 2>$null | Out-Null
+}
+
+# Also stop the build servers this run started, so nothing idle survives it.
+dotnet build-server shutdown 2>$null | Out-Null
 
 $rows | Format-Table -AutoSize | Out-String -Width 220
