@@ -449,7 +449,13 @@
 
 已接线（数据层）：`ComponentRuns.FlattenStyled` 在展开组件的同一遍里产出与 runs **平行的** `ChatClick?[]` 与
 `TextRun[]?[]`；`ChatLog.Add` 接受这两个可选数组，`ClickFor`/`HoverFor`/`RunsAt` 供命中测试取用。
-已接线：`system_chat` 走 `TryReadSystemChatStyled`（带点击/悬停），会话 `TryClickChat` 按**右键**命中并执行
-`open_url`/`run_command`/`suggest_command`/`copy_to_clipboard`，`ChatHoverAt` 供绘制期画提示框（宽度上限 210 已生效）。
-**缺口**：①`insertion` 字段未解析，Shift+右键目前只记诊断不插入；②光标不变手型（窗口层未暴露光标形状）；
-③玩家聊天的装饰路径仍会丢交互（装饰重建 runs），仅系统消息带交互。
+已接线并**实测**：`system_chat` 走 `TryReadSystemChatStyled`（带点击/悬停）；会话 `TryClickChat` 按**右键**命中并执行
+`open_url`/`run_command`/`suggest_command`/`copy_to_clipboard`；**Shift+右键插入 `insertion` 文本**；`ChatHoverAt` 供绘制期画
+提示框（宽度上限 210、换行）。组件载荷字段**按动作命名**：`open_url→url`、`run_command`/`suggest_command→command`、
+`copy_to_clipboard→value`、`change_page→page`、`open_file→path`；悬停文本在当前版本用 `value`（旧版 `contents`）。
+
+实测记录（`/tellraw @a` 真包，见 §9 诊断）：`hover='a tip'`、`click=SuggestCommand:/msg Bob`、
+`shift=True prompt='INSERTED'`、`shift=False prompt='/msg Bob '`（打开输入框并填入）。
+
+**缺口**：①光标不变手型（窗口层尚未暴露光标形状）；②玩家聊天的装饰路径仍会丢交互（装饰重建 runs），仅系统消息带交互；
+③`change_page`/`show_dialog`/`custom`/`open_file` 未实现。

@@ -27,7 +27,7 @@ public enum ChatClickAction
 /// <summary>A click attached to a run of text.</summary>
 /// <param name="Action">What the click does.</param>
 /// <param name="Value">URL, command, or text, depending on the action.</param>
-public sealed record ChatClick(ChatClickAction Action, string Value);
+public sealed record ChatClick(ChatClickAction Action, string Value, string? Insertion = null);
 
 /// <summary>
 /// Reads the click and hover behaviour a component's style carries.
@@ -57,7 +57,6 @@ public static class ChatInteractions
         }
 
         var action = click.GetString("action");
-        var value = click.GetString("value") ?? string.Empty;
 
         var kind = action switch
         {
@@ -68,7 +67,22 @@ public static class ChatInteractions
             _ => ChatClickAction.None
         };
 
-        return kind == ChatClickAction.None ? null : new ChatClick(kind, value);
+        if (kind == ChatClickAction.None)
+        {
+            return null;
+        }
+
+        // The payload field is named after the action, so reading a single fixed name loses the value for most actions.
+        var field = kind switch
+        {
+            ChatClickAction.OpenUrl => "url",
+            ChatClickAction.CopyToClipboard => "value",
+            _ => "command"
+        };
+
+        // A style may also carry text to insert instead of acting when shift is held, which is what the reference does.
+        var insertion = style.GetString("insertion");
+        return new ChatClick(kind, click.GetString(field) ?? string.Empty, insertion);
     }
 
     /// <summary>Reads the hover text a style attaches to its text.</summary>
@@ -96,7 +110,8 @@ public static class ChatInteractions
             return null;
         }
 
-        var contents = hover.Get("contents") ?? hover.Get("value");
+        // The current spelling calls the payload "value"; the older one called it "contents".
+        var contents = hover.Get("value") ?? hover.Get("contents");
 
         var runs = ComponentRuns.Flatten(contents, language);
         return runs.Length == 0 ? null : runs;

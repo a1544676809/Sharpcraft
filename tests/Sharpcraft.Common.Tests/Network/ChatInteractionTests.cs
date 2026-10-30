@@ -16,7 +16,7 @@ public sealed class ChatInteractionTests
     [Fact]
     public void AClickIsReadFromTheCurrentSpelling()
     {
-        var click = Style(ClickEvent("open_url", "https://example.invalid/a"));
+        var click = Style(ClickEvent("open_url", "url", "https://example.invalid/a"));
 
         var parsed = ChatInteractions.ReadClick(click);
 
@@ -29,7 +29,7 @@ public sealed class ChatInteractionTests
     public void AClickIsReadFromTheOlderSpellingToo()
     {
         var style = new NbtCompound();
-        style.Set("clickEvent", ClickEvent("run_command", "/spawn"));
+        style.Set("clickEvent", ClickEvent("run_command", "command", "/spawn"));
 
         Assert.Equal(ChatClickAction.RunCommand, ChatInteractions.ReadClick(style)!.Action);
     }
@@ -38,13 +38,13 @@ public sealed class ChatInteractionTests
     [InlineData("suggest_command", ChatClickAction.SuggestCommand)]
     [InlineData("copy_to_clipboard", ChatClickAction.CopyToClipboard)]
     public void TheOtherActionsAreRecognised(string action, ChatClickAction expected) =>
-        Assert.Equal(expected, ChatInteractions.ReadClick(Style(ClickEvent(action, "x")))!.Action);
+        Assert.Equal(expected, ChatInteractions.ReadClick(Style(ClickEvent(action, action == "copy_to_clipboard" ? "value" : "command", "x")))!.Action);
 
     [Fact]
     public void AnUnsupportedActionIsIgnoredRatherThanBreakingTheMessage()
     {
         // An action this client does not implement must not throw the message away.
-        Assert.Null(ChatInteractions.ReadClick(Style(ClickEvent("change_page", "2"))));
+        Assert.Null(ChatInteractions.ReadClick(Style(ClickEvent("change_page", "page", "2"))));
         Assert.Null(ChatInteractions.ReadClick(new NbtCompound()));
         Assert.Null(ChatInteractions.ReadClick(null));
     }
@@ -88,24 +88,25 @@ public sealed class ChatInteractionTests
         return style;
     }
 
-    private static NbtCompound ClickEvent(string action, string value)
+    private static NbtCompound ClickEvent(string action, string field, string value)
     {
         var click = new NbtCompound();
         click.Set("action", new NbtString(action));
-        click.Set("value", new NbtString(value));
+        click.Set("fieldName", new NbtString(field));
+        click.Set(field, new NbtString(value));
         return click;
     }
 
     [Fact]
     public void FlattenStyledKeepsInteractionsBesideTheRuns()
     {
-        var click = ClickEvent("run_command", "/spawn");
+        var click = ClickEvent("run_command", "command", "/spawn");
 
         var hover = new NbtCompound();
         hover.Set("action", new NbtString("show_text"));
         var tip = new NbtCompound();
         tip.Set("text", new NbtString("a tip"));
-        hover.Set("contents", tip);
+        hover.Set("value", tip);
 
         var styled = new NbtCompound();
         styled.Set("text", new NbtString("clickable"));

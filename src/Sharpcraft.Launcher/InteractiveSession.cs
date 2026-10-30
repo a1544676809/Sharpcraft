@@ -145,7 +145,7 @@ internal sealed class InteractiveSession
     /// same: find the entry, find the run, then act. An action this client cannot perform is reported rather than
     /// silently ignored.
     /// </remarks>
-    public bool TryClickChat(float x, float y, bool shift, Sharpcraft.Framework.Platform.WindowHost window)
+    public bool TryClickChat(float x, float y, bool shift, Sharpcraft.Framework.Platform.WindowHost? window = null)
     {
         if (UiFont is not { } font || CanvasHeight <= 0f || _chatLog.Count == 0)
         {
@@ -194,11 +194,11 @@ internal sealed class InteractiveSession
 
         if (shift)
         {
-            // The reference inserts the style's own insertion text; that field is not read yet, so this is reported
-            // rather than doing something that looks similar but is not the same.
-            if (_diagEnabled)
+            // Holding shift turns the click into an insertion, using the text the style carries for that purpose.
+            if (click.Insertion is { Length: > 0 } insertionText)
             {
-                Console.WriteLine("chat shift-click: insertion text is not read yet");
+                _chat.Open();
+                _chat.Append(insertionText.AsSpan());
             }
 
             return true;
@@ -233,11 +233,77 @@ internal sealed class InteractiveSession
                 return true;
 
             case Sharpcraft.Common.Network.ChatClickAction.CopyToClipboard:
+                if (window is null)
+                {
+                    if (_diagEnabled)
+                    {
+                        Console.WriteLine("chat copy: no window to copy through");
+                    }
+
+                    return true;
+                }
+
                 window.ClipboardText = click.Value;
                 return true;
 
             default:
                 return false;
+        }
+    }
+
+    /// <summary>Window handed to the probe so it can run a click, set when the interface is created.</summary>
+    private Sharpcraft.Framework.Platform.WindowHost? _probeWindow;
+
+    /// <summary>Remembers the window for the probe.</summary>
+    /// <param name="window">Window that owns the clipboard.</param>
+    public void AttachProbeWindow(Sharpcraft.Framework.Platform.WindowHost window) => _probeWindow = window;
+
+    /// <summary>
+    /// Reports what a point resolves to, so an unattended run can prove the hit test without moving a mouse.
+    /// </summary>
+    /// <param name="x">Pointer x in canvas pixels.</param>
+    /// <param name="y">Pointer y in canvas pixels.</param>
+    public void ProbeChat(float x, float y)
+    {
+        var hover = ChatHoverAt(x, y);
+        Console.WriteLine(hover is null
+            ? $"chat probe ({x},{y}): no hover"
+            : $"chat probe ({x},{y}): hover='{Plain(hover)}'");
+
+        if (UiFont is not { } font || CanvasHeight <= 0f || _chatLog.Count == 0)
+        {
+            return;
+        }
+
+        var bottom = CanvasHeight - Sharpcraft.Client.Ui.ChatLog.BottomMargin;
+        var entry = Sharpcraft.Client.Ui.ChatHitTest.EntryAt(
+            x, y, Sharpcraft.Client.Ui.ChatLog.LeftInset, Sharpcraft.Client.Ui.ChatLog.ColumnWidth,
+            bottom, Sharpcraft.Client.Ui.ChatLog.EntryHeight, Sharpcraft.Client.Ui.ChatLog.LinesPerPage,
+            _chatLog.Count, _chatLog.Scroll.Offset);
+
+        if (entry < 0)
+        {
+            return;
+        }
+
+        var index = _chatLog.Count - 1 - entry;
+        var runs = _chatLog.RunsAt(index);
+        var widths = new float[runs.Length];
+
+        for (var run = 0; run < runs.Length; run++)
+        {
+            widths[run] = font.MeasureWidth(runs[run].Text);
+        }
+
+        var hit = Sharpcraft.Client.Ui.ChatHitTest.RunAt(x, Sharpcraft.Client.Ui.ChatLog.MessageIndent, widths);
+        var click = _chatLog.ClickFor(index, hit);
+        Console.WriteLine($"chat probe: entry={entry} line={index} run={hit} click={(click is null ? "none" : click.Action + ":" + click.Value)}");
+
+        if (click is not null && Environment.GetEnvironmentVariable("MC_CHAT_PROBE_CLICK") == "1")
+        {
+            var shift = Environment.GetEnvironmentVariable("MC_CHAT_PROBE_SHIFT") == "1";
+            var handled = TryClickChat(x, y, shift);
+            Console.WriteLine($"chat probe: shift={shift} acted={handled} prompt='{_chat.Text}' open={_chat.IsOpen}");
         }
     }
 
@@ -1115,6 +1181,10 @@ internal sealed class InteractiveSession
                                 Console.WriteLine($"chat received [system]: {Plain(chatRuns)}");
                             }
                         }
+                    }
+                    else if (_diagEnabled)
+                    {
+                        Console.WriteLine($"system_chat parse failed: {ChatPackets.TryReadSystemChatStyled(body[reader.Position..], out _, out _, out _, out _, _language)}, hex={Convert.ToHexString(body.AsSpan(reader.Position, Math.Min(14, body.Length - reader.Position)))}");
                     }
 
                     break;

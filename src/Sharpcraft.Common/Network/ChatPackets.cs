@@ -73,8 +73,23 @@ public static class ChatPackets
         overlay = false;
 
         var status = NbtReader.TryReadNetworkRoot(body, out var root, out var consumed);
+        var styled = status == DecodeStatus.Success && root is not null;
 
-        if (status != DecodeStatus.Success || root is null)
+        if (styled)
+        {
+            (runs, clicks, hovers) = ComponentRuns.FlattenStyled(root, language);
+        }
+        else if (TryReadBareString(body, out var plain, out var plainConsumed))
+        {
+            // A component with no style is written as a bare string, whose network form omits the root name: a string
+            // tag, then a two byte length, then the text. The tag reader rejects that shape, so it is handled here
+            // rather than being treated as a malformed message.
+            runs = [new TextRun(plain, ComponentRuns.DefaultColour, Bold: false)];
+            clicks = [null];
+            hovers = [null];
+            consumed = plainConsumed;
+        }
+        else
         {
             return status == DecodeStatus.Success ? DecodeStatus.Invalid : status;
         }
@@ -84,9 +99,35 @@ public static class ChatPackets
             return DecodeStatus.NeedMoreData;
         }
 
-        (runs, clicks, hovers) = ComponentRuns.FlattenStyled(root, language);
         overlay = overlayFlag;
         return DecodeStatus.Success;
+    }
+
+
+    /// <summary>Reads a bare string component.</summary>
+    /// <param name="body">Bytes at the component.</param>
+    /// <param name="text">The text.</param>
+    /// <param name="consumed">Bytes used.</param>
+    private static bool TryReadBareString(ReadOnlySpan<byte> body, out string text, out int consumed)
+    {
+        text = string.Empty;
+        consumed = 0;
+
+        if (body.Length < 3 || body[0] != 8)
+        {
+            return false;
+        }
+
+        var length = (body[1] << 8) | body[2];
+
+        if (length < 0 || body.Length < 3 + length)
+        {
+            return false;
+        }
+
+        text = System.Text.Encoding.UTF8.GetString(body.Slice(3, length));
+        consumed = 3 + length;
+        return true;
     }
 
     /// <summary>Reads a <c>system_chat</c> body.</summary>

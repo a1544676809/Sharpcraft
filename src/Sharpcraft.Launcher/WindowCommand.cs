@@ -248,6 +248,21 @@ internal static class WindowCommand
                     // clipboard, so the two are handed over here rather than reached for from inside the session.
                     session.CanvasHeight = canvasHeight;
 
+                    // An unattended run cannot move the pointer, so a fixed probe point can report what it resolves to.
+                    var probe = Environment.GetEnvironmentVariable("MC_CHAT_PROBE");
+
+                    if (probe is { Length: > 0 } && session.ChatTicks % 100 == 0)
+                    {
+                        var parts = probe.Split(',');
+
+                        if (parts.Length == 2 &&
+                            float.TryParse(parts[0], out var probeX) &&
+                            float.TryParse(parts[1], out var probeY))
+                        {
+                            session.ProbeChat(probeX, probeY);
+                        }
+                    }
+
                     if (session.Chat.IsOpen || !frame.Input.MouseCaptured)
                     {
                         var pointer = frame.Input.CursorInCanvas;
