@@ -48,7 +48,8 @@ public static class WindowedRenderer
         Func<UiFrame, UiGeometry?>? uiGeometry = null,
         TextureData? glyphTexture = null,
         IReadOnlyList<TextureData>? spriteTextures = null,
-        UiTextureSource? textureSource = null)
+        UiTextureSource? textureSource = null,
+        AtlasTextureSource? atlasSource = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -69,7 +70,7 @@ public static class WindowedRenderer
         // Atlas resources: the fragment shader samples it, so the pipeline layout and the bind group
         // have to exist before anything is drawn (docs/modules/render.md 6.1).
         var atlasData = request.Atlas ?? TextureData.White;
-        using var atlasTexture = device.CreateTexture(new TextureDescriptor
+        var atlasTexture = device.CreateTexture(new TextureDescriptor
         {
             Size = new WGPUExtent3D
             {
@@ -98,7 +99,7 @@ public static class WindowedRenderer
             0,
             new WGPUOrigin3D { x = 0, y = 0, z = 0 });
 
-        using var atlasView = atlasTexture.CreateView();
+        var atlasView = atlasTexture.CreateView();
 
         using var atlasSampler = device.CreateSampler(new SamplerDescriptor
         {
@@ -136,7 +137,7 @@ public static class WindowedRenderer
             new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
             new byte[VertexLayout.CameraUniformSize].AsSpan());
 
-        using var bindGroup = device.CreateBindGroup(
+        var bindGroup = device.CreateBindGroup(
             bindGroupLayout,
             [
                 BindGroupEntry.TextureView(0, atlasView),
@@ -185,7 +186,7 @@ public static class WindowedRenderer
             new WGPUOrigin3D { x = 0, y = 0, z = 0 });
 
         var glyphView = glyphSheet.CreateView();
-        using var uiBindGroup = device.CreateBindGroup(
+        var uiBindGroup = device.CreateBindGroup(
             bindGroupLayout,
             [
                 BindGroupEntry.TextureView(0, atlasView),
@@ -257,6 +258,7 @@ public static class WindowedRenderer
 
         // The source starts at the textures just uploaded, so the first frame does not re-upload them.
         textureSource?.Update(glyphTexture, spriteTextures ?? []);
+        atlasSource?.Update(request.Atlas);
 
         // A DPI-scaled display reports a logical size smaller than the framebuffer; the swapchain
         // must be configured in physical pixels or every acquire reports "outdated".
@@ -335,9 +337,74 @@ public static class WindowedRenderer
         Console.WriteLine($"window: swapchain configured ({format}, {frameWidth}x{frameHeight})");
 
         var appliedTextureVersion = textureSource?.Version ?? 0;
+        var appliedAtlasVersion = atlasSource?.Version ?? 0;
 
         while (true)
         {
+            if (atlasSource is not null && atlasSource.Version != appliedAtlasVersion)
+            {
+                appliedAtlasVersion = atlasSource.Version;
+
+                // The atlas drives every textured face, so replacing it means replacing its texture and the two bind
+                // groups that point at it. Whether the geometry must also be rebuilt is the caller's call, because it
+                // depends on whether the layout changed (docs/decisions/0017-reload-invalidation-by-layout.md).
+                var refreshedAtlas = atlasSource.Atlas ?? TextureData.White;
+
+                bindGroup.Dispose();
+                uiBindGroup.Dispose();
+                atlasView.Dispose();
+                atlasTexture.Dispose();
+
+                atlasTexture = device.CreateTexture(new TextureDescriptor
+                {
+                    Size = new WGPUExtent3D
+                    {
+                        width = (uint)refreshedAtlas.Width,
+                        height = (uint)refreshedAtlas.Height,
+                        depthOrArrayLayers = 1
+                    },
+                    MipLevelCount = 1,
+                    SampleCount = 1,
+                    Dimension = WGPUTextureDimension._2D,
+                    Format = WGPUTextureFormat.RGBA8Unorm,
+                    Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
+                });
+
+                device.Queue.WriteTexture(
+                    atlasTexture,
+                    refreshedAtlas.Rgba,
+                    (uint)(refreshedAtlas.Width * 4),
+                    (uint)refreshedAtlas.Height,
+                    new WGPUExtent3D
+                    {
+                        width = (uint)refreshedAtlas.Width,
+                        height = (uint)refreshedAtlas.Height,
+                        depthOrArrayLayers = 1
+                    },
+                    0,
+                    new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+
+                atlasView = atlasTexture.CreateView();
+
+                bindGroup = device.CreateBindGroup(
+                    bindGroupLayout,
+                    [
+                        BindGroupEntry.TextureView(0, atlasView),
+                        BindGroupEntry.Sampler(1, atlasSampler),
+                        BindGroupEntry.Buffer(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize)
+                    ]);
+
+                uiBindGroup = device.CreateBindGroup(
+                    bindGroupLayout,
+                    [
+                        BindGroupEntry.TextureView(0, atlasView),
+                        BindGroupEntry.Sampler(1, atlasSampler),
+                        BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize)
+                    ]);
+
+                Console.WriteLine($"ui: atlas re-uploaded (version {appliedAtlasVersion}, {refreshedAtlas.Width}x{refreshedAtlas.Height})");
+            }
+
             if (textureSource is not null && textureSource.Version != appliedTextureVersion)
             {
                 appliedTextureVersion = textureSource.Version;
