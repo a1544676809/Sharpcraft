@@ -742,6 +742,54 @@ internal static class FrameCommand
             }
         }
 
+        if (Environment.GetEnvironmentVariable("MC_FRAME_CULL") == "1" && frame.Depth is { } depthPixels)
+        {
+            // Conservative occlusion decision over the chunk boxes, using the verified pyramid from this frame's depth.
+            var linear = new float[depthPixels.Length];
+
+            for (var index = 0; index < depthPixels.Length; index++)
+            {
+                linear[index] = Sharpcraft.Framework.Rendering.DepthLinearisation.ToDistance(depthPixels[index], 0.1f, 2000f);
+            }
+
+            var pyramid = Sharpcraft.Framework.Rendering.DepthPyramid.Build(linear, frame.Width, frame.Height);
+            var considered = 0;
+            var culled = 0;
+
+            foreach (var chunk in world.GetChunks())
+            {
+                var lowest = chunk.MinSectionY * 16;
+                var highest = (chunk.MinSectionY + chunk.SectionCount) * 16;
+                var centre = new System.Numerics.Vector3(
+                    (chunk.ChunkX * 16) + 8f,
+                    (lowest + highest) / 2f,
+                    (chunk.ChunkZ * 16) + 8f);
+                var half = new System.Numerics.Vector3(8f, (highest - lowest) / 2f, 8f);
+
+                if (!Sharpcraft.Client.Render.OcclusionCulling.TryProjectBox(centre, half, frame.ViewProjection, out var rectMin, out var rectMax, out var nearest))
+                {
+                    continue;
+                }
+
+                considered++;
+
+                if (!pyramid.TryCoveringDepth(rectMin.X, rectMin.Y, rectMax.X, rectMax.Y, out var farthest))
+                {
+                    continue;
+                }
+
+                var nearestDistance = Sharpcraft.Framework.Rendering.DepthLinearisation.ToDistance(nearest, 0.1f, 2000f);
+
+                if (Sharpcraft.Client.Render.OcclusionCulling.IsOccluded(nearestDistance, farthest))
+                {
+                    culled++;
+                }
+            }
+
+            Console.WriteLine(
+                $"cull: chunks {considered}, culled {culled} ({(considered == 0 ? 0f : 100f * culled / considered):F1}%), visible {considered - culled}");
+        }
+
         var png = PngEncoder.EncodeRgba(frame.Width, frame.Height, frame.Rgba);
         var path = Path.Combine(Path.GetTempPath(), "sharpcraft-frame.png");
         File.WriteAllBytes(path, png);

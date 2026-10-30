@@ -56,7 +56,7 @@ public sealed record TextureData(int Width, int Height, byte[] Rgba)
 /// <param name="Rgba">Row-major RGBA8 pixels.</param>
 /// <param name="ViewProjection">Camera matrix that was applied.</param>
 /// <param name="AdapterName">Adapter that rendered the frame, for diagnostics.</param>
-public sealed record FrameResult(int Width, int Height, byte[] Rgba, Matrix4x4 ViewProjection, string AdapterName);
+public sealed record FrameResult(int Width, int Height, byte[] Rgba, Matrix4x4 ViewProjection, string AdapterName, float[]? Depth = null);
 
 /// <summary>
 /// Software-side camera math, kept separate from the GPU calls so it can be unit tested without

@@ -49,17 +49,18 @@ public static class OffscreenRenderer
     /// <param name="device">Device.</param>
     /// <param name="format">Colour target format.</param>
     /// <summary>Reads the depth buffer back and prints its range, proving depth is available for the occlusion pass.</summary>
-    private static void ReportDepth(Instance instance, Brew.Wgpu.Buffer depthReadback, ulong depthSize, int depthPadded, int width, int height)
+    private static float[]? ReportDepth(Instance instance, Brew.Wgpu.Buffer depthReadback, ulong depthSize, int depthPadded, int width, int height)
     {
         var status = depthReadback.MapBlocking(instance, MapMode.Read, 0, (nuint)depthSize);
 
         if (status != WGPUMapAsyncStatus.Success)
         {
             Console.WriteLine($"depth: readback failed ({status})");
-            return;
+            return null;
         }
 
         var mapped = depthReadback.GetMappedRange<byte>(0, (nuint)depthSize);
+        var depths = new float[width * height];
         var nearest = float.MaxValue;
         var farthest = 0f;
         var centre = BitConverter.ToSingle(mapped.Slice(((height / 2) * depthPadded) + ((width / 2) * 4), 4));
@@ -69,6 +70,7 @@ public static class OffscreenRenderer
             for (var x = 0; x < width; x++)
             {
                 var value = BitConverter.ToSingle(mapped.Slice((y * depthPadded) + (x * 4), 4));
+                depths[(y * width) + x] = value;
 
                 if (value < nearest)
                 {
@@ -89,6 +91,8 @@ public static class OffscreenRenderer
             $"depth: {width}x{height} nearest {nearest:F4} ({DepthLinearisation.ToDistance(nearest, near, far):F1} blocks) " +
             $"farthest {farthest:F4} ({DepthLinearisation.ToDistance(farthest, near, far):F1} blocks) " +
             $"centre {centre:F4} ({DepthLinearisation.ToDistance(centre, near, far):F1} blocks)");
+
+        return depths;
     }
 
     /// <summary>
@@ -453,6 +457,7 @@ public static class OffscreenRenderer
                 height,
                 new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 });
 
+            float[]? depthPixels = null;
             var pyramidLevels = new List<Brew.Wgpu.Buffer>();
             var pyramidReadbacks = new List<Brew.Wgpu.Buffer>();
             var pyramidParameters = new List<Brew.Wgpu.Buffer>();
@@ -575,7 +580,7 @@ public static class OffscreenRenderer
 
             if (Environment.GetEnvironmentVariable("MC_FRAME_DEPTH") == "1")
             {
-                ReportDepth(instance, depthReadback, depthSize, depthPadded, (int)width, (int)height);
+                depthPixels = ReportDepth(instance, depthReadback, depthSize, depthPadded, (int)width, (int)height);
             }
 
             if (hasPyramid)
@@ -589,7 +594,7 @@ public static class OffscreenRenderer
             depthTexture.Dispose();
             texture.Dispose();
 
-            return new FrameResult(request.Width, request.Height, pixels, viewProjection, adapterName);
+            return new FrameResult(request.Width, request.Height, pixels, viewProjection, adapterName, depthPixels);
         }
         catch (ResourceCreationException exception)
         {
