@@ -35,6 +35,20 @@ updated: 2026-10-30
 - 每包可有 `filter` 段（`ResourceFilterSection`）：按路径/命名空间过滤；只过滤不提供内容的包走
   `FallbackResourceManager.pushFilterOnly`（**不参与资源提供，只遮蔽路径**）。
 
+## 2.1 包形态：目录与压缩包（已核对）
+
+`FolderRepositorySource.discoverPacks` 遍历 `resourcepacks/` 下每个条目，由 `PackDetector` 判定：
+
+| 条目 | 处理 |
+| --- | --- |
+| **目录** | `PathPackResources`（直接读文件系统） |
+| **zip 文件** | `FilePackResources`（仅默认文件系统或 `LinkFileSystem`；其他 FS 记 `Can't open pack archive` 并拒绝） |
+| 其他 | 记 `Found non-pack entry, ignoring` |
+| 可疑符号链接 | `DirectoryValidator` 记 `ForbiddenSymlinkInfo` 并**忽略该包** |
+
+`PathPackResources.getResource(type, location)` 解析为 `<root>/<assets|data>/<namespace>/<path>`；`getNamespaces` 枚举该根下的目录名并校验命名空间合法。
+发现的包使用固定配置 `PackSelectionConfig(required=false, Position.TOP, fixedPosition=false)`。
+
 ## 3. 包元数据（已核对）
 
 `pack.mcmeta` 的 `pack` 段 = `description` + **支持的格式区间**（`PackFormat.packCodec(packType)`），
@@ -46,11 +60,26 @@ updated: 2026-10-30
 → `SimpleReloadInstance.create(...)`，监听器类型为 `PreparableReloadListener`（两阶段：准备 / 应用）。
 `createReload` 会记录本次重载的包列表（`Reloading ResourceManager: …`）。
 
+## 4.1 位置插入的精确语义（已核对）
+
+`Pack.DefaultPosition.insert(list, value, converter, reverse)`：
+- `BOTTOM`：从前往后跳过"固定位置且同为 BOTTOM"的条目，插入其后 ⇒ 位于列表**前部**；
+- `TOP`：从后往前跳过"固定位置且同为 TOP"的条目，插入其后 ⇒ 位于列表**后部**。
+
+由于查找从列表末尾向前，**TOP = 最高优先级，BOTTOM = 最低**。客户端来源：
+
+| 来源 | 配置 | 结论 |
+| --- | --- | --- |
+| `vanilla` 内置包 | `required=true, BOTTOM, fixed=true` | 固定在**最低**优先级 |
+| 其他内置包 | `required=false, TOP, fixed=false` | 位于固定包之后 |
+| `resourcepacks/` 发现的包 | `required=false, TOP, fixed=false` | 同上；同组内**后加入者优先** |
+
+⇒ 玩家安装的包覆盖内置包与 vanilla，符合直觉。
+
 ## 5. 未核对（不得据此实现）
 
 | 项 | 说明 |
 | --- | --- |
-| 客户端包来源的注册顺序 | 内置（vanilla）包、`resourcepacks/` 目录包、服务器下发包各自加入 `PackRepository` 的**顺序与默认位置**尚未逐行核对 |
 | `overlays`（包内目录叠加） | `pack.mcmeta` 的 overlays 段与目录叠加规则未核对 |
 | `SimpleReloadInstance` 阶段细节 | 并发度、失败回滚（是否原子）与监听器依赖排序未核对 |
 | `KnownPacksManager`（服务端已知包） | 与客户端资源包栈的交互未核对 |
