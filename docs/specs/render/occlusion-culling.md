@@ -31,7 +31,8 @@ WebGPU 的遮挡查询能力受限且跨平台不一致；**Hi-Z（分层深度�
 | 期 | 交付 | 出口判据 |
 | --- | --- | --- |
 | O1（已完成数学） | `OcclusionCulling.TryProjectBox` / `IsOccluded` | 5 项单测 |
-| O2 | Hi-Z 金字塔 build（compute）+ 与 CPU 参考逐 texel 一致 | 任意深度图下完全一致 |
+| **O1.5（已完成）** | **CPU 参考实现** `DepthPyramid.Build`（逐级 2x2 取最远）+ `TryCoveringDepth`（选最细且单 texel 覆盖矩形的层级）| 4 项单测：层级数、最远子节点、覆盖矩形取值、退化矩形拒绝 |
+| O2 | GPU compute 版金字塔，与 O1.5 逐 texel 一致 | 任意深度图下与 CPU 参考完全相同 |
 | O3 | 剔除 compute 产出可见列表（先 CPU 回读） | 与不剔除参考帧逐像素一致，剔除率达标 |
 | O4 | indirect draw，去掉回读 | 每帧提交次数仍为 1；剔除率与 O3 相同 |
 

@@ -238,3 +238,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-212 | 天空+雾**接入窗口路径**（共用着色器，补齐 binding 3；新增天空管线先画）| `docs/analysis/render/sky-and-fog.md` §8 | 窗口日志出帧、无 validation error；窗口像素未抓取（远程会话无可见窗口）| `Framework/Rendering/WindowedRenderer` | 已完成 |
 | T-213 | **像素探针工具** `MC_FRAME_PROBE=x,y;x,y`（输出 rgba 与 argb，越界跳过）| — | 实测 `probe (480,5) = rgba(121,166,255,255) argb 0xFF79A6FF` | `Launcher/FrameCommand` | 已完成 |
 | T-214 | **半透明阶段**规格与 S1-S4 切片（层分类、双网格、距离排序、共用雾）| `docs/specs/render/pipeline.md` §15 | 规格已就绪；S1 依赖方块渲染层数据 | `Client/Render`（待落地）| 规格已就绪 |
+| T-215 | Hi-Z **CPU 参考**（`DepthPyramid.Build` 取最远 + `TryCoveringDepth` 单 texel 覆盖）| `docs/specs/render/occlusion-culling.md` O1.5 | `DepthPyramidTests`(4) | `Client/Render/DepthPyramid` | 已完成 |
