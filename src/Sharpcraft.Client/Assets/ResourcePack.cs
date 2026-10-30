@@ -76,6 +76,56 @@ public sealed class ResourcePack : IDisposable
 
     private const string MetadataFileName = "pack.mcmeta";
 
+    private (PackFormatVersion Min, PackFormatVersion Max)? _supportedFormats;
+    private bool _supportedFormatsRead;
+
+    /// <summary>
+    /// The pack format this client speaks, used both for overlay selection and for the compatibility check.
+    /// </summary>
+    public PackFormatVersion? ClientPackFormat { get; set; }
+
+    /// <summary>
+    /// The format range the pack declares, or null when it declares none.
+    /// </summary>
+    /// <remarks>
+    /// Since 25w31a a pack states <c>min_format</c> and <c>max_format</c>; older packs state a single
+    /// <c>pack_format</c>, which is treated as a one-version range.
+    /// </remarks>
+    public (PackFormatVersion Min, PackFormatVersion Max)? SupportedFormats
+    {
+        get
+        {
+            if (!_supportedFormatsRead)
+            {
+                _supportedFormatsRead = true;
+
+                using var metadata = Open(MetadataFileName, applyOverlays: false);
+
+                if (metadata is not null)
+                {
+                    using var reader = new StreamReader(metadata);
+                    _supportedFormats = ResourcePackFormats.TryParseSupportedFormats(reader.ReadToEnd());
+                }
+            }
+
+            return _supportedFormats;
+        }
+    }
+
+    /// <summary>
+    /// True when this pack may be used by the given client format; a pack that declares nothing is accepted.
+    /// </summary>
+    /// <param name="client">Client format in use.</param>
+    public bool FitsFormat(PackFormatVersion client)
+    {
+        if (SupportedFormats is not { } range)
+        {
+            return true;
+        }
+
+        return client.CompareTo(range.Min) >= 0 && client.CompareTo(range.Max) <= 0;
+    }
+
     private List<OverlayEntry>? _overlays;
     private bool _overlaysRead;
 

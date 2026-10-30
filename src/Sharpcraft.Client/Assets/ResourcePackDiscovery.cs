@@ -23,7 +23,12 @@ public static class ResourcePackDiscovery
     /// </summary>
     /// <param name="folder">Folder such as <c>resourcepacks</c>.</param>
     /// <returns>Packs that could be opened; unreadable entries are skipped rather than failing the whole scan.</returns>
-    public static List<ResourcePack> Discover(string folder)
+    /// <param name="folder">Folder such as <c>resourcepacks</c>.</param>
+    /// <param name="clientFormat">
+    /// Format the client speaks. When given, a pack whose declared range excludes it is skipped with a diagnostic, which is
+    /// what the reference's "incompatible" state amounts to; when null nothing is filtered and nothing is claimed.
+    /// </param>
+    public static List<ResourcePack> Discover(string folder, PackFormatVersion? clientFormat = null)
     {
         var packs = new List<ResourcePack>();
 
@@ -47,7 +52,7 @@ public static class ResourcePackDiscovery
             {
                 if (File.Exists(Path.Combine(entry, MetadataFile)))
                 {
-                    packs.Add(ResourcePack.FromDirectory(entry));
+                    Accept(packs, ResourcePack.FromDirectory(entry), clientFormat);
                 }
 
                 continue;
@@ -60,11 +65,36 @@ public static class ResourcePackDiscovery
 
             if (HasMetadataInArchive(entry))
             {
-                packs.Add(ResourcePack.FromArchive(entry));
+                Accept(packs, ResourcePack.FromArchive(entry), clientFormat);
             }
         }
 
         return packs;
+    }
+
+    /// <summary>Keeps a pack when it fits the client format, otherwise says why it was skipped.</summary>
+    private static void Accept(List<ResourcePack> packs, ResourcePack pack, PackFormatVersion? clientFormat)
+    {
+        if (clientFormat is not { } client)
+        {
+            packs.Add(pack);
+            return;
+        }
+
+        pack.ClientPackFormat = client;
+
+        if (pack.FitsFormat(client))
+        {
+            packs.Add(pack);
+            return;
+        }
+
+        var declared = pack.SupportedFormats is { } range
+            ? $"{range.Min}..{range.Max}"
+            : "none";
+
+        Console.WriteLine($"resource pack {pack.Id}: format {declared}, client {client}; skipped");
+        pack.Dispose();
     }
 
     private static bool HasMetadataInArchive(string path)

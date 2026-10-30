@@ -21,7 +21,7 @@
 | 目录 | 文档数 |
 | --- | --- |
 | [`architecture/`](architecture/README.md) | 2 |
-| [`assets/`](assets/README.md) | 4 |
+| [`assets/`](assets/README.md) | 5 |
 | [`common/`](common/README.md) | 5 |
 | [`gui/`](gui/README.md) | 1 |
 

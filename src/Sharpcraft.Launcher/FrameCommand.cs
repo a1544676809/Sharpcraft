@@ -274,6 +274,26 @@ internal static class FrameCommand
         return new Sharpcraft.Client.Assets.ResourceManager(stack, count, BuildStack);
     }
 
+    /// <summary>
+    /// The pack format this client speaks, from <c>MC_PACK_FORMAT</c> or the snapshot default.
+    /// </summary>
+    /// <remarks>
+    /// 26.3 snapshot 8 is resource format 96.0 and the 26.3 release is 97.1 (Minecraft Wiki, Pack format). The value is
+    /// overridable because the baseline can move between a snapshot and a release, and a wrong number here would reject
+    /// packs that are in fact fine.
+    /// </remarks>
+    private static Sharpcraft.Client.Assets.PackFormatVersion ResolveClientPackFormat()
+    {
+        var configured = Environment.GetEnvironmentVariable("MC_PACK_FORMAT");
+
+        if (Sharpcraft.Client.Assets.PackFormatVersion.TryParse(configured, out var parsed))
+        {
+            return parsed;
+        }
+
+        return new Sharpcraft.Client.Assets.PackFormatVersion(96, 0);
+    }
+
     /// <summary>Builds a stack from the base pack plus every installed pack.</summary>
     /// <returns>The stack and how many installed packs it carries.</returns>
     private static (AssetStack Stack, int PackCount) BuildStack()
@@ -289,6 +309,7 @@ internal static class FrameCommand
         }
 
         var count = 0;
+        var clientFormat = ResolveClientPackFormat();
         var folders = Environment.GetEnvironmentVariable("MC_RESOURCE_PACKS");
 
         if (!string.IsNullOrWhiteSpace(folders))
@@ -300,7 +321,7 @@ internal static class FrameCommand
                     continue;
                 }
 
-                foreach (var pack in Sharpcraft.Client.Assets.ResourcePackDiscovery.Discover(folder))
+                foreach (var pack in Sharpcraft.Client.Assets.ResourcePackDiscovery.Discover(folder, clientFormat))
                 {
                     stack.Add(new Sharpcraft.Client.Assets.ResourcePackSource(pack));
                     count++;
