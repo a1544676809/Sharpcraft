@@ -632,14 +632,29 @@ internal static class FrameCommand
     internal static ClientWorld BuildWaterWorld(BlockStateLayout layout)
     {
         var world = new ClientWorld(minSectionY: -1, sectionCount: 2);
-        var chunk = world.AddChunk(0, 0);
 
         layout.TryGetBaseId(new Identifier("minecraft", "stone"), out var stone);
         layout.TryGetBaseId(new Identifier("minecraft", "water"), out var water);
 
-        chunk.SetSection(new Sharpcraft.Common.World.ChunkSection(singleState: stone, sectionY: -1));
-        chunk.SetSection(new Sharpcraft.Common.World.ChunkSection(singleState: water, sectionY: 0));
-        chunk.MarkLoaded();
+        // A three by three patch of stone with a pool in the middle and a chest at the edge, so the presented view has
+        // something to judge the water against rather than a single flat slab.
+        for (var chunkX = -1; chunkX <= 1; chunkX++)
+        {
+            for (var chunkZ = -1; chunkZ <= 1; chunkZ++)
+            {
+                var chunk = world.AddChunk(chunkX, chunkZ);
+                chunk.SetSection(new Sharpcraft.Common.World.ChunkSection(singleState: stone, sectionY: -1));
+
+                if (chunkX == 0 && chunkZ == 0)
+                {
+                    chunk.SetSection(new Sharpcraft.Common.World.ChunkSection(singleState: water, sectionY: 0));
+                }
+
+                chunk.MarkLoaded();
+            }
+        }
+
+        world.AddChunk(1, 1).AddBlockEntity(new Sharpcraft.Common.World.BlockEntityRecord(8, 0, 8, 1));
 
         return world;
     }
@@ -705,6 +720,8 @@ internal static class FrameCommand
         // With a cache only the chunks whose blocks changed are re-meshed; without one the whole world is
         // scanned, which is what the offscreen paths still do (docs/specs/network/play-movement.md 7.19).
         // The windowed path passes meshSynchronously false and lets the background worker do the meshing.
+        layout ??= Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout;
+
         float[]? translucentVertices = null;
         uint[]? translucentIndices = null;
         var translucentRanges = new List<(int FirstIndex, int IndexCount, float CentreX, float CentreZ)>();
@@ -801,6 +818,27 @@ internal static class FrameCommand
                 ? cache.Build(world, sprites, maxBlocks: 2_000_000)
                 : cache.Snapshot();
             drawRanges = null;
+
+            if (Environment.GetEnvironmentVariable("MC_FRAME_TRANSLUCENT") == "1")
+            {
+                // The cache builds one merged mesh, so the translucent layer is meshed separately here. It costs a second
+                // pass over the chunks, which is acceptable for the presented view and keeps the cached path untouched.
+                using var opaqueSink = new Sharpcraft.Client.Render.MeshBuffer(4096);
+                using var translucentBuffer = new Sharpcraft.Client.Render.MeshBuffer(4096);
+
+                foreach (var chunk in world.GetChunks())
+                {
+                    Sharpcraft.Client.Render.ChunkMesher.MeshChunk(
+                        world, chunk, airState: 0, opaqueSink, maxBlocks: 2_000_000, sprites: sprites, translucent: translucentBuffer, layout: layout);
+                }
+
+                if (translucentBuffer.IndexCount > 0)
+                {
+                    var split = translucentBuffer.ToMeshData(0);
+                    translucentVertices = split.Vertices;
+                    translucentIndices = split.Indices;
+                }
+            }
         }
 
         var bounds = BoundsOf(mesh);

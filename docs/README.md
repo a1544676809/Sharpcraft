@@ -111,7 +111,7 @@
 | [`modules/`](modules/README.md) | 17 |
 | [`repro/`](repro/README.md) | 0 |
 | [`specs/`](specs/README.md) | 15 |
-| [`src/`](src/README.md) | 12 |
+| [`src/`](src/README.md) | 11 |
 | [`tools/`](tools/README.md) | 1 |
 
 <!-- END GENERATED: docs -->

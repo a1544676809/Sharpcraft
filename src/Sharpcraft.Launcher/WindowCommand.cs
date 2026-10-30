@@ -66,6 +66,10 @@ internal static class WindowCommand
         {
             world = FrameCommand.BuildDemoWorld();
         }
+        else if (Environment.GetEnvironmentVariable("MC_FRAME_WATER") == "1")
+        {
+            world = FrameCommand.BuildWaterWorld(VanillaBlockRegistry.Layout);
+        }
         else if (Environment.GetEnvironmentVariable("MC_FRAME_REPLAY") is { Length: > 0 } replayPath)
         {
             world = FrameCommand.LoadReplay(replayPath);

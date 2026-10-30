@@ -6,10 +6,9 @@
 
 | 开关 | 含义 |
 | --- | --- |
-| `MC_DEV_BENCH=1` | 基准模式总闸；未设置时下列开关**无效**，并在启动时打印 `benchmark mode: not for normal play` |
-| `MC_BENCH_BUFFER=<秒>` | 连接后只收不建：缓存服务端区块，**达到期望区块数或超时（先到者）**后一次性装入并开始计时 |
+| `MC_MESH_FIFO=1` | 网格构建退回先进先出顺序，作为「距离优先」的对照 |
 
-> 该路径**不得进入发布形态**：由 `MC_DEV_BENCH` 把关，默认关闭；相关说明登记在 `docs/specs/quality-attributes.md`。
+> 基准相关开关默认关闭；任何会改变正常加载/渲染行为的临时挂钩都不得留在树里（历史上的一条已于 2026-10-30 移除，见下）。
 
 ## 控制变量
 
@@ -24,11 +23,13 @@ pwsh -File benchmarks/chunk-mesh/run.ps1 -Bots 4 -BufferSeconds 5 -Teleport "-83
 ```
 
 脚本会：
-1. 以 `MC_DEV_BENCH=1 MC_BENCH_BUFFER=<秒>` 启动 N 个客户端实例（不同 `MC_LOGIN_NAME`）；
+1. 以 `MC_MESH_FIFO=1`（对照）或不设置（距离优先）启动 N 个客户端实例（不同 `MC_LOGIN_NAME`）；
 2. 通过 mcpfabric RPC 依次 `/tp` 到同一坐标（token 从本地配置读取，**不打印、不提交**）；
 3. 收集各自日志中的 `bench:` 行，汇总成表格。
 
 ## 当前状态
 
-**尚未实现** `MC_DEV_BENCH` / `MC_BENCH_BUFFER`（需要改造窗口路径的区块接收：先缓存、后装入、再计时）。
+**区块缓存挂钩已移除**（2026-10-30）：早期实现过「先缓存服务端区块、收到 arm 文件指令再一次性装入」的 dev 挂钩
+（`ChunkBufferHarness`，`MC_DEV_BENCH` / `MC_BENCH_BUFFER` / `MC_BENCH_DELAY` / `MC_BENCH_ARM_FILE`），
+它会让客户端在收到指令前不安装区块。现在计时直接以传送时刻为起点，不再有这条会改变加载行为的路径。
 本目录先固化流程与判据，避免用"含服务端传输"的数字当结论。

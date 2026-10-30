@@ -171,6 +171,7 @@ public static class WindowedRenderer
             ]);
 
         using var pipeline = CreatePipeline(device, format, pipelineLayout);
+        using var translucentPipeline = CreateTranslucentPipeline(device, format, pipelineLayout);
         using var skyPipeline = CreateSkyPipeline(device, format);
         using var uiPipeline = UiRenderer.CreatePipeline(device, format, pipelineLayout);
         using var uiTextPipeline = UiRenderer.CreateTextPipeline(device, format, pipelineLayout);
@@ -217,7 +218,10 @@ public static class WindowedRenderer
             [
                 BindGroupEntry.TextureView(0, atlasView),
                 BindGroupEntry.Sampler(1, atlasSampler),
-                BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize)
+                BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize),
+                // The layout declares the fog buffer for the world shader; the interface shader ignores it, but a bind
+                // group must still supply every binding the layout declares.
+                BindGroupEntry.Buffer(3, fogBuffer, 0, 32)
             ]);
 
         using var uiSpritePipeline = UiRenderer.CreateSpritePipeline(device, format, pipelineLayout);
@@ -267,7 +271,8 @@ public static class WindowedRenderer
                 [
                     BindGroupEntry.TextureView(0, view),
                     BindGroupEntry.Sampler(1, atlasSampler),
-                    BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize)
+                    BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize),
+                    BindGroupEntry.Buffer(3, fogBuffer, 0, 32)
                 ]));
 
             spriteSheets.Add(sheet);
@@ -279,7 +284,8 @@ public static class WindowedRenderer
             [
                 BindGroupEntry.TextureView(0, glyphView),
                 BindGroupEntry.Sampler(1, atlasSampler),
-                BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize)
+                BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize),
+                BindGroupEntry.Buffer(3, fogBuffer, 0, 32)
             ]);
 
         // The source starts at the textures just uploaded, so the first frame does not re-upload them.
@@ -430,7 +436,8 @@ public static class WindowedRenderer
                     [
                         BindGroupEntry.TextureView(0, atlasView),
                         BindGroupEntry.Sampler(1, atlasSampler),
-                        BindGroupEntry.Buffer(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize)
+                        BindGroupEntry.Buffer(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize),
+                        BindGroupEntry.Buffer(3, fogBuffer, 0, 32)
                     ]);
 
                 uiBindGroup = device.CreateBindGroup(
@@ -438,7 +445,8 @@ public static class WindowedRenderer
                     [
                         BindGroupEntry.TextureView(0, atlasView),
                         BindGroupEntry.Sampler(1, atlasSampler),
-                        BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize)
+                        BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize),
+                        BindGroupEntry.Buffer(3, fogBuffer, 0, 32)
                     ]);
 
                 Console.WriteLine($"ui: atlas re-uploaded (version {appliedAtlasVersion}, {refreshedAtlas.Width}x{refreshedAtlas.Height})");
@@ -483,7 +491,8 @@ public static class WindowedRenderer
                     [
                         BindGroupEntry.TextureView(0, glyphView),
                         BindGroupEntry.Sampler(1, atlasSampler),
-                        BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize)
+                        BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize),
+                        BindGroupEntry.Buffer(3, fogBuffer, 0, 32)
                     ]);
 
                 foreach (var staleBindGroup in spriteBindGroups)
@@ -533,7 +542,8 @@ public static class WindowedRenderer
                         [
                             BindGroupEntry.TextureView(0, refreshedView),
                             BindGroupEntry.Sampler(1, atlasSampler),
-                            BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize)
+                            BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize),
+                            BindGroupEntry.Buffer(3, fogBuffer, 0, 32)
                         ]));
 
                     spriteSheets.Add(refreshedSheet);
@@ -822,6 +832,24 @@ public static class WindowedRenderer
                 pass.DrawIndexed((uint)currentRequest.Indices.Length);
             }
 
+            if (currentRequest.TranslucentVertices is { Length: > 0 } windowTranslucentVertices &&
+                currentRequest.TranslucentIndices is { Length: > 0 } windowTranslucentIndices)
+            {
+                // Blended layer last, with depth writes off: the same pass order the offscreen path uses.
+                using var windowTranslucentVertexBuffer = device.CreateBufferInit(
+                    new BufferInitDescriptor { Usage = BufferUsage.Vertex },
+                    windowTranslucentVertices.AsSpan());
+                using var windowTranslucentIndexBuffer = device.CreateBufferInit(
+                    new BufferInitDescriptor { Usage = BufferUsage.Index },
+                    windowTranslucentIndices.AsSpan());
+
+                pass.SetPipeline(translucentPipeline);
+                pass.SetBindGroup(0, bindGroup);
+                pass.SetVertexBuffer(0, windowTranslucentVertexBuffer);
+                pass.SetIndexBuffer(windowTranslucentIndexBuffer, WGPUIndexFormat.Uint32);
+                pass.DrawIndexed((uint)windowTranslucentIndices.Length);
+            }
+
 
 
             if (uiIndexCount > 0 && uiRanges.Length > 0)
@@ -1002,6 +1030,52 @@ public static class WindowedRenderer
             vertexStride: 0,
             vertexStepMode: WGPUVertexStepMode.Vertex,
             vertexAttributes: []);
+    }
+
+    /// <summary>
+    /// The translucent pipeline: same shader and layout, blending on and depth writes off.
+    /// </summary>
+    private static RenderPipeline CreateTranslucentPipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
+    {
+        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
+        {
+            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText))
+        });
+
+        return device.CreateRenderPipeline(
+            shader,
+            "vs_main"u8,
+            shader,
+            "fs_translucent"u8,
+            [
+                new ColorTargetState
+                {
+                    Format = format,
+                    WriteMask = ColorWriteMask.All,
+                    Blend = new WGPUBlendState
+                    {
+                        color = new WGPUBlendComponent
+                        {
+                            operation = WGPUBlendOperation.Add,
+                            srcFactor = WGPUBlendFactor.SrcAlpha,
+                            dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
+                        },
+                        alpha = new WGPUBlendComponent
+                        {
+                            operation = WGPUBlendOperation.Add,
+                            srcFactor = WGPUBlendFactor.One,
+                            dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
+                        }
+                    }
+                }
+            ],
+            layout: layout,
+            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
+            multisample: MultisampleState.Default,
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.LessEqual, write: false),
+            vertexStride: (ulong)VertexLayout.Stride,
+            vertexStepMode: WGPUVertexStepMode.Vertex,
+            vertexAttributes: VertexLayout.Attributes());
     }
 
     private static RenderPipeline CreatePipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
