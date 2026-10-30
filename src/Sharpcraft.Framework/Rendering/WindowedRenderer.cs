@@ -129,7 +129,13 @@ public static class WindowedRenderer
                 ShaderStage.Vertex,
                 WGPUBufferBindingType.Uniform,
                 false,
-                VertexLayout.CameraUniformSize)
+                VertexLayout.CameraUniformSize),
+            BindGroupLayoutEntry.Buffer(
+                3,
+                ShaderStage.Vertex | ShaderStage.Fragment,
+                WGPUBufferBindingType.Uniform,
+                false,
+                32)
         ]);
 
         using var pipelineLayout = device.CreatePipelineLayout([bindGroupLayout]);
@@ -138,15 +144,32 @@ public static class WindowedRenderer
             new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
             new byte[VertexLayout.CameraUniformSize].AsSpan());
 
+        // Fog: colour plus start and end distance in blocks, shared by the terrain shader.
+        var fogBytes = new byte[32];
+        var fogValues = new float[8];
+        fogValues[0] = 0.75f;
+        fogValues[1] = 0.85f;
+        fogValues[2] = 1.0f;
+        fogValues[3] = 1.0f;
+        fogValues[4] = Environment.GetEnvironmentVariable("MC_FOG_START") is { } startText && float.TryParse(startText, out var fogStart) ? fogStart : 64f;
+        fogValues[5] = Environment.GetEnvironmentVariable("MC_FOG_END") is { } endText && float.TryParse(endText, out var fogEnd) ? fogEnd : 160f;
+        System.Runtime.InteropServices.MemoryMarshal.AsBytes(fogValues.AsSpan()).CopyTo(fogBytes);
+        using var fogBuffer = device.CreateBufferInit(
+            new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
+            fogBytes.AsSpan());
+        device.Queue.WriteBuffer(fogBuffer, 0, fogBytes.AsSpan());
+
         var bindGroup = device.CreateBindGroup(
             bindGroupLayout,
             [
                 BindGroupEntry.TextureView(0, atlasView),
                 BindGroupEntry.Sampler(1, atlasSampler),
-                BindGroupEntry.Buffer(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize)
+                BindGroupEntry.Buffer(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize),
+                BindGroupEntry.Buffer(3, fogBuffer, 0, 32)
             ]);
 
         using var pipeline = CreatePipeline(device, format, pipelineLayout);
+        using var skyPipeline = CreateSkyPipeline(device, format);
         using var uiPipeline = UiRenderer.CreatePipeline(device, format, pipelineLayout);
         using var uiTextPipeline = UiRenderer.CreateTextPipeline(device, format, pipelineLayout);
 
@@ -747,6 +770,10 @@ public static class WindowedRenderer
             ],
             DepthStencilAttachment.DepthClear(depthView));
 
+            // Sky first, over the cleared target; world geometry then draws on top of it.
+            pass.SetPipeline(skyPipeline);
+            pass.Draw(3);
+
             pass.SetPipeline(pipeline);
             // Rewriting 64 bytes is the whole cost of moving the camera; the staging buffers are reused.
             var cameraStarted = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -950,6 +977,30 @@ public static class WindowedRenderer
         NativeSurfaceKind.MetalLayer => SurfaceSource.MetalLayer(source.Handle0),
         _ => throw new PlatformNotSupportedException($"no surface source for {source.Tag}")
     };
+
+    /// <summary>Builds the sky pipeline: a full-screen triangle with no vertex buffer and no depth writes.</summary>
+    /// <param name="device">Device.</param>
+    /// <param name="format">Colour target format.</param>
+    private static RenderPipeline CreateSkyPipeline(Device device, WGPUTextureFormat format)
+    {
+        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
+        {
+            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.SkyShaderSourceText))
+        });
+
+        return device.CreateRenderPipeline(
+            shader,
+            "vs_sky"u8,
+            shader,
+            "fs_sky"u8,
+            [new ColorTargetState(format)],
+            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
+            multisample: MultisampleState.Default,
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.Always, write: false),
+            vertexStride: 0,
+            vertexStepMode: WGPUVertexStepMode.Vertex,
+            vertexAttributes: []);
+    }
 
     private static RenderPipeline CreatePipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
     {
