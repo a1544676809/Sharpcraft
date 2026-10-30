@@ -76,6 +76,31 @@ public sealed class SpriteAtlas
 
     /// <summary>True when the atlas actually carries this sprite.</summary>
     public bool Contains(Identifier location) => _sprites.ContainsKey(location);
+
+    private readonly Dictionary<(int X, int Y, int Width, int Height), Transparency> _transparency = [];
+
+    /// <summary>
+    /// Alpha content of a sprite, computed once per rectangle.
+    /// </summary>
+    /// <param name="sprite">Sprite rectangle in atlas pixels.</param>
+    /// <remarks>
+    /// The reference scans the quad's UV sub-rectangle and flags a fully transparent pixel as cut out and a partially
+    /// transparent one as needing blending
+    /// (ref://mc-26.3-analysis/src/com/mojang/blaze3d/platform/NativeImage.java, computeTransparency).
+    /// </remarks>
+    public Transparency ComputeTransparency(SpriteRect sprite)
+    {
+        var key = (sprite.X, sprite.Y, sprite.Width, sprite.Height);
+
+        if (_transparency.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        var transparency = SpriteAlpha.Compute(Pixels, Width, sprite);
+        _transparency[key] = transparency;
+        return transparency;
+    }
 }
 
 /// <summary>

@@ -113,6 +113,31 @@ public sealed class BlockSpriteMap
     public SpriteRect ForTexture(string texturePath) =>
         _atlas.Get(new Identifier("minecraft", TextureDirectory + texturePath));
 
+    /// <summary>
+    /// Alpha content of every texture this block's model uses, combined.
+    /// </summary>
+    /// <param name="blockId">Block identifier.</param>
+    /// <remarks>
+    /// The reference decides a quad's layer from its material's transparency, which for a non fluid is the sprite's own
+    /// alpha content; combining the faces is the closest equivalent while our models still resolve to plain sprites.
+    /// </remarks>
+    public Transparency TransparencyOf(Identifier blockId)
+    {
+        var transparency = Transparency.None;
+
+        foreach (var sprite in ResolveFaces(blockId))
+        {
+            transparency = transparency.Or(_atlas.ComputeTransparency(sprite));
+
+            if (transparency.HasTransparent && transparency.HasTranslucent)
+            {
+                break;
+            }
+        }
+
+        return transparency;
+    }
+
     private SpriteRect[] ResolveFaces(Identifier blockId)
     {
         if (_cache.TryGetValue(blockId, out var cached))

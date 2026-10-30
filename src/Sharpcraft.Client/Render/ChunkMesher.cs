@@ -113,7 +113,8 @@ public static class ChunkMesher
         int maxBlocks,
         BlockSpriteMap? sprites = null,
         MeshBuffer? translucent = null,
-        Sharpcraft.Common.Registries.BlockStateLayout? layout = null)
+        Sharpcraft.Common.Registries.BlockStateLayout? layout = null,
+        MeshBuffer? cutout = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(chunk);
@@ -144,7 +145,7 @@ public static class ChunkMesher
             for (var direction = 0; direction < 6; direction++)
             {
                 consumed.Clear();
-                MergeSectionFaces(world, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout);
+                MergeSectionFaces(world, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout);
             }
         }
 
@@ -164,7 +165,8 @@ public static class ChunkMesher
         Span<bool> consumed,
         BlockSpriteMap? sprites,
         MeshBuffer? translucent = null,
-        Sharpcraft.Common.Registries.BlockStateLayout? layout = null)
+        Sharpcraft.Common.Registries.BlockStateLayout? layout = null,
+        MeshBuffer? cutout = null)
     {
         var (uAxis, vAxis) = InPlaneAxes(direction);
 
@@ -212,7 +214,7 @@ public static class ChunkMesher
                         }
                     }
 
-                    EmitMergedQuad(world, buffer, direction, slice, u, v, width, height, baseX, baseY, baseZ, key.State, sprites, translucent, layout);
+                    EmitMergedQuad(world, buffer, direction, slice, u, v, width, height, baseX, baseY, baseZ, key.State, sprites, translucent, layout, cutout);
                 }
             }
         }
@@ -337,7 +339,8 @@ public static class ChunkMesher
         int state,
         BlockSpriteMap? sprites,
         MeshBuffer? translucent = null,
-        Sharpcraft.Common.Registries.BlockStateLayout? layout = null)
+        Sharpcraft.Common.Registries.BlockStateLayout? layout = null,
+        MeshBuffer? cutout = null)
     {
         var (uAxis, vAxis) = InPlaneAxes(direction);
         var (x, y, z) = FaceBlock(uAxis, vAxis, slice, u, v);
@@ -455,7 +458,19 @@ public static class ChunkMesher
         (float U, float V) uvB = Uv((b.X - baseX, b.Y - baseY, b.Z - baseZ));
         (float U, float V) uvC = Uv((c.X - baseX, c.Y - baseY, c.Z - baseZ));
 
-        var target = translucent is not null && BlockRenderLayers.IsTranslucent(state, layout) ? translucent : buffer;
+        var target = buffer;
+
+        if (translucent is not null)
+        {
+            // The layer decides the target buffer, exactly as the reference picks a chunk section layer per material.
+            target = BlockLayerRules.Of(state, sprites, layout) switch
+            {
+                BlockLayer.Translucent when translucent is not null => translucent,
+                BlockLayer.Cutout when cutout is not null => cutout,
+                _ => buffer
+            };
+        }
+
         target.AppendQuad(
             origin,
             a,
