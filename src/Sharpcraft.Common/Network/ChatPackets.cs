@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Text;
+using Sharpcraft.Common.Localization;
 using Sharpcraft.Common.Nbt;
 
 namespace Sharpcraft.Common.Network;
@@ -20,7 +21,12 @@ public static class ChatPackets
     /// <param name="body">Packet body without the id.</param>
     /// <param name="text">Flattened text.</param>
     /// <param name="overlay">True when the line belongs in the action bar rather than the chat log.</param>
-    public static DecodeStatus TryReadSystemChat(ReadOnlySpan<byte> body, out string text, out bool overlay)
+    /// <param name="language">Translation table, or null to leave keys unresolved.</param>
+    public static DecodeStatus TryReadSystemChat(
+        ReadOnlySpan<byte> body,
+        out string text,
+        out bool overlay,
+        LanguageTable? language = null)
     {
         text = string.Empty;
         overlay = false;
@@ -39,7 +45,7 @@ public static class ChatPackets
             return DecodeStatus.NeedMoreData;
         }
 
-        text = ComponentText.Flatten(root);
+        text = ComponentText.Flatten(root, language);
         overlay = isOverlay;
         return DecodeStatus.Success;
     }
@@ -53,14 +59,33 @@ public static class ComponentText
 
     /// <summary>Flattens a component into plain text.</summary>
     /// <param name="tag">Component node, usually a compound.</param>
-    public static string Flatten(NbtTag? tag)
+    /// <param name="language">Translation table, or null to leave keys unresolved.</param>
+    public static string Flatten(NbtTag? tag, LanguageTable? language = null)
     {
         var builder = new StringBuilder();
-        Append(builder, tag, 0);
+        Append(builder, tag, 0, language);
         return builder.ToString();
     }
 
-    private static void Append(StringBuilder builder, NbtTag? tag, int depth)
+    /// <summary>Flattens the <c>with</c> arguments of a translated component.</summary>
+    private static string[] FlattenArguments(NbtCompound compound, int depth, LanguageTable? language)
+    {
+        if (compound.Get("with") is not NbtList arguments || arguments.Items.Count == 0)
+        {
+            return [];
+        }
+
+        var flattened = new string[arguments.Items.Count];
+
+        for (var index = 0; index < flattened.Length; index++)
+        {
+            flattened[index] = Flatten(arguments.Items[index], language);
+        }
+
+        return flattened;
+    }
+
+    private static void Append(StringBuilder builder, NbtTag? tag, int depth, LanguageTable? language)
     {
         if (tag is null || depth > MaxDepth)
         {
@@ -85,27 +110,33 @@ public static class ComponentText
         {
             builder.Append(text);
         }
-        else
+        else if (compound.GetString("translate") is { } translate)
         {
-            // Translated components carry a key and arguments. Without a language table the key is the best honest
-            // rendering, and it is what makes a missing translation visible instead of silently blank.
-            var translate = compound.GetString("translate");
+            // A translated node carries a key and, usually, the arguments to fill in. Each argument is itself a
+            // component, so it is flattened first and the result substituted into the translated sentence.
+            var arguments = FlattenArguments(compound, depth, language);
 
-            if (translate is not null)
+            if (language is not null)
             {
+                builder.Append(language.Format(translate, arguments));
+            }
+            else
+            {
+                // Without a table the key is the honest rendering: it makes a missing translation visible instead of
+                // silently blank.
                 builder.Append(translate);
             }
-            else if (compound.GetString("fallback") is { } fallback)
-            {
-                builder.Append(fallback);
-            }
+        }
+        else if (compound.GetString("fallback") is { } fallback)
+        {
+            builder.Append(fallback);
         }
 
         if (compound.Get("extra") is NbtList extra)
         {
             for (var index = 0; index < extra.Items.Count; index++)
             {
-                Append(builder, extra.Items[index], depth + 1);
+                Append(builder, extra.Items[index], depth + 1, language);
             }
         }
     }

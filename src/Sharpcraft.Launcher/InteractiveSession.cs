@@ -36,6 +36,7 @@ internal sealed class InteractiveSession
     private readonly PlayerListRoster _playerList = new();
     private readonly ChatInput _chat = new();
     private readonly ChatLog _chatLog = new();
+    private readonly Sharpcraft.Common.Localization.LanguageTable _language;
     private long _chatTicks;
     private readonly bool _diagEnabled = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
     private int _diagFrames;
@@ -63,9 +64,15 @@ internal sealed class InteractiveSession
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private TimeSpan _last;
 
-    private InteractiveSession(PlayerEntity player, LivePlaySession? live, ClientWorld? world, ChunkWorkerPool? pool)
+    private InteractiveSession(
+        PlayerEntity player,
+        LivePlaySession? live,
+        ClientWorld? world,
+        ChunkWorkerPool? pool,
+        Sharpcraft.Common.Localization.LanguageTable? language = null)
     {
         _player = player;
+        _language = language ?? Sharpcraft.Common.Localization.LanguageTable.Empty;
         _world = world;
         _pool = pool;
         _interpolator = new PlayerInterpolator(player, _camera.Yaw);
@@ -80,14 +87,15 @@ internal sealed class InteractiveSession
         ClientWorld world,
         FrameRequest request,
         LivePlaySession? live = null,
-        ChunkWorkerPool? pool = null)
+        ChunkWorkerPool? pool = null,
+        Sharpcraft.Common.Localization.LanguageTable? language = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(request);
 
         var adapter = new EntityWorldAdapter(world);
         var spawn = FindSpawn(world, request);
-        return new InteractiveSession(new PlayerEntity(adapter, spawn), live, world, pool);
+        return new InteractiveSession(new PlayerEntity(adapter, spawn), live, world, pool, language);
     }
 
     /// <summary>
@@ -528,7 +536,7 @@ internal sealed class InteractiveSession
 
 
                 case PacketIds.PlayClientbound.SystemChat:
-                    if (ChatPackets.TryReadSystemChat(body[reader.Position..], out var chatText, out var overlay) ==
+                    if (ChatPackets.TryReadSystemChat(body[reader.Position..], out var chatText, out var overlay, _language) ==
                         DecodeStatus.Success)
                     {
                         // The overlay flag marks an action bar line, which is drawn elsewhere in the reference; until

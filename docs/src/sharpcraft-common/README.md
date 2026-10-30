@@ -10,6 +10,7 @@
 | 文档 | 摘要 | 状态 | 最后更新 |
 | --- | --- | --- | --- |
 | [`entities.md`](entities.md) | Aabb / EntityDimensions / Entity / LivingEntity / PlayerEntity。 | 已评审 | 2026-10-29 |
+| [`localization.md`](localization.md) | 翻译表：键查表与参数替换 | 已评审 | - |
 | [`network.md`](network.md) | 把线上的字节变成有类型的数据。 | 已评审 | 2026-10-29 |
 
 <!-- END GENERATED: docs/src/sharpcraft-common -->

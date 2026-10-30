@@ -116,7 +116,9 @@ internal static class WindowCommand
         }
 
         using var liveScope = live;
-        var session = InteractiveSession.Create(world, request, live, workerPool);
+        // Loaded before the session because chat arrives as translation keys and the session resolves them.
+        var language = FrameCommand.PrepareLanguage();
+        var session = InteractiveSession.Create(world, request, live, workerPool, language);
 
         // The document comes from one managed location and nowhere else: no environment variable and no command
         // line option can point the client at an arbitrary file (docs/decisions/0010). Editing that file reloads

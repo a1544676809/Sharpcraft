@@ -247,8 +247,9 @@
 
 **已实现**：`ChatInput`（打开/追加/退格/提交/关闭、256 上限、控制字符丢弃）、`chat`/`chat_command` 构建、
 会话接线（T 与 `/` 打开、Enter 发送、Esc 关闭、打开时抑制移动与视角、释放捕获）、提示框绘制（含光标）、
-`system_chat` 解析（组件树摊平 + `overlay` 过滤）、`ChatLog`（100 行上限、淡出曲线、贪心折行、按原版常量绘制）。
-**待做**：语言表（`translate` 键解析，见 T-121）；`player_chat`(66)/`disguised_chat`(33)/`delete_chat`(31) 解析；组件**样式**（颜色/粗体/点击事件）与
+`system_chat` 解析（组件树摊平 + `overlay` 过滤 + **翻译键解析**：`translate` + `with` 实参，`%s`/`%1$s`/`%%`，
+语言表来自资源包 `lang/en_us.json`）、`ChatLog`（100 行上限、淡出曲线、贪心折行、按原版常量绘制）。
+**待做**：`player_chat`(66)/`disguised_chat`(33)/`delete_chat`(31) 解析；组件**样式**（颜色/粗体/点击事件）与
 `translate` 的实参替换；边框、滚动条与 PageUp 翻页；动作栏（`overlay=true`）的独立显示。
 
 ### 9.1 GUI 画布与整数缩放（2026-10-29）

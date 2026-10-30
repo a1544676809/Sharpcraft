@@ -173,6 +173,46 @@ internal static class FrameCommand
     /// <param name="layout">Block state layout, or null when it is not known yet.</param>
     /// <returns>Atlas plus mapping, or null when no pack is installed.</returns>
     /// <summary>
+    /// Loads the translation table the server's messages are written against.
+    /// </summary>
+    /// <remarks>
+    /// The language file is an asset like any other: it is extracted from the game by the launcher and never stored in
+    /// the repository. Without it the interface can only show translation keys, which is what it did before this.
+    /// </remarks>
+    internal static Sharpcraft.Common.Localization.LanguageTable PrepareLanguage()
+    {
+        var packPath = FindPack();
+
+        if (packPath is null)
+        {
+            Console.WriteLine("language: no asset pack found; messages will show translation keys");
+            return Sharpcraft.Common.Localization.LanguageTable.Empty;
+        }
+
+        using var stack = new AssetStack { Policy = MissingResourcePolicy.Warn }
+            .Add(new BuiltInFallbackSource())
+            .Add(new ZipAssetSource(packPath, "base-pack"));
+
+        var bytes = stack.Read(
+            ResourceKind.Language,
+            new Sharpcraft.Common.Identifiers.Identifier("minecraft", "en_us"));
+
+        if (bytes is null)
+        {
+            Console.WriteLine("language: en_us.json is missing from the pack; messages will show translation keys");
+            return Sharpcraft.Common.Localization.LanguageTable.Empty;
+        }
+
+        var started = System.Diagnostics.Stopwatch.StartNew();
+        var table = Sharpcraft.Common.Localization.LanguageTable.Parse(
+            System.Text.Encoding.UTF8.GetString(bytes));
+        started.Stop();
+
+        Console.WriteLine($"language: {table.Count} keys, {started.ElapsedMilliseconds} ms");
+        return table;
+    }
+
+    /// <summary>
     /// Loads the glyph sheet from the same asset pack the block textures come from, so text uses the game's own
     /// font without any asset entering the repository (docs/modules/ui.md 5).
     /// </summary>
