@@ -143,12 +143,7 @@ internal static class WindowCommand
                 while (passes < 64 && (meshCache.LastTotalChunks < world.LoadedChunkCount || meshCache.PendingChunks > 0))
                 {
                     meshCache.QueueMissing(world);
-                    meshCache.Build(
-                        world,
-                        next.Map,
-                        maxBlocks: int.MaxValue,
-                        maxChunksPerBuild: int.MaxValue,
-                        maxMillisecondsPerBuild: 5_000);
+                    meshCache.Build(world, next.Map, Sharpcraft.Client.Render.MeshBuildPolicy.CatchUp);
                     passes++;
 
                     if (meshCache.PendingChunks > 0)
@@ -173,7 +168,7 @@ internal static class WindowCommand
         });
 
         // A short synchronous warm-up gives the first frame something to show.
-        meshCache.Build(world, prepared?.Map, maxChunksPerBuild: 8, maxMillisecondsPerBuild: 250);
+        meshCache.Build(world, prepared?.Map, Sharpcraft.Client.Render.MeshBuildPolicy.Interactive);
         meshCache.QueueMissing(world);
 
         var request = FrameCommand.BuildRequest(

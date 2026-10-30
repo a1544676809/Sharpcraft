@@ -60,6 +60,19 @@ public sealed class ChunkMeshCache
     /// <param name="maxBlocks">Safety cap.</param>
     /// <param name="maxChunksPerBuild">Upper bound on chunks meshed in this call.</param>
     /// <param name="maxMillisecondsPerBuild">Wall-clock budget; a chunk is never cut in half.</param>
+    /// <summary>Builds with a shared policy, so callers do not each pick their own numbers.</summary>
+    /// <param name="world">World to build for.</param>
+    /// <param name="sprites">Atlas mapping, or null for untextured.</param>
+    /// <param name="policy">Batch and time budget.</param>
+    /// <param name="maxBlocks">Block ceiling for one call.</param>
+    public MeshData Build(ClientWorld world, BlockSpriteMap? sprites, MeshBuildPolicy policy, int maxBlocks = int.MaxValue) =>
+        Build(
+            world,
+            sprites,
+            maxBlocks: maxBlocks,
+            maxChunksPerBuild: policy.MaxChunksPerPass,
+            maxMillisecondsPerBuild: policy.MaxMillisecondsPerPass);
+
     public MeshData Build(
         ClientWorld world,
         BlockSpriteMap? sprites = null,
