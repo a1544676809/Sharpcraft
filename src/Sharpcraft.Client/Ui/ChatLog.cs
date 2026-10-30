@@ -61,7 +61,10 @@ public sealed class ChatLog
     public const uint ModifiedTagColour = 0xFF606060u;
 
     /// <summary>Background wash behind each line.</summary>
-    public const float BackgroundOpacity = 0.5f;
+    public static float BackgroundOpacity { get; set; } =
+        float.TryParse(Environment.GetEnvironmentVariable("MC_TEXT_BACKGROUND_OPACITY"), out var opacity)
+            ? Math.Clamp(opacity, 0f, 1f)
+            : 0.5f;
 
     /// <summary>Text opacity at the default setting.</summary>
     public const float TextOpacity = 1f;
@@ -117,7 +120,8 @@ public sealed class ChatLog
         long tick,
         MessageTag tag = MessageTag.None,
         ChatClick?[]? clicks = null,
-        TextRun[]?[]? hovers = null)
+        TextRun[]?[]? hovers = null,
+        byte[]? signature = null)
     {
         if (runs.Length == 0)
         {
@@ -138,7 +142,7 @@ public sealed class ChatLog
             return;
         }
 
-        _lines.Add(new Line(runs.ToArray(), tick, builder.ToString(), tag, clicks, hovers));
+        _lines.Add(new Line(runs.ToArray(), tick, builder.ToString(), tag, clicks, hovers, signature));
 
         if (_lines.Count > MaxHistory)
         {
@@ -159,6 +163,25 @@ public sealed class ChatLog
 
     /// <summary>Indicator tag of one entry, which is what its bar's tooltip describes.</summary>
     /// <param name="index">Entry index, oldest first.</param>
+    /// <summary>
+    /// Removes the line carrying a signature, which is what a <c>delete_chat</c> packet asks for.
+    /// </summary>
+    /// <param name="signature">Signature bytes of the message to remove.</param>
+    /// <returns>True when a line was removed.</returns>
+    public bool RemoveBySignature(ReadOnlySpan<byte> signature)
+    {
+        for (var index = _lines.Count - 1; index >= 0; index--)
+        {
+            if (_lines[index].Signature is { } existing && existing.AsSpan().SequenceEqual(signature))
+            {
+                _lines.RemoveAt(index);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public MessageTag TagFor(int index) =>
         index >= 0 && index < _lines.Count ? _lines[index].Tag : MessageTag.None;
 
@@ -409,7 +432,8 @@ public sealed class ChatLog
         string Text,
         MessageTag Tag,
         ChatClick?[]? Clicks = null,
-        TextRun[]?[]? Hovers = null);
+        TextRun[]?[]? Hovers = null,
+        byte[]? Signature = null);
 
     /// <summary>Greedy word wrapping over a line, reporting where each piece starts, allocating nothing.</summary>
     private readonly ref struct Wrapped(string text, BitmapFont font, float width)
