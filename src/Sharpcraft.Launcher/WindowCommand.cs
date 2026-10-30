@@ -237,6 +237,7 @@ internal static class WindowCommand
                 if (uiFont is not null)
                 {
                     session.ChatLog.Draw(uiGeometry, uiFont, canvasHeight, session.ChatTicks, session.Chat.IsOpen);
+                    session.ActionBar.Draw(uiGeometry, uiFont, canvasWidth, canvasHeight);
 
                     // The bar sits just right of the column, over the same rows the history occupies.
                     var chatBottom = canvasHeight - Sharpcraft.Client.Ui.ChatLog.BottomMargin;

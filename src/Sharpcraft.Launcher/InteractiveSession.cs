@@ -39,6 +39,7 @@ internal sealed class InteractiveSession
     private readonly Sharpcraft.Common.Localization.LanguageTable _language;
     private long _chatTicks;
     private long _chatOpenedAtMs;
+    private readonly Sharpcraft.Client.Ui.ActionBar _actionBar = new();
     private bool _diagnosticChatSent;
     private readonly bool _diagEnabled = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
     private int _diagFrames;
@@ -127,6 +128,9 @@ internal sealed class InteractiveSession
 
     /// <summary>Ticks elapsed, used by the chat fade.</summary>
     public long ChatTicks => _chatTicks;
+
+    /// <summary>The transient line above the hotbar, which is where overlay chat goes.</summary>
+    public Sharpcraft.Client.Ui.ActionBar ActionBar => _actionBar;
 
     /// <summary>Milliseconds since the prompt was opened, which drives the caret blink.</summary>
     public long ChatElapsedMs => Environment.TickCount64 - _chatOpenedAtMs;
@@ -560,6 +564,7 @@ internal sealed class InteractiveSession
                 // has to advance once per tick (docs/specs/network/entity-sync.md 9.4).
                 _entities.Tick();
             _chatTicks++;
+        _actionBar.Tick();
                 _interpolator.Push(_player, _camera.Yaw);
                 PublishTick();
             });
@@ -852,9 +857,12 @@ internal sealed class InteractiveSession
                     if (ChatPackets.TryReadSystemChat(body[reader.Position..], out Sharpcraft.Common.Network.TextRun[] chatRuns, out var overlay, _language) ==
                         DecodeStatus.Success)
                     {
-                        // The overlay flag marks an action bar line, which is drawn elsewhere in the reference; until
-                        // that exists, keeping it out of the log is the honest choice.
-                        if (!overlay)
+                        // The overlay flag means "show this above the hotbar rather than in the history".
+                        if (overlay)
+                        {
+                            _actionBar.Set(chatRuns);
+                        }
+                        else
                         {
                             // A system line is what the reference tags with its pale indicator bar.
                             _chatLog.Add(chatRuns, _chatTicks, Sharpcraft.Client.Ui.ChatLog.MessageTag.System);
