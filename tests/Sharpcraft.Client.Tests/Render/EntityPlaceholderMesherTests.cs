@@ -51,8 +51,8 @@ public sealed class EntityPlaceholderMesherTests
         // The arms reach past the collision box, as they do in the reference; the height is what has to match.
         Assert.InRange(maxX - minX, EntityPlaceholderMesher.PlayerWidth, 1.05f);
         Assert.Equal(EntityPlaceholderMesher.PlayerHeight, maxY - minY, 3);
-        // Depth is the body depth; only the arms widen the silhouette.
-        Assert.Equal(0.5f, maxZ - minZ, 3);
+        // The deepest part is the head cube (8 pixels); the bounds span every part, so that is what comes out.
+        Assert.Equal(8f / 16f * EntityPlaceholderMesher.ModelScale, maxZ - minZ, 3);
         Assert.Equal(70f, minY, 3);
         Assert.Equal(5f, (minX + maxX) / 2f, 3);
     }
@@ -145,5 +145,21 @@ public sealed class EntityPlaceholderMesherTests
         }
 
         return (minX, maxX, minY, maxY, minZ, maxZ);
+    }
+
+    [Fact]
+    public void ReferencePartSizesAreUsed()
+    {
+        // The model is authored in pixels; 1/16 block each, scaled so the 32 pixel stack is PlayerHeight tall. Pinning the
+        // relation here means a later change to the placeholder cannot drift from the reference without a test failing.
+        Assert.Equal(0.9f, EntityPlaceholderMesher.ModelScale, 4);
+
+        var mesher = new EntityPlaceholderMesher();
+        var geometry = mesher.Build([State(159, 0f, 0f, 0f)], Sprite());
+        var (_, maxX, minY, maxY, _, _) = Bounds(geometry);
+
+        Assert.Equal(EntityPlaceholderMesher.PlayerHeight, maxY - minY, 3);
+        Assert.Equal(0f, minY, 3);
+        Assert.InRange(maxX, 0.3f, 0.4f);
     }
 }

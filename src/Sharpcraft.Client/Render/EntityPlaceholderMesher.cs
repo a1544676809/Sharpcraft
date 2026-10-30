@@ -74,16 +74,18 @@ public sealed class EntityPlaceholderMesher
             if (isPlayer)
             {
                 // Head, body, two arms and two legs: still boxes, but the silhouette reads as a person rather than a pillar.
-                // The second argument is the bottom of each part, not its centre.
-                // Proportions are the reference's: legs 0.75 tall, body 0.75, head 0.5, total height 1.8.
+                // The second argument is the bottom of each part, not its centre. Sizes are the reference model's pixels
+                // (head 8x8x8, body 8x12x4, arm 3x12x4, leg 4x12x4) at 1/16 block, scaled by ModelScale so the 32 pixel
+                // model stands PlayerHeight tall.
                 var feet = new Vector3(entity.X, entity.Y, entity.Z);
+                const float px = 1f / 16f * ModelScale;
 
-                AppendBox(_geometry, feet + new Vector3(0f, 1.5f, 0f), 0.5f, 0.3f, red, green, blue, sprite, ref vertexFloats, ref indexCount);
-                AppendBox(_geometry, feet + new Vector3(0f, 0.75f, 0f), 0.5f, 0.75f, red, green, blue, sprite, ref vertexFloats, ref indexCount);
-                AppendBox(_geometry, feet + new Vector3(-0.375f, 0.75f, 0f), 0.25f, 0.75f, red, green, blue, sprite, ref vertexFloats, ref indexCount);
-                AppendBox(_geometry, feet + new Vector3(0.375f, 0.75f, 0f), 0.25f, 0.75f, red, green, blue, sprite, ref vertexFloats, ref indexCount);
-                AppendBox(_geometry, feet + new Vector3(-0.125f, 0f, 0f), 0.25f, 0.75f, red, green, blue, sprite, ref vertexFloats, ref indexCount);
-                AppendBox(_geometry, feet + new Vector3(0.125f, 0f, 0f), 0.25f, 0.75f, red, green, blue, sprite, ref vertexFloats, ref indexCount);
+                AppendBox(_geometry, feet + new Vector3(0f, 24f * px, 0f), 8f * px, 8f * px, red, green, blue, sprite, ref vertexFloats, ref indexCount, 8f * px);
+                AppendBox(_geometry, feet + new Vector3(0f, 12f * px, 0f), 8f * px, 12f * px, red, green, blue, sprite, ref vertexFloats, ref indexCount, 4f * px);
+                AppendBox(_geometry, feet + new Vector3(-5f * px, 12f * px, 0f), 3f * px, 12f * px, red, green, blue, sprite, ref vertexFloats, ref indexCount, 4f * px);
+                AppendBox(_geometry, feet + new Vector3(5f * px, 12f * px, 0f), 3f * px, 12f * px, red, green, blue, sprite, ref vertexFloats, ref indexCount, 4f * px);
+                AppendBox(_geometry, feet + new Vector3(-1.9f * px, 0f, 0f), 4f * px, 12f * px, red, green, blue, sprite, ref vertexFloats, ref indexCount, 4f * px);
+                AppendBox(_geometry, feet + new Vector3(1.9f * px, 0f, 0f), 4f * px, 12f * px, red, green, blue, sprite, ref vertexFloats, ref indexCount, 4f * px);
             }
             else
             {
@@ -108,6 +110,12 @@ public sealed class EntityPlaceholderMesher
         return _geometry;
     }
 
+    /// <summary>Pixels in the reference player model, 32 of them stacking to its height.</summary>
+    public const float ModelPixels = 32f;
+
+    /// <summary>Scale that fits the 32 pixel model into <see cref="PlayerHeight"/> blocks.</summary>
+    public const float ModelScale = PlayerHeight / (ModelPixels / 16f);
+
     /// <summary>Boxes a player is drawn from until real models are extracted from the jar.</summary>
     public const int PlayerPartCount = 6;
 
@@ -124,15 +132,17 @@ public sealed class EntityPlaceholderMesher
         float blue,
         SpriteRect sprite,
         ref int vertexFloats,
-        ref int indexCount)
+        ref int indexCount,
+        float? depth = null)
     {
         var half = width / 2f;
+        var halfDepth = (depth ?? width) / 2f;
         var minX = feet.X - half;
         var maxX = feet.X + half;
         var minY = feet.Y;
         var maxY = feet.Y + height;
-        var minZ = feet.Z - half;
-        var maxZ = feet.Z + half;
+        var minZ = feet.Z - halfDepth;
+        var maxZ = feet.Z + halfDepth;
 
         // +X, -X, +Y, -Y, +Z, -Z; each face is two triangles wound consistently.
         AppendFace(geometry, new Vector3(maxX, minY, minZ), new Vector3(maxX, minY, maxZ), new Vector3(maxX, maxY, maxZ), new Vector3(maxX, maxY, minZ), red, green, blue, sprite, ref vertexFloats, ref indexCount);
