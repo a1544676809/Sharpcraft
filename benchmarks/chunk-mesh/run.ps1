@@ -15,6 +15,7 @@ param(
     [int]$Bots = 2,
     [int]$BufferSeconds = 5,
     [string]$Teleport = "-83 120 46",
+    [int]$DelaySeconds = 6,
     [string]$Server = "127.0.0.1:25565",
     [string]$TokenConfig = "E:\Games\minecraft\.minecraft\versions\26.3-snapshot-8-Fabric 0.19.3\config\mcpfabric.config.json"
 )
@@ -51,6 +52,7 @@ for ($i = 1; $i -le $Bots; $i++) {
     $env:MC_WINDOW_SECONDS = "120"
     $env:MC_DEV_BENCH = "1"
     $env:MC_BENCH_BUFFER = "$BufferSeconds"
+    $env:MC_BENCH_DELAY = "$DelaySeconds"
 
     Start-Process -FilePath "dotnet" -ArgumentList @(
         "run", "--project", "src\Sharpcraft.Launcher", "--no-build", "--", "window", $Server
@@ -62,12 +64,11 @@ for ($i = 1; $i -le $Bots; $i++) {
 Start-Sleep -Seconds 25
 
 # Everyone to the same spot, then let the chunk stream arrive before measuring.
-foreach ($name in $names) {
-    Send-Command "/tp $name $Teleport"
-    Start-Sleep -Milliseconds 500
-}
+# Everyone to one spot: a selector avoids depending on exact names, and the delay lets this burst be the measured one.
+Send-Command "/tp @a $Teleport"
+Write-Host "tp issued: /tp @a $Teleport"
 
-Start-Sleep -Seconds ($BufferSeconds + 20)
+Start-Sleep -Seconds ($BufferSeconds + $DelaySeconds + 20)
 
 $rows = @()
 for ($i = 0; $i -lt $Bots; $i++) {

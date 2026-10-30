@@ -19,16 +19,22 @@ internal sealed class ChunkBufferHarness
     /// <summary>Window, in seconds, during which chunks are held.</summary>
     internal const string BufferSwitch = "MC_BENCH_BUFFER";
 
+    /// <summary>Delay before buffering starts, so a teleport can be issued first and its burst is the one measured.</summary>
+    internal const string DelaySwitch = "MC_BENCH_DELAY";
+
     private readonly int _expectedChunks;
     private readonly TimeSpan _window;
+    private readonly TimeSpan _delay;
+    private readonly System.Diagnostics.Stopwatch _sinceStart = System.Diagnostics.Stopwatch.StartNew();
     private readonly List<object> _held = [];
     private readonly System.Diagnostics.Stopwatch _clock = new();
     private bool _released;
 
-    private ChunkBufferHarness(int expectedChunks, TimeSpan window)
+    private ChunkBufferHarness(int expectedChunks, TimeSpan window, TimeSpan delay)
     {
         _expectedChunks = expectedChunks;
         _window = window;
+        _delay = delay;
     }
 
     /// <summary>How many chunks are being held.</summary>
@@ -54,7 +60,11 @@ internal sealed class ChunkBufferHarness
         }
 
         Console.WriteLine("benchmark mode: not for normal play");
-        return new ChunkBufferHarness(Math.Max(1, expectedChunks), TimeSpan.FromSeconds(seconds));
+        var delaySeconds = double.TryParse(Environment.GetEnvironmentVariable(DelaySwitch), out var parsed) ? parsed : 0;
+        return new ChunkBufferHarness(
+            Math.Max(1, expectedChunks),
+            TimeSpan.FromSeconds(seconds),
+            TimeSpan.FromSeconds(Math.Max(0, delaySeconds)));
     }
 
     /// <summary>
@@ -65,6 +75,13 @@ internal sealed class ChunkBufferHarness
     public bool Hold(object chunk)
     {
         if (_released)
+        {
+            return false;
+        }
+
+        // Before the delay the join burst installs normally, so a teleport issued during that time produces the burst
+        // that actually gets measured.
+        if (_sinceStart.Elapsed < _delay)
         {
             return false;
         }
