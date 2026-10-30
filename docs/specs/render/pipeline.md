@@ -226,3 +226,7 @@ P3 之前不谈包；但 §3 的 pass 划分必须**现在就按"可命名目标
    ranges 按区块到相机距离**降序**（`TranslucentOrder` 已实现并有测试）。
 
 验收：合成"两片半透明平面相交"场景，与"关闭半透明"渲染比对——被遮挡部分必须改变颜色，且不透明区域逐像素不变。
+
+**S2 网格侧已完成（2026-10-30）**：`MeshChunk` / `MergeSectionFaces` / `EmitMergedQuad` 透传 `translucent` 缓冲与 `layout`，
+面出口按 `BlockRenderLayers.IsTranslucent(state, layout)` 选目标缓冲。3 项测试：水入透明缓冲、无 layout 时全入不透明、
+**拆分不改变总面数**。剩余：`FrameRequest` 双几何 + 混合管线 + 距离降序绘制。
