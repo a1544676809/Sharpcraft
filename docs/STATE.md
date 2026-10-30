@@ -62,7 +62,7 @@ updated: 2026-10-29
 **下一步具体动作**（2026-10-30 校准）：
 1. 资源包模块 A1–A11 已完成，**推送被网络阻断**（`github.com` 不可达、SSH 公钥未登记），恢复后第一件事 `git push`（117 提交）。
 2. M5 5.2 聊天收口：已补 `change_page`/`open_file`、动作栏 HSV 颜色循环；`textBackgroundOpacity` 已可配置（`ChatLog.BackgroundOpacity`，默认 0.5）、`delete_chat` 的 `ChatLog` 侧完成（签名存取+删除，4 项测试）；
-**仍待**：`player_chat` 签名从解析层透出并接线到会话删除。
+签名已由解析层透出并接线到会话删除 ⇒ **A 的聊天项全部完成**。
 3. 随后按 A→D→C→B：T-104 离屏截图接 UI（像素级对照）、T-159 gamma 逐像素 → M6 模组热加载（先写 ADR）→ 5.3 渲染管线 P1。
 会打印 `chat received:`。
 随后：T-120（`player_chat` 等剩余入站与组件样式）、T-108（热加载状态迁移）、T-104（离屏截图接 UI）。

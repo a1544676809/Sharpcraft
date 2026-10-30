@@ -1255,7 +1255,7 @@ internal sealed class InteractiveSession
                 case PacketIds.PlayClientbound.PlayerChat:
                     if (PlayerChatPackets.TryReadPlayerChatStyled(
                             body[reader.Position..], out var chatSender, out var chatBody, out var chatTarget,
-                            out var chatSigned, out var chatTypeId, _language) == DecodeStatus.Success)
+                            out var chatSigned, out var chatSignature, out var chatTypeId, _language) == DecodeStatus.Success)
                     {
                         // The shape of a player message comes from the chat type registry, never from an assumption:
                         // the same packet renders as <name> text, name >> text or [name -> target] text depending on
@@ -1274,7 +1274,8 @@ internal sealed class InteractiveSession
                             _chatTicks,
                             chatSigned ? Sharpcraft.Client.Ui.ChatLog.MessageTag.None : Sharpcraft.Client.Ui.ChatLog.MessageTag.NotSecure,
                             decoratedLine.Clicks,
-                            decoratedLine.Hovers);
+                            decoratedLine.Hovers,
+                            chatSignature);
 
                         if (_diagEnabled)
                         {

@@ -164,4 +164,18 @@ public sealed class PlayerChatPacketTests
         System.Buffers.Binary.BinaryPrimitives.WriteInt64BigEndian(bytes, value);
         stream.Write(bytes);
     }
+
+    [Fact]
+    public void AnUnsignedMessageReportsNoSignature()
+    {
+        // The delete instruction names a signature, so the reader has to hand one back when there is one and an empty
+        // one when there is not, rather than dropping it.
+        var body = Body("hi", null, "chat");
+
+        Assert.Equal(
+            DecodeStatus.Success,
+            PlayerChatPackets.TryReadPlayerChatStyled(body, out _, out _, out _, out var signed, out var signature, out _, null));
+        Assert.False(signed);
+        Assert.Empty(signature);
+    }
 }

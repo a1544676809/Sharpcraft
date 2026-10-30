@@ -162,12 +162,33 @@ public static class PlayerChatPackets
         out StyledRuns target,
         out bool signed,
         out int chatTypeId,
+        LanguageTable? language = null) =>
+        TryReadPlayerChatStyled(body, out sender, out content, out target, out signed, out _, out chatTypeId, language);
+
+    /// <summary>Reads a styled player message, also reporting the signature a later delete would name.</summary>
+    /// <param name="body">Packet body.</param>
+    /// <param name="sender">Sender runs.</param>
+    /// <param name="content">Message runs.</param>
+    /// <param name="target">Chat target runs.</param>
+    /// <param name="signed">True when the message was signed.</param>
+    /// <param name="signature">Signature bytes, empty when unsigned.</param>
+    /// <param name="chatTypeId">Chat type registry id.</param>
+    /// <param name="language">Translation table, or null.</param>
+    public static DecodeStatus TryReadPlayerChatStyled(
+        ReadOnlySpan<byte> body,
+        out StyledRuns sender,
+        out StyledRuns content,
+        out StyledRuns target,
+        out bool signed,
+        out byte[] signature,
+        out int chatTypeId,
         LanguageTable? language = null)
     {
         sender = StyledRuns.Empty;
         content = StyledRuns.Empty;
         target = StyledRuns.Empty;
         signed = false;
+        signature = [];
         chatTypeId = -1;
 
         var reader = new PayloadReader(body);
@@ -179,7 +200,7 @@ public static class PlayerChatPackets
             return DecodeStatus.NeedMoreData;
         }
 
-        if (!TryReadSignature(ref reader, out signed) || !TryReadBody(ref reader, out var text, out _))
+        if (!TryReadSignature(ref reader, out signed, out signature) || !TryReadBody(ref reader, out var text, out _))
         {
             return DecodeStatus.NeedMoreData;
         }
@@ -286,7 +307,36 @@ public static class PlayerChatPackets
         return true;
     }
 
-    private static bool TryReadSignature(ref PayloadReader reader, out bool present)
+    private static bool TryReadSignature(ref PayloadReader reader, out bool present) =>
+        TryReadSignature(ref reader, out present, out _);
+
+    private static bool TryReadSignature(ref PayloadReader reader, out bool present, out byte[] signature)
+    {
+        signature = [];
+        present = false;
+
+        if (reader.TryReadBool(out var hasSignature) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        present = hasSignature;
+
+        if (!hasSignature)
+        {
+            return true;
+        }
+
+        if (reader.TryReadByteArray(out var bytes, maxLength: 512) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        signature = bytes;
+        return true;
+    }
+
+    private static bool TryReadSignature_Unused(ref PayloadReader reader, out bool present)
     {
         present = false;
 
