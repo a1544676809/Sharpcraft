@@ -584,6 +584,38 @@ internal static class FrameCommand
             {
                 Console.WriteLine($"    no texture: {blockId}");
             }
+
+            // Layer probe: prove where the leaves sprite and layer actually land instead of guessing.
+            if (layout.TryGetBaseId(new Identifier("minecraft", "oak_leaves"), out var leavesId))
+            {
+                var leafSprite = map.ForState(leavesId);
+                Console.WriteLine(
+                    $"  layer probe: leaves sprite ({leafSprite.X},{leafSprite.Y},{leafSprite.Width}x{leafSprite.Height}) " +
+                    $"missing ({missing.X},{missing.Y},{missing.Width}x{missing.Height}) " +
+                    $"same={leafSprite == missing} layer={Sharpcraft.Client.Render.BlockLayerRules.Of(leavesId, map, layout)} " +
+                    $"tint={Sharpcraft.Client.Render.BlockTintTable.KindOf(new Identifier("minecraft", "oak_leaves"))}");
+
+                // Sample the atlas region itself: if these bytes are a checkerboard, the pack's texture is, not our code.
+                var sumR = 0L; var sumG = 0L; var sumB = 0L; var sumA = 0L; var count = 0;
+
+                for (var py = leafSprite.Y; py < leafSprite.Y + leafSprite.Height; py++)
+                {
+                    for (var px = leafSprite.X; px < leafSprite.X + leafSprite.Width; px++)
+                    {
+                        var offset = ((py * atlas.Width) + px) * 4;
+                        sumR += atlas.Pixels[offset]; sumG += atlas.Pixels[offset + 1];
+                        sumB += atlas.Pixels[offset + 2]; sumA += atlas.Pixels[offset + 3];
+                        count++;
+                    }
+                }
+
+                Console.WriteLine(
+                    $"  atlas probe: mean rgba ({sumR / count},{sumG / count},{sumB / count},{sumA / count}) " +
+                    $"first texel ({atlas.Pixels[((leafSprite.Y * atlas.Width) + leafSprite.X) * 4]}," +
+                    $"{atlas.Pixels[(((leafSprite.Y * atlas.Width) + leafSprite.X) * 4) + 1]}," +
+                    $"{atlas.Pixels[(((leafSprite.Y * atlas.Width) + leafSprite.X) * 4) + 2]}," +
+                    $"{atlas.Pixels[(((leafSprite.Y * atlas.Width) + leafSprite.X) * 4) + 3]})");
+            }
         }
         Console.WriteLine(
             $"sprites: {atlas.Width}x{atlas.Height} atlas, {atlas.Sprites.Count} sprites, " +
@@ -855,6 +887,15 @@ internal static class FrameCommand
                 var split = cutout.ToMeshData(0);
                 cutoutVertices = split.Vertices;
                 cutoutIndices = split.Indices;
+            }
+
+            if (Environment.GetEnvironmentVariable("MC_DEBUG_SPRITES") == "1" && cutoutVertices is { Length: >= 12 })
+            {
+                // Vertex layout is position(3), uv(2), colour(3), sprite rect(4): the colour is what the tint multiplies.
+                Console.WriteLine(
+                    $"  vertex probe: cutout vertex0 colour ({cutoutVertices[3]:F3},{cutoutVertices[4]:F3},{cutoutVertices[5]:F3}) " +
+                    $"uv ({cutoutVertices[6]:F3},{cutoutVertices[7]:F3}) rect ({cutoutVertices[8]:F3},{cutoutVertices[9]:F3},{cutoutVertices[10]:F3},{cutoutVertices[11]:F3}) " +
+                    $"tintMultiplier {BiomeTint.ToMultiplier(BiomeTint.FoliageDefault)}");
             }
 
             Console.WriteLine(

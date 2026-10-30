@@ -646,3 +646,18 @@ updated: 2026-10-29
   ①用单方块探针场景（真实图集）打印 `map.ForState(oak_leaves)` 的 sprite 矩形是否等于 missingno；
   ②确认顶点色与 tint 乘子是否真的写进顶点（可 dump 一个 quad 的 12 个 float）；
   ③再用真实服务器截图对比。
+
+## 2026-10-30 第 5 轮：定位到 tint 的 ARGB 哨兵 bug（已修）
+
+探针链条（全部实测，不靠猜）：
+1. `layer probe`：leaves sprite **(608,256,16×16)**，不等于 missingno (96,400)；`layer=Cutout`、`tint=Foliage` ⇒ 贴图/分层/着色类型都对。
+2. `atlas probe`：该矩形内像素均值 **(96,96,96,171)**、首像素 (104,100,104,255) ⇒ 图集里是**灰度树叶贴图**（原版树叶就是灰度，靠 tint 上色）。
+3. `vertex probe`：cutout 顶点色 **(0.750,0.750,0.750)**，而 `ToMultiplier(FoliageDefault)` 返回 **(1,1,1)** ⇒ **着色乘子根本没生效**。
+
+**根因**：原版颜色是 **ARGB**，`FoliageDefault = -12012264`（0xFF48B518）作为有符号 int 是**负数**，而我把"负数"当成"无 tint"的哨兵，于是所有负色值都被丢弃。
+**修复**：只有 `-1` 表示无 tint；其余按 `(c>>16)&0xFF` 等取通道。新增回归测试 `NegativeArgbIsStillATint`（断言 0x48/0xB5/0x18）。
+
+**仍不对**：修后截图树叶**依然**是黑白棋盘，说明着色不是唯一问题；下一个必须证明的点是"棋盘到底来自哪张图"——
+即在**同一帧**里用一个已知方块（石头）与树叶比对，并 dump 实际采样的 atlas texel。
+**下一步具体动作**：①在同一帧内对石头/树叶各取一个面，打印其顶点 rect 与采样 texel（uv→atlas 坐标）；②若 rect 正确而画面仍是棋盘，则问题在
+**mip 采样/alpha 测试**（mip 后 alpha 均值下降会被 `discard` 掉一半），需按原版 `MipmapStrategy` 处理 alpha；③再回截图验收。

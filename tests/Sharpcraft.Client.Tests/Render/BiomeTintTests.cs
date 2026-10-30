@@ -59,6 +59,17 @@ public sealed class BiomeTintTests
     }
 
     [Fact]
+    public void NegativeArgbIsStillATint()
+    {
+        // The reference foliage default is 0xFF48B518, which is negative as a signed int; it must not read as "no tint".
+        var (red, green, blue) = BiomeTint.ToMultiplier(BiomeTint.FoliageDefault);
+
+        Assert.Equal(0x48 / 255f, red, 4);
+        Assert.Equal(0xB5 / 255f, green, 4);
+        Assert.Equal(0x18 / 255f, blue, 4);
+    }
+
+    [Fact]
     public void ATintBecomesAUnitMultiplier()
     {
         var (red, green, blue) = BiomeTint.ToMultiplier(0x80_40_20);

@@ -93,8 +93,12 @@ public sealed class BiomeTint
     /// Converts a packed colour to the three multipliers the mesher writes into a vertex.
     /// </summary>
     /// <param name="colour">Packed RGB colour, or -1 for no tint.</param>
+    /// <remarks>
+    /// Colours are packed ARGB, so a valid colour is usually negative because its alpha byte is 0xFF. Only the sentinel -1
+    /// means "no tint"; treating every negative value as none silently dropped the foliage colour the reference supplies.
+    /// </remarks>
     public static (float Red, float Green, float Blue) ToMultiplier(int colour) =>
-        colour < 0
+        colour == -1
             ? (1f, 1f, 1f)
             : (((colour >> 16) & 0xFF) / 255f, ((colour >> 8) & 0xFF) / 255f, (colour & 0xFF) / 255f);
 }
