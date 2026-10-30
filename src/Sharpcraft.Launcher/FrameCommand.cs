@@ -172,6 +172,27 @@ internal static class FrameCommand
     /// </summary>
     /// <param name="layout">Block state layout, or null when it is not known yet.</param>
     /// <returns>Atlas plus mapping, or null when no pack is installed.</returns>
+    /// <summary>Loads a font definition referenced from another one.</summary>
+    /// <param name="stack">Asset stack to read from.</param>
+    /// <param name="reference">Identifier such as <c>minecraft:include/space</c>.</param>
+    private static string? ReadFontReference(
+        Sharpcraft.Client.Assets.AssetStack stack,
+        string reference)
+    {
+        var colon = reference.IndexOf(':');
+
+        if (colon <= 0 || colon == reference.Length - 1)
+        {
+            return null;
+        }
+
+        var bytes = stack.Read(
+            ResourceKind.Font,
+            new Sharpcraft.Common.Identifiers.Identifier(reference[..colon], reference[(colon + 1)..]));
+
+        return bytes is null ? null : System.Text.Encoding.UTF8.GetString(bytes);
+    }
+
     /// <summary>
     /// Loads the translation table the server's messages are written against.
     /// </summary>
@@ -245,7 +266,32 @@ internal static class FrameCommand
         var font = Sharpcraft.Client.Ui.BitmapFont.FromSheet(image);
         started.Stop();
 
-        Console.WriteLine($"font: {font.CellWidth}x{font.CellHeight} cells, line {font.Height}, {started.ElapsedMilliseconds} ms");
+        // Characters without ink, a space above all, take their advance from the font definition rather than from the
+        // sheet. Without this a space advances a single pixel and every sentence loses its word breaks.
+        var declared = 0;
+        var definition = stack.Read(
+            ResourceKind.Font,
+            new Sharpcraft.Common.Identifiers.Identifier("minecraft", "default"));
+
+        if (definition is not null)
+        {
+            declared = Sharpcraft.Client.Ui.FontDefinition.Apply(
+                System.Text.Encoding.UTF8.GetString(definition),
+                reference => ReadFontReference(stack, reference),
+                font);
+        }
+
+        if (declared == 0)
+        {
+            // The definition is where the reference keeps this number; if it cannot be read, the value the game
+            // itself declares for a space is used and the fallback is reported rather than hidden.
+            font.SetAdvance(' ', 4);
+            Console.WriteLine("font: definition unreadable; using the reference's default space advance of 4");
+        }
+
+        Console.WriteLine(
+            $"font: {font.CellWidth}x{font.CellHeight} cells, line {font.Height}, {declared} declared advances, "
+            + $"{started.ElapsedMilliseconds} ms");
         return font;
     }
 

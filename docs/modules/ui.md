@@ -212,9 +212,9 @@
 | 方向 | 包 | ID | 负载 |
 | --- | --- | --- | --- |
 | 客户端→服务端 | `chat` | 9 | 文本(≤256) + 时间戳(long) + 盐(long) + **有符号?**(bool) + 已读偏移(VarInt) + **固定 20 位** bitset(3 字节) + 校验和(byte) |
-| 客户端→服务端 | `chat_command` | 7 | 仅命令文本（**保留前导 `/`**）|
+| 客户端→服务端 | `chat_command` | 7 | 仅命令文本（**不含前导 `/`**——原版在客户端就剥掉，带斜杠会被判为未知命令）|
 | 服务端→客户端 | `system_chat` | 124 | **已接**：组件树摊平成文本 + `overlay`（动作栏）标记 |
-| 服务端→客户端 | `player_chat` | 66 | 待接（含签名/会话校验）|
+| 服务端→客户端 | `player_chat` | 66 | **已接**：跳过签名簿记，取 `body.content` 或 `unsignedContent`（后者优先）与 chat type 的名字组件 |
 | 服务端→客户端 | `disguised_chat` | 33 / `delete_chat` 31 | 待接 |
 
 无聊天会话时，签名位发 **false**、已读偏移 0、20 位全 0、校验和 0（原版把 0 视为"忽略"）。
@@ -249,7 +249,16 @@
 会话接线（T 与 `/` 打开、Enter 发送、Esc 关闭、打开时抑制移动与视角、释放捕获）、提示框绘制（含光标）、
 `system_chat` 解析（组件树摊平 + `overlay` 过滤 + **翻译键解析**：`translate` + `with` 实参，`%s`/`%1$s`/`%%`，
 语言表来自资源包 `lang/en_us.json`）、`ChatLog`（100 行上限、淡出曲线、贪心折行、按原版常量绘制）。
-**待做**：`player_chat`(66)/`disguised_chat`(33)/`delete_chat`(31) 解析；组件**样式**（颜色/粗体/点击事件）与
+**`player_chat` 的字段顺序**（错一个长度，后面整条连接全错位）：全局索引(VarInt)、发送者(UUID)、
+每发送者索引(VarInt)、可选签名(bool + 字节数组)、body（content ≤256 + 时间戳(long) + 盐(long) +
+已读签名数(VarInt≤20) × {id, 可选完整签名}）、可选 unsignedContent(bool + NBT)、
+过滤掩码(VarInt 类型；类型 2 时 VarInt 字数 + 每字 long)、chat type(VarInt id + 名字组件 NBT + 可选目标组件)。
+
+**已实测**（`MC_CHAT_SAY` 诊断钩子）：客户端发出 `chat` → 服务端广播 `player_chat` → 解析并显示
+`SharpcraftBotZ: hello from sharpcraft client`。
+
+**待做**：`disguised_chat`(33)/`delete_chat`(31)；**玩家消息的装饰**（`<名字> 内容` 里的尖括号与颜色来自
+`chat_type` 注册表，配置阶段同步，尚未读取，现在用 `名字: 内容` 代替）；组件**样式**（颜色/粗体/点击事件）与
 `translate` 的实参替换；边框、滚动条与 PageUp 翻页；动作栏（`overlay=true`）的独立显示。
 
 ### 9.1 GUI 画布与整数缩放（2026-10-29）

@@ -189,8 +189,13 @@ public static class PlayPackets
         return body.AsSpan(0, writer.Position).ToArray();
     }
 
-    /// <summary>Builds a command line, which keeps its leading slash.</summary>
-    /// <param name="command">Command text including the slash.</param>
+    /// <summary>Builds a command line.</summary>
+    /// <param name="command">Command text without the leading slash.</param>
+    /// <remarks>
+    /// The slash is not part of the command on the wire: the reference strips it before sending, and a server that
+    /// receives it treats the slash as the first character of the command name and answers that the command is
+    /// unknown. It is rejected here rather than stripped, so a caller that forgets cannot hide the mistake.
+    /// </remarks>
     public static byte[] BuildChatCommand(string command)
     {
         ArgumentNullException.ThrowIfNull(command);
@@ -198,6 +203,11 @@ public static class PlayPackets
         if (command.Length == 0 || command.Length > MaxChatLength)
         {
             throw new ArgumentException($"a command is between one and {MaxChatLength} characters", nameof(command));
+        }
+
+        if (command[0] == '/')
+        {
+            throw new ArgumentException("the leading slash is not sent on the wire", nameof(command));
         }
 
         var body = new byte[(command.Length * 4) + 8];

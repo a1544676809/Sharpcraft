@@ -52,17 +52,25 @@ public sealed class ChatTests
     }
 
     [Fact]
-    public void ACommandKeepsItsSlashAndGoesOnItsOwnPacket()
+    public void ACommandGoesOnItsOwnPacketWithoutTheSlash()
     {
-        var packet = PlayPackets.BuildChatCommand("/time set day");
+        // The slash is what makes the line a command for the player; the reference strips it before sending, and a
+        // server that receives it answers that the command is unknown.
+        var packet = PlayPackets.BuildChatCommand("time set day");
         var reader = new PayloadReader(packet);
 
         Assert.Equal(DecodeStatus.Success, reader.TryReadVarInt(out var id));
         Assert.Equal(PacketIds.PlayServerbound.ChatCommand, id);
 
         Assert.Equal(DecodeStatus.Success, reader.TryReadString(out var command));
-        Assert.Equal("/time set day", command);
+        Assert.Equal("time set day", command);
         Assert.Equal(packet.Length, reader.Position);
+    }
+
+    [Fact]
+    public void ACommandThatStillCarriesItsSlashIsRejected()
+    {
+        Assert.Throws<ArgumentException>(() => PlayPackets.BuildChatCommand("/time set day"));
     }
 
     [Fact]

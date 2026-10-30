@@ -38,6 +38,7 @@ internal sealed class InteractiveSession
     private readonly ChatLog _chatLog = new();
     private readonly Sharpcraft.Common.Localization.LanguageTable _language;
     private long _chatTicks;
+    private bool _diagnosticChatSent;
     private readonly bool _diagEnabled = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
     private int _diagFrames;
 
@@ -195,6 +196,31 @@ internal sealed class InteractiveSession
         }
     }
 
+
+    /// <summary>
+    /// Sends one chat line when asked to by the environment, so an unattended run can verify the chat path end to
+    /// end (docs/modules/ui.md 8.4). It is a verification hook in the same spirit as the auto walk: it exists so a
+    /// run can be observed rather than described.
+    /// </summary>
+    private void MaybeSendDiagnosticChat()
+    {
+        if (_diagnosticChatSent || _chatTicks < 40)
+        {
+            return;
+        }
+
+        var line = Environment.GetEnvironmentVariable("MC_CHAT_SAY");
+
+        if (string.IsNullOrWhiteSpace(line))
+        {
+            return;
+        }
+
+        _diagnosticChatSent = true;
+        SendChat(line, isCommand: line[0] == '/');
+        Console.WriteLine($"chat sent: {line}");
+    }
+
     /// <summary>Sends a submitted line as either a chat message or a command.</summary>
     /// <param name="message">Line the player submitted.</param>
     /// <param name="isCommand">True when it starts with a slash.</param>
@@ -205,8 +231,9 @@ internal sealed class InteractiveSession
             return;
         }
 
+        // The slash marks the line as a command for the player; it is not part of the command on the wire.
         _live.Send(isCommand
-            ? PlayPackets.BuildChatCommand(message)
+            ? PlayPackets.BuildChatCommand(message[1..])
             : PlayPackets.BuildChatMessage(message, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
     }
 
@@ -220,6 +247,7 @@ internal sealed class InteractiveSession
 
         // Chat runs before movement so a key that opened the prompt cannot also move the player on the same frame.
         UpdateChat(window);
+        MaybeSendDiagnosticChat();
 
         var frame = _mapper.Map(window.Input);
 
@@ -534,6 +562,24 @@ internal sealed class InteractiveSession
 
                     break;
 
+
+                case PacketIds.PlayClientbound.PlayerChat:
+                    if (PlayerChatPackets.TryReadPlayerChat(
+                            body[reader.Position..], out var chatSender, out var chatMessage, _language) ==
+                        DecodeStatus.Success)
+                    {
+                        // The decoration around a player message comes from the chat type registry, which is not read
+                        // yet, so the common shape is used and the gap is recorded rather than guessed at.
+                        var line = $"{chatSender}: {chatMessage}";
+                        _chatLog.Add(line, _chatTicks);
+
+                        if (_diagEnabled)
+                        {
+                            Console.WriteLine($"chat received: {line}");
+                        }
+                    }
+
+                    break;
 
                 case PacketIds.PlayClientbound.SystemChat:
                     if (ChatPackets.TryReadSystemChat(body[reader.Position..], out var chatText, out var overlay, _language) ==

@@ -36,6 +36,7 @@ public sealed class BitmapFont
     public const int SheetColumns = 16;
 
     private readonly Dictionary<char, Glyph> _glyphs = [];
+    private readonly Dictionary<char, int> _advances = [];
     private readonly RgbaImage _sheet;
     private readonly int _sheetWidth;
     private readonly int _sheetHeight;
@@ -71,9 +72,25 @@ public sealed class BitmapFont
     /// <summary>The decoded sheet, so it can be uploaded as a texture unchanged.</summary>
     public RgbaImage Sheet => _sheet;
 
+    /// <summary>
+    /// Records an advance declared by the font definition, for characters whose width cannot come from ink.
+    /// </summary>
+    /// <param name="character">Character to give an advance.</param>
+    /// <param name="advance">Advance in font pixels.</param>
+    /// <remarks>
+    /// A space has no lit pixels, so the sheet gives it a width of zero and the derived advance would be a single
+    /// pixel; every sentence would have its words run together. The definition supplies the real number.
+    /// </remarks>
+    public void SetAdvance(char character, int advance) => _advances[character] = advance;
+
     /// <summary>Advance of one character in font pixels, zero when the sheet has no glyph for it.</summary>
     /// <param name="character">Character to measure.</param>
-    public int AdvanceOf(char character) => TryGet(character, out var glyph) ? glyph.Advance : 0;
+    public int AdvanceOf(char character) =>
+        _advances.TryGetValue(character, out var declared)
+            ? declared
+            : TryGet(character, out var glyph)
+                ? glyph.Advance
+                : 0;
 
     /// <summary>Line height in font pixels.</summary>
     public int Height { get; }
@@ -121,18 +138,19 @@ public sealed class BitmapFont
     /// <param name="glyph">Metrics when present.</param>
     public bool TryGet(char character, out Glyph glyph) => _glyphs.TryGetValue(character, out glyph);
 
-    /// <summary>Width of a string in font pixels, using each glyph's advance.</summary>
+    /// <summary>Width of a string in font pixels, using each character's advance.</summary>
     /// <param name="text">Text to measure.</param>
+    /// <remarks>
+    /// This goes through the same advance lookup as drawing, so a character whose width comes from the font
+    /// definition rather than from ink, a space above all, measures the same as it draws.
+    /// </remarks>
     public int MeasureWidth(ReadOnlySpan<char> text)
     {
         var width = 0;
 
         for (var index = 0; index < text.Length; index++)
         {
-            if (_glyphs.TryGetValue(text[index], out var glyph))
-            {
-                width += glyph.Advance;
-            }
+            width += AdvanceOf(text[index]);
         }
 
         return width;

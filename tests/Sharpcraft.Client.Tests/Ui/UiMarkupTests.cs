@@ -137,7 +137,9 @@ public sealed class UiMarkupTests
 
         // Warm enough that one time costs (buffer growth, type initialisers) are behind us; four passes is more
         // than any of them need and costs microseconds.
-        for (var warm = 0; warm < 4; warm++)
+        // Warm past the point where tiered compilation replaces the method: a recompile installed in the middle of
+        // the measured loop allocates once and looks like a regression that is not there.
+        for (var warm = 0; warm < 32; warm++)
         {
             UiScreenLayout.Build(root, styles, 320f, 240f, geometry);
         }
