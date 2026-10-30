@@ -207,4 +207,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-180 | 资源包格式兼容：`min_format`/`max_format`、`supported_formats`、`pack_format` 三种声明；不匹配则跳过并诊断；客户端格式 97.1（26.3 正式版） | `docs/analysis/assets/resource-pack-format.md`（Minecraft Wiki 来源） | `ResourcePackFormatTests`(5) + 全量 959 绿 | `Client/Assets/PackFormatVersion`、`ResourcePackFormats`、`ResourcePack`、`ResourcePackDiscovery`、`Launcher/FrameCommand` | 已完成 |
 | T-181 | 重载监听器：`ResourceManager.AddListener` 排序执行；**语言表**已接入 `session.Language` 并端到端生效 | ADR-0016 §7、`docs/analysis/assets/resource-pack-stack.md` §12 | 端到端（1 键→3 键 + `resource reload: applied`）| `Launcher/WindowCommand`、`InteractiveSession.Language` | 已完成 |
 | T-182 | 文件监听：`PackWatcher`（开关 `MC_RESOURCE_PACK_WATCH=1`、300ms 去抖、关闭不建监听器、zip 整包变化同样触发）| ADR-0016、D-001 | `PackWatcherTests`(2) + 端到端 | `Client/Assets/PackWatcher`、`Launcher/WindowCommand` | 已完成 |
-| T-183 | 字体/贴图集重载：GPU 侧纹理换绑（渲染器按重载结果更新 glyph/贴图绑定组）| ADR-0016 §6、A8 | 待补 | 待落地 | 待落地 |
+| T-183 | 字体/贴图集重载：GPU 侧纹理换绑（渲染器按重载结果更新 glyph/贴图绑定组）| ADR-0016 §6、A8 | 待补 | 待落地 | 进行中|
