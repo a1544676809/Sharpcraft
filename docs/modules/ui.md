@@ -449,7 +449,7 @@
 
 已接线（数据层）：`ComponentRuns.FlattenStyled` 在展开组件的同一遍里产出与 runs **平行的** `ChatClick?[]` 与
 `TextRun[]?[]`；`ChatLog.Add` 接受这两个可选数组，`ClickFor`/`HoverFor`/`RunsAt` 供命中测试取用。
-已接线并**实测**：`system_chat` 走 `TryReadSystemChatStyled`（带点击/悬停）；会话 `TryClickChat` 按**右键**命中并执行
+已接线并**实测**：动作栏与标题共用 `ChatPackets.TryReadComponentRuns`（同时接受 Compound 与**裸字符串**）；`system_chat` 走 `TryReadSystemChatStyled`（带点击/悬停）；会话 `TryClickChat` 按**右键**命中并执行
 `open_url`/`run_command`/`suggest_command`/`copy_to_clipboard`；**Shift+右键插入 `insertion` 文本**；`ChatHoverAt` 供绘制期画
 提示框（宽度上限 210、换行）。组件载荷字段**按动作命名**：`open_url→url`、`run_command`/`suggest_command→command`、
 `copy_to_clipboard→value`、`change_page→page`、`open_file→path`；悬停文本在当前版本用 `value`（旧版 `contents`）。

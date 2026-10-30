@@ -1145,38 +1145,9 @@ internal sealed class InteractiveSession
                     break;
 
                 case PacketIds.PlayClientbound.SetActionBarText:
-                    var actionBarStatus = Sharpcraft.Common.Nbt.NbtReader.TryReadNetworkRoot(
-                        body[reader.Position..], out var actionBarComponent, out _);
-
-                    if (actionBarStatus != DecodeStatus.Success &&
-                        TryReadBareTextComponent(body[reader.Position..], out var bareRuns))
+                    // A component may be a bare string, so the same reader serves titles and the action bar.
+                    if (ChatPackets.TryReadComponentRuns(body[reader.Position..], out var actionBarRuns, _language))
                     {
-                        // A component may be a bare string rather than a compound, which the reference accepts. Reading
-                        // only compounds made such a message look like nothing at all.
-                        _actionBar.Set(bareRuns);
-
-                        if (_diagEnabled)
-                        {
-                            Console.WriteLine($"action bar received: {Plain(bareRuns)}");
-                        }
-
-                        break;
-                    }
-
-                    if (actionBarStatus != DecodeStatus.Success)
-                    {
-                        // A packet whose body does not parse where it was expected is worth reporting rather than
-                        // dropping silently: the failure is what makes a missing feature invisible.
-                        if (_diagEnabled)
-                        {
-                            Console.WriteLine($"action bar parse failed: {actionBarStatus}, {body.Length} bytes, hex={Convert.ToHexString(body.AsSpan(Math.Max(0, body.Length - 24)))}");
-                        }
-                    }
-                    else if (actionBarComponent is not null)
-                    {
-                        // The action bar from a title command arrives on its own packet, not as a system message with
-                        // the overlay flag, so it needs handling here as well.
-                        var actionBarRuns = Sharpcraft.Common.Network.ComponentRuns.Flatten(actionBarComponent, _language);
                         _actionBar.Set(actionBarRuns);
 
                         if (_diagEnabled)
