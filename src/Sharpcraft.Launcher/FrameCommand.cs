@@ -260,6 +260,39 @@ internal static class FrameCommand
     /// font without any asset entering the repository (docs/modules/ui.md 5).
     /// </summary>
     /// <summary>
+    /// Appends installed resource packs to a stack so they take priority over the base pack.
+    /// </summary>
+    /// <param name="stack">Stack to extend.</param>
+    /// <remarks>
+    /// Packs are read from <c>MC_RESOURCE_PACKS</c>, a semicolon separated list of folders, which is the hook a player or
+    /// a launcher uses to point at <c>resourcepacks</c>. The stack already scans backwards, so appending is all that is
+    /// needed for them to override the base pack.
+    /// </remarks>
+    private static void AddResourcePacks(Sharpcraft.Client.Assets.AssetStack stack)
+    {
+        var folders = Environment.GetEnvironmentVariable("MC_RESOURCE_PACKS");
+
+        if (string.IsNullOrWhiteSpace(folders))
+        {
+            return;
+        }
+
+        foreach (var folder in folders.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (!System.IO.Directory.Exists(folder))
+            {
+                continue;
+            }
+
+            foreach (var pack in Sharpcraft.Client.Assets.ResourcePackDiscovery.Discover(folder))
+            {
+                stack.Add(new Sharpcraft.Client.Assets.ResourcePackSource(pack));
+                Console.WriteLine($"resource pack: {pack.Id} ({pack.Kind})");
+            }
+        }
+    }
+
+    /// <summary>
     /// Loads the tooltip sprites and their nine slice border, or null when the pack or the files are missing.
     /// </summary>
     /// <remarks>
@@ -309,6 +342,8 @@ internal static class FrameCommand
             .Add(new BuiltInFallbackSource())
             .Add(new ZipAssetSource(packPath, "base-pack"));
 
+        AddResourcePacks(stack);
+
         var background = stack.Read(
             ResourceKind.Texture,
             new Sharpcraft.Common.Identifiers.Identifier("minecraft", "gui/sprites/tooltip/background"));
@@ -351,6 +386,8 @@ internal static class FrameCommand
         using var stack = new AssetStack { Policy = MissingResourcePolicy.Warn }
             .Add(new BuiltInFallbackSource())
             .Add(new ZipAssetSource(packPath, "base-pack"));
+
+        AddResourcePacks(stack);
 
         var bytes = stack.Read(
             ResourceKind.Texture,

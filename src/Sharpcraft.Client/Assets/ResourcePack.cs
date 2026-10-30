@@ -128,6 +128,45 @@ public sealed class ResourcePack : IDisposable
         }
     }
 
+    /// <summary>
+    /// Lists every file under a prefix, relative to the pack root.
+    /// </summary>
+    /// <param name="prefix">Prefix such as <c>assets/minecraft/textures/block</c>.</param>
+    public IEnumerable<string> EnumerateFiles(string prefix)
+    {
+        var normalized = prefix.Replace('\\', '/').TrimEnd('/') + "/";
+
+        if (Kind == ResourcePackKind.Directory)
+        {
+            var root = Path.Combine(Root, normalized.Replace('/', Path.DirectorySeparatorChar));
+
+            if (!Directory.Exists(root))
+            {
+                yield break;
+            }
+
+            foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            {
+                yield return normalized + Path.GetRelativePath(root, file).Replace(Path.DirectorySeparatorChar, '/');
+            }
+
+            yield break;
+        }
+
+        if (_archive is null)
+        {
+            yield break;
+        }
+
+        foreach (var entry in _archive.Entries)
+        {
+            if (entry.FullName.StartsWith(normalized, StringComparison.Ordinal))
+            {
+                yield return entry.FullName;
+            }
+        }
+    }
+
     /// <inheritdoc />
     public void Dispose() => _archive?.Dispose();
 }

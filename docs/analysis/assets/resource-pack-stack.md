@@ -207,7 +207,7 @@ stack.add(primaryPackResources);                     // primary 最后
 | 包模型（目录 / zip，zip 保持单个句柄）| 已实现 `Client/Assets/ResourcePack` |
 | 发现（跳过重解析点/非包条目；zip 需含 `pack.mcmeta`）| 已实现 `ResourcePackDiscovery` |
 | 有序栈 + 逆序回退 + 命名空间并集 | 已实现 `ResourcePackStack`，5 项测试 |
-| `filter` 遮蔽（`pushFilterOnly`）| 待做 |
-| 接入现有加载点（字体、`GuiSpriteAtlas`、语言表、UI 文档）| 待做 |
-| 目录选择与启动器接线（`resourcepacks/`）| 待做 |
+| `filter` 遮蔽（`pushFilterOnly`）| 待做（需先核对 `IdentifierPattern` 的匹配语义）|
+| 接入字体与 `GuiSpriteAtlas`（经 `ResourcePackSource` + `MC_RESOURCE_PACKS`）| 已实现；端到端验证通过（第三方包换红色边框生效）|
+| 目录选择与启动器接线 | 暂用 `MC_RESOURCE_PACKS` 环境变量；启动器选项待做（注意：字体与贴图集各自建栈，会重复发现一次）|
 | 两阶段重载（T-173）与文件监听（T-174）| 待做 |
