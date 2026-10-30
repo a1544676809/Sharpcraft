@@ -20,6 +20,13 @@ public sealed class ShaderSourceTests
 
         foreach (var file in Directory.EnumerateFiles(rendering, "*.cs", SearchOption.AllDirectories))
         {
+            // The Shaders folder holds the shader tooling itself (parsers mention the attribute names as tokens) and the
+            // .wgsl files; only the renderer sources are inspected here.
+            if (file.Contains(Path.Combine("Rendering", "Shaders"), StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             var text = File.ReadAllText(file);
 
             if (text.Contains("@vertex", StringComparison.Ordinal) ||
@@ -44,7 +51,9 @@ public sealed class ShaderSourceTests
         foreach (var file in files)
         {
             var text = File.ReadAllText(file);
-            Assert.Contains("@vertex", text);
+            Assert.True(
+                text.Contains("@vertex", StringComparison.Ordinal) || text.Contains("@compute", StringComparison.Ordinal),
+                $"{Path.GetFileName(file)} declares no entry point");
         }
     }
 

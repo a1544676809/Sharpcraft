@@ -21,9 +21,6 @@ public sealed partial record ShaderDescriptor(
     [GeneratedRegex(@"@binding\((\d+)\)")]
     private static partial Regex BindingPattern();
 
-    [GeneratedRegex(@"@(vertex|fragment|compute)\s+fn\s+(\w+)")]
-    private static partial Regex EntryPattern();
-
     /// <summary>Binding numbers declared in a shader source.</summary>
     /// <param name="source">Composed shader source.</param>
     public static SortedSet<int> DeclaredBindings(string source)
@@ -42,11 +39,32 @@ public sealed partial record ShaderDescriptor(
     /// <param name="source">Composed shader source.</param>
     public static SortedSet<string> DeclaredEntries(string source)
     {
+        // An entry point is an attribute followed by "fn name". Other attributes may sit in between (a compute shader has
+        // @workgroup_size before the fn), so the search looks ahead a few lines instead of requiring them adjacent.
         var found = new SortedSet<string>(StringComparer.Ordinal);
+        var lines = source.Replace("\r\n", "\n").Split('\n');
 
-        foreach (Match match in EntryPattern().Matches(source))
+        for (var index = 0; index < lines.Length; index++)
         {
-            found.Add(match.Groups[2].Value);
+            var line = lines[index];
+
+            if (!line.Contains("@vertex", StringComparison.Ordinal) &&
+                !line.Contains("@fragment", StringComparison.Ordinal) &&
+                !line.Contains("@compute", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            for (var look = index; look < Math.Min(lines.Length, index + 4); look++)
+            {
+                var match = Regex.Match(lines[look], @"fn\s+(\w+)");
+
+                if (match.Success)
+                {
+                    found.Add(match.Groups[1].Value);
+                    break;
+                }
+            }
         }
 
         return found;

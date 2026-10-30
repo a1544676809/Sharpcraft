@@ -34,6 +34,8 @@ WebGPU 的遮挡查询能力受限且跨平台不一致；**Hi-Z（分层深度�
 | **O1.5（已完成）** | **CPU 参考实现** `DepthPyramid.Build`（逐级 2x2 取最远）+ `TryCoveringDepth`（选最细且单 texel 覆盖矩形的层级）| 4 项单测：层级数、最远子节点、覆盖矩形取值、退化矩形拒绝 |
 | **O1.7（已完成）** | **深度纹理可回读**（`RenderAttachment | CopySrc`，行按 256 字节对齐）| 实测 960x540：`nearest 0.9986 / farthest 1.0000 / centre 1.0000` |
 | **O1.8（已完成）** | **深度线性化** `DepthLinearisation`（`ToDistance`/`ToDepth`/`InPlace`，默认近 0.1 / 远 2000）| 4 项测试（端点、典型值 0.9986 → 40–90 方块、互为逆、单调）；实测 `nearest 0.9986 → 70.3 方块` |
+| **O2.1（已完成）** | `pipelines/depth_pyramid.wgsl`（compute，`cs_downsample`，workgroup 8×8，binding 4 输入/5 输出/6 参数）+ 登记进 `ShaderPipelines`；参考实现 `DepthPyramid` 迁入 Framework 便于同处比对 | 参考 4 项测试；着色器通过启动期校验 |
+| O2.2（待做）| 离屏路径实际 dispatch（storage buffer + 参数 + 回读），与 `DepthPyramid` **逐 texel** 比对 | 全等 |
 | O2 | GPU compute 版金字塔（输入为**线性化距离**），与 O1.5 逐 texel 一致 | 任意深度图下与 CPU 参考完全相同 |
 | O3 | 剔除 compute 产出可见列表（先 CPU 回读） | 与不剔除参考帧逐像素一致，剔除率达标 |
 | O4 | indirect draw，去掉回读 | 每帧提交次数仍为 1；剔除率与 O3 相同 |

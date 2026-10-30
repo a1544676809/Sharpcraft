@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
-namespace Sharpcraft.Client.Render;
+namespace Sharpcraft.Framework.Rendering;
 
 /// <summary>
 /// Hierarchical depth pyramid: each level halves the resolution and keeps the farthest depth of its children.

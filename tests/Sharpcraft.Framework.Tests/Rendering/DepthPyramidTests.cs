@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
-using Sharpcraft.Client.Render;
+using Sharpcraft.Framework.Rendering;
 using Xunit;
 
-namespace Sharpcraft.Client.Tests.Render;
+namespace Sharpcraft.Framework.Tests.Rendering;
 
 /// <summary>
 /// Depth pyramid (docs/specs/render/occlusion-culling.md, stage O2): levels halve, the farthest child wins so the occlusion
