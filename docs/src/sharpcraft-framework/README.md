@@ -13,6 +13,6 @@
 
 | 目录 | 文档数 |
 | --- | --- |
-| [`rendering/`](rendering/README.md) | 1 |
+| [`rendering/`](rendering/README.md) | 2 |
 
 <!-- END GENERATED: docs/src/sharpcraft-framework -->

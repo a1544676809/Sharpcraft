@@ -10,6 +10,7 @@
 | 文档 | 摘要 | 状态 | 最后更新 |
 | --- | --- | --- | --- |
 | [`shader-packs.md`](shader-packs.md) | 把"外部着色器包"变成引擎的一等输入：包声明渲染目标、阶段、顺序与 uniform，引擎只负责校验与执行。 | 已评审 | 2026-10-29 |
+| [`shaders.md`](shaders.md) | 着色器组织的工具与契约实现；规范见 docs/specs/render/shader-organisation.md。 | 未标注 | - |
 
 <!-- END GENERATED: docs/src/sharpcraft-framework/rendering -->
 
