@@ -242,3 +242,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-216 | 半透明 **S3 排序**（`TranslucentOrder.ByDistanceDescending`：距离降序、等距稳定）| `docs/specs/render/pipeline.md` §15 | `TranslucentOrderTests`(3) | `Client/Render/TranslucentOrder` | 已完成 |
 | T-217 | **深度回读**（`CopySrc` + 256 字节行对齐）+ 数值证据；并发现 NDC 深度远处饱和、O2 需线性化 | `docs/specs/render/occlusion-culling.md` O1.7 | 实测 `depth: 960x540 nearest 0.9986 farthest 1.0000 centre 1.0000` | `Framework/Rendering/OffscreenRenderer` | 已完成 |
 | T-218 | **深度线性化**（`DepthLinearisation`：窗口深度 ↔ 视轴距离，默认 0.1/2000）并接入深度诊断 | `docs/specs/render/occlusion-culling.md` O1.8 | `DepthLinearisationTests`(4) + 实测 `0.9986 → 70.3 blocks` | `Framework/Rendering/DepthLinearisation` | 已完成 |
+| T-219 | **着色器组织对比与改造计划**（原版 93 条目：core 64 / include 18 / post 10；我方 3 文件内联且无 include、无绑定单一来源）| `docs/analysis/render/shader-organisation.md` | 原版目录实测 + 我方 WGSL 分布实测 | 分析文档（无代码）| 规格已就绪 |
