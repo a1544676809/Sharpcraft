@@ -335,6 +335,58 @@ internal sealed class InteractiveSession
     }
 
 
+
+    /// <summary>
+    /// Decorates a message with the chat type it names, or returns null when the type cannot be resolved.
+    /// </summary>
+    /// <param name="chatTypeId">Chat type id from the wire.</param>
+    /// <param name="senderName">Name carried by the binding.</param>
+    /// <param name="content">Message contents.</param>
+    /// <param name="target">Target of a direct message, or empty.</param>
+    /// <remarks>
+    /// An empty table means the server sent no chat types, so the reference's own default shape applies. A table with
+    /// entries but no match means the message names a type we were never told about, and the reference cannot display
+    /// it either; returning null lets the caller drop it instead of guessing a shape.
+    /// </remarks>
+    private Sharpcraft.Common.Network.TextRun[]? DecorateLine(
+        int chatTypeId,
+        Sharpcraft.Common.Network.TextRun[] senderName,
+        Sharpcraft.Common.Network.TextRun[] content,
+        Sharpcraft.Common.Network.TextRun[] target)
+    {
+        var decoration = _chatTypes is { Count: > 0 } table
+            ? table.Get(chatTypeId)
+            : Sharpcraft.Common.Network.ChatTypeDecoration.Default;
+
+        if (decoration is null)
+        {
+            if (_diagEnabled)
+            {
+                Console.WriteLine($"chat dropped: unknown chat type {chatTypeId}");
+            }
+
+            return null;
+        }
+
+        var arguments = new System.Collections.Generic.List<Sharpcraft.Common.Network.TextRun[]>(decoration.Parameters.Length);
+
+        for (var argument = 0; argument < decoration.Parameters.Length; argument++)
+        {
+            arguments.Add(decoration.Parameters[argument] switch
+            {
+                Sharpcraft.Common.Network.ChatTypeDecoration.Sender => senderName,
+                Sharpcraft.Common.Network.ChatTypeDecoration.Content => content,
+                Sharpcraft.Common.Network.ChatTypeDecoration.Target => target,
+                _ => []
+            });
+        }
+
+        return Sharpcraft.Common.Network.ComponentRuns.Decorate(
+            _language,
+            decoration.TranslationKey,
+            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(arguments));
+    }
+
     /// <summary>Joins runs into one string, for logging and for the diagnostic output.</summary>
     private static string Plain(IReadOnlyList<Sharpcraft.Common.Network.TextRun> runs)
     {
@@ -712,44 +764,15 @@ internal sealed class InteractiveSession
                             body[reader.Position..], out var chatSender, out var chatMessage, out var chatSigned,
                             out var chatTypeId, out var chatTarget, _language) == DecodeStatus.Success)
                     {
-                        // The shape of a player message comes from the chat type registry, never from an assumption: the
-                        // same packet renders as <name> text, name >> text or [name -> target] text depending on the
-                        // entry the server named. An id we were never told about cannot be displayed, and the reference
-                        // fails on it too, so the line is dropped with a diagnostic rather than shown in a wrong shape.
-                        // An empty table means the server sent no chat types, in which case the reference's own
-                        // default shape applies. A table with entries but no match for the id is a different matter:
-                        // the reference cannot display such a message at all.
-                        var decoration = _chatTypes is { Count: > 0 } table
-                            ? table.Get(chatTypeId)
-                            : Sharpcraft.Common.Network.ChatTypeDecoration.Default;
+                        // The shape of a player message comes from the chat type registry, never from an assumption:
+                        // the same packet renders as <name> text, name >> text or [name -> target] text depending on
+                        // the entry the server named.
+                        var decorated = DecorateLine(chatTypeId, chatSender, chatMessage, chatTarget);
 
-                        if (decoration is null)
+                        if (decorated is null)
                         {
-                            if (_diagEnabled)
-                            {
-                                Console.WriteLine($"chat dropped: unknown chat type {chatTypeId}");
-                            }
-
                             break;
                         }
-
-                        var arguments = new System.Collections.Generic.List<Sharpcraft.Common.Network.TextRun[]>(decoration.Parameters.Length);
-
-                        for (var argument = 0; argument < decoration.Parameters.Length; argument++)
-                        {
-                            arguments.Add(decoration.Parameters[argument] switch
-                            {
-                                Sharpcraft.Common.Network.ChatTypeDecoration.Sender => chatSender,
-                                Sharpcraft.Common.Network.ChatTypeDecoration.Content => chatMessage,
-                                Sharpcraft.Common.Network.ChatTypeDecoration.Target => chatTarget,
-                                _ => []
-                            });
-                        }
-
-                        var decorated = Sharpcraft.Common.Network.ComponentRuns.Decorate(
-                            _language,
-                            decoration.TranslationKey,
-                            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(arguments));
 
                         // A message without a signature comes from a server that does not sign chat; the reference
                         // marks those as not secure, which shows the same pale bar a system line gets.
@@ -761,6 +784,42 @@ internal sealed class InteractiveSession
                         if (_diagEnabled)
                         {
                             Console.WriteLine($"chat received: {Plain(decorated)}");
+                        }
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.DisguisedChat:
+                    if (DisguisedChatPackets.TryRead(
+                            body[reader.Position..], out var disguisedText, out var disguisedType,
+                            out var disguisedName, out var disguisedTarget, _language) == DecodeStatus.Success)
+                    {
+                        // The server is speaking on someone's behalf, which is what /me produces. The reference tags
+                        // these as a system message, so they carry the same pale bar.
+                        var decoration = DecorateLine(disguisedType, disguisedName, disguisedText, disguisedTarget);
+
+                        if (decoration is not null)
+                        {
+                            _chatLog.Add(decoration, _chatTicks, Sharpcraft.Client.Ui.ChatLog.MessageTag.System);
+
+                            if (_diagEnabled)
+                            {
+                                Console.WriteLine($"chat received: {Plain(decoration)}");
+                            }
+                        }
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.DeleteChat:
+                    if (DeleteChatPackets.TryRead(body[reader.Position..], out var deleted) == DecodeStatus.Success)
+                    {
+                        // The instruction names a signed message, and nothing is signed on a server in offline mode, so
+                        // there is nothing here it can match. Recorded rather than pretended: removing a line by
+                        // signature needs the client to keep the signatures it was shown, which it does not yet.
+                        if (_diagEnabled)
+                        {
+                            Console.WriteLine($"chat delete ignored: no signature tracking ({deleted.Length} bytes)");
                         }
                     }
 

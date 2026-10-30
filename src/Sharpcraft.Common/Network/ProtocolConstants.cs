@@ -247,6 +247,12 @@ public static class PacketIds
         /// <summary>A chat line from another player.</summary>
         public const int PlayerChat = 66;
 
+        /// <summary>Server-sent message on a player's behalf, which is what <c>/me</c> produces.</summary>
+        public const int DisguisedChat = 33;
+
+        /// <summary>Tells the client to remove a message it was shown, named by signature.</summary>
+        public const int DeleteChat = 31;
+
         /// <summary>Ping.</summary>
         public const int Ping = 62;
 
