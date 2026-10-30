@@ -139,9 +139,19 @@ public sealed class WindowHost : IDisposable
 
         RefreshGuiScale();
 
-        glfw.SetKeyCallback(handle, (window, key, _, action, _) =>
+        var trace = Environment.GetEnvironmentVariable("MC_INPUT_TRACE") == "1";
+
+        glfw.SetKeyCallback(handle, (window, key, scancode, action, mods) =>
         {
             _ = window;
+
+            if (trace)
+            {
+                // Verification hook: remote desktop tools and on-screen keyboards inject keys differently, so when
+                // input looks dead the first question is whether anything arrives at all.
+                Console.WriteLine($"input: key {key} scancode {scancode} action {action} mods {mods}");
+            }
+
             if (action == InputAction.Press)
             {
                 Input.Press((int)key);
@@ -156,6 +166,11 @@ public sealed class WindowHost : IDisposable
         // input method are already applied. Keys give the actions, characters give the text.
         glfw.SetCharCallback(handle, (_, codepoint) =>
         {
+            if (trace)
+            {
+                Console.WriteLine($"input: char {codepoint} '{(codepoint is > 0 and <= 0xFFFF ? ((char)codepoint).ToString() : "?")}'");
+            }
+
             if (codepoint is > 0 and <= 0xFFFF)
             {
                 Input.AppendText((char)codepoint);
