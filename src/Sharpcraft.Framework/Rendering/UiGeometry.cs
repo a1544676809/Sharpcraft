@@ -267,7 +267,8 @@ public sealed class UiGeometry
 
         // The swap chain is an sRGB format and encodes on write, so the authored colour is decoded here, once, at the
         // single point where a colour enters the vertex buffer.
-        var linear = ToLinear(colour);
+        // Gamma-space blending matches the reference; see docs/decisions/0013-gamma-space-ui-blending.md.
+        var linear = colour;
 
         WriteVertex(left, top, u0, v0, linear);
         WriteVertex(right, top, u1, v0, linear);

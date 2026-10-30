@@ -59,7 +59,10 @@ public static class WindowedRenderer
         using var device = adapter.RequestDeviceBlocking();
 
         Console.WriteLine($"window: surface ready on {adapter.GetInfo().Description}");
-        var format = surface.GetPreferredFormat(adapter);
+        // A non-sRGB surface blends in gamma space, which is what the reference does
+        // (docs/decisions/0013-gamma-space-ui-blending.md). Using the preferred sRGB format made every translucent
+        // overlay lighter than the reference.
+        var format = WGPUTextureFormat.BGRA8Unorm;
 
         // Atlas resources: the fragment shader samples it, so the pipeline layout and the bind group
         // have to exist before anything is drawn (docs/modules/render.md 6.1).
