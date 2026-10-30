@@ -47,3 +47,25 @@ status: 草稿
 ## 不做
 
 - 不做动画骨骼（P1 已裁决排除）、不做 Vulkan 后端（ADR-0018 未批准实现）、不做帧生成（WebGPU 呈现模型不支持）。
+
+## 全量复测记录（2026-10-30，第 36 轮）
+
+同一次会话内**逐项重跑**，命令与输出原文如下（`MC_ASSETS_OUT=%TEMP%\mcs-assets-pack`、`MC_PACK_FORMAT=97.1`、
+回放 `%TEMP%\scene5.bin`）：
+
+| # | 检查项 | 命令要点 | 实测输出 | 判定 |
+| --- | --- | --- | --- | --- |
+| 1 | 确定性场景 | `frame replay` + `MC_FRAME_COMPARE` | `scene: chunks 9, sections 24, fingerprint 0xD9F5D3A48E05E9A3`；`compare: identical (max channel delta 0)` | ✅ |
+| 2 | Hi-Z 金字塔 | `MC_FRAME_PYRAMID=1` | `9 levels, total mismatches 0, worst delta 0.000000`（9 级全 0）| ✅ |
+| 3 | 运动矢量 | `MC_FRAME_MOTION=1` | `14 samples, mismatches 0, worst delta 0.0000 px` | ✅ |
+| 4 | 遮挡剔除 | `MC_FRAME_OCCLUDER=1 MC_FRAME_CULLTEST=1` | `dropped 12 of 20, pixel mismatches 0`（**60.0%**，零误剔）| ✅（刚好达标）|
+| 5 | 半透明 | `MC_FRAME_WATER=1 MC_FRAME_TRANSLUCENT=1 MC_FRAME_TRANSLUCENT_TEST=1` | `10 triangles, pixels changed 97344, first (324,114)` | ✅ |
+| 6 | 方块实体 | `MC_FRAME_OCCLUDER=1 MC_FRAME_BLOCK_ENTITIES=1` + 比对 | `1 boxes, 12 triangles`；`329 pixel(s) differ, first (461,68), max delta 166` | ✅ |
+
+**仍需收口的偏差（不计为已达成）**：
+
+1. 剔除率 **60.0%** 是"刚好"达标，且场景只有 20 个区块；更大世界的剔除率未测。
+2. 半透明**按距离降序**尚未接线（当前透明层是一次 draw），混合顺序正确性缺证据。
+3. 方块实体缺**数据包级**解析用例（T-240 仍为进行中）。
+4. 实体仍是 6 个盒体占位（尺寸已按参考校准），**纹理面与真实模型**未做。
+5. 天空仅渐变与雾参数对齐，**天体（日/月/星/日出）**未做。
