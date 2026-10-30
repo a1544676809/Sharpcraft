@@ -853,6 +853,24 @@ internal sealed class InteractiveSession
 
                     break;
 
+                case PacketIds.PlayClientbound.SetActionBarText:
+                    if (Sharpcraft.Common.Nbt.NbtReader.TryReadNetworkRoot(
+                            body[reader.Position..], out var actionBarComponent, out _) == DecodeStatus.Success &&
+                        actionBarComponent is not null)
+                    {
+                        // The action bar from a title command arrives on its own packet, not as a system message with
+                        // the overlay flag, so it needs handling here as well.
+                        var actionBarRuns = Sharpcraft.Common.Network.ComponentRuns.Flatten(actionBarComponent, _language);
+                        _actionBar.Set(actionBarRuns);
+
+                        if (_diagEnabled)
+                        {
+                            Console.WriteLine($"action bar received: {Plain(actionBarRuns)}");
+                        }
+                    }
+
+                    break;
+
                 case PacketIds.PlayClientbound.SystemChat:
                     if (ChatPackets.TryReadSystemChat(body[reader.Position..], out Sharpcraft.Common.Network.TextRun[] chatRuns, out var overlay, _language) ==
                         DecodeStatus.Success)

@@ -253,6 +253,9 @@ public static class PacketIds
         /// <summary>Tells the client to remove a message it was shown, named by signature.</summary>
         public const int DeleteChat = 31;
 
+        /// <summary>Text shown above the hotbar, which is what a title command's action bar produces.</summary>
+        public const int SetActionBarText = 89;
+
         /// <summary>Ping.</summary>
         public const int Ping = 62;
 
