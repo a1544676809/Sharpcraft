@@ -13,6 +13,7 @@
 | --- | --- | --- | --- |
 | [`block-models.md`](block-models.md) | 变体、parent 继承、#变量、面→纹理、uv 缺省 | 草稿 | - |
 | [`jar-entry-map.md`](jar-entry-map.md) | jar 条目分类与资产清单（顶层分布、assets 分类、纹理格式） | 草稿 | - |
+| [`resource-pack-stack.md`](resource-pack-stack.md) | 包列表顺序→按命名空间回退栈；后者覆盖前者；重载为两阶段原子替换 | 部分核对（未核对项已列出） | 2026-10-30 |
 | [`resource-resolution.md`](resource-resolution.md) | 路径推导、包栈优先级、元数据兄弟、合并方向 | 草稿 | - |
 
 <!-- END GENERATED: docs/analysis/assets -->
