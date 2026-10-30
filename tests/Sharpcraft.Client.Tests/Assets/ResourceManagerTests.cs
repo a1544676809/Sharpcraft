@@ -123,6 +123,47 @@ public sealed class ResourceManagerTests : IDisposable
         Assert.Equal("first", ReadLanguage(manager));
     }
 
+    [Fact]
+    public void RepeatedReloadsLetThePreviousPacksBeCollected()
+    {
+        var folder = Path.Combine(_root, "resourcepacks");
+        MakeFolderPack(Path.Combine(folder, "extra"), "assets/minecraft/lang/en_us.json", "one");
+
+        WeakReference? first = null;
+        var builds = 0;
+
+        var manager = new ResourceManager(
+            BuildStack(folder), 1,
+            () =>
+            {
+                builds++;
+                var pack = ResourcePack.FromDirectory(Path.Combine(folder, "extra"));
+                first ??= new WeakReference(pack);
+
+                var stack = new AssetStack { Policy = MissingResourcePolicy.Warn }
+                    .Add(new ResourcePackSource(pack));
+
+                return (stack, 1);
+            });
+
+        Assert.True(manager.Reload());
+        Assert.NotNull(first);
+        Assert.True(first!.IsAlive);
+
+        // A second reload replaces the stack, and disposing it must drop the only reference to the first pack.
+        Assert.True(manager.Reload());
+
+        for (var attempt = 0; attempt < 3 && first.IsAlive; attempt++)
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+        }
+
+        Assert.False(first.IsAlive);
+        manager.Dispose();
+    }
+
     private static string ReadLanguage(ResourceManager manager)
     {
         var bytes = manager.Read(ResourceKind.Language, new Identifier("minecraft", "en_us"));

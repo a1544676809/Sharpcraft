@@ -28,14 +28,29 @@ public sealed class ResourcePackFormatTests : IDisposable
     }
 
     [Fact]
-    public void TheLegacySingleFormatIsReadAsAOneVersionRange()
+    public void TheLegacySingleFormatCoversEveryMinorOfThatMajor()
     {
         var range = ResourcePackFormats.TryParseSupportedFormats(
             """{ "pack": { "description": "t", "pack_format": 64 } }""");
 
         Assert.NotNull(range);
         Assert.Equal(new PackFormatVersion(64, 0), range!.Value.Min);
-        Assert.Equal(range.Value.Min, range.Value.Max);
+        Assert.Equal(new PackFormatVersion(64, int.MaxValue), range.Value.Max);
+    }
+
+    [Fact]
+    public void ARealPackDeclaringOnlyMajorVersionsIsAccepted()
+    {
+        // The shipped Faithful 32x pack for 26.3 declares exactly this, and 97.1 must fit inside "up to 97".
+        var range = ResourcePackFormats.TryParseSupportedFormats(
+            """{ "pack": { "description": "The go-to 32x resource pack.", "min_format": 84, "max_format": 97 } }""");
+
+        Assert.NotNull(range);
+        Assert.Equal(new PackFormatVersion(84, 0), range!.Value.Min);
+        Assert.Equal(new PackFormatVersion(97, int.MaxValue), range.Value.Max);
+
+        var client = new PackFormatVersion(97, 1);
+        Assert.True(client.CompareTo(range.Value.Min) >= 0 && client.CompareTo(range.Value.Max) <= 0);
     }
 
     [Fact]

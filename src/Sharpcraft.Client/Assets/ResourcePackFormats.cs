@@ -34,29 +34,34 @@ public static class ResourcePackFormats
                 return null;
             }
 
-            if (TryReadVersion(pack, "min_format", out var min) && TryReadVersion(pack, "max_format", out var max))
+            // min_format defaults its minor to 0 and max_format to the largest minor, exactly as the reference's bottom
+            // and top codecs do; that is what lets a pack say max_format 97 and still accept 97.1.
+            if (TryReadVersion(pack, "min_format", 0, out var min) &&
+                TryReadVersion(pack, "max_format", int.MaxValue, out var max))
             {
                 return (min, max);
             }
 
             if (pack.TryGetProperty("supported_formats", out var supported))
             {
+                // supported_formats speaks in major versions only, so a pair means "every minor between these majors".
                 if (supported.ValueKind == JsonValueKind.Number && supported.TryGetInt32(out var single))
                 {
-                    var version = new PackFormatVersion(single, 0);
-                    return (version, version);
+                    return (new PackFormatVersion(single, 0), new PackFormatVersion(single, int.MaxValue));
                 }
 
                 if (supported.ValueKind == JsonValueKind.Array && supported.GetArrayLength() == 2 &&
-                    TryReadVersion(supported[0], out var low) && TryReadVersion(supported[1], out var high))
+                    TryReadVersion(supported[0], 0, out var low) &&
+                    TryReadVersion(supported[1], int.MaxValue, out var high))
                 {
                     return (low, high);
                 }
             }
 
-            if (TryReadVersion(pack, "pack_format", out var legacy))
+            // The old single number also named a major, so every minor of it is acceptable.
+            if (TryReadVersion(pack, "pack_format", 0, out var legacy))
             {
-                return (legacy, legacy);
+                return (legacy, new PackFormatVersion(legacy.Major, int.MaxValue));
             }
 
             return null;
@@ -67,7 +72,11 @@ public static class ResourcePackFormats
         }
     }
 
-    private static bool TryReadVersion(JsonElement element, string name, out PackFormatVersion version)
+    private static bool TryReadVersion(
+        JsonElement element,
+        string name,
+        int defaultMinor,
+        out PackFormatVersion version)
     {
         version = default;
 
@@ -76,27 +85,16 @@ public static class ResourcePackFormats
             return false;
         }
 
-        if (value.ValueKind == JsonValueKind.Number)
-        {
-            if (!value.TryGetInt32(out var major))
-            {
-                return false;
-            }
-
-            version = new PackFormatVersion(major, 0);
-            return true;
-        }
-
-        return value.ValueKind == JsonValueKind.String && PackFormatVersion.TryParse(value.GetString(), out version);
+        return TryReadVersion(value, defaultMinor, out version);
     }
 
-    private static bool TryReadVersion(JsonElement value, out PackFormatVersion version)
+    private static bool TryReadVersion(JsonElement value, int defaultMinor, out PackFormatVersion version)
     {
         version = default;
 
         if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var major))
         {
-            version = new PackFormatVersion(major, 0);
+            version = new PackFormatVersion(major, defaultMinor);
             return true;
         }
 
