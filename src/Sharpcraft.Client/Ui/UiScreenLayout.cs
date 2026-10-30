@@ -358,8 +358,10 @@ public static class UiScreenLayout
         uint colour,
         bool shadow = true)
     {
-        var cellWidth = font.CellWidth * textScale;
-        var cellHeight = font.CellHeight * textScale;
+        // The cell is scaled down to the declared height, so a high resolution sheet draws finer ink without
+        // changing the layout (docs/analysis/assets/font-slicing.md).
+        var cellWidth = font.CellWidth * font.Scale * textScale;
+        var cellHeight = font.CellHeight * font.Scale * textScale;
         var pen = x;
 
         // The reference draws every glyph twice: once offset by a pixel in both directions in a darkened colour, then
@@ -434,7 +436,7 @@ public static class UiScreenLayout
             return;
         }
 
-        AddText(geometry, font, content, left, cursor + ((lineHeight - (font.CellHeight * textScale)) / 2f), textScale, colour);
+        AddText(geometry, font, content, left, cursor + ((lineHeight - (font.CellHeight * font.Scale * textScale)) / 2f), textScale, colour);
         cursor += lineHeight;
     }
 }

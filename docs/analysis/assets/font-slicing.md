@@ -46,6 +46,16 @@ ascent      = 声明的 ascent
 
 `BitmapFont.FromSheet` 写死 **8×8** 单元。用 Faithful 时每个字形只取到左上 1/4，且偏移按 8 计算 ⇒ 文字重叠、糊成一团（截图已留证）。
 
+## 4.1 我们已修的部分（2026-10-30）
+
+- 单元格由图集/列数推导（`BitmapFont` 早已如此，Faithful 256px → 16×16 单元）；
+- **真正的错在绘制**：`UiScreenLayout` 用原始单元格尺寸画字，没乘 `pixelScale`，高清图集就会与后一个字重叠。
+  已加 `BitmapFont.Scale = height / cellHeight`，绘制与行心偏移都乘它。
+- 实测：Faithful 32x → `font: 16x16 cells, line 8`，文字清晰、排版尺寸与原版一致。
+
+**仍待做**：从 `font/default.json`（跟进 `reference` 到 `bitmap` 项）读取 `height`/`ascent` 与 `chars` 网格，
+而不是沿用 16 列 / height 8 / ascent 7 的缺省；否则声明了不同 `height` 或非 16 列的包仍会偏。
+
 ## 5. 正确做法
 
 1. 从资源栈读 `font/default.json`，跟进 `reference` 到 `bitmap` 提供器；

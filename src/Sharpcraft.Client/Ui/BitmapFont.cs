@@ -156,6 +156,16 @@ public sealed class BitmapFont
         return width;
     }
 
+    /// <summary>
+    /// How far a cell must be shrunk to reach the declared height.
+    /// </summary>
+    /// <remarks>
+    /// A high resolution pack ships a larger sheet, so a cell is bigger than the declared height; drawing the cell at its
+    /// raw size would overlap the next glyph. The reference divides by this factor so HD art draws finer ink at the same
+    /// layout size.
+    /// </remarks>
+    public float Scale => (float)Height / _cellHeight;
+
     /// <summary>Texture coordinates covering one glyph cell, in the range zero to one.</summary>
     /// <param name="glyph">Glyph whose cell is wanted.</param>
     public (float U0, float V0, float U1, float V1) Uv(in Glyph glyph) =>
