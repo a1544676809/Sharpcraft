@@ -538,6 +538,10 @@ internal sealed class InteractiveSession
             _chatLog.ScrollBy((int)(step * 7d));
         }
 
+        // Over a clickable run the pointer becomes a hand, which is how the reference signals that it can be clicked.
+        window.SetHandCursor(
+            !input.MouseCaptured && ChatHoverAt(input.CursorInCanvas.X, input.CursorInCanvas.Y) is not null);
+
         if (input.TakeRightClick())
         {
             TryClickChat(input.CursorInCanvas.X, input.CursorInCanvas.Y, input.IsKeyDown(InputKey.LeftShift), window);

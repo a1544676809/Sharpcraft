@@ -23,6 +23,10 @@ public sealed class WindowHost : IDisposable
     private bool _initialised;
     private Glfw? _glfw;
     private unsafe WindowHandle* _handle;
+    private unsafe Cursor* _arrowCursor;
+    private unsafe Cursor* _handCursor;
+    private bool _handCursorActive;
+    private bool _cursorReady;
 
     private WindowHost(IWindow window) => _window = window;
 
@@ -185,6 +189,11 @@ public sealed class WindowHost : IDisposable
 
         glfw.SetCursorPosCallback(handle, (_, x, y) => Input.MoveCursor(new Vector2((float)x, (float)y)));
 
+        // The reference turns the pointer into a hand over a clickable run, so the two shapes are created once here.
+        _arrowCursor = glfw.CreateStandardCursor(CursorShape.Arrow);
+        _handCursor = glfw.CreateStandardCursor(CursorShape.Hand);
+        _cursorReady = true;
+
         glfw.SetScrollCallback(handle, (_, _, yOffset) =>
         {
             // The wheel is consumed once per frame, so a fast flick is not lost between frames.
@@ -325,7 +334,40 @@ public sealed class WindowHost : IDisposable
     }
 
     /// <inheritdoc />
+    /// <summary>
+    /// Shows the hand shape while the pointer is over something clickable, and the arrow otherwise.
+    /// </summary>
+    /// <param name="hand">True to show the hand.</param>
+    public unsafe void SetHandCursor(bool hand)
+    {
+        if (!_cursorReady || _glfw is null || _handle is null || hand == _handCursorActive)
+        {
+            return;
+        }
+
+        _glfw.SetCursor((WindowHandle*)_handle, hand ? _handCursor : _arrowCursor);
+        _handCursorActive = hand;
+    }
+
     public void Dispose()
+    {
+        DestroyCursors();
+        DisposeCore();
+    }
+
+    private unsafe void DestroyCursors()
+    {
+        if (_glfw is null || !_cursorReady)
+        {
+            return;
+        }
+
+        _glfw.DestroyCursor(_arrowCursor);
+        _glfw.DestroyCursor(_handCursor);
+        _cursorReady = false;
+    }
+
+    private void DisposeCore()
     {
         if (_initialised)
         {
