@@ -223,4 +223,13 @@ public sealed class AssetPackTests
             }
         }
     }
+
+    [Fact]
+    public void TooltipSpritesAreIncluded()
+    {
+        // The tooltip is drawn from GUI sprites, so they have to reach the pack (docs/analysis/gui/tooltip-background.md).
+        Assert.True(AssetSelection.IsIncluded("assets/minecraft/textures/gui/sprites/tooltip/frame.png"));
+        Assert.True(AssetSelection.IsIncluded("assets/minecraft/textures/gui/sprites/tooltip/frame.png.mcmeta"));
+        Assert.True(AssetSelection.IsIncluded("assets/minecraft/textures/gui/sprites/tooltip/background.png"));
+    }
 }
