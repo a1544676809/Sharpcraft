@@ -69,7 +69,10 @@ updated: 2026-10-29
    **下一步具体动作**：把视锥接线到 `WindowCommand` 的实体几何回调（相机 lambda 里缓存 view-projection），
    并输出剔除计数（QA-1.3 要求 ≥60%）；随后实体模型需由启动器从 jar 提取模型 JSON（仓库内不存资产）。
 4. T-104/T-159（离屏界面 pass + 逐像素）改为 **5.3 的验收手段**（规格见 `docs/analysis/render/offscreen-ui-pass.md`），不再独立排期。
-5. 随后：M6 模组热加载（先写 ADR）→ 着色器包接入（P3）。
+5. **着色器包资料已收集（2026-10-30）**：`docs/analysis/render/shader-pack-anatomy.md`（真实包 468 条目、维度×阶段两层、
+   16 类几何阶段、9 档 profile）+ `docs/specs/render/shader-pack-compatibility.md`（不支持项与 GLSL→WGSL 改写）。
+   **下一步具体动作**：把"按维度解析阶段""未识别阶段跳过"两条写入 `shader-packs.md` 正文（需评审），再进 P3 接入点。
+6. 随后：M6 模组热加载（先写 ADR）→ 着色器包接入（P3）。
 会打印 `chat received:`。
 随后：T-120（`player_chat` 等剩余入站与组件样式）、T-108（热加载状态迁移）、T-104（离屏截图接 UI）。
 随后：T-108（热加载状态迁移）、T-104（离屏截图接 UI）、T-114（`ChunkSeamTests` 并行抖动）、T-107（间歇 wgpu 断言，需完整 validation 文本）。

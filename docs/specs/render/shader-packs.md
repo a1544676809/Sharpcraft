@@ -67,3 +67,11 @@ AGENTS.md 原则 11 要求渲染架构在**设计阶段**就为外部着色器�
 - 执行器属于 `Framework/Rendering`（唯一允许接触 WGPU 的层）。
 - 阶段内部使用的世界几何来自 `Client`，但包只声明"读哪个目标"，不接触游戏对象。
 - 测试只需断言声明模型与校验规则，不需要 GPU：契约层是纯数据 + 纯函数。
+
+## 8. 真实样本与兼容指导（2026-10-30 补充）
+
+- 结构解剖与实测数字：`docs/analysis/render/shader-pack-anatomy.md`（样本 ComplementaryUnbound r5.9.3，468 条目 / 1.2 MB）。
+- 关键结论：包是**"维度 × 阶段"**两层结构（`program/<stage>.glsl` 共享翻译单元 + `worldN/<stage>.fsh|.vsh` 薄包装），
+  **不是**全局单份；`shaders.properties` 280 行承载 profile `#define` 与选项界面布局。
+- 由此本规格需补两条（尚未写入正文，待评审）：①按维度解析阶段 ②未识别阶段（DH/Voxy/colorwheel）跳过并汇总日志。
+- 不支持特性与移植建议：`docs/specs/render/shader-pack-compatibility.md`。
