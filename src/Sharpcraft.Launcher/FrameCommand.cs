@@ -727,6 +727,82 @@ internal static class FrameCommand
         var frame = OffscreenRenderer.Render(request);
 
         Console.WriteLine($"rendered on adapter: {frame.AdapterName}");
+
+        if (Environment.GetEnvironmentVariable("MC_FRAME_CULLTEST") == "1" && request.DrawRanges is { Length: > 0 } ranges)
+        {
+            // Two checks in one: with the natural decision the picture must not change at all, and with a forced drop it must
+            // change, which proves the ranges are actually honoured rather than silently merged back into one draw.
+            var forced = Environment.GetEnvironmentVariable("MC_FRAME_CULL_FORCE") == "1";
+            var dropped = 0;
+            var modified = new (int FirstIndex, int IndexCount)[ranges.Length];
+
+            // Natural mode uses the real decision; forced mode drops the first chunk to prove the ranges are honoured.
+            var occluded = new bool[ranges.Length];
+
+            if (!forced && frame.Depth is { } cullDepth)
+            {
+                var linear = new float[cullDepth.Length];
+
+                for (var index = 0; index < cullDepth.Length; index++)
+                {
+                    linear[index] = Sharpcraft.Framework.Rendering.DepthLinearisation.ToDistance(cullDepth[index], 0.1f, 2000f);
+                }
+
+                var pyramid = Sharpcraft.Framework.Rendering.DepthPyramid.Build(linear, frame.Width, frame.Height);
+                var chunks = world.GetChunks();
+
+                for (var index = 0; index < ranges.Length && index < chunks.Length; index++)
+                {
+                    var chunk = chunks[index];
+                    var lowest = chunk.MinSectionY * 16;
+                    var highest = (chunk.MinSectionY + chunk.SectionCount) * 16;
+                    var centre = new System.Numerics.Vector3(
+                        (chunk.ChunkX * 16) + 8f,
+                        (lowest + highest) / 2f,
+                        (chunk.ChunkZ * 16) + 8f);
+                    var half = new System.Numerics.Vector3(8f, (highest - lowest) / 2f, 8f);
+
+                    if (!Sharpcraft.Client.Render.OcclusionCulling.TryProjectBox(centre, half, frame.ViewProjection, out var rectMin, out var rectMax, out var nearest))
+                    {
+                        continue;
+                    }
+
+                    if (!pyramid.TryCoveringDepth(rectMin.X, rectMin.Y, rectMax.X, rectMax.Y, out var farthest))
+                    {
+                        continue;
+                    }
+
+                    var nearestDistance = Sharpcraft.Framework.Rendering.DepthLinearisation.ToDistance(nearest, 0.1f, 2000f);
+                    occluded[index] = Sharpcraft.Client.Render.OcclusionCulling.IsOccluded(nearestDistance, farthest);
+                }
+            }
+
+            for (var index = 0; index < ranges.Length; index++)
+            {
+                var skip = forced ? index == 0 : occluded[index];
+
+                if (skip)
+                {
+                    dropped++;
+                }
+
+                modified[index] = skip ? (ranges[index].FirstIndex, 0) : ranges[index];
+            }
+
+            var second = OffscreenRenderer.Render(request with { DrawRanges = modified });
+            var difference = Sharpcraft.Framework.Rendering.PixelComparison.Compare(
+                frame.Rgba,
+                second.Rgba,
+                frame.Width,
+                frame.Height,
+                tolerance: 0);
+
+            Console.WriteLine(
+                $"culltest: mode {(forced ? "forced" : "natural")}, dropped {dropped} of {ranges.Length}, " +
+                $"pixel mismatches {difference.Mismatches}" +
+                (difference.Mismatches > 0 ? $", first at ({difference.FirstX},{difference.FirstY})" : string.Empty));
+        }
+
         if (Environment.GetEnvironmentVariable("MC_FRAME_COMPARE") is { Length: > 0 } baselinePath && File.Exists(baselinePath))
         {
             // Compare against a reference frame: zero mismatches is the only acceptable result for an optimisation that
