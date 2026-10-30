@@ -112,5 +112,6 @@
 | [`repro/`](repro/README.md) | 0 |
 | [`specs/`](specs/README.md) | 10 |
 | [`src/`](src/README.md) | 10 |
+| [`tools/`](tools/README.md) | 1 |
 
 <!-- END GENERATED: docs -->
