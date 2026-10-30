@@ -44,6 +44,15 @@ public sealed class ResourcePackSource : IAssetSource
     }
 
     /// <inheritdoc />
+    public bool TryOpenPath(string relativePath, out Stream content)
+    {
+        var stream = _pack.Open(relativePath);
+
+        content = stream ?? Stream.Null;
+        return stream is not null;
+    }
+
+    /// <inheritdoc />
     public IEnumerable<Identifier> List(string prefix)
     {
         var root = string.Concat(ResourcePath.ClientRoot, "/", prefix);

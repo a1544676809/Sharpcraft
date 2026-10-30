@@ -32,6 +32,21 @@ public interface IAssetSource : IDisposable
 
     /// <summary>Lists every resource under a path prefix, in a stable order.</summary>
     IEnumerable<Identifier> List(string prefix);
+
+    /// <summary>
+    /// Opens a raw file by its pack-relative path, such as a <c>.mcmeta</c> beside a texture.
+    /// </summary>
+    /// <param name="relativePath">Path from the pack root.</param>
+    /// <param name="content">Stream when found.</param>
+    /// <remarks>
+    /// A resource kind cannot express these files: a texture lookup appends <c>.png</c>, so the metadata beside it is
+    /// unreachable that way. Sources that can answer override this; the default refuses.
+    /// </remarks>
+    bool TryOpenPath(string relativePath, out Stream content)
+    {
+        content = Stream.Null;
+        return false;
+    }
 }
 
 /// <summary>

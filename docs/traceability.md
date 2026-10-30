@@ -200,3 +200,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-173 | 两阶段重载与旧快照回收（含自动化回收验证）| ADR-0015 | 待补 | 待落地 | 阻塞于评审 |
 | T-174 | **文件变更热加载**（扩展，默认关闭）：监听目录包/zip、300ms 去抖、全快照重建、失败保留旧快照、纹理按内容哈希失效 | ADR-0016、`docs/specs/deviations.md` D-001 | 待补（验收 5 项已写入 ADR）| 待落地 | 阻塞于评审 |
 | T-175 | 重载监听器注册表：把字体图集/`GuiSpriteAtlas`/语言表/UI 文档改为可重入监听器（顺序：语言·字体→贴图集→UI）| ADR-0016 §7、ADR-0015 | 待补 | 待落地 | 阻塞于评审 |
+| T-176 | **统一资源管理器**：会话级唯一栈（一次发现、全局共用），字体/贴图集/语言表/字体引用改为从它读取；`OpenFile` 支持 `.mcmeta` 等原始文件按优先级读取 | 原版单一 `ResourceManager` 语义、`docs/analysis/assets/resource-pack-stack.md` §12 | `ResourceManagerTests`(2) + 端到端（日志由两行变一行、红色覆盖环 1749px）+ 全量 944 绿 | `Client/Assets/ResourceManager`、`AssetStack`(TryOpenPath)、`Launcher/FrameCommand`、`Launcher/WindowCommand` | 已完成 |

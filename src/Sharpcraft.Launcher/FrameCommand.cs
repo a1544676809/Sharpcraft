@@ -176,7 +176,7 @@ internal static class FrameCommand
     /// <param name="stack">Asset stack to read from.</param>
     /// <param name="reference">Identifier such as <c>minecraft:include/space</c>.</param>
     private static string? ReadFontReference(
-        Sharpcraft.Client.Assets.AssetStack stack,
+        Sharpcraft.Client.Assets.ResourceManager resources,
         string reference)
     {
         var colon = reference.IndexOf(':');
@@ -186,7 +186,7 @@ internal static class FrameCommand
             return null;
         }
 
-        var bytes = stack.Read(
+        var bytes = resources.Read(
             ResourceKind.Font,
             new Sharpcraft.Common.Identifiers.Identifier(reference[..colon], reference[(colon + 1)..]));
 
@@ -200,19 +200,14 @@ internal static class FrameCommand
     /// The language file is an asset like any other: it is extracted from the game by the launcher and never stored in
     /// the repository. Without it the interface can only show translation keys, which is what it did before this.
     /// </remarks>
-    internal static Sharpcraft.Common.Localization.LanguageTable PrepareLanguage()
+    /// <summary>
+    /// Loads the message table from the shared resource manager.
+    /// </summary>
+    /// <param name="resources">Session resource manager.</param>
+    internal static Sharpcraft.Common.Localization.LanguageTable PrepareLanguage(
+        Sharpcraft.Client.Assets.ResourceManager resources)
     {
-        var packPath = FindPack();
-
-        if (packPath is null)
-        {
-            Console.WriteLine("language: no asset pack found; messages will show translation keys");
-            return Sharpcraft.Common.Localization.LanguageTable.Empty;
-        }
-
-        using var stack = new AssetStack { Policy = MissingResourcePolicy.Warn }
-            .Add(new BuiltInFallbackSource())
-            .Add(new ZipAssetSource(packPath, "base-pack"));
+        ArgumentNullException.ThrowIfNull(resources);
 
         // The interface follows the machine's language, the way the reference does: on a Chinese machine the same
         // message must not appear in English.
@@ -229,7 +224,7 @@ internal static class FrameCommand
 
         foreach (var candidate in candidates)
         {
-            bytes = stack.Read(
+            bytes = resources.Read(
                 ResourceKind.Language,
                 new Sharpcraft.Common.Identifiers.Identifier("minecraft", candidate));
 
@@ -260,36 +255,50 @@ internal static class FrameCommand
     /// font without any asset entering the repository (docs/modules/ui.md 5).
     /// </summary>
     /// <summary>
-    /// Appends installed resource packs to a stack so they take priority over the base pack.
+    /// Builds the session resource manager: base pack, then every installed pack above it.
     /// </summary>
-    /// <param name="stack">Stack to extend.</param>
     /// <remarks>
-    /// Packs are read from <c>MC_RESOURCE_PACKS</c>, a semicolon separated list of folders, which is the hook a player or
-    /// a launcher uses to point at <c>resourcepacks</c>. The stack already scans backwards, so appending is all that is
-    /// needed for them to override the base pack.
+    /// One manager per session, as the reference keeps one resource manager. Packs are discovered once here, so the font,
+    /// the tooltip sprites and the language table all see the same overrides and a reload has a single place to rebuild.
     /// </remarks>
-    private static void AddResourcePacks(Sharpcraft.Client.Assets.AssetStack stack)
+    internal static Sharpcraft.Client.Assets.ResourceManager CreateResourceManager()
     {
+        var stack = new AssetStack { Policy = MissingResourcePolicy.Warn }
+            .Add(new BuiltInFallbackSource());
+
+        var packPath = FindPack();
+
+        if (packPath is not null)
+        {
+            stack.Add(new ZipAssetSource(packPath, "base-pack"));
+        }
+
+        var count = 0;
         var folders = Environment.GetEnvironmentVariable("MC_RESOURCE_PACKS");
 
-        if (string.IsNullOrWhiteSpace(folders))
+        if (!string.IsNullOrWhiteSpace(folders))
         {
-            return;
-        }
-
-        foreach (var folder in folders.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            if (!System.IO.Directory.Exists(folder))
+            foreach (var folder in folders.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
-                continue;
-            }
+                if (!System.IO.Directory.Exists(folder))
+                {
+                    continue;
+                }
 
-            foreach (var pack in Sharpcraft.Client.Assets.ResourcePackDiscovery.Discover(folder))
-            {
-                stack.Add(new Sharpcraft.Client.Assets.ResourcePackSource(pack));
-                Console.WriteLine($"resource pack: {pack.Id} ({pack.Kind})");
+                foreach (var pack in Sharpcraft.Client.Assets.ResourcePackDiscovery.Discover(folder))
+                {
+                    stack.Add(new Sharpcraft.Client.Assets.ResourcePackSource(pack));
+                    count++;
+                }
             }
         }
+
+        if (count > 0)
+        {
+            Console.WriteLine($"resource packs: {count} installed");
+        }
+
+        return new Sharpcraft.Client.Assets.ResourceManager(stack, count);
     }
 
     /// <summary>
@@ -300,54 +309,34 @@ internal static class FrameCommand
     /// from the <c>.mcmeta</c> rather than hard coding it keeps the drawing tied to the texture that will be used.
     /// </remarks>
     /// <summary>Reads one tooltip sprite's scaling from its <c>.mcmeta</c>, or a stretch when absent.</summary>
-    /// <param name="packPath">Pack archive.</param>
+    /// <param name="resources">Session resource manager, so a pack may override the metadata too.</param>
     /// <param name="name">Sprite name, such as <c>frame</c>.</param>
-    private static Sharpcraft.Client.Ui.GuiSpriteScaling ReadScaling(string packPath, string name)
+    private static Sharpcraft.Client.Ui.GuiSpriteScaling ReadScaling(
+        Sharpcraft.Client.Assets.ResourceManager resources,
+        string name)
     {
-        try
-        {
-            using var archive = System.IO.Compression.ZipFile.OpenRead(packPath);
-            var entry = archive.GetEntry(
-                $"assets/minecraft/textures/gui/sprites/tooltip/{name}.png.mcmeta");
+        using var stream = resources.OpenFile(
+            $"assets/minecraft/textures/gui/sprites/tooltip/{name}.png.mcmeta");
 
-            if (entry is null)
-            {
-                return new Sharpcraft.Client.Ui.GuiSpriteScaling();
-            }
-
-            using var reader = new StreamReader(entry.Open());
-            return Sharpcraft.Client.Ui.GuiSpriteScaling.TryParse(reader.ReadToEnd())
-                   ?? new Sharpcraft.Client.Ui.GuiSpriteScaling();
-        }
-        catch (System.IO.InvalidDataException)
+        if (stream is null)
         {
             return new Sharpcraft.Client.Ui.GuiSpriteScaling();
         }
-        catch (System.IO.IOException)
-        {
-            return new Sharpcraft.Client.Ui.GuiSpriteScaling();
-        }
+
+        using var reader = new StreamReader(stream);
+        return Sharpcraft.Client.Ui.GuiSpriteScaling.TryParse(reader.ReadToEnd())
+               ?? new Sharpcraft.Client.Ui.GuiSpriteScaling();
     }
 
-    internal static Sharpcraft.Client.Ui.GuiSpriteAtlas? PrepareGuiSprites()
+    internal static Sharpcraft.Client.Ui.GuiSpriteAtlas? PrepareGuiSprites(
+        Sharpcraft.Client.Assets.ResourceManager resources)
     {
-        var packPath = FindPack();
+        ArgumentNullException.ThrowIfNull(resources);
 
-        if (packPath is null)
-        {
-            return null;
-        }
-
-        using var stack = new AssetStack { Policy = MissingResourcePolicy.Warn }
-            .Add(new BuiltInFallbackSource())
-            .Add(new ZipAssetSource(packPath, "base-pack"));
-
-        AddResourcePacks(stack);
-
-        var background = stack.Read(
+        var background = resources.Read(
             ResourceKind.Texture,
             new Sharpcraft.Common.Identifiers.Identifier("minecraft", "gui/sprites/tooltip/background"));
-        var frame = stack.Read(
+        var frame = resources.Read(
             ResourceKind.Texture,
             new Sharpcraft.Common.Identifiers.Identifier("minecraft", "gui/sprites/tooltip/frame"));
 
@@ -358,8 +347,8 @@ internal static class FrameCommand
         }
 
         // Two sprites, each with its own scaling: a pack may give them different borders or a plain stretch.
-        var backgroundScaling = ReadScaling(packPath, "background");
-        var frameScaling = ReadScaling(packPath, "frame");
+        var backgroundScaling = ReadScaling(resources, "background");
+        var frameScaling = ReadScaling(resources, "frame");
 
         var backgroundImage = Sharpcraft.Common.Imaging.PngDecoder.Decode(background);
         var frameImage = Sharpcraft.Common.Imaging.PngDecoder.Decode(frame);
@@ -373,23 +362,12 @@ internal static class FrameCommand
             backgroundTexture, frameTexture, backgroundScaling, frameScaling);
     }
 
-    internal static Sharpcraft.Client.Ui.BitmapFont? PrepareFont()
+    internal static Sharpcraft.Client.Ui.BitmapFont? PrepareFont(
+        Sharpcraft.Client.Assets.ResourceManager resources)
     {
-        var packPath = FindPack();
+        ArgumentNullException.ThrowIfNull(resources);
 
-        if (packPath is null)
-        {
-            Console.WriteLine("font: no asset pack found; text uses placeholder bars");
-            return null;
-        }
-
-        using var stack = new AssetStack { Policy = MissingResourcePolicy.Warn }
-            .Add(new BuiltInFallbackSource())
-            .Add(new ZipAssetSource(packPath, "base-pack"));
-
-        AddResourcePacks(stack);
-
-        var bytes = stack.Read(
+        var bytes = resources.Read(
             ResourceKind.Texture,
             new Sharpcraft.Common.Identifiers.Identifier("minecraft", "font/ascii"));
 
@@ -407,7 +385,7 @@ internal static class FrameCommand
         // Characters without ink, a space above all, take their advance from the font definition rather than from the
         // sheet. Without this a space advances a single pixel and every sentence loses its word breaks.
         var declared = 0;
-        var definition = stack.Read(
+        var definition = resources.Read(
             ResourceKind.Font,
             new Sharpcraft.Common.Identifiers.Identifier("minecraft", "default"));
 
@@ -415,7 +393,7 @@ internal static class FrameCommand
         {
             declared = Sharpcraft.Client.Ui.FontDefinition.Apply(
                 System.Text.Encoding.UTF8.GetString(definition),
-                reference => ReadFontReference(stack, reference),
+                reference => ReadFontReference(resources, reference),
                 font);
         }
 

@@ -51,6 +51,19 @@ public sealed class ZipAssetSource : IAssetSource, IMetadataAssetSource
         }
     }
 
+    /// <inheritdoc />
+    public bool TryOpenPath(string relativePath, out Stream content)
+    {
+        if (_entries.TryGetValue(relativePath, out var entry))
+        {
+            content = entry.Open();
+            return true;
+        }
+
+        content = Stream.Null;
+        return false;
+    }
+
     /// <summary>Path of the zip.</summary>
     public string Path { get; }
 

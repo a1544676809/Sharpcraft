@@ -117,7 +117,9 @@ internal static class WindowCommand
 
         using var liveScope = live;
         // Loaded before the session because chat arrives as translation keys and the session resolves them.
-        var language = FrameCommand.PrepareLanguage();
+        // One resource manager for the session, so every loader reads the same pack stack.
+        using var resources = FrameCommand.CreateResourceManager();
+        var language = FrameCommand.PrepareLanguage(resources);
 
         // Chat types decide how a player message is written, so they come from the same connection that carries the
         // messages (docs/decisions/0012-chat-type-registry.md). Without them the reference's own default shape is used.
@@ -155,10 +157,10 @@ internal static class WindowCommand
         }
 
         var uiGeometry = new UiGeometry();
-        var uiFont = FrameCommand.PrepareFont();
+        var uiFont = FrameCommand.PrepareFont(resources);
         session.UiFont = uiFont;
         // The tooltip's frame is two nine slice sprites; without them it falls back to a rectangle.
-        var guiSprites = FrameCommand.PrepareGuiSprites();
+        var guiSprites = FrameCommand.PrepareGuiSprites(resources);
 
         var glyphTexture = uiFont is null
             ? null

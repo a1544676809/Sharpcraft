@@ -208,6 +208,7 @@ stack.add(primaryPackResources);                     // primary 最后
 | 发现（跳过重解析点/非包条目；zip 需含 `pack.mcmeta`）| 已实现 `ResourcePackDiscovery` |
 | 有序栈 + 逆序回退 + 命名空间并集 | 已实现 `ResourcePackStack`，5 项测试 |
 | `filter` 遮蔽（`pushFilterOnly`）| 待做（需先核对 `IdentifierPattern` 的匹配语义）|
-| 接入字体与 `GuiSpriteAtlas`（经 `ResourcePackSource` + `MC_RESOURCE_PACKS`）| 已实现；端到端验证通过（第三方包换红色边框生效）|
-| 目录选择与启动器接线 | 暂用 `MC_RESOURCE_PACKS` 环境变量；启动器选项待做（注意：字体与贴图集各自建栈，会重复发现一次）|
+| UI 文档（`ui:` 加载的 JSON）接入栈 | 待做 |
+| **统一资源管理器**（`ResourceManager`：一次发现、全局共用，对应原版单一 `ResourceManager` 角色）| 已实现；字体/贴图集/语言表/字体引用全部改为从它读取；端到端验证：日志 `resource packs: 1 installed`（由两行变一行），红色覆盖环仍在 |
+| 目录选择与启动器接线 | 暂用 `MC_RESOURCE_PACKS` 环境变量；启动器选项待做 |
 | 两阶段重载（T-173）与文件监听（T-174）| 待做 |
