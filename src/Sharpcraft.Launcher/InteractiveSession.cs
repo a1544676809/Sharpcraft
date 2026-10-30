@@ -854,9 +854,19 @@ internal sealed class InteractiveSession
                     break;
 
                 case PacketIds.PlayClientbound.SetActionBarText:
-                    if (Sharpcraft.Common.Nbt.NbtReader.TryReadNetworkRoot(
-                            body[reader.Position..], out var actionBarComponent, out _) == DecodeStatus.Success &&
-                        actionBarComponent is not null)
+                    var actionBarStatus = Sharpcraft.Common.Nbt.NbtReader.TryReadNetworkRoot(
+                        body[reader.Position..], out var actionBarComponent, out _);
+
+                    if (actionBarStatus != DecodeStatus.Success)
+                    {
+                        // A packet whose body does not parse where it was expected is worth reporting rather than
+                        // dropping silently: the failure is what makes a missing feature invisible.
+                        if (_diagEnabled)
+                        {
+                            Console.WriteLine($"action bar parse failed: {actionBarStatus}, {body.Length} bytes");
+                        }
+                    }
+                    else if (actionBarComponent is not null)
                     {
                         // The action bar from a title command arrives on its own packet, not as a system message with
                         // the overlay flag, so it needs handling here as well.
