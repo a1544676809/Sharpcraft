@@ -43,6 +43,39 @@ public sealed class ResourcePack : IDisposable
     /// <summary>Whether this pack is a folder or an archive.</summary>
     public ResourcePackKind Kind { get; }
 
+    private ResourceFilter? _filter;
+    private bool _filterRead;
+
+    /// <summary>
+    /// The pack's <c>filter</c> block, or null when it declares none.
+    /// </summary>
+    /// <remarks>
+    /// Read on first use: a filter is only consulted when a lookup actually misses in this pack, so packs that declare
+    /// none never pay for parsing their metadata.
+    /// </remarks>
+    public ResourceFilter? Filter
+    {
+        get
+        {
+            if (!_filterRead)
+            {
+                _filterRead = true;
+
+                using var metadata = Open(MetadataFileName);
+
+                if (metadata is not null)
+                {
+                    using var reader = new StreamReader(metadata);
+                    _filter = ResourceFilter.TryParse(reader.ReadToEnd());
+                }
+            }
+
+            return _filter;
+        }
+    }
+
+    private const string MetadataFileName = "pack.mcmeta";
+
     /// <summary>Opens a pack from a folder.</summary>
     /// <param name="root">Folder holding <c>pack.mcmeta</c>.</param>
     public static ResourcePack FromDirectory(string root) =>

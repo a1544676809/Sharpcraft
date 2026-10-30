@@ -47,6 +47,17 @@ public interface IAssetSource : IDisposable
         content = Stream.Null;
         return false;
     }
+
+    /// <summary>
+    /// True when this source hides the resource from every lower priority source.
+    /// </summary>
+    /// <param name="kind">Resource kind.</param>
+    /// <param name="location">Resource to test.</param>
+    /// <remarks>
+    /// A pack's <c>filter</c> block exists to make a resource absent even when a pack below carries it, so a block has to
+    /// stop the scan rather than simply not answering.
+    /// </remarks>
+    bool Blocks(ResourceKind kind, Identifier location) => false;
 }
 
 /// <summary>
@@ -84,6 +95,13 @@ public sealed class AssetStack : IDisposable
     {
         for (var i = _sources.Count - 1; i >= 0; i--)
         {
+            if (_sources[i].Blocks(kind, location))
+            {
+                // A pack's filter hides the resource from this pack downwards, so the scan stops here rather than
+                // continuing to a lower pack that would otherwise answer.
+                break;
+            }
+
             if (_sources[i].TryOpen(kind, location, out content))
             {
                 sourceId = _sources[i].Id;

@@ -53,6 +53,9 @@ public sealed class ResourcePackSource : IAssetSource
     }
 
     /// <inheritdoc />
+    public bool Blocks(ResourceKind kind, Identifier location) => _pack.Filter?.IsFiltered(location) ?? false;
+
+    /// <inheritdoc />
     public IEnumerable<Identifier> List(string prefix)
     {
         var root = string.Concat(ResourcePath.ClientRoot, "/", prefix);

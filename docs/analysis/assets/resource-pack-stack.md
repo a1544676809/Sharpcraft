@@ -49,6 +49,13 @@ updated: 2026-10-30
 `PathPackResources.getResource(type, location)` 解析为 `<root>/<assets|data>/<namespace>/<path>`；`getNamespaces` 枚举该根下的目录名并校验命名空间合法。
 发现的包使用固定配置 `PackSelectionConfig(required=false, Position.TOP, fixedPosition=false)`。
 
+## 2.2 filter 的匹配语义（已核对）
+
+`pack.mcmeta` 的 `filter.block[]` 每项是 `{ namespace?: 正则, path?: 正则 }`（`IdentifierPattern`）：
+- 缺省的字段**恒真**（`Optional.empty()` → `r -> true`），所以 `{}` 遮蔽**一切**；
+- 正则用 `Pattern.asPredicate()`，即 `matcher(x).find()` ⇒ **子串匹配**，不是整串锚定；我们同样用 `Regex.IsMatch`（find 语义）；
+- 命中即"从该包向下遮蔽"，因此即便下层包有该资源也必须返回缺失——实现上是让扫描**就地停止**（`IAssetSource.Blocks`）。
+
 ## 3. 包元数据（已核对）
 
 `pack.mcmeta` 的 `pack` 段 = `description` + **支持的格式区间**（`PackFormat.packCodec(packType)`），
@@ -207,7 +214,7 @@ stack.add(primaryPackResources);                     // primary 最后
 | 包模型（目录 / zip，zip 保持单个句柄）| 已实现 `Client/Assets/ResourcePack` |
 | 发现（跳过重解析点/非包条目；zip 需含 `pack.mcmeta`）| 已实现 `ResourcePackDiscovery` |
 | 有序栈 + 逆序回退 + 命名空间并集 | 已实现 `ResourcePackStack`，5 项测试 |
-| `filter` 遮蔽（`pushFilterOnly`）| 待做（需先核对 `IdentifierPattern` 的匹配语义）|
+| `filter` 遮蔽（`pushFilterOnly`）| 已实现：`ResourceFilter`（namespace/path 正则、缺省为恒真、**子串匹配**）、`IAssetSource.Blocks` 让扫描就地停止 |
 | UI 文档（`ui:` 加载的 JSON）接入栈 | 待做 |
 | **统一资源管理器**（`ResourceManager`：一次发现、全局共用，对应原版单一 `ResourceManager` 角色）| 已实现；字体/贴图集/语言表/字体引用全部改为从它读取；端到端验证：日志 `resource packs: 1 installed`（由两行变一行），红色覆盖环仍在 |
 | 目录选择与启动器接线 | 暂用 `MC_RESOURCE_PACKS` 环境变量；启动器选项待做 |
