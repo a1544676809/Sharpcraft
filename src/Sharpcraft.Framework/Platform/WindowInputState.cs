@@ -24,6 +24,7 @@ public sealed class WindowInputState
 
     /// <summary>Set when the primary button is pressed and cleared when the click is consumed.</summary>
     private bool _clickPending;
+    private bool _rightClickPending;
     private double _scroll;
 
     /// <summary>The interface scale and canvas currently in force.</summary>
@@ -219,6 +220,19 @@ public sealed class WindowInputState
         {
             _clickPending = true;
         }
+        else if (button == 1)
+        {
+            // The right button is what the reference uses for a chat click, so it needs its own flag.
+            _rightClickPending = true;
+        }
+    }
+
+    /// <summary>Takes the right button press since the last call and clears it.</summary>
+    public bool TakeRightClick()
+    {
+        var clicked = _rightClickPending;
+        _rightClickPending = false;
+        return clicked;
     }
 
     /// <summary>Takes the pending primary click, if any.</summary>

@@ -244,6 +244,22 @@ internal static class WindowCommand
                     session.ChatLog.Draw(uiGeometry, uiFont, canvasHeight, session.ChatTicks, session.Chat.IsOpen);
                     session.ActionBar.Draw(uiGeometry, uiFont, canvasWidth, canvasHeight);
 
+                    // The session needs the drawn height to know where the history sits, and the window layer owns the
+                    // clipboard, so the two are handed over here rather than reached for from inside the session.
+                    session.CanvasHeight = canvasHeight;
+
+                    if (session.Chat.IsOpen || !frame.Input.MouseCaptured)
+                    {
+                        var pointer = frame.Input.CursorInCanvas;
+                        var hover = session.ChatHoverAt(pointer.X, pointer.Y);
+
+                        if (hover is not null)
+                        {
+                            Sharpcraft.Client.Ui.Tooltip.Draw(
+                                uiGeometry, uiFont, hover, pointer.X, pointer.Y, canvasWidth, canvasHeight);
+                        }
+                    }
+
                     // The bar sits just right of the column, over the same rows the history occupies.
                     var chatBottom = canvasHeight - Sharpcraft.Client.Ui.ChatLog.BottomMargin;
                     var chatTop = chatBottom - (Sharpcraft.Client.Ui.ChatLog.LinesPerPage * Sharpcraft.Client.Ui.ChatLog.EntryHeight);

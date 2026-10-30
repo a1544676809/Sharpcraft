@@ -449,4 +449,7 @@
 
 已接线（数据层）：`ComponentRuns.FlattenStyled` 在展开组件的同一遍里产出与 runs **平行的** `ChatClick?[]` 与
 `TextRun[]?[]`；`ChatLog.Add` 接受这两个可选数组，`ClickFor`/`HoverFor`/`RunsAt` 供命中测试取用。
-**待做**：会话接线（右键执行、Shift+右键插入、悬停画框、光标变手型）与端到端实测。
+已接线：`system_chat` 走 `TryReadSystemChatStyled`（带点击/悬停），会话 `TryClickChat` 按**右键**命中并执行
+`open_url`/`run_command`/`suggest_command`/`copy_to_clipboard`，`ChatHoverAt` 供绘制期画提示框（宽度上限 210 已生效）。
+**缺口**：①`insertion` 字段未解析，Shift+右键目前只记诊断不插入；②光标不变手型（窗口层未暴露光标形状）；
+③玩家聊天的装饰路径仍会丢交互（装饰重建 runs），仅系统消息带交互。

@@ -129,6 +129,161 @@ internal sealed class InteractiveSession
     /// <summary>Ticks elapsed, used by the chat fade.</summary>
     public long ChatTicks => _chatTicks;
 
+    /// <summary>Height the interface was last drawn at, needed to know where the history sits.</summary>
+    public float CanvasHeight { get; set; }
+
+    /// <summary>
+    /// Runs a chat click at a point, following the reference: the right button acts, and holding shift inserts instead.
+    /// </summary>
+    /// <param name="x">Pointer x in canvas pixels.</param>
+    /// <param name="y">Pointer y in canvas pixels.</param>
+    /// <param name="shift">True when shift is held, which turns the click into an insertion.</param>
+    /// <param name="window">Window that owns the clipboard, used by the copy action.</param>
+    /// <returns>True when the click landed on an interactive run.</returns>
+    /// <remarks>
+    /// The reference resolves the style under the pointer and then acts on its click event, so the sequence here is the
+    /// same: find the entry, find the run, then act. An action this client cannot perform is reported rather than
+    /// silently ignored.
+    /// </remarks>
+    public bool TryClickChat(float x, float y, bool shift, Sharpcraft.Framework.Platform.WindowHost window)
+    {
+        if (UiFont is not { } font || CanvasHeight <= 0f || _chatLog.Count == 0)
+        {
+            return false;
+        }
+
+        var bottom = CanvasHeight - Sharpcraft.Client.Ui.ChatLog.BottomMargin;
+        var entry = Sharpcraft.Client.Ui.ChatHitTest.EntryAt(
+            x, y, Sharpcraft.Client.Ui.ChatLog.LeftInset, Sharpcraft.Client.Ui.ChatLog.ColumnWidth,
+            bottom, Sharpcraft.Client.Ui.ChatLog.EntryHeight, Sharpcraft.Client.Ui.ChatLog.LinesPerPage,
+            _chatLog.Count, _chatLog.Scroll.Offset);
+
+        if (entry < 0)
+        {
+            return false;
+        }
+
+        var index = _chatLog.Count - 1 - entry;
+        var runs = _chatLog.RunsAt(index);
+
+        if (runs.Length == 0)
+        {
+            return false;
+        }
+
+        var widths = new float[runs.Length];
+
+        for (var run = 0; run < runs.Length; run++)
+        {
+            widths[run] = font.MeasureWidth(runs[run].Text);
+        }
+
+        var hit = Sharpcraft.Client.Ui.ChatHitTest.RunAt(x, Sharpcraft.Client.Ui.ChatLog.MessageIndent, widths);
+
+        if (hit < 0)
+        {
+            return false;
+        }
+
+        var click = _chatLog.ClickFor(index, hit);
+
+        if (click is null)
+        {
+            return false;
+        }
+
+        if (shift)
+        {
+            // The reference inserts the style's own insertion text; that field is not read yet, so this is reported
+            // rather than doing something that looks similar but is not the same.
+            if (_diagEnabled)
+            {
+                Console.WriteLine("chat shift-click: insertion text is not read yet");
+            }
+
+            return true;
+        }
+
+        switch (click.Action)
+        {
+            case Sharpcraft.Common.Network.ChatClickAction.OpenUrl:
+                try
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(click.Value)
+                    {
+                        UseShellExecute = true
+                    });
+                }
+                catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+                {
+                    if (_diagEnabled)
+                    {
+                        Console.WriteLine($"chat open url failed: {exception.Message}");
+                    }
+                }
+
+                return true;
+
+            case Sharpcraft.Common.Network.ChatClickAction.RunCommand:
+                SendChat(click.Value, isCommand: true);
+                return true;
+
+            case Sharpcraft.Common.Network.ChatClickAction.SuggestCommand:
+                _chat.Open(click.Value);
+                return true;
+
+            case Sharpcraft.Common.Network.ChatClickAction.CopyToClipboard:
+                window.ClipboardText = click.Value;
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>
+    /// Hover runs under a point, or null when the pointer is not over an interactive run.
+    /// </summary>
+    /// <param name="x">Pointer x in canvas pixels.</param>
+    /// <param name="y">Pointer y in canvas pixels.</param>
+    public Sharpcraft.Common.Network.TextRun[]? ChatHoverAt(float x, float y)
+    {
+        if (UiFont is not { } font || CanvasHeight <= 0f || _chatLog.Count == 0)
+        {
+            return null;
+        }
+
+        var bottom = CanvasHeight - Sharpcraft.Client.Ui.ChatLog.BottomMargin;
+        var entry = Sharpcraft.Client.Ui.ChatHitTest.EntryAt(
+            x, y, Sharpcraft.Client.Ui.ChatLog.LeftInset, Sharpcraft.Client.Ui.ChatLog.ColumnWidth,
+            bottom, Sharpcraft.Client.Ui.ChatLog.EntryHeight, Sharpcraft.Client.Ui.ChatLog.LinesPerPage,
+            _chatLog.Count, _chatLog.Scroll.Offset);
+
+        if (entry < 0)
+        {
+            return null;
+        }
+
+        var index = _chatLog.Count - 1 - entry;
+        var runs = _chatLog.RunsAt(index);
+
+        if (runs.Length == 0)
+        {
+            return null;
+        }
+
+        var widths = new float[runs.Length];
+
+        for (var run = 0; run < runs.Length; run++)
+        {
+            widths[run] = font.MeasureWidth(runs[run].Text);
+        }
+
+        var hit = Sharpcraft.Client.Ui.ChatHitTest.RunAt(x, Sharpcraft.Client.Ui.ChatLog.MessageIndent, widths);
+
+        return hit < 0 ? null : _chatLog.HoverFor(index, hit);
+    }
+
     /// <summary>The transient line above the hotbar, which is where overlay chat goes.</summary>
     public Sharpcraft.Client.Ui.ActionBar ActionBar => _actionBar;
 
@@ -315,6 +470,11 @@ internal sealed class InteractiveSession
         {
             var step = Math.Clamp(wheel, -1d, 1d);
             _chatLog.ScrollBy((int)(step * 7d));
+        }
+
+        if (input.TakeRightClick())
+        {
+            TryClickChat(input.CursorInCanvas.X, input.CursorInCanvas.Y, input.IsKeyDown(InputKey.LeftShift), window);
         }
 
         if (UiFont is { } uiFont && input.TakeClick())
@@ -928,9 +1088,13 @@ internal sealed class InteractiveSession
                     break;
 
                 case PacketIds.PlayClientbound.SystemChat:
-                    if (ChatPackets.TryReadSystemChat(body[reader.Position..], out Sharpcraft.Common.Network.TextRun[] chatRuns, out var overlay, _language) ==
-                        DecodeStatus.Success)
+                    // The style is read beside the runs because that is what makes a message clickable: the reference
+                    // resolves the style under the pointer, so the click has to travel with the run that owns it.
+                    if (ChatPackets.TryReadSystemChatStyled(
+                            body[reader.Position..], out var chatRuns, out var chatClicks, out var chatHovers,
+                            out var overlay, _language) == DecodeStatus.Success)
                     {
+
                         // The overlay flag means "show this above the hotbar rather than in the history".
                         if (overlay)
                         {
@@ -939,7 +1103,12 @@ internal sealed class InteractiveSession
                         else
                         {
                             // A system line is what the reference tags with its pale indicator bar.
-                            _chatLog.Add(chatRuns, _chatTicks, Sharpcraft.Client.Ui.ChatLog.MessageTag.System);
+                            _chatLog.Add(
+                                chatRuns,
+                                _chatTicks,
+                                Sharpcraft.Client.Ui.ChatLog.MessageTag.System,
+                                chatClicks,
+                                chatHovers);
 
                             if (_diagEnabled)
                             {

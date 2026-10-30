@@ -50,6 +50,45 @@ public static class ChatPackets
         return DecodeStatus.Success;
     }
 
+    /// <summary>
+    /// Reads a <c>system_chat</c> body and keeps the click and hover its runs carry.
+    /// </summary>
+    /// <param name="body">Packet body without the id.</param>
+    /// <param name="runs">Runs in order.</param>
+    /// <param name="clicks">Click per run, parallel to <paramref name="runs"/>.</param>
+    /// <param name="hovers">Hover per run, parallel to <paramref name="runs"/>.</param>
+    /// <param name="overlay">True when the line belongs above the hotbar.</param>
+    /// <param name="language">Translation table, or null.</param>
+    public static DecodeStatus TryReadSystemChatStyled(
+        ReadOnlySpan<byte> body,
+        out TextRun[] runs,
+        out ChatClick?[] clicks,
+        out TextRun[]?[] hovers,
+        out bool overlay,
+        LanguageTable? language = null)
+    {
+        runs = [];
+        clicks = [];
+        hovers = [];
+        overlay = false;
+
+        var status = NbtReader.TryReadNetworkRoot(body, out var root, out var consumed);
+
+        if (status != DecodeStatus.Success || root is null)
+        {
+            return status == DecodeStatus.Success ? DecodeStatus.Invalid : status;
+        }
+
+        if (new PayloadReader(body[consumed..]).TryReadBool(out var overlayFlag) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        (runs, clicks, hovers) = ComponentRuns.FlattenStyled(root, language);
+        overlay = overlayFlag;
+        return DecodeStatus.Success;
+    }
+
     /// <summary>Reads a <c>system_chat</c> body.</summary>
     /// <param name="body">Packet body without the id.</param>
     /// <param name="text">Flattened text.</param>
