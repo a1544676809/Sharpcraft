@@ -707,6 +707,7 @@ internal static class FrameCommand
         // The windowed path passes meshSynchronously false and lets the background worker do the meshing.
         float[]? translucentVertices = null;
         uint[]? translucentIndices = null;
+        var translucentRanges = new List<(int FirstIndex, int IndexCount, float CentreX, float CentreZ)>();
 
         if (cache is null)
         {
@@ -722,9 +723,22 @@ internal static class FrameCommand
             foreach (var chunk in world.GetChunks())
             {
                 var before = buffer.IndexCount;
+                var translucentBefore = translucent?.IndexCount ?? 0;
+
                 blocks += Sharpcraft.Client.Render.ChunkMesher.MeshChunk(
                     world, chunk, airState: 0, buffer, maxBlocks: 2_000_000 - blocks, sprites: sprites, translucent: translucent, layout: layout);
+
                 ranges.Add((before, buffer.IndexCount - before));
+
+                if (translucent is not null)
+                {
+                    // Each chunk's translucent faces occupy their own span of the shared buffer.
+                    translucentRanges.Add((
+                        translucentBefore,
+                        translucent.IndexCount - translucentBefore,
+                        (chunk.ChunkX * 16) + 8f,
+                        (chunk.ChunkZ * 16) + 8f));
+                }
             }
 
             mesh = buffer.ToMeshData(blocks);
@@ -817,6 +831,23 @@ internal static class FrameCommand
                 target = new Vector3(aimX, aimY, aimZ);
             }
         }
+        // Blending is order dependent, so translucent chunks are drawn far to near.
+        var translucentOrdered = translucentRanges
+            .Where(range => range.IndexCount > 0)
+            .OrderByDescending(range =>
+            {
+                var offsetX = range.CentreX - eye.X;
+                var offsetZ = range.CentreZ - eye.Z;
+                return (offsetX * offsetX) + (offsetZ * offsetZ);
+            })
+            .Select(range => (range.FirstIndex, range.IndexCount))
+            .ToArray();
+
+        if (translucentOrdered.Length > 0)
+        {
+            Console.WriteLine($"translucent ranges: {translucentOrdered.Length}, far to near");
+        }
+
         return new FrameRequest(
             width,
             height,
@@ -829,7 +860,8 @@ internal static class FrameCommand
             Atlas = atlas,
             DrawRanges = drawRanges,
             TranslucentVertices = translucentVertices,
-            TranslucentIndices = translucentIndices
+            TranslucentIndices = translucentIndices,
+            TranslucentRanges = translucentOrdered.Length > 0 ? translucentOrdered : null
         };
     }
 

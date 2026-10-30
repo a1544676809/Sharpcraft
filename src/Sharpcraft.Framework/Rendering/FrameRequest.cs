@@ -55,6 +55,15 @@ public sealed record FrameRequest(
 
     /// <summary>Indices of the translucent layer, in the same vertex layout as <see cref="Vertices"/>.</summary>
     public uint[]? TranslucentIndices { get; init; }
+
+    /// <summary>
+    /// Index ranges of the translucent layer in back to front order. Null draws it in one call.
+    /// </summary>
+    /// <remarks>
+    /// Blending is order dependent, so the caller has to sort: it is the only side that knows where each chunk sits
+    /// relative to the camera.
+    /// </remarks>
+    public (int FirstIndex, int IndexCount)[]? TranslucentRanges { get; init; }
 }
 
 /// <summary>An RGBA8 image uploaded as a texture, typically the stitched sprite atlas.</summary>

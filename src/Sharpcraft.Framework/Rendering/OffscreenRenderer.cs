@@ -628,7 +628,22 @@ public static class OffscreenRenderer
                 pass.SetBindGroup(0, bindGroup, []);
                 pass.SetVertexBuffer(0, translucentVertexBuffer);
                 pass.SetIndexBuffer(translucentIndexBuffer, WGPUIndexFormat.Uint32);
-                pass.DrawIndexed((uint)translucentIndices.Length);
+
+                if (request.TranslucentRanges is { Length: > 0 } translucentRanges)
+                {
+                    // Drawn in the order the caller sorted them, which is far to near.
+                    foreach (var (firstIndex, indexCount) in translucentRanges)
+                    {
+                        if (indexCount > 0)
+                        {
+                            pass.DrawIndexed((uint)indexCount, 1, (uint)firstIndex, 0, 0);
+                        }
+                    }
+                }
+                else
+                {
+                    pass.DrawIndexed((uint)translucentIndices.Length);
+                }
             }
 
             pass.End();
