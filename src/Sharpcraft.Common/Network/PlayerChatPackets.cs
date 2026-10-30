@@ -31,12 +31,12 @@ public static class PlayerChatPackets
     /// <param name="language">Translation table, or null to leave keys unresolved.</param>
     public static DecodeStatus TryReadPlayerChat(
         ReadOnlySpan<byte> body,
-        out string senderName,
-        out string text,
+        out TextRun[] senderName,
+        out TextRun[] text,
         LanguageTable? language = null)
     {
-        senderName = string.Empty;
-        text = string.Empty;
+        senderName = [];
+        text = [];
 
         var reader = new PayloadReader(body);
 
@@ -59,7 +59,7 @@ public static class PlayerChatPackets
             return DecodeStatus.NeedMoreData;
         }
 
-        string? unsignedContent = null;
+        TextRun[]? unsignedContent = null;
 
         if (hasUnsignedContent)
         {
@@ -70,7 +70,7 @@ public static class PlayerChatPackets
                 return DecodeStatus.NeedMoreData;
             }
 
-            unsignedContent = ComponentText.Flatten(component, language);
+            unsignedContent = ComponentRuns.Flatten(component, language);
             reader.Skip(consumed);
         }
 
@@ -88,7 +88,7 @@ public static class PlayerChatPackets
             return DecodeStatus.NeedMoreData;
         }
 
-        senderName = ComponentText.Flatten(nameComponent, language);
+        senderName = ComponentRuns.Flatten(nameComponent, language);
         reader.Skip(nameLength);
 
         // The binding ends with an optional target name, which matters only for messages aimed at one player.
@@ -103,7 +103,7 @@ public static class PlayerChatPackets
             return DecodeStatus.NeedMoreData;
         }
 
-        text = unsignedContent ?? content;
+        text = unsignedContent ?? [new TextRun(content, ComponentRuns.DefaultColour, Bold: false)];
         return DecodeStatus.Success;
     }
 

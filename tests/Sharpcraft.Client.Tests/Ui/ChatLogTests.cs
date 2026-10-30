@@ -115,6 +115,54 @@ public sealed class ChatLogTests
         Assert.Equal("chat.type.text", ComponentText.Flatten(compound));
     }
 
+
+    [Fact]
+    public void AStyledLineDrawsEachRunInItsOwnColour()
+    {
+        var log = new ChatLog();
+        log.Add(
+        [
+            new Sharpcraft.Common.Network.TextRun("aa", 0xFFFF5555u, Bold: false),
+            new Sharpcraft.Common.Network.TextRun("bb", 0xFF55FF55u, Bold: false)
+        ],
+        tick: 0);
+
+        var geometry = new UiGeometry();
+        log.Draw(geometry, Font(), screenHeight: 200f, nowTick: 0, fullyVisible: true);
+
+        var colours = new HashSet<uint>();
+
+        for (var index = 0; index < geometry.Vertices.Length; index += 5)
+        {
+            colours.Add((uint)BitConverter.SingleToUInt32Bits(geometry.Vertices[index + 4]));
+        }
+
+        // Two runs, two inks; the row background is not a vertex colour so it does not appear here.
+        Assert.Contains(0xFFFF5555u, colours.Select(PackToWord));
+        Assert.Contains(0xFF55FF55u, colours.Select(PackToWord));
+    }
+
+    [Fact]
+    public void ABoldRunIsDrawnTwiceSoItReadsAsBold()
+    {
+        var plain = new ChatLog();
+        plain.Add("aa", tick: 0);
+
+        var bold = new ChatLog();
+        bold.Add([new Sharpcraft.Common.Network.TextRun("aa", 0xFFFFFFFFu, Bold: true)], tick: 0);
+
+        var plainGeometry = new UiGeometry();
+        var boldGeometry = new UiGeometry();
+
+        plain.Draw(plainGeometry, Font(), screenHeight: 200f, nowTick: 0, fullyVisible: true);
+        bold.Draw(boldGeometry, Font(), screenHeight: 200f, nowTick: 0, fullyVisible: true);
+
+        // The background quad plus the glyphs: bold repeats the glyphs one pixel over.
+        Assert.True(boldGeometry.QuadCount > plainGeometry.QuadCount);
+    }
+
+    private static uint PackToWord(uint colour) => colour;
+
     /// <summary>A sheet whose every glyph advances six pixels, so wrapping has something to measure.</summary>
     private static BitmapFont Font()
     {

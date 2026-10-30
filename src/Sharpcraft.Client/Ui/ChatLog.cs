@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using System.Text;
+using Sharpcraft.Common.Network;
 using Sharpcraft.Framework.Rendering;
 
 namespace Sharpcraft.Client.Ui;
@@ -10,9 +12,8 @@ namespace Sharpcraft.Client.Ui;
 /// </summary>
 /// <remarks>
 /// A line stays fully visible for most of its life and then fades over the last second, which is what makes old chat
-/// unobtrusive without a timer per line: the alpha is computed from the line's age with the same curve the
-/// reference uses. Wrapping happens at draw time against the real glyph metrics, so a line that does not fit breaks
-/// where the font says it breaks rather than at an assumed character count.
+/// unobtrusive without a timer per line. Lines keep their styled runs: flattening them to one colour would lose the
+/// difference between a team name, an ordinary message and an error.
 /// </remarks>
 public sealed class ChatLog
 {
@@ -43,7 +44,7 @@ public sealed class ChatLog
     /// <summary>Text opacity at the default setting.</summary>
     public const float TextOpacity = 1f;
 
-    private readonly List<(string Text, long AddedTick)> _lines = [];
+    private readonly List<Line> _lines = [];
 
     /// <summary>Lines held, oldest first.</summary>
     public int Count => _lines.Count;
@@ -51,17 +52,37 @@ public sealed class ChatLog
     /// <summary>Lines that fit on one page.</summary>
     public static int LinesPerPage => VisibleHeight / EntryHeight;
 
-    /// <summary>Adds a line, dropping the oldest once the history is full.</summary>
+    /// <summary>Adds a plain line, which is drawn in white.</summary>
     /// <param name="text">Line text.</param>
     /// <param name="tick">Current tick, used for the fade.</param>
-    public void Add(string text, long tick)
+    public void Add(string text, long tick) =>
+        Add([new TextRun(text, ComponentRuns.DefaultColour, Bold: false)], tick);
+
+    /// <summary>Adds a line made of styled runs.</summary>
+    /// <param name="runs">Runs in order.</param>
+    /// <param name="tick">Current tick, used for the fade.</param>
+    public void Add(ReadOnlySpan<TextRun> runs, long tick)
     {
-        if (string.IsNullOrWhiteSpace(text))
+        if (runs.Length == 0)
         {
             return;
         }
 
-        _lines.Add((text, tick));
+        var builder = new StringBuilder();
+        var empty = true;
+
+        for (var index = 0; index < runs.Length; index++)
+        {
+            builder.Append(runs[index].Text);
+            empty &= string.IsNullOrWhiteSpace(runs[index].Text);
+        }
+
+        if (empty)
+        {
+            return;
+        }
+
+        _lines.Add(new Line(runs.ToArray(), tick, builder.ToString()));
 
         if (_lines.Count > MaxHistory)
         {
@@ -116,15 +137,17 @@ public sealed class ChatLog
 
         for (var index = _lines.Count - 1; index >= 0 && row < page; index--)
         {
-            var (text, addedTick) = _lines[index];
-            var alpha = fullyVisible ? 1f : AlphaFor(nowTick - addedTick);
+            var line = _lines[index];
+            var alpha = fullyVisible ? 1f : AlphaFor(nowTick - line.AddedTick);
 
             if (alpha <= 0.00001f)
             {
                 continue;
             }
 
-            foreach (var span in new Wrapped(text, font, ColumnWidth))
+            var pen = 0f;
+
+            foreach (var piece in new Wrapped(line.Text, font, ColumnWidth))
             {
                 if (row >= page)
                 {
@@ -139,17 +162,10 @@ public sealed class ChatLog
                     entryTop,
                     ColumnWidth + 8f,
                     EntryHeight,
-                    PackBlack(alpha * BackgroundOpacity));
+                    Pack(0x00000000u, alpha * BackgroundOpacity));
 
-                UiScreenLayout.AddText(
-                    geometry,
-                    font,
-                    span,
-                    MessageIndent,
-                    entryBottom - 8f,
-                    1f,
-                    PackWhite(alpha * TextOpacity));
-
+                DrawPiece(geometry, font, line, piece.Start, piece.Length, MessageIndent + pen, entryBottom - 8f, alpha);
+                pen += font.MeasureWidth(line.Text.AsSpan(piece.Start, piece.Length));
                 row++;
             }
         }
@@ -157,26 +173,86 @@ public sealed class ChatLog
         return row;
     }
 
-    private static uint PackBlack(float alpha) =>
-        (uint)Math.Clamp((int)(alpha * 255f), 0, 255) << 24;
+    private static void DrawPiece(
+        UiGeometry geometry,
+        BitmapFont font,
+        Line line,
+        int start,
+        int length,
+        float x,
+        float y,
+        float alpha)
+    {
+        var end = start + length;
+        var penX = x;
+        var cursor = start;
+        var runIndex = 0;
+        var runStart = 0;
 
-    private static uint PackWhite(float alpha) =>
-        0x00FFFFFFu | ((uint)Math.Clamp((int)(alpha * 255f), 0, 255) << 24);
+        while (cursor < end && runIndex < line.Runs.Length)
+        {
+            // Skip runs that end before the piece begins.
+            while (runIndex < line.Runs.Length && runStart + line.Runs[runIndex].Text.Length <= cursor)
+            {
+                runStart += line.Runs[runIndex].Text.Length;
+                runIndex++;
+            }
 
-    /// <summary>Greedy word wrapping over a line, allocating nothing.</summary>
+            if (runIndex >= line.Runs.Length)
+            {
+                break;
+            }
+
+            var run = line.Runs[runIndex];
+            var runEnd = runStart + run.Text.Length;
+            var sliceEnd = Math.Min(end, runEnd);
+            var sliceLength = sliceEnd - cursor;
+
+            if (sliceLength <= 0)
+            {
+                cursor = sliceEnd;
+                continue;
+            }
+
+            var slice = run.Text.AsSpan(cursor - runStart, sliceLength);
+            var colour = Pack(run.Colour, alpha * TextOpacity);
+            var startX = penX;
+            UiScreenLayout.AddText(geometry, font, slice, startX, y, 1f, colour);
+
+            if (run.Bold)
+            {
+                // Bold is the same glyphs repeated one pixel to the right, which is how the reference fakes it.
+                UiScreenLayout.AddText(geometry, font, slice, startX + 1f, y, 1f, colour);
+            }
+
+            penX += font.MeasureWidth(slice);
+            cursor = sliceEnd;
+        }
+    }
+
+    private static uint Pack(uint colour, float alpha)
+    {
+        var alphaByte = (uint)Math.Clamp((int)(alpha * 255f), 0, 255);
+        return (colour & 0x00FFFFFFu) | (alphaByte << 24);
+    }
+
+    private readonly record struct Line(TextRun[] Runs, long AddedTick, string Text);
+
+    /// <summary>Greedy word wrapping over a line, reporting where each piece starts, allocating nothing.</summary>
     private readonly ref struct Wrapped(string text, BitmapFont font, float width)
     {
-        /// <summary>Enumerates the wrapped pieces, breaking at spaces and, when a word cannot fit, mid word.</summary>
+        /// <summary>Enumerates the wrapped pieces.</summary>
         public Enumerator GetEnumerator() => new(text.AsSpan(), font, width);
     }
 
     /// <summary>Iterates wrapped pieces.</summary>
     private ref struct Enumerator(ReadOnlySpan<char> text, BitmapFont font, float width)
     {
+        private readonly int _total = text.Length;
         private ReadOnlySpan<char> _rest = text;
 
-        /// <summary>The current piece.</summary>
-        public ReadOnlySpan<char> Current { get; private set; }
+        /// <summary>The current piece: where it starts in the line and how long it is.</summary>
+        public (int Start, int Length) Current { get; private set; }
 
         /// <summary>Advances to the next piece.</summary>
         public bool MoveNext()
@@ -213,7 +289,7 @@ public sealed class ChatLog
                     ? lastSpace + 1
                     : index;
 
-            Current = _rest[..length];
+            Current = (_total - _rest.Length, length);
             _rest = _rest[length..];
             return true;
         }

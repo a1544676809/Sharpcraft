@@ -221,6 +221,33 @@ internal sealed class InteractiveSession
         Console.WriteLine($"chat sent: {line}");
     }
 
+
+    /// <summary>Joins runs into one string, for logging and for the diagnostic output.</summary>
+    private static string Plain(IReadOnlyList<Sharpcraft.Common.Network.TextRun> runs)
+    {
+        var builder = new System.Text.StringBuilder();
+
+        for (var index = 0; index < runs.Count; index++)
+        {
+            builder.Append(runs[index].Text);
+        }
+
+        return builder.ToString();
+    }
+
+    /// <summary>Joins runs into one string.</summary>
+    private static string Plain(Sharpcraft.Common.Network.TextRun[] runs)
+    {
+        var builder = new System.Text.StringBuilder();
+
+        for (var index = 0; index < runs.Length; index++)
+        {
+            builder.Append(runs[index].Text);
+        }
+
+        return builder.ToString();
+    }
+
     /// <summary>Sends a submitted line as either a chat message or a command.</summary>
     /// <param name="message">Line the player submitted.</param>
     /// <param name="isCommand">True when it starts with a slash.</param>
@@ -570,30 +597,34 @@ internal sealed class InteractiveSession
                     {
                         // The decoration around a player message comes from the chat type registry, which is not read
                         // yet, so the common shape is used and the gap is recorded rather than guessed at.
-                        var line = $"{chatSender}: {chatMessage}";
-                        _chatLog.Add(line, _chatTicks);
+                        var line = new System.Collections.Generic.List<Sharpcraft.Common.Network.TextRun>(chatSender.Length + chatMessage.Length + 1);
+                        line.AddRange(chatSender);
+                        line.Add(new Sharpcraft.Common.Network.TextRun(": ", Sharpcraft.Common.Network.ComponentRuns.DefaultColour, false));
+                        line.AddRange(chatMessage);
+
+                        _chatLog.Add(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(line), _chatTicks);
 
                         if (_diagEnabled)
                         {
-                            Console.WriteLine($"chat received: {line}");
+                            Console.WriteLine($"chat received: {Plain(line)}");
                         }
                     }
 
                     break;
 
                 case PacketIds.PlayClientbound.SystemChat:
-                    if (ChatPackets.TryReadSystemChat(body[reader.Position..], out var chatText, out var overlay, _language) ==
+                    if (ChatPackets.TryReadSystemChat(body[reader.Position..], out Sharpcraft.Common.Network.TextRun[] chatRuns, out var overlay, _language) ==
                         DecodeStatus.Success)
                     {
                         // The overlay flag marks an action bar line, which is drawn elsewhere in the reference; until
                         // that exists, keeping it out of the log is the honest choice.
                         if (!overlay)
                         {
-                            _chatLog.Add(chatText, _chatTicks);
+                            _chatLog.Add(chatRuns, _chatTicks);
 
                             if (_diagEnabled)
                             {
-                                Console.WriteLine($"chat received: {chatText}");
+                                Console.WriteLine($"chat received: {Plain(chatRuns)}");
                             }
                         }
                     }

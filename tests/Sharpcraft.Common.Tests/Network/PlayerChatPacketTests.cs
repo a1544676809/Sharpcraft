@@ -19,8 +19,8 @@ public sealed class PlayerChatPacketTests
         var body = Body("hello there", unsignedContent: null, chatTypeName: "Alice");
 
         Assert.Equal(DecodeStatus.Success, PlayerChatPackets.TryReadPlayerChat(body, out var sender, out var text));
-        Assert.Equal("Alice", sender);
-        Assert.Equal("hello there", text);
+        Assert.Equal("Alice", Join(sender));
+        Assert.Equal("hello there", Join(text));
     }
 
     [Fact]
@@ -31,7 +31,7 @@ public sealed class PlayerChatPacketTests
         var body = Body("original", unsignedContent: "filtered", chatTypeName: "Alice");
 
         Assert.Equal(DecodeStatus.Success, PlayerChatPackets.TryReadPlayerChat(body, out _, out var text));
-        Assert.Equal("filtered", text);
+        Assert.Equal("filtered", Join(text));
     }
 
     [Fact]
@@ -40,8 +40,8 @@ public sealed class PlayerChatPacketTests
         var body = Body("whisper", unsignedContent: null, chatTypeName: "Alice", target: "Bob");
 
         Assert.Equal(DecodeStatus.Success, PlayerChatPackets.TryReadPlayerChat(body, out var sender, out var text));
-        Assert.Equal("Alice", sender);
-        Assert.Equal("whisper", text);
+        Assert.Equal("Alice", Join(sender));
+        Assert.Equal("whisper", Join(text));
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public sealed class PlayerChatPacketTests
         var body = Body("masked", unsignedContent: null, chatTypeName: "Alice", filterWords: 1);
 
         Assert.Equal(DecodeStatus.Success, PlayerChatPackets.TryReadPlayerChat(body, out _, out var text));
-        Assert.Equal("masked", text);
+        Assert.Equal("masked", Join(text));
     }
 
     [Fact]
@@ -61,6 +61,19 @@ public sealed class PlayerChatPacketTests
         Assert.Equal(
             DecodeStatus.NeedMoreData,
             PlayerChatPackets.TryReadPlayerChat(body[..^6], out _, out _));
+    }
+
+
+    private static string Join(Sharpcraft.Common.Network.TextRun[] runs)
+    {
+        var builder = new StringBuilder();
+
+        for (var index = 0; index < runs.Length; index++)
+        {
+            builder.Append(runs[index].Text);
+        }
+
+        return builder.ToString();
     }
 
     private static byte[] Body(

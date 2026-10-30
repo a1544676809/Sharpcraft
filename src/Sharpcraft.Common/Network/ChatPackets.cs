@@ -17,6 +17,39 @@ namespace Sharpcraft.Common.Network;
 /// </remarks>
 public static class ChatPackets
 {
+    /// <summary>Reads a <c>system_chat</c> body, keeping its styling.</summary>
+    /// <param name="body">Packet body without the id.</param>
+    /// <param name="runs">Styled runs of the line.</param>
+    /// <param name="overlay">True when the line belongs in the action bar rather than the chat log.</param>
+    /// <param name="language">Translation table, or null to leave keys unresolved.</param>
+    public static DecodeStatus TryReadSystemChat(
+        ReadOnlySpan<byte> body,
+        out TextRun[] runs,
+        out bool overlay,
+        LanguageTable? language = null)
+    {
+        runs = [];
+        overlay = false;
+
+        var styledStatus = NbtReader.TryReadNetworkRoot(body, out var styledRoot, out var styledConsumed);
+
+        if (styledStatus != DecodeStatus.Success || styledRoot is null)
+        {
+            return styledStatus == DecodeStatus.Success ? DecodeStatus.Invalid : styledStatus;
+        }
+
+        var styledReader = new PayloadReader(body[styledConsumed..]);
+
+        if (styledReader.TryReadBool(out var styledOverlay) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        runs = ComponentRuns.Flatten(styledRoot, language);
+        overlay = styledOverlay;
+        return DecodeStatus.Success;
+    }
+
     /// <summary>Reads a <c>system_chat</c> body.</summary>
     /// <param name="body">Packet body without the id.</param>
     /// <param name="text">Flattened text.</param>
@@ -28,25 +61,22 @@ public static class ChatPackets
         out bool overlay,
         LanguageTable? language = null)
     {
+        var status = TryReadSystemChat(body, out TextRun[] runs, out overlay, language);
         text = string.Empty;
-        overlay = false;
 
-        var status = NbtReader.TryReadNetworkRoot(body, out var root, out var consumed);
-
-        if (status != DecodeStatus.Success || root is null)
+        if (status != DecodeStatus.Success)
         {
-            return status == DecodeStatus.Success ? DecodeStatus.Invalid : status;
+            return status;
         }
 
-        var reader = new PayloadReader(body[consumed..]);
+        var builder = new System.Text.StringBuilder();
 
-        if (reader.TryReadBool(out var isOverlay) != DecodeStatus.Success)
+        for (var index = 0; index < runs.Length; index++)
         {
-            return DecodeStatus.NeedMoreData;
+            builder.Append(runs[index].Text);
         }
 
-        text = ComponentText.Flatten(root, language);
-        overlay = isOverlay;
+        text = builder.ToString();
         return DecodeStatus.Success;
     }
 }
