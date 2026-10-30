@@ -126,3 +126,4 @@ tick 速率实测 19.4–19.8/s，原因是 Windows `Task.Delay` 的 ~15.6 ms �
 - 事实：原版"靠后的包覆盖靠前的包"已核对（`FallbackResourceManager` 反向遍历）；**但客户端各来源（内置/目录/服务器）加入顺序与默认位置未逐行核对**。
 - 缓解：先补核对（`ClientPackSource`、`Minecraft` 的 pack 注册、`DefaultPosition`），再冻结实现；核对结论写入 `docs/analysis/assets/resource-pack-stack.md` §5。
 - 复查条件：ADR-0015 评审通过、包来源顺序确认后关闭。
+- **2026-10-30 进展**：顺序与插入语义已核对到源码行（TOP=最高、BOTTOM=最低，vanilla 固定最低，发现包位于其上方），风险降为“已缓解，待实现验证”。

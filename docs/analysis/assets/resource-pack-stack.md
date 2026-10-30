@@ -99,6 +99,92 @@ updated: 2026-10-30
 ⇒ 一次重载要么整体成功应用、要么**整体失败并保持/放弃旧状态**，不存在"应用了一半"的中间态。
 （监听器内部仍是两阶段：准备 → 应用，见 `PreparableReloadListener`。）
 
+## 8. overlay 叠加的实现（已核对）
+
+`PathPackResources.PathResourcesSupplier.openResources`：primary 加上每个 overlay 目录（`content.resolve(overlay)`）各一个
+`PathPackResources`，包成 **`OverlayedPackResources`** 返回。其构造函数：
+
+```java
+stack.addAll(Lists.reverse(overlayPackResources));   // overlay 逆序在前
+stack.add(primaryPackResources);                     // primary 最后
+```
+
+`getResource` **正向**遍历该栈取第一个命中 ⇒ **overlay 全部优先于包根**，且多个 overlay 中**列表中靠后者优先**。
+`getNamespaces` 取并集；`getMetadataSection` 只查 primary（元数据不受 overlay 影响）。
+
+## 9. 重载调度（已核对）
+
+`SimpleReloadInstance.prepareTasks`：为每个 `PreparableReloadListener` 建立**串行屏障链**（前一个的 future 作为下一个的 `PreparationBarrier`）；
+**准备阶段**跑在 `taskExecutor`（后台），**应用阶段**跑在 `mainThreadExecutor`（主线程，`countingReloadExecutor`）；
+带进度计数（准备权重 2、重载 2、单监听器 1）。失败由 future 链向外传播，配合 §7 的"整体失败"语义。
+
+## 10. 包格式（已核对）
+
+`PackFormat(int major, int minor)`；格式码接受**整数**或 `[major, minor]` 列表。
+`lastPreMinorVersion`：`CLIENT_RESOURCES = 64`、`SERVER_DATA = 81`（用于区分"次版本号引入之前"的取值范围）。
+
+## 11. KnownPacksManager（已核对定位，本项目暂不需要）
+
+客户端侧维护"服务端已知包"的集合（`KnownPack`），用于握手时避免重复下发；它读取 `PackRepository` 的可用/已选包。
+**与本项目的本地资源包栈无直接关系**，实现资源包栈时不需要它；如将来做服务器资源包下发再处理。
+
+## 5. 未核对（不得据此实现）
+
+在本次研究范围内**已无未核对项**：包形态、优先级与插入语义、元数据、overlays（元数据 + 叠加实现）、
+重载失败与调度、包格式取值均已核对到源码行。范围外（有意不研究）：服务器下发资源包、`KnownPacks` 握手细节。
+
+## 6. 包内目录叠加（overlays，已核对元数据部分）
+
+`pack.mcmeta` 的 `overlays` 段（`OverlayMetadataSection`）：
+
+```json
+{ "overlays": { "entries": [ { "format": <格式区间>, "overlay": "<目录名>" } ] } }
+```
+
+- `entries[].overlay` 必须是 `[-_a-zA-Z0-9.]+` 的目录名，否则报 `is not accepted directory name`；
+- `overlaysForVersion(currentPackVersion)` 只保留**格式区间覆盖当前包格式**的条目；`Pack.Metadata.overlays` 就是这个列表；
+- 即：同一包里可以按 Minecraft 版本放多套资源，只有匹配当前版本的那几套生效。
+
+**仍待核对**：这些 overlay 目录在读取时如何叠在包根之上（哪个类负责合并、叠加顺序）。本仓库不做猜测。
+
+## 7. 重载失败语义（已核对入口）
+
+`Minecraft.reloadResourcePacks`：`resourcePackRepository.reload()` → `openAllSelected()` → `resourceManager.createReload(...)`，
+用 `LoadingOverlay` 展示进度；完成回调用 `Util.ifElse(…成功…, …失败…)`，失败走 `abortResourcePackRecovery()`
+（下载包场景）或仅弹 `resourcePack.load_fail` 提示。
+
+⇒ 一次重载要么整体成功应用、要么**整体失败并保持/放弃旧状态**，不存在"应用了一半"的中间态。
+（监听器内部仍是两阶段：准备 → 应用，见 `PreparableReloadListener`。）
+
+## 8. overlay 叠加的实现（已核对）
+
+`PathPackResources.PathResourcesSupplier.openResources`：primary 加上每个 overlay 目录（`content.resolve(overlay)`）各一个
+`PathPackResources`，包成 **`OverlayedPackResources`** 返回。其构造函数：
+
+```java
+stack.addAll(Lists.reverse(overlayPackResources));   // overlay 逆序在前
+stack.add(primaryPackResources);                     // primary 最后
+```
+
+`getResource` **正向**遍历该栈取第一个命中 ⇒ **overlay 全部优先于包根**，且多个 overlay 中**列表中靠后者优先**。
+`getNamespaces` 取并集；`getMetadataSection` 只查 primary（元数据不受 overlay 影响）。
+
+## 9. 重载调度（已核对）
+
+`SimpleReloadInstance.prepareTasks`：为每个 `PreparableReloadListener` 建立**串行屏障链**（前一个的 future 作为下一个的 `PreparationBarrier`）；
+**准备阶段**跑在 `taskExecutor`（后台），**应用阶段**跑在 `mainThreadExecutor`（主线程，`countingReloadExecutor`）；
+带进度计数（准备权重 2、重载 2、单监听器 1）。失败由 future 链向外传播，配合 §7 的"整体失败"语义。
+
+## 10. 包格式（已核对）
+
+`PackFormat(int major, int minor)`；格式码接受**整数**或 `[major, minor]` 列表。
+`lastPreMinorVersion`：`CLIENT_RESOURCES = 64`、`SERVER_DATA = 81`（用于区分"次版本号引入之前"的取值范围）。
+
+## 11. KnownPacksManager（已核对定位，本项目暂不需要）
+
+客户端侧维护"服务端已知包"的集合（`KnownPack`），用于握手时避免重复下发；它读取 `PackRepository` 的可用/已选包。
+**与本项目的本地资源包栈无直接关系**，实现资源包栈时不需要它；如将来做服务器资源包下发再处理。
+
 ## 5. 未核对（不得据此实现）
 
 | 项 | 说明 |

@@ -195,6 +195,6 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-168 | `Tooltip` 改用九宫格贴图（几何 `x-3-9 / w+6+18`、文字内边距 3、无资源回退矩形）| `docs/modules/ui.md` 8.8、`docs/analysis/gui/tooltip-background.md` | `NineSliceTests` +3 项（回退矩形、贴图材质与两个索引、内容区外扩 12px）；屏测 3× 放大确认紫环、缺角台阶、深色底；贴图像素解剖证明环在索引 9 且边块 `0..border` 可取到 | `Client/Ui/Tooltip`、`Launcher/FrameCommand.PrepareGuiSprites`、`Launcher/WindowCommand` | 已完成 |
 | T-169 | GUI 贴图 **scaling 语义对齐原版**：`stretch`/`tile`/`nine_slice`、四边 border（单值或对象）、标称 width/height、非法九宫格拒绝 | `docs/analysis/gui/tooltip-background.md` 7；`ref://mc-26.3-analysis/src/net/minecraft/client/resources/metadata/gui/GuiSpriteScaling.java` | `NineSliceTests`（+4 项：四边 border、tile 识别、无中心拒绝、标称尺寸驱动 UV）+ 全量 934 项绿 | `Client/Ui/GuiSpriteScaling`、`NineSlice`、`Tooltip`、`Launcher/FrameCommand` | 已完成|
 | T-170 | 资源包栈**行为研究**：优先级方向、列表形成、元数据、重载入口 | `docs/analysis/assets/resource-pack-stack.md` | 待补（研究项无测试） | 无（纯分析） | 进行中 |
-| T-171 | 补齐未核对项：**已核对**包形态（目录/zip/符号链接）、位置插入语义与客户端来源优先级；另已核对 overlays 元数据与版本过滤、重载失败整体中止；仍待核对 overlay 叠加实现、并发细节、KnownPacks、PackFormat 取值 | `docs/analysis/assets/resource-pack-stack.md` §2.1/§4.1/§5 | 待补 | 无（纯分析） | 进行中 |
+| T-171 | 资源包栈**全部行为核对完成**：包形态（目录/zip/链接）、优先级与插入、元数据、overlays（元数据+`OverlayedPackResources` 叠加）、重载失败与调度、`PackFormat` 取值 | `docs/analysis/assets/resource-pack-stack.md` §2.1/§4.1/§6–§11 | 研究项无测试（实现时补）| 无（纯分析）| 已完成 |
 | T-172 | 资源包栈实现（发现→有序栈→按命名空间回退→filter 遮蔽）| ADR-0015、`docs/analysis/assets/resource-pack-stack.md` | 待补 | 待落地 | 阻塞于评审 |
 | T-173 | 两阶段重载与旧快照回收（含自动化回收验证）| ADR-0015 | 待补 | 待落地 | 阻塞于评审 |
