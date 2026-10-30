@@ -18,7 +18,7 @@ public sealed class PlayerChatPacketTests
     {
         var body = Body("hello there", unsignedContent: null, chatTypeName: "Alice");
 
-        Assert.Equal(DecodeStatus.Success, PlayerChatPackets.TryReadPlayerChat(body, out var sender, out var text));
+        Assert.Equal(DecodeStatus.Success, PlayerChatPackets.TryReadPlayerChat(body, out var sender, out var text, out _));
         Assert.Equal("Alice", Join(sender));
         Assert.Equal("hello there", Join(text));
     }
@@ -30,7 +30,7 @@ public sealed class PlayerChatPacketTests
         // wants shown.
         var body = Body("original", unsignedContent: "filtered", chatTypeName: "Alice");
 
-        Assert.Equal(DecodeStatus.Success, PlayerChatPackets.TryReadPlayerChat(body, out _, out var text));
+        Assert.Equal(DecodeStatus.Success, PlayerChatPackets.TryReadPlayerChat(body, out _, out var text, out _));
         Assert.Equal("filtered", Join(text));
     }
 
@@ -39,7 +39,7 @@ public sealed class PlayerChatPacketTests
     {
         var body = Body("whisper", unsignedContent: null, chatTypeName: "Alice", target: "Bob");
 
-        Assert.Equal(DecodeStatus.Success, PlayerChatPackets.TryReadPlayerChat(body, out var sender, out var text));
+        Assert.Equal(DecodeStatus.Success, PlayerChatPackets.TryReadPlayerChat(body, out var sender, out var text, out _));
         Assert.Equal("Alice", Join(sender));
         Assert.Equal("whisper", Join(text));
     }
@@ -49,7 +49,7 @@ public sealed class PlayerChatPacketTests
     {
         var body = Body("masked", unsignedContent: null, chatTypeName: "Alice", filterWords: 1);
 
-        Assert.Equal(DecodeStatus.Success, PlayerChatPackets.TryReadPlayerChat(body, out _, out var text));
+        Assert.Equal(DecodeStatus.Success, PlayerChatPackets.TryReadPlayerChat(body, out _, out var text, out _));
         Assert.Equal("masked", Join(text));
     }
 
@@ -60,7 +60,7 @@ public sealed class PlayerChatPacketTests
 
         Assert.Equal(
             DecodeStatus.NeedMoreData,
-            PlayerChatPackets.TryReadPlayerChat(body[..^6], out _, out _));
+            PlayerChatPackets.TryReadPlayerChat(body[..^6], out _, out _, out _));
     }
 
 

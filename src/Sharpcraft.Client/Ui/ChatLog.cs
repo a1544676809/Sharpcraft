@@ -87,7 +87,13 @@ public sealed class ChatLog
         Error,
 
         /// <summary>Message the client altered, drawn with a dark bar.</summary>
-        Modified
+        Modified,
+
+        /// <summary>
+        /// Player message that arrived without a signature, which is what a server that does not sign chat produces.
+        /// The reference marks these as not secure and gives them the same pale bar as a system line.
+        /// </summary>
+        NotSecure
     }
 
     /// <summary>Lines held, oldest first.</summary>
@@ -141,6 +147,7 @@ public sealed class ChatLog
             MessageTag.System => SystemTagColour,
             MessageTag.Error => ErrorTagColour,
             MessageTag.Modified => ModifiedTagColour,
+            MessageTag.NotSecure => SystemTagColour,
             _ => 0u
         };
 

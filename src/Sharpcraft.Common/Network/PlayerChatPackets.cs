@@ -29,14 +29,20 @@ public static class PlayerChatPackets
     /// <param name="senderName">Display name of the sender, already flattened.</param>
     /// <param name="text">Message text.</param>
     /// <param name="language">Translation table, or null to leave keys unresolved.</param>
+    /// <param name="signed">
+    /// True when the message carried a signature. An unsigned message comes from a server that does not sign chat, and
+    /// the reference marks those lines as not secure, which is what decides whether they show an indicator bar.
+    /// </param>
     public static DecodeStatus TryReadPlayerChat(
         ReadOnlySpan<byte> body,
         out TextRun[] senderName,
         out TextRun[] text,
+        out bool signed,
         LanguageTable? language = null)
     {
         senderName = [];
         text = [];
+        signed = false;
 
         var reader = new PayloadReader(body);
 
@@ -47,7 +53,7 @@ public static class PlayerChatPackets
             return DecodeStatus.NeedMoreData;
         }
 
-        if (!SkipOptionalSignature(ref reader) || !TryReadBody(ref reader, out var content, out _))
+        if (!TryReadSignature(ref reader, out signed) || !TryReadBody(ref reader, out var content, out _))
         {
             return DecodeStatus.NeedMoreData;
         }
@@ -132,7 +138,7 @@ public static class PlayerChatPackets
         for (var index = 0; index < acknowledged; index++)
         {
             if (reader.TryReadVarInt(out _) != DecodeStatus.Success ||      // packed signature id
-                !SkipOptionalSignature(ref reader))
+                !TryReadSignature(ref reader, out _))
             {
                 return false;
             }
@@ -141,14 +147,18 @@ public static class PlayerChatPackets
         return true;
     }
 
-    private static bool SkipOptionalSignature(ref PayloadReader reader)
+    private static bool TryReadSignature(ref PayloadReader reader, out bool present)
     {
-        if (reader.TryReadBool(out var present) != DecodeStatus.Success)
+        present = false;
+
+        if (reader.TryReadBool(out var hasSignature) != DecodeStatus.Success)
         {
             return false;
         }
 
-        return !present || reader.TryReadByteArray(out _, maxLength: 512) == DecodeStatus.Success;
+        present = hasSignature;
+
+        return !hasSignature || reader.TryReadByteArray(out _, maxLength: 512) == DecodeStatus.Success;
     }
 
     private static bool SkipFilterMask(ref PayloadReader reader)

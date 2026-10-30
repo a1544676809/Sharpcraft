@@ -74,6 +74,22 @@ public sealed class ChatTagTests
         Assert.Equal(ChatLog.TagBarWidth, geometry.Vertices[30] - geometry.Vertices[20], 3);
     }
 
+
+    [Fact]
+    public void AnUnsignedPlayerMessageCarriesTheSamePaleBarAsASystemLine()
+    {
+        // A server that does not sign chat makes the reference treat every player message as not secure, which is why
+        // in offline play the bars appear beside chat lines as well as system ones.
+        var log = new ChatLog();
+        log.Add("hi", tick: 0, ChatLog.MessageTag.NotSecure);
+
+        var geometry = new UiGeometry();
+        log.Draw(geometry, Font(), screenHeight: 200f, nowTick: 0, fullyVisible: true);
+
+        var bar = ColourAt(geometry, quad: 1);
+        Assert.Equal(UiGeometry.ToLinear(UiGeometry.FromArgb(ChatLog.SystemTagColour)), bar);
+    }
+
     private static uint ColourAt(UiGeometry geometry, int quad) =>
         (uint)BitConverter.SingleToUInt32Bits(geometry.Vertices[(quad * 20) + 4]);
 

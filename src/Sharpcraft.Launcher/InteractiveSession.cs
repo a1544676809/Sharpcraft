@@ -705,7 +705,7 @@ internal sealed class InteractiveSession
 
                 case PacketIds.PlayClientbound.PlayerChat:
                     if (PlayerChatPackets.TryReadPlayerChat(
-                            body[reader.Position..], out var chatSender, out var chatMessage, _language) ==
+                            body[reader.Position..], out var chatSender, out var chatMessage, out var chatSigned, _language) ==
                         DecodeStatus.Success)
                     {
                         // The decoration around a player message comes from the chat type registry, which is not read
@@ -715,7 +715,12 @@ internal sealed class InteractiveSession
                         line.Add(new Sharpcraft.Common.Network.TextRun(": ", Sharpcraft.Common.Network.ComponentRuns.DefaultColour, false));
                         line.AddRange(chatMessage);
 
-                        _chatLog.Add(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(line), _chatTicks);
+                        // A message without a signature comes from a server that does not sign chat; the reference
+                        // marks those as not secure, which shows the same pale bar a system line gets.
+                        _chatLog.Add(
+                            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(line),
+                            _chatTicks,
+                            chatSigned ? Sharpcraft.Client.Ui.ChatLog.MessageTag.None : Sharpcraft.Client.Ui.ChatLog.MessageTag.NotSecure);
 
                         if (_diagEnabled)
                         {
