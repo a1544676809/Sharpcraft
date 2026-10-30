@@ -23,9 +23,53 @@ public sealed class NineSliceTests
         var scaling = GuiSpriteScaling.TryParse(json);
 
         Assert.NotNull(scaling);
-        Assert.Equal("nine_slice", scaling!.Type);
-        Assert.Equal(10, scaling.Border);
+        Assert.Equal(GuiSpriteScalingType.NineSlice, scaling!.Type);
+        Assert.Equal(GuiSpriteBorder.Uniform(10), scaling.Border);
         Assert.True(scaling.StretchInner);
+    }
+
+    [Fact]
+    public void APerSideBorderIsRead()
+    {
+        const string json = """
+        { "gui": { "scaling": { "type": "nine_slice", "width": 200, "height": 120,
+          "border": { "left": 4, "top": 6, "right": 8, "bottom": 10 } } } }
+        """;
+
+        var scaling = GuiSpriteScaling.TryParse(json);
+
+        Assert.NotNull(scaling);
+        Assert.Equal(new GuiSpriteBorder(4, 6, 8, 10), scaling!.Border);
+        Assert.Equal(200, scaling.Width);
+        Assert.Equal(120, scaling.Height);
+        Assert.False(scaling.StretchInner);
+    }
+
+    [Fact]
+    public void ATileSpriteIsRecognised()
+    {
+        var scaling = GuiSpriteScaling.TryParse("""{ "gui": { "scaling": { "type": "tile", "width": 16, "height": 16 } } }""");
+
+        Assert.NotNull(scaling);
+        Assert.Equal(GuiSpriteScalingType.Tile, scaling!.Type);
+    }
+
+    [Fact]
+    public void ANineSliceWithNoCentreSliceIsRejectedLikeTheReference()
+    {
+        // left + right >= width leaves nothing to stretch, which the reference refuses.
+        Assert.Null(GuiSpriteScaling.TryParse(
+            """{ "gui": { "scaling": { "type": "nine_slice", "width": 20, "height": 20, "border": 10 } } }"""));
+    }
+
+    [Fact]
+    public void ANominalSizeFromThePackDrivesTheSpriteCoordinates()
+    {
+        // A pack can declare a larger nominal size than the image; the geometry must follow the declaration.
+        var cells = NineSlice.Cells(0f, 0f, 100f, 100f, 200f, 200f, GuiSpriteBorder.Uniform(10));
+
+        Assert.Equal(9, cells.Count);
+        Assert.Contains(cells, c => c is { U1: 200f, V1: 200f });
     }
 
     [Fact]
@@ -87,7 +131,7 @@ public sealed class NineSliceTests
     {
         var background = new Sharpcraft.Framework.Rendering.TextureData(100, 100, Background());
         var frame = new Sharpcraft.Framework.Rendering.TextureData(100, 100, Background());
-        var sprites = new GuiSpriteAtlas(background, frame, 10);
+        var sprites = GuiSpriteAtlas.Uniform(background, frame, 10);
 
         var geometry = new Sharpcraft.Framework.Rendering.UiGeometry();
         Tooltip.Draw(geometry, Font(), [new TextRun("tip", 0xFFFFFFFFu, false)], 100f, 200f, 480f, 270f, sprites);
@@ -112,7 +156,7 @@ public sealed class NineSliceTests
         // Nine slice margin 9 plus the three pixel padding: the text area grows by twelve on every side.
         var background = new Sharpcraft.Framework.Rendering.TextureData(100, 100, Background());
         var frame = new Sharpcraft.Framework.Rendering.TextureData(100, 100, Background());
-        var sprites = new GuiSpriteAtlas(background, frame, 10);
+        var sprites = GuiSpriteAtlas.Uniform(background, frame, 10);
 
         var geometry = new Sharpcraft.Framework.Rendering.UiGeometry();
         Tooltip.Draw(geometry, Font(), [new TextRun("tip", 0xFFFFFFFFu, false)], 100f, 200f, 480f, 270f, sprites);

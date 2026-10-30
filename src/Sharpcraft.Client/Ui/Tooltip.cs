@@ -116,7 +116,7 @@ public static class Tooltip
                 geometry,
                 sprites.Background,
                 GuiSpriteAtlas.BackgroundIndex,
-                sprites.Border,
+                sprites.BackgroundScaling,
                 left,
                 top,
                 totalWidth,
@@ -126,7 +126,7 @@ public static class Tooltip
                 geometry,
                 sprites.Frame,
                 GuiSpriteAtlas.FrameIndex,
-                sprites.Border,
+                sprites.FrameScaling,
                 left,
                 top,
                 totalWidth,
@@ -153,17 +153,28 @@ public static class Tooltip
         UiGeometry geometry,
         TextureData sprite,
         int spriteIndex,
-        int border,
+        GuiSpriteScaling scaling,
         float left,
         float top,
         float width,
         float height)
     {
-        var cells = NineSlice.Cells(left, top, width, height, sprite.Width, sprite.Height, border);
+        // A pack may declare a nominal size that differs from the image, so the geometry follows the declaration.
+        var sourceWidth = scaling.Width > 0 ? scaling.Width : sprite.Width;
+        var sourceHeight = scaling.Height > 0 ? scaling.Height : sprite.Height;
+
+        if (scaling.Type != GuiSpriteScalingType.NineSlice)
+        {
+            // Stretch (and a tile we cannot repeat yet) draw the whole sprite across the box.
+            geometry.AddSpriteRectangle(left, top, width, height, 0f, 0f, 1f, 1f, spriteIndex);
+            return;
+        }
+
+        var cells = NineSlice.Cells(left, top, width, height, sourceWidth, sourceHeight, scaling.Border);
 
         // The cells work in texels, which is what a nine slice reasons about, but a vertex wants 0..1 coordinates.
-        var inverseWidth = 1f / sprite.Width;
-        var inverseHeight = 1f / sprite.Height;
+        var inverseWidth = 1f / sourceWidth;
+        var inverseHeight = 1f / sourceHeight;
 
         for (var index = 0; index < cells.Count; index++)
         {

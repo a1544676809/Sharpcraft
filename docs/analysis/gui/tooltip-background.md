@@ -77,3 +77,19 @@ updated: 2026-10-30
 
 结论：`border = 10` 与环索引 9 相容——九宫格的边块取 `0..border`（包含第 9 行/列），因此直边与四角都能取到那条环；
 我们的九宫格实现正是 `0..border` 区间，渲染结果与数据一致。
+
+## 7. 第三方资源包等效性（对齐原版 scaling 语义）
+
+原版 `GuiSpriteScaling` 有三种形态（`net/minecraft/client/resources/metadata/gui/GuiSpriteScaling.java`）：
+
+| 形态 | 字段 | 我们的实现 |
+| --- | --- | --- |
+| `stretch`（默认，无字段）| 无 | 整张贴图拉伸到一个 quad |
+| `tile` | `width`、`height` | 已解析；**渲染暂按 stretch 处理**（缺重复采样）|
+| `nine_slice` | `width`、`height`、`border`（**单值或 left/top/right/bottom**）、`stretch_inner`（默认 false）| 完整支持，含四边独立 |
+
+另对齐两条原版规则：
+- **`width`/`height` 是标称尺寸**，可不同于图片像素；我们的 UV 用标称尺寸换算（`GuiSpriteScaling.Width/Height`）。
+- 九宫格校验：`left+right >= width` 或 `top+bottom >= height` 时**原版判定非法**；我们同样返回 null，调用方回退。
+
+**尚未对齐**：多资源包栈（原版按 pack 顺序后者覆盖前者）。当前加载器只读基础包，第三方包目录/zip 尚未接入——这是"加载任意第三方包"的最后一块，需单独任务。

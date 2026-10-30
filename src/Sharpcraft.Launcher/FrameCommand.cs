@@ -266,6 +266,36 @@ internal static class FrameCommand
     /// The tooltip is a sprite pair, so without them the interface falls back to a plain rectangle. Reading the border
     /// from the <c>.mcmeta</c> rather than hard coding it keeps the drawing tied to the texture that will be used.
     /// </remarks>
+    /// <summary>Reads one tooltip sprite's scaling from its <c>.mcmeta</c>, or a stretch when absent.</summary>
+    /// <param name="packPath">Pack archive.</param>
+    /// <param name="name">Sprite name, such as <c>frame</c>.</param>
+    private static Sharpcraft.Client.Ui.GuiSpriteScaling ReadScaling(string packPath, string name)
+    {
+        try
+        {
+            using var archive = System.IO.Compression.ZipFile.OpenRead(packPath);
+            var entry = archive.GetEntry(
+                $"assets/minecraft/textures/gui/sprites/tooltip/{name}.png.mcmeta");
+
+            if (entry is null)
+            {
+                return new Sharpcraft.Client.Ui.GuiSpriteScaling();
+            }
+
+            using var reader = new StreamReader(entry.Open());
+            return Sharpcraft.Client.Ui.GuiSpriteScaling.TryParse(reader.ReadToEnd())
+                   ?? new Sharpcraft.Client.Ui.GuiSpriteScaling();
+        }
+        catch (System.IO.InvalidDataException)
+        {
+            return new Sharpcraft.Client.Ui.GuiSpriteScaling();
+        }
+        catch (System.IO.IOException)
+        {
+            return new Sharpcraft.Client.Ui.GuiSpriteScaling();
+        }
+    }
+
     internal static Sharpcraft.Client.Ui.GuiSpriteAtlas? PrepareGuiSprites()
     {
         var packPath = FindPack();
@@ -292,32 +322,9 @@ internal static class FrameCommand
             return null;
         }
 
-        var border = 10;
-
-        try
-        {
-            using var archive = System.IO.Compression.ZipFile.OpenRead(packPath);
-            var meta = archive.GetEntry("assets/minecraft/textures/gui/sprites/tooltip/frame.png.mcmeta");
-
-            if (meta is not null)
-            {
-                using var reader = new StreamReader(meta.Open());
-                var scaling = Sharpcraft.Client.Ui.GuiSpriteScaling.TryParse(reader.ReadToEnd());
-
-                if (scaling is { Type: "nine_slice", Border: > 0 })
-                {
-                    border = scaling.Border;
-                }
-            }
-        }
-        catch (System.IO.InvalidDataException)
-        {
-            Console.WriteLine("tooltip: frame mcmeta unreadable; assuming a border of 10");
-        }
-        catch (System.IO.IOException)
-        {
-            Console.WriteLine("tooltip: frame mcmeta unreadable; assuming a border of 10");
-        }
+        // Two sprites, each with its own scaling: a pack may give them different borders or a plain stretch.
+        var backgroundScaling = ReadScaling(packPath, "background");
+        var frameScaling = ReadScaling(packPath, "frame");
 
         var backgroundImage = Sharpcraft.Common.Imaging.PngDecoder.Decode(background);
         var frameImage = Sharpcraft.Common.Imaging.PngDecoder.Decode(frame);
@@ -327,7 +334,8 @@ internal static class FrameCommand
         var frameTexture = new Sharpcraft.Framework.Rendering.TextureData(
             frameImage.Width, frameImage.Height, frameImage.Pixels);
 
-        return new Sharpcraft.Client.Ui.GuiSpriteAtlas(backgroundTexture, frameTexture, border);
+        return new Sharpcraft.Client.Ui.GuiSpriteAtlas(
+            backgroundTexture, frameTexture, backgroundScaling, frameScaling);
     }
 
     internal static Sharpcraft.Client.Ui.BitmapFont? PrepareFont()
