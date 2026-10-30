@@ -48,6 +48,81 @@ public static class OffscreenRenderer
     /// <summary>Builds the sky pipeline: no vertex buffer, no depth, drawn first over the cleared target.</summary>
     /// <param name="device">Device.</param>
     /// <param name="format">Colour target format.</param>
+    /// <summary>
+    /// Compares the compute pyramid against the CPU reference, texel by texel, and prints the outcome.
+    /// </summary>
+    private static void ComparePyramid(
+        Instance instance,
+        Brew.Wgpu.Buffer depthReadback,
+        ulong depthSize,
+        int depthPadded,
+        Brew.Wgpu.Buffer pyramidOutput,
+        ulong outputSize,
+        int width,
+        int height)
+    {
+        if (depthReadback.MapBlocking(instance, MapMode.Read, 0, (nuint)depthSize) != WGPUMapAsyncStatus.Success)
+        {
+            Console.WriteLine("pyramid: depth map failed");
+            return;
+        }
+
+        var depthMapped = depthReadback.GetMappedRange<byte>(0, (nuint)depthSize);
+        var depth = new float[width * height];
+
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                depth[(y * width) + x] = BitConverter.ToSingle(depthMapped.Slice((y * depthPadded) + (x * 4), 4));
+            }
+        }
+
+        depthReadback.Unmap();
+
+        if (pyramidOutput.MapBlocking(instance, MapMode.Read, 0, (nuint)outputSize) != WGPUMapAsyncStatus.Success)
+        {
+            Console.WriteLine("pyramid: output map failed");
+            return;
+        }
+
+        var outWidth = Math.Max(1, width / 2);
+        var outHeight = Math.Max(1, height / 2);
+        var gpuMapped = pyramidOutput.GetMappedRange<byte>(0, (nuint)outputSize);
+
+        // The pyramid is defined over linear distances, so the reference is built from the same conversion.
+        for (var index = 0; index < depth.Length; index++)
+        {
+            depth[index] = DepthLinearisation.ToDistance(depth[index], 0.1f, 2000f);
+        }
+
+        var reference = DepthPyramid.Build(depth, width, height);
+        var expected = reference[1];
+        var mismatches = 0;
+        var worst = 0f;
+
+        for (var index = 0; index < outWidth * outHeight; index++)
+        {
+            var gpu = BitConverter.ToSingle(gpuMapped.Slice(index * 4, 4));
+            var delta = MathF.Abs(gpu - expected[index]);
+
+            // Float32 at two thousand blocks resolves to roughly a hundredth, so the comparison allows five centimetres;
+            // anything larger would be a real disagreement rather than rounding.
+            if (delta > 0.05f)
+            {
+                mismatches++;
+                worst = MathF.Max(worst, delta);
+            }
+        }
+
+        pyramidOutput.Unmap();
+        var gpu0 = BitConverter.ToSingle(gpuMapped.Slice(0, 4));
+        var gpu1 = BitConverter.ToSingle(gpuMapped.Slice(4, 4));
+        Console.WriteLine($"pyramid: first gpu {gpu0:F3}, {gpu1:F3}; cpu {expected[0]:F3}, {expected[1]:F3}; source depth0 {depth[0]:F3}");
+        Console.WriteLine(
+            $"pyramid: {outWidth}x{outHeight} level 1, gpu vs cpu mismatches {mismatches}, worst delta {worst:F6}");
+    }
+
     /// <summary>Reads the depth buffer back and prints its range, proving depth is available for the occlusion pass.</summary>
     private static void ReportDepth(Instance instance, Brew.Wgpu.Buffer depthReadback, ulong depthSize, int depthPadded, int width, int height)
     {
@@ -380,6 +455,84 @@ public static class OffscreenRenderer
                 height,
                 new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 });
 
+            var pyramidOutput = default(Brew.Wgpu.Buffer);
+            var pyramidReadback = default(Brew.Wgpu.Buffer);
+            var hasPyramid = false;
+            var outWidth = Math.Max(1, (int)width / 2);
+            var outHeight = Math.Max(1, (int)height / 2);
+            var outBytes = (ulong)(outWidth * outHeight * 4);
+
+            if (Environment.GetEnvironmentVariable("MC_FRAME_PYRAMID") == "1")
+            {
+                // Source must be a storage buffer, so the padded depth copy is copied again, tightly, into one.
+                var sourceBytes = (ulong)depthPadded * height;
+                var depthStorage = device.CreateBuffer(new BufferDescriptor
+                {
+                    Size = sourceBytes,
+                    Usage = BufferUsage.Storage | BufferUsage.CopyDst
+                });
+
+                // The depth texture is copied twice: once for the CPU reference and once for the compute pass, because a
+                // map-read buffer cannot also be a copy source.
+                encoder.CopyTextureToBuffer(
+                    depthTexture,
+                    depthStorage,
+                    (uint)depthPadded,
+                    height,
+                    new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 });
+
+                // A map-read buffer cannot also be storage, so the result is copied into a readback buffer afterwards.
+                pyramidOutput = device.CreateBuffer(new BufferDescriptor
+                {
+                    Size = outBytes,
+                    Usage = BufferUsage.Storage | BufferUsage.CopySrc
+                });
+                pyramidReadback = device.CreateBuffer(new BufferDescriptor
+                {
+                    Size = outBytes,
+                    Usage = BufferUsage.MapRead | BufferUsage.CopyDst
+                });
+                hasPyramid = true;
+
+                var parameters = new uint[] { width, height, (uint)(depthPadded / 4), 0, 0x3DCCCCCDu, 0x44FA0000u, 0, 0 };
+                var parameterBytes = new byte[32];
+                System.Runtime.InteropServices.MemoryMarshal.AsBytes(parameters.AsSpan()).CopyTo(parameterBytes);
+                using var parameterBuffer = device.CreateBufferInit(
+                    new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
+                    parameterBytes.AsSpan());
+
+                using var computeLayout = device.CreateBindGroupLayout(
+                [
+                    BindGroupLayoutEntry.Buffer(4, ShaderStage.Compute, WGPUBufferBindingType.ReadOnlyStorage, false, 0),
+                    BindGroupLayoutEntry.Buffer(5, ShaderStage.Compute, WGPUBufferBindingType.Storage, false, 0),
+                    BindGroupLayoutEntry.Buffer(6, ShaderStage.Compute, WGPUBufferBindingType.Uniform, false, 32)
+                ]);
+
+                using var computePipelineLayout = device.CreatePipelineLayout([computeLayout]);
+                using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
+                {
+                    Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("depth_pyramid")))
+                });
+                using var computePipeline = device.CreateComputePipeline(shader, "cs_downsample"u8, computePipelineLayout);
+                using var computeBindGroup = device.CreateBindGroup(
+                    computeLayout,
+                    [
+                        BindGroupEntry.Buffer(4, depthStorage, 0, sourceBytes),
+                        BindGroupEntry.Buffer(5, pyramidOutput, 0, outBytes),
+                        BindGroupEntry.Buffer(6, parameterBuffer, 0, 32)
+                    ]);
+
+                using var computePass = encoder.BeginComputePass();
+                computePass.SetPipeline(computePipeline);
+                computePass.SetBindGroup(0, computeBindGroup, []);
+                computePass.DispatchWorkgroups(
+                    (uint)Math.Max(1, (outWidth + 7) / 8),
+                    (uint)Math.Max(1, (outHeight + 7) / 8));
+                computePass.End();
+                encoder.CopyBufferToBuffer(pyramidOutput, 0, pyramidReadback, 0, outBytes);
+                depthStorage.Dispose();
+            }
+
             var commands = encoder.Finish();
             device.Queue.Submit(commands);
 
@@ -402,6 +555,11 @@ public static class OffscreenRenderer
             if (Environment.GetEnvironmentVariable("MC_FRAME_DEPTH") == "1")
             {
                 ReportDepth(instance, depthReadback, depthSize, depthPadded, (int)width, (int)height);
+            }
+
+            if (Environment.GetEnvironmentVariable("MC_FRAME_PYRAMID") == "1" && hasPyramid)
+            {
+                ComparePyramid(instance, depthReadback, depthSize, depthPadded, pyramidReadback, outBytes, (int)width, (int)height);
             }
 
             depthReadback.Dispose();
