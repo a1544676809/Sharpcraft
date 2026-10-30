@@ -213,3 +213,16 @@ P3 之前不谈包；但 §3 的 pass 划分必须**现在就按"可命名目标
 已知近似（需登记为偏差）：区块内**不逐面**排序，只按区块排序（与原版粒度同级）；交叉面仍可能出错，§7.1 已接受。
 
 依赖：S1 需要从资产/注册表取得方块渲染层信息（暂无），其余三片不依赖外部数据。
+
+### S2 实施细节（已勘察代码，2026-10-30）
+
+好消息：`ChunkMesher` 的**所有面都从同一个 `buffer.AppendQuad(...)` 出口写出**（`ChunkMesher.cs` L452 附近），
+且该出口作用域里已有当前方块的 `state`。因此拆分不需要重写网格算法：
+
+1. `MeshChunk(world, chunk, airState, buffer, maxBlocks, sprites, MeshBuffer? translucent = null, BlockStateLayout? layout = null)`；
+2. 面出口改为 `var target = BlockRenderLayers.IsTranslucent(state, layout) ? (translucent ?? buffer) : buffer;`；
+3. `Mesh(world, buffer, …)` 同步透传；`FrameCommand` 逐区块循环各建两个 `MeshBuffer`，得到两组 ranges；
+4. `FrameRequest` 增 `TranslucentVertices/Indices/Ranges`；离屏再加一条**混合开、深度写关**的管线，在不透明之后绘制，
+   ranges 按区块到相机距离**降序**（`TranslucentOrder` 已实现并有测试）。
+
+验收：合成"两片半透明平面相交"场景，与"关闭半透明"渲染比对——被遮挡部分必须改变颜色，且不透明区域逐像素不变。
