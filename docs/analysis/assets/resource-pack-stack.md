@@ -199,3 +199,15 @@ stack.add(primaryPackResources);                     // primary 最后
 - 我们当前只有一个"基础包 zip"（`AssetStack` + `ZipAssetSource`），**没有多包栈**，也没有重载。
 - 要做到"兼容任意第三方资源包"，需要：包发现（目录/zip）→ 有序栈（后者覆盖前者）→ 按命名空间回退查找 → 两阶段重载。
 - 与原则 2（模组热加载）同属"运行时资源替换"，两者共享同一套"原子替换 + 旧实例可回收"的要求。
+
+## 12. 实现进度
+
+| 部分 | 状态 |
+| --- | --- |
+| 包模型（目录 / zip，zip 保持单个句柄）| 已实现 `Client/Assets/ResourcePack` |
+| 发现（跳过重解析点/非包条目；zip 需含 `pack.mcmeta`）| 已实现 `ResourcePackDiscovery` |
+| 有序栈 + 逆序回退 + 命名空间并集 | 已实现 `ResourcePackStack`，5 项测试 |
+| `filter` 遮蔽（`pushFilterOnly`）| 待做 |
+| 接入现有加载点（字体、`GuiSpriteAtlas`、语言表、UI 文档）| 待做 |
+| 目录选择与启动器接线（`resourcepacks/`）| 待做 |
+| 两阶段重载（T-173）与文件监听（T-174）| 待做 |
