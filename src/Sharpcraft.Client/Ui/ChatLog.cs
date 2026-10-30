@@ -38,6 +38,16 @@ public sealed class ChatLog
     /// <summary>Ticks after which a line has faded completely.</summary>
     public const long FadeTicks = 200;
 
+    /// <summary>
+    /// Distance from the screen edge to the left edge of the chat background.
+    /// </summary>
+    /// <remarks>
+    /// Measured from the reference rather than derived: its chat box starts two interface pixels in from the edge,
+    /// while the text inside starts four. Drawing the box at the edge instead made the whole column sit two pixels
+    /// to the left of where it belongs.
+    /// </remarks>
+    public const float LeftInset = 2f;
+
     /// <summary>Background wash behind each line.</summary>
     public const float BackgroundOpacity = 0.5f;
 
@@ -158,7 +168,7 @@ public sealed class ChatLog
                 var entryTop = entryBottom - EntryHeight;
 
                 geometry.AddRectangle(
-                    MessageIndent - 4f,
+                    LeftInset,
                     entryTop,
                     ColumnWidth + 8f,
                     EntryHeight,
