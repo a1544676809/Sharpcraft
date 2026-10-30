@@ -220,4 +220,5 @@ stack.add(primaryPackResources);                     // primary 最后
 | 目录选择与启动器接线 | 暂用 `MC_RESOURCE_PACKS` 环境变量；启动器选项待做 |
 | 两阶段重载核心（T-173）：`ResourceManager.Reload` + 有序监听器 + 失败保留旧栈 | 已实现（4 项测试）；字体/贴图集监听器与触发源待接 |
 | `overlays` 叠加（A4）| 已实现：`ResourcePackOverlays` + `ResourcePack.Open`（overlay 逆序优先、primary 最后、`pack.mcmeta` 不叠加），4 项测试 |
-| 文件监听（T-174）| 待做 |
+| 文件监听（T-174/A9）| 已实现：`PackWatcher`（`MC_RESOURCE_PACK_WATCH=1`、300ms 静默去抖、关闭时不创建任何监听器），2 项测试 + 端到端 |
+| 重载监听器（T-175/A8）| 语言表已接入并端到端生效；字体/贴图集的 GPU 换绑待做（T-181）|

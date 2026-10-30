@@ -36,7 +36,17 @@ internal sealed class InteractiveSession
     private readonly PlayerListRoster _playerList = new();
     private readonly ChatInput _chat = new();
     private readonly ChatLog _chatLog = new();
-    private readonly Sharpcraft.Common.Localization.LanguageTable _language;
+    private Sharpcraft.Common.Localization.LanguageTable _language;
+
+    /// <summary>
+    /// The message table. Settable because a resource reload replaces it: chat already on screen keeps the text it was
+    /// drawn with, and messages that arrive afterwards use the new table, which is what a reload means for text.
+    /// </summary>
+    public Sharpcraft.Common.Localization.LanguageTable Language
+    {
+        get => _language;
+        set => _language = value ?? Sharpcraft.Common.Localization.LanguageTable.Empty;
+    }
     private long _chatTicks;
     private long _chatOpenedAtMs;
     private readonly Sharpcraft.Client.Ui.ActionBar _actionBar = new();

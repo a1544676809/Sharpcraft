@@ -138,6 +138,27 @@ internal static class WindowCommand
 
         var session = InteractiveSession.Create(world, request, live, workerPool, language, chatTypes);
 
+        // A reload rebuilds the stack and then tells the listeners, in order. Language first: everything that shows text
+        // reads it, so it must be in place before anything else rebuilds.
+        resources.AddListener("language", 10, manager => session.Language = FrameCommand.PrepareLanguage(manager));
+
+        // Watching is an extension the reference does not have, so it only exists when the switch is on
+        // (docs/decisions/0016-resource-pack-file-watch.md).
+        using var packWatcher = Sharpcraft.Client.Assets.PackWatcher.ForEnvironment(
+            FrameCommand.ResourcePackFolders(),
+            () =>
+            {
+                if (resources.Reload())
+                {
+                    Console.WriteLine("resource reload: applied after a file change");
+                }
+            });
+
+        if (Sharpcraft.Client.Assets.PackWatcher.IsEnabled)
+        {
+            Console.WriteLine($"resource watch: {packWatcher?.FolderCount ?? 0} folder(s)");
+        }
+
         // The document comes from one managed location and nowhere else: no environment variable and no command
         // line option can point the client at an arbitrary file (docs/decisions/0010). Editing that file reloads
         // the interface while the game runs; a broken edit keeps the previous screen.

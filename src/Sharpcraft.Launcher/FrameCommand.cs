@@ -274,6 +274,29 @@ internal static class FrameCommand
         return new Sharpcraft.Client.Assets.ResourceManager(stack, count, BuildStack);
     }
 
+    /// <summary>The pack folders named by <c>MC_RESOURCE_PACKS</c>, split and trimmed.</summary>
+    internal static IReadOnlyList<string> ResourcePackFolders()
+    {
+        var configured = Environment.GetEnvironmentVariable("MC_RESOURCE_PACKS");
+
+        if (string.IsNullOrWhiteSpace(configured))
+        {
+            return [];
+        }
+
+        var folders = new List<string>();
+
+        foreach (var folder in configured.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (System.IO.Directory.Exists(folder))
+            {
+                folders.Add(folder);
+            }
+        }
+
+        return folders;
+    }
+
     /// <summary>
     /// The pack format this client speaks, from <c>MC_PACK_FORMAT</c> or the snapshot default.
     /// </summary>
@@ -310,22 +333,13 @@ internal static class FrameCommand
 
         var count = 0;
         var clientFormat = ResolveClientPackFormat();
-        var folders = Environment.GetEnvironmentVariable("MC_RESOURCE_PACKS");
 
-        if (!string.IsNullOrWhiteSpace(folders))
+        foreach (var folder in ResourcePackFolders())
         {
-            foreach (var folder in folders.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            foreach (var pack in Sharpcraft.Client.Assets.ResourcePackDiscovery.Discover(folder, clientFormat))
             {
-                if (!System.IO.Directory.Exists(folder))
-                {
-                    continue;
-                }
-
-                foreach (var pack in Sharpcraft.Client.Assets.ResourcePackDiscovery.Discover(folder, clientFormat))
-                {
-                    stack.Add(new Sharpcraft.Client.Assets.ResourcePackSource(pack));
-                    count++;
-                }
+                stack.Add(new Sharpcraft.Client.Assets.ResourcePackSource(pack));
+                count++;
             }
         }
 
