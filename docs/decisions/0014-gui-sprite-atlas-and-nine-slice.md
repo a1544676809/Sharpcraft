@@ -20,6 +20,18 @@
 3. **渲染**：实现九宫格绘制（四角原尺寸、四边单向拉伸、中心双向拉伸），作为通用 UI 能力，供 tooltip / 按钮 / 面板等复用。
 4. **不受支持即降级**：`mcmeta` 缺失或类型不认识时，回退为按原尺寸平铺并在诊断中记录，不崩溃。
 
+## 实现步骤（已核对代码结构）
+
+`WindowedRenderer` 的 UI 绘制循环已是“按 `Range.Material` 切换 pipeline + bind group”，因此贴图材质不需要新架构：
+
+1. `UiMaterial` 增 `Sprite`；`UiGeometry.Range` 增 `SpriteIndex`；新增 `AddSpriteRectangle`（切换材质并记录索引）。
+2. 新 shader 采样 RGBA（不是字形那样只取 alpha）再乘顶点色；`UiRenderer.CreateSpritePipeline` 复用 text 布局。
+3. `WindowedRenderer` 接收 `IReadOnlyList<TextureData>`，为每张建 texture + bind group；循环里 `Sprite` 分支按 `range.SpriteIndex` 切换。
+4. `Client` 从资源包读 `tooltip/background|frame.png` 与 `.mcmeta`（`GuiSpriteScaling` 已就绪），组成贴图列表传入。
+5. `Tooltip` 用 `NineSlice.Cells` + `AddSpriteRectangle` 画两张图（几何 `x-3-9 / w+6+18`，文字内边距 3）。
+
+边界：贴图列表可为空，此时 `Sprite` 材质不使用，`Tooltip` 回退到现有矩形实现。
+
 ## 影响
 
 - `Tooltip` 改为"文字内容区 + 3 内边距 + 9 贴图边"，并按 `x-3-9 / w+6+18` 定位。
