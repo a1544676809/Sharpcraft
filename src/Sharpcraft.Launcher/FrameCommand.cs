@@ -674,6 +674,10 @@ internal static class FrameCommand
     /// <summary>Renders the world to an offscreen frame and writes a PNG.</summary>
     internal static string RenderWorld(ClientWorld world, int width, int height, BlockStateLayout? layout = null)
     {
+        // Every frame path reports the same fingerprint for the same scene, so two runs can be proven comparable before
+        // their pixels are compared.
+        Console.WriteLine($"scene: chunks {world.LoadedChunkCount}, fingerprint 0x{Sharpcraft.Client.World.SceneFingerprint.Of(world):X16}");
+
         var prepared = PrepareSprites(layout);
         var request = BuildRequest(
             world,

@@ -7,6 +7,7 @@
 
 | 文档 | 摘要 | 状态 | 最后更新 |
 | --- | --- | --- | --- |
+| [`midterm-goal.md`](midterm-goal.md) | 一段以证据定义的阶段目标：确定性基线、完整阶段、真实包可加载、性能门槛 | 草稿 | - |
 | [`roadmap.md`](roadmap.md) | M1–M6 的划分、出口条件与验收标准 | 已评审 | - |
 
 <!-- END GENERATED: docs/milestones -->
