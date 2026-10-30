@@ -678,6 +678,13 @@ internal static class FrameCommand
         // their pixels are compared.
         Console.WriteLine($"scene: chunks {world.LoadedChunkCount}, fingerprint 0x{Sharpcraft.Client.World.SceneFingerprint.Of(world):X16}");
 
+        if (Environment.GetEnvironmentVariable("MC_FRAME_RECORD") is { Length: > 0 } recordPath)
+        {
+            // Keep the scene so later runs render exactly the same world instead of whatever the server shipped.
+            Sharpcraft.Client.World.SceneRecorder.Save(world, recordPath);
+            Console.WriteLine($"scene: recorded to {recordPath}");
+        }
+
         var prepared = PrepareSprites(layout);
         var request = BuildRequest(
             world,

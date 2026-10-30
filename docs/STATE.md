@@ -91,7 +91,11 @@ updated: 2026-10-29
    **T-206 进行中**：`SceneFingerprint` 已完成（排序区块键 + 粗采样，2 项测试，同世界同值/不同场景不同值）；
    **已接入真实路径**（`FrameCommand.RenderWorld`）：两次运行分别打印 `scene: chunks 9, fingerprint 0xE5A2…` 与 `0xAD10…`
    ⇒ **世界本身每次都不同**（生成点与区块集合由服务器决定），这就是不可复现的根源。
-   **下一步具体动作**：录制区块并回放（固定场景）+ 钉死相机 + 冻结实体，使两次指纹相同，再跑逐像素比对。
+   **已达成（T-207）**：`SceneRecorder` 录制/回放 + `MC_FRAME_RECORD` / `MC_FRAME_REPLAY`。实测：录制 9 区块 3.38 MB；
+   回放两次指纹**相同**（0x1579C2F0017F8D2A），逐像素 **`compare: identical (max channel delta 0, tolerance 0)`**。
+   **新缺陷（T-208）**：回放指纹 0x1579… ≠ 录制时 0xC1B5… ⇒ 存取不保真（疑 minSectionY/y 偏移或光照未存）。
+   **下一步具体动作**：修 T-208 保真度；随后钉死相机与冻结实体（回放目前依赖场景推相机，已隐式确定）。
+11. **优先级补充（所有者 2026-10-30）**：**以还原原版着色器为标准**；着色器包降为次要，排在其后。
 10. **中期目标已立项**：`docs/milestones/midterm-goal.md` —— 确定性基线、五个阶段完整、Hi-Z 达 O3、
     真实着色器包（Complementary Unbound r5.9.3 主干子集）可加载且失败可回退、性能 p99 ≤16.7 ms。
 10. 随后：T-104 离屏 UI pass（多 pass 骨架）→ 运动矢量 pass → Hi-Z O2；M6 模组热加载（先写 ADR）→ P3。
