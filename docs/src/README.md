@@ -16,5 +16,6 @@
 | [`sharpcraft-client/`](sharpcraft-client/README.md) | 6 |
 | [`sharpcraft-common/`](sharpcraft-common/README.md) | 3 |
 | [`sharpcraft-framework/`](sharpcraft-framework/README.md) | 1 |
+| [`sharpcraft-launcher/`](sharpcraft-launcher/README.md) | 1 |
 
 <!-- END GENERATED: docs/src -->
