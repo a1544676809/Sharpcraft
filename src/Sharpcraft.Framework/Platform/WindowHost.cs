@@ -246,6 +246,7 @@ public sealed class WindowHost : IDisposable
         var scale = GuiScale.Calculate(width, height, _scaleOption);
         var (scaledWidth, scaledHeight) = GuiScale.ScaledSize(width, height, scale);
         Gui = new GuiCanvas(scale, scaledWidth, scaledHeight);
+        Input.SetCanvas(Gui);
     }
 
     /// <summary>Processes pending window events; returns false once the user closed the window.</summary>

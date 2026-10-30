@@ -225,21 +225,9 @@ internal static class WindowCommand
                     session.ChatLog.Draw(uiGeometry, uiFont, canvasHeight, session.ChatTicks, session.Chat.IsOpen);
                 }
 
-                // The prompt sits where the reference puts it: a two pixel inset, twelve pixel box at the foot of
-                // the screen, half transparent black behind it, and the caret after the typed text.
                 if (session.Chat.IsOpen)
                 {
-                    const uint promptBackground = 0x80000000u;
-                    uiGeometry.AddRectangle(2f, canvasHeight - 14f, canvasWidth - 4f, 12f, promptBackground);
-
-                    if (uiFont is not null)
-                    {
-                        var typed = session.Chat.Text;
-                        UiScreenLayout.AddText(uiGeometry, uiFont, typed, 4f, canvasHeight - 13f, 1f, 0xFFFFFFFFu);
-
-                        var caretX = 4f + (uiFont.MeasureWidth(typed) * 1f);
-                        uiGeometry.AddRectangle(caretX + 1f, canvasHeight - 13f, 1f, 8f, 0xFFE0E0E0u);
-                    }
+                    ChatPrompt.Draw(uiGeometry, uiFont, canvasWidth, canvasHeight, session.Chat.Text);
                 }
 
                 if (KeyBindings.Default.IsDown(frame.Input, InputAction.PlayerList))

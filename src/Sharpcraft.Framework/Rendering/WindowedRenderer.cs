@@ -291,7 +291,8 @@ public static class WindowedRenderer
 
             if (nextWidth != frameWidth || nextHeight != frameHeight)
             {
-                Console.WriteLine($"window: resize {frameWidth}x{frameHeight} -> {nextWidth}x{nextHeight}");
+                Console.WriteLine($"window: resize {frameWidth}x{frameHeight} -> {nextWidth}x{nextHeight}, "
+                    + $"gui scale {window.Gui.Scale} -> canvas {window.Gui.Width}x{window.Gui.Height}");
                 frameWidth = nextWidth;
                 frameHeight = nextHeight;
 
@@ -340,7 +341,11 @@ public static class WindowedRenderer
                 // interface scale (docs/modules/ui.md 9.1). One factor converts both the projection and the
                 // scissor rectangles, so a resize or a scale change moves the whole interface coherently.
                 var canvas = window.Gui;
-                uiScale = frameWidth / (float)Math.Max(1, canvas.Width);
+                // The factor is the whole scale, not framebuffer divided by canvas width: the canvas is rounded
+                // up, so that division is fractional and would place the bottom of the interface a little above the
+                // bottom of the screen. With the whole factor the interface lands on device pixels exactly, and the
+                // strip left over by rounding stays outside the framebuffer, which is what the reference does.
+                uiScale = Math.Max(1, canvas.Scale);
                 var matrix = new float[UiProjection.FloatsPerMatrix];
                 UiProjection.WriteOrthographic(canvas.Width, canvas.Height, matrix);
 

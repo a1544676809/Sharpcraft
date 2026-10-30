@@ -25,6 +25,16 @@ public sealed class WindowInputState
     /// <summary>Set when the primary button is pressed and cleared when the click is consumed.</summary>
     private bool _clickPending;
 
+    /// <summary>The interface scale and canvas currently in force.</summary>
+    public GuiCanvas Canvas { get; private set; } = new(1, 1, 1);
+
+    /// <summary>
+    /// The pointer position in interface pixels, which is the coordinate system the interface is laid out in
+    /// (docs/modules/ui.md 9.1). Hit testing uses this rather than the device position, otherwise a click lands
+    /// somewhere else as soon as the scale is not one.
+    /// </summary>
+    public Vector2 CursorInCanvas { get; private set; }
+
     /// <summary>True while the window has focus.</summary>
     public bool HasFocus { get; internal set; } = true;
 
@@ -152,6 +162,24 @@ public sealed class WindowInputState
         }
 
         _lastCursor = position;
+
+        var scale = Math.Max(1, Canvas.Scale);
+        CursorInCanvas = new Vector2(
+            MathF.Floor(position.X / scale),
+            MathF.Floor(position.Y / scale));
+    }
+
+    /// <summary>Records the interface scale in force, so pointer positions can be reported in its pixels.</summary>
+    /// <param name="canvas">Current scale and canvas.</param>
+    internal void SetCanvas(GuiCanvas canvas)
+    {
+        Canvas = canvas;
+
+        if (_lastCursor is { } last)
+        {
+            var scale = Math.Max(1, canvas.Scale);
+            CursorInCanvas = new Vector2(MathF.Floor(last.X / scale), MathF.Floor(last.Y / scale));
+        }
     }
 
     /// <summary>Records a mouse button press from the backend.</summary>
