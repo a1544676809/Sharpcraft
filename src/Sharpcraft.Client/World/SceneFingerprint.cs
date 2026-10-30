@@ -45,7 +45,8 @@ public static class SceneFingerprint
             }
 
             // Coarse sampling keeps the cost small while still reflecting any edit to the terrain.
-            for (var y = 0; y < chunk.SectionCount * 16; y += 8)
+            // Same absolute range as the recorder, otherwise the fingerprint and the file disagree about the world.
+            for (var y = chunk.MinSectionY * 16; y < (chunk.MinSectionY + chunk.SectionCount) * 16; y += 8)
             {
                 for (var x = 0; x < 16; x += 4)
                 {

@@ -50,7 +50,8 @@ public static class SceneRecorder
             writer.Write(chunk.SectionCount);
             writer.Write(chunk.MinSectionY);
 
-            for (var y = 0; y < chunk.SectionCount * 16; y++)
+            // y is section indexed by absolute y (y >> 4), so the sweep must start at the chunk's lowest section, not at zero.
+            for (var y = chunk.MinSectionY * 16; y < (chunk.MinSectionY + chunk.SectionCount) * 16; y++)
             {
                 for (var x = 0; x < 16; x++)
                 {
@@ -89,7 +90,7 @@ public static class SceneRecorder
 
             var chunk = new LevelChunk(chunkX, chunkZ, minSectionY, sectionCount);
 
-            for (var y = 0; y < sectionCount * 16; y++)
+            for (var y = minSectionY * 16; y < (minSectionY + sectionCount) * 16; y++)
             {
                 for (var x = 0; x < 16; x++)
                 {

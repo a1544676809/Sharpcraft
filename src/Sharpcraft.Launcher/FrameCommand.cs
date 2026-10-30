@@ -676,7 +676,9 @@ internal static class FrameCommand
     {
         // Every frame path reports the same fingerprint for the same scene, so two runs can be proven comparable before
         // their pixels are compared.
-        Console.WriteLine($"scene: chunks {world.LoadedChunkCount}, fingerprint 0x{Sharpcraft.Client.World.SceneFingerprint.Of(world):X16}");
+        var firstChunk = world.GetChunks().Length > 0 ? world.GetChunks()[0] : null;
+        Console.WriteLine($"scene: chunks {world.LoadedChunkCount}, minSectionY {firstChunk?.MinSectionY}, sections {firstChunk?.SectionCount}, " +
+            $"fingerprint 0x{Sharpcraft.Client.World.SceneFingerprint.Of(world):X16}");
 
         if (Environment.GetEnvironmentVariable("MC_FRAME_RECORD") is { Length: > 0 } recordPath)
         {

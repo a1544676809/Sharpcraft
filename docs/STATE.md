@@ -93,8 +93,10 @@ updated: 2026-10-29
    ⇒ **世界本身每次都不同**（生成点与区块集合由服务器决定），这就是不可复现的根源。
    **已达成（T-207）**：`SceneRecorder` 录制/回放 + `MC_FRAME_RECORD` / `MC_FRAME_REPLAY`。实测：录制 9 区块 3.38 MB；
    回放两次指纹**相同**（0x1579C2F0017F8D2A），逐像素 **`compare: identical (max channel delta 0, tolerance 0)`**。
-   **新缺陷（T-208）**：回放指纹 0x1579… ≠ 录制时 0xC1B5… ⇒ 存取不保真（疑 minSectionY/y 偏移或光照未存）。
-   **下一步具体动作**：修 T-208 保真度；随后钉死相机与冻结实体（回放目前依赖场景推相机，已隐式确定）。
+   **T-208 进展（未修完）**：已修正 y 范围（`GetBlockState` 的 y 按 `y>>4` 分段，必须从 `MinSectionY*16` 起）——指纹范围修正后录制值变为 0xF26F…；
+   并**排除布局原因**：录制与回放都报 `minSectionY -4 / 24 sections`，差异在**方块内容**。
+   **下一步具体动作**：写一个“逐方块首个差异”诊断（坐标 + 两个 state 值），定位 Save/Load 丢在哪类方块上（疑 `SetBlockState` 的 airState 语义或palette 默认值）。
+   注：**回放自身仍逐像素一致**，确定性目标未受影响。
 11. **优先级补充（所有者 2026-10-30）**：**以还原原版着色器为标准**；着色器包降为次要，排在其后。
 10. **中期目标已立项**：`docs/milestones/midterm-goal.md` —— 确定性基线、五个阶段完整、Hi-Z 达 O3、
     真实着色器包（Complementary Unbound r5.9.3 主干子集）可加载且失败可回退、性能 p99 ≤16.7 ms。
