@@ -54,7 +54,8 @@ public sealed class EntityPlaceholderMesher
         // Six faces of four vertices each, with two triangles per face.
         const int verticesPerBox = 24;
         const int indicesPerBox = 36;
-        _geometry.Reserve(entities.Length * verticesPerBox * 12, entities.Length * indicesPerBox);
+        // A player is drawn as six parts, so reserve for the worst case.
+        _geometry.Reserve(entities.Length * PlayerPartCount * verticesPerBox * 12, entities.Length * PlayerPartCount * indicesPerBox);
 
         var vertexFloats = 0;
         var indexCount = 0;
@@ -70,17 +71,34 @@ public sealed class EntityPlaceholderMesher
             var green = isPlayer ? 0.65f : 0.6f;
             var blue = isPlayer ? 1f : 0.5f;
 
-            AppendBox(
-                _geometry,
-                new Vector3(entity.X, entity.Y, entity.Z),
-                width,
-                height,
-                red,
-                green,
-                blue,
-                sprite,
-                ref vertexFloats,
-                ref indexCount);
+            if (isPlayer)
+            {
+                // Head, body, two arms and two legs: still boxes, but the silhouette reads as a person rather than a pillar.
+                // The second argument is the bottom of each part, not its centre.
+                // Proportions are the reference's: legs 0.75 tall, body 0.75, head 0.5, total height 1.8.
+                var feet = new Vector3(entity.X, entity.Y, entity.Z);
+
+                AppendBox(_geometry, feet + new Vector3(0f, 1.5f, 0f), 0.5f, 0.3f, red, green, blue, sprite, ref vertexFloats, ref indexCount);
+                AppendBox(_geometry, feet + new Vector3(0f, 0.75f, 0f), 0.5f, 0.75f, red, green, blue, sprite, ref vertexFloats, ref indexCount);
+                AppendBox(_geometry, feet + new Vector3(-0.375f, 0.75f, 0f), 0.25f, 0.75f, red, green, blue, sprite, ref vertexFloats, ref indexCount);
+                AppendBox(_geometry, feet + new Vector3(0.375f, 0.75f, 0f), 0.25f, 0.75f, red, green, blue, sprite, ref vertexFloats, ref indexCount);
+                AppendBox(_geometry, feet + new Vector3(-0.125f, 0f, 0f), 0.25f, 0.75f, red, green, blue, sprite, ref vertexFloats, ref indexCount);
+                AppendBox(_geometry, feet + new Vector3(0.125f, 0f, 0f), 0.25f, 0.75f, red, green, blue, sprite, ref vertexFloats, ref indexCount);
+            }
+            else
+            {
+                AppendBox(
+                    _geometry,
+                    new Vector3(entity.X, entity.Y, entity.Z),
+                    width,
+                    height,
+                    red,
+                    green,
+                    blue,
+                    sprite,
+                    ref vertexFloats,
+                    ref indexCount);
+            }
 
             LastEntityCount++;
         }
@@ -89,6 +107,9 @@ public sealed class EntityPlaceholderMesher
         _geometry.IndexCount = indexCount;
         return _geometry;
     }
+
+    /// <summary>Boxes a player is drawn from until real models are extracted from the jar.</summary>
+    public const int PlayerPartCount = 6;
 
     /// <summary>Entity type id of a player in 26.3, observed in the live world.</summary>
     private const int PlayerEntityTypeId = 159;

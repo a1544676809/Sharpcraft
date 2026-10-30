@@ -16,13 +16,24 @@ namespace Sharpcraft.Client.Tests.Render;
 public sealed class EntityPlaceholderMesherTests
 {
     [Fact]
-    public void OneEntityBecomesOneBox()
+    public void APlayerIsDrawnFromSixBoxes()
     {
         var mesher = new EntityPlaceholderMesher();
 
-        var geometry = mesher.Build([State(1, 10f, 64f, -3f)], Sprite());
+        var geometry = mesher.Build([State(159, 10f, 64f, -3f)], Sprite());
 
         Assert.Equal(1, mesher.LastEntityCount);
+        Assert.Equal(EntityPlaceholderMesher.PlayerPartCount * 24 * 12, geometry.VertexFloats);
+        Assert.Equal(EntityPlaceholderMesher.PlayerPartCount * 36, geometry.IndexCount);
+    }
+
+    [Fact]
+    public void AMobIsDrawnFromOneBox()
+    {
+        var mesher = new EntityPlaceholderMesher();
+
+        var geometry = mesher.Build([State(11, 10f, 64f, -3f)], Sprite());
+
         Assert.Equal(24 * 12, geometry.VertexFloats);
         Assert.Equal(36, geometry.IndexCount);
     }
@@ -37,9 +48,11 @@ public sealed class EntityPlaceholderMesherTests
 
         var (minX, maxX, minY, maxY, minZ, maxZ) = Bounds(geometry);
 
-        Assert.Equal(EntityPlaceholderMesher.PlayerWidth, maxX - minX, 3);
+        // The arms reach past the collision box, as they do in the reference; the height is what has to match.
+        Assert.InRange(maxX - minX, EntityPlaceholderMesher.PlayerWidth, 1.05f);
         Assert.Equal(EntityPlaceholderMesher.PlayerHeight, maxY - minY, 3);
-        Assert.Equal(EntityPlaceholderMesher.PlayerWidth, maxZ - minZ, 3);
+        // Depth is the body depth; only the arms widen the silhouette.
+        Assert.Equal(0.5f, maxZ - minZ, 3);
         Assert.Equal(70f, minY, 3);
         Assert.Equal(5f, (minX + maxX) / 2f, 3);
     }
