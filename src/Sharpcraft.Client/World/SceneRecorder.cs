@@ -90,6 +90,13 @@ public static class SceneRecorder
 
             var chunk = new LevelChunk(chunkX, chunkZ, minSectionY, sectionCount);
 
+            // A block write only lands in a section that exists, so the empty sections are created up front; without
+            // this the whole scene loads as air and every comparison silently passes against nothing.
+            for (var section = 0; section < sectionCount; section++)
+            {
+                chunk.SetSection(new ChunkSection(singleState: 0, sectionY: minSectionY + section));
+            }
+
             for (var y = minSectionY * 16; y < (minSectionY + sectionCount) * 16; y++)
             {
                 for (var x = 0; x < 16; x++)
@@ -123,5 +130,55 @@ public static class SceneRecorder
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Finds the first block that differs between two worlds, for diagnosing a lossy round trip.
+    /// </summary>
+    /// <param name="expected">Original world.</param>
+    /// <param name="actual">World rebuilt from the file.</param>
+    /// <param name="difference">Readable description, empty when identical.</param>
+    public static bool TryFindFirstDifference(ClientWorld expected, ClientWorld actual, out string difference)
+    {
+        ArgumentNullException.ThrowIfNull(expected);
+        ArgumentNullException.ThrowIfNull(actual);
+
+        foreach (var chunk in expected.GetChunks())
+        {
+            var other = Find(actual.GetChunks(), chunk.ChunkX, chunk.ChunkZ);
+
+            if (other is null)
+            {
+                difference = $"chunk {chunk.ChunkX},{chunk.ChunkZ} missing";
+                return true;
+            }
+
+            if (other.SectionCount != chunk.SectionCount || other.MinSectionY != chunk.MinSectionY)
+            {
+                difference = $"chunk {chunk.ChunkX},{chunk.ChunkZ} layout {other.MinSectionY}/{other.SectionCount} vs {chunk.MinSectionY}/{chunk.SectionCount}";
+                return true;
+            }
+
+            for (var y = chunk.MinSectionY * 16; y < (chunk.MinSectionY + chunk.SectionCount) * 16; y++)
+            {
+                for (var x = 0; x < 16; x++)
+                {
+                    for (var z = 0; z < 16; z++)
+                    {
+                        var want = chunk.GetBlockState(x, y, z);
+                        var got = other.GetBlockState(x, y, z);
+
+                        if (want != got)
+                        {
+                            difference = $"block ({x},{y},{z}) in chunk {chunk.ChunkX},{chunk.ChunkZ}: {want} became {got}";
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        difference = string.Empty;
+        return false;
     }
 }

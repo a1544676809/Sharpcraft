@@ -685,6 +685,11 @@ internal static class FrameCommand
             // Keep the scene so later runs render exactly the same world instead of whatever the server shipped.
             Sharpcraft.Client.World.SceneRecorder.Save(world, recordPath);
             Console.WriteLine($"scene: recorded to {recordPath}");
+
+            // Prove the file reproduces the scene instead of assuming it does.
+            var reloaded = Sharpcraft.Client.World.SceneRecorder.Load(recordPath);
+            var lossy = Sharpcraft.Client.World.SceneRecorder.TryFindFirstDifference(world, reloaded, out var detail);
+            Console.WriteLine(lossy ? $"scene: roundtrip differs: {detail}" : "scene: roundtrip identical");
         }
 
         var prepared = PrepareSprites(layout);
