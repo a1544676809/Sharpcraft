@@ -225,3 +225,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-199 | 原生 Vulkan 后端**决策预案**（ADR-0018 提议）：收益/成本/证据门槛/批准前置条件 | `docs/decisions/0018-native-vulkan-backend.md`、`docs/risks.md` R-022 | 成本表 + 实测证据（3 包 geo/tess=0）+ 四选项对比 | 决策文档（无代码）| 阻塞于评审 |
 | T-200 | **后端中立接口预留**（ADR-0018 裁决）：能力协商 `BackendCapabilities` + 阶段声明模型 + 禁止后端类型外泄 | `docs/specs/render/backend-interface.md`、ADR-0018 §8 | `BackendCapabilitiesTests`(3：WGPU 有 compute 无 geo/tess/RT、缺失项列举、支持项为空) | `Framework/Rendering/BackendCapabilities` | 已完成 |
 | T-201 | 时域放缩前置：**亚像素抖动**实现 + 管线规格新增 §13；`shader-packs.md` §9 补四条阶段/维度/特性检查规则 | `docs/specs/render/pipeline.md` §13、`docs/specs/render/shader-packs.md` §9 | `CameraJitterTests`(4：幅度<1px、均值归零、周期与负索引、投影位移<1px) | `Client/Render/CameraJitter` | 已完成 |
+| T-202 | 运动矢量：**重投影数学**（`Reprojection.Of/TryToScreen` + `FrameHistory`），像素单位、`NaN` 表示相机后方无效 | `docs/specs/render/pipeline.md` §13 | `ReprojectionTests`(5：静止为零、相机右移则像左移、近处位移更大、相机后方无效、历史返回上一帧) | `Client/Render/Reprojection` | 已完成 |

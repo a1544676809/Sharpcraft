@@ -79,7 +79,9 @@ updated: 2026-10-29
    实现 Vulkan 后端仍**未获批准**，R-022 保留（P3 后按实测复核）。
 7. **时域放缩前置已开工（T-201）**：`CameraJitter` 落地（周期 8、均值归零、投影平移 <1 px，4 项测试）；
    `pipeline.md` 新增 §13（jitter/运动矢量/深度为一等能力），`shader-packs.md` 新增 §9（阶段全序、维度双机制、
-   特性检查、未识别阶段跳过）。**下一步具体动作**：在 §3 pass 表里加 MotionVectors 输出（逐像素位移）。
+   特性检查、未识别阶段跳过）。**运动矢量数学已完成（T-202）**：`Reprojection` + `FrameHistory`，5 项测试（符号：当前→上一帧，像素）。
+**下一步具体动作**：在 §3 pass 表新增 MotionVectors 输出 pass（用 `Reprojection` 逐像素化），并把 `FrameHistory`
+接进窗口渲染循环（每帧 `Advance(viewProjection)`）；随后才是"深度可采样"与 tonemap 时机。
 8. 随后：M6 模组热加载（先写 ADR）→ 着色器包接入（P3）。
 会打印 `chat received:`。
 随后：T-120（`player_chat` 等剩余入站与组件样式）、T-108（热加载状态迁移）、T-104（离屏截图接 UI）。
