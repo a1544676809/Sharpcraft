@@ -47,6 +47,14 @@ public sealed record FrameRequest(
     /// while there is a single range the result is identical to one big draw.
     /// </remarks>
     public (int FirstIndex, int IndexCount)[]? DrawRanges { get; init; }
+
+    /// <summary>
+    /// Vertices of the translucent layer, drawn after the opaque pass with blending on and depth writes off.
+    /// </summary>
+    public float[]? TranslucentVertices { get; init; }
+
+    /// <summary>Indices of the translucent layer, in the same vertex layout as <see cref="Vertices"/>.</summary>
+    public uint[]? TranslucentIndices { get; init; }
 }
 
 /// <summary>An RGBA8 image uploaded as a texture, typically the stitched sprite atlas.</summary>

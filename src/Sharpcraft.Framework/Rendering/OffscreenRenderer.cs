@@ -322,6 +322,32 @@ public static class OffscreenRenderer
             vertexAttributes: VertexLayout.Attributes());
     }
 
+    /// <summary>
+    /// The translucent pipeline: the same shader and layout as terrain, but blending on and depth writes off so layers
+    /// behind still show through and the order of the draw calls matters.
+    /// </summary>
+    private static RenderPipeline CreateTranslucentPipeline(Device device, PipelineLayout layout)
+    {
+        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
+        {
+            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(ShaderSourceText))
+        });
+
+        return device.CreateRenderPipeline(
+            shader,
+            "vs_main"u8,
+            shader,
+            "fs_main"u8,
+            [new ColorTargetState(WGPUTextureFormat.RGBA8Unorm)],
+            layout: layout,
+            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
+            multisample: MultisampleState.Default,
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.LessEqual, write: false),
+            vertexStride: (ulong)VertexLayout.Stride,
+            vertexStepMode: WGPUVertexStepMode.Vertex,
+            vertexAttributes: VertexLayout.Attributes());
+    }
+
     private static uint[] BuildIndexBytes(FrameRequest request) => request.Indices;
 
     /// <summary>Renders a frame and returns its pixels.</summary>
