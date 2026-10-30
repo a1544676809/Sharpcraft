@@ -13,6 +13,12 @@ namespace Sharpcraft.Client.Tests;
 /// must produce exactly the same geometry as meshing the whole world at once; if it produces more, a border
 /// face is drawn twice and the seam shows overlapping texture.
 /// </summary>
+/// <remarks>
+/// The cache build takes a wall clock budget per call and stops early when it is spent. These tests compare meshes
+/// for equality, not build pacing, so they pass an unlimited budget: with the default fifteen milliseconds a busy
+/// machine could stop after the first chunk and the comparison would fail for a reason that has nothing to do with
+/// seams. That is exactly what made this suite fail intermittently under a parallel run and never alone.
+/// </remarks>
 public sealed class ChunkSeamTests
 {
     [Fact]
@@ -23,7 +29,7 @@ public sealed class ChunkSeamTests
         var whole = ChunkMesher.Mesh(world, airState: 0, maxBlocks: 1_000_000);
 
         var cache = new ChunkMeshCache();
-        var split = cache.Build(world, maxChunksPerBuild: 64);
+        var split = cache.Build(world, maxChunksPerBuild: 64, maxMillisecondsPerBuild: double.MaxValue);
 
         Assert.Equal(whole.Vertices.Length, split.Vertices.Length);
         Assert.Equal(whole.Indices.Length, split.Indices.Length);
@@ -39,11 +45,11 @@ public sealed class ChunkSeamTests
         AddFloor(world, 0, 0);
 
         var cache = new ChunkMeshCache();
-        var alone = cache.Build(world, maxChunksPerBuild: 64);
+        var alone = cache.Build(world, maxChunksPerBuild: 64, maxMillisecondsPerBuild: double.MaxValue);
 
         AddFloor(world, 1, 0);
 
-        cache.Build(world, maxChunksPerBuild: 64);
+        cache.Build(world, maxChunksPerBuild: 64, maxMillisecondsPerBuild: double.MaxValue);
         var afterNeighbour = cache.Snapshot();
         var whole = ChunkMesher.Mesh(world, airState: 0, maxBlocks: 1_000_000);
 
@@ -53,7 +59,7 @@ public sealed class ChunkSeamTests
         // The incremental result must equal a cache built from scratch on the finished world; if the stale
         // seam faces had survived, the incremental mesh would carry extra geometry instead.
         var fresh = new ChunkMeshCache();
-        var fromScratch = fresh.Build(world, maxChunksPerBuild: 64);
+        var fromScratch = fresh.Build(world, maxChunksPerBuild: 64, maxMillisecondsPerBuild: double.MaxValue);
 
         Assert.Equal(fromScratch.Vertices.Length, afterNeighbour.Vertices.Length);
         Assert.Equal(fromScratch.Indices.Length, afterNeighbour.Indices.Length);

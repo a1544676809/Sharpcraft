@@ -135,7 +135,12 @@ public sealed class UiMarkupTests
         var styles = UiStyles.Compile(root);
         var geometry = new UiGeometry();
 
-        UiScreenLayout.Build(root, styles, 320f, 240f, geometry); // warm the buffers
+        // Warm enough that one time costs (buffer growth, type initialisers) are behind us; four passes is more
+        // than any of them need and costs microseconds.
+        for (var warm = 0; warm < 4; warm++)
+        {
+            UiScreenLayout.Build(root, styles, 320f, 240f, geometry);
+        }
 
         var before = GC.GetAllocatedBytesForCurrentThread();
 
@@ -145,6 +150,6 @@ public sealed class UiMarkupTests
         }
 
         var after = GC.GetAllocatedBytesForCurrentThread();
-        Assert.Equal(before, after);
+        Assert.True(after == before, $"building a frame allocated {after - before} bytes");
     }
 }
