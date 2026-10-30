@@ -221,3 +221,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-195 | 离屏帧补**界面 pass**（T-104）+ 已知颜色**逐像素校验**（T-159）| `docs/analysis/render/offscreen-ui-pass.md` | 设计完成；实现与像素断言待做 | `Framework/Rendering/OffscreenRenderer`（待改）| 规格已就绪 |
 | T-196 | 渲染管线 P1 第一片：**视锥剔除数学**（`ViewFrustum` 六平面 + AABB 支撑点测试）；接线到渲染路径与实体模型待做 | `docs/specs/render/pipeline.md` §6、§9 P1 | `ViewFrustumTests`(5：前方可见/后方/侧方/超远/跨边大盒可见) | `Client/Render/ViewFrustum` | 进行中 |
 | T-197 | 着色器包**解剖**（真实 Iris 包 468 条目/1.2 MB：布局、维度×阶段两层结构、16 类几何阶段、9 档 profile 与选项系统）+ **兼容指导**（不支持项与 GLSL→WGSL 改写）| `docs/analysis/render/shader-pack-anatomy.md`、`docs/specs/render/shader-pack-compatibility.md` | 实测条目/扩展名/阶段清单 + 280 行结构 + 官方全序/维度双机制/特性标志 | 分析文档（无代码）+ 官方文档核对（3 页）| 已完成 |
+| T-198 | 硬件光追与 DLSS/XeSS/FSR 在 WGPU 上的可行性核实 | `docs/analysis/render/upscaling-and-raytracing.md`、`docs/risks.md` R-021 | 官方/社区来源 4 条 + 逐项结论表 | 分析文档（无代码）| 已完成 |
