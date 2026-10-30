@@ -625,6 +625,45 @@ internal static class FrameCommand
     ]);
 
     /// <summary>Builds the frame request (mesh plus camera) for a world.</summary>
+    /// <summary>
+    /// Builds a deterministic scene for the occlusion test: a solid wall with solid chunks behind it.
+    /// </summary>
+    /// <remarks>
+    /// Whole sections are filled with one state, which is a single call per section and needs no per-block loop. The wall is
+    /// wide and tall enough to cover the view at the fixed camera, so the chunks behind it are certainly hidden.
+    /// </remarks>
+    internal static ClientWorld BuildOccluderWorld()
+    {
+        var world = new ClientWorld(minSectionY: -1, sectionCount: 3);
+
+        void Solid(int chunkX, int chunkZ)
+        {
+            var chunk = world.AddChunk(chunkX, chunkZ);
+
+            for (var section = -1; section <= 1; section++)
+            {
+                chunk.SetSection(new Sharpcraft.Common.World.ChunkSection(singleState: 1, sectionY: section));
+            }
+
+            // A chunk that is not marked loaded is skipped by the mesher, which is why the first attempt drew nothing.
+            chunk.MarkLoaded();
+        }
+
+        // Wall: five chunks wide at z = 0.
+        for (var x = -2; x <= 2; x++)
+        {
+            Solid(x, 0);
+        }
+
+        // Hidden: three chunks behind the wall.
+        for (var x = -1; x <= 1; x++)
+        {
+            Solid(x, 3);
+        }
+
+        return world;
+    }
+
     internal static FrameRequest BuildRequest(
         ClientWorld world,
         int width,
@@ -678,6 +717,20 @@ internal static class FrameCommand
         var footprintZ = bounds.Max.Z - bounds.Min.Z;
         var radius = MathF.Max(4f, MathF.Sqrt(footprintX * footprintX + footprintZ * footprintZ) / 2f);
         var (eye, target) = CameraMath.DefaultCamera(centre, radius);
+
+        // A fixed camera makes an occlusion test reproducible; six comma separated numbers.
+        if (Environment.GetEnvironmentVariable("MC_FRAME_CAM") is { Length: > 0 } cameraText)
+        {
+            var parts = cameraText.Split(',');
+
+            if (parts.Length == 6 &&
+                float.TryParse(parts[0], out var camX) && float.TryParse(parts[1], out var camY) && float.TryParse(parts[2], out var camZ) &&
+                float.TryParse(parts[3], out var aimX) && float.TryParse(parts[4], out var aimY) && float.TryParse(parts[5], out var aimZ))
+            {
+                eye = new Vector3(camX, camY, camZ);
+                target = new Vector3(aimX, aimY, aimZ);
+            }
+        }
         return new FrameRequest(
             width,
             height,
