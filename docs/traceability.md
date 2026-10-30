@@ -228,3 +228,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-202 | 运动矢量：**重投影数学**（`Reprojection.Of/TryToScreen` + `FrameHistory`），像素单位、`NaN` 表示相机后方无效 | `docs/specs/render/pipeline.md` §13 | `ReprojectionTests`(5：静止为零、相机右移则像左移、近处位移更大、相机后方无效、历史返回上一帧) | `Client/Render/Reprojection` | 已完成 |
 | T-203 | 运动矢量像素级：`ReconstructWorld`（uv 加深度经逆 VP 得世界）与 `OfPixel`（像素位移）| `docs/specs/render/pipeline.md` §13 | `ReprojectionPixelTests`(3：深度重建往返、像素位移与解析解一致、静止为零) | `Client/Render/Reprojection` | 已完成 |
 | T-204 | **GPU 遮挡剔除计划与保守测试数学**（Hi-Z 路线、O1-O4 分期、QA-1.4 指标）| `docs/specs/render/occlusion-culling.md`、`docs/specs/quality-attributes.md` QA-1.4 | `OcclusionCullingTests`(5) | `Client/Render/OcclusionCulling` | 进行中 |
+| T-205 | 帧比对工具：`PixelComparison`（逐像素差异、容差、首个差异坐标、ARGB 读取）+ `frame` 命令 `MC_FRAME_COMPARE` 接线 | `docs/analysis/render/offscreen-ui-pass.md` | `PixelComparisonTests`(5)；**端到端比对未完成**：`frame` 默认服务器地址解析失败（11001）| `Framework/Rendering/PixelComparison`、`Launcher/FrameCommand` | 进行中 |

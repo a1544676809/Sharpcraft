@@ -687,6 +687,23 @@ internal static class FrameCommand
         var frame = OffscreenRenderer.Render(request);
 
         Console.WriteLine($"rendered on adapter: {frame.AdapterName}");
+        if (Environment.GetEnvironmentVariable("MC_FRAME_COMPARE") is { Length: > 0 } baselinePath && File.Exists(baselinePath))
+        {
+            // Compare against a reference frame: zero mismatches is the only acceptable result for an optimisation that
+            // claims not to change the picture, and a blend may round by one, which the tolerance covers.
+            var baseline = Sharpcraft.Common.Imaging.PngDecoder.Decode(File.ReadAllBytes(baselinePath));
+            var tolerance = int.TryParse(Environment.GetEnvironmentVariable("MC_FRAME_TOLERANCE"), out var parsed) ? parsed : 0;
+            var difference = Sharpcraft.Framework.Rendering.PixelComparison.Compare(
+                baseline.Pixels,
+                frame.Rgba,
+                frame.Width,
+                frame.Height,
+                tolerance);
+
+            Console.WriteLine(difference.Mismatches == 0
+                ? $"compare: identical ({frame.Width}x{frame.Height}, max channel delta {difference.MaxChannelDelta}, tolerance {tolerance})"
+                : $"compare: {difference.Mismatches} pixel(s) differ, first at ({difference.FirstX},{difference.FirstY}), max channel delta {difference.MaxChannelDelta}");
+        }
         var png = PngEncoder.EncodeRgba(frame.Width, frame.Height, frame.Rgba);
         var path = Path.Combine(Path.GetTempPath(), "sharpcraft-frame.png");
         File.WriteAllBytes(path, png);
@@ -774,6 +791,23 @@ internal static class FrameCommand
             }
         }
 
+        if (Environment.GetEnvironmentVariable("MC_FRAME_COMPARE") is { Length: > 0 } baselinePath && File.Exists(baselinePath))
+        {
+            // Compare against a reference frame: zero mismatches is the only acceptable result for an optimisation that
+            // claims not to change the picture, and a blend may round by one, which the tolerance covers.
+            var baseline = Sharpcraft.Common.Imaging.PngDecoder.Decode(File.ReadAllBytes(baselinePath));
+            var tolerance = int.TryParse(Environment.GetEnvironmentVariable("MC_FRAME_TOLERANCE"), out var parsed) ? parsed : 0;
+            var difference = Sharpcraft.Framework.Rendering.PixelComparison.Compare(
+                baseline.Pixels,
+                frame.Rgba,
+                frame.Width,
+                frame.Height,
+                tolerance);
+
+            Console.WriteLine(difference.Mismatches == 0
+                ? $"compare: identical ({frame.Width}x{frame.Height}, max channel delta {difference.MaxChannelDelta}, tolerance {tolerance})"
+                : $"compare: {difference.Mismatches} pixel(s) differ, first at ({difference.FirstX},{difference.FirstY}), max channel delta {difference.MaxChannelDelta}");
+        }
         var png = PngEncoder.EncodeRgba(frame.Width, frame.Height, frame.Rgba);
         var path = Path.Combine(Path.GetTempPath(), "sharpcraft-frame.png");
         File.WriteAllBytes(path, png);
