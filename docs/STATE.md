@@ -63,9 +63,13 @@ updated: 2026-10-29
 1. 资源包模块 A1–A11 已完成，**推送被网络阻断**（`github.com` 不可达、SSH 公钥未登记），恢复后第一件事 `git push`（117 提交）。
 2. M5 5.2 聊天收口：已补 `change_page`/`open_file`、动作栏 HSV 颜色循环；`textBackgroundOpacity` 已可配置（`ChatLog.BackgroundOpacity`，默认 0.5）、`delete_chat` 的 `ChatLog` 侧完成（签名存取+删除，4 项测试）；
 签名已由解析层透出并接线到会话删除 ⇒ **A 的聊天项全部完成**。
-3. **D 进行中**：`docs/analysis/render/offscreen-ui-pass.md` 已给出离屏界面 pass 与逐像素校验的规格（T-195，规格已就绪）；
-   实现 150–250 行，先在 `OffscreenRenderer` 加界面管线与可选几何来源，再回读断言已知颜色。
-4. 随后：M6 模组热加载（先写 ADR）→ 5.3 渲染管线 P1。
+3. **5.3 渲染管线 P1 已开工**（所有者 2026-10-30 指示按 AGENTS.md 推进）：
+   P1 范围锁定为**实体静态模型 + 名字牌 + 视锥剔除统计**（`docs/specs/render/pipeline.md` §12）。
+   第一片已完成：`ViewFrustum`（六平面 + AABB 支撑点测试，5 项单测）。
+   **下一步具体动作**：把视锥接线到 `WindowCommand` 的实体几何回调（相机 lambda 里缓存 view-projection），
+   并输出剔除计数（QA-1.3 要求 ≥60%）；随后实体模型需由启动器从 jar 提取模型 JSON（仓库内不存资产）。
+4. T-104/T-159（离屏界面 pass + 逐像素）改为 **5.3 的验收手段**（规格见 `docs/analysis/render/offscreen-ui-pass.md`），不再独立排期。
+5. 随后：M6 模组热加载（先写 ADR）→ 着色器包接入（P3）。
 会打印 `chat received:`。
 随后：T-120（`player_chat` 等剩余入站与组件样式）、T-108（热加载状态迁移）、T-104（离屏截图接 UI）。
 随后：T-108（热加载状态迁移）、T-104（离屏截图接 UI）、T-114（`ChunkSeamTests` 并行抖动）、T-107（间歇 wgpu 断言，需完整 validation 文本）。
