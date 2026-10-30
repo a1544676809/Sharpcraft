@@ -221,4 +221,4 @@ stack.add(primaryPackResources);                     // primary 最后
 | 两阶段重载核心（T-173）：`ResourceManager.Reload` + 有序监听器 + 失败保留旧栈 | 已实现（4 项测试）；字体/贴图集监听器与触发源待接 |
 | `overlays` 叠加（A4）| 已实现：`ResourcePackOverlays` + `ResourcePack.Open`（overlay 逆序优先、primary 最后、`pack.mcmeta` 不叠加），4 项测试 |
 | 文件监听（T-174/A9）| 已实现：`PackWatcher`（`MC_RESOURCE_PACK_WATCH=1`、300ms 静默去抖、关闭时不创建任何监听器），2 项测试 + 端到端 |
-| 重载监听器（T-175/A8）| 语言表已接入并端到端生效；字体/贴图集的 GPU 换绑待做（T-181）|
+| 重载监听器（T-175/A8）| 已完成：语言表接入；字体/贴图集经 `UiTextureSource` 版本号触发渲染器**重新上传**（端到端：红环→绿环）|

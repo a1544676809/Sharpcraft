@@ -187,6 +187,26 @@ internal static class WindowCommand
             ? null
             : new TextureData(uiFont.Sheet.Width, uiFont.Sheet.Height, uiFont.Sheet.Pixels);
 
+        // The renderer uploads these once; a reload replaces the images, so it watches this source's version instead of
+        // being rebuilt (docs/decisions/0016-resource-pack-file-watch.md).
+        var uiTextures = new Sharpcraft.Framework.Rendering.UiTextureSource();
+
+        // Font atlas and tooltip sprites reload together: they come from the same packs and a half updated pair would draw
+        // text measured for one sheet against another.
+        resources.AddListener("font", 20, manager =>
+        {
+            uiFont = FrameCommand.PrepareFont(manager);
+            session.UiFont = uiFont;
+            guiSprites = FrameCommand.PrepareGuiSprites(manager);
+
+            var glyph = uiFont is null
+                ? null
+                : new TextureData(uiFont.Sheet.Width, uiFont.Sheet.Height, uiFont.Sheet.Pixels);
+
+            uiTextures.Update(glyph, guiSprites?.Textures ?? []);
+            Console.WriteLine("resource reload: interface font and sprites replaced");
+        });
+
         // Without an atlas there is no cell to sample, so entity boxes are simply not drawn.
         var entitySource = entitySprite is { } sprite
             ? new Func<DynamicGeometry>(() => entityMesher.Build(session.EntityStates(session.PartialTick), sprite))
@@ -247,6 +267,7 @@ internal static class WindowCommand
             dynamicGeometry: entitySource,
             glyphTexture: glyphTexture,
             spriteTextures: guiSprites?.Textures,
+            textureSource: uiTextures,
             uiGeometry: frame =>
             {
                 var screen = uiLoader.Current ?? fallback;

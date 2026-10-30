@@ -47,7 +47,8 @@ public static class WindowedRenderer
         Func<DynamicGeometry?>? dynamicGeometry = null,
         Func<UiFrame, UiGeometry?>? uiGeometry = null,
         TextureData? glyphTexture = null,
-        IReadOnlyList<TextureData>? spriteTextures = null)
+        IReadOnlyList<TextureData>? spriteTextures = null,
+        UiTextureSource? textureSource = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -154,7 +155,7 @@ public static class WindowedRenderer
         // Glyphs live in their own sheet rather than the block atlas: the two have different sampling needs and
         // mixing them would make text blurry at small sizes.
         var glyphData = glyphTexture ?? TextureData.White;
-        using var glyphSheet = device.CreateTexture(new TextureDescriptor
+        var glyphSheet = device.CreateTexture(new TextureDescriptor
         {
             Size = new WGPUExtent3D
             {
@@ -183,7 +184,7 @@ public static class WindowedRenderer
             0,
             new WGPUOrigin3D { x = 0, y = 0, z = 0 });
 
-        using var glyphView = glyphSheet.CreateView();
+        var glyphView = glyphSheet.CreateView();
         using var uiBindGroup = device.CreateBindGroup(
             bindGroupLayout,
             [
@@ -246,13 +247,16 @@ public static class WindowedRenderer
             spriteViews.Add(view);
         }
 
-        using var uiTextBindGroup = device.CreateBindGroup(
+        var uiTextBindGroup = device.CreateBindGroup(
             bindGroupLayout,
             [
                 BindGroupEntry.TextureView(0, glyphView),
                 BindGroupEntry.Sampler(1, atlasSampler),
                 BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize)
             ]);
+
+        // The source starts at the textures just uploaded, so the first frame does not re-upload them.
+        textureSource?.Update(glyphTexture, spriteTextures ?? []);
 
         // A DPI-scaled display reports a logical size smaller than the framebuffer; the swapchain
         // must be configured in physical pixels or every acquire reports "outdated".
@@ -330,8 +334,111 @@ public static class WindowedRenderer
 
         Console.WriteLine($"window: swapchain configured ({format}, {frameWidth}x{frameHeight})");
 
+        var appliedTextureVersion = textureSource?.Version ?? 0;
+
         while (true)
         {
+            if (textureSource is not null && textureSource.Version != appliedTextureVersion)
+            {
+                appliedTextureVersion = textureSource.Version;
+
+                // A reload replaced the images, so the old GPU copies are stale; drop them and upload the new ones.
+                uiTextBindGroup.Dispose();
+                glyphView.Dispose();
+                glyphSheet.Dispose();
+
+                var refreshedGlyph = textureSource.Glyph;
+
+                // Without a glyph atlas text cannot be drawn, so a 1x1 transparent sheet stands in rather than a stale one.
+                refreshedGlyph ??= new TextureData(1, 1, new byte[4]);
+
+                glyphSheet = device.CreateTexture(new TextureDescriptor
+                {
+                    Size = new WGPUExtent3D { width = (uint)refreshedGlyph.Width, height = (uint)refreshedGlyph.Height, depthOrArrayLayers = 1 },
+                    MipLevelCount = 1,
+                    SampleCount = 1,
+                    Dimension = WGPUTextureDimension._2D,
+                    Format = WGPUTextureFormat.RGBA8Unorm,
+                    Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
+                });
+
+                device.Queue.WriteTexture(
+                    glyphSheet,
+                    refreshedGlyph.Rgba,
+                    (uint)(refreshedGlyph.Width * 4),
+                    (uint)refreshedGlyph.Height,
+                    new WGPUExtent3D { width = (uint)refreshedGlyph.Width, height = (uint)refreshedGlyph.Height, depthOrArrayLayers = 1 },
+                    0,
+                    new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+
+                glyphView = glyphSheet.CreateView();
+                uiTextBindGroup = device.CreateBindGroup(
+                    bindGroupLayout,
+                    [
+                        BindGroupEntry.TextureView(0, glyphView),
+                        BindGroupEntry.Sampler(1, atlasSampler),
+                        BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize)
+                    ]);
+
+                foreach (var staleBindGroup in spriteBindGroups)
+                {
+                    staleBindGroup.Dispose();
+                }
+
+                foreach (var staleView in spriteViews)
+                {
+                    staleView.Dispose();
+                }
+
+                foreach (var staleSheet in spriteSheets)
+                {
+                    staleSheet.Dispose();
+                }
+
+                spriteBindGroups.Clear();
+                spriteViews.Clear();
+                spriteSheets.Clear();
+
+                foreach (var spriteData in textureSource.Sprites)
+                {
+                    var refreshedSheet = device.CreateTexture(new TextureDescriptor
+                    {
+                        Size = new WGPUExtent3D { width = (uint)spriteData.Width, height = (uint)spriteData.Height, depthOrArrayLayers = 1 },
+                        MipLevelCount = 1,
+                        SampleCount = 1,
+                        Dimension = WGPUTextureDimension._2D,
+                        Format = WGPUTextureFormat.RGBA8Unorm,
+                        Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
+                    });
+
+                    device.Queue.WriteTexture(
+                        refreshedSheet,
+                        spriteData.Rgba,
+                        (uint)(spriteData.Width * 4),
+                        (uint)spriteData.Height,
+                        new WGPUExtent3D { width = (uint)spriteData.Width, height = (uint)spriteData.Height, depthOrArrayLayers = 1 },
+                        0,
+                        new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+
+                    var refreshedView = refreshedSheet.CreateView();
+
+                    spriteBindGroups.Add(device.CreateBindGroup(
+                        bindGroupLayout,
+                        [
+                            BindGroupEntry.TextureView(0, refreshedView),
+                            BindGroupEntry.Sampler(1, atlasSampler),
+                            BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize)
+                        ]));
+
+                    spriteSheets.Add(refreshedSheet);
+                    spriteViews.Add(refreshedView);
+                }
+
+                Console.WriteLine(
+                    $"ui: textures re-uploaded (version {appliedTextureVersion}, {spriteBindGroups.Count} sprites, " +
+                    $"glyph {refreshedGlyph.Width}x{refreshedGlyph.Height})");
+            }
+
             if (!window.Pump() || Environment.TickCount64 > deadline)
             {
                 break;
