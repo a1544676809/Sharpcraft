@@ -29,6 +29,7 @@ AGENTS.md 原则 12：不可逆或跨模块的决策必须在此留档，**只�
 | [`0015-resource-pack-stack-and-reload.md`](0015-resource-pack-stack-and-reload.md) | 提示框贴图目前只从"基础包 zip"读取。 | **提议（待评审）** | - |
 | [`0016-resource-pack-file-watch.md`](0016-resource-pack-file-watch.md) | 包作者改一个贴图就要重启客户端。 | **提议（待评审）** | - |
 | [`0017-reload-invalidation-by-layout.md`](0017-reload-invalidation-by-layout.md) | 原版重载成功后直接 levelExtractor.allChanged()（全部区块几何重建，Minecraft.reloadResourcePacks 成功分支）。 | **已接受**（所有者 2026-10-30 确认：允许略微卡顿，采用分层失效） | - |
+| [`0018-native-vulkan-backend.md`](0018-native-vulkan-backend.md) | 为获得几何/细分/Mesh Shader/硬件光追/VRS 等 Vulkan 独有能力而新增原生后端的成本、收益与门槛 | 提议 | - |
 
 <!-- END GENERATED: docs/decisions -->
 
