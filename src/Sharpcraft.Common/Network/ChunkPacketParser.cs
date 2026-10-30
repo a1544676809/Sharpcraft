@@ -23,14 +23,6 @@ public sealed record ParsedChunk(
     public IReadOnlyList<BlockEntityRecord> BlockEntities { get; init; } = [];
 }
 
-/// <summary>
-/// One block entity as it appears in the chunk packet.
-/// </summary>
-/// <param name="LocalX">Block X inside the chunk, zero to fifteen.</param>
-/// <param name="Y">Absolute block Y.</param>
-/// <param name="LocalZ">Block Z inside the chunk, zero to fifteen.</param>
-/// <param name="TypeId">Registry id of the block entity type.</param>
-public readonly record struct BlockEntityRecord(int LocalX, int Y, int LocalZ, int TypeId);
 
 /// <summary>
 /// Parses the play-phase <c>level_chunk_with_light</c> packet (id 46)

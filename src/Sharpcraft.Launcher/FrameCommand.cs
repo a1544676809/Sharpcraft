@@ -674,6 +674,10 @@ internal static class FrameCommand
             Solid(x, 0);
         }
 
+        // A chest stands on the wall face the camera looks at, so the block entity stage has something visible to draw.
+        // In the chunk in front of the wall: inside the wall it would be buried and invisible.
+        world.AddChunk(0, -1).AddBlockEntity(new Sharpcraft.Common.World.BlockEntityRecord(8, 17, 15, 1));
+
         // Hidden: three wide and four deep behind the wall, so the rate has a meaningful population to work with.
         for (var z = 3; z <= 6; z++)
         {
@@ -725,6 +729,50 @@ internal static class FrameCommand
 
             mesh = buffer.ToMeshData(blocks);
             drawRanges = [.. ranges];
+
+            if (Environment.GetEnvironmentVariable("MC_FRAME_BLOCK_ENTITIES") == "1")
+            {
+                var states = new List<Sharpcraft.Client.Render.BlockEntityRenderState>();
+
+                foreach (var chunk in world.GetChunks())
+                {
+                    foreach (var record in chunk.BlockEntities)
+                    {
+                        states.Add(new Sharpcraft.Client.Render.BlockEntityRenderState(
+                            (chunk.ChunkX * 16) + record.LocalX,
+                            record.Y,
+                            (chunk.ChunkZ * 16) + record.LocalZ,
+                            record.TypeId));
+                    }
+                }
+
+                if (states.Count > 0)
+                {
+                    var mesher = new Sharpcraft.Client.Render.BlockEntityPlaceholderMesher();
+                    var blockEntityGeometry = mesher.Build(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(states), new SpriteRect(0, 0, 16, 16, 1));
+
+                    // Appended to the same arrays, so the block entity stage shares the opaque pipeline and its depth.
+                    var mergedVertices = new float[mesh.Vertices.Length + blockEntityGeometry.VertexFloats];
+                    mesh.Vertices.CopyTo(mergedVertices, 0);
+                    blockEntityGeometry.Vertices[..blockEntityGeometry.VertexFloats].CopyTo(mergedVertices.AsSpan(mesh.Vertices.Length));
+
+                    var mergedIndices = new uint[mesh.Indices.Length + blockEntityGeometry.IndexCount];
+                    mesh.Indices.CopyTo(mergedIndices, 0);
+                    var vertexOffset = (uint)(mesh.Vertices.Length / Sharpcraft.Client.Render.ChunkMesher.FloatsPerVertex);
+
+                    for (var index = 0; index < blockEntityGeometry.IndexCount; index++)
+                    {
+                        mergedIndices[mesh.Indices.Length + index] = blockEntityGeometry.Indices[index] + vertexOffset;
+                    }
+
+                    // The block entity indices sit past every chunk range, so they need a range of their own or they are
+                    // never drawn: the draw loop only visits ranges.
+                    var blockEntityFirstIndex = mesh.Indices.Length;
+                    mesh = new Sharpcraft.Client.Render.MeshData(mergedVertices, mergedIndices, mesh.BlockCount);
+                    drawRanges = [.. drawRanges, (blockEntityFirstIndex, blockEntityGeometry.IndexCount)];
+                    Console.WriteLine($"block entities: {states.Count} boxes, {blockEntityGeometry.IndexCount / 3} triangles");
+                }
+            }
 
             if (translucent is not null)
             {

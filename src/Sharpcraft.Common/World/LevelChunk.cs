@@ -71,6 +71,15 @@ public sealed class LevelChunk
     /// <summary>Marks the chunk as loaded.</summary>
     public void MarkLoaded() => Loaded = true;
 
+    private readonly List<BlockEntityRecord> _blockEntities = [];
+
+    /// <summary>Block entities attached to this chunk.</summary>
+    public IReadOnlyList<BlockEntityRecord> BlockEntities => _blockEntities;
+
+    /// <summary>Attaches a block entity, as decoded from the chunk packet.</summary>
+    /// <param name="record">Block entity to attach.</param>
+    public void AddBlockEntity(BlockEntityRecord record) => _blockEntities.Add(record);
+
     /// <summary>Block state at chunk-local coordinates, or <paramref name="fallbackState"/> when absent.</summary>
     public int GetBlockState(int x, int y, int z, int fallbackState = 0)
     {

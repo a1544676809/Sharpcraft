@@ -506,7 +506,7 @@ updated: 2026-10-29
 
 ## 未提交改动 / 后台任务
 
-- 无后台任务。15 个提交未推送（等所有者指示）。
+- 无后台任务。187 个提交未推送（等所有者指示）。
 
 ## 最近提交
 
@@ -514,3 +514,13 @@ updated: 2026-10-29
 - `963b835` feat(client): resolve face textures from blockstates and models
 - `512f15d` feat(render): resolve state ids to blocks from the baseline registry layout
 - `2c64044` feat(render): sample the sprite atlas so blocks show their real textures
+
+## 2026-10-30 方块实体接入渲染路径（T-242）
+
+- `BlockEntityRecord` 归入 `Common/World`，`LevelChunk` 存储；`ChunkPacketParser` 解析时保留 `(LocalX, Y, LocalZ, TypeId)`
+  （packedXZ 为**一个字节**、高半字节 X / 低半字节 Z；Y 为**绝对 short**；type 为 VarInt——已按参考核实）。
+- `BlockEntityPlaceholderMesher`：箱子 14/16、其余 12/16，落在方块面 +1/16；几何并入主顶点/索引数组。
+- **实测**：`block entities: 1 boxes, 12 triangles`；与「关闭方块实体」帧比对 **329 像素不同、首个 (461,68)、最大通道差 166**。
+- 两个真坑：方块实体原先埋在实心墙里；合并后的索引**不在任何 draw range 内**（帧完全一致），补 range 后才可见。
+
+**下一步具体动作**：①补方块实体**数据包级**解析用例（T-240 收口）；②半透明**按距离降序**绘制 + 混合公式校验。
