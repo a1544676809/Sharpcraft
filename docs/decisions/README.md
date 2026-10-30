@@ -23,6 +23,7 @@ AGENTS.md 原则 12：不可逆或跨模块的决策必须在此留档，**只�
 | [`0009-access-control-applies-to-the-launcher.md`](0009-access-control-applies-to-the-launcher.md) | 澄清宪章 7.1 的适用范围，明确游戏侧不加严不判定 | 已接受 | - |
 | [`0010-ui-hot-reload-scope.md`](0010-ui-hot-reload-scope.md) | 热加载的适用构建、路径边界与不可退化的约束 | 已接受 | - |
 | [`0011-accepted-frame-spike-on-bulk-upload.md`](0011-accepted-frame-spike-on-bulk-upload.md) | 以一个受控偏差换取更早出现的地形，并给出复查条件 | 已接受 | - |
+| [`0012-chat-type-registry.md`](0012-chat-type-registry.md) | 日期：2026-10-30 相关：T-096、T-142、原则 5（三侧边界）、原则 12（规格即矩阵） | **待评审** | - |
 
 <!-- END GENERATED: docs/decisions -->
 
