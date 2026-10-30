@@ -138,7 +138,11 @@ public sealed class UiGeometry
     /// <param name="material">Material the following quads use.</param>
     public void UseMaterial(UiMaterial material)
     {
-        if (_material == material)
+        // A different sprite also needs its own range: one draw call binds one texture, so switching texture inside a
+        // range would make the second sprite reuse the first one's binding.
+        var sameSprite = _rangeCount == 0 || _ranges[_rangeCount - 1].SpriteIndex == _spriteIndex;
+
+        if (_material == material && sameSprite)
         {
             return;
         }
@@ -155,12 +159,12 @@ public sealed class UiGeometry
 
         if (last.IndexCount == 0)
         {
-            _ranges[_rangeCount - 1] = last with { Material = material };
+            _ranges[_rangeCount - 1] = last with { Material = material, SpriteIndex = _spriteIndex };
             return;
         }
 
         EnsureRangeRoom();
-        _ranges[_rangeCount++] = last with { Material = material, FirstIndex = _indexCount, IndexCount = 0 };
+        _ranges[_rangeCount++] = last with { Material = material, FirstIndex = _indexCount, IndexCount = 0, SpriteIndex = _spriteIndex };
     }
 
     /// <summary>Appends a solid rectangle.</summary>
