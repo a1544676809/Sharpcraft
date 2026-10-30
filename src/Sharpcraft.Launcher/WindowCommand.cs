@@ -110,11 +110,14 @@ internal static class WindowCommand
 
         resources.AddListener("atlas", 30, manager =>
         {
+            var candidateClock = System.Diagnostics.Stopwatch.StartNew();
             var rebuilt = FrameCommand.PrepareSprites(
                 Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 }
                     ? FrameCommand.DemoLayout()
                     : VanillaBlockRegistry.Layout,
                 manager);
+
+            candidateClock.Stop();
 
             if (rebuilt is not { } next)
             {
@@ -131,6 +134,7 @@ internal static class WindowCommand
             {
                 // Every coordinate belongs to the old layout, so all meshes are rebuilt and the renderer's geometry storage
                 // is dropped and refilled: a resolution change is a complete rebuild (ADR-0017).
+                var meshClock = System.Diagnostics.Stopwatch.StartNew();
                 meshCache.Clear();
                 var passes = 0;
 
@@ -151,15 +155,19 @@ internal static class WindowCommand
                     }
                 }
 
+                meshClock.Stop();
                 geometryEpoch++;
                 replayAllMeshes = true;
                 Console.WriteLine(
                     $"resource reload: layout changed; meshes {meshCache.LastTotalChunks}/{world.LoadedChunkCount} " +
-                    $"after {passes} pass(es), replay armed");
+                    $"after {passes} pass(es), candidate {candidateClock.Elapsed.TotalMilliseconds:F1} ms, " +
+                    $"meshes {meshClock.Elapsed.TotalMilliseconds:F1} ms");
             }
 
             atlasSource.Update(new TextureData(next.Atlas.Width, next.Atlas.Height, next.Atlas.Pixels));
-            Console.WriteLine($"resource reload: atlas {(layoutChanged ? "replaced" : "refreshed")} ({next.Atlas.Width}x{next.Atlas.Height})");
+            Console.WriteLine(
+                $"resource reload: atlas {(layoutChanged ? "replaced" : "refreshed")} ({next.Atlas.Width}x{next.Atlas.Height}), " +
+                $"candidate {candidateClock.Elapsed.TotalMilliseconds:F1} ms, layoutChanged={layoutChanged}");
         });
 
         // A short synchronous warm-up gives the first frame something to show.
