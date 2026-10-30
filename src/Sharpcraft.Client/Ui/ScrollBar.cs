@@ -25,7 +25,8 @@ public static class ScrollBar
     public const uint PendingColour = 0xFFCC3333u;
 
     /// <summary>Ordinary colour.</summary>
-    public const uint NormalColour = 0xFF333377u;
+    // The reference's own value for the bar: 3355562 = 0x3333AA.
+    public const uint NormalColour = 0xFF3333AAu;
 
     /// <summary>Draws the bar when the list overflows.</summary>
     /// <param name="geometry">Receives the quads.</param>

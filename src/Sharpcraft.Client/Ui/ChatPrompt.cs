@@ -60,6 +60,7 @@ public static class ChatPrompt
         }
 
         // The prompt always has focus while it is open, which is what makes the caret blink.
-        TextEditRenderer.Draw(geometry, font, model, InsetX + 2f, top + 1f, focused: true, elapsedMs);
+        // The reference centres the eight pixel glyph box in a twelve pixel field, so the text sits two pixels down.
+        TextEditRenderer.Draw(geometry, font, model, InsetX + 2f, top + 2f, focused: true, elapsedMs);
     }
 }

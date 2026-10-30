@@ -35,7 +35,7 @@ public sealed class ColourOrderTests
 
         // The first quad is the highlight, so its colour word is the one to check.
         var highlight = (uint)BitConverter.SingleToUInt32Bits(geometry.Vertices[4]);
-        Assert.Equal(UiGeometry.ToLinear(UiGeometry.FromArgb(TextEditRenderer.SelectionColour)), highlight);
+        Assert.Equal((UiGeometry.FromArgb(TextEditRenderer.SelectionColour)), highlight);
     }
 
     [Fact]
@@ -50,8 +50,8 @@ public sealed class ColourOrderTests
 
         // Highlight first, then for each character its shadow and then the glyph itself.
         var glyph = (uint)BitConverter.SingleToUInt32Bits(geometry.Vertices[(2 * 20) + 4]);
-        Assert.Equal(UiGeometry.ToLinear(UiGeometry.FromArgb(TextEditRenderer.SelectedTextColour)), glyph);
-        Assert.NotEqual(UiGeometry.ToLinear(UiGeometry.FromArgb(TextEditRenderer.TextColour)), glyph);
+        Assert.Equal((UiGeometry.FromArgb(TextEditRenderer.SelectedTextColour)), glyph);
+        Assert.NotEqual((UiGeometry.FromArgb(TextEditRenderer.TextColour)), glyph);
     }
 
     private static BitmapFont Monospace()
@@ -85,7 +85,7 @@ public sealed class ColourOrderTests
 
         for (var value = 0; value < 256; value++)
         {
-            var linear = (byte)(UiGeometry.ToLinear((uint)value) & 0xFF);
+            var linear = (byte)(((uint)value) & 0xFF);
             Assert.True(linear >= previous, $"linear value fell at {value}");
             previous = linear;
         }
@@ -103,15 +103,13 @@ public sealed class ColourOrderTests
     [InlineData(255u)]
     public void TheShadesTheInterfaceUsesComeBackUnchanged(uint value)
     {
-        // Decoding then letting the hardware encode must return the authored byte, which is what makes a pale blue
-        // selection arrive pale rather than nearly white.
-        var linear = (byte)(UiGeometry.ToLinear(value) & 0xFF);
-        var channel = linear / 255.0;
-        var encoded = (byte)Math.Round(
-            255.0 * (channel <= 0.0031308 ? channel * 12.92 : (1.055 * Math.Pow(channel, 1 / 2.4)) - 0.055));
+        // Since the surface is no longer sRGB (docs/decisions/0013-gamma-space-ui-blending.md) the authored byte is
+        // written straight into the vertex, so what the interface asked for is exactly what the shader receives.
+        var argb = 0xFF000000u | (value << 16) | (value << 8) | value;
+        var packed = UiGeometry.FromArgb(argb);
 
-        // Two steps of tolerance: the linear value is stored as a byte, and for dark shades that byte is coarse
-        // enough that rounding it and encoding it back moves the result by two.
-        Assert.InRange(encoded, value <= 2 ? 0 : (int)value - 2, (int)value + 2);
+        Assert.Equal((byte)value, (byte)(packed & 0xFF));
+        Assert.Equal((byte)value, (byte)((packed >> 8) & 0xFF));
+        Assert.Equal((byte)value, (byte)((packed >> 16) & 0xFF));
     }
 }

@@ -26,7 +26,7 @@ public sealed class ChatTagTests
 
         // Background, then the bar; the glyphs follow.
         var bar = ColourAt(geometry, quad: 1);
-        Assert.Equal(UiGeometry.ToLinear(UiGeometry.FromArgb(ChatLog.SystemTagColour)), bar & 0x00FFFFFFu | (bar & 0xFF000000u));
+        Assert.Equal((UiGeometry.FromArgb(ChatLog.SystemTagColour)), bar & 0x00FFFFFFu | (bar & 0xFF000000u));
     }
 
     [Fact]
@@ -40,7 +40,7 @@ public sealed class ChatTagTests
 
         // Background first, then the glyphs: no bar in between.
         var second = ColourAt(geometry, quad: 1);
-        Assert.NotEqual(UiGeometry.ToLinear(UiGeometry.FromArgb(ChatLog.SystemTagColour)), second);
+        Assert.NotEqual((UiGeometry.FromArgb(ChatLog.SystemTagColour)), second);
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public sealed class ChatTagTests
         log.Draw(geometry, Font(), screenHeight: 200f, nowTick: 0, fullyVisible: true);
 
         var bar = ColourAt(geometry, quad: 1);
-        Assert.Equal(UiGeometry.ToLinear(UiGeometry.FromArgb(ChatLog.SystemTagColour)), bar);
+        Assert.Equal((UiGeometry.FromArgb(ChatLog.SystemTagColour)), bar);
     }
 
     private static uint ColourAt(UiGeometry geometry, int quad) =>

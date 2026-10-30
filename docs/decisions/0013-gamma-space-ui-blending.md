@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
+
 # ADR-0013：界面混合在 gamma 空间进行（交换链改为非 sRGB）
 
 - 状态：已采纳（用户 2026-10-30 明确选择方案 A）
