@@ -23,6 +23,7 @@
 | [`architecture/`](architecture/README.md) | 2 |
 | [`assets/`](assets/README.md) | 3 |
 | [`common/`](common/README.md) | 5 |
+| [`gui/`](gui/README.md) | 1 |
 
 <!-- END GENERATED: docs/analysis -->
 

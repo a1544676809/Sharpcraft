@@ -469,3 +469,27 @@
 **没有背景**（`textWithBackdrop` 在标题上下文不画底色），文字带阴影；透明度按 **淡入 10 tick / 停留 70 tick / 淡出 20 tick** 计算。
 
 副标题单独到达时不清掉标题；`clear_titles` 两者一起清。
+
+## 8.8 提示框外观：GUI 贴图与九宫格【待评审】
+
+> 状态：**待评审**。规格未获所有者评审通过前，本节的实现不得开工（AGENTS.md 3.5）。
+
+### 行为规格
+
+提示框外框与底色为两张 GUI 贴图叠加，**不是**矩形：`minecraft:tooltip/background`（先）与
+`minecraft:tooltip/frame`（后，`nine_slice`，`border = 10`、`stretch_inner = true`）。
+
+几何（canvas 像素，`x,y,w,h` 为文字内容区）：贴图左上角 `x-3-9, y-3-9`，尺寸 `w+6+18, h+6+18`；
+即内容区四周 **3** 内边距、贴图再外扩 **9**。四角不拉伸，故外框四角呈缺角观感。
+
+### 前置能力（同 ADR-0014）
+
+1. 提取器支持 `textures/gui/sprites/**`（PNG + `.mcmeta`），产物在仓库外
+2. GUI 贴图加载器（读 `nine_slice` 描述）
+3. 通用九宫格绘制
+
+### 验收
+
+- 悬停有 hover 的聊天文字时，提示框外观（黑边、紫框、缺角、内边距）与原版截图一致
+- 单元测试：九宫格四角不拉伸、四边单向、中心双向；`.mcmeta` 缺失时降级且记录诊断
+- 证据：`docs/analysis/gui/tooltip-background.md`

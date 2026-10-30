@@ -25,6 +25,7 @@ AGENTS.md 原则 12：不可逆或跨模块的决策必须在此留档，**只�
 | [`0011-accepted-frame-spike-on-bulk-upload.md`](0011-accepted-frame-spike-on-bulk-upload.md) | 以一个受控偏差换取更早出现的地形，并给出复查条件 | 已接受 | - |
 | [`0012-chat-type-registry.md`](0012-chat-type-registry.md) | 日期：2026-10-30 相关：T-096、T-142、原则 5（三侧边界）、原则 12（规格即矩阵） | **已按原版核对**（实现前仍按流程提交评审） | - |
 | [`0013-gamma-space-ui-blending.md`](0013-gamma-space-ui-blending.md) | 我们的交换链使用 BGRA8UnormSrgb，因此 GPU 在线性空间做混合；原版 Minecraft 没有 sRGB 帧缓冲，混合发生在 gamma 空间。 | 已采纳（用户 2026-10-30 明确选择方案 A） | - |
+| [`0014-gui-sprite-atlas-and-nine-slice.md`](0014-gui-sprite-atlas-and-nine-slice.md) | 提示框（tooltip）在原版由两张 GUI 贴图叠成：tooltip/background 与 tooltip/frame，后者为 nine_slice（border = 10、stretch_inner = true）。 | **提议（待评审）** | - |
 
 <!-- END GENERATED: docs/decisions -->
 
