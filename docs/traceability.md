@@ -209,3 +209,5 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-182 | 文件监听：`PackWatcher`（开关 `MC_RESOURCE_PACK_WATCH=1`、300ms 去抖、关闭不建监听器、zip 整包变化同样触发）| ADR-0016、D-001 | `PackWatcherTests`(2) + 端到端 | `Client/Assets/PackWatcher`、`Launcher/WindowCommand` | 已完成 |
 | T-183 | 字体/贴图集重载：GPU 侧纹理换绑（渲染器按重载结果更新 glyph/贴图绑定组）| ADR-0016 §6、A8 | 待补 | 待落地 | 进行中|
 | T-184 | **高清字体图集**：按原版 `BitmapProvider` 规则切分（`chars` 网格定单元、`height`/`ascent` 定度量、`pixelScale=height/glyphHeight`），读到 `font/default.json` 的 bitmap 提供器 | `docs/analysis/assets/font-slicing.md`、`ref://mc-26.3-analysis/src/net/minecraft/client/gui/font/providers/BitmapProvider.java` | 待补 | 待落地 | 进行中 |
+| T-185 | **方块图集/模型/blockstate 改走统一资源栈**（现于 `FrameCommand` L480 自建仅基础包栈）| `docs/analysis/assets/texture-atlas-sizing.md` §2/§3 | 待补 | 待落地 | 进行中 |
+| T-186 | 动画帧尺寸读 `animation` 元数据（`FrameSize`），缺省退回方帧假设并记诊断 | `docs/analysis/assets/texture-atlas-sizing.md` §1、`SpriteContents` | 待补 | 待落地 | 进行中 |

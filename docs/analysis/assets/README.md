@@ -17,6 +17,7 @@
 | [`resource-pack-format.md`](resource-pack-format.md) | 26.x 各版本的资源包格式号，取自 Minecraft Wiki；用于判断第三方包是否可用 | 已核对（外部来源，非 jar） | 2026-10-30 |
 | [`resource-pack-stack.md`](resource-pack-stack.md) | 包列表顺序→按命名空间回退栈；后者覆盖前者；重载为两阶段原子替换 | 部分核对（未核对项已列出） | 2026-10-30 |
 | [`resource-resolution.md`](resource-resolution.md) | 路径推导、包栈优先级、元数据兄弟、合并方向 | 草稿 | - |
+| [`texture-atlas-sizing.md`](texture-atlas-sizing.md) | 图集按原生尺寸打包；真正缺的是方块相关加载器仍绕过统一资源栈 | 部分核对 | 2026-10-30 |
 
 <!-- END GENERATED: docs/analysis/assets -->
 
