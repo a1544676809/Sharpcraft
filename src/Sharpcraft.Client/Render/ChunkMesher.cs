@@ -114,7 +114,8 @@ public static class ChunkMesher
         BlockSpriteMap? sprites = null,
         MeshBuffer? translucent = null,
         Sharpcraft.Common.Registries.BlockStateLayout? layout = null,
-        MeshBuffer? cutout = null)
+        MeshBuffer? cutout = null,
+        BiomeTint? tint = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(chunk);
@@ -145,7 +146,7 @@ public static class ChunkMesher
             for (var direction = 0; direction < 6; direction++)
             {
                 consumed.Clear();
-                MergeSectionFaces(world, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout);
+                MergeSectionFaces(world, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout, tint);
             }
         }
 
@@ -166,7 +167,8 @@ public static class ChunkMesher
         BlockSpriteMap? sprites,
         MeshBuffer? translucent = null,
         Sharpcraft.Common.Registries.BlockStateLayout? layout = null,
-        MeshBuffer? cutout = null)
+        MeshBuffer? cutout = null,
+        BiomeTint? tint = null)
     {
         var (uAxis, vAxis) = InPlaneAxes(direction);
 
@@ -214,7 +216,7 @@ public static class ChunkMesher
                         }
                     }
 
-                    EmitMergedQuad(world, buffer, direction, slice, u, v, width, height, baseX, baseY, baseZ, key.State, sprites, translucent, layout, cutout);
+                    EmitMergedQuad(world, buffer, direction, slice, u, v, width, height, baseX, baseY, baseZ, key.State, sprites, translucent, layout, cutout, tint);
                 }
             }
         }
@@ -340,7 +342,8 @@ public static class ChunkMesher
         BlockSpriteMap? sprites,
         MeshBuffer? translucent = null,
         Sharpcraft.Common.Registries.BlockStateLayout? layout = null,
-        MeshBuffer? cutout = null)
+        MeshBuffer? cutout = null,
+        BiomeTint? tint = null)
     {
         var (uAxis, vAxis) = InPlaneAxes(direction);
         var (x, y, z) = FaceBlock(uAxis, vAxis, slice, u, v);
@@ -429,6 +432,21 @@ public static class ChunkMesher
         // multiplying a texture by the state hash colour would tint every block (found by sampling
         // rendered pixels against the atlas cell of a forced stone world).
         var (red, green, blue) = sprites is null ? ColourOf(state) : (1f, 1f, 1f);
+
+        if (tint is not null && layout?.BlockAt(state) is { } tintedBlock)
+        {
+            // The reference tints the faces whose model carries a tint index; grass tints only its top, leaves and plants
+            // tint every face.
+            var kind = BlockTintTable.KindOf(tintedBlock);
+
+            if (kind != BlockTintKind.None && (!BlockTintTable.TintsTopFaceOnly(kind) || direction == PositiveY))
+            {
+                var (tintRed, tintGreen, tintBlue) = BiomeTint.ToMultiplier(tint.Colour(kind));
+                red *= tintRed;
+                green *= tintGreen;
+                blue *= tintBlue;
+            }
+        }
         var (dx, dy, dz) = NeighbourOffset(direction);
         var shadeFactor = direction switch
         {

@@ -112,6 +112,15 @@ internal static class WindowCommand
         Console.WriteLine($"chunk workers: {workerPool.WorkerCount} (of {Environment.ProcessorCount} logical processors)");
 
         var meshCache = new ChunkMeshCache(workerPool);
+
+        // The sinks live as long as the cache: it re-meshes chunks incrementally, and a sink disposed between frames would
+        // silently swallow the faces meshed after that point.
+        var layered = Environment.GetEnvironmentVariable("MC_FRAME_TRANSLUCENT") == "1";
+        var layerCutout = layered ? new Sharpcraft.Client.Render.MeshBuffer(4096) : null;
+        var layerTranslucent = layered ? new Sharpcraft.Client.Render.MeshBuffer(4096) : null;
+        meshCache.Layers = layered
+            ? new Sharpcraft.Client.Render.LayerSinks(VanillaBlockRegistry.Layout, layerCutout, layerTranslucent, null)
+            : null;
         var meshOrderSeen = 0;
         var meshOrderDistanceSum = 0f;
         var geometryEpoch = 0;
@@ -188,6 +197,7 @@ internal static class WindowCommand
             prepared is null
                 ? null
                 : new TextureData(prepared.Value.Atlas.Width, prepared.Value.Atlas.Height, prepared.Value.Atlas.Pixels),
+            tint: Sharpcraft.Client.Render.BiomeTint.Load(resources),
             cache: meshCache,
             meshSynchronously: false);
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");

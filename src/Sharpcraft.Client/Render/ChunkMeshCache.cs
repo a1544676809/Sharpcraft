@@ -73,6 +73,13 @@ public sealed class ChunkMeshCache
             maxChunksPerBuild: policy.MaxChunksPerPass,
             maxMillisecondsPerBuild: policy.MaxMillisecondsPerPass);
 
+    /// <summary>Sinks that take the cutout and translucent faces out of the solid mesh while the cache builds.</summary>
+    /// <remarks>
+    /// Without them every block, leaves and water included, lands in the arena mesh as well as in its own layer, and the
+    /// solid copy of a leaf shows its transparent texels as black holes.
+    /// </remarks>
+    public LayerSinks? Layers { get; set; }
+
     public MeshData Build(
         ClientWorld world,
         BlockSpriteMap? sprites = null,
@@ -111,7 +118,18 @@ public sealed class ChunkMeshCache
             }
 
             using var buffer = new MeshBuffer(512);
-            ChunkMesher.MeshChunk(world, chunk, airState: 0, buffer, maxBlocks, sprites);
+            var layers = Layers;
+            ChunkMesher.MeshChunk(
+                world,
+                chunk,
+                airState: 0,
+                buffer,
+                maxBlocks,
+                sprites,
+                translucent: layers?.Translucent,
+                layout: layers?.Layout,
+                cutout: layers?.Cutout,
+                tint: layers?.Tint);
             _meshes[key] = buffer.ToMeshData(0);
             remeshed++;
         }

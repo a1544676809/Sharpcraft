@@ -580,7 +580,7 @@ internal static class FrameCommand
                 $"  sprite coverage: {layout.Blocks.Count - unresolved.Count}/{layout.Blocks.Count} blocks textured, " +
                 $"{unresolved.Count} missing");
 
-            foreach (var blockId in unresolved.Take(8))
+            foreach (var blockId in unresolved.Take(400))
             {
                 Console.WriteLine($"    no texture: {blockId}");
             }
@@ -749,7 +749,8 @@ internal static class FrameCommand
         TextureData? atlas = null,
         ChunkMeshCache? cache = null,
         bool meshSynchronously = true,
-        BlockStateLayout? layout = null)
+        BlockStateLayout? layout = null,
+        BiomeTint? tint = null)
     {
         // With a cache only the chunks whose blocks changed are re-meshed; without one the whole world is
         // scanned, which is what the offscreen paths still do (docs/specs/network/play-movement.md 7.19).
@@ -780,7 +781,7 @@ internal static class FrameCommand
                 var translucentBefore = translucent?.IndexCount ?? 0;
 
                 blocks += Sharpcraft.Client.Render.ChunkMesher.MeshChunk(
-                    world, chunk, airState: 0, buffer, maxBlocks: 2_000_000 - blocks, sprites: sprites, translucent: translucent, layout: layout, cutout: cutout);
+                    world, chunk, airState: 0, buffer, maxBlocks: 2_000_000 - blocks, sprites: sprites, translucent: translucent, layout: layout, cutout: cutout, tint: tint);
 
                 ranges.Add((before, buffer.IndexCount - before));
 
@@ -878,7 +879,7 @@ internal static class FrameCommand
                 foreach (var chunk in world.GetChunks())
                 {
                     Sharpcraft.Client.Render.ChunkMesher.MeshChunk(
-                        world, chunk, airState: 0, opaqueSink, maxBlocks: 2_000_000, sprites: sprites, translucent: translucentBuffer, layout: layout, cutout: cutoutBuffer);
+                        world, chunk, airState: 0, opaqueSink, maxBlocks: 2_000_000, sprites: sprites, translucent: translucentBuffer, layout: layout, cutout: cutoutBuffer, tint: tint);
                 }
 
                 if (translucentBuffer.IndexCount > 0)
@@ -987,6 +988,11 @@ internal static class FrameCommand
 
         var prepared = PrepareSprites(layout);
         layout ??= Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout;
+
+        // Colour maps come from the resource pack; without them the tint falls back to the reference constants. The stack
+        // is cheap to build, and this path only builds one frame.
+        using var tintResources = CreateResourceManager();
+        var tint = Sharpcraft.Client.Render.BiomeTint.Load(tintResources);
 
         var request = BuildRequest(
             world,
