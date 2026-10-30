@@ -811,7 +811,7 @@ internal sealed class InteractiveSession
 
                         if (_diagEnabled)
                         {
-                            Console.WriteLine($"chat received: {Plain(decorated)}");
+                            Console.WriteLine($"chat received [type {chatTypeId}]: {Plain(decorated)}");
                         }
                     }
 
@@ -832,7 +832,7 @@ internal sealed class InteractiveSession
 
                             if (_diagEnabled)
                             {
-                                Console.WriteLine($"chat received: {Plain(decoration)}");
+                                Console.WriteLine($"chat received [disguised type {disguisedType}]: {Plain(decoration)}");
                             }
                         }
                     }
@@ -869,7 +869,7 @@ internal sealed class InteractiveSession
 
                             if (_diagEnabled)
                             {
-                                Console.WriteLine($"chat received: {Plain(chatRuns)}");
+                                Console.WriteLine($"chat received [system]: {Plain(chatRuns)}");
                             }
                         }
                     }

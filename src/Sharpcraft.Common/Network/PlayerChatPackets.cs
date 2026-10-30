@@ -48,6 +48,10 @@ public static class PlayerChatPackets
         chatTypeId = -1;
         chatTarget = [];
 
+        // Temporary field tracing (docs/modules/ui.md 8.4): the chat type id came out one higher than the reference
+        // resolved for the same message, so the field offsets are printed to find which read is off.
+        var tracing = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
+        var trace = new System.Text.StringBuilder();
         var reader = new PayloadReader(body);
 
         if (reader.TryReadVarInt(out _) != DecodeStatus.Success ||          // global index
@@ -57,10 +61,14 @@ public static class PlayerChatPackets
             return DecodeStatus.NeedMoreData;
         }
 
+        trace.Append($"head={reader.Position} ");
+
         if (!TryReadSignature(ref reader, out signed) || !TryReadBody(ref reader, out var content, out _))
         {
             return DecodeStatus.NeedMoreData;
         }
+
+        trace.Append($"sig={signed} body={reader.Position} content='{content}' ");
 
         // An unsigned content overrides the body: it is what the server wants shown when it rewrote or filtered the
         // message, so preferring the body would show text the server deliberately replaced.
@@ -84,6 +92,8 @@ public static class PlayerChatPackets
             reader.Skip(consumed);
         }
 
+        trace.Append($"unsigned={hasUnsignedContent} afterUnsigned={reader.Position} ");
+
         if (!SkipFilterMask(ref reader))
         {
             return DecodeStatus.NeedMoreData;
@@ -96,6 +106,13 @@ public static class PlayerChatPackets
             nameComponent is null)
         {
             return DecodeStatus.NeedMoreData;
+        }
+
+        trace.Append($"afterFilter={reader.Position} type={chatType} ");
+
+        if (tracing)
+        {
+            Console.WriteLine("player chat fields: " + trace.ToString());
         }
 
         chatTypeId = chatType;

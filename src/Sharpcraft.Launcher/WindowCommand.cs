@@ -127,6 +127,11 @@ internal static class WindowCommand
         {
             chatTypes.Load(registries);
             Console.WriteLine($"chat types: {chatTypes.Count} from the server");
+
+            if (Environment.GetEnvironmentVariable("MC_DIAG") == "1")
+            {
+                Console.WriteLine("chat type table: " + string.Join(", ", chatTypes.Describe()));
+            }
         }
 
         var session = InteractiveSession.Create(world, request, live, workerPool, language, chatTypes);

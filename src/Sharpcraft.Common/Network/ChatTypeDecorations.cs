@@ -125,6 +125,15 @@ public sealed class ChatTypeTable
         _entries = decorations;
     }
 
+    /// <summary>Describes every entry, for diagnostics.</summary>
+    public IEnumerable<string> Describe()
+    {
+        for (var id = 0; id < _entries.Length; id++)
+        {
+            yield return _entries[id] is { } decoration ? $"{id}={decoration.TranslationKey}" : $"{id}=?";
+        }
+    }
+
     /// <summary>Decoration for a chat type id, or null when the id is unknown.</summary>
     /// <param name="id">Id as it appeared on the wire.</param>
     public ChatTypeDecoration? Get(int id) =>
