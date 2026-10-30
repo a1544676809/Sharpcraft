@@ -22,6 +22,7 @@ public static class ShaderPipelines
         new ShaderDescriptor("ui_sprite", "ui_sprite.wgsl", ["vs_main", "fs_main"], [0, 1, 2]),
         new ShaderDescriptor("ui_text", "ui_text.wgsl", ["vs_main", "fs_main"], [0, 1, 2]),
         new ShaderDescriptor("depth_pyramid", "depth_pyramid.wgsl", ["cs_downsample"], [4, 5, 6]),
+        new ShaderDescriptor("motion_vectors", "motion_vectors.wgsl", ["cs_motion"], [4, 5, 6, 7]),
     ];
 
     private static bool _validated;
