@@ -57,6 +57,26 @@ public sealed class BlockStateLayout
 
     /// <summary>Base id of a block.</summary>
     /// <exception cref="KeyNotFoundException">Unknown block.</exception>
+    /// <summary>
+    /// Block a global state id belongs to, or null when it is outside every registered range.
+    /// </summary>
+    /// <param name="stateId">Global block state id.</param>
+    /// <remarks>
+    /// A linear scan is fine: this is used for classification at load time, not per frame.
+    /// </remarks>
+    public Identifier? BlockAt(int stateId)
+    {
+        foreach (var entry in _blocks)
+        {
+            if (stateId >= entry.BaseId && stateId < entry.BaseId + entry.StateCount)
+            {
+                return entry.Id;
+            }
+        }
+
+        return null;
+    }
+
     public int GetBaseId(Identifier blockId) =>
         _baseIds.TryGetValue(blockId, out var baseId) ? baseId : throw new KeyNotFoundException($"unknown block '{blockId}'");
 
