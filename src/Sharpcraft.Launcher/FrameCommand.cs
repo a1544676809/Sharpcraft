@@ -629,6 +629,26 @@ internal static class FrameCommand
     /// Builds a deterministic scene for the translucent test: stone with a layer of water on top.
     /// </summary>
     /// <param name="layout">Layout used to resolve the stone and water state ids.</param>
+    /// <summary>
+    /// Builds a deterministic scene with leaves, to check the cutout layer against a layout we know.
+    /// </summary>
+    /// <param name="layout">Layout used to resolve the stone and leaves state ids.</param>
+    internal static ClientWorld BuildLeavesWorld(BlockStateLayout layout)
+    {
+        var world = new ClientWorld(minSectionY: -1, sectionCount: 3);
+
+        layout.TryGetBaseId(new Identifier("minecraft", "stone"), out var stone);
+        layout.TryGetBaseId(new Identifier("minecraft", "oak_leaves"), out var leaves);
+
+        var chunk = world.AddChunk(0, 0);
+        chunk.SetSection(new Sharpcraft.Common.World.ChunkSection(singleState: stone, sectionY: -1));
+        chunk.SetSection(new Sharpcraft.Common.World.ChunkSection(singleState: leaves, sectionY: 0));
+        chunk.ApplyLight(Sharpcraft.Common.Network.LightData.FullSky(chunk.Light.LightSectionCount));
+        chunk.MarkLoaded();
+
+        return world;
+    }
+
     internal static ClientWorld BuildWaterWorld(BlockStateLayout layout)
     {
         var world = new ClientWorld(minSectionY: -1, sectionCount: 3);
@@ -835,6 +855,10 @@ internal static class FrameCommand
                 cutoutVertices = split.Vertices;
                 cutoutIndices = split.Indices;
             }
+
+            Console.WriteLine(
+                $"layers: solid {drawRanges!.Sum(range => range.IndexCount) / 3} tri, " +
+                $"cutout {(cutoutIndices?.Length ?? 0) / 3} tri, translucent {(translucentIndices?.Length ?? 0) / 3} tri");
         }
         else
         {
@@ -870,6 +894,9 @@ internal static class FrameCommand
                     cutoutVertices = split.Vertices;
                     cutoutIndices = split.Indices;
                 }
+
+                Console.WriteLine(
+                    $"layers: cutout {(cutoutIndices?.Length ?? 0) / 3} tri, translucent {(translucentIndices?.Length ?? 0) / 3} tri");
             }
         }
 

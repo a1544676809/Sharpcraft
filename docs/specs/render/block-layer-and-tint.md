@@ -86,3 +86,20 @@ color = pixels[index]  （越界用 fallback）
 - **不是**按方块名判断层/着色（原版按贴图 alpha 与模型 `tintindex`）；我们若图省事做名表，会在模组方块上立刻翻车。
 - 群系数据缺失时必须有确定回退（`GrassColor.getDefaultColor()`），并在日志中标注缺失项，不得静默变黑。
 - `colormap` 缺失时回退常量色同理。
+
+### 实测核对（2026-10-30，按用户要求先查原版/原版数据）
+
+从资产包（`minecraft-26.3-*.pack.zip`，11534 项）里取出实际文件核对：
+
+| 事实 | 证据 |
+| --- | --- |
+| **`models/block/leaves.json` 没有 `render_type`** | 模型只有 parent/textures/elements；六个面都带 `tintindex: 0` |
+| 树叶层由**贴图 alpha** 决定 | `textures/block/oak_leaves.png` 16×16：**alpha=0 有 84 个像素，部分透明 0 个** ⇒ `Transparency(true,false)` ⇒ **CUTOUT** |
+| 树叶需要**群系着色** | 模型每个面 `tintindex: 0`，即逐顶点上色 |
+
+⇒ 我们 A1 的"按贴图 alpha 判定层"与原版一致；**名称表不应作为主判据**（已改为：alpha 优先，名称表仅作无图集/不透明贴图时的兜底）。
+
+**现状与遗留**：
+- 真实服务器（用户确认：**Fabric，基本无 mod**）实测 `cutout 4256 tri / translucent 1214 tri`，cutout 层确实生效；
+- 树叶仍呈**黑白棋盘格** ⇒ 属于 **sprite 解析或 UV 取样**问题（不是分层判据）。下一步：给 sprite 未命中加日志，并与 `FaceBakery` 的 UV 推导 + 图集 padding 对照。
+- 另：本地合成场景（水/树叶）此前是**纯色**，因为该路径 `PrepareSprites` 返回 null（无图集），不能用来验证贴图；贴图验证必须走真实资产路径。

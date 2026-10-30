@@ -51,9 +51,12 @@ public static class BlockLayerRules
 
         if (sprites is null)
         {
-            return BlockLayer.Solid;
+            // Without an atlas the alpha cannot be read, so fall back to the table that stands in for model render types.
+            return BlockRenderLayers.IsCutout(block) ? BlockLayer.Cutout : BlockLayer.Solid;
         }
 
+        // The reference decides from the texture, not from the block: oak leaves carry no render type at all, they are cut
+        // out because their texture has zero alpha texels (84 of them, none partial).
         var transparency = sprites.TransparencyOf(block);
 
         if (transparency.HasTranslucent)
@@ -61,6 +64,13 @@ public static class BlockLayerRules
             return BlockLayer.Translucent;
         }
 
-        return transparency.HasTransparent ? BlockLayer.Cutout : BlockLayer.Solid;
+        if (transparency.HasTransparent)
+        {
+            return BlockLayer.Cutout;
+        }
+
+        // Opaque texture but the name table says cut out: keep the declared behaviour for models whose texture shipped
+        // fully opaque.
+        return BlockRenderLayers.IsCutout(block) ? BlockLayer.Cutout : BlockLayer.Solid;
     }
 }
