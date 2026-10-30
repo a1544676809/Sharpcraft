@@ -86,6 +86,19 @@ internal sealed class ChunkBufferHarness
         return true;
     }
 
+    /// <summary>Releases on the window alone, for when the server stops sending before the count is reached.</summary>
+    public bool TryRelease()
+    {
+        if (_released || _held.Count == 0 || _clock.Elapsed < _window)
+        {
+            return false;
+        }
+
+        _released = true;
+        Console.WriteLine($"bench: released {_held.Count} chunks after {_clock.Elapsed.TotalMilliseconds:F0} ms (window)");
+        return true;
+    }
+
     /// <summary>Takes the held chunks once they have been released.</summary>
     public IReadOnlyList<object> TakeReleased()
     {

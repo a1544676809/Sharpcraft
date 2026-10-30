@@ -875,6 +875,12 @@ internal sealed class InteractiveSession
         DrainIncoming();
         ApplyParsedChunks();
 
+        // A benchmark hold also has to end when the server simply stops sending, hence the per-frame window check.
+        if (_benchBuffer is { } benchBuffer && benchBuffer.TryRelease())
+        {
+            ReleaseBenchBuffer(benchBuffer);
+        }
+
         _loop.Advance(
             elapsed,
             () =>
@@ -1083,9 +1089,58 @@ internal sealed class InteractiveSession
 
         for (var installed = 0; installed < ParsedChunksPerFrame && _pool.TryTakeParsed(out var parsed); installed++)
         {
-            _world.AddChunk(parsed);
-            _geometryDirty = true;
+            InstallChunk(parsed);
         }
+    }
+
+    private Sharpcraft.Launcher.Benchmarking.ChunkBufferHarness? _benchBuffer;
+    private bool _benchChecked;
+
+    /// <summary>
+    /// Installs a chunk, holding it first when the benchmark buffer is active.
+    /// </summary>
+    /// <remarks>
+    /// Holding is what makes the measurement exclude the server's send time: the clock starts when the buffer releases.
+    /// Without the dev switch the buffer is null and this is exactly the old path (benchmarks/chunk-mesh/README.md).
+    /// </remarks>
+    private void InstallChunk(Sharpcraft.Common.Network.ParsedChunk chunk)
+    {
+        if (!_benchChecked)
+        {
+            _benchChecked = true;
+            _benchBuffer = Sharpcraft.Launcher.Benchmarking.ChunkBufferHarness.FromEnvironment(ExpectedChunkCount());
+        }
+
+        if (_benchBuffer is { } buffer)
+        {
+            buffer.Hold(chunk);
+
+            if (!buffer.Holding)
+            {
+                ReleaseBenchBuffer(buffer);
+            }
+
+            return;
+        }
+
+        _world!.AddChunk(chunk);
+        _geometryDirty = true;
+    }
+
+    private void ReleaseBenchBuffer(Sharpcraft.Launcher.Benchmarking.ChunkBufferHarness buffer)
+    {
+        foreach (var held in buffer.TakeReleased())
+        {
+            _world!.AddChunk((Sharpcraft.Common.Network.ParsedChunk)held);
+        }
+
+        _geometryDirty = true;
+        _benchBuffer = null;
+
+        var position = _player.Position;
+        Console.WriteLine(
+            $"bench: player at ({position.X:F1}, {position.Y:F1}, {position.Z:F1}), " +
+            $"chunks installed {_world!.LoadedChunkCount}");
     }
 
     private void DrainIncoming()
@@ -1155,8 +1210,7 @@ internal sealed class InteractiveSession
                     if (ChunkPacketParser.TryRead(body, _world.SectionCount, _world.MinSectionY, airState: 0, out var parsed) == DecodeStatus.Success &&
                         parsed is not null)
                     {
-                        _world.AddChunk(parsed);
-                        _geometryDirty = true;
+                        InstallChunk(parsed);
                     }
 
                     break;
