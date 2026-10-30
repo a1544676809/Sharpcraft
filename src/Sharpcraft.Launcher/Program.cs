@@ -370,9 +370,11 @@ internal static class Program
         if (Environment.GetEnvironmentVariable("MC_FRAME_REPLAY") is { Length: > 0 } replayPath && File.Exists(replayPath))
         {
             // Replay a recorded scene: no server, therefore no variance between runs.
-            var recorded = Environment.GetEnvironmentVariable("MC_FRAME_OCCLUDER") == "1"
-                ? FrameCommand.BuildOccluderWorld()
-                : Sharpcraft.Client.World.SceneRecorder.Load(replayPath);
+            var recorded = Environment.GetEnvironmentVariable("MC_FRAME_WATER") == "1"
+                ? FrameCommand.BuildWaterWorld(Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout)
+                : Environment.GetEnvironmentVariable("MC_FRAME_OCCLUDER") == "1"
+                    ? FrameCommand.BuildOccluderWorld()
+                    : Sharpcraft.Client.World.SceneRecorder.Load(replayPath);
             var replayPathOut = FrameCommand.RenderWorld(recorded, 960, 540);
             Console.WriteLine($"frame written to {replayPathOut}");
             return 0;

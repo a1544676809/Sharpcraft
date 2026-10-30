@@ -626,6 +626,25 @@ internal static class FrameCommand
 
     /// <summary>Builds the frame request (mesh plus camera) for a world.</summary>
     /// <summary>
+    /// Builds a deterministic scene for the translucent test: stone with a layer of water on top.
+    /// </summary>
+    /// <param name="layout">Layout used to resolve the stone and water state ids.</param>
+    internal static ClientWorld BuildWaterWorld(BlockStateLayout layout)
+    {
+        var world = new ClientWorld(minSectionY: -1, sectionCount: 2);
+        var chunk = world.AddChunk(0, 0);
+
+        layout.TryGetBaseId(new Identifier("minecraft", "stone"), out var stone);
+        layout.TryGetBaseId(new Identifier("minecraft", "water"), out var water);
+
+        chunk.SetSection(new Sharpcraft.Common.World.ChunkSection(singleState: stone, sectionY: -1));
+        chunk.SetSection(new Sharpcraft.Common.World.ChunkSection(singleState: water, sectionY: 0));
+        chunk.MarkLoaded();
+
+        return world;
+    }
+
+    /// <summary>
     /// Builds a deterministic scene for the occlusion test: a solid wall with solid chunks behind it.
     /// </summary>
     /// <remarks>
@@ -676,27 +695,43 @@ internal static class FrameCommand
         BlockSpriteMap? sprites = null,
         TextureData? atlas = null,
         ChunkMeshCache? cache = null,
-        bool meshSynchronously = true)
+        bool meshSynchronously = true,
+        BlockStateLayout? layout = null)
     {
         // With a cache only the chunks whose blocks changed are re-meshed; without one the whole world is
         // scanned, which is what the offscreen paths still do (docs/specs/network/play-movement.md 7.19).
         // The windowed path passes meshSynchronously false and lets the background worker do the meshing.
+        float[]? translucentVertices = null;
+        uint[]? translucentIndices = null;
+
         if (cache is null)
         {
             // Mesh chunk by chunk so each one gets an index range: without ranges a culled chunk cannot be left out.
             using var buffer = new Sharpcraft.Client.Render.MeshBuffer(Math.Min(2_000_000, world.LoadedChunkCount * 512));
+
+            // With a layout the same pass can also fill a second buffer with the translucent faces.
+            var wantsTranslucent = Environment.GetEnvironmentVariable("MC_FRAME_TRANSLUCENT") == "1" && layout is not null;
+            using var translucent = wantsTranslucent ? new Sharpcraft.Client.Render.MeshBuffer(Math.Min(2_000_000, world.LoadedChunkCount * 512)) : null;
             var ranges = new List<(int FirstIndex, int IndexCount)>(world.LoadedChunkCount);
             var blocks = 0;
 
             foreach (var chunk in world.GetChunks())
             {
                 var before = buffer.IndexCount;
-                blocks += Sharpcraft.Client.Render.ChunkMesher.MeshChunk(world, chunk, airState: 0, buffer, maxBlocks: 2_000_000 - blocks, sprites: sprites);
+                blocks += Sharpcraft.Client.Render.ChunkMesher.MeshChunk(
+                    world, chunk, airState: 0, buffer, maxBlocks: 2_000_000 - blocks, sprites: sprites, translucent: translucent, layout: layout);
                 ranges.Add((before, buffer.IndexCount - before));
             }
 
             mesh = buffer.ToMeshData(blocks);
             drawRanges = [.. ranges];
+
+            if (translucent is not null)
+            {
+                var split = translucent.ToMeshData(0);
+                translucentVertices = split.Vertices;
+                translucentIndices = split.Indices;
+            }
         }
         else
         {
@@ -744,7 +779,9 @@ internal static class FrameCommand
             target)
         {
             Atlas = atlas,
-            DrawRanges = drawRanges
+            DrawRanges = drawRanges,
+            TranslucentVertices = translucentVertices,
+            TranslucentIndices = translucentIndices
         };
     }
 
@@ -770,6 +807,8 @@ internal static class FrameCommand
         }
 
         var prepared = PrepareSprites(layout);
+        layout ??= Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout;
+
         var request = BuildRequest(
             world,
             width,
@@ -777,12 +816,26 @@ internal static class FrameCommand
             out var mesh,
             out var drawRanges,
             prepared?.Map,
-            prepared is null ? null : new TextureData(prepared.Value.Atlas.Width, prepared.Value.Atlas.Height, prepared.Value.Atlas.Pixels));
+            prepared is null ? null : new TextureData(prepared.Value.Atlas.Width, prepared.Value.Atlas.Height, prepared.Value.Atlas.Pixels),
+            layout: layout);
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
+        Console.WriteLine($"layers: translucent triangles {(request.TranslucentIndices?.Length ?? 0) / 3}, layout {(layout is null ? "null" : "set")}, water->{(layout is null ? "-" : layout.BlockAt(1)?.ToString() ?? "none")}");
 
         var frame = OffscreenRenderer.Render(request);
 
         Console.WriteLine($"rendered on adapter: {frame.AdapterName}");
+
+        if (Environment.GetEnvironmentVariable("MC_FRAME_TRANSLUCENT_TEST") == "1" && request.TranslucentIndices is { Length: > 0 })
+        {
+            // The same frame without the translucent layer, so the difference is exactly what blending contributed.
+            var opaqueOnly = OffscreenRenderer.Render(request with { TranslucentVertices = null, TranslucentIndices = null });
+            var difference = Sharpcraft.Framework.Rendering.PixelComparison.Compare(frame.Rgba, opaqueOnly.Rgba, frame.Width, frame.Height, 0);
+
+            Console.WriteLine(
+                $"translucent: {request.TranslucentIndices.Length / 3} triangles, pixels changed {difference.Mismatches}" +
+                (difference.Mismatches > 0 ? $", first ({difference.FirstX},{difference.FirstY})" : string.Empty));
+        }
+
 
         if (Environment.GetEnvironmentVariable("MC_FRAME_CULLTEST") == "1" && request.DrawRanges is { Length: > 0 } ranges)
         {

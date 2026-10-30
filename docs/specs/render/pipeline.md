@@ -230,3 +230,7 @@ P3 之前不谈包；但 §3 的 pass 划分必须**现在就按"可命名目标
 **S2 网格侧已完成（2026-10-30）**：`MeshChunk` / `MergeSectionFaces` / `EmitMergedQuad` 透传 `translucent` 缓冲与 `layout`，
 面出口按 `BlockRenderLayers.IsTranslucent(state, layout)` 选目标缓冲。3 项测试：水入透明缓冲、无 layout 时全入不透明、
 **拆分不改变总面数**。剩余：`FrameRequest` 双几何 + 混合管线 + 距离降序绘制。
+
+**S2 渲染侧完成（2026-10-30）**：`BuildRequest` 增 `layout`（为空时回退 `VanillaBlockRegistry.Layout`），
+`MC_FRAME_TRANSLUCENT=1` 时同一遍网格化同时填透明缓冲；离屏在 `pass.End()` 前用混合管线绘制。
+合成"石头上覆水"场景实测：**透明层 10 个三角形，与"关闭透明"相比 97,344 个像素改变，首个 (324,114)**。
