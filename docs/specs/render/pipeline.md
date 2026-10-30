@@ -234,3 +234,18 @@ P3 之前不谈包；但 §3 的 pass 划分必须**现在就按"可命名目标
 **S2 渲染侧完成（2026-10-30）**：`BuildRequest` 增 `layout`（为空时回退 `VanillaBlockRegistry.Layout`），
 `MC_FRAME_TRANSLUCENT=1` 时同一遍网格化同时填透明缓冲；离屏在 `pass.End()` 前用混合管线绘制。
 合成"石头上覆水"场景实测：**透明层 10 个三角形，与"关闭透明"相比 97,344 个像素改变，首个 (324,114)**。
+
+### 方块实体阶段：现状勘察（2026-10-30）
+
+五阶段里只剩方块实体未开工。勘察结论（这是真正的门槛，不是渲染问题）：
+
+1. `ChunkPacketParser` **目前只数个数、不保留数据**：`SkipBlockEntity`（`Common/Network/ChunkPacketParser.cs`，约 L228）
+   读掉 `packed XZ`、`packed Y`、`type` 与 NBT 后丢弃，`ParsedChunk` 只记录 `BlockEntityCount` 与 `blockEntitiesSkipped`。
+2. 因此客户端**没有任何方块实体实例**可用，渲染侧无论怎么写都拿不到要画的东西。
+3. 需要先做数据侧：把 `(x, y, z, type)` 留在 `ParsedChunk` 里，再由世界装载进 `LevelChunk`。
+
+**风险（需核实）**：`SkipBlockEntity` 的字段宽度是"先读 1 字节再读 2 字节"再读 VarInt，与注释所说的"packed XZ（2 字节）+ packed Y（2 字节）"
+并不一致——它能跑通说明当前写法与真实字节流吻合，但**语义**（哪个字节是 x、哪个是 z、Y 是否要减 64）
+必须与 `ref://mc-26.3-analysis` 的区块包读取实现核对后才能解码坐标，否则会把方块实体画到错误的方块位置。
+
+**下一步**：核对坐标编码 → `ParsedChunk` 增加方块实体列表 → `LevelChunk` 存储 → `BlockEntityMesher`（按类型取尺寸，如箱子 0.875³）→ 像素/数值验收。
