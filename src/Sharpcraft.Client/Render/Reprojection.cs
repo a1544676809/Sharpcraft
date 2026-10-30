@@ -40,6 +40,68 @@ public static class Reprojection
         return new Vector2((previous.X - current.X) * width, (previous.Y - current.Y) * height);
     }
 
+    /// <summary>
+    /// Rebuilds the world position a pixel shows, from its depth and the inverse view-projection.
+    /// </summary>
+    /// <param name="screen">Zero-to-one screen coordinates.</param>
+    /// <param name="depth">Depth in zero-to-one.</param>
+    /// <param name="inverseViewProjection">Inverse of this frame's combined matrix.</param>
+    /// <returns>World position, or <see cref="Vector3.NaN"/> when the inverse transform is degenerate.</returns>
+    /// <remarks>
+    /// This is the per-pixel half of the motion vector pass: the shader does exactly this, so proving it here gives the
+    /// shader a ground truth to be checked against instead of being trusted on sight.
+    /// </remarks>
+    public static Vector3 ReconstructWorld(Vector2 screen, float depth, Matrix4x4 inverseViewProjection)
+    {
+        var clip = new Vector4(
+            (screen.X * 2f) - 1f,
+            1f - (screen.Y * 2f),
+            depth,
+            1f);
+
+        var world = Vector4.Transform(clip, inverseViewProjection);
+
+        if (MathF.Abs(world.W) <= 1e-6f)
+        {
+            return new Vector3(float.NaN);
+        }
+
+        return new Vector3(world.X / world.W, world.Y / world.W, world.Z / world.W);
+    }
+
+    /// <summary>
+    /// Motion in pixels for a pixel of the current frame, given its depth.
+    /// </summary>
+    /// <param name="screen">Zero-to-one screen coordinates.</param>
+    /// <param name="depth">Depth in zero-to-one.</param>
+    /// <param name="inverseCurrentViewProjection">Inverse of this frame's combined matrix.</param>
+    /// <param name="previousViewProjection">Last frame's combined matrix.</param>
+    /// <param name="width">Viewport width in pixels.</param>
+    /// <param name="height">Viewport height in pixels.</param>
+    public static Vector2 OfPixel(
+        Vector2 screen,
+        float depth,
+        Matrix4x4 inverseCurrentViewProjection,
+        Matrix4x4 previousViewProjection,
+        int width,
+        int height)
+    {
+        var world = ReconstructWorld(screen, depth, inverseCurrentViewProjection);
+
+        if (float.IsNaN(world.X))
+        {
+            return Vector2.NaN;
+        }
+
+        // The current position is the pixel itself, so only the previous frame has to be projected.
+        if (!TryToScreen(world, previousViewProjection, out var previous))
+        {
+            return Vector2.NaN;
+        }
+
+        return new Vector2((previous.X - screen.X) * width, (previous.Y - screen.Y) * height);
+    }
+
     /// <summary>Projects a world point to zero-to-one screen coordinates.</summary>
     /// <param name="world">World position.</param>
     /// <param name="viewProjection">Combined matrix.</param>
