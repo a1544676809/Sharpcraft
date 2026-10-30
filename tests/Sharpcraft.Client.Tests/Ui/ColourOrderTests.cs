@@ -48,10 +48,22 @@ public sealed class ColourOrderTests
         var geometry = new UiGeometry();
         TextEditRenderer.Draw(geometry, Monospace(), model, 0f, 0f, focused: false, elapsedMs: 0);
 
-        // Highlight first, then for each character its shadow and then the glyph itself.
-        var glyph = (uint)BitConverter.SingleToUInt32Bits(geometry.Vertices[(2 * 20) + 4]);
-        Assert.Equal((UiGeometry.FromArgb(TextEditRenderer.SelectedTextColour)), glyph);
-        Assert.NotEqual((UiGeometry.FromArgb(TextEditRenderer.TextColour)), glyph);
+        // The selected ink is drawn, and so is a shadow, which in the reference would have been inverted along with the
+        // rest of the selection. Both are looked for rather than indexed, because the order inside a run is an
+        // implementation detail.
+        var colours = new List<uint>();
+
+        for (var index = 0; index + 4 < geometry.Vertices.Length; index += 20)
+        {
+            colours.Add((uint)BitConverter.SingleToUInt32Bits(geometry.Vertices[index + 4]));
+        }
+
+        var ink = UiGeometry.FromArgb(TextEditRenderer.SelectedTextColour);
+        Assert.Contains(ink, colours);
+        Assert.DoesNotContain(UiGeometry.FromArgb(TextEditRenderer.TextColour), colours);
+
+        // The shadow has to be lighter than the ink, otherwise the selection reads as a dirty bold line.
+        Assert.Contains(colours, colour => (colour & 0xFF) > (ink & 0xFF));
     }
 
     private static BitmapFont Monospace()

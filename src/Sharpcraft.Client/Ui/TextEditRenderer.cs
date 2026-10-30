@@ -150,17 +150,16 @@ public static class TextEditRenderer
             var before = value.AsSpan(0, selectionStart);
 
             UiScreenLayout.AddText(geometry, font, before, x, y, 1f, textColour);
-            // No shadow inside the selection: the reference inverts the pixels underneath, which turns the shadow
-            // light as well, so a dark one here would read as a dirty, boldened line.
-            UiScreenLayout.AddText(
-                geometry,
-                font,
-                value.AsSpan(selectionStart, selectionEnd - selectionStart),
-                x + font.MeasureWidth(before),
-                y,
-                1f,
-                UiGeometry.FromArgb(SelectedTextColour),
-                shadow: false);
+            // The reference draws the text with its shadow and then inverts the pixels under the selection, so the
+            // shadow survives as a light halo. Without an invert pass the same effect is painted directly: a shadow in
+            // the inverse of the usual shadow colour, then the ink on top.
+            var selectedText = value.AsSpan(selectionStart, selectionEnd - selectionStart);
+            var selectedX = x + font.MeasureWidth(before);
+            var ink = UiGeometry.FromArgb(SelectedTextColour);
+            var invertedShadow = 0xFF000000u | (~((ink >> 2) & 0x003F3F3Fu) & 0x00FFFFFFu);
+
+            UiScreenLayout.AddText(geometry, font, selectedText, selectedX + 1f, y + 1f, 1f, invertedShadow, shadow: false);
+            UiScreenLayout.AddText(geometry, font, selectedText, selectedX, y, 1f, ink, shadow: false);
             UiScreenLayout.AddText(
                 geometry,
                 font,
