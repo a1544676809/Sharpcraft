@@ -34,7 +34,36 @@ public sealed class DynamicRegistries
     public void Apply(Identifier registryId, IReadOnlyList<Entry> entries)
     {
         ArgumentNullException.ThrowIfNull(entries);
-        _registries[registryId.ToString()] = [.. entries];
+
+        // A registry can arrive in more than one packet, and entry ids are positional, so batches are appended rather
+        // than replacing what came before. Replacing kept only the last batch and shifted every id: a chat type that
+        // the server numbered one resolved to the entry we had stored at one, which was a different type entirely.
+        var key = registryId.ToString();
+
+        if (!_registries.TryGetValue(key, out var existing))
+        {
+            _registries[key] = [.. entries];
+            return;
+        }
+
+        foreach (var entry in entries)
+        {
+            var duplicate = false;
+
+            foreach (var known in existing)
+            {
+                if (known.Id.Equals(entry.Id))
+                {
+                    duplicate = true;
+                    break;
+                }
+            }
+
+            if (!duplicate)
+            {
+                existing.Add(entry);
+            }
+        }
     }
 
     /// <summary>Entries of a registry, or null when it was never sent.</summary>

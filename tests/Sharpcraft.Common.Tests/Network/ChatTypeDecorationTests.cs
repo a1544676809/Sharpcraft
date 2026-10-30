@@ -81,4 +81,41 @@ public sealed class ChatTypeDecorationTests
         Assert.Equal("chat.type.text", ChatTypeDecoration.Default.TranslationKey);
         Assert.Equal([ChatTypeDecoration.Sender, ChatTypeDecoration.Content], ChatTypeDecoration.Default.Parameters);
     }
+
+    [Fact]
+    public void IdsOnTheWireAreOneBased()
+    {
+        // Zero means the definition follows inline; one names the first registry entry. Reading them as indices made an
+        // ordinary message render as an emote, which is exactly the bug this guards.
+        var registries = new DynamicRegistries();
+        var chat = new NbtCompound();
+        var decoration = new NbtCompound();
+        decoration.Set("translation_key", new NbtString("chat.type.text"));
+        decoration.Set("parameters", new NbtList(NbtTagType.String, [new NbtString("sender"), new NbtString("content")]));
+        chat.Set("chat", decoration);
+
+        registries.Apply(
+            new Sharpcraft.Common.Identifiers.Identifier("minecraft", "chat_type"),
+            [new DynamicRegistries.Entry(new Sharpcraft.Common.Identifiers.Identifier("minecraft", "chat"), chat)]);
+
+        var table = new ChatTypeTable();
+        table.Load(registries);
+
+        Assert.Equal("chat.type.text", table.Get(1)!.TranslationKey);
+        Assert.Null(table.Get(0));
+        Assert.Null(table.Get(2));
+    }
+
+    [Fact]
+    public void ASecondBatchIsAddedRatherThanReplacingTheFirst()
+    {
+        var registries = new DynamicRegistries();
+        var id = new Sharpcraft.Common.Identifiers.Identifier("minecraft", "chat_type");
+
+        registries.Apply(id, [new DynamicRegistries.Entry(new Sharpcraft.Common.Identifiers.Identifier("minecraft", "a"), null)]);
+        registries.Apply(id, [new DynamicRegistries.Entry(new Sharpcraft.Common.Identifiers.Identifier("minecraft", "b"), null)]);
+
+        // Two entries, so a later batch cannot shift the ids of the earlier ones.
+        Assert.Equal(2, registries.Get(id)!.Count);
+    }
 }

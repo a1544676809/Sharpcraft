@@ -113,6 +113,10 @@ public static class PlayerChatPackets
         if (tracing)
         {
             Console.WriteLine("player chat fields: " + trace.ToString());
+
+            var from = Math.Max(0, 40);
+            var to = Math.Min(body.Length, 60);
+            Console.WriteLine("bytes 40..60: " + Convert.ToHexString(body[from..to]));
         }
 
         chatTypeId = chatType;

@@ -136,6 +136,20 @@ public sealed class ChatTypeTable
 
     /// <summary>Decoration for a chat type id, or null when the id is unknown.</summary>
     /// <param name="id">Id as it appeared on the wire.</param>
-    public ChatTypeDecoration? Get(int id) =>
-        id >= 0 && id < _entries.Length ? _entries[id] : null;
+    /// <remarks>
+    /// Ids on the wire are one based: zero means the definition follows inline instead of naming a registry entry, and
+    /// anything else is the index plus one. Reading them as indices is what made an ordinary chat message resolve to the
+    /// entry after it, so a line that should read <c>&lt;name&gt; text</c> was drawn as an emote.
+    /// </remarks>
+    public ChatTypeDecoration? Get(int id)
+    {
+        if (id <= 0)
+        {
+            // An inline definition would follow in the packet; nothing here reads one, so it cannot be shown.
+            return null;
+        }
+
+        var index = id - 1;
+        return index < _entries.Length ? _entries[index] : null;
+    }
 }
