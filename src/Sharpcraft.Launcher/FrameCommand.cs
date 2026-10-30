@@ -630,6 +630,7 @@ internal static class FrameCommand
         int width,
         int height,
         out MeshData mesh,
+        out (int FirstIndex, int IndexCount)[]? drawRanges,
         BlockSpriteMap? sprites = null,
         TextureData? atlas = null,
         ChunkMeshCache? cache = null,
@@ -638,11 +639,30 @@ internal static class FrameCommand
         // With a cache only the chunks whose blocks changed are re-meshed; without one the whole world is
         // scanned, which is what the offscreen paths still do (docs/specs/network/play-movement.md 7.19).
         // The windowed path passes meshSynchronously false and lets the background worker do the meshing.
-        mesh = cache is null
-            ? ChunkMesher.Mesh(world, airState: 0, maxBlocks: 2_000_000, sprites: sprites)
-            : meshSynchronously
+        if (cache is null)
+        {
+            // Mesh chunk by chunk so each one gets an index range: without ranges a culled chunk cannot be left out.
+            using var buffer = new Sharpcraft.Client.Render.MeshBuffer(Math.Min(2_000_000, world.LoadedChunkCount * 512));
+            var ranges = new List<(int FirstIndex, int IndexCount)>(world.LoadedChunkCount);
+            var blocks = 0;
+
+            foreach (var chunk in world.GetChunks())
+            {
+                var before = buffer.IndexCount;
+                blocks += Sharpcraft.Client.Render.ChunkMesher.MeshChunk(world, chunk, airState: 0, buffer, maxBlocks: 2_000_000 - blocks, sprites: sprites);
+                ranges.Add((before, buffer.IndexCount - before));
+            }
+
+            mesh = buffer.ToMeshData(blocks);
+            drawRanges = [.. ranges];
+        }
+        else
+        {
+            mesh = meshSynchronously
                 ? cache.Build(world, sprites, maxBlocks: 2_000_000)
                 : cache.Snapshot();
+            drawRanges = null;
+        }
 
         var bounds = BoundsOf(mesh);
 
@@ -667,7 +687,8 @@ internal static class FrameCommand
             eye,
             target)
         {
-            Atlas = atlas
+            Atlas = atlas,
+            DrawRanges = drawRanges
         };
     }
 
@@ -698,6 +719,7 @@ internal static class FrameCommand
             width,
             height,
             out var mesh,
+            out var drawRanges,
             prepared?.Map,
             prepared is null ? null : new TextureData(prepared.Value.Atlas.Width, prepared.Value.Atlas.Height, prepared.Value.Atlas.Pixels));
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");

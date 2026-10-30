@@ -178,6 +178,7 @@ internal static class WindowCommand
             width,
             height,
             out var mesh,
+            out var drawRanges,
             prepared?.Map,
             prepared is null
                 ? null
