@@ -97,7 +97,9 @@ internal sealed class InteractiveSession
 
         var adapter = new EntityWorldAdapter(world);
         var spawn = FindSpawn(world, request);
-        return new InteractiveSession(new PlayerEntity(adapter, spawn), live, world, pool, language);
+        var session = new InteractiveSession(new PlayerEntity(adapter, spawn), live, world, pool, language);
+        session.PrepareDebugPrompt();
+        return session;
     }
 
     /// <summary>
@@ -124,6 +126,28 @@ internal sealed class InteractiveSession
 
     /// <summary>Milliseconds since the prompt was opened, which drives the caret blink.</summary>
     public long ChatElapsedMs => Environment.TickCount64 - _chatOpenedAtMs;
+
+    /// <summary>
+    /// Opens the prompt with text already selected, so a screenshot can show the selection without typing.
+    /// </summary>
+    /// <remarks>
+    /// Driven by <c>MC_CHAT_DEBUG_TEXT</c>. It exists because the only way to check a selection's colour against the
+    /// reference is to see it, and typing into a window from an automated check is not possible.
+    /// </remarks>
+    private void PrepareDebugPrompt()
+    {
+        var text = Environment.GetEnvironmentVariable("MC_CHAT_DEBUG_TEXT");
+
+        if (string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        _chat.Open();
+        _chat.Append(text.AsSpan());
+        _chat.Model.SelectAll();
+        _chatOpenedAtMs = Environment.TickCount64;
+    }
 
     /// <summary>Glyph metrics, needed to turn a click into a caret position.</summary>
     public Sharpcraft.Client.Ui.BitmapFont? UiFont { get; set; }

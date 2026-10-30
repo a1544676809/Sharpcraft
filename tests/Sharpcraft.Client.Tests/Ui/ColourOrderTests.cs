@@ -35,7 +35,7 @@ public sealed class ColourOrderTests
 
         // The first quad is the highlight, so its colour word is the one to check.
         var highlight = (uint)BitConverter.SingleToUInt32Bits(geometry.Vertices[4]);
-        Assert.Equal(UiGeometry.FromArgb(TextEditRenderer.SelectionColour), highlight);
+        Assert.Equal(UiGeometry.ToLinear(UiGeometry.FromArgb(TextEditRenderer.SelectionColour)), highlight);
     }
 
     [Fact]
@@ -50,8 +50,8 @@ public sealed class ColourOrderTests
 
         // Highlight first, then for each character its shadow and then the glyph itself.
         var glyph = (uint)BitConverter.SingleToUInt32Bits(geometry.Vertices[(2 * 20) + 4]);
-        Assert.Equal(UiGeometry.FromArgb(TextEditRenderer.SelectedTextColour), glyph);
-        Assert.NotEqual(UiGeometry.FromArgb(TextEditRenderer.TextColour), glyph);
+        Assert.Equal(UiGeometry.ToLinear(UiGeometry.FromArgb(TextEditRenderer.SelectedTextColour)), glyph);
+        Assert.NotEqual(UiGeometry.ToLinear(UiGeometry.FromArgb(TextEditRenderer.TextColour)), glyph);
     }
 
     private static BitmapFont Monospace()
@@ -74,5 +74,44 @@ public sealed class ColourOrderTests
         }
 
         return BitmapFont.FromSheet(sheet);
+    }
+
+    [Fact]
+    public void TheSrgbConversionIsMonotonic()
+    {
+        // The swap chain encodes what is written to it, so decoding has to preserve order: a brighter authored
+        // colour must never end up darker. This is the check that would have caught the washed out colours.
+        var previous = -1;
+
+        for (var value = 0; value < 256; value++)
+        {
+            var linear = (byte)(UiGeometry.ToLinear((uint)value) & 0xFF);
+            Assert.True(linear >= previous, $"linear value fell at {value}");
+            previous = linear;
+        }
+    }
+
+    [Theory]
+    [InlineData(0u)]
+    [InlineData(32u)]
+    [InlineData(85u)]
+    [InlineData(127u)]
+    [InlineData(160u)]
+    [InlineData(192u)]
+    [InlineData(200u)]
+    [InlineData(224u)]
+    [InlineData(255u)]
+    public void TheShadesTheInterfaceUsesComeBackUnchanged(uint value)
+    {
+        // Decoding then letting the hardware encode must return the authored byte, which is what makes a pale blue
+        // selection arrive pale rather than nearly white.
+        var linear = (byte)(UiGeometry.ToLinear(value) & 0xFF);
+        var channel = linear / 255.0;
+        var encoded = (byte)Math.Round(
+            255.0 * (channel <= 0.0031308 ? channel * 12.92 : (1.055 * Math.Pow(channel, 1 / 2.4)) - 0.055));
+
+        // Two steps of tolerance: the linear value is stored as a byte, and for dark shades that byte is coarse
+        // enough that rounding it and encoding it back moves the result by two.
+        Assert.InRange(encoded, value <= 2 ? 0 : (int)value - 2, (int)value + 2);
     }
 }

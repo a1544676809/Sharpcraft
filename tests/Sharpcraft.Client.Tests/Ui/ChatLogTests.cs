@@ -138,9 +138,9 @@ public sealed class ChatLogTests
         }
 
         // Two runs, two inks; the row background is not a vertex colour so it does not appear here.
-        // The vertex carries channels in memory order, so compare against the converted values.
-        Assert.Contains(UiGeometry.FromArgb(0xFFFF5555u), colours.Select(PackToWord));
-        Assert.Contains(UiGeometry.FromArgb(0xFF55FF55u), colours.Select(PackToWord));
+        // The vertex carries channels in memory order, decoded for the sRGB swap chain, so compare against that.
+        Assert.Contains(UiGeometry.ToLinear(UiGeometry.FromArgb(0xFFFF5555u)), colours.Select(PackToWord));
+        Assert.Contains(UiGeometry.ToLinear(UiGeometry.FromArgb(0xFF55FF55u)), colours.Select(PackToWord));
     }
 
     [Fact]
