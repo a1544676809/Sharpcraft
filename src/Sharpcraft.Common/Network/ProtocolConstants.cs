@@ -259,6 +259,15 @@ public static class PacketIds
         // evidence, so this follows the generated table (docs/modules/ui.md 8.4).
         public const int SetActionBarText = 89;
 
+        /// <summary>Large centred title text.</summary>
+        public const int SetTitleText = 116;
+
+        /// <summary>Subtitle shown under the title.</summary>
+        public const int SetSubtitleText = 114;
+
+        /// <summary>Removes the title and subtitle.</summary>
+        public const int ClearTitles = 14;
+
         /// <summary>Ping.</summary>
         public const int Ping = 62;
 

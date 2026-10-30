@@ -104,11 +104,42 @@ public static class ChatPackets
     }
 
 
+    /// <summary>
+    /// Reads a component payload as runs, accepting both the compound form and a bare string.
+    /// </summary>
+    /// <param name="body">Bytes at the component.</param>
+    /// <param name="runs">Runs in order.</param>
+    /// <param name="language">Translation table, or null.</param>
+    /// <remarks>
+    /// A component with no style is written as a bare string, so a reader that only accepts compounds drops those
+    /// messages entirely. Titles and action bars both hit this.
+    /// </remarks>
+    public static bool TryReadComponentRuns(ReadOnlySpan<byte> body, out TextRun[] runs, LanguageTable? language = null)
+    {
+        runs = [];
+
+        var status = NbtReader.TryReadNetworkRoot(body, out var root, out _);
+
+        if (status == DecodeStatus.Success && root is not null)
+        {
+            runs = ComponentRuns.Flatten(root, language);
+            return true;
+        }
+
+        if (TryReadBareString(body, out var plain, out _))
+        {
+            runs = [new TextRun(plain, ComponentRuns.DefaultColour, Bold: false)];
+            return true;
+        }
+
+        return false;
+    }
+
     /// <summary>Reads a bare string component.</summary>
     /// <param name="body">Bytes at the component.</param>
     /// <param name="text">The text.</param>
     /// <param name="consumed">Bytes used.</param>
-    private static bool TryReadBareString(ReadOnlySpan<byte> body, out string text, out int consumed)
+    internal static bool TryReadBareString(ReadOnlySpan<byte> body, out string text, out int consumed)
     {
         text = string.Empty;
         consumed = 0;

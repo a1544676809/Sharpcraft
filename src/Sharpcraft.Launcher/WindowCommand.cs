@@ -243,6 +243,7 @@ internal static class WindowCommand
                 {
                     session.ChatLog.Draw(uiGeometry, uiFont, canvasHeight, session.ChatTicks, session.Chat.IsOpen);
                     session.ActionBar.Draw(uiGeometry, uiFont, canvasWidth, canvasHeight);
+                    session.Title.Draw(uiGeometry, uiFont, canvasWidth, canvasHeight);
 
                     // The session needs the drawn height to know where the history sits, and the window layer owns the
                     // clipboard, so the two are handed over here rather than reached for from inside the session.

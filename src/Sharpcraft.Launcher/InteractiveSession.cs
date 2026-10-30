@@ -40,6 +40,7 @@ internal sealed class InteractiveSession
     private long _chatTicks;
     private long _chatOpenedAtMs;
     private readonly Sharpcraft.Client.Ui.ActionBar _actionBar = new();
+    private readonly Sharpcraft.Client.Ui.Title _title = new();
     private bool _diagnosticChatSent;
     private readonly bool _diagEnabled = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
     private int _diagFrames;
@@ -352,6 +353,9 @@ internal sealed class InteractiveSession
 
     /// <summary>The transient line above the hotbar, which is where overlay chat goes.</summary>
     public Sharpcraft.Client.Ui.ActionBar ActionBar => _actionBar;
+
+    /// <summary>The large centred title, which the title command shows.</summary>
+    public Sharpcraft.Client.Ui.Title Title => _title;
 
     /// <summary>Milliseconds since the prompt was opened, which drives the caret blink.</summary>
     public long ChatElapsedMs => Environment.TickCount64 - _chatOpenedAtMs;
@@ -826,6 +830,7 @@ internal sealed class InteractiveSession
                 _entities.Tick();
             _chatTicks++;
         _actionBar.Tick();
+        _title.Tick();
                 _interpolator.Push(_player, _camera.Yaw);
                 PublishTick();
             });
@@ -1112,6 +1117,31 @@ internal sealed class InteractiveSession
                         }
                     }
 
+                    break;
+
+                case PacketIds.PlayClientbound.SetTitleText:
+                case PacketIds.PlayClientbound.SetSubtitleText:
+                    if (ChatPackets.TryReadComponentRuns(body[reader.Position..], out var titleRuns, _language))
+                    {
+                        if (_diagEnabled)
+                        {
+                            Console.WriteLine($"title received [{(packetId == PacketIds.PlayClientbound.SetTitleText ? "title" : "subtitle")}]: {Plain(titleRuns)}");
+                        }
+
+                        if (packetId == PacketIds.PlayClientbound.SetTitleText)
+                        {
+                            _title.Show(titleRuns);
+                        }
+                        else
+                        {
+                            _title.ShowSubtitle(titleRuns);
+                        }
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.ClearTitles:
+                    _title.Clear();
                     break;
 
                 case PacketIds.PlayClientbound.SetActionBarText:

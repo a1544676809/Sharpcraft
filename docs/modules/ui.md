@@ -459,3 +459,12 @@
 
 **光标**：悬停在可点击段上时窗口层切换为手型（`WindowHost.SetHandCursor`，GLFW 标准光标，创建一次、按需切换、退出销毁）。
 **缺口**：①玩家聊天的装饰路径仍会丢交互（装饰重建 runs），仅系统消息带交互；②`change_page`/`show_dialog`/`custom`/`open_file` 未实现。
+
+## 8.7 标题与副标题（`set_title_text` / `set_subtitle_text` / `clear_titles`）
+
+`/title … title|subtitle …` 走的不是系统消息，而是独立包：**116** 标题、**114** 副标题、**14** 清除。
+
+原版 `Hud.extractTitle`：以屏幕中心为原点，标题 **4 倍**字号、副标题 **2 倍**字号，水平居中；标题在中心上方、副标题在下方；
+**没有背景**（`textWithBackdrop` 在标题上下文不画底色），文字带阴影；透明度按 **淡入 10 tick / 停留 70 tick / 淡出 20 tick** 计算。
+
+副标题单独到达时不清掉标题；`clear_titles` 两者一起清。
