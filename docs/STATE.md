@@ -77,7 +77,10 @@ updated: 2026-10-29
 6. **已裁决（2026-10-30）**：**预留 Vulkan 接口、不实现**；WGPU 仍为唯一实现与工作中心。
    落地：`docs/specs/render/backend-interface.md` + `BackendCapabilities`（能力协商，3 项测试）⇒ T-200 完成。
    实现 Vulkan 后端仍**未获批准**，R-022 保留（P3 后按实测复核）。
-7. 随后：M6 模组热加载（先写 ADR）→ 着色器包接入（P3）。
+7. **时域放缩前置已开工（T-201）**：`CameraJitter` 落地（周期 8、均值归零、投影平移 <1 px，4 项测试）；
+   `pipeline.md` 新增 §13（jitter/运动矢量/深度为一等能力），`shader-packs.md` 新增 §9（阶段全序、维度双机制、
+   特性检查、未识别阶段跳过）。**下一步具体动作**：在 §3 pass 表里加 MotionVectors 输出（逐像素位移）。
+8. 随后：M6 模组热加载（先写 ADR）→ 着色器包接入（P3）。
 会打印 `chat received:`。
 随后：T-120（`player_chat` 等剩余入站与组件样式）、T-108（热加载状态迁移）、T-104（离屏截图接 UI）。
 随后：T-108（热加载状态迁移）、T-104（离屏截图接 UI）、T-114（`ChunkSeamTests` 并行抖动）、T-107（间歇 wgpu 断言，需完整 validation 文本）。

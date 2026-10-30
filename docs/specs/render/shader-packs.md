@@ -80,3 +80,15 @@ AGENTS.md 原则 11 要求渲染架构在**设计阶段**就为外部着色器�
   ④ 未识别阶段（DH/Voxy/colorwheel/Photonics）跳过并汇总日志。
 - 来源：`shaders.properties` 官方参考（Programs 概览、shaders.properties 概览、dimension.properties 三页，链接见分析文档 §7）。
 - 不支持特性与移植建议：`docs/specs/render/shader-pack-compatibility.md`。
+
+## 9. 阶段与维度模型（2026-10-30 所有者批准写入）
+
+本节补上原规格缺失的四条（依据 Iris 官方文档，见 `shader-pack-anatomy.md` §7）：
+
+1. **完整程序顺序**：`setup`(仅计算) → `begin` → `shadow` → `shadowcomp` → `prepare` → `gbuffers`(不透明) →
+   `deferred` → `gbuffers`(半透明) → `composite*` → `final`。阶段后缀 `1–99`；`final` 仅一份。
+2. **维度选择两套机制**：`dimension.properties`（`dimension.<文件夹>=<维度 id>...`，支持 `namespace:` 与 `*`，未列出则回落基础目录）
+   与 `worldN` 遗留（**存在任一 `worldN` 时基础目录不参与**）。实现以 `dimension.properties` 优先。
+3. **加载前特性检查**：`iris.features.required` 映射为 `GraphicsCapability`，用 `BackendCapabilities.Missing` 判定；
+   非空则**拒绝加载并逐条列出缺失能力**。`optional` 不支持时继续加载并记录。
+4. **未识别阶段**：`dh_*`、`voxy_*`、`clrwl_*` 等模组扩展阶段**跳过并汇总一行日志**，不算错误。
