@@ -591,6 +591,25 @@ public static class OffscreenRenderer
                 }
             }
 
+            if (request.TranslucentVertices is { Length: > 0 } translucentVertices &&
+                request.TranslucentIndices is { Length: > 0 } translucentIndices)
+            {
+                // Blended, no depth writes, drawn last: the order of these calls is what makes overlapping water read right.
+                using var translucentPipeline = CreateTranslucentPipeline(device, pipelineLayout);
+                using var translucentVertexBuffer = device.CreateBufferInit(
+                    new BufferInitDescriptor { Usage = BufferUsage.Vertex },
+                    translucentVertices.AsSpan());
+                using var translucentIndexBuffer = device.CreateBufferInit(
+                    new BufferInitDescriptor { Usage = BufferUsage.Index },
+                    translucentIndices.AsSpan());
+
+                pass.SetPipeline(translucentPipeline);
+                pass.SetBindGroup(0, bindGroup, []);
+                pass.SetVertexBuffer(0, translucentVertexBuffer);
+                pass.SetIndexBuffer(translucentIndexBuffer, WGPUIndexFormat.Uint32);
+                pass.DrawIndexed((uint)translucentIndices.Length);
+            }
+
             pass.End();
 
             encoder.CopyTextureToBuffer(
