@@ -52,3 +52,51 @@ public sealed class ChatHitTestTests
         Assert.Equal(-1, ChatHitTest.RunAt(33f, 2f, widths));
     }
 }
+
+/// <summary>
+/// The tip that appears beside a hovered run (docs/modules/ui.md 8.6). It wraps at the reference's width instead of
+/// running off screen, and it keeps itself inside the canvas.
+/// </summary>
+public sealed class TooltipTests
+{
+    [Fact]
+    public void AShortTipStaysOnOneLine()
+    {
+        var lines = Tooltip.Wrap([new Sharpcraft.Common.Network.TextRun("hi", 0xFFFFFFFFu, false)], Font(), Tooltip.MaxWidth);
+
+        Assert.Single(lines);
+        Assert.Equal("hi", string.Concat(lines[0].Select(run => run.Text)));
+    }
+
+    [Fact]
+    public void ALongTipWrapsInsteadOfRunningOff()
+    {
+        var text = new string('a', 400);
+        var lines = Tooltip.Wrap([new Sharpcraft.Common.Network.TextRun(text, 0xFFFFFFFFu, false)], Font(), Tooltip.MaxWidth);
+
+        Assert.True(lines.Count > 1, "the tip has to break");
+
+        foreach (var line in lines)
+        {
+            var width = line.Sum(run => Font().MeasureWidth(run.Text));
+            Assert.True(width <= Tooltip.MaxWidth, $"line wider than the limit: {width}");
+        }
+
+        // Nothing is lost when the tip is broken.
+        Assert.Equal(text.Length, lines.Sum(line => line.Sum(run => run.Text.Length)));
+    }
+
+    [Fact]
+    public void TheBoxIsKeptInsideTheCanvas()
+    {
+        var geometry = new Sharpcraft.Framework.Rendering.UiGeometry();
+        Tooltip.Draw(geometry, Font(), [new Sharpcraft.Common.Network.TextRun("tip", 0xFFFFFFFFu, false)],
+            pointerX: 470f, pointerY: 4f, canvasWidth: 480f, canvasHeight: 270f);
+
+        Assert.True(geometry.QuadCount > 0);
+        Assert.True(geometry.Vertices[0] >= 0f);
+        Assert.True(geometry.Vertices[1] >= 0f);
+    }
+
+    private static Sharpcraft.Client.Ui.BitmapFont Font() => ChatHitTestFonts.Create();
+}

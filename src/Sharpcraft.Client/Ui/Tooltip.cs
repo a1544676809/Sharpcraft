@@ -31,6 +31,11 @@ public static class Tooltip
     public const float LineHeight = 9f;
 
     /// <summary>
+    /// Widest a tip may be before it wraps, which is the reference's own limit.
+    /// </summary>
+    public const float MaxWidth = 210f;
+
+    /// <summary>
     /// Adds the box to the interface geometry.
     /// </summary>
     /// <param name="geometry">Receives the quads.</param>
@@ -57,15 +62,23 @@ public static class Tooltip
             return;
         }
 
+        var lines = Wrap(runs, font, MaxWidth);
         var width = 0f;
 
-        foreach (var run in runs)
+        foreach (var line in lines)
         {
-            width += font.MeasureWidth(run.Text);
+            var lineWidth = 0f;
+
+            foreach (var run in line)
+            {
+                lineWidth += font.MeasureWidth(run.Text);
+            }
+
+            width = MathF.Max(width, lineWidth);
         }
 
         var boxWidth = width + (Padding * 2f) + 2f;
-        var boxHeight = LineHeight + (Padding * 2f) + 2f;
+        var boxHeight = (lines.Count * LineHeight) + (Padding * 2f) + 2f;
 
         // Prefer up and to the right of the pointer, then pull back inside the canvas.
         var left = MathF.Min(pointerX + 6f, canvasWidth - boxWidth - 2f);
@@ -79,13 +92,133 @@ public static class Tooltip
         geometry.AddRectangle(left, top, 1f, boxHeight, FrameStartColour);
         geometry.AddRectangle(left + boxWidth - 1f, top, 1f, boxHeight, FrameEndColour);
 
-        var pen = left + Padding + 1f;
         var textTop = top + Padding + 1f;
+
+        foreach (var line in lines)
+        {
+            var pen = left + Padding + 1f;
+
+            foreach (var run in line)
+            {
+                UiScreenLayout.AddText(geometry, font, run.Text, pen, textTop, 1f, run.Colour, shadow: false);
+                pen += font.MeasureWidth(run.Text);
+            }
+
+            textTop += LineHeight;
+        }
+    }
+
+    /// <summary>
+    /// Breaks the tip into lines no wider than the limit, on word boundaries where possible.
+    /// </summary>
+    /// <param name="runs">Tip text.</param>
+    /// <param name="font">Glyph metrics.</param>
+    /// <param name="maxWidth">Widest a line may be.</param>
+    /// <remarks>
+    /// A word that is itself too wide is broken between characters, because leaving it whole would push the tip past
+    /// the limit and off the screen edge. Colours travel with the characters they belong to.
+    /// </remarks>
+    public static List<TextRun[]> Wrap(TextRun[] runs, BitmapFont font, float maxWidth)
+    {
+        ArgumentNullException.ThrowIfNull(runs);
+        ArgumentNullException.ThrowIfNull(font);
+
+        var lines = new List<TextRun[]>();
+        var current = new List<TextRun>();
+        var currentWidth = 0f;
+
+        void Break()
+        {
+            if (current.Count > 0)
+            {
+                lines.Add([.. current]);
+                current.Clear();
+                currentWidth = 0f;
+            }
+        }
 
         foreach (var run in runs)
         {
-            UiScreenLayout.AddText(geometry, font, run.Text, pen, textTop, 1f, run.Colour, shadow: false);
-            pen += font.MeasureWidth(run.Text);
+            var word = new System.Text.StringBuilder();
+
+            void FlushWord()
+            {
+                if (word.Length == 0)
+                {
+                    return;
+                }
+
+                var text = word.ToString();
+                word.Clear();
+                var wordWidth = font.MeasureWidth(text);
+
+                if (currentWidth > 0f && currentWidth + wordWidth > maxWidth)
+                {
+                    Break();
+                }
+
+                if (wordWidth > maxWidth)
+                {
+                    // A single word longer than a line has to be split between characters.
+                    var piece = new System.Text.StringBuilder();
+                    var pieceWidth = 0f;
+
+                    foreach (var character in text)
+                    {
+                        var characterWidth = font.MeasureWidth(character.ToString());
+
+                        if (pieceWidth + characterWidth > maxWidth && piece.Length > 0)
+                        {
+                            current.Add(new TextRun(piece.ToString(), run.Colour, run.Bold));
+                            Break();
+                            piece.Clear();
+                            pieceWidth = 0f;
+                        }
+
+                        piece.Append(character);
+                        pieceWidth += characterWidth;
+                    }
+
+                    if (piece.Length > 0)
+                    {
+                        current.Add(new TextRun(piece.ToString(), run.Colour, run.Bold));
+                        currentWidth += pieceWidth;
+                    }
+
+                    return;
+                }
+
+                current.Add(new TextRun(text, run.Colour, run.Bold));
+                currentWidth += wordWidth;
+            }
+
+            foreach (var character in run.Text)
+            {
+                if (character == ' ')
+                {
+                    FlushWord();
+                    var spaceWidth = font.MeasureWidth(" ");
+
+                    if (currentWidth + spaceWidth > maxWidth)
+                    {
+                        Break();
+                    }
+                    else
+                    {
+                        current.Add(new TextRun(" ", run.Colour, run.Bold));
+                        currentWidth += spaceWidth;
+                    }
+                }
+                else
+                {
+                    word.Append(character);
+                }
+            }
+
+            FlushWord();
         }
+
+        Break();
+        return lines;
     }
 }

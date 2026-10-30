@@ -440,4 +440,11 @@
 读取层为 `ChatInteractions`（`Common/Network`），与命中测试分离，便于先验证解析再验证交互。
 已落通用件：`ChatHitTest`（指针 → 条目 → 段，计入滚动偏移与自下而上填充）与 `Tooltip`（原版配色 `0xF0100010` 底
 + `0x505000FF`/`0x5028007F` 边框，越界时收回画布内）。
-**待做**：把交互信息挂到渲染段上、点击执行（`open_url` / `run_command` / `suggest_command` / `copy_to_clipboard`）与光标变化。
+**原版语义（已按 `ChatScreen`/`Screen` 核对）**：
+- 触发是**右键**（`event.button() == 1`），不是左键；
+- **Shift+右键 = 把 `insertion` 插入光标处**（`insertionClickMode()`），不执行动作；
+- 动作集合是 `ClickEvent` sealed 的变体：`OpenUrl` / `RunCommand` / `SuggestCommand` / `CopyToClipboard` / `ChangePage` / `ShowDialog` / `OpenFile` / `Custom`（后者回 `ServerboundCustomClickActionPacket`）。本客户端实现前四种，其余记为缺口；
+- 悬停在原版由文字渲染器内建（`HoveredTextEffects.TOOLTIP_AND_CURSOR`），我们采用"绘制 + 独立命中"，**可观测等价**；提示框宽度上限 **210**（`ChatComponent.TOOLTIP_MAX_WIDTH`）并在超宽时换行；
+- **竖条也有提示框**（`ChatComponent.showTooltip(GuiMessageTag)`，如未签名说明），尚未实现，记为缺口。
+
+**待做**：把交互信息挂到渲染段上（`ChatLog.Add` 平行数组）、右键/Shift 接线、点击执行与光标变手型。
