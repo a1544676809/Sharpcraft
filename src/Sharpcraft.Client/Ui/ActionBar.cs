@@ -135,6 +135,6 @@ public sealed class ActionBar
     private static uint Pack(uint argb, float alpha)
     {
         var byteAlpha = (byte)Math.Clamp(alpha * 255f, 0f, 255f);
-        return (UiGeometry.FromArgb(argb) & 0x00FFFFFFu) | ((uint)byteAlpha << 24);
+        return (argb & 0x00FFFFFFu) | ((uint)byteAlpha << 24);
     }
 }

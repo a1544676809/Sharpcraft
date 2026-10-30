@@ -132,10 +132,10 @@ public static class TextEditRenderer
                 y - 1f,
                 Math.Max(1f, right - left),
                 LineHeight + 2f,
-                UiGeometry.FromArgb(SelectionColour));
+                (SelectionColour));
         }
 
-        var textColour = UiGeometry.FromArgb(TextColour);
+        var textColour = (TextColour);
 
         if (!model.HasSelection)
         {
@@ -155,12 +155,12 @@ public static class TextEditRenderer
             // the inverse of the usual shadow colour, then the ink on top.
             var selectedText = value.AsSpan(selectionStart, selectionEnd - selectionStart);
             var selectedX = x + font.MeasureWidth(before);
-            var ink = UiGeometry.FromArgb(SelectedTextColour);
+            var ink = (SelectedTextColour);
 
             // The reference draws the text with the ordinary text colour and then inverts the region, so the shadow that
             // gets inverted is the one derived from the text colour, not from the blue the highlight adds. Deriving it
             // from the blue produced a saturated pink that read far stronger than the reference's neutral grey.
-            var textInk = UiGeometry.FromArgb(TextColour);
+            var textInk = (TextColour);
             var invertedShadow = 0xFF000000u | (~((textInk >> 2) & 0x003F3F3Fu) & 0x00FFFFFFu);
 
             UiScreenLayout.AddText(geometry, font, selectedText, selectedX + 1f, y + 1f, 1f, invertedShadow, shadow: false);

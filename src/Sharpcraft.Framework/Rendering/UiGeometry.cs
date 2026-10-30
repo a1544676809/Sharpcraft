@@ -165,7 +165,9 @@ public sealed class UiGeometry
     public void AddRectangle(float x, float y, float width, float height, uint colour)
     {
         UseMaterial(UiMaterial.Colour);
-        AppendQuad(x, y, x + width, y + height, 0f, 0f, 0f, 0f, colour);
+        // Every public colour is authored as ARGB; the vertex buffer wants RGBA bytes, so the conversion happens here
+        // once. Doing it at some call sites and not others is what turned a blue-violet tooltip frame into a red one.
+        AppendQuad(x, y, x + width, y + height, 0f, 0f, 0f, 0f, FromArgb(colour));
     }
 
     /// <summary>Appends a textured rectangle, such as one glyph from the font atlas.</summary>
@@ -190,7 +192,7 @@ public sealed class UiGeometry
         uint colour)
     {
         UseMaterial(UiMaterial.Text);
-        AppendQuad(x, y, x + width, y + height, u0, v0, u1, v1, colour);
+        AppendQuad(x, y, x + width, y + height, u0, v0, u1, v1, FromArgb(colour));
     }
 
     /// <summary>Packs a colour channel tuple into the word the vertex stores.</summary>

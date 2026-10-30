@@ -312,7 +312,7 @@ public sealed class ChatLog
                         entryTop,
                         TagBarWidth,
                         EntryHeight,
-                        Pack(UiGeometry.FromArgb(tagColour), alpha * TextOpacity));
+                        Pack((tagColour), alpha * TextOpacity));
                 }
 
                 DrawPiece(geometry, font, line, piece.Start, piece.Length, MessageIndent, entryBottom - 8f, alpha);
@@ -366,7 +366,7 @@ public sealed class ChatLog
             }
 
             var slice = run.Text.AsSpan(cursor - runStart, sliceLength);
-            var colour = Pack(UiGeometry.FromArgb(run.Colour), alpha * TextOpacity);
+            var colour = Pack((run.Colour), alpha * TextOpacity);
             var startX = penX;
             UiScreenLayout.AddText(geometry, font, slice, startX, y, 1f, colour);
 
