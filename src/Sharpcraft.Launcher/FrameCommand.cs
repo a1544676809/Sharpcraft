@@ -649,16 +649,19 @@ internal static class FrameCommand
             chunk.MarkLoaded();
         }
 
-        // Wall: five chunks wide at z = 0.
-        for (var x = -2; x <= 2; x++)
+        // Wall: seven chunks wide at z = 0, tall and wide enough to cover the view at the fixed camera.
+        for (var x = -3; x <= 3; x++)
         {
             Solid(x, 0);
         }
 
-        // Hidden: three chunks behind the wall.
-        for (var x = -1; x <= 1; x++)
+        // Hidden: three wide and four deep behind the wall, so the rate has a meaningful population to work with.
+        for (var z = 3; z <= 6; z++)
         {
-            Solid(x, 3);
+            for (var x = -1; x <= 1; x++)
+            {
+                Solid(x, z);
+            }
         }
 
         return world;
@@ -832,7 +835,10 @@ internal static class FrameCommand
 
             for (var index = 0; index < ranges.Length; index++)
             {
-                var skip = forced ? index == 0 : occluded[index];
+                var forcedIndex = Environment.GetEnvironmentVariable("MC_FRAME_CULL_FORCE_INDEX") is { Length: > 0 } indexText && int.TryParse(indexText, out var parsedIndex)
+                    ? parsedIndex
+                    : 0;
+                var skip = forced ? index == forcedIndex : occluded[index];
 
                 if (skip)
                 {
