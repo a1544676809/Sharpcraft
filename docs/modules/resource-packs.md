@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 Sharpcraft contributors -->
 
-状态：[待评审]（边界待所有者确认）
+状态：[已评审]（所有者 2026-10-30 确认：范围按草案；A1–A11 全部通过后整模块一次推送）
 基线：Minecraft 26.3
 证据：`docs/analysis/assets/resource-pack-stack.md`（§1–§12，均带 `ref://` 指针）、`docs/decisions/0015`、`docs/decisions/0016`、`docs/specs/deviations.md` D-001
 最后更新：2026-10-30
@@ -70,5 +70,8 @@
 
 ## 6. 未决
 
-- `pack_format` 的**区间来源**是否需要跟随启动器解析出的版本清单（当前写死基线 26.3 的客户端格式号）。
+- **`pack_format` 当前值从何而来（未解决，必须先定）**：26.3 的版本清单与 jar 内 `version.json` 都**没有**可直接读到的
+  `pack_version` 字段（已实测：`pack_version.resource/data` 皆为空，版本 json 顶层键为 arguments/assetIndex/assets/complianceLevel/…）。
+  因此 A5 只能先做**机制**：`pack.mcmeta` 的 `supported_formats`（单值或 `[min,max]`）解析 + 与外部给定的客户端格式比较；
+  客户端格式取值来源（`MC_PACK_FORMAT` 覆盖 / 启动器上下文 / 其它）待定，**未知时一律接受并记一条"未校验兼容性"诊断**，不假装校验过。
 - 热加载是否需要"仅在开发构建可用"之外的产品化开关（当前只做环境变量 + 命令行）。
