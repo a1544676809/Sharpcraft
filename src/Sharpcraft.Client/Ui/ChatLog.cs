@@ -222,9 +222,9 @@ public sealed class ChatLog
 
                 if (tagColour != 0u)
                 {
-                    // The reference draws a two pixel bar at the left of a tagged line, over the background.
+                    // The reference places the bar one pixel left of the box, so half of it sits outside the wash.
                     geometry.AddRectangle(
-                        LeftInset,
+                        LeftInset - 1f,
                         entryTop,
                         TagBarWidth,
                         EntryHeight,
