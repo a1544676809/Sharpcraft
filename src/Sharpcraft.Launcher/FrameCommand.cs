@@ -412,9 +412,11 @@ internal static class FrameCommand
     {
         ArgumentNullException.ThrowIfNull(resources);
 
-        var bytes = resources.Read(
-            ResourceKind.Texture,
-            new Sharpcraft.Common.Identifiers.Identifier("minecraft", "font/ascii"));
+        // The pack declares the sheet, its grid and its metrics; assuming them is what made an HD pack overlap.
+        var provider = Sharpcraft.Client.Assets.BitmapFontDefinition.Resolve(resources);
+
+        var sheetId = provider?.File ?? new Sharpcraft.Common.Identifiers.Identifier("minecraft", "font/ascii");
+        var bytes = resources.Read(ResourceKind.Texture, sheetId);
 
         if (bytes is null)
         {
@@ -424,7 +426,11 @@ internal static class FrameCommand
 
         var started = System.Diagnostics.Stopwatch.StartNew();
         var image = Sharpcraft.Common.Imaging.PngDecoder.Decode(bytes);
-        var font = Sharpcraft.Client.Ui.BitmapFont.FromSheet(image);
+        var font = Sharpcraft.Client.Ui.BitmapFont.FromSheet(
+            image,
+            provider?.Height ?? Sharpcraft.Client.Ui.BitmapFont.DefaultHeight,
+            provider?.Ascent ?? Sharpcraft.Client.Ui.BitmapFont.DefaultAscent,
+            provider?.Columns ?? Sharpcraft.Client.Ui.BitmapFont.SheetColumns);
         started.Stop();
 
         // Characters without ink, a space above all, take their advance from the font definition rather than from the
