@@ -144,6 +144,10 @@ public static class OffscreenRenderer
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        // Every pipeline is checked against its file once, so a layout that disagrees with its shader fails here rather
+        // than as an opaque validation error during a draw.
+        Shaders.ShaderPipelines.EnsureValid();
+
         var viewProjection = CameraMath.BuildViewProjection(
             request.CameraPosition,
             request.CameraTarget,

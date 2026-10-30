@@ -246,3 +246,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-220 | **着色器组织规范**（布局/命名/include/绑定单一来源/启动自检/测试门禁，含与原版对应关系）| `docs/specs/render/shader-organisation.md` | 规格文本；G1-G5 待实施 | `Framework/Rendering/Shaders`（待建）| 规格已就绪 |
 | T-221 | 着色器组织 G2/G3/G4：include 组合器、绑定单一来源、启动期一致性校验 | `docs/specs/render/shader-organisation.md` §3/§4/§6/§10 | `ShaderOrganisationTests`(6) | `Framework/Rendering/Shaders/{ShaderIncludeComposer,ShaderBindings,ShaderDescriptor}` | 已完成 |
 | T-222 | 着色器 G1 拆文件（terrain/sky/ui_panel/ui_sprite/ui_text → `Shaders/pipelines/*.wgsl`，嵌入式资源）+ 禁内联门禁 | `docs/specs/render/shader-organisation.md` §10 | `ShaderLibraryTests`(3)、`ShaderSourceTests`(2)、两次重构后帧比对 `identical` | `Framework/Rendering/Shaders` | 已完成 |
+| T-223 | 着色器 G5：**管线登记表** + 启动期校验注入（离屏与窗口两条路径）| `docs/specs/render/shader-organisation.md` §5/§6 | `ShaderPipelinesTests`(3) + 帧比对 `identical` | `Framework/Rendering/Shaders/ShaderPipelines` | 已完成 |

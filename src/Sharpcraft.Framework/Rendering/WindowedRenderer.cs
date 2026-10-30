@@ -115,6 +115,8 @@ public static class WindowedRenderer
             MaxAnisotropy = 1
         });
 
+        Shaders.ShaderPipelines.EnsureValid();
+
         using var bindGroupLayout = device.CreateBindGroupLayout(
         [
             BindGroupLayoutEntry.Texture(

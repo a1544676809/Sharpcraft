@@ -130,7 +130,10 @@ updated: 2026-10-29
     用 `ShaderBindings` 生成布局，并加 §7 门禁测试（`Framework/Rendering/*.cs` 不得再有内联 WGSL）。
     **T-222 进展**：terrain/sky 已拆为 `Shaders/pipelines/*.wgsl`（嵌入式资源 + `ShaderLibrary`，含 include 组合），
     3 项测试；**重构前后帧逐像素 identical** ⇒ 无行为变化。**T-222 已完成**：五套着色器全部文件化（嵌入式资源），禁内联门禁 `ShaderSourceTests`(2) 生效，两次帧比对均 `identical`。
-    **仍待（G5 收尾）**：统一的管线条目清单与启动期注入（当前 `ShaderDescriptor` 只提供校验能力，未集中注册）。
+    **T-223 G5 已完成**：`ShaderPipelines.All`（terrain/sky/ui_panel/ui_sprite/ui_text，含入口与绑定）+ `EnsureValid()`
+    在离屏与窗口启动时执行；3 项测试；帧仍 `identical`。**着色器组织改造到此收口（G1-G5 全完成）**。
+    **下一步具体动作**：回到 O2 —— 新增 `pipelines/depth_pyramid.wgsl`（compute），按新规约登记，
+    与 `DepthPyramid` CPU 参考逐 texel 比对。
     **（原计划）** `DepthPyramid` 改为接收**线性化距离**（或提供 `BuildFromWindowDepth(..., near, far)`），
     然后做 compute 版金字塔并与 CPU 结果逐 texel 比对。
 10. **中期目标已立项**：`docs/milestones/midterm-goal.md` —— 确定性基线、五个阶段完整、Hi-Z 达 O3、
