@@ -64,11 +64,18 @@ public static class OffscreenRenderer
         };
         @group(0) @binding(2) var<uniform> camera : Camera;
 
+        struct Fog {
+            colour : vec4<f32>,
+            range : vec4<f32>,
+        };
+        @group(0) @binding(3) var<uniform> fog : Fog;
+
         struct VertexOutput {
             @builtin(position) clipPosition : vec4<f32>,
             @location(0) colour : vec3<f32>,
             @location(1) uv : vec2<f32>,
             @location(2) spriteRect : vec4<f32>,
+            @location(3) fogDistance : f32,
         };
 
         @vertex
@@ -82,7 +89,9 @@ public static class OffscreenRenderer
 
             // Vertices stay in world space; the camera moves by updating this uniform, so a moving camera
             // never forces the mesh to be re-transformed and re-uploaded.
-            output.clipPosition = camera.viewProjection * vec4<f32>(position, 1.0);
+            let clip = camera.viewProjection * vec4<f32>(position, 1.0);
+            output.clipPosition = clip;
+            output.fogDistance = clip.w;
             output.colour = colour;
             output.uv = uv;
             output.spriteRect = spriteRect;
@@ -109,7 +118,10 @@ public static class OffscreenRenderer
             let atlasUv = rectMin + texel / atlasSize;
 
             let sampled = textureSample(atlasTexture, atlasSampler, atlasUv);
-            return vec4<f32>(sampled.rgb * input.colour, 1.0);
+            let base = vec4<f32>(sampled.rgb * input.colour, 1.0);
+            let span = max(fog.range.y - fog.range.x, 0.001);
+            let fogFactor = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
+            return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogFactor), base.a);
         }
         """;
 
@@ -285,7 +297,13 @@ public static class OffscreenRenderer
                     ShaderStage.Vertex,
                     WGPUBufferBindingType.Uniform,
                     false,
-                    VertexLayout.CameraUniformSize)
+                    VertexLayout.CameraUniformSize),
+                BindGroupLayoutEntry.Buffer(
+                    3,
+                    ShaderStage.Vertex | ShaderStage.Fragment,
+                    WGPUBufferBindingType.Uniform,
+                    false,
+                    32)
             ]);
 
             using var pipelineLayout = device.CreatePipelineLayout([bindGroupLayout]);
@@ -294,6 +312,21 @@ public static class OffscreenRenderer
             using var cameraBuffer = device.CreateBufferInit(
                 new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
                 new byte[VertexLayout.CameraUniformSize].AsSpan());
+
+            // Fog: colour plus start and end distance in blocks.
+            var fogBytes = new byte[32];
+            var fogValues = new float[8];
+            fogValues[0] = 0.75f;
+            fogValues[1] = 0.85f;
+            fogValues[2] = 1.0f;
+            fogValues[3] = 1.0f;
+            fogValues[4] = Environment.GetEnvironmentVariable("MC_FOG_START") is { } startText && float.TryParse(startText, out var start) ? start : 64f;
+            fogValues[5] = Environment.GetEnvironmentVariable("MC_FOG_END") is { } endText && float.TryParse(endText, out var end) ? end : 160f;
+            System.Runtime.InteropServices.MemoryMarshal.AsBytes(fogValues.AsSpan()).CopyTo(fogBytes);
+            using var fogBuffer = device.CreateBufferInit(
+                new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
+                fogBytes.AsSpan());
+            device.Queue.WriteBuffer(fogBuffer, 0, fogBytes.AsSpan());
 
             Span<float> cameraBlock = stackalloc float[16];
             CameraUniform.Write(cameraBlock, request.CameraPosition, request.CameraTarget, request.FieldOfViewDegrees, (int)width, (int)height);
@@ -310,7 +343,8 @@ public static class OffscreenRenderer
                 [
                     BindGroupEntry.TextureView(0, atlasView),
                     BindGroupEntry.Sampler(1, atlasSampler),
-                    BindGroupEntry.Buffer(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize)
+                    BindGroupEntry.Buffer(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize),
+                BindGroupEntry.Buffer(3, fogBuffer, 0, 32)
                 ]);
 
             // Readback rows must be padded to 256 bytes.

@@ -234,3 +234,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-208 | **录制保真度已修**：根因是 `SetBlockState` 只写入**已存在**的 section，重建时全为空 ⇒ 整个场景变成空气（回放恒定指纹 0x1579…）；改为载入时先创建各 section | `docs/milestones/midterm-goal.md` | `SceneRecorderTests`(2) + 实测 `roundtrip identical`、回放与录制指纹同为 0xD9F5…、`compare: identical` | `Client/World/SceneRecorder` | 已完成 |
 | T-209 | 原版**天空与雾**行为分析（26.3 属性驱动雾 + 天空盘常量）与 P2 第一片方案 | `docs/analysis/render/sky-and-fog.md` | 源码实测常量（SKY_DISC_RADIUS 512、SUNRISE_STEPS 16、STAR_COUNT 1500 等）| 分析文档（无代码）| 规格已就绪 |
 | T-210 | 离屏**天空渐变 pass**（全屏三角形，无顶点缓冲，深度恒通过不写）| `docs/analysis/render/sky-and-fog.md` §6 | 实测像素：y=5 (121,166,255)≈天顶(120,166,255)、y=400 (173,204,255) 接近地平线(191,217,255)、y=520 被地形覆盖 | `Framework/Rendering/OffscreenRenderer` | 已完成 |
+| T-211 | **距离雾**（`Fog` uniform：颜色 + 起止方块；顶点传 `clip.w`，片元线性 ramp）| `docs/analysis/render/sky-and-fog.md` §7 | 实测：远处地形 (25,16,12)→(176,206,255)、天空不变；无验证错误 | `Framework/Rendering/OffscreenRenderer` | 已完成 |
