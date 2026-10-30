@@ -106,11 +106,6 @@ internal static class WindowCommand
         // whether the layout changed, so that comparison lives here where both atlases are known.
         var atlasSource = new Sharpcraft.Framework.Rendering.AtlasTextureSource();
 
-        // The listener only prepares a candidate. Applying it touches the mesh cache and the world, which the render
-        // thread owns, so the swap happens there (docs/analysis/assets/texture-atlas-sizing.md §10).
-        PendingAtlas? pendingAtlas = null;
-        var atlasGate = new object();
-
         resources.AddListener("atlas", 30, manager =>
         {
             var rebuilt = FrameCommand.PrepareSprites(
@@ -125,80 +120,28 @@ internal static class WindowCommand
                 return;
             }
 
-            lock (atlasGate)
+            var layoutChanged = LayoutChanged(prepared?.Atlas, next.Atlas);
+
+            prepared = next;
+            workerPool.SetSprites(next.Map);
+
+            if (layoutChanged)
             {
-                pendingAtlas = new PendingAtlas(next.Atlas, next.Map);
+                // The texture coordinates baked into every chunk belong to the old layout, so all of them are rebuilt
+                // (docs/decisions/0017-reload-invalidation-by-layout.md).
+                meshCache.Clear();
+                meshCache.Build(world, next.Map, maxChunksPerBuild: int.MaxValue, maxMillisecondsPerBuild: 5_000);
+                meshCache.QueueMissing(world);
+                Console.WriteLine("resource reload: atlas layout changed; chunks rebuilt");
             }
+
+            atlasSource.Update(new TextureData(next.Atlas.Width, next.Atlas.Height, next.Atlas.Pixels));
+            Console.WriteLine($"resource reload: atlas {(layoutChanged ? "replaced" : "refreshed")} ({next.Atlas.Width}x{next.Atlas.Height})");
         });
 
         // A short synchronous warm-up gives the first frame something to show.
         meshCache.Build(world, prepared?.Map, maxChunksPerBuild: 8, maxMillisecondsPerBuild: 250);
         meshCache.QueueMissing(world);
-
-        // Runs on the render thread, where nothing else is touching the world or the mesh cache.
-        Action applyPendingAtlas = () =>
-        {
-            PendingAtlas? candidate;
-
-            lock (atlasGate)
-            {
-                candidate = pendingAtlas;
-                pendingAtlas = null;
-            }
-
-            if (candidate is not { } next)
-            {
-                return;
-            }
-
-            var previous = prepared;
-            var layoutChanged = LayoutChanged(previous?.Atlas, next.Atlas);
-
-            if (layoutChanged)
-            {
-                try
-                {
-                    var sections = world.GetChunks();
-                    meshCache.Clear();
-                    var passes = 0;
-
-                    while (passes < 64 &&
-                           (meshCache.LastTotalChunks < sections.Length || meshCache.PendingChunks > 0))
-                    {
-                        meshCache.QueueMissing(world);
-                        meshCache.Build(
-                            world,
-                            next.Map,
-                            maxBlocks: int.MaxValue,
-                            maxChunksPerBuild: int.MaxValue,
-                            maxMillisecondsPerBuild: 5_000);
-                        passes++;
-
-                        if (meshCache.PendingChunks > 0)
-                        {
-                            Thread.Sleep(2);
-                        }
-                    }
-
-                    if (meshCache.LastTotalChunks < sections.Length || meshCache.PendingChunks > 0)
-                    {
-                        throw new InvalidOperationException(
-                            $"only {meshCache.LastTotalChunks}/{sections.Length} chunks rebuilt");
-                    }
-                }
-                catch (Exception exception)
-                {
-                    Console.WriteLine($"resource reload: atlas rebuild failed ({exception.GetType().Name}: {exception.Message}); keeping the previous atlas");
-                    workerPool.SetSprites(previous?.Map);
-                    return;
-                }
-            }
-
-            prepared = (next.Atlas, next.Map);
-            workerPool.SetSprites(next.Map);
-            atlasSource.Update(new TextureData(next.Atlas.Width, next.Atlas.Height, next.Atlas.Pixels));
-            Console.WriteLine($"resource reload: atlas {(layoutChanged ? "replaced" : "refreshed")} ({next.Atlas.Width}x{next.Atlas.Height})");
-        };
 
         var request = FrameCommand.BuildRequest(
             world,
@@ -391,8 +334,6 @@ internal static class WindowCommand
             atlasSource: atlasSource,
             uiGeometry: frame =>
             {
-                applyPendingAtlas();
-
                 var screen = uiLoader.Current ?? fallback;
 
                 if (screen is null)
@@ -639,9 +580,4 @@ internal static class WindowCommand
             return new PreparedWorld(world, LivePlaySession.Adopt(connection, cancellationToken, probe.Registries));
         }
     }
-
-    /// <summary>An atlas rebuild waiting to be applied on the render thread.</summary>
-    /// <param name="Atlas">Candidate atlas.</param>
-    /// <param name="Map">Mapping built from that atlas.</param>
-    private readonly record struct PendingAtlas(SpriteAtlas Atlas, BlockSpriteMap Map);
 }
