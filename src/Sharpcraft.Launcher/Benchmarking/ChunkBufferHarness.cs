@@ -22,19 +22,24 @@ internal sealed class ChunkBufferHarness
     /// <summary>Delay before buffering starts, so a teleport can be issued first and its burst is the one measured.</summary>
     internal const string DelaySwitch = "MC_BENCH_DELAY";
 
+    /// <summary>File whose appearance arms the buffer, so the burst after a teleport is the one measured.</summary>
+    internal const string ArmFileSwitch = "MC_BENCH_ARM_FILE";
+
     private readonly int _expectedChunks;
     private readonly TimeSpan _window;
     private readonly TimeSpan _delay;
     private readonly System.Diagnostics.Stopwatch _sinceStart = System.Diagnostics.Stopwatch.StartNew();
+    private readonly string? _armFile;
     private readonly List<object> _held = [];
     private readonly System.Diagnostics.Stopwatch _clock = new();
     private bool _released;
 
-    private ChunkBufferHarness(int expectedChunks, TimeSpan window, TimeSpan delay)
+    private ChunkBufferHarness(int expectedChunks, TimeSpan window, TimeSpan delay, string? armFile)
     {
         _expectedChunks = expectedChunks;
         _window = window;
         _delay = delay;
+        _armFile = armFile;
     }
 
     /// <summary>How many chunks are being held.</summary>
@@ -64,7 +69,8 @@ internal sealed class ChunkBufferHarness
         return new ChunkBufferHarness(
             Math.Max(1, expectedChunks),
             TimeSpan.FromSeconds(seconds),
-            TimeSpan.FromSeconds(Math.Max(0, delaySeconds)));
+            TimeSpan.FromSeconds(Math.Max(0, delaySeconds)),
+            Environment.GetEnvironmentVariable(ArmFileSwitch));
     }
 
     /// <summary>
@@ -82,6 +88,13 @@ internal sealed class ChunkBufferHarness
         // Before the delay the join burst installs normally, so a teleport issued during that time produces the burst
         // that actually gets measured.
         if (_sinceStart.Elapsed < _delay)
+        {
+            return false;
+        }
+
+        // Armed by a file so the caller decides the exact moment: the teleport is issued first, then the marker appears,
+        // and only the chunks that follow are held.
+        if (_armFile is { Length: > 0 } && !File.Exists(_armFile))
         {
             return false;
         }

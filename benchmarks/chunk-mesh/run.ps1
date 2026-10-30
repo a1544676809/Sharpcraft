@@ -15,7 +15,8 @@ param(
     [int]$Bots = 2,
     [int]$BufferSeconds = 5,
     [string]$Teleport = "-83 120 46",
-    [int]$DelaySeconds = 6,
+    [int]$DelaySeconds = 0,
+    [string]$ArmFile = "",
     [string]$Server = "127.0.0.1:25565",
     [string]$TokenConfig = "E:\Games\minecraft\.minecraft\versions\26.3-snapshot-8-Fabric 0.19.3\config\mcpfabric.config.json"
 )
@@ -64,7 +65,9 @@ for ($i = 1; $i -le $Bots; $i++) {
 Start-Sleep -Seconds 25
 
 # Everyone to the same spot, then let the chunk stream arrive before measuring.
-# Everyone to one spot: a selector avoids depending on exact names, and the delay lets this burst be the measured one.
+# Arm first, then teleport: the join burst installs normally and only the burst produced by the teleport is held.
+if ($ArmFile) { Set-Content -Path $ArmFile -Value "go" }
+Start-Sleep -Milliseconds 400
 Send-Command "/tp @a $Teleport"
 Write-Host "tp issued: /tp @a $Teleport"
 
