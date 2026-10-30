@@ -28,6 +28,7 @@ AGENTS.md 原则 12：不可逆或跨模块的决策必须在此留档，**只�
 | [`0014-gui-sprite-atlas-and-nine-slice.md`](0014-gui-sprite-atlas-and-nine-slice.md) | 提示框（tooltip）在原版由两张 GUI 贴图叠成：tooltip/background 与 tooltip/frame，后者为 nine_slice（border = 10、stretch_inner = true）。 | **提议（待评审）** | - |
 | [`0015-resource-pack-stack-and-reload.md`](0015-resource-pack-stack-and-reload.md) | 提示框贴图目前只从"基础包 zip"读取。 | **提议（待评审）** | - |
 | [`0016-resource-pack-file-watch.md`](0016-resource-pack-file-watch.md) | 包作者改一个贴图就要重启客户端。 | **提议（待评审）** | - |
+| [`0017-reload-invalidation-by-layout.md`](0017-reload-invalidation-by-layout.md) | 原版重载成功后直接 levelExtractor.allChanged()（全部区块几何重建，Minecraft.reloadResourcePacks 成功分支）。 | **已接受**（所有者 2026-10-30 确认：允许略微卡顿，采用分层失效） | - |
 
 <!-- END GENERATED: docs/decisions -->
 

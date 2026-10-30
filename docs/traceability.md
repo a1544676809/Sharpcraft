@@ -212,3 +212,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-185 | 方块图集/模型/blockstate 改走统一资源栈（PrepareSprites(layout, resources)）；重载时重建图集并作废区块网格待做 | docs/analysis/assets/texture-atlas-sizing.md §2/§3/§6 | 实测 Faithful 32x：图集 1024→2048、世界变 32x | Launcher/FrameCommand.PrepareSprites、Launcher/WindowCommand | 进行中 |
 | T-186 | 动画帧尺寸读 `animation` 元数据（`width`/`height`），帧数由高/帧高推导、首帧按帧高裁剪（支持非方帧） | `docs/analysis/assets/texture-atlas-sizing.md` §1、`SpriteContents` | `AnimationFrameSizeTests`(3) + 全量绿 | `Client/Assets/AnimationFrameSize`、`SpriteAtlas` | 已完成 |
 | T-187 | 关闭开关时与原版一致（`PackWatcher.IsEnabled` 默认 false、不创建监听器）| D-001、`docs/specs/deviations.md` | `PackWatcherTests.TheSwitchIsOffByDefault` | `Client/Assets/PackWatcher` | 已完成 |
+| T-188 | 热加载**布局差异驱动**的失效：布局不变只换纹理、布局改变才全量重建（ADR-0017）| ADR-0017、`docs/analysis/assets/texture-atlas-sizing.md` §7–§9 | 待补 | 待落地 | 进行中 |
