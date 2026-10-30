@@ -118,12 +118,19 @@ public static class TextEditRenderer
 
         if (model.HasSelection)
         {
-            var start = CaretOffset(font, value, model.SelectionStart);
-            var end = CaretOffset(font, value, model.SelectionEnd);
+            // The reference marks the selection from the caret to one pixel before the other end, so the box reaches
+            // a pixel past the text on the side the highlight started and stops a pixel early on the caret side.
+            // The reference advances its pen by the text width plus one before placing the caret, and marks the
+            // other end one pixel short, which is what gives the box its extra pixel on either side.
+            var caret = CaretOffset(font, value, model.CaretPos) + 1f;
+            var other = CaretOffset(font, value, model.HighlightPos) - 1f;
+            var left = Math.Min(caret, other);
+            var right = Math.Max(caret, other);
+
             geometry.AddRectangle(
-                x + start,
+                x + left,
                 y - 1f,
-                Math.Max(1f, end - start),
+                Math.Max(1f, right - left),
                 LineHeight + 2f,
                 UiGeometry.FromArgb(SelectionColour));
         }
@@ -178,8 +185,9 @@ public static class TextEditRenderer
         }
         else
         {
-            // At the end the reference draws the font's underscore, so the caret sits on the baseline.
-            UiScreenLayout.AddText(geometry, font, "_", caretX, y, 1f, textColour);
+            // At the end the reference draws the font's underscore one pixel past the text, because its pen has
+            // already been advanced by the width plus one.
+            UiScreenLayout.AddText(geometry, font, "_", caretX + 1f, y, 1f, textColour);
         }
     }
 }
