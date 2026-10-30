@@ -438,7 +438,22 @@ public static class OffscreenRenderer
                 pass.SetBindGroup(0, bindGroup, []);
                 pass.SetVertexBuffer(0, vertexBuffer);
                 pass.SetIndexBuffer(indexBuffer, WGPUIndexFormat.Uint32);
-                pass.DrawIndexed((uint)request.Indices.Length);
+
+                if (request.DrawRanges is { Length: > 0 } ranges)
+                {
+                    // One call per chunk, so an omitted chunk actually disappears rather than being merged into one draw.
+                    foreach (var (firstIndex, indexCount) in ranges)
+                    {
+                        if (indexCount > 0)
+                        {
+                            pass.DrawIndexed((uint)indexCount, 1, (uint)firstIndex, 0, 0);
+                        }
+                    }
+                }
+                else
+                {
+                    pass.DrawIndexed((uint)request.Indices.Length);
+                }
             }
 
             pass.End();

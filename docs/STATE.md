@@ -143,7 +143,10 @@ updated: 2026-10-29
     实测 `chunks 9, culled 0, visible 9` ⇒ **零误剔**（该场景本就无遮挡，0 是正确答案）。
     **O3 的现实约束**：①离屏路径一次 draw 画完所有区块 ⇒ 逐像素等价需先改按区块绘制（O3.2）
     ②剔除率在 9 区块无遮挡场景不可测，QA-1.4 的 ≥60% 需放大世界。
-    **下一步具体动作**：O3.2 —— 离屏按区块绘制 + 可见列表生效，再做不剔除 vs 剔除的逐像素比对。
+    **T-228 O3.2a 完成**：`FrameRequest.DrawRanges` + 离屏逐区块绘制（无 ranges 时仍单次 draw），帧比对 `identical`。
+    **下一步具体动作（O3.2b，需三处改动）**：①`FrameCommand` 逐区块网格化并记录 `(FirstIndex, IndexCount)`
+    ②把可见列表转成 ranges（被剔的给出 IndexCount=0）③构造**有遮挡场景**（如两面墙后面放一个区块）测剔除率，
+    再跑 cull=0 与 cull=1 的逐像素比对（必须 0 差异）。
     **（原计划）** `DepthPyramid` 改为接收**线性化距离**（或提供 `BuildFromWindowDepth(..., near, far)`），
     然后做 compute 版金字塔并与 CPU 结果逐 texel 比对。
 10. **中期目标已立项**：`docs/milestones/midterm-goal.md` —— 确定性基线、五个阶段完整、Hi-Z 达 O3、

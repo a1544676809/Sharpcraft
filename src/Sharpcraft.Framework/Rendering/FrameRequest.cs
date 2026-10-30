@@ -38,6 +38,15 @@ public sealed record FrameRequest(
     /// rect so a greedy quad can tile its texture inside one atlas cell.
     /// </summary>
     public TextureData? Atlas { get; init; }
+
+    /// <summary>
+    /// Index ranges to draw separately, one per chunk. Null draws everything in one call.
+    /// </summary>
+    /// <remarks>
+    /// Occlusion culling can only change the picture if a hidden chunk can be omitted, which needs one draw per chunk;
+    /// while there is a single range the result is identical to one big draw.
+    /// </remarks>
+    public (int FirstIndex, int IndexCount)[]? DrawRanges { get; init; }
 }
 
 /// <summary>An RGBA8 image uploaded as a texture, typically the stitched sprite atlas.</summary>
