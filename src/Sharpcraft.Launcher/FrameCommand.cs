@@ -263,6 +263,21 @@ internal static class FrameCommand
     /// </remarks>
     internal static Sharpcraft.Client.Assets.ResourceManager CreateResourceManager()
     {
+        var (stack, count) = BuildStack();
+
+        if (count > 0)
+        {
+            Console.WriteLine($"resource packs: {count} installed");
+        }
+
+        // The factory lets a reload rebuild the same stack later without any loader knowing how it was built.
+        return new Sharpcraft.Client.Assets.ResourceManager(stack, count, BuildStack);
+    }
+
+    /// <summary>Builds a stack from the base pack plus every installed pack.</summary>
+    /// <returns>The stack and how many installed packs it carries.</returns>
+    private static (AssetStack Stack, int PackCount) BuildStack()
+    {
         var stack = new AssetStack { Policy = MissingResourcePolicy.Warn }
             .Add(new BuiltInFallbackSource());
 
@@ -293,12 +308,7 @@ internal static class FrameCommand
             }
         }
 
-        if (count > 0)
-        {
-            Console.WriteLine($"resource packs: {count} installed");
-        }
-
-        return new Sharpcraft.Client.Assets.ResourceManager(stack, count);
+        return (stack, count);
     }
 
     /// <summary>

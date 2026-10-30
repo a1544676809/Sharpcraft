@@ -197,7 +197,7 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-170 | 资源包栈**行为研究**：优先级方向、列表形成、元数据、重载入口 | `docs/analysis/assets/resource-pack-stack.md` | 待补（研究项无测试） | 无（纯分析） | 进行中 |
 | T-171 | 资源包栈**全部行为核对完成**：包形态（目录/zip/链接）、优先级与插入、元数据、overlays（元数据+`OverlayedPackResources` 叠加）、重载失败与调度、`PackFormat` 取值 | `docs/analysis/assets/resource-pack-stack.md` §2.1/§4.1/§6–§11 | 研究项无测试（实现时补）| 无（纯分析）| 已完成 |
 | T-172 | 资源包栈实现：包模型、发现、有序栈与逆序回退、命名空间并集、**接入字体与贴图集加载点**（`MC_RESOURCE_PACKS`）；filter 遮蔽待做 | ADR-0015、`docs/analysis/assets/resource-pack-stack.md` | `ResourcePackStackTests`(5) + `ResourcePackSourceTests`(3) + **端到端**：第三方包改红边框 → 屏测红色环 1706 px；全量 942 绿 | `Client/Assets/{ResourcePack,ResourcePackStack,ResourcePackDiscovery,ResourcePackSource}`、`Launcher/FrameCommand` | 进行中 |
-| T-173 | 两阶段重载与旧快照回收（含自动化回收验证）| ADR-0015 | 待补 | 待落地 | 阻塞于评审 |
+| T-173 | 两阶段重载核心：`Reload` 先建新栈再换引用（全有或全无）、失败保留旧栈、有序监听器；旧栈随即释放 | ADR-0015、`docs/analysis/assets/resource-pack-stack.md` §12 | `ResourceManagerTests`（+2：换栈且监听器按序、失败保留旧栈）+ 全量 950 绿 | `Client/Assets/ResourceManager`、`Launcher/FrameCommand`(BuildStack 工厂) | 进行中 |
 | T-174 | **文件变更热加载**（扩展，默认关闭）：监听目录包/zip、300ms 去抖、全快照重建、失败保留旧快照、纹理按内容哈希失效 | ADR-0016、`docs/specs/deviations.md` D-001 | 待补（验收 5 项已写入 ADR）| 待落地 | 阻塞于评审 |
 | T-175 | 重载监听器注册表：把字体图集/`GuiSpriteAtlas`/语言表/UI 文档改为可重入监听器（顺序：语言·字体→贴图集→UI）| ADR-0016 §7、ADR-0015 | 待补 | 待落地 | 阻塞于评审 |
 | T-176 | **统一资源管理器**：会话级唯一栈（一次发现、全局共用），字体/贴图集/语言表/字体引用改为从它读取；`OpenFile` 支持 `.mcmeta` 等原始文件按优先级读取 | 原版单一 `ResourceManager` 语义、`docs/analysis/assets/resource-pack-stack.md` §12 | `ResourceManagerTests`(2) + 端到端（日志由两行变一行、红色覆盖环 1749px）+ 全量 944 绿 | `Client/Assets/ResourceManager`、`AssetStack`(TryOpenPath)、`Launcher/FrameCommand`、`Launcher/WindowCommand` | 已完成 |

@@ -72,6 +72,76 @@ public sealed class ResourceManagerTests : IDisposable
         Assert.Equal(GuiSpriteScalingType.Tile, scaling!.Type);
     }
 
+    [Fact]
+    public void AReloadSwapsTheStackAndRunsListenersInOrder()
+    {
+        var folder = Path.Combine(_root, "resourcepacks");
+        var packRoot = Path.Combine(folder, "extra");
+        MakeFolderPack(packRoot, "assets/minecraft/lang/en_us.json", "first");
+
+        var manager = new ResourceManager(
+            BuildStack(folder), 1,
+            () => (BuildStack(folder), 1));
+
+        var order = new List<string>();
+        manager.AddListener("later", 20, _ => order.Add("later"));
+        manager.AddListener("early", 10, _ => order.Add("early"));
+
+        Assert.Equal("first", ReadLanguage(manager));
+
+        File.WriteAllText(
+            Path.Combine(packRoot, "assets", "minecraft", "lang", "en_us.json"), "second");
+
+        Assert.True(manager.Reload());
+        Assert.Equal("second", ReadLanguage(manager));
+        Assert.Equal(["early", "later"], order);
+    }
+
+    [Fact]
+    public void AFailedReloadKeepsThePreviousStack()
+    {
+        var folder = Path.Combine(_root, "resourcepacks");
+        MakeFolderPack(Path.Combine(folder, "extra"), "assets/minecraft/lang/en_us.json", "first");
+
+        var attempts = 0;
+        var manager = new ResourceManager(
+            BuildStack(folder), 1,
+            () =>
+            {
+                attempts++;
+
+                if (attempts > 1)
+                {
+                    throw new IOException("file is mid-write");
+                }
+
+                return (BuildStack(folder), 1);
+            });
+
+        Assert.True(manager.Reload());
+        Assert.False(manager.Reload());
+        Assert.Equal("first", ReadLanguage(manager));
+    }
+
+    private static string ReadLanguage(ResourceManager manager)
+    {
+        var bytes = manager.Read(ResourceKind.Language, new Identifier("minecraft", "en_us"));
+        Assert.NotNull(bytes);
+        return System.Text.Encoding.UTF8.GetString(bytes!);
+    }
+
+    private AssetStack BuildStack(string folder)
+    {
+        var stack = new AssetStack { Policy = MissingResourcePolicy.Warn };
+
+        foreach (var pack in ResourcePackDiscovery.Discover(folder))
+        {
+            stack.Add(new ResourcePackSource(pack));
+        }
+
+        return stack;
+    }
+
     private string MakeArchive(string name, string relativePath, string content)
     {
         var path = Path.Combine(_root, name);
