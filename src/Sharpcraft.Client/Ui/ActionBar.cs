@@ -11,8 +11,8 @@ namespace Sharpcraft.Client.Ui;
 /// (docs/modules/ui.md 8.4).
 /// </summary>
 /// <remarks>
-/// It is not a chat line: it is centred, it has no history, and it disappears on its own after three seconds. Keeping it
-/// separate is what the reference does, and it is why an action bar message does not appear in the chat log.
+/// It is not a chat line: it is centred, it has no history, it has no backdrop either - the reference draws plain text
+/// there - and it disappears on its own after three seconds.
 /// </remarks>
 public sealed class ActionBar
 {
@@ -113,14 +113,6 @@ public sealed class ActionBar
 
         var left = MathF.Floor((canvasWidth - width) / 2f);
         var top = canvasHeight - BottomInset - 4f;
-
-        // The reference draws a backdrop behind the line so it stays readable over a bright world.
-        geometry.AddRectangle(
-            left - 2f,
-            top - 1f,
-            width + 4f,
-            LineHeight + 2f,
-            Pack(0x00000000u, 0.5f * alpha));
 
         var pen = left;
 

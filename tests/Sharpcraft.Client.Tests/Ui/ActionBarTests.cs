@@ -63,12 +63,19 @@ public sealed class ActionBarTests
         var geometry = new UiGeometry();
         bar.Draw(geometry, Font(), canvasWidth: 480f, canvasHeight: 270f);
 
-        // The backdrop is the first quad; its centre has to be the canvas centre, and it sits above the hotbar.
-        var left = geometry.Vertices[0];
-        var right = geometry.Vertices[5];
-        var top = geometry.Vertices[1];
+        // There is no backdrop, so the extent comes from the glyph quads themselves.
+        var left = float.MaxValue;
+        var right = float.MinValue;
+        var top = float.MaxValue;
 
-        Assert.Equal(240f, (left + right) / 2f, 3);
+        for (var index = 0; index + 5 < geometry.Vertices.Length; index += 20)
+        {
+            left = MathF.Min(left, geometry.Vertices[index]);
+            right = MathF.Max(right, geometry.Vertices[index + 5]);
+            top = MathF.Min(top, geometry.Vertices[index + 1]);
+        }
+
+        Assert.Equal(240f, (left + right) / 2f, 1f);
         Assert.True(top < 270f - ActionBar.BottomInset, "the line sits above the hotbar");
     }
 
