@@ -76,12 +76,35 @@ updated: 2026-10-30
 
 ⇒ 玩家安装的包覆盖内置包与 vanilla，符合直觉。
 
+## 6. 包内目录叠加（overlays，已核对元数据部分）
+
+`pack.mcmeta` 的 `overlays` 段（`OverlayMetadataSection`）：
+
+```json
+{ "overlays": { "entries": [ { "format": <格式区间>, "overlay": "<目录名>" } ] } }
+```
+
+- `entries[].overlay` 必须是 `[-_a-zA-Z0-9.]+` 的目录名，否则报 `is not accepted directory name`；
+- `overlaysForVersion(currentPackVersion)` 只保留**格式区间覆盖当前包格式**的条目；`Pack.Metadata.overlays` 就是这个列表；
+- 即：同一包里可以按 Minecraft 版本放多套资源，只有匹配当前版本的那几套生效。
+
+**仍待核对**：这些 overlay 目录在读取时如何叠在包根之上（哪个类负责合并、叠加顺序）。本仓库不做猜测。
+
+## 7. 重载失败语义（已核对入口）
+
+`Minecraft.reloadResourcePacks`：`resourcePackRepository.reload()` → `openAllSelected()` → `resourceManager.createReload(...)`，
+用 `LoadingOverlay` 展示进度；完成回调用 `Util.ifElse(…成功…, …失败…)`，失败走 `abortResourcePackRecovery()`
+（下载包场景）或仅弹 `resourcePack.load_fail` 提示。
+
+⇒ 一次重载要么整体成功应用、要么**整体失败并保持/放弃旧状态**，不存在"应用了一半"的中间态。
+（监听器内部仍是两阶段：准备 → 应用，见 `PreparableReloadListener`。）
+
 ## 5. 未核对（不得据此实现）
 
 | 项 | 说明 |
 | --- | --- |
-| `overlays`（包内目录叠加） | `pack.mcmeta` 的 overlays 段与目录叠加规则未核对 |
-| `SimpleReloadInstance` 阶段细节 | 并发度、失败回滚（是否原子）与监听器依赖排序未核对 |
+| `overlay` 目录的叠加实现 | 哪个类把 overlay 目录叠在包根之上、叠加顺序 |
+| `SimpleReloadInstance` 并发细节 | 并发度与监听器依赖排序（失败语义已核对）|
 | `KnownPacksManager`（服务端已知包） | 与客户端资源包栈的交互未核对 |
 | 包类型格式号 | `PackFormat` 在客户端资源与服务器数据两侧的具体取值范围未核对 |
 
