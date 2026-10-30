@@ -18,6 +18,43 @@ namespace Sharpcraft.Framework.Rendering;
 public static class OffscreenRenderer
 {
 
+    /// <summary>
+    /// Full-screen gradient for the sky stage: a shade at the zenith fading to the horizon colour.
+    /// </summary>
+    /// <remarks>
+    /// A first slice only: vanilla also draws a sky disc, stars and a sunrise band, which are deliberately absent rather
+    /// than approximated. Colours are the daytime overworld values until the environment attribute table is extracted.
+    /// </remarks>
+    internal const string SkyShaderSourceText = """
+        struct SkyOutput {
+            @builtin(position) clipPosition : vec4<f32>,
+            @location(0) height : f32,
+        };
+
+        @vertex
+        fn vs_sky(@builtin(vertex_index) index : u32) -> SkyOutput {
+            // One oversized triangle covering the screen, so no vertex buffer is needed.
+            var positions = array<vec2<f32>, 3>(
+                vec2<f32>(-1.0, -3.0),
+                vec2<f32>(-1.0, 1.0),
+                vec2<f32>(3.0, 1.0));
+
+            var output : SkyOutput;
+            let position = positions[index];
+            output.clipPosition = vec4<f32>(position, 0.0, 1.0);
+            // 0 at the bottom of the screen, 1 at the top.
+            output.height = (position.y + 1.0) * 0.5;
+            return output;
+        }
+
+        @fragment
+        fn fs_sky(input : SkyOutput) -> @location(0) vec4<f32> {
+            let horizon = vec3<f32>(0.75, 0.85, 1.0);
+            let zenith = vec3<f32>(0.47, 0.65, 1.0);
+            return vec4<f32>(mix(horizon, zenith, input.height), 1.0);
+        }
+        """;
+
     internal const string ShaderSourceText = """
         @group(0) @binding(0) var atlasTexture : texture_2d<f32>;
         @group(0) @binding(1) var atlasSampler : sampler;
@@ -90,6 +127,31 @@ public static class OffscreenRenderer
         {
             throw new RenderingUnavailableException($"no WGPU adapter available: {exception.Message}");
         }
+    }
+
+    /// <summary>Builds the sky pipeline: no vertex buffer, no depth, drawn first over the cleared target.</summary>
+    /// <param name="device">Device.</param>
+    /// <param name="format">Colour target format.</param>
+    private static RenderPipeline CreateSkyPipeline(Device device, WGPUTextureFormat format)
+    {
+        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
+        {
+            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(SkyShaderSourceText))
+        });
+
+        return device.CreateRenderPipeline(
+            shader,
+            "vs_sky"u8,
+            shader,
+            "fs_sky"u8,
+            [new ColorTargetState(format)],
+            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
+            multisample: MultisampleState.Default,
+            // Depth test always passes and writes nothing: the sky is a backdrop, not geometry.
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.Always, write: false),
+            vertexStride: 0,
+            vertexStepMode: WGPUVertexStepMode.Vertex,
+            vertexAttributes: []);
     }
 
     private static RenderPipeline CreatePipeline(Device device, PipelineLayout layout)
@@ -289,6 +351,13 @@ public static class OffscreenRenderer
                 }
             ],
             DepthStencilAttachment.DepthClear(depthView));
+
+            // Sky first: it fills the cleared target, then the world draws over it.
+            using (var skyPipeline = CreateSkyPipeline(device, WGPUTextureFormat.RGBA8Unorm))
+            {
+                pass.SetPipeline(skyPipeline);
+                pass.Draw(3);
+            }
 
             if (hasGeometry)
             {
