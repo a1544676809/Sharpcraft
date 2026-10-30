@@ -86,8 +86,9 @@ public sealed class TextEditRendererTests
         var geometry = new UiGeometry();
         TextEditRenderer.Draw(geometry, Monospace(), model, x: 0f, y: 0f, focused: false, elapsedMs: 0);
 
-        // A highlight quad, then each of the four characters twice: once for the shadow and once for the glyph.
-        Assert.Equal(9, geometry.QuadCount);
+        // A highlight quad; the two selected characters without a shadow, because the reference inverts the shadow
+        // away as well; and the two characters after the selection, which keep theirs.
+        Assert.Equal(7, geometry.QuadCount);
     }
 
     [Fact]

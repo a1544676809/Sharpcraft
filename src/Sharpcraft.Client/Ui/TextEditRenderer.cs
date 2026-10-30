@@ -30,10 +30,10 @@ public static class TextEditRenderer
     /// which reads as a pale blue box with blue text. There is no invert blend in this pipeline, so a pale blue that
     /// sits close to that result is used instead, with blue text on top.
     /// </remarks>
-    public const uint SelectionColour = 0xFFC0C8FFu;
+    public const uint SelectionColour = 0xFFC0C0FFu;
 
     /// <summary>Colour of selected text: blue, which is what the reference's inversion leaves behind.</summary>
-    public const uint SelectedTextColour = 0xFF2020C0u;
+    public const uint SelectedTextColour = 0xFF1F1FFFu;
 
     /// <summary>Height of a single line box.</summary>
     public const float LineHeight = 9f;
@@ -136,25 +136,28 @@ public static class TextEditRenderer
         }
         else
         {
-            // The reference inverts the pixels under the selection, which reads as white text on blue. There is no
-            // invert blend here, so the selected run is drawn white over the blue instead; recorded in the module page.
+            // The reference inverts the pixels under the selection, which reads as blue text on a pale box. There is
+            // no invert blend here, so a pale box with blue text is drawn instead; recorded in the module page.
             var selectionStart = model.SelectionStart;
             var selectionEnd = model.SelectionEnd;
-            var before = value[..selectionStart];
+            var before = value.AsSpan(0, selectionStart);
 
             UiScreenLayout.AddText(geometry, font, before, x, y, 1f, textColour);
+            // No shadow inside the selection: the reference inverts the pixels underneath, which turns the shadow
+            // light as well, so a dark one here would read as a dirty, boldened line.
             UiScreenLayout.AddText(
                 geometry,
                 font,
-                value[selectionStart..selectionEnd],
+                value.AsSpan(selectionStart, selectionEnd - selectionStart),
                 x + font.MeasureWidth(before),
                 y,
                 1f,
-                UiGeometry.FromArgb(SelectedTextColour));
+                UiGeometry.FromArgb(SelectedTextColour),
+                shadow: false);
             UiScreenLayout.AddText(
                 geometry,
                 font,
-                value[selectionEnd..],
+                value.AsSpan(selectionEnd),
                 x + font.MeasureWidth(value.AsSpan(0, selectionEnd)),
                 y,
                 1f,

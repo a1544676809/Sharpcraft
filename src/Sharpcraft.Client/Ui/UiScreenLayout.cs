@@ -355,7 +355,8 @@ public static class UiScreenLayout
         float x,
         float y,
         float textScale,
-        uint colour)
+        uint colour,
+        bool shadow = true)
     {
         var cellWidth = font.CellWidth * textScale;
         var cellHeight = font.CellHeight * textScale;
@@ -363,7 +364,7 @@ public static class UiScreenLayout
 
         // The reference draws every glyph twice: once offset by a pixel in both directions in a darkened colour, then
         // the glyph itself. Without it the text looks thin and washes out over a bright world.
-        var shadow = ShadowOf(colour);
+        var shadowColour = ShadowOf(colour);
 
         for (var index = 0; index < content.Length; index++)
         {
@@ -374,16 +375,20 @@ public static class UiScreenLayout
             if (font.TryGet(character, out var glyph) && character != ' ')
             {
                 var (u0, v0, u1, v1) = font.Uv(glyph);
-                geometry.AddTexturedRectangle(
-                    pen + textScale,
-                    y + textScale,
-                    cellWidth,
-                    cellHeight,
-                    u0,
-                    v0,
-                    u1,
-                    v1,
-                    shadow);
+                if (shadow)
+                {
+                    geometry.AddTexturedRectangle(
+                        pen + textScale,
+                        y + textScale,
+                        cellWidth,
+                        cellHeight,
+                        u0,
+                        v0,
+                        u1,
+                        v1,
+                        shadowColour);
+                }
+
                 geometry.AddTexturedRectangle(pen, y, cellWidth, cellHeight, u0, v0, u1, v1, colour);
             }
 
