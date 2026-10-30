@@ -34,6 +34,24 @@ public sealed class PackWatcherTests : IDisposable
     }
 
     [Fact]
+    public void TheSwitchIsOffByDefault()
+    {
+        var previous = Environment.GetEnvironmentVariable(PackWatcher.SwitchName);
+        Environment.SetEnvironmentVariable(PackWatcher.SwitchName, null);
+
+        try
+        {
+            // Nothing is watched unless the player asked for it, so the default behaviour is the reference's.
+            Assert.False(PackWatcher.IsEnabled);
+            Assert.Null(PackWatcher.ForEnvironment([_root], () => { }));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(PackWatcher.SwitchName, previous);
+        }
+    }
+
+    [Fact]
     public void NoFoldersMeansNoWatchers()
     {
         Assert.Null(PackWatcher.ForEnvironment([], () => { }));

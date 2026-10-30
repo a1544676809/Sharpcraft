@@ -51,7 +51,7 @@
 | # | 判据 | 证据形式 |
 | --- | --- | --- |
 | A1 | 目录包与 zip 包都能覆盖基础包 | ✅ 端到端：红边框环；Faithful 32x → 图集 1024→2048、世界 32x、字体清晰（`16x16 cells, line 8`）|
-| A2 | 优先级：后加入者胜；关闭时与原版一致 | 单测 |
+| A2 | 优先级：后加入者胜；关闭时与原版一致 | ✅ `ResourcePackStackTests`（后者胜）+ `PackWatcherTests.TheSwitchIsOffByDefault`（开关默认关、不建监听器）|
 | A3 | `filter` 命中即遮蔽下层包 | 单测（已达成）|
 | A4 | `overlays` 按版本区间叠加，元数据只取 primary | ✅ `ResourcePackOverlayTests`（4 项）|
 | A5 | `pack_format` 不适用的包被跳过并记诊断 | ✅ `ResourcePackFormatTests`（5 项）|
@@ -66,7 +66,8 @@
 
 - **本模块"完成"的定义**：A1–A11 全部有证据、矩阵各行状态为 `已完成`、`STATE.md` 更新、`dotnet test` 全绿。
 - **推送时机**：达成上述条件后**整模块一次性推送**，不中途推送半成品（遵循所有者"完成一整个模块再推送"的规矩）。
-- 当前进度：A1/A3/A4/A5/A6/A7/A8/A9/A10 已达成；仅 A2（关闭开关时行为断言）未达成。
+- 当前进度：**A1–A11 全部达成**。
+**已知限制（不掩盖）**：重载目前刷新 UI 纹理与语言表；**方块图集在重载时不会重建**（需渲染器换绑 + 作废全部区块网格，见 `docs/analysis/assets/texture-atlas-sizing.md` §7，任务 T-185 剩余）。
 
 ## 6. 未决
 
