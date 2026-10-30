@@ -101,6 +101,8 @@ public static class SpriteAtlasBuilder
         ArgumentNullException.ThrowIfNull(stack);
 
         var sprites = new List<(Identifier Location, RgbaImage Image, int Frames)>();
+        var sectionClock = System.Diagnostics.Stopwatch.StartNew();
+        var decodeMs = 0d;
         var seen = new HashSet<Identifier>();
 
         foreach (var location in stack.ListAll(BlockTexturePrefix))
@@ -117,7 +119,9 @@ public static class SpriteAtlasBuilder
             }
 
             // Only changed files are decoded; a reload that recolours one sprite should not decode thirteen hundred.
+            sectionClock.Restart();
             var image = ImageCache.GetOrDecode(location, bytes, data => PngDecoder.Decode(data));
+            decodeMs += sectionClock.Elapsed.TotalMilliseconds;
 
             // The frame size is declared, not guessed: a square of the image width is only the common case.
             var declared = AnimationFrameSize.TryRead(stack.ReadMetadata(ResourceKind.Texture, location));
@@ -146,7 +150,11 @@ public static class SpriteAtlasBuilder
         var missing = PngDecoder.Decode(new BuiltInFallbackSource().Checkerboard);
         sprites.Add((SpriteAtlas.MissingSprite, missing, 1));
 
-        return Stitch(sprites);
+        sectionClock.Restart();
+        var atlas = Stitch(sprites);
+        var stitchMs = sectionClock.Elapsed.TotalMilliseconds;
+        Console.WriteLine($"sprites: build decode {decodeMs:F1} ms, stitch {stitchMs:F1} ms, {sprites.Count} sprites");
+        return atlas;
     }
 
     /// <summary>Packs the given sprites into a power-of-two atlas.</summary>

@@ -21,6 +21,12 @@ namespace Sharpcraft.Launcher;
 internal static class WindowCommand
 {
     /// <summary>Runs the windowed presentation and returns the screenshot path.</summary>
+    /// <summary>The block layout this run resolves against, which differs only for the demo layout.</summary>
+    private static BlockStateLayout? CurrentLayout() =>
+        Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 }
+            ? FrameCommand.DemoLayout()
+            : VanillaBlockRegistry.Layout;
+
     /// <summary>True when two atlases differ in size or in any sprite's rectangle.</summary>
     /// <param name="before">Previous atlas, or null.</param>
     /// <param name="after">New atlas.</param>
@@ -112,38 +118,35 @@ internal static class WindowCommand
 
         resources.AddListener("atlas", 30, manager =>
         {
-            var candidateClock = System.Diagnostics.Stopwatch.StartNew();
-            var rebuilt = FrameCommand.PrepareSprites(
-                Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 }
-                    ? FrameCommand.DemoLayout()
-                    : VanillaBlockRegistry.Layout,
-                manager);
+            var atlasClock = System.Diagnostics.Stopwatch.StartNew();
+            var candidate = FrameCommand.PrepareAtlas(manager);
+            atlasClock.Stop();
 
-            candidateClock.Stop();
-
-            if (rebuilt is not { } next)
+            if (candidate is null)
             {
                 Console.WriteLine("resource reload: the atlas could not be rebuilt; keeping the previous one");
                 return;
             }
 
-            var layoutChanged = LayoutChanged(prepared?.Atlas, next.Atlas);
+            var layoutChanged = LayoutChanged(prepared?.Atlas, candidate);
 
-            prepared = next;
-            workerPool.SetSprites(next.Map);
+            // Only a layout change needs the models resolved again; a pure recolour keeps the previous mapping.
+            var nextMap = layoutChanged
+                ? FrameCommand.PrepareMap(candidate, CurrentLayout(), manager)
+                : prepared?.Map;
+
+            prepared = (candidate, nextMap!);
+            workerPool.SetSprites(nextMap);
 
             if (layoutChanged)
             {
-                // Every coordinate belongs to the old layout, so all meshes are rebuilt and the renderer's geometry storage
-                // is dropped and refilled: a resolution change is a complete rebuild (ADR-0017).
-                var meshClock = System.Diagnostics.Stopwatch.StartNew();
                 meshCache.Clear();
                 var passes = 0;
 
                 while (passes < 64 && (meshCache.LastTotalChunks < world.LoadedChunkCount || meshCache.PendingChunks > 0))
                 {
                     meshCache.QueueMissing(world);
-                    meshCache.Build(world, next.Map, Sharpcraft.Client.Render.MeshBuildPolicy.CatchUp);
+                    meshCache.Build(world, nextMap!, Sharpcraft.Client.Render.MeshBuildPolicy.CatchUp);
                     passes++;
 
                     if (meshCache.PendingChunks > 0)
@@ -152,19 +155,18 @@ internal static class WindowCommand
                     }
                 }
 
-                meshClock.Stop();
                 geometryEpoch++;
-                replayQueue = new Queue<(long, Sharpcraft.Client.Render.MeshData)>(meshCache.SnapshotAll());
+                replayQueue = new Queue<(long Key, Sharpcraft.Client.Render.MeshData Mesh)>(meshCache.SnapshotAll());
                 Console.WriteLine(
                     $"resource reload: layout changed; meshes {meshCache.LastTotalChunks}/{world.LoadedChunkCount} " +
-                    $"after {passes} pass(es), candidate {candidateClock.Elapsed.TotalMilliseconds:F1} ms, " +
-                    $"meshes {meshClock.Elapsed.TotalMilliseconds:F1} ms");
+                    $"after {passes} pass(es), atlas {atlasClock.Elapsed.TotalMilliseconds:F1} ms");
+            }
+            else
+            {
+                Console.WriteLine($"resource reload: atlas refreshed in {atlasClock.Elapsed.TotalMilliseconds:F1} ms (models kept)");
             }
 
-            atlasSource.Update(new TextureData(next.Atlas.Width, next.Atlas.Height, next.Atlas.Pixels));
-            Console.WriteLine(
-                $"resource reload: atlas {(layoutChanged ? "replaced" : "refreshed")} ({next.Atlas.Width}x{next.Atlas.Height}), " +
-                $"candidate {candidateClock.Elapsed.TotalMilliseconds:F1} ms, layoutChanged={layoutChanged}");
+            atlasSource.Update(new TextureData(candidate.Width, candidate.Height, candidate.Pixels));
         });
 
         // A short synchronous warm-up gives the first frame something to show.

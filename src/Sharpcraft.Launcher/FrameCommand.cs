@@ -487,6 +487,36 @@ internal static class FrameCommand
     /// Session resource manager. When given, block textures, models and blockstates are read through it, which is what lets
     /// an installed pack override the world's textures; without it only the base pack is read.
     /// </param>
+    /// <summary>
+    /// Builds only the atlas, without resolving models.
+    /// </summary>
+    /// <param name="resources">Session resource manager.</param>
+    /// <remarks>
+    /// Resolving block models costs about half a second on a full pack while building the atlas costs about thirty
+    /// milliseconds, so a reload that only changed pixels must not pay for the models again.
+    /// </remarks>
+    internal static SpriteAtlas? PrepareAtlas(Sharpcraft.Client.Assets.ResourceManager resources)
+    {
+        ArgumentNullException.ThrowIfNull(resources);
+
+        return SpriteAtlasBuilder.Build(resources.Stack);
+    }
+
+    /// <summary>Resolves block models into an atlas mapping, for a candidate atlas.</summary>
+    /// <param name="atlas">Candidate atlas.</param>
+    /// <param name="layout">Block state layout.</param>
+    /// <param name="resources">Session resource manager.</param>
+    internal static BlockSpriteMap PrepareMap(
+        SpriteAtlas atlas,
+        BlockStateLayout? layout,
+        Sharpcraft.Client.Assets.ResourceManager resources)
+    {
+        ArgumentNullException.ThrowIfNull(atlas);
+        ArgumentNullException.ThrowIfNull(resources);
+
+        return new BlockSpriteMap(atlas, layout, new BlockModelResolver(resources.Stack));
+    }
+
     internal static (SpriteAtlas Atlas, BlockSpriteMap Map)? PrepareSprites(
         BlockStateLayout? layout,
         Sharpcraft.Client.Assets.ResourceManager? resources = null)
