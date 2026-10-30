@@ -145,6 +145,113 @@ public static class PlayerChatPackets
         return DecodeStatus.Success;
     }
 
+    /// <summary>
+    /// Reads a player chat message keeping the click and hover each part carries.
+    /// </summary>
+    /// <param name="body">Packet body.</param>
+    /// <param name="sender">Sender name with its interactions.</param>
+    /// <param name="content">Message with its interactions.</param>
+    /// <param name="target">Target of a direct message, empty when there is none.</param>
+    /// <param name="signed">Whether the message carried a signature.</param>
+    /// <param name="chatTypeId">Chat type id.</param>
+    /// <param name="language">Translation table, or null.</param>
+    public static DecodeStatus TryReadPlayerChatStyled(
+        ReadOnlySpan<byte> body,
+        out StyledRuns sender,
+        out StyledRuns content,
+        out StyledRuns target,
+        out bool signed,
+        out int chatTypeId,
+        LanguageTable? language = null)
+    {
+        sender = StyledRuns.Empty;
+        content = StyledRuns.Empty;
+        target = StyledRuns.Empty;
+        signed = false;
+        chatTypeId = -1;
+
+        var reader = new PayloadReader(body);
+
+        if (reader.TryReadVarInt(out _) != DecodeStatus.Success ||
+            reader.TryReadUuid(out _) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out _) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        if (!TryReadSignature(ref reader, out signed) || !TryReadBody(ref reader, out var text, out _))
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        if (reader.TryReadBool(out var hasUnsignedContent) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        StyledRuns? unsigned = null;
+
+        if (hasUnsignedContent)
+        {
+            var status = NbtReader.TryReadNetworkRoot(body[reader.Position..], out var component, out var consumed);
+
+            if (status != DecodeStatus.Success || component is null)
+            {
+                return DecodeStatus.NeedMoreData;
+            }
+
+            var (uRuns, uClicks, uHovers) = ComponentRuns.FlattenStyled(component, language);
+            unsigned = new StyledRuns(uRuns, uClicks, uHovers);
+            reader.Skip(consumed);
+        }
+
+        if (!SkipFilterMask(ref reader))
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        if (reader.TryReadVarInt(out var type) != DecodeStatus.Success ||
+            type < 0 || type > MaxChatTypes ||
+            NbtReader.TryReadNetworkRoot(body[reader.Position..], out var nameComponent, out var nameLength) !=
+                DecodeStatus.Success ||
+            nameComponent is null)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        chatTypeId = type;
+        var (nameRuns, nameClicks, nameHovers) = ComponentRuns.FlattenStyled(nameComponent, language);
+        sender = new StyledRuns(nameRuns, nameClicks, nameHovers);
+        reader.Skip(nameLength);
+
+        if (reader.TryReadBool(out var hasTarget) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        if (hasTarget)
+        {
+            if (NbtReader.TryReadNetworkRoot(body[reader.Position..], out var targetComponent, out var targetLength) !=
+                DecodeStatus.Success)
+            {
+                return DecodeStatus.NeedMoreData;
+            }
+
+            if (targetComponent is not null)
+            {
+                var (tRuns, tClicks, tHovers) = ComponentRuns.FlattenStyled(targetComponent, language);
+                target = new StyledRuns(tRuns, tClicks, tHovers);
+            }
+
+            reader.Skip(targetLength);
+        }
+
+        content = unsigned ?? new StyledRuns(
+            [new TextRun(text, ComponentRuns.DefaultColour, Bold: false)], [null], [null]);
+
+        return DecodeStatus.Success;
+    }
+
     private static bool TryReadBody(ref PayloadReader reader, out string content, out long timestamp)
     {
         content = string.Empty;

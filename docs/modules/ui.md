@@ -458,7 +458,8 @@
 `shift=True prompt='INSERTED'`、`shift=False prompt='/msg Bob '`（打开输入框并填入）。
 
 **光标**：悬停在可点击段上时窗口层切换为手型（`WindowHost.SetHandCursor`，GLFW 标准光标，创建一次、按需切换、退出销毁）。
-**缺口**：①玩家聊天的装饰路径仍会丢交互（装饰重建 runs），仅系统消息带交互；②`change_page`/`show_dialog`/`custom`/`open_file` 未实现。
+玩家聊天的装饰路径现在也保留交互：`DecorateStyled` 在代入 `%s` 时把每段的 click/hover 一起搬过去，
+`PlayerChatPackets.TryReadPlayerChatStyled` 从包里的名字/正文读出交互。**缺口**：`change_page`/`show_dialog`/`custom`/`open_file` 未实现。
 
 ## 8.7 标题与副标题（`set_title_text` / `set_subtitle_text` / `clear_titles`）
 

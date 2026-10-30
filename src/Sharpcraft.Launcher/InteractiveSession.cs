@@ -609,6 +609,56 @@ internal sealed class InteractiveSession
     /// entries but no match means the message names a type we were never told about, and the reference cannot display
     /// it either; returning null lets the caller drop it instead of guessing a shape.
     /// </remarks>
+    /// <summary>
+    /// Decorates a message with its chat type while keeping the click and hover each part carries.
+    /// </summary>
+    /// <param name="chatTypeId">Chat type id from the wire.</param>
+    /// <param name="senderName">Sender name with its interactions.</param>
+    /// <param name="content">Message with its interactions.</param>
+    /// <param name="target">Target with its interactions, or empty.</param>
+    /// <remarks>
+    /// A decorated line is where clickable names and bodies actually appear, so the substitution has to carry the
+    /// interactions. Rebuilding the runs without them made every decorated message unclickable.
+    /// </remarks>
+    private Sharpcraft.Common.Network.StyledRuns? DecorateLineStyled(
+        int chatTypeId,
+        Sharpcraft.Common.Network.StyledRuns senderName,
+        Sharpcraft.Common.Network.StyledRuns content,
+        Sharpcraft.Common.Network.StyledRuns target)
+    {
+        var decoration = _chatTypes is { Count: > 0 } table
+            ? table.Get(chatTypeId)
+            : Sharpcraft.Common.Network.ChatTypeDecoration.Default;
+
+        if (decoration is null)
+        {
+            if (_diagEnabled)
+            {
+                Console.WriteLine($"chat dropped: unknown chat type {chatTypeId}");
+            }
+
+            return null;
+        }
+
+        var arguments = new System.Collections.Generic.List<Sharpcraft.Common.Network.StyledRuns>(decoration.Parameters.Length);
+
+        for (var argument = 0; argument < decoration.Parameters.Length; argument++)
+        {
+            arguments.Add(decoration.Parameters[argument] switch
+            {
+                Sharpcraft.Common.Network.ChatTypeDecoration.Sender => senderName,
+                Sharpcraft.Common.Network.ChatTypeDecoration.Content => content,
+                Sharpcraft.Common.Network.ChatTypeDecoration.Target => target,
+                _ => Sharpcraft.Common.Network.StyledRuns.Empty
+            });
+        }
+
+        return Sharpcraft.Common.Network.ComponentRuns.DecorateStyled(
+            _language,
+            decoration.TranslationKey,
+            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(arguments));
+    }
+
     private Sharpcraft.Common.Network.TextRun[]? DecorateLine(
         int chatTypeId,
         Sharpcraft.Common.Network.TextRun[] senderName,
@@ -1054,16 +1104,16 @@ internal sealed class InteractiveSession
 
 
                 case PacketIds.PlayClientbound.PlayerChat:
-                    if (PlayerChatPackets.TryReadPlayerChat(
-                            body[reader.Position..], out var chatSender, out var chatMessage, out var chatSigned,
-                            out var chatTypeId, out var chatTarget, _language) == DecodeStatus.Success)
+                    if (PlayerChatPackets.TryReadPlayerChatStyled(
+                            body[reader.Position..], out var chatSender, out var chatBody, out var chatTarget,
+                            out var chatSigned, out var chatTypeId, _language) == DecodeStatus.Success)
                     {
                         // The shape of a player message comes from the chat type registry, never from an assumption:
                         // the same packet renders as <name> text, name >> text or [name -> target] text depending on
                         // the entry the server named.
-                        var decorated = DecorateLine(chatTypeId, chatSender, chatMessage, chatTarget);
+                        var decoratedValues = DecorateLineStyled(chatTypeId, chatSender, chatBody, chatTarget);
 
-                        if (decorated is null)
+                        if (decoratedValues is not { } decoratedLine)
                         {
                             break;
                         }
@@ -1071,13 +1121,15 @@ internal sealed class InteractiveSession
                         // A message without a signature comes from a server that does not sign chat; the reference
                         // marks those as not secure, which shows the same pale bar a system line gets.
                         _chatLog.Add(
-                            decorated,
+                            decoratedLine.Runs,
                             _chatTicks,
-                            chatSigned ? Sharpcraft.Client.Ui.ChatLog.MessageTag.None : Sharpcraft.Client.Ui.ChatLog.MessageTag.NotSecure);
+                            chatSigned ? Sharpcraft.Client.Ui.ChatLog.MessageTag.None : Sharpcraft.Client.Ui.ChatLog.MessageTag.NotSecure,
+                            decoratedLine.Clicks,
+                            decoratedLine.Hovers);
 
                         if (_diagEnabled)
                         {
-                            Console.WriteLine($"chat received [type {chatTypeId}]: {Plain(decorated)}");
+                            Console.WriteLine($"chat received [type {chatTypeId}]: {Plain(decoratedLine.Runs)}");
                         }
                     }
 

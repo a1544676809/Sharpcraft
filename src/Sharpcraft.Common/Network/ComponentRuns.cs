@@ -22,6 +22,16 @@ public readonly record struct TextRun(string Text, uint Colour, bool Bold);
 /// wrong for team names, warnings and errors. The sixteen named colours and the hex form are the reference's own,
 /// taken from its colour table rather than from memory.
 /// </remarks>
+/// <summary>Runs together with the click and hover each one carries.</summary>
+/// <param name="Runs">The text runs.</param>
+/// <param name="Clicks">Click per run, parallel to <paramref name="Runs"/>.</param>
+/// <param name="Hovers">Hover per run, parallel to <paramref name="Runs"/>.</param>
+public readonly record struct StyledRuns(TextRun[] Runs, ChatClick?[] Clicks, TextRun[]?[] Hovers)
+{
+    /// <summary>An empty set.</summary>
+    public static StyledRuns Empty => new([], [], []);
+}
+
 public static class ComponentRuns
 {
     /// <summary>Default appearance: white, not bold.</summary>
@@ -79,6 +89,90 @@ public static class ComponentRuns
         var hovers = new List<TextRun[]?>(4);
         Append(runs, tag, DefaultColour, inheritedBold: false, depth: 0, language: language, clicks: clicks, hovers: hovers);
         return ([.. runs], [.. clicks], [.. hovers]);
+    }
+
+    /// <summary>
+    /// Applies a chat type decoration while keeping the click and hover each argument carries.
+    /// </summary>
+    /// <param name="language">Translation table, or null.</param>
+    /// <param name="translationKey">Key such as <c>chat.type.text</c>.</param>
+    /// <param name="arguments">One styled run set per placeholder, in order.</param>
+    /// <returns>The decorated runs with their interactions.</returns>
+    /// <remarks>
+    /// A decorated message is where a clickable name or a clickable body most often appears, so rebuilding the runs
+    /// without their interactions silently made every decorated line unclickable. The interaction lives beside the run,
+    /// so the substitution has to carry both.
+    /// </remarks>
+    public static StyledRuns DecorateStyled(
+        LanguageTable? language,
+        string translationKey,
+        ReadOnlySpan<StyledRuns> arguments)
+    {
+        ArgumentNullException.ThrowIfNull(translationKey);
+
+        var format = language is not null && language.TryGet(translationKey, out var resolved)
+            ? resolved
+            : translationKey;
+
+        var runs = new List<TextRun>(8);
+        var clicks = new List<ChatClick?>(8);
+        var hovers = new List<TextRun[]?>(8);
+        var pending = new System.Text.StringBuilder();
+        var next = 0;
+
+        void Flush()
+        {
+            if (pending.Length == 0)
+            {
+                return;
+            }
+
+            runs.Add(new TextRun(pending.ToString(), DefaultColour, Bold: false));
+            clicks.Add(null);
+            hovers.Add(null);
+            pending.Clear();
+        }
+
+        for (var index = 0; index < format.Length; index++)
+        {
+            if (format[index] != '%' || index + 1 >= format.Length)
+            {
+                pending.Append(format[index]);
+                continue;
+            }
+
+            var marker = format[index + 1];
+
+            if (marker == '%')
+            {
+                pending.Append('%');
+                index++;
+                continue;
+            }
+
+            if (marker == 's')
+            {
+                index++;
+
+                if (next < arguments.Length)
+                {
+                    Flush();
+                    var argument = arguments[next];
+                    runs.AddRange(argument.Runs);
+                    clicks.AddRange(argument.Clicks);
+                    hovers.AddRange(argument.Hovers);
+                    next++;
+                }
+
+                continue;
+            }
+
+            pending.Append(format[index]);
+        }
+
+        Flush();
+
+        return new StyledRuns([.. runs], [.. clicks], [.. hovers]);
     }
 
     /// <summary>Looks up a colour name or hex value.</summary>
