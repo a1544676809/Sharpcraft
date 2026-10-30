@@ -337,7 +337,7 @@ public static class OffscreenRenderer
             shader,
             "vs_main"u8,
             shader,
-            "fs_main"u8,
+            Environment.GetEnvironmentVariable("MC_FRAME_ALPHA_ONE") == "1" ? "fs_main"u8 : "fs_translucent"u8,
             [new ColorTargetState(WGPUTextureFormat.RGBA8Unorm)],
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },

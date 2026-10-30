@@ -261,3 +261,17 @@ P3 之前不谈包；但 §3 的 pass 划分必须**现在就按"可命名目标
 `ParsedChunk` 现增 `BlockEntities`（`BlockEntityRecord(LocalX, Y, LocalZ, TypeId)`）。
 
 **下一步**：`LevelChunk` 存储 → `BlockEntityMesher`（箱子 0.875³）→ 像素/数值验收。
+
+### 混合从未真正启用（2026-10-30 纠错）
+
+第 29/31 轮曾记录「混合管线已接线、有像素证据」。**这个结论不成立**：
+
+1. `alpha 0.7` 与 `alpha 1.0` 的探针像素**完全相同**：`probe (324,114) = rgba(15,12,12,255)`。若混合生效，两者必然不同。
+2. 复查 `CreateTranslucentPipeline`：**根本没有混合状态**，`[new ColorTargetState(WGPUTextureFormat.RGBA8Unorm)]` 是单参数构造。
+   第 29 轮那次「加 `BlendState.AlphaBlending`」的 `replace` **静默未命中**，我却没有回读确认就把结果记成了成功。
+3. 第 31 轮的 97,344 像素变化只证明「这一层被画出来了」，**不证明**它与背景混合。
+
+教训：`string.Replace` 不报错**不等于**改上了；必须回读被改的行。本轮已改为按行定位并回读确认。
+
+待办：查清绑定的混合类型（`ColorTargetState` 只有单参构造、`BlendState` 这个名字不存在），接入后再跑 alpha 0.7 / 1.0 对照，
+**两者必须不同**才算混合生效。
