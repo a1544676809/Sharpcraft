@@ -48,6 +48,18 @@ public sealed class ChatLog
     /// </remarks>
     public const float LeftInset = 2f;
 
+    /// <summary>Width of the tag indicator bar drawn at the left of a tagged line.</summary>
+    public const float TagBarWidth = 2f;
+
+    /// <summary>Colour of the indicator for a server or client system message.</summary>
+    public const uint SystemTagColour = 0xFFD0D0D0u;
+
+    /// <summary>Colour of the indicator for a chat error.</summary>
+    public const uint ErrorTagColour = 0xFFFF5555u;
+
+    /// <summary>Colour of the indicator for a message the client altered.</summary>
+    public const uint ModifiedTagColour = 0xFF606060u;
+
     /// <summary>Background wash behind each line.</summary>
     public const float BackgroundOpacity = 0.5f;
 
@@ -55,6 +67,28 @@ public sealed class ChatLog
     public const float TextOpacity = 1f;
 
     private readonly List<Line> _lines = [];
+
+    /// <summary>
+    /// Marks a line the way the reference does, with a bar at its left.
+    /// </summary>
+    /// <remarks>
+    /// The reference attaches a tag to lines that did not come from a player: system messages carry a pale bar, chat
+    /// errors a red one, and messages the client altered a dark one. Player messages carry no tag and no bar.
+    /// </remarks>
+    public enum MessageTag
+    {
+        /// <summary>No bar, which is what a player message has.</summary>
+        None,
+
+        /// <summary>System message, drawn with a pale bar.</summary>
+        System,
+
+        /// <summary>Chat error, drawn with a red bar.</summary>
+        Error,
+
+        /// <summary>Message the client altered, drawn with a dark bar.</summary>
+        Modified
+    }
 
     /// <summary>Lines held, oldest first.</summary>
     public int Count => _lines.Count;
@@ -65,13 +99,13 @@ public sealed class ChatLog
     /// <summary>Adds a plain line, which is drawn in white.</summary>
     /// <param name="text">Line text.</param>
     /// <param name="tick">Current tick, used for the fade.</param>
-    public void Add(string text, long tick) =>
-        Add([new TextRun(text, ComponentRuns.DefaultColour, Bold: false)], tick);
+    public void Add(string text, long tick, MessageTag tag = MessageTag.None) =>
+        Add([new TextRun(text, ComponentRuns.DefaultColour, Bold: false)], tick, tag);
 
     /// <summary>Adds a line made of styled runs.</summary>
     /// <param name="runs">Runs in order.</param>
     /// <param name="tick">Current tick, used for the fade.</param>
-    public void Add(ReadOnlySpan<TextRun> runs, long tick)
+    public void Add(ReadOnlySpan<TextRun> runs, long tick, MessageTag tag = MessageTag.None)
     {
         if (runs.Length == 0)
         {
@@ -92,13 +126,23 @@ public sealed class ChatLog
             return;
         }
 
-        _lines.Add(new Line(runs.ToArray(), tick, builder.ToString()));
+        _lines.Add(new Line(runs.ToArray(), tick, builder.ToString(), tag));
 
         if (_lines.Count > MaxHistory)
         {
             _lines.RemoveAt(0);
         }
     }
+
+    /// <summary>Colour of a tag's indicator bar, or zero when the line has none.</summary>
+    private static uint ColourOf(MessageTag tag) =>
+        tag switch
+        {
+            MessageTag.System => SystemTagColour,
+            MessageTag.Error => ErrorTagColour,
+            MessageTag.Modified => ModifiedTagColour,
+            _ => 0u
+        };
 
     /// <summary>Forgets every line, used when leaving a world.</summary>
     public void Clear() => _lines.Clear();
@@ -174,6 +218,19 @@ public sealed class ChatLog
                     EntryHeight,
                     Pack(0x00000000u, alpha * BackgroundOpacity));
 
+                var tagColour = ColourOf(line.Tag);
+
+                if (tagColour != 0u)
+                {
+                    // The reference draws a two pixel bar at the left of a tagged line, over the background.
+                    geometry.AddRectangle(
+                        LeftInset,
+                        entryTop,
+                        TagBarWidth,
+                        EntryHeight,
+                        Pack(UiGeometry.FromArgb(tagColour), alpha * TextOpacity));
+                }
+
                 DrawPiece(geometry, font, line, piece.Start, piece.Length, MessageIndent + pen, entryBottom - 8f, alpha);
                 pen += font.MeasureWidth(line.Text.AsSpan(piece.Start, piece.Length));
                 row++;
@@ -246,7 +303,7 @@ public sealed class ChatLog
         return (colour & 0x00FFFFFFu) | (alphaByte << 24);
     }
 
-    private readonly record struct Line(TextRun[] Runs, long AddedTick, string Text);
+    private readonly record struct Line(TextRun[] Runs, long AddedTick, string Text, MessageTag Tag);
 
     /// <summary>Greedy word wrapping over a line, reporting where each piece starts, allocating nothing.</summary>
     private readonly ref struct Wrapped(string text, BitmapFont font, float width)

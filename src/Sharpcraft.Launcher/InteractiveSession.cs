@@ -733,7 +733,8 @@ internal sealed class InteractiveSession
                         // that exists, keeping it out of the log is the honest choice.
                         if (!overlay)
                         {
-                            _chatLog.Add(chatRuns, _chatTicks);
+                            // A system line is what the reference tags with its pale indicator bar.
+                            _chatLog.Add(chatRuns, _chatTicks, Sharpcraft.Client.Ui.ChatLog.MessageTag.System);
 
                             if (_diagEnabled)
                             {
