@@ -55,9 +55,15 @@ internal static class WindowCommand
 
         // The windowed path uses the same atlas and block layout as the offscreen path, otherwise the
         // window would show colour-only faces while the saved PNG is textured (docs/modules/render.md 6.1).
-        var prepared = FrameCommand.PrepareSprites(Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 }
-            ? FrameCommand.DemoLayout()
-            : VanillaBlockRegistry.Layout);
+        // One resource manager for the session, created before anything reads resources so the atlas, models and
+        // blockstates see the same packs as the font and the language table.
+        using var resources = FrameCommand.CreateResourceManager();
+
+        var prepared = FrameCommand.PrepareSprites(
+            Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 }
+                ? FrameCommand.DemoLayout()
+                : VanillaBlockRegistry.Layout,
+            resources);
 
         // One pool serves both decoding and meshing, sized from the machine
         // (docs/specs/network/play-movement.md 7.24).
@@ -117,8 +123,6 @@ internal static class WindowCommand
 
         using var liveScope = live;
         // Loaded before the session because chat arrives as translation keys and the session resolves them.
-        // One resource manager for the session, so every loader reads the same pack stack.
-        using var resources = FrameCommand.CreateResourceManager();
         var language = FrameCommand.PrepareLanguage(resources);
 
         // Chat types decide how a player message is written, so they come from the same connection that carries the

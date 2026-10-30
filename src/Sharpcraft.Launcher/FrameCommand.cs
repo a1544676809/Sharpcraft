@@ -456,7 +456,14 @@ internal static class FrameCommand
         return font;
     }
 
-    internal static (SpriteAtlas Atlas, BlockSpriteMap Map)? PrepareSprites(BlockStateLayout? layout)
+    /// <param name="layout">Block state layout, or null for the demo layout.</param>
+    /// <param name="resources">
+    /// Session resource manager. When given, block textures, models and blockstates are read through it, which is what lets
+    /// an installed pack override the world's textures; without it only the base pack is read.
+    /// </param>
+    internal static (SpriteAtlas Atlas, BlockSpriteMap Map)? PrepareSprites(
+        BlockStateLayout? layout,
+        Sharpcraft.Client.Assets.ResourceManager? resources = null)
     {
         if (layout is null)
         {
@@ -476,10 +483,20 @@ internal static class FrameCommand
             return null;
         }
 
-        // The stack stays alive until the atlas and mapping are built, then it is released.
-        using var stack = new AssetStack { Policy = MissingResourcePolicy.Warn }
-            .Add(new BuiltInFallbackSource())
-            .Add(new ZipAssetSource(packPath, "base-pack"));
+        // The stack stays alive until the atlas and mapping are built, then it is released. A session manager is preferred
+        // so installed packs take part; the local stack remains for callers that have none.
+        AssetStack stack;
+
+        if (resources is not null)
+        {
+            stack = resources.Stack;
+        }
+        else
+        {
+            stack = new AssetStack { Policy = MissingResourcePolicy.Warn }
+                .Add(new BuiltInFallbackSource())
+                .Add(new ZipAssetSource(packPath, "base-pack"));
+        }
 
         var timer = System.Diagnostics.Stopwatch.StartNew();
         var atlas = SpriteAtlasBuilder.Build(stack);
