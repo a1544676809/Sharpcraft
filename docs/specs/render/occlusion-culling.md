@@ -36,7 +36,7 @@ WebGPU 的遮挡查询能力受限且跨平台不一致；**Hi-Z（分层深度�
 | **O1.8（已完成）** | **深度线性化** `DepthLinearisation`（`ToDistance`/`ToDepth`/`InPlace`，默认近 0.1 / 远 2000）| 4 项测试（端点、典型值 0.9986 → 40–90 方块、互为逆、单调）；实测 `nearest 0.9986 → 70.3 方块` |
 | **O2.1（已完成）** | `pipelines/depth_pyramid.wgsl`（compute，`cs_downsample`，workgroup 8×8，binding 4 输入/5 输出/6 参数）+ 登记进 `ShaderPipelines`；参考实现 `DepthPyramid` 迁入 Framework 便于同处比对 | 参考 4 项测试；着色器通过启动期校验 |
 | **O2.2（已完成，第 1 层）** | 离屏路径实际 dispatch：深度双拷贝（CPU 参考一份、compute 一份）、参数 uniform（宽/高/行跨度/近远）、`CopyBufferToBuffer` 回读 | 实测 480×270 第 1 层 **mismatches 0、worst delta 0.000000**（容差 0.05 方块，float32 在 2000 方块的量化极限）|
-| O2 | GPU compute 版金字塔（输入为**线性化距离**），与 O1.5 逐 texel 一致 | 任意深度图下与 CPU 参考完全相同 |
+| **O2（已完成）** | GPU compute 完整 **mip 链**（循环 dispatch，逐级 storage→storage），输入为线性化距离 | 实测 **9 级全部 mismatches 0、worst delta 0.000000** |
 | O3 | 剔除 compute 产出可见列表（先 CPU 回读） | 与不剔除参考帧逐像素一致，剔除率达标 |
 | O4 | indirect draw，去掉回读 | 每帧提交次数仍为 1；剔除率与 O3 相同 |
 
@@ -75,3 +75,8 @@ WebGPU 的遮挡查询能力受限且跨平台不一致；**Hi-Z（分层深度�
 2. 缓冲区不能同时既 `MapRead` 又作 `CopySrc` ⇒ 深度纹理**拷贝两次**（CPU 参考一份、compute 一份），而不是缓冲区互相拷。
 3. WGSL 中 `target` 是**保留字** ⇒ 改名 `destination`。
 4. 金字塔必须在**距离**域比较：着色器内做线性化（`near*far/(far - d*(far-near))`，`d>=1` 取 `far`），否则第 1 层全是 1.0。
+
+### O2 收尾时发现的第五个坑
+
+只有**第 0 级**需要 window→distance 转换；更深层输入已经是距离。第一版每级都转换，导致第 2–5 级把 70 方块当成 window 深度 0.07→饱和到 far，
+出现 worst delta 1929。修正为参数里的 `convert` 标志（仅 level 0 置 1）。

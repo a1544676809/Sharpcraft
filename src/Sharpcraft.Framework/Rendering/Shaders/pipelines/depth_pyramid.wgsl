@@ -10,7 +10,8 @@ struct Params {
     height : u32,
     // Rows of the source are padded for the texture to buffer copy, so the shader must skip the padding.
     stride : u32,
-    pad0 : u32,
+    // Non-zero for level zero only: deeper levels already hold distances.
+    convert : u32,
     near : f32,
     far : f32,
     pad1 : vec2<u32>,
@@ -35,12 +36,17 @@ fn cs_downsample(@builtin(global_invocation_id) id : vec3<u32>) {
             let sourceX = min(params.width - 1u, id.x * 2u + dx);
             let sourceY = min(params.height - 1u, id.y * 2u + dy);
                         // The pyramid is defined over distances, not window depth, which saturates in the far field.
-            let window = source[sourceY * params.stride + sourceX];
-            let distance = select(
-                params.near * params.far / (params.far - window * (params.far - params.near)),
-                params.far,
-                window >= 1.0);
-            farthest = max(farthest, distance);
+            let raw = source[sourceY * params.stride + sourceX];
+            var value = raw;
+
+            if (params.convert != 0u) {
+                value = select(
+                    params.near * params.far / (params.far - raw * (params.far - params.near)),
+                    params.far,
+                    raw >= 1.0);
+            }
+
+            farthest = max(farthest, value);
         }
     }
 

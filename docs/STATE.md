@@ -137,7 +137,9 @@ updated: 2026-10-29
     **T-225 O2.2 完成**：compute dispatch 跑通，**第 1 层与 CPU 参考逐 texel 全等**（480×270，mismatches 0，worst delta 0.000000）。
     途中解决四条平台约束（MAP 用途单向、缓冲不能既 MapRead 又 CopySrc ⇒ 深度拷贝两次、`target` 是 WGSL 保留字、
     金字塔必须在距离域比较）。
-    **下一步具体动作**：把金字塔扩到**完整 mip 链**（多级 dispatch），然后 O3（剔除 compute → 可见列表 → 与不剔除帧逐像素一致）。
+    **T-226 O2 完成**：GPU 完整 **9 级 mip 链**与 CPU 参考**逐 texel 全等**（total mismatches 0）。
+    途中第五个坑：只有第 0 级需要 window→distance 转换（更深层已是距离），否则第 2–5 级出现 1929 方块的假差异。
+    **下一步具体动作**：O3 —— 剔除 compute（用金字塔的 covering 查询判定 AABB），产出可见列表，再与"不剔除"参考帧逐像素比对。
     **（原计划）** `DepthPyramid` 改为接收**线性化距离**（或提供 `BuildFromWindowDepth(..., near, far)`），
     然后做 compute 版金字塔并与 CPU 结果逐 texel 比对。
 10. **中期目标已立项**：`docs/milestones/midterm-goal.md` —— 确定性基线、五个阶段完整、Hi-Z 达 O3、
