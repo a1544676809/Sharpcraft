@@ -208,4 +208,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-181 | 重载监听器：`ResourceManager.AddListener` 排序执行；**语言表**已接入 `session.Language` 并端到端生效 | ADR-0016 §7、`docs/analysis/assets/resource-pack-stack.md` §12 | 端到端（1 键→3 键 + `resource reload: applied`）| `Launcher/WindowCommand`、`InteractiveSession.Language` | 已完成 |
 | T-182 | 文件监听：`PackWatcher`（开关 `MC_RESOURCE_PACK_WATCH=1`、300ms 去抖、关闭不建监听器、zip 整包变化同样触发）| ADR-0016、D-001 | `PackWatcherTests`(2) + 端到端 | `Client/Assets/PackWatcher`、`Launcher/WindowCommand` | 已完成 |
 | T-183 | 字体/贴图集重载：GPU 侧纹理换绑（渲染器按重载结果更新 glyph/贴图绑定组）| ADR-0016 §6、A8 | 待补 | 待落地 | 进行中|
-| T-184 | **高清字体图集**：`BitmapFont` 假定 8×8 单元，Faithful 32x 的 ascii 图集是 16×16 单元 → 文字重叠；需按 `图集宽/16` 推导单元并缩放度量 | 真包实测（截图字体糊）+ `docs/analysis/assets/` | 待补 | 待落地 | 进行中 |
+| T-184 | **高清字体图集**：按原版 `BitmapProvider` 规则切分（`chars` 网格定单元、`height`/`ascent` 定度量、`pixelScale=height/glyphHeight`），读到 `font/default.json` 的 bitmap 提供器 | `docs/analysis/assets/font-slicing.md`、`ref://mc-26.3-analysis/src/net/minecraft/client/gui/font/providers/BitmapProvider.java` | 待补 | 待落地 | 进行中 |

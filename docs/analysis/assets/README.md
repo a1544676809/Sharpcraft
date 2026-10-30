@@ -12,6 +12,7 @@
 | 文档 | 摘要 | 状态 | 最后更新 |
 | --- | --- | --- | --- |
 | [`block-models.md`](block-models.md) | 变体、parent 继承、#变量、面→纹理、uv 缺省 | 草稿 | - |
+| [`font-slicing.md`](font-slicing.md) | 单元尺寸由图集与字符网格推导，度量由 height/ascent 决定；高清包只放大像素，不改变排版 | 已核对 | 2026-10-30 |
 | [`jar-entry-map.md`](jar-entry-map.md) | jar 条目分类与资产清单（顶层分布、assets 分类、纹理格式） | 草稿 | - |
 | [`resource-pack-format.md`](resource-pack-format.md) | 26.x 各版本的资源包格式号，取自 Minecraft Wiki；用于判断第三方包是否可用 | 已核对（外部来源，非 jar） | 2026-10-30 |
 | [`resource-pack-stack.md`](resource-pack-stack.md) | 包列表顺序→按命名空间回退栈；后者覆盖前者；重载为两阶段原子替换 | 部分核对（未核对项已列出） | 2026-10-30 |
