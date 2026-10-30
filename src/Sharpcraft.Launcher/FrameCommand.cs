@@ -722,6 +722,26 @@ internal static class FrameCommand
                 ? $"compare: identical ({frame.Width}x{frame.Height}, max channel delta {difference.MaxChannelDelta}, tolerance {tolerance})"
                 : $"compare: {difference.Mismatches} pixel(s) differ, first at ({difference.FirstX},{difference.FirstY}), max channel delta {difference.MaxChannelDelta}");
         }
+        if (Environment.GetEnvironmentVariable("MC_FRAME_PROBE") is { Length: > 0 } probeText)
+        {
+            // Sample named pixels from the rendered frame, so a claim about a colour is a number taken from the image.
+            foreach (var pair in probeText.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var parts = pair.Split(',');
+
+                if (parts.Length == 2 &&
+                    int.TryParse(parts[0], out var probeX) &&
+                    int.TryParse(parts[1], out var probeY) &&
+                    probeX >= 0 && probeX < frame.Width && probeY >= 0 && probeY < frame.Height)
+                {
+                    var offset = ((probeY * frame.Width) + probeX) * 4;
+                    Console.WriteLine(
+                        $"probe ({probeX},{probeY}) = rgba({frame.Rgba[offset]},{frame.Rgba[offset + 1]},{frame.Rgba[offset + 2]},{frame.Rgba[offset + 3]}) " +
+                        $"argb 0x{Sharpcraft.Framework.Rendering.PixelComparison.ArgbAt(frame.Rgba, frame.Width, probeX, probeY):X8}");
+                }
+            }
+        }
+
         var png = PngEncoder.EncodeRgba(frame.Width, frame.Height, frame.Rgba);
         var path = Path.Combine(Path.GetTempPath(), "sharpcraft-frame.png");
         File.WriteAllBytes(path, png);

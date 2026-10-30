@@ -236,3 +236,5 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-210 | 离屏**天空渐变 pass**（全屏三角形，无顶点缓冲，深度恒通过不写）| `docs/analysis/render/sky-and-fog.md` §6 | 实测像素：y=5 (121,166,255)≈天顶(120,166,255)、y=400 (173,204,255) 接近地平线(191,217,255)、y=520 被地形覆盖 | `Framework/Rendering/OffscreenRenderer` | 已完成 |
 | T-211 | **距离雾**（`Fog` uniform：颜色 + 起止方块；顶点传 `clip.w`，片元线性 ramp）| `docs/analysis/render/sky-and-fog.md` §7 | 实测：远处地形 (25,16,12)→(176,206,255)、天空不变；无验证错误 | `Framework/Rendering/OffscreenRenderer` | 已完成 |
 | T-212 | 天空+雾**接入窗口路径**（共用着色器，补齐 binding 3；新增天空管线先画）| `docs/analysis/render/sky-and-fog.md` §8 | 窗口日志：出帧、无 validation error；**窗口像素未抓取**（远程会话无可见窗口）| `Framework/Rendering/WindowedRenderer` | 已完成（像素验收缺）|
+| T-213 | **像素探针工具** `MC_FRAME_PROBE=x,y;x,y`（输出 rgba 与 argb，越界跳过）| — | 实测 `probe (480,5) = rgba(121,166,255,255) argb 0xFF79A6FF` | `Launcher/FrameCommand` | 已完成 |
+| T-214 | **半透明阶段**规格与 S1–S4 切片（层分类、双网格、距离排序、共用雾）| `docs/specs/render/pipeline.md` §15 | 规格已就绪；S1 依赖方块渲染层数据 | 待落地 | 规格已就绪 |
