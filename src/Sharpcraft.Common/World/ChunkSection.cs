@@ -21,10 +21,12 @@ public sealed class ChunkSection
     private readonly PalettedContainer _states;
 
     /// <summary>Creates a section filled with one block state.</summary>
-    public ChunkSection(int singleState, int sectionY)
+    public ChunkSection(int singleState, int sectionY, int airState = 0)
     {
         _states = new PalettedContainer(Volume, singleState);
         SectionY = sectionY;
+        // A filled section must not claim to be empty, or the mesher skips it entirely.
+        NonAirCount = singleState == airState ? 0 : Volume;
     }
 
     /// <summary>Creates a section from an already parsed container.</summary>

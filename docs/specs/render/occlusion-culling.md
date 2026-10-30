@@ -97,5 +97,7 @@ WebGPU 的遮挡查询能力受限且跨平台不一致；**Hi-Z（分层深度�
 - 已给区块 `MarkLoaded()`（未标记的区块会被网格器跳过）——仍为空；
 - 怀疑点是 `ChunkSection(singleState: 1, sectionY:)` 的语义：整段单一状态的构造可能把 `nonAirCount` 记为 0，从而被网格器当作空段。
 
-**结论**：需要先查清 `ChunkSection` 单状态构造与网格器"空段"判据，才能得到可用的遮挡场景；
+**已查明并修掉一个真缺陷**：`ChunkSection(int singleState, int sectionY)` 从未设置 `NonAirCount`（恒为 0）⇒ `IsEmpty` 恒真
+⇒ 网格器直接跳过整段。已加 `airState` 参数并据此设置计数（3 项测试）。**结论**：合成场景仍为空，剩余疑点在
+`PalettedContainer(Volume, singleState)` 的构造语义（第二个参数可能被当作位宽而非状态）；
 在此之前 **QA-1.4 的剔除率不可测**，O3 只能停在"判定+应用已验证、零误剔"这一步。
