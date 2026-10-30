@@ -64,6 +64,10 @@ public sealed class ColourOrderTests
 
         // The shadow has to be lighter than the ink, otherwise the selection reads as a dirty bold line.
         Assert.Contains(colours, colour => (colour & 0xFF) > (ink & 0xFF));
+
+        // The reference inverts the shadow it drew from the ordinary text colour (0xE0E0E0), which lands on a neutral
+        // light grey. Deriving it from the blue ink instead produced a saturated pink that read far too strongly.
+        Assert.Contains(0xFFC7C7C7u, colours);
     }
 
     private static BitmapFont Monospace()
