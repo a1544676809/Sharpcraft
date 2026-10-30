@@ -227,3 +227,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-201 | 时域放缩前置：**亚像素抖动**实现 + 管线规格新增 §13；`shader-packs.md` §9 补四条阶段/维度/特性检查规则 | `docs/specs/render/pipeline.md` §13、`docs/specs/render/shader-packs.md` §9 | `CameraJitterTests`(4：幅度<1px、均值归零、周期与负索引、投影位移<1px) | `Client/Render/CameraJitter` | 已完成 |
 | T-202 | 运动矢量：**重投影数学**（`Reprojection.Of/TryToScreen` + `FrameHistory`），像素单位、`NaN` 表示相机后方无效 | `docs/specs/render/pipeline.md` §13 | `ReprojectionTests`(5：静止为零、相机右移则像左移、近处位移更大、相机后方无效、历史返回上一帧) | `Client/Render/Reprojection` | 已完成 |
 | T-203 | 运动矢量像素级：`ReconstructWorld`（uv 加深度经逆 VP 得世界）与 `OfPixel`（像素位移）| `docs/specs/render/pipeline.md` §13 | `ReprojectionPixelTests`(3：深度重建往返、像素位移与解析解一致、静止为零) | `Client/Render/Reprojection` | 已完成 |
+| T-204 | **GPU 遮挡剔除计划与保守测试数学**（Hi-Z 路线、O1-O4 分期、QA-1.4 指标）| `docs/specs/render/occlusion-culling.md`、`docs/specs/quality-attributes.md` QA-1.4 | `OcclusionCullingTests`(5) | `Client/Render/OcclusionCulling` | 进行中 |
