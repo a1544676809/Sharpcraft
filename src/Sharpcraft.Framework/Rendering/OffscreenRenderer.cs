@@ -144,6 +144,44 @@ public static class OffscreenRenderer
     /// <summary>Builds the sky pipeline: no vertex buffer, no depth, drawn first over the cleared target.</summary>
     /// <param name="device">Device.</param>
     /// <param name="format">Colour target format.</param>
+    /// <summary>Reads the depth buffer back and prints its range, proving depth is available for the occlusion pass.</summary>
+    private static void ReportDepth(Instance instance, Brew.Wgpu.Buffer depthReadback, ulong depthSize, int depthPadded, int width, int height)
+    {
+        var status = depthReadback.MapBlocking(instance, MapMode.Read, 0, (nuint)depthSize);
+
+        if (status != WGPUMapAsyncStatus.Success)
+        {
+            Console.WriteLine($"depth: readback failed ({status})");
+            return;
+        }
+
+        var mapped = depthReadback.GetMappedRange<byte>(0, (nuint)depthSize);
+        var nearest = float.MaxValue;
+        var farthest = 0f;
+        var centre = BitConverter.ToSingle(mapped.Slice(((height / 2) * depthPadded) + ((width / 2) * 4), 4));
+
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                var value = BitConverter.ToSingle(mapped.Slice((y * depthPadded) + (x * 4), 4));
+
+                if (value < nearest)
+                {
+                    nearest = value;
+                }
+
+                if (value > farthest)
+                {
+                    farthest = value;
+                }
+            }
+        }
+
+        depthReadback.Unmap();
+        Console.WriteLine($"depth: {width}x{height} nearest {nearest:F4} farthest {farthest:F4} centre {centre:F4}");
+    }
+
     private static RenderPipeline CreateSkyPipeline(Device device, WGPUTextureFormat format)
     {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
@@ -231,7 +269,8 @@ public static class OffscreenRenderer
                 SampleCount = 1,
                 Dimension = WGPUTextureDimension._2D,
                 Format = WGPUTextureFormat.Depth32Float,
-                Usage = TextureUsage.RenderAttachment
+                // CopySrc so the depth can be read back: it is the input the occlusion pyramid is built from.
+                Usage = TextureUsage.RenderAttachment | TextureUsage.CopySrc
             });
 
             using var depthView = depthTexture.CreateView();
@@ -358,6 +397,15 @@ public static class OffscreenRenderer
                 Usage = BufferUsage.MapRead | BufferUsage.CopyDst
             });
 
+            // Depth rows are 4 bytes per pixel and padded the same way as colour.
+            var depthPadded = (((int)width * 4) + 255) / 256 * 256;
+            var depthSize = (ulong)depthPadded * height;
+            var depthReadback = device.CreateBuffer(new BufferDescriptor
+            {
+                Size = depthSize,
+                Usage = BufferUsage.MapRead | BufferUsage.CopyDst
+            });
+
             var hasGeometry = request.Indices.Length > 0 && request.Vertices.Length > 0;
             // World-space vertices: the shader applies the camera, so the buffer only changes when the
             // geometry changes.
@@ -411,6 +459,13 @@ public static class OffscreenRenderer
                 height,
                 new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 });
 
+            encoder.CopyTextureToBuffer(
+                depthTexture,
+                depthReadback,
+                (uint)depthPadded,
+                height,
+                new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 });
+
             var commands = encoder.Finish();
             device.Queue.Submit(commands);
 
@@ -429,6 +484,13 @@ public static class OffscreenRenderer
 
             readback.Unmap();
             readback.Dispose();
+
+            if (Environment.GetEnvironmentVariable("MC_FRAME_DEPTH") == "1")
+            {
+                ReportDepth(instance, depthReadback, depthSize, depthPadded, (int)width, (int)height);
+            }
+
+            depthReadback.Dispose();
             commands.Dispose();
             encoder.Dispose();
             depthTexture.Dispose();

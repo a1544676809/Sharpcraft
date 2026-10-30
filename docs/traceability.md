@@ -240,3 +240,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-214 | **半透明阶段**规格与 S1-S4 切片（层分类、双网格、距离排序、共用雾）| `docs/specs/render/pipeline.md` §15 | 规格已就绪；S1 依赖方块渲染层数据 | `Client/Render`（待落地）| 规格已就绪 |
 | T-215 | Hi-Z **CPU 参考**（`DepthPyramid.Build` 取最远 + `TryCoveringDepth` 单 texel 覆盖）| `docs/specs/render/occlusion-culling.md` O1.5 | `DepthPyramidTests`(4) | `Client/Render/DepthPyramid` | 已完成 |
 | T-216 | 半透明 **S3 排序**（`TranslucentOrder.ByDistanceDescending`：距离降序、等距稳定）| `docs/specs/render/pipeline.md` §15 | `TranslucentOrderTests`(3) | `Client/Render/TranslucentOrder` | 已完成 |
+| T-217 | **深度回读**（`CopySrc` + 256 字节行对齐）+ 数值证据；并发现 NDC 深度远处饱和、O2 需线性化 | `docs/specs/render/occlusion-culling.md` O1.7 | 实测 `depth: 960x540 nearest 0.9986 farthest 1.0000 centre 1.0000` | `Framework/Rendering/OffscreenRenderer` | 已完成 |
