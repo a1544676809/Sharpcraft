@@ -46,7 +46,8 @@ public static class WindowedRenderer
         int expectedChunks = 0,
         Func<DynamicGeometry?>? dynamicGeometry = null,
         Func<UiFrame, UiGeometry?>? uiGeometry = null,
-        TextureData? glyphTexture = null)
+        TextureData? glyphTexture = null,
+        IReadOnlyList<TextureData>? spriteTextures = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -190,6 +191,60 @@ public static class WindowedRenderer
                 BindGroupEntry.Sampler(1, atlasSampler),
                 BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize)
             ]);
+
+        using var uiSpritePipeline = UiRenderer.CreateSpritePipeline(device, format, pipelineLayout);
+
+        // GUI sprites (tooltip background and frame) each need their own texture and binding, because one draw call can
+        // only bind one texture (docs/decisions/0014-gui-sprite-atlas-and-nine-slice.md).
+        var spriteDataList = spriteTextures ?? [];
+        var spriteSheets = new List<Texture>(spriteDataList.Count);
+        var spriteViews = new List<TextureView>(spriteDataList.Count);
+        var spriteBindGroups = new List<BindGroup>(spriteDataList.Count);
+
+        foreach (var spriteData in spriteDataList)
+        {
+            var sheet = device.CreateTexture(new TextureDescriptor
+            {
+                Size = new WGPUExtent3D
+                {
+                    width = (uint)spriteData.Width,
+                    height = (uint)spriteData.Height,
+                    depthOrArrayLayers = 1
+                },
+                MipLevelCount = 1,
+                SampleCount = 1,
+                Dimension = WGPUTextureDimension._2D,
+                Format = WGPUTextureFormat.RGBA8Unorm,
+                Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
+            });
+
+            device.Queue.WriteTexture(
+                sheet,
+                spriteData.Rgba,
+                (uint)(spriteData.Width * 4),
+                (uint)spriteData.Height,
+                new WGPUExtent3D
+                {
+                    width = (uint)spriteData.Width,
+                    height = (uint)spriteData.Height,
+                    depthOrArrayLayers = 1
+                },
+                0,
+                new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+
+            var view = sheet.CreateView();
+
+            spriteBindGroups.Add(device.CreateBindGroup(
+                bindGroupLayout,
+                [
+                    BindGroupEntry.TextureView(0, view),
+                    BindGroupEntry.Sampler(1, atlasSampler),
+                    BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize)
+                ]));
+
+            spriteSheets.Add(sheet);
+            spriteViews.Add(view);
+        }
 
         using var uiTextBindGroup = device.CreateBindGroup(
             bindGroupLayout,
@@ -559,19 +614,30 @@ public static class WindowedRenderer
 
                 var boundMaterial = (UiMaterial?)null;
 
+                // A sprite range also depends on which texture it binds, so the index is part of what decides a rebind.
+                var boundSprite = -2;
+
                 // One draw per scissor range, which is what keeps a screen of many widgets down to a few draws.
                 // The pipeline and bind group only change when the material does, so panels then text cost two
                 // bindings for the whole screen rather than one per range.
                 foreach (var range in uiRanges)
                 {
-                    if (boundMaterial != range.Material)
+                    if (boundMaterial != range.Material || boundSprite != range.SpriteIndex)
                     {
                         boundMaterial = range.Material;
+                        boundSprite = range.SpriteIndex;
 
                         if (range.Material == UiMaterial.Text)
                         {
                             pass.SetPipeline(uiTextPipeline);
                             pass.SetBindGroup(0, uiTextBindGroup);
+                        }
+                        else if (range.Material == UiMaterial.Sprite &&
+                                 range.SpriteIndex >= 0 &&
+                                 range.SpriteIndex < spriteBindGroups.Count)
+                        {
+                            pass.SetPipeline(uiSpritePipeline);
+                            pass.SetBindGroup(0, spriteBindGroups[range.SpriteIndex]);
                         }
                         else
                         {

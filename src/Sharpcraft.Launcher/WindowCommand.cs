@@ -157,6 +157,9 @@ internal static class WindowCommand
         var uiGeometry = new UiGeometry();
         var uiFont = FrameCommand.PrepareFont();
         session.UiFont = uiFont;
+        // The tooltip's frame is two nine slice sprites; without them it falls back to a rectangle.
+        var guiSprites = FrameCommand.PrepareGuiSprites();
+
         var glyphTexture = uiFont is null
             ? null
             : new TextureData(uiFont.Sheet.Width, uiFont.Sheet.Height, uiFont.Sheet.Pixels);
@@ -220,6 +223,7 @@ internal static class WindowCommand
             expectedChunks: InteractiveSession.ExpectedChunkCount(),
             dynamicGeometry: entitySource,
             glyphTexture: glyphTexture,
+            spriteTextures: guiSprites?.Textures,
             uiGeometry: frame =>
             {
                 var screen = uiLoader.Current ?? fallback;
@@ -272,13 +276,39 @@ internal static class WindowCommand
                         if (hover is not null)
                         {
                             Sharpcraft.Client.Ui.Tooltip.Draw(
-                                uiGeometry, uiFont, hover, pointer.X, pointer.Y, canvasWidth, canvasHeight);
+                                uiGeometry, uiFont, hover, pointer.X, pointer.Y, canvasWidth, canvasHeight, guiSprites);
                         }
                         else if (session.ChatTagTipAt(pointer.X, pointer.Y) is { } tagTip)
                         {
                             // The indicator bar explains itself when hovered.
                             Sharpcraft.Client.Ui.Tooltip.Draw(
-                                uiGeometry, uiFont, tagTip, pointer.X, pointer.Y, canvasWidth, canvasHeight);
+                                uiGeometry, uiFont, tagTip, pointer.X, pointer.Y, canvasWidth, canvasHeight, guiSprites);
+                        }
+                    }
+
+                    // A fixed preview point, because an unattended run cannot move the pointer onto a hover target.
+                    var preview = Environment.GetEnvironmentVariable("MC_TOOLTIP_PREVIEW");
+
+                    if (preview is { Length: > 0 })
+                    {
+                        var previewParts = preview.Split(',');
+
+                        if (previewParts.Length == 2 &&
+                            float.TryParse(previewParts[0], out var previewX) &&
+                            float.TryParse(previewParts[1], out var previewY))
+                        {
+                            Sharpcraft.Client.Ui.Tooltip.Draw(
+                                uiGeometry,
+                                uiFont,
+                                [new Sharpcraft.Common.Network.TextRun(
+                                    "Server message. Cannot be reported.",
+                                    Sharpcraft.Common.Network.ComponentRuns.DefaultColour,
+                                    false)],
+                                previewX,
+                                previewY,
+                                canvasWidth,
+                                canvasHeight,
+                                guiSprites);
                         }
                     }
 

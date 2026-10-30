@@ -40,11 +40,16 @@ public static class Tooltip
     /// </summary>
     /// <param name="geometry">Receives the quads.</param>
     /// <param name="font">Glyph metrics.</param>
-    /// <param name="runs">Tip text, one line per run set element.</param>
+    /// <param name="runs">Tip text.</param>
     /// <param name="pointerX">Pointer x in canvas pixels.</param>
     /// <param name="pointerY">Pointer y in canvas pixels.</param>
     /// <param name="canvasWidth">Canvas width, used to keep the box on screen.</param>
     /// <param name="canvasHeight">Canvas height, used to keep the box on screen.</param>
+    /// <param name="sprites">GUI sprites to draw the frame from, or null to fall back to a plain rectangle.</param>
+    /// <remarks>
+    /// The reference draws the frame from two nine slice sprites at <c>x-3-9, y-3-9, w+6+18, h+6+18</c>, where x,y,w,h
+    /// is the text area. The corners keep their pixels, which is what gives the frame its shape; a rectangle cannot.
+    /// </remarks>
     public static void Draw(
         UiGeometry geometry,
         BitmapFont font,
@@ -52,7 +57,8 @@ public static class Tooltip
         float pointerX,
         float pointerY,
         float canvasWidth,
-        float canvasHeight)
+        float canvasHeight,
+        GuiSpriteAtlas? sprites = null)
     {
         ArgumentNullException.ThrowIfNull(geometry);
         ArgumentNullException.ThrowIfNull(font);
@@ -63,7 +69,7 @@ public static class Tooltip
         }
 
         var lines = Wrap(runs, font, MaxWidth);
-        var width = 0f;
+        var textWidth = 0f;
 
         foreach (var line in lines)
         {
@@ -74,37 +80,104 @@ public static class Tooltip
                 lineWidth += font.MeasureWidth(run.Text);
             }
 
-            width = MathF.Max(width, lineWidth);
+            textWidth = MathF.Max(textWidth, lineWidth);
         }
 
-        var boxWidth = width + (Padding * 2f) + 2f;
-        var boxHeight = (lines.Count * LineHeight) + (Padding * 2f) + 2f;
+        var textHeight = lines.Count * LineHeight;
 
-        // Prefer up and to the right of the pointer, then pull back inside the canvas.
-        var left = MathF.Min(pointerX + 6f, canvasWidth - boxWidth - 2f);
-        var top = MathF.Min(pointerY - boxHeight - 6f, canvasHeight - boxHeight - 2f);
+        // Outer box is the text plus the reference's three pixel padding on every side.
+        var boxWidth = textWidth + (Padding * 2f);
+        var boxHeight = textHeight + (Padding * 2f);
+
+        // The sprites reach nine more pixels beyond that on every side.
+        var margin = sprites is null ? 0f : 9f;
+        var totalWidth = boxWidth + (margin * 2f);
+        var totalHeight = boxHeight + (margin * 2f);
+
+        var left = MathF.Min(pointerX + 6f, canvasWidth - totalWidth - 2f);
+        var top = MathF.Min(pointerY - totalHeight - 6f, canvasHeight - totalHeight - 2f);
         left = MathF.Max(2f, left);
         top = MathF.Max(2f, top);
 
-        geometry.AddRectangle(left, top, boxWidth, boxHeight, BackgroundColour);
-        geometry.AddRectangle(left, top, boxWidth, 1f, FrameStartColour);
-        geometry.AddRectangle(left, top + boxHeight - 1f, boxWidth, 1f, FrameEndColour);
-        geometry.AddRectangle(left, top, 1f, boxHeight, FrameStartColour);
-        geometry.AddRectangle(left + boxWidth - 1f, top, 1f, boxHeight, FrameEndColour);
+        var textLeft = left + margin + Padding;
+        var textTop = top + margin + Padding;
 
-        var textTop = top + Padding + 1f;
+        if (sprites is null)
+        {
+            geometry.AddRectangle(left, top, boxWidth, boxHeight, BackgroundColour);
+            geometry.AddRectangle(left, top, boxWidth, 1f, FrameStartColour);
+            geometry.AddRectangle(left, top + boxHeight - 1f, boxWidth, 1f, FrameEndColour);
+            geometry.AddRectangle(left, top, 1f, boxHeight, FrameStartColour);
+            geometry.AddRectangle(left + boxWidth - 1f, top, 1f, boxHeight, FrameEndColour);
+        }
+        else
+        {
+            DrawSprite(
+                geometry,
+                sprites.Background,
+                GuiSpriteAtlas.BackgroundIndex,
+                sprites.Border,
+                left,
+                top,
+                totalWidth,
+                totalHeight);
+
+            DrawSprite(
+                geometry,
+                sprites.Frame,
+                GuiSpriteAtlas.FrameIndex,
+                sprites.Border,
+                left,
+                top,
+                totalWidth,
+                totalHeight);
+        }
+
+        var lineTop = textTop;
 
         foreach (var line in lines)
         {
-            var pen = left + Padding + 1f;
+            var pen = textLeft;
 
             foreach (var run in line)
             {
-                UiScreenLayout.AddText(geometry, font, run.Text, pen, textTop, 1f, run.Colour, shadow: false);
+                UiScreenLayout.AddText(geometry, font, run.Text, pen, lineTop, 1f, run.Colour, shadow: false);
                 pen += font.MeasureWidth(run.Text);
             }
 
-            textTop += LineHeight;
+            lineTop += LineHeight;
+        }
+    }
+
+    private static void DrawSprite(
+        UiGeometry geometry,
+        TextureData sprite,
+        int spriteIndex,
+        int border,
+        float left,
+        float top,
+        float width,
+        float height)
+    {
+        var cells = NineSlice.Cells(left, top, width, height, sprite.Width, sprite.Height, border);
+
+        // The cells work in texels, which is what a nine slice reasons about, but a vertex wants 0..1 coordinates.
+        var inverseWidth = 1f / sprite.Width;
+        var inverseHeight = 1f / sprite.Height;
+
+        for (var index = 0; index < cells.Count; index++)
+        {
+            var cell = cells[index];
+            geometry.AddSpriteRectangle(
+                cell.X,
+                cell.Y,
+                cell.Width,
+                cell.Height,
+                cell.U0 * inverseWidth,
+                cell.V0 * inverseHeight,
+                cell.U1 * inverseWidth,
+                cell.V1 * inverseHeight,
+                spriteIndex);
         }
     }
 

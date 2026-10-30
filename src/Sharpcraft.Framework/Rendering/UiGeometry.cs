@@ -10,7 +10,10 @@ public enum UiMaterial
     Colour,
 
     /// <summary>Textured, sampling the glyph atlas.</summary>
-    Text
+    Text,
+
+    /// <summary>Textured, sampling a GUI sprite chosen by the range's sprite index.</summary>
+    Sprite
 }
 
 /// <summary>
@@ -54,6 +57,7 @@ public sealed class UiGeometry
     private int _indexCount;
     private int _rangeCount;
     private UiMaterial _material;
+    private int _spriteIndex;
 
     /// <summary>One contiguous run of indices sharing a scissor rectangle and a material.</summary>
     public readonly record struct Range(
@@ -63,7 +67,8 @@ public sealed class UiGeometry
         float MaxY,
         UiMaterial Material,
         int FirstIndex,
-        int IndexCount);
+        int IndexCount,
+        int SpriteIndex = 0);
 
     /// <summary>Vertex data in use.</summary>
     public ReadOnlySpan<float> Vertices => _vertices.AsSpan(0, _vertexFloats);
@@ -84,6 +89,7 @@ public sealed class UiGeometry
         _indexCount = 0;
         _rangeCount = 0;
         _material = UiMaterial.Colour;
+        _spriteIndex = 0;
     }
 
     /// <summary>Starts a new scissor range, or retargets the current one when it is still empty.</summary>
@@ -97,7 +103,7 @@ public sealed class UiGeometry
         {
             var current = _ranges[_rangeCount - 1];
             var same = current.MinX == minX && current.MinY == minY && current.MaxX == maxX && current.MaxY == maxY
-                && current.Material == _material;
+                && current.Material == _material && current.SpriteIndex == _spriteIndex;
 
             if (same)
             {
@@ -113,7 +119,8 @@ public sealed class UiGeometry
                     MinY = minY,
                     MaxX = maxX,
                     MaxY = maxY,
-                    Material = _material
+                    Material = _material,
+                    SpriteIndex = _spriteIndex
                 };
 
                 return;
@@ -121,7 +128,7 @@ public sealed class UiGeometry
         }
 
         EnsureRangeRoom();
-        _ranges[_rangeCount++] = new Range(minX, minY, maxX, maxY, _material, _indexCount, 0);
+        _ranges[_rangeCount++] = new Range(minX, minY, maxX, maxY, _material, _indexCount, 0, _spriteIndex);
     }
 
     /// <summary>
@@ -168,6 +175,42 @@ public sealed class UiGeometry
         // Every public colour is authored as ARGB; the vertex buffer wants RGBA bytes, so the conversion happens here
         // once. Doing it at some call sites and not others is what turned a blue-violet tooltip frame into a red one.
         AppendQuad(x, y, x + width, y + height, 0f, 0f, 0f, 0f, FromArgb(colour));
+    }
+
+    /// <summary>
+    /// Appends a rectangle textured from a GUI sprite (docs/decisions/0014-gui-sprite-atlas-and-nine-slice.md).
+    /// </summary>
+    /// <param name="x">Left edge.</param>
+    /// <param name="y">Top edge.</param>
+    /// <param name="width">Width.</param>
+    /// <param name="height">Height.</param>
+    /// <param name="u0">Left texture coordinate in texels.</param>
+    /// <param name="v0">Top texture coordinate in texels.</param>
+    /// <param name="u1">Right texture coordinate in texels.</param>
+    /// <param name="v1">Bottom texture coordinate in texels.</param>
+    /// <param name="spriteIndex">Which sprite the renderer must bind, or -1 to keep the current one.</param>
+    /// <remarks>
+    /// A different sprite closes the current range, because one draw call can only bind one texture. Passing -1 keeps
+    /// the index, which is what a nine slice does for its nine cells.
+    /// </remarks>
+    public void AddSpriteRectangle(
+        float x,
+        float y,
+        float width,
+        float height,
+        float u0,
+        float v0,
+        float u1,
+        float v1,
+        int spriteIndex = -1)
+    {
+        if (spriteIndex >= 0)
+        {
+            _spriteIndex = spriteIndex;
+        }
+
+        UseMaterial(UiMaterial.Sprite);
+        AppendQuad(x, y, x + width, y + height, u0, v0, u1, v1, 0xFFFFFFFFu);
     }
 
     /// <summary>Appends a textured rectangle, such as one glyph from the font atlas.</summary>

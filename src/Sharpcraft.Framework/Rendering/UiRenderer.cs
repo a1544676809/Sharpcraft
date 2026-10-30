@@ -55,6 +55,45 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
 }
 """;
 
+    /// <summary>Shader for GUI sprites: samples the sprite's own colours and tints by the vertex colour.</summary>
+    public const string SpriteShaderSourceText = """
+struct Transform {
+    matrix: mat4x4<f32>,
+};
+
+@group(0) @binding(0) var sprite: texture_2d<f32>;
+@group(0) @binding(1) var spriteSampler: sampler;
+@group(0) @binding(2) var<uniform> transform: Transform;
+
+struct VertexInput {
+    @location(0) position: vec2<f32>,
+    @location(1) colour: vec4<f32>,
+    @location(2) uv: vec2<f32>,
+};
+
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) colour: vec4<f32>,
+    @location(1) uv: vec2<f32>,
+};
+
+@vertex
+fn vs_main(input: VertexInput) -> VertexOutput {
+    var output: VertexOutput;
+    output.position = transform.matrix * vec4<f32>(input.position, 0.0, 1.0);
+    output.colour = input.colour;
+    output.uv = input.uv;
+    return output;
+}
+
+@fragment
+fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
+    // Sprites carry their own pixels, unlike glyph sheets where only the coverage matters.
+    let sampled = textureSample(sprite, spriteSampler, input.uv);
+    return sampled * input.colour;
+}
+""";
+
     /// <summary>Shader for text: samples the glyph sheet and tints by the vertex colour.</summary>
     public const string TextShaderSourceText = """
 struct Transform {
@@ -103,6 +142,52 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
         {
             Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(TextShaderSourceText))
+        });
+
+        var blend = new WGPUBlendState
+        {
+            color = new WGPUBlendComponent
+            {
+                operation = WGPUBlendOperation.Add,
+                srcFactor = WGPUBlendFactor.SrcAlpha,
+                dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
+            },
+            alpha = new WGPUBlendComponent
+            {
+                operation = WGPUBlendOperation.Add,
+                srcFactor = WGPUBlendFactor.One,
+                dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
+            }
+        };
+
+        var depth = DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.Always, write: false);
+
+        return device.CreateRenderPipeline(
+            shader,
+            "vs_main"u8,
+            shader,
+            "fs_main"u8,
+            [new ColorTargetState(format) { Blend = blend }],
+            layout: layout,
+            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None, FrontFace = WGPUFrontFace.CCW },
+            multisample: MultisampleState.Default,
+            depthStencil: depth,
+            vertexStride: (ulong)VertexLayout.UiStride,
+            vertexStepMode: WGPUVertexStepMode.Vertex,
+            vertexAttributes: VertexLayout.UiTextAttributes());
+    }
+
+    /// <summary>
+    /// Creates the interface pipeline used for GUI sprites, which samples the sprite's own colours.
+    /// </summary>
+    /// <param name="device">Device to create it on.</param>
+    /// <param name="format">Colour target format.</param>
+    /// <param name="layout">Pipeline layout; expects a sprite texture, a sampler and the transform.</param>
+    public static RenderPipeline CreateSpritePipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
+    {
+        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
+        {
+            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(SpriteShaderSourceText))
         });
 
         var blend = new WGPUBlendState

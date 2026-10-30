@@ -259,6 +259,77 @@ internal static class FrameCommand
     /// Loads the glyph sheet from the same asset pack the block textures come from, so text uses the game's own
     /// font without any asset entering the repository (docs/modules/ui.md 5).
     /// </summary>
+    /// <summary>
+    /// Loads the tooltip sprites and their nine slice border, or null when the pack or the files are missing.
+    /// </summary>
+    /// <remarks>
+    /// The tooltip is a sprite pair, so without them the interface falls back to a plain rectangle. Reading the border
+    /// from the <c>.mcmeta</c> rather than hard coding it keeps the drawing tied to the texture that will be used.
+    /// </remarks>
+    internal static Sharpcraft.Client.Ui.GuiSpriteAtlas? PrepareGuiSprites()
+    {
+        var packPath = FindPack();
+
+        if (packPath is null)
+        {
+            return null;
+        }
+
+        using var stack = new AssetStack { Policy = MissingResourcePolicy.Warn }
+            .Add(new BuiltInFallbackSource())
+            .Add(new ZipAssetSource(packPath, "base-pack"));
+
+        var background = stack.Read(
+            ResourceKind.Texture,
+            new Sharpcraft.Common.Identifiers.Identifier("minecraft", "gui/sprites/tooltip/background"));
+        var frame = stack.Read(
+            ResourceKind.Texture,
+            new Sharpcraft.Common.Identifiers.Identifier("minecraft", "gui/sprites/tooltip/frame"));
+
+        if (background is null || frame is null)
+        {
+            Console.WriteLine("tooltip: sprites missing from the pack; the tooltip falls back to a rectangle");
+            return null;
+        }
+
+        var border = 10;
+
+        try
+        {
+            using var archive = System.IO.Compression.ZipFile.OpenRead(packPath);
+            var meta = archive.GetEntry("assets/minecraft/textures/gui/sprites/tooltip/frame.png.mcmeta");
+
+            if (meta is not null)
+            {
+                using var reader = new StreamReader(meta.Open());
+                var scaling = Sharpcraft.Client.Ui.GuiSpriteScaling.TryParse(reader.ReadToEnd());
+
+                if (scaling is { Type: "nine_slice", Border: > 0 })
+                {
+                    border = scaling.Border;
+                }
+            }
+        }
+        catch (System.IO.InvalidDataException)
+        {
+            Console.WriteLine("tooltip: frame mcmeta unreadable; assuming a border of 10");
+        }
+        catch (System.IO.IOException)
+        {
+            Console.WriteLine("tooltip: frame mcmeta unreadable; assuming a border of 10");
+        }
+
+        var backgroundImage = Sharpcraft.Common.Imaging.PngDecoder.Decode(background);
+        var frameImage = Sharpcraft.Common.Imaging.PngDecoder.Decode(frame);
+
+        var backgroundTexture = new Sharpcraft.Framework.Rendering.TextureData(
+            backgroundImage.Width, backgroundImage.Height, backgroundImage.Pixels);
+        var frameTexture = new Sharpcraft.Framework.Rendering.TextureData(
+            frameImage.Width, frameImage.Height, frameImage.Pixels);
+
+        return new Sharpcraft.Client.Ui.GuiSpriteAtlas(backgroundTexture, frameTexture, border);
+    }
+
     internal static Sharpcraft.Client.Ui.BitmapFont? PrepareFont()
     {
         var packPath = FindPack();
