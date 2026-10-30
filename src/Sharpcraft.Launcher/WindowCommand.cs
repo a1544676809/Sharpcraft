@@ -101,6 +101,8 @@ internal static class WindowCommand
         Console.WriteLine($"chunk workers: {workerPool.WorkerCount} (of {Environment.ProcessorCount} logical processors)");
 
         var meshCache = new ChunkMeshCache(workerPool);
+        var geometryEpoch = 0;
+        var replayAllMeshes = false;
 
         // The block atlas the terrain samples. A reload replaces it; whether the geometry must be rebuilt depends on
         // whether the layout changed, so that comparison lives here where both atlases are known.
@@ -127,12 +129,33 @@ internal static class WindowCommand
 
             if (layoutChanged)
             {
-                // The texture coordinates baked into every chunk belong to the old layout, so all of them are rebuilt
-                // (docs/decisions/0017-reload-invalidation-by-layout.md).
+                // Every coordinate belongs to the old layout, so all meshes are rebuilt and the renderer's geometry storage
+                // is dropped and refilled: a resolution change is a complete rebuild (ADR-0017).
                 meshCache.Clear();
-                meshCache.Build(world, next.Map, maxChunksPerBuild: int.MaxValue, maxMillisecondsPerBuild: 5_000);
-                meshCache.QueueMissing(world);
-                Console.WriteLine("resource reload: atlas layout changed; chunks rebuilt");
+                var passes = 0;
+
+                while (passes < 64 && (meshCache.LastTotalChunks < world.LoadedChunkCount || meshCache.PendingChunks > 0))
+                {
+                    meshCache.QueueMissing(world);
+                    meshCache.Build(
+                        world,
+                        next.Map,
+                        maxBlocks: int.MaxValue,
+                        maxChunksPerBuild: int.MaxValue,
+                        maxMillisecondsPerBuild: 5_000);
+                    passes++;
+
+                    if (meshCache.PendingChunks > 0)
+                    {
+                        Thread.Sleep(2);
+                    }
+                }
+
+                geometryEpoch++;
+                replayAllMeshes = true;
+                Console.WriteLine(
+                    $"resource reload: layout changed; meshes {meshCache.LastTotalChunks}/{world.LoadedChunkCount} " +
+                    $"after {passes} pass(es), replay armed");
             }
 
             atlasSource.Update(new TextureData(next.Atlas.Width, next.Atlas.Height, next.Atlas.Pixels));
@@ -312,7 +335,12 @@ internal static class WindowCommand
                     meshCache.QueueMissing(world);
                 }
 
-                var drained = meshCache.DrainUpdates();
+                // After a reset the renderer holds nothing, so every mesh is replayed once; the incremental queue would
+                // only carry what changed since the last frame and the world would stay empty.
+                var drained = replayAllMeshes
+                    ? meshCache.SnapshotAll()
+                    : meshCache.DrainUpdates();
+                replayAllMeshes = false;
                 if (drained.Count == 0)
                 {
                     return null;
@@ -332,6 +360,7 @@ internal static class WindowCommand
             spriteTextures: guiSprites?.Textures,
             textureSource: uiTextures,
             atlasSource: atlasSource,
+            geometryEpoch: () => geometryEpoch,
             uiGeometry: frame =>
             {
                 var screen = uiLoader.Current ?? fallback;

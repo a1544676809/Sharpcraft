@@ -118,6 +118,15 @@ public sealed class ChunkMeshCache
         _pool?.TryEnqueueMesh(chunkKey);
     }
 
+    /// <summary>
+    /// Every mesh currently held, for a full re-upload.
+    /// </summary>
+    /// <remarks>
+    /// A rebuild that resets the renderer's geometry storage has to put every mesh back, and the incremental queue only
+    /// carries what changed. This is the difference between a world that reappears and a world that stays empty.
+    /// </remarks>
+    public List<(long Key, MeshData Mesh)> SnapshotAll() => [.. _meshes.Select(entry => (entry.Key, entry.Value))];
+
     /// <summary>Queues every loaded chunk that has no mesh yet; called as terrain streams in.</summary>
     /// <param name="world">World to scan.</param>
     public void QueueMissing(ClientWorld world)

@@ -49,7 +49,8 @@ public static class WindowedRenderer
         TextureData? glyphTexture = null,
         IReadOnlyList<TextureData>? spriteTextures = null,
         UiTextureSource? textureSource = null,
-        AtlasTextureSource? atlasSource = null)
+        AtlasTextureSource? atlasSource = null,
+        Func<int>? geometryEpoch = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -337,10 +338,23 @@ public static class WindowedRenderer
         Console.WriteLine($"window: swapchain configured ({format}, {frameWidth}x{frameHeight})");
 
         var appliedTextureVersion = textureSource?.Version ?? 0;
+        var appliedGeometryEpoch = geometryEpoch?.Invoke() ?? 0;
         var appliedAtlasVersion = atlasSource?.Version ?? 0;
 
         while (true)
         {
+            if (geometryEpoch is not null && geometryEpoch() != appliedGeometryEpoch)
+            {
+                appliedGeometryEpoch = geometryEpoch();
+
+                // The caller rebuilt every mesh for a new atlas layout, so nothing in the old storage is valid. It is
+                // dropped here and the caller replays every mesh in the same frame, which is what keeps a resolution
+                // change all or nothing (docs/decisions/0017-reload-invalidation-by-layout.md).
+                arena?.Dispose();
+                arena = new ChunkGeometryArena(device, expectedChunks: expectedChunks);
+                Console.WriteLine("ui: world geometry reset");
+            }
+
             if (atlasSource is not null && atlasSource.Version != appliedAtlasVersion)
             {
                 appliedAtlasVersion = atlasSource.Version;
