@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
+
 # mcpfabric 远程接口（用于对照验证）
 
 `mcpfabric` 是装在**原版客户端**上的 Fabric 模组，在 `127.0.0.1:25599` 上暴露一个 JSON-RPC 接口。
