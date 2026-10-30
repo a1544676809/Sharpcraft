@@ -67,6 +67,7 @@ public sealed class ChatLog
     public const float TextOpacity = 1f;
 
     private readonly List<Line> _lines = [];
+    private readonly ScrollState _scroll = new();
 
     /// <summary>
     /// Marks a line the way the reference does, with a bar at its left.
@@ -151,6 +152,16 @@ public sealed class ChatLog
             _ => 0u
         };
 
+    /// <summary>Scroll position, in whole entries from the newest.</summary>
+    public ScrollState Scroll => _scroll;
+
+    /// <summary>Scrolls by whole entries, clamped the way the reference clamps it.</summary>
+    /// <param name="delta">Entries to move; positive goes towards older messages.</param>
+    public void ScrollBy(int delta) => _scroll.ScrollBy(delta, _lines.Count, LinesPerPage);
+
+    /// <summary>Returns to the newest entry, which is what closing the prompt does.</summary>
+    public void ResetScroll() => _scroll.Reset();
+
     /// <summary>Forgets every line, used when leaving a world.</summary>
     public void Clear() => _lines.Clear();
 
@@ -196,10 +207,12 @@ public sealed class ChatLog
         var row = 0;
         var page = LinesPerPage;
 
-        for (var index = _lines.Count - 1; index >= 0 && row < page; index--)
+        for (var index = _lines.Count - 1 - _scroll.Offset; index >= 0 && row < page; index--)
         {
             var line = _lines[index];
-            var alpha = fullyVisible ? 1f : AlphaFor(nowTick - line.AddedTick);
+            // The reference keeps every line at full opacity while the list is scrolled, so reading back does
+            // not fade under the reader.
+            var alpha = fullyVisible || _scroll.IsScrolled ? 1f : AlphaFor(nowTick - line.AddedTick);
 
             if (alpha <= 0.00001f)
             {

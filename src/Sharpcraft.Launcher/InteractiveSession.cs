@@ -212,6 +212,7 @@ internal sealed class InteractiveSession
         if (bindings.JustPressed(input, InputAction.CloseScreen))
         {
             _chat.Close();
+            _chatLog.ResetScroll();
             return;
         }
 
@@ -288,6 +289,18 @@ internal sealed class InteractiveSession
         if (input.JustPressed(InputKey.End))
         {
             model.End(extend);
+        }
+
+        // Page up walks towards older messages, page down back towards the newest; the reference moves seven entries
+        // per press, the same step its wheel uses.
+        if (input.JustPressed(InputKey.PageUp))
+        {
+            _chatLog.ScrollBy(7);
+        }
+
+        if (input.JustPressed(InputKey.PageDown))
+        {
+            _chatLog.ScrollBy(-7);
         }
 
         if (UiFont is { } uiFont && input.TakeClick())

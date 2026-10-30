@@ -170,3 +170,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-143 | 移除**小键盘方向别名**（原版也不把小键盘当方向键，别名属偏离）| `docs/modules/input.md` 7.0 | `KeyBindingsTests` / 全量回归（方向键仍按 `Left/Right/Home/End/Delete` 本体工作）| `Framework/Platform/WindowInputState`（删除 `TranslateAliases`）| 已完成 |
 | T-144 | `disguised_chat`(33) 与 `delete_chat`(31)：前者按装饰展开并标系统标签；后者解析签名但暂无法匹配（离线服无签名）| `docs/modules/ui.md` 5.3、`docs/specs/network/protocol-phases.md` | `DisguisedChatPacketTests`（4 项：删除签名、截断拒绝、带绑定读取、直聊目标）+ 全量回归 | `Common/Network/DisguisedChatPackets`、`InteractiveSession`（`DecorateLine` 共用）| 已完成 |
 | T-145 | 明确**通用控件 / 聊天专有**分层，并记录滚动应提取为通用列表控件 | `docs/modules/ui.md` 5.3 | 文档评审 | 无代码（分层决策）| 已完成 |
+| T-146 | **通用滚动控件** `ScrollState` + `ScrollBar`，聊天接入 PageUp/PageDown（7 项/次）| `docs/modules/ui.md` 5.3 | `ScrollTests`（4 项：两端夹紧、放不下不能滚、溢出才画、滚动后拇指上移）+ 全量回归 | `Client/Ui/ScrollState`、`Client/Ui/ScrollBar`、`ChatLog.Scroll`、`InteractiveSession`、`WindowCommand`（绘制）| 已完成 |

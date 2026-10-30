@@ -63,6 +63,12 @@ public enum InputKey
     /// <summary>Delete — remove the character at the caret.</summary>
     Delete,
 
+    /// <summary>Page up — scroll a list towards older entries.</summary>
+    PageUp,
+
+    /// <summary>Page down — scroll a list towards newer entries.</summary>
+    PageDown,
+
     /// <summary>C — copy when combined with control.</summary>
     C,
 

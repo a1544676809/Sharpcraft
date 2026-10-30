@@ -141,6 +141,8 @@ public sealed class WindowInputState
         InputKey.Home => (int)Keys.Home,
         InputKey.End => (int)Keys.End,
         InputKey.Delete => (int)Keys.Delete,
+        InputKey.PageUp => (int)Keys.PageUp,
+        InputKey.PageDown => (int)Keys.PageDown,
         InputKey.C => (int)Keys.C,
         InputKey.V => (int)Keys.V,
         InputKey.X => (int)Keys.X,

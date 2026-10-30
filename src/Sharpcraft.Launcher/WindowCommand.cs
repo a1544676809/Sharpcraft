@@ -237,6 +237,20 @@ internal static class WindowCommand
                 if (uiFont is not null)
                 {
                     session.ChatLog.Draw(uiGeometry, uiFont, canvasHeight, session.ChatTicks, session.Chat.IsOpen);
+
+                    // The bar sits just right of the column, over the same rows the history occupies.
+                    var chatBottom = canvasHeight - Sharpcraft.Client.Ui.ChatLog.BottomMargin;
+                    var chatTop = chatBottom - (Sharpcraft.Client.Ui.ChatLog.LinesPerPage * Sharpcraft.Client.Ui.ChatLog.EntryHeight);
+
+                    Sharpcraft.Client.Ui.ScrollBar.Draw(
+                        uiGeometry,
+                        Sharpcraft.Client.Ui.ChatLog.LeftInset + Sharpcraft.Client.Ui.ChatLog.ColumnWidth + 4f,
+                        chatTop,
+                        chatBottom,
+                        session.ChatLog.Count,
+                        Sharpcraft.Client.Ui.ChatLog.LinesPerPage,
+                        session.ChatLog.Scroll.Offset,
+                        pending: false);
                 }
 
                 if (session.Chat.IsOpen)
