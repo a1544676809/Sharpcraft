@@ -95,4 +95,35 @@ public sealed class ChatInteractionTests
         click.Set("value", new NbtString(value));
         return click;
     }
+
+    [Fact]
+    public void FlattenStyledKeepsInteractionsBesideTheRuns()
+    {
+        var click = ClickEvent("run_command", "/spawn");
+
+        var hover = new NbtCompound();
+        hover.Set("action", new NbtString("show_text"));
+        var tip = new NbtCompound();
+        tip.Set("text", new NbtString("a tip"));
+        hover.Set("contents", tip);
+
+        var styled = new NbtCompound();
+        styled.Set("text", new NbtString("clickable"));
+        styled.Set("click_event", click);
+        styled.Set("hover_event", hover);
+
+        var root = new NbtCompound();
+        root.Set("text", new NbtString("plain "));
+        root.Set("extra", new NbtList(NbtTagType.Compound, [styled]));
+
+        var (runs, clicks, hovers) = ComponentRuns.FlattenStyled(root);
+
+        Assert.Equal(2, runs.Length);
+        Assert.Equal(2, clicks.Length);
+        Assert.Equal(2, hovers.Length);
+        Assert.Null(clicks[0]);
+        Assert.Equal(ChatClickAction.RunCommand, clicks[1]!.Action);
+        Assert.Null(hovers[0]);
+        Assert.Equal("a tip", string.Concat(hovers[1]!.Select(run => run.Text)));
+    }
 }

@@ -112,7 +112,12 @@ public sealed class ChatLog
     /// <summary>Adds a line made of styled runs.</summary>
     /// <param name="runs">Runs in order.</param>
     /// <param name="tick">Current tick, used for the fade.</param>
-    public void Add(ReadOnlySpan<TextRun> runs, long tick, MessageTag tag = MessageTag.None)
+    public void Add(
+        ReadOnlySpan<TextRun> runs,
+        long tick,
+        MessageTag tag = MessageTag.None,
+        ChatClick?[]? clicks = null,
+        TextRun[]?[]? hovers = null)
     {
         if (runs.Length == 0)
         {
@@ -133,7 +138,7 @@ public sealed class ChatLog
             return;
         }
 
-        _lines.Add(new Line(runs.ToArray(), tick, builder.ToString(), tag));
+        _lines.Add(new Line(runs.ToArray(), tick, builder.ToString(), tag, clicks, hovers));
 
         if (_lines.Count > MaxHistory)
         {
@@ -151,6 +156,45 @@ public sealed class ChatLog
             MessageTag.NotSecure => SystemTagColour,
             _ => 0u
         };
+
+    /// <summary>Runs of one entry, for measuring where a pointer lands.</summary>
+    /// <param name="index">Entry index, oldest first.</param>
+    public TextRun[] RunsAt(int index) =>
+        index >= 0 && index < _lines.Count ? _lines[index].Runs : [];
+
+    /// <summary>Click attached to a run, or null when that run is not clickable.</summary>
+    /// <param name="index">Entry index, oldest first.</param>
+    /// <param name="run">Run index within the entry.</param>
+    /// <remarks>
+    /// The interaction arrays are parallel to the runs and may be shorter or absent, so both bounds are checked here
+    /// rather than at every call site.
+    /// </remarks>
+    public ChatClick? ClickFor(int index, int run)
+    {
+        if (index < 0 || index >= _lines.Count || run < 0)
+        {
+            return null;
+        }
+
+        var clicks = _lines[index].Clicks;
+
+        return clicks is not null && run < clicks.Length ? clicks[run] : null;
+    }
+
+    /// <summary>Hover text attached to a run, or null when it has none.</summary>
+    /// <param name="index">Entry index, oldest first.</param>
+    /// <param name="run">Run index within the entry.</param>
+    public TextRun[]? HoverFor(int index, int run)
+    {
+        if (index < 0 || index >= _lines.Count || run < 0)
+        {
+            return null;
+        }
+
+        var hovers = _lines[index].Hovers;
+
+        return hovers is not null && run < hovers.Length ? hovers[run] : null;
+    }
 
     /// <summary>Scroll position, in whole entries from the newest.</summary>
     public ScrollState Scroll => _scroll;
@@ -338,7 +382,13 @@ public sealed class ChatLog
         return (colour & 0x00FFFFFFu) | (alphaByte << 24);
     }
 
-    private readonly record struct Line(TextRun[] Runs, long AddedTick, string Text, MessageTag Tag);
+    private readonly record struct Line(
+        TextRun[] Runs,
+        long AddedTick,
+        string Text,
+        MessageTag Tag,
+        ChatClick?[]? Clicks = null,
+        TextRun[]?[]? Hovers = null);
 
     /// <summary>Greedy word wrapping over a line, reporting where each piece starts, allocating nothing.</summary>
     private readonly ref struct Wrapped(string text, BitmapFont font, float width)

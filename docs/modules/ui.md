@@ -447,4 +447,6 @@
 - 悬停在原版由文字渲染器内建（`HoveredTextEffects.TOOLTIP_AND_CURSOR`），我们采用"绘制 + 独立命中"，**可观测等价**；提示框宽度上限 **210**（`ChatComponent.TOOLTIP_MAX_WIDTH`）并在超宽时换行；
 - **竖条也有提示框**（`ChatComponent.showTooltip(GuiMessageTag)`，如未签名说明），尚未实现，记为缺口。
 
-**待做**：把交互信息挂到渲染段上（`ChatLog.Add` 平行数组）、右键/Shift 接线、点击执行与光标变手型。
+已接线（数据层）：`ComponentRuns.FlattenStyled` 在展开组件的同一遍里产出与 runs **平行的** `ChatClick?[]` 与
+`TextRun[]?[]`；`ChatLog.Add` 接受这两个可选数组，`ClickFor`/`HoverFor`/`RunsAt` 供命中测试取用。
+**待做**：会话接线（右键执行、Shift+右键插入、悬停画框、光标变手型）与端到端实测。

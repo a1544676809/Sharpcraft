@@ -60,6 +60,27 @@ public static class ComponentRuns
         return [.. runs];
     }
 
+    /// <summary>
+    /// Flattens a component and keeps the click and hover each run carries.
+    /// </summary>
+    /// <param name="tag">Component to flatten.</param>
+    /// <param name="language">Translation table, or null.</param>
+    /// <returns>The runs and, parallel to them, the interactions.</returns>
+    /// <remarks>
+    /// The interaction cannot ride on the run itself without changing a type used everywhere, so it is returned beside
+    /// the runs and indexed the same way. A run with no interaction has null in both arrays at its position.
+    /// </remarks>
+    public static (TextRun[] Runs, ChatClick?[] Clicks, TextRun[]?[] Hovers) FlattenStyled(
+        NbtTag? tag,
+        LanguageTable? language = null)
+    {
+        var runs = new List<TextRun>(4);
+        var clicks = new List<ChatClick?>(4);
+        var hovers = new List<TextRun[]?>(4);
+        Append(runs, tag, DefaultColour, inheritedBold: false, depth: 0, language: language, clicks: clicks, hovers: hovers);
+        return ([.. runs], [.. clicks], [.. hovers]);
+    }
+
     /// <summary>Looks up a colour name or hex value.</summary>
     /// <param name="value">A name such as <c>gold</c> or a value such as <c>#FFAA00</c>.</param>
     /// <param name="colour">Packed colour when recognised.</param>
@@ -198,7 +219,9 @@ public static class ComponentRuns
         uint inheritedColour,
         bool inheritedBold,
         int depth,
-        LanguageTable? language)
+        LanguageTable? language,
+        List<ChatClick?>? clicks = null,
+        List<TextRun[]?>? hovers = null)
     {
         if (tag is null || depth > MaxDepth)
         {
@@ -208,6 +231,8 @@ public static class ComponentRuns
         if (tag is NbtString literal)
         {
             runs.Add(new TextRun(literal.Value, inheritedColour, inheritedBold));
+            clicks?.Add(null);
+            hovers?.Add(null);
             return;
         }
 
@@ -230,11 +255,21 @@ public static class ComponentRuns
             bold = boldTag.Value != 0;
         }
 
+        var click = ChatInteractions.ReadClick(compound);
+        var hover = ChatInteractions.ReadHover(compound, language);
+
+        void Emit(string value)
+        {
+            runs.Add(new TextRun(value, colour, bold));
+            clicks?.Add(click);
+            hovers?.Add(hover);
+        }
+
         var text = compound.GetString("text");
 
         if (text is not null)
         {
-            runs.Add(new TextRun(text, colour, bold));
+            Emit(text);
         }
         else if (compound.GetString("translate") is { } translate)
         {
@@ -243,19 +278,19 @@ public static class ComponentRuns
 
             if (resolved.Length > 0)
             {
-                runs.Add(new TextRun(resolved, colour, bold));
+                Emit(resolved);
             }
         }
         else if (compound.GetString("fallback") is { } fallback)
         {
-            runs.Add(new TextRun(fallback, colour, bold));
+            Emit(fallback);
         }
 
         if (compound.Get("extra") is NbtList extra)
         {
             for (var index = 0; index < extra.Items.Count; index++)
             {
-                Append(runs, extra.Items[index], colour, bold, depth + 1, language);
+                Append(runs, extra.Items[index], colour, bold, depth + 1, language, clicks, hovers);
             }
         }
     }

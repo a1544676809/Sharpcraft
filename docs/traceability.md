@@ -179,3 +179,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-152 | **点击/悬停解析层**：读 `click_event`/`clickEvent`（4 种动作）与 `hover_event` 的 `show_text`；未知动作不丢消息 | `docs/modules/ui.md` 8.6 | `ChatInteractionTests`（7 项：新旧拼写、两种动作、未知动作、悬停文本、物品悬停不显示）| `Common/Network/ChatInteractions` | 已完成|
 | T-153 | **逐段命中测试与提示框**：指针 → 条目/段（含滚动偏移、自下而上）；提示框用原版配色并夹在画布内 | `docs/modules/ui.md` 8.6 | `ChatHitTestTests`（4 项：底行即最旧可见、顶行非最新、越界、段边界归属）| `Client/Ui/ChatHitTest`、`Client/Ui/Tooltip` | 已完成 |
 | T-154 | 提示框按原版宽度 210 换行（超宽单词逐字符断开），并记录原版点击语义（右键、Shift 插入、动作集） | `docs/modules/ui.md` 8.6 | `TooltipTests`（3 项：短文本单行、长文本换行且不超宽、框体夹在画布内）| `Client/Ui/Tooltip` | 已完成 |
+| T-155 | 交互数据挂到渲染段：`FlattenStyled` 产出平行数组，`ChatLog` 存储并提供 `ClickFor`/`HoverFor`/`RunsAt` | `docs/modules/ui.md` 8.6 | `ChatInteractionTests`（+1 项：并列数组与交互内容）+ Common 361 项全绿 | `Common/Network/ComponentRuns.FlattenStyled`、`Client/Ui/ChatLog` | 已完成 |
