@@ -45,6 +45,21 @@ public enum InputKey
     /// <summary>Slash — open the chat prompt with a command prefix already typed.</summary>
     Slash,
 
-    /// <summary>Backspace — delete the character before the caret in the chat prompt.</summary>
-    Backspace
+    /// <summary>Backspace — delete the character before the caret.</summary>
+    Backspace,
+
+    /// <summary>Left arrow — move the caret left.</summary>
+    LeftArrow,
+
+    /// <summary>Right arrow — move the caret right.</summary>
+    RightArrow,
+
+    /// <summary>Home — move the caret to the start.</summary>
+    Home,
+
+    /// <summary>End — move the caret to the end.</summary>
+    End,
+
+    /// <summary>Delete — remove the character at the caret.</summary>
+    Delete
 }

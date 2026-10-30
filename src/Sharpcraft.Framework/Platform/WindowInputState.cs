@@ -134,6 +134,11 @@ public sealed class WindowInputState
         InputKey.Enter => (int)Keys.Enter,
         InputKey.Slash => (int)Keys.Slash,
         InputKey.Backspace => (int)Keys.Backspace,
+        InputKey.LeftArrow => (int)Keys.Left,
+        InputKey.RightArrow => (int)Keys.Right,
+        InputKey.Home => (int)Keys.Home,
+        InputKey.End => (int)Keys.End,
+        InputKey.Delete => (int)Keys.Delete,
         _ => -1
     };
 

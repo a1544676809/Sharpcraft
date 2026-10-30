@@ -38,6 +38,7 @@ internal sealed class InteractiveSession
     private readonly ChatLog _chatLog = new();
     private readonly Sharpcraft.Common.Localization.LanguageTable _language;
     private long _chatTicks;
+    private long _chatOpenedAtMs;
     private bool _diagnosticChatSent;
     private readonly bool _diagEnabled = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
     private int _diagFrames;
@@ -121,6 +122,12 @@ internal sealed class InteractiveSession
     /// <summary>Ticks elapsed, used by the chat fade.</summary>
     public long ChatTicks => _chatTicks;
 
+    /// <summary>Milliseconds since the prompt was opened, which drives the caret blink.</summary>
+    public long ChatElapsedMs => Environment.TickCount64 - _chatOpenedAtMs;
+
+    /// <summary>Glyph metrics, needed to turn a click into a caret position.</summary>
+    public Sharpcraft.Client.Ui.BitmapFont? UiFont { get; set; }
+
     /// <summary>Fraction into the current tick, for callers that interpolate between ticks.</summary>
     public float PartialTick => _loop.Alpha;
 
@@ -161,11 +168,13 @@ internal sealed class InteractiveSession
             if (bindings.JustPressed(input, InputAction.OpenCommand))
             {
                 _chat.Open("/");
+                _chatOpenedAtMs = Environment.TickCount64;
                 window.SetMouseCaptured(false);
             }
             else if (bindings.JustPressed(input, InputAction.OpenChat))
             {
                 _chat.Open();
+                _chatOpenedAtMs = Environment.TickCount64;
                 window.SetMouseCaptured(false);
             }
 
@@ -188,9 +197,49 @@ internal sealed class InteractiveSession
             return;
         }
 
+        // Editing, with shift extending the selection the way the reference does.
+        var model = _chat.Model;
+        var extend = input.IsKeyDown(InputKey.LeftShift);
+
         if (input.JustPressed(InputKey.Backspace))
         {
-            _chat.Backspace();
+            model.Backspace();
+        }
+
+        if (input.JustPressed(InputKey.Delete))
+        {
+            model.Delete();
+        }
+
+        if (input.JustPressed(InputKey.LeftArrow))
+        {
+            model.MoveCaret(-1, extend);
+        }
+
+        if (input.JustPressed(InputKey.RightArrow))
+        {
+            model.MoveCaret(1, extend);
+        }
+
+        if (input.JustPressed(InputKey.Home))
+        {
+            model.Home(extend);
+        }
+
+        if (input.JustPressed(InputKey.End))
+        {
+            model.End(extend);
+        }
+
+        if (UiFont is { } uiFont && input.TakeClick())
+        {
+            // A click inside the prompt places the caret; the text starts two pixels in from the inset.
+            var offset = input.CursorInCanvas.X - (ChatPrompt.InsetX + 2f);
+
+            if (offset >= 0f)
+            {
+                model.MoveCaretTo(TextEditRenderer.PositionAtOffset(uiFont, model.Value, offset), extend);
+            }
         }
 
         var typed = input.TakeText();
@@ -402,7 +451,9 @@ internal sealed class InteractiveSession
 
         // Capture on the first frame only when the window already has focus, and afterwards only when the player
         // clicks inside it. Capturing without focus would lock the pointer into a window they are not using.
-        if (!window.Input.MouseCaptured && window.Input.HasFocus && (first || window.Input.TakeClick()))
+        // While the chat prompt is open the click belongs to the prompt: it places the caret, so it must not be
+        // swallowed here, and the pointer must not be captured either or the player could not type comfortably.
+        if (!_chat.IsOpen && !window.Input.MouseCaptured && window.Input.HasFocus && (first || window.Input.TakeClick()))
         {
             window.SetMouseCaptured(true);
         }

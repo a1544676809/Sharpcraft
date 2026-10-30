@@ -21,7 +21,7 @@ public sealed class ChatPromptTests
     public void TheBoxSitsAgainstTheBottomOfTheCanvas(float canvasHeight)
     {
         var geometry = new UiGeometry();
-        ChatPrompt.Draw(geometry, font: null, canvasWidth: 480f, canvasHeight: canvasHeight, text: string.Empty);
+        ChatPrompt.Draw(geometry, font: null, 480f, canvasHeight, new TextEditModel(), 0);
 
         var (top, bottom) = VerticalExtent(geometry);
 
@@ -33,7 +33,7 @@ public sealed class ChatPromptTests
     public void TheBoxSpansTheCanvasWithTheReferenceInsets()
     {
         var geometry = new UiGeometry();
-        ChatPrompt.Draw(geometry, font: null, canvasWidth: 480f, canvasHeight: 270f, text: string.Empty);
+        ChatPrompt.Draw(geometry, font: null, 480f, 270f, new TextEditModel(), 0);
 
         var (left, right) = HorizontalExtent(geometry);
 
@@ -42,12 +42,15 @@ public sealed class ChatPromptTests
     }
 
     [Fact]
-    public void TypedTextAddsGlyphsAndACaret()
+    public void TypedTextAddsGlyphsAndTheCaret()
     {
-        var geometry = new UiGeometry();
-        ChatPrompt.Draw(geometry, Font(), canvasWidth: 480f, canvasHeight: 270f, text: "hi");
+        var model = new TextEditModel();
+        model.Insert("hi".AsSpan());
 
-        // One box, one quad per visible character and one caret.
+        var geometry = new UiGeometry();
+        ChatPrompt.Draw(geometry, Font(), 480f, 270f, model, elapsedMs: 0);
+
+        // The box, one quad per visible character, and the caret at the end drawn as the underscore glyph.
         Assert.Equal(4, geometry.QuadCount);
     }
 

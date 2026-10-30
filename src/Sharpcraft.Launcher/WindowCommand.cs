@@ -140,6 +140,7 @@ internal static class WindowCommand
 
         var uiGeometry = new UiGeometry();
         var uiFont = FrameCommand.PrepareFont();
+        session.UiFont = uiFont;
         var glyphTexture = uiFont is null
             ? null
             : new TextureData(uiFont.Sheet.Width, uiFont.Sheet.Height, uiFont.Sheet.Pixels);
@@ -229,7 +230,7 @@ internal static class WindowCommand
 
                 if (session.Chat.IsOpen)
                 {
-                    ChatPrompt.Draw(uiGeometry, uiFont, canvasWidth, canvasHeight, session.Chat.Text);
+                    ChatPrompt.Draw(uiGeometry, uiFont, canvasWidth, canvasHeight, session.Chat.Model, session.ChatElapsedMs);
                 }
 
                 if (KeyBindings.Default.IsDown(frame.Input, InputAction.PlayerList))

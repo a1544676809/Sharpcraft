@@ -12,22 +12,29 @@ namespace Sharpcraft.Client.Ui;
 /// the player can keep typing a command without pressing it again. And a line that begins with a slash is sent as a
 /// command, not as a chat message, which is a different packet: the server treats them differently and a command
 /// sent as chat is simply shown to everyone as text.
+/// <para>
+/// Editing lives in <see cref="TextEditModel"/>, shared with every other text field, so the prompt only adds the two
+/// things that are about chat: opening with a prefix, and deciding what a submitted line means.
+/// </para>
 /// </remarks>
 public sealed class ChatInput
 {
     /// <summary>Longest line the reference accepts.</summary>
     public const int MaxLength = 256;
 
-    private readonly System.Text.StringBuilder _text = new();
+    private readonly TextEditModel _model = new(MaxLength);
 
     /// <summary>True while the prompt is open and taking keys.</summary>
     public bool IsOpen { get; private set; }
 
+    /// <summary>The editing state, for the renderer and for key handling.</summary>
+    public TextEditModel Model => _model;
+
     /// <summary>Characters typed so far.</summary>
-    public int Length => _text.Length;
+    public int Length => _model.Length;
 
     /// <summary>The typed line, for drawing and for sending.</summary>
-    public string Text => _text.ToString();
+    public string Text => _model.Value;
 
     /// <summary>Opens the prompt.</summary>
     /// <param name="prefix">Text to start with; a slash for a command.</param>
@@ -36,39 +43,30 @@ public sealed class ChatInput
         ArgumentNullException.ThrowIfNull(prefix);
 
         IsOpen = true;
-        _text.Clear();
+        _model.Clear();
 
         if (prefix.Length > 0)
         {
-            _text.Append(prefix);
+            _model.Insert(prefix.AsSpan());
         }
     }
 
-    /// <summary>Appends typed characters, stopping at the reference's limit.</summary>
+    /// <summary>Appends typed characters at the caret, stopping at the reference's limit.</summary>
     /// <param name="typed">Characters from the character callback.</param>
     public void Append(ReadOnlySpan<char> typed)
     {
-        if (!IsOpen)
+        if (IsOpen)
         {
-            return;
-        }
-
-        for (var index = 0; index < typed.Length && _text.Length < MaxLength; index++)
-        {
-            // Control characters never reach the box: the reference drops them rather than showing glyphs for them.
-            if (!char.IsControl(typed[index]))
-            {
-                _text.Append(typed[index]);
-            }
+            _model.Insert(typed);
         }
     }
 
-    /// <summary>Removes the last character, if any.</summary>
+    /// <summary>Removes the character before the caret.</summary>
     public void Backspace()
     {
-        if (IsOpen && _text.Length > 0)
+        if (IsOpen)
         {
-            _text.Length--;
+            _model.Backspace();
         }
     }
 
@@ -76,13 +74,13 @@ public sealed class ChatInput
     public void Close()
     {
         IsOpen = false;
-        _text.Clear();
+        _model.Clear();
     }
 
     /// <summary>
     /// Closes the prompt and hands back what should be sent.
     /// </summary>
-    /// <param name="message">The line, with no trailing whitespace removed.</param>
+    /// <param name="message">The line, unchanged.</param>
     /// <param name="isCommand">True when the line starts with a slash.</param>
     /// <returns>False when the prompt was closed or the line was blank, in which case nothing is sent.</returns>
     public bool TrySubmit(out string message, out bool isCommand)
@@ -95,9 +93,9 @@ public sealed class ChatInput
             return false;
         }
 
-        var line = _text.ToString();
+        var line = _model.Value;
         IsOpen = false;
-        _text.Clear();
+        _model.Clear();
 
         if (line.Length == 0)
         {

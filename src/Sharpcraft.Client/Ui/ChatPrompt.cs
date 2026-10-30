@@ -38,16 +38,18 @@ public static class ChatPrompt
     /// <param name="font">Glyph metrics, or null to draw only the box.</param>
     /// <param name="canvasWidth">Virtual width.</param>
     /// <param name="canvasHeight">Virtual height.</param>
-    /// <param name="text">Typed text.</param>
+    /// <param name="model">Editing state of the prompt.</param>
+    /// <param name="elapsedMs">Milliseconds since the prompt gained focus, which drives the caret blink.</param>
     public static void Draw(
         UiGeometry geometry,
         BitmapFont? font,
         float canvasWidth,
         float canvasHeight,
-        string text)
+        TextEditModel model,
+        long elapsedMs)
     {
         ArgumentNullException.ThrowIfNull(geometry);
-        ArgumentNullException.ThrowIfNull(text);
+        ArgumentNullException.ThrowIfNull(model);
 
         var top = canvasHeight - BottomInset - Height;
         geometry.AddRectangle(InsetX, top, canvasWidth - (InsetX * 2f), Height, Background);
@@ -57,9 +59,7 @@ public static class ChatPrompt
             return;
         }
 
-        UiScreenLayout.AddText(geometry, font, text, InsetX + 2f, top + 1f, 1f, Ink);
-
-        var caretX = InsetX + 2f + font.MeasureWidth(text);
-        geometry.AddRectangle(caretX + 1f, top + 1f, 1f, 8f, Caret);
+        // The prompt always has focus while it is open, which is what makes the caret blink.
+        TextEditRenderer.Draw(geometry, font, model, InsetX + 2f, top + 1f, focused: true, elapsedMs);
     }
 }
