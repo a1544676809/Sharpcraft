@@ -21,6 +21,28 @@ namespace Sharpcraft.Launcher;
 internal static class WindowCommand
 {
     /// <summary>Runs the windowed presentation and returns the screenshot path.</summary>
+    /// <summary>True when two atlases differ in size or in any sprite's rectangle.</summary>
+    /// <param name="before">Previous atlas, or null.</param>
+    /// <param name="after">New atlas.</param>
+    private static bool LayoutChanged(SpriteAtlas? before, SpriteAtlas after)
+    {
+        if (before is null || before.Width != after.Width || before.Height != after.Height ||
+            before.Sprites.Count != after.Sprites.Count)
+        {
+            return true;
+        }
+
+        foreach (var (location, rect) in after.Sprites)
+        {
+            if (!before.Sprites.TryGetValue(location, out var previous) || previous != rect)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     internal static async Task<string> RunAsync(
         string? address,
         HttpClient http,
@@ -59,7 +81,7 @@ internal static class WindowCommand
         // blockstates see the same packs as the font and the language table.
         using var resources = FrameCommand.CreateResourceManager();
 
-        var prepared = FrameCommand.PrepareSprites(
+        (SpriteAtlas Atlas, BlockSpriteMap Map)? prepared = FrameCommand.PrepareSprites(
             Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 }
                 ? FrameCommand.DemoLayout()
                 : VanillaBlockRegistry.Layout,
@@ -79,6 +101,43 @@ internal static class WindowCommand
         Console.WriteLine($"chunk workers: {workerPool.WorkerCount} (of {Environment.ProcessorCount} logical processors)");
 
         var meshCache = new ChunkMeshCache(workerPool);
+
+        // The block atlas the terrain samples. A reload replaces it; whether the geometry must be rebuilt depends on
+        // whether the layout changed, so that comparison lives here where both atlases are known.
+        var atlasSource = new Sharpcraft.Framework.Rendering.AtlasTextureSource();
+
+        resources.AddListener("atlas", 30, manager =>
+        {
+            var rebuilt = FrameCommand.PrepareSprites(
+                Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 }
+                    ? FrameCommand.DemoLayout()
+                    : VanillaBlockRegistry.Layout,
+                manager);
+
+            if (rebuilt is not { } next)
+            {
+                Console.WriteLine("resource reload: the atlas could not be rebuilt; keeping the previous one");
+                return;
+            }
+
+            var layoutChanged = LayoutChanged(prepared?.Atlas, next.Atlas);
+
+            prepared = next;
+            workerPool.SetSprites(next.Map);
+
+            if (layoutChanged)
+            {
+                // The texture coordinates baked into every chunk belong to the old layout, so all of them are rebuilt
+                // (docs/decisions/0017-reload-invalidation-by-layout.md).
+                meshCache.Clear();
+                meshCache.Build(world, next.Map, maxChunksPerBuild: int.MaxValue, maxMillisecondsPerBuild: 5_000);
+                meshCache.QueueMissing(world);
+                Console.WriteLine("resource reload: atlas layout changed; chunks rebuilt");
+            }
+
+            atlasSource.Update(new TextureData(next.Atlas.Width, next.Atlas.Height, next.Atlas.Pixels));
+            Console.WriteLine($"resource reload: atlas {(layoutChanged ? "replaced" : "refreshed")} ({next.Atlas.Width}x{next.Atlas.Height})");
+        });
 
         // A short synchronous warm-up gives the first frame something to show.
         meshCache.Build(world, prepared?.Map, maxChunksPerBuild: 8, maxMillisecondsPerBuild: 250);
@@ -272,6 +331,7 @@ internal static class WindowCommand
             glyphTexture: glyphTexture,
             spriteTextures: guiSprites?.Textures,
             textureSource: uiTextures,
+            atlasSource: atlasSource,
             uiGeometry: frame =>
             {
                 var screen = uiLoader.Current ?? fallback;

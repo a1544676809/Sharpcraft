@@ -95,7 +95,16 @@ public sealed class ResourceManager : IDisposable
 
         foreach (var listener in _listeners.OrderBy(entry => entry.Order))
         {
-            listener.Reload(this);
+            // A failing listener must not take the reload down with it: the other caches still need their turn, and a
+            // half updated interface is worse than one stale atlas.
+            try
+            {
+                listener.Reload(this);
+            }
+            catch (Exception exception)
+            {
+                Console.WriteLine($"resource reload: listener {listener.Id} failed ({exception.GetType().Name}: {exception.Message})");
+            }
         }
 
         return true;
