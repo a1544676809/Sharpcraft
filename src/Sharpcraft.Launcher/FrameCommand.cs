@@ -317,6 +317,11 @@ internal static class FrameCommand
         return new Sharpcraft.Client.Assets.PackFormatVersion(97, 1);
     }
 
+    /// <summary>Drops a trailing <c>.png</c> from a provider's file name.</summary>
+    /// <param name="path">Path such as <c>font/ascii.png</c>.</param>
+    private static string StripTextureExtension(string path) =>
+        path.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? path[..^4] : path;
+
     /// <summary>Builds a stack from the base pack plus every installed pack.</summary>
     /// <returns>The stack and how many installed packs it carries.</returns>
     private static (AssetStack Stack, int PackCount) BuildStack()
@@ -415,8 +420,23 @@ internal static class FrameCommand
         // The pack declares the sheet, its grid and its metrics; assuming them is what made an HD pack overlap.
         var provider = Sharpcraft.Client.Assets.BitmapFontDefinition.Resolve(resources);
 
-        var sheetId = provider?.File ?? new Sharpcraft.Common.Identifiers.Identifier("minecraft", "font/ascii");
+        var fallbackSheet = new Sharpcraft.Common.Identifiers.Identifier("minecraft", "font/ascii");
+
+        // A provider names its file with the extension ("minecraft:font/ascii.png"), while a texture identifier must not
+        // carry one because the kind supplies it; keeping it would look for ascii.png.png and lose the font entirely.
+        var sheetId = provider is { } resolved
+            ? new Sharpcraft.Common.Identifiers.Identifier(
+                resolved.File.Namespace,
+                StripTextureExtension(resolved.File.Path))
+            : fallbackSheet;
+
         var bytes = resources.Read(ResourceKind.Texture, sheetId);
+
+        if (bytes is null && sheetId != fallbackSheet)
+        {
+            Console.WriteLine($"font: {sheetId} is missing; falling back to the default sheet");
+            bytes = resources.Read(ResourceKind.Texture, fallbackSheet);
+        }
 
         if (bytes is null)
         {

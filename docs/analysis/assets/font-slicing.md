@@ -62,3 +62,12 @@ ascent      = 声明的 ascent
 2. 用 `chars` 的行数/列数切分（而非写死 16）；
 3. `height`/`ascent` 决定度量，`pixelScale = height / glyphHeight`；
 4. 缺省（无 JSON 或无 bitmap）时退回 8×8 + height 8 + ascent 7，并在日志说明。
+
+## 8. 回归与未解问题
+
+- **已修回归**：原版 `font/default.json` 的 `file` 写作 `minecraft:font/ascii.png`（带扩展名）；直接当纹理 Identifier 会
+  变成 `ascii.png.png` 而读不到字体。现剥离扩展名，并在读不到时回退默认 `font/ascii` 并记日志。
+  修复后原版日志恢复为 `font: 8x8 cells, line 8, 2 declared advances`（与改动前一致）。
+- **未解（保留下一步）**：原版实机截图中字形看起来比改动前**偏粗**，而度量日志与图集尺寸均与基线一致，
+  目前无法解释。下一步排查：①是否重复绘制了阴影（对比单字形截图）②`Scale` 在非整数比下的取整
+  ③行心偏移公式。未查明前不得声称字体完全等价。
