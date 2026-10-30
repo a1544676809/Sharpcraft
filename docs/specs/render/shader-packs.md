@@ -73,5 +73,10 @@ AGENTS.md 原则 11 要求渲染架构在**设计阶段**就为外部着色器�
 - 结构解剖与实测数字：`docs/analysis/render/shader-pack-anatomy.md`（样本 ComplementaryUnbound r5.9.3，468 条目 / 1.2 MB）。
 - 关键结论：包是**"维度 × 阶段"**两层结构（`program/<stage>.glsl` 共享翻译单元 + `worldN/<stage>.fsh|.vsh` 薄包装），
   **不是**全局单份；`shaders.properties` 280 行承载 profile `#define` 与选项界面布局。
-- 由此本规格需补两条（尚未写入正文，待评审）：①按维度解析阶段 ②未识别阶段（DH/Voxy/colorwheel）跳过并汇总日志。
+- 已核对 Iris 官方文档（2026-10-30），本规格需补四条（**尚未写入正文，待所有者评审**）：
+  ① `dimension.properties` 的维度映射与"未列出则回落基础目录"语义（并保留 `worldN` 遗留规则：存在任一 `worldN` 时基础目录不参与）；
+  ② 官方完整程序顺序 `setup→begin→shadow→shadowcomp→prepare→gbuffers(不透明)→deferred→gbuffers(半透明)→composite*→final`；
+  ③ `iris.features.required` / `optional` 的加载前检查（不支持则拒绝并列出缺失特性）；
+  ④ 未识别阶段（DH/Voxy/colorwheel/Photonics）跳过并汇总日志。
+- 来源：`shaders.properties` 官方参考（Programs 概览、shaders.properties 概览、dimension.properties 三页，链接见分析文档 §7）。
 - 不支持特性与移植建议：`docs/specs/render/shader-pack-compatibility.md`。

@@ -44,6 +44,17 @@ status: 草稿
 | `#define` 开关 | `const` / `override`，或按 profile 生成管线变体 |
 | `discard` | `discard`（同名） |
 
+## 3.5 加载前先看特性声明（最重要的一条）
+
+包可以在 `shaders.properties` 里用 `iris.features.required` / `iris.features.optional` 声明依赖的特性
+（`COMPUTE_SHADERS`、`SSBO`、`CUSTOM_IMAGES`、`REVERSED_CULLING` 等）。本客户端 MUST：
+
+1. 先解析该列表；
+2. 若有 `required` 项不支持，**拒绝加载并逐条列出缺失特性**，不做半程编译；
+3. `optional` 项不支持时继续加载，并记录一行"已忽略的特性"。
+
+这比让包编译到一半失败更能帮助作者。
+
 ## 4. 失败与诊断
 
 - 包加载失败、单阶段编译失败、采样名未知：**逐条报错并指出阶段名与文件名**；
