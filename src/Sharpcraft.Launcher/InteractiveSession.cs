@@ -414,6 +414,37 @@ internal sealed class InteractiveSession
             System.Runtime.InteropServices.CollectionsMarshal.AsSpan(arguments));
     }
 
+
+    /// <summary>
+    /// Reads a component that is a bare string instead of a compound.
+    /// </summary>
+    /// <param name="body">Bytes at the component.</param>
+    /// <param name="runs">One run holding the text.</param>
+    /// <remarks>
+    /// The network form of a component omits the root name, so a plain string is a single string tag whose payload is
+    /// the text. Reading only compounds dropped exactly this case.
+    /// </remarks>
+    private static bool TryReadBareTextComponent(ReadOnlySpan<byte> body, out Sharpcraft.Common.Network.TextRun[] runs)
+    {
+        runs = [];
+
+        if (body.Length < 3 || body[0] != 8)
+        {
+            return false;
+        }
+
+        var length = (body[1] << 8) | body[2];
+
+        if (length <= 0 || body.Length < 3 + length)
+        {
+            return false;
+        }
+
+        var text = System.Text.Encoding.UTF8.GetString(body.Slice(3, length));
+        runs = [new Sharpcraft.Common.Network.TextRun(text, Sharpcraft.Common.Network.ComponentRuns.DefaultColour, false)];
+        return true;
+    }
+
     /// <summary>Joins runs into one string, for logging and for the diagnostic output.</summary>
     private static string Plain(IReadOnlyList<Sharpcraft.Common.Network.TextRun> runs)
     {
@@ -857,13 +888,28 @@ internal sealed class InteractiveSession
                     var actionBarStatus = Sharpcraft.Common.Nbt.NbtReader.TryReadNetworkRoot(
                         body[reader.Position..], out var actionBarComponent, out _);
 
+                    if (actionBarStatus != DecodeStatus.Success &&
+                        TryReadBareTextComponent(body[reader.Position..], out var bareRuns))
+                    {
+                        // A component may be a bare string rather than a compound, which the reference accepts. Reading
+                        // only compounds made such a message look like nothing at all.
+                        _actionBar.Set(bareRuns);
+
+                        if (_diagEnabled)
+                        {
+                            Console.WriteLine($"action bar received: {Plain(bareRuns)}");
+                        }
+
+                        break;
+                    }
+
                     if (actionBarStatus != DecodeStatus.Success)
                     {
                         // A packet whose body does not parse where it was expected is worth reporting rather than
                         // dropping silently: the failure is what makes a missing feature invisible.
                         if (_diagEnabled)
                         {
-                            Console.WriteLine($"action bar parse failed: {actionBarStatus}, {body.Length} bytes");
+                            Console.WriteLine($"action bar parse failed: {actionBarStatus}, {body.Length} bytes, hex={Convert.ToHexString(body.AsSpan(Math.Max(0, body.Length - 24)))}");
                         }
                     }
                     else if (actionBarComponent is not null)
