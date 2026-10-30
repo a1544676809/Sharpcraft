@@ -20,6 +20,6 @@
 | 目录 | 文档数 |
 | --- | --- |
 | [`network/`](network/README.md) | 6 |
-| [`render/`](render/README.md) | 3 |
+| [`render/`](render/README.md) | 4 |
 
 <!-- END GENERATED: docs/specs -->

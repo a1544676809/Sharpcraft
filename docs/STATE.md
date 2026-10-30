@@ -74,8 +74,9 @@ updated: 2026-10-29
    **已按官方文档修正三处认知**：①官方全序含 `setup/begin/prepare/shadowcomp`（样本只有子集）
    ②维度选择有 `dimension.properties`（含回落语义）与 `worldN` 遗留两套机制 ③`iris.features.required` 应先于编译检查。
    **下一步具体动作**：把四条待补项写入 `shader-packs.md` 正文（需所有者评审），再进 P3 接入点设计。
-6. **待所有者裁决**：是否自研原生 Vulkan 后端（ADR-0018 提议）。与**原则 6（必须通过 WGPU）冲突**，需书面授权；
-   我的建议是暂不启动，先走"WGPU + compute"，在 P3 后用实测数据复核（风险 R-022 已登记）。
+6. **已裁决（2026-10-30）**：**预留 Vulkan 接口、不实现**；WGPU 仍为唯一实现与工作中心。
+   落地：`docs/specs/render/backend-interface.md` + `BackendCapabilities`（能力协商，3 项测试）⇒ T-200 完成。
+   实现 Vulkan 后端仍**未获批准**，R-022 保留（P3 后按实测复核）。
 7. 随后：M6 模组热加载（先写 ADR）→ 着色器包接入（P3）。
 会打印 `chat received:`。
 随后：T-120（`player_chat` 等剩余入站与组件样式）、T-108（热加载状态迁移）、T-104（离屏截图接 UI）。
