@@ -27,6 +27,7 @@ AGENTS.md 原则 12：不可逆或跨模块的决策必须在此留档，**只�
 | [`0013-gamma-space-ui-blending.md`](0013-gamma-space-ui-blending.md) | 我们的交换链使用 BGRA8UnormSrgb，因此 GPU 在线性空间做混合；原版 Minecraft 没有 sRGB 帧缓冲，混合发生在 gamma 空间。 | 已采纳（用户 2026-10-30 明确选择方案 A） | - |
 | [`0014-gui-sprite-atlas-and-nine-slice.md`](0014-gui-sprite-atlas-and-nine-slice.md) | 提示框（tooltip）在原版由两张 GUI 贴图叠成：tooltip/background 与 tooltip/frame，后者为 nine_slice（border = 10、stretch_inner = true）。 | **提议（待评审）** | - |
 | [`0015-resource-pack-stack-and-reload.md`](0015-resource-pack-stack-and-reload.md) | 提示框贴图目前只从"基础包 zip"读取。 | **提议（待评审）** | - |
+| [`0016-resource-pack-file-watch.md`](0016-resource-pack-file-watch.md) | 包作者改一个贴图就要重启客户端。 | **提议（待评审）** | - |
 
 <!-- END GENERATED: docs/decisions -->
 

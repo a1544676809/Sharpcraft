@@ -198,3 +198,5 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-171 | 资源包栈**全部行为核对完成**：包形态（目录/zip/链接）、优先级与插入、元数据、overlays（元数据+`OverlayedPackResources` 叠加）、重载失败与调度、`PackFormat` 取值 | `docs/analysis/assets/resource-pack-stack.md` §2.1/§4.1/§6–§11 | 研究项无测试（实现时补）| 无（纯分析）| 已完成 |
 | T-172 | 资源包栈实现（发现→有序栈→按命名空间回退→filter 遮蔽）| ADR-0015、`docs/analysis/assets/resource-pack-stack.md` | 待补 | 待落地 | 阻塞于评审 |
 | T-173 | 两阶段重载与旧快照回收（含自动化回收验证）| ADR-0015 | 待补 | 待落地 | 阻塞于评审 |
+| T-174 | **文件变更热加载**（扩展，默认关闭）：监听目录包/zip、300ms 去抖、全快照重建、失败保留旧快照、纹理按内容哈希失效 | ADR-0016、`docs/specs/deviations.md` D-001 | 待补（验收 5 项已写入 ADR）| 待落地 | 阻塞于评审 |
+| T-175 | 重载监听器注册表：把字体图集/`GuiSpriteAtlas`/语言表/UI 文档改为可重入监听器（顺序：语言·字体→贴图集→UI）| ADR-0016 §7、ADR-0015 | 待补 | 待落地 | 阻塞于评审 |
