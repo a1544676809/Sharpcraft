@@ -248,4 +248,16 @@ P3 之前不谈包；但 §3 的 pass 划分必须**现在就按"可命名目标
 并不一致——它能跑通说明当前写法与真实字节流吻合，但**语义**（哪个字节是 x、哪个是 z、Y 是否要减 64）
 必须与 `ref://mc-26.3-analysis` 的区块包读取实现核对后才能解码坐标，否则会把方块实体画到错误的方块位置。
 
-**下一步**：核对坐标编码 → `ParsedChunk` 增加方块实体列表 → `LevelChunk` 存储 → `BlockEntityMesher`（按类型取尺寸，如箱子 0.875³）→ 像素/数值验收。
+**坐标编码已核对（2026-10-30）**，依据 `ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundLevelChunkPacketData.java`：
+
+| 字段 | 宽度 | 语义 |
+| --- | --- | --- |
+| `packedXZ` | **byte** | 高半字节 = 区块内 X，低半字节 = 区块内 Z（原版 `SectionPos.sectionRelative(packedXZ >> 4)` 与 `sectionRelative(packedXZ)`）|
+| `y` | **short** | **绝对**方块 Y（无偏移）|
+| `type` | VarInt | 方块实体类型注册表 id |
+| `tag` | NBT | 可选 compound，缺席编码为单个 End 字节 |
+
+⇒ 我原先"1 字节 + 2 字节"的读法**正确**，注释里"packed XZ 2 字节"是错的（已按参考纠正认知）。
+`ParsedChunk` 现增 `BlockEntities`（`BlockEntityRecord(LocalX, Y, LocalZ, TypeId)`）。
+
+**下一步**：`LevelChunk` 存储 → `BlockEntityMesher`（箱子 0.875³）→ 像素/数值验收。

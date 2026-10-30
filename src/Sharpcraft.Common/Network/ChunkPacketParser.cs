@@ -15,7 +15,22 @@ public sealed record ParsedChunk(
     IReadOnlyDictionary<int, long[]> Heightmaps,
     int BlockEntityCount,
     LightData Light,
-    bool BlockEntitiesSkipped = false);
+    bool BlockEntitiesSkipped = false)
+{
+    /// <summary>
+    /// Block entities of the chunk, empty when the payload could not be walked.
+    /// </summary>
+    public IReadOnlyList<BlockEntityRecord> BlockEntities { get; init; } = [];
+}
+
+/// <summary>
+/// One block entity as it appears in the chunk packet.
+/// </summary>
+/// <param name="LocalX">Block X inside the chunk, zero to fifteen.</param>
+/// <param name="Y">Absolute block Y.</param>
+/// <param name="LocalZ">Block Z inside the chunk, zero to fifteen.</param>
+/// <param name="TypeId">Registry id of the block entity type.</param>
+public readonly record struct BlockEntityRecord(int LocalX, int Y, int LocalZ, int TypeId);
 
 /// <summary>
 /// Parses the play-phase <c>level_chunk_with_light</c> packet (id 46)
@@ -153,9 +168,11 @@ public static DecodeStatus TryRead(
         }
 
         var blockEntitiesBroken = false;
+        var blockEntities = new List<BlockEntityRecord>(Math.Min(blockEntityCount, 256));
+
         for (var i = 0; i < blockEntityCount; i++)
         {
-            status = SkipBlockEntity(body, ref reader);
+            status = ReadBlockEntity(body, ref reader, out var blockEntity);
             if (status != DecodeStatus.Success)
             {
                 // A block entity whose payload we cannot walk desynchronises everything after it, including the
@@ -167,6 +184,8 @@ public static DecodeStatus TryRead(
                 blockEntitiesBroken = true;
                 break;
             }
+
+            blockEntities.Add(blockEntity);
         }
 
         // Light arrays follow the block entities; they are stored raw for now.
@@ -222,30 +241,37 @@ public static DecodeStatus TryRead(
         }
 
         chunk.MarkLoaded();
-        parsed = new ParsedChunk(chunk, heightmaps, blockEntityCount, light, blockEntitiesSkipped);
+        parsed = new ParsedChunk(chunk, heightmaps, blockEntityCount, light, blockEntitiesSkipped) { BlockEntities = blockEntities };
         return DecodeStatus.Success;
     }
 
-    private static DecodeStatus SkipBlockEntity(ReadOnlySpan<byte> body, ref PayloadReader reader)
+    private static DecodeStatus ReadBlockEntity(ReadOnlySpan<byte> body, ref PayloadReader reader, out BlockEntityRecord record)
     {
+        record = default;
+
         // packed XZ, packed Y, block entity type, then an unnamed NBT compound.
-        var status = reader.TryReadByte(out _);
+        // One byte holds both horizontal coordinates, high nibble X and low nibble Z; Y is an absolute short.
+        var status = reader.TryReadByte(out var packedXz);
         if (status != DecodeStatus.Success)
         {
             return status;
         }
 
-        status = reader.TryReadBytes(2, out _);
+        status = reader.TryReadBytes(2, out var yBytes);
         if (status != DecodeStatus.Success)
         {
             return status;
         }
 
-        status = reader.TryReadVarInt(out _);
+        var y = (short)((yBytes[0] << 8) | yBytes[1]);
+
+        status = reader.TryReadVarInt(out var typeId);
         if (status != DecodeStatus.Success)
         {
             return status;
         }
+
+        record = new BlockEntityRecord((packedXz >> 4) & 0xF, y, packedXz & 0xF, typeId);
 
         // No "payload follows" flag exists in 26.3: OPTIONAL_COMPOUND_TAG delegates straight to writeNbt, which
         // encodes an absent tag as a lone End byte. Reading a boolean here shifted every record by one byte,
