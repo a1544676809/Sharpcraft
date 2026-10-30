@@ -79,12 +79,14 @@ public static class WindowedRenderer
                 height = (uint)atlasData.Height,
                 depthOrArrayLayers = 1
             },
-            MipLevelCount = 1,
+            MipLevelCount = 1 + (uint)AtlasMipChain.Levels,
             SampleCount = 1,
             Dimension = WGPUTextureDimension._2D,
             Format = WGPUTextureFormat.RGBA8Unorm,
             Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
         });
+
+        var atlasMips = AtlasMipChain.Build(atlasData.Rgba, atlasData.Width, atlasData.Height);
 
         device.Queue.WriteTexture(
             atlasTexture,
@@ -99,6 +101,25 @@ public static class WindowedRenderer
             },
             0,
             new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+
+        var mipWidth = atlasData.Width;
+        var mipHeight = atlasData.Height;
+
+        for (var level = 0; level < atlasMips.Length; level++)
+        {
+            mipWidth = Math.Max(1, mipWidth / 2);
+            mipHeight = Math.Max(1, mipHeight / 2);
+
+            device.Queue.WriteTexture(
+                atlasTexture,
+                atlasMips[level],
+                (uint)(mipWidth * 4),
+                (uint)mipHeight,
+                new WGPUExtent3D { width = (uint)mipWidth, height = (uint)mipHeight, depthOrArrayLayers = 1 },
+                (uint)(level + 1),
+                new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+        }
+
 
         var atlasView = atlasTexture.CreateView();
 

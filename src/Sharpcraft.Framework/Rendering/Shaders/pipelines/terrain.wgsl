@@ -73,10 +73,9 @@ fn fs_translucent(input : VertexOutput) -> @location(0) vec4<f32> {
     let atlasSize = vec2<f32>(textureDimensions(atlasTexture));
     let rectMin = input.spriteRect.xy;
     let rectMax = input.spriteRect.zw;
-    let spriteTexels = max(round((rectMax - rectMin) * atlasSize) + vec2<f32>(1.0), vec2<f32>(1.0));
-    let repeated = input.uv - floor(input.uv);
-    let texel = clamp(floor(repeated * spriteTexels), vec2<f32>(0.0), spriteTexels - vec2<f32>(1.0));
-    let atlasUv = rectMin + texel / atlasSize;
+    // Continuous mapping into the sprite rectangle: with a mipmapped, linearly filtered atlas this stays smooth when a
+    // block covers fewer pixels than its texture has texels. Snapping to one texel per fragment speckled at distance.
+    let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
     let sampled = textureSample(atlasTexture, atlasSampler, atlasUv);
     let base = vec4<f32>(sampled.rgb * input.colour, 1.0);
@@ -92,10 +91,9 @@ fn fs_cutout(input : VertexOutput) -> @location(0) vec4<f32> {
     let atlasSize = vec2<f32>(textureDimensions(atlasTexture));
     let rectMin = input.spriteRect.xy;
     let rectMax = input.spriteRect.zw;
-    let spriteTexels = max(round((rectMax - rectMin) * atlasSize) + vec2<f32>(1.0), vec2<f32>(1.0));
-    let repeated = input.uv - floor(input.uv);
-    let texel = clamp(floor(repeated * spriteTexels), vec2<f32>(0.0), spriteTexels - vec2<f32>(1.0));
-    let atlasUv = rectMin + texel / atlasSize;
+    // Continuous mapping into the sprite rectangle: with a mipmapped, linearly filtered atlas this stays smooth when a
+    // block covers fewer pixels than its texture has texels. Snapping to one texel per fragment speckled at distance.
+    let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
     let sampled = textureSample(atlasTexture, atlasSampler, atlasUv);
 

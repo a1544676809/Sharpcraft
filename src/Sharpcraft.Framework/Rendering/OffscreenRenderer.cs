@@ -425,7 +425,7 @@ public static class OffscreenRenderer
             var texture = device.CreateTexture(new TextureDescriptor
             {
                 Size = new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 },
-                MipLevelCount = 1,
+                MipLevelCount = 1 + (uint)AtlasMipChain.Levels,
                 SampleCount = 1,
                 Dimension = WGPUTextureDimension._2D,
                 Format = WGPUTextureFormat.RGBA8Unorm,
@@ -465,6 +465,8 @@ public static class OffscreenRenderer
                 Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
             });
 
+            var atlasMips = AtlasMipChain.Build(atlasData.Rgba, atlasData.Width, atlasData.Height);
+
             device.Queue.WriteTexture(
                 atlasTexture,
                 atlasData.Rgba,
@@ -479,6 +481,25 @@ public static class OffscreenRenderer
                 0,
                 new WGPUOrigin3D { x = 0, y = 0, z = 0 });
 
+            // Mip levels one and up, each half the previous size.
+            var mipWidth = atlasData.Width;
+            var mipHeight = atlasData.Height;
+
+            for (var level = 0; level < atlasMips.Length; level++)
+            {
+                mipWidth = Math.Max(1, mipWidth / 2);
+                mipHeight = Math.Max(1, mipHeight / 2);
+
+                device.Queue.WriteTexture(
+                    atlasTexture,
+                    atlasMips[level],
+                    (uint)(mipWidth * 4),
+                    (uint)mipHeight,
+                    new WGPUExtent3D { width = (uint)mipWidth, height = (uint)mipHeight, depthOrArrayLayers = 1 },
+                    (uint)(level + 1),
+                    new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+            }
+
             using var atlasView = atlasTexture.CreateView();
 
             using var atlasSampler = device.CreateSampler(new SamplerDescriptor
@@ -486,11 +507,11 @@ public static class OffscreenRenderer
                 AddressModeU = WGPUAddressMode.ClampToEdge,
                 AddressModeV = WGPUAddressMode.ClampToEdge,
                 AddressModeW = WGPUAddressMode.ClampToEdge,
-                MagFilter = WGPUFilterMode.Nearest,
-                MinFilter = WGPUFilterMode.Nearest,
-                MipmapFilter = WGPUMipmapFilterMode.Nearest,
+                MagFilter = WGPUFilterMode.Linear,
+                MinFilter = WGPUFilterMode.Linear,
+                MipmapFilter = WGPUMipmapFilterMode.Linear,
                 LodMinClamp = 0f,
-                LodMaxClamp = 1f,
+                LodMaxClamp = AtlasMipChain.Levels,
                 MaxAnisotropy = 1
             });
 
