@@ -22,11 +22,18 @@ public static class TextEditRenderer
     /// <summary>Colour of ordinary text, the reference's own, written as ARGB.</summary>
     public const uint TextColour = 0xFFE0E0E0u;
 
-    /// <summary>Colour behind a selection, written as ARGB: solid blue, the reference's own value.</summary>
-    public const uint SelectionColour = 0xFF0000FFu;
+    /// <summary>
+    /// Colour behind a selection, written as ARGB.
+    /// </summary>
+    /// <remarks>
+    /// The reference does not paint a flat colour here: it inverts the pixels under the selection and tints them blue,
+    /// which reads as a pale blue box with blue text. There is no invert blend in this pipeline, so a pale blue that
+    /// sits close to that result is used instead, with blue text on top.
+    /// </remarks>
+    public const uint SelectionColour = 0xFFC0C8FFu;
 
-    /// <summary>Colour of selected text, which the reference produces by inverting the pixels underneath.</summary>
-    public const uint SelectedTextColour = 0xFFFFFFFFu;
+    /// <summary>Colour of selected text: blue, which is what the reference's inversion leaves behind.</summary>
+    public const uint SelectedTextColour = 0xFF2020C0u;
 
     /// <summary>Height of a single line box.</summary>
     public const float LineHeight = 9f;

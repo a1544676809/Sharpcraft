@@ -125,7 +125,7 @@ public static class UiScreenLayout
 <Screen Padding="8">
   <!-- A HUD panel sits behind its text rather than tinting the whole screen. -->
   <StackPanel Background="#A0000000" Padding="6" Spacing="2">
-    <TextBlock Text="SHARPCRAFT" Colour="#FFFFFFFF" Height="24" />
+    <TextBlock Text="SHARPCRAFT" Colour="#FFFFFFFF" />
     <TextBlock Text="ui kernel online" Colour="#FF7FC4FF" />
     <TextBlock Text="glyphs from the game font sheet" Colour="#FFB0B0B0" />
   </StackPanel>
@@ -147,7 +147,7 @@ public static class UiScreenLayout
         float height,
         UiGeometry geometry,
         BitmapFont? font = null,
-        float textScale = 2f)
+        float textScale = 1f)
     {
         ArgumentNullException.ThrowIfNull(screen);
         ArgumentNullException.ThrowIfNull(styles);
@@ -321,6 +321,14 @@ public static class UiScreenLayout
     /// Every glyph draws its whole cell and the pen advances by the glyph's own advance, so the transparent margin
     /// of a narrow glyph overlaps the next cell without adding ink.
     /// </remarks>
+    /// <summary>
+    /// Darkens a colour the way the reference darkens a drop shadow, keeping the alpha.
+    /// </summary>
+    /// <param name="colour">Packed vertex colour.</param>
+    private static uint ShadowOf(uint colour) =>
+        (colour & 0xFF000000u)
+        | ((colour >> 2) & 0x003F3F3Fu);
+
     public static void AddText(
         UiGeometry geometry,
         BitmapFont font,
@@ -339,6 +347,7 @@ public static class UiScreenLayout
     /// <param name="y">Top edge of the glyph cell.</param>
     /// <param name="textScale">Scale from font pixels to virtual pixels.</param>
     /// <param name="colour">Ink colour.</param>
+
     public static void AddText(
         UiGeometry geometry,
         BitmapFont font,
@@ -352,6 +361,10 @@ public static class UiScreenLayout
         var cellHeight = font.CellHeight * textScale;
         var pen = x;
 
+        // The reference draws every glyph twice: once offset by a pixel in both directions in a darkened colour, then
+        // the glyph itself. Without it the text looks thin and washes out over a bright world.
+        var shadow = ShadowOf(colour);
+
         for (var index = 0; index < content.Length; index++)
         {
             var character = content[index];
@@ -361,6 +374,16 @@ public static class UiScreenLayout
             if (font.TryGet(character, out var glyph) && character != ' ')
             {
                 var (u0, v0, u1, v1) = font.Uv(glyph);
+                geometry.AddTexturedRectangle(
+                    pen + textScale,
+                    y + textScale,
+                    cellWidth,
+                    cellHeight,
+                    u0,
+                    v0,
+                    u1,
+                    v1,
+                    shadow);
                 geometry.AddTexturedRectangle(pen, y, cellWidth, cellHeight, u0, v0, u1, v1, colour);
             }
 

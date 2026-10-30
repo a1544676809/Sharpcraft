@@ -86,8 +86,8 @@ public sealed class TextEditRendererTests
         var geometry = new UiGeometry();
         TextEditRenderer.Draw(geometry, Monospace(), model, x: 0f, y: 0f, focused: false, elapsedMs: 0);
 
-        // A highlight quad plus the glyphs for four characters.
-        Assert.Equal(5, geometry.QuadCount);
+        // A highlight quad, then each of the four characters twice: once for the shadow and once for the glyph.
+        Assert.Equal(9, geometry.QuadCount);
     }
 
     [Fact]
@@ -99,8 +99,8 @@ public sealed class TextEditRendererTests
         var geometry = new UiGeometry();
         TextEditRenderer.Draw(geometry, Monospace(), model, x: 0f, y: 0f, focused: false, elapsedMs: 0);
 
-        // One glyph, no caret.
-        Assert.Equal(1, geometry.QuadCount);
+        // One glyph with its shadow, and no caret.
+        Assert.Equal(2, geometry.QuadCount);
     }
 
     /// <summary>A sheet whose glyphs advance six pixels.</summary>

@@ -68,7 +68,8 @@ public sealed class UiTextRenderingTests
 
         // Three visible characters, the space advances without drawing, and they share one range because they
         // have the same material and scissor.
-        Assert.Equal(3, geometry.QuadCount);
+        // Each visible character is drawn twice: once as a shadow and once as the glyph.
+        Assert.Equal(6, geometry.QuadCount);
         Assert.Equal(1, geometry.Ranges.Length);
         Assert.Equal(UiMaterial.Text, geometry.Ranges[0].Material);
     }
@@ -94,9 +95,10 @@ public sealed class UiTextRenderingTests
 
         var vertices = geometry.Vertices;
 
-        // First glyph at x = 0; second begins at one advance of ten virtual pixels.
-        Assert.Equal(0f, vertices[0], 3);
-        Assert.Equal(4f, vertices[20], 3);
+        // Each glyph is drawn twice, shadow first, so the glyph quads are the odd ones out.
+        // First glyph at x = 0; second begins one advance further along.
+        Assert.Equal(0f, vertices[20], 3);
+        Assert.Equal(4f, vertices[60], 3);
     }
 
     [Fact]

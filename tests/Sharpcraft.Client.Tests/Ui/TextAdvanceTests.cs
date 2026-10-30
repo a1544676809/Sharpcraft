@@ -24,11 +24,12 @@ public sealed class TextAdvanceTests
 
         UiScreenLayout.AddText(geometry, font, "a a", 0f, 0f, 1f, 0xFFFFFFFFu);
 
-        // Two glyphs are drawn (the space is blank), and the second one starts at glyph advance plus space advance.
-        Assert.Equal(2, geometry.QuadCount);
+        // Each visible glyph is drawn twice, once for its shadow and once for the glyph, and the space is blank.
+        Assert.Equal(4, geometry.QuadCount);
 
-        var firstX = geometry.Vertices[0];
-        var secondX = geometry.Vertices[20];
+        // The first quad of each pair is the shadow, offset by one pixel; the glyph follows it.
+        var firstX = geometry.Vertices[20];
+        var secondX = geometry.Vertices[60];
 
         Assert.Equal(0f, firstX, 3);
         Assert.Equal(font.AdvanceOf('a') + 4f, secondX, 3);
@@ -43,8 +44,9 @@ public sealed class TextAdvanceTests
 
         UiScreenLayout.AddText(geometry, font, "ab cd", 0f, 0f, 1f, 0xFFFFFFFFu);
 
-        // The last drawn glyph ends where the measured width says the text ends.
-        var lastGlyphX = geometry.Vertices[3 * 20];
+        // The last drawn glyph ends where the measured width says the text ends. Quads come in pairs because of the
+        // shadow, so the fourth visible glyph starts at the eighth quad.
+        var lastGlyphX = geometry.Vertices[7 * 20];
         var lastGlyphWidth = font.CellWidth;
 
         Assert.Equal(font.MeasureWidth("ab c") + lastGlyphWidth, lastGlyphX + lastGlyphWidth, 3);

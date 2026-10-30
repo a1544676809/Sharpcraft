@@ -48,8 +48,8 @@ public sealed class ColourOrderTests
         var geometry = new UiGeometry();
         TextEditRenderer.Draw(geometry, Monospace(), model, 0f, 0f, focused: false, elapsedMs: 0);
 
-        // Highlight first, then the glyphs; the glyph colour is the inverted one, not the ordinary text colour.
-        var glyph = (uint)BitConverter.SingleToUInt32Bits(geometry.Vertices[(5 * 5) + 4]);
+        // Highlight first, then for each character its shadow and then the glyph itself.
+        var glyph = (uint)BitConverter.SingleToUInt32Bits(geometry.Vertices[(2 * 20) + 4]);
         Assert.Equal(UiGeometry.FromArgb(TextEditRenderer.SelectedTextColour), glyph);
         Assert.NotEqual(UiGeometry.FromArgb(TextEditRenderer.TextColour), glyph);
     }

@@ -50,8 +50,9 @@ public sealed class ChatPromptTests
         var geometry = new UiGeometry();
         ChatPrompt.Draw(geometry, Font(), 480f, 270f, model, elapsedMs: 0);
 
-        // The box, one quad per visible character, and the caret at the end drawn as the underscore glyph.
-        Assert.Equal(4, geometry.QuadCount);
+        // The box; each visible character twice, once for its shadow and once for the glyph; and the caret at the
+        // end, which is the underscore glyph and also carries a shadow.
+        Assert.Equal(7, geometry.QuadCount);
     }
 
     private static (float Top, float Bottom) VerticalExtent(UiGeometry geometry)
