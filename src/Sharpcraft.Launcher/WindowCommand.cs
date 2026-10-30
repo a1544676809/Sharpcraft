@@ -101,6 +101,8 @@ internal static class WindowCommand
         Console.WriteLine($"chunk workers: {workerPool.WorkerCount} (of {Environment.ProcessorCount} logical processors)");
 
         var meshCache = new ChunkMeshCache(workerPool);
+        var meshOrderSeen = 0;
+        var meshOrderDistanceSum = 0f;
         var geometryEpoch = 0;
         var replayAllMeshes = false;
 
@@ -354,6 +356,30 @@ internal static class WindowCommand
                     return null;
                 }
 
+                if (meshOrderSeen < 64)
+                {
+                    var eye = session.Player.Position;
+
+                    foreach (var (key, _) in drained)
+                    {
+                        if (meshOrderSeen >= 64)
+                        {
+                            break;
+                        }
+
+                        var (chunkX, chunkZ) = Sharpcraft.Client.World.ClientWorld.Unpack(key);
+                        var dx = chunkX + 0.5f - (eye.X / 16f);
+                        var dz = chunkZ + 0.5f - (eye.Z / 16f);
+                        meshOrderDistanceSum += MathF.Sqrt((dx * dx) + (dz * dz));
+                        meshOrderSeen++;
+                    }
+
+                    if (meshOrderSeen >= 64)
+                    {
+                        Console.WriteLine($"mesh order: first 64 average distance {meshOrderDistanceSum / 64f:F2} chunks");
+                    }
+                }
+
                 var updates = new List<(long Key, GeometryData Mesh)>(drained.Count);
                 foreach (var (key, mesh) in drained)
                 {
@@ -371,6 +397,10 @@ internal static class WindowCommand
             geometryEpoch: () => geometryEpoch,
             uiGeometry: frame =>
             {
+                // Mesh work is ordered by distance, so the pool needs to know where the player is each frame.
+                var player = session.Player.Position;
+                workerPool.SetViewOrigin(player.X / 16f, player.Z / 16f);
+
                 var screen = uiLoader.Current ?? fallback;
 
                 if (screen is null)

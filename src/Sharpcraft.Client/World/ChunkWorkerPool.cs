@@ -31,7 +31,14 @@ public sealed class ChunkWorkerPool : IDisposable
 {
     private readonly ClientWorld _world;
     private readonly ConcurrentQueue<byte[]> _parseQueue = new();
-    private readonly ConcurrentQueue<long> _meshQueue = new();
+    // Nearest first: the chunk under the player is what they notice, and a plain queue would build whatever the network
+    // happened to deliver first. Ties fall back to arrival order through the sequence number.
+    private readonly object _meshGate = new();
+    private readonly PriorityQueue<long, (double Distance, long Sequence)> _meshQueue = new();
+    private readonly bool _meshFifo = Environment.GetEnvironmentVariable("MC_MESH_FIFO") == "1";
+    private long _meshSequence;
+    private float _viewChunkX;
+    private float _viewChunkZ;
     private readonly ConcurrentQueue<ParsedChunk> _parsed = new();
     private readonly ConcurrentQueue<(long Key, MeshData Mesh)> _meshes = new();
 
@@ -139,6 +146,42 @@ public sealed class ChunkWorkerPool : IDisposable
     /// <summary>Queues a chunk for meshing.</summary>
     /// <param name="chunkKey">Packed chunk key.</param>
     /// <returns>False when the mesh queue is full.</returns>
+    /// <summary>
+    /// Tells the pool where the player is, in chunk coordinates, so pending mesh work can be ordered by distance.
+    /// </summary>
+    /// <param name="chunkX">Player chunk x, fractional allowed.</param>
+    /// <param name="chunkZ">Player chunk z.</param>
+    public void SetViewOrigin(float chunkX, float chunkZ)
+    {
+        lock (_meshGate)
+        {
+            _viewChunkX = chunkX;
+            _viewChunkZ = chunkZ;
+        }
+    }
+
+    private double DistanceTo(long chunkKey)
+    {
+        if (_meshFifo)
+        {
+            return 0d;
+        }
+
+        var (chunkX, chunkZ) = ClientWorld.Unpack(chunkKey);
+        var dx = chunkX + 0.5f - _viewChunkX;
+        var dz = chunkZ + 0.5f - _viewChunkZ;
+
+        return (dx * dx) + (dz * dz);
+    }
+
+    private bool TryTakeMeshKey(out long chunkKey)
+    {
+        lock (_meshGate)
+        {
+            return _meshQueue.TryDequeue(out chunkKey, out _);
+        }
+    }
+
     public bool TryEnqueueMesh(long chunkKey)
     {
         if (Volatile.Read(ref _meshPending) >= _maxQueuedMeshes)
@@ -147,7 +190,12 @@ public sealed class ChunkWorkerPool : IDisposable
         }
 
         Interlocked.Increment(ref _meshPending);
-        _meshQueue.Enqueue(chunkKey);
+
+        lock (_meshGate)
+        {
+            _meshQueue.Enqueue(chunkKey, (DistanceTo(chunkKey), ++_meshSequence));
+        }
+
         _signal.Release();
         return true;
     }
@@ -205,7 +253,7 @@ public sealed class ChunkWorkerPool : IDisposable
                 continue;
             }
 
-            if (_meshQueue.TryDequeue(out var key))
+            if (TryTakeMeshKey(out var key))
             {
                 Interlocked.Decrement(ref _meshPending);
                 Mesh(key);
