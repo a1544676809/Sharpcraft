@@ -84,3 +84,27 @@ fn fs_translucent(input : VertexOutput) -> @location(0) vec4<f32> {
     let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
     return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogged), 0.7);
 }
+
+// Cutout pass: identical colour, but texels below half alpha are discarded instead of blended, which is what leaves and
+// plants need (ref: ChunkSectionLayer.CUTOUT uses alpha testing, not blending).
+@fragment
+fn fs_cutout(input : VertexOutput) -> @location(0) vec4<f32> {
+    let atlasSize = vec2<f32>(textureDimensions(atlasTexture));
+    let rectMin = input.spriteRect.xy;
+    let rectMax = input.spriteRect.zw;
+    let spriteTexels = max(round((rectMax - rectMin) * atlasSize) + vec2<f32>(1.0), vec2<f32>(1.0));
+    let repeated = input.uv - floor(input.uv);
+    let texel = clamp(floor(repeated * spriteTexels), vec2<f32>(0.0), spriteTexels - vec2<f32>(1.0));
+    let atlasUv = rectMin + texel / atlasSize;
+
+    let sampled = textureSample(atlasTexture, atlasSampler, atlasUv);
+
+    if (sampled.a < 0.5) {
+        discard;
+    }
+
+    let base = vec4<f32>(sampled.rgb * input.colour, 1.0);
+    let span = max(fog.range.y - fog.range.x, 0.001);
+    let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
+    return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogged), 1.0);
+}

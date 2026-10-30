@@ -56,6 +56,12 @@ public sealed record FrameRequest(
     /// <summary>Indices of the translucent layer, in the same vertex layout as <see cref="Vertices"/>.</summary>
     public uint[]? TranslucentIndices { get; init; }
 
+    /// <summary>Vertices of the cutout layer: alpha tested, no blending, depth writes on.</summary>
+    public float[]? CutoutVertices { get; init; }
+
+    /// <summary>Indices of the cutout layer.</summary>
+    public uint[]? CutoutIndices { get; init; }
+
     /// <summary>
     /// Index ranges of the translucent layer in back to front order. Null draws it in one call.
     /// </summary>

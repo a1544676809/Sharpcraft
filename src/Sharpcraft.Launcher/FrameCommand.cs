@@ -738,6 +738,8 @@ internal static class FrameCommand
 
         float[]? translucentVertices = null;
         uint[]? translucentIndices = null;
+        float[]? cutoutVertices = null;
+        uint[]? cutoutIndices = null;
         var translucentRanges = new List<(int FirstIndex, int IndexCount, float CentreX, float CentreZ)>();
 
         if (cache is null)
@@ -748,6 +750,7 @@ internal static class FrameCommand
             // With a layout the same pass can also fill a second buffer with the translucent faces.
             var wantsTranslucent = Environment.GetEnvironmentVariable("MC_FRAME_TRANSLUCENT") == "1" && layout is not null;
             using var translucent = wantsTranslucent ? new Sharpcraft.Client.Render.MeshBuffer(Math.Min(2_000_000, world.LoadedChunkCount * 512)) : null;
+            using var cutout = wantsTranslucent ? new Sharpcraft.Client.Render.MeshBuffer(Math.Min(2_000_000, world.LoadedChunkCount * 512)) : null;
             var ranges = new List<(int FirstIndex, int IndexCount)>(world.LoadedChunkCount);
             var blocks = 0;
 
@@ -757,7 +760,7 @@ internal static class FrameCommand
                 var translucentBefore = translucent?.IndexCount ?? 0;
 
                 blocks += Sharpcraft.Client.Render.ChunkMesher.MeshChunk(
-                    world, chunk, airState: 0, buffer, maxBlocks: 2_000_000 - blocks, sprites: sprites, translucent: translucent, layout: layout);
+                    world, chunk, airState: 0, buffer, maxBlocks: 2_000_000 - blocks, sprites: sprites, translucent: translucent, layout: layout, cutout: cutout);
 
                 ranges.Add((before, buffer.IndexCount - before));
 
@@ -825,6 +828,13 @@ internal static class FrameCommand
                 translucentVertices = split.Vertices;
                 translucentIndices = split.Indices;
             }
+
+            if (cutout is not null)
+            {
+                var split = cutout.ToMeshData(0);
+                cutoutVertices = split.Vertices;
+                cutoutIndices = split.Indices;
+            }
         }
         else
         {
@@ -839,11 +849,12 @@ internal static class FrameCommand
                 // pass over the chunks, which is acceptable for the presented view and keeps the cached path untouched.
                 using var opaqueSink = new Sharpcraft.Client.Render.MeshBuffer(4096);
                 using var translucentBuffer = new Sharpcraft.Client.Render.MeshBuffer(4096);
+                using var cutoutBuffer = new Sharpcraft.Client.Render.MeshBuffer(4096);
 
                 foreach (var chunk in world.GetChunks())
                 {
                     Sharpcraft.Client.Render.ChunkMesher.MeshChunk(
-                        world, chunk, airState: 0, opaqueSink, maxBlocks: 2_000_000, sprites: sprites, translucent: translucentBuffer, layout: layout);
+                        world, chunk, airState: 0, opaqueSink, maxBlocks: 2_000_000, sprites: sprites, translucent: translucentBuffer, layout: layout, cutout: cutoutBuffer);
                 }
 
                 if (translucentBuffer.IndexCount > 0)
@@ -851,6 +862,13 @@ internal static class FrameCommand
                     var split = translucentBuffer.ToMeshData(0);
                     translucentVertices = split.Vertices;
                     translucentIndices = split.Indices;
+                }
+
+                if (cutoutBuffer.IndexCount > 0)
+                {
+                    var split = cutoutBuffer.ToMeshData(0);
+                    cutoutVertices = split.Vertices;
+                    cutoutIndices = split.Indices;
                 }
             }
         }
@@ -913,6 +931,8 @@ internal static class FrameCommand
             DrawRanges = drawRanges,
             TranslucentVertices = translucentVertices,
             TranslucentIndices = translucentIndices,
+            CutoutVertices = cutoutVertices,
+            CutoutIndices = cutoutIndices,
             TranslucentRanges = translucentOrdered.Length > 0 ? translucentOrdered : null
         };
     }

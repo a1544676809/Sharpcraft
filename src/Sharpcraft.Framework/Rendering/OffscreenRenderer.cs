@@ -369,6 +369,31 @@ public static class OffscreenRenderer
             vertexAttributes: VertexLayout.Attributes());
     }
 
+    /// <summary>
+    /// The cutout pipeline: same shader family with alpha testing instead of blending, depth writes on.
+    /// </summary>
+    private static RenderPipeline CreateCutoutPipeline(Device device, PipelineLayout layout)
+    {
+        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
+        {
+            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(ShaderSourceText))
+        });
+
+        return device.CreateRenderPipeline(
+            shader,
+            "vs_main"u8,
+            shader,
+            "fs_cutout"u8,
+            [new ColorTargetState(WGPUTextureFormat.RGBA8Unorm)],
+            layout: layout,
+            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
+            multisample: MultisampleState.Default,
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float),
+            vertexStride: (ulong)VertexLayout.Stride,
+            vertexStepMode: WGPUVertexStepMode.Vertex,
+            vertexAttributes: VertexLayout.Attributes());
+    }
+
     private static uint[] BuildIndexBytes(FrameRequest request) => request.Indices;
 
     /// <summary>Renders a frame and returns its pixels.</summary>
@@ -610,6 +635,24 @@ public static class OffscreenRenderer
                 {
                     pass.DrawIndexed((uint)request.Indices.Length);
                 }
+            }
+
+            if (request.CutoutVertices is { Length: > 0 } cutoutVertices &&
+                request.CutoutIndices is { Length: > 0 } cutoutIndices)
+            {
+                using var cutoutPipeline = CreateCutoutPipeline(device, pipelineLayout);
+                using var cutoutVertexBuffer = device.CreateBufferInit(
+                    new BufferInitDescriptor { Usage = BufferUsage.Vertex },
+                    cutoutVertices.AsSpan());
+                using var cutoutIndexBuffer = device.CreateBufferInit(
+                    new BufferInitDescriptor { Usage = BufferUsage.Index },
+                    cutoutIndices.AsSpan());
+
+                pass.SetPipeline(cutoutPipeline);
+                pass.SetBindGroup(0, bindGroup, []);
+                pass.SetVertexBuffer(0, cutoutVertexBuffer);
+                pass.SetIndexBuffer(cutoutIndexBuffer, WGPUIndexFormat.Uint32);
+                pass.DrawIndexed((uint)cutoutIndices.Length);
             }
 
             if (request.TranslucentVertices is { Length: > 0 } translucentVertices &&

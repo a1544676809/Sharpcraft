@@ -172,6 +172,7 @@ public static class WindowedRenderer
 
         using var pipeline = CreatePipeline(device, format, pipelineLayout);
         using var translucentPipeline = CreateTranslucentPipeline(device, format, pipelineLayout);
+        using var cutoutPipeline = CreateCutoutPipeline(device, format, pipelineLayout);
         using var skyPipeline = CreateSkyPipeline(device, format);
         using var uiPipeline = UiRenderer.CreatePipeline(device, format, pipelineLayout);
         using var uiTextPipeline = UiRenderer.CreateTextPipeline(device, format, pipelineLayout);
@@ -832,6 +833,23 @@ public static class WindowedRenderer
                 pass.DrawIndexed((uint)currentRequest.Indices.Length);
             }
 
+            if (currentRequest.CutoutVertices is { Length: > 0 } windowCutoutVertices &&
+                currentRequest.CutoutIndices is { Length: > 0 } windowCutoutIndices)
+            {
+                using var windowCutoutVertexBuffer = device.CreateBufferInit(
+                    new BufferInitDescriptor { Usage = BufferUsage.Vertex },
+                    windowCutoutVertices.AsSpan());
+                using var windowCutoutIndexBuffer = device.CreateBufferInit(
+                    new BufferInitDescriptor { Usage = BufferUsage.Index },
+                    windowCutoutIndices.AsSpan());
+
+                pass.SetPipeline(cutoutPipeline);
+                pass.SetBindGroup(0, bindGroup);
+                pass.SetVertexBuffer(0, windowCutoutVertexBuffer);
+                pass.SetIndexBuffer(windowCutoutIndexBuffer, WGPUIndexFormat.Uint32);
+                pass.DrawIndexed((uint)windowCutoutIndices.Length);
+            }
+
             if (currentRequest.TranslucentVertices is { Length: > 0 } windowTranslucentVertices &&
                 currentRequest.TranslucentIndices is { Length: > 0 } windowTranslucentIndices)
             {
@@ -1030,6 +1048,31 @@ public static class WindowedRenderer
             vertexStride: 0,
             vertexStepMode: WGPUVertexStepMode.Vertex,
             vertexAttributes: []);
+    }
+
+    /// <summary>
+    /// The cutout pipeline: alpha testing instead of blending, depth writes on.
+    /// </summary>
+    private static RenderPipeline CreateCutoutPipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
+    {
+        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
+        {
+            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText))
+        });
+
+        return device.CreateRenderPipeline(
+            shader,
+            "vs_main"u8,
+            shader,
+            "fs_cutout"u8,
+            [new ColorTargetState(format)],
+            layout: layout,
+            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
+            multisample: MultisampleState.Default,
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float),
+            vertexStride: (ulong)VertexLayout.Stride,
+            vertexStepMode: WGPUVertexStepMode.Vertex,
+            vertexAttributes: VertexLayout.Attributes());
     }
 
     /// <summary>
