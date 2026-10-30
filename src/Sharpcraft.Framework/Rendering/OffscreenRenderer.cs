@@ -179,7 +179,13 @@ public static class OffscreenRenderer
         }
 
         depthReadback.Unmap();
-        Console.WriteLine($"depth: {width}x{height} nearest {nearest:F4} farthest {farthest:F4} centre {centre:F4}");
+        // Window depth compresses the far field, so the distances are what actually get compared.
+        var near = 0.1f;
+        var far = 2000f;
+        Console.WriteLine(
+            $"depth: {width}x{height} nearest {nearest:F4} ({DepthLinearisation.ToDistance(nearest, near, far):F1} blocks) " +
+            $"farthest {farthest:F4} ({DepthLinearisation.ToDistance(farthest, near, far):F1} blocks) " +
+            $"centre {centre:F4} ({DepthLinearisation.ToDistance(centre, near, far):F1} blocks)");
     }
 
     private static RenderPipeline CreateSkyPipeline(Device device, WGPUTextureFormat format)
