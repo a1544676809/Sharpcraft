@@ -86,13 +86,14 @@ public sealed class SpriteAtlasTests
 
         var sprite = atlas.Sprites[new Identifier("minecraft", "a")];
 
-        // Half a texel of inset keeps nearest-neighbour sampling inside the cell.
-        Assert.Equal((sprite.X + 0.5f) / atlas.Width, sprite.U0, 5);
-        Assert.Equal((sprite.X + 32 - 0.5f) / atlas.Width, sprite.U1, 5);
+        // The range covers the sprite exactly; a half texel inset used to squeeze a tile onto one texel less and left
+        // every block edge with a thin dark line (ADR-0015). Bleed is now handled by the padding ring.
+        Assert.Equal((float)sprite.X / atlas.Width, sprite.U0, 5);
+        Assert.Equal((float)(sprite.X + 32) / atlas.Width, sprite.U1, 5);
         // V0 names the sprite's top row, because row zero of the atlas is its top row and the mesh emits v = 0 at
         // the top edge of a face.
-        Assert.Equal((sprite.Y + 0.5f) / atlas.Height, sprite.V0, 5);
-        Assert.Equal((sprite.Y + 16 - 0.5f) / atlas.Height, sprite.V1, 5);
+        Assert.Equal((float)sprite.Y / atlas.Height, sprite.V0, 5);
+        Assert.Equal((float)(sprite.Y + 16) / atlas.Height, sprite.V1, 5);
         Assert.True(sprite.U1 > sprite.U0);
         Assert.True(sprite.V1 > sprite.V0);
     }

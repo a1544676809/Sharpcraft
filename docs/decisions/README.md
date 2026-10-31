@@ -26,6 +26,7 @@ AGENTS.md 原则 12：不可逆或跨模块的决策必须在此留档，**只�
 | [`0012-chat-type-registry.md`](0012-chat-type-registry.md) | 日期：2026-10-30 相关：T-096、T-142、原则 5（三侧边界）、原则 12（规格即矩阵） | **已按原版核对**（实现前仍按流程提交评审） | - |
 | [`0013-gamma-space-ui-blending.md`](0013-gamma-space-ui-blending.md) | 我们的交换链使用 BGRA8UnormSrgb，因此 GPU 在线性空间做混合；原版 Minecraft 没有 sRGB 帧缓冲，混合发生在 gamma 空间。 | 已采纳（用户 2026-10-30 明确选择方案 A） | - |
 | [`0014-gui-sprite-atlas-and-nine-slice.md`](0014-gui-sprite-atlas-and-nine-slice.md) | 提示框（tooltip）在原版由两张 GUI 贴图叠成：tooltip/background 与 tooltip/frame，后者为 nine_slice（border = 10、stretch_inner = true）。 | **提议（待评审）** | - |
+| [`0015-atlas-uv-covers-sprite.md`](0015-atlas-uv-covers-sprite.md) | 方块贴图来自一张拼接图集。 | 已接受（2026-10-31，由项目所有者确认方向后实施） | - |
 | [`0015-resource-pack-stack-and-reload.md`](0015-resource-pack-stack-and-reload.md) | 提示框贴图目前只从"基础包 zip"读取。 | **提议（待评审）** | - |
 | [`0016-resource-pack-file-watch.md`](0016-resource-pack-file-watch.md) | 包作者改一个贴图就要重启客户端。 | **提议（待评审）** | - |
 | [`0017-reload-invalidation-by-layout.md`](0017-reload-invalidation-by-layout.md) | 原版重载成功后直接 levelExtractor.allChanged()（全部区块几何重建，Minecraft.reloadResourcePacks 成功分支）。 | **已接受**（所有者 2026-10-30 确认：允许略微卡顿，采用分层失效） | - |

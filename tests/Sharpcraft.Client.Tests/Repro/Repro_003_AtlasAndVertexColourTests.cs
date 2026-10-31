@@ -13,14 +13,15 @@ using Xunit;
 namespace Sharpcraft.Client.Tests.Repro;
 
 /// <summary>
-/// Repro-003：最近邻采样落在图集格子边界时会取到隔壁精灵的纹素，画面表现为方块边缘"渗色"。
-/// 修复是 UV 向内缩半个纹素；本用例钉住缩进量，防止有人把内缩去掉当成"坐标更直观"。
+/// Repro-003：图集相邻精灵“渗色”。最初的修复是把 UV 向内缩半个纹素，但那是用缩小采样范围换取安全，
+/// 代价是每个方块最外一圈纹素永远采不到，方块边界出现细黑线。ADR-0015 改为给每个精灵留一个像素的 padding，
+/// UV 覆盖整个精灵；本用例钉住这两点，防止有人把 padding 去掉或又把 UV 缩回去。
 /// 关联：docs/modules/render.md §6.1；`SpriteAtlas`。
 /// </summary>
 public sealed class Repro_003_AtlasUvInsetTests
 {
     [Fact]
-    public void SpriteUvsAreInsetByHalfATexelOnEveryEdge()
+    public void SpriteUvsCoverTheSpriteAndThePaddingRingRepeatsItsEdge()
     {
         var atlas = SpriteAtlasBuilder.Stitch(
         [
@@ -30,17 +31,20 @@ public sealed class Repro_003_AtlasUvInsetTests
 
         var sprite = atlas.Sprites[new Identifier("minecraft", "block/stone")];
 
-        // Convert the UV edges back to texel space and compare with the cell rectangle.
-        var left = (sprite.U0 * atlas.Width) - sprite.X;
-        var right = (sprite.U1 * atlas.Width) - (sprite.X + sprite.Width);
+        // The UV rectangle must match the sprite cell exactly, with no inset.
+        Assert.Equal(sprite.X, sprite.U0 * atlas.Width, 4);
+        Assert.Equal(sprite.X + sprite.Width, sprite.U1 * atlas.Width, 4);
+        Assert.Equal(sprite.Y, sprite.V0 * atlas.Height, 4);
+        Assert.Equal(sprite.Y + sprite.Height, sprite.V1 * atlas.Height, 4);
 
-        var top = (sprite.V0 * atlas.Height) - sprite.Y;
-        var bottom = (sprite.V1 * atlas.Height) - (sprite.Y + sprite.Height);
+        // Bleed protection lives in the padding ring: the texel just outside the sprite repeats its edge.
+        var inside = (((sprite.Y * atlas.Width) + sprite.X) * RgbaImage.BytesPerPixel);
+        var outside = (((sprite.Y * atlas.Width) + sprite.X - 1) * RgbaImage.BytesPerPixel);
 
-        Assert.Equal(0.5, left, 4);
-        Assert.Equal(0.5, top, 4);
-        Assert.Equal(-0.5, right, 4);
-        Assert.Equal(-0.5, bottom, 4);
+        for (var channel = 0; channel < RgbaImage.BytesPerPixel; channel++)
+        {
+            Assert.Equal(atlas.Pixels[inside + channel], atlas.Pixels[outside + channel]);
+        }
     }
 
     private static RgbaImage Solid(int width, int height)
