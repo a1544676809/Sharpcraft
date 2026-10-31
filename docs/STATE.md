@@ -1882,4 +1882,7 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 全量 1168 通过、门禁 ok。**待办**：Timelines 关键帧/easing 求值（SUN/MOON/STAR_ANGLE 等）→ 再接天空天体与日夜光照；`AdvanceClocks` 目前按 ceil?（rate 取整）每 tick 推进，后续补 partial 精度。## 2026-11-01 时间系统第二片：Timelines 角度求值
 - 新增 `Common/World/SkyTimelines.cs`：`CubicBezierEasing`（复刻 EasingType.CubicBezier：Newton 4 次、步长±0.25、二分回退）、`FloatKeyframeTrack`（复刻 KeyframeTrackSampler：period 环绕+环绕段+lerp(ease(alpha))）、`SkyTimelines.SunAngle/MoonAngle/StarAngleDegrees`（SUN/STAR 6000→360/0、MOON 6000→540/180，easing symmetric(0.362,0.241)）。
 - `SkyTimelinesTests` 4 项（端点/中点0.5/单调/锚点：Sun 6000=0、18000=180、30000=0；Moon 18000=360）。全量 1173 通过、门禁 ok。
-- 待办：`SKY_LIGHT_FACTOR/COLOR` 等其余属性求值；`AdvanceClocks` partial 精度；再回接天空天体渲染与日夜光照。
+- 待办：`SKY_LIGHT_FACTOR/COLOR` 等其余属性求值；`AdvanceClocks` partial 精度；再回接天空天体渲染与日夜光照。## 2026-11-01 时间系统第三片：其余环境属性
+- `FloatKeyframeTrack` 支持线性 easing（Func）；`SkyAttributeTracks`：**STAR_BRIGHTNESS**（MAX 修饰→采样值）、**SKY_LIGHT_FACTOR**（日1.0/夜0.24）、**MOON_PHASE 索引**（按 totalTicks，period 24000*8）。
+- 测试 +3（星亮度 6000=0/18000=0.5；天光系数 6000=1/18000=0.24；月相 0/3/8 环绕）。全量 1176 通过、门禁 ok。
+- 待办：SUNRISE_SUNSET_COLOR（33 关键帧 RGBA）、SKY_COLOR 修饰、SKY_LIGHT_COLOR；再回接天空天体渲染与日夜光照。AdvanceClocks partial 精度。

@@ -104,7 +104,10 @@ public sealed class FloatKeyframeTrack
         _periodTicks = periodTicks;
     }
 
-    public static FloatKeyframeTrack Build(IReadOnlyList<FloatKeyframe> keyframes, CubicBezierEasing easing, int periodTicks)
+    public static FloatKeyframeTrack Build(IReadOnlyList<FloatKeyframe> keyframes, CubicBezierEasing easing, int periodTicks) =>
+        Build(keyframes, easing.Apply, periodTicks);
+
+    public static FloatKeyframeTrack Build(IReadOnlyList<FloatKeyframe> keyframes, Func<float, float> easing, int periodTicks)
     {
         ArgumentNullException.ThrowIfNull(keyframes);
         if (keyframes.Count == 0)
@@ -150,7 +153,7 @@ public sealed class FloatKeyframeTrack
         }
 
         var alpha = (float)(sampleTicks - segment.FromTicks) / (segment.ToTicks - segment.FromTicks);
-        return segment.FromValue + (segment.Easing.Apply(alpha) * (segment.ToValue - segment.FromValue));
+        return segment.FromValue + (segment.Ease(alpha) * (segment.ToValue - segment.FromValue));
     }
 
     private Segment GetSegmentAt(int ticks)
@@ -166,7 +169,43 @@ public sealed class FloatKeyframeTrack
         return _segments[^1];
     }
 
-    private readonly record struct Segment(CubicBezierEasing Easing, float FromValue, int FromTicks, float ToValue, int ToTicks);
+    private readonly record struct Segment(Func<float, float> Ease, float FromValue, int FromTicks, float ToValue, int ToTicks);
+}
+
+/// <summary>
+/// Other overworld-day environment attributes from Timelines.java that are plain (linear) keyframe tracks. Values are the
+/// effective attribute values (modifier tracks on the default bases), documented per member.
+/// </summary>
+public static class SkyAttributeTracks
+{
+    private const int Period = SkyTimelines.PeriodTicks;
+
+    // STAR_BRIGHTNESS: base 0.0 with FloatModifier.MAXIMUM track, so the sampled track is the value.
+    private static readonly FloatKeyframeTrack StarBrightness = FloatKeyframeTrack.Build(
+    [
+        new FloatKeyframe(92, 0.037f), new FloatKeyframe(627, 0f), new FloatKeyframe(11373, 0f),
+        new FloatKeyframe(11732, 0.016f), new FloatKeyframe(11959, 0.044f), new FloatKeyframe(12399, 0.143f),
+        new FloatKeyframe(12729, 0.258f), new FloatKeyframe(13228, 0.5f), new FloatKeyframe(22772, 0.5f),
+        new FloatKeyframe(23032, 0.364f), new FloatKeyframe(23356, 0.225f), new FloatKeyframe(23758, 0.101f)
+    ], static x => x, Period);
+
+    // SKY_LIGHT_FACTOR: default base 1.0 with FloatModifier.MULTIPLY track (730/11270 = 1.0, 13140/22860 = 0.24).
+    private static readonly FloatKeyframeTrack SkyLightFactorTrack = FloatKeyframeTrack.Build(
+    [
+        new FloatKeyframe(730, 1f), new FloatKeyframe(11270, 1f), new FloatKeyframe(13140, 0.24f), new FloatKeyframe(22860, 0.24f)
+    ], static x => x, Period);
+
+    public static float StarBrightnessAt(int dayTimeTicks) => StarBrightness.Sample(dayTimeTicks);
+
+    public static float SkyLightFactorAt(int dayTimeTicks) => SkyLightFactorTrack.Sample(dayTimeTicks);
+
+    /// <summary>Moon phase index 0..7 from the moon timeline (period 24000*8, one phase per 24000 ticks).</summary>
+    public static int MoonPhaseIndex(long totalTicks)
+    {
+        const int moonPeriod = Period * 8;
+        var ticks = ((totalTicks % moonPeriod) + moonPeriod) % moonPeriod;
+        return (int)(ticks / Period);
+    }
 }
 
 /// <summary>Overworld day environment tracks from Timelines.java: sun/moon/star angles (degrees).</summary>

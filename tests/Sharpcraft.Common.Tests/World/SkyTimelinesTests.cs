@@ -48,4 +48,26 @@ public sealed class SkyTimelinesTests
         Assert.Equal(360f, SkyTimelines.MoonAngleDegrees(18000), 3);
         Assert.Equal(180f, SkyTimelines.MoonAngleDegrees(6000), 3);
     }
+
+    [Fact]
+    public void StarBrightnessFollowsItsTrack()
+    {
+        Assert.Equal(0f, SkyAttributeTracks.StarBrightnessAt(6000), 3);   // day: 0
+        Assert.Equal(0.5f, SkyAttributeTracks.StarBrightnessAt(18000), 3); // midnight plateau: 0.5
+    }
+
+    [Fact]
+    public void SkyLightFactorIsDayOneAndNightPointTwoFour()
+    {
+        Assert.Equal(1f, SkyAttributeTracks.SkyLightFactorAt(6000), 3);
+        Assert.Equal(0.24f, SkyAttributeTracks.SkyLightFactorAt(18000), 3);
+    }
+
+    [Fact]
+    public void MoonPhaseIndexAdvancesEveryFullDay()
+    {
+        Assert.Equal(0, SkyAttributeTracks.MoonPhaseIndex(0));
+        Assert.Equal(3, SkyAttributeTracks.MoonPhaseIndex((24000L * 3) + 5));
+        Assert.Equal(0, SkyAttributeTracks.MoonPhaseIndex(24000L * 8)); // wraps
+    }
 }
