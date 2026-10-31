@@ -871,47 +871,57 @@ public static class ChunkMesher
                             sideSprite);
                     }
 
-                    var topY = lowY + selfHeight;
+                    // Side faces use the same corner heights as the top face so the rim is continuous (flat selfHeight here
+                    // left a step/gap between the side top edge and the corner-height top face). Corner assignment and the
+                    // +/-0.001 inset on the normal axis follow the reference FluidRenderer.
+                    var c00 = lowY + Corner(0, 0);
+                    var c01 = lowY + Corner(0, 1);
+                    var c10 = lowY + Corner(1, 0);
+                    var c11 = lowY + Corner(1, 1);
+                    var nz = fz + epsilon;
+                    var sz = fz + 1f - epsilon;
+                    var wx = fx + epsilon;
+                    var ex = fx + 1f - epsilon;
 
-                    // -Z
+                    // -Z (z = bz): corners (0,0) and (1,0)
                     if (!IsWater(bx, by, bz - 1) && !IsSolid(bx, by, bz - 1))
                     {
                         var colour = Face(0.8f);
                         translucent.AppendQuad(
-                            (fx, topY, fz), (fx + 1f, topY, fz), (fx + 1f, lowY, fz), (fx, lowY, fz),
+                            (fx, c00, nz), (fx + 1f, c10, nz), (fx + 1f, lowY, nz), (fx, lowY, nz),
                             colour, colour, colour, colour,
                             (0f, 0f), (1f, 0f), (1f, 1f), (0f, 1f),
                             sideSprite);
                     }
 
-                    // +Z
+                    // +Z (z = bz + 1): corners (1,1) and (0,1)
                     if (!IsWater(bx, by, bz + 1) && !IsSolid(bx, by, bz + 1))
                     {
                         var colour = Face(0.8f);
                         translucent.AppendQuad(
-                            (fx + 1f, topY, fz + 1f), (fx, topY, fz + 1f), (fx, lowY, fz + 1f), (fx + 1f, lowY, fz + 1f),
+                            (fx + 1f, c11, sz), (fx, c01, sz), (fx, lowY, sz), (fx + 1f, lowY, sz),
                             colour, colour, colour, colour,
                             (0f, 0f), (1f, 0f), (1f, 1f), (0f, 1f),
                             sideSprite);
                     }
 
-                    // -X
+                    // -X (x = bx): corners (0,1) and (0,0)
                     if (!IsWater(bx - 1, by, bz) && !IsSolid(bx - 1, by, bz))
                     {
                         var colour = Face(0.6f);
                         translucent.AppendQuad(
-                            (fx, topY, fz + 1f), (fx, topY, fz), (fx, lowY, fz), (fx, lowY, fz + 1f),
+                            (wx, c01, fz + 1f), (wx, c00, fz), (wx, lowY, fz), (wx, lowY, fz + 1f),
                             colour, colour, colour, colour,
                             (0f, 0f), (1f, 0f), (1f, 1f), (0f, 1f),
                             sideSprite);
                     }
 
-                    // +X
+                    // +X (x = bx + 1): corners (1,0) and (1,1)
                     if (!IsWater(bx + 1, by, bz) && !IsSolid(bx + 1, by, bz))
                     {
                         var colour = Face(0.6f);
                         translucent.AppendQuad(
-                            (fx + 1f, topY, fz), (fx + 1f, topY, fz + 1f), (fx + 1f, lowY, fz + 1f), (fx + 1f, lowY, fz),
+                            (ex, c10, fz), (ex, c11, fz + 1f), (ex, lowY, fz + 1f), (ex, lowY, fz),
                             colour, colour, colour, colour,
                             (0f, 0f), (1f, 0f), (1f, 1f), (0f, 1f),
                             sideSprite);
