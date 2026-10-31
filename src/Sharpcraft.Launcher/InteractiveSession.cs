@@ -1232,6 +1232,12 @@ internal sealed class InteractiveSession
 
                     break;
 
+                // A death notice. The reference waits for the player to click respawn on the death screen; there is no
+                // death screen yet, so the respawn request goes out straight away. Recorded as a deviation in STATE.
+                case PacketIds.PlayClientbound.PlayerCombatKill:
+                    _live.Send(PlayPackets.BuildClientCommand(0));
+                    break;
+
                 // Block entity updates carry the position, the type and a fresh NBT tag. Decoding them keeps the packet
                 // stream honest; nothing consumes the tag until block entity rendering exists.
                 case PacketIds.PlayClientbound.BlockEntityData:

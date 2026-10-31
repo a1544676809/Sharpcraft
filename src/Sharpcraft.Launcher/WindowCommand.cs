@@ -630,7 +630,7 @@ internal static class WindowCommand
     /// <summary>A collected world together with the connection it was collected over.</summary>
     /// <param name="World">The world holding the received chunks.</param>
     /// <param name="Live">Session that owns the already joined connection.</param>
-    internal readonly record struct PreparedWorld(ClientWorld World, LivePlaySession Live);
+    internal readonly record struct PreparedWorld(ClientWorld World, LivePlaySession? Live);
 
     internal static async Task<PreparedWorld> ServerWorldAsync(
         string address,
@@ -712,7 +712,12 @@ internal static class WindowCommand
                 // for a while. Open the window on an empty world and let the live session stream it in.
                 Console.WriteLine("no chunks preloaded yet; opening on an empty world and streaming as they arrive");
                 var fallback = stats.JoinGame is { } joined ? layout(joined.DimensionTypeId) : (SectionCount: 24, MinSectionY: -4);
-    world ??= new ClientWorld(fallback.MinSectionY, fallback.SectionCount);
+                world ??= new ClientWorld(fallback.MinSectionY, fallback.SectionCount);
+
+                // A connection whose preload saw no chunks is not worth reusing: open a fresh session so the join runs
+                // from the start instead of inheriting a half finished one.
+                connection.Dispose();
+                return new PreparedWorld(world, null);
             }
             // Hand the joined connection to the session instead of dropping it and logging in again. Joining
             // twice made startup slower and showed a spurious join and leave to everyone else on the server.

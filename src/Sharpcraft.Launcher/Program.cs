@@ -149,7 +149,7 @@ internal static class Program
                 .ServerWorldAsync(address, http, collectSeconds, cancellation.Token)
                 .ConfigureAwait(false);
             world = preparedWorld.World;
-            preparedWorld.Live.Dispose();
+            preparedWorld.Live?.Dispose();
             Console.WriteLine($"world: {world.LoadedChunkCount} chunks, spawn will come from the teleport");
         }
         catch (Exception exception) when (exception is InvalidOperationException or IOException)

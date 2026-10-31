@@ -57,6 +57,18 @@ public static class PlayPackets
         return buffer[..writer.Position].ToArray();
     }
 
+    /// <summary>Asks the server to respawn the local player.</summary>
+    /// <remarks>The reference sends this when the player clicks respawn on the death screen; there is no death screen yet,
+    /// so the client sends it as soon as the death notice arrives (recorded as a deviation in docs/STATE.md).</remarks>
+    public static byte[] BuildClientCommand(int action)
+    {
+        var buffer = new byte[6];
+        var writer = new PayloadWriter(buffer);
+        writer.WriteVarInt(PacketIds.PlayServerbound.ClientCommand);
+        writer.WriteVarInt(action);
+        return buffer[..writer.Position].ToArray();
+    }
+
     /// <summary>Decodes the JoinGame header including the spawn info prefix.</summary>
     public static DecodeStatus TryReadJoinGame(ReadOnlySpan<byte> body, out JoinGameInfo info)
     {

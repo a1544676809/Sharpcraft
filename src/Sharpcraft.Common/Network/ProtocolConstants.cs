@@ -131,6 +131,10 @@ public static class PacketIds
         /// <summary>A command, sent as one line with its leading slash.</summary>
         public const int ChatCommand = 7;
 
+        /// <summary>Client command: the only action is performing a respawn after death.</summary>
+        /// <remarks>Reference registration dump: play serverbound 12, body is the action as a varint.</remarks>
+        public const int ClientCommand = 12;
+
         /// <summary>
         /// End of a client tick. The server resets its per-tick movement guards here, so a client that
         /// never sends it is disconnected on its second position packet.
@@ -181,6 +185,14 @@ public static class PacketIds
     /// <summary>Server to client, <see cref="ConnectionState.Play"/> (only used ids listed).</summary>
     public static class PlayClientbound
     {
+        /// <summary>Health and food update for the local player.</summary>
+        /// <remarks>Reference registration dump: play clientbound 106.</remarks>
+        public const int SetHealth = 106;
+
+        /// <summary>Death notice: the player id and the message shown on the death screen.</summary>
+        /// <remarks>Reference registration dump: play clientbound 69.</remarks>
+        public const int PlayerCombatKill = 69;
+
         /// <summary>Update for a single block entity: position, type and its NBT tag.</summary>
         /// <remarks>Reference registration dump: play clientbound 6.</remarks>
         public const int BlockEntityData = 6;
