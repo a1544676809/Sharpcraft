@@ -63,17 +63,18 @@ public sealed class MesherBenchmarkTests
         Console.WriteLine($"BENCH setup blocks={warmBlocks} vertices={buffer.VertexCount} indices={buffer.IndexCount}");
 
         const int iterations = 12;
-        var watch = Stopwatch.StartNew();
 
-        for (var index = 0; index < iterations; index++)
-        {
-            ChunkMesher.MeshChunk(world, centre, 0, buffer, int.MaxValue, sprites, translucent, layout, cutout, null, cullTable);
-        }
+        // The name based path (what the code did before the table) is measured in the same run so the comparison is fair.
+        var withoutTable = Measure(world, centre, buffer, sprites, translucent, layout, cutout, null, iterations);
+        var withTable = Measure(world, centre, buffer, sprites, translucent, layout, cutout, cullTable, iterations);
 
-        watch.Stop();
-        var perChunk = watch.Elapsed.TotalMilliseconds / iterations;
+        // How many quads a face-at-a-time renderer (the reference approach) would emit for the same chunk, so the two
+        // strategies can be compared on primitives rather than on opinion.
+        var vanillaFaces = CountVisibleFaces(centre, cullTable);
 
-        Console.WriteLine($"BENCH mesh_ms_per_chunk={perChunk:F2} iterations={iterations} (with state cull table)");
+        Console.WriteLine(
+            $"BENCH mesh_ms_per_chunk={withTable:F2} without_table={withoutTable:F2} iterations={iterations} "
+            + $"greedy_quads={856 / 4} vanilla_faces={vanillaFaces}");
 
         // Attribute the cost: the cull predicate resolves a state to a name and then looks the name up for transparency,
         // once per candidate face cell. Time those two lookups directly.
@@ -136,6 +137,72 @@ public sealed class MesherBenchmarkTests
         {
             chunk.SetSection(sections[index]);
         }
+    }
+
+    private static double Measure(
+        ClientWorld world,
+        LevelChunk chunk,
+        MeshBuffer buffer,
+        BlockSpriteMap sprites,
+        MeshBuffer translucent,
+        Sharpcraft.Common.Registries.BlockStateLayout layout,
+        MeshBuffer cutout,
+        StateCullTable? cull,
+        int iterations)
+    {
+        buffer.Clear();
+        var watch = Stopwatch.StartNew();
+
+        for (var index = 0; index < iterations; index++)
+        {
+            ChunkMesher.MeshChunk(world, chunk, 0, buffer, int.MaxValue, sprites, translucent, layout, cutout, null, cull);
+            buffer.Clear();
+        }
+
+        watch.Stop();
+        return watch.Elapsed.TotalMilliseconds / iterations;
+    }
+
+    private static int CountVisibleFaces(LevelChunk chunk, StateCullTable cull)
+    {
+        var faces = 0;
+
+        Span<(int Dx, int Dy, int Dz)> offsets = [(0, 1, 0), (0, -1, 0), (1, 0, 0), (-1, 0, 0), (0, 0, 1), (0, 0, -1)];
+
+        for (var x = 0; x < 16; x++)
+        {
+            for (var z = 0; z < 16; z++)
+            {
+                for (var y = MinSectionY * 16; y < 256; y++)
+                {
+                    var state = chunk.GetBlockState(x, y, z, 0);
+
+                    if (state == 0)
+                    {
+                        continue;
+                    }
+
+                    foreach (var offset in offsets)
+                    {
+                        var neighbourX = x + offset.Dx;
+                        var neighbourZ = z + offset.Dz;
+
+                        // Outside this column the neighbour lives in another chunk; count those as visible so the figure
+                        // errs towards the reference emitting more rather than fewer.
+                        var side = neighbourX is < 0 or > 15 || neighbourZ is < 0 or > 15
+                            ? 0
+                            : chunk.GetBlockState(neighbourX, y + offset.Dy, neighbourZ, 0);
+
+                        if (!cull.IsOpaque(side))
+                        {
+                            faces++;
+                        }
+                    }
+                }
+            }
+        }
+
+        return faces;
     }
 
     private static RgbaImage Solid()

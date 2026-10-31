@@ -40,9 +40,12 @@ public sealed class StateCullTable
             var entry = blocks[family];
             var isLeaves = entry.Id.Path.EndsWith("_leaves", StringComparison.Ordinal);
 
-            var isOpaque = true;
+            // Air is not opaque: it has no model, so its sprite resolves to the missing one and would otherwise count as
+            // solid, which is wrong for the face-culling question.
+            var isAir = entry.Id.Path.EndsWith("air", StringComparison.Ordinal);
+            var isOpaque = !isAir;
 
-            if (sprites is not null)
+            if (sprites is not null && !isAir)
             {
                 var transparency = sprites.TransparencyOf(entry.Id);
                 isOpaque = !transparency.HasTransparent && !transparency.HasTranslucent;

@@ -1103,3 +1103,20 @@ send  60.. : -704.50 → -743.21 → …                ← 之后不再被纠�
   可见性由 `Block.shouldRenderFace`（`getFaceOcclusionShape == Shapes.block()` 快速剔除 + `skipRendering`）判定。
   ⇒ 我们的 greedy 合并产出**更少的四边形/顶点**（GPU 侧更省），代价是每格 CPU 开销更高；现在已从 92ms 降到 23.65ms，
   但仍是 2-3 倍于原版的单区块量级（原版每区块数毫秒），剩余瓶颈 = greedy 主循环（约 83%）。
+
+## 2026-10-31 第 37 轮：与原版实现的对比（同一区块，实测）
+
+基准：`MesherBenchmarkTests`（稠密地形区块，32,727 实心方块，同一进程内先测"无表"再测"有表"）：
+
+| 指标 | 无预分类表 | 有预分类表 | 原版（face-at-a-time）|
+| --- | --- | --- | --- |
+| 单区块耗时 | **93.98 ms** | **21.74 ms**（4.3×）| 数毫秒量级（不合并，逐面发射）|
+| 图元数量 | — | **214 个四边形** | **8,814 个面** |
+
+- **我们的 greedy 合并产出比原版少 41 倍图元**（214 vs 8,814）⇒ GPU/带宽侧明显更省，这是**优于原版的地方**。
+- 代价是 CPU 每区块更重：现在 21.74 ms，仍高于原版数毫秒；**剩余瓶颈 = greedy 主循环（约 76 ms 中的大部分）**。
+- 原版依据（读代码）：`SectionCompiler` 逐方块、`RenderShape.MODEL` 逐可见面发射，**无合并**；
+  可见性 `Block.shouldRenderFace`：`getFaceOcclusionShape(dir.getOpposite()) == Shapes.block()` 快速剔除，再 `skipRendering`。
+  我们的等价判定改为**按 state 预计算的数组**（不透明/树叶/同家族），语义与 `skipRendering` 家族规则一致（树叶留内面）。
+- 顺带修正：`StateCullTable` 把 `*air` 判为不透明（air 无模型→缺失 sprite→误判为实心）；虽 `TryDescribe` 已先按 `airState` 过滤，
+  仍修正以免误用。全量 7 套 1107 用例通过；端到端客户端滞后 **11.4s → 3.0~3.3s**（目标 ≤2s，下一步攻克 greedy 循环）。
