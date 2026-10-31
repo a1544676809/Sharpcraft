@@ -337,9 +337,15 @@ public static class WindowedRenderer
         // With per-chunk geometry the world is drawn from an arena: a chunk that arrives writes only its own
         // bytes, instead of the whole world being recomposed and re-uploaded every frame
         // (docs/specs/network/play-movement.md 7.25).
+        using var culler = new ChunkCuller(device, device.Queue, 8192);
         var arena = geometryUpdates is null
             ? null
             : new ChunkGeometryArena(device, expectedChunks: expectedChunks);
+
+        if (arena is not null)
+        {
+            arena.Culler = culler;
+        }
 
         // Geometry that is rebuilt every frame, such as placeholder entity boxes. It gets its own small pair of
         // buffers so a per frame rewrite never touches the world arena.
@@ -814,7 +820,29 @@ public static class WindowedRenderer
             }
 
             using var view = acquired.Texture.CreateView();
+            // The camera is sampled once per frame, before the encoder, because the cull pass needs the view projection
+            // and a render pass cannot be interrupted to record compute.
+            var cameraStarted = System.Diagnostics.Stopwatch.GetTimestamp();
+            var (eye, target) = cameraPerFrame is null
+                ? (request.CameraPosition, request.CameraTarget)
+                : cameraPerFrame(window);
+
             var encoder = device.CreateCommandEncoder();
+            var gpuCulled = false;
+
+            if (arena is not null && culler.Available && !disableCulling)
+            {
+                var viewProjectionForCull = CameraMath.BuildViewProjection(
+                    eye,
+                    target,
+                    request.FieldOfViewDegrees,
+                    (int)frameWidth,
+                    (int)frameHeight);
+
+                FrustumPlanes.Extract(viewProjectionForCull, frustumPlanes);
+                culler.Dispatch(encoder, frustumPlanes, arena.ChunkCount);
+                gpuCulled = true;
+            }
             var pass = encoder.BeginRenderPass(
             [
                 new ColorAttachment
@@ -833,10 +861,6 @@ public static class WindowedRenderer
 
             pass.SetPipeline(pipeline);
             // Rewriting 64 bytes is the whole cost of moving the camera; the staging buffers are reused.
-            var cameraStarted = System.Diagnostics.Stopwatch.GetTimestamp();
-            var (eye, target) = cameraPerFrame is null
-                ? (request.CameraPosition, request.CameraTarget)
-                : cameraPerFrame(window);
             var cameraMs = (System.Diagnostics.Stopwatch.GetTimestamp() - cameraStarted) * 1000d
                 / System.Diagnostics.Stopwatch.Frequency;
             cameraTotalMs += cameraMs;
@@ -869,7 +893,11 @@ public static class WindowedRenderer
                     (int)frameWidth,
                     (int)frameHeight);
 
-                if (disableCulling)
+                if (gpuCulled)
+                {
+                    arena.DrawWithCuller(pass);
+                }
+                else if (disableCulling)
                 {
                     arena.Draw(pass);
                 }

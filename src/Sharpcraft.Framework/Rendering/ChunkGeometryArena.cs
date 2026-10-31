@@ -188,6 +188,9 @@ public sealed class ChunkGeometryArena : IDisposable
         _slices[chunkKey] = slice;
     }
 
+    /// <summary>Optional GPU culler whose argument buffer drives the draws.</summary>
+    public ChunkCuller? Culler { get; set; }
+
     /// <summary>Chunks the last culled draw skipped.</summary>
     public int CulledLastFrame { get; private set; }
 
@@ -227,6 +230,26 @@ public sealed class ChunkGeometryArena : IDisposable
             }
 
             pass.DrawIndexedIndirect(_drawArgs, (ulong)(slice.Slot * DrawArgBytes));
+        }
+    }
+
+    /// <summary>Draws every resident chunk through the culler's argument buffer.</summary>
+    /// <param name="pass">Render pass to record into.</param>
+    /// <remarks>The cull pass has already zeroed the index count of the invisible chunks.</remarks>
+    public void DrawWithCuller(RenderPassEncoder pass)
+    {
+        if (_slices.Count == 0 || Culler is not { Available: true } culler || culler.Args is not { } arguments)
+        {
+            Draw(pass);
+            return;
+        }
+
+        pass.SetVertexBuffer(0, _vertex, 0, _vertexCapacity);
+        pass.SetIndexBuffer(_index, WGPUIndexFormat.Uint32, 0, _indexCapacity);
+
+        foreach (var slice in _slices.Values)
+        {
+            pass.DrawIndexedIndirect(arguments, (ulong)(slice.Slot * DrawArgBytes));
         }
     }
 
@@ -388,6 +411,13 @@ public sealed class ChunkGeometryArena : IDisposable
         BitConverter.TryWriteBytes(record[12..], (int)(slice.VertexOffset / (ulong)_bytesPerVertex));
         BitConverter.TryWriteBytes(record[16..], 0u);
         _queue.WriteBuffer(_drawArgs, (ulong)(slice.Slot * DrawArgBytes), record);
+        Culler?.WriteSlot(
+            slice.Slot,
+            slice.Minimum,
+            slice.Maximum,
+            slice.IndexCount,
+            (uint)(slice.IndexOffset / sizeof(uint)),
+            (int)(slice.VertexOffset / (ulong)_bytesPerVertex));
     }
 
     /// <summary>Where one chunk's geometry lives in the arena.</summary>
