@@ -614,16 +614,15 @@ public static class ChunkMesher
             ? ((byte)0, (byte)0)
             : ((byte)(skySum / samples), (byte)(blockSum / samples));
 
-        var shade = 0f;
-
-        for (var index = 0; index < 4; index++)
-        {
-            shade += ShadeBrightness(neighbourhood.GetBlockState(xs[index], ys[index], zs[index], 0), sprites, layout);
-        }
-
-        // Ambient occlusion is the average shade brightness of the four cells meeting at the corner, matching the
-        // reference: a solid neighbour contributes 0.2 and air/transparent 1.0, so the vertex levels are 1.0/0.8/0.6/0.4.
-        var occlusion = ambientOcclusion ? shade * 0.25f : 1f;
+        // Ambient occlusion: average shade brightness of the four cells that share this vertex on the face's outer side.
+        // A full solid cell contributes 0.2, anything else 1.0, so an open corner is 1.0 and a nook drops toward 0.2.
+        var occlusion = ambientOcclusion
+            ? AmbientOcclusion(
+                Occludes(neighbourhood.GetBlockState(xs[0], ys[0], zs[0], 0), sprites, layout),
+                Occludes(neighbourhood.GetBlockState(xs[1], ys[1], zs[1], 0), sprites, layout),
+                Occludes(neighbourhood.GetBlockState(xs[2], ys[2], zs[2], 0), sprites, layout),
+                Occludes(neighbourhood.GetBlockState(xs[3], ys[3], zs[3], 0), sprites, layout))
+            : 1f;
 
         // Vanilla lightmap multiplier (linear RGB) from the averaged light, times the directional shade and AO. The
         // terrain shader decodes the texel, multiplies by this, and re-encodes (docs/specs/render/lighting.md 3-5).
@@ -633,12 +632,23 @@ public static class ChunkMesher
         return (red * lightmap.X * scalar, green * lightmap.Y * scalar, blue * lightmap.Z * scalar);
     }
 
-    /// <summary>Shade brightness a cell contributes to a neighbouring vertex: 0.2 when solid, 1.0 otherwise.</summary>
-    private static float ShadeBrightness(int state, BlockSpriteMap? sprites, BlockStateLayout? layout) =>
-        Occludes(state, sprites, layout) ? 0.2f : 1f;
+    /// <summary>
+    /// Ambient-occlusion coefficient for one vertex: the average of the four cells that share it, a full solid cell
+    /// counting as 0.2 and anything else as 1.0. Open = 1.0, one solid neighbour = 0.8, a fully enclosed nook = 0.2.
+    /// </summary>
+    public static float AmbientOcclusion(bool center, bool sideA, bool sideB, bool diagonal) =>
+        ((center ? 0.2f : 1f) + (sideA ? 0.2f : 1f) + (sideB ? 0.2f : 1f) + (diagonal ? 0.2f : 1f)) * 0.25f;
 
     private static bool Occludes(int state, BlockSpriteMap? sprites, BlockStateLayout? layout)
     {
+        // Air never occludes. State 0 is the air state throughout this client (every Mesh/MeshChunk call passes airState 0),
+        // and without this guard an air cell the layout could not resolve fell through to "opaque", collapsing the 4-cell AO
+        // average to its 0.2 floor on almost every vertex - which darkened the whole world and is why AO-off looked right.
+        if (state == 0)
+        {
+            return false;
+        }
+
         if (sprites is null || layout?.BlockAt(state) is not { } block)
         {
             // Without an atlas or a layout the alpha cannot be read, so treat it as opaque, which is what the caller that

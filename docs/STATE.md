@@ -1841,3 +1841,6 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 新增宿主开关 `MC_NO_AO`（关 AO）用于 A/B；AO 通过 Mesh/MeshChunk 显式传参，游戏层不读环境变量。
 
 - AO 实机对比远比原版暗 → 游戏**默认关闭 AO**（`MC_AO=1` 可开）；AO 强度校准列为待办。全量 1137 通过、门禁 ok。
+
+### AO 真正根因修复：空气被当成遮挡物
+`Occludes` 对空气(state 0)走"无布局→不透明"分支 → AO 4 格平均塌到 0.2 下限 → 全世界发暗；关 AO 就正常。修复：`Occludes` 对空气短路为不遮挡。AO 抽成纯函数 `ChunkMesher.AmbientOcclusion`（4 格 0.2/1.0 平均），新增 `AmbientOcclusionTests`（含孤立方块顶面应全亮的集成测试）。**AO 恢复默认开启**，`MC_NO_AO=1` 可关。全量 1141 通过、门禁 ok。仍缺原版拐角柔化（待校准）。
