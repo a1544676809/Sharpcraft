@@ -1526,3 +1526,19 @@ culler 的 `slots` 要按层各自维护，避免再犯 A3b 那次"按在册数�
   `MC_CULL_DISABLE=1` → 回落 A3b 视锥剔除。建议先做成**默认关闭的宿主选项（如 `MC_OCCLUSION=1`）**，
   用同机位截图与"不剔除"对比像素差，达标后再默认开启。
 - 预期：视距大、地形遮挡多时才有明显收益；当前 328–657 区块、960×540 下预估 <0.5 ms，需实测确认是否值得默认开。
+
+## 2026-10-31 冰面问题的原版对照
+
+原版事实（`ref://mc-26.3-analysis/src`）：
+- `Blocks.ICE`：`BlockBehaviour.Properties.of()...noOcclusion()` —— 冰**不遮挡**，相邻方块的面向冰的面仍然绘制。
+- `ChunkSectionLayer.TRANSLUCENT` 用 `RenderPipelines.TRANSLUCENT_TERRAIN`（`TERRAIN_SNIPPET` +
+  `BlendFunction.TRANSLUCENT` + `ALPHA_CUTOUT 0.1` + `DepthStencilState.DEFAULT` 即**深度写入开**）。
+  ⇒ 半透明**用纹理自身 alpha**、只剔除 alpha<0.1 的像素、写深度、按区块从远到近。
+- 26.3 另有 **OIT 路径**（`OIT_ALPHA_ONLY`/`OIT_DEPTH_BOUNDS`/`OIT_TRANSMITTANCE`，深度比较 `GREATER_THAN_OR_EQUAL` 且不写），
+  属于更高级的透明方案，暂不引入。
+
+我们与之一致的差距已修：`fs_translucent` 原来输出**固定 alpha 0.7**（注释写着"water 占位"），
+现改为 **使用纹理 alpha + `discard < 0.1`**（对齐 `ALPHA_CUTOUT 0.1`）。
+
+**尚未解释的现象**：冰原截图里仍有**成片黑色方块**；同机位关掉剔除（`MC_CULL_DISABLE=1`）截图**完全一致**
+⇒ **不是剔除问题**，问题在光照/几何/采样路径，下一步需要针对"黑色面"定位（怀疑是这些面的光照被算成 0）。

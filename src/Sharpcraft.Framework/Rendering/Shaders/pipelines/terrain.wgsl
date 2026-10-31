@@ -83,10 +83,19 @@ fn fs_translucent(input : VertexOutput) -> @location(0) vec4<f32> {
     let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
     let sampled = textureSample(atlasTexture, atlasSampler, atlasUv);
-    let base = vec4<f32>(sampled.rgb * input.colour, 1.0);
+
+    // The reference keeps the texture's own alpha for translucent terrain and only cuts out nearly invisible texels
+    // (ALPHA_CUTOUT 0.1), so ice and stained glass keep their tint. A flat placeholder alpha made every translucent
+    // block look the same, which is what made ice read wrong.
+    if (sampled.a < 0.1)
+    {
+        discard;
+    }
+
+    let base = vec4<f32>(sampled.rgb * input.colour, sampled.a);
     let span = max(fog.range.y - fog.range.x, 0.001);
     let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
-    return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogged), 0.7);
+    return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogged), base.a);
 }
 
 // Cutout pass: identical colour, but texels below half alpha are discarded instead of blended, which is what leaves and
