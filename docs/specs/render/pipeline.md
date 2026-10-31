@@ -336,3 +336,7 @@ P3 之前不谈包；但 §3 的 pass 划分必须**现在就按"可命名目标
   现有 `window` 命令写出的 PNG 来自**离屏路径**（仍是旧混合管线，未改），不能代表窗口 OIT 结果。
 - 未做：原版 depth-bounds + transmittance OIT 复刻，以及 `MC_TRANSPARENCY=weighted|reference` 切换（后续）。
 
+**结论变更（2026-10-31）**：上文的**加权混合 OIT 观感实测明显更差**，已**封存**（git 历史保留），不再编译；
+窗口透明改为**唯一采用原版 depth-bounds + 小波透射率 OIT**（见 `docs/specs/render/oit-reference.md`）。`MC_TRANSPARENCY`
+开关随之移除；此节的加权规格仅作封存记录。
+

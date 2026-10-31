@@ -16,9 +16,8 @@ public static class ShaderPipelines
     /// <summary>Every pipeline with its expected entries and bindings.</summary>
     public static IReadOnlyList<ShaderDescriptor> All { get; } =
     [
-        new ShaderDescriptor("terrain", "terrain.wgsl", ["vs_main", "fs_main", "fs_translucent_oit"], [0, 1, 2, 3]),
+        new ShaderDescriptor("terrain", "terrain.wgsl", ["vs_main", "fs_main", "fs_translucent", "fs_cutout"], [0, 1, 2, 3]),
         new ShaderDescriptor("sky", "sky.wgsl", ["vs_sky", "fs_sky"], []),
-        new ShaderDescriptor("oit_resolve", "oit_resolve.wgsl", ["vs_fullscreen", "fs_oit_resolve"], [0, 1, 2]),
         new ShaderDescriptor("oit_reference", "oit_reference.wgsl", ["vs_main", "fs_depth_bounds", "fs_transmittance", "fs_accumulate"], [0, 1, 2, 3]),
         new ShaderDescriptor("oit_depth_bounds_cull", "oit_depth_bounds_cull.wgsl", ["vs_fullscreen", "fs_cull"], [0]),
         new ShaderDescriptor("oit_composite", "oit_composite.wgsl", ["vs_fullscreen", "fs_composite"], [0, 1, 2, 3]),

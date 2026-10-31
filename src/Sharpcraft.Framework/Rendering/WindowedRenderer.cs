@@ -145,44 +145,7 @@ public static class WindowedRenderer
             MaxAnisotropy = 1
         });
 
-        // The resolve pass samples the two order independent targets, so it needs linear filtering at the texel centres
-        // without bleeding into a neighbour; the atlas sampler is nearest for crisp block textures and cannot be reused.
-        using var oitSampler = device.CreateSampler(new SamplerDescriptor
-        {
-            AddressModeU = WGPUAddressMode.ClampToEdge,
-            AddressModeV = WGPUAddressMode.ClampToEdge,
-            AddressModeW = WGPUAddressMode.ClampToEdge,
-            MagFilter = WGPUFilterMode.Linear,
-            MinFilter = WGPUFilterMode.Linear,
-            MipmapFilter = WGPUMipmapFilterMode.Nearest,
-            LodMinClamp = 0f,
-            LodMaxClamp = 1f,
-            MaxAnisotropy = 1
-        });
-
         Shaders.ShaderPipelines.EnsureValid();
-
-        // The resolve pass has a different binding shape from the terrain one (two sampled textures and one sampler, no
-        // uniforms), so it gets its own layout. Kept out of the terrain layout because the two are used by unrelated
-        // pipelines (docs/specs/render/pipeline.md 15).
-        using var oitResolveBindGroupLayout = device.CreateBindGroupLayout(
-        [
-            BindGroupLayoutEntry.Texture(
-                0,
-                ShaderStage.Fragment,
-                WGPUTextureSampleType.Float,
-                WGPUTextureViewDimension._2D,
-                false),
-            BindGroupLayoutEntry.Sampler(1, ShaderStage.Fragment, WGPUSamplerBindingType.Filtering),
-            BindGroupLayoutEntry.Texture(
-                2,
-                ShaderStage.Fragment,
-                WGPUTextureSampleType.Float,
-                WGPUTextureViewDimension._2D,
-                false)
-        ]);
-
-        using var oitResolveLayout = device.CreatePipelineLayout([oitResolveBindGroupLayout]);
 
         using var bindGroupLayout = device.CreateBindGroupLayout(
         [
@@ -242,15 +205,10 @@ public static class WindowedRenderer
         using var skyPipeline = CreateSkyPipeline(device, format);
         using var uiPipeline = UiRenderer.CreatePipeline(device, format, pipelineLayout);
         using var uiTextPipeline = UiRenderer.CreateTextPipeline(device, format, pipelineLayout);
-        // Order independent transparency: translucent terrain writes the two weighted targets instead of blending into
-        // the frame, and a full screen pass resolves them back. See CreateTranslucentOitPipeline / CreateOitResolvePipeline.
-        using var translucentOitPipeline = CreateTranslucentOitPipeline(device, pipelineLayout);
-        using var oitResolvePipeline = CreateOitResolvePipeline(device, format, oitResolveLayout);
 
-        // Reference transparency (docs/specs/render/oit-reference.md) needs a handful more layouts and up to five
-        // pipelines; they are only built when the host asks for the reference path, so the weighted default pays nothing.
-        var useReference = request.Diagnostics?.Transparency == TransparencyMode.Reference;
-
+        // Transparency is the reference depth-bounds + wavelet-transmittance OIT (docs/specs/render/oit-reference.md).
+        // The earlier weighted-blended OIT looked markedly worse in play and is shelved, not compiled; git history keeps
+        // it if it is ever wanted again.
         using var refTransmittanceLayout = CreateOitTextureLayout(device, 1);
         using var refAccumulateLayout = CreateOitTextureLayout(device, 3);
         using var refCullLayout = CreateOitTextureLayout(device, 1);
@@ -260,20 +218,11 @@ public static class WindowedRenderer
         using var refCullPipelineLayout = device.CreatePipelineLayout([refCullLayout]);
         using var refCompositePipelineLayout = device.CreatePipelineLayout([refCompositeLayout]);
 
-        RenderPipeline refDepthBoundsPipeline = default;
-        RenderPipeline refTransmittancePipeline = default;
-        RenderPipeline refAccumulatePipeline = default;
-        RenderPipeline refCullPipeline = default;
-        RenderPipeline refCompositePipeline = default;
-
-        if (useReference)
-        {
-            refDepthBoundsPipeline = CreateDepthBoundsPipeline(device, pipelineLayout);
-            refTransmittancePipeline = CreateTransmittancePipeline(device, refTransmittancePipelineLayout);
-            refAccumulatePipeline = CreateAccumulatePipeline(device, refAccumulatePipelineLayout);
-            refCullPipeline = CreateCullPipeline(device, refCullPipelineLayout);
-            refCompositePipeline = CreateCompositePipeline(device, format, refCompositePipelineLayout);
-        }
+        using var refDepthBoundsPipeline = CreateDepthBoundsPipeline(device, pipelineLayout);
+        using var refTransmittancePipeline = CreateTransmittancePipeline(device, refTransmittancePipelineLayout);
+        using var refAccumulatePipeline = CreateAccumulatePipeline(device, refAccumulatePipelineLayout);
+        using var refCullPipeline = CreateCullPipeline(device, refCullPipelineLayout);
+        using var refCompositePipeline = CreateCompositePipeline(device, format, refCompositePipelineLayout);
 
         // The interface layer needs its own transform: one uniform buffer cannot hold both the world camera and
         // the orthographic projection while a single pass reads from it.
@@ -471,17 +420,8 @@ public static class WindowedRenderer
         var depthTexture = CreateDepthTexture(device, frameWidth, frameHeight);
         var depthView = depthTexture.CreateView();
 
-        // Two full size targets hold the order independent result until the resolve pass folds it into the frame. The
-        // accumulate target carries colour times alpha in rgb (and the alpha sum in a); the reveal target carries the
-        // product of one minus alpha, so one frame of overlap resolves to a stable colour regardless of draw order.
-        var accumTexture = CreateOitTarget(device, frameWidth, frameHeight, WGPUTextureFormat.RGBA16Float);
-        var accumView = accumTexture.CreateView();
-        var revealTexture = CreateOitTarget(device, frameWidth, frameHeight, WGPUTextureFormat.R16Float);
-        var revealView = revealTexture.CreateView();
-        var oitResolveBindGroup = CreateOitResolveBindGroup(device, oitResolveBindGroupLayout, accumView, revealView, oitSampler);
-
-        // Reference transparency targets and bind groups, valid only when the reference path is active. Brew handles are
-        // structs, so they are kept as non-nullable defaults guarded by useReference rather than nullables.
+        // Reference transparency targets and bind groups. Brew handles are structs, so they are held as non-nullable
+        // defaults and rebuilt by CreateReferenceTargets on resize.
         Texture refDepthBoundsTexture = default;
         TextureView refDepthBoundsView = default;
         Texture refDepthBoundsCulledTexture = default;
@@ -549,10 +489,7 @@ public static class WindowedRenderer
             refTargetsCreated = true;
         }
 
-        if (useReference)
-        {
-            CreateReferenceTargets();
-        }
+        CreateReferenceTargets();
 
         Span<float> cameraBlock = stackalloc float[16];
         var cameraBytes = new byte[VertexLayout.CameraUniformSize];
@@ -811,21 +748,7 @@ public static class WindowedRenderer
                 depthTexture = CreateDepthTexture(device, frameWidth, frameHeight);
                 depthView = depthTexture.CreateView();
 
-                oitResolveBindGroup.Dispose();
-                accumView.Dispose();
-                accumTexture.Dispose();
-                revealView.Dispose();
-                revealTexture.Dispose();
-                accumTexture = CreateOitTarget(device, frameWidth, frameHeight, WGPUTextureFormat.RGBA16Float);
-                accumView = accumTexture.CreateView();
-                revealTexture = CreateOitTarget(device, frameWidth, frameHeight, WGPUTextureFormat.R16Float);
-                revealView = revealTexture.CreateView();
-                oitResolveBindGroup = CreateOitResolveBindGroup(device, oitResolveBindGroupLayout, accumView, revealView, oitSampler);
-
-                if (useReference)
-                {
-                    CreateReferenceTargets();
-                }
+                CreateReferenceTargets();
 
                 // The geometry is world-space and the camera travels in a uniform, so a resize needs no
                 // re-upload at all.
@@ -1187,11 +1110,9 @@ public static class WindowedRenderer
             // can run between them.
             pass.End();
 
-            if (useReference)
-            {
-                // Reference transparency (docs/specs/render/oit-reference.md): depth bounds, a culling pass, wavelet
-                // transmittance, accumulation and a composite that writes depth. The three stages redraw the same
-                // translucent geometry, so no sort is needed at all.
+            // Reference transparency (docs/specs/render/oit-reference.md): depth bounds, a culling pass, wavelet
+            // transmittance, accumulation and a composite that writes depth. The three stages redraw the same
+            // translucent geometry, so no sort is needed at all.
                 var hasRefStatic = useStaticWorld
                     && currentRequest.TranslucentVertices is { Length: > 0 }
                     && currentRequest.TranslucentIndices is { Length: > 0 };
@@ -1332,93 +1253,8 @@ public static class WindowedRenderer
                         $"cull: chunks={arena?.ChunkCount ?? 0} culled={arena?.CulledLastFrame ?? 0} "
                         + $"cutout={arenaCutout?.ChunkCount ?? 0} translucent={arenaTranslucent?.ChunkCount ?? 0} (reference oit)");
                 }
-            }
-            else
-            {
-            // Pass 2: translucent terrain writes the two weighted targets. Depth is loaded so the layer is still occluded
-            // by opaque terrain in front of it, but the blending itself is commutative, so draw order no longer matters.
-            var oitPass = encoder.BeginRenderPass(
-            [
-                new ColorAttachment
-                {
-                    View = accumView,
-                    LoadOp = WGPULoadOp.Clear,
-                    StoreOp = WGPUStoreOp.Store,
-                    ClearValue = new WGPUColor { r = 0f, g = 0f, b = 0f, a = 0f }
-                },
-                new ColorAttachment
-                {
-                    View = revealView,
-                    LoadOp = WGPULoadOp.Clear,
-                    StoreOp = WGPUStoreOp.Store,
-                    ClearValue = new WGPUColor { r = 1f, g = 1f, b = 1f, a = 1f }
-                }
-            ],
-            new DepthStencilAttachment
-            {
-                View = depthView,
-                DepthLoadOp = WGPULoadOp.Load,
-                DepthStoreOp = WGPUStoreOp.Store
-            });
-
-            if (arenaTranslucent is not null && arenaTranslucent.ChunkCount > 0)
-            {
-                oitPass.SetPipeline(translucentOitPipeline);
-                oitPass.SetBindGroup(0, bindGroup);
-                // Farthest first is kept only so the transparent chunks stream in a stable order; the resolve no longer
-                // depends on it (docs/specs/render/pipeline.md 15).
-                arenaTranslucent!.DrawFarthestFirst(oitPass, eye);
-
-                if (cullStatistics && (presented % 60) == 0)
-                {
-                    Console.WriteLine(
-                        $"cull: chunks={arena?.ChunkCount ?? 0} culled={arena?.CulledLastFrame ?? 0} "
-                        + $"cutout={arenaCutout?.ChunkCount ?? 0} translucent={arenaTranslucent?.ChunkCount ?? 0}");
-                }
-            }
-
-            if (useStaticWorld && currentRequest.TranslucentVertices is { Length: > 0 } windowTranslucentVertices &&
-                currentRequest.TranslucentIndices is { Length: > 0 } windowTranslucentIndices)
-            {
-                using var windowTranslucentVertexBuffer = device.CreateBufferInit(
-                    new BufferInitDescriptor { Usage = BufferUsage.Vertex },
-                    windowTranslucentVertices.AsSpan());
-                using var windowTranslucentIndexBuffer = device.CreateBufferInit(
-                    new BufferInitDescriptor { Usage = BufferUsage.Index },
-                    windowTranslucentIndices.AsSpan());
-
-                oitPass.SetPipeline(translucentOitPipeline);
-                oitPass.SetBindGroup(0, bindGroup);
-                oitPass.SetVertexBuffer(0, windowTranslucentVertexBuffer);
-                oitPass.SetIndexBuffer(windowTranslucentIndexBuffer, WGPUIndexFormat.Uint32);
-                oitPass.DrawIndexed((uint)windowTranslucentIndices.Length);
-            }
-
-            oitPass.End();
-
-            // Pass 3: resolve the two targets into the frame colour. It loads the colour the main pass wrote and blends
-            // the reconstructed translucent colour over it, so opaque terrain under the water stays visible.
-            var resolvePass = encoder.BeginRenderPass(
-            [
-                new ColorAttachment
-                {
-                    View = view,
-                    LoadOp = WGPULoadOp.Load,
-                    StoreOp = WGPUStoreOp.Store
-                }
-            ],
-            new DepthStencilAttachment
-            {
-                View = depthView,
-                DepthLoadOp = WGPULoadOp.Load,
-                DepthStoreOp = WGPUStoreOp.Store
-            });
-
-            resolvePass.SetPipeline(oitResolvePipeline);
-            resolvePass.SetBindGroup(0, oitResolveBindGroup);
-            resolvePass.Draw(3);
-            resolvePass.End();
-            }
+            // (The weighted-blended OIT path that used to live here was shelved for its visual quality and is no longer
+            // compiled; the reference OIT above is the only transparency path.)
 
             // Pass 4: the interface draws last, over the resolved frame, in its own pass so it never participates in the
             // world depth test or the transparency resolve.
@@ -1584,33 +1420,20 @@ public static class WindowedRenderer
         vertexBuffer.Dispose();
         depthView.Dispose();
         depthTexture.Dispose();
-        oitResolveBindGroup.Dispose();
-        accumView.Dispose();
-        accumTexture.Dispose();
-        revealView.Dispose();
-        revealTexture.Dispose();
-        if (useReference)
-        {
-            refCullBindGroup.Dispose();
-            refTransmittanceBindGroup.Dispose();
-            refAccumulateBindGroup.Dispose();
-            refCompositeBindGroup.Dispose();
-            refDepthBoundsView.Dispose();
-            refDepthBoundsTexture.Dispose();
-            refDepthBoundsCulledView.Dispose();
-            refDepthBoundsCulledTexture.Dispose();
-            refTransmittance0View.Dispose();
-            refTransmittance0Texture.Dispose();
-            refTransmittance1View.Dispose();
-            refTransmittance1Texture.Dispose();
-            refAccumulateView.Dispose();
-            refAccumulateTexture.Dispose();
-            refDepthBoundsPipeline.Dispose();
-            refTransmittancePipeline.Dispose();
-            refAccumulatePipeline.Dispose();
-            refCullPipeline.Dispose();
-            refCompositePipeline.Dispose();
-        }
+        refCullBindGroup.Dispose();
+        refTransmittanceBindGroup.Dispose();
+        refAccumulateBindGroup.Dispose();
+        refCompositeBindGroup.Dispose();
+        refDepthBoundsView.Dispose();
+        refDepthBoundsTexture.Dispose();
+        refDepthBoundsCulledView.Dispose();
+        refDepthBoundsCulledTexture.Dispose();
+        refTransmittance0View.Dispose();
+        refTransmittance0Texture.Dispose();
+        refTransmittance1View.Dispose();
+        refTransmittance1Texture.Dispose();
+        refAccumulateView.Dispose();
+        refAccumulateTexture.Dispose();
         indexBuffer.Dispose();
 
         return format;
@@ -1648,137 +1471,6 @@ public static class WindowedRenderer
             Format = format,
             Usage = TextureUsage.RenderAttachment | TextureUsage.TextureBinding
         });
-
-    /// <summary>Binds the two order independent targets and their sampler for the resolve pass.</summary>
-    private static BindGroup CreateOitResolveBindGroup(
-        Device device,
-        BindGroupLayout layout,
-        TextureView accumView,
-        TextureView revealView,
-        Sampler sampler) =>
-        device.CreateBindGroup(
-            layout,
-            [
-                BindGroupEntry.TextureView(0, accumView),
-                BindGroupEntry.Sampler(1, sampler),
-                BindGroupEntry.TextureView(2, revealView)
-            ]);
-
-    /// <summary>
-    /// The translucent order independent pipeline: the same geometry as the opaque pass, but the fragment entry point
-    /// writes colour times alpha into one target and the coverage product into the other, both additively, so triangle
-    /// order is irrelevant. Depth is tested but not written, so translucent geometry still occludes itself correctly
-    /// against opaque terrain.
-    /// </summary>
-    private static RenderPipeline CreateTranslucentOitPipeline(Device device, PipelineLayout layout)
-    {
-        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
-        {
-            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText))
-        });
-
-        return device.CreateRenderPipeline(
-            shader,
-            "vs_main"u8,
-            shader,
-            "fs_translucent_oit"u8,
-            [
-                new ColorTargetState
-                {
-                    Format = WGPUTextureFormat.RGBA16Float,
-                    WriteMask = ColorWriteMask.All,
-                    Blend = new WGPUBlendState
-                    {
-                        color = new WGPUBlendComponent
-                        {
-                            operation = WGPUBlendOperation.Add,
-                            srcFactor = WGPUBlendFactor.One,
-                            dstFactor = WGPUBlendFactor.One
-                        },
-                        alpha = new WGPUBlendComponent
-                        {
-                            operation = WGPUBlendOperation.Add,
-                            srcFactor = WGPUBlendFactor.One,
-                            dstFactor = WGPUBlendFactor.One
-                        }
-                    }
-                },
-                new ColorTargetState
-                {
-                    Format = WGPUTextureFormat.R16Float,
-                    WriteMask = ColorWriteMask.All,
-                    Blend = new WGPUBlendState
-                    {
-                        color = new WGPUBlendComponent
-                        {
-                            operation = WGPUBlendOperation.Add,
-                            srcFactor = WGPUBlendFactor.Zero,
-                            dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
-                        },
-                        alpha = new WGPUBlendComponent
-                        {
-                            operation = WGPUBlendOperation.Add,
-                            srcFactor = WGPUBlendFactor.Zero,
-                            dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
-                        }
-                    }
-                }
-            ],
-            layout: layout,
-            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
-            multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.LessEqual, write: false),
-            vertexStride: (ulong)VertexLayout.Stride,
-            vertexStepMode: WGPUVertexStepMode.Vertex,
-            vertexAttributes: VertexLayout.Attributes());
-    }
-
-    /// <summary>
-    /// The resolve pipeline: a full screen triangle that reads the two order independent targets and blends the
-    /// reconstructed translucent colour over the frame that is already there.
-    /// </summary>
-    private static RenderPipeline CreateOitResolvePipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
-    {
-        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
-        {
-            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("oit_resolve")))
-        });
-
-        return device.CreateRenderPipeline(
-            shader,
-            "vs_fullscreen"u8,
-            shader,
-            "fs_oit_resolve"u8,
-            [
-                new ColorTargetState
-                {
-                    Format = format,
-                    WriteMask = ColorWriteMask.All,
-                    Blend = new WGPUBlendState
-                    {
-                        color = new WGPUBlendComponent
-                        {
-                            operation = WGPUBlendOperation.Add,
-                            srcFactor = WGPUBlendFactor.SrcAlpha,
-                            dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
-                        },
-                        alpha = new WGPUBlendComponent
-                        {
-                            operation = WGPUBlendOperation.Add,
-                            srcFactor = WGPUBlendFactor.SrcAlpha,
-                            dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
-                        }
-                    }
-                }
-            ],
-            layout: layout,
-            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
-            multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.Always, write: false),
-            vertexStride: 0,
-            vertexStepMode: WGPUVertexStepMode.Vertex,
-            vertexAttributes: []);
-    }
 
     private static SurfaceSource ToSurfaceSource(NativeSurfaceSource source) => source.Tag switch
     {

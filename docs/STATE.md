@@ -1792,3 +1792,12 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 `BLUE_ICE` 的 `HalfTransparentBlock` 只覆盖 `skipRendering`（同类面剔除），两者渲染层都是 solid；只有 `ICE` 带
 `.noOcclusion()` 是半透明。修复：从半透明表移除二者，补 `frosted_ice`；`BlockRenderLayersTests` 增加 `packed_ice`/
 `blue_ice` 不透明与 `frosted_ice` 半透明断言。全量 1125 通过。
+
+## 2026-10-31 加权 OIT 封存，reference 成为唯一透明路径
+
+所有者目视裁决：**加权混合 OIT 观感明显更差**。处理：
+- 从工作树移除加权 OIT 的全部可编译产物：`accum`/`reveal` 目标、`translucentOitPipeline`/`oitResolvePipeline`、
+  `oit_resolve.wgsl`、`terrain.wgsl` 的 `fs_translucent_oit`、`OitResolveTests`、`TransparencyMode` 与 `MC_TRANSPARENCY` 开关。
+- 窗口透明**唯一走 reference OIT**（depth-bounds + 8 系数小波）；`CreateReferenceTargets` 变为无条件创建/重建。
+- 加权实现保留在 git 历史（`25bc36a` 等），文档标注"封存、不编译"。
+- 实测：reference-only 构建水景 540 帧 0 validation error；全量 **1122 通过**（去 3 条加权数学测试）、文档门禁 ok。

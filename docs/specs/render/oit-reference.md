@@ -3,15 +3,16 @@
 
 <!-- doc
 title: 原版 OIT 参考管线（depth-bounds + 小波透射率）
-summary: 26.3 的 OIT 三阶段行为规格，作为 reference 透明管线；含与加权 OIT 的切换
-status: 草案（待所有者确认范围后评审）
+summary: 26.3 的 OIT 三阶段行为规格，作为窗口唯一采用的透明管线
+status: 已实现（2026-10-31）
 updated: 2026-10-31
 -->
 
 # 原版 OIT 参考管线（depth-bounds + 小波透射率）
 
 > 本文只描述**原版可观测行为与数据流**，据此独立实现 WGSL；不粘贴原版实现。证据以 `ref://mc-26.3-analysis/...` 指针给出。
-> 目标：作为与《加权混合 OIT》（`pipeline.md` §15）并列的第二条透明管线，用宿主开关 `MC_TRANSPARENCY=weighted|reference` 选择，默认 weighted。
+> 目标：这是本项目窗口透明**唯一采用**的管线（原版 26.3 的 OIT）。早先的「加权混合 OIT」实测观感明显更差，
+> 已**封存**（git 历史保留），不参与编译；因此不再有 `MC_TRANSPARENCY` 开关。
 
 ## 1. 与原版的关系
 
@@ -124,12 +125,12 @@ Pass 顺序（在加权 OIT 的同等位置替换/追加）：
    这是"能靠纯逻辑量化"的核心等效性（用户方针）。
 2. **不变性**：`coverage = 1 - Π(1-α)` 与累计顺序无关；单片退化为普通 alpha。
 3. **运行时**：确定性水景（`MC_FRAME_WATER=1`）窗口跑满若干帧、**0 wgpu validation error**、p99 记录。
-4. **像素**：本环境不可截窗口，目视由所有者本机 `MC_TRANSPARENCY=reference … window` 确认。
+4. **像素**：本环境不可截窗口，目视由所有者本机 `dotnet run … window` 确认（现已是唯一透明路径）。
 
 ## 9. 风险与未决
 
 - 精度：8 系数 × RGBA16F 对多层堆叠有近似；原版接受该近似（`OIT_COEFF_COUNT=8` 是设计值）。
-- 成本：三阶段 = 半透明几何画 3 遍 + 3 个全屏 pass；只作 reference 管线，默认仍 weighted。
+- 成本：三阶段 = 半透明几何画 3 遍 + 3 个全屏 pass；这是现在唯一的透明管线（加权 OIT 已封存）。
 - 深度约定：`deviceToLinearDepth` 依赖投影矩阵项与深度范围 `[0,1]` 或 `[-1,1]`；须与我们 `CameraMath` 投影一致核对。
 - 开关落地须遵守原则 13：`MC_TRANSPARENCY` 只在宿主层解析，游戏程序集只收显式选项；失败回落 weighted。
 
