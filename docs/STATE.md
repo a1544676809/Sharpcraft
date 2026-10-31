@@ -1835,3 +1835,6 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 未做：夜晚/天气/维度 timeline 插值、夜视/Darkness/Boss、亮度滑块接入。
 ### 修复：顶点光照采样越界一格（正法线面）
 `CornerShade` 的 `corner` 已是面顶点坐标，却又加了一次法线 ⇒ +X/+Y/+Z 面多采一格（顶面读到上方方块的光）。改为 `corner + min(n,0)`。全量 1136 通过。
+### 根因修复：省略的天空光段默认 15（整体发黑 / 海平面附近反常亮）
+`LevelChunk.ApplyLight` 只为"带数据的天光段"赋值，忽略了协议语义：未下发、也不在 emptySkyMask 的段应默认 **15**。结果露天大片读 0 → 整体偏暗，只有少数带数组的地表段正常 → 海平面附近反而亮。
+修复：非空掩码且无数组的段填整段 15（共享 0xFF 数组）。新增 `ChunkLightTests.SectionsThePacketOmitsAreFullSkyUnlessMarkedEmpty`。全量 **1137 通过**、门禁 ok。行为规格见 `docs/specs/render/lighting.md` §2。

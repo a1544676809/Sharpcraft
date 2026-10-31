@@ -99,6 +99,28 @@ public sealed class ChunkLightTests
     }
 
     [Fact]
+    public void SectionsThePacketOmitsAreFullSkyUnlessMarkedEmpty()
+    {
+        var chunk = new LevelChunk(0, 0, minSectionY: 0, sectionCount: 2);
+
+        // No sky arrays at all; light section 1 is explicitly all-zero, the rest are implicit full sunlight.
+        var light = new LightData(
+            SkyMask: [],
+            BlockMask: [],
+            EmptySkyMask: [0b0000_0010],
+            EmptyBlockMask: [],
+            SkyUpdates: [],
+            BlockUpdates: []);
+
+        chunk.ApplyLight(light);
+
+        // y = 0 lands in light section 1 (marked empty); y = 16 and 32 are implicit full sunlight.
+        Assert.Equal(0, chunk.GetSkyLight(0, 0, 0));
+        Assert.Equal(15, chunk.GetSkyLight(0, 16, 0));
+        Assert.Equal(15, chunk.GetSkyLight(0, 32, 0));
+    }
+
+    [Fact]
     public void ArraysOfTheWrongSizeAreRejected()
     {
         var light = new ChunkLight(0, 1);
