@@ -56,7 +56,7 @@ public sealed class ChatTests
     {
         // The slash is what makes the line a command for the player; the reference strips it before sending, and a
         // server that receives it answers that the command is unknown.
-        var packet = PlayPackets.BuildChatCommand("time set day", 0);
+        var packet = PlayPackets.BuildChatCommand("time set day");
         var reader = new PayloadReader(packet);
 
         Assert.Equal(DecodeStatus.Success, reader.TryReadVarInt(out var id));
@@ -64,31 +64,13 @@ public sealed class ChatTests
 
         Assert.Equal(DecodeStatus.Success, reader.TryReadString(out var command));
         Assert.Equal("time set day", command);
-
-        // A truncated command packet makes the server drop the connection, so the session fields must be present.
-        Assert.Equal(DecodeStatus.Success, reader.TryReadLong(out var timestamp));
-        Assert.Equal(0, timestamp);
-        Assert.Equal(DecodeStatus.Success, reader.TryReadLong(out var salt));
-        Assert.Equal(0, salt);
-        Assert.Equal(DecodeStatus.Success, reader.TryReadVarInt(out var signatures));
-        Assert.Equal(0, signatures);
-        Assert.Equal(DecodeStatus.Success, reader.TryReadVarInt(out var lastSeen));
-        Assert.Equal(0, lastSeen);
-        Assert.Equal(DecodeStatus.Success, reader.TryReadByte(out var acknowledged0));
-        Assert.Equal(0, acknowledged0);
-        Assert.Equal(DecodeStatus.Success, reader.TryReadByte(out var acknowledged1));
-        Assert.Equal(0, acknowledged1);
-        Assert.Equal(DecodeStatus.Success, reader.TryReadByte(out var acknowledged2));
-        Assert.Equal(0, acknowledged2);
-        Assert.Equal(DecodeStatus.Success, reader.TryReadByte(out var checksum));
-        Assert.Equal(0, checksum);
         Assert.Equal(packet.Length, reader.Position);
     }
 
     [Fact]
     public void ACommandThatStillCarriesItsSlashIsRejected()
     {
-        Assert.Throws<ArgumentException>(() => PlayPackets.BuildChatCommand("/time set day", 0));
+        Assert.Throws<ArgumentException>(() => PlayPackets.BuildChatCommand("/time set day"));
     }
 
     [Fact]
@@ -97,7 +79,7 @@ public sealed class ChatTests
         var tooLong = new string('a', PlayPackets.MaxChatLength + 1);
 
         Assert.Throws<ArgumentException>(() => PlayPackets.BuildChatMessage(tooLong, 0));
-        Assert.Throws<ArgumentException>(() => PlayPackets.BuildChatCommand(string.Empty, 0));
+        Assert.Throws<ArgumentException>(() => PlayPackets.BuildChatCommand(string.Empty));
     }
 
     [Fact]
