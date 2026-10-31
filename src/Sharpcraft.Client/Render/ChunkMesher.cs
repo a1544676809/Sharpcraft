@@ -791,6 +791,13 @@ public static class ChunkMesher
                         {
                             if (sampleBlock.Path == "water")
                             {
+                                // The reference getHeight returns 1.0 when the same fluid is directly above, so a flowing
+                                // block next to a continuous column must use 1.0 here for its corner to rise and meet it.
+                                if (layout.BlockAt(nb.GetBlockState(bx + ddx, by + 1, bz + ddz, 0)) is { Path: "water" })
+                                {
+                                    return 1f;
+                                }
+
                                 var neighbour = Sharpcraft.Common.World.FluidStateCodec.FromBlockState(sample, layout);
                                 return neighbour.IsEmpty ? 0f : neighbour.OwnHeight;
                             }
