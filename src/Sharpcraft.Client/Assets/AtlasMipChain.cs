@@ -177,6 +177,53 @@ public static class AtlasMipChain
                 }
             }
 
+            // Repeat this level's edge one texel outward, matching the padding ring the stitcher leaves at level zero, so
+            // minification near a sprite border still reads the sprite.
+            for (var y = 0; y < nextHeight; y++)
+            {
+                var destinationY = originY + y;
+
+                if (destinationY >= destinationHeight)
+                {
+                    break;
+                }
+
+                var left = (((destinationY * destinationWidth) + originX) * 4);
+                var right = (((destinationY * destinationWidth) + Math.Min(originX + nextWidth - 1, destinationWidth - 1)) * 4);
+
+                if (originX > 0)
+                {
+                    Buffer.BlockCopy(destination, left, destination, left - 4, 4);
+                }
+
+                if (originX + nextWidth < destinationWidth)
+                {
+                    Buffer.BlockCopy(destination, right, destination, right + 4, 4);
+                }
+            }
+
+            if (originY > 0)
+            {
+                var rowBytes = Math.Min(nextWidth, destinationWidth - originX) * 4;
+                Buffer.BlockCopy(
+                    destination,
+                    ((originY * destinationWidth) + originX) * 4,
+                    destination,
+                    (((originY - 1) * destinationWidth) + originX) * 4,
+                    rowBytes);
+            }
+
+            if (originY + nextHeight < destinationHeight)
+            {
+                var rowBytes = Math.Min(nextWidth, destinationWidth - originX) * 4;
+                Buffer.BlockCopy(
+                    destination,
+                    (((originY + nextHeight - 1) * destinationWidth) + originX) * 4,
+                    destination,
+                    (((originY + nextHeight) * destinationWidth) + originX) * 4,
+                    rowBytes);
+            }
+
             current = next;
             currentWidth = nextWidth;
             currentHeight = nextHeight;

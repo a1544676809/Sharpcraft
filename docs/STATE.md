@@ -691,3 +691,14 @@ updated: 2026-10-29
 - 修后实测截图：**草方块顶面变绿**（这次是真的，顶面绿色、侧面仍是贴图自带的绿条），高草/植物仍偏灰。
 - **下一步具体动作**：①用同一套顶点探针对**植物**（`short_grass`）取一个 cutout 顶点，确认 tint 乘子是否进入顶点色；
   ②若没有，检查 cutout 几何走的 pass 是否拿到 tint；③再用真实 `oak_leaves.png` 夹具验收 mip 覆盖率（误差 ≤0.05）。
+
+## 2026-10-31 第 7 轮：按你定的方案加图集 padding；并修掉一个崩溃
+
+- 采样方案按你的选择执行：**图集 stitch 时每个 sprite 四周留 1 texel 边缘复制（padding）**，着色器回到**连续 UV + 硬件 LOD**。
+  mip 链每一级也把边缘复制进 padding 环，保证远处采样不越界到邻居。
+- **修掉一个真崩溃（重要）**：`SpriteAtlas.ComputeTransparency` 用了普通 `Dictionary` 作为缓存，而区块网格在 **8 个 worker 线程**上并发调用
+  ⇒ `Collection was modified`/corrupted → **device lost**，窗口"未响应"后退出。已改 `ConcurrentDictionary.GetOrAdd`。
+  （这也解释了上一轮"灰白糊成一片"和黑色大块——设备已经挂了。）
+- 复测截图：草方块顶面绿、石/土纹理正常、白/绿植物可见，但**树叶整体偏黑**、方块边缘仍有**细黑虚线**。
+- **下一步具体动作**：①量一个树叶面在屏幕上的实际颜色（截图取样）并与"灰度纹理 × 树叶 tint"预期值对比，判断是 tint 过暗还是纹理取值偏暗；
+  ②黑虚线：确认 padding 是否覆盖 mip 各级与 UV 起点（打印一个方块面的 rectMin/rectMax 与相邻 sprite 是否重叠）；③再用真实 `oak_leaves.png` 夹具验收。

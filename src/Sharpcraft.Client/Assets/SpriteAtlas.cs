@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Globalization;
+using System.Collections.Concurrent;
 using Sharpcraft.Common.Identifiers;
 using Sharpcraft.Common.Imaging;
 
@@ -77,7 +78,7 @@ public sealed class SpriteAtlas
     /// <summary>True when the atlas actually carries this sprite.</summary>
     public bool Contains(Identifier location) => _sprites.ContainsKey(location);
 
-    private readonly Dictionary<(int X, int Y, int Width, int Height), Transparency> _transparency = [];
+    private readonly ConcurrentDictionary<(int X, int Y, int Width, int Height), Transparency> _transparency = new();
 
     /// <summary>
     /// Alpha content of a sprite, computed once per rectangle.
@@ -90,16 +91,11 @@ public sealed class SpriteAtlas
     /// </remarks>
     public Transparency ComputeTransparency(SpriteRect sprite)
     {
+        // Chunk meshing runs on the worker threads, so this cache is hit concurrently. A plain dictionary threw a
+        // collection corrupted error under that load and took the device down with it.
         var key = (sprite.X, sprite.Y, sprite.Width, sprite.Height);
 
-        if (_transparency.TryGetValue(key, out var cached))
-        {
-            return cached;
-        }
-
-        var transparency = SpriteAlpha.Compute(Pixels, Width, sprite);
-        _transparency[key] = transparency;
-        return transparency;
+        return _transparency.GetOrAdd(key, _ => SpriteAlpha.Compute(Pixels, Width, sprite));
     }
 }
 
@@ -109,6 +105,9 @@ public sealed class SpriteAtlas
 /// </summary>
 public static class SpriteAtlasBuilder
 {
+    /// <summary>Texels of edge padding around every sprite.</summary>
+    private const int Padding = 1;
+
     /// <summary>Animated textures are vertical frame strips; only the first frame enters the atlas.</summary>
     public const string BlockTexturePrefix = "assets/minecraft/textures/block/";
 
@@ -241,8 +240,11 @@ public static class SpriteAtlasBuilder
 
         foreach (var sprite in ordered)
         {
-            var width = sprite.Image.Width;
-            var height = sprite.Image.Height;
+            // One texel of padding on every side, filled by repeating the sprite's edge. Linear filtering and mip levels
+            // read a texel outside the sprite rectangle at its border; without the padding that neighbour is an unrelated
+            // sprite, which showed up as black seams along block edges.
+            var width = sprite.Image.Width + (Padding * 2);
+            var height = sprite.Image.Height + (Padding * 2);
 
             if (width > size || height > size)
             {
@@ -261,7 +263,7 @@ public static class SpriteAtlasBuilder
                 return false;
             }
 
-            placements.Add((x, y));
+            placements.Add((x + Padding, y + Padding));
             x += width;
             shelfHeight = Math.Max(shelfHeight, height);
         }
@@ -292,6 +294,30 @@ public static class SpriteAtlasBuilder
                     pixels,
                     target,
                     image.Width * RgbaImage.BytesPerPixel);
+            }
+
+            // Repeat the edge texels into the padding ring, so any sample just outside the sprite reads the sprite itself.
+            for (var pad = 1; pad <= Padding; pad++)
+            {
+                for (var column = 0; column < image.Width; column++)
+                {
+                    var top = (((y * size) + x + column) * RgbaImage.BytesPerPixel);
+                    var topTarget = ((((y - pad) * size) + x + column) * RgbaImage.BytesPerPixel);
+                    var bottom = ((((y + image.Height - 1) * size) + x + column) * RgbaImage.BytesPerPixel);
+                    var bottomTarget = ((((y + image.Height - 1 + pad) * size) + x + column) * RgbaImage.BytesPerPixel);
+                    Buffer.BlockCopy(pixels, top, pixels, topTarget, RgbaImage.BytesPerPixel);
+                    Buffer.BlockCopy(pixels, bottom, pixels, bottomTarget, RgbaImage.BytesPerPixel);
+                }
+
+                for (var row = -pad; row < image.Height + pad; row++)
+                {
+                    var leftSource = ((((y + Math.Clamp(row, 0, image.Height - 1)) * size) + x) * RgbaImage.BytesPerPixel);
+                    var leftTarget = ((((y + row) * size) + x - pad) * RgbaImage.BytesPerPixel);
+                    var rightSource = ((((y + Math.Clamp(row, 0, image.Height - 1)) * size) + x + image.Width - 1) * RgbaImage.BytesPerPixel);
+                    var rightTarget = ((((y + row) * size) + x + image.Width - 1 + pad) * RgbaImage.BytesPerPixel);
+                    Buffer.BlockCopy(pixels, leftSource, pixels, leftTarget, RgbaImage.BytesPerPixel);
+                    Buffer.BlockCopy(pixels, rightSource, pixels, rightTarget, RgbaImage.BytesPerPixel);
+                }
             }
 
             // Half-texel inset: sampling exactly on a cell edge would let nearest-neighbour pick a
