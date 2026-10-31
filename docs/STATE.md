@@ -1410,3 +1410,30 @@ System.ArgumentException: The value cannot be an empty string. (Parameter 'name'
 | **A5** | **三层流式**：`GeometryData` 扩为 opaque/cutout/translucent，arena 每区块三组 slice，渲染三 pass（半透明按距远→近）| **新排入**（老问题，用户确认）|
 
 约定：A1–A5 每条都必须保留"不可用时退回 CPU 路径"的兜底。
+
+## 2026-10-31 A5 三层流式：落点已定位，实施清单
+
+已确认丢弃点（本分支代码现状）：
+
+- `ChunkWorkerPool` L409-418：每次 `MeshChunk` 都建了 `cutoutScratch` / `translucentScratch` 两个临时缓冲，
+  **算完直接 Dispose**（注释说明"渲染用的 cutout/translucent 来自另一条 pass"），只把不透明层
+  `buffer.ToMeshData(0)` 入队 `_meshes`。
+- `GeometryData` 只有 `(float[] Vertices, uint[] Indices)`。
+- `WindowedRenderer` 只有首帧路径 `currentRequest.CutoutVertices/TranslucentVertices`（L929/L946）。
+
+实施清单（按依赖顺序，每步可独立编译与验证）：
+
+1. **数据层**：`GeometryData` 增加 `CutoutVertices/CutoutIndices/TranslucentVertices/TranslucentIndices`（默认空数组）。
+2. **产出层**：`ChunkWorkerPool` 把两个 scratch 也 `ToMeshData(0)` 并随不透明层一起入队（队列元素加两个字段）。
+3. **上传层**：`WindowCommand` 的 `geometryUpdates` 把 4 个数组一起塞进 `GeometryData`；
+   `ChunkGeometryArena` 扩展为**每区块三组 slice**（或实例化三个 arena：opaque/cutout/translucent），
+   每组的 indirect 参数与 culler 各自独立。
+4. **绘制层**：`WindowedRenderer` 增加两个 pass——`cutoutPipeline` 画 cutout arena、
+   `translucentPipeline` 画 translucent arena（先按区块中心距离**由远到近**排序，真正的逐面排序列为后续）；
+   三层都沿用 A2 的 indirect 与 A3b 的 cull（各自一个 `ChunkCuller`）。
+5. **兜底**：任一层缺失/为空 → 跳过该 pass；`MC_CULL_DISABLE=1` 与 `Available=false` 行为不变。
+6. **验证**：放大化世界里 `verify-photos`（同机位截图）对比"修复前后：远处水/玻璃是否出现"；
+   并记录上传字节与 p99（同时把**每帧上传限流 8 MB** 一并做掉，压住 `over33`）。
+
+注：核心变量是 `ChunkGeometryArena` 的"每区块一个 slice"假设；改成三组 slice 时，`SlotHighWater` 与
+culler 的 `slots` 要按层各自维护，避免再犯 A3b 那次"按在册数量分发"的错误。
