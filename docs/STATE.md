@@ -1745,3 +1745,30 @@ var revealTexture = ... Format = WGPUTextureFormat.R16Float ...;   // 同上
 2. 若观感通过：接 `MC_TRANSPARENCY=weighted|reference` 宿主开关（默认 weighted，失败回落 weighted），原版 depth-bounds +
    transmittance OIT 作为 reference 管线。
 3. 可选：让离屏渲染器也走 OIT，使像素级对照（T-104/T-159 的截图）能覆盖透明层。
+
+## 2026-10-31 原版 OIT 参考管线：勘察与规格完成（待确认范围后实现）
+
+已通读原版 `net/minecraft/client/renderer/oit/*` 与相关 shader include，行为规格写入
+`docs/specs/render/oit-reference.md`（草案，status 待确认）。核心结论：
+
+- 原版透明 = **三阶段 OIT**：`DEPTH_BOUNDS`(RGBA32F, 混合 MAX, 深度 `>=` 只读) → `TRANSMITTANCE`(2×RGBA16F, 8 系数小波, ADDITIVE)
+  → `ACCUMULATE`(RGBA16F, ADDITIVE) → `COMPOSITE`(读 accum+系数+depthBounds，写主色并**写最近器件深度**)。
+  阶段间有一次 `depth_bounds_cull`（最远边界裁到不透明深度）；云/水面贴片另有 `oitCloudDepth`/`oitTerrainWithWaterPatchDepth` + `water mask`。
+- 常量：`OIT_WAVELET_RANK=2`、`OIT_COEFFICIENT_COUNT=8`、`OIT_TRANSMITTANCE_TARGET_COUNT=2`。
+- 我们只渲染地形半透明，故 reference 管线**只覆盖地形**；云/水贴片/实体/天气的 OIT 集合与 water mask **不实现**（等这些内容存在再接）。
+
+**建议的落地顺序（分 3 个可验证小步）**：
+
+1. **纯逻辑核心**：C# 参考 `encode/sample/coverage`（8 系数小波），测试：顺序无关、总透射率≈`Π(1-α)`、单片退化。
+2. **GPU 目标与管线**：4 个目标 + 3 阶段管线 + cull + composite 的 WGSL；确定性水景 `MC_TRANSPARENCY=reference` 跑满无 validation error。
+3. **宿主开关**：`MC_TRANSPARENCY` 仅在宿主层解析（原则 13），默认 weighted，失败回落。
+
+**第 1 步已完成（2026-10-31）**：`src/Sharpcraft.Framework/Rendering/OitWavelet.cs`（8 系数小波 encode/sample/coverage 的
+CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独立实现）+ `OitWaveletTests`（5 项）。
+**实测通过**：单片覆盖度≈α（误差<0.02）、双层≈`1−(1−a₁)(1−a₂)`（<0.03）、编码顺序无关（系数逐位相等）、
+空系数覆盖度=0、absorbance↔transmittance 往返。⇒ 算法理解与实现已由纯逻辑验证，可以上 GPU。
+
+**下一步具体动作**：第 2 步 —— GPU 目标与管线：`depthBounds`(RGBA32F, MAX)/`depthBoundsCulled`(RGBA32F)/
+`transmittance[2]`(RGBA16F, ADDITIVE)/`accumulate`(RGBA16F, ADDITIVE) 四目标 + `oit_reference.wgsl`（三入口）+
+`oit_depth_bounds_cull.wgsl` + `oit_composite.wgsl`；三阶段各画一遍半透明几何；composite 写主色与深度。
+WGSL 的采样/编码须与 `OitWavelet` 逐值一致（先用确定性水景跑通、0 validation error，再谈像素）。
