@@ -911,6 +911,15 @@ internal sealed class InteractiveSession
         DrainIncoming();
         ApplyParsedChunks();
 
+        // Streaming telemetry, only under the existing diagnostic switch: the equivalence matrix reads these lines to prove
+        // that chunks keep arriving as the player moves (docs/specs/quality/vanilla-equivalence-matrix.md).
+        if (_diagEnabled && (_diagFrames % 60) == 0 && _world is not null)
+        {
+            Console.WriteLine(
+                $"stream: loaded={_world.LoadedChunkCount} expected={ExpectedChunkCount()} " +
+                $"pendingParsed={_pool?.ParsedReady ?? 0} pendingMesh={_pool?.MeshesReady ?? 0}");
+        }
+
         _loop.Advance(
             elapsed,
             () =>

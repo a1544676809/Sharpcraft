@@ -838,3 +838,22 @@ updated: 2026-10-29
 - 实测：同一位置树木**树叶完整出现**（见截图），7 套测试全绿。
 - **已知遗留（未修）**：translucent（水/玻璃）仍是一次性构建，**后加载区块的水/玻璃不会出现**；需要在缓存里按区块存
   三层网格并逐帧增量上传，留给后续。
+
+## 2026-10-31 第 17 轮：转入"全量等效性验证"（停止加功能）
+
+- 用户指出：本会话 debug/试验代码不止改了今天的内容，必须做**全量**等效性验证。已建
+  `docs/specs/quality/vanilla-equivalence-matrix.md`：15 行特性 × 判据 × 检查方式 × 阈值 × 状态。
+- 审计结果：本会话 **226 个提交**，大量直接改可观测行为；目前**只有一部分**有逐像素/逐数值证据。
+- 明确列为**已知缺陷**：①新区块不继续加载（`updates 0`）；②半透明层不随区块流式更新；③流体渲染路径缺失。
+- 已加"仅在 `MC_DIAG=1` 下输出"的 `stream:` 遥测（loaded/expected/pending），用于脚本断言区块流式加载；不改正常行为。
+- **下一步**：写 `tools/verify/verify-streaming.ps1`，先量出当前流式加载的失败曲线作为基线，再修 ①②。
+
+### 验证脚本与首批测量（同轮）
+
+- `tools/verify/check-packet-ids.ps1`：把 `ProtocolConstants` 与**原版注册表 dump**（`packet-tables.txt`）逐条比对 ——
+  结果 **checked=90, mismatches=0**（PASS）。这是"有原版依据"的检查。
+- `tools/verify/verify-streaming.ps1`：自动走一段（`MC_WINDOW_AUTOWALK=1`），断言 loaded 增长并接近 expected。
+  实测：**loaded 17 → 329（expected 289，113.8%）**，说明**区块确实到达**。
+- 但同一次运行：`pool: parsed 68 ok, meshed 91`，窗口 `frame ... updates 0` —— **到达的区块大量没有进入网格/上传**，
+  这才是"新区块看不见"的真实环节（不是网络层）。
+- 另发现：`unhandled packet id=115 = set_time`（原版 id 正确，是我们没实现该包；无渲染影响，登记为待实现）。
