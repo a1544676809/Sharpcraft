@@ -35,9 +35,15 @@ public static class FluidSurface
         var sum = 0f;
         var weight = 0f;
 
-        // The diagonal only participates when at least one edge carries fluid; otherwise it is an unrelated cell.
+        // The diagonal only participates when at least one edge carries fluid; otherwise it is an unrelated cell. Per the
+        // reference, a full diagonal column (height >= 1) lifts the corner straight to 1 without averaging.
         if (north > 0f || east > 0f)
         {
+            if (corner >= 1f)
+            {
+                return 1f;
+            }
+
             AddWeighted(ref sum, ref weight, corner);
         }
 

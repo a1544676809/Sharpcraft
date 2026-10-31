@@ -49,4 +49,12 @@ public sealed class FluidSurfaceTests
         // One edge fluid, the other solid: corner and solid edge are dropped, average of self and the fluid edge.
         Assert.Equal(0.3f, FluidSurface.AverageCorner(0.4f, 0.2f, -1f, -1f), 5);
     }
+
+    [Fact]
+    public void FullDiagonalColumnLiftsTheCornerToOne()
+    {
+        // Reference calculateAverageHeight: inside the "an edge has fluid" branch, a diagonal of height >= 1 returns 1
+        // directly instead of being averaged - this is what let a flowing block's corner meet a full diagonal column.
+        Assert.Equal(1f, FluidSurface.AverageCorner(0.5f, 0.5f, 0.5f, 1f), 5);
+    }
 }
