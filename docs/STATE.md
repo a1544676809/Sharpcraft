@@ -805,3 +805,12 @@ updated: 2026-10-29
 - 新增 `Occludes(state, sprites, layout)`：用 `BlockSpriteMap.TransparencyOf(block)` 判定是否完全不透明；无图集/无布局时保持旧行为（安全默认）。
 - 实测（超平坦场景，朝下看地面）：**地面恢复连续**，矩形淡蓝空洞消失；纯黑像素从 43,194 降到 **649**（剩余为树篱/植物缝隙）。
 - 全量 7 套测试通过、0 warning。
+
+## 2026-10-31 第 14 轮：先查原版"透明方块"渲染方式
+
+- 结论写入 `docs/analysis/render/transparent-blocks.md`：
+  ①地形管线（solid/cutout/translucent）在原版**都是单面剔除**（`GENERIC_BLOCKS_SNIPPET` 无 `withCull(false)`，默认 cull=true）；
+  ②相邻面剔除由各族覆写 `skipRendering`：冰/粉雪=同方块剔除，树叶=同类且关闭镂空树叶时剔除，**流体=同流体剔除**；
+  ③**流体不参与方块模型渲染**：`LiquidBlock.getRenderShape = INVISIBLE`，水/岩浆由独立流体渲染器绘制（我们目前缺这条路径）。
+- ⇒ "看到背面"在原版**不是默认行为**。若确实需要，属于**有意偏差**，须先明确情形并登记。
+- **待用户确认**：想要的是①从外面看玻璃能看到内壁，还是②潜入水中看到水面背面？确认后我再实现并登记偏差。
