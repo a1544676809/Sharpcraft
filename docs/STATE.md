@@ -1330,3 +1330,18 @@ Trying to destroy a SwapchainAcquireSemaphore that is still in use by a SurfaceT
   撤回后分支正常启动（pid 11308）。
 - 修复计划不变：①整体替换时重建 arena（而不是在旧内容上长大+全量重写）②**每帧上传限流**（如 8 MB）
   ③若仍 panic 再改固定尺寸渲染目标 + 缩放呈现。
+
+## 2026-10-31 按原版源码核对：命令包只含文本；崩溃在 system_chat 的组件解码
+
+按要求翻阅 `../mc-26.3-analysis/src`：
+
+- `ServerboundChatCommandPacket` 的 `write` **只写 `output.writeUtf(this.command)`**，构造也只读 `input.readUtf()`
+  ⇒ **我们最初只写命令文本是对的**；我上一版的"补齐 22 字节"正好是服务端报的 `found 22 bytes extra`，**已 revert**。
+- `ClientboundSystemChatPacket` = `record(Component content, boolean overlay)`，用
+  `ComponentSerialization.TRUSTED_STREAM_CODEC` 解码 ⇒ **没有 chat type/装饰**，崩溃点只可能在**组件树解码**。
+- 我们的 `ComponentRuns` 已支持 `text`/`translate`(带 `with` 参数)/`fallback`/`extra`，`LanguageTable.Format` 缺键时
+  返回 key 不抛异常 ⇒ 不是"完全不支持 translatable"，更可能是 **trusted 变体的字节格式**（长度前缀/结尾标记）
+  或 `chat.type.admin` 这类带参数组件在 `FlattenArguments` 上的处理。
+- 崩溃机理：客户端在消息处理路径上退出 → 关闭进程 → 才出现 wgpu 交换链 panic（**panic 是症状，不是原因**）。
+- **下一步**：①逐字节对照 `TRUSTED_STREAM_CODEC`（Nbt 组件、是否有长度前缀、末尾 END）与我们的读取；
+  ②让宿主层打印**托管异常栈**（目前 stderr 只有 Rust panic），才能一次定位。
