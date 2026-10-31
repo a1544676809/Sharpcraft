@@ -1856,4 +1856,12 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 待续：四角高度（`FluidSurface` 已备但未接线）、flow-UV、per-face 光、overlay、不合并的独立流体网格；水下雾；图集动画。### 流体几何：关键教训（2026-10-31）
 尝试"水不合并 + 顶面四角高度"时发现：**不做"同种流体面剔除"就逐方块发射水，会把整段水的内部面全发出来**（一个 16³ 水段 60 合并 quad → 7710 quad，性能灾难）。结论：流体必须走**独立通道并做同种流体面剔除**（相邻同种流体→跳过该面），再谈四角高度/不合并。该尝试已回退，保持全量 1158 绿。下一步：实现含同种流体剔除的 `FluidMesher` 独立通道。### 流体几何：独立通道落地（2026-10-31）
 `ChunkMesher` 新增 `EmitSectionFluids`：逐水块发射、**同种流体面剔除**（相邻水→跳过该面）、四角高度（`FluidSurface`）、still 贴图、生物群系水色、**逐面光**（max(本格,上方)）、按朝向着色；方块面通道在提供 translucent 缓冲时**跳过流体**。`FluidMesherTests`（满水段外表面 6×16×16、单块 6 面）+ LayerSplit 修正 + 水高测试；全量 **1160 通过**、门禁 ok。
-- 待续：flow 向量与旋转 UV、overlay、反向顶面；水下雾；离屏水面固定机位像素验收（窗口不可截，需离屏场景或所有者目视）。
+- 待续：flow 向量与旋转 UV、overlay、反向顶面；水下雾；离屏水面固定机位像素验收（窗口不可截，需离屏场景或所有者目视）。### 流体目标现状（第 10 轮，未完成，如实记录）
+已完成：独立流体通道（同种流体面剔除、四角高度、still 贴图、水色、逐面光）+ 接入半透明层；`FluidMesherTests` 满水段外壳 1536 / 单块 6。
+未完成（objective 仍需继续）：
+1. flow 向量 + 旋转 flow UV —— **阻塞点**：`BlockSpriteMap` 只解析 `_still`，未暴露 `_flow`；需先加 `_flow` 精灵查询接口。
+2. overlay（相邻半透明/树叶用 water_overlay）——需 `_overlay` 精灵查询。
+3. 反向顶面 shouldRenderBackwardUpFace。
+4. 离屏固定机位水面场景 + 像素探针验收（窗口不可截）。
+5. 水下雾（WaterFogEnvironment：WATER_FOG_COLOR/距离/sky-cloud end）——需把"相机在水中"从宿主传入 fog uniform。
+结论：目标**保持 active，不标记完成**。下一步建议先做 `BlockSpriteMap` 的 `_flow`/`_overlay` 查询（资产层小改），再做 flow-UV/overlay；随后水下雾与离屏验收。
