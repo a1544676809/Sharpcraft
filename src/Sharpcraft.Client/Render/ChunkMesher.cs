@@ -712,7 +712,7 @@ public static class ChunkMesher
                 for (var x = 0; x < 16; x++)
                 {
                     var state = section.Get(x, y, z);
-                    if (layout.BlockAt(state) is not { Path: "water" })
+                    if (layout.BlockAt(state) is not { Path: "water" } fluidBlockRef)
                     {
                         continue;
                     }
@@ -748,8 +748,31 @@ public static class ChunkMesher
                         tb = b;
                     }
 
+                    var blockId = fluidBlockRef;
                     var topSprite = sprites?.ForState(state, BlockFace.Top);
                     var sideSprite = sprites?.ForState(state, BlockFace.Side);
+
+                    var flowX = 0f;
+                    var flowZ = 0f;
+
+                    void AddFlow(int ddx, int ddz)
+                    {
+                        var neighbourState = nb.GetBlockState(bx + ddx, by, bz + ddz, 0);
+                        if (layout.BlockAt(neighbourState) is { Path: "water" })
+                        {
+                            var neighbour = Sharpcraft.Common.World.FluidStateCodec.FromBlockState(neighbourState, layout);
+                            var difference = selfHeight - (neighbour.IsEmpty ? 0f : neighbour.OwnHeight);
+                            flowX += difference * ddx;
+                            flowZ += difference * ddz;
+                        }
+                    }
+
+                    AddFlow(-1, 0);
+                    AddFlow(1, 0);
+                    AddFlow(0, -1);
+                    AddFlow(0, 1);
+                    var flowing = ((flowX * flowX) + (flowZ * flowZ)) > 1e-7f;
+                    var flowSprite = flowing ? sprites?.FluidFlow(blockId) : null;
 
                     (float R, float G, float B) Face(float shade) => (lm.X * tr * shade, lm.Y * tg * shade, lm.Z * tb * shade);
 
@@ -804,14 +827,36 @@ public static class ChunkMesher
                     if (!aboveWater)
                     {
                         var colour = Face(1.0f);
-                        translucent.AppendQuad(
-                            (fx, lowY + Corner(0, 0) - epsilon, fz),
-                            (fx, lowY + Corner(0, 1) - epsilon, fz + 1f),
-                            (fx + 1f, lowY + Corner(1, 1) - epsilon, fz + 1f),
-                            (fx + 1f, lowY + Corner(1, 0) - epsilon, fz),
-                            colour, colour, colour, colour,
-                            (0f, 0f), (0f, 1f), (1f, 1f), (1f, 0f),
-                            topSprite);
+                        if (flowSprite is { } moving)
+                        {
+                            // Flow UV rotated toward the downhill direction (reference: angle atan2(z,x) - pi/2, radius
+                            // 0.25 around the sprite centre).
+                            var angle = MathF.Atan2(flowZ, flowX) - (MathF.PI / 2f);
+                            var s = MathF.Sin(angle) * 0.25f;
+                            var c = MathF.Cos(angle) * 0.25f;
+                            translucent.AppendQuad(
+                                (fx, lowY + Corner(0, 0) - epsilon, fz),
+                                (fx, lowY + Corner(0, 1) - epsilon, fz + 1f),
+                                (fx + 1f, lowY + Corner(1, 1) - epsilon, fz + 1f),
+                                (fx + 1f, lowY + Corner(1, 0) - epsilon, fz),
+                                colour, colour, colour, colour,
+                                (0.5f + (-c - s), 0.5f + (-c + s)),
+                                (0.5f + (-c + s), 0.5f + (c + s)),
+                                (0.5f + (c + s), 0.5f + (c - s)),
+                                (0.5f + (c - s), 0.5f + (-c - s)),
+                                moving);
+                        }
+                        else
+                        {
+                            translucent.AppendQuad(
+                                (fx, lowY + Corner(0, 0) - epsilon, fz),
+                                (fx, lowY + Corner(0, 1) - epsilon, fz + 1f),
+                                (fx + 1f, lowY + Corner(1, 1) - epsilon, fz + 1f),
+                                (fx + 1f, lowY + Corner(1, 0) - epsilon, fz),
+                                colour, colour, colour, colour,
+                                (0f, 0f), (0f, 1f), (1f, 1f), (1f, 0f),
+                                topSprite);
+                        }
                     }
 
                     // Bottom: only when the cell below is neither water nor solid.

@@ -1864,4 +1864,5 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 3. 反向顶面 shouldRenderBackwardUpFace。
 4. 离屏固定机位水面场景 + 像素探针验收（窗口不可截）。
 5. 水下雾（WaterFogEnvironment：WATER_FOG_COLOR/距离/sky-cloud end）——需把"相机在水中"从宿主传入 fog uniform。
-结论：目标**保持 active，不标记完成**。下一步建议先做 `BlockSpriteMap` 的 `_flow`/`_overlay` 查询（资产层小改），再做 flow-UV/overlay；随后水下雾与离屏验收。
+结论：目标**保持 active，不标记完成**。下一步建议先做 `BlockSpriteMap` 的 `_flow`/`_overlay` 查询（资产层小改），再做 flow-UV/overlay；随后水下雾与离屏验收。- 流体 flow：`BlockSpriteMap.FluidFlow/FluidOverlay` 增加 `_flow`/`_overlay` 查询；`EmitSectionFluids` 计算 flow 向量（仅同种水邻居的高度差），顶面流动时用 `_flow` 精灵按 `atan2(flowZ,flowX)-π/2`、半径 0.25 旋转 UV，静水用 still。全量 1160 通过。
+- 待续：overlay 应用（相邻半透明/树叶）、反向顶面、水下雾、离屏固定机位像素验收。
