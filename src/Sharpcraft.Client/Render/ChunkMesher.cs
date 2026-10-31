@@ -24,6 +24,9 @@ namespace Sharpcraft.Client.Render;
 /// </remarks>
 public static class ChunkMesher
 {
+    /// <summary>Diagnostic switch: emit full brightness vertices to isolate shading from geometry.</summary>
+    private static readonly bool NoShade = Environment.GetEnvironmentVariable("MC_FRAME_NO_SHADE") == "1";
+
     /// <summary>Floats per vertex: position (3) plus colour (3).</summary>
     public const int FloatsPerVertex = 12;
 
@@ -432,6 +435,14 @@ public static class ChunkMesher
         // multiplying a texture by the state hash colour would tint every block (found by sampling
         // rendered pixels against the atlas cell of a forced stone world).
         var (red, green, blue) = sprites is null ? ColourOf(state) : (1f, 1f, 1f);
+
+        if (NoShade)
+        {
+            // Diagnostic: force full brightness to tell "no geometry" from "shaded black".
+            red = 1f;
+            green = 1f;
+            blue = 1f;
+        }
 
         if (tint is not null && layout?.BlockAt(state) is { } tintedBlock)
         {

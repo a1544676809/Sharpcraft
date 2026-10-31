@@ -1059,6 +1059,11 @@ internal static class FrameCommand
         using var tintResources = CreateResourceManager();
         var tint = Sharpcraft.Client.Render.BiomeTint.Load(tintResources);
 
+        if (Environment.GetEnvironmentVariable("MC_FRAME_NO_TINT") == "1")
+        {
+            tint = null;
+        }
+
         var request = BuildRequest(
             world,
             width,
@@ -1074,6 +1079,17 @@ internal static class FrameCommand
         var frame = OffscreenRenderer.Render(request);
 
         Console.WriteLine($"rendered on adapter: {frame.AdapterName}");
+
+        // depth dump: write the depth buffer next to the colour so a black pixel can be classified as "no geometry" or
+        // "geometry present but shaded black".
+        if (Environment.GetEnvironmentVariable("MC_FRAME_DEPTH_DUMP") == "1" && frame.Depth is { } depthDump)
+        {
+            var bytes = new byte[depthDump.Length * 4];
+            Buffer.BlockCopy(depthDump, 0, bytes, 0, bytes.Length);
+            var dumpPath = Path.Combine(Path.GetTempPath(), "frame-depth.f32");
+            File.WriteAllBytes(dumpPath, bytes);
+            Console.WriteLine($"  depth dump: {frame.Width}x{frame.Height} -> {dumpPath}");
+        }
 
         if (Environment.GetEnvironmentVariable("MC_FRAME_TRANSLUCENT_TEST") == "1" && request.TranslucentIndices is { Length: > 0 })
         {
