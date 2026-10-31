@@ -785,7 +785,7 @@ public static class ChunkMesher
                     void AddFlow(int ddx, int ddz)
                     {
                         var neighbourState = nb.GetBlockState(bx + ddx, by, bz + ddz, 0);
-                        if (layout.BlockAt(neighbourState) is { Path: "water" })
+                        if (layout.BlockAt(neighbourState) is { } flowBlockRef && flowBlockRef.Path == fluidPath)
                         {
                             var neighbour = Sharpcraft.Common.World.FluidStateCodec.FromBlockState(neighbourState, layout);
                             var difference = selfHeight - (neighbour.IsEmpty ? 0f : neighbour.OwnHeight);
@@ -816,11 +816,11 @@ public static class ChunkMesher
                         var sample = nb.GetBlockState(bx + ddx, by, bz + ddz, 0);
                         if (layout.BlockAt(sample) is { } sampleBlock)
                         {
-                            if (sampleBlock.Path == "water")
+                            if (sampleBlock.Path == fluidPath)
                             {
                                 // The reference getHeight returns 1.0 when the same fluid is directly above, so a flowing
                                 // block next to a continuous column must use 1.0 here for its corner to rise and meet it.
-                                if (layout.BlockAt(nb.GetBlockState(bx + ddx, by + 1, bz + ddz, 0)) is { Path: "water" })
+                                if (layout.BlockAt(nb.GetBlockState(bx + ddx, by + 1, bz + ddz, 0)) is { } aboveRef && aboveRef.Path == fluidPath)
                                 {
                                     return 1f;
                                 }

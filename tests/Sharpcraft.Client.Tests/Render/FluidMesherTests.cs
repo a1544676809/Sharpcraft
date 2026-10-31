@@ -86,4 +86,26 @@ public sealed class FluidMesherTests
         Assert.True(opaque.IndexCount > 0);
         Assert.Equal(0, translucent.IndexCount);
     }
+
+    [Fact]
+    public void FullLavaSectionEmitsADoubleSidedOuterShellIntoOpaque()
+    {
+        var layout = new BlockStateLayout(
+        [
+            (new Identifier("minecraft", "air"), 1),
+            (new Identifier("minecraft", "lava"), 16)
+        ]);
+        var world = new ClientWorld(minSectionY: 0, sectionCount: 1);
+        var chunk = world.AddChunk(0, 0);
+        chunk.SetSection(new ChunkSection(singleState: 1, sectionY: 0)); // full lava section
+        chunk.MarkLoaded();
+
+        using var opaque = new MeshBuffer();
+        using var translucent = new MeshBuffer();
+        ChunkMesher.MeshChunk(world, chunk, airState: 0, opaque, maxBlocks: 1_000_000, sprites: null, translucent, layout);
+
+        // Lava is opaque -> double-sided (reference addBackFace): 6*16*16 outer faces, both windings.
+        Assert.Equal(2 * 6 * 16 * 16, opaque.IndexCount / ChunkMesher.IndicesPerQuad);
+        Assert.Equal(0, translucent.IndexCount);
+    }
 }
