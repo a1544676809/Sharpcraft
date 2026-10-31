@@ -113,7 +113,7 @@ internal static class WindowCommand
             prepared?.Map,
             fifoMeshOrder: Sharpcraft.Launcher.Diagnostics.HostDebugOptions.FifoMeshOrder,
             mergeFaces: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoMergeFaces,
-            ambientOcclusion: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoAmbientOcclusion);
+            ambientOcclusion: Sharpcraft.Launcher.Diagnostics.HostDebugOptions.AmbientOcclusion);
         Console.WriteLine($"chunk workers: {workerPool.WorkerCount} (of {Environment.ProcessorCount} logical processors)");
 
         var meshCache = new ChunkMeshCache(workerPool);

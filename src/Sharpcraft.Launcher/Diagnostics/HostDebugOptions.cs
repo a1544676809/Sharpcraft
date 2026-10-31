@@ -70,6 +70,9 @@ public static class HostDebugOptions
     /// <summary>True to disable greedy face merging, meshing every block face on its own (for an A/B on cost vs fidelity).</summary>
     public static bool NoMergeFaces => Environment.GetEnvironmentVariable("MC_MESH_NOMERGE") == "1";
 
-    /// <summary>True to disable ambient occlusion (for an A/B on how much AO darkens the scene).</summary>
-    public static bool NoAmbientOcclusion => Environment.GetEnvironmentVariable("MC_NO_AO") == "1";
+    /// <summary>
+    /// Ambient occlusion is off by default: our AO darkens terraced terrain much more than the reference (under
+    /// calibration), so the shipped default matches the reference look better without it. Set MC_AO=1 to enable it.
+    /// </summary>
+    public static bool AmbientOcclusion => Environment.GetEnvironmentVariable("MC_AO") == "1";
 }
