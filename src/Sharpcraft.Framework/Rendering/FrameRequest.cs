@@ -78,6 +78,15 @@ public sealed record FrameRequest(
 /// <param name="Rgba">Pixels, four bytes per texel.</param>
 public sealed record TextureData(int Width, int Height, byte[] Rgba)
 {
+    /// <summary>
+    /// Mip levels one and up, each half the previous size, or null when only level zero is available.
+    /// </summary>
+    /// <remarks>
+    /// The chain is generated where the sprites are known, because the reference rescales each sprite's alpha to keep its
+    /// alpha test coverage; the renderer only uploads what it is given.
+    /// </remarks>
+    public byte[][]? Mips { get; init; }
+
     /// <summary>A single white texel, used when a frame samples no atlas.</summary>
     public static TextureData White { get; } = new(1, 1, [255, 255, 255, 255]);
 }

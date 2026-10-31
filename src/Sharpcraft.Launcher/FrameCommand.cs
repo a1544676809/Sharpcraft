@@ -517,6 +517,23 @@ internal static class FrameCommand
         return new BlockSpriteMap(atlas, layout, new BlockModelResolver(resources.Stack));
     }
 
+    /// <summary>
+    /// Wraps an atlas in the request texture data, with its mip chain already generated.
+    /// </summary>
+    /// <param name="atlas">Stitched atlas.</param>
+    /// <remarks>
+    /// Mips are built here because the per sprite alpha rescaling needs the sprite rectangles, which the renderer never sees.
+    /// </remarks>
+    internal static TextureData WithMips(SpriteAtlas atlas)
+    {
+        var sprites = new List<SpriteRect>(atlas.Sprites.Values);
+
+        return new TextureData(atlas.Width, atlas.Height, atlas.Pixels)
+        {
+            Mips = Sharpcraft.Client.Assets.AtlasMipChain.Build(atlas.Pixels, atlas.Width, atlas.Height, sprites)
+        };
+    }
+
     internal static (SpriteAtlas Atlas, BlockSpriteMap Map)? PrepareSprites(
         BlockStateLayout? layout,
         Sharpcraft.Client.Assets.ResourceManager? resources = null)
@@ -1042,7 +1059,7 @@ internal static class FrameCommand
             out var mesh,
             out var drawRanges,
             prepared?.Map,
-            prepared is null ? null : new TextureData(prepared.Value.Atlas.Width, prepared.Value.Atlas.Height, prepared.Value.Atlas.Pixels),
+            prepared is null ? null : WithMips(prepared.Value.Atlas),
             layout: layout);
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
         Console.WriteLine($"layers: translucent triangles {(request.TranslucentIndices?.Length ?? 0) / 3}, layout {(layout is null ? "null" : "set")}, water->{(layout is null ? "-" : layout.BlockAt(1)?.ToString() ?? "none")}");
@@ -1291,7 +1308,7 @@ internal static class FrameCommand
         {
             Atlas = prepared is null
                 ? null
-                : new TextureData(prepared.Value.Atlas.Width, prepared.Value.Atlas.Height, prepared.Value.Atlas.Pixels)
+                : WithMips(prepared.Value.Atlas)
         });
 
         Console.WriteLine($"rendered on adapter: {frame.AdapterName}");

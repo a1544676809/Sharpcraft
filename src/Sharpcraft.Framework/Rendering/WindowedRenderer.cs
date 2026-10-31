@@ -79,14 +79,14 @@ public static class WindowedRenderer
                 height = (uint)atlasData.Height,
                 depthOrArrayLayers = 1
             },
-            MipLevelCount = 1 + (uint)AtlasMipChain.Levels,
+            MipLevelCount = 1 + (uint)(atlasData.Mips?.Length ?? 0),
             SampleCount = 1,
             Dimension = WGPUTextureDimension._2D,
             Format = WGPUTextureFormat.RGBA8Unorm,
             Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
         });
 
-        var atlasMips = AtlasMipChain.Build(atlasData.Rgba, atlasData.Width, atlasData.Height);
+        var atlasMips = atlasData.Mips ?? [];
 
         device.Queue.WriteTexture(
             atlasTexture,

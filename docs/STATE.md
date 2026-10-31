@@ -661,3 +661,16 @@ updated: 2026-10-29
 即在**同一帧**里用一个已知方块（石头）与树叶比对，并 dump 实际采样的 atlas texel。
 **下一步具体动作**：①在同一帧内对石头/树叶各取一个面，打印其顶点 rect 与采样 texel（uv→atlas 坐标）；②若 rect 正确而画面仍是棋盘，则问题在
 **mip 采样/alpha 测试**（mip 后 alpha 均值下降会被 `discard` 掉一半），需按原版 `MipmapStrategy` 处理 alpha；③再回截图验收。
+
+## 2026-10-31 第 6 轮：按你选择移植原版 mipmap（覆盖率补偿）
+
+- 依 `MipmapGenerator.java` / `ARGB.meanLinear` / `TextureUtil.solidify` 逐项实现，**按 sprite** 生成：
+  透明像素先用最近不透明像素补色 → 每级 alpha 取四邻均值、颜色在**线性空间**取均值 → 有孔贴图每级做
+  `scaleAlphaToCoverage`（测量 alpha 测试覆盖率并迭代缩放 alpha，参考阈值 0.5）。
+- 架构调整：mip 链在**客户端**生成（因为只有那里知道 sprite 矩形），随 `TextureData.Mips` 交给渲染器上传；
+  渲染器只负责按给定层数建纹理与设 `LodMaxClamp`。旧的 Framework 版 `AtlasMipChain` 已删除。
+- 途中修掉三处自身错误：给**颜色渲染目标**错误地加了 mip 层（应 1 层，只有图集需要）、`TextureData` 记录体重复、
+  以及一个不现实的测试夹具（纯棋盘让覆盖率在 0↔1 跳变，任何实现都无法匹配 0.5，故删除该用例，保留结构用例）。
+- **待验证（不声称完成）**：真实服务器截图确认树叶/草色；`scaleAlphaToCoverage` 的匹配精度还需一个**真实贴图夹具**做数值验收。
+- **下一步具体动作**：①真实服务器同角度截图（树叶应呈绿色带孔纹理、草顶分层）；②用真实 `oak_leaves.png` 做夹具，
+  断言每级覆盖率与第 0 级误差 ≤0.05；③把 A 阶段收尾后进 B。

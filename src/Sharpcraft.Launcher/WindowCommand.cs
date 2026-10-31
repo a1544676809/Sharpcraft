@@ -180,7 +180,7 @@ internal static class WindowCommand
                 Console.WriteLine($"resource reload: atlas refreshed in {atlasClock.Elapsed.TotalMilliseconds:F1} ms (models kept)");
             }
 
-            atlasSource.Update(new TextureData(candidate.Width, candidate.Height, candidate.Pixels));
+            atlasSource.Update(new TextureData(candidate.Width, candidate.Height, candidate.Pixels) { Mips = Sharpcraft.Client.Assets.AtlasMipChain.Build(candidate.Pixels, candidate.Width, candidate.Height, [.. candidate.Sprites.Values]) });
         });
 
         // A short synchronous warm-up gives the first frame something to show.
@@ -196,7 +196,7 @@ internal static class WindowCommand
             prepared?.Map,
             prepared is null
                 ? null
-                : new TextureData(prepared.Value.Atlas.Width, prepared.Value.Atlas.Height, prepared.Value.Atlas.Pixels),
+                : FrameCommand.WithMips(prepared.Value.Atlas),
             tint: Sharpcraft.Client.Render.BiomeTint.Load(resources),
             cache: meshCache,
             meshSynchronously: false);

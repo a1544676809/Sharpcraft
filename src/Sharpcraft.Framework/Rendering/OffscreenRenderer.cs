@@ -425,7 +425,7 @@ public static class OffscreenRenderer
             var texture = device.CreateTexture(new TextureDescriptor
             {
                 Size = new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 },
-                MipLevelCount = 1 + (uint)AtlasMipChain.Levels,
+                MipLevelCount = 1,
                 SampleCount = 1,
                 Dimension = WGPUTextureDimension._2D,
                 Format = WGPUTextureFormat.RGBA8Unorm,
@@ -458,14 +458,14 @@ public static class OffscreenRenderer
                     height = (uint)atlasData.Height,
                     depthOrArrayLayers = 1
                 },
-                MipLevelCount = 1,
+                MipLevelCount = 1 + (uint)(atlasData.Mips?.Length ?? 0),
                 SampleCount = 1,
                 Dimension = WGPUTextureDimension._2D,
                 Format = WGPUTextureFormat.RGBA8Unorm,
                 Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
             });
 
-            var atlasMips = AtlasMipChain.Build(atlasData.Rgba, atlasData.Width, atlasData.Height);
+            var atlasMips = atlasData.Mips ?? [];
 
             device.Queue.WriteTexture(
                 atlasTexture,
@@ -511,7 +511,7 @@ public static class OffscreenRenderer
                 MinFilter = WGPUFilterMode.Linear,
                 MipmapFilter = WGPUMipmapFilterMode.Linear,
                 LodMinClamp = 0f,
-                LodMaxClamp = AtlasMipChain.Levels,
+                LodMaxClamp = Math.Max(1, atlasData.Mips?.Length ?? 1),
                 MaxAnisotropy = 1
             });
 
