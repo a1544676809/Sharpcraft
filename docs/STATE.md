@@ -982,3 +982,14 @@ send  60.. : -704.50 → -743.21 → …                ← 之后不再被纠�
   | 修复后 | **49** | 39（实际 ack 39 次）|
 - 新增 `tools/verify/verify-batch-ack.ps1`（断言 区块 ≥ 40、failed=0）→ **PASS**。
 - 未达成目标 200：另有节流/解析速率问题，登记为下一步（不是 ack 缺陷）。
+
+## 2026-10-31 第 29 轮：#1 登录/进世界字段级验证
+
+- 原版依据：`ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundLoginPacket.java` 与
+  `CommonPlayerSpawnInfo.java` 的 `STREAM_CODEC.composite(...)` 顺序。
+- 新增 `tests/Sharpcraft.Common.Tests/Network/JoinGameFieldTests.cs`（3 个用例）：
+  1. **逐字段**断言 playerId / hardcore / levels / maxPlayers / chunkRadius / simulationDistance /
+     reducedDebugInfo / showDeathScreen / limitedCrafting / dimensionTypeId / dimensionId / seed / gameMode
+  2. 客户端**忽略的尾部**（onlineMode、enforcesSecureChat）不影响已读字段
+  3. 存在 death location 时仍能正确解析
+- 全量 7 套 **1099 用例**通过（Common 374）。矩阵 #1 → 已验证（字段级）。

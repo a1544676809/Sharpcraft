@@ -18,7 +18,7 @@
 
 | # | 特性 | 原版判据 | 检查方式 | 阈值 | 状态 |
 |---| --- | --- | --- | --- | --- |
-| 1 | 登录/进入世界 | JoinGame 字段与顺序一致 | `walk`/`play` 断言 | 完全一致 | 未验证 |
+| 1 | 登录/进入世界 | 字段顺序与类型同原版 `ClientboundLoginPacket` / `CommonPlayerSpawnInfo` | `JoinGameFieldTests`、`LoginPacketTests`、`ProtocolPacketTests` | 逐字段相等 | **已验证（字段级 golden：playerId/hardcore/levels/三个距离/三个布尔/维度类型/维度键/seed/gameMode；尾部字段不影响）** |
 | 2 | KeepAlive/Ping | 收到即回 | `verify-protocol-live.ps1` | 20s 内 ≥1 次 | 已验证：**实测 1 次** ✓ |
 | 3 | 区块流式加载 | 移动时区块数持续增长到视距上限 | `tools/verify/verify-streaming.ps1` | ≥expected 90% | **已知缺陷** |
 | 4 | 区块批处理 ack | 每批 `ChunkBatchFinished` 必须回 `ChunkBatchReceived`，否则只收到第一批 | `verify-batch-ack.ps1` | 区块数 ≫ 9 且批次数 >1 | **已验证：9 → 49 区块（39 批），目标 200 未达（另有节流待查）** |
