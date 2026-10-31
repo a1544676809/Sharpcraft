@@ -46,7 +46,31 @@ public sealed class ChunkGeometryArena : IDisposable
     private readonly int _expectedChunks;
     private bool _presized;
     private readonly Dictionary<long, Slice> _slices = [];
+    /// <summary>Bytes of one DrawIndexedIndirect argument record.</summary>
+    private const int DrawArgBytes = 20;
+
+    /// <summary>Draw slots the indirect buffer is created with, one per resident chunk.</summary>
+    private const int MaxDrawSlots = 8192;
+
     private readonly Dictionary<long, GeometryData> _meshes = [];
+
+    /// <summary>
+    /// One indirect draw record per chunk, so a draw is a single call that carries its own index range and base vertex.
+    /// </summary>
+    /// <remarks>
+    /// The index buffer is bound once for the whole arena and each record points into it, which removes the per chunk
+    /// SetIndexBuffer as well. A later compute pass can zero the index count of a chunk to cull it without touching the
+    /// command stream, which is what makes GPU culling possible.
+    /// </remarks>
+    private readonly WgpuBuffer _drawArgs;
+
+    /// <summary>Slot in the indirect buffer each resident chunk occupies.</summary>
+    private readonly Dictionary<long, int> _slotOf = [];
+
+    /// <summary>Slots freed by chunks that left, reused before the next fresh slot.</summary>
+    private readonly Stack<int> _freeSlots = [];
+
+    private int _slotsUsed;
     private readonly List<WgpuBuffer> _retired = [];
 
     private WgpuBuffer _vertex;
@@ -82,6 +106,12 @@ public sealed class ChunkGeometryArena : IDisposable
         _indexCapacity = Math.Max(MinimumBufferBytes, initialCapacity / 2);
         _vertex = CreateBuffer(vertexCapacity: _vertexCapacity, BufferUsage.Vertex);
         _index = CreateBuffer(vertexCapacity: _indexCapacity, BufferUsage.Index);
+
+        _drawArgs = _device.CreateBuffer(new BufferDescriptor
+        {
+            Size = (ulong)(MaxDrawSlots * DrawArgBytes),
+            Usage = BufferUsage.Indirect | BufferUsage.CopyDst
+        });
     }
 
     /// <summary>Chunks currently resident.</summary>
@@ -104,7 +134,12 @@ public sealed class ChunkGeometryArena : IDisposable
         if (mesh.Vertices.Length == 0)
         {
             _meshes.Remove(chunkKey);
-            _slices.Remove(chunkKey);
+
+            if (_slices.Remove(chunkKey, out var gone))
+            {
+                _freeSlots.Push(gone.Slot);
+            }
+
             return;
         }
 
@@ -133,9 +168,18 @@ public sealed class ChunkGeometryArena : IDisposable
             return;
         }
 
-        var slice = new Slice(_vertexUsed, _indexUsed, (uint)mesh.Indices.Length);
+        var slot = TakeSlot();
+
+        if (slot < 0)
+        {
+            _meshes.Remove(chunkKey);
+            return;
+        }
+
+        var slice = new Slice(_vertexUsed, _indexUsed, (uint)mesh.Indices.Length, slot);
         _queue.WriteBuffer(_vertex, slice.VertexOffset, mesh.Vertices.AsSpan());
         _queue.WriteBuffer(_index, slice.IndexOffset, mesh.Indices.AsSpan());
+        WriteDrawArgs(slice);
         UploadedBytes += (long)neededVertex + (long)neededIndex;
 
         _vertexUsed += neededVertex;
@@ -154,10 +198,12 @@ public sealed class ChunkGeometryArena : IDisposable
 
         pass.SetVertexBuffer(0, _vertex, 0, _vertexCapacity);
 
+        // One binding for the whole index buffer: each record carries its own first index and base vertex.
+        pass.SetIndexBuffer(_index, WGPUIndexFormat.Uint32, 0, _indexCapacity);
+
         foreach (var slice in _slices.Values)
         {
-            pass.SetIndexBuffer(_index, WGPUIndexFormat.Uint32, slice.IndexOffset, (ulong)slice.IndexCount * sizeof(uint));
-            pass.DrawIndexed(slice.IndexCount, 1, 0, (int)(slice.VertexOffset / (ulong)_bytesPerVertex), 1);
+            pass.DrawIndexedIndirect(_drawArgs, (ulong)(slice.Slot * DrawArgBytes));
         }
     }
 
@@ -166,6 +212,7 @@ public sealed class ChunkGeometryArena : IDisposable
     {
         _vertex.Dispose();
         _index.Dispose();
+        _drawArgs.Dispose();
 
         foreach (var buffer in _retired)
         {
@@ -229,6 +276,9 @@ public sealed class ChunkGeometryArena : IDisposable
         _vertexUsed = 0;
         _indexUsed = 0;
         _slices.Clear();
+        _slotOf.Clear();
+        _freeSlots.Clear();
+        _slotsUsed = 0;
 
         foreach (var (key, mesh) in _meshes)
         {
@@ -242,9 +292,17 @@ public sealed class ChunkGeometryArena : IDisposable
                 continue;
             }
 
-            var slice = new Slice(_vertexUsed, _indexUsed, (uint)mesh.Indices.Length);
+            var slot = TakeSlot();
+
+            if (slot < 0)
+            {
+                continue;
+            }
+
+            var slice = new Slice(_vertexUsed, _indexUsed, (uint)mesh.Indices.Length, slot);
             _queue.WriteBuffer(_vertex, slice.VertexOffset, mesh.Vertices.AsSpan());
             _queue.WriteBuffer(_index, slice.IndexOffset, mesh.Indices.AsSpan());
+            WriteDrawArgs(slice);
             UploadedBytes += SizeOf(mesh);
 
             _vertexUsed += vertexBytes;
@@ -253,9 +311,39 @@ public sealed class ChunkGeometryArena : IDisposable
         }
     }
 
+    /// <summary>Takes a free draw slot, or -1 when the indirect buffer is full.</summary>
+    private int TakeSlot()
+    {
+        if (_freeSlots.Count > 0)
+        {
+            return _freeSlots.Pop();
+        }
+
+        if (_slotsUsed >= MaxDrawSlots)
+        {
+            return -1;
+        }
+
+        return _slotsUsed++;
+    }
+
+    /// <summary>Writes one chunk's indirect draw arguments.</summary>
+    /// <param name="slice">The slice whose record to write.</param>
+    private void WriteDrawArgs(Slice slice)
+    {
+        Span<byte> record = stackalloc byte[DrawArgBytes];
+        BitConverter.TryWriteBytes(record, slice.IndexCount);
+        BitConverter.TryWriteBytes(record[4..], 1u);
+        BitConverter.TryWriteBytes(record[8..], (uint)(slice.IndexOffset / sizeof(uint)));
+        BitConverter.TryWriteBytes(record[12..], (int)(slice.VertexOffset / (ulong)_bytesPerVertex));
+        BitConverter.TryWriteBytes(record[16..], 0u);
+        _queue.WriteBuffer(_drawArgs, (ulong)(slice.Slot * DrawArgBytes), record);
+    }
+
     /// <summary>Where one chunk's geometry lives in the arena.</summary>
     /// <param name="VertexOffset">Byte offset into the vertex buffer.</param>
     /// <param name="IndexOffset">Byte offset into the index buffer.</param>
     /// <param name="IndexCount">Indices this chunk draws.</param>
-    private readonly record struct Slice(ulong VertexOffset, ulong IndexOffset, uint IndexCount);
+    /// <param name="Slot">Its indirect draw record.</param>
+    private readonly record struct Slice(ulong VertexOffset, ulong IndexOffset, uint IndexCount, int Slot);
 }

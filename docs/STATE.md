@@ -1253,3 +1253,18 @@ send  60.. : -704.50 → -743.21 → …                ← 之后不再被纠�
 - **验证（Release，放大化，90s）**：`arena 329 chunks, presized=True, uploaded 635.9 MB, 2 full rebuilds`；
   `16125 frames in 90.0s`（≈179 fps），worst 93.5 ms（首帧/重建），仅 2 帧 >33 ms，**无 panic**。
 - 教训（记入流程）：改完必须**两种配置都重建**再测；我此前用旧 Release 二进制得出"仍超限"的错误结论。
+
+## 2026-10-31 实验分支 exp/gpu-culling-indirect：A2 间接绘制（完成）
+
+- 分支基点 `ec38ef5`；本分支只做 GPU 化改造，主线不动。
+- **A2 实现**：`ChunkGeometryArena` 新增 **indirect 参数缓冲**（每区块一条 20 字节 DrawIndexedIndirect 记录：
+  indexCount/instanceCount/firstIndex/baseVertex/firstInstance），槽位由空闲表复用；
+  索引缓冲**整块绑定一次**，每区块 `DrawIndexedIndirect(args, slot*20)`。
+  - 顺带去掉每区块一次 `SetIndexBuffer`（原来 329 次/帧）。
+- **验证**：全量 7 套 **1109 用例通过**；Release 窗口在放大化世界正常渲染（截图为实体地形，草/土/雪/水面齐全）；
+  `verify-performance -Walk`：**p99 8.73 ms**（405 区块），与改造前 8.29 ms 同量级（本阶段目的是为 GPU 剔除铺路，不是提速）。
+- **A3 设计（下一步）**：新增 compute pass `chunk_cull.wgsl`
+  - 输入：每槽 AABB（min/max）、基础 indexCount、视锥 6 平面 uniform；
+  - 输出：把被剔除的槽 `indexCount` 写 0（其余保持原值）；
+  - 之后 `Draw` 仍按槽发 `DrawIndexedIndirect`（被剔除者成为 no-op）。
+  这样 CPU 不再需要逐区块做可见性判断，且为后续 **MultiDrawIndexedIndirectCount**（一次调用画全部）留好结构。
