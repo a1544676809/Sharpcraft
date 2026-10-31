@@ -1316,3 +1316,17 @@ Trying to destroy a SwapchainAcquireSemaphore that is still in use by a SurfaceT
    避免"旧 300 MB + 新 300 MB 同存 + 全量重写"。
 2. **上传限流**：每帧最多上传 N MB（例如 8 MB），把突发摊到多帧；`updates` 计数已有，可直接用于预算。
 3. 交换链侧继续观察：若仍 panic，考虑**固定尺寸渲染目标 + 缩放呈现**，彻底绕开 reconfigure 路径。
+
+## 2026-10-31 **已稳定复现** `/tp` 崩溃（含原地 tp）
+
+- 复现方式（mcpfabric 桥，等价于服务端执行）：连续 5 次 `command.run "tp Blue_Coast ~ ~ ~"` → **客户端必崩**。
+  - 崩溃前日志：`frame #324 ... uploaded +132,800 KiB`（**单帧 130 MB**），随后
+    `wgpu-hal swapchain/native.rs:359 panicked: Trying to destroy a SwapchainAcquireSemaphore that is still in use`。
+  - 之前单次、远距的 teleport 没崩，是因为那一次的上传量小；连打（或一次性整体替换）就撞上。
+- 结论修正：崩溃与"聊天框显示"无关（用户指出服务端原地 tp 也崩，验证正确）；
+  真正的链条是 **tp → 服务端围绕玩家重发/重建大量区块 → 客户端单帧全量重建 arena（130–279 MB 上传）
+  → 帧时暴涨 / 表面丢失 → wgpu-hal 交换链 panic**。
+- 另外：本分支先前加的 `OnSubmittedWorkDoneBlocking` **是回归**（分支启动即 panic，主线正常）——**已撤回**，
+  撤回后分支正常启动（pid 11308）。
+- 修复计划不变：①整体替换时重建 arena（而不是在旧内容上长大+全量重写）②**每帧上传限流**（如 8 MB）
+  ③若仍 panic 再改固定尺寸渲染目标 + 缩放呈现。
