@@ -351,4 +351,5 @@ P3 之前不谈包；但 §3 的 pass 划分必须**现在就按"可命名目标
   平坦开阔面仍大幅合并（性能保住），有 AO/光照变化处不再被抹平。
 - **开关**：`ChunkMesher.MeshChunk(..., merge:)` 两路径都完整；宿主 `MC_MESH_NOMERGE=1` 走逐面（A/B 用）。默认合并。
 - 单测 `ChunkMesherMergeLightingTests`：合并出的多格 quad 四角颜色必须一致（否则判失败）、平坦面合并后 quad 更少、凹坑场景确有 AO 渐变。
+- **色彩空间**：此前在 **gamma 空间**乘光照（图集 `RGBA8Unorm` 未解码就乘线性光，再写非 sRGB 的 `BGRA8Unorm`），导致"满光面正常、任何 L<1 的面被过度压暗"（阴影发黑）。改为 `litColour`：解码 sRGB(2.2) → 乘线性光 → 编码，满光返回原贴图。已用于 `terrain.wgsl`（main/cutout/translucent）与 `oit_reference.wgsl`（accumulate）。
 

@@ -85,6 +85,12 @@ fn toTransmittance(absorbance : f32) -> f32 {
     return clamp(exp(-absorbance), 0.0001, 1.0);
 }
 
+// Same linear-space lighting as terrain.wgsl: decode the sRGB atlas texel, multiply by the linear light, re-encode.
+fn litColour(texel : vec3<f32>, light : vec3<f32>) -> vec3<f32> {
+    let linear = pow(max(texel, vec3<f32>(0.0)), vec3<f32>(2.2));
+    return pow(max(linear * light, vec3<f32>(0.0)), vec3<f32>(1.0 / 2.2));
+}
+
 fn normalizeDepth(fragmentLinearDepth : f32, closestLinearDepth : f32, furthestLinearDepth : f32) -> f32 {
     let range = max(furthestLinearDepth - closestLinearDepth, 0.0001);
     let depthWithinBounds = clamp(fragmentLinearDepth - closestLinearDepth, 0.0, range);
@@ -281,7 +287,7 @@ fn fs_accumulate(input : VertexOutput) -> AccumulateOutput {
         dpdx(input.uv) * gradientScale,
         dpdy(input.uv) * gradientScale);
 
-    let base = sampled.rgb * input.colour;
+    let base = litColour(sampled.rgb, input.colour);
     let span = max(fog.range.y - fog.range.x, 0.001);
     let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
     let colour = mix(base, fog.colour.rgb, fogged);

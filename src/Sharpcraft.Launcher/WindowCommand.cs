@@ -347,6 +347,11 @@ internal static class WindowCommand
             Environment.GetEnvironmentVariable("MC_FRAME_WATER") == "1" ||
             Environment.GetEnvironmentVariable("MC_FRAME_REPLAY") is { Length: > 0 };
 
+        // Host-only light probe (MC_LIGHT_PROBE=1): prints the sky/block light the mesher will read around the player, so
+        // a too-dark scene can be told apart from a lighting-model problem. Principle 13: parsed here, in the host.
+        var lightProbeDone = false;
+        var lightProbe = Environment.GetEnvironmentVariable("MC_LIGHT_PROBE") == "1";
+
         var format = WindowedRenderer.Run(
             request,
             frames,
@@ -374,6 +379,37 @@ internal static class WindowCommand
                 {
                     var camera = session.UpdateCamera(window);
                     speedOverlay?.Observe(session.Player.Position, session.TickIndex);
+
+                    if (lightProbe && !lightProbeDone)
+                    {
+                        lightProbeDone = true;
+                        var lp = session.Player.Position;
+                        var px = (int)Math.Floor(lp.X);
+                        var pz = (int)Math.Floor(lp.Z);
+                        var py = (int)Math.Floor(lp.Y);
+                        Console.WriteLine($"[light] player=({lp.X:F1},{lp.Y:F1},{lp.Z:F1}) chunks={world.LoadedChunkCount}");
+
+                        for (var dy = -3; dy <= 3; dy++)
+                        {
+                            var st = world.GetBlockState(px, py + dy, pz);
+                            world.TryGetLight(px, py + dy, pz, out var sky, out var block);
+                            Console.WriteLine($"[light] (x{px},y{py + dy},z{pz}) state={st} sky={sky} block={block}");
+                        }
+
+                        // A 3x3 surface sample a few blocks out, so a single column is not the only evidence.
+                        for (var dzz = -2; dzz <= 2; dzz += 2)
+                        {
+                            for (var dxx = -2; dxx <= 2; dxx += 2)
+                            {
+                                var sx = px + dxx;
+                                var sz = pz + dzz;
+                                var sy = py + 1;
+                                world.TryGetLight(sx, sy, sz, out var sky, out var block);
+                                Console.WriteLine($"[light] +({dxx},{dzz}) y{sy} sky={sky} block={block}");
+                            }
+                        }
+                    }
+
                     return camera;
                 },
             geometryUpdates: () =>

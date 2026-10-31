@@ -1814,3 +1814,14 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 **下一步（未做，待所有者定）**：① 在真实场景量 `MC_MESH_NOMERGE` 与默认的面数/显存/p99 做 A/B；
 ② 若要更贴近原版，AO 仍用 `Occludes`（冰不遮挡）而非原版 `isCollisionShapeFullBlock`（冰会遮挡），属已知偏差；
 ③ 每顶点光照仍用自研 `Brightness()` 近似而非原版 lightmap。
+
+## 2026-10-31 修：地形在 gamma 空间乘光照导致阴影过暗（露天也黑）
+
+光照探针（`MC_LIGHT_PROBE=1`，宿主层）实测：地表 `sky=15 block=0` 满天空光 ⇒ **数据正确**，不是没读到光。
+根因：图集 `RGBA8Unorm` 存的是 sRGB 编码值，硬件不解码；我们又直接乘线性光照再写非 sRGB 的 `BGRA8Unorm` ⇒
+**满光(L=1)正常、任何 L<1 的面被过度压暗**（阴影/侧面发黑），与原版"线性乘光→sRGB 输出"不一致。
+修复：新增 `litColour`（解码 2.2 → 乘线性光 → 编码），用于 `terrain.wgsl`（main/cutout/translucent）与
+`oit_reference.wgsl`（accumulate）。水 demo 出图：石侧由近黑变中灰。全量 **1125 通过**、文档门禁 ok。
+
+**下一步/未做**：原版 `Lightmap` 曲线（`light_brightness(x)=x/(4-3x)` + 环境光 + 天空/方块光颜色 + 时间 darkening）。
+现在 `Brightness()` 仍是线性近似（在满光=1、中高光比原版偏亮，不会再偏暗）。若要逐值对齐再做。

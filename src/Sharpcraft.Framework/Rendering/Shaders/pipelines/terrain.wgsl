@@ -12,6 +12,15 @@ struct Fog {
 };
 @group(0) @binding(3) var<uniform> fog : Fog;
 
+// Lighting must happen in linear space. The atlas is authored in sRGB but stored as RGBA8Unorm, so the hardware does not
+// decode it; multiplying those gamma-encoded bytes directly by a linear light (any light below one) darkens far more
+// than the reference does, which is why shaded faces read almost black while full-lit faces look right. Decode, multiply,
+// re-encode: full light returns the texel unchanged, and mid/shadow tones match a linear multiply.
+fn litColour(texel : vec3<f32>, light : vec3<f32>) -> vec3<f32> {
+    let linear = pow(max(texel, vec3<f32>(0.0)), vec3<f32>(2.2));
+    return pow(max(linear * light, vec3<f32>(0.0)), vec3<f32>(1.0 / 2.2));
+}
+
 struct VertexOutput {
     @builtin(position) clipPosition : vec4<f32>,
     @location(0) colour : vec3<f32>,
@@ -74,7 +83,7 @@ fn fs_main(input : VertexOutput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    let base = vec4<f32>(sampled.rgb * input.colour, 1.0);
+    let base = vec4<f32>(litColour(sampled.rgb, input.colour), 1.0);
     let span = max(fog.range.y - fog.range.x, 0.001);
     let fogFactor = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
     return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogFactor), base.a);
@@ -110,7 +119,7 @@ fn fs_translucent(input : VertexOutput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    let base = vec4<f32>(sampled.rgb * input.colour, sampled.a);
+    let base = vec4<f32>(litColour(sampled.rgb, input.colour), sampled.a);
     let span = max(fog.range.y - fog.range.x, 0.001);
     let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
     return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogged), base.a);
@@ -142,7 +151,7 @@ fn fs_cutout(input : VertexOutput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    let base = vec4<f32>(sampled.rgb * input.colour, 1.0);
+    let base = vec4<f32>(litColour(sampled.rgb, input.colour), 1.0);
     let span = max(fog.range.y - fog.range.x, 0.001);
     let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
     return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogged), 1.0);
