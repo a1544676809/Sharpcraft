@@ -1443,3 +1443,17 @@ culler 的 `slots` 要按层各自维护，避免再犯 A3b 那次"按在册数�
   （全部可选、默认 null ⇒ 零破坏，全量测试通过）。这是纯数据契约层，不改变任何渲染行为。
 - 第 2 步（`ChunkWorkerPool` 保留两个 scratch 并入队）涉及队列元素类型 `(long Key, MeshData Mesh)` 的扩展，
   会连带改动 `WindowCommand` 的两处解构，**下一步单独提交**。
+
+### A5 第 2 步补充：还多一层需要改（勘察结果）
+
+第 2 步不止改 `ChunkWorkerPool`，`ChunkMeshCache` 也有一条中间层：
+
+- `ChunkWorkerPool._meshes`：`ConcurrentQueue<(long Key, MeshData Mesh)>`（L47），入队在 L427。
+- **`ChunkMeshCache.DrainUpdates()`** 返回 `List<(long, MeshData)>`，内部 `_updates` 与 `Combine()` 都按两元组走 —— 三层必须一起扩。
+- `WindowCommand` L393/397 的 `List<(long Key, MeshData Mesh)> drained` 与 L441（mesh order）、L456（`new GeometryData(...)`）三处解构。
+
+建议做法：新增 `readonly record struct MeshedChunk(long Key, MeshData Opaque, MeshData Cutout, MeshData Translucent)`，
+把三处元组统一换成它，`MeshData` 本身不动（避免影响 `Snapshot/Combine` 的其它调用者）。
+
+**下一步从这里继续**：先加 `MeshedChunk`，再改 pool 入队 → cache `DrainUpdates` → WindowCommand 透传 →
+三个 arena → 两个 pass → 五条退化 → 上传限流与截图验证。
