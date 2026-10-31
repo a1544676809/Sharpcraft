@@ -30,21 +30,28 @@ public sealed class AmbientOcclusionTests
     }
 
     [Fact]
-    public void EachSolidNeighbourTakesAQuarterStepDown()
+    public void SingleSolidNeighbourTakesAQuarterStepDown()
     {
         Assert.Equal(0.8f, ChunkMesher.AmbientOcclusion(true, false, false, false), 5);
-        Assert.Equal(0.6f, ChunkMesher.AmbientOcclusion(true, true, false, false), 5);
-        Assert.Equal(0.4f, ChunkMesher.AmbientOcclusion(true, true, true, false), 5);
+        Assert.Equal(0.8f, ChunkMesher.AmbientOcclusion(false, true, false, false), 5);
+        Assert.Equal(0.8f, ChunkMesher.AmbientOcclusion(false, false, false, true), 5); // open edges -> diagonal counts
+    }
+
+    [Fact]
+    public void FullyEnclosedNookIsTheDarkest()
+    {
         Assert.Equal(0.2f, ChunkMesher.AmbientOcclusion(true, true, true, true), 5);
     }
 
     [Fact]
-    public void CenterAndCornersWeighEqually()
+    public void CornerSofteningIgnoresAnOpenDiagonalWhenBothEdgesAreSolid()
     {
-        // The four cells are interchangeable in the average, so any single solid cell gives the same 0.8.
-        Assert.Equal(0.8f, ChunkMesher.AmbientOcclusion(true, false, false, false), 5);
-        Assert.Equal(0.8f, ChunkMesher.AmbientOcclusion(false, true, false, false), 5);
-        Assert.Equal(0.8f, ChunkMesher.AmbientOcclusion(false, false, false, true), 5);
+        // Both edge cells solid, diagonal open: the reference treats the diagonal as occluded by the edges, so this
+        // enclosed corner is 0.4, not 0.6. This is the corner-softening rule.
+        Assert.Equal(0.4f, ChunkMesher.AmbientOcclusion(false, true, true, false), 5);
+
+        // Contrast: with one edge open, the (solid) diagonal is counted normally -> 0.4 too, but via a different cell.
+        Assert.Equal(0.4f, ChunkMesher.AmbientOcclusion(true, true, false, true), 5);
     }
 
     [Fact]

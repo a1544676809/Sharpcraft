@@ -634,10 +634,15 @@ public static class ChunkMesher
 
     /// <summary>
     /// Ambient-occlusion coefficient for one vertex: the average of the four cells that share it, a full solid cell
-    /// counting as 0.2 and anything else as 1.0. Open = 1.0, one solid neighbour = 0.8, a fully enclosed nook = 0.2.
+    /// counting as 0.2 and anything else as 1.0. Includes the reference corner-softening rule: if both edge cells are
+    /// solid the diagonal is treated as occluded by them (use the edge's shade) instead of its own cell, which keeps an
+    /// open diagonal from brightening an otherwise enclosed nook.
     /// </summary>
-    public static float AmbientOcclusion(bool center, bool sideA, bool sideB, bool diagonal) =>
-        ((center ? 0.2f : 1f) + (sideA ? 0.2f : 1f) + (sideB ? 0.2f : 1f) + (diagonal ? 0.2f : 1f)) * 0.25f;
+    public static float AmbientOcclusion(bool center, bool sideA, bool sideB, bool diagonal)
+    {
+        var corner = sideA && sideB ? sideA : diagonal;
+        return ((center ? 0.2f : 1f) + (sideA ? 0.2f : 1f) + (sideB ? 0.2f : 1f) + (corner ? 0.2f : 1f)) * 0.25f;
+    }
 
     private static bool Occludes(int state, BlockSpriteMap? sprites, BlockStateLayout? layout)
     {

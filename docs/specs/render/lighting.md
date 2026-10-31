@@ -68,12 +68,11 @@
 ## 4. 逐顶点平滑光照 / AO / 面朝向
 
 - **平滑光照**：每个顶点取"该面外侧 4 个格子"（base、base-u、base-v、base-u-v，u/v 为面内两轴），分别对 sky、block 求平均，再代入 §3 得该顶点的 lightmap 乘子。
-- **AO**：同一 4 格中每格贡献 `shadeBrightness = 实心碰撞方块 ? 0.2 : 1.0`，取平均作为标量乘子（纯函数 `ChunkMesher.AmbientOcclusion`）。
+- **AO**：同一 4 格中每格贡献 `shadeBrightness = 实心碰撞方块 ? 0.2 : 1.0`，取平均作为标量乘子（纯函数 `ChunkMesher.AmbientOcclusion`），并含原版**拐角柔化**规则：当两条边格都实心时，对角格视为被它们遮蔽（用边格值），避免开放对角把半封闭凹角算亮。
 - **空气永不遮挡**：`state 0`（本客户端的空气态）直接判为非遮挡。此前空气走"无布局→不透明"分支，使 AO 平均塌到 0.2 下限、整片世界变暗——这正是"关 AO 就正常"的原因。已修复（`Occludes` 短路）。
-- **默认开启 AO**；宿主开关 `MC_NO_AO=1` 可关做 A/B。仍缺原版"拐角柔化"（两邻边都透光时忽略对角），列为已知偏差。
+- **默认开启 AO**；宿主开关 `MC_NO_AO=1` 可关做 A/B。
   - 已知偏差：本实现"实心"判定用纹理不透明度（`Occludes`，冰/水/玻璃不算遮挡），原版用碰撞形状（冰算遮挡）。见 §7。
-- **实机对比**：此前"整体偏暗"实为 AO 把空气误判为遮挡（已修，见上）。修好后 AO 观感已接近原版（2026-10-31 所有者确认）。`MC_NO_AO=1` 可关。
-- 仍缺原版**拐角柔化**规则（两邻边都透光时忽略对角格），凹角可能比原版略暗，列为可选优化（非阻塞）。
+- **实机对比**：此前"整体偏暗"实为 AO 把空气误判为遮挡（已修，见上）。修好后 AO 观感已接近原版（2026-10-31 所有者确认）。
 - **面朝向**：按 `CardinalLighting.DEFAULT` —— 上 1.0 / 下 0.5 / 南北 0.8 / 东西 0.6，作标量乘子。
 
 最终顶点颜色（线性）= `lightmap(sky,block) * shade * AO`（RGB 逐通道乘标量）。纹理块再与线性化后的贴图逐通道相乘。
@@ -84,15 +83,21 @@
 - 若直接在 gamma 空间乘光照会使任何 `L<1` 的面过度压暗。故地形/半透明着色器用：**贴图 sRGB 解码(2.2 近似) → 乘线性 lightmap → 重新编码(1/2.2)**；满光时返回原贴图不变。
 - `ARGB.vector3fFromRGB24` 用精确 sRGB→linear 曲线（`x>=0.04045 ? ((x+0.055)/1.055)^2.4 : x/12.92`）把环境色转为线性。
 
-## 6. 时间 / 天气 / 维度（首版范围外）
+## 6. 时间 / 天气 / 维度（**未实现，暂缓**）
 
 原版 `skyFactor`、`skyLightColor`、`ambientColor`、`skyLightLevel` 由维度类型与 **时间轴（Timelines）** 驱动：白天 `skyFactor=1.0`、天空光色为白；夜晚 `skyFactor≈0.24`、天空光色约 `(0.48,0.48,1.0)`；雷暴/降水另有修正。
-**首版仅实现 overworld 白天默认**（§3 表）。夜晚/天气/维度的时间轴插值列为后续工作，参数接口预留（`LightmapParameters`）。
+
+**当前状态：仅实现 overworld 白天默认**（§3 表）；日夜/天气/维度**尚未实现**。参数接口（`LightmapParameters`）已预留，但下列两点是硬前提，故整块暂缓：
+
+1. **缺少世界时间数据**：`ClientWorld` 无时间字段，网络层只解析区块包，尚未解析 `set_time`/`update_time` 等 play 包。需先补时间包解析 → 世界时间（0..24000 tick）。
+2. **lightmap 目前烘进顶点色**（mesh 时定死）。日夜随时间变，若继续烘焙需不断重建网格。正确做法（与原版一致）：顶点只存 `sky`/`block` 光照等级 + `AO×朝向` 标量，**lightmap 在着色器里用每帧更新的 uniform（skyFactor、skyLightColor、blockFactor、ambient、brightness）现算**；需改顶点格式、`terrain.wgsl`/`oit_reference.wgsl`、每帧 UBO 与离屏路径。
+
+落地步骤（未来）：① 时间包解析 + `ClientWorld` 时间字段 + 单测；② 着色器 side lightmap + 时间 UBO；③ 按 `Timelines` 关键帧插值 `skyFactor`/`skyLightColor`/`ambientColor`（含日夜、天气、维度）。
 
 ## 7. 已知偏差与范围
 
 - AO 的"实心"判定用纹理不透明度而非碰撞形状（§4）。
-- 未实现：夜视、Darkness 效果、Boss 遮罩暗化、闪电闪光加成、时间轴日夜/天气、方块光闪烁。
+- 未实现：夜视、Darkness 效果、Boss 遮罩暗化、闪电闪光加成、**时间轴日夜/天气（§6，暂缓）**、方块光闪烁。
 - lightmap 反 gamma（notGamma）与 `brightnessFactor` 按默认 0.5 参与，未接亮度滑块。
 
 ## 8. 等效性测试计划（纯逻辑、可量化）
