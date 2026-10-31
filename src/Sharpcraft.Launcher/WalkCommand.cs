@@ -53,11 +53,12 @@ internal static class WalkCommand
         IEntityWorld adapter = world is null ? new FlatWorld() : new EntityWorldAdapter(world);
         var player = new PlayerEntity(adapter, new Vector3(0.5f, 0f, 0.5f));
         var sync = new PlayerSync();
-        var start = player.Position;
+        Vector3? start = null;
 
         var sent = 0;
         var corrections = 0;
     var keepAliveReplies = 0;
+    var packetCounts = new System.Collections.Generic.Dictionary<int, int>();
     var batchAcks = 0;
         var reason = string.Empty;
         var survived = false;
@@ -189,7 +190,10 @@ internal static class WalkCommand
         {
             try
             {
-                while (!cancellationToken.IsCancellationRequested)
+                // Distance baseline: where the server placed us, so the figure is the ground actually walked.
+        start = player.Position;
+
+        while (!cancellationToken.IsCancellationRequested)
                 {
                     inbound.Enqueue(await connection.ReceiveAsync(cancellationToken).ConfigureAwait(false));
                 }
@@ -231,10 +235,13 @@ internal static class WalkCommand
                     var reader = new PayloadReader(body);
                     reader.TryReadVarInt(out var packetId);
 
+                    packetCounts[packetId] = packetCounts.TryGetValue(packetId, out var seen) ? seen + 1 : 1;
+
                     switch (packetId)
                     {
                         case PacketIds.PlayClientbound.KeepAlive:
                             reader.TryReadLong(out var keepAliveId);
+                            keepAliveReplies++;
                             TrySend(connection, PlayPackets.BuildKeepAliveReply(keepAliveId), ref reason);
                             break;
 
@@ -313,13 +320,13 @@ internal static class WalkCommand
                             break;
 
                         case PacketIds.PlayClientbound.Disconnect:
-                            return new Result(sent, corrections, Distance(start, player.Position), DescribeDisconnect(body, reader), false, keepAliveReplies, batchAcks);
+                            return new Result(sent, corrections, Distance(start ?? player.Position, player.Position), DescribeDisconnect(body, reader), false, keepAliveReplies, batchAcks);
                     }
                 }
 
                 if (pumpFailure.Length != 0)
                 {
-                    return new Result(sent, corrections, Distance(start, player.Position), pumpFailure, false, keepAliveReplies, batchAcks);
+                    return new Result(sent, corrections, Distance(start ?? player.Position, player.Position), pumpFailure, false, keepAliveReplies, batchAcks);
                 }
 
                 // Deadline arithmetic instead of an accumulator: the n-th tick is due at
@@ -346,7 +353,7 @@ internal static class WalkCommand
                     {
                         if (!TrySend(connection, packet, ref reason))
                         {
-                            return new Result(sent, corrections, Distance(start, player.Position), reason, false, keepAliveReplies, batchAcks);
+                            return new Result(sent, corrections, Distance(start ?? player.Position, player.Position), reason, false, keepAliveReplies, batchAcks);
                         }
 
                         sent++;
@@ -378,7 +385,7 @@ internal static class WalkCommand
                                     breakSequence++),
                                 ref reason))
                         {
-                            return new Result(sent, corrections, Distance(start, player.Position), reason, false);
+                            return new Result(sent, corrections, Distance(start ?? player.Position, player.Position), reason, false);
                         }
 
                         log($"broke block at ({target.X:F0},{target.Y:F0},{target.Z:F0}) state={(world is null ? -1 : world.GetBlockState((int)target.X, (int)target.Y, (int)target.Z))} yaw={sync.CurrentYawDegrees:F1} feet=({player.Position.X:F1},{player.Position.Y:F1},{player.Position.Z:F1})");
@@ -386,7 +393,7 @@ internal static class WalkCommand
 
                     if (!TrySend(connection, PlayPackets.BuildClientTickEnd(), ref reason))
                     {
-                        return new Result(sent, corrections, Distance(start, player.Position), reason, false);
+                        return new Result(sent, corrections, Distance(start ?? player.Position, player.Position), reason, false);
                     }
 
                     tickCostMs += (Stopwatch.GetTimestamp() - tickStart) * 1000d / Stopwatch.Frequency;
@@ -442,7 +449,9 @@ internal static class WalkCommand
 
         log($"ticks={tickCounter} in {tickWatch.Elapsed.TotalSeconds:F2}s => {tickCounter / Math.Max(0.001, tickWatch.Elapsed.TotalSeconds):F1} ticks/sec, cost {tickCostMs / Math.Max(1, tickCounter):F2} ms/tick, sent={sent}, chunks={world?.LoadedChunkCount ?? 0}, blockChanges={blockChanges}");
                         log($"pacing: interval min={(tickIntervals == 0 ? 0 : minIntervalMs):F2}ms avg={(tickIntervals == 0 ? 0 : 1000d * tickIntervals / Math.Max(0.001, tickWatch.Elapsed.TotalMilliseconds - 50)):F2}ms max={maxIntervalMs:F2}ms, >55ms={gapsOver55}, <20ms={backToBackTicks}, samples={tickIntervals}");
-        return new Result(sent, corrections, Distance(start, player.Position), reason, survived);
+        log("packets: " + string.Join(", ", packetCounts.OrderBy(pair => pair.Key).Select(pair => $"{pair.Key}x{pair.Value}")));
+
+        return new Result(sent, corrections, Distance(start ?? player.Position, player.Position), reason, survived, keepAliveReplies, batchAcks);
 
     }
 
