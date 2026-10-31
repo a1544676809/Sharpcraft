@@ -1294,3 +1294,25 @@ send  60.. : -704.50 → -743.21 → …                ← 之后不再被纠�
   3. `/tp` 到**目标实体**或带参数形式（`/tp <target>`）走不同的数据包分支。
 - **下次崩溃需要的证据**：控制台窗口最后 5–10 行（`stdout`/`stderr`），以及**确切的命令原文**。
   客户端目前的 stderr 只落 `libpng` 警告，真正的 panic/异常信息在控制台里。
+
+## 2026-10-31 定位：游戏内 `/tp` 崩溃 = 整块 arena 重建 + 交换链 panic（有日志证据）
+
+用户在游戏内输入 `/tp` 后客户端崩溃。用桥的 `players.teleport` 短距/远距都不崩（那走服务端同一条路径），
+但**崩溃日志抓到了**：`/tp` 后某一帧 `uploaded +286092 KiB`（**约 279 MB 单帧上传**），随后 4 帧内出现
+
+```
+panicked at wgpu-hal-29.0.3/src/vulkan/swapchain/native.rs:359
+Trying to destroy a SwapchainAcquireSemaphore that is still in use by a SurfaceTexture
+```
+
+⇒ 两条独立缺陷叠加：
+1. **整块重建**：teleport 让几乎所有区块同时被替换，`ChunkGeometryArena` 容量不足 → `RebuildAll()` 一口气重写全部几何
+   （279 MB 单帧上传，帧时 144 ms），GPU 侧压力骤增/表面丢失；
+2. **wgpu-hal 交换链 panic**：表面 Lost 后 `Configure` 销毁交换链时，上一帧的 acquire 信号量仍在飞。
+   已在 `676cb2d` 加了 `OnSubmittedWorkDoneBlocking` 再 `Configure`，但**症状仍在**（说明是驱动侧 Lost 触发，不是单纯时序）。
+
+### 待修的方案（按优先级）
+1. **整体替换时重建而不是长大**：world 被整体替换（teleport/换维度）时，**清空并重建 arena 缓冲**（丢弃旧内容，按新规模一次分配），
+   避免"旧 300 MB + 新 300 MB 同存 + 全量重写"。
+2. **上传限流**：每帧最多上传 N MB（例如 8 MB），把突发摊到多帧；`updates` 计数已有，可直接用于预算。
+3. 交换链侧继续观察：若仍 panic，考虑**固定尺寸渲染目标 + 缩放呈现**，彻底绕开 reconfigure 路径。
