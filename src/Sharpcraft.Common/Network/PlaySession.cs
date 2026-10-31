@@ -20,7 +20,8 @@ public sealed record PlaySessionStats(
     string DisconnectedReason,
     bool Survived,
     int ChunksReceived = 0,
-    int ChunksFailed = 0)
+    int ChunksFailed = 0,
+    int BatchesAcknowledged = 0)
 {
     /// <summary>Total packets received.</summary>
     public int TotalPackets => PacketCounts.Values.Sum();
@@ -37,6 +38,9 @@ public static class PlaySession
     /// Directory that failed chunk packets are written to, or null to skip the dump.
     /// </summary>
     /// <remarks>Set by the host from its own configuration; the protocol code reads no environment (principle 13).</remarks>
+    /// <summary>Chunks per tick the client asks the server to send when a batch finishes.</summary>
+    public const float DesiredChunksPerTick = 8f;
+
     public static string? ChunkDumpDirectory { get; set; }
 
     /// <summary>Runs the loop for a bounded time.</summary>
@@ -66,6 +70,7 @@ public static class PlaySession
         var sync = player is null ? null : new PlayerSync();
         var orientationProvider = orientation ?? (() => (0f, 0f));
         var chunksFailed = 0;
+        var batchesAcknowledged = 0;
         var layout = (SectionCount: 24, MinSectionY: -4, AirState: 0);
         var haveLayout = false;
 
@@ -135,7 +140,14 @@ public static class PlaySession
                         break;
                     }
 
-                    case PacketIds.PlayClientbound.KeepAlive:
+                    // The server sends one batch at a time and waits for this reply, so a session that never answers it
+                // stops receiving chunks after the first batch.
+                case PacketIds.PlayClientbound.ChunkBatchFinished:
+                    connection.Send(PlayPackets.BuildChunkBatchReceived(DesiredChunksPerTick));
+                    batchesAcknowledged++;
+                    break;
+
+                case PacketIds.PlayClientbound.KeepAlive:
                         if (reader.TryReadLong(out var keepAliveId) == DecodeStatus.Success)
                         {
                             connection.Send(PlayPackets.BuildKeepAliveReply(keepAliveId));
@@ -206,12 +218,12 @@ public static class PlaySession
                             ? "raw: " + MinecraftLoginCrypto.ToHex(body)
                             : reason;
                         log?.Invoke($"disconnected by the server: {disconnected}");
-                        return new PlaySessionStats(joinGame, keepAlives, pings, counts, disconnected, false, chunksReceived, chunksFailed);
+                        return new PlaySessionStats(joinGame, keepAlives, pings, counts, disconnected, false, chunksReceived, chunksFailed, batchesAcknowledged);
                     }
 
                     case PacketIds.PlayClientbound.StartConfiguration:
                         log?.Invoke("server asked to reconfigure; stopping");
-                        return new PlaySessionStats(joinGame, keepAlives, pings, counts, "start_configuration", false, chunksReceived, chunksFailed);
+                        return new PlaySessionStats(joinGame, keepAlives, pings, counts, "start_configuration", false, chunksReceived, chunksFailed, batchesAcknowledged);
 
                     default:
                         log?.Invoke($"play <- id {packetId} ({body.Length} bytes)");
@@ -237,6 +249,6 @@ public static class PlaySession
             survived = true;
         }
 
-        return new PlaySessionStats(joinGame, keepAlives, pings, counts, disconnected, survived, chunksReceived, chunksFailed);
+        return new PlaySessionStats(joinGame, keepAlives, pings, counts, disconnected, survived, chunksReceived, chunksFailed, batchesAcknowledged);
     }
 }

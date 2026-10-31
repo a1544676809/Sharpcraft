@@ -969,3 +969,16 @@ send  60.. : -704.50 → -743.21 → …                ← 之后不再被纠�
 - 重写 `SpeedOverlay`：只在**tick 号变化时**采样一次，显示 `Speed: 0.281 blocks/tick (5.61 b/s)`。
 - 实测（自动走）：连续三次采样 **0.281 / 0.281 / 0.281** —— 与原版冲刺 0.2806 blocks/tick 一致（5.612 b/s）。
 - 全量 7 套测试通过；分离检查 0 违规。
+
+## 2026-10-31 第 28 轮：#4 区块批处理 ack（预加载路径从未回 ack）
+
+- **根因**：`PlaySession`（预加载/收集路径）只处理 `LevelChunkWithLight`，**没有 `ChunkBatchFinished` 分支**；
+  协议上服务器每批发完就等 `ChunkBatchReceived`，所以**只收到第一批就停**（日志恒为 `chunks: 9 ok`）。
+- **修复**：`PlaySession` 增加 `ChunkBatchFinished → BuildChunkBatchReceived(8f)`，并把 `BatchesAcknowledged` 计入 `PlaySessionStats`。
+- **A/B 实测**（`MC_START_CHUNKS=200`，收集 15s）：
+  | | 区块数 | 收到的批次数 |
+  | --- | --- | --- |
+  | 修复前 | **9** | 39（但只解析 9）|
+  | 修复后 | **49** | 39（实际 ack 39 次）|
+- 新增 `tools/verify/verify-batch-ack.ps1`（断言 区块 ≥ 40、failed=0）→ **PASS**。
+- 未达成目标 200：另有节流/解析速率问题，登记为下一步（不是 ack 缺陷）。
