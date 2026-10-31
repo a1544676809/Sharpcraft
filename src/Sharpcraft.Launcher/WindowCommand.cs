@@ -135,6 +135,10 @@ internal static class WindowCommand
 
         var geometryEpoch = 0;
         Queue<(long Key, Sharpcraft.Client.Render.MeshData Mesh)>? replayQueue = null;
+        long drainedTotal = 0;
+        var renderFrames = 0;
+        var streamDiag = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
+        var diagClock = System.Diagnostics.Stopwatch.StartNew();
 
         // The block atlas the terrain samples. A reload replaces it; whether the geometry must be rebuilt depends on
         // whether the layout changed, so that comparison lives here where both atlases are known.
@@ -406,6 +410,17 @@ internal static class WindowCommand
                 {
                     drained = [.. meshCache.DrainUpdates()];
                 }
+                drainedTotal += drained.Count;
+
+                if (streamDiag && (++renderFrames % 60) == 0)
+                {
+                    Console.WriteLine(
+                        $"streamrender: world={world.LoadedChunkCount} meshes={meshCache.LastTotalChunks} "
+                        + $"drained={drainedTotal} thisFrame={drained.Count} "
+                        + $"built={workerPool.MeshesBuilt} empty={workerPool.MeshesEmpty} missing={workerPool.MeshesMissingChunk} " + $"t={diagClock.Elapsed.TotalSeconds:F1}s "
+                        + $"meshPending={workerPool.MeshesPending} ready={workerPool.MeshesReady} frame={renderFrames}");
+                }
+
                 if (drained.Count == 0)
                 {
                     return null;

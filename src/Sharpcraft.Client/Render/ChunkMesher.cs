@@ -128,6 +128,8 @@ public static class ChunkMesher
 
         Span<bool> consumed = stackalloc bool[256];
 
+            var neighbourhood = new Neighbourhood(world, chunk);
+
         for (var sectionIndex = 0; sectionIndex < chunk.SectionCount; sectionIndex++)
         {
             var section = chunk.GetSection(chunk.MinSectionY + sectionIndex);
@@ -147,7 +149,7 @@ public static class ChunkMesher
             for (var direction = 0; direction < 6; direction++)
             {
                 consumed.Clear();
-                MergeSectionFaces(world, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout, tint);
+                MergeSectionFaces(neighbourhood, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout, tint);
             }
         }
 
@@ -156,7 +158,7 @@ public static class ChunkMesher
 
     /// <summary>Merges the faces of one direction inside one section into as few quads as possible.</summary>
     private static void MergeSectionFaces(
-        ClientWorld world,
+        in Neighbourhood neighbourhood,
         ChunkSection section,
         int direction,
         int baseX,
@@ -188,7 +190,7 @@ public static class ChunkMesher
                         continue;
                     }
 
-                    if (!TryDescribe(world, section, direction, uAxis, vAxis, slice, u, v, baseX, baseY, baseZ, airState, sprites, layout, out var key))
+                    if (!TryDescribe(neighbourhood, section, direction, uAxis, vAxis, slice, u, v, baseX, baseY, baseZ, airState, sprites, layout, out var key))
                     {
                         continue;
                     }
@@ -196,7 +198,7 @@ public static class ChunkMesher
                     var width = 1;
                     while (u + width < 16 &&
                            !consumed[(v << 4) | (u + width)] &&
-                           TryDescribe(world, section, direction, uAxis, vAxis, slice, u + width, v, baseX, baseY, baseZ, airState, sprites, layout, out var next) &&
+                           TryDescribe(neighbourhood, section, direction, uAxis, vAxis, slice, u + width, v, baseX, baseY, baseZ, airState, sprites, layout, out var next) &&
                            next == key)
                     {
                         width++;
@@ -204,7 +206,7 @@ public static class ChunkMesher
 
                     var height = 1;
                     while (v + height < 16 &&
-                           RowMatches(world, section, direction, uAxis, vAxis, slice, u, v + height, width, baseX, baseY, baseZ, airState, sprites, layout, key, consumed))
+                           RowMatches(neighbourhood, section, direction, uAxis, vAxis, slice, u, v + height, width, baseX, baseY, baseZ, airState, sprites, layout, key, consumed))
                     {
                         height++;
                     }
@@ -217,14 +219,14 @@ public static class ChunkMesher
                         }
                     }
 
-                    EmitMergedQuad(world, buffer, direction, slice, u, v, width, height, baseX, baseY, baseZ, key.State, sprites, translucent, layout, cutout, tint);
+                    EmitMergedQuad(neighbourhood, buffer, direction, slice, u, v, width, height, baseX, baseY, baseZ, key.State, sprites, translucent, layout, cutout, tint);
                 }
             }
         }
     }
 
     private static bool RowMatches(
-        ClientWorld world,
+        in Neighbourhood neighbourhood,
         ChunkSection section,
         int direction,
         int uAxis,
@@ -249,7 +251,7 @@ public static class ChunkMesher
                 return false;
             }
 
-            if (!TryDescribe(world, section, direction, uAxis, vAxis, slice, u + du, v, baseX, baseY, baseZ, airState, sprites, layout, out var candidate) ||
+            if (!TryDescribe(neighbourhood, section, direction, uAxis, vAxis, slice, u + du, v, baseX, baseY, baseZ, airState, sprites, layout, out var candidate) ||
                 candidate != key)
             {
                 return false;
@@ -259,12 +261,75 @@ public static class ChunkMesher
         return true;
     }
 
+    /// <summary>
+    /// The five chunks a face can reach: this one and its four horizontal neighbours.
+    /// </summary>
+    /// <remarks>
+    /// A face's neighbour block is at most one block outside the chunk and never crosses a section boundary vertically, so
+    /// these five are the only chunks involved. Resolving them once turns every block and light lookup into an array index
+    /// instead of a dictionary probe, which is what made meshing take hundreds of milliseconds per chunk.
+    /// </remarks>
+    private readonly struct Neighbourhood
+    {
+        private readonly LevelChunk _centre;
+        private readonly LevelChunk? _west;
+        private readonly LevelChunk? _east;
+        private readonly LevelChunk? _north;
+        private readonly LevelChunk? _south;
+
+        public Neighbourhood(ClientWorld world, LevelChunk centre)
+        {
+            _centre = centre;
+            _west = world.GetChunk(centre.ChunkX - 1, centre.ChunkZ);
+            _east = world.GetChunk(centre.ChunkX + 1, centre.ChunkZ);
+            _north = world.GetChunk(centre.ChunkX, centre.ChunkZ - 1);
+            _south = world.GetChunk(centre.ChunkX, centre.ChunkZ + 1);
+        }
+
+        public int GetBlockState(int x, int y, int z, int fallback)
+        {
+            var chunk = Resolve(x, z);
+
+            return chunk is null ? fallback : chunk.GetBlockState(x & 15, y, z & 15, fallback);
+        }
+
+        public bool TryGetLight(int x, int y, int z, out byte sky, out byte block)
+        {
+            var chunk = Resolve(x, z);
+
+            if (chunk is null)
+            {
+                sky = 0;
+                block = 0;
+                return false;
+            }
+
+            sky = chunk.GetSkyLight(x & 15, y, z & 15);
+            block = chunk.GetBlockLight(x & 15, y, z & 15);
+            return true;
+        }
+
+        private LevelChunk? Resolve(int x, int z)
+        {
+            var offsetX = (x >> 4) - _centre.ChunkX;
+            var offsetZ = (z >> 4) - _centre.ChunkZ;
+
+            return offsetX switch
+            {
+                0 => offsetZ switch { 0 => _centre, -1 => _north, 1 => _south, _ => null },
+                -1 when offsetZ == 0 => _west,
+                1 when offsetZ == 0 => _east,
+                _ => null
+            };
+        }
+    }
+
     /// <summary>What a face contributes to a merge: the block state plus the light that shades it.</summary>
     private readonly record struct MergeKey(int State, byte Sky, byte Block);
 
     /// <summary>Resolves a (slice, u, v) cell of a face plane into the face it would emit.</summary>
     private static bool TryDescribe(
-        ClientWorld world,
+        in Neighbourhood neighbourhood,
         ChunkSection section,
         int direction,
         int uAxis,
@@ -294,14 +359,14 @@ public static class ChunkMesher
         var sampleY = baseY + y + dy;
         var sampleZ = baseZ + z + dz;
 
-        var neighbour = world.GetBlockState(sampleX, sampleY, sampleZ, airState);
+        var neighbour = neighbourhood.GetBlockState(sampleX, sampleY, sampleZ, airState);
 
         if (neighbour != airState && ShouldCullFace(state, neighbour, sprites, layout))
         {
             return false;
         }
 
-        world.TryGetLight(sampleX, sampleY, sampleZ, out var sky, out var block);
+        neighbourhood.TryGetLight(sampleX, sampleY, sampleZ, out var sky, out var block);
         key = new MergeKey(state, sky, block);
         return true;
     }
@@ -394,7 +459,7 @@ public static class ChunkMesher
     };
 
     private static void EmitMergedQuad(
-        ClientWorld world,
+        in Neighbourhood neighbourhood,
         MeshBuffer buffer,
         int direction,
         int slice,
@@ -522,9 +587,9 @@ public static class ChunkMesher
             _ => SideShade
         };
 
-        var light = world.TryGetLight(baseX + x + dx, baseY + y + dy, baseZ + z + dz, out var sky, out var block)
+        var light = neighbourhood.TryGetLight(baseX + x + dx, baseY + y + dy, baseZ + z + dz, out var sky, out var block)
             ? (sky, block)
-            : world.TryGetLight(baseX + x, baseY + y, baseZ + z, out var selfSky, out var selfBlock)
+            : neighbourhood.TryGetLight(baseX + x, baseY + y, baseZ + z, out var selfSky, out var selfBlock)
                 ? (selfSky, selfBlock)
                 : ((byte)0, (byte)0);
 

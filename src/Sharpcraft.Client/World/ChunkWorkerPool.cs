@@ -35,6 +35,10 @@ public sealed class ChunkWorkerPool : IDisposable
     // happened to deliver first. Ties fall back to arrival order through the sequence number.
     private readonly object _meshGate = new();
     private readonly PriorityQueue<long, (double Distance, long Sequence)> _meshQueue = new();
+
+    // Keys already waiting in the queue. Without this, asking for every chunk that has no mesh yet re-queues the same
+    // chunks every frame, the queue hits its ceiling immediately and the nearest duplicates starve everything else.
+    private readonly HashSet<long> _meshQueued = [];
     private readonly bool _meshFifo;
     private long _meshSequence;
     private float _viewChunkX;
@@ -236,7 +240,13 @@ public sealed class ChunkWorkerPool : IDisposable
     {
         lock (_meshGate)
         {
-            return _meshQueue.TryDequeue(out chunkKey, out _);
+            if (!_meshQueue.TryDequeue(out chunkKey, out _))
+            {
+                return false;
+            }
+
+            _meshQueued.Remove(chunkKey);
+            return true;
         }
     }
 
@@ -247,10 +257,14 @@ public sealed class ChunkWorkerPool : IDisposable
             return false;
         }
 
-        Interlocked.Increment(ref _meshPending);
-
         lock (_meshGate)
         {
+            if (!_meshQueued.Add(chunkKey))
+            {
+                return false;
+            }
+
+            Interlocked.Increment(ref _meshPending);
             _meshQueue.Enqueue(chunkKey, (DistanceTo(chunkKey), ++_meshSequence));
         }
 
