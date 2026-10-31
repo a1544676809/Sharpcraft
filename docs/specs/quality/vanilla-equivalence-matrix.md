@@ -19,10 +19,10 @@
 | # | 特性 | 原版判据 | 检查方式 | 阈值 | 状态 |
 |---| --- | --- | --- | --- | --- |
 | 1 | 登录/进入世界 | JoinGame 字段与顺序一致 | `walk`/`play` 断言 | 完全一致 | 未验证 |
-| 2 | KeepAlive/Ping | 收到即回 | 连接 60s 无断线 | 0 次超时 | 未验证 |
+| 2 | KeepAlive/Ping | 收到即回 | `verify-protocol-live.ps1` | 20s 内 ≥1 次 | **实测 0 次（待查）** |
 | 3 | 区块流式加载 | 移动时区块数持续增长到视距上限 | `tools/verify/verify-streaming.ps1` | ≥expected 90% | **已知缺陷** |
 | 4 | 区块批处理 ack | 每批回 `ChunkBatchReceived` | 同上，回包数≥批次数 | 相等 | 未验证 |
-| 5 | 玩家位置同步 | 纠正后一致、不掉落 | `walk` + `stream:` 位置 | ≤0.05 格 | 未验证 |
+| 5 | 玩家位置同步 | 纠正后一致、不掉落 | `verify-protocol-live.ps1` 的 distance | 8s 内接近 4.317 格/秒 | **实测 20s 走 217 格（corrections=2，待查）** |
 | 6 | 方块实体 | 箱子 14/16、贴地 | `BlockEntityPlaceholderMesherTests` | 像素差 ≤1 | 部分验证 |
 | 7 | 实体模型 | 六部件、0.9 比例 | `EntityPlaceholderMesherTests` | 结构断言 | 部分验证（占位）|
 | 8 | 分层 | 按材质透明度三层 | `BlockLayerRulesTests`、`Repro-006` | 全绿 | 部分验证 |

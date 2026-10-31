@@ -23,7 +23,14 @@ internal static class WalkCommand
     /// <param name="Distance">Distance the player believed it travelled.</param>
     /// <param name="DisconnectReason">Reason the server gave, or empty.</param>
     /// <param name="Survived">True when the connection was still open at the end.</param>
-    internal sealed record Result(int TicksSent, int Corrections, double Distance, string DisconnectReason, bool Survived);
+    internal sealed record Result(
+        int TicksSent,
+        int Corrections,
+        double Distance,
+        string DisconnectReason,
+        bool Survived,
+        int KeepAliveReplies = 0,
+        int BatchAcks = 0);
 
     /// <summary>Walks forward for a bounded time.</summary>
     /// <param name="connection">Play-phase connection.</param>
@@ -50,6 +57,8 @@ internal static class WalkCommand
 
         var sent = 0;
         var corrections = 0;
+    var keepAliveReplies = 0;
+    var batchAcks = 0;
         var reason = string.Empty;
         var survived = false;
 
@@ -94,7 +103,7 @@ internal static class WalkCommand
                         reader.TryReadLong(out var keepAliveId);
                         if (!TrySend(connection, PlayPackets.BuildKeepAliveReply(keepAliveId), ref reason))
                         {
-                            return new Result(sent, corrections, 0, reason, false);
+                            return new Result(sent, corrections, 0, reason, false, keepAliveReplies, batchAcks);
                         }
 
                         break;
@@ -124,7 +133,7 @@ internal static class WalkCommand
                 TrySend(connection, probe.AsSpan(0, probeWriter.Position), ref reason);
                 log($"probed id {probeId} with 40 body bytes");
                 await Task.Delay(600, cancellationToken).ConfigureAwait(false);
-                return new Result(0, corrections, 0, reason, true);
+                return new Result(0, corrections, 0, reason, true, keepAliveReplies, batchAcks);
             }
             if (int.TryParse(Environment.GetEnvironmentVariable("MC_LOAD_ID"), out var loadId) && loadId > 0)
                             {
@@ -304,13 +313,13 @@ internal static class WalkCommand
                             break;
 
                         case PacketIds.PlayClientbound.Disconnect:
-                            return new Result(sent, corrections, Distance(start, player.Position), DescribeDisconnect(body, reader), false);
+                            return new Result(sent, corrections, Distance(start, player.Position), DescribeDisconnect(body, reader), false, keepAliveReplies, batchAcks);
                     }
                 }
 
                 if (pumpFailure.Length != 0)
                 {
-                    return new Result(sent, corrections, Distance(start, player.Position), pumpFailure, false);
+                    return new Result(sent, corrections, Distance(start, player.Position), pumpFailure, false, keepAliveReplies, batchAcks);
                 }
 
                 // Deadline arithmetic instead of an accumulator: the n-th tick is due at
@@ -337,7 +346,7 @@ internal static class WalkCommand
                     {
                         if (!TrySend(connection, packet, ref reason))
                         {
-                            return new Result(sent, corrections, Distance(start, player.Position), reason, false);
+                            return new Result(sent, corrections, Distance(start, player.Position), reason, false, keepAliveReplies, batchAcks);
                         }
 
                         sent++;

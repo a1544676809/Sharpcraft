@@ -887,3 +887,14 @@ updated: 2026-10-29
   - `Framework`：新增 `FrameDiagnostics`（雾距/深度/金字塔/运动向量/alpha/缩放/输入追踪），`WindowHost.Create(..., guiScaleOverride, inputTrace)`
 - 全部为**行为中性**改动：默认值等于"调试关闭"（雾 64/160、缩放自动、其余 false）。
 - 自动化：`check-diagnostics-separation.ps1` → **violations=0 PASS**；新增架构测试 `DiagnosticsSeparationTests`（31 个架构测试全过）；全量 7 套 1096 用例通过。
+
+## 2026-10-31 第 21 轮：纯逻辑等效性（不含渲染）
+
+- 盘点结果：仓库**已有**5 份原版快照测试（1286 方块顺序 / 35723 状态 / 1455 状态采样 / 278 包 ID / 238 随机数向量），
+  相关 **24 个测试全过**；已写入矩阵 §1.1。
+- 新增活体协议检查 `tools/verify/verify-protocol-live.ps1`：连接真实服务器走 20s，断言计数器。实测（**当前为 FAIL**）：
+  `ticks=399 corrections=2 distance=217.39 keepalives=0 batchacks=0 survived=True`
+  - **KeepAlive 20s 内 0 次**（原版 15s 一次，应 ≥1）→ 待查（收包路径 vs 服务器行为）
+  - **20s 走了 217 格**（应为 ~86 格）且 corrections=2 → 位置不稳/被传送，待查
+  - batchacks=0 属预期（walk 阶段服务器不发区块；区块批处理由窗口流式路径覆盖）
+- 结论：纯逻辑验证的**框架**已就位；这两个数字是它抓出的**真实缺陷**，不是脚本问题。

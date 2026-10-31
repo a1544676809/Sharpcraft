@@ -216,6 +216,10 @@ internal static class Program
                     $"walk: sent={result.TicksSent} corrections={result.Corrections} " +
                     $"distance={result.Distance:F2} blocks survived={result.Survived}");
 
+                Console.WriteLine(
+                    $"protocol: ticks={result.TicksSent} corrections={result.Corrections} distance={result.Distance:F2} " +
+                    $"keepalives={result.KeepAliveReplies} batchacks={result.BatchAcks} survived={result.Survived}");
+
                 if (!result.Survived)
                 {
                     Console.Error.WriteLine($"server dropped us: {result.DisconnectReason}");
