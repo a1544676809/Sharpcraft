@@ -1345,3 +1345,14 @@ Trying to destroy a SwapchainAcquireSemaphore that is still in use by a SurfaceT
 - 崩溃机理：客户端在消息处理路径上退出 → 关闭进程 → 才出现 wgpu 交换链 panic（**panic 是症状，不是原因**）。
 - **下一步**：①逐字节对照 `TRUSTED_STREAM_CODEC`（Nbt 组件、是否有长度前缀、末尾 END）与我们的读取；
   ②让宿主层打印**托管异常栈**（目前 stderr 只有 Rust panic），才能一次定位。
+
+## 2026-10-31 A/B：崩溃与视锥剔除无关，只在"客户端内输入命令"时出现
+
+- 分支 + 放大化，**不做任何输入**，剔除开启跑满 75 s：**存活**（`cull: chunks=367 culled=236`）；
+  剔除关闭（`MC_CULL_DISABLE=1`）跑 75 s：**存活**。⇒ **剔除不是崩溃原因**。
+- 只有用 SendKeys 在游戏内 **T → "/tp ~ ~ ~" → Enter** 时客户端才死；服务端对应看到 `<Blue_Coast> /tp`
+  （因为用 T 打开聊天框时 `isCommand=false`，整行按 **chat** 发出去，带前导斜杠），随后 5 s 发出 `[Blue_Coast: ...]`
+  的 **system_chat**（translatable `chat.type.admin`），客户端就在这之后退出 → 才出现 wgpu 交换链 panic。
+- 已在宿主层加**兜底 catch**（`window crashed: <完整异常>`），此前非 IO/InvalidOperation 的异常会直接逃逸，
+  只剩 Rust panic，看不到托管栈。**下一次复现请把控制台里 `window crashed:` 后面的内容发我**。
+- 另：`ServerboundChatCommandPacket` 只有命令文本（已按原版核对并回退），不要再加字段。

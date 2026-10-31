@@ -659,6 +659,13 @@ internal static class Program
             Console.Error.WriteLine($"window failed: {exception.Message}");
             return 1;
         }
+        catch (Exception exception)
+        {
+            // Anything else used to escape and take the process down with only a native panic to show for it, which hid
+            // the managed fault. Print the whole chain so the real failure is visible.
+            Console.Error.WriteLine($"window crashed: {exception}");
+            return 1;
+        }
     }
 
     private static async Task<int> ProbeAsync(string address)
