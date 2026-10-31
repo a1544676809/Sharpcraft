@@ -1847,4 +1847,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - A（日夜/天气/维度）：明确**暂未实现**，已在 docs/specs/render/lighting.md §6 写明两个硬前提（缺时间包解析、lightmap 需移到着色器）与落地步骤。- C（半透明水/冰亮度）：查证——水有生物群系色染色（BiomeTint.Water 默认 0x3F76E4 蓝），reference OIT 的单层 accum/composite 数学上等价于标准 alpha 混合（accum.rgb/accum.a 归一后 coverage=alpha）。未发现系统性压暗点；残余可能是水雾（water fog）未实现与 OIT 顺序无关近似的差异。**待固定机位对照再定**，暂不改动。## 2026-10-31 方块状态模块评审通过 + 流体状态解码（步骤 A）
 - `docs/modules/block-state.md` 评审通过（[已评审]，含 §9 模组热重载规划）。
 - 新增 `Sharpcraft.Common/World/FluidState.cs`：`FluidState`（Kind/Amount/Falling/IsSource/OwnHeight=amount/9）+ `FluidStateCodec.FromBlockState(stateId, layout)`（level=id-base，0=源/1..7 流动/8..15 下落）。`FluidStateTests` 9 项通过。
-- 全量 1142+ 通过、门禁 ok。下一步：写 `docs/specs/render/fluid-rendering.md` 并实现流体网格（四角高度/flow-UV/水色/逐面光/overlay）。
+- 全量 1142+ 通过、门禁 ok。下一步：写 `docs/specs/render/fluid-rendering.md` 并实现流体网格（四角高度/flow-UV/水色/逐面光/overlay）。## 2026-10-31 流体渲染：规格评审通过 + 几何核心（静态帧第 1 步）
+- `docs/specs/render/fluid-rendering.md` 评审通过（OIT 纠正为 26.3 原版机制，非偏差）。
+- 调查：图集**只拼接动画首帧**（`TakeFirstFrame`）⇒ 流动动画需先做图集动画；水雾=WaterFogEnvironment。
+- 新增 `Sharpcraft.Client/Render/FluidSurface.cs`（ownHeight=amount/9、原版 calculateAverageHeight 四角加权），`FluidSurfaceTests` 5 项通过。
+- 全量 **1156 通过**、门禁 ok。
+- **下一步**：给 MeshBuffer 加浮点坐标 `AppendQuad`（现仅整数）→ 实现流体几何发射（四角高度/面剔除/flow-UV/染色/逐面光/overlay）→ 接半透明层 → 离屏水面出图；再补水下雾与图集动画。
