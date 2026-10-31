@@ -32,6 +32,7 @@
 | 12 | 半透明排序 | 远到近、不写深度 | 像素算术断言 | ≤1 | 部分验证 |
 | 13 | 天空/雾/天体 | 渐变 + 日月星 | 原版截图对比 | ΔE 待定 | 未验证（天体未做）|
 | 14 | UI/字体/聊天 | 布局字体一致 | UI 截图 + 现有测试 | 待定 | 部分验证 |
+| 17 | 速度读数（宿主显示）| 原版 F3：`Entity.computeSpeed()` 每 tick 取 `position-lastKnownPosition` 的 3D 长度，显示 `%.3f blocks/tick` | 目视 + 数值稳定 | 每 tick 一次、不跳动 | **已验证：稳定 0.281 blocks/tick（冲刺 5.61 b/s）** |
 | 16 | 调试代码可分离 | 游戏程序集不读环境变量；删除 `Launcher/Diagnostics` 即可移除全部调试 | `check-diagnostics-separation.ps1` + `DiagnosticsSeparationTests` | violations=0 | **已验证（0 处）** |
 | 15 | 性能 | p99 ≤16.7ms、剔除 ≤1ms、1 提交/帧 | `benchmarks/` | 见中期目标 | 未验证（当前 150–200ms）|
 

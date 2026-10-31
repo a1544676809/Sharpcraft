@@ -960,3 +960,12 @@ send  60.. : -704.50 → -743.21 → …                ← 之后不再被纠�
 - **实测（20s，真实服务器）**：`corrections=1`（仅 join）、`distance=85.94`、**`speed=4.318`**（原版 4.317）
   ⇒ `verify-protocol-live.ps1` **PASS**；全量 7 套 1096 用例通过。
 - 这条也解释了窗口里"玩家下坠/位置不对/世界看起来异常"的一部分现象（移动长期不被服务器采纳）。
+
+## 2026-10-31 第 27 轮：速度读数按原版语义重写
+
+- **原版依据**（`ref://mc-26.3-analysis/src/net/minecraft/world/entity/Entity.java` 的 `computeSpeed()`）：
+  每个 **tick** 计算 `lastKnownSpeed = position - lastKnownPosition`（**3D**），F3 显示 `Speed: %.3f blocks/tick`，**无平滑**。
+- 原实现按**每帧**差分并做指数平滑 ⇒ 数字在小数/大数间跳动（用户反馈确认）。
+- 重写 `SpeedOverlay`：只在**tick 号变化时**采样一次，显示 `Speed: 0.281 blocks/tick (5.61 b/s)`。
+- 实测（自动走）：连续三次采样 **0.281 / 0.281 / 0.281** —— 与原版冲刺 0.2806 blocks/tick 一致（5.612 b/s）。
+- 全量 7 套测试通过；分离检查 0 违规。

@@ -132,7 +132,6 @@ internal static class WindowCommand
         var speedOverlay = Sharpcraft.Launcher.Diagnostics.SpeedOverlay.Enabled
             ? new Sharpcraft.Launcher.Diagnostics.SpeedOverlay()
             : null;
-        var overlayClock = System.Diagnostics.Stopwatch.StartNew();
 
         var geometryEpoch = 0;
         Queue<(long Key, Sharpcraft.Client.Render.MeshData Mesh)>? replayQueue = null;
@@ -365,7 +364,7 @@ internal static class WindowCommand
                 : (window) =>
                 {
                     var camera = session.UpdateCamera(window);
-                    speedOverlay?.Update(session.Player.Position, overlayClock.Elapsed.TotalSeconds);
+                    speedOverlay?.Observe(session.Player.Position, session.TickIndex);
                     return camera;
                 },
             geometryUpdates: () =>

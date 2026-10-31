@@ -53,6 +53,9 @@ internal sealed class InteractiveSession
     private readonly Sharpcraft.Client.Ui.Title _title = new();
     private bool _diagnosticChatSent;
     private bool _playerLoadedSent;
+
+    /// <summary>Number of ticks this session has run, used by the host speed readout.</summary>
+    public long TickIndex { get; private set; }
     private readonly bool _diagEnabled = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
     private int _diagFrames;
 
@@ -979,6 +982,7 @@ internal sealed class InteractiveSession
                 }
 
                 _player.Tick(frame.Forward, frame.Strafe, frame.Jump, frame.Sprint, _camera.Yaw, frame.Sneak);
+            TickIndex++;
 
                 // Remote entities approach the position the server reported over a few ticks, so the tracker
                 // has to advance once per tick (docs/specs/network/entity-sync.md 9.4).
