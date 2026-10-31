@@ -1885,4 +1885,7 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 待办：`SKY_LIGHT_FACTOR/COLOR` 等其余属性求值；`AdvanceClocks` partial 精度；再回接天空天体渲染与日夜光照。## 2026-11-01 时间系统第三片：其余环境属性
 - `FloatKeyframeTrack` 支持线性 easing（Func）；`SkyAttributeTracks`：**STAR_BRIGHTNESS**（MAX 修饰→采样值）、**SKY_LIGHT_FACTOR**（日1.0/夜0.24）、**MOON_PHASE 索引**（按 totalTicks，period 24000*8）。
 - 测试 +3（星亮度 6000=0/18000=0.5；天光系数 6000=1/18000=0.24；月相 0/3/8 环绕）。全量 1176 通过、门禁 ok。
-- 待办：SUNRISE_SUNSET_COLOR（33 关键帧 RGBA）、SKY_COLOR 修饰、SKY_LIGHT_COLOR；再回接天空天体渲染与日夜光照。AdvanceClocks partial 精度。
+- 待办：SUNRISE_SUNSET_COLOR（33 关键帧 RGBA）、SKY_COLOR 修饰、SKY_LIGHT_COLOR；再回接天空天体渲染与日夜光照。AdvanceClocks partial 精度。## 2026-11-01 时间系统第四片：日出/日落色 + 天空光色
+- `SkyAttributeTracks` 增：**SUNRISE_SUNSET_COLOR**（33 关键帧 ARGB32 → 逐通道线性 RGB + 线性 alpha，4 条线性轨）；**SKY_LIGHT_COLOR**（白×颜色修饰：昼 (1,1,1)、夜 (linear(0.48),linear(0.48),1)）。
+- 测试 +2（日出正午 alpha=0；天空光色昼白/夜蓝）。全量 1178 通过、门禁 ok。
+- 时间数据层基本齐全（角度/星亮度/天光系数/日出色/天光色/月相）。下一步：回接天空天体渲染 + 日夜光照消费。

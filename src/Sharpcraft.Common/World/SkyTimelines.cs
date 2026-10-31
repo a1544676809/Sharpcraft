@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using System.Numerics;
+
 namespace Sharpcraft.Common.World;
 
 /// <summary>A cubic-bezier easing identical to the reference EasingType.CubicBezier (docs/modules/time.md 5).</summary>
@@ -206,6 +208,51 @@ public static class SkyAttributeTracks
         var ticks = ((totalTicks % moonPeriod) + moonPeriod) % moonPeriod;
         return (int)(ticks / Period);
     }
+
+    private static float SrgbToLinear(int channel)
+    {
+        var x = channel / 255f;
+        return x >= 0.04045f ? MathF.Pow((x + 0.055f) / 1.055f, 2.4f) : x / 12.92f;
+    }
+
+    // SUNRISE_SUNSET_COLOR keyframes (tick, ARGB32) from Timelines.java; decoded per channel to linear RGB + linear alpha.
+    private static readonly (int Tick, int Argb)[] SunriseRaw =
+    [
+        (71, 1609540403), (310, 703969843), (565, 117167155), (730, 16770355), (11270, 16770355),
+        (11397, 83679283), (11522, 268028723), (11690, 703969843), (11929, 1609540403), (12243, -1310226637),
+        (12358, -857440717), (12512, -371166669), (12613, -153261261), (12732, -19242189), (12841, -19440589),
+        (13035, -321760973), (13252, -1043577037), (13775, 918435635), (13888, 532362547), (14039, 163001139),
+        (14192, 11744051), (21807, 11678515), (21961, 163001139), (22112, 532362547), (22225, 918435635),
+        (22748, -1043577037), (22965, -321760973), (23159, -19440589), (23272, -19242189), (23488, -371166669),
+        (23642, -857440717), (23757, -1310226637)
+    ];
+
+    private static FloatKeyframeTrack SunriseChannel(Func<int, float> select) =>
+        FloatKeyframeTrack.Build(
+            SunriseRaw.Select(k => new FloatKeyframe(k.Tick, select(k.Argb))).ToArray(),
+            static x => x,
+            Period);
+
+    private static readonly FloatKeyframeTrack SunriseR = SunriseChannel(a => SrgbToLinear((a >> 16) & 0xFF));
+    private static readonly FloatKeyframeTrack SunriseG = SunriseChannel(a => SrgbToLinear((a >> 8) & 0xFF));
+    private static readonly FloatKeyframeTrack SunriseB = SunriseChannel(a => SrgbToLinear(a & 0xFF));
+    private static readonly FloatKeyframeTrack SunriseA = SunriseChannel(a => ((a >> 24) & 0xFF) / 255f);
+
+    public static Vector4 SunriseSunsetColorAt(int dayTimeTicks) =>
+        new(SunriseR.Sample(dayTimeTicks), SunriseG.Sample(dayTimeTicks), SunriseB.Sample(dayTimeTicks), SunriseA.Sample(dayTimeTicks));
+
+    // SKY_LIGHT_COLOR: white * ColorModifier.MULTIPLY_RGB track (730/11270 white, 13140/22860 = NIGHT_SKY_LIGHT_COLOR).
+    private const int NightSkyChannel = 122; // as8BitChannel(0.48)
+    private static readonly float NightSky = SrgbToLinear(NightSkyChannel);
+
+    private static readonly FloatKeyframeTrack SkyLightColorR = FloatKeyframeTrack.Build(
+        [new FloatKeyframe(730, 1f), new FloatKeyframe(11270, 1f), new FloatKeyframe(13140, NightSky), new FloatKeyframe(22860, NightSky)], static x => x, Period);
+
+    private static readonly FloatKeyframeTrack SkyLightColorB = FloatKeyframeTrack.Build(
+        [new FloatKeyframe(730, 1f), new FloatKeyframe(11270, 1f), new FloatKeyframe(13140, 1f), new FloatKeyframe(22860, 1f)], static x => x, Period);
+
+    public static Vector3 SkyLightColorAt(int dayTimeTicks) =>
+        new(SkyLightColorR.Sample(dayTimeTicks), SkyLightColorR.Sample(dayTimeTicks), SkyLightColorB.Sample(dayTimeTicks));
 }
 
 /// <summary>Overworld day environment tracks from Timelines.java: sun/moon/star angles (degrees).</summary>

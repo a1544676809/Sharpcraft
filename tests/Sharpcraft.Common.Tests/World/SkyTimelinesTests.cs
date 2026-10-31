@@ -70,4 +70,28 @@ public sealed class SkyTimelinesTests
         Assert.Equal(3, SkyAttributeTracks.MoonPhaseIndex((24000L * 3) + 5));
         Assert.Equal(0, SkyAttributeTracks.MoonPhaseIndex(24000L * 8)); // wraps
     }
+
+    [Fact]
+    public void SunriseColourIsTransparentInTheDay()
+    {
+        // The 730/11270 keyframe (16770355) has alpha byte 0, so the sunrise band is invisible at noon.
+        Assert.Equal(0f, SkyAttributeTracks.SunriseSunsetColorAt(6000).W, 3);
+    }
+
+    [Fact]
+    public void SkyLightColourIsWhiteByDayAndBlueAtNight()
+    {
+        var day = SkyAttributeTracks.SkyLightColorAt(6000);
+        Assert.Equal(1f, day.X, 3);
+        Assert.Equal(1f, day.Y, 3);
+        Assert.Equal(1f, day.Z, 3);
+
+        var night = SkyAttributeTracks.SkyLightColorAt(18000);
+        // NIGHT_SKY_LIGHT_COLOR = (0.48,0.48,1.0) sRGB -> linear, blue stays 1.
+        static float Srgb(float x) => x >= 0.04045f ? MathF.Pow((x + 0.055f) / 1.055f, 2.4f) : x / 12.92f;
+        var expectedRed = Srgb(122f / 255f);
+        Assert.Equal(expectedRed, night.X, 3);
+        Assert.Equal(expectedRed, night.Y, 3);
+        Assert.Equal(1f, night.Z, 3);
+    }
 }
