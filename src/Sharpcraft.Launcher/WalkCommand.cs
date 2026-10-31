@@ -257,7 +257,10 @@ internal static class WalkCommand
                                 var (_, snapped, distance) = ApplyTeleport(connection, sync, player, correction);
                                 corrections++;
                                 accumulator = TimeSpan.Zero;
-                                log($"correction {corrections}: deviation {distance:F2} snapped={snapped}");
+                                log($"correction {corrections}: deviation {distance:F2} snapped={snapped} " +
+                        $"server=({correction.X:F2},{correction.Y:F2},{correction.Z:F2}) " +
+                        $"local=({player.Position.X:F2},{player.Position.Y:F2},{player.Position.Z:F2}) " +
+                        $"relatives={correction.RelativeFlags}");
                             }
 
                             break;
@@ -351,7 +354,12 @@ internal static class WalkCommand
 
                     if (sync.Build(kind, player, yawDegrees, pitchDegrees) is { } packet)
                     {
-                        if (!TrySend(connection, packet, ref reason))
+                        if (Environment.GetEnvironmentVariable("MC_WALK_EXCHANGE") == "1" && sent % 20 == 0)
+        {
+            log($"send {sent}: at ({player.Position.X:F2},{player.Position.Y:F2},{player.Position.Z:F2}) ground={player.OnGround}");
+        }
+
+        if (!TrySend(connection, packet, ref reason))
                         {
                             return new Result(sent, corrections, Distance(start ?? player.Position, player.Position), reason, false, keepAliveReplies, batchAcks);
                         }

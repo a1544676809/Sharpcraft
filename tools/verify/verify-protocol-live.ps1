@@ -12,7 +12,8 @@ param(
     [int]$MinKeepAlives = 1,
     [double]$ReferenceSpeed = 4.317,
     [double]$SpeedTolerance = 0.25,
-    [int]$CollectSeconds = -1
+    [int]$CollectSeconds = -1,
+    [int]$MaxCorrections = 1
 )
 
 $ErrorActionPreference = 'Stop'
@@ -75,6 +76,10 @@ $speed = if ($span -gt 0) { [math]::Round([math]::Sqrt(($dx * $dx) + ($dz * $dz)
 
 if (-not $survived) { "FAIL protocol survived=false"; exit 1 }
 if ($ticks -le 0) { "FAIL protocol ticks=$ticks"; exit 1 }
+
+# One correction is the join teleport. Any more means the server pulled the player back during the walk, which is what a
+# client that does not get its first movements accepted looks like.
+if ($corrections -gt $MaxCorrections) { "FAIL corrections=$corrections max=$MaxCorrections"; exit 1 }
 if ($keepalives -lt $MinKeepAlives) { "FAIL protocol keepalives=$keepalives threshold=$MinKeepAlives"; exit 1 }
 if ([math]::Abs($speed - $ReferenceSpeed) -gt $SpeedTolerance) {
     "FAIL speed=$speed reference=$ReferenceSpeed tolerance=$SpeedTolerance"
