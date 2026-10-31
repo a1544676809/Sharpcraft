@@ -766,3 +766,14 @@ updated: 2026-10-29
 
 **需要用户配合**：RenderDoc GUI 在这台机器上用户可用；请用它抓一帧（F12），把 `.rdc` 路径给我，
 我在事件列表里定位"有黑线的那次 draw"并读它的 pipeline state（fog uniform / depth / blend / storeOp）。
+
+### 2026-10-31 第 10 轮：有真实抓帧了（Vulkan，frame 538）
+
+- 用户用 RenderDoc GUI 抓到了 `Sharpcraft_2026.10.31_02.12.26_frame538.rdc`，后端是 **Vulkan**（说明本机 wgpu 走 Vulkan，不是 D3D12，
+  这就是我用 `renderdoccmd capture` 无法 hook 的原因——那个 build 的 Vulkan layer 未注册成功）。
+- 已把 `.rdc` 转成 `chrome.json`（命令流）与 `xml`（管线状态）：一帧内 1 次 sky `Draw(3)` + ~17 次 chunk `DrawIndexed` + cutout + 2 次 UI。
+- **用户观察**：`EID 96` 开始绘制世界时，黑线就已经存在 ⇒ 黑线属于世界绘制阶段（不是 UI/后处理）。
+- 关键排除（本次对话内）：用**常量颜色片元着色器**重渲染，纯黑像素 **0** ⇒ 黑线确实由我们的片元着色器写出；
+  但要注意：离屏 `frame` 路径只加载了很少的 chunk（408–600 三角形），**与窗口画面不是同一场景规模**，之前的若干对照实验结论不能直接套用。
+- **下一步（需用户 30 秒操作，最直接）**：在 RenderDoc 里对黑线像素做 **Debug this pixel / Pixel History**，读出：
+  ①哪些 EID 命中该像素；②该 EID 的 shader 输出值。这能一次定死"哪次 draw 写的黑"。
