@@ -415,7 +415,7 @@ internal static class WindowCommand
                 if (streamDiag && (++renderFrames % 60) == 0)
                 {
                     Console.WriteLine(
-                        $"streamrender: world={world.LoadedChunkCount} meshes={meshCache.LastTotalChunks} "
+                        $"streamrender: world={world.LoadedChunkCount} arrived={session.ChunksInstalled} arrivalLast={session.LastInstallSeconds:F1} " + $"meshes={meshCache.LastTotalChunks} "
                         + $"drained={drainedTotal} thisFrame={drained.Count} "
                         + $"built={workerPool.MeshesBuilt} empty={workerPool.MeshesEmpty} missing={workerPool.MeshesMissingChunk} " + $"t={diagClock.Elapsed.TotalSeconds:F1}s "
                         + $"meshPending={workerPool.MeshesPending} ready={workerPool.MeshesReady} frame={renderFrames}");

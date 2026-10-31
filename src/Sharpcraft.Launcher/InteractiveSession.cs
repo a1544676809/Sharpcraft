@@ -53,6 +53,16 @@ internal sealed class InteractiveSession
     private readonly Sharpcraft.Client.Ui.Title _title = new();
     private bool _diagnosticChatSent;
     private bool _playerLoadedSent;
+    private readonly System.Diagnostics.Stopwatch _installClock = System.Diagnostics.Stopwatch.StartNew();
+
+    /// <summary>Chunks installed into the world so far, i.e. data that has arrived from the server.</summary>
+    public int ChunksInstalled { get; private set; }
+
+    /// <summary>Seconds since the session started when the last chunk was installed.</summary>
+    public double LastInstallSeconds { get; private set; }
+
+    /// <summary>Seconds since the session started when the first chunk was installed.</summary>
+    public double FirstInstallSeconds { get; private set; }
 
     /// <summary>Number of ticks this session has run, used by the host speed readout.</summary>
     public long TickIndex { get; private set; }
@@ -1144,6 +1154,15 @@ internal sealed class InteractiveSession
     {
         _world!.AddChunk(chunk);
         _geometryDirty = true;
+
+        // Arrival bookkeeping: the server's sending time must be excluded when judging how long the client takes to draw.
+        ChunksInstalled++;
+        LastInstallSeconds = _installClock.Elapsed.TotalSeconds;
+
+        if (ChunksInstalled == 1)
+        {
+            FirstInstallSeconds = LastInstallSeconds;
+        }
     }
 
     private void DrainIncoming()
