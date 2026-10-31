@@ -1891,4 +1891,6 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 时间数据层基本齐全（角度/星亮度/天光系数/日出色/天光色/月相）。下一步：回接天空天体渲染 + 日夜光照消费。## 2026-11-01 天空天体：几何等效核心（目标 A）
 - 新增 `Client/Render/CelestialGeometry.cs`：日/月四边形（XZ -1..1）在原版矩阵链 **Scale(size,1,size)→Translate(0,height,0)→RotX(angle)→RotY(-90)** 下的顶点；日出三角扇（中心(0,100,0)+16环，r120/z40）。
 - `CelestialGeometryTests` 3 项手算等效（角度0/90°顶点、日出扇形中心/环点）通过。全量 1181 通过（一次偶发 `ChunkSeamTests` 抖动，复跑全绿）、门禁 ok。
-- 待办：天体贴图集（sun/moon）从 pack 取；天空 pass 用 `CelestialGeometry` 绘制盘/日月/星/日出；`DayTime`→角度/亮度驱动；离屏像素验收。
+- 待办：天体贴图集（sun/moon）从 pack 取；天空 pass 用 `CelestialGeometry` 绘制盘/日月/星/日出；`DayTime`→角度/亮度驱动；离屏像素验收。## 2026-11-01 天空天体：贴图切片核心
+- `Client/Assets/CelestialSprites.cs`：天体贴图资源位于 `textures/environment/`（sun、moon_phases，独立于方块图集）；`SliceMoonPhases` 把 4×2 月相表切成 8 个 row-major 矩形。测试 2 项（切片坐标、非整格报错）。全量 1183 通过、门禁 ok。
+- 待办：GPU 侧把 sun/moon 贴图上传 + 天空 pass 用 `CelestialGeometry` 画盘/日月/星/日出（`DayTime`→角度/亮度），离屏出图+像素验收。这是较大的渲染切片。
