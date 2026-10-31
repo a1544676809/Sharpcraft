@@ -177,6 +177,11 @@ public static class ChunkMesher
     {
         var (uAxis, vAxis) = InPlaneAxes(direction);
 
+        // One pass builds the plane's faces, then the merge runs on that table. Asking the world for each neighbour again
+        // while widening and growing a quad made the work quadratic in the quad size, which is exactly the flat case.
+        Span<MergeKey> keys = stackalloc MergeKey[256];
+        Span<bool> present = stackalloc bool[256];
+
         for (var slice = 0; slice < 16; slice++)
         {
             // The consumed mask is per plane: sharing it across slices would suppress cells in
@@ -187,29 +192,62 @@ public static class ChunkMesher
             {
                 for (var u = 0; u < 16; u++)
                 {
-                    if (consumed[(v << 4) | u])
+                    var cell = (v << 4) | u;
+                    present[cell] = TryDescribe(
+                        neighbourhood, section, direction, uAxis, vAxis, slice, u, v, baseX, baseY, baseZ,
+                        airState, sprites, layout, cull, out keys[cell]);
+                }
+            }
+
+            for (var v = 0; v < 16; v++)
+            {
+                for (var u = 0; u < 16; u++)
+                {
+                    var cell = (v << 4) | u;
+
+                    if (consumed[cell] || !present[cell])
                     {
                         continue;
                     }
 
-                    if (!TryDescribe(neighbourhood, section, direction, uAxis, vAxis, slice, u, v, baseX, baseY, baseZ, airState, sprites, layout, cull, out var key))
-                    {
-                        continue;
-                    }
+                    var key = keys[cell];
 
                     var width = 1;
-                    while (u + width < 16 &&
-                           !consumed[(v << 4) | (u + width)] &&
-                           TryDescribe(neighbourhood, section, direction, uAxis, vAxis, slice, u + width, v, baseX, baseY, baseZ, airState, sprites, layout, cull, out var next) &&
-                           next == key)
+
+                    while (u + width < 16)
                     {
+                        var next = (v << 4) | (u + width);
+
+                        if (consumed[next] || !present[next] || keys[next] != key)
+                        {
+                            break;
+                        }
+
                         width++;
                     }
 
                     var height = 1;
-                    while (v + height < 16 &&
-                           RowMatches(neighbourhood, section, direction, uAxis, vAxis, slice, u, v + height, width, baseX, baseY, baseZ, airState, sprites, layout, cull, key, consumed))
+
+                    while (v + height < 16)
                     {
+                        var rowMatches = true;
+
+                        for (var du = 0; du < width; du++)
+                        {
+                            var above = ((v + height) << 4) | (u + du);
+
+                            if (consumed[above] || !present[above] || keys[above] != key)
+                            {
+                                rowMatches = false;
+                                break;
+                            }
+                        }
+
+                        if (!rowMatches)
+                        {
+                            break;
+                        }
+
                         height++;
                     }
 

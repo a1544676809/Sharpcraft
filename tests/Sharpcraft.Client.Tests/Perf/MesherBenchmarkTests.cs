@@ -139,6 +139,92 @@ public sealed class MesherBenchmarkTests
         }
     }
 
+    [Fact]
+    public void AmplifiedTerrainStressIsMeasured()
+    {
+        // Amplified style terrain: tall peaks, deep valleys and cave pockets, which is the worst case for a mesher because
+        // almost nothing merges. This is the stress figure, not the everyday one.
+        var world = new ClientWorld(MinSectionY, SectionCount);
+
+        for (var chunkX = -1; chunkX <= 1; chunkX++)
+        {
+            for (var chunkZ = -1; chunkZ <= 1; chunkZ++)
+            {
+                var chunk = new LevelChunk(chunkX, chunkZ, MinSectionY, SectionCount);
+                FillAmplified(chunk, chunkX, chunkZ);
+                chunk.MarkLoaded();
+                world.AddChunk(chunk);
+            }
+        }
+
+        var atlas = SpriteAtlasBuilder.Stitch(
+        [
+            (new Identifier("minecraft", "block/stone"), Solid(), 1),
+            (SpriteAtlas.MissingSprite, Solid(), 1)
+        ]);
+
+        var layout = VanillaBlockRegistry.Layout;
+        var sprites = new BlockSpriteMap(atlas, layout);
+        var cullTable = new StateCullTable(layout, sprites);
+
+        var centre = world.GetChunk(0, 0)!;
+        using var buffer = new MeshBuffer(1 << 20);
+        using var translucent = new MeshBuffer(1 << 16);
+        using var cutout = new MeshBuffer(1 << 16);
+
+        var blocks = ChunkMesher.MeshChunk(world, centre, 0, buffer, int.MaxValue, sprites, translucent, layout, cutout, null, cullTable);
+        var quads = buffer.VertexCount / 4;
+        var faces = CountVisibleFaces(centre, cullTable);
+
+        var withTable = Measure(world, centre, buffer, sprites, translucent, layout, cutout, cullTable, iterations: 8);
+
+        Console.WriteLine(
+            $"BENCH amplified_ms_per_chunk={withTable:F2} blocks={blocks} greedy_quads={quads} vanilla_faces={faces}");
+
+        Assert.True(blocks > 0, "the amplified chunk produced no geometry, so the measurement is meaningless");
+    }
+
+    private static void FillAmplified(LevelChunk chunk, int chunkX, int chunkZ)
+    {
+        var sections = new ChunkSection[SectionCount];
+
+        for (var index = 0; index < SectionCount; index++)
+        {
+            sections[index] = new ChunkSection(0, MinSectionY + index);
+        }
+
+        for (var x = 0; x < 16; x++)
+        {
+            for (var z = 0; z < 16; z++)
+            {
+                var worldX = (chunkX * 16) + x;
+                var worldZ = (chunkZ * 16) + z;
+
+                // Peaks and valleys, then a second sine pair so the surface folds over itself and caves open up.
+                var peak = 90 + (int)(45.0 * Math.Sin(worldX * 0.21) * Math.Cos(worldZ * 0.19));
+                var fold = (int)(18.0 * Math.Sin(worldX * 0.63 + worldZ * 0.41));
+
+                for (var y = MinSectionY * 16; y < peak; y++)
+                {
+                    var cave = Math.Sin(worldX * 0.55) * Math.Cos(y * 0.37) * Math.Sin(worldZ * 0.49) > 0.42;
+
+                    if (cave && y < peak - 6)
+                    {
+                        continue;
+                    }
+
+                    var state = ((worldX * 31) + (worldZ * 17) + y + fold) % 23 == 0 ? 2 : 1;
+                    sections[(y >> 4) - MinSectionY].Set(x, y & 15, z, state);
+                }
+            }
+        }
+
+        for (var index = 0; index < SectionCount; index++)
+        {
+            chunk.SetSection(sections[index]);
+        }
+    }
+
     private static double Measure(
         ClientWorld world,
         LevelChunk chunk,
