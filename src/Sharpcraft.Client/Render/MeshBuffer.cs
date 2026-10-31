@@ -86,6 +86,42 @@ public sealed class MeshBuffer : IDisposable
         (float U, float V) uvB,
         (float U, float V) uvC,
         (float U, float V) uvD,
+        SpriteRect? sprite = null) =>
+        AppendQuad(a, b, c, d, (red, green, blue), (red, green, blue), (red, green, blue), (red, green, blue), uvA, uvB, uvC, uvD, sprite);
+
+    /// <summary>
+    /// Appends a quad whose four corners carry their own lit colour.
+    /// </summary>
+    /// <remarks>
+    /// Smooth lighting and ambient occlusion vary per corner, exactly as the reference computes them per vertex, so a quad
+    /// needs four colours rather than one. The single colour overload forwards here with all four equal.
+    /// </remarks>
+    /// <param name="a">First corner position.</param>
+    /// <param name="b">Second corner position.</param>
+    /// <param name="c">Third corner position.</param>
+    /// <param name="d">Fourth corner position.</param>
+    /// <param name="colourA">Lit colour of the first corner.</param>
+    /// <param name="colourB">Lit colour of the second corner.</param>
+    /// <param name="colourC">Lit colour of the third corner.</param>
+    /// <param name="colourD">Lit colour of the fourth corner.</param>
+    /// <param name="uvA">UV of the first corner, in sprite repeats.</param>
+    /// <param name="uvB">UV of the second corner, in sprite repeats.</param>
+    /// <param name="uvC">UV of the third corner, in sprite repeats.</param>
+    /// <param name="uvD">UV of the fourth corner, in sprite repeats.</param>
+    /// <param name="sprite">Atlas cell to sample; null covers the whole texture.</param>
+    public void AppendQuad(
+        (int X, int Y, int Z) a,
+        (int X, int Y, int Z) b,
+        (int X, int Y, int Z) c,
+        (int X, int Y, int Z) d,
+        (float R, float G, float B) colourA,
+        (float R, float G, float B) colourB,
+        (float R, float G, float B) colourC,
+        (float R, float G, float B) colourD,
+        (float U, float V) uvA,
+        (float U, float V) uvB,
+        (float U, float V) uvC,
+        (float U, float V) uvD,
         SpriteRect? sprite = null)
     {
         const int floatsPerQuad = 4 * ChunkMesher.FloatsPerVertex;
@@ -94,10 +130,10 @@ public sealed class MeshBuffer : IDisposable
 
         var rect = sprite ?? WholeAtlas;
         var first = (uint)(_vertexFloats / ChunkMesher.FloatsPerVertex);
-        WriteVertex(a, red, green, blue, uvA, rect);
-        WriteVertex(b, red, green, blue, uvB, rect);
-        WriteVertex(c, red, green, blue, uvC, rect);
-        WriteVertex(d, red, green, blue, uvD, rect);
+        WriteVertex(a, colourA.R, colourA.G, colourA.B, uvA, rect);
+        WriteVertex(b, colourB.R, colourB.G, colourB.B, uvB, rect);
+        WriteVertex(c, colourC.R, colourC.G, colourC.B, uvC, rect);
+        WriteVertex(d, colourD.R, colourD.G, colourD.B, uvD, rect);
 
         _indices[_indexCount++] = first;
         _indices[_indexCount++] = first + 1;

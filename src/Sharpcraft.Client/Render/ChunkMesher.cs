@@ -477,6 +477,74 @@ public static class ChunkMesher
         return sameFamily;
     }
 
+
+    /// <summary>
+    /// Lit colour of one quad corner, from smooth lighting and ambient occlusion.
+    /// </summary>
+    /// <remarks>
+    /// The reference computes light per vertex: it averages the light of the four cells that share the corner on the visible
+    /// side, then darkens by the occluders around that corner (one quarter per occluder, and half when both sides are
+    /// blocked). Doing this per corner instead of once per quad is what removes the flat patches a merged quad used to
+    /// show, and it keeps neighbouring quads continuous across chunk borders because the samples are world positions.
+    /// </remarks>
+    private static (float R, float G, float B) CornerShade(
+        in Neighbourhood neighbourhood,
+        int direction,
+        (int X, int Y, int Z) corner,
+        int uAxis,
+        int vAxis,
+        float shadeFactor,
+        float red,
+        float green,
+        float blue,
+        BlockSpriteMap? sprites,
+        Sharpcraft.Common.Registries.BlockStateLayout? layout)
+    {
+        var (nx, ny, nz) = NeighbourOffset(direction);
+        Span<int> u = stackalloc int[3];
+        u[uAxis] = 1;
+        Span<int> v = stackalloc int[3];
+        v[vAxis] = 1;
+
+        var bx = corner.X + nx;
+        var by = corner.Y + ny;
+        var bz = corner.Z + nz;
+
+        Span<int> xs = stackalloc int[4] { bx, bx - u[0], bx - v[0], bx - u[0] - v[0] };
+        Span<int> ys = stackalloc int[4] { by, by - u[1], by - v[1], by - u[1] - v[1] };
+        Span<int> zs = stackalloc int[4] { bz, bz - u[2], bz - v[2], bz - u[2] - v[2] };
+
+        var skySum = 0;
+        var blockSum = 0;
+        var samples = 0;
+
+        for (var index = 0; index < 4; index++)
+        {
+            if (neighbourhood.TryGetLight(xs[index], ys[index], zs[index], out var sky, out var block))
+            {
+                skySum += sky;
+                blockSum += block;
+                samples++;
+            }
+        }
+
+        var light = samples == 0
+            ? ((byte)0, (byte)0)
+            : ((byte)(skySum / samples), (byte)(blockSum / samples));
+
+        var sideOne = Occludes(neighbourhood.GetBlockState(xs[1], ys[1], zs[1], 0), sprites, layout);
+        var sideTwo = Occludes(neighbourhood.GetBlockState(xs[2], ys[2], zs[2], 0), sprites, layout);
+        var diagonal = Occludes(neighbourhood.GetBlockState(xs[3], ys[3], zs[3], 0), sprites, layout);
+
+        var occlusion = sideOne && sideTwo
+            ? 0.5f
+            : 1f - (0.25f * ((sideOne ? 1 : 0) + (sideTwo ? 1 : 0) + (diagonal ? 1 : 0)));
+
+        var brightness = Brightness(light) * shadeFactor * occlusion;
+
+        return (red * brightness, green * brightness, blue * brightness);
+    }
+
     private static bool Occludes(int state, BlockSpriteMap? sprites, BlockStateLayout? layout)
     {
         if (sprites is null || layout?.BlockAt(state) is not { } block)
@@ -484,6 +552,14 @@ public static class ChunkMesher
             // Without an atlas or a layout the alpha cannot be read, so treat it as opaque, which is what the caller that
             // passes no atlas expects (untextured geometry is cube shaped in every current test and demo).
             return true;
+        }
+
+        // A block that renders in the translucent layer can never fully occlude, whatever its texture alpha looks like:
+        // the reference marks ice, water and the glass family noOcclusion for exactly this reason. Treating ice as an
+        // occluder culled its neighbours' faces and made the ambient occlusion darken a whole ice field.
+        if (BlockRenderLayers.IsTranslucent(block))
+        {
+            return false;
         }
 
         var transparency = sprites.TransparencyOf(block);
@@ -640,21 +716,12 @@ public static class ChunkMesher
                 blue *= tintBlue;
             }
         }
-        var (dx, dy, dz) = NeighbourOffset(direction);
         var shadeFactor = direction switch
         {
             PositiveY => TopShade,
             NegativeY => BottomShade,
             _ => SideShade
         };
-
-        var light = neighbourhood.TryGetLight(baseX + x + dx, baseY + y + dy, baseZ + z + dz, out var sky, out var block)
-            ? (sky, block)
-            : neighbourhood.TryGetLight(baseX + x, baseY + y, baseZ + z, out var selfSky, out var selfBlock)
-                ? (selfSky, selfBlock)
-                : ((byte)0, (byte)0);
-
-        var shade = Brightness(light) * shadeFactor;
 
         // Corner order follows the winding: where U came first the horizontal corner comes first,
         // where V came first the vertical one does. UVs stay in sprite repeats so a merged quad
@@ -716,9 +783,10 @@ public static class ChunkMesher
             a,
             b,
             c,
-            red * shade,
-            green * shade,
-            blue * shade,
+            CornerShade(neighbourhood, direction, origin, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout),
+            CornerShade(neighbourhood, direction, a, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout),
+            CornerShade(neighbourhood, direction, b, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout),
+            CornerShade(neighbourhood, direction, c, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout),
             uvOrigin,
             uvA,
             uvB,
