@@ -137,6 +137,12 @@ public static class PacketIds
         /// </summary>
         public const int ClientTickEnd = 13;
 
+        /// <summary>
+        /// Reports that the client finished loading the world; the server accepts movement only after this.
+        /// </summary>
+        /// <remarks>Reference registration dump: play serverbound 44, empty body.</remarks>
+        public const int PlayerLoaded = 44;
+
         /// <summary>Block interaction: start or stop destroying, drops, item use.</summary>
         public const int PlayerAction = 41;
 

@@ -42,6 +42,21 @@ public sealed record JoinGameInfo(
 /// </remarks>
 public static class PlayPackets
 {
+    /// <summary>
+    /// Builds the empty packet that tells the server the world is loaded.
+    /// </summary>
+    /// <remarks>
+    /// The reference client sends this once the terrain around the player is in place; until then the server ignores
+    /// movement packets, which looks like the player being teleported back to the join position.
+    /// </remarks>
+    public static byte[] BuildPlayerLoaded()
+    {
+        var buffer = new byte[2];
+        var writer = new PayloadWriter(buffer);
+        writer.WriteVarInt(PacketIds.PlayServerbound.PlayerLoaded);
+        return buffer[..writer.Position].ToArray();
+    }
+
     /// <summary>Decodes the JoinGame header including the spawn info prefix.</summary>
     public static DecodeStatus TryReadJoinGame(ReadOnlySpan<byte> body, out JoinGameInfo info)
     {

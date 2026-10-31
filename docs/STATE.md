@@ -948,3 +948,15 @@ send  60.. : -704.50 → -743.21 → …                ← 之后不再被纠�
 - 已把该缺陷写成断言：`verify-protocol-live.ps1` 要求 `corrections ≤ 1`（仅 join 那次）。当前实测 **2 → FAIL**，即复现用例就位。
 - **下一步（按流程）**：定位 join 传送的 `AcceptTeleportation` 与随后移动包的次序/内容（我们传的 teleport id、坐标、onGround），
   修好后断言转绿。仅改宿主/网络时序，不动渲染。
+
+## 2026-10-31 第 26 轮：修复"开局移动不被采纳"（根因 = 缺 player_loaded）
+
+- **根因**：原版客户端在世界加载完成后发送 `minecraft:player_loaded`（**serverbound id 44，空包体**）；
+  服务器在此之前**忽略所有移动包**，于是约 3 秒后判定偏差 >10 格并把玩家拉回出生点。
+  我方从未发送该包（只在 `MC_LOAD_ID` 探针里出现过）。
+- **修复**：`PacketIds.PlayServerbound.PlayerLoaded = 44` + `PlayPackets.BuildPlayerLoaded()`；
+  - 真实客户端：接受 join 传送后发送一次（`_playerLoadedSent` 保证只发一次）
+  - walk 验证路径：接受 join 传送后发送
+- **实测（20s，真实服务器）**：`corrections=1`（仅 join）、`distance=85.94`、**`speed=4.318`**（原版 4.317）
+  ⇒ `verify-protocol-live.ps1` **PASS**；全量 7 套 1096 用例通过。
+- 这条也解释了窗口里"玩家下坠/位置不对/世界看起来异常"的一部分现象（移动长期不被服务器采纳）。

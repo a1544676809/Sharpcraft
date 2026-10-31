@@ -117,6 +117,9 @@ internal static class WalkCommand
                             corrections++;
                             joinTeleportSeen = true;
 
+                            // Without this the server ignores every movement packet and later teleports us back.
+                            TrySend(connection, PlayPackets.BuildPlayerLoaded(), ref reason);
+
                             // The server ignores position updates until the client reports that the world is
                             // loaded. The packet has an empty body, so the id is the whole payload.
                             // Probe mode: send one id with a deliberately oversized body, then stop. The server names the

@@ -22,7 +22,7 @@
 | 2 | KeepAlive/Ping | 收到即回 | `verify-protocol-live.ps1` | 20s 内 ≥1 次 | 已验证：**实测 1 次** ✓ |
 | 3 | 区块流式加载 | 移动时区块数持续增长到视距上限 | `tools/verify/verify-streaming.ps1` | ≥expected 90% | **已知缺陷** |
 | 4 | 区块批处理 ack | 每批回 `ChunkBatchReceived` | 同上，回包数≥批次数 | 相等 | 未验证 |
-| 5 | 玩家位置同步 | 平稳前进、不被反复拉回；速度 4.317 格/秒 | `verify-protocol-live.ps1`（trace 窗口速度）| 4.317±0.25 | **失败：实测 3.62，trace 显示位置来回跳（-635→-640→-631→-636）** |
+| 5 | 玩家位置同步 | 平稳前进、不被反复拉回；速度 4.317 格/秒 | `verify-protocol-live.ps1`（trace 窗口速度）| 4.317±0.25 | **已验证：speed=4.318、corrections=1、20s 走 85.94 格** |
 | 6 | 方块实体 | 箱子 14/16、贴地 | `BlockEntityPlaceholderMesherTests` | 像素差 ≤1 | 部分验证 |
 | 7 | 实体模型 | 六部件、0.9 比例 | `EntityPlaceholderMesherTests` | 结构断言 | 部分验证（占位）|
 | 8 | 分层 | 按材质透明度三层 | `BlockLayerRulesTests`、`Repro-006` | 全绿 | 部分验证 |

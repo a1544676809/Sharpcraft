@@ -52,6 +52,7 @@ internal sealed class InteractiveSession
     private readonly Sharpcraft.Client.Ui.ActionBar _actionBar = new();
     private readonly Sharpcraft.Client.Ui.Title _title = new();
     private bool _diagnosticChatSent;
+    private bool _playerLoadedSent;
     private readonly bool _diagEnabled = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
     private int _diagFrames;
 
@@ -1186,6 +1187,14 @@ internal sealed class InteractiveSession
                                 _player.Position.Z,
                                 outcome.YawDegrees,
                                 outcome.PitchDegrees));
+
+                            // The server ignores movement until the client says the world is loaded, so this goes out once
+                            // the join teleport has been accepted, exactly like the reference client.
+                            if (!_playerLoadedSent)
+                            {
+                                _live.Send(PlayPackets.BuildPlayerLoaded());
+                                _playerLoadedSent = true;
+                            }
                         }
                     }
 
