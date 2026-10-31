@@ -67,13 +67,15 @@ public sealed class MesherBenchmarkTests
         // The name based path (what the code did before the table) is measured in the same run so the comparison is fair.
         var withoutTable = Measure(world, centre, buffer, sprites, translucent, layout, cutout, null, iterations);
         var withTable = Measure(world, centre, buffer, sprites, translucent, layout, cutout, cullTable, iterations);
+        var visualCache = new StateVisualCache(sprites, layout);
+        var withVisuals = Measure(world, centre, buffer, sprites, translucent, layout, cutout, cullTable, iterations, visualCache);
 
         // How many quads a face-at-a-time renderer (the reference approach) would emit for the same chunk, so the two
         // strategies can be compared on primitives rather than on opinion.
         var vanillaFaces = CountVisibleFaces(centre, cullTable);
 
         Console.WriteLine(
-            $"BENCH mesh_ms_per_chunk={withTable:F2} without_table={withoutTable:F2} iterations={iterations} "
+            $"BENCH mesh_ms_per_chunk={withVisuals:F2} with_cull_only={withTable:F2} without_table={withoutTable:F2} iterations={iterations} "
             + $"greedy_quads={856 / 4} vanilla_faces={vanillaFaces}");
 
         // Attribute the cost: the cull predicate resolves a state to a name and then looks the name up for transparency,
@@ -103,6 +105,44 @@ public sealed class MesherBenchmarkTests
             $"BENCH micro name_ns={(nameWatch.Elapsed.TotalMilliseconds * 1_000_000 / lookups):F0} "
             + $"transparency_ns={(transparencyWatch.Elapsed.TotalMilliseconds * 1_000_000 / lookups):F0} "
             + $"per_chunk_cells=36864");
+
+        // Where the per cell cost sits: the section read, the cross chunk block read and the two light reads.
+        var middleSection = centre.GetSection(0)!;
+        const int cellIterations = 2_000_000;
+
+        var sectionWatch = Stopwatch.StartNew();
+        var sink = 0;
+
+        for (var index = 0; index < cellIterations; index++)
+        {
+            sink += middleSection.Get(index & 15, (index >> 4) & 15, (index >> 8) & 15);
+        }
+
+        sectionWatch.Stop();
+
+        var blockWatch = Stopwatch.StartNew();
+
+        for (var index = 0; index < cellIterations; index++)
+        {
+            sink += centre.GetBlockState(index & 15, 64, (index >> 4) & 15, 0);
+        }
+
+        blockWatch.Stop();
+
+        var lightWatch = Stopwatch.StartNew();
+
+        for (var index = 0; index < cellIterations; index++)
+        {
+            sink += centre.GetSkyLight(index & 15, 64, (index >> 4) & 15);
+            sink += centre.GetBlockLight(index & 15, 64, (index >> 4) & 15);
+        }
+
+        lightWatch.Stop();
+
+        Console.WriteLine(
+            $"BENCH cell_ns section_get={(sectionWatch.Elapsed.TotalMilliseconds * 1_000_000 / cellIterations):F0} "
+            + $"block_get={(blockWatch.Elapsed.TotalMilliseconds * 1_000_000 / cellIterations):F0} "
+            + $"light_pair={(lightWatch.Elapsed.TotalMilliseconds * 1_000_000 / cellIterations):F0} sink={sink}");
 
         Assert.True(warmBlocks > 0, "the benchmark chunk produced no geometry, so the measurement is meaningless");
     }
@@ -137,6 +177,51 @@ public sealed class MesherBenchmarkTests
         {
             chunk.SetSection(sections[index]);
         }
+    }
+
+    [Fact]
+    public void SectionCostScalesWithFilledSections()
+    {
+        // How the per chunk cost grows with the number of filled sections, which separates per section overhead from the
+        // per cell lookups (a section is six planes of two hundred and fifty six cells).
+        var world = new ClientWorld(MinSectionY, SectionCount);
+        var atlas = SpriteAtlasBuilder.Stitch(
+        [
+            (new Identifier("minecraft", "block/stone"), Solid(), 1),
+            (SpriteAtlas.MissingSprite, Solid(), 1)
+        ]);
+
+        var layout = VanillaBlockRegistry.Layout;
+        var sprites = new BlockSpriteMap(atlas, layout);
+        var cull = new StateCullTable(layout, sprites);
+        var visuals = new StateVisualCache(sprites, layout);
+        using var buffer = new MeshBuffer(1 << 20);
+
+        foreach (var filled in new[] { 1, 4, 8, 24 })
+        {
+            var chunk = new LevelChunk(0, 0, MinSectionY, SectionCount);
+            var sections = new ChunkSection[SectionCount];
+
+            for (var index = 0; index < SectionCount; index++)
+            {
+                var state = index < filled ? 1 : 0;
+                sections[index] = new ChunkSection(state, MinSectionY + index);
+            }
+
+            for (var index = 0; index < SectionCount; index++)
+            {
+                chunk.SetSection(sections[index]);
+            }
+
+            chunk.MarkLoaded();
+            world.AddChunk(chunk);
+            buffer.Clear();
+
+            var ms = Measure(world, chunk, buffer, sprites, new MeshBuffer(1 << 16), layout, new MeshBuffer(1 << 16), cull, 5, visuals);
+            Console.WriteLine($"BENCH scaling filled_sections={filled} ms={ms:F2} quads={buffer.VertexCount / 4}");
+        }
+
+        Assert.True(true);
     }
 
     [Fact]
@@ -177,9 +262,10 @@ public sealed class MesherBenchmarkTests
         var faces = CountVisibleFaces(centre, cullTable);
 
         var withTable = Measure(world, centre, buffer, sprites, translucent, layout, cutout, cullTable, iterations: 8);
+        var amplifiedVisuals = Measure(world, centre, buffer, sprites, translucent, layout, cutout, cullTable, iterations: 8, new StateVisualCache(sprites, layout));
 
         Console.WriteLine(
-            $"BENCH amplified_ms_per_chunk={withTable:F2} blocks={blocks} greedy_quads={quads} vanilla_faces={faces}");
+            $"BENCH amplified_ms_per_chunk={amplifiedVisuals:F2} cull_only={withTable:F2} blocks={blocks} greedy_quads={quads} vanilla_faces={faces}");
 
         Assert.True(blocks > 0, "the amplified chunk produced no geometry, so the measurement is meaningless");
     }
@@ -234,14 +320,15 @@ public sealed class MesherBenchmarkTests
         Sharpcraft.Common.Registries.BlockStateLayout layout,
         MeshBuffer cutout,
         StateCullTable? cull,
-        int iterations)
+        int iterations,
+        StateVisualCache? visuals = null)
     {
         buffer.Clear();
         var watch = Stopwatch.StartNew();
 
         for (var index = 0; index < iterations; index++)
         {
-            ChunkMesher.MeshChunk(world, chunk, 0, buffer, int.MaxValue, sprites, translucent, layout, cutout, null, cull);
+            ChunkMesher.MeshChunk(world, chunk, 0, buffer, int.MaxValue, sprites, translucent, layout, cutout, null, cull, visuals);
             buffer.Clear();
         }
 

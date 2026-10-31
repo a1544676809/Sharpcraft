@@ -117,7 +117,8 @@ public static class ChunkMesher
         Sharpcraft.Common.Registries.BlockStateLayout? layout = null,
         MeshBuffer? cutout = null,
         BiomeTint? tint = null,
-        StateCullTable? cull = null)
+        StateCullTable? cull = null,
+        StateVisualCache? visuals = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(chunk);
@@ -150,7 +151,7 @@ public static class ChunkMesher
             for (var direction = 0; direction < 6; direction++)
             {
                 consumed.Clear();
-                MergeSectionFaces(neighbourhood, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout, tint, cull);
+                MergeSectionFaces(neighbourhood, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout, tint, cull, visuals);
             }
         }
 
@@ -173,7 +174,8 @@ public static class ChunkMesher
         Sharpcraft.Common.Registries.BlockStateLayout? layout = null,
         MeshBuffer? cutout = null,
         BiomeTint? tint = null,
-        StateCullTable? cull = null)
+        StateCullTable? cull = null,
+        StateVisualCache? visuals = null)
     {
         var (uAxis, vAxis) = InPlaneAxes(direction);
 
@@ -259,7 +261,7 @@ public static class ChunkMesher
                         }
                     }
 
-                    EmitMergedQuad(neighbourhood, buffer, direction, slice, u, v, width, height, baseX, baseY, baseZ, key.State, sprites, translucent, layout, cutout, tint);
+                    EmitMergedQuad(neighbourhood, buffer, direction, slice, u, v, width, height, baseX, baseY, baseZ, key.State, sprites, translucent, layout, cutout, tint, cull, visuals);
                 }
             }
         }
@@ -533,7 +535,8 @@ public static class ChunkMesher
         Sharpcraft.Common.Registries.BlockStateLayout? layout = null,
         MeshBuffer? cutout = null,
         BiomeTint? tint = null,
-        StateCullTable? cull = null)
+        StateCullTable? cull = null,
+        StateVisualCache? visuals = null)
     {
         var (uAxis, vAxis) = InPlaneAxes(direction);
         var (x, y, z) = FaceBlock(uAxis, vAxis, slice, u, v);
@@ -554,7 +557,7 @@ public static class ChunkMesher
 
         // Projects a corner onto the face's texture axes. The reference derives each face's coordinates from world
         // axes with a fixed flip, so expressing them the same way keeps every face aligned with the original.
-        (float U, float V) Uv((int X, int Y, int Z) corner) => direction switch
+        static (float U, float V) Uv(int direction, int x, int y, int z, (int X, int Y, int Z) corner) => direction switch
         {
             PositiveZ => ((float)(corner.X - x), (float)((y + 1) - corner.Y)),
             NegativeZ => ((float)((x + 1) - corner.X), (float)((y + 1) - corner.Y)),
@@ -661,30 +664,51 @@ public static class ChunkMesher
         // horizontal axis runs opposite between opposing sides, which is what makes a wrapped texture read the
         // same way round as the original rather than mirrored on half the faces
         // (docs/analysis/render/face-uv.md, ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/model/FaceBakery.java).
-        (float U, float V) uvOrigin = Uv((origin.X - baseX, origin.Y - baseY, origin.Z - baseZ));
-        (float U, float V) uvA = Uv((a.X - baseX, a.Y - baseY, a.Z - baseZ));
-        (float U, float V) uvB = Uv((b.X - baseX, b.Y - baseY, b.Z - baseZ));
-        (float U, float V) uvC = Uv((c.X - baseX, c.Y - baseY, c.Z - baseZ));
+        (float U, float V) uvOrigin = Uv(direction, x, y, z, (origin.X - baseX, origin.Y - baseY, origin.Z - baseZ));
+        (float U, float V) uvA = Uv(direction, x, y, z, (a.X - baseX, a.Y - baseY, a.Z - baseZ));
+        (float U, float V) uvB = Uv(direction, x, y, z, (b.X - baseX, b.Y - baseY, b.Z - baseZ));
+        (float U, float V) uvC = Uv(direction, x, y, z, (c.X - baseX, c.Y - baseY, c.Z - baseZ));
 
         var target = buffer;
+        var face = FaceOf(direction);
 
-        if (translucent is not null)
+        // The layer decides the target buffer, exactly as the reference picks a chunk section layer per material, and it is
+        // decided per face from that face's own sprite: a block can have an opaque top and holed sides, and a holed sprite
+        // drawn by the solid pipeline shows its holes as opaque black.
+        SpriteRect? faceSprite;
+
+        if (visuals is not null)
         {
-            // The layer decides the target buffer, exactly as the reference picks a chunk section layer per material. It is
-            // decided per face from that face's own sprite: a block can have an opaque top and holed sides, and a holed
-            // sprite drawn by the solid pipeline shows its holes as opaque black.
-            var face = FaceOf(direction);
-            var faceSprite = sprites?.ForState(state, face);
-            var layer = faceSprite is null || layout?.BlockAt(state) is not { } faceBlock
-                ? BlockLayerRules.Of(state, sprites, layout)
-                : BlockLayerRules.OfSprite(faceBlock, faceSprite, sprites);
+            var visual = visuals.Get(state, face);
+            faceSprite = visual.Sprite;
 
-            target = layer switch
+            if (translucent is not null)
             {
-                BlockLayer.Translucent when translucent is not null => translucent,
-                BlockLayer.Cutout when cutout is not null => cutout,
-                _ => buffer
-            };
+                target = visual.Layer switch
+                {
+                    BlockLayer.Translucent when translucent is not null => translucent,
+                    BlockLayer.Cutout when cutout is not null => cutout,
+                    _ => buffer
+                };
+            }
+        }
+        else
+        {
+            faceSprite = sprites?.ForState(state, face);
+
+            if (translucent is not null)
+            {
+                var layer = faceSprite is null || layout?.BlockAt(state) is not { } faceBlock
+                    ? BlockLayerRules.Of(state, sprites, layout)
+                    : BlockLayerRules.OfSprite(faceBlock, faceSprite, sprites);
+
+                target = layer switch
+                {
+                    BlockLayer.Translucent when translucent is not null => translucent,
+                    BlockLayer.Cutout when cutout is not null => cutout,
+                    _ => buffer
+                };
+            }
         }
 
         target.AppendQuad(
@@ -699,7 +723,7 @@ public static class ChunkMesher
             uvA,
             uvB,
             uvC,
-            sprites?.ForState(state, FaceOf(direction)));
+            faceSprite);
     }
 
     /// <summary>Maps a face direction to the atlas face bucket a block uses.</summary>

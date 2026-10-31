@@ -55,6 +55,7 @@ public sealed class ChunkWorkerPool : IDisposable
 
     // Answers about a state (opaque, leaves, same block) computed once per atlas instead of once per face cell.
     private volatile Sharpcraft.Client.Render.StateCullTable? _cullTable;
+    private volatile Sharpcraft.Client.Render.StateVisualCache? _visualCache;
     private volatile Sharpcraft.Client.Render.LayerSinks? _layers;
 
     /// <summary>
@@ -72,6 +73,7 @@ public sealed class ChunkWorkerPool : IDisposable
         {
             _layers = value;
             _cullTable = null;
+            _visualCache = null;
         }
     }
     private volatile bool _stop;
@@ -155,6 +157,7 @@ public sealed class ChunkWorkerPool : IDisposable
     {
         _sprites = sprites;
         _cullTable = null;
+        _visualCache = null;
     }
 
     /// <summary>Queues a chunk packet body for decoding.</summary>
@@ -419,7 +422,8 @@ public sealed class ChunkWorkerPool : IDisposable
             layout: layers?.Layout,
             cutout: cutoutScratch,
             tint: layers?.Tint,
-            cull: _cullTable ??= BuildCullTable());
+            cull: _cullTable ??= BuildCullTable(),
+            visuals: _visualCache ??= new Sharpcraft.Client.Render.StateVisualCache(_sprites, _layers?.Layout));
         var mesh = buffer.ToMeshData(0);
 
         MeshesBuilt++;

@@ -25,7 +25,7 @@ if ($Walk) { $env:MC_WINDOW_AUTOWALK = '1' }
 
 Push-Location $root
 try {
-    & dotnet run --project src\Sharpcraft.Launcher --no-build -- window $Address *> $log
+    & dotnet run --project src\Sharpcraft.Launcher -c Release --no-build -- window $Address *> $log
 }
 finally {
     Pop-Location

@@ -24,7 +24,7 @@ $env:MC_START_CHUNKS = "$TargetChunks"
 
 Push-Location $root
 try {
-    & dotnet run --project src\Sharpcraft.Launcher --no-build -- walk $Address *> $log
+    & dotnet run --project src\Sharpcraft.Launcher -c Release --no-build -- walk $Address *> $log
 }
 finally {
     Pop-Location

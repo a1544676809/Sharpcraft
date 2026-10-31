@@ -24,7 +24,7 @@ Remove-Item Env:\MC_WINDOW_AUTOWALK -ErrorAction SilentlyContinue
 
 Push-Location $root
 try {
-    & dotnet run --project src\Sharpcraft.Launcher --no-build -- window $Address *> $log
+    & dotnet run --project src\Sharpcraft.Launcher -c Release --no-build -- window $Address *> $log
 }
 finally {
     Pop-Location

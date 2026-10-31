@@ -101,6 +101,7 @@ public sealed class ChunkMeshCache
         var cullTable = Layers?.Layout is { } cullLayout && sprites is not null
             ? new StateCullTable(cullLayout, sprites)
             : null;
+        var visualCache = new StateVisualCache(sprites, Layers?.Layout);
 
         foreach (var chunk in world.GetChunks())
         {
@@ -135,7 +136,8 @@ public sealed class ChunkMeshCache
                 layout: layers?.Layout,
                 cutout: layers?.Cutout,
                 tint: layers?.Tint,
-                cull: cullTable);
+                cull: cullTable,
+                visuals: visualCache);
             _meshes[key] = buffer.ToMeshData(0);
             remeshed++;
         }

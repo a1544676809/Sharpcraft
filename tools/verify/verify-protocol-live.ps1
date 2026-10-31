@@ -28,7 +28,7 @@ if ($CollectSeconds -ge 0) { $env:MC_WALK_COLLECT = "$CollectSeconds" }
 
 Push-Location $root
 try {
-    & dotnet run --project src\Sharpcraft.Launcher --no-build -- walk $Address *> $log
+    & dotnet run --project src\Sharpcraft.Launcher -c Release --no-build -- walk $Address *> $log
 }
 finally {
     Pop-Location
