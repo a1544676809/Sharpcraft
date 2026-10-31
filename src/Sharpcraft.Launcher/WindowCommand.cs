@@ -108,7 +108,11 @@ internal static class WindowCommand
             : prepared.Value.Map.ForBlock(new Sharpcraft.Common.Identifiers.Identifier("minecraft", "stone"));
 
 
-        var workerPool = new ChunkWorkerPool(world, prepared?.Map, fifoMeshOrder: Sharpcraft.Launcher.Diagnostics.HostDebugOptions.FifoMeshOrder);
+        var workerPool = new ChunkWorkerPool(
+            world,
+            prepared?.Map,
+            fifoMeshOrder: Sharpcraft.Launcher.Diagnostics.HostDebugOptions.FifoMeshOrder,
+            mergeFaces: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoMergeFaces);
         Console.WriteLine($"chunk workers: {workerPool.WorkerCount} (of {Environment.ProcessorCount} logical processors)");
 
         var meshCache = new ChunkMeshCache(workerPool);

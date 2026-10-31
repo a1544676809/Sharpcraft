@@ -66,4 +66,7 @@ public static class HostDebugOptions
 
     /// <summary>True when the mesh queue should ignore the nearest-first ordering.</summary>
     public static bool FifoMeshOrder => Environment.GetEnvironmentVariable("MC_MESH_FIFO") == "1";
+
+    /// <summary>True to disable greedy face merging, meshing every block face on its own (for an A/B on cost vs fidelity).</summary>
+    public static bool NoMergeFaces => Environment.GetEnvironmentVariable("MC_MESH_NOMERGE") == "1";
 }

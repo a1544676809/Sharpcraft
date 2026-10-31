@@ -63,13 +63,14 @@ public static class ChunkMesher
         ClientWorld world,
         int airState = 0,
         int maxBlocks = 2_000_000,
-        BlockSpriteMap? sprites = null)
+        BlockSpriteMap? sprites = null,
+        bool merge = true)
     {
         ArgumentNullException.ThrowIfNull(world);
 
         // Merging cuts the quad count by an order of magnitude, so a smaller guess is enough.
         using var buffer = new MeshBuffer(Math.Min(maxBlocks, world.LoadedChunkCount * 512));
-        var blocks = Mesh(world, buffer, airState, maxBlocks, sprites);
+        var blocks = Mesh(world, buffer, airState, maxBlocks, sprites, merge);
         return buffer.ToMeshData(blocks);
     }
 
@@ -83,7 +84,8 @@ public static class ChunkMesher
         MeshBuffer buffer,
         int airState = 0,
         int maxBlocks = 2_000_000,
-        BlockSpriteMap? sprites = null)
+        BlockSpriteMap? sprites = null,
+        bool merge = true)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(buffer);
@@ -98,7 +100,7 @@ public static class ChunkMesher
                 break;
             }
 
-            blocks += MeshChunk(world, chunk, airState, buffer, maxBlocks - blocks, sprites);
+            blocks += MeshChunk(world, chunk, airState, buffer, maxBlocks - blocks, sprites, merge: merge);
         }
 
         return blocks;
@@ -118,7 +120,8 @@ public static class ChunkMesher
         MeshBuffer? cutout = null,
         BiomeTint? tint = null,
         StateCullTable? cull = null,
-        StateVisualCache? visuals = null)
+        StateVisualCache? visuals = null,
+        bool merge = true)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(chunk);
@@ -151,7 +154,7 @@ public static class ChunkMesher
             for (var direction = 0; direction < 6; direction++)
             {
                 consumed.Clear();
-                MergeSectionFaces(neighbourhood, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout, tint, cull, visuals);
+                MergeSectionFaces(neighbourhood, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout, tint, cull, visuals, merge);
             }
         }
 
@@ -175,7 +178,8 @@ public static class ChunkMesher
         MeshBuffer? cutout = null,
         BiomeTint? tint = null,
         StateCullTable? cull = null,
-        StateVisualCache? visuals = null)
+        StateVisualCache? visuals = null,
+        bool merge = true)
     {
         var (uAxis, vAxis) = InPlaneAxes(direction);
 
@@ -216,41 +220,58 @@ public static class ChunkMesher
 
                     var width = 1;
 
-                    while (u + width < 16)
+                    if (merge)
                     {
-                        var next = (v << 4) | (u + width);
-
-                        if (consumed[next] || !present[next] || keys[next] != key)
+                        while (u + width < 16)
                         {
-                            break;
-                        }
+                            var next = (v << 4) | (u + width);
 
-                        width++;
+                            if (consumed[next] || !present[next] || keys[next] != key)
+                            {
+                                break;
+                            }
+
+                            width++;
+                        }
                     }
 
                     var height = 1;
 
-                    while (v + height < 16)
+                    if (merge)
                     {
-                        var rowMatches = true;
-
-                        for (var du = 0; du < width; du++)
+                        while (v + height < 16)
                         {
-                            var above = ((v + height) << 4) | (u + du);
+                            var rowMatches = true;
 
-                            if (consumed[above] || !present[above] || keys[above] != key)
+                            for (var du = 0; du < width; du++)
                             {
-                                rowMatches = false;
+                                var above = ((v + height) << 4) | (u + du);
+
+                                if (consumed[above] || !present[above] || keys[above] != key)
+                                {
+                                    rowMatches = false;
+                                    break;
+                                }
+                            }
+
+                            if (!rowMatches)
+                            {
                                 break;
                             }
-                        }
 
-                        if (!rowMatches)
-                        {
-                            break;
+                            height++;
                         }
+                    }
 
-                        height++;
+                    // A merged quad carries only four corner lights and AO, so merging is exact only where the whole
+                    // rectangle is lit uniformly (open, same light, no occluders in or around it). Anywhere else fall
+                    // back to one quad per block face, which makes the merged output equal the unmerged output exactly
+                    // (the smooth-lighting variation the reference gets for free by never merging).
+                    if (merge && (width > 1 || height > 1) &&
+                        !RectangleIsUniformlyLit(neighbourhood, direction, uAxis, vAxis, slice, u, v, width, height, baseX, baseY, baseZ, sprites, layout, key))
+                    {
+                        width = 1;
+                        height = 1;
                     }
 
                     for (var dv = 0; dv < height; dv++)
@@ -265,6 +286,59 @@ public static class ChunkMesher
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// True when every cell in and around the rectangle is non-occluding and shares one light level, so a single merged
+    /// quad's bilinear corner shading equals the per-face shading of each block. Any occluder or light change means the
+    /// merged quad would smear the variation, so the caller emits per-face quads instead.
+    /// </summary>
+    private static bool RectangleIsUniformlyLit(
+        in Neighbourhood neighbourhood,
+        int direction,
+        int uAxis,
+        int vAxis,
+        int slice,
+        int u,
+        int v,
+        int width,
+        int height,
+        int baseX,
+        int baseY,
+        int baseZ,
+        BlockSpriteMap? sprites,
+        BlockStateLayout? layout,
+        MergeKey key)
+    {
+        var (dx, dy, dz) = NeighbourOffset(direction);
+
+        for (var vv = v - 1; vv <= v + height; vv++)
+        {
+            for (var uu = u - 1; uu <= u + width; uu++)
+            {
+                var (x, y, z) = FaceBlock(uAxis, vAxis, slice, uu, vv);
+                var sampleX = baseX + x + dx;
+                var sampleY = baseY + y + dy;
+                var sampleZ = baseZ + z + dz;
+
+                // Without an atlas the occlusion cannot be known (Occludes reports solid for everything); treat those
+                // cells as non-occluding so the untextured path still merges where the light is uniform.
+                if (sprites is not null && layout is not null &&
+                    Occludes(neighbourhood.GetBlockState(sampleX, sampleY, sampleZ, 0), sprites, layout))
+                {
+                    return false;
+                }
+
+                neighbourhood.TryGetLight(sampleX, sampleY, sampleZ, out var sky, out var block);
+
+                if (sky != key.Sky || block != key.Block)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     private static bool RowMatches(
@@ -534,18 +608,24 @@ public static class ChunkMesher
             ? ((byte)0, (byte)0)
             : ((byte)(skySum / samples), (byte)(blockSum / samples));
 
-        var sideOne = Occludes(neighbourhood.GetBlockState(xs[1], ys[1], zs[1], 0), sprites, layout);
-        var sideTwo = Occludes(neighbourhood.GetBlockState(xs[2], ys[2], zs[2], 0), sprites, layout);
-        var diagonal = Occludes(neighbourhood.GetBlockState(xs[3], ys[3], zs[3], 0), sprites, layout);
+        var shade = 0f;
 
-        var occlusion = sideOne && sideTwo
-            ? 0.5f
-            : 1f - (0.25f * ((sideOne ? 1 : 0) + (sideTwo ? 1 : 0) + (diagonal ? 1 : 0)));
+        for (var index = 0; index < 4; index++)
+        {
+            shade += ShadeBrightness(neighbourhood.GetBlockState(xs[index], ys[index], zs[index], 0), sprites, layout);
+        }
 
+        // Ambient occlusion is the average shade brightness of the four cells meeting at the corner, matching the
+        // reference: a solid neighbour contributes 0.2 and air/transparent 1.0, so the vertex levels are 1.0/0.8/0.6/0.4.
+        var occlusion = shade * 0.25f;
         var brightness = Brightness(light) * shadeFactor * occlusion;
 
         return (red * brightness, green * brightness, blue * brightness);
     }
+
+    /// <summary>Shade brightness a cell contributes to a neighbouring vertex: 0.2 when solid, 1.0 otherwise.</summary>
+    private static float ShadeBrightness(int state, BlockSpriteMap? sprites, BlockStateLayout? layout) =>
+        Occludes(state, sprites, layout) ? 0.2f : 1f;
 
     private static bool Occludes(int state, BlockSpriteMap? sprites, BlockStateLayout? layout)
     {
@@ -718,11 +798,14 @@ public static class ChunkMesher
                 blue *= tintBlue;
             }
         }
+        // Directional face brightness follows the reference's CardinalLighting.DEFAULT: up 1.0, down 0.5, north/south
+        // (Z axis) 0.8, west/east (X axis) 0.6. A single 0.75 for every side made side faces shade wrong.
         var shadeFactor = direction switch
         {
-            PositiveY => TopShade,
-            NegativeY => BottomShade,
-            _ => SideShade
+            PositiveY => 1.0f,
+            NegativeY => 0.5f,
+            NegativeZ or PositiveZ => 0.8f,
+            _ => 0.6f
         };
 
         // Corner order follows the winding: where U came first the horizontal corner comes first,

@@ -800,7 +800,8 @@ internal static class FrameCommand
                 var translucentBefore = translucent?.IndexCount ?? 0;
 
                 blocks += Sharpcraft.Client.Render.ChunkMesher.MeshChunk(
-                    world, chunk, airState: 0, buffer, maxBlocks: 2_000_000 - blocks, sprites: sprites, translucent: translucent, layout: layout, cutout: cutout, tint: tint);
+                    world, chunk, airState: 0, buffer, maxBlocks: 2_000_000 - blocks, sprites: sprites, translucent: translucent, layout: layout, cutout: cutout, tint: tint,
+                    merge: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoMergeFaces);
 
                 ranges.Add((before, buffer.IndexCount - before));
 
@@ -899,7 +900,8 @@ internal static class FrameCommand
                 foreach (var chunk in world.GetChunks())
                 {
                     Sharpcraft.Client.Render.ChunkMesher.MeshChunk(
-                        world, chunk, airState: 0, opaqueSink, maxBlocks: 2_000_000, sprites: sprites, translucent: translucentBuffer, layout: layout, cutout: cutoutBuffer, tint: tint);
+                        world, chunk, airState: 0, opaqueSink, maxBlocks: 2_000_000, sprites: sprites, translucent: translucentBuffer, layout: layout, cutout: cutoutBuffer, tint: tint,
+                        merge: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoMergeFaces);
                 }
 
                 if (translucentBuffer.IndexCount > 0)
@@ -1255,7 +1257,8 @@ internal static class FrameCommand
                 Console.WriteLine($"  demo block (0,{y},0) state {world.GetBlockState(0, y, 0)}");
             }
         }
-        var mesh = ChunkMesher.Mesh(world, airState: 0, maxBlocks: 2_000_000, sprites: prepared?.Map);
+        var mesh = ChunkMesher.Mesh(world, airState: 0, maxBlocks: 2_000_000, sprites: prepared?.Map,
+            merge: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoMergeFaces);
         Console.WriteLine($"local demo: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
         var bounds = (Min: new Vector3(0, -16, 0), Max: new Vector3(16, 16, 16));

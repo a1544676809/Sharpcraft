@@ -1801,3 +1801,16 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 窗口透明**唯一走 reference OIT**（depth-bounds + 8 系数小波）；`CreateReferenceTargets` 变为无条件创建/重建。
 - 加权实现保留在 git 历史（`25bc36a` 等），文档标注"封存、不编译"。
 - 实测：reference-only 构建水景 540 帧 0 validation error；全量 **1122 通过**（去 3 条加权数学测试）、文档门禁 ok。
+
+## 2026-10-31 平滑光照对齐原版 + 光照感知合并 + 合并开关
+
+所有者截图指出冰面"诡异阴影"。核对原版 `BlockModelLighter`/`CardinalLighting`：原版与 Sodium 都**不贪婪合并**，我们的是自加优化。
+本轮（先完善合并路径）：
+- 面朝向亮度改原版基数（上1.0/下0.5/南北0.8/东西0.6）；AO 改 4 格 `0.2/1.0` 平均（去掉自创"两边都挡=0.5"）。
+- **光照感知合并**：合并矩形（含外扩一圈）必须全"无遮挡且同一光照"才合并，否则逐面；合并输出逐值等于不合并。
+- `MeshChunk(..., merge:)` 两路径完整；宿主 `MC_MESH_NOMERGE=1` 走逐面（窗口/离屏均已接）。
+- 新增 `ChunkMesherMergeLightingTests`（3 项，含"多格 quad 四角颜色必须一致"）。全量 **1125 通过**、文档门禁 ok。
+
+**下一步（未做，待所有者定）**：① 在真实场景量 `MC_MESH_NOMERGE` 与默认的面数/显存/p99 做 A/B；
+② 若要更贴近原版，AO 仍用 `Occludes`（冰不遮挡）而非原版 `isCollisionShapeFullBlock`（冰会遮挡），属已知偏差；
+③ 每顶点光照仍用自研 `Brightness()` 近似而非原版 lightmap。

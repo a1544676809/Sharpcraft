@@ -40,6 +40,7 @@ public sealed class ChunkWorkerPool : IDisposable
     // chunks every frame, the queue hits its ceiling immediately and the nearest duplicates starve everything else.
     private readonly HashSet<long> _meshQueued = [];
     private readonly bool _meshFifo;
+    private readonly bool _mergeFaces;
     private long _meshSequence;
     private float _viewChunkX;
     private float _viewChunkZ;
@@ -92,11 +93,13 @@ public sealed class ChunkWorkerPool : IDisposable
         int? workerCount = null,
         int maxQueuedParses = 64,
         int maxQueuedMeshes = 1024,
-        bool fifoMeshOrder = false)
+        bool fifoMeshOrder = false,
+        bool mergeFaces = true)
     {
         ArgumentNullException.ThrowIfNull(world);
 
         _meshFifo = fifoMeshOrder;
+        _mergeFaces = mergeFaces;
         _world = world;
         _sprites = sprites;
         _maxQueuedParses = maxQueuedParses;
@@ -427,7 +430,8 @@ public sealed class ChunkWorkerPool : IDisposable
             cutout: cutoutScratch,
             tint: layers?.Tint,
             cull: _cullTable ??= BuildCullTable(),
-            visuals: _visualCache ??= new Sharpcraft.Client.Render.StateVisualCache(_sprites, _layers?.Layout));
+            visuals: _visualCache ??= new Sharpcraft.Client.Render.StateVisualCache(_sprites, _layers?.Layout),
+            merge: _mergeFaces);
         var mesh = buffer.ToMeshData(0);
 
         MeshesBuilt++;
