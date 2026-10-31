@@ -1552,3 +1552,16 @@ culler 的 `slots` 要按层各自维护，避免再犯 A3b 那次"按在册数�
 - 修复：`write: true`（`WGPUCompareFunction.LessEqual` 不变，我们的深度是 0..1 近…远）。
 - 结果：**同机位冰原截图黑块全部消失**，冰面连成整片、水下地形正常透出。
 - 仍保留"按区块远→近"排序（`DrawFarthestFirst`）作为补充；逐面排序依旧不做。
+
+### 冰面分块感：关掉贪心合并的实验（结果：不可行，但学到关键数据）
+
+做法：临时把 `MergeSectionFaces` 的扩充循环条件改成 `Merge=false`（每面一个四边形，与原版一致），Release 跑冰原同机位。
+结果：**客户端崩溃** —— `wgpuDeviceCreateBuffer: Not enough memory left`，之前几帧上传量 140–230 MB。
+
+结论：
+- **贪心合并是我们内存能活下来的关键**：每面一个四边形会让几何量约 **4×**，三套 arena 直接爆显存。
+  （这也解释了原版为什么吃内存：原版不合并。）
+- 因此**不能靠"关合并"消除分块感**，必须在合并路径内解决：
+  ① 逐顶点光照 + AO（原版 `ModelBlockRenderer.tesselateAmbientOcclusion` / `BlockQuadLighter`）
+  ② 检查合并四边形的 UV/mip 连续性（相邻合并四边形尺寸不同 → mip 选择不同 → 可见边界/斜带）
+- 实验已 `git checkout` 回滚，分支保持绿色（`42afe47`），游戏已恢复运行。
