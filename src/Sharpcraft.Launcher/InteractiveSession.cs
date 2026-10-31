@@ -53,6 +53,10 @@ internal sealed class InteractiveSession
     private readonly Sharpcraft.Client.Ui.Title _title = new();
     private bool _diagnosticChatSent;
     private bool _playerLoadedSent;
+
+    // True once the server has placed us. Until then the client must not simulate: with no position it would fall
+    // through an empty world while the server is still generating, which reads as the player dropping into the void.
+    private bool _hasServerPosition;
     private readonly System.Diagnostics.Stopwatch _installClock = System.Diagnostics.Stopwatch.StartNew();
 
     /// <summary>Chunks installed into the world so far, i.e. data that has arrived from the server.</summary>
@@ -991,7 +995,11 @@ internal sealed class InteractiveSession
                     _camera.SetLook(_camera.Yaw, sweep);
                 }
 
-                _player.Tick(frame.Forward, frame.Strafe, frame.Jump, frame.Sprint, _camera.Yaw, frame.Sneak);
+                if (_hasServerPosition)
+                {
+                    _player.Tick(frame.Forward, frame.Strafe, frame.Jump, frame.Sprint, _camera.Yaw, frame.Sneak);
+                }
+
             TickIndex++;
 
                 // Remote entities approach the position the server reported over a few ticks, so the tracker
@@ -1198,6 +1206,7 @@ internal sealed class InteractiveSession
                         correction is not null)
                     {
                         var outcome = _sync.ApplyServerPosition(_player, correction, isTeleport: true);
+                        _hasServerPosition = true;
                         AdoptServerRotation(outcome);
                         _interpolator.Snap(_player, _camera.Yaw);
 

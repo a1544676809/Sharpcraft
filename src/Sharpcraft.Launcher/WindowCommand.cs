@@ -708,10 +708,12 @@ internal static class WindowCommand
             Console.WriteLine($"chunks: {stats.ChunksReceived} ok, {stats.ChunksFailed} failed");
             if (world is null || world.LoadedChunkCount == 0)
             {
-                connection.Dispose();
-                throw new InvalidOperationException("no chunks were received, nothing to show");
+                // The preload only saves a moment: a server still generating its spawn area can send nothing
+                // for a while. Open the window on an empty world and let the live session stream it in.
+                Console.WriteLine("no chunks preloaded yet; opening on an empty world and streaming as they arrive");
+                var fallback = stats.JoinGame is { } joined ? layout(joined.DimensionTypeId) : (SectionCount: 24, MinSectionY: -4);
+    world ??= new ClientWorld(fallback.MinSectionY, fallback.SectionCount);
             }
-
             // Hand the joined connection to the session instead of dropping it and logging in again. Joining
             // twice made startup slower and showed a spurious join and leave to everyone else on the server.
             // The registries are the ones this very connection received during configuration, which is where the
