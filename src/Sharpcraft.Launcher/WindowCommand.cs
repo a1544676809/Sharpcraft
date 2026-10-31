@@ -116,14 +116,15 @@ internal static class WindowCommand
         // The sinks live as long as the cache: it re-meshes chunks incrementally, and a sink disposed between frames would
         // silently swallow the faces meshed after that point.
         // Layer routing is not optional: a sprite with holes drawn in the solid pass renders those holes opaque black.
-        var layerCutout = new Sharpcraft.Client.Render.MeshBuffer(4096);
+        // Cutout geometry is not split out: it is alpha tested by the terrain shader and therefore streams together with the
+        // solid mesh, so chunks that arrive later still show their leaves. Only blending needs its own buffer.
         var layerTranslucent = new Sharpcraft.Client.Render.MeshBuffer(4096);
 
         // The cache meshes the solid layer, so it needs the tint too: without it grass tops stay grey while only the
         // cutout and translucent layers are tinted.
         var biomeTint = Sharpcraft.Client.Render.BiomeTint.Load(resources);
         meshCache.Layers = new Sharpcraft.Client.Render.LayerSinks(
-            VanillaBlockRegistry.Layout, layerCutout, layerTranslucent, biomeTint);
+            VanillaBlockRegistry.Layout, null, layerTranslucent, biomeTint);
         workerPool.Layers = meshCache.Layers;
         var meshOrderSeen = 0;
         var meshOrderDistanceSum = 0f;

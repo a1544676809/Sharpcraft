@@ -57,6 +57,14 @@ fn fs_main(input : VertexOutput) -> @location(0) vec4<f32> {
     // the fragment footprint.
     let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
     let sampled = textureSample(atlasTexture, atlasSampler, atlasUv);
+
+    // Alpha test here rather than in a separate cutout pipeline: leaves and plants then stream with the same per chunk
+    // mesh as everything else. It is the same rule the reference applies to cutout terrain (threshold 0.5), just carried by
+    // one pipeline instead of two.
+    if (sampled.a < 0.5) {
+        discard;
+    }
+
     let base = vec4<f32>(sampled.rgb * input.colour, 1.0);
     let span = max(fog.range.y - fog.range.x, 0.001);
     let fogFactor = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
