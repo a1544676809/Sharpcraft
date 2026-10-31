@@ -1437,3 +1437,9 @@ System.ArgumentException: The value cannot be an empty string. (Parameter 'name'
 
 注：核心变量是 `ChunkGeometryArena` 的"每区块一个 slice"假设；改成三组 slice 时，`SlotHighWater` 与
 culler 的 `slots` 要按层各自维护，避免再犯 A3b 那次"按在册数量分发"的错误。
+
+### A5 进度
+- **第 1 步完成**：`GeometryData` 已增加 `CutoutVertices/CutoutIndices/TranslucentVertices/TranslucentIndices`
+  （全部可选、默认 null ⇒ 零破坏，全量测试通过）。这是纯数据契约层，不改变任何渲染行为。
+- 第 2 步（`ChunkWorkerPool` 保留两个 scratch 并入队）涉及队列元素类型 `(long Key, MeshData Mesh)` 的扩展，
+  会连带改动 `WindowCommand` 的两处解构，**下一步单独提交**。

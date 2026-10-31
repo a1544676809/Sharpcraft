@@ -9,4 +9,14 @@ namespace Sharpcraft.Framework.Rendering;
 /// </summary>
 /// <param name="Vertices">Interleaved vertex floats, <see cref="VertexLayout.Stride"/> bytes per vertex.</param>
 /// <param name="Indices">Triangle indices, zero based for this piece of geometry.</param>
-public readonly record struct GeometryData(float[] Vertices, uint[] Indices);
+/// <param name="CutoutVertices">Interleaved geometry for the cutout layer, or null when the chunk has none.</param>
+/// <param name="CutoutIndices">Cutout triangle indices, or null.</param>
+/// <param name="TranslucentVertices">Interleaved geometry for the translucent layer, or null.</param>
+/// <param name="TranslucentIndices">Translucent triangle indices, or null.</param>
+public readonly record struct GeometryData(
+    float[] Vertices,
+    uint[] Indices,
+    float[]? CutoutVertices = null,
+    uint[]? CutoutIndices = null,
+    float[]? TranslucentVertices = null,
+    uint[]? TranslucentIndices = null);
