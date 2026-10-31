@@ -749,3 +749,20 @@ updated: 2026-10-29
 
 **需要的输入**：①RenderDoc 用 GUI（qrenderdoc）手动抓帧后把 `.rdc` 路径给我；或②允许我用 VS2026 附加到渲染线程；
 或③接受把它记为已知缺陷，先推进 B/C。
+
+### 第 9 轮追加：按 pass 隔离（自建"抓帧"）
+
+新增 `MC_FRAME_ONLY=sky|opaque|cutout|translucent` 与 `MC_FRAME_CLEAR=r,g,b`，逐 pass 单独渲染（清屏设为洋红以便识别"未覆盖"）：
+
+| 只渲染 | 纯黑像素 | 细黑线（1–3px run） |
+| --- | --- | --- |
+| sky | **0** | 0 |
+| opaque | **56,775** | 22 |
+| cutout | 4,170 | 11 |
+
+⇒ 黑线由 **opaque 通道**产生（cutout 也有同类现象）。
+进一步：`opaque + 关闭图集（1×1 白）+ 顶点色强制 1` 仍然 **56,775** 个纯黑像素、细线仍在
+⇒ **既不是纹理，也不是顶点色/光照**；只剩 **fog uniform / 附件写入** 这两类可能，需要真正抓到那一次 draw 的状态。
+
+**需要用户配合**：RenderDoc GUI 在这台机器上用户可用；请用它抓一帧（F12），把 `.rdc` 路径给我，
+我在事件列表里定位"有黑线的那次 draw"并读它的 pipeline state（fog uniform / depth / blend / storeOp）。
