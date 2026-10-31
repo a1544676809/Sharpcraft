@@ -1,10 +1,10 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 Sharpcraft contributors -->
 
-状态：[待评审]
+状态：[已评审]
 基线：Minecraft 26.3
-最后更新：2026-10-31
-授权：用户 2026-10-31 "顺带引入时间系统"，并要求遵守 AGENTS（先文档评审后实现）。
+最后更新：2026-11-01
+授权：用户 2026-10-31 评审通过并"开始实现"。
 
 # 时间系统模块（Time / World Clock）
 

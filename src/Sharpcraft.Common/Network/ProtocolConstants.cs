@@ -203,6 +203,10 @@ public static class PacketIds
         /// <summary>Keep alive ping.</summary>
         public const int KeepAlive = 45;
 
+        /// <summary>Server world time: a game time plus per-world-clock network states.</summary>
+        /// <remarks>Reference registration dump: play clientbound 115 (verified against the GameProtocols clientbound order).</remarks>
+        public const int SetTime = 115;
+
         /// <summary>Absolute player position: a teleport or a server correction.</summary>
         public const int PlayerPosition = 73;
 

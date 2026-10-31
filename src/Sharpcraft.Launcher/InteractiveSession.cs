@@ -1244,6 +1244,18 @@ internal sealed class InteractiveSession
                     BlockEntityPackets.TryReadBlockEntityData(body, out _);
                     break;
 
+                case PacketIds.PlayClientbound.SetTime:
+                    if (_world is not null)
+                    {
+                        var setTimeReader = new PayloadReader(body);
+                        if (SetTimePacketCodec.TryRead(ref setTimeReader, out var setTime) == DecodeStatus.Success)
+                        {
+                            _world.ApplyTime(setTime);
+                        }
+                    }
+
+                    break;
+
                 case PacketIds.PlayClientbound.LevelChunkWithLight:
                     if (_world is null)
                     {

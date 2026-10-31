@@ -25,6 +25,7 @@ public sealed class ClientWorld
     private readonly HashSet<long> _dirtyChunks = [];
     private readonly int _minSectionY;
     private readonly int _sectionCount;
+    private readonly Dictionary<int, ClockNetworkState> _clocks = new();
 
     /// <summary>Creates a world with a fixed vertical section range.</summary>
     /// <param name="minSectionY">Lowest section index (overworld 1.18+ uses -4).</param>
@@ -45,6 +46,62 @@ public sealed class ClientWorld
 
     /// <summary>Dimensions the server offers, as identifiers.</summary>
     public IReadOnlyList<string> Dimensions { get; private set; } = [];
+
+    /// <summary>Overworld clock registry id (WorldClocks registers overworld first).</summary>
+    public const int OverworldClockId = 0;
+
+    /// <summary>Full day length in ticks.</summary>
+    public const int DayLengthTicks = 24000;
+
+    /// <summary>Network game time from the last <c>set_time</c>.</summary>
+    public long GameTime { get; private set; }
+
+    /// <summary>Day time in 0..23999 from the overworld clock (0 when no time is known).</summary>
+    public int DayTime
+    {
+        get
+        {
+            if (!_clocks.TryGetValue(OverworldClockId, out var clock))
+            {
+                return 0;
+            }
+
+            var ticks = clock.TotalTicks % DayLengthTicks;
+            return (int)((ticks + DayLengthTicks) % DayLengthTicks);
+        }
+    }
+
+    /// <summary>Applies a <c>set_time</c> packet: game time and every world clock state.</summary>
+    public void ApplyTime(SetTimePacket packet)
+    {
+        ArgumentNullException.ThrowIfNull(packet);
+
+        GameTime = packet.GameTime;
+        _clocks.Clear();
+        foreach (var (id, state) in packet.Clocks)
+        {
+            _clocks[id] = state;
+        }
+    }
+
+    /// <summary>Reads one world clock's state.</summary>
+    public bool TryGetClock(int clockId, out ClockNetworkState state) => _clocks.TryGetValue(clockId, out state);
+
+    /// <summary>Advances every clock by one client tick according to its rate.</summary>
+    public void AdvanceClocks()
+    {
+        if (_clocks.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var key in new List<int>(_clocks.Keys))
+        {
+            var clock = _clocks[key];
+            var advance = (long)MathF.Round(clock.Rate);
+            _clocks[key] = clock with { TotalTicks = clock.TotalTicks + advance };
+        }
+    }
 
     /// <summary>
     /// Chunks whose geometry is stale. A block on a chunk border also dirties its neighbour, because face
