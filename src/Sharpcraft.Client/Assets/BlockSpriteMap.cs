@@ -109,6 +109,14 @@ public sealed class BlockSpriteMap
         };
     }
 
+    /// <summary>Alpha content of one face's sprite.</summary>
+    /// <param name="sprite">Sprite rectangle.</param>
+    /// <remarks>
+    /// The reference decides the layer per material, that is per quad, not per block: a block whose top texture is opaque and
+    /// whose side texture has holes must split its faces across layers.
+    /// </remarks>
+    public Transparency TransparencyOfSprite(SpriteRect sprite) => _atlas.ComputeTransparency(sprite);
+
     /// <summary>Resolves by texture path, for callers that already know the exact texture.</summary>
     public SpriteRect ForTexture(string texturePath) =>
         _atlas.Get(new Identifier("minecraft", TextureDirectory + texturePath));

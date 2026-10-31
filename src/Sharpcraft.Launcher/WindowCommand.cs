@@ -115,9 +115,9 @@ internal static class WindowCommand
 
         // The sinks live as long as the cache: it re-meshes chunks incrementally, and a sink disposed between frames would
         // silently swallow the faces meshed after that point.
-        var layered = Environment.GetEnvironmentVariable("MC_FRAME_TRANSLUCENT") == "1";
-        var layerCutout = layered ? new Sharpcraft.Client.Render.MeshBuffer(4096) : null;
-        var layerTranslucent = layered ? new Sharpcraft.Client.Render.MeshBuffer(4096) : null;
+        // Layer routing is not optional: a sprite with holes drawn in the solid pass renders those holes opaque black.
+        var layerCutout = new Sharpcraft.Client.Render.MeshBuffer(4096);
+        var layerTranslucent = new Sharpcraft.Client.Render.MeshBuffer(4096);
 
         // The cache meshes the solid layer, so it needs the tint too: without it grass tops stay grey while only the
         // cutout and translucent layers are tinted.

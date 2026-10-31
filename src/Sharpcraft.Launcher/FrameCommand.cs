@@ -825,7 +825,9 @@ internal static class FrameCommand
             using var buffer = new Sharpcraft.Client.Render.MeshBuffer(Math.Min(2_000_000, world.LoadedChunkCount * 512));
 
             // With a layout the same pass can also fill a second buffer with the translucent faces.
-            var wantsTranslucent = Environment.GetEnvironmentVariable("MC_FRAME_TRANSLUCENT") == "1" && layout is not null;
+            // The layers are split whenever the layout is known; leaving a holed sprite in the solid pass draws its holes
+            // as opaque black.
+            var wantsTranslucent = layout is not null;
             using var translucent = wantsTranslucent ? new Sharpcraft.Client.Render.MeshBuffer(Math.Min(2_000_000, world.LoadedChunkCount * 512)) : null;
             using var cutout = wantsTranslucent ? new Sharpcraft.Client.Render.MeshBuffer(Math.Min(2_000_000, world.LoadedChunkCount * 512)) : null;
             var ranges = new List<(int FirstIndex, int IndexCount)>(world.LoadedChunkCount);
@@ -933,7 +935,7 @@ internal static class FrameCommand
                 : cache.Snapshot();
             drawRanges = null;
 
-            if (Environment.GetEnvironmentVariable("MC_FRAME_TRANSLUCENT") == "1")
+            if (layout is not null && sprites is not null)
             {
                 // The cache builds one merged mesh, so the translucent layer is meshed separately here. It costs a second
                 // pass over the chunks, which is acceptable for the presented view and keeps the cached path untouched.
@@ -1056,6 +1058,33 @@ internal static class FrameCommand
 
         // Colour maps come from the resource pack; without them the tint falls back to the reference constants. The stack
         // is cheap to build, and this path only builds one frame.
+        if (Environment.GetEnvironmentVariable("MC_DEBUG_LIGHT") == "1")
+        {
+            // Light probe: a chunk whose light is all zero renders black, which is what a dark patch on the ground looks like.
+            foreach (var chunk in world.GetChunks())
+            {
+                var sky = 0;
+                var block = 0;
+
+                for (var section = 0; section < chunk.Light.LightSectionCount; section++)
+                {
+                    for (var y = 0; y < 16; y += 8)
+                    {
+                        for (var z = 0; z < 16; z += 8)
+                        {
+                            for (var x = 0; x < 16; x += 8)
+                            {
+                                sky = Math.Max(sky, chunk.Light.GetSkyLight(section, x, y, z));
+                                block = Math.Max(block, chunk.Light.GetBlockLight(section, x, y, z));
+                            }
+                        }
+                    }
+                }
+
+                Console.WriteLine($"  light probe: chunk ({chunk.ChunkX},{chunk.ChunkZ}) lightSections={chunk.Light.LightSectionCount} maxSky={sky} maxBlock={block}");
+            }
+        }
+
         using var tintResources = CreateResourceManager();
         var tint = Sharpcraft.Client.Render.BiomeTint.Load(tintResources);
 

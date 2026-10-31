@@ -491,8 +491,16 @@ public static class ChunkMesher
 
         if (translucent is not null)
         {
-            // The layer decides the target buffer, exactly as the reference picks a chunk section layer per material.
-            target = BlockLayerRules.Of(state, sprites, layout) switch
+            // The layer decides the target buffer, exactly as the reference picks a chunk section layer per material. It is
+            // decided per face from that face's own sprite: a block can have an opaque top and holed sides, and a holed
+            // sprite drawn by the solid pipeline shows its holes as opaque black.
+            var face = FaceOf(direction);
+            var faceSprite = sprites?.ForState(state, face);
+            var layer = faceSprite is null || layout?.BlockAt(state) is not { } faceBlock
+                ? BlockLayerRules.Of(state, sprites, layout)
+                : BlockLayerRules.OfSprite(faceBlock, faceSprite, sprites);
+
+            target = layer switch
             {
                 BlockLayer.Translucent when translucent is not null => translucent,
                 BlockLayer.Cutout when cutout is not null => cutout,

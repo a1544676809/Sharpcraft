@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using Sharpcraft.Client.Assets;
+using Sharpcraft.Common.Identifiers;
 using Sharpcraft.Common.Registries;
 
 namespace Sharpcraft.Client.Render;
@@ -33,6 +34,32 @@ public enum BlockLayer
 /// </remarks>
 public static class BlockLayerRules
 {
+    /// <summary>Layer for a single face, from that face's own sprite.</summary>
+    /// <param name="block">Owning block, used for the explicit translucent materials.</param>
+    /// <param name="sprite">The face's sprite.</param>
+    /// <param name="sprites">Sprite map, for the alpha content.</param>
+    public static BlockLayer OfSprite(Identifier block, SpriteRect sprite, BlockSpriteMap? sprites)
+    {
+        if (BlockRenderLayers.IsTranslucent(block))
+        {
+            return BlockLayer.Translucent;
+        }
+
+        if (sprites is null)
+        {
+            return BlockRenderLayers.IsCutout(block) ? BlockLayer.Cutout : BlockLayer.Solid;
+        }
+
+        var transparency = sprites.TransparencyOfSprite(sprite);
+
+        if (transparency.HasTranslucent)
+        {
+            return BlockLayer.Translucent;
+        }
+
+        return transparency.HasTransparent ? BlockLayer.Cutout : BlockLayer.Solid;
+    }
+
     /// <summary>Layer for a block state.</summary>
     /// <param name="stateId">Global block state id.</param>
     /// <param name="sprites">Sprite map, used for the alpha content.</param>
