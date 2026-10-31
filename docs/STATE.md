@@ -1689,3 +1689,33 @@ culler 的 `slots` 要按层各自维护，避免再犯 A3b 那次"按在册数�
 3. **按平台性能切换**：两条管线共用同一套半透明几何与 arena，只切换目标与 pass 组合；
    用宿主层选项（如 `MC_TRANSPARENCY=weighted|reference`）选择，默认 weighted，失败自动回落 weighted。
    注意原则 13：开关只在宿主层解析，游戏程序集只接收显式选项。
+
+### OIT 第 2 步：可直接照抄的要点（下次开工用）
+
+**目标**（`WindowedRenderer` 里 depth 创建处之后，并加入 resize 重建与 Dispose）：
+```csharp
+var accumTexture  = device.CreateTexture(new TextureDescriptor {
+    Size = new Extent(frameWidth, frameHeight, 1), MipLevelCount = 1, SampleCount = 1,
+    Dimension = WGPUTextureDimension._2D, Format = WGPUTextureFormat.RGBA16Float,
+    Usage = TextureUsage.RenderAttachment | TextureUsage.TextureBinding });
+var revealTexture = ... Format = WGPUTextureFormat.R16Float ...;   // 同上
+```
+
+**半透明 OIT 管线**（入口 `fs_translucent_oit`，两个 color target）：
+- target0(accum, RGBA16F)：`color = { Add, One, One }`、`alpha = { Add, One, One }`
+- target1(reveal, R16F)：`color = { Add, Zero, OneMinusSrcAlpha }`
+- 深度：`Depth32Float, LessEqual, write:false`；顶点布局/步长与现有 terrain 相同
+
+**resolve 管线**（`ShaderLibrary.Load("oit_resolve")`，`vs_fullscreen`/`fs_oit_resolve`）：
+- 1 个 target：`{ Add, SrcAlpha, OneMinusSrcAlpha }`；深度 `Always, write:false`；无顶点缓冲（`pass.Draw(3)`）
+- 绑定：`@group(0) 0: texture(accum) / 1: sampler(Linear,Clamp) / 2: texture(reveal)`，
+  采样器用 `MagFilter/MinFilter = Linear`、`AddressMode* = ClampToEdge`
+
+**帧结构（4 pass）**：
+1. 主 pass：天空 → 不透明 arena → cutout arena → 静态世界(仅 `useStaticWorld`) → 动态几何
+2. OIT pass：`BeginRenderPass(accum=Clear0, reveal=Clear1, depth=Load(depthView))`，
+   `SetPipeline(translucentOitPipeline)`、绑定相机 bindGroup、`arenaTranslucent.DrawFarthestFirst(pass, eye)`
+   （排序已无必要，保留无害）、静态半透明（仅 `useStaticWorld`）
+3. resolve pass：`BeginRenderPass(colour=Load(mainView))`，`Draw(3)`
+4. UI pass：原 UI 绘制块整体搬入
+注意：`pass.End()` 位置要随之移动；UI 使用 `uiTransformBuffer` 自己的绑定，不受影响。
