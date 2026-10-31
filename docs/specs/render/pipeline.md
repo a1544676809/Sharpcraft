@@ -309,3 +309,30 @@ P3 之前不谈包；但 §3 的 pass 划分必须**现在就按"可命名目标
    数据来自 `colormap/*.png` 与群系定义。
 
 两者都排在"原版等效"的剩余清单里，需在五阶段管线补齐后再做。
+
+### 半透明改为加权混合 OIT（窗口路径，2026-10-31）
+
+排序只解决"大致先后"，重叠的半透明面在相交时仍会错序（§7.1 已接受）。原版 26.3 的透明并非靠排序，
+而是**顺序无关透明（OIT）**——每帧把半透明合成到独立目标再解算，因此本实现把窗口渲染路径从"排序 + 混合"
+换成加权混合 OIT，排序降级为"仅让区块流式稳定"，不再是正确性前提。
+
+行为规格（窗口渲染器）：
+
+| 目标 | 格式 | 写入内容 | 混合 |
+| --- | --- | --- | --- |
+| `accum` | RGBA16F | `(colour·α, α)` | color/alpha 均 `One / One`（累加）|
+| `reveal` | R16F | `Π(1−α)` | `Zero / OneMinusSrcAlpha` |
+| 解算 | 帧色（BGRA8Unorm）| `colour = accum.rgb / accum.a`，`coverage = 1 − reveal` | `SrcAlpha / OneMinusSrcAlpha` 叠到已有帧色上 |
+
+帧结构由单 pass 改为 **4 pass**：① 主（天空→不透明→cutout→静态/动态几何，写深度）；② OIT（清 accum=0 / reveal=1，
+深度 Load 只读，画半透明 arena 与静态半透明，深度写关）；③ 解算（全屏三角形，`Draw(3)`，载入帧色后叠加）；④ UI。
+
+**验收现状**：
+
+- 纯逻辑：`OitResolveTests`（3 项）钉住"两片任意顺序解算结果相同""单片退化为普通 alpha 混合""覆盖度=1−reveal"。
+- 运行时：确定性水景（`MC_FRAME_WATER=1`）窗口跑满数千帧、**无任何 wgpu validation error**、p99 ≈ 10 ms（960×540）。
+- **缺口（诚实）**：本环境**无法像素化验证窗口输出**——交换链纹理不可拷贝，`PrintWindow` 对 wgpu 交换链返回黑屏。
+  因此窗口侧 OIT 的"目视正确"需所有者在本机运行 `MC_FRAME_WATER=1 dotnet run … window` 亲眼确认；
+  现有 `window` 命令写出的 PNG 来自**离屏路径**（仍是旧混合管线，未改），不能代表窗口 OIT 结果。
+- 未做：原版 depth-bounds + transmittance OIT 复刻，以及 `MC_TRANSPARENCY=weighted|reference` 切换（后续）。
+

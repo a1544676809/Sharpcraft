@@ -13,7 +13,7 @@ updated: 2026-10-29
 > 本文件只记录**易变状态**（AGENTS.md 4.2）。设计结论属于 `docs/modules/`，里程碑划分属于 `docs/milestones/roadmap.md`，索引属于 `docs/README.md`，决策属于 `docs/decisions/`。**不要在此复述它们。**
 > 每次收工必须与代码同一提交更新本文件，并写清"下一步具体动作"。
 
-最后更新：2026-10-30
+最后更新：2026-10-31
 
 ## 当前里程碑
 
@@ -1719,3 +1719,29 @@ var revealTexture = ... Format = WGPUTextureFormat.R16Float ...;   // 同上
 3. resolve pass：`BeginRenderPass(colour=Load(mainView))`，`Draw(3)`
 4. UI pass：原 UI 绘制块整体搬入
 注意：`pass.End()` 位置要随之移动；UI 使用 `uiTransformBuffer` 自己的绑定，不受影响。
+
+## 2026-10-31 OIT 第 2/3 步完成（窗口路径加权混合 OIT）
+
+**已落地**（`src/Sharpcraft.Framework/Rendering/WindowedRenderer.cs`）：
+
+1. 两个帧尺寸目标 `accum`(RGBA16F)/`reveal`(R16F)，含 resize 重建与 Dispose；`oitSampler`(Linear/Clamp)；
+   独立 `oitResolveBindGroupLayout`（texture0/sampler1/texture2）。
+2. 两条管线：`CreateTranslucentOitPipeline`（双 target，accum `One/One`、reveal `Zero/OneMinusSrcAlpha`，
+   深度 `LessEqual` 写关）、`CreateOitResolvePipeline`（`SrAlpha/OneMinusSrcAlpha`，深度 `Always` 写关，`Draw(3)`）。
+3. 帧循环拆 **4 pass**：主 → OIT（accum=0/reveal=1，深度 Load 只读）→ 解算 → UI；`pass.End()` 已随各 pass 移动。
+4. `ShaderPipelines.All` 新增 `oit_resolve` 描述符 + terrain 增加 `fs_translucent_oit` 入口（启动校验覆盖）。
+5. 新增 `tests/Sharpcraft.Framework.Tests/Rendering/OitResolveTests.cs`（3 项：顺序无关、单片退化 alpha、覆盖度=1−reveal）。
+
+**修掉的真 bug**：`oit_resolve.wgsl` 第 16 行缺失 `var` 关键字（脚手架从未真正编译过，早先"运行时已验证"的说法不成立）。
+加 `var` 后窗口成功创建管线并出帧。
+
+**验收数据**：`MC_FRAME_WATER=1` 窗口跑满 1073/2508 帧、**0 validation error**、p99 10.18 ms（960×540）；
+全量测试 1117 通过、文档门禁 ok。
+
+**下一步具体动作（按序）**：
+
+1. **所有者本机目视**：`$env:MC_FRAME_WATER='1'; dotnet run --project src/Sharpcraft.Launcher -c Release -- window`
+   确认水面 OIT 观感（本环境交换链不可截图，`PrintWindow` 对 wgpu 返回黑屏；`window` 写出的 PNG 是离屏旧混合路径，不能代表 OIT）。
+2. 若观感通过：接 `MC_TRANSPARENCY=weighted|reference` 宿主开关（默认 weighted，失败回落 weighted），原版 depth-bounds +
+   transmittance OIT 作为 reference 管线。
+3. 可选：让离屏渲染器也走 OIT，使像素级对照（T-104/T-159 的截图）能覆盖透明层。

@@ -13,9 +13,8 @@ struct FullscreenOutput
 };
 
 @group(0) @binding(0) var accumulateTexture : texture_2d<f32>;
-@group(0) @binding(1) accumulateSampler : sampler;
+@group(0) @binding(1) var accumulateSampler : sampler;
 @group(0) @binding(2) var revealTexture : texture_2d<f32>;
-
 @vertex
 fn vs_fullscreen(@builtin(vertex_index) index : u32) -> FullscreenOutput
 {
