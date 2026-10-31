@@ -1619,3 +1619,12 @@ culler 的 `slots` 要按层各自维护，避免再犯 A3b 那次"按在册数�
   透过冰看不见其它区块的透明物）。代价是共面瑕疵——正好由流体高度消掉。
 - 结论记录：正确组合是 ①按 section（16³）排序 + ②写深度；当前用 ③按列排序 + 不写深度 + 流体高度，
   作为阶段 1 的折中。阶段 2 引入方块状态后再做 ①。
+### 逐面剔除依据（原版 + Sodium 都核对过）
+
+- 原版 `Block.shouldRenderFace`（`world/level/block/Block.java` L295-309）：
+  **只有** `neighborState.getFaceOcclusionShape(direction.getOpposite()) == Shapes.block()` 才剔除；
+  `Blocks.GLASS` 与 `Blocks.ICE` 都带 **`.noOcclusion()`** ⇒ 冰-冰、玻璃-玻璃之间的面**照画**。
+- Sodium `render/model/AbstractBlockRenderContext.java`：同样的规则（注释原文：*"if the neighbor has a
+  full-block occlusion shape, the face is always hidden"*），且 Sodium 有**独立的** `DefaultFluidRenderer`
+  自己处理流体遮挡 ⇒ 流体单独归类，符合"同族只对 water/lava 剔除"。
+- 因此把 `ShouldCullFace` 的"同家族即剔除"改为：**仅 `water`/`lava` 同族剔除**；冰/玻璃保留内部面。

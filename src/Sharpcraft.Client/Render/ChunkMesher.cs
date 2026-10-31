@@ -471,10 +471,12 @@ public static class ChunkMesher
             return false;
         }
 
-        // Glass, ice and the like: only the shared face between identical blocks is dropped.
+        // Ice and glass carry noOcclusion in the reference, so a face between two of them is still drawn and the inside of
+        // the mass reads through the block instead of turning into a black hole. Fluids are the exception: the fluid
+        // renderer culls the shared face between two cells of the same fluid, which keeps a lake from doubling its surfaces.
         var sameFamily = selfPath == neighbourPath;
 
-        return sameFamily;
+        return sameFamily && selfPath is "water" or "lava";
     }
 
 
