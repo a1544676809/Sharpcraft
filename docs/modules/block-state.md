@@ -1,10 +1,10 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 Sharpcraft contributors -->
 
-状态：[待评审]
+状态：[已评审]
 基线：Minecraft 26.3
 最后更新：2026-10-31
-授权：用户 2026-10-31 指示"先写成模块文档，这是重要决策"。评审通过前不得据此开工（AGENTS 3.5）。
+授权：用户 2026-10-31 指示"先写成模块文档，这是重要决策"；随后评审通过并"允许开工"。
 
 # 方块状态模块（Block State）
 
