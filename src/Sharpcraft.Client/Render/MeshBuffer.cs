@@ -182,6 +182,32 @@ public sealed class MeshBuffer : IDisposable
         V1 = 1f
     };
 
+    /// <summary>Writes one vertex from a fractional position, used by the fluid surface height.</summary>
+    private void WriteVertex(
+        (float X, float Y, float Z) position,
+        float red,
+        float green,
+        float blue,
+        (float U, float V) uv,
+        SpriteRect sprite)
+    {
+        var offset = _vertexFloats;
+        _vertices[offset] = position.X;
+        _vertices[offset + 1] = position.Y;
+        _vertices[offset + 2] = position.Z;
+        _vertices[offset + 3] = red;
+        _vertices[offset + 4] = green;
+        _vertices[offset + 5] = blue;
+        _vertices[offset + 6] = uv.U;
+        _vertices[offset + 7] = uv.V;
+        _vertices[offset + 8] = sprite.U0;
+        _vertices[offset + 9] = sprite.V0;
+        _vertices[offset + 10] = sprite.U1;
+        _vertices[offset + 11] = sprite.V1;
+
+        _vertexFloats = offset + ChunkMesher.FloatsPerVertex;
+    }
+
     private void WriteVertex(
         (int X, int Y, int Z) position,
         float red,
@@ -207,6 +233,56 @@ public sealed class MeshBuffer : IDisposable
         _vertices[offset + 11] = sprite.V1;
 
         _vertexFloats = offset + ChunkMesher.FloatsPerVertex;
+    }
+
+    /// <summary>
+    /// Appends a quad whose corners are fractional positions, which the fluid surface needs because still water sits at
+    /// eight ninths of a block rather than at the block top.
+    /// </summary>
+    /// <param name="a">First corner position.</param>
+    /// <param name="b">Second corner position.</param>
+    /// <param name="c">Third corner position.</param>
+    /// <param name="d">Fourth corner position.</param>
+    /// <param name="colourA">Lit colour of the first corner.</param>
+    /// <param name="colourB">Lit colour of the second corner.</param>
+    /// <param name="colourC">Lit colour of the third corner.</param>
+    /// <param name="colourD">Lit colour of the fourth corner.</param>
+    /// <param name="uvA">UV of the first corner.</param>
+    /// <param name="uvB">UV of the second corner.</param>
+    /// <param name="uvC">UV of the third corner.</param>
+    /// <param name="uvD">UV of the fourth corner.</param>
+    /// <param name="sprite">Atlas cell to sample; null covers the whole texture.</param>
+    public void AppendQuad(
+        (float X, float Y, float Z) a,
+        (float X, float Y, float Z) b,
+        (float X, float Y, float Z) c,
+        (float X, float Y, float Z) d,
+        (float R, float G, float B) colourA,
+        (float R, float G, float B) colourB,
+        (float R, float G, float B) colourC,
+        (float R, float G, float B) colourD,
+        (float U, float V) uvA,
+        (float U, float V) uvB,
+        (float U, float V) uvC,
+        (float U, float V) uvD,
+        SpriteRect? sprite = null)
+    {
+        EnsureVertexRoom(4 * ChunkMesher.FloatsPerVertex);
+        EnsureIndexRoom(ChunkMesher.IndicesPerQuad);
+
+        var rect = sprite ?? WholeAtlas;
+        var first = (uint)(_vertexFloats / ChunkMesher.FloatsPerVertex);
+        WriteVertex(a, colourA.R, colourA.G, colourA.B, uvA, rect);
+        WriteVertex(b, colourB.R, colourB.G, colourB.B, uvB, rect);
+        WriteVertex(c, colourC.R, colourC.G, colourC.B, uvC, rect);
+        WriteVertex(d, colourD.R, colourD.G, colourD.B, uvD, rect);
+
+        _indices[_indexCount++] = first;
+        _indices[_indexCount++] = first + 1;
+        _indices[_indexCount++] = first + 2;
+        _indices[_indexCount++] = first;
+        _indices[_indexCount++] = first + 2;
+        _indices[_indexCount++] = first + 3;
     }
 
     private void EnsureVertexRoom(int floats)

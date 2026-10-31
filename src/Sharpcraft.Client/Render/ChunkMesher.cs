@@ -778,15 +778,48 @@ public static class ChunkMesher
             }
         }
 
+        var cornerOrigin = CornerShade(neighbourhood, direction, origin, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout);
+        var cornerA = CornerShade(neighbourhood, direction, a, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout);
+        var cornerB = CornerShade(neighbourhood, direction, b, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout);
+        var cornerC = CornerShade(neighbourhood, direction, c, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout);
+
+        // Still water and lava sit at fourteen sixteenths of a block, not at the block top. Without this the water surface
+        // is exactly coplanar with an ice block's top face and the two fight for the same depth, which is what showed as
+        // large rectangular patches on a frozen ocean. Flowing fluid heights need the block state level property and are
+        // left for the block state work; a single height already removes the coplanar case.
+        if (layout?.BlockAt(state) is { Path: "water" or "lava" })
+        {
+            var top = Math.Max(Math.Max(origin.Y, a.Y), Math.Max(b.Y, c.Y));
+            target.AppendQuad(
+                Drop(origin),
+                Drop(a),
+                Drop(b),
+                Drop(c),
+                cornerOrigin,
+                cornerA,
+                cornerB,
+                cornerC,
+                uvOrigin,
+                uvA,
+                uvB,
+                uvC,
+                faceSprite);
+
+            (float X, float Y, float Z) Drop((int X, int Y, int Z) point) =>
+                (point.X, point.Y == top ? point.Y - (1f / 16f) : point.Y, point.Z);
+
+            return;
+        }
+
         target.AppendQuad(
             origin,
             a,
             b,
             c,
-            CornerShade(neighbourhood, direction, origin, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout),
-            CornerShade(neighbourhood, direction, a, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout),
-            CornerShade(neighbourhood, direction, b, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout),
-            CornerShade(neighbourhood, direction, c, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout),
+            cornerOrigin,
+            cornerA,
+            cornerB,
+            cornerC,
             uvOrigin,
             uvA,
             uvB,
