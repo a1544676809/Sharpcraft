@@ -1869,4 +1869,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 流体静态几何核心已交付并在所有者处目视确认：独立通道 + 同种流体面剔除 + 四角高度(含 getHeight/对角≥1/边≥1 规则) + 侧面四角+内缩 + 侧面 `_flow` 高度映射 V + 顶面 still/flow 旋转 UV + 水色 + 逐面光；1161 测试通过。
 - **遮挡判定**：原版 `isFaceOccludedByState` 依赖方块**遮挡/碰撞形状(VoxelShape)**，非模型几何；该数据与**方块实体/碰撞行为**强相关（未开发）→ 按所有者指示**暂缓实现，先建文档**：`docs/modules/block-shape.md`（[规划]/暂缓）。流体暂用 `IsSolid` 近似，记为受控偏差。
 - **流体 backlog（未来）**：overlay、反向顶面、flow 下落偏置/下方回退、水下雾、精确遮挡形状(block-shape)、离屏固定机位像素验收、纹理动画(图集动画)。
-- 下一步：本目标视为收口，转下个模块（M5.3 渲染剩余：天空天体/实体模型/半透明排序证据/方块实体；或 5.2 UI）。
+- 下一步：本目标视为收口，转下个模块（M5.3 渲染剩余：天空天体/实体模型/半透明排序证据/方块实体；或 5.2 UI）。- 修复回归：流体通道只处理 **water**（`IsFluidState` 仅 water）；此前把 lava 也跳过块通道却没在流体通道发射 → 岩浆不可见。lava 恢复为不透明方块路径。新增 `FluidMesherTests.LavaStaysOnTheOpaqueBlockPath`。全量 1162 通过。

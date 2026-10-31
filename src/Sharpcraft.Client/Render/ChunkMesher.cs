@@ -678,9 +678,13 @@ public static class ChunkMesher
         return !transparency.HasTransparent && !transparency.HasTranslucent;
     }
 
-    /// <summary>True when a state's block is a fluid (water/lava); fluids are meshed by <see cref="EmitSectionFluids"/>.</summary>
+    /// <summary>
+    /// True when a state's block is a water fluid, which is meshed by <see cref="EmitSectionFluids"/> into the translucent
+    /// buffer. Lava is intentionally NOT included: it is opaque and stays on the normal block path (otherwise the block
+    /// pass would skip it and nothing would draw it).
+    /// </summary>
     private static bool IsFluidState(int state, BlockStateLayout? layout) =>
-        layout?.BlockAt(state) is { Path: "water" or "lava" };
+        layout?.BlockAt(state) is { Path: "water" };
 
     /// <summary>
     /// Emits water geometry for one section into the translucent buffer (docs/specs/render/fluid-rendering.md). Faces are

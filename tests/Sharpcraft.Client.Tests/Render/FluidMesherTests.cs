@@ -64,4 +64,26 @@ public sealed class FluidMesherTests
 
         Assert.Equal(6, translucent.IndexCount / ChunkMesher.IndicesPerQuad);
     }
+
+    [Fact]
+    public void LavaStaysOnTheOpaqueBlockPath()
+    {
+        // Lava is opaque and must NOT be skipped by the fluid (water-only) pass: otherwise nothing draws it.
+        var layout = new BlockStateLayout(
+        [
+            (new Identifier("minecraft", "air"), 1),
+            (new Identifier("minecraft", "lava"), 16)
+        ]);
+        var world = new ClientWorld(minSectionY: 0, sectionCount: 1);
+        var chunk = world.AddChunk(0, 0);
+        chunk.SetSection(new ChunkSection(singleState: 1, sectionY: 0)); // state 1 = lava
+        chunk.MarkLoaded();
+
+        using var opaque = new MeshBuffer();
+        using var translucent = new MeshBuffer();
+        ChunkMesher.MeshChunk(world, chunk, airState: 0, opaque, maxBlocks: 1_000_000, sprites: null, translucent, layout);
+
+        Assert.True(opaque.IndexCount > 0);
+        Assert.Equal(0, translucent.IndexCount);
+    }
 }
