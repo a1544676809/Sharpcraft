@@ -118,9 +118,13 @@ internal static class WindowCommand
         var layered = Environment.GetEnvironmentVariable("MC_FRAME_TRANSLUCENT") == "1";
         var layerCutout = layered ? new Sharpcraft.Client.Render.MeshBuffer(4096) : null;
         var layerTranslucent = layered ? new Sharpcraft.Client.Render.MeshBuffer(4096) : null;
-        meshCache.Layers = layered
-            ? new Sharpcraft.Client.Render.LayerSinks(VanillaBlockRegistry.Layout, layerCutout, layerTranslucent, null)
-            : null;
+
+        // The cache meshes the solid layer, so it needs the tint too: without it grass tops stay grey while only the
+        // cutout and translucent layers are tinted.
+        var biomeTint = Sharpcraft.Client.Render.BiomeTint.Load(resources);
+        meshCache.Layers = new Sharpcraft.Client.Render.LayerSinks(
+            VanillaBlockRegistry.Layout, layerCutout, layerTranslucent, biomeTint);
+        workerPool.Layers = meshCache.Layers;
         var meshOrderSeen = 0;
         var meshOrderDistanceSum = 0f;
         var geometryEpoch = 0;
@@ -197,7 +201,7 @@ internal static class WindowCommand
             prepared is null
                 ? null
                 : FrameCommand.WithMips(prepared.Value.Atlas),
-            tint: Sharpcraft.Client.Render.BiomeTint.Load(resources),
+            tint: biomeTint,
             cache: meshCache,
             meshSynchronously: false);
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");

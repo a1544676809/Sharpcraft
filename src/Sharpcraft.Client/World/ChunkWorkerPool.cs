@@ -48,6 +48,21 @@ public sealed class ChunkWorkerPool : IDisposable
     private readonly int _maxQueuedMeshes;
 
     private volatile BlockSpriteMap? _sprites;
+    private volatile Sharpcraft.Client.Render.LayerSinks? _layers;
+
+    /// <summary>
+    /// Layer routing for worker built meshes.
+    /// </summary>
+    /// <remarks>
+    /// Workers build the solid arena mesh, so without this the leaves and water would be meshed into it as well and the
+    /// grass tops would never be tinted. Each worker writes the other layers into throwaway buffers: the rendered cutout and
+    /// translucent geometry comes from the separate pass, and a shared buffer would be written from several threads.
+    /// </remarks>
+    public Sharpcraft.Client.Render.LayerSinks? Layers
+    {
+        get => _layers;
+        set => _layers = value;
+    }
     private volatile bool _stop;
     private int _parsePending;
     private int _meshPending;
@@ -362,7 +377,21 @@ public sealed class ChunkWorkerPool : IDisposable
         }
 
         using var buffer = new MeshBuffer(512);
-        ChunkMesher.MeshChunk(_world, chunk, airState: 0, buffer, 2_000_000, _sprites);
+        var layers = _layers;
+        using var cutoutScratch = layers is null ? null : new MeshBuffer(256);
+        using var translucentScratch = layers is null ? null : new MeshBuffer(256);
+
+        ChunkMesher.MeshChunk(
+            _world,
+            chunk,
+            airState: 0,
+            buffer,
+            2_000_000,
+            _sprites,
+            translucent: translucentScratch,
+            layout: layers?.Layout,
+            cutout: cutoutScratch,
+            tint: layers?.Tint);
         var mesh = buffer.ToMeshData(0);
 
         MeshesBuilt++;
