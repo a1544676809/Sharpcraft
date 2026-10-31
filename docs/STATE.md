@@ -1838,3 +1838,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 ### 根因修复：省略的天空光段默认 15（整体发黑 / 海平面附近反常亮）
 `LevelChunk.ApplyLight` 只为"带数据的天光段"赋值，忽略了协议语义：未下发、也不在 emptySkyMask 的段应默认 **15**。结果露天大片读 0 → 整体偏暗，只有少数带数组的地表段正常 → 海平面附近反而亮。
 修复：非空掩码且无数组的段填整段 15（共享 0xFF 数组）。新增 `ChunkLightTests.SectionsThePacketOmitsAreFullSkyUnlessMarkedEmpty`。全量 **1137 通过**、门禁 ok。行为规格见 `docs/specs/render/lighting.md` §2。
+- 新增宿主开关 `MC_NO_AO`（关 AO）用于 A/B；AO 通过 Mesh/MeshChunk 显式传参，游戏层不读环境变量。

@@ -69,4 +69,7 @@ public static class HostDebugOptions
 
     /// <summary>True to disable greedy face merging, meshing every block face on its own (for an A/B on cost vs fidelity).</summary>
     public static bool NoMergeFaces => Environment.GetEnvironmentVariable("MC_MESH_NOMERGE") == "1";
+
+    /// <summary>True to disable ambient occlusion (for an A/B on how much AO darkens the scene).</summary>
+    public static bool NoAmbientOcclusion => Environment.GetEnvironmentVariable("MC_NO_AO") == "1";
 }

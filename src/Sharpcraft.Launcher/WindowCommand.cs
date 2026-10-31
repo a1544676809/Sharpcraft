@@ -112,7 +112,8 @@ internal static class WindowCommand
             world,
             prepared?.Map,
             fifoMeshOrder: Sharpcraft.Launcher.Diagnostics.HostDebugOptions.FifoMeshOrder,
-            mergeFaces: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoMergeFaces);
+            mergeFaces: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoMergeFaces,
+            ambientOcclusion: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoAmbientOcclusion);
         Console.WriteLine($"chunk workers: {workerPool.WorkerCount} (of {Environment.ProcessorCount} logical processors)");
 
         var meshCache = new ChunkMeshCache(workerPool);
@@ -349,7 +350,7 @@ internal static class WindowCommand
 
         // Host-only light probe (MC_LIGHT_PROBE=1): prints the sky/block light the mesher will read around the player, so
         // a too-dark scene can be told apart from a lighting-model problem. Principle 13: parsed here, in the host.
-        var lightProbeDone = false;
+        var lightProbeTick = 0;
         var lightProbe = Environment.GetEnvironmentVariable("MC_LIGHT_PROBE") == "1";
 
         var format = WindowedRenderer.Run(
@@ -380,33 +381,20 @@ internal static class WindowCommand
                     var camera = session.UpdateCamera(window);
                     speedOverlay?.Observe(session.Player.Position, session.TickIndex);
 
-                    if (lightProbe && !lightProbeDone)
+                    if (lightProbe && (lightProbeTick++ % 90) == 0)
                     {
-                        lightProbeDone = true;
                         var lp = session.Player.Position;
                         var px = (int)Math.Floor(lp.X);
                         var pz = (int)Math.Floor(lp.Z);
                         var py = (int)Math.Floor(lp.Y);
                         Console.WriteLine($"[light] player=({lp.X:F1},{lp.Y:F1},{lp.Z:F1}) chunks={world.LoadedChunkCount}");
 
-                        for (var dy = -3; dy <= 3; dy++)
+                        for (var dy = -12; dy <= 4; dy++)
                         {
                             var st = world.GetBlockState(px, py + dy, pz);
                             world.TryGetLight(px, py + dy, pz, out var sky, out var block);
-                            Console.WriteLine($"[light] (x{px},y{py + dy},z{pz}) state={st} sky={sky} block={block}");
-                        }
-
-                        // A 3x3 surface sample a few blocks out, so a single column is not the only evidence.
-                        for (var dzz = -2; dzz <= 2; dzz += 2)
-                        {
-                            for (var dxx = -2; dxx <= 2; dxx += 2)
-                            {
-                                var sx = px + dxx;
-                                var sz = pz + dzz;
-                                var sy = py + 1;
-                                world.TryGetLight(sx, sy, sz, out var sky, out var block);
-                                Console.WriteLine($"[light] +({dxx},{dzz}) y{sy} sky={sky} block={block}");
-                            }
+                            var lm = Sharpcraft.Client.Render.VanillaLightmap.Colour(sky, block);
+                            Console.WriteLine($"[light] y{py + dy} state={st} sky={sky} block={block} lm=({lm.X:F2},{lm.Y:F2},{lm.Z:F2})");
                         }
                     }
 

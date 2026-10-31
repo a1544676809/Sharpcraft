@@ -61,13 +61,14 @@ public static class ChunkMesher
         int airState = 0,
         int maxBlocks = 2_000_000,
         BlockSpriteMap? sprites = null,
-        bool merge = true)
+        bool merge = true,
+        bool ambientOcclusion = true)
     {
         ArgumentNullException.ThrowIfNull(world);
 
         // Merging cuts the quad count by an order of magnitude, so a smaller guess is enough.
         using var buffer = new MeshBuffer(Math.Min(maxBlocks, world.LoadedChunkCount * 512));
-        var blocks = Mesh(world, buffer, airState, maxBlocks, sprites, merge);
+        var blocks = Mesh(world, buffer, airState, maxBlocks, sprites, merge, ambientOcclusion);
         return buffer.ToMeshData(blocks);
     }
 
@@ -82,7 +83,8 @@ public static class ChunkMesher
         int airState = 0,
         int maxBlocks = 2_000_000,
         BlockSpriteMap? sprites = null,
-        bool merge = true)
+        bool merge = true,
+        bool ambientOcclusion = true)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(buffer);
@@ -97,7 +99,7 @@ public static class ChunkMesher
                 break;
             }
 
-            blocks += MeshChunk(world, chunk, airState, buffer, maxBlocks - blocks, sprites, merge: merge);
+            blocks += MeshChunk(world, chunk, airState, buffer, maxBlocks - blocks, sprites, merge: merge, ambientOcclusion: ambientOcclusion);
         }
 
         return blocks;
@@ -118,7 +120,8 @@ public static class ChunkMesher
         BiomeTint? tint = null,
         StateCullTable? cull = null,
         StateVisualCache? visuals = null,
-        bool merge = true)
+        bool merge = true,
+        bool ambientOcclusion = true)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(chunk);
@@ -151,7 +154,7 @@ public static class ChunkMesher
             for (var direction = 0; direction < 6; direction++)
             {
                 consumed.Clear();
-                MergeSectionFaces(neighbourhood, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout, tint, cull, visuals, merge);
+                MergeSectionFaces(neighbourhood, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout, tint, cull, visuals, merge, ambientOcclusion);
             }
         }
 
@@ -176,7 +179,8 @@ public static class ChunkMesher
         BiomeTint? tint = null,
         StateCullTable? cull = null,
         StateVisualCache? visuals = null,
-        bool merge = true)
+        bool merge = true,
+        bool ambientOcclusion = true)
     {
         var (uAxis, vAxis) = InPlaneAxes(direction);
 
@@ -279,7 +283,7 @@ public static class ChunkMesher
                         }
                     }
 
-                    EmitMergedQuad(neighbourhood, buffer, direction, slice, u, v, width, height, baseX, baseY, baseZ, key.State, sprites, translucent, layout, cutout, tint, cull, visuals);
+                    EmitMergedQuad(neighbourhood, buffer, direction, slice, u, v, width, height, baseX, baseY, baseZ, key.State, sprites, translucent, layout, cutout, tint, cull, visuals, ambientOcclusion);
                 }
             }
         }
@@ -571,7 +575,8 @@ public static class ChunkMesher
         float green,
         float blue,
         BlockSpriteMap? sprites,
-        Sharpcraft.Common.Registries.BlockStateLayout? layout)
+        Sharpcraft.Common.Registries.BlockStateLayout? layout,
+        bool ambientOcclusion = true)
     {
         var (nx, ny, nz) = NeighbourOffset(direction);
         Span<int> u = stackalloc int[3];
@@ -618,7 +623,7 @@ public static class ChunkMesher
 
         // Ambient occlusion is the average shade brightness of the four cells meeting at the corner, matching the
         // reference: a solid neighbour contributes 0.2 and air/transparent 1.0, so the vertex levels are 1.0/0.8/0.6/0.4.
-        var occlusion = shade * 0.25f;
+        var occlusion = ambientOcclusion ? shade * 0.25f : 1f;
 
         // Vanilla lightmap multiplier (linear RGB) from the averaged light, times the directional shade and AO. The
         // terrain shader decodes the texel, multiplies by this, and re-encodes (docs/specs/render/lighting.md 3-5).
@@ -699,7 +704,8 @@ public static class ChunkMesher
         MeshBuffer? cutout = null,
         BiomeTint? tint = null,
         StateCullTable? cull = null,
-        StateVisualCache? visuals = null)
+        StateVisualCache? visuals = null,
+        bool ambientOcclusion = true)
     {
         var (uAxis, vAxis) = InPlaneAxes(direction);
         var (x, y, z) = FaceBlock(uAxis, vAxis, slice, u, v);
@@ -868,10 +874,10 @@ public static class ChunkMesher
             }
         }
 
-        var cornerOrigin = CornerShade(neighbourhood, direction, origin, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout);
-        var cornerA = CornerShade(neighbourhood, direction, a, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout);
-        var cornerB = CornerShade(neighbourhood, direction, b, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout);
-        var cornerC = CornerShade(neighbourhood, direction, c, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout);
+        var cornerOrigin = CornerShade(neighbourhood, direction, origin, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion);
+        var cornerA = CornerShade(neighbourhood, direction, a, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion);
+        var cornerB = CornerShade(neighbourhood, direction, b, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion);
+        var cornerC = CornerShade(neighbourhood, direction, c, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion);
 
         // Still water and lava sit at fourteen sixteenths of a block, not at the block top. Without this the water surface
         // is exactly coplanar with an ice block's top face and the two fight for the same depth, which is what showed as
