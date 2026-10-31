@@ -1512,3 +1512,17 @@ culler 的 `slots` 要按层各自维护，避免再犯 A3b 那次"按在册数�
 - `WindowedRenderer` 的半透明 pass 改用它。
 - 验证：湖区截图层次正确（远处水更淡、近处水在前、水下地形可见）；全量 7 套测试通过。
 - 记录为**近似**：逐面排序更精确，但成本远高于收益（方块尺度下区块级排序已足够）。
+
+### ① A4 GPU 遮挡剔除：设计与前置条件（未实现）
+
+- 前置：`CreateDepthTexture` 目前 `Usage = RenderAttachment`，**必须加 `TextureBinding`** 才能在 compute 里采样
+  （否则创建 bind group 会报验证错误）。
+- 数据：culler 已持有每槽 AABB 与 indirect 参数，A4 只需
+  ① compute 之前（此时深度纹理仍保存**上一帧**内容）绑定 depth view + sampler；
+  ② uniform 里增加 `mat4x4` 视图投影 + 视口尺寸；
+  ③ 着色器把 8 个 AABB 角投影到屏幕，取屏幕矩形内若干采样点的**最大**深度，与区块**最近**深度比较
+     （`nearest > maxSampled + bias` 判为遮挡）。
+- 保守性：任一角在近平面之后（`w <= 0`）→ 不做遮挡判定；bias 取保守值；`Available=false` 或
+  `MC_CULL_DISABLE=1` → 回落 A3b 视锥剔除。建议先做成**默认关闭的宿主选项（如 `MC_OCCLUSION=1`）**，
+  用同机位截图与"不剔除"对比像素差，达标后再默认开启。
+- 预期：视距大、地形遮挡多时才有明显收益；当前 328–657 区块、960×540 下预估 <0.5 ms，需实测确认是否值得默认开。
