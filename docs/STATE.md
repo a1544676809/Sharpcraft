@@ -1853,4 +1853,5 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 新增 `Sharpcraft.Client/Render/FluidSurface.cs`（ownHeight=amount/9、原版 calculateAverageHeight 四角加权），`FluidSurfaceTests` 5 项通过。
 - 全量 **1156 通过**、门禁 ok。
 - **下一步**：给 MeshBuffer 加浮点坐标 `AppendQuad`（现仅整数）→ 实现流体几何发射（四角高度/面剔除/flow-UV/染色/逐面光/overlay）→ 接半透明层 → 离屏水面出图；再补水下雾与图集动画。- 流体几何（静态，进行中）：`ChunkMesher` 的水/岩浆液面高度由固定 14/16 改为原版 **amount/9**（源水 8/9、流动更低、上方同种流体=1.0），用 `FluidStateCodec` 解 level；`FluidWaterHeightTests` 2 项（源水/流动高度）通过。全量 1158 通过。
-- 待续：四角高度（`FluidSurface` 已备但未接线）、flow-UV、per-face 光、overlay、不合并的独立流体网格；水下雾；图集动画。
+- 待续：四角高度（`FluidSurface` 已备但未接线）、flow-UV、per-face 光、overlay、不合并的独立流体网格；水下雾；图集动画。### 流体几何：关键教训（2026-10-31）
+尝试"水不合并 + 顶面四角高度"时发现：**不做"同种流体面剔除"就逐方块发射水，会把整段水的内部面全发出来**（一个 16³ 水段 60 合并 quad → 7710 quad，性能灾难）。结论：流体必须走**独立通道并做同种流体面剔除**（相邻同种流体→跳过该面），再谈四角高度/不合并。该尝试已回退，保持全量 1158 绿。下一步：实现含同种流体剔除的 `FluidMesher` 独立通道。
