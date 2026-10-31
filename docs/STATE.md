@@ -1833,3 +1833,5 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 等效性单测 `VanillaLightmapTests`（手算值：满光=白、无光=黑、sky12≈0.71875、方块光暖色）。全量 **1136 通过**、门禁 ok。
 - 行为变化：无光面现在按原版为**黑**（旧 0.12 地板移除）；中高光比旧线性偏暗更接近原版曲线。
 - 未做：夜晚/天气/维度 timeline 插值、夜视/Darkness/Boss、亮度滑块接入。
+### 修复：顶点光照采样越界一格（正法线面）
+`CornerShade` 的 `corner` 已是面顶点坐标，却又加了一次法线 ⇒ +X/+Y/+Z 面多采一格（顶面读到上方方块的光）。改为 `corner + min(n,0)`。全量 1136 通过。

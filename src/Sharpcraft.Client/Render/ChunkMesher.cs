@@ -579,9 +579,13 @@ public static class ChunkMesher
         Span<int> v = stackalloc int[3];
         v[vAxis] = 1;
 
-        var bx = corner.X + nx;
-        var by = corner.Y + ny;
-        var bz = corner.Z + nz;
+        // `corner` is already a face vertex (the face plane), so the four cells that share it on the outer side sit at
+        // corner - (0 or 1) per axis: at corner for a positive normal axis, at corner - 1 for a negative one. Adding the
+        // raw normal overshot by one cell on +X/+Y/+Z, so a top face read the light above the block above it and a side
+        // face read one block too far out.
+        var bx = corner.X + Math.Min(nx, 0);
+        var by = corner.Y + Math.Min(ny, 0);
+        var bz = corner.Z + Math.Min(nz, 0);
 
         Span<int> xs = stackalloc int[4] { bx, bx - u[0], bx - v[0], bx - u[0] - v[0] };
         Span<int> ys = stackalloc int[4] { by, by - u[1], by - v[1], by - u[1] - v[1] };
