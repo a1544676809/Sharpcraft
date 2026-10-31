@@ -840,7 +840,7 @@ public static class WindowedRenderer
                     (int)frameHeight);
 
                 FrustumPlanes.Extract(viewProjectionForCull, frustumPlanes);
-                culler.Dispatch(encoder, frustumPlanes, arena.ChunkCount);
+                culler.Dispatch(encoder, frustumPlanes, arena.SlotHighWater);
                 gpuCulled = true;
             }
             var pass = encoder.BeginRenderPass(

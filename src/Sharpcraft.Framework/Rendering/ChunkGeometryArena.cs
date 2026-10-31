@@ -188,6 +188,15 @@ public sealed class ChunkGeometryArena : IDisposable
         _slices[chunkKey] = slice;
     }
 
+    /// <summary>
+    /// Highest draw slot ever handed out plus one, including holes left by chunks that left.
+    /// </summary>
+    /// <remarks>
+    /// The cull pass must cover every slot, not just the resident count: slots above the count keep whatever the previous
+    /// frame wrote, so a chunk culled once would stay invisible after later chunks were removed.
+    /// </remarks>
+    public int SlotHighWater => _slotsUsed;
+
     /// <summary>Optional GPU culler whose argument buffer drives the draws.</summary>
     public ChunkCuller? Culler { get; set; }
 
