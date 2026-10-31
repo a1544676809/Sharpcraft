@@ -218,12 +218,13 @@ public static class PlayPackets
 
     /// <summary>Builds a command line.</summary>
     /// <param name="command">Command text without the leading slash.</param>
+    /// <param name="timestamp">Milliseconds since the epoch, as the reference sends it.</param>
     /// <remarks>
     /// The slash is not part of the command on the wire: the reference strips it before sending, and a server that
     /// receives it treats the slash as the first character of the command name and answers that the command is
     /// unknown. It is rejected here rather than stripped, so a caller that forgets cannot hide the mistake.
     /// </remarks>
-    public static byte[] BuildChatCommand(string command)
+    public static byte[] BuildChatCommand(string command, long timestamp)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -237,10 +238,20 @@ public static class PlayPackets
             throw new ArgumentException("the leading slash is not sent on the wire", nameof(command));
         }
 
-        var body = new byte[(command.Length * 4) + 8];
+        // A command carries the same session fields a chat line does, minus the message and its signature. Sending only
+        // the text leaves the server reading a truncated packet, which drops the connection.
+        var body = new byte[(command.Length * 4) + 64];
         var writer = new PayloadWriter(body);
         writer.WriteVarInt(PacketIds.PlayServerbound.ChatCommand);
         writer.WriteString(command);
+        writer.WriteLong(timestamp);
+        writer.WriteLong(0L);        // salt
+        writer.WriteVarInt(0);       // no argument signatures
+        writer.WriteVarInt(0);       // last seen offset
+        writer.WriteByte(0);         // twenty acknowledged bits, three bytes, all clear
+        writer.WriteByte(0);
+        writer.WriteByte(0);
+        writer.WriteByte(0);         // checksum: zero means ignore
         return body.AsSpan(0, writer.Position).ToArray();
     }
 

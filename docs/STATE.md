@@ -1330,3 +1330,16 @@ Trying to destroy a SwapchainAcquireSemaphore that is still in use by a SurfaceT
   撤回后分支正常启动（pid 11308）。
 - 修复计划不变：①整体替换时重建 arena（而不是在旧内容上长大+全量重写）②**每帧上传限流**（如 8 MB）
   ③若仍 panic 再改固定尺寸渲染目标 + 缩放呈现。
+
+## 2026-10-31 修复：`chat_command` 缺字段（游戏内打命令必崩的真正原因）
+
+用户指出：**只有"在游戏内输入命令执行"才崩**，服务端原地 tp 不崩。据此定位到包结构：
+
+- `chat_command`（serverbound 7）在 26.3 里**不止命令文本**，还有：`timestamp(long)`、`salt(long)`、
+  `argument signatures`(VarInt 计数)、`last seen`(偏移 + 20 位 bitset 3 字节 + 校验和 1 字节)。
+- 我们原来只写了命令文本 ⇒ 包被截断 ⇒ 服务端解析错位、**断开连接** ⇒ 客户端在断线/退出路径上撞到
+  wgpu 交换链 panic（`SwapchainAcquireSemaphore still in use`），表现为"整个客户端崩掉"。
+- **修复**：`BuildChatCommand(command, timestamp)` 按 `chat` 的同类结构补齐字段；`SendChat` 传时间戳；
+  `ChatTests` 逐字段断言新布局（9 项全绿）。全量 **1112 用例通过**。
+- 说明：之前"服务端连续 tp ×5 也崩"是另一条路径（大量区块重建、130 MB 单帧上传）——与打命令崩溃**不同**，两者都要修；
+  上传限流/整体重建仍在计划中。

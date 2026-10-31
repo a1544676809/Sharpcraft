@@ -880,7 +880,7 @@ internal sealed class InteractiveSession
 
         // The slash marks the line as a command for the player; it is not part of the command on the wire.
         _live.Send(isCommand
-            ? PlayPackets.BuildChatCommand(message[1..])
+            ? PlayPackets.BuildChatCommand(message[1..], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             : PlayPackets.BuildChatMessage(message, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
     }
 
