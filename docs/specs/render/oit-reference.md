@@ -133,7 +133,35 @@ Pass 顺序（在加权 OIT 的同等位置替换/追加）：
 - 深度约定：`deviceToLinearDepth` 依赖投影矩阵项与深度范围 `[0,1]` 或 `[-1,1]`；须与我们 `CameraMath` 投影一致核对。
 - 开关落地须遵守原则 13：`MC_TRANSPARENCY` 只在宿主层解析，游戏程序集只收显式选项；失败回落 weighted。
 
-## 10. 参考指针
+## 10. 实现约束：标准 Z 适配（关键，勿照抄符号）
+
+原版是**反向 Z**：`GREATER_THAN_OR_EQUAL` 深度比较 + 深度边界用 `MAX` 混合即可同时得到"最近线性/最远线性/最近器件"。
+我们是**标准 Z**（`CameraMath.BuildProjection` 产出 WebGPU `[0,1]` 深度、近 0 远 1，深度比较 `LessEqual`，清 `1.0`），
+所以所有"最近/最远"的取法都要翻转，否则会得到一个看着像、其实深度方向反了的画面。落地约定：
+
+| 事项 | 原版（反向 Z）| 我们（标准 Z）|
+| --- | --- | --- |
+| 深度比较（OIT 三阶段）| `GREATER_THAN_OR_EQUAL` | `LESS_EQUAL`；仍不写深度 |
+| 深度边界编码到 RGBA32F（混合 `MAX`）| `(-linear, linear, device, opaqueDevice)` | `(-linear, +linear, -device, alpha>0.99 ? -device : -1)` |
+| 还原 | 直接读 | `closestLinear = -r`、`furthestLinear = g`、`closestDevice = -b`、`opaqueDevice = -a` |
+| composite 的 `frag_depth` | `= b`（最近器件）| `= -b` |
+
+理由：四个通道**都取 `MAX`** 仍是自洽的——`r:MAX(-linear)=-最近`、`g:MAX(+linear)=最远`、`b:MAX(-device)=-最近`、
+`a:MAX(-device | -1)=-最近不透明`（未不透明为 `-1`⇒还原为 `1`⇒裁到远平面，等价"无上限"）。
+
+线性深度**直接复用顶点着色器已输出的 `fogDistance = clip.w`（= 视距，单位方块）**，不引入 `ProjMat`；器件深度用
+`clip.z/clip.w`（NDC z）作为插值传递。`depth_bounds_cull` 与 `composite` 在此约定下翻转比较与符号。
+
+## 11. 未实现清单（本轮只做地形半透明，其余形成文档不做）
+
+以下属于原版 OIT 的一部分，但当前客户端**没有对应内容**，故本规格**不实现**，待内容存在后再接：
+
+- `oitCloudDepth` / `oitTerrainWithWaterPatchDepth` 两个额外深度目标与 `water mask` 阶段（水面贴片/云）。
+- 实体、粒子、世界文字、云、天气、世界边界、光束、物品光效等的 OIT 管线集合（`RenderPipelines.OIT_ENTITY` 等）。
+- `OIT_ADDITIVE` 特例（自发光面只贡献颜色、不遮挡）。
+- 原版按维度的 `OitPipelineSet` 变体（`OIT_TERRAIN_MULTIDRAW` 等）。
+
+## 12. 参考指针
 
 - `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/oit/OitStage.java`
 - `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/oit/OitPipelineSet.java`

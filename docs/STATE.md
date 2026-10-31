@@ -1772,3 +1772,6 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 `transmittance[2]`(RGBA16F, ADDITIVE)/`accumulate`(RGBA16F, ADDITIVE) 四目标 + `oit_reference.wgsl`（三入口）+
 `oit_depth_bounds_cull.wgsl` + `oit_composite.wgsl`；三阶段各画一遍半透明几何；composite 写主色与深度。
 WGSL 的采样/编码须与 `OitWavelet` 逐值一致（先用确定性水景跑通、0 validation error，再谈像素）。
+**关键实现约束（spec §10）**：我们标准 Z、原版反向 Z。深度边界仍四路 `MAX` 编码为
+`(-linear, +linear, -device, alpha>0.99? -device : -1)`，cull/composite 取负还原；三阶段深度比较改 `LessEqual` 写关；
+`composite` 的 `frag_depth = -b`；线性深度直接用 `fogDistance(=clip.w)`。
