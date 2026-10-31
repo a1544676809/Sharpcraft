@@ -16,6 +16,8 @@
 - 游戏侧对应属性（`MinecraftLoginClient.LoginNameOverride`、`PlaySession.ChunkDumpDirectory`、
   `PackWatcher.IsEnabled`、`ChatLog.BackgroundOpacity`、`ChunkWorkerPool(..., fifoMeshOrder:)`）默认值一律等于"调试关闭"。
 
+- `SpeedOverlay`：开关 `MC_SPEED_OVERLAY=1` 时在画面左下角实时显示水平速度（格/秒），用于与原版 F3 速度直接对照。
+
 ## 约束
 
 - 新增调试开关 MUST 只在本目录解析；MUST NOT 下沉到 `Common` / `Client` / `Framework`。

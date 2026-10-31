@@ -128,6 +128,12 @@ internal static class WindowCommand
         workerPool.Layers = meshCache.Layers;
         var meshOrderSeen = 0;
         var meshOrderDistanceSum = 0f;
+        // Host side speed readout, only when the host asks for it (principle 13 keeps it out of the game).
+        var speedOverlay = Sharpcraft.Launcher.Diagnostics.SpeedOverlay.Enabled
+            ? new Sharpcraft.Launcher.Diagnostics.SpeedOverlay()
+            : null;
+        var overlayClock = System.Diagnostics.Stopwatch.StartNew();
+
         var geometryEpoch = 0;
         Queue<(long Key, Sharpcraft.Client.Render.MeshData Mesh)>? replayQueue = null;
 
@@ -354,7 +360,14 @@ internal static class WindowCommand
 
             session.CaptureMouse(window, index == 0);
         },
-            hasLocalScene ? null : (window) => session.UpdateCamera(window),
+            hasLocalScene
+                ? null
+                : (window) =>
+                {
+                    var camera = session.UpdateCamera(window);
+                    speedOverlay?.Update(session.Player.Position, overlayClock.Elapsed.TotalSeconds);
+                    return camera;
+                },
             geometryUpdates: () =>
             {
                 // Hand fresh work to the pool, then return only the chunks that finished. The renderer keeps a
@@ -467,6 +480,7 @@ internal static class WindowCommand
                     session.ChatLog.Draw(uiGeometry, uiFont, canvasHeight, session.ChatTicks, session.Chat.IsOpen);
                     session.ActionBar.Draw(uiGeometry, uiFont, canvasWidth, canvasHeight);
                     session.Title.Draw(uiGeometry, uiFont, canvasWidth, canvasHeight);
+                    speedOverlay?.Draw(uiGeometry, uiFont, canvasHeight);
 
                     // The session needs the drawn height to know where the history sits, and the window layer owns the
                     // clipboard, so the two are handed over here rather than reached for from inside the session.

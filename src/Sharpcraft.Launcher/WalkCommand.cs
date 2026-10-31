@@ -30,7 +30,8 @@ internal static class WalkCommand
         string DisconnectReason,
         bool Survived,
         int KeepAliveReplies = 0,
-        int BatchAcks = 0);
+        int BatchAcks = 0,
+        double Speed = 0);
 
     /// <summary>Walks forward for a bounded time.</summary>
     /// <param name="connection">Play-phase connection.</param>
@@ -67,6 +68,9 @@ internal static class WalkCommand
         var interval = TimeSpan.FromMilliseconds(int.TryParse(Environment.GetEnvironmentVariable("MC_WALK_INTERVAL_MS"), out var intervalMs) ? intervalMs : 50);
         var lastSend = TimeSpan.Zero;
         var lastTrace = TimeSpan.Zero;
+    Vector3? traceStart = null;
+    TimeSpan traceStartAt = TimeSpan.Zero;
+    var walkedDistance = 0d;
         var sendEveryTicks = int.TryParse(Environment.GetEnvironmentVariable("MC_WALK_SEND_EVERY_TICKS"), out var every) && every > 0 ? every : 1;
         var tickCounter = 0;
         var blockChanges = 0;
@@ -449,9 +453,20 @@ internal static class WalkCommand
 
         log($"ticks={tickCounter} in {tickWatch.Elapsed.TotalSeconds:F2}s => {tickCounter / Math.Max(0.001, tickWatch.Elapsed.TotalSeconds):F1} ticks/sec, cost {tickCostMs / Math.Max(1, tickCounter):F2} ms/tick, sent={sent}, chunks={world?.LoadedChunkCount ?? 0}, blockChanges={blockChanges}");
                         log($"pacing: interval min={(tickIntervals == 0 ? 0 : minIntervalMs):F2}ms avg={(tickIntervals == 0 ? 0 : 1000d * tickIntervals / Math.Max(0.001, tickWatch.Elapsed.TotalMilliseconds - 50)):F2}ms max={maxIntervalMs:F2}ms, >55ms={gapsOver55}, <20ms={backToBackTicks}, samples={tickIntervals}");
+        var walkedSeconds = Math.Max(0.001, (clock.Elapsed - traceStartAt).TotalSeconds);
+        var effectiveSpeed = traceStart is null ? 0 : walkedDistance / walkedSeconds;
+        log($"effective walking speed: {walkedDistance:F2} blocks in {walkedSeconds:F2}s => {effectiveSpeed:F3} blocks/s (reference 4.317)");
         log("packets: " + string.Join(", ", packetCounts.OrderBy(pair => pair.Key).Select(pair => $"{pair.Key}x{pair.Value}")));
 
-        return new Result(sent, corrections, Distance(start ?? player.Position, player.Position), reason, survived, keepAliveReplies, batchAcks);
+        return new Result(
+            sent,
+            corrections,
+            Distance(start ?? player.Position, player.Position),
+            reason,
+            survived,
+            keepAliveReplies,
+            batchAcks,
+            effectiveSpeed);
 
     }
 

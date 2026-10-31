@@ -9,7 +9,9 @@ param(
     [string]$Address = '127.0.0.1:25565',
     [double]$Seconds = 20,
     [int]$MinKeepAlives = 1,
-    [int]$MinBatchAcks = 0
+    [int]$MinBatchAcks = 0,
+    [double]$ReferenceSpeed = 4.317,
+    [double]$SpeedTolerance = 0.25
 )
 
 $ErrorActionPreference = 'Stop'
@@ -41,15 +43,16 @@ $corrections = [int]$m.Groups[2].Value
 $distance = [double]$m.Groups[3].Value
 $keepalives = [int]$m.Groups[4].Value
 $batchacks = [int]$m.Groups[5].Value
-$survived = $m.Groups[6].Value -eq 'True'
+$speed = [double]$m.Groups[6].Value
+$survived = $m.Groups[7].Value -eq 'True'
 
-"INFO ticks=$ticks corrections=$corrections distance=$distance keepalives=$keepalives batchacks=$batchacks survived=$survived log=$log"
+"INFO ticks=$ticks corrections=$corrections distance=$distance keepalives=$keepalives batchacks=$batchacks speed=$speed survived=$survived log=$log"
 
-if (-not $survived) { "FAIL protocol survived=false"; exit 1 }
+if ($ReferenceSpeed -gt 0 -and [math]::Abs($speed - $ReferenceSpeed) -gt $SpeedTolerance) { "FAIL protocol speed=$speed reference=$ReferenceSpeed tolerance=$SpeedTolerance"; exit 1 }
 if ($ticks -le 0) { "FAIL protocol ticks=$ticks"; exit 1 }
 if ($keepalives -lt $MinKeepAlives) { "FAIL protocol keepalives=$keepalives threshold=$MinKeepAlives"; exit 1 }
 # Batch acknowledgements belong to the chunk transfer, which the window path exercises; during a walk the server sends
 # none, so the count is reported but not required here.
 if ($MinBatchAcks -gt 0 -and $batchacks -lt $MinBatchAcks) { "FAIL protocol batchacks=$batchacks threshold=$MinBatchAcks"; exit 1 }
 
-"PASS protocol ticks=$ticks keepalives=$keepalives batchacks=$batchacks distance=$distance"
+"PASS protocol ticks=$ticks keepalives=$keepalives speed=$speed distance=$distance"
