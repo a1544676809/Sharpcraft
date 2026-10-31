@@ -4,12 +4,12 @@
 <!-- doc
 title: 流体渲染行为规格
 summary: 水/岩浆的液面高度、面剔除、flow-UV、染色、逐面光、贴图动画与水下雾
-status: 待评审
+status: 已评审
 -->
 
 # 流体渲染行为规格
 
-状态：草案（待评审）。范围：水/岩浆等流体方块的几何生成与着色，及水下雾。
+状态：已评审（用户 2026-10-31 评审通过，并纠正：OIT 为 26.3 原版机制）。范围：水/岩浆等流体方块的几何生成与着色，及水下雾。
 证据指针：`ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/FluidRenderer.java`、
 `.../world/level/material/{FluidState,FlowingFluid,WaterFluid}.java`、
 `.../world/level/block/LiquidBlock.java`、
@@ -78,7 +78,7 @@ status: 待评审
 ## 10. 与渲染管线的关系
 
 - 流体进**半透明层**（S1 分类：`water`/`lava` 已属 translucent）。
-- 混合：原版用水/冰"按距离排序的 alpha 混合"；我们当前半透明走 **reference OIT**（顺序无关近似）。此处存在"OIT vs 排序"的可见差异，属已知管线选择，规格沿用 OIT，等效性以像素近似为准（不在本规格强行改回排序）。
+- 混合：**原版 26.3 半透明走 OIT**（depth-bounds / transmittance / accumulate / composite，顺序无关）。本项目已实现该 reference OIT，因此流体半透明混合**与原版一致**；OIT 是原版机制，不是我们的偏差。
 - 流体几何**不参与方块贪婪合并**；需独立网格/独立缓冲。
 
 ## 11. 等效性测试计划（纯逻辑优先）
@@ -101,6 +101,5 @@ status: 待评审
 
 ## 13. 已知偏差 / 范围
 
-- 半透明用 OIT（顺序无关）而非原版排序混合。
 - 水/岩浆的**流动纹理动画**依赖图集动画（未实现前水为静态）。
 - 未覆盖：waterlogged 方块内的流体（方块属性 `waterlogged`）、流体与实体的交互、气泡柱等。
