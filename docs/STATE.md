@@ -1628,3 +1628,24 @@ culler 的 `slots` 要按层各自维护，避免再犯 A3b 那次"按在册数�
   full-block occlusion shape, the face is always hidden"*），且 Sodium 有**独立的** `DefaultFluidRenderer`
   自己处理流体遮挡 ⇒ 流体单独归类，符合"同族只对 water/lava 剔除"。
 - 因此把 `ShouldCullFace` 的"同家族即剔除"改为：**仅 `water`/`lava` 同族剔除**；冰/玻璃保留内部面。
+
+## 2026-10-31 **关键**：26.3 的透明根本不是靠排序，而是 **OIT**
+
+在分析工作区 `client/renderer/LevelRenderer.java` 里查到：
+
+- `L460 / L554`：`executeOit(chunkSectionsToRender, ...)`、`executeOitWaterMask(...)` —— 每帧走 **OIT 管线**
+- `L230/L238/L239/L399/L405/L409`：OIT 专用目标
+  `oitCloudDepth`、`oitTerrainWithWaterPatchDepth`、`OIT_TRANSMITTANCE_TARGET_COUNT` 组透射目标
+- `L109-L111`：`OIT_WAVELET_RANK = 2`、`OIT_COEFFICIENT_COUNT = 2^3 = 8`、`OIT_TRANSMITTANCE_TARGET_COUNT = 2`
+- `RenderPipelines` 里的 `OIT_ALPHA_ONLY / OIT_DEPTH_BOUNDS / OIT_TRANSMITTANCE / OIT_ACCUMULATE`
+  片段使用 `BlendFunction.ADDITIVE`、`CompareOp.GREATER_THAN_OR_EQUAL`、**不写深度**、`GpuFormat.RGBA16_FLOAT`
+- `ChunkSectionLayer.TRANSLUCENT` 只是"半透明"的归类；真正解决顺序问题的是 OIT 那一层。
+
+⇒ **结论**：我们一直在用"排序 + 深度写/不写"去解决一个 26.3 用 **OIT** 解决的问题，
+所以无论怎么调排序都只是缓解，永远达不到原版。这也解释了为什么共面冰/水、透过冰看远处水等组合怎么改都有残渣。
+
+### 三条路线
+1. **加权混合 OIT（McGuire & Bavoil 经典款）**：一个累积目标(RGBA16F) + 一个 revealage 目标，无需排序；
+   wgpu 完全能做。改动中等（两个额外目标 + 一次全屏 resolve + 半透明着色器改成输出 weight）。
+2. **对齐 26.3 的 depth-bounds + transmittance OIT**：效果最接近，但需要 2 组透射目标 + 多次 pass，工程量大。
+3. **继续排序路线**（按 section 排序 + 写深度）：只能缓解，且要引入 section 级切片，收益不如 1。
