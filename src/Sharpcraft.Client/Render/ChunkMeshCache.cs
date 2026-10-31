@@ -97,6 +97,11 @@ public sealed class ChunkMeshCache
             _meshes.Remove(key);
         }
 
+        // One table for the whole pass: it depends only on the atlas and the layout, not on the chunk.
+        var cullTable = Layers?.Layout is { } cullLayout && sprites is not null
+            ? new StateCullTable(cullLayout, sprites)
+            : null;
+
         foreach (var chunk in world.GetChunks())
         {
             var key = ClientWorld.Pack(chunk.ChunkX, chunk.ChunkZ);
@@ -129,7 +134,8 @@ public sealed class ChunkMeshCache
                 translucent: layers?.Translucent,
                 layout: layers?.Layout,
                 cutout: layers?.Cutout,
-                tint: layers?.Tint);
+                tint: layers?.Tint,
+                cull: cullTable);
             _meshes[key] = buffer.ToMeshData(0);
             remeshed++;
         }

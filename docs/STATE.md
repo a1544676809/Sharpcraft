@@ -1086,3 +1086,20 @@ send  60.. : -704.50 → -743.21 → …                ← 之后不再被纠�
 - 下一步（按收益排序）：①按 state id 预分类（透明度/是否树叶）去掉逐格字符串+字典查询（约省 17%）；
   ②优化 greedy 主循环（`TryDescribe`/`RowMatches` 重复计算），目标把 92 ms 降到 10 ms 以内；
   ③复测 `verify-mesh-lag.ps1`（当前客户端滞后 11.4s）。
+
+## 2026-10-31 第 36 轮：状态预分类表（第一步优化，3.9 倍）
+
+- 新增 `Sharpcraft.Client/Render/StateCullTable`：按 state id 预计算 **是否不透明 / 是否树叶 / 同方块家族**，
+  一次数组读取替代「state→Identifier→字符串 EndsWith → 透明度字典查表」。
+  构建成本：每套图集一次（1286 个方块，约 0.4ms），在 `ChunkWorkerPool`/`ChunkMeshCache` 缓存，图集或布局变化时失效。
+- **实测（同一稠密区块 32,727 实心方块）**：
+  | | MeshChunk |
+  | --- | --- |
+  | 优化前 | **92 ms** |
+  | 优化后 | **23.65 ms**（**3.9×**，不是预估的 17%，因为省掉了字符串与字典的缓存缺失与分配）|
+- **等价性**：27 个网格 golden 测试全部通过（几何逐字节未变）；全量 7 套 1107 用例通过。
+- **端到端**：`verify-mesh-lag.ps1`：客户端滞后 **11.4s → 3.0s**（服务端发送时间已排除）；仍 > 2s 目标。
+- **与原版对比（读代码，非印象）**：原版 `SectionCompiler` 逐方块、逐可见面发射四边形，**不做 greedy 合并**，
+  可见性由 `Block.shouldRenderFace`（`getFaceOcclusionShape == Shapes.block()` 快速剔除 + `skipRendering`）判定。
+  ⇒ 我们的 greedy 合并产出**更少的四边形/顶点**（GPU 侧更省），代价是每格 CPU 开销更高；现在已从 92ms 降到 23.65ms，
+  但仍是 2-3 倍于原版的单区块量级（原版每区块数毫秒），剩余瓶颈 = greedy 主循环（约 83%）。

@@ -20,7 +20,7 @@
 |---| --- | --- | --- | --- | --- |
 | 1 | 登录/进入世界 | 字段顺序与类型同原版 `ClientboundLoginPacket` / `CommonPlayerSpawnInfo` | `JoinGameFieldTests`、`LoginPacketTests`、`ProtocolPacketTests` | 逐字段相等 | **已验证（字段级 golden：playerId/hardcore/levels/三个距离/三个布尔/维度类型/维度键/seed/gameMode；尾部字段不影响）** |
 | 2 | KeepAlive/Ping | 收到即回 | `verify-protocol-live.ps1` | 20s 内 ≥1 次 | 已验证：**实测 1 次** ✓ |
-| 3 | 区块流式加载 | 区块数据到达后，网格与上传须在秒级跟上，不得「能走但看不见」| `MC_DIAG` 下 `streamrender:` 遥测（world/meshes/built/meshPending）| meshes ≈ world 且 pending→0 | **已修一处：队列重复灌满导致远端区块饿死（world=329 时 meshes 仅 16 → 修后 473/473）；剩余吞吐约 30 区块/秒，填满需 10–15s** |
+| 3 | 区块流式加载 | 区块到达后网格须在秒级跟上，不得「能走但看不见」| `verify-mesh-lag.ps1`（排除服务端发送时间）| 客户端滞后 ≤2s | **已修两处：①队列重复灌满（world=329 时 meshes 仅 16）②状态预分类表（92→23.65 ms/区块）；客户端滞后 11.4s→3.0s，仍超 2s 目标，瓶颈在 greedy 主循环** |
 | 4 | 区块批处理 ack | 每批 `ChunkBatchFinished` 必须回 `ChunkBatchReceived`，否则只收到第一批 | `verify-batch-ack.ps1` | 区块数 ≫ 9 且批次数 >1 | **已验证：9 → 49 区块（39 批），目标 200 未达（另有节流待查）** |
 | 5 | 玩家位置同步 | 平稳前进、不被反复拉回；速度 4.317 格/秒 | `verify-protocol-live.ps1`（trace 窗口速度）| 4.317±0.25 | **已验证：speed=4.318、corrections=1、20s 走 85.94 格** |
 | 6 | 方块实体 | 区块内记录：packed XZ（X 高 4 位/Z 低 4 位）、Y 大端 short、类型 VarInt、无名 NBT；更新包 clientbound 6：packed 长坐标、类型、NBT | `BlockEntityRecordTests`、`BlockEntityUpdateTests`、`Repro-007` | 逐字段相等 | **部分验证：解码已逐字段验证；类型 id↔名称注册表未对照，NBT 内容被丢弃** |

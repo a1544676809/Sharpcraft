@@ -116,7 +116,8 @@ public static class ChunkMesher
         MeshBuffer? translucent = null,
         Sharpcraft.Common.Registries.BlockStateLayout? layout = null,
         MeshBuffer? cutout = null,
-        BiomeTint? tint = null)
+        BiomeTint? tint = null,
+        StateCullTable? cull = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(chunk);
@@ -149,7 +150,7 @@ public static class ChunkMesher
             for (var direction = 0; direction < 6; direction++)
             {
                 consumed.Clear();
-                MergeSectionFaces(neighbourhood, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout, tint);
+                MergeSectionFaces(neighbourhood, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout, tint, cull);
             }
         }
 
@@ -171,7 +172,8 @@ public static class ChunkMesher
         MeshBuffer? translucent = null,
         Sharpcraft.Common.Registries.BlockStateLayout? layout = null,
         MeshBuffer? cutout = null,
-        BiomeTint? tint = null)
+        BiomeTint? tint = null,
+        StateCullTable? cull = null)
     {
         var (uAxis, vAxis) = InPlaneAxes(direction);
 
@@ -190,7 +192,7 @@ public static class ChunkMesher
                         continue;
                     }
 
-                    if (!TryDescribe(neighbourhood, section, direction, uAxis, vAxis, slice, u, v, baseX, baseY, baseZ, airState, sprites, layout, out var key))
+                    if (!TryDescribe(neighbourhood, section, direction, uAxis, vAxis, slice, u, v, baseX, baseY, baseZ, airState, sprites, layout, cull, out var key))
                     {
                         continue;
                     }
@@ -198,7 +200,7 @@ public static class ChunkMesher
                     var width = 1;
                     while (u + width < 16 &&
                            !consumed[(v << 4) | (u + width)] &&
-                           TryDescribe(neighbourhood, section, direction, uAxis, vAxis, slice, u + width, v, baseX, baseY, baseZ, airState, sprites, layout, out var next) &&
+                           TryDescribe(neighbourhood, section, direction, uAxis, vAxis, slice, u + width, v, baseX, baseY, baseZ, airState, sprites, layout, cull, out var next) &&
                            next == key)
                     {
                         width++;
@@ -206,7 +208,7 @@ public static class ChunkMesher
 
                     var height = 1;
                     while (v + height < 16 &&
-                           RowMatches(neighbourhood, section, direction, uAxis, vAxis, slice, u, v + height, width, baseX, baseY, baseZ, airState, sprites, layout, key, consumed))
+                           RowMatches(neighbourhood, section, direction, uAxis, vAxis, slice, u, v + height, width, baseX, baseY, baseZ, airState, sprites, layout, cull, key, consumed))
                     {
                         height++;
                     }
@@ -241,6 +243,7 @@ public static class ChunkMesher
         int airState,
         BlockSpriteMap? sprites,
         BlockStateLayout? layout,
+        StateCullTable? cull,
         MergeKey key,
         Span<bool> consumed)
     {
@@ -251,7 +254,7 @@ public static class ChunkMesher
                 return false;
             }
 
-            if (!TryDescribe(neighbourhood, section, direction, uAxis, vAxis, slice, u + du, v, baseX, baseY, baseZ, airState, sprites, layout, out var candidate) ||
+            if (!TryDescribe(neighbourhood, section, direction, uAxis, vAxis, slice, u + du, v, baseX, baseY, baseZ, airState, sprites, layout, cull, out var candidate) ||
                 candidate != key)
             {
                 return false;
@@ -343,6 +346,7 @@ public static class ChunkMesher
         int airState,
         BlockSpriteMap? sprites,
         BlockStateLayout? layout,
+        StateCullTable? cull,
         out MergeKey key)
     {
         key = default;
@@ -361,7 +365,7 @@ public static class ChunkMesher
 
         var neighbour = neighbourhood.GetBlockState(sampleX, sampleY, sampleZ, airState);
 
-        if (neighbour != airState && ShouldCullFace(state, neighbour, sprites, layout))
+        if (neighbour != airState && ShouldCullFace(state, neighbour, sprites, layout, cull))
         {
             return false;
         }
@@ -391,8 +395,23 @@ public static class ChunkMesher
     /// (ref://mc-26.3-analysis/src/net/minecraft/world/level/block/LeavesBlock.java:45,
     /// ref://.../block/HalfTransparentBlock.java:13, ref://.../block/LiquidBlock.java:112).
     /// </remarks>
-    private static bool ShouldCullFace(int state, int neighbour, BlockSpriteMap? sprites, BlockStateLayout? layout)
+    private static bool ShouldCullFace(int state, int neighbour, BlockSpriteMap? sprites, BlockStateLayout? layout, StateCullTable? cull = null)
     {
+        if (cull is not null)
+        {
+            if (cull.IsOpaque(neighbour))
+            {
+                return true;
+            }
+
+            if (cull.IsLeaves(state))
+            {
+                return false;
+            }
+
+            return cull.SameFamily(state, neighbour) || state == neighbour;
+        }
+
         if (Occludes(neighbour, sprites, layout))
         {
             return true;
@@ -475,7 +494,8 @@ public static class ChunkMesher
         MeshBuffer? translucent = null,
         Sharpcraft.Common.Registries.BlockStateLayout? layout = null,
         MeshBuffer? cutout = null,
-        BiomeTint? tint = null)
+        BiomeTint? tint = null,
+        StateCullTable? cull = null)
     {
         var (uAxis, vAxis) = InPlaneAxes(direction);
         var (x, y, z) = FaceBlock(uAxis, vAxis, slice, u, v);

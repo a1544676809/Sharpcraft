@@ -51,12 +51,14 @@ public sealed class MesherBenchmarkTests
         var layout = VanillaBlockRegistry.Layout;
         var sprites = new BlockSpriteMap(atlas, layout);
 
+        var cullTable = new StateCullTable(layout, sprites);
+
         var centre = world.GetChunk(0, 0)!;
         using var buffer = new MeshBuffer(1 << 20);
         using var translucent = new MeshBuffer(1 << 16);
         using var cutout = new MeshBuffer(1 << 16);
 
-        var warmBlocks = ChunkMesher.MeshChunk(world, centre, 0, buffer, int.MaxValue, sprites, translucent, layout, cutout, null);
+        var warmBlocks = ChunkMesher.MeshChunk(world, centre, 0, buffer, int.MaxValue, sprites, translucent, layout, cutout, null, cullTable);
 
         Console.WriteLine($"BENCH setup blocks={warmBlocks} vertices={buffer.VertexCount} indices={buffer.IndexCount}");
 
@@ -65,13 +67,13 @@ public sealed class MesherBenchmarkTests
 
         for (var index = 0; index < iterations; index++)
         {
-            ChunkMesher.MeshChunk(world, centre, 0, buffer, int.MaxValue, sprites, translucent, layout, cutout, null);
+            ChunkMesher.MeshChunk(world, centre, 0, buffer, int.MaxValue, sprites, translucent, layout, cutout, null, cullTable);
         }
 
         watch.Stop();
         var perChunk = watch.Elapsed.TotalMilliseconds / iterations;
 
-        Console.WriteLine($"BENCH mesh_ms_per_chunk={perChunk:F2} iterations={iterations}");
+        Console.WriteLine($"BENCH mesh_ms_per_chunk={perChunk:F2} iterations={iterations} (with state cull table)");
 
         // Attribute the cost: the cull predicate resolves a state to a name and then looks the name up for transparency,
         // once per candidate face cell. Time those two lookups directly.

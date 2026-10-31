@@ -52,6 +52,9 @@ public sealed class ChunkWorkerPool : IDisposable
     private readonly int _maxQueuedMeshes;
 
     private volatile BlockSpriteMap? _sprites;
+
+    // Answers about a state (opaque, leaves, same block) computed once per atlas instead of once per face cell.
+    private volatile Sharpcraft.Client.Render.StateCullTable? _cullTable;
     private volatile Sharpcraft.Client.Render.LayerSinks? _layers;
 
     /// <summary>
@@ -65,7 +68,11 @@ public sealed class ChunkWorkerPool : IDisposable
     public Sharpcraft.Client.Render.LayerSinks? Layers
     {
         get => _layers;
-        set => _layers = value;
+        set
+        {
+            _layers = value;
+            _cullTable = null;
+        }
     }
     private volatile bool _stop;
     private int _parsePending;
@@ -144,7 +151,11 @@ public sealed class ChunkWorkerPool : IDisposable
 
     /// <summary>Updates the atlas mapping used by later meshes.</summary>
     /// <param name="sprites">New mapping, or null for untextured meshing.</param>
-    public void SetSprites(BlockSpriteMap? sprites) => _sprites = sprites;
+    public void SetSprites(BlockSpriteMap? sprites)
+    {
+        _sprites = sprites;
+        _cullTable = null;
+    }
 
     /// <summary>Queues a chunk packet body for decoding.</summary>
     /// <param name="body">Packet body, including the packet id; the pool takes ownership.</param>
@@ -407,7 +418,8 @@ public sealed class ChunkWorkerPool : IDisposable
             translucent: translucentScratch,
             layout: layers?.Layout,
             cutout: cutoutScratch,
-            tint: layers?.Tint);
+            tint: layers?.Tint,
+            cull: _cullTable ??= BuildCullTable());
         var mesh = buffer.ToMeshData(0);
 
         MeshesBuilt++;
@@ -417,6 +429,14 @@ public sealed class ChunkWorkerPool : IDisposable
         }
 
         _meshes.Enqueue((key, mesh));
+    }
+
+    private Sharpcraft.Client.Render.StateCullTable? BuildCullTable()
+    {
+        var layout = _layers?.Layout;
+
+        // Without a layout there are no state ids to classify, so the mesher keeps its name based path.
+        return layout is null ? null : new Sharpcraft.Client.Render.StateCullTable(layout, _sprites);
     }
 
     private LevelChunk? FindChunk(long key)
