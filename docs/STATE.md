@@ -1060,3 +1060,29 @@ send  60.. : -704.50 → -743.21 → …                ← 之后不再被纠�
 - 网格吞吐 ≈ **32 区块/秒**（8 线程）⇒ 单区块约 250ms，原版是几毫秒级。
 - 下一步（先测后改）：用测试基准量出 `ChunkMesher.MeshChunk` 单区块耗时并定位热点（首要嫌疑：
   每个候选面调用 `ShouldCullFace` 的 `Identifier` 字符串比较 + sprite 透明度查表，单区块约 3.7 万次）。
+
+## 2026-10-31 第 35 轮：全链路瓶颈定位（量出来，不猜）
+
+基准（`dotnet test --filter Benchmark`，Console 输出）：
+- `tests/Sharpcraft.Client.Tests/Perf/MesherBenchmarkTests.cs`：地形化区块（32,727 实心方块）上 `MeshChunk` 耗时
+- `tests/Sharpcraft.Common.Tests/Perf/ChunkParseBenchmarkTests.cs`：区块包解析耗时
+
+**全链路分解（实测）**：
+
+| 环节 | 耗时 | 占比/说明 |
+| --- | --- | --- |
+| 解析（parse） | **0.002 ms/包** | 可忽略 |
+| 网格（MeshChunk） | **92 ms/区块**（单线程，稠密最坏情况）| **瓶颈** |
+| ├ 状态名查询 `BlockAt` | 64 ns/次 ≈ 4.7 ms/区块 | 每格约 2 次 |
+| ├ 透明度查询 `TransparencyOf` | 300 ns/次 ≈ **11 ms/区块** | 每格 1 次 |
+| └ greedy 合并主循环 | ≈ **76 ms/区块** | **主要开销（83%）** |
+| 上传（arena） | ≈ 2.8 KB/区块 | 可忽略 |
+| 绘制 | p99 8.03 ms / 111 区块 | 余量充足 |
+
+- 线程池实测 32 区块/秒 ÷ 8 线程 ≈ 250 ms/区块 ⇒ 真实地形比合成区块更重（草/叶几乎无法合并），
+  且与单线程 92 ms 同量级 ⇒ **不是锁竞争问题，是单区块成本太高**。
+- 结论：**瓶颈 = ChunkMesher 的 greedy 合并主循环（83%）+ 逐格状态/透明度查表（17%）**；
+  解析、上传、绘制都不是瓶颈。
+- 下一步（按收益排序）：①按 state id 预分类（透明度/是否树叶）去掉逐格字符串+字典查询（约省 17%）；
+  ②优化 greedy 主循环（`TryDescribe`/`RowMatches` 重复计算），目标把 92 ms 降到 10 ms 以内；
+  ③复测 `verify-mesh-lag.ps1`（当前客户端滞后 11.4s）。
