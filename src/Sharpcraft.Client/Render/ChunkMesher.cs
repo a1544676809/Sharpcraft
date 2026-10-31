@@ -156,6 +156,11 @@ public static class ChunkMesher
                 consumed.Clear();
                 MergeSectionFaces(neighbourhood, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout, tint, cull, visuals, merge, ambientOcclusion);
             }
+
+            if (translucent is not null)
+            {
+                EmitSectionFluids(neighbourhood, section, baseX, baseY, baseZ, translucent, sprites, layout, tint);
+            }
         }
 
         return solidBlocks;
@@ -673,6 +678,204 @@ public static class ChunkMesher
         return !transparency.HasTransparent && !transparency.HasTranslucent;
     }
 
+    /// <summary>True when a state's block is a fluid (water/lava); fluids are meshed by <see cref="EmitSectionFluids"/>.</summary>
+    private static bool IsFluidState(int state, BlockStateLayout? layout) =>
+        layout?.BlockAt(state) is { Path: "water" or "lava" };
+
+    /// <summary>
+    /// Emits water geometry for one section into the translucent buffer (docs/specs/render/fluid-rendering.md). Faces are
+    /// culled against the same fluid (an adjacent water block hides the shared face), so a plain water section emits only
+    /// its outer surface rather than every internal face. The top face uses the reference four-corner height average.
+    /// </summary>
+    private static void EmitSectionFluids(
+        in Neighbourhood neighbourhood,
+        ChunkSection section,
+        int baseX,
+        int baseY,
+        int baseZ,
+        MeshBuffer translucent,
+        BlockSpriteMap? sprites,
+        BlockStateLayout? layout,
+        BiomeTint? tint)
+    {
+        if (layout is null)
+        {
+            return;
+        }
+
+        var nb = neighbourhood;
+
+        for (var y = 0; y < 16; y++)
+        {
+            for (var z = 0; z < 16; z++)
+            {
+                for (var x = 0; x < 16; x++)
+                {
+                    var state = section.Get(x, y, z);
+                    if (layout.BlockAt(state) is not { Path: "water" })
+                    {
+                        continue;
+                    }
+
+                    var fluid = Sharpcraft.Common.World.FluidStateCodec.FromBlockState(state, layout);
+                    if (fluid.IsEmpty)
+                    {
+                        continue;
+                    }
+
+                    var bx = baseX + x;
+                    var by = baseY + y;
+                    var bz = baseZ + z;
+                    var fx = (float)bx;
+                    var fz = (float)bz;
+                    var lowY = (float)by;
+
+                    var aboveWater = layout.BlockAt(nb.GetBlockState(bx, by + 1, bz, 0)) is { Path: "water" };
+                    var selfHeight = aboveWater ? 1f : fluid.OwnHeight;
+
+                    nb.TryGetLight(bx, by, bz, out var s0, out var b0);
+                    nb.TryGetLight(bx, by + 1, bz, out var s1, out var b1);
+                    var lm = VanillaLightmap.Colour(Math.Max(s0, s1), Math.Max(b0, b1));
+
+                    var tr = 1f;
+                    var tg = 1f;
+                    var tb = 1f;
+                    if (tint is not null)
+                    {
+                        var (r, g, b) = BiomeTint.ToMultiplier(tint.Colour(BlockTintKind.Water));
+                        tr = r;
+                        tg = g;
+                        tb = b;
+                    }
+
+                    var topSprite = sprites?.ForState(state, BlockFace.Top);
+                    var sideSprite = sprites?.ForState(state, BlockFace.Side);
+
+                    (float R, float G, float B) Face(float shade) => (lm.X * tr * shade, lm.Y * tg * shade, lm.Z * tb * shade);
+
+                    bool IsWater(int wx, int wy, int wz) => layout.BlockAt(nb.GetBlockState(wx, wy, wz, 0)) is { Path: "water" };
+
+                    bool IsSolid(int wx, int wy, int wz)
+                    {
+                        var block = layout.BlockAt(nb.GetBlockState(wx, wy, wz, 0));
+                        return block is { } value && value.Path != "air" && value.Path != "water";
+                    }
+
+                    float CellHeight(int ddx, int ddz)
+                    {
+                        var sample = nb.GetBlockState(bx + ddx, by, bz + ddz, 0);
+                        if (layout.BlockAt(sample) is { } sampleBlock)
+                        {
+                            if (sampleBlock.Path == "water")
+                            {
+                                var neighbour = Sharpcraft.Common.World.FluidStateCodec.FromBlockState(sample, layout);
+                                return neighbour.IsEmpty ? 0f : neighbour.OwnHeight;
+                            }
+
+                            if (sampleBlock.Path != "air")
+                            {
+                                return -1f;
+                            }
+                        }
+
+                        return 0f;
+                    }
+
+                    var north = CellHeight(0, -1);
+                    var south = CellHeight(0, 1);
+                    var west = CellHeight(-1, 0);
+                    var east = CellHeight(1, 0);
+                    var northWest = CellHeight(-1, -1);
+                    var northEast = CellHeight(1, -1);
+                    var southWest = CellHeight(-1, 1);
+                    var southEast = CellHeight(1, 1);
+
+                    float Corner(int cx, int cz)
+                    {
+                        var n1 = cx == 0 ? west : east;
+                        var n2 = cz == 0 ? north : south;
+                        var diagonal = cx == 0 ? (cz == 0 ? northWest : southWest) : (cz == 0 ? northEast : southEast);
+                        return FluidSurface.AverageCorner(selfHeight, n1, n2, diagonal);
+                    }
+
+                    const float epsilon = 0.001f;
+
+                    // Top: only when no water directly above. Corner heights so the surface follows neighbours.
+                    if (!aboveWater)
+                    {
+                        var colour = Face(1.0f);
+                        translucent.AppendQuad(
+                            (fx, lowY + Corner(0, 0) - epsilon, fz),
+                            (fx, lowY + Corner(0, 1) - epsilon, fz + 1f),
+                            (fx + 1f, lowY + Corner(1, 1) - epsilon, fz + 1f),
+                            (fx + 1f, lowY + Corner(1, 0) - epsilon, fz),
+                            colour, colour, colour, colour,
+                            (0f, 0f), (0f, 1f), (1f, 1f), (1f, 0f),
+                            topSprite);
+                    }
+
+                    // Bottom: only when the cell below is neither water nor solid.
+                    if (!IsWater(bx, by - 1, bz) && !IsSolid(bx, by - 1, bz))
+                    {
+                        var colour = Face(0.5f);
+                        var yb = lowY + epsilon;
+                        translucent.AppendQuad(
+                            (fx, yb, fz), (fx + 1f, yb, fz), (fx + 1f, yb, fz + 1f), (fx, yb, fz + 1f),
+                            colour, colour, colour, colour,
+                            (0f, 0f), (1f, 0f), (1f, 1f), (0f, 1f),
+                            sideSprite);
+                    }
+
+                    var topY = lowY + selfHeight;
+
+                    // -Z
+                    if (!IsWater(bx, by, bz - 1) && !IsSolid(bx, by, bz - 1))
+                    {
+                        var colour = Face(0.8f);
+                        translucent.AppendQuad(
+                            (fx, topY, fz), (fx + 1f, topY, fz), (fx + 1f, lowY, fz), (fx, lowY, fz),
+                            colour, colour, colour, colour,
+                            (0f, 0f), (1f, 0f), (1f, 1f), (0f, 1f),
+                            sideSprite);
+                    }
+
+                    // +Z
+                    if (!IsWater(bx, by, bz + 1) && !IsSolid(bx, by, bz + 1))
+                    {
+                        var colour = Face(0.8f);
+                        translucent.AppendQuad(
+                            (fx + 1f, topY, fz + 1f), (fx, topY, fz + 1f), (fx, lowY, fz + 1f), (fx + 1f, lowY, fz + 1f),
+                            colour, colour, colour, colour,
+                            (0f, 0f), (1f, 0f), (1f, 1f), (0f, 1f),
+                            sideSprite);
+                    }
+
+                    // -X
+                    if (!IsWater(bx - 1, by, bz) && !IsSolid(bx - 1, by, bz))
+                    {
+                        var colour = Face(0.6f);
+                        translucent.AppendQuad(
+                            (fx, topY, fz + 1f), (fx, topY, fz), (fx, lowY, fz), (fx, lowY, fz + 1f),
+                            colour, colour, colour, colour,
+                            (0f, 0f), (1f, 0f), (1f, 1f), (0f, 1f),
+                            sideSprite);
+                    }
+
+                    // +X
+                    if (!IsWater(bx + 1, by, bz) && !IsSolid(bx + 1, by, bz))
+                    {
+                        var colour = Face(0.6f);
+                        translucent.AppendQuad(
+                            (fx + 1f, topY, fz), (fx + 1f, topY, fz + 1f), (fx + 1f, lowY, fz + 1f), (fx + 1f, lowY, fz),
+                            colour, colour, colour, colour,
+                            (0f, 0f), (1f, 0f), (1f, 1f), (0f, 1f),
+                            sideSprite);
+                    }
+                }
+            }
+        }
+    }
+
     private static (int X, int Y, int Z) FaceBlock(int uAxis, int vAxis, int slice, int u, int v)
     {
         Span<int> coordinates = stackalloc int[3];
@@ -722,6 +925,12 @@ public static class ChunkMesher
         StateVisualCache? visuals = null,
         bool ambientOcclusion = true)
     {
+        // Fluids are meshed by EmitSectionFluids into the translucent buffer; the block path must not also emit them.
+        if (translucent is not null && IsFluidState(state, layout))
+        {
+            return;
+        }
+
         var (uAxis, vAxis) = InPlaneAxes(direction);
         var (x, y, z) = FaceBlock(uAxis, vAxis, slice, u, v);
 
