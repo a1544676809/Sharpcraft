@@ -42,23 +42,61 @@ public static class AtlasMipChain
         ArgumentNullException.ThrowIfNull(rgba);
         ArgumentNullException.ThrowIfNull(sprites);
 
-        var levels = new List<byte[]>(Levels);
-        var levelWidth = width;
-        var levelHeight = height;
+        var levels = BuildBaseChain(rgba, width, height);
 
-        for (var level = 0; level < Levels; level++)
-        {
-            levelWidth = Math.Max(1, levelWidth / 2);
-            levelHeight = Math.Max(1, levelHeight / 2);
-            levels.Add(new byte[levelWidth * levelHeight * 4]);
-        }
-
+        // Sprites then overwrite their own regions with the coverage corrected version. The base chain matters: a level
+        // that started blank left black texels wherever no sprite was written, and at the higher levels a sample near a
+        // sprite edge landed on them, which is the thin black line that grew thicker with distance.
         foreach (var sprite in sprites)
         {
             BuildSprite(rgba, width, height, sprite, levels);
         }
 
         return [.. levels];
+    }
+
+    private static List<byte[]> BuildBaseChain(byte[] rgba, int width, int height)
+    {
+        var levels = new List<byte[]>(Levels);
+        var previous = rgba;
+        var previousWidth = width;
+        var previousHeight = height;
+
+        for (var level = 0; level < Levels; level++)
+        {
+            var nextWidth = Math.Max(1, previousWidth / 2);
+            var nextHeight = Math.Max(1, previousHeight / 2);
+            var next = new byte[nextWidth * nextHeight * 4];
+
+            for (var y = 0; y < nextHeight; y++)
+            {
+                for (var x = 0; x < nextWidth; x++)
+                {
+                    var x0 = Math.Min(x * 2, previousWidth - 1);
+                    var x1 = Math.Min((x * 2) + 1, previousWidth - 1);
+                    var y0 = Math.Min(y * 2, previousHeight - 1);
+                    var y1 = Math.Min((y * 2) + 1, previousHeight - 1);
+
+                    var c1 = (((y0 * previousWidth) + x0) * 4);
+                    var c2 = (((y0 * previousWidth) + x1) * 4);
+                    var c3 = (((y1 * previousWidth) + x0) * 4);
+                    var c4 = (((y1 * previousWidth) + x1) * 4);
+                    var target = (((y * nextWidth) + x) * 4);
+
+                    next[target] = LinearChannelMean(previous[c1], previous[c2], previous[c3], previous[c4]);
+                    next[target + 1] = LinearChannelMean(previous[c1 + 1], previous[c2 + 1], previous[c3 + 1], previous[c4 + 1]);
+                    next[target + 2] = LinearChannelMean(previous[c1 + 2], previous[c2 + 2], previous[c3 + 2], previous[c4 + 2]);
+                    next[target + 3] = (byte)((previous[c1 + 3] + previous[c2 + 3] + previous[c3 + 3] + previous[c4 + 3]) / 4);
+                }
+            }
+
+            levels.Add(next);
+            previous = next;
+            previousWidth = nextWidth;
+            previousHeight = nextHeight;
+        }
+
+        return levels;
     }
 
     private static void BuildSprite(byte[] rgba, int width, int height, SpriteRect sprite, List<byte[]> levels)

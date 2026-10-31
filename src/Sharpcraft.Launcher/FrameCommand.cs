@@ -632,6 +632,13 @@ internal static class FrameCommand
                     $"{atlas.Pixels[(((leafSprite.Y * atlas.Width) + leafSprite.X) * 4) + 1]}," +
                     $"{atlas.Pixels[(((leafSprite.Y * atlas.Width) + leafSprite.X) * 4) + 2]}," +
                     $"{atlas.Pixels[(((leafSprite.Y * atlas.Width) + leafSprite.X) * 4) + 3]})");
+
+                // atlas dump: write the stitched atlas so the neighbourhood of a sprite can be inspected directly.
+                File.WriteAllBytes(Path.Combine(Path.GetTempPath(), "atlas-dump.rgba"), atlas.Pixels);
+                File.WriteAllText(
+                    Path.Combine(Path.GetTempPath(), "atlas-dump.txt"),
+                    $"{atlas.Width}x{atlas.Height} leaves={leafSprite.X},{leafSprite.Y},{leafSprite.Width},{leafSprite.Height}");
+                Console.WriteLine($"  atlas dump: {atlas.Width}x{atlas.Height} -> %TEMP%\\atlas-dump.rgba");
             }
         }
         Console.WriteLine(

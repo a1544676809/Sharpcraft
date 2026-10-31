@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
+
 # ADR-0015：图集 UV 覆盖完整精灵，改用 padding 防渗色
 
 - 状态：已接受（2026-10-31，由项目所有者确认方向后实施）
