@@ -1006,3 +1006,16 @@ send  60.. : -704.50 → -743.21 → …                ← 之后不再被纠�
 - **未实现（登记为缺口）**：`ClientLevel.calculateBlockTint` 的 **半径 2 / 25 点**逐通道整数平均混合；
   `Biome.getGrassColor` 的 `grassColorModifier`（swamp、dark_forest）。原因：生物群系数据尚未进入客户端。
 - 全量 **7 套 1101 用例**通过（Client 472）。
+
+## 2026-10-31 第 31 轮：#6 方块实体（解码逐字段验证）
+
+- 原版依据：`ClientboundLevelChunkPacketData.BlockEntityInfo`（`xz = sectionRelative(x)<<4 | sectionRelative(z)`，
+  Y 为 SHORT，类型为 BLOCK_ENTITY_TYPE 注册表 VarInt，`OPTIONAL_COMPOUND_TAG` = 直接 `readNbt`，**无布尔标志**，
+  缺失即单个 End 字节）；`ClientboundBlockEntityDataPacket`（clientbound **6**，`BlockPos.STREAM_CODEC` + 类型 + `TRUSTED_COMPOUND_TAG`）；
+  网络 NBT 根 **无名**。
+- 新增 `BlockEntityRecordTests`（2）：X=12（0xCB 为负）仍解出 12/11/190/7；带 NBT 标签时记录不变、标签被正确跳过。
+- 新增 `BlockEntityPackets` + `BlockEntityUpdateTests`（2）：packed 长坐标含**负 Y/Z** 解包正确；错包 id 拒绝。
+- `InteractiveSession` 现在**分发** `block_entity_data`（解码后暂不使用），不再落到 `unhandled packet`。
+- 修正测试构建器注释（原先误写"bool flag first"），并把 tag 写入改为真实的无名根。
+- **剩余缺口**：类型 id ↔ 名称的注册表对照（缺 BLOCK_ENTITY_TYPE dump）；NBT 内容当前丢弃（无方块实体渲染）。
+- 全量 **7 套 1105 用例**通过（Common 378、Client 472）。

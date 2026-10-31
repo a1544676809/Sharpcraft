@@ -23,7 +23,7 @@
 | 3 | 区块流式加载 | 移动时区块数持续增长到视距上限 | `tools/verify/verify-streaming.ps1` | ≥expected 90% | **已知缺陷** |
 | 4 | 区块批处理 ack | 每批 `ChunkBatchFinished` 必须回 `ChunkBatchReceived`，否则只收到第一批 | `verify-batch-ack.ps1` | 区块数 ≫ 9 且批次数 >1 | **已验证：9 → 49 区块（39 批），目标 200 未达（另有节流待查）** |
 | 5 | 玩家位置同步 | 平稳前进、不被反复拉回；速度 4.317 格/秒 | `verify-protocol-live.ps1`（trace 窗口速度）| 4.317±0.25 | **已验证：speed=4.318、corrections=1、20s 走 85.94 格** |
-| 6 | 方块实体 | 箱子 14/16、贴地 | `BlockEntityPlaceholderMesherTests` | 像素差 ≤1 | 部分验证 |
+| 6 | 方块实体 | 区块内记录：packed XZ（X 高 4 位/Z 低 4 位）、Y 大端 short、类型 VarInt、无名 NBT；更新包 clientbound 6：packed 长坐标、类型、NBT | `BlockEntityRecordTests`、`BlockEntityUpdateTests`、`Repro-007` | 逐字段相等 | **部分验证：解码已逐字段验证；类型 id↔名称注册表未对照，NBT 内容被丢弃** |
 | 7 | 实体模型 | 六部件、0.9 比例 | `EntityPlaceholderMesherTests` | 结构断言 | 部分验证（占位）|
 | 8 | 分层 | 按材质透明度三层 | `BlockLayerRulesTests`、`Repro-006` | 全绿 | 部分验证 |
 | 9 | 生物群系着色 | `ColorMapColorUtil.get` 的索引规则 + 固定色常量；另有半径 2 的 25 点混合与 swamp/dark_forest 修饰符 | `BiomeTintSamplingTests`（121 组 temp×rain 网格逐点比对）、`BiomeTintTests` | 逐点相等 | **部分验证：采样规则与常量已验证；25 点混合与修饰符未实现（缺生物群系数据）** |

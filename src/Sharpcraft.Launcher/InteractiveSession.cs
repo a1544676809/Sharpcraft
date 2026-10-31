@@ -1204,6 +1204,12 @@ internal sealed class InteractiveSession
 
                     break;
 
+                // Block entity updates carry the position, the type and a fresh NBT tag. Decoding them keeps the packet
+                // stream honest; nothing consumes the tag until block entity rendering exists.
+                case PacketIds.PlayClientbound.BlockEntityData:
+                    BlockEntityPackets.TryReadBlockEntityData(body, out _);
+                    break;
+
                 case PacketIds.PlayClientbound.LevelChunkWithLight:
                     if (_world is null)
                     {

@@ -187,11 +187,23 @@ public sealed class ChunkPacketTests
         Assert.Null(DimensionTypeInfo.TryRead(new NbtCompound().Set("min_y", new NbtInt(0)).Set("height", new NbtInt(300))));
     }
 
+    /// <summary>Builds a minimal chunk packet for other tests, with one block entity.</summary>
+    internal static byte[] BuildChunkPacketForTests(
+        byte packedXz = 0x21,
+        short blockEntityY = 65,
+        int blockEntityTypeId = 0,
+        byte[]? blockEntityTag = null) =>
+        BuildChunkPacket(0, 0, [0, 7], [], packedXz, blockEntityY, blockEntityTypeId, blockEntityTag);
+
     private static byte[] BuildChunkPacket(
         int chunkX,
         int chunkZ,
         int[] sectionStates,
-        (int Type, long[] Values)[] heightmaps)
+        (int Type, long[] Values)[] heightmaps,
+        byte packedXz = 0x21,
+        short blockEntityY = 65,
+        int blockEntityTypeId = 0,
+        byte[]? blockEntityTag = null)
     {
         // Section payload: states container then biomes container, both "single value".
         var sectionBuffer = new List<byte>();
@@ -228,12 +240,16 @@ public sealed class ChunkPacketTests
         var sectionBytes = sectionBuffer.ToArray();
         writer.WriteByteArray(sectionBytes);
 
-        // One block entity without a tag: the tag is optional (bool flag first).
+        // One block entity. High nibble of the packed byte is X, low nibble is Z, Y is a big-endian short, then the
+        // registry id, then the NBT tag written straight through: an absent tag is a lone End byte, with no length or
+        // presence flag in front of it.
         writer.WriteVarInt(1);
-        writer.WriteByte(0x21);                          // packed XZ
-        writer.WriteRaw([0x00, 0x41]);                   // Y as a big-endian short
-        writer.WriteVarInt(0);                           // block entity type id
-        writer.WriteBool(false);                         // no tag
+        writer.WriteByte(packedXz);
+        var yBytes = new byte[] { (byte)(blockEntityY >> 8), (byte)blockEntityY };
+        writer.WriteRaw(yBytes);
+        writer.WriteVarInt(blockEntityTypeId);
+        var absentTag = new byte[] { 0x00 };
+        writer.WriteRaw(blockEntityTag ?? absentTag);
 
         // Light: four masks encoded as length-prefixed byte arrays (a Java BitSet.toByteArray),
         // then the sky and block light array lists.

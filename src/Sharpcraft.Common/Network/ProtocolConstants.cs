@@ -181,6 +181,10 @@ public static class PacketIds
     /// <summary>Server to client, <see cref="ConnectionState.Play"/> (only used ids listed).</summary>
     public static class PlayClientbound
     {
+        /// <summary>Update for a single block entity: position, type and its NBT tag.</summary>
+        /// <remarks>Reference registration dump: play clientbound 6.</remarks>
+        public const int BlockEntityData = 6;
+
         /// <summary>Disconnect with a component reason.</summary>
         public const int Disconnect = 32;
 
