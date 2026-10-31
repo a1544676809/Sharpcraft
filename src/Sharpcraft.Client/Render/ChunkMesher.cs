@@ -299,10 +299,8 @@ public static class ChunkMesher
 
         var neighbour = world.GetBlockState(sampleX, sampleY, sampleZ, airState);
 
-        if (neighbour != airState && (neighbour == state || Occludes(neighbour, sprites, layout)))
+        if (neighbour != airState && ShouldCullFace(state, neighbour, sprites, layout))
         {
-            // Only an occluding neighbour hides a face. Culling whenever the neighbour is merely non air hides the ground
-            // under water and glass, which showed as holes with the sky behind them.
             return false;
         }
 
@@ -317,11 +315,53 @@ public static class ChunkMesher
     /// <param name="state">Neighbouring block state.</param>
     /// <param name="sprites">Sprite map, for the alpha content.</param>
     /// <param name="layout">Layout used to name the state.</param>
+    /// <summary>
+    /// True when the neighbouring block hides this face.
+    /// </summary>
+    /// <param name="state">Block owning the face.</param>
+    /// <param name="neighbour">Block on the other side.</param>
+    /// <param name="sprites">Sprite map, for the alpha content.</param>
+    /// <param name="layout">Layout used to name the states.</param>
+    /// <remarks>
+    /// Follows the reference's per family rules: a fully opaque neighbour always hides the face; leaves keep their inner
+    /// faces while fancy leaves are on, which is what makes a canopy read as solid from the inside; glass, ice and fluids
+    /// hide only against the same block or fluid
+    /// (ref://mc-26.3-analysis/src/net/minecraft/world/level/block/LeavesBlock.java:45,
+    /// ref://.../block/HalfTransparentBlock.java:13, ref://.../block/LiquidBlock.java:112).
+    /// </remarks>
+    private static bool ShouldCullFace(int state, int neighbour, BlockSpriteMap? sprites, BlockStateLayout? layout)
+    {
+        if (Occludes(neighbour, sprites, layout))
+        {
+            return true;
+        }
+
+        var selfPath = layout?.BlockAt(state)?.Path;
+        var neighbourPath = layout?.BlockAt(neighbour)?.Path;
+
+        if (selfPath is null || neighbourPath is null)
+        {
+            return state == neighbour;
+        }
+
+        // Fancy leaves: a leaf face next to another leaf block is drawn, so the inside of a canopy is visible.
+        if (selfPath.EndsWith("_leaves", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        // Glass, ice and the like: only the shared face between identical blocks is dropped.
+        var sameFamily = selfPath == neighbourPath;
+
+        return sameFamily;
+    }
+
     private static bool Occludes(int state, BlockSpriteMap? sprites, BlockStateLayout? layout)
     {
         if (sprites is null || layout?.BlockAt(state) is not { } block)
         {
-            // Without an atlas or layout nothing better is known; keeping the old behaviour is the safe default.
+            // Without an atlas or a layout the alpha cannot be read, so treat it as opaque, which is what the caller that
+            // passes no atlas expects (untextured geometry is cube shaped in every current test and demo).
             return true;
         }
 
