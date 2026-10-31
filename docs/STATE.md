@@ -1677,3 +1677,15 @@ culler 的 `slots` 要按层各自维护，避免再犯 A3b 那次"按在册数�
 - `terrain.wgsl` 增加 `fs_translucent_oit`（双输出：`(colour*a, a)` 与 `(a)`，保留 `discard<0.1` 与 `textureSampleGrad`）。
 - **实测**：Release 启动正常（`#1652`），说明新入口在 Naga 里能编译；画面与之前一致（尚未接线）。
 - 下一步：`accum`(RGBA16F)/`reveal`(R16F) 目标 + 两个管线 + **4 pass 拆分**（主 → OIT → resolve → UI）。
+
+### 透明管线总计划（用户确认）
+
+1. **OIT 路线 1（加权混合）**：先落地，作为**默认**管线（开销小、无需排序）。
+   - 第 1 步（已完成，`175be3b`）：着色器入口就位并验证可编译。
+   - 第 2 步：`accum`(RGBA16F)/`reveal`(R16F) 目标 + 两个管线（translucent-oit / resolve）。
+   - 第 3 步：4 pass 拆分（主 → OIT → resolve → UI），同机位截图验证。
+2. **原版 OIT 复刻（depth‑bounds + transmittance）**：路线 1 完成后再做，作为**高质量管线**。
+   - 依据 `LevelRenderer.executeOit` / `RenderPipelines.OIT_*`：两组透射目标 + depth bounds + 水面 mask。
+3. **按平台性能切换**：两条管线共用同一套半透明几何与 arena，只切换目标与 pass 组合；
+   用宿主层选项（如 `MC_TRANSPARENCY=weighted|reference`）选择，默认 weighted，失败自动回落 weighted。
+   注意原则 13：开关只在宿主层解析，游戏程序集只接收显式选项。
