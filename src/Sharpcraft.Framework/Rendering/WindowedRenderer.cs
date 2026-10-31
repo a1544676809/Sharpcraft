@@ -61,7 +61,11 @@ public static class WindowedRenderer
         var source = window.GetSurfaceSource();
         using var surface = instance.CreateSurface(ToSurfaceSource(source));
         using var adapter = instance.RequestAdapterBlocking(surface);
-        using var device = adapter.RequestDeviceBlocking();
+        // Ask for the limits this adapter actually offers rather than the defaults, whose maxBufferSize is 256 MiB. A full
+        // amplified view needs more than that for one geometry buffer, and the adapter's own figure is the honest ceiling.
+        var deviceLimits = adapter.GetLimits();
+        var deviceDescriptor = new DeviceDescriptor { RequiredLimits = deviceLimits };
+        using var device = adapter.RequestDeviceBlocking(in deviceDescriptor);
 
         Console.WriteLine($"window: surface ready on {adapter.GetInfo().Description}");
         // A non-sRGB surface blends in gamma space, which is what the reference does

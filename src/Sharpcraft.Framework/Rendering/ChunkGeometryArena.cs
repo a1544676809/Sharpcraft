@@ -32,6 +32,14 @@ public sealed class ChunkGeometryArena : IDisposable
     /// </summary>
     private const ulong AssumedBytesPerChunk = 96 * 1024;
 
+    /// <summary>
+    /// Ceiling for one buffer. The device rejects anything above two hundred and fifty six megabytes, and amplified
+    /// terrain needs more than that for a full view, so the arena stops at half the limit and simply skips chunks that no
+    /// longer fit. Chunks are meshed nearest first, so what gets skipped is the far edge rather than the ground underfoot.
+    /// </summary>
+    /// <remarks>Paging several buffers would remove the ceiling; that is the planned replacement for this stop gap.</remarks>
+    private const ulong MaxBufferBytes = 1024UL << 20;
+
     private readonly Device _device;
     private readonly Queue _queue;
     private readonly int _bytesPerVertex;
@@ -172,7 +180,7 @@ public sealed class ChunkGeometryArena : IDisposable
     private WgpuBuffer CreateBuffer(ulong vertexCapacity, BufferUsage usage) =>
         _device.CreateBuffer(new BufferDescriptor
         {
-            Size = vertexCapacity,
+            Size = Math.Min(vertexCapacity, MaxBufferBytes),
             Usage = usage | BufferUsage.CopyDst
         });
 
@@ -216,21 +224,31 @@ public sealed class ChunkGeometryArena : IDisposable
         _vertex = CreateBuffer(vertexCapacity, BufferUsage.Vertex);
         _index = CreateBuffer(indexCapacity, BufferUsage.Index);
 
-        _vertexCapacity = vertexCapacity;
-        _indexCapacity = indexCapacity;
+        _vertexCapacity = Math.Min(vertexCapacity, MaxBufferBytes);
+        _indexCapacity = Math.Min(indexCapacity, MaxBufferBytes);
         _vertexUsed = 0;
         _indexUsed = 0;
         _slices.Clear();
 
         foreach (var (key, mesh) in _meshes)
         {
+            var vertexBytes = (ulong)mesh.Vertices.Length * sizeof(float);
+            var indexBytes = (ulong)mesh.Indices.Length * sizeof(uint);
+
+            if (_vertexUsed + vertexBytes > _vertexCapacity || _indexUsed + indexBytes > _indexCapacity)
+            {
+                // Out of room at the ceiling: leave this chunk out rather than failing the buffer creation. Chunks are
+                // meshed nearest first, so the ones dropped are at the far edge of the view.
+                continue;
+            }
+
             var slice = new Slice(_vertexUsed, _indexUsed, (uint)mesh.Indices.Length);
             _queue.WriteBuffer(_vertex, slice.VertexOffset, mesh.Vertices.AsSpan());
             _queue.WriteBuffer(_index, slice.IndexOffset, mesh.Indices.AsSpan());
             UploadedBytes += SizeOf(mesh);
 
-            _vertexUsed += (ulong)mesh.Vertices.Length * sizeof(float);
-            _indexUsed += (ulong)mesh.Indices.Length * sizeof(uint);
+            _vertexUsed += vertexBytes;
+            _indexUsed += indexBytes;
             _slices[key] = slice;
         }
     }

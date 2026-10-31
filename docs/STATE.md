@@ -1238,3 +1238,18 @@ send  60.. : -704.50 → -743.21 → …                ← 之后不再被纠�
   `Buffer size 274657422 is greater than the maximum buffer size (268435456)` → **设备 panic，客户端崩溃**。
 - 原因：`ChunkGeometryArena` 用**单个**顶点/索引缓冲，放大化地形 400 区块 × ~4,200 四边形 × 4 × 48 B ≈ 300+ MB。
 - 需要：①**分页 is顶点/索引缓冲**（每页 ≤128 MB，多缓冲绘制）②或瘦身顶点格式（12 float → 更紧凑）。
+
+## 2026-10-31 第 45 轮：设备上限的真相与修复（不是 256 MiB）
+
+- **"设备上限"是什么**：是指 wgpu/WebGPU 的 **`maxBufferSize`（单个 buffer 的字节上限）**，不是显存总量。
+  `adapter.RequestDeviceBlocking()` 不传 `RequiredLimits` 时继承 **默认 256 MiB**，所以我们一个 300–500 MB 的顶点缓冲
+  会被 `wgpuDeviceCreateBuffer` 拒绝并 panic。
+- **实测该适配器（RTX 3060 / Vulkan）**：`maxBufferSize = 1 TiB (1099511627776)`、
+  `maxStorageBufferBindingSize ≈ 2 GiB`。默认 256 MiB 完全是"没要"造成的。
+- **修复**：两个渲染器改为
+  `var deviceDescriptor = new DeviceDescriptor { RequiredLimits = adapter.GetLimits() };`
+  `adapter.RequestDeviceBlocking(in deviceDescriptor)` —— 向适配器要它**实际支持**的上限。
+  同时把 arena 的自我上限设为 **1 GiB**（超限时跳过最远区块而不是崩）。
+- **验证（Release，放大化，90s）**：`arena 329 chunks, presized=True, uploaded 635.9 MB, 2 full rebuilds`；
+  `16125 frames in 90.0s`（≈179 fps），worst 93.5 ms（首帧/重建），仅 2 帧 >33 ms，**无 panic**。
+- 教训（记入流程）：改完必须**两种配置都重建**再测；我此前用旧 Release 二进制得出"仍超限"的错误结论。

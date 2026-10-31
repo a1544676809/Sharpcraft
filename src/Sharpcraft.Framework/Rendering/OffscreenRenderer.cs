@@ -416,7 +416,11 @@ public static class OffscreenRenderer
             var instance = Instance.Create();
             using var adapter = instance.RequestAdapterBlocking();
             var adapterName = adapter.GetInfo().Description;
-            using var device = adapter.RequestDeviceBlocking();
+            // Ask for the limits this adapter actually offers rather than the defaults, whose maxBufferSize is 256 MiB. A full
+        // amplified view needs more than that for one geometry buffer, and the adapter's own figure is the honest ceiling.
+        var deviceLimits = adapter.GetLimits();
+        var deviceDescriptor = new DeviceDescriptor { RequiredLimits = deviceLimits };
+        using var device = adapter.RequestDeviceBlocking(in deviceDescriptor);
 
             var width = (uint)request.Width;
             var height = (uint)request.Height;
