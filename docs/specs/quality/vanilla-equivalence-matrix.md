@@ -35,6 +35,25 @@
 | 16 | 调试代码可分离 | 游戏程序集不读环境变量；删除 `Launcher/Diagnostics` 即可移除全部调试 | `check-diagnostics-separation.ps1` + `DiagnosticsSeparationTests` | violations=0 | **已验证（0 处）** |
 | 15 | 性能 | p99 ≤16.7ms、剔除 ≤1ms、1 提交/帧 | `benchmarks/` | 见中期目标 | 未验证（当前 150–200ms）|
 
+
+## 1.1 纯逻辑等效性（与渲染无关，全部以原版 dump / 向量为依据）
+
+这些项不需要截图，可直接用参考数据逐条断言，属于当前**已完成**的部分：
+
+| 项目 | 原版依据 | 覆盖量 | 落地 |
+| --- | --- | --- | --- |
+| 方块注册顺序 | `vectors/block-order.txt` | **1286** 个方块，首位 `air`、末位 `firefly_bush` | `RegistryOrderTests` |
+| 方块状态计数 | `vectors/block-states.txt` | 合计 **35723** 个全局状态（与 `VanillaBlockRegistry.BlockStateCount` 一致）| `BlockStateIdTests` |
+| 状态 id 采样 | `vectors/block-states.txt` 采样 | **1455** 条样本逐条比对 | `BlockStateIdTests` |
+| 数据包 ID | `vectors/packet-tables.txt` | 参考 **278** 条；我方常量与之逐条比对 **90** 个，0 不一致 | `PacketIdTableTests` + `check-packet-ids.ps1` |
+| Java 随机数 | `vectors/raw-vectors.txt` | **238** 条向量（legacy / xoro / create）| `RandomVectorTests`、`PositionalAndWorldgenVectorTests` |
+| 调试代码可分离 | 原则 13 | 游戏程序集环境变量读取 **0** 处 | `check-diagnostics-separation.ps1` + 架构测试 |
+
+上述筛选用到的 24 个测试当前**全部通过**。
+
+**纯逻辑部分仍缺的**是"活体协议行为"断言（不需要截图，只需连服务器并断言计数）：
+登录字段、KeepAlive 60s 不断线、区块批处理 ack 次数、玩家位置锁定（≤0.05 格）。这些是下一步的脚本工作。
+
 ## 2. 执行顺序
 
 1. 恢复 3、4、5（网络/流式/位置）——世界能否正常看的前提。
