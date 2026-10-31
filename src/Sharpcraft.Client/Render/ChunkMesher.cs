@@ -898,8 +898,16 @@ public static class ChunkMesher
         // is exactly coplanar with an ice block's top face and the two fight for the same depth, which is what showed as
         // large rectangular patches on a frozen ocean. Flowing fluid heights need the block state level property and are
         // left for the block state work; a single height already removes the coplanar case.
-        if (layout?.BlockAt(state) is { Path: "water" or "lava" })
+        if (layout?.BlockAt(state) is { Path: "water" or "lava" } fluidBlock)
         {
+            // Vanilla fluid surface height: amount/9 (source = 8/9), or a full block when the same fluid is directly above.
+            // Flowing levels are lower. This replaces the old fixed 14/16 hack and uses the decoded block level.
+            var fluid = Sharpcraft.Common.World.FluidStateCodec.FromBlockState(state, layout);
+            var aboveState = neighbourhood.GetBlockState(baseX + x, baseY + y + 1, baseZ + z, 0);
+            var sameFluidAbove = layout.BlockAt(aboveState) is { } aboveBlock && aboveBlock.Path == fluidBlock.Path;
+            var ownHeight = sameFluidAbove ? 1f : (fluid.IsEmpty ? 1f : fluid.OwnHeight);
+            var drop = 1f - ownHeight;
+
             var top = Math.Max(Math.Max(origin.Y, a.Y), Math.Max(b.Y, c.Y));
             target.AppendQuad(
                 Drop(origin),
@@ -917,7 +925,7 @@ public static class ChunkMesher
                 faceSprite);
 
             (float X, float Y, float Z) Drop((int X, int Y, int Z) point) =>
-                (point.X, point.Y == top ? point.Y - (1f / 16f) : point.Y, point.Z);
+                (point.X, point.Y == top ? point.Y - drop : point.Y, point.Z);
 
             return;
         }
