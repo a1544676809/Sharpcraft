@@ -71,6 +71,9 @@ public static class WindowedRenderer
         // Atlas resources: the fragment shader samples it, so the pipeline layout and the bind group
         // have to exist before anything is drawn (docs/modules/render.md 6.1).
         var atlasData = request.Atlas ?? TextureData.White;
+
+        // Diagnostic: drop the mip chain to separate mip filtering from level-zero sampling.
+        var atlasMips = Environment.GetEnvironmentVariable("MC_NO_MIPS") == "1" ? [] : atlasData.Mips ?? [];
         var atlasTexture = device.CreateTexture(new TextureDescriptor
         {
             Size = new WGPUExtent3D
@@ -79,14 +82,12 @@ public static class WindowedRenderer
                 height = (uint)atlasData.Height,
                 depthOrArrayLayers = 1
             },
-            MipLevelCount = 1 + (uint)(atlasData.Mips?.Length ?? 0),
+            MipLevelCount = 1 + (uint)atlasMips.Length,
             SampleCount = 1,
             Dimension = WGPUTextureDimension._2D,
             Format = WGPUTextureFormat.RGBA8Unorm,
             Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
         });
-
-        var atlasMips = atlasData.Mips ?? [];
 
         device.Queue.WriteTexture(
             atlasTexture,

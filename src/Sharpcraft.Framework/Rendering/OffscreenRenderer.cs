@@ -450,6 +450,9 @@ public static class OffscreenRenderer
             // Atlas upload: nearest sampling with no mipmaps keeps pixel art crisp and stops the
             // half-texel inset from blending across sprite borders.
             var atlasData = request.Atlas ?? TextureData.White;
+
+            // Diagnostic: drop the mip chain to separate mip filtering from level-zero sampling.
+            var atlasMips = Environment.GetEnvironmentVariable("MC_NO_MIPS") == "1" ? [] : atlasData.Mips ?? [];
             using var atlasTexture = device.CreateTexture(new TextureDescriptor
             {
                 Size = new WGPUExtent3D
@@ -458,14 +461,12 @@ public static class OffscreenRenderer
                     height = (uint)atlasData.Height,
                     depthOrArrayLayers = 1
                 },
-                MipLevelCount = 1 + (uint)(atlasData.Mips?.Length ?? 0),
+                MipLevelCount = 1 + (uint)atlasMips.Length,
                 SampleCount = 1,
                 Dimension = WGPUTextureDimension._2D,
                 Format = WGPUTextureFormat.RGBA8Unorm,
                 Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
             });
-
-            var atlasMips = atlasData.Mips ?? [];
 
             device.Queue.WriteTexture(
                 atlasTexture,
@@ -511,7 +512,7 @@ public static class OffscreenRenderer
                 MinFilter = WGPUFilterMode.Linear,
                 MipmapFilter = WGPUMipmapFilterMode.Linear,
                 LodMinClamp = 0f,
-                LodMaxClamp = Math.Max(1, atlasData.Mips?.Length ?? 1),
+                LodMaxClamp = Math.Max(1, atlasMips.Length),
                 MaxAnisotropy = 1
             });
 
