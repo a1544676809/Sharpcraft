@@ -21,7 +21,7 @@ namespace Sharpcraft.Client.Render;
 public sealed class ChunkMeshCache
 {
     private readonly Dictionary<long, MeshData> _meshes = [];
-    private readonly List<(long Key, MeshData Mesh)> _updates = [];
+    private readonly List<MeshedChunk> _updates = [];
     private readonly ChunkWorkerPool? _pool;
 
     /// <summary>Creates a standalone cache that meshes on the calling thread.</summary>
@@ -164,7 +164,7 @@ public sealed class ChunkMeshCache
     /// A rebuild that resets the renderer's geometry storage has to put every mesh back, and the incremental queue only
     /// carries what changed. This is the difference between a world that reappears and a world that stays empty.
     /// </remarks>
-    public List<(long Key, MeshData Mesh)> SnapshotAll() => [.. _meshes.Select(entry => (entry.Key, entry.Value))];
+    public List<MeshedChunk> SnapshotAll() => [.. _meshes.Select(entry => MeshedChunk.FromOpaque(entry.Key, entry.Value))];
 
     /// <summary>Queues every loaded chunk that has no mesh yet; called as terrain streams in.</summary>
     /// <param name="world">World to scan.</param>
@@ -191,7 +191,7 @@ public sealed class ChunkMeshCache
     /// Picks up the meshes the pool finished and returns them, so the renderer can upload only those chunks
     /// instead of recomposing the whole world (docs/specs/network/play-movement.md 7.25).
     /// </summary>
-    public IReadOnlyList<(long Key, MeshData Mesh)> DrainUpdates()
+    public IReadOnlyList<MeshedChunk> DrainUpdates()
     {
         _updates.Clear();
 
@@ -200,10 +200,10 @@ public sealed class ChunkMeshCache
             return _updates;
         }
 
-        while (_pool.TryTakeMesh(out var key, out var mesh))
+        while (_pool.TryTakeMesh(out var key, out var mesh, out var cutout, out var translucent))
         {
             _meshes[key] = mesh;
-            _updates.Add((key, mesh));
+            _updates.Add(new MeshedChunk(key, mesh, cutout, translucent));
         }
 
         return _updates;

@@ -134,7 +134,7 @@ internal static class WindowCommand
             : null;
 
         var geometryEpoch = 0;
-        Queue<(long Key, Sharpcraft.Client.Render.MeshData Mesh)>? replayQueue = null;
+        Queue<Sharpcraft.Client.Render.MeshedChunk>? replayQueue = null;
         long drainedTotal = 0;
         var renderFrames = 0;
         var streamDiag = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
@@ -184,7 +184,7 @@ internal static class WindowCommand
                 }
 
                 geometryEpoch++;
-                replayQueue = new Queue<(long Key, Sharpcraft.Client.Render.MeshData Mesh)>(meshCache.SnapshotAll());
+                replayQueue = new Queue<Sharpcraft.Client.Render.MeshedChunk>(meshCache.SnapshotAll());
                 Console.WriteLine(
                     $"resource reload: layout changed; meshes {meshCache.LastTotalChunks}/{world.LoadedChunkCount} " +
                     $"after {passes} pass(es), atlas {atlasClock.Elapsed.TotalMilliseconds:F1} ms");
@@ -390,11 +390,11 @@ internal static class WindowCommand
                 // only carry what changed since the last frame and the world would stay empty.
                 // A full replay is spread over frames: sending every mesh at once is what produced the 160 ms spike, and a
                 // partly refilled world is correct because the old geometry was already dropped.
-                List<(long Key, Sharpcraft.Client.Render.MeshData Mesh)> drained;
+                List<Sharpcraft.Client.Render.MeshedChunk> drained;
 
                 if (replayQueue is { Count: > 0 } pendingReplay)
                 {
-                    drained = new List<(long, Sharpcraft.Client.Render.MeshData)>(64);
+                    drained = new List<Sharpcraft.Client.Render.MeshedChunk>(64);
 
                     while (drained.Count < 64 && pendingReplay.Count > 0)
                     {
@@ -430,8 +430,9 @@ internal static class WindowCommand
                 {
                     var eye = session.Player.Position;
 
-                    foreach (var (key, _) in drained)
+                    foreach (var entry in drained)
                     {
+                        var key = entry.Key;
                         if (meshOrderSeen >= 64)
                         {
                             break;
@@ -451,9 +452,15 @@ internal static class WindowCommand
                 }
 
                 var updates = new List<(long Key, GeometryData Mesh)>(drained.Count);
-                foreach (var (key, mesh) in drained)
+                foreach (var entry in drained)
                 {
-                    updates.Add((key, new GeometryData(mesh.Vertices, mesh.Indices)));
+                    updates.Add((entry.Key, new GeometryData(
+                        entry.Opaque.Vertices,
+                        entry.Opaque.Indices,
+                        entry.Cutout?.Vertices,
+                        entry.Cutout?.Indices,
+                        entry.Translucent?.Vertices,
+                        entry.Translucent?.Indices)));
                 }
 
                 return updates;

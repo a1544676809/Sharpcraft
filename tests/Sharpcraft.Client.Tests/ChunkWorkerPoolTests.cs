@@ -104,7 +104,7 @@ public sealed class ChunkWorkerPoolTests
         var deadline = DateTime.UtcNow.AddSeconds(seconds);
         while (DateTime.UtcNow < deadline)
         {
-            if (pool.TryTakeMesh(out key, out var mesh))
+            if (pool.TryTakeMesh(out key, out var mesh, out _, out _))
             {
                 return mesh;
             }

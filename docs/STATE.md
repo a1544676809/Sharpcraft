@@ -1457,3 +1457,10 @@ culler 的 `slots` 要按层各自维护，避免再犯 A3b 那次"按在册数�
 
 **下一步从这里继续**：先加 `MeshedChunk`，再改 pool 入队 → cache `DrainUpdates` → WindowCommand 透传 →
 三个 arena → 两个 pass → 五条退化 → 上传限流与截图验证。
+
+### A5 第 2 步完成
+- 新增 `MeshedChunk(long Key, MeshData Opaque, MeshData? Cutout, MeshData? Translucent)`（`Client/Render/MeshedChunk.cs`）。
+- `ChunkWorkerPool`：两个 scratch **不再 Dispose**，随不透明层一起入队；`TryTakeMesh` 增加两个 out 参数。
+- `ChunkMeshCache`：`_updates` / `DrainUpdates()` / `SnapshotAll()` 全部改为 `MeshedChunk`。
+- `WindowCommand`：`replayQueue`、`drained`、两处解构与 `GeometryData(...)` 六参构造全部透传三层。
+- 全量测试通过；**渲染行为尚未改变**（下一阶段才用这些层）。
