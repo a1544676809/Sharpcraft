@@ -208,6 +208,9 @@ public sealed class ChunkGeometryArena : IDisposable
     /// </remarks>
     public int SlotHighWater => _slotsUsed;
 
+    /// <summary>Reusable sort keys for the translucent pass, so ordering allocates nothing per frame.</summary>
+    private SortKey[] _sortKeys = [];
+
     /// <summary>Optional GPU culler whose argument buffer drives the draws.</summary>
     public ChunkCuller? Culler { get; set; }
 
@@ -271,6 +274,60 @@ public sealed class ChunkGeometryArena : IDisposable
         {
             pass.DrawIndexedIndirect(arguments, (ulong)(slice.Slot * DrawArgBytes));
         }
+    }
+
+    /// <summary>Draws the resident chunks farthest first, which is the order blending needs.</summary>
+    /// <param name="pass">Render pass to record into.</param>
+    /// <param name="eye">Camera position, in world units.</param>
+    /// <remarks>
+    /// Blending is order dependent, so the translucent layer has to be drawn back to front. Sorting the draw order by the
+    /// chunk centre is enough to fix the usual artefacts, and it is the recorded approximation: per face ordering would
+    /// be exact but costs far more than it is worth for cubes this size.
+    /// </remarks>
+    public void DrawFarthestFirst(RenderPassEncoder pass, System.Numerics.Vector3 eye)
+    {
+        if (_slices.Count == 0)
+        {
+            return;
+        }
+
+        if (_sortKeys.Length < _slices.Count)
+        {
+            _sortKeys = new SortKey[_slices.Count];
+        }
+
+        var count = 0;
+
+        foreach (var slice in _slices.Values)
+        {
+            var centreX = (slice.Minimum.X + slice.Maximum.X) * 0.5f - eye.X;
+            var centreY = (slice.Minimum.Y + slice.Maximum.Y) * 0.5f - eye.Y;
+            var centreZ = (slice.Minimum.Z + slice.Maximum.Z) * 0.5f - eye.Z;
+
+            _sortKeys[count].Distance = (centreX * centreX) + (centreY * centreY) + (centreZ * centreZ);
+            _sortKeys[count].Slot = slice.Slot;
+            count++;
+        }
+
+        Array.Sort(_sortKeys, 0, count);
+
+        pass.SetVertexBuffer(0, _vertex, 0, _vertexCapacity);
+        pass.SetIndexBuffer(_index, WGPUIndexFormat.Uint32, 0, _indexCapacity);
+
+        for (var index = 0; index < count; index++)
+        {
+            pass.DrawIndexedIndirect(_drawArgs, (ulong)(_sortKeys[index].Slot * DrawArgBytes));
+        }
+    }
+
+    /// <summary>One chunk's distance from the camera and its draw slot, ordered farthest first.</summary>
+    private struct SortKey : IComparable<SortKey>
+    {
+        public float Distance;
+        public int Slot;
+
+        /// <inheritdoc />
+        public int CompareTo(SortKey other) => other.Distance.CompareTo(Distance);
     }
 
     /// <inheritdoc />

@@ -981,7 +981,7 @@ public static class WindowedRenderer
             {
                 pass.SetPipeline(translucentPipeline);
                 pass.SetBindGroup(0, bindGroup);
-                arenaTranslucent!.Draw(pass);
+                arenaTranslucent!.DrawFarthestFirst(pass, eye);
 
                 if (cullStatistics && (presented % 60) == 0)
                 {

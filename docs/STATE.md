@@ -1504,3 +1504,11 @@ culler 的 `slots` 要按层各自维护，避免再犯 A3b 那次"按在册数�
 - 新增 `MaxPresizeBytes = 256 MB`：单次预分配封顶，避免"分配一个巨大缓冲"本身变成尖峰
 - 实测（静止机位 45 s）：`max=67.08 ms`、`over33=4`、`2 full rebuilds`（此前 `max=292.49`、`3 full rebuilds`）
 - 仍待做：② 半透明按距排序、① A4 GPU 遮挡剔除
+
+### ② 半透明按距排序：已完成
+
+- `ChunkGeometryArena.DrawFarthestFirst(pass, eye)`：按区块中心与相机的**距离平方降序**绘制半透明层；
+  复用 `SortKey[]` 字段 + `struct SortKey : IComparable<SortKey>`（**每帧零分配**，符合热路径要求）。
+- `WindowedRenderer` 的半透明 pass 改用它。
+- 验证：湖区截图层次正确（远处水更淡、近处水在前、水下地形可见）；全量 7 套测试通过。
+- 记录为**近似**：逐面排序更精确，但成本远高于收益（方块尺度下区块级排序已足够）。
