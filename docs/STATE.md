@@ -1784,3 +1784,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 1. **窗口像素仍无法在本环境截图**（交换链不可拷贝），reference 观感需所有者本机 `MC_TRANSPARENCY=reference` 目视。
 2. 深度边界用 RGBA16F（RGBA32F 不可混合）带来的远处精度损失，若目视有问题再考虑分通道/两目标方案。
 3. 未做：water mask、云/水面贴片深度、实体/粒子/云/天气的 OIT 集合、`OIT_ADDITIVE`（见 spec §11）。
+
+## 2026-10-31 修：浮冰/蓝冰被误判为半透明（所有者截图为证）
+
+现象：一整座浮冰/蓝冰山看起来像半透明雾。根因：`BlockRenderLayers` 的临时半透明表把 `minecraft:packed_ice`、
+`minecraft:blue_ice` 也列入了半透明层 ⇒ 走深度写关的半透明路径。原版核实：`PACKED_ICE` 无 `.noOcclusion()`（实心），
+`BLUE_ICE` 的 `HalfTransparentBlock` 只覆盖 `skipRendering`（同类面剔除），两者渲染层都是 solid；只有 `ICE` 带
+`.noOcclusion()` 是半透明。修复：从半透明表移除二者，补 `frosted_ice`；`BlockRenderLayersTests` 增加 `packed_ice`/
+`blue_ice` 不透明与 `frosted_ice` 半透明断言。全量 1125 通过。

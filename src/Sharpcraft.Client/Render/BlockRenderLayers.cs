@@ -19,8 +19,7 @@ public static class BlockRenderLayers
     {
         "minecraft:water",
         "minecraft:ice",
-        "minecraft:blue_ice",
-        "minecraft:packed_ice",
+        "minecraft:frosted_ice",
         "minecraft:glass",
         "minecraft:glass_pane",
         "minecraft:tinted_glass",

@@ -19,6 +19,7 @@ public sealed class BlockRenderLayersTests
     [InlineData("minecraft:glass")]
     [InlineData("minecraft:glass_pane")]
     [InlineData("minecraft:ice")]
+    [InlineData("minecraft:frosted_ice")]
     [InlineData("minecraft:red_stained_glass")]
     public void TranslucentBlocksAreClassified(string name)
     {
@@ -29,6 +30,11 @@ public sealed class BlockRenderLayersTests
     [InlineData("minecraft:stone")]
     [InlineData("minecraft:dirt")]
     [InlineData("minecraft:oak_leaves")]
+    // Packed ice and blue ice look like ice but are solid in the reference: their block has no noOcclusion and
+    // HalfTransparentBlock only culls same-block faces. Classifying them as translucent drew whole ice mountains with
+    // depth writes off, so they read as haze.
+    [InlineData("minecraft:packed_ice")]
+    [InlineData("minecraft:blue_ice")]
     public void OpaqueBlocksAreNotClassified(string name)
     {
         Assert.False(BlockRenderLayers.IsTranslucent(Id(name)));
