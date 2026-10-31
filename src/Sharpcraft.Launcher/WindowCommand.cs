@@ -135,6 +135,7 @@ internal static class WindowCommand
 
         var geometryEpoch = 0;
         Queue<Sharpcraft.Client.Render.MeshedChunk>? replayQueue = null;
+    var uploadQueue = new Queue<Sharpcraft.Client.Render.MeshedChunk>();
         long drainedTotal = 0;
         var renderFrames = 0;
         var streamDiag = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
@@ -451,9 +452,36 @@ internal static class WindowCommand
                     }
                 }
 
+                // A whole world arriving at once used to mean one frame with hundreds of megabytes of uploads, which
+                // showed up as a 100 ms plus frame. The budget spreads it: what does not fit waits for the next frame,
+                // and a chunk may briefly show only its opaque layer, which is the recorded degradation.
+                const long UploadBudgetBytes = 8L * 1024 * 1024;
                 var updates = new List<(long Key, GeometryData Mesh)>(drained.Count);
-                foreach (var entry in drained)
+                long queuedBytes = 0;
+
+                foreach (var entry in uploadQueue)
                 {
+                    queuedBytes += entry.Opaque.Vertices.LongLength * sizeof(float) + (entry.Cutout?.Vertices.LongLength ?? 0) * sizeof(float);
+                }
+
+                var uploads = new List<Sharpcraft.Client.Render.MeshedChunk>(drained.Count + uploadQueue.Count);
+                uploads.AddRange(uploadQueue);
+                uploads.AddRange(drained);
+                uploadQueue.Clear();
+
+                long uploadedThisFrame = 0;
+
+                foreach (var entry in uploads)
+                {
+                    var bytes = (entry.Opaque.Vertices.LongLength + (entry.Cutout?.Vertices.LongLength ?? 0) + (entry.Translucent?.Vertices.LongLength ?? 0)) * sizeof(float);
+
+                    if (updates.Count > 0 && uploadedThisFrame + bytes > UploadBudgetBytes)
+                    {
+                        uploadQueue.Enqueue(entry);
+                        continue;
+                    }
+
+                    uploadedThisFrame += bytes;
                     updates.Add((entry.Key, new GeometryData(
                         entry.Opaque.Vertices,
                         entry.Opaque.Indices,

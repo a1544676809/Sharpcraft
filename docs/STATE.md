@@ -1464,3 +1464,18 @@ culler 的 `slots` 要按层各自维护，避免再犯 A3b 那次"按在册数�
 - `ChunkMeshCache`：`_updates` / `DrainUpdates()` / `SnapshotAll()` 全部改为 `MeshedChunk`。
 - `WindowCommand`：`replayQueue`、`drained`、两处解构与 `GeometryData(...)` 六参构造全部透传三层。
 - 全量测试通过；**渲染行为尚未改变**（下一阶段才用这些层）。
+
+### A5 第 3–6 步完成（三层流式打通）
+
+- **三个 arena（方案 A）**：`arena` / `arenaCutout` / `arenaTranslucent`，各自一个 `ChunkCuller`；
+  每帧按 `SlotHighWater` 各自 dispatch 剔除；重置/重建时三者一起重建。
+- **两个新 pass**：`cutoutPipeline` 画 cutout arena、`translucentPipeline` 画 translucent arena（当前按槽位顺序，
+  **逐面/按距排序仍是已知缺口**，作为第 5 条退化路径显式记录）。
+- **退化路径**：① 层为空 → 跳过该 pass；② 每层 arena 独立（互不影响）；③ 每帧 **8 MB 上传预算**，
+  超出部分进 `uploadQueue` 顺延到下一帧（先有陆地后有水，可观测、不丢数据）；④ cull 不可用 → 各自回落 CPU 剔除/不剔除；
+  ⑤ 半透明排序退化（槽位顺序）。
+- **验证（Release + 放大化）**：
+  - `cull: chunks=677 culled=0 cutout=650 translucent=628` —— 流式区块的层**真的在上传了**（此前恒为 0）
+  - 截图一（700,63,700）：湖面与水下地形正常 → 水（translucent）在新区块可见
+  - 截图二（1501,92,1501，雪原针叶林）：树叶（cutout）与雪地正常、无空洞
+  - 全量 **7 套测试通过**

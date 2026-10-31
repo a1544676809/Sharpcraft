@@ -337,14 +337,35 @@ public static class WindowedRenderer
         // With per-chunk geometry the world is drawn from an arena: a chunk that arrives writes only its own
         // bytes, instead of the whole world being recomposed and re-uploaded every frame
         // (docs/specs/network/play-movement.md 7.25).
+        // One arena per layer, so a failure or an empty layer only affects itself and the layers can be drawn with their
+        // own pipelines in their own order (docs/specs/render/terrain-layers.md).
         using var culler = new ChunkCuller(device, device.Queue, 8192);
+        using var cutoutCuller = new ChunkCuller(device, device.Queue, 8192);
+        using var translucentCuller = new ChunkCuller(device, device.Queue, 8192);
+
         var arena = geometryUpdates is null
+            ? null
+            : new ChunkGeometryArena(device, expectedChunks: expectedChunks);
+        var arenaCutout = geometryUpdates is null
+            ? null
+            : new ChunkGeometryArena(device, expectedChunks: expectedChunks);
+        var arenaTranslucent = geometryUpdates is null
             ? null
             : new ChunkGeometryArena(device, expectedChunks: expectedChunks);
 
         if (arena is not null)
         {
             arena.Culler = culler;
+        }
+
+        if (arenaCutout is not null)
+        {
+            arenaCutout.Culler = cutoutCuller;
+        }
+
+        if (arenaTranslucent is not null)
+        {
+            arenaTranslucent.Culler = translucentCuller;
         }
 
         // Geometry that is rebuilt every frame, such as placeholder entity boxes. It gets its own small pair of
@@ -426,6 +447,15 @@ public static class WindowedRenderer
                 // change all or nothing (docs/decisions/0017-reload-invalidation-by-layout.md).
                 arena?.Dispose();
                 arena = new ChunkGeometryArena(device, expectedChunks: expectedChunks);
+                arena.Culler = culler;
+
+                arenaCutout?.Dispose();
+                arenaCutout = new ChunkGeometryArena(device, expectedChunks: expectedChunks);
+                arenaCutout.Culler = cutoutCuller;
+
+                arenaTranslucent?.Dispose();
+                arenaTranslucent = new ChunkGeometryArena(device, expectedChunks: expectedChunks);
+                arenaTranslucent.Culler = translucentCuller;
                 Console.WriteLine("ui: world geometry reset");
             }
 
@@ -720,6 +750,17 @@ public static class WindowedRenderer
                     foreach (var (key, mesh) in updates)
                     {
                         arena.Apply(key, mesh);
+
+                        // The per chunk layers travel with the opaque geometry; a chunk with none just skips its arena.
+                        if (mesh.CutoutVertices is { Length: > 0 } cutoutVertices && arenaCutout is not null)
+                        {
+                            arenaCutout.Apply(key, new GeometryData(cutoutVertices, mesh.CutoutIndices ?? []));
+                        }
+
+                        if (mesh.TranslucentVertices is { Length: > 0 } translucentVertices && arenaTranslucent is not null)
+                        {
+                            arenaTranslucent.Apply(key, new GeometryData(translucentVertices, mesh.TranslucentIndices ?? []));
+                        }
                     }
                 }
             }
@@ -841,6 +882,17 @@ public static class WindowedRenderer
 
                 FrustumPlanes.Extract(viewProjectionForCull, frustumPlanes);
                 culler.Dispatch(encoder, frustumPlanes, arena.SlotHighWater);
+
+                if (arenaCutout is not null && cutoutCuller.Available)
+                {
+                    cutoutCuller.Dispatch(encoder, frustumPlanes, arenaCutout.SlotHighWater);
+                }
+
+                if (arenaTranslucent is not null && translucentCuller.Available)
+                {
+                    translucentCuller.Dispatch(encoder, frustumPlanes, arenaTranslucent.SlotHighWater);
+                }
+
                 gpuCulled = true;
             }
             var pass = encoder.BeginRenderPass(
@@ -906,10 +958,36 @@ public static class WindowedRenderer
                     FrustumPlanes.Extract(viewProjection, frustumPlanes);
                     arena.Draw(pass, frustumPlanes);
                 }
+            }
+
+            // Cutout and translucent layers, each from its own arena with its own pipeline. A layer with nothing to draw
+            // costs one branch.
+            if (arenaCutout is not null && arenaCutout.ChunkCount > 0)
+            {
+                pass.SetPipeline(cutoutPipeline);
+                pass.SetBindGroup(0, bindGroup);
+
+                if (gpuCulled)
+                {
+                    arenaCutout.DrawWithCuller(pass);
+                }
+                else
+                {
+                    arenaCutout.Draw(pass);
+                }
+            }
+
+            if (arenaTranslucent is not null && arenaTranslucent.ChunkCount > 0)
+            {
+                pass.SetPipeline(translucentPipeline);
+                pass.SetBindGroup(0, bindGroup);
+                arenaTranslucent!.Draw(pass);
 
                 if (cullStatistics && (presented % 60) == 0)
                 {
-                    Console.WriteLine($"cull: chunks={arena.ChunkCount} culled={arena.CulledLastFrame}");
+                    Console.WriteLine(
+                        $"cull: chunks={arena?.ChunkCount ?? 0} culled={arena?.CulledLastFrame ?? 0} "
+                        + $"cutout={arenaCutout?.ChunkCount ?? 0} translucent={arenaTranslucent?.ChunkCount ?? 0}");
                 }
             }
 
