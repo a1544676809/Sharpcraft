@@ -815,6 +815,14 @@ public static class ChunkMesher
 
                     float Corner(int cx, int cz)
                     {
+                        // With the same fluid directly above, the column is continuous, so the block reaches the full block
+                        // top (reference getHeight = hasSameAbove ? 1.0 : ownHeight). Without this the corner average dipped
+                        // the rim below the block above and left a seam at water drops / terraces.
+                        if (aboveWater)
+                        {
+                            return 1f;
+                        }
+
                         var n1 = cx == 0 ? west : east;
                         var n2 = cz == 0 ? north : south;
                         var diagonal = cx == 0 ? (cz == 0 ? northWest : southWest) : (cz == 0 ? northEast : southEast);
