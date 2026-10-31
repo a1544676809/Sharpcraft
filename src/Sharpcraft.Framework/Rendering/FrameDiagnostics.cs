@@ -41,4 +41,10 @@ public sealed record FrameDiagnostics
 
     /// <summary>Print frame time percentiles when the window closes.</summary>
     public bool PerformanceSummary { get; init; }
+
+    /// <summary>Print how many chunks the frustum test skipped, once a second.</summary>
+    public bool CullStatistics { get; init; }
+
+    /// <summary>Draw every chunk without the frustum test, the fallback when GPU culling is unavailable.</summary>
+    public bool DisableCulling { get; init; }
 }

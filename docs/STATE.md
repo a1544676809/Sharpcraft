@@ -1268,3 +1268,16 @@ send  60.. : -704.50 → -743.21 → …                ← 之后不再被纠�
   - 输出：把被剔除的槽 `indexCount` 写 0（其余保持原值）；
   - 之后 `Draw` 仍按槽发 `DrawIndexedIndirect`（被剔除者成为 no-op）。
   这样 CPU 不再需要逐区块做可见性判断，且为后续 **MultiDrawIndexedIndirectCount**（一次调用画全部）留好结构。
+
+## 2026-10-31 实验分支：A3a 视锥剔除（CPU 参考实现 + 兜底开关）
+
+- `FrustumPlanes`：从 `viewProjection` 提取 6 个内平面（**System.Numerics 行向量约定，必须用矩阵列**：
+  这是我第一版的错误——用行得到 2/3 测试失败，改成列后 3/3 通过），`Extract` 归一化平面，`IsVisible` 用 AABB
+  "沿法线最远角"判定（保守，绝不误剔）。
+- `ChunkGeometryArena`：每个 slice 记录世界 AABB（从顶点位置求 min/max），`Draw(pass, planes)` 跳过视锥外区块，
+  `CulledLastFrame` 计数；`Draw(pass)` 保持全画（兜底）。
+- `WindowedRenderer`：每帧算 `CameraMath.BuildViewProjection` → 提取平面 → 传入绘制。
+- **兜底**：`FrameDiagnostics.DisableCulling`（宿主 `MC_CULL_DISABLE=1`）直接走 `arena.Draw(pass)`，不剔除。
+  这样 A2/A3 在"没有 GPU 剔除"或需要对照时都能退回 CPU 全画路径。
+- **验证**：7 套 **1112 用例全绿**；Release + 放大化：`cull: chunks=348 culled=61..89`（约 20%），画面正常。
+- **下一步 A3b**：`chunk_cull.wgsl` compute pass，写同一批 indirect 记录；`Available=false` 时自动回落到本 CPU 剔除。

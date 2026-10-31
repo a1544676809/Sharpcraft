@@ -378,6 +378,9 @@ public static class WindowedRenderer
         var colour = request.ClearColour;
         var presented = 0;
         var performanceSummary = false;
+        var cullStatistics = false;
+        var disableCulling = false;
+        var frustumPlanes = new System.Numerics.Vector4[6];
         var gapSamples = new double[1 << 17];
         var gapCount = 0;
         var worstFrameMs = 0d;
@@ -756,6 +759,8 @@ public static class WindowedRenderer
             // regressed when meshing moved between threads.
             var nowMs = frameClock.Elapsed.TotalMilliseconds;
             performanceSummary = currentRequest.Diagnostics?.PerformanceSummary == true;
+            cullStatistics = currentRequest.Diagnostics?.CullStatistics == true;
+            disableCulling = currentRequest.Diagnostics?.DisableCulling == true;
             var gapMs = nowMs - lastFrameAt;
 
             if (gapCount < gapSamples.Length)
@@ -852,7 +857,28 @@ public static class WindowedRenderer
 
             if (arena is not null)
             {
-                arena.Draw(pass);
+                // The CPU reference cull: same test the compute pass will run, so the two can be compared directly.
+                var viewProjection = CameraMath.BuildViewProjection(
+                    eye,
+                    target,
+                    request.FieldOfViewDegrees,
+                    (int)frameWidth,
+                    (int)frameHeight);
+
+                if (disableCulling)
+                {
+                    arena.Draw(pass);
+                }
+                else
+                {
+                    FrustumPlanes.Extract(viewProjection, frustumPlanes);
+                    arena.Draw(pass, frustumPlanes);
+                }
+
+                if (cullStatistics && (presented % 60) == 0)
+                {
+                    Console.WriteLine($"cull: chunks={arena.ChunkCount} culled={arena.CulledLastFrame}");
+                }
             }
 
             if (dynamicIndexCount > 0)

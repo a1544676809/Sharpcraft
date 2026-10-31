@@ -58,7 +58,9 @@ public static class HostDebugOptions
             AlphaOne = Flag("MC_FRAME_ALPHA_ONE"),
             GuiScale = (int)Number("MC_GUI_SCALE", 0f),
             InputTrace = Flag("MC_INPUT_TRACE"),
-            PerformanceSummary = Flag("MC_PERF_SUMMARY")
+            PerformanceSummary = Flag("MC_PERF_SUMMARY"),
+            CullStatistics = Flag("MC_CULL_STATS"),
+            DisableCulling = Flag("MC_CULL_DISABLE")
         };
     }
 

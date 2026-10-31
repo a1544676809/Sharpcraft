@@ -176,7 +176,8 @@ public sealed class ChunkGeometryArena : IDisposable
             return;
         }
 
-        var slice = new Slice(_vertexUsed, _indexUsed, (uint)mesh.Indices.Length, slot);
+        var (minimum, maximum) = BoundsOf(mesh);
+        var slice = new Slice(_vertexUsed, _indexUsed, (uint)mesh.Indices.Length, slot, minimum, maximum);
         _queue.WriteBuffer(_vertex, slice.VertexOffset, mesh.Vertices.AsSpan());
         _queue.WriteBuffer(_index, slice.IndexOffset, mesh.Indices.AsSpan());
         WriteDrawArgs(slice);
@@ -187,9 +188,23 @@ public sealed class ChunkGeometryArena : IDisposable
         _slices[chunkKey] = slice;
     }
 
+    /// <summary>Chunks the last culled draw skipped.</summary>
+    public int CulledLastFrame { get; private set; }
+
     /// <summary>Draws every resident chunk, one range each.</summary>
     /// <param name="pass">Render pass to record into.</param>
-    public void Draw(RenderPassEncoder pass)
+    public void Draw(RenderPassEncoder pass) => Draw(pass, default);
+
+    /// <summary>
+    /// Draws the resident chunks, skipping any whose bounds fall outside the frustum.
+    /// </summary>
+    /// <param name="pass">Render pass to record into.</param>
+    /// <param name="planes">Six inward facing frustum planes, or fewer to draw everything.</param>
+    /// <remarks>
+    /// This is the CPU reference for the compute cull pass: same visibility test, same result, so the two can be compared
+    /// and the GPU path can be dropped back to this one when compute is unavailable.
+    /// </remarks>
+    public void Draw(RenderPassEncoder pass, ReadOnlySpan<System.Numerics.Vector4> planes)
     {
         if (_slices.Count == 0)
         {
@@ -201,8 +216,16 @@ public sealed class ChunkGeometryArena : IDisposable
         // One binding for the whole index buffer: each record carries its own first index and base vertex.
         pass.SetIndexBuffer(_index, WGPUIndexFormat.Uint32, 0, _indexCapacity);
 
+        CulledLastFrame = 0;
+
         foreach (var slice in _slices.Values)
         {
+            if (planes.Length >= 6 && !FrustumPlanes.IsVisible(planes, slice.Minimum, slice.Maximum))
+            {
+                CulledLastFrame++;
+                continue;
+            }
+
             pass.DrawIndexedIndirect(_drawArgs, (ulong)(slice.Slot * DrawArgBytes));
         }
     }
@@ -230,6 +253,32 @@ public sealed class ChunkGeometryArena : IDisposable
             Size = Math.Min(vertexCapacity, MaxBufferBytes),
             Usage = usage | BufferUsage.CopyDst
         });
+
+    /// <summary>World space bounds of a mesh, from its positions.</summary>
+    /// <param name="mesh">Geometry whose bounds to compute.</param>
+    private (System.Numerics.Vector3 Minimum, System.Numerics.Vector3 Maximum) BoundsOf(GeometryData mesh)
+    {
+        var stride = _bytesPerVertex / sizeof(float);
+        var vertices = mesh.Vertices;
+        var minimum = new System.Numerics.Vector3(float.MaxValue);
+        var maximum = new System.Numerics.Vector3(float.MinValue);
+
+        for (var index = 0; index + 2 < vertices.Length; index += stride)
+        {
+            var x = vertices[index];
+            var y = vertices[index + 1];
+            var z = vertices[index + 2];
+
+            if (x < minimum.X) { minimum.X = x; }
+            if (y < minimum.Y) { minimum.Y = y; }
+            if (z < minimum.Z) { minimum.Z = z; }
+            if (x > maximum.X) { maximum.X = x; }
+            if (y > maximum.Y) { maximum.Y = y; }
+            if (z > maximum.Z) { maximum.Z = z; }
+        }
+
+        return (minimum, maximum);
+    }
 
     private static long SizeOf(GeometryData mesh) =>
         ((long)mesh.Vertices.Length * sizeof(float)) + ((long)mesh.Indices.Length * sizeof(uint));
@@ -299,7 +348,8 @@ public sealed class ChunkGeometryArena : IDisposable
                 continue;
             }
 
-            var slice = new Slice(_vertexUsed, _indexUsed, (uint)mesh.Indices.Length, slot);
+            var (minimum, maximum) = BoundsOf(mesh);
+            var slice = new Slice(_vertexUsed, _indexUsed, (uint)mesh.Indices.Length, slot, minimum, maximum);
             _queue.WriteBuffer(_vertex, slice.VertexOffset, mesh.Vertices.AsSpan());
             _queue.WriteBuffer(_index, slice.IndexOffset, mesh.Indices.AsSpan());
             WriteDrawArgs(slice);
@@ -345,5 +395,11 @@ public sealed class ChunkGeometryArena : IDisposable
     /// <param name="IndexOffset">Byte offset into the index buffer.</param>
     /// <param name="IndexCount">Indices this chunk draws.</param>
     /// <param name="Slot">Its indirect draw record.</param>
-    private readonly record struct Slice(ulong VertexOffset, ulong IndexOffset, uint IndexCount, int Slot);
+    private readonly record struct Slice(
+        ulong VertexOffset,
+        ulong IndexOffset,
+        uint IndexCount,
+        int Slot,
+        System.Numerics.Vector3 Minimum,
+        System.Numerics.Vector3 Maximum);
 }
