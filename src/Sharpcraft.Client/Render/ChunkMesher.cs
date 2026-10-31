@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using Sharpcraft.Client.World;
+using Sharpcraft.Common.Registries;
 using Sharpcraft.Common.World;
 
 using Sharpcraft.Client.Assets;
@@ -190,7 +191,7 @@ public static class ChunkMesher
                         continue;
                     }
 
-                    if (!TryDescribe(world, section, direction, uAxis, vAxis, slice, u, v, baseX, baseY, baseZ, airState, out var key))
+                    if (!TryDescribe(world, section, direction, uAxis, vAxis, slice, u, v, baseX, baseY, baseZ, airState, sprites, layout, out var key))
                     {
                         continue;
                     }
@@ -198,7 +199,7 @@ public static class ChunkMesher
                     var width = 1;
                     while (u + width < 16 &&
                            !consumed[(v << 4) | (u + width)] &&
-                           TryDescribe(world, section, direction, uAxis, vAxis, slice, u + width, v, baseX, baseY, baseZ, airState, out var next) &&
+                           TryDescribe(world, section, direction, uAxis, vAxis, slice, u + width, v, baseX, baseY, baseZ, airState, sprites, layout, out var next) &&
                            next == key)
                     {
                         width++;
@@ -206,7 +207,7 @@ public static class ChunkMesher
 
                     var height = 1;
                     while (v + height < 16 &&
-                           RowMatches(world, section, direction, uAxis, vAxis, slice, u, v + height, width, baseX, baseY, baseZ, airState, key, consumed))
+                           RowMatches(world, section, direction, uAxis, vAxis, slice, u, v + height, width, baseX, baseY, baseZ, airState, sprites, layout, key, consumed))
                     {
                         height++;
                     }
@@ -239,6 +240,8 @@ public static class ChunkMesher
         int baseY,
         int baseZ,
         int airState,
+        BlockSpriteMap? sprites,
+        BlockStateLayout? layout,
         MergeKey key,
         Span<bool> consumed)
     {
@@ -249,7 +252,7 @@ public static class ChunkMesher
                 return false;
             }
 
-            if (!TryDescribe(world, section, direction, uAxis, vAxis, slice, u + du, v, baseX, baseY, baseZ, airState, out var candidate) ||
+            if (!TryDescribe(world, section, direction, uAxis, vAxis, slice, u + du, v, baseX, baseY, baseZ, airState, sprites, layout, out var candidate) ||
                 candidate != key)
             {
                 return false;
@@ -276,6 +279,8 @@ public static class ChunkMesher
         int baseY,
         int baseZ,
         int airState,
+        BlockSpriteMap? sprites,
+        BlockStateLayout? layout,
         out MergeKey key)
     {
         key = default;
@@ -292,14 +297,36 @@ public static class ChunkMesher
         var sampleY = baseY + y + dy;
         var sampleZ = baseZ + z + dz;
 
-        if (world.GetBlockState(sampleX, sampleY, sampleZ, airState) != airState)
+        var neighbour = world.GetBlockState(sampleX, sampleY, sampleZ, airState);
+
+        if (neighbour != airState && (neighbour == state || Occludes(neighbour, sprites, layout)))
         {
+            // Only an occluding neighbour hides a face. Culling whenever the neighbour is merely non air hides the ground
+            // under water and glass, which showed as holes with the sky behind them.
             return false;
         }
 
         world.TryGetLight(sampleX, sampleY, sampleZ, out var sky, out var block);
         key = new MergeKey(state, sky, block);
         return true;
+    }
+
+    /// <summary>
+    /// True when a block hides the face of its neighbour: fully opaque, so a hole or a blend cannot show through.
+    /// </summary>
+    /// <param name="state">Neighbouring block state.</param>
+    /// <param name="sprites">Sprite map, for the alpha content.</param>
+    /// <param name="layout">Layout used to name the state.</param>
+    private static bool Occludes(int state, BlockSpriteMap? sprites, BlockStateLayout? layout)
+    {
+        if (sprites is null || layout?.BlockAt(state) is not { } block)
+        {
+            // Without an atlas or layout nothing better is known; keeping the old behaviour is the safe default.
+            return true;
+        }
+
+        var transparency = sprites.TransparencyOf(block);
+        return !transparency.HasTransparent && !transparency.HasTranslucent;
     }
 
     private static (int X, int Y, int Z) FaceBlock(int uAxis, int vAxis, int slice, int u, int v)
