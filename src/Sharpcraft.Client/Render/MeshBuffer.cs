@@ -143,6 +143,29 @@ public sealed class MeshBuffer : IDisposable
         _indices[_indexCount++] = first + 3;
     }
 
+    /// <summary>
+    /// Appends a quad and its reverse winding. The reference draws fluid faces double-sided (addFace's addBackFace), so a
+    /// fluid quad in an opaque/depth-culling pass must cover both sides or back-face culling eats it.
+    /// </summary>
+    public void AppendQuadDoubleSided(
+        (float X, float Y, float Z) a,
+        (float X, float Y, float Z) b,
+        (float X, float Y, float Z) c,
+        (float X, float Y, float Z) d,
+        (float R, float G, float B) colourA,
+        (float R, float G, float B) colourB,
+        (float R, float G, float B) colourC,
+        (float R, float G, float B) colourD,
+        (float U, float V) uvA,
+        (float U, float V) uvB,
+        (float U, float V) uvC,
+        (float U, float V) uvD,
+        SpriteRect? sprite = null)
+    {
+        AppendQuad(a, b, c, d, colourA, colourB, colourC, colourD, uvA, uvB, uvC, uvD, sprite);
+        AppendQuad(a, d, c, b, colourA, colourD, colourC, colourB, uvA, uvD, uvC, uvB, sprite);
+    }
+
     /// <summary>Copies the written geometry into exactly sized arrays.</summary>
     public MeshData ToMeshData(int blockCount) =>
         new(Vertices.ToArray(), Indices.ToArray(), blockCount);

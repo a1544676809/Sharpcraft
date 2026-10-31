@@ -730,7 +730,25 @@ public static class ChunkMesher
                     }
 
                     var fluidPath = fluidBlockRef.Path;
-                    var target = fluidPath == "lava" ? opaque : translucent;
+                    var sink = fluidPath == "lava" ? opaque : translucent;
+                    var lavaSink = fluidPath == "lava";
+                    void Emit(
+                        (float X, float Y, float Z) a, (float X, float Y, float Z) b,
+                        (float X, float Y, float Z) c, (float X, float Y, float Z) d,
+                        (float R, float G, float B) colourA, (float R, float G, float B) colourB,
+                        (float R, float G, float B) colourC, (float R, float G, float B) colourD,
+                        (float U, float V) uvA, (float U, float V) uvB, (float U, float V) uvC, (float U, float V) uvD,
+                        SpriteRect? sprite)
+                    {
+                        if (lavaSink)
+                        {
+                            sink.AppendQuadDoubleSided(a, b, c, d, colourA, colourB, colourC, colourD, uvA, uvB, uvC, uvD, sprite);
+                        }
+                        else
+                        {
+                            sink.AppendQuad(a, b, c, d, colourA, colourB, colourC, colourD, uvA, uvB, uvC, uvD, sprite);
+                        }
+                    }
 
                     var bx = baseX + x;
                     var by = baseY + y;
@@ -858,7 +876,7 @@ public static class ChunkMesher
                             var angle = MathF.Atan2(flowZ, flowX) - (MathF.PI / 2f);
                             var s = MathF.Sin(angle) * 0.25f;
                             var c = MathF.Cos(angle) * 0.25f;
-                            target.AppendQuad(
+                            Emit(
                                 (fx, lowY + Corner(0, 0) - epsilon, fz),
                                 (fx, lowY + Corner(0, 1) - epsilon, fz + 1f),
                                 (fx + 1f, lowY + Corner(1, 1) - epsilon, fz + 1f),
@@ -872,7 +890,7 @@ public static class ChunkMesher
                         }
                         else
                         {
-                            target.AppendQuad(
+                            Emit(
                                 (fx, lowY + Corner(0, 0) - epsilon, fz),
                                 (fx, lowY + Corner(0, 1) - epsilon, fz + 1f),
                                 (fx + 1f, lowY + Corner(1, 1) - epsilon, fz + 1f),
@@ -888,7 +906,7 @@ public static class ChunkMesher
                     {
                         var colour = Face(0.5f);
                         var yb = lowY + epsilon;
-                        target.AppendQuad(
+                        Emit(
                             (fx, yb, fz), (fx + 1f, yb, fz), (fx + 1f, yb, fz + 1f), (fx, yb, fz + 1f),
                             colour, colour, colour, colour,
                             (0f, 0f), (1f, 0f), (1f, 1f), (0f, 1f),
@@ -912,7 +930,7 @@ public static class ChunkMesher
                     if (!IsSameFluid(bx, by, bz - 1) && !IsSolid(bx, by, bz - 1))
                     {
                         var colour = Face(0.8f);
-                        target.AppendQuad(
+                        Emit(
                             (fx, c00, nz), (fx + 1f, c10, nz), (fx + 1f, lowY, nz), (fx, lowY, nz),
                             colour, colour, colour, colour,
                             (0f, (1f - Corner(0, 0)) * 0.5f),
@@ -926,7 +944,7 @@ public static class ChunkMesher
                     if (!IsSameFluid(bx, by, bz + 1) && !IsSolid(bx, by, bz + 1))
                     {
                         var colour = Face(0.8f);
-                        target.AppendQuad(
+                        Emit(
                             (fx + 1f, c11, sz), (fx, c01, sz), (fx, lowY, sz), (fx + 1f, lowY, sz),
                             colour, colour, colour, colour,
                             (0f, (1f - Corner(1, 1)) * 0.5f),
@@ -940,7 +958,7 @@ public static class ChunkMesher
                     if (!IsSameFluid(bx - 1, by, bz) && !IsSolid(bx - 1, by, bz))
                     {
                         var colour = Face(0.6f);
-                        target.AppendQuad(
+                        Emit(
                             (wx, c01, fz + 1f), (wx, c00, fz), (wx, lowY, fz), (wx, lowY, fz + 1f),
                             colour, colour, colour, colour,
                             (0f, (1f - Corner(0, 1)) * 0.5f),
@@ -954,7 +972,7 @@ public static class ChunkMesher
                     if (!IsSameFluid(bx + 1, by, bz) && !IsSolid(bx + 1, by, bz))
                     {
                         var colour = Face(0.6f);
-                        target.AppendQuad(
+                        Emit(
                             (ex, c10, fz), (ex, c11, fz + 1f), (ex, lowY, fz + 1f), (ex, lowY, fz),
                             colour, colour, colour, colour,
                             (0f, (1f - Corner(1, 0)) * 0.5f),
