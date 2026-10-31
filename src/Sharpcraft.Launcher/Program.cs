@@ -218,7 +218,7 @@ internal static class Program
 
                 Console.WriteLine(
                     $"protocol: ticks={result.TicksSent} corrections={result.Corrections} distance={result.Distance:F2} " +
-                    $"keepalives={result.KeepAliveReplies} batchacks={result.BatchAcks} speed={result.Speed:F3} survived={result.Survived}");
+                    $"keepalives={result.KeepAliveReplies} batchacks={result.BatchAcks} survived={result.Survived}");
 
                 if (!result.Survived)
                 {
