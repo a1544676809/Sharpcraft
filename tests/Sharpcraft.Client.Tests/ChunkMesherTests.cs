@@ -136,6 +136,7 @@ public sealed class ChunkMesherTests
     public void FacesAreShadedByFacingSoTopIsBrightest()
     {
         var world = SingleBlockWorld(2);
+        world.GetChunk(0, 0)!.Light.FillSkyLight(15);
 
         var mesh = ChunkMesher.Mesh(world);
 
@@ -159,7 +160,9 @@ public sealed class ChunkMesherTests
         var litColour = ChunkMesher.Mesh(lit).Vertices[3];
 
         Assert.True(litColour > darkColour, $"lit {litColour} should be brighter than dark {darkColour}");
-        Assert.True(darkColour > 0f, "unlit geometry must not go pure black");
+
+        // Vanilla has no ambient light in the overworld, so zero light really is black (docs/specs/render/lighting.md 3).
+        Assert.Equal(0f, darkColour, 5);
     }
 
     [Fact]

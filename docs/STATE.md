@@ -1825,3 +1825,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 **下一步/未做**：原版 `Lightmap` 曲线（`light_brightness(x)=x/(4-3x)` + 环境光 + 天空/方块光颜色 + 时间 darkening）。
 现在 `Brightness()` 仍是线性近似（在满光=1、中高光比原版偏亮，不会再偏暗）。若要逐值对齐再做。
+
+## 2026-10-31 接入原版 lightmap（草案已实现，配等效性测试）
+
+- 新增行为规格 `docs/specs/render/lighting.md`：lightmap 公式（`x/(4-3x)` 曲线、天光/方块光颜色、环境光、notGamma、亮度混合）、overworld 白天默认参数、色彩空间、等效性测试计划、已知偏差。
+- 新增 `src/Sharpcraft.Client/Render/VanillaLightmap.cs`（§3 纯函数 + `LightmapParameters`，白天 overworld 默认）；`ChunkMesher.CornerShade` 改用它替换旧线性 `Brightness`，删除 `MinimumBrightness`。
+- 等效性单测 `VanillaLightmapTests`（手算值：满光=白、无光=黑、sky12≈0.71875、方块光暖色）。全量 **1136 通过**、门禁 ok。
+- 行为变化：无光面现在按原版为**黑**（旧 0.12 地板移除）；中高光比旧线性偏暗更接近原版曲线。
+- 未做：夜晚/天气/维度 timeline 插值、夜视/Darkness/Boss、亮度滑块接入。

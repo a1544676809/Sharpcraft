@@ -34,9 +34,6 @@ public static class ChunkMesher
     /// <summary>Indices per quad (two triangles).</summary>
     public const int IndicesPerQuad = 6;
 
-    /// <summary>Darkest a face can get; keeps unlit caves legible instead of pure black.</summary>
-    public const float MinimumBrightness = 0.12f;
-
     /// <summary>Shading applied to faces looking up.</summary>
     public const float TopShade = 1.0f;
 
@@ -618,9 +615,13 @@ public static class ChunkMesher
         // Ambient occlusion is the average shade brightness of the four cells meeting at the corner, matching the
         // reference: a solid neighbour contributes 0.2 and air/transparent 1.0, so the vertex levels are 1.0/0.8/0.6/0.4.
         var occlusion = shade * 0.25f;
-        var brightness = Brightness(light) * shadeFactor * occlusion;
 
-        return (red * brightness, green * brightness, blue * brightness);
+        // Vanilla lightmap multiplier (linear RGB) from the averaged light, times the directional shade and AO. The
+        // terrain shader decodes the texel, multiplies by this, and re-encodes (docs/specs/render/lighting.md 3-5).
+        var lightmap = VanillaLightmap.Colour(light.Item1, light.Item2);
+        var scalar = shadeFactor * occlusion;
+
+        return (red * lightmap.X * scalar, green * lightmap.Y * scalar, blue * lightmap.Z * scalar);
     }
 
     /// <summary>Shade brightness a cell contributes to a neighbouring vertex: 0.2 when solid, 1.0 otherwise.</summary>
@@ -919,17 +920,6 @@ public static class ChunkMesher
         NegativeY => BlockFace.Bottom,
         _ => BlockFace.Side
     };
-
-    /// <summary>
-    /// Brightness of a cell from its light levels. Sky and block light are combined with max,
-    /// normalised over 0..15 and floored, which is close enough to the vanilla lightmap for a
-    /// first pass without claiming to match it exactly.
-    /// </summary>
-    public static float Brightness((byte Sky, byte Block) light)
-    {
-        var level = light.Sky > light.Block ? light.Sky : light.Block;
-        return MinimumBrightness + (1f - MinimumBrightness) * (level / 15f);
-    }
 
     /// <summary>Deterministic colour from a block state id, so the same world always looks the same.</summary>
     public static (float Red, float Green, float Blue) ColourOf(int state)

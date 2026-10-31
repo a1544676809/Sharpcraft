@@ -21,6 +21,6 @@
 | --- | --- |
 | [`network/`](network/README.md) | 6 |
 | [`quality/`](quality/README.md) | 1 |
-| [`render/`](render/README.md) | 8 |
+| [`render/`](render/README.md) | 9 |
 
 <!-- END GENERATED: docs/specs -->
