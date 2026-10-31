@@ -50,7 +50,8 @@ public static class WindowedRenderer
         IReadOnlyList<TextureData>? spriteTextures = null,
         UiTextureSource? textureSource = null,
         AtlasTextureSource? atlasSource = null,
-        Func<int>? geometryEpoch = null)
+        Func<int>? geometryEpoch = null,
+    FrameDiagnostics? diagnostics = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -174,8 +175,8 @@ public static class WindowedRenderer
         fogValues[1] = 0.85f;
         fogValues[2] = 1.0f;
         fogValues[3] = 1.0f;
-        fogValues[4] = Environment.GetEnvironmentVariable("MC_FOG_START") is { } startText && float.TryParse(startText, out var fogStart) ? fogStart : 64f;
-        fogValues[5] = Environment.GetEnvironmentVariable("MC_FOG_END") is { } endText && float.TryParse(endText, out var fogEnd) ? fogEnd : 160f;
+        fogValues[4] = diagnostics?.FogStart ?? 64f;
+        fogValues[5] = diagnostics?.FogEnd ?? 160f;
         System.Runtime.InteropServices.MemoryMarshal.AsBytes(fogValues.AsSpan()).CopyTo(fogBytes);
         using var fogBuffer = device.CreateBufferInit(
             new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },

@@ -63,9 +63,8 @@ public static class OffscreenRenderer
         int height)
     {
         System.Numerics.Matrix4x4.Invert(viewProjection, out var inverse);
-        var shiftText = Environment.GetEnvironmentVariable("MC_FRAME_MOTION_DX");
-        var shift = float.TryParse(shiftText, out var shiftValue) ? shiftValue : 1f;
-        var shiftBy = new System.Numerics.Vector3(shift, 0f, 0f);
+        var shift = request.Diagnostics?.MotionShiftX ?? 0f;
+        var shiftBy = new System.Numerics.Vector3(shift == 0f ? 1f : shift, 0f, 0f);
         var previous = CameraMath.BuildViewProjection(
             request.CameraPosition + shiftBy,
             request.CameraTarget + shiftBy,
@@ -326,7 +325,7 @@ public static class OffscreenRenderer
     /// The translucent pipeline: the same shader and layout as terrain, but blending on and depth writes off so layers
     /// behind still show through and the order of the draw calls matters.
     /// </summary>
-    private static RenderPipeline CreateTranslucentPipeline(Device device, PipelineLayout layout)
+    private static RenderPipeline CreateTranslucentPipeline(Device device, PipelineLayout layout, bool alphaOne)
     {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
         {
@@ -337,7 +336,7 @@ public static class OffscreenRenderer
             shader,
             "vs_main"u8,
             shader,
-            Environment.GetEnvironmentVariable("MC_FRAME_ALPHA_ONE") == "1" ? "fs_main"u8 : "fs_translucent"u8,
+            alphaOne ? "fs_main"u8 : "fs_translucent"u8,
             [
                 new ColorTargetState
                 {
@@ -552,8 +551,8 @@ public static class OffscreenRenderer
             fogValues[1] = 0.85f;
             fogValues[2] = 1.0f;
             fogValues[3] = 1.0f;
-            fogValues[4] = Environment.GetEnvironmentVariable("MC_FOG_START") is { } startText && float.TryParse(startText, out var start) ? start : 64f;
-            fogValues[5] = Environment.GetEnvironmentVariable("MC_FOG_END") is { } endText && float.TryParse(endText, out var end) ? end : 160f;
+            fogValues[4] = request.Diagnostics?.FogStart ?? 64f;
+            fogValues[5] = request.Diagnostics?.FogEnd ?? 160f;
             System.Runtime.InteropServices.MemoryMarshal.AsBytes(fogValues.AsSpan()).CopyTo(fogBytes);
             using var fogBuffer = device.CreateBufferInit(
                 new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
@@ -680,7 +679,7 @@ public static class OffscreenRenderer
                 request.TranslucentIndices is { Length: > 0 } translucentIndices)
             {
                 // Blended, no depth writes, drawn last: the order of these calls is what makes overlapping water read right.
-                using var translucentPipeline = CreateTranslucentPipeline(device, pipelineLayout);
+                using var translucentPipeline = CreateTranslucentPipeline(device, pipelineLayout, request.Diagnostics?.AlphaOne == true);
                 using var translucentVertexBuffer = device.CreateBufferInit(
                     new BufferInitDescriptor { Usage = BufferUsage.Vertex },
                     translucentVertices.AsSpan());
@@ -731,7 +730,7 @@ public static class OffscreenRenderer
             var pyramidReadbacks = new List<Brew.Wgpu.Buffer>();
             var pyramidParameters = new List<Brew.Wgpu.Buffer>();
             var pyramidSizes = new List<(int Width, int Height)>();
-            var hasPyramid = Environment.GetEnvironmentVariable("MC_FRAME_PYRAMID") == "1";
+            var hasPyramid = request.Diagnostics?.BuildPyramid == true;
 
             if (hasPyramid)
             {
@@ -830,7 +829,7 @@ public static class OffscreenRenderer
 
             Brew.Wgpu.Buffer motionOutput = default;
             Brew.Wgpu.Buffer motionReadback = default;
-            var hasMotion = Environment.GetEnvironmentVariable("MC_FRAME_MOTION") == "1";
+            var hasMotion = request.Diagnostics?.MotionVectors == true;
 
             if (hasMotion)
             {
@@ -868,9 +867,8 @@ public static class OffscreenRenderer
                     motionParameterBytes.AsSpan());
 
                 // Previous camera: the same view shifted along X, so the motion has a known sign and magnitude.
-                var shiftText = Environment.GetEnvironmentVariable("MC_FRAME_MOTION_DX");
-                var shift = float.TryParse(shiftText, out var shiftValue) ? shiftValue : 1f;
-                var shiftBy = new System.Numerics.Vector3(shift, 0f, 0f);
+                var shift = request.Diagnostics?.MotionShiftX ?? 0f;
+                var shiftBy = new System.Numerics.Vector3(shift == 0f ? 1f : shift, 0f, 0f);
                 var previousViewProjection = CameraMath.BuildViewProjection(
                     request.CameraPosition + shiftBy,
                     request.CameraTarget + shiftBy,
@@ -939,7 +937,7 @@ public static class OffscreenRenderer
             readback.Unmap();
             readback.Dispose();
 
-            if (Environment.GetEnvironmentVariable("MC_FRAME_DEPTH") == "1")
+            if (request.Diagnostics?.ReadDepth == true)
             {
                 depthPixels = ReportDepth(instance, depthReadback, depthSize, depthPadded, (int)width, (int)height);
             }

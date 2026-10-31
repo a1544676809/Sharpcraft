@@ -61,10 +61,7 @@ public sealed class ChatLog
     public const uint ModifiedTagColour = 0xFF606060u;
 
     /// <summary>Background wash behind each line.</summary>
-    public static float BackgroundOpacity { get; set; } =
-        float.TryParse(Environment.GetEnvironmentVariable("MC_TEXT_BACKGROUND_OPACITY"), out var opacity)
-            ? Math.Clamp(opacity, 0f, 1f)
-            : 0.5f;
+    public static float BackgroundOpacity { get; set; } = 0.5f;
 
     /// <summary>Text opacity at the default setting.</summary>
     public const float TextOpacity = 1f;

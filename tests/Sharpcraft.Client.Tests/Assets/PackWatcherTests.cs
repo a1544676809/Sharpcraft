@@ -19,6 +19,21 @@ public sealed class PackWatcherTests : IDisposable
     [Fact]
     public void ABurstOfWritesIsReportedOnce()
     {
+        // The switch is host owned now (principle 13): turn it on for this test only.
+        PackWatcher.IsEnabled = true;
+
+        try
+        {
+            ABurstOfWritesIsReportedOnceCore();
+        }
+        finally
+        {
+            PackWatcher.IsEnabled = false;
+        }
+    }
+
+    private void ABurstOfWritesIsReportedOnceCore()
+    {
         using var watcher = new PackWatcherProbe(_root);
 
         // Three writes in quick succession, the way an editor saves.

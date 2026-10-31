@@ -24,6 +24,15 @@ public sealed record LoginOutcome(
 /// </summary>
 public static class MinecraftLoginClient
 {
+    /// <summary>
+    /// Name to present instead of the authenticated profile name; the host sets it for offline test servers.
+    /// </summary>
+    /// <remarks>
+    /// The host parses its own configuration, so the protocol code reads no environment (principle 13). An online mode
+    /// server still rejects a name that does not match the session, so this cannot be used to impersonate anyone.
+    /// </remarks>
+    public static string? LoginNameOverride { get; set; }
+
     /// <summary>Runs the login phase against a resolved endpoint.</summary>
     /// <param name="address">Server address as typed; SRV resolution is applied.</param>
     /// <param name="profile">Player name and profile id.</param>
@@ -63,9 +72,7 @@ public static class MinecraftLoginClient
             // Diagnostic hook: an offline-mode server accepts any name, which is what makes it possible to run two
         // clients side by side for equivalence checks. An online-mode server rejects a name that does not match
         // the authenticated session, so this cannot be used to impersonate anyone.
-        var loginName = Environment.GetEnvironmentVariable("MC_LOGIN_NAME") is { Length: > 0 } overrideName
-            ? overrideName
-            : profile.Name;
+        var loginName = LoginNameOverride is { Length: > 0 } overrideName ? overrideName : profile.Name;
 
         var loginStartLength = LoginPackets.WriteLoginStart(loginStart, loginName, profileId);
             connection.Send(loginStart.AsSpan(0, loginStartLength));

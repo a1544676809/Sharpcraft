@@ -39,6 +39,9 @@ public sealed record FrameRequest(
     /// </summary>
     public TextureData? Atlas { get; init; }
 
+    /// <summary>Host supplied diagnostic options, or null for the plain frame.</summary>
+    public FrameDiagnostics? Diagnostics { get; init; }
+
     /// <summary>
     /// Index ranges to draw separately, one per chunk. Null draws everything in one call.
     /// </summary>

@@ -877,3 +877,13 @@ updated: 2026-10-29
 - 落地要求：调试代码集中在可整体删除的独立位置；游戏程序集不得读环境变量；由宿主层解析后以显式选项传入；
   `tools/verify/check-diagnostics-separation.ps1` + 架构测试断言违规数为 0。
 - 当前违规 **18 处**（Framework 12 / Client 3 / Common 3），列为债务：先清零，再让架构测试进 CI 门禁。
+
+## 2026-10-31 第 20 轮：原则 13 落地（18 处违规清零）
+
+- 把游戏程序集（Framework/Client/Common）里 18 处 `GetEnvironmentVariable` **全部**搬走：
+  - 新增 `src/Sharpcraft.Launcher/Diagnostics/HostDebugOptions.cs`（宿主层唯一解析点）+ `docs/src/sharpcraft-launcher/diagnostics.md`
+  - `Common`：`MinecraftLoginClient.LoginNameOverride`、`PlaySession.ChunkDumpDirectory`；删掉 `PlayerChatPackets` 里遗留的字段追踪
+  - `Client`：`PackWatcher.IsEnabled`、`ChatLog.BackgroundOpacity`、`ChunkWorkerPool(..., fifoMeshOrder:)`
+  - `Framework`：新增 `FrameDiagnostics`（雾距/深度/金字塔/运动向量/alpha/缩放/输入追踪），`WindowHost.Create(..., guiScaleOverride, inputTrace)`
+- 全部为**行为中性**改动：默认值等于"调试关闭"（雾 64/160、缩放自动、其余 false）。
+- 自动化：`check-diagnostics-separation.ps1` → **violations=0 PASS**；新增架构测试 `DiagnosticsSeparationTests`（31 个架构测试全过）；全量 7 套 1096 用例通过。

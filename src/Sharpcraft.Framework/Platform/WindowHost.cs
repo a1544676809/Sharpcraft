@@ -28,7 +28,15 @@ public sealed class WindowHost : IDisposable
     private bool _handCursorActive;
     private bool _cursorReady;
 
-    private WindowHost(IWindow window) => _window = window;
+    private readonly int _guiScaleOverride;
+    private readonly bool _inputTrace;
+
+    private WindowHost(IWindow window, int guiScaleOverride = 0, bool inputTrace = false)
+    {
+        _window = window;
+        _guiScaleOverride = guiScaleOverride;
+        _inputTrace = inputTrace;
+    }
 
     /// <summary>Window width in pixels.</summary>
     public int Width => _window.Size.X;
@@ -53,7 +61,7 @@ public sealed class WindowHost : IDisposable
     }
 
     /// <summary>Creates and initialises a window.</summary>
-    public static WindowHost Create(string title, int width, int height)
+    public static WindowHost Create(string title, int width, int height, int guiScaleOverride = 0, bool inputTrace = false)
     {
         var options = WindowOptions.Default with
         {
@@ -137,13 +145,11 @@ public sealed class WindowHost : IDisposable
         _handle = handle;
 
         // Zero means "as large as fits", which is the reference's default. A fixed value is honoured for testing.
-        _scaleOption = int.TryParse(Environment.GetEnvironmentVariable("MC_GUI_SCALE"), out var configured)
-            ? configured
-            : GuiScale.Auto;
+        _scaleOption = _guiScaleOverride;
 
         RefreshGuiScale();
 
-        var trace = Environment.GetEnvironmentVariable("MC_INPUT_TRACE") == "1";
+        var trace = _inputTrace;
 
         glfw.SetKeyCallback(handle, (window, key, scancode, action, mods) =>
         {

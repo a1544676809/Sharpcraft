@@ -33,6 +33,12 @@ public sealed record PlaySessionStats(
 /// </summary>
 public static class PlaySession
 {
+    /// <summary>
+    /// Directory that failed chunk packets are written to, or null to skip the dump.
+    /// </summary>
+    /// <remarks>Set by the host from its own configuration; the protocol code reads no environment (principle 13).</remarks>
+    public static string? ChunkDumpDirectory { get; set; }
+
     /// <summary>Runs the loop for a bounded time.</summary>
     /// <param name="connection">Connection already in the play phase.</param>
     /// <param name="duration">How long to stay connected.</param>
@@ -96,7 +102,7 @@ public static class PlaySession
 
                         var status = ChunkPacketParser.TryRead(
                             body, layout.SectionCount, layout.MinSectionY, layout.AirState, out var parsed);
-                        if (Environment.GetEnvironmentVariable("MC_DUMP_CHUNK_DIR") is { Length: > 0 } dumpDir &&
+                        if (ChunkDumpDirectory is { Length: > 0 } dumpDir &&
                             status != DecodeStatus.Success)
                         {
                             Directory.CreateDirectory(dumpDir);

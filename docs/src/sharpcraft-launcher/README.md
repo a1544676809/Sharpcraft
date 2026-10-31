@@ -9,6 +9,6 @@
 
 | 文档 | 摘要 | 状态 | 最后更新 |
 | --- | --- | --- | --- |
-| [`benchmarking.md`](benchmarking.md) | 只服务于开发期测量的代码，默认不生效。 | 未标注 | - |
+| [`diagnostics.md`](diagnostics.md) | 把宿主层（启动器 / 工具）的调试开关解析为显式值，交给游戏程序集使用。 | 未标注 | - |
 
 <!-- END GENERATED: docs/src/sharpcraft-launcher -->

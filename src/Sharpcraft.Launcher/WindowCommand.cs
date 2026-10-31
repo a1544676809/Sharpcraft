@@ -108,7 +108,7 @@ internal static class WindowCommand
             : prepared.Value.Map.ForBlock(new Sharpcraft.Common.Identifiers.Identifier("minecraft", "stone"));
 
 
-        var workerPool = new ChunkWorkerPool(world, prepared?.Map);
+        var workerPool = new ChunkWorkerPool(world, prepared?.Map, fifoMeshOrder: Sharpcraft.Launcher.Diagnostics.HostDebugOptions.FifoMeshOrder);
         Console.WriteLine($"chunk workers: {workerPool.WorkerCount} (of {Environment.ProcessorCount} logical processors)");
 
         var meshCache = new ChunkMeshCache(workerPool);
@@ -438,6 +438,7 @@ internal static class WindowCommand
             textureSource: uiTextures,
             atlasSource: atlasSource,
             geometryEpoch: () => geometryEpoch,
+            diagnostics: Sharpcraft.Launcher.Diagnostics.HostDebugOptions.ForFrame(),
             uiGeometry: frame =>
             {
                 // Mesh work is ordered by distance, so the pool needs to know where the player is each frame.

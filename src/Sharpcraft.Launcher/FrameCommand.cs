@@ -975,6 +975,7 @@ internal static class FrameCommand
             eye,
             target)
         {
+        Diagnostics = Sharpcraft.Launcher.Diagnostics.HostDebugOptions.ForFrame(),
             Atlas = atlas,
             DrawRanges = drawRanges,
             TranslucentVertices = translucentVertices,

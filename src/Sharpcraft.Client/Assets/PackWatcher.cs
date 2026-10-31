@@ -51,9 +51,11 @@ public sealed class PackWatcher : IDisposable
         }
     }
 
-    /// <summary>True when the switch is on.</summary>
-    public static bool IsEnabled =>
-        string.Equals(Environment.GetEnvironmentVariable(SwitchName), "1", StringComparison.Ordinal);
+    /// <summary>
+    /// True when watching is enabled. The host sets this from its own configuration.
+    /// </summary>
+    /// <remarks>The client reads no environment (principle 13).</remarks>
+    public static bool IsEnabled { get; set; }
 
     /// <summary>Number of folders actually being watched.</summary>
     public int FolderCount => _watchers.Count;

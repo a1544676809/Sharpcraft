@@ -35,7 +35,7 @@ public sealed class ChunkWorkerPool : IDisposable
     // happened to deliver first. Ties fall back to arrival order through the sequence number.
     private readonly object _meshGate = new();
     private readonly PriorityQueue<long, (double Distance, long Sequence)> _meshQueue = new();
-    private readonly bool _meshFifo = Environment.GetEnvironmentVariable("MC_MESH_FIFO") == "1";
+    private readonly bool _meshFifo;
     private long _meshSequence;
     private float _viewChunkX;
     private float _viewChunkZ;
@@ -78,10 +78,12 @@ public sealed class ChunkWorkerPool : IDisposable
         BlockSpriteMap? sprites = null,
         int? workerCount = null,
         int maxQueuedParses = 64,
-        int maxQueuedMeshes = 1024)
+        int maxQueuedMeshes = 1024,
+        bool fifoMeshOrder = false)
     {
         ArgumentNullException.ThrowIfNull(world);
 
+        _meshFifo = fifoMeshOrder;
         _world = world;
         _sprites = sprites;
         _maxQueuedParses = maxQueuedParses;
