@@ -141,7 +141,10 @@ public sealed class NbtCompound : NbtTag
     /// <summary>Adds or replaces a child.</summary>
     public NbtCompound Set(string name, NbtTag value)
     {
-        ArgumentException.ThrowIfNullOrEmpty(name);
+        // An empty key is legal: the reference reads keys with readUtf into a plain map and never rejects "", and a list
+        // of compounds serialises each element without a name, which is exactly the shape a translated chat component
+        // uses for its arguments. Rejecting it aborted the read and killed the session on a chat line.
+        ArgumentNullException.ThrowIfNull(name);
         ArgumentNullException.ThrowIfNull(value);
 
         if (!_children.ContainsKey(name))

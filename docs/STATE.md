@@ -1356,3 +1356,29 @@ Trying to destroy a SwapchainAcquireSemaphore that is still in use by a SurfaceT
 - 已在宿主层加**兜底 catch**（`window crashed: <完整异常>`），此前非 IO/InvalidOperation 的异常会直接逃逸，
   只剩 Rust panic，看不到托管栈。**下一次复现请把控制台里 `window crashed:` 后面的内容发我**。
 - 另：`ServerboundChatCommandPacket` 只有命令文本（已按原版核对并回退），不要再加字段。
+
+## 2026-10-31 **已修复并实测通过**：`/tp` 崩溃 = NBT 空键被拒（组件含无名 compound）
+
+抓到的托管栈（第一次真正看到）：
+
+```
+System.ArgumentException: The value cannot be an empty string. (Parameter 'name')
+  at NbtReader.ReadCompound line 127      <- compound.Set(name, ...)
+  at NbtReader.ReadList     line 167      <- 列表里的 compound 元素
+  at ChatPackets.TryReadSystemChatStyled  line 75
+  at InteractiveSession.DrainIncoming
+```
+
+**原版依据**（`ref://mc-26.3-analysis/src/net/minecraft/nbt/CompoundTag.java`）：`loadCompound` 用
+`input.readUTF()` 作 key 放进 `Maps.newHashMap()`，**从不校验空字符串**；而 NBT 的"compound 列表"元素本来就不带名字。
+`[Blue_Coast: Teleported ...]` 是 translatable 组件，其 `with` 参数正是这种结构 ⇒ 我们**比原版更严**的
+`ArgumentException.ThrowIfNullOrEmpty(name)` 直接抛异常，把会话弄断。
+
+**修复**
+1. `NbtCompound.Set` 只拒绝 null，允许空键（对齐原版）；新增两个回归测试
+   （空键条目、compound 列表元素）——`tests/Sharpcraft.Common.Tests/Nbt/EmptyNameTests.cs`
+2. 退出时**不再销毁 surface/adapter/device**（改为有意泄漏）：销毁交换链会触发 wgpu-hal
+   `SwapchainAcquireSemaphore still in use` 的 abort；进程退出由驱动回收。实测 `exit code 0`，**不再 panic**。
+3. 宿主层兜底 catch 打印 `window crashed: <完整异常>`（这次就是靠它拿到的栈）。
+
+**实测**：游戏内 T → `/tp ~ ~ ~` → Enter，客户端**存活**（pid 53724，落在地面），全量 7 套 / 1114 用例通过。

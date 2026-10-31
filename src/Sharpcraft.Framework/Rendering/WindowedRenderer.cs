@@ -59,13 +59,17 @@ public static class WindowedRenderer
 
         var instance = Instance.Create();
         var source = window.GetSurfaceSource();
-        using var surface = instance.CreateSurface(ToSurfaceSource(source));
-        using var adapter = instance.RequestAdapterBlocking(surface);
+        // Surface, adapter and device are deliberately not disposed. Dropping them destroys the swapchain, and wgpu-hal
+        // panics when a swapchain acquire semaphore is still referenced by the last presented texture ("Trying to destroy
+        // a SwapchainAcquireSemaphore that is still in use"). The process is exiting anyway, so the driver reclaims these
+        // when it goes; leaking them on the way out is cheaper than an abort on the way out.
+        var surface = instance.CreateSurface(ToSurfaceSource(source));
+        var adapter = instance.RequestAdapterBlocking(surface);
         // Ask for the limits this adapter actually offers rather than the defaults, whose maxBufferSize is 256 MiB. A full
         // amplified view needs more than that for one geometry buffer, and the adapter's own figure is the honest ceiling.
         var deviceLimits = adapter.GetLimits();
         var deviceDescriptor = new DeviceDescriptor { RequiredLimits = deviceLimits };
-        using var device = adapter.RequestDeviceBlocking(in deviceDescriptor);
+        var device = adapter.RequestDeviceBlocking(in deviceDescriptor);
 
         Console.WriteLine($"window: surface ready on {adapter.GetInfo().Description}");
         // A non-sRGB surface blends in gamma space, which is what the reference does
