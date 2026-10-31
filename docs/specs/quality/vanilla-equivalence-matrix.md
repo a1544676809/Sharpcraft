@@ -26,7 +26,7 @@
 | 6 | 方块实体 | 箱子 14/16、贴地 | `BlockEntityPlaceholderMesherTests` | 像素差 ≤1 | 部分验证 |
 | 7 | 实体模型 | 六部件、0.9 比例 | `EntityPlaceholderMesherTests` | 结构断言 | 部分验证（占位）|
 | 8 | 分层 | 按材质透明度三层 | `BlockLayerRulesTests`、`Repro-006` | 全绿 | 部分验证 |
-| 9 | 生物群系着色 | colormap + tintindex | `BiomeTintTests` + 原版同机位取色 | 均值差 ≤3/255 | 未验证 |
+| 9 | 生物群系着色 | `ColorMapColorUtil.get` 的索引规则 + 固定色常量；另有半径 2 的 25 点混合与 swamp/dark_forest 修饰符 | `BiomeTintSamplingTests`（121 组 temp×rain 网格逐点比对）、`BiomeTintTests` | 逐点相等 | **部分验证：采样规则与常量已验证；25 点混合与修饰符未实现（缺生物群系数据）** |
 | 10 | 图集 UV/padding/mip | 1:1、无黑边、远处平滑 | ADR-0015/0016 + 黑像素计数 | 黑像素=0 | 部分验证（缺原版输出基准）|
 | 11 | 面剔除 | 仅遮挡剔除、树叶留内面 | `Repro-005`、`Repro-006` | 面积 256/162 | 部分验证（仅 CPU 侧，缺画面）|
 | 12 | 半透明排序 | 远到近、不写深度 | 像素算术断言 | ≤1 | 部分验证 |

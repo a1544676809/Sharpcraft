@@ -993,3 +993,16 @@ send  60.. : -704.50 → -743.21 → …                ← 之后不再被纠�
   2. 客户端**忽略的尾部**（onlineMode、enforcesSecureChat）不影响已读字段
   3. 存在 death location 时仍能正确解析
 - 全量 7 套 **1099 用例**通过（Common 374）。矩阵 #1 → 已验证（字段级）。
+
+## 2026-10-31 第 30 轮：#9 生物群系着色（采样规则逐点比对）
+
+- 原版依据：`ref://mc-26.3-analysis/src/net/minecraft/world/level/ColorMapColorUtil.java`
+  `rain *= temp; x=(1-temp)*255; y=(1-rain)*255; index=(y<<8)|x; index>=len?default:pixels[index]`；
+  `GrassColor`/`FoliageColor` 的默认色 `-65281` / `-12012264`（另有 `-10380959` 常绿、`-8345771` 白桦）。
+- 为可测性给 `Colormap` 增加 `FromPixels(int[])`（工具/测试用的纯构造，不读资源）。
+- 新增 `BiomeTintSamplingTests`：
+  1. **121 组** (temp,rain) ∈ {0,0.1,…,1.0}² 网格，我方 `Sample` 与独立实现的参考规则**逐点相等**
+  2. 越界索引回退；`(0,0)` 命中最后一格 65535
+- **未实现（登记为缺口）**：`ClientLevel.calculateBlockTint` 的 **半径 2 / 25 点**逐通道整数平均混合；
+  `Biome.getGrassColor` 的 `grassColorModifier`（swamp、dark_forest）。原因：生物群系数据尚未进入客户端。
+- 全量 **7 套 1101 用例**通过（Client 472）。

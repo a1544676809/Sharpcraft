@@ -28,6 +28,19 @@ public sealed class Colormap
     public const int PixelCount = 65536;
 
     /// <summary>
+    /// Wraps raw pixels as a colour map.
+    /// </summary>
+    /// <param name="pixels">The 65536 pixels, indexed exactly as the reference does.</param>
+    /// <remarks>Used by tooling and tests so the sampling rule can be checked without a resource pack.</remarks>
+    public static Colormap FromPixels(int[] pixels)
+    {
+        ArgumentNullException.ThrowIfNull(pixels);
+        ArgumentOutOfRangeException.ThrowIfNotEqual(pixels.Length, PixelCount);
+
+        return new Colormap(pixels);
+    }
+
+    /// <summary>
     /// Loads a colour map from the resource stack.
     /// </summary>
     /// <param name="resources">Session resource manager.</param>
