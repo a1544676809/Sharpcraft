@@ -105,8 +105,15 @@ public sealed class SpriteAtlas
 /// </summary>
 public static class SpriteAtlasBuilder
 {
-    /// <summary>Texels of edge padding around every sprite.</summary>
-    private const int Padding = 1;
+    /// <summary>
+    /// Texels of edge padding around every sprite.
+    /// </summary>
+    /// <remarks>
+    /// Two, not one: the uv range ends exactly on the sprite boundary, so a bilinear sample there reads the padding texel
+    /// and the texel after it. With a single texel of padding that second texel belongs to the next sprite, which showed as
+    /// a dark one pixel line on every block edge.
+    /// </remarks>
+    private const int Padding = 2;
 
     /// <summary>Animated textures are vertical frame strips; only the first frame enters the atlas.</summary>
     public const string BlockTexturePrefix = "assets/minecraft/textures/block/";
