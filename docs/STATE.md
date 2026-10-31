@@ -1670,3 +1670,10 @@ culler 的 `slots` 要按层各自维护，避免再犯 A3b 那次"按在册数�
      C resolve pass（全屏三角形把 accum/reveal 合成到主颜色目标）
      D UI pass（原 UI 代码整体搬到这里）
 4. 验证：同机位截图（冰/水/透过冰看水/共面）、p99 影响；`DrawFarthestFirst` 保留为无害辅助。
+
+### OIT 第 1 步完成（着色器脚手架，画面不变）
+- 新增独立模块 `Shaders/pipelines/oit_resolve.wgsl`：全屏三角形 + `fs_oit_resolve`
+  （`coverage = 1 - reveal.r`、`rgb = accum.rgb / max(accum.a, 1e-5)`），自带三个绑定。
+- `terrain.wgsl` 增加 `fs_translucent_oit`（双输出：`(colour*a, a)` 与 `(a)`，保留 `discard<0.1` 与 `textureSampleGrad`）。
+- **实测**：Release 启动正常（`#1652`），说明新入口在 Naga 里能编译；画面与之前一致（尚未接线）。
+- 下一步：`accum`(RGBA16F)/`reveal`(R16F) 目标 + 两个管线 + **4 pass 拆分**（主 → OIT → resolve → UI）。

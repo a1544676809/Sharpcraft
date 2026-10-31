@@ -147,3 +147,46 @@ fn fs_cutout(input : VertexOutput) -> @location(0) vec4<f32> {
     let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
     return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogged), 1.0);
 }
+
+// ---- Order independent transparency ----------------------------------------------------------------
+// The reference composites translucent terrain order independently rather than sorting it, so this entry point writes the
+// two weighted blended targets instead of a single blended colour: one accumulates colour times alpha together with the
+// coverage, the other accumulates the product of one minus alpha. The resolve pass turns them back into a colour.
+
+struct OitOutput
+{
+    @location(0) accumulate : vec4<f32>,
+    @location(1) reveal : vec4<f32>,
+};
+
+@fragment
+fn fs_translucent_oit(input : VertexOutput) -> OitOutput
+{
+    let rectMin = input.spriteRect.xy;
+    let rectMax = input.spriteRect.zw;
+    let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
+    let gradientScale = rectMax - rectMin;
+    let sampled = textureSampleGrad(
+        atlasTexture,
+        atlasSampler,
+        atlasUv,
+        dpdx(input.uv) * gradientScale,
+        dpdy(input.uv) * gradientScale);
+
+    if (sampled.a < 0.1)
+    {
+        discard;
+    }
+
+    let base = vec4<f32>(sampled.rgb * input.colour, sampled.a);
+    let span = max(fog.range.y - fog.range.x, 0.001);
+    let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
+    let colour = mix(base.rgb, fog.colour.rgb, fogged);
+
+    var output : OitOutput;
+    output.accumulate = vec4<f32>(colour * base.a, base.a);
+    output.reveal = vec4<f32>(base.a, base.a, base.a, base.a);
+
+    return output;
+}
+
