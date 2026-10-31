@@ -1397,3 +1397,16 @@ System.ArgumentException: The value cannot be an empty string. (Parameter 'name'
 
 **修复方向**（下一步）：`GeometryData` 扩成三层；`ChunkGeometryArena` 每区块持三组 slice（或三个 arena）；
 渲染器按 不透明 → cutout → translucent 三个 pass 绘制（半透明按距离从远到近）。
+
+## 2026-10-31 A 系列计划（更新）
+
+| 项 | 内容 | 状态 |
+| --- | --- | --- |
+| A1 | 顶点格式 48 → 24 B（颜色/UV/光照打包）| 暂缓（用户判断带宽不是瓶颈、风险大）|
+| A2 | 每区块 indirect 绘制参数（DrawIndexedIndirect，索引缓冲整块绑定一次）| **完成** `0c73230` |
+| A3a | CPU 视锥剔除参考实现 + `MC_CULL_DISABLE` 兜底 | **完成** `ab32861` |
+| A3b | `chunk_cull.wgsl` compute 视锥剔除（`Available=false` 回落 A3a）| **进行中** |
+| A4 | GPU 遮挡剔除（上一帧 Hi‑Z）| 未开始（回落 A3b/A3a）|
+| **A5** | **三层流式**：`GeometryData` 扩为 opaque/cutout/translucent，arena 每区块三组 slice，渲染三 pass（半透明按距远→近）| **新排入**（老问题，用户确认）|
+
+约定：A1–A5 每条都必须保留"不可用时退回 CPU 路径"的兜底。
