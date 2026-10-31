@@ -1649,3 +1649,24 @@ culler 的 `slots` 要按层各自维护，避免再犯 A3b 那次"按在册数�
    wgpu 完全能做。改动中等（两个额外目标 + 一次全屏 resolve + 半透明着色器改成输出 weight）。
 2. **对齐 26.3 的 depth-bounds + transmittance OIT**：效果最接近，但需要 2 组透射目标 + 多次 pass，工程量大。
 3. **继续排序路线**（按 section 排序 + 写深度）：只能缓解，且要引入 section 级切片，收益不如 1。
+
+### OIT 路线 1：实施计划（已确认开工，下一步直接照此落地）
+
+1. **新着色器文件** `Shaders/pipelines/oit_resolve.wgsl`（独立模块，避免与 terrain 共享绑定）：
+   - 顶点：全屏三角形，输出 uv
+   - 片元：`accum = textureSample(accumulate, ...)`、`reveal = textureSample(reveal, ...)`；
+     `alpha = 1 - reveal.r`，`rgb = accum.rgb / max(accum.a, 1e-5)`，返回 `vec4(rgb, alpha)`
+   - 绑定：`@group(0) @binding(0) texture_2d<f32>`、`@binding(1) sampler`、`@binding(2) texture_2d<f32>`
+2. **terrain.wgsl 增加** `fs_translucent_oit`：输出两个 target
+   `@location(0) vec4(colour * a, a)`、`@location(1) vec4(a)`（保留 `discard < 0.1`、`textureSampleGrad`）
+3. **WindowedRenderer**：
+   - 随窗口尺寸创建 `accum`(RGBA16Float) / `reveal`(R16Float)，`RenderAttachment | TextureBinding`，并随 resize 重建
+   - `CreateTranslucentOitPipeline`：2 个 color target，
+     accum 混合 `(ONE, ONE)`/`(ONE, ONE)`、reveal 混合 `(ZERO, ONE_MINUS_SRC_ALPHA)`；深度测试开、写关
+   - `CreateOitResolvePipeline`：1 个 color target，混合 `(SRC_ALPHA, ONE_MINUS_SRC_ALPHA)`；深度 Always、写关
+   - 帧结构改为 4 个 pass：
+     A 主 pass（天空/不透明/cutout + 动态几何）
+     B OIT pass（清 accum=0 / reveal=1，depth=Load 深度，画半透明）
+     C resolve pass（全屏三角形把 accum/reveal 合成到主颜色目标）
+     D UI pass（原 UI 代码整体搬到这里）
+4. 验证：同机位截图（冰/水/透过冰看水/共面）、p99 影响；`DrawFarthestFirst` 保留为无害辅助。
