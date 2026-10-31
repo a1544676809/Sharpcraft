@@ -26,11 +26,22 @@ public sealed class ChunkGeometryArena : IDisposable
 {
     private const ulong MinimumBufferBytes = 1 << 20;
 
+    /// <summary>Largest single presize, so one allocation never becomes a frame spike of its own.</summary>
+    private const ulong MaxPresizeBytes = 256UL << 20;
+
     /// <summary>
     /// Starting guess per chunk when the view distance is known. Deliberately generous: over-reserving costs
     /// memory once, while under-reserving costs a full rewrite of every resident chunk, which is a frame spike.
     /// </summary>
-    private const ulong AssumedBytesPerChunk = 96 * 1024;
+    /// <summary>
+    /// Starting guess per chunk when the view distance is known.
+    /// </summary>
+    /// <remarks>
+    /// Measured on amplified terrain: a full view holds six hundred odd chunks at roughly half a megabyte of interleaved
+    /// vertices each, so the old ninety six kilobyte guess under reserved by six times and the arena paid for it in
+    /// full rewrites. Over reserving costs memory once; under reserving costs a spike.
+    /// </remarks>
+    private const ulong AssumedBytesPerChunk = 512 * 1024;
 
     /// <summary>
     /// Ceiling for one buffer. The device rejects anything above two hundred and fifty six megabytes, and amplified
@@ -333,9 +344,11 @@ public sealed class ChunkGeometryArena : IDisposable
 
         // One deliberate presize for the whole view distance beats log2(n) doublings, each of which rewrites
         // every resident chunk (docs/specs/network/play-movement.md 7.27).
-        var vertexCapacity = Math.Max(
+        // Allocating a very large buffer is itself a spike, so a single presize is capped; growth continues by doubling
+        // if the world really needs more.
+        var vertexCapacity = Math.Min(MaxPresizeBytes, Math.Max(
             ArenaSizing.NextCapacity(_vertexCapacity, _vertexUsed, (ulong)_vertexUsed, _meshes.Count, _expectedChunks, _presized),
-            MinimumBufferBytes);
+            MinimumBufferBytes));
 
         var indexCapacity = Math.Max(
             ArenaSizing.NextCapacity(_indexCapacity, _indexUsed, (ulong)_indexUsed, _meshes.Count, _expectedChunks, _presized),
