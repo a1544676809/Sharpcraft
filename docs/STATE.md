@@ -1873,4 +1873,5 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 流体岩浆已修（`d4fc7f4`）：`CellHeight`/`AddFlow` 按流体质心类型泛化；岩浆双面外壳。所有者确认"岩浆差不多"；遮挡精确形状留方块实体后（block-shape backlog）。
 - 新增 `docs/specs/render/sky-celestial.md`（待评审）：读 SkyRenderer 常量/变换/几何（盘r512、星1500@100、日30@100、月20@100、日出16段、月相8）。
 - **硬依赖**：天体角度/月相/亮度/天空色/日出色均来自环境属性（时间轴驱动）→ 需**世界时间**（未解析，与 lighting.md §6 日夜同缺口）。
-- 下一步（待所有者定）：①先补世界时间包解析（可同时解锁日夜光照）；或②用宿主注入时间/角度先验证天体渲染正确性。
+- 下一步（待所有者定）：①先补世界时间包解析（可同时解锁日夜光照）；或②用宿主注入时间/角度先验证天体渲染正确性。## 2026-10-31 时间系统模块文档（待评审）
+- 新增 `docs/modules/time.md`（待评审）：`set_time` 新结构（long gameTime + Map<WorldClock,ClockNetworkState{totalTicks,partialTick,rate}>）；dayTime=overworld.totalTicks%24000；环境属性由 Timelines 关键帧/easing 求值（SUN/MOON/STAR_ANGLE 优先）。含 packet id 待核对、测试、落地步骤与风险。评审通过后按步骤实现（packet→clock→timeline→消费）。
