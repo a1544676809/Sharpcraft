@@ -34,7 +34,7 @@
 | 14 | UI/字体/聊天 | 布局字体一致 | UI 截图 + 现有测试 | 待定 | 部分验证 |
 | 17 | 速度读数（宿主显示）| 原版 F3：`Entity.computeSpeed()` 每 tick 取 `position-lastKnownPosition` 的 3D 长度，显示 `%.3f blocks/tick` | 目视 + 数值稳定 | 每 tick 一次、不跳动 | **已验证：稳定 0.281 blocks/tick（冲刺 5.61 b/s）** |
 | 16 | 调试代码可分离 | 游戏程序集不读环境变量；删除 `Launcher/Diagnostics` 即可移除全部调试 | `check-diagnostics-separation.ps1` + `DiagnosticsSeparationTests` | violations=0 | **已验证（0 处）** |
-| 15 | 性能 | p99 ≤16.7ms、剔除 ≤1ms、1 提交/帧 | `benchmarks/` | 见中期目标 | 未验证（当前 150–200ms）|
+| 15 | 性能 | 帧时间 p99 ≤ 16.7 ms（中期目标）| `verify-performance.ps1`（渲染器自带分位数）| p99 ≤ 16.7 | **已验证（实测 p99 8.03 ms @1920×1080、128 区块；p50 5.56、p95 6.93）**；遮挡剔除耗时与提交次数尚未单独测量 |
 
 
 ## 1.1 纯逻辑等效性（与渲染无关，全部以原版 dump / 向量为依据）

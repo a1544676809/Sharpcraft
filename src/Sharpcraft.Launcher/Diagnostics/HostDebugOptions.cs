@@ -57,7 +57,8 @@ public static class HostDebugOptions
             MotionShiftX = Number("MC_FRAME_MOTION_DX", 0f),
             AlphaOne = Flag("MC_FRAME_ALPHA_ONE"),
             GuiScale = (int)Number("MC_GUI_SCALE", 0f),
-            InputTrace = Flag("MC_INPUT_TRACE")
+            InputTrace = Flag("MC_INPUT_TRACE"),
+            PerformanceSummary = Flag("MC_PERF_SUMMARY")
         };
     }
 

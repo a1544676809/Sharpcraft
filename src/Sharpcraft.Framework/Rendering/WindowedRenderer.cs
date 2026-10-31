@@ -373,6 +373,9 @@ public static class WindowedRenderer
 
         var colour = request.ClearColour;
         var presented = 0;
+        var performanceSummary = false;
+        var gapSamples = new double[1 << 17];
+        var gapCount = 0;
         var worstFrameMs = 0d;
         var worstFrameIndex = 0;
         var framesOver33 = 0;
@@ -748,7 +751,13 @@ public static class WindowedRenderer
             // Frame pacing: the worst gap is what a dropped frame feels like, and it is the number that
             // regressed when meshing moved between threads.
             var nowMs = frameClock.Elapsed.TotalMilliseconds;
+            performanceSummary = currentRequest.Diagnostics?.PerformanceSummary == true;
             var gapMs = nowMs - lastFrameAt;
+
+            if (gapCount < gapSamples.Length)
+            {
+                gapSamples[gapCount++] = gapMs;
+            }
             var uploadedNow = arena?.UploadedBytes ?? 0;
             var uploadedDelta = uploadedNow - lastUploadedAt;
             lastUploadedAt = uploadedNow;
@@ -990,6 +999,31 @@ public static class WindowedRenderer
 
         Console.WriteLine(
             $"window: {presented} frames in {frameClock.Elapsed.TotalSeconds:F1}s, worst frame {worstFrameMs:F1} ms at #{worstFrameIndex}, {framesOver33} frames over 33 ms");
+
+        // Percentiles are what a player feels, so they are printed on request: the median says what a normal frame costs
+        // and the ninety ninth says what the occasional hitch costs.
+        if (performanceSummary && gapCount > 0)
+        {
+            var sorted = gapSamples.AsSpan(0, gapCount).ToArray();
+            Array.Sort(sorted);
+
+            static double At(double[] samples, double fraction) =>
+                samples[Math.Clamp((int)Math.Ceiling(fraction * samples.Length) - 1, 0, samples.Length - 1)];
+
+            var mean = 0d;
+
+            for (var index = 0; index < sorted.Length; index++)
+            {
+                mean += sorted[index];
+            }
+
+            mean /= sorted.Length;
+
+            Console.WriteLine(
+                $"perf: frames={sorted.Length} mean={mean:F2} p50={At(sorted, 0.50):F2} p95={At(sorted, 0.95):F2} "
+                + $"p99={At(sorted, 0.99):F2} max={sorted[^1]:F2} over33={framesOver33} "
+                + $"rebuildAvgMs={(rebuildCount == 0 ? 0 : rebuildTotalMs / rebuildCount):F1}");
+        }
         if (arena is not null)
         {
             Console.WriteLine(

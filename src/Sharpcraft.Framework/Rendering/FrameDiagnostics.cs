@@ -38,4 +38,7 @@ public sealed record FrameDiagnostics
 
     /// <summary>Log every key event, for diagnosing injected input.</summary>
     public bool InputTrace { get; init; }
+
+    /// <summary>Print frame time percentiles when the window closes.</summary>
+    public bool PerformanceSummary { get; init; }
 }

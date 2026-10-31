@@ -609,6 +609,14 @@ internal static class Program
     private static string versionIdFromJar(string jarPath) =>
         Path.GetFileNameWithoutExtension(jarPath) is { Length: > 0 } name ? name : "unknown";
 
+    /// <summary>Window width the host asks for, so a measurement can use a realistic size.</summary>
+    private static int WindowWidth() =>
+        int.TryParse(Environment.GetEnvironmentVariable("MC_WINDOW_WIDTH"), out var width) && width > 0 ? width : 960;
+
+    /// <summary>Window height the host asks for.</summary>
+    private static int WindowHeight() =>
+        int.TryParse(Environment.GetEnvironmentVariable("MC_WINDOW_HEIGHT"), out var height) && height > 0 ? height : 540;
+
     private static async Task<int> WindowAsync(string? address)
     {
         using var cancellation = CancelOnCtrlC();
@@ -626,7 +634,7 @@ internal static class Program
 
         try
         {
-            var path = await WindowCommand.RunAsync(address, http, 960, 540, seconds, frames, visibleFor, cancellation.Token)
+            var path = await WindowCommand.RunAsync(address, http, WindowWidth(), WindowHeight(), seconds, frames, visibleFor, cancellation.Token)
                 .ConfigureAwait(false);
             Console.WriteLine($"frame written to {path}");
             return 0;
