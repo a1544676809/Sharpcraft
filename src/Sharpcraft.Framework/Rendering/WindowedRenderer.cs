@@ -991,20 +991,25 @@ public static class WindowedRenderer
                 }
             }
 
+            // The reference draws every section from the same per section buffers; it has no separate static copy of the
+            // world. Drawing the preloaded combined mesh next to the arena kept the first few chunks on a second path with
+            // its own colour, so the static copy is used only until the arena holds anything.
+            var useStaticWorld = arena is null || arena.ChunkCount == 0;
+
             if (dynamicIndexCount > 0)
             {
                 pass.SetVertexBuffer(0, dynamicVertex, 0, dynamicVertexCapacity);
                 pass.SetIndexBuffer(dynamicIndex, WGPUIndexFormat.Uint32, 0, (ulong)dynamicIndexCount * sizeof(uint));
                 pass.DrawIndexed(dynamicIndexCount, 1, 0, 0, 1);
             }
-            else
+            else if (useStaticWorld)
             {
                 pass.SetVertexBuffer(0, vertexBuffer);
                 pass.SetIndexBuffer(indexBuffer, WGPUIndexFormat.Uint32);
                 pass.DrawIndexed((uint)currentRequest.Indices.Length);
             }
 
-            if (currentRequest.CutoutVertices is { Length: > 0 } windowCutoutVertices &&
+            if (useStaticWorld && currentRequest.CutoutVertices is { Length: > 0 } windowCutoutVertices &&
                 currentRequest.CutoutIndices is { Length: > 0 } windowCutoutIndices)
             {
                 using var windowCutoutVertexBuffer = device.CreateBufferInit(
@@ -1021,7 +1026,7 @@ public static class WindowedRenderer
                 pass.DrawIndexed((uint)windowCutoutIndices.Length);
             }
 
-            if (currentRequest.TranslucentVertices is { Length: > 0 } windowTranslucentVertices &&
+            if (useStaticWorld && currentRequest.TranslucentVertices is { Length: > 0 } windowTranslucentVertices &&
                 currentRequest.TranslucentIndices is { Length: > 0 } windowTranslucentIndices)
             {
                 // Blended layer last, with depth writes off: the same pass order the offscreen path uses.

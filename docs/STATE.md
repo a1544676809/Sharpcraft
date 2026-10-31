@@ -1565,3 +1565,17 @@ culler 的 `slots` 要按层各自维护，避免再犯 A3b 那次"按在册数�
   ① 逐顶点光照 + AO（原版 `ModelBlockRenderer.tesselateAmbientOcclusion` / `BlockQuadLighter`）
   ② 检查合并四边形的 UV/mip 连续性（相邻合并四边形尺寸不同 → mip 选择不同 → 可见边界/斜带）
 - 实验已 `git checkout` 回滚，分支保持绿色（`42afe47`），游戏已恢复运行。
+
+## 2026-10-31 出生 9 区块颜色不同：**双绘制路径**（已修）
+
+用户观察到：进游戏后**周围 9 个区块的颜色与远处明显不同**。
+
+- 原因：出生那批区块由 `FrameCommand.BuildRequest` 产出的**静态合并网格**（`currentRequest.Vertices` /
+  `CutoutVertices` / `TranslucentVertices`）绘制，而后续流入的区块走 **arena** 路径。两条路径的着色/光照不一致
+  ⇒ 3×3 区块色块。
+- **原版对照**：原版没有"静态世界副本"这一层——`SectionRenderDispatcher` 把每个 section 编进自己的缓冲，
+  **所有区块同源绘制**。我们的双路径本身就是偏离。
+- 修复：`useStaticWorld = arena is null || arena.ChunkCount == 0`，**arena 一旦有内容就不再画静态副本**
+  （opaque / cutout / translucent 三处都加了这个门）。出生区块由 arena 的 `replayQueue` 补齐。
+- 同时（上一处实验后保留）：`textureSampleGrad` + 未回绕 uv 的显式梯度，消除合并四边形之间的 mip 跳变。
+- 结果：出生 3×3 色块消失，冰面大幅趋于均匀（仍有轻微横向条带，属合并四边形的光照/mip 残差，下一步做逐顶点光照+AO）。

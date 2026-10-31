@@ -56,7 +56,16 @@ fn fs_main(input : VertexOutput) -> @location(0) vec4<f32> {
     // never reads a neighbour: linear filtering and mip selection stay on the sprite, and the hardware picks the level from
     // the fragment footprint.
     let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
-    let sampled = textureSample(atlasTexture, atlasSampler, atlasUv);
+    // A merged quad tiles its sprite several times, so the wrapped coordinate jumps at every block edge and the hardware
+    // would choose a different mip level on either side of the jump; that showed as large rectangular patches on flat
+    // ice. The gradients come from the continuous (unwrapped) uv, so mip selection stays uniform across the whole quad.
+    let gradientScale = rectMax - rectMin;
+    let sampled = textureSampleGrad(
+        atlasTexture,
+        atlasSampler,
+        atlasUv,
+        dpdx(input.uv) * gradientScale,
+        dpdy(input.uv) * gradientScale);
 
     // Alpha test here rather than in a separate cutout pipeline: leaves and plants then stream with the same per chunk
     // mesh as everything else. It is the same rule the reference applies to cutout terrain (threshold 0.5), just carried by
@@ -82,7 +91,16 @@ fn fs_translucent(input : VertexOutput) -> @location(0) vec4<f32> {
     // block covers fewer pixels than its texture has texels. Snapping to one texel per fragment speckled at distance.
     let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
-    let sampled = textureSample(atlasTexture, atlasSampler, atlasUv);
+    // A merged quad tiles its sprite several times, so the wrapped coordinate jumps at every block edge and the hardware
+    // would choose a different mip level on either side of the jump; that showed as large rectangular patches on flat
+    // ice. The gradients come from the continuous (unwrapped) uv, so mip selection stays uniform across the whole quad.
+    let gradientScale = rectMax - rectMin;
+    let sampled = textureSampleGrad(
+        atlasTexture,
+        atlasSampler,
+        atlasUv,
+        dpdx(input.uv) * gradientScale,
+        dpdy(input.uv) * gradientScale);
 
     // The reference keeps the texture's own alpha for translucent terrain and only cuts out nearly invisible texels
     // (ALPHA_CUTOUT 0.1), so ice and stained glass keep their tint. A flat placeholder alpha made every translucent
@@ -109,7 +127,16 @@ fn fs_cutout(input : VertexOutput) -> @location(0) vec4<f32> {
     // block covers fewer pixels than its texture has texels. Snapping to one texel per fragment speckled at distance.
     let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
-    let sampled = textureSample(atlasTexture, atlasSampler, atlasUv);
+    // A merged quad tiles its sprite several times, so the wrapped coordinate jumps at every block edge and the hardware
+    // would choose a different mip level on either side of the jump; that showed as large rectangular patches on flat
+    // ice. The gradients come from the continuous (unwrapped) uv, so mip selection stays uniform across the whole quad.
+    let gradientScale = rectMax - rectMin;
+    let sampled = textureSampleGrad(
+        atlasTexture,
+        atlasSampler,
+        atlasUv,
+        dpdx(input.uv) * gradientScale,
+        dpdy(input.uv) * gradientScale);
 
     if (sampled.a < 0.5) {
         discard;
