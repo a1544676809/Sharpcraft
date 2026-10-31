@@ -614,6 +614,9 @@ public static class WindowedRenderer
                 // taken from the live request, not the one captured at startup: after a resize the draw call
                 // uses the current index count, and a vertex buffer from an older mesh would make those
                 // indices point past it, drawing stray triangles that look like overlapping texture.
+                // Rebuilding the swapchain while the last acquire semaphore is still in flight trips a wgpu-hal panic
+                // ("destroy a SwapchainAcquireSemaphore that is still in use"), so let submitted work finish first.
+                device.Queue.OnSubmittedWorkDoneBlocking(instance);
                 surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight);
                 depthView.Dispose();
                 depthTexture.Dispose();
@@ -798,6 +801,7 @@ public static class WindowedRenderer
             {
                 // The surface output must be released before the surface is reconfigured.
                 acquired.Texture.Dispose();
+                device.Queue.OnSubmittedWorkDoneBlocking(instance);
                 surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight);
                 continue;
             }
