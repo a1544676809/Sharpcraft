@@ -159,7 +159,7 @@ public static class ChunkMesher
 
             if (translucent is not null)
             {
-                EmitSectionFluids(neighbourhood, section, baseX, baseY, baseZ, translucent, sprites, layout, tint);
+                EmitSectionFluids(neighbourhood, section, baseX, baseY, baseZ, buffer, translucent, sprites, layout, tint);
             }
         }
 
@@ -679,17 +679,16 @@ public static class ChunkMesher
     }
 
     /// <summary>
-    /// True when a state's block is a water fluid, which is meshed by <see cref="EmitSectionFluids"/> into the translucent
-    /// buffer. Lava is intentionally NOT included: it is opaque and stays on the normal block path (otherwise the block
-    /// pass would skip it and nothing would draw it).
+    /// True when a state's block is a fluid (water or lava), which <see cref="EmitSectionFluids"/> meshes with proper
+    /// surface geometry: water into the translucent buffer, lava into the opaque buffer.
     /// </summary>
     private static bool IsFluidState(int state, BlockStateLayout? layout) =>
-        layout?.BlockAt(state) is { Path: "water" };
+        layout?.BlockAt(state) is { Path: "water" or "lava" };
 
     /// <summary>
-    /// Emits water geometry for one section into the translucent buffer (docs/specs/render/fluid-rendering.md). Faces are
-    /// culled against the same fluid (an adjacent water block hides the shared face), so a plain water section emits only
-    /// its outer surface rather than every internal face. The top face uses the reference four-corner height average.
+    /// Emits fluid geometry for one section (docs/specs/render/fluid-rendering.md). Water and lava share one algorithm
+    /// (reference FluidRenderer.tesselate): same-fluid face culling, four-corner surface heights, flow UV. Only the target
+    /// layer differs - water is translucent, lava is opaque (reference: the fluid model's layer) - plus water's biome tint.
     /// </summary>
     private static void EmitSectionFluids(
         in Neighbourhood neighbourhood,
@@ -697,6 +696,7 @@ public static class ChunkMesher
         int baseX,
         int baseY,
         int baseZ,
+        MeshBuffer opaque,
         MeshBuffer translucent,
         BlockSpriteMap? sprites,
         BlockStateLayout? layout,
@@ -716,7 +716,9 @@ public static class ChunkMesher
                 for (var x = 0; x < 16; x++)
                 {
                     var state = section.Get(x, y, z);
-                    if (layout.BlockAt(state) is not { Path: "water" } fluidBlockRef)
+                    var blockRef = layout.BlockAt(state);
+                    if (blockRef is not { } fluidBlockRef ||
+                        (fluidBlockRef.Path != "water" && fluidBlockRef.Path != "lava"))
                     {
                         continue;
                     }
@@ -727,6 +729,9 @@ public static class ChunkMesher
                         continue;
                     }
 
+                    var fluidPath = fluidBlockRef.Path;
+                    var target = fluidPath == "lava" ? opaque : translucent;
+
                     var bx = baseX + x;
                     var by = baseY + y;
                     var bz = baseZ + z;
@@ -734,8 +739,8 @@ public static class ChunkMesher
                     var fz = (float)bz;
                     var lowY = (float)by;
 
-                    var aboveWater = layout.BlockAt(nb.GetBlockState(bx, by + 1, bz, 0)) is { Path: "water" };
-                    var selfHeight = aboveWater ? 1f : fluid.OwnHeight;
+                    var aboveSame = layout.BlockAt(nb.GetBlockState(bx, by + 1, bz, 0)) is { } aboveBlockRef && aboveBlockRef.Path == fluidPath;
+                    var selfHeight = aboveSame ? 1f : fluid.OwnHeight;
 
                     nb.TryGetLight(bx, by, bz, out var s0, out var b0);
                     nb.TryGetLight(bx, by + 1, bz, out var s1, out var b1);
@@ -744,7 +749,7 @@ public static class ChunkMesher
                     var tr = 1f;
                     var tg = 1f;
                     var tb = 1f;
-                    if (tint is not null)
+                    if (fluidPath != "lava" && tint is not null)
                     {
                         var (r, g, b) = BiomeTint.ToMultiplier(tint.Colour(BlockTintKind.Water));
                         tr = r;
@@ -780,12 +785,12 @@ public static class ChunkMesher
 
                     (float R, float G, float B) Face(float shade) => (lm.X * tr * shade, lm.Y * tg * shade, lm.Z * tb * shade);
 
-                    bool IsWater(int wx, int wy, int wz) => layout.BlockAt(nb.GetBlockState(wx, wy, wz, 0)) is { Path: "water" };
+                    bool IsSameFluid(int wx, int wy, int wz) => layout.BlockAt(nb.GetBlockState(wx, wy, wz, 0)) is { } sameRef && sameRef.Path == fluidPath;
 
                     bool IsSolid(int wx, int wy, int wz)
                     {
                         var block = layout.BlockAt(nb.GetBlockState(wx, wy, wz, 0));
-                        return block is { } value && value.Path != "air" && value.Path != "water";
+                        return block is { } value && value.Path != "air" && value.Path != "water" && value.Path != "lava";
                     }
 
                     float CellHeight(int ddx, int ddz)
@@ -829,7 +834,7 @@ public static class ChunkMesher
                         // With the same fluid directly above, the column is continuous, so the block reaches the full block
                         // top (reference getHeight = hasSameAbove ? 1.0 : ownHeight). Without this the corner average dipped
                         // the rim below the block above and left a seam at water drops / terraces.
-                        if (aboveWater)
+                        if (aboveSame)
                         {
                             return 1f;
                         }
@@ -843,7 +848,7 @@ public static class ChunkMesher
                     const float epsilon = 0.001f;
 
                     // Top: only when no water directly above. Corner heights so the surface follows neighbours.
-                    if (!aboveWater)
+                    if (!aboveSame)
                     {
                         var colour = Face(1.0f);
                         if (flowSprite is { } moving)
@@ -853,7 +858,7 @@ public static class ChunkMesher
                             var angle = MathF.Atan2(flowZ, flowX) - (MathF.PI / 2f);
                             var s = MathF.Sin(angle) * 0.25f;
                             var c = MathF.Cos(angle) * 0.25f;
-                            translucent.AppendQuad(
+                            target.AppendQuad(
                                 (fx, lowY + Corner(0, 0) - epsilon, fz),
                                 (fx, lowY + Corner(0, 1) - epsilon, fz + 1f),
                                 (fx + 1f, lowY + Corner(1, 1) - epsilon, fz + 1f),
@@ -867,7 +872,7 @@ public static class ChunkMesher
                         }
                         else
                         {
-                            translucent.AppendQuad(
+                            target.AppendQuad(
                                 (fx, lowY + Corner(0, 0) - epsilon, fz),
                                 (fx, lowY + Corner(0, 1) - epsilon, fz + 1f),
                                 (fx + 1f, lowY + Corner(1, 1) - epsilon, fz + 1f),
@@ -879,11 +884,11 @@ public static class ChunkMesher
                     }
 
                     // Bottom: only when the cell below is neither water nor solid.
-                    if (!IsWater(bx, by - 1, bz) && !IsSolid(bx, by - 1, bz))
+                    if (!IsSameFluid(bx, by - 1, bz) && !IsSolid(bx, by - 1, bz))
                     {
                         var colour = Face(0.5f);
                         var yb = lowY + epsilon;
-                        translucent.AppendQuad(
+                        target.AppendQuad(
                             (fx, yb, fz), (fx + 1f, yb, fz), (fx + 1f, yb, fz + 1f), (fx, yb, fz + 1f),
                             colour, colour, colour, colour,
                             (0f, 0f), (1f, 0f), (1f, 1f), (0f, 1f),
@@ -904,10 +909,10 @@ public static class ChunkMesher
                     var sideFlowSprite = sprites?.FluidFlow(blockId) ?? sideSprite;
 
                     // -Z (z = bz): corners (0,0) and (1,0)
-                    if (!IsWater(bx, by, bz - 1) && !IsSolid(bx, by, bz - 1))
+                    if (!IsSameFluid(bx, by, bz - 1) && !IsSolid(bx, by, bz - 1))
                     {
                         var colour = Face(0.8f);
-                        translucent.AppendQuad(
+                        target.AppendQuad(
                             (fx, c00, nz), (fx + 1f, c10, nz), (fx + 1f, lowY, nz), (fx, lowY, nz),
                             colour, colour, colour, colour,
                             (0f, (1f - Corner(0, 0)) * 0.5f),
@@ -918,10 +923,10 @@ public static class ChunkMesher
                     }
 
                     // +Z (z = bz + 1): corners (1,1) and (0,1)
-                    if (!IsWater(bx, by, bz + 1) && !IsSolid(bx, by, bz + 1))
+                    if (!IsSameFluid(bx, by, bz + 1) && !IsSolid(bx, by, bz + 1))
                     {
                         var colour = Face(0.8f);
-                        translucent.AppendQuad(
+                        target.AppendQuad(
                             (fx + 1f, c11, sz), (fx, c01, sz), (fx, lowY, sz), (fx + 1f, lowY, sz),
                             colour, colour, colour, colour,
                             (0f, (1f - Corner(1, 1)) * 0.5f),
@@ -932,10 +937,10 @@ public static class ChunkMesher
                     }
 
                     // -X (x = bx): corners (0,1) and (0,0)
-                    if (!IsWater(bx - 1, by, bz) && !IsSolid(bx - 1, by, bz))
+                    if (!IsSameFluid(bx - 1, by, bz) && !IsSolid(bx - 1, by, bz))
                     {
                         var colour = Face(0.6f);
-                        translucent.AppendQuad(
+                        target.AppendQuad(
                             (wx, c01, fz + 1f), (wx, c00, fz), (wx, lowY, fz), (wx, lowY, fz + 1f),
                             colour, colour, colour, colour,
                             (0f, (1f - Corner(0, 1)) * 0.5f),
@@ -946,10 +951,10 @@ public static class ChunkMesher
                     }
 
                     // +X (x = bx + 1): corners (1,0) and (1,1)
-                    if (!IsWater(bx + 1, by, bz) && !IsSolid(bx + 1, by, bz))
+                    if (!IsSameFluid(bx + 1, by, bz) && !IsSolid(bx + 1, by, bz))
                     {
                         var colour = Face(0.6f);
-                        translucent.AppendQuad(
+                        target.AppendQuad(
                             (ex, c10, fz), (ex, c11, fz + 1f), (ex, lowY, fz + 1f), (ex, lowY, fz),
                             colour, colour, colour, colour,
                             (0f, (1f - Corner(1, 0)) * 0.5f),
