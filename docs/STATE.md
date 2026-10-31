@@ -1382,3 +1382,18 @@ System.ArgumentException: The value cannot be an empty string. (Parameter 'name'
 3. 宿主层兜底 catch 打印 `window crashed: <完整异常>`（这次就是靠它拿到的栈）。
 
 **实测**：游戏内 T → `/tp ~ ~ ~` → Enter，客户端**存活**（pid 53724，落在地面），全量 7 套 / 1114 用例通过。
+
+## 2026-10-31 老问题确认：流式区块只上传**不透明**层（远处/新区块的透明方块隐形）
+
+用户报告（并指出是**老问题**，与 A2/A3 无关）：出生点附近的透明方块正常，稍远或新加载的区块里透明方块（水/玻璃）**看不见**。
+
+代码依据（已核对，非猜测）：
+- `ChunkMesher` 每区块产出**三层**：不透明 `Vertices/Indices` + `cutout` + `translucent`（日志 `layers: cutout … tri, translucent … tri`）；
+- 但 `WindowCommand` 的流式上传只做了
+  `updates.Add((key, new GeometryData(mesh.Vertices, mesh.Indices)))` —— **只带不透明层**；
+  `GeometryData.cs` 也只有 `(float[] Vertices, uint[] Indices)` 两个字段；
+- 初始预加载/帧请求路径另有 `CutoutVertices/CutoutIndices`（`WindowedRenderer` L901）只覆盖**首次**那批区块。
+⇒ 所以**只有出生时加载的那批**有透明/镂空几何，之后流入的区块没有。
+
+**修复方向**（下一步）：`GeometryData` 扩成三层；`ChunkGeometryArena` 每区块持三组 slice（或三个 arena）；
+渲染器按 不透明 → cutout → translucent 三个 pass 绘制（半透明按距离从远到近）。
