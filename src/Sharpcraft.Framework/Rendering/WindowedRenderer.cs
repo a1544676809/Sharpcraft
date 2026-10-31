@@ -72,8 +72,7 @@ public static class WindowedRenderer
         // have to exist before anything is drawn (docs/modules/render.md 6.1).
         var atlasData = request.Atlas ?? TextureData.White;
 
-        // Diagnostic: drop the mip chain to separate mip filtering from level-zero sampling.
-        var atlasMips = Environment.GetEnvironmentVariable("MC_NO_MIPS") == "1" ? [] : atlasData.Mips ?? [];
+        var atlasMips = atlasData.Mips ?? [];
         var atlasTexture = device.CreateTexture(new TextureDescriptor
         {
             Size = new WGPUExtent3D

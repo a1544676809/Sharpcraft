@@ -601,46 +601,8 @@ internal static class FrameCommand
             {
                 Console.WriteLine($"    no texture: {blockId}");
             }
-
-            // Layer probe: prove where the leaves sprite and layer actually land instead of guessing.
-            if (layout.TryGetBaseId(new Identifier("minecraft", "oak_leaves"), out var leavesId))
-            {
-                var leafSprite = map.ForState(leavesId);
-                Console.WriteLine(
-                    $"  layer probe: leaves sprite ({leafSprite.X},{leafSprite.Y},{leafSprite.Width}x{leafSprite.Height}) " +
-                    $"missing ({missing.X},{missing.Y},{missing.Width}x{missing.Height}) " +
-                    $"same={leafSprite == missing} layer={Sharpcraft.Client.Render.BlockLayerRules.Of(leavesId, map, layout)} " +
-                    $"tint={Sharpcraft.Client.Render.BlockTintTable.KindOf(new Identifier("minecraft", "oak_leaves"))}");
-
-                // Sample the atlas region itself: if these bytes are a checkerboard, the pack's texture is, not our code.
-                var sumR = 0L; var sumG = 0L; var sumB = 0L; var sumA = 0L; var count = 0;
-
-                for (var py = leafSprite.Y; py < leafSprite.Y + leafSprite.Height; py++)
-                {
-                    for (var px = leafSprite.X; px < leafSprite.X + leafSprite.Width; px++)
-                    {
-                        var offset = ((py * atlas.Width) + px) * 4;
-                        sumR += atlas.Pixels[offset]; sumG += atlas.Pixels[offset + 1];
-                        sumB += atlas.Pixels[offset + 2]; sumA += atlas.Pixels[offset + 3];
-                        count++;
-                    }
-                }
-
-                Console.WriteLine(
-                    $"  atlas probe: mean rgba ({sumR / count},{sumG / count},{sumB / count},{sumA / count}) " +
-                    $"first texel ({atlas.Pixels[((leafSprite.Y * atlas.Width) + leafSprite.X) * 4]}," +
-                    $"{atlas.Pixels[(((leafSprite.Y * atlas.Width) + leafSprite.X) * 4) + 1]}," +
-                    $"{atlas.Pixels[(((leafSprite.Y * atlas.Width) + leafSprite.X) * 4) + 2]}," +
-                    $"{atlas.Pixels[(((leafSprite.Y * atlas.Width) + leafSprite.X) * 4) + 3]})");
-
-                // atlas dump: write the stitched atlas so the neighbourhood of a sprite can be inspected directly.
-                File.WriteAllBytes(Path.Combine(Path.GetTempPath(), "atlas-dump.rgba"), atlas.Pixels);
-                File.WriteAllText(
-                    Path.Combine(Path.GetTempPath(), "atlas-dump.txt"),
-                    $"{atlas.Width}x{atlas.Height} leaves={leafSprite.X},{leafSprite.Y},{leafSprite.Width},{leafSprite.Height}");
-                Console.WriteLine($"  atlas dump: {atlas.Width}x{atlas.Height} -> %TEMP%\\atlas-dump.rgba");
-            }
         }
+
         Console.WriteLine(
             $"sprites: {atlas.Width}x{atlas.Height} atlas, {atlas.Sprites.Count} sprites, " +
             $"layout {(map.HasLayout ? "present" : "missing")}, {timer.Elapsed.TotalMilliseconds:F0} ms");
@@ -744,7 +706,6 @@ internal static class FrameCommand
 
         world.AddChunk(1, 1).AddBlockEntity(new Sharpcraft.Common.World.BlockEntityRecord(8, 0, 8, 1));
 
-        Console.WriteLine($"sky light probe: {world.GetSkyLight(8, 8, 8)} / {world.GetSkyLight(8, 24, 8)}");
 
         return world;
     }
@@ -915,14 +876,6 @@ internal static class FrameCommand
                 cutoutIndices = split.Indices;
             }
 
-            if (Environment.GetEnvironmentVariable("MC_DEBUG_SPRITES") == "1" && cutoutVertices is { Length: >= 12 })
-            {
-                // Vertex layout is position(3), uv(2), colour(3), sprite rect(4): the colour is what the tint multiplies.
-                Console.WriteLine(
-                    $"  vertex probe: cutout vertex0 colour ({cutoutVertices[3]:F3},{cutoutVertices[4]:F3},{cutoutVertices[5]:F3}) " +
-                    $"uv ({cutoutVertices[6]:F3},{cutoutVertices[7]:F3}) rect ({cutoutVertices[8]:F3},{cutoutVertices[9]:F3},{cutoutVertices[10]:F3},{cutoutVertices[11]:F3}) " +
-                    $"tintMultiplier {BiomeTint.ToMultiplier(BiomeTint.FoliageDefault)}");
-            }
 
             Console.WriteLine(
                 $"layers: solid {drawRanges!.Sum(range => range.IndexCount) / 3} tri, " +
@@ -1058,40 +1011,9 @@ internal static class FrameCommand
 
         // Colour maps come from the resource pack; without them the tint falls back to the reference constants. The stack
         // is cheap to build, and this path only builds one frame.
-        if (Environment.GetEnvironmentVariable("MC_DEBUG_LIGHT") == "1")
-        {
-            // Light probe: a chunk whose light is all zero renders black, which is what a dark patch on the ground looks like.
-            foreach (var chunk in world.GetChunks())
-            {
-                var sky = 0;
-                var block = 0;
-
-                for (var section = 0; section < chunk.Light.LightSectionCount; section++)
-                {
-                    for (var y = 0; y < 16; y += 8)
-                    {
-                        for (var z = 0; z < 16; z += 8)
-                        {
-                            for (var x = 0; x < 16; x += 8)
-                            {
-                                sky = Math.Max(sky, chunk.Light.GetSkyLight(section, x, y, z));
-                                block = Math.Max(block, chunk.Light.GetBlockLight(section, x, y, z));
-                            }
-                        }
-                    }
-                }
-
-                Console.WriteLine($"  light probe: chunk ({chunk.ChunkX},{chunk.ChunkZ}) lightSections={chunk.Light.LightSectionCount} maxSky={sky} maxBlock={block}");
-            }
-        }
-
         using var tintResources = CreateResourceManager();
         var tint = Sharpcraft.Client.Render.BiomeTint.Load(tintResources);
 
-        if (Environment.GetEnvironmentVariable("MC_FRAME_NO_TINT") == "1")
-        {
-            tint = null;
-        }
 
         var request = BuildRequest(
             world,
@@ -1109,16 +1031,6 @@ internal static class FrameCommand
 
         Console.WriteLine($"rendered on adapter: {frame.AdapterName}");
 
-        // depth dump: write the depth buffer next to the colour so a black pixel can be classified as "no geometry" or
-        // "geometry present but shaded black".
-        if (Environment.GetEnvironmentVariable("MC_FRAME_DEPTH_DUMP") == "1" && frame.Depth is { } depthDump)
-        {
-            var bytes = new byte[depthDump.Length * 4];
-            Buffer.BlockCopy(depthDump, 0, bytes, 0, bytes.Length);
-            var dumpPath = Path.Combine(Path.GetTempPath(), "frame-depth.f32");
-            File.WriteAllBytes(dumpPath, bytes);
-            Console.WriteLine($"  depth dump: {frame.Width}x{frame.Height} -> {dumpPath}");
-        }
 
         if (Environment.GetEnvironmentVariable("MC_FRAME_TRANSLUCENT_TEST") == "1" && request.TranslucentIndices is { Length: > 0 })
         {

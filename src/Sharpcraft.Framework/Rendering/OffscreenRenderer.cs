@@ -451,8 +451,7 @@ public static class OffscreenRenderer
             // half-texel inset from blending across sprite borders.
             var atlasData = request.Atlas ?? TextureData.White;
 
-            // Diagnostic: drop the mip chain to separate mip filtering from level-zero sampling.
-            var atlasMips = Environment.GetEnvironmentVariable("MC_NO_MIPS") == "1" ? [] : atlasData.Mips ?? [];
+            var atlasMips = atlasData.Mips ?? [];
             using var atlasTexture = device.CreateTexture(new TextureDescriptor
             {
                 Size = new WGPUExtent3D
@@ -614,22 +613,6 @@ public static class OffscreenRenderer
                 ? device.CreateBufferInit(new BufferInitDescriptor { Usage = BufferUsage.Index }, indexBytes.AsSpan())
                 : default;
 
-            // Diagnostic: render a single stage, so a defect can be attributed to the pass that produced it.
-            var only = Environment.GetEnvironmentVariable("MC_FRAME_ONLY");
-            bool Wants(string stage) => only is null or "" || only.Equals(stage, StringComparison.OrdinalIgnoreCase);
-
-            var clearText = Environment.GetEnvironmentVariable("MC_FRAME_CLEAR");
-
-            if (clearText is { Length: > 0 })
-            {
-                var parts = clearText.Split(',');
-                if (parts.Length == 3 &&
-                    float.TryParse(parts[0], out var cr) && float.TryParse(parts[1], out var cg) && float.TryParse(parts[2], out var cb))
-                {
-                    request = request with { ClearColour = new System.Numerics.Vector4(cr, cg, cb, 1f) };
-                }
-            }
-
             var encoder = device.CreateCommandEncoder();
             var colour = request.ClearColour;
             var pass = encoder.BeginRenderPass(
@@ -645,14 +628,13 @@ public static class OffscreenRenderer
             DepthStencilAttachment.DepthClear(depthView));
 
             // Sky first: it fills the cleared target, then the world draws over it.
-            if (Wants("sky"))
+            using (var skyPipeline = CreateSkyPipeline(device, WGPUTextureFormat.RGBA8Unorm))
             {
-                using var skyPipeline = CreateSkyPipeline(device, WGPUTextureFormat.RGBA8Unorm);
                 pass.SetPipeline(skyPipeline);
                 pass.Draw(3);
             }
 
-            if (hasGeometry && Wants("opaque"))
+            if (hasGeometry)
             {
                 pass.SetPipeline(pipeline);
                 pass.SetBindGroup(0, bindGroup, []);
@@ -676,8 +658,7 @@ public static class OffscreenRenderer
                 }
             }
 
-            if (Wants("cutout") &&
-                request.CutoutVertices is { Length: > 0 } cutoutVertices &&
+            if (request.CutoutVertices is { Length: > 0 } cutoutVertices &&
                 request.CutoutIndices is { Length: > 0 } cutoutIndices)
             {
                 using var cutoutPipeline = CreateCutoutPipeline(device, pipelineLayout);
@@ -695,8 +676,7 @@ public static class OffscreenRenderer
                 pass.DrawIndexed((uint)cutoutIndices.Length);
             }
 
-            if (Wants("translucent") &&
-                request.TranslucentVertices is { Length: > 0 } translucentVertices &&
+            if (request.TranslucentVertices is { Length: > 0 } translucentVertices &&
                 request.TranslucentIndices is { Length: > 0 } translucentIndices)
             {
                 // Blended, no depth writes, drawn last: the order of these calls is what makes overlapping water read right.
