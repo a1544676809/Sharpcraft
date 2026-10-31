@@ -1893,4 +1893,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `CelestialGeometryTests` 3 项手算等效（角度0/90°顶点、日出扇形中心/环点）通过。全量 1181 通过（一次偶发 `ChunkSeamTests` 抖动，复跑全绿）、门禁 ok。
 - 待办：天体贴图集（sun/moon）从 pack 取；天空 pass 用 `CelestialGeometry` 绘制盘/日月/星/日出；`DayTime`→角度/亮度驱动；离屏像素验收。## 2026-11-01 天空天体：贴图切片核心
 - `Client/Assets/CelestialSprites.cs`：天体贴图资源位于 `textures/environment/`（sun、moon_phases，独立于方块图集）；`SliceMoonPhases` 把 4×2 月相表切成 8 个 row-major 矩形。测试 2 项（切片坐标、非整格报错）。全量 1183 通过、门禁 ok。
-- 待办：GPU 侧把 sun/moon 贴图上传 + 天空 pass 用 `CelestialGeometry` 画盘/日月/星/日出（`DayTime`→角度/亮度），离屏出图+像素验收。这是较大的渲染切片。
+- 待办：GPU 侧把 sun/moon 贴图上传 + 天空 pass 用 `CelestialGeometry` 画盘/日月/星/日出（`DayTime`→角度/亮度），离屏出图+像素验收。这是较大的渲染切片。## 2026-11-01 天空天体：网格构建 + 着色器
+- `Client/Render/CelestialMeshBuilder.cs`：把 `CelestialGeometry` 四边形打包成 position3+uv2 顶点 + 三角索引（UV 顺序同原版 buildCelestialQuad），测试 1 项手算。
+- `Framework/.../pipelines/celestial.wgsl`：`vs_celestial/fs_celestial`，uniform=相机 viewProjection + `CelestialTransform{model,tint}`，采样天体纹理×tint。
+- 全量 1184 通过、门禁 ok。
+- 待办：设备侧建 celestial 纹理/管线/uniform、在天空 pass 后绘制（先离屏太阳最小验证，再月/星/日出），像素验收。
