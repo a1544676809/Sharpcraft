@@ -60,7 +60,10 @@ public static class HostDebugOptions
             InputTrace = Flag("MC_INPUT_TRACE"),
             PerformanceSummary = Flag("MC_PERF_SUMMARY"),
             CullStatistics = Flag("MC_CULL_STATS"),
-            DisableCulling = Flag("MC_CULL_DISABLE")
+            DisableCulling = Flag("MC_CULL_DISABLE"),
+            Transparency = Environment.GetEnvironmentVariable("MC_TRANSPARENCY") == "reference"
+                ? Sharpcraft.Framework.Rendering.TransparencyMode.Reference
+                : Sharpcraft.Framework.Rendering.TransparencyMode.Weighted
         };
     }
 

@@ -1768,10 +1768,19 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 **实测通过**：单片覆盖度≈α（误差<0.02）、双层≈`1−(1−a₁)(1−a₂)`（<0.03）、编码顺序无关（系数逐位相等）、
 空系数覆盖度=0、absorbance↔transmittance 往返。⇒ 算法理解与实现已由纯逻辑验证，可以上 GPU。
 
-**下一步具体动作**：第 2 步 —— GPU 目标与管线：`depthBounds`(RGBA32F, MAX)/`depthBoundsCulled`(RGBA32F)/
-`transmittance[2]`(RGBA16F, ADDITIVE)/`accumulate`(RGBA16F, ADDITIVE) 四目标 + `oit_reference.wgsl`（三入口）+
-`oit_depth_bounds_cull.wgsl` + `oit_composite.wgsl`；三阶段各画一遍半透明几何；composite 写主色与深度。
-WGSL 的采样/编码须与 `OitWavelet` 逐值一致（先用确定性水景跑通、0 validation error，再谈像素）。
-**关键实现约束（spec §10）**：我们标准 Z、原版反向 Z。深度边界仍四路 `MAX` 编码为
-`(-linear, +linear, -device, alpha>0.99? -device : -1)`，cull/composite 取负还原；三阶段深度比较改 `LessEqual` 写关；
-`composite` 的 `frag_depth = -b`；线性深度直接用 `fogDistance(=clip.w)`。
+**第 2/3 步已完成（2026-10-31，GPU 三阶段 + composite + 开关）**：
+
+- 新增 WGSL：`oit_reference.wgsl`（`vs_main` + `fs_depth_bounds`/`fs_transmittance`/`fs_accumulate`，含 8 系数编解码）、
+  `oit_depth_bounds_cull.wgsl`、`oit_composite.wgsl`（`fs_composite` 写 `frag_depth`）。已登记进 `ShaderPipelines` 启动校验。
+- `WindowedRenderer`：4 个目标（depthBounds / depthBoundsCulled / transmittance×2 / accumulate）+ 5 条管线 + cull + composite，
+  帧循环 `if (useReference)` 分支（其余原 weighted 分支保留），resize 重建目标、退出 Disposal、静态半透明 3 次绘制。
+- 开关：`FrameDiagnostics.TransparencyMode` + 宿主 `HostDebugOptions` 解析 `MC_TRANSPARENCY=reference`（默认 weighted，符合原则 13）。
+- **修掉的编译/运行时坑**：WGSL `1 << power` 需 `1i << u32(power)`；`texelFetch`→`textureLoad`；
+  **RGBA32F 在本后端不可混合** ⇒ 深度边界改用 RGBA16F（哨兵 `-65504`，线性深度在远处约 ±1–2 方块精度，reference 可接受）。
+- **运行时实测**：确定性水景 reference 模式 **703 帧 / 0 validation error**；resize（960×540→640×360）后仍 0 error；
+  weighted 默认模式回归正常（535 帧）。全量测试 1122 通过、文档门禁 ok。
+
+**已知限制 / 下一步**：
+1. **窗口像素仍无法在本环境截图**（交换链不可拷贝），reference 观感需所有者本机 `MC_TRANSPARENCY=reference` 目视。
+2. 深度边界用 RGBA16F（RGBA32F 不可混合）带来的远处精度损失，若目视有问题再考虑分通道/两目标方案。
+3. 未做：water mask、云/水面贴片深度、实体/粒子/云/天气的 OIT 集合、`OIT_ADDITIVE`（见 spec §11）。

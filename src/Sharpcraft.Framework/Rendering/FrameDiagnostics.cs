@@ -3,6 +3,16 @@
 
 namespace Sharpcraft.Framework.Rendering;
 
+/// <summary>Which translucent compositing path a frame uses (docs/specs/render/oit-reference.md).</summary>
+public enum TransparencyMode
+{
+    /// <summary>Weighted blended OIT with a reveal target: cheap, order independent, the default.</summary>
+    Weighted,
+
+    /// <summary>Vanilla-style depth-bounds + wavelet-transmittance OIT: more faithful, more passes.</summary>
+    Reference,
+}
+
 /// <summary>
 /// Extra outputs and tweaks a host may ask a frame for, all off by default.
 /// </summary>
@@ -47,4 +57,7 @@ public sealed record FrameDiagnostics
 
     /// <summary>Draw every chunk without the frustum test, the fallback when GPU culling is unavailable.</summary>
     public bool DisableCulling { get; init; }
+
+    /// <summary>Which translucent compositing path to use.</summary>
+    public TransparencyMode Transparency { get; init; } = TransparencyMode.Weighted;
 }

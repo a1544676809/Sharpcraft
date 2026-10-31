@@ -30,8 +30,8 @@ updated: 2026-10-31
 
 | 名称 | 格式 | 用途 |
 | --- | --- | --- |
-| `depthBounds` | RGBA32F | 每像素透明度几何的最近/最远线性深度与最近器件深度、不透明器件深度 |
-| `depthBoundsCulled` | RGBA32F | 经 `depth_bounds_cull` 后：最远边界裁到不透明深度 |
+| `depthBounds` | RGBA16F（原版 RGBA32F；本后端 RGBA32F 不可混合，见 §10）| 每像素透明度几何的最近/最远线性深度与最近器件深度、不透明线性深度 |
+| `depthBoundsCulled` | RGBA16F | 经 `depth_bounds_cull` 后：最远边界裁到不透明深度 |
 | `transmittance[2]` | RGBA16F ×2 | 8 个透射率小波系数（每目标 4 个） |
 | `accumulate` | RGBA16F | 加权颜色累计 `Σ (rgb·a, a)·采样透射率` |
 | `oitCloudDepth` / `oitTerrainWithWaterPatchDepth` | 深度 | 云/水面贴片专用深度（本规格暂不实现，见 §6） |
@@ -142,12 +142,13 @@ Pass 顺序（在加权 OIT 的同等位置替换/追加）：
 | 事项 | 原版（反向 Z）| 我们（标准 Z）|
 | --- | --- | --- |
 | 深度比较（OIT 三阶段）| `GREATER_THAN_OR_EQUAL` | `LESS_EQUAL`；仍不写深度 |
-| 深度边界编码到 RGBA32F（混合 `MAX`）| `(-linear, linear, device, opaqueDevice)` | `(-linear, +linear, -device, alpha>0.99 ? -device : -1)` |
-| 还原 | 直接读 | `closestLinear = -r`、`furthestLinear = g`、`closestDevice = -b`、`opaqueDevice = -a` |
+| 深度边界编码到 RGBA16F（混合 `MAX`）| `(-linear, linear, device, opaqueDevice)` | `(-linear, +linear, -device, alpha>0.99 ? -linear : -65504)` |
+| 还原 | 直接读 | `closestLinear = -r`、`furthestLinear = g`、`closestDevice = -b`、`opaqueLinear = -a` |
 | composite 的 `frag_depth` | `= b`（最近器件）| `= -b` |
 
-理由：四个通道**都取 `MAX`** 仍是自洽的——`r:MAX(-linear)=-最近`、`g:MAX(+linear)=最远`、`b:MAX(-device)=-最近`、
-`a:MAX(-device | -1)=-最近不透明`（未不透明为 `-1`⇒还原为 `1`⇒裁到远平面，等价"无上限"）。
+理由：四个通道**都取 `MAX`** 仍是自洽的——`r:MAX(-linear)=-最近`、`g:MAX(+linear)=最远`、`b:MAX(-device)=-最近器件`、
+`a:MAX(-linear_opaque | -65504)=-最近不透明线性`（无则不透明为 `-65504`⇒还原 65504⇒`min(g,65504)=g`，等价"无上限"）。
+注意：目标格式用 **RGBA16F**，因为本后端 RGBA32F 不支持混合；16F 在远处（~2000 方块）线性深度约有 ±1–2 方块量化，reference 可接受。
 
 线性深度**直接复用顶点着色器已输出的 `fogDistance = clip.w`（= 视距，单位方块）**，不引入 `ProjMat`；器件深度用
 `clip.z/clip.w`（NDC z）作为插值传递。`depth_bounds_cull` 与 `composite` 在此约定下翻转比较与符号。
