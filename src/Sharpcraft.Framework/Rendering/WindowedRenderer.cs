@@ -486,20 +486,6 @@ public static class WindowedRenderer
         BindGroup refCompositeBindGroup = default;
         Texture cloudDepthTexture = default;
         TextureView cloudDepthView = default;
-        Texture cloudDepthBoundsTexture = default;
-        TextureView cloudDepthBoundsView = default;
-        Texture cloudDepthBoundsCulledTexture = default;
-        TextureView cloudDepthBoundsCulledView = default;
-        Texture cloudTransmittance0Texture = default;
-        TextureView cloudTransmittance0View = default;
-        Texture cloudTransmittance1Texture = default;
-        TextureView cloudTransmittance1View = default;
-        Texture cloudAccumulateTexture = default;
-        TextureView cloudAccumulateView = default;
-        BindGroup cloudCullBindGroup = default;
-        BindGroup cloudTransmittanceBindGroup = default;
-        BindGroup cloudAccumulateBindGroup = default;
-        BindGroup cloudCompositeBindGroup = default;
         var cloudDepthTargetsCreated = false;
         var refTargetsCreated = false;
 
@@ -525,20 +511,6 @@ public static class WindowedRenderer
                 {
                     cloudDepthView.Dispose();
                     cloudDepthTexture.Dispose();
-                    cloudDepthBoundsView.Dispose();
-                    cloudDepthBoundsTexture.Dispose();
-                    cloudDepthBoundsCulledView.Dispose();
-                    cloudDepthBoundsCulledTexture.Dispose();
-                    cloudTransmittance0View.Dispose();
-                    cloudTransmittance0Texture.Dispose();
-                    cloudTransmittance1View.Dispose();
-                    cloudTransmittance1Texture.Dispose();
-                    cloudAccumulateView.Dispose();
-                    cloudAccumulateTexture.Dispose();
-                    cloudCullBindGroup.Dispose();
-                    cloudTransmittanceBindGroup.Dispose();
-                    cloudAccumulateBindGroup.Dispose();
-                    cloudCompositeBindGroup.Dispose();
                     cloudDepthTargetsCreated = false;
                 }
             }
@@ -575,37 +547,6 @@ public static class WindowedRenderer
             {
                 cloudDepthTexture = CreateDepthTexture(device, frameWidth, frameHeight);
                 cloudDepthView = cloudDepthTexture.CreateView();
-                cloudDepthBoundsTexture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
-                cloudDepthBoundsView = cloudDepthBoundsTexture.CreateView();
-                cloudDepthBoundsCulledTexture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
-                cloudDepthBoundsCulledView = cloudDepthBoundsCulledTexture.CreateView();
-                cloudTransmittance0Texture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
-                cloudTransmittance0View = cloudTransmittance0Texture.CreateView();
-                cloudTransmittance1Texture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
-                cloudTransmittance1View = cloudTransmittance1Texture.CreateView();
-                cloudAccumulateTexture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
-                cloudAccumulateView = cloudAccumulateTexture.CreateView();
-                cloudCullBindGroup = device.CreateBindGroup(
-                    refCullLayout,
-                    [BindGroupEntry.TextureView(0, cloudDepthBoundsView)]);
-                cloudTransmittanceBindGroup = device.CreateBindGroup(
-                    refTransmittanceLayout,
-                    [BindGroupEntry.TextureView(0, cloudDepthBoundsCulledView)]);
-                cloudAccumulateBindGroup = device.CreateBindGroup(
-                    refAccumulateLayout,
-                    [
-                        BindGroupEntry.TextureView(0, cloudDepthBoundsCulledView),
-                        BindGroupEntry.TextureView(1, cloudTransmittance0View),
-                        BindGroupEntry.TextureView(2, cloudTransmittance1View)
-                    ]);
-                cloudCompositeBindGroup = device.CreateBindGroup(
-                    refCompositeLayout,
-                    [
-                        BindGroupEntry.TextureView(0, cloudAccumulateView),
-                        BindGroupEntry.TextureView(1, cloudTransmittance0View),
-                        BindGroupEntry.TextureView(2, cloudTransmittance1View),
-                        BindGroupEntry.TextureView(3, cloudDepthBoundsCulledView)
-                    ]);
                 cloudDepthTargetsCreated = true;
             }
 
