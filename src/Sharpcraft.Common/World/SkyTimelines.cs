@@ -328,7 +328,7 @@ public static class SkyAttributeTracks
         new(CloudColorFactorR.Sample(dayTimeTicks), CloudColorFactorR.Sample(dayTimeTicks), CloudColorFactorB.Sample(dayTimeTicks));
 
     private static readonly FloatKeyframeTrack CloudColorAlpha = FloatKeyframeTrack.Build(
-        [new FloatKeyframe(133, 0.8f), new FloatKeyframe(11867, 0.8f), new FloatKeyframe(13670, 0.15f), new FloatKeyframe(22330, 0.15f)],
+        [new FloatKeyframe(133, 0.8f), new FloatKeyframe(11867, 0.8f), new FloatKeyframe(13670, 0.12f), new FloatKeyframe(22330, 0.12f)],
         static x => x, Period);
 
     /// <summary>CLOUD_COLOR alpha (day 0.8, night 0.15), matching DimensionTypes default and the night multiplier.</summary>

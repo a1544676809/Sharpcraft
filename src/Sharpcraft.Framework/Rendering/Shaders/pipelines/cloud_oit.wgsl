@@ -205,9 +205,6 @@ struct TransmittanceOutput {
 @fragment
 fn fs_transmittance(input : VertexOutput) -> TransmittanceOutput {
     let fragmentAlpha = input.cloudAlpha * input.alpha;
-    if (fragmentAlpha < 0.1) {
-        discard;
-    }
     let bounds = textureLoad(depthBoundsTexture, vec2<i32>(input.clipPosition.xy), 0);
     let closestLinear = -bounds.r;
     let furthestLinear = bounds.g;
@@ -227,9 +224,6 @@ struct AccumulateOutput {
 @fragment
 fn fs_accumulate(input : VertexOutput) -> AccumulateOutput {
     let fragmentAlpha = input.cloudAlpha * input.alpha;
-    if (fragmentAlpha < 0.1) {
-        discard;
-    }
     let pixel = vec2<i32>(input.clipPosition.xy);
     let bounds = textureLoad(depthBoundsTexture, pixel, 0);
     let closestLinear = -bounds.r;
