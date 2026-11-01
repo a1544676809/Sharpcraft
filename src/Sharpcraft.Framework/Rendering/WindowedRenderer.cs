@@ -269,6 +269,7 @@ public static class WindowedRenderer
         using var refAccumulatePipeline = CreateAccumulatePipeline(device, refAccumulatePipelineLayout, format: oitTargetFormat);
         using var refCullPipeline = CreateCullPipeline(device, refCullPipelineLayout, oitTargetFormat);
         using var refCompositePipeline = CreateCompositePipeline(device, format, refCompositePipelineLayout);
+        using var cloudCompositePipeline = CreateCompositePipeline(device, format, refCompositePipelineLayout, WGPUCompareFunction.LessEqual);
 
         // The interface layer needs its own transform: one uniform buffer cannot hold both the world camera and
         // the orthographic projection while a single pass reads from it.
@@ -1461,7 +1462,7 @@ public static class WindowedRenderer
                 var cloudCompositePass = encoder.BeginRenderPass(
                     [new ColorAttachment { View = view, LoadOp = WGPULoadOp.Load, StoreOp = WGPUStoreOp.Store }],
                     new DepthStencilAttachment { View = depthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store });
-                cloudCompositePass.SetPipeline(refCompositePipeline);
+                cloudCompositePass.SetPipeline(cloudCompositePipeline);
                 cloudCompositePass.SetBindGroup(0, cloudCompositeBindGroup);
                 cloudCompositePass.Draw(3);
                 cloudCompositePass.End();
@@ -1858,7 +1859,7 @@ public static class WindowedRenderer
     }
 
     /// <summary>Reference transparency composite: premultiplied over the frame, writing the nearest translucent depth.</summary>
-    private static RenderPipeline CreateCompositePipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
+    private static RenderPipeline CreateCompositePipeline(Device device, WGPUTextureFormat format, PipelineLayout layout, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always)
     {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
         {
@@ -1885,7 +1886,7 @@ public static class WindowedRenderer
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
             multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.Always, write: true),
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, depthCompare, write: true),
             vertexStride: 0,
             vertexStepMode: WGPUVertexStepMode.Vertex,
             vertexAttributes: []);
