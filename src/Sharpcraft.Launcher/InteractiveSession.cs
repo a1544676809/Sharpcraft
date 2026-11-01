@@ -1256,6 +1256,18 @@ internal sealed class InteractiveSession
 
                     break;
 
+                case PacketIds.PlayClientbound.GameEvent:
+                    if (_world is not null)
+                    {
+                        var gameEventReader = new PayloadReader(body);
+                        if (GameEventPacketCodec.TryRead(ref gameEventReader, out var gameEvent) == DecodeStatus.Success)
+                        {
+                            _world.ApplyWeather(gameEvent);
+                        }
+                    }
+
+                    break;
+
                 case PacketIds.PlayClientbound.LevelChunkWithLight:
                     if (_world is null)
                     {

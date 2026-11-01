@@ -78,6 +78,65 @@ public sealed class ClientWorld
     public float DayTimePartial =>
         _clocks.TryGetValue(OverworldClockId, out var clock) ? Math.Clamp(clock.PartialTick, 0f, 1f) : 0f;
 
+    private float _rainLevel;
+    private float _thunderLevel;
+    private float _previousRainLevel;
+    private float _previousThunderLevel;
+
+    /// <summary>Rain level (0..1) at a sub-tick fraction, interpolated between the previous and current tick.</summary>
+    public float RainLevel(float partialTick) => LerpBetween(partialTick, _previousRainLevel, _rainLevel);
+
+    /// <summary>
+    /// Thunder level (0..1) at a sub-tick fraction, interpolated between ticks and scaled by the rain level, matching
+    /// <c>Level.getThunderLevel</c> (docs/modules/weather-and-sky-color.md 6.3).
+    /// </summary>
+    public float ThunderLevel(float partialTick) => LerpBetween(partialTick, _previousThunderLevel, _thunderLevel) * RainLevel(partialTick);
+
+    /// <summary>Sets the rain level; the client takes the server's value directly (previous and current match).</summary>
+    public void SetRainLevel(float level)
+    {
+        var clamped = Math.Clamp(level, 0f, 1f);
+        _previousRainLevel = clamped;
+        _rainLevel = clamped;
+    }
+
+    /// <summary>Sets the thunder level; the client takes the server's value directly.</summary>
+    public void SetThunderLevel(float level)
+    {
+        var clamped = Math.Clamp(level, 0f, 1f);
+        _previousThunderLevel = clamped;
+        _thunderLevel = clamped;
+    }
+
+    /// <summary>
+    /// Applies a <c>game_event</c> to the weather state, mirroring the reference <c>ClientPacketListener.handleGameEvent</c>.
+    /// The START/STOP branch values (0/1) are the reference's quirk; the server always follows them with a
+    /// RAIN_LEVEL_CHANGE carrying the real level.
+    /// </summary>
+    public void ApplyWeather(Sharpcraft.Common.Network.GameEventPacket packet)
+    {
+        ArgumentNullException.ThrowIfNull(packet);
+
+        switch (packet.EventType)
+        {
+            case Sharpcraft.Common.Network.GameEventPacketCodec.StartRaining:
+                SetRainLevel(0f);
+                break;
+            case Sharpcraft.Common.Network.GameEventPacketCodec.StopRaining:
+                SetRainLevel(1f);
+                break;
+            case Sharpcraft.Common.Network.GameEventPacketCodec.RainLevelChange:
+                SetRainLevel(packet.Param);
+                break;
+            case Sharpcraft.Common.Network.GameEventPacketCodec.ThunderLevelChange:
+                SetThunderLevel(packet.Param);
+                break;
+        }
+    }
+
+    private static float LerpBetween(float partialTick, float previous, float current) =>
+        previous + (Math.Clamp(partialTick, 0f, 1f) * (current - previous));
+
     /// <summary>Applies a <c>set_time</c> packet: game time and every world clock state.</summary>
     public void ApplyTime(SetTimePacket packet)
     {

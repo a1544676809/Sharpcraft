@@ -1940,4 +1940,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 单测 6（`ColorMapColorUtilTests` 3、`SkyColourTests` 3，均手算）。全量 **1218 通过**、门禁/架构 ok。
 - **P1.3** ✅ `Common/World/ColourBlend`（greyscale `0.3/0.59/0.11`、scaleRGB clamp、srgbLerp、BlendToGray）+ `WeatherBlend`（`RainBrightness=1-rain`、`SkyLightFactor`/`ApplySkyColour` 按 `rain−thunder`/`thunder` 权重重叠）；`WeatherBlendTests`(6)。
 - **P1.4** ✅ `BlockTint.Calculate`（`(2r+1)²` 逐通道整数平均，r=0 单点）+ `GaussianWeights`（7 抽头 `{0,1,4,6,4,1,0}`、3D 乘积、总和 4096）；`BlockTintTests`(3)+`GaussianWeightsTests`(3)。**P1 纯逻辑全部完成**。
-- **下一步 P2（天气同步，Client）**：`ClientboundGameEventPacket` 解析（id 锚点校准）+ `WeatherState`（rain/thunder + 按 partial 插值）+ 把 `RainBrightness` 接到日月/星 alpha；随后接 `SkyLightFactor`/`ApplySkyColour` 到日夜光照与天空。P3（biome 数据，硬前置）另起。
+- **下一步 P2（天气同步，Client）**：`ClientboundGameEventPacket` 解析（id 锚点校准）+ `WeatherState`（rain/thunder + 按 partial 插值）+ 把 `RainBrightness` 接到日月/星 alpha；随后接 `SkyLightFactor`/`ApplySkyColour` 到日夜光照与天空。P3（biome 数据，硬前置）另起。## 2026-11-01 P2 天气同步（Client）
+- **P2.1** `PlayClientbound.GameEvent=39`（GameProtocols clientbound 序 index 40，id=index−1；锚点 SetTime 116→115、Login 51→50）；`GameEventPacket`(byte type + float param)+`GameEventPacketCodec`；`GameEventPacketTests`(2)。实读确认 START/STOP 为占位（0/1），真实值由随后 `RAIN_LEVEL_CHANGE`/`THUNDER_LEVEL_CHANGE` 给出。
+- **P2.2** `ClientWorld` 天气状态：`SetRainLevel/SetThunderLevel`(o=current)、`RainLevel(partial)`/`ThunderLevel(partial)`(thunder×rain，照 `Level.getThunderLevel`)、`ApplyWeather`(START 0/STOP 1 quirk + 7/8 level)；`InteractiveSession` 分发 `GameEvent`；`ClientWorldWeatherTests`(4)。
+- **P2.3** `RAIN_BRIGHTNESS=1-rain` 接日月 tint alpha；星亮度按 `(1−rainWeight)(1−thunder)` 衰减；`MC_FORCE_RAIN/THUNDER` 验证。本地夜 rain 0→stars 0.500/alpha 1.00，rain 1→stars 0.000/alpha 0.00。
+- 全量 **1224 通过**、门禁/架构 ok。**下一步**：P3（chunk biome 数据 + registry，硬前置；接方块调色逐群系与天空盘替换）或先把天气叠加进 `LightmapParameters`/`SKY_LIGHT_*`（可纯逻辑测）。P3 工作量最大，建议单独一轮。

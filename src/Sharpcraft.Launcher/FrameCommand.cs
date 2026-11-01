@@ -1344,6 +1344,16 @@ internal static class FrameCommand
         var dayTime = EffectiveDayTime(world);
         var partialTick = EffectiveDayTimePartial(world);
 
+        // Rain/thunder levels (host override for verification); rain brightness dims the sun and moon, and rain/thunder
+        // dims the stars (WeatherAttributes sets STAR_BRIGHTNESS to 0 under rain/thunder).
+        var rainLevel = Environment.GetEnvironmentVariable("MC_FORCE_RAIN") is { Length: > 0 } rainText && float.TryParse(rainText, out var parsedRain)
+            ? Math.Clamp(parsedRain, 0f, 1f)
+            : world.RainLevel(partialTick);
+        var thunderLevel = Environment.GetEnvironmentVariable("MC_FORCE_THUNDER") is { Length: > 0 } thunderText && float.TryParse(thunderText, out var parsedThunder)
+            ? Math.Clamp(parsedThunder, 0f, 1f) * rainLevel
+            : world.ThunderLevel(partialTick);
+        var rainBrightness = Sharpcraft.Common.World.WeatherBlend.RainBrightness(rainLevel);
+
         // The moon phase follows total world ticks (one phase per 24000 ticks); angles follow the day clock.
         var totalTicks = world.TryGetClock(ClientWorld.OverworldClockId, out var clock) ? clock.TotalTicks : world.GameTime;
         var moonPhaseIndex = Sharpcraft.Common.World.SkyAttributeTracks.MoonPhaseIndex(totalTicks);
@@ -1388,7 +1398,8 @@ internal static class FrameCommand
         }
 
         // Stars: the reference star field rotated by the star angle, brightened by the star-brightness attribute.
-        var starBrightness = Sharpcraft.Common.World.SkyAttributeTracks.StarBrightnessAt(dayTime, partialTick);
+        var starBrightness = Sharpcraft.Common.World.SkyAttributeTracks.StarBrightnessAt(dayTime, partialTick)
+            * (1f - MathF.Max(0f, rainLevel - thunderLevel)) * (1f - thunderLevel);
         if (starBrightness > 0f)
         {
             var starCorners = StarField.Build(out var keptStars);
@@ -1417,7 +1428,7 @@ internal static class FrameCommand
         {
             Console.WriteLine(
                 $"celestial: {textures.Count} texture(s), {draws.Count} textured draw(s), {colorDraws.Count} colour draw(s), " +
-                $"sun {sunAngle:F1} deg, moon {moonAngle:F1} deg (phase {moonPhaseIndex}), sunrise a={sunrise.W:F3}, stars {starBrightness:F3}");
+                $"sun {sunAngle:F1} deg, moon {moonAngle:F1} deg (phase {moonPhaseIndex}), sunrise a={sunrise.W:F3}, stars {starBrightness:F3}, rain {rainLevel:F2} (sun/moon alpha {rainBrightness:F2})");
         }
 
         return request with
@@ -1443,7 +1454,8 @@ internal static class FrameCommand
                 angleDegrees * (MathF.PI / 180f), height: 100f, size: size, uv: (0f, 0f, 1f, 1f));
 
             // Translate to the eye so the body stays at the same place relative to the camera, i.e. infinitely far.
-            draws.Add(new CelestialQuadDraw(textureIndex, vertices, indices, Matrix4x4.CreateTranslation(request.CameraPosition), Vector4.One));
+            // RAIN_BRIGHTNESS (= 1 - rainLevel) is the reference alpha on the sun/moon transform.
+            draws.Add(new CelestialQuadDraw(textureIndex, vertices, indices, Matrix4x4.CreateTranslation(request.CameraPosition), new Vector4(1f, 1f, 1f, rainBrightness)));
         }
 
         void AddColor(Vector3[] positions, Vector4[] colours, List<uint> triangles, Vector4 tint, CelestialColorBlend blend)
