@@ -119,7 +119,7 @@ internal static class FrameCommand
             }
 
             Console.WriteLine($"adapter: {OffscreenRenderer.DescribeAdapter()}");
-            return RenderWorld(world, width, height, VanillaBlockRegistry.Layout);
+            return RenderWorld(world, width, height, VanillaBlockRegistry.Layout, Sharpcraft.Common.World.BiomeRegistry.From(probe.Registries));
         }
     }
 
@@ -1005,7 +1005,7 @@ internal static class FrameCommand
     }
 
     /// <summary>Renders the world to an offscreen frame and writes a PNG.</summary>
-    internal static string RenderWorld(ClientWorld world, int width, int height, BlockStateLayout? layout = null)
+    internal static string RenderWorld(ClientWorld world, int width, int height, BlockStateLayout? layout = null, Sharpcraft.Common.World.BiomeRegistry? biomes = null)
     {
         // Every frame path reports the same fingerprint for the same scene, so two runs can be proven comparable before
         // their pixels are compared.
@@ -1032,6 +1032,11 @@ internal static class FrameCommand
         // is cheap to build, and this path only builds one frame.
         using var tintResources = CreateResourceManager();
         var tint = Sharpcraft.Client.Render.BiomeTint.Load(tintResources);
+        if (biomes is not null)
+        {
+            // Per-biome block tint: resolve the biome at each position and average over the biome-blend square (radius 2).
+            tint = tint.WithBiomes(world.GetBiomeAt, biomes, blendRadius: 2);
+        }
 
 
         var request = BuildRequest(

@@ -1967,4 +1967,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `NbtCompound` 增 `GetFloat`/`GetBool`（`NbtFloat`/`NbtByte`）。
 - `Common/World/BiomeRegistry`：`From(DynamicRegistries)` 取 `minecraft:worldgen/biome` 条目→`BiomeEntry(Id, Climate{HasPrecipitation,Temperature,Downfall}, Effects{WaterColor,FoliageColor?,DryFoliageColor?,GrassColor?,GrassColorModifier})`；`Parse` 解 NBT；`ParseColour` 解 `"RRGGBB"`（`#` 可选）→0xFFRRGGBB；`ById` 位置查找；颜色缺省 water=0x3F76E4。
 - 复用现有 `RegistryDataPackets`/`DynamicRegistries`（无需新包解析）。测试 `BiomeRegistryTests`(4)。全量 **1236 通过**、门禁 ok。
-- **下一步 P3.3**：`BiomeColorSource`：位置→`ChunkSection.GetBiome`→`BiomeRegistry`→草/叶/水 tint（`ColorMapColorUtil`+温度/湿度、`grassColorModifier`、`biomeBlendRadius`）接入 `ChunkMesher`；单测 + 离屏出图。
+- **下一步 P3.3**：`BiomeColorSource`：位置→`ChunkSection.GetBiome`→`BiomeRegistry`→草/叶/水 tint（`ColorMapColorUtil`+温度/湿度、`grassColorModifier`、`biomeBlendRadius`）接入 `ChunkMesher`；单测 + 离屏出图。## 2026-11-01 P3.3 逐群系方块调色接入
+- `ClientWorld.GetBiomeAt(x,y,z)`：chunk→section(`y>>4`)→`ChunkSection.GetBiome(x&15,y&15,z&15)`，未加载返回 -1。
+- `BiomeTint` 增 `WithBiomes(biomeIdAt, registry, blendRadius)` 与 `ColourAt(kind,x,y,z)`：位置→群系→`BiomeColour`（草=override??colormap+modifier、叶=override??colormap、水=effects.water_color、evergreen/birch 固定），经 `BlockTint.Calculate` 按 blendRadius 平均；`FromColormaps` 测试工厂。`DARK_FOREST` 精确、`SWAMP` 缺 `BIOME_INFO_NOISE` 返回基色（受控偏差）。
+- `ChunkMesher`：方块面 tint 用 `origin` 世界坐标、流体用水格 `bx,by,bz` 调 `ColourAt`。`FrameCommand.RenderWorld` 增 `BiomeRegistry?`，真服路径传 `BiomeRegistry.From(probe.Registries)`（回放/本地无 registry→默认 tint）。
+- 测试 `BiomeTintTests`(+3：按群系草/水、DARK_FOREST 公式、blendRadius 平均)。全量 **1239 通过**、门禁 ok。
+- **注**：无真实服务器 registry 环境，逐群系**离屏像素**未单独验证；已用纯逻辑单测覆盖（等价性以公式/平均为准）。
+- **下一步 P3.4**：`SKY_COLOR`=`calculateSkyColor(temperature)` 经 7 抽头 gaussian 空间混合，绘制天空盘（`CelestialGeometry.SkyDisc`）替换/叠加全屏渐变；离屏出图+像素验证。

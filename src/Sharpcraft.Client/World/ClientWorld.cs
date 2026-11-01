@@ -357,6 +357,14 @@ public sealed class ClientWorld
         return chunk.GetBlockState(BlockCoordinates.SectionRelative(x), y, BlockCoordinates.SectionRelative(z), fallbackState);
     }
 
+    /// <summary>Biome id at a world block position, or -1 when the chunk/section is not loaded or carries no biome data.</summary>
+    public int GetBiomeAt(int x, int y, int z)
+    {
+        var chunk = GetChunk(BlockCoordinates.ToSectionCoord(x), BlockCoordinates.ToSectionCoord(z));
+        var section = chunk?.GetSection(y >> ChunkSection.SideBits);
+        return section is null ? -1 : section.GetBiome(x & 15, y & 15, z & 15);
+    }
+
     /// <summary>Writes a block state; silently ignored when the chunk is not loaded.</summary>
     public bool SetBlockState(int x, int y, int z, int state, int airState = 0)
     {

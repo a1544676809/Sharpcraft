@@ -782,7 +782,7 @@ public static class ChunkMesher
                     var tb = 1f;
                     if (fluidPath != "lava" && tint is not null)
                     {
-                        var (r, g, b) = BiomeTint.ToMultiplier(tint.Colour(BlockTintKind.Water));
+                        var (r, g, b) = BiomeTint.ToMultiplier(tint.ColourAt(BlockTintKind.Water, bx, by, bz));
                         tr = r;
                         tg = g;
                         tb = b;
@@ -1151,7 +1151,7 @@ public static class ChunkMesher
 
             if (kind != BlockTintKind.None && (!BlockTintTable.TintsTopFaceOnly(kind) || direction == PositiveY))
             {
-                var (tintRed, tintGreen, tintBlue) = BiomeTint.ToMultiplier(tint.Colour(kind));
+                var (tintRed, tintGreen, tintBlue) = BiomeTint.ToMultiplier(tint.ColourAt(kind, origin.X, origin.Y, origin.Z));
                 red *= tintRed;
                 green *= tintGreen;
                 blue *= tintBlue;

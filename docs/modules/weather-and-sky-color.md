@@ -70,6 +70,7 @@
 
 - **Colormap 取色** `ColorMapColorUtil.get(temp, rain, pixels, default)`：`rain *= temp`；`x=(int)((1-temp)*255)`、`y=(int)((1-rain)*255)`、`index=y<<8|x`；越界返回 default。`GrassColor.get(temp,rain)` 用 65536 像素数组 + default `-65281`；`FoliageColor`/`DryFoliageColor` 各有自己的数组。
 - **草色** `Biome.getGrassColor(x,z)`：`base = grassColorOverride ?? GrassColor.get(clamp(temp,0,1), clamp(downfall,0,1))`，再经 `grassColorModifier.modifyColor(x,z,base)`（`NONE` / `DARK_FOREST` / `SWAMP`）。
+  - 实现：`NONE` 直通；`DARK_FOREST` = `ARGB.opaque(((base & 0xFEFEFE) + 2634762) >> 1)`；`SWAMP` 依赖 `Biome.BIOME_INFO_NOISE`（未实现）→ 暂返回基色，记**受控偏差**。
 - **落叶/干叶**：`getFoliageColor()` = `foliageColorOverride ?? FoliageColor.get(temp,downfall)`；`getDryFoliageColor()` 同理用 `DryFoliageColor`。
 - **水色** `getWaterColor()` = `specialEffects.waterColor()`（每生物群系常量；默认 `4159204`）。
 - **空间平均** `ClientLevel.calculateBlockTint(pos, resolver)`：`dist = options.biomeBlendRadius`（默认 **2**，范围 0..7）；`dist==0`→单点；否则对 `(2dist+1)²` 方形区域的每格 `resolver.getColor(biome, x, z)` 做 **RGB 逐通道整数求和后除以 count**（`ARGB.color(totalRed/count,…)`）。

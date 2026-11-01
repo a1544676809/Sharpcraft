@@ -55,6 +55,7 @@ updated: 2026-11-01
 - **registry 同步来源**：生物群系 registry 经 `registry_data` 包同步；需确认本仓库注册表解析（T-042 目前面向方块状态）能通用到取群系条目，或新增 biome 专用解码。
 - **温度/降水与 colormap 纹理**：`grass.png`/`foliage.png` 等 colormap（256×256，索引 `y<<8|x`）从资源包取；越界 default 色常量照抄。
 - **`temperature_modifier`**：草/叶 colormap 不用；若将来做 `getTemperature(pos)`（冰雪冻结点）需补。
+- **`grass_color_modifier`**：`NONE` 直通、`DARK_FOREST` 为纯算术（`ARGB.opaque(((base&0xFEFEFE)+2634762)>>1)`，可精确实现）；`SWAMP` 依赖 `Biome.BIOME_INFO_NOISE`（simplex 噪声，未实现）→ 首版返回基色，记**受控偏差**。
 
 ## 6. 证据
 
