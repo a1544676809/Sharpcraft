@@ -293,6 +293,7 @@ internal static class WindowCommand
             && int.TryParse(rangeText, out var parsedRange) ? parsedRange : 128;
         var cloudOit = Environment.GetEnvironmentVariable("MC_CLOUD_OIT") is not "0";
         var cloudAdaptive = Environment.GetEnvironmentVariable("MC_CLOUD_ADAPTIVE") == "1";
+        var oitLowPrecision = Environment.GetEnvironmentVariable("MC_OIT_LOW_PRECISION") == "1";
         session.SetCloudOptions(
             enabled: cloudMode != "off",
             fancy: cloudMode != "fast" && cloudMode != "off",
@@ -587,6 +588,7 @@ internal static class WindowCommand
             clearColourPerFrame: () => new System.Numerics.Vector4(session.CurrentSkyColour(), 1f),
             cloudsPerFrame: () => session.CurrentCloudDraw(),
             cloudOitEnabled: session.CloudUseOit,
+            oitLowPrecision: oitLowPrecision,
             celestialPerFrame: () =>
             {
                 if (world is null)

@@ -57,7 +57,8 @@ public static class WindowedRenderer
     Func<Vector4>? clearColourPerFrame = null,
     Func<CelestialColorDraw?>? cloudsPerFrame = null,
     Func<(CelestialQuadDraw[] Draws, CelestialColorDraw[] Colors)?>? celestialPerFrame = null,
-    bool cloudOitEnabled = false)
+    bool cloudOitEnabled = false,
+    bool oitLowPrecision = false)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -245,6 +246,7 @@ public static class WindowedRenderer
         // Transparency is the reference depth-bounds + wavelet-transmittance OIT (docs/specs/render/oit-reference.md).
         // The earlier weighted-blended OIT looked markedly worse in play and is shelved, not compiled; git history keeps
         // it if it is ever wanted again.
+        var oitTargetFormat = oitLowPrecision ? WGPUTextureFormat.RGBA8Unorm : WGPUTextureFormat.RGBA16Float;
         using var refTransmittanceLayout = CreateOitTextureLayout(device, 1);
         using var refAccumulateLayout = CreateOitTextureLayout(device, 3);
         using var refCullLayout = CreateOitTextureLayout(device, 1);
@@ -257,14 +259,14 @@ public static class WindowedRenderer
         using var cloudDbPipelineLayout = cloudOit is null ? default : device.CreatePipelineLayout([cloudOit.Layout]);
         using var cloudTransPipelineLayout = cloudOit is null ? default : device.CreatePipelineLayout([cloudOit.Layout, refTransmittanceLayout]);
         using var cloudAccumPipelineLayout = cloudOit is null ? default : device.CreatePipelineLayout([cloudOit.Layout, refAccumulateLayout]);
-        using var cloudDepthBoundsPipeline = cloudOit is null ? default : CreateDepthBoundsPipeline(device, cloudDbPipelineLayout, "cloud_oit", positionColor: true);
-        using var cloudTransmittancePipeline = cloudOit is null ? default : CreateTransmittancePipeline(device, cloudTransPipelineLayout, "cloud_oit", positionColor: true);
-        using var cloudAccumulatePipeline = cloudOit is null ? default : CreateAccumulatePipeline(device, cloudAccumPipelineLayout, "cloud_oit", positionColor: true);
+        using var cloudDepthBoundsPipeline = cloudOit is null ? default : CreateDepthBoundsPipeline(device, cloudDbPipelineLayout, "cloud_oit", positionColor: true, format: oitTargetFormat);
+        using var cloudTransmittancePipeline = cloudOit is null ? default : CreateTransmittancePipeline(device, cloudTransPipelineLayout, "cloud_oit", positionColor: true, format: oitTargetFormat);
+        using var cloudAccumulatePipeline = cloudOit is null ? default : CreateAccumulatePipeline(device, cloudAccumPipelineLayout, "cloud_oit", positionColor: true, format: oitTargetFormat);
 
-        using var refDepthBoundsPipeline = CreateDepthBoundsPipeline(device, pipelineLayout);
-        using var refTransmittancePipeline = CreateTransmittancePipeline(device, refTransmittancePipelineLayout);
-        using var refAccumulatePipeline = CreateAccumulatePipeline(device, refAccumulatePipelineLayout);
-        using var refCullPipeline = CreateCullPipeline(device, refCullPipelineLayout);
+        using var refDepthBoundsPipeline = CreateDepthBoundsPipeline(device, pipelineLayout, format: oitTargetFormat);
+        using var refTransmittancePipeline = CreateTransmittancePipeline(device, refTransmittancePipelineLayout, format: oitTargetFormat);
+        using var refAccumulatePipeline = CreateAccumulatePipeline(device, refAccumulatePipelineLayout, format: oitTargetFormat);
+        using var refCullPipeline = CreateCullPipeline(device, refCullPipelineLayout, oitTargetFormat);
         using var refCompositePipeline = CreateCompositePipeline(device, format, refCompositePipelineLayout);
 
         // The interface layer needs its own transform: one uniform buffer cannot hold both the world camera and
@@ -477,15 +479,15 @@ public static class WindowedRenderer
                 refAccumulateTexture.Dispose();
             }
 
-            refDepthBoundsTexture = CreateOitTarget(device, frameWidth, frameHeight, WGPUTextureFormat.RGBA16Float);
+            refDepthBoundsTexture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
             refDepthBoundsView = refDepthBoundsTexture.CreateView();
-            refDepthBoundsCulledTexture = CreateOitTarget(device, frameWidth, frameHeight, WGPUTextureFormat.RGBA16Float);
+            refDepthBoundsCulledTexture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
             refDepthBoundsCulledView = refDepthBoundsCulledTexture.CreateView();
-            refTransmittance0Texture = CreateOitTarget(device, frameWidth, frameHeight, WGPUTextureFormat.RGBA16Float);
+            refTransmittance0Texture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
             refTransmittance0View = refTransmittance0Texture.CreateView();
-            refTransmittance1Texture = CreateOitTarget(device, frameWidth, frameHeight, WGPUTextureFormat.RGBA16Float);
+            refTransmittance1Texture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
             refTransmittance1View = refTransmittance1Texture.CreateView();
-            refAccumulateTexture = CreateOitTarget(device, frameWidth, frameHeight, WGPUTextureFormat.RGBA16Float);
+            refAccumulateTexture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
             refAccumulateView = refAccumulateTexture.CreateView();
 
             refCullBindGroup = device.CreateBindGroup(refCullLayout, [BindGroupEntry.TextureView(0, refDepthBoundsView)]);
@@ -1598,7 +1600,7 @@ public static class WindowedRenderer
     /// Reference transparency stage 1: record the per-pixel depth range of the translucent layer. RGBA32F with a MAX
     /// blend, so the closest and furthest bounds survive in different channels.
     /// </summary>
-    private static RenderPipeline CreateDepthBoundsPipeline(Device device, PipelineLayout layout, string shaderName = "oit_reference", bool positionColor = false)
+    private static RenderPipeline CreateDepthBoundsPipeline(Device device, PipelineLayout layout, string shaderName = "oit_reference", bool positionColor = false, WGPUTextureFormat format = WGPUTextureFormat.RGBA16Float)
     {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
         {
@@ -1613,7 +1615,7 @@ public static class WindowedRenderer
             [
                 new ColorTargetState
                 {
-                    Format = WGPUTextureFormat.RGBA16Float,
+                    Format = format,
                     WriteMask = ColorWriteMask.All,
                     Blend = new WGPUBlendState
                     {
@@ -1632,7 +1634,7 @@ public static class WindowedRenderer
     }
 
     /// <summary>Reference transparency stage 2: wavelet-transmittance coefficients, additively blended into two targets.</summary>
-    private static RenderPipeline CreateTransmittancePipeline(Device device, PipelineLayout layout, string shaderName = "oit_reference", bool positionColor = false)
+    private static RenderPipeline CreateTransmittancePipeline(Device device, PipelineLayout layout, string shaderName = "oit_reference", bool positionColor = false, WGPUTextureFormat format = WGPUTextureFormat.RGBA16Float)
     {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
         {
@@ -1655,7 +1657,7 @@ public static class WindowedRenderer
             "vs_main"u8,
             shader,
             "fs_transmittance"u8,
-            [Additive(WGPUTextureFormat.RGBA16Float), Additive(WGPUTextureFormat.RGBA16Float)],
+            [Additive(format), Additive(format)],
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
             multisample: MultisampleState.Default,
@@ -1666,7 +1668,7 @@ public static class WindowedRenderer
     }
 
     /// <summary>Reference transparency stage 3: colour weighted by the transmittance in front of each fragment.</summary>
-    private static RenderPipeline CreateAccumulatePipeline(Device device, PipelineLayout layout, string shaderName = "oit_reference", bool positionColor = false)
+    private static RenderPipeline CreateAccumulatePipeline(Device device, PipelineLayout layout, string shaderName = "oit_reference", bool positionColor = false, WGPUTextureFormat format = WGPUTextureFormat.RGBA16Float)
     {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
         {
@@ -1681,7 +1683,7 @@ public static class WindowedRenderer
             [
                 new ColorTargetState
                 {
-                    Format = WGPUTextureFormat.RGBA16Float,
+                    Format = format,
                     WriteMask = ColorWriteMask.All,
                     Blend = new WGPUBlendState
                     {
@@ -1700,7 +1702,7 @@ public static class WindowedRenderer
     }
 
     /// <summary>Reference transparency: clip the far depth bound to the nearest opaque surface.</summary>
-    private static RenderPipeline CreateCullPipeline(Device device, PipelineLayout layout)
+    private static RenderPipeline CreateCullPipeline(Device device, PipelineLayout layout, WGPUTextureFormat format = WGPUTextureFormat.RGBA16Float)
     {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
         {
@@ -1712,7 +1714,7 @@ public static class WindowedRenderer
             "vs_fullscreen"u8,
             shader,
             "fs_cull"u8,
-            [new ColorTargetState(WGPUTextureFormat.RGBA16Float)],
+            [new ColorTargetState(format)],
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
             multisample: MultisampleState.Default,
