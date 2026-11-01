@@ -208,7 +208,7 @@ internal static class ConfigurationProbe
         var writer = new PayloadWriter(buffer);
         writer.WriteVarInt(PacketIds.ConfigurationServerbound.ClientInformation);
         writer.WriteString("en_us", 16);
-        writer.WriteByte(2);
+        writer.WriteByte((byte)Math.Clamp(InteractiveSession.ViewDistanceChunks, 2, 32)); // requested view distance
         writer.WriteVarInt(0);            // ChatVisiblity.FULL
         writer.WriteBool(true);           // chat colours
         writer.WriteByte(0);              // model customisation

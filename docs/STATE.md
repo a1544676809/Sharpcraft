@@ -2027,4 +2027,7 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 实现 `FrameCommand.EffectiveSkyColour`（`SkyColourSource` 空间混合 × `SkyColorMultiplierAt` × `WeatherBlend.ApplySkyColour`）。
 - 窗口：`SkipGradientSky=true` + `clearColourPerFrame`=天空色；`fogPerFrame`=`CurrentFogColour`（有 biomes 时用天空色）；`InteractiveSession.SetBiomes/CurrentSkyColour`。离屏 `RenderWorld` 同（设置 ClearColour/FogColour/SkipGradientSky）。
 - 窗口 diag：`skyCol=(0.478,0.478,1.000)`、`day` 正常。全量 **1256 通过**、门禁 ok。
-- **注意**：离屏单帧 `frame` 预热的 deferred 偶尔未包含进服 full-sync（该次 day=0）；窗口路径正常。后续可把 full-sync 在更早阶段接入以修正离屏。
+- **注意**：离屏单帧 `frame` 预热的 deferred 偶尔未包含进服 full-sync（该次 day=0）；窗口路径正常。后续可把 full-sync 在更早阶段接入以修正离屏。## 2026-11-01 可配置视距（默认 12，T-293）
+- `InteractiveSession.ViewDistanceChunks` 改为宿主配置：`MC_VIEW_DISTANCE`（clamp 2..32，默认 **12**）；配置阶段 `ConfigurationProbe.SendClientInformation`、play `ClientInformation`、`WalkCommand` 均用它（此前硬编码 8/2）。
+- 全量 **1256 通过**、门禁 ok。窗口以默认 12 重启。
+- **已知视觉差距（后续可选）**：①**云层未实现**（原版 CloudRenderer）；②天空为纯 `SKY_COLOR` 平色，缺地平线渐变；③雾色简化为 `SKY_COLOR`（原版 `FOG_COLOR↔SKY_COLOR` 混合）；④夜间亮度可能偏低。

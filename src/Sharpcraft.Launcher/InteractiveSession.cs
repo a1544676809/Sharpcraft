@@ -79,10 +79,16 @@ internal sealed class InteractiveSession
     private Sharpcraft.Common.World.BiomeRegistry? _biomes;
 
     /// <summary>
-    /// Chunks of view distance requested from the server. It bounds how much terrain can be resident, which is
-    /// what the geometry arena presizes for (docs/specs/network/play-movement.md 7.27).
+    /// Requested render distance in chunks. Host configuration (MC_VIEW_DISTANCE), default 12; the server may cap it and
+    /// the effective radius arrives in JoinGame. Kept in the host so game assemblies read no environment (principle 13).
     /// </summary>
-    public const int ViewDistanceChunks = 8;
+    public static int ViewDistanceChunks { get; } = ReadViewDistanceChunks();
+
+    private static int ReadViewDistanceChunks()
+    {
+        var raw = Environment.GetEnvironmentVariable("MC_VIEW_DISTANCE");
+        return int.TryParse(raw, out var parsed) ? Math.Clamp(parsed, 2, 32) : 12;
+    }
 
     /// <summary>Chunks a square view of <see cref="ViewDistanceChunks"/> can hold.</summary>
     public static int ExpectedChunkCount()
@@ -1164,7 +1170,7 @@ internal sealed class InteractiveSession
         _streamingRequested = true;
         _live.Send(PlayPackets.BuildClientInformation(
             locale: "en_us",
-            viewDistance: ViewDistanceChunks,
+            viewDistance: (byte)ViewDistanceChunks,
             chatVisibility: 0,
             chatColors: true,
             skinParts: 0x7F,
