@@ -1043,6 +1043,41 @@ internal static class FrameCommand
             tint = tint.WithBiomes(world.GetBiomeAt, biomes, blendRadius: 2);
         }
 
+        if (Environment.GetEnvironmentVariable("MC_BIOME_PROBE") == "1" && biomes is not null)
+        {
+            Console.WriteLine($"biome probe: registry {biomes.Entries.Count} entries");
+            var seen = new HashSet<int>();
+            foreach (var chunk in world.GetChunks())
+            {
+                var section = chunk.GetSection(chunk.MinSectionY);
+                if (section is null || !section.HasBiomes)
+                {
+                    continue;
+                }
+
+                var span = section.Biomes;
+                for (var i = 0; i < span.Length && seen.Count < 10; i++)
+                {
+                    var id = span[i];
+                    if (!seen.Add(id))
+                    {
+                        continue;
+                    }
+
+                    var entry = biomes.ById(id);
+                    var grass = tint.ColourAt(BlockTintKind.Grass, (chunk.ChunkX * 16) + 8, (chunk.MinSectionY * 16) + 8, (chunk.ChunkZ * 16) + 8);
+                    Console.WriteLine(entry is null
+                        ? $"  id {id}: <no entry> -> grass 0x{grass & 0xFFFFFF:X6}"
+                        : $"  id {id} {entry.Id}: temp {entry.Climate.Temperature:F2} downfall {entry.Climate.Downfall:F2} water 0x{entry.Effects.WaterColor & 0xFFFFFF:X6} grassOverride {(entry.Effects.GrassColor is int g ? $"0x{g & 0xFFFFFF:X6}" : "none")} mod {entry.Effects.GrassColorModifier} -> grass 0x{grass & 0xFFFFFF:X6}");
+                }
+
+                if (seen.Count >= 10)
+                {
+                    break;
+                }
+            }
+        }
+
 
         var request = BuildRequest(
             world,

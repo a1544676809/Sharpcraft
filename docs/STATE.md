@@ -1987,3 +1987,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **现象**：实机草地顶部呈品红/紫。对照原版 `getGrassColorFromTexture` 发现：查 colormap 前需把 `temperature`/`downfall` **clamp 0..1**；我们直接传原始群系温度（常 <0 或 >1），索引越界返回 colormap 默认色 `-65281`（品红）。
 - **修复**：`BiomeTint.BiomeColour` 对 temperature/downfall clamp 0..1 再查表；`BiomeTintTests.TemperatureIsClampedBeforeColourMapLookup`（temp=2→index0，断言非 -65281）。
 - 重启实机 `window`（pid 52704）复验。全量 1244 通过、门禁 ok。
+- **tint 等效性复核（`MC_BIOME_PROBE`）**：真服群系温度/降水解析正确，草色与原版名色一致——`beach` 0.8/0.4→**0x91BD59**（原版平原/沙滩草地 #91BD59）、`forest` 0.7/0.8→0x82BE59、`river` 0.5/0.5→0x8EB971。紫色已消除；同群系若仍偏淡属**光照/贴图/描边**差异而非 biome tint。
