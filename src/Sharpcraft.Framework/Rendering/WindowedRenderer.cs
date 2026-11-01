@@ -76,7 +76,13 @@ public static class WindowedRenderer
         // Ask for the limits this adapter actually offers rather than the defaults, whose maxBufferSize is 256 MiB. A full
         // amplified view needs more than that for one geometry buffer, and the adapter's own figure is the honest ceiling.
         var deviceLimits = adapter.GetLimits();
-        var deviceDescriptor = new DeviceDescriptor { RequiredLimits = deviceLimits };
+        var supportsFloat32Blendable = adapter.HasFeature(WGPUFeatureName.Float32Blendable);
+        WGPUFeatureName[] requiredFeatures = supportsFloat32Blendable ? [WGPUFeatureName.Float32Blendable] : [];
+        var deviceDescriptor = new DeviceDescriptor
+        {
+            RequiredLimits = deviceLimits,
+            RequiredFeatures = requiredFeatures
+        };
         var device = adapter.RequestDeviceBlocking(in deviceDescriptor);
 
         Console.WriteLine($"window: surface ready on {adapter.GetInfo().Description}");
@@ -247,7 +253,7 @@ public static class WindowedRenderer
         // Transparency is the reference depth-bounds + wavelet-transmittance OIT (docs/specs/render/oit-reference.md).
         // The earlier weighted-blended OIT looked markedly worse in play and is shelved, not compiled; git history keeps
         // it if it is ever wanted again.
-        var oitTargetFormat = oitLowPrecision ? WGPUTextureFormat.RGBA8Unorm : WGPUTextureFormat.RGBA16Float;
+        var oitTargetFormat = oitLowPrecision ? WGPUTextureFormat.RGBA8Unorm : (supportsFloat32Blendable ? WGPUTextureFormat.RGBA32Float : WGPUTextureFormat.RGBA16Float);
         using var refTransmittanceLayout = CreateOitTextureLayout(device, 1);
         using var refAccumulateLayout = CreateOitTextureLayout(device, 3);
         using var refCullLayout = CreateOitTextureLayout(device, 1);
