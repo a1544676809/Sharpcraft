@@ -24,9 +24,15 @@ public static class ShaderBindings
     /// <summary>Fog uniform: colour and range, 32 bytes.</summary>
     public const int Fog = 3;
 
+    /// <summary>Lightmap uniform: per-frame sky/block factors and colours, 64 bytes.</summary>
+    public const int Lightmap = 4;
+
     /// <summary>Bytes in the camera uniform.</summary>
     public const int CameraBytes = 64;
 
     /// <summary>Bytes in the fog uniform.</summary>
     public const int FogBytes = 32;
+
+    /// <summary>Bytes in the lightmap uniform.</summary>
+    public const int LightmapBytes = 64;
 }

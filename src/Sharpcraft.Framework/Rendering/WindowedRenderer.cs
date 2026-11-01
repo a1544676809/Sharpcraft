@@ -167,7 +167,13 @@ public static class WindowedRenderer
                 ShaderStage.Vertex | ShaderStage.Fragment,
                 WGPUBufferBindingType.Uniform,
                 false,
-                32)
+                32),
+            BindGroupLayoutEntry.Buffer(
+                Shaders.ShaderBindings.Lightmap,
+                ShaderStage.Fragment,
+                WGPUBufferBindingType.Uniform,
+                false,
+                Shaders.ShaderBindings.LightmapBytes)
         ]);
 
         using var pipelineLayout = device.CreatePipelineLayout([bindGroupLayout]);
@@ -191,13 +197,22 @@ public static class WindowedRenderer
             fogBytes.AsSpan());
         device.Queue.WriteBuffer(fogBuffer, 0, fogBytes.AsSpan());
 
+        // Lightmap parameters (sky/block factors and colours), rewritten per frame so day/night needs no re-mesh.
+        var lightmapBytes = new byte[Shaders.ShaderBindings.LightmapBytes];
+        LightmapUniformCodec.Write(LightmapUniform.Day, lightmapBytes);
+        using var lightmapBuffer = device.CreateBufferInit(
+            new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
+            lightmapBytes.AsSpan());
+        device.Queue.WriteBuffer(lightmapBuffer, 0, lightmapBytes.AsSpan());
+
         var bindGroup = device.CreateBindGroup(
             bindGroupLayout,
             [
                 BindGroupEntry.TextureView(0, atlasView),
                 BindGroupEntry.Sampler(1, atlasSampler),
                 BindGroupEntry.Buffer(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize),
-                BindGroupEntry.Buffer(3, fogBuffer, 0, 32)
+                BindGroupEntry.Buffer(3, fogBuffer, 0, 32),
+                BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
             ]);
 
         using var pipeline = CreatePipeline(device, format, pipelineLayout);
@@ -269,7 +284,8 @@ public static class WindowedRenderer
                 BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize),
                 // The layout declares the fog buffer for the world shader; the interface shader ignores it, but a bind
                 // group must still supply every binding the layout declares.
-                BindGroupEntry.Buffer(3, fogBuffer, 0, 32)
+                BindGroupEntry.Buffer(3, fogBuffer, 0, 32),
+                BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
             ]);
 
         using var uiSpritePipeline = UiRenderer.CreateSpritePipeline(device, format, pipelineLayout);
@@ -320,7 +336,8 @@ public static class WindowedRenderer
                     BindGroupEntry.TextureView(0, view),
                     BindGroupEntry.Sampler(1, atlasSampler),
                     BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize),
-                    BindGroupEntry.Buffer(3, fogBuffer, 0, 32)
+                    BindGroupEntry.Buffer(3, fogBuffer, 0, 32),
+                BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
                 ]));
 
             spriteSheets.Add(sheet);
@@ -333,7 +350,8 @@ public static class WindowedRenderer
                 BindGroupEntry.TextureView(0, glyphView),
                 BindGroupEntry.Sampler(1, atlasSampler),
                 BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize),
-                BindGroupEntry.Buffer(3, fogBuffer, 0, 32)
+                BindGroupEntry.Buffer(3, fogBuffer, 0, 32),
+                BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
             ]);
 
         // The source starts at the textures just uploaded, so the first frame does not re-upload them.
@@ -598,7 +616,8 @@ public static class WindowedRenderer
                         BindGroupEntry.TextureView(0, atlasView),
                         BindGroupEntry.Sampler(1, atlasSampler),
                         BindGroupEntry.Buffer(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize),
-                        BindGroupEntry.Buffer(3, fogBuffer, 0, 32)
+                        BindGroupEntry.Buffer(3, fogBuffer, 0, 32),
+                BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
                     ]);
 
                 uiBindGroup = device.CreateBindGroup(
@@ -607,7 +626,8 @@ public static class WindowedRenderer
                         BindGroupEntry.TextureView(0, atlasView),
                         BindGroupEntry.Sampler(1, atlasSampler),
                         BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize),
-                        BindGroupEntry.Buffer(3, fogBuffer, 0, 32)
+                        BindGroupEntry.Buffer(3, fogBuffer, 0, 32),
+                BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
                     ]);
 
                 Console.WriteLine($"ui: atlas re-uploaded (version {appliedAtlasVersion}, {refreshedAtlas.Width}x{refreshedAtlas.Height})");
@@ -653,7 +673,8 @@ public static class WindowedRenderer
                         BindGroupEntry.TextureView(0, glyphView),
                         BindGroupEntry.Sampler(1, atlasSampler),
                         BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize),
-                        BindGroupEntry.Buffer(3, fogBuffer, 0, 32)
+                        BindGroupEntry.Buffer(3, fogBuffer, 0, 32),
+                BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
                     ]);
 
                 foreach (var staleBindGroup in spriteBindGroups)
@@ -704,7 +725,8 @@ public static class WindowedRenderer
                             BindGroupEntry.TextureView(0, refreshedView),
                             BindGroupEntry.Sampler(1, atlasSampler),
                             BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize),
-                            BindGroupEntry.Buffer(3, fogBuffer, 0, 32)
+                            BindGroupEntry.Buffer(3, fogBuffer, 0, 32),
+                BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
                         ]));
 
                     spriteSheets.Add(refreshedSheet);
@@ -1022,6 +1044,11 @@ public static class WindowedRenderer
             }
 
             device.Queue.WriteBuffer(cameraBuffer, 0, cameraBytes.AsSpan());
+
+            // Per-frame lightmap parameters: day/night changes only this block, never the mesh.
+            var frameLightmapBytes = new byte[Shaders.ShaderBindings.LightmapBytes];
+            LightmapUniformCodec.Write(currentRequest.Lightmap, frameLightmapBytes);
+            device.Queue.WriteBuffer(lightmapBuffer, 0, frameLightmapBytes.AsSpan());
 
             pass.SetBindGroup(0, bindGroup);
 

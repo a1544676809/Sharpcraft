@@ -86,8 +86,9 @@ public sealed class MeshBuffer : IDisposable
         (float U, float V) uvB,
         (float U, float V) uvC,
         (float U, float V) uvD,
-        SpriteRect? sprite = null) =>
-        AppendQuad(a, b, c, d, (red, green, blue), (red, green, blue), (red, green, blue), (red, green, blue), uvA, uvB, uvC, uvD, sprite);
+        SpriteRect? sprite = null,
+        (float Sky, float Block) light = default) =>
+        AppendQuad(a, b, c, d, (red, green, blue), (red, green, blue), (red, green, blue), (red, green, blue), light, light, light, light, uvA, uvB, uvC, uvD, sprite);
 
     /// <summary>
     /// Appends a quad whose four corners carry their own lit colour.
@@ -118,6 +119,10 @@ public sealed class MeshBuffer : IDisposable
         (float R, float G, float B) colourB,
         (float R, float G, float B) colourC,
         (float R, float G, float B) colourD,
+        (float Sky, float Block) lightA,
+        (float Sky, float Block) lightB,
+        (float Sky, float Block) lightC,
+        (float Sky, float Block) lightD,
         (float U, float V) uvA,
         (float U, float V) uvB,
         (float U, float V) uvC,
@@ -130,10 +135,10 @@ public sealed class MeshBuffer : IDisposable
 
         var rect = sprite ?? WholeAtlas;
         var first = (uint)(_vertexFloats / ChunkMesher.FloatsPerVertex);
-        WriteVertex(a, colourA.R, colourA.G, colourA.B, uvA, rect);
-        WriteVertex(b, colourB.R, colourB.G, colourB.B, uvB, rect);
-        WriteVertex(c, colourC.R, colourC.G, colourC.B, uvC, rect);
-        WriteVertex(d, colourD.R, colourD.G, colourD.B, uvD, rect);
+        WriteVertex(a, colourA.R, colourA.G, colourA.B, lightA, uvA, rect);
+        WriteVertex(b, colourB.R, colourB.G, colourB.B, lightB, uvB, rect);
+        WriteVertex(c, colourC.R, colourC.G, colourC.B, lightC, uvC, rect);
+        WriteVertex(d, colourD.R, colourD.G, colourD.B, lightD, uvD, rect);
 
         _indices[_indexCount++] = first;
         _indices[_indexCount++] = first + 1;
@@ -156,16 +161,19 @@ public sealed class MeshBuffer : IDisposable
         (float R, float G, float B) colourB,
         (float R, float G, float B) colourC,
         (float R, float G, float B) colourD,
+        (float Sky, float Block) lightA,
+        (float Sky, float Block) lightB,
+        (float Sky, float Block) lightC,
+        (float Sky, float Block) lightD,
         (float U, float V) uvA,
         (float U, float V) uvB,
         (float U, float V) uvC,
         (float U, float V) uvD,
         SpriteRect? sprite = null)
     {
-        AppendQuad(a, b, c, d, colourA, colourB, colourC, colourD, uvA, uvB, uvC, uvD, sprite);
-        AppendQuad(a, d, c, b, colourA, colourD, colourC, colourB, uvA, uvD, uvC, uvB, sprite);
+        AppendQuad(a, b, c, d, colourA, colourB, colourC, colourD, lightA, lightB, lightC, lightD, uvA, uvB, uvC, uvD, sprite);
+        AppendQuad(a, d, c, b, colourA, colourD, colourC, colourB, lightA, lightD, lightC, lightB, uvA, uvD, uvC, uvB, sprite);
     }
-
     /// <summary>Copies the written geometry into exactly sized arrays.</summary>
     public MeshData ToMeshData(int blockCount) =>
         new(Vertices.ToArray(), Indices.ToArray(), blockCount);
@@ -211,6 +219,7 @@ public sealed class MeshBuffer : IDisposable
         float red,
         float green,
         float blue,
+        (float Sky, float Block) light,
         (float U, float V) uv,
         SpriteRect sprite)
     {
@@ -227,6 +236,8 @@ public sealed class MeshBuffer : IDisposable
         _vertices[offset + 9] = sprite.V0;
         _vertices[offset + 10] = sprite.U1;
         _vertices[offset + 11] = sprite.V1;
+        _vertices[offset + 12] = light.Sky;
+        _vertices[offset + 13] = light.Block;
 
         _vertexFloats = offset + ChunkMesher.FloatsPerVertex;
     }
@@ -236,6 +247,7 @@ public sealed class MeshBuffer : IDisposable
         float red,
         float green,
         float blue,
+        (float Sky, float Block) light,
         (float U, float V) uv,
         SpriteRect sprite)
     {
@@ -254,6 +266,8 @@ public sealed class MeshBuffer : IDisposable
         _vertices[offset + 9] = sprite.V0;
         _vertices[offset + 10] = sprite.U1;
         _vertices[offset + 11] = sprite.V1;
+        _vertices[offset + 12] = light.Sky;
+        _vertices[offset + 13] = light.Block;
 
         _vertexFloats = offset + ChunkMesher.FloatsPerVertex;
     }
@@ -284,6 +298,10 @@ public sealed class MeshBuffer : IDisposable
         (float R, float G, float B) colourB,
         (float R, float G, float B) colourC,
         (float R, float G, float B) colourD,
+        (float Sky, float Block) lightA,
+        (float Sky, float Block) lightB,
+        (float Sky, float Block) lightC,
+        (float Sky, float Block) lightD,
         (float U, float V) uvA,
         (float U, float V) uvB,
         (float U, float V) uvC,
@@ -295,10 +313,10 @@ public sealed class MeshBuffer : IDisposable
 
         var rect = sprite ?? WholeAtlas;
         var first = (uint)(_vertexFloats / ChunkMesher.FloatsPerVertex);
-        WriteVertex(a, colourA.R, colourA.G, colourA.B, uvA, rect);
-        WriteVertex(b, colourB.R, colourB.G, colourB.B, uvB, rect);
-        WriteVertex(c, colourC.R, colourC.G, colourC.B, uvC, rect);
-        WriteVertex(d, colourD.R, colourD.G, colourD.B, uvD, rect);
+        WriteVertex(a, colourA.R, colourA.G, colourA.B, lightA, uvA, rect);
+        WriteVertex(b, colourB.R, colourB.G, colourB.B, lightB, uvB, rect);
+        WriteVertex(c, colourC.R, colourC.G, colourC.B, lightC, uvC, rect);
+        WriteVertex(d, colourD.R, colourD.G, colourD.B, lightD, uvD, rect);
 
         _indices[_indexCount++] = first;
         _indices[_indexCount++] = first + 1;

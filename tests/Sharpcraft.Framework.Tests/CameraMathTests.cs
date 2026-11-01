@@ -104,11 +104,11 @@ public sealed class CameraMathTests
         var request = new FrameRequest(
             Width: 32,
             Height: 32,
-            // Two vertices of position(3) + colour(3) + tile(2) + sprite rect(4).
+            // Two vertices of position(3) + base colour(3) + tile(2) + sprite rect(4) + light(2).
             Vertices:
             [
-                0f, 0f, 0f, 0.25f, 0.5f, 0.75f, 2f, 3f, 0.125f, 0.25f, 0.5f, 0.75f,
-                1f, 1f, 1f, 1f, 0f, 0f, 1f, 1f, 0.125f, 0.25f, 0.5f, 0.75f
+                0f, 0f, 0f, 0.25f, 0.5f, 0.75f, 2f, 3f, 0.125f, 0.25f, 0.5f, 0.75f, 1f, 0f,
+                1f, 1f, 1f, 1f, 0f, 0f, 1f, 1f, 0.125f, 0.25f, 0.5f, 0.75f, 1f, 0f
             ],
             Indices: [0, 1, 1],
             ClearColour: new Vector4(0, 0, 0, 1),

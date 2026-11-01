@@ -993,6 +993,7 @@ internal static class FrameCommand
             target)
         {
         Diagnostics = Sharpcraft.Launcher.Diagnostics.HostDebugOptions.ForFrame(),
+            Lightmap = ToLightmapUniform(lighting),
             Atlas = atlas,
             DrawRanges = drawRanges,
             TranslucentVertices = translucentVertices,
@@ -1309,6 +1310,16 @@ internal static class FrameCommand
             ? forced
             : world.DayTime;
 
+    /// <summary>Maps the client lightmap parameters to the framework uniform the terrain shader reads.</summary>
+    internal static LightmapUniform ToLightmapUniform(LightmapParameters parameters) => new(
+        SkyFactor: parameters.SkyFactor,
+        BlockFactor: parameters.BlockFactor,
+        BrightnessFactor: parameters.BrightnessFactor,
+        Padding: 0f,
+        SkyLightColor: new Vector4(parameters.SkyLightColor, 1f),
+        BlockLightTint: new Vector4(parameters.BlockLightTint, 1f),
+        AmbientColor: new Vector4(parameters.AmbientColor, 0f));
+
     /// <summary>
     /// Adds the celestial bodies for the world's current day time. The sun (and later the moon, stars and sunrise band)
     /// are attached here so every offscreen path draws the same sky.
@@ -1588,6 +1599,7 @@ internal static class FrameCommand
             eye,
             target)
         {
+            Lightmap = ToLightmapUniform(LightmapParameters.OverworldAt(EffectiveDayTime(world))),
             Atlas = prepared is null
                 ? null
                 : WithMips(prepared.Value.Atlas)

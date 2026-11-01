@@ -27,11 +27,17 @@ public sealed record FrameRequest(
     Vector3 CameraTarget,
     float FieldOfViewDegrees = 60f)
 {
-    /// <summary>Floats per vertex.</summary>
-    public const int FloatsPerVertex = 12;
+    /// <summary>Floats per vertex: position (3) + base colour (3) + uv (2) + sprite rect (4) + light (2).</summary>
+    public const int FloatsPerVertex = 14;
 
     /// <summary>Vertex count.</summary>
     public int VertexCount => Vertices.Length / FloatsPerVertex;
+
+    /// <summary>
+    /// Per-frame lightmap parameters the terrain shader uses to compute the lightmap from each vertex's light levels
+    /// (docs/decisions/0019, docs/specs/render/lighting.md 6). Defaults to overworld day.
+    /// </summary>
+    public LightmapUniform Lightmap { get; init; } = LightmapUniform.Day;
 
     /// <summary>
     /// Atlas sampled by the shader, or null for a colour-only frame. UVs stay relative to the sprite
@@ -128,6 +134,37 @@ public sealed record CelestialColorDraw(
     Matrix4x4 Model,
     Vector4 Tint,
     CelestialColorBlend Blend);
+
+/// <summary>
+/// Per-frame lightmap parameters for the terrain shader's per-fragment lightmap (docs/decisions/0019,
+/// docs/specs/render/lighting.md 6). Layout matches the WGSL <c>Lightmap</c> struct: four floats then three vec4s (64 bytes).
+/// </summary>
+/// <param name="SkyFactor">Sky-light multiplier (day 1.0, night ~0.24).</param>
+/// <param name="BlockFactor">Block-light multiplier (1.4).</param>
+/// <param name="BrightnessFactor">Brightness slider (0.5).</param>
+/// <param name="Padding">Explicit padding so the first vec4 is 16-byte aligned.</param>
+/// <param name="SkyLightColor">Linear sky-light colour (day white, night blue-tinted).</param>
+/// <param name="BlockLightTint">Linear block-light tint (warm).</param>
+/// <param name="AmbientColor">Linear ambient colour (overworld black).</param>
+public readonly record struct LightmapUniform(
+    float SkyFactor,
+    float BlockFactor,
+    float BrightnessFactor,
+    float Padding,
+    Vector4 SkyLightColor,
+    Vector4 BlockLightTint,
+    Vector4 AmbientColor)
+{
+    /// <summary>Overworld daytime defaults, matching <c>VanillaLightmap.LightmapParameters.DayOverworld</c>.</summary>
+    public static LightmapUniform Day { get; } = new(
+        SkyFactor: 1f,
+        BlockFactor: 1.4f,
+        BrightnessFactor: 0.5f,
+        Padding: 0f,
+        SkyLightColor: Vector4.One,
+        BlockLightTint: new Vector4(1.000f, 0.687f, 0.263f, 1f),
+        AmbientColor: Vector4.Zero);
+}
 
 /// <summary>An RGBA8 image uploaded as a texture, typically the stitched sprite atlas.</summary>
 /// <param name="Width">Pixel width.</param>

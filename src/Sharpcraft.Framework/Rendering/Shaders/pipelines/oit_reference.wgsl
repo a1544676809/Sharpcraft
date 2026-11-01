@@ -20,6 +20,42 @@ struct Fog {
 };
 @group(0) @binding(3) var<uniform> fog : Fog;
 
+struct Lightmap {
+    skyFactor : f32,
+    blockFactor : f32,
+    brightnessFactor : f32,
+    padding : f32,
+    skyLightColor : vec4<f32>,
+    blockLightTint : vec4<f32>,
+    ambientColor : vec4<f32>,
+};
+@group(0) @binding(4) var<uniform> lightmap : Lightmap;
+
+fn brightnessCurve(x : f32) -> f32 { return x / (4.0 - 3.0 * x); }
+
+fn lightmapNotGamma(c : vec3<f32>) -> vec3<f32> {
+    let m = max(c.x, max(c.y, c.z));
+    if (m <= 0.0) { return c; }
+    let inv = 1.0 - m;
+    let scaled = 1.0 - (inv * inv * inv * inv);
+    return c * (scaled / m);
+}
+
+// Exact port of VanillaLightmap.Colour (docs/specs/render/lighting.md 3).
+fn lightmapColour(skyLevel : f32, blockLevel : f32) -> vec3<f32> {
+    let blockBrightness = brightnessCurve(blockLevel) * lightmap.blockFactor;
+    let skyBrightness = brightnessCurve(skyLevel) * lightmap.skyFactor;
+    var colour = lightmap.ambientColor.rgb + lightmap.skyLightColor.rgb * skyBrightness;
+    var parabolic = (2.0 * blockLevel) - 1.0;
+    parabolic = parabolic * parabolic;
+    let blockLightColour = mix(lightmap.blockLightTint.rgb, vec3<f32>(1.0), 0.9 * parabolic);
+    colour = colour + blockLightColour * blockBrightness;
+    colour = clamp(colour, vec3<f32>(0.0), vec3<f32>(1.0));
+    let ng = lightmapNotGamma(colour);
+    colour = mix(colour, ng, clamp(lightmap.brightnessFactor, 0.0, 1.0));
+    return clamp(colour, vec3<f32>(0.0), vec3<f32>(1.0));
+}
+
 // Group 1: the results of the earlier stages. Depth bounds is read by the transmittance and accumulate stages; the two
 // coefficient targets are read only by accumulate. A given stage's pipeline layout only references the subset it needs,
 // so a target being written is never bound as a sampled texture in the same pass.
@@ -41,6 +77,7 @@ struct VertexOutput {
     @location(2) spriteRect : vec4<f32>,
     @location(3) fogDistance : f32,
     @location(4) deviceDepth : f32,
+    @location(5) light : vec2<f32>,
 };
 
 @vertex
@@ -49,6 +86,7 @@ fn vs_main(
     @location(1) colour : vec3<f32>,
     @location(2) uv : vec2<f32>,
     @location(3) spriteRect : vec4<f32>,
+    @location(4) light : vec2<f32>,
 ) -> VertexOutput {
     var output : VertexOutput;
     let clip = camera.viewProjection * vec4<f32>(position, 1.0);
@@ -60,6 +98,7 @@ fn vs_main(
     output.colour = colour;
     output.uv = uv;
     output.spriteRect = spriteRect;
+    output.light = light;
     return output;
 }
 
@@ -287,7 +326,8 @@ fn fs_accumulate(input : VertexOutput) -> AccumulateOutput {
         dpdx(input.uv) * gradientScale,
         dpdy(input.uv) * gradientScale);
 
-    let base = litColour(sampled.rgb, input.colour);
+    let light = input.colour * lightmapColour(input.light.x, input.light.y);
+    let base = litColour(sampled.rgb, light);
     let span = max(fog.range.y - fog.range.x, 0.001);
     let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
     let colour = mix(base, fog.colour.rgb, fogged);

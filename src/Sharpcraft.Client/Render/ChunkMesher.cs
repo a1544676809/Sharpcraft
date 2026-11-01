@@ -26,7 +26,7 @@ namespace Sharpcraft.Client.Render;
 public static class ChunkMesher
 {
     /// <summary>Floats per vertex: position (3) plus colour (3).</summary>
-    public const int FloatsPerVertex = 12;
+    public const int FloatsPerVertex = 14;
 
     /// <summary>Vertices per quad.</summary>
     public const int VerticesPerQuad = 4;
@@ -575,7 +575,7 @@ public static class ChunkMesher
     /// blocked). Doing this per corner instead of once per quad is what removes the flat patches a merged quad used to
     /// show, and it keeps neighbouring quads continuous across chunk borders because the samples are world positions.
     /// </remarks>
-    private static (float R, float G, float B) CornerShade(
+    private static (float R, float G, float B, float Sky, float Block) CornerShade(
         in Neighbourhood neighbourhood,
         int direction,
         (int X, int Y, int Z) corner,
@@ -636,12 +636,10 @@ public static class ChunkMesher
                 Occludes(neighbourhood.GetBlockState(xs[3], ys[3], zs[3], 0), sprites, layout))
             : 1f;
 
-        // Vanilla lightmap multiplier (linear RGB) from the averaged light, times the directional shade and AO. The
-        // terrain shader decodes the texel, multiplies by this, and re-encodes (docs/specs/render/lighting.md 3-5).
-        var lightmap = VanillaLightmap.Colour(light.Item1, light.Item2, lighting);
+        // Base colour = biome tint × directional shade × AO (linear). The lightmap is computed per fragment in the shader
+        // from the light levels carried alongside, so a day/night change needs no re-mesh (docs/decisions/0019).
         var scalar = shadeFactor * occlusion;
-
-        return (red * lightmap.X * scalar, green * lightmap.Y * scalar, blue * lightmap.Z * scalar);
+        return (red * scalar, green * scalar, blue * scalar, light.Item1 / 15f, light.Item2 / 15f);
     }
 
     /// <summary>
@@ -740,6 +738,11 @@ public static class ChunkMesher
                     var fluidPath = fluidBlockRef.Path;
                     var sink = fluidPath == "lava" ? opaque : translucent;
                     var lavaSink = fluidPath == "lava";
+
+                    // Light levels of this fluid cell (set just below, before any Emit call); captured by the local Emit.
+                    float skyLevel = 0f;
+                    float blockLevel = 0f;
+
                     void Emit(
                         (float X, float Y, float Z) a, (float X, float Y, float Z) b,
                         (float X, float Y, float Z) c, (float X, float Y, float Z) d,
@@ -750,11 +753,11 @@ public static class ChunkMesher
                     {
                         if (lavaSink)
                         {
-                            sink.AppendQuadDoubleSided(a, b, c, d, colourA, colourB, colourC, colourD, uvA, uvB, uvC, uvD, sprite);
+                            sink.AppendQuadDoubleSided(a, b, c, d, colourA, colourB, colourC, colourD, (skyLevel, blockLevel), (skyLevel, blockLevel), (skyLevel, blockLevel), (skyLevel, blockLevel), uvA, uvB, uvC, uvD, sprite);
                         }
                         else
                         {
-                            sink.AppendQuad(a, b, c, d, colourA, colourB, colourC, colourD, uvA, uvB, uvC, uvD, sprite);
+                            sink.AppendQuad(a, b, c, d, colourA, colourB, colourC, colourD, (skyLevel, blockLevel), (skyLevel, blockLevel), (skyLevel, blockLevel), (skyLevel, blockLevel), uvA, uvB, uvC, uvD, sprite);
                         }
                     }
 
@@ -770,7 +773,9 @@ public static class ChunkMesher
 
                     nb.TryGetLight(bx, by, bz, out var s0, out var b0);
                     nb.TryGetLight(bx, by + 1, bz, out var s1, out var b1);
-                    var lm = VanillaLightmap.Colour(Math.Max(s0, s1), Math.Max(b0, b1), lighting);
+                    // Light levels go to the shader; the lightmap is computed per fragment so day/night needs no re-mesh.
+                    skyLevel = Math.Max(s0, s1) / 15f;
+                    blockLevel = Math.Max(b0, b1) / 15f;
 
                     var tr = 1f;
                     var tg = 1f;
@@ -809,7 +814,7 @@ public static class ChunkMesher
                     var flowing = ((flowX * flowX) + (flowZ * flowZ)) > 1e-7f;
                     var flowSprite = flowing ? sprites?.FluidFlow(blockId) : null;
 
-                    (float R, float G, float B) Face(float shade) => (lm.X * tr * shade, lm.Y * tg * shade, lm.Z * tb * shade);
+                    (float R, float G, float B) Face(float shade) => (tr * shade, tg * shade, tb * shade);
 
                     bool IsSameFluid(int wx, int wy, int wz) => layout.BlockAt(nb.GetBlockState(wx, wy, wz, 0)) is { } sameRef && sameRef.Path == fluidPath;
 
@@ -1242,10 +1247,14 @@ public static class ChunkMesher
                 Drop(a),
                 Drop(b),
                 Drop(c),
-                cornerOrigin,
-                cornerA,
-                cornerB,
-                cornerC,
+                (cornerOrigin.R, cornerOrigin.G, cornerOrigin.B),
+                (cornerA.R, cornerA.G, cornerA.B),
+                (cornerB.R, cornerB.G, cornerB.B),
+                (cornerC.R, cornerC.G, cornerC.B),
+                (cornerOrigin.Sky, cornerOrigin.Block),
+                (cornerA.Sky, cornerA.Block),
+                (cornerB.Sky, cornerB.Block),
+                (cornerC.Sky, cornerC.Block),
                 uvOrigin,
                 uvA,
                 uvB,
@@ -1263,10 +1272,14 @@ public static class ChunkMesher
             a,
             b,
             c,
-            cornerOrigin,
-            cornerA,
-            cornerB,
-            cornerC,
+            (cornerOrigin.R, cornerOrigin.G, cornerOrigin.B),
+            (cornerA.R, cornerA.G, cornerA.B),
+            (cornerB.R, cornerB.G, cornerB.B),
+            (cornerC.R, cornerC.G, cornerC.B),
+            (cornerOrigin.Sky, cornerOrigin.Block),
+            (cornerA.Sky, cornerA.Block),
+            (cornerB.Sky, cornerB.Block),
+            (cornerC.Sky, cornerC.Block),
             uvOrigin,
             uvA,
             uvB,

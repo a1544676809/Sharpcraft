@@ -1919,4 +1919,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `ChunkMeshCache.Lighting` / `ChunkWorkerPool.Lighting`（默认昼）：记录所用 `LightmapParameters`；变化时缓存整体失效、按新参数重网格化（`ChunkMeshCache.Build` 内 `_appliedLighting` 比较后 `_meshes.Clear()`）。
 - `WindowCommand`：启动与每帧用 `LightmapParameters.OverworldAt(world.DayTime)` 设置两者；参数变化即 `meshCache.Clear()+QueueMissing(world)` 分片重建。
 - **验证**：`ChunkMeshCacheTests.ChangingTheLightmapParametersRemeshesEveryChunk`（同参 0 重建、变参全重建）；离屏日夜像素证据见上一条。全量 **1191 通过**、0 警告。
-- **遗留（需 ADR）**：真正零重建=着色器侧每帧 UBO lightmap，须改 12-float 顶点契约（跨模块），按原则 12 待所有者确认 + ADR 后再做。天气/维度、天空盘/暗盘、`RAIN_BRIGHTNESS` 未做。
+- **遗留（需 ADR）**：真正零重建=着色器侧每帧 UBO lightmap，须改 12-float 顶点契约（跨模块），按原则 12 待所有者确认 + ADR 后再做。天气/维度、天空盘/暗盘、`RAIN_BRIGHTNESS` 未做。## 2026-11-01 顶点契约变更：着色器侧 lightmap（ADR-0019，所有者“可以修改”授权）
+- **契约**：顶点 12→14 float（pos3 + base3(tint×shade×AO) + uv2 + spriteRect4 + light2(sky,block)）；`FrameRequest.FloatsPerVertex=14`、`VertexLayout.Stride=56`（新增 `Float32x2`@48 loc4）。占位实体/方块实体网格补 light=(1,0)。
+- **着色器**：`terrain.wgsl`/`oit_reference.wgsl` 加 light 属性 + `Lightmap` UBO（binding4，64B），片元逐片元 `lightmapColour(sky,block)` 精确复刻 `VanillaLightmap.Colour`（brightness/parabola/notGamma/brightnessFactor）；`ChunkMesher` 不再烘焙光图（`CornerShade` 返回 base+等级，`MeshBuffer` 写 light2，流体同步）。
+- **渲染器**：离屏与窗口都建 lightmap UBO 并按帧写 `request.Lightmap`；`LightmapUniformCodec` 编码；`FrameCommand.ToLightmapUniform(LightmapParameters.OverworldAt(EffectiveDayTime))`。
+- **等价验证**：纯逻辑 `VanillaLightmapTests`（昼 1 / 夜≈(0.088,0.088,0.453)）+ 出图：本地**同一网格仅换 UBO**，地形 top-mid 昼 `rgba(136,136,136)`→夜 `rgba(45,45,95)`，夜空见星。全量 **1191 通过**、门禁 ok。
+- **窗口运行时像素未验收**（本环境无可见窗口）：窗口渲染器已同源接线（binding4/UBO）但仅编译通过。未做：天气/维度、夜视/暗化、方块光闪烁；模块 A 仍欠天空盘/暗盘、`RAIN_BRIGHTNESS`。

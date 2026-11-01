@@ -150,19 +150,20 @@ public sealed class ChunkMesherTests
     }
 
     [Fact]
-    public void UnlitBlocksAreDarkerThanLitBlocks()
+    public void LitBlocksCarryHigherSkyLightThanUnlitBlocks()
     {
         var dark = SingleBlockWorld(2);
         var lit = SingleBlockWorld(2);
         lit.GetChunk(0, 0)!.Light.FillSkyLight(15);
 
-        var darkColour = ChunkMesher.Mesh(dark).Vertices[3];
-        var litColour = ChunkMesher.Mesh(lit).Vertices[3];
+        // The lightmap is applied in the shader now, so the light levels ride in the vertex light attribute (offset 12 =
+        // sky level 0..1) rather than being baked into the colour.
+        var darkSky = ChunkMesher.Mesh(dark).Vertices[12];
+        var litSky = ChunkMesher.Mesh(lit).Vertices[12];
 
-        Assert.True(litColour > darkColour, $"lit {litColour} should be brighter than dark {darkColour}");
-
-        // Vanilla has no ambient light in the overworld, so zero light really is black (docs/specs/render/lighting.md 3).
-        Assert.Equal(0f, darkColour, 5);
+        Assert.True(litSky > darkSky, $"lit sky {litSky} should exceed dark sky {darkSky}");
+        Assert.Equal(1f, litSky, 3);
+        Assert.Equal(0f, darkSky, 5);
     }
 
     [Fact]

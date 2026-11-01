@@ -579,7 +579,13 @@ public static class OffscreenRenderer
                     ShaderStage.Vertex | ShaderStage.Fragment,
                     WGPUBufferBindingType.Uniform,
                     false,
-                    32)
+                    32),
+                BindGroupLayoutEntry.Buffer(
+                    Shaders.ShaderBindings.Lightmap,
+                    ShaderStage.Fragment,
+                    WGPUBufferBindingType.Uniform,
+                    false,
+                    Shaders.ShaderBindings.LightmapBytes)
             ]);
 
             using var pipelineLayout = device.CreatePipelineLayout([bindGroupLayout]);
@@ -603,6 +609,14 @@ public static class OffscreenRenderer
                 new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
                 fogBytes.AsSpan());
             device.Queue.WriteBuffer(fogBuffer, 0, fogBytes.AsSpan());
+
+            // Lightmap parameters (sky/block factors and colours); rewritten per frame so day/night needs no re-mesh.
+            var lightmapBytes = new byte[Shaders.ShaderBindings.LightmapBytes];
+            LightmapUniformCodec.Write(request.Lightmap, lightmapBytes);
+            using var lightmapBuffer = device.CreateBufferInit(
+                new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
+                lightmapBytes.AsSpan());
+            device.Queue.WriteBuffer(lightmapBuffer, 0, lightmapBytes.AsSpan());
 
             Span<float> cameraBlock = stackalloc float[16];
             CameraUniform.Write(cameraBlock, request.CameraPosition, request.CameraTarget, request.FieldOfViewDegrees, (int)width, (int)height);
@@ -631,7 +645,8 @@ public static class OffscreenRenderer
                     BindGroupEntry.TextureView(0, atlasView),
                     BindGroupEntry.Sampler(1, atlasSampler),
                     BindGroupEntry.Buffer(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize),
-                BindGroupEntry.Buffer(3, fogBuffer, 0, 32)
+                BindGroupEntry.Buffer(3, fogBuffer, 0, 32),
+                BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
                 ]);
 
             // Readback rows must be padded to 256 bytes.

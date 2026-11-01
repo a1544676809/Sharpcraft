@@ -19,14 +19,14 @@ public sealed class VertexLayoutTests
     [Fact]
     public void TheLayoutMatchesTheVertexStride()
     {
-        Assert.Equal(48, VertexLayout.Stride);
+        Assert.Equal(56, VertexLayout.Stride);
 
         var attributes = VertexLayout.Attributes();
 
-        // World position, light colour, tile uv, sprite rect: 3 + 3 + 2 + 4 floats. The camera arrives
+        // World position, base colour, tile uv, sprite rect, light levels: 3 + 3 + 2 + 4 + 2 floats. The camera arrives
         // as a uniform, so no clip-space w is baked into the vertex.
-        Assert.Equal(3 + 3 + 2 + 4, VertexLayout.Stride / sizeof(float));
-        Assert.Equal(4, attributes.Length);
+        Assert.Equal(3 + 3 + 2 + 4 + 2, VertexLayout.Stride / sizeof(float));
+        Assert.Equal(5, attributes.Length);
     }
 
     [Fact]
@@ -54,6 +54,7 @@ public sealed class VertexLayoutTests
         Assert.Equal(WGPUVertexFormat.Float32x3, attributes[1].Format);
         Assert.Equal(WGPUVertexFormat.Float32x2, attributes[2].Format);
         Assert.Equal(WGPUVertexFormat.Float32x4, attributes[3].Format);
+        Assert.Equal(WGPUVertexFormat.Float32x2, attributes[4].Format);
     }
 
     private static ulong SizeOf(WGPUVertexFormat format) => format switch

@@ -85,16 +85,16 @@
 
 ## 6. 时间 / 天气 / 维度
 
-- **已实现（离屏路径，2026-11-01）**：`LightmapParameters.OverworldAt(dayTime)` 用 `SkyAttributeTracks.SkyLightFactorAt/SkyLightColorAt` 取当前 `skyFactor`/`skyLightColor`（昼 1.0 / 白；夜 0.24 / (0.48,0.48,1) 线性），其余参数保持昼默认；`ChunkMesher`（`Mesh`/`MeshChunk`/`MergeSectionFaces`/`EmitMergedQuad`/`CornerShade`/`EmitSectionFluids`）贯穿 `LightmapParameters`，在 UV/AO lightmap 计算处用其求值。离屏路径每帧重建网格，因此顶点色随 `DayTime` 更新，**无需改顶点格式或着色器**。
-- **等价证据（纯逻辑 + 出图）**：`VanillaLightmapTests` 手算——正午 `OverworldAt(6000)` 全白天体 =1；夜 `OverworldAt(18000)` 全白天体 ≈(0.088,0.088,0.453)（R=G<B，暗且偏蓝）；本地帧地形 `top-mid` 昼 `rgba(136,136,136)` → 夜 `rgba(45,45,95)`。
-- **已实现（实时窗口路径，分片式）**：网格缓存（`ChunkMeshCache.Lighting`）与后台网格池（`ChunkWorkerPool.Lighting`）记录所用 `LightmapParameters`；`WindowCommand` 每帧比较当前 `OverworldAt(DayTime)`，一旦变化即 `Clear` 全部缓存并按新参数重建（`QueueMissing`，逐个分片重传）。因为光图烘进顶点色，这必然重网格化一次；`ChunkMeshCacheTests.ChangingTheLightmapParametersRemeshesEveryChunk` 证明“同参不重建、变参全重建”。**代价**：每次显著日夜变化会有一帧重网格化尖峰（按参数变化触发，非每帧）。
-- **真正零重建的正确做法（未来，需 ADR）**：顶点只存 `sky`/`block` 等级 + `AO×朝向` 标量，lightmap 在着色器用**每帧更新的 UBO**（skyFactor、skyLightColor、blockFactor、ambient、brightness）现算。这要改 12-float 顶点契约（terrain/fluid/方块实体/实体 + 两渲染器 + 着色器），属**跨模块契约变更**，按原则 12 须所有者确认并落 ADR 后再实施。
+- **已实现（ADR-0019，顶点契约变更）**：顶点改为 14-float，携带 `sky`/`block` 光照等级（0..1 = level/15）；基础色通道存 `tint × 朝向shade × AO`。`terrain.wgsl`/`oit_reference.wgsl` 逐片元用每帧 `LightmapUniform` UBO（`skyFactor`、`blockFactor`、`brightnessFactor`、`skyLightColor`、`blockLightTint`、`ambientColor`，64 字节）精确复刻 `VanillaLightmap.Colour` 现算 lightmap，再 `litColour(texel, base × lightmap)`。离屏与窗口渲染器共用（binding 4），**时间变化只改 UBO，不重建网格**。
+- **参数来源**：`LightmapParameters.OverworldAt(dayTime)` 用 `SkyAttributeTracks.SkyLightFactorAt/SkyLightColorAt`（昼 1.0/白；夜 0.24/(0.48,0.48,1) 线性），经 `FrameCommand.ToLightmapUniform` 映射为 `LightmapUniform`。
+- **等价证据（纯逻辑 + 出图）**：`VanillaLightmapTests` 手算——正午全白天体 =1；夜全白天体 ≈(0.088,0.088,0.453)（R=G<B）。本地帧同一网格、仅换 UBO：地形 `top-mid` 昼 `rgba(136,136,136)` → 夜 `rgba(45,45,95)`，夜空可见星星。
+- **逐片元 vs 旧烘焙**：旧实现插值“已烘焙颜色”，新实现插值等级后逐片元算非线性 lightmap——更接近原版（原版传光照等级并用 lightmap 纹理逐片元采样），平滑光照渐变处有小差异，属受控且更正确的偏差。
 - 天气（雨/雷）、维度（下界/末地）环境参数未建模；`ambientColor` 恒 0。
 
 ## 7. 已知偏差与范围
 
 - AO 的"实心"判定用纹理不透明度而非碰撞形状（§4）。
-- 未实现：夜视、Darkness 效果、Boss 遮罩暗化、闪电闪光加成、**天气/维度环境参数（§6；日夜已在离屏路径实现）**、方块光闪烁。
+- 未实现：夜视、Darkness 效果、Boss 遮罩暗化、闪电闪光加成、**天气/维度环境参数（§6；日夜已实现）**、方块光闪烁。
 - lightmap 反 gamma（notGamma）与 `brightnessFactor` 按默认 0.5 参与，未接亮度滑块。
 
 ## 8. 等效性测试计划（纯逻辑、可量化）
