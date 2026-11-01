@@ -295,6 +295,8 @@ internal static class WindowCommand
         var cloudAdaptive = Environment.GetEnvironmentVariable("MC_CLOUD_ADAPTIVE") == "1";
         var oitLowPrecision = Environment.GetEnvironmentVariable("MC_OIT_LOW_PRECISION") == "1";
         var cloudDepth = Environment.GetEnvironmentVariable("MC_CLOUD_DEPTH") == "1";
+        var skyDiscMode = (Environment.GetEnvironmentVariable("MC_SKY_DISC_MODE") ?? "vanilla").ToLowerInvariant();
+        var skyDiscVanilla = skyDiscMode != "fast" && skyDiscMode != "optimized";
         session.SetCloudOptions(
             enabled: cloudMode != "off",
             fancy: cloudMode != "fast" && cloudMode != "off",
@@ -606,6 +608,14 @@ internal static class WindowCommand
             cloudOitEnabled: session.CloudUseOit,
             oitLowPrecision: oitLowPrecision,
             cloudDepthEnabled: cloudDepth,
+            skyDiscVanilla: skyDiscVanilla,
+            skyDiscPerFrame: () =>
+            {
+                var fog = session.CurrentFogColour();
+                return (session.CurrentSkyColour(),
+                    new System.Numerics.Vector3(fog.X, fog.Y, fog.Z),
+                    MathF.Min(Sharpcraft.Launcher.InteractiveSession.ViewDistanceChunks * 16f, 512f));
+            },
             celestialPerFrame: () =>
             {
                 if (world is null)

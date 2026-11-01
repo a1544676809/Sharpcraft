@@ -60,7 +60,9 @@ public static class WindowedRenderer
     Func<(CelestialQuadDraw[] Draws, CelestialColorDraw[] Colors, CelestialColorDraw[] SkyDiscs)?>? celestialPerFrame = null,
     bool cloudOitEnabled = false,
     bool oitLowPrecision = false,
-    bool cloudDepthEnabled = false)
+    bool cloudDepthEnabled = false,
+    bool skyDiscVanilla = true,
+    Func<(Vector3 Sky, Vector3 Fog, float SkyFogEnd)>? skyDiscPerFrame = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -241,8 +243,11 @@ public static class WindowedRenderer
         using var celestialColour = request.CelestialColorDraws is { Length: > 0 } || celestialPerFrame is not null
             ? new OffscreenRenderer.CelestialColorResources(device, request, cameraBuffer, VertexLayout.CameraUniformSize, format)
             : null;
-        using var skyDiscColour = request.SkyDiscDraws is { Length: > 0 }
+        using var skyDiscColour = !skyDiscVanilla && request.SkyDiscDraws is { Length: > 0 }
             ? new OffscreenRenderer.CelestialColorResources(device, request with { CelestialColorDraws = request.SkyDiscDraws }, cameraBuffer, VertexLayout.CameraUniformSize, format)
+            : null;
+        using var skyDiscVanillaResources = skyDiscVanilla && skyDiscPerFrame is not null
+            ? new SkyDiscResources(device, cameraBuffer, VertexLayout.CameraUniformSize, format)
             : null;
         // Clouds change every frame (scroll/camera), so their position-colour draw set is updated per frame.
         using var cloudColour = cloudsPerFrame is null
@@ -1086,6 +1091,12 @@ public static class WindowedRenderer
             celestial?.UpdateCamera(celestialDelta);
             celestialColour?.UpdateCamera(celestialDelta);
             skyDiscColour?.UpdateCamera(celestialDelta);
+
+            if (skyDiscVanillaResources is not null && skyDiscPerFrame?.Invoke() is { } skyDiscState)
+            {
+                skyDiscVanillaResources.Update(skyDiscState.Sky, skyDiscState.Fog, skyDiscState.SkyFogEnd);
+                skyDiscVanillaResources.Draw(pass);
+            }
 
             skyDiscColour?.Draw(pass);
             celestial?.Draw(pass);

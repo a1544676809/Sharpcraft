@@ -25,7 +25,7 @@ public sealed record FrameRequest(
     Vector4 ClearColour,
     Vector3 CameraPosition,
     Vector3 CameraTarget,
-    float FieldOfViewDegrees = 60f)
+    float FieldOfViewDegrees = 70f)
 {
     /// <summary>Floats per vertex: position (3) + base colour (3) + uv (2) + sprite rect (4) + light (2).</summary>
     public const int FloatsPerVertex = 14;

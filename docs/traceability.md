@@ -359,3 +359,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-332 | **天空盘 fog 渐变**：按原版 sky shader 的 `FogSkyEnd` 逻辑，天空盘顶点按距离在 SKY_COLOR→FOG_COLOR 间渐变（顶点色烘焙，opaque） | `ref://.../core/sky.fsh`、`AtmosphericFogEnvironment` | 构建通过；客户端运行 | `Launcher/{FrameCommand,WindowCommand}` | 已完成 |
 | T-333 | **天空盘地平线缝隙修复**：有天空盘时窗口 clear colour 改为雾色（而非 SKY_COLOR），避免 disc 边缘外露蓝色缝隙 | `core/sky.fsh`；T-332 | 构建通过；客户端运行 | `Launcher/WindowCommand` | 已完成 |
 | T-334 | **天空盘渐变换分**：天空盘由 10 顶点改为 16 环×64 段（约 1025 顶点），顶点色按半径/`skyFogEnd` 从 SKY_COLOR→FOG_COLOR，消除 10 顶点线性插值的窄过渡 | `core/sky.fsh`、T-332 | 构建通过；客户端运行 | `Launcher/FrameCommand` | 已完成 |
+| T-335 | **Vanilla 逐像素天空盘（默认）+ fast 回退**：`MC_SKY_DISC_MODE=vanilla|fast/optimized`；vanilla 用 `sky_disc.wgsl` 逐像素 spherical/cylindrical fog，fast 保留现有细分顶点色渐变；FOV 默认改为原版 70 | `core/sky.fsh`、`AtmosphericFogEnvironment` | 构建通过；客户端运行 | `Framework/Rendering/{SkyDiscResources,WindowedRenderer}`、`Launcher/WindowCommand` | 已完成 |

@@ -2124,3 +2124,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-01 天空盘 fog 渐变（T-332）：顶点按距离 SKY_COLOR→FOG_COLOR，地平线白化。
 - 2026-11-01 天空盘地平线缝隙：窗口 clear 改为雾色（T-333）。
 - 2026-11-01 天空盘渐变改为 16环×64段细分（T-334），地平线过渡更顺滑。
+- 2026-11-01 天空盘 Vanilla 逐像素 shader 默认，fast 顶点渐变回退；FOV 默认70（T-335）。
