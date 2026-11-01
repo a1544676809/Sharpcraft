@@ -1998,4 +1998,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 仍待：**#10 BlockLightTint**（仍用 `Srgb24ToLinear`，应改原样 `v/255`）；**#3** 平滑光照算法近似（待定是否移植 smoothBlend/smoothWeightedBlend）。## 2026-11-01 修复：世界时钟被空 set_time 清空 / gameTime 兜底
 - **诊断（`MC_DIAG`）**：真服 `set_time` 约每 20 tick 一次但 **clockUpdates 恒空**（只有 gameTime）；旧 `ApplyTime` 每次 `_clocks.Clear()` → 时钟被清、`DayTime` 恒 0（暗）；`/time set day` 先亮、下一空包即复原。
 - **修复**（对齐原版 `ClientClockManager`）：`ApplyTime` 先 `AdvanceClocks(gameTime)` 再**仅覆盖包内时钟、不清空**；`AdvanceClocks(long)` 用 `Δ·rate`（carry partial→total）；`AdvanceTick()` 每 tick `GameTime++` 并推进时钟；无 overworld 时钟时 `DayTime=GameTime%24000` 兜底。
-- `ClientWorldTimeTests`(7)。全量 **1250 通过**、门禁 ok。实机 `day` 从 ~4890 起每秒 +20 推进（白天亮度正常）。重启窗口复验昼夜与 `/time set`。
+- `ClientWorldTimeTests`(7)。全量 **1250 通过**、门禁 ok。实机 `day` 从 ~4890 起每秒 +20 推进（白天亮度正常）。重启窗口复验昼夜与 `/time set`。## 2026-11-01 C：抓包核实时钟来源（结论：该服不下发时钟）
+- 抓包（`MC_PACKET_LOG`）：**配置阶段**只有 custom_payload/ping/update_enabled_features/select_known_packs/registry_data×N/update_tags/finish_configuration；**游戏阶段**唯一时间包是 `set_time`(id115) 且 **clockUpdates 恒空**（原始字节 `73 + 8B gameTime + 00`）。**全流程无任何携带世界时钟的包**。
+- 原版核实：昼夜由时钟驱动的 Timeline 属性决定（`EnvironmentAttributeSystem.addDynamicLayers`），只吃 `ClockManager` 时钟；**无 gameTime 兜底**。故该服上原版时间应为时钟默认 0。
+- **修正**：移除先前的 `GameTime%24000` 兜底，`DayTime` 严格只取 overworld 时钟（缺失=0）；`ApplyTime` 仍“tick 后只覆盖包内时钟、不清空”（`/time set` 会带时钟→生效且持久）。`ClientWorldTimeTests` 改为“无时钟=0”。全量 1250 通过。
+- 仍待：**#10 BlockLightTint**（`Srgb24ToLinear` 应改 `v/255`）；**#3** 平滑光照近似。另：`Diagnostics/` 的 `MC_PACKET_LOG`/hex 打印为宿主诊断，可整体删除不影响游戏。

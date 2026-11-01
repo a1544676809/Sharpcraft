@@ -57,17 +57,20 @@ public sealed class ClientWorld
     /// <summary>Network game time from the last <c>set_time</c>.</summary>
     public long GameTime { get; private set; }
 
-    /// <summary>Day time in 0..23999 from the overworld clock (0 when no time is known).</summary>
+    /// <summary>Day time in 0..23999 from the overworld clock (0 when the server has not synced one).</summary>
     public int DayTime
     {
         get
         {
-            // The overworld clock normally arrives through set_time. Some servers only send the game time and leave the
-            // clock-update map empty, so when no clock is present fall back to the game time: the overworld clock's total
-            // ticks track game time, and day time is its position in the 24000-tick day.
-            var ticks = _clocks.TryGetValue(OverworldClockId, out var clock) ? clock.TotalTicks : GameTime;
-            var wrapped = ticks % DayLengthTicks;
-            return (int)((wrapped + DayLengthTicks) % DayLengthTicks);
+            // The reference derives day time only from the overworld clock (nothing reads the raw game time for it); a
+            // server that never sends clock updates therefore leaves the clock at its default, so this is 0 afterwards.
+            if (!_clocks.TryGetValue(OverworldClockId, out var clock))
+            {
+                return 0;
+            }
+
+            var ticks = clock.TotalTicks % DayLengthTicks;
+            return (int)((ticks + DayLengthTicks) % DayLengthTicks);
         }
     }
 

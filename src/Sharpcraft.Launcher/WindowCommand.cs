@@ -744,7 +744,8 @@ internal static class WindowCommand
             var probe = await ConfigurationProbe.RunAsync(
                 connection,
                 TimeSpan.FromSeconds(20),
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken,
+                log: Environment.GetEnvironmentVariable("MC_PACKET_LOG") == "1" ? Console.WriteLine : null).ConfigureAwait(false);
 
             if (!probe.ReachedPlay)
             {

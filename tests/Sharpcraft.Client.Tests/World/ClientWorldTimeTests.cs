@@ -73,15 +73,16 @@ public sealed class ClientWorldTimeTests
     }
 
     [Fact]
-    public void FallsBackToGameTimeWhenTheServerSendsNoClocks()
+    public void NoClockIsDayZeroEvenWithGameTime()
     {
-        // Some servers send only game time with an empty clock map; day time follows the game time (its 24000-tick day).
+        // The reference derives day time only from the overworld clock, never from the raw game time. A server that sends
+        // an empty clock map (only game time) therefore leaves day time at 0 until it sends a clock update.
         var world = new ClientWorld(minSectionY: 0, sectionCount: 1);
         world.ApplyTime(new SetTimePacket(18000, new Dictionary<int, ClockNetworkState>()));
-        Assert.Equal(18000, world.DayTime);
+        Assert.Equal(0, world.DayTime);
 
         world.AdvanceTick();
-        Assert.Equal(18001, world.DayTime);
+        Assert.Equal(0, world.DayTime);
     }
 
     [Fact]
