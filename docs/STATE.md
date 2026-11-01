@@ -2134,3 +2134,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-01 加入 DrawIndexed 计数（T-342）；视距32约4700 draws/frame但仍160FPS。
 - 2026-11-01 古城室内压测（T-343）：155FPS、约1902 draws/frame、几何≈1.46GB；不引入paged arena。
 - 2026-11-01 M5.3 P1 实体视锥剔除接线完成（T-344）；全量1267通过，剔除计数走 MC_DIAG。
+- 2026-11-01 环境问题：后台残留 16 个 `dotnet` host（21:01:28 启动，RSS≈2.3GB）、1 个 `VBCSCompiler`（≈350MB）、2 个无法结束的 `Sharpcraft.Launcher` 空壳；文档此前仅有历史清理记录，需在后续收尾时统一回收，避免多次 build/test 累积。
