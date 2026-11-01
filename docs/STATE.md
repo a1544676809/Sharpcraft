@@ -2061,4 +2061,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 根因：`ChunkGeometryArena` 初始 `expectedChunks(625)×512KB×2×3层 ≈ 1.4GB`；且 `RebuildAll` 以 `MaxPresizeBytes` 当硬上限，实际几何超限时每帧全量重建（~100MB/帧）→ OOM。
 - 修复：初始改 1MB 起；每层增长上限 `MaxBufferBytes=96MB`（presize 16MB）；达上限跳过远处区块（不再重建）；`RebuildAll` 增长上限用 MaxBuffer。视距 12 连续 45s+ 无 OOM/validation（进程 ~819MB）。全量 1265 通过。
 - **另一主因（频繁关闭）**：`Start-Process` 启动的客户端会在工具调用结束时被清理；改用**持久终端会话**（`terminal_open`/`terminal_send`）后持续运行 **11647 帧**稳定（pid 48892，RSS ~866MB）。
-- 仍待：超大窗口(2560×1334)时 OIT 目标与重传仍可能吃紧；可视需要再降或分页缓冲区。
+- 仍待：超大窗口(2560×1334)时 OIT 目标与重传仍可能吃紧；可视需要再降或分页缓冲区。## 2026-11-01 新目标：视距 12–32 无跳过（T-300 / ADR-0020）
+- 所有者要求：视距 **12 且不跳过远处区块**是硬性，原版可到 **32**。单缓冲 arena + 256MB 上限于此不可能，必须换几何存储。
+- 已立目标 `goal-6e779d0d`；写 ADR-0020：**每区块独立 vertex/index 缓冲 + CPU 视锥剔除**（原版模型），显存随实际网格增长，取消上限/跳过。
+- 实施分步：①ADR（完成）→②`ChunkGeometryStore`（每区块缓冲、Apply/Remove、内存统计）→③`WindowedRenderer` 三层绘制改每区块缓冲+CPU 剔除（translucent 距离排序）→④视距 12/24/32 长跑与显存测量→⑤测试/门禁/traceability 收尾。
+- 现状：旧每帧云/天体 pass 不回退；当前客户端仍可用（旧 arena 方案，视距12 稳定但高内存时会跳过远区块）。
