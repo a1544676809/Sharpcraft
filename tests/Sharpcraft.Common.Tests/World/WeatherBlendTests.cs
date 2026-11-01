@@ -77,4 +77,25 @@ public sealed class WeatherBlendTests
         Assert.Equal(0.85f, rainy.X, 4);
         Assert.Equal(0.85f, rainy.Z, 4);
     }
+
+    [Fact]
+    public void FogIsMultipliedUnderRain()
+    {
+        Assert.Equal(Vector3.One, WeatherBlend.ApplyFog(Vector3.One, 0f, 0f));
+
+        var rainy = WeatherBlend.ApplyFog(Vector3.One, 1f, 0f);
+        Assert.Equal(0.5f, rainy.X, 4);
+        Assert.Equal(0.5f, rainy.Y, 4);
+        Assert.Equal(0.6f, rainy.Z, 4);
+    }
+
+    [Fact]
+    public void SunriseIsMultipliedUnderRain()
+    {
+        // rgb multiplied by (0.5,0.5,0.6), alpha kept (multiply arg alpha is 1).
+        var rainy = WeatherBlend.ApplySunrise(new Vector4(1f, 1f, 1f, 0.8f), 1f, 0f);
+        Assert.Equal(0.5f, rainy.X, 4);
+        Assert.Equal(0.6f, rainy.Z, 4);
+        Assert.Equal(0.8f, rainy.W, 4);
+    }
 }

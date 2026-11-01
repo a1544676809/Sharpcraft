@@ -1399,8 +1399,10 @@ internal static class FrameCommand
         AddBody(CelestialSprites.Sun, sunAngle, size: 30f);
         AddBody(CelestialSprites.MoonPhase(moonPhaseIndex), moonAngle, size: 20f);
 
-        // Sunrise/sunset band: a position-colour triangle fan, skipped below the reference alpha cutoff.
-        var sunrise = Sharpcraft.Common.World.SkyAttributeTracks.SunriseSunsetColorAt(dayTime, partialTick);
+        // Sunrise/sunset band: a position-colour triangle fan, skipped below the reference alpha cutoff. Rain/thunder
+        // multiply the colour (WeatherAttributes SUNRISE_SUNSET_COLOR MULTIPLY_ARGB).
+        var sunrise = Sharpcraft.Common.World.WeatherBlend.ApplySunrise(
+            Sharpcraft.Common.World.SkyAttributeTracks.SunriseSunsetColorAt(dayTime, partialTick), rainLevel, thunderLevel);
         if (sunrise.W > 0.001f)
         {
             var sinSun = MathF.Sin(sunAngle * (MathF.PI / 180f));

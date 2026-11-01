@@ -24,6 +24,14 @@ public static class WeatherBlend
     private const float ThunderGrayFactor = 0.24f;
     private const float ThunderGrayBrightness = 0.94f;
 
+    // FOG_COLOR MULTIPLY_RGB arguments (ARGB.colorFromFloat(1, r,g,b) -> rgb only).
+    private static readonly Vector3 RainFog = new(0.5f, 0.5f, 0.6f);
+    private static readonly Vector3 ThunderFog = new(0.25f, 0.25f, 0.3f);
+
+    // SUNRISE_SUNSET_COLOR MULTIPLY_ARGB arguments (alpha comes from colorFromFloat(alpha=1) so it is 1).
+    private static readonly Vector4 RainSunrise = new(0.5f, 0.5f, 0.6f, 1f);
+    private static readonly Vector4 ThunderSunrise = new(0.25f, 0.25f, 0.3f, 1f);
+
     /// <summary>Reference <c>RAIN_BRIGHTNESS = 1 − getRainLevel(partialTicks)</c>, the sun/moon/stars alpha.</summary>
     public static float RainBrightness(float rainLevel) => 1f - rainLevel;
 
@@ -69,4 +77,44 @@ public static class WeatherBlend
 
         return result;
     }
+
+    /// <summary>Weather-applied <c>FOG_COLOR</c>: base RGB multiplied by the RAIN/THUNDER factor, blended by their weights.</summary>
+    public static Vector3 ApplyFog(Vector3 baseColour, float rainLevel, float thunderLevel)
+    {
+        var result = baseColour;
+        var rainWeight = rainLevel - thunderLevel;
+        if (rainWeight > 0f)
+        {
+            result = Vector3.Lerp(result, Multiply(result, RainFog), rainWeight);
+        }
+
+        if (thunderLevel > 0f)
+        {
+            result = Vector3.Lerp(result, Multiply(result, ThunderFog), thunderLevel);
+        }
+
+        return result;
+    }
+
+    /// <summary>Weather-applied <c>SUNRISE_SUNSET_COLOR</c>: base RGBA multiplied by the RAIN/THUNDER factor, blended by their weights.</summary>
+    public static Vector4 ApplySunrise(Vector4 baseColour, float rainLevel, float thunderLevel)
+    {
+        var result = baseColour;
+        var rainWeight = rainLevel - thunderLevel;
+        if (rainWeight > 0f)
+        {
+            result = Vector4.Lerp(result, Multiply(result, RainSunrise), rainWeight);
+        }
+
+        if (thunderLevel > 0f)
+        {
+            result = Vector4.Lerp(result, Multiply(result, ThunderSunrise), thunderLevel);
+        }
+
+        return result;
+    }
+
+    private static Vector3 Multiply(Vector3 a, Vector3 b) => new(a.X * b.X, a.Y * b.Y, a.Z * b.Z);
+
+    private static Vector4 Multiply(Vector4 a, Vector4 b) => new(a.X * b.X, a.Y * b.Y, a.Z * b.Z, a.W * b.W);
 }
