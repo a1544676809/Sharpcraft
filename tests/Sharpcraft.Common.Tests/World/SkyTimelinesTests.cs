@@ -151,4 +151,17 @@ public sealed class SkyTimelinesTests
         Assert.Equal(0x0F / 255f, night.Y, 4);
         Assert.Equal(0x16 / 255f, night.Z, 4);
     }
+
+    [Fact]
+    public void CloudColorFactorIsWhiteByDayDarkAtNight()
+    {
+        var day = SkyAttributeTracks.CloudColorFactorAt(6000);
+        Assert.Equal(1f, day.X, 4);
+        Assert.Equal(1f, day.Z, 4);
+
+        var night = SkyAttributeTracks.CloudColorFactorAt(18000);
+        Assert.Equal(0x19 / 255f, night.X, 4);
+        Assert.Equal(0x19 / 255f, night.Y, 4);
+        Assert.Equal(0x26 / 255f, night.Z, 4);
+    }
 }

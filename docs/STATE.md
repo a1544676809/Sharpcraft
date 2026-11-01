@@ -2033,4 +2033,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **已知视觉差距（后续可选）**：①**云层未实现**（原版 CloudRenderer）；②天空为纯 `SKY_COLOR` 平色，缺地平线渐变；③雾色简化为 `SKY_COLOR`（原版 `FOG_COLOR↔SKY_COLOR` 混合）；④夜间亮度可能偏低。## 2026-11-01 云层模块设计（待评审）
 - 实读 `CloudRenderer`/`clouds.{vsh,fsh}`/`EnvironmentAttributes`/`day.json`，写 `docs/modules/clouds.md`（草稿）：cell=12、云高 192.33、`CLOUD_FOG_END=2048`、`visual/cloud_color` 昼白→夜 `#191926`、滚动 0.6 块/s、面亮度 1/0.7/0.8/0.9。
 - 拟用"云纹理水平贴图平面近似"（受控偏差：无逐 cell 侧面剔除/阴影），§3 单测（颜色因子/滚动/常量）、§4 离屏对比。
-- **按 AGENTS 3.5 需 `[已评审]` 后再编码**；当前等待所有者评审 `docs/modules/clouds.md §5`。
+- **按 AGENTS 3.5 需 `[已评审]` 后再编码**；当前等待所有者评审 `docs/modules/clouds.md §5`。## 2026-11-01 云方案定稿：逐 cell（已评审）
+- 所有者决定：**逐 cell 还原原版**（云开销可接受）；无 clouds.png 不画；绘制半径跟 `MC_VIEW_DISTANCE`。`docs/modules/clouds.md` → `[已评审]`。
+- **关键发现/前置**：`WindowedRenderer` **没有 celestial/云 pass**（太阳/月亮/星星/云只在离屏绘制）→ 窗口夜黑、无云的另一根因。需先给窗口补 `celestial+cloud pass`。
+- 实现顺序：① 纯逻辑 `CloudTexture`/`CloudMeshBuilder`/`CloudColorFactorAt`（+单测）→② 窗口 celestial+cloud pass →③ 离屏复用 →④ 对照帧。
+- **① 已完成（T-295）**：`CloudTexture`(alpha<10 空/四邻/pack)、`CloudMeshBuilder`(原版 buildMesh/buildExtrudedCell 面规则)、`CloudColorFactorAt`；`CloudTextureTests`(2)+`CloudMeshBuilderTests`(4)+云色单测。全量 **1263 通过**。
+- **下一步 ②（T-296）**：给 `WindowedRenderer` 补 celestial+cloud pass（现仅离屏有），再接入云四边形；每帧 `CloudColor/Offset/CellSize`、顶/底/侧向面、alpha 混合与 CloudFogEnd 淡出。

@@ -313,6 +313,19 @@ public static class SkyAttributeTracks
         var blue = bluePrevious + ((blueCurrent - bluePrevious) * t);
         return new Vector3(red, red, blue);
     }
+
+    // CLOUD_COLOR timeline MULTIPLY track (day.json visual/cloud_color): #ffffffff day -> #ff191926 night.
+    private static readonly FloatKeyframeTrack CloudColorFactorR = FloatKeyframeTrack.Build(
+        [new FloatKeyframe(133, 1f), new FloatKeyframe(11867, 1f), new FloatKeyframe(13670, 0x19 / 255f), new FloatKeyframe(22330, 0x19 / 255f)],
+        static x => x, Period);
+
+    private static readonly FloatKeyframeTrack CloudColorFactorB = FloatKeyframeTrack.Build(
+        [new FloatKeyframe(133, 1f), new FloatKeyframe(11867, 1f), new FloatKeyframe(13670, 0x26 / 255f), new FloatKeyframe(22330, 0x26 / 255f)],
+        static x => x, Period);
+
+    /// <summary>CLOUD_COLOR multiplier at a day time (white by day, dark blue-grey #191926 at night).</summary>
+    public static Vector3 CloudColorFactorAt(int dayTimeTicks) =>
+        new(CloudColorFactorR.Sample(dayTimeTicks), CloudColorFactorR.Sample(dayTimeTicks), CloudColorFactorB.Sample(dayTimeTicks));
 }
 
 /// <summary>Overworld day environment tracks from Timelines.java: sun/moon/star angles (degrees).</summary>

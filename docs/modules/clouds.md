@@ -4,7 +4,7 @@
 <!-- doc
 title: 云层渲染（CloudRenderer）
 summary: 26.3 云的高度/尺寸/纹理/运动/颜色与混合，及本项目的等效实现方案
-status: 草稿
+status: 已评审
 updated: 2026-11-01
 -->
 
@@ -22,18 +22,18 @@ updated: 2026-11-01
 - **混合/雾**：alpha 混合；云雾按 `visual/cloud_fog_end_distance` 默认 **2048** 做线性淡出（`FogCloudsEnd`）。
 - **距离**：绘制半径 `radiusCells = ceil(renderDistanceBlocks / 12)`；只建相机附近的云 mesh。
 
-## 2. 本项目实现方案（行为等效，过程简化）
+## 2. 本项目实现方案（逐 cell，还原原版）
 
-受控偏差（记录于 STATE）：不逐 cell 建带朝向剔除的完整 mesh，而是**用云纹理做水平贴图平面**近似：
+按原版逐 cell 构建云四边形（成本可接受）：
 
-1. 载入 `clouds.png` 为纹理（RGBA，alpha 作云孔）。
-2. 以相机 XZ 为中心、`y = cloudHeight(192.33)` 放置水平四边形，尺寸覆盖渲染距离所需（≈ `2*renderDistanceBlocks + 若干 cell`，纹理按 cell=12 平铺/滚动）。
-3. UV 由 **世界 XZ / (纹理宽*12)** 生成并按 `offset` 滚动；采样 alpha<阈值丢弃 → 得到云块轮廓。
-4. 颜色 = 云纹理 RGB × `cloudColor`（`CloudColorFactorAt(dayTime)` × 天气调暗）；alpha 混合。
-5. 绘制顺序：天空之后、地形之前；深度比较 `LessEqual`（云在地形之后被遮挡），不写深度。
-6. 雾：按 `CLOUD_FOG_END(2048)` 线性淡出。
+1. 载入 `clouds.png`（RGBA，alpha<10 为空），打包每个 cell 的四邻空标志，生成 `cells[x + y*width]`。
+2. 相机附近半径 `radiusCells = ceil(renderDistanceBlocks/12)` 内按 `buildMesh` 环形遍历（`ring` 0..2r，按 `x²+z²<=r²`）收集可见 cell。
+3. 面规则（`buildExtrudedCell`）：`relativePos != BELOW` 加顶面、`!= ABOVE` 加底面、四向只在对应邻为空**且相对坐标符号匹配**时加；相机 ±1 cell 内额外加六个 `INSIDE_FACE` 面。
+4. 位置：`faceVertex*CellSize(12,4,12) + (cellX,0,cellZ)*CellSize + CloudOffset`；`CloudOffset = (-xInCell, relativeBottomY, -zInCell)`，`cloudOffset=(gameTime% (w*400)+partial)*0.03`（≈0.6 块/s）。高度 `visual/cloud_height` 默认 **192.33**、厚 4。
+5. 颜色/明暗：面亮度 **顶1/底0.7/南北0.8/东西0.9** × `visual/cloud_color`（昼 `#ffffffff`→夜 `#ff191926`，multiply）× 天气调暗。
+6. 混合/雾：alpha 混合，按 `CLOUD_FOG_END=2048` 线性淡出；绘制在天空之后、地形之前。
 
-这样能得到"晴天白云 / 夜间暗云 / 随时间移动"的等效观感；牺牲逐 cell 的侧面阴影与精确剔除（远距不明显）。
+渲染承载：本渲染器窗口侧目前**没有 celestial/云 pass**（只有离屏绘制太阳/月亮/星星），因此需先在窗口补该 pass，再接入云四边形（详见 §6）。
 
 ## 3. 纯逻辑测试（可量化部分）
 
@@ -46,8 +46,12 @@ updated: 2026-11-01
 - 离屏真服帧：白天 `MC_FORCE_DAYTIME=6000` 出图见白云；夜间见暗云。对比原版截图。
 - 像素：云区 alpha 混合是否覆盖天空色；无云孔透出天空。
 
-## 5. 待确认（评审项）
+## 5. 评审决定（已通过 2026-11-01）
 
-- 采用"贴图平面近似"（§2）是否可接受，还是要求逐 cell 几何（成本高、收益在晴天边缘/侧面阴影）。
-- 云纹理是否需要在资源缺省时回退（无 clouds.png 时不画云）。
-- 是否接入 `MC_VIEW_DISTANCE` 控制云绘制半径（默认跟视距）。
+- **采用逐 cell 几何**（非贴图平面近似）；云开销可接受，优先还原原版行为。
+- 无 `clouds.png` 时**不画云**（不崩溃）。
+- 云绘制半径**跟随 `MC_VIEW_DISTANCE`**。
+
+## 6. 前置：窗口 celestial/cloud pass
+
+当前 `WindowedRenderer` **没有**绘制 celestial（太阳/月亮/星星）与云；这些只在离屏 `OffscreenRenderer` 实现。要在窗口里看到逐 cell 云（以及日月星），必须先给窗口补上同一套 celestial/云绘制 pass（管线、纹理、每帧 uniform：`CloudColor/CloudOffset/CellSize`、云四边形/顶底/侧向面），再接入本模块。实现顺序：① 纯逻辑 `CloudTexture`/`CloudMeshBuilder`/`CloudColorFactorAt` + 单测；② 窗口 celestial+cloud pass；③ 离屏同源复用；④ 出对照帧。
