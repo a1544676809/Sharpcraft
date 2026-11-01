@@ -54,7 +54,16 @@ public sealed class TexturedMesherTests
         var green = mesh.Vertices[4];
         var blue = mesh.Vertices[5];
 
-        Assert.False(red == green && green == blue, "without sprites the state colour should stay tinted");
+        // A vertex on a chunk-edge side face has no neighbour light (the reference is black there too), so scan vertices
+        // for any tinted one rather than trusting the first.
+        var tinted = red != green || green != blue;
+
+        for (var i = 0; !tinted && i + 5 < mesh.Vertices.Length; i += FloatsPerVertex)
+        {
+            tinted = mesh.Vertices[i + 3] != mesh.Vertices[i + 4] || mesh.Vertices[i + 4] != mesh.Vertices[i + 5];
+        }
+
+        Assert.True(tinted, "without sprites the state colour should stay tinted");
     }
 
     [Fact]

@@ -9,6 +9,7 @@
 
 | 文档 | 摘要 | 状态 | 最后更新 |
 | --- | --- | --- | --- |
+| [`lighting-color-space.md`](lighting-color-space.md) | 26.3 block 着色器全程 sRGB 域直接相乘；据此修正我们误加的 gamma 解码/编码 | 草稿 | 2026-11-01 |
 | [`offscreen-ui-pass.md`](offscreen-ui-pass.md) | T-104 / T-159 的行为规格：离屏路径补上界面 pass，并用已知颜色反查 gamma 与通道顺序 | 草稿 | - |
 | [`shader-organisation.md`](shader-organisation.md) | 原版 93 个着色器条目的组织规范；我们当前的内联状态与改造建议 | 草稿 | - |
 | [`shader-pack-anatomy.md`](shader-pack-anatomy.md) | 真实 Iris 包的文件布局、阶段清单、包装层与共享翻译单元、选项系统；全部为行为级描述 | 草稿 | - |

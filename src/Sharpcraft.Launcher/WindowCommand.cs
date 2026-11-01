@@ -108,7 +108,12 @@ internal static class WindowCommand
             : prepared.Value.Map.ForBlock(new Sharpcraft.Common.Identifiers.Identifier("minecraft", "stone"));
 
 
-        var workerPool = new ChunkWorkerPool(world, prepared?.Map, fifoMeshOrder: Sharpcraft.Launcher.Diagnostics.HostDebugOptions.FifoMeshOrder);
+        var workerPool = new ChunkWorkerPool(
+            world,
+            prepared?.Map,
+            fifoMeshOrder: Sharpcraft.Launcher.Diagnostics.HostDebugOptions.FifoMeshOrder,
+            mergeFaces: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoMergeFaces,
+            ambientOcclusion: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoAmbientOcclusion);
         Console.WriteLine($"chunk workers: {workerPool.WorkerCount} (of {Environment.ProcessorCount} logical processors)");
 
         var meshCache = new ChunkMeshCache(workerPool);
@@ -134,7 +139,8 @@ internal static class WindowCommand
             : null;
 
         var geometryEpoch = 0;
-        Queue<(long Key, Sharpcraft.Client.Render.MeshData Mesh)>? replayQueue = null;
+        Queue<Sharpcraft.Client.Render.MeshedChunk>? replayQueue = null;
+    var uploadQueue = new Queue<Sharpcraft.Client.Render.MeshedChunk>();
         long drainedTotal = 0;
         var renderFrames = 0;
         var streamDiag = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
@@ -184,7 +190,7 @@ internal static class WindowCommand
                 }
 
                 geometryEpoch++;
-                replayQueue = new Queue<(long Key, Sharpcraft.Client.Render.MeshData Mesh)>(meshCache.SnapshotAll());
+                replayQueue = new Queue<Sharpcraft.Client.Render.MeshedChunk>(meshCache.SnapshotAll());
                 Console.WriteLine(
                     $"resource reload: layout changed; meshes {meshCache.LastTotalChunks}/{world.LoadedChunkCount} " +
                     $"after {passes} pass(es), atlas {atlasClock.Elapsed.TotalMilliseconds:F1} ms");
@@ -253,6 +259,18 @@ internal static class WindowCommand
             chatTypes.Load(registries);
             Console.WriteLine($"chat types: {chatTypes.Count} from the server");
 
+            // Per-biome block tint (docs/modules/weather-and-sky-color.md 6.1): rebuild the tint with the server's biome
+            // registry and remesh so grass/leaves/water use the biome at each position.
+            if (Sharpcraft.Common.World.BiomeRegistry.From(registries) is { } biomes)
+            {
+                biomeTint = biomeTint.WithBiomes(world.GetBiomeAt, biomes, blendRadius: 2);
+                meshCache.Layers = new Sharpcraft.Client.Render.LayerSinks(VanillaBlockRegistry.Layout, null, layerTranslucent, biomeTint);
+                workerPool.Layers = meshCache.Layers;
+                meshCache.Clear();
+                meshCache.QueueMissing(world);
+                Console.WriteLine($"biomes: {biomes.Entries.Count} from the server; per-biome block tint enabled");
+            }
+
             if (Environment.GetEnvironmentVariable("MC_DIAG") == "1")
             {
                 Console.WriteLine("chat type table: " + string.Join(", ", chatTypes.Describe()));
@@ -260,6 +278,40 @@ internal static class WindowCommand
         }
 
         var session = InteractiveSession.Create(world, request, live, workerPool, language, chatTypes);
+
+        // Sky/fog use SKY_COLOR (biome sky colour x day/night x weather), so the live session needs the biome registry.
+        if (live?.Registries is { } biomeRegistries && Sharpcraft.Common.World.BiomeRegistry.From(biomeRegistries) is { } sessionBiomes)
+        {
+            session.SetBiomes(sessionBiomes);
+        }
+
+        session.SetCloudTexture(Sharpcraft.Client.Assets.CloudTexture.Load(resources));
+
+        // Cloud options mirror the reference: CloudStatus OFF/FAST/FANCY and the separate cloudRange (chunks).
+        var cloudMode = (Environment.GetEnvironmentVariable("MC_CLOUD_MODE") ?? "fancy").ToLowerInvariant();
+        var cloudRange = Environment.GetEnvironmentVariable("MC_CLOUD_RANGE") is { Length: > 0 } rangeText
+            && int.TryParse(rangeText, out var parsedRange) ? parsedRange : 128;
+        var cloudOit = Environment.GetEnvironmentVariable("MC_CLOUD_OIT") is not "0";
+        var cloudAdaptive = Environment.GetEnvironmentVariable("MC_CLOUD_ADAPTIVE") == "1";
+        var oitLowPrecision = Environment.GetEnvironmentVariable("MC_OIT_LOW_PRECISION") == "1";
+        var cloudDepth = Environment.GetEnvironmentVariable("MC_CLOUD_DEPTH") == "1";
+        var skyDiscMode = (Environment.GetEnvironmentVariable("MC_SKY_DISC_MODE") ?? "vanilla").ToLowerInvariant();
+        var skyDiscVanilla = skyDiscMode != "fast" && skyDiscMode != "optimized";
+        session.SetCloudOptions(
+            enabled: cloudMode != "off",
+            fancy: cloudMode != "fast" && cloudMode != "off",
+            rangeChunks: cloudRange,
+            useOit: cloudOit,
+            adaptive: cloudAdaptive);
+
+        // The gradient sky is static day blue; use a flat SKY_COLOR clear colour instead (vanilla sky is SKY_COLOR).
+        // MC_SKY_GRADIENT=1 keeps the gradient pass for experimentation, default stays flat.
+        var skyGradient = Environment.GetEnvironmentVariable("MC_SKY_GRADIENT") == "1";
+        request = request with { SkipGradientSky = !skyGradient };
+
+        // Sun, moon, stars and the sunrise band: the window now has the celestial pass, so populate its draws/textures.
+        request = FrameCommand.AttachCelestial(request, world, resources, session.CurrentSkyColour(),
+            new System.Numerics.Vector3(session.CurrentFogColour().X, session.CurrentFogColour().Y, session.CurrentFogColour().Z));
 
         // A reload rebuilds the stack and then tells the listeners, in order. Language first: everything that shows text
         // reads it, so it must be in place before anything else rebuilds.
@@ -342,12 +394,30 @@ internal static class WindowCommand
             Environment.GetEnvironmentVariable("MC_FRAME_WATER") == "1" ||
             Environment.GetEnvironmentVariable("MC_FRAME_REPLAY") is { Length: > 0 };
 
+        // Host-only light probe (MC_LIGHT_PROBE=1): prints the sky/block light the mesher will read around the player, so
+        // a too-dark scene can be told apart from a lighting-model problem. Principle 13: parsed here, in the host.
+        var lightProbeTick = 0;
+        var lightProbe = Environment.GetEnvironmentVariable("MC_LIGHT_PROBE") == "1";
+        var frameClock = System.Diagnostics.Stopwatch.StartNew();
+        var previousFrameMs = 0.0;
+        var removedChunks = new List<long>();
+        long celestialCacheKey = long.MinValue;
+        FrameRequest? celestialCached = null;
+
         var format = WindowedRenderer.Run(
             request,
             frames,
             visibleFor,
             (index, window) =>
         {
+            var nowMs = frameClock.Elapsed.TotalMilliseconds;
+            if (index > 0)
+            {
+                session.ObserveFrame(nowMs - previousFrameMs);
+            }
+
+            previousFrameMs = nowMs;
+
             if (index == 0)
             {
                 Console.WriteLine("window: first frame presented");
@@ -369,10 +439,41 @@ internal static class WindowCommand
                 {
                     var camera = session.UpdateCamera(window);
                     speedOverlay?.Observe(session.Player.Position, session.TickIndex);
+
+                    if (lightProbe && (lightProbeTick++ % 90) == 0)
+                    {
+                        var lp = session.Player.Position;
+                        var px = (int)Math.Floor(lp.X);
+                        var pz = (int)Math.Floor(lp.Z);
+                        var py = (int)Math.Floor(lp.Y);
+                        Console.WriteLine($"[light] player=({lp.X:F1},{lp.Y:F1},{lp.Z:F1}) chunks={world.LoadedChunkCount}");
+
+                        for (var dy = -12; dy <= 4; dy++)
+                        {
+                            var st = world.GetBlockState(px, py + dy, pz);
+                            world.TryGetLight(px, py + dy, pz, out var sky, out var block);
+                            var lm = Sharpcraft.Client.Render.VanillaLightmap.Colour(sky, block);
+                            Console.WriteLine($"[light] y{py + dy} state={st} sky={sky} block={block} lm=({lm.X:F2},{lm.Y:F2},{lm.Z:F2})");
+                        }
+                    }
+
                     return camera;
                 },
             geometryUpdates: () =>
             {
+                removedChunks.Clear();
+                var player = session.Player.Position;
+                var playerChunkX = (int)MathF.Floor(player.X / 16f);
+                var playerChunkZ = (int)MathF.Floor(player.Z / 16f);
+                removedChunks.AddRange(world.RemoveChunksOutside(
+                    playerChunkX,
+                    playerChunkZ,
+                    Sharpcraft.Launcher.InteractiveSession.ViewDistanceChunks + 2));
+                foreach (var removed in removedChunks)
+                {
+                    meshCache.Remove(removed);
+                }
+
                 // Hand fresh work to the pool, then return only the chunks that finished. The renderer keeps a
                 // slice per chunk, so each arrival costs one small upload rather than a recomposition of the
                 // whole world (docs/specs/network/play-movement.md 7.25).
@@ -390,11 +491,11 @@ internal static class WindowCommand
                 // only carry what changed since the last frame and the world would stay empty.
                 // A full replay is spread over frames: sending every mesh at once is what produced the 160 ms spike, and a
                 // partly refilled world is correct because the old geometry was already dropped.
-                List<(long Key, Sharpcraft.Client.Render.MeshData Mesh)> drained;
+                List<Sharpcraft.Client.Render.MeshedChunk> drained;
 
                 if (replayQueue is { Count: > 0 } pendingReplay)
                 {
-                    drained = new List<(long, Sharpcraft.Client.Render.MeshData)>(64);
+                    drained = new List<Sharpcraft.Client.Render.MeshedChunk>(64);
 
                     while (drained.Count < 64 && pendingReplay.Count > 0)
                     {
@@ -430,8 +531,9 @@ internal static class WindowCommand
                 {
                     var eye = session.Player.Position;
 
-                    foreach (var (key, _) in drained)
+                    foreach (var entry in drained)
                     {
+                        var key = entry.Key;
                         if (meshOrderSeen >= 64)
                         {
                             break;
@@ -450,10 +552,43 @@ internal static class WindowCommand
                     }
                 }
 
+                // A whole world arriving at once used to mean one frame with hundreds of megabytes of uploads, which
+                // showed up as a 100 ms plus frame. The budget spreads it: what does not fit waits for the next frame,
+                // and a chunk may briefly show only its opaque layer, which is the recorded degradation.
+                const long UploadBudgetBytes = 8L * 1024 * 1024;
                 var updates = new List<(long Key, GeometryData Mesh)>(drained.Count);
-                foreach (var (key, mesh) in drained)
+                long queuedBytes = 0;
+
+                foreach (var entry in uploadQueue)
                 {
-                    updates.Add((key, new GeometryData(mesh.Vertices, mesh.Indices)));
+                    queuedBytes += entry.Opaque.Vertices.LongLength * sizeof(float) + (entry.Cutout?.Vertices.LongLength ?? 0) * sizeof(float);
+                }
+
+                var uploads = new List<Sharpcraft.Client.Render.MeshedChunk>(drained.Count + uploadQueue.Count);
+                uploads.AddRange(uploadQueue);
+                uploads.AddRange(drained);
+                uploadQueue.Clear();
+
+                long uploadedThisFrame = 0;
+
+                foreach (var entry in uploads)
+                {
+                    var bytes = (entry.Opaque.Vertices.LongLength + (entry.Cutout?.Vertices.LongLength ?? 0) + (entry.Translucent?.Vertices.LongLength ?? 0)) * sizeof(float);
+
+                    if (updates.Count > 0 && uploadedThisFrame + bytes > UploadBudgetBytes)
+                    {
+                        uploadQueue.Enqueue(entry);
+                        continue;
+                    }
+
+                    uploadedThisFrame += bytes;
+                    updates.Add((entry.Key, new GeometryData(
+                        entry.Opaque.Vertices,
+                        entry.Opaque.Indices,
+                        entry.Cutout?.Vertices,
+                        entry.Cutout?.Indices,
+                        entry.Translucent?.Vertices,
+                        entry.Translucent?.Indices)));
                 }
 
                 return updates;
@@ -466,8 +601,42 @@ internal static class WindowCommand
             atlasSource: atlasSource,
             geometryEpoch: () => geometryEpoch,
             diagnostics: Sharpcraft.Launcher.Diagnostics.HostDebugOptions.ForFrame(),
-            uiGeometry: frame =>
+            lightmapPerFrame: () => session.CurrentLightmap(),
+            fogPerFrame: () => session.CurrentFogColour(),
+            clearColourPerFrame: () => session.CurrentFogColour(),
+            cloudsPerFrame: () => session.CurrentCloudDraw(),
+            cloudOitEnabled: session.CloudUseOit,
+            oitLowPrecision: oitLowPrecision,
+            cloudDepthEnabled: cloudDepth,
+            skyDiscVanilla: skyDiscVanilla,
+            skyDiscPerFrame: () =>
             {
+                var fog = session.CurrentFogColour();
+                return (session.CurrentSkyColour(),
+                    new System.Numerics.Vector3(fog.X, fog.Y, fog.Z),
+                    MathF.Min(Sharpcraft.Launcher.InteractiveSession.ViewDistanceChunks * 16f, 512f), session.Player.Position + new System.Numerics.Vector3(0f, 1.62f, 0f));
+            },
+            celestialPerFrame: () =>
+            {
+                if (world is null)
+                {
+                    return null;
+                }
+
+                var rainKey = (long)(FrameCommand.EffectiveRainLevel(world, 0f) * 100f);
+                var thunderKey = (long)(FrameCommand.EffectiveThunderLevel(world, 0f) * 100f);
+                var key = FrameCommand.EffectiveDayTime(world) ^ (rainKey << 32) ^ (thunderKey << 24);
+                if (celestialCached is null || key != celestialCacheKey)
+                {
+                    celestialCached = FrameCommand.AttachCelestial(request, world, resources, session.CurrentSkyColour(),
+                        new System.Numerics.Vector3(session.CurrentFogColour().X, session.CurrentFogColour().Y, session.CurrentFogColour().Z));
+                    celestialCacheKey = key;
+                }
+
+                return (celestialCached.CelestialDraws ?? [], celestialCached.CelestialColorDraws ?? [], celestialCached.SkyDiscDraws ?? []);
+            },
+            geometryRemovals: () => removedChunks,
+            uiGeometry: frame =>            {
                 // Mesh work is ordered by distance, so the pool needs to know where the player is each frame.
                 var player = session.Player.Position;
                 workerPool.SetViewOrigin(player.X / 16f, player.Z / 16f);
@@ -668,7 +837,8 @@ internal static class WindowCommand
             var probe = await ConfigurationProbe.RunAsync(
                 connection,
                 TimeSpan.FromSeconds(20),
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken,
+                log: Environment.GetEnvironmentVariable("MC_PACKET_LOG") == "1" ? Console.WriteLine : null).ConfigureAwait(false);
 
             if (!probe.ReachedPlay)
             {
@@ -723,7 +893,7 @@ internal static class WindowCommand
             // twice made startup slower and showed a spurious join and leave to everyone else on the server.
             // The registries are the ones this very connection received during configuration, which is where the
             // chat type decorations live.
-            return new PreparedWorld(world, LivePlaySession.Adopt(connection, cancellationToken, probe.Registries));
+            return new PreparedWorld(world, LivePlaySession.Adopt(connection, cancellationToken, probe.Registries, stats.DeferredPackets));
         }
     }
 }

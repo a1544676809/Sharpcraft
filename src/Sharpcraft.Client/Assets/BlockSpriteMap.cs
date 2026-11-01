@@ -109,6 +109,12 @@ public sealed class BlockSpriteMap
         };
     }
 
+    /// <summary>Flowing sprite of a fluid block (<c>name_flow</c>), or null when it has none.</summary>
+    public SpriteRect? FluidFlow(Identifier blockId) => Lookup($"{blockId.Path}_flow");
+
+    /// <summary>Overlay sprite of a fluid block (<c>name_overlay</c>), or null when it has none.</summary>
+    public SpriteRect? FluidOverlay(Identifier blockId) => Lookup($"{blockId.Path}_overlay");
+
     /// <summary>Alpha content of one face's sprite.</summary>
     /// <param name="sprite">Sprite rectangle.</param>
     /// <remarks>

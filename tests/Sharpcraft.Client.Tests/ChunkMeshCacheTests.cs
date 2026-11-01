@@ -85,4 +85,25 @@ public sealed class ChunkMeshCacheTests
         var vertexCount = mesh.Vertices.Length / ChunkMesher.FloatsPerVertex;
         Assert.All(mesh.Indices, index => Assert.InRange(index, 0u, (uint)vertexCount - 1));
     }
+
+    [Fact]
+    public void ChangingTheLightmapParametersRemeshesEveryChunk()
+    {
+        var world = new ClientWorld(minSectionY: 0, sectionCount: 1);
+        world.AddChunk(0, 0).SetSection(new ChunkSection(singleState: 1, sectionY: 0));
+        world.AddChunk(1, 0).SetSection(new ChunkSection(singleState: 2, sectionY: 0));
+
+        var cache = new ChunkMeshCache();
+        cache.Build(world, maxChunksPerBuild: 64);
+        Assert.Equal(2, cache.LastRemeshedChunks);
+
+        // Same day/night state: the lightmap is unchanged, so nothing is re-meshed.
+        cache.Build(world, maxChunksPerBuild: 64);
+        Assert.Equal(0, cache.LastRemeshedChunks);
+
+        // Night changes the lightmap, which is baked per vertex, so every chunk must rebuild.
+        cache.Lighting = LightmapParameters.OverworldAt(18000);
+        cache.Build(world, maxChunksPerBuild: 64);
+        Assert.Equal(2, cache.LastRemeshedChunks);
+    }
 }

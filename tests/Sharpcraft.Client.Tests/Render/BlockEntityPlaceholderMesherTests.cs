@@ -22,7 +22,7 @@ public sealed class BlockEntityPlaceholderMesherTests
         var geometry = mesher.Build([new BlockEntityRenderState(10f, 64f, -3f, 1)], Sprite());
 
         Assert.Equal(1, mesher.LastEntityCount);
-        Assert.Equal(24 * 12, geometry.VertexFloats);
+        Assert.Equal(24 * 14, geometry.VertexFloats);
         Assert.Equal(36, geometry.IndexCount);
     }
 
@@ -85,7 +85,7 @@ public sealed class BlockEntityPlaceholderMesherTests
         var minY = float.MaxValue; var maxY = float.MinValue;
         var minZ = float.MaxValue; var maxZ = float.MinValue;
 
-        for (var index = 0; index + 12 <= geometry.VertexFloats; index += 12)
+        for (var index = 0; index + 14 <= geometry.VertexFloats; index += 14)
         {
             var x = geometry.Vertices[index];
             var y = geometry.Vertices[index + 1];

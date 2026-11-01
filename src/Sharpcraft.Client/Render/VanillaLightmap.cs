@@ -1,0 +1,121 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// Copyright (C) 2026 Sharpcraft contributors
+
+using System.Numerics;
+using Sharpcraft.Common.World;
+
+namespace Sharpcraft.Client.Render;
+
+/// <summary>
+/// Parameters of the vanilla lightmap for one dimension/time. Defaults describe the overworld at day, the only case the
+/// first pass models (docs/specs/render/lighting.md 6). Night, weather and other dimensions are future work; the shape is
+/// here so they slot in without touching callers.
+/// </summary>
+public readonly record struct LightmapParameters(
+    float SkyFactor,
+    float BlockFactor,
+    Vector3 SkyLightColor,
+    Vector3 BlockLightTint,
+    Vector3 AmbientColor,
+    float BrightnessFactor)
+{
+    /// <summary>Overworld daytime defaults (docs/specs/render/lighting.md 3).</summary>
+    public static LightmapParameters DayOverworld { get; } = new(
+        SkyFactor: 1.0f,
+        BlockFactor: 1.4f,
+        SkyLightColor: Vector3.One,
+        BlockLightTint: Rgb24ToVector(-10100),
+        AmbientColor: Vector3.Zero,
+        BrightnessFactor: 0.5f);
+
+    /// <summary>
+    /// Overworld parameters at a given day time: the sky factor and sky light colour follow the environment attribute
+    /// timelines (day 1.0 / white, night ~0.24 / ~(0.48,0.48,1)); the block light and brightness stay at their defaults
+    /// (docs/specs/render/lighting.md 6). Weather and dimensions remain out of scope.
+    /// </summary>
+    public static LightmapParameters OverworldAt(int dayTimeTicks) => DayOverworld with
+    {
+        SkyFactor = SkyAttributeTracks.SkyLightFactorAt(dayTimeTicks),
+        SkyLightColor = SkyAttributeTracks.SkyLightColorAt(dayTimeTicks)
+    };
+
+    /// <summary>
+    /// Overworld parameters at a sub-tick fraction: the sky factor and colour are interpolated between the previous and the
+    /// current tick, exactly like the reference EnvironmentAttributeProbe.partialTickLerp (docs/modules/time.md 5).
+    /// </summary>
+    public static LightmapParameters OverworldAt(int dayTimeTicks, float partialTick)
+    {
+        var t = Math.Clamp(partialTick, 0f, 1f);
+        var previousFactor = SkyAttributeTracks.SkyLightFactorAt(dayTimeTicks - 1);
+        var currentFactor = SkyAttributeTracks.SkyLightFactorAt(dayTimeTicks);
+        var previousColour = SkyAttributeTracks.SkyLightColorAt(dayTimeTicks - 1);
+        var currentColour = SkyAttributeTracks.SkyLightColorAt(dayTimeTicks);
+
+        return DayOverworld with
+        {
+            SkyFactor = previousFactor + ((currentFactor - previousFactor) * t),
+            SkyLightColor = Vector3.Lerp(previousColour, currentColour, t)
+        };
+    }
+
+    /// <summary>Decodes a packed 24-bit colour into three 0..1 channels, exactly like ARGB.vector3fFromRGB24 (raw, no gamma).</summary>
+    public static Vector3 Rgb24ToVector(int rgb24)
+    {
+        var red = (rgb24 >> 16) & 0xFF;
+        var green = (rgb24 >> 8) & 0xFF;
+        var blue = rgb24 & 0xFF;
+        return new Vector3(red / 255f, green / 255f, blue / 255f);
+    }
+}
+
+/// <summary>
+/// The vanilla lightmap multiplier for a (sky, block) light pair (docs/specs/render/lighting.md 3). Returns a linear RGB
+/// value that the terrain shader multiplies with the decoded texel colour; the gamma encode happens in the shader.
+/// </summary>
+public static class VanillaLightmap
+{
+    /// <summary>Lightmap colour with the overworld daytime parameters.</summary>
+    public static Vector3 Colour(int sky, int block) => Colour(sky, block, LightmapParameters.DayOverworld);
+
+    /// <summary>Lightmap colour for explicit parameters.</summary>
+    public static Vector3 Colour(int sky, int block, in LightmapParameters parameters)
+    {
+        var blockLevel = Math.Clamp(block, 0, 15) / 15f;
+        var skyLevel = Math.Clamp(sky, 0, 15) / 15f;
+
+        var blockBrightness = BrightnessCurve(blockLevel) * parameters.BlockFactor;
+        var skyBrightness = BrightnessCurve(skyLevel) * parameters.SkyFactor;
+
+        var colour = parameters.AmbientColor + (parameters.SkyLightColor * skyBrightness);
+
+        var parabolic = (2f * blockLevel) - 1f;
+        parabolic *= parabolic;
+        var blockLightColour = Vector3.Lerp(parameters.BlockLightTint, Vector3.One, 0.9f * parabolic);
+        colour += blockLightColour * blockBrightness;
+
+        colour = Vector3.Clamp(colour, Vector3.Zero, Vector3.One);
+
+        var notGamma = NotGamma(colour);
+        colour = Vector3.Lerp(colour, notGamma, Math.Clamp(parameters.BrightnessFactor, 0f, 1f));
+
+        return Vector3.Clamp(colour, Vector3.Zero, Vector3.One);
+    }
+
+    /// <summary>The vanilla brightness curve <c>x / (4 - 3x)</c> over 0..1.</summary>
+    public static float BrightnessCurve(float level) => level / (4f - (3f * level));
+
+    /// <summary>The reference inverse-gamma boost applied before the brightness mix.</summary>
+    public static Vector3 NotGamma(Vector3 colour)
+    {
+        var maximum = MathF.Max(colour.X, MathF.Max(colour.Y, colour.Z));
+
+        if (maximum <= 0f)
+        {
+            return colour;
+        }
+
+        var inverted = 1f - maximum;
+        var scaled = 1f - (inverted * inverted * inverted * inverted);
+        return colour * (scaled / maximum);
+    }
+}

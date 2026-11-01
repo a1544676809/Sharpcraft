@@ -58,10 +58,18 @@ public static class HostDebugOptions
             AlphaOne = Flag("MC_FRAME_ALPHA_ONE"),
             GuiScale = (int)Number("MC_GUI_SCALE", 0f),
             InputTrace = Flag("MC_INPUT_TRACE"),
-            PerformanceSummary = Flag("MC_PERF_SUMMARY")
+            PerformanceSummary = Flag("MC_PERF_SUMMARY"),
+            CullStatistics = Flag("MC_CULL_STATS"),
+            DisableCulling = Flag("MC_CULL_DISABLE")
         };
     }
 
     /// <summary>True when the mesh queue should ignore the nearest-first ordering.</summary>
     public static bool FifoMeshOrder => Environment.GetEnvironmentVariable("MC_MESH_FIFO") == "1";
+
+    /// <summary>True to disable greedy face merging, meshing every block face on its own (for an A/B on cost vs fidelity).</summary>
+    public static bool NoMergeFaces => Environment.GetEnvironmentVariable("MC_MESH_NOMERGE") == "1";
+
+    /// <summary>True to disable ambient occlusion (A/B switch; AO is on by default now that air no longer occludes).</summary>
+    public static bool NoAmbientOcclusion => Environment.GetEnvironmentVariable("MC_NO_AO") == "1";
 }

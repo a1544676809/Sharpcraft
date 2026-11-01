@@ -14,8 +14,8 @@ namespace Sharpcraft.Framework.Rendering;
 /// </summary>
 public static class VertexLayout
 {
-    /// <summary>Bytes per vertex: 3 + 3 + 2 + 4 floats.</summary>
-    public const int Stride = 48;
+    /// <summary>Bytes per vertex: 3 + 3 + 2 + 4 + 2 floats (position, base colour, uv, sprite rect, light).</summary>
+    public const int Stride = 56;
 
     /// <summary>Size of the camera uniform block in bytes: one 4×4 matrix.</summary>
     public const ulong CameraUniformSize = 64;
@@ -62,6 +62,35 @@ public static class VertexLayout
         new(WGPUVertexFormat.Float32x3, 0, 0),
         new(WGPUVertexFormat.Float32x3, 12, 1),
         new(WGPUVertexFormat.Float32x2, 24, 2),
-        new(WGPUVertexFormat.Float32x4, 32, 3)
+        new(WGPUVertexFormat.Float32x4, 32, 3),
+        new(WGPUVertexFormat.Float32x2, 48, 4)
+    ];
+
+    /// <summary>Bytes per celestial vertex: position (3) + uv (2) floats.</summary>
+    public const int CelestialStride = 20;
+
+    /// <summary>Celestial body vertex attributes: position at location 0, uv at location 1.</summary>
+    public static VertexAttribute[] CelestialAttributes() =>
+    [
+        new(WGPUVertexFormat.Float32x3, 0, 0),
+        new(WGPUVertexFormat.Float32x2, 12, 1)
+    ];
+
+    /// <summary>Bytes per position-colour vertex: position (3) + colour (4) floats.</summary>
+    public const int PositionColorStride = 28;
+
+    /// <summary>Position-colour attributes (sunrise fan, stars): position at 0, colour at 1.</summary>
+    public static VertexAttribute[] PositionColorAttributes() =>
+    [
+        new(WGPUVertexFormat.Float32x3, 0, 0),
+        new(WGPUVertexFormat.Float32x4, 12, 1)
+    ];
+    /// <summary>Bytes per sky-disc vertex: position (3) floats only.</summary>
+    public const int SkyDiscStride = 12;
+
+    /// <summary>Sky-disc attributes: position at location 0.</summary>
+    public static VertexAttribute[] SkyDiscAttributes() =>
+    [
+        new(WGPUVertexFormat.Float32x3, 0, 0)
     ];
 }

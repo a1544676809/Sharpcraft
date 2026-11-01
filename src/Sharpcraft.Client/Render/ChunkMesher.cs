@@ -26,16 +26,13 @@ namespace Sharpcraft.Client.Render;
 public static class ChunkMesher
 {
     /// <summary>Floats per vertex: position (3) plus colour (3).</summary>
-    public const int FloatsPerVertex = 12;
+    public const int FloatsPerVertex = 14;
 
     /// <summary>Vertices per quad.</summary>
     public const int VerticesPerQuad = 4;
 
     /// <summary>Indices per quad (two triangles).</summary>
     public const int IndicesPerQuad = 6;
-
-    /// <summary>Darkest a face can get; keeps unlit caves legible instead of pure black.</summary>
-    public const float MinimumBrightness = 0.12f;
 
     /// <summary>Shading applied to faces looking up.</summary>
     public const float TopShade = 1.0f;
@@ -63,13 +60,16 @@ public static class ChunkMesher
         ClientWorld world,
         int airState = 0,
         int maxBlocks = 2_000_000,
-        BlockSpriteMap? sprites = null)
+        BlockSpriteMap? sprites = null,
+        bool merge = true,
+        bool ambientOcclusion = true,
+        LightmapParameters? lighting = null)
     {
         ArgumentNullException.ThrowIfNull(world);
 
         // Merging cuts the quad count by an order of magnitude, so a smaller guess is enough.
         using var buffer = new MeshBuffer(Math.Min(maxBlocks, world.LoadedChunkCount * 512));
-        var blocks = Mesh(world, buffer, airState, maxBlocks, sprites);
+        var blocks = Mesh(world, buffer, airState, maxBlocks, sprites, merge, ambientOcclusion, lighting);
         return buffer.ToMeshData(blocks);
     }
 
@@ -83,13 +83,17 @@ public static class ChunkMesher
         MeshBuffer buffer,
         int airState = 0,
         int maxBlocks = 2_000_000,
-        BlockSpriteMap? sprites = null)
+        BlockSpriteMap? sprites = null,
+        bool merge = true,
+        bool ambientOcclusion = true,
+        LightmapParameters? lighting = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(buffer);
 
         buffer.Clear();
         var blocks = 0;
+        var parameters = lighting ?? LightmapParameters.DayOverworld;
 
         foreach (var chunk in world.GetChunks())
         {
@@ -98,7 +102,7 @@ public static class ChunkMesher
                 break;
             }
 
-            blocks += MeshChunk(world, chunk, airState, buffer, maxBlocks - blocks, sprites);
+            blocks += MeshChunk(world, chunk, airState, buffer, maxBlocks - blocks, sprites, merge: merge, ambientOcclusion: ambientOcclusion, lighting: parameters);
         }
 
         return blocks;
@@ -118,12 +122,16 @@ public static class ChunkMesher
         MeshBuffer? cutout = null,
         BiomeTint? tint = null,
         StateCullTable? cull = null,
-        StateVisualCache? visuals = null)
+        StateVisualCache? visuals = null,
+        bool merge = true,
+        bool ambientOcclusion = true,
+        LightmapParameters? lighting = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(chunk);
         ArgumentNullException.ThrowIfNull(buffer);
 
+        var parameters = lighting ?? LightmapParameters.DayOverworld;
         var baseX = chunk.ChunkX * 16;
         var baseZ = chunk.ChunkZ * 16;
         var solidBlocks = 0;
@@ -151,7 +159,12 @@ public static class ChunkMesher
             for (var direction = 0; direction < 6; direction++)
             {
                 consumed.Clear();
-                MergeSectionFaces(neighbourhood, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout, tint, cull, visuals);
+                MergeSectionFaces(neighbourhood, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout, tint, cull, visuals, merge, ambientOcclusion, parameters);
+            }
+
+            if (translucent is not null)
+            {
+                EmitSectionFluids(neighbourhood, section, baseX, baseY, baseZ, buffer, translucent, sprites, layout, tint, parameters);
             }
         }
 
@@ -175,7 +188,10 @@ public static class ChunkMesher
         MeshBuffer? cutout = null,
         BiomeTint? tint = null,
         StateCullTable? cull = null,
-        StateVisualCache? visuals = null)
+        StateVisualCache? visuals = null,
+        bool merge = true,
+        bool ambientOcclusion = true,
+        LightmapParameters lighting = default)
     {
         var (uAxis, vAxis) = InPlaneAxes(direction);
 
@@ -216,41 +232,58 @@ public static class ChunkMesher
 
                     var width = 1;
 
-                    while (u + width < 16)
+                    if (merge)
                     {
-                        var next = (v << 4) | (u + width);
-
-                        if (consumed[next] || !present[next] || keys[next] != key)
+                        while (u + width < 16)
                         {
-                            break;
-                        }
+                            var next = (v << 4) | (u + width);
 
-                        width++;
+                            if (consumed[next] || !present[next] || keys[next] != key)
+                            {
+                                break;
+                            }
+
+                            width++;
+                        }
                     }
 
                     var height = 1;
 
-                    while (v + height < 16)
+                    if (merge)
                     {
-                        var rowMatches = true;
-
-                        for (var du = 0; du < width; du++)
+                        while (v + height < 16)
                         {
-                            var above = ((v + height) << 4) | (u + du);
+                            var rowMatches = true;
 
-                            if (consumed[above] || !present[above] || keys[above] != key)
+                            for (var du = 0; du < width; du++)
                             {
-                                rowMatches = false;
+                                var above = ((v + height) << 4) | (u + du);
+
+                                if (consumed[above] || !present[above] || keys[above] != key)
+                                {
+                                    rowMatches = false;
+                                    break;
+                                }
+                            }
+
+                            if (!rowMatches)
+                            {
                                 break;
                             }
-                        }
 
-                        if (!rowMatches)
-                        {
-                            break;
+                            height++;
                         }
+                    }
 
-                        height++;
+                    // A merged quad carries only four corner lights and AO, so merging is exact only where the whole
+                    // rectangle is lit uniformly (open, same light, no occluders in or around it). Anywhere else fall
+                    // back to one quad per block face, which makes the merged output equal the unmerged output exactly
+                    // (the smooth-lighting variation the reference gets for free by never merging).
+                    if (merge && (width > 1 || height > 1) &&
+                        !RectangleIsUniformlyLit(neighbourhood, direction, uAxis, vAxis, slice, u, v, width, height, baseX, baseY, baseZ, sprites, layout, key))
+                    {
+                        width = 1;
+                        height = 1;
                     }
 
                     for (var dv = 0; dv < height; dv++)
@@ -261,10 +294,63 @@ public static class ChunkMesher
                         }
                     }
 
-                    EmitMergedQuad(neighbourhood, buffer, direction, slice, u, v, width, height, baseX, baseY, baseZ, key.State, sprites, translucent, layout, cutout, tint, cull, visuals);
+                    EmitMergedQuad(neighbourhood, buffer, direction, slice, u, v, width, height, baseX, baseY, baseZ, key.State, sprites, translucent, layout, cutout, tint, cull, visuals, ambientOcclusion, lighting);
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// True when every cell in and around the rectangle is non-occluding and shares one light level, so a single merged
+    /// quad's bilinear corner shading equals the per-face shading of each block. Any occluder or light change means the
+    /// merged quad would smear the variation, so the caller emits per-face quads instead.
+    /// </summary>
+    private static bool RectangleIsUniformlyLit(
+        in Neighbourhood neighbourhood,
+        int direction,
+        int uAxis,
+        int vAxis,
+        int slice,
+        int u,
+        int v,
+        int width,
+        int height,
+        int baseX,
+        int baseY,
+        int baseZ,
+        BlockSpriteMap? sprites,
+        BlockStateLayout? layout,
+        MergeKey key)
+    {
+        var (dx, dy, dz) = NeighbourOffset(direction);
+
+        for (var vv = v - 1; vv <= v + height; vv++)
+        {
+            for (var uu = u - 1; uu <= u + width; uu++)
+            {
+                var (x, y, z) = FaceBlock(uAxis, vAxis, slice, uu, vv);
+                var sampleX = baseX + x + dx;
+                var sampleY = baseY + y + dy;
+                var sampleZ = baseZ + z + dz;
+
+                // Without an atlas the occlusion cannot be known (Occludes reports solid for everything); treat those
+                // cells as non-occluding so the untextured path still merges where the light is uniform.
+                if (sprites is not null && layout is not null &&
+                    Occludes(neighbourhood.GetBlockState(sampleX, sampleY, sampleZ, 0), sprites, layout))
+                {
+                    return false;
+                }
+
+                neighbourhood.TryGetLight(sampleX, sampleY, sampleZ, out var sky, out var block);
+
+                if (sky != key.Sky || block != key.Block)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     private static bool RowMatches(
@@ -471,14 +557,137 @@ public static class ChunkMesher
             return false;
         }
 
-        // Glass, ice and the like: only the shared face between identical blocks is dropped.
+        // Ice and glass carry noOcclusion in the reference, so a face between two of them is still drawn and the inside of
+        // the mass reads through the block instead of turning into a black hole. Fluids are the exception: the fluid
+        // renderer culls the shared face between two cells of the same fluid, which keeps a lake from doubling its surfaces.
         var sameFamily = selfPath == neighbourPath;
 
-        return sameFamily;
+        return sameFamily && selfPath is "water" or "lava";
+    }
+
+
+    /// <summary>
+    /// Lit colour of one quad corner, from smooth lighting and ambient occlusion.
+    /// </summary>
+    /// <remarks>
+    /// The reference computes light per vertex: it averages the light of the four cells that share the corner on the visible
+    /// side, then darkens by the occluders around that corner (one quarter per occluder, and half when both sides are
+    /// blocked). Doing this per corner instead of once per quad is what removes the flat patches a merged quad used to
+    /// show, and it keeps neighbouring quads continuous across chunk borders because the samples are world positions.
+    /// </remarks>
+    private static (float R, float G, float B, float Sky, float Block) CornerShade(
+        in Neighbourhood neighbourhood,
+        int direction,
+        (int X, int Y, int Z) corner,
+        int uAxis,
+        int vAxis,
+        float shadeFactor,
+        float red,
+        float green,
+        float blue,
+        BlockSpriteMap? sprites,
+        Sharpcraft.Common.Registries.BlockStateLayout? layout,
+        bool ambientOcclusion = true,
+        LightmapParameters lighting = default)
+    {
+        var (nx, ny, nz) = NeighbourOffset(direction);
+        Span<int> u = stackalloc int[3];
+        u[uAxis] = 1;
+        Span<int> v = stackalloc int[3];
+        v[vAxis] = 1;
+
+        // `corner` is already a face vertex (the face plane), so the four cells that share it on the outer side sit at
+        // corner - (0 or 1) per axis: at corner for a positive normal axis, at corner - 1 for a negative one. Adding the
+        // raw normal overshot by one cell on +X/+Y/+Z, so a top face read the light above the block above it and a side
+        // face read one block too far out.
+        var bx = corner.X + Math.Min(nx, 0);
+        var by = corner.Y + Math.Min(ny, 0);
+        var bz = corner.Z + Math.Min(nz, 0);
+
+        Span<int> xs = stackalloc int[4] { bx, bx - u[0], bx - v[0], bx - u[0] - v[0] };
+        Span<int> ys = stackalloc int[4] { by, by - u[1], by - v[1], by - u[1] - v[1] };
+        Span<int> zs = stackalloc int[4] { bz, bz - u[2], bz - v[2], bz - u[2] - v[2] };
+
+        Span<byte> skySamples = stackalloc byte[4];
+        Span<byte> blockSamples = stackalloc byte[4];
+        var samples = 0;
+
+        for (var index = 0; index < 4; index++)
+        {
+            if (neighbourhood.TryGetLight(xs[index], ys[index], zs[index], out var sampleSky, out var sampleBlock))
+            {
+                skySamples[samples] = sampleSky;
+                blockSamples[samples] = sampleBlock;
+                samples++;
+            }
+        }
+
+        (int Sky, int Block) light;
+        if (samples == 4)
+        {
+            // Reference LightCoordsUtil.smoothBlend for a full cube face: three neighbours + centre with the
+            // zero-neighbour correction (docs/analysis/render/lighting-color-space.md #3). Index 0 is the centre cell.
+            light = SmoothLighting.Blend(
+                skySamples[0], blockSamples[0],
+                skySamples[1], blockSamples[1],
+                skySamples[2], blockSamples[2],
+                skySamples[3], blockSamples[3]);
+        }
+        else if (samples == 0)
+        {
+            light = (0, 0);
+        }
+        else
+        {
+            var skySum = 0;
+            var blockSum = 0;
+            for (var index = 0; index < samples; index++)
+            {
+                skySum += skySamples[index];
+                blockSum += blockSamples[index];
+            }
+
+            light = (skySum / samples, blockSum / samples);
+        }
+
+        // Ambient occlusion: average shade brightness of the four cells that share this vertex on the face's outer side.
+        // A full solid cell contributes 0.2, anything else 1.0, so an open corner is 1.0 and a nook drops toward 0.2.
+        var occlusion = ambientOcclusion
+            ? AmbientOcclusion(
+                Occludes(neighbourhood.GetBlockState(xs[0], ys[0], zs[0], 0), sprites, layout),
+                Occludes(neighbourhood.GetBlockState(xs[1], ys[1], zs[1], 0), sprites, layout),
+                Occludes(neighbourhood.GetBlockState(xs[2], ys[2], zs[2], 0), sprites, layout),
+                Occludes(neighbourhood.GetBlockState(xs[3], ys[3], zs[3], 0), sprites, layout))
+            : 1f;
+
+        // Base colour = biome tint × directional shade × AO (linear). The lightmap is computed per fragment in the shader
+        // from the light levels carried alongside, so a day/night change needs no re-mesh (docs/decisions/0019).
+        var scalar = shadeFactor * occlusion;
+        return (red * scalar, green * scalar, blue * scalar, light.Item1 / 15f, light.Item2 / 15f);
+    }
+
+    /// <summary>
+    /// Ambient-occlusion coefficient for one vertex: the average of the four cells that share it, a full solid cell
+    /// counting as 0.2 and anything else as 1.0. Includes the reference corner-softening rule: if both edge cells are
+    /// solid the diagonal is treated as occluded by them (use the edge's shade) instead of its own cell, which keeps an
+    /// open diagonal from brightening an otherwise enclosed nook.
+    /// </summary>
+    public static float AmbientOcclusion(bool center, bool sideA, bool sideB, bool diagonal)
+    {
+        var corner = sideA && sideB ? sideA : diagonal;
+        return ((center ? 0.2f : 1f) + (sideA ? 0.2f : 1f) + (sideB ? 0.2f : 1f) + (corner ? 0.2f : 1f)) * 0.25f;
     }
 
     private static bool Occludes(int state, BlockSpriteMap? sprites, BlockStateLayout? layout)
     {
+        // Air never occludes. State 0 is the air state throughout this client (every Mesh/MeshChunk call passes airState 0),
+        // and without this guard an air cell the layout could not resolve fell through to "opaque", collapsing the 4-cell AO
+        // average to its 0.2 floor on almost every vertex - which darkened the whole world and is why AO-off looked right.
+        if (state == 0)
+        {
+            return false;
+        }
+
         if (sprites is null || layout?.BlockAt(state) is not { } block)
         {
             // Without an atlas or a layout the alpha cannot be read, so treat it as opaque, which is what the caller that
@@ -486,8 +695,332 @@ public static class ChunkMesher
             return true;
         }
 
+        // A block that renders in the translucent layer can never fully occlude, whatever its texture alpha looks like:
+        // the reference marks ice, water and the glass family noOcclusion for exactly this reason. Treating ice as an
+        // occluder culled its neighbours' faces and made the ambient occlusion darken a whole ice field.
+        if (BlockRenderLayers.IsTranslucent(block))
+        {
+            return false;
+        }
+
         var transparency = sprites.TransparencyOf(block);
         return !transparency.HasTransparent && !transparency.HasTranslucent;
+    }
+
+    /// <summary>
+    /// True when a state's block is a fluid (water or lava), which <see cref="EmitSectionFluids"/> meshes with proper
+    /// surface geometry: water into the translucent buffer, lava into the opaque buffer.
+    /// </summary>
+    private static bool IsFluidState(int state, BlockStateLayout? layout) =>
+        layout?.BlockAt(state) is { Path: "water" or "lava" };
+
+    /// <summary>
+    /// Emits fluid geometry for one section (docs/specs/render/fluid-rendering.md). Water and lava share one algorithm
+    /// (reference FluidRenderer.tesselate): same-fluid face culling, four-corner surface heights, flow UV. Only the target
+    /// layer differs - water is translucent, lava is opaque (reference: the fluid model's layer) - plus water's biome tint.
+    /// </summary>
+    private static void EmitSectionFluids(
+        in Neighbourhood neighbourhood,
+        ChunkSection section,
+        int baseX,
+        int baseY,
+        int baseZ,
+        MeshBuffer opaque,
+        MeshBuffer translucent,
+        BlockSpriteMap? sprites,
+        BlockStateLayout? layout,
+        BiomeTint? tint,
+        LightmapParameters lighting = default)
+    {
+        if (layout is null)
+        {
+            return;
+        }
+
+        var nb = neighbourhood;
+
+        for (var y = 0; y < 16; y++)
+        {
+            for (var z = 0; z < 16; z++)
+            {
+                for (var x = 0; x < 16; x++)
+                {
+                    var state = section.Get(x, y, z);
+                    var blockRef = layout.BlockAt(state);
+                    if (blockRef is not { } fluidBlockRef ||
+                        (fluidBlockRef.Path != "water" && fluidBlockRef.Path != "lava"))
+                    {
+                        continue;
+                    }
+
+                    var fluid = Sharpcraft.Common.World.FluidStateCodec.FromBlockState(state, layout);
+                    if (fluid.IsEmpty)
+                    {
+                        continue;
+                    }
+
+                    var fluidPath = fluidBlockRef.Path;
+                    var sink = fluidPath == "lava" ? opaque : translucent;
+                    var lavaSink = fluidPath == "lava";
+
+                    // Light levels of this fluid cell (set just below, before any Emit call); captured by the local Emit.
+                    float skyLevel = 0f;
+                    float blockLevel = 0f;
+
+                    void Emit(
+                        (float X, float Y, float Z) a, (float X, float Y, float Z) b,
+                        (float X, float Y, float Z) c, (float X, float Y, float Z) d,
+                        (float R, float G, float B) colourA, (float R, float G, float B) colourB,
+                        (float R, float G, float B) colourC, (float R, float G, float B) colourD,
+                        (float U, float V) uvA, (float U, float V) uvB, (float U, float V) uvC, (float U, float V) uvD,
+                        SpriteRect? sprite)
+                    {
+                        if (lavaSink)
+                        {
+                            sink.AppendQuadDoubleSided(a, b, c, d, colourA, colourB, colourC, colourD, (skyLevel, blockLevel), (skyLevel, blockLevel), (skyLevel, blockLevel), (skyLevel, blockLevel), uvA, uvB, uvC, uvD, sprite);
+                        }
+                        else
+                        {
+                            sink.AppendQuad(a, b, c, d, colourA, colourB, colourC, colourD, (skyLevel, blockLevel), (skyLevel, blockLevel), (skyLevel, blockLevel), (skyLevel, blockLevel), uvA, uvB, uvC, uvD, sprite);
+                        }
+                    }
+
+                    var bx = baseX + x;
+                    var by = baseY + y;
+                    var bz = baseZ + z;
+                    var fx = (float)bx;
+                    var fz = (float)bz;
+                    var lowY = (float)by;
+
+                    var aboveSame = layout.BlockAt(nb.GetBlockState(bx, by + 1, bz, 0)) is { } aboveBlockRef && aboveBlockRef.Path == fluidPath;
+                    var selfHeight = aboveSame ? 1f : fluid.OwnHeight;
+
+                    nb.TryGetLight(bx, by, bz, out var s0, out var b0);
+                    nb.TryGetLight(bx, by + 1, bz, out var s1, out var b1);
+                    // Light levels go to the shader; the lightmap is computed per fragment so day/night needs no re-mesh.
+                    skyLevel = Math.Max(s0, s1) / 15f;
+                    blockLevel = Math.Max(b0, b1) / 15f;
+
+                    var tr = 1f;
+                    var tg = 1f;
+                    var tb = 1f;
+                    if (fluidPath != "lava" && tint is not null)
+                    {
+                        var (r, g, b) = BiomeTint.ToMultiplier(tint.ColourAt(BlockTintKind.Water, bx, by, bz));
+                        tr = r;
+                        tg = g;
+                        tb = b;
+                    }
+
+                    var blockId = fluidBlockRef;
+                    var topSprite = sprites?.ForState(state, BlockFace.Top);
+                    var sideSprite = sprites?.ForState(state, BlockFace.Side);
+
+                    var flowX = 0f;
+                    var flowZ = 0f;
+
+                    void AddFlow(int ddx, int ddz)
+                    {
+                        var neighbourState = nb.GetBlockState(bx + ddx, by, bz + ddz, 0);
+                        if (layout.BlockAt(neighbourState) is { } flowBlockRef && flowBlockRef.Path == fluidPath)
+                        {
+                            var neighbour = Sharpcraft.Common.World.FluidStateCodec.FromBlockState(neighbourState, layout);
+                            var difference = selfHeight - (neighbour.IsEmpty ? 0f : neighbour.OwnHeight);
+                            flowX += difference * ddx;
+                            flowZ += difference * ddz;
+                        }
+                    }
+
+                    AddFlow(-1, 0);
+                    AddFlow(1, 0);
+                    AddFlow(0, -1);
+                    AddFlow(0, 1);
+                    var flowing = ((flowX * flowX) + (flowZ * flowZ)) > 1e-7f;
+                    var flowSprite = flowing ? sprites?.FluidFlow(blockId) : null;
+
+                    (float R, float G, float B) Face(float shade) => (tr * shade, tg * shade, tb * shade);
+
+                    bool IsSameFluid(int wx, int wy, int wz) => layout.BlockAt(nb.GetBlockState(wx, wy, wz, 0)) is { } sameRef && sameRef.Path == fluidPath;
+
+                    bool IsSolid(int wx, int wy, int wz)
+                    {
+                        var block = layout.BlockAt(nb.GetBlockState(wx, wy, wz, 0));
+                        return block is { } value && value.Path != "air" && value.Path != "water" && value.Path != "lava";
+                    }
+
+                    float CellHeight(int ddx, int ddz)
+                    {
+                        var sample = nb.GetBlockState(bx + ddx, by, bz + ddz, 0);
+                        if (layout.BlockAt(sample) is { } sampleBlock)
+                        {
+                            if (sampleBlock.Path == fluidPath)
+                            {
+                                // The reference getHeight returns 1.0 when the same fluid is directly above, so a flowing
+                                // block next to a continuous column must use 1.0 here for its corner to rise and meet it.
+                                if (layout.BlockAt(nb.GetBlockState(bx + ddx, by + 1, bz + ddz, 0)) is { } aboveRef && aboveRef.Path == fluidPath)
+                                {
+                                    return 1f;
+                                }
+
+                                var neighbour = Sharpcraft.Common.World.FluidStateCodec.FromBlockState(sample, layout);
+                                return neighbour.IsEmpty ? 0f : neighbour.OwnHeight;
+                            }
+
+                            if (sampleBlock.Path != "air")
+                            {
+                                return -1f;
+                            }
+                        }
+
+                        return 0f;
+                    }
+
+                    var north = CellHeight(0, -1);
+                    var south = CellHeight(0, 1);
+                    var west = CellHeight(-1, 0);
+                    var east = CellHeight(1, 0);
+                    var northWest = CellHeight(-1, -1);
+                    var northEast = CellHeight(1, -1);
+                    var southWest = CellHeight(-1, 1);
+                    var southEast = CellHeight(1, 1);
+
+                    float Corner(int cx, int cz)
+                    {
+                        // With the same fluid directly above, the column is continuous, so the block reaches the full block
+                        // top (reference getHeight = hasSameAbove ? 1.0 : ownHeight). Without this the corner average dipped
+                        // the rim below the block above and left a seam at water drops / terraces.
+                        if (aboveSame)
+                        {
+                            return 1f;
+                        }
+
+                        var n1 = cx == 0 ? west : east;
+                        var n2 = cz == 0 ? north : south;
+                        var diagonal = cx == 0 ? (cz == 0 ? northWest : southWest) : (cz == 0 ? northEast : southEast);
+                        return FluidSurface.AverageCorner(selfHeight, n1, n2, diagonal);
+                    }
+
+                    const float epsilon = 0.001f;
+
+                    // Top: only when no water directly above. Corner heights so the surface follows neighbours.
+                    if (!aboveSame)
+                    {
+                        var colour = Face(1.0f);
+                        if (flowSprite is { } moving)
+                        {
+                            // Flow UV rotated toward the downhill direction (reference: angle atan2(z,x) - pi/2, radius
+                            // 0.25 around the sprite centre).
+                            var angle = MathF.Atan2(flowZ, flowX) - (MathF.PI / 2f);
+                            var s = MathF.Sin(angle) * 0.25f;
+                            var c = MathF.Cos(angle) * 0.25f;
+                            Emit(
+                                (fx, lowY + Corner(0, 0) - epsilon, fz),
+                                (fx, lowY + Corner(0, 1) - epsilon, fz + 1f),
+                                (fx + 1f, lowY + Corner(1, 1) - epsilon, fz + 1f),
+                                (fx + 1f, lowY + Corner(1, 0) - epsilon, fz),
+                                colour, colour, colour, colour,
+                                (0.5f + (-c - s), 0.5f + (-c + s)),
+                                (0.5f + (-c + s), 0.5f + (c + s)),
+                                (0.5f + (c + s), 0.5f + (c - s)),
+                                (0.5f + (c - s), 0.5f + (-c - s)),
+                                moving);
+                        }
+                        else
+                        {
+                            Emit(
+                                (fx, lowY + Corner(0, 0) - epsilon, fz),
+                                (fx, lowY + Corner(0, 1) - epsilon, fz + 1f),
+                                (fx + 1f, lowY + Corner(1, 1) - epsilon, fz + 1f),
+                                (fx + 1f, lowY + Corner(1, 0) - epsilon, fz),
+                                colour, colour, colour, colour,
+                                (0f, 0f), (0f, 1f), (1f, 1f), (1f, 0f),
+                                topSprite);
+                        }
+                    }
+
+                    // Bottom: only when the cell below is neither water nor solid.
+                    if (!IsSameFluid(bx, by - 1, bz) && !IsSolid(bx, by - 1, bz))
+                    {
+                        var colour = Face(0.5f);
+                        var yb = lowY + epsilon;
+                        Emit(
+                            (fx, yb, fz), (fx + 1f, yb, fz), (fx + 1f, yb, fz + 1f), (fx, yb, fz + 1f),
+                            colour, colour, colour, colour,
+                            (0f, 0f), (1f, 0f), (1f, 1f), (0f, 1f),
+                            sideSprite);
+                    }
+
+                    // Side faces use the same corner heights as the top face so the rim is continuous, and (as in the
+                    // reference FluidRenderer) sample the flowing sprite with V mapped to the exposed height so the texture
+                    // reads as water falling down the drop. Corner assignment and the +/-0.001 inset follow the reference.
+                    var c00 = lowY + Corner(0, 0);
+                    var c01 = lowY + Corner(0, 1);
+                    var c10 = lowY + Corner(1, 0);
+                    var c11 = lowY + Corner(1, 1);
+                    var nz = fz + epsilon;
+                    var sz = fz + 1f - epsilon;
+                    var wx = fx + epsilon;
+                    var ex = fx + 1f - epsilon;
+                    var sideFlowSprite = sprites?.FluidFlow(blockId) ?? sideSprite;
+
+                    // -Z (z = bz): corners (0,0) and (1,0)
+                    if (!IsSameFluid(bx, by, bz - 1) && !IsSolid(bx, by, bz - 1))
+                    {
+                        var colour = Face(0.8f);
+                        Emit(
+                            (fx, c00, nz), (fx + 1f, c10, nz), (fx + 1f, lowY, nz), (fx, lowY, nz),
+                            colour, colour, colour, colour,
+                            (0f, (1f - Corner(0, 0)) * 0.5f),
+                            (0.5f, (1f - Corner(1, 0)) * 0.5f),
+                            (0.5f, 0.5f),
+                            (0f, 0.5f),
+                            sideFlowSprite);
+                    }
+
+                    // +Z (z = bz + 1): corners (1,1) and (0,1)
+                    if (!IsSameFluid(bx, by, bz + 1) && !IsSolid(bx, by, bz + 1))
+                    {
+                        var colour = Face(0.8f);
+                        Emit(
+                            (fx + 1f, c11, sz), (fx, c01, sz), (fx, lowY, sz), (fx + 1f, lowY, sz),
+                            colour, colour, colour, colour,
+                            (0f, (1f - Corner(1, 1)) * 0.5f),
+                            (0.5f, (1f - Corner(0, 1)) * 0.5f),
+                            (0.5f, 0.5f),
+                            (0f, 0.5f),
+                            sideFlowSprite);
+                    }
+
+                    // -X (x = bx): corners (0,1) and (0,0)
+                    if (!IsSameFluid(bx - 1, by, bz) && !IsSolid(bx - 1, by, bz))
+                    {
+                        var colour = Face(0.6f);
+                        Emit(
+                            (wx, c01, fz + 1f), (wx, c00, fz), (wx, lowY, fz), (wx, lowY, fz + 1f),
+                            colour, colour, colour, colour,
+                            (0f, (1f - Corner(0, 1)) * 0.5f),
+                            (0.5f, (1f - Corner(0, 0)) * 0.5f),
+                            (0.5f, 0.5f),
+                            (0f, 0.5f),
+                            sideFlowSprite);
+                    }
+
+                    // +X (x = bx + 1): corners (1,0) and (1,1)
+                    if (!IsSameFluid(bx + 1, by, bz) && !IsSolid(bx + 1, by, bz))
+                    {
+                        var colour = Face(0.6f);
+                        Emit(
+                            (ex, c10, fz), (ex, c11, fz + 1f), (ex, lowY, fz + 1f), (ex, lowY, fz),
+                            colour, colour, colour, colour,
+                            (0f, (1f - Corner(1, 0)) * 0.5f),
+                            (0.5f, (1f - Corner(1, 1)) * 0.5f),
+                            (0.5f, 0.5f),
+                            (0f, 0.5f),
+                            sideFlowSprite);
+                    }
+                }
+            }
+        }
     }
 
     private static (int X, int Y, int Z) FaceBlock(int uAxis, int vAxis, int slice, int u, int v)
@@ -536,8 +1069,16 @@ public static class ChunkMesher
         MeshBuffer? cutout = null,
         BiomeTint? tint = null,
         StateCullTable? cull = null,
-        StateVisualCache? visuals = null)
+        StateVisualCache? visuals = null,
+        bool ambientOcclusion = true,
+        LightmapParameters lighting = default)
     {
+        // Fluids are meshed by EmitSectionFluids into the translucent buffer; the block path must not also emit them.
+        if (translucent is not null && IsFluidState(state, layout))
+        {
+            return;
+        }
+
         var (uAxis, vAxis) = InPlaneAxes(direction);
         var (x, y, z) = FaceBlock(uAxis, vAxis, slice, u, v);
 
@@ -634,27 +1175,21 @@ public static class ChunkMesher
 
             if (kind != BlockTintKind.None && (!BlockTintTable.TintsTopFaceOnly(kind) || direction == PositiveY))
             {
-                var (tintRed, tintGreen, tintBlue) = BiomeTint.ToMultiplier(tint.Colour(kind));
+                var (tintRed, tintGreen, tintBlue) = BiomeTint.ToMultiplier(tint.ColourAt(kind, origin.X, origin.Y, origin.Z));
                 red *= tintRed;
                 green *= tintGreen;
                 blue *= tintBlue;
             }
         }
-        var (dx, dy, dz) = NeighbourOffset(direction);
+        // Directional face brightness follows the reference's CardinalLighting.DEFAULT: up 1.0, down 0.5, north/south
+        // (Z axis) 0.8, west/east (X axis) 0.6. A single 0.75 for every side made side faces shade wrong.
         var shadeFactor = direction switch
         {
-            PositiveY => TopShade,
-            NegativeY => BottomShade,
-            _ => SideShade
+            PositiveY => 1.0f,
+            NegativeY => 0.5f,
+            NegativeZ or PositiveZ => 0.8f,
+            _ => 0.6f
         };
-
-        var light = neighbourhood.TryGetLight(baseX + x + dx, baseY + y + dy, baseZ + z + dz, out var sky, out var block)
-            ? (sky, block)
-            : neighbourhood.TryGetLight(baseX + x, baseY + y, baseZ + z, out var selfSky, out var selfBlock)
-                ? (selfSky, selfBlock)
-                : ((byte)0, (byte)0);
-
-        var shade = Brightness(light) * shadeFactor;
 
         // Corner order follows the winding: where U came first the horizontal corner comes first,
         // where V came first the vertical one does. UVs stay in sprite repeats so a merged quad
@@ -711,14 +1246,64 @@ public static class ChunkMesher
             }
         }
 
+        var cornerOrigin = CornerShade(neighbourhood, direction, origin, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion, lighting);
+        var cornerA = CornerShade(neighbourhood, direction, a, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion, lighting);
+        var cornerB = CornerShade(neighbourhood, direction, b, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion, lighting);
+        var cornerC = CornerShade(neighbourhood, direction, c, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion, lighting);
+
+        // Still water and lava sit at fourteen sixteenths of a block, not at the block top. Without this the water surface
+        // is exactly coplanar with an ice block's top face and the two fight for the same depth, which is what showed as
+        // large rectangular patches on a frozen ocean. Flowing fluid heights need the block state level property and are
+        // left for the block state work; a single height already removes the coplanar case.
+        if (layout?.BlockAt(state) is { Path: "water" or "lava" } fluidBlock)
+        {
+            // Vanilla fluid surface height: amount/9 (source = 8/9), or a full block when the same fluid is directly above.
+            // Flowing levels are lower. This replaces the old fixed 14/16 hack and uses the decoded block level.
+            var fluid = Sharpcraft.Common.World.FluidStateCodec.FromBlockState(state, layout);
+            var aboveState = neighbourhood.GetBlockState(baseX + x, baseY + y + 1, baseZ + z, 0);
+            var sameFluidAbove = layout.BlockAt(aboveState) is { } aboveBlock && aboveBlock.Path == fluidBlock.Path;
+            var ownHeight = sameFluidAbove ? 1f : (fluid.IsEmpty ? 1f : fluid.OwnHeight);
+            var drop = 1f - ownHeight;
+
+            var top = Math.Max(Math.Max(origin.Y, a.Y), Math.Max(b.Y, c.Y));
+            target.AppendQuad(
+                Drop(origin),
+                Drop(a),
+                Drop(b),
+                Drop(c),
+                (cornerOrigin.R, cornerOrigin.G, cornerOrigin.B),
+                (cornerA.R, cornerA.G, cornerA.B),
+                (cornerB.R, cornerB.G, cornerB.B),
+                (cornerC.R, cornerC.G, cornerC.B),
+                (cornerOrigin.Sky, cornerOrigin.Block),
+                (cornerA.Sky, cornerA.Block),
+                (cornerB.Sky, cornerB.Block),
+                (cornerC.Sky, cornerC.Block),
+                uvOrigin,
+                uvA,
+                uvB,
+                uvC,
+                faceSprite);
+
+            (float X, float Y, float Z) Drop((int X, int Y, int Z) point) =>
+                (point.X, point.Y == top ? point.Y - drop : point.Y, point.Z);
+
+            return;
+        }
+
         target.AppendQuad(
             origin,
             a,
             b,
             c,
-            red * shade,
-            green * shade,
-            blue * shade,
+            (cornerOrigin.R, cornerOrigin.G, cornerOrigin.B),
+            (cornerA.R, cornerA.G, cornerA.B),
+            (cornerB.R, cornerB.G, cornerB.B),
+            (cornerC.R, cornerC.G, cornerC.B),
+            (cornerOrigin.Sky, cornerOrigin.Block),
+            (cornerA.Sky, cornerA.Block),
+            (cornerB.Sky, cornerB.Block),
+            (cornerC.Sky, cornerC.Block),
             uvOrigin,
             uvA,
             uvB,
@@ -733,17 +1318,6 @@ public static class ChunkMesher
         NegativeY => BlockFace.Bottom,
         _ => BlockFace.Side
     };
-
-    /// <summary>
-    /// Brightness of a cell from its light levels. Sky and block light are combined with max,
-    /// normalised over 0..15 and floored, which is close enough to the vanilla lightmap for a
-    /// first pass without claiming to match it exactly.
-    /// </summary>
-    public static float Brightness((byte Sky, byte Block) light)
-    {
-        var level = light.Sky > light.Block ? light.Sky : light.Block;
-        return MinimumBrightness + (1f - MinimumBrightness) * (level / 15f);
-    }
 
     /// <summary>Deterministic colour from a block state id, so the same world always looks the same.</summary>
     public static (float Red, float Green, float Blue) ColourOf(int state)

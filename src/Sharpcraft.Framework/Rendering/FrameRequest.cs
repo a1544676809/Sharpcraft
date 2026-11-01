@@ -25,13 +25,25 @@ public sealed record FrameRequest(
     Vector4 ClearColour,
     Vector3 CameraPosition,
     Vector3 CameraTarget,
-    float FieldOfViewDegrees = 60f)
+    float FieldOfViewDegrees = 70f)
 {
-    /// <summary>Floats per vertex.</summary>
-    public const int FloatsPerVertex = 12;
+    /// <summary>Floats per vertex: position (3) + base colour (3) + uv (2) + sprite rect (4) + light (2).</summary>
+    public const int FloatsPerVertex = 14;
 
     /// <summary>Vertex count.</summary>
     public int VertexCount => Vertices.Length / FloatsPerVertex;
+
+    /// <summary>
+    /// Per-frame lightmap parameters the terrain shader uses to compute the lightmap from each vertex's light levels
+    /// (docs/decisions/0019, docs/specs/render/lighting.md 6). Defaults to overworld day.
+    /// </summary>
+    public LightmapUniform Lightmap { get; init; } = LightmapUniform.Day;
+
+    /// <summary>
+    /// Fog colour (RGB 0..1) for this frame. The reference multiplies a base fog colour by the time/weather fog
+    /// timeline; the host recomputes this per frame (docs/modules/weather-and-sky-color.md 6.3).
+    /// </summary>
+    public Vector4 FogColour { get; init; } = new(0.75f, 0.85f, 1.0f, 1f);
 
     /// <summary>
     /// Atlas sampled by the shader, or null for a colour-only frame. UVs stay relative to the sprite
@@ -73,6 +85,103 @@ public sealed record FrameRequest(
     /// relative to the camera.
     /// </remarks>
     public (int FirstIndex, int IndexCount)[]? TranslucentRanges { get; init; }
+
+    /// <summary>
+    /// When true the full-screen gradient sky (sky.wgsl) is not drawn; the caller supplies a sky disc / other backdrop
+    /// instead (docs/modules/weather-and-sky-color.md 6.2).
+    /// </summary>
+    public bool SkipGradientSky { get; init; }
+
+    /// <summary>Textures referenced by <see cref="CelestialDraws"/>, uploaded once and sampled by index.</summary>
+    public TextureData[]? CelestialTextures { get; init; }
+
+    /// <summary>
+    /// Celestial body quads (sun, moon) drawn after the sky gradient and before world geometry, so terrain covers them.
+    /// </summary>
+    /// <remarks>
+    /// Positions are already in the sky frame; the draw's model matrix places them relative to the camera so the bodies
+    /// read as infinitely far. Depth writes are off, so a single order-independent pass is enough.
+    /// </remarks>
+    public CelestialQuadDraw[]? CelestialDraws { get; init; }
+
+    /// <summary>
+    /// Celestial position-colour draws (sunrise fan, stars): no texture, per-vertex colour times a per-draw tint.
+    /// </summary>
+    /// <remarks>Drawn after the textured bodies, still before world geometry, so terrain covers them.</remarks>
+    public CelestialColorDraw[]? CelestialColorDraws { get; init; }
+
+    /// <summary>Opaque sky-disc draws (top/bottom), rendered before the textured celestial bodies.</summary>
+    public CelestialColorDraw[]? SkyDiscDraws { get; init; }
+}
+
+/// <summary>One textured celestial quad (sun or moon) in the sky backdrop.</summary>
+/// <param name="TextureIndex">Index into <see cref="FrameRequest.CelestialTextures"/>.</param>
+/// <param name="Vertices">Interleaved position (3) + uv (2) floats.</param>
+/// <param name="Indices">Triangle indices into <paramref name="Vertices"/>.</param>
+/// <param name="Model">Model matrix applied before the camera; typically a translation to the eye.</param>
+/// <param name="Tint">Multiplied into the sampled texel (rgb) and alpha.</param>
+public sealed record CelestialQuadDraw(
+    int TextureIndex,
+    float[] Vertices,
+    ushort[] Indices,
+    Matrix4x4 Model,
+    Vector4 Tint);
+
+/// <summary>Blend mode for a position-colour celestial draw, matching the reference pipeline.</summary>
+public enum CelestialColorBlend
+{
+    /// <summary>Reference sunrise/sunset: colour SrcAlpha/OneMinusSrcAlpha, alpha One/OneMinusSrcAlpha.</summary>
+    Translucent,
+
+    /// <summary>Reference stars: OVERLAY = colour SrcAlpha/One, alpha One/Zero (additive onto the sky).</summary>
+    Overlay,
+
+    /// <summary>Opaque sky-disc geometry: no blending, writes the colour directly.</summary>
+    Opaque
+}
+
+/// <summary>One position-colour celestial draw (sunrise fan or stars).</summary>
+/// <param name="Vertices">Interleaved position (3) + colour (4) floats, per vertex.</param>
+/// <param name="Indices">Triangle list indices into <paramref name="Vertices"/>.</param>
+/// <param name="Model">Model matrix applied before the camera; typically a translation to the eye.</param>
+/// <param name="Tint">Colour modulator multiplied into the vertex colour (rgba).</param>
+/// <param name="Blend">Which reference blend state to use.</param>
+public sealed record CelestialColorDraw(
+    float[] Vertices,
+    uint[] Indices,
+    Matrix4x4 Model,
+    Vector4 Tint,
+    CelestialColorBlend Blend);
+
+/// <summary>
+/// Per-frame lightmap parameters for the terrain shader's per-fragment lightmap (docs/decisions/0019,
+/// docs/specs/render/lighting.md 6). Layout matches the WGSL <c>Lightmap</c> struct: four floats then three vec4s (64 bytes).
+/// </summary>
+/// <param name="SkyFactor">Sky-light multiplier (day 1.0, night ~0.24).</param>
+/// <param name="BlockFactor">Block-light multiplier (1.4).</param>
+/// <param name="BrightnessFactor">Brightness slider (0.5).</param>
+/// <param name="Padding">Explicit padding so the first vec4 is 16-byte aligned.</param>
+/// <param name="SkyLightColor">Linear sky-light colour (day white, night blue-tinted).</param>
+/// <param name="BlockLightTint">Block-light tint (raw 0..1 channels, like ARGB.vector3fFromRGB24).</param>
+/// <param name="AmbientColor">Linear ambient colour (overworld black).</param>
+public readonly record struct LightmapUniform(
+    float SkyFactor,
+    float BlockFactor,
+    float BrightnessFactor,
+    float Padding,
+    Vector4 SkyLightColor,
+    Vector4 BlockLightTint,
+    Vector4 AmbientColor)
+{
+    /// <summary>Overworld daytime defaults, matching <c>VanillaLightmap.LightmapParameters.DayOverworld</c>.</summary>
+    public static LightmapUniform Day { get; } = new(
+        SkyFactor: 1f,
+        BlockFactor: 1.4f,
+        BrightnessFactor: 0.5f,
+        Padding: 0f,
+        SkyLightColor: Vector4.One,
+        BlockLightTint: new Vector4(1.000f, 0.847f, 0.549f, 1f),
+        AmbientColor: Vector4.Zero);
 }
 
 /// <summary>An RGBA8 image uploaded as a texture, typically the stitched sprite atlas.</summary>

@@ -72,18 +72,163 @@ internal sealed class InteractiveSession
     public long TickIndex { get; private set; }
     private readonly bool _diagEnabled = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
     private int _diagFrames;
+    private readonly bool _packetLog = Environment.GetEnvironmentVariable("MC_PACKET_LOG") == "1";
+    private int _packetLogCount;
+    private const int PacketLogLimit = 400;
+    private readonly Sharpcraft.Client.Render.BlockLightFlicker _blockLightFlicker = new();
+    private Sharpcraft.Common.World.BiomeRegistry? _biomes;
+    private Sharpcraft.Client.Assets.CloudTexture? _cloudTexture;
+    private readonly Sharpcraft.Client.Render.CloudDrawCache _cloudDrawCache = new();
+    private bool _cloudsEnabled = true;
+    private bool _cloudsFancy = true;
+    private int _cloudRangeChunks = 128;
+    private bool _cloudUseOit = true;
+    private bool _cloudAdaptive;
+    private int _adaptiveCloudRange = Sharpcraft.Client.Render.CloudRangePolicy.Maximum;
+    private double _frameMsAccumulator;
+    private int _frameSamples;
+    private int _framesSinceRangeChange;
 
     /// <summary>
-    /// Chunks of view distance requested from the server. It bounds how much terrain can be resident, which is
-    /// what the geometry arena presizes for (docs/specs/network/play-movement.md 7.27).
+    /// Requested render distance in chunks. Host configuration (MC_VIEW_DISTANCE), default 12; the server may cap it and
+    /// the effective radius arrives in JoinGame. Kept in the host so game assemblies read no environment (principle 13).
     /// </summary>
-    public const int ViewDistanceChunks = 8;
+    public static int ViewDistanceChunks { get; } = ReadViewDistanceChunks();
+
+    private static int ReadViewDistanceChunks()
+    {
+        var raw = Environment.GetEnvironmentVariable("MC_VIEW_DISTANCE");
+        return int.TryParse(raw, out var parsed) ? Math.Clamp(parsed, 2, 32) : 12;
+    }
 
     /// <summary>Chunks a square view of <see cref="ViewDistanceChunks"/> can hold.</summary>
     public static int ExpectedChunkCount()
     {
         var side = (2 * ViewDistanceChunks) + 1;
         return side * side;
+    }
+
+    /// <summary>
+    /// The lightmap uniform for the current frame: the world's day/night parameters with the block factor carrying the
+    /// torches' flicker (docs/analysis/render/lighting-color-space.md #8). Rewritten every frame so day/night and flicker
+    /// need no re-mesh.
+    /// </summary>
+    internal LightmapUniform CurrentLightmap()
+    {
+        if (_world is null)
+        {
+            return LightmapUniform.Day;
+        }
+
+        var parameters = FrameCommand.EffectiveLighting(_world) with { BlockFactor = _blockLightFlicker.BlockFactor };
+        return FrameCommand.ToLightmapUniform(parameters);
+    }
+
+    /// <summary>
+    /// The fog colour for the current frame: the base overworld fog multiplied by the FOG_COLOR timeline and weather, so
+    /// distant terrain and water darken at night instead of staying day-blue (docs/modules/weather-and-sky-color.md 6.3).
+    /// </summary>
+    internal Vector4 CurrentFogColour()
+    {
+        if (_world is not null && _biomes is not null)
+        {
+            // AtmosphericFogEnvironment.getBaseColor: fog base colour mixed toward the weather-darkened SKY_COLOR with
+            // a factor derived from sky_fog_end_distance / render distance.
+            var fogBase = FrameCommand.EffectiveFogColour(_world);
+            var sky = CurrentSkyColour();
+            var skyFogEnd = MathF.Min(512f / 16f, ViewDistanceChunks);
+            var clamped = Math.Clamp(0.25f + (0.75f * (skyFogEnd / 32f)), 0f, 1f);
+            var mix = 1f - MathF.Pow(clamped, 0.25f);
+            var mixed = Vector3.Lerp(new Vector3(fogBase.X, fogBase.Y, fogBase.Z), sky, mix);
+            return new Vector4(mixed, 1f);
+        }
+
+        var baseFog = new Vector3(0.75f, 0.85f, 1.0f);
+        if (_world is null)
+        {
+            return new Vector4(baseFog, 1f);
+        }
+
+        var partialTick = FrameCommand.EffectiveDayTimePartial(_world);
+        var factor = Sharpcraft.Common.World.SkyAttributeTracks.FogColorFactorAt(FrameCommand.EffectiveDayTime(_world), partialTick);
+        var rain = FrameCommand.EffectiveRainLevel(_world, partialTick);
+        var thunder = FrameCommand.EffectiveThunderLevel(_world, partialTick);
+        var fog = Sharpcraft.Common.World.WeatherBlend.ApplyFog(baseFog * factor, rain, thunder);
+        return new Vector4(fog, 1f);
+    }
+
+    /// <summary>The SKY_COLOR at the camera for this frame (biome sky colour × day/night × weather).</summary>
+    internal Vector3 CurrentSkyColour()
+    {
+        if (_world is null || _biomes is null)
+        {
+            return new Vector3(0.55f, 0.72f, 0.95f);
+        }
+
+        var eye = _player.Position;
+        return FrameCommand.EffectiveSkyColour(
+            _world, _biomes, (int)MathF.Floor(eye.X), (int)MathF.Floor(eye.Y + 1.6f), (int)MathF.Floor(eye.Z));
+    }
+
+    /// <summary>Provides the biome registry the live session uses for sky/fog colours.</summary>
+    internal void SetBiomes(Sharpcraft.Common.World.BiomeRegistry? biomes) => _biomes = biomes;
+
+    /// <summary>Provides the cloud texture the live session draws each frame.</summary>
+    internal void SetCloudTexture(Sharpcraft.Client.Assets.CloudTexture? texture) => _cloudTexture = texture;
+
+    /// <summary>Cloud options from the host: status/range mirror the reference CloudStatus and cloudRange settings.</summary>
+    internal void SetCloudOptions(bool enabled, bool fancy, int rangeChunks, bool useOit, bool adaptive = false)
+    {
+        _cloudsEnabled = enabled;
+        _cloudsFancy = fancy;
+        _cloudRangeChunks = Math.Max(2, rangeChunks);
+        _cloudUseOit = useOit;
+        _cloudAdaptive = adaptive;
+        _adaptiveCloudRange = _cloudRangeChunks;
+    }
+
+    /// <summary>Whether fancy clouds use the reference OIT path.</summary>
+    internal bool CloudUseOit => _cloudUseOit;
+
+    /// <summary>Feeds one presented-frame duration into the opt-in adaptive cloud range.</summary>
+    internal void ObserveFrame(double frameMilliseconds)
+    {
+        if (!_cloudAdaptive || _cloudsFancy == false)
+        {
+            return;
+        }
+
+        _frameMsAccumulator += frameMilliseconds;
+        _frameSamples++;
+        _framesSinceRangeChange++;
+        if (_frameSamples < 60 || _framesSinceRangeChange < 120)
+        {
+            return;
+        }
+
+        var average = _frameMsAccumulator / _frameSamples;
+        _frameMsAccumulator = 0;
+        _frameSamples = 0;
+        var next = Sharpcraft.Client.Render.CloudRangePolicy.Next(_adaptiveCloudRange, average);
+        if (next != _adaptiveCloudRange)
+        {
+            _adaptiveCloudRange = next;
+            _framesSinceRangeChange = 0;
+        }
+    }
+
+    private int EffectiveCloudRange => _cloudAdaptive ? _adaptiveCloudRange : _cloudRangeChunks;
+
+    /// <summary>The per-frame cloud position-colour draw around the camera, or null when clouds/texture are unavailable.</summary>
+    internal Sharpcraft.Framework.Rendering.CelestialColorDraw? CurrentCloudDraw()
+    {
+        if (_world is null || _cloudTexture is null || !_cloudsEnabled)
+        {
+            return null;
+        }
+
+        var eye = _player.Position + new Vector3(0f, 1.62f, 0f);
+        return FrameCommand.BuildCloudDraw(_world, _cloudTexture, eye, _cloudDrawCache, EffectiveCloudRange, _cloudsFancy, _loop.Alpha);
     }
 
     /// <summary>Decoded chunks installed per frame; keeps one batch from stalling the frame.</summary>
@@ -957,6 +1102,11 @@ internal sealed class InteractiveSession
 
                 _tickCounter++;
 
+                // Advance the world clocks (day/night, docs/modules/time.md) and the block-light flicker once per tick,
+                // like the reference client tick (LightmapRenderStateExtractor.tick).
+                _world?.AdvanceTick();
+                _blockLightFlicker.Tick();
+
                 // Verification hook: print the tracked entities so their positions can be compared against the
                 // other client's own report of where it is (docs/specs/network/entity-sync.md 7).
                 if (Environment.GetEnvironmentVariable("MC_ENTITY_LOG") == "1" && _tickCounter % 20 == 0)
@@ -984,7 +1134,12 @@ internal sealed class InteractiveSession
                     Console.WriteLine(
                         $"diag: tick={_tickCounter} fwd={frame.Forward:F0} sprint={frame.Sprint} sneak={frame.Sneak} "
                         + $"jump presses={pressed} accepted={accepted} inAir={inAir} ground={_player.OnGround} "
-                        + $"y={_player.Position.Y:F2} vy={_player.DeltaMovement.Y:F3}");
+                        + $"y={_player.Position.Y:F2} vy={_player.DeltaMovement.Y:F3} day={_world?.DayTime}");
+                    var diagLightmap = CurrentLightmap();
+                    Console.WriteLine(
+                        $"diag lightmap: skyFactor={diagLightmap.SkyFactor:F3} blockFactor={diagLightmap.BlockFactor:F3} " +
+                        $"skyCol=({diagLightmap.SkyLightColor.X:F3},{diagLightmap.SkyLightColor.Y:F3},{diagLightmap.SkyLightColor.Z:F3}) " +
+                        $"blockTint=({diagLightmap.BlockLightTint.X:F3},{diagLightmap.BlockLightTint.Y:F3},{diagLightmap.BlockLightTint.Z:F3})");
                 }
 
                 // Diagnostic hook: sweep the pitch so the head direction can be checked from a second client
@@ -1090,7 +1245,7 @@ internal sealed class InteractiveSession
         _streamingRequested = true;
         _live.Send(PlayPackets.BuildClientInformation(
             locale: "en_us",
-            viewDistance: ViewDistanceChunks,
+            viewDistance: (byte)ViewDistanceChunks,
             chatVisibility: 0,
             chatColors: true,
             skinParts: 0x7F,
@@ -1188,6 +1343,15 @@ internal sealed class InteractiveSession
                 continue;
             }
 
+            // Host-only join packet capture (MC_PACKET_LOG=1): id/length/prefix of the first packets, so the clock source
+            // can be found against the reference (principle 13: parsed here, in the host; no LINQ on this hot path).
+            if (_packetLog && _packetLogCount < PacketLogLimit)
+            {
+                _packetLogCount++;
+                var prefix = body[..Math.Min(24, body.Length)];
+                Console.WriteLine($"pkt#{_packetLogCount} id={packetId} len={body.Length} hex={Convert.ToHexString(prefix)}");
+            }
+
             switch (packetId)
             {
                 case PacketIds.PlayClientbound.KeepAlive:
@@ -1242,6 +1406,46 @@ internal sealed class InteractiveSession
                 // stream honest; nothing consumes the tag until block entity rendering exists.
                 case PacketIds.PlayClientbound.BlockEntityData:
                     BlockEntityPackets.TryReadBlockEntityData(body, out _);
+                    break;
+
+                case PacketIds.PlayClientbound.SetTime:
+                    if (_world is not null)
+                    {
+                        var setTimeReader = new PayloadReader(body);
+                        if (SetTimePacketCodec.TryRead(ref setTimeReader, out var setTime) == DecodeStatus.Success)
+                        {
+                            _world.ApplyTime(setTime);
+                            if (Environment.GetEnvironmentVariable("MC_DIAG") == "1")
+                            {
+                                var clocks = new System.Text.StringBuilder();
+                                foreach (var kv in setTime.Clocks)
+                                {
+                                    if (clocks.Length > 0)
+                                    {
+                                        clocks.Append(',');
+                                    }
+
+                                    clocks.Append(kv.Key).Append(":t=").Append(kv.Value.TotalTicks).Append(",r=").Append(kv.Value.Rate);
+                                }
+
+                                var head = Convert.ToHexString(body[..Math.Min(40, body.Length)]);
+                                Console.WriteLine($"set_time: len={body.Length} gameTime={setTime.GameTime} day={_world.DayTime} clocks=[{clocks}] hex={head}");
+                            }
+                        }
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.GameEvent:
+                    if (_world is not null)
+                    {
+                        var gameEventReader = new PayloadReader(body);
+                        if (GameEventPacketCodec.TryRead(ref gameEventReader, out var gameEvent) == DecodeStatus.Success)
+                        {
+                            _world.ApplyWeather(gameEvent);
+                        }
+                    }
+
                     break;
 
                 case PacketIds.PlayClientbound.LevelChunkWithLight:

@@ -141,7 +141,10 @@ public sealed class NbtCompound : NbtTag
     /// <summary>Adds or replaces a child.</summary>
     public NbtCompound Set(string name, NbtTag value)
     {
-        ArgumentException.ThrowIfNullOrEmpty(name);
+        // An empty key is legal: the reference reads keys with readUtf into a plain map and never rejects "", and a list
+        // of compounds serialises each element without a name, which is exactly the shape a translated chat component
+        // uses for its arguments. Rejecting it aborted the read and killed the session on a chat line.
+        ArgumentNullException.ThrowIfNull(name);
         ArgumentNullException.ThrowIfNull(value);
 
         if (!_children.ContainsKey(name))
@@ -166,6 +169,14 @@ public sealed class NbtCompound : NbtTag
     /// <summary>Typed read; returns the default when absent or of another type.</summary>
     public long GetLong(string name, long fallback = 0) =>
         Get(name) is NbtLong tag ? tag.Value : fallback;
+
+    /// <summary>Typed read; returns the default when absent or of another type.</summary>
+    public float GetFloat(string name, float fallback = 0f) =>
+        Get(name) is NbtFloat tag ? tag.Value : fallback;
+
+    /// <summary>Typed read of an NBT byte as a boolean (non-zero true); returns the default when absent or of another type.</summary>
+    public bool GetBool(string name, bool fallback = false) =>
+        Get(name) is NbtByte tag ? tag.Value != 0 : fallback;
 
     /// <summary>Typed read; returns the default when absent or of another type.</summary>
     public string? GetString(string name) => Get(name) is NbtString tag ? tag.Value : null;

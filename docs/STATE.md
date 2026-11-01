@@ -13,7 +13,7 @@ updated: 2026-10-29
 > 本文件只记录**易变状态**（AGENTS.md 4.2）。设计结论属于 `docs/modules/`，里程碑划分属于 `docs/milestones/roadmap.md`，索引属于 `docs/README.md`，决策属于 `docs/decisions/`。**不要在此复述它们。**
 > 每次收工必须与代码同一提交更新本文件，并写清"下一步具体动作"。
 
-最后更新：2026-10-30
+最后更新：2026-10-31
 
 ## 当前里程碑
 
@@ -1253,3 +1253,883 @@ send  60.. : -704.50 → -743.21 → …                ← 之后不再被纠�
 - **验证（Release，放大化，90s）**：`arena 329 chunks, presized=True, uploaded 635.9 MB, 2 full rebuilds`；
   `16125 frames in 90.0s`（≈179 fps），worst 93.5 ms（首帧/重建），仅 2 帧 >33 ms，**无 panic**。
 - 教训（记入流程）：改完必须**两种配置都重建**再测；我此前用旧 Release 二进制得出"仍超限"的错误结论。
+
+## 2026-10-31 实验分支 exp/gpu-culling-indirect：A2 间接绘制（完成）
+
+- 分支基点 `ec38ef5`；本分支只做 GPU 化改造，主线不动。
+- **A2 实现**：`ChunkGeometryArena` 新增 **indirect 参数缓冲**（每区块一条 20 字节 DrawIndexedIndirect 记录：
+  indexCount/instanceCount/firstIndex/baseVertex/firstInstance），槽位由空闲表复用；
+  索引缓冲**整块绑定一次**，每区块 `DrawIndexedIndirect(args, slot*20)`。
+  - 顺带去掉每区块一次 `SetIndexBuffer`（原来 329 次/帧）。
+- **验证**：全量 7 套 **1109 用例通过**；Release 窗口在放大化世界正常渲染（截图为实体地形，草/土/雪/水面齐全）；
+  `verify-performance -Walk`：**p99 8.73 ms**（405 区块），与改造前 8.29 ms 同量级（本阶段目的是为 GPU 剔除铺路，不是提速）。
+- **A3 设计（下一步）**：新增 compute pass `chunk_cull.wgsl`
+  - 输入：每槽 AABB（min/max）、基础 indexCount、视锥 6 平面 uniform；
+  - 输出：把被剔除的槽 `indexCount` 写 0（其余保持原值）；
+  - 之后 `Draw` 仍按槽发 `DrawIndexedIndirect`（被剔除者成为 no-op）。
+  这样 CPU 不再需要逐区块做可见性判断，且为后续 **MultiDrawIndexedIndirectCount**（一次调用画全部）留好结构。
+
+## 2026-10-31 实验分支：A3a 视锥剔除（CPU 参考实现 + 兜底开关）
+
+- `FrustumPlanes`：从 `viewProjection` 提取 6 个内平面（**System.Numerics 行向量约定，必须用矩阵列**：
+  这是我第一版的错误——用行得到 2/3 测试失败，改成列后 3/3 通过），`Extract` 归一化平面，`IsVisible` 用 AABB
+  "沿法线最远角"判定（保守，绝不误剔）。
+- `ChunkGeometryArena`：每个 slice 记录世界 AABB（从顶点位置求 min/max），`Draw(pass, planes)` 跳过视锥外区块，
+  `CulledLastFrame` 计数；`Draw(pass)` 保持全画（兜底）。
+- `WindowedRenderer`：每帧算 `CameraMath.BuildViewProjection` → 提取平面 → 传入绘制。
+- **兜底**：`FrameDiagnostics.DisableCulling`（宿主 `MC_CULL_DISABLE=1`）直接走 `arena.Draw(pass)`，不剔除。
+  这样 A2/A3 在"没有 GPU 剔除"或需要对照时都能退回 CPU 全画路径。
+- **验证**：7 套 **1112 用例全绿**；Release + 放大化：`cull: chunks=348 culled=61..89`（约 20%），画面正常。
+- **下一步 A3b**：`chunk_cull.wgsl` compute pass，写同一批 indirect 记录；`Available=false` 时自动回落到本 CPU 剔除。
+
+## 2026-10-31 记录：用户报告 `/tp` 导致客户端崩溃（未复现，待证据）
+
+- 用户原话：**"打 tp 会崩溃"**（2026-10-31，放大化世界，Release 客户端）。
+- 我用 mcpfabric 桥做了两次等价复现，**都没有崩**：
+  - `players.teleport -71 260 -119`（同区块附近）→ 存活，落在 `-70.5 218 -118.5 ground`；
+  - `players.teleport 4000 200 4000`（跨 4000 格，强制全量区块卸载/重载）→ 存活，落在 `4000.5 126.3 4000.5`。
+- 因此**不是**"位置跳变/区块重载"本身。可疑方向（按可能性排序）：
+  1. **聊天/命令输入路径**（用户在游戏内打字执行，而我们用的是桥命令，没走客户端聊天框）；
+  2. 之前出现过的 **wgpu-hal 交换链 panic**（`SwapchainAcquireSemaphore still in use`）——若 `tp` 触发窗口尺寸/表面变化会撞上；
+  3. `/tp` 到**目标实体**或带参数形式（`/tp <target>`）走不同的数据包分支。
+- **下次崩溃需要的证据**：控制台窗口最后 5–10 行（`stdout`/`stderr`），以及**确切的命令原文**。
+  客户端目前的 stderr 只落 `libpng` 警告，真正的 panic/异常信息在控制台里。
+
+## 2026-10-31 定位：游戏内 `/tp` 崩溃 = 整块 arena 重建 + 交换链 panic（有日志证据）
+
+用户在游戏内输入 `/tp` 后客户端崩溃。用桥的 `players.teleport` 短距/远距都不崩（那走服务端同一条路径），
+但**崩溃日志抓到了**：`/tp` 后某一帧 `uploaded +286092 KiB`（**约 279 MB 单帧上传**），随后 4 帧内出现
+
+```
+panicked at wgpu-hal-29.0.3/src/vulkan/swapchain/native.rs:359
+Trying to destroy a SwapchainAcquireSemaphore that is still in use by a SurfaceTexture
+```
+
+⇒ 两条独立缺陷叠加：
+1. **整块重建**：teleport 让几乎所有区块同时被替换，`ChunkGeometryArena` 容量不足 → `RebuildAll()` 一口气重写全部几何
+   （279 MB 单帧上传，帧时 144 ms），GPU 侧压力骤增/表面丢失；
+2. **wgpu-hal 交换链 panic**：表面 Lost 后 `Configure` 销毁交换链时，上一帧的 acquire 信号量仍在飞。
+   已在 `676cb2d` 加了 `OnSubmittedWorkDoneBlocking` 再 `Configure`，但**症状仍在**（说明是驱动侧 Lost 触发，不是单纯时序）。
+
+### 待修的方案（按优先级）
+1. **整体替换时重建而不是长大**：world 被整体替换（teleport/换维度）时，**清空并重建 arena 缓冲**（丢弃旧内容，按新规模一次分配），
+   避免"旧 300 MB + 新 300 MB 同存 + 全量重写"。
+2. **上传限流**：每帧最多上传 N MB（例如 8 MB），把突发摊到多帧；`updates` 计数已有，可直接用于预算。
+3. 交换链侧继续观察：若仍 panic，考虑**固定尺寸渲染目标 + 缩放呈现**，彻底绕开 reconfigure 路径。
+
+## 2026-10-31 **已稳定复现** `/tp` 崩溃（含原地 tp）
+
+- 复现方式（mcpfabric 桥，等价于服务端执行）：连续 5 次 `command.run "tp Blue_Coast ~ ~ ~"` → **客户端必崩**。
+  - 崩溃前日志：`frame #324 ... uploaded +132,800 KiB`（**单帧 130 MB**），随后
+    `wgpu-hal swapchain/native.rs:359 panicked: Trying to destroy a SwapchainAcquireSemaphore that is still in use`。
+  - 之前单次、远距的 teleport 没崩，是因为那一次的上传量小；连打（或一次性整体替换）就撞上。
+- 结论修正：崩溃与"聊天框显示"无关（用户指出服务端原地 tp 也崩，验证正确）；
+  真正的链条是 **tp → 服务端围绕玩家重发/重建大量区块 → 客户端单帧全量重建 arena（130–279 MB 上传）
+  → 帧时暴涨 / 表面丢失 → wgpu-hal 交换链 panic**。
+- 另外：本分支先前加的 `OnSubmittedWorkDoneBlocking` **是回归**（分支启动即 panic，主线正常）——**已撤回**，
+  撤回后分支正常启动（pid 11308）。
+- 修复计划不变：①整体替换时重建 arena（而不是在旧内容上长大+全量重写）②**每帧上传限流**（如 8 MB）
+  ③若仍 panic 再改固定尺寸渲染目标 + 缩放呈现。
+
+## 2026-10-31 按原版源码核对：命令包只含文本；崩溃在 system_chat 的组件解码
+
+按要求翻阅 `../mc-26.3-analysis/src`：
+
+- `ServerboundChatCommandPacket` 的 `write` **只写 `output.writeUtf(this.command)`**，构造也只读 `input.readUtf()`
+  ⇒ **我们最初只写命令文本是对的**；我上一版的"补齐 22 字节"正好是服务端报的 `found 22 bytes extra`，**已 revert**。
+- `ClientboundSystemChatPacket` = `record(Component content, boolean overlay)`，用
+  `ComponentSerialization.TRUSTED_STREAM_CODEC` 解码 ⇒ **没有 chat type/装饰**，崩溃点只可能在**组件树解码**。
+- 我们的 `ComponentRuns` 已支持 `text`/`translate`(带 `with` 参数)/`fallback`/`extra`，`LanguageTable.Format` 缺键时
+  返回 key 不抛异常 ⇒ 不是"完全不支持 translatable"，更可能是 **trusted 变体的字节格式**（长度前缀/结尾标记）
+  或 `chat.type.admin` 这类带参数组件在 `FlattenArguments` 上的处理。
+- 崩溃机理：客户端在消息处理路径上退出 → 关闭进程 → 才出现 wgpu 交换链 panic（**panic 是症状，不是原因**）。
+- **下一步**：①逐字节对照 `TRUSTED_STREAM_CODEC`（Nbt 组件、是否有长度前缀、末尾 END）与我们的读取；
+  ②让宿主层打印**托管异常栈**（目前 stderr 只有 Rust panic），才能一次定位。
+
+## 2026-10-31 A/B：崩溃与视锥剔除无关，只在"客户端内输入命令"时出现
+
+- 分支 + 放大化，**不做任何输入**，剔除开启跑满 75 s：**存活**（`cull: chunks=367 culled=236`）；
+  剔除关闭（`MC_CULL_DISABLE=1`）跑 75 s：**存活**。⇒ **剔除不是崩溃原因**。
+- 只有用 SendKeys 在游戏内 **T → "/tp ~ ~ ~" → Enter** 时客户端才死；服务端对应看到 `<Blue_Coast> /tp`
+  （因为用 T 打开聊天框时 `isCommand=false`，整行按 **chat** 发出去，带前导斜杠），随后 5 s 发出 `[Blue_Coast: ...]`
+  的 **system_chat**（translatable `chat.type.admin`），客户端就在这之后退出 → 才出现 wgpu 交换链 panic。
+- 已在宿主层加**兜底 catch**（`window crashed: <完整异常>`），此前非 IO/InvalidOperation 的异常会直接逃逸，
+  只剩 Rust panic，看不到托管栈。**下一次复现请把控制台里 `window crashed:` 后面的内容发我**。
+- 另：`ServerboundChatCommandPacket` 只有命令文本（已按原版核对并回退），不要再加字段。
+
+## 2026-10-31 **已修复并实测通过**：`/tp` 崩溃 = NBT 空键被拒（组件含无名 compound）
+
+抓到的托管栈（第一次真正看到）：
+
+```
+System.ArgumentException: The value cannot be an empty string. (Parameter 'name')
+  at NbtReader.ReadCompound line 127      <- compound.Set(name, ...)
+  at NbtReader.ReadList     line 167      <- 列表里的 compound 元素
+  at ChatPackets.TryReadSystemChatStyled  line 75
+  at InteractiveSession.DrainIncoming
+```
+
+**原版依据**（`ref://mc-26.3-analysis/src/net/minecraft/nbt/CompoundTag.java`）：`loadCompound` 用
+`input.readUTF()` 作 key 放进 `Maps.newHashMap()`，**从不校验空字符串**；而 NBT 的"compound 列表"元素本来就不带名字。
+`[Blue_Coast: Teleported ...]` 是 translatable 组件，其 `with` 参数正是这种结构 ⇒ 我们**比原版更严**的
+`ArgumentException.ThrowIfNullOrEmpty(name)` 直接抛异常，把会话弄断。
+
+**修复**
+1. `NbtCompound.Set` 只拒绝 null，允许空键（对齐原版）；新增两个回归测试
+   （空键条目、compound 列表元素）——`tests/Sharpcraft.Common.Tests/Nbt/EmptyNameTests.cs`
+2. 退出时**不再销毁 surface/adapter/device**（改为有意泄漏）：销毁交换链会触发 wgpu-hal
+   `SwapchainAcquireSemaphore still in use` 的 abort；进程退出由驱动回收。实测 `exit code 0`，**不再 panic**。
+3. 宿主层兜底 catch 打印 `window crashed: <完整异常>`（这次就是靠它拿到的栈）。
+
+**实测**：游戏内 T → `/tp ~ ~ ~` → Enter，客户端**存活**（pid 53724，落在地面），全量 7 套 / 1114 用例通过。
+
+## 2026-10-31 老问题确认：流式区块只上传**不透明**层（远处/新区块的透明方块隐形）
+
+用户报告（并指出是**老问题**，与 A2/A3 无关）：出生点附近的透明方块正常，稍远或新加载的区块里透明方块（水/玻璃）**看不见**。
+
+代码依据（已核对，非猜测）：
+- `ChunkMesher` 每区块产出**三层**：不透明 `Vertices/Indices` + `cutout` + `translucent`（日志 `layers: cutout … tri, translucent … tri`）；
+- 但 `WindowCommand` 的流式上传只做了
+  `updates.Add((key, new GeometryData(mesh.Vertices, mesh.Indices)))` —— **只带不透明层**；
+  `GeometryData.cs` 也只有 `(float[] Vertices, uint[] Indices)` 两个字段；
+- 初始预加载/帧请求路径另有 `CutoutVertices/CutoutIndices`（`WindowedRenderer` L901）只覆盖**首次**那批区块。
+⇒ 所以**只有出生时加载的那批**有透明/镂空几何，之后流入的区块没有。
+
+**修复方向**（下一步）：`GeometryData` 扩成三层；`ChunkGeometryArena` 每区块持三组 slice（或三个 arena）；
+渲染器按 不透明 → cutout → translucent 三个 pass 绘制（半透明按距离从远到近）。
+
+## 2026-10-31 A 系列计划（更新）
+
+| 项 | 内容 | 状态 |
+| --- | --- | --- |
+| A1 | 顶点格式 48 → 24 B（颜色/UV/光照打包）| 暂缓（用户判断带宽不是瓶颈、风险大）|
+| A2 | 每区块 indirect 绘制参数（DrawIndexedIndirect，索引缓冲整块绑定一次）| **完成** `0c73230` |
+| A3a | CPU 视锥剔除参考实现 + `MC_CULL_DISABLE` 兜底 | **完成** `ab32861` |
+| A3b | `chunk_cull.wgsl` compute 视锥剔除（`Available=false` 回落 A3a）| **进行中** |
+| A4 | GPU 遮挡剔除（上一帧 Hi‑Z）| 未开始（回落 A3b/A3a）|
+| **A5** | **三层流式**：`GeometryData` 扩为 opaque/cutout/translucent，arena 每区块三组 slice，渲染三 pass（半透明按距远→近）| **新排入**（老问题，用户确认）|
+
+约定：A1–A5 每条都必须保留"不可用时退回 CPU 路径"的兜底。
+
+## 2026-10-31 A5 三层流式：落点已定位，实施清单
+
+已确认丢弃点（本分支代码现状）：
+
+- `ChunkWorkerPool` L409-418：每次 `MeshChunk` 都建了 `cutoutScratch` / `translucentScratch` 两个临时缓冲，
+  **算完直接 Dispose**（注释说明"渲染用的 cutout/translucent 来自另一条 pass"），只把不透明层
+  `buffer.ToMeshData(0)` 入队 `_meshes`。
+- `GeometryData` 只有 `(float[] Vertices, uint[] Indices)`。
+- `WindowedRenderer` 只有首帧路径 `currentRequest.CutoutVertices/TranslucentVertices`（L929/L946）。
+
+实施清单（按依赖顺序，每步可独立编译与验证）：
+
+1. **数据层**：`GeometryData` 增加 `CutoutVertices/CutoutIndices/TranslucentVertices/TranslucentIndices`（默认空数组）。
+2. **产出层**：`ChunkWorkerPool` 把两个 scratch 也 `ToMeshData(0)` 并随不透明层一起入队（队列元素加两个字段）。
+3. **上传层**：`WindowCommand` 的 `geometryUpdates` 把 4 个数组一起塞进 `GeometryData`；
+   `ChunkGeometryArena` 扩展为**每区块三组 slice**（或实例化三个 arena：opaque/cutout/translucent），
+   每组的 indirect 参数与 culler 各自独立。
+4. **绘制层**：`WindowedRenderer` 增加两个 pass——`cutoutPipeline` 画 cutout arena、
+   `translucentPipeline` 画 translucent arena（先按区块中心距离**由远到近**排序，真正的逐面排序列为后续）；
+   三层都沿用 A2 的 indirect 与 A3b 的 cull（各自一个 `ChunkCuller`）。
+5. **兜底**：任一层缺失/为空 → 跳过该 pass；`MC_CULL_DISABLE=1` 与 `Available=false` 行为不变。
+6. **验证**：放大化世界里 `verify-photos`（同机位截图）对比"修复前后：远处水/玻璃是否出现"；
+   并记录上传字节与 p99（同时把**每帧上传限流 8 MB** 一并做掉，压住 `over33`）。
+
+注：核心变量是 `ChunkGeometryArena` 的"每区块一个 slice"假设；改成三组 slice 时，`SlotHighWater` 与
+culler 的 `slots` 要按层各自维护，避免再犯 A3b 那次"按在册数量分发"的错误。
+
+### A5 进度
+- **第 1 步完成**：`GeometryData` 已增加 `CutoutVertices/CutoutIndices/TranslucentVertices/TranslucentIndices`
+  （全部可选、默认 null ⇒ 零破坏，全量测试通过）。这是纯数据契约层，不改变任何渲染行为。
+- 第 2 步（`ChunkWorkerPool` 保留两个 scratch 并入队）涉及队列元素类型 `(long Key, MeshData Mesh)` 的扩展，
+  会连带改动 `WindowCommand` 的两处解构，**下一步单独提交**。
+
+### A5 第 2 步补充：还多一层需要改（勘察结果）
+
+第 2 步不止改 `ChunkWorkerPool`，`ChunkMeshCache` 也有一条中间层：
+
+- `ChunkWorkerPool._meshes`：`ConcurrentQueue<(long Key, MeshData Mesh)>`（L47），入队在 L427。
+- **`ChunkMeshCache.DrainUpdates()`** 返回 `List<(long, MeshData)>`，内部 `_updates` 与 `Combine()` 都按两元组走 —— 三层必须一起扩。
+- `WindowCommand` L393/397 的 `List<(long Key, MeshData Mesh)> drained` 与 L441（mesh order）、L456（`new GeometryData(...)`）三处解构。
+
+建议做法：新增 `readonly record struct MeshedChunk(long Key, MeshData Opaque, MeshData Cutout, MeshData Translucent)`，
+把三处元组统一换成它，`MeshData` 本身不动（避免影响 `Snapshot/Combine` 的其它调用者）。
+
+**下一步从这里继续**：先加 `MeshedChunk`，再改 pool 入队 → cache `DrainUpdates` → WindowCommand 透传 →
+三个 arena → 两个 pass → 五条退化 → 上传限流与截图验证。
+
+### A5 第 2 步完成
+- 新增 `MeshedChunk(long Key, MeshData Opaque, MeshData? Cutout, MeshData? Translucent)`（`Client/Render/MeshedChunk.cs`）。
+- `ChunkWorkerPool`：两个 scratch **不再 Dispose**，随不透明层一起入队；`TryTakeMesh` 增加两个 out 参数。
+- `ChunkMeshCache`：`_updates` / `DrainUpdates()` / `SnapshotAll()` 全部改为 `MeshedChunk`。
+- `WindowCommand`：`replayQueue`、`drained`、两处解构与 `GeometryData(...)` 六参构造全部透传三层。
+- 全量测试通过；**渲染行为尚未改变**（下一阶段才用这些层）。
+
+### A5 第 3–6 步完成（三层流式打通）
+
+- **三个 arena（方案 A）**：`arena` / `arenaCutout` / `arenaTranslucent`，各自一个 `ChunkCuller`；
+  每帧按 `SlotHighWater` 各自 dispatch 剔除；重置/重建时三者一起重建。
+- **两个新 pass**：`cutoutPipeline` 画 cutout arena、`translucentPipeline` 画 translucent arena（当前按槽位顺序，
+  **逐面/按距排序仍是已知缺口**，作为第 5 条退化路径显式记录）。
+- **退化路径**：① 层为空 → 跳过该 pass；② 每层 arena 独立（互不影响）；③ 每帧 **8 MB 上传预算**，
+  超出部分进 `uploadQueue` 顺延到下一帧（先有陆地后有水，可观测、不丢数据）；④ cull 不可用 → 各自回落 CPU 剔除/不剔除；
+  ⑤ 半透明排序退化（槽位顺序）。
+- **验证（Release + 放大化）**：
+  - `cull: chunks=677 culled=0 cutout=650 translucent=628` —— 流式区块的层**真的在上传了**（此前恒为 0）
+  - 截图一（700,63,700）：湖面与水下地形正常 → 水（translucent）在新区块可见
+  - 截图二（1501,92,1501，雪原针叶林）：树叶（cutout）与雪地正常、无空洞
+  - 全量 **7 套测试通过**
+
+### A5 后性能复测（三层 + 8MB 限流，静止机位，45s）
+
+| | mean | p50 | p95 | p99 | max | over33 | 区块 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| A3b（两层未启用） | 5.57 | 5.56 | 6.48 | **7.78** | 74.6 | 2 | 328 |
+| **A5（三层 + 限流）** | 5.62 | 5.54 | 6.84 | **8.76** | **292.5** | 4 | 657 |
+
+结论：三层绘制多花 ~1 ms（合理，多两个 pass）；**max 292 ms 是 arena 增长时全量重写**（`3 full rebuilds`，三套 1 GiB 缓冲），
+这是下一个明确的优化点（分页/预分配，或上传限流扩到重建）。
+
+### 剩余任务（本分支未完成）
+
+1. **A4 GPU 遮挡剔除**：用上一帧深度金字塔，在 compute 里对区块 AABB 做遮挡测试，写同一批 indirect 参数
+   （与 A3b 同结构，只多一个 Hi-Z 纹理绑定 + 采样）。回落：Hi-Z 不可用 → A3b 视锥剔除。
+2. **半透明排序**：目前按槽位顺序绘制（退化路径⑤）；按区块中心距离**远→近**排序即可覆盖绝大多数视觉问题，
+   逐面排序列为后续。
+3. **重建尖峰**：`max 292 ms`，三套 arena 各自全量重写；考虑预分配/分页，或把重建也纳入上传预算。
+
+### ③ 重建尖峰：已修（max 292 ms → 67 ms）
+
+- `ChunkGeometryArena.AssumedBytesPerChunk`：96 KB → **512 KB**（实测放大化约 0.5 MB/区块，原来低估 6 倍，导致反复全量重写）
+- 新增 `MaxPresizeBytes = 256 MB`：单次预分配封顶，避免"分配一个巨大缓冲"本身变成尖峰
+- 实测（静止机位 45 s）：`max=67.08 ms`、`over33=4`、`2 full rebuilds`（此前 `max=292.49`、`3 full rebuilds`）
+- 仍待做：② 半透明按距排序、① A4 GPU 遮挡剔除
+
+### ② 半透明按距排序：已完成
+
+- `ChunkGeometryArena.DrawFarthestFirst(pass, eye)`：按区块中心与相机的**距离平方降序**绘制半透明层；
+  复用 `SortKey[]` 字段 + `struct SortKey : IComparable<SortKey>`（**每帧零分配**，符合热路径要求）。
+- `WindowedRenderer` 的半透明 pass 改用它。
+- 验证：湖区截图层次正确（远处水更淡、近处水在前、水下地形可见）；全量 7 套测试通过。
+- 记录为**近似**：逐面排序更精确，但成本远高于收益（方块尺度下区块级排序已足够）。
+
+### ① A4 GPU 遮挡剔除：设计与前置条件（未实现）
+
+- 前置：`CreateDepthTexture` 目前 `Usage = RenderAttachment`，**必须加 `TextureBinding`** 才能在 compute 里采样
+  （否则创建 bind group 会报验证错误）。
+- 数据：culler 已持有每槽 AABB 与 indirect 参数，A4 只需
+  ① compute 之前（此时深度纹理仍保存**上一帧**内容）绑定 depth view + sampler；
+  ② uniform 里增加 `mat4x4` 视图投影 + 视口尺寸；
+  ③ 着色器把 8 个 AABB 角投影到屏幕，取屏幕矩形内若干采样点的**最大**深度，与区块**最近**深度比较
+     （`nearest > maxSampled + bias` 判为遮挡）。
+- 保守性：任一角在近平面之后（`w <= 0`）→ 不做遮挡判定；bias 取保守值；`Available=false` 或
+  `MC_CULL_DISABLE=1` → 回落 A3b 视锥剔除。建议先做成**默认关闭的宿主选项（如 `MC_OCCLUSION=1`）**，
+  用同机位截图与"不剔除"对比像素差，达标后再默认开启。
+- 预期：视距大、地形遮挡多时才有明显收益；当前 328–657 区块、960×540 下预估 <0.5 ms，需实测确认是否值得默认开。
+
+## 2026-10-31 冰面问题的原版对照
+
+原版事实（`ref://mc-26.3-analysis/src`）：
+- `Blocks.ICE`：`BlockBehaviour.Properties.of()...noOcclusion()` —— 冰**不遮挡**，相邻方块的面向冰的面仍然绘制。
+- `ChunkSectionLayer.TRANSLUCENT` 用 `RenderPipelines.TRANSLUCENT_TERRAIN`（`TERRAIN_SNIPPET` +
+  `BlendFunction.TRANSLUCENT` + `ALPHA_CUTOUT 0.1` + `DepthStencilState.DEFAULT` 即**深度写入开**）。
+  ⇒ 半透明**用纹理自身 alpha**、只剔除 alpha<0.1 的像素、写深度、按区块从远到近。
+- 26.3 另有 **OIT 路径**（`OIT_ALPHA_ONLY`/`OIT_DEPTH_BOUNDS`/`OIT_TRANSMITTANCE`，深度比较 `GREATER_THAN_OR_EQUAL` 且不写），
+  属于更高级的透明方案，暂不引入。
+
+我们与之一致的差距已修：`fs_translucent` 原来输出**固定 alpha 0.7**（注释写着"water 占位"），
+现改为 **使用纹理 alpha + `discard < 0.1`**（对齐 `ALPHA_CUTOUT 0.1`）。
+
+**尚未解释的现象**：冰原截图里仍有**成片黑色方块**；同机位关掉剔除（`MC_CULL_DISABLE=1`）截图**完全一致**
+⇒ **不是剔除问题**，问题在光照/几何/采样路径，下一步需要针对"黑色面"定位（怀疑是这些面的光照被算成 0）。
+
+### 冰/水透明排序：根因是**没有写深度**（已修，黑块消失）
+
+- 原版 `TRANSLUCENT_TERRAIN` 用 `TERRAIN_SNIPPET` 的 `DepthStencilState.DEFAULT`（**深度写入开启**），
+  所以即使区块内四边形顺序不完美，**较远的透明面会被深度测试挡掉**，不会叠加成黑块。
+- 我们 `CreateTranslucentPipeline` 之前是 `LessEqual, write: false` —— 不写深度，远处透明面照样叠加，
+  于是"背后不该看见的面"透出来，表现为成片黑色方块（用户判断：与排序是同一类问题，正确）。
+- 修复：`write: true`（`WGPUCompareFunction.LessEqual` 不变，我们的深度是 0..1 近…远）。
+- 结果：**同机位冰原截图黑块全部消失**，冰面连成整片、水下地形正常透出。
+- 仍保留"按区块远→近"排序（`DrawFarthestFirst`）作为补充；逐面排序依旧不做。
+
+### 冰面分块感：关掉贪心合并的实验（结果：不可行，但学到关键数据）
+
+做法：临时把 `MergeSectionFaces` 的扩充循环条件改成 `Merge=false`（每面一个四边形，与原版一致），Release 跑冰原同机位。
+结果：**客户端崩溃** —— `wgpuDeviceCreateBuffer: Not enough memory left`，之前几帧上传量 140–230 MB。
+
+结论：
+- **贪心合并是我们内存能活下来的关键**：每面一个四边形会让几何量约 **4×**，三套 arena 直接爆显存。
+  （这也解释了原版为什么吃内存：原版不合并。）
+- 因此**不能靠"关合并"消除分块感**，必须在合并路径内解决：
+  ① 逐顶点光照 + AO（原版 `ModelBlockRenderer.tesselateAmbientOcclusion` / `BlockQuadLighter`）
+  ② 检查合并四边形的 UV/mip 连续性（相邻合并四边形尺寸不同 → mip 选择不同 → 可见边界/斜带）
+- 实验已 `git checkout` 回滚，分支保持绿色（`42afe47`），游戏已恢复运行。
+
+## 2026-10-31 出生 9 区块颜色不同：**双绘制路径**（已修）
+
+用户观察到：进游戏后**周围 9 个区块的颜色与远处明显不同**。
+
+- 原因：出生那批区块由 `FrameCommand.BuildRequest` 产出的**静态合并网格**（`currentRequest.Vertices` /
+  `CutoutVertices` / `TranslucentVertices`）绘制，而后续流入的区块走 **arena** 路径。两条路径的着色/光照不一致
+  ⇒ 3×3 区块色块。
+- **原版对照**：原版没有"静态世界副本"这一层——`SectionRenderDispatcher` 把每个 section 编进自己的缓冲，
+  **所有区块同源绘制**。我们的双路径本身就是偏离。
+- 修复：`useStaticWorld = arena is null || arena.ChunkCount == 0`，**arena 一旦有内容就不再画静态副本**
+  （opaque / cutout / translucent 三处都加了这个门）。出生区块由 arena 的 `replayQueue` 补齐。
+- 同时（上一处实验后保留）：`textureSampleGrad` + 未回绕 uv 的显式梯度，消除合并四边形之间的 mip 跳变。
+- 结果：出生 3×3 色块消失，冰面大幅趋于均匀（仍有轻微横向条带，属合并四边形的光照/mip 残差，下一步做逐顶点光照+AO）。
+
+## 2026-10-31 逐精灵 mip：已实现；但**不是**冰面条带的原因（同机位实测）
+
+- 重写 `AtlasMipChain.Build`：按**精灵归属**生成 mip（先建 level-0 归属图，padding 用环形搜索找最近精灵），
+  每级把源 2×2 块**夹取到该精灵矩形内**再按 alpha 加权平均 ⇒ 永不相邻精灵渗色（对齐优化模组做法）。
+- **同机位对照**（两次都先 `players.get` 读回确认 pose 完全一致：`x=1080.5 y=63 z=800.5 yaw=-90 pitch=40`）：
+  旧（整图集 mip）vs 新（逐精灵 mip）像素差 **0.171/255，仅 0.12% 像素** ⇒ **视觉几乎无差别**。
+- 结论：**冰面的分块/条带不是 mip 渗色造成的**。mip 修复仍然保留（它是正确性修复，防止其它表面渗色）。
+
+### 下一步（按 Sodium 调研结果）
+- Sodium 的 `translucent_sorting` 是**逐 section 内的四边形排序**：BSP 树 + 四边形切分（`bsp_tree`、`quad`），
+  常用快路径是 `SortType.STATIC_NORMAL_RELATIVE`（构建期按法线距离静态排好，必要时才动态重排），
+  section 之间再按距离排序。
+- 我们现在只有**区块级**远→近；冰面条带更像是**每四边形只取一次光照**导致（相邻合并四边形明暗不同）。
+  下一步应做 ① 逐顶点光照 + AO（原版 `BlockQuadLighter`），② 若仍不够，再引入 Sodium 式的 section 内四边形排序。
+- Sodium 许可证：**LGPL-3.0**（与本项目一致），可阅读参考；实现仍须自行编写（原则 3）。
+
+## 2026-10-31 冰面"大块矩形"真因：**水面与冰面共面 z-fighting**
+
+- 用户指出所见是**浮冰**（冰盖在冻洋水面上）。逐精灵 mip（同机位 0.12% 差异）与**逐顶点光照+AO**（同机位几乎一致）
+  都验证过：**都不是这些矩形的原因**。
+- 真因：我们**没有实现流体高度**（全局搜索无 `0.875`/`FluidHeight` 之类），水体按**整方块**发射，
+  水面顶面在 `y+1`，与冰方块顶面**同一平面** ⇒ 深度相等、逐四边形"谁先写谁赢" ⇒ 大片矩形色块。
+  原版 `LiquidBlock`/`FlowingFluid` 的源水高度是 **14/16 = 0.875**，水面比方块顶低 1/16，不会与浮冰共面。
+- 修复方向：mesher 对流体按**源水 0.875**（流动水按四角高度另算）发射顶面与侧面；这是"真正透明的冰"瑕疵的根因。
+
+### 本轮已实现（与原版对齐，已提交）
+- 逐顶点平滑光照 + AO（`CornerShade`：四格取光平均 + 1.0/0.75/0.5/0.25 遮挡衰减，双面遮挡封顶 0.5）
+- `Occludes` 修正：**半透明层方块永不遮挡**（原版 `noOcclusion`），此前冰被当遮挡物导致相邻面被剔、全场压暗
+
+## 2026-10-31 阶段 1：流体高度（按方块名）+ 半透明不写深度
+
+- `MeshBuffer` 新增**浮点坐标**的 `AppendQuad`/`WriteVertex`（顶点本来就是 float，只是此前只从整数格写入）。
+- `ChunkMesher.EmitMergedQuad`：方块名为 `water`/`lava` 时，把四边形**顶边**下移 **1/16（=0.875 源水高度）**，
+  水面不再与浮冰顶面共面（消除 z-fighting 的直接原因）。
+  - 限制：**流动水的高度差**需要方块状态 `level` 属性，属阶段 2；源水 0.875 已足够消除共面。
+- 半透明 pass **恢复不写深度**：按整列区块排序时，写深度会把"更远区块的透明物体"挡没（用户实测：
+  透过冰看不见其它区块的透明物）。代价是共面瑕疵——正好由流体高度消掉。
+- 结论记录：正确组合是 ①按 section（16³）排序 + ②写深度；当前用 ③按列排序 + 不写深度 + 流体高度，
+  作为阶段 1 的折中。阶段 2 引入方块状态后再做 ①。
+### 逐面剔除依据（原版 + Sodium 都核对过）
+
+- 原版 `Block.shouldRenderFace`（`world/level/block/Block.java` L295-309）：
+  **只有** `neighborState.getFaceOcclusionShape(direction.getOpposite()) == Shapes.block()` 才剔除；
+  `Blocks.GLASS` 与 `Blocks.ICE` 都带 **`.noOcclusion()`** ⇒ 冰-冰、玻璃-玻璃之间的面**照画**。
+- Sodium `render/model/AbstractBlockRenderContext.java`：同样的规则（注释原文：*"if the neighbor has a
+  full-block occlusion shape, the face is always hidden"*），且 Sodium 有**独立的** `DefaultFluidRenderer`
+  自己处理流体遮挡 ⇒ 流体单独归类，符合"同族只对 water/lava 剔除"。
+- 因此把 `ShouldCullFace` 的"同家族即剔除"改为：**仅 `water`/`lava` 同族剔除**；冰/玻璃保留内部面。
+
+## 2026-10-31 **关键**：26.3 的透明根本不是靠排序，而是 **OIT**
+
+在分析工作区 `client/renderer/LevelRenderer.java` 里查到：
+
+- `L460 / L554`：`executeOit(chunkSectionsToRender, ...)`、`executeOitWaterMask(...)` —— 每帧走 **OIT 管线**
+- `L230/L238/L239/L399/L405/L409`：OIT 专用目标
+  `oitCloudDepth`、`oitTerrainWithWaterPatchDepth`、`OIT_TRANSMITTANCE_TARGET_COUNT` 组透射目标
+- `L109-L111`：`OIT_WAVELET_RANK = 2`、`OIT_COEFFICIENT_COUNT = 2^3 = 8`、`OIT_TRANSMITTANCE_TARGET_COUNT = 2`
+- `RenderPipelines` 里的 `OIT_ALPHA_ONLY / OIT_DEPTH_BOUNDS / OIT_TRANSMITTANCE / OIT_ACCUMULATE`
+  片段使用 `BlendFunction.ADDITIVE`、`CompareOp.GREATER_THAN_OR_EQUAL`、**不写深度**、`GpuFormat.RGBA16_FLOAT`
+- `ChunkSectionLayer.TRANSLUCENT` 只是"半透明"的归类；真正解决顺序问题的是 OIT 那一层。
+
+⇒ **结论**：我们一直在用"排序 + 深度写/不写"去解决一个 26.3 用 **OIT** 解决的问题，
+所以无论怎么调排序都只是缓解，永远达不到原版。这也解释了为什么共面冰/水、透过冰看远处水等组合怎么改都有残渣。
+
+### 三条路线
+1. **加权混合 OIT（McGuire & Bavoil 经典款）**：一个累积目标(RGBA16F) + 一个 revealage 目标，无需排序；
+   wgpu 完全能做。改动中等（两个额外目标 + 一次全屏 resolve + 半透明着色器改成输出 weight）。
+2. **对齐 26.3 的 depth-bounds + transmittance OIT**：效果最接近，但需要 2 组透射目标 + 多次 pass，工程量大。
+3. **继续排序路线**（按 section 排序 + 写深度）：只能缓解，且要引入 section 级切片，收益不如 1。
+
+### OIT 路线 1：实施计划（已确认开工，下一步直接照此落地）
+
+1. **新着色器文件** `Shaders/pipelines/oit_resolve.wgsl`（独立模块，避免与 terrain 共享绑定）：
+   - 顶点：全屏三角形，输出 uv
+   - 片元：`accum = textureSample(accumulate, ...)`、`reveal = textureSample(reveal, ...)`；
+     `alpha = 1 - reveal.r`，`rgb = accum.rgb / max(accum.a, 1e-5)`，返回 `vec4(rgb, alpha)`
+   - 绑定：`@group(0) @binding(0) texture_2d<f32>`、`@binding(1) sampler`、`@binding(2) texture_2d<f32>`
+2. **terrain.wgsl 增加** `fs_translucent_oit`：输出两个 target
+   `@location(0) vec4(colour * a, a)`、`@location(1) vec4(a)`（保留 `discard < 0.1`、`textureSampleGrad`）
+3. **WindowedRenderer**：
+   - 随窗口尺寸创建 `accum`(RGBA16Float) / `reveal`(R16Float)，`RenderAttachment | TextureBinding`，并随 resize 重建
+   - `CreateTranslucentOitPipeline`：2 个 color target，
+     accum 混合 `(ONE, ONE)`/`(ONE, ONE)`、reveal 混合 `(ZERO, ONE_MINUS_SRC_ALPHA)`；深度测试开、写关
+   - `CreateOitResolvePipeline`：1 个 color target，混合 `(SRC_ALPHA, ONE_MINUS_SRC_ALPHA)`；深度 Always、写关
+   - 帧结构改为 4 个 pass：
+     A 主 pass（天空/不透明/cutout + 动态几何）
+     B OIT pass（清 accum=0 / reveal=1，depth=Load 深度，画半透明）
+     C resolve pass（全屏三角形把 accum/reveal 合成到主颜色目标）
+     D UI pass（原 UI 代码整体搬到这里）
+4. 验证：同机位截图（冰/水/透过冰看水/共面）、p99 影响；`DrawFarthestFirst` 保留为无害辅助。
+
+### OIT 第 1 步完成（着色器脚手架，画面不变）
+- 新增独立模块 `Shaders/pipelines/oit_resolve.wgsl`：全屏三角形 + `fs_oit_resolve`
+  （`coverage = 1 - reveal.r`、`rgb = accum.rgb / max(accum.a, 1e-5)`），自带三个绑定。
+- `terrain.wgsl` 增加 `fs_translucent_oit`（双输出：`(colour*a, a)` 与 `(a)`，保留 `discard<0.1` 与 `textureSampleGrad`）。
+- **实测**：Release 启动正常（`#1652`），说明新入口在 Naga 里能编译；画面与之前一致（尚未接线）。
+- 下一步：`accum`(RGBA16F)/`reveal`(R16F) 目标 + 两个管线 + **4 pass 拆分**（主 → OIT → resolve → UI）。
+
+### 透明管线总计划（用户确认）
+
+1. **OIT 路线 1（加权混合）**：先落地，作为**默认**管线（开销小、无需排序）。
+   - 第 1 步（已完成，`175be3b`）：着色器入口就位并验证可编译。
+   - 第 2 步：`accum`(RGBA16F)/`reveal`(R16F) 目标 + 两个管线（translucent-oit / resolve）。
+   - 第 3 步：4 pass 拆分（主 → OIT → resolve → UI），同机位截图验证。
+2. **原版 OIT 复刻（depth‑bounds + transmittance）**：路线 1 完成后再做，作为**高质量管线**。
+   - 依据 `LevelRenderer.executeOit` / `RenderPipelines.OIT_*`：两组透射目标 + depth bounds + 水面 mask。
+3. **按平台性能切换**：两条管线共用同一套半透明几何与 arena，只切换目标与 pass 组合；
+   用宿主层选项（如 `MC_TRANSPARENCY=weighted|reference`）选择，默认 weighted，失败自动回落 weighted。
+   注意原则 13：开关只在宿主层解析，游戏程序集只接收显式选项。
+
+### OIT 第 2 步：可直接照抄的要点（下次开工用）
+
+**目标**（`WindowedRenderer` 里 depth 创建处之后，并加入 resize 重建与 Dispose）：
+```csharp
+var accumTexture  = device.CreateTexture(new TextureDescriptor {
+    Size = new Extent(frameWidth, frameHeight, 1), MipLevelCount = 1, SampleCount = 1,
+    Dimension = WGPUTextureDimension._2D, Format = WGPUTextureFormat.RGBA16Float,
+    Usage = TextureUsage.RenderAttachment | TextureUsage.TextureBinding });
+var revealTexture = ... Format = WGPUTextureFormat.R16Float ...;   // 同上
+```
+
+**半透明 OIT 管线**（入口 `fs_translucent_oit`，两个 color target）：
+- target0(accum, RGBA16F)：`color = { Add, One, One }`、`alpha = { Add, One, One }`
+- target1(reveal, R16F)：`color = { Add, Zero, OneMinusSrcAlpha }`
+- 深度：`Depth32Float, LessEqual, write:false`；顶点布局/步长与现有 terrain 相同
+
+**resolve 管线**（`ShaderLibrary.Load("oit_resolve")`，`vs_fullscreen`/`fs_oit_resolve`）：
+- 1 个 target：`{ Add, SrcAlpha, OneMinusSrcAlpha }`；深度 `Always, write:false`；无顶点缓冲（`pass.Draw(3)`）
+- 绑定：`@group(0) 0: texture(accum) / 1: sampler(Linear,Clamp) / 2: texture(reveal)`，
+  采样器用 `MagFilter/MinFilter = Linear`、`AddressMode* = ClampToEdge`
+
+**帧结构（4 pass）**：
+1. 主 pass：天空 → 不透明 arena → cutout arena → 静态世界(仅 `useStaticWorld`) → 动态几何
+2. OIT pass：`BeginRenderPass(accum=Clear0, reveal=Clear1, depth=Load(depthView))`，
+   `SetPipeline(translucentOitPipeline)`、绑定相机 bindGroup、`arenaTranslucent.DrawFarthestFirst(pass, eye)`
+   （排序已无必要，保留无害）、静态半透明（仅 `useStaticWorld`）
+3. resolve pass：`BeginRenderPass(colour=Load(mainView))`，`Draw(3)`
+4. UI pass：原 UI 绘制块整体搬入
+注意：`pass.End()` 位置要随之移动；UI 使用 `uiTransformBuffer` 自己的绑定，不受影响。
+
+## 2026-10-31 OIT 第 2/3 步完成（窗口路径加权混合 OIT）
+
+**已落地**（`src/Sharpcraft.Framework/Rendering/WindowedRenderer.cs`）：
+
+1. 两个帧尺寸目标 `accum`(RGBA16F)/`reveal`(R16F)，含 resize 重建与 Dispose；`oitSampler`(Linear/Clamp)；
+   独立 `oitResolveBindGroupLayout`（texture0/sampler1/texture2）。
+2. 两条管线：`CreateTranslucentOitPipeline`（双 target，accum `One/One`、reveal `Zero/OneMinusSrcAlpha`，
+   深度 `LessEqual` 写关）、`CreateOitResolvePipeline`（`SrAlpha/OneMinusSrcAlpha`，深度 `Always` 写关，`Draw(3)`）。
+3. 帧循环拆 **4 pass**：主 → OIT（accum=0/reveal=1，深度 Load 只读）→ 解算 → UI；`pass.End()` 已随各 pass 移动。
+4. `ShaderPipelines.All` 新增 `oit_resolve` 描述符 + terrain 增加 `fs_translucent_oit` 入口（启动校验覆盖）。
+5. 新增 `tests/Sharpcraft.Framework.Tests/Rendering/OitResolveTests.cs`（3 项：顺序无关、单片退化 alpha、覆盖度=1−reveal）。
+
+**修掉的真 bug**：`oit_resolve.wgsl` 第 16 行缺失 `var` 关键字（脚手架从未真正编译过，早先"运行时已验证"的说法不成立）。
+加 `var` 后窗口成功创建管线并出帧。
+
+**验收数据**：`MC_FRAME_WATER=1` 窗口跑满 1073/2508 帧、**0 validation error**、p99 10.18 ms（960×540）；
+全量测试 1117 通过、文档门禁 ok。
+
+**下一步具体动作（按序）**：
+
+1. **所有者本机目视**：`$env:MC_FRAME_WATER='1'; dotnet run --project src/Sharpcraft.Launcher -c Release -- window`
+   确认水面 OIT 观感（本环境交换链不可截图，`PrintWindow` 对 wgpu 返回黑屏；`window` 写出的 PNG 是离屏旧混合路径，不能代表 OIT）。
+2. 若观感通过：接 `MC_TRANSPARENCY=weighted|reference` 宿主开关（默认 weighted，失败回落 weighted），原版 depth-bounds +
+   transmittance OIT 作为 reference 管线。
+3. 可选：让离屏渲染器也走 OIT，使像素级对照（T-104/T-159 的截图）能覆盖透明层。
+
+## 2026-10-31 原版 OIT 参考管线：勘察与规格完成（待确认范围后实现）
+
+已通读原版 `net/minecraft/client/renderer/oit/*` 与相关 shader include，行为规格写入
+`docs/specs/render/oit-reference.md`（草案，status 待确认）。核心结论：
+
+- 原版透明 = **三阶段 OIT**：`DEPTH_BOUNDS`(RGBA32F, 混合 MAX, 深度 `>=` 只读) → `TRANSMITTANCE`(2×RGBA16F, 8 系数小波, ADDITIVE)
+  → `ACCUMULATE`(RGBA16F, ADDITIVE) → `COMPOSITE`(读 accum+系数+depthBounds，写主色并**写最近器件深度**)。
+  阶段间有一次 `depth_bounds_cull`（最远边界裁到不透明深度）；云/水面贴片另有 `oitCloudDepth`/`oitTerrainWithWaterPatchDepth` + `water mask`。
+- 常量：`OIT_WAVELET_RANK=2`、`OIT_COEFFICIENT_COUNT=8`、`OIT_TRANSMITTANCE_TARGET_COUNT=2`。
+- 我们只渲染地形半透明，故 reference 管线**只覆盖地形**；云/水贴片/实体/天气的 OIT 集合与 water mask **不实现**（等这些内容存在再接）。
+
+**建议的落地顺序（分 3 个可验证小步）**：
+
+1. **纯逻辑核心**：C# 参考 `encode/sample/coverage`（8 系数小波），测试：顺序无关、总透射率≈`Π(1-α)`、单片退化。
+2. **GPU 目标与管线**：4 个目标 + 3 阶段管线 + cull + composite 的 WGSL；确定性水景 `MC_TRANSPARENCY=reference` 跑满无 validation error。
+3. **宿主开关**：`MC_TRANSPARENCY` 仅在宿主层解析（原则 13），默认 weighted，失败回落。
+
+**第 1 步已完成（2026-10-31）**：`src/Sharpcraft.Framework/Rendering/OitWavelet.cs`（8 系数小波 encode/sample/coverage 的
+CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独立实现）+ `OitWaveletTests`（5 项）。
+**实测通过**：单片覆盖度≈α（误差<0.02）、双层≈`1−(1−a₁)(1−a₂)`（<0.03）、编码顺序无关（系数逐位相等）、
+空系数覆盖度=0、absorbance↔transmittance 往返。⇒ 算法理解与实现已由纯逻辑验证，可以上 GPU。
+
+**第 2/3 步已完成（2026-10-31，GPU 三阶段 + composite + 开关）**：
+
+- 新增 WGSL：`oit_reference.wgsl`（`vs_main` + `fs_depth_bounds`/`fs_transmittance`/`fs_accumulate`，含 8 系数编解码）、
+  `oit_depth_bounds_cull.wgsl`、`oit_composite.wgsl`（`fs_composite` 写 `frag_depth`）。已登记进 `ShaderPipelines` 启动校验。
+- `WindowedRenderer`：4 个目标（depthBounds / depthBoundsCulled / transmittance×2 / accumulate）+ 5 条管线 + cull + composite，
+  帧循环 `if (useReference)` 分支（其余原 weighted 分支保留），resize 重建目标、退出 Disposal、静态半透明 3 次绘制。
+- 开关：`FrameDiagnostics.TransparencyMode` + 宿主 `HostDebugOptions` 解析 `MC_TRANSPARENCY=reference`（默认 weighted，符合原则 13）。
+- **修掉的编译/运行时坑**：WGSL `1 << power` 需 `1i << u32(power)`；`texelFetch`→`textureLoad`；
+  **RGBA32F 在本后端不可混合** ⇒ 深度边界改用 RGBA16F（哨兵 `-65504`，线性深度在远处约 ±1–2 方块精度，reference 可接受）。
+- **运行时实测**：确定性水景 reference 模式 **703 帧 / 0 validation error**；resize（960×540→640×360）后仍 0 error；
+  weighted 默认模式回归正常（535 帧）。全量测试 1122 通过、文档门禁 ok。
+
+**已知限制 / 下一步**：
+1. **窗口像素仍无法在本环境截图**（交换链不可拷贝），reference 观感需所有者本机 `MC_TRANSPARENCY=reference` 目视。
+2. 深度边界用 RGBA16F（RGBA32F 不可混合）带来的远处精度损失，若目视有问题再考虑分通道/两目标方案。
+3. 未做：water mask、云/水面贴片深度、实体/粒子/云/天气的 OIT 集合、`OIT_ADDITIVE`（见 spec §11）。
+
+## 2026-10-31 修：浮冰/蓝冰被误判为半透明（所有者截图为证）
+
+现象：一整座浮冰/蓝冰山看起来像半透明雾。根因：`BlockRenderLayers` 的临时半透明表把 `minecraft:packed_ice`、
+`minecraft:blue_ice` 也列入了半透明层 ⇒ 走深度写关的半透明路径。原版核实：`PACKED_ICE` 无 `.noOcclusion()`（实心），
+`BLUE_ICE` 的 `HalfTransparentBlock` 只覆盖 `skipRendering`（同类面剔除），两者渲染层都是 solid；只有 `ICE` 带
+`.noOcclusion()` 是半透明。修复：从半透明表移除二者，补 `frosted_ice`；`BlockRenderLayersTests` 增加 `packed_ice`/
+`blue_ice` 不透明与 `frosted_ice` 半透明断言。全量 1125 通过。
+
+## 2026-10-31 加权 OIT 封存，reference 成为唯一透明路径
+
+所有者目视裁决：**加权混合 OIT 观感明显更差**。处理：
+- 从工作树移除加权 OIT 的全部可编译产物：`accum`/`reveal` 目标、`translucentOitPipeline`/`oitResolvePipeline`、
+  `oit_resolve.wgsl`、`terrain.wgsl` 的 `fs_translucent_oit`、`OitResolveTests`、`TransparencyMode` 与 `MC_TRANSPARENCY` 开关。
+- 窗口透明**唯一走 reference OIT**（depth-bounds + 8 系数小波）；`CreateReferenceTargets` 变为无条件创建/重建。
+- 加权实现保留在 git 历史（`25bc36a` 等），文档标注"封存、不编译"。
+- 实测：reference-only 构建水景 540 帧 0 validation error；全量 **1122 通过**（去 3 条加权数学测试）、文档门禁 ok。
+
+## 2026-10-31 平滑光照对齐原版 + 光照感知合并 + 合并开关
+
+所有者截图指出冰面"诡异阴影"。核对原版 `BlockModelLighter`/`CardinalLighting`：原版与 Sodium 都**不贪婪合并**，我们的是自加优化。
+本轮（先完善合并路径）：
+- 面朝向亮度改原版基数（上1.0/下0.5/南北0.8/东西0.6）；AO 改 4 格 `0.2/1.0` 平均（去掉自创"两边都挡=0.5"）。
+- **光照感知合并**：合并矩形（含外扩一圈）必须全"无遮挡且同一光照"才合并，否则逐面；合并输出逐值等于不合并。
+- `MeshChunk(..., merge:)` 两路径完整；宿主 `MC_MESH_NOMERGE=1` 走逐面（窗口/离屏均已接）。
+- 新增 `ChunkMesherMergeLightingTests`（3 项，含"多格 quad 四角颜色必须一致"）。全量 **1125 通过**、文档门禁 ok。
+
+**下一步（未做，待所有者定）**：① 在真实场景量 `MC_MESH_NOMERGE` 与默认的面数/显存/p99 做 A/B；
+② 若要更贴近原版，AO 仍用 `Occludes`（冰不遮挡）而非原版 `isCollisionShapeFullBlock`（冰会遮挡），属已知偏差；
+③ 每顶点光照仍用自研 `Brightness()` 近似而非原版 lightmap。
+
+## 2026-10-31 修：地形在 gamma 空间乘光照导致阴影过暗（露天也黑）
+
+光照探针（`MC_LIGHT_PROBE=1`，宿主层）实测：地表 `sky=15 block=0` 满天空光 ⇒ **数据正确**，不是没读到光。
+根因：图集 `RGBA8Unorm` 存的是 sRGB 编码值，硬件不解码；我们又直接乘线性光照再写非 sRGB 的 `BGRA8Unorm` ⇒
+**满光(L=1)正常、任何 L<1 的面被过度压暗**（阴影/侧面发黑），与原版"线性乘光→sRGB 输出"不一致。
+修复：新增 `litColour`（解码 2.2 → 乘线性光 → 编码），用于 `terrain.wgsl`（main/cutout/translucent）与
+`oit_reference.wgsl`（accumulate）。水 demo 出图：石侧由近黑变中灰。全量 **1125 通过**、文档门禁 ok。
+
+**下一步/未做**：原版 `Lightmap` 曲线（`light_brightness(x)=x/(4-3x)` + 环境光 + 天空/方块光颜色 + 时间 darkening）。
+现在 `Brightness()` 仍是线性近似（在满光=1、中高光比原版偏亮，不会再偏暗）。若要逐值对齐再做。
+
+## 2026-10-31 接入原版 lightmap（草案已实现，配等效性测试）
+
+- 新增行为规格 `docs/specs/render/lighting.md`：lightmap 公式（`x/(4-3x)` 曲线、天光/方块光颜色、环境光、notGamma、亮度混合）、overworld 白天默认参数、色彩空间、等效性测试计划、已知偏差。
+- 新增 `src/Sharpcraft.Client/Render/VanillaLightmap.cs`（§3 纯函数 + `LightmapParameters`，白天 overworld 默认）；`ChunkMesher.CornerShade` 改用它替换旧线性 `Brightness`，删除 `MinimumBrightness`。
+- 等效性单测 `VanillaLightmapTests`（手算值：满光=白、无光=黑、sky12≈0.71875、方块光暖色）。全量 **1136 通过**、门禁 ok。
+- 行为变化：无光面现在按原版为**黑**（旧 0.12 地板移除）；中高光比旧线性偏暗更接近原版曲线。
+- 未做：夜晚/天气/维度 timeline 插值、夜视/Darkness/Boss、亮度滑块接入。
+### 修复：顶点光照采样越界一格（正法线面）
+`CornerShade` 的 `corner` 已是面顶点坐标，却又加了一次法线 ⇒ +X/+Y/+Z 面多采一格（顶面读到上方方块的光）。改为 `corner + min(n,0)`。全量 1136 通过。
+### 根因修复：省略的天空光段默认 15（整体发黑 / 海平面附近反常亮）
+`LevelChunk.ApplyLight` 只为"带数据的天光段"赋值，忽略了协议语义：未下发、也不在 emptySkyMask 的段应默认 **15**。结果露天大片读 0 → 整体偏暗，只有少数带数组的地表段正常 → 海平面附近反而亮。
+修复：非空掩码且无数组的段填整段 15（共享 0xFF 数组）。新增 `ChunkLightTests.SectionsThePacketOmitsAreFullSkyUnlessMarkedEmpty`。全量 **1137 通过**、门禁 ok。行为规格见 `docs/specs/render/lighting.md` §2。
+- 新增宿主开关 `MC_NO_AO`（关 AO）用于 A/B；AO 通过 Mesh/MeshChunk 显式传参，游戏层不读环境变量。
+
+- AO 实机对比远比原版暗 → 游戏**默认关闭 AO**（`MC_AO=1` 可开）；AO 强度校准列为待办。全量 1137 通过、门禁 ok。
+
+### AO 真正根因修复：空气被当成遮挡物
+`Occludes` 对空气(state 0)走"无布局→不透明"分支 → AO 4 格平均塌到 0.2 下限 → 全世界发暗；关 AO 就正常。修复：`Occludes` 对空气短路为不遮挡。AO 抽成纯函数 `ChunkMesher.AmbientOcclusion`（4 格 0.2/1.0 平均），新增 `AmbientOcclusionTests`（含孤立方块顶面应全亮的集成测试）。**AO 恢复默认开启**，`MC_NO_AO=1` 可关。全量 1141 通过、门禁 ok。仍缺原版拐角柔化（待校准）。- AO 等效性：所有者确认"现在 AO 看起来非常像原版"（2026-10-31）。AO 默认开启；拐角柔化为可选优化。- B：AO 加入原版拐角柔化（两邻边都实心时对角用边格值）；AmbientOcclusionTests 增加该规则用例。全量 1142 通过。
+- A（日夜/天气/维度）：明确**暂未实现**，已在 docs/specs/render/lighting.md §6 写明两个硬前提（缺时间包解析、lightmap 需移到着色器）与落地步骤。- C（半透明水/冰亮度）：查证——水有生物群系色染色（BiomeTint.Water 默认 0x3F76E4 蓝），reference OIT 的单层 accum/composite 数学上等价于标准 alpha 混合（accum.rgb/accum.a 归一后 coverage=alpha）。未发现系统性压暗点；残余可能是水雾（water fog）未实现与 OIT 顺序无关近似的差异。**待固定机位对照再定**，暂不改动。## 2026-10-31 方块状态模块评审通过 + 流体状态解码（步骤 A）
+- `docs/modules/block-state.md` 评审通过（[已评审]，含 §9 模组热重载规划）。
+- 新增 `Sharpcraft.Common/World/FluidState.cs`：`FluidState`（Kind/Amount/Falling/IsSource/OwnHeight=amount/9）+ `FluidStateCodec.FromBlockState(stateId, layout)`（level=id-base，0=源/1..7 流动/8..15 下落）。`FluidStateTests` 9 项通过。
+- 全量 1142+ 通过、门禁 ok。下一步：写 `docs/specs/render/fluid-rendering.md` 并实现流体网格（四角高度/flow-UV/水色/逐面光/overlay）。## 2026-10-31 流体渲染：规格评审通过 + 几何核心（静态帧第 1 步）
+- `docs/specs/render/fluid-rendering.md` 评审通过（OIT 纠正为 26.3 原版机制，非偏差）。
+- 调查：图集**只拼接动画首帧**（`TakeFirstFrame`）⇒ 流动动画需先做图集动画；水雾=WaterFogEnvironment。
+- 新增 `Sharpcraft.Client/Render/FluidSurface.cs`（ownHeight=amount/9、原版 calculateAverageHeight 四角加权），`FluidSurfaceTests` 5 项通过。
+- 全量 **1156 通过**、门禁 ok。
+- **下一步**：给 MeshBuffer 加浮点坐标 `AppendQuad`（现仅整数）→ 实现流体几何发射（四角高度/面剔除/flow-UV/染色/逐面光/overlay）→ 接半透明层 → 离屏水面出图；再补水下雾与图集动画。- 流体几何（静态，进行中）：`ChunkMesher` 的水/岩浆液面高度由固定 14/16 改为原版 **amount/9**（源水 8/9、流动更低、上方同种流体=1.0），用 `FluidStateCodec` 解 level；`FluidWaterHeightTests` 2 项（源水/流动高度）通过。全量 1158 通过。
+- 待续：四角高度（`FluidSurface` 已备但未接线）、flow-UV、per-face 光、overlay、不合并的独立流体网格；水下雾；图集动画。### 流体几何：关键教训（2026-10-31）
+尝试"水不合并 + 顶面四角高度"时发现：**不做"同种流体面剔除"就逐方块发射水，会把整段水的内部面全发出来**（一个 16³ 水段 60 合并 quad → 7710 quad，性能灾难）。结论：流体必须走**独立通道并做同种流体面剔除**（相邻同种流体→跳过该面），再谈四角高度/不合并。该尝试已回退，保持全量 1158 绿。下一步：实现含同种流体剔除的 `FluidMesher` 独立通道。### 流体几何：独立通道落地（2026-10-31）
+`ChunkMesher` 新增 `EmitSectionFluids`：逐水块发射、**同种流体面剔除**（相邻水→跳过该面）、四角高度（`FluidSurface`）、still 贴图、生物群系水色、**逐面光**（max(本格,上方)）、按朝向着色；方块面通道在提供 translucent 缓冲时**跳过流体**。`FluidMesherTests`（满水段外表面 6×16×16、单块 6 面）+ LayerSplit 修正 + 水高测试；全量 **1160 通过**、门禁 ok。
+- 待续：flow 向量与旋转 UV、overlay、反向顶面；水下雾；离屏水面固定机位像素验收（窗口不可截，需离屏场景或所有者目视）。### 流体目标现状（第 10 轮，未完成，如实记录）
+已完成：独立流体通道（同种流体面剔除、四角高度、still 贴图、水色、逐面光）+ 接入半透明层；`FluidMesherTests` 满水段外壳 1536 / 单块 6。
+未完成（objective 仍需继续）：
+1. flow 向量 + 旋转 flow UV —— **阻塞点**：`BlockSpriteMap` 只解析 `_still`，未暴露 `_flow`；需先加 `_flow` 精灵查询接口。
+2. overlay（相邻半透明/树叶用 water_overlay）——需 `_overlay` 精灵查询。
+3. 反向顶面 shouldRenderBackwardUpFace。
+4. 离屏固定机位水面场景 + 像素探针验收（窗口不可截）。
+5. 水下雾（WaterFogEnvironment：WATER_FOG_COLOR/距离/sky-cloud end）——需把"相机在水中"从宿主传入 fog uniform。
+结论：目标**保持 active，不标记完成**。下一步建议先做 `BlockSpriteMap` 的 `_flow`/`_overlay` 查询（资产层小改），再做 flow-UV/overlay；随后水下雾与离屏验收。- 流体 flow：`BlockSpriteMap.FluidFlow/FluidOverlay` 增加 `_flow`/`_overlay` 查询；`EmitSectionFluids` 计算 flow 向量（仅同种水邻居的高度差），顶面流动时用 `_flow` 精灵按 `atan2(flowZ,flowX)-π/2`、半径 0.25 旋转 UV，静水用 still。全量 1160 通过。
+- 待续：overlay 应用（相邻半透明/树叶）、反向顶面、水下雾、离屏固定机位像素验收。- 流体侧面修正（对照原版 FluidRenderer）：侧面顶部改用与顶面一致的**四角高度**（hNW/hNE/hSW/hSE 映射与 NORTH/SOUTH/WEST/EAST 取法逐一核对一致），并在法线轴上做 **±0.001 内缩**避免共面 z-fighting。消除水面上"硬台阶/薄缝"。全量 1160 通过。- 流体落差缝修正（对照 FluidRenderer.getHeight）：**上方有同种流体时该格四角高度一律取 1.0**（原版 `hasSameAbove ? 1.0 : ownHeight` 且 `heightSelf>=1 → 四角=1`），消除水台阶/竖直水体的顶边缝。全量 1160 通过。- 流体"流动块↔满格块"接缝（等效性修正）：`CellHeight` 计算邻居高度时，若该邻居**上方也是同种流体**则返回 1.0（原版 `getHeight=hasSameAbove?1.0:ownHeight`）。这样流动块的共享角会抬到 1.0 与满格块相接（`h>=1→角=1`，`FluidSurfaceTests.FullEdgeNeighbourLiftsTheCornerToOne` 已覆盖该数学）。消除不完整/完整流体块之间的缝。全量 1160 通过。- 流体角落缝（对照 calculateAverageHeight）：补上"两条边之一有流体"分支内 **对角格≥1.0 → 角直接取1.0**（此前漏了这条，对角是满格水柱时角没抬到1 → 高低差块间缝）。`FluidSurfaceTests.FullDiagonalColumnLiftsTheCornerToOne` 覆盖。全量 1161 通过。- 流体侧面贴图（对照 FluidRenderer）：侧面改用 **`_flow` 精灵**，V 坐标按角高度 `v=(1-h)*0.5`、底部 `v=0.5`（呈向下流动），U 取 0/0.5。此前侧面用 still 且 V=0..1。全量 1161 通过。## 2026-10-31 流体静态几何收口 + block-shape 模块文档（暂缓）
+- 流体静态几何核心已交付并在所有者处目视确认：独立通道 + 同种流体面剔除 + 四角高度(含 getHeight/对角≥1/边≥1 规则) + 侧面四角+内缩 + 侧面 `_flow` 高度映射 V + 顶面 still/flow 旋转 UV + 水色 + 逐面光；1161 测试通过。
+- **遮挡判定**：原版 `isFaceOccludedByState` 依赖方块**遮挡/碰撞形状(VoxelShape)**，非模型几何；该数据与**方块实体/碰撞行为**强相关（未开发）→ 按所有者指示**暂缓实现，先建文档**：`docs/modules/block-shape.md`（[规划]/暂缓）。流体暂用 `IsSolid` 近似，记为受控偏差。
+- **流体 backlog（未来）**：overlay、反向顶面、flow 下落偏置/下方回退、水下雾、精确遮挡形状(block-shape)、离屏固定机位像素验收、纹理动画(图集动画)。
+- 下一步：本目标视为收口，转下个模块（M5.3 渲染剩余：天空天体/实体模型/半透明排序证据/方块实体；或 5.2 UI）。- 修复回归：流体通道只处理 **water**（`IsFluidState` 仅 water）；此前把 lava 也跳过块通道却没在流体通道发射 → 岩浆不可见。lava 恢复为不透明方块路径。新增 `FluidMesherTests.LavaStaysOnTheOpaqueBlockPath`。全量 1162 通过。- 岩浆流体：原版 FluidRenderer 对任意流体通用，仅**渲染层**不同（水=半透明、岩浆=solid 不透明）、水有生物群系色、岩浆无。改为**岩浆也走同一流体通道**（`EmitSectionFluids` 泛化：按液体种类分流—water→translucent、lava→opaque；同种流体剔除/四角高度/侧壁/flow 复用；岩浆无 tint）。此前岩浆落到 `EmitMergedQuad` 旧分支（每格降高、无侧壁）→ 空洞/悬浮。全量 1162 通过。- 岩浆空洞根因（读 FluidRenderer.addFace 的 addBackFace）：**原版流体面是双面的**（侧面 addBackFace=!isOverlay、顶面=shouldRenderBackwardUpFace）。我们单面：水走 OIT 不剔除背面所以没事；**岩浆走不透明通道（背面剔除）→ 面被剔光 → 空洞**。修：岩浆面双面发射（`MeshBuffer.AppendQuadDoubleSided`），水保持单面（避免 OIT 叠加变暗）。此前的测试崩溃是本地函数 `Emit` 自递归，已修。全量 1162 通过。- 岩浆接缝根因（真读 FluidRenderer.tesselate 62-117）：邻居高度按 **`fluidType.isSame`** 取（同型流体邻居贡献 ownHeight）。我们泛化时漏了：`CellHeight`/`AddFlow` 仍写死 `Path=="water"` → 岩浆邻居被当"实心 -1"忽略 → 相邻不同液位岩浆块四角不接、共享侧又被同种流体剔除 → 缝隙/悬浮。修：改用 `fluidPath`。新增 `FullLavaSectionEmitsADoubleSidedOuterShellIntoOpaque`（2×6×16×16）。全量 1163 通过。## 2026-10-31 天空天体（A）规格 + 依赖
+- 流体岩浆已修（`d4fc7f4`）：`CellHeight`/`AddFlow` 按流体质心类型泛化；岩浆双面外壳。所有者确认"岩浆差不多"；遮挡精确形状留方块实体后（block-shape backlog）。
+- 新增 `docs/specs/render/sky-celestial.md`（待评审）：读 SkyRenderer 常量/变换/几何（盘r512、星1500@100、日30@100、月20@100、日出16段、月相8）。
+- **硬依赖**：天体角度/月相/亮度/天空色/日出色均来自环境属性（时间轴驱动）→ 需**世界时间**（未解析，与 lighting.md §6 日夜同缺口）。
+- 下一步（待所有者定）：①先补世界时间包解析（可同时解锁日夜光照）；或②用宿主注入时间/角度先验证天体渲染正确性。## 2026-10-31 时间系统模块文档（待评审）
+- 新增 `docs/modules/time.md`（待评审）：`set_time` 新结构（long gameTime + Map<WorldClock,ClockNetworkState{totalTicks,partialTick,rate}>）；dayTime=overworld.totalTicks%24000；环境属性由 Timelines 关键帧/easing 求值（SUN/MOON/STAR_ANGLE 优先）。含 packet id 待核对、测试、落地步骤与风险。评审通过后按步骤实现（packet→clock→timeline→消费）。## 2026-11-01 时间系统实现（第一片：包→时钟→dayTime）
+- `PacketIds.PlayClientbound.SetTime=115`（经 GameProtocols clientbound 注册序校准，+1 在 0..127 已知 id 全吻合）。
+- `SetTimePacketCodec`：VarInt id + long gameTime + VarInt count + 每时钟(VarInt id + VarLong totalTicks + Float partial + Float rate)；单测 2 项。
+- `ClientWorld`：每时钟 `ClockNetworkState`；`GameTime`、`DayTime=overworld( id0 ).totalTicks%24000`、`ApplyTime`、`AdvanceClocks`；单测 4 项。
+- `InteractiveSession` 分发新增 `SetTime` → `world.ApplyTime`。
+- 全量 1168 通过、门禁 ok。**待办**：Timelines 关键帧/easing 求值（SUN/MOON/STAR_ANGLE 等）→ 再接天空天体与日夜光照；`AdvanceClocks` 目前按 ceil?（rate 取整）每 tick 推进，后续补 partial 精度。## 2026-11-01 时间系统第二片：Timelines 角度求值
+- 新增 `Common/World/SkyTimelines.cs`：`CubicBezierEasing`（复刻 EasingType.CubicBezier：Newton 4 次、步长±0.25、二分回退）、`FloatKeyframeTrack`（复刻 KeyframeTrackSampler：period 环绕+环绕段+lerp(ease(alpha))）、`SkyTimelines.SunAngle/MoonAngle/StarAngleDegrees`（SUN/STAR 6000→360/0、MOON 6000→540/180，easing symmetric(0.362,0.241)）。
+- `SkyTimelinesTests` 4 项（端点/中点0.5/单调/锚点：Sun 6000=0、18000=180、30000=0；Moon 18000=360）。全量 1173 通过、门禁 ok。
+- 待办：`SKY_LIGHT_FACTOR/COLOR` 等其余属性求值；`AdvanceClocks` partial 精度；再回接天空天体渲染与日夜光照。## 2026-11-01 时间系统第三片：其余环境属性
+- `FloatKeyframeTrack` 支持线性 easing（Func）；`SkyAttributeTracks`：**STAR_BRIGHTNESS**（MAX 修饰→采样值）、**SKY_LIGHT_FACTOR**（日1.0/夜0.24）、**MOON_PHASE 索引**（按 totalTicks，period 24000*8）。
+- 测试 +3（星亮度 6000=0/18000=0.5；天光系数 6000=1/18000=0.24；月相 0/3/8 环绕）。全量 1176 通过、门禁 ok。
+- 待办：SUNRISE_SUNSET_COLOR（33 关键帧 RGBA）、SKY_COLOR 修饰、SKY_LIGHT_COLOR；再回接天空天体渲染与日夜光照。AdvanceClocks partial 精度。## 2026-11-01 时间系统第四片：日出/日落色 + 天空光色
+- `SkyAttributeTracks` 增：**SUNRISE_SUNSET_COLOR**（33 关键帧 ARGB32 → 逐通道线性 RGB + 线性 alpha，4 条线性轨）；**SKY_LIGHT_COLOR**（白×颜色修饰：昼 (1,1,1)、夜 (linear(0.48),linear(0.48),1)）。
+- 测试 +2（日出正午 alpha=0；天空光色昼白/夜蓝）。全量 1178 通过、门禁 ok。
+- 时间数据层基本齐全（角度/星亮度/天光系数/日出色/天光色/月相）。下一步：回接天空天体渲染 + 日夜光照消费。## 2026-11-01 天空天体：几何等效核心（目标 A）
+- 新增 `Client/Render/CelestialGeometry.cs`：日/月四边形（XZ -1..1）在原版矩阵链 **Scale(size,1,size)→Translate(0,height,0)→RotX(angle)→RotY(-90)** 下的顶点；日出三角扇（中心(0,100,0)+16环，r120/z40）。
+- `CelestialGeometryTests` 3 项手算等效（角度0/90°顶点、日出扇形中心/环点）通过。全量 1181 通过（一次偶发 `ChunkSeamTests` 抖动，复跑全绿）、门禁 ok。
+- 待办：天体贴图集（sun/moon）从 pack 取；天空 pass 用 `CelestialGeometry` 绘制盘/日月/星/日出；`DayTime`→角度/亮度驱动；离屏像素验收。## 2026-11-01 天空天体：贴图切片核心
+- `Client/Assets/CelestialSprites.cs`：天体贴图资源位于 `textures/environment/`（sun、moon_phases，独立于方块图集）；`SliceMoonPhases` 把 4×2 月相表切成 8 个 row-major 矩形。测试 2 项（切片坐标、非整格报错）。全量 1183 通过、门禁 ok。
+- 待办：GPU 侧把 sun/moon 贴图上传 + 天空 pass 用 `CelestialGeometry` 画盘/日月/星/日出（`DayTime`→角度/亮度），离屏出图+像素验收。这是较大的渲染切片。## 2026-11-01 天空天体：网格构建 + 着色器
+- `Client/Render/CelestialMeshBuilder.cs`：把 `CelestialGeometry` 四边形打包成 position3+uv2 顶点 + 三角索引（UV 顺序同原版 buildCelestialQuad），测试 1 项手算。
+- `Framework/.../pipelines/celestial.wgsl`：`vs_celestial/fs_celestial`，uniform=相机 viewProjection + `CelestialTransform{model,tint}`，采样天体纹理×tint。
+- 全量 1184 通过、门禁 ok。
+- 待办：设备侧建 celestial 纹理/管线/uniform、在天空 pass 后绘制（先离屏太阳最小验证，再月/星/日出），像素验收。## 2026-11-01 天空天体：太阳设备接线 + 26.3 贴图路径更正
+- **更正（对照 pack 实读 + SkyRenderer）**：26.3 天体贴图在 `textures/environment/celestial/`——`sun.png` 与 8 张独立月相 `moon/<phase>.png`（`MoonPhase` 枚举 0..7：full_moon/waning_gibbous/third_quarter/waning_crescent/new_moon/waxing_crescent/first_quarter/waxing_gibbous），**不是** 4×2 月相表。`CelestialSprites` 重写：`Sun=environment/celestial/sun`、`MoonPhase(i)=environment/celestial/moon/<name>`；删除 `SliceMoonPhases`/`CelestialSprite`。上方 10-31 "moon_phases 4×2" 旧表述作废。
+- **设备接线（离屏）**：`FrameRequest` 增 `CelestialTextures`/`CelestialDraws`（每 draw=纹理索引 + pos3/uv2 顶点 + 索引 + model + tint）；`OffscreenRenderer` 新增 `CelestialResources`：上传天体纹理、`celestial.wgsl` 管线（顶点布局收敛到 `VertexLayout.CelestialAttributes`）、每 draw 相机 + model/tint uniform + 绑定组；天空渐变之后、地形之前绘制，深度恒通过不写。**合成用原版 `BlendFunction.OVERLAY`（颜色 SrcAlpha/One、alpha One/Zero）**——黑色/透明像素不贡献，太阳贴图透明角不再画成黑块。
+- **角度驱动**：`FrameCommand.AttachCelestial` 用 `world.DayTime`→`SkyTimelines.SunAngleDegrees`（`MC_SUN_ANGLE` 可覆盖验证）；`model=translate(eye)` 让天体相对相机（视作无穷远）。已接入 `RenderWorld`（真服/回放）与 `RenderLocal`。
+- **GPU 等价验收（离屏，`MC_SUN_TEST=1`）**：纯白贴图时太阳四边形质心投影到画面正中，中心像素 `rgba(255,255,255,255)`；改用 pack 真 `sun.png`（32×32）后中心 `rgba(255,255,255,255)`、可见暖白光晕且**无黑块**。出图 `%TEMP%\sharpcraft-sun-test.png`。
+- 修复架构门禁 `Repro_001`（`VertexAttribute` 只允许在 `VertexLayout.cs`）：天体顶点属性移入 `VertexLayout.CelestialAttributes()`。
+- 全量 **1184 通过**、0 警告。**待办**：月亮（按 `MOON_PHASE` 选贴图）、星空（1500）、日出条带（三角扇+顶点色）、天空盘/暗盘；亮度接 `STAR_BRIGHTNESS`/`RAIN_BRIGHTNESS`；镜像到 `WindowedRenderer`；随后日夜光照。## 2026-11-01 天空天体：月亮接入
+- `AttachCelestial` 增月亮：按 `SkyAttributeTracks.MoonPhaseIndex(overworld.totalTicks)` 选 `environment/celestial/moon/<phase>`，角度 `MoonAngleDegrees`、尺寸 20 / 高度 100；与太阳共用 celestial 管线（多纹理 / 多 draw，`CelestialResources` 已支持）。
+- 验收：`MC_MOON_TEST=1` + pack 渲染 full_moon（32×32）中心 `rgba(255,255,255,255)`、无黑块；本地帧日志 `celestial: 2 texture(s), 2 draw(s)`；全量 **1184 通过**。
+- 待办：星空、日出条带、天空盘/暗盘、`RAIN_BRIGHTNESS` 亮度、镜像 `WindowedRenderer`、日夜光照。## 2026-11-01 天空天体：日出条带 + 星空
+- **新增 position-colour 管线** `Framework/.../pipelines/position_color.wgsl`（端口 core/position_color：clip=Proj·ModelView·Pos，顶点色×ColorModulator，α=0 丢弃）；顶点布局 `VertexLayout.PositionColorAttributes`（pos3+color4）；两种混合：日出 `TRANSLUCENT`、星空 `OVERLAY`。`ShaderPipelines.All` 补 `celestial`/`position_color` 描述符（启动自校验）。
+- **日出**：`CelestialGeometry.SunriseFanWorld(theta, alpha)`（RotX90·RotZ·ScaleZ 展开，18 顶点）；颜色中心白 α=1 / 环白 α=0；α≤0.001 不画。
+- **星空**：`Client/Render/StarField.cs`——`LegacyRandom`（java.util.Random 兼容 48 位 LCG）+ `buildStars` 复刻（seed 10842、候选 1500、长度∈(0.010000001,1)、距离 100、随机自旋）；`CelestialGeometry.SkyRotate` 按 STAR_ANGLE 旋转；`OVERLAY` 色调=STAR_BRIGHTNESS。
+- **等价性验证**：纯逻辑 `StarFieldTests`（Java Random(0) 向量 nextInt=-1155484576 / nextFloat=0.73096776；星点确定性、均落在 r=100 球面）、`CelestialGeometryTests`（SunriseFanWorld / SkyRotate 手算）。GPU：`MC_COLOR_TEST` 同帧加/不加 colour draws → 改变 **45145 像素**（780 颗星 + 红色日出扇）；本地帧 `celestial: 2 textured draw(s), 2 colour draw(s) … sunrise a=0.445, stars 0.055`。
+- 全量 **1188 通过**、0 警告。待办：天空盘/暗盘、`RAIN_BRIGHTNESS`、镜像窗口、日夜光照。## 2026-11-01 日夜光照（离屏路径）
+- `LightmapParameters.OverworldAt(dayTime)`：`SkyFactor=SkyLightFactorAt`、`SkyLightColor=SkyLightColorAt`（昼 1/白、夜 0.24/(0.48,0.48,1) 线性），其余昼默认。
+- `ChunkMesher` 贯穿 `LightmapParameters`（Mesh → MeshChunk → MergeSectionFaces → EmitMergedQuad → CornerShade，及 EmitSectionFluids）；`FrameCommand` 以 `EffectiveDayTime(world)`（`MC_FORCE_DAYTIME` 可覆盖）驱动网格与天体角度。离屏每帧重建网格 ⇒ 顶点色随 DayTime 更新，**无需改顶点格式/着色器**。
+- **等价性**：`VanillaLightmapTests` +2（正午全白天体=1；夜全白天体≈(0.088,0.088,0.453)，R=G<B）；本地帧地形 top-mid 昼 `rgba(136,136,136)` → 夜 `rgba(45,45,95)`。
+- 全量 **1190 通过**、0 警告。**未做**：窗口路径仍昼参数（缓存网格；正确做法=着色器侧每帧 UBO lightmap，需改顶点格式）；天气/维度；天空盘/暗盘、`RAIN_BRIGHTNESS`。## 2026-11-01 日夜光照接入实时路径（缓存按参数重建）
+- `ChunkMeshCache.Lighting` / `ChunkWorkerPool.Lighting`（默认昼）：记录所用 `LightmapParameters`；变化时缓存整体失效、按新参数重网格化（`ChunkMeshCache.Build` 内 `_appliedLighting` 比较后 `_meshes.Clear()`）。
+- `WindowCommand`：启动与每帧用 `LightmapParameters.OverworldAt(world.DayTime)` 设置两者；参数变化即 `meshCache.Clear()+QueueMissing(world)` 分片重建。
+- **验证**：`ChunkMeshCacheTests.ChangingTheLightmapParametersRemeshesEveryChunk`（同参 0 重建、变参全重建）；离屏日夜像素证据见上一条。全量 **1191 通过**、0 警告。
+- **遗留（需 ADR）**：真正零重建=着色器侧每帧 UBO lightmap，须改 12-float 顶点契约（跨模块），按原则 12 待所有者确认 + ADR 后再做。天气/维度、天空盘/暗盘、`RAIN_BRIGHTNESS` 未做。## 2026-11-01 顶点契约变更：着色器侧 lightmap（ADR-0019，所有者“可以修改”授权）
+- **契约**：顶点 12→14 float（pos3 + base3(tint×shade×AO) + uv2 + spriteRect4 + light2(sky,block)）；`FrameRequest.FloatsPerVertex=14`、`VertexLayout.Stride=56`（新增 `Float32x2`@48 loc4）。占位实体/方块实体网格补 light=(1,0)。
+- **着色器**：`terrain.wgsl`/`oit_reference.wgsl` 加 light 属性 + `Lightmap` UBO（binding4，64B），片元逐片元 `lightmapColour(sky,block)` 精确复刻 `VanillaLightmap.Colour`（brightness/parabola/notGamma/brightnessFactor）；`ChunkMesher` 不再烘焙光图（`CornerShade` 返回 base+等级，`MeshBuffer` 写 light2，流体同步）。
+- **渲染器**：离屏与窗口都建 lightmap UBO 并按帧写 `request.Lightmap`；`LightmapUniformCodec` 编码；`FrameCommand.ToLightmapUniform(LightmapParameters.OverworldAt(EffectiveDayTime))`。
+- **等价验证**：纯逻辑 `VanillaLightmapTests`（昼 1 / 夜≈(0.088,0.088,0.453)）+ 出图：本地**同一网格仅换 UBO**，地形 top-mid 昼 `rgba(136,136,136)`→夜 `rgba(45,45,95)`，夜空见星。全量 **1191 通过**、门禁 ok。
+- **窗口运行时像素未验收**（本环境无可见窗口）：窗口渲染器已同源接线（binding4/UBO）但仅编译通过。未做：天气/维度、夜视/暗化、方块光闪烁；模块 A 仍欠天空盘/暗盘、`RAIN_BRIGHTNESS`。## 2026-11-01 天体/光照 sub-tick 插值（对照原版 EnvironmentAttributeProbe）
+- **实读原版**：`EnvironmentAttributeProbe.ValueProbe.get` = `partialTickLerp.apply(partial, lastValue, newValue)`——在**上一 tick 与当前 tick 采样值**间线性插值，**不是** t+partial 重采样。
+- 落地：`ClientWorld.DayTimePartial`（overworld clock PartialTick，clamp 0..1）；`SkyTimelines`/`SkyAttributeTracks` 增 `(int dayTime, float partial)` 重载（采样 t-1 与 t 后按 partial 线性插值）；`LightmapParameters.OverworldAt(int, float)` 对 skyFactor/skyColor 同法插值；`FrameCommand.EffectiveDayTimePartial`（`MC_FORCE_PARTIAL` 可覆盖）驱动天体角/星亮度/日出色/日夜光照。
+- **等效验证**：`SkyTimelinesTests` 两条（lerp(t-1,t,partial) 端点/中点；扫描跨 tick 太阳角>0.5° 处断言中点严格介于两者）+ `VanillaLightmapTests` 两条（skyFactor 跨 tick 插值；逐片元 vs 烘焙 0.3952 vs 0.5）；端到端同 tick(6000) partial 0/0.5/1 → 太阳 360°/180°/0°。全量 **1195 通过**、门禁 ok。窗口像素未验收。## 2026-11-01 天空盘/暗盘：几何 + 判定（渲染仍渐变，受控偏差）
+- **实读原版**：`buildSkyDisc(yy)` = 中心(0,yy,0)+i=-180..180/45 环（x=sign(yy)·512·cos、z=512·sin）；`renderSky` 顺序 SkyDisc(SKY_COLOR)→Sunrise→SunMoonStars→(shouldRenderDarkDisc) DarkDisc；`shouldRenderDarkDisc` = `eyeY−horizon<0 && !underwater`。
+- 落地（纯逻辑）：`CelestialGeometry.SkyDisc(float y)`（10 顶点，上下盘 ±16）、`SkyVisibility.ShouldRenderDarkDisc(eyeY,horizonY,underwater)`；测试 `CelestialGeometryTests.SkyDiscMatchesTheBuildSkyDiscFormula`、`SkyVisibilityTests`(4)。
+- **未接渲染（受控偏差）**：`SKY_COLOR` = 生物群系温度色 × `MULTIPLY_RGB` 关键帧 × 天气灰度（`OverworldBiomes.calculateSkyColor`、`WeatherAttributes`、`Timelines.NIGHT_SKY_COLOR_MULTIPLIER`），依赖群系+天气 → 暂不用盘替换全屏渐变。`RAIN_BRIGHTNESS` 同样阻塞于天气。
+- 全量 **1200 通过**、门禁 ok。模块 A 收口：日月星/日出/日夜光照/sub-tick 均完成并验证；天空盘/暗盘仅几何/判定就绪、盘颜色与 `RAIN_BRIGHTNESS` 阻塞于「生物群系+天气」。## 2026-11-01 天气/群系天空色：模块设计文档（[待评审]，未编码）
+- 新增 `docs/modules/weather-and-sky-color.md`（状态 [待评审]）：实读原版——**方块调色**（`GrassColor/FoliageColor/DryFoliageColor` colormap 索引 `y<<8|x`、`grassColorModifier` NONE/DARK_FOREST/SWAMP、`calculateBlockTint` 按 `biomeBlendRadius`(默认2) 逐通道整数平均、per-biome `waterColor`）+ **天空色** `calculateSkyColor`(HSV) 与 gaussian 空间混合(kernel 0,1,4,6,4,1,0)、时间轴 `MULTIPLY`、`WeatherAttributes.RAIN/THUNDER` 按 `(rain-thunder)/thunder` 权重重叠、`ClientboundGameEventPacket`(type byte+float；RAIN_LEVEL_CHANGE=7/THUNDER=8) 同步、`RAIN_BRIGHTNESS=1-rain`。含 §9 纯逻辑等效测试、§10 分期、§7 风险；并登记现有 `BiomeTint/BlockTintTable` 为全局近似、需升级为逐生物群系。
+- **未编码**：按 AGENTS 3.5 先文档、待所有者评审（[待评审]→[已评审]）后再实施。硬前置=chunk biome 数据与 biome registry 温度（客户端未解析）。## 2026-11-01 天气/群系色 P1 纯逻辑（第一步，文档已[已评审]）
+- 模块文档转 **[已评审]**（所有者 2026-11-01 通过）。按 §10 分步实施，P1 纯逻辑（Common，无数据/资产）。
+- **P1.1** `Common/World/ColorMapColorUtil.Get`：colormap 索引 `rain=downfall*temp; x=(1-temp)*255; y=(1-rain)*255; index=y<<8|x`，越界返回 default（复刻 `ColorMapColorUtil.java`）。
+- **P1.2** `Common/World/SkyColour.FromTemperature`：`t=clamp(temp/3,-1,1)`，HSV `(0.62222224-0.05t,0.5+0.1t,1.0)` → opaque ARGB（复刻 `calculateSkyColor`+`Mth.hsvToArgb`）。
+- 单测 6（`ColorMapColorUtilTests` 3、`SkyColourTests` 3，均手算）。全量 **1218 通过**、门禁/架构 ok。
+- **P1.3** ✅ `Common/World/ColourBlend`（greyscale `0.3/0.59/0.11`、scaleRGB clamp、srgbLerp、BlendToGray）+ `WeatherBlend`（`RainBrightness=1-rain`、`SkyLightFactor`/`ApplySkyColour` 按 `rain−thunder`/`thunder` 权重重叠）；`WeatherBlendTests`(6)。
+- **P1.4** ✅ `BlockTint.Calculate`（`(2r+1)²` 逐通道整数平均，r=0 单点）+ `GaussianWeights`（7 抽头 `{0,1,4,6,4,1,0}`、3D 乘积、总和 4096）；`BlockTintTests`(3)+`GaussianWeightsTests`(3)。**P1 纯逻辑全部完成**。
+- **下一步 P2（天气同步，Client）**：`ClientboundGameEventPacket` 解析（id 锚点校准）+ `WeatherState`（rain/thunder + 按 partial 插值）+ 把 `RainBrightness` 接到日月/星 alpha；随后接 `SkyLightFactor`/`ApplySkyColour` 到日夜光照与天空。P3（biome 数据，硬前置）另起。## 2026-11-01 P2 天气同步（Client）
+- **P2.1** `PlayClientbound.GameEvent=39`（GameProtocols clientbound 序 index 40，id=index−1；锚点 SetTime 116→115、Login 51→50）；`GameEventPacket`(byte type + float param)+`GameEventPacketCodec`；`GameEventPacketTests`(2)。实读确认 START/STOP 为占位（0/1），真实值由随后 `RAIN_LEVEL_CHANGE`/`THUNDER_LEVEL_CHANGE` 给出。
+- **P2.2** `ClientWorld` 天气状态：`SetRainLevel/SetThunderLevel`(o=current)、`RainLevel(partial)`/`ThunderLevel(partial)`(thunder×rain，照 `Level.getThunderLevel`)、`ApplyWeather`(START 0/STOP 1 quirk + 7/8 level)；`InteractiveSession` 分发 `GameEvent`；`ClientWorldWeatherTests`(4)。
+- **P2.3** `RAIN_BRIGHTNESS=1-rain` 接日月 tint alpha；星亮度按 `(1−rainWeight)(1−thunder)` 衰减；`MC_FORCE_RAIN/THUNDER` 验证。本地夜 rain 0→stars 0.500/alpha 1.00，rain 1→stars 0.000/alpha 0.00。
+- 全量 **1224 通过**、门禁/架构 ok。**下一步**：P3（chunk biome 数据 + registry，硬前置；接方块调色逐群系与天空盘替换）或先把天气叠加进 `LightmapParameters`/`SKY_LIGHT_*`（可纯逻辑测）。P3 工作量最大，建议单独一轮。## 2026-11-01 P4.1 天气叠加进 lightmap（SKY_LIGHT_FACTOR）
+- `FrameCommand.EffectiveLighting(world)`：`LightmapParameters.OverworldAt(dayTime,partial)` 之后按 `WeatherBlend.SkyLightFactor(base,rain,thunder)` 叠加天气（`EffectiveRain/Thunder` 复用，含 env 覆盖）；`BuildRequest` 与 `RenderLocal` 统一用它。
+- 日月/星 alpha 与光照共用同一 rain/thunder（去掉重复内联解析）。
+- **验证**：`WeatherBlendTests`(+1：day base1 rain1→0.7625、night 0.24 不变)；本地白天 rain 0→top-mid `rgba(136,136,136)`、rain 1→`rgba(128,128,128)`（变暗）。全量 **1225 通过**、门禁 ok。
+- **未做（P4 其余）**：`SKY_LIGHT_COLOR` 天气 alphaBlend、`FOG_COLOR`/`CLOUD_COLOR`、`SUNRISE_SUNSET_COLOR` 天气乘子（均可纯逻辑，需读 `ARGB.alphaBlend` 精确语义）；**P3（biome 数据）** 仍是接方块调色与天空盘的硬前置，建议单独一轮。## 2026-11-01 P4.2 FOG/SUNRISE 天气乘子
+- `WeatherBlend.ApplyFog`/`ApplySunrise`：`ARGB.multiply` 分量乘 + 按 `(rain−thunder)/thunder` 权重 lerp；FOG 因子 rain(0.5,0.5,0.6)/thunder(0.25,0.25,0.3)，SUNRISE 同因子（alpha 保持 1）。
+- 日出条带颜色接 `ApplySunrise`（`AttachCelestial`）。`WeatherBlendTests`(+2)。
+- 全量 **1227 通过**、门禁 ok。**仍未做**：`SKY_LIGHT_COLOR`/`CLOUD_COLOR` 天气 alphaBlend（需读 `ARGB.alphaBlend` 全body 与 `vector4fFromARGB32`），`FOG_COLOR` 基色（维度/群系）；**P3（biome 数据）** 待单独一轮。## 2026-11-01 P4.3 SKY_LIGHT_COLOR 天气 alphaBlend
+- `ColourBlend` 增 Vector4：`Greyscale/ScaleRgb/BlendToGray(Vector4,保留 alpha)/AlphaBlend`（复刻 `ARGB.alphaBlend`+`alphaBlendChannel`，含 sa=0/1 短路）。
+- `WeatherBlend.ApplySkyLightColor(Vector3,rain,thunder)`：基色 alphaBlend 向夜间天光色 (122,122,255)/255、alpha 79/255(rain)/134/255(thunder)，按 `(rain−thunder)/thunder` 权重重叠；接进 `EffectiveLighting.SkyLightColor`。
+- `WeatherBlendTests`(+2)。全量 **1229 通过**、门禁 ok。
+- **仍未做**：`CLOUD_COLOR` 天气灰度（无云渲染消费，暂缓）；`FOG_COLOR` 真正基色（维度/群系）；`SKY_COLOR`/方块调色逐群系→**P3（biome 数据 + registry）** 为硬前置，建议单独一轮。## 2026-11-01 P3 数据格式调查（文档）
+- 新增 `docs/analysis/common/biome-data.md`（草稿）：区块每 section「方块状态容器 + 生物群系容器（4×4×4=64、`BiomeMaxLocalBits=3`、全局调色板=群系 id、索引 `(y<<4)|(z<<2)|x`)」；`ChunkPacketParser` 现已读入并**丢弃**，P3 改为存 `int[64]`。
+- 群系注册表（`Biome.NETWORK_CODEC`）：`has_precipitation`、`temperature`、`temperature_modifier`(默认 NONE)、`downfall`、可选 `attributes`（含 `visual/sky_color`）、`effects`{`water_color` 必填、`foliage_color`?、`dry_foliage_color`?、`grass_color`?、`grass_color_modifier`?}；颜色 `"RRGGBB"`。
+- 颜色派生与采样：草/叶/干叶=override??colormap(temp,downfall)+modifier，水=water_color；`SKY_COLOR` 首版用 `calculateSkyColor(temp)`（原版主世界精确等价）；位置→section quart `(>>2&3)`，环境属性 7 抽头 gaussian 空间混合（核 `{0,1,4,6,4,1,0}`）。
+- 模块文档 §11 指向分析文档。**下一步 P3 实施**：①`ChunkSection` 存 biome id[64]＋解析；②registry_data 取群系条目（或专用解码）＋`BiomeColors` 数据；③`ColorMapColorUtil`+温度→草/叶/水逐群系 tint（接 `ChunkMesher`）；④`SKY_COLOR`=calculateSkyColor+空间混合替换天空盘。工作量最大，分小步。## 2026-11-01 P3.1 区块 biome id 存储 + 解析捕获
+- `ChunkSection`：新增 `int[64] Biomes`（`BiomeVolume=64`）、`GetBiome(x,y,z)`、`HasBiomes`、纯函数 `BiomeIndex = ((y>>2&3)<<4)|((z>>2&3)<<2)|(x>>2&3)`；ctor 增可选 `int[]? biomes`。
+- `ChunkPacketParser`：生物群系容器由“读后丢弃”改为 `biomes.Get(b)` 存入每 section `int[64]`（字节消费不变，`ChunkPacketTests` 仍绿）。
+- 测试 `ChunkSectionBiomeTests`(3)。全量 **1232 通过**、门禁 ok。
+- **下一步 P3.2**：biome registry 条目解码（`has_precipitation`/`temperature`/`temperature_modifier`/`downfall`/`effects` 与 `"RRGGBB"` 颜色）＋ `BiomeRegistry`（Common）＋合成字节单测；再 P3.3 逐群系 tint 接 `ChunkMesher`、P3.4 天空盘。## 2026-11-01 P3.2 biome registry 解码 + BiomeRegistry
+- `NbtCompound` 增 `GetFloat`/`GetBool`（`NbtFloat`/`NbtByte`）。
+- `Common/World/BiomeRegistry`：`From(DynamicRegistries)` 取 `minecraft:worldgen/biome` 条目→`BiomeEntry(Id, Climate{HasPrecipitation,Temperature,Downfall}, Effects{WaterColor,FoliageColor?,DryFoliageColor?,GrassColor?,GrassColorModifier})`；`Parse` 解 NBT；`ParseColour` 解 `"RRGGBB"`（`#` 可选）→0xFFRRGGBB；`ById` 位置查找；颜色缺省 water=0x3F76E4。
+- 复用现有 `RegistryDataPackets`/`DynamicRegistries`（无需新包解析）。测试 `BiomeRegistryTests`(4)。全量 **1236 通过**、门禁 ok。
+- **下一步 P3.3**：`BiomeColorSource`：位置→`ChunkSection.GetBiome`→`BiomeRegistry`→草/叶/水 tint（`ColorMapColorUtil`+温度/湿度、`grassColorModifier`、`biomeBlendRadius`）接入 `ChunkMesher`；单测 + 离屏出图。## 2026-11-01 P3.3 逐群系方块调色接入
+- `ClientWorld.GetBiomeAt(x,y,z)`：chunk→section(`y>>4`)→`ChunkSection.GetBiome(x&15,y&15,z&15)`，未加载返回 -1。
+- `BiomeTint` 增 `WithBiomes(biomeIdAt, registry, blendRadius)` 与 `ColourAt(kind,x,y,z)`：位置→群系→`BiomeColour`（草=override??colormap+modifier、叶=override??colormap、水=effects.water_color、evergreen/birch 固定），经 `BlockTint.Calculate` 按 blendRadius 平均；`FromColormaps` 测试工厂。`DARK_FOREST` 精确、`SWAMP` 缺 `BIOME_INFO_NOISE` 返回基色（受控偏差）。
+- `ChunkMesher`：方块面 tint 用 `origin` 世界坐标、流体用水格 `bx,by,bz` 调 `ColourAt`。`FrameCommand.RenderWorld` 增 `BiomeRegistry?`，真服路径传 `BiomeRegistry.From(probe.Registries)`（回放/本地无 registry→默认 tint）。
+- 测试 `BiomeTintTests`(+3：按群系草/水、DARK_FOREST 公式、blendRadius 平均)。全量 **1239 通过**、门禁 ok。
+- **注**：无真实服务器 registry 环境，逐群系**离屏像素**未单独验证；已用纯逻辑单测覆盖（等价性以公式/平均为准）。
+- **下一步 P3.4**：`SKY_COLOR`=`calculateSkyColor(temperature)` 经 7 抽头 gaussian 空间混合，绘制天空盘（`CelestialGeometry.SkyDisc`）替换/叠加全屏渐变；离屏出图+像素验证。## 2026-11-01 P3.4 SKY_COLOR 计算 + 天空盘绘制验证
+- `SkyAttributeTracks.SkyColorMultiplierAt(dayTime[,partial])`：Timelines `SKY_COLOR` MULTIPLY 乘子（133/11867 白=1 → 13670/22330 黑=0）。
+- `SkyColourSource.ColorAt(biomeIdAt, registry, x,y,z)`：以 `calculateSkyColor(temperature)` 逐群系、按 quart 采样 + 7 抽头 gaussian（核 `{0,1,4,6,4,1,0}`，总权重 4096）空间混合（未加载群系不计权重）。
+- 诊断 `MC_SKY_DISC_TEST`：用 `CelestialGeometry.SkyDisc` 绘制盘、tint=calculateSkyColor(temp)，中心像素 `rgba(123,164,255)`=`0xFF7BA4FF`(temp0.5)、覆盖 518400 像素 ⇒ 盘几何+颜色管线正确。
+- 测试 `SkyColourSourceTests`(3)、`SkyTimelinesTests`(+1)。全量 **1243 通过**、门禁 ok。
+- **替换天空盘（opt-in，T-281）**：`MC_SKY_DISC=1` 时 `FrameRequest.SkipGradientSky` 跳过 `sky.wgsl`，`AppendSkyDisc` 画顶盘(SKY_COLOR)+地平线下底盘(黑，`SkyVisibility`)；真服路径用 `SkyColourSource`、本地用 `MC_BIOME_TEMP` 合成。验证：本地 sky 像素渐变 `rgba(121,167,255)` → 换盘后渐变跳过、写盘 colour (0.482,0.643,1.000)。**默认仍渐变**（缺参考帧，目视调优留待，受控偏差）。P3 全链（P3.1–P3.4）已交付。## 2026-11-01 真服实机验证 + 窗口逐群系 tint
+- **真实服务器连通**（127.0.0.1:25565，登录 Blue_Coast）：离屏 `frame` 收 49 区块、1.6M 方块；`probe.Registries` 群系表 **67** 条，采样群系 id 53 解析成功、SKY_COLOR 计算 `(0.490,0.635,1.000)`。
+- **`WindowCommand` 接逐群系 tint**：从 `live.Registries` 建 `BiomeRegistry`，`BiomeTint.WithBiomes` 重建 `LayerSinks` 并 `meshCache.Clear()+QueueMissing` 重网格化；日志 `biomes: 67 ... per-biome block tint enabled`。
+- **窗口实机**：`window 127.0.0.1:25565` 成功 presented（960x540，frame #1800+ 持续渲染，无 validation error）。窗口像素不可截（swapchain），目视由所有者确认。
+- **诊断修复**：离屏相机常在世界外，天空盘采样回退到已加载区块列，避免取群系得 -1→全 0。
+- 备注：离屏真服帧"发白"是距离雾（相机远、fog 64–160），非 P3 bug；`MC_FOG_START/END` 推远后正常显示绿色植被（tint 生效）。全量 **1243 通过**。## 2026-11-01 修复：紫色草方块（群系色越界）
+- **现象**：实机草地顶部呈品红/紫。对照原版 `getGrassColorFromTexture` 发现：查 colormap 前需把 `temperature`/`downfall` **clamp 0..1**；我们直接传原始群系温度（常 <0 或 >1），索引越界返回 colormap 默认色 `-65281`（品红）。
+- **修复**：`BiomeTint.BiomeColour` 对 temperature/downfall clamp 0..1 再查表；`BiomeTintTests.TemperatureIsClampedBeforeColourMapLookup`（temp=2→index0，断言非 -65281）。
+- 重启实机 `window`（pid 52704）复验。全量 1244 通过、门禁 ok。
+- **tint 等效性复核（`MC_BIOME_PROBE`）**：真服群系温度/降水解析正确，草色与原版名色一致——`beach` 0.8/0.4→**0x91BD59**（原版平原/沙滩草地 #91BD59）、`forest` 0.7/0.8→0x82BE59、`river` 0.5/0.5→0x8EB971。紫色已消除；同群系若仍偏淡属**光照/贴图/描边**差异而非 biome tint。## 2026-11-01 修复：地形光照色彩空间（litColour 直接相乘）
+- **代码证据**：原版 `block.vsh`（`vertexColor = Color * sample_lightmap`）、`block.fsh`（`color = texture * vertexColor * ColorModulator`）**全程无 pow/gamma**；`lightmap.fsh` 亮度 `get_brightness(l)=l/(4-3l)` 我们已 1:1 复刻。→ 正确为 sRGB 域直接相乘。
+- **修复**：`terrain.wgsl`/`oit_reference.wgsl` 的 `litColour` 改为 `clamp(texel*light)`（`light=vertexColor*lightmapColour`）。此前 `pow(texel^2.2*light)^(1/2.2)` 把 tint 当线性，导致染色方块（草/叶/水）过亮偏淡。
+- 规格 `docs/analysis/render/lighting-color-space.md`；全量 **1244 通过**、门禁 ok。真服离屏帧正常（顶面受光/侧面变暗）。重启 `window` 实机复验。## 2026-11-01 修复 #8 块光闪烁 + #13 世界时钟（每帧光照）
+- `Client/Render/BlockLightFlicker`：复刻原版 `flicker += (r1−r2)·r3·r4·0.1; flicker *= 0.9`，`blockFactor=1.4+flicker`；随机源可注入以便单测。
+- `InteractiveSession`：每 tick `_world.AdvanceClocks()`（修 #13：此前从未推进→时间/亮度冻结）+ `_blockLightFlicker.Tick()`；新增 `CurrentLightmap()` = `EffectiveLighting(world)` 覆盖 `BlockFactor=flicker`。
+- `WindowedRenderer.Run` 增 `lightmapPerFrame` 回调，每帧重写光照 uniform（此前窗口固定 `LightmapUniform.Day`，昼夜/闪烁都不会变）。
+- `BlockLightFlickerTests`(3)。全量 **1247 通过**、门禁 ok。重启窗口实机复验闪烁与昼夜。
+- 仍待：**#10 BlockLightTint**（仍用 `Srgb24ToLinear`，应改原样 `v/255`）；**#3** 平滑光照算法近似（待定是否移植 smoothBlend/smoothWeightedBlend）。## 2026-11-01 修复：世界时钟被空 set_time 清空 / gameTime 兜底
+- **诊断（`MC_DIAG`）**：真服 `set_time` 约每 20 tick 一次但 **clockUpdates 恒空**（只有 gameTime）；旧 `ApplyTime` 每次 `_clocks.Clear()` → 时钟被清、`DayTime` 恒 0（暗）；`/time set day` 先亮、下一空包即复原。
+- **修复**（对齐原版 `ClientClockManager`）：`ApplyTime` 先 `AdvanceClocks(gameTime)` 再**仅覆盖包内时钟、不清空**；`AdvanceClocks(long)` 用 `Δ·rate`（carry partial→total）；`AdvanceTick()` 每 tick `GameTime++` 并推进时钟；无 overworld 时钟时 `DayTime=GameTime%24000` 兜底。
+- `ClientWorldTimeTests`(7)。全量 **1250 通过**、门禁 ok。实机 `day` 从 ~4890 起每秒 +20 推进（白天亮度正常）。重启窗口复验昼夜与 `/time set`。## 2026-11-01 C：抓包核实时钟来源（结论：该服不下发时钟）
+- 抓包（`MC_PACKET_LOG`）：**配置阶段**只有 custom_payload/ping/update_enabled_features/select_known_packs/registry_data×N/update_tags/finish_configuration；**游戏阶段**唯一时间包是 `set_time`(id115) 且 **clockUpdates 恒空**（原始字节 `73 + 8B gameTime + 00`）。**全流程无任何携带世界时钟的包**。
+- 原版核实：昼夜由时钟驱动的 Timeline 属性决定（`EnvironmentAttributeSystem.addDynamicLayers`），只吃 `ClockManager` 时钟；**无 gameTime 兜底**。故该服上原版时间应为时钟默认 0。
+- **修正**：移除先前的 `GameTime%24000` 兜底，`DayTime` 严格只取 overworld 时钟（缺失=0）；`ApplyTime` 仍“tick 后只覆盖包内时钟、不清空”（`/time set` 会带时钟→生效且持久）。`ClientWorldTimeTests` 改为“无时钟=0”。全量 1250 通过。
+- 仍待：**#10 BlockLightTint**（`Srgb24ToLinear` 应改 `v/255`）；**#3** 平滑光照近似。另：`Diagnostics/` 的 `MC_PACKET_LOG`/hex 打印为宿主诊断，可整体删除不影响游戏。## 2026-11-01 修复：预热阶段丢弃进服全量时钟/天气包（T-287）
+- 服务端 = Fabric（就是 127.0.0.1:25565）；原版/Fabric 服务端进服会用 `createFullSyncPacket` 下发**全量时钟**（`PlayerList.java:659`），例行 `set_time` 空 map（`MinecraftServer:1145`）。
+- 我们的窗口流程先 `PlaySession.RunAsync` 预热收区块，其 `default:` **丢弃**了进服全量 `set_time`（及 `GameEvent` 天气），之后才 `Adopt` 建 live 会话 → 时钟/天气初值丢失。
+- **修复**：`PlaySession` 把 `SetTime`/`GameEvent` 暂存进 `PlaySessionStats.DeferredPackets`；`LivePlaySession.Adopt` 注入队列；离屏 `frame` 直接应用。
+- 实机首包 `set_time len=32 clocks=[1:t=0,r=0, 0:t=109000,r=0] day=13000` → 该服**时钟 rate=0、时间冻结在 13000(夜)**；`/time set day` 会带单时钟更新→生效并保持（不再复原）。全量 **1250 通过**、门禁 ok。## 2026-11-01 修复 #10 BlockLightTint（原样通道）
+- 原版 `BLOCK_LIGHT_TINT = ARGB.vector3fFromRGB24(-10100)` = `from8BitChannel(v)=v/255`（无 gamma）= `(255,216,140)/255`；我们误用 `Srgb24ToLinear` → 块光色偏暗/偏色。
+- 改 `VanillaLightmap.Rgb24ToVector`（原样 `v/255`），`DayOverworld.BlockLightTint` 与 `FrameRequest.Day.BlockLightTint` 同步；删除 `Srgb24ToLinear`。
+- `VanillaLightmapTests.BlockLightTintIsRawSrgbChannels`。全量 **1251 通过**、门禁 ok。
+- 光照等效项：#8 已实现、#10 已修、#13 已修；**仅剩 #3**（平滑光照算法近似，缺 `smoothBlend/smoothWeightedBlend` 的 3邻+center 特判与 AO 双线性权重）。## 2026-11-01 修复 #3 完整方块面平滑光照（smoothBlend）
+- 实读 `BlockModelLighter.prepareQuadAmbientOcclusion`：完整方块面走 **else 分支**，每顶点=`LightCoordsUtil.smoothBlend(3邻+center)`（无 `smoothWeightedBlend`，那只在 partial 非立方模型）。
+- 新增 `Client/Render/SmoothLighting.Blend`：`sky>2||block>2` 时 `neighbor==0→center`、`sky==0→继承 center sky`，再 `(sum)>>2`；`ChunkMesher.CornerShade` 用其替换简单 4 格整数平均（center=index0）。
+- `SmoothLightingTests`(4)。全量 **1255 通过**、门禁 ok。光照对照表全部 ✅（#3/#8/#10/#13 + litColour/时钟/预热丢包）。## 2026-11-01 修复：雾色随时间/天气（夜间不再套白昼蓝）
+- 症状：夜里冰面/水面/普通方块偏蓝——雾色此前是**静态白昼蓝**(0.75,0.85,1.0)。
+- 原版 `visual/fog_color` 为 multiply 曲线：133/11867 `#ffffff` → 13670/22330 `#0f0f16`。加 `SkyAttributeTracks.FogColorFactorAt(dayTime[,partial])`。
+- `FrameRequest.FogColour`（默认白昼雾）；`OffscreenRenderer`/`WindowedRenderer` 使用；窗口新增 `fogPerFrame` 每帧重写雾 uniform；`FrameCommand.EffectiveFogColour` 与 `InteractiveSession.CurrentFogColour` = base×(晨昏因子)×weather（`WeatherBlend.ApplyFog`）。
+- `SkyTimelinesTests.FogColorFactorIsWhiteByDayDarkAtNight`。全量 **1256 通过**、门禁 ok。
+- **仍待**：**天空渐变仍静态**（`sky.wgsl` 硬编码 horizon/zenith，无 uniform）→ 夜天偏蓝的另一半；需给 sky pipeline 加 tint uniform 并按 `SKY_COLOR` 时间曲线×weather 每帧更新。## 2026-11-01 修复：夜间方块发蓝（SKY_LIGHT_COLOR gamma bug）
+- 诊断（`MC_DIAG` 打实际 Lightmap uniform）：夜 `skyCol=(0.195,0.195,1.000)`，而原版 `#7a7aff` 应为 `(0.478,0.478,1.0)`。根因：`SkyTimelines.NightSky = SrgbToLinear(122)` 误做 gamma 解码（0.195）；`SUNRISE_SUNSET_COLOR` 的 R/G/B 同样误线性化。
+- 修复：改回原样 `v/255`（对齐 `ARGB.vector3fFromARGB32`），删除 `SrgbToLinear`。实机确认 `skyCol=(0.478,0.478,1.000)`。
+- `SkyTimelinesTests` 更新为 `122/255`。全量 **1256 通过**、门禁 ok。
+- **仍待**：天空渐变静态（`sky.wgsl` 无 uniform）；且雾基色当前用 `base×(fog因子)` 近似，原版是 `FOG_COLOR(默认黑) 与 SKY_COLOR 混合`，后续按原版统一到 SKY_COLOR。## 2026-11-01 天空/雾改由 SKY_COLOR 驱动（T-292）
+- 原版：天空= `SKY_COLOR`（群系 `calculateSkyColor` × 昼夜乘子 × 天气）；雾基色=`FOG_COLOR`(默认黑) 与 `SKY_COLOR` 混合（`AtmosphericFogEnvironment.getBaseColor`）。
+- 实现 `FrameCommand.EffectiveSkyColour`（`SkyColourSource` 空间混合 × `SkyColorMultiplierAt` × `WeatherBlend.ApplySkyColour`）。
+- 窗口：`SkipGradientSky=true` + `clearColourPerFrame`=天空色；`fogPerFrame`=`CurrentFogColour`（有 biomes 时用天空色）；`InteractiveSession.SetBiomes/CurrentSkyColour`。离屏 `RenderWorld` 同（设置 ClearColour/FogColour/SkipGradientSky）。
+- 窗口 diag：`skyCol=(0.478,0.478,1.000)`、`day` 正常。全量 **1256 通过**、门禁 ok。
+- **注意**：离屏单帧 `frame` 预热的 deferred 偶尔未包含进服 full-sync（该次 day=0）；窗口路径正常。后续可把 full-sync 在更早阶段接入以修正离屏。## 2026-11-01 可配置视距（默认 12，T-293）
+- `InteractiveSession.ViewDistanceChunks` 改为宿主配置：`MC_VIEW_DISTANCE`（clamp 2..32，默认 **12**）；配置阶段 `ConfigurationProbe.SendClientInformation`、play `ClientInformation`、`WalkCommand` 均用它（此前硬编码 8/2）。
+- 全量 **1256 通过**、门禁 ok。窗口以默认 12 重启。
+- **已知视觉差距（后续可选）**：①**云层未实现**（原版 CloudRenderer）；②天空为纯 `SKY_COLOR` 平色，缺地平线渐变；③雾色简化为 `SKY_COLOR`（原版 `FOG_COLOR↔SKY_COLOR` 混合）；④夜间亮度可能偏低。## 2026-11-01 云层模块设计（待评审）
+- 实读 `CloudRenderer`/`clouds.{vsh,fsh}`/`EnvironmentAttributes`/`day.json`，写 `docs/modules/clouds.md`（草稿）：cell=12、云高 192.33、`CLOUD_FOG_END=2048`、`visual/cloud_color` 昼白→夜 `#191926`、滚动 0.6 块/s、面亮度 1/0.7/0.8/0.9。
+- 拟用"云纹理水平贴图平面近似"（受控偏差：无逐 cell 侧面剔除/阴影），§3 单测（颜色因子/滚动/常量）、§4 离屏对比。
+- **按 AGENTS 3.5 需 `[已评审]` 后再编码**；当前等待所有者评审 `docs/modules/clouds.md §5`。## 2026-11-01 云方案定稿：逐 cell（已评审）
+- 所有者决定：**逐 cell 还原原版**（云开销可接受）；无 clouds.png 不画；绘制半径跟 `MC_VIEW_DISTANCE`。`docs/modules/clouds.md` → `[已评审]`。
+- **关键发现/前置**：`WindowedRenderer` **没有 celestial/云 pass**（太阳/月亮/星星/云只在离屏绘制）→ 窗口夜黑、无云的另一根因。需先给窗口补 `celestial+cloud pass`。
+- 实现顺序：① 纯逻辑 `CloudTexture`/`CloudMeshBuilder`/`CloudColorFactorAt`（+单测）→② 窗口 celestial+cloud pass →③ 离屏复用 →④ 对照帧。
+- **① 已完成（T-295）**：`CloudTexture`(alpha<10 空/四邻/pack)、`CloudMeshBuilder`(原版 buildMesh/buildExtrudedCell 面规则)、`CloudColorFactorAt`；`CloudTextureTests`(2)+`CloudMeshBuilderTests`(4)+云色单测。全量 **1263 通过**。
+- **下一步 ②（T-296）**：给 `WindowedRenderer` 补 celestial+cloud pass（现仅离屏有），再接入云四边形；每帧 `CloudColor/Offset/CellSize`、顶/底/侧向面、alpha 混合与 CloudFogEnd 淡出。## 2026-11-01 T-296 步骤①：窗口 celestial pass（已完成）
+- `OffscreenRenderer.CelestialResources/CelestialColorResources` 提为共享 `internal` 并参数化颜色目标格式（窗口 `Bgra8Unorm` vs 离屏 `Rgba8Unorm`）；`CreatePositionColorPipeline` 加 format 参数。
+- `WindowedRenderer` 复用两者，天空之后/地形之前绘制；`WindowCommand` 调 `FrameCommand.AttachCelestial` 填充 draws/textures。窗口启动无 GPU validation error，日月星显现。
+- 全量 **1263 通过**、门禁 ok。**下一步 ②（T-297）**：逐 cell 云接入（CloudMeshBuilder→position-colour，每帧 CloudColor/Offset/CellSize，alpha + CloudFogEnd），并处理天体随相机（当前 model 用初始相机，行走时需按位移增量更新）。## 2026-11-01 T-297 进展：逐 cell 云离屏渲染（窗口待）
+- `CloudGeometryBuilder`（面顶点表/亮度 1/0.7/0.8/0.9/厚度 4/雾 alpha）→ position-colour；`FrameCommand.BuildCloudDraw`（云滚动 `gameTime% (w*400)*0.03`、相机侧、`radiusCells=ceil(view*16/12)`、`CloudColorFactor×天气`）；离屏 `RenderWorld` 追加到 `CelestialColorDraws`。
+- 修复：离屏相机在世界外时天空采样群系失败→全黑；改为**回退到已加载区块列**采样 `EffectiveSkyColour`（与天空盘一致）。
+- `CloudGeometryBuilderTests`(2)；离屏日间出图见蓝天空+太阳+云块。全量 **1265 通过**、门禁 ok。
+- **待做**：窗口每帧云接入（需每帧更新云几何/偏移与天体随相机位移）；离屏相机远时云在相机附近可能不在取景内，窗口验证更直观。## 2026-11-01 T-297 完成：窗口每帧云
+- `CelestialColorResources.SetDraws`（延迟一帧释放旧缓冲）支持每帧更新云 draws；`WindowedRenderer` 新增 `cloudsPerFrame`，天空/日月星之后、地形之前以 position-colour 绘制云。
+- `InteractiveSession` 持 `_cloudTexture`（`SetCloudTexture`）并提供 `CurrentCloudDraw()`= `FrameCommand.BuildCloudDraw(world, texture, eye)`；`WindowCommand` 传入 `cloudsPerFrame`。
+- 窗口运行无 GPU validation error（frame ~40–90ms）。全量 **1265 通过**、门禁 ok。
+- **已知偏差**：日月星仍用**初始相机** model（行走时会偏移）；云按当前眼位生成所以正确。后续可给 CelestialResources 加相机位移增量更新。T-296 目标基本达成（窗口 celestial+cloud pass 已有）；如需严格，再补天体随相机。## 2026-11-01 T-296 收尾：天体随相机
+- `CelestialResources`/`CelestialColorResources` 增 `UpdateCamera(Vector3 delta)`：每帧按 `eye - request.CameraPosition` 左乘平移写回天体 transform，日月星不再随移动偏移（云本就用当前眼位）。
+- `WindowedRenderer` 每帧在采样相机后调用（仅天体，不对云资源调用）。窗口运行无 GPU validation error。全量 **1265 通过**、门禁 ok。
+- **T-296/T-297 完成**：窗口已具备 celestial（日月星/日出）+ 逐 cell 云 pass；离屏/窗口共用绘制资源。云纹理缺失时不画云。## 2026-11-01 修复：窗口每帧云 GPU 缓冲 OOM（T-298）
+- 症状：窗口运行一段时间后 `wgpuDeviceCreateBuffer: Not enough memory` 崩溃（客户端起不来/退出）。
+- 原因：`CelestialColorResources.SetDraws` 每帧重建云缓冲；60fps 下分配爆炸。
+- 修复：容量内**原地 `WriteBuffer` 复用**，仅容量/结构变化时重建（旧缓冲延迟一帧释放）。窗口连续 2469 帧稳定无 validation/OOM；全量 1265 通过。
+- 当前客户端运行 pid（子进程）~57780。剩余视觉差距：天空无地平线渐变、雾基色近似、云无 OIT/精确 cloud-fog。## 2026-11-01 修复：几何 arena 显存 OOM（T-299）
+- 崩溃：`wgpuDeviceCreateBuffer: Not enough memory`（960×540、视距12、约1900帧）。
+- 根因：`ChunkGeometryArena` 初始 `expectedChunks(625)×512KB×2×3层 ≈ 1.4GB`；且 `RebuildAll` 以 `MaxPresizeBytes` 当硬上限，实际几何超限时每帧全量重建（~100MB/帧）→ OOM。
+- 修复：初始改 1MB 起；每层增长上限 `MaxBufferBytes=96MB`（presize 16MB）；达上限跳过远处区块（不再重建）；`RebuildAll` 增长上限用 MaxBuffer。视距 12 连续 45s+ 无 OOM/validation（进程 ~819MB）。全量 1265 通过。
+- **另一主因（频繁关闭）**：`Start-Process` 启动的客户端会在工具调用结束时被清理；改用**持久终端会话**（`terminal_open`/`terminal_send`）后持续运行 **11647 帧**稳定（pid 48892，RSS ~866MB）。
+- 仍待：超大窗口(2560×1334)时 OIT 目标与重传仍可能吃紧；可视需要再降或分页缓冲区。## 2026-11-01 新目标：视距 12–32 无跳过（T-300 / ADR-0020）
+- 所有者要求：视距 **12 且不跳过远处区块**是硬性，原版可到 **32**。单缓冲 arena + 256MB 上限于此不可能，必须换几何存储。
+- 已立目标 `goal-6e779d0d`；写 ADR-0020：**每区块独立 vertex/index 缓冲 + CPU 视锥剔除**（原版模型），显存随实际网格增长，取消上限/跳过。
+- 实施分步：①ADR（完成）→②`ChunkGeometryStore`（每区块缓冲、Apply/Remove、内存统计）→③`WindowedRenderer` 三层绘制改每区块缓冲+CPU 剔除（translucent 距离排序）→④视距 12/24/32 长跑与显存测量→⑤测试/门禁/traceability 收尾。
+- 现状：旧每帧云/天体 pass 不回退；当前客户端仍可用（旧 arena 方案，视距12 稳定但高内存时会跳过远区块）。## 2026-11-01 T-301：每区块几何存储 + 窗口绘制（完成）
+- 新增 `ChunkGeometryStore`：每区块独立 vertex/index 缓冲，`Apply` 同尺寸原地重写、尺寸变化重建、`Remove` 释放；`MemoryBytes/UploadedBytes` 统计；`Draw(planes)` CPU 视锥剔除、`DrawFarthestFirst` 排序。
+- `WindowedRenderer` 三层（solid/cutout/translucent）改用 store；移除 `ChunkCuller`/间接绘制/`SlotHighWater`/达上限丢弃逻辑；保留 disableCulling 调试开关。
+- 视距 12 运行 **6996+ 帧**无 OOM/validation（RSS ~812MB，GPU dedicated ~1.6GB）；全量 1265 通过。待压测 24/32；区块卸载（ClientWorld 未移除离视区块）与旧 arena 清理列为后续。## 2026-11-01 T-302：视距 32 压测通过（每区块存储）
+- 视距 **32**：窗口统计 **3890 区块**、**上传 3.26GB**、**0 次 full rebuild**、**8302 帧**无 OOM/validation（GPU dedicated 峰值 ~4.3GB，960×540）。
+- 证明"每区块缓冲 + CPU 剔除"支持大视距且**不跳过远处区块**；旧单 arena 上限问题解除。
+- 旧 `ChunkGeometryArena`/`ArenaSizing` 暂留（仍被旧单测覆盖），后续可删；`ClientWorld` 目前不会移除离视区块，长时间大范围移动会累积内存（后续做区块卸载 + 缓冲释放）。
+- **剩余渲染缺口已登记** `docs/specs/render/known-gaps.md`：区块卸载、旧 arena/绘制调用、天空盘/渐变、雾精确混合、夜亮度、云 OIT/精确 cloud-fog、天体细节像素等效、高分辨率显存、适配器选择；traceability T-303。## 2026-11-01 T-304：天体/云排查（月亮 UV 修复）
+- 实读原版 `SkyRenderer`：太阳尺寸30/高度100、月亮20/100、星空1500、日出18顶点扇形；日出 alpha 经 PoseStack 后乘 scale 作用在旋转前局部 Z（我们的 `SunriseFanWorld` 公式正确）。
+- **已修正**：原版月亮四边形相对太阳使用反向 UV（`buildMoonPhases` → 180°），我们此前正向 → 月相方向错误；`AddBody(..., flip: true)` 传 `(1,1,0,0)`，加 `CelestialGeometryTests`。
+- 云 shader 实读：`vertexColor = faceColors[dir] * CloudColor`，alpha *= `1-linear_fog_value(vertexDistance,0,FogCloudsEnd)`；面亮度/雾与我们实现一致；**缺 OIT 云 pass**（已知缺口）。
+- 下一步：需要用户给出太阳/月亮/星星/云的具体可见问题（位置/大小/颜色/闪烁/排序），以定位剩余偏差；或继续按已知缺口做云 OIT/天空盘。## 2026-11-01 T-305：窗口天体每帧重建 + 云位置修正
+- 根因1：窗口的 celestial 只在启动时 `AttachCelestial` 一次；`/time` 变化后太阳/月亮/星星几何不更新 → 太阳不动、夜里无星星。现 `WindowedRenderer` 增 `celestialPerFrame`，宿主每帧重建 day/night 天体（PNG 解码静态缓存、纹理数组固定顺序，`CelestialResources.SetDraws` 复用纹理/管线）。
+- 根因2：云 `BuildCloudDraw` 的 origin 重复加了相机坐标；原版 shader `pos = cell*CellSize + face*CellSize + CloudOffset` + 相机 uniform，origin 应为 `(cellX*12-xInCell, bottomY, cellZ*12-zInCell)`。已修。
+- 验证：离屏 `MC_SUN_ANGLE=0` 太阳在视野、90/180 消失且星星可见（白点）；全量 1266 通过。剩余需窗口实测与云 OIT/排序。## 2026-11-01 T-306：星星随相机 / 云相机相对坐标
+- 现象：玩家走路会靠近星星；云跨区块位置突然跳变/渲染异常。
+- 根因1：每帧 `celestialPerFrame` 的 `SetDraws` 在 `UpdateCamera` 之后执行，新 draw 的 model 仍是初始相机 → 星星固定在世界原点。已改为先 `SetDraws` 再 `UpdateCamera(delta)`。
+- 根因2：原版云是**相机相对**（vsh 的 cell 是 relative cell，pos=relative*12+CloudOffset，相机在原点）；我们 origin 之前含 centerCell 绝对坐标 → 跨 cell 跳变。已改为 `origin=(eye.X-xInCell, bottomY, eye.Z-zInCell)`；`CloudGeometryBuilder` 继续用相对 CellX。
+- 待窗口实测：跨区块行走云连续性、星星不随移动靠近；全量测试后提交。## 2026-11-01 T-307：高空天空/雾黑屏修复
+- 现象：玩家 Y 高于世界高度上限时地面/天空变黑（截图二黑色大块为雾/天空把地形染色）。
+- 根因：`CurrentSkyColour` 用相机 Y 采样群系；Y 超出已加载 section 时 `GetBiomeAt` 全 -1 → `SkyColourSource` 权重 0 → sky=(0,0,0)，而 `CurrentFogColour` 直接取 sky → 雾/地面黑。
+- 修复：按原版 `ChunkAccess.getNoiseBiome` 将采样 quartY **clamp 到世界 [minY,maxY]**；极端缺失再回退 y=64。离屏高空相机帧全蓝、无黑色；全量 1267 通过。
+- 待窗口实测高空；云在夜间偏暗属正常色（若过黑另查）。## 2026-11-01 T-308：云范围/顺序/深度（进行中）
+- 原版依据：`CloudRenderer.prepare` 的 `range` 来自 `Options.cloudRange`，默认 **128 区块**（2048 方块）；我们误用 `MC_VIEW_DISTANCE=12`→192 方块，而云 fog 到 2048 才消失 → 云在 192 处硬切“冒出来”。
+- 原版顺序：`executeClassicTransparency` 中 **半透明地形之后**才 `cloudRenderer.render`；fancy 走 `renderOit` + 深度。我们此前云在地形之前、深度 Always不写 → 地形/云互相穿透（“透视”）。
+- 实现：`CloudDrawCache`（仅中心 cell/相机侧/垂直偏移变化时重建相机相对几何，每帧只更新 model 平移）；`BuildCloudDraw` 半径=`ceil(128*16/12)`；`WindowedRenderer` 云 pass 移到地形/OIT 之后，创建 cloud pipeline 深度 `LessEqual`；`CelestialColorResources` 未变数组跳过重传。
+- 构建/1267 通过；窗口运行中（pid 54384，RSS ~1.16GB）。**未做**：云 OIT（当前普通 alpha + 深度）；严格像素等效待后续。## 2026-11-01 T-309：云配置开关
+- 新增宿主开关（不污染游戏程序集环境变量读取，经显式选项传入）：`MC_CLOUD_MODE=off|fast|fancy`（默认 fancy）与 `MC_CLOUD_RANGE`（默认 128 区块，对应原版 `Options.cloudRange`）；`MC_CLOUD_MODE=off` 跳过云，`fast` 用仅 DOWN 面（`CloudMeshBuilder.BuildFlat`）。
+- `CloudDrawCache` 缓存 fancy 云几何；`CloudMeshBuilderTests.FastModeBuildsOnlyTheDownFace`、`CloudDrawCacheTests` 加回归；全量 **1269** 通过。
+- **完整 cloud OIT 仍待实现**：需要新增 position-color 版 OIT 着色器/三阶段 pipeline 并接入现有 OIT 目标；计划以显式 `CloudUseOit` 选项接入，不影响当前路径。## 2026-11-01 T-310：跳跃云上下抖动修复
+- 现象：跳跃时云上下颤抖。
+- 根因：`CloudDrawCache` 为实现雾 alpha 把 `relativeBottomY` 四舍五入进几何；跳跃时该值每帧变化 → 几何重建且云块垂直位置被量化到整块，产生上下跳。
+- 修复：缓存几何不再含垂直偏移（fog 距离按水平相对位置），缓存键不含垂直；每帧 model 平移 y 固定为绝对 `bottomY`（水平仍为 eye-(xInCell,zInCell)），与 shader `CloudOffset.y` 等价。
+- 全量测试通过；Cloud 测试 11。## 2026-11-01 T-311：cloud OIT（参考三阶段复用）
+- 原版：`CloudRenderer.renderOit` 按 OitStage 复用 `OitRenderPassProvider` 的 depth bounds/transmittance/accumulate 目标，fancy 使用 OIT 管线。
+- 实现：`CloudOitResources` 将云缓存几何展开为地形 14-float 顶点（position+colour+uv+spriteRect+light），用 **256 级 alpha 渐变纹理**让现有 OIT shader 的 `sampleAlpha` 得到逐顶点云 alpha；云几何在现有 OIT 的 bounds/transmittance/accumulate 三个 pass 中额外绘制（复用现有 pipeline 与 group1 绑定），composite 一并解析。
+- 开关：`MC_CLOUD_OIT=0` 回退普通 alpha+深度；默认开启。窗口运行 3586+ 帧无 GPU 校验错误；构建通过。
+- 待：像素级对照、性能（128 区块 + OIT），以及与原版独立 cloud depth OIT 的差异记录。## 2026-11-01 渲染优化计划（T-312）
+- 计划文档 `docs/specs/render/optimization-plan.md`：阶段1 cloud OIT 常驻几何+专用 shader；阶段2 云几何/自适应范围；阶段3 OIT 目标生命周期；阶段4 独立 cloud depth + 像素对照；阶段5 天体/天空/绘制路径。
+- 下一步从阶段1开始：新增 `cloud_oit.wgsl`（7-float 顶点 + transform uniform），缓存云几何仅在 cell/侧别变化时重建，每帧仅更新 uniform。- 2026-11-01 阶段1完成：`cloud_oit.wgsl`（7-float+transform）+ `CloudOitResources` 仅在缓存数组变化时上传，每帧只更新 transform；窗口 2194+ 帧无校验错误。
+- 2026-11-01 阶段2完成：`CloudRangePolicy` + `MC_CLOUD_ADAPTIVE`（默认关闭）按帧时间在 32–128 调云范围。
+- 2026-11-01 阶段3完成：OIT 目标按需创建（有半透明/云 OIT 才分配），无内容场景不占目标显存。
+- 2026-11-01 阶段5部分：天体几何按 dayTime/雨雷缓存，减少每帧重建（相机仍每帧 UpdateCamera）。
+- 2026-11-01 阶段5部分：`MC_SKY_GRADIENT=1` 开关（默认平色 SKY_COLOR）。阶段4独立 cloud depth 仍需单独 OIT passes。
+- 2026-11-01 阶段4设计完成：独立 cloud depth OIT（cloudDepthTexture/三阶段/独立 composite，`MC_CLOUD_DEPTH`）；实现待下一提交。
+- 2026-11-01 阶段3余项完成：`MC_OIT_LOW_PRECISION=1` OIT 目标降为 RGBA8Unorm（默认 16F）。
+- 2026-11-01 阶段4对照流程已登记 `benchmarks/render/cloud-oit-compare.md`；独立 cloud depth 实现仍待下一提交。
+- 2026-11-01 阶段4实现：`MC_CLOUD_DEPTH=1` 独立 cloud depth + 专用 OIT targets/三阶段/composite；默认 0。
+- 2026-11-01 阶段4修复：补 cloud depth-bounds cull pass，修复云不透明白块。
+- 2026-11-01 阶段4 cloud OIT 最终验收：blit_depth、独立 cloud depth、bounds-only 深度写、夜间 alpha/内部面修正完成；全量1272通过，用户确认昼夜正常。
+- 2026-11-01 阶段4最终：Float32Blendable→RGBA32F OIT（无特性回退16F），玻璃/云条纹消失；全量1272通过。
+- 2026-11-01 区块卸载+显存释放完成（T-327）：视距+2 外移除 world/chunk cache/GPU store；known-gaps OIT/卸载项关闭；全量1272通过。
+- 2026-11-01 高分辨率 OIT 压测（T-328）通过：2560×1334 视距12 40s 无 OOM。
+- 2026-11-01 天空盘切片范围记录：上/下盘实现；水下暗盘延后到水下渲染。
+- 2026-11-01 天空盘上盘实现（T-330）：opaque 通道 + SkyDiscDraws，y=+16 SKY_COLOR 于日月星前；水下暗盘延后。
+- 2026-11-01 白雾混合（T-331）按 AtmosphericFogEnvironment 公式接入当前雾色。
+- 2026-11-01 天空盘 fog 渐变（T-332）：顶点按距离 SKY_COLOR→FOG_COLOR，地平线白化。
+- 2026-11-01 天空盘地平线缝隙：窗口 clear 改为雾色（T-333）。
+- 2026-11-01 天空盘渐变改为 16环×64段细分（T-334），地平线过渡更顺滑。
+- 2026-11-01 天空盘 Vanilla 逐像素 shader 默认，fast 顶点渐变回退；FOV 默认70（T-335）。
+- 2026-11-01 天空盘改为源码等效：逐像素 fog + FogSkyEnd=min(renderDistanceBlocks,512)，撤销视觉调参。
+- 2026-11-01 Vanilla天空盘相机平移修复（T-337）：全量1272通过；天空盘观感正常。
+- 2026-11-01 固定机位天空/雾采样通过：Sharpcraft (136,169,255) vs vanilla (137,170,255)。
+- 2026-11-01 视距32统计：154FPS、solid arena 1770chunks/1040MB；draw call非瓶颈，显存优先（T-339）。
+- 2026-11-01 2560视距32统计（T-340）：162FPS，几何显存≈1.22GB；不引入paged arena。
+- 2026-11-01 删除旧 arena 死代码（T-341）；全量1267通过。
+- 2026-11-01 加入 DrawIndexed 计数（T-342）；视距32约4700 draws/frame但仍160FPS。
+- 2026-11-01 古城室内压测（T-343）：155FPS、约1902 draws/frame、几何≈1.46GB；不引入paged arena。

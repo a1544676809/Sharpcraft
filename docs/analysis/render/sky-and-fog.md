@@ -109,3 +109,15 @@ status: 草稿
 
 证据：窗口运行日志 `window: surface ready`、连续出帧，且**无** `wgpu uncaptured error` / `Validation Error`。
 说明：本环境无法抓取窗口像素（远程会话无可见窗口），所以窗口侧的**像素级**验证仍缺，离屏侧已有（§6/§7）。
+
+## 9. 原版天空盘/暗盘（实读，用于天空盘切片）
+
+证据：`SkyRenderer.buildSkyDisc` / `renderSkyDisc` / `renderDarkDisc` / `RenderPipelines.SKY`。
+
+- `SKY_DISC_RADIUS = 512`，`SKY_VERTICES = 10`；`buildSkyDisc(yy)` 为 `TRIANGLE_FAN`：中心 `(0, yy, 0)`，随后 `i=-180..180 step 45` 的环点 `(signum(yy)*512*cos(i), yy, 512*sin(i))`。
+- 预构建两个 buffer：top `y=+16`、bottom `y=-16`；每帧 `renderSkyDisc` 用 `SKY` pipeline、`DynamicTransforms` tint=`(skyColor,1)` 绘制 top 的 10 个顶点。
+- `SKY` pipeline：vertex `core/sky`、fragment `core/sky`、vertex binding `POSITION`、`TRIANGLE_FAN`、`ColorTargetState.DEFAULT`（**不混合、opaque**），绑定 matrices/fog。
+- `renderDarkDisc` 仅当 `shouldRenderDarkDisc && !player.isUnderWater()` 时执行；将 modelview 平移 `(0,12,0)`，用 bottom buffer、tint 黑色 `(0,0,0,1)` 绘制。
+- 绘制顺序：`renderSkyDisc` → `renderSunriseAndSunset` → `renderSunMoonAndStars` → （条件）`renderDarkDisc`。
+
+**我们的切片**：上盘 `y=+16` + 下盘 `y=-16` 用 opaque SKY pipeline；水下条件/水下暗盘暂不实现（水下渲染未做），文档已登记延后。

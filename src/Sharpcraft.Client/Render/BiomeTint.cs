@@ -3,6 +3,7 @@
 
 using Sharpcraft.Client.Assets;
 using Sharpcraft.Common.Identifiers;
+using Sharpcraft.Common.World;
 
 namespace Sharpcraft.Client.Render;
 
@@ -54,11 +55,17 @@ public sealed class BiomeTint
 
     private readonly Colormap? _grass;
     private readonly Colormap? _foliage;
+    private readonly Func<int, int, int, int>? _biomeIdAt;
+    private readonly BiomeRegistry? _registry;
+    private readonly int _blendRadius;
 
-    private BiomeTint(Colormap? grass, Colormap? foliage)
+    private BiomeTint(Colormap? grass, Colormap? foliage, Func<int, int, int, int>? biomeIdAt = null, BiomeRegistry? registry = null, int blendRadius = 0)
     {
         _grass = grass;
         _foliage = foliage;
+        _biomeIdAt = biomeIdAt;
+        _registry = registry;
+        _blendRadius = blendRadius;
     }
 
     /// <summary>Biome temperature used until biome data reaches the client.</summary>
@@ -71,6 +78,9 @@ public sealed class BiomeTint
     /// <param name="resources">Session resource manager.</param>
     public static BiomeTint Load(ResourceManager resources) =>
         new(Colormap.Load(resources, "grass"), Colormap.Load(resources, "foliage"));
+
+    /// <summary>Creates a tint from explicit colour maps (null allowed), for callers without a pack or for tests.</summary>
+    public static BiomeTint FromColormaps(Colormap? grass, Colormap? foliage) => new(grass, foliage);
 
     /// <summary>
     /// Colour for a tint kind at a position.
@@ -88,6 +98,65 @@ public sealed class BiomeTint
             BlockTintKind.Water => WaterDefault,
             _ => -1
         };
+
+    /// <summary>Returns a copy that resolves block tints per biome via <paramref name="biomeIdAt"/> and the registry.</summary>
+    public BiomeTint WithBiomes(Func<int, int, int, int> biomeIdAt, BiomeRegistry registry, int blendRadius)
+    {
+        ArgumentNullException.ThrowIfNull(biomeIdAt);
+        ArgumentNullException.ThrowIfNull(registry);
+        return new BiomeTint(_grass, _foliage, biomeIdAt, registry, Math.Max(0, blendRadius));
+    }
+
+    /// <summary>
+    /// Colour for a tint kind at a world block position. With biome data it averages the per-biome colour over the
+    /// biome-blend square (reference ClientLevel.calculateBlockTint); otherwise it uses the default temperature/rainfall.
+    /// </summary>
+    public int ColourAt(BlockTintKind kind, int x, int y, int z)
+    {
+        if (_biomeIdAt is null || _registry is null)
+        {
+            return Colour(kind);
+        }
+
+        return BlockTint.Calculate(x, z, _blendRadius, (wx, wz) =>
+        {
+            var entry = _registry.ById(_biomeIdAt(wx, y, wz));
+            return entry is null ? Colour(kind) : BiomeColour(kind, entry, wx, wz);
+        });
+    }
+
+    private int BiomeColour(BlockTintKind kind, BiomeEntry entry, int x, int z)
+    {
+        var effects = entry.Effects;
+
+        // Reference getGrassColorFromTexture clamps temperature and downfall to 0..1 before indexing the colour map;
+        // without it a biome below 0 or above 1 indexes outside the map and returns the magenta fallback.
+        var temperature = Math.Clamp(entry.Climate.Temperature, 0f, 1f);
+        var downfall = Math.Clamp(entry.Climate.Downfall, 0f, 1f);
+
+        return kind switch
+        {
+            BlockTintKind.Grass => ApplyGrassModifier(
+                effects.GrassColor ?? (_grass?.Sample(temperature, downfall, -65281) ?? -65281),
+                effects.GrassColorModifier,
+                x,
+                z),
+            BlockTintKind.Foliage => effects.FoliageColor ?? (_foliage?.Sample(temperature, downfall, FoliageDefault) ?? FoliageDefault),
+            BlockTintKind.FoliageEvergreen => FoliageEvergreen,
+            BlockTintKind.FoliageBirch => FoliageBirch,
+            BlockTintKind.Water => effects.WaterColor,
+            _ => -1
+        };
+    }
+
+    private static int ApplyGrassModifier(int baseColor, GrassColourModifier modifier, int x, int z) => modifier switch
+    {
+        // Reference DARK_FOREST: ARGB.opaque(((base & 0xFEFEFE) + 2634762) >> 1).
+        GrassColourModifier.DarkForest => unchecked((int)0xFF000000) | ((((baseColor & 0x00FEFEFE) + 2634762) >> 1) & 0xFFFFFF),
+        // Reference SWAMP uses Biome.BIOME_INFO_NOISE (not implemented); documented controlled deviation keeps the base.
+        GrassColourModifier.Swamp => baseColor,
+        _ => baseColor
+    };
 
     /// <summary>
     /// Converts a packed colour to the three multipliers the mesher writes into a vertex.

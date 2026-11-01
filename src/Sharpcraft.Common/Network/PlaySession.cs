@@ -21,7 +21,8 @@ public sealed record PlaySessionStats(
     bool Survived,
     int ChunksReceived = 0,
     int ChunksFailed = 0,
-    int BatchesAcknowledged = 0)
+    int BatchesAcknowledged = 0,
+    IReadOnlyList<byte[]>? DeferredPackets = null)
 {
     /// <summary>Total packets received.</summary>
     public int TotalPackets => PacketCounts.Values.Sum();
@@ -73,6 +74,11 @@ public static class PlaySession
         var batchesAcknowledged = 0;
         var layout = (SectionCount: 24, MinSectionY: -4, AirState: 0);
         var haveLayout = false;
+
+        // Packets the live session needs but that arrive during this preload (before it takes over the connection):
+        // the join-time full clock sync (set_time) and game events (weather) would otherwise be lost here, because the
+        // default branch below only counts them.
+        var deferred = new List<byte[]>();
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(duration);
@@ -218,14 +224,19 @@ public static class PlaySession
                             ? "raw: " + MinecraftLoginCrypto.ToHex(body)
                             : reason;
                         log?.Invoke($"disconnected by the server: {disconnected}");
-                        return new PlaySessionStats(joinGame, keepAlives, pings, counts, disconnected, false, chunksReceived, chunksFailed, batchesAcknowledged);
+                        return new PlaySessionStats(joinGame, keepAlives, pings, counts, disconnected, false, chunksReceived, chunksFailed, batchesAcknowledged, deferred);
                     }
 
                     case PacketIds.PlayClientbound.StartConfiguration:
                         log?.Invoke("server asked to reconfigure; stopping");
-                        return new PlaySessionStats(joinGame, keepAlives, pings, counts, "start_configuration", false, chunksReceived, chunksFailed, batchesAcknowledged);
+                        return new PlaySessionStats(joinGame, keepAlives, pings, counts, "start_configuration", false, chunksReceived, chunksFailed, batchesAcknowledged, deferred);
 
                     default:
+                        if (packetId == PacketIds.PlayClientbound.SetTime || packetId == PacketIds.PlayClientbound.GameEvent)
+                        {
+                            deferred.Add(body.ToArray());
+                        }
+
                         log?.Invoke($"play <- id {packetId} ({body.Length} bytes)");
 
                 if (player is not null && sync is not null)
@@ -249,6 +260,6 @@ public static class PlaySession
             survived = true;
         }
 
-        return new PlaySessionStats(joinGame, keepAlives, pings, counts, disconnected, survived, chunksReceived, chunksFailed, batchesAcknowledged);
+        return new PlaySessionStats(joinGame, keepAlives, pings, counts, disconnected, survived, chunksReceived, chunksFailed, batchesAcknowledged, deferred);
     }
 }

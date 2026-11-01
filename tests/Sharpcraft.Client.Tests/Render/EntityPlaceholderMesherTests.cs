@@ -23,7 +23,7 @@ public sealed class EntityPlaceholderMesherTests
         var geometry = mesher.Build([State(159, 10f, 64f, -3f)], Sprite());
 
         Assert.Equal(1, mesher.LastEntityCount);
-        Assert.Equal(EntityPlaceholderMesher.PlayerPartCount * 24 * 12, geometry.VertexFloats);
+        Assert.Equal(EntityPlaceholderMesher.PlayerPartCount * 24 * 14, geometry.VertexFloats);
         Assert.Equal(EntityPlaceholderMesher.PlayerPartCount * 36, geometry.IndexCount);
     }
 
@@ -34,7 +34,7 @@ public sealed class EntityPlaceholderMesherTests
 
         var geometry = mesher.Build([State(11, 10f, 64f, -3f)], Sprite());
 
-        Assert.Equal(24 * 12, geometry.VertexFloats);
+        Assert.Equal(24 * 14, geometry.VertexFloats);
         Assert.Equal(36, geometry.IndexCount);
     }
 
@@ -80,7 +80,7 @@ public sealed class EntityPlaceholderMesherTests
             Sprite());
 
         Assert.Equal(3, mesher.LastEntityCount);
-        Assert.Equal(3 * 24 * 12, geometry.VertexFloats);
+        Assert.Equal(3 * 24 * 14, geometry.VertexFloats);
         Assert.Equal(3 * 36, geometry.IndexCount);
     }
 
@@ -131,7 +131,7 @@ public sealed class EntityPlaceholderMesherTests
         var minZ = float.MaxValue;
         var maxZ = float.MinValue;
 
-        for (var offset = 0; offset < geometry.VertexFloats; offset += 12)
+        for (var offset = 0; offset < geometry.VertexFloats; offset += 14)
         {
             var x = geometry.Vertices[offset];
             var y = geometry.Vertices[offset + 1];

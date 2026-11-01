@@ -25,6 +25,8 @@ public sealed class ClientWorld
     private readonly HashSet<long> _dirtyChunks = [];
     private readonly int _minSectionY;
     private readonly int _sectionCount;
+    private readonly Dictionary<int, ClockNetworkState> _clocks = new();
+    private long _lastTickGameTime;
 
     /// <summary>Creates a world with a fixed vertical section range.</summary>
     /// <param name="minSectionY">Lowest section index (overworld 1.18+ uses -4).</param>
@@ -45,6 +47,148 @@ public sealed class ClientWorld
 
     /// <summary>Dimensions the server offers, as identifiers.</summary>
     public IReadOnlyList<string> Dimensions { get; private set; } = [];
+
+    /// <summary>Overworld clock registry id (WorldClocks registers overworld first).</summary>
+    public const int OverworldClockId = 0;
+
+    /// <summary>Full day length in ticks.</summary>
+    public const int DayLengthTicks = 24000;
+
+    /// <summary>Network game time from the last <c>set_time</c>.</summary>
+    public long GameTime { get; private set; }
+
+    /// <summary>Day time in 0..23999 from the overworld clock (0 when the server has not synced one).</summary>
+    public int DayTime
+    {
+        get
+        {
+            // The reference derives day time only from the overworld clock (nothing reads the raw game time for it); a
+            // server that never sends clock updates therefore leaves the clock at its default, so this is 0 afterwards.
+            if (!_clocks.TryGetValue(OverworldClockId, out var clock))
+            {
+                return 0;
+            }
+
+            var ticks = clock.TotalTicks % DayLengthTicks;
+            return (int)((ticks + DayLengthTicks) % DayLengthTicks);
+        }
+    }
+
+    /// <summary>
+    /// Sub-tick fraction (0..1) of the overworld clock, used to interpolate environment attributes (sun angle, sky light)
+    /// between the previous and current tick, exactly like the reference EnvironmentAttributeProbe (docs/modules/time.md 5).
+    /// </summary>
+    public float DayTimePartial =>
+        _clocks.TryGetValue(OverworldClockId, out var clock) ? Math.Clamp(clock.PartialTick, 0f, 1f) : 0f;
+
+    private float _rainLevel;
+    private float _thunderLevel;
+    private float _previousRainLevel;
+    private float _previousThunderLevel;
+
+    /// <summary>Rain level (0..1) at a sub-tick fraction, interpolated between the previous and current tick.</summary>
+    public float RainLevel(float partialTick) => LerpBetween(partialTick, _previousRainLevel, _rainLevel);
+
+    /// <summary>
+    /// Thunder level (0..1) at a sub-tick fraction, interpolated between ticks and scaled by the rain level, matching
+    /// <c>Level.getThunderLevel</c> (docs/modules/weather-and-sky-color.md 6.3).
+    /// </summary>
+    public float ThunderLevel(float partialTick) => LerpBetween(partialTick, _previousThunderLevel, _thunderLevel) * RainLevel(partialTick);
+
+    /// <summary>Sets the rain level; the client takes the server's value directly (previous and current match).</summary>
+    public void SetRainLevel(float level)
+    {
+        var clamped = Math.Clamp(level, 0f, 1f);
+        _previousRainLevel = clamped;
+        _rainLevel = clamped;
+    }
+
+    /// <summary>Sets the thunder level; the client takes the server's value directly.</summary>
+    public void SetThunderLevel(float level)
+    {
+        var clamped = Math.Clamp(level, 0f, 1f);
+        _previousThunderLevel = clamped;
+        _thunderLevel = clamped;
+    }
+
+    /// <summary>
+    /// Applies a <c>game_event</c> to the weather state, mirroring the reference <c>ClientPacketListener.handleGameEvent</c>.
+    /// The START/STOP branch values (0/1) are the reference's quirk; the server always follows them with a
+    /// RAIN_LEVEL_CHANGE carrying the real level.
+    /// </summary>
+    public void ApplyWeather(Sharpcraft.Common.Network.GameEventPacket packet)
+    {
+        ArgumentNullException.ThrowIfNull(packet);
+
+        switch (packet.EventType)
+        {
+            case Sharpcraft.Common.Network.GameEventPacketCodec.StartRaining:
+                SetRainLevel(0f);
+                break;
+            case Sharpcraft.Common.Network.GameEventPacketCodec.StopRaining:
+                SetRainLevel(1f);
+                break;
+            case Sharpcraft.Common.Network.GameEventPacketCodec.RainLevelChange:
+                SetRainLevel(packet.Param);
+                break;
+            case Sharpcraft.Common.Network.GameEventPacketCodec.ThunderLevelChange:
+                SetThunderLevel(packet.Param);
+                break;
+        }
+    }
+
+    private static float LerpBetween(float partialTick, float previous, float current) =>
+        previous + (Math.Clamp(partialTick, 0f, 1f) * (current - previous));
+
+    /// <summary>
+    /// Applies a <c>set_time</c> packet: advance the existing clocks to the packet's game time, then update only the clocks
+    /// the packet actually carries. Routine packets carry no clock updates, so they must not reset the clocks — the reference
+    /// ClientClockManager.handleUpdates ticks first and then overwrites only the entries present in the update map.
+    /// </summary>
+    public void ApplyTime(SetTimePacket packet)
+    {
+        ArgumentNullException.ThrowIfNull(packet);
+
+        AdvanceClocks(packet.GameTime);
+        GameTime = packet.GameTime;
+
+        foreach (var (id, state) in packet.Clocks)
+        {
+            _clocks[id] = state;
+        }
+    }
+
+    /// <summary>Reads one world clock's state.</summary>
+    public bool TryGetClock(int clockId, out ClockNetworkState state) => _clocks.TryGetValue(clockId, out state);
+
+    /// <summary>
+    /// Advances every clock to <paramref name="gameTime"/>: <c>partialTick += (gameTime - last) * rate</c>, carrying whole
+    /// ticks into <c>totalTicks</c>, exactly like the reference ClientClockManager.tick.
+    /// </summary>
+    public void AdvanceClocks(long gameTime)
+    {
+        var delta = gameTime - _lastTickGameTime;
+        _lastTickGameTime = gameTime;
+        if (delta == 0 || _clocks.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var key in new List<int>(_clocks.Keys))
+        {
+            var clock = _clocks[key];
+            var partial = clock.PartialTick + (delta * (double)clock.Rate);
+            var full = (long)Math.Floor(partial);
+            _clocks[key] = clock with { TotalTicks = clock.TotalTicks + full, PartialTick = (float)(partial - full) };
+        }
+    }
+
+    /// <summary>One client tick: advance the game time by one tick and step every clock (docs/modules/time.md).</summary>
+    public void AdvanceTick()
+    {
+        GameTime += 1;
+        AdvanceClocks(GameTime);
+    }
 
     /// <summary>
     /// Chunks whose geometry is stale. A block on a chunk border also dirties its neighbour, because face
@@ -175,6 +319,34 @@ public sealed class ClientWorld
     }
 
     /// <summary>
+    /// Removes every chunk farther than <paramref name="radiusChunks"/> (Chebyshev) from the centre column and returns
+    /// their packed keys, so the renderer and mesh cache can release the matching GPU/CPU resources.
+    /// </summary>
+    public List<long> RemoveChunksOutside(int centerChunkX, int centerChunkZ, int radiusChunks)
+    {
+        var removed = new List<long>();
+        foreach (var chunk in GetChunks())
+        {
+            if (Math.Abs(chunk.ChunkX - centerChunkX) > radiusChunks
+                || Math.Abs(chunk.ChunkZ - centerChunkZ) > radiusChunks)
+            {
+                var key = Pack(chunk.ChunkX, chunk.ChunkZ);
+                if (_chunks.TryRemove(key, out _))
+                {
+                    removed.Add(key);
+                }
+            }
+        }
+
+        if (removed.Count > 0)
+        {
+            RefreshSnapshot();
+        }
+
+        return removed;
+    }
+
+    /// <summary>
     /// Rebuilds the immutable view the mesher iterates. The array reference is swapped atomically, so a reader
     /// on another thread either sees the whole previous snapshot or the whole new one
     /// (docs/specs/network/play-movement.md 7.20).
@@ -232,6 +404,14 @@ public sealed class ClientWorld
         }
 
         return chunk.GetBlockState(BlockCoordinates.SectionRelative(x), y, BlockCoordinates.SectionRelative(z), fallbackState);
+    }
+
+    /// <summary>Biome id at a world block position, or -1 when the chunk/section is not loaded or carries no biome data.</summary>
+    public int GetBiomeAt(int x, int y, int z)
+    {
+        var chunk = GetChunk(BlockCoordinates.ToSectionCoord(x), BlockCoordinates.ToSectionCoord(z));
+        var section = chunk?.GetSection(y >> ChunkSection.SideBits);
+        return section is null ? -1 : section.GetBiome(x & 15, y & 15, z & 15);
     }
 
     /// <summary>Writes a block state; silently ignored when the chunk is not loaded.</summary>

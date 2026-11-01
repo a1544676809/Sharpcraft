@@ -86,6 +86,47 @@ public sealed class MeshBuffer : IDisposable
         (float U, float V) uvB,
         (float U, float V) uvC,
         (float U, float V) uvD,
+        SpriteRect? sprite = null,
+        (float Sky, float Block) light = default) =>
+        AppendQuad(a, b, c, d, (red, green, blue), (red, green, blue), (red, green, blue), (red, green, blue), light, light, light, light, uvA, uvB, uvC, uvD, sprite);
+
+    /// <summary>
+    /// Appends a quad whose four corners carry their own lit colour.
+    /// </summary>
+    /// <remarks>
+    /// Smooth lighting and ambient occlusion vary per corner, exactly as the reference computes them per vertex, so a quad
+    /// needs four colours rather than one. The single colour overload forwards here with all four equal.
+    /// </remarks>
+    /// <param name="a">First corner position.</param>
+    /// <param name="b">Second corner position.</param>
+    /// <param name="c">Third corner position.</param>
+    /// <param name="d">Fourth corner position.</param>
+    /// <param name="colourA">Lit colour of the first corner.</param>
+    /// <param name="colourB">Lit colour of the second corner.</param>
+    /// <param name="colourC">Lit colour of the third corner.</param>
+    /// <param name="colourD">Lit colour of the fourth corner.</param>
+    /// <param name="uvA">UV of the first corner, in sprite repeats.</param>
+    /// <param name="uvB">UV of the second corner, in sprite repeats.</param>
+    /// <param name="uvC">UV of the third corner, in sprite repeats.</param>
+    /// <param name="uvD">UV of the fourth corner, in sprite repeats.</param>
+    /// <param name="sprite">Atlas cell to sample; null covers the whole texture.</param>
+    public void AppendQuad(
+        (int X, int Y, int Z) a,
+        (int X, int Y, int Z) b,
+        (int X, int Y, int Z) c,
+        (int X, int Y, int Z) d,
+        (float R, float G, float B) colourA,
+        (float R, float G, float B) colourB,
+        (float R, float G, float B) colourC,
+        (float R, float G, float B) colourD,
+        (float Sky, float Block) lightA,
+        (float Sky, float Block) lightB,
+        (float Sky, float Block) lightC,
+        (float Sky, float Block) lightD,
+        (float U, float V) uvA,
+        (float U, float V) uvB,
+        (float U, float V) uvC,
+        (float U, float V) uvD,
         SpriteRect? sprite = null)
     {
         const int floatsPerQuad = 4 * ChunkMesher.FloatsPerVertex;
@@ -94,10 +135,10 @@ public sealed class MeshBuffer : IDisposable
 
         var rect = sprite ?? WholeAtlas;
         var first = (uint)(_vertexFloats / ChunkMesher.FloatsPerVertex);
-        WriteVertex(a, red, green, blue, uvA, rect);
-        WriteVertex(b, red, green, blue, uvB, rect);
-        WriteVertex(c, red, green, blue, uvC, rect);
-        WriteVertex(d, red, green, blue, uvD, rect);
+        WriteVertex(a, colourA.R, colourA.G, colourA.B, lightA, uvA, rect);
+        WriteVertex(b, colourB.R, colourB.G, colourB.B, lightB, uvB, rect);
+        WriteVertex(c, colourC.R, colourC.G, colourC.B, lightC, uvC, rect);
+        WriteVertex(d, colourD.R, colourD.G, colourD.B, lightD, uvD, rect);
 
         _indices[_indexCount++] = first;
         _indices[_indexCount++] = first + 1;
@@ -107,6 +148,32 @@ public sealed class MeshBuffer : IDisposable
         _indices[_indexCount++] = first + 3;
     }
 
+    /// <summary>
+    /// Appends a quad and its reverse winding. The reference draws fluid faces double-sided (addFace's addBackFace), so a
+    /// fluid quad in an opaque/depth-culling pass must cover both sides or back-face culling eats it.
+    /// </summary>
+    public void AppendQuadDoubleSided(
+        (float X, float Y, float Z) a,
+        (float X, float Y, float Z) b,
+        (float X, float Y, float Z) c,
+        (float X, float Y, float Z) d,
+        (float R, float G, float B) colourA,
+        (float R, float G, float B) colourB,
+        (float R, float G, float B) colourC,
+        (float R, float G, float B) colourD,
+        (float Sky, float Block) lightA,
+        (float Sky, float Block) lightB,
+        (float Sky, float Block) lightC,
+        (float Sky, float Block) lightD,
+        (float U, float V) uvA,
+        (float U, float V) uvB,
+        (float U, float V) uvC,
+        (float U, float V) uvD,
+        SpriteRect? sprite = null)
+    {
+        AppendQuad(a, b, c, d, colourA, colourB, colourC, colourD, lightA, lightB, lightC, lightD, uvA, uvB, uvC, uvD, sprite);
+        AppendQuad(a, d, c, b, colourA, colourD, colourC, colourB, lightA, lightD, lightC, lightB, uvA, uvD, uvC, uvB, sprite);
+    }
     /// <summary>Copies the written geometry into exactly sized arrays.</summary>
     public MeshData ToMeshData(int blockCount) =>
         new(Vertices.ToArray(), Indices.ToArray(), blockCount);
@@ -146,11 +213,41 @@ public sealed class MeshBuffer : IDisposable
         V1 = 1f
     };
 
+    /// <summary>Writes one vertex from a fractional position, used by the fluid surface height.</summary>
+    private void WriteVertex(
+        (float X, float Y, float Z) position,
+        float red,
+        float green,
+        float blue,
+        (float Sky, float Block) light,
+        (float U, float V) uv,
+        SpriteRect sprite)
+    {
+        var offset = _vertexFloats;
+        _vertices[offset] = position.X;
+        _vertices[offset + 1] = position.Y;
+        _vertices[offset + 2] = position.Z;
+        _vertices[offset + 3] = red;
+        _vertices[offset + 4] = green;
+        _vertices[offset + 5] = blue;
+        _vertices[offset + 6] = uv.U;
+        _vertices[offset + 7] = uv.V;
+        _vertices[offset + 8] = sprite.U0;
+        _vertices[offset + 9] = sprite.V0;
+        _vertices[offset + 10] = sprite.U1;
+        _vertices[offset + 11] = sprite.V1;
+        _vertices[offset + 12] = light.Sky;
+        _vertices[offset + 13] = light.Block;
+
+        _vertexFloats = offset + ChunkMesher.FloatsPerVertex;
+    }
+
     private void WriteVertex(
         (int X, int Y, int Z) position,
         float red,
         float green,
         float blue,
+        (float Sky, float Block) light,
         (float U, float V) uv,
         SpriteRect sprite)
     {
@@ -169,8 +266,64 @@ public sealed class MeshBuffer : IDisposable
         _vertices[offset + 9] = sprite.V0;
         _vertices[offset + 10] = sprite.U1;
         _vertices[offset + 11] = sprite.V1;
+        _vertices[offset + 12] = light.Sky;
+        _vertices[offset + 13] = light.Block;
 
         _vertexFloats = offset + ChunkMesher.FloatsPerVertex;
+    }
+
+    /// <summary>
+    /// Appends a quad whose corners are fractional positions, which the fluid surface needs because still water sits at
+    /// eight ninths of a block rather than at the block top.
+    /// </summary>
+    /// <param name="a">First corner position.</param>
+    /// <param name="b">Second corner position.</param>
+    /// <param name="c">Third corner position.</param>
+    /// <param name="d">Fourth corner position.</param>
+    /// <param name="colourA">Lit colour of the first corner.</param>
+    /// <param name="colourB">Lit colour of the second corner.</param>
+    /// <param name="colourC">Lit colour of the third corner.</param>
+    /// <param name="colourD">Lit colour of the fourth corner.</param>
+    /// <param name="uvA">UV of the first corner.</param>
+    /// <param name="uvB">UV of the second corner.</param>
+    /// <param name="uvC">UV of the third corner.</param>
+    /// <param name="uvD">UV of the fourth corner.</param>
+    /// <param name="sprite">Atlas cell to sample; null covers the whole texture.</param>
+    public void AppendQuad(
+        (float X, float Y, float Z) a,
+        (float X, float Y, float Z) b,
+        (float X, float Y, float Z) c,
+        (float X, float Y, float Z) d,
+        (float R, float G, float B) colourA,
+        (float R, float G, float B) colourB,
+        (float R, float G, float B) colourC,
+        (float R, float G, float B) colourD,
+        (float Sky, float Block) lightA,
+        (float Sky, float Block) lightB,
+        (float Sky, float Block) lightC,
+        (float Sky, float Block) lightD,
+        (float U, float V) uvA,
+        (float U, float V) uvB,
+        (float U, float V) uvC,
+        (float U, float V) uvD,
+        SpriteRect? sprite = null)
+    {
+        EnsureVertexRoom(4 * ChunkMesher.FloatsPerVertex);
+        EnsureIndexRoom(ChunkMesher.IndicesPerQuad);
+
+        var rect = sprite ?? WholeAtlas;
+        var first = (uint)(_vertexFloats / ChunkMesher.FloatsPerVertex);
+        WriteVertex(a, colourA.R, colourA.G, colourA.B, lightA, uvA, rect);
+        WriteVertex(b, colourB.R, colourB.G, colourB.B, lightB, uvB, rect);
+        WriteVertex(c, colourC.R, colourC.G, colourC.B, lightC, uvC, rect);
+        WriteVertex(d, colourD.R, colourD.G, colourD.B, lightD, uvD, rect);
+
+        _indices[_indexCount++] = first;
+        _indices[_indexCount++] = first + 1;
+        _indices[_indexCount++] = first + 2;
+        _indices[_indexCount++] = first;
+        _indices[_indexCount++] = first + 2;
+        _indices[_indexCount++] = first + 3;
     }
 
     private void EnsureVertexRoom(int floats)

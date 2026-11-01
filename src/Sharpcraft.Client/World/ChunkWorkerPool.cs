@@ -40,11 +40,13 @@ public sealed class ChunkWorkerPool : IDisposable
     // chunks every frame, the queue hits its ceiling immediately and the nearest duplicates starve everything else.
     private readonly HashSet<long> _meshQueued = [];
     private readonly bool _meshFifo;
+    private readonly bool _mergeFaces;
+    private readonly bool _ambientOcclusion;
     private long _meshSequence;
     private float _viewChunkX;
     private float _viewChunkZ;
     private readonly ConcurrentQueue<ParsedChunk> _parsed = new();
-    private readonly ConcurrentQueue<(long Key, MeshData Mesh)> _meshes = new();
+    private readonly ConcurrentQueue<Sharpcraft.Client.Render.MeshedChunk> _meshes = new();
 
     private readonly SemaphoreSlim _signal = new(0);
     private readonly Thread[] _workers;
@@ -57,6 +59,7 @@ public sealed class ChunkWorkerPool : IDisposable
     private volatile Sharpcraft.Client.Render.StateCullTable? _cullTable;
     private volatile Sharpcraft.Client.Render.StateVisualCache? _visualCache;
     private volatile Sharpcraft.Client.Render.LayerSinks? _layers;
+    private Sharpcraft.Client.Render.LightmapParameters _lighting = Sharpcraft.Client.Render.LightmapParameters.DayOverworld;
 
     /// <summary>
     /// Layer routing for worker built meshes.
@@ -80,6 +83,13 @@ public sealed class ChunkWorkerPool : IDisposable
     private int _parsePending;
     private int _meshPending;
 
+    /// <summary>Lightmap parameters used by worker meshing; the live renderer sets this when the day/night state changes.</summary>
+    public Sharpcraft.Client.Render.LightmapParameters Lighting
+    {
+        get => _lighting;
+        set => _lighting = value;
+    }
+
     /// <summary>Creates a pool sized for this machine.</summary>
     /// <param name="world">World the workers read; never written from here.</param>
     /// <param name="sprites">Atlas mapping used for meshing.</param>
@@ -92,11 +102,15 @@ public sealed class ChunkWorkerPool : IDisposable
         int? workerCount = null,
         int maxQueuedParses = 64,
         int maxQueuedMeshes = 1024,
-        bool fifoMeshOrder = false)
+        bool fifoMeshOrder = false,
+        bool mergeFaces = true,
+        bool ambientOcclusion = true)
     {
         ArgumentNullException.ThrowIfNull(world);
 
         _meshFifo = fifoMeshOrder;
+        _mergeFaces = mergeFaces;
+        _ambientOcclusion = ambientOcclusion;
         _world = world;
         _sprites = sprites;
         _maxQueuedParses = maxQueuedParses;
@@ -293,17 +307,21 @@ public sealed class ChunkWorkerPool : IDisposable
     /// <summary>Takes one finished mesh.</summary>
     /// <param name="chunkKey">Packed chunk key.</param>
     /// <param name="mesh">Finished mesh.</param>
-    public bool TryTakeMesh(out long chunkKey, out MeshData mesh)
+    public bool TryTakeMesh(out long chunkKey, out MeshData mesh, out MeshData? cutout, out MeshData? translucent)
     {
         if (_meshes.TryDequeue(out var item))
         {
             chunkKey = item.Key;
-            mesh = item.Mesh;
+            mesh = item.Opaque;
+            cutout = item.Cutout;
+            translucent = item.Translucent;
             return true;
         }
 
         chunkKey = 0;
         mesh = MeshData.Empty;
+        cutout = null;
+        translucent = null;
         return false;
     }
 
@@ -423,7 +441,10 @@ public sealed class ChunkWorkerPool : IDisposable
             cutout: cutoutScratch,
             tint: layers?.Tint,
             cull: _cullTable ??= BuildCullTable(),
-            visuals: _visualCache ??= new Sharpcraft.Client.Render.StateVisualCache(_sprites, _layers?.Layout));
+            visuals: _visualCache ??= new Sharpcraft.Client.Render.StateVisualCache(_sprites, _layers?.Layout),
+            merge: _mergeFaces,
+            ambientOcclusion: _ambientOcclusion,
+            lighting: _lighting);
         var mesh = buffer.ToMeshData(0);
 
         MeshesBuilt++;
@@ -432,7 +453,11 @@ public sealed class ChunkWorkerPool : IDisposable
             MeshesEmpty++;
         }
 
-        _meshes.Enqueue((key, mesh));
+        _meshes.Enqueue(new Sharpcraft.Client.Render.MeshedChunk(
+            key,
+            mesh,
+            cutoutScratch?.ToMeshData(0),
+            translucentScratch?.ToMeshData(0)));
     }
 
     private Sharpcraft.Client.Render.StateCullTable? BuildCullTable()

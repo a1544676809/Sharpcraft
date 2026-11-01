@@ -120,6 +120,13 @@ public sealed class LevelChunk
                 Light.SetSkyLight(section, light.SkyUpdates[sky]);
                 sky++;
             }
+            else if (!LightData.IsSet(light.EmptySkyMask, section))
+            {
+                // The protocol omits fully-lit sky sections and does not mark them empty, so "no array and not empty"
+                // means full sunlight. Leaving those at 0 made every open-sky section black in game; only the surface
+                // sections that carried a real array stayed lit, which is why the dark scene looked bright at sea level.
+                Light.SetSkyLight(section, FullSkyArray);
+            }
 
             if (LightData.IsSet(light.BlockMask, section) && block < light.BlockUpdates.Count)
             {
@@ -127,6 +134,16 @@ public sealed class LevelChunk
                 block++;
             }
         }
+    }
+
+    /// <summary>Shared all-15 sky light layer for sections the packet leaves implicit (fully sunlit).</summary>
+    private static readonly byte[] FullSkyArray = CreateFullSkyArray();
+
+    private static byte[] CreateFullSkyArray()
+    {
+        var array = new byte[ChunkLight.BytesPerSection];
+        Array.Fill(array, (byte)0xFF);
+        return array;
     }
 
     /// <summary>Sky light at chunk-local coordinates (0 outside the modelled range).</summary>

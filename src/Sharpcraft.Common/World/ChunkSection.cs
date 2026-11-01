@@ -18,7 +18,11 @@ public sealed class ChunkSection
     /// <summary>Total blocks in a section.</summary>
     public const int Volume = Side * Side * Side;
 
+    /// <summary>Biomes per section: one per 4x4x4 quart volume.</summary>
+    public const int BiomeVolume = 4 * 4 * 4;
+
     private readonly PalettedContainer _states;
+    private readonly int[]? _biomes;
 
     /// <summary>Creates a section filled with one block state.</summary>
     public ChunkSection(int singleState, int sectionY, int airState = 0)
@@ -29,12 +33,19 @@ public sealed class ChunkSection
         NonAirCount = singleState == airState ? 0 : Volume;
     }
 
-    /// <summary>Creates a section from an already parsed container.</summary>
-    public ChunkSection(PalettedContainer states, int sectionY, int nonAirCount)
+    /// <summary>Creates a section from an already parsed container, optionally with its per-quart biome ids.</summary>
+    public ChunkSection(PalettedContainer states, int sectionY, int nonAirCount, int[]? biomes = null)
     {
         _states = states ?? throw new ArgumentNullException(nameof(states));
         SectionY = sectionY;
         NonAirCount = nonAirCount;
+
+        if (biomes is not null && biomes.Length != BiomeVolume)
+        {
+            throw new ArgumentException($"biome array must hold {BiomeVolume} entries", nameof(biomes));
+        }
+
+        _biomes = biomes;
     }
 
     /// <summary>Section index along the world Y axis.</summary>
@@ -42,6 +53,19 @@ public sealed class ChunkSection
 
     /// <summary>Block states in this section.</summary>
     public PalettedContainer States => _states;
+
+    /// <summary>Per-quart biome registry ids, or null when the section carries none.</summary>
+    public ReadOnlySpan<int> Biomes => _biomes;
+
+    /// <summary>True when this section carries biome ids.</summary>
+    public bool HasBiomes => _biomes is not null;
+
+    /// <summary>Biome index inside the 4x4x4 quart grid for section-local block coordinates (0..15).</summary>
+    public static int BiomeIndex(int x, int y, int z) =>
+        (((y >> 2) & 3) << 4) | (((z >> 2) & 3) << 2) | ((x >> 2) & 3);
+
+    /// <summary>Reads the biome id at section-local block coordinates (0 when the section has no biome data).</summary>
+    public int GetBiome(int x, int y, int z) => _biomes is null ? 0 : _biomes[BiomeIndex(x, y, z)];
 
     /// <summary>Number of blocks that are not air, as reported by the server.</summary>
     public int NonAirCount { get; private set; }

@@ -16,13 +16,18 @@ public static class ShaderPipelines
     /// <summary>Every pipeline with its expected entries and bindings.</summary>
     public static IReadOnlyList<ShaderDescriptor> All { get; } =
     [
-        new ShaderDescriptor("terrain", "terrain.wgsl", ["vs_main", "fs_main"], [0, 1, 2, 3]),
+        new ShaderDescriptor("terrain", "terrain.wgsl", ["vs_main", "fs_main", "fs_translucent", "fs_cutout"], [0, 1, 2, 3, 4]),
         new ShaderDescriptor("sky", "sky.wgsl", ["vs_sky", "fs_sky"], []),
+        new ShaderDescriptor("oit_reference", "oit_reference.wgsl", ["vs_main", "fs_depth_bounds", "fs_transmittance", "fs_accumulate"], [0, 1, 2, 3, 4]),
+        new ShaderDescriptor("oit_depth_bounds_cull", "oit_depth_bounds_cull.wgsl", ["vs_fullscreen", "fs_cull"], [0]),
+        new ShaderDescriptor("oit_composite", "oit_composite.wgsl", ["vs_fullscreen", "fs_composite"], [0, 1, 2, 3]),
         new ShaderDescriptor("ui_panel", "ui_panel.wgsl", ["vs_main", "fs_main"], [2]),
         new ShaderDescriptor("ui_sprite", "ui_sprite.wgsl", ["vs_main", "fs_main"], [0, 1, 2]),
         new ShaderDescriptor("ui_text", "ui_text.wgsl", ["vs_main", "fs_main"], [0, 1, 2]),
         new ShaderDescriptor("depth_pyramid", "depth_pyramid.wgsl", ["cs_downsample"], [4, 5, 6]),
         new ShaderDescriptor("motion_vectors", "motion_vectors.wgsl", ["cs_motion"], [4, 5, 6, 7]),
+        new ShaderDescriptor("celestial", "celestial.wgsl", ["vs_celestial", "fs_celestial"], [0, 1, 2, 3]),
+        new ShaderDescriptor("position_color", "position_color.wgsl", ["vs_position_color", "fs_position_color"], [0, 1]),
     ];
 
     private static bool _validated;

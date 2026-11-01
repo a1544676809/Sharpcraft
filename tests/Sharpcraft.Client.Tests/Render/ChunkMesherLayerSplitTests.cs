@@ -18,8 +18,9 @@ namespace Sharpcraft.Client.Tests.Render;
 public sealed class ChunkMesherLayerSplitTests
 {
     private static BlockStateLayout Layout() => new([
+        (new Identifier("minecraft", "air"), 1),
         (new Identifier("minecraft", "stone"), 1),
-        (new Identifier("minecraft", "water"), 1)
+        (new Identifier("minecraft", "water"), 16)
     ]);
 
     private static ClientWorld World(out LevelChunk chunk)
@@ -64,14 +65,30 @@ public sealed class ChunkMesherLayerSplitTests
     [Fact]
     public void SplittingDoesNotChangeTheTotalFaceCount()
     {
-        var world = World(out var chunk);
+        // Fluids now go through their own pass (with same-fluid culling), so the split-invariance claim only holds for
+        // solid blocks; use a stone-only world here.
+        static ClientWorld StoneWorld(out LevelChunk chunk)
+        {
+            var world = new ClientWorld(minSectionY: -1, sectionCount: 2);
+            chunk = world.AddChunk(0, 0);
+            chunk.SetSection(new ChunkSection(singleState: 1, sectionY: -1));
+            chunk.SetSection(new ChunkSection(singleState: 1, sectionY: 0));
+            chunk.MarkLoaded();
+            return world;
+        }
+
+        var world = StoneWorld(out var chunk);
         using var whole = new MeshBuffer();
         ChunkMesher.MeshChunk(world, chunk, airState: 0, whole, maxBlocks: 1_000_000, sprites: null);
 
-        var world2 = World(out var chunk2);
+        var world2 = StoneWorld(out var chunk2);
         using var opaque = new MeshBuffer();
         using var translucent = new MeshBuffer();
-        ChunkMesher.MeshChunk(world2, chunk2, airState: 0, opaque, maxBlocks: 1_000_000, sprites: null, translucent, Layout());
+        var stoneLayout = new BlockStateLayout([
+            (new Identifier("minecraft", "air"), 1),
+            (new Identifier("minecraft", "stone"), 1)
+        ]);
+        ChunkMesher.MeshChunk(world2, chunk2, airState: 0, opaque, maxBlocks: 1_000_000, sprites: null, translucent, stoneLayout);
 
         Assert.Equal(whole.IndexCount, opaque.IndexCount + translucent.IndexCount);
     }

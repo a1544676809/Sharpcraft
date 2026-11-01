@@ -309,3 +309,47 @@ P3 之前不谈包；但 §3 的 pass 划分必须**现在就按"可命名目标
    数据来自 `colormap/*.png` 与群系定义。
 
 两者都排在"原版等效"的剩余清单里，需在五阶段管线补齐后再做。
+
+### 半透明改为加权混合 OIT（窗口路径，2026-10-31）
+
+排序只解决"大致先后"，重叠的半透明面在相交时仍会错序（§7.1 已接受）。原版 26.3 的透明并非靠排序，
+而是**顺序无关透明（OIT）**——每帧把半透明合成到独立目标再解算，因此本实现把窗口渲染路径从"排序 + 混合"
+换成加权混合 OIT，排序降级为"仅让区块流式稳定"，不再是正确性前提。
+
+行为规格（窗口渲染器）：
+
+| 目标 | 格式 | 写入内容 | 混合 |
+| --- | --- | --- | --- |
+| `accum` | RGBA16F | `(colour·α, α)` | color/alpha 均 `One / One`（累加）|
+| `reveal` | R16F | `Π(1−α)` | `Zero / OneMinusSrcAlpha` |
+| 解算 | 帧色（BGRA8Unorm）| `colour = accum.rgb / accum.a`，`coverage = 1 − reveal` | `SrcAlpha / OneMinusSrcAlpha` 叠到已有帧色上 |
+
+帧结构由单 pass 改为 **4 pass**：① 主（天空→不透明→cutout→静态/动态几何，写深度）；② OIT（清 accum=0 / reveal=1，
+深度 Load 只读，画半透明 arena 与静态半透明，深度写关）；③ 解算（全屏三角形，`Draw(3)`，载入帧色后叠加）；④ UI。
+
+**验收现状**：
+
+- 纯逻辑：`OitResolveTests`（3 项）钉住"两片任意顺序解算结果相同""单片退化为普通 alpha 混合""覆盖度=1−reveal"。
+- 运行时：确定性水景（`MC_FRAME_WATER=1`）窗口跑满数千帧、**无任何 wgpu validation error**、p99 ≈ 10 ms（960×540）。
+- **缺口（诚实）**：本环境**无法像素化验证窗口输出**——交换链纹理不可拷贝，`PrintWindow` 对 wgpu 交换链返回黑屏。
+  因此窗口侧 OIT 的"目视正确"需所有者在本机运行 `MC_FRAME_WATER=1 dotnet run … window` 亲眼确认；
+  现有 `window` 命令写出的 PNG 来自**离屏路径**（仍是旧混合管线，未改），不能代表窗口 OIT 结果。
+- 未做：原版 depth-bounds + transmittance OIT 复刻，以及 `MC_TRANSPARENCY=weighted|reference` 切换（后续）。
+
+**结论变更（2026-10-31）**：上文的**加权混合 OIT 观感实测明显更差**，已**封存**（git 历史保留），不再编译；
+窗口透明改为**唯一采用原版 depth-bounds + 小波透射率 OIT**（见 `docs/specs/render/oit-reference.md`）。`MC_TRANSPARENCY`
+开关随之移除；此节的加权规格仅作封存记录。
+
+### 平滑光照：面朝向/AO 对齐原版 + 光照感知合并（2026-10-31）
+
+原版（`BlockModelLighter`）与 Sodium 都**不做贪婪合并**（逐方块面、每顶点光/AO）。我们的合并是自加的性能优化，
+原本只用「状态 + 一格光照」做 key，合并后大矩形只算 4 角 → 大片假阴影/硬接缝。修正与对齐：
+
+- **面朝向亮度**改为 `CardinalLighting.DEFAULT`：上 1.0 / 下 0.5 / 南北 0.8 / 东西 0.6（原为统一 0.75）。
+- **AO** 改为原版口径：每顶点 = 4 个共享格 `getShadeBrightness`（实心 0.2 / 其他 1.0）的平均，去掉"两边都挡=0.5"的自创规则。
+- **光照感知合并**：只有当合并矩形（含外扩一圈）全部"无遮挡且同一光照"时才合并；否则退回逐面。这样合并输出**逐值等于不合并**，
+  平坦开阔面仍大幅合并（性能保住），有 AO/光照变化处不再被抹平。
+- **开关**：`ChunkMesher.MeshChunk(..., merge:)` 两路径都完整；宿主 `MC_MESH_NOMERGE=1` 走逐面（A/B 用）。默认合并。
+- 单测 `ChunkMesherMergeLightingTests`：合并出的多格 quad 四角颜色必须一致（否则判失败）、平坦面合并后 quad 更少、凹坑场景确有 AO 渐变。
+- **色彩空间**：此前在 **gamma 空间**乘光照（图集 `RGBA8Unorm` 未解码就乘线性光，再写非 sRGB 的 `BGRA8Unorm`），导致"满光面正常、任何 L<1 的面被过度压暗"（阴影发黑）。改为 `litColour`：解码 sRGB(2.2) → 乘线性光 → 编码，满光返回原贴图。已用于 `terrain.wgsl`（main/cutout/translucent）与 `oit_reference.wgsl`（accumulate）。
+

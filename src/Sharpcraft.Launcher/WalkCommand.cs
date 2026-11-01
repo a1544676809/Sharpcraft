@@ -219,7 +219,7 @@ internal static class WalkCommand
                 connection,
                 PlayPackets.BuildClientInformation(
                     locale: "en_us",
-                    viewDistance: 8,
+                    viewDistance: (byte)InteractiveSession.ViewDistanceChunks,
                     chatVisibility: 0,
                     chatColors: true,
                     skinParts: 0x7F,

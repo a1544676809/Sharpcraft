@@ -55,7 +55,7 @@ public sealed class EntityPlaceholderMesher
         const int verticesPerBox = 24;
         const int indicesPerBox = 36;
         // A player is drawn as six parts, so reserve for the worst case.
-        _geometry.Reserve(entities.Length * PlayerPartCount * verticesPerBox * 12, entities.Length * PlayerPartCount * indicesPerBox);
+        _geometry.Reserve(entities.Length * PlayerPartCount * verticesPerBox * 14, entities.Length * PlayerPartCount * indicesPerBox);
 
         var vertexFloats = 0;
         var indexCount = 0;
@@ -166,7 +166,7 @@ public sealed class EntityPlaceholderMesher
         ref int vertexFloats,
         ref int indexCount)
     {
-        var first = (uint)(vertexFloats / 12);
+        var first = (uint)(vertexFloats / 14);
 
         WriteVertex(geometry.Vertices, ref vertexFloats, a, red, green, blue, 0f, 0f, sprite);
         WriteVertex(geometry.Vertices, ref vertexFloats, b, red, green, blue, 1f, 0f, sprite);
@@ -204,5 +204,8 @@ public sealed class EntityPlaceholderMesher
         destination[offset++] = sprite.V0;
         destination[offset++] = sprite.U1;
         destination[offset++] = sprite.V1;
+        // Placeholder boxes are lit as full sky (day-lit) rather than sampled light.
+        destination[offset++] = 1f;
+        destination[offset++] = 0f;
     }
 }
