@@ -2045,4 +2045,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `CloudGeometryBuilder`（面顶点表/亮度 1/0.7/0.8/0.9/厚度 4/雾 alpha）→ position-colour；`FrameCommand.BuildCloudDraw`（云滚动 `gameTime% (w*400)*0.03`、相机侧、`radiusCells=ceil(view*16/12)`、`CloudColorFactor×天气`）；离屏 `RenderWorld` 追加到 `CelestialColorDraws`。
 - 修复：离屏相机在世界外时天空采样群系失败→全黑；改为**回退到已加载区块列**采样 `EffectiveSkyColour`（与天空盘一致）。
 - `CloudGeometryBuilderTests`(2)；离屏日间出图见蓝天空+太阳+云块。全量 **1265 通过**、门禁 ok。
-- **待做**：窗口每帧云接入（需每帧更新云几何/偏移与天体随相机位移）；离屏相机远时云在相机附近可能不在取景内，窗口验证更直观。
+- **待做**：窗口每帧云接入（需每帧更新云几何/偏移与天体随相机位移）；离屏相机远时云在相机附近可能不在取景内，窗口验证更直观。## 2026-11-01 T-297 完成：窗口每帧云
+- `CelestialColorResources.SetDraws`（延迟一帧释放旧缓冲）支持每帧更新云 draws；`WindowedRenderer` 新增 `cloudsPerFrame`，天空/日月星之后、地形之前以 position-colour 绘制云。
+- `InteractiveSession` 持 `_cloudTexture`（`SetCloudTexture`）并提供 `CurrentCloudDraw()`= `FrameCommand.BuildCloudDraw(world, texture, eye)`；`WindowCommand` 传入 `cloudsPerFrame`。
+- 窗口运行无 GPU validation error（frame ~40–90ms）。全量 **1265 通过**、门禁 ok。
+- **已知偏差**：日月星仍用**初始相机** model（行走时会偏移）；云按当前眼位生成所以正确。后续可给 CelestialResources 加相机位移增量更新。T-296 目标基本达成（窗口 celestial+cloud pass 已有）；如需严格，再补天体随相机。

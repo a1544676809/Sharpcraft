@@ -77,6 +77,7 @@ internal sealed class InteractiveSession
     private const int PacketLogLimit = 400;
     private readonly Sharpcraft.Client.Render.BlockLightFlicker _blockLightFlicker = new();
     private Sharpcraft.Common.World.BiomeRegistry? _biomes;
+    private Sharpcraft.Client.Assets.CloudTexture? _cloudTexture;
 
     /// <summary>
     /// Requested render distance in chunks. Host configuration (MC_VIEW_DISTANCE), default 12; the server may cap it and
@@ -155,6 +156,21 @@ internal sealed class InteractiveSession
 
     /// <summary>Provides the biome registry the live session uses for sky/fog colours.</summary>
     internal void SetBiomes(Sharpcraft.Common.World.BiomeRegistry? biomes) => _biomes = biomes;
+
+    /// <summary>Provides the cloud texture the live session draws each frame.</summary>
+    internal void SetCloudTexture(Sharpcraft.Client.Assets.CloudTexture? texture) => _cloudTexture = texture;
+
+    /// <summary>The per-frame cloud position-colour draw around the camera, or null when clouds/texture are unavailable.</summary>
+    internal Sharpcraft.Framework.Rendering.CelestialColorDraw? CurrentCloudDraw()
+    {
+        if (_world is null || _cloudTexture is null)
+        {
+            return null;
+        }
+
+        var eye = _player.Position + new Vector3(0f, 1.62f, 0f);
+        return FrameCommand.BuildCloudDraw(_world, _cloudTexture, eye);
+    }
 
     /// <summary>Decoded chunks installed per frame; keeps one batch from stalling the frame.</summary>
     private const int ParsedChunksPerFrame = 8;

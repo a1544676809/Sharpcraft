@@ -54,7 +54,8 @@ public static class WindowedRenderer
     FrameDiagnostics? diagnostics = null,
     Func<LightmapUniform>? lightmapPerFrame = null,
     Func<Vector4>? fogPerFrame = null,
-    Func<Vector4>? clearColourPerFrame = null)
+    Func<Vector4>? clearColourPerFrame = null,
+    Func<CelestialColorDraw?>? cloudsPerFrame = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -229,6 +230,10 @@ public static class WindowedRenderer
         using var celestialColour = request.CelestialColorDraws is { Length: > 0 }
             ? new OffscreenRenderer.CelestialColorResources(device, request, cameraBuffer, VertexLayout.CameraUniformSize, format)
             : null;
+        // Clouds change every frame (scroll/camera), so their position-colour draw set is updated per frame.
+        using var cloudColour = cloudsPerFrame is null
+            ? null
+            : new OffscreenRenderer.CelestialColorResources(device, request with { CelestialColorDraws = [] }, cameraBuffer, VertexLayout.CameraUniformSize, format);
         using var uiPipeline = UiRenderer.CreatePipeline(device, format, pipelineLayout);
         using var uiTextPipeline = UiRenderer.CreateTextPipeline(device, format, pipelineLayout);
 
@@ -1042,6 +1047,14 @@ public static class WindowedRenderer
             // Sun/moon (textured) then sunrise/stars (position-colour), still before terrain so world geometry covers them.
             celestial?.Draw(pass);
             celestialColour?.Draw(pass);
+
+            // Clouds: per-cell faces tinted by CLOUD_COLOR, refreshed every frame, drawn after the celestial bodies.
+            if (cloudsPerFrame?.Invoke() is { } cloudDraw)
+            {
+                cloudColour?.SetDraws([cloudDraw]);
+            }
+
+            cloudColour?.Draw(pass);
 
             pass.SetPipeline(pipeline);
             // Rewriting 64 bytes is the whole cost of moving the camera; the staging buffers are reused.

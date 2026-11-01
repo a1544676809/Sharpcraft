@@ -285,6 +285,8 @@ internal static class WindowCommand
             session.SetBiomes(sessionBiomes);
         }
 
+        session.SetCloudTexture(Sharpcraft.Client.Assets.CloudTexture.Load(resources));
+
         // The gradient sky is static day blue; use a flat SKY_COLOR clear colour instead (vanilla sky is SKY_COLOR).
         request = request with { SkipGradientSky = true };
 
@@ -556,6 +558,7 @@ internal static class WindowCommand
             lightmapPerFrame: () => session.CurrentLightmap(),
             fogPerFrame: () => session.CurrentFogColour(),
             clearColourPerFrame: () => new System.Numerics.Vector4(session.CurrentSkyColour(), 1f),
+            cloudsPerFrame: () => session.CurrentCloudDraw(),
             uiGeometry: frame =>
             {
                 // Mesh work is ordered by distance, so the pool needs to know where the player is each frame.

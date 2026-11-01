@@ -1282,16 +1282,23 @@ public static class OffscreenRenderer
         private readonly PipelineLayout _pipelineLayout;
         private readonly RenderPipeline _translucentPipeline;
         private readonly RenderPipeline _overlayPipeline;
-        private readonly Brew.Wgpu.Buffer[] _vertexBuffers;
-        private readonly Brew.Wgpu.Buffer[] _indexBuffers;
-        private readonly Brew.Wgpu.Buffer[] _transformBuffers;
-        private readonly BindGroup[] _bindGroups;
-        private readonly uint[] _indexCounts;
-        private readonly bool[] _overlay;
+        private Brew.Wgpu.Buffer[] _vertexBuffers = [];
+        private Brew.Wgpu.Buffer[] _indexBuffers = [];
+        private Brew.Wgpu.Buffer[] _transformBuffers = [];
+        private BindGroup[] _bindGroups = [];
+        private uint[] _indexCounts = [];
+        private bool[] _overlay = [];
+        private readonly List<(Brew.Wgpu.Buffer Vertex, Brew.Wgpu.Buffer Index, Brew.Wgpu.Buffer Transform, BindGroup BindGroup)> _retired = new();
+        private readonly Device _device;
+        private readonly Brew.Wgpu.Buffer _cameraBuffer;
+        private readonly ulong _cameraSize;
 
         public CelestialColorResources(Device device, FrameRequest request, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, WGPUTextureFormat format = WGPUTextureFormat.RGBA8Unorm)
         {
-            var draws = request.CelestialColorDraws!;
+            var draws = request.CelestialColorDraws ?? [];
+            _device = device;
+            _cameraBuffer = cameraBuffer;
+            _cameraSize = cameraSize;
 
             _layout = device.CreateBindGroupLayout(
             [
@@ -1309,19 +1316,43 @@ public static class OffscreenRenderer
             _translucentPipeline = CreatePositionColorPipeline(device, shader, _pipelineLayout, overlay: false, format);
             _overlayPipeline = CreatePositionColorPipeline(device, shader, _pipelineLayout, overlay: true, format);
 
-            _vertexBuffers = new Brew.Wgpu.Buffer[draws.Length];
-            _indexBuffers = new Brew.Wgpu.Buffer[draws.Length];
-            _transformBuffers = new Brew.Wgpu.Buffer[draws.Length];
-            _bindGroups = new BindGroup[draws.Length];
-            _indexCounts = new uint[draws.Length];
-            _overlay = new bool[draws.Length];
+            SetDraws(draws);
+        }
 
-            for (var index = 0; index < draws.Length; index++)
+        /// <summary>
+        /// Replaces the draw set (used every frame for clouds). The previous buffers are retired and released on the next
+        /// update, so a buffer is not destroyed while the frame that referenced it may still be in flight.
+        /// </summary>
+        public void SetDraws(IReadOnlyList<CelestialColorDraw> draws)
+        {
+            foreach (var (vertex, index, transform, bindGroup) in _retired)
+            {
+                bindGroup.Dispose();
+                transform.Dispose();
+                index.Dispose();
+                vertex.Dispose();
+            }
+
+            _retired.Clear();
+
+            for (var i = 0; i < _bindGroups.Length; i++)
+            {
+                _retired.Add((_vertexBuffers[i], _indexBuffers[i], _transformBuffers[i], _bindGroups[i]));
+            }
+
+            _vertexBuffers = new Brew.Wgpu.Buffer[draws.Count];
+            _indexBuffers = new Brew.Wgpu.Buffer[draws.Count];
+            _transformBuffers = new Brew.Wgpu.Buffer[draws.Count];
+            _bindGroups = new BindGroup[draws.Count];
+            _indexCounts = new uint[draws.Count];
+            _overlay = new bool[draws.Count];
+
+            for (var index = 0; index < draws.Count; index++)
             {
                 var draw = draws[index];
-                _vertexBuffers[index] = device.CreateBufferInit(
+                _vertexBuffers[index] = _device.CreateBufferInit(
                     new BufferInitDescriptor { Usage = BufferUsage.Vertex }, draw.Vertices.AsSpan());
-                _indexBuffers[index] = device.CreateBufferInit(
+                _indexBuffers[index] = _device.CreateBufferInit(
                     new BufferInitDescriptor { Usage = BufferUsage.Index }, draw.Indices.AsSpan());
 
                 var transformBytes = new byte[TransformUniformSize];
@@ -1332,13 +1363,13 @@ public static class OffscreenRenderer
                 transformFloats[18] = draw.Tint.Z;
                 transformFloats[19] = draw.Tint.W;
                 System.Runtime.InteropServices.MemoryMarshal.AsBytes(transformFloats.AsSpan()).CopyTo(transformBytes);
-                _transformBuffers[index] = device.CreateBufferInit(
+                _transformBuffers[index] = _device.CreateBufferInit(
                     new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst }, transformBytes.AsSpan());
 
-                _bindGroups[index] = device.CreateBindGroup(
+                _bindGroups[index] = _device.CreateBindGroup(
                     _layout,
                     [
-                        BindGroupEntry.Buffer(0, cameraBuffer, 0, cameraSize),
+                        BindGroupEntry.Buffer(0, _cameraBuffer, 0, _cameraSize),
                         BindGroupEntry.Buffer(1, _transformBuffers[index], 0, TransformUniformSize)
                     ]);
 
