@@ -51,7 +51,8 @@ public static class WindowedRenderer
         UiTextureSource? textureSource = null,
         AtlasTextureSource? atlasSource = null,
         Func<int>? geometryEpoch = null,
-    FrameDiagnostics? diagnostics = null)
+    FrameDiagnostics? diagnostics = null,
+    Func<LightmapUniform>? lightmapPerFrame = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -1047,7 +1048,7 @@ public static class WindowedRenderer
 
             // Per-frame lightmap parameters: day/night changes only this block, never the mesh.
             var frameLightmapBytes = new byte[Shaders.ShaderBindings.LightmapBytes];
-            LightmapUniformCodec.Write(currentRequest.Lightmap, frameLightmapBytes);
+            LightmapUniformCodec.Write(lightmapPerFrame?.Invoke() ?? currentRequest.Lightmap, frameLightmapBytes);
             device.Queue.WriteBuffer(lightmapBuffer, 0, frameLightmapBytes.AsSpan());
 
             pass.SetBindGroup(0, bindGroup);

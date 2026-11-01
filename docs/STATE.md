@@ -1990,4 +1990,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **tint 等效性复核（`MC_BIOME_PROBE`）**：真服群系温度/降水解析正确，草色与原版名色一致——`beach` 0.8/0.4→**0x91BD59**（原版平原/沙滩草地 #91BD59）、`forest` 0.7/0.8→0x82BE59、`river` 0.5/0.5→0x8EB971。紫色已消除；同群系若仍偏淡属**光照/贴图/描边**差异而非 biome tint。## 2026-11-01 修复：地形光照色彩空间（litColour 直接相乘）
 - **代码证据**：原版 `block.vsh`（`vertexColor = Color * sample_lightmap`）、`block.fsh`（`color = texture * vertexColor * ColorModulator`）**全程无 pow/gamma**；`lightmap.fsh` 亮度 `get_brightness(l)=l/(4-3l)` 我们已 1:1 复刻。→ 正确为 sRGB 域直接相乘。
 - **修复**：`terrain.wgsl`/`oit_reference.wgsl` 的 `litColour` 改为 `clamp(texel*light)`（`light=vertexColor*lightmapColour`）。此前 `pow(texel^2.2*light)^(1/2.2)` 把 tint 当线性，导致染色方块（草/叶/水）过亮偏淡。
-- 规格 `docs/analysis/render/lighting-color-space.md`；全量 **1244 通过**、门禁 ok。真服离屏帧正常（顶面受光/侧面变暗）。重启 `window` 实机复验。
+- 规格 `docs/analysis/render/lighting-color-space.md`；全量 **1244 通过**、门禁 ok。真服离屏帧正常（顶面受光/侧面变暗）。重启 `window` 实机复验。## 2026-11-01 修复 #8 块光闪烁 + #13 世界时钟（每帧光照）
+- `Client/Render/BlockLightFlicker`：复刻原版 `flicker += (r1−r2)·r3·r4·0.1; flicker *= 0.9`，`blockFactor=1.4+flicker`；随机源可注入以便单测。
+- `InteractiveSession`：每 tick `_world.AdvanceClocks()`（修 #13：此前从未推进→时间/亮度冻结）+ `_blockLightFlicker.Tick()`；新增 `CurrentLightmap()` = `EffectiveLighting(world)` 覆盖 `BlockFactor=flicker`。
+- `WindowedRenderer.Run` 增 `lightmapPerFrame` 回调，每帧重写光照 uniform（此前窗口固定 `LightmapUniform.Day`，昼夜/闪烁都不会变）。
+- `BlockLightFlickerTests`(3)。全量 **1247 通过**、门禁 ok。重启窗口实机复验闪烁与昼夜。
+- 仍待：**#10 BlockLightTint**（仍用 `Srgb24ToLinear`，应改原样 `v/255`）；**#3** 平滑光照算法近似（待定是否移植 smoothBlend/smoothWeightedBlend）。

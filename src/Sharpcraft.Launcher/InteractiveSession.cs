@@ -72,6 +72,7 @@ internal sealed class InteractiveSession
     public long TickIndex { get; private set; }
     private readonly bool _diagEnabled = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
     private int _diagFrames;
+    private readonly Sharpcraft.Client.Render.BlockLightFlicker _blockLightFlicker = new();
 
     /// <summary>
     /// Chunks of view distance requested from the server. It bounds how much terrain can be resident, which is
@@ -84,6 +85,22 @@ internal sealed class InteractiveSession
     {
         var side = (2 * ViewDistanceChunks) + 1;
         return side * side;
+    }
+
+    /// <summary>
+    /// The lightmap uniform for the current frame: the world's day/night parameters with the block factor carrying the
+    /// torches' flicker (docs/analysis/render/lighting-color-space.md #8). Rewritten every frame so day/night and flicker
+    /// need no re-mesh.
+    /// </summary>
+    internal LightmapUniform CurrentLightmap()
+    {
+        if (_world is null)
+        {
+            return LightmapUniform.Day;
+        }
+
+        var parameters = FrameCommand.EffectiveLighting(_world) with { BlockFactor = _blockLightFlicker.BlockFactor };
+        return FrameCommand.ToLightmapUniform(parameters);
     }
 
     /// <summary>Decoded chunks installed per frame; keeps one batch from stalling the frame.</summary>
@@ -956,6 +973,11 @@ internal sealed class InteractiveSession
                 }
 
                 _tickCounter++;
+
+                // Advance the world clocks (day/night, docs/modules/time.md) and the block-light flicker once per tick,
+                // like the reference client tick (LightmapRenderStateExtractor.tick).
+                _world?.AdvanceClocks();
+                _blockLightFlicker.Tick();
 
                 // Verification hook: print the tracked entities so their positions can be compared against the
                 // other client's own report of where it is (docs/specs/network/entity-sync.md 7).
