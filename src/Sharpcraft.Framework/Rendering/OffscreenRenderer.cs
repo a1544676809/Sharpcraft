@@ -3,6 +3,7 @@
 
 using Brew.Wgpu;
 using Brew.Wgpu.Native;
+using System.Numerics;
 
 namespace Sharpcraft.Framework.Rendering;
 
@@ -1073,11 +1074,15 @@ public static class OffscreenRenderer
         private readonly Brew.Wgpu.Buffer[] _transformBuffers;
         private readonly BindGroup[] _bindGroups;
         private readonly uint[] _indexCounts;
+        private readonly Matrix4x4[] _baseModels;
+        private readonly Vector4[] _tints;
+        private readonly Device _device;
 
         public CelestialResources(Device device, FrameRequest request, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, WGPUTextureFormat format = WGPUTextureFormat.RGBA8Unorm)
         {
             var textures = request.CelestialTextures!;
             var draws = request.CelestialDraws!;
+            _device = device;
 
             _textures = new Brew.Wgpu.Texture[textures.Length];
             _views = new TextureView[textures.Length];
@@ -1179,10 +1184,14 @@ public static class OffscreenRenderer
             _transformBuffers = new Brew.Wgpu.Buffer[draws.Length];
             _bindGroups = new BindGroup[draws.Length];
             _indexCounts = new uint[draws.Length];
+            _baseModels = new Matrix4x4[draws.Length];
+            _tints = new Vector4[draws.Length];
 
             for (var index = 0; index < draws.Length; index++)
             {
                 var draw = draws[index];
+                _baseModels[index] = draw.Model;
+                _tints[index] = draw.Tint;
                 _vertexBuffers[index] = device.CreateBufferInit(
                     new BufferInitDescriptor { Usage = BufferUsage.Vertex }, draw.Vertices.AsSpan());
                 _indexBuffers[index] = device.CreateBufferInit(
@@ -1228,6 +1237,29 @@ public static class OffscreenRenderer
                 pass.SetVertexBuffer(0, _vertexBuffers[index]);
                 pass.SetIndexBuffer(_indexBuffers[index], WGPUIndexFormat.Uint16);
                 pass.DrawIndexed(_indexCounts[index]);
+            }
+        }
+
+        /// <summary>Re-centres the bodies on the camera by translating each base model by <paramref name="eyeDelta"/>.</summary>
+        public void UpdateCamera(Vector3 eyeDelta)
+        {
+            if (eyeDelta == Vector3.Zero)
+            {
+                return;
+            }
+
+            var translation = Matrix4x4.CreateTranslation(eyeDelta);
+            for (var index = 0; index < _transformBuffers.Length; index++)
+            {
+                var transformBytes = new byte[TransformUniformSize];
+                var transformFloats = new float[20];
+                WriteMatrix(translation * _baseModels[index], transformFloats, 0);
+                transformFloats[16] = _tints[index].X;
+                transformFloats[17] = _tints[index].Y;
+                transformFloats[18] = _tints[index].Z;
+                transformFloats[19] = _tints[index].W;
+                System.Runtime.InteropServices.MemoryMarshal.AsBytes(transformFloats.AsSpan()).CopyTo(transformBytes);
+                _device.Queue.WriteBuffer(_transformBuffers[index], 0, transformBytes.AsSpan());
             }
         }
 
@@ -1288,8 +1320,10 @@ public static class OffscreenRenderer
         private BindGroup[] _bindGroups = [];
         private uint[] _indexCounts = [];
         private bool[] _overlay = [];
-        private readonly List<(Brew.Wgpu.Buffer Vertex, Brew.Wgpu.Buffer Index, Brew.Wgpu.Buffer Transform, BindGroup BindGroup)> _retired = new();
+        private Matrix4x4[] _baseModels = [];
+        private Vector4[] _tints = [];
         private readonly Device _device;
+        private readonly List<(Brew.Wgpu.Buffer Vertex, Brew.Wgpu.Buffer Index, Brew.Wgpu.Buffer Transform, BindGroup BindGroup)> _retired = new();
         private readonly Brew.Wgpu.Buffer _cameraBuffer;
         private readonly ulong _cameraSize;
 
@@ -1299,7 +1333,6 @@ public static class OffscreenRenderer
             _device = device;
             _cameraBuffer = cameraBuffer;
             _cameraSize = cameraSize;
-
             _layout = device.CreateBindGroupLayout(
             [
                 BindGroupLayoutEntry.Buffer(0, ShaderStage.Vertex, WGPUBufferBindingType.Uniform, false, cameraSize),
@@ -1346,10 +1379,14 @@ public static class OffscreenRenderer
             _bindGroups = new BindGroup[draws.Count];
             _indexCounts = new uint[draws.Count];
             _overlay = new bool[draws.Count];
+            _baseModels = new Matrix4x4[draws.Count];
+            _tints = new Vector4[draws.Count];
 
             for (var index = 0; index < draws.Count; index++)
             {
                 var draw = draws[index];
+                _baseModels[index] = draw.Model;
+                _tints[index] = draw.Tint;
                 _vertexBuffers[index] = _device.CreateBufferInit(
                     new BufferInitDescriptor { Usage = BufferUsage.Vertex }, draw.Vertices.AsSpan());
                 _indexBuffers[index] = _device.CreateBufferInit(
@@ -1393,6 +1430,29 @@ public static class OffscreenRenderer
                 pass.SetVertexBuffer(0, _vertexBuffers[index]);
                 pass.SetIndexBuffer(_indexBuffers[index], WGPUIndexFormat.Uint32);
                 pass.DrawIndexed(_indexCounts[index]);
+            }
+        }
+
+        /// <summary>Re-centres the colour bodies on the camera by translating each base model by <paramref name="eyeDelta"/>.</summary>
+        public void UpdateCamera(Vector3 eyeDelta)
+        {
+            if (eyeDelta == Vector3.Zero)
+            {
+                return;
+            }
+
+            var translation = Matrix4x4.CreateTranslation(eyeDelta);
+            for (var index = 0; index < _transformBuffers.Length; index++)
+            {
+                var transformBytes = new byte[TransformUniformSize];
+                var transformFloats = new float[20];
+                WriteMatrix(translation * _baseModels[index], transformFloats, 0);
+                transformFloats[16] = _tints[index].X;
+                transformFloats[17] = _tints[index].Y;
+                transformFloats[18] = _tints[index].Z;
+                transformFloats[19] = _tints[index].W;
+                System.Runtime.InteropServices.MemoryMarshal.AsBytes(transformFloats.AsSpan()).CopyTo(transformBytes);
+                _device.Queue.WriteBuffer(_transformBuffers[index], 0, transformBytes.AsSpan());
             }
         }
 

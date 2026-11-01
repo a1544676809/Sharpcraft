@@ -2049,4 +2049,7 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `CelestialColorResources.SetDraws`（延迟一帧释放旧缓冲）支持每帧更新云 draws；`WindowedRenderer` 新增 `cloudsPerFrame`，天空/日月星之后、地形之前以 position-colour 绘制云。
 - `InteractiveSession` 持 `_cloudTexture`（`SetCloudTexture`）并提供 `CurrentCloudDraw()`= `FrameCommand.BuildCloudDraw(world, texture, eye)`；`WindowCommand` 传入 `cloudsPerFrame`。
 - 窗口运行无 GPU validation error（frame ~40–90ms）。全量 **1265 通过**、门禁 ok。
-- **已知偏差**：日月星仍用**初始相机** model（行走时会偏移）；云按当前眼位生成所以正确。后续可给 CelestialResources 加相机位移增量更新。T-296 目标基本达成（窗口 celestial+cloud pass 已有）；如需严格，再补天体随相机。
+- **已知偏差**：日月星仍用**初始相机** model（行走时会偏移）；云按当前眼位生成所以正确。后续可给 CelestialResources 加相机位移增量更新。T-296 目标基本达成（窗口 celestial+cloud pass 已有）；如需严格，再补天体随相机。## 2026-11-01 T-296 收尾：天体随相机
+- `CelestialResources`/`CelestialColorResources` 增 `UpdateCamera(Vector3 delta)`：每帧按 `eye - request.CameraPosition` 左乘平移写回天体 transform，日月星不再随移动偏移（云本就用当前眼位）。
+- `WindowedRenderer` 每帧在采样相机后调用（仅天体，不对云资源调用）。窗口运行无 GPU validation error。全量 **1265 通过**、门禁 ok。
+- **T-296/T-297 完成**：窗口已具备 celestial（日月星/日出）+ 逐 cell 云 pass；离屏/窗口共用绘制资源。云纹理缺失时不画云。

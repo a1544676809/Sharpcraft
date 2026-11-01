@@ -996,6 +996,11 @@ public static class WindowedRenderer
                 ? (request.CameraPosition, request.CameraTarget)
                 : cameraPerFrame(window);
 
+            // Sun/moon/stars are built relative to the initial camera; keep them centred as the player moves.
+            var celestialDelta = eye - request.CameraPosition;
+            celestial?.UpdateCamera(celestialDelta);
+            celestialColour?.UpdateCamera(celestialDelta);
+
             var encoder = device.CreateCommandEncoder();
             var gpuCulled = false;
 
