@@ -2068,4 +2068,7 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 现状：旧每帧云/天体 pass 不回退；当前客户端仍可用（旧 arena 方案，视距12 稳定但高内存时会跳过远区块）。## 2026-11-01 T-301：每区块几何存储 + 窗口绘制（完成）
 - 新增 `ChunkGeometryStore`：每区块独立 vertex/index 缓冲，`Apply` 同尺寸原地重写、尺寸变化重建、`Remove` 释放；`MemoryBytes/UploadedBytes` 统计；`Draw(planes)` CPU 视锥剔除、`DrawFarthestFirst` 排序。
 - `WindowedRenderer` 三层（solid/cutout/translucent）改用 store；移除 `ChunkCuller`/间接绘制/`SlotHighWater`/达上限丢弃逻辑；保留 disableCulling 调试开关。
-- 视距 12 运行 **6996+ 帧**无 OOM/validation（RSS ~812MB，GPU dedicated ~1.6GB）；全量 1265 通过。待压测 24/32；区块卸载（ClientWorld 未移除离视区块）与旧 arena 清理列为后续。
+- 视距 12 运行 **6996+ 帧**无 OOM/validation（RSS ~812MB，GPU dedicated ~1.6GB）；全量 1265 通过。待压测 24/32；区块卸载（ClientWorld 未移除离视区块）与旧 arena 清理列为后续。## 2026-11-01 T-302：视距 32 压测通过（每区块存储）
+- 视距 **32**：窗口统计 **3890 区块**、**上传 3.26GB**、**0 次 full rebuild**、**8302 帧**无 OOM/validation（GPU dedicated 峰值 ~4.3GB，960×540）。
+- 证明"每区块缓冲 + CPU 剔除"支持大视距且**不跳过远处区块**；旧单 arena 上限问题解除。
+- 旧 `ChunkGeometryArena`/`ArenaSizing` 暂留（仍被旧单测覆盖），后续可删；`ClientWorld` 目前不会移除离视区块，长时间大范围移动会累积内存（后续做区块卸载 + 缓冲释放）。
