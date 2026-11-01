@@ -358,3 +358,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-331 | **白雾混合（AtmosphericFogEnvironment）**：按原版 `skyFogEnd=min(512/16,renderDistance)`、`mix=1-clamp(0.25+0.75*skyFogEnd/32)^0.25`，将 FOG_COLOR 基色与 weather-darkened SKY_COLOR 混合；窗口雾色接入 | `ref://mc-26.3-analysis/.../AtmosphericFogEnvironment.java` | 构建通过；客户端运行 | `Launcher/InteractiveSession` | 已完成 |
 | T-332 | **天空盘 fog 渐变**：按原版 sky shader 的 `FogSkyEnd` 逻辑，天空盘顶点按距离在 SKY_COLOR→FOG_COLOR 间渐变（顶点色烘焙，opaque） | `ref://.../core/sky.fsh`、`AtmosphericFogEnvironment` | 构建通过；客户端运行 | `Launcher/{FrameCommand,WindowCommand}` | 已完成 |
 | T-333 | **天空盘地平线缝隙修复**：有天空盘时窗口 clear colour 改为雾色（而非 SKY_COLOR），避免 disc 边缘外露蓝色缝隙 | `core/sky.fsh`；T-332 | 构建通过；客户端运行 | `Launcher/WindowCommand` | 已完成 |
+| T-334 | **天空盘渐变换分**：天空盘由 10 顶点改为 16 环×64 段（约 1025 顶点），顶点色按半径/`skyFogEnd` 从 SKY_COLOR→FOG_COLOR，消除 10 顶点线性插值的窄过渡 | `core/sky.fsh`、T-332 | 构建通过；客户端运行 | `Launcher/FrameCommand` | 已完成 |

@@ -1727,28 +1727,61 @@ internal static class FrameCommand
         var effectiveSkyColour = skyColour ?? new Vector3(request.ClearColour.X, request.ClearColour.Y, request.ClearColour.Z);
         var effectiveFogColour = fogColour ?? effectiveSkyColour;
         var skyFogEnd = MathF.Min(InteractiveSession.ViewDistanceChunks * 16f, 512f);
-        var skyTop = Sharpcraft.Client.Render.CelestialGeometry.SkyDisc(16f);
-        var skyVertices = new float[skyTop.Length * 7];
-        for (var i = 0; i < skyTop.Length; i++)
+        const int skyRings = 16;
+        const int skySegments = 64;
+        const float skyRadius = 512f;
+        var skyVertexCount = 1 + (skyRings * skySegments);
+        var skyVertices = new float[skyVertexCount * 7];
+
+        void WriteSkyVertex(int index, float x, float y, float z, Vector3 colour)
         {
-            var offset = i * 7;
-            var fogFactor = Math.Clamp(skyTop[i].Length() / MathF.Max(skyFogEnd, 0.001f), 0f, 1f);
-            var colour = Vector3.Lerp(effectiveSkyColour, effectiveFogColour, fogFactor);
-            skyVertices[offset] = skyTop[i].X;
-            skyVertices[offset + 1] = skyTop[i].Y;
-            skyVertices[offset + 2] = skyTop[i].Z;
+            var offset = index * 7;
+            skyVertices[offset] = x;
+            skyVertices[offset + 1] = y;
+            skyVertices[offset + 2] = z;
             skyVertices[offset + 3] = colour.X;
             skyVertices[offset + 4] = colour.Y;
             skyVertices[offset + 5] = colour.Z;
             skyVertices[offset + 6] = 1f;
         }
 
-        var skyTriangles = new List<uint>((skyTop.Length - 2) * 3);
-        for (var i = 1; i + 1 < skyTop.Length; i++)
+        WriteSkyVertex(0, 0f, 16f, 0f, effectiveSkyColour);
+        var skyIndex = 1;
+        for (var ring = 1; ring <= skyRings; ring++)
         {
+            var radius = skyRadius * ring / skyRings;
+            var fogFactor = Math.Clamp(radius / MathF.Max(skyFogEnd, 0.001f), 0f, 1f);
+            var colour = Vector3.Lerp(effectiveSkyColour, effectiveFogColour, fogFactor);
+            for (var segment = 0; segment < skySegments; segment++)
+            {
+                var angle = segment * MathF.Tau / skySegments;
+                WriteSkyVertex(skyIndex++, radius * MathF.Cos(angle), 16f, radius * MathF.Sin(angle), colour);
+            }
+        }
+
+        var skyTriangles = new List<uint>((skySegments * 3) + ((skyRings - 1) * skySegments * 6));
+        for (var segment = 0; segment < skySegments; segment++)
+        {
+            var next = (segment + 1) % skySegments;
             skyTriangles.Add(0);
-            skyTriangles.Add((uint)i);
-            skyTriangles.Add((uint)(i + 1));
+            skyTriangles.Add((uint)(1 + segment));
+            skyTriangles.Add((uint)(1 + next));
+        }
+
+        for (var ring = 1; ring < skyRings; ring++)
+        {
+            var inner = 1 + ((ring - 1) * skySegments);
+            var outer = inner + skySegments;
+            for (var segment = 0; segment < skySegments; segment++)
+            {
+                var next = (segment + 1) % skySegments;
+                skyTriangles.Add((uint)(inner + segment));
+                skyTriangles.Add((uint)(outer + segment));
+                skyTriangles.Add((uint)(outer + next));
+                skyTriangles.Add((uint)(inner + segment));
+                skyTriangles.Add((uint)(outer + next));
+                skyTriangles.Add((uint)(inner + next));
+            }
         }
 
         skyDiscDraws.Add(new CelestialColorDraw(
