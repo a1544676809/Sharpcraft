@@ -1499,7 +1499,17 @@ internal static class FrameCommand
     /// </summary>
     internal static Vector3 EffectiveSkyColour(ClientWorld world, Sharpcraft.Common.World.BiomeRegistry biomes, int x, int y, int z)
     {
-        var baseSky = Sharpcraft.Common.World.SkyColourSource.ColorAt(world.GetBiomeAt, biomes, x, y, z);
+        // The reference clamps the biome sample's quart Y into the world height (ChunkAccess.getNoiseBiome), so a camera
+        // above/below the build range still gets the top/bottom section's biome instead of no weight and a black colour.
+        var minBlockY = world.MinSectionY * 16;
+        var maxBlockY = minBlockY + (world.SectionCount * 16) - 1;
+        var sampleY = Math.Clamp(y, minBlockY, maxBlockY);
+        var baseSky = Sharpcraft.Common.World.SkyColourSource.ColorAt(world.GetBiomeAt, biomes, x, sampleY, z);
+        if (baseSky == Vector3.Zero)
+        {
+            // A column whose extreme sections are missing still falls back to a loaded section near sea level.
+            baseSky = Sharpcraft.Common.World.SkyColourSource.ColorAt(world.GetBiomeAt, biomes, x, 64, z);
+        }
         var partialTick = EffectiveDayTimePartial(world);
         var multiplier = Sharpcraft.Common.World.SkyAttributeTracks.SkyColorMultiplierAt(EffectiveDayTime(world), partialTick);
         var rain = EffectiveRainLevel(world, partialTick);

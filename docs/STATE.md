@@ -2083,4 +2083,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 现象：玩家走路会靠近星星；云跨区块位置突然跳变/渲染异常。
 - 根因1：每帧 `celestialPerFrame` 的 `SetDraws` 在 `UpdateCamera` 之后执行，新 draw 的 model 仍是初始相机 → 星星固定在世界原点。已改为先 `SetDraws` 再 `UpdateCamera(delta)`。
 - 根因2：原版云是**相机相对**（vsh 的 cell 是 relative cell，pos=relative*12+CloudOffset，相机在原点）；我们 origin 之前含 centerCell 绝对坐标 → 跨 cell 跳变。已改为 `origin=(eye.X-xInCell, bottomY, eye.Z-zInCell)`；`CloudGeometryBuilder` 继续用相对 CellX。
-- 待窗口实测：跨区块行走云连续性、星星不随移动靠近；全量测试后提交。
+- 待窗口实测：跨区块行走云连续性、星星不随移动靠近；全量测试后提交。## 2026-11-01 T-307：高空天空/雾黑屏修复
+- 现象：玩家 Y 高于世界高度上限时地面/天空变黑（截图二黑色大块为雾/天空把地形染色）。
+- 根因：`CurrentSkyColour` 用相机 Y 采样群系；Y 超出已加载 section 时 `GetBiomeAt` 全 -1 → `SkyColourSource` 权重 0 → sky=(0,0,0)，而 `CurrentFogColour` 直接取 sky → 雾/地面黑。
+- 修复：按原版 `ChunkAccess.getNoiseBiome` 将采样 quartY **clamp 到世界 [minY,maxY]**；极端缺失再回退 y=64。离屏高空相机帧全蓝、无黑色；全量 1267 通过。
+- 待窗口实测高空；云在夜间偏暗属正常色（若过黑另查）。
