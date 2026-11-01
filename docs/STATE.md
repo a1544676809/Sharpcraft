@@ -1931,4 +1931,6 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **实读原版**：`buildSkyDisc(yy)` = 中心(0,yy,0)+i=-180..180/45 环（x=sign(yy)·512·cos、z=512·sin）；`renderSky` 顺序 SkyDisc(SKY_COLOR)→Sunrise→SunMoonStars→(shouldRenderDarkDisc) DarkDisc；`shouldRenderDarkDisc` = `eyeY−horizon<0 && !underwater`。
 - 落地（纯逻辑）：`CelestialGeometry.SkyDisc(float y)`（10 顶点，上下盘 ±16）、`SkyVisibility.ShouldRenderDarkDisc(eyeY,horizonY,underwater)`；测试 `CelestialGeometryTests.SkyDiscMatchesTheBuildSkyDiscFormula`、`SkyVisibilityTests`(4)。
 - **未接渲染（受控偏差）**：`SKY_COLOR` = 生物群系温度色 × `MULTIPLY_RGB` 关键帧 × 天气灰度（`OverworldBiomes.calculateSkyColor`、`WeatherAttributes`、`Timelines.NIGHT_SKY_COLOR_MULTIPLIER`），依赖群系+天气 → 暂不用盘替换全屏渐变。`RAIN_BRIGHTNESS` 同样阻塞于天气。
-- 全量 **1200 通过**、门禁 ok。模块 A 收口：日月星/日出/日夜光照/sub-tick 均完成并验证；天空盘/暗盘仅几何/判定就绪、盘颜色与 `RAIN_BRIGHTNESS` 阻塞于「生物群系+天气」。
+- 全量 **1200 通过**、门禁 ok。模块 A 收口：日月星/日出/日夜光照/sub-tick 均完成并验证；天空盘/暗盘仅几何/判定就绪、盘颜色与 `RAIN_BRIGHTNESS` 阻塞于「生物群系+天气」。## 2026-11-01 天气/群系天空色：模块设计文档（[待评审]，未编码）
+- 新增 `docs/modules/weather-and-sky-color.md`（状态 [待评审]）：实读原版——`calculateSkyColor`(HSV 温度色)、生物群系 gaussian 空间混合(kernel 0,1,4,6,4,1,0)、时间轴 `MULTIPLY` 修饰、`WeatherAttributes.RAIN/THUNDER` 按 `rainLevel-thunder`/`thunderLevel` 权重重叠（SKY_COLOR/FOG/CLOUD/SKY_LIGHT_LEVEL·COLOR·FACTOR、STAR=0、SUNRISE）、`ClientboundGameEventPacket`(type byte+float；RAIN_LEVEL_CHANGE=7/THUNDER_LEVEL_CHANGE=8) 同步、`RAIN_BRIGHTNESS=1-rain`。含 §9 纯逻辑等效测试计划、§10 分期、§7 风险。
+- **未编码**：按 AGENTS 3.5 先文档、待所有者评审（[待评审]→[已评审]）后再实施。硬前置=chunk biome 数据与 biome registry 温度（客户端未解析）。
