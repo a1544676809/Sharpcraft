@@ -387,3 +387,13 @@ mesh: 31321 blocks, 7354 triangles
 | 集成 | `launcher frame replay <file>` | 用已捕获的真实区块包回放，验证"真实数据能画出来" |
 | 集成 | `launcher window <address>` / `window local` | 窗口呈现真实世界（180 帧，BGRA8UnormSrgb）并落盘 PNG |
 | 集成 | `MC_WINDOW_SELFRESIZE=640x360 launcher window local` | 第 30 帧时窗口自缩到 640×360，验证交换链/深度/顶点三者一起重建 |
+
+## 9. M5.3 P1 实体视锥剔除（2026-11-01，T-344）
+
+- 相机 lambda 每帧用 `CameraMath.BuildViewProjection(eye, target, 70, width, height)` 生成视图投影；
+- `ViewFrustum.FromViewProjection` 提取六平面；
+- `WindowCommand` 的实体几何回调对 `EntityRenderState` 按玩家（0.6×1.8）或普通生物（0.9×0.9）的 AABB 做 `IsBoxVisible`；
+- 通过后的实体交给 `EntityPlaceholderMesher.Build`，未通过的不生成几何；
+- `MC_DIAG=1` 时每 120 帧输出 `entity cull: candidates=... visible=... culled=...`。
+
+**状态**：视锥接线已完成，全量测试通过。**未完成**：真实实体静态模型、名字牌投影、以及用实际实体场景验证 QA-1.3 的剔除率 ≥60%。
