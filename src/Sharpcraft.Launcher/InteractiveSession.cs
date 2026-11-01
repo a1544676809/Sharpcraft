@@ -72,6 +72,9 @@ internal sealed class InteractiveSession
     public long TickIndex { get; private set; }
     private readonly bool _diagEnabled = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
     private int _diagFrames;
+    private readonly bool _packetLog = Environment.GetEnvironmentVariable("MC_PACKET_LOG") == "1";
+    private int _packetLogCount;
+    private const int PacketLogLimit = 400;
     private readonly Sharpcraft.Client.Render.BlockLightFlicker _blockLightFlicker = new();
 
     /// <summary>
@@ -1210,6 +1213,15 @@ internal sealed class InteractiveSession
                 continue;
             }
 
+            // Host-only join packet capture (MC_PACKET_LOG=1): id/length/prefix of the first packets, so the clock source
+            // can be found against the reference (principle 13: parsed here, in the host; no LINQ on this hot path).
+            if (_packetLog && _packetLogCount < PacketLogLimit)
+            {
+                _packetLogCount++;
+                var prefix = body[..Math.Min(24, body.Length)];
+                Console.WriteLine($"pkt#{_packetLogCount} id={packetId} len={body.Length} hex={Convert.ToHexString(prefix)}");
+            }
+
             switch (packetId)
             {
                 case PacketIds.PlayClientbound.KeepAlive:
@@ -1275,8 +1287,19 @@ internal sealed class InteractiveSession
                             _world.ApplyTime(setTime);
                             if (Environment.GetEnvironmentVariable("MC_DIAG") == "1")
                             {
-                                var parts = string.Join(",", setTime.Clocks.Select(kv => $"{kv.Key}:t={kv.Value.TotalTicks},r={kv.Value.Rate},p={kv.Value.PartialTick:F2}"));
-                                Console.WriteLine($"set_time: gameTime={setTime.GameTime} day={_world.DayTime} clocks=[{parts}]");
+                                var clocks = new System.Text.StringBuilder();
+                                foreach (var kv in setTime.Clocks)
+                                {
+                                    if (clocks.Length > 0)
+                                    {
+                                        clocks.Append(',');
+                                    }
+
+                                    clocks.Append(kv.Key).Append(":t=").Append(kv.Value.TotalTicks).Append(",r=").Append(kv.Value.Rate);
+                                }
+
+                                var head = Convert.ToHexString(body[..Math.Min(40, body.Length)]);
+                                Console.WriteLine($"set_time: len={body.Length} gameTime={setTime.GameTime} day={_world.DayTime} clocks=[{clocks}] hex={head}");
                             }
                         }
                     }
