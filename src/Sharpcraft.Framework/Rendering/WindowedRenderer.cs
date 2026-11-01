@@ -1289,7 +1289,7 @@ public static class WindowedRenderer
 
                 var depthLoadStore = new DepthStencilAttachment
                 {
-                    View = depthView,
+                    View = cloudDepthTargetsCreated ? cloudDepthView : depthView,
                     DepthLoadOp = WGPULoadOp.Load,
                     DepthStoreOp = WGPUStoreOp.Store
                 };
@@ -1638,7 +1638,7 @@ public static class WindowedRenderer
             SampleCount = 1,
             Dimension = WGPUTextureDimension._2D,
             Format = WGPUTextureFormat.Depth32Float,
-            Usage = TextureUsage.RenderAttachment | TextureUsage.CopySrc | TextureUsage.CopyDst
+            Usage = TextureUsage.RenderAttachment | TextureUsage.CopySrc | TextureUsage.CopyDst | TextureUsage.TextureBinding
         });
 
     /// <summary>Creates one order independent transparency target: renderable and sampleable, at frame size.</summary>
