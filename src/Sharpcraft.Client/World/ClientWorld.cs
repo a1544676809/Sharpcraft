@@ -319,6 +319,34 @@ public sealed class ClientWorld
     }
 
     /// <summary>
+    /// Removes every chunk farther than <paramref name="radiusChunks"/> (Chebyshev) from the centre column and returns
+    /// their packed keys, so the renderer and mesh cache can release the matching GPU/CPU resources.
+    /// </summary>
+    public List<long> RemoveChunksOutside(int centerChunkX, int centerChunkZ, int radiusChunks)
+    {
+        var removed = new List<long>();
+        foreach (var chunk in GetChunks())
+        {
+            if (Math.Abs(chunk.ChunkX - centerChunkX) > radiusChunks
+                || Math.Abs(chunk.ChunkZ - centerChunkZ) > radiusChunks)
+            {
+                var key = Pack(chunk.ChunkX, chunk.ChunkZ);
+                if (_chunks.TryRemove(key, out _))
+                {
+                    removed.Add(key);
+                }
+            }
+        }
+
+        if (removed.Count > 0)
+        {
+            RefreshSnapshot();
+        }
+
+        return removed;
+    }
+
+    /// <summary>
     /// Rebuilds the immutable view the mesher iterates. The array reference is swapped atomically, so a reader
     /// on another thread either sees the whole previous snapshot or the whole new one
     /// (docs/specs/network/play-movement.md 7.20).

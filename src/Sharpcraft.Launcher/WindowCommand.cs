@@ -397,6 +397,7 @@ internal static class WindowCommand
         var lightProbe = Environment.GetEnvironmentVariable("MC_LIGHT_PROBE") == "1";
         var frameClock = System.Diagnostics.Stopwatch.StartNew();
         var previousFrameMs = 0.0;
+        var removedChunks = new List<long>();
         long celestialCacheKey = long.MinValue;
         FrameRequest? celestialCached = null;
 
@@ -457,6 +458,19 @@ internal static class WindowCommand
                 },
             geometryUpdates: () =>
             {
+                removedChunks.Clear();
+                var player = session.Player.Position;
+                var playerChunkX = (int)MathF.Floor(player.X / 16f);
+                var playerChunkZ = (int)MathF.Floor(player.Z / 16f);
+                removedChunks.AddRange(world.RemoveChunksOutside(
+                    playerChunkX,
+                    playerChunkZ,
+                    Sharpcraft.Launcher.InteractiveSession.ViewDistanceChunks + 2));
+                foreach (var removed in removedChunks)
+                {
+                    meshCache.Remove(removed);
+                }
+
                 // Hand fresh work to the pool, then return only the chunks that finished. The renderer keeps a
                 // slice per chunk, so each arrival costs one small upload rather than a recomposition of the
                 // whole world (docs/specs/network/play-movement.md 7.25).
@@ -609,8 +623,8 @@ internal static class WindowCommand
 
                 return (celestialCached.CelestialDraws ?? [], celestialCached.CelestialColorDraws ?? []);
             },
-            uiGeometry: frame =>
-            {
+            geometryRemovals: () => removedChunks,
+            uiGeometry: frame =>            {
                 // Mesh work is ordered by distance, so the pool needs to know where the player is each frame.
                 var player = session.Player.Position;
                 workerPool.SetViewOrigin(player.X / 16f, player.Z / 16f);

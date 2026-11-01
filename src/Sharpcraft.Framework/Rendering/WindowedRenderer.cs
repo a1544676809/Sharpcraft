@@ -43,6 +43,7 @@ public static class WindowedRenderer
         Func<WindowHost, (Vector3 Eye, Vector3 Target)>? cameraPerFrame = null,
         Func<FrameRequest?>? rebuildRequest = null,
         Func<IReadOnlyList<(long Key, GeometryData Mesh)>?>? geometryUpdates = null,
+        Func<IReadOnlyList<long>?>? geometryRemovals = null,
         int expectedChunks = 0,
         Func<DynamicGeometry?>? dynamicGeometry = null,
         Func<UiFrame, UiGeometry?>? uiGeometry = null,
@@ -918,6 +919,16 @@ public static class WindowedRenderer
                             arenaTranslucent.Apply(key, new GeometryData(translucentVertices, mesh.TranslucentIndices ?? []));
                         }
                     }
+                }
+            }
+
+            if (geometryRemovals?.Invoke() is { Count: > 0 } removals)
+            {
+                foreach (var key in removals)
+                {
+                    arena?.Remove(key);
+                    arenaCutout?.Remove(key);
+                    arenaTranslucent?.Remove(key);
                 }
             }
 

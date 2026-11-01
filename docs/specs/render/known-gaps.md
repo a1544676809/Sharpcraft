@@ -16,7 +16,7 @@ updated: 2026-11-01
 
 | 项 | 现状 | 影响 | 建议 |
 | --- | --- | --- | --- |
-| **区块卸载** | `ClientWorld` 不会移除离视距区块；`ChunkGeometryStore.Remove` 已具备但无人调用 | 长时间大范围移动会持续累积世界与显存（无上限增长） | 玩家跨区块时按视距+余量卸载 `ClientWorld.RemoveChunk`，同步 `ChunkMeshCache` 删条目、`ChunkGeometryStore.Remove` 释放缓冲 |
+| **区块卸载** | 已实现：`ClientWorld.RemoveChunksOutside` + `ChunkMeshCache.Remove` + `ChunkGeometryStore.Remove`，按视距+2 释放 | — | 已关闭（T-327） |
 | 旧 arena 死代码 | `ChunkGeometryArena`/`ArenaSizing` 已不被渲染器使用，仅旧单测覆盖 | 增加维护面/误导 | 确认无外部引用后删除文件与对应测试，更新 traceability |
 | Draw call 数量 | 每区块一次 `DrawIndexed`（solid/cutout/translucent），视距 32 约数千 | CPU 提交开销；当前 960×540 可接受 | profiling 后决定：分页 arena + GPU 间接剔除，或按层合批 |
 
@@ -32,7 +32,7 @@ updated: 2026-11-01
 
 | 项 | 现状 | 影响 | 建议 |
 | --- | --- | --- | --- |
-| 云无 OIT / 精确 cloud fog | 逐 cell 面 + 简单 alpha 淡出（`CLOUD_FOG_END` 近似） | 与半透明地形/远处云的混合不完全一致 | 接入 OIT 云 pass 与 `linear_fog_value(vertexDistance,0,FogCloudsEnd)` |
+| 云 OIT / cloud fog | 已实现参考 OIT（cloud depth + blit_depth + bounds/transmittance/accumulate + 单次 composite）；RGBA32F 在 Float32Blendable 可用时启用，否则回退 16F | 无 Float32Blendable 时可能有轻微深度量化 | 保持开关与固定机位像素对照 |
 | 云几何实现方式 | CPU 逐 cell 面（位置/亮度），而非原版 storage-buffer + shader 生成 | 结果等效性待像素对比；CPU 构建成本随视距增长 | profiling 与参考帧对比后再决定是否迁到 GPU 生成 |
 
 ## 4. 天体（太阳/月亮/星星/日出）

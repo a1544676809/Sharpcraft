@@ -174,6 +174,9 @@ public sealed class ChunkMeshCache
         _pool?.TryEnqueueMesh(chunkKey);
     }
 
+    /// <summary>Drops a cached chunk because it left the view; the caller also releases its GPU buffers.</summary>
+    public void Remove(long chunkKey) => _meshes.Remove(chunkKey);
+
     /// <summary>
     /// Every mesh currently held, for a full re-upload.
     /// </summary>
