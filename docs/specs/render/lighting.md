@@ -83,21 +83,17 @@
 - 若直接在 gamma 空间乘光照会使任何 `L<1` 的面过度压暗。故地形/半透明着色器用：**贴图 sRGB 解码(2.2 近似) → 乘线性 lightmap → 重新编码(1/2.2)**；满光时返回原贴图不变。
 - `ARGB.vector3fFromRGB24` 用精确 sRGB→linear 曲线（`x>=0.04045 ? ((x+0.055)/1.055)^2.4 : x/12.92`）把环境色转为线性。
 
-## 6. 时间 / 天气 / 维度（**未实现，暂缓**）
+## 6. 时间 / 天气 / 维度
 
-原版 `skyFactor`、`skyLightColor`、`ambientColor`、`skyLightLevel` 由维度类型与 **时间轴（Timelines）** 驱动：白天 `skyFactor=1.0`、天空光色为白；夜晚 `skyFactor≈0.24`、天空光色约 `(0.48,0.48,1.0)`；雷暴/降水另有修正。
-
-**当前状态：仅实现 overworld 白天默认**（§3 表）；日夜/天气/维度**尚未实现**。参数接口（`LightmapParameters`）已预留，但下列两点是硬前提，故整块暂缓：
-
-1. **缺少世界时间数据**：`ClientWorld` 无时间字段，网络层只解析区块包，尚未解析 `set_time`/`update_time` 等 play 包。需先补时间包解析 → 世界时间（0..24000 tick）。
-2. **lightmap 目前烘进顶点色**（mesh 时定死）。日夜随时间变，若继续烘焙需不断重建网格。正确做法（与原版一致）：顶点只存 `sky`/`block` 光照等级 + `AO×朝向` 标量，**lightmap 在着色器里用每帧更新的 uniform（skyFactor、skyLightColor、blockFactor、ambient、brightness）现算**；需改顶点格式、`terrain.wgsl`/`oit_reference.wgsl`、每帧 UBO 与离屏路径。
-
-落地步骤（未来）：① 时间包解析 + `ClientWorld` 时间字段 + 单测；② 着色器 side lightmap + 时间 UBO；③ 按 `Timelines` 关键帧插值 `skyFactor`/`skyLightColor`/`ambientColor`（含日夜、天气、维度）。
+- **已实现（离屏路径，2026-11-01）**：`LightmapParameters.OverworldAt(dayTime)` 用 `SkyAttributeTracks.SkyLightFactorAt/SkyLightColorAt` 取当前 `skyFactor`/`skyLightColor`（昼 1.0 / 白；夜 0.24 / (0.48,0.48,1) 线性），其余参数保持昼默认；`ChunkMesher`（`Mesh`/`MeshChunk`/`MergeSectionFaces`/`EmitMergedQuad`/`CornerShade`/`EmitSectionFluids`）贯穿 `LightmapParameters`，在 UV/AO lightmap 计算处用其求值。离屏路径每帧重建网格，因此顶点色随 `DayTime` 更新，**无需改顶点格式或着色器**。
+- **等价证据（纯逻辑 + 出图）**：`VanillaLightmapTests` 手算——正午 `OverworldAt(6000)` 全白天体 =1；夜 `OverworldAt(18000)` 全白天体 ≈(0.088,0.088,0.453)（R=G<B，暗且偏蓝）；本地帧地形 `top-mid` 昼 `rgba(136,136,136)` → 夜 `rgba(45,45,95)`。
+- **未实现（实时窗口路径）**：窗口用缓存网格（`ChunkMeshCache`），时间变化不重建网格，故窗口仍取昼参数。正确做法（与原版一致，未来）：顶点只存 `sky`/`block` 等级 + `AO×朝向` 标量，lightmap 在着色器用**每帧更新的 UBO**（skyFactor、skyLightColor、blockFactor、ambient、brightness）现算；需改顶点格式、`terrain.wgsl`/`oit_reference.wgsl`、每帧 uniform 与窗口渲染器。
+- 天气（雨/雷）、维度（下界/末地）环境参数未建模；`ambientColor` 恒 0。
 
 ## 7. 已知偏差与范围
 
 - AO 的"实心"判定用纹理不透明度而非碰撞形状（§4）。
-- 未实现：夜视、Darkness 效果、Boss 遮罩暗化、闪电闪光加成、**时间轴日夜/天气（§6，暂缓）**、方块光闪烁。
+- 未实现：夜视、Darkness 效果、Boss 遮罩暗化、闪电闪光加成、**天气/维度环境参数（§6；日夜已在离屏路径实现）**、方块光闪烁。
 - lightmap 反 gamma（notGamma）与 `brightnessFactor` 按默认 0.5 参与，未接亮度滑块。
 
 ## 8. 等效性测试计划（纯逻辑、可量化）

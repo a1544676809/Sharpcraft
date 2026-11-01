@@ -1911,4 +1911,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **日出**：`CelestialGeometry.SunriseFanWorld(theta, alpha)`（RotX90·RotZ·ScaleZ 展开，18 顶点）；颜色中心白 α=1 / 环白 α=0；α≤0.001 不画。
 - **星空**：`Client/Render/StarField.cs`——`LegacyRandom`（java.util.Random 兼容 48 位 LCG）+ `buildStars` 复刻（seed 10842、候选 1500、长度∈(0.010000001,1)、距离 100、随机自旋）；`CelestialGeometry.SkyRotate` 按 STAR_ANGLE 旋转；`OVERLAY` 色调=STAR_BRIGHTNESS。
 - **等价性验证**：纯逻辑 `StarFieldTests`（Java Random(0) 向量 nextInt=-1155484576 / nextFloat=0.73096776；星点确定性、均落在 r=100 球面）、`CelestialGeometryTests`（SunriseFanWorld / SkyRotate 手算）。GPU：`MC_COLOR_TEST` 同帧加/不加 colour draws → 改变 **45145 像素**（780 颗星 + 红色日出扇）；本地帧 `celestial: 2 textured draw(s), 2 colour draw(s) … sunrise a=0.445, stars 0.055`。
-- 全量 **1188 通过**、0 警告。待办：天空盘/暗盘、`RAIN_BRIGHTNESS`、镜像窗口、日夜光照。
+- 全量 **1188 通过**、0 警告。待办：天空盘/暗盘、`RAIN_BRIGHTNESS`、镜像窗口、日夜光照。## 2026-11-01 日夜光照（离屏路径）
+- `LightmapParameters.OverworldAt(dayTime)`：`SkyFactor=SkyLightFactorAt`、`SkyLightColor=SkyLightColorAt`（昼 1/白、夜 0.24/(0.48,0.48,1) 线性），其余昼默认。
+- `ChunkMesher` 贯穿 `LightmapParameters`（Mesh → MeshChunk → MergeSectionFaces → EmitMergedQuad → CornerShade，及 EmitSectionFluids）；`FrameCommand` 以 `EffectiveDayTime(world)`（`MC_FORCE_DAYTIME` 可覆盖）驱动网格与天体角度。离屏每帧重建网格 ⇒ 顶点色随 DayTime 更新，**无需改顶点格式/着色器**。
+- **等价性**：`VanillaLightmapTests` +2（正午全白天体=1；夜全白天体≈(0.088,0.088,0.453)，R=G<B）；本地帧地形 top-mid 昼 `rgba(136,136,136)` → 夜 `rgba(45,45,95)`。
+- 全量 **1190 通过**、0 警告。**未做**：窗口路径仍昼参数（缓存网格；正确做法=着色器侧每帧 UBO lightmap，需改顶点格式）；天气/维度；天空盘/暗盘、`RAIN_BRIGHTNESS`。

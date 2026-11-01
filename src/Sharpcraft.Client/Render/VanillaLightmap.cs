@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Numerics;
+using Sharpcraft.Common.World;
 
 namespace Sharpcraft.Client.Render;
 
@@ -26,6 +27,17 @@ public readonly record struct LightmapParameters(
         BlockLightTint: Srgb24ToLinear(-10100),
         AmbientColor: Vector3.Zero,
         BrightnessFactor: 0.5f);
+
+    /// <summary>
+    /// Overworld parameters at a given day time: the sky factor and sky light colour follow the environment attribute
+    /// timelines (day 1.0 / white, night ~0.24 / ~(0.48,0.48,1)); the block light and brightness stay at their defaults
+    /// (docs/specs/render/lighting.md 6). Weather and dimensions remain out of scope.
+    /// </summary>
+    public static LightmapParameters OverworldAt(int dayTimeTicks) => DayOverworld with
+    {
+        SkyFactor = SkyAttributeTracks.SkyLightFactorAt(dayTimeTicks),
+        SkyLightColor = SkyAttributeTracks.SkyLightColorAt(dayTimeTicks)
+    };
 
     /// <summary>Decodes a packed sRGB 24-bit colour into linear floats, as the reference does for environment colours.</summary>
     public static Vector3 Srgb24ToLinear(int rgb24)

@@ -100,4 +100,35 @@ public sealed class VanillaLightmapTests
         Assert.Equal(Vector3.Zero, VanillaLightmap.NotGamma(Vector3.Zero));
         Assert.Equal(Vector3.One.X, VanillaLightmap.NotGamma(Vector3.One).X, 5);
     }
+
+    [Fact]
+    public void OverworldAtNoonMatchesTheDayDefaults()
+    {
+        var noon = LightmapParameters.OverworldAt(6000);
+
+        Assert.Equal(1f, noon.SkyFactor, 3);
+        Assert.Equal(1f, noon.SkyLightColor.X, 3);
+
+        var colour = VanillaLightmap.Colour(15, 0, noon);
+        Assert.Equal(1f, colour.X, 4);
+        Assert.Equal(1f, colour.Z, 4);
+    }
+
+    [Fact]
+    public void OverworldAtNightDarkensAndTintsTheSkyBlue()
+    {
+        // At tick 18000 SKY_LIGHT_FACTOR is 0.24 and SKY_LIGHT_COLOR is the night (0.48,0.48,1) linear tint.
+        var night = LightmapParameters.OverworldAt(18000);
+        Assert.Equal(0.24f, night.SkyFactor, 2);
+
+        var dark = VanillaLightmap.Colour(15, 0, night);
+        var day = VanillaLightmap.Colour(15, 0);
+
+        Assert.True(dark.X < day.X, "night must be darker than day");
+        Assert.True(dark.X < 0.15f, $"night red {dark.X} should be dark");
+        Assert.True(dark.Z > dark.X, "night sky should be blue tinted");
+        // The reference night sky light color has R and G on the same track, so those two channels agree exactly.
+        Assert.Equal(dark.X, dark.Y, 5);
+        Assert.InRange(dark.Z, 0.4f, 0.5f);
+    }
 }
