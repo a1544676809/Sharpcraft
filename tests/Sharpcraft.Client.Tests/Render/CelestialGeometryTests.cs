@@ -51,4 +51,28 @@ public sealed class CelestialGeometryTests
         AssertClose(new Vector3(0f, 120f, -40f), fan[1]);
         AssertClose(new Vector3(0f, 120f, -40f), fan[17]);
     }
+
+    [Fact]
+    public void SunriseFanWorldMatchesTheExpandedRotX90RotZTransform()
+    {
+        // angle 90deg, alpha 1: x' = -py, y' = -pz, z' = px.
+        var fan = CelestialGeometry.SunriseFanWorld(MathF.PI / 2f, 1f);
+        AssertClose(new Vector3(-100f, 0f, 0f), fan[0]);   // centre (0,100,0)
+        AssertClose(new Vector3(-120f, 40f, 0f), fan[1]);  // ring (0,120,-40)
+
+        // alpha only scales the y output: y' = -pz*alpha.
+        var half = CelestialGeometry.SunriseFanWorld(MathF.PI / 2f, 0.5f);
+        AssertClose(new Vector3(-120f, 20f, 0f), half[1]);
+    }
+
+    [Fact]
+    public void SkyRotateMatchesRotXThenRotYMinusNinety()
+    {
+        Span<Vector3> destination = stackalloc Vector3[2];
+        CelestialGeometry.SkyRotate([new Vector3(1f, 0f, 0f), new Vector3(0f, 1f, 0f)], 0f, destination);
+
+        // RotY(-90) maps +X to +Z and leaves +Y unchanged.
+        AssertClose(new Vector3(0f, 0f, 1f), destination[0]);
+        AssertClose(new Vector3(0f, 1f, 0f), destination[1]);
+    }
 }

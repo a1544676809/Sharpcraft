@@ -85,6 +85,12 @@ public sealed record FrameRequest(
     /// read as infinitely far. Depth writes are off, so a single order-independent pass is enough.
     /// </remarks>
     public CelestialQuadDraw[]? CelestialDraws { get; init; }
+
+    /// <summary>
+    /// Celestial position-colour draws (sunrise fan, stars): no texture, per-vertex colour times a per-draw tint.
+    /// </summary>
+    /// <remarks>Drawn after the textured bodies, still before world geometry, so terrain covers them.</remarks>
+    public CelestialColorDraw[]? CelestialColorDraws { get; init; }
 }
 
 /// <summary>One textured celestial quad (sun or moon) in the sky backdrop.</summary>
@@ -99,6 +105,29 @@ public sealed record CelestialQuadDraw(
     ushort[] Indices,
     Matrix4x4 Model,
     Vector4 Tint);
+
+/// <summary>Blend mode for a position-colour celestial draw, matching the reference pipeline.</summary>
+public enum CelestialColorBlend
+{
+    /// <summary>Reference sunrise/sunset: colour SrcAlpha/OneMinusSrcAlpha, alpha One/OneMinusSrcAlpha.</summary>
+    Translucent,
+
+    /// <summary>Reference stars: OVERLAY = colour SrcAlpha/One, alpha One/Zero (additive onto the sky).</summary>
+    Overlay
+}
+
+/// <summary>One position-colour celestial draw (sunrise fan or stars).</summary>
+/// <param name="Vertices">Interleaved position (3) + colour (4) floats, per vertex.</param>
+/// <param name="Indices">Triangle list indices into <paramref name="Vertices"/>.</param>
+/// <param name="Model">Model matrix applied before the camera; typically a translation to the eye.</param>
+/// <param name="Tint">Colour modulator multiplied into the vertex colour (rgba).</param>
+/// <param name="Blend">Which reference blend state to use.</param>
+public sealed record CelestialColorDraw(
+    float[] Vertices,
+    uint[] Indices,
+    Matrix4x4 Model,
+    Vector4 Tint,
+    CelestialColorBlend Blend);
 
 /// <summary>An RGBA8 image uploaded as a texture, typically the stitched sprite atlas.</summary>
 /// <param name="Width">Pixel width.</param>

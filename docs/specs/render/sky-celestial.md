@@ -51,7 +51,9 @@ status: 待评审
 - **太阳已接入设备管线**：`environment/celestial/sun` 纹理经 `celestial.wgsl`（pos3+uv2；每帧相机 + 每 draw 的 model/tint uniform）绘于天空渐变之后、地形之前；深度恒通过且不写，故被地形遮挡。合成采用原版 `BlendFunction.OVERLAY`（颜色 `SrcAlpha/One`、alpha `One/Zero`），使贴图的黑色/透明像素不贡献颜色。
 - 天体贴图在 26.3 位于 `textures/environment/celestial/`：`sun.png` 与 `moon/<phase>.png`（8 张独立月相贴图，**不是** 4×2 月相表），与方块图集独立。已按此更正标识符。
 - **月亮已接入同一管线**：按 `SkyAttributeTracks.MoonPhaseIndex(overworld.totalTicks)` 选 `moon/<phase>` 贴图，角度 `MOON_ANGLE`、尺寸 20 / 高度 100，与太阳共用 OVERLAY 合成。
-- **尚未做**：天空盘/暗盘、星空（1500）、日出条带（三角扇 + 顶点色）；亮度乘 `RAIN_BRIGHTNESS`；镜像到 `WindowedRenderer`。
+- **日出条带已接入**：position-colour 三角扇（18 顶点，中心白 α=1、环白 α=0），变换 `RotX(90°)·RotZ((sin(sunAngle)<0?180:0)+90°)` 且 Z 乘 alpha，颜色 `SUNRISE_SUNSET_COLOR`，`TRANSLUCENT` 混合；alpha≤0.001 不画。
+- **星空已接入**：复刻 `buildStars`（LCG seed 10842、候选 1500、长度∈(0.010000001,1) 保留、距离 100、随机自旋），按 `STAR_ANGLE` 旋转、`STAR_BRIGHTNESS` 作 `OVERLAY` 色调。
+- **尚未做**：天空盘/暗盘（沿用全屏渐变作为受控偏差）、`RAIN_BRIGHTNESS`（日月 alpha，晴天=1）、镜像到 `WindowedRenderer`；随后日夜光照。
 
 ## 6. 实现分期（评审通过后）
 

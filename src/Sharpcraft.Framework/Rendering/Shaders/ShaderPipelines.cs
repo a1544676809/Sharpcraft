@@ -26,6 +26,8 @@ public static class ShaderPipelines
         new ShaderDescriptor("ui_text", "ui_text.wgsl", ["vs_main", "fs_main"], [0, 1, 2]),
         new ShaderDescriptor("depth_pyramid", "depth_pyramid.wgsl", ["cs_downsample"], [4, 5, 6]),
         new ShaderDescriptor("motion_vectors", "motion_vectors.wgsl", ["cs_motion"], [4, 5, 6, 7]),
+        new ShaderDescriptor("celestial", "celestial.wgsl", ["vs_celestial", "fs_celestial"], [0, 1, 2, 3]),
+        new ShaderDescriptor("position_color", "position_color.wgsl", ["vs_position_color", "fs_position_color"], [0, 1]),
     ];
 
     private static bool _validated;

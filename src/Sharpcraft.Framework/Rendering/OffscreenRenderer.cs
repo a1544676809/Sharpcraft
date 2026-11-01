@@ -395,6 +395,47 @@ public static class OffscreenRenderer
 
     private static uint[] BuildIndexBytes(FrameRequest request) => request.Indices;
 
+    /// <summary>
+    /// Position-colour pipeline: vertex colour times the per-draw tint, with the given reference blend mode. Sunrise uses
+    /// Translucent; stars use Overlay (both match the reference pipelines' ColorTargetState).
+    /// </summary>
+    private static RenderPipeline CreatePositionColorPipeline(Device device, ShaderModule shader, PipelineLayout layout, bool overlay)
+    {
+        var blend = overlay
+            ? new WGPUBlendState
+            {
+                color = new WGPUBlendComponent { operation = WGPUBlendOperation.Add, srcFactor = WGPUBlendFactor.SrcAlpha, dstFactor = WGPUBlendFactor.One },
+                alpha = new WGPUBlendComponent { operation = WGPUBlendOperation.Add, srcFactor = WGPUBlendFactor.One, dstFactor = WGPUBlendFactor.Zero }
+            }
+            : new WGPUBlendState
+            {
+                color = new WGPUBlendComponent { operation = WGPUBlendOperation.Add, srcFactor = WGPUBlendFactor.SrcAlpha, dstFactor = WGPUBlendFactor.OneMinusSrcAlpha },
+                alpha = new WGPUBlendComponent { operation = WGPUBlendOperation.Add, srcFactor = WGPUBlendFactor.One, dstFactor = WGPUBlendFactor.OneMinusSrcAlpha }
+            };
+
+        return device.CreateRenderPipeline(
+            shader,
+            "vs_position_color"u8,
+            shader,
+            "fs_position_color"u8,
+            [
+                new ColorTargetState
+                {
+                    Format = WGPUTextureFormat.RGBA8Unorm,
+                    WriteMask = ColorWriteMask.All,
+                    Blend = blend
+                }
+            ],
+            layout: layout,
+            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
+            multisample: MultisampleState.Default,
+            // Part of the backdrop: depth always passes and nothing is written, so terrain covers it.
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.Always, write: false),
+            vertexStride: (ulong)VertexLayout.PositionColorStride,
+            vertexStepMode: WGPUVertexStepMode.Vertex,
+            vertexAttributes: VertexLayout.PositionColorAttributes());
+    }
+
     /// <summary>Renders a frame and returns its pixels.</summary>
     /// <exception cref="RenderingUnavailableException">The GPU path failed.</exception>
     public static FrameResult Render(FrameRequest request)
@@ -579,6 +620,11 @@ public static class OffscreenRenderer
                 ? new CelestialResources(device, request, cameraBuffer, VertexLayout.CameraUniformSize)
                 : null;
 
+            // Position-colour bodies (sunrise fan, stars): no texture, per-vertex colour times a tint.
+            using var celestialColour = request.CelestialColorDraws is { Length: > 0 }
+                ? new CelestialColorResources(device, request, cameraBuffer, VertexLayout.CameraUniformSize)
+                : null;
+
             using var bindGroup = device.CreateBindGroup(
                 bindGroupLayout,
                 [
@@ -645,6 +691,9 @@ public static class OffscreenRenderer
 
             // Sun and moon sit in the sky backdrop, before terrain, so world geometry covers them.
             celestial?.Draw(pass);
+
+            // Sunrise band and stars, drawn on top of the bodies but still behind world geometry.
+            celestialColour?.Draw(pass);
 
             if (hasGeometry)
             {
@@ -1201,6 +1250,130 @@ public static class OffscreenRenderer
             {
                 texture.Dispose();
             }
+        }
+    }
+
+    /// <summary>
+    /// Owns the GPU objects for one frame's position-colour celestial draws (sunrise fan, stars): a pipeline per blend
+    /// mode and, per draw, a vertex/index/transform buffer and bind group. Built per frame and disposed with it.
+    /// </summary>
+    private sealed class CelestialColorResources : IDisposable
+    {
+        private const ulong TransformUniformSize = 80;
+
+        private readonly BindGroupLayout _layout;
+        private readonly PipelineLayout _pipelineLayout;
+        private readonly RenderPipeline _translucentPipeline;
+        private readonly RenderPipeline _overlayPipeline;
+        private readonly Brew.Wgpu.Buffer[] _vertexBuffers;
+        private readonly Brew.Wgpu.Buffer[] _indexBuffers;
+        private readonly Brew.Wgpu.Buffer[] _transformBuffers;
+        private readonly BindGroup[] _bindGroups;
+        private readonly uint[] _indexCounts;
+        private readonly bool[] _overlay;
+
+        public CelestialColorResources(Device device, FrameRequest request, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize)
+        {
+            var draws = request.CelestialColorDraws!;
+
+            _layout = device.CreateBindGroupLayout(
+            [
+                BindGroupLayoutEntry.Buffer(0, ShaderStage.Vertex, WGPUBufferBindingType.Uniform, false, cameraSize),
+                BindGroupLayoutEntry.Buffer(1, ShaderStage.Vertex | ShaderStage.Fragment, WGPUBufferBindingType.Uniform, false, TransformUniformSize)
+            ]);
+
+            _pipelineLayout = device.CreatePipelineLayout([_layout]);
+
+            using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
+            {
+                Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("position_color")))
+            });
+
+            _translucentPipeline = CreatePositionColorPipeline(device, shader, _pipelineLayout, overlay: false);
+            _overlayPipeline = CreatePositionColorPipeline(device, shader, _pipelineLayout, overlay: true);
+
+            _vertexBuffers = new Brew.Wgpu.Buffer[draws.Length];
+            _indexBuffers = new Brew.Wgpu.Buffer[draws.Length];
+            _transformBuffers = new Brew.Wgpu.Buffer[draws.Length];
+            _bindGroups = new BindGroup[draws.Length];
+            _indexCounts = new uint[draws.Length];
+            _overlay = new bool[draws.Length];
+
+            for (var index = 0; index < draws.Length; index++)
+            {
+                var draw = draws[index];
+                _vertexBuffers[index] = device.CreateBufferInit(
+                    new BufferInitDescriptor { Usage = BufferUsage.Vertex }, draw.Vertices.AsSpan());
+                _indexBuffers[index] = device.CreateBufferInit(
+                    new BufferInitDescriptor { Usage = BufferUsage.Index }, draw.Indices.AsSpan());
+
+                var transformBytes = new byte[TransformUniformSize];
+                var transformFloats = new float[20];
+                WriteMatrix(draw.Model, transformFloats, 0);
+                transformFloats[16] = draw.Tint.X;
+                transformFloats[17] = draw.Tint.Y;
+                transformFloats[18] = draw.Tint.Z;
+                transformFloats[19] = draw.Tint.W;
+                System.Runtime.InteropServices.MemoryMarshal.AsBytes(transformFloats.AsSpan()).CopyTo(transformBytes);
+                _transformBuffers[index] = device.CreateBufferInit(
+                    new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst }, transformBytes.AsSpan());
+
+                _bindGroups[index] = device.CreateBindGroup(
+                    _layout,
+                    [
+                        BindGroupEntry.Buffer(0, cameraBuffer, 0, cameraSize),
+                        BindGroupEntry.Buffer(1, _transformBuffers[index], 0, TransformUniformSize)
+                    ]);
+
+                _indexCounts[index] = (uint)draw.Indices.Length;
+                _overlay[index] = draw.Blend == CelestialColorBlend.Overlay;
+            }
+        }
+
+        /// <summary>Draws every colour body, picking the pipeline that matches its blend mode.</summary>
+        public void Draw(RenderPassEncoder pass)
+        {
+            if (_bindGroups.Length == 0)
+            {
+                return;
+            }
+
+            for (var index = 0; index < _bindGroups.Length; index++)
+            {
+                pass.SetPipeline(_overlay[index] ? _overlayPipeline : _translucentPipeline);
+                pass.SetBindGroup(0, _bindGroups[index], []);
+                pass.SetVertexBuffer(0, _vertexBuffers[index]);
+                pass.SetIndexBuffer(_indexBuffers[index], WGPUIndexFormat.Uint32);
+                pass.DrawIndexed(_indexCounts[index]);
+            }
+        }
+
+        public void Dispose()
+        {
+            foreach (var bindGroup in _bindGroups)
+            {
+                bindGroup.Dispose();
+            }
+
+            foreach (var buffer in _transformBuffers)
+            {
+                buffer.Dispose();
+            }
+
+            foreach (var buffer in _indexBuffers)
+            {
+                buffer.Dispose();
+            }
+
+            foreach (var buffer in _vertexBuffers)
+            {
+                buffer.Dispose();
+            }
+
+            _translucentPipeline.Dispose();
+            _overlayPipeline.Dispose();
+            _pipelineLayout.Dispose();
+            _layout.Dispose();
         }
     }
 }

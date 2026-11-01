@@ -37,6 +37,11 @@ internal static class FrameCommand
             return RenderSunTest(width, height);
         }
 
+        if (Environment.GetEnvironmentVariable("MC_COLOR_TEST") is { Length: > 0 })
+        {
+            return RenderColorTest(width, height);
+        }
+
         if (Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 })
         {
             return RenderLocal(width, height);
@@ -1302,6 +1307,7 @@ internal static class FrameCommand
     {
         var textures = new List<TextureData>();
         var draws = new List<CelestialQuadDraw>();
+        var colorDraws = new List<CelestialColorDraw>();
 
         // The moon phase follows total world ticks (one phase per 24000 ticks); angles follow the day clock.
         var totalTicks = world.TryGetClock(ClientWorld.OverworldClockId, out var clock) ? clock.TotalTicks : world.GameTime;
@@ -1320,15 +1326,71 @@ internal static class FrameCommand
         AddBody(CelestialSprites.Sun, sunAngle, size: 30f);
         AddBody(CelestialSprites.MoonPhase(moonPhaseIndex), moonAngle, size: 20f);
 
-        if (draws.Count > 0)
+        // Sunrise/sunset band: a position-colour triangle fan, skipped below the reference alpha cutoff.
+        var sunrise = Sharpcraft.Common.World.SkyAttributeTracks.SunriseSunsetColorAt(world.DayTime);
+        if (sunrise.W > 0.001f)
         {
-            Console.WriteLine(
-                $"celestial: {textures.Count} texture(s), {draws.Count} draw(s), sun {sunAngle:F1} deg, moon {moonAngle:F1} deg (phase {moonPhaseIndex})");
+            var sinSun = MathF.Sin(sunAngle * (MathF.PI / 180f));
+            var theta = ((sinSun < 0f ? 180f : 0f) + 90f) * (MathF.PI / 180f);
+            var fan = CelestialGeometry.SunriseFanWorld(theta, sunrise.W);
+
+            var colours = new Vector4[fan.Length];
+            colours[0] = new Vector4(1f, 1f, 1f, 1f);
+            for (var i = 1; i < colours.Length; i++)
+            {
+                colours[i] = new Vector4(1f, 1f, 1f, 0f);
+            }
+
+            var triangles = new List<uint>((fan.Length - 2) * 3);
+            for (var i = 1; i + 1 < fan.Length; i++)
+            {
+                triangles.Add(0);
+                triangles.Add((uint)i);
+                triangles.Add((uint)(i + 1));
+            }
+
+            AddColor(fan, colours, triangles, sunrise, CelestialColorBlend.Translucent);
         }
 
-        return draws.Count == 0
-            ? request
-            : request with { CelestialTextures = [.. textures], CelestialDraws = [.. draws] };
+        // Stars: the reference star field rotated by the star angle, brightened by the star-brightness attribute.
+        var starBrightness = Sharpcraft.Common.World.SkyAttributeTracks.StarBrightnessAt(world.DayTime);
+        if (starBrightness > 0f)
+        {
+            var starCorners = StarField.Build(out var keptStars);
+            var starAngle = Sharpcraft.Common.World.SkyTimelines.StarAngleDegrees(world.DayTime);
+            var rotated = new Vector3[starCorners.Length];
+            CelestialGeometry.SkyRotate(starCorners, starAngle * (MathF.PI / 180f), rotated);
+
+            var colours = new Vector4[rotated.Length];
+            Array.Fill(colours, Vector4.One);
+            var triangles = new List<uint>(keptStars * 6);
+            for (var quad = 0; quad < keptStars; quad++)
+            {
+                var b = (uint)(quad * 4);
+                triangles.Add(b);
+                triangles.Add(b + 1);
+                triangles.Add(b + 2);
+                triangles.Add(b);
+                triangles.Add(b + 2);
+                triangles.Add(b + 3);
+            }
+
+            AddColor(rotated, colours, triangles, new Vector4(starBrightness, starBrightness, starBrightness, starBrightness), CelestialColorBlend.Overlay);
+        }
+
+        if (draws.Count > 0 || colorDraws.Count > 0)
+        {
+            Console.WriteLine(
+                $"celestial: {textures.Count} texture(s), {draws.Count} textured draw(s), {colorDraws.Count} colour draw(s), " +
+                $"sun {sunAngle:F1} deg, moon {moonAngle:F1} deg (phase {moonPhaseIndex}), sunrise a={sunrise.W:F3}, stars {starBrightness:F3}");
+        }
+
+        return request with
+        {
+            CelestialTextures = textures.Count > 0 ? [.. textures] : null,
+            CelestialDraws = draws.Count > 0 ? [.. draws] : null,
+            CelestialColorDraws = colorDraws.Count > 0 ? [.. colorDraws] : null
+        };
 
         void AddBody(Sharpcraft.Common.Identifiers.Identifier identifier, float angleDegrees, float size)
         {
@@ -1348,6 +1410,109 @@ internal static class FrameCommand
             // Translate to the eye so the body stays at the same place relative to the camera, i.e. infinitely far.
             draws.Add(new CelestialQuadDraw(textureIndex, vertices, indices, Matrix4x4.CreateTranslation(request.CameraPosition), Vector4.One));
         }
+
+        void AddColor(Vector3[] positions, Vector4[] colours, List<uint> triangles, Vector4 tint, CelestialColorBlend blend)
+        {
+            var vertices = new float[positions.Length * 7];
+            for (var i = 0; i < positions.Length; i++)
+            {
+                var offset = i * 7;
+                vertices[offset] = positions[i].X;
+                vertices[offset + 1] = positions[i].Y;
+                vertices[offset + 2] = positions[i].Z;
+                vertices[offset + 3] = colours[i].X;
+                vertices[offset + 4] = colours[i].Y;
+                vertices[offset + 5] = colours[i].Z;
+                vertices[offset + 6] = colours[i].W;
+            }
+
+            colorDraws.Add(new CelestialColorDraw(vertices, [.. triangles], Matrix4x4.CreateTranslation(request.CameraPosition), tint, blend));
+        }
+    }
+
+    /// <summary>
+    /// Offscreen check of the position-colour celestial path: renders a sky-only frame with the sunrise fan (solid red) and
+    /// the star field, then without them, and reports how many pixels the colour draws changed.
+    /// </summary>
+    internal static string RenderColorTest(int width, int height)
+    {
+        var fan = CelestialGeometry.SunriseFanWorld(MathF.PI / 2f, 1f);
+        var fanColours = new Vector4[fan.Length];
+        Array.Fill(fanColours, new Vector4(1f, 0f, 0f, 1f));
+        var fanTriangles = new List<uint>((fan.Length - 2) * 3);
+        for (var i = 1; i + 1 < fan.Length; i++)
+        {
+            fanTriangles.Add(0);
+            fanTriangles.Add((uint)i);
+            fanTriangles.Add((uint)(i + 1));
+        }
+
+        var starCorners = StarField.Build(out var keptStars);
+        var starRotated = new Vector3[starCorners.Length];
+        CelestialGeometry.SkyRotate(starCorners, 0f, starRotated);
+        var starColours = new Vector4[starRotated.Length];
+        Array.Fill(starColours, Vector4.One);
+        var starTriangles = new List<uint>(keptStars * 6);
+        for (var quad = 0; quad < keptStars; quad++)
+        {
+            var b = (uint)(quad * 4);
+            starTriangles.Add(b);
+            starTriangles.Add(b + 1);
+            starTriangles.Add(b + 2);
+            starTriangles.Add(b);
+            starTriangles.Add(b + 2);
+            starTriangles.Add(b + 3);
+        }
+
+        var (fanVertices, fanIndices) = PackColor(fan, fanColours, fanTriangles);
+        var (starVertices, starIndices) = PackColor(starRotated, starColours, starTriangles);
+
+        var eye = new Vector3(0f, 150f, 300f);
+        var withBodies = new FrameRequest(
+            width,
+            height,
+            [],
+            [],
+            new Vector4(0f, 0f, 0f, 1f),
+            eye,
+            Vector3.Zero)
+        {
+            CelestialColorDraws =
+            [
+                new CelestialColorDraw(fanVertices, fanIndices, Matrix4x4.Identity, new Vector4(1f, 0f, 0f, 1f), CelestialColorBlend.Translucent),
+                new CelestialColorDraw(starVertices, starIndices, Matrix4x4.Identity, Vector4.One, CelestialColorBlend.Overlay)
+            ]
+        };
+
+        var frame = OffscreenRenderer.Render(withBodies);
+        var without = OffscreenRenderer.Render(withBodies with { CelestialColorDraws = null });
+        var difference = PixelComparison.Compare(without.Rgba, frame.Rgba, frame.Width, frame.Height, 0);
+        Console.WriteLine(
+            $"color test: {keptStars} stars + sunrise changed {difference.Mismatches} pixels" +
+            (difference.Mismatches > 0 ? $", first ({difference.FirstX},{difference.FirstY})" : string.Empty));
+
+        var png = PngEncoder.EncodeRgba(frame.Width, frame.Height, frame.Rgba);
+        var path = Path.Combine(Path.GetTempPath(), "sharpcraft-color-test.png");
+        File.WriteAllBytes(path, png);
+        return path;
+    }
+
+    private static (float[] Vertices, uint[] Indices) PackColor(Vector3[] positions, Vector4[] colours, List<uint> triangles)
+    {
+        var vertices = new float[positions.Length * 7];
+        for (var i = 0; i < positions.Length; i++)
+        {
+            var offset = i * 7;
+            vertices[offset] = positions[i].X;
+            vertices[offset + 1] = positions[i].Y;
+            vertices[offset + 2] = positions[i].Z;
+            vertices[offset + 3] = colours[i].X;
+            vertices[offset + 4] = colours[i].Y;
+            vertices[offset + 5] = colours[i].Z;
+            vertices[offset + 6] = colours[i].W;
+        }
+
+        return (vertices, [.. triangles]);
     }
 
     private static string RenderLocal(int width, int height)

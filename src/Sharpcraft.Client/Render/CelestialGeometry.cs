@@ -50,7 +50,7 @@ public static class CelestialGeometry
 
     /// <summary>
     /// The sunrise/sunset triangle fan in local space: centre (0,100,0) then `steps` ring points at 120/40 radius, as in
-    /// the reference buildSunriseFan (18 vertices for 16 steps). Colour alpha is applied by the renderer's Z scale.
+    /// the reference buildSunriseFan (18 vertices for 16 steps).
     /// </summary>
     public static Vector3[] SunriseFanLocal(int steps = 16)
     {
@@ -66,5 +66,53 @@ public static class CelestialGeometry
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// The sunrise/sunset triangle fan (18 vertices) after the reference transform chain
+    /// <c>RotX(90°) · RotZ(angle) · Scale(1,1,alpha)</c> applied to <see cref="SunriseFanLocal"/>, in the same local sky
+    /// frame as the sun/moon (add the eye per frame). The scale Z by alpha is what fades the band out.
+    /// </summary>
+    /// <remarks>Expanded per vertex: x' = px·cos − py·sin, y' = −pz·alpha, z' = px·sin + py·cos.</remarks>
+    public static Vector3[] SunriseFanWorld(float angleRadians, float alpha)
+    {
+        var local = SunriseFanLocal();
+        var result = new Vector3[local.Length];
+        var cos = MathF.Cos(angleRadians);
+        var sin = MathF.Sin(angleRadians);
+
+        for (var i = 0; i < local.Length; i++)
+        {
+            var p = local[i];
+            result[i] = new Vector3((p.X * cos) - (p.Y * sin), -(p.Z * alpha), (p.X * sin) + (p.Y * cos));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Applies the sky body rotation — <c>RotX(angle)</c> then <c>RotY(−90°)</c> — to star-field points, matching the
+    /// reference renderSunMoonAndStars pose order. Star positions are already at their final distance, so there is no
+    /// translate/scale here.
+    /// </summary>
+    public static void SkyRotate(ReadOnlySpan<Vector3> source, float angleRadians, Span<Vector3> destination)
+    {
+        if (destination.Length < source.Length)
+        {
+            throw new ArgumentException("destination must hold every source point", nameof(destination));
+        }
+
+        var cos = MathF.Cos(angleRadians);
+        var sin = MathF.Sin(angleRadians);
+
+        for (var i = 0; i < source.Length; i++)
+        {
+            var p = source[i];
+
+            // rotate about X, then about Y by -90 degrees: x' = -z, z' = x
+            var ry = (p.Y * cos) - (p.Z * sin);
+            var rz = (p.Y * sin) + (p.Z * cos);
+            destination[i] = new Vector3(-rz, ry, p.X);
+        }
     }
 }

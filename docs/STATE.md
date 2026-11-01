@@ -1906,4 +1906,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 全量 **1184 通过**、0 警告。**待办**：月亮（按 `MOON_PHASE` 选贴图）、星空（1500）、日出条带（三角扇+顶点色）、天空盘/暗盘；亮度接 `STAR_BRIGHTNESS`/`RAIN_BRIGHTNESS`；镜像到 `WindowedRenderer`；随后日夜光照。## 2026-11-01 天空天体：月亮接入
 - `AttachCelestial` 增月亮：按 `SkyAttributeTracks.MoonPhaseIndex(overworld.totalTicks)` 选 `environment/celestial/moon/<phase>`，角度 `MoonAngleDegrees`、尺寸 20 / 高度 100；与太阳共用 celestial 管线（多纹理 / 多 draw，`CelestialResources` 已支持）。
 - 验收：`MC_MOON_TEST=1` + pack 渲染 full_moon（32×32）中心 `rgba(255,255,255,255)`、无黑块；本地帧日志 `celestial: 2 texture(s), 2 draw(s)`；全量 **1184 通过**。
-- 待办：星空、日出条带、天空盘/暗盘、`RAIN_BRIGHTNESS` 亮度、镜像 `WindowedRenderer`、日夜光照。
+- 待办：星空、日出条带、天空盘/暗盘、`RAIN_BRIGHTNESS` 亮度、镜像 `WindowedRenderer`、日夜光照。## 2026-11-01 天空天体：日出条带 + 星空
+- **新增 position-colour 管线** `Framework/.../pipelines/position_color.wgsl`（端口 core/position_color：clip=Proj·ModelView·Pos，顶点色×ColorModulator，α=0 丢弃）；顶点布局 `VertexLayout.PositionColorAttributes`（pos3+color4）；两种混合：日出 `TRANSLUCENT`、星空 `OVERLAY`。`ShaderPipelines.All` 补 `celestial`/`position_color` 描述符（启动自校验）。
+- **日出**：`CelestialGeometry.SunriseFanWorld(theta, alpha)`（RotX90·RotZ·ScaleZ 展开，18 顶点）；颜色中心白 α=1 / 环白 α=0；α≤0.001 不画。
+- **星空**：`Client/Render/StarField.cs`——`LegacyRandom`（java.util.Random 兼容 48 位 LCG）+ `buildStars` 复刻（seed 10842、候选 1500、长度∈(0.010000001,1)、距离 100、随机自旋）；`CelestialGeometry.SkyRotate` 按 STAR_ANGLE 旋转；`OVERLAY` 色调=STAR_BRIGHTNESS。
+- **等价性验证**：纯逻辑 `StarFieldTests`（Java Random(0) 向量 nextInt=-1155484576 / nextFloat=0.73096776；星点确定性、均落在 r=100 球面）、`CelestialGeometryTests`（SunriseFanWorld / SkyRotate 手算）。GPU：`MC_COLOR_TEST` 同帧加/不加 colour draws → 改变 **45145 像素**（780 颗星 + 红色日出扇）；本地帧 `celestial: 2 textured draw(s), 2 colour draw(s) … sunrise a=0.445, stars 0.055`。
+- 全量 **1188 通过**、0 警告。待办：天空盘/暗盘、`RAIN_BRIGHTNESS`、镜像窗口、日夜光照。

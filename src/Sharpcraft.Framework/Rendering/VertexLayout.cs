@@ -74,4 +74,14 @@ public static class VertexLayout
         new(WGPUVertexFormat.Float32x3, 0, 0),
         new(WGPUVertexFormat.Float32x2, 12, 1)
     ];
+
+    /// <summary>Bytes per position-colour vertex: position (3) + colour (4) floats.</summary>
+    public const int PositionColorStride = 28;
+
+    /// <summary>Position-colour attributes (sunrise fan, stars): position at 0, colour at 1.</summary>
+    public static VertexAttribute[] PositionColorAttributes() =>
+    [
+        new(WGPUVertexFormat.Float32x3, 0, 0),
+        new(WGPUVertexFormat.Float32x4, 12, 1)
+    ];
 }
