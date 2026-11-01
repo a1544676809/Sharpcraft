@@ -1417,7 +1417,7 @@ public static class WindowedRenderer
             if (cloudDepthTargetsCreated && cloudOit is not null)
             {
                 var cloudBoundsPass = encoder.BeginRenderPass(
-                    [new ColorAttachment { View = cloudDepthBoundsView, LoadOp = WGPULoadOp.Clear, StoreOp = WGPUStoreOp.Store, ClearValue = new WGPUColor { r = 0f, g = 0f, b = 0f, a = 0f } }],
+                    [new ColorAttachment { View = cloudDepthBoundsView, LoadOp = WGPULoadOp.Clear, StoreOp = WGPUStoreOp.Store, ClearValue = new WGPUColor { r = -65504f, g = -65504f, b = -65504f, a = -65504f } }],
                     new DepthStencilAttachment { View = cloudDepthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store });
                 cloudBoundsPass.SetPipeline(cloudDepthBoundsPipeline);
                 cloudBoundsPass.SetBindGroup(0, cloudOit.BindGroup);
