@@ -56,12 +56,12 @@ linear = pow(texel, 2.2);  out = pow(linear * light, 1/2.2)
 | --- | --- | --- | --- | --- |
 | 1 | 采样纹理 | `block.fsh`: `texture(Sampler0,uv)`；`Lightmap` 纹理 `RGBA8_UNORM` | `terrain.wgsl` `textureSampleGrad`，atlas `RGBA8Unorm` | 一致 |
 | 2 | 顶点色 Color | `block.vsh`: `Color`（tint×面明暗×AO，0..1） | `ChunkMesher.CornerShade`: `red=tint*shadeFactor*occlusion` | 一致（明暗 1/0.5/0.8/0.6、AO 见实现） |
-| 3 | 光照级别 | `lightmap.fsh`: `level=floor(texCoord*16)/15`（16 级量化） | 顶点 `sky/15`、`block/15`（连续）再 `lightmapColour` | 近似一致（≤1/15 量化差） |
+| 3 | 平滑光照 | `LightCoordsUtil.smoothBlend`(66-88)：3 邻+center，`neighbor==0→center`、`sky>2||block>2` 才修正，`(a+b+c+d)>>2` 得 1/16 级精度；再 `smoothWeightedBlend`(90-103) 按 AO 权重 w1..w4 双线性加权；`sample_lightmap`+`lightmap.fsh` `floor(texCoord*16)/15` 取整 | `ChunkMesher.CornerShade`(611-642)：对 4 邻格 `skySum/samples`、`blockSum/samples` 简单整数平均，无 3邻+center 特判、无 AO 双线性权重 | **算法近似**：角落/边缘光照过渡略不同（非量化差） |
 | 4 | 亮度曲线 | `Lightmap.getBrightness`: `lerp(ambientLight, l/(4-3l), 1)` | `brightnessCurve(l)=l/(4-3l)` | 主世界 ambientLight=0 等价；其他维度有差 |
 | 5 | 光照图合成 | `lightmap.fsh` 公式 | `terrain.wgsl::lightmapColour` | 一致（省 nightVision/boss/darkness，默认 0） |
 | 6 | 光照图取值域 | `RGBA8_UNORM` 原始值 | 原始值 + 直接相乘 | 一致 |
 | 7 | 最终合成 | `block.fsh`: `texture*vertexColor*ColorModulator`（**无 gamma**） | `litColour=clamp(texel*light)`（已改） | 一致 |
-| 8 | blockFactor | `LightmapRenderStateExtractor`: `blockLightFlicker+1.4` | `DayOverworld.BlockFactor=1.4` | 近似（省略 ±flicker） |
+| 8 | blockFactor | `LightmapRenderStateExtractor`: `blockFactor = blockLightFlicker + 1.4F`（行52）；flicker 每 tick `+= (rand-rand)*rand*rand*0.1; *=0.9`（行32-34） | `DayOverworld.BlockFactor=1.4`（常量） | 近似（省略块光随机闪烁，幅度很小） |
 | 9 | brightness(gamma) | `Options.gamma` 默认 **0.5** | `BrightnessFactor=0.5` | 一致 |
 | 10 | BlockLightTint | `ARGB.vector3fFromRGB24(-10100)`=`v/255`（`from8BitChannel`，**无 gamma**） | `Srgb24ToLinear(-10100)`（gamma 解码） | **偏差**：块光色偏暗/偏色 |
 | 11 | SkyLightColor / SkyColor / SkyLightFactor 时间曲线 | `data/minecraft/timeline/day.json`: 730/11270/13140/22860=0.24、`#7a7aff`、133/11867/13670/22330 | `SkyAttributeTracks` 同值 | 一致 |
@@ -69,4 +69,4 @@ linear = pow(texel, 2.2);  out = pow(linear * light, 1/2.2)
 | 13 | 世界时钟推进 | 原版客户端每 tick 推进世界时钟（时间与 partial 前进） | `ClientWorld.AdvanceClocks()` **未被调用** | **偏差**：时间冻结/昼夜不推进（改时间仅在收到 set_time 时跳变） |
 | 14 | set_time 解析 | `ClientboundSetTimePacket` LONG gameTime + map(WorldClock→ClockNetworkState{VAR_LONG,FLOAT,FLOAT}) | `SetTimePacketCodec` 同结构 | 一致 |
 
-**结论**：核心光照合成已与原版等效；剩余实质偏差为 **#10 BlockLightTint（gamma 误用）** 与 **#13 世界时钟未推进**，前者影响块光色，后者影响昼夜/亮度随时间变化（"整体偏暗、改时间不变"很可能源于 #13 或服务器时间本身）。#3、#8 为可接受近似。
+**结论**：核心光照合成已与原版等效；剩余实质偏差为 **#10 BlockLightTint（gamma 误用）** 与 **#13 世界时钟未推进**（"整体偏暗、改时间不变"很可能源于 #13 或服务器时间本身）。**#3** 为平滑光照算法近似（我们缺 `smoothBlend/smoothWeightedBlend` 的 3邻+center 特判与 AO 双线性权重，角落/边缘过渡略不同，非量化差）；**#8** 省略块光随机闪烁（幅度很小）。
