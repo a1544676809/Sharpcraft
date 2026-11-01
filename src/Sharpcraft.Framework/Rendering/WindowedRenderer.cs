@@ -508,8 +508,6 @@ public static class WindowedRenderer
             refTargetsCreated = true;
         }
 
-        CreateReferenceTargets();
-
         Span<float> cameraBlock = stackalloc float[16];
         var cameraBytes = new byte[VertexLayout.CameraUniformSize];
 
@@ -768,7 +766,10 @@ public static class WindowedRenderer
                 depthTexture = CreateDepthTexture(device, frameWidth, frameHeight);
                 depthView = depthTexture.CreateView();
 
-                CreateReferenceTargets();
+                if (refTargetsCreated)
+                {
+                    CreateReferenceTargets();
+                }
 
                 // The geometry is world-space and the camera travels in a uniform, so a resize needs no
                 // re-upload at all.
@@ -1157,6 +1158,16 @@ public static class WindowedRenderer
             // Reference transparency (docs/specs/render/oit-reference.md): depth bounds, a culling pass, wavelet
             // transmittance, accumulation and a composite that writes depth. The three stages redraw the same
             // translucent geometry, so no sort is needed at all.
+            var needsOit = arenaTranslucent?.ChunkCount > 0
+                || currentRequest.TranslucentIndices is { Length: > 0 }
+                || cloudOit is not null;
+            if (needsOit && !refTargetsCreated)
+            {
+                CreateReferenceTargets();
+            }
+
+            if (refTargetsCreated && needsOit)
+            {
                 var hasRefStatic = useStaticWorld
                     && currentRequest.TranslucentVertices is { Length: > 0 }
                     && currentRequest.TranslucentIndices is { Length: > 0 };
@@ -1317,6 +1328,7 @@ public static class WindowedRenderer
                         $"cull: chunks={arena?.ChunkCount ?? 0} culled={arena?.CulledLastFrame ?? 0} "
                         + $"cutout={arenaCutout?.ChunkCount ?? 0} translucent={arenaTranslucent?.ChunkCount ?? 0} (reference oit)");
                 }
+            }
             // (The weighted-blended OIT path that used to live here was shelved for its visual quality and is no longer
             // compiled; the reference OIT above is the only transparency path.)
 
