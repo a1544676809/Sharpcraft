@@ -132,9 +132,15 @@ internal sealed class InteractiveSession
     {
         if (_world is not null && _biomes is not null)
         {
-            // The reference fog base colour is dominated by SKY_COLOR (FOG_COLOR defaults to black and is mixed toward the
-            // sky), so use the sky colour directly; it darkens at night and under weather exactly like the sky.
-            return new Vector4(CurrentSkyColour(), 1f);
+            // AtmosphericFogEnvironment.getBaseColor: fog base colour mixed toward the weather-darkened SKY_COLOR with
+            // a factor derived from sky_fog_end_distance / render distance.
+            var fogBase = FrameCommand.EffectiveFogColour(_world);
+            var sky = CurrentSkyColour();
+            var skyFogEnd = MathF.Min(512f / 16f, ViewDistanceChunks);
+            var clamped = Math.Clamp(0.25f + (0.75f * (skyFogEnd / 32f)), 0f, 1f);
+            var mix = 1f - MathF.Pow(clamped, 0.25f);
+            var mixed = Vector3.Lerp(new Vector3(fogBase.X, fogBase.Y, fogBase.Z), sky, mix);
+            return new Vector4(mixed, 1f);
         }
 
         var baseFog = new Vector3(0.75f, 0.85f, 1.0f);

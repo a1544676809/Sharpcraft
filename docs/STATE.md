@@ -2120,3 +2120,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-01 高分辨率 OIT 压测（T-328）通过：2560×1334 视距12 40s 无 OOM。
 - 2026-11-01 天空盘切片范围记录：上/下盘实现；水下暗盘延后到水下渲染。
 - 2026-11-01 天空盘上盘实现（T-330）：opaque 通道 + SkyDiscDraws，y=+16 SKY_COLOR 于日月星前；水下暗盘延后。
+- 2026-11-01 白雾混合（T-331）按 AtmosphericFogEnvironment 公式接入当前雾色。
