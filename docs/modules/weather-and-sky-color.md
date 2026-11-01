@@ -70,6 +70,7 @@
 
 - **Colormap 取色** `ColorMapColorUtil.get(temp, rain, pixels, default)`：`rain *= temp`；`x=(int)((1-temp)*255)`、`y=(int)((1-rain)*255)`、`index=y<<8|x`；越界返回 default。`GrassColor.get(temp,rain)` 用 65536 像素数组 + default `-65281`；`FoliageColor`/`DryFoliageColor` 各有自己的数组。
 - **草色** `Biome.getGrassColor(x,z)`：`base = grassColorOverride ?? GrassColor.get(clamp(temp,0,1), clamp(downfall,0,1))`，再经 `grassColorModifier.modifyColor(x,z,base)`（`NONE` / `DARK_FOREST` / `SWAMP`）。
+  - **查表前必须把 temperature、downfall clamp 到 0..1**（原版 `getGrassColorFromTexture` 如此）；漏掉会让温度越界的群系索引越界、返回品红默认色（-65281），表现为紫色草方块。
   - 实现：`NONE` 直通；`DARK_FOREST` = `ARGB.opaque(((base & 0xFEFEFE) + 2634762) >> 1)`；`SWAMP` 依赖 `Biome.BIOME_INFO_NOISE`（未实现）→ 暂返回基色，记**受控偏差**。
 - **落叶/干叶**：`getFoliageColor()` = `foliageColorOverride ?? FoliageColor.get(temp,downfall)`；`getDryFoliageColor()` 同理用 `DryFoliageColor`。
 - **水色** `getWaterColor()` = `specialEffects.waterColor()`（每生物群系常量；默认 `4159204`）。

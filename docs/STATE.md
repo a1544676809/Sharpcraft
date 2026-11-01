@@ -1983,4 +1983,7 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **`WindowCommand` 接逐群系 tint**：从 `live.Registries` 建 `BiomeRegistry`，`BiomeTint.WithBiomes` 重建 `LayerSinks` 并 `meshCache.Clear()+QueueMissing` 重网格化；日志 `biomes: 67 ... per-biome block tint enabled`。
 - **窗口实机**：`window 127.0.0.1:25565` 成功 presented（960x540，frame #1800+ 持续渲染，无 validation error）。窗口像素不可截（swapchain），目视由所有者确认。
 - **诊断修复**：离屏相机常在世界外，天空盘采样回退到已加载区块列，避免取群系得 -1→全 0。
-- 备注：离屏真服帧"发白"是距离雾（相机远、fog 64–160），非 P3 bug；`MC_FOG_START/END` 推远后正常显示绿色植被（tint 生效）。全量 **1243 通过**。
+- 备注：离屏真服帧"发白"是距离雾（相机远、fog 64–160），非 P3 bug；`MC_FOG_START/END` 推远后正常显示绿色植被（tint 生效）。全量 **1243 通过**。## 2026-11-01 修复：紫色草方块（群系色越界）
+- **现象**：实机草地顶部呈品红/紫。对照原版 `getGrassColorFromTexture` 发现：查 colormap 前需把 `temperature`/`downfall` **clamp 0..1**；我们直接传原始群系温度（常 <0 或 >1），索引越界返回 colormap 默认色 `-65281`（品红）。
+- **修复**：`BiomeTint.BiomeColour` 对 temperature/downfall clamp 0..1 再查表；`BiomeTintTests.TemperatureIsClampedBeforeColourMapLookup`（temp=2→index0，断言非 -65281）。
+- 重启实机 `window`（pid 52704）复验。全量 1244 通过、门禁 ok。

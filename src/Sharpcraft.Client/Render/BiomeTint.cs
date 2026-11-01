@@ -127,17 +127,21 @@ public sealed class BiomeTint
 
     private int BiomeColour(BlockTintKind kind, BiomeEntry entry, int x, int z)
     {
-        var climate = entry.Climate;
         var effects = entry.Effects;
+
+        // Reference getGrassColorFromTexture clamps temperature and downfall to 0..1 before indexing the colour map;
+        // without it a biome below 0 or above 1 indexes outside the map and returns the magenta fallback.
+        var temperature = Math.Clamp(entry.Climate.Temperature, 0f, 1f);
+        var downfall = Math.Clamp(entry.Climate.Downfall, 0f, 1f);
 
         return kind switch
         {
             BlockTintKind.Grass => ApplyGrassModifier(
-                effects.GrassColor ?? (_grass?.Sample(climate.Temperature, climate.Downfall, -65281) ?? -65281),
+                effects.GrassColor ?? (_grass?.Sample(temperature, downfall, -65281) ?? -65281),
                 effects.GrassColorModifier,
                 x,
                 z),
-            BlockTintKind.Foliage => effects.FoliageColor ?? (_foliage?.Sample(climate.Temperature, climate.Downfall, FoliageDefault) ?? FoliageDefault),
+            BlockTintKind.Foliage => effects.FoliageColor ?? (_foliage?.Sample(temperature, downfall, FoliageDefault) ?? FoliageDefault),
             BlockTintKind.FoliageEvergreen => FoliageEvergreen,
             BlockTintKind.FoliageBirch => FoliageBirch,
             BlockTintKind.Water => effects.WaterColor,
