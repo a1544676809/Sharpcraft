@@ -259,6 +259,18 @@ internal static class WindowCommand
             chatTypes.Load(registries);
             Console.WriteLine($"chat types: {chatTypes.Count} from the server");
 
+            // Per-biome block tint (docs/modules/weather-and-sky-color.md 6.1): rebuild the tint with the server's biome
+            // registry and remesh so grass/leaves/water use the biome at each position.
+            if (Sharpcraft.Common.World.BiomeRegistry.From(registries) is { } biomes)
+            {
+                biomeTint = biomeTint.WithBiomes(world.GetBiomeAt, biomes, blendRadius: 2);
+                meshCache.Layers = new Sharpcraft.Client.Render.LayerSinks(VanillaBlockRegistry.Layout, null, layerTranslucent, biomeTint);
+                workerPool.Layers = meshCache.Layers;
+                meshCache.Clear();
+                meshCache.QueueMissing(world);
+                Console.WriteLine($"biomes: {biomes.Entries.Count} from the server; per-biome block tint enabled");
+            }
+
             if (Environment.GetEnvironmentVariable("MC_DIAG") == "1")
             {
                 Console.WriteLine("chat type table: " + string.Join(", ", chatTypes.Describe()));

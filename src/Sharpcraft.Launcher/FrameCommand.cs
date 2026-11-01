@@ -1063,11 +1063,24 @@ internal static class FrameCommand
         if (Environment.GetEnvironmentVariable("MC_SKY_DISC") == "1" && biomes is not null)
         {
             var eye = request.CameraPosition;
-            var baseSky = Sharpcraft.Common.World.SkyColourSource.ColorAt(
-                world.GetBiomeAt, biomes, (int)MathF.Floor(eye.X), (int)MathF.Floor(eye.Y), (int)MathF.Floor(eye.Z));
+            var sampleX = (int)MathF.Floor(eye.X);
+            var sampleY = (int)MathF.Floor(eye.Y);
+            var sampleZ = (int)MathF.Floor(eye.Z);
+
+            // The offscreen camera frames the whole world and can sit outside the loaded area; sample a loaded column then.
+            var chunks = world.GetChunks();
+            if (chunks.Length > 0 && world.GetChunk(sampleX >> 4, sampleZ >> 4) is null)
+            {
+                sampleX = (chunks[0].ChunkX * 16) + 8;
+                sampleZ = (chunks[0].ChunkZ * 16) + 8;
+            }
+
+            var baseSky = Sharpcraft.Common.World.SkyColourSource.ColorAt(world.GetBiomeAt, biomes, sampleX, sampleY, sampleZ);
             var sky = ApplySkyWeather(baseSky, world);
             request = AppendSkyDisc(request, sky);
-            Console.WriteLine($"sky disc: colour ({sky.X:F3},{sky.Y:F3},{sky.Z:F3}), gradient skipped");
+            Console.WriteLine(
+                $"sky disc: biomes {biomes.Entries.Count}, sample ({sampleX},{sampleY},{sampleZ}) id {world.GetBiomeAt(sampleX, sampleY, sampleZ)}, " +
+                $"colour ({sky.X:F3},{sky.Y:F3},{sky.Z:F3}), gradient skipped");
         }
 
         var frame = OffscreenRenderer.Render(request);

@@ -1978,4 +1978,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `SkyColourSource.ColorAt(biomeIdAt, registry, x,y,z)`：以 `calculateSkyColor(temperature)` 逐群系、按 quart 采样 + 7 抽头 gaussian（核 `{0,1,4,6,4,1,0}`，总权重 4096）空间混合（未加载群系不计权重）。
 - 诊断 `MC_SKY_DISC_TEST`：用 `CelestialGeometry.SkyDisc` 绘制盘、tint=calculateSkyColor(temp)，中心像素 `rgba(123,164,255)`=`0xFF7BA4FF`(temp0.5)、覆盖 518400 像素 ⇒ 盘几何+颜色管线正确。
 - 测试 `SkyColourSourceTests`(3)、`SkyTimelinesTests`(+1)。全量 **1243 通过**、门禁 ok。
-- **替换天空盘（opt-in，T-281）**：`MC_SKY_DISC=1` 时 `FrameRequest.SkipGradientSky` 跳过 `sky.wgsl`，`AppendSkyDisc` 画顶盘(SKY_COLOR)+地平线下底盘(黑，`SkyVisibility`)；真服路径用 `SkyColourSource`、本地用 `MC_BIOME_TEMP` 合成。验证：本地 sky 像素渐变 `rgba(121,167,255)` → 换盘后渐变跳过、写盘 colour (0.482,0.643,1.000)。**默认仍渐变**（缺参考帧，目视调优留待，受控偏差）。P3 全链（P3.1–P3.4）已交付。
+- **替换天空盘（opt-in，T-281）**：`MC_SKY_DISC=1` 时 `FrameRequest.SkipGradientSky` 跳过 `sky.wgsl`，`AppendSkyDisc` 画顶盘(SKY_COLOR)+地平线下底盘(黑，`SkyVisibility`)；真服路径用 `SkyColourSource`、本地用 `MC_BIOME_TEMP` 合成。验证：本地 sky 像素渐变 `rgba(121,167,255)` → 换盘后渐变跳过、写盘 colour (0.482,0.643,1.000)。**默认仍渐变**（缺参考帧，目视调优留待，受控偏差）。P3 全链（P3.1–P3.4）已交付。## 2026-11-01 真服实机验证 + 窗口逐群系 tint
+- **真实服务器连通**（127.0.0.1:25565，登录 Blue_Coast）：离屏 `frame` 收 49 区块、1.6M 方块；`probe.Registries` 群系表 **67** 条，采样群系 id 53 解析成功、SKY_COLOR 计算 `(0.490,0.635,1.000)`。
+- **`WindowCommand` 接逐群系 tint**：从 `live.Registries` 建 `BiomeRegistry`，`BiomeTint.WithBiomes` 重建 `LayerSinks` 并 `meshCache.Clear()+QueueMissing` 重网格化；日志 `biomes: 67 ... per-biome block tint enabled`。
+- **窗口实机**：`window 127.0.0.1:25565` 成功 presented（960x540，frame #1800+ 持续渲染，无 validation error）。窗口像素不可截（swapchain），目视由所有者确认。
+- **诊断修复**：离屏相机常在世界外，天空盘采样回退到已加载区块列，避免取群系得 -1→全 0。
+- 备注：离屏真服帧"发白"是距离雾（相机远、fog 64–160），非 P3 bug；`MC_FOG_START/END` 推远后正常显示绿色植被（tint 生效）。全量 **1243 通过**。
