@@ -79,6 +79,9 @@ internal sealed class InteractiveSession
     private Sharpcraft.Common.World.BiomeRegistry? _biomes;
     private Sharpcraft.Client.Assets.CloudTexture? _cloudTexture;
     private readonly Sharpcraft.Client.Render.CloudDrawCache _cloudDrawCache = new();
+    private bool _cloudsEnabled = true;
+    private bool _cloudsFancy = true;
+    private int _cloudRangeChunks = 128;
 
     /// <summary>
     /// Requested render distance in chunks. Host configuration (MC_VIEW_DISTANCE), default 12; the server may cap it and
@@ -161,16 +164,24 @@ internal sealed class InteractiveSession
     /// <summary>Provides the cloud texture the live session draws each frame.</summary>
     internal void SetCloudTexture(Sharpcraft.Client.Assets.CloudTexture? texture) => _cloudTexture = texture;
 
+    /// <summary>Cloud options from the host: status/range mirror the reference CloudStatus and cloudRange settings.</summary>
+    internal void SetCloudOptions(bool enabled, bool fancy, int rangeChunks)
+    {
+        _cloudsEnabled = enabled;
+        _cloudsFancy = fancy;
+        _cloudRangeChunks = Math.Max(2, rangeChunks);
+    }
+
     /// <summary>The per-frame cloud position-colour draw around the camera, or null when clouds/texture are unavailable.</summary>
     internal Sharpcraft.Framework.Rendering.CelestialColorDraw? CurrentCloudDraw()
     {
-        if (_world is null || _cloudTexture is null)
+        if (_world is null || _cloudTexture is null || !_cloudsEnabled)
         {
             return null;
         }
 
         var eye = _player.Position + new Vector3(0f, 1.62f, 0f);
-        return FrameCommand.BuildCloudDraw(_world, _cloudTexture, eye, _cloudDrawCache);
+        return FrameCommand.BuildCloudDraw(_world, _cloudTexture, eye, _cloudDrawCache, _cloudRangeChunks, _cloudsFancy);
     }
 
     /// <summary>Decoded chunks installed per frame; keeps one batch from stalling the frame.</summary>

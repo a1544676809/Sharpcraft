@@ -1521,10 +1521,14 @@ internal static class FrameCommand
     /// Builds the per-frame cloud position-colour draw: visible faces via CloudMeshBuilder, geometry via
     /// CloudGeometryBuilder, tinted by the CLOUD_COLOR timeline and weather (docs/modules/clouds.md 2).
     /// </summary>
-    internal static CelestialColorDraw? BuildCloudDraw(ClientWorld world, Sharpcraft.Client.Assets.CloudTexture texture, Vector3 eye, Sharpcraft.Client.Render.CloudDrawCache? cache = null)
+    internal static CelestialColorDraw? BuildCloudDraw(
+        ClientWorld world,
+        Sharpcraft.Client.Assets.CloudTexture texture,
+        Vector3 eye,
+        Sharpcraft.Client.Render.CloudDrawCache? cache = null,
+        int rangeChunks = 128,
+        bool fancy = true)
     {
-        // The reference uses the separate cloudRange option (default 128 chunks), not the terrain view distance.
-        const int CloudRangeChunks = 128;
         var partialTick = EffectiveDayTimePartial(world);
         var offset = (float)(world.GameTime % (texture.Width * 400L)) + partialTick;
         var cloudX = eye.X + (offset * 0.03f);
@@ -1547,15 +1551,18 @@ internal static class FrameCommand
                 ? Sharpcraft.Client.Render.CloudCameraSide.BelowClouds
                 : Sharpcraft.Client.Render.CloudCameraSide.InsideClouds;
 
-        var radiusCells = (int)MathF.Ceiling(CloudRangeChunks * 16f / 12f);
+        var radiusCells = (int)MathF.Ceiling(rangeChunks * 16f / 12f);
         float[] vertices;
         uint[] indices;
         Matrix4x4 model;
 
-        if (cache is null)
+        if (cache is null || !fancy)
         {
-            var quads = Sharpcraft.Client.Render.CloudMeshBuilder.Build(
-                texture.Cells, texture.Width, texture.Height, cellX, cellZ, radiusCells, side);
+            var quads = fancy
+                ? Sharpcraft.Client.Render.CloudMeshBuilder.Build(
+                    texture.Cells, texture.Width, texture.Height, cellX, cellZ, radiusCells, side)
+                : Sharpcraft.Client.Render.CloudMeshBuilder.BuildFlat(
+                    texture.Cells, texture.Width, texture.Height, cellX, cellZ, radiusCells);
             if (quads.Count == 0)
             {
                 return null;

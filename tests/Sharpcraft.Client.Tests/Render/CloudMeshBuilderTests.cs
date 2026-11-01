@@ -19,6 +19,17 @@ public sealed class CloudMeshBuilderTests
     }
 
     [Fact]
+    public void FastModeBuildsOnlyTheDownFace()
+    {
+        var texture = CloudTexture_OneCloud(5, 5, 2, 2);
+        var quads = CloudMeshBuilder.BuildFlat(texture, 5, 5, 2, 2, 1);
+
+        var only = Assert.Single(quads);
+        Assert.Equal(CloudFaceDirection.Down, only.Direction);
+        Assert.False(only.InsideFace);
+    }
+
+    [Fact]
     public void BelowCloudsEmitsBottomPlusInterior()
     {
         // One cloud at texture cell (1,1); camera cell is that cell, radius 1.

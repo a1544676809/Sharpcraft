@@ -287,6 +287,15 @@ internal static class WindowCommand
 
         session.SetCloudTexture(Sharpcraft.Client.Assets.CloudTexture.Load(resources));
 
+        // Cloud options mirror the reference: CloudStatus OFF/FAST/FANCY and the separate cloudRange (chunks).
+        var cloudMode = (Environment.GetEnvironmentVariable("MC_CLOUD_MODE") ?? "fancy").ToLowerInvariant();
+        var cloudRange = Environment.GetEnvironmentVariable("MC_CLOUD_RANGE") is { Length: > 0 } rangeText
+            && int.TryParse(rangeText, out var parsedRange) ? parsedRange : 128;
+        session.SetCloudOptions(
+            enabled: cloudMode != "off",
+            fancy: cloudMode != "fast" && cloudMode != "off",
+            rangeChunks: cloudRange);
+
         // The gradient sky is static day blue; use a flat SKY_COLOR clear colour instead (vanilla sky is SKY_COLOR).
         request = request with { SkipGradientSky = true };
 

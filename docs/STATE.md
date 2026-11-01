@@ -2091,4 +2091,7 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 原版依据：`CloudRenderer.prepare` 的 `range` 来自 `Options.cloudRange`，默认 **128 区块**（2048 方块）；我们误用 `MC_VIEW_DISTANCE=12`→192 方块，而云 fog 到 2048 才消失 → 云在 192 处硬切“冒出来”。
 - 原版顺序：`executeClassicTransparency` 中 **半透明地形之后**才 `cloudRenderer.render`；fancy 走 `renderOit` + 深度。我们此前云在地形之前、深度 Always不写 → 地形/云互相穿透（“透视”）。
 - 实现：`CloudDrawCache`（仅中心 cell/相机侧/垂直偏移变化时重建相机相对几何，每帧只更新 model 平移）；`BuildCloudDraw` 半径=`ceil(128*16/12)`；`WindowedRenderer` 云 pass 移到地形/OIT 之后，创建 cloud pipeline 深度 `LessEqual`；`CelestialColorResources` 未变数组跳过重传。
-- 构建/1267 通过；窗口运行中（pid 54384，RSS ~1.16GB）。**未做**：云 OIT（当前普通 alpha + 深度）；严格像素等效待后续。
+- 构建/1267 通过；窗口运行中（pid 54384，RSS ~1.16GB）。**未做**：云 OIT（当前普通 alpha + 深度）；严格像素等效待后续。## 2026-11-01 T-309：云配置开关
+- 新增宿主开关（不污染游戏程序集环境变量读取，经显式选项传入）：`MC_CLOUD_MODE=off|fast|fancy`（默认 fancy）与 `MC_CLOUD_RANGE`（默认 128 区块，对应原版 `Options.cloudRange`）；`MC_CLOUD_MODE=off` 跳过云，`fast` 用仅 DOWN 面（`CloudMeshBuilder.BuildFlat`）。
+- `CloudDrawCache` 缓存 fancy 云几何；`CloudMeshBuilderTests.FastModeBuildsOnlyTheDownFace`、`CloudDrawCacheTests` 加回归；全量 **1269** 通过。
+- **完整 cloud OIT 仍待实现**：需要新增 position-color 版 OIT 着色器/三阶段 pipeline 并接入现有 OIT 目标；计划以显式 `CloudUseOit` 选项接入，不影响当前路径。

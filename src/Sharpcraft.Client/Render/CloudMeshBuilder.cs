@@ -94,6 +94,58 @@ public static class CloudMeshBuilder
         return quads;
     }
 
+    /// <summary>Fast clouds: only the down face of each non-empty cell (reference buildFlatCell).</summary>
+    public static List<CloudQuad> BuildFlat(
+        ReadOnlySpan<long> cells,
+        int textureWidth,
+        int textureHeight,
+        int centerCellX,
+        int centerCellZ,
+        int radiusCells)
+    {
+        var quads = new List<CloudQuad>();
+
+        for (var ring = 0; ring <= 2 * radiusCells; ring++)
+        {
+            for (var relativeCellX = -ring; relativeCellX <= ring; relativeCellX++)
+            {
+                var relativeCellZ = ring - Math.Abs(relativeCellX);
+                if (relativeCellZ < 0 || relativeCellZ > radiusCells
+                    || (relativeCellX * relativeCellX) + (relativeCellZ * relativeCellZ) > radiusCells * radiusCells)
+                {
+                    continue;
+                }
+
+                if (relativeCellZ != 0)
+                {
+                    TryAddFlat(quads, cells, textureWidth, textureHeight, centerCellX, centerCellZ, relativeCellX, -relativeCellZ);
+                }
+
+                TryAddFlat(quads, cells, textureWidth, textureHeight, centerCellX, centerCellZ, relativeCellX, relativeCellZ);
+            }
+        }
+
+        return quads;
+    }
+
+    private static void TryAddFlat(
+        List<CloudQuad> quads,
+        ReadOnlySpan<long> cells,
+        int textureWidth,
+        int textureHeight,
+        int centerCellX,
+        int centerCellZ,
+        int relativeCellX,
+        int relativeCellZ)
+    {
+        var indexX = FloorMod(centerCellX + relativeCellX, textureWidth);
+        var indexY = FloorMod(centerCellZ + relativeCellZ, textureHeight);
+        if (cells[indexX + (indexY * textureWidth)] != 0L)
+        {
+            quads.Add(new CloudQuad(relativeCellX, relativeCellZ, CloudFaceDirection.Down, false));
+        }
+    }
+
     private static void TryBuildCell(
         List<CloudQuad> quads,
         ReadOnlySpan<long> cells,
