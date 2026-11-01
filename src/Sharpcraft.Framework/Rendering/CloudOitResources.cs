@@ -9,130 +9,98 @@ using Brew.Wgpu.Native;
 namespace Sharpcraft.Framework.Rendering;
 
 /// <summary>
-/// Cloud geometry in the terrain vertex format so the existing reference-OIT stages can render it: a 1x256 alpha ramp
-/// supplies the per-vertex cloud alpha through the atlas sampler, while the vertex colour carries brightness * cloud tint.
-/// This lets the fancy cloud path reuse the same depth-bounds/transmittance/accumulate/composite pipelines as translucent
-/// terrain (docs/specs/render/oit-reference.md).
+/// Owns the persistent cloud OIT geometry and its transform uniform. The mesh is uploaded only when the cloud cache
+/// produces new arrays; every frame writes just the 80-byte transform (model + tint), matching the reference CloudInfo
+/// uniform pattern instead of re-expanding the whole mesh.
 /// </summary>
 internal sealed class CloudOitResources : IDisposable
 {
+    private const ulong TransformUniformSize = 80;
+
     private readonly Device _device;
-    private readonly Texture _alphaTexture;
-    private readonly TextureView _alphaView;
-    private readonly Sampler _sampler;
-    private readonly Brew.Wgpu.Buffer _fog;
-    private readonly Brew.Wgpu.Buffer _lightmap;
+    private readonly Brew.Wgpu.Buffer _transform;
+    private const float MinCapacity = 4096;
     private Brew.Wgpu.Buffer _vertex;
     private Brew.Wgpu.Buffer _index;
-    private ulong _vertexCapacity;
-    private ulong _indexCapacity;
+    private ulong _vertexCapacity = (ulong)MinCapacity;
+    private ulong _indexCapacity = (ulong)MinCapacity;
     private uint _indexCount;
+    private float[]? _sourceVertices;
+    private uint[]? _sourceIndices;
 
-    public CloudOitResources(Device device, BindGroupLayout bindGroupLayout, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize)
+    public CloudOitResources(Device device, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize)
     {
         _device = device;
+        Layout = device.CreateBindGroupLayout(
+        [
+            BindGroupLayoutEntry.Buffer(0, ShaderStage.Vertex, WGPUBufferBindingType.Uniform, false, cameraSize),
+            BindGroupLayoutEntry.Buffer(1, ShaderStage.Vertex | ShaderStage.Fragment, WGPUBufferBindingType.Uniform, false, TransformUniformSize)
+        ]);
 
-        // 256 alpha steps: RGBA8 white with alpha = i/255, sampled nearest by the cloud OIT vertex uv.x.
-        var pixels = new byte[256 * 4];
-        for (var i = 0; i < 256; i++)
+        _transform = device.CreateBuffer(new BufferDescriptor
         {
-            pixels[i * 4] = 255;
-            pixels[i * 4 + 1] = 255;
-            pixels[i * 4 + 2] = 255;
-            pixels[i * 4 + 3] = (byte)i;
-        }
-
-        _alphaTexture = device.CreateTexture(new TextureDescriptor
-        {
-            Size = new WGPUExtent3D { width = 256, height = 1, depthOrArrayLayers = 1 },
-            MipLevelCount = 1,
-            SampleCount = 1,
-            Dimension = WGPUTextureDimension._2D,
-            Format = WGPUTextureFormat.RGBA8Unorm,
-            Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
+            Size = TransformUniformSize,
+            Usage = BufferUsage.Uniform | BufferUsage.CopyDst
         });
-        device.Queue.WriteTexture(
-            _alphaTexture,
-            pixels,
-            256 * 4,
-            1,
-            new WGPUExtent3D { width = 256, height = 1, depthOrArrayLayers = 1 },
-            0,
-            new WGPUOrigin3D { x = 0, y = 0, z = 0 });
-        _alphaView = _alphaTexture.CreateView();
-        _sampler = device.CreateSampler(new SamplerDescriptor
-        {
-            AddressModeU = WGPUAddressMode.ClampToEdge,
-            AddressModeV = WGPUAddressMode.ClampToEdge,
-            AddressModeW = WGPUAddressMode.ClampToEdge,
-            MagFilter = WGPUFilterMode.Nearest,
-            MinFilter = WGPUFilterMode.Nearest,
-            MipmapFilter = WGPUMipmapFilterMode.Nearest,
-            LodMinClamp = 0f,
-            LodMaxClamp = 1f,
-            MaxAnisotropy = 1
-        });
-
-        // Identity fog (range far apart) and identity lightmap: cloud colour already includes its tint and fog alpha.
-        var fogValues = new float[8];
-        fogValues[5] = 1.0e9f; // range.y
-        var fogBytes = MemoryMarshal.AsBytes(fogValues.AsSpan()).ToArray();
-        _fog = device.CreateBufferInit(new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst }, fogBytes.AsSpan());
-
-        var lightValues = new float[16];
-        lightValues[0] = 1f; // skyFactor
-        lightValues[1] = 0f; // blockFactor
-        lightValues[2] = 0f; // brightnessFactor
-        lightValues[4] = 1f; // skyLightColor r (struct after four floats)
-        lightValues[5] = 1f;
-        lightValues[6] = 1f;
-        lightValues[7] = 1f;
-        var lightBytes = MemoryMarshal.AsBytes(lightValues.AsSpan()).ToArray();
-        _lightmap = device.CreateBufferInit(new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst }, lightBytes.AsSpan());
-
         BindGroup = device.CreateBindGroup(
-            bindGroupLayout,
+            Layout,
             [
-                BindGroupEntry.TextureView(Shaders.ShaderBindings.AtlasTexture, _alphaView),
-                BindGroupEntry.Sampler(Shaders.ShaderBindings.AtlasSampler, _sampler),
-                BindGroupEntry.Buffer(Shaders.ShaderBindings.Camera, cameraBuffer, 0, cameraSize),
-                BindGroupEntry.Buffer(Shaders.ShaderBindings.Fog, _fog, 0, Shaders.ShaderBindings.FogBytes),
-                BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, _lightmap, 0, Shaders.ShaderBindings.LightmapBytes)
+                BindGroupEntry.Buffer(0, cameraBuffer, 0, cameraSize),
+                BindGroupEntry.Buffer(1, _transform, 0, TransformUniformSize)
             ]);
 
-        _vertex = device.CreateBuffer(new BufferDescriptor { Size = 4096, Usage = BufferUsage.Vertex | BufferUsage.CopyDst });
-        _index = device.CreateBuffer(new BufferDescriptor { Size = 4096, Usage = BufferUsage.Index | BufferUsage.CopyDst });
-        _vertexCapacity = 4096;
-        _indexCapacity = 4096;
+        _vertex = device.CreateBuffer(new BufferDescriptor { Size = _vertexCapacity, Usage = BufferUsage.Vertex | BufferUsage.CopyDst });
+        _index = device.CreateBuffer(new BufferDescriptor { Size = _indexCapacity, Usage = BufferUsage.Index | BufferUsage.CopyDst });
     }
+
+    public BindGroupLayout Layout { get; }
 
     public BindGroup BindGroup { get; }
 
-    /// <summary>Uploads the cloud mesh (7-float position-colour vertices) as 14-float terrain vertices.</summary>
+    /// <summary>Uploads geometry only when the cache arrays change; always refreshes the transform uniform.</summary>
     public void Update(float[] vertices, uint[] indices, Matrix4x4 model, Vector4 tint)
     {
+        if (!ReferenceEquals(_sourceVertices, vertices) || !ReferenceEquals(_sourceIndices, indices))
+        {
+            UploadGeometry(vertices, indices);
+            _sourceVertices = vertices;
+            _sourceIndices = indices;
+        }
+
+        var transformBytes = new byte[TransformUniformSize];
+        var floats = new float[20];
+        WriteMatrix(model, floats, 0);
+        floats[16] = tint.X;
+        floats[17] = tint.Y;
+        floats[18] = tint.Z;
+        floats[19] = tint.W;
+        MemoryMarshal.AsBytes(floats.AsSpan()).CopyTo(transformBytes);
+        _device.Queue.WriteBuffer(_transform, 0, transformBytes.AsSpan());
+    }
+
+    private void UploadGeometry(float[] vertices, uint[] indices)
+    {
+        // Expand the cached 7-float cloud vertices into the terrain OIT vertex format once per geometry change: the vertex
+        // colour stays brightness, uv.x carries the cloud alpha, and the transform uniform applies model + CLOUD_COLOR.
         var count = vertices.Length / 7;
         var packed = new float[count * 14];
         for (var i = 0; i < count; i++)
         {
             var s = i * 7;
             var d = i * 14;
-            var position = Vector3.Transform(new Vector3(vertices[s], vertices[s + 1], vertices[s + 2]), model);
-            packed[d] = position.X;
-            packed[d + 1] = position.Y;
-            packed[d + 2] = position.Z;
-            packed[d + 3] = vertices[s + 3] * tint.X;
-            packed[d + 4] = vertices[s + 4] * tint.Y;
-            packed[d + 5] = vertices[s + 5] * tint.Z;
-            var alpha = Math.Clamp(vertices[s + 6] * tint.W, 0f, 1f);
-            // atlas uv.x selects the alpha ramp texel; uv.y stays in the middle of the 1px row.
-            packed[d + 6] = ((alpha * 255f) + 0.5f) / 256f;
-            packed[d + 7] = 0.5f;
-            packed[d + 8] = 0f;  // spriteRect.xy
+            packed[d] = vertices[s];
+            packed[d + 1] = vertices[s + 1];
+            packed[d + 2] = vertices[s + 2];
+            packed[d + 3] = vertices[s + 3];
+            packed[d + 4] = vertices[s + 4];
+            packed[d + 5] = vertices[s + 5];
+            packed[d + 6] = Math.Clamp(vertices[s + 6], 0f, 1f); // alpha in uv.x
+            packed[d + 7] = 0f;
+            packed[d + 8] = 0f;
             packed[d + 9] = 0f;
-            packed[d + 10] = 1f; // spriteRect.zw
+            packed[d + 10] = 1f;
             packed[d + 11] = 1f;
-            packed[d + 12] = 1f; // light (sky, block) -> white lightmap
+            packed[d + 12] = 1f;
             packed[d + 13] = 1f;
         }
 
@@ -140,7 +108,7 @@ internal sealed class CloudOitResources : IDisposable
         if (vertexBytes > _vertexCapacity)
         {
             _vertex.Dispose();
-            _vertexCapacity = Math.Max(vertexBytes * 2, 4096);
+            _vertexCapacity = Math.Max(vertexBytes * 2, (ulong)MinCapacity);
             _vertex = _device.CreateBuffer(new BufferDescriptor { Size = _vertexCapacity, Usage = BufferUsage.Vertex | BufferUsage.CopyDst });
         }
 
@@ -148,12 +116,20 @@ internal sealed class CloudOitResources : IDisposable
         if (indexBytes > _indexCapacity)
         {
             _index.Dispose();
-            _indexCapacity = Math.Max(indexBytes * 2, 4096);
+            _indexCapacity = Math.Max(indexBytes * 2, (ulong)MinCapacity);
             _index = _device.CreateBuffer(new BufferDescriptor { Size = _indexCapacity, Usage = BufferUsage.Index | BufferUsage.CopyDst });
         }
 
-        _device.Queue.WriteBuffer(_vertex, 0, MemoryMarshal.AsBytes(packed.AsSpan()));
-        _device.Queue.WriteBuffer(_index, 0, MemoryMarshal.AsBytes(indices.AsSpan()));
+        if (packed.Length > 0)
+        {
+            _device.Queue.WriteBuffer(_vertex, 0, MemoryMarshal.AsBytes(packed.AsSpan()));
+        }
+
+        if (indices.Length > 0)
+        {
+            _device.Queue.WriteBuffer(_index, 0, MemoryMarshal.AsBytes(indices.AsSpan()));
+        }
+
         _indexCount = (uint)indices.Length;
     }
 
@@ -173,10 +149,26 @@ internal sealed class CloudOitResources : IDisposable
     {
         _vertex.Dispose();
         _index.Dispose();
-        _fog.Dispose();
-        _lightmap.Dispose();
-        _sampler.Dispose();
-        _alphaView.Dispose();
-        _alphaTexture.Dispose();
+        _transform.Dispose();
+    }
+
+    private static void WriteMatrix(Matrix4x4 matrix, float[] destination, int offset)
+    {
+        destination[offset] = matrix.M11;
+        destination[offset + 1] = matrix.M12;
+        destination[offset + 2] = matrix.M13;
+        destination[offset + 3] = matrix.M14;
+        destination[offset + 4] = matrix.M21;
+        destination[offset + 5] = matrix.M22;
+        destination[offset + 6] = matrix.M23;
+        destination[offset + 7] = matrix.M24;
+        destination[offset + 8] = matrix.M31;
+        destination[offset + 9] = matrix.M32;
+        destination[offset + 10] = matrix.M33;
+        destination[offset + 11] = matrix.M34;
+        destination[offset + 12] = matrix.M41;
+        destination[offset + 13] = matrix.M42;
+        destination[offset + 14] = matrix.M43;
+        destination[offset + 15] = matrix.M44;
     }
 }

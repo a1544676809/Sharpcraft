@@ -237,7 +237,7 @@ public static class WindowedRenderer
             ? null
             : new OffscreenRenderer.CelestialColorResources(device, request with { CelestialColorDraws = [] }, cameraBuffer, VertexLayout.CameraUniformSize, format, WGPUCompareFunction.LessEqual);
         using var cloudOit = cloudOitEnabled && cloudColour is not null
-            ? new CloudOitResources(device, bindGroupLayout, cameraBuffer, VertexLayout.CameraUniformSize)
+            ? new CloudOitResources(device, cameraBuffer, VertexLayout.CameraUniformSize)
             : null;
         using var uiPipeline = UiRenderer.CreatePipeline(device, format, pipelineLayout);
         using var uiTextPipeline = UiRenderer.CreateTextPipeline(device, format, pipelineLayout);
@@ -253,6 +253,13 @@ public static class WindowedRenderer
         using var refAccumulatePipelineLayout = device.CreatePipelineLayout([bindGroupLayout, refAccumulateLayout]);
         using var refCullPipelineLayout = device.CreatePipelineLayout([refCullLayout]);
         using var refCompositePipelineLayout = device.CreatePipelineLayout([refCompositeLayout]);
+
+        using var cloudDbPipelineLayout = cloudOit is null ? default : device.CreatePipelineLayout([cloudOit.Layout]);
+        using var cloudTransPipelineLayout = cloudOit is null ? default : device.CreatePipelineLayout([cloudOit.Layout, refTransmittanceLayout]);
+        using var cloudAccumPipelineLayout = cloudOit is null ? default : device.CreatePipelineLayout([cloudOit.Layout, refAccumulateLayout]);
+        using var cloudDepthBoundsPipeline = cloudOit is null ? default : CreateDepthBoundsPipeline(device, cloudDbPipelineLayout, "cloud_oit", positionColor: true);
+        using var cloudTransmittancePipeline = cloudOit is null ? default : CreateTransmittancePipeline(device, cloudTransPipelineLayout, "cloud_oit", positionColor: true);
+        using var cloudAccumulatePipeline = cloudOit is null ? default : CreateAccumulatePipeline(device, cloudAccumPipelineLayout, "cloud_oit", positionColor: true);
 
         using var refDepthBoundsPipeline = CreateDepthBoundsPipeline(device, pipelineLayout);
         using var refTransmittancePipeline = CreateTransmittancePipeline(device, refTransmittancePipelineLayout);
@@ -1207,7 +1214,7 @@ public static class WindowedRenderer
                 DrawReferenceGeometry(boundsPass);
                 if (cloudOit is not null)
                 {
-                    boundsPass.SetPipeline(refDepthBoundsPipeline);
+                    boundsPass.SetPipeline(cloudDepthBoundsPipeline);
                     boundsPass.SetBindGroup(0, cloudOit.BindGroup);
                     cloudOit.DrawGeometry(boundsPass);
                 }
@@ -1255,7 +1262,7 @@ public static class WindowedRenderer
                 DrawReferenceGeometry(transmittancePass);
                 if (cloudOit is not null)
                 {
-                    transmittancePass.SetPipeline(refTransmittancePipeline);
+                    transmittancePass.SetPipeline(cloudTransmittancePipeline);
                     transmittancePass.SetBindGroup(0, cloudOit.BindGroup);
                     transmittancePass.SetBindGroup(1, refTransmittanceBindGroup);
                     cloudOit.DrawGeometry(transmittancePass);
@@ -1280,7 +1287,7 @@ public static class WindowedRenderer
                 DrawReferenceGeometry(accumulatePass);
                 if (cloudOit is not null)
                 {
-                    accumulatePass.SetPipeline(refAccumulatePipeline);
+                    accumulatePass.SetPipeline(cloudAccumulatePipeline);
                     accumulatePass.SetBindGroup(0, cloudOit.BindGroup);
                     accumulatePass.SetBindGroup(1, refAccumulateBindGroup);
                     cloudOit.DrawGeometry(accumulatePass);
@@ -1579,11 +1586,11 @@ public static class WindowedRenderer
     /// Reference transparency stage 1: record the per-pixel depth range of the translucent layer. RGBA32F with a MAX
     /// blend, so the closest and furthest bounds survive in different channels.
     /// </summary>
-    private static RenderPipeline CreateDepthBoundsPipeline(Device device, PipelineLayout layout)
+    private static RenderPipeline CreateDepthBoundsPipeline(Device device, PipelineLayout layout, string shaderName = "oit_reference", bool positionColor = false)
     {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
         {
-            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("oit_reference")))
+            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load(shaderName)))
         });
 
         return device.CreateRenderPipeline(
@@ -1613,11 +1620,11 @@ public static class WindowedRenderer
     }
 
     /// <summary>Reference transparency stage 2: wavelet-transmittance coefficients, additively blended into two targets.</summary>
-    private static RenderPipeline CreateTransmittancePipeline(Device device, PipelineLayout layout)
+    private static RenderPipeline CreateTransmittancePipeline(Device device, PipelineLayout layout, string shaderName = "oit_reference", bool positionColor = false)
     {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
         {
-            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("oit_reference")))
+            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load(shaderName)))
         });
 
         static ColorTargetState Additive(WGPUTextureFormat format) => new()
@@ -1647,11 +1654,11 @@ public static class WindowedRenderer
     }
 
     /// <summary>Reference transparency stage 3: colour weighted by the transmittance in front of each fragment.</summary>
-    private static RenderPipeline CreateAccumulatePipeline(Device device, PipelineLayout layout)
+    private static RenderPipeline CreateAccumulatePipeline(Device device, PipelineLayout layout, string shaderName = "oit_reference", bool positionColor = false)
     {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
         {
-            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("oit_reference")))
+            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load(shaderName)))
         });
 
         return device.CreateRenderPipeline(
