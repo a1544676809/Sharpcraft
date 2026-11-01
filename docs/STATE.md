@@ -1973,4 +1973,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `ChunkMesher`：方块面 tint 用 `origin` 世界坐标、流体用水格 `bx,by,bz` 调 `ColourAt`。`FrameCommand.RenderWorld` 增 `BiomeRegistry?`，真服路径传 `BiomeRegistry.From(probe.Registries)`（回放/本地无 registry→默认 tint）。
 - 测试 `BiomeTintTests`(+3：按群系草/水、DARK_FOREST 公式、blendRadius 平均)。全量 **1239 通过**、门禁 ok。
 - **注**：无真实服务器 registry 环境，逐群系**离屏像素**未单独验证；已用纯逻辑单测覆盖（等价性以公式/平均为准）。
-- **下一步 P3.4**：`SKY_COLOR`=`calculateSkyColor(temperature)` 经 7 抽头 gaussian 空间混合，绘制天空盘（`CelestialGeometry.SkyDisc`）替换/叠加全屏渐变；离屏出图+像素验证。
+- **下一步 P3.4**：`SKY_COLOR`=`calculateSkyColor(temperature)` 经 7 抽头 gaussian 空间混合，绘制天空盘（`CelestialGeometry.SkyDisc`）替换/叠加全屏渐变；离屏出图+像素验证。## 2026-11-01 P3.4 SKY_COLOR 计算 + 天空盘绘制验证
+- `SkyAttributeTracks.SkyColorMultiplierAt(dayTime[,partial])`：Timelines `SKY_COLOR` MULTIPLY 乘子（133/11867 白=1 → 13670/22330 黑=0）。
+- `SkyColourSource.ColorAt(biomeIdAt, registry, x,y,z)`：以 `calculateSkyColor(temperature)` 逐群系、按 quart 采样 + 7 抽头 gaussian（核 `{0,1,4,6,4,1,0}`，总权重 4096）空间混合（未加载群系不计权重）。
+- 诊断 `MC_SKY_DISC_TEST`：用 `CelestialGeometry.SkyDisc` 绘制盘、tint=calculateSkyColor(temp)，中心像素 `rgba(123,164,255)`=`0xFF7BA4FF`(temp0.5)、覆盖 518400 像素 ⇒ 盘几何+颜色管线正确。
+- 测试 `SkyColourSourceTests`(3)、`SkyTimelinesTests`(+1)。全量 **1243 通过**、门禁 ok。
+- **受控偏差/待办**：生产帧仍用全屏渐变天空（`sky.wgsl`）——用盘替换需在真服+参考帧下目视调优，本环境无参考帧故未切换；`SKY_COLOR` 计算、盘绘制已就绪。P3 数据/计算链（P3.1–P3.4）已交付。

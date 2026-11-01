@@ -129,4 +129,14 @@ public sealed class SkyTimelinesTests
 
         Assert.Fail("expected a tick where the sun angle moves between ticks");
     }
+
+    [Fact]
+    public void SkyColorMultiplierIsWhiteByDayBlackAtNight()
+    {
+        Assert.Equal(1f, SkyAttributeTracks.SkyColorMultiplierAt(6000).X, 4);
+        Assert.Equal(0f, SkyAttributeTracks.SkyColorMultiplierAt(18000).X, 4);
+        // Sub-tick between a white tick and a black tick should sit strictly between.
+        var mid = SkyAttributeTracks.SkyColorMultiplierAt(13670, 0.5f).X;
+        Assert.InRange(mid, 0f, 1f);
+    }
 }

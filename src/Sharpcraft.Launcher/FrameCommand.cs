@@ -42,6 +42,11 @@ internal static class FrameCommand
             return RenderColorTest(width, height);
         }
 
+        if (Environment.GetEnvironmentVariable("MC_SKY_DISC_TEST") is { Length: > 0 })
+        {
+            return RenderSkyDiscTest(width, height);
+        }
+
         if (Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 })
         {
             return RenderLocal(width, height);
@@ -1576,6 +1581,66 @@ internal static class FrameCommand
 
         var png = PngEncoder.EncodeRgba(frame.Width, frame.Height, frame.Rgba);
         var path = Path.Combine(Path.GetTempPath(), "sharpcraft-color-test.png");
+        File.WriteAllBytes(path, png);
+        return path;
+    }
+
+    /// <summary>
+    /// Diagnostic: draws the sky disc (<see cref="CelestialGeometry.SkyDisc"/> at y=16) with the calculateSkyColor(temperature)
+    /// tint and probes the centre pixel, proving the disc geometry and colour pipeline. <c>MC_BIOME_TEMP</c> overrides the
+    /// temperature (default 0.5).
+    /// </summary>
+    internal static string RenderSkyDiscTest(int width, int height)
+    {
+        var temperature = Environment.GetEnvironmentVariable("MC_BIOME_TEMP") is { Length: > 0 } text && float.TryParse(text, out var parsed)
+            ? parsed
+            : 0.5f;
+        var packed = Sharpcraft.Common.World.SkyColour.FromTemperature(temperature);
+        var tint = new Vector4(
+            ((packed >> 16) & 0xFF) / 255f,
+            ((packed >> 8) & 0xFF) / 255f,
+            (packed & 0xFF) / 255f,
+            1f);
+
+        var disc = CelestialGeometry.SkyDisc(16f);
+        var colours = new Vector4[disc.Length];
+        Array.Fill(colours, Vector4.One);
+        var triangles = new List<uint>();
+        for (var i = 1; i + 1 < disc.Length; i++)
+        {
+            triangles.Add(0);
+            triangles.Add((uint)i);
+            triangles.Add((uint)(i + 1));
+        }
+
+        var (vertices, indices) = PackColor(disc, colours, triangles);
+        var request = new FrameRequest(
+            width,
+            height,
+            [],
+            [],
+            new Vector4(0f, 0f, 0f, 1f),
+            new Vector3(0f, -10f, 30f),
+            new Vector3(0f, 16f, 0f),
+            60f)
+        {
+            CelestialColorDraws = [new CelestialColorDraw(vertices, indices, Matrix4x4.Identity, tint, CelestialColorBlend.Translucent)]
+        };
+
+        var frame = OffscreenRenderer.Render(request);
+        var without = OffscreenRenderer.Render(request with { CelestialColorDraws = null });
+        var difference = PixelComparison.Compare(without.Rgba, frame.Rgba, frame.Width, frame.Height, 0);
+
+        var centreX = frame.Width / 2;
+        var centreY = frame.Height / 2;
+        var offset = ((centreY * frame.Width) + centreX) * 4;
+        Console.WriteLine(
+            $"sky disc test: temp {temperature:F2} expect argb 0x{packed:X8}, " +
+            $"centre rgba({frame.Rgba[offset]},{frame.Rgba[offset + 1]},{frame.Rgba[offset + 2]},{frame.Rgba[offset + 3]}), " +
+            $"changed {difference.Mismatches} px");
+
+        var png = PngEncoder.EncodeRgba(frame.Width, frame.Height, frame.Rgba);
+        var path = Path.Combine(Path.GetTempPath(), "sharpcraft-sky-disc.png");
         File.WriteAllBytes(path, png);
         return path;
     }

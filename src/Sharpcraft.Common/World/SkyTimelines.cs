@@ -269,6 +269,30 @@ public static class SkyAttributeTracks
 
     public static Vector3 SkyLightColorAt(int dayTimeTicks) =>
         new(SkyLightColorR.Sample(dayTimeTicks), SkyLightColorR.Sample(dayTimeTicks), SkyLightColorB.Sample(dayTimeTicks));
+
+    // SKY_COLOR timeline MULTIPLY_RGB track: white (1) at 133/11867 (day) -> black (0) at 13670/22330 (night).
+    private static readonly FloatKeyframeTrack SkyColorMultiplier =
+        FloatKeyframeTrack.Build(
+            [new FloatKeyframe(133, 1f), new FloatKeyframe(11867, 1f), new FloatKeyframe(13670, 0f), new FloatKeyframe(22330, 0f)],
+            static x => x,
+            Period);
+
+    /// <summary>SKY_COLOR multiplier at a day time (white by day, black at night), matching Timelines.</summary>
+    public static Vector3 SkyColorMultiplierAt(int dayTimeTicks)
+    {
+        var value = SkyColorMultiplier.Sample(dayTimeTicks);
+        return new Vector3(value, value, value);
+    }
+
+    /// <summary>SKY_COLOR multiplier at a sub-tick fraction (linear between the previous and current tick).</summary>
+    public static Vector3 SkyColorMultiplierAt(int dayTimeTicks, float partialTick)
+    {
+        var t = Math.Clamp(partialTick, 0f, 1f);
+        var previous = SkyColorMultiplier.Sample(dayTimeTicks - 1);
+        var current = SkyColorMultiplier.Sample(dayTimeTicks);
+        var value = previous + ((current - previous) * t);
+        return new Vector3(value, value, value);
+    }
 }
 
 /// <summary>Overworld day environment tracks from Timelines.java: sun/moon/star angles (degrees).</summary>
