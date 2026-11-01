@@ -1347,7 +1347,8 @@ internal static class FrameCommand
 
         return parameters with
         {
-            SkyFactor = Sharpcraft.Common.World.WeatherBlend.SkyLightFactor(parameters.SkyFactor, rain, thunder)
+            SkyFactor = Sharpcraft.Common.World.WeatherBlend.SkyLightFactor(parameters.SkyFactor, rain, thunder),
+            SkyLightColor = Sharpcraft.Common.World.WeatherBlend.ApplySkyLightColor(parameters.SkyLightColor, rain, thunder)
         };
     }
 

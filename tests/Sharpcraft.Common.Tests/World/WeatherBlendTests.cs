@@ -98,4 +98,25 @@ public sealed class WeatherBlendTests
         Assert.Equal(0.6f, rainy.Z, 4);
         Assert.Equal(0.8f, rainy.W, 4);
     }
+
+    [Fact]
+    public void AlphaBlendCompositesSourceOverDestination()
+    {
+        // src alpha 0.5 over opaque dst: channel = src*0.5 + dst*0.5.
+        var result = ColourBlend.AlphaBlend(new Vector4(0f, 0f, 0f, 1f), new Vector4(1f, 1f, 1f, 0.5f));
+        Assert.Equal(0.5f, result.X, 4);
+        Assert.Equal(1f, result.W, 4);
+    }
+
+    [Fact]
+    public void SkyLightColourTintsBlueUnderRain()
+    {
+        Assert.Equal(Vector3.One, WeatherBlend.ApplySkyLightColor(Vector3.One, 0f, 0f));
+
+        // White base alpha-blended toward night (122,122,255)/255 at alpha 79/255, then weight 1 -> (0.8384,0.8384,1.0).
+        var rainy = WeatherBlend.ApplySkyLightColor(Vector3.One, 1f, 0f);
+        Assert.Equal(0.8384f, rainy.X, 3);
+        Assert.Equal(0.8384f, rainy.Y, 3);
+        Assert.Equal(1f, rainy.Z, 3);
+    }
 }

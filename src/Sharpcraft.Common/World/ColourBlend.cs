@@ -34,6 +34,53 @@ public static class ColourBlend
     public static Vector3 BlendToGray(Vector3 subject, float factor, float brightness) =>
         Lerp(factor, subject, ScaleRgb(Greyscale(subject), brightness));
 
+    /// <summary>Reference <c>ARGB.greyscale(Vector4fc)</c>: luminance on rgb, alpha kept.</summary>
+    public static Vector4 Greyscale(Vector4 colour)
+    {
+        var grey = (colour.X * 0.3f) + (colour.Y * 0.59f) + (colour.Z * 0.11f);
+        return new Vector4(grey, grey, grey, colour.W);
+    }
+
+    /// <summary>Reference <c>ARGB.scaleRGB(Vector4fc, scale)</c>: multiply rgb then clamp 0..1, keep alpha.</summary>
+    public static Vector4 ScaleRgb(Vector4 colour, float scale) => new(
+        Math.Clamp(colour.X * scale, 0f, 1f),
+        Math.Clamp(colour.Y * scale, 0f, 1f),
+        Math.Clamp(colour.Z * scale, 0f, 1f),
+        colour.W);
+
+    /// <summary>
+    /// Reference <c>ARGB.alphaBlend(Vector4fc)</c>: composite <paramref name="source"/> over <paramref name="destination"/>
+    /// by the source's alpha. Channels use <c>(src·sa + dst·(alpha−sa))/alpha</c>.
+    /// </summary>
+    public static Vector4 AlphaBlend(Vector4 destination, Vector4 source)
+    {
+        var destinationAlpha = destination.W;
+        var sourceAlpha = source.W;
+
+        if (sourceAlpha == 1f)
+        {
+            return source;
+        }
+
+        if (sourceAlpha == 0f)
+        {
+            return destination;
+        }
+
+        var alpha = sourceAlpha + (destinationAlpha * (1f - sourceAlpha));
+        float Channel(float dst, float src) => ((src * sourceAlpha) + (dst * (alpha - sourceAlpha))) / alpha;
+
+        return new Vector4(
+            Channel(destination.X, source.X),
+            Channel(destination.Y, source.Y),
+            Channel(destination.Z, source.Z),
+            alpha);
+    }
+
+    /// <summary>Reference <c>ColorModifier.BLEND_TO_GRAY_ARGB</c>: blend a 4-channel colour toward its brightness-scaled grey.</summary>
+    public static Vector4 BlendToGray(Vector4 subject, float factor, float brightness) =>
+        Vector4.Lerp(subject, ScaleRgb(Greyscale(subject), brightness), factor);
+
     /// <summary>Packs an opaque RGB24 colour (reference <c>ARGB.color(r,g,b)</c> = 0xFFRRGGBB).</summary>
     public static int Rgb(int red, int green, int blue) =>
         unchecked((int)0xFF000000) | ((red & 0xFF) << 16) | ((green & 0xFF) << 8) | (blue & 0xFF);

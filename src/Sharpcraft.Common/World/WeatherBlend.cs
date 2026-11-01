@@ -114,6 +114,32 @@ public static class WeatherBlend
         return result;
     }
 
+    // SKY_LIGHT_COLOR ALPHA_BLEND_RGB: source = night sky-light colour (0.48,0.48,1.0 sRGB -> 122,122,255) with alpha
+    // as8BitChannel(0.3125/0.52734375) = 79/134.
+    private static readonly Vector3 NightSkyLightRgb = new(122f / 255f, 122f / 255f, 1f);
+    private const float NightSkyLightRainAlpha = 79f / 255f;
+    private const float NightSkyLightThunderAlpha = 134f / 255f;
+
+    /// <summary>Weather-applied <c>SKY_LIGHT_COLOR</c>: base RGB alpha-blended toward the night sky-light colour, weighted.</summary>
+    public static Vector3 ApplySkyLightColor(Vector3 baseColour, float rainLevel, float thunderLevel)
+    {
+        var result = new Vector4(baseColour, 1f);
+        var rainWeight = rainLevel - thunderLevel;
+        if (rainWeight > 0f)
+        {
+            var source = new Vector4(NightSkyLightRgb, NightSkyLightRainAlpha);
+            result = Vector4.Lerp(result, ColourBlend.AlphaBlend(result, source), rainWeight);
+        }
+
+        if (thunderLevel > 0f)
+        {
+            var source = new Vector4(NightSkyLightRgb, NightSkyLightThunderAlpha);
+            result = Vector4.Lerp(result, ColourBlend.AlphaBlend(result, source), thunderLevel);
+        }
+
+        return new Vector3(result.X, result.Y, result.Z);
+    }
+
     private static Vector3 Multiply(Vector3 a, Vector3 b) => new(a.X * b.X, a.Y * b.Y, a.Z * b.Z);
 
     private static Vector4 Multiply(Vector4 a, Vector4 b) => new(a.X * b.X, a.Y * b.Y, a.Z * b.Z, a.W * b.W);

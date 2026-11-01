@@ -1951,4 +1951,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **未做（P4 其余）**：`SKY_LIGHT_COLOR` 天气 alphaBlend、`FOG_COLOR`/`CLOUD_COLOR`、`SUNRISE_SUNSET_COLOR` 天气乘子（均可纯逻辑，需读 `ARGB.alphaBlend` 精确语义）；**P3（biome 数据）** 仍是接方块调色与天空盘的硬前置，建议单独一轮。## 2026-11-01 P4.2 FOG/SUNRISE 天气乘子
 - `WeatherBlend.ApplyFog`/`ApplySunrise`：`ARGB.multiply` 分量乘 + 按 `(rain−thunder)/thunder` 权重 lerp；FOG 因子 rain(0.5,0.5,0.6)/thunder(0.25,0.25,0.3)，SUNRISE 同因子（alpha 保持 1）。
 - 日出条带颜色接 `ApplySunrise`（`AttachCelestial`）。`WeatherBlendTests`(+2)。
-- 全量 **1227 通过**、门禁 ok。**仍未做**：`SKY_LIGHT_COLOR`/`CLOUD_COLOR` 天气 alphaBlend（需读 `ARGB.alphaBlend` 全body 与 `vector4fFromARGB32`），`FOG_COLOR` 基色（维度/群系）；**P3（biome 数据）** 待单独一轮。
+- 全量 **1227 通过**、门禁 ok。**仍未做**：`SKY_LIGHT_COLOR`/`CLOUD_COLOR` 天气 alphaBlend（需读 `ARGB.alphaBlend` 全body 与 `vector4fFromARGB32`），`FOG_COLOR` 基色（维度/群系）；**P3（biome 数据）** 待单独一轮。## 2026-11-01 P4.3 SKY_LIGHT_COLOR 天气 alphaBlend
+- `ColourBlend` 增 Vector4：`Greyscale/ScaleRgb/BlendToGray(Vector4,保留 alpha)/AlphaBlend`（复刻 `ARGB.alphaBlend`+`alphaBlendChannel`，含 sa=0/1 短路）。
+- `WeatherBlend.ApplySkyLightColor(Vector3,rain,thunder)`：基色 alphaBlend 向夜间天光色 (122,122,255)/255、alpha 79/255(rain)/134/255(thunder)，按 `(rain−thunder)/thunder` 权重重叠；接进 `EffectiveLighting.SkyLightColor`。
+- `WeatherBlendTests`(+2)。全量 **1229 通过**、门禁 ok。
+- **仍未做**：`CLOUD_COLOR` 天气灰度（无云渲染消费，暂缓）；`FOG_COLOR` 真正基色（维度/群系）；`SKY_COLOR`/方块调色逐群系→**P3（biome 数据 + registry）** 为硬前置，建议单独一轮。
