@@ -87,9 +87,8 @@ public sealed class SkyTimelinesTests
         Assert.Equal(1f, day.Z, 3);
 
         var night = SkyAttributeTracks.SkyLightColorAt(18000);
-        // NIGHT_SKY_LIGHT_COLOR = (0.48,0.48,1.0) sRGB -> linear, blue stays 1.
-        static float Srgb(float x) => x >= 0.04045f ? MathF.Pow((x + 0.055f) / 1.055f, 2.4f) : x / 12.92f;
-        var expectedRed = Srgb(122f / 255f);
+        // NIGHT_SKY_LIGHT_COLOR = ARGB #7a7aff, raw 0..1 channels (no gamma): (122,122,255)/255.
+        var expectedRed = 122f / 255f;
         Assert.Equal(expectedRed, night.X, 3);
         Assert.Equal(expectedRed, night.Y, 3);
         Assert.Equal(1f, night.Z, 3);

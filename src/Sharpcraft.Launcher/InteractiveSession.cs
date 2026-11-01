@@ -1030,6 +1030,11 @@ internal sealed class InteractiveSession
                         $"diag: tick={_tickCounter} fwd={frame.Forward:F0} sprint={frame.Sprint} sneak={frame.Sneak} "
                         + $"jump presses={pressed} accepted={accepted} inAir={inAir} ground={_player.OnGround} "
                         + $"y={_player.Position.Y:F2} vy={_player.DeltaMovement.Y:F3} day={_world?.DayTime}");
+                    var diagLightmap = CurrentLightmap();
+                    Console.WriteLine(
+                        $"diag lightmap: skyFactor={diagLightmap.SkyFactor:F3} blockFactor={diagLightmap.BlockFactor:F3} " +
+                        $"skyCol=({diagLightmap.SkyLightColor.X:F3},{diagLightmap.SkyLightColor.Y:F3},{diagLightmap.SkyLightColor.Z:F3}) " +
+                        $"blockTint=({diagLightmap.BlockLightTint.X:F3},{diagLightmap.BlockLightTint.Y:F3},{diagLightmap.BlockLightTint.Z:F3})");
                 }
 
                 // Diagnostic hook: sweep the pitch so the head direction can be checked from a second client

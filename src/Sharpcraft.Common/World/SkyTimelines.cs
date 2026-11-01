@@ -218,13 +218,7 @@ public static class SkyAttributeTracks
         return (int)(ticks / Period);
     }
 
-    private static float SrgbToLinear(int channel)
-    {
-        var x = channel / 255f;
-        return x >= 0.04045f ? MathF.Pow((x + 0.055f) / 1.055f, 2.4f) : x / 12.92f;
-    }
-
-    // SUNRISE_SUNSET_COLOR keyframes (tick, ARGB32) from Timelines.java; decoded per channel to linear RGB + linear alpha.
+    // SUNRISE_SUNSET_COLOR keyframes (tick, ARGB32) from Timelines.java; channels are raw 0..1 like ARGB.vector4fFromARGB32.
     private static readonly (int Tick, int Argb)[] SunriseRaw =
     [
         (71, 1609540403), (310, 703969843), (565, 117167155), (730, 16770355), (11270, 16770355),
@@ -242,9 +236,9 @@ public static class SkyAttributeTracks
             static x => x,
             Period);
 
-    private static readonly FloatKeyframeTrack SunriseR = SunriseChannel(a => SrgbToLinear((a >> 16) & 0xFF));
-    private static readonly FloatKeyframeTrack SunriseG = SunriseChannel(a => SrgbToLinear((a >> 8) & 0xFF));
-    private static readonly FloatKeyframeTrack SunriseB = SunriseChannel(a => SrgbToLinear(a & 0xFF));
+    private static readonly FloatKeyframeTrack SunriseR = SunriseChannel(a => ((a >> 16) & 0xFF) / 255f);
+    private static readonly FloatKeyframeTrack SunriseG = SunriseChannel(a => ((a >> 8) & 0xFF) / 255f);
+    private static readonly FloatKeyframeTrack SunriseB = SunriseChannel(a => (a & 0xFF) / 255f);
     private static readonly FloatKeyframeTrack SunriseA = SunriseChannel(a => ((a >> 24) & 0xFF) / 255f);
 
     public static Vector4 SunriseSunsetColorAt(int dayTimeTicks) =>
@@ -259,7 +253,7 @@ public static class SkyAttributeTracks
 
     // SKY_LIGHT_COLOR: white * ColorModifier.MULTIPLY_RGB track (730/11270 white, 13140/22860 = NIGHT_SKY_LIGHT_COLOR).
     private const int NightSkyChannel = 122; // as8BitChannel(0.48)
-    private static readonly float NightSky = SrgbToLinear(NightSkyChannel);
+    private static readonly float NightSky = NightSkyChannel / 255f;
 
     private static readonly FloatKeyframeTrack SkyLightColorR = FloatKeyframeTrack.Build(
         [new FloatKeyframe(730, 1f), new FloatKeyframe(11270, 1f), new FloatKeyframe(13140, NightSky), new FloatKeyframe(22860, NightSky)], static x => x, Period);

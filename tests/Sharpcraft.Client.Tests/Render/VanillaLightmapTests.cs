@@ -117,7 +117,7 @@ public sealed class VanillaLightmapTests
     [Fact]
     public void OverworldAtNightDarkensAndTintsTheSkyBlue()
     {
-        // At tick 18000 SKY_LIGHT_FACTOR is 0.24 and SKY_LIGHT_COLOR is the night (0.48,0.48,1) linear tint.
+        // At tick 18000 SKY_LIGHT_FACTOR is 0.24 and SKY_LIGHT_COLOR is the raw night colour #7a7aff = (122,122,255)/255.
         var night = LightmapParameters.OverworldAt(18000);
         Assert.Equal(0.24f, night.SkyFactor, 2);
 
@@ -125,11 +125,12 @@ public sealed class VanillaLightmapTests
         var day = VanillaLightmap.Colour(15, 0);
 
         Assert.True(dark.X < day.X, "night must be darker than day");
-        Assert.True(dark.X < 0.15f, $"night red {dark.X} should be dark");
+        // Hand-computed: sky 0.478*0.24 = 0.115; notGamma 0.3188/0.6664; brightness mix gives (0.2168,0.2168,0.4532).
+        Assert.Equal(0.2168f, dark.X, 3);
         Assert.True(dark.Z > dark.X, "night sky should be blue tinted");
         // The reference night sky light color has R and G on the same track, so those two channels agree exactly.
         Assert.Equal(dark.X, dark.Y, 5);
-        Assert.InRange(dark.Z, 0.4f, 0.5f);
+        Assert.Equal(0.4532f, dark.Z, 3);
     }
 
     [Fact]

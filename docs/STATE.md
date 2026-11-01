@@ -2018,4 +2018,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 原版 `visual/fog_color` 为 multiply 曲线：133/11867 `#ffffff` → 13670/22330 `#0f0f16`。加 `SkyAttributeTracks.FogColorFactorAt(dayTime[,partial])`。
 - `FrameRequest.FogColour`（默认白昼雾）；`OffscreenRenderer`/`WindowedRenderer` 使用；窗口新增 `fogPerFrame` 每帧重写雾 uniform；`FrameCommand.EffectiveFogColour` 与 `InteractiveSession.CurrentFogColour` = base×(晨昏因子)×weather（`WeatherBlend.ApplyFog`）。
 - `SkyTimelinesTests.FogColorFactorIsWhiteByDayDarkAtNight`。全量 **1256 通过**、门禁 ok。
-- **仍待**：**天空渐变仍静态**（`sky.wgsl` 硬编码 horizon/zenith，无 uniform）→ 夜天偏蓝的另一半；需给 sky pipeline 加 tint uniform 并按 `SKY_COLOR` 时间曲线×weather 每帧更新。
+- **仍待**：**天空渐变仍静态**（`sky.wgsl` 硬编码 horizon/zenith，无 uniform）→ 夜天偏蓝的另一半；需给 sky pipeline 加 tint uniform 并按 `SKY_COLOR` 时间曲线×weather 每帧更新。## 2026-11-01 修复：夜间方块发蓝（SKY_LIGHT_COLOR gamma bug）
+- 诊断（`MC_DIAG` 打实际 Lightmap uniform）：夜 `skyCol=(0.195,0.195,1.000)`，而原版 `#7a7aff` 应为 `(0.478,0.478,1.0)`。根因：`SkyTimelines.NightSky = SrgbToLinear(122)` 误做 gamma 解码（0.195）；`SUNRISE_SUNSET_COLOR` 的 R/G/B 同样误线性化。
+- 修复：改回原样 `v/255`（对齐 `ARGB.vector3fFromARGB32`），删除 `SrgbToLinear`。实机确认 `skyCol=(0.478,0.478,1.000)`。
+- `SkyTimelinesTests` 更新为 `122/255`。全量 **1256 通过**、门禁 ok。
+- **仍待**：天空渐变静态（`sky.wgsl` 无 uniform）；且雾基色当前用 `base×(fog因子)` 近似，原版是 `FOG_COLOR(默认黑) 与 SKY_COLOR 混合`，后续按原版统一到 SKY_COLOR。
