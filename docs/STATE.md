@@ -1897,4 +1897,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `Client/Render/CelestialMeshBuilder.cs`：把 `CelestialGeometry` 四边形打包成 position3+uv2 顶点 + 三角索引（UV 顺序同原版 buildCelestialQuad），测试 1 项手算。
 - `Framework/.../pipelines/celestial.wgsl`：`vs_celestial/fs_celestial`，uniform=相机 viewProjection + `CelestialTransform{model,tint}`，采样天体纹理×tint。
 - 全量 1184 通过、门禁 ok。
-- 待办：设备侧建 celestial 纹理/管线/uniform、在天空 pass 后绘制（先离屏太阳最小验证，再月/星/日出），像素验收。
+- 待办：设备侧建 celestial 纹理/管线/uniform、在天空 pass 后绘制（先离屏太阳最小验证，再月/星/日出），像素验收。## 2026-11-01 天空天体：太阳设备接线 + 26.3 贴图路径更正
+- **更正（对照 pack 实读 + SkyRenderer）**：26.3 天体贴图在 `textures/environment/celestial/`——`sun.png` 与 8 张独立月相 `moon/<phase>.png`（`MoonPhase` 枚举 0..7：full_moon/waning_gibbous/third_quarter/waning_crescent/new_moon/waxing_crescent/first_quarter/waxing_gibbous），**不是** 4×2 月相表。`CelestialSprites` 重写：`Sun=environment/celestial/sun`、`MoonPhase(i)=environment/celestial/moon/<name>`；删除 `SliceMoonPhases`/`CelestialSprite`。上方 10-31 "moon_phases 4×2" 旧表述作废。
+- **设备接线（离屏）**：`FrameRequest` 增 `CelestialTextures`/`CelestialDraws`（每 draw=纹理索引 + pos3/uv2 顶点 + 索引 + model + tint）；`OffscreenRenderer` 新增 `CelestialResources`：上传天体纹理、`celestial.wgsl` 管线（顶点布局收敛到 `VertexLayout.CelestialAttributes`）、每 draw 相机 + model/tint uniform + 绑定组；天空渐变之后、地形之前绘制，深度恒通过不写。**合成用原版 `BlendFunction.OVERLAY`（颜色 SrcAlpha/One、alpha One/Zero）**——黑色/透明像素不贡献，太阳贴图透明角不再画成黑块。
+- **角度驱动**：`FrameCommand.AttachCelestial` 用 `world.DayTime`→`SkyTimelines.SunAngleDegrees`（`MC_SUN_ANGLE` 可覆盖验证）；`model=translate(eye)` 让天体相对相机（视作无穷远）。已接入 `RenderWorld`（真服/回放）与 `RenderLocal`。
+- **GPU 等价验收（离屏，`MC_SUN_TEST=1`）**：纯白贴图时太阳四边形质心投影到画面正中，中心像素 `rgba(255,255,255,255)`；改用 pack 真 `sun.png`（32×32）后中心 `rgba(255,255,255,255)`、可见暖白光晕且**无黑块**。出图 `%TEMP%\sharpcraft-sun-test.png`。
+- 修复架构门禁 `Repro_001`（`VertexAttribute` 只允许在 `VertexLayout.cs`）：天体顶点属性移入 `VertexLayout.CelestialAttributes()`。
+- 全量 **1184 通过**、0 警告。**待办**：月亮（按 `MOON_PHASE` 选贴图）、星空（1500）、日出条带（三角扇+顶点色）、天空盘/暗盘；亮度接 `STAR_BRIGHTNESS`/`RAIN_BRIGHTNESS`；镜像到 `WindowedRenderer`；随后日夜光照。

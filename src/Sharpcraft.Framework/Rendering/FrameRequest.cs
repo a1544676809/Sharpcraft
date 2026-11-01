@@ -73,7 +73,32 @@ public sealed record FrameRequest(
     /// relative to the camera.
     /// </remarks>
     public (int FirstIndex, int IndexCount)[]? TranslucentRanges { get; init; }
+
+    /// <summary>Textures referenced by <see cref="CelestialDraws"/>, uploaded once and sampled by index.</summary>
+    public TextureData[]? CelestialTextures { get; init; }
+
+    /// <summary>
+    /// Celestial body quads (sun, moon) drawn after the sky gradient and before world geometry, so terrain covers them.
+    /// </summary>
+    /// <remarks>
+    /// Positions are already in the sky frame; the draw's model matrix places them relative to the camera so the bodies
+    /// read as infinitely far. Depth writes are off, so a single order-independent pass is enough.
+    /// </remarks>
+    public CelestialQuadDraw[]? CelestialDraws { get; init; }
 }
+
+/// <summary>One textured celestial quad (sun or moon) in the sky backdrop.</summary>
+/// <param name="TextureIndex">Index into <see cref="FrameRequest.CelestialTextures"/>.</param>
+/// <param name="Vertices">Interleaved position (3) + uv (2) floats.</param>
+/// <param name="Indices">Triangle indices into <paramref name="Vertices"/>.</param>
+/// <param name="Model">Model matrix applied before the camera; typically a translation to the eye.</param>
+/// <param name="Tint">Multiplied into the sampled texel (rgb) and alpha.</param>
+public sealed record CelestialQuadDraw(
+    int TextureIndex,
+    float[] Vertices,
+    ushort[] Indices,
+    Matrix4x4 Model,
+    Vector4 Tint);
 
 /// <summary>An RGBA8 image uploaded as a texture, typically the stitched sprite atlas.</summary>
 /// <param name="Width">Pixel width.</param>

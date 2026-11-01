@@ -573,6 +573,12 @@ public static class OffscreenRenderer
 
             device.Queue.WriteBuffer(cameraBuffer, 0, cameraBytes.AsSpan());
 
+            // Celestial bodies (sun/moon): textured quads that sit in the sky backdrop. Built here so their buffers live
+            // until the command buffer is submitted; drawn right after the sky gradient.
+            using var celestial = request.CelestialDraws is { Length: > 0 } && request.CelestialTextures is { Length: > 0 }
+                ? new CelestialResources(device, request, cameraBuffer, VertexLayout.CameraUniformSize)
+                : null;
+
             using var bindGroup = device.CreateBindGroup(
                 bindGroupLayout,
                 [
@@ -636,6 +642,9 @@ public static class OffscreenRenderer
                 pass.SetPipeline(skyPipeline);
                 pass.Draw(3);
             }
+
+            // Sun and moon sit in the sky backdrop, before terrain, so world geometry covers them.
+            celestial?.Draw(pass);
 
             if (hasGeometry)
             {
@@ -975,6 +984,223 @@ public static class OffscreenRenderer
         catch (AdapterRequestException exception)
         {
             throw new RenderingUnavailableException($"WGPU adapter request failed: {exception.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Owns the GPU objects for one frame's celestial bodies: textures, a shared bind-group layout and pipeline, plus a
+    /// vertex/index/transform buffer and bind group per draw. Built per frame and disposed with it.
+    /// </summary>
+    private sealed class CelestialResources : IDisposable
+    {
+        // mat4x4 model (64 bytes) followed by vec4 tint (16 bytes); matches celestial.wgsl CelestialTransform.
+        private const ulong TransformUniformSize = 80;
+
+        private readonly Brew.Wgpu.Texture[] _textures;
+        private readonly TextureView[] _views;
+        private readonly Sampler _sampler;
+        private readonly BindGroupLayout _layout;
+        private readonly PipelineLayout _pipelineLayout;
+        private readonly RenderPipeline _pipeline;
+        private readonly Brew.Wgpu.Buffer[] _vertexBuffers;
+        private readonly Brew.Wgpu.Buffer[] _indexBuffers;
+        private readonly Brew.Wgpu.Buffer[] _transformBuffers;
+        private readonly BindGroup[] _bindGroups;
+        private readonly uint[] _indexCounts;
+
+        public CelestialResources(Device device, FrameRequest request, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize)
+        {
+            var textures = request.CelestialTextures!;
+            var draws = request.CelestialDraws!;
+
+            _textures = new Brew.Wgpu.Texture[textures.Length];
+            _views = new TextureView[textures.Length];
+
+            for (var index = 0; index < textures.Length; index++)
+            {
+                var data = textures[index];
+                _textures[index] = device.CreateTexture(new TextureDescriptor
+                {
+                    Size = new WGPUExtent3D { width = (uint)data.Width, height = (uint)data.Height, depthOrArrayLayers = 1 },
+                    MipLevelCount = 1,
+                    SampleCount = 1,
+                    Dimension = WGPUTextureDimension._2D,
+                    Format = WGPUTextureFormat.RGBA8Unorm,
+                    Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
+                });
+
+                device.Queue.WriteTexture(
+                    _textures[index],
+                    data.Rgba,
+                    (uint)(data.Width * 4),
+                    (uint)data.Height,
+                    new WGPUExtent3D { width = (uint)data.Width, height = (uint)data.Height, depthOrArrayLayers = 1 },
+                    0,
+                    new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+
+                _views[index] = _textures[index].CreateView();
+            }
+
+            // Nearest sampling keeps the crisp pixel-art sun and moon discs from smearing.
+            _sampler = device.CreateSampler(new SamplerDescriptor
+            {
+                AddressModeU = WGPUAddressMode.ClampToEdge,
+                AddressModeV = WGPUAddressMode.ClampToEdge,
+                AddressModeW = WGPUAddressMode.ClampToEdge,
+                MagFilter = WGPUFilterMode.Nearest,
+                MinFilter = WGPUFilterMode.Nearest,
+                MipmapFilter = WGPUMipmapFilterMode.Nearest,
+                LodMinClamp = 0f,
+                LodMaxClamp = 1f,
+                MaxAnisotropy = 1
+            });
+
+            _layout = device.CreateBindGroupLayout(
+            [
+                BindGroupLayoutEntry.Buffer(0, ShaderStage.Vertex, WGPUBufferBindingType.Uniform, false, cameraSize),
+                BindGroupLayoutEntry.Buffer(1, ShaderStage.Vertex | ShaderStage.Fragment, WGPUBufferBindingType.Uniform, false, TransformUniformSize),
+                BindGroupLayoutEntry.Texture(2, ShaderStage.Fragment, WGPUTextureSampleType.Float, WGPUTextureViewDimension._2D, false),
+                BindGroupLayoutEntry.Sampler(3, ShaderStage.Fragment, WGPUSamplerBindingType.Filtering)
+            ]);
+
+            _pipelineLayout = device.CreatePipelineLayout([_layout]);
+
+            using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
+            {
+                Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("celestial")))
+            });
+
+            _pipeline = device.CreateRenderPipeline(
+                shader,
+                "vs_celestial"u8,
+                shader,
+                "fs_celestial"u8,
+                [
+                    // The reference draws celestial bodies with BlendFunction.OVERLAY: colour SrcAlpha/One, alpha One/Zero.
+                    // That adds the body onto the sky and makes black/transparent pixels contribute nothing.
+                    new ColorTargetState
+                    {
+                        Format = WGPUTextureFormat.RGBA8Unorm,
+                        WriteMask = ColorWriteMask.All,
+                        Blend = new WGPUBlendState
+                        {
+                            color = new WGPUBlendComponent
+                            {
+                                operation = WGPUBlendOperation.Add,
+                                srcFactor = WGPUBlendFactor.SrcAlpha,
+                                dstFactor = WGPUBlendFactor.One
+                            },
+                            alpha = new WGPUBlendComponent
+                            {
+                                operation = WGPUBlendOperation.Add,
+                                srcFactor = WGPUBlendFactor.One,
+                                dstFactor = WGPUBlendFactor.Zero
+                            }
+                        }
+                    }
+                ],
+                layout: _pipelineLayout,
+                primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
+                multisample: MultisampleState.Default,
+                // Bodies are part of the backdrop: depth always passes and nothing is written, so terrain covers them.
+                depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.Always, write: false),
+                vertexStride: (ulong)VertexLayout.CelestialStride,
+                vertexStepMode: WGPUVertexStepMode.Vertex,
+                vertexAttributes: VertexLayout.CelestialAttributes());
+
+            _vertexBuffers = new Brew.Wgpu.Buffer[draws.Length];
+            _indexBuffers = new Brew.Wgpu.Buffer[draws.Length];
+            _transformBuffers = new Brew.Wgpu.Buffer[draws.Length];
+            _bindGroups = new BindGroup[draws.Length];
+            _indexCounts = new uint[draws.Length];
+
+            for (var index = 0; index < draws.Length; index++)
+            {
+                var draw = draws[index];
+                _vertexBuffers[index] = device.CreateBufferInit(
+                    new BufferInitDescriptor { Usage = BufferUsage.Vertex }, draw.Vertices.AsSpan());
+                _indexBuffers[index] = device.CreateBufferInit(
+                    new BufferInitDescriptor { Usage = BufferUsage.Index }, draw.Indices.AsSpan());
+
+                var transformBytes = new byte[TransformUniformSize];
+                var transformFloats = new float[20];
+                WriteMatrix(draw.Model, transformFloats, 0);
+                transformFloats[16] = draw.Tint.X;
+                transformFloats[17] = draw.Tint.Y;
+                transformFloats[18] = draw.Tint.Z;
+                transformFloats[19] = draw.Tint.W;
+                System.Runtime.InteropServices.MemoryMarshal.AsBytes(transformFloats.AsSpan()).CopyTo(transformBytes);
+                _transformBuffers[index] = device.CreateBufferInit(
+                    new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst }, transformBytes.AsSpan());
+
+                _bindGroups[index] = device.CreateBindGroup(
+                    _layout,
+                    [
+                        BindGroupEntry.Buffer(0, cameraBuffer, 0, cameraSize),
+                        BindGroupEntry.Buffer(1, _transformBuffers[index], 0, TransformUniformSize),
+                        BindGroupEntry.TextureView(2, _views[draw.TextureIndex]),
+                        BindGroupEntry.Sampler(3, _sampler)
+                    ]);
+
+                _indexCounts[index] = (uint)draw.Indices.Length;
+            }
+        }
+
+        /// <summary>Draws every body with the shared pipeline; each has its own texture, transform and buffers.</summary>
+        public void Draw(RenderPassEncoder pass)
+        {
+            if (_bindGroups.Length == 0)
+            {
+                return;
+            }
+
+            pass.SetPipeline(_pipeline);
+
+            for (var index = 0; index < _bindGroups.Length; index++)
+            {
+                pass.SetBindGroup(0, _bindGroups[index], []);
+                pass.SetVertexBuffer(0, _vertexBuffers[index]);
+                pass.SetIndexBuffer(_indexBuffers[index], WGPUIndexFormat.Uint16);
+                pass.DrawIndexed(_indexCounts[index]);
+            }
+        }
+
+        public void Dispose()
+        {
+            foreach (var bindGroup in _bindGroups)
+            {
+                bindGroup.Dispose();
+            }
+
+            foreach (var buffer in _transformBuffers)
+            {
+                buffer.Dispose();
+            }
+
+            foreach (var buffer in _indexBuffers)
+            {
+                buffer.Dispose();
+            }
+
+            foreach (var buffer in _vertexBuffers)
+            {
+                buffer.Dispose();
+            }
+
+            _pipeline.Dispose();
+            _pipelineLayout.Dispose();
+            _layout.Dispose();
+            _sampler.Dispose();
+
+            foreach (var view in _views)
+            {
+                view.Dispose();
+            }
+
+            foreach (var texture in _textures)
+            {
+                texture.Dispose();
+            }
         }
     }
 }

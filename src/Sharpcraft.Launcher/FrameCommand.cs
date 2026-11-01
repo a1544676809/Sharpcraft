@@ -31,6 +31,11 @@ internal static class FrameCommand
         int collectSeconds,
         CancellationToken cancellationToken)
     {
+        if (Environment.GetEnvironmentVariable("MC_SUN_TEST") is { Length: > 0 })
+        {
+            return RenderSunTest(width, height);
+        }
+
         if (Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 })
         {
             return RenderLocal(width, height);
@@ -1030,6 +1035,9 @@ internal static class FrameCommand
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
         Console.WriteLine($"layers: translucent triangles {(request.TranslucentIndices?.Length ?? 0) / 3}, layout {(layout is null ? "null" : "set")}, water->{(layout is null ? "-" : layout.BlockAt(1)?.ToString() ?? "none")}");
 
+        // Celestial bodies (the sun for now): drawn into the sky backdrop for the current day time.
+        request = AttachCelestial(request, world, tintResources);
+
         var frame = OffscreenRenderer.Render(request);
 
         Console.WriteLine($"rendered on adapter: {frame.AdapterName}");
@@ -1216,6 +1224,108 @@ internal static class FrameCommand
         return path;
     }
 
+    /// <summary>
+    /// Renders a sky-only frame with a white sun at angle 0 and a camera aimed straight at it, proving the celestial
+    /// pipeline draws at the position the CPU projection predicts. Returns the PNG path.
+    /// </summary>
+    internal static string RenderSunTest(int width, int height)
+    {
+        var (vertices, indices) = CelestialMeshBuilder.CelestialQuad(
+            0f, height: 100f, size: 30f, uv: (0f, 0f, 1f, 1f));
+
+        // A 2x2 pure-white texture by default so a lit pixel is unambiguous against the blue sky and no pack is needed.
+        TextureData sunTexture = new(2, 2,
+        [
+            255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255
+        ]);
+
+        // With MC_SUN_TEST_PACK set, draw the real sun sprite from the pack instead, to check its orientation and UVs.
+        if (Environment.GetEnvironmentVariable("MC_SUN_TEST_PACK") is { Length: > 0 })
+        {
+            using var resources = CreateResourceManager();
+            var bytes = resources.Read(ResourceKind.Texture, CelestialSprites.Sun);
+            if (bytes is not null)
+            {
+                var image = PngDecoder.Decode(bytes);
+                sunTexture = new TextureData(image.Width, image.Height, image.Pixels);
+                Console.WriteLine($"sun test: real sun sprite {image.Width}x{image.Height}");
+            }
+        }
+
+        var draw = new CelestialQuadDraw(0, vertices, indices, Matrix4x4.Identity, Vector4.One);
+
+        // The sun disc lies in the horizontal plane y=100 around the origin; look at its centre from below and in front.
+        var request = new FrameRequest(
+            width,
+            height,
+            [],
+            [],
+            new Vector4(0f, 0f, 0f, 1f),
+            new Vector3(0f, 70f, 30f),
+            new Vector3(0f, 100f, 0f),
+            60f)
+        {
+            CelestialTextures = [sunTexture],
+            CelestialDraws = [draw]
+        };
+
+        var frame = OffscreenRenderer.Render(request);
+
+        // The centre pixel is on the ray to the sun's centroid, so it must be the white disc, not the sky gradient.
+        var centreX = frame.Width / 2;
+        var centreY = frame.Height / 2;
+        var offset = ((centreY * frame.Width) + centreX) * 4;
+        Console.WriteLine($"sun test: centre rgba({frame.Rgba[offset]},{frame.Rgba[offset + 1]},{frame.Rgba[offset + 2]},{frame.Rgba[offset + 3]})");
+
+        var png = PngEncoder.EncodeRgba(frame.Width, frame.Height, frame.Rgba);
+        var path = Path.Combine(Path.GetTempPath(), "sharpcraft-sun-test.png");
+        File.WriteAllBytes(path, png);
+        return path;
+    }
+
+    /// <summary>
+    /// Adds the celestial bodies for the world's current day time. The sun (and later the moon, stars and sunrise band)
+    /// are attached here so every offscreen path draws the same sky.
+    /// </summary>
+    internal static FrameRequest AttachCelestial(
+        FrameRequest request,
+        ClientWorld world,
+        Sharpcraft.Client.Assets.ResourceManager resources)
+    {
+        var textures = new List<TextureData>();
+        var draws = new List<CelestialQuadDraw>();
+
+        // A fixed angle is available for verification; otherwise the sun follows the overworld clock.
+        var sunAngle = Environment.GetEnvironmentVariable("MC_SUN_ANGLE") is { Length: > 0 } angleText &&
+            float.TryParse(angleText, out var parsedAngle)
+            ? parsedAngle
+            : Sharpcraft.Common.World.SkyTimelines.SunAngleDegrees(world.DayTime);
+
+        var sunBytes = resources.Read(ResourceKind.Texture, CelestialSprites.Sun);
+        if (sunBytes is not null)
+        {
+            var image = PngDecoder.Decode(sunBytes);
+            var textureIndex = textures.Count;
+            textures.Add(new TextureData(image.Width, image.Height, image.Pixels));
+
+            var (vertices, indices) = CelestialMeshBuilder.CelestialQuad(
+                sunAngle * (MathF.PI / 180f), height: 100f, size: 30f, uv: (0f, 0f, 1f, 1f));
+
+            // Translate to the eye so the body stays at the same place relative to the camera, i.e. infinitely far.
+            draws.Add(new CelestialQuadDraw(textureIndex, vertices, indices, Matrix4x4.CreateTranslation(request.CameraPosition), Vector4.One));
+        }
+
+        if (draws.Count > 0)
+        {
+            Console.WriteLine($"celestial: {textures.Count} texture(s), {draws.Count} draw(s), sun angle {sunAngle:F1} deg");
+        }
+
+        return draws.Count == 0
+            ? request
+            : request with { CelestialTextures = [.. textures], CelestialDraws = [.. draws] };
+    }
+
     private static string RenderLocal(int width, int height)
     {
         var world = BuildDemoWorld();
@@ -1265,7 +1375,8 @@ internal static class FrameCommand
         var centre = (bounds.Min + bounds.Max) / 2f;
         var (eye, target) = CameraMath.DefaultCamera(centre, 16f);
 
-        var frame = OffscreenRenderer.Render(new FrameRequest(
+        using var resources = CreateResourceManager();
+        var request = new FrameRequest(
             width,
             height,
             mesh.Vertices,
@@ -1277,7 +1388,10 @@ internal static class FrameCommand
             Atlas = prepared is null
                 ? null
                 : WithMips(prepared.Value.Atlas)
-        });
+        };
+        request = AttachCelestial(request, world, resources);
+
+        var frame = OffscreenRenderer.Render(request);
 
         Console.WriteLine($"rendered on adapter: {frame.AdapterName}");
 

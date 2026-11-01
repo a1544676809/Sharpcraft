@@ -64,4 +64,14 @@ public static class VertexLayout
         new(WGPUVertexFormat.Float32x2, 24, 2),
         new(WGPUVertexFormat.Float32x4, 32, 3)
     ];
+
+    /// <summary>Bytes per celestial vertex: position (3) + uv (2) floats.</summary>
+    public const int CelestialStride = 20;
+
+    /// <summary>Celestial body vertex attributes: position at location 0, uv at location 1.</summary>
+    public static VertexAttribute[] CelestialAttributes() =>
+    [
+        new(WGPUVertexFormat.Float32x3, 0, 0),
+        new(WGPUVertexFormat.Float32x2, 12, 1)
+    ];
 }

@@ -6,24 +6,22 @@ using Xunit;
 
 namespace Sharpcraft.Client.Tests.Assets;
 
-/// <summary>Moon-phase sheet slicing for the celestial pass (docs/specs/render/sky-celestial.md 3).</summary>
+/// <summary>Celestial body sprite identifiers match the 26.3 layout (docs/specs/render/sky-celestial.md 3).</summary>
 public sealed class CelestialSpritesTests
 {
     [Fact]
-    public void MoonPhasesSliceIntoARowMajorFourByTwoGrid()
+    public void SunAndMoonSpritesLiveUnderEnvironmentCelestial()
     {
-        var phases = CelestialSprites.SliceMoonPhases(64, 32);
-
-        Assert.Equal(8, phases.Length);
-        Assert.Equal(new CelestialSprite(0, 0, 16, 16), phases[0]);
-        Assert.Equal(new CelestialSprite(48, 0, 16, 16), phases[3]);
-        Assert.Equal(new CelestialSprite(0, 16, 16, 16), phases[4]);
-        Assert.Equal(new CelestialSprite(48, 16, 16, 16), phases[7]);
+        Assert.Equal("environment/celestial/sun", CelestialSprites.Sun.Path);
+        Assert.Equal("environment/celestial/moon/full_moon", CelestialSprites.MoonPhase(0).Path);
+        Assert.Equal("environment/celestial/moon/waxing_gibbous", CelestialSprites.MoonPhase(7).Path);
     }
 
     [Fact]
-    public void AnImageThatDoesNotTileIsRejected()
+    public void MoonPhaseNamesMatchTheVanillaOrder()
     {
-        Assert.Throws<ArgumentException>(() => CelestialSprites.SliceMoonPhases(63, 32));
+        Assert.Equal("full_moon", CelestialSprites.MoonPhaseName(0));
+        Assert.Equal("new_moon", CelestialSprites.MoonPhaseName(4));
+        Assert.Throws<ArgumentOutOfRangeException>(() => CelestialSprites.MoonPhaseName(8));
     }
 }

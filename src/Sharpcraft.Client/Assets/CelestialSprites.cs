@@ -5,52 +5,40 @@ using Sharpcraft.Common.Identifiers;
 
 namespace Sharpcraft.Client.Assets;
 
-/// <summary>A pixel rectangle of one celestial sprite inside its source image.</summary>
-public readonly record struct CelestialSprite(int X, int Y, int Width, int Height);
-
 /// <summary>
-/// Celestial textures live under <c>textures/environment/</c>, separate from the block atlas
-/// (docs/specs/render/sky-celestial.md 3). The moon texture is a 4x2 grid of the 8 phases.
+/// Celestial body sprites. In 26.3 the sun and the eight moon phases are individual textures under
+/// <c>textures/environment/celestial/</c> (the reference loads them into its celestials atlas), not a 4x2 moon sheet
+/// (docs/specs/render/sky-celestial.md 3, ref://mc-26.3-analysis/src/net/minecraft/client/renderer/SkyRenderer.java).
 /// </summary>
 public static class CelestialSprites
 {
-    /// <summary>Resource location of the sun texture (<c>textures/environment/sun.png</c>).</summary>
-    public static readonly Identifier Sun = new("minecraft", "environment/sun");
+    /// <summary>Sun texture (<c>textures/environment/celestial/sun.png</c>).</summary>
+    public static readonly Identifier Sun = new("minecraft", "environment/celestial/sun");
 
-    /// <summary>Resource location of the moon phases texture (<c>textures/environment/moon_phases.png</c>).</summary>
-    public static readonly Identifier MoonPhases = new("minecraft", "environment/moon_phases");
+    /// <summary>Number of moon phases (<c>MoonPhase.COUNT</c>).</summary>
+    public const int MoonPhaseCount = 8;
 
-    /// <summary>Moon phase grid columns in the source image.</summary>
-    public const int MoonPhaseColumns = 4;
+    // MoonPhase.values() order from net.minecraft.world.level.MoonPhase: index -> serialized name.
+    private static readonly string[] MoonPhaseNames =
+    [
+        "full_moon", "waning_gibbous", "third_quarter", "waning_crescent",
+        "new_moon", "waxing_crescent", "first_quarter", "waxing_gibbous"
+    ];
 
-    /// <summary>Moon phase grid rows in the source image.</summary>
-    public const int MoonPhaseRows = 2;
+    /// <summary>Serialized name of a moon phase (0..7), matching <c>MoonPhase.getSerializedName()</c>.</summary>
+    public static string MoonPhaseName(int index)
+    {
+        if ((uint)index >= MoonPhaseCount)
+        {
+            throw new ArgumentOutOfRangeException(nameof(index), index, "moon phase index must be 0..7");
+        }
 
-    /// <summary>Number of moon phases.</summary>
-    public const int MoonPhaseCount = MoonPhaseColumns * MoonPhaseRows;
+        return MoonPhaseNames[index];
+    }
 
     /// <summary>
-    /// Slices the 4x2 moon-phase sheet into the 8 phase rectangles in row-major order (the reference lays the phases out
-    /// in this grid and addresses them by MoonPhase order).
+    /// Texture identifier of a moon phase (0..7): <c>textures/environment/celestial/moon/&lt;name&gt;.png</c>.
     /// </summary>
-    public static CelestialSprite[] SliceMoonPhases(int width, int height)
-    {
-        if (width <= 0 || height <= 0 || width % MoonPhaseColumns != 0 || height % MoonPhaseRows != 0)
-        {
-            throw new ArgumentException($"moon phases image {width}x{height} does not tile a {MoonPhaseColumns}x{MoonPhaseRows} grid");
-        }
-
-        var cellWidth = width / MoonPhaseColumns;
-        var cellHeight = height / MoonPhaseRows;
-        var result = new CelestialSprite[MoonPhaseCount];
-
-        for (var index = 0; index < MoonPhaseCount; index++)
-        {
-            var column = index % MoonPhaseColumns;
-            var row = index / MoonPhaseColumns;
-            result[index] = new CelestialSprite(column * cellWidth, row * cellHeight, cellWidth, cellHeight);
-        }
-
-        return result;
-    }
+    public static Identifier MoonPhase(int index) =>
+        new("minecraft", "environment/celestial/moon/" + MoonPhaseName(index));
 }

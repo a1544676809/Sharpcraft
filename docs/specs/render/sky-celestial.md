@@ -45,14 +45,16 @@ status: 待评审
 
 **我们目前解析不到世界时间**（`ClientWorld` 无时间字段、未解析 `set_time/update_time`），因此天体角度无法按真实时间计算。这是本模块的**前置依赖**，与 `docs/specs/render/lighting.md §6`（日夜）同一缺口。
 
-## 5. 现状
+## 5. 现状（2026-11-01）
 
-- 我们只有**全屏渐变天空 + 距离雾**（`sky.wgsl`），**没有**天空盘、日月、星空、日出条带。
-- 天体贴图集（celestials）尚未接入；需从资源包 `textures/environment/{sun.png, moon_phases.png}` 取精灵（独立于方块图集）。
+- 已有**全屏渐变天空 + 距离雾**（`sky.wgsl`）。
+- **太阳已接入设备管线**：`environment/celestial/sun` 纹理经 `celestial.wgsl`（pos3+uv2；每帧相机 + 每 draw 的 model/tint uniform）绘于天空渐变之后、地形之前；深度恒通过且不写，故被地形遮挡。合成采用原版 `BlendFunction.OVERLAY`（颜色 `SrcAlpha/One`、alpha `One/Zero`），使贴图的黑色/透明像素不贡献颜色。
+- 天体贴图在 26.3 位于 `textures/environment/celestial/`：`sun.png` 与 `moon/<phase>.png`（8 张独立月相贴图，**不是** 4×2 月相表），与方块图集独立。已按此更正标识符。
+- **尚未做**：天空盘/暗盘、月亮（按 `MOON_PHASE` 选贴图）、星空、日出条带。
 
 ## 6. 实现分期（评审通过后）
 
-1. **资产**：从 pack 读取 celestials 精灵（`sun`、`moon_phases` 8 相），建独立小图集/精灵表。
+1. **资产**：从 pack 读取 celestials 精灵（`environment/celestial/sun`、`environment/celestial/moon/<phase>` 共 8 张），独立于方块图集。
 2. **天空盘 + 暗盘**（颜色 `SKY_COLOR`，半径512）。
 3. **日/月四边形 + 变换**（高度100、缩放30/20；月相选 UV）。
 4. **星空**（1500 四边形、距离100、`starBrightness`）。
@@ -71,7 +73,7 @@ status: 待评审
 
 - **世界时间缺失**（§4）：无时间则角度只能取固定值/宿主注入，属"渲染正确但时间不真"的受控偏差，需与日夜光照一并解决。
 - 天体贴图集抽取（独立于方块图集）需资产管线小改。
-- 月相解析（`moon/<phase>` 8 相 UV）与 `MOON_PHASE` 属性。
+- 月相：26.3 为 8 张独立贴图 `moon/<phase>.png`（`MoonPhase` 枚举 0..7），无需 4×2 切表；按 `MOON_PHASE` 选贴图即可。
 - 末地闪光、末地天空本规格不做（登记）。
 
 ## 9. 参考资料
