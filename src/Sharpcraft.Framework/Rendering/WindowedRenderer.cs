@@ -62,7 +62,7 @@ public static class WindowedRenderer
     bool oitLowPrecision = false,
     bool cloudDepthEnabled = false,
     bool skyDiscVanilla = true,
-    Func<(Vector3 Sky, Vector3 Fog, float SkyFogEnd)>? skyDiscPerFrame = null)
+    Func<(Vector3 Sky, Vector3 Fog, float SkyFogEnd, Vector3 Eye)>? skyDiscPerFrame = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -1094,7 +1094,7 @@ public static class WindowedRenderer
 
             if (skyDiscVanillaResources is not null && skyDiscPerFrame?.Invoke() is { } skyDiscState)
             {
-                skyDiscVanillaResources.Update(skyDiscState.Sky, skyDiscState.Fog, skyDiscState.SkyFogEnd);
+                skyDiscVanillaResources.Update(skyDiscState.Sky, skyDiscState.Fog, skyDiscState.SkyFogEnd, skyDiscState.Eye);
                 skyDiscVanillaResources.Draw(pass);
             }
 

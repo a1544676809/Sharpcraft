@@ -83,7 +83,7 @@ internal sealed class SkyDiscResources : IDisposable
         _indexCount = (uint)indices.Length;
     }
 
-    public void Update(Vector3 skyColour, Vector3 fogColour, float skyFogEnd)
+    public void Update(Vector3 skyColour, Vector3 fogColour, float skyFogEnd, Vector3 eye)
     {
         var floats = new float[12];
         floats[0] = skyColour.X;
@@ -95,6 +95,9 @@ internal sealed class SkyDiscResources : IDisposable
         floats[6] = fogColour.Z;
         floats[7] = 1f;
         floats[8] = skyFogEnd;
+        floats[9] = eye.X;
+        floats[10] = eye.Y;
+        floats[11] = eye.Z;
         var bytes = MemoryMarshal.AsBytes(floats.AsSpan()).ToArray();
         _device.Queue.WriteBuffer(_skyUniform, 0, bytes.AsSpan());
     }

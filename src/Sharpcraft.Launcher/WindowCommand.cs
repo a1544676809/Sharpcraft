@@ -614,7 +614,7 @@ internal static class WindowCommand
                 var fog = session.CurrentFogColour();
                 return (session.CurrentSkyColour(),
                     new System.Numerics.Vector3(fog.X, fog.Y, fog.Z),
-                    MathF.Min(Sharpcraft.Launcher.InteractiveSession.ViewDistanceChunks * 16f, 512f));
+                    MathF.Min(Sharpcraft.Launcher.InteractiveSession.ViewDistanceChunks * 16f, 512f), session.Player.Position + new System.Numerics.Vector3(0f, 1.62f, 0f));
             },
             celestialPerFrame: () =>
             {

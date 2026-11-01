@@ -21,7 +21,7 @@ struct VertexOutput {
 @vertex
 fn vs_main(@location(0) position : vec3<f32>) -> VertexOutput {
     var output : VertexOutput;
-    output.position = camera.viewProjection * vec4<f32>(position, 1.0);
+    output.position = camera.viewProjection * vec4<f32>(position + vec3<f32>(sky.params.y, sky.params.z, sky.params.w), 1.0);
     output.sphericalDistance = length(position);
     output.cylindricalDistance = max(length(position.xz), abs(position.y));
     return output;
