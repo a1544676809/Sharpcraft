@@ -50,9 +50,9 @@ internal sealed class SkyDiscResources : IDisposable
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
             multisample: MultisampleState.Default,
             depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.Always, write: false),
-            vertexStride: 12,
+            vertexStride: VertexLayout.SkyDiscStride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
-            vertexAttributes: [new VertexAttribute(WGPUVertexFormat.Float32x3, 0, 0)]);
+            vertexAttributes: VertexLayout.SkyDiscAttributes());
 
         _bindGroup = device.CreateBindGroup(
             _layout,
