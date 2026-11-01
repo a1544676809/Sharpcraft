@@ -1619,7 +1619,8 @@ internal static class FrameCommand
         FrameRequest request,
         ClientWorld world,
         Sharpcraft.Client.Assets.ResourceManager resources,
-        Vector3? skyColour = null)
+        Vector3? skyColour = null,
+        Vector3? fogColour = null)
     {
         var textures = new List<TextureData>();
         var textureIndices = new Dictionary<Sharpcraft.Common.Identifiers.Identifier, int>();
@@ -1724,17 +1725,21 @@ internal static class FrameCommand
         }
 
         var effectiveSkyColour = skyColour ?? new Vector3(request.ClearColour.X, request.ClearColour.Y, request.ClearColour.Z);
+        var effectiveFogColour = fogColour ?? effectiveSkyColour;
+        var skyFogEnd = MathF.Min(InteractiveSession.ViewDistanceChunks * 16f, 512f);
         var skyTop = Sharpcraft.Client.Render.CelestialGeometry.SkyDisc(16f);
         var skyVertices = new float[skyTop.Length * 7];
         for (var i = 0; i < skyTop.Length; i++)
         {
             var offset = i * 7;
+            var fogFactor = Math.Clamp(skyTop[i].Length() / MathF.Max(skyFogEnd, 0.001f), 0f, 1f);
+            var colour = Vector3.Lerp(effectiveSkyColour, effectiveFogColour, fogFactor);
             skyVertices[offset] = skyTop[i].X;
             skyVertices[offset + 1] = skyTop[i].Y;
             skyVertices[offset + 2] = skyTop[i].Z;
-            skyVertices[offset + 3] = 1f;
-            skyVertices[offset + 4] = 1f;
-            skyVertices[offset + 5] = 1f;
+            skyVertices[offset + 3] = colour.X;
+            skyVertices[offset + 4] = colour.Y;
+            skyVertices[offset + 5] = colour.Z;
             skyVertices[offset + 6] = 1f;
         }
 
@@ -1750,7 +1755,7 @@ internal static class FrameCommand
             skyVertices,
             [.. skyTriangles],
             Matrix4x4.CreateTranslation(request.CameraPosition),
-            new Vector4(effectiveSkyColour, 1f),
+            new Vector4(1f, 1f, 1f, 1f),
             CelestialColorBlend.Opaque));
 
         return request with

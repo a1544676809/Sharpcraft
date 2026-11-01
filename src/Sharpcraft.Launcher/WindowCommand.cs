@@ -308,7 +308,8 @@ internal static class WindowCommand
         request = request with { SkipGradientSky = !skyGradient };
 
         // Sun, moon, stars and the sunrise band: the window now has the celestial pass, so populate its draws/textures.
-        request = FrameCommand.AttachCelestial(request, world, resources, session.CurrentSkyColour());
+        request = FrameCommand.AttachCelestial(request, world, resources, session.CurrentSkyColour(),
+            new System.Numerics.Vector3(session.CurrentFogColour().X, session.CurrentFogColour().Y, session.CurrentFogColour().Z));
 
         // A reload rebuilds the stack and then tells the listeners, in order. Language first: everything that shows text
         // reads it, so it must be in place before anything else rebuilds.
@@ -617,7 +618,8 @@ internal static class WindowCommand
                 var key = FrameCommand.EffectiveDayTime(world) ^ (rainKey << 32) ^ (thunderKey << 24);
                 if (celestialCached is null || key != celestialCacheKey)
                 {
-                    celestialCached = FrameCommand.AttachCelestial(request, world, resources, session.CurrentSkyColour());
+                    celestialCached = FrameCommand.AttachCelestial(request, world, resources, session.CurrentSkyColour(),
+                        new System.Numerics.Vector3(session.CurrentFogColour().X, session.CurrentFogColour().Y, session.CurrentFogColour().Z));
                     celestialCacheKey = key;
                 }
 
