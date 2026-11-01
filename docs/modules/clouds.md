@@ -33,7 +33,7 @@ updated: 2026-11-01
 5. 颜色/明暗：面亮度 **顶1/底0.7/南北0.8/东西0.9** × `visual/cloud_color`（昼 `#ffffffff`→夜 `#ff191926`，multiply）× 天气调暗。
 6. 混合/雾：alpha 混合，按 `CLOUD_FOG_END=2048` 线性淡出；绘制在天空之后、地形之前。
 
-渲染承载：本渲染器窗口侧目前**没有 celestial/云 pass**（只有离屏绘制太阳/月亮/星星），因此需先在窗口补该 pass，再接入云四边形（详见 §6）。
+渲染承载：窗口侧已接入 celestial/cloud pass：`WindowedRenderer` 每帧重建日月星/日出几何（纹理缓存）并通过 `CelestialColorResources.SetDraws` 更新云四边形；云在天空/天体之后、地形之前绘制（T-305）。
 
 ## 3. 纯逻辑测试（可量化部分）
 
