@@ -234,7 +234,7 @@ public static class WindowedRenderer
         // Clouds change every frame (scroll/camera), so their position-colour draw set is updated per frame.
         using var cloudColour = cloudsPerFrame is null
             ? null
-            : new OffscreenRenderer.CelestialColorResources(device, request with { CelestialColorDraws = [] }, cameraBuffer, VertexLayout.CameraUniformSize, format);
+            : new OffscreenRenderer.CelestialColorResources(device, request with { CelestialColorDraws = [] }, cameraBuffer, VertexLayout.CameraUniformSize, format, WGPUCompareFunction.LessEqual);
         using var uiPipeline = UiRenderer.CreatePipeline(device, format, pipelineLayout);
         using var uiTextPipeline = UiRenderer.CreateTextPipeline(device, format, pipelineLayout);
 
@@ -1009,13 +1009,7 @@ public static class WindowedRenderer
             celestial?.Draw(pass);
             celestialColour?.Draw(pass);
 
-            // Clouds: per-cell faces tinted by CLOUD_COLOR, refreshed every frame, drawn after the celestial bodies.
-            if (cloudsPerFrame?.Invoke() is { } cloudDraw)
-            {
-                cloudColour?.SetDraws([cloudDraw]);
-            }
-
-            cloudColour?.Draw(pass);
+            // Clouds are drawn after the transparent terrain (below), with depth testing, matching the reference order.
 
             pass.SetPipeline(pipeline);
             // Rewriting 64 bytes is the whole cost of moving the camera; the staging buffers are reused.
@@ -1286,6 +1280,25 @@ public static class WindowedRenderer
                 }
             // (The weighted-blended OIT path that used to live here was shelved for its visual quality and is no longer
             // compiled; the reference OIT above is the only transparency path.)
+
+            // Clouds come after the opaque and transparent terrain, with depth testing so terrain and the cloud layer
+            // occlude each other correctly (the reference draws them in executeClassicTransparency).
+            if (cloudColour is not null)
+            {
+                var cloudPass = encoder.BeginRenderPass(
+                [
+                    new ColorAttachment { View = view, LoadOp = WGPULoadOp.Load, StoreOp = WGPUStoreOp.Store }
+                ],
+                new DepthStencilAttachment { View = depthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store });
+
+                if (cloudsPerFrame?.Invoke() is { } cloudDraw)
+                {
+                    cloudColour.SetDraws([cloudDraw]);
+                }
+
+                cloudColour.Draw(cloudPass);
+                cloudPass.End();
+            }
 
             // Pass 4: the interface draws last, over the resolved frame, in its own pass so it never participates in the
             // world depth test or the transparency resolve.

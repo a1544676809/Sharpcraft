@@ -2087,4 +2087,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 现象：玩家 Y 高于世界高度上限时地面/天空变黑（截图二黑色大块为雾/天空把地形染色）。
 - 根因：`CurrentSkyColour` 用相机 Y 采样群系；Y 超出已加载 section 时 `GetBiomeAt` 全 -1 → `SkyColourSource` 权重 0 → sky=(0,0,0)，而 `CurrentFogColour` 直接取 sky → 雾/地面黑。
 - 修复：按原版 `ChunkAccess.getNoiseBiome` 将采样 quartY **clamp 到世界 [minY,maxY]**；极端缺失再回退 y=64。离屏高空相机帧全蓝、无黑色；全量 1267 通过。
-- 待窗口实测高空；云在夜间偏暗属正常色（若过黑另查）。
+- 待窗口实测高空；云在夜间偏暗属正常色（若过黑另查）。## 2026-11-01 T-308：云范围/顺序/深度（进行中）
+- 原版依据：`CloudRenderer.prepare` 的 `range` 来自 `Options.cloudRange`，默认 **128 区块**（2048 方块）；我们误用 `MC_VIEW_DISTANCE=12`→192 方块，而云 fog 到 2048 才消失 → 云在 192 处硬切“冒出来”。
+- 原版顺序：`executeClassicTransparency` 中 **半透明地形之后**才 `cloudRenderer.render`；fancy 走 `renderOit` + 深度。我们此前云在地形之前、深度 Always不写 → 地形/云互相穿透（“透视”）。
+- 实现：`CloudDrawCache`（仅中心 cell/相机侧/垂直偏移变化时重建相机相对几何，每帧只更新 model 平移）；`BuildCloudDraw` 半径=`ceil(128*16/12)`；`WindowedRenderer` 云 pass 移到地形/OIT 之后，创建 cloud pipeline 深度 `LessEqual`；`CelestialColorResources` 未变数组跳过重传。
+- 构建/1267 通过；窗口运行中（pid 54384，RSS ~1.16GB）。**未做**：云 OIT（当前普通 alpha + 深度）；严格像素等效待后续。

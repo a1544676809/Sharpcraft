@@ -1521,8 +1521,10 @@ internal static class FrameCommand
     /// Builds the per-frame cloud position-colour draw: visible faces via CloudMeshBuilder, geometry via
     /// CloudGeometryBuilder, tinted by the CLOUD_COLOR timeline and weather (docs/modules/clouds.md 2).
     /// </summary>
-    internal static CelestialColorDraw? BuildCloudDraw(ClientWorld world, Sharpcraft.Client.Assets.CloudTexture texture, Vector3 eye)
+    internal static CelestialColorDraw? BuildCloudDraw(ClientWorld world, Sharpcraft.Client.Assets.CloudTexture texture, Vector3 eye, Sharpcraft.Client.Render.CloudDrawCache? cache = null)
     {
+        // The reference uses the separate cloudRange option (default 128 chunks), not the terrain view distance.
+        const int CloudRangeChunks = 128;
         var partialTick = EffectiveDayTimePartial(world);
         var offset = (float)(world.GameTime % (texture.Width * 400L)) + partialTick;
         var cloudX = eye.X + (offset * 0.03f);
@@ -1545,19 +1547,37 @@ internal static class FrameCommand
                 ? Sharpcraft.Client.Render.CloudCameraSide.BelowClouds
                 : Sharpcraft.Client.Render.CloudCameraSide.InsideClouds;
 
-        var radiusCells = (int)MathF.Ceiling(InteractiveSession.ViewDistanceChunks * 16f / 12f);
-        var quads = Sharpcraft.Client.Render.CloudMeshBuilder.Build(
-            texture.Cells, texture.Width, texture.Height, cellX, cellZ, radiusCells, side);
-        if (quads.Count == 0)
-        {
-            return null;
-        }
+        var radiusCells = (int)MathF.Ceiling(CloudRangeChunks * 16f / 12f);
+        float[] vertices;
+        uint[] indices;
+        Matrix4x4 model;
 
-        // The reference renders clouds camera-relative: the shader places a face at relativeCell*CellSize + CloudOffset
-        // and the camera is at the origin, so in our absolute-vertex path the origin is the eye shifted by the in-cell
-        // remainder. The centre cell index must NOT be added here (that was the cross-cell jump).
-        var origin = Sharpcraft.Client.Render.CloudGeometryBuilder.OriginFromEye(eye, xInCell, zInCell, bottomY);
-        var (vertices, indices) = Sharpcraft.Client.Render.CloudGeometryBuilder.Build(quads, eye, origin);
+        if (cache is null)
+        {
+            var quads = Sharpcraft.Client.Render.CloudMeshBuilder.Build(
+                texture.Cells, texture.Width, texture.Height, cellX, cellZ, radiusCells, side);
+            if (quads.Count == 0)
+            {
+                return null;
+            }
+
+            // Absolute-vertex path (offscreen one-shot): origin is the eye shifted by the in-cell remainder.
+            var origin = Sharpcraft.Client.Render.CloudGeometryBuilder.OriginFromEye(eye, xInCell, zInCell, bottomY);
+            (vertices, indices) = Sharpcraft.Client.Render.CloudGeometryBuilder.Build(quads, eye, origin);
+            model = Matrix4x4.Identity;
+        }
+        else
+        {
+            // Cached camera-relative mesh: vertices already carry the vertical offset; move it with the eye each frame.
+            (vertices, indices) = cache.Get(
+                texture.Cells, texture.Width, texture.Height, cellX, cellZ, radiusCells, relativeBottom, side);
+            if (vertices.Length == 0)
+            {
+                return null;
+            }
+
+            model = Matrix4x4.CreateTranslation(eye.X - xInCell, eye.Y, eye.Z - zInCell);
+        }
 
         var factor = Sharpcraft.Common.World.SkyAttributeTracks.CloudColorFactorAt(EffectiveDayTime(world));
         var rain = EffectiveRainLevel(world, partialTick);
@@ -1567,7 +1587,7 @@ internal static class FrameCommand
             factor.Z * (1f - (0.4f * rain)),
             1f);
 
-        return new CelestialColorDraw(vertices, indices, Matrix4x4.Identity, tint, CelestialColorBlend.Translucent);
+        return new CelestialColorDraw(vertices, indices, model, tint, CelestialColorBlend.Translucent);
     }
 
     /// <summary>Maps the client lightmap parameters to the framework uniform the terrain shader reads.</summary>

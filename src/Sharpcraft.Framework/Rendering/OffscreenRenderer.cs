@@ -400,7 +400,7 @@ public static class OffscreenRenderer
     /// Position-colour pipeline: vertex colour times the per-draw tint, with the given reference blend mode. Sunrise uses
     /// Translucent; stars use Overlay (both match the reference pipelines' ColorTargetState).
     /// </summary>
-    private static RenderPipeline CreatePositionColorPipeline(Device device, ShaderModule shader, PipelineLayout layout, bool overlay, WGPUTextureFormat format = WGPUTextureFormat.RGBA8Unorm)
+    private static RenderPipeline CreatePositionColorPipeline(Device device, ShaderModule shader, PipelineLayout layout, bool overlay, WGPUTextureFormat format = WGPUTextureFormat.RGBA8Unorm, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always)
     {
         var blend = overlay
             ? new WGPUBlendState
@@ -430,8 +430,9 @@ public static class OffscreenRenderer
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
             multisample: MultisampleState.Default,
-            // Part of the backdrop: depth always passes and nothing is written, so terrain covers it.
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.Always, write: false),
+            // Part of the backdrop by default: depth always passes and nothing is written, so terrain covers it. Clouds pass
+            // LessEqual instead so terrain and other clouds occlude them (drawn after the world).
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, depthCompare, write: false),
             vertexStride: (ulong)VertexLayout.PositionColorStride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
             vertexAttributes: VertexLayout.PositionColorAttributes());
@@ -1353,8 +1354,10 @@ public static class OffscreenRenderer
         private readonly ulong _cameraSize;
         private long[] _vertexCapacity = [];
         private long[] _indexCapacity = [];
+        private float[][] _sourceVertices = [];
+        private uint[][] _sourceIndices = [];
 
-        public CelestialColorResources(Device device, FrameRequest request, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, WGPUTextureFormat format = WGPUTextureFormat.RGBA8Unorm)
+        public CelestialColorResources(Device device, FrameRequest request, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, WGPUTextureFormat format = WGPUTextureFormat.RGBA8Unorm, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always)
         {
             var draws = request.CelestialColorDraws ?? [];
             _device = device;
@@ -1373,8 +1376,8 @@ public static class OffscreenRenderer
                 Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("position_color")))
             });
 
-            _translucentPipeline = CreatePositionColorPipeline(device, shader, _pipelineLayout, overlay: false, format);
-            _overlayPipeline = CreatePositionColorPipeline(device, shader, _pipelineLayout, overlay: true, format);
+            _translucentPipeline = CreatePositionColorPipeline(device, shader, _pipelineLayout, overlay: false, format, depthCompare);
+            _overlayPipeline = CreatePositionColorPipeline(device, shader, _pipelineLayout, overlay: true, format, depthCompare);
 
             SetDraws(draws);
         }
@@ -1435,6 +1438,8 @@ public static class OffscreenRenderer
             _tints = new Vector4[draws.Count];
             _vertexCapacity = new long[draws.Count];
             _indexCapacity = new long[draws.Count];
+            _sourceVertices = new float[draws.Count][];
+            _sourceIndices = new uint[draws.Count][];
 
             for (var index = 0; index < draws.Count; index++)
             {
@@ -1475,8 +1480,18 @@ public static class OffscreenRenderer
             _indexCounts[index] = (uint)draw.Indices.Length;
             _overlay[index] = draw.Blend == CelestialColorBlend.Overlay;
 
-            _device.Queue.WriteBuffer(_vertexBuffers[index], 0, System.Runtime.InteropServices.MemoryMarshal.AsBytes(draw.Vertices.AsSpan()));
-            _device.Queue.WriteBuffer(_indexBuffers[index], 0, System.Runtime.InteropServices.MemoryMarshal.AsBytes(draw.Indices.AsSpan()));
+            // The cloud mesh is cached and only its translation changes per frame; skip the (multi-megabyte) upload
+            // unless the caller actually provided new vertex/index arrays.
+            var unchanged = index < _sourceVertices.Length
+                && ReferenceEquals(_sourceVertices[index], draw.Vertices)
+                && ReferenceEquals(_sourceIndices[index], draw.Indices);
+            if (!unchanged)
+            {
+                _device.Queue.WriteBuffer(_vertexBuffers[index], 0, System.Runtime.InteropServices.MemoryMarshal.AsBytes(draw.Vertices.AsSpan()));
+                _device.Queue.WriteBuffer(_indexBuffers[index], 0, System.Runtime.InteropServices.MemoryMarshal.AsBytes(draw.Indices.AsSpan()));
+                _sourceVertices[index] = draw.Vertices;
+                _sourceIndices[index] = draw.Indices;
+            }
 
             var transformBytes = new byte[TransformUniformSize];
             var transformFloats = new float[20];

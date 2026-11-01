@@ -78,6 +78,7 @@ internal sealed class InteractiveSession
     private readonly Sharpcraft.Client.Render.BlockLightFlicker _blockLightFlicker = new();
     private Sharpcraft.Common.World.BiomeRegistry? _biomes;
     private Sharpcraft.Client.Assets.CloudTexture? _cloudTexture;
+    private readonly Sharpcraft.Client.Render.CloudDrawCache _cloudDrawCache = new();
 
     /// <summary>
     /// Requested render distance in chunks. Host configuration (MC_VIEW_DISTANCE), default 12; the server may cap it and
@@ -169,7 +170,7 @@ internal sealed class InteractiveSession
         }
 
         var eye = _player.Position + new Vector3(0f, 1.62f, 0f);
-        return FrameCommand.BuildCloudDraw(_world, _cloudTexture, eye);
+        return FrameCommand.BuildCloudDraw(_world, _cloudTexture, eye, _cloudDrawCache);
     }
 
     /// <summary>Decoded chunks installed per frame; keeps one batch from stalling the frame.</summary>
