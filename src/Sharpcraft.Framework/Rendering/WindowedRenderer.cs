@@ -1601,6 +1601,7 @@ public static class WindowedRenderer
         {
             Console.WriteLine(
                 $"window: arena {arena.ChunkCount} chunks, presized={arena.Presized}, "
+                + $"memory {arena.MemoryBytes / (1024d * 1024d):F1} MB, "
                 + $"uploaded {arena.UploadedBytes / (1024d * 1024d):F1} MB, "
                 + $"{arena.FullRebuilds} full rebuilds");
             arena.Dispose();
