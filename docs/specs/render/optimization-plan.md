@@ -69,3 +69,14 @@ updated: 2026-11-01
 - OIT 共享目标与独立 cloud depth 的视觉差异；
 - 128 区块 CPU/GPU 内存与构建时间；
 - 自适应范围引入的非确定性观感（必须可关闭并记录）。
+
+## 阶段 4 详细设计（独立 cloud depth OIT）
+
+目标：不再让云与半透明地形共享同一 depth 与同一 OIT 分辨率；按原版 `CloudRenderer.renderOit` 为云单独走三阶段，再在 terrain composite 之后单独 composite 云。
+
+1. **目标**：新增 `cloudDepthTexture`（Depth32Float，随窗口 resize 重建）；`cloudDepthBounds`（RGBA16F，MAX）、`cloudCoeff0/1`（RGBA16F，ADD）、`cloudAccum`（RGBA16F，ADD）。可复用尺寸/格式辅助函数。
+2. **深度初始化**：在每个云 OIT 帧开始，用一次全屏 blit 将 terrain 主深度复制到 `cloudDepthTexture`（`BLIT_DEPTH`），后续云 OIT 用 `cloudDepthTexture` 作为 depth attachment；这样云与地形深度解耦。
+3. **三阶段**：使用现有 `cloud_oit.wgsl` 与 cloud pipeline，分别渲染到 cloud 目标；depth bounds 阶段前绘制主深度 blit（与地形 OIT 的 `BLIT_DEPTH_DURING_DEPTH_BOUNDS` 等价）。
+4. **cloud composite**：新增 cloud 版 `oit_composite` pipeline/bind group，读取 cloud depth bounds/coeff/accum，在 terrain composite **之后**、正常云 pass 之前合成；`MC_CLOUD_DEPTH=1` 开启，默认 0（沿用当前共享目标路径，避免观感回退）。
+5. **像素对照**：固定机位/时间/视距，`MC_CLOUD_DEPTH=0/1` 各出一帧，记录差异（云与水面交叠、云边缘、深度排序）；无法自动取窗口像素时由用户截图记录。
+6. **验收**：默认路径不变；开关开启时无 GPU 校验错误；像素差异报告写入 `benchmarks/` 或 STATE；全量测试通过。

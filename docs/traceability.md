@@ -342,3 +342,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-315 | **阶段3：OIT 目标按需创建**：删除启动时无条件 `CreateReferenceTargets`，改为每帧仅当存在半透明地形或 cloud OIT 时首次创建；resize 仅在已创建时重建。无半透明/无云 OIT 场景不再占用多张 RGBA16F 目标 | `docs/specs/render/optimization-plan.md 阶段3` | 构建通过；窗口运行无校验错误 | `Framework/Rendering/WindowedRenderer` | 已完成 |
 | T-316 | **阶段5（部分）：天体几何按世界帧缓存**：窗口 `celestialPerFrame` 仅在 overworld dayTime / rain / thunder 变化时重建日月星/日出几何，其余帧复用；相机位移仍由 UpdateCamera 每帧更新 | `docs/specs/render/optimization-plan.md 阶段5` | 构建通过 | `Launcher/WindowCommand` | 已完成 |
 | T-317 | **阶段5（部分）：天空渐变开关**：`MC_SKY_GRADIENT=1` 保留渐变天空 pass，默认仍平色 SKY_COLOR（不改变参考观感） | `docs/specs/render/optimization-plan.md 阶段5` | 构建通过 | `Launcher/WindowCommand` | 已完成 |
+| T-318 | **阶段4详细设计**：独立 cloud depth OIT（cloudDepthTexture + cloud depth bounds/coeff/accum 目标、主深度 blit、三阶段、独立 cloud composite、`MC_CLOUD_DEPTH` 开关、固定机位像素对照） | `docs/specs/render/optimization-plan.md 阶段4详细设计` | — | — | 已完成（设计） |
