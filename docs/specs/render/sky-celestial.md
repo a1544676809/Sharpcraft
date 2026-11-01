@@ -54,7 +54,8 @@ status: 待评审
 - **日出条带已接入**：position-colour 三角扇（18 顶点，中心白 α=1、环白 α=0），变换 `RotX(90°)·RotZ((sin(sunAngle)<0?180:0)+90°)` 且 Z 乘 alpha，颜色 `SUNRISE_SUNSET_COLOR`，`TRANSLUCENT` 混合；alpha≤0.001 不画。
 - **星空已接入**：复刻 `buildStars`（LCG seed 10842、候选 1500、长度∈(0.010000001,1) 保留、距离 100、随机自旋），按 `STAR_ANGLE` 旋转、`STAR_BRIGHTNESS` 作 `OVERLAY` 色调。
 - **逐帧平滑**：日月星角、星亮度、日出色按 `(dayTime, partialTick)` 在相邻 tick 间线性插值（原版 `EnvironmentAttributeProbe` 语义），消除每 tick 一格的跳变；`MC_FORCE_PARTIAL` 可固定 partial 验证。
-- **尚未做**：天空盘/暗盘（沿用全屏渐变作为受控偏差）、`RAIN_BRIGHTNESS`（日月 alpha，晴天=1）、镜像到 `WindowedRenderer`；随后日夜光照。
+- **天空盘/暗盘（几何+判定已做）**：`CelestialGeometry.SkyDisc(y)`（10 顶点，i=-180..180 步 45，x=sign(y)·512·cos、z=512·sin，y=±16 上/下盘，对应原版 `buildSkyDisc`）与 `SkyVisibility.ShouldRenderDarkDisc(eyeY,horizonY,underwater)`（`eyeY−horizon<0 且 !underwater`，对应 `shouldRenderDarkDisc`）已实现并有纯逻辑测试。**渲染仍用全屏渐变（受控偏差）**：真正替换为盘需 `SKY_COLOR`，而它是「生物群系温度色 `calculateSkyColor` × `MULTIPLY_RGB` 关键帧(133/11867 白 → 13670/22330 黑) × 天气灰度混合」——依赖**生物群系温度 + 天气**，暂缓（见 §8）。
+- **尚未做**：`RAIN_BRIGHTNESS`（日月 alpha，晴天=1；需天气系统）。
 
 ## 6. 实现分期（评审通过后）
 
@@ -78,6 +79,7 @@ status: 待评审
 - **世界时间缺失**（§4）：无时间则角度只能取固定值/宿主注入，属"渲染正确但时间不真"的受控偏差，需与日夜光照一并解决。
 - 天体贴图集抽取（独立于方块图集）需资产管线小改。
 - 月相：26.3 为 8 张独立贴图 `moon/<phase>.png`（`MoonPhase` 枚举 0..7），无需 4×2 切表；按 `MOON_PHASE` 选贴图即可。
+- **天空盘颜色 `SKY_COLOR`**：非单一全局量，= 生物群系温度色（`OverworldBiomes.calculateSkyColor`，空间 gaussian 混合）× `MULTIPLY_RGB` 关键帧 × 天气灰度（`WeatherAttributes`）。故「用盘替换渐变」暂缓；当前渐变天空为受控偏差。几何`SkyDisc`与暗盘判定已就绪待用。
 - 末地闪光、末地天空本规格不做（登记）。
 
 ## 9. 参考资料

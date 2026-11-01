@@ -75,4 +75,21 @@ public sealed class CelestialGeometryTests
         AssertClose(new Vector3(0f, 0f, 1f), destination[0]);
         AssertClose(new Vector3(0f, 1f, 0f), destination[1]);
     }
+
+    [Fact]
+    public void SkyDiscMatchesTheBuildSkyDiscFormula()
+    {
+        var top = CelestialGeometry.SkyDisc(16f);
+        Assert.Equal(10, top.Length);
+        AssertClose(new Vector3(0f, 16f, 0f), top[0]);                 // centre
+        AssertClose(new Vector3(-512f, 16f, 0f), top[1]);              // i = -180
+        AssertClose(new Vector3(-362.039f, 16f, -362.039f), top[2]);   // i = -135
+        AssertClose(new Vector3(512f, 16f, 0f), top[5]);               // i = 0
+        AssertClose(new Vector3(0f, 16f, 512f), top[7]);               // i = 90
+
+        // The bottom disc negates x (signum(-16) = -1) and sits at y = -16.
+        var bottom = CelestialGeometry.SkyDisc(-16f);
+        AssertClose(new Vector3(512f, -16f, 0f), bottom[1]);
+        AssertClose(new Vector3(0f, -16f, 512f), bottom[7]);
+    }
 }

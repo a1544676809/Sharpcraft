@@ -91,6 +91,28 @@ public static class CelestialGeometry
     }
 
     /// <summary>
+    /// The sky-disc triangle fan (10 vertices) matching the reference buildSkyDisc: centre (0, y, 0) then nine ring
+    /// points at i = -180..180 step 45 with x = signum(y)·512·cos(i), z = 512·sin(i), all at height y. The reference builds
+    /// the top dome at y = +16 and the dark bottom disc at y = -16 (docs/specs/render/sky-celestial.md 1-2).
+    /// </summary>
+    public static Vector3[] SkyDisc(float y)
+    {
+        const float radius = 512f;
+        var result = new Vector3[10];
+        result[0] = new Vector3(0f, y, 0f);
+        var sign = MathF.Sign(y) == 0f ? 1f : MathF.Sign(y);
+
+        var index = 1;
+        for (var degrees = -180; degrees <= 180; degrees += 45)
+        {
+            var radians = degrees * (MathF.PI / 180f);
+            result[index++] = new Vector3(sign * radius * MathF.Cos(radians), y, radius * MathF.Sin(radians));
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Applies the sky body rotation — <c>RotX(angle)</c> then <c>RotY(−90°)</c> — to star-field points, matching the
     /// reference renderSunMoonAndStars pose order. Star positions are already at their final distance, so there is no
     /// translate/scale here.
