@@ -1726,7 +1726,7 @@ internal static class FrameCommand
 
         var effectiveSkyColour = skyColour ?? new Vector3(request.ClearColour.X, request.ClearColour.Y, request.ClearColour.Z);
         var effectiveFogColour = fogColour ?? effectiveSkyColour;
-        var skyFogEnd = 512f;
+        var skyFogEnd = MathF.Min(InteractiveSession.ViewDistanceChunks * 16f, 512f);
         const int skyRings = 16;
         const int skySegments = 64;
         const float skyRadius = 512f;
