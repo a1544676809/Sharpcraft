@@ -76,6 +76,7 @@ internal sealed class InteractiveSession
     private int _packetLogCount;
     private const int PacketLogLimit = 400;
     private readonly Sharpcraft.Client.Render.BlockLightFlicker _blockLightFlicker = new();
+    private Sharpcraft.Common.World.BiomeRegistry? _biomes;
 
     /// <summary>
     /// Chunks of view distance requested from the server. It bounds how much terrain can be resident, which is
@@ -112,6 +113,13 @@ internal sealed class InteractiveSession
     /// </summary>
     internal Vector4 CurrentFogColour()
     {
+        if (_world is not null && _biomes is not null)
+        {
+            // The reference fog base colour is dominated by SKY_COLOR (FOG_COLOR defaults to black and is mixed toward the
+            // sky), so use the sky colour directly; it darkens at night and under weather exactly like the sky.
+            return new Vector4(CurrentSkyColour(), 1f);
+        }
+
         var baseFog = new Vector3(0.75f, 0.85f, 1.0f);
         if (_world is null)
         {
@@ -125,6 +133,22 @@ internal sealed class InteractiveSession
         var fog = Sharpcraft.Common.World.WeatherBlend.ApplyFog(baseFog * factor, rain, thunder);
         return new Vector4(fog, 1f);
     }
+
+    /// <summary>The SKY_COLOR at the camera for this frame (biome sky colour × day/night × weather).</summary>
+    internal Vector3 CurrentSkyColour()
+    {
+        if (_world is null || _biomes is null)
+        {
+            return new Vector3(0.55f, 0.72f, 0.95f);
+        }
+
+        var eye = _player.Position;
+        return FrameCommand.EffectiveSkyColour(
+            _world, _biomes, (int)MathF.Floor(eye.X), (int)MathF.Floor(eye.Y + 1.6f), (int)MathF.Floor(eye.Z));
+    }
+
+    /// <summary>Provides the biome registry the live session uses for sky/fog colours.</summary>
+    internal void SetBiomes(Sharpcraft.Common.World.BiomeRegistry? biomes) => _biomes = biomes;
 
     /// <summary>Decoded chunks installed per frame; keeps one batch from stalling the frame.</summary>
     private const int ParsedChunksPerFrame = 8;

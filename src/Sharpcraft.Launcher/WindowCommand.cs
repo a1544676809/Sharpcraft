@@ -279,6 +279,15 @@ internal static class WindowCommand
 
         var session = InteractiveSession.Create(world, request, live, workerPool, language, chatTypes);
 
+        // Sky/fog use SKY_COLOR (biome sky colour x day/night x weather), so the live session needs the biome registry.
+        if (live?.Registries is { } biomeRegistries && Sharpcraft.Common.World.BiomeRegistry.From(biomeRegistries) is { } sessionBiomes)
+        {
+            session.SetBiomes(sessionBiomes);
+        }
+
+        // The gradient sky is static day blue; use a flat SKY_COLOR clear colour instead (vanilla sky is SKY_COLOR).
+        request = request with { SkipGradientSky = true };
+
         // A reload rebuilds the stack and then tells the listeners, in order. Language first: everything that shows text
         // reads it, so it must be in place before anything else rebuilds.
         resources.AddListener("language", 10, manager => session.Language = FrameCommand.PrepareLanguage(manager));
@@ -543,6 +552,7 @@ internal static class WindowCommand
             diagnostics: Sharpcraft.Launcher.Diagnostics.HostDebugOptions.ForFrame(),
             lightmapPerFrame: () => session.CurrentLightmap(),
             fogPerFrame: () => session.CurrentFogColour(),
+            clearColourPerFrame: () => new System.Numerics.Vector4(session.CurrentSkyColour(), 1f),
             uiGeometry: frame =>
             {
                 // Mesh work is ordered by distance, so the pool needs to know where the player is each frame.

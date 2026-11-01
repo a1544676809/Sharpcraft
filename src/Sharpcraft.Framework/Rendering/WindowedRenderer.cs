@@ -53,7 +53,8 @@ public static class WindowedRenderer
         Func<int>? geometryEpoch = null,
     FrameDiagnostics? diagnostics = null,
     Func<LightmapUniform>? lightmapPerFrame = null,
-    Func<Vector4>? fogPerFrame = null)
+    Func<Vector4>? fogPerFrame = null,
+    Func<Vector4>? clearColourPerFrame = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -1009,6 +1010,7 @@ public static class WindowedRenderer
 
                 gpuCulled = true;
             }
+            var frameColour = clearColourPerFrame?.Invoke() ?? colour;
             var pass = encoder.BeginRenderPass(
             [
                 new ColorAttachment
@@ -1016,14 +1018,18 @@ public static class WindowedRenderer
                     View = view,
                     LoadOp = WGPULoadOp.Clear,
                     StoreOp = WGPUStoreOp.Store,
-                    ClearValue = new WGPUColor { r = colour.X, g = colour.Y, b = colour.Z, a = colour.W }
+                    ClearValue = new WGPUColor { r = frameColour.X, g = frameColour.Y, b = frameColour.Z, a = frameColour.W }
                 }
             ],
             DepthStencilAttachment.DepthClear(depthView));
 
-            // Sky first, over the cleared target; world geometry then draws on top of it.
-            pass.SetPipeline(skyPipeline);
-            pass.Draw(3);
+            // Sky first, over the cleared target; world geometry then draws on top of it. When the caller supplies a flat
+            // SKY_COLOR through the clear colour, the gradient sky is skipped.
+            if (!currentRequest.SkipGradientSky)
+            {
+                pass.SetPipeline(skyPipeline);
+                pass.Draw(3);
+            }
 
             pass.SetPipeline(pipeline);
             // Rewriting 64 bytes is the whole cost of moving the camera; the staging buffers are reused.

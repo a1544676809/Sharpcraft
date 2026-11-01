@@ -1115,6 +1115,15 @@ internal static class FrameCommand
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
         Console.WriteLine($"layers: translucent triangles {(request.TranslucentIndices?.Length ?? 0) / 3}, layout {(layout is null ? "null" : "set")}, water->{(layout is null ? "-" : layout.BlockAt(1)?.ToString() ?? "none")}");
 
+        // Sky background and fog use SKY_COLOR (biome sky colour x day/night x weather), like the reference, instead of the
+        // static gradient. Clear the target to it and skip the gradient pass.
+        if (biomes is not null)
+        {
+            var eye = request.CameraPosition;
+            var sky = EffectiveSkyColour(world, biomes, (int)MathF.Floor(eye.X), (int)MathF.Floor(eye.Y), (int)MathF.Floor(eye.Z));
+            request = request with { SkipGradientSky = true, ClearColour = new Vector4(sky, 1f), FogColour = new Vector4(sky, 1f) };
+        }
+
         // Celestial bodies (the sun for now): drawn into the sky backdrop for the current day time.
         request = AttachCelestial(request, world, tintResources);
 
@@ -1454,6 +1463,20 @@ internal static class FrameCommand
         var thunder = EffectiveThunderLevel(world, partialTick);
         var fog = Sharpcraft.Common.World.WeatherBlend.ApplyFog(new Vector3(0.75f, 0.85f, 1.0f) * factor, rain, thunder);
         return new Vector4(fog, 1f);
+    }
+
+    /// <summary>
+    /// The SKY_COLOR at a world position: the biome's calculateSkyColor blended over neighbours, multiplied by the
+    /// day/night SKY_COLOR timeline and darkened by weather (docs/modules/weather-and-sky-color.md 6.2).
+    /// </summary>
+    internal static Vector3 EffectiveSkyColour(ClientWorld world, Sharpcraft.Common.World.BiomeRegistry biomes, int x, int y, int z)
+    {
+        var baseSky = Sharpcraft.Common.World.SkyColourSource.ColorAt(world.GetBiomeAt, biomes, x, y, z);
+        var partialTick = EffectiveDayTimePartial(world);
+        var multiplier = Sharpcraft.Common.World.SkyAttributeTracks.SkyColorMultiplierAt(EffectiveDayTime(world), partialTick);
+        var rain = EffectiveRainLevel(world, partialTick);
+        var thunder = EffectiveThunderLevel(world, partialTick);
+        return Sharpcraft.Common.World.WeatherBlend.ApplySkyColour(baseSky * multiplier, rain, thunder);
     }
 
     /// <summary>Maps the client lightmap parameters to the framework uniform the terrain shader reads.</summary>

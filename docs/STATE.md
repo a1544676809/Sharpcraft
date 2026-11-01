@@ -2022,4 +2022,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 诊断（`MC_DIAG` 打实际 Lightmap uniform）：夜 `skyCol=(0.195,0.195,1.000)`，而原版 `#7a7aff` 应为 `(0.478,0.478,1.0)`。根因：`SkyTimelines.NightSky = SrgbToLinear(122)` 误做 gamma 解码（0.195）；`SUNRISE_SUNSET_COLOR` 的 R/G/B 同样误线性化。
 - 修复：改回原样 `v/255`（对齐 `ARGB.vector3fFromARGB32`），删除 `SrgbToLinear`。实机确认 `skyCol=(0.478,0.478,1.000)`。
 - `SkyTimelinesTests` 更新为 `122/255`。全量 **1256 通过**、门禁 ok。
-- **仍待**：天空渐变静态（`sky.wgsl` 无 uniform）；且雾基色当前用 `base×(fog因子)` 近似，原版是 `FOG_COLOR(默认黑) 与 SKY_COLOR 混合`，后续按原版统一到 SKY_COLOR。
+- **仍待**：天空渐变静态（`sky.wgsl` 无 uniform）；且雾基色当前用 `base×(fog因子)` 近似，原版是 `FOG_COLOR(默认黑) 与 SKY_COLOR 混合`，后续按原版统一到 SKY_COLOR。## 2026-11-01 天空/雾改由 SKY_COLOR 驱动（T-292）
+- 原版：天空= `SKY_COLOR`（群系 `calculateSkyColor` × 昼夜乘子 × 天气）；雾基色=`FOG_COLOR`(默认黑) 与 `SKY_COLOR` 混合（`AtmosphericFogEnvironment.getBaseColor`）。
+- 实现 `FrameCommand.EffectiveSkyColour`（`SkyColourSource` 空间混合 × `SkyColorMultiplierAt` × `WeatherBlend.ApplySkyColour`）。
+- 窗口：`SkipGradientSky=true` + `clearColourPerFrame`=天空色；`fogPerFrame`=`CurrentFogColour`（有 biomes 时用天空色）；`InteractiveSession.SetBiomes/CurrentSkyColour`。离屏 `RenderWorld` 同（设置 ClearColour/FogColour/SkipGradientSky）。
+- 窗口 diag：`skyCol=(0.478,0.478,1.000)`、`day` 正常。全量 **1256 通过**、门禁 ok。
+- **注意**：离屏单帧 `frame` 预热的 deferred 偶尔未包含进服 full-sync（该次 day=0）；窗口路径正常。后续可把 full-sync 在更早阶段接入以修正离屏。
