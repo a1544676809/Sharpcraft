@@ -400,7 +400,7 @@ public static class OffscreenRenderer
     /// Position-colour pipeline: vertex colour times the per-draw tint, with the given reference blend mode. Sunrise uses
     /// Translucent; stars use Overlay (both match the reference pipelines' ColorTargetState).
     /// </summary>
-    private static RenderPipeline CreatePositionColorPipeline(Device device, ShaderModule shader, PipelineLayout layout, bool overlay, WGPUTextureFormat format = WGPUTextureFormat.RGBA8Unorm, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always)
+    private static RenderPipeline CreatePositionColorPipeline(Device device, ShaderModule shader, PipelineLayout layout, bool overlay, WGPUTextureFormat format = WGPUTextureFormat.RGBA8Unorm, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always, bool opaque = false)
     {
         var blend = overlay
             ? new WGPUBlendState
@@ -424,7 +424,7 @@ public static class OffscreenRenderer
                 {
                     Format = format,
                     WriteMask = ColorWriteMask.All,
-                    Blend = blend
+                    Blend = opaque ? null : blend
                 }
             ],
             layout: layout,
@@ -1340,12 +1340,14 @@ public static class OffscreenRenderer
         private readonly PipelineLayout _pipelineLayout;
         private readonly RenderPipeline _translucentPipeline;
         private readonly RenderPipeline _overlayPipeline;
+        private readonly RenderPipeline _opaquePipeline;
         private Brew.Wgpu.Buffer[] _vertexBuffers = [];
         private Brew.Wgpu.Buffer[] _indexBuffers = [];
         private Brew.Wgpu.Buffer[] _transformBuffers = [];
         private BindGroup[] _bindGroups = [];
         private uint[] _indexCounts = [];
         private bool[] _overlay = [];
+        private bool[] _opaque = [];
         private Matrix4x4[] _baseModels = [];
         private Vector4[] _tints = [];
         private readonly Device _device;
@@ -1378,6 +1380,7 @@ public static class OffscreenRenderer
 
             _translucentPipeline = CreatePositionColorPipeline(device, shader, _pipelineLayout, overlay: false, format, depthCompare);
             _overlayPipeline = CreatePositionColorPipeline(device, shader, _pipelineLayout, overlay: true, format, depthCompare);
+            _opaquePipeline = CreatePositionColorPipeline(device, shader, _pipelineLayout, overlay: false, format, depthCompare, opaque: true);
 
             SetDraws(draws);
         }
@@ -1434,6 +1437,7 @@ public static class OffscreenRenderer
             _bindGroups = new BindGroup[draws.Count];
             _indexCounts = new uint[draws.Count];
             _overlay = new bool[draws.Count];
+            _opaque = new bool[draws.Count];
             _baseModels = new Matrix4x4[draws.Count];
             _tints = new Vector4[draws.Count];
             _vertexCapacity = new long[draws.Count];
@@ -1479,6 +1483,7 @@ public static class OffscreenRenderer
             _tints[index] = draw.Tint;
             _indexCounts[index] = (uint)draw.Indices.Length;
             _overlay[index] = draw.Blend == CelestialColorBlend.Overlay;
+            _opaque[index] = draw.Blend == CelestialColorBlend.Opaque;
 
             // The cloud mesh is cached and only its translation changes per frame; skip the (multi-megabyte) upload
             // unless the caller actually provided new vertex/index arrays.
@@ -1514,7 +1519,7 @@ public static class OffscreenRenderer
 
             for (var index = 0; index < _bindGroups.Length; index++)
             {
-                pass.SetPipeline(_overlay[index] ? _overlayPipeline : _translucentPipeline);
+                pass.SetPipeline(_opaque[index] ? _opaquePipeline : (_overlay[index] ? _overlayPipeline : _translucentPipeline));
                 pass.SetBindGroup(0, _bindGroups[index], []);
                 pass.SetVertexBuffer(0, _vertexBuffers[index]);
                 pass.SetIndexBuffer(_indexBuffers[index], WGPUIndexFormat.Uint32);
@@ -1569,6 +1574,7 @@ public static class OffscreenRenderer
 
             _translucentPipeline.Dispose();
             _overlayPipeline.Dispose();
+            _opaquePipeline.Dispose();
             _pipelineLayout.Dispose();
             _layout.Dispose();
         }

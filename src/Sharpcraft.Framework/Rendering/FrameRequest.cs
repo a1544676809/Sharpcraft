@@ -109,6 +109,9 @@ public sealed record FrameRequest(
     /// </summary>
     /// <remarks>Drawn after the textured bodies, still before world geometry, so terrain covers them.</remarks>
     public CelestialColorDraw[]? CelestialColorDraws { get; init; }
+
+    /// <summary>Opaque sky-disc draws (top/bottom), rendered before the textured celestial bodies.</summary>
+    public CelestialColorDraw[]? SkyDiscDraws { get; init; }
 }
 
 /// <summary>One textured celestial quad (sun or moon) in the sky backdrop.</summary>
@@ -131,7 +134,10 @@ public enum CelestialColorBlend
     Translucent,
 
     /// <summary>Reference stars: OVERLAY = colour SrcAlpha/One, alpha One/Zero (additive onto the sky).</summary>
-    Overlay
+    Overlay,
+
+    /// <summary>Opaque sky-disc geometry: no blending, writes the colour directly.</summary>
+    Opaque
 }
 
 /// <summary>One position-colour celestial draw (sunrise fan or stars).</summary>

@@ -241,6 +241,9 @@ public static class WindowedRenderer
         using var celestialColour = request.CelestialColorDraws is { Length: > 0 } || celestialPerFrame is not null
             ? new OffscreenRenderer.CelestialColorResources(device, request, cameraBuffer, VertexLayout.CameraUniformSize, format)
             : null;
+        using var skyDiscColour = request.SkyDiscDraws is { Length: > 0 }
+            ? new OffscreenRenderer.CelestialColorResources(device, request with { CelestialColorDraws = request.SkyDiscDraws }, cameraBuffer, VertexLayout.CameraUniformSize, format)
+            : null;
         // Clouds change every frame (scroll/camera), so their position-colour draw set is updated per frame.
         using var cloudColour = cloudsPerFrame is null
             ? null
@@ -1081,7 +1084,9 @@ public static class WindowedRenderer
             // model, so translating first would be overwritten and the bodies would stay anchored in the world.
             celestial?.UpdateCamera(celestialDelta);
             celestialColour?.UpdateCamera(celestialDelta);
+            skyDiscColour?.UpdateCamera(celestialDelta);
 
+            skyDiscColour?.Draw(pass);
             celestial?.Draw(pass);
             celestialColour?.Draw(pass);
 

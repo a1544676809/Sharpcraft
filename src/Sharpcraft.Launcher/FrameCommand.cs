@@ -1618,12 +1618,14 @@ internal static class FrameCommand
     internal static FrameRequest AttachCelestial(
         FrameRequest request,
         ClientWorld world,
-        Sharpcraft.Client.Assets.ResourceManager resources)
+        Sharpcraft.Client.Assets.ResourceManager resources,
+        Vector3? skyColour = null)
     {
         var textures = new List<TextureData>();
         var textureIndices = new Dictionary<Sharpcraft.Common.Identifiers.Identifier, int>();
         var draws = new List<CelestialQuadDraw>();
         var colorDraws = new List<CelestialColorDraw>();
+        var skyDiscDraws = new List<CelestialColorDraw>();
         var dayTime = EffectiveDayTime(world);
         var partialTick = EffectiveDayTimePartial(world);
 
@@ -1721,11 +1723,42 @@ internal static class FrameCommand
                 $"sun {sunAngle:F1} deg, moon {moonAngle:F1} deg (phase {moonPhaseIndex}), sunrise a={sunrise.W:F3}, stars {starBrightness:F3}, rain {rainLevel:F2} (sun/moon alpha {rainBrightness:F2})");
         }
 
+        var effectiveSkyColour = skyColour ?? new Vector3(request.ClearColour.X, request.ClearColour.Y, request.ClearColour.Z);
+        var skyTop = Sharpcraft.Client.Render.CelestialGeometry.SkyDisc(16f);
+        var skyVertices = new float[skyTop.Length * 7];
+        for (var i = 0; i < skyTop.Length; i++)
+        {
+            var offset = i * 7;
+            skyVertices[offset] = skyTop[i].X;
+            skyVertices[offset + 1] = skyTop[i].Y;
+            skyVertices[offset + 2] = skyTop[i].Z;
+            skyVertices[offset + 3] = 1f;
+            skyVertices[offset + 4] = 1f;
+            skyVertices[offset + 5] = 1f;
+            skyVertices[offset + 6] = 1f;
+        }
+
+        var skyTriangles = new List<uint>((skyTop.Length - 2) * 3);
+        for (var i = 1; i + 1 < skyTop.Length; i++)
+        {
+            skyTriangles.Add(0);
+            skyTriangles.Add((uint)i);
+            skyTriangles.Add((uint)(i + 1));
+        }
+
+        skyDiscDraws.Add(new CelestialColorDraw(
+            skyVertices,
+            [.. skyTriangles],
+            Matrix4x4.CreateTranslation(request.CameraPosition),
+            new Vector4(effectiveSkyColour, 1f),
+            CelestialColorBlend.Opaque));
+
         return request with
         {
             CelestialTextures = textures.Count > 0 ? [.. textures] : null,
             CelestialDraws = draws.Count > 0 ? [.. draws] : null,
-            CelestialColorDraws = colorDraws.Count > 0 ? [.. colorDraws] : null
+            CelestialColorDraws = colorDraws.Count > 0 ? [.. colorDraws] : null,
+            SkyDiscDraws = skyDiscDraws.Count > 0 ? [.. skyDiscDraws] : null
         };
 
         int AddTexture(Sharpcraft.Common.Identifiers.Identifier identifier)
