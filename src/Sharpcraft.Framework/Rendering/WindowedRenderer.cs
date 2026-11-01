@@ -1309,7 +1309,7 @@ public static class WindowedRenderer
                 boundsPass.SetPipeline(refDepthBoundsPipeline);
                 boundsPass.SetBindGroup(0, bindGroup);
                 DrawReferenceGeometry(boundsPass);
-                if (cloudOit is not null && !cloudDepthTargetsCreated)
+                if (cloudOit is not null)
                 {
                     boundsPass.SetPipeline(cloudDepthBoundsPipeline);
                     boundsPass.SetBindGroup(0, cloudOit.BindGroup);
@@ -1357,7 +1357,7 @@ public static class WindowedRenderer
                 transmittancePass.SetBindGroup(0, bindGroup);
                 transmittancePass.SetBindGroup(1, refTransmittanceBindGroup);
                 DrawReferenceGeometry(transmittancePass);
-                if (cloudOit is not null && !cloudDepthTargetsCreated)
+                if (cloudOit is not null)
                 {
                     transmittancePass.SetPipeline(cloudTransmittancePipeline);
                     transmittancePass.SetBindGroup(0, cloudOit.BindGroup);
@@ -1382,7 +1382,7 @@ public static class WindowedRenderer
                 accumulatePass.SetBindGroup(0, bindGroup);
                 accumulatePass.SetBindGroup(1, refAccumulateBindGroup);
                 DrawReferenceGeometry(accumulatePass);
-                if (cloudOit is not null && !cloudDepthTargetsCreated)
+                if (cloudOit is not null)
                 {
                     accumulatePass.SetPipeline(cloudAccumulatePipeline);
                     accumulatePass.SetBindGroup(0, cloudOit.BindGroup);
@@ -1417,56 +1417,6 @@ public static class WindowedRenderer
             }
             // (The weighted-blended OIT path that used to live here was shelved for its visual quality and is no longer
             // compiled; the reference OIT above is the only transparency path.)
-
-            // Independent cloud OIT: a separate depth (copied after opaque terrain) and separate targets, so clouds do
-            // not share the terrain OIT resolve. MC_CLOUD_DEPTH=1 only; default keeps the shared path above.
-            if (cloudDepthTargetsCreated && cloudOit is not null)
-            {
-                var cloudBoundsPass = encoder.BeginRenderPass(
-                    [new ColorAttachment { View = cloudDepthBoundsView, LoadOp = WGPULoadOp.Clear, StoreOp = WGPUStoreOp.Store, ClearValue = new WGPUColor { r = -65504f, g = -65504f, b = -65504f, a = -65504f } }],
-                    new DepthStencilAttachment { View = cloudDepthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store });
-                cloudBoundsPass.SetPipeline(cloudDepthBoundsPipeline);
-                cloudBoundsPass.SetBindGroup(0, cloudOit.BindGroup);
-                cloudOit.DrawGeometry(cloudBoundsPass);
-                cloudBoundsPass.End();
-
-                var cloudCullPass = encoder.BeginRenderPass(
-                    [new ColorAttachment { View = cloudDepthBoundsCulledView, LoadOp = WGPULoadOp.Clear, StoreOp = WGPUStoreOp.Store, ClearValue = new WGPUColor { r = 0f, g = 0f, b = 0f, a = 0f } }],
-                    new DepthStencilAttachment { View = cloudDepthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store });
-                cloudCullPass.SetPipeline(refCullPipeline);
-                cloudCullPass.SetBindGroup(0, cloudCullBindGroup);
-                cloudCullPass.Draw(3);
-                cloudCullPass.End();
-
-                var cloudTransPass = encoder.BeginRenderPass(
-                    [
-                        new ColorAttachment { View = cloudTransmittance0View, LoadOp = WGPULoadOp.Clear, StoreOp = WGPUStoreOp.Store, ClearValue = new WGPUColor { r = 0f, g = 0f, b = 0f, a = 0f } },
-                        new ColorAttachment { View = cloudTransmittance1View, LoadOp = WGPULoadOp.Clear, StoreOp = WGPUStoreOp.Store, ClearValue = new WGPUColor { r = 0f, g = 0f, b = 0f, a = 0f } }
-                    ],
-                    new DepthStencilAttachment { View = cloudDepthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store });
-                cloudTransPass.SetPipeline(cloudTransmittancePipeline);
-                cloudTransPass.SetBindGroup(0, cloudOit.BindGroup);
-                cloudTransPass.SetBindGroup(1, cloudTransmittanceBindGroup);
-                cloudOit.DrawGeometry(cloudTransPass);
-                cloudTransPass.End();
-
-                var cloudAccumPass = encoder.BeginRenderPass(
-                    [new ColorAttachment { View = cloudAccumulateView, LoadOp = WGPULoadOp.Clear, StoreOp = WGPUStoreOp.Store, ClearValue = new WGPUColor { r = 0f, g = 0f, b = 0f, a = 0f } }],
-                    new DepthStencilAttachment { View = cloudDepthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store });
-                cloudAccumPass.SetPipeline(cloudAccumulatePipeline);
-                cloudAccumPass.SetBindGroup(0, cloudOit.BindGroup);
-                cloudAccumPass.SetBindGroup(1, cloudAccumulateBindGroup);
-                cloudOit.DrawGeometry(cloudAccumPass);
-                cloudAccumPass.End();
-
-                var cloudCompositePass = encoder.BeginRenderPass(
-                    [new ColorAttachment { View = view, LoadOp = WGPULoadOp.Load, StoreOp = WGPUStoreOp.Store }],
-                    new DepthStencilAttachment { View = depthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store });
-                cloudCompositePass.SetPipeline(cloudCompositePipeline);
-                cloudCompositePass.SetBindGroup(0, cloudCompositeBindGroup);
-                cloudCompositePass.Draw(3);
-                cloudCompositePass.End();
-            }
 
             // Clouds come after the opaque and transparent terrain, with depth testing so terrain and the cloud layer
             // occlude each other correctly (the reference draws them in executeClassicTransparency).
