@@ -49,3 +49,24 @@ linear = pow(texel, 2.2);  out = pow(linear * light, 1/2.2)
 ## 5. 待确认
 
 - 光照图 framebuffer 是否 sRGB 存储（若存储即编码，则 `lightmapColour` 需再 `^(1/2.2)`）。当前按原版 `block.fsh` 直接相乘实现；如需精确，可在拿参考帧后用同一机位像素对照定标。
+
+## 6. 逐项对照（原版 vs 本实现，2026-11-01 实读）
+
+| # | 环节 | 原版证据 | 本实现 | 结论 |
+| --- | --- | --- | --- | --- |
+| 1 | 采样纹理 | `block.fsh`: `texture(Sampler0,uv)`；`Lightmap` 纹理 `RGBA8_UNORM` | `terrain.wgsl` `textureSampleGrad`，atlas `RGBA8Unorm` | 一致 |
+| 2 | 顶点色 Color | `block.vsh`: `Color`（tint×面明暗×AO，0..1） | `ChunkMesher.CornerShade`: `red=tint*shadeFactor*occlusion` | 一致（明暗 1/0.5/0.8/0.6、AO 见实现） |
+| 3 | 光照级别 | `lightmap.fsh`: `level=floor(texCoord*16)/15`（16 级量化） | 顶点 `sky/15`、`block/15`（连续）再 `lightmapColour` | 近似一致（≤1/15 量化差） |
+| 4 | 亮度曲线 | `Lightmap.getBrightness`: `lerp(ambientLight, l/(4-3l), 1)` | `brightnessCurve(l)=l/(4-3l)` | 主世界 ambientLight=0 等价；其他维度有差 |
+| 5 | 光照图合成 | `lightmap.fsh` 公式 | `terrain.wgsl::lightmapColour` | 一致（省 nightVision/boss/darkness，默认 0） |
+| 6 | 光照图取值域 | `RGBA8_UNORM` 原始值 | 原始值 + 直接相乘 | 一致 |
+| 7 | 最终合成 | `block.fsh`: `texture*vertexColor*ColorModulator`（**无 gamma**） | `litColour=clamp(texel*light)`（已改） | 一致 |
+| 8 | blockFactor | `LightmapRenderStateExtractor`: `blockLightFlicker+1.4` | `DayOverworld.BlockFactor=1.4` | 近似（省略 ±flicker） |
+| 9 | brightness(gamma) | `Options.gamma` 默认 **0.5** | `BrightnessFactor=0.5` | 一致 |
+| 10 | BlockLightTint | `ARGB.vector3fFromRGB24(-10100)`=`v/255`（`from8BitChannel`，**无 gamma**） | `Srgb24ToLinear(-10100)`（gamma 解码） | **偏差**：块光色偏暗/偏色 |
+| 11 | SkyLightColor / SkyColor / SkyLightFactor 时间曲线 | `data/minecraft/timeline/day.json`: 730/11270/13140/22860=0.24、`#7a7aff`、133/11867/13670/22330 | `SkyAttributeTracks` 同值 | 一致 |
+| 12 | skyFactor 取值 | `LightmapRenderStateExtractor`: `attributeProbe().getValue(SKY_LIGHT_FACTOR, partialTicks)` | `OverworldAt(dayTime, partial)` 前后 tick 插值 | 一致 |
+| 13 | 世界时钟推进 | 原版客户端每 tick 推进世界时钟（时间与 partial 前进） | `ClientWorld.AdvanceClocks()` **未被调用** | **偏差**：时间冻结/昼夜不推进（改时间仅在收到 set_time 时跳变） |
+| 14 | set_time 解析 | `ClientboundSetTimePacket` LONG gameTime + map(WorldClock→ClockNetworkState{VAR_LONG,FLOAT,FLOAT}) | `SetTimePacketCodec` 同结构 | 一致 |
+
+**结论**：核心光照合成已与原版等效；剩余实质偏差为 **#10 BlockLightTint（gamma 误用）** 与 **#13 世界时钟未推进**，前者影响块光色，后者影响昼夜/亮度随时间变化（"整体偏暗、改时间不变"很可能源于 #13 或服务器时间本身）。#3、#8 为可接受近似。
