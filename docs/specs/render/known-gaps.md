@@ -24,7 +24,8 @@ updated: 2026-11-01
 
 | 项 | 现状 | 影响 | 建议 |
 | --- | --- | --- | --- |
-| 天空为纯 `SKY_COLOR` 平色 | 跳过了原版 sky disc 的细微几何/地平线渐变 | 天空缺少地平线亮带/圆盘边界（远看仍接近） | 用 `CelestialGeometry.SkyDisc` + `SKY_COLOR` 绘制天空盘，或按高度做轻微渐变 |
+| 天空盘/地平线渐变 | 尚未绘制原版 sky disc；当前为平色 SKY_COLOR | 缺少地平线亮带/圆盘边界 | 实现半径 512、上盘 y=+16/下盘 y=-16 的天空盘；上盘 SKY_COLOR |
+| 水下天空暗盘 | 水下渲染/水下视效尚未实现 | 无法验证 `shouldRenderDarkDisc` 与水下天空/雾 | **延后**到水下渲染切片，暂不实现 |
 | 雾基色近似 | 目前雾色= `SKY_COLOR`（近似）；原版是 `FOG_COLOR`(默认黑) 与 `SKY_COLOR` 按 `skyFogEnd` 混合，含日出日落 lerp、雨雾 | 特定角度/天气下雾色偏差 | 按 `AtmosphericFogEnvironment.getBaseColor` 完整实现 |
 | 夜间亮度 | 已修正色彩空间/原样通道，仍与参考观感"差一点" | 夜间略暗/对比不同 | 用同机位参考帧定标 gamma/ambient；必要时调 `BrightnessFactor` |
 

@@ -80,3 +80,9 @@ updated: 2026-11-01
 4. **cloud composite**：新增 cloud 版 `oit_composite` pipeline/bind group，读取 cloud depth bounds/coeff/accum，在 terrain composite **之后**、正常云 pass 之前合成；`MC_CLOUD_DEPTH=1` 开启，默认 0（沿用当前共享目标路径，避免观感回退）。
 5. **像素对照**：固定机位/时间/视距，`MC_CLOUD_DEPTH=0/1` 各出一帧，记录差异（云与水面交叠、云边缘、深度排序）；无法自动取窗口像素时由用户截图记录。
 6. **验收**：默认路径不变；开关开启时无 GPU 校验错误；像素差异报告写入 `benchmarks/` 或 STATE；全量测试通过。
+
+### 天空盘切片（水下部分延后）
+
+- 实现原版上/下天空盘：半径 512、10 顶点三角扇，上盘 `y=+16` 用 `SKY_COLOR`，下盘 `y=-16` 用黑；窗口与离屏共用。
+- **延后**：水下天空/暗盘（`shouldRenderDarkDisc`）依赖尚未实现的水下渲染/水下雾，待水下切片完成后再做，不在本切片实现或宣称等效。
+
