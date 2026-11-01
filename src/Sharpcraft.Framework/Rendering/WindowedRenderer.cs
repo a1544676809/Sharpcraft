@@ -57,7 +57,7 @@ public static class WindowedRenderer
     Func<Vector4>? fogPerFrame = null,
     Func<Vector4>? clearColourPerFrame = null,
     Func<CelestialColorDraw?>? cloudsPerFrame = null,
-    Func<(CelestialQuadDraw[] Draws, CelestialColorDraw[] Colors)?>? celestialPerFrame = null,
+    Func<(CelestialQuadDraw[] Draws, CelestialColorDraw[] Colors, CelestialColorDraw[] SkyDiscs)?>? celestialPerFrame = null,
     bool cloudOitEnabled = false,
     bool oitLowPrecision = false,
     bool cloudDepthEnabled = false)
@@ -1078,6 +1078,7 @@ public static class WindowedRenderer
             {
                 celestial?.SetDraws(celestialUpdate.Draws);
                 celestialColour?.SetDraws(celestialUpdate.Colors);
+                skyDiscColour?.SetDraws(celestialUpdate.SkyDiscs);
             }
 
             // Apply the camera delta AFTER any per-frame draw rebuild: a freshly built draw uses the base (initial) camera

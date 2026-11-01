@@ -621,7 +621,7 @@ internal static class WindowCommand
                     celestialCacheKey = key;
                 }
 
-                return (celestialCached.CelestialDraws ?? [], celestialCached.CelestialColorDraws ?? []);
+                return (celestialCached.CelestialDraws ?? [], celestialCached.CelestialColorDraws ?? [], celestialCached.SkyDiscDraws ?? []);
             },
             geometryRemovals: () => removedChunks,
             uiGeometry: frame =>            {
