@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 Sharpcraft contributors -->
 
-状态：[待评审]
+状态：[已评审]（所有者 2026-11-01 评审通过）
 基线：Minecraft 26.3
 证据：ref://mc-26.3-analysis/src/net/minecraft/{world/attribute/WeatherAttributes.java, world/attribute/EnvironmentAttributeProbe.java, world/attribute/modifier/{FloatModifier,ColorModifier,FloatWithAlpha}.java, data/worldgen/biome/OverworldBiomes.java, world/level/biome/Biome.java, world/level/{GrassColor,FoliageColor,DryFoliageColor,ColorMapColorUtil}.java, client/renderer/{BiomeColors,ClientLevel}.java, network/protocol/game/ClientboundGameEventPacket.java}
 最后更新：2026-11-01

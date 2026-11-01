@@ -1933,4 +1933,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **未接渲染（受控偏差）**：`SKY_COLOR` = 生物群系温度色 × `MULTIPLY_RGB` 关键帧 × 天气灰度（`OverworldBiomes.calculateSkyColor`、`WeatherAttributes`、`Timelines.NIGHT_SKY_COLOR_MULTIPLIER`），依赖群系+天气 → 暂不用盘替换全屏渐变。`RAIN_BRIGHTNESS` 同样阻塞于天气。
 - 全量 **1200 通过**、门禁 ok。模块 A 收口：日月星/日出/日夜光照/sub-tick 均完成并验证；天空盘/暗盘仅几何/判定就绪、盘颜色与 `RAIN_BRIGHTNESS` 阻塞于「生物群系+天气」。## 2026-11-01 天气/群系天空色：模块设计文档（[待评审]，未编码）
 - 新增 `docs/modules/weather-and-sky-color.md`（状态 [待评审]）：实读原版——**方块调色**（`GrassColor/FoliageColor/DryFoliageColor` colormap 索引 `y<<8|x`、`grassColorModifier` NONE/DARK_FOREST/SWAMP、`calculateBlockTint` 按 `biomeBlendRadius`(默认2) 逐通道整数平均、per-biome `waterColor`）+ **天空色** `calculateSkyColor`(HSV) 与 gaussian 空间混合(kernel 0,1,4,6,4,1,0)、时间轴 `MULTIPLY`、`WeatherAttributes.RAIN/THUNDER` 按 `(rain-thunder)/thunder` 权重重叠、`ClientboundGameEventPacket`(type byte+float；RAIN_LEVEL_CHANGE=7/THUNDER=8) 同步、`RAIN_BRIGHTNESS=1-rain`。含 §9 纯逻辑等效测试、§10 分期、§7 风险；并登记现有 `BiomeTint/BlockTintTable` 为全局近似、需升级为逐生物群系。
-- **未编码**：按 AGENTS 3.5 先文档、待所有者评审（[待评审]→[已评审]）后再实施。硬前置=chunk biome 数据与 biome registry 温度（客户端未解析）。
+- **未编码**：按 AGENTS 3.5 先文档、待所有者评审（[待评审]→[已评审]）后再实施。硬前置=chunk biome 数据与 biome registry 温度（客户端未解析）。## 2026-11-01 天气/群系色 P1 纯逻辑（第一步，文档已[已评审]）
+- 模块文档转 **[已评审]**（所有者 2026-11-01 通过）。按 §10 分步实施，P1 纯逻辑（Common，无数据/资产）。
+- **P1.1** `Common/World/ColorMapColorUtil.Get`：colormap 索引 `rain=downfall*temp; x=(1-temp)*255; y=(1-rain)*255; index=y<<8|x`，越界返回 default（复刻 `ColorMapColorUtil.java`）。
+- **P1.2** `Common/World/SkyColour.FromTemperature`：`t=clamp(temp/3,-1,1)`，HSV `(0.62222224-0.05t,0.5+0.1t,1.0)` → opaque ARGB（复刻 `calculateSkyColor`+`Mth.hsvToArgb`）。
+- 单测 6（`ColorMapColorUtilTests` 3、`SkyColourTests` 3，均手算）。全量 **1206 通过**（一次 Client 偶发抖动已复跑绿）、门禁/架构 ok。
+- **下一步** P1.3：读 `ARGB.{greyscale,scaleRGB,srgbLerp,alphaBlend}` 实现 `BlendToGray`/`AlphaBlend` 与天气权重叠加（RAIN/THUNDER）；P1.4 `CalculateBlockTint`(+blendRadius)、gaussian 权重、`RainBrightness`。
