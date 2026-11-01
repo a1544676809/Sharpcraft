@@ -542,6 +542,7 @@ internal static class WindowCommand
             geometryEpoch: () => geometryEpoch,
             diagnostics: Sharpcraft.Launcher.Diagnostics.HostDebugOptions.ForFrame(),
             lightmapPerFrame: () => session.CurrentLightmap(),
+            fogPerFrame: () => session.CurrentFogColour(),
             uiGeometry: frame =>
             {
                 // Mesh work is ordered by distance, so the pool needs to know where the player is each frame.

@@ -1022,6 +1022,7 @@ internal static class FrameCommand
         {
         Diagnostics = Sharpcraft.Launcher.Diagnostics.HostDebugOptions.ForFrame(),
             Lightmap = ToLightmapUniform(lighting),
+            FogColour = EffectiveFogColour(world),
             Atlas = atlas,
             DrawRanges = drawRanges,
             TranslucentVertices = translucentVertices,
@@ -1442,6 +1443,17 @@ internal static class FrameCommand
             SkyFactor = Sharpcraft.Common.World.WeatherBlend.SkyLightFactor(parameters.SkyFactor, rain, thunder),
             SkyLightColor = Sharpcraft.Common.World.WeatherBlend.ApplySkyLightColor(parameters.SkyLightColor, rain, thunder)
         };
+    }
+
+    /// <summary>Fog colour for the current day time and weather (base overworld fog × FOG_COLOR timeline × weather).</summary>
+    internal static Vector4 EffectiveFogColour(ClientWorld world)
+    {
+        var partialTick = EffectiveDayTimePartial(world);
+        var factor = Sharpcraft.Common.World.SkyAttributeTracks.FogColorFactorAt(EffectiveDayTime(world), partialTick);
+        var rain = EffectiveRainLevel(world, partialTick);
+        var thunder = EffectiveThunderLevel(world, partialTick);
+        var fog = Sharpcraft.Common.World.WeatherBlend.ApplyFog(new Vector3(0.75f, 0.85f, 1.0f) * factor, rain, thunder);
+        return new Vector4(fog, 1f);
     }
 
     /// <summary>Maps the client lightmap parameters to the framework uniform the terrain shader reads.</summary>

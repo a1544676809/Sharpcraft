@@ -598,10 +598,10 @@ public static class OffscreenRenderer
             // Fog: colour plus start and end distance in blocks.
             var fogBytes = new byte[32];
             var fogValues = new float[8];
-            fogValues[0] = 0.75f;
-            fogValues[1] = 0.85f;
-            fogValues[2] = 1.0f;
-            fogValues[3] = 1.0f;
+            fogValues[0] = request.FogColour.X;
+            fogValues[1] = request.FogColour.Y;
+            fogValues[2] = request.FogColour.Z;
+            fogValues[3] = request.FogColour.W;
             fogValues[4] = request.Diagnostics?.FogStart ?? 64f;
             fogValues[5] = request.Diagnostics?.FogEnd ?? 160f;
             System.Runtime.InteropServices.MemoryMarshal.AsBytes(fogValues.AsSpan()).CopyTo(fogBytes);

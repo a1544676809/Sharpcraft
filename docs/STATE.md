@@ -2013,4 +2013,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 光照等效项：#8 已实现、#10 已修、#13 已修；**仅剩 #3**（平滑光照算法近似，缺 `smoothBlend/smoothWeightedBlend` 的 3邻+center 特判与 AO 双线性权重）。## 2026-11-01 修复 #3 完整方块面平滑光照（smoothBlend）
 - 实读 `BlockModelLighter.prepareQuadAmbientOcclusion`：完整方块面走 **else 分支**，每顶点=`LightCoordsUtil.smoothBlend(3邻+center)`（无 `smoothWeightedBlend`，那只在 partial 非立方模型）。
 - 新增 `Client/Render/SmoothLighting.Blend`：`sky>2||block>2` 时 `neighbor==0→center`、`sky==0→继承 center sky`，再 `(sum)>>2`；`ChunkMesher.CornerShade` 用其替换简单 4 格整数平均（center=index0）。
-- `SmoothLightingTests`(4)。全量 **1255 通过**、门禁 ok。光照对照表全部 ✅（#3/#8/#10/#13 + litColour/时钟/预热丢包）。
+- `SmoothLightingTests`(4)。全量 **1255 通过**、门禁 ok。光照对照表全部 ✅（#3/#8/#10/#13 + litColour/时钟/预热丢包）。## 2026-11-01 修复：雾色随时间/天气（夜间不再套白昼蓝）
+- 症状：夜里冰面/水面/普通方块偏蓝——雾色此前是**静态白昼蓝**(0.75,0.85,1.0)。
+- 原版 `visual/fog_color` 为 multiply 曲线：133/11867 `#ffffff` → 13670/22330 `#0f0f16`。加 `SkyAttributeTracks.FogColorFactorAt(dayTime[,partial])`。
+- `FrameRequest.FogColour`（默认白昼雾）；`OffscreenRenderer`/`WindowedRenderer` 使用；窗口新增 `fogPerFrame` 每帧重写雾 uniform；`FrameCommand.EffectiveFogColour` 与 `InteractiveSession.CurrentFogColour` = base×(晨昏因子)×weather（`WeatherBlend.ApplyFog`）。
+- `SkyTimelinesTests.FogColorFactorIsWhiteByDayDarkAtNight`。全量 **1256 通过**、门禁 ok。
+- **仍待**：**天空渐变仍静态**（`sky.wgsl` 硬编码 horizon/zenith，无 uniform）→ 夜天偏蓝的另一半；需给 sky pipeline 加 tint uniform 并按 `SKY_COLOR` 时间曲线×weather 每帧更新。

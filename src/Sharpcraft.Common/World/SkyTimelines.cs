@@ -293,6 +293,32 @@ public static class SkyAttributeTracks
         var value = previous + ((current - previous) * t);
         return new Vector3(value, value, value);
     }
+
+    // FOG_COLOR timeline MULTIPLY track (day.json visual/fog_color): white at 133/11867 -> #0f0f16 at 13670/22330.
+    private static readonly FloatKeyframeTrack FogColorFactorR = FloatKeyframeTrack.Build(
+        [new FloatKeyframe(133, 1f), new FloatKeyframe(11867, 1f), new FloatKeyframe(13670, 15f / 255f), new FloatKeyframe(22330, 15f / 255f)],
+        static x => x, Period);
+
+    private static readonly FloatKeyframeTrack FogColorFactorB = FloatKeyframeTrack.Build(
+        [new FloatKeyframe(133, 1f), new FloatKeyframe(11867, 1f), new FloatKeyframe(13670, 22f / 255f), new FloatKeyframe(22330, 22f / 255f)],
+        static x => x, Period);
+
+    /// <summary>FOG_COLOR multiplier at a day time (white by day, the dark night colour otherwise).</summary>
+    public static Vector3 FogColorFactorAt(int dayTimeTicks) =>
+        new(FogColorFactorR.Sample(dayTimeTicks), FogColorFactorR.Sample(dayTimeTicks), FogColorFactorB.Sample(dayTimeTicks));
+
+    /// <summary>FOG_COLOR multiplier at a sub-tick fraction (linear between the previous and current tick).</summary>
+    public static Vector3 FogColorFactorAt(int dayTimeTicks, float partialTick)
+    {
+        var t = Math.Clamp(partialTick, 0f, 1f);
+        var redPrevious = FogColorFactorR.Sample(dayTimeTicks - 1);
+        var redCurrent = FogColorFactorR.Sample(dayTimeTicks);
+        var bluePrevious = FogColorFactorB.Sample(dayTimeTicks - 1);
+        var blueCurrent = FogColorFactorB.Sample(dayTimeTicks);
+        var red = redPrevious + ((redCurrent - redPrevious) * t);
+        var blue = bluePrevious + ((blueCurrent - bluePrevious) * t);
+        return new Vector3(red, red, blue);
+    }
 }
 
 /// <summary>Overworld day environment tracks from Timelines.java: sun/moon/star angles (degrees).</summary>

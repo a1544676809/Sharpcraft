@@ -40,6 +40,12 @@ public sealed record FrameRequest(
     public LightmapUniform Lightmap { get; init; } = LightmapUniform.Day;
 
     /// <summary>
+    /// Fog colour (RGB 0..1) for this frame. The reference multiplies a base fog colour by the time/weather fog
+    /// timeline; the host recomputes this per frame (docs/modules/weather-and-sky-color.md 6.3).
+    /// </summary>
+    public Vector4 FogColour { get; init; } = new(0.75f, 0.85f, 1.0f, 1f);
+
+    /// <summary>
     /// Atlas sampled by the shader, or null for a colour-only frame. UVs stay relative to the sprite
     /// rect so a greedy quad can tile its texture inside one atlas cell.
     /// </summary>

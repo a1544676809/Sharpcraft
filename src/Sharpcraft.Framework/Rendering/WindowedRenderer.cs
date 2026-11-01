@@ -52,7 +52,8 @@ public static class WindowedRenderer
         AtlasTextureSource? atlasSource = null,
         Func<int>? geometryEpoch = null,
     FrameDiagnostics? diagnostics = null,
-    Func<LightmapUniform>? lightmapPerFrame = null)
+    Func<LightmapUniform>? lightmapPerFrame = null,
+    Func<Vector4>? fogPerFrame = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -186,10 +187,10 @@ public static class WindowedRenderer
         // Fog: colour plus start and end distance in blocks, shared by the terrain shader.
         var fogBytes = new byte[32];
         var fogValues = new float[8];
-        fogValues[0] = 0.75f;
-        fogValues[1] = 0.85f;
-        fogValues[2] = 1.0f;
-        fogValues[3] = 1.0f;
+        fogValues[0] = request.FogColour.X;
+        fogValues[1] = request.FogColour.Y;
+        fogValues[2] = request.FogColour.Z;
+        fogValues[3] = request.FogColour.W;
         fogValues[4] = diagnostics?.FogStart ?? 64f;
         fogValues[5] = diagnostics?.FogEnd ?? 160f;
         System.Runtime.InteropServices.MemoryMarshal.AsBytes(fogValues.AsSpan()).CopyTo(fogBytes);
@@ -1050,6 +1051,19 @@ public static class WindowedRenderer
             var frameLightmapBytes = new byte[Shaders.ShaderBindings.LightmapBytes];
             LightmapUniformCodec.Write(lightmapPerFrame?.Invoke() ?? currentRequest.Lightmap, frameLightmapBytes);
             device.Queue.WriteBuffer(lightmapBuffer, 0, frameLightmapBytes.AsSpan());
+
+            // Per-frame fog colour (time/weather driven); the range stays as configured.
+            var frameFogColour = fogPerFrame?.Invoke() ?? currentRequest.FogColour;
+            var frameFogValues = new float[8];
+            frameFogValues[0] = frameFogColour.X;
+            frameFogValues[1] = frameFogColour.Y;
+            frameFogValues[2] = frameFogColour.Z;
+            frameFogValues[3] = frameFogColour.W;
+            frameFogValues[4] = currentRequest.Diagnostics?.FogStart ?? 64f;
+            frameFogValues[5] = currentRequest.Diagnostics?.FogEnd ?? 160f;
+            var frameFogBytes = new byte[Shaders.ShaderBindings.FogBytes];
+            System.Runtime.InteropServices.MemoryMarshal.AsBytes(frameFogValues.AsSpan()).CopyTo(frameFogBytes);
+            device.Queue.WriteBuffer(fogBuffer, 0, frameFogBytes.AsSpan());
 
             pass.SetBindGroup(0, bindGroup);
 

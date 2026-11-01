@@ -139,4 +139,17 @@ public sealed class SkyTimelinesTests
         var mid = SkyAttributeTracks.SkyColorMultiplierAt(13670, 0.5f).X;
         Assert.InRange(mid, 0f, 1f);
     }
+
+    [Fact]
+    public void FogColorFactorIsWhiteByDayDarkAtNight()
+    {
+        var day = SkyAttributeTracks.FogColorFactorAt(6000);
+        Assert.Equal(1f, day.X, 4);
+        Assert.Equal(1f, day.Z, 4);
+
+        var night = SkyAttributeTracks.FogColorFactorAt(18000);
+        Assert.Equal(0x0F / 255f, night.X, 4);
+        Assert.Equal(0x0F / 255f, night.Y, 4);
+        Assert.Equal(0x16 / 255f, night.Z, 4);
+    }
 }

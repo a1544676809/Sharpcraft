@@ -106,6 +106,26 @@ internal sealed class InteractiveSession
         return FrameCommand.ToLightmapUniform(parameters);
     }
 
+    /// <summary>
+    /// The fog colour for the current frame: the base overworld fog multiplied by the FOG_COLOR timeline and weather, so
+    /// distant terrain and water darken at night instead of staying day-blue (docs/modules/weather-and-sky-color.md 6.3).
+    /// </summary>
+    internal Vector4 CurrentFogColour()
+    {
+        var baseFog = new Vector3(0.75f, 0.85f, 1.0f);
+        if (_world is null)
+        {
+            return new Vector4(baseFog, 1f);
+        }
+
+        var partialTick = FrameCommand.EffectiveDayTimePartial(_world);
+        var factor = Sharpcraft.Common.World.SkyAttributeTracks.FogColorFactorAt(FrameCommand.EffectiveDayTime(_world), partialTick);
+        var rain = FrameCommand.EffectiveRainLevel(_world, partialTick);
+        var thunder = FrameCommand.EffectiveThunderLevel(_world, partialTick);
+        var fog = Sharpcraft.Common.World.WeatherBlend.ApplyFog(baseFog * factor, rain, thunder);
+        return new Vector4(fog, 1f);
+    }
+
     /// <summary>Decoded chunks installed per frame; keeps one batch from stalling the frame.</summary>
     private const int ParsedChunksPerFrame = 8;
     private int _jumpPressed;
