@@ -470,6 +470,7 @@ public static class WindowedRenderer
         TextureView cloudTransmittance1View = default;
         Texture cloudAccumulateTexture = default;
         TextureView cloudAccumulateView = default;
+        BindGroup cloudCullBindGroup = default;
         BindGroup cloudTransmittanceBindGroup = default;
         BindGroup cloudAccumulateBindGroup = default;
         BindGroup cloudCompositeBindGroup = default;
@@ -508,6 +509,7 @@ public static class WindowedRenderer
                     cloudTransmittance1Texture.Dispose();
                     cloudAccumulateView.Dispose();
                     cloudAccumulateTexture.Dispose();
+                    cloudCullBindGroup.Dispose();
                     cloudTransmittanceBindGroup.Dispose();
                     cloudAccumulateBindGroup.Dispose();
                     cloudCompositeBindGroup.Dispose();
@@ -557,13 +559,16 @@ public static class WindowedRenderer
                 cloudTransmittance1View = cloudTransmittance1Texture.CreateView();
                 cloudAccumulateTexture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
                 cloudAccumulateView = cloudAccumulateTexture.CreateView();
+                cloudCullBindGroup = device.CreateBindGroup(
+                    refCullLayout,
+                    [BindGroupEntry.TextureView(0, cloudDepthBoundsView)]);
                 cloudTransmittanceBindGroup = device.CreateBindGroup(
                     refTransmittanceLayout,
-                    [BindGroupEntry.TextureView(0, cloudDepthBoundsView)]);
+                    [BindGroupEntry.TextureView(0, cloudDepthBoundsCulledView)]);
                 cloudAccumulateBindGroup = device.CreateBindGroup(
                     refAccumulateLayout,
                     [
-                        BindGroupEntry.TextureView(0, cloudDepthBoundsView),
+                        BindGroupEntry.TextureView(0, cloudDepthBoundsCulledView),
                         BindGroupEntry.TextureView(1, cloudTransmittance0View),
                         BindGroupEntry.TextureView(2, cloudTransmittance1View)
                     ]);
@@ -573,7 +578,7 @@ public static class WindowedRenderer
                         BindGroupEntry.TextureView(0, cloudAccumulateView),
                         BindGroupEntry.TextureView(1, cloudTransmittance0View),
                         BindGroupEntry.TextureView(2, cloudTransmittance1View),
-                        BindGroupEntry.TextureView(3, cloudDepthBoundsView)
+                        BindGroupEntry.TextureView(3, cloudDepthBoundsCulledView)
                     ]);
                 cloudDepthTargetsCreated = true;
             }
@@ -1423,6 +1428,14 @@ public static class WindowedRenderer
                 cloudBoundsPass.SetBindGroup(0, cloudOit.BindGroup);
                 cloudOit.DrawGeometry(cloudBoundsPass);
                 cloudBoundsPass.End();
+
+                var cloudCullPass = encoder.BeginRenderPass(
+                    [new ColorAttachment { View = cloudDepthBoundsCulledView, LoadOp = WGPULoadOp.Clear, StoreOp = WGPUStoreOp.Store, ClearValue = new WGPUColor { r = 0f, g = 0f, b = 0f, a = 0f } }],
+                    new DepthStencilAttachment { View = cloudDepthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store });
+                cloudCullPass.SetPipeline(refCullPipeline);
+                cloudCullPass.SetBindGroup(0, cloudCullBindGroup);
+                cloudCullPass.Draw(3);
+                cloudCullPass.End();
 
                 var cloudTransPass = encoder.BeginRenderPass(
                     [

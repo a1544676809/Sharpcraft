@@ -2113,3 +2113,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-01 阶段3余项完成：`MC_OIT_LOW_PRECISION=1` OIT 目标降为 RGBA8Unorm（默认 16F）。
 - 2026-11-01 阶段4对照流程已登记 `benchmarks/render/cloud-oit-compare.md`；独立 cloud depth 实现仍待下一提交。
 - 2026-11-01 阶段4实现：`MC_CLOUD_DEPTH=1` 独立 cloud depth + 专用 OIT targets/三阶段/composite；默认 0。
+- 2026-11-01 阶段4修复：补 cloud depth-bounds cull pass，修复云不透明白块。
