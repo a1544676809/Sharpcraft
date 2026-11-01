@@ -697,9 +697,11 @@ public static class OffscreenRenderer
             ],
             DepthStencilAttachment.DepthClear(depthView));
 
-            // Sky first: it fills the cleared target, then the world draws over it.
-            using (var skyPipeline = CreateSkyPipeline(device, WGPUTextureFormat.RGBA8Unorm))
+            // Sky first: it fills the cleared target, then the world draws over it. Skipped when the caller supplies a sky
+            // disc backdrop instead (SkipGradientSky).
+            if (!request.SkipGradientSky)
             {
+                using var skyPipeline = CreateSkyPipeline(device, WGPUTextureFormat.RGBA8Unorm);
                 pass.SetPipeline(skyPipeline);
                 pass.Draw(3);
             }

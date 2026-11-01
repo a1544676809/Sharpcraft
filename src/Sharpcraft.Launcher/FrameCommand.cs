@@ -1059,6 +1059,17 @@ internal static class FrameCommand
         // Celestial bodies (the sun for now): drawn into the sky backdrop for the current day time.
         request = AttachCelestial(request, world, tintResources);
 
+        // Opt-in sky disc: replace the gradient backdrop with the SKY_COLOR disc (docs/modules/weather-and-sky-color.md 6.2).
+        if (Environment.GetEnvironmentVariable("MC_SKY_DISC") == "1" && biomes is not null)
+        {
+            var eye = request.CameraPosition;
+            var baseSky = Sharpcraft.Common.World.SkyColourSource.ColorAt(
+                world.GetBiomeAt, biomes, (int)MathF.Floor(eye.X), (int)MathF.Floor(eye.Y), (int)MathF.Floor(eye.Z));
+            var sky = ApplySkyWeather(baseSky, world);
+            request = AppendSkyDisc(request, sky);
+            Console.WriteLine($"sky disc: colour ({sky.X:F3},{sky.Y:F3},{sky.Z:F3}), gradient skipped");
+        }
+
         var frame = OffscreenRenderer.Render(request);
 
         Console.WriteLine($"rendered on adapter: {frame.AdapterName}");
@@ -1663,6 +1674,61 @@ internal static class FrameCommand
         return (vertices, [.. triangles]);
     }
 
+    private static Vector3 SkyTintColour(float temperature)
+    {
+        var packed = Sharpcraft.Common.World.SkyColour.FromTemperature(temperature);
+        return new Vector3(((packed >> 16) & 0xFF) / 255f, ((packed >> 8) & 0xFF) / 255f, (packed & 0xFF) / 255f);
+    }
+
+    /// <summary>Applies the SKY_COLOR timeline multiplier and weather layers to a base sky RGB (docs/... 6.2/6.3).</summary>
+    private static Vector3 ApplySkyWeather(Vector3 baseSky, ClientWorld world)
+    {
+        var partialTick = EffectiveDayTimePartial(world);
+        var multiplier = Sharpcraft.Common.World.SkyAttributeTracks.SkyColorMultiplierAt(EffectiveDayTime(world), partialTick);
+        var sky = baseSky * multiplier;
+        var rain = EffectiveRainLevel(world, partialTick);
+        var thunder = EffectiveThunderLevel(world, partialTick);
+        return Sharpcraft.Common.World.WeatherBlend.ApplySkyColour(sky, rain, thunder);
+    }
+
+    /// <summary>Replaces the gradient sky with the SKY_COLOR top disc (plus the dark bottom disc below the horizon).</summary>
+    private static FrameRequest AppendSkyDisc(FrameRequest request, Vector3 skyColour)
+    {
+        var eye = request.CameraPosition;
+        var draws = request.CelestialColorDraws is null
+            ? new List<CelestialColorDraw>()
+            : new List<CelestialColorDraw>(request.CelestialColorDraws);
+
+        AddDisc(CelestialGeometry.SkyDisc(16f), Matrix4x4.CreateTranslation(eye), new Vector4(skyColour, 1f));
+
+        var horizon = Environment.GetEnvironmentVariable("MC_HORIZON") is { Length: > 0 } horizonText && float.TryParse(horizonText, out var parsedHorizon)
+            ? parsedHorizon
+            : 63f;
+        var underwater = Environment.GetEnvironmentVariable("MC_UNDERWATER") == "1";
+        if (SkyVisibility.ShouldRenderDarkDisc(eye.Y, horizon, underwater))
+        {
+            AddDisc(CelestialGeometry.SkyDisc(-16f), Matrix4x4.CreateTranslation(eye + new Vector3(0f, 12f, 0f)), new Vector4(0f, 0f, 0f, 1f));
+        }
+
+        return request with { SkipGradientSky = true, CelestialColorDraws = [.. draws] };
+
+        void AddDisc(Vector3[] positions, Matrix4x4 model, Vector4 tint)
+        {
+            var colours = new Vector4[positions.Length];
+            Array.Fill(colours, Vector4.One);
+            var triangles = new List<uint>((positions.Length - 2) * 3);
+            for (var i = 1; i + 1 < positions.Length; i++)
+            {
+                triangles.Add(0);
+                triangles.Add((uint)i);
+                triangles.Add((uint)(i + 1));
+            }
+
+            var (vertices, indices) = PackColor(positions, colours, triangles);
+            draws.Add(new CelestialColorDraw(vertices, indices, model, tint, CelestialColorBlend.Translucent));
+        }
+    }
+
     private static string RenderLocal(int width, int height)
     {
         var world = BuildDemoWorld();
@@ -1728,6 +1794,18 @@ internal static class FrameCommand
                 : WithMips(prepared.Value.Atlas)
         };
         request = AttachCelestial(request, world, resources);
+
+        // Opt-in sky disc for local verification: synthetic temperature, gradient replaced by the SKY_COLOR disc.
+        if (Environment.GetEnvironmentVariable("MC_SKY_DISC") == "1")
+        {
+            var temperature = Environment.GetEnvironmentVariable("MC_BIOME_TEMP") is { Length: > 0 } text && float.TryParse(text, out var parsed)
+                ? parsed
+                : 0.5f;
+            var packed = SkyTintColour(temperature);
+            var sky = ApplySkyWeather(packed, world);
+            request = AppendSkyDisc(request, sky);
+            Console.WriteLine($"sky disc(local): temp {temperature:F2} colour ({sky.X:F3},{sky.Y:F3},{sky.Z:F3}), gradient skipped");
+        }
 
         var frame = OffscreenRenderer.Render(request);
 

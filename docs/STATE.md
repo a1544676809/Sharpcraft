@@ -1978,4 +1978,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `SkyColourSource.ColorAt(biomeIdAt, registry, x,y,z)`：以 `calculateSkyColor(temperature)` 逐群系、按 quart 采样 + 7 抽头 gaussian（核 `{0,1,4,6,4,1,0}`，总权重 4096）空间混合（未加载群系不计权重）。
 - 诊断 `MC_SKY_DISC_TEST`：用 `CelestialGeometry.SkyDisc` 绘制盘、tint=calculateSkyColor(temp)，中心像素 `rgba(123,164,255)`=`0xFF7BA4FF`(temp0.5)、覆盖 518400 像素 ⇒ 盘几何+颜色管线正确。
 - 测试 `SkyColourSourceTests`(3)、`SkyTimelinesTests`(+1)。全量 **1243 通过**、门禁 ok。
-- **受控偏差/待办**：生产帧仍用全屏渐变天空（`sky.wgsl`）——用盘替换需在真服+参考帧下目视调优，本环境无参考帧故未切换；`SKY_COLOR` 计算、盘绘制已就绪。P3 数据/计算链（P3.1–P3.4）已交付。
+- **替换天空盘（opt-in，T-281）**：`MC_SKY_DISC=1` 时 `FrameRequest.SkipGradientSky` 跳过 `sky.wgsl`，`AppendSkyDisc` 画顶盘(SKY_COLOR)+地平线下底盘(黑，`SkyVisibility`)；真服路径用 `SkyColourSource`、本地用 `MC_BIOME_TEMP` 合成。验证：本地 sky 像素渐变 `rgba(121,167,255)` → 换盘后渐变跳过、写盘 colour (0.482,0.643,1.000)。**默认仍渐变**（缺参考帧，目视调优留待，受控偏差）。P3 全链（P3.1–P3.4）已交付。

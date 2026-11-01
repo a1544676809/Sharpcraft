@@ -80,6 +80,12 @@ public sealed record FrameRequest(
     /// </remarks>
     public (int FirstIndex, int IndexCount)[]? TranslucentRanges { get; init; }
 
+    /// <summary>
+    /// When true the full-screen gradient sky (sky.wgsl) is not drawn; the caller supplies a sky disc / other backdrop
+    /// instead (docs/modules/weather-and-sky-color.md 6.2).
+    /// </summary>
+    public bool SkipGradientSky { get; init; }
+
     /// <summary>Textures referenced by <see cref="CelestialDraws"/>, uploaded once and sampled by index.</summary>
     public TextureData[]? CelestialTextures { get; init; }
 
