@@ -2138,3 +2138,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-01 补充 M5.3 P1 实现文档（docs/modules/render.md §9），此前只有规格与 traceability。
 - 2026-11-01 增加 `MC_PRESENT_MODE`（默认Fifo）；视距32 immediate≈156FPS，此前Fifo数据需标注口径（T-345）。
 - 2026-11-01 M5.3 P1 名字牌投影完成（T-346，4测试）；UI 文本绘制待接。
+- 2026-11-01 M5.3 名字牌 UI 接线（T-347）：玩家名从 player list 映射并绘制；全量1271通过。

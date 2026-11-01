@@ -631,6 +631,25 @@ internal sealed class InteractiveSession
     /// <param name="alpha">Fraction into the current tick.</param>
     public ReadOnlySpan<EntityRenderState> EntityStates(float alpha) => _entities.Interpolate(alpha);
 
+    /// <summary>Resolves a player entity's display name through the player list UUID mapping.</summary>
+    public string? EntityDisplayName(int entityId)
+    {
+        if (!_entities.TryGetUuid(entityId, out var uuid))
+        {
+            return null;
+        }
+
+        foreach (var entry in _playerList.Entries)
+        {
+            if (entry.Id == uuid && entry.Name.Length > 0)
+            {
+                return entry.Name;
+            }
+        }
+
+        return null;
+    }
+
     public bool TakeGeometryDirty()
     {
         if (!_geometryDirty)

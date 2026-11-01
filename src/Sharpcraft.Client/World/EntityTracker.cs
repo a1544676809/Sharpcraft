@@ -157,6 +157,19 @@ public sealed class EntityTracker
     /// <summary>Entities currently tracked.</summary>
     public int Count => _entities.Count;
 
+    /// <summary>Looks up the persistent identity for a runtime entity id, when the server supplied one.</summary>
+    public bool TryGetUuid(int id, out Guid uuid)
+    {
+        if (_entities.TryGetValue(id, out var entity) && entity.Uuid != Guid.Empty)
+        {
+            uuid = entity.Uuid;
+            return true;
+        }
+
+        uuid = Guid.Empty;
+        return false;
+    }
+
     /// <summary>Updates whose entity id was unknown; expected around reconnects.</summary>
     public int UnknownUpdates { get; private set; }
 

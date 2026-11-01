@@ -398,3 +398,4 @@ mesh: 31321 blocks, 7354 triangles
 
 **状态**：视锥接线已完成，全量测试通过。**未完成**：真实实体静态模型、名字牌投影、以及用实际实体场景验证 QA-1.3 的剔除率 ≥60%。
 - **名字牌投影（2026-11-01，T-346）**：`NameplateProjection.TryProject` 将实体脚点 + 高度 + `HeadOffset` 投影到归一化屏幕坐标并返回深度；仅提供投影，UI 文本绘制待接。
+- **名字牌 UI（2026-11-01，T-347）**：`EntityTracker.TryGetUuid` + `InteractiveSession.EntityDisplayName` 从玩家列表解析名字；`WindowCommand` 的 UI 回调把 `NameplateProjection` 结果乘画布尺寸并 `UiScreenLayout.AddText` 绘制玩家名（缩放/裁剪交给 UI）。

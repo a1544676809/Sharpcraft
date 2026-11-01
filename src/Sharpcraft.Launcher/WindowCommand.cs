@@ -690,6 +690,45 @@ internal static class WindowCommand
                 var canvasHeight = frame.Height;
                 UiScreenLayout.Build(screen.Root, screen.Styles, canvasWidth, canvasHeight, uiGeometry, uiFont);
 
+                if (uiFont is not null)
+                {
+                    var nameplateViewProjection = Sharpcraft.Framework.Rendering.CameraMath.BuildViewProjection(
+                        lastEye, lastTarget, 70f, canvasWidth, canvasHeight);
+                    foreach (var entity in session.EntityStates(session.PartialTick))
+                    {
+                        if (session.EntityDisplayName(entity.Id) is not { Length: > 0 } displayName)
+                        {
+                            continue;
+                        }
+
+                        var entityHeight = entity.TypeId == EntityPlaceholderMesher.PlayerEntityTypeId
+                            ? EntityPlaceholderMesher.PlayerHeight
+                            : EntityPlaceholderMesher.MobHeight;
+                        if (!Sharpcraft.Client.Render.NameplateProjection.TryProject(
+                                new System.Numerics.Vector3(entity.X, entity.Y, entity.Z),
+                                entityHeight,
+                                nameplateViewProjection,
+                                out var nameplateScreen,
+                                out _)
+                            || nameplateScreen.X is < 0f or > 1f
+                            || nameplateScreen.Y is < 0f or > 1f)
+                        {
+                            continue;
+                        }
+
+                        var nameWidth = uiFont.MeasureWidth(displayName);
+                        UiScreenLayout.AddText(
+                            uiGeometry,
+                            uiFont,
+                            displayName,
+                            (nameplateScreen.X * canvasWidth) - (nameWidth * 0.5f),
+                            (nameplateScreen.Y * canvasHeight) - (uiFont.CellHeight * uiFont.Scale),
+                            1f,
+                            0xFFFFFFFFu,
+                            shadow: true);
+                    }
+                }
+
                 // The reference shows the list only while the key is held, so it is drawn from the current input
                 // rather than unconditionally. It joins the same batch as the document, so the submission budget
                 // does not grow with it.
