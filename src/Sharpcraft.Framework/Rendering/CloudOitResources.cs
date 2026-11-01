@@ -83,10 +83,10 @@ internal sealed class CloudOitResources : IDisposable
         lightValues[0] = 1f; // skyFactor
         lightValues[1] = 0f; // blockFactor
         lightValues[2] = 0f; // brightnessFactor
-        lightValues[8] = 1f; // skyLightColor r
-        lightValues[9] = 1f;
-        lightValues[10] = 1f;
-        lightValues[11] = 1f;
+        lightValues[4] = 1f; // skyLightColor r (struct after four floats)
+        lightValues[5] = 1f;
+        lightValues[6] = 1f;
+        lightValues[7] = 1f;
         var lightBytes = MemoryMarshal.AsBytes(lightValues.AsSpan()).ToArray();
         _lightmap = device.CreateBufferInit(new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst }, lightBytes.AsSpan());
 
