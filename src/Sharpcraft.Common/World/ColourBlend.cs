@@ -33,4 +33,17 @@ public static class ColourBlend
     /// <summary>Reference <c>ColorModifier.BLEND_TO_GRAY_RGB</c>: <c>srgbLerp(factor, subject, greyscale(subject)·brightness)</c>.</summary>
     public static Vector3 BlendToGray(Vector3 subject, float factor, float brightness) =>
         Lerp(factor, subject, ScaleRgb(Greyscale(subject), brightness));
+
+    /// <summary>Packs an opaque RGB24 colour (reference <c>ARGB.color(r,g,b)</c> = 0xFFRRGGBB).</summary>
+    public static int Rgb(int red, int green, int blue) =>
+        unchecked((int)0xFF000000) | ((red & 0xFF) << 16) | ((green & 0xFF) << 8) | (blue & 0xFF);
+
+    /// <summary>Red channel of a packed ARGB colour.</summary>
+    public static int Red(int color) => (color >> 16) & 0xFF;
+
+    /// <summary>Green channel of a packed ARGB colour.</summary>
+    public static int Green(int color) => (color >> 8) & 0xFF;
+
+    /// <summary>Blue channel of a packed ARGB colour.</summary>
+    public static int Blue(int color) => color & 0xFF;
 }
