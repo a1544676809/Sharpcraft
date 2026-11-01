@@ -2059,5 +2059,6 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 当前客户端运行 pid（子进程）~57780。剩余视觉差距：天空无地平线渐变、雾基色近似、云无 OIT/精确 cloud-fog。## 2026-11-01 修复：几何 arena 显存 OOM（T-299）
 - 崩溃：`wgpuDeviceCreateBuffer: Not enough memory`（960×540、视距12、约1900帧）。
 - 根因：`ChunkGeometryArena` 初始 `expectedChunks(625)×512KB×2×3层 ≈ 1.4GB`；且 `RebuildAll` 以 `MaxPresizeBytes` 当硬上限，实际几何超限时每帧全量重建（~100MB/帧）→ OOM。
-- 修复：初始改 1MB 起；每层增长上限 `MaxBufferBytes=128MB`（presize 32MB）；达上限跳过远处区块（不再重建）；`RebuildAll` 增长上限用 MaxBuffer。视距 12 连续 45s+ 无 OOM/validation（进程 ~819MB）。全量 1265 通过。
+- 修复：初始改 1MB 起；每层增长上限 `MaxBufferBytes=96MB`（presize 16MB）；达上限跳过远处区块（不再重建）；`RebuildAll` 增长上限用 MaxBuffer。视距 12 连续 45s+ 无 OOM/validation（进程 ~819MB）。全量 1265 通过。
+- **另一主因（频繁关闭）**：`Start-Process` 启动的客户端会在工具调用结束时被清理；改用**持久终端会话**（`terminal_open`/`terminal_send`）后持续运行 **11647 帧**稳定（pid 48892，RSS ~866MB）。
 - 仍待：超大窗口(2560×1334)时 OIT 目标与重传仍可能吃紧；可视需要再降或分页缓冲区。

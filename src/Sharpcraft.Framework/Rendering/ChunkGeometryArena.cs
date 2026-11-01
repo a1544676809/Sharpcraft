@@ -27,7 +27,7 @@ public sealed class ChunkGeometryArena : IDisposable
     private const ulong MinimumBufferBytes = 1 << 20;
 
     /// <summary>Largest single presize, so one allocation never becomes a frame spike of its own.</summary>
-    private const ulong MaxPresizeBytes = 32UL << 20;
+    private const ulong MaxPresizeBytes = 16UL << 20;
 
     /// <summary>
     /// Starting guess per chunk when the view distance is known. Deliberately generous: over-reserving costs
@@ -49,7 +49,7 @@ public sealed class ChunkGeometryArena : IDisposable
     /// longer fit. Chunks are meshed nearest first, so what gets skipped is the far edge rather than the ground underfoot.
     /// </summary>
     /// <remarks>Paging several buffers would remove the ceiling; that is the planned replacement for this stop gap.</remarks>
-    private const ulong MaxBufferBytes = 128UL << 20;
+    private const ulong MaxBufferBytes = 96UL << 20;
 
     private readonly Device _device;
     private readonly Queue _queue;
