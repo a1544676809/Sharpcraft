@@ -2065,4 +2065,7 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 所有者要求：视距 **12 且不跳过远处区块**是硬性，原版可到 **32**。单缓冲 arena + 256MB 上限于此不可能，必须换几何存储。
 - 已立目标 `goal-6e779d0d`；写 ADR-0020：**每区块独立 vertex/index 缓冲 + CPU 视锥剔除**（原版模型），显存随实际网格增长，取消上限/跳过。
 - 实施分步：①ADR（完成）→②`ChunkGeometryStore`（每区块缓冲、Apply/Remove、内存统计）→③`WindowedRenderer` 三层绘制改每区块缓冲+CPU 剔除（translucent 距离排序）→④视距 12/24/32 长跑与显存测量→⑤测试/门禁/traceability 收尾。
-- 现状：旧每帧云/天体 pass 不回退；当前客户端仍可用（旧 arena 方案，视距12 稳定但高内存时会跳过远区块）。
+- 现状：旧每帧云/天体 pass 不回退；当前客户端仍可用（旧 arena 方案，视距12 稳定但高内存时会跳过远区块）。## 2026-11-01 T-301：每区块几何存储 + 窗口绘制（完成）
+- 新增 `ChunkGeometryStore`：每区块独立 vertex/index 缓冲，`Apply` 同尺寸原地重写、尺寸变化重建、`Remove` 释放；`MemoryBytes/UploadedBytes` 统计；`Draw(planes)` CPU 视锥剔除、`DrawFarthestFirst` 排序。
+- `WindowedRenderer` 三层（solid/cutout/translucent）改用 store；移除 `ChunkCuller`/间接绘制/`SlotHighWater`/达上限丢弃逻辑；保留 disableCulling 调试开关。
+- 视距 12 运行 **6996+ 帧**无 OOM/validation（RSS ~812MB，GPU dedicated ~1.6GB）；全量 1265 通过。待压测 24/32；区块卸载（ClientWorld 未移除离视区块）与旧 arena 清理列为后续。

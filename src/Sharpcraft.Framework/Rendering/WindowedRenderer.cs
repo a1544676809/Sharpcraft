@@ -385,39 +385,12 @@ public static class WindowedRenderer
 
         var currentRequest = request;
 
-        // With per-chunk geometry the world is drawn from an arena: a chunk that arrives writes only its own
-        // bytes, instead of the whole world being recomposed and re-uploaded every frame
-        // (docs/specs/network/play-movement.md 7.25).
-        // One arena per layer, so a failure or an empty layer only affects itself and the layers can be drawn with their
-        // own pipelines in their own order (docs/specs/render/terrain-layers.md).
-        using var culler = new ChunkCuller(device, device.Queue, 8192);
-        using var cutoutCuller = new ChunkCuller(device, device.Queue, 8192);
-        using var translucentCuller = new ChunkCuller(device, device.Queue, 8192);
-
-        var arena = geometryUpdates is null
-            ? null
-            : new ChunkGeometryArena(device, expectedChunks: expectedChunks);
-        var arenaCutout = geometryUpdates is null
-            ? null
-            : new ChunkGeometryArena(device, expectedChunks: expectedChunks);
-        var arenaTranslucent = geometryUpdates is null
-            ? null
-            : new ChunkGeometryArena(device, expectedChunks: expectedChunks);
-
-        if (arena is not null)
-        {
-            arena.Culler = culler;
-        }
-
-        if (arenaCutout is not null)
-        {
-            arenaCutout.Culler = cutoutCuller;
-        }
-
-        if (arenaTranslucent is not null)
-        {
-            arenaTranslucent.Culler = translucentCuller;
-        }
+        // One store per layer: every chunk keeps its own vertex/index buffer, drawn with CPU frustum culling. Memory
+        // follows the resident meshes, so view distances 12-32 need no single-buffer ceiling and never drop far chunks
+        // (ADR-0020).
+        var arena = geometryUpdates is null ? null : new ChunkGeometryStore(device);
+        var arenaCutout = geometryUpdates is null ? null : new ChunkGeometryStore(device);
+        var arenaTranslucent = geometryUpdates is null ? null : new ChunkGeometryStore(device);
 
         // Geometry that is rebuilt every frame, such as placeholder entity boxes. It gets its own small pair of
         // buffers so a per frame rewrite never touches the world arena.
@@ -568,16 +541,13 @@ public static class WindowedRenderer
                 // dropped here and the caller replays every mesh in the same frame, which is what keeps a resolution
                 // change all or nothing (docs/decisions/0017-reload-invalidation-by-layout.md).
                 arena?.Dispose();
-                arena = new ChunkGeometryArena(device, expectedChunks: expectedChunks);
-                arena.Culler = culler;
+                arena = new ChunkGeometryStore(device);
 
                 arenaCutout?.Dispose();
-                arenaCutout = new ChunkGeometryArena(device, expectedChunks: expectedChunks);
-                arenaCutout.Culler = cutoutCuller;
+                arenaCutout = new ChunkGeometryStore(device);
 
                 arenaTranslucent?.Dispose();
-                arenaTranslucent = new ChunkGeometryArena(device, expectedChunks: expectedChunks);
-                arenaTranslucent.Culler = translucentCuller;
+                arenaTranslucent = new ChunkGeometryStore(device);
                 Console.WriteLine("ui: world geometry reset");
             }
 
@@ -1002,32 +972,6 @@ public static class WindowedRenderer
             celestialColour?.UpdateCamera(celestialDelta);
 
             var encoder = device.CreateCommandEncoder();
-            var gpuCulled = false;
-
-            if (arena is not null && culler.Available && !disableCulling)
-            {
-                var viewProjectionForCull = CameraMath.BuildViewProjection(
-                    eye,
-                    target,
-                    request.FieldOfViewDegrees,
-                    (int)frameWidth,
-                    (int)frameHeight);
-
-                FrustumPlanes.Extract(viewProjectionForCull, frustumPlanes);
-                culler.Dispatch(encoder, frustumPlanes, arena.SlotHighWater);
-
-                if (arenaCutout is not null && cutoutCuller.Available)
-                {
-                    cutoutCuller.Dispatch(encoder, frustumPlanes, arenaCutout.SlotHighWater);
-                }
-
-                if (arenaTranslucent is not null && translucentCuller.Available)
-                {
-                    translucentCuller.Dispatch(encoder, frustumPlanes, arenaTranslucent.SlotHighWater);
-                }
-
-                gpuCulled = true;
-            }
             var frameColour = clearColourPerFrame?.Invoke() ?? colour;
             var pass = encoder.BeginRenderPass(
             [
@@ -1103,45 +1047,42 @@ public static class WindowedRenderer
 
             pass.SetBindGroup(0, bindGroup);
 
-            if (arena is not null)
+            var drawsWorld = arena is { ChunkCount: > 0 } || arenaCutout is { ChunkCount: > 0 };
+            if (drawsWorld && !disableCulling)
             {
-                // The CPU reference cull: same test the compute pass will run, so the two can be compared directly.
                 var viewProjection = CameraMath.BuildViewProjection(
                     eye,
                     target,
                     request.FieldOfViewDegrees,
                     (int)frameWidth,
                     (int)frameHeight);
+                FrustumPlanes.Extract(viewProjection, frustumPlanes);
+            }
 
-                if (gpuCulled)
-                {
-                    arena.DrawWithCuller(pass);
-                }
-                else if (disableCulling)
+            if (arena is { ChunkCount: > 0 })
+            {
+                if (disableCulling)
                 {
                     arena.Draw(pass);
                 }
                 else
                 {
-                    FrustumPlanes.Extract(viewProjection, frustumPlanes);
                     arena.Draw(pass, frustumPlanes);
                 }
             }
 
-            // Cutout and translucent layers, each from its own arena with its own pipeline. A layer with nothing to draw
-            // costs one branch.
-            if (arenaCutout is not null && arenaCutout.ChunkCount > 0)
+            if (arenaCutout is { ChunkCount: > 0 })
             {
                 pass.SetPipeline(cutoutPipeline);
                 pass.SetBindGroup(0, bindGroup);
 
-                if (gpuCulled)
+                if (disableCulling)
                 {
-                    arenaCutout.DrawWithCuller(pass);
+                    arenaCutout.Draw(pass);
                 }
                 else
                 {
-                    arenaCutout.Draw(pass);
+                    arenaCutout.Draw(pass, frustumPlanes);
                 }
             }
 
