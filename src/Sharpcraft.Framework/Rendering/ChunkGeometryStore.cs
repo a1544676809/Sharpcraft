@@ -52,6 +52,9 @@ public sealed class ChunkGeometryStore : IDisposable
     /// <summary>Chunks skipped by the last draw's frustum test (diagnostic).</summary>
     public int CulledLastFrame { get; private set; }
 
+    /// <summary>Cumulative DrawIndexed calls issued by this store (diagnostic).</summary>
+    public long DrawCallsTotal { get; private set; }
+
     /// <summary>Per-chunk storage never needs a bulk presize; kept for the renderer's diagnostics.</summary>
     public bool Presized => false;
 
@@ -165,8 +168,9 @@ public sealed class ChunkGeometryStore : IDisposable
         }
     }
 
-    private static void DrawEntry(RenderPassEncoder pass, Entry entry)
+    private void DrawEntry(RenderPassEncoder pass, Entry entry)
     {
+        DrawCallsTotal++;
         pass.SetVertexBuffer(0, entry.Vertex);
         pass.SetIndexBuffer(entry.Index, WGPUIndexFormat.Uint32);
         pass.DrawIndexed(entry.IndexCount);

@@ -1614,6 +1614,10 @@ public static class WindowedRenderer
         {
             Console.WriteLine($"window: translucent {arenaTranslucent.ChunkCount} chunks, memory {arenaTranslucent.MemoryBytes / (1024d * 1024d):F1} MB");
         }
+        var totalDrawCalls = (arena?.DrawCallsTotal ?? 0)
+            + (arenaCutout?.DrawCallsTotal ?? 0)
+            + (arenaTranslucent?.DrawCallsTotal ?? 0);
+        Console.WriteLine($"window: draws/frame {(totalDrawCalls / (double)Math.Max(presented, 1)):F0} (solid/cutout/translucent stores)");
 
         Console.WriteLine(
             $"window: rebuild {rebuildCount} frames, avg {(rebuildCount == 0 ? 0 : rebuildTotalMs / rebuildCount):F1} ms, "
