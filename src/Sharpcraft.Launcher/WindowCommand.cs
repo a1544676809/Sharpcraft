@@ -291,10 +291,12 @@ internal static class WindowCommand
         var cloudMode = (Environment.GetEnvironmentVariable("MC_CLOUD_MODE") ?? "fancy").ToLowerInvariant();
         var cloudRange = Environment.GetEnvironmentVariable("MC_CLOUD_RANGE") is { Length: > 0 } rangeText
             && int.TryParse(rangeText, out var parsedRange) ? parsedRange : 128;
+        var cloudOit = Environment.GetEnvironmentVariable("MC_CLOUD_OIT") is not "0";
         session.SetCloudOptions(
             enabled: cloudMode != "off",
             fancy: cloudMode != "fast" && cloudMode != "off",
-            rangeChunks: cloudRange);
+            rangeChunks: cloudRange,
+            useOit: cloudOit);
 
         // The gradient sky is static day blue; use a flat SKY_COLOR clear colour instead (vanilla sky is SKY_COLOR).
         request = request with { SkipGradientSky = true };
@@ -568,6 +570,7 @@ internal static class WindowCommand
             fogPerFrame: () => session.CurrentFogColour(),
             clearColourPerFrame: () => new System.Numerics.Vector4(session.CurrentSkyColour(), 1f),
             cloudsPerFrame: () => session.CurrentCloudDraw(),
+            cloudOitEnabled: session.CloudUseOit,
             celestialPerFrame: () =>
             {
                 if (world is null)

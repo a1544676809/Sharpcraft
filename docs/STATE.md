@@ -2098,4 +2098,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 现象：跳跃时云上下颤抖。
 - 根因：`CloudDrawCache` 为实现雾 alpha 把 `relativeBottomY` 四舍五入进几何；跳跃时该值每帧变化 → 几何重建且云块垂直位置被量化到整块，产生上下跳。
 - 修复：缓存几何不再含垂直偏移（fog 距离按水平相对位置），缓存键不含垂直；每帧 model 平移 y 固定为绝对 `bottomY`（水平仍为 eye-(xInCell,zInCell)），与 shader `CloudOffset.y` 等价。
-- 全量测试通过；Cloud 测试 11。
+- 全量测试通过；Cloud 测试 11。## 2026-11-01 T-311：cloud OIT（参考三阶段复用）
+- 原版：`CloudRenderer.renderOit` 按 OitStage 复用 `OitRenderPassProvider` 的 depth bounds/transmittance/accumulate 目标，fancy 使用 OIT 管线。
+- 实现：`CloudOitResources` 将云缓存几何展开为地形 14-float 顶点（position+colour+uv+spriteRect+light），用 **256 级 alpha 渐变纹理**让现有 OIT shader 的 `sampleAlpha` 得到逐顶点云 alpha；云几何在现有 OIT 的 bounds/transmittance/accumulate 三个 pass 中额外绘制（复用现有 pipeline 与 group1 绑定），composite 一并解析。
+- 开关：`MC_CLOUD_OIT=0` 回退普通 alpha+深度；默认开启。窗口运行 3586+ 帧无 GPU 校验错误；构建通过。
+- 待：像素级对照、性能（128 区块 + OIT），以及与原版独立 cloud depth OIT 的差异记录。

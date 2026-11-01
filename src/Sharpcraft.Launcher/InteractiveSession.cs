@@ -82,6 +82,7 @@ internal sealed class InteractiveSession
     private bool _cloudsEnabled = true;
     private bool _cloudsFancy = true;
     private int _cloudRangeChunks = 128;
+    private bool _cloudUseOit = true;
 
     /// <summary>
     /// Requested render distance in chunks. Host configuration (MC_VIEW_DISTANCE), default 12; the server may cap it and
@@ -165,12 +166,16 @@ internal sealed class InteractiveSession
     internal void SetCloudTexture(Sharpcraft.Client.Assets.CloudTexture? texture) => _cloudTexture = texture;
 
     /// <summary>Cloud options from the host: status/range mirror the reference CloudStatus and cloudRange settings.</summary>
-    internal void SetCloudOptions(bool enabled, bool fancy, int rangeChunks)
+    internal void SetCloudOptions(bool enabled, bool fancy, int rangeChunks, bool useOit)
     {
         _cloudsEnabled = enabled;
         _cloudsFancy = fancy;
         _cloudRangeChunks = Math.Max(2, rangeChunks);
+        _cloudUseOit = useOit;
     }
+
+    /// <summary>Whether fancy clouds use the reference OIT path.</summary>
+    internal bool CloudUseOit => _cloudUseOit;
 
     /// <summary>The per-frame cloud position-colour draw around the camera, or null when clouds/texture are unavailable.</summary>
     internal Sharpcraft.Framework.Rendering.CelestialColorDraw? CurrentCloudDraw()

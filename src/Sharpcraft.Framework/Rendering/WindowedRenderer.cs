@@ -56,7 +56,8 @@ public static class WindowedRenderer
     Func<Vector4>? fogPerFrame = null,
     Func<Vector4>? clearColourPerFrame = null,
     Func<CelestialColorDraw?>? cloudsPerFrame = null,
-    Func<(CelestialQuadDraw[] Draws, CelestialColorDraw[] Colors)?>? celestialPerFrame = null)
+    Func<(CelestialQuadDraw[] Draws, CelestialColorDraw[] Colors)?>? celestialPerFrame = null,
+    bool cloudOitEnabled = false)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -235,6 +236,9 @@ public static class WindowedRenderer
         using var cloudColour = cloudsPerFrame is null
             ? null
             : new OffscreenRenderer.CelestialColorResources(device, request with { CelestialColorDraws = [] }, cameraBuffer, VertexLayout.CameraUniformSize, format, WGPUCompareFunction.LessEqual);
+        using var cloudOit = cloudOitEnabled && cloudColour is not null
+            ? new CloudOitResources(device, bindGroupLayout, cameraBuffer, VertexLayout.CameraUniformSize)
+            : null;
         using var uiPipeline = UiRenderer.CreatePipeline(device, format, pipelineLayout);
         using var uiTextPipeline = UiRenderer.CreateTextPipeline(device, format, pipelineLayout);
 
@@ -970,6 +974,14 @@ public static class WindowedRenderer
             // Sun/moon/stars are built relative to the initial camera; keep them centred as the player moves.
             var celestialDelta = eye - request.CameraPosition;
 
+            // Sample the cloud draw once: the OIT stages need its vertices before the main transparency passes, and the
+            // non-OIT path reuses the same draw later.
+            var cloudDrawFrame = cloudsPerFrame?.Invoke();
+            if (cloudOit is not null && cloudDrawFrame is { } cloudForOit)
+            {
+                cloudOit.Update(cloudForOit.Vertices, cloudForOit.Indices, cloudForOit.Model, cloudForOit.Tint);
+            }
+
             var encoder = device.CreateCommandEncoder();
             var frameColour = clearColourPerFrame?.Invoke() ?? colour;
             var pass = encoder.BeginRenderPass(
@@ -1193,6 +1205,12 @@ public static class WindowedRenderer
                 boundsPass.SetPipeline(refDepthBoundsPipeline);
                 boundsPass.SetBindGroup(0, bindGroup);
                 DrawReferenceGeometry(boundsPass);
+                if (cloudOit is not null)
+                {
+                    boundsPass.SetPipeline(refDepthBoundsPipeline);
+                    boundsPass.SetBindGroup(0, cloudOit.BindGroup);
+                    cloudOit.DrawGeometry(boundsPass);
+                }
                 boundsPass.End();
 
                 // Stage 1b: clip the furthest bound to the nearest opaque surface.
@@ -1235,6 +1253,13 @@ public static class WindowedRenderer
                 transmittancePass.SetBindGroup(0, bindGroup);
                 transmittancePass.SetBindGroup(1, refTransmittanceBindGroup);
                 DrawReferenceGeometry(transmittancePass);
+                if (cloudOit is not null)
+                {
+                    transmittancePass.SetPipeline(refTransmittancePipeline);
+                    transmittancePass.SetBindGroup(0, cloudOit.BindGroup);
+                    transmittancePass.SetBindGroup(1, refTransmittanceBindGroup);
+                    cloudOit.DrawGeometry(transmittancePass);
+                }
                 transmittancePass.End();
 
                 // Stage 3: accumulate colour weighted by the transmittance in front of each fragment.
@@ -1253,6 +1278,13 @@ public static class WindowedRenderer
                 accumulatePass.SetBindGroup(0, bindGroup);
                 accumulatePass.SetBindGroup(1, refAccumulateBindGroup);
                 DrawReferenceGeometry(accumulatePass);
+                if (cloudOit is not null)
+                {
+                    accumulatePass.SetPipeline(refAccumulatePipeline);
+                    accumulatePass.SetBindGroup(0, cloudOit.BindGroup);
+                    accumulatePass.SetBindGroup(1, refAccumulateBindGroup);
+                    cloudOit.DrawGeometry(accumulatePass);
+                }
                 accumulatePass.End();
 
                 // Composite over the frame, writing the nearest translucent depth.
@@ -1283,7 +1315,7 @@ public static class WindowedRenderer
 
             // Clouds come after the opaque and transparent terrain, with depth testing so terrain and the cloud layer
             // occlude each other correctly (the reference draws them in executeClassicTransparency).
-            if (cloudColour is not null)
+            if (cloudColour is not null && cloudOit is null)
             {
                 var cloudPass = encoder.BeginRenderPass(
                 [
@@ -1291,7 +1323,7 @@ public static class WindowedRenderer
                 ],
                 new DepthStencilAttachment { View = depthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store });
 
-                if (cloudsPerFrame?.Invoke() is { } cloudDraw)
+                if (cloudDrawFrame is { } cloudDraw)
                 {
                     cloudColour.SetDraws([cloudDraw]);
                 }
