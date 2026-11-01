@@ -103,9 +103,21 @@ internal sealed class LivePlaySession : IDisposable
     internal static LivePlaySession Adopt(
         MinecraftConnection connection,
         CancellationToken cancellationToken,
-        Sharpcraft.Common.Network.DynamicRegistries? registries = null)
+        Sharpcraft.Common.Network.DynamicRegistries? registries = null,
+        IReadOnlyList<byte[]>? deferredPackets = null)
     {
         var session = new LivePlaySession(connection, registries);
+
+        // Packets the preload consumed (join clock sync, weather game events) are replayed into the queue so the live
+        // session applies them exactly as if it had owned the connection from the start.
+        if (deferredPackets is not null)
+        {
+            foreach (var body in deferredPackets)
+            {
+                session._incoming.Enqueue(body);
+            }
+        }
+
         session.Start(cancellationToken);
         return session;
     }

@@ -123,6 +123,29 @@ internal static class FrameCommand
                 throw new InvalidOperationException("no chunks were received, nothing to render");
             }
 
+            // Apply the clock and weather packets the preload deferred (the join full-clock sync and game events), so the
+            // single frame uses the server's real day time and weather.
+            if (stats.DeferredPackets is { } deferredPackets)
+            {
+                foreach (var deferredBody in deferredPackets)
+                {
+                    var deferredReader = new PayloadReader(deferredBody);
+                    if (deferredReader.TryReadVarInt(out var deferredId) != DecodeStatus.Success)
+                    {
+                        continue;
+                    }
+
+                    if (deferredId == PacketIds.PlayClientbound.SetTime && SetTimePacketCodec.TryRead(ref deferredReader, out var setTime) == DecodeStatus.Success)
+                    {
+                        world.ApplyTime(setTime);
+                    }
+                    else if (deferredId == PacketIds.PlayClientbound.GameEvent && GameEventPacketCodec.TryRead(ref deferredReader, out var gameEvent) == DecodeStatus.Success)
+                    {
+                        world.ApplyWeather(gameEvent);
+                    }
+                }
+            }
+
             Console.WriteLine($"adapter: {OffscreenRenderer.DescribeAdapter()}");
             return RenderWorld(world, width, height, VanillaBlockRegistry.Layout, Sharpcraft.Common.World.BiomeRegistry.From(probe.Registries));
         }

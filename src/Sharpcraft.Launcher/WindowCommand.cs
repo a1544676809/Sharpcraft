@@ -800,7 +800,7 @@ internal static class WindowCommand
             // twice made startup slower and showed a spurious join and leave to everyone else on the server.
             // The registries are the ones this very connection received during configuration, which is where the
             // chat type decorations live.
-            return new PreparedWorld(world, LivePlaySession.Adopt(connection, cancellationToken, probe.Registries));
+            return new PreparedWorld(world, LivePlaySession.Adopt(connection, cancellationToken, probe.Registries, stats.DeferredPackets));
         }
     }
 }

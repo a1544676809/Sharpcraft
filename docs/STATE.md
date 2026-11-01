@@ -2002,4 +2002,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 抓包（`MC_PACKET_LOG`）：**配置阶段**只有 custom_payload/ping/update_enabled_features/select_known_packs/registry_data×N/update_tags/finish_configuration；**游戏阶段**唯一时间包是 `set_time`(id115) 且 **clockUpdates 恒空**（原始字节 `73 + 8B gameTime + 00`）。**全流程无任何携带世界时钟的包**。
 - 原版核实：昼夜由时钟驱动的 Timeline 属性决定（`EnvironmentAttributeSystem.addDynamicLayers`），只吃 `ClockManager` 时钟；**无 gameTime 兜底**。故该服上原版时间应为时钟默认 0。
 - **修正**：移除先前的 `GameTime%24000` 兜底，`DayTime` 严格只取 overworld 时钟（缺失=0）；`ApplyTime` 仍“tick 后只覆盖包内时钟、不清空”（`/time set` 会带时钟→生效且持久）。`ClientWorldTimeTests` 改为“无时钟=0”。全量 1250 通过。
-- 仍待：**#10 BlockLightTint**（`Srgb24ToLinear` 应改 `v/255`）；**#3** 平滑光照近似。另：`Diagnostics/` 的 `MC_PACKET_LOG`/hex 打印为宿主诊断，可整体删除不影响游戏。
+- 仍待：**#10 BlockLightTint**（`Srgb24ToLinear` 应改 `v/255`）；**#3** 平滑光照近似。另：`Diagnostics/` 的 `MC_PACKET_LOG`/hex 打印为宿主诊断，可整体删除不影响游戏。## 2026-11-01 修复：预热阶段丢弃进服全量时钟/天气包（T-287）
+- 服务端 = Fabric（就是 127.0.0.1:25565）；原版/Fabric 服务端进服会用 `createFullSyncPacket` 下发**全量时钟**（`PlayerList.java:659`），例行 `set_time` 空 map（`MinecraftServer:1145`）。
+- 我们的窗口流程先 `PlaySession.RunAsync` 预热收区块，其 `default:` **丢弃**了进服全量 `set_time`（及 `GameEvent` 天气），之后才 `Adopt` 建 live 会话 → 时钟/天气初值丢失。
+- **修复**：`PlaySession` 把 `SetTime`/`GameEvent` 暂存进 `PlaySessionStats.DeferredPackets`；`LivePlaySession.Adopt` 注入队列；离屏 `frame` 直接应用。
+- 实机首包 `set_time len=32 clocks=[1:t=0,r=0, 0:t=109000,r=0] day=13000` → 该服**时钟 rate=0、时间冻结在 13000(夜)**；`/time set day` 会带单时钟更新→生效并保持（不再复原）。全量 **1250 通过**、门禁 ok。
