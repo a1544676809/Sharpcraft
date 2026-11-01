@@ -2108,3 +2108,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-01 阶段2完成：`CloudRangePolicy` + `MC_CLOUD_ADAPTIVE`（默认关闭）按帧时间在 32–128 调云范围。
 - 2026-11-01 阶段3完成：OIT 目标按需创建（有半透明/云 OIT 才分配），无内容场景不占目标显存。
 - 2026-11-01 阶段5部分：天体几何按 dayTime/雨雷缓存，减少每帧重建（相机仍每帧 UpdateCamera）。
+- 2026-11-01 阶段5部分：`MC_SKY_GRADIENT=1` 开关（默认平色 SKY_COLOR）。阶段4独立 cloud depth 仍需单独 OIT passes。

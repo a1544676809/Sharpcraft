@@ -301,7 +301,9 @@ internal static class WindowCommand
             adaptive: cloudAdaptive);
 
         // The gradient sky is static day blue; use a flat SKY_COLOR clear colour instead (vanilla sky is SKY_COLOR).
-        request = request with { SkipGradientSky = true };
+        // MC_SKY_GRADIENT=1 keeps the gradient pass for experimentation, default stays flat.
+        var skyGradient = Environment.GetEnvironmentVariable("MC_SKY_GRADIENT") == "1";
+        request = request with { SkipGradientSky = !skyGradient };
 
         // Sun, moon, stars and the sunrise band: the window now has the celestial pass, so populate its draws/textures.
         request = FrameCommand.AttachCelestial(request, world, resources);
