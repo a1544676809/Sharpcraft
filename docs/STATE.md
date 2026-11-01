@@ -2076,4 +2076,7 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 实读原版 `SkyRenderer`：太阳尺寸30/高度100、月亮20/100、星空1500、日出18顶点扇形；日出 alpha 经 PoseStack 后乘 scale 作用在旋转前局部 Z（我们的 `SunriseFanWorld` 公式正确）。
 - **已修正**：原版月亮四边形相对太阳使用反向 UV（`buildMoonPhases` → 180°），我们此前正向 → 月相方向错误；`AddBody(..., flip: true)` 传 `(1,1,0,0)`，加 `CelestialGeometryTests`。
 - 云 shader 实读：`vertexColor = faceColors[dir] * CloudColor`，alpha *= `1-linear_fog_value(vertexDistance,0,FogCloudsEnd)`；面亮度/雾与我们实现一致；**缺 OIT 云 pass**（已知缺口）。
-- 下一步：需要用户给出太阳/月亮/星星/云的具体可见问题（位置/大小/颜色/闪烁/排序），以定位剩余偏差；或继续按已知缺口做云 OIT/天空盘。
+- 下一步：需要用户给出太阳/月亮/星星/云的具体可见问题（位置/大小/颜色/闪烁/排序），以定位剩余偏差；或继续按已知缺口做云 OIT/天空盘。## 2026-11-01 T-305：窗口天体每帧重建 + 云位置修正
+- 根因1：窗口的 celestial 只在启动时 `AttachCelestial` 一次；`/time` 变化后太阳/月亮/星星几何不更新 → 太阳不动、夜里无星星。现 `WindowedRenderer` 增 `celestialPerFrame`，宿主每帧重建 day/night 天体（PNG 解码静态缓存、纹理数组固定顺序，`CelestialResources.SetDraws` 复用纹理/管线）。
+- 根因2：云 `BuildCloudDraw` 的 origin 重复加了相机坐标；原版 shader `pos = cell*CellSize + face*CellSize + CloudOffset` + 相机 uniform，origin 应为 `(cellX*12-xInCell, bottomY, cellZ*12-zInCell)`。已修。
+- 验证：离屏 `MC_SUN_ANGLE=0` 太阳在视野、90/180 消失且星星可见（白点）；全量 1266 通过。剩余需窗口实测与云 OIT/排序。

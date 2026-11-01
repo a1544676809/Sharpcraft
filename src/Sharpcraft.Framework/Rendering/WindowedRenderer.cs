@@ -55,7 +55,8 @@ public static class WindowedRenderer
     Func<LightmapUniform>? lightmapPerFrame = null,
     Func<Vector4>? fogPerFrame = null,
     Func<Vector4>? clearColourPerFrame = null,
-    Func<CelestialColorDraw?>? cloudsPerFrame = null)
+    Func<CelestialColorDraw?>? cloudsPerFrame = null,
+    Func<(CelestialQuadDraw[] Draws, CelestialColorDraw[] Colors)?>? celestialPerFrame = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -227,7 +228,7 @@ public static class WindowedRenderer
         using var celestial = request.CelestialDraws is { Length: > 0 } && request.CelestialTextures is { Length: > 0 }
             ? new OffscreenRenderer.CelestialResources(device, request, cameraBuffer, VertexLayout.CameraUniformSize, format)
             : null;
-        using var celestialColour = request.CelestialColorDraws is { Length: > 0 }
+        using var celestialColour = request.CelestialColorDraws is { Length: > 0 } || celestialPerFrame is not null
             ? new OffscreenRenderer.CelestialColorResources(device, request, cameraBuffer, VertexLayout.CameraUniformSize, format)
             : null;
         // Clouds change every frame (scroll/camera), so their position-colour draw set is updated per frame.
@@ -994,6 +995,14 @@ public static class WindowedRenderer
             }
 
             // Sun/moon (textured) then sunrise/stars (position-colour), still before terrain so world geometry covers them.
+            // Sun/moon/star/sunrise geometry depends on the world clock, so rebuild the small draw set each frame while
+            // keeping the loaded textures/pipelines.
+            if (celestialPerFrame?.Invoke() is { } celestialUpdate)
+            {
+                celestial?.SetDraws(celestialUpdate.Draws);
+                celestialColour?.SetDraws(celestialUpdate.Colors);
+            }
+
             celestial?.Draw(pass);
             celestialColour?.Draw(pass);
 

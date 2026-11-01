@@ -22,6 +22,12 @@ namespace Sharpcraft.Launcher;
 /// </summary>
 internal static class FrameCommand
 {
+    // Decoded celestial sprites are reused across frames: the window rebuilds the sun/moon/star geometry per frame but
+    // must not re-read and re-decode the PNGs each time.
+    private static readonly Dictionary<Sharpcraft.Common.Identifiers.Identifier, TextureData> CelestialTextureCache = [];
+
+    // Host diagnostics: print the rebuilt celestial state only when MC_DIAG is on (rebuilds now run every frame).
+    private static readonly bool LogCelestial = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
     /// <summary>Runs the whole pipeline and returns the output path.</summary>
     internal static async Task<string> RunAsync(
         string address,
@@ -1537,7 +1543,9 @@ internal static class FrameCommand
             return null;
         }
 
-        var origin = new Vector3(eye.X + (cellX * 12f) - xInCell, bottomY, eye.Z + (cellZ * 12f) - zInCell);
+        // The shader places a face at cell*CellSize + face*CellSize + CloudOffset and the camera uniform supplies the
+        // eye, so the origin is the wrapped world tile position, NOT offset by the eye again.
+        var origin = new Vector3((cellX * 12f) - xInCell, bottomY, (cellZ * 12f) - zInCell);
         var (vertices, indices) = Sharpcraft.Client.Render.CloudGeometryBuilder.Build(quads, eye, origin);
 
         var factor = Sharpcraft.Common.World.SkyAttributeTracks.CloudColorFactorAt(EffectiveDayTime(world));
@@ -1571,6 +1579,7 @@ internal static class FrameCommand
         Sharpcraft.Client.Assets.ResourceManager resources)
     {
         var textures = new List<TextureData>();
+        var textureIndices = new Dictionary<Sharpcraft.Common.Identifiers.Identifier, int>();
         var draws = new List<CelestialQuadDraw>();
         var colorDraws = new List<CelestialColorDraw>();
         var dayTime = EffectiveDayTime(world);
@@ -1595,6 +1604,13 @@ internal static class FrameCommand
             float.TryParse(angleText, out var parsedAngle)
             ? parsedAngle
             : Sharpcraft.Common.World.SkyTimelines.SunAngleDegrees(dayTime, partialTick);
+
+        // Preload the sun and every moon phase so the texture array has a stable index while the phase advances.
+        AddTexture(CelestialSprites.Sun);
+        for (var phase = 0; phase < CelestialSprites.MoonPhaseCount; phase++)
+        {
+            AddTexture(CelestialSprites.MoonPhase(phase));
+        }
 
         AddBody(CelestialSprites.Sun, sunAngle, size: 30f);
         // The reference builds the moon quads with reversed UVs (buildMoonPhases) while the sun uses forward UVs, so the
@@ -1656,7 +1672,7 @@ internal static class FrameCommand
             AddColor(rotated, colours, triangles, new Vector4(starBrightness, starBrightness, starBrightness, starBrightness), CelestialColorBlend.Overlay);
         }
 
-        if (draws.Count > 0 || colorDraws.Count > 0)
+        if (LogCelestial && (draws.Count > 0 || colorDraws.Count > 0))
         {
             Console.WriteLine(
                 $"celestial: {textures.Count} texture(s), {draws.Count} textured draw(s), {colorDraws.Count} colour draw(s), " +
@@ -1670,17 +1686,39 @@ internal static class FrameCommand
             CelestialColorDraws = colorDraws.Count > 0 ? [.. colorDraws] : null
         };
 
+        int AddTexture(Sharpcraft.Common.Identifiers.Identifier identifier)
+        {
+            if (textureIndices.TryGetValue(identifier, out var existing))
+            {
+                return existing;
+            }
+
+            if (!CelestialTextureCache.TryGetValue(identifier, out var decoded))
+            {
+                var data = resources.Read(ResourceKind.Texture, identifier);
+                if (data is null)
+                {
+                    return -1;
+                }
+
+                var decodedImage = PngDecoder.Decode(data);
+                decoded = new TextureData(decodedImage.Width, decodedImage.Height, decodedImage.Pixels);
+                CelestialTextureCache[identifier] = decoded;
+            }
+
+            var index = textures.Count;
+            textures.Add(decoded);
+            textureIndices[identifier] = index;
+            return index;
+        }
+
         void AddBody(Sharpcraft.Common.Identifiers.Identifier identifier, float angleDegrees, float size, bool flip = false)
         {
-            var bytes = resources.Read(ResourceKind.Texture, identifier);
-            if (bytes is null)
+            var textureIndex = AddTexture(identifier);
+            if (textureIndex < 0)
             {
                 return;
             }
-
-            var image = PngDecoder.Decode(bytes);
-            var textureIndex = textures.Count;
-            textures.Add(new TextureData(image.Width, image.Height, image.Pixels));
 
             var uv = flip ? (1f, 1f, 0f, 0f) : (0f, 0f, 1f, 1f);
             var (vertices, indices) = CelestialMeshBuilder.CelestialQuad(

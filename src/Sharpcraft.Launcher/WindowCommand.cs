@@ -559,6 +559,16 @@ internal static class WindowCommand
             fogPerFrame: () => session.CurrentFogColour(),
             clearColourPerFrame: () => new System.Numerics.Vector4(session.CurrentSkyColour(), 1f),
             cloudsPerFrame: () => session.CurrentCloudDraw(),
+            celestialPerFrame: () =>
+            {
+                if (world is null)
+                {
+                    return null;
+                }
+
+                var refreshed = FrameCommand.AttachCelestial(request, world, resources);
+                return (refreshed.CelestialDraws ?? [], refreshed.CelestialColorDraws ?? []);
+            },
             uiGeometry: frame =>
             {
                 // Mesh work is ordered by distance, so the pool needs to know where the player is each frame.
