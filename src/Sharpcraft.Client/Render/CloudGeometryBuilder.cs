@@ -32,6 +32,13 @@ public static class CloudGeometryBuilder
     // Face brightness from clouds.vsh faceColors (bottom 0.7, top 1.0, north/south 0.8, west/east 0.9).
     private static readonly float[] FaceBrightness = [0.7f, 1.0f, 0.8f, 0.8f, 0.9f, 0.9f];
 
+    /// <summary>
+    /// Origin for a camera-relative cloud mesh: the reference shader places faces at relativeCell*CellSize + CloudOffset
+    /// with the camera at the origin, so in absolute coordinates the origin is the eye minus the in-cell remainder.
+    /// </summary>
+    public static Vector3 OriginFromEye(Vector3 eye, float xInCell, float zInCell, float bottomY) =>
+        new(eye.X - xInCell, bottomY, eye.Z - zInCell);
+
     /// <summary>Builds the geometry for the given visible faces.</summary>
     /// <param name="quads">Visible faces from <see cref="CloudMeshBuilder.Build"/>.</param>
     /// <param name="eye">Camera position, for the cloud fog fade.</param>

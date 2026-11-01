@@ -1543,9 +1543,10 @@ internal static class FrameCommand
             return null;
         }
 
-        // The shader places a face at cell*CellSize + face*CellSize + CloudOffset and the camera uniform supplies the
-        // eye, so the origin is the wrapped world tile position, NOT offset by the eye again.
-        var origin = new Vector3((cellX * 12f) - xInCell, bottomY, (cellZ * 12f) - zInCell);
+        // The reference renders clouds camera-relative: the shader places a face at relativeCell*CellSize + CloudOffset
+        // and the camera is at the origin, so in our absolute-vertex path the origin is the eye shifted by the in-cell
+        // remainder. The centre cell index must NOT be added here (that was the cross-cell jump).
+        var origin = Sharpcraft.Client.Render.CloudGeometryBuilder.OriginFromEye(eye, xInCell, zInCell, bottomY);
         var (vertices, indices) = Sharpcraft.Client.Render.CloudGeometryBuilder.Build(quads, eye, origin);
 
         var factor = Sharpcraft.Common.World.SkyAttributeTracks.CloudColorFactorAt(EffectiveDayTime(world));

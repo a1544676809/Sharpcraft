@@ -32,6 +32,22 @@ public sealed class CloudGeometryBuilderTests
     }
 
     [Fact]
+    public void OriginIsCameraRelativeAndExcludesTheCentreCell()
+    {
+        var origin = CloudGeometryBuilder.OriginFromEye(new Vector3(100f, 70f, 200f), 3f, 11f, 192.33f);
+
+        Assert.Equal(97f, origin.X, 3);
+        Assert.Equal(192.33f, origin.Y, 3);
+        Assert.Equal(189f, origin.Z, 3);
+
+        // A relative cell adds its own offset; the centre cell index is not part of the origin.
+        var quads = new[] { new CloudQuad(1, 0, CloudFaceDirection.Up, false) };
+        var (vertices, _) = CloudGeometryBuilder.Build(quads, new Vector3(100f, 70f, 200f), origin, fogEnd: 1e9f);
+        Assert.Equal(97f + 12f, vertices[0], 3);
+        Assert.Equal(192.33f + 4f, vertices[1], 3);
+    }
+
+    [Fact]
     public void BottomFaceUsesTheBottomBrightness()
     {
         var quads = new[] { new CloudQuad(0, 0, CloudFaceDirection.Down, false) };

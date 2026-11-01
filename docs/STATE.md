@@ -2079,4 +2079,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 下一步：需要用户给出太阳/月亮/星星/云的具体可见问题（位置/大小/颜色/闪烁/排序），以定位剩余偏差；或继续按已知缺口做云 OIT/天空盘。## 2026-11-01 T-305：窗口天体每帧重建 + 云位置修正
 - 根因1：窗口的 celestial 只在启动时 `AttachCelestial` 一次；`/time` 变化后太阳/月亮/星星几何不更新 → 太阳不动、夜里无星星。现 `WindowedRenderer` 增 `celestialPerFrame`，宿主每帧重建 day/night 天体（PNG 解码静态缓存、纹理数组固定顺序，`CelestialResources.SetDraws` 复用纹理/管线）。
 - 根因2：云 `BuildCloudDraw` 的 origin 重复加了相机坐标；原版 shader `pos = cell*CellSize + face*CellSize + CloudOffset` + 相机 uniform，origin 应为 `(cellX*12-xInCell, bottomY, cellZ*12-zInCell)`。已修。
-- 验证：离屏 `MC_SUN_ANGLE=0` 太阳在视野、90/180 消失且星星可见（白点）；全量 1266 通过。剩余需窗口实测与云 OIT/排序。
+- 验证：离屏 `MC_SUN_ANGLE=0` 太阳在视野、90/180 消失且星星可见（白点）；全量 1266 通过。剩余需窗口实测与云 OIT/排序。## 2026-11-01 T-306：星星随相机 / 云相机相对坐标
+- 现象：玩家走路会靠近星星；云跨区块位置突然跳变/渲染异常。
+- 根因1：每帧 `celestialPerFrame` 的 `SetDraws` 在 `UpdateCamera` 之后执行，新 draw 的 model 仍是初始相机 → 星星固定在世界原点。已改为先 `SetDraws` 再 `UpdateCamera(delta)`。
+- 根因2：原版云是**相机相对**（vsh 的 cell 是 relative cell，pos=relative*12+CloudOffset，相机在原点）；我们 origin 之前含 centerCell 绝对坐标 → 跨 cell 跳变。已改为 `origin=(eye.X-xInCell, bottomY, eye.Z-zInCell)`；`CloudGeometryBuilder` 继续用相对 CellX。
+- 待窗口实测：跨区块行走云连续性、星星不随移动靠近；全量测试后提交。

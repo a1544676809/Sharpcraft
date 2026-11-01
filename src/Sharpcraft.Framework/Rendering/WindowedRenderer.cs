@@ -969,8 +969,6 @@ public static class WindowedRenderer
 
             // Sun/moon/stars are built relative to the initial camera; keep them centred as the player moves.
             var celestialDelta = eye - request.CameraPosition;
-            celestial?.UpdateCamera(celestialDelta);
-            celestialColour?.UpdateCamera(celestialDelta);
 
             var encoder = device.CreateCommandEncoder();
             var frameColour = clearColourPerFrame?.Invoke() ?? colour;
@@ -1002,6 +1000,11 @@ public static class WindowedRenderer
                 celestial?.SetDraws(celestialUpdate.Draws);
                 celestialColour?.SetDraws(celestialUpdate.Colors);
             }
+
+            // Apply the camera delta AFTER any per-frame draw rebuild: a freshly built draw uses the base (initial) camera
+            // model, so translating first would be overwritten and the bodies would stay anchored in the world.
+            celestial?.UpdateCamera(celestialDelta);
+            celestialColour?.UpdateCamera(celestialDelta);
 
             celestial?.Draw(pass);
             celestialColour?.Draw(pass);
