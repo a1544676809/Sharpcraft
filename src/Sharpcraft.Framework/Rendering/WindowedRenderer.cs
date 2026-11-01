@@ -260,9 +260,9 @@ public static class WindowedRenderer
         using var cloudDbPipelineLayout = cloudOit is null ? default : device.CreatePipelineLayout([cloudOit.Layout]);
         using var cloudTransPipelineLayout = cloudOit is null ? default : device.CreatePipelineLayout([cloudOit.Layout, refTransmittanceLayout]);
         using var cloudAccumPipelineLayout = cloudOit is null ? default : device.CreatePipelineLayout([cloudOit.Layout, refAccumulateLayout]);
-        using var cloudDepthBoundsPipeline = cloudOit is null ? default : CreateDepthBoundsPipeline(device, cloudDbPipelineLayout, "cloud_oit", positionColor: true, format: oitTargetFormat, depthWrite: true);
-        using var cloudTransmittancePipeline = cloudOit is null ? default : CreateTransmittancePipeline(device, cloudTransPipelineLayout, "cloud_oit", positionColor: true, format: oitTargetFormat, depthWrite: true);
-        using var cloudAccumulatePipeline = cloudOit is null ? default : CreateAccumulatePipeline(device, cloudAccumPipelineLayout, "cloud_oit", positionColor: true, format: oitTargetFormat, depthWrite: true);
+        using var cloudDepthBoundsPipeline = cloudOit is null ? default : CreateDepthBoundsPipeline(device, cloudDbPipelineLayout, "cloud_oit", positionColor: true, format: oitTargetFormat);
+        using var cloudTransmittancePipeline = cloudOit is null ? default : CreateTransmittancePipeline(device, cloudTransPipelineLayout, "cloud_oit", positionColor: true, format: oitTargetFormat);
+        using var cloudAccumulatePipeline = cloudOit is null ? default : CreateAccumulatePipeline(device, cloudAccumPipelineLayout, "cloud_oit", positionColor: true, format: oitTargetFormat);
 
         using var refDepthBoundsPipeline = CreateDepthBoundsPipeline(device, pipelineLayout, format: oitTargetFormat);
         using var refTransmittancePipeline = CreateTransmittancePipeline(device, refTransmittancePipelineLayout, format: oitTargetFormat);
