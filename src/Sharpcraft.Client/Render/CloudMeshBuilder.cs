@@ -195,7 +195,7 @@ public static class CloudMeshBuilder
             quads.Add(new CloudQuad(relativeCellX, relativeCellZ, CloudFaceDirection.East, false));
         }
 
-        if (Math.Abs(relativeCellX) <= 1 && Math.Abs(relativeCellZ) <= 1)
+        if (side == CloudCameraSide.InsideClouds && Math.Abs(relativeCellX) <= 1 && Math.Abs(relativeCellZ) <= 1)
         {
             for (var direction = 0; direction < 6; direction++)
             {
