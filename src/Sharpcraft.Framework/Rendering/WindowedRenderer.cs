@@ -1606,6 +1606,14 @@ public static class WindowedRenderer
                 + $"{arena.FullRebuilds} full rebuilds");
             arena.Dispose();
         }
+        if (arenaCutout is not null)
+        {
+            Console.WriteLine($"window: cutout {arenaCutout.ChunkCount} chunks, memory {arenaCutout.MemoryBytes / (1024d * 1024d):F1} MB");
+        }
+        if (arenaTranslucent is not null)
+        {
+            Console.WriteLine($"window: translucent {arenaTranslucent.ChunkCount} chunks, memory {arenaTranslucent.MemoryBytes / (1024d * 1024d):F1} MB");
+        }
 
         Console.WriteLine(
             $"window: rebuild {rebuildCount} frames, avg {(rebuildCount == 0 ? 0 : rebuildTotalMs / rebuildCount):F1} ms, "

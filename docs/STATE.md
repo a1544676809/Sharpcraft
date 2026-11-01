@@ -2129,3 +2129,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-01 Vanilla天空盘相机平移修复（T-337）：全量1272通过；天空盘观感正常。
 - 2026-11-01 固定机位天空/雾采样通过：Sharpcraft (136,169,255) vs vanilla (137,170,255)。
 - 2026-11-01 视距32统计：154FPS、solid arena 1770chunks/1040MB；draw call非瓶颈，显存优先（T-339）。
+- 2026-11-01 2560视距32统计（T-340）：162FPS，几何显存≈1.22GB；不引入paged arena。
