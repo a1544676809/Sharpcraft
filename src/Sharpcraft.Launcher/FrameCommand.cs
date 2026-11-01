@@ -1597,7 +1597,9 @@ internal static class FrameCommand
             : Sharpcraft.Common.World.SkyTimelines.SunAngleDegrees(dayTime, partialTick);
 
         AddBody(CelestialSprites.Sun, sunAngle, size: 30f);
-        AddBody(CelestialSprites.MoonPhase(moonPhaseIndex), moonAngle, size: 20f);
+        // The reference builds the moon quads with reversed UVs (buildMoonPhases) while the sun uses forward UVs, so the
+        // raw phase images are rotated 180 degrees to match the reference's on-screen orientation.
+        AddBody(CelestialSprites.MoonPhase(moonPhaseIndex), moonAngle, size: 20f, flip: true);
 
         // Sunrise/sunset band: a position-colour triangle fan, skipped below the reference alpha cutoff. Rain/thunder
         // multiply the colour (WeatherAttributes SUNRISE_SUNSET_COLOR MULTIPLY_ARGB).
@@ -1668,7 +1670,7 @@ internal static class FrameCommand
             CelestialColorDraws = colorDraws.Count > 0 ? [.. colorDraws] : null
         };
 
-        void AddBody(Sharpcraft.Common.Identifiers.Identifier identifier, float angleDegrees, float size)
+        void AddBody(Sharpcraft.Common.Identifiers.Identifier identifier, float angleDegrees, float size, bool flip = false)
         {
             var bytes = resources.Read(ResourceKind.Texture, identifier);
             if (bytes is null)
@@ -1680,8 +1682,9 @@ internal static class FrameCommand
             var textureIndex = textures.Count;
             textures.Add(new TextureData(image.Width, image.Height, image.Pixels));
 
+            var uv = flip ? (1f, 1f, 0f, 0f) : (0f, 0f, 1f, 1f);
             var (vertices, indices) = CelestialMeshBuilder.CelestialQuad(
-                angleDegrees * (MathF.PI / 180f), height: 100f, size: size, uv: (0f, 0f, 1f, 1f));
+                angleDegrees * (MathF.PI / 180f), height: 100f, size: size, uv: uv);
 
             // Translate to the eye so the body stays at the same place relative to the camera, i.e. infinitely far.
             // RAIN_BRIGHTNESS (= 1 - rainLevel) is the reference alpha on the sun/moon transform.

@@ -41,6 +41,25 @@ public sealed class CelestialGeometryTests
     }
 
     [Fact]
+    public void QuadUvRectControlsCornerAssignmentForMoonFlip()
+    {
+        Vector3[] corners = [new(-1, 0, -1), new(1, 0, -1), new(1, 0, 1), new(-1, 0, 1)];
+
+        var (forward, _) = CelestialMeshBuilder.Quad(corners, (0f, 0f, 1f, 1f));
+        Assert.Equal(0f, forward[3], 3);
+        Assert.Equal(0f, forward[4], 3);
+        Assert.Equal(1f, forward[2 * CelestialMeshBuilder.FloatsPerVertex + 3], 3);
+        Assert.Equal(1f, forward[2 * CelestialMeshBuilder.FloatsPerVertex + 4], 3);
+
+        // The moon uses the reversed rect (1,1,0,0), which is a 180 degree rotation of the sprite.
+        var (flipped, _) = CelestialMeshBuilder.Quad(corners, (1f, 1f, 0f, 0f));
+        Assert.Equal(1f, flipped[3], 3);
+        Assert.Equal(1f, flipped[4], 3);
+        Assert.Equal(0f, flipped[2 * CelestialMeshBuilder.FloatsPerVertex + 3], 3);
+        Assert.Equal(0f, flipped[2 * CelestialMeshBuilder.FloatsPerVertex + 4], 3);
+    }
+
+    [Fact]
     public void SunriseFanHasCentreAndRingPoints()
     {
         var fan = CelestialGeometry.SunriseFanLocal(16);

@@ -2072,4 +2072,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 视距 **32**：窗口统计 **3890 区块**、**上传 3.26GB**、**0 次 full rebuild**、**8302 帧**无 OOM/validation（GPU dedicated 峰值 ~4.3GB，960×540）。
 - 证明"每区块缓冲 + CPU 剔除"支持大视距且**不跳过远处区块**；旧单 arena 上限问题解除。
 - 旧 `ChunkGeometryArena`/`ArenaSizing` 暂留（仍被旧单测覆盖），后续可删；`ClientWorld` 目前不会移除离视区块，长时间大范围移动会累积内存（后续做区块卸载 + 缓冲释放）。
-- **剩余渲染缺口已登记** `docs/specs/render/known-gaps.md`：区块卸载、旧 arena/绘制调用、天空盘/渐变、雾精确混合、夜亮度、云 OIT/精确 cloud-fog、天体细节像素等效、高分辨率显存、适配器选择；traceability T-303。
+- **剩余渲染缺口已登记** `docs/specs/render/known-gaps.md`：区块卸载、旧 arena/绘制调用、天空盘/渐变、雾精确混合、夜亮度、云 OIT/精确 cloud-fog、天体细节像素等效、高分辨率显存、适配器选择；traceability T-303。## 2026-11-01 T-304：天体/云排查（月亮 UV 修复）
+- 实读原版 `SkyRenderer`：太阳尺寸30/高度100、月亮20/100、星空1500、日出18顶点扇形；日出 alpha 经 PoseStack 后乘 scale 作用在旋转前局部 Z（我们的 `SunriseFanWorld` 公式正确）。
+- **已修正**：原版月亮四边形相对太阳使用反向 UV（`buildMoonPhases` → 180°），我们此前正向 → 月相方向错误；`AddBody(..., flip: true)` 传 `(1,1,0,0)`，加 `CelestialGeometryTests`。
+- 云 shader 实读：`vertexColor = faceColors[dir] * CloudColor`，alpha *= `1-linear_fog_value(vertexDistance,0,FogCloudsEnd)`；面亮度/雾与我们实现一致；**缺 OIT 云 pass**（已知缺口）。
+- 下一步：需要用户给出太阳/月亮/星星/云的具体可见问题（位置/大小/颜色/闪烁/排序），以定位剩余偏差；或继续按已知缺口做云 OIT/天空盘。
