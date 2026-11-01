@@ -1687,7 +1687,7 @@ public static class WindowedRenderer
             SampleCount = 1,
             Dimension = WGPUTextureDimension._2D,
             Format = WGPUTextureFormat.Depth32Float,
-            Usage = TextureUsage.RenderAttachment
+            Usage = TextureUsage.RenderAttachment | TextureUsage.CopySrc | TextureUsage.CopyDst
         });
 
     /// <summary>Creates one order independent transparency target: renderable and sampleable, at frame size.</summary>
