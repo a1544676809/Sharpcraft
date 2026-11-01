@@ -17,7 +17,7 @@ updated: 2026-11-01
 | 项 | 现状 | 影响 | 建议 |
 | --- | --- | --- | --- |
 | **区块卸载** | 已实现：`ClientWorld.RemoveChunksOutside` + `ChunkMeshCache.Remove` + `ChunkGeometryStore.Remove`，按视距+2 释放 | — | 已关闭（T-327） |
-| 旧 arena 死代码 | `ChunkGeometryArena`/`ArenaSizing` 已不被渲染器使用，仅旧单测覆盖 | 增加维护面/误导 | 确认无外部引用后删除文件与对应测试，更新 traceability |
+| 旧 arena 死代码 | 已删除 `ChunkGeometryArena`/`ArenaSizing` 及其测试 | — | 已关闭（T-341） |
 | Draw call 数量 | 每区块一次 `DrawIndexed`（solid/cutout/translucent），视距 32 约数千 | CPU 提交开销；当前 960×540 可接受 | profiling 后决定：分页 arena + GPU 间接剔除，或按层合批 |
 
 ## 2. 天空 / 光照 / 雾
