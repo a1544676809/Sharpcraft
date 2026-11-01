@@ -393,6 +393,8 @@ internal static class WindowCommand
         var lightProbe = Environment.GetEnvironmentVariable("MC_LIGHT_PROBE") == "1";
         var frameClock = System.Diagnostics.Stopwatch.StartNew();
         var previousFrameMs = 0.0;
+        long celestialCacheKey = long.MinValue;
+        FrameRequest? celestialCached = null;
 
         var format = WindowedRenderer.Run(
             request,
@@ -590,8 +592,16 @@ internal static class WindowCommand
                     return null;
                 }
 
-                var refreshed = FrameCommand.AttachCelestial(request, world, resources);
-                return (refreshed.CelestialDraws ?? [], refreshed.CelestialColorDraws ?? []);
+                var rainKey = (long)(FrameCommand.EffectiveRainLevel(world, 0f) * 100f);
+                var thunderKey = (long)(FrameCommand.EffectiveThunderLevel(world, 0f) * 100f);
+                var key = FrameCommand.EffectiveDayTime(world) ^ (rainKey << 32) ^ (thunderKey << 24);
+                if (celestialCached is null || key != celestialCacheKey)
+                {
+                    celestialCached = FrameCommand.AttachCelestial(request, world, resources);
+                    celestialCacheKey = key;
+                }
+
+                return (celestialCached.CelestialDraws ?? [], celestialCached.CelestialColorDraws ?? []);
             },
             uiGeometry: frame =>
             {

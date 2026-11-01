@@ -2107,3 +2107,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 下一步从阶段1开始：新增 `cloud_oit.wgsl`（7-float 顶点 + transform uniform），缓存云几何仅在 cell/侧别变化时重建，每帧仅更新 uniform。- 2026-11-01 阶段1完成：`cloud_oit.wgsl`（7-float+transform）+ `CloudOitResources` 仅在缓存数组变化时上传，每帧只更新 transform；窗口 2194+ 帧无校验错误。
 - 2026-11-01 阶段2完成：`CloudRangePolicy` + `MC_CLOUD_ADAPTIVE`（默认关闭）按帧时间在 32–128 调云范围。
 - 2026-11-01 阶段3完成：OIT 目标按需创建（有半透明/云 OIT 才分配），无内容场景不占目标显存。
+- 2026-11-01 阶段5部分：天体几何按 dayTime/雨雷缓存，减少每帧重建（相机仍每帧 UpdateCamera）。
