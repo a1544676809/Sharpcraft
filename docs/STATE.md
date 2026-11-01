@@ -1944,4 +1944,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **P2.1** `PlayClientbound.GameEvent=39`（GameProtocols clientbound 序 index 40，id=index−1；锚点 SetTime 116→115、Login 51→50）；`GameEventPacket`(byte type + float param)+`GameEventPacketCodec`；`GameEventPacketTests`(2)。实读确认 START/STOP 为占位（0/1），真实值由随后 `RAIN_LEVEL_CHANGE`/`THUNDER_LEVEL_CHANGE` 给出。
 - **P2.2** `ClientWorld` 天气状态：`SetRainLevel/SetThunderLevel`(o=current)、`RainLevel(partial)`/`ThunderLevel(partial)`(thunder×rain，照 `Level.getThunderLevel`)、`ApplyWeather`(START 0/STOP 1 quirk + 7/8 level)；`InteractiveSession` 分发 `GameEvent`；`ClientWorldWeatherTests`(4)。
 - **P2.3** `RAIN_BRIGHTNESS=1-rain` 接日月 tint alpha；星亮度按 `(1−rainWeight)(1−thunder)` 衰减；`MC_FORCE_RAIN/THUNDER` 验证。本地夜 rain 0→stars 0.500/alpha 1.00，rain 1→stars 0.000/alpha 0.00。
-- 全量 **1224 通过**、门禁/架构 ok。**下一步**：P3（chunk biome 数据 + registry，硬前置；接方块调色逐群系与天空盘替换）或先把天气叠加进 `LightmapParameters`/`SKY_LIGHT_*`（可纯逻辑测）。P3 工作量最大，建议单独一轮。
+- 全量 **1224 通过**、门禁/架构 ok。**下一步**：P3（chunk biome 数据 + registry，硬前置；接方块调色逐群系与天空盘替换）或先把天气叠加进 `LightmapParameters`/`SKY_LIGHT_*`（可纯逻辑测）。P3 工作量最大，建议单独一轮。## 2026-11-01 P4.1 天气叠加进 lightmap（SKY_LIGHT_FACTOR）
+- `FrameCommand.EffectiveLighting(world)`：`LightmapParameters.OverworldAt(dayTime,partial)` 之后按 `WeatherBlend.SkyLightFactor(base,rain,thunder)` 叠加天气（`EffectiveRain/Thunder` 复用，含 env 覆盖）；`BuildRequest` 与 `RenderLocal` 统一用它。
+- 日月/星 alpha 与光照共用同一 rain/thunder（去掉重复内联解析）。
+- **验证**：`WeatherBlendTests`(+1：day base1 rain1→0.7625、night 0.24 不变)；本地白天 rain 0→top-mid `rgba(136,136,136)`、rain 1→`rgba(128,128,128)`（变暗）。全量 **1225 通过**、门禁 ok。
+- **未做（P4 其余）**：`SKY_LIGHT_COLOR` 天气 alphaBlend、`FOG_COLOR`/`CLOUD_COLOR`、`SUNRISE_SUNSET_COLOR` 天气乘子（均可纯逻辑，需读 `ARGB.alphaBlend` 精确语义）；**P3（biome 数据）** 仍是接方块调色与天空盘的硬前置，建议单独一轮。

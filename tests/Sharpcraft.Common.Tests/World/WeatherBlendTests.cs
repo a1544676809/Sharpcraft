@@ -62,6 +62,14 @@ public sealed class WeatherBlendTests
     }
 
     [Fact]
+    public void RainDarkensDayButLeavesNightAlone()
+    {
+        // Day base factor 1 blended toward 0.24 by alpha 0.3125 -> 0.7625; night base already 0.24 -> unchanged.
+        Assert.Equal(0.7625f, WeatherBlend.SkyLightFactor(1f, 1f, 0f), 4);
+        Assert.Equal(0.24f, WeatherBlend.SkyLightFactor(0.24f, 1f, 0f), 4);
+    }
+
+    [Fact]
     public void ApplySkyColourGreyscalesUnderRain()
     {
         Assert.Equal(Vector3.One, WeatherBlend.ApplySkyColour(Vector3.One, 0f, 0f));

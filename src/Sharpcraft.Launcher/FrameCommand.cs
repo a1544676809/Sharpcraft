@@ -787,7 +787,7 @@ internal static class FrameCommand
 
         // Day/night lightmap parameters from the world clock; the offscreen path re-meshes every frame, so this reaches
         // the vertex colours without re-uploading a cached mesh (docs/specs/render/lighting.md 6).
-        var lighting = LightmapParameters.OverworldAt(EffectiveDayTime(world), EffectiveDayTimePartial(world));
+        var lighting = EffectiveLighting(world);
 
         float[]? translucentVertices = null;
         uint[]? translucentIndices = null;
@@ -1319,6 +1319,38 @@ internal static class FrameCommand
             ? Math.Clamp(forced, 0f, 1f)
             : world.DayTimePartial;
 
+    /// <summary>Rain level at a sub-tick fraction, with <c>MC_FORCE_RAIN</c> override for verification.</summary>
+    internal static float EffectiveRainLevel(ClientWorld world, float partialTick) =>
+        Environment.GetEnvironmentVariable("MC_FORCE_RAIN") is { Length: > 0 } text && float.TryParse(text, out var forced)
+            ? Math.Clamp(forced, 0f, 1f)
+            : world.RainLevel(partialTick);
+
+    /// <summary>Thunder level (already scaled by rain), with <c>MC_FORCE_THUNDER</c> override for verification.</summary>
+    internal static float EffectiveThunderLevel(ClientWorld world, float partialTick)
+    {
+        var rain = EffectiveRainLevel(world, partialTick);
+        return Environment.GetEnvironmentVariable("MC_FORCE_THUNDER") is { Length: > 0 } text && float.TryParse(text, out var forced)
+            ? Math.Clamp(forced, 0f, 1f) * rain
+            : world.ThunderLevel(partialTick);
+    }
+
+    /// <summary>
+    /// The lightmap parameters for the current time and weather: the day/night sky factor and colour from the timelines,
+    /// then the RAIN/THUNDER layers applied (docs/modules/weather-and-sky-color.md 6.3).
+    /// </summary>
+    internal static LightmapParameters EffectiveLighting(ClientWorld world)
+    {
+        var partialTick = EffectiveDayTimePartial(world);
+        var parameters = LightmapParameters.OverworldAt(EffectiveDayTime(world), partialTick);
+        var rain = EffectiveRainLevel(world, partialTick);
+        var thunder = EffectiveThunderLevel(world, partialTick);
+
+        return parameters with
+        {
+            SkyFactor = Sharpcraft.Common.World.WeatherBlend.SkyLightFactor(parameters.SkyFactor, rain, thunder)
+        };
+    }
+
     /// <summary>Maps the client lightmap parameters to the framework uniform the terrain shader reads.</summary>
     internal static LightmapUniform ToLightmapUniform(LightmapParameters parameters) => new(
         SkyFactor: parameters.SkyFactor,
@@ -1346,12 +1378,8 @@ internal static class FrameCommand
 
         // Rain/thunder levels (host override for verification); rain brightness dims the sun and moon, and rain/thunder
         // dims the stars (WeatherAttributes sets STAR_BRIGHTNESS to 0 under rain/thunder).
-        var rainLevel = Environment.GetEnvironmentVariable("MC_FORCE_RAIN") is { Length: > 0 } rainText && float.TryParse(rainText, out var parsedRain)
-            ? Math.Clamp(parsedRain, 0f, 1f)
-            : world.RainLevel(partialTick);
-        var thunderLevel = Environment.GetEnvironmentVariable("MC_FORCE_THUNDER") is { Length: > 0 } thunderText && float.TryParse(thunderText, out var parsedThunder)
-            ? Math.Clamp(parsedThunder, 0f, 1f) * rainLevel
-            : world.ThunderLevel(partialTick);
+        var rainLevel = EffectiveRainLevel(world, partialTick);
+        var thunderLevel = EffectiveThunderLevel(world, partialTick);
         var rainBrightness = Sharpcraft.Common.World.WeatherBlend.RainBrightness(rainLevel);
 
         // The moon phase follows total world ticks (one phase per 24000 ticks); angles follow the day clock.
@@ -1604,7 +1632,7 @@ internal static class FrameCommand
             }
         }
         var mesh = ChunkMesher.Mesh(world, airState: 0, maxBlocks: 2_000_000, sprites: prepared?.Map,
-            merge: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoMergeFaces, lighting: LightmapParameters.OverworldAt(EffectiveDayTime(world), EffectiveDayTimePartial(world)));
+            merge: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoMergeFaces, lighting: EffectiveLighting(world));
         Console.WriteLine($"local demo: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
         var bounds = (Min: new Vector3(0, -16, 0), Max: new Vector3(16, 16, 16));
@@ -1621,7 +1649,7 @@ internal static class FrameCommand
             eye,
             target)
         {
-            Lightmap = ToLightmapUniform(LightmapParameters.OverworldAt(EffectiveDayTime(world), EffectiveDayTimePartial(world))),
+            Lightmap = ToLightmapUniform(EffectiveLighting(world)),
             Atlas = prepared is null
                 ? null
                 : WithMips(prepared.Value.Atlas)
