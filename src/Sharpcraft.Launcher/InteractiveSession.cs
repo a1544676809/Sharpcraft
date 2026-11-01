@@ -1635,10 +1635,19 @@ internal sealed class InteractiveSession
                     break;
 
                 case PacketIds.PlayClientbound.PlayerInfoUpdate:
-                    if (PlayerListPackets.TryReadPlayerInfoUpdate(body[reader.Position..], out _, out var profileUpdates) ==
-                        DecodeStatus.Success)
+                    var playerInfoStatus = PlayerListPackets.TryReadPlayerInfoUpdate(
+                        body[reader.Position..], out var playerInfoActions, out var profileUpdates);
+                    if (playerInfoStatus == DecodeStatus.Success)
                     {
                         _playerList.Apply(profileUpdates);
+                        if (_packetLog)
+                        {
+                            Console.WriteLine($"playerinfo: actions={playerInfoActions} entries={profileUpdates.Length} roster={_playerList.Count}");
+                        }
+                    }
+                    else if (_packetLog)
+                    {
+                        Console.WriteLine($"playerinfo: parse failed status={playerInfoStatus} len={body.Length}");
                     }
 
                     break;

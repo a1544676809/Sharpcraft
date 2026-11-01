@@ -40,6 +40,24 @@ public sealed class PlayerListTests
     }
 
     [Fact]
+    public void AnAddPacketWithNullChatSessionStillParsesTheName()
+    {
+        var body = Body(
+            actions: PlayerListActions.AddPlayer | PlayerListActions.InitializeChat,
+            count: 1,
+            writer =>
+            {
+                WriteUuid(writer, Alice);
+                WriteString(writer, "Alice");
+                WriteVarInt(writer, 0); // no profile properties
+                writer.WriteByte(0);    // nullable chat session absent
+            });
+
+        Assert.Equal(DecodeStatus.Success, PlayerListPackets.TryReadPlayerInfoUpdate(body, out _, out var entries));
+        Assert.Equal("Alice", Assert.Single(entries).Name);
+    }
+
+    [Fact]
     public void PayloadsAreReadInActionOrderNotCallOrder()
     {
         // Listed, game mode and latency all present: the payloads arrive in ordinal order, which is game mode,
@@ -153,7 +171,7 @@ public sealed class PlayerListTests
     private static byte[] Body(PlayerListActions actions, int count, Action<MemoryStream> writeEntries)
     {
         using var stream = new MemoryStream();
-        WriteVarInt(stream, (int)actions);
+        stream.WriteByte((byte)actions);
         WriteVarInt(stream, count);
         writeEntries(stream);
         return stream.ToArray();

@@ -81,7 +81,7 @@ public static class PlayerListPackets
 
         var reader = new PayloadReader(body);
 
-        if (reader.TryReadVarInt(out var mask) != DecodeStatus.Success)
+        if (reader.TryReadByte(out var mask) != DecodeStatus.Success)
         {
             return DecodeStatus.NeedMoreData;
         }
@@ -276,12 +276,20 @@ public static class PlayerListPackets
         return true;
     }
 
-    /// <summary>Skips a chat session: a session id, an expiry, and two byte arrays.</summary>
-    private static bool SkipChatSession(ref PayloadReader reader) =>
-        reader.TryReadUuid(out _) == DecodeStatus.Success &&
-        reader.TryReadLong(out _) == DecodeStatus.Success &&
-        reader.TryReadByteArray(out _, maxLength: 1024) == DecodeStatus.Success &&
-        reader.TryReadByteArray(out _, maxLength: 4096) == DecodeStatus.Success;
+    /// <summary>Skips a nullable chat session: presence flag, then session id, expiry, and two byte arrays.</summary>
+    private static bool SkipChatSession(ref PayloadReader reader)
+    {
+        if (reader.TryReadBool(out var present) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        return !present
+            || (reader.TryReadUuid(out _) == DecodeStatus.Success
+                && reader.TryReadLong(out _) == DecodeStatus.Success
+                && reader.TryReadByteArray(out _, maxLength: 1024) == DecodeStatus.Success
+                && reader.TryReadByteArray(out _, maxLength: 4096) == DecodeStatus.Success);
+    }
 
     /// <summary>Skips a display name, which is a network NBT tag read and discarded for now.</summary>
     private static bool SkipNetworkComponent(ref PayloadReader reader, ReadOnlySpan<byte> body)

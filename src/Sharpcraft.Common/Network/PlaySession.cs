@@ -232,7 +232,10 @@ public static class PlaySession
                         return new PlaySessionStats(joinGame, keepAlives, pings, counts, "start_configuration", false, chunksReceived, chunksFailed, batchesAcknowledged, deferred);
 
                     default:
-                        if (packetId == PacketIds.PlayClientbound.SetTime || packetId == PacketIds.PlayClientbound.GameEvent)
+                        if (packetId == PacketIds.PlayClientbound.SetTime
+                            || packetId == PacketIds.PlayClientbound.GameEvent
+                            || packetId == PacketIds.PlayClientbound.PlayerInfoUpdate
+                            || packetId == PacketIds.PlayClientbound.PlayerInfoRemove)
                         {
                             deferred.Add(body.ToArray());
                         }
