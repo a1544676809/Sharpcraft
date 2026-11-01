@@ -2111,3 +2111,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-01 阶段5部分：`MC_SKY_GRADIENT=1` 开关（默认平色 SKY_COLOR）。阶段4独立 cloud depth 仍需单独 OIT passes。
 - 2026-11-01 阶段4设计完成：独立 cloud depth OIT（cloudDepthTexture/三阶段/独立 composite，`MC_CLOUD_DEPTH`）；实现待下一提交。
 - 2026-11-01 阶段3余项完成：`MC_OIT_LOW_PRECISION=1` OIT 目标降为 RGBA8Unorm（默认 16F）。
+- 2026-11-01 阶段4对照流程已登记 `benchmarks/render/cloud-oit-compare.md`；独立 cloud depth 实现仍待下一提交。

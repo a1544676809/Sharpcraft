@@ -344,3 +344,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-317 | **阶段5（部分）：天空渐变开关**：`MC_SKY_GRADIENT=1` 保留渐变天空 pass，默认仍平色 SKY_COLOR（不改变参考观感） | `docs/specs/render/optimization-plan.md 阶段5` | 构建通过 | `Launcher/WindowCommand` | 已完成 |
 | T-318 | **阶段4详细设计**：独立 cloud depth OIT（cloudDepthTexture + cloud depth bounds/coeff/accum 目标、主深度 blit、三阶段、独立 cloud composite、`MC_CLOUD_DEPTH` 开关、固定机位像素对照） | `docs/specs/render/optimization-plan.md 阶段4详细设计` | — | — | 已完成 |
 | T-319 | **阶段3余项：OIT 目标低精度选项**：`MC_OIT_LOW_PRECISION=1` 将 OIT 目标与对应 pipeline color format 改为 RGBA8Unorm（默认 RGBA16Float），用于高分辨率显存降级；所有 OIT pipeline 的格式参数化 | `docs/specs/render/optimization-plan.md 阶段3` | 构建通过；全量测试 | `Framework/Rendering/WindowedRenderer`、`Launcher/WindowCommand` | 已完成 |
+| T-320 | **阶段4对照基准流程**：固定机位/时间/视距的 `MC_CLOUD_OIT=1` vs `0`（未来加 `MC_CLOUD_DEPTH=1`）云边界/遮挡/夜间颜色对照流程 | `benchmarks/render/cloud-oit-compare.md`；optimization-plan 阶段4 | — | — | 已完成（流程） |
