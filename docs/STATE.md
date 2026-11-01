@@ -1937,5 +1937,6 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 模块文档转 **[已评审]**（所有者 2026-11-01 通过）。按 §10 分步实施，P1 纯逻辑（Common，无数据/资产）。
 - **P1.1** `Common/World/ColorMapColorUtil.Get`：colormap 索引 `rain=downfall*temp; x=(1-temp)*255; y=(1-rain)*255; index=y<<8|x`，越界返回 default（复刻 `ColorMapColorUtil.java`）。
 - **P1.2** `Common/World/SkyColour.FromTemperature`：`t=clamp(temp/3,-1,1)`，HSV `(0.62222224-0.05t,0.5+0.1t,1.0)` → opaque ARGB（复刻 `calculateSkyColor`+`Mth.hsvToArgb`）。
-- 单测 6（`ColorMapColorUtilTests` 3、`SkyColourTests` 3，均手算）。全量 **1206 通过**（一次 Client 偶发抖动已复跑绿）、门禁/架构 ok。
-- **下一步** P1.3：读 `ARGB.{greyscale,scaleRGB,srgbLerp,alphaBlend}` 实现 `BlendToGray`/`AlphaBlend` 与天气权重叠加（RAIN/THUNDER）；P1.4 `CalculateBlockTint`(+blendRadius)、gaussian 权重、`RainBrightness`。
+- 单测 6（`ColorMapColorUtilTests` 3、`SkyColourTests` 3，均手算）。全量 **1212 通过**、门禁/架构 ok。
+- **P1.3** ✅ `Common/World/ColourBlend`（greyscale `0.3/0.59/0.11`、scaleRGB clamp、srgbLerp、BlendToGray）+ `WeatherBlend`（`RainBrightness=1-rain`、`SkyLightFactor`/`ApplySkyColour` 按 `rain−thunder`/`thunder` 权重重叠）；`WeatherBlendTests`(6)。
+- **下一步** P1.4：`CalculateBlockTint`（含 `biomeBlendRadius` 逐通道整数平均，泛型 resolver）、gaussian 权重（`{0,1,4,6,4,1,0}` 三轴归一）、`RainBrightness` 已在 P1.3；随后 P2 天气同步。
