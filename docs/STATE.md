@@ -1959,4 +1959,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 新增 `docs/analysis/common/biome-data.md`（草稿）：区块每 section「方块状态容器 + 生物群系容器（4×4×4=64、`BiomeMaxLocalBits=3`、全局调色板=群系 id、索引 `(y<<4)|(z<<2)|x`)」；`ChunkPacketParser` 现已读入并**丢弃**，P3 改为存 `int[64]`。
 - 群系注册表（`Biome.NETWORK_CODEC`）：`has_precipitation`、`temperature`、`temperature_modifier`(默认 NONE)、`downfall`、可选 `attributes`（含 `visual/sky_color`）、`effects`{`water_color` 必填、`foliage_color`?、`dry_foliage_color`?、`grass_color`?、`grass_color_modifier`?}；颜色 `"RRGGBB"`。
 - 颜色派生与采样：草/叶/干叶=override??colormap(temp,downfall)+modifier，水=water_color；`SKY_COLOR` 首版用 `calculateSkyColor(temp)`（原版主世界精确等价）；位置→section quart `(>>2&3)`，环境属性 7 抽头 gaussian 空间混合（核 `{0,1,4,6,4,1,0}`）。
-- 模块文档 §11 指向分析文档。**下一步 P3 实施**：①`ChunkSection` 存 biome id[64]＋解析；②registry_data 取群系条目（或专用解码）＋`BiomeColors` 数据；③`ColorMapColorUtil`+温度→草/叶/水逐群系 tint（接 `ChunkMesher`）；④`SKY_COLOR`=calculateSkyColor+空间混合替换天空盘。工作量最大，分小步。
+- 模块文档 §11 指向分析文档。**下一步 P3 实施**：①`ChunkSection` 存 biome id[64]＋解析；②registry_data 取群系条目（或专用解码）＋`BiomeColors` 数据；③`ColorMapColorUtil`+温度→草/叶/水逐群系 tint（接 `ChunkMesher`）；④`SKY_COLOR`=calculateSkyColor+空间混合替换天空盘。工作量最大，分小步。## 2026-11-01 P3.1 区块 biome id 存储 + 解析捕获
+- `ChunkSection`：新增 `int[64] Biomes`（`BiomeVolume=64`）、`GetBiome(x,y,z)`、`HasBiomes`、纯函数 `BiomeIndex = ((y>>2&3)<<4)|((z>>2&3)<<2)|(x>>2&3)`；ctor 增可选 `int[]? biomes`。
+- `ChunkPacketParser`：生物群系容器由“读后丢弃”改为 `biomes.Get(b)` 存入每 section `int[64]`（字节消费不变，`ChunkPacketTests` 仍绿）。
+- 测试 `ChunkSectionBiomeTests`(3)。全量 **1232 通过**、门禁 ok。
+- **下一步 P3.2**：biome registry 条目解码（`has_precipitation`/`temperature`/`temperature_modifier`/`downfall`/`effects` 与 `"RRGGBB"` 颜色）＋ `BiomeRegistry`（Common）＋合成字节单测；再 P3.3 逐群系 tint 接 `ChunkMesher`、P3.4 天空盘。

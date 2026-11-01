@@ -221,15 +221,21 @@ public static DecodeStatus TryRead(
                 return status;
             }
 
-            // Biomes are consumed to keep the reader aligned; they are not stored yet.
+            // Biomes: 4x4x4 quart ids, stored per section for per-biome colour (docs/analysis/common/biome-data.md).
             status = PalettedContainerCodec.TryRead(
-                ref sectionReader, BiomeCount, PalettedContainerCodec.BiomeMaxLocalBits, out _);
+                ref sectionReader, BiomeCount, PalettedContainerCodec.BiomeMaxLocalBits, out var biomes);
             if (status != DecodeStatus.Success)
             {
                 return status;
             }
 
-            chunk.SetSection(new ChunkSection(states, minSectionY + i, nonEmptyBlockCount));
+            var biomeIds = new int[BiomeCount];
+            for (var b = 0; b < BiomeCount; b++)
+            {
+                biomeIds[b] = biomes.Get(b);
+            }
+
+            chunk.SetSection(new ChunkSection(states, minSectionY + i, nonEmptyBlockCount, biomeIds));
         }
 
         chunk.MarkLoaded();
