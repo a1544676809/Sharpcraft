@@ -601,7 +601,7 @@ internal static class WindowCommand
             diagnostics: Sharpcraft.Launcher.Diagnostics.HostDebugOptions.ForFrame(),
             lightmapPerFrame: () => session.CurrentLightmap(),
             fogPerFrame: () => session.CurrentFogColour(),
-            clearColourPerFrame: () => new System.Numerics.Vector4(session.CurrentSkyColour(), 1f),
+            clearColourPerFrame: () => session.CurrentFogColour(),
             cloudsPerFrame: () => session.CurrentCloudDraw(),
             cloudOitEnabled: session.CloudUseOit,
             oitLowPrecision: oitLowPrecision,
