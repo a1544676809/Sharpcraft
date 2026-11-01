@@ -326,6 +326,13 @@ public static class SkyAttributeTracks
     /// <summary>CLOUD_COLOR multiplier at a day time (white by day, dark blue-grey #191926 at night).</summary>
     public static Vector3 CloudColorFactorAt(int dayTimeTicks) =>
         new(CloudColorFactorR.Sample(dayTimeTicks), CloudColorFactorR.Sample(dayTimeTicks), CloudColorFactorB.Sample(dayTimeTicks));
+
+    private static readonly FloatKeyframeTrack CloudColorAlpha = FloatKeyframeTrack.Build(
+        [new FloatKeyframe(133, 0.8f), new FloatKeyframe(11867, 0.8f), new FloatKeyframe(13670, 0.15f), new FloatKeyframe(22330, 0.15f)],
+        static x => x, Period);
+
+    /// <summary>CLOUD_COLOR alpha (day 0.8, night 0.15), matching DimensionTypes default and the night multiplier.</summary>
+    public static float CloudColorAlphaAt(int dayTimeTicks) => CloudColorAlpha.Sample(dayTimeTicks);
 }
 
 /// <summary>Overworld day environment tracks from Timelines.java: sun/moon/star angles (degrees).</summary>

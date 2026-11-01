@@ -264,10 +264,10 @@ public static class WindowedRenderer
         using var cloudTransmittancePipeline = cloudOit is null ? default : CreateTransmittancePipeline(device, cloudTransPipelineLayout, "cloud_oit", positionColor: true, format: oitTargetFormat);
         using var cloudAccumulatePipeline = cloudOit is null ? default : CreateAccumulatePipeline(device, cloudAccumPipelineLayout, "cloud_oit", positionColor: true, format: oitTargetFormat);
 
-        using var refDepthBoundsPipeline = CreateDepthBoundsPipeline(device, pipelineLayout, format: oitTargetFormat);
+        using var refDepthBoundsPipeline = CreateDepthBoundsPipeline(device, pipelineLayout, format: WGPUTextureFormat.RGBA32Float);
         using var refTransmittancePipeline = CreateTransmittancePipeline(device, refTransmittancePipelineLayout, format: oitTargetFormat);
         using var refAccumulatePipeline = CreateAccumulatePipeline(device, refAccumulatePipelineLayout, format: oitTargetFormat);
-        using var refCullPipeline = CreateCullPipeline(device, refCullPipelineLayout, oitTargetFormat);
+        using var refCullPipeline = CreateCullPipeline(device, refCullPipelineLayout, WGPUTextureFormat.RGBA32Float);
         using var refCompositePipeline = CreateCompositePipeline(device, format, refCompositePipelineLayout);
         using var cloudCompositePipeline = CreateCompositePipeline(device, format, refCompositePipelineLayout, WGPUCompareFunction.LessEqual);
 
@@ -518,9 +518,9 @@ public static class WindowedRenderer
                 }
             }
 
-            refDepthBoundsTexture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
+            refDepthBoundsTexture = CreateOitTarget(device, frameWidth, frameHeight, WGPUTextureFormat.RGBA32Float);
             refDepthBoundsView = refDepthBoundsTexture.CreateView();
-            refDepthBoundsCulledTexture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
+            refDepthBoundsCulledTexture = CreateOitTarget(device, frameWidth, frameHeight, WGPUTextureFormat.RGBA32Float);
             refDepthBoundsCulledView = refDepthBoundsCulledTexture.CreateView();
             refTransmittance0Texture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
             refTransmittance0View = refTransmittance0Texture.CreateView();

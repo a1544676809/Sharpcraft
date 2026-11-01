@@ -31,6 +31,7 @@ struct VertexOutput {
     @location(1) alpha : f32,
     @location(2) fogDistance : f32,
     @location(3) deviceDepth : f32,
+    @location(4) cloudAlpha : f32,
 };
 
 @vertex
@@ -48,7 +49,8 @@ fn vs_main(
     let clip = camera.viewProjection * world;
     output.clipPosition = clip;
     output.colour = colour * transform.tint.rgb;
-    output.alpha = uv.x * transform.tint.a;
+    output.alpha = uv.x;
+    output.cloudAlpha = transform.tint.a;
     output.fogDistance = clip.w;
     output.deviceDepth = clip.z / max(clip.w, 0.00001);
     return output;
@@ -184,12 +186,12 @@ struct DepthBoundsOutput {
 
 @fragment
 fn fs_depth_bounds(input : VertexOutput) -> DepthBoundsOutput {
-    if (input.alpha < 0.01) {
+    if (input.cloudAlpha < 0.01) {
         discard;
     }
     let linear = input.fogDistance;
     let device = input.deviceDepth;
-    let opaqueLinear = select(-65504.0, -linear, input.alpha > 0.99);
+    let opaqueLinear = select(-65504.0, -linear, input.cloudAlpha > 0.99);
     var output : DepthBoundsOutput;
     output.bounds = vec4<f32>(-linear, linear, -device, opaqueLinear);
     return output;
@@ -202,14 +204,15 @@ struct TransmittanceOutput {
 
 @fragment
 fn fs_transmittance(input : VertexOutput) -> TransmittanceOutput {
-    if (input.alpha < 0.1) {
+    let fragmentAlpha = input.cloudAlpha * input.alpha;
+    if (fragmentAlpha < 0.1) {
         discard;
     }
     let bounds = textureLoad(depthBoundsTexture, vec2<i32>(input.clipPosition.xy), 0);
     let closestLinear = -bounds.r;
     let furthestLinear = bounds.g;
     let normalizedDepth = normalizeDepth(input.fogDistance, closestLinear, furthestLinear);
-    let absorbance = toAbsorbance(1.0 - input.alpha);
+    let absorbance = toAbsorbance(1.0 - fragmentAlpha);
     let coefficients = encodeTransmittance(absorbance, normalizedDepth);
     var output : TransmittanceOutput;
     output.coeff0 = vec4<f32>(coefficients[0], coefficients[1], coefficients[2], coefficients[3]);
@@ -223,7 +226,8 @@ struct AccumulateOutput {
 
 @fragment
 fn fs_accumulate(input : VertexOutput) -> AccumulateOutput {
-    if (input.alpha < 0.1) {
+    let fragmentAlpha = input.cloudAlpha * input.alpha;
+    if (fragmentAlpha < 0.1) {
         discard;
     }
     let pixel = vec2<i32>(input.clipPosition.xy);
@@ -232,8 +236,8 @@ fn fs_accumulate(input : VertexOutput) -> AccumulateOutput {
     let furthestLinear = bounds.g;
     let normalizedDepth = normalizeDepth(input.fogDistance, closestLinear, furthestLinear);
     let coefficients = loadCoefficients(pixel);
-    let sampledTransmittance = sampleTransmittance(coefficients, normalizedDepth, 1.0 - input.alpha);
+    let sampledTransmittance = sampleTransmittance(coefficients, normalizedDepth, 1.0 - fragmentAlpha);
     var output : AccumulateOutput;
-    output.accum = vec4<f32>(input.colour * input.alpha, input.alpha) * sampledTransmittance;
+    output.accum = vec4<f32>(input.colour * fragmentAlpha, fragmentAlpha) * sampledTransmittance;
     return output;
 }

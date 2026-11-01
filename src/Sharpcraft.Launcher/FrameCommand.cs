@@ -1589,12 +1589,13 @@ internal static class FrameCommand
         }
 
         var factor = Sharpcraft.Common.World.SkyAttributeTracks.CloudColorFactorAt(EffectiveDayTime(world));
+        var cloudAlpha = Sharpcraft.Common.World.SkyAttributeTracks.CloudColorAlphaAt(EffectiveDayTime(world));
         var rain = EffectiveRainLevel(world, partialTick);
         var tint = new Vector4(
             factor.X * (1f - (0.5f * rain)),
             factor.Y * (1f - (0.5f * rain)),
             factor.Z * (1f - (0.4f * rain)),
-            1f);
+            cloudAlpha);
 
         return new CelestialColorDraw(vertices, indices, model, tint, CelestialColorBlend.Translucent);
     }
