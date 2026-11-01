@@ -327,3 +327,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-300 | **架构决策：每区块几何缓冲 + CPU 剔除（12–32 无跳过）**：ADR-0020，替代单一大 arena（受 256MB 单缓冲上限、需跳过远区块）；决定每区块 vertex/index 缓冲 + CPU 视锥剔除，显存随实际网格增长 | `docs/decisions/0020-per-chunk-geometry-buffers.md` | — | — | 已完成 |
 | T-301 | **每区块几何存储 + 窗口绘制改造**：新增 `ChunkGeometryStore`（每区块 vertex/index 缓冲、Apply/Remove、MemoryBytes、CPU 视锥剔除 Draw/DrawFarthestFirst）；`WindowedRenderer` 三层改用该 store，移除 arena/Culler/间接绘制与达上限丢弃路径 | `docs/decisions/0020...` | 构建/全量 1265 通过；视距12 运行 6996 帧无 OOM/validation | `Framework/Rendering/{ChunkGeometryStore,WindowedRenderer}` | 已完成 |
 | T-302 | **视距 12/24/32 压测与收尾**：长跑无 OOM/validation、远处区块全可见、内存测量；旧 `ChunkGeometryArena`/`ArenaSizing` 暂留（离线兼容），后续可删 | `docs/decisions/0020...` | 视距12 6996+帧；视距**32：3890 区块、上传 3.26GB、0 次全量重建、8302 帧无错误**；全量 1265 通过 | — | 已完成 |
+| T-303 | **渲染已知缺口登记**：几何（区块卸载/旧 arena/Draw call）、天空/雾/夜亮度、云（OIT/fog、GPU 生成）、天体细节等效、高分辨率显存、适配器选择、视距24 未测 | `docs/specs/render/known-gaps.md` | — | — | 已完成 |

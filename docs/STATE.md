@@ -2072,3 +2072,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 视距 **32**：窗口统计 **3890 区块**、**上传 3.26GB**、**0 次 full rebuild**、**8302 帧**无 OOM/validation（GPU dedicated 峰值 ~4.3GB，960×540）。
 - 证明"每区块缓冲 + CPU 剔除"支持大视距且**不跳过远处区块**；旧单 arena 上限问题解除。
 - 旧 `ChunkGeometryArena`/`ArenaSizing` 暂留（仍被旧单测覆盖），后续可删；`ClientWorld` 目前不会移除离视区块，长时间大范围移动会累积内存（后续做区块卸载 + 缓冲释放）。
+- **剩余渲染缺口已登记** `docs/specs/render/known-gaps.md`：区块卸载、旧 arena/绘制调用、天空盘/渐变、雾精确混合、夜亮度、云 OIT/精确 cloud-fog、天体细节像素等效、高分辨率显存、适配器选择；traceability T-303。
