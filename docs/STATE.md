@@ -1963,4 +1963,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `ChunkSection`：新增 `int[64] Biomes`（`BiomeVolume=64`）、`GetBiome(x,y,z)`、`HasBiomes`、纯函数 `BiomeIndex = ((y>>2&3)<<4)|((z>>2&3)<<2)|(x>>2&3)`；ctor 增可选 `int[]? biomes`。
 - `ChunkPacketParser`：生物群系容器由“读后丢弃”改为 `biomes.Get(b)` 存入每 section `int[64]`（字节消费不变，`ChunkPacketTests` 仍绿）。
 - 测试 `ChunkSectionBiomeTests`(3)。全量 **1232 通过**、门禁 ok。
-- **下一步 P3.2**：biome registry 条目解码（`has_precipitation`/`temperature`/`temperature_modifier`/`downfall`/`effects` 与 `"RRGGBB"` 颜色）＋ `BiomeRegistry`（Common）＋合成字节单测；再 P3.3 逐群系 tint 接 `ChunkMesher`、P3.4 天空盘。
+- **下一步 P3.2**：biome registry 条目解码（`has_precipitation`/`temperature`/`temperature_modifier`/`downfall`/`effects` 与 `"RRGGBB"` 颜色）＋ `BiomeRegistry`（Common）＋合成字节单测；再 P3.3 逐群系 tint 接 `ChunkMesher`、P3.4 天空盘。## 2026-11-01 P3.2 biome registry 解码 + BiomeRegistry
+- `NbtCompound` 增 `GetFloat`/`GetBool`（`NbtFloat`/`NbtByte`）。
+- `Common/World/BiomeRegistry`：`From(DynamicRegistries)` 取 `minecraft:worldgen/biome` 条目→`BiomeEntry(Id, Climate{HasPrecipitation,Temperature,Downfall}, Effects{WaterColor,FoliageColor?,DryFoliageColor?,GrassColor?,GrassColorModifier})`；`Parse` 解 NBT；`ParseColour` 解 `"RRGGBB"`（`#` 可选）→0xFFRRGGBB；`ById` 位置查找；颜色缺省 water=0x3F76E4。
+- 复用现有 `RegistryDataPackets`/`DynamicRegistries`（无需新包解析）。测试 `BiomeRegistryTests`(4)。全量 **1236 通过**、门禁 ok。
+- **下一步 P3.3**：`BiomeColorSource`：位置→`ChunkSection.GetBiome`→`BiomeRegistry`→草/叶/水 tint（`ColorMapColorUtil`+温度/湿度、`grassColorModifier`、`biomeBlendRadius`）接入 `ChunkMesher`；单测 + 离屏出图。

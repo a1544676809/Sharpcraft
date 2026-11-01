@@ -171,6 +171,14 @@ public sealed class NbtCompound : NbtTag
         Get(name) is NbtLong tag ? tag.Value : fallback;
 
     /// <summary>Typed read; returns the default when absent or of another type.</summary>
+    public float GetFloat(string name, float fallback = 0f) =>
+        Get(name) is NbtFloat tag ? tag.Value : fallback;
+
+    /// <summary>Typed read of an NBT byte as a boolean (non-zero true); returns the default when absent or of another type.</summary>
+    public bool GetBool(string name, bool fallback = false) =>
+        Get(name) is NbtByte tag ? tag.Value != 0 : fallback;
+
+    /// <summary>Typed read; returns the default when absent or of another type.</summary>
     public string? GetString(string name) => Get(name) is NbtString tag ? tag.Value : null;
 
     /// <summary>Typed read; returns null when absent or of another type.</summary>
