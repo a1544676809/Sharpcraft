@@ -1120,12 +1120,34 @@ internal static class FrameCommand
         if (biomes is not null)
         {
             var eye = request.CameraPosition;
-            var sky = EffectiveSkyColour(world, biomes, (int)MathF.Floor(eye.X), (int)MathF.Floor(eye.Y), (int)MathF.Floor(eye.Z));
+            var sampleX = (int)MathF.Floor(eye.X);
+            var sampleY = (int)MathF.Floor(eye.Y);
+            var sampleZ = (int)MathF.Floor(eye.Z);
+            var chunks = world.GetChunks();
+            if (chunks.Length > 0 && world.GetChunk(sampleX >> 4, sampleZ >> 4) is null)
+            {
+                // The offscreen camera frames the whole world and can sit outside the loaded area; sample a loaded column
+                // so the biome sky colour is not zero.
+                sampleX = (chunks[0].ChunkX * 16) + 8;
+                sampleZ = (chunks[0].ChunkZ * 16) + 8;
+            }
+
+            var sky = EffectiveSkyColour(world, biomes, sampleX, sampleY, sampleZ);
             request = request with { SkipGradientSky = true, ClearColour = new Vector4(sky, 1f), FogColour = new Vector4(sky, 1f) };
         }
 
         // Celestial bodies (the sun for now): drawn into the sky backdrop for the current day time.
         request = AttachCelestial(request, world, tintResources);
+
+        // Per-cell clouds (docs/modules/clouds.md 2); appended after the celestial draws so it is not overwritten and
+        // drawn with the same position-colour pass before terrain.
+        if (biomes is not null
+            && Environment.GetEnvironmentVariable("MC_NO_CLOUDS") != "1"
+            && Sharpcraft.Client.Assets.CloudTexture.Load(tintResources) is { } cloudTexture
+            && BuildCloudDraw(world, cloudTexture, request.CameraPosition) is { } cloudDraw)
+        {
+            request = request with { CelestialColorDraws = [.. (request.CelestialColorDraws ?? []), cloudDraw] };
+        }
 
         // Opt-in sky disc: replace the gradient backdrop with the SKY_COLOR disc (docs/modules/weather-and-sky-color.md 6.2).
         if (Environment.GetEnvironmentVariable("MC_SKY_DISC") == "1" && biomes is not null)
@@ -1477,6 +1499,56 @@ internal static class FrameCommand
         var rain = EffectiveRainLevel(world, partialTick);
         var thunder = EffectiveThunderLevel(world, partialTick);
         return Sharpcraft.Common.World.WeatherBlend.ApplySkyColour(baseSky * multiplier, rain, thunder);
+    }
+
+    /// <summary>
+    /// Builds the per-frame cloud position-colour draw: visible faces via CloudMeshBuilder, geometry via
+    /// CloudGeometryBuilder, tinted by the CLOUD_COLOR timeline and weather (docs/modules/clouds.md 2).
+    /// </summary>
+    internal static CelestialColorDraw? BuildCloudDraw(ClientWorld world, Sharpcraft.Client.Assets.CloudTexture texture, Vector3 eye)
+    {
+        var partialTick = EffectiveDayTimePartial(world);
+        var offset = (float)(world.GameTime % (texture.Width * 400L)) + partialTick;
+        var cloudX = eye.X + (offset * 0.03f);
+        var cloudZ = eye.Z + 3.96f;
+        var widthBlocks = texture.Width * 12.0;
+        var heightBlocks = texture.Height * 12.0;
+        cloudX -= (float)(Math.Floor(cloudX / widthBlocks) * widthBlocks);
+        cloudZ -= (float)(Math.Floor(cloudZ / heightBlocks) * heightBlocks);
+        var cellX = (int)Math.Floor(cloudX / 12.0);
+        var cellZ = (int)Math.Floor(cloudZ / 12.0);
+        var xInCell = (float)(cloudX - (cellX * 12.0));
+        var zInCell = (float)(cloudZ - (cellZ * 12.0));
+
+        const float bottomY = 192.33f;
+        var relativeBottom = bottomY - eye.Y;
+        var relativeTop = relativeBottom + 4f;
+        var side = relativeTop < 0f
+            ? Sharpcraft.Client.Render.CloudCameraSide.AboveClouds
+            : relativeBottom > 0f
+                ? Sharpcraft.Client.Render.CloudCameraSide.BelowClouds
+                : Sharpcraft.Client.Render.CloudCameraSide.InsideClouds;
+
+        var radiusCells = (int)MathF.Ceiling(InteractiveSession.ViewDistanceChunks * 16f / 12f);
+        var quads = Sharpcraft.Client.Render.CloudMeshBuilder.Build(
+            texture.Cells, texture.Width, texture.Height, cellX, cellZ, radiusCells, side);
+        if (quads.Count == 0)
+        {
+            return null;
+        }
+
+        var origin = new Vector3(eye.X + (cellX * 12f) - xInCell, bottomY, eye.Z + (cellZ * 12f) - zInCell);
+        var (vertices, indices) = Sharpcraft.Client.Render.CloudGeometryBuilder.Build(quads, eye, origin);
+
+        var factor = Sharpcraft.Common.World.SkyAttributeTracks.CloudColorFactorAt(EffectiveDayTime(world));
+        var rain = EffectiveRainLevel(world, partialTick);
+        var tint = new Vector4(
+            factor.X * (1f - (0.5f * rain)),
+            factor.Y * (1f - (0.5f * rain)),
+            factor.Z * (1f - (0.4f * rain)),
+            1f);
+
+        return new CelestialColorDraw(vertices, indices, Matrix4x4.Identity, tint, CelestialColorBlend.Translucent);
     }
 
     /// <summary>Maps the client lightmap parameters to the framework uniform the terrain shader reads.</summary>

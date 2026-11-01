@@ -2041,4 +2041,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **下一步 ②（T-296）**：给 `WindowedRenderer` 补 celestial+cloud pass（现仅离屏有），再接入云四边形；每帧 `CloudColor/Offset/CellSize`、顶/底/侧向面、alpha 混合与 CloudFogEnd 淡出。## 2026-11-01 T-296 步骤①：窗口 celestial pass（已完成）
 - `OffscreenRenderer.CelestialResources/CelestialColorResources` 提为共享 `internal` 并参数化颜色目标格式（窗口 `Bgra8Unorm` vs 离屏 `Rgba8Unorm`）；`CreatePositionColorPipeline` 加 format 参数。
 - `WindowedRenderer` 复用两者，天空之后/地形之前绘制；`WindowCommand` 调 `FrameCommand.AttachCelestial` 填充 draws/textures。窗口启动无 GPU validation error，日月星显现。
-- 全量 **1263 通过**、门禁 ok。**下一步 ②（T-297）**：逐 cell 云接入（CloudMeshBuilder→position-colour，每帧 CloudColor/Offset/CellSize，alpha + CloudFogEnd），并处理天体随相机（当前 model 用初始相机，行走时需按位移增量更新）。
+- 全量 **1263 通过**、门禁 ok。**下一步 ②（T-297）**：逐 cell 云接入（CloudMeshBuilder→position-colour，每帧 CloudColor/Offset/CellSize，alpha + CloudFogEnd），并处理天体随相机（当前 model 用初始相机，行走时需按位移增量更新）。## 2026-11-01 T-297 进展：逐 cell 云离屏渲染（窗口待）
+- `CloudGeometryBuilder`（面顶点表/亮度 1/0.7/0.8/0.9/厚度 4/雾 alpha）→ position-colour；`FrameCommand.BuildCloudDraw`（云滚动 `gameTime% (w*400)*0.03`、相机侧、`radiusCells=ceil(view*16/12)`、`CloudColorFactor×天气`）；离屏 `RenderWorld` 追加到 `CelestialColorDraws`。
+- 修复：离屏相机在世界外时天空采样群系失败→全黑；改为**回退到已加载区块列**采样 `EffectiveSkyColour`（与天空盘一致）。
+- `CloudGeometryBuilderTests`(2)；离屏日间出图见蓝天空+太阳+云块。全量 **1265 通过**、门禁 ok。
+- **待做**：窗口每帧云接入（需每帧更新云几何/偏移与天体随相机位移）；离屏相机远时云在相机附近可能不在取景内，窗口验证更直观。
