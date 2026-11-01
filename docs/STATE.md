@@ -2030,4 +2030,7 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **注意**：离屏单帧 `frame` 预热的 deferred 偶尔未包含进服 full-sync（该次 day=0）；窗口路径正常。后续可把 full-sync 在更早阶段接入以修正离屏。## 2026-11-01 可配置视距（默认 12，T-293）
 - `InteractiveSession.ViewDistanceChunks` 改为宿主配置：`MC_VIEW_DISTANCE`（clamp 2..32，默认 **12**）；配置阶段 `ConfigurationProbe.SendClientInformation`、play `ClientInformation`、`WalkCommand` 均用它（此前硬编码 8/2）。
 - 全量 **1256 通过**、门禁 ok。窗口以默认 12 重启。
-- **已知视觉差距（后续可选）**：①**云层未实现**（原版 CloudRenderer）；②天空为纯 `SKY_COLOR` 平色，缺地平线渐变；③雾色简化为 `SKY_COLOR`（原版 `FOG_COLOR↔SKY_COLOR` 混合）；④夜间亮度可能偏低。
+- **已知视觉差距（后续可选）**：①**云层未实现**（原版 CloudRenderer）；②天空为纯 `SKY_COLOR` 平色，缺地平线渐变；③雾色简化为 `SKY_COLOR`（原版 `FOG_COLOR↔SKY_COLOR` 混合）；④夜间亮度可能偏低。## 2026-11-01 云层模块设计（待评审）
+- 实读 `CloudRenderer`/`clouds.{vsh,fsh}`/`EnvironmentAttributes`/`day.json`，写 `docs/modules/clouds.md`（草稿）：cell=12、云高 192.33、`CLOUD_FOG_END=2048`、`visual/cloud_color` 昼白→夜 `#191926`、滚动 0.6 块/s、面亮度 1/0.7/0.8/0.9。
+- 拟用"云纹理水平贴图平面近似"（受控偏差：无逐 cell 侧面剔除/阴影），§3 单测（颜色因子/滚动/常量）、§4 离屏对比。
+- **按 AGENTS 3.5 需 `[已评审]` 后再编码**；当前等待所有者评审 `docs/modules/clouds.md §5`。
