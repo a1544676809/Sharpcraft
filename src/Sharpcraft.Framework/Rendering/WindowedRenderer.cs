@@ -270,6 +270,25 @@ public static class WindowedRenderer
         using var refCullPipeline = CreateCullPipeline(device, refCullPipelineLayout, oitTargetFormat);
         using var refCompositePipeline = CreateCompositePipeline(device, format, refCompositePipelineLayout);
         using var cloudCompositePipeline = CreateCompositePipeline(device, format, refCompositePipelineLayout, WGPUCompareFunction.LessEqual);
+        using var blitDepthLayout = device.CreateBindGroupLayout(
+        [
+            BindGroupLayoutEntry.Texture(0, ShaderStage.Fragment, WGPUTextureSampleType.Depth, WGPUTextureViewDimension._2D, false),
+            BindGroupLayoutEntry.Sampler(1, ShaderStage.Fragment, WGPUSamplerBindingType.Filtering)
+        ]);
+        using var blitDepthPipelineLayout = device.CreatePipelineLayout([blitDepthLayout]);
+        using var blitDepthPipeline = CreateBlitDepthPipeline(device, blitDepthPipelineLayout);
+        using var blitDepthSampler = device.CreateSampler(new SamplerDescriptor
+        {
+            AddressModeU = WGPUAddressMode.ClampToEdge,
+            AddressModeV = WGPUAddressMode.ClampToEdge,
+            AddressModeW = WGPUAddressMode.ClampToEdge,
+            MagFilter = WGPUFilterMode.Nearest,
+            MinFilter = WGPUFilterMode.Nearest,
+            MipmapFilter = WGPUMipmapFilterMode.Nearest,
+            LodMinClamp = 0f,
+            LodMaxClamp = 1f,
+            MaxAnisotropy = 1
+        });
 
         // The interface layer needs its own transform: one uniform buffer cannot hold both the world camera and
         // the orthographic projection while a single pass reads from it.
@@ -1236,9 +1255,16 @@ public static class WindowedRenderer
 
             if (cloudDepthTargetsCreated)
             {
-                // Freeze the opaque depth for the cloud OIT stages; translucent terrain may write the main depth later.
-                var copyExtent = new WGPUExtent3D { width = frameWidth, height = frameHeight, depthOrArrayLayers = 1 };
-                encoder.CopyTextureToTexture(depthTexture, cloudDepthTexture, copyExtent, 0, 0);
+                // Blit the opaque main depth into the cloud depth attachment (reference BLIT_DEPTH_DURING_DEPTH_BOUNDS).
+                var blitPass = encoder.BeginRenderPass(
+                    [],
+                    new DepthStencilAttachment { View = cloudDepthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store });
+                blitPass.SetPipeline(blitDepthPipeline);
+                blitPass.SetBindGroup(0, device.CreateBindGroup(
+                    blitDepthLayout,
+                    [BindGroupEntry.TextureView(0, depthView), BindGroupEntry.Sampler(1, blitDepthSampler)]));
+                blitPass.Draw(3);
+                blitPass.End();
             }
 
             // Reference transparency (docs/specs/render/oit-reference.md): depth bounds, a culling pass, wavelet
@@ -1809,6 +1835,28 @@ public static class WindowedRenderer
     }
 
     /// <summary>Reference transparency composite: premultiplied over the frame, writing the nearest translucent depth.</summary>
+    private static RenderPipeline CreateBlitDepthPipeline(Device device, PipelineLayout layout)
+    {
+        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
+        {
+            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("blit_depth")))
+        });
+
+        return device.CreateRenderPipeline(
+            shader,
+            "vs_fullscreen"u8,
+            shader,
+            "fs_blit"u8,
+            [],
+            layout: layout,
+            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
+            multisample: MultisampleState.Default,
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.Always, write: true),
+            vertexStride: 0,
+            vertexStepMode: WGPUVertexStepMode.Vertex,
+            vertexAttributes: []);
+    }
+
     private static RenderPipeline CreateCompositePipeline(Device device, WGPUTextureFormat format, PipelineLayout layout, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always)
     {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
