@@ -2006,4 +2006,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 服务端 = Fabric（就是 127.0.0.1:25565）；原版/Fabric 服务端进服会用 `createFullSyncPacket` 下发**全量时钟**（`PlayerList.java:659`），例行 `set_time` 空 map（`MinecraftServer:1145`）。
 - 我们的窗口流程先 `PlaySession.RunAsync` 预热收区块，其 `default:` **丢弃**了进服全量 `set_time`（及 `GameEvent` 天气），之后才 `Adopt` 建 live 会话 → 时钟/天气初值丢失。
 - **修复**：`PlaySession` 把 `SetTime`/`GameEvent` 暂存进 `PlaySessionStats.DeferredPackets`；`LivePlaySession.Adopt` 注入队列；离屏 `frame` 直接应用。
-- 实机首包 `set_time len=32 clocks=[1:t=0,r=0, 0:t=109000,r=0] day=13000` → 该服**时钟 rate=0、时间冻结在 13000(夜)**；`/time set day` 会带单时钟更新→生效并保持（不再复原）。全量 **1250 通过**、门禁 ok。
+- 实机首包 `set_time len=32 clocks=[1:t=0,r=0, 0:t=109000,r=0] day=13000` → 该服**时钟 rate=0、时间冻结在 13000(夜)**；`/time set day` 会带单时钟更新→生效并保持（不再复原）。全量 **1250 通过**、门禁 ok。## 2026-11-01 修复 #10 BlockLightTint（原样通道）
+- 原版 `BLOCK_LIGHT_TINT = ARGB.vector3fFromRGB24(-10100)` = `from8BitChannel(v)=v/255`（无 gamma）= `(255,216,140)/255`；我们误用 `Srgb24ToLinear` → 块光色偏暗/偏色。
+- 改 `VanillaLightmap.Rgb24ToVector`（原样 `v/255`），`DayOverworld.BlockLightTint` 与 `FrameRequest.Day.BlockLightTint` 同步；删除 `Srgb24ToLinear`。
+- `VanillaLightmapTests.BlockLightTintIsRawSrgbChannels`。全量 **1251 通过**、门禁 ok。
+- 光照等效项：#8 已实现、#10 已修、#13 已修；**仅剩 #3**（平滑光照算法近似，缺 `smoothBlend/smoothWeightedBlend` 的 3邻+center 特判与 AO 双线性权重）。

@@ -150,7 +150,7 @@ public sealed record CelestialColorDraw(
 /// <param name="BrightnessFactor">Brightness slider (0.5).</param>
 /// <param name="Padding">Explicit padding so the first vec4 is 16-byte aligned.</param>
 /// <param name="SkyLightColor">Linear sky-light colour (day white, night blue-tinted).</param>
-/// <param name="BlockLightTint">Linear block-light tint (warm).</param>
+/// <param name="BlockLightTint">Block-light tint (raw 0..1 channels, like ARGB.vector3fFromRGB24).</param>
 /// <param name="AmbientColor">Linear ambient colour (overworld black).</param>
 public readonly record struct LightmapUniform(
     float SkyFactor,
@@ -168,7 +168,7 @@ public readonly record struct LightmapUniform(
         BrightnessFactor: 0.5f,
         Padding: 0f,
         SkyLightColor: Vector4.One,
-        BlockLightTint: new Vector4(1.000f, 0.687f, 0.263f, 1f),
+        BlockLightTint: new Vector4(1.000f, 0.847f, 0.549f, 1f),
         AmbientColor: Vector4.Zero);
 }
 

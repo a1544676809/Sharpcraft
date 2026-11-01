@@ -24,7 +24,7 @@ public readonly record struct LightmapParameters(
         SkyFactor: 1.0f,
         BlockFactor: 1.4f,
         SkyLightColor: Vector3.One,
-        BlockLightTint: Srgb24ToLinear(-10100),
+        BlockLightTint: Rgb24ToVector(-10100),
         AmbientColor: Vector3.Zero,
         BrightnessFactor: 0.5f);
 
@@ -58,17 +58,14 @@ public readonly record struct LightmapParameters(
         };
     }
 
-    /// <summary>Decodes a packed sRGB 24-bit colour into linear floats, as the reference does for environment colours.</summary>
-    public static Vector3 Srgb24ToLinear(int rgb24)
+    /// <summary>Decodes a packed 24-bit colour into three 0..1 channels, exactly like ARGB.vector3fFromRGB24 (raw, no gamma).</summary>
+    public static Vector3 Rgb24ToVector(int rgb24)
     {
         var red = (rgb24 >> 16) & 0xFF;
         var green = (rgb24 >> 8) & 0xFF;
         var blue = rgb24 & 0xFF;
-        return new Vector3(SrgbToLinear(red / 255f), SrgbToLinear(green / 255f), SrgbToLinear(blue / 255f));
+        return new Vector3(red / 255f, green / 255f, blue / 255f);
     }
-
-    private static float SrgbToLinear(float value) =>
-        value >= 0.04045f ? MathF.Pow((value + 0.055f) / 1.055f, 2.4f) : value / 12.92f;
 }
 
 /// <summary>

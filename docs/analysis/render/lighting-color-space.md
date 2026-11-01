@@ -63,10 +63,10 @@ linear = pow(texel, 2.2);  out = pow(linear * light, 1/2.2)
 | 7 | 最终合成 | `block.fsh`: `texture*vertexColor*ColorModulator`（**无 gamma**） | `litColour=clamp(texel*light)`（已改） | 一致 |
 | 8 | blockFactor | `LightmapRenderStateExtractor`: `blockFactor = blockLightFlicker + 1.4F`（行52）；flicker 每 tick `+= (rand-rand)*rand*rand*0.1; *=0.9`（行32-34） | `DayOverworld.BlockFactor=1.4`（常量） | 近似（省略块光随机闪烁，幅度很小） |
 | 9 | brightness(gamma) | `Options.gamma` 默认 **0.5** | `BrightnessFactor=0.5` | 一致 |
-| 10 | BlockLightTint | `ARGB.vector3fFromRGB24(-10100)`=`v/255`（`from8BitChannel`，**无 gamma**） | `Srgb24ToLinear(-10100)`（gamma 解码） | **偏差**：块光色偏暗/偏色 |
+| 10 | BlockLightTint | `ARGB.vector3fFromRGB24(-10100)`=`v/255`（`from8BitChannel`，**无 gamma**） | 已改 `Rgb24ToVector`（原样 `v/255`） | 已修（T-288） |
 | 11 | SkyLightColor / SkyColor / SkyLightFactor 时间曲线 | `data/minecraft/timeline/day.json`: 730/11270/13140/22860=0.24、`#7a7aff`、133/11867/13670/22330 | `SkyAttributeTracks` 同值 | 一致 |
 | 12 | skyFactor 取值 | `LightmapRenderStateExtractor`: `attributeProbe().getValue(SKY_LIGHT_FACTOR, partialTicks)` | `OverworldAt(dayTime, partial)` 前后 tick 插值 | 一致 |
 | 13 | 世界时钟推进 | 原版客户端每 tick 推进世界时钟（时间与 partial 前进） | `ClientWorld.AdvanceClocks()` **未被调用** | **偏差**：时间冻结/昼夜不推进（改时间仅在收到 set_time 时跳变） |
 | 14 | set_time 解析 | `ClientboundSetTimePacket` LONG gameTime + map(WorldClock→ClockNetworkState{VAR_LONG,FLOAT,FLOAT}) | `SetTimePacketCodec` 同结构 | 一致 |
 
-**结论**：核心光照合成已与原版等效；剩余实质偏差为 **#10 BlockLightTint（gamma 误用）** 与 **#13 世界时钟未推进**（"整体偏暗、改时间不变"很可能源于 #13 或服务器时间本身）。**#3** 为平滑光照算法近似（我们缺 `smoothBlend/smoothWeightedBlend` 的 3邻+center 特判与 AO 双线性权重，角落/边缘过渡略不同，非量化差）；**#8** 省略块光随机闪烁（幅度很小）。
+**结论**：核心光照合成已与原版等效；**#10** 已修（T-288，`BlockLightTint` 改原样 `v/255`）、**#13** 已修（T-286/287，时钟保留+进服全量同步）、**#8** 已实现（T-285，块光闪烁）。仅 **#3** 为平滑光照算法近似（缺 `smoothBlend/smoothWeightedBlend` 的 3邻+center 特判与 AO 双线性权重，角落/边缘过渡略不同，非量化差）保留。

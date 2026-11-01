@@ -163,4 +163,15 @@ public sealed class VanillaLightmapTests
         Assert.Equal(0.3952f, perFragmentMid, 3);
         Assert.True(perFragmentMid < bakedMid, "per-fragment mid-gradient value is darker than the baked interpolation");
     }
+
+    [Fact]
+    public void BlockLightTintIsRawSrgbChannels()
+    {
+        // Reference BLOCK_LIGHT_TINT default = ARGB.vector3fFromRGB24(-10100) = raw (0xFF,0xD8,0x8C)/255, no gamma.
+        var tint = LightmapParameters.DayOverworld.BlockLightTint;
+
+        Assert.Equal(1.0f, tint.X, 3);
+        Assert.Equal(0xD8 / 255f, tint.Y, 3);
+        Assert.Equal(0x8C / 255f, tint.Z, 3);
+    }
 }
