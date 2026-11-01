@@ -1335,13 +1335,18 @@ public static class WindowedRenderer
                 boundsPass.SetPipeline(refDepthBoundsPipeline);
                 boundsPass.SetBindGroup(0, bindGroup);
                 DrawReferenceGeometry(boundsPass);
+                boundsPass.End();
+
                 if (cloudOit is not null)
                 {
-                    boundsPass.SetPipeline(cloudDepthBoundsPipeline);
-                    boundsPass.SetBindGroup(0, cloudOit.BindGroup);
-                    cloudOit.DrawGeometry(boundsPass);
+                    var cloudBoundsPass = encoder.BeginRenderPass(
+                        [new ColorAttachment { View = refDepthBoundsView, LoadOp = WGPULoadOp.Load, StoreOp = WGPUStoreOp.Store }],
+                        depthLoadStore);
+                    cloudBoundsPass.SetPipeline(cloudDepthBoundsPipeline);
+                    cloudBoundsPass.SetBindGroup(0, cloudOit.BindGroup);
+                    cloudOit.DrawGeometry(cloudBoundsPass);
+                    cloudBoundsPass.End();
                 }
-                boundsPass.End();
 
                 // Stage 1b: clip the furthest bound to the nearest opaque surface.
                 var cullPass = encoder.BeginRenderPass(
@@ -1383,14 +1388,22 @@ public static class WindowedRenderer
                 transmittancePass.SetBindGroup(0, bindGroup);
                 transmittancePass.SetBindGroup(1, refTransmittanceBindGroup);
                 DrawReferenceGeometry(transmittancePass);
+                transmittancePass.End();
+
                 if (cloudOit is not null)
                 {
-                    transmittancePass.SetPipeline(cloudTransmittancePipeline);
-                    transmittancePass.SetBindGroup(0, cloudOit.BindGroup);
-                    transmittancePass.SetBindGroup(1, refTransmittanceBindGroup);
-                    cloudOit.DrawGeometry(transmittancePass);
+                    var cloudTransPass = encoder.BeginRenderPass(
+                        [
+                            new ColorAttachment { View = refTransmittance0View, LoadOp = WGPULoadOp.Load, StoreOp = WGPUStoreOp.Store },
+                            new ColorAttachment { View = refTransmittance1View, LoadOp = WGPULoadOp.Load, StoreOp = WGPUStoreOp.Store }
+                        ],
+                        depthLoadStore);
+                    cloudTransPass.SetPipeline(cloudTransmittancePipeline);
+                    cloudTransPass.SetBindGroup(0, cloudOit.BindGroup);
+                    cloudTransPass.SetBindGroup(1, refTransmittanceBindGroup);
+                    cloudOit.DrawGeometry(cloudTransPass);
+                    cloudTransPass.End();
                 }
-                transmittancePass.End();
 
                 // Stage 3: accumulate colour weighted by the transmittance in front of each fragment.
                 var accumulatePass = encoder.BeginRenderPass(
@@ -1408,14 +1421,19 @@ public static class WindowedRenderer
                 accumulatePass.SetBindGroup(0, bindGroup);
                 accumulatePass.SetBindGroup(1, refAccumulateBindGroup);
                 DrawReferenceGeometry(accumulatePass);
+                accumulatePass.End();
+
                 if (cloudOit is not null)
                 {
-                    accumulatePass.SetPipeline(cloudAccumulatePipeline);
-                    accumulatePass.SetBindGroup(0, cloudOit.BindGroup);
-                    accumulatePass.SetBindGroup(1, refAccumulateBindGroup);
-                    cloudOit.DrawGeometry(accumulatePass);
+                    var cloudAccumPass = encoder.BeginRenderPass(
+                        [new ColorAttachment { View = refAccumulateView, LoadOp = WGPULoadOp.Load, StoreOp = WGPUStoreOp.Store }],
+                        depthLoadStore);
+                    cloudAccumPass.SetPipeline(cloudAccumulatePipeline);
+                    cloudAccumPass.SetBindGroup(0, cloudOit.BindGroup);
+                    cloudAccumPass.SetBindGroup(1, refAccumulateBindGroup);
+                    cloudOit.DrawGeometry(cloudAccumPass);
+                    cloudAccumPass.End();
                 }
-                accumulatePass.End();
 
                 // Composite over the frame, writing the nearest translucent depth.
                 var compositePass = encoder.BeginRenderPass(
