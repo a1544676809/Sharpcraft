@@ -71,7 +71,7 @@ public static class CloudGeometryBuilder
 
             for (var i = 0; i < 4; i++)
             {
-                var face = faces[i];
+                var face = quad.InsideFace ? faces[3 - i] : faces[i];
                 var x = origin.X + cellOffsetX + (face.X * cellSize);
                 var y = origin.Y + (face.Y * thickness);
                 var z = origin.Z + cellOffsetZ + (face.Z * cellSize);
