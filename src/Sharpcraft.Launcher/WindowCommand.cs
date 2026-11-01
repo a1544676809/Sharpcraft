@@ -292,11 +292,13 @@ internal static class WindowCommand
         var cloudRange = Environment.GetEnvironmentVariable("MC_CLOUD_RANGE") is { Length: > 0 } rangeText
             && int.TryParse(rangeText, out var parsedRange) ? parsedRange : 128;
         var cloudOit = Environment.GetEnvironmentVariable("MC_CLOUD_OIT") is not "0";
+        var cloudAdaptive = Environment.GetEnvironmentVariable("MC_CLOUD_ADAPTIVE") == "1";
         session.SetCloudOptions(
             enabled: cloudMode != "off",
             fancy: cloudMode != "fast" && cloudMode != "off",
             rangeChunks: cloudRange,
-            useOit: cloudOit);
+            useOit: cloudOit,
+            adaptive: cloudAdaptive);
 
         // The gradient sky is static day blue; use a flat SKY_COLOR clear colour instead (vanilla sky is SKY_COLOR).
         request = request with { SkipGradientSky = true };
@@ -389,6 +391,8 @@ internal static class WindowCommand
         // a too-dark scene can be told apart from a lighting-model problem. Principle 13: parsed here, in the host.
         var lightProbeTick = 0;
         var lightProbe = Environment.GetEnvironmentVariable("MC_LIGHT_PROBE") == "1";
+        var frameClock = System.Diagnostics.Stopwatch.StartNew();
+        var previousFrameMs = 0.0;
 
         var format = WindowedRenderer.Run(
             request,
@@ -396,6 +400,14 @@ internal static class WindowCommand
             visibleFor,
             (index, window) =>
         {
+            var nowMs = frameClock.Elapsed.TotalMilliseconds;
+            if (index > 0)
+            {
+                session.ObserveFrame(nowMs - previousFrameMs);
+            }
+
+            previousFrameMs = nowMs;
+
             if (index == 0)
             {
                 Console.WriteLine("window: first frame presented");

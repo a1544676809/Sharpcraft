@@ -2105,3 +2105,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 待：像素级对照、性能（128 区块 + OIT），以及与原版独立 cloud depth OIT 的差异记录。## 2026-11-01 渲染优化计划（T-312）
 - 计划文档 `docs/specs/render/optimization-plan.md`：阶段1 cloud OIT 常驻几何+专用 shader；阶段2 云几何/自适应范围；阶段3 OIT 目标生命周期；阶段4 独立 cloud depth + 像素对照；阶段5 天体/天空/绘制路径。
 - 下一步从阶段1开始：新增 `cloud_oit.wgsl`（7-float 顶点 + transform uniform），缓存云几何仅在 cell/侧别变化时重建，每帧仅更新 uniform。- 2026-11-01 阶段1完成：`cloud_oit.wgsl`（7-float+transform）+ `CloudOitResources` 仅在缓存数组变化时上传，每帧只更新 transform；窗口 2194+ 帧无校验错误。
+- 2026-11-01 阶段2完成：`CloudRangePolicy` + `MC_CLOUD_ADAPTIVE`（默认关闭）按帧时间在 32–128 调云范围。
