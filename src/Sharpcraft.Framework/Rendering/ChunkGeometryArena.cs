@@ -27,7 +27,7 @@ public sealed class ChunkGeometryArena : IDisposable
     private const ulong MinimumBufferBytes = 1 << 20;
 
     /// <summary>Largest single presize, so one allocation never becomes a frame spike of its own.</summary>
-    private const ulong MaxPresizeBytes = 256UL << 20;
+    private const ulong MaxPresizeBytes = 32UL << 20;
 
     /// <summary>
     /// Starting guess per chunk when the view distance is known. Deliberately generous: over-reserving costs
@@ -49,7 +49,7 @@ public sealed class ChunkGeometryArena : IDisposable
     /// longer fit. Chunks are meshed nearest first, so what gets skipped is the far edge rather than the ground underfoot.
     /// </summary>
     /// <remarks>Paging several buffers would remove the ceiling; that is the planned replacement for this stop gap.</remarks>
-    private const ulong MaxBufferBytes = 1024UL << 20;
+    private const ulong MaxBufferBytes = 128UL << 20;
 
     private readonly Device _device;
     private readonly Queue _queue;
@@ -106,12 +106,10 @@ public sealed class ChunkGeometryArena : IDisposable
         _queue = device.Queue;
         _bytesPerVertex = bytesPerVertex;
         _expectedChunks = expectedChunks;
-        // With a view distance the arena can start close to its final size, which removes the early doublings
-        // before enough chunks have arrived to measure an average
-        // (docs/specs/network/play-movement.md 7.27).
-        var initialCapacity = expectedChunks > 0
-            ? Math.Max(MinimumBufferBytes, (ulong)expectedChunks * AssumedBytesPerChunk)
-            : MinimumBufferBytes;
+        // Start small: pre-reserving the whole view distance at the generous per-chunk guess multiplied across the three
+        // layer arenas reserved over a gigabyte on a normal view distance and exhausted GPU memory. Grow on demand and let
+        // the measured-average presize (ArenaSizing) size for the view once enough chunks have arrived.
+        var initialCapacity = MinimumBufferBytes;
 
         _vertexCapacity = initialCapacity;
         _indexCapacity = Math.Max(MinimumBufferBytes, initialCapacity / 2);
@@ -175,6 +173,15 @@ public sealed class ChunkGeometryArena : IDisposable
         if (_vertexUsed + neededVertex > _vertexCapacity ||
             _indexUsed + neededIndex > _indexCapacity)
         {
+            // Once a buffer is at its ceiling a rebuild cannot help; drop the chunk instead of rebuilding every frame.
+            // Chunks are meshed nearest first, so what is dropped is the far edge rather than the ground underfoot.
+            if (_vertexCapacity >= MaxBufferBytes || _indexCapacity >= MaxBufferBytes
+                || _vertexUsed + neededVertex > MaxBufferBytes || _indexUsed + neededIndex > MaxBufferBytes)
+            {
+                _meshes.Remove(chunkKey);
+                return;
+            }
+
             RebuildAll();
             return;
         }
@@ -403,13 +410,13 @@ public sealed class ChunkGeometryArena : IDisposable
         // every resident chunk (docs/specs/network/play-movement.md 7.27).
         // Allocating a very large buffer is itself a spike, so a single presize is capped; growth continues by doubling
         // if the world really needs more.
-        var vertexCapacity = Math.Min(MaxPresizeBytes, Math.Max(
+        var vertexCapacity = Math.Min(MaxBufferBytes, Math.Max(
             ArenaSizing.NextCapacity(_vertexCapacity, _vertexUsed, (ulong)_vertexUsed, _meshes.Count, _expectedChunks, _presized),
             MinimumBufferBytes));
 
-        var indexCapacity = Math.Max(
+        var indexCapacity = Math.Min(MaxBufferBytes, Math.Max(
             ArenaSizing.NextCapacity(_indexCapacity, _indexUsed, (ulong)_indexUsed, _meshes.Count, _expectedChunks, _presized),
-            MinimumBufferBytes);
+            MinimumBufferBytes));
 
         if (!_presized && _expectedChunks > 0 && _meshes.Count >= ArenaSizing.SamplesForPresize)
         {
