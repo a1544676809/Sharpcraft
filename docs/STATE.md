@@ -1955,4 +1955,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `ColourBlend` 增 Vector4：`Greyscale/ScaleRgb/BlendToGray(Vector4,保留 alpha)/AlphaBlend`（复刻 `ARGB.alphaBlend`+`alphaBlendChannel`，含 sa=0/1 短路）。
 - `WeatherBlend.ApplySkyLightColor(Vector3,rain,thunder)`：基色 alphaBlend 向夜间天光色 (122,122,255)/255、alpha 79/255(rain)/134/255(thunder)，按 `(rain−thunder)/thunder` 权重重叠；接进 `EffectiveLighting.SkyLightColor`。
 - `WeatherBlendTests`(+2)。全量 **1229 通过**、门禁 ok。
-- **仍未做**：`CLOUD_COLOR` 天气灰度（无云渲染消费，暂缓）；`FOG_COLOR` 真正基色（维度/群系）；`SKY_COLOR`/方块调色逐群系→**P3（biome 数据 + registry）** 为硬前置，建议单独一轮。
+- **仍未做**：`CLOUD_COLOR` 天气灰度（无云渲染消费，暂缓）；`FOG_COLOR` 真正基色（维度/群系）；`SKY_COLOR`/方块调色逐群系→**P3（biome 数据 + registry）** 为硬前置，建议单独一轮。## 2026-11-01 P3 数据格式调查（文档）
+- 新增 `docs/analysis/common/biome-data.md`（草稿）：区块每 section「方块状态容器 + 生物群系容器（4×4×4=64、`BiomeMaxLocalBits=3`、全局调色板=群系 id、索引 `(y<<4)|(z<<2)|x`)」；`ChunkPacketParser` 现已读入并**丢弃**，P3 改为存 `int[64]`。
+- 群系注册表（`Biome.NETWORK_CODEC`）：`has_precipitation`、`temperature`、`temperature_modifier`(默认 NONE)、`downfall`、可选 `attributes`（含 `visual/sky_color`）、`effects`{`water_color` 必填、`foliage_color`?、`dry_foliage_color`?、`grass_color`?、`grass_color_modifier`?}；颜色 `"RRGGBB"`。
+- 颜色派生与采样：草/叶/干叶=override??colormap(temp,downfall)+modifier，水=water_color；`SKY_COLOR` 首版用 `calculateSkyColor(temp)`（原版主世界精确等价）；位置→section quart `(>>2&3)`，环境属性 7 抽头 gaussian 空间混合（核 `{0,1,4,6,4,1,0}`）。
+- 模块文档 §11 指向分析文档。**下一步 P3 实施**：①`ChunkSection` 存 biome id[64]＋解析；②registry_data 取群系条目（或专用解码）＋`BiomeColors` 数据；③`ColorMapColorUtil`+温度→草/叶/水逐群系 tint（接 `ChunkMesher`）；④`SKY_COLOR`=calculateSkyColor+空间混合替换天空盘。工作量最大，分小步。

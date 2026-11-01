@@ -143,3 +143,12 @@
 2. **P2 天气同步**：`ClientboundGameEventPacket` 解析（id 校准）+ `WeatherState` 插值；把 `RAIN_BRIGHTNESS` 接日月/星 alpha（修恒 1 偏差）。
 3. **P3 生物群系数据（硬前置）**：chunk biome 解析 + registry（climateSettings/specialEffects）；先用它把**方块调色升级为逐生物群系 + blend radius**（草/叶/水），再用 `SKY_COLOR` 空间混合**替换渐变天空盘**（几何已就绪）。
 4. **P4 其余消费**：`FOG_COLOR`、`CLOUD_COLOR`、天气叠加进 `LightmapParameters`（`SKY_LIGHT_*`）。
+
+## 11. P3 数据格式调查（见分析文档）
+
+已实读并写入 `docs/analysis/common/biome-data.md`：
+
+- 区块每 section 为「方块状态容器 + 生物群系容器（4×4×4=64、局部调色板上限 3、全局调色板=群系 id、索引 `(y<<4)|(z<<2)|x`)」；本仓库 `ChunkPacketParser` 现已读入并**丢弃**，P3 改为按 section 存 `int[64]`。
+- 群系注册表条目：`has_precipitation`、`temperature`、`temperature_modifier`(默认 NONE)、`downfall`、可选 `attributes`（含 `visual/sky_color`）、`effects`{`water_color` 必填、`foliage_color`?、`dry_foliage_color`?、`grass_color`?、`grass_color_modifier`?}；颜色为 `"RRGGBB"`。
+- 颜色派生：草/叶/干叶 = override ?? colormap(temp,downfall) 再经 modifier；水=effects.water_color；天空色首版用 `calculateSkyColor(temperature)`（对原版主世界群系精确等价；自定义 `attributes` 覆盖记受控偏差/后续）。
+- 位置采样：block→section quart `(>>2 &3)`，环境属性在相机附近用 7 抽头 gaussian 空间混合（核 `{0,1,4,6,4,1,0}`，总权重 4096）。
