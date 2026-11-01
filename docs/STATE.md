@@ -2137,3 +2137,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-01 环境问题：后台残留 16 个 `dotnet` host（21:01:28 启动，RSS≈2.3GB）、1 个 `VBCSCompiler`（≈350MB）、2 个无法结束的 `Sharpcraft.Launcher` 空壳；文档此前仅有历史清理记录，需在后续收尾时统一回收，避免多次 build/test 累积。
 - 2026-11-01 补充 M5.3 P1 实现文档（docs/modules/render.md §9），此前只有规格与 traceability。
 - 2026-11-01 增加 `MC_PRESENT_MODE`（默认Fifo）；视距32 immediate≈156FPS，此前Fifo数据需标注口径（T-345）。
+- 2026-11-01 M5.3 P1 名字牌投影完成（T-346，4测试）；UI 文本绘制待接。
