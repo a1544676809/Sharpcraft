@@ -124,10 +124,9 @@ fn toTransmittance(absorbance : f32) -> f32 {
     return clamp(exp(-absorbance), 0.0001, 1.0);
 }
 
-// Same linear-space lighting as terrain.wgsl: decode the sRGB atlas texel, multiply by the linear light, re-encode.
+// Reference block.vsh/block.fsh multiply texel x vertexColor x lightmap in plain sRGB space (no gamma decode/encode).
 fn litColour(texel : vec3<f32>, light : vec3<f32>) -> vec3<f32> {
-    let linear = pow(max(texel, vec3<f32>(0.0)), vec3<f32>(2.2));
-    return pow(max(linear * light, vec3<f32>(0.0)), vec3<f32>(1.0 / 2.2));
+    return clamp(texel * light, vec3<f32>(0.0), vec3<f32>(1.0));
 }
 
 fn normalizeDepth(fragmentLinearDepth : f32, closestLinearDepth : f32, furthestLinearDepth : f32) -> f32 {

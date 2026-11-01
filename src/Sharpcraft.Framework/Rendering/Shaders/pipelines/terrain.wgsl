@@ -25,13 +25,12 @@ struct Lightmap {
 };
 @group(0) @binding(4) var<uniform> lightmap : Lightmap;
 
-// Lighting must happen in linear space. The atlas is authored in sRGB but stored as RGBA8Unorm, so the hardware does not
-// decode it; multiplying those gamma-encoded bytes directly by a linear light (any light below one) darkens far more
-// than the reference does, which is why shaded faces read almost black while full-lit faces look right. Decode, multiply,
-// re-encode: full light returns the texel unchanged, and mid/shadow tones match a linear multiply.
+// Reference block.vsh/block.fsh multiply in plain (gamma/sRGB) space with no decode or encode:
+//   vertexColor = Color * sample_lightmap(...);   color = texture * vertexColor * ColorModulator.
+// So combine the sampled texel, the vertex Colour (tint x shade x AO) and the lightmap colour by direct multiplication,
+// exactly like the reference. lightmapColour already reproduces lightmap.fsh's brightness math 1:1.
 fn litColour(texel : vec3<f32>, light : vec3<f32>) -> vec3<f32> {
-    let linear = pow(max(texel, vec3<f32>(0.0)), vec3<f32>(2.2));
-    return pow(max(linear * light, vec3<f32>(0.0)), vec3<f32>(1.0 / 2.2));
+    return clamp(texel * light, vec3<f32>(0.0), vec3<f32>(1.0));
 }
 
 fn brightnessCurve(x : f32) -> f32 { return x / (4.0 - 3.0 * x); }
