@@ -294,6 +294,7 @@ internal static class WindowCommand
         var cloudOit = Environment.GetEnvironmentVariable("MC_CLOUD_OIT") is not "0";
         var cloudAdaptive = Environment.GetEnvironmentVariable("MC_CLOUD_ADAPTIVE") == "1";
         var oitLowPrecision = Environment.GetEnvironmentVariable("MC_OIT_LOW_PRECISION") == "1";
+        var cloudDepth = Environment.GetEnvironmentVariable("MC_CLOUD_DEPTH") == "1";
         session.SetCloudOptions(
             enabled: cloudMode != "off",
             fancy: cloudMode != "fast" && cloudMode != "off",
@@ -589,6 +590,7 @@ internal static class WindowCommand
             cloudsPerFrame: () => session.CurrentCloudDraw(),
             cloudOitEnabled: session.CloudUseOit,
             oitLowPrecision: oitLowPrecision,
+            cloudDepthEnabled: cloudDepth,
             celestialPerFrame: () =>
             {
                 if (world is null)
