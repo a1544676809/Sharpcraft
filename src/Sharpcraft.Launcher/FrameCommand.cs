@@ -31,7 +31,8 @@ internal static class FrameCommand
         int collectSeconds,
         CancellationToken cancellationToken)
     {
-        if (Environment.GetEnvironmentVariable("MC_SUN_TEST") is { Length: > 0 })
+        if (Environment.GetEnvironmentVariable("MC_SUN_TEST") is { Length: > 0 } ||
+            Environment.GetEnvironmentVariable("MC_MOON_TEST") is { Length: > 0 })
         {
             return RenderSunTest(width, height);
         }
@@ -1225,37 +1226,43 @@ internal static class FrameCommand
     }
 
     /// <summary>
-    /// Renders a sky-only frame with a white sun at angle 0 and a camera aimed straight at it, proving the celestial
-    /// pipeline draws at the position the CPU projection predicts. Returns the PNG path.
+    /// Renders a sky-only frame with a body (sun, or the moon under MC_MOON_TEST) at angle 0 and a camera aimed straight
+    /// at it, proving the celestial pipeline draws at the position the CPU projection predicts. Returns the PNG path.
     /// </summary>
     internal static string RenderSunTest(int width, int height)
     {
+        // MC_MOON_TEST switches to the moon (size 20) so the moon sprite can be verified the same way as the sun.
+        var isMoon = Environment.GetEnvironmentVariable("MC_MOON_TEST") is { Length: > 0 };
+        var bodySize = isMoon ? 20f : 30f;
+        var label = isMoon ? "moon" : "sun";
+
         var (vertices, indices) = CelestialMeshBuilder.CelestialQuad(
-            0f, height: 100f, size: 30f, uv: (0f, 0f, 1f, 1f));
+            0f, height: 100f, size: bodySize, uv: (0f, 0f, 1f, 1f));
 
         // A 2x2 pure-white texture by default so a lit pixel is unambiguous against the blue sky and no pack is needed.
-        TextureData sunTexture = new(2, 2,
+        TextureData bodyTexture = new(2, 2,
         [
             255, 255, 255, 255, 255, 255, 255, 255,
             255, 255, 255, 255, 255, 255, 255, 255
         ]);
 
-        // With MC_SUN_TEST_PACK set, draw the real sun sprite from the pack instead, to check its orientation and UVs.
+        // With MC_SUN_TEST_PACK set, draw the real sprite from the pack instead, to check its orientation and UVs.
         if (Environment.GetEnvironmentVariable("MC_SUN_TEST_PACK") is { Length: > 0 })
         {
             using var resources = CreateResourceManager();
-            var bytes = resources.Read(ResourceKind.Texture, CelestialSprites.Sun);
+            var identifier = isMoon ? CelestialSprites.MoonPhase(0) : CelestialSprites.Sun;
+            var bytes = resources.Read(ResourceKind.Texture, identifier);
             if (bytes is not null)
             {
                 var image = PngDecoder.Decode(bytes);
-                sunTexture = new TextureData(image.Width, image.Height, image.Pixels);
-                Console.WriteLine($"sun test: real sun sprite {image.Width}x{image.Height}");
+                bodyTexture = new TextureData(image.Width, image.Height, image.Pixels);
+                Console.WriteLine($"{label} test: real sprite {identifier.Path} {image.Width}x{image.Height}");
             }
         }
 
         var draw = new CelestialQuadDraw(0, vertices, indices, Matrix4x4.Identity, Vector4.One);
 
-        // The sun disc lies in the horizontal plane y=100 around the origin; look at its centre from below and in front.
+        // The body lies in the horizontal plane y=100 around the origin; look at its centre from below and in front.
         var request = new FrameRequest(
             width,
             height,
@@ -1266,20 +1273,20 @@ internal static class FrameCommand
             new Vector3(0f, 100f, 0f),
             60f)
         {
-            CelestialTextures = [sunTexture],
+            CelestialTextures = [bodyTexture],
             CelestialDraws = [draw]
         };
 
         var frame = OffscreenRenderer.Render(request);
 
-        // The centre pixel is on the ray to the sun's centroid, so it must be the white disc, not the sky gradient.
+        // The centre pixel is on the ray to the body's centroid, so it must be the disc, not the sky gradient.
         var centreX = frame.Width / 2;
         var centreY = frame.Height / 2;
         var offset = ((centreY * frame.Width) + centreX) * 4;
-        Console.WriteLine($"sun test: centre rgba({frame.Rgba[offset]},{frame.Rgba[offset + 1]},{frame.Rgba[offset + 2]},{frame.Rgba[offset + 3]})");
+        Console.WriteLine($"{label} test: centre rgba({frame.Rgba[offset]},{frame.Rgba[offset + 1]},{frame.Rgba[offset + 2]},{frame.Rgba[offset + 3]})");
 
         var png = PngEncoder.EncodeRgba(frame.Width, frame.Height, frame.Rgba);
-        var path = Path.Combine(Path.GetTempPath(), "sharpcraft-sun-test.png");
+        var path = Path.Combine(Path.GetTempPath(), $"sharpcraft-{label}-test.png");
         File.WriteAllBytes(path, png);
         return path;
     }
@@ -1296,34 +1303,51 @@ internal static class FrameCommand
         var textures = new List<TextureData>();
         var draws = new List<CelestialQuadDraw>();
 
+        // The moon phase follows total world ticks (one phase per 24000 ticks); angles follow the day clock.
+        var totalTicks = world.TryGetClock(ClientWorld.OverworldClockId, out var clock) ? clock.TotalTicks : world.GameTime;
+        var moonPhaseIndex = Sharpcraft.Common.World.SkyAttributeTracks.MoonPhaseIndex(totalTicks);
+        var moonAngle = Environment.GetEnvironmentVariable("MC_MOON_ANGLE") is { Length: > 0 } moonText &&
+            float.TryParse(moonText, out var parsedMoonAngle)
+            ? parsedMoonAngle
+            : Sharpcraft.Common.World.SkyTimelines.MoonAngleDegrees(world.DayTime);
+
         // A fixed angle is available for verification; otherwise the sun follows the overworld clock.
         var sunAngle = Environment.GetEnvironmentVariable("MC_SUN_ANGLE") is { Length: > 0 } angleText &&
             float.TryParse(angleText, out var parsedAngle)
             ? parsedAngle
             : Sharpcraft.Common.World.SkyTimelines.SunAngleDegrees(world.DayTime);
 
-        var sunBytes = resources.Read(ResourceKind.Texture, CelestialSprites.Sun);
-        if (sunBytes is not null)
-        {
-            var image = PngDecoder.Decode(sunBytes);
-            var textureIndex = textures.Count;
-            textures.Add(new TextureData(image.Width, image.Height, image.Pixels));
-
-            var (vertices, indices) = CelestialMeshBuilder.CelestialQuad(
-                sunAngle * (MathF.PI / 180f), height: 100f, size: 30f, uv: (0f, 0f, 1f, 1f));
-
-            // Translate to the eye so the body stays at the same place relative to the camera, i.e. infinitely far.
-            draws.Add(new CelestialQuadDraw(textureIndex, vertices, indices, Matrix4x4.CreateTranslation(request.CameraPosition), Vector4.One));
-        }
+        AddBody(CelestialSprites.Sun, sunAngle, size: 30f);
+        AddBody(CelestialSprites.MoonPhase(moonPhaseIndex), moonAngle, size: 20f);
 
         if (draws.Count > 0)
         {
-            Console.WriteLine($"celestial: {textures.Count} texture(s), {draws.Count} draw(s), sun angle {sunAngle:F1} deg");
+            Console.WriteLine(
+                $"celestial: {textures.Count} texture(s), {draws.Count} draw(s), sun {sunAngle:F1} deg, moon {moonAngle:F1} deg (phase {moonPhaseIndex})");
         }
 
         return draws.Count == 0
             ? request
             : request with { CelestialTextures = [.. textures], CelestialDraws = [.. draws] };
+
+        void AddBody(Sharpcraft.Common.Identifiers.Identifier identifier, float angleDegrees, float size)
+        {
+            var bytes = resources.Read(ResourceKind.Texture, identifier);
+            if (bytes is null)
+            {
+                return;
+            }
+
+            var image = PngDecoder.Decode(bytes);
+            var textureIndex = textures.Count;
+            textures.Add(new TextureData(image.Width, image.Height, image.Pixels));
+
+            var (vertices, indices) = CelestialMeshBuilder.CelestialQuad(
+                angleDegrees * (MathF.PI / 180f), height: 100f, size: size, uv: (0f, 0f, 1f, 1f));
+
+            // Translate to the eye so the body stays at the same place relative to the camera, i.e. infinitely far.
+            draws.Add(new CelestialQuadDraw(textureIndex, vertices, indices, Matrix4x4.CreateTranslation(request.CameraPosition), Vector4.One));
+        }
     }
 
     private static string RenderLocal(int width, int height)

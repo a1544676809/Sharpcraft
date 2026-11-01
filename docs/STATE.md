@@ -1903,4 +1903,7 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **角度驱动**：`FrameCommand.AttachCelestial` 用 `world.DayTime`→`SkyTimelines.SunAngleDegrees`（`MC_SUN_ANGLE` 可覆盖验证）；`model=translate(eye)` 让天体相对相机（视作无穷远）。已接入 `RenderWorld`（真服/回放）与 `RenderLocal`。
 - **GPU 等价验收（离屏，`MC_SUN_TEST=1`）**：纯白贴图时太阳四边形质心投影到画面正中，中心像素 `rgba(255,255,255,255)`；改用 pack 真 `sun.png`（32×32）后中心 `rgba(255,255,255,255)`、可见暖白光晕且**无黑块**。出图 `%TEMP%\sharpcraft-sun-test.png`。
 - 修复架构门禁 `Repro_001`（`VertexAttribute` 只允许在 `VertexLayout.cs`）：天体顶点属性移入 `VertexLayout.CelestialAttributes()`。
-- 全量 **1184 通过**、0 警告。**待办**：月亮（按 `MOON_PHASE` 选贴图）、星空（1500）、日出条带（三角扇+顶点色）、天空盘/暗盘；亮度接 `STAR_BRIGHTNESS`/`RAIN_BRIGHTNESS`；镜像到 `WindowedRenderer`；随后日夜光照。
+- 全量 **1184 通过**、0 警告。**待办**：月亮（按 `MOON_PHASE` 选贴图）、星空（1500）、日出条带（三角扇+顶点色）、天空盘/暗盘；亮度接 `STAR_BRIGHTNESS`/`RAIN_BRIGHTNESS`；镜像到 `WindowedRenderer`；随后日夜光照。## 2026-11-01 天空天体：月亮接入
+- `AttachCelestial` 增月亮：按 `SkyAttributeTracks.MoonPhaseIndex(overworld.totalTicks)` 选 `environment/celestial/moon/<phase>`，角度 `MoonAngleDegrees`、尺寸 20 / 高度 100；与太阳共用 celestial 管线（多纹理 / 多 draw，`CelestialResources` 已支持）。
+- 验收：`MC_MOON_TEST=1` + pack 渲染 full_moon（32×32）中心 `rgba(255,255,255,255)`、无黑块；本地帧日志 `celestial: 2 texture(s), 2 draw(s)`；全量 **1184 通过**。
+- 待办：星空、日出条带、天空盘/暗盘、`RAIN_BRIGHTNESS` 亮度、镜像 `WindowedRenderer`、日夜光照。
