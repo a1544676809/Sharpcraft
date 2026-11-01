@@ -43,8 +43,45 @@ public sealed class ClientWorldTimeTests
     public void AdvanceClocksMovesByRate()
     {
         var world = WithOverworldClock(6000);
-        world.AdvanceClocks();
+        world.AdvanceTick();
         Assert.Equal(6001, world.DayTime);
+    }
+
+    [Fact]
+    public void RoutineEmptySetTimeDoesNotResetClocks()
+    {
+        // Routine set_time packets carry no clock updates; they must not clear the clocks (reference handleUpdates).
+        // The clock advances by the game-time delta (1019 - 999 = 20), staying near 6000 instead of dropping to 0.
+        var world = WithOverworldClock(6000);
+        world.ApplyTime(new SetTimePacket(1019, new Dictionary<int, ClockNetworkState>()));
+        Assert.Equal(6020, world.DayTime);
+    }
+
+    [Fact]
+    public void TimeSetSurvivesFollowingEmptyPacketsAndAdvances()
+    {
+        var world = WithOverworldClock(0);
+        world.ApplyTime(new SetTimePacket(1000, new Dictionary<int, ClockNetworkState>
+        {
+            [ClientWorld.OverworldClockId] = new ClockNetworkState(1000, 0f, 1f)
+        }));
+        Assert.Equal(1000, world.DayTime);
+
+        // The next routine packet only advances game time by 20 ticks; the clock advances with it, it is not wiped.
+        world.ApplyTime(new SetTimePacket(1020, new Dictionary<int, ClockNetworkState>()));
+        Assert.Equal(1020, world.DayTime);
+    }
+
+    [Fact]
+    public void FallsBackToGameTimeWhenTheServerSendsNoClocks()
+    {
+        // Some servers send only game time with an empty clock map; day time follows the game time (its 24000-tick day).
+        var world = new ClientWorld(minSectionY: 0, sectionCount: 1);
+        world.ApplyTime(new SetTimePacket(18000, new Dictionary<int, ClockNetworkState>()));
+        Assert.Equal(18000, world.DayTime);
+
+        world.AdvanceTick();
+        Assert.Equal(18001, world.DayTime);
     }
 
     [Fact]

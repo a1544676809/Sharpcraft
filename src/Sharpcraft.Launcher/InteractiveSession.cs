@@ -976,7 +976,7 @@ internal sealed class InteractiveSession
 
                 // Advance the world clocks (day/night, docs/modules/time.md) and the block-light flicker once per tick,
                 // like the reference client tick (LightmapRenderStateExtractor.tick).
-                _world?.AdvanceClocks();
+                _world?.AdvanceTick();
                 _blockLightFlicker.Tick();
 
                 // Verification hook: print the tracked entities so their positions can be compared against the
@@ -1006,7 +1006,7 @@ internal sealed class InteractiveSession
                     Console.WriteLine(
                         $"diag: tick={_tickCounter} fwd={frame.Forward:F0} sprint={frame.Sprint} sneak={frame.Sneak} "
                         + $"jump presses={pressed} accepted={accepted} inAir={inAir} ground={_player.OnGround} "
-                        + $"y={_player.Position.Y:F2} vy={_player.DeltaMovement.Y:F3}");
+                        + $"y={_player.Position.Y:F2} vy={_player.DeltaMovement.Y:F3} day={_world?.DayTime}");
                 }
 
                 // Diagnostic hook: sweep the pitch so the head direction can be checked from a second client
@@ -1273,6 +1273,11 @@ internal sealed class InteractiveSession
                         if (SetTimePacketCodec.TryRead(ref setTimeReader, out var setTime) == DecodeStatus.Success)
                         {
                             _world.ApplyTime(setTime);
+                            if (Environment.GetEnvironmentVariable("MC_DIAG") == "1")
+                            {
+                                var parts = string.Join(",", setTime.Clocks.Select(kv => $"{kv.Key}:t={kv.Value.TotalTicks},r={kv.Value.Rate},p={kv.Value.PartialTick:F2}"));
+                                Console.WriteLine($"set_time: gameTime={setTime.GameTime} day={_world.DayTime} clocks=[{parts}]");
+                            }
                         }
                     }
 

@@ -26,6 +26,7 @@ public sealed class ClientWorld
     private readonly int _minSectionY;
     private readonly int _sectionCount;
     private readonly Dictionary<int, ClockNetworkState> _clocks = new();
+    private long _lastTickGameTime;
 
     /// <summary>Creates a world with a fixed vertical section range.</summary>
     /// <param name="minSectionY">Lowest section index (overworld 1.18+ uses -4).</param>
@@ -61,13 +62,12 @@ public sealed class ClientWorld
     {
         get
         {
-            if (!_clocks.TryGetValue(OverworldClockId, out var clock))
-            {
-                return 0;
-            }
-
-            var ticks = clock.TotalTicks % DayLengthTicks;
-            return (int)((ticks + DayLengthTicks) % DayLengthTicks);
+            // The overworld clock normally arrives through set_time. Some servers only send the game time and leave the
+            // clock-update map empty, so when no clock is present fall back to the game time: the overworld clock's total
+            // ticks track game time, and day time is its position in the 24000-tick day.
+            var ticks = _clocks.TryGetValue(OverworldClockId, out var clock) ? clock.TotalTicks : GameTime;
+            var wrapped = ticks % DayLengthTicks;
+            return (int)((wrapped + DayLengthTicks) % DayLengthTicks);
         }
     }
 
@@ -137,13 +137,18 @@ public sealed class ClientWorld
     private static float LerpBetween(float partialTick, float previous, float current) =>
         previous + (Math.Clamp(partialTick, 0f, 1f) * (current - previous));
 
-    /// <summary>Applies a <c>set_time</c> packet: game time and every world clock state.</summary>
+    /// <summary>
+    /// Applies a <c>set_time</c> packet: advance the existing clocks to the packet's game time, then update only the clocks
+    /// the packet actually carries. Routine packets carry no clock updates, so they must not reset the clocks — the reference
+    /// ClientClockManager.handleUpdates ticks first and then overwrites only the entries present in the update map.
+    /// </summary>
     public void ApplyTime(SetTimePacket packet)
     {
         ArgumentNullException.ThrowIfNull(packet);
 
+        AdvanceClocks(packet.GameTime);
         GameTime = packet.GameTime;
-        _clocks.Clear();
+
         foreach (var (id, state) in packet.Clocks)
         {
             _clocks[id] = state;
@@ -153,10 +158,15 @@ public sealed class ClientWorld
     /// <summary>Reads one world clock's state.</summary>
     public bool TryGetClock(int clockId, out ClockNetworkState state) => _clocks.TryGetValue(clockId, out state);
 
-    /// <summary>Advances every clock by one client tick according to its rate.</summary>
-    public void AdvanceClocks()
+    /// <summary>
+    /// Advances every clock to <paramref name="gameTime"/>: <c>partialTick += (gameTime - last) * rate</c>, carrying whole
+    /// ticks into <c>totalTicks</c>, exactly like the reference ClientClockManager.tick.
+    /// </summary>
+    public void AdvanceClocks(long gameTime)
     {
-        if (_clocks.Count == 0)
+        var delta = gameTime - _lastTickGameTime;
+        _lastTickGameTime = gameTime;
+        if (delta == 0 || _clocks.Count == 0)
         {
             return;
         }
@@ -164,9 +174,17 @@ public sealed class ClientWorld
         foreach (var key in new List<int>(_clocks.Keys))
         {
             var clock = _clocks[key];
-            var advance = (long)MathF.Round(clock.Rate);
-            _clocks[key] = clock with { TotalTicks = clock.TotalTicks + advance };
+            var partial = clock.PartialTick + (delta * (double)clock.Rate);
+            var full = (long)Math.Floor(partial);
+            _clocks[key] = clock with { TotalTicks = clock.TotalTicks + full, PartialTick = (float)(partial - full) };
         }
+    }
+
+    /// <summary>One client tick: advance the game time by one tick and step every clock (docs/modules/time.md).</summary>
+    public void AdvanceTick()
+    {
+        GameTime += 1;
+        AdvanceClocks(GameTime);
     }
 
     /// <summary>

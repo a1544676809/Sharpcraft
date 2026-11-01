@@ -1995,4 +1995,7 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `InteractiveSession`：每 tick `_world.AdvanceClocks()`（修 #13：此前从未推进→时间/亮度冻结）+ `_blockLightFlicker.Tick()`；新增 `CurrentLightmap()` = `EffectiveLighting(world)` 覆盖 `BlockFactor=flicker`。
 - `WindowedRenderer.Run` 增 `lightmapPerFrame` 回调，每帧重写光照 uniform（此前窗口固定 `LightmapUniform.Day`，昼夜/闪烁都不会变）。
 - `BlockLightFlickerTests`(3)。全量 **1247 通过**、门禁 ok。重启窗口实机复验闪烁与昼夜。
-- 仍待：**#10 BlockLightTint**（仍用 `Srgb24ToLinear`，应改原样 `v/255`）；**#3** 平滑光照算法近似（待定是否移植 smoothBlend/smoothWeightedBlend）。
+- 仍待：**#10 BlockLightTint**（仍用 `Srgb24ToLinear`，应改原样 `v/255`）；**#3** 平滑光照算法近似（待定是否移植 smoothBlend/smoothWeightedBlend）。## 2026-11-01 修复：世界时钟被空 set_time 清空 / gameTime 兜底
+- **诊断（`MC_DIAG`）**：真服 `set_time` 约每 20 tick 一次但 **clockUpdates 恒空**（只有 gameTime）；旧 `ApplyTime` 每次 `_clocks.Clear()` → 时钟被清、`DayTime` 恒 0（暗）；`/time set day` 先亮、下一空包即复原。
+- **修复**（对齐原版 `ClientClockManager`）：`ApplyTime` 先 `AdvanceClocks(gameTime)` 再**仅覆盖包内时钟、不清空**；`AdvanceClocks(long)` 用 `Δ·rate`（carry partial→total）；`AdvanceTick()` 每 tick `GameTime++` 并推进时钟；无 overworld 时钟时 `DayTime=GameTime%24000` 兜底。
+- `ClientWorldTimeTests`(7)。全量 **1250 通过**、门禁 ok。实机 `day` 从 ~4890 起每秒 +20 推进（白天亮度正常）。重启窗口复验昼夜与 `/time set`。
