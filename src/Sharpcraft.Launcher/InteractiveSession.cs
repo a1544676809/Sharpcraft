@@ -222,7 +222,7 @@ internal sealed class InteractiveSession
         }
 
         var eye = _player.Position + new Vector3(0f, 1.62f, 0f);
-        return FrameCommand.BuildCloudDraw(_world, _cloudTexture, eye, _cloudDrawCache, EffectiveCloudRange, _cloudsFancy);
+        return FrameCommand.BuildCloudDraw(_world, _cloudTexture, eye, _cloudDrawCache, EffectiveCloudRange, _cloudsFancy, _loop.Alpha);
     }
 
     /// <summary>Decoded chunks installed per frame; keeps one batch from stalling the frame.</summary>

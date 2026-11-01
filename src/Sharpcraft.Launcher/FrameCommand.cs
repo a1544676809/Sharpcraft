@@ -1527,9 +1527,10 @@ internal static class FrameCommand
         Vector3 eye,
         Sharpcraft.Client.Render.CloudDrawCache? cache = null,
         int rangeChunks = 128,
-        bool fancy = true)
+        bool fancy = true,
+        float? partialTickOverride = null)
     {
-        var partialTick = EffectiveDayTimePartial(world);
+        var partialTick = partialTickOverride ?? EffectiveDayTimePartial(world);
         var offset = (float)(world.GameTime % (texture.Width * 400L)) + partialTick;
         var cloudX = eye.X + (offset * 0.03f);
         var cloudZ = eye.Z + 3.96f;
