@@ -120,7 +120,7 @@ public sealed class EntityPlaceholderMesher
     public const int PlayerPartCount = 6;
 
     /// <summary>Entity type id of a player in 26.3, observed in the live world.</summary>
-    private const int PlayerEntityTypeId = 159;
+    public const int PlayerEntityTypeId = 159;
 
     internal static void AppendBox(
         DynamicGeometry geometry,

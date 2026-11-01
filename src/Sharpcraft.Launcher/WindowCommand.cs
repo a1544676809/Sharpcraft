@@ -101,6 +101,10 @@ internal static class WindowCommand
         // One pool serves both decoding and meshing, sized from the machine
         // (docs/specs/network/play-movement.md 7.24).
         var entityMesher = new EntityPlaceholderMesher();
+        var visibleEntities = new List<Sharpcraft.Client.World.EntityRenderState>();
+        System.Numerics.Vector3 lastEye = default;
+        System.Numerics.Vector3 lastTarget = default;
+        var entityCullFrames = 0;
 
         // Placeholder boxes sample one atlas cell and tint it, so no per entity texture lookup is needed.
         SpriteRect? entitySprite = prepared is null
@@ -384,7 +388,31 @@ internal static class WindowCommand
 
         // Without an atlas there is no cell to sample, so entity boxes are simply not drawn.
         var entitySource = entitySprite is { } sprite
-            ? new Func<DynamicGeometry>(() => entityMesher.Build(session.EntityStates(session.PartialTick), sprite))
+            ? new Func<DynamicGeometry>(() =>
+            {
+                var states = session.EntityStates(session.PartialTick);
+                visibleEntities.Clear();
+                var frustum = Sharpcraft.Client.Render.ViewFrustum.FromViewProjection(
+                    Sharpcraft.Framework.Rendering.CameraMath.BuildViewProjection(lastEye, lastTarget, 70f, 960, 540));
+                foreach (var entity in states)
+                {
+                    var isPlayer = entity.TypeId == EntityPlaceholderMesher.PlayerEntityTypeId;
+                    var width = isPlayer ? EntityPlaceholderMesher.PlayerWidth : EntityPlaceholderMesher.MobWidth;
+                    var height = isPlayer ? EntityPlaceholderMesher.PlayerHeight : EntityPlaceholderMesher.MobHeight;
+                    var centre = new System.Numerics.Vector3(entity.X, entity.Y + (height * 0.5f), entity.Z);
+                    if (frustum.IsBoxVisible(centre, new System.Numerics.Vector3(width * 0.5f, height * 0.5f, width * 0.5f)))
+                    {
+                        visibleEntities.Add(entity);
+                    }
+                }
+
+                if (streamDiag && (++entityCullFrames % 120) == 0)
+                {
+                    Console.WriteLine($"entity cull: candidates={states.Length} visible={visibleEntities.Count} culled={states.Length - visibleEntities.Count}");
+                }
+
+                return entityMesher.Build(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), sprite);
+            })
             : null;
 
         // A local demo scene has no player to steer, so the fixed camera from the request is used instead of the
@@ -438,6 +466,8 @@ internal static class WindowCommand
                 : (window) =>
                 {
                     var camera = session.UpdateCamera(window);
+                    lastEye = camera.Eye;
+                    lastTarget = camera.Target;
                     speedOverlay?.Observe(session.Player.Position, session.TickIndex);
 
                     if (lightProbe && (lightProbeTick++ % 90) == 0)
