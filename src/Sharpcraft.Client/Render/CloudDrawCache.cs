@@ -16,7 +16,6 @@ public sealed class CloudDrawCache
     private int _cellZ = int.MinValue;
     private CloudCameraSide _side;
     private int _radius;
-    private int _vertical = int.MinValue;
     private float[] _vertices = [];
     private uint[] _indices = [];
 
@@ -32,23 +31,19 @@ public sealed class CloudDrawCache
         int cellX,
         int cellZ,
         int radiusCells,
-        float verticalOffset,
         CloudCameraSide side)
     {
-        var vertical = (int)MathF.Round(verticalOffset);
-        if (_vertices.Length != 0 && cellX == _cellX && cellZ == _cellZ && side == _side && radiusCells == _radius
-            && vertical == _vertical)
+        if (_vertices.Length != 0 && cellX == _cellX && cellZ == _cellZ && side == _side && radiusCells == _radius)
         {
             return (_vertices, _indices);
         }
 
         var quads = CloudMeshBuilder.Build(cells, textureWidth, textureHeight, cellX, cellZ, radiusCells, side);
-        (_vertices, _indices) = CloudGeometryBuilder.Build(quads, Vector3.Zero, new Vector3(0f, vertical, 0f));
+        (_vertices, _indices) = CloudGeometryBuilder.Build(quads, Vector3.Zero, Vector3.Zero);
         _cellX = cellX;
         _cellZ = cellZ;
         _side = side;
         _radius = radiusCells;
-        _vertical = vertical;
         return (_vertices, _indices);
     }
 }

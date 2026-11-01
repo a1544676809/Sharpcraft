@@ -1577,13 +1577,15 @@ internal static class FrameCommand
         {
             // Cached camera-relative mesh: vertices already carry the vertical offset; move it with the eye each frame.
             (vertices, indices) = cache.Get(
-                texture.Cells, texture.Width, texture.Height, cellX, cellZ, radiusCells, relativeBottom, side);
+                texture.Cells, texture.Width, texture.Height, cellX, cellZ, radiusCells, side);
             if (vertices.Length == 0)
             {
                 return null;
             }
 
-            model = Matrix4x4.CreateTranslation(eye.X - xInCell, eye.Y, eye.Z - zInCell);
+            // Keep the cloud plane at the fixed absolute bottom height; only horizontal offset follows the eye, so a
+            // jump adds no vertical snapping.
+            model = Matrix4x4.CreateTranslation(eye.X - xInCell, bottomY, eye.Z - zInCell);
         }
 
         var factor = Sharpcraft.Common.World.SkyAttributeTracks.CloudColorFactorAt(EffectiveDayTime(world));

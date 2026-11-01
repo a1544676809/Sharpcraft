@@ -2094,4 +2094,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 构建/1267 通过；窗口运行中（pid 54384，RSS ~1.16GB）。**未做**：云 OIT（当前普通 alpha + 深度）；严格像素等效待后续。## 2026-11-01 T-309：云配置开关
 - 新增宿主开关（不污染游戏程序集环境变量读取，经显式选项传入）：`MC_CLOUD_MODE=off|fast|fancy`（默认 fancy）与 `MC_CLOUD_RANGE`（默认 128 区块，对应原版 `Options.cloudRange`）；`MC_CLOUD_MODE=off` 跳过云，`fast` 用仅 DOWN 面（`CloudMeshBuilder.BuildFlat`）。
 - `CloudDrawCache` 缓存 fancy 云几何；`CloudMeshBuilderTests.FastModeBuildsOnlyTheDownFace`、`CloudDrawCacheTests` 加回归；全量 **1269** 通过。
-- **完整 cloud OIT 仍待实现**：需要新增 position-color 版 OIT 着色器/三阶段 pipeline 并接入现有 OIT 目标；计划以显式 `CloudUseOit` 选项接入，不影响当前路径。
+- **完整 cloud OIT 仍待实现**：需要新增 position-color 版 OIT 着色器/三阶段 pipeline 并接入现有 OIT 目标；计划以显式 `CloudUseOit` 选项接入，不影响当前路径。## 2026-11-01 T-310：跳跃云上下抖动修复
+- 现象：跳跃时云上下颤抖。
+- 根因：`CloudDrawCache` 为实现雾 alpha 把 `relativeBottomY` 四舍五入进几何；跳跃时该值每帧变化 → 几何重建且云块垂直位置被量化到整块，产生上下跳。
+- 修复：缓存几何不再含垂直偏移（fog 距离按水平相对位置），缓存键不含垂直；每帧 model 平移 y 固定为绝对 `bottomY`（水平仍为 eye-(xInCell,zInCell)），与 shader `CloudOffset.y` 等价。
+- 全量测试通过；Cloud 测试 11。
