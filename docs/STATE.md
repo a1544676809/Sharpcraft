@@ -2114,3 +2114,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-01 阶段4对照流程已登记 `benchmarks/render/cloud-oit-compare.md`；独立 cloud depth 实现仍待下一提交。
 - 2026-11-01 阶段4实现：`MC_CLOUD_DEPTH=1` 独立 cloud depth + 专用 OIT targets/三阶段/composite；默认 0。
 - 2026-11-01 阶段4修复：补 cloud depth-bounds cull pass，修复云不透明白块。
+- 2026-11-01 阶段4 cloud OIT 最终验收：blit_depth、独立 cloud depth、bounds-only 深度写、夜间 alpha/内部面修正完成；全量1272通过，用户确认昼夜正常。
