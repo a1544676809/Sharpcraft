@@ -299,6 +299,12 @@ internal static class WindowCommand
         var cloudAdaptive = Environment.GetEnvironmentVariable("MC_CLOUD_ADAPTIVE") == "1";
         var oitLowPrecision = Environment.GetEnvironmentVariable("MC_OIT_LOW_PRECISION") == "1";
         var cloudDepth = Environment.GetEnvironmentVariable("MC_CLOUD_DEPTH") == "1";
+        var presentMode = Environment.GetEnvironmentVariable("MC_PRESENT_MODE")?.ToLowerInvariant() switch
+        {
+            "immediate" => Brew.Wgpu.Native.WGPUPresentMode.Immediate,
+            "mailbox" => Brew.Wgpu.Native.WGPUPresentMode.Mailbox,
+            _ => Brew.Wgpu.Native.WGPUPresentMode.Fifo
+        };
         var skyDiscMode = (Environment.GetEnvironmentVariable("MC_SKY_DISC_MODE") ?? "vanilla").ToLowerInvariant();
         var skyDiscVanilla = skyDiscMode != "fast" && skyDiscMode != "optimized";
         session.SetCloudOptions(
@@ -638,6 +644,7 @@ internal static class WindowCommand
             cloudOitEnabled: session.CloudUseOit,
             oitLowPrecision: oitLowPrecision,
             cloudDepthEnabled: cloudDepth,
+            presentMode: presentMode,
             skyDiscVanilla: skyDiscVanilla,
             skyDiscPerFrame: () =>
             {

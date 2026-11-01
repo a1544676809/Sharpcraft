@@ -62,7 +62,8 @@ public static class WindowedRenderer
     bool oitLowPrecision = false,
     bool cloudDepthEnabled = false,
     bool skyDiscVanilla = true,
-    Func<(Vector3 Sky, Vector3 Fog, float SkyFogEnd, Vector3 Eye)>? skyDiscPerFrame = null)
+    Func<(Vector3 Sky, Vector3 Fog, float SkyFogEnd, Vector3 Eye)>? skyDiscPerFrame = null,
+    WGPUPresentMode presentMode = WGPUPresentMode.Fifo)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -431,7 +432,7 @@ public static class WindowedRenderer
         Console.WriteLine($"window: framebuffer {frameWidth}x{frameHeight}, logical {window.Width}x{window.Height}, "
                 + $"gui scale {window.Gui.Scale} -> canvas {window.Gui.Width}x{window.Gui.Height}");
 
-        surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight);
+        surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight, presentMode, WGPUCompositeAlphaMode.Auto);
 
         var currentRequest = request;
 
@@ -814,7 +815,7 @@ public static class WindowedRenderer
                 // taken from the live request, not the one captured at startup: after a resize the draw call
                 // uses the current index count, and a vertex buffer from an older mesh would make those
                 // indices point past it, drawing stray triangles that look like overlapping texture.
-                surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight);
+                surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight, presentMode, WGPUCompositeAlphaMode.Auto);
                 depthView.Dispose();
                 depthTexture.Dispose();
                 depthTexture = CreateDepthTexture(device, frameWidth, frameHeight);
@@ -1024,7 +1025,7 @@ public static class WindowedRenderer
             {
                 // The surface output must be released before the surface is reconfigured.
                 acquired.Texture.Dispose();
-                surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight);
+                surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight, presentMode, WGPUCompositeAlphaMode.Auto);
                 continue;
             }
 
