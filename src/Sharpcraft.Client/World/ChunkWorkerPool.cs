@@ -59,6 +59,7 @@ public sealed class ChunkWorkerPool : IDisposable
     private volatile Sharpcraft.Client.Render.StateCullTable? _cullTable;
     private volatile Sharpcraft.Client.Render.StateVisualCache? _visualCache;
     private volatile Sharpcraft.Client.Render.LayerSinks? _layers;
+    private Sharpcraft.Client.Render.LightmapParameters _lighting = Sharpcraft.Client.Render.LightmapParameters.DayOverworld;
 
     /// <summary>
     /// Layer routing for worker built meshes.
@@ -81,6 +82,13 @@ public sealed class ChunkWorkerPool : IDisposable
     private volatile bool _stop;
     private int _parsePending;
     private int _meshPending;
+
+    /// <summary>Lightmap parameters used by worker meshing; the live renderer sets this when the day/night state changes.</summary>
+    public Sharpcraft.Client.Render.LightmapParameters Lighting
+    {
+        get => _lighting;
+        set => _lighting = value;
+    }
 
     /// <summary>Creates a pool sized for this machine.</summary>
     /// <param name="world">World the workers read; never written from here.</param>
@@ -435,7 +443,8 @@ public sealed class ChunkWorkerPool : IDisposable
             cull: _cullTable ??= BuildCullTable(),
             visuals: _visualCache ??= new Sharpcraft.Client.Render.StateVisualCache(_sprites, _layers?.Layout),
             merge: _mergeFaces,
-            ambientOcclusion: _ambientOcclusion);
+            ambientOcclusion: _ambientOcclusion,
+            lighting: _lighting);
         var mesh = buffer.ToMeshData(0);
 
         MeshesBuilt++;

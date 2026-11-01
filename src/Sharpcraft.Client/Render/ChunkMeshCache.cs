@@ -23,6 +23,7 @@ public sealed class ChunkMeshCache
     private readonly Dictionary<long, MeshData> _meshes = [];
     private readonly List<MeshedChunk> _updates = [];
     private readonly ChunkWorkerPool? _pool;
+    private LightmapParameters _appliedLighting = LightmapParameters.DayOverworld;
 
     /// <summary>Creates a standalone cache that meshes on the calling thread.</summary>
     public ChunkMeshCache()
@@ -80,6 +81,14 @@ public sealed class ChunkMeshCache
     /// </remarks>
     public LayerSinks? Layers { get; set; }
 
+    /// <summary>
+    /// Lightmap parameters used when meshing. Because the lightmap is baked into vertex colours, changing this (day/night)
+    /// invalidates every cached chunk on the next <see cref="Build"/>; a live renderer sets it when the day time drifts far
+    /// enough to matter. Defaults to overworld day, so callers that never touch it keep the previous behaviour
+    /// (docs/specs/render/lighting.md 6).
+    /// </summary>
+    public LightmapParameters Lighting { get; set; } = LightmapParameters.DayOverworld;
+
     public MeshData Build(
         ClientWorld world,
         BlockSpriteMap? sprites = null,
@@ -91,6 +100,13 @@ public sealed class ChunkMeshCache
 
         var started = System.Diagnostics.Stopwatch.GetTimestamp();
         var remeshed = 0;
+
+        if (Lighting != _appliedLighting)
+        {
+            // Lightmap is per-vertex, so a changed day/night state invalidates every mesh, not just dirty chunks.
+            _meshes.Clear();
+            _appliedLighting = Lighting;
+        }
 
         foreach (var key in world.TakeDirtyChunks())
         {
@@ -137,7 +153,8 @@ public sealed class ChunkMeshCache
                 cutout: layers?.Cutout,
                 tint: layers?.Tint,
                 cull: cullTable,
-                visuals: visualCache);
+                visuals: visualCache,
+                lighting: Lighting);
             _meshes[key] = buffer.ToMeshData(0);
             remeshed++;
         }

@@ -1915,4 +1915,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `LightmapParameters.OverworldAt(dayTime)`：`SkyFactor=SkyLightFactorAt`、`SkyLightColor=SkyLightColorAt`（昼 1/白、夜 0.24/(0.48,0.48,1) 线性），其余昼默认。
 - `ChunkMesher` 贯穿 `LightmapParameters`（Mesh → MeshChunk → MergeSectionFaces → EmitMergedQuad → CornerShade，及 EmitSectionFluids）；`FrameCommand` 以 `EffectiveDayTime(world)`（`MC_FORCE_DAYTIME` 可覆盖）驱动网格与天体角度。离屏每帧重建网格 ⇒ 顶点色随 DayTime 更新，**无需改顶点格式/着色器**。
 - **等价性**：`VanillaLightmapTests` +2（正午全白天体=1；夜全白天体≈(0.088,0.088,0.453)，R=G<B）；本地帧地形 top-mid 昼 `rgba(136,136,136)` → 夜 `rgba(45,45,95)`。
-- 全量 **1190 通过**、0 警告。**未做**：窗口路径仍昼参数（缓存网格；正确做法=着色器侧每帧 UBO lightmap，需改顶点格式）；天气/维度；天空盘/暗盘、`RAIN_BRIGHTNESS`。
+- 全量 **1190 通过**、0 警告。**未做**：窗口路径仍昼参数（缓存网格；正确做法=着色器侧每帧 UBO lightmap，需改顶点格式）；天气/维度；天空盘/暗盘、`RAIN_BRIGHTNESS`。## 2026-11-01 日夜光照接入实时路径（缓存按参数重建）
+- `ChunkMeshCache.Lighting` / `ChunkWorkerPool.Lighting`（默认昼）：记录所用 `LightmapParameters`；变化时缓存整体失效、按新参数重网格化（`ChunkMeshCache.Build` 内 `_appliedLighting` 比较后 `_meshes.Clear()`）。
+- `WindowCommand`：启动与每帧用 `LightmapParameters.OverworldAt(world.DayTime)` 设置两者；参数变化即 `meshCache.Clear()+QueueMissing(world)` 分片重建。
+- **验证**：`ChunkMeshCacheTests.ChangingTheLightmapParametersRemeshesEveryChunk`（同参 0 重建、变参全重建）；离屏日夜像素证据见上一条。全量 **1191 通过**、0 警告。
+- **遗留（需 ADR）**：真正零重建=着色器侧每帧 UBO lightmap，须改 12-float 顶点契约（跨模块），按原则 12 待所有者确认 + ADR 后再做。天气/维度、天空盘/暗盘、`RAIN_BRIGHTNESS` 未做。

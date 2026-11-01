@@ -204,6 +204,9 @@ internal static class WindowCommand
         });
 
         // A short synchronous warm-up gives the first frame something to show.
+        var startupLighting = Sharpcraft.Client.Render.LightmapParameters.OverworldAt(world.DayTime);
+        meshCache.Lighting = startupLighting;
+        workerPool.Lighting = startupLighting;
         meshCache.Build(world, prepared?.Map, Sharpcraft.Client.Render.MeshBuildPolicy.Interactive);
         meshCache.QueueMissing(world);
 
@@ -402,6 +405,18 @@ internal static class WindowCommand
                 },
             geometryUpdates: () =>
             {
+                // Day/night: the lightmap is baked per vertex, so when the current lightmap state differs from the one the
+                // cached meshes were built with, rebuild every chunk (the offscreen path re-meshes per frame, this is the
+                // live equivalent; docs/specs/render/lighting.md 6).
+                var lighting = Sharpcraft.Client.Render.LightmapParameters.OverworldAt(world.DayTime);
+                if (lighting != meshCache.Lighting)
+                {
+                    meshCache.Lighting = lighting;
+                    workerPool.Lighting = lighting;
+                    meshCache.Clear();
+                    meshCache.QueueMissing(world);
+                }
+
                 // Hand fresh work to the pool, then return only the chunks that finished. The renderer keeps a
                 // slice per chunk, so each arrival costs one small upload rather than a recomposition of the
                 // whole world (docs/specs/network/play-movement.md 7.25).
