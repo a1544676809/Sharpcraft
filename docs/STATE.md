@@ -2052,4 +2052,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **已知偏差**：日月星仍用**初始相机** model（行走时会偏移）；云按当前眼位生成所以正确。后续可给 CelestialResources 加相机位移增量更新。T-296 目标基本达成（窗口 celestial+cloud pass 已有）；如需严格，再补天体随相机。## 2026-11-01 T-296 收尾：天体随相机
 - `CelestialResources`/`CelestialColorResources` 增 `UpdateCamera(Vector3 delta)`：每帧按 `eye - request.CameraPosition` 左乘平移写回天体 transform，日月星不再随移动偏移（云本就用当前眼位）。
 - `WindowedRenderer` 每帧在采样相机后调用（仅天体，不对云资源调用）。窗口运行无 GPU validation error。全量 **1265 通过**、门禁 ok。
-- **T-296/T-297 完成**：窗口已具备 celestial（日月星/日出）+ 逐 cell 云 pass；离屏/窗口共用绘制资源。云纹理缺失时不画云。
+- **T-296/T-297 完成**：窗口已具备 celestial（日月星/日出）+ 逐 cell 云 pass；离屏/窗口共用绘制资源。云纹理缺失时不画云。## 2026-11-01 修复：窗口每帧云 GPU 缓冲 OOM（T-298）
+- 症状：窗口运行一段时间后 `wgpuDeviceCreateBuffer: Not enough memory` 崩溃（客户端起不来/退出）。
+- 原因：`CelestialColorResources.SetDraws` 每帧重建云缓冲；60fps 下分配爆炸。
+- 修复：容量内**原地 `WriteBuffer` 复用**，仅容量/结构变化时重建（旧缓冲延迟一帧释放）。窗口连续 2469 帧稳定无 validation/OOM；全量 1265 通过。
+- 当前客户端运行 pid（子进程）~57780。剩余视觉差距：天空无地平线渐变、雾基色近似、云无 OIT/精确 cloud-fog。

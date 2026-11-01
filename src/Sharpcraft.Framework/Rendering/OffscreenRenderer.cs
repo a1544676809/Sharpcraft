@@ -1326,6 +1326,8 @@ public static class OffscreenRenderer
         private readonly List<(Brew.Wgpu.Buffer Vertex, Brew.Wgpu.Buffer Index, Brew.Wgpu.Buffer Transform, BindGroup BindGroup)> _retired = new();
         private readonly Brew.Wgpu.Buffer _cameraBuffer;
         private readonly ulong _cameraSize;
+        private long[] _vertexCapacity = [];
+        private long[] _indexCapacity = [];
 
         public CelestialColorResources(Device device, FrameRequest request, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, WGPUTextureFormat format = WGPUTextureFormat.RGBA8Unorm)
         {
@@ -1358,6 +1360,32 @@ public static class OffscreenRenderer
         /// </summary>
         public void SetDraws(IReadOnlyList<CelestialColorDraw> draws)
         {
+            var reuse = _bindGroups.Length == draws.Count && _vertexCapacity.Length == draws.Count;
+            if (reuse)
+            {
+                for (var i = 0; i < draws.Count; i++)
+                {
+                    var draw = draws[i];
+                    if ((long)draw.Vertices.Length * sizeof(float) > _vertexCapacity[i]
+                        || (long)draw.Indices.Length * sizeof(uint) > _indexCapacity[i])
+                    {
+                        reuse = false;
+                        break;
+                    }
+                }
+            }
+
+            if (reuse)
+            {
+                for (var i = 0; i < draws.Count; i++)
+                {
+                    WriteDraw(i, draws[i]);
+                }
+
+                return;
+            }
+
+            // Capacity/structure changed: recreate buffers (rare - only at start or when the cloud face count grows).
             foreach (var (vertex, index, transform, bindGroup) in _retired)
             {
                 bindGroup.Dispose();
@@ -1367,7 +1395,6 @@ public static class OffscreenRenderer
             }
 
             _retired.Clear();
-
             for (var i = 0; i < _bindGroups.Length; i++)
             {
                 _retired.Add((_vertexBuffers[i], _indexBuffers[i], _transformBuffers[i], _bindGroups[i]));
@@ -1381,27 +1408,29 @@ public static class OffscreenRenderer
             _overlay = new bool[draws.Count];
             _baseModels = new Matrix4x4[draws.Count];
             _tints = new Vector4[draws.Count];
+            _vertexCapacity = new long[draws.Count];
+            _indexCapacity = new long[draws.Count];
 
             for (var index = 0; index < draws.Count; index++)
             {
                 var draw = draws[index];
-                _baseModels[index] = draw.Model;
-                _tints[index] = draw.Tint;
-                _vertexBuffers[index] = _device.CreateBufferInit(
-                    new BufferInitDescriptor { Usage = BufferUsage.Vertex }, draw.Vertices.AsSpan());
-                _indexBuffers[index] = _device.CreateBufferInit(
-                    new BufferInitDescriptor { Usage = BufferUsage.Index }, draw.Indices.AsSpan());
-
-                var transformBytes = new byte[TransformUniformSize];
-                var transformFloats = new float[20];
-                WriteMatrix(draw.Model, transformFloats, 0);
-                transformFloats[16] = draw.Tint.X;
-                transformFloats[17] = draw.Tint.Y;
-                transformFloats[18] = draw.Tint.Z;
-                transformFloats[19] = draw.Tint.W;
-                System.Runtime.InteropServices.MemoryMarshal.AsBytes(transformFloats.AsSpan()).CopyTo(transformBytes);
-                _transformBuffers[index] = _device.CreateBufferInit(
-                    new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst }, transformBytes.AsSpan());
+                _vertexCapacity[index] = Math.Max((long)draw.Vertices.Length * sizeof(float), 4096);
+                _indexCapacity[index] = Math.Max((long)draw.Indices.Length * sizeof(uint), 4096);
+                _vertexBuffers[index] = _device.CreateBuffer(new BufferDescriptor
+                {
+                    Size = (ulong)_vertexCapacity[index],
+                    Usage = BufferUsage.Vertex | BufferUsage.CopyDst
+                });
+                _indexBuffers[index] = _device.CreateBuffer(new BufferDescriptor
+                {
+                    Size = (ulong)_indexCapacity[index],
+                    Usage = BufferUsage.Index | BufferUsage.CopyDst
+                });
+                _transformBuffers[index] = _device.CreateBuffer(new BufferDescriptor
+                {
+                    Size = TransformUniformSize,
+                    Usage = BufferUsage.Uniform | BufferUsage.CopyDst
+                });
 
                 _bindGroups[index] = _device.CreateBindGroup(
                     _layout,
@@ -1410,9 +1439,29 @@ public static class OffscreenRenderer
                         BindGroupEntry.Buffer(1, _transformBuffers[index], 0, TransformUniformSize)
                     ]);
 
-                _indexCounts[index] = (uint)draw.Indices.Length;
-                _overlay[index] = draw.Blend == CelestialColorBlend.Overlay;
+                WriteDraw(index, draw);
             }
+        }
+
+        private void WriteDraw(int index, CelestialColorDraw draw)
+        {
+            _baseModels[index] = draw.Model;
+            _tints[index] = draw.Tint;
+            _indexCounts[index] = (uint)draw.Indices.Length;
+            _overlay[index] = draw.Blend == CelestialColorBlend.Overlay;
+
+            _device.Queue.WriteBuffer(_vertexBuffers[index], 0, System.Runtime.InteropServices.MemoryMarshal.AsBytes(draw.Vertices.AsSpan()));
+            _device.Queue.WriteBuffer(_indexBuffers[index], 0, System.Runtime.InteropServices.MemoryMarshal.AsBytes(draw.Indices.AsSpan()));
+
+            var transformBytes = new byte[TransformUniformSize];
+            var transformFloats = new float[20];
+            WriteMatrix(draw.Model, transformFloats, 0);
+            transformFloats[16] = draw.Tint.X;
+            transformFloats[17] = draw.Tint.Y;
+            transformFloats[18] = draw.Tint.Z;
+            transformFloats[19] = draw.Tint.W;
+            System.Runtime.InteropServices.MemoryMarshal.AsBytes(transformFloats.AsSpan()).CopyTo(transformBytes);
+            _device.Queue.WriteBuffer(_transformBuffers[index], 0, transformBytes.AsSpan());
         }
 
         /// <summary>Draws every colour body, picking the pipeline that matches its blend mode.</summary>
