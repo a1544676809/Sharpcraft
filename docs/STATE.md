@@ -1924,4 +1924,7 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **着色器**：`terrain.wgsl`/`oit_reference.wgsl` 加 light 属性 + `Lightmap` UBO（binding4，64B），片元逐片元 `lightmapColour(sky,block)` 精确复刻 `VanillaLightmap.Colour`（brightness/parabola/notGamma/brightnessFactor）；`ChunkMesher` 不再烘焙光图（`CornerShade` 返回 base+等级，`MeshBuffer` 写 light2，流体同步）。
 - **渲染器**：离屏与窗口都建 lightmap UBO 并按帧写 `request.Lightmap`；`LightmapUniformCodec` 编码；`FrameCommand.ToLightmapUniform(LightmapParameters.OverworldAt(EffectiveDayTime))`。
 - **等价验证**：纯逻辑 `VanillaLightmapTests`（昼 1 / 夜≈(0.088,0.088,0.453)）+ 出图：本地**同一网格仅换 UBO**，地形 top-mid 昼 `rgba(136,136,136)`→夜 `rgba(45,45,95)`，夜空见星。全量 **1191 通过**、门禁 ok。
-- **窗口运行时像素未验收**（本环境无可见窗口）：窗口渲染器已同源接线（binding4/UBO）但仅编译通过。未做：天气/维度、夜视/暗化、方块光闪烁；模块 A 仍欠天空盘/暗盘、`RAIN_BRIGHTNESS`。
+- **窗口运行时像素未验收**（本环境无可见窗口）：窗口渲染器已同源接线（binding4/UBO）但仅编译通过。未做：天气/维度、夜视/暗化、方块光闪烁；模块 A 仍欠天空盘/暗盘、`RAIN_BRIGHTNESS`。## 2026-11-01 天体/光照 sub-tick 插值（对照原版 EnvironmentAttributeProbe）
+- **实读原版**：`EnvironmentAttributeProbe.ValueProbe.get` = `partialTickLerp.apply(partial, lastValue, newValue)`——在**上一 tick 与当前 tick 采样值**间线性插值，**不是** t+partial 重采样。
+- 落地：`ClientWorld.DayTimePartial`（overworld clock PartialTick，clamp 0..1）；`SkyTimelines`/`SkyAttributeTracks` 增 `(int dayTime, float partial)` 重载（采样 t-1 与 t 后按 partial 线性插值）；`LightmapParameters.OverworldAt(int, float)` 对 skyFactor/skyColor 同法插值；`FrameCommand.EffectiveDayTimePartial`（`MC_FORCE_PARTIAL` 可覆盖）驱动天体角/星亮度/日出色/日夜光照。
+- **等效验证**：`SkyTimelinesTests` 两条（lerp(t-1,t,partial) 端点/中点；扫描跨 tick 太阳角>0.5° 处断言中点严格介于两者）+ `VanillaLightmapTests` 两条（skyFactor 跨 tick 插值；逐片元 vs 烘焙 0.3952 vs 0.5）；端到端同 tick(6000) partial 0/0.5/1 → 太阳 360°/180°/0°。全量 **1195 通过**、门禁 ok。窗口像素未验收。

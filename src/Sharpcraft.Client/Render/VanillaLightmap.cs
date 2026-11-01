@@ -39,6 +39,25 @@ public readonly record struct LightmapParameters(
         SkyLightColor = SkyAttributeTracks.SkyLightColorAt(dayTimeTicks)
     };
 
+    /// <summary>
+    /// Overworld parameters at a sub-tick fraction: the sky factor and colour are interpolated between the previous and the
+    /// current tick, exactly like the reference EnvironmentAttributeProbe.partialTickLerp (docs/modules/time.md 5).
+    /// </summary>
+    public static LightmapParameters OverworldAt(int dayTimeTicks, float partialTick)
+    {
+        var t = Math.Clamp(partialTick, 0f, 1f);
+        var previousFactor = SkyAttributeTracks.SkyLightFactorAt(dayTimeTicks - 1);
+        var currentFactor = SkyAttributeTracks.SkyLightFactorAt(dayTimeTicks);
+        var previousColour = SkyAttributeTracks.SkyLightColorAt(dayTimeTicks - 1);
+        var currentColour = SkyAttributeTracks.SkyLightColorAt(dayTimeTicks);
+
+        return DayOverworld with
+        {
+            SkyFactor = previousFactor + ((currentFactor - previousFactor) * t),
+            SkyLightColor = Vector3.Lerp(previousColour, currentColour, t)
+        };
+    }
+
     /// <summary>Decodes a packed sRGB 24-bit colour into linear floats, as the reference does for environment colours.</summary>
     public static Vector3 Srgb24ToLinear(int rgb24)
     {

@@ -199,6 +199,15 @@ public static class SkyAttributeTracks
 
     public static float StarBrightnessAt(int dayTimeTicks) => StarBrightness.Sample(dayTimeTicks);
 
+    /// <summary>Star brightness at a sub-tick fraction, linear between the previous and current tick (probe semantics).</summary>
+    public static float StarBrightnessAt(int dayTimeTicks, float partialTick)
+    {
+        var t = Math.Clamp(partialTick, 0f, 1f);
+        var previous = StarBrightness.Sample(dayTimeTicks - 1);
+        var current = StarBrightness.Sample(dayTimeTicks);
+        return previous + ((current - previous) * t);
+    }
+
     public static float SkyLightFactorAt(int dayTimeTicks) => SkyLightFactorTrack.Sample(dayTimeTicks);
 
     /// <summary>Moon phase index 0..7 from the moon timeline (period 24000*8, one phase per 24000 ticks).</summary>
@@ -241,6 +250,13 @@ public static class SkyAttributeTracks
     public static Vector4 SunriseSunsetColorAt(int dayTimeTicks) =>
         new(SunriseR.Sample(dayTimeTicks), SunriseG.Sample(dayTimeTicks), SunriseB.Sample(dayTimeTicks), SunriseA.Sample(dayTimeTicks));
 
+    /// <summary>Sunrise/sunset colour at a sub-tick fraction, linear between the previous and current tick.</summary>
+    public static Vector4 SunriseSunsetColorAt(int dayTimeTicks, float partialTick)
+    {
+        var t = Math.Clamp(partialTick, 0f, 1f);
+        return Vector4.Lerp(SunriseSunsetColorAt(dayTimeTicks - 1), SunriseSunsetColorAt(dayTimeTicks), t);
+    }
+
     // SKY_LIGHT_COLOR: white * ColorModifier.MULTIPLY_RGB track (730/11270 white, 13140/22860 = NIGHT_SKY_LIGHT_COLOR).
     private const int NightSkyChannel = 122; // as8BitChannel(0.48)
     private static readonly float NightSky = SrgbToLinear(NightSkyChannel);
@@ -273,4 +289,25 @@ public static class SkyTimelines
     public static float MoonAngleDegrees(int dayTimeTicks) => MoonAngleTrack.Sample(dayTimeTicks);
 
     public static float StarAngleDegrees(int dayTimeTicks) => SunAngleTrack.Sample(dayTimeTicks);
+
+    /// <summary>
+    /// Sun angle at a sub-tick fraction: linear between the previous and current tick value, matching the reference
+    /// EnvironmentAttributeProbe.partialTickLerp (docs/modules/time.md 5). At partial 0 it returns the previous tick's
+    /// value and at partial 1 the current tick's value, so consecutive frames are continuous without per-tick stepping.
+    /// </summary>
+    public static float SunAngleDegrees(int dayTimeTicks, float partialTick) => LerpBetweenTicks(SunAngleTrack, dayTimeTicks, partialTick);
+
+    public static float MoonAngleDegrees(int dayTimeTicks, float partialTick) => LerpBetweenTicks(MoonAngleTrack, dayTimeTicks, partialTick);
+
+    public static float StarAngleDegrees(int dayTimeTicks, float partialTick) => LerpBetweenTicks(SunAngleTrack, dayTimeTicks, partialTick);
+
+    /// <summary>Linear interpolation between the track value one tick ago and at <paramref name="ticks"/>.</summary>
+    public static float LerpBetweenTicks(FloatKeyframeTrack track, int ticks, float partialTick)
+    {
+        ArgumentNullException.ThrowIfNull(track);
+        var previous = track.Sample(ticks - 1L);
+        var current = track.Sample(ticks);
+        var t = Math.Clamp(partialTick, 0f, 1f);
+        return previous + ((current - previous) * t);
+    }
 }

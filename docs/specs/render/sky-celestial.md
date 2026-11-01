@@ -53,6 +53,7 @@ status: 待评审
 - **月亮已接入同一管线**：按 `SkyAttributeTracks.MoonPhaseIndex(overworld.totalTicks)` 选 `moon/<phase>` 贴图，角度 `MOON_ANGLE`、尺寸 20 / 高度 100，与太阳共用 OVERLAY 合成。
 - **日出条带已接入**：position-colour 三角扇（18 顶点，中心白 α=1、环白 α=0），变换 `RotX(90°)·RotZ((sin(sunAngle)<0?180:0)+90°)` 且 Z 乘 alpha，颜色 `SUNRISE_SUNSET_COLOR`，`TRANSLUCENT` 混合；alpha≤0.001 不画。
 - **星空已接入**：复刻 `buildStars`（LCG seed 10842、候选 1500、长度∈(0.010000001,1) 保留、距离 100、随机自旋），按 `STAR_ANGLE` 旋转、`STAR_BRIGHTNESS` 作 `OVERLAY` 色调。
+- **逐帧平滑**：日月星角、星亮度、日出色按 `(dayTime, partialTick)` 在相邻 tick 间线性插值（原版 `EnvironmentAttributeProbe` 语义），消除每 tick 一格的跳变；`MC_FORCE_PARTIAL` 可固定 partial 验证。
 - **尚未做**：天空盘/暗盘（沿用全屏渐变作为受控偏差）、`RAIN_BRIGHTNESS`（日月 alpha，晴天=1）、镜像到 `WindowedRenderer`；随后日夜光照。
 
 ## 6. 实现分期（评审通过后）

@@ -94,4 +94,39 @@ public sealed class SkyTimelinesTests
         Assert.Equal(expectedRed, night.Y, 3);
         Assert.Equal(1f, night.Z, 3);
     }
+
+    [Fact]
+    public void AngleInterpolatesBetweenThePreviousAndCurrentTick()
+    {
+        // Reference EnvironmentAttributeProbe.partialTickLerp: value = lerp(partial, value(t-1), value(t)).
+        var t = 12000;
+        var previous = SkyTimelines.SunAngleDegrees(t - 1);
+        var current = SkyTimelines.SunAngleDegrees(t);
+
+        Assert.Equal(previous, SkyTimelines.SunAngleDegrees(t, 0f), 4);
+        Assert.Equal(current, SkyTimelines.SunAngleDegrees(t, 1f), 4);
+        Assert.Equal((previous + current) / 2f, SkyTimelines.SunAngleDegrees(t, 0.5f), 4);
+    }
+
+    [Fact]
+    public void InterpolationStrictlySmoothsAFastMovingAngle()
+    {
+        // Find a tick where the sun angle moves more than half a degree between ticks; the halfway value must sit
+        // strictly between the two ticks, which is what removes the once-per-tick stepping.
+        for (var t = 0; t < SkyTimelines.PeriodTicks; t++)
+        {
+            var previous = SkyTimelines.SunAngleDegrees(t - 1);
+            var current = SkyTimelines.SunAngleDegrees(t);
+
+            if (MathF.Abs(current - previous) > 0.5f)
+            {
+                var mid = SkyTimelines.SunAngleDegrees(t, 0.5f);
+                Assert.True(mid > MathF.Min(previous, current) && mid < MathF.Max(previous, current),
+                    $"mid {mid} not between {previous} and {current}");
+                return;
+            }
+        }
+
+        Assert.Fail("expected a tick where the sun angle moves between ticks");
+    }
 }

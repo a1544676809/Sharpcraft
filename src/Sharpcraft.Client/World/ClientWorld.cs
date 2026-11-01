@@ -71,6 +71,13 @@ public sealed class ClientWorld
         }
     }
 
+    /// <summary>
+    /// Sub-tick fraction (0..1) of the overworld clock, used to interpolate environment attributes (sun angle, sky light)
+    /// between the previous and current tick, exactly like the reference EnvironmentAttributeProbe (docs/modules/time.md 5).
+    /// </summary>
+    public float DayTimePartial =>
+        _clocks.TryGetValue(OverworldClockId, out var clock) ? Math.Clamp(clock.PartialTick, 0f, 1f) : 0f;
+
     /// <summary>Applies a <c>set_time</c> packet: game time and every world clock state.</summary>
     public void ApplyTime(SetTimePacket packet)
     {

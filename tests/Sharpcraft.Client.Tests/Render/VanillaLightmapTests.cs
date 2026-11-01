@@ -131,4 +131,36 @@ public sealed class VanillaLightmapTests
         Assert.Equal(dark.X, dark.Y, 5);
         Assert.InRange(dark.Z, 0.4f, 0.5f);
     }
+
+    [Fact]
+    public void OverworldAtInterpolatesSkyFactorBetweenTicks()
+    {
+        // 13140 is the tick where SKY_LIGHT_FACTOR drops from 1.0 to 0.24; halfway is the mean of the two ticks.
+        var previous = Sharpcraft.Common.World.SkyAttributeTracks.SkyLightFactorAt(13139);
+        var current = Sharpcraft.Common.World.SkyAttributeTracks.SkyLightFactorAt(13140);
+        var mid = LightmapParameters.OverworldAt(13140, 0.5f);
+
+        Assert.Equal((previous + current) * 0.5f, mid.SkyFactor, 4);
+        Assert.True(mid.SkyFactor < previous && mid.SkyFactor > current);
+    }
+
+    [Fact]
+    public void PerFragmentLightmapDiffersFromBakedInterpolation()
+    {
+        // A face lit sky=15 at one corner and sky=0 at the other. The old baked approach wrote f(endpoint) per vertex and the
+        // GPU linearly interpolated those results; the shader-side approach interpolates the level and evaluates f per pixel.
+        var litCorner = VanillaLightmap.Colour(15, 0).X;   // 1
+        var darkCorner = VanillaLightmap.Colour(0, 0).X;   // 0
+        var bakedMid = (litCorner + darkCorner) * 0.5f;    // 0.5
+
+        // f at level 0.5: brightness(0.5) = 0.5/(4-1.5) = 0.2; notGamma(0.2) = 0.5904; mix by brightnessFactor 0.5 -> 0.3952.
+        var level = 0.5f;
+        var raw = VanillaLightmap.BrightnessCurve(level);
+        var boosted = VanillaLightmap.NotGamma(new Vector3(raw)).X;
+        var perFragmentMid = raw + ((boosted - raw) * 0.5f);
+
+        Assert.Equal(0.5f, bakedMid, 4);
+        Assert.Equal(0.3952f, perFragmentMid, 3);
+        Assert.True(perFragmentMid < bakedMid, "per-fragment mid-gradient value is darker than the baked interpolation");
+    }
 }

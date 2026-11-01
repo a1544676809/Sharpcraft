@@ -787,7 +787,7 @@ internal static class FrameCommand
 
         // Day/night lightmap parameters from the world clock; the offscreen path re-meshes every frame, so this reaches
         // the vertex colours without re-uploading a cached mesh (docs/specs/render/lighting.md 6).
-        var lighting = LightmapParameters.OverworldAt(EffectiveDayTime(world));
+        var lighting = LightmapParameters.OverworldAt(EffectiveDayTime(world), EffectiveDayTimePartial(world));
 
         float[]? translucentVertices = null;
         uint[]? translucentIndices = null;
@@ -1310,6 +1310,15 @@ internal static class FrameCommand
             ? forced
             : world.DayTime;
 
+    /// <summary>
+    /// Sub-tick fraction for interpolating environment attributes. <c>MC_FORCE_PARTIAL</c> fixes it for verification;
+    /// otherwise it is the overworld clock's partial tick (matching the reference EnvironmentAttributeProbe).
+    /// </summary>
+    internal static float EffectiveDayTimePartial(ClientWorld world) =>
+        Environment.GetEnvironmentVariable("MC_FORCE_PARTIAL") is { Length: > 0 } text && float.TryParse(text, out var forced)
+            ? Math.Clamp(forced, 0f, 1f)
+            : world.DayTimePartial;
+
     /// <summary>Maps the client lightmap parameters to the framework uniform the terrain shader reads.</summary>
     internal static LightmapUniform ToLightmapUniform(LightmapParameters parameters) => new(
         SkyFactor: parameters.SkyFactor,
@@ -1333,6 +1342,7 @@ internal static class FrameCommand
         var draws = new List<CelestialQuadDraw>();
         var colorDraws = new List<CelestialColorDraw>();
         var dayTime = EffectiveDayTime(world);
+        var partialTick = EffectiveDayTimePartial(world);
 
         // The moon phase follows total world ticks (one phase per 24000 ticks); angles follow the day clock.
         var totalTicks = world.TryGetClock(ClientWorld.OverworldClockId, out var clock) ? clock.TotalTicks : world.GameTime;
@@ -1340,19 +1350,19 @@ internal static class FrameCommand
         var moonAngle = Environment.GetEnvironmentVariable("MC_MOON_ANGLE") is { Length: > 0 } moonText &&
             float.TryParse(moonText, out var parsedMoonAngle)
             ? parsedMoonAngle
-            : Sharpcraft.Common.World.SkyTimelines.MoonAngleDegrees(dayTime);
+            : Sharpcraft.Common.World.SkyTimelines.MoonAngleDegrees(dayTime, partialTick);
 
         // A fixed angle is available for verification; otherwise the sun follows the overworld clock.
         var sunAngle = Environment.GetEnvironmentVariable("MC_SUN_ANGLE") is { Length: > 0 } angleText &&
             float.TryParse(angleText, out var parsedAngle)
             ? parsedAngle
-            : Sharpcraft.Common.World.SkyTimelines.SunAngleDegrees(dayTime);
+            : Sharpcraft.Common.World.SkyTimelines.SunAngleDegrees(dayTime, partialTick);
 
         AddBody(CelestialSprites.Sun, sunAngle, size: 30f);
         AddBody(CelestialSprites.MoonPhase(moonPhaseIndex), moonAngle, size: 20f);
 
         // Sunrise/sunset band: a position-colour triangle fan, skipped below the reference alpha cutoff.
-        var sunrise = Sharpcraft.Common.World.SkyAttributeTracks.SunriseSunsetColorAt(dayTime);
+        var sunrise = Sharpcraft.Common.World.SkyAttributeTracks.SunriseSunsetColorAt(dayTime, partialTick);
         if (sunrise.W > 0.001f)
         {
             var sinSun = MathF.Sin(sunAngle * (MathF.PI / 180f));
@@ -1378,11 +1388,11 @@ internal static class FrameCommand
         }
 
         // Stars: the reference star field rotated by the star angle, brightened by the star-brightness attribute.
-        var starBrightness = Sharpcraft.Common.World.SkyAttributeTracks.StarBrightnessAt(dayTime);
+        var starBrightness = Sharpcraft.Common.World.SkyAttributeTracks.StarBrightnessAt(dayTime, partialTick);
         if (starBrightness > 0f)
         {
             var starCorners = StarField.Build(out var keptStars);
-            var starAngle = Sharpcraft.Common.World.SkyTimelines.StarAngleDegrees(dayTime);
+            var starAngle = Sharpcraft.Common.World.SkyTimelines.StarAngleDegrees(dayTime, partialTick);
             var rotated = new Vector3[starCorners.Length];
             CelestialGeometry.SkyRotate(starCorners, starAngle * (MathF.PI / 180f), rotated);
 
@@ -1582,7 +1592,7 @@ internal static class FrameCommand
             }
         }
         var mesh = ChunkMesher.Mesh(world, airState: 0, maxBlocks: 2_000_000, sprites: prepared?.Map,
-            merge: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoMergeFaces, lighting: LightmapParameters.OverworldAt(EffectiveDayTime(world)));
+            merge: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoMergeFaces, lighting: LightmapParameters.OverworldAt(EffectiveDayTime(world), EffectiveDayTimePartial(world)));
         Console.WriteLine($"local demo: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
         var bounds = (Min: new Vector3(0, -16, 0), Max: new Vector3(16, 16, 16));
@@ -1599,7 +1609,7 @@ internal static class FrameCommand
             eye,
             target)
         {
-            Lightmap = ToLightmapUniform(LightmapParameters.OverworldAt(EffectiveDayTime(world))),
+            Lightmap = ToLightmapUniform(LightmapParameters.OverworldAt(EffectiveDayTime(world), EffectiveDayTimePartial(world))),
             Atlas = prepared is null
                 ? null
                 : WithMips(prepared.Value.Atlas)

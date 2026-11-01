@@ -48,6 +48,7 @@
 - `MOON_ANGLE`：6000→540°、6000→180°；`STAR_ANGLE` 同太阳；
 - `SKY_LIGHT_FACTOR/COLOR`、`SKY_COLOR`、`SUNRISE_SUNSET_COLOR`、`MOON_PHASE`、`STAR_BRIGHTNESS` 各有自己的关键帧/修饰。
 - 求值 = 按 `dayTime` 在关键帧间插值（含 easing）。**必须逐属性核对关键帧与缓动**，不得只取首尾近似当等效。
+- **sub-tick 插值（原版 `EnvironmentAttributeProbe`）**：渲染取值 = "上一 tick 采样值与本 tick 采样值按 `partialTick` 线性插值"（`partialTickLerp.apply(partial, lastValue, newValue)`），**不是**"在 t+partial 重新采样"。已落地：`ClientWorld.DayTimePartial`、`SkyTimelines/SkyAttributeTracks` 的 `(dayTime, partial)` 重载、`LightmapParameters.OverworldAt(dayTime, partial)`。使日月星角、星亮度、日出色、日夜光照逐帧平滑、无每 tick 跳变（`MC_FORCE_PARTIAL` 可固定 partial 做验证）。
 
 阶段策略（建议）：
 - 一版：精确实现 `SUN/MOON/STAR_ANGLE`（天空天体必需）+ `SKY_LIGHT_FACTOR/COLOR`（日夜光照）；
