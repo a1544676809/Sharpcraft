@@ -2038,4 +2038,7 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **关键发现/前置**：`WindowedRenderer` **没有 celestial/云 pass**（太阳/月亮/星星/云只在离屏绘制）→ 窗口夜黑、无云的另一根因。需先给窗口补 `celestial+cloud pass`。
 - 实现顺序：① 纯逻辑 `CloudTexture`/`CloudMeshBuilder`/`CloudColorFactorAt`（+单测）→② 窗口 celestial+cloud pass →③ 离屏复用 →④ 对照帧。
 - **① 已完成（T-295）**：`CloudTexture`(alpha<10 空/四邻/pack)、`CloudMeshBuilder`(原版 buildMesh/buildExtrudedCell 面规则)、`CloudColorFactorAt`；`CloudTextureTests`(2)+`CloudMeshBuilderTests`(4)+云色单测。全量 **1263 通过**。
-- **下一步 ②（T-296）**：给 `WindowedRenderer` 补 celestial+cloud pass（现仅离屏有），再接入云四边形；每帧 `CloudColor/Offset/CellSize`、顶/底/侧向面、alpha 混合与 CloudFogEnd 淡出。
+- **下一步 ②（T-296）**：给 `WindowedRenderer` 补 celestial+cloud pass（现仅离屏有），再接入云四边形；每帧 `CloudColor/Offset/CellSize`、顶/底/侧向面、alpha 混合与 CloudFogEnd 淡出。## 2026-11-01 T-296 步骤①：窗口 celestial pass（已完成）
+- `OffscreenRenderer.CelestialResources/CelestialColorResources` 提为共享 `internal` 并参数化颜色目标格式（窗口 `Bgra8Unorm` vs 离屏 `Rgba8Unorm`）；`CreatePositionColorPipeline` 加 format 参数。
+- `WindowedRenderer` 复用两者，天空之后/地形之前绘制；`WindowCommand` 调 `FrameCommand.AttachCelestial` 填充 draws/textures。窗口启动无 GPU validation error，日月星显现。
+- 全量 **1263 通过**、门禁 ok。**下一步 ②（T-297）**：逐 cell 云接入（CloudMeshBuilder→position-colour，每帧 CloudColor/Offset/CellSize，alpha + CloudFogEnd），并处理天体随相机（当前 model 用初始相机，行走时需按位移增量更新）。

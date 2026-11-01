@@ -221,6 +221,14 @@ public static class WindowedRenderer
         using var pipeline = CreatePipeline(device, format, pipelineLayout);
         using var cutoutPipeline = CreateCutoutPipeline(device, format, pipelineLayout);
         using var skyPipeline = CreateSkyPipeline(device, format);
+        // Celestial bodies and stars: the same backdrop draws the offscreen path uses, so the window and the exported
+        // frame agree (docs/modules/clouds.md 6).
+        using var celestial = request.CelestialDraws is { Length: > 0 } && request.CelestialTextures is { Length: > 0 }
+            ? new OffscreenRenderer.CelestialResources(device, request, cameraBuffer, VertexLayout.CameraUniformSize, format)
+            : null;
+        using var celestialColour = request.CelestialColorDraws is { Length: > 0 }
+            ? new OffscreenRenderer.CelestialColorResources(device, request, cameraBuffer, VertexLayout.CameraUniformSize, format)
+            : null;
         using var uiPipeline = UiRenderer.CreatePipeline(device, format, pipelineLayout);
         using var uiTextPipeline = UiRenderer.CreateTextPipeline(device, format, pipelineLayout);
 
@@ -1030,6 +1038,10 @@ public static class WindowedRenderer
                 pass.SetPipeline(skyPipeline);
                 pass.Draw(3);
             }
+
+            // Sun/moon (textured) then sunrise/stars (position-colour), still before terrain so world geometry covers them.
+            celestial?.Draw(pass);
+            celestialColour?.Draw(pass);
 
             pass.SetPipeline(pipeline);
             // Rewriting 64 bytes is the whole cost of moving the camera; the staging buffers are reused.

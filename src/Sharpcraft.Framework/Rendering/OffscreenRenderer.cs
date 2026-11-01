@@ -399,7 +399,7 @@ public static class OffscreenRenderer
     /// Position-colour pipeline: vertex colour times the per-draw tint, with the given reference blend mode. Sunrise uses
     /// Translucent; stars use Overlay (both match the reference pipelines' ColorTargetState).
     /// </summary>
-    private static RenderPipeline CreatePositionColorPipeline(Device device, ShaderModule shader, PipelineLayout layout, bool overlay)
+    private static RenderPipeline CreatePositionColorPipeline(Device device, ShaderModule shader, PipelineLayout layout, bool overlay, WGPUTextureFormat format = WGPUTextureFormat.RGBA8Unorm)
     {
         var blend = overlay
             ? new WGPUBlendState
@@ -421,7 +421,7 @@ public static class OffscreenRenderer
             [
                 new ColorTargetState
                 {
-                    Format = WGPUTextureFormat.RGBA8Unorm,
+                    Format = format,
                     WriteMask = ColorWriteMask.All,
                     Blend = blend
                 }
@@ -1057,7 +1057,7 @@ public static class OffscreenRenderer
     /// Owns the GPU objects for one frame's celestial bodies: textures, a shared bind-group layout and pipeline, plus a
     /// vertex/index/transform buffer and bind group per draw. Built per frame and disposed with it.
     /// </summary>
-    private sealed class CelestialResources : IDisposable
+    internal sealed class CelestialResources : IDisposable
     {
         // mat4x4 model (64 bytes) followed by vec4 tint (16 bytes); matches celestial.wgsl CelestialTransform.
         private const ulong TransformUniformSize = 80;
@@ -1074,7 +1074,7 @@ public static class OffscreenRenderer
         private readonly BindGroup[] _bindGroups;
         private readonly uint[] _indexCounts;
 
-        public CelestialResources(Device device, FrameRequest request, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize)
+        public CelestialResources(Device device, FrameRequest request, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, WGPUTextureFormat format = WGPUTextureFormat.RGBA8Unorm)
         {
             var textures = request.CelestialTextures!;
             var draws = request.CelestialDraws!;
@@ -1146,7 +1146,7 @@ public static class OffscreenRenderer
                     // That adds the body onto the sky and makes black/transparent pixels contribute nothing.
                     new ColorTargetState
                     {
-                        Format = WGPUTextureFormat.RGBA8Unorm,
+                        Format = format,
                         WriteMask = ColorWriteMask.All,
                         Blend = new WGPUBlendState
                         {
@@ -1274,7 +1274,7 @@ public static class OffscreenRenderer
     /// Owns the GPU objects for one frame's position-colour celestial draws (sunrise fan, stars): a pipeline per blend
     /// mode and, per draw, a vertex/index/transform buffer and bind group. Built per frame and disposed with it.
     /// </summary>
-    private sealed class CelestialColorResources : IDisposable
+    internal sealed class CelestialColorResources : IDisposable
     {
         private const ulong TransformUniformSize = 80;
 
@@ -1289,7 +1289,7 @@ public static class OffscreenRenderer
         private readonly uint[] _indexCounts;
         private readonly bool[] _overlay;
 
-        public CelestialColorResources(Device device, FrameRequest request, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize)
+        public CelestialColorResources(Device device, FrameRequest request, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, WGPUTextureFormat format = WGPUTextureFormat.RGBA8Unorm)
         {
             var draws = request.CelestialColorDraws!;
 
@@ -1306,8 +1306,8 @@ public static class OffscreenRenderer
                 Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("position_color")))
             });
 
-            _translucentPipeline = CreatePositionColorPipeline(device, shader, _pipelineLayout, overlay: false);
-            _overlayPipeline = CreatePositionColorPipeline(device, shader, _pipelineLayout, overlay: true);
+            _translucentPipeline = CreatePositionColorPipeline(device, shader, _pipelineLayout, overlay: false, format);
+            _overlayPipeline = CreatePositionColorPipeline(device, shader, _pipelineLayout, overlay: true, format);
 
             _vertexBuffers = new Brew.Wgpu.Buffer[draws.Length];
             _indexBuffers = new Brew.Wgpu.Buffer[draws.Length];

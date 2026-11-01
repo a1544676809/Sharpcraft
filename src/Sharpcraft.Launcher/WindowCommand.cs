@@ -288,6 +288,9 @@ internal static class WindowCommand
         // The gradient sky is static day blue; use a flat SKY_COLOR clear colour instead (vanilla sky is SKY_COLOR).
         request = request with { SkipGradientSky = true };
 
+        // Sun, moon, stars and the sunrise band: the window now has the celestial pass, so populate its draws/textures.
+        request = FrameCommand.AttachCelestial(request, world, resources);
+
         // A reload rebuilds the stack and then tells the listeners, in order. Language first: everything that shows text
         // reads it, so it must be in place before anything else rebuilds.
         resources.AddListener("language", 10, manager => session.Language = FrameCommand.PrepareLanguage(manager));
