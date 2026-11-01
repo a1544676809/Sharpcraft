@@ -56,7 +56,7 @@ linear = pow(texel, 2.2);  out = pow(linear * light, 1/2.2)
 | --- | --- | --- | --- | --- |
 | 1 | 采样纹理 | `block.fsh`: `texture(Sampler0,uv)`；`Lightmap` 纹理 `RGBA8_UNORM` | `terrain.wgsl` `textureSampleGrad`，atlas `RGBA8Unorm` | 一致 |
 | 2 | 顶点色 Color | `block.vsh`: `Color`（tint×面明暗×AO，0..1） | `ChunkMesher.CornerShade`: `red=tint*shadeFactor*occlusion` | 一致（明暗 1/0.5/0.8/0.6、AO 见实现） |
-| 3 | 平滑光照 | `LightCoordsUtil.smoothBlend`(66-88)：3 邻+center，`neighbor==0→center`、`sky>2||block>2` 才修正，`(a+b+c+d)>>2` 得 1/16 级精度；再 `smoothWeightedBlend`(90-103) 按 AO 权重 w1..w4 双线性加权；`sample_lightmap`+`lightmap.fsh` `floor(texCoord*16)/15` 取整 | `ChunkMesher.CornerShade`(611-642)：对 4 邻格 `skySum/samples`、`blockSum/samples` 简单整数平均，无 3邻+center 特判、无 AO 双线性权重 | **算法近似**：角落/边缘光照过渡略不同（非量化差） |
+| 3 | 平滑光照 | `LightCoordsUtil.smoothBlend`(66-88)：3 邻+center，`neighbor==0→center`、`sky>2||block>2` 才修正，`(a+b+c+d)>>2`；完整方块面走 else 分支（无 `smoothWeightedBlend`，那只用于 partial 非立方模型） | `SmoothLighting.Blend` + `ChunkMesher.CornerShade`（center=index0 + 3 邻，含零邻特判） | 已修（T-289，完整方块面等价；partial 加权分支不适用） |
 | 4 | 亮度曲线 | `Lightmap.getBrightness`: `lerp(ambientLight, l/(4-3l), 1)` | `brightnessCurve(l)=l/(4-3l)` | 主世界 ambientLight=0 等价；其他维度有差 |
 | 5 | 光照图合成 | `lightmap.fsh` 公式 | `terrain.wgsl::lightmapColour` | 一致（省 nightVision/boss/darkness，默认 0） |
 | 6 | 光照图取值域 | `RGBA8_UNORM` 原始值 | 原始值 + 直接相乘 | 一致 |
@@ -69,4 +69,4 @@ linear = pow(texel, 2.2);  out = pow(linear * light, 1/2.2)
 | 13 | 世界时钟推进 | 原版客户端每 tick 推进世界时钟（时间与 partial 前进） | `ClientWorld.AdvanceClocks()` **未被调用** | **偏差**：时间冻结/昼夜不推进（改时间仅在收到 set_time 时跳变） |
 | 14 | set_time 解析 | `ClientboundSetTimePacket` LONG gameTime + map(WorldClock→ClockNetworkState{VAR_LONG,FLOAT,FLOAT}) | `SetTimePacketCodec` 同结构 | 一致 |
 
-**结论**：核心光照合成已与原版等效；**#10** 已修（T-288，`BlockLightTint` 改原样 `v/255`）、**#13** 已修（T-286/287，时钟保留+进服全量同步）、**#8** 已实现（T-285，块光闪烁）。仅 **#3** 为平滑光照算法近似（缺 `smoothBlend/smoothWeightedBlend` 的 3邻+center 特判与 AO 双线性权重，角落/边缘过渡略不同，非量化差）保留。
+**结论**：核心光照合成已与原版等效；**#10** 已修（T-288）、**#13** 已修（T-286/287）、**#8** 已实现（T-285）、**#3** 已修（T-289，完整方块面 `smoothBlend` 零邻特判；`smoothWeightedBlend` 仅用于 partial 非立方模型，本渲染器不产出，故不适用）。

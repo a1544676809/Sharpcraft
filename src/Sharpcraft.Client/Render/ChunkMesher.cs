@@ -608,23 +608,47 @@ public static class ChunkMesher
         Span<int> ys = stackalloc int[4] { by, by - u[1], by - v[1], by - u[1] - v[1] };
         Span<int> zs = stackalloc int[4] { bz, bz - u[2], bz - v[2], bz - u[2] - v[2] };
 
-        var skySum = 0;
-        var blockSum = 0;
+        Span<byte> skySamples = stackalloc byte[4];
+        Span<byte> blockSamples = stackalloc byte[4];
         var samples = 0;
 
         for (var index = 0; index < 4; index++)
         {
-            if (neighbourhood.TryGetLight(xs[index], ys[index], zs[index], out var sky, out var block))
+            if (neighbourhood.TryGetLight(xs[index], ys[index], zs[index], out var sampleSky, out var sampleBlock))
             {
-                skySum += sky;
-                blockSum += block;
+                skySamples[samples] = sampleSky;
+                blockSamples[samples] = sampleBlock;
                 samples++;
             }
         }
 
-        var light = samples == 0
-            ? ((byte)0, (byte)0)
-            : ((byte)(skySum / samples), (byte)(blockSum / samples));
+        (int Sky, int Block) light;
+        if (samples == 4)
+        {
+            // Reference LightCoordsUtil.smoothBlend for a full cube face: three neighbours + centre with the
+            // zero-neighbour correction (docs/analysis/render/lighting-color-space.md #3). Index 0 is the centre cell.
+            light = SmoothLighting.Blend(
+                skySamples[0], blockSamples[0],
+                skySamples[1], blockSamples[1],
+                skySamples[2], blockSamples[2],
+                skySamples[3], blockSamples[3]);
+        }
+        else if (samples == 0)
+        {
+            light = (0, 0);
+        }
+        else
+        {
+            var skySum = 0;
+            var blockSum = 0;
+            for (var index = 0; index < samples; index++)
+            {
+                skySum += skySamples[index];
+                blockSum += blockSamples[index];
+            }
+
+            light = (skySum / samples, blockSum / samples);
+        }
 
         // Ambient occlusion: average shade brightness of the four cells that share this vertex on the face's outer side.
         // A full solid cell contributes 0.2, anything else 1.0, so an open corner is 1.0 and a nook drops toward 0.2.
