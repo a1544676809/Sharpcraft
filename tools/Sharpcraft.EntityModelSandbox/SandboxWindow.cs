@@ -36,7 +36,9 @@ internal static class SandboxWindow
 
         DynamicGeometry Build()
         {
-            return mesher.Build([entity], sprite, skin.Width, skin.Height, state);
+            var geometry = mesher.Build([entity], sprite, skin.Width, skin.Height, state);
+            AppendSelectionHighlight(geometry, sprite, PlayerModelDefinition.AdultParts[partIndex], Faces[faceIndex]);
+            return geometry;
         }
 
         var geometry = Build();
@@ -130,8 +132,73 @@ internal static class SandboxWindow
         {
             var part = PlayerModelDefinition.AdultParts[partIndex].Name;
             var face = Faces[faceIndex];
-            var current = state.TryGetValue(part + "." + face, out var value) ? value : FaceUvTransform.Identity;
+            var current = state.TryGetValue(part + "." + face, out var value)
+                ? value
+                : FaceUvTransform.Identity;
             return $"Sharpcraft sandbox | {part}.{face} | PageUp/Down part, Left/Right face, Space rotate, Shift flipH, Ctrl flipV | rot={current.Rotation} flipH={current.FlipH} flipV={current.FlipV}";
         }
+    }
+
+    private static void AppendSelectionHighlight(DynamicGeometry geometry, Sharpcraft.Client.Assets.SpriteRect sprite, EntityModelPart part, string face)
+    {
+        var px = (1f / 16f) * EntityPlaceholderMesher.ModelScale;
+        var centreX = part.CentreX * px;
+        var bottom = part.Bottom * px;
+        var halfW = part.Width * px * 0.5f;
+        var halfD = part.Depth * px * 0.5f;
+        var min = new Vector3(centreX - halfW, bottom, -halfD);
+        var max = new Vector3(centreX + halfW, bottom + (part.Height * px), halfD);
+        var t0 = new Vector3(min.X, min.Y, min.Z);
+        var t1 = new Vector3(max.X, min.Y, min.Z);
+        var t2 = new Vector3(max.X, max.Y, min.Z);
+        var t3 = new Vector3(min.X, max.Y, min.Z);
+        var l0 = new Vector3(min.X, min.Y, max.Z);
+        var l1 = new Vector3(max.X, min.Y, max.Z);
+        var l2 = new Vector3(max.X, max.Y, max.Z);
+        var l3 = new Vector3(min.X, max.Y, max.Z);
+        var (a, b, c, d, normal) = face switch
+        {
+            "DOWN" => (l1, l0, t0, t1, new Vector3(0, -1, 0)),
+            "UP" => (t2, t3, l3, l2, new Vector3(0, 1, 0)),
+            "WEST" => (t0, l0, l3, t3, new Vector3(-1, 0, 0)),
+            "NORTH" => (t1, t0, t3, t2, new Vector3(0, 0, -1)),
+            "EAST" => (l1, t1, t2, l2, new Vector3(1, 0, 0)),
+            _ => (l0, l1, l2, l3, new Vector3(0, 0, 1))
+        };
+        a += normal * 0.01f;
+        b += normal * 0.01f;
+        c += normal * 0.01f;
+        d += normal * 0.01f;
+        var first = (uint)(geometry.VertexFloats / 14);
+        AppendVertex(geometry, a, sprite);
+        AppendVertex(geometry, b, sprite);
+        AppendVertex(geometry, c, sprite);
+        AppendVertex(geometry, d, sprite);
+        geometry.Indices[geometry.IndexCount++] = first;
+        geometry.Indices[geometry.IndexCount++] = first + 1;
+        geometry.Indices[geometry.IndexCount++] = first + 2;
+        geometry.Indices[geometry.IndexCount++] = first;
+        geometry.Indices[geometry.IndexCount++] = first + 2;
+        geometry.Indices[geometry.IndexCount++] = first + 3;
+    }
+
+    private static void AppendVertex(DynamicGeometry geometry, Vector3 p, Sharpcraft.Client.Assets.SpriteRect sprite)
+    {
+        var o = geometry.VertexFloats;
+        geometry.Vertices[o++] = p.X;
+        geometry.Vertices[o++] = p.Y;
+        geometry.Vertices[o++] = p.Z;
+        geometry.Vertices[o++] = 0.2f;
+        geometry.Vertices[o++] = 1f;
+        geometry.Vertices[o++] = 0.2f;
+        geometry.Vertices[o++] = 0.5f;
+        geometry.Vertices[o++] = 0.5f;
+        geometry.Vertices[o++] = sprite.U0;
+        geometry.Vertices[o++] = sprite.V0;
+        geometry.Vertices[o++] = sprite.U1;
+        geometry.Vertices[o++] = sprite.V1;
+        geometry.Vertices[o++] = 1f;
+        geometry.Vertices[o++] = 0f;
+        geometry.VertexFloats = o;
     }
 }
