@@ -66,8 +66,8 @@ public sealed class EntityModelMesher
         var ty = part.TextureY;
 
         // +Z / -Z / -X / +X / +Y / -Y, using the standard cube texture layout.
-        AddFace(min.X, min.Y, max.Z, max.X, min.Y, max.Z, max.X, max.Y, max.Z, min.X, max.Y, max.Z, tx + d, ty + d, w, h, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
-        AddFace(max.X, min.Y, min.Z, min.X, min.Y, min.Z, min.X, max.Y, min.Z, max.X, max.Y, min.Z, tx + d + w, ty + d, w, h, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
+        AddFace(min.X, min.Y, max.Z, max.X, min.Y, max.Z, max.X, max.Y, max.Z, min.X, max.Y, max.Z, tx + d + w + d, ty + d, w, h, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
+        AddFace(max.X, min.Y, min.Z, min.X, min.Y, min.Z, min.X, max.Y, min.Z, max.X, max.Y, min.Z, tx + d, ty + d, w, h, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
         AddFace(min.X, min.Y, min.Z, min.X, min.Y, max.Z, min.X, max.Y, max.Z, min.X, max.Y, min.Z, tx, ty + d, d, h, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
         AddFace(max.X, min.Y, max.Z, max.X, min.Y, min.Z, max.X, max.Y, min.Z, max.X, max.Y, max.Z, tx + d + w, ty + d, d, h, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
         AddFace(min.X, max.Y, min.Z, max.X, max.Y, min.Z, max.X, max.Y, max.Z, min.X, max.Y, max.Z, tx + d, ty, w, d, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
