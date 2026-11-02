@@ -89,10 +89,10 @@ public sealed class EntityModelMesher
         var u1 = (tu + tw) / (float)skinWidth;
         var v1 = (tv + th) / (float)skinHeight;
         var first = (uint)(vertexFloats / 14);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, ax, ay, az, u1, v0, skin);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, bx, by, bz, u0, v0, skin);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, cx, cy, cz, u0, v1, skin);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, dx, dy, dz, u1, v1, skin);
+        WriteVertex(_geometry.Vertices, ref vertexFloats, ax, ay, az, u0, v1, skin);
+        WriteVertex(_geometry.Vertices, ref vertexFloats, bx, by, bz, u1, v1, skin);
+        WriteVertex(_geometry.Vertices, ref vertexFloats, cx, cy, cz, u1, v0, skin);
+        WriteVertex(_geometry.Vertices, ref vertexFloats, dx, dy, dz, u0, v0, skin);
 
         _geometry.Indices[indexCount++] = first;
         _geometry.Indices[indexCount++] = first + 1;
