@@ -2222,3 +2222,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Sheep 基础腿/羊毛组修正（T-427）：4×12×4 base legs + 独立 wool parts，脸/腿恢复。
 - 2026-11-02 Cow 模型转译（T-428）：头/鼻/角、body+udder、四腿，沙盒已验证。
 - 2026-11-02 Chicken 模型转译（T-429）：头/喙/肉垂 + 旋转 body + 腿/翅，沙盒已验证。
+- 2026-11-02 Wolf 模型转译（T-430）：real_head/body/upper_body/四腿/tail，沙盒已验证。

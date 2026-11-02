@@ -52,6 +52,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheWolfTypeResolvesToItsParts()
+    {
+        var definition = EntityModelResolver.Resolve(WolfModelDefinition.WolfEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("wolf", definition.Name);
+        Assert.Equal(11, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheChickenTypeResolvesToItsParts()
     {
         var definition = EntityModelResolver.Resolve(ChickenModelDefinition.ChickenEntityTypeId);
