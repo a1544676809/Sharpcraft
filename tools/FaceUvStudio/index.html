@@ -35,6 +35,14 @@
   .face-actions button.on { background:#1d4a3a; border-color:var(--good); }
   .face-meta { margin-top:6px; color:var(--muted); font-size:12px; min-height:18px; }
   .face-meta .ok { color:var(--good); }
+  .stage { margin:0 0 16px; padding:12px; background:var(--panel); border:1px solid var(--line); border-radius:9px; display:flex; gap:16px; align-items:center; }
+  .stage h2 { margin:0; font-size:13px; color:var(--muted); }
+  .cube-wrap { width:220px; height:220px; perspective:700px; flex:0 0 auto; }
+  .cube { position:relative; width:140px; height:140px; margin:40px; transform-style:preserve-3d; transform:rotateX(-18deg) rotateY(-28deg); }
+  .cube-face { position:absolute; inset:0; width:140px; height:140px; background:#0d1015; border:1px solid #52627a; overflow:hidden; }
+  .cube-face canvas { width:140px; height:140px; display:block; image-rendering:pixelated; }
+  .cube-face span { position:absolute; left:4px; top:2px; color:#fff; font-size:10px; text-shadow:0 1px 2px #000; }
+  .cube-help { color:var(--muted); font-size:12px; }
   .export { margin-top:16px; background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:12px; }
   .export h2 { margin:0 0 8px; font-size:14px; }
   textarea { width:100%; min-height:150px; resize:vertical; background:#0e1218; color:#cfe9ff; border:1px solid var(--line); border-radius:6px; padding:10px; font:12px/1.4 Consolas, monospace; }
@@ -60,6 +68,13 @@
     </div>
   </aside>
   <section class="content">
+    <div class="stage">
+      <div>
+        <h2>3D 预览 · 拖动旋转</h2>
+        <div class="cube-wrap"><div class="cube" id="cube"></div></div>
+      </div>
+      <div class="cube-help">当前部件：<b id="cubePart">head</b><br>拖动立方体可旋转视角；六个面使用左侧每面的旋转/翻转设置。</div>
+    </div>
     <div class="toolbar">
       <button id="resetPart">重置本部件</button>
       <button id="resetAll">重置全部</button>
@@ -145,6 +160,7 @@ function drawFace(canvas, def, face) {
   const ctx = canvas.getContext("2d");
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,cssW,cssH);
+  ctx.imageSmoothingEnabled = false;
   const r = faceRect(def, face);
   const scale = Math.min((cssW-24)/r.w, (cssH-24)/r.h);
   const dw = r.w*scale, dh = r.h*scale;
@@ -192,7 +208,54 @@ function renderFaces() {
     facesEl.appendChild(card);
     requestAnimationFrame(() => drawFace(c, def, face));
   }
+  renderCube();
   renderExport();
+}
+
+function renderCube() {
+  const cube = document.getElementById("cube");
+  if (!cube) return;
+  const def = PARTS[activePart];
+  document.getElementById("cubePart").textContent = def.label;
+  cube.innerHTML = "";
+  const faces = [
+    ["NORTH", "translateZ(70px)"],
+    ["SOUTH", "rotateY(180deg) translateZ(70px)"],
+    ["EAST", "rotateY(90deg) translateZ(70px)"],
+    ["WEST", "rotateY(-90deg) translateZ(70px)"],
+    ["UP", "rotateX(90deg) translateZ(70px)"],
+    ["DOWN", "rotateX(-90deg) translateZ(70px)"]
+  ];
+  for (const [face, transform] of faces) {
+    const el = document.createElement("div");
+    el.className = "cube-face";
+    el.style.transform = transform;
+    const c = document.createElement("canvas");
+    c.width = 140; c.height = 140;
+    c.style.width = "140px"; c.style.height = "140px";
+    el.appendChild(c);
+    const label = document.createElement("span");
+    label.textContent = FACE_LABEL[face];
+    el.appendChild(label);
+    cube.appendChild(el);
+    drawCubeFace(c, def, face);
+  }
+}
+
+function drawCubeFace(canvas, def, face) {
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, 140, 140);
+  const r = faceRect(def, face);
+  const scale = Math.min(132 / r.w, 132 / r.h);
+  const dw = r.w * scale, dh = r.h * scale;
+  const st = state[activePart][face];
+  ctx.save();
+  ctx.translate(70, 70);
+  ctx.rotate(st.rot * Math.PI / 180);
+  ctx.scale(st.flipH ? -1 : 1, st.flipV ? -1 : 1);
+  ctx.drawImage(skin, r.x, r.y, r.w, r.h, -dw / 2, -dh / 2, dw, dh);
+  ctx.restore();
 }
 
 function renderExport() {
@@ -220,6 +283,22 @@ showGrid.onchange = renderFaces;
 
 skin = makeDefaultSkin();
 renderFaces();
+
+let cubeRotX = -18, cubeRotY = -28, dragging = false, lastX = 0, lastY = 0;
+const cubeEl = document.getElementById("cube");
+cubeEl.addEventListener("pointerdown", e => {
+  dragging = true; lastX = e.clientX; lastY = e.clientY; cubeEl.setPointerCapture(e.pointerId);
+});
+cubeEl.addEventListener("pointermove", e => {
+  if (!dragging) return;
+  cubeRotY += (e.clientX - lastX) * 0.6;
+  cubeRotX -= (e.clientY - lastY) * 0.6;
+  lastX = e.clientX; lastY = e.clientY;
+  cubeEl.style.transform = `rotateX(${cubeRotX}deg) rotateY(${cubeRotY}deg)`;
+});
+cubeEl.addEventListener("pointerup", e => {
+  dragging = false; cubeEl.releasePointerCapture(e.pointerId);
+});
 </script>
 </body>
 </html>
