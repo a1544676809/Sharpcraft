@@ -704,28 +704,46 @@ internal static class WindowCommand
                         var entityHeight = entity.TypeId == EntityPlaceholderMesher.PlayerEntityTypeId
                             ? EntityPlaceholderMesher.PlayerHeight
                             : EntityPlaceholderMesher.MobHeight;
-                        if (!Sharpcraft.Client.Render.NameplateProjection.TryProject(
+                        var textWidthPixels = uiFont.MeasureWidth(displayName);
+                        var textHeightPixels = uiFont.CellHeight;
+                        if (!Sharpcraft.Client.Render.NameplateProjection.TryProjectBillboard(
                                 new System.Numerics.Vector3(entity.X, entity.Y, entity.Z),
                                 entityHeight,
+                                textWidthPixels,
+                                textHeightPixels,
+                                lastEye,
+                                lastTarget,
                                 nameplateViewProjection,
                                 out var nameplateScreen,
-                                out _)
+                                out var nameplateWidth,
+                                out var nameplateHeight)
                             || nameplateScreen.X is < 0f or > 1f
                             || nameplateScreen.Y is < 0f or > 1f)
                         {
                             continue;
                         }
 
-                        var nameWidth = uiFont.MeasureWidth(displayName);
+                        var textScale = (nameplateWidth * canvasWidth) / MathF.Max(textWidthPixels, 1f);
+                        var screenWidth = textWidthPixels * textScale;
+                        var screenHeight = nameplateHeight * canvasHeight;
+                        var nameLeft = (nameplateScreen.X * canvasWidth) - (screenWidth * 0.5f);
+                        var nameTop = (nameplateScreen.Y * canvasHeight) - screenHeight;
+                        var namePad = 2f;
+                        uiGeometry.AddRectangle(
+                            nameLeft - namePad,
+                            nameTop - namePad,
+                            screenWidth + (namePad * 2f),
+                            screenHeight + (namePad * 2f),
+                            0x40000000u);
                         UiScreenLayout.AddText(
                             uiGeometry,
                             uiFont,
                             displayName,
-                            (nameplateScreen.X * canvasWidth) - (nameWidth * 0.5f),
-                            (nameplateScreen.Y * canvasHeight) - (uiFont.CellHeight * uiFont.Scale),
-                            1f,
-                            0xFFFFFFFFu,
-                            shadow: true);
+                            nameLeft,
+                            nameTop,
+                            textScale,
+                            0x80FFFFFFu,
+                            shadow: false);
                     }
                 }
 
