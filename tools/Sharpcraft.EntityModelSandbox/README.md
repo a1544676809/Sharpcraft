@@ -17,3 +17,6 @@ dotnet run --project tools/Sharpcraft.EntityModelSandbox -c Release
 ```
 
 资源包路径通过 `MC_ASSETS_PACK` 覆盖；自定义皮肤通过 `MC_SANDBOX_SKIN` 指定。两者都不设置时使用本地启动器默认路径。该工具只读资源、不写仓库资产。
+
+
+`template.png` 这类 1600×1600（25× 放大）的 UV 模板会被识别为逻辑 64×64，可用 `MC_SANDBOX_SKIN` 指向它启动。

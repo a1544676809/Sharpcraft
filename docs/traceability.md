@@ -409,3 +409,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-381 | **全部部件 WEST/EAST 纹理互换**：标准 skin 的 WEST 面使用右侧纹理、EAST 使用左侧纹理；交换两区域 UV 角点，几何不变 | `template.png`、`ModelPart.Polygon` | 构建通过；窗口重启 | `Client/Render/EntityModelMesher` | 已完成 |
 | T-382 | **沙盒面状态导出**：每次调整或按 `T` 将当前 6 部件×6 面的 `rot/flipH/flipV` 写入 `%TEMP%\sharpcraft-face-state.json`，可直接回填 `EntityModelMesher` | `docs/modules/entity-render.md` | 构建通过 | `tools/Sharpcraft.EntityModelSandbox/SandboxWindow.cs` | 已完成 |
 | T-383 | **校准结果固化**：将沙盒导出的统一面变换（DOWN/UP 180°、WEST/NORTH/EAST/SOUTH FlipH）写入 `PlayerModelDefinition.DefaultFaceTransforms`，`EntityModelMesher` 在无显式 transforms 时使用它 | `%TEMP%\sharpcraft-face-state.json`、`docs/modules/entity-render.md` | 构建通过 | `Client/Render/{PlayerModelDefinition,EntityModelMesher}` | 已完成 |
+| T-384 | **模板皮肤支持**：沙盒把 1600×1600 的 `template.png` 识别为逻辑 64×64，按模板色块显示各面区域，便于逐面对照 | `template.png` | 沙盒窗口截图验证 | `tools/Sharpcraft.EntityModelSandbox/SandboxWindow.cs` | 已完成 |

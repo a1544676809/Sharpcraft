@@ -21,6 +21,8 @@ internal static class SandboxWindow
     public static void Run()
     {
         var skin = SandboxServer.LoadSkin();
+        var logicalWidth = skin.Width == 1600 ? 64 : skin.Width;
+        var logicalHeight = skin.Height == 1600 ? 64 : skin.Height;
         var sprite = new Sharpcraft.Client.Assets.SpriteRect(0, 0, skin.Width, skin.Height, 1)
         {
             U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f
