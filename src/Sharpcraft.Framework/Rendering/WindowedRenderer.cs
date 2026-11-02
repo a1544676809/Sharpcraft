@@ -2026,7 +2026,7 @@ public static class WindowedRenderer
             shader,
             "vs_main"u8,
             shader,
-            "fs_cutout"u8,
+            "fs_entity_translucent"u8,
             [
                 new ColorTargetState
                 {

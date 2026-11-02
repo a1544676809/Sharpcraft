@@ -2202,3 +2202,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 实体特殊层文档（T-407）：记录 Enderman eyes/Player translucent/Drowned outer 等待补项。
 - 2026-11-02 Creeper 模型转译 + CentreZ（T-408）：六 flat parts，沙盒已验证。
 - 2026-11-02 Slime 模型转译（T-409）：inner cube + eyes/mouth + outer grow cube，沙盒已验证。
+- 2026-11-02 实体 transluent alpha 修复（T-410）：fs_entity_translucent 保留 sampled.a，Slime 半透明生效。

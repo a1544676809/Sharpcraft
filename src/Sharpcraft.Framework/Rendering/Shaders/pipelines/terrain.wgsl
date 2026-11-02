@@ -202,3 +202,28 @@ fn fs_cutout(input : VertexOutput) -> @location(0) vec4<f32> {
     let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
     return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogged), 1.0);
 }
+
+// Entity translucent pass: preserves texture alpha for skin overlays and slime outer cubes.
+@fragment
+fn fs_entity_translucent(input : VertexOutput) -> @location(0) vec4<f32> {
+    let rectMin = input.spriteRect.xy;
+    let rectMax = input.spriteRect.zw;
+    let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
+    let gradientScale = rectMax - rectMin;
+    let sampled = textureSampleGrad(
+        atlasTexture,
+        atlasSampler,
+        atlasUv,
+        dpdx(input.uv) * gradientScale,
+        dpdy(input.uv) * gradientScale);
+
+    if (sampled.a < 0.1) {
+        discard;
+    }
+
+    let light = input.colour * lightmapColour(input.light.x, input.light.y);
+    let base = vec4<f32>(litColour(sampled.rgb, light), sampled.a);
+    let span = max(fog.range.y - fog.range.x, 0.001);
+    let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
+    return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogged), sampled.a);
+}
