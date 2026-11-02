@@ -15,3 +15,6 @@
 
 
 界面包含：逐面清晰裁切 + 可拖动旋转的 3D 立方体预览；每面可旋转/翻 H/翻 V，底部导出 JSON。
+
+
+同步模式：先运行 `dotnet run --project tools/Sharpcraft.EntityModelSandbox -c Release -- --serve`，浏览器打开 `http://127.0.0.1:19876/`。网页每面操作会 POST `/state`，沙盒重渲染 `/frame.png` 并显示在网页上方。

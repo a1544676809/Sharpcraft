@@ -7,6 +7,12 @@ using Sharpcraft.Client.World;
 using Sharpcraft.Common.Imaging;
 using Sharpcraft.Framework.Rendering;
 
+if (args.Contains("--serve"))
+{
+    Sharpcraft.EntityModelSandbox.SandboxServer.Run();
+    return;
+}
+
 var customSkin = Environment.GetEnvironmentVariable("MC_SANDBOX_SKIN") ?? @"E:\\Users\\14947\\Downloads\\my_skin.png";
         byte[] imageBytes;
         if (File.Exists(customSkin))

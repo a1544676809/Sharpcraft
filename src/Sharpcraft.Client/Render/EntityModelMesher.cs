@@ -16,7 +16,7 @@ public sealed class EntityModelMesher
 {
     private readonly DynamicGeometry _geometry = new();
 
-    public DynamicGeometry Build(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight)
+    public DynamicGeometry Build(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null)
     {
         _geometry.Clear();
         _geometry.Reserve(entities.Length * 6 * 24 * 14, entities.Length * 6 * 36);
@@ -40,7 +40,7 @@ public sealed class EntityModelMesher
                 var halfD = part.Depth * px * 0.5f;
                 var min = new Vector3(feet.X + centreX - halfW, feet.Y + bottom, feet.Z - halfD);
                 var max = new Vector3(feet.X + centreX + halfW, feet.Y + bottom + (part.Height * px), feet.Z + halfD);
-                AddPart(part, min, max, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
+                AddPart(part, min, max, skin, skinWidth, skinHeight, transforms, ref vertexFloats, ref indexCount);
             }
         }
 
@@ -60,6 +60,7 @@ public sealed class EntityModelMesher
         SpriteRect skin,
         int skinWidth,
         int skinHeight,
+        IReadOnlyDictionary<string, FaceUvTransform>? transforms,
         ref int vertexFloats,
         ref int indexCount)
     {
@@ -87,21 +88,31 @@ public sealed class EntityModelMesher
         var l1 = new Vector3(max.X, min.Y, max.Z);
         var l2 = new Vector3(max.X, max.Y, max.Z);
         var l3 = new Vector3(min.X, max.Y, max.Z);
+        FaceUvTransform T(string face) => transforms is not null && transforms.TryGetValue(part.Name + "." + face, out var value) ? value : FaceUvTransform.Identity;
 
-        AddFace(l1, l0, t0, t1, u2, v0, u1, v0, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // DOWN
-        AddFace(t2, t3, l3, l2, u22, v1, u2, v1, u2, v0, u22, v0, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // UP
-        AddFace(t0, l0, l3, t3, u1, v2, u0, v2, u0, v1, u1, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // WEST
-        AddFace(t1, t0, t3, t2, u2, v2, u1, v2, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // NORTH
-        AddFace(l1, t1, t2, l2, u3, v2, u2, v2, u2, v1, u3, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // EAST
-        AddFace(l0, l1, l2, l3, u4, v2, u3, v2, u3, v1, u4, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // SOUTH
+        AddFace(l1, l0, t0, t1, u2, v0, u1, v0, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("DOWN")); // DOWN
+        AddFace(t2, t3, l3, l2, u22, v1, u2, v1, u2, v0, u22, v0, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("UP")); // UP
+        AddFace(t0, l0, l3, t3, u1, v2, u0, v2, u0, v1, u1, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("WEST")); // WEST
+        AddFace(t1, t0, t3, t2, u2, v2, u1, v2, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("NORTH")); // NORTH
+        AddFace(l1, t1, t2, l2, u3, v2, u2, v2, u2, v1, u3, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("EAST")); // EAST
+        AddFace(l0, l1, l2, l3, u4, v2, u3, v2, u3, v1, u4, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("SOUTH")); // SOUTH
     }
 
     private void AddFace(
         Vector3 a, Vector3 b, Vector3 c, Vector3 d,
         float au, float av, float bu, float bv, float cu, float cv, float du, float dv,
         SpriteRect skin, int skinWidth, int skinHeight,
-        ref int vertexFloats, ref int indexCount)
+        ref int vertexFloats, ref int indexCount,
+        FaceUvTransform transform)
     {
+        var uMin = MathF.Min(MathF.Min(au, bu), MathF.Min(cu, du));
+        var uMax = MathF.Max(MathF.Max(au, bu), MathF.Max(cu, du));
+        var vMin = MathF.Min(MathF.Min(av, bv), MathF.Min(cv, dv));
+        var vMax = MathF.Max(MathF.Max(av, bv), MathF.Max(cv, dv));
+        (au, av) = TransformUv(au, av, uMin, uMax, vMin, vMax, transform);
+        (bu, bv) = TransformUv(bu, bv, uMin, uMax, vMin, vMax, transform);
+        (cu, cv) = TransformUv(cu, cv, uMin, uMax, vMin, vMax, transform);
+        (du, dv) = TransformUv(du, dv, uMin, uMax, vMin, vMax, transform);
         var first = (uint)(vertexFloats / 14);
         WriteVertex(_geometry.Vertices, ref vertexFloats, a, au / skinWidth, av / skinHeight, skin);
         WriteVertex(_geometry.Vertices, ref vertexFloats, b, bu / skinWidth, bv / skinHeight, skin);
@@ -114,6 +125,22 @@ public sealed class EntityModelMesher
         _geometry.Indices[indexCount++] = first;
         _geometry.Indices[indexCount++] = first + 2;
         _geometry.Indices[indexCount++] = first + 3;
+    }
+
+    private static (float U, float V) TransformUv(float u, float v, float uMin, float uMax, float vMin, float vMax, FaceUvTransform t)
+    {
+        var nu = (u - uMin) / MathF.Max(uMax - uMin, 1e-6f);
+        var nv = (v - vMin) / MathF.Max(vMax - vMin, 1e-6f);
+        if (t.FlipH) nu = 1f - nu;
+        if (t.FlipV) nv = 1f - nv;
+        (nu, nv) = (t.Rotation % 360) switch
+        {
+            90 => (nv, 1f - nu),
+            180 => (1f - nu, 1f - nv),
+            270 => (1f - nv, nu),
+            _ => (nu, nv)
+        };
+        return (uMin + nu * (uMax - uMin), vMin + nv * (vMax - vMin));
     }
 
     private static void WriteVertex(float[] destination, ref int offset, Vector3 position, float u, float v, SpriteRect skin)

@@ -70,10 +70,10 @@
   <section class="content">
     <div class="stage">
       <div>
-        <h2>3D 预览 · 拖动旋转</h2>
-        <div class="cube-wrap"><div class="cube" id="cube"></div></div>
+        <h2>沙盒 3D 实时预览</h2>
+        <img id="sandboxFrame" alt="sandbox 3D preview" style="width:420px;height:420px;image-rendering:pixelated;background:#0d1015;border-radius:6px;">
       </div>
-      <div class="cube-help">当前部件：<b id="cubePart">head</b><br>拖动立方体可旋转视角；六个面使用左侧每面的旋转/翻转设置。</div>
+      <div class="cube-help">先运行沙盒：<code>dotnet run --project tools/Sharpcraft.EntityModelSandbox -c Release -- --serve</code><br>然后在浏览器打开：<code>http://127.0.0.1:19876/</code><br>修改每面方向会实时同步到沙盒 3D。</div>
     </div>
     <div class="toolbar">
       <button id="resetPart">重置本部件</button>
@@ -97,7 +97,7 @@ const PARTS = {
   right_leg:  { label:"right_leg",  tex:[0,16],  w:4, h:12, d:4 }
 };
 const FACES = ["DOWN","UP","WEST","NORTH","EAST","SOUTH"];
-const FACE_LABEL = { DOWN:"底面", UP:"顶面", WEST:"左侧", NORTH:"正面", EAST:"右侧", SOUTH:"背面" };
+const FACE_LABEL = { DOWN:"顶面 TOP", UP:"底面 BOTTOM", WEST:"右侧 RIGHT", NORTH:"正面 FRONT", EAST:"左侧 LEFT", SOUTH:"背面 BACK" };
 const state = {};
 for (const [p, def] of Object.entries(PARTS)) {
   state[p] = {};
@@ -210,7 +210,25 @@ function renderFaces() {
   }
   renderCube();
   renderExport();
+  syncState();
 }
+
+const SANDBOX = "http://127.0.0.1:19876";
+let syncInFlight = false;
+async function syncState() {
+  const frame = document.getElementById("sandboxFrame");
+  try {
+    await fetch(SANDBOX + "/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(state) });
+  } catch (_) {
+    if (frame) frame.alt = "sandbox 未运行";
+  }
+}
+function pollFrame() {
+  const frame = document.getElementById("sandboxFrame");
+  if (frame) frame.src = SANDBOX + "/frame.png?t=" + Date.now();
+}
+setInterval(pollFrame, 600);
+setTimeout(pollFrame, 200);
 
 function renderCube() {
   const cube = document.getElementById("cube");
@@ -221,10 +239,10 @@ function renderCube() {
   const faces = [
     ["NORTH", "translateZ(70px)"],
     ["SOUTH", "rotateY(180deg) translateZ(70px)"],
-    ["EAST", "rotateY(90deg) translateZ(70px)"],
-    ["WEST", "rotateY(-90deg) translateZ(70px)"],
-    ["UP", "rotateX(90deg) translateZ(70px)"],
-    ["DOWN", "rotateX(-90deg) translateZ(70px)"]
+    ["WEST", "rotateY(90deg) translateZ(70px)"],
+    ["EAST", "rotateY(-90deg) translateZ(70px)"],
+    ["DOWN", "rotateX(90deg) translateZ(70px)"],
+    ["UP", "rotateX(-90deg) translateZ(70px)"]
   ];
   for (const [face, transform] of faces) {
     const el = document.createElement("div");
@@ -283,22 +301,9 @@ showGrid.onchange = renderFaces;
 
 skin = makeDefaultSkin();
 renderFaces();
-
-let cubeRotX = -18, cubeRotY = -28, dragging = false, lastX = 0, lastY = 0;
-const cubeEl = document.getElementById("cube");
-cubeEl.addEventListener("pointerdown", e => {
-  dragging = true; lastX = e.clientX; lastY = e.clientY; cubeEl.setPointerCapture(e.pointerId);
-});
-cubeEl.addEventListener("pointermove", e => {
-  if (!dragging) return;
-  cubeRotY += (e.clientX - lastX) * 0.6;
-  cubeRotX -= (e.clientY - lastY) * 0.6;
-  lastX = e.clientX; lastY = e.clientY;
-  cubeEl.style.transform = `rotateX(${cubeRotX}deg) rotateY(${cubeRotY}deg)`;
-});
-cubeEl.addEventListener("pointerup", e => {
-  dragging = false; cubeEl.releasePointerCapture(e.pointerId);
-});
+const sandboxSkin = new Image();
+sandboxSkin.onload = () => { skin = sandboxSkin; renderFaces(); };
+sandboxSkin.src = SANDBOX + "/skin.png";
 </script>
 </body>
 </html>
