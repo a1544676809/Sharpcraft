@@ -121,6 +121,12 @@ internal sealed class WorldTextResources : IDisposable
 
     public void SetDraws(IReadOnlyList<WorldTextDraw> draws)
     {
+        if (draws.Count == 0)
+        {
+            _indexCount = 0;
+            return;
+        }
+
         var vertices = new List<float>();
         var indices = new List<uint>();
         foreach (var draw in draws)
