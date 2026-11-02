@@ -91,7 +91,8 @@ public static class HumanoidMobModelDefinition
         var parts = new List<EntityModelPart>(Skeleton.Parts)
         {
             PlayerModelDefinition.FromVanilla("outer_head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0,
-                grow: grow, texturePath: overlayPath),
+                grow: grow, texturePath: overlayPath,
+                overlays: [new("outer_hat", 0.5f, 32, 0, false, overlayPath)]),
             PlayerModelDefinition.FromVanilla("outer_body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16,
                 grow: grow, texturePath: overlayPath),
             PlayerModelDefinition.FromVanilla("outer_left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 40, 16,
