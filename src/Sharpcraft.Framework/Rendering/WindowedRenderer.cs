@@ -47,6 +47,7 @@ public static class WindowedRenderer
         int expectedChunks = 0,
         Func<DynamicGeometry?>? dynamicGeometry = null,
         Func<UiFrame, UiGeometry?>? uiGeometry = null,
+    Func<IReadOnlyList<WorldTextDraw>?>? worldTextPerFrame = null,
         TextureData? glyphTexture = null,
         IReadOnlyList<TextureData>? spriteTextures = null,
         UiTextureSource? textureSource = null,
@@ -313,6 +314,9 @@ public static class WindowedRenderer
         // Glyphs live in their own sheet rather than the block atlas: the two have different sampling needs and
         // mixing them would make text blurry at small sizes.
         var glyphData = glyphTexture ?? TextureData.White;
+        using var worldText = worldTextPerFrame is not null
+            ? new WorldTextResources(device, glyphData, cameraBuffer, VertexLayout.CameraUniformSize, format)
+            : null;
         var glyphSheet = device.CreateTexture(new TextureDescriptor
         {
             Size = new WGPUExtent3D
@@ -1438,6 +1442,15 @@ public static class WindowedRenderer
             // (The weighted-blended OIT path that used to live here was shelved for its visual quality and is no longer
             // compiled; the reference OIT above is the only transparency path.)
 
+            if (worldText is not null)
+            {
+                worldText.SetDraws(worldTextPerFrame?.Invoke() ?? []);
+                var worldTextPass = encoder.BeginRenderPass(
+                    [new ColorAttachment { View = view, LoadOp = WGPULoadOp.Load, StoreOp = WGPUStoreOp.Store }],
+                    new DepthStencilAttachment { View = depthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store });
+                worldText.Draw(worldTextPass);
+                worldTextPass.End();
+            }
             // Clouds come after the opaque and transparent terrain, with depth testing so terrain and the cloud layer
             // occlude each other correctly (the reference draws them in executeClassicTransparency).
             if (cloudColour is not null && cloudOit is null)

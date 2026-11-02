@@ -93,4 +93,15 @@ public static class VertexLayout
     [
         new(WGPUVertexFormat.Float32x3, 0, 0)
     ];
+
+    /// <summary>Bytes per world-text vertex: position (3) + uv (2) + colour (4) floats.</summary>
+    public const int WorldTextStride = 36;
+
+    /// <summary>World-text attributes: position, uv, colour.</summary>
+    public static VertexAttribute[] WorldTextAttributes() =>
+    [
+        new(WGPUVertexFormat.Float32x3, 0, 0),
+        new(WGPUVertexFormat.Float32x2, 12, 1),
+        new(WGPUVertexFormat.Float32x4, 20, 2)
+    ];
 }

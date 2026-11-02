@@ -2142,3 +2142,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-01 修复 PlayerInfoUpdate：固定 bitset mask + nullable chat session + 预加载延迟；双客户端名字牌实测显示 Blue_Coast（T-348）。
 - 2026-11-02 世界空间文字调查完成（T-349，docs/analysis/render/world-space-text.md）；名字牌/告示牌/文本展示统一世界文字契约已记录，待实现 WorldTextRenderer。
 - 2026-11-02 世界空间名字牌第一片（T-350）：billboard/世界尺度0.025、背景alpha0.25、文字alpha0.5、无阴影；告示牌/文本展示待接。
+- 2026-11-02 世界文字 pass 第一版（T-351）：WorldTextResources + WorldTextMeshBuilder；名字牌改走 glyph 世界四边形，修正 font.Scale；告示牌/文本展示待接。

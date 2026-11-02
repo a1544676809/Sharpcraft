@@ -673,7 +673,55 @@ internal static class WindowCommand
                 return (celestialCached.CelestialDraws ?? [], celestialCached.CelestialColorDraws ?? [], celestialCached.SkyDiscDraws ?? []);
             },
             geometryRemovals: () => removedChunks,
-            uiGeometry: frame =>            {
+            worldTextPerFrame: () =>
+            {
+                if (uiFont is null)
+                {
+                    return null;
+                }
+
+                var forward = lastTarget - lastEye;
+                if (forward.LengthSquared() < 1e-8f)
+                {
+                    forward = -System.Numerics.Vector3.UnitZ;
+                }
+
+                forward = System.Numerics.Vector3.Normalize(forward);
+                var right = System.Numerics.Vector3.Cross(forward, System.Numerics.Vector3.UnitY);
+                if (right.LengthSquared() < 1e-8f)
+                {
+                    right = System.Numerics.Vector3.UnitX;
+                }
+
+                right = System.Numerics.Vector3.Normalize(right);
+                var up = System.Numerics.Vector3.Normalize(System.Numerics.Vector3.Cross(right, forward));
+                var draws = new List<Sharpcraft.Framework.Rendering.WorldTextDraw>();
+                foreach (var entity in session.EntityStates(session.PartialTick))
+                {
+                    if (session.EntityDisplayName(entity.Id) is not { Length: > 0 } name)
+                    {
+                        continue;
+                    }
+
+                    var height = entity.TypeId == EntityPlaceholderMesher.PlayerEntityTypeId
+                        ? EntityPlaceholderMesher.PlayerHeight
+                        : EntityPlaceholderMesher.MobHeight;
+                    var anchorPoint = new System.Numerics.Vector3(
+                        entity.X,
+                        entity.Y + height + Sharpcraft.Client.Render.NameplateProjection.HeadOffset,
+                        entity.Z);
+                    draws.AddRange(Sharpcraft.Client.Render.WorldTextMeshBuilder.BuildNameplate(
+                        name,
+                        uiFont,
+                        anchorPoint,
+                        right,
+                        up,
+                        0x80FFFFFFu,
+                        0x40000000u));
+                }
+
+                return draws;
+            },            uiGeometry: frame =>            {
                 // Mesh work is ordered by distance, so the pool needs to know where the player is each frame.
                 var player = session.Player.Position;
                 workerPool.SetViewOrigin(player.X / 16f, player.Z / 16f);
@@ -689,63 +737,6 @@ internal static class WindowCommand
                 var canvasWidth = frame.Width;
                 var canvasHeight = frame.Height;
                 UiScreenLayout.Build(screen.Root, screen.Styles, canvasWidth, canvasHeight, uiGeometry, uiFont);
-
-                if (uiFont is not null)
-                {
-                    var nameplateViewProjection = Sharpcraft.Framework.Rendering.CameraMath.BuildViewProjection(
-                        lastEye, lastTarget, 70f, canvasWidth, canvasHeight);
-                    foreach (var entity in session.EntityStates(session.PartialTick))
-                    {
-                        if (session.EntityDisplayName(entity.Id) is not { Length: > 0 } displayName)
-                        {
-                            continue;
-                        }
-
-                        var entityHeight = entity.TypeId == EntityPlaceholderMesher.PlayerEntityTypeId
-                            ? EntityPlaceholderMesher.PlayerHeight
-                            : EntityPlaceholderMesher.MobHeight;
-                        var textWidthPixels = uiFont.MeasureWidth(displayName);
-                        var textHeightPixels = uiFont.CellHeight;
-                        if (!Sharpcraft.Client.Render.NameplateProjection.TryProjectBillboard(
-                                new System.Numerics.Vector3(entity.X, entity.Y, entity.Z),
-                                entityHeight,
-                                textWidthPixels,
-                                textHeightPixels,
-                                lastEye,
-                                lastTarget,
-                                nameplateViewProjection,
-                                out var nameplateScreen,
-                                out var nameplateWidth,
-                                out _)
-                            || nameplateScreen.X is < 0f or > 1f
-                            || nameplateScreen.Y is < 0f or > 1f)
-                        {
-                            continue;
-                        }
-
-                        var textScale = (nameplateWidth * canvasWidth) / MathF.Max(textWidthPixels, 1f);
-                        var screenWidth = textWidthPixels * textScale;
-                        var screenHeight = uiFont.CellHeight * uiFont.Scale * textScale;
-                        var nameLeft = (nameplateScreen.X * canvasWidth) - (screenWidth * 0.5f);
-                        var nameTop = nameplateScreen.Y * canvasHeight;
-                        var namePad = 2f;
-                        uiGeometry.AddRectangle(
-                            nameLeft - namePad,
-                            nameTop - namePad,
-                            screenWidth + (namePad * 2f),
-                            screenHeight + (namePad * 2f),
-                            0x40000000u);
-                        UiScreenLayout.AddText(
-                            uiGeometry,
-                            uiFont,
-                            displayName,
-                            nameLeft,
-                            nameTop,
-                            textScale,
-                            0x80FFFFFFu,
-                            shadow: false);
-                    }
-                }
 
                 // The reference shows the list only while the key is held, so it is drawn from the current input
                 // rather than unconditionally. It joins the same batch as the document, so the submission budget
