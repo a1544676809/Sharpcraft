@@ -37,6 +37,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheZombieVillagerTypeReusesVillagerGeometry()
+    {
+        var definition = EntityModelResolver.Resolve(VillagerModelDefinition.ZombieVillagerEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("zombie_villager", definition.Name);
+        Assert.Equal(VillagerModelDefinition.Definition.Parts.Count, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheVillagerTypeResolvesToNinePartsAndScale()
     {
         var definition = EntityModelResolver.Resolve(VillagerModelDefinition.VillagerEntityTypeId);

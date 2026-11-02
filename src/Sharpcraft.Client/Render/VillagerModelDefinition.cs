@@ -10,6 +10,7 @@ namespace Sharpcraft.Client.Render;
 public static class VillagerModelDefinition
 {
     public const int VillagerEntityTypeId = 143;
+    public const int ZombieVillagerEntityTypeId = 157;
 
     public static readonly EntityModelDefinition Definition = new(
         "villager",
@@ -32,5 +33,14 @@ public static class VillagerModelDefinition
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/villager/villager",
+        0.9375f);
+
+    public static readonly EntityModelDefinition ZombieVillager = new(
+        "zombie_villager",
+        64,
+        64,
+        VillagerModelDefinition.Definition.Parts,
+        PlayerModelDefinition.DefaultFaceTransforms,
+        "entity/zombie_villager/zombie_villager",
         0.9375f);
 }
