@@ -2181,3 +2181,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 游戏模板皮肤启动（T-386）：`MC_PLAYER_SKIN` 覆盖，1600 模板按 64×64 UV，双客户端已启动。
 - 2026-11-02 左右肢体几何镜像（T-387）：左右臂/腿中心 X 取反，纹理不变。
 - 2026-11-02 通用实体模型基础（T-388）：`EntityModelDefinition` + `EntityModelResolver`，玩家已通过 resolver。
+- 2026-11-02 Zombie 模型转译（T-389）：HumanoidModel 部件定义与 resolver 注册完成，mob 纹理/渲染待接。
