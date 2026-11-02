@@ -2207,3 +2207,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Magma Cube 模型转译（T-412）：8 segments + inside cube，沙盒已验证。
 - 2026-11-02 Part pivot/rotation + Spider（T-413）：spider 8 腿旋转，沙盒已验证。
 - 2026-11-02 Villager 模型转译（T-414）：hat/nose/jacket/交叉手臂/腿，scale 0.9375，沙盒已验证。
+- 2026-11-02 Villager 手臂左右修正（T-415）：left_arm +X/right_arm -X。
