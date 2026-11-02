@@ -14,3 +14,6 @@ dotnet run --project tools/Sharpcraft.EntityModelSandbox -c Release
 
 
 多视角模式（当前）会输出 `front/back/left/right/shoulders` 五张 PNG，用于定位面朝向问题。
+
+
+可用 `MC_SANDBOX_SKIN` 指定自定义皮肤；当前默认读取 `E:\Users\14947\Downloads\my_skin.png` 的箭头皮肤。沙盒使用 `NearestTextureFilter=true`（`FrameRequest` 诊断选项），避免纹理模糊。

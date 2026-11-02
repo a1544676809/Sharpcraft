@@ -112,6 +112,9 @@ public sealed record FrameRequest(
 
     /// <summary>Opaque sky-disc draws (top/bottom), rendered before the textured celestial bodies.</summary>
     public CelestialColorDraw[]? SkyDiscDraws { get; init; }
+
+    /// <summary>Use nearest-neighbour sampling for the atlas; a sandbox/diagnostic option.</summary>
+    public bool NearestTextureFilter { get; init; }
 }
 
 /// <summary>One textured celestial quad (sun or moon) in the sky backdrop.</summary>

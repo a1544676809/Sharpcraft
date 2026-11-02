@@ -7,15 +7,26 @@ using Sharpcraft.Client.World;
 using Sharpcraft.Common.Imaging;
 using Sharpcraft.Framework.Rendering;
 
-var packPath = Environment.GetEnvironmentVariable("MC_ASSETS_PACK")
-    ?? @"C:\Users\14947\AppData\Local\MinecraftCSharp\packs\minecraft-26.3-a51bffa6a64c.pack.zip";
-using var archive = ZipFile.OpenRead(packPath);
-var entry = archive.GetEntry("assets/minecraft/textures/entity/player/wide/steve.png")
-    ?? throw new InvalidDataException("player skin entry missing from pack");
-using var stream = entry.Open();
-using var memory = new MemoryStream();
-stream.CopyTo(memory);
-var image = PngDecoder.Decode(memory.ToArray());
+var customSkin = Environment.GetEnvironmentVariable("MC_SANDBOX_SKIN") ?? @"E:\\Users\\14947\\Downloads\\my_skin.png";
+        byte[] imageBytes;
+        if (File.Exists(customSkin))
+        {
+            imageBytes = File.ReadAllBytes(customSkin);
+        }
+        else
+        {
+            var packPath = Environment.GetEnvironmentVariable("MC_ASSETS_PACK")
+                ?? @"C:\\Users\\14947\\AppData\\Local\\MinecraftCSharp\\packs\\minecraft-26.3-a51bffa6a64c.pack.zip";
+            using var archive = ZipFile.OpenRead(packPath);
+            var entry = archive.GetEntry("assets/minecraft/textures/entity/player/wide/steve.png")
+                ?? throw new InvalidDataException("player skin entry missing from pack");
+            using var stream = entry.Open();
+            using var memory = new MemoryStream();
+            stream.CopyTo(memory);
+            imageBytes = memory.ToArray();
+        }
+
+        var image = PngDecoder.Decode(imageBytes);
 var skin = new TextureData(image.Width, image.Height, image.Pixels);
 var sprite = new Sharpcraft.Client.Assets.SpriteRect(0, 0, image.Width, image.Height, 1)
 {
@@ -50,7 +61,8 @@ foreach (var view in views)
         FieldOfViewDegrees: 70f)
     {
         Atlas = skin,
-        SkipGradientSky = true
+        SkipGradientSky = true,
+        NearestTextureFilter = true
     };
     var frame = OffscreenRenderer.Render(request);
     var output = Path.Combine(Path.GetTempPath(), $"entity-model-{view.Name}.png");

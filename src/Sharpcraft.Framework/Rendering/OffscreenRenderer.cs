@@ -553,9 +553,9 @@ public static class OffscreenRenderer
                 AddressModeU = WGPUAddressMode.ClampToEdge,
                 AddressModeV = WGPUAddressMode.ClampToEdge,
                 AddressModeW = WGPUAddressMode.ClampToEdge,
-                MagFilter = WGPUFilterMode.Linear,
-                MinFilter = WGPUFilterMode.Linear,
-                MipmapFilter = WGPUMipmapFilterMode.Linear,
+                MagFilter = request.NearestTextureFilter ? WGPUFilterMode.Nearest : WGPUFilterMode.Linear,
+                MinFilter = request.NearestTextureFilter ? WGPUFilterMode.Nearest : WGPUFilterMode.Linear,
+                MipmapFilter = request.NearestTextureFilter ? WGPUMipmapFilterMode.Nearest : WGPUMipmapFilterMode.Linear,
                 LodMinClamp = 0f,
                 LodMaxClamp = Math.Max(1, atlasMips.Length),
                 MaxAnisotropy = 1
