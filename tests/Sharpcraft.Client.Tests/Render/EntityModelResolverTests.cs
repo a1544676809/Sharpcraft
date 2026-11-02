@@ -62,6 +62,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheLlamaTypeResolvesToItsParts()
+    {
+        var definition = EntityModelResolver.Resolve(LlamaModelDefinition.LlamaEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("llama", definition.Name);
+        Assert.Equal(11, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheZombieAndSkeletonHorseReuseEquineGeometry()
     {
         Assert.Equal("zombie_horse", EntityModelResolver.Resolve(HorseModelDefinition.ZombieHorseEntityTypeId).Name);

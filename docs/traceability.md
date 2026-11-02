@@ -473,3 +473,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-446 | **Donkey 模型转译**：复用 AbstractEquineModel 几何，纹理 `entity/horse/donkey`，scale 0.87，type id 37 | `DonkeyModel` | Client 608 | `Client/Render/{HorseModelDefinition,EntityModelResolver}` | 进行中 |
 | T-447 | **Mule 模型转译**：复用 AbstractEquineModel 几何，纹理 `entity/horse/mule`，scale 0.92，type id 88 | `MuleModel` | Client 609 | `Client/Render/{HorseModelDefinition,EntityModelResolver}` | 进行中 |
 | T-448 | **Zombie Horse / Skeleton Horse**：复用 AbstractEquineModel 几何，纹理 `horse_zombie`/`horse_skeleton`，type id 155/119 | `ZombieHorseRenderer`、`SkeletonHorseRenderer` | Client 610 | `Client/Render/{HorseModelDefinition,EntityModelResolver}` | 进行中 |
+| T-449 | **Llama 模型转译**：LlamaModel head/neck/ears、body、双 chest、四腿；纹理 `entity/llama/llama_brown`，type id 79 | `LlamaModel` | Client 611 | `Client/Render/{LlamaModelDefinition,EntityModelResolver}` | 进行中 |
