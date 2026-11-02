@@ -45,9 +45,9 @@ public static class WorldTextMeshBuilder
             right,
             up,
             left - 1f,
-            0f,
-            left + width + 1f,
-            glyphHeight,
+            -1f,
+            left + width,
+            glyphHeight + 1f,
             -1f,
             -1f,
             backgroundColour);
@@ -62,7 +62,7 @@ public static class WorldTextMeshBuilder
             if (font.TryGet(character, out var glyph))
             {
                 var (u0, v0, u1, v1) = font.Uv(glyph);
-                var uRight = u0 + ((u1 - u0) * (glyph.Width / (float)font.CellWidth));
+                var uRight = u1;
                 AddQuad(
                     textVertices,
                     textIndices,
@@ -71,7 +71,7 @@ public static class WorldTextMeshBuilder
                     up,
                     pen,
                     0f,
-                    pen + (glyph.Width * glyphScale),
+                    pen + (font.CellWidth * glyphScale),
                     glyphHeight,
                     u0,
                     v0,
