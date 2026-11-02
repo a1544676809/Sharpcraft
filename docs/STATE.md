@@ -2252,3 +2252,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Skeleton outer hat（T-458）：Stray/Bogged outer_hat 补齐。
 - 2026-11-02 实体渲染层差距登记（T-459）：合并 part 不具原版等效性，暂停新模型，先做多 layer 架构。
 - 2026-11-02 Endermite 模型转译（T-460）：4 segments root parts。
+- 2026-11-02 Silverfish 模型转译（T-461）：7 segments + 3 layers。

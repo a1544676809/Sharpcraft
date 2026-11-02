@@ -37,6 +37,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheSilverfishTypeResolvesToSevenSegmentsAndThreeLayers()
+    {
+        var definition = EntityModelResolver.Resolve(SilverfishModelDefinition.SilverfishEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("silverfish", definition.Name);
+        Assert.Equal(10, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheEndermiteTypeResolvesToFourSegments()
     {
         var definition = EntityModelResolver.Resolve(EndermiteModelDefinition.EndermiteEntityTypeId);
