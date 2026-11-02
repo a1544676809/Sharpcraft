@@ -272,6 +272,7 @@ public static class WindowedRenderer
         }
         using var pipeline = CreatePipeline(device, format, pipelineLayout);
         using var cutoutPipeline = CreateCutoutPipeline(device, format, pipelineLayout);
+        using var entityPipeline = CreateEntityPipeline(device, format, pipelineLayout);
         using var skyPipeline = CreateSkyPipeline(device, format);
         // Celestial bodies and stars: the same backdrop draws the offscreen path uses, so the window and the exported
         // frame agree (docs/modules/clouds.md 6).
@@ -1236,6 +1237,7 @@ public static class WindowedRenderer
 
             if (dynamicIndexCount > 0)
             {
+                pass.SetPipeline(entityPipeline);
                 pass.SetVertexBuffer(0, dynamicVertex, 0, dynamicVertexCapacity);
                 pass.SetIndexBuffer(dynamicIndex, WGPUIndexFormat.Uint32, 0, (ulong)dynamicIndexCount * sizeof(uint));
                 if (entitySkinCreated)
@@ -2003,6 +2005,31 @@ public static class WindowedRenderer
             [new ColorTargetState(format)],
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
+            multisample: MultisampleState.Default,
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float),
+            vertexStride: (ulong)VertexLayout.Stride,
+            vertexStepMode: WGPUVertexStepMode.Vertex,
+            vertexAttributes: VertexLayout.Attributes());
+    }
+
+    /// <summary>
+    /// Entity models follow the reference entityCutout pipeline: alpha testing and no back-face culling.
+    /// </summary>
+    private static RenderPipeline CreateEntityPipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
+    {
+        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
+        {
+            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText))
+        });
+
+        return device.CreateRenderPipeline(
+            shader,
+            "vs_main"u8,
+            shader,
+            "fs_cutout"u8,
+            [new ColorTargetState(format)],
+            layout: layout,
+            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
             multisample: MultisampleState.Default,
             depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float),
             vertexStride: (ulong)VertexLayout.Stride,

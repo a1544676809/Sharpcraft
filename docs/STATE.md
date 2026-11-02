@@ -2191,3 +2191,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 `EntityModelPart.Mirror` 生效（T-396）：`EntityModelMesher` 对 mirror 部件所有面 U 取反，Zombie 左臂/左腿待目视。
 - 2026-11-02 Skeleton 模型转译（T-397）：Humanoid definition 注册 type id 118，待游戏观察。
 - 2026-11-02 Skeleton 模型修正（T-398）：2×12×2 四肢、64×32 纹理；待游戏观察。
+- 2026-11-02 实体无背面剔除（T-399）：entity pipeline `CullMode.None`，待游戏观察骷髅。
