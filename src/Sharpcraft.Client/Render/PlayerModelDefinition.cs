@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// Copyright (C) 2026 Sharpcraft contributors
+
+namespace Sharpcraft.Client.Render;
+
+/// <summary>
+/// One static model cuboid in model-pixel space. This is render data only: it never references an entity or world.
+/// </summary>
+/// <param name="Name">Part name for diagnostics and future overlays.</param>
+/// <param name="CentreX">Horizontal centre offset in model pixels.</param>
+/// <param name="Bottom">Bottom Y in model pixels, measured from the feet.</param>
+/// <param name="Width">X size in pixels.</param>
+/// <param name="Height">Y size in pixels.</param>
+/// <param name="Depth">Z size in pixels.</param>
+public readonly record struct EntityModelPart(
+    string Name,
+    float CentreX,
+    float Bottom,
+    float Width,
+    float Height,
+    float Depth);
+
+/// <summary>
+/// Static model definitions consumed by the entity mesher. The values follow the reference
+/// `HumanoidModel.createMesh` player parts (docs/modules/entity-render.md).
+/// </summary>
+public static class PlayerModelDefinition
+{
+    /// <summary>Model height in pixels: head top is 32 pixels above the feet.</summary>
+    public const float ModelPixels = 32f;
+
+    public static readonly EntityModelPart[] AdultParts =
+    [
+        new("head", 0f, 24f, 8f, 8f, 8f),
+        new("body", 0f, 12f, 8f, 12f, 4f),
+        new("left_arm", 5f, 12f, 4f, 12f, 4f),
+        new("right_arm", -5f, 12f, 4f, 12f, 4f),
+        new("left_leg", 1.9f, 0f, 4f, 12f, 4f),
+        new("right_leg", -1.9f, 0f, 4f, 12f, 4f)
+    ];
+}
