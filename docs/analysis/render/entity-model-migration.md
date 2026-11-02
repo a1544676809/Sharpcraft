@@ -130,3 +130,9 @@ updated: 2026-11-02
 1. 先修非玩家回退：未注册模型 → `EntityPlaceholderMesher`，避免皮肤路径下实体消失；
 2. 为 Zombie 接 `textures/entity/zombie/zombie.png`，完成第一个非玩家渲染闭环；
 3. 扩展 `EntityModelDefinition` 支持多 cube + `PartPose`，然后做 Pig。
+
+
+## 7. 特殊层记录
+
+Enderman 眼睛、Player 双层透明、Drowned outer 等不属于普通 cube overlay 的特例，统一记录在
+[实体特殊层与材质](entity-special-layers.md)，模型移植完成后再补。
