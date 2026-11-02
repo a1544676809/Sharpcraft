@@ -62,6 +62,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheSnowGolemTypeResolvesToItsParts()
+    {
+        var definition = EntityModelResolver.Resolve(SnowGolemModelDefinition.SnowGolemEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("snow_golem", definition.Name);
+        Assert.Equal(5, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheGoatTypeResolvesToItsParts()
     {
         var definition = EntityModelResolver.Resolve(GoatModelDefinition.GoatEntityTypeId);

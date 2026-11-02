@@ -463,3 +463,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-436 | **Polar Bear 模型转译**：PolarBearModel head/mouth/耳、双 body cube、四腿，scale 1.2；纹理 `entity/bear/polarbear`，type id 105 | `PolarBearModel` | Client 600/沙盒截图 | `Client/Render/{PolarBearModelDefinition,EntityModelResolver}` | 进行中 |
 | T-437 | **Panda 模型转译**：PandaModel head+鼻/耳、rotated body、四条 6×9×6 腿；纹理 `entity/panda/panda`，type id 97 | `PandaModel` | Client 601/沙盒截图 | `Client/Render/{PandaModelDefinition,EntityModelResolver}` | 进行中 |
 | T-438 | **Goat 模型转译**：GoatModel head/耳/山羊胡/角/鼻、双 body cube、四腿；纹理 `entity/goat/goat`，type id 63 | `GoatModel` | Client 602/沙盒截图 | `Client/Render/{GoatModelDefinition,EntityModelResolver}` | 进行中 |
+| T-439 | **Snow Golem 模型转译**：SnowGolemModel head/upper body/lower body/双臂，grow -0.5，手臂 Z 旋转；纹理 `entity/snow_golem/snow_golem`，type id 124；Rabbit 暂不注册（需嵌套层级变换） | `SnowGolemModel` | Client 603/沙盒截图 | `Client/Render/{SnowGolemModelDefinition,EntityModelResolver}` | 进行中 |

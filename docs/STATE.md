@@ -2230,3 +2230,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Polar Bear 模型转译（T-436）：head/body/四腿，scale1.2。
 - 2026-11-02 Panda 模型转译（T-437）：head/body/legs，沙盒已验证。
 - 2026-11-02 Goat 模型转译（T-438）：head/body/legs，沙盒已验证。
+- 2026-11-02 Snow Golem 模型转译（T-439）：head/body/双臂 scale deformation，Rabbit 暂缓（嵌套层级）。
