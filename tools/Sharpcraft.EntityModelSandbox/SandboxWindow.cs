@@ -29,6 +29,8 @@ internal static class SandboxWindow
         var state = new Dictionary<string, FaceUvTransform>();
         var partIndex = 0;
         var faceIndex = 0;
+        var isolateSelectedPart = false;
+        var hideSelectedPart = false;
         var yaw = 0f;
         var pitch = -0.12f;
         var hasLast = false;
@@ -36,8 +38,15 @@ internal static class SandboxWindow
 
         DynamicGeometry Build()
         {
-            var geometry = mesher.Build([entity], sprite, skin.Width, skin.Height, state);
-            AppendSelectionHighlight(geometry, sprite, PlayerModelDefinition.AdultParts[partIndex], Faces[faceIndex]);
+            var partName = PlayerModelDefinition.AdultParts[partIndex].Name;
+            var geometry = mesher.Build([entity], sprite, skin.Width, skin.Height, state,
+                onlyPart: isolateSelectedPart ? partName : null,
+                excludedPart: hideSelectedPart ? partName : null);
+            if (!hideSelectedPart)
+            {
+                AppendSelectionHighlight(geometry, sprite, PlayerModelDefinition.AdultParts[partIndex], Faces[faceIndex]);
+            }
+
             return geometry;
         }
 
@@ -74,6 +83,15 @@ internal static class SandboxWindow
                 {
                     partIndex = (partIndex - 1 + PlayerModelDefinition.AdultParts.Length) % PlayerModelDefinition.AdultParts.Length;
                     faceIndex = 0;
+                }
+
+                if (input.JustPressed(InputKey.Home))
+                {
+                    isolateSelectedPart = !isolateSelectedPart;
+                }
+                else if (input.JustPressed(InputKey.End))
+                {
+                    hideSelectedPart = !hideSelectedPart;
                 }
 
                 if (input.JustPressed(InputKey.RightArrow))
@@ -135,7 +153,7 @@ internal static class SandboxWindow
             var current = state.TryGetValue(part + "." + face, out var value)
                 ? value
                 : FaceUvTransform.Identity;
-            return $"Sharpcraft sandbox | {part}.{face} | PageUp/Down part, Left/Right face, Space rotate, Shift flipH, Ctrl flipV | rot={current.Rotation} flipH={current.FlipH} flipV={current.FlipV}";
+            return $"Sharpcraft sandbox | {part}.{face} | PageUp/Down part, Left/Right face, Space rotate, Shift flipH, Ctrl flipV, Home isolate, End hide | rot={current.Rotation} flipH={current.FlipH} flipV={current.FlipV} | isolate={isolateSelectedPart} hide={hideSelectedPart}";
         }
     }
 
