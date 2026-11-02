@@ -10,6 +10,7 @@ namespace Sharpcraft.Client.Render;
 public static class CatModelDefinition
 {
     public const int CatEntityTypeId = 21;
+    public const int OcelotEntityTypeId = 92;
 
     public static readonly EntityModelDefinition Definition = new(
         "cat",
@@ -31,4 +32,12 @@ public static class CatModelDefinition
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/cat/cat_tabby",
         0.8f);
+
+    public static readonly EntityModelDefinition Ocelot = new(
+        "ocelot",
+        64,
+        32,
+        CatModelDefinition.Definition.Parts,
+        PlayerModelDefinition.DefaultFaceTransforms,
+        "entity/cat/ocelot");
 }

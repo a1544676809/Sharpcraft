@@ -52,6 +52,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheOcelotTypeReusesTheFelineGeometry()
+    {
+        var definition = EntityModelResolver.Resolve(CatModelDefinition.OcelotEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("ocelot", definition.Name);
+        Assert.Equal(CatModelDefinition.Definition.Parts.Count, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheCatTypeResolvesToItsParts()
     {
         var definition = EntityModelResolver.Resolve(CatModelDefinition.CatEntityTypeId);

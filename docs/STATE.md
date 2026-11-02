@@ -2224,3 +2224,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Chicken 模型转译（T-429）：头/喙/肉垂 + 旋转 body + 腿/翅，沙盒已验证。
 - 2026-11-02 Wolf 模型转译（T-430）：real_head/body/upper_body/四腿/tail，沙盒已验证。
 - 2026-11-02 Cat 模型转译（T-431）：head/body/tail/legs，scale0.8，沙盒已验证。
+- 2026-11-02 Ocelot 模型转译（T-432）：复用 Feline 几何 + ocelot 纹理。
