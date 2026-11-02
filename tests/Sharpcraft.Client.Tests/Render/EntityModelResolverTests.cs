@@ -19,6 +19,14 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheSkeletonVariantsReuseSkeletonGeometry()
+    {
+        Assert.Equal("stray", EntityModelResolver.Resolve(HumanoidMobModelDefinition.StrayEntityTypeId).Name);
+        Assert.Equal("bogged", EntityModelResolver.Resolve(HumanoidMobModelDefinition.BoggedEntityTypeId).Name);
+        Assert.Equal("wither_skeleton", EntityModelResolver.Resolve(HumanoidMobModelDefinition.WitherSkeletonEntityTypeId).Name);
+    }
+
+    [Fact]
     public void TheSkeletonTypeResolvesToTheHumanoidSkeletonDefinition()
     {
         var definition = EntityModelResolver.Resolve(HumanoidMobModelDefinition.SkeletonEntityTypeId);

@@ -10,6 +10,9 @@ namespace Sharpcraft.Client.Render;
 public static class HumanoidMobModelDefinition
 {
     public const int SkeletonEntityTypeId = 118;
+    public const int StrayEntityTypeId = 131;
+    public const int BoggedEntityTypeId = 16;
+    public const int WitherSkeletonEntityTypeId = 150;
     public const int HuskEntityTypeId = 68;
     public const int DrownedEntityTypeId = 39;
     public const int EndermanEntityTypeId = 42;
@@ -78,6 +81,18 @@ public static class HumanoidMobModelDefinition
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/skeleton/skeleton");
+
+    public static readonly EntityModelDefinition Stray = new(
+        "stray", 64, 32, Skeleton.Parts, PlayerModelDefinition.DefaultFaceTransforms,
+        "entity/skeleton/stray");
+
+    public static readonly EntityModelDefinition Bogged = new(
+        "bogged", 64, 32, Skeleton.Parts, PlayerModelDefinition.DefaultFaceTransforms,
+        "entity/skeleton/bogged");
+
+    public static readonly EntityModelDefinition WitherSkeleton = new(
+        "wither_skeleton", 64, 32, Skeleton.Parts, PlayerModelDefinition.DefaultFaceTransforms,
+        "entity/skeleton/wither_skeleton");
 
     public static readonly EntityModelDefinition Zombie = new(
         "zombie",
