@@ -716,7 +716,7 @@ internal static class WindowCommand
                                 nameplateViewProjection,
                                 out var nameplateScreen,
                                 out var nameplateWidth,
-                                out var nameplateHeight)
+                                out _)
                             || nameplateScreen.X is < 0f or > 1f
                             || nameplateScreen.Y is < 0f or > 1f)
                         {
@@ -725,9 +725,9 @@ internal static class WindowCommand
 
                         var textScale = (nameplateWidth * canvasWidth) / MathF.Max(textWidthPixels, 1f);
                         var screenWidth = textWidthPixels * textScale;
-                        var screenHeight = nameplateHeight * canvasHeight;
+                        var screenHeight = uiFont.CellHeight * uiFont.Scale * textScale;
                         var nameLeft = (nameplateScreen.X * canvasWidth) - (screenWidth * 0.5f);
-                        var nameTop = (nameplateScreen.Y * canvasHeight) - screenHeight;
+                        var nameTop = nameplateScreen.Y * canvasHeight;
                         var namePad = 2f;
                         uiGeometry.AddRectangle(
                             nameLeft - namePad,
