@@ -62,6 +62,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheMuleTypeReusesEquineGeometry()
+    {
+        var definition = EntityModelResolver.Resolve(HorseModelDefinition.MuleEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("mule", definition.Name);
+        Assert.Equal(0.92f, definition.Scale);
+    }
+
+    [Fact]
     public void TheDonkeyTypeReusesEquineGeometry()
     {
         var definition = EntityModelResolver.Resolve(HorseModelDefinition.DonkeyEntityTypeId);

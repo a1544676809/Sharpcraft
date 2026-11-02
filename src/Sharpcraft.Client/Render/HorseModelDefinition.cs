@@ -10,6 +10,7 @@ public static class HorseModelDefinition
 {
     public const int HorseEntityTypeId = 67;
     public const int DonkeyEntityTypeId = 37;
+    public const int MuleEntityTypeId = 88;
 
     public static readonly EntityModelDefinition Definition = new(
         "horse",
@@ -47,4 +48,13 @@ public static class HorseModelDefinition
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/horse/donkey",
         0.87f);
+
+    public static readonly EntityModelDefinition Mule = new(
+        "mule",
+        64,
+        64,
+        HorseModelDefinition.Definition.Parts,
+        PlayerModelDefinition.DefaultFaceTransforms,
+        "entity/horse/mule",
+        0.92f);
 }
