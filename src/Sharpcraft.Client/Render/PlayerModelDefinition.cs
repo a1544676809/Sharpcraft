@@ -64,13 +64,56 @@ public static class PlayerModelDefinition
 
     public static readonly EntityModelPart[] AdultParts =
     [
-        new("head", 0f, 24f, 8f, 8f, 8f, 0, 0, false, [new("hat", 0.5f, 32, 0)]),
-        new("body", 0f, 12f, 8f, 12f, 4f, 16, 16, false, [new("jacket", 0.25f, 16, 32)]),
-        new("left_arm", -6f, 12f, 4f, 12f, 4f, 32, 48, false, [new("left_sleeve", 0.25f, 48, 48)]),
-        new("right_arm", 6f, 12f, 4f, 12f, 4f, 40, 16, false, [new("right_sleeve", 0.25f, 40, 32)]),
-        new("left_leg", -1.9f, 0f, 4f, 12f, 4f, 16, 48, false, [new("left_pants", 0.25f, 0, 48)]),
-        new("right_leg", 1.9f, 0f, 4f, 12f, 4f, 0, 16, false, [new("right_pants", 0.25f, 0, 32)])
+        FromVanilla("head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0, overlays: [new("hat", 0.5f, 32, 0)]),
+        FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16, overlays: [new("jacket", 0.25f, 16, 32)]),
+        FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 32, 48, overlays: [new("left_sleeve", 0.25f, 48, 48)]),
+        FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16, overlays: [new("right_sleeve", 0.25f, 40, 32)]),
+        FromVanilla("left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 16, 48, overlays: [new("left_pants", 0.25f, 0, 48)]),
+        FromVanilla("right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16, overlays: [new("right_pants", 0.25f, 0, 32)])
     ];
+
+    /// <summary>
+    /// Builds an EntityModelPart from the reference's y-down pivot/cube values. The conversion is centralized here so
+    /// individual model definitions do not need to hand-flip Bottom/CentreX.
+    /// </summary>
+    public static EntityModelPart FromVanilla(
+        string name,
+        float pivotX,
+        float pivotY,
+        float pivotZ,
+        float minX,
+        float minY,
+        float minZ,
+        float width,
+        float height,
+        float depth,
+        int textureX,
+        int textureY,
+        bool mirror = false,
+        bool mirrorX = true,
+        IReadOnlyList<EntityModelLayer>? overlays = null,
+        float modelHeight = 24f)
+    {
+        var sourceCentreX = pivotX + minX + (width * 0.5f);
+        var centreX = MathF.Round(mirrorX ? -sourceCentreX : sourceCentreX, 4);
+        var bottom = MathF.Round(modelHeight - (pivotY + minY + height), 4);
+        var centreZ = MathF.Round(pivotZ + minZ + (depth * 0.5f), 4);
+        return new EntityModelPart(
+            name,
+            centreX,
+            bottom,
+            width,
+            height,
+            depth,
+            textureX,
+            textureY,
+            mirror,
+            overlays,
+            CentreZ: centreZ,
+            PivotX: mirrorX ? -pivotX : pivotX,
+            PivotY: modelHeight - pivotY,
+            PivotZ: pivotZ);
+    }
 
     public static readonly EntityModelDefinition Definition =
         new("player", 64, 64, AdultParts, DefaultFaceTransforms, "entity/player/wide/steve");

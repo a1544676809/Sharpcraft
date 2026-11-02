@@ -2214,3 +2214,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 实体坐标系统调查（T-419）：地图/相机已统一，实体模型/朝向仍未统一；下一步先做 EntityModelTransform。
 - 2026-11-02 EntityModelTransform（T-420）：实体根变换统一，mesher 应用 Translation/Yaw/Pitch/Scale；后续迁移模型 y-down 坐标。
 - 2026-11-02 已有实体路径迁移（T-421）：placeholder mesher 也使用 EntityModelTransform。
+- 2026-11-02 Player 模型定义迁移（T-422）：FromVanilla 工厂，Player 使用原版 pivot/cube 坐标；其余模型继续迁移。
