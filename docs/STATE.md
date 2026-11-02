@@ -2237,3 +2237,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Mooshroom 模型转译（T-443）：复用 Cow + mooshroom_red。
 - 2026-11-02 Horse 模型转译（T-444）：AbstractEquineModel 主体，沙盒已验证。
 - 2026-11-02 Horse 耳朵/尾巴修正（T-445）：head 子耳 + body 子 tail 合成。
+- 2026-11-02 Donkey 模型转译（T-446）：复用 Equine + donkey texture，scale0.87。

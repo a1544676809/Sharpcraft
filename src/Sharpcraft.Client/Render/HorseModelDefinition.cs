@@ -9,6 +9,7 @@ namespace Sharpcraft.Client.Render;
 public static class HorseModelDefinition
 {
     public const int HorseEntityTypeId = 67;
+    public const int DonkeyEntityTypeId = 37;
 
     public static readonly EntityModelDefinition Definition = new(
         "horse",
@@ -37,4 +38,13 @@ public static class HorseModelDefinition
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/horse/horse_brown");
+
+    public static readonly EntityModelDefinition Donkey = new(
+        "donkey",
+        64,
+        64,
+        HorseModelDefinition.Definition.Parts,
+        PlayerModelDefinition.DefaultFaceTransforms,
+        "entity/horse/donkey",
+        0.87f);
 }

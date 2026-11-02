@@ -41,6 +41,7 @@ public static class EntityModelResolver
         [SquidModelDefinition.SquidEntityTypeId] = SquidModelDefinition.Definition,
         [SquidModelDefinition.GlowSquidEntityTypeId] = SquidModelDefinition.GlowSquid,
         [HorseModelDefinition.HorseEntityTypeId] = HorseModelDefinition.Definition,
+        [HorseModelDefinition.DonkeyEntityTypeId] = HorseModelDefinition.Donkey,
         [VillagerModelDefinition.VillagerEntityTypeId] = VillagerModelDefinition.Definition,
         [HumanoidMobModelDefinition.HuskEntityTypeId] = HumanoidMobModelDefinition.Husk,
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie
