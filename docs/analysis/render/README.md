@@ -17,5 +17,6 @@
 | [`transparent-blocks.md`](transparent-blocks.md) | 本文件只描述可观测行为与判定规则，证据以 ref:// 指针引用仓库外分析工作区。 | 未标注 | - |
 | [`upscaling-and-raytracing.md`](upscaling-and-raytracing.md) | 逐项核实 DLSS / XeSS / FSR / 硬件光追的可用性、依据，以及无论选谁都必须先具备的管线输入 | 草稿 | - |
 | [`vanilla-equivalence-check.md`](vanilla-equivalence-check.md) | 逐项把我们的实现与原版参考对照。 | 未标注 | - |
+| [`world-space-text.md`](world-space-text.md) | 原版世界空间文字（名字牌、告示牌、文本展示实体等）的提交契约、坐标、字体、背景、朝向与光照语义 | 草稿 | 2026-11-02 |
 
 <!-- END GENERATED: docs/analysis/render -->

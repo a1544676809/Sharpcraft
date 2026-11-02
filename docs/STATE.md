@@ -2140,3 +2140,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-01 M5.3 P1 名字牌投影完成（T-346，4测试）；UI 文本绘制待接。
 - 2026-11-01 M5.3 名字牌 UI 接线（T-347）：玩家名从 player list 映射并绘制；全量1271通过。
 - 2026-11-01 修复 PlayerInfoUpdate：固定 bitset mask + nullable chat session + 预加载延迟；双客户端名字牌实测显示 Blue_Coast（T-348）。
+- 2026-11-02 世界空间文字调查完成（T-349，docs/analysis/render/world-space-text.md）；名字牌/告示牌/文本展示统一世界文字契约已记录，待实现 WorldTextRenderer。
