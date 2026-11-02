@@ -62,6 +62,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheFoxTypeResolvesToItsParts()
+    {
+        var definition = EntityModelResolver.Resolve(FoxModelDefinition.FoxEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("fox", definition.Name);
+        Assert.Equal(10, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheCatTypeResolvesToItsParts()
     {
         var definition = EntityModelResolver.Resolve(CatModelDefinition.CatEntityTypeId);

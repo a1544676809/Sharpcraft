@@ -458,3 +458,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-430 | **Wolf 模型转译**：AdultWolfModel：real_head/耳/鼻、body/upper_body、四腿、real_tail；纹理 `entity/wolf/wolf`，type id 152 | `AdultWolfModel` | Client 596/沙盒截图 | `Client/Render/{WolfModelDefinition,EntityModelResolver}` | 进行中 |
 | T-431 | **Cat 模型转译**：AdultFelineModel head/nose/ears、rotated body、双 tail、四腿；CAT_TRANSFORMER scale 0.8；纹理 `entity/cat/cat_tabby`，type id 21 | `AdultCatModel`、`AdultFelineModel` | Client 597/沙盒截图 | `Client/Render/{CatModelDefinition,EntityModelResolver}` | 进行中 |
 | T-432 | **Ocelot 模型转译**：复用 AdultFelineModel/Cat 几何，纹理 `entity/cat/ocelot`，无 CAT scale，type id 92 | `AdultOcelotModel` | Client 598 | `Client/Render/{CatModelDefinition,EntityModelResolver}` | 进行中 |
+| T-433 | **Fox 模型转译**：AdultFoxModel：head/耳/鼻、rotated body、四腿、tail；纹理 `entity/fox/fox`，type id 55 | `AdultFoxModel` | Client 599/沙盒截图 | `Client/Render/{FoxModelDefinition,EntityModelResolver}` | 进行中 |
