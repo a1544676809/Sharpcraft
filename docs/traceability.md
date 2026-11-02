@@ -460,3 +460,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-432 | **Ocelot 模型转译**：复用 AdultFelineModel/Cat 几何，纹理 `entity/cat/ocelot`，无 CAT scale，type id 92 | `AdultOcelotModel` | Client 598 | `Client/Render/{CatModelDefinition,EntityModelResolver}` | 进行中 |
 | T-433 | **Fox 模型转译**：AdultFoxModel：head/耳/鼻、rotated body、四腿、tail；纹理 `entity/fox/fox`，type id 55 | `AdultFoxModel` | Client 599/沙盒截图 | `Client/Render/{FoxModelDefinition,EntityModelResolver}` | 进行中 |
 | T-434 | **Fox tail 修正**：tail 是 body 子部件，pivot 按 body pivot/rotation 合成后为 (-4,17,9)，rotationX=-1.5184；修复尾巴错位 | `AdultFoxModel` | 沙盒截图 | `Client/Render/FoxModelDefinition` | 完成 |
+| T-436 | **Polar Bear 模型转译**：PolarBearModel head/mouth/耳、双 body cube、四腿，scale 1.2；纹理 `entity/bear/polarbear`，type id 105 | `PolarBearModel` | Client 600/沙盒截图 | `Client/Render/{PolarBearModelDefinition,EntityModelResolver}` | 进行中 |

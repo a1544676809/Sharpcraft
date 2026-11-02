@@ -62,6 +62,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void ThePolarBearTypeResolvesToItsParts()
+    {
+        var definition = EntityModelResolver.Resolve(PolarBearModelDefinition.PolarBearEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("polar_bear", definition.Name);
+        Assert.Equal(1.2f, definition.Scale);
+    }
+
+    [Fact]
     public void TheFoxTypeResolvesToItsParts()
     {
         var definition = EntityModelResolver.Resolve(FoxModelDefinition.FoxEntityTypeId);
