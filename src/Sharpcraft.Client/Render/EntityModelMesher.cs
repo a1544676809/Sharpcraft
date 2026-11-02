@@ -19,7 +19,17 @@ public sealed class EntityModelMesher
     public DynamicGeometry Build(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null)
     {
         _geometry.Clear();
-        _geometry.Reserve(entities.Length * 6 * 24 * 14, entities.Length * 6 * 36);
+        var cubeCount = 0;
+        foreach (var entity in entities)
+        {
+            var model = EntityModelResolver.Resolve(entity.TypeId);
+            foreach (var part in model.Parts)
+            {
+                cubeCount += 1 + (part.OverlayLayers?.Count ?? 0);
+            }
+        }
+
+        _geometry.Reserve((cubeCount + entities.Length * 2) * 24 * 14, (cubeCount + entities.Length * 2) * 36);
         var vertexFloats = 0;
         var indexCount = 0;
 
