@@ -21,6 +21,8 @@ public static class EntityModelResolver
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie
     };
 
+    public static IReadOnlyCollection<EntityModelDefinition> Definitions => Models.Values.Distinct().ToArray();
+
     public static EntityModelDefinition? TryResolve(int typeId) =>
         Models.TryGetValue(typeId, out var definition) ? definition : null;
 

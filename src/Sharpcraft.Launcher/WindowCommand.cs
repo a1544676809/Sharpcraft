@@ -402,19 +402,8 @@ internal static class WindowCommand
         }
 
         var playerSkin = customSkin ?? Sharpcraft.Client.Render.EntitySkinTexture.Load(resources);
-        var skinImages = new System.Collections.Generic.Dictionary<string, Sharpcraft.Framework.Rendering.TextureData>(StringComparer.Ordinal);
-        if (playerSkin is not null)
-        {
-            skinImages["entity/player/wide/steve"] = playerSkin;
-        }
-
-        var zombieSkin = Sharpcraft.Client.Render.EntitySkinTexture.LoadPath(resources, "entity/zombie/zombie");
-        if (zombieSkin is not null)
-        {
-            skinImages["entity/zombie/zombie"] = zombieSkin;
-        }
-
-        var entitySkinAtlas = skinImages.Count == 0 ? null : Sharpcraft.Client.Render.EntitySkinAtlas.FromTextures(skinImages);
+        var entitySkinLibrary = Sharpcraft.Client.Render.EntitySkinLibrary.Load(resources, playerSkin);
+        var entitySkinAtlas = entitySkinLibrary.Atlas;
         var entitySkin = entitySkinAtlas?.Texture ?? playerSkin;
         var entitySkinSprite = playerSkin is { } skin
             ? new Sharpcraft.Client.Assets.SpriteRect(0, 0, skin.Width, skin.Height, 1) { U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f }
