@@ -2210,3 +2210,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Villager 手臂左右修正（T-415）：left_arm +X/right_arm -X。
 - 2026-11-02 Villager 左右臂语义修正（T-416）：left_arm=-X mirror true，right_arm=+X mirror false。
 - 2026-11-02 Villager 手臂 Y 修正（T-417）：Bottom=15，手臂回到肩部。
+- 2026-11-02 Villager 手臂 X 旋转符号修正（T-418）：RotationX=+0.75。
