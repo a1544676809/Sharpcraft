@@ -19,6 +19,7 @@ public static class EntityModelResolver
     {
         [EntityPlaceholderMesher.PlayerEntityTypeId] = PlayerModelDefinition.Definition,
         [HumanoidMobModelDefinition.SkeletonEntityTypeId] = HumanoidMobModelDefinition.Skeleton,
+        [HumanoidMobModelDefinition.HuskEntityTypeId] = HumanoidMobModelDefinition.Husk,
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie
     };
 

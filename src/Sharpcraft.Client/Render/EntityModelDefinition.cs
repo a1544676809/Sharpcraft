@@ -15,7 +15,8 @@ public sealed class EntityModelDefinition
         int textureHeight,
         IReadOnlyList<EntityModelPart> parts,
         IReadOnlyDictionary<string, FaceUvTransform>? faceTransforms = null,
-        string? texturePath = null)
+        string? texturePath = null,
+        float scale = 1f)
     {
         Name = name;
         TextureWidth = textureWidth;
@@ -23,6 +24,7 @@ public sealed class EntityModelDefinition
         Parts = parts;
         FaceTransforms = faceTransforms ?? new Dictionary<string, FaceUvTransform>();
         TexturePath = texturePath;
+        Scale = scale;
     }
 
     public string Name { get; }
@@ -31,4 +33,5 @@ public sealed class EntityModelDefinition
     public IReadOnlyList<EntityModelPart> Parts { get; }
     public IReadOnlyDictionary<string, FaceUvTransform> FaceTransforms { get; }
     public string? TexturePath { get; }
+    public float Scale { get; }
 }

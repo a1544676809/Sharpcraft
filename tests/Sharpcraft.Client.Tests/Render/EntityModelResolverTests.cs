@@ -29,6 +29,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheHuskTypeResolvesToTheScaledZombieDefinition()
+    {
+        var definition = EntityModelResolver.Resolve(HumanoidMobModelDefinition.HuskEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("husk", definition.Name);
+        Assert.Equal(1.0625f, definition.Scale);
+    }
+
+    [Fact]
     public void TheZombieTypeResolvesToTheHumanoidZombieDefinition()
     {
         var definition = EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId);

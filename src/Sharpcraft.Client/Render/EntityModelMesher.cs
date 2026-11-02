@@ -22,7 +22,6 @@ public sealed class EntityModelMesher
         _geometry.Reserve(entities.Length * 6 * 24 * 14, entities.Length * 6 * 36);
         var vertexFloats = 0;
         var indexCount = 0;
-        var px = (1f / 16f) * EntityPlaceholderMesher.ModelScale;
 
         foreach (var entity in entities)
         {
@@ -32,6 +31,7 @@ public sealed class EntityModelMesher
                 continue;
             }
 
+            var px = (1f / 16f) * EntityPlaceholderMesher.ModelScale * model.Scale;
             var feet = new Vector3(entity.X, entity.Y, entity.Z);
             var sprite = skin;
             var skinWidthForModel = skinWidth;
