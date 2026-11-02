@@ -46,3 +46,8 @@ updated: 2026-11-02
 - 不把上述近似模型继续当作“已完成”；
 - 不再添加新的近似模型；
 - 下一步优先实现父子层级变换，然后重做 Horse/Fox/Wolf/Rabbit/Camel 的精确版本。
+
+
+## 5. 渲染层近似
+
+`Skeleton clothing`、Player overlays、Drowned outer、Slime outer 目前把独立 RenderLayer 合并进同一 DynamicGeometry/draw，不能保证原版 layer 的 RenderType、深度、顺序和透明度等效。详见[实体渲染层架构差距](entity-render-layers.md)。

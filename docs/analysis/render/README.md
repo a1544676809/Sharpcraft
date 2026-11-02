@@ -12,6 +12,7 @@
 | [`entity-coordinate-system.md`](entity-coordinate-system.md) | 地形/相机/实体状态/模型空间的坐标约定、当前已统一与未统一的部分 | 草稿 | 2026-11-02 |
 | [`entity-model-approximations.md`](entity-model-approximations.md) | 已完成实体模型中仍需父子层级变换才能精确等价的部分 | 已评审 | 2026-11-02 |
 | [`entity-model-migration.md`](entity-model-migration.md) | 原版生物模型来源、按复杂度排序的移植顺序、当前进度与已知缺口 | 已评审 | 2026-11-02 |
+| [`entity-render-layers.md`](entity-render-layers.md) | 合并 part 的简化实现与原版独立 RenderLayer 的差异、影响和修复契约 | 已评审 | 2026-11-02 |
 | [`entity-special-layers.md`](entity-special-layers.md) | 不属于普通 base/overlay cube 的实体渲染层清单，以及后续补充顺序 | 已评审 | 2026-11-02 |
 | [`lighting-color-space.md`](lighting-color-space.md) | 26.3 block 着色器全程 sRGB 域直接相乘；据此修正我们误加的 gamma 解码/编码 | 草稿 | 2026-11-01 |
 | [`offscreen-ui-pass.md`](offscreen-ui-pass.md) | T-104 / T-159 的行为规格：离屏路径补上界面 pass，并用已知颜色反查 gamma 与通道顺序 | 草稿 | - |
