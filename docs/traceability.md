@@ -477,3 +477,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-450 | **Llama chest 可见性**：`EntityRenderState.HasChest`，`EntityModelMesher` 默认过滤 `right_chest/left_chest`；只有状态有 chest 时才显示；沙盒支持 `MC_SANDBOX_CHEST=1` 查看 | `LlamaModel.hasChest` | Client 611 | `Client/World/EntityTracker`、`Client/Render/EntityModelMesher` | 完成 |
 | T-451 | **Llama chest 开口修正**：原版 chest `rotationY=+π/2`，在 x 镜像坐标中取反为 `-π/2`，修复开口朝内/反向 | `LlamaModel` | 沙盒 `MC_SANDBOX_CHEST=1` 截图 | `Client/Render/LlamaModelDefinition` | 完成 |
 | T-452 | **撤销 Camel 近似实现**：原版 Camel 的 hump/tail/head/ears 是 body 子层级，不能继续用绝对 pivot 近似；已移除注册与文件，待通用父子变换实现后重做 | `AdultCamelModel` | Client 611 | `Client/Render/EntityModelResolver` | 待重做 |
+| T-453 | **实体模型近似实现审计**：标记 Horse/Fox/Wolf/Rabbit/Camel 的父子层级近似；其余已定义为无近似；Camel 近似已撤销；下一步需通用 Parent/PartPose 变换 | `docs/analysis/render/entity-model-approximations.md` | 文档评审 | — | 待处理 |
