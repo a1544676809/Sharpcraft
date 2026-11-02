@@ -445,3 +445,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-417 | **Villager 手臂 Y 修正**：原版手臂 cube 局部 y=-2..6，对应 Bottom=15（此前误写 19，导致手臂抬高/穿到躯干后）；沙盒重验 | `VillagerModel` | 沙盒截图 | `Client/Render/VillagerModelDefinition` | 完成 |
 | T-418 | **Villager 手臂 X 旋转符号修正**：原版 `xRot=-0.75` 在 y-down 模型空间，y-up 客户端需取反为 `+0.75`；修正手臂穿到背后 | `VillagerModel` | 沙盒截图 | `Client/Render/VillagerModelDefinition` | 完成 |
 | T-419 | **实体坐标系统调查**：确认地形/相机/实体状态已统一为 Y-up 世界坐标；实体模型仍用 Bottom/CentreX/Rotation 逐模型补偿，且 EntityRenderState.Yaw/Pitch 未被 mesher 消费；提出统一 EntityModelTransform | `docs/analysis/render/entity-coordinate-system.md` | 文档评审 | — | 待评审 |
+| T-420 | **EntityModelTransform**：新增统一实体根变换（Translation/Yaw/Pitch/Scale）；`EntityModelMesher` 在顶点输出时统一应用，不再把 feet 塞进每个 part；3 项变换测试 | `docs/analysis/render/entity-coordinate-system.md` | Client 591 通过 | `Client/Render/{EntityModelTransform,EntityModelMesher}` | 已完成 |

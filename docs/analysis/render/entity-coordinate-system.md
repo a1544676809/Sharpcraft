@@ -112,3 +112,12 @@ UV 不受顶点变换影响；但 `scale(-1,...)` 会反转三角形绕序，需
 4. 再接 Pig/Cow/Sheep 等 Quadruped。
 
 **不要先继续增加新 mob**：否则每个 quadruped 都会继续放大当前的坐标补丁问题。
+
+
+## 8. 已实现的第一层（2026-11-02）
+
+- 新增 `EntityModelTransform`：`Translation + Yaw/Pitch + Scale`；
+- `EntityModelMesher` 不再把 feet 直接加到每个 part，而是用 `EntityModelTransform.Apply` 统一输出世界顶点；
+- 新增 3 项变换单测（平移、缩放、Yaw）；Client 591 通过。
+
+这一步先统一了**实体根变换**。后续仍需要把模型定义从当前 `Bottom/CentreX` 兼容坐标迁移到原版 y-down/pivot 坐标，并让 `EntityPlaceholderMesher` 也走同一变换。
