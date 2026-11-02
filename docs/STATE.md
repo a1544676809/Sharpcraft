@@ -2173,3 +2173,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 沙盒部件隔离/隐藏（T-378）：Home 隔离当前部件、End 隐藏当前部件。
 - 2026-11-02 body DOWN/UP 纹理互换（T-379）。
 - 2026-11-02 全部部件 DOWN/UP 纹理互换（T-380）。
+- 2026-11-02 全部部件 WEST/EAST 纹理互换（T-381）。

@@ -406,3 +406,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-378 | **沙盒部件隔离/隐藏**：`EntityModelMesher.Build` 支持 `onlyPart`/`excludedPart`；沙盒 `Home` 隔离当前部件、`End` 隐藏当前部件，解决其它块遮挡导致面无法标记 | `docs/modules/entity-render.md` | 构建通过；窗口启动验证 | `Client/Render/EntityModelMesher`、`tools/Sharpcraft.EntityModelSandbox/SandboxWindow.cs` | 已完成 |
 | T-379 | **body DOWN/UP 纹理互换**：按标准 64×64 skin，body 的 DOWN 面应使用 bottom 区域、UP 面使用 top 区域；仅对 body 交换 UV，几何顺序不变 | `template.png`、`ModelPart.Polygon` | 构建通过 | `Client/Render/EntityModelMesher` | 已完成 |
 | T-380 | **全部部件 DOWN/UP 纹理互换**：标准 64×64 skin 的 DOWN 面统一使用 bottom 区域、UP 使用 top 区域；去掉仅 body 的条件 | `template.png`、`ModelPart.Polygon` | 构建通过；窗口重启 | `Client/Render/EntityModelMesher` | 已完成 |
+| T-381 | **全部部件 WEST/EAST 纹理互换**：标准 skin 的 WEST 面使用右侧纹理、EAST 使用左侧纹理；交换两区域 UV 角点，几何不变 | `template.png`、`ModelPart.Polygon` | 构建通过；窗口重启 | `Client/Render/EntityModelMesher` | 已完成 |
