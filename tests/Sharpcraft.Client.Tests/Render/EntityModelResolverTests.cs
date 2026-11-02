@@ -37,6 +37,14 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheIllagerVariantsReuseIllagerGeometry()
+    {
+        Assert.Equal("vindicator", EntityModelResolver.Resolve(IllagerModelDefinition.VindicatorEntityTypeId).Name);
+        Assert.Equal("evoker", EntityModelResolver.Resolve(IllagerModelDefinition.EvokerEntityTypeId).Name);
+        Assert.Equal("pillager", EntityModelResolver.Resolve(IllagerModelDefinition.PillagerEntityTypeId).Name);
+    }
+
+    [Fact]
     public void TheIronGolemTypeResolvesToItsRootParts()
     {
         var definition = EntityModelResolver.Resolve(IronGolemModelDefinition.IronGolemEntityTypeId);

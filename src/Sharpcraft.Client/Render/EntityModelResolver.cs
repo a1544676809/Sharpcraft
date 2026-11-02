@@ -54,6 +54,9 @@ public static class EntityModelResolver
         [EndermiteModelDefinition.EndermiteEntityTypeId] = EndermiteModelDefinition.Definition,
         [SilverfishModelDefinition.SilverfishEntityTypeId] = SilverfishModelDefinition.Definition,
         [IronGolemModelDefinition.IronGolemEntityTypeId] = IronGolemModelDefinition.Definition,
+        [IllagerModelDefinition.VindicatorEntityTypeId] = IllagerModelDefinition.Vindicator,
+        [IllagerModelDefinition.EvokerEntityTypeId] = IllagerModelDefinition.Evoker,
+        [IllagerModelDefinition.PillagerEntityTypeId] = IllagerModelDefinition.Pillager,
         [HumanoidMobModelDefinition.HuskEntityTypeId] = HumanoidMobModelDefinition.Husk,
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie
     };
