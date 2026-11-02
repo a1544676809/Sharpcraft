@@ -49,6 +49,7 @@ public static class WindowedRenderer
         Func<UiFrame, UiGeometry?>? uiGeometry = null,
     Func<IReadOnlyList<WorldTextDraw>?>? worldTextPerFrame = null,
         TextureData? glyphTexture = null,
+    TextureData? entitySkinTexture = null,
         IReadOnlyList<TextureData>? spriteTextures = null,
         UiTextureSource? textureSource = null,
         AtlasTextureSource? atlasSource = null,
@@ -234,6 +235,41 @@ public static class WindowedRenderer
                 BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
             ]);
 
+        Texture entitySkinGpu = default;
+        TextureView entitySkinView = default;
+        BindGroup entitySkinBindGroup = default;
+        var entitySkinCreated = false;
+        if (entitySkinTexture is { } skinData)
+        {
+            entitySkinGpu = device.CreateTexture(new TextureDescriptor
+            {
+                Size = new WGPUExtent3D { width = (uint)skinData.Width, height = (uint)skinData.Height, depthOrArrayLayers = 1 },
+                MipLevelCount = 1,
+                SampleCount = 1,
+                Dimension = WGPUTextureDimension._2D,
+                Format = WGPUTextureFormat.RGBA8Unorm,
+                Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
+            });
+            device.Queue.WriteTexture(
+                entitySkinGpu,
+                skinData.Rgba,
+                (uint)(skinData.Width * 4),
+                (uint)skinData.Height,
+                new WGPUExtent3D { width = (uint)skinData.Width, height = (uint)skinData.Height, depthOrArrayLayers = 1 },
+                0,
+                new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+            entitySkinView = entitySkinGpu.CreateView();
+            entitySkinBindGroup = device.CreateBindGroup(
+                bindGroupLayout,
+                [
+                    BindGroupEntry.TextureView(0, entitySkinView),
+                    BindGroupEntry.Sampler(1, atlasSampler),
+                    BindGroupEntry.Buffer(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize),
+                    BindGroupEntry.Buffer(3, fogBuffer, 0, 32),
+                    BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
+                ]);
+            entitySkinCreated = true;
+        }
         using var pipeline = CreatePipeline(device, format, pipelineLayout);
         using var cutoutPipeline = CreateCutoutPipeline(device, format, pipelineLayout);
         using var skyPipeline = CreateSkyPipeline(device, format);
@@ -1202,7 +1238,16 @@ public static class WindowedRenderer
             {
                 pass.SetVertexBuffer(0, dynamicVertex, 0, dynamicVertexCapacity);
                 pass.SetIndexBuffer(dynamicIndex, WGPUIndexFormat.Uint32, 0, (ulong)dynamicIndexCount * sizeof(uint));
+                if (entitySkinCreated)
+                {
+                    pass.SetBindGroup(0, entitySkinBindGroup);
+                }
+
                 pass.DrawIndexed(dynamicIndexCount, 1, 0, 0, 1);
+                if (entitySkinCreated)
+                {
+                    pass.SetBindGroup(0, bindGroup);
+                }
             }
             else if (useStaticWorld)
             {
@@ -1640,6 +1685,12 @@ public static class WindowedRenderer
 
         dynamicVertex.Dispose();
         dynamicIndex.Dispose();
+        if (entitySkinCreated)
+        {
+            entitySkinBindGroup.Dispose();
+            entitySkinView.Dispose();
+            entitySkinGpu.Dispose();
+        }
         uiVertex.Dispose();
         uiIndex.Dispose();
         uiTransformBuffer.Dispose();

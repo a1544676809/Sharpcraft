@@ -393,6 +393,11 @@ internal static class WindowCommand
         });
 
         // Without an atlas there is no cell to sample, so entity boxes are simply not drawn.
+        var entitySkin = Sharpcraft.Client.Render.EntitySkinTexture.Load(resources);
+        var entitySkinSprite = entitySkin is { } skin
+            ? new Sharpcraft.Client.Assets.SpriteRect(0, 0, skin.Width, skin.Height, 1) { U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f }
+            : (Sharpcraft.Client.Assets.SpriteRect?)null;
+        var modelMesher = new Sharpcraft.Client.Render.EntityModelMesher();
         var entitySource = entitySprite is { } sprite
             ? new Func<DynamicGeometry>(() =>
             {
@@ -417,7 +422,9 @@ internal static class WindowCommand
                     Console.WriteLine($"entity cull: candidates={states.Length} visible={visibleEntities.Count} culled={states.Length - visibleEntities.Count}");
                 }
 
-                return entityMesher.Build(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), sprite);
+                return entitySkin is { } skinModel
+                    ? modelMesher.Build(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), entitySkinSprite!, skinModel.Width, skinModel.Height)
+                    : entityMesher.Build(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), sprite);
             })
             : null;
 
@@ -632,6 +639,7 @@ internal static class WindowCommand
             expectedChunks: InteractiveSession.ExpectedChunkCount(),
             dynamicGeometry: entitySource,
             glyphTexture: glyphTexture,
+            entitySkinTexture: entitySkin,
             spriteTextures: guiSprites?.Textures,
             textureSource: uiTextures,
             atlasSource: atlasSource,
