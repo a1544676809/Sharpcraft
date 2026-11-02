@@ -442,3 +442,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-414 | **Villager 模型转译**：按 VillagerModel.createBodyModel 建 head/hat、body/jacket、nose、3 个交叉手臂 cube（共享 pivot + X rotation）、双腿；整体 scale 0.9375，type id 143 | `VillagerModel` | Client 588/沙盒截图 | `Client/Render/{VillagerModelDefinition,EntityModelResolver}` | 进行中 |
 | T-415 | **Villager 手臂左右修正**：源模型 left_arm=-6/right_arm=+6，但游戏路径缺少原版 `scale(-1,..)`，改为 left_arm=+6/right_arm=-6；沙盒重验 | `VillagerModel` | 沙盒截图 | `Client/Render/VillagerModelDefinition` | 完成 |
 | T-416 | **Villager 左右臂语义修正**：原版 left_arm=-X/mirror=true、right_arm=+X/mirror=false；此前错误地只交换位置，导致手臂纹理/方向仍反 | `VillagerModel` | 沙盒截图 | `Client/Render/VillagerModelDefinition` | 完成 |
+| T-417 | **Villager 手臂 Y 修正**：原版手臂 cube 局部 y=-2..6，对应 Bottom=15（此前误写 19，导致手臂抬高/穿到躯干后）；沙盒重验 | `VillagerModel` | 沙盒截图 | `Client/Render/VillagerModelDefinition` | 完成 |
