@@ -61,8 +61,9 @@ public sealed class EntityModelMesher
                 var bottom = part.Bottom * px;
                 var halfW = part.Width * px * 0.5f;
                 var halfD = part.Depth * px * 0.5f;
-                var min = new Vector3(feet.X + centreX - halfW, feet.Y + bottom, feet.Z + centreZ - halfD);
-                var max = new Vector3(feet.X + centreX + halfW, feet.Y + bottom + (part.Height * px), feet.Z + centreZ + halfD);
+                var grow = part.Grow * px;
+                var min = new Vector3(feet.X + centreX - halfW - grow, feet.Y + bottom - grow, feet.Z + centreZ - halfD - grow);
+                var max = new Vector3(feet.X + centreX + halfW + grow, feet.Y + bottom + (part.Height * px) + grow, feet.Z + centreZ + halfD + grow);
                 if (onlyPart is not null && part.Name != onlyPart) continue;
                 if (excludedPart is not null && part.Name == excludedPart) continue;
                 var partSprite = sprite;

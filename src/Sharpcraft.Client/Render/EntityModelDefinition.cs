@@ -46,6 +46,11 @@ public sealed class EntityModelDefinition
 
             foreach (var part in Parts)
             {
+                if (part.TexturePath is { Length: > 0 } partTexture)
+                {
+                    yield return partTexture;
+                }
+
                 if (part.OverlayLayers is null)
                 {
                     continue;

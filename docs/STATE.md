@@ -2219,3 +2219,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Pig 模型转译（T-424）：head/snout + rotated body + 四腿，variant 纹理 pig_temperate。
 - 2026-11-02 Sheep 模型转译（T-425）：Quadruped + wool overlay，沙盒已验证。
 - 2026-11-02 Sheep wool head 修正（T-426）：wool_head 独立 part，脸/腿恢复。
+- 2026-11-02 Sheep 基础腿/羊毛组修正（T-427）：4×12×4 base legs + 独立 wool parts，脸/腿恢复。
