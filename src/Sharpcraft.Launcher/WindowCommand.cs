@@ -393,7 +393,15 @@ internal static class WindowCommand
         });
 
         // Without an atlas there is no cell to sample, so entity boxes are simply not drawn.
-        var entitySkin = Sharpcraft.Client.Render.EntitySkinTexture.Load(resources);
+        var customSkinPath = Environment.GetEnvironmentVariable("MC_PLAYER_SKIN");
+        Sharpcraft.Framework.Rendering.TextureData? customSkin = null;
+        if (customSkinPath is { Length: > 0 } && File.Exists(customSkinPath))
+        {
+            var skinImage = Sharpcraft.Common.Imaging.PngDecoder.Decode(File.ReadAllBytes(customSkinPath));
+            customSkin = new Sharpcraft.Framework.Rendering.TextureData(skinImage.Width, skinImage.Height, skinImage.Pixels);
+        }
+
+        var entitySkin = customSkin ?? Sharpcraft.Client.Render.EntitySkinTexture.Load(resources);
         var entitySkinSprite = entitySkin is { } skin
             ? new Sharpcraft.Client.Assets.SpriteRect(0, 0, skin.Width, skin.Height, 1) { U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f }
             : (Sharpcraft.Client.Assets.SpriteRect?)null;
@@ -423,7 +431,7 @@ internal static class WindowCommand
                 }
 
                 return entitySkin is { } skinModel
-                    ? modelMesher.Build(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), entitySkinSprite!, skinModel.Width, skinModel.Height)
+                    ? modelMesher.Build(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), entitySkinSprite!, skinModel.Width == 1600 ? 64 : skinModel.Width, skinModel.Height == 1600 ? 64 : skinModel.Height)
                     : entityMesher.Build(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), sprite);
             })
             : null;

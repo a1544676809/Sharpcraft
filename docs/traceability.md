@@ -411,3 +411,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-383 | **校准结果固化**：将沙盒导出的统一面变换（DOWN/UP 180°、WEST/NORTH/EAST/SOUTH FlipH）写入 `PlayerModelDefinition.DefaultFaceTransforms`，`EntityModelMesher` 在无显式 transforms 时使用它 | `%TEMP%\sharpcraft-face-state.json`、`docs/modules/entity-render.md` | 构建通过 | `Client/Render/{PlayerModelDefinition,EntityModelMesher}` | 已完成 |
 | T-384 | **模板皮肤支持**：沙盒把 1600×1600 的 `template.png` 识别为逻辑 64×64，按模板色块显示各面区域，便于逐面对照 | `template.png` | 沙盒窗口截图验证 | `tools/Sharpcraft.EntityModelSandbox/SandboxWindow.cs` | 已完成 |
 | T-385 | **模板 UV 逻辑尺寸修正**：`SandboxWindow` 把 1600×1600 模板按逻辑 64×64 传给 mesher，修正之前用 1600 做 UV 分母导致只采到纯色区域的问题；模板文字现能正确显示 | `template.png` | 沙盒截图显示 FACE HEAD/FRONT BODY | `tools/Sharpcraft.EntityModelSandbox/SandboxWindow.cs` | 已完成 |
+| T-386 | **游戏模板皮肤启动**：启动器支持 `MC_PLAYER_SKIN` 直接覆盖玩家皮肤；1600×1600 模板按逻辑 64×64 传 mesher；双客户端游戏内已显示模板标签 | `template.png` | 游戏截图显示 FACE HEAD 标签 | `Launcher/WindowCommand`、`Client/Render/EntityModelMesher` | 已完成 |
