@@ -37,6 +37,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheBlazeTypeResolvesToHeadAndTwelveRods()
+    {
+        var definition = EntityModelResolver.Resolve(BlazeModelDefinition.BlazeEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("blaze", definition.Name);
+        Assert.Equal(13, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheIllagerVariantsReuseIllagerGeometry()
     {
         Assert.Equal("vindicator", EntityModelResolver.Resolve(IllagerModelDefinition.VindicatorEntityTypeId).Name);

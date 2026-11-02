@@ -489,3 +489,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-462 | **Iron Golem 模型转译**：IronGolemModel root head/body/双臂/双腿，头部含鼻、body 含 lower cube grow0.5；纹理 `entity/iron_golem/iron_golem`，type id 71 | `IronGolemModel` | Client 616/沙盒截图 | `Client/Render/{IronGolemModelDefinition,EntityModelResolver}` | 进行中 |
 | T-463 | **Illager 变体**：Vindicator/Evoker/Pillager 复用 IllagerModel 几何，纹理 `vindicator/evoker/pillager`，type id 144/47/104 | `IllagerModel` | Client 617/沙盒截图 | `Client/Render/{IllagerModelDefinition,EntityModelResolver}` | 进行中 |
 | T-464 | **Wandering Trader**：复用 Villager 几何与 scale，纹理 `entity/wandering_trader/wandering_trader`，type id 145 | `WanderingTraderRenderer` | Client 618 | `Client/Render/{VillagerModelDefinition,EntityModelResolver}` | 进行中 |
+| T-465 | **Blaze 模型转译**：BlazeModel head + 12 root rods，纹理 `entity/blaze/blaze`，type id 14 | `BlazeModel` | Client 619/沙盒截图 | `Client/Render/{BlazeModelDefinition,EntityModelResolver}` | 进行中 |
