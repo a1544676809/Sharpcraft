@@ -2257,3 +2257,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Illager 变体（T-463）：Vindicator/Evoker/Pillager。
 - 2026-11-02 Wandering Trader（T-464）：复用 Villager + wandering_trader。
 - 2026-11-02 Blaze 模型转译（T-465）：head + 12 rods，沙盒已验证。
+- 2026-11-02 Turtle 模型转译（T-466）：root parts + HasEgg。

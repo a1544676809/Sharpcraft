@@ -67,6 +67,7 @@ public sealed class EntityModelMesher
                 if (onlyPart is not null && part.Name != onlyPart) continue;
                 if (excludedPart is not null && part.Name == excludedPart) continue;
                 if (!entity.HasChest && (part.Name == "right_chest" || part.Name == "left_chest")) continue;
+                if (!entity.HasEgg && part.Name == "egg_belly") continue;
                 var partSprite = sprite;
                 var partSkinWidth = skinWidthForModel;
                 var partSkinHeight = skinHeightForModel;

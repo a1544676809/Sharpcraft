@@ -38,7 +38,8 @@ internal static class SandboxWindow
         var model = EntityModelResolver.Resolve(typeId);
         var sprite = atlas.Get(model.TexturePath) ?? throw new InvalidDataException($"skin {model.TexturePath} missing from atlas");
         var entity = new EntityRenderState(1, typeId, 0f, 0f, 0f, 0f, 0f,
-            HasChest: Environment.GetEnvironmentVariable("MC_SANDBOX_CHEST") == "1");
+            HasChest: Environment.GetEnvironmentVariable("MC_SANDBOX_CHEST") == "1",
+            HasEgg: Environment.GetEnvironmentVariable("MC_SANDBOX_EGG") == "1");
         var mesher = new EntityModelMesher();
         var state = new Dictionary<string, FaceUvTransform>();
         var statePath = Path.Combine(Path.GetTempPath(), "sharpcraft-face-state.json");

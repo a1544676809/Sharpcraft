@@ -37,6 +37,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheTurtleTypeResolvesToItsParts()
+    {
+        var definition = EntityModelResolver.Resolve(TurtleModelDefinition.TurtleEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("turtle", definition.Name);
+        Assert.Equal(8, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheBlazeTypeResolvesToHeadAndTwelveRods()
     {
         var definition = EntityModelResolver.Resolve(BlazeModelDefinition.BlazeEntityTypeId);

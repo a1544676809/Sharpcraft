@@ -59,6 +59,7 @@ public static class EntityModelResolver
         [IllagerModelDefinition.EvokerEntityTypeId] = IllagerModelDefinition.Evoker,
         [IllagerModelDefinition.PillagerEntityTypeId] = IllagerModelDefinition.Pillager,
         [BlazeModelDefinition.BlazeEntityTypeId] = BlazeModelDefinition.Definition,
+        [TurtleModelDefinition.TurtleEntityTypeId] = TurtleModelDefinition.Definition,
         [HumanoidMobModelDefinition.HuskEntityTypeId] = HumanoidMobModelDefinition.Husk,
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie
     };
