@@ -68,7 +68,7 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("horse", definition.Name);
-        Assert.Equal(10, definition.Parts.Count);
+        Assert.Equal(12, definition.Parts.Count);
     }
 
     [Fact]
