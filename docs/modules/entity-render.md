@@ -91,3 +91,12 @@ P1 只做**静态姿态 + 朝向**，明确排除骨骼动画、物品装备渲�
 - [ ] 玩家静态模型定义/网格/纹理接入（本模块下一片）
 - [ ] 名称牌高度改为真实模型 `nameTagAttachment`
 - [ ] 其它实体类型模型（P1 后）
+
+## 5.1 纹理坐标证据（避免再次猜测）
+
+- `PngDecoder` 明确输出 **row-major RGBA8**，首行是图像顶部（`docs/.../PngDecoder.cs` 的 `RgbaImage` 注释）；
+- `SpriteAtlasBuilder` 明确约定 `V0` 是 sprite 的顶行、mesh 的 `v=0` 是面的顶边（`src/Sharpcraft.Client/Assets/SpriteAtlas.cs` 注释）；
+- 地形 `terrain.wgsl` 使用同一 `TextureData`/`SpriteRect`/`textureSample` 路径，块纹理显示正常，说明 WGPU 纹理坐标 `(0,0)` 顶部与本地图像行序一致；
+- 原版 `ModelPart.Polygon` 的 UV 赋值是：
+  `vertices[0]=(u1,v0)`、`vertices[1]=(u0,v0)`、`vertices[2]=(u0,v1)`、`vertices[3]=(u1,v1)`；
+- 因此 skin 不应做全局 `1-v` 翻转；之前该做法把面采样到透明区域，导致玩家消失。正确做法是保持 `SpriteRect` 顶部约定，按 `ModelPart.Polygon` 的顶点顺序生成 UV。

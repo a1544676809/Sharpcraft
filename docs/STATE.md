@@ -2152,3 +2152,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 皮肤 UV 修正（T-358）：SOUTH/NORTH UV 按 ModelPart.Cube；wide/slim 选择待补。
 - 2026-11-02 实体皮肤 UV 上下方向修正（T-359）：双客户端模型皮肤正常。
 - 2026-11-02 玩家皮肤面序/U 方向与手臂中心修正（T-360）；双客户端验证中。
+- 2026-11-02 实体纹理坐标依据核实（T-361）：禁止全局 skin V 翻转；按 ModelPart.Polygon 顶点顺序。
