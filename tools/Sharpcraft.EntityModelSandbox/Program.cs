@@ -28,20 +28,32 @@ var states = new[]
 };
 var mesher = new EntityModelMesher();
 var geometry = mesher.Build(states, sprite, image.Width, image.Height);
-var request = new FrameRequest(
-    Width: 512,
-    Height: 512,
-    Vertices: geometry.Vertices.AsSpan(0, geometry.VertexFloats).ToArray(),
-    Indices: geometry.Indices.AsSpan(0, geometry.IndexCount).ToArray(),
-    ClearColour: new System.Numerics.Vector4(0.55f, 0.72f, 0.95f, 1f),
-    CameraPosition: new System.Numerics.Vector3(0f, 1.1f, -3f),
-    CameraTarget: new System.Numerics.Vector3(0f, 1.0f, 0f),
-    FieldOfViewDegrees: 70f)
+var views = new (string Name, System.Numerics.Vector3 Eye, System.Numerics.Vector3 Target)[]
 {
-    Atlas = skin,
-    SkipGradientSky = true
+    ("front", new(0f, 1.1f, -3f), new(0f, 1.0f, 0f)),
+    ("back", new(0f, 1.1f, 3f), new(0f, 1.0f, 0f)),
+    ("left", new(-3f, 1.1f, 0f), new(0f, 1.0f, 0f)),
+    ("right", new(3f, 1.1f, 0f), new(0f, 1.0f, 0f)),
+    ("shoulders", new(0f, 2.3f, -2.5f), new(0f, 1.2f, 0f))
 };
-var frame = OffscreenRenderer.Render(request);
-var output = Path.Combine(Path.GetTempPath(), "entity-model-sandbox.png");
-File.WriteAllBytes(output, PngEncoder.EncodeRgba(frame.Width, frame.Height, frame.Rgba));
-Console.WriteLine($"sandbox frame written to {output} ({frame.AdapterName})");
+
+foreach (var view in views)
+{
+    var request = new FrameRequest(
+        Width: 512,
+        Height: 512,
+        Vertices: geometry.Vertices.AsSpan(0, geometry.VertexFloats).ToArray(),
+        Indices: geometry.Indices.AsSpan(0, geometry.IndexCount).ToArray(),
+        ClearColour: new System.Numerics.Vector4(0.55f, 0.72f, 0.95f, 1f),
+        CameraPosition: view.Eye,
+        CameraTarget: view.Target,
+        FieldOfViewDegrees: 70f)
+    {
+        Atlas = skin,
+        SkipGradientSky = true
+    };
+    var frame = OffscreenRenderer.Render(request);
+    var output = Path.Combine(Path.GetTempPath(), $"entity-model-{view.Name}.png");
+    File.WriteAllBytes(output, PngEncoder.EncodeRgba(frame.Width, frame.Height, frame.Rgba));
+    Console.WriteLine($"sandbox {view.Name} written to {output} ({frame.AdapterName})");
+}
