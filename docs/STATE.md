@@ -2192,3 +2192,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Skeleton 模型转译（T-397）：Humanoid definition 注册 type id 118，待游戏观察。
 - 2026-11-02 Skeleton 模型修正（T-398）：2×12×2 四肢、64×32 纹理；待游戏观察。
 - 2026-11-02 实体无背面剔除（T-399）：entity pipeline `CullMode.None`，待游戏观察骷髅。
+- 2026-11-02 沙盒统一资源/模型切换（T-400）：MC_SANDBOX_MODEL=player/zombie/skeleton，texture 走 EntitySkinLibrary。

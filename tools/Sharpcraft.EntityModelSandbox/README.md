@@ -20,3 +20,18 @@ dotnet run --project tools/Sharpcraft.EntityModelSandbox -c Release
 
 
 `template.png` 这类 1600×1600（25× 放大）的 UV 模板会被识别为逻辑 64×64，可用 `MC_SANDBOX_SKIN` 指向它启动。
+
+
+## 模型与纹理
+
+沙盒使用游戏同一条资源路径：`MC_ASSETS_PACK` → `ResourceManager` → `EntitySkinLibrary`。
+
+- `MC_SANDBOX_MODEL=player|zombie|skeleton` 选择注册模型；
+- 纹理由 `EntityModelDefinition.TexturePath` 自动解析；
+- 只有需要临时覆盖玩家皮肤时才设置 `MC_SANDBOX_SKIN`。
+
+```powershell
+$env:MC_ASSETS_PACK="C:\path\to\minecraft-26.3.pack.zip"
+$env:MC_SANDBOX_MODEL="skeleton"
+dotnet run --project tools/Sharpcraft.EntityModelSandbox -c Release -- --window
+```

@@ -30,6 +30,19 @@ public static class EntityModelResolver
     public static EntityModelDefinition Resolve(int typeId) =>
         TryResolve(typeId) ?? Placeholder;
 
+    public static int? FindTypeId(string name)
+    {
+        foreach (var pair in Models)
+        {
+            if (string.Equals(pair.Value.Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                return pair.Key;
+            }
+        }
+
+        return null;
+    }
+
     public static void Register(int typeId, EntityModelDefinition definition)
     {
         ArgumentNullException.ThrowIfNull(definition);

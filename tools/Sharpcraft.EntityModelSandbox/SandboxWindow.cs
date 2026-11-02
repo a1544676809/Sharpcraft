@@ -3,8 +3,10 @@
 
 using System.Numerics;
 using System.Text.Json;
+using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
+using Sharpcraft.Common.Imaging;
 using Sharpcraft.Framework.Platform;
 using Sharpcraft.Framework.Rendering;
 
@@ -20,14 +22,22 @@ internal static class SandboxWindow
 
     public static void Run()
     {
-        var skin = SandboxServer.LoadSkin();
-        var logicalWidth = skin.Width == 1600 ? 64 : skin.Width;
-        var logicalHeight = skin.Height == 1600 ? 64 : skin.Height;
-        var sprite = new Sharpcraft.Client.Assets.SpriteRect(0, 0, skin.Width, skin.Height, 1)
+        using var resources = CreateResourceManager();
+        TextureData? playerOverride = null;
+        var customSkinPath = Environment.GetEnvironmentVariable("MC_SANDBOX_SKIN");
+        if (customSkinPath is { Length: > 0 } && File.Exists(customSkinPath))
         {
-            U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f
-        };
-        var entity = new EntityRenderState(1, EntityPlaceholderMesher.PlayerEntityTypeId, 0f, 0f, 0f, 0f, 0f);
+            var image = PngDecoder.Decode(File.ReadAllBytes(customSkinPath));
+            playerOverride = new TextureData(image.Width, image.Height, image.Pixels);
+        }
+
+        var skinLibrary = EntitySkinLibrary.Load(resources, playerOverride);
+        var atlas = skinLibrary.Atlas ?? throw new InvalidDataException("no entity skin could be loaded from the asset pack");
+        var requestedModel = Environment.GetEnvironmentVariable("MC_SANDBOX_MODEL") ?? "player";
+        var typeId = EntityModelResolver.FindTypeId(requestedModel) ?? EntityPlaceholderMesher.PlayerEntityTypeId;
+        var model = EntityModelResolver.Resolve(typeId);
+        var sprite = atlas.Get(model.TexturePath) ?? throw new InvalidDataException($"skin {model.TexturePath} missing from atlas");
+        var entity = new EntityRenderState(1, typeId, 0f, 0f, 0f, 0f, 0f);
         var mesher = new EntityModelMesher();
         var state = new Dictionary<string, FaceUvTransform>();
         var statePath = Path.Combine(Path.GetTempPath(), "sharpcraft-face-state.json");
@@ -42,13 +52,15 @@ internal static class SandboxWindow
 
         DynamicGeometry Build()
         {
-            var partName = PlayerModelDefinition.AdultParts[partIndex].Name;
-            var geometry = mesher.Build([entity], sprite, logicalWidth, logicalHeight, state,
+            var parts = model.Parts;
+            var partName = parts[partIndex % parts.Count].Name;
+            var geometry = mesher.Build([entity], sprite, sprite.Width, sprite.Height, state,
                 onlyPart: isolateSelectedPart ? partName : null,
-                excludedPart: hideSelectedPart ? partName : null);
+                excludedPart: hideSelectedPart ? partName : null,
+                skinAtlas: atlas);
             if (!hideSelectedPart)
             {
-                AppendSelectionHighlight(geometry, sprite, PlayerModelDefinition.AdultParts[partIndex], Faces[faceIndex]);
+                AppendSelectionHighlight(geometry, sprite, parts[partIndex % parts.Count], Faces[faceIndex]);
             }
 
             return geometry;
@@ -65,7 +77,7 @@ internal static class SandboxWindow
             CameraTarget: new Vector3(0f, 1.0f, 0f),
             FieldOfViewDegrees: 60f)
         {
-            Atlas = skin,
+            Atlas = atlas.Texture,
             SkipGradientSky = true,
             NearestTextureFilter = true
         };
@@ -80,12 +92,12 @@ internal static class SandboxWindow
 
                 if (input.JustPressed(InputKey.PageDown))
                 {
-                    partIndex = (partIndex + 1) % PlayerModelDefinition.AdultParts.Length;
+                    partIndex = (partIndex + 1) % model.Parts.Count;
                     faceIndex = 0;
                 }
                 else if (input.JustPressed(InputKey.PageUp))
                 {
-                    partIndex = (partIndex - 1 + PlayerModelDefinition.AdultParts.Length) % PlayerModelDefinition.AdultParts.Length;
+                    partIndex = (partIndex - 1 + model.Parts.Count) % model.Parts.Count;
                     faceIndex = 0;
                 }
 
@@ -107,7 +119,7 @@ internal static class SandboxWindow
                     faceIndex = (faceIndex - 1 + Faces.Length) % Faces.Length;
                 }
 
-                var key = PlayerModelDefinition.AdultParts[partIndex].Name + "." + Faces[faceIndex];
+                var key = model.Parts[partIndex % model.Parts.Count].Name + "." + Faces[faceIndex];
                 var current = state.TryGetValue(key, out var value) ? value : FaceUvTransform.Identity;
                 if (input.JustPressed(InputKey.Space))
                 {
@@ -126,7 +138,7 @@ internal static class SandboxWindow
                 state[key] = current;
                 if (changed || input.JustPressed(InputKey.T))
                 {
-                    DumpState(statePath, state);
+                    DumpState(statePath, state, model.Parts);
                 }
 
                 var cursor = input.CursorInCanvas;
@@ -157,7 +169,7 @@ internal static class SandboxWindow
 
         string Title()
         {
-            var part = PlayerModelDefinition.AdultParts[partIndex].Name;
+            var part = model.Parts[partIndex % model.Parts.Count].Name;
             var face = Faces[faceIndex];
             var current = state.TryGetValue(part + "." + face, out var value)
                 ? value
@@ -166,10 +178,10 @@ internal static class SandboxWindow
         }
     }
 
-    private static void DumpState(string path, IReadOnlyDictionary<string, FaceUvTransform> state)
+    private static void DumpState(string path, IReadOnlyDictionary<string, FaceUvTransform> state, IReadOnlyList<EntityModelPart> parts)
     {
         var all = new SortedDictionary<string, FaceUvTransform>(StringComparer.Ordinal);
-        foreach (var part in PlayerModelDefinition.AdultParts)
+        foreach (var part in parts)
         {
             foreach (var face in Faces)
             {
@@ -244,5 +256,19 @@ internal static class SandboxWindow
         geometry.Vertices[o++] = 1f;
         geometry.Vertices[o++] = 0f;
         geometry.VertexFloats = o;
+    }
+
+    private static ResourceManager CreateResourceManager()
+    {
+        var pack = Environment.GetEnvironmentVariable("MC_ASSETS_PACK")
+            ?? throw new InvalidOperationException("MC_ASSETS_PACK must point at a Sharpcraft asset pack");
+        var stack = new AssetStack { Policy = MissingResourcePolicy.Warn }
+            .Add(new BuiltInFallbackSource());
+        if (File.Exists(pack))
+        {
+            stack.Add(new ZipAssetSource(pack, "base-pack"));
+        }
+
+        return new ResourceManager(stack, 0);
     }
 }
