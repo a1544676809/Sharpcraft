@@ -2217,3 +2217,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Player 模型定义迁移（T-422）：FromVanilla 工厂，Player 使用原版 pivot/cube 坐标；其余模型继续迁移。
 - 2026-11-02 全部实体模型定义迁移（T-423）：现有模型统一 FromVanilla raw 坐标。
 - 2026-11-02 Pig 模型转译（T-424）：head/snout + rotated body + 四腿，variant 纹理 pig_temperate。
+- 2026-11-02 Sheep 模型转译（T-425）：Quadruped + wool overlay，沙盒已验证。

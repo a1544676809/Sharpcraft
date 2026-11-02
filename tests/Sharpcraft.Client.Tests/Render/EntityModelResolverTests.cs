@@ -41,6 +41,17 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheSheepTypeResolvesToAQuadrupedWithWool()
+    {
+        var definition = EntityModelResolver.Resolve(SheepModelDefinition.SheepEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("sheep", definition.Name);
+        Assert.Equal(6, definition.Parts.Count);
+        Assert.Contains("entity/sheep/sheep_wool", definition.TexturePaths);
+    }
+
+    [Fact]
     public void ThePigTypeResolvesToAQuadrupedDefinition()
     {
         var definition = EntityModelResolver.Resolve(PigModelDefinition.PigEntityTypeId);

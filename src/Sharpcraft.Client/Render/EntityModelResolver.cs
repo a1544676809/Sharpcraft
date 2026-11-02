@@ -26,6 +26,7 @@ public static class EntityModelResolver
         [MagmaCubeModelDefinition.MagmaCubeEntityTypeId] = MagmaCubeModelDefinition.Definition,
         [SpiderModelDefinition.SpiderEntityTypeId] = SpiderModelDefinition.Definition,
         [PigModelDefinition.PigEntityTypeId] = PigModelDefinition.Definition,
+        [SheepModelDefinition.SheepEntityTypeId] = SheepModelDefinition.Definition,
         [VillagerModelDefinition.VillagerEntityTypeId] = VillagerModelDefinition.Definition,
         [HumanoidMobModelDefinition.HuskEntityTypeId] = HumanoidMobModelDefinition.Husk,
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie
