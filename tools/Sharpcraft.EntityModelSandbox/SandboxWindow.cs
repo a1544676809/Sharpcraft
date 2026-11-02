@@ -60,6 +60,21 @@ internal static class SandboxWindow
             0,
             cameraPerFrame: window =>
             {
+                var focus = SandboxServer.TakeFocus();
+                if (focus is not null)
+                {
+                    (yaw, pitch) = focus.Face switch
+                    {
+                        "SOUTH" => (MathF.PI, 0f),
+                        "EAST" => (MathF.PI / 2f, 0f),
+                        "WEST" => (-MathF.PI / 2f, 0f),
+                        "UP" => (0f, 1.15f),
+                        "DOWN" => (0f, -1.15f),
+                        _ => (0f, 0f)
+                    };
+                    hasLast = false;
+                }
+
                 var input = window.Input;
                 var cursor = input.CursorInCanvas;
                 if (input.LeftMouseDown)

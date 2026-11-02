@@ -18,6 +18,7 @@ internal static class SandboxServer
     private const string Prefix = "http://127.0.0.1:19876/";
     private static byte[] _skinPng = [];
     private static byte[] _current = [];
+    private static FocusState? _focus;
 
     public static void Run()
     {
@@ -64,6 +65,7 @@ internal static class SandboxServer
             using var document = JsonDocument.Parse(json);
             foreach (var part in document.RootElement.EnumerateObject())
             {
+                if (part.Name == "focus") continue;
                 foreach (var face in part.Value.EnumerateObject())
                 {
                     var value = face.Value;
@@ -72,6 +74,11 @@ internal static class SandboxServer
                         value.GetProperty("flipH").GetBoolean(),
                         value.GetProperty("flipV").GetBoolean());
                 }
+            }
+
+            if (document.RootElement.TryGetProperty("focus", out var focus))
+            {
+                _focus = new FocusState(focus.GetProperty("part").GetString() ?? "head", focus.GetProperty("face").GetString() ?? "NORTH");
             }
 
             _current = Render(skin, state);
@@ -168,4 +175,11 @@ internal static class SandboxServer
     }
 
     internal sealed record FaceState(int Rot, bool FlipH, bool FlipV);
+    internal sealed record FocusState(string Part, string Face);
+    internal static FocusState? TakeFocus()
+    {
+        var focus = _focus;
+        _focus = null;
+        return focus;
+    }
 }

@@ -197,6 +197,7 @@ function renderFaces() {
     const actions = document.createElement("div"); actions.className = "face-actions";
     const mk = (label, fn) => { const b=document.createElement("button"); b.textContent=label; b.onclick=fn; actions.appendChild(b); return b; };
     mk("↻ 90°", () => { state[activePart][face].rot = (state[activePart][face].rot + 90) % 360; renderFaces(); });
+    mk("👁 转到", () => { syncState({ part: activePart, face }); });
     const hb = mk("↔ 翻H", () => { state[activePart][face].flipH = !state[activePart][face].flipH; renderFaces(); });
     const vb = mk("↕ 翻V", () => { state[activePart][face].flipV = !state[activePart][face].flipV; renderFaces(); });
     const meta = document.createElement("div"); meta.className = "face-meta";
@@ -215,10 +216,12 @@ function renderFaces() {
 
 const SANDBOX = "http://127.0.0.1:19876";
 let syncInFlight = false;
-async function syncState() {
+async function syncState(focus) {
   const frame = document.getElementById("sandboxFrame");
   try {
-    await fetch(SANDBOX + "/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(state) });
+    const payload = Object.assign({}, state);
+    if (focus) payload.focus = focus;
+    await fetch(SANDBOX + "/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
   } catch (_) {
     if (frame) frame.alt = "sandbox 未运行";
   }
