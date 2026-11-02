@@ -62,6 +62,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheSquidTypeResolvesToItsParts()
+    {
+        var definition = EntityModelResolver.Resolve(SquidModelDefinition.SquidEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("squid", definition.Name);
+        Assert.Equal(9, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheSnowGolemTypeResolvesToItsParts()
     {
         var definition = EntityModelResolver.Resolve(SnowGolemModelDefinition.SnowGolemEntityTypeId);

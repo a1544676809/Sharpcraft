@@ -2232,3 +2232,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Goat 模型转译（T-438）：head/body/legs，沙盒已验证。
 - 2026-11-02 Snow Golem 模型转译（T-439）：head/body/双臂 scale deformation，Rabbit 暂缓（嵌套层级）。
 - 2026-11-02 Snow Golem 手臂方向修正（T-440）：双臂朝下。
+- 2026-11-02 Squid 模型转译（T-441）：body + 8 tentacles。

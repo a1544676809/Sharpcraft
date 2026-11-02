@@ -37,6 +37,7 @@ public static class EntityModelResolver
         [PandaModelDefinition.PandaEntityTypeId] = PandaModelDefinition.Definition,
         [GoatModelDefinition.GoatEntityTypeId] = GoatModelDefinition.Definition,
         [SnowGolemModelDefinition.SnowGolemEntityTypeId] = SnowGolemModelDefinition.Definition,
+        [SquidModelDefinition.SquidEntityTypeId] = SquidModelDefinition.Definition,
         [VillagerModelDefinition.VillagerEntityTypeId] = VillagerModelDefinition.Definition,
         [HumanoidMobModelDefinition.HuskEntityTypeId] = HumanoidMobModelDefinition.Husk,
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie
