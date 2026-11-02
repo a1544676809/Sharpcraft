@@ -106,3 +106,13 @@ updated: 2026-11-02
 - `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/AbstractSignRenderer.java`
 - `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/DisplayRenderer.java`
 - `ref://mc-26.3-analysis/src/net/minecraft/client/gui/Font.java`
+
+## 9. 补充：glyph 四边形生成（BakedSheetGlyph）
+
+- 每个 glyph 的四边形不是“cell 矩形”：由 `GlyphInfo` 的 `left/right/up/down` 决定；
+- 粗体向右/向下扩展 `0.1` 像素；斜体按 `up/down` 做 `1 - 0.25 * metric` 的剪切；
+- 阴影通过 `shadowOffset` 额外提交一份 glyph（原版在 `renderChar` 中先画阴影，再画正文）；
+- 背景不是固定 cell：`Font.PreparedTextBuilder.markBackground` 用实际 advance 与字体高度 9 计算包围盒，背景 effect 放在 z=-0.01；
+- 因此，正确实现必须从字体度量生成**每个 glyph 的四角**，不能用 UI 的 `AddText`/`AddRectangle` 逐字近似。
+
+当前 `NameplateProjection + UiScreenLayout.AddText` 的名字牌仅作为临时观感验证，**应被世界文字 pass 替换**；告示牌/文本展示实体也不能用 UI 屏幕文本实现。
