@@ -50,7 +50,7 @@ public static class EntityModelResolver
         [HorseModelDefinition.SkeletonHorseEntityTypeId] = HorseModelDefinition.SkeletonHorse,
         [LlamaModelDefinition.LlamaEntityTypeId] = LlamaModelDefinition.Definition,
         [VillagerModelDefinition.VillagerEntityTypeId] = VillagerModelDefinition.Definition,
-        [VillagerModelDefinition.ZombieVillagerEntityTypeId] = VillagerModelDefinition.ZombieVillager,
+        [ZombieVillagerModelDefinition.ZombieVillagerEntityTypeId] = ZombieVillagerModelDefinition.Definition,
         [HumanoidMobModelDefinition.HuskEntityTypeId] = HumanoidMobModelDefinition.Husk,
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie
     };

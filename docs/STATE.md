@@ -2247,3 +2247,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 实体模型近似审计（T-453）：Horse/Fox/Wolf/Rabbit/Camel 标记为待层级化，不再新增近似。
 - 2026-11-02 Skeleton 变体（T-454）：Stray/Bogged/Wither Skeleton。
 - 2026-11-02 Zombie Villager（T-455）：复用 Villager + zombie_villager。
+- 2026-11-02 Zombie Villager 独立几何修正（T-456）：Humanoid 几何，不再复用 Villager。
