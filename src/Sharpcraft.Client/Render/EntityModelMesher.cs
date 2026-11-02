@@ -90,7 +90,15 @@ public sealed class EntityModelMesher
         var l1 = new Vector3(max.X, min.Y, max.Z);
         var l2 = new Vector3(max.X, max.Y, max.Z);
         var l3 = new Vector3(min.X, max.Y, max.Z);
-        FaceUvTransform T(string face) => transforms is not null && transforms.TryGetValue(part.Name + "." + face, out var value) ? value : FaceUvTransform.Identity;
+        FaceUvTransform T(string face)
+        {
+            var fallback = PlayerModelDefinition.DefaultFaceTransforms.TryGetValue(face, out var defaultTransform)
+                ? defaultTransform
+                : FaceUvTransform.Identity;
+            return transforms is not null && transforms.TryGetValue(part.Name + "." + face, out var value)
+                ? value
+                : fallback;
+        }
 
         var swapBodyDownUp = true;
         var d0u = swapBodyDownUp ? u22 : u2; var d0v = swapBodyDownUp ? v1 : v0;

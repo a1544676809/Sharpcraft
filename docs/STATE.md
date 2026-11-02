@@ -2175,3 +2175,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 全部部件 DOWN/UP 纹理互换（T-380）。
 - 2026-11-02 全部部件 WEST/EAST 纹理互换（T-381）。
 - 2026-11-02 沙盒面状态导出（T-382）：每次改面/按 T 写 `%TEMP%\sharpcraft-face-state.json`。
+- 2026-11-02 面 UV 校准结果固化（T-383）：DOWN/UP 180°，侧面 FlipH；游戏路径使用默认变换。

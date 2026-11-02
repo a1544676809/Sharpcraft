@@ -32,6 +32,17 @@ public static class PlayerModelDefinition
     /// <summary>Model height in pixels: head top is 32 pixels above the feet.</summary>
     public const float ModelPixels = 32f;
 
+    /// <summary>Final per-face UV transforms calibrated in the sandbox (identical for every adult part).</summary>
+    public static readonly IReadOnlyDictionary<string, FaceUvTransform> DefaultFaceTransforms = new Dictionary<string, FaceUvTransform>(StringComparer.Ordinal)
+    {
+        ["DOWN"] = new(180, false, false),
+        ["UP"] = new(180, false, false),
+        ["WEST"] = new(0, true, false),
+        ["NORTH"] = new(0, true, false),
+        ["EAST"] = new(0, true, false),
+        ["SOUTH"] = new(0, true, false)
+    };
+
     public static readonly EntityModelPart[] AdultParts =
     [
         new("head", 0f, 24f, 8f, 8f, 8f, 0, 0),

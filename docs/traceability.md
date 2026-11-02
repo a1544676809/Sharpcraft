@@ -408,3 +408,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-380 | **全部部件 DOWN/UP 纹理互换**：标准 64×64 skin 的 DOWN 面统一使用 bottom 区域、UP 使用 top 区域；去掉仅 body 的条件 | `template.png`、`ModelPart.Polygon` | 构建通过；窗口重启 | `Client/Render/EntityModelMesher` | 已完成 |
 | T-381 | **全部部件 WEST/EAST 纹理互换**：标准 skin 的 WEST 面使用右侧纹理、EAST 使用左侧纹理；交换两区域 UV 角点，几何不变 | `template.png`、`ModelPart.Polygon` | 构建通过；窗口重启 | `Client/Render/EntityModelMesher` | 已完成 |
 | T-382 | **沙盒面状态导出**：每次调整或按 `T` 将当前 6 部件×6 面的 `rot/flipH/flipV` 写入 `%TEMP%\sharpcraft-face-state.json`，可直接回填 `EntityModelMesher` | `docs/modules/entity-render.md` | 构建通过 | `tools/Sharpcraft.EntityModelSandbox/SandboxWindow.cs` | 已完成 |
+| T-383 | **校准结果固化**：将沙盒导出的统一面变换（DOWN/UP 180°、WEST/NORTH/EAST/SOUTH FlipH）写入 `PlayerModelDefinition.DefaultFaceTransforms`，`EntityModelMesher` 在无显式 transforms 时使用它 | `%TEMP%\sharpcraft-face-state.json`、`docs/modules/entity-render.md` | 构建通过 | `Client/Render/{PlayerModelDefinition,EntityModelMesher}` | 已完成 |
