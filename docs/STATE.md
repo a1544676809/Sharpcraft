@@ -2243,3 +2243,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Llama 模型转译（T-449）：head/body/chest/legs。
 - 2026-11-02 Llama chest 可见性（T-450）：HasChest 控制，默认隐藏。
 - 2026-11-02 Llama chest 开口修正（T-451）：rotationY=-π/2，开口朝外。
+- 2026-11-02 撤销 Camel 近似（T-452）：不交付近似模型，待层级变换后重做。
