@@ -2204,3 +2204,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Slime 模型转译（T-409）：inner cube + eyes/mouth + outer grow cube，沙盒已验证。
 - 2026-11-02 实体 transluent alpha 修复（T-410）：fs_entity_translucent 保留 sampled.a，Slime 半透明生效。
 - 2026-11-02 Slime outer cube 修正（T-411）：独立 outer_cube 8×8×8，纹理缺块修复。
+- 2026-11-02 Magma Cube 模型转译（T-412）：8 segments + inside cube，沙盒已验证。

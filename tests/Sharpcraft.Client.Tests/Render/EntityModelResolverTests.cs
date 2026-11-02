@@ -29,6 +29,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheMagmaCubeTypeResolvesToNineFlatParts()
+    {
+        var definition = EntityModelResolver.Resolve(MagmaCubeModelDefinition.MagmaCubeEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("magma_cube", definition.Name);
+        Assert.Equal(9, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheSlimeTypeResolvesToCubeBodyDefinition()
     {
         var definition = EntityModelResolver.Resolve(SlimeModelDefinition.SlimeEntityTypeId);

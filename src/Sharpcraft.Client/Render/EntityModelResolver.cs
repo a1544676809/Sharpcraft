@@ -23,6 +23,7 @@ public static class EntityModelResolver
         [HumanoidMobModelDefinition.EndermanEntityTypeId] = HumanoidMobModelDefinition.Enderman,
         [CreeperModelDefinition.CreeperEntityTypeId] = CreeperModelDefinition.Definition,
         [SlimeModelDefinition.SlimeEntityTypeId] = SlimeModelDefinition.Definition,
+        [MagmaCubeModelDefinition.MagmaCubeEntityTypeId] = MagmaCubeModelDefinition.Definition,
         [HumanoidMobModelDefinition.HuskEntityTypeId] = HumanoidMobModelDefinition.Husk,
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie
     };
