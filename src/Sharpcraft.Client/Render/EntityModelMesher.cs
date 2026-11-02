@@ -53,7 +53,7 @@ public sealed class EntityModelMesher
                 var max = new Vector3(feet.X + centreX + halfW, feet.Y + bottom + (part.Height * px), feet.Z + halfD);
                 if (onlyPart is not null && part.Name != onlyPart) continue;
                 if (excludedPart is not null && part.Name == excludedPart) continue;
-                AddPart(part, min, max, sprite, skinWidthForModel, skinHeightForModel, transforms, model.FaceTransforms, ref vertexFloats, ref indexCount);
+                AddPart(part, min, max, sprite, skinWidthForModel, skinHeightForModel, transforms, model.FaceTransforms, px, ref vertexFloats, ref indexCount);
             }
         }
 
@@ -75,6 +75,7 @@ public sealed class EntityModelMesher
         int skinHeight,
         IReadOnlyDictionary<string, FaceUvTransform>? transforms,
         IReadOnlyDictionary<string, FaceUvTransform> defaultTransforms,
+        float px,
         ref int vertexFloats,
         ref int indexCount)
     {
@@ -130,6 +131,27 @@ public sealed class EntityModelMesher
         AddFace(t1, t0, t3, t2, u2, v2, u1, v2, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("NORTH")); // NORTH
         AddFace(l1, t1, t2, l2, u1, v2, u0, v2, u0, v1, u1, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("EAST")); // EAST
         AddFace(l0, l1, l2, l3, u4, v2, u3, v2, u3, v1, u4, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("SOUTH")); // SOUTH
+
+        if (part.OverlayLayers is not null)
+        {
+            foreach (var layer in part.OverlayLayers)
+            {
+                var grow = layer.Grow * px;
+                var overlay = new EntityModelPart(
+                    part.Name,
+                    part.CentreX,
+                    part.Bottom,
+                    part.Width,
+                    part.Height,
+                    part.Depth,
+                    layer.TextureX,
+                    layer.TextureY,
+                    layer.Mirror || part.Mirror);
+                var overlayMin = new Vector3(min.X - grow, min.Y - grow, min.Z - grow);
+                var overlayMax = new Vector3(max.X + grow, max.Y + grow, max.Z + grow);
+                AddPart(overlay, overlayMin, overlayMax, skin, skinWidth, skinHeight, transforms, defaultTransforms, px, ref vertexFloats, ref indexCount);
+            }
+        }
     }
 
     private void AddFace(

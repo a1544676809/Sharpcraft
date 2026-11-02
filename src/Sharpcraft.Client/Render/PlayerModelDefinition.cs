@@ -21,6 +21,17 @@ public readonly record struct EntityModelPart(
     float Depth,
     int TextureX = 0,
     int TextureY = 0,
+    bool Mirror = false,
+    IReadOnlyList<EntityModelLayer>? OverlayLayers = null);
+
+/// <summary>
+/// An outer skin layer around one base cuboid, expressed as a uniform growth and its own texture offset.
+/// </summary>
+public readonly record struct EntityModelLayer(
+    string Name,
+    float Grow,
+    int TextureX,
+    int TextureY,
     bool Mirror = false);
 
 /// <summary>
@@ -45,12 +56,12 @@ public static class PlayerModelDefinition
 
     public static readonly EntityModelPart[] AdultParts =
     [
-        new("head", 0f, 24f, 8f, 8f, 8f, 0, 0),
-        new("body", 0f, 12f, 8f, 12f, 4f, 16, 16),
-        new("left_arm", -6f, 12f, 4f, 12f, 4f, 32, 48),
-        new("right_arm", 6f, 12f, 4f, 12f, 4f, 40, 16),
-        new("left_leg", -1.9f, 0f, 4f, 12f, 4f, 16, 48),
-        new("right_leg", 1.9f, 0f, 4f, 12f, 4f, 0, 16)
+        new("head", 0f, 24f, 8f, 8f, 8f, 0, 0, false, [new("hat", 0.5f, 32, 0)]),
+        new("body", 0f, 12f, 8f, 12f, 4f, 16, 16, false, [new("jacket", 0.25f, 16, 32)]),
+        new("left_arm", -6f, 12f, 4f, 12f, 4f, 32, 48, false, [new("left_sleeve", 0.25f, 48, 48)]),
+        new("right_arm", 6f, 12f, 4f, 12f, 4f, 40, 16, false, [new("right_sleeve", 0.25f, 40, 32)]),
+        new("left_leg", -1.9f, 0f, 4f, 12f, 4f, 16, 48, false, [new("left_pants", 0.25f, 0, 48)]),
+        new("right_leg", 1.9f, 0f, 4f, 12f, 4f, 0, 16, false, [new("right_pants", 0.25f, 0, 32)])
     ];
 
     public static readonly EntityModelDefinition Definition =

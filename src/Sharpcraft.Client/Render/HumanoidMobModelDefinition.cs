@@ -18,7 +18,7 @@ public static class HumanoidMobModelDefinition
         64,
         64,
         [
-            new("head", 0f, 24f, 8f, 8f, 8f, 0, 0),
+            new("head", 0f, 24f, 8f, 8f, 8f, 0, 0, false, [new("hat", 0.5f, 32, 0)]),
             new("body", 0f, 12f, 8f, 12f, 4f, 16, 16),
             new("left_arm", -6f, 12f, 4f, 12f, 4f, 40, 16, true),
             new("right_arm", 6f, 12f, 4f, 12f, 4f, 40, 16),
@@ -34,7 +34,7 @@ public static class HumanoidMobModelDefinition
         64,
         32,
         [
-            new("head", 0f, 24f, 8f, 8f, 8f, 0, 0),
+            new("head", 0f, 24f, 8f, 8f, 8f, 0, 0, false, [new("hat", 0.5f, 32, 0)]),
             new("body", 0f, 12f, 8f, 12f, 4f, 16, 16),
             new("left_arm", -5f, 12f, 2f, 12f, 2f, 40, 16, true),
             new("right_arm", 5f, 12f, 2f, 12f, 2f, 40, 16),
@@ -49,7 +49,7 @@ public static class HumanoidMobModelDefinition
         64,
         64,
         [
-            new("head", 0f, 24f, 8f, 8f, 8f, 0, 0),
+            new("head", 0f, 24f, 8f, 8f, 8f, 0, 0, false, [new("hat", 0.5f, 32, 0)]),
             new("body", 0f, 12f, 8f, 12f, 4f, 16, 16),
             new("left_arm", -6f, 12f, 4f, 12f, 4f, 40, 16, true),
             new("right_arm", 6f, 12f, 4f, 12f, 4f, 40, 16),
