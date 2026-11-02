@@ -2226,3 +2226,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Cat 模型转译（T-431）：head/body/tail/legs，scale0.8，沙盒已验证。
 - 2026-11-02 Ocelot 模型转译（T-432）：复用 Feline 几何 + ocelot 纹理。
 - 2026-11-02 Fox 模型转译（T-433）：head/body/legs/tail，沙盒已验证。
+- 2026-11-02 Fox tail 修正（T-434）：body 子变换合成，tail 回到身体后方。

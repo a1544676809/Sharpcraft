@@ -24,8 +24,9 @@ public static class FoxModelDefinition
             PlayerModelDefinition.FromVanilla("left_hind_leg", -1f, 17.5f, 7f, 2f, 0.5f, -1f, 2f, 6f, 2f, 4, 24),
             PlayerModelDefinition.FromVanilla("right_front_leg", -5f, 17.5f, 0f, 2f, 0.5f, -1f, 2f, 6f, 2f, 13, 24),
             PlayerModelDefinition.FromVanilla("left_front_leg", -1f, 17.5f, 0f, 2f, 0.5f, -1f, 2f, 6f, 2f, 4, 24),
-            PlayerModelDefinition.FromVanilla("tail", 0f, 16f, -6f, 2f, 0f, -1f, 4f, 9f, 5f, 30, 0,
-                rotationX: -MathF.PI / 2f, rotationZ: 0.05235988f)
+            // Body pivot (0,16,-6) + local tail offset (-4,15,-1) composed with body X rotation PI/2.
+            PlayerModelDefinition.FromVanilla("tail", -4f, 17f, 9f, 2f, 0f, -1f, 4f, 9f, 5f, 30, 0,
+                rotationX: -1.5183983f)
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/fox/fox");
