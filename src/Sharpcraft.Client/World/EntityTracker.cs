@@ -126,7 +126,26 @@ public sealed class TrackedEntity
 /// <param name="Z">Interpolated feet z.</param>
 /// <param name="Yaw">Interpolated yaw in degrees.</param>
 /// <param name="Pitch">Interpolated pitch in degrees.</param>
-public readonly record struct EntityRenderState(int Id, int TypeId, float X, float Y, float Z, float Yaw, float Pitch);
+/// <param name="ShowHat">Whether the player hat overlay is visible.</param>
+/// <param name="ShowJacket">Whether the player jacket overlay is visible.</param>
+/// <param name="ShowLeftSleeve">Whether the left sleeve overlay is visible.</param>
+/// <param name="ShowRightSleeve">Whether the right sleeve overlay is visible.</param>
+/// <param name="ShowLeftPants">Whether the left pants overlay is visible.</param>
+/// <param name="ShowRightPants">Whether the right pants overlay is visible.</param>
+public readonly record struct EntityRenderState(
+    int Id,
+    int TypeId,
+    float X,
+    float Y,
+    float Z,
+    float Yaw,
+    float Pitch,
+    bool ShowHat = true,
+    bool ShowJacket = true,
+    bool ShowLeftSleeve = true,
+    bool ShowRightSleeve = true,
+    bool ShowLeftPants = true,
+    bool ShowRightPants = true);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).

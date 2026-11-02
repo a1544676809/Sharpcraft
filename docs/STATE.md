@@ -2195,3 +2195,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 沙盒统一资源/模型切换（T-400）：MC_SANDBOX_MODEL=player/zombie/skeleton，texture 走 EntitySkinLibrary。
 - 2026-11-02 Husk 模型转译（T-401）：ZombieModel + 1.0625 scale，纹理 entity/zombie/husk，沙盒已验证。
 - 2026-11-02 人形双层纹理/overlay（T-402）：hat/jacket/sleeves/pants 定义与 mesher 扩边输出，待沙盒/游戏观察。
+- 2026-11-02 Player 透明/可见性（T-403）：实体 pipeline alpha blend，外层 show* 过滤。

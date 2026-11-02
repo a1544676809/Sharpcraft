@@ -2027,7 +2027,28 @@ public static class WindowedRenderer
             "vs_main"u8,
             shader,
             "fs_cutout"u8,
-            [new ColorTargetState(format)],
+            [
+                new ColorTargetState
+                {
+                    Format = format,
+                    WriteMask = ColorWriteMask.All,
+                    Blend = new WGPUBlendState
+                    {
+                        color = new WGPUBlendComponent
+                        {
+                            operation = WGPUBlendOperation.Add,
+                            srcFactor = WGPUBlendFactor.SrcAlpha,
+                            dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
+                        },
+                        alpha = new WGPUBlendComponent
+                        {
+                            operation = WGPUBlendOperation.Add,
+                            srcFactor = WGPUBlendFactor.One,
+                            dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
+                        }
+                    }
+                }
+            ],
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
             multisample: MultisampleState.Default,

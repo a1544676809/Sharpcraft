@@ -53,7 +53,7 @@ public sealed class EntityModelMesher
                 var max = new Vector3(feet.X + centreX + halfW, feet.Y + bottom + (part.Height * px), feet.Z + halfD);
                 if (onlyPart is not null && part.Name != onlyPart) continue;
                 if (excludedPart is not null && part.Name == excludedPart) continue;
-                AddPart(part, min, max, sprite, skinWidthForModel, skinHeightForModel, transforms, model.FaceTransforms, px, ref vertexFloats, ref indexCount);
+                AddPart(part, min, max, sprite, skinWidthForModel, skinHeightForModel, transforms, model.FaceTransforms, entity, px, ref vertexFloats, ref indexCount);
             }
         }
 
@@ -75,6 +75,7 @@ public sealed class EntityModelMesher
         int skinHeight,
         IReadOnlyDictionary<string, FaceUvTransform>? transforms,
         IReadOnlyDictionary<string, FaceUvTransform> defaultTransforms,
+        EntityRenderState renderState,
         float px,
         ref int vertexFloats,
         ref int indexCount)
@@ -136,6 +137,11 @@ public sealed class EntityModelMesher
         {
             foreach (var layer in part.OverlayLayers)
             {
+                if (!LayerVisible(layer.Name, renderState))
+                {
+                    continue;
+                }
+
                 var grow = layer.Grow * px;
                 var overlay = new EntityModelPart(
                     part.Name,
@@ -149,10 +155,21 @@ public sealed class EntityModelMesher
                     layer.Mirror || part.Mirror);
                 var overlayMin = new Vector3(min.X - grow, min.Y - grow, min.Z - grow);
                 var overlayMax = new Vector3(max.X + grow, max.Y + grow, max.Z + grow);
-                AddPart(overlay, overlayMin, overlayMax, skin, skinWidth, skinHeight, transforms, defaultTransforms, px, ref vertexFloats, ref indexCount);
+                AddPart(overlay, overlayMin, overlayMax, skin, skinWidth, skinHeight, transforms, defaultTransforms, renderState, px, ref vertexFloats, ref indexCount);
             }
         }
     }
+
+    private static bool LayerVisible(string name, EntityRenderState state) => name switch
+    {
+        "hat" => state.ShowHat,
+        "jacket" => state.ShowJacket,
+        "left_sleeve" => state.ShowLeftSleeve,
+        "right_sleeve" => state.ShowRightSleeve,
+        "left_pants" => state.ShowLeftPants,
+        "right_pants" => state.ShowRightPants,
+        _ => true
+    };
 
     private void AddFace(
         Vector3 a, Vector3 b, Vector3 c, Vector3 d,
