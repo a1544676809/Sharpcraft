@@ -29,6 +29,17 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheCreeperTypeResolvesToSixFlatParts()
+    {
+        var definition = EntityModelResolver.Resolve(CreeperModelDefinition.CreeperEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("creeper", definition.Name);
+        Assert.Equal(6, definition.Parts.Count);
+        Assert.Equal(4f, definition.Parts[2].CentreZ);
+    }
+
+    [Fact]
     public void TheEndermanTypeResolvesToItsTallHumanoidDefinition()
     {
         var definition = EntityModelResolver.Resolve(HumanoidMobModelDefinition.EndermanEntityTypeId);

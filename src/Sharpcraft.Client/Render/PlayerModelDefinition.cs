@@ -22,7 +22,8 @@ public readonly record struct EntityModelPart(
     int TextureX = 0,
     int TextureY = 0,
     bool Mirror = false,
-    IReadOnlyList<EntityModelLayer>? OverlayLayers = null);
+    IReadOnlyList<EntityModelLayer>? OverlayLayers = null,
+    float CentreZ = 0f);
 
 /// <summary>
 /// An outer skin layer around one base cuboid, expressed as a uniform growth and its own texture offset.

@@ -56,11 +56,12 @@ public sealed class EntityModelMesher
             foreach (var part in model.Parts)
             {
                 var centreX = part.CentreX * px;
+                var centreZ = part.CentreZ * px;
                 var bottom = part.Bottom * px;
                 var halfW = part.Width * px * 0.5f;
                 var halfD = part.Depth * px * 0.5f;
-                var min = new Vector3(feet.X + centreX - halfW, feet.Y + bottom, feet.Z - halfD);
-                var max = new Vector3(feet.X + centreX + halfW, feet.Y + bottom + (part.Height * px), feet.Z + halfD);
+                var min = new Vector3(feet.X + centreX - halfW, feet.Y + bottom, feet.Z + centreZ - halfD);
+                var max = new Vector3(feet.X + centreX + halfW, feet.Y + bottom + (part.Height * px), feet.Z + centreZ + halfD);
                 if (onlyPart is not null && part.Name != onlyPart) continue;
                 if (excludedPart is not null && part.Name == excludedPart) continue;
                 AddPart(part, min, max, sprite, skinWidthForModel, skinHeightForModel, transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount);
@@ -163,7 +164,9 @@ public sealed class EntityModelMesher
                     part.Depth,
                     layer.TextureX,
                     layer.TextureY,
-                    layer.Mirror || part.Mirror);
+                    layer.Mirror || part.Mirror,
+                    null,
+                    part.CentreZ);
                 var overlayMin = new Vector3(min.X - grow, min.Y - grow, min.Z - grow);
                 var overlayMax = new Vector3(max.X + grow, max.Y + grow, max.Z + grow);
                 var overlaySkin = skin;
