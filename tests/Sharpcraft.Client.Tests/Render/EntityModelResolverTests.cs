@@ -62,6 +62,13 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheZombieAndSkeletonHorseReuseEquineGeometry()
+    {
+        Assert.Equal("zombie_horse", EntityModelResolver.Resolve(HorseModelDefinition.ZombieHorseEntityTypeId).Name);
+        Assert.Equal("skeleton_horse", EntityModelResolver.Resolve(HorseModelDefinition.SkeletonHorseEntityTypeId).Name);
+    }
+
+    [Fact]
     public void TheMuleTypeReusesEquineGeometry()
     {
         var definition = EntityModelResolver.Resolve(HorseModelDefinition.MuleEntityTypeId);

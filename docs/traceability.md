@@ -472,3 +472,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-445 | **Horse 耳朵/尾巴修正**：补 head 子部件左右耳（UV19,16）；tail 由 body 子偏移合成为 pivot(0,6,7)，修复耳朵缺失和尾巴位置 | `AbstractEquineModel` | Client 607 | `Client/Render/HorseModelDefinition` | 完成 |
 | T-446 | **Donkey 模型转译**：复用 AbstractEquineModel 几何，纹理 `entity/horse/donkey`，scale 0.87，type id 37 | `DonkeyModel` | Client 608 | `Client/Render/{HorseModelDefinition,EntityModelResolver}` | 进行中 |
 | T-447 | **Mule 模型转译**：复用 AbstractEquineModel 几何，纹理 `entity/horse/mule`，scale 0.92，type id 88 | `MuleModel` | Client 609 | `Client/Render/{HorseModelDefinition,EntityModelResolver}` | 进行中 |
+| T-448 | **Zombie Horse / Skeleton Horse**：复用 AbstractEquineModel 几何，纹理 `horse_zombie`/`horse_skeleton`，type id 155/119 | `ZombieHorseRenderer`、`SkeletonHorseRenderer` | Client 610 | `Client/Render/{HorseModelDefinition,EntityModelResolver}` | 进行中 |

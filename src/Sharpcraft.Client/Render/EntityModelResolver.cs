@@ -43,6 +43,8 @@ public static class EntityModelResolver
         [HorseModelDefinition.HorseEntityTypeId] = HorseModelDefinition.Definition,
         [HorseModelDefinition.DonkeyEntityTypeId] = HorseModelDefinition.Donkey,
         [HorseModelDefinition.MuleEntityTypeId] = HorseModelDefinition.Mule,
+        [HorseModelDefinition.ZombieHorseEntityTypeId] = HorseModelDefinition.ZombieHorse,
+        [HorseModelDefinition.SkeletonHorseEntityTypeId] = HorseModelDefinition.SkeletonHorse,
         [VillagerModelDefinition.VillagerEntityTypeId] = VillagerModelDefinition.Definition,
         [HumanoidMobModelDefinition.HuskEntityTypeId] = HumanoidMobModelDefinition.Husk,
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie
