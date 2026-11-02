@@ -2145,3 +2145,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 世界文字 pass 第一版（T-351）：WorldTextResources + WorldTextMeshBuilder；名字牌改走 glyph 世界四边形，修正 font.Scale；告示牌/文本展示待接。
 - 2026-11-02 名字牌背景按原版 `markBackground` 修正上下各一像素、去掉右侧多余一像素（T-352）。
 - 2026-11-02 名字牌高度偏差登记（T-353）：待完整实体模型/碰撞高度切片解决，不在当前切片硬调。
+- 2026-11-02 M5.3 P1 实体渲染设计文档完成（T-354）：RenderState 解耦、玩家模型尺寸/UV 证据、P1 静态姿态范围；下一片实现模型定义与网格。
