@@ -9,6 +9,7 @@
 
 | 文档 | 摘要 | 状态 | 最后更新 |
 | --- | --- | --- | --- |
+| [`entity-coordinate-system.md`](entity-coordinate-system.md) | 地形/相机/实体状态/模型空间的坐标约定、当前已统一与未统一的部分 | 草稿 | 2026-11-02 |
 | [`entity-model-migration.md`](entity-model-migration.md) | 原版生物模型来源、按复杂度排序的移植顺序、当前进度与已知缺口 | 已评审 | 2026-11-02 |
 | [`entity-special-layers.md`](entity-special-layers.md) | 不属于普通 base/overlay cube 的实体渲染层清单，以及后续补充顺序 | 已评审 | 2026-11-02 |
 | [`lighting-color-space.md`](lighting-color-space.md) | 26.3 block 着色器全程 sRGB 域直接相乘；据此修正我们误加的 gamma 解码/编码 | 草稿 | 2026-11-01 |
