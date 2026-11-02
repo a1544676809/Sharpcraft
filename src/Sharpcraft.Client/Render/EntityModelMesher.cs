@@ -88,12 +88,12 @@ public sealed class EntityModelMesher
         var l2 = new Vector3(max.X, max.Y, max.Z);
         var l3 = new Vector3(min.X, max.Y, max.Z);
 
-        AddFace(l0, l1, t1, t0, u1, v0, u2, v0, u2, v1, u1, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // DOWN
-        AddFace(t3, t2, l2, l3, u2, v1, u22, v1, u22, v0, u2, v0, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // UP
-        AddFace(l0, t0, t3, l3, u0, v1, u1, v1, u1, v2, u0, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // WEST
-        AddFace(t1, t0, t3, t2, u2, v1, u1, v1, u1, v2, u2, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // NORTH
-        AddFace(t1, l1, l2, t2, u2, v1, u3, v1, u3, v2, u2, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // EAST
-        AddFace(l0, l1, l2, l3, u4, v1, u3, v1, u3, v2, u4, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // SOUTH
+        AddFace(l1, l0, t0, t1, u2, v0, u1, v0, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // DOWN
+        AddFace(t2, t3, l3, l2, u22, v1, u2, v1, u2, v0, u22, v0, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // UP
+        AddFace(t0, l0, l3, t3, u1, v2, u0, v2, u0, v1, u1, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // WEST
+        AddFace(t1, t0, t3, t2, u2, v2, u1, v2, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // NORTH
+        AddFace(l1, t1, t2, l2, u3, v2, u2, v2, u2, v1, u3, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // EAST
+        AddFace(l0, l1, l2, l3, u4, v2, u3, v2, u3, v1, u4, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // SOUTH
     }
 
     private void AddFace(
