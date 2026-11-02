@@ -9,6 +9,7 @@ namespace Sharpcraft.Client.Render;
 public static class SquidModelDefinition
 {
     public const int SquidEntityTypeId = 130;
+    public const int GlowSquidEntityTypeId = 62;
 
     public static readonly EntityModelDefinition Definition = new(
         "squid",
@@ -27,6 +28,14 @@ public static class SquidModelDefinition
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/squid/squid");
+
+    public static readonly EntityModelDefinition GlowSquid = new(
+        "glow_squid",
+        64,
+        32,
+        SquidModelDefinition.Definition.Parts,
+        PlayerModelDefinition.DefaultFaceTransforms,
+        "entity/squid/glow_squid");
 
     private static EntityModelPart Tentacle(int index, float x, float z, float yRot) =>
         PlayerModelDefinition.FromVanilla(

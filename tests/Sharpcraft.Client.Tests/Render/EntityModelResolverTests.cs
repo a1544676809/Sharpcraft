@@ -62,6 +62,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheGlowSquidTypeReusesSquidGeometry()
+    {
+        var definition = EntityModelResolver.Resolve(SquidModelDefinition.GlowSquidEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("glow_squid", definition.Name);
+        Assert.Equal(SquidModelDefinition.Definition.Parts.Count, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheSquidTypeResolvesToItsParts()
     {
         var definition = EntityModelResolver.Resolve(SquidModelDefinition.SquidEntityTypeId);
