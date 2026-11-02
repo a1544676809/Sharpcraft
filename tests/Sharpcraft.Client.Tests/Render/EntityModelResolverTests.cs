@@ -62,6 +62,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheGoatTypeResolvesToItsParts()
+    {
+        var definition = EntityModelResolver.Resolve(GoatModelDefinition.GoatEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("goat", definition.Name);
+        Assert.Equal(12, definition.Parts.Count);
+    }
+
+    [Fact]
     public void ThePandaTypeResolvesToItsParts()
     {
         var definition = EntityModelResolver.Resolve(PandaModelDefinition.PandaEntityTypeId);

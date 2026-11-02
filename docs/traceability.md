@@ -462,3 +462,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-434 | **Fox tail 修正**：tail 是 body 子部件，pivot 按 body pivot/rotation 合成后为 (-4,17,9)，rotationX=-1.5184；修复尾巴错位 | `AdultFoxModel` | 沙盒截图 | `Client/Render/FoxModelDefinition` | 完成 |
 | T-436 | **Polar Bear 模型转译**：PolarBearModel head/mouth/耳、双 body cube、四腿，scale 1.2；纹理 `entity/bear/polarbear`，type id 105 | `PolarBearModel` | Client 600/沙盒截图 | `Client/Render/{PolarBearModelDefinition,EntityModelResolver}` | 进行中 |
 | T-437 | **Panda 模型转译**：PandaModel head+鼻/耳、rotated body、四条 6×9×6 腿；纹理 `entity/panda/panda`，type id 97 | `PandaModel` | Client 601/沙盒截图 | `Client/Render/{PandaModelDefinition,EntityModelResolver}` | 进行中 |
+| T-438 | **Goat 模型转译**：GoatModel head/耳/山羊胡/角/鼻、双 body cube、四腿；纹理 `entity/goat/goat`，type id 63 | `GoatModel` | Client 602/沙盒截图 | `Client/Render/{GoatModelDefinition,EntityModelResolver}` | 进行中 |
