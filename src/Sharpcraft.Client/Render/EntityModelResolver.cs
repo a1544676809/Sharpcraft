@@ -28,6 +28,7 @@ public static class EntityModelResolver
         [PigModelDefinition.PigEntityTypeId] = PigModelDefinition.Definition,
         [SheepModelDefinition.SheepEntityTypeId] = SheepModelDefinition.Definition,
         [CowModelDefinition.CowEntityTypeId] = CowModelDefinition.Definition,
+        [CowModelDefinition.MooshroomEntityTypeId] = CowModelDefinition.Mooshroom,
         [ChickenModelDefinition.ChickenEntityTypeId] = ChickenModelDefinition.Definition,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,
         [CatModelDefinition.CatEntityTypeId] = CatModelDefinition.Definition,

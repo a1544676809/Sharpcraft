@@ -2234,3 +2234,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Snow Golem 手臂方向修正（T-440）：双臂朝下。
 - 2026-11-02 Squid 模型转译（T-441）：body + 8 tentacles。
 - 2026-11-02 Glow Squid 模型转译（T-442）：复用 Squid + glow texture。
+- 2026-11-02 Mooshroom 模型转译（T-443）：复用 Cow + mooshroom_red。

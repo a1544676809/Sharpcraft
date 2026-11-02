@@ -162,6 +162,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheMooshroomTypeReusesCowGeometry()
+    {
+        var definition = EntityModelResolver.Resolve(CowModelDefinition.MooshroomEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("mooshroom", definition.Name);
+        Assert.Equal(CowModelDefinition.Definition.Parts.Count, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheCowTypeResolvesToAQuadrupedWithHornsAndUdder()
     {
         var definition = EntityModelResolver.Resolve(CowModelDefinition.CowEntityTypeId);

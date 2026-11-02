@@ -9,6 +9,7 @@ namespace Sharpcraft.Client.Render;
 public static class CowModelDefinition
 {
     public const int CowEntityTypeId = 30;
+    public const int MooshroomEntityTypeId = 87;
 
     public static readonly EntityModelDefinition Definition = new(
         "cow",
@@ -28,4 +29,12 @@ public static class CowModelDefinition
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/cow/cow_temperate");
+
+    public static readonly EntityModelDefinition Mooshroom = new(
+        "mooshroom",
+        64,
+        64,
+        CowModelDefinition.Definition.Parts,
+        PlayerModelDefinition.DefaultFaceTransforms,
+        "entity/cow/mooshroom_red");
 }

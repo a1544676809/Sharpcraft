@@ -467,3 +467,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-440 | **Snow Golem 手臂方向修正**：复查原版 `left_arm zRot=+1`、`right_arm yRot=π/zRot=-1`；在当前 y-up 变换下按实际组合修正，双臂朝下，不再上举 | `SnowGolemModel` | 沙盒截图 | `Client/Render/SnowGolemModelDefinition` | 完成 |
 | T-441 | **Squid 模型转译**：body 12×16×12 + 8 条 2×18×2 触手（Y 旋转），纹理 `entity/squid/squid`，type id 130 | `SquidModel` | Client 604 | `Client/Render/{SquidModelDefinition,EntityModelResolver}` | 进行中 |
 | T-442 | **Glow Squid 模型转译**：复用 Squid 几何，纹理 `entity/squid/glow_squid`，type id 62；发光层待补 | `GlowSquidRenderer` | Client 605 | `Client/Render/{SquidModelDefinition,EntityModelResolver}` | 进行中 |
+| T-443 | **Mooshroom 模型转译**：复用 CowModel 几何，纹理 `entity/cow/mooshroom_red`，type id 87；蘑菇层待补 | `MushroomCowRenderer` | Client 606 | `Client/Render/{CowModelDefinition,EntityModelResolver}` | 进行中 |
