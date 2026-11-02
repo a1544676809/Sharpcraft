@@ -29,6 +29,17 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheSlimeTypeResolvesToCubeBodyDefinition()
+    {
+        var definition = EntityModelResolver.Resolve(SlimeModelDefinition.SlimeEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("slime", definition.Name);
+        Assert.Equal(4, definition.Parts.Count);
+        Assert.NotNull(definition.Parts[0].OverlayLayers);
+    }
+
+    [Fact]
     public void TheCreeperTypeResolvesToSixFlatParts()
     {
         var definition = EntityModelResolver.Resolve(CreeperModelDefinition.CreeperEntityTypeId);

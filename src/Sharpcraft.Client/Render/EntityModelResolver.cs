@@ -22,6 +22,7 @@ public static class EntityModelResolver
         [HumanoidMobModelDefinition.DrownedEntityTypeId] = HumanoidMobModelDefinition.Drowned,
         [HumanoidMobModelDefinition.EndermanEntityTypeId] = HumanoidMobModelDefinition.Enderman,
         [CreeperModelDefinition.CreeperEntityTypeId] = CreeperModelDefinition.Definition,
+        [SlimeModelDefinition.SlimeEntityTypeId] = SlimeModelDefinition.Definition,
         [HumanoidMobModelDefinition.HuskEntityTypeId] = HumanoidMobModelDefinition.Husk,
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie
     };
