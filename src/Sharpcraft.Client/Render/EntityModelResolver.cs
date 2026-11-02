@@ -28,6 +28,7 @@ public static class EntityModelResolver
         [PigModelDefinition.PigEntityTypeId] = PigModelDefinition.Definition,
         [SheepModelDefinition.SheepEntityTypeId] = SheepModelDefinition.Definition,
         [CowModelDefinition.CowEntityTypeId] = CowModelDefinition.Definition,
+        [ChickenModelDefinition.ChickenEntityTypeId] = ChickenModelDefinition.Definition,
         [VillagerModelDefinition.VillagerEntityTypeId] = VillagerModelDefinition.Definition,
         [HumanoidMobModelDefinition.HuskEntityTypeId] = HumanoidMobModelDefinition.Husk,
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie
