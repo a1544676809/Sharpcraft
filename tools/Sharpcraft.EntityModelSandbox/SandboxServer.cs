@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using System.Collections.Concurrent;
 using System.Net;
 using System.Text.Json;
 using Sharpcraft.Client.Assets;
@@ -16,34 +17,43 @@ internal static class SandboxServer
 {
     private const string Prefix = "http://127.0.0.1:19876/";
     private static byte[] _skinPng = [];
+    private static byte[] _current = [];
 
     public static void Run()
     {
-        var skin = LoadSkin();
-        var state = new Dictionary<string, FaceState>();
-        var current = Render(skin, state);
+        var state = new ConcurrentDictionary<string, FaceState>();
+        Start(state);
+        Thread.Sleep(Timeout.Infinite);
+    }
 
-        using var listener = new HttpListener();
+    public static void Start(ConcurrentDictionary<string, FaceState> state)
+    {
+        var skin = LoadSkin();
+        var listener = new HttpListener();
         listener.Prefixes.Add(Prefix);
         listener.Start();
         Console.WriteLine($"sandbox server listening on {Prefix}");
-
-        while (true)
+        var thread = new Thread(() =>
         {
-            var context = listener.GetContext();
-            try
+            while (true)
             {
-                Handle(context, skin, state, ref current);
+                var context = listener.GetContext();
+                try
+                {
+                    Handle(context, skin, state);
+                }
+                catch (Exception exception)
+                {
+                    Console.Error.WriteLine($"sandbox request failed: {exception.Message}");
+                    try { context.Response.Abort(); } catch { }
+                }
             }
-            catch (Exception exception)
-            {
-                Console.Error.WriteLine($"sandbox request failed: {exception.Message}");
-                try { context.Response.Abort(); } catch { }
-            }
-        }
+        })
+        { IsBackground = true };
+        thread.Start();
     }
 
-    private static void Handle(HttpListenerContext context, TextureData skin, Dictionary<string, FaceState> state, ref byte[] current)
+    private static void Handle(HttpListenerContext context, TextureData skin, ConcurrentDictionary<string, FaceState> state)
     {
         var path = context.Request.Url?.AbsolutePath ?? "/";
         if (path == "/state" && context.Request.HttpMethod == "POST")
@@ -64,14 +74,14 @@ internal static class SandboxServer
                 }
             }
 
-            current = Render(skin, state);
+            _current = Render(skin, state);
             TryWrite(context, 200, "application/json", "{\"ok\":true}"u8.ToArray());
             return;
         }
 
         if (path == "/frame.png")
         {
-            TryWrite(context, 200, "image/png", current);
+            TryWrite(context, 200, "image/png", _current);
             return;
         }
 
@@ -157,5 +167,5 @@ internal static class SandboxServer
         return PngEncoder.EncodeRgba(frame.Width, frame.Height, frame.Rgba);
     }
 
-    private sealed record FaceState(int Rot, bool FlipH, bool FlipV);
+    internal sealed record FaceState(int Rot, bool FlipH, bool FlipV);
 }

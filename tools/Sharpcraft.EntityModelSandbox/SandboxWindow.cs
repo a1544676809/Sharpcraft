@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using System.Collections.Concurrent;
 using System.Numerics;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
@@ -15,13 +16,26 @@ internal static class SandboxWindow
     public static void Run()
     {
         var skin = SandboxServer.LoadSkin();
+        var faceState = new ConcurrentDictionary<string, SandboxServer.FaceState>();
+        SandboxServer.Start(faceState);
         var sprite = new Sharpcraft.Client.Assets.SpriteRect(0, 0, skin.Width, skin.Height, 1)
         {
             U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f
         };
         var entity = new EntityRenderState(1, EntityPlaceholderMesher.PlayerEntityTypeId, 0f, 0f, 0f, 0f, 0f);
         var mesher = new EntityModelMesher();
-        var geometry = mesher.Build([entity], sprite, skin.Width, skin.Height);
+        DynamicGeometry Build()
+        {
+            var transforms = new Dictionary<string, FaceUvTransform>();
+            foreach (var pair in faceState)
+            {
+                transforms[pair.Key] = new FaceUvTransform(pair.Value.Rot, pair.Value.FlipH, pair.Value.FlipV);
+            }
+
+            return mesher.Build([entity], sprite, skin.Width, skin.Height, transforms);
+        }
+
+        var geometry = Build();
         var request = new FrameRequest(
             Width: 900,
             Height: 700,
@@ -72,6 +86,6 @@ internal static class SandboxWindow
                     -MathF.Cos(yaw) * MathF.Cos(pitch)) * distance;
                 return (eye, target);
             },
-            dynamicGeometry: () => geometry);
+            dynamicGeometry: Build);
     }
 }

@@ -2166,3 +2166,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Face UV Studio 3D/最近邻（T-371）：网页面可逐面操作并 3D 预览。
 - 2026-11-02 Face UV Studio/沙盒同步（T-372）：网页操作 -> 沙盒 /state -> /frame.png 实时预览；继续用模板校准。
 - 2026-11-02 沙盒窗口 + 左键轨道相机（T-373）：`--window` 可用，鼠标左键拖动旋转。
+- 2026-11-02 网页控制驱动沙盒窗口（T-374）：`--window` 同时提供页面和实时 3D；可边调面边看。
