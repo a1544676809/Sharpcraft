@@ -2258,3 +2258,30 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Wandering Trader（T-464）：复用 Villager + wandering_trader。
 - 2026-11-02 Blaze 模型转译（T-465）：head + 12 rods，沙盒已验证。
 - 2026-11-02 Turtle 模型转译（T-466）：root parts + HasEgg。
+
+
+## 2026-11-02 上下文压缩前交接
+
+**当前分支/工作目录**
+- 工作目录：`E:\source\repos\MinecraftCSharp\.agents\worktrees\...\m5.3-render-p1`
+- 最近提交到 `T-466`；Client 测试最近一次为 **620 通过**。
+
+**当前模型状态**
+- 已完成/可用：Player、Zombie、Husk、Skeleton、Stray、Bogged、Wither Skeleton、Drowned、Enderman、Creeper、Slime、Magma Cube、Pig、Sheep、Cow、Chicken、Spider、Villager、Zombie Villager、Snow Golem、Llama、Wolf、Fox、Cat、Ocelot、Polar Bear、Panda、Goat、Horse、Donkey、Mule、Zombie Horse、Skeleton Horse、Mooshroom、Endermite、Silverfish、Iron Golem、Vindicator、Evoker、Pillager、Wandering Trader、Blaze、Turtle。
+- 注意：部分“有外观但未严格等效”的项已登记在 `docs/analysis/render/entity-model-approximations.md` 和 `entity-render-layers.md`：Horse/Fox/Wolf/Rabbit/Camel 的层级近似，以及 Skeleton clothing/Player overlay/Drowned outer/Slime outer 的独立 RenderLayer 差距。
+
+**接下来优先做：变体纹理系统（不引入层级近似）**
+- 现在 `EntityModelResolver` 只按 `TypeId` 解析；
+- 增加 `EntityRenderState.Variant`（或 VariantId）；
+- `EntityModelResolver` 支持 `(TypeId, Variant) -> EntityModelDefinition`；
+- 变体仅切换纹理，不改变几何；
+- 首批目标：Pig/Cow/Chicken warm/cold、Llama 颜色、Cat 毛色、Horse 毛色；
+- 完成后可安全增加大量外观而不违反层级/图层原则。
+
+**之后必须补的基础设施**
+1. `Parent` + 局部 `PartPose` 递归变换：解决 Horse/Fox/Wolf/Rabbit/Camel。
+2. `EntityRenderLayerDefinition` / `EntityGeometryLayer` 多 layer 提交：解决 Stray/Bogged clothing、Player overlays、Drowned outer、Slime outer。
+3. Illager `armPose` 可见性：当前 arms group 与正常 arms 同时显示，原版只显示一套。
+4. Enderman eyes、Slime/Guardian 等 emissive/beam 特殊层。
+5. `EntityPlaceholderMesher` 已接入 `EntityModelTransform`；后续模型定义继续迁移到 raw y-down/PartPose 坐标。
+
