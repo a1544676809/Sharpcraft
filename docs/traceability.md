@@ -464,3 +464,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-437 | **Panda 模型转译**：PandaModel head+鼻/耳、rotated body、四条 6×9×6 腿；纹理 `entity/panda/panda`，type id 97 | `PandaModel` | Client 601/沙盒截图 | `Client/Render/{PandaModelDefinition,EntityModelResolver}` | 进行中 |
 | T-438 | **Goat 模型转译**：GoatModel head/耳/山羊胡/角/鼻、双 body cube、四腿；纹理 `entity/goat/goat`，type id 63 | `GoatModel` | Client 602/沙盒截图 | `Client/Render/{GoatModelDefinition,EntityModelResolver}` | 进行中 |
 | T-439 | **Snow Golem 模型转译**：SnowGolemModel head/upper body/lower body/双臂，grow -0.5，手臂 Z 旋转；纹理 `entity/snow_golem/snow_golem`，type id 124；Rabbit 暂不注册（需嵌套层级变换） | `SnowGolemModel` | Client 603/沙盒截图 | `Client/Render/{SnowGolemModelDefinition,EntityModelResolver}` | 进行中 |
+| T-440 | **Snow Golem 手臂方向修正**：复查原版 `left_arm zRot=+1`、`right_arm yRot=π/zRot=-1`；在当前 y-up 变换下按实际组合修正，双臂朝下，不再上举 | `SnowGolemModel` | 沙盒截图 | `Client/Render/SnowGolemModelDefinition` | 完成 |

@@ -17,7 +17,7 @@ public static class SnowGolemModelDefinition
         [
             PlayerModelDefinition.FromVanilla("head", 0f, 4f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0, grow: -0.5f),
             PlayerModelDefinition.FromVanilla("left_arm", 5f, 6f, 1f, -1f, 0f, -1f, 12f, 2f, 2f, 32, 0,
-                grow: -0.5f, rotationZ: -1f),
+                grow: -0.5f, rotationZ: 1f),
             PlayerModelDefinition.FromVanilla("right_arm", -5f, 6f, -1f, -1f, 0f, -1f, 12f, 2f, 2f, 32, 0,
                 grow: -0.5f, rotationY: MathF.PI, rotationZ: 1f),
             PlayerModelDefinition.FromVanilla("upper_body", 0f, 13f, 0f, -5f, -10f, -5f, 10f, 10f, 10f, 0, 16, grow: -0.5f),
