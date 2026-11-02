@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Sharpcraft Face UV Studio</title>
+<style>
+  :root { color-scheme: dark; --bg:#15171c; --panel:#20242c; --line:#343b48; --text:#e8edf5; --muted:#95a1b3; --accent:#6cc7ff; --good:#5bd39a; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.45 Segoe UI, system-ui, sans-serif; background:var(--bg); color:var(--text); }
+  header { padding:16px 22px; border-bottom:1px solid var(--line); display:flex; gap:18px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:17px; margin:0; font-weight:650; letter-spacing:.2px; }
+  header .hint { color:var(--muted); font-size:12px; max-width:720px; }
+  main { display:grid; grid-template-columns:260px 1fr; min-height:calc(100vh - 74px); }
+  aside { padding:16px; border-right:1px solid var(--line); }
+  aside h2 { font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); margin:0 0 8px; }
+  .file { display:block; width:100%; margin-bottom:14px; color:var(--muted); font-size:12px; }
+  .part-btn { display:block; width:100%; text-align:left; padding:9px 11px; margin:5px 0; background:transparent; color:var(--text); border:1px solid var(--line); border-radius:7px; cursor:pointer; }
+  .part-btn:hover { border-color:#536175; }
+  .part-btn.active { background:#26384a; border-color:var(--accent); color:#fff; }
+  .rule { margin-top:18px; padding:10px 12px; background:#1a2028; border:1px solid var(--line); border-radius:7px; color:var(--muted); font-size:12px; }
+  .rule b { color:var(--good); font-weight:600; }
+  .content { padding:18px; }
+  .toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+  .toolbar button { background:#26384a; color:var(--text); border:1px solid #3c5268; padding:8px 12px; border-radius:7px; cursor:pointer; }
+  .toolbar button:hover { border-color:var(--accent); }
+  .faces { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+  .face-card { background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:10px; }
+  .face-card h3 { margin:0 0 6px; font-size:13px; display:flex; justify-content:space-between; }
+  .face-card h3 span { color:var(--muted); font-weight:400; font-size:11px; }
+  .face-card canvas { width:100%; aspect-ratio:1.25/1; display:block; background:#0d1015; border-radius:5px; image-rendering:pixelated; }
+  .face-actions { display:flex; gap:5px; flex-wrap:wrap; margin-top:8px; }
+  .face-actions button { background:#202a36; color:var(--text); border:1px solid #3a4a5e; border-radius:5px; padding:4px 7px; font-size:12px; cursor:pointer; }
+  .face-actions button.on { background:#1d4a3a; border-color:var(--good); }
+  .face-meta { margin-top:6px; color:var(--muted); font-size:12px; min-height:18px; }
+  .face-meta .ok { color:var(--good); }
+  .export { margin-top:16px; background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:12px; }
+  .export h2 { margin:0 0 8px; font-size:14px; }
+  textarea { width:100%; min-height:150px; resize:vertical; background:#0e1218; color:#cfe9ff; border:1px solid var(--line); border-radius:6px; padding:10px; font:12px/1.4 Consolas, monospace; }
+  .check { display:inline-flex; gap:6px; align-items:center; color:var(--muted); font-size:12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sharpcraft · Face UV Studio</h1>
+  <div class="hint">规则：看向 Steve 正面时，所有侧面箭头向上，红色在左，蓝色在右；顶/底同样。每个面可单独旋转与翻转，右侧 JSON 是最终每面 UV 角点映射。</div>
+</header>
+<main>
+  <aside>
+    <h2>Skin</h2>
+    <input class="file" type="file" id="skinFile" accept="image/png">
+    <h2>部件</h2>
+    <div id="parts"></div>
+    <div class="rule">
+      判定：<br>
+      <b>↑</b> 箭头尖端在面顶部<br>
+      <b>红</b> 在面左侧，<b>蓝</b> 在面右侧<br>
+      顶/底视角同样按视图方向判定。
+    </div>
+  </aside>
+  <section class="content">
+    <div class="toolbar">
+      <button id="resetPart">重置本部件</button>
+      <button id="resetAll">重置全部</button>
+      <label class="check"><input type="checkbox" id="showGrid" checked> 显示纹理网格</label>
+    </div>
+    <div class="faces" id="faces"></div>
+    <div class="export">
+      <h2>导出映射</h2>
+      <textarea id="exportText" readonly></textarea>
+    </div>
+  </section>
+</main>
+<script>
+const PARTS = {
+  head:       { label:"head",       tex:[0,0],   w:8, h:8,  d:8 },
+  body:       { label:"body",       tex:[16,16], w:8, h:12, d:4 },
+  left_arm:   { label:"left_arm",   tex:[32,48], w:4, h:12, d:4 },
+  right_arm:  { label:"right_arm",  tex:[40,16], w:4, h:12, d:4 },
+  left_leg:   { label:"left_leg",   tex:[16,48], w:4, h:12, d:4 },
+  right_leg:  { label:"right_leg",  tex:[0,16],  w:4, h:12, d:4 }
+};
+const FACES = ["DOWN","UP","WEST","NORTH","EAST","SOUTH"];
+const FACE_LABEL = { DOWN:"底面", UP:"顶面", WEST:"左侧", NORTH:"正面", EAST:"右侧", SOUTH:"背面" };
+const state = {};
+for (const [p, def] of Object.entries(PARTS)) {
+  state[p] = {};
+  for (const f of FACES) state[p][f] = { rot:0, flipH:false, flipV:false };
+}
+let activePart = "head";
+let skin = null;
+
+const partsEl = document.getElementById("parts");
+const facesEl = document.getElementById("faces");
+const exportEl = document.getElementById("exportText");
+const skinFile = document.getElementById("skinFile");
+const showGrid = document.getElementById("showGrid");
+
+for (const p of Object.keys(PARTS)) {
+  const b = document.createElement("button");
+  b.className = "part-btn" + (p === activePart ? " active" : "");
+  b.textContent = PARTS[p].label;
+  b.onclick = () => { activePart = p; renderParts(); renderFaces(); };
+  partsEl.appendChild(b);
+}
+
+function renderParts() {
+  [...partsEl.children].forEach((b, i) => b.classList.toggle("active", Object.keys(PARTS)[i] === activePart));
+}
+
+function makeDefaultSkin() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const x = c.getContext("2d");
+  x.fillStyle = "#e6d84a"; x.fillRect(0,0,64,64);
+  // simple arrow marks in every 8x8 grid cell: up arrow red-left / blue-right
+  for (let gy=0; gy<8; gy++) for (let gx=0; gx<8; gx++) {
+    const ox=gx*8, oy=gy*8;
+    x.fillStyle = "#d34b4b"; x.fillRect(ox+2,oy+2,2,5);
+    x.fillStyle = "#3c67d8"; x.fillRect(ox+4,oy+2,2,5);
+    x.fillStyle = "#f2e85a"; x.fillRect(ox+3,oy+1,2,2);
+  }
+  return c;
+}
+
+function faceRect(def, face) {
+  const [tx,ty] = def.tex, w=def.w, h=def.h, d=def.d;
+  const u0=tx, u1=tx+d, u2=tx+d+w, u22=tx+d+2*w, u3=tx+d+w+d, u4=tx+d+w+d+w;
+  const v0=ty, v1=ty+d, v2=ty+d+h;
+  switch(face) {
+    case "DOWN":  return {x:u1, y:v0, w:w, h:d};
+    case "UP":    return {x:u2, y:v0, w:w, h:d};
+    case "WEST":  return {x:u0, y:v1, w:d, h:h};
+    case "NORTH": return {x:u1, y:v1, w:w, h:h};
+    case "EAST":  return {x:u2, y:v1, w:d, h:h};
+    case "SOUTH": return {x:u3, y:v1, w:w, h:h};
+  }
+}
+
+function drawFace(canvas, def, face) {
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth || 240, cssH = canvas.clientHeight || 192;
+  canvas.width = Math.round(cssW*dpr); canvas.height = Math.round(cssH*dpr);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,cssW,cssH);
+  const r = faceRect(def, face);
+  const scale = Math.min((cssW-24)/r.w, (cssH-24)/r.h);
+  const dw = r.w*scale, dh = r.h*scale;
+  const st = state[activePart][face];
+  ctx.save();
+  ctx.translate(cssW/2, cssH/2);
+  ctx.rotate(st.rot * Math.PI/180);
+  ctx.scale(st.flipH?-1:1, st.flipV?-1:1);
+  if (skin) ctx.drawImage(skin, r.x, r.y, r.w, r.h, -dw/2, -dh/2, dw, dh);
+  else {
+    ctx.fillStyle = "#444b57"; ctx.fillRect(-dw/2,-dh/2,dw,dh);
+  }
+  ctx.restore();
+  if (showGrid.checked) {
+    ctx.strokeStyle = "rgba(255,255,255,.18)"; ctx.lineWidth = 1;
+    ctx.strokeRect((cssW-dw)/2, (cssH-dh)/2, dw, dh);
+  }
+  // orientation guide: arrow up at top center
+  ctx.save();
+  ctx.strokeStyle = "#fff"; ctx.fillStyle = "#fff"; ctx.globalAlpha = .82; ctx.lineWidth = 2;
+  const ax = cssW/2, ay = 12;
+  ctx.beginPath(); ctx.moveTo(ax, ay+10); ctx.lineTo(ax, ay); ctx.moveTo(ax-4, ay+4); ctx.lineTo(ax, ay); ctx.lineTo(ax+4, ay+4); ctx.stroke();
+  ctx.restore();
+}
+
+function renderFaces() {
+  const def = PARTS[activePart];
+  facesEl.innerHTML = "";
+  for (const face of FACES) {
+    const card = document.createElement("div"); card.className = "face-card";
+    const h = document.createElement("h3");
+    h.innerHTML = `${FACE_LABEL[face]} <span>${face}</span>`;
+    const c = document.createElement("canvas");
+    const actions = document.createElement("div"); actions.className = "face-actions";
+    const mk = (label, fn) => { const b=document.createElement("button"); b.textContent=label; b.onclick=fn; actions.appendChild(b); return b; };
+    mk("↻ 90°", () => { state[activePart][face].rot = (state[activePart][face].rot + 90) % 360; renderFaces(); });
+    const hb = mk("↔ 翻H", () => { state[activePart][face].flipH = !state[activePart][face].flipH; renderFaces(); });
+    const vb = mk("↕ 翻V", () => { state[activePart][face].flipV = !state[activePart][face].flipV; renderFaces(); });
+    const meta = document.createElement("div"); meta.className = "face-meta";
+    const st = state[activePart][face];
+    if (st.flipH) hb.classList.add("on");
+    if (st.flipV) vb.classList.add("on");
+    meta.textContent = `rot=${st.rot}° flipH=${st.flipH} flipV=${st.flipV}`;
+    card.append(h,c,actions,meta);
+    facesEl.appendChild(card);
+    requestAnimationFrame(() => drawFace(c, def, face));
+  }
+  renderExport();
+}
+
+function renderExport() {
+  const out = {};
+  for (const [p, faces] of Object.entries(state)) out[p] = faces;
+  exportEl.value = JSON.stringify(out, null, 2);
+}
+
+document.getElementById("resetPart").onclick = () => {
+  for (const face of FACES) state[activePart][face] = {rot:0,flipH:false,flipV:false};
+  renderFaces();
+};
+document.getElementById("resetAll").onclick = () => {
+  for (const p of Object.keys(PARTS)) for (const face of FACES) state[p][face] = {rot:0,flipH:false,flipV:false};
+  renderFaces();
+};
+skinFile.onchange = () => {
+  const f = skinFile.files && skinFile.files[0];
+  if (!f) return;
+  const img = new Image();
+  img.onload = () => { skin = img; renderFaces(); };
+  img.src = URL.createObjectURL(f);
+};
+showGrid.onchange = renderFaces;
+
+skin = makeDefaultSkin();
+renderFaces();
+</script>
+</body>
+</html>
