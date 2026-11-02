@@ -92,7 +92,7 @@ public sealed class EntityModelMesher
         var l3 = new Vector3(min.X, max.Y, max.Z);
         FaceUvTransform T(string face) => transforms is not null && transforms.TryGetValue(part.Name + "." + face, out var value) ? value : FaceUvTransform.Identity;
 
-        var swapBodyDownUp = part.Name == "body";
+        var swapBodyDownUp = true;
         var d0u = swapBodyDownUp ? u22 : u2; var d0v = swapBodyDownUp ? v1 : v0;
         var d1u = swapBodyDownUp ? u2 : u1; var d1v = swapBodyDownUp ? v1 : v0;
         var d2u = swapBodyDownUp ? u2 : u1; var d2v = swapBodyDownUp ? v0 : v1;
