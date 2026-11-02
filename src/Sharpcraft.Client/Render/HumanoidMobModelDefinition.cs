@@ -82,13 +82,29 @@ public static class HumanoidMobModelDefinition
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/skeleton/skeleton");
 
-    public static readonly EntityModelDefinition Stray = new(
-        "stray", 64, 32, Skeleton.Parts, PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/skeleton/stray");
+    public static readonly EntityModelDefinition Stray = WithClothing("stray", "entity/skeleton/stray", "entity/skeleton/stray_overlay", 0.25f);
 
-    public static readonly EntityModelDefinition Bogged = new(
-        "bogged", 64, 32, Skeleton.Parts, PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/skeleton/bogged");
+    public static readonly EntityModelDefinition Bogged = WithClothing("bogged", "entity/skeleton/bogged", "entity/skeleton/bogged_overlay", 0.2f);
+
+    private static EntityModelDefinition WithClothing(string name, string texturePath, string overlayPath, float grow)
+    {
+        var parts = new List<EntityModelPart>(Skeleton.Parts)
+        {
+            PlayerModelDefinition.FromVanilla("outer_head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0,
+                grow: grow, texturePath: overlayPath),
+            PlayerModelDefinition.FromVanilla("outer_body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16,
+                grow: grow, texturePath: overlayPath),
+            PlayerModelDefinition.FromVanilla("outer_left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 40, 16,
+                mirror: true, grow: grow, texturePath: overlayPath),
+            PlayerModelDefinition.FromVanilla("outer_right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16,
+                grow: grow, texturePath: overlayPath),
+            PlayerModelDefinition.FromVanilla("outer_left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16,
+                mirror: true, grow: grow, texturePath: overlayPath),
+            PlayerModelDefinition.FromVanilla("outer_right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16,
+                grow: grow, texturePath: overlayPath)
+        };
+        return new EntityModelDefinition(name, 64, 32, parts, PlayerModelDefinition.DefaultFaceTransforms, texturePath);
+    }
 
     public static readonly EntityModelDefinition WitherSkeleton = new(
         "wither_skeleton", 64, 32, Skeleton.Parts, PlayerModelDefinition.DefaultFaceTransforms,
