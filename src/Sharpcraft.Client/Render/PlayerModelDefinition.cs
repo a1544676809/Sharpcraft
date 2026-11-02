@@ -29,7 +29,8 @@ public readonly record struct EntityModelPart(
     float PivotZ = 0f,
     float RotationX = 0f,
     float RotationY = 0f,
-    float RotationZ = 0f);
+    float RotationZ = 0f,
+    string? TexturePath = null);
 
 /// <summary>
 /// An outer skin layer around one base cuboid, expressed as a uniform growth and its own texture offset.
@@ -95,7 +96,8 @@ public static class PlayerModelDefinition
         float modelHeight = 24f,
         float rotationX = 0f,
         float rotationY = 0f,
-        float rotationZ = 0f)
+        float rotationZ = 0f,
+        string? texturePath = null)
     {
         var sourceCentreX = pivotX + minX + (width * 0.5f);
         var centreX = MathF.Round(mirrorX ? -sourceCentreX : sourceCentreX, 4);
@@ -118,7 +120,8 @@ public static class PlayerModelDefinition
             PivotZ: pivotZ,
             RotationX: rotationX,
             RotationY: rotationY,
-            RotationZ: rotationZ);
+            RotationZ: rotationZ,
+            TexturePath: texturePath);
     }
 
     public static readonly EntityModelDefinition Definition =

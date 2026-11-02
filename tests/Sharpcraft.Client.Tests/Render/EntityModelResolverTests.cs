@@ -47,7 +47,7 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("sheep", definition.Name);
-        Assert.Equal(6, definition.Parts.Count);
+        Assert.Equal(7, definition.Parts.Count);
         Assert.Contains("entity/sheep/sheep_wool", definition.TexturePaths);
     }
 

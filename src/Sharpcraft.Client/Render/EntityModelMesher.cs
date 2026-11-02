@@ -65,7 +65,17 @@ public sealed class EntityModelMesher
                 var max = new Vector3(feet.X + centreX + halfW, feet.Y + bottom + (part.Height * px), feet.Z + centreZ + halfD);
                 if (onlyPart is not null && part.Name != onlyPart) continue;
                 if (excludedPart is not null && part.Name == excludedPart) continue;
-                AddPart(part, min, max, sprite, skinWidthForModel, skinHeightForModel, feet, entityTransform, transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount);
+                var partSprite = sprite;
+                var partSkinWidth = skinWidthForModel;
+                var partSkinHeight = skinHeightForModel;
+                if (part.TexturePath is { Length: > 0 } partPath && skinAtlas?.Get(partPath) is { } partAtlas)
+                {
+                    partSprite = partAtlas;
+                    partSkinWidth = partAtlas.Width;
+                    partSkinHeight = partAtlas.Height;
+                }
+
+                AddPart(part, min, max, partSprite, partSkinWidth, partSkinHeight, feet, entityTransform, transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount);
             }
         }
 
