@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Numerics;
+using System.Text.Json;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
 using Sharpcraft.Framework.Platform;
@@ -27,6 +28,7 @@ internal static class SandboxWindow
         var entity = new EntityRenderState(1, EntityPlaceholderMesher.PlayerEntityTypeId, 0f, 0f, 0f, 0f, 0f);
         var mesher = new EntityModelMesher();
         var state = new Dictionary<string, FaceUvTransform>();
+        var statePath = Path.Combine(Path.GetTempPath(), "sharpcraft-face-state.json");
         var partIndex = 0;
         var faceIndex = 0;
         var isolateSelectedPart = false;
@@ -118,7 +120,12 @@ internal static class SandboxWindow
                     current = current with { FlipV = !current.FlipV };
                 }
 
+                var changed = !current.Equals(state.TryGetValue(key, out var previous) ? previous : FaceUvTransform.Identity);
                 state[key] = current;
+                if (changed || input.JustPressed(InputKey.T))
+                {
+                    DumpState(statePath, state);
+                }
 
                 var cursor = input.CursorInCanvas;
                 if (input.LeftMouseDown)
@@ -155,6 +162,23 @@ internal static class SandboxWindow
                 : FaceUvTransform.Identity;
             return $"Sharpcraft sandbox | {part}.{face} | PageUp/Down part, Left/Right face, Space rotate, Shift flipH, Ctrl flipV, Home isolate, End hide | rot={current.Rotation} flipH={current.FlipH} flipV={current.FlipV} | isolate={isolateSelectedPart} hide={hideSelectedPart}";
         }
+    }
+
+    private static void DumpState(string path, IReadOnlyDictionary<string, FaceUvTransform> state)
+    {
+        var all = new SortedDictionary<string, FaceUvTransform>(StringComparer.Ordinal);
+        foreach (var part in PlayerModelDefinition.AdultParts)
+        {
+            foreach (var face in Faces)
+            {
+                var key = part.Name + "." + face;
+                all[key] = state.TryGetValue(key, out var value) ? value : FaceUvTransform.Identity;
+            }
+        }
+
+        var json = JsonSerializer.Serialize(all, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(path, json);
+        Console.WriteLine($"face state written to {path}");
     }
 
     private static void AppendSelectionHighlight(DynamicGeometry geometry, Sharpcraft.Client.Assets.SpriteRect sprite, EntityModelPart part, string face)
