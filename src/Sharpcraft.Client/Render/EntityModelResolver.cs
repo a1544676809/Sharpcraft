@@ -25,6 +25,7 @@ public static class EntityModelResolver
         [SlimeModelDefinition.SlimeEntityTypeId] = SlimeModelDefinition.Definition,
         [MagmaCubeModelDefinition.MagmaCubeEntityTypeId] = MagmaCubeModelDefinition.Definition,
         [SpiderModelDefinition.SpiderEntityTypeId] = SpiderModelDefinition.Definition,
+        [VillagerModelDefinition.VillagerEntityTypeId] = VillagerModelDefinition.Definition,
         [HumanoidMobModelDefinition.HuskEntityTypeId] = HumanoidMobModelDefinition.Husk,
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie
     };

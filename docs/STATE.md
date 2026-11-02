@@ -2206,3 +2206,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Slime outer cube 修正（T-411）：独立 outer_cube 8×8×8，纹理缺块修复。
 - 2026-11-02 Magma Cube 模型转译（T-412）：8 segments + inside cube，沙盒已验证。
 - 2026-11-02 Part pivot/rotation + Spider（T-413）：spider 8 腿旋转，沙盒已验证。
+- 2026-11-02 Villager 模型转译（T-414）：hat/nose/jacket/交叉手臂/腿，scale 0.9375，沙盒已验证。

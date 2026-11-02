@@ -29,6 +29,18 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheVillagerTypeResolvesToNinePartsAndScale()
+    {
+        var definition = EntityModelResolver.Resolve(VillagerModelDefinition.VillagerEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("villager", definition.Name);
+        Assert.Equal(9, definition.Parts.Count);
+        Assert.Equal(0.9375f, definition.Scale);
+        Assert.NotEqual(0f, definition.Parts[4].RotationX);
+    }
+
+    [Fact]
     public void TheSpiderTypeResolvesToItsBodyAndEightLegs()
     {
         var definition = EntityModelResolver.Resolve(SpiderModelDefinition.SpiderEntityTypeId);
