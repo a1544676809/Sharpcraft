@@ -62,6 +62,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheHorseTypeResolvesToItsParts()
+    {
+        var definition = EntityModelResolver.Resolve(HorseModelDefinition.HorseEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("horse", definition.Name);
+        Assert.Equal(10, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheGlowSquidTypeReusesSquidGeometry()
     {
         var definition = EntityModelResolver.Resolve(SquidModelDefinition.GlowSquidEntityTypeId);

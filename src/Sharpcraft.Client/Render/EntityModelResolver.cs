@@ -40,6 +40,7 @@ public static class EntityModelResolver
         [SnowGolemModelDefinition.SnowGolemEntityTypeId] = SnowGolemModelDefinition.Definition,
         [SquidModelDefinition.SquidEntityTypeId] = SquidModelDefinition.Definition,
         [SquidModelDefinition.GlowSquidEntityTypeId] = SquidModelDefinition.GlowSquid,
+        [HorseModelDefinition.HorseEntityTypeId] = HorseModelDefinition.Definition,
         [VillagerModelDefinition.VillagerEntityTypeId] = VillagerModelDefinition.Definition,
         [HumanoidMobModelDefinition.HuskEntityTypeId] = HumanoidMobModelDefinition.Husk,
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie
