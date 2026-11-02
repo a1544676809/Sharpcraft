@@ -2188,3 +2188,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 实体 skin 图集/Zombie 纹理链路（T-393）：player+zombie 图集、按 TexturePath 选区域；待游戏观察。
 - 2026-11-02 空世界文字 draw 崩溃修复（T-394）：无名字牌时不再创建空 buffer。
 - 2026-11-02 实体纹理统一资源层（T-395）：EntitySkinLibrary 按 TexturePath 从 ResourceManager 取纹理。
+- 2026-11-02 `EntityModelPart.Mirror` 生效（T-396）：`EntityModelMesher` 对 mirror 部件所有面 U 取反，Zombie 左臂/左腿待目视。

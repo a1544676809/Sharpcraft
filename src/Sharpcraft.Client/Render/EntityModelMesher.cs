@@ -107,9 +107,11 @@ public sealed class EntityModelMesher
             var fallback = defaultTransforms.TryGetValue(face, out var defaultTransform)
                 ? defaultTransform
                 : FaceUvTransform.Identity;
-            return transforms is not null && transforms.TryGetValue(part.Name + "." + face, out var value)
+            var result = transforms is not null && transforms.TryGetValue(part.Name + "." + face, out var value)
                 ? value
                 : fallback;
+            // CubeListBuilder.mirror flips U for every face of the part.
+            return part.Mirror ? result with { FlipH = !result.FlipH } : result;
         }
 
         var swapBodyDownUp = true;
