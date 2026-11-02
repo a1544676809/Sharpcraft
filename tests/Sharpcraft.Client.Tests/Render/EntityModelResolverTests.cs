@@ -35,8 +35,8 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("slime", definition.Name);
-        Assert.Equal(4, definition.Parts.Count);
-        Assert.NotNull(definition.Parts[0].OverlayLayers);
+        Assert.Equal(5, definition.Parts.Count);
+        Assert.Equal("outer_cube", definition.Parts[4].Name);
     }
 
     [Fact]
