@@ -50,6 +50,7 @@ public static class EntityModelResolver
         [HorseModelDefinition.SkeletonHorseEntityTypeId] = HorseModelDefinition.SkeletonHorse,
         [LlamaModelDefinition.LlamaEntityTypeId] = LlamaModelDefinition.Definition,
         [VillagerModelDefinition.VillagerEntityTypeId] = VillagerModelDefinition.Definition,
+        [VillagerModelDefinition.WanderingTraderEntityTypeId] = VillagerModelDefinition.WanderingTrader,
         [ZombieVillagerModelDefinition.ZombieVillagerEntityTypeId] = ZombieVillagerModelDefinition.Definition,
         [EndermiteModelDefinition.EndermiteEntityTypeId] = EndermiteModelDefinition.Definition,
         [SilverfishModelDefinition.SilverfishEntityTypeId] = SilverfishModelDefinition.Definition,

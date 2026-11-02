@@ -10,6 +10,7 @@ namespace Sharpcraft.Client.Render;
 public static class VillagerModelDefinition
 {
     public const int VillagerEntityTypeId = 143;
+    public const int WanderingTraderEntityTypeId = 145;
 
     public static readonly EntityModelDefinition Definition = new(
         "villager",
@@ -34,4 +35,12 @@ public static class VillagerModelDefinition
         "entity/villager/villager",
         0.9375f);
 
+    public static readonly EntityModelDefinition WanderingTrader = new(
+        "wandering_trader",
+        64,
+        64,
+        Definition.Parts,
+        PlayerModelDefinition.DefaultFaceTransforms,
+        "entity/wandering_trader/wandering_trader",
+        0.9375f);
 }

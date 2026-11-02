@@ -488,3 +488,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-461 | **Silverfish 模型转译**：7 个 root segment + 3 个 root layer cube，纹理 `entity/silverfish/silverfish`，type id 117 | `SilverfishModel` | Client 615 | `Client/Render/{SilverfishModelDefinition,EntityModelResolver}` | 进行中 |
 | T-462 | **Iron Golem 模型转译**：IronGolemModel root head/body/双臂/双腿，头部含鼻、body 含 lower cube grow0.5；纹理 `entity/iron_golem/iron_golem`，type id 71 | `IronGolemModel` | Client 616/沙盒截图 | `Client/Render/{IronGolemModelDefinition,EntityModelResolver}` | 进行中 |
 | T-463 | **Illager 变体**：Vindicator/Evoker/Pillager 复用 IllagerModel 几何，纹理 `vindicator/evoker/pillager`，type id 144/47/104 | `IllagerModel` | Client 617/沙盒截图 | `Client/Render/{IllagerModelDefinition,EntityModelResolver}` | 进行中 |
+| T-464 | **Wandering Trader**：复用 Villager 几何与 scale，纹理 `entity/wandering_trader/wandering_trader`，type id 145 | `WanderingTraderRenderer` | Client 618 | `Client/Render/{VillagerModelDefinition,EntityModelResolver}` | 进行中 |

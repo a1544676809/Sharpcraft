@@ -85,6 +85,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheWanderingTraderReusesVillagerGeometry()
+    {
+        var definition = EntityModelResolver.Resolve(VillagerModelDefinition.WanderingTraderEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("wandering_trader", definition.Name);
+        Assert.Equal(VillagerModelDefinition.Definition.Parts.Count, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheVillagerTypeResolvesToNinePartsAndScale()
     {
         var definition = EntityModelResolver.Resolve(VillagerModelDefinition.VillagerEntityTypeId);

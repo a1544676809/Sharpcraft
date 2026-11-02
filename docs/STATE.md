@@ -2255,3 +2255,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Silverfish 模型转译（T-461）：7 segments + 3 layers。
 - 2026-11-02 Iron Golem 模型转译（T-462）：root parts，沙盒已验证。
 - 2026-11-02 Illager 变体（T-463）：Vindicator/Evoker/Pillager。
+- 2026-11-02 Wandering Trader（T-464）：复用 Villager + wandering_trader。
