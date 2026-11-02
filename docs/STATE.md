@@ -2159,3 +2159,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 玩家面顺序对齐渲染器剔除（T-365）；双客户端验证中。
 - 2026-11-02 独立实体模型沙盒（T-366）：`tools/Sharpcraft.EntityModelSandbox` 输出正面 PNG，UV 正常；游戏内路径继续按沙盒结果收敛。
 - 2026-11-02 实体模型沙盒多视角（T-367）：front正常、left/back/肩膀仍不对；后续仅在沙盒收敛。
+- 2026-11-02 沙盒五视角（T-367）：front/肩膀正常，left/back 仍不符；后续用 UV 调试纹理定位侧面。
