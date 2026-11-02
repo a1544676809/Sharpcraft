@@ -51,7 +51,9 @@ public sealed class EntitySkinAtlas
                 Buffer.BlockCopy(image.Rgba, y * image.Width * 4, pixels, ((row * cellHeight + y) * cellWidth) * 4, image.Width * 4);
             }
 
-            sprites[pair.Key] = new SpriteRect(0, row * cellHeight, 64, 64, 1)
+            var logicalWidth = image.Width == 1600 ? 64 : image.Width;
+            var logicalHeight = image.Height == 1600 ? 64 : image.Height;
+            sprites[pair.Key] = new SpriteRect(0, row * cellHeight, logicalWidth, logicalHeight, 1)
             {
                 U0 = 0f,
                 V0 = (float)(row * cellHeight) / height,
