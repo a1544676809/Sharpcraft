@@ -29,6 +29,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheDrownedTypeResolvesToTheDrownedDefinition()
+    {
+        var definition = EntityModelResolver.Resolve(HumanoidMobModelDefinition.DrownedEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("drowned", definition.Name);
+        Assert.Contains("entity/zombie/drowned_outer_layer", definition.TexturePaths);
+    }
+
+    [Fact]
     public void TheHuskTypeResolvesToTheScaledZombieDefinition()
     {
         var definition = EntityModelResolver.Resolve(HumanoidMobModelDefinition.HuskEntityTypeId);

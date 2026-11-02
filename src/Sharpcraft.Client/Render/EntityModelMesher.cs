@@ -53,7 +53,7 @@ public sealed class EntityModelMesher
                 var max = new Vector3(feet.X + centreX + halfW, feet.Y + bottom + (part.Height * px), feet.Z + halfD);
                 if (onlyPart is not null && part.Name != onlyPart) continue;
                 if (excludedPart is not null && part.Name == excludedPart) continue;
-                AddPart(part, min, max, sprite, skinWidthForModel, skinHeightForModel, transforms, model.FaceTransforms, entity, px, ref vertexFloats, ref indexCount);
+                AddPart(part, min, max, sprite, skinWidthForModel, skinHeightForModel, transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount);
             }
         }
 
@@ -76,6 +76,7 @@ public sealed class EntityModelMesher
         IReadOnlyDictionary<string, FaceUvTransform>? transforms,
         IReadOnlyDictionary<string, FaceUvTransform> defaultTransforms,
         EntityRenderState renderState,
+        EntitySkinAtlas? skinAtlas,
         float px,
         ref int vertexFloats,
         ref int indexCount)
@@ -155,7 +156,17 @@ public sealed class EntityModelMesher
                     layer.Mirror || part.Mirror);
                 var overlayMin = new Vector3(min.X - grow, min.Y - grow, min.Z - grow);
                 var overlayMax = new Vector3(max.X + grow, max.Y + grow, max.Z + grow);
-                AddPart(overlay, overlayMin, overlayMax, skin, skinWidth, skinHeight, transforms, defaultTransforms, renderState, px, ref vertexFloats, ref indexCount);
+                var overlaySkin = skin;
+                var overlayWidth = skinWidth;
+                var overlayHeight = skinHeight;
+                if (layer.TexturePath is { Length: > 0 } layerPath && skinAtlas?.Get(layerPath) is { } layerSprite)
+                {
+                    overlaySkin = layerSprite;
+                    overlayWidth = layerSprite.Width;
+                    overlayHeight = layerSprite.Height;
+                }
+
+                AddPart(overlay, overlayMin, overlayMax, overlaySkin, overlayWidth, overlayHeight, transforms, defaultTransforms, renderState, skinAtlas, px, ref vertexFloats, ref indexCount);
             }
         }
     }

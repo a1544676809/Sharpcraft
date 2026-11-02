@@ -34,4 +34,31 @@ public sealed class EntityModelDefinition
     public IReadOnlyDictionary<string, FaceUvTransform> FaceTransforms { get; }
     public string? TexturePath { get; }
     public float Scale { get; }
+
+    public IEnumerable<string> TexturePaths
+    {
+        get
+        {
+            if (TexturePath is { Length: > 0 } main)
+            {
+                yield return main;
+            }
+
+            foreach (var part in Parts)
+            {
+                if (part.OverlayLayers is null)
+                {
+                    continue;
+                }
+
+                foreach (var layer in part.OverlayLayers)
+                {
+                    if (layer.TexturePath is { Length: > 0 } overlay)
+                    {
+                        yield return overlay;
+                    }
+                }
+            }
+        }
+    }
 }

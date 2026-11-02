@@ -27,25 +27,28 @@ public sealed class EntitySkinLibrary
         var images = new Dictionary<string, TextureData>(StringComparer.Ordinal);
         foreach (var definition in EntityModelResolver.Definitions)
         {
-            if (definition.TexturePath is not { Length: > 0 } path)
+            foreach (var path in definition.TexturePaths)
             {
-                continue;
-            }
+                if (images.ContainsKey(path))
+                {
+                    continue;
+                }
 
-            if (path == "entity/player/wide/steve" && playerOverride is not null)
-            {
-                images[path] = playerOverride;
-                continue;
-            }
+                if (path == "entity/player/wide/steve" && playerOverride is not null)
+                {
+                    images[path] = playerOverride;
+                    continue;
+                }
 
-            var data = resources.Read(ResourceKind.Texture, new Identifier("minecraft", path));
-            if (data is null)
-            {
-                continue;
-            }
+                var data = resources.Read(ResourceKind.Texture, new Identifier("minecraft", path));
+                if (data is null)
+                {
+                    continue;
+                }
 
-            var image = PngDecoder.Decode(data);
-            images[path] = new TextureData(image.Width, image.Height, image.Pixels);
+                var image = PngDecoder.Decode(data);
+                images[path] = new TextureData(image.Width, image.Height, image.Pixels);
+            }
         }
 
         return new EntitySkinLibrary(images.Count == 0 ? null : EntitySkinAtlas.FromTextures(images));

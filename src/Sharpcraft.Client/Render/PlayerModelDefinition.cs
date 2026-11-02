@@ -32,7 +32,8 @@ public readonly record struct EntityModelLayer(
     float Grow,
     int TextureX,
     int TextureY,
-    bool Mirror = false);
+    bool Mirror = false,
+    string? TexturePath = null);
 
 /// <summary>
 /// Static model definitions consumed by the entity mesher. The values follow the reference
