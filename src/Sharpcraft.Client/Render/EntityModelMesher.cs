@@ -16,7 +16,7 @@ public sealed class EntityModelMesher
 {
     private readonly DynamicGeometry _geometry = new();
 
-    public DynamicGeometry Build(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null)
+    public DynamicGeometry Build(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null)
     {
         _geometry.Clear();
         _geometry.Reserve(entities.Length * 6 * 24 * 14, entities.Length * 6 * 36);
@@ -33,6 +33,16 @@ public sealed class EntityModelMesher
             }
 
             var feet = new Vector3(entity.X, entity.Y, entity.Z);
+            var sprite = skin;
+            var skinWidthForModel = skinWidth;
+            var skinHeightForModel = skinHeight;
+            if (skinAtlas?.Get(model.TexturePath) is { } atlasSprite)
+            {
+                sprite = atlasSprite;
+                skinWidthForModel = atlasSprite.Width;
+                skinHeightForModel = atlasSprite.Height;
+            }
+
             foreach (var part in model.Parts)
             {
                 var centreX = part.CentreX * px;
@@ -43,7 +53,7 @@ public sealed class EntityModelMesher
                 var max = new Vector3(feet.X + centreX + halfW, feet.Y + bottom + (part.Height * px), feet.Z + halfD);
                 if (onlyPart is not null && part.Name != onlyPart) continue;
                 if (excludedPart is not null && part.Name == excludedPart) continue;
-                AddPart(part, min, max, skin, skinWidth, skinHeight, transforms, model.FaceTransforms, ref vertexFloats, ref indexCount);
+                AddPart(part, min, max, sprite, skinWidthForModel, skinHeightForModel, transforms, model.FaceTransforms, ref vertexFloats, ref indexCount);
             }
         }
 

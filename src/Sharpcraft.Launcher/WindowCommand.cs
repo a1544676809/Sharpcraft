@@ -401,8 +401,22 @@ internal static class WindowCommand
             customSkin = new Sharpcraft.Framework.Rendering.TextureData(skinImage.Width, skinImage.Height, skinImage.Pixels);
         }
 
-        var entitySkin = customSkin ?? Sharpcraft.Client.Render.EntitySkinTexture.Load(resources);
-        var entitySkinSprite = entitySkin is { } skin
+        var playerSkin = customSkin ?? Sharpcraft.Client.Render.EntitySkinTexture.Load(resources);
+        var skinImages = new System.Collections.Generic.Dictionary<string, Sharpcraft.Framework.Rendering.TextureData>(StringComparer.Ordinal);
+        if (playerSkin is not null)
+        {
+            skinImages["entity/player/wide/steve"] = playerSkin;
+        }
+
+        var zombieSkin = Sharpcraft.Client.Render.EntitySkinTexture.LoadPath(resources, "entity/zombie/zombie");
+        if (zombieSkin is not null)
+        {
+            skinImages["entity/zombie/zombie"] = zombieSkin;
+        }
+
+        var entitySkinAtlas = skinImages.Count == 0 ? null : Sharpcraft.Client.Render.EntitySkinAtlas.FromTextures(skinImages);
+        var entitySkin = entitySkinAtlas?.Texture ?? playerSkin;
+        var entitySkinSprite = playerSkin is { } skin
             ? new Sharpcraft.Client.Assets.SpriteRect(0, 0, skin.Width, skin.Height, 1) { U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f }
             : (Sharpcraft.Client.Assets.SpriteRect?)null;
         var modelMesher = new Sharpcraft.Client.Render.EntityModelMesher();
@@ -430,8 +444,14 @@ internal static class WindowCommand
                     Console.WriteLine($"entity cull: candidates={states.Length} visible={visibleEntities.Count} culled={states.Length - visibleEntities.Count}");
                 }
 
-                return entitySkin is { } skinModel
-                    ? modelMesher.Build(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), entitySkinSprite!, skinModel.Width == 1600 ? 64 : skinModel.Width, skinModel.Height == 1600 ? 64 : skinModel.Height)
+                if (entitySkinAtlas is not null)
+                {
+                    var atlasSprite = new Sharpcraft.Client.Assets.SpriteRect(0, 0, entitySkinAtlas.Texture.Width, entitySkinAtlas.Texture.Height, 1) { U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f };
+                    return modelMesher.Build(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), atlasSprite, 64, 64, skinAtlas: entitySkinAtlas);
+                }
+
+                return entitySkinSprite is { } skinModel
+                    ? modelMesher.Build(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), skinModel, skinModel.Width == 1600 ? 64 : skinModel.Width, skinModel.Height == 1600 ? 64 : skinModel.Height)
                     : entityMesher.Build(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), sprite);
             })
             : null;

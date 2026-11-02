@@ -2185,3 +2185,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 生物模型移植清单与进展文档（T-390）：按复杂度排序，记录 Player 完成、Zombie 定义完成/纹理未接。
 - 2026-11-02 非玩家模型回退（T-391）：未注册实体使用 Placeholder，不再消失。
 - 2026-11-02 模型纹理路径元数据（T-392）：Player/Zombie 定义带 TexturePath。
+- 2026-11-02 实体 skin 图集/Zombie 纹理链路（T-393）：player+zombie 图集、按 TexturePath 选区域；待游戏观察。

@@ -10,10 +10,12 @@ namespace Sharpcraft.Client.Render;
 /// <summary>Loads the default player skin; the texture is data only and contains no world/entity reference.</summary>
 public static class EntitySkinTexture
 {
-    public static TextureData? Load(ResourceManager resources, bool slim = false)
+    public static TextureData? Load(ResourceManager resources, bool slim = false) =>
+        LoadPath(resources, slim ? "entity/player/slim/steve" : "entity/player/wide/steve");
+
+    public static TextureData? LoadPath(ResourceManager resources, string path)
     {
         ArgumentNullException.ThrowIfNull(resources);
-        var path = slim ? "entity/player/slim/steve" : "entity/player/wide/steve";
         var data = resources.Read(ResourceKind.Texture, new Identifier("minecraft", path));
         if (data is null)
         {
