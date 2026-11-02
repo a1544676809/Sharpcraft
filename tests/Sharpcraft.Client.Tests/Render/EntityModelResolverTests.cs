@@ -37,6 +37,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheIronGolemTypeResolvesToItsRootParts()
+    {
+        var definition = EntityModelResolver.Resolve(IronGolemModelDefinition.IronGolemEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("iron_golem", definition.Name);
+        Assert.Equal(8, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheSilverfishTypeResolvesToSevenSegmentsAndThreeLayers()
     {
         var definition = EntityModelResolver.Resolve(SilverfishModelDefinition.SilverfishEntityTypeId);

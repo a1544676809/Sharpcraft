@@ -53,6 +53,7 @@ public static class EntityModelResolver
         [ZombieVillagerModelDefinition.ZombieVillagerEntityTypeId] = ZombieVillagerModelDefinition.Definition,
         [EndermiteModelDefinition.EndermiteEntityTypeId] = EndermiteModelDefinition.Definition,
         [SilverfishModelDefinition.SilverfishEntityTypeId] = SilverfishModelDefinition.Definition,
+        [IronGolemModelDefinition.IronGolemEntityTypeId] = IronGolemModelDefinition.Definition,
         [HumanoidMobModelDefinition.HuskEntityTypeId] = HumanoidMobModelDefinition.Husk,
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie
     };
