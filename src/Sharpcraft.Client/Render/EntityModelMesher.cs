@@ -70,8 +70,8 @@ public sealed class EntityModelMesher
         AddFace(max.X, min.Y, min.Z, min.X, min.Y, min.Z, min.X, max.Y, min.Z, max.X, max.Y, min.Z, tx + d, ty + d, w, h, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
         AddFace(min.X, min.Y, min.Z, min.X, min.Y, max.Z, min.X, max.Y, max.Z, min.X, max.Y, min.Z, tx, ty + d, d, h, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
         AddFace(max.X, min.Y, max.Z, max.X, min.Y, min.Z, max.X, max.Y, min.Z, max.X, max.Y, max.Z, tx + d + w, ty + d, d, h, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
-        AddFace(min.X, max.Y, min.Z, max.X, max.Y, min.Z, max.X, max.Y, max.Z, min.X, max.Y, max.Z, tx + d, ty, w, d, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
-        AddFace(min.X, min.Y, max.Z, max.X, min.Y, max.Z, max.X, min.Y, min.Z, min.X, min.Y, min.Z, tx + d + w, ty, w, d, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
+        AddFace(min.X, max.Y, min.Z, max.X, max.Y, min.Z, max.X, max.Y, max.Z, min.X, max.Y, max.Z, tx + d + w, ty, w, d, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, flipV: true);
+        AddFace(min.X, min.Y, max.Z, max.X, min.Y, max.Z, max.X, min.Y, min.Z, min.X, min.Y, min.Z, tx + d, ty, w, d, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
     }
 
     private void AddFace(
@@ -81,18 +81,20 @@ public sealed class EntityModelMesher
         float dx, float dy, float dz,
         int tu, int tv, int tw, int th,
         SpriteRect skin, int skinWidth, int skinHeight,
-        ref int vertexFloats, ref int indexCount)
+        ref int vertexFloats, ref int indexCount,
+        bool flipV = false)
     {
         var u0 = (tu + skin.U0 * skinWidth) / skinWidth;
         var v0 = (tv + skin.V0 * skinHeight) / skinHeight;
         var u1 = (tu + tw) / (float)skinWidth;
         var v1 = (tv + th) / (float)skinHeight;
-
         var first = (uint)(vertexFloats / 14);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, ax, ay, az, u0, v0, skin);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, bx, by, bz, u0, v1, skin);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, cx, cy, cz, u1, v1, skin);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, dx, dy, dz, u1, v0, skin);
+        var topV = flipV ? v1 : v0;
+        var bottomV = flipV ? v0 : v1;
+        WriteVertex(_geometry.Vertices, ref vertexFloats, ax, ay, az, u1, bottomV, skin);
+        WriteVertex(_geometry.Vertices, ref vertexFloats, bx, by, bz, u0, bottomV, skin);
+        WriteVertex(_geometry.Vertices, ref vertexFloats, cx, cy, cz, u0, topV, skin);
+        WriteVertex(_geometry.Vertices, ref vertexFloats, dx, dy, dz, u1, topV, skin);
 
         _geometry.Indices[indexCount++] = first;
         _geometry.Indices[indexCount++] = first + 1;
