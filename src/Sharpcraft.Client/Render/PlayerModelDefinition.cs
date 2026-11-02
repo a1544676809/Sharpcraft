@@ -52,4 +52,7 @@ public static class PlayerModelDefinition
         new("left_leg", -1.9f, 0f, 4f, 12f, 4f, 16, 48),
         new("right_leg", 1.9f, 0f, 4f, 12f, 4f, 0, 16)
     ];
+
+    public static readonly EntityModelDefinition Definition =
+        new("player", 64, 64, AdultParts, DefaultFaceTransforms);
 }

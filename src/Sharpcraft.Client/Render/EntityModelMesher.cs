@@ -26,13 +26,14 @@ public sealed class EntityModelMesher
 
         foreach (var entity in entities)
         {
-            if (entity.TypeId != EntityPlaceholderMesher.PlayerEntityTypeId)
+            var model = EntityModelResolver.Resolve(entity.TypeId);
+            if (model is null)
             {
                 continue;
             }
 
             var feet = new Vector3(entity.X, entity.Y, entity.Z);
-            foreach (var part in PlayerModelDefinition.AdultParts)
+            foreach (var part in model.Parts)
             {
                 var centreX = part.CentreX * px;
                 var bottom = part.Bottom * px;
@@ -42,7 +43,7 @@ public sealed class EntityModelMesher
                 var max = new Vector3(feet.X + centreX + halfW, feet.Y + bottom + (part.Height * px), feet.Z + halfD);
                 if (onlyPart is not null && part.Name != onlyPart) continue;
                 if (excludedPart is not null && part.Name == excludedPart) continue;
-                AddPart(part, min, max, skin, skinWidth, skinHeight, transforms, ref vertexFloats, ref indexCount);
+                AddPart(part, min, max, skin, skinWidth, skinHeight, transforms, model.FaceTransforms, ref vertexFloats, ref indexCount);
             }
         }
 
@@ -63,6 +64,7 @@ public sealed class EntityModelMesher
         int skinWidth,
         int skinHeight,
         IReadOnlyDictionary<string, FaceUvTransform>? transforms,
+        IReadOnlyDictionary<string, FaceUvTransform> defaultTransforms,
         ref int vertexFloats,
         ref int indexCount)
     {
@@ -92,7 +94,7 @@ public sealed class EntityModelMesher
         var l3 = new Vector3(min.X, max.Y, max.Z);
         FaceUvTransform T(string face)
         {
-            var fallback = PlayerModelDefinition.DefaultFaceTransforms.TryGetValue(face, out var defaultTransform)
+            var fallback = defaultTransforms.TryGetValue(face, out var defaultTransform)
                 ? defaultTransform
                 : FaceUvTransform.Identity;
             return transforms is not null && transforms.TryGetValue(part.Name + "." + face, out var value)
