@@ -41,6 +41,17 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void ThePigTypeResolvesToAQuadrupedDefinition()
+    {
+        var definition = EntityModelResolver.Resolve(PigModelDefinition.PigEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("pig", definition.Name);
+        Assert.Equal(7, definition.Parts.Count);
+        Assert.NotEqual(0f, definition.Parts[2].RotationX);
+    }
+
+    [Fact]
     public void TheSpiderTypeResolvesToItsBodyAndEightLegs()
     {
         var definition = EntityModelResolver.Resolve(SpiderModelDefinition.SpiderEntityTypeId);
