@@ -16,10 +16,10 @@ public sealed class PlayerModelDefinitionTests
         Assert.Equal(6, parts.Length);
         AssertPart(parts, "head", 0f, 24f, 8f, 8f, 8f);
         AssertPart(parts, "body", 0f, 12f, 8f, 12f, 4f);
-        AssertPart(parts, "left_arm", 6f, 12f, 4f, 12f, 4f);
-        AssertPart(parts, "right_arm", -6f, 12f, 4f, 12f, 4f);
-        AssertPart(parts, "left_leg", 1.9f, 0f, 4f, 12f, 4f);
-        AssertPart(parts, "right_leg", -1.9f, 0f, 4f, 12f, 4f);
+        AssertPart(parts, "left_arm", -6f, 12f, 4f, 12f, 4f);
+        AssertPart(parts, "right_arm", 6f, 12f, 4f, 12f, 4f);
+        AssertPart(parts, "left_leg", -1.9f, 0f, 4f, 12f, 4f);
+        AssertPart(parts, "right_leg", 1.9f, 0f, 4f, 12f, 4f);
     }
 
     [Fact]
