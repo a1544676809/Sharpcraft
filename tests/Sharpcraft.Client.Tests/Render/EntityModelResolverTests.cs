@@ -29,6 +29,17 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheSpiderTypeResolvesToItsBodyAndEightLegs()
+    {
+        var definition = EntityModelResolver.Resolve(SpiderModelDefinition.SpiderEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("spider", definition.Name);
+        Assert.Equal(11, definition.Parts.Count);
+        Assert.NotEqual(0f, definition.Parts[3].RotationY);
+    }
+
+    [Fact]
     public void TheMagmaCubeTypeResolvesToNineFlatParts()
     {
         var definition = EntityModelResolver.Resolve(MagmaCubeModelDefinition.MagmaCubeEntityTypeId);

@@ -64,7 +64,7 @@ public sealed class EntityModelMesher
                 var max = new Vector3(feet.X + centreX + halfW, feet.Y + bottom + (part.Height * px), feet.Z + centreZ + halfD);
                 if (onlyPart is not null && part.Name != onlyPart) continue;
                 if (excludedPart is not null && part.Name == excludedPart) continue;
-                AddPart(part, min, max, sprite, skinWidthForModel, skinHeightForModel, transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount);
+                AddPart(part, min, max, sprite, skinWidthForModel, skinHeightForModel, feet, transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount);
             }
         }
 
@@ -84,6 +84,7 @@ public sealed class EntityModelMesher
         SpriteRect skin,
         int skinWidth,
         int skinHeight,
+        Vector3 feet,
         IReadOnlyDictionary<string, FaceUvTransform>? transforms,
         IReadOnlyDictionary<string, FaceUvTransform> defaultTransforms,
         EntityRenderState renderState,
@@ -116,6 +117,13 @@ public sealed class EntityModelMesher
         var l1 = new Vector3(max.X, min.Y, max.Z);
         var l2 = new Vector3(max.X, max.Y, max.Z);
         var l3 = new Vector3(min.X, max.Y, max.Z);
+        if (part.RotationX != 0f || part.RotationY != 0f || part.RotationZ != 0f)
+        {
+            var pivot = feet + new Vector3(part.PivotX * px, part.PivotY * px, part.PivotZ * px);
+            Vector3 Apply(Vector3 point) => RotateAround(point, pivot, part.RotationX, part.RotationY, part.RotationZ);
+            t0 = Apply(t0); t1 = Apply(t1); t2 = Apply(t2); t3 = Apply(t3);
+            l0 = Apply(l0); l1 = Apply(l1); l2 = Apply(l2); l3 = Apply(l3);
+        }
         FaceUvTransform T(string face)
         {
             var fallback = defaultTransforms.TryGetValue(face, out var defaultTransform)
@@ -166,7 +174,13 @@ public sealed class EntityModelMesher
                     layer.TextureY,
                     layer.Mirror || part.Mirror,
                     null,
-                    part.CentreZ);
+                    part.CentreZ,
+                    part.PivotX,
+                    part.PivotY,
+                    part.PivotZ,
+                    part.RotationX,
+                    part.RotationY,
+                    part.RotationZ);
                 var overlayMin = new Vector3(min.X - grow, min.Y - grow, min.Z - grow);
                 var overlayMax = new Vector3(max.X + grow, max.Y + grow, max.Z + grow);
                 var overlaySkin = skin;
@@ -179,9 +193,18 @@ public sealed class EntityModelMesher
                     overlayHeight = layerSprite.Height;
                 }
 
-                AddPart(overlay, overlayMin, overlayMax, overlaySkin, overlayWidth, overlayHeight, transforms, defaultTransforms, renderState, skinAtlas, px, ref vertexFloats, ref indexCount);
+                AddPart(overlay, overlayMin, overlayMax, overlaySkin, overlayWidth, overlayHeight, feet, transforms, defaultTransforms, renderState, skinAtlas, px, ref vertexFloats, ref indexCount);
             }
         }
+    }
+
+    private static Vector3 RotateAround(Vector3 point, Vector3 pivot, float rx, float ry, float rz)
+    {
+        var local = point - pivot;
+        if (rz != 0f) local = Vector3.Transform(local, Matrix4x4.CreateRotationZ(rz));
+        if (ry != 0f) local = Vector3.Transform(local, Matrix4x4.CreateRotationY(ry));
+        if (rx != 0f) local = Vector3.Transform(local, Matrix4x4.CreateRotationX(rx));
+        return pivot + local;
     }
 
     private static bool LayerVisible(string name, EntityRenderState state) => name switch
