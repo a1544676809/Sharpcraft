@@ -49,6 +49,10 @@ public sealed class EntityModelMesher
         return _geometry;
     }
 
+    /// <summary>
+    /// Emits the six faces in the reference <c>ModelPart.Cube</c> order. The UV corners below are the exact
+    /// Polygon constructor values; no per-face rectangle flip or 180-degree rotation is applied.
+    /// </summary>
     private void AddPart(
         EntityModelPart part,
         Vector3 min,
@@ -59,40 +63,50 @@ public sealed class EntityModelMesher
         ref int vertexFloats,
         ref int indexCount)
     {
-        var d = (int)(part.Depth);
-        var w = (int)(part.Width);
-        var h = (int)(part.Height);
+        var d = part.Depth;
+        var w = part.Width;
+        var h = part.Height;
         var tx = part.TextureX;
         var ty = part.TextureY;
 
-        // +Z / -Z / -X / +X / +Y / -Y, using the standard cube texture layout.
-        AddFace(min.X, min.Y, max.Z, max.X, min.Y, max.Z, max.X, max.Y, max.Z, min.X, max.Y, max.Z, tx + d + w + d, ty + d, w, h, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
-        AddFace(max.X, min.Y, min.Z, min.X, min.Y, min.Z, min.X, max.Y, min.Z, max.X, max.Y, min.Z, tx + d, ty + d, w, h, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
-        AddFace(min.X, min.Y, min.Z, min.X, min.Y, max.Z, min.X, max.Y, max.Z, min.X, max.Y, min.Z, tx, ty + d, d, h, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
-        AddFace(max.X, min.Y, max.Z, max.X, min.Y, min.Z, max.X, max.Y, min.Z, max.X, max.Y, max.Z, tx + d + w, ty + d, d, h, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
-        AddFace(max.X, max.Y, min.Z, min.X, max.Y, min.Z, min.X, max.Y, max.Z, max.X, max.Y, max.Z, tx + d + w, ty + d, w, d, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
-        AddFace(min.X, min.Y, max.Z, max.X, min.Y, max.Z, max.X, min.Y, min.Z, min.X, min.Y, min.Z, tx + d, ty, w, d, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount);
+        var u0 = tx;
+        var u1 = tx + d;
+        var u2 = tx + d + w;
+        var u22 = tx + d + (2f * w);
+        var u3 = tx + d + w + d;
+        var u4 = tx + d + w + d + w;
+        var v0 = ty;
+        var v1 = ty + d;
+        var v2 = ty + d + h;
+
+        var t0 = new Vector3(min.X, min.Y, min.Z);
+        var t1 = new Vector3(max.X, min.Y, min.Z);
+        var t2 = new Vector3(max.X, max.Y, min.Z);
+        var t3 = new Vector3(min.X, max.Y, min.Z);
+        var l0 = new Vector3(min.X, min.Y, max.Z);
+        var l1 = new Vector3(max.X, min.Y, max.Z);
+        var l2 = new Vector3(max.X, max.Y, max.Z);
+        var l3 = new Vector3(min.X, max.Y, max.Z);
+
+        AddFace(l1, l0, t0, t1, u2, v0, u1, v0, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // DOWN
+        AddFace(t2, t3, l3, l2, u22, v1, u2, v1, u2, v0, u22, v0, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // UP
+        AddFace(t0, l0, l3, t3, u1, v1, u0, v1, u0, v2, u1, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // WEST
+        AddFace(t1, t0, t3, t2, u2, v1, u1, v1, u1, v2, u2, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // NORTH
+        AddFace(l1, t1, t2, l2, u3, v1, u2, v1, u2, v2, u3, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // EAST
+        AddFace(l0, l1, l2, l3, u4, v1, u3, v1, u3, v2, u4, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount); // SOUTH
     }
 
     private void AddFace(
-        float ax, float ay, float az,
-        float bx, float by, float bz,
-        float cx, float cy, float cz,
-        float dx, float dy, float dz,
-        int tu, int tv, int tw, int th,
+        Vector3 a, Vector3 b, Vector3 c, Vector3 d,
+        float au, float av, float bu, float bv, float cu, float cv, float du, float dv,
         SpriteRect skin, int skinWidth, int skinHeight,
-        ref int vertexFloats, ref int indexCount,
-        bool flipV = false)
+        ref int vertexFloats, ref int indexCount)
     {
-        var u0 = (tu + skin.U0 * skinWidth) / skinWidth;
-        var v0 = (tv + skin.V0 * skinHeight) / skinHeight;
-        var u1 = (tu + tw) / (float)skinWidth;
-        var v1 = (tv + th) / (float)skinHeight;
         var first = (uint)(vertexFloats / 14);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, ax, ay, az, u0, v1, skin);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, bx, by, bz, u1, v1, skin);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, cx, cy, cz, u1, v0, skin);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, dx, dy, dz, u0, v0, skin);
+        WriteVertex(_geometry.Vertices, ref vertexFloats, a, au / skinWidth, av / skinHeight, skin);
+        WriteVertex(_geometry.Vertices, ref vertexFloats, b, bu / skinWidth, bv / skinHeight, skin);
+        WriteVertex(_geometry.Vertices, ref vertexFloats, c, cu / skinWidth, cv / skinHeight, skin);
+        WriteVertex(_geometry.Vertices, ref vertexFloats, d, du / skinWidth, dv / skinHeight, skin);
 
         _geometry.Indices[indexCount++] = first;
         _geometry.Indices[indexCount++] = first + 1;
@@ -102,24 +116,21 @@ public sealed class EntityModelMesher
         _geometry.Indices[indexCount++] = first + 3;
     }
 
-    private static void WriteVertex(float[] destination, ref int offset, float x, float y, float z, float u, float v, SpriteRect skin)
+    private static void WriteVertex(float[] destination, ref int offset, Vector3 position, float u, float v, SpriteRect skin)
     {
-        destination[offset++] = x;
-        destination[offset++] = y;
-        destination[offset++] = z;
+        destination[offset++] = position.X;
+        destination[offset++] = position.Y;
+        destination[offset++] = position.Z;
         destination[offset++] = 1f;
         destination[offset++] = 1f;
         destination[offset++] = 1f;
-        destination[offset++] = 0f; // U
-        destination[offset++] = 0f; // V
+        destination[offset++] = u;
+        destination[offset++] = v;
         destination[offset++] = skin.U0;
         destination[offset++] = skin.V0;
         destination[offset++] = skin.U1;
         destination[offset++] = skin.V1;
         destination[offset++] = 1f;
         destination[offset++] = 0f;
-        // The block vertex format uses per-vertex u/v inside the sprite rect; overwrite them.
-        destination[offset - 8] = u;
-        destination[offset - 7] = v;
     }
 }

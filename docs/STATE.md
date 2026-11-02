@@ -2155,3 +2155,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 实体纹理坐标依据核实（T-361）：禁止全局 skin V 翻转；按 ModelPart.Polygon 顶点顺序。
 - 2026-11-02 wide 玩家 left_arm/left_leg 纹理偏移按 PlayerModel 修正（T-362）。
 - 2026-11-02 玩家面内 UV 180° 修正（T-363）：双客户端皮肤方向正常。
+- 2026-11-02 玩家逐面 UV 表实现（T-364）：wide 模型皮肤方向正常；slim 选择待后续。
