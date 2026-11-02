@@ -2184,3 +2184,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Zombie 模型转译（T-389）：HumanoidModel 部件定义与 resolver 注册完成，mob 纹理/渲染待接。
 - 2026-11-02 生物模型移植清单与进展文档（T-390）：按复杂度排序，记录 Player 完成、Zombie 定义完成/纹理未接。
 - 2026-11-02 非玩家模型回退（T-391）：未注册实体使用 Placeholder，不再消失。
+- 2026-11-02 模型纹理路径元数据（T-392）：Player/Zombie 定义带 TexturePath。

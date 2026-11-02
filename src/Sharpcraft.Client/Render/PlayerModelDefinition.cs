@@ -54,5 +54,5 @@ public static class PlayerModelDefinition
     ];
 
     public static readonly EntityModelDefinition Definition =
-        new("player", 64, 64, AdultParts, DefaultFaceTransforms);
+        new("player", 64, 64, AdultParts, DefaultFaceTransforms, "entity/player/wide/steve");
 }

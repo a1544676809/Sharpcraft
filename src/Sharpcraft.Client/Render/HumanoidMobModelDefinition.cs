@@ -23,5 +23,6 @@ public static class HumanoidMobModelDefinition
             new("left_leg", -1.9f, 0f, 4f, 12f, 4f, 0, 16, true),
             new("right_leg", 1.9f, 0f, 4f, 12f, 4f, 0, 16)
         ],
-        PlayerModelDefinition.DefaultFaceTransforms);
+        PlayerModelDefinition.DefaultFaceTransforms,
+        "entity/zombie/zombie");
 }

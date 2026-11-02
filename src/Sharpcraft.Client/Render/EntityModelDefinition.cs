@@ -14,13 +14,15 @@ public sealed class EntityModelDefinition
         int textureWidth,
         int textureHeight,
         IReadOnlyList<EntityModelPart> parts,
-        IReadOnlyDictionary<string, FaceUvTransform>? faceTransforms = null)
+        IReadOnlyDictionary<string, FaceUvTransform>? faceTransforms = null,
+        string? texturePath = null)
     {
         Name = name;
         TextureWidth = textureWidth;
         TextureHeight = textureHeight;
         Parts = parts;
         FaceTransforms = faceTransforms ?? new Dictionary<string, FaceUvTransform>();
+        TexturePath = texturePath;
     }
 
     public string Name { get; }
@@ -28,4 +30,5 @@ public sealed class EntityModelDefinition
     public int TextureHeight { get; }
     public IReadOnlyList<EntityModelPart> Parts { get; }
     public IReadOnlyDictionary<string, FaceUvTransform> FaceTransforms { get; }
+    public string? TexturePath { get; }
 }
