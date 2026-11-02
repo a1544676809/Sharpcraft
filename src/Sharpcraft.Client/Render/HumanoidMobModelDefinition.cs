@@ -4,8 +4,8 @@
 namespace Sharpcraft.Client.Render;
 
 /// <summary>
-/// Humanoid mob definitions. Zombie uses HumanoidModel's 4x12x4 limbs; Skeleton's own layer replaces them with
-/// 2x12x2 limbs and a 64x32 texture.
+/// Humanoid mob definitions. Every part is written in the reference's y-down pivot/cube form and converted by
+/// <see cref="PlayerModelDefinition.FromVanilla"/>; no per-model Bottom/CentreX arithmetic remains here.
 /// </summary>
 public static class HumanoidMobModelDefinition
 {
@@ -20,12 +20,12 @@ public static class HumanoidMobModelDefinition
         64,
         32,
         [
-            new("head", 0f, 38f, 8f, 8f, 8f, 0, 0, false, [new("hat", -0.5f, 0, 16)]),
-            new("body", 0f, 27f, 8f, 12f, 4f, 32, 16),
-            new("left_arm", -5f, 9f, 2f, 30f, 2f, 56, 0, true),
-            new("right_arm", 5f, 9f, 2f, 30f, 2f, 56, 0),
-            new("left_leg", -2f, 0f, 2f, 30f, 2f, 56, 0, true),
-            new("right_leg", 2f, 0f, 2f, 30f, 2f, 56, 0)
+            PlayerModelDefinition.FromVanilla("head", 0f, -13f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0, overlays: [new("hat", -0.5f, 0, 16)], modelHeight: 25f),
+            PlayerModelDefinition.FromVanilla("body", 0f, -14f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 32, 16, modelHeight: 25f),
+            PlayerModelDefinition.FromVanilla("left_arm", 5f, -12f, 0f, -1f, -2f, -1f, 2f, 30f, 2f, 56, 0, mirror: true, modelHeight: 25f),
+            PlayerModelDefinition.FromVanilla("right_arm", -5f, -12f, 0f, -1f, -2f, -1f, 2f, 30f, 2f, 56, 0, modelHeight: 25f),
+            PlayerModelDefinition.FromVanilla("left_leg", 2f, -5f, 0f, -1f, 0f, -1f, 2f, 30f, 2f, 56, 0, mirror: true, modelHeight: 25f),
+            PlayerModelDefinition.FromVanilla("right_leg", -2f, -5f, 0f, -1f, 0f, -1f, 2f, 30f, 2f, 56, 0, modelHeight: 25f)
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/enderman/enderman");
@@ -35,13 +35,12 @@ public static class HumanoidMobModelDefinition
         64,
         64,
         [
-            new("head", 0f, 24f, 8f, 8f, 8f, 0, 0, false,
-                [new("hat", 0.5f, 32, 0), DrownedOuter(0, 0)]),
-            new("body", 0f, 12f, 8f, 12f, 4f, 16, 16, false, [DrownedOuter(16, 16)]),
-            new("left_arm", -6f, 12f, 4f, 12f, 4f, 32, 48, false, [DrownedOuter(32, 48)]),
-            new("right_arm", 6f, 12f, 4f, 12f, 4f, 40, 16, false, [DrownedOuter(40, 16)]),
-            new("left_leg", -1.9f, 0f, 4f, 12f, 4f, 16, 48, false, [DrownedOuter(16, 48)]),
-            new("right_leg", 1.9f, 0f, 4f, 12f, 4f, 0, 16, false, [DrownedOuter(0, 16)])
+            PlayerModelDefinition.FromVanilla("head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0, overlays: [new("hat", 0.5f, 32, 0), DrownedOuter(0, 0)]),
+            PlayerModelDefinition.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16, overlays: [DrownedOuter(16, 16)]),
+            PlayerModelDefinition.FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 32, 48, overlays: [DrownedOuter(32, 48)]),
+            PlayerModelDefinition.FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16, overlays: [DrownedOuter(40, 16)]),
+            PlayerModelDefinition.FromVanilla("left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 16, 48, overlays: [DrownedOuter(16, 48)]),
+            PlayerModelDefinition.FromVanilla("right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16, overlays: [DrownedOuter(0, 16)])
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/zombie/drowned");
@@ -54,12 +53,12 @@ public static class HumanoidMobModelDefinition
         64,
         64,
         [
-            new("head", 0f, 24f, 8f, 8f, 8f, 0, 0, false, [new("hat", 0.5f, 32, 0)]),
-            new("body", 0f, 12f, 8f, 12f, 4f, 16, 16),
-            new("left_arm", -6f, 12f, 4f, 12f, 4f, 40, 16, true),
-            new("right_arm", 6f, 12f, 4f, 12f, 4f, 40, 16),
-            new("left_leg", -1.9f, 0f, 4f, 12f, 4f, 0, 16, true),
-            new("right_leg", 1.9f, 0f, 4f, 12f, 4f, 0, 16)
+            PlayerModelDefinition.FromVanilla("head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0, overlays: [new("hat", 0.5f, 32, 0)]),
+            PlayerModelDefinition.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16),
+            PlayerModelDefinition.FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 40, 16, mirror: true),
+            PlayerModelDefinition.FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16),
+            PlayerModelDefinition.FromVanilla("left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16, mirror: true),
+            PlayerModelDefinition.FromVanilla("right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16)
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/zombie/husk",
@@ -70,12 +69,12 @@ public static class HumanoidMobModelDefinition
         64,
         32,
         [
-            new("head", 0f, 24f, 8f, 8f, 8f, 0, 0, false, [new("hat", 0.5f, 32, 0)]),
-            new("body", 0f, 12f, 8f, 12f, 4f, 16, 16),
-            new("left_arm", -5f, 12f, 2f, 12f, 2f, 40, 16, true),
-            new("right_arm", 5f, 12f, 2f, 12f, 2f, 40, 16),
-            new("left_leg", -2f, 0f, 2f, 12f, 2f, 0, 16, true),
-            new("right_leg", 2f, 0f, 2f, 12f, 2f, 0, 16)
+            PlayerModelDefinition.FromVanilla("head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0, overlays: [new("hat", 0.5f, 32, 0)]),
+            PlayerModelDefinition.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16),
+            PlayerModelDefinition.FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -1f, 2f, 12f, 2f, 40, 16, mirror: true),
+            PlayerModelDefinition.FromVanilla("right_arm", -5f, 2f, 0f, -1f, -2f, -1f, 2f, 12f, 2f, 40, 16),
+            PlayerModelDefinition.FromVanilla("left_leg", 2f, 12f, 0f, -1f, 0f, -1f, 2f, 12f, 2f, 0, 16, mirror: true),
+            PlayerModelDefinition.FromVanilla("right_leg", -2f, 12f, 0f, -1f, 0f, -1f, 2f, 12f, 2f, 0, 16)
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/skeleton/skeleton");
@@ -85,12 +84,12 @@ public static class HumanoidMobModelDefinition
         64,
         64,
         [
-            new("head", 0f, 24f, 8f, 8f, 8f, 0, 0, false, [new("hat", 0.5f, 32, 0)]),
-            new("body", 0f, 12f, 8f, 12f, 4f, 16, 16),
-            new("left_arm", -6f, 12f, 4f, 12f, 4f, 40, 16, true),
-            new("right_arm", 6f, 12f, 4f, 12f, 4f, 40, 16),
-            new("left_leg", -1.9f, 0f, 4f, 12f, 4f, 0, 16, true),
-            new("right_leg", 1.9f, 0f, 4f, 12f, 4f, 0, 16)
+            PlayerModelDefinition.FromVanilla("head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0, overlays: [new("hat", 0.5f, 32, 0)]),
+            PlayerModelDefinition.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16),
+            PlayerModelDefinition.FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 40, 16, mirror: true),
+            PlayerModelDefinition.FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16),
+            PlayerModelDefinition.FromVanilla("left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16, mirror: true),
+            PlayerModelDefinition.FromVanilla("right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16)
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/zombie/zombie");

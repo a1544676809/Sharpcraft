@@ -92,7 +92,10 @@ public static class PlayerModelDefinition
         bool mirror = false,
         bool mirrorX = true,
         IReadOnlyList<EntityModelLayer>? overlays = null,
-        float modelHeight = 24f)
+        float modelHeight = 24f,
+        float rotationX = 0f,
+        float rotationY = 0f,
+        float rotationZ = 0f)
     {
         var sourceCentreX = pivotX + minX + (width * 0.5f);
         var centreX = MathF.Round(mirrorX ? -sourceCentreX : sourceCentreX, 4);
@@ -112,7 +115,10 @@ public static class PlayerModelDefinition
             CentreZ: centreZ,
             PivotX: mirrorX ? -pivotX : pivotX,
             PivotY: modelHeight - pivotY,
-            PivotZ: pivotZ);
+            PivotZ: pivotZ,
+            RotationX: rotationX,
+            RotationY: rotationY,
+            RotationZ: rotationZ);
     }
 
     public static readonly EntityModelDefinition Definition =

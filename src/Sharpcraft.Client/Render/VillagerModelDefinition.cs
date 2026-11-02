@@ -5,7 +5,7 @@ namespace Sharpcraft.Client.Render;
 
 /// <summary>
 /// VillagerModel: head/hat, body/jacket, nose, crossed-arm group (three cubes under one rotated pivot) and legs.
-/// The reference applies villagerLikeScale 0.9375 to the whole layer.
+/// All values are raw PartPose/cube values; villagerLikeScale 0.9375 is applied at the definition level.
 /// </summary>
 public static class VillagerModelDefinition
 {
@@ -16,19 +16,19 @@ public static class VillagerModelDefinition
         64,
         64,
         [
-            new("head", 0f, 24f, 8f, 10f, 8f, 0, 0, false,
-                [new("hat", 0.51f, 32, 0)]),
-            new("body", 0f, 12f, 8f, 12f, 6f, 16, 20),
-            new("jacket", 0f, 4f, 8f, 20f, 6f, 0, 38),
-            new("nose", 0f, 23f, 2f, 4f, 2f, 24, 0, false, null, -5f),
-            new("left_arm", -6f, 15f, 4f, 8f, 4f, 44, 22, true, null, -1f,
-                PivotX: 0f, PivotY: 21f, PivotZ: -1f, RotationX: 0.75f),
-            new("right_arm", 6f, 15f, 4f, 8f, 4f, 44, 22, false, null, -1f,
-                PivotX: 0f, PivotY: 21f, PivotZ: -1f, RotationX: 0.75f),
-            new("crossed_arms", 0f, 15f, 8f, 4f, 4f, 40, 38, false, null, -1f,
-                PivotX: 0f, PivotY: 21f, PivotZ: -1f, RotationX: 0.75f),
-            new("right_leg", 2f, 0f, 4f, 12f, 4f, 0, 22),
-            new("left_leg", -2f, 0f, 4f, 12f, 4f, 0, 22, true)
+            PlayerModelDefinition.FromVanilla("head", 0f, 0f, 0f, -4f, -10f, -4f, 8f, 10f, 8f, 0, 0,
+                overlays: [new("hat", 0.51f, 32, 0)], mirrorX: false),
+            PlayerModelDefinition.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -3f, 8f, 12f, 6f, 16, 20, mirrorX: false),
+            PlayerModelDefinition.FromVanilla("jacket", 0f, 0f, 0f, -4f, 0f, -3f, 8f, 20f, 6f, 0, 38, mirrorX: false),
+            PlayerModelDefinition.FromVanilla("nose", 0f, -2f, 0f, -1f, -1f, -6f, 2f, 4f, 2f, 24, 0, mirrorX: false),
+            PlayerModelDefinition.FromVanilla("left_arm", 0f, 3f, -1f, -8f, -2f, -2f, 4f, 8f, 4f, 44, 22,
+                mirror: true, mirrorX: false, rotationX: 0.75f),
+            PlayerModelDefinition.FromVanilla("right_arm", 0f, 3f, -1f, 4f, -2f, -2f, 4f, 8f, 4f, 44, 22,
+                mirrorX: false, rotationX: 0.75f),
+            PlayerModelDefinition.FromVanilla("crossed_arms", 0f, 3f, -1f, -4f, 2f, -2f, 8f, 4f, 4f, 40, 38,
+                mirrorX: false, rotationX: 0.75f),
+            PlayerModelDefinition.FromVanilla("right_leg", -2f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 22),
+            PlayerModelDefinition.FromVanilla("left_leg", 2f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 22, mirror: true)
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/villager/villager",

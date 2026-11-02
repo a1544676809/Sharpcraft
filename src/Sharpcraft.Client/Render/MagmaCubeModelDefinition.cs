@@ -4,7 +4,7 @@
 namespace Sharpcraft.Client.Render;
 
 /// <summary>
-/// MagmaCubeModel: eight stacked segment cubes plus the inside cube; all are flat parts with fixed texture offsets.
+/// MagmaCubeModel: eight stacked segment cubes plus the inside cube, all in raw model coordinates.
 /// </summary>
 public static class MagmaCubeModelDefinition
 {
@@ -15,15 +15,15 @@ public static class MagmaCubeModelDefinition
         64,
         64,
         [
-            new("cube0", 0f, 7f, 8f, 1f, 8f, 0, 0),
-            new("cube1", 0f, 6f, 8f, 1f, 8f, 0, 9),
-            new("cube2", 0f, 5f, 8f, 1f, 8f, 0, 18),
-            new("cube3", 0f, 4f, 8f, 1f, 8f, 0, 27),
-            new("cube4", 0f, 3f, 8f, 1f, 8f, 32, 0),
-            new("cube5", 0f, 2f, 8f, 1f, 8f, 32, 9),
-            new("cube6", 0f, 1f, 8f, 1f, 8f, 32, 18),
-            new("cube7", 0f, 0f, 8f, 1f, 8f, 32, 27),
-            new("inside_cube", 0f, 2f, 4f, 4f, 4f, 24, 40)
+            PlayerModelDefinition.FromVanilla("cube0", 0f, 0f, 0f, -4f, 16f, -4f, 8f, 1f, 8f, 0, 0),
+            PlayerModelDefinition.FromVanilla("cube1", 0f, 0f, 0f, -4f, 17f, -4f, 8f, 1f, 8f, 0, 9),
+            PlayerModelDefinition.FromVanilla("cube2", 0f, 0f, 0f, -4f, 18f, -4f, 8f, 1f, 8f, 0, 18),
+            PlayerModelDefinition.FromVanilla("cube3", 0f, 0f, 0f, -4f, 19f, -4f, 8f, 1f, 8f, 0, 27),
+            PlayerModelDefinition.FromVanilla("cube4", 0f, 0f, 0f, -4f, 20f, -4f, 8f, 1f, 8f, 32, 0),
+            PlayerModelDefinition.FromVanilla("cube5", 0f, 0f, 0f, -4f, 21f, -4f, 8f, 1f, 8f, 32, 9),
+            PlayerModelDefinition.FromVanilla("cube6", 0f, 0f, 0f, -4f, 22f, -4f, 8f, 1f, 8f, 32, 18),
+            PlayerModelDefinition.FromVanilla("cube7", 0f, 0f, 0f, -4f, 23f, -4f, 8f, 1f, 8f, 32, 27),
+            PlayerModelDefinition.FromVanilla("inside_cube", 0f, 0f, 0f, -2f, 18f, -2f, 4f, 4f, 4f, 24, 40)
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/slime/magmacube");
