@@ -145,7 +145,8 @@ public readonly record struct EntityRenderState(
     bool ShowLeftSleeve = true,
     bool ShowRightSleeve = true,
     bool ShowLeftPants = true,
-    bool ShowRightPants = true);
+    bool ShowRightPants = true,
+    bool HasChest = false);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).

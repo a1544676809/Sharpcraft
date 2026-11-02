@@ -66,6 +66,7 @@ public sealed class EntityModelMesher
                 var max = new Vector3(feet.X + centreX + halfW + grow, feet.Y + bottom + (part.Height * px) + grow, feet.Z + centreZ + halfD + grow);
                 if (onlyPart is not null && part.Name != onlyPart) continue;
                 if (excludedPart is not null && part.Name == excludedPart) continue;
+                if (!entity.HasChest && (part.Name == "right_chest" || part.Name == "left_chest")) continue;
                 var partSprite = sprite;
                 var partSkinWidth = skinWidthForModel;
                 var partSkinHeight = skinHeightForModel;

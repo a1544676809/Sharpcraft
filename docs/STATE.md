@@ -2241,3 +2241,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Mule 模型转译（T-447）：复用 Equine + mule texture，scale0.92。
 - 2026-11-02 Zombie Horse/Skeleton Horse（T-448）：复用 Equine 变体。
 - 2026-11-02 Llama 模型转译（T-449）：head/body/chest/legs。
+- 2026-11-02 Llama chest 可见性（T-450）：HasChest 控制，默认隐藏。
