@@ -71,27 +71,28 @@ public sealed class EntityPlaceholderMesher
             var green = isPlayer ? 0.65f : 0.6f;
             var blue = isPlayer ? 1f : 0.5f;
 
+            var entityTransform = EntityModelTransform.From(entity);
             if (isPlayer)
             {
                 // Head, body, two arms and two legs: still boxes, but the silhouette reads as a person rather than a pillar.
                 // The second argument is the bottom of each part, not its centre. Sizes are the reference model's pixels
                 // (head 8x8x8, body 8x12x4, arm 3x12x4, leg 4x12x4) at 1/16 block, scaled by ModelScale so the 32 pixel
                 // model stands PlayerHeight tall.
-                var feet = new Vector3(entity.X, entity.Y, entity.Z);
+                var feet = Vector3.Zero;
                 const float px = 1f / 16f * ModelScale;
 
-                AppendBox(_geometry, feet + new Vector3(0f, 24f * px, 0f), 8f * px, 8f * px, red, green, blue, sprite, ref vertexFloats, ref indexCount, 8f * px);
-                AppendBox(_geometry, feet + new Vector3(0f, 12f * px, 0f), 8f * px, 12f * px, red, green, blue, sprite, ref vertexFloats, ref indexCount, 4f * px);
-                AppendBox(_geometry, feet + new Vector3(-5f * px, 12f * px, 0f), 3f * px, 12f * px, red, green, blue, sprite, ref vertexFloats, ref indexCount, 4f * px);
-                AppendBox(_geometry, feet + new Vector3(5f * px, 12f * px, 0f), 3f * px, 12f * px, red, green, blue, sprite, ref vertexFloats, ref indexCount, 4f * px);
-                AppendBox(_geometry, feet + new Vector3(-1.9f * px, 0f, 0f), 4f * px, 12f * px, red, green, blue, sprite, ref vertexFloats, ref indexCount, 4f * px);
-                AppendBox(_geometry, feet + new Vector3(1.9f * px, 0f, 0f), 4f * px, 12f * px, red, green, blue, sprite, ref vertexFloats, ref indexCount, 4f * px);
+                AppendBox(_geometry, feet + new Vector3(0f, 24f * px, 0f), 8f * px, 8f * px, red, green, blue, sprite, ref vertexFloats, ref indexCount, 8f * px, entityTransform);
+                AppendBox(_geometry, feet + new Vector3(0f, 12f * px, 0f), 8f * px, 12f * px, red, green, blue, sprite, ref vertexFloats, ref indexCount, 4f * px, entityTransform);
+                AppendBox(_geometry, feet + new Vector3(-5f * px, 12f * px, 0f), 3f * px, 12f * px, red, green, blue, sprite, ref vertexFloats, ref indexCount, 4f * px, entityTransform);
+                AppendBox(_geometry, feet + new Vector3(5f * px, 12f * px, 0f), 3f * px, 12f * px, red, green, blue, sprite, ref vertexFloats, ref indexCount, 4f * px, entityTransform);
+                AppendBox(_geometry, feet + new Vector3(-1.9f * px, 0f, 0f), 4f * px, 12f * px, red, green, blue, sprite, ref vertexFloats, ref indexCount, 4f * px, entityTransform);
+                AppendBox(_geometry, feet + new Vector3(1.9f * px, 0f, 0f), 4f * px, 12f * px, red, green, blue, sprite, ref vertexFloats, ref indexCount, 4f * px, entityTransform);
             }
             else
             {
                 AppendBox(
                     _geometry,
-                    new Vector3(entity.X, entity.Y, entity.Z),
+                    Vector3.Zero,
                     width,
                     height,
                     red,
@@ -99,7 +100,9 @@ public sealed class EntityPlaceholderMesher
                     blue,
                     sprite,
                     ref vertexFloats,
-                    ref indexCount);
+                    ref indexCount,
+                    depth: null,
+                    entityTransform);
             }
 
             LastEntityCount++;
@@ -133,8 +136,10 @@ public sealed class EntityPlaceholderMesher
         SpriteRect sprite,
         ref int vertexFloats,
         ref int indexCount,
-        float? depth = null)
+        float? depth = null,
+        EntityModelTransform? entityTransform = null)
     {
+        var transform = entityTransform ?? new EntityModelTransform(Vector3.Zero, 0f, 0f, 1f);
         var half = width / 2f;
         var halfDepth = (depth ?? width) / 2f;
         var minX = feet.X - half;
@@ -145,12 +150,12 @@ public sealed class EntityPlaceholderMesher
         var maxZ = feet.Z + halfDepth;
 
         // +X, -X, +Y, -Y, +Z, -Z; each face is two triangles wound consistently.
-        AppendFace(geometry, new Vector3(maxX, minY, minZ), new Vector3(maxX, minY, maxZ), new Vector3(maxX, maxY, maxZ), new Vector3(maxX, maxY, minZ), red, green, blue, sprite, ref vertexFloats, ref indexCount);
-        AppendFace(geometry, new Vector3(minX, minY, maxZ), new Vector3(minX, minY, minZ), new Vector3(minX, maxY, minZ), new Vector3(minX, maxY, maxZ), red, green, blue, sprite, ref vertexFloats, ref indexCount);
-        AppendFace(geometry, new Vector3(minX, maxY, minZ), new Vector3(maxX, maxY, minZ), new Vector3(maxX, maxY, maxZ), new Vector3(minX, maxY, maxZ), red, green, blue, sprite, ref vertexFloats, ref indexCount);
-        AppendFace(geometry, new Vector3(minX, minY, maxZ), new Vector3(maxX, minY, maxZ), new Vector3(maxX, minY, minZ), new Vector3(minX, minY, minZ), red, green, blue, sprite, ref vertexFloats, ref indexCount);
-        AppendFace(geometry, new Vector3(minX, minY, maxZ), new Vector3(maxX, minY, maxZ), new Vector3(maxX, maxY, maxZ), new Vector3(minX, maxY, maxZ), red, green, blue, sprite, ref vertexFloats, ref indexCount);
-        AppendFace(geometry, new Vector3(maxX, minY, minZ), new Vector3(minX, minY, minZ), new Vector3(minX, maxY, minZ), new Vector3(maxX, maxY, minZ), red, green, blue, sprite, ref vertexFloats, ref indexCount);
+        AppendFace(geometry, new Vector3(maxX, minY, minZ), new Vector3(maxX, minY, maxZ), new Vector3(maxX, maxY, maxZ), new Vector3(maxX, maxY, minZ), red, green, blue, sprite, ref vertexFloats, ref indexCount, transform);
+        AppendFace(geometry, new Vector3(minX, minY, maxZ), new Vector3(minX, minY, minZ), new Vector3(minX, maxY, minZ), new Vector3(minX, maxY, maxZ), red, green, blue, sprite, ref vertexFloats, ref indexCount, transform);
+        AppendFace(geometry, new Vector3(minX, maxY, minZ), new Vector3(maxX, maxY, minZ), new Vector3(maxX, maxY, maxZ), new Vector3(minX, maxY, maxZ), red, green, blue, sprite, ref vertexFloats, ref indexCount, transform);
+        AppendFace(geometry, new Vector3(minX, minY, maxZ), new Vector3(maxX, minY, maxZ), new Vector3(maxX, minY, minZ), new Vector3(minX, minY, minZ), red, green, blue, sprite, ref vertexFloats, ref indexCount, transform);
+        AppendFace(geometry, new Vector3(minX, minY, maxZ), new Vector3(maxX, minY, maxZ), new Vector3(maxX, maxY, maxZ), new Vector3(minX, maxY, maxZ), red, green, blue, sprite, ref vertexFloats, ref indexCount, transform);
+        AppendFace(geometry, new Vector3(maxX, minY, minZ), new Vector3(minX, minY, minZ), new Vector3(minX, maxY, minZ), new Vector3(maxX, maxY, minZ), red, green, blue, sprite, ref vertexFloats, ref indexCount, transform);
     }
 
     private static void AppendFace(
@@ -164,14 +169,15 @@ public sealed class EntityPlaceholderMesher
         float blue,
         SpriteRect sprite,
         ref int vertexFloats,
-        ref int indexCount)
+        ref int indexCount,
+        EntityModelTransform transform)
     {
         var first = (uint)(vertexFloats / 14);
 
-        WriteVertex(geometry.Vertices, ref vertexFloats, a, red, green, blue, 0f, 0f, sprite);
-        WriteVertex(geometry.Vertices, ref vertexFloats, b, red, green, blue, 1f, 0f, sprite);
-        WriteVertex(geometry.Vertices, ref vertexFloats, c, red, green, blue, 1f, 1f, sprite);
-        WriteVertex(geometry.Vertices, ref vertexFloats, d, red, green, blue, 0f, 1f, sprite);
+        WriteVertex(geometry.Vertices, ref vertexFloats, a, red, green, blue, 0f, 0f, sprite, transform);
+        WriteVertex(geometry.Vertices, ref vertexFloats, b, red, green, blue, 1f, 0f, sprite, transform);
+        WriteVertex(geometry.Vertices, ref vertexFloats, c, red, green, blue, 1f, 1f, sprite, transform);
+        WriteVertex(geometry.Vertices, ref vertexFloats, d, red, green, blue, 0f, 1f, sprite, transform);
 
         geometry.Indices[indexCount++] = first;
         geometry.Indices[indexCount++] = first + 1;
@@ -190,11 +196,13 @@ public sealed class EntityPlaceholderMesher
         float blue,
         float u,
         float v,
-        SpriteRect sprite)
+        SpriteRect sprite,
+        EntityModelTransform transform)
     {
-        destination[offset++] = position.X;
-        destination[offset++] = position.Y;
-        destination[offset++] = position.Z;
+        var world = transform.Apply(position);
+        destination[offset++] = world.X;
+        destination[offset++] = world.Y;
+        destination[offset++] = world.Z;
         destination[offset++] = red;
         destination[offset++] = green;
         destination[offset++] = blue;

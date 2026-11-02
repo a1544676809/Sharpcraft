@@ -121,3 +121,11 @@ UV 不受顶点变换影响；但 `scale(-1,...)` 会反转三角形绕序，需
 - 新增 3 项变换单测（平移、缩放、Yaw）；Client 591 通过。
 
 这一步先统一了**实体根变换**。后续仍需要把模型定义从当前 `Bottom/CentreX` 兼容坐标迁移到原版 y-down/pivot 坐标，并让 `EntityPlaceholderMesher` 也走同一变换。
+
+
+## 9. 已有实体路径迁移（2026-11-02）
+
+- `EntityPlaceholderMesher` 也改为：局部 box → `EntityModelTransform.Apply` → 世界顶点；
+- `AppendBox` 的 depth/transform 参数保持向后兼容，BlockEntity 调用不变；
+- 全部现有实体/占位 box 路径现在共享同一实体根变换；
+- Client 591 通过。
