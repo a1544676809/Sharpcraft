@@ -31,6 +31,7 @@ public sealed class EntityModelResolverTests
     [Fact]
     public void AnUnregisteredTypeHasNoDefinition()
     {
-        Assert.Null(EntityModelResolver.Resolve(123456));
+        Assert.Null(EntityModelResolver.TryResolve(123456));
+        Assert.Equal("placeholder", EntityModelResolver.Resolve(123456).Name);
     }
 }

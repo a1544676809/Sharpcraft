@@ -9,14 +9,23 @@ namespace Sharpcraft.Client.Render;
 /// </summary>
 public static class EntityModelResolver
 {
+    public static readonly EntityModelDefinition Placeholder = new(
+        "placeholder",
+        64,
+        64,
+        [new EntityModelPart("body", 0f, 0f, 14f, 14f, 14f, 0, 0)]);
+
     private static readonly Dictionary<int, EntityModelDefinition> Models = new()
     {
         [EntityPlaceholderMesher.PlayerEntityTypeId] = PlayerModelDefinition.Definition,
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie
     };
 
-    public static EntityModelDefinition? Resolve(int typeId) =>
+    public static EntityModelDefinition? TryResolve(int typeId) =>
         Models.TryGetValue(typeId, out var definition) ? definition : null;
+
+    public static EntityModelDefinition Resolve(int typeId) =>
+        TryResolve(typeId) ?? Placeholder;
 
     public static void Register(int typeId, EntityModelDefinition definition)
     {
