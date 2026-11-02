@@ -43,7 +43,7 @@ internal static class SandboxWindow
         DynamicGeometry Build()
         {
             var partName = PlayerModelDefinition.AdultParts[partIndex].Name;
-            var geometry = mesher.Build([entity], sprite, skin.Width, skin.Height, state,
+            var geometry = mesher.Build([entity], sprite, logicalWidth, logicalHeight, state,
                 onlyPart: isolateSelectedPart ? partName : null,
                 excludedPart: hideSelectedPart ? partName : null);
             if (!hideSelectedPart)
