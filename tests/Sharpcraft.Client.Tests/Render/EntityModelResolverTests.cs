@@ -19,6 +19,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheSkeletonTypeResolvesToTheHumanoidSkeletonDefinition()
+    {
+        var definition = EntityModelResolver.Resolve(HumanoidMobModelDefinition.SkeletonEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("skeleton", definition.Name);
+        Assert.Equal(6, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheZombieTypeResolvesToTheHumanoidZombieDefinition()
     {
         var definition = EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId);

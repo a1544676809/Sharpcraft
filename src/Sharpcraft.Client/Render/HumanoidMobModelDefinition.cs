@@ -4,15 +4,19 @@
 namespace Sharpcraft.Client.Render;
 
 /// <summary>
-/// Humanoid mob definitions. ZombieModel extends HumanoidModel, so its static pose uses the same six part boxes;
+/// Humanoid mob definitions. These models extend HumanoidModel, so their static pose uses the same six part boxes;
 /// the only differences are the texture layer and the arm/leg UV offsets.
 /// </summary>
 public static class HumanoidMobModelDefinition
 {
+    public const int SkeletonEntityTypeId = 118;
     public const int ZombieEntityTypeId = 154;
 
-    public static readonly EntityModelDefinition Zombie = new(
-        "zombie",
+    public static readonly EntityModelDefinition Skeleton = Create("entity/skeleton/skeleton");
+    public static readonly EntityModelDefinition Zombie = Create("entity/zombie/zombie");
+
+    private static EntityModelDefinition Create(string texturePath) => new(
+        texturePath[(texturePath.LastIndexOf('/') + 1)..],
         64,
         64,
         [
@@ -24,5 +28,5 @@ public static class HumanoidMobModelDefinition
             new("right_leg", 1.9f, 0f, 4f, 12f, 4f, 0, 16)
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/zombie/zombie");
+        texturePath);
 }

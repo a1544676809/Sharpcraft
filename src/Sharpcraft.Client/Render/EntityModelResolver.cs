@@ -18,6 +18,7 @@ public static class EntityModelResolver
     private static readonly Dictionary<int, EntityModelDefinition> Models = new()
     {
         [EntityPlaceholderMesher.PlayerEntityTypeId] = PlayerModelDefinition.Definition,
+        [HumanoidMobModelDefinition.SkeletonEntityTypeId] = HumanoidMobModelDefinition.Skeleton,
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie
     };
 
