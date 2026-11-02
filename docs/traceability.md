@@ -475,3 +475,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-448 | **Zombie Horse / Skeleton Horse**：复用 AbstractEquineModel 几何，纹理 `horse_zombie`/`horse_skeleton`，type id 155/119 | `ZombieHorseRenderer`、`SkeletonHorseRenderer` | Client 610 | `Client/Render/{HorseModelDefinition,EntityModelResolver}` | 进行中 |
 | T-449 | **Llama 模型转译**：LlamaModel head/neck/ears、body、双 chest、四腿；纹理 `entity/llama/llama_brown`，type id 79 | `LlamaModel` | Client 611 | `Client/Render/{LlamaModelDefinition,EntityModelResolver}` | 进行中 |
 | T-450 | **Llama chest 可见性**：`EntityRenderState.HasChest`，`EntityModelMesher` 默认过滤 `right_chest/left_chest`；只有状态有 chest 时才显示；沙盒支持 `MC_SANDBOX_CHEST=1` 查看 | `LlamaModel.hasChest` | Client 611 | `Client/World/EntityTracker`、`Client/Render/EntityModelMesher` | 完成 |
+| T-451 | **Llama chest 开口修正**：原版 chest `rotationY=+π/2`，在 x 镜像坐标中取反为 `-π/2`，修复开口朝内/反向 | `LlamaModel` | 沙盒 `MC_SANDBOX_CHEST=1` 截图 | `Client/Render/LlamaModelDefinition` | 完成 |
