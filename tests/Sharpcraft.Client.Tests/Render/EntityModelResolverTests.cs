@@ -37,6 +37,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheEndermiteTypeResolvesToFourSegments()
+    {
+        var definition = EntityModelResolver.Resolve(EndermiteModelDefinition.EndermiteEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("endermite", definition.Name);
+        Assert.Equal(4, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheZombieVillagerTypeUsesHumanoidGeometry()
     {
         var definition = EntityModelResolver.Resolve(ZombieVillagerModelDefinition.ZombieVillagerEntityTypeId);
