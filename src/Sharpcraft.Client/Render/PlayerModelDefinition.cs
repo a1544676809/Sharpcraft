@@ -36,8 +36,8 @@ public static class PlayerModelDefinition
     [
         new("head", 0f, 24f, 8f, 8f, 8f, 0, 0),
         new("body", 0f, 12f, 8f, 12f, 4f, 16, 16),
-        new("left_arm", 5f, 12f, 4f, 12f, 4f, 40, 16, true),
-        new("right_arm", -5f, 12f, 4f, 12f, 4f, 40, 16),
+        new("left_arm", 6f, 12f, 4f, 12f, 4f, 40, 16, true),
+        new("right_arm", -6f, 12f, 4f, 12f, 4f, 40, 16),
         new("left_leg", 1.9f, 0f, 4f, 12f, 4f, 0, 16, true),
         new("right_leg", -1.9f, 0f, 4f, 12f, 4f, 0, 16)
     ];
