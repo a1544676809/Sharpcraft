@@ -30,6 +30,7 @@ public static class EntityModelResolver
         [CowModelDefinition.CowEntityTypeId] = CowModelDefinition.Definition,
         [ChickenModelDefinition.ChickenEntityTypeId] = ChickenModelDefinition.Definition,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,
+        [CatModelDefinition.CatEntityTypeId] = CatModelDefinition.Definition,
         [VillagerModelDefinition.VillagerEntityTypeId] = VillagerModelDefinition.Definition,
         [HumanoidMobModelDefinition.HuskEntityTypeId] = HumanoidMobModelDefinition.Husk,
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie
