@@ -34,6 +34,7 @@ public static class EntityModelResolver
         [CatModelDefinition.OcelotEntityTypeId] = CatModelDefinition.Ocelot,
         [FoxModelDefinition.FoxEntityTypeId] = FoxModelDefinition.Definition,
         [PolarBearModelDefinition.PolarBearEntityTypeId] = PolarBearModelDefinition.Definition,
+        [PandaModelDefinition.PandaEntityTypeId] = PandaModelDefinition.Definition,
         [VillagerModelDefinition.VillagerEntityTypeId] = VillagerModelDefinition.Definition,
         [HumanoidMobModelDefinition.HuskEntityTypeId] = HumanoidMobModelDefinition.Husk,
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie

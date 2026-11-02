@@ -62,6 +62,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void ThePandaTypeResolvesToItsParts()
+    {
+        var definition = EntityModelResolver.Resolve(PandaModelDefinition.PandaEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("panda", definition.Name);
+        Assert.Equal(9, definition.Parts.Count);
+    }
+
+    [Fact]
     public void ThePolarBearTypeResolvesToItsParts()
     {
         var definition = EntityModelResolver.Resolve(PolarBearModelDefinition.PolarBearEntityTypeId);
