@@ -18,3 +18,6 @@
 
 
 同步模式：先运行 `dotnet run --project tools/Sharpcraft.EntityModelSandbox -c Release -- --serve`，浏览器打开 `http://127.0.0.1:19876/`。网页每面操作会 POST `/state`，沙盒重渲染 `/frame.png` 并显示在网页上方。
+
+
+窗口模式（当前推荐）：`dotnet run --project tools/Sharpcraft.EntityModelSandbox -c Release -- --window`。沙盒窗口内用鼠标左键拖动旋转视角；网页只用于辅助查看分区，不再显示 3D。

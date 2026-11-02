@@ -104,7 +104,7 @@ internal static class SandboxServer
         context.Response.OutputStream.Close();
     }
 
-    private static TextureData LoadSkin()
+    internal static TextureData LoadSkin()
     {
         var custom = Environment.GetEnvironmentVariable("MC_SANDBOX_SKIN") ?? @"E:\Users\14947\Downloads\my_skin.png";
         if (File.Exists(custom))

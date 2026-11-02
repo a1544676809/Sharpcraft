@@ -7,6 +7,12 @@ using Sharpcraft.Client.World;
 using Sharpcraft.Common.Imaging;
 using Sharpcraft.Framework.Rendering;
 
+if (args.Contains("--window"))
+{
+    Sharpcraft.EntityModelSandbox.SandboxWindow.Run();
+    return;
+}
+
 if (args.Contains("--serve"))
 {
     Sharpcraft.EntityModelSandbox.SandboxServer.Run();

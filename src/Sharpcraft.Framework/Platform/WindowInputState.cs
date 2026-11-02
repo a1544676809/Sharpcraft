@@ -22,6 +22,9 @@ public sealed class WindowInputState
     /// <summary>Last reported absolute cursor position, used to derive the delta.</summary>
     private Vector2? _lastCursor;
 
+    /// <summary>True while the primary mouse button is held; used by diagnostic orbit cameras.</summary>
+    public bool LeftMouseDown { get; private set; }
+
     /// <summary>Set when the primary button is pressed and cleared when the click is consumed.</summary>
     private bool _clickPending;
     private bool _rightClickPending;
@@ -218,6 +221,7 @@ public sealed class WindowInputState
     {
         if (button == 0)
         {
+            LeftMouseDown = true;
             _clickPending = true;
         }
         else if (button == 1)
@@ -233,6 +237,15 @@ public sealed class WindowInputState
         var clicked = _rightClickPending;
         _rightClickPending = false;
         return clicked;
+    }
+
+    /// <summary>Records a primary-button release.</summary>
+    internal void ReleaseButton(int button)
+    {
+        if (button == 0)
+        {
+            LeftMouseDown = false;
+        }
     }
 
     /// <summary>Takes the pending primary click, if any.</summary>

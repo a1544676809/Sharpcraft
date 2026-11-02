@@ -2165,3 +2165,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Face UV Studio（T-370）：网页面朝向调节器已可用；待用户标定后回写 mesher。
 - 2026-11-02 Face UV Studio 3D/最近邻（T-371）：网页面可逐面操作并 3D 预览。
 - 2026-11-02 Face UV Studio/沙盒同步（T-372）：网页操作 -> 沙盒 /state -> /frame.png 实时预览；继续用模板校准。
+- 2026-11-02 沙盒窗口 + 左键轨道相机（T-373）：`--window` 可用，鼠标左键拖动旋转。

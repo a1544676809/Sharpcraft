@@ -212,6 +212,10 @@ public sealed class WindowHost : IDisposable
             {
                 Input.PressButton((int)button);
             }
+            else if (action == InputAction.Release)
+            {
+                Input.ReleaseButton((int)button);
+            }
         });
 
         glfw.SetWindowFocusCallback(handle, (_, focused) =>
