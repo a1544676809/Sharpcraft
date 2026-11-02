@@ -12,7 +12,23 @@ public static class HumanoidMobModelDefinition
     public const int SkeletonEntityTypeId = 118;
     public const int HuskEntityTypeId = 68;
     public const int DrownedEntityTypeId = 39;
+    public const int EndermanEntityTypeId = 42;
     public const int ZombieEntityTypeId = 154;
+
+    public static readonly EntityModelDefinition Enderman = new(
+        "enderman",
+        64,
+        32,
+        [
+            new("head", 0f, 38f, 8f, 8f, 8f, 0, 0, false, [new("hat", -0.5f, 0, 16)]),
+            new("body", 0f, 27f, 8f, 12f, 4f, 32, 16),
+            new("left_arm", -5f, 9f, 2f, 30f, 2f, 56, 0, true),
+            new("right_arm", 5f, 9f, 2f, 30f, 2f, 56, 0),
+            new("left_leg", -2f, 0f, 2f, 30f, 2f, 56, 0, true),
+            new("right_leg", 2f, 0f, 2f, 30f, 2f, 56, 0)
+        ],
+        PlayerModelDefinition.DefaultFaceTransforms,
+        "entity/enderman/enderman");
 
     public static readonly EntityModelDefinition Drowned = new(
         "drowned",

@@ -2198,3 +2198,4 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 2026-11-02 Player 透明/可见性（T-403）：实体 pipeline alpha blend，外层 show* 过滤。
 - 2026-11-02 Drowned 模型转译（T-404）：base + drowned_outer_layer，overlay 独立纹理路径；沙盒已验证。
 - 2026-11-02 Drowned overlay reserve 修正（T-405）：按 parts+overlays 预留几何，沙盒 drowned 纹理正确。
+- 2026-11-02 Enderman 模型转译（T-406）：独立 yOffset/长肢/64×32 texture，沙盒已验证。

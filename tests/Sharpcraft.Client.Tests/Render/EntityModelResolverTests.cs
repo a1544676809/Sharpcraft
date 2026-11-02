@@ -29,6 +29,16 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void TheEndermanTypeResolvesToItsTallHumanoidDefinition()
+    {
+        var definition = EntityModelResolver.Resolve(HumanoidMobModelDefinition.EndermanEntityTypeId);
+
+        Assert.NotNull(definition);
+        Assert.Equal("enderman", definition.Name);
+        Assert.Equal(30f, definition.Parts[2].Height);
+    }
+
+    [Fact]
     public void TheDrownedTypeResolvesToTheDrownedDefinition()
     {
         var definition = EntityModelResolver.Resolve(HumanoidMobModelDefinition.DrownedEntityTypeId);
