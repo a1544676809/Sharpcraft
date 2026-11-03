@@ -30,6 +30,7 @@
 | [`entity-equipment.md`](entity-equipment.md) | 把 set_equipment 的装备槽状态转成实体渲染状态，并为鞍、马甲、装饰、挽具、狼甲等提供独立的装备渲染层；手持物品模型渲染后置。 | 已评审 | 2026-11-03 |
 | [`entity-render.md`](entity-render.md) | M5.3 P1 静态实体模型、渲染状态、部件几何与渲染/游戏逻辑解耦 | 已评审 | 2026-11-02 |
 | [`input.md`](input.md) | 把平台输入收敛成与平台无关的动作状态，把客户端状态输出到窗口与日志。 | 已评审 | 2026-10-29 |
+| [`item-registry.md`](item-registry.md) | 按基线 jar 的注册顺序提供只读物品身份表，供网络 ItemStack、装备映射与后续物品逻辑使用。 | 待评审 | 2026-11-03 |
 | [`launcher.md`](launcher.md) | 独立跨平台启动器：认证、版本/资产获取、参数装配、进程启动。 | 已评审 | 2026-10-28 |
 | [`modding.md`](modding.md) | 把"模组"做成宿主结构的一部分：模组程序集加载进可卸载的 AssemblyLoadContext，卸载后必须能真正被 GC 回收。 | 已评审 | 2026-10-29 |
 | [`nbt.md`](nbt.md) | 网络与数据包里的 NBT 读写：标签类型表、复合/列表、数组、字符串，以及读取上限。 | 已评审 | 2026-10-28 |

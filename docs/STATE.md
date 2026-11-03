@@ -2736,3 +2736,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 新增 `SetEquipmentPackets.TryRead`：id 104、slot continuation 位、空栈；非空 `DataComponentPatch` 记录 `HasDataComponents` 后停止。
 - `EntityTracker.ApplyEquipment` 保存 8 槽 item id/count，`TrackedEntity.EquipmentItemAt/EquipmentCountAt`；`InteractiveSession` 已接入包分发。
 - 测试：`SetEquipmentPacketTests` 4 项 + `EntityTrackerTests.EquipmentSlotsAreStoredAndClearedPerEntity`；下一阶段 E2 为受控物品→装备纹理映射。
+
+### 2026-11-03 物品注册表调查（T-540）
+
+- 结论：`minecraft:item` 是内置注册表，`Item.STREAM_CODEC` 写 registry id；`RegistrySynchronization` 不包含 item，客户端必须用基线快照。
+- 新增 `docs/analysis/common/item-registry.md` 与 `docs/modules/item-registry.md`（均待评审）。
+- 下一步：从 `../mc-26.3-analysis/` 的 Java 分析环境导出 `BuiltInRegistries.ITEM.listElements()`，形成 `tests/Sharpcraft.Common.Tests/TestData/vanilla-item-order.txt`（纯标识符，不含资产），再实现 `ItemRegistry`。
