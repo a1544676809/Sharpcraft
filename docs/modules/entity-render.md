@@ -167,3 +167,10 @@ P1 只做**静态姿态 + 朝向**，明确排除骨骼动画、物品装备渲�
 - `EntityModelDefinition.TexturePaths` 自动收集部件级 `TexturePath` 与 `EmissiveTexturePath`，skin atlas 会一并加载。
 - `EmissiveOnly = true` 的部件只在 emissive pass 发射，因此可以“复制一份基础几何”挂在同一父级下，专门承载某一层发光贴图，不参与普通绘制。
 - Warden 用此机制表达四层：bioluminescent、pulsating spots（本实现固定 spots_1）、heart、tendrils（纹理复用 `warden`）。真正的逐层 alpha/脉冲动画仍需动画系统。
+
+## 14. 顶点 tint 与热带鱼
+
+- `EntityModelPart.TintSelector` 返回每部件颜色乘子；未设置时使用 `EntityRenderState.Tint`（default 视为白色）。
+- 顶点色（vertex colour）由 mesher 写入 tint，`fs_entity_cutout` 用 `input.colour` 与 lightmap 相乘，等价于原版模型 tint。
+- 热带鱼用两个乘子：`Tint`（baseColor，作用于基础层）和 `PatternTint`（patternColor，作用于 pattern 复制层）。pattern 复制层与基础几何同顶点、同 draw 顺序，`LESS_EQUAL` 深度让后绘制者覆盖。
+- 变体键不按线性索引：`EntityVariantSpec.KeySelector` 可把原始 packed 值映射成名称；热带鱼 packed 值低 16 位是 pattern（含 base id），16..23 是 baseColor id，24..31 是 patternColor id。颜色表来自 `DyeColor.getTextureDiffuseColor()`。

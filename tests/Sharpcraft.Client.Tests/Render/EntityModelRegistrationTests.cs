@@ -447,6 +447,19 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheTropicalFishHasASmallAndPatternCopyForEachPattern()
+    {
+        var small = EntityModelResolver.ResolveVariantStrict(TropicalFishModelDefinition.TropicalFishEntityTypeId, "kob");
+        var large = EntityModelResolver.ResolveVariantStrict(TropicalFishModelDefinition.TropicalFishEntityTypeId, "blockfish");
+
+        Assert.Equal(10, small.Parts.Count);
+        Assert.Equal(12, large.Parts.Count);
+        Assert.Contains(small.Parts, part => part.Name == "pattern_body" && part.TexturePath == "entity/fish/tropical_a_pattern_1");
+        Assert.Contains(large.Parts, part => part.Name == "pattern_body" && part.TexturePath == "entity/fish/tropical_b_pattern_4");
+        Assert.NotNull(small.Parts.Single(part => part.Name == "pattern_body").TintSelector);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

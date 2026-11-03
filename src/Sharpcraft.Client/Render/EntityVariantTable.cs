@@ -70,6 +70,11 @@ public sealed class EntityVariantTable
         }
 
         var value = variantId & spec.ValueMask;
+        if (spec.KeySelector is { } selector)
+        {
+            return selector(variantId);
+        }
+
         return _names.TryGetValue((typeId, value), out var name) ? name : spec.DefaultKey;
     }
 
@@ -82,13 +87,17 @@ public sealed class EntityVariantTable
         }
 
         var value = variantId & spec.ValueMask;
-        var known = _names.TryGetValue((typeId, value), out var name);
-        if (known && EntityModelResolver.TryResolveVariant(typeId, name!) is { } definition)
+        var known = spec.KeySelector is { } selector
+            ? (name: selector(variantId), found: true)
+            : _names.TryGetValue((typeId, value), out var mapped)
+                ? (name: mapped, found: true)
+                : (name: string.Empty, found: false);
+        if (known.found && EntityModelResolver.TryResolveVariant(typeId, known.name) is { } definition)
         {
             return definition;
         }
 
-        _unknown.Add($"{typeId}:{(known ? name : value.ToString(System.Globalization.CultureInfo.InvariantCulture))}");
+        _unknown.Add($"{typeId}:{(known.found ? known.name : value.ToString(System.Globalization.CultureInfo.InvariantCulture))}");
         return EntityModelResolver.TryResolveVariant(typeId, spec.DefaultKey)
             ?? EntityModelResolver.Resolve(typeId);
     }
@@ -103,6 +112,11 @@ public sealed class EntityVariantTable
         }
 
         var value = variantId & spec.ValueMask;
+        if (spec.KeySelector is { } selector)
+        {
+            return EntityModelResolver.ResolveVariantStrict(typeId, selector(variantId));
+        }
+
         if (!_names.TryGetValue((typeId, value), out var name))
         {
             throw new KeyNotFoundException($"variant value {value} is not in the registry for entity type {typeId}");

@@ -2626,3 +2626,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - 结构：head（upperlip、upperhead、左右 scale、左右鼻孔、jaw）、5 段 neck、12 段 tail（每段 spine + scale）、body + 3 个背刺、左右翼 base/tip（bone + skin）、四肢各三段（leg→tip→foot）；共 66 部件。
 - 纹理 `entity/enderdragon/dragon`（256×256），type id 44；静态 bind pose；飞行/颈部/尾部/翼动画与眼睛层未移植。
+
+### 2026-11-03 Tropical Fish + tint（T-518/T-519）
+
+- 顶点 tint：`EntityModelPart.TintSelector`、`EntityRenderState.Tint/PatternTint`，mesher 写入顶点色；packed variant 通过 `EntityVariantSpec.KeySelector` 解 pattern，DyeColor texture diffuse 解 base/pattern 颜色。
+- Tropical Fish：small(5 部件)/large(6 部件) + 同几何 pattern 复制层（12 种 pattern 纹理，`PatternTint`），type id 140，纹理 32×32；静态 bind pose（摆尾/旋转/世界旋转未移植）。
+- 沙盒新增 `MC_SANDBOX_TINT` / `MC_SANDBOX_PATTERN_TINT`（十六进制 RRGGBB）用于颜色验收。

@@ -63,6 +63,10 @@ internal static class SandboxWindow
         var model = variantTable.Resolve(typeId, variantId);
         var sprite = atlas.Get(model.TexturePath) ?? throw new InvalidDataException($"skin {model.TexturePath} missing from atlas");
         var sandboxState = Environment.GetEnvironmentVariable("MC_SANDBOX_STATE") ?? string.Empty;
+        var tintText = Environment.GetEnvironmentVariable("MC_SANDBOX_TINT");
+        var patternTintText = Environment.GetEnvironmentVariable("MC_SANDBOX_PATTERN_TINT");
+        var tint = ParseTint(tintText);
+        var patternTint = ParseTint(patternTintText);
         var entity = new EntityRenderState(1, typeId, 0f, 0f, 0f, 0f, 0f,
             HasChest: Environment.GetEnvironmentVariable("MC_SANDBOX_CHEST") == "1",
             HasEgg: Environment.GetEnvironmentVariable("MC_SANDBOX_EGG") == "1",
@@ -73,7 +77,9 @@ internal static class SandboxWindow
             HasNectar: sandboxState.Contains("nectar", StringComparison.OrdinalIgnoreCase),
             IsCold: sandboxState.Contains("cold", StringComparison.OrdinalIgnoreCase),
             IsCharging: sandboxState.Contains("charging", StringComparison.OrdinalIgnoreCase),
-            IsHidingInShell: sandboxState.Contains("shell", StringComparison.OrdinalIgnoreCase) || sandboxState.Contains("hiding", StringComparison.OrdinalIgnoreCase));
+            IsHidingInShell: sandboxState.Contains("shell", StringComparison.OrdinalIgnoreCase) || sandboxState.Contains("hiding", StringComparison.OrdinalIgnoreCase),
+            Tint: tint,
+            PatternTint: patternTint);
         var mesher = new EntityModelMesher();
         var state = new Dictionary<string, FaceUvTransform>();
         var statePath = Path.Combine(Path.GetTempPath(), "sharpcraft-face-state.json");
@@ -302,6 +308,16 @@ internal static class SandboxWindow
         geometry.Vertices[o++] = 1f;
         geometry.Vertices[o++] = 0f;
         geometry.VertexFloats = o;
+    }
+
+    private static Vector3 ParseTint(string? text)
+    {
+        if (text is not { Length: 6 } || !int.TryParse(text, System.Globalization.NumberStyles.HexNumber, null, out var rgb))
+        {
+            return default;
+        }
+
+        return new Vector3(((rgb >> 16) & 0xFF) / 255f, ((rgb >> 8) & 0xFF) / 255f, (rgb & 0xFF) / 255f);
     }
 
     private static ResourceManager CreateResourceManager()

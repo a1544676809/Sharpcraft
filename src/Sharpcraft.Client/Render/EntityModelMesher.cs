@@ -275,6 +275,8 @@ public sealed class EntityModelMesher
         }
 
         var emitBase = emissivePass || kindFilter is null || part.Kind == kindFilter;
+        var partTint = part.TintSelector?.Invoke(renderState)
+            ?? (renderState.Tint == default ? Vector3.One : renderState.Tint);
         var swapBodyDownUp = true;
         var d0u = swapBodyDownUp ? u22 : u2; var d0v = swapBodyDownUp ? v1 : v0;
         var d1u = swapBodyDownUp ? u2 : u1; var d1v = swapBodyDownUp ? v1 : v0;
@@ -287,12 +289,12 @@ public sealed class EntityModelMesher
 
         if (emitBase)
         {
-        AddFace(l1, l0, t0, t1, d0u, d0v, d1u, d1v, d2u, d2v, d3u, d3v, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("DOWN"), target); // DOWN
-        AddFace(t2, t3, l3, l2, u0u, u0v, u1u, u1v, u2u, u2v, u3u, u3v, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("UP"), target); // UP
-        AddFace(t0, l0, l3, t3, u3, v2, u2, v2, u2, v1, u3, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("WEST"), target); // WEST
-        AddFace(t1, t0, t3, t2, u2, v2, u1, v2, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("NORTH"), target); // NORTH
-        AddFace(l1, t1, t2, l2, u1, v2, u0, v2, u0, v1, u1, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("EAST"), target); // EAST
-        AddFace(l0, l1, l2, l3, u4, v2, u3, v2, u3, v1, u4, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("SOUTH"), target); // SOUTH
+        AddFace(l1, l0, t0, t1, d0u, d0v, d1u, d1v, d2u, d2v, d3u, d3v, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("DOWN"), partTint, target); // DOWN
+        AddFace(t2, t3, l3, l2, u0u, u0v, u1u, u1v, u2u, u2v, u3u, u3v, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("UP"), partTint, target); // UP
+        AddFace(t0, l0, l3, t3, u3, v2, u2, v2, u2, v1, u3, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("WEST"), partTint, target); // WEST
+        AddFace(t1, t0, t3, t2, u2, v2, u1, v2, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("NORTH"), partTint, target); // NORTH
+        AddFace(l1, t1, t2, l2, u1, v2, u0, v2, u0, v1, u1, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("EAST"), partTint, target); // EAST
+        AddFace(l0, l1, l2, l3, u4, v2, u3, v2, u3, v1, u4, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("SOUTH"), partTint, target); // SOUTH
         }
 
 
@@ -413,6 +415,7 @@ public sealed class EntityModelMesher
         SpriteRect skin, int skinWidth, int skinHeight,
         ref int vertexFloats, ref int indexCount,
         FaceUvTransform transform,
+        Vector3 tint,
         DynamicGeometry target)
     {
         var uMin = MathF.Min(MathF.Min(au, bu), MathF.Min(cu, du));
@@ -424,10 +427,10 @@ public sealed class EntityModelMesher
         (cu, cv) = TransformUv(cu, cv, uMin, uMax, vMin, vMax, transform);
         (du, dv) = TransformUv(du, dv, uMin, uMax, vMin, vMax, transform);
         var first = (uint)(vertexFloats / 14);
-        WriteVertex(target.Vertices, ref vertexFloats, a, au / skinWidth, av / skinHeight, skin);
-        WriteVertex(target.Vertices, ref vertexFloats, b, bu / skinWidth, bv / skinHeight, skin);
-        WriteVertex(target.Vertices, ref vertexFloats, c, cu / skinWidth, cv / skinHeight, skin);
-        WriteVertex(target.Vertices, ref vertexFloats, d, du / skinWidth, dv / skinHeight, skin);
+        WriteVertex(target.Vertices, ref vertexFloats, a, au / skinWidth, av / skinHeight, skin, tint);
+        WriteVertex(target.Vertices, ref vertexFloats, b, bu / skinWidth, bv / skinHeight, skin, tint);
+        WriteVertex(target.Vertices, ref vertexFloats, c, cu / skinWidth, cv / skinHeight, skin, tint);
+        WriteVertex(target.Vertices, ref vertexFloats, d, du / skinWidth, dv / skinHeight, skin, tint);
 
         target.Indices[indexCount++] = first;
         target.Indices[indexCount++] = first + 1;
@@ -453,14 +456,14 @@ public sealed class EntityModelMesher
         return (uMin + nu * (uMax - uMin), vMin + nv * (vMax - vMin));
     }
 
-    private static void WriteVertex(float[] destination, ref int offset, Vector3 world, float u, float v, SpriteRect skin)
+    private static void WriteVertex(float[] destination, ref int offset, Vector3 world, float u, float v, SpriteRect skin, Vector3 tint)
     {
         destination[offset++] = world.X;
         destination[offset++] = world.Y;
         destination[offset++] = world.Z;
-        destination[offset++] = 1f;
-        destination[offset++] = 1f;
-        destination[offset++] = 1f;
+        destination[offset++] = tint.X;
+        destination[offset++] = tint.Y;
+        destination[offset++] = tint.Z;
         destination[offset++] = u;
         destination[offset++] = v;
         destination[offset++] = skin.U0;
@@ -471,6 +474,8 @@ public sealed class EntityModelMesher
         destination[offset++] = 0f;
     }
 }
+
+
 
 
 

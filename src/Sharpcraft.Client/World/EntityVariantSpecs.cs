@@ -39,7 +39,8 @@ public readonly record struct EntityVariantSpec(
     int AngerAccessorIndex = -1,
     int ColdMask = 0,
     int ChargingMask = 0,
-    bool ShellHideStates = false);
+    bool ShellHideStates = false,
+    Func<int, string>? KeySelector = null);
 
 /// <summary>
 /// Answering "which synced-data field is the variant" for the entity types this client renders with variants.
@@ -121,7 +122,14 @@ public static class EntityVariantSpecs
         [28] = new(18, null, ["unaffected", "exposed", "weathered", "oxidized"], "unaffected"),
 
         // Zombie Nautilus: registry-backed variant at 18 (TEMPERATE/WARM).
-        [156] = new(18, "zombie_nautilus_variant", ["temperate", "warm"], "temperate")
+        [156] = new(18, "zombie_nautilus_variant", ["temperate", "warm"], "temperate"),
+
+        // Tropical fish: packed variant (pattern in low 16 bits, base colour in bits 16..23, pattern colour in 24..31).
+        [140] = new(18, null,
+            ["kob", "sunstreak", "snooper", "dasher", "brinely", "spotty", "flopper", "stripey", "glitter", "blockfish", "betty", "clayfish"],
+            "kob",
+            ValueMask: unchecked((int)0xFFFFFFFF),
+            KeySelector: TropicalFishPatternKey)
     };
 
     /// <summary>Number of entity types with a variant field.</summary>
@@ -132,5 +140,24 @@ public static class EntityVariantSpecs
 
     /// <summary>Looks up the variant layout of an entity type.</summary>
     public static bool TryGet(int typeId, out EntityVariantSpec spec) => Specs.TryGetValue(typeId, out spec);
+
+    private static readonly Dictionary<int, string> TropicalPatterns = new()
+    {
+        [0] = "kob",
+        [1] = "sunstreak",
+        [2] = "snooper",
+        [3] = "dasher",
+        [4] = "brinely",
+        [5] = "spotty",
+        [1 | (1 << 8)] = "flopper",
+        [1 | (2 << 8)] = "stripey",
+        [1 | (3 << 8)] = "glitter",
+        [1 | (4 << 8)] = "blockfish",
+        [1 | (5 << 8)] = "betty",
+        [1 | (6 << 8)] = "clayfish"
+    };
+
+    private static string TropicalFishPatternKey(int packed) =>
+        TropicalPatterns.TryGetValue(packed & 0xFFFF, out var key) ? key : "kob";
 }
 

@@ -170,7 +170,9 @@ public readonly record struct EntityRenderState(
     bool HasNectar = false,
     bool IsCold = false,
     bool IsCharging = false,
-    bool IsHidingInShell = false);
+    bool IsHidingInShell = false,
+    System.Numerics.Vector3 Tint = default,
+    System.Numerics.Vector3 PatternTint = default);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -505,6 +507,14 @@ public sealed class EntityTracker
                 && (entity.VariantId == 2
                     || (entity.VariantId == 1 && stateTicks > 5)
                     || (entity.VariantId == 3 && stateTicks < 26));
+            var tint = default(System.Numerics.Vector3);
+            var patternTint = default(System.Numerics.Vector3);
+            if (entity.TypeId == 140)
+            {
+                tint = DyeTint((entity.VariantId >> 16) & 0xFF);
+                patternTint = DyeTint((entity.VariantId >> 24) & 0xFF);
+            }
+
             _renderStates.Add(new EntityRenderState(
                 entity.Id,
                 entity.TypeId,
@@ -520,13 +530,27 @@ public sealed class EntityTracker
                 HasNectar: spec.NectarMask != 0 && (entity.Flags & spec.NectarMask) != 0,
                 IsCold: spec.ColdMask != 0 && (entity.Flags & spec.ColdMask) != 0,
                 IsCharging: spec.ChargingMask != 0 && (entity.Flags & spec.ChargingMask) != 0,
-                IsHidingInShell: hidingInShell));
+                IsHidingInShell: hidingInShell,
+                Tint: tint,
+                PatternTint: patternTint));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);
     }
 
     private static bool Relative(int relatives, int bit) => (relatives & (1 << bit)) != 0;
+
+    private static readonly int[] DyeRgb =
+    [
+        16383998, 16351261, 13061821, 3847130, 16701501, 8439583, 15961002, 4673362,
+        10329495, 1481884, 8991416, 3949738, 8606770, 6192150, 11546150, 1908001
+    ];
+
+    private static System.Numerics.Vector3 DyeTint(int dyeId)
+    {
+        var rgb = DyeRgb[Math.Clamp(dyeId, 0, 15)];
+        return new System.Numerics.Vector3(((rgb >> 16) & 0xFF) / 255f, ((rgb >> 8) & 0xFF) / 255f, (rgb & 0xFF) / 255f);
+    }
 
     /// <summary>Normalises an angle into [0, 360).</summary>
     private static float Wrap360(float degrees)

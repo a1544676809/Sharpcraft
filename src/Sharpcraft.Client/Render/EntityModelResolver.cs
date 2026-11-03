@@ -71,6 +71,7 @@ public static class EntityModelResolver
         [WitherBossModelDefinition.WitherEntityTypeId] = WitherBossModelDefinition.Definition,
         [WardenModelDefinition.WardenEntityTypeId] = WardenModelDefinition.Definition,
         [EnderDragonModelDefinition.EnderDragonEntityTypeId] = EnderDragonModelDefinition.Definition,
+        [TropicalFishModelDefinition.TropicalFishEntityTypeId] = TropicalFishModelDefinition.Definition,
         [GuardianModelDefinition.GuardianEntityTypeId] = GuardianModelDefinition.Definition,
         [GuardianModelDefinition.ElderGuardianEntityTypeId] = GuardianModelDefinition.Elder,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,
@@ -186,6 +187,7 @@ public static class EntityModelResolver
         RegisterVariants(PufferfishModelDefinition.PufferfishEntityTypeId, PufferfishModelDefinition.Variants);
         RegisterVariants(CopperGolemModelDefinition.CopperGolemEntityTypeId, CopperGolemModelDefinition.Variants);
         RegisterVariants(ZombieNautilusModelDefinition.ZombieNautilusEntityTypeId, ZombieNautilusModelDefinition.Variants);
+        RegisterVariants(TropicalFishModelDefinition.TropicalFishEntityTypeId, TropicalFishModelDefinition.Variants);
         RegisterVariants(LlamaModelDefinition.LlamaEntityTypeId, LlamaModelDefinition.Variants);
     }
 }
