@@ -19,7 +19,7 @@
 | [`biome-data.md`](biome-data.md) | 26.3 区块生物群系容器的位序、注册表字段、位置采样与草/叶/水/天空颜色来源 | 草稿 | 2026-11-01 |
 | [`coordinates.md`](coordinates.md) | 坐标换算看着简单，但负数取整是最经典的错误源：Java 的 >> 是算术右移（等价于向下取整除以 2^n），而 C# 的整数除法 / 是向零截断。 | 草稿 | 2026-10-28 |
 | [`identifier.md`](identifier.md) | Identifier 的解析、校验、等值、排序与序列化 | 草稿 | 2026-10-28 |
-| [`item-registry.md`](item-registry.md) | 26.3 内置 item 注册表的 id 来源、网络语义、快照生成方案与风险 | 草稿 | 2026-11-03 |
+| [`item-registry.md`](item-registry.md) | 26.3 内置 item 注册表的 id 来源、网络语义、快照生成方案与风险 | 已评审 | 2026-11-03 |
 | [`random-vectors.md`](random-vectors.md) | 随机数算法无法靠"读源码"验证正确性：LCG 与 xoroshiro128++ 的每一位都必须一致，而源码推导无法排除理解偏差。 | 草稿 | 2026-10-28 |
 | [`random.md`](random.md) | 随机数必须逐位复刻：同一世界种子必须产出同一地形、同一战利品。 | 草稿 | 2026-10-28 |
 | [`registry-order.md`](registry-order.md) | "注册表元素顺序"不是实现细节：它决定网络注册表同步的包体顺序、方块状态全局 id、以及数据包加载后的可复现性。 | 草稿 | 2026-10-28 |

@@ -2742,3 +2742,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 结论：`minecraft:item` 是内置注册表，`Item.STREAM_CODEC` 写 registry id；`RegistrySynchronization` 不包含 item，客户端必须用基线快照。
 - 新增 `docs/analysis/common/item-registry.md` 与 `docs/modules/item-registry.md`（均待评审）。
 - 下一步：从 `../mc-26.3-analysis/` 的 Java 分析环境导出 `BuiltInRegistries.ITEM.listElements()`，形成 `tests/Sharpcraft.Common.Tests/TestData/vanilla-item-order.txt`（纯标识符，不含资产），再实现 `ItemRegistry`。
+
+### 2026-11-03 物品注册表实现（T-541）
+
+- 从本地 26.3 客户端 jar 用分析 harness 导出 `BuiltInRegistries.ITEM.listElements()`：1658 项，jar SHA-1 `e877b6a07acd633fb3bb475002175cec036e7b87`；快照入库 `tests/Sharpcraft.Common.Tests/TestData/vanilla-item-order.txt`（纯标识符）。
+- `ItemRegistry` 复用 `Registry<ItemInfo>`，按行号=id 加载并冻结；校验首项 `minecraft:air`、空快照失败。
+- `ItemRegistryTests` 校验数量与关键 id：saddle=949、white_carpet=580、red_harness=964、wolf_armor=1004、iron_horse_armor=1407、iron_nautilus_armor=1485。
+- 下一步 E2：装备纹理受控映射（以 `ItemInfo.Id` 标识符为 key）。
+

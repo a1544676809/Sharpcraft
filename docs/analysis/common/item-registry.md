@@ -4,7 +4,7 @@
 <!-- doc
 title: 物品注册表（Item registry）调查
 summary: 26.3 内置 item 注册表的 id 来源、网络语义、快照生成方案与风险
-status: 草稿
+status: 已评审
 updated: 2026-11-03
 -->
 
@@ -15,7 +15,7 @@ updated: 2026-11-03
 - `minecraft:item` 是 **内置（built-in）注册表**，不是随数据包加载的动态注册表；客户端必须使用与基线 jar 一致的注册顺序。
 - `ItemStack` 的网络字段是 `Item.STREAM_CODEC = ByteBufCodecs.holderRegistry(Registries.ITEM)`，线上写的是 **registry id（VarInt）**，不是资源路径。
 - 因此 `set_equipment` 里的 `itemHolderId` 要正确解释，必须知道 26.3 的 **完整 item 注册顺序**。
-- 仓库当前没有 item 注册表、没有 item 顺序快照；必须先补一份**只含标识符的注册顺序快照**（不含任何游戏资产）。
+- 仓库当前没有 item 注册表、没有 item 顺序快照；必须先补一份**只含标识符的注册顺序快照**（不含任何游戏资产）。**2026-11-03 已从 26.3 jar 导出：1658 项，首项 `minecraft:air`；快照见 `tests/Sharpcraft.Common.Tests/TestData/vanilla-item-order.txt`。**
 
 ## 2. 证据
 
@@ -83,7 +83,7 @@ updated: 2026-11-03
 
 ## 6. 未解决问题与风险
 
-1. **快照尚未生成**：需要分析环境执行上述导出；当前仓库没有该数据。
+1. **快照已生成**（2026-11-03，1658 项，jar SHA-1 `e877b6a07acd633fb3bb475002175cec036e7b87`）；后续基线升级需重导。
 2. **基线升级**：item id 顺序会随版本变化，快照必须随基线升级重新生成；版本不匹配应硬失败，而不是回退到猜测。
 3. **自定义/模组物品**：vanilla 内置快照不含自定义 item；对自定义 id 只能降级为“未知”，不能正确映射装备纹理。若未来需要模组 item，需另设计注册表同步/扩展协议。
 4. **服务端差异**：若连接非 vanilla 服务端且其 item 注册表不同，id 解释会错位；本项目只承诺 vanilla 26.3 基线。
@@ -95,3 +95,4 @@ updated: 2026-11-03
 - `docs/analysis/render/entity-equipment.md`
 - `docs/specs/network/entity-sync.md`
 - `docs/modules/entity-equipment.md`
+
