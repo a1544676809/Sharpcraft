@@ -56,6 +56,21 @@ public sealed class EntityLayerTests
     }
 
     [Fact]
+    public void AnimationPoseOffsetsAreAppliedBeforeMeshing()
+    {
+        var sprite = new SpriteRect(0, 0, 64, 64, 1);
+        var mesher = new EntityModelMesher();
+        var normal = mesher.Build([Entity(PigModelDefinition.PigEntityTypeId)], sprite, 64, 64);
+        var normalBounds = Bounds(normal);
+
+        var pose = new EntityPose();
+        pose.Add("head", new PoseOffset(new Vector3(0f, 10f, 0f), Vector3.Zero, Vector3.Zero));
+        var posed = mesher.Build([Entity(PigModelDefinition.PigEntityTypeId)], sprite, 64, 64, pose: pose);
+        var posedBounds = Bounds(posed);
+
+        Assert.NotEqual(normalBounds.Max.Y, posedBounds.Max.Y);
+    }
+    [Fact]
     public void ModelUvsAreNormalisedByTheDeclaredTextureSizeNotTheImageSize()
     {
         // Ghast declares a 64x32 texture while its PNG is 128x64; UVs must be divided by 64/32, so the widest body
@@ -143,3 +158,4 @@ public sealed class EntityLayerTests
         Assert.Equal(layers.Sum(layer => layer.Geometry.IndexCount), merged.IndexCount);
     }
 }
+

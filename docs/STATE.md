@@ -2800,3 +2800,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 新增 `docs/analysis/render/entity-animation.md` 与 `docs/modules/entity-animation.md`。
 - 实现 `EntityAnimation.cs`：AnimationDefinition/Channel/Keyframe、KeyframeAnimation（LINEAR/CATMULLROM、循环、targetScale）、AnimationState（50ms/tick）、EntityPose（同名部件加性累积）、KeyframeAnimations（POSITION Y 翻转、SCALE x-1）。
 - 测试 `EntityAnimationTests` 6 项；下一步 A2 把 pose 接入 `EntityModelMesher`，再选 Pig/Camel 做四足样板。
+
+### 2026-11-03 动画 A2：网格 pose 接入（T-550）
+
+- `EntityModelMesher.Build/BuildLayers/BuildInto` 新增可选 `EntityPose`；`PartFrame` 在静态 pivot/rotation 上叠加动画 offset，装备副本按去前缀后的原名继承。
+- 新增 `AnimationPoseOffsetsAreAppliedBeforeMeshing`：Pig 头部 y 偏移会改变网格 bounds。
+- 注意：动画定义目前是 C# 行为数据（原版也是 Java 硬编码，不是资源 JSON）；A3 再按实体移植具体动画。

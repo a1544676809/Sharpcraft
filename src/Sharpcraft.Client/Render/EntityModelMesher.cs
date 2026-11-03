@@ -21,9 +21,9 @@ public sealed class EntityModelMesher
         [EntityGeometryLayerKind.Cutout, EntityGeometryLayerKind.Translucent, EntityGeometryLayerKind.Emissive];
 
     /// <summary>Merged geometry of every layer, kept for callers that draw entities in one pass.</summary>
-    public DynamicGeometry Build(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null)
+    public DynamicGeometry Build(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, EntityPose? pose = null)
     {
-        var layers = BuildLayers(entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants);
+        var layers = BuildLayers(entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants, pose);
         _geometry.Clear();
         var totalVertexFloats = 0;
         var totalIndexCount = 0;
@@ -57,7 +57,7 @@ public sealed class EntityModelMesher
     /// <summary>
     /// Builds one geometry per reference render type, in draw order (cutout, translucent, emissive).
     /// </summary>
-    public IReadOnlyList<EntityGeometryLayer> BuildLayers(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null)
+    public IReadOnlyList<EntityGeometryLayer> BuildLayers(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, EntityPose? pose = null)
     {
         var layers = new List<EntityGeometryLayer>(3);
         for (var i = 0; i < LayerKinds.Length; i++)
@@ -65,7 +65,7 @@ public sealed class EntityModelMesher
             var kind = LayerKinds[i];
             var geometry = _layerGeometries[i];
             var emissivePass = kind == EntityGeometryLayerKind.Emissive;
-            BuildInto(geometry, kind, entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants, emissivePass);
+            BuildInto(geometry, kind, entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants, emissivePass, pose);
             if (geometry.IndexCount > 0)
             {
                 layers.Add(new EntityGeometryLayer(kind.ToString().ToLowerInvariant(), kind, i, geometry));
@@ -75,7 +75,7 @@ public sealed class EntityModelMesher
         return layers;
     }
 
-    private DynamicGeometry BuildInto(DynamicGeometry target, EntityGeometryLayerKind? kindFilter, ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, bool emissivePass = false)
+    private DynamicGeometry BuildInto(DynamicGeometry target, EntityGeometryLayerKind? kindFilter, ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, bool emissivePass = false, EntityPose? pose = null)
     {
         target.Clear();
         var cubeCount = 0;
@@ -177,7 +177,7 @@ public sealed class EntityModelMesher
                     partSprite = partAtlas;
                 }
 
-                AddPart(part, target, kindFilter, emissivePass, min, max, partSprite, partSkinWidth, partSkinHeight, feet, entityTransform, PartMatrix(part, model.Parts, px), transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount);
+                AddPart(part, target, kindFilter, emissivePass, min, max, partSprite, partSkinWidth, partSkinHeight, feet, entityTransform, PartMatrix(part, model.Parts, px, pose), transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount);
             }
         }
 
@@ -352,6 +352,26 @@ public sealed class EntityModelMesher
         }
     }
 
+    private static string PosePartName(string name)
+    {
+        if (!name.StartsWith("equipment_", StringComparison.Ordinal))
+        {
+            return name;
+        }
+
+        var remainder = name.StartsWith("equipment_extra_", StringComparison.Ordinal)
+            ? name["equipment_extra_".Length..]
+            : name["equipment_".Length..];
+        var first = remainder.IndexOf('_');
+        if (first < 0)
+        {
+            return name;
+        }
+
+        remainder = remainder[(first + 1)..];
+        var second = remainder.IndexOf('_');
+        return second < 0 ? name : remainder[(second + 1)..];
+    }
     private static Matrix4x4 RotationZyx(float rx, float ry, float rz) =>
         Matrix4x4.CreateRotationZ(rz) * Matrix4x4.CreateRotationY(ry) * Matrix4x4.CreateRotationX(rx);
 
@@ -359,11 +379,12 @@ public sealed class EntityModelMesher
     /// Matrix that maps a point expressed relative to <paramref name="part"/>'s origin into entity space. This is the
     /// frame other parts' pivots are expressed in, not the frame a part's own cube is stored in.
     /// </summary>
-    private static Matrix4x4 PartFrame(EntityModelPart part, IReadOnlyList<EntityModelPart> parts, float px)
+    private static Matrix4x4 PartFrame(EntityModelPart part, IReadOnlyList<EntityModelPart> parts, float px, EntityPose? pose = null)
     {
-        var pivot = new Vector3(part.PivotX * px, part.PivotY * px, part.PivotZ * px);
-        // Row-vector convention: "rotate, then translate" is Rotation * Translation.
-        var local = RotationZyx(part.RotationX, part.RotationY, part.RotationZ) * Matrix4x4.CreateTranslation(pivot);
+        var poseOffset = pose?.Get(PosePartName(part.Name)) ?? PoseOffset.Zero;
+        var pivot = new Vector3((part.PivotX + poseOffset.Position.X) * px, (part.PivotY + poseOffset.Position.Y) * px, (part.PivotZ + poseOffset.Position.Z) * px);
+        // Row-vector convention: "rotate, then translate" is Rotation * Translation; animation scale is local.
+        var local = Matrix4x4.CreateScale(new Vector3(1f + poseOffset.Scale.X, 1f + poseOffset.Scale.Y, 1f + poseOffset.Scale.Z)) * RotationZyx(part.RotationX + poseOffset.Rotation.X, part.RotationY + poseOffset.Rotation.Y, part.RotationZ + poseOffset.Rotation.Z) * Matrix4x4.CreateTranslation(pivot);
 
         if (part.Parent is not { Length: > 0 } parentName)
         {
@@ -374,7 +395,7 @@ public sealed class EntityModelMesher
         {
             if (string.Equals(candidate.Name, parentName, StringComparison.Ordinal))
             {
-                return local * PartFrame(candidate, parts, px);
+                return local * PartFrame(candidate, parts, px, pose);
             }
         }
 
@@ -389,9 +410,9 @@ public sealed class EntityModelMesher
     /// the extra translate back. Child parts keep cubes relative to their own origin (from <c>FromVanillaChild</c>), so
     /// their frame is already the storage transform.
     /// </remarks>
-    private static Matrix4x4 PartMatrix(EntityModelPart part, IReadOnlyList<EntityModelPart> parts, float px)
+    private static Matrix4x4 PartMatrix(EntityModelPart part, IReadOnlyList<EntityModelPart> parts, float px, EntityPose? pose = null)
     {
-        var frame = PartFrame(part, parts, px);
+        var frame = PartFrame(part, parts, px, pose);
         if (part.Parent is { Length: > 0 })
         {
             return frame;
@@ -477,6 +498,9 @@ public sealed class EntityModelMesher
         destination[offset++] = 0f;
     }
 }
+
+
+
 
 
 
