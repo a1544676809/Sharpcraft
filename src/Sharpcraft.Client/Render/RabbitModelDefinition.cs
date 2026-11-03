@@ -37,4 +37,35 @@ public static class RabbitModelDefinition
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/rabbit/rabbit_brown");
+
+    public static readonly IReadOnlyList<string> VariantKeys = ["brown", "white", "black", "white_splotched", "gold", "salt", "evil"];
+
+    public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants = BuildVariants();
+
+    private static Dictionary<string, EntityModelDefinition> BuildVariants()
+    {
+        var files = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["brown"] = "rabbit_brown",
+            ["white"] = "rabbit_white",
+            ["black"] = "rabbit_black",
+            ["white_splotched"] = "rabbit_white_splotched",
+            ["gold"] = "rabbit_gold",
+            ["salt"] = "rabbit_salt",
+            ["evil"] = "rabbit_caerbannog"
+        };
+        var variants = new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)
+        {
+            ["brown"] = Definition
+        };
+        foreach (var key in VariantKeys)
+        {
+            if (key != "brown")
+            {
+                variants[key] = new EntityModelDefinition("rabbit_" + key, 64, 64, Definition.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/rabbit/" + files[key]);
+            }
+        }
+
+        return variants;
+    }
 }

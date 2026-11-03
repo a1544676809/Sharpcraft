@@ -2643,3 +2643,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - BabyFelineModel 11 部件（32×32，猫 11 变体含 all_black/ocelot 纹理命名规则）；BabyWolfModel 11 部件（9 变体，tame/angry 幼年纹理）；BabyFoxModel 10 部件（red/snow，sleep 幼年纹理）；BabyRabbitModel 17 部件（默认 brown_baby）。
 - 均走 `IsBaby` 选择与 `*_baby` 纹理；静态 bind pose（动画未移植）。**rabbit 的成年/幼年变体键尚未接入**（项目 Rabbit 定义当前只有单几何）。
+
+### 2026-11-03 幼年 Wolf/Rabbit 代码级复核（T-523）
+
+- BabyWolf：几何逐项核对通过；修正 **tame/angry 幼年纹理命名**（应为 `wolf_<variant>_tame_baby` / `wolf_<variant>_angry_baby`，旧实现拼成 `..._baby_tame`）；BabyFox red 补 `fox_sleep_baby` 选择器。
+- Rabbit：原项目只有单 `rabbit_brown`，补齐成年 7 变体（brown/white/black/white_splotched/gold/salt/evil；evil 用 `rabbit_caerbannog`），并补幼年 `*_baby` 对应纹理；`EntityVariantSpecs[111]` 用 KeySelector 处理 sparse id 99。
+- 逐项 AABB/部件数复核：BabyCat 11、BabyWolf 11、BabyFox 10、BabyRabbit 17；父子/UV/mirror/旋转与原版一致。

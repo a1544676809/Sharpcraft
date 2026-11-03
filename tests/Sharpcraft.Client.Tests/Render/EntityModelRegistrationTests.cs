@@ -494,6 +494,9 @@ public sealed class EntityModelRegistrationTests
         Assert.Equal("baby_rabbit", rabbit.Name);
         Assert.Equal(17, rabbit.Parts.Count);
         Assert.Equal("entity/cat/cat_all_black_baby", EntityModelResolver.ResolveVariantStrict(CatModelDefinition.CatEntityTypeId, "all_black", true).TexturePath);
+        Assert.Equal("entity/rabbit/rabbit_black_baby", EntityModelResolver.ResolveVariantStrict(RabbitModelDefinition.RabbitEntityTypeId, "black", true).TexturePath);
+        Assert.Contains("entity/wolf/wolf_spotted_tame_baby", EntityModelResolver.ResolveVariantStrict(WolfModelDefinition.WolfEntityTypeId, "spotted", true).TexturePaths);
+        Assert.Contains("entity/fox/fox_sleep_baby", EntityModelResolver.ResolveVariantStrict(FoxModelDefinition.FoxEntityTypeId, "red", true).TexturePaths);
     }
 
     [Fact]

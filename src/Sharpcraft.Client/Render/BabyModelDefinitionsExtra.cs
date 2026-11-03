@@ -44,7 +44,9 @@ public static class BabyModelDefinitionsExtra
             PlayerModelDefinition.FromVanillaChild("tail_r1", "tail", 0f, -0.6f, 0.2f, -1f, -5.7f, -1f, 2f, 6f, 2f, 22, 16, rotationX: -3.1f)
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/wolf/wolf_baby");
+        "entity/wolf/wolf_baby",
+        textureSelector: state => state.IsTame ? "entity/wolf/wolf_tame_baby" : state.IsAngry ? "entity/wolf/wolf_angry_baby" : "entity/wolf/wolf_baby",
+        additionalTexturePaths: ["entity/wolf/wolf_tame_baby", "entity/wolf/wolf_angry_baby"]);
 
     public static readonly EntityModelDefinition Fox = new(
         "baby_fox",
@@ -63,7 +65,9 @@ public static class BabyModelDefinitionsExtra
             PlayerModelDefinition.FromVanillaChild("tail", "body", 0f, -0.5f, 3f, -1.5f, -1.48f, -1f, 3f, 3f, 6f, 0, 20)
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/fox/fox_baby");
+        "entity/fox/fox_baby",
+        textureSelector: state => state.IsSleeping ? "entity/fox/fox_sleep_baby" : "entity/fox/fox_baby",
+        additionalTexturePaths: ["entity/fox/fox_sleep_baby"]);
 
     public static readonly EntityModelDefinition Rabbit = new(
         "baby_rabbit",
@@ -132,8 +136,8 @@ public static class BabyModelDefinitionsExtra
 
             var file = wolfFiles[i];
             var wild = "entity/wolf/" + file + "_baby";
-            var tame = wild + "_tame";
-            var angry = wild + "_angry";
+            var tame = "entity/wolf/" + file + "_tame_baby";
+            var angry = "entity/wolf/" + file + "_angry_baby";
             var captured = wild;
             variants[(WolfModelDefinition.WolfEntityTypeId, key)] = new(
                 "baby_wolf_" + key,
@@ -142,7 +146,7 @@ public static class BabyModelDefinitionsExtra
                 Wolf.Parts,
                 PlayerModelDefinition.DefaultFaceTransforms,
                 captured,
-                textureSelector: state => state.IsTame ? captured + "_tame" : state.IsAngry ? captured + "_angry" : captured,
+                textureSelector: state => state.IsTame ? tame : state.IsAngry ? angry : captured,
                 additionalTexturePaths: [tame, angry]);
         }
 
@@ -155,9 +159,35 @@ public static class BabyModelDefinitionsExtra
             "entity/fox/fox_snow_baby",
             textureSelector: state => state.IsSleeping ? "entity/fox/fox_snow_sleep_baby" : "entity/fox/fox_snow_baby",
             additionalTexturePaths: ["entity/fox/fox_snow_sleep_baby"]);
+
+        var rabbitFiles = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["brown"] = "rabbit_brown",
+            ["white"] = "rabbit_white",
+            ["black"] = "rabbit_black",
+            ["white_splotched"] = "rabbit_white_splotched",
+            ["gold"] = "rabbit_gold",
+            ["salt"] = "rabbit_salt",
+            ["evil"] = "rabbit_caerbannog"
+        };
+        foreach (var key in RabbitModelDefinition.VariantKeys)
+        {
+            if (key != "brown")
+            {
+                variants[(RabbitModelDefinition.RabbitEntityTypeId, key)] = new(
+                    "baby_rabbit_" + key,
+                    32,
+                    32,
+                    Rabbit.Parts,
+                    PlayerModelDefinition.DefaultFaceTransforms,
+                    "entity/rabbit/" + rabbitFiles[key] + "_baby");
+            }
+        }
+
         return variants;
     }
 
     private static readonly string[] WolfVariantFiles =
         ["wolf", "wolf_spotted", "wolf_snowy", "wolf_black", "wolf_ashen", "wolf_rusty", "wolf_woods", "wolf_chestnut", "wolf_striped"];
 }
+

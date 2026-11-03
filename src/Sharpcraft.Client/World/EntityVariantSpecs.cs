@@ -129,7 +129,10 @@ public static class EntityVariantSpecs
             ["kob", "sunstreak", "snooper", "dasher", "brinely", "spotty", "flopper", "stripey", "glitter", "blockfish", "betty", "clayfish"],
             "kob",
             ValueMask: unchecked((int)0xFFFFFFFF),
-            KeySelector: TropicalFishPatternKey)
+            KeySelector: TropicalFishPatternKey),
+
+        // Rabbit: integer variant with a sparse "evil" id (99).
+        [111] = new(18, null, ["brown", "white", "black", "white_splotched", "gold", "salt", "evil"], "brown", KeySelector: RabbitKey)
     };
 
     /// <summary>Number of entity types with a variant field.</summary>
@@ -159,5 +162,17 @@ public static class EntityVariantSpecs
 
     private static string TropicalFishPatternKey(int packed) =>
         TropicalPatterns.TryGetValue(packed & 0xFFFF, out var key) ? key : "kob";
+
+    private static string RabbitKey(int variant) => variant switch
+    {
+        0 => "brown",
+        1 => "white",
+        2 => "black",
+        3 => "white_splotched",
+        4 => "gold",
+        5 => "salt",
+        99 => "evil",
+        _ => "brown"
+    };
 }
 
