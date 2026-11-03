@@ -19,6 +19,10 @@ public static class EntityAnimationController
         {
             ApplyQuadrupedWalk(state, pose);
         }
+        else if (state.TypeId == CamelModelDefinition.CamelEntityTypeId)
+        {
+            CamelAnimations.WalkBaked.Apply(state.WalkAnimationPos * 0.1f, MathF.Min(state.WalkAnimationSpeed * 2.5f, 1f), pose);
+        }
     }
 
     /// <summary>Reference QuadrupedModel.setupAnim: head pitch and four legs from walkAnimationPos/Speed.</summary>
@@ -43,4 +47,5 @@ public static class EntityAnimationController
     private static void AddLegRotation(EntityPose pose, string part, float radians) =>
         pose.Add(part, new PoseOffset(Vector3.Zero, new Vector3(radians, 0f, 0f), Vector3.Zero));
 }
+
 

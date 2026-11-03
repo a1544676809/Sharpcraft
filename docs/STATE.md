@@ -2812,3 +2812,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `EntityAnimationController` 实现 `QuadrupedModel.setupAnim`：head pitch + 四腿 `cos(walkPos*0.6662)*1.4*walkSpeed`，左右/前后相位差 π。
 - `EntityRenderState` 增加 `AgeInTicks/WalkAnimationPos/WalkAnimationSpeed`；沙盒通过 `MC_SANDBOX_WALK_POS/SPEED` 可复现两帧姿态（0 与 2.35）。
 - Pig 两帧截图已对照：腿摆方向/相位正确；Camel 关键帧动画下一步单独移植。
+
+### 2026-11-03 动画 A3：Camel 关键帧样板（T-552）
+
+- 移植 `CamelAnimation.CAMEL_WALK` 1.5 秒循环：root/head/四腿 rotation+position、耳、尾；CATMULLROM/LINEAR 按原版。
+- `EntityAnimationController` 用 `walkPos*0.1` 与 `min(walkSpeed*2.5,1)` 应用；Pig 程序化 sample 与 Camel 关键帧 sample 均有测试/两帧截图。
+- 下一步 A4：Zombie/Villager 两足手臂与头部；真实网络移动状态仍需后续接入。

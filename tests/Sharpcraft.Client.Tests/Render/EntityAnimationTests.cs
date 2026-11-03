@@ -106,6 +106,20 @@ public sealed class EntityAnimationTests
         Assert.Equal(1.4f, pose.Get("left_front_leg").Rotation.X, 4);
     }
     [Fact]
+    public void CamelWalkUsesThePortedKeyframeData()
+    {
+        var state = new Sharpcraft.Client.World.EntityRenderState(1, CamelModelDefinition.CamelEntityTypeId, 0f, 0f, 0f, 0f, 0f)
+        {
+            WalkAnimationPos = 0f,
+            WalkAnimationSpeed = 1f
+        };
+        var pose = new EntityPose();
+        EntityAnimationController.Apply(state, pose);
+
+        Assert.Equal(2.5f * (MathF.PI / 180f), pose.Get("root").Rotation.Z, 4);
+        Assert.Equal(22.5f * (MathF.PI / 180f), pose.Get("right_front_leg").Rotation.X, 4);
+    }
+    [Fact]
     public void BakingRejectsMissingParts()
     {
         var animation = new AnimationDefinition(1f, false, new Dictionary<string, IReadOnlyList<AnimationChannel>>
@@ -116,6 +130,7 @@ public sealed class EntityAnimationTests
         Assert.Throws<InvalidOperationException>(() => animation.Bake(new HashSet<string> { "head" }));
     }
 }
+
 
 
 
