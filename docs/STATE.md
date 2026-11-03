@@ -2868,3 +2868,7 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 新增 `docs/analysis/render/entity-animation-architecture.md`：判断当前 `EntityAnimationController` switch + 单一 RenderState 不适合按生物批量补全。
 - 提案：`IEntityAnimationProvider` + 每生物 `IEntityAnimationState` + registry；每生物垂直切片只新增自己的 Animations/Provider/Tests 文件，Lead 统一接线。
 - 该文档为待评审；实施前不创建共享接口代码。
+
+### 2026-11-03 动画架构收益/代价（T-565）
+
+- 在 `entity-animation-architecture.md` 6.1 记录 provider 方案相对原版的收益、代价/风险和抵消约束（每生物独立 state、完整状态清单、Lead 独立验收）。

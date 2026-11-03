@@ -118,6 +118,34 @@ Provider 的 `State` 是每实体一份的可变对象；`Apply` 只写 `EntityP
 4. 按生物派单（2–3 个并行）；
 5. Lead 每批做全量构建/测试/截图，更新 traceability 与 STATE。
 
+## 6.1 与原版架构的收益与代价
+
+### 收益
+
+- **减少重复类**：原版每个实体一个 Model 类、独立 `setupAnim` 和字段；provider + 数据化动画共用求值器，减少类层次和模板代码。
+- **适合按生物并行**：每个生物一个 provider + state + tests 文件，registry 只做 typeId → provider，避免所有生物修改同一个 switch。
+- **动画与渲染解耦**：`EntityPose` 独立于模型定义，装备副本按 part 名继承；动画、几何、装备层可共享同一套测试/沙盒。
+- **便于审计与批量生成**：动画定义是纯数据，可逐帧对照原版、脚本校验和统计覆盖率；沙盒能列出所有 clip 和缺口。
+- **扩展/模组友好**：新增实体主要增加 provider/数据文件，不必修改核心渲染 switch；理论上更容易做热加载和外部覆盖。
+- **性能可更优**：baked keyframes 缓存、每实体复用 state/pose、provider 查找可缓存，避免每帧反射/对象分配。
+
+### 代价/风险
+
+- **行为等价责任转移到 provider**：原版 `setupAnim` 中的顺序、默认行为、状态优先级较多，provider 很容易只实现“看起来像”的动画而漏掉细节。
+- **类型安全弱于原版类结构**：大量使用 part name、clip name、状态字段字符串；拼写错误可能到运行时/测试才暴露。
+- **状态归属容易混乱**：如果所有生物状态压进单一 `EntityRenderState`/`EntityAnimationFrame`，会变成“万能包”；必须坚持每生物自己的 `IEntityAnimationState`。
+- **框架层更复杂**：需要 registry、state 生命周期、provider 缓存、沙盒 clip 发现等基础设施；原版的 renderer/model 类关系更直白。
+- **源码不再一一对应**：不利于逐文件对照，必须用更强的 behavior spec、逐帧数据对照和 provider 契约测试来防止“数据对但状态选择错”。
+- **特殊层/装备层更绕**：provider 必须统一处理 equipment copy、emissive、可见性叠加和动画继承，否则层会错位。
+- **调试/剖析更间接**：调用跨 registry/provider/state，栈和性能剖析不如原版 Model 方法直观。
+
+### 抵消风险的必要约束
+
+- 每个 provider 强制拥有自己的 state 类型、`Clips`、`Apply` 和完整状态测试；
+- 任务书必须列出原版 `setupAnim` 的全部状态与缺失 render-state 字段，不得用“近似”补缺；
+- Lead 独立做全量构建、沙盒多帧验收和至少一个关键帧的源码抽查；
+- 任何未验收状态保持 `进行中`，不因“测试绿”直接写 `已完成`。
+
 ## 7. 待评审问题
 
 - `EntityAnimationFrame` 需要覆盖哪些通用字段，特殊状态字段由 provider state 保存还是由通用帧扩展；

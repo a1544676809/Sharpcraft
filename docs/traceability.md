@@ -602,3 +602,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-562 | **动画 A9：Frog**：`FrogAnimations` 移植全部 6 个动画定义（Croak/Walk/Jump/Tongue/Swim/IdleWater），保留 LINEAR/CATMULLROM、pre/post target、scale；测试 11 项 | `docs/analysis/render/entity-animation.md` | Client 750（`FrogAnimationTests` 11） | `Client/Render/FrogAnimations` | 已完成 |
 | T-563 | **动画 A9 控制器接线**：Armadillo/Frog/Baby Axolotl 的 `ClipNames` 与 `Apply`/`ApplyClip` 接入；沙盒可切换其动画；成人 Axolotl 四因子、Frog/Armadillo one-shot 状态字段仍缺，未标记为完整 | `docs/analysis/render/entity-animation.md` | Client 750/构建 | `Client/Render/EntityAnimationController` | 进行中 |
 | T-564 | **实体动画架构文档**：分析现有 switch/共享状态瓶颈，提出 `IEntityAnimationProvider` + 每生物 `IEntityAnimationState` + registry 的垂直切片方案，并给出团队任务模板与迁移顺序；待评审后实施 | `docs/analysis/render/entity-animation-architecture.md` | —（文档任务） | — | 已完成 |
+| T-565 | **动画架构收益/代价记录**：把 provider 方案相对原版 Model/RenderState 类结构的收益、风险与抵消约束写入架构文档 | `docs/analysis/render/entity-animation-architecture.md` 6.1 | —（文档任务） | — | 已完成 |
