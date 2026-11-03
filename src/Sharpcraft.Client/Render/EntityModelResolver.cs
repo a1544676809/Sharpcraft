@@ -70,6 +70,7 @@ public static class EntityModelResolver
         [ZombieNautilusModelDefinition.ZombieNautilusEntityTypeId] = ZombieNautilusModelDefinition.Definition,
         [WitherBossModelDefinition.WitherEntityTypeId] = WitherBossModelDefinition.Definition,
         [WardenModelDefinition.WardenEntityTypeId] = WardenModelDefinition.Definition,
+        [EnderDragonModelDefinition.EnderDragonEntityTypeId] = EnderDragonModelDefinition.Definition,
         [GuardianModelDefinition.GuardianEntityTypeId] = GuardianModelDefinition.Definition,
         [GuardianModelDefinition.ElderGuardianEntityTypeId] = GuardianModelDefinition.Elder,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,

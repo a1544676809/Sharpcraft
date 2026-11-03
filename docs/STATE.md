@@ -2621,3 +2621,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `EntityModelPart.EmissiveTexturePath`：部件级 emissive 贴图；`EmissiveOnly` 部件只走 emissive pass；`EntityModelDefinition.TexturePaths` 自动收录部件纹理与 emissive 纹理；mesher 在 emissive pass 按部件切换 sprite。
 - Warden 完整四层：bioluminescent 5 部件 / pulsating spots 6 部件（固定 spots_1 帧）/ heart 1 / tendrils 2（复用 `warden` 纹理），共 25 部件。纹理 128×128，type id 146；静态 bind pose，动画与 spots 两帧脉冲未移植。
 - 已记录于 `docs/modules/entity-render.md` §13。
+
+### 2026-11-03 Ender Dragon 模型（T-517）
+
+- 结构：head（upperlip、upperhead、左右 scale、左右鼻孔、jaw）、5 段 neck、12 段 tail（每段 spine + scale）、body + 3 个背刺、左右翼 base/tip（bone + skin）、四肢各三段（leg→tip→foot）；共 66 部件。
+- 纹理 `entity/enderdragon/dragon`（256×256），type id 44；静态 bind pose；飞行/颈部/尾部/翼动画与眼睛层未移植。

@@ -545,3 +545,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 
 
 | T-516 | **多 emissive 层能力**：`EntityModelPart.EmissiveTexturePath`（部件级发光贴图）+ `TexturePaths` 自动收集 + `EmissiveOnly` 复制几何；mesher emissive pass 按部件选择 sprite；支持同模型多发光层（Warden 四层） | `LivingEntityEmissiveLayer` 行为对照 | Client 687 | `Client/Render/{PlayerModelDefinition,EntityModelDefinition,EntityModelMesher}`、`docs/modules/entity-render.md` §13 | 已完成 |
+| T-517 | **Ender Dragon 模型转译**：head（upperlip/upperhead/左右 scale/鼻孔 + jaw）、5 段 neck、12 段 tail（每段 spine box + scale）、body + 3 个背刺、左右翼各两段（bone + skin）与四肢各三段；纹理 `entity/enderdragon/dragon`（256×256），type id 44；静态 bind pose（飞行/颈部/尾部/翼动画未移植） | `EnderDragonModel` | Client 687/沙盒截图 | `Client/Render/{EnderDragonModelDefinition,EntityModelResolver}` | 已完成 |

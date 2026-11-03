@@ -435,6 +435,18 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheEnderDragonTypeHasFiveNeckAndTwelveTailSegments()
+    {
+        var definition = EntityModelResolver.Resolve(EnderDragonModelDefinition.EnderDragonEntityTypeId);
+
+        Assert.Equal("ender_dragon", definition.Name);
+        Assert.Equal(66, definition.Parts.Count);
+        Assert.Equal(5, definition.Parts.Count(part => part.Name.StartsWith("neck", StringComparison.Ordinal) && !part.Name.EndsWith("_scale", StringComparison.Ordinal)));
+        Assert.Equal(12, definition.Parts.Count(part => part.Name.StartsWith("tail", StringComparison.Ordinal) && !part.Name.EndsWith("_scale", StringComparison.Ordinal)));
+        Assert.Contains(definition.Parts, part => part.Name == "left_wing_tip_skin" && part.Parent == "left_wing");
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).
