@@ -122,7 +122,7 @@ public sealed class EntityModelMesher
                 skinWidthForModel = eyeSprite.Width;
                 skinHeightForModel = eyeSprite.Height;
             }
-            else if (skinAtlas?.Get(model.TexturePath) is { } atlasSprite)
+            else if (skinAtlas?.Get(model.TextureSelector?.Invoke(entity) ?? model.TexturePath) is { } atlasSprite)
             {
                 sprite = atlasSprite;
                 skinWidthForModel = atlasSprite.Width;

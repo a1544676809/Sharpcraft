@@ -3,6 +3,8 @@
 
 namespace Sharpcraft.Client.Render;
 
+using Sharpcraft.Client.World;
+
 /// <summary>
 /// A render-only entity model definition. This mirrors the role of the reference LayerDefinition/EntityModelSet:
 /// named parts, texture dimensions and per-face UV defaults. It never references entity simulation.
@@ -17,7 +19,9 @@ public sealed class EntityModelDefinition
         IReadOnlyDictionary<string, FaceUvTransform>? faceTransforms = null,
         string? texturePath = null,
         float scale = 1f,
-        string? emissiveTexturePath = null)
+        string? emissiveTexturePath = null,
+        Func<EntityRenderState, string?>? textureSelector = null,
+        IReadOnlyList<string>? additionalTexturePaths = null)
     {
         Name = name;
         TextureWidth = textureWidth;
@@ -27,6 +31,8 @@ public sealed class EntityModelDefinition
         TexturePath = texturePath;
         Scale = scale;
         EmissiveTexturePath = emissiveTexturePath;
+        TextureSelector = textureSelector;
+        AdditionalTexturePaths = additionalTexturePaths ?? [];
     }
 
     public string Name { get; }
@@ -43,6 +49,15 @@ public sealed class EntityModelDefinition
     /// </summary>
     public string? EmissiveTexturePath { get; }
 
+    /// <summary>
+    /// Picks the texture for the current entity state (tame/angry, sleeping, nectar), or null to fall back to
+    /// <see cref="TexturePath"/>.
+    /// </summary>
+    public Func<EntityRenderState, string?>? TextureSelector { get; }
+
+    /// <summary>Textures the selector can return, loaded into the skin atlas up front.</summary>
+    public IReadOnlyList<string> AdditionalTexturePaths { get; }
+
     public IEnumerable<string> TexturePaths
     {
         get
@@ -55,6 +70,14 @@ public sealed class EntityModelDefinition
             if (EmissiveTexturePath is { Length: > 0 } emissive)
             {
                 yield return emissive;
+            }
+
+            foreach (var additional in AdditionalTexturePaths)
+            {
+                if (additional.Length > 0)
+                {
+                    yield return additional;
+                }
             }
 
             foreach (var part in Parts)

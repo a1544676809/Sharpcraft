@@ -52,6 +52,36 @@ public sealed class EntityVariantTrackingTests
     }
 
     [Fact]
+    public void WolfFlagsAndAngerEndTimeBecomeRenderStateBooleans()
+    {
+        var tracker = new EntityTracker { GameTime = 100 };
+        tracker.Add(new AddedEntity(7, Guid.Empty, 152, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+
+        Assert.True(tracker.ApplyEntityData(7, [new EntityDataItem(18, 0, 4)]));
+        Assert.True(tracker.Interpolate(0f)[0].IsTame);
+
+        tracker.ApplyEntityData(7, [new EntityDataItem(22, 2, EntityDataItem.NotAnInteger, LongValue: 500)]);
+        Assert.True(tracker.Interpolate(0f)[0].IsAngry);
+
+        tracker.GameTime = 600;
+        Assert.False(tracker.Interpolate(0f)[0].IsAngry);
+    }
+
+    [Fact]
+    public void FoxSleepingAndBeeNectarFlagsAreExposed()
+    {
+        var tracker = new EntityTracker();
+        tracker.Add(new AddedEntity(8, Guid.Empty, 55, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+        tracker.Add(new AddedEntity(9, Guid.Empty, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+
+        tracker.ApplyEntityData(8, [new EntityDataItem(19, 0, 32)]);
+        tracker.ApplyEntityData(9, [new EntityDataItem(18, 0, 8)]);
+
+        Assert.True(tracker.Interpolate(0f)[0].IsSleeping);
+        Assert.True(tracker.Interpolate(0f)[1].HasNectar);
+    }
+
+    [Fact]
     public void AnUpdateForAnUnknownEntityIsCounted()
     {
         var tracker = new EntityTracker();

@@ -1178,6 +1178,7 @@ internal sealed class InteractiveSession
 
                 // Remote entities approach the position the server reported over a few ticks, so the tracker
                 // has to advance once per tick (docs/specs/network/entity-sync.md 9.4).
+                _entities.GameTime = _world?.GameTime ?? 0;
                 _entities.Tick();
             _chatTicks++;
         _actionBar.Tick();

@@ -31,5 +31,58 @@ public static class WolfModelDefinition
             PlayerModelDefinition.FromVanillaChild("real_tail", "tail", 0f, 0f, 0f, 0f, 0f, -1f, 2f, 8f, 2f, 9, 18)
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/wolf/wolf");
+        "entity/wolf/wolf",
+        textureSelector: state => state.IsTame
+            ? "entity/wolf/wolf_tame"
+            : state.IsAngry
+                ? "entity/wolf/wolf_angry"
+                : "entity/wolf/wolf",
+        additionalTexturePaths: ["entity/wolf/wolf_tame", "entity/wolf/wolf_angry"]);
+
+    /// <summary>Registry entry names of the wolf variants, in vanilla bootstrap order.</summary>
+    public static readonly IReadOnlyList<string> VariantKeys =
+    [
+        "pale", "spotted", "snowy", "black", "ashen", "rusty", "woods", "chestnut", "striped"
+    ];
+
+    private static readonly string[] VariantFiles =
+    [
+        "wolf", "wolf_spotted", "wolf_snowy", "wolf_black", "wolf_ashen", "wolf_rusty", "wolf_woods", "wolf_chestnut", "wolf_striped"
+    ];
+
+    /// <summary>Variant key to definition; texture follows the tame/angry state through the selector.</summary>
+    public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants = BuildVariants();
+
+    private static Dictionary<string, EntityModelDefinition> BuildVariants()
+    {
+        var variants = new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)
+        {
+            ["pale"] = Definition
+        };
+
+        for (var i = 0; i < VariantKeys.Count; i++)
+        {
+            var key = VariantKeys[i];
+            if (key == "pale")
+            {
+                continue;
+            }
+
+            var wild = "entity/wolf/" + VariantFiles[i];
+            var tame = wild + "_tame";
+            var angry = wild + "_angry";
+            var captured = wild;
+            variants[key] = new EntityModelDefinition(
+                "wolf_" + key,
+                64,
+                64,
+                Definition.Parts,
+                PlayerModelDefinition.DefaultFaceTransforms,
+                captured,
+                textureSelector: state => state.IsTame ? captured + "_tame" : state.IsAngry ? captured + "_angry" : captured,
+                additionalTexturePaths: [tame, angry]);
+        }
+
+        return variants;
+    }
 }

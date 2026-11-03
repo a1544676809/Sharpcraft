@@ -28,5 +28,25 @@ public static class FoxModelDefinition
                 rotationX: -0.05235988f)
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/fox/fox");
+        "entity/fox/fox",
+        textureSelector: state => state.IsSleeping ? "entity/fox/fox_sleep" : "entity/fox/fox",
+        additionalTexturePaths: ["entity/fox/fox_sleep"]);
+
+    /// <summary>Fox type names: RED and SNOW, matching the synced integer type id order.</summary>
+    public static readonly IReadOnlyList<string> VariantKeys = ["red", "snow"];
+
+    public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
+        new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)
+        {
+            ["red"] = Definition,
+            ["snow"] = new(
+                "fox_snow",
+                48,
+                32,
+                Definition.Parts,
+                PlayerModelDefinition.DefaultFaceTransforms,
+                "entity/fox/fox_snow",
+                textureSelector: state => state.IsSleeping ? "entity/fox/fox_snow_sleep" : "entity/fox/fox_snow",
+                additionalTexturePaths: ["entity/fox/fox_snow_sleep"])
+        };
 }

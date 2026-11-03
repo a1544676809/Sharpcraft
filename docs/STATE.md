@@ -2390,3 +2390,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `BeeModelDefinition`：`bone`(空 group)→body(+stinger、左右触角)、两翅（yRot ±15°、左翅 mirror、grow 0.001）、前/中/后腿平面；纹理 `entity/bee/bee`，type id 11。
 - 注册 + 注册测试（10 部件、Parent 关系）；沙盒目视正常（黄身、蓝眼、薄翅、三对腿）。
 - **已知缺口**：BeeRenderer 的 angry / nectar 状态纹理（4 种，另有 baby 4 种）未接；扇翅动画未移植。
+
+### 2026-11-03 状态纹理基础设施（T-477）
+
+- 渲染状态增 `IsTame/IsAngry/IsSleeping/HasNectar`；`EntityDataItem` 支持 LONG（anger end time）；tracker 以 `GameTime` 比较判定 angry。
+- `EntityModelDefinition.TextureSelector` + `AdditionalTexturePaths`：所有可能纹理先入皮肤图集，打包时按实体状态选路径。
+- 已接：Wolf 9 变体 × wild/tame/angry；Fox red/snow × idle/sleep；Bee angry/nectar 四态（均按原版 `getTexture` 规则）。
+- 沙盒 `MC_SANDBOX_STATE=tame|angry|sleeping|nectar` 可强制状态；截图确认 Wolf tame、Bee nectar、Fox snow-sleeping 正确。
+- 测试：状态选择器 + tracker flag/anger 用例；全量 Client **653 通过**。

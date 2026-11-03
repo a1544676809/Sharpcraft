@@ -45,10 +45,10 @@ updated: 2026-11-03
 | Cow | 18 | COW_VARIANT（holder） | |
 | Chicken | 18 | CHICKEN_VARIANT（holder） | |
 | Cat | 20 | CAT_VARIANT（holder） | 18/19 来自 TamableAnimal |
-| Wolf | 23 | WOLF_VARIANT（holder） | 需要 wild/tame/angry 三态，暂缓 |
+| Wolf | 23 | WOLF_VARIANT（holder） | flags 18 的 tame 位（4）+ anger end time 22；wild/tame/angry 三态已接（T-477） |
 | Horse | 19 | INT | 低 8 位是 variant，高位是 markings |
 | Llama | 20 | INT | 0 creamy / 1 white / 2 brown / 3 gray |
-| Fox | 18 | INT | 0 red / 1 snow；纹理还按睡眠状态分，暂缓 |
+| Fox | 18 | INT | 0 red / 1 snow；flags 19 的 sleeping 位（32），四态纹理已接（T-477） |
 
 ## 3. 注册表变体：值 → 名字 → 资源
 
@@ -86,12 +86,12 @@ updated: 2026-11-03
 - Horse：0 white / 1 creamy / 2 chestnut / 3 brown / 4 black / 5 gray / 6 dark_brown，纹理
   `entity/horse/horse_<name>`；默认 0（white）。
 - Llama：0 creamy / 1 white / 2 brown / 3 gray，纹理 `entity/llama/llama_<name>`；默认 0（creamy）。
-- Fox：0 red / 1 snow，且按睡眠状态再分四张；睡眠位来自 flags，本批不接。
+- Fox：0 red / 1 snow，按 flags 的 sleeping 位（32）在 idle/sleep 四张纹理间选（T-477 已接）。
 
 ## 5. 未实现/限制（必须在文档里显式登记）
 
 1. **幼年模型**：本仓库当前只渲染成年模型；变体的 `baby_asset_id` 与 Baby* 模型不接。
-2. **Wolf / Fox**：分别需要 tame/angry 与 sleeping 状态，本批不做。
+2. **Wolf / Fox 状态纹理**已接：Wolf 用 flags 的 tame 位与 anger end time（与 GameTime 比较），Fox 用 sleeping 位；见 T-477。
 3. **自定义数据包新增变体**：若服务器在注册表里给出我们内置表里没有的名字（数据包/模组新增），
    纹理无法从内置资源集取到；按“接近原版 + 显式报错”处理 —— 渲染回落到该实体的默认变体，
    同时记录计数并在诊断日志里以异常形式抛出（不静默）。见 §6。
@@ -111,3 +111,4 @@ updated: 2026-11-03
 - 基础设施：`set_entity_data` 解码（含跳过未知 serializer）、`registry_data` 变体表、`EntityRenderState.VariantId`。
 - 纹理变体：Cat（11）、Horse（7）、Llama（4）。
 - 冷暖变体（纹理 + 几何）：Pig（3）、Cow（3）、Chicken（3）。
+

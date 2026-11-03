@@ -18,12 +18,22 @@ namespace Sharpcraft.Client.World;
 /// </param>
 /// <param name="DefaultKey">Variant name used when the server never sent the field (it equals the default).</param>
 /// <param name="ValueMask">Mask applied to the raw integer before it is used as an index.</param>
+/// <param name="FlagsAccessorIndex">Accessor carrying the byte flag word (tame/nectar/sleeping), or -1.</param>
+/// <param name="TameMask">Flag bit that means tamed (TamableAnimal bit 2 = 4).</param>
+/// <param name="NectarMask">Flag bit that means carrying nectar (Bee bit 3 = 8).</param>
+/// <param name="SleepingMask">Flag bit that means sleeping (Fox bit 5 = 32).</param>
+/// <param name="AngerAccessorIndex">Accessor carrying the anger end time as a long, or -1.</param>
 public readonly record struct EntityVariantSpec(
     int AccessorIndex,
     string? RegistryPath,
     IReadOnlyList<string> Keys,
     string DefaultKey,
-    int ValueMask = 0xFF);
+    int ValueMask = 0xFF,
+    int FlagsAccessorIndex = -1,
+    int TameMask = 0,
+    int NectarMask = 0,
+    int SleepingMask = 0,
+    int AngerAccessorIndex = -1);
 
 /// <summary>
 /// Answering "which synced-data field is the variant" for the entity types this client renders with variants.
@@ -55,7 +65,18 @@ public static class EntityVariantSpecs
         [67] = new(19, null, ["white", "creamy", "chestnut", "brown", "black", "gray", "dark_brown"], "white"),
 
         // Llama: AbstractChestedHorse adds chest (18), then strength (19), then variant (20).
-        [79] = new(20, null, ["creamy", "white", "brown", "gray"], "creamy")
+        [79] = new(20, null, ["creamy", "white", "brown", "gray"], "creamy"),
+
+        // Wolf: TamableAnimal flags (18), owner (19), interested (20), collar (21), anger end time (22), variant (23).
+        [152] = new(23, "wolf_variant",
+            ["pale", "spotted", "snowy", "black", "ashen", "rusty", "woods", "chestnut", "striped"], "pale",
+            FlagsAccessorIndex: 18, TameMask: 4, AngerAccessorIndex: 22),
+
+        // Fox: type id (18), byte flags (19) with the sleeping bit at 32.
+        [55] = new(18, null, ["red", "snow"], "red", FlagsAccessorIndex: 19, SleepingMask: 32),
+
+        // Bee: byte flags (18) with the nectar bit at 8; anger end time follows at 19. No variant registry.
+        [11] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 18, NectarMask: 8, AngerAccessorIndex: 19)
     };
 
     /// <summary>Number of entity types with a variant field.</summary>

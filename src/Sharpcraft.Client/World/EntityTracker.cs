@@ -91,6 +91,12 @@ public sealed class TrackedEntity
     /// </summary>
     public int VariantId { get; internal set; }
 
+    /// <summary>Raw byte flag word from synced entity data (tame/nectar/sleeping bits).</summary>
+    public int Flags { get; internal set; }
+
+    /// <summary>Anger end time in game ticks, or long.MinValue when unknown.</summary>
+    public long AngerEndTime { get; internal set; } = long.MinValue;
+
     /// <summary>
     /// Authoritative target position. Vanilla does not snap a remote entity to the position the server reports:
     /// it approaches it over a few ticks, which is why the rendered entity trails slightly behind the
@@ -154,7 +160,11 @@ public readonly record struct EntityRenderState(
     bool ShowRightPants = true,
     bool HasChest = false,
     bool HasEgg = false,
-    int VariantId = 0);
+    int VariantId = 0,
+    bool IsTame = false,
+    bool IsAngry = false,
+    bool IsSleeping = false,
+    bool HasNectar = false);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -386,18 +396,32 @@ public sealed class EntityTracker
             return false;
         }
 
+        var applied = false;
         foreach (var item in items)
         {
-            if (item.Index == spec.AccessorIndex && item.Value != EntityDataItem.NotAnInteger)
+            if (spec.AccessorIndex >= 0 && item.Index == spec.AccessorIndex && item.Value != EntityDataItem.NotAnInteger)
             {
                 entity.VariantId = item.Value & spec.ValueMask;
                 VariantUpdates++;
-                return true;
+                applied = true;
+            }
+            else if (spec.FlagsAccessorIndex >= 0 && item.Index == spec.FlagsAccessorIndex && item.Value != EntityDataItem.NotAnInteger)
+            {
+                entity.Flags = item.Value;
+                applied = true;
+            }
+            else if (spec.AngerAccessorIndex >= 0 && item.Index == spec.AngerAccessorIndex && item.LongValue != EntityDataItem.NotALong)
+            {
+                entity.AngerEndTime = item.LongValue;
+                applied = true;
             }
         }
 
-        return false;
+        return applied;
     }
+
+    /// <summary>Game time used to decide whether an anger end time is still in the future.</summary>
+    public long GameTime { get; set; }
 
     /// <summary>Removes entities the server dropped.</summary>
     /// <param name="ids">Entity ids.</param>
@@ -463,6 +487,7 @@ public sealed class EntityTracker
 
         foreach (var entity in _entities.Values)
         {
+            EntityVariantSpecs.TryGet(entity.TypeId, out var spec);
             _renderStates.Add(new EntityRenderState(
                 entity.Id,
                 entity.TypeId,
@@ -471,7 +496,11 @@ public sealed class EntityTracker
                 (float)(entity.PreviousZ + ((entity.Z - entity.PreviousZ) * t)),
                 Wrap360(LerpAngle(entity.PreviousYaw, entity.Yaw, t)),
                 entity.PreviousPitch + ((entity.Pitch - entity.PreviousPitch) * t),
-                VariantId: entity.VariantId));
+                VariantId: entity.VariantId,
+                IsTame: spec.TameMask != 0 && (entity.Flags & spec.TameMask) != 0,
+                IsAngry: spec.AngerAccessorIndex >= 0 && entity.AngerEndTime > GameTime,
+                IsSleeping: spec.SleepingMask != 0 && (entity.Flags & spec.SleepingMask) != 0,
+                HasNectar: spec.NectarMask != 0 && (entity.Flags & spec.NectarMask) != 0));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);

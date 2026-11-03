@@ -138,6 +138,8 @@ public static class EntityModelResolver
         RegisterVariants(ChickenModelDefinition.ChickenEntityTypeId, ChickenModelDefinition.Variants);
         RegisterVariants(CatModelDefinition.CatEntityTypeId, CatModelDefinition.Variants);
         RegisterVariants(HorseModelDefinition.HorseEntityTypeId, HorseModelDefinition.Variants);
+        RegisterVariants(WolfModelDefinition.WolfEntityTypeId, WolfModelDefinition.Variants);
+        RegisterVariants(FoxModelDefinition.FoxEntityTypeId, FoxModelDefinition.Variants);
         RegisterVariants(LlamaModelDefinition.LlamaEntityTypeId, LlamaModelDefinition.Variants);
     }
 }

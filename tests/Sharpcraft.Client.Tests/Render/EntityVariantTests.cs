@@ -186,6 +186,21 @@ public sealed class EntityVariantTests
     }
 
     [Fact]
+    public void StateSelectorsPickTameAngrySleepingAndNectarTextures()
+    {
+        var tameWolf = EntityModelResolver.ResolveVariantStrict(WolfModelDefinition.WolfEntityTypeId, "pale");
+        Assert.Equal("entity/wolf/wolf_tame", tameWolf.TextureSelector!(new EntityRenderState(1, 152, 0, 0, 0, 0, 0, IsTame: true)));
+        Assert.Equal("entity/wolf/wolf_angry", tameWolf.TextureSelector!(new EntityRenderState(1, 152, 0, 0, 0, 0, 0, IsAngry: true)));
+
+        var fox = EntityModelResolver.ResolveVariantStrict(FoxModelDefinition.FoxEntityTypeId, "snow");
+        Assert.Equal("entity/fox/fox_snow_sleep", fox.TextureSelector!(new EntityRenderState(1, 55, 0, 0, 0, 0, 0, IsSleeping: true)));
+
+        var bee = EntityModelResolver.Resolve(BeeModelDefinition.BeeEntityTypeId);
+        Assert.Equal("entity/bee/bee_angry_nectar", bee.TextureSelector!(new EntityRenderState(1, 11, 0, 0, 0, 0, 0, IsAngry: true, HasNectar: true)));
+        Assert.Equal("entity/bee/bee", bee.TextureSelector!(new EntityRenderState(1, 11, 0, 0, 0, 0, 0)));
+    }
+
+    [Fact]
     public void EveryVariantDefinitionIsExposedForTheSkinAtlas()
     {
         var textures = EntityModelResolver.Definitions

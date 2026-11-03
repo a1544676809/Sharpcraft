@@ -34,5 +34,12 @@ public static class BeeModelDefinition
             PlayerModelDefinition.FromVanillaChild("back_legs", "bone", 1.5f, 3f, 2f, -5f, 0f, 0f, 7f, 2f, 0f, 26, 5)
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/bee/bee");
+        "entity/bee/bee",
+        textureSelector: state => state.IsAngry
+            ? (state.HasNectar ? "entity/bee/bee_angry_nectar" : "entity/bee/bee_angry")
+            : (state.HasNectar ? "entity/bee/bee_nectar" : "entity/bee/bee"),
+        additionalTexturePaths:
+        [
+            "entity/bee/bee_angry", "entity/bee/bee_nectar", "entity/bee/bee_angry_nectar"
+        ]);
 }
