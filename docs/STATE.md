@@ -2840,3 +2840,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - Cow/Mooshroom/Sheep/Goat 复用 `QuadrupedModel.setupAnim` 的四腿相位；`ClipNames` 现在返回 idle/walk。
 - 这四种实体尚未单独做沙盒截图，先用参数化姿态测试锁定相位；后续与 Horse 等专用动画一起扩展。
+
+### 2026-11-03 动画 A6：Horse 族（T-557）
+
+- `AbstractEquineModel.setupAnim` 的成人基础路径接入：headParts pitch、四腿 cos 相位、tail rotation/position。
+- Horse/Donkey/Mule/SkeletonHorse/ZombieHorse 的 `ClipNames` 增加 idle/walk；HorseWalk 测试锁定相位。
+- 站立/进食/水生等状态和幼马特殊偏移尚未移植，不能算完整实体动画。

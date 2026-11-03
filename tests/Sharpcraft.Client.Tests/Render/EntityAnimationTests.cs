@@ -175,6 +175,23 @@ public sealed class EntityAnimationTests
         }
     }
     [Fact]
+    public void HorseWalkUsesTheReferenceEquinePhases()
+    {
+        var state = new Sharpcraft.Client.World.EntityRenderState(1, HorseModelDefinition.HorseEntityTypeId, 0f, 0f, 0f, 0f, 0f)
+        {
+            WalkAnimationPos = 0f,
+            WalkAnimationSpeed = 1f
+        };
+        var pose = new EntityPose();
+        EntityAnimationController.Apply(state, pose);
+
+        Assert.Equal(0.8f, pose.Get("right_front_leg").Rotation.X, 4);
+        Assert.Equal(-0.8f, pose.Get("left_front_leg").Rotation.X, 4);
+        Assert.Equal(0.5f, pose.Get("left_hind_leg").Rotation.X, 4);
+        Assert.Equal(-0.5f, pose.Get("right_hind_leg").Rotation.X, 4);
+        Assert.Contains("walk", EntityAnimationController.ClipNames(HorseModelDefinition.HorseEntityTypeId));
+    }
+    [Fact]
     public void BakingRejectsMissingParts()
     {
         var animation = new AnimationDefinition(1f, false, new Dictionary<string, IReadOnlyList<AnimationChannel>>
@@ -185,6 +202,7 @@ public sealed class EntityAnimationTests
         Assert.Throws<InvalidOperationException>(() => animation.Bake(new HashSet<string> { "head" }));
     }
 }
+
 
 
 

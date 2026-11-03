@@ -17,6 +17,9 @@ public static class EntityAnimationController
     {
         PigModelDefinition.PigEntityTypeId or CowModelDefinition.CowEntityTypeId or CowModelDefinition.MooshroomEntityTypeId
             or SheepModelDefinition.SheepEntityTypeId or GoatModelDefinition.GoatEntityTypeId => ["idle", "walk"],
+        HorseModelDefinition.HorseEntityTypeId or HorseModelDefinition.DonkeyEntityTypeId
+            or HorseModelDefinition.MuleEntityTypeId or HorseModelDefinition.SkeletonHorseEntityTypeId
+            or HorseModelDefinition.ZombieHorseEntityTypeId => ["idle", "walk"],
         CamelModelDefinition.CamelEntityTypeId => ["idle", "walk"],
         154 or 39 or 68 => ["idle", "walk"],
         VillagerModelDefinition.VillagerEntityTypeId => ["idle", "walk"],
@@ -64,6 +67,14 @@ public static class EntityAnimationController
             CamelAnimations.WalkBaked.Apply(state.WalkAnimationPos * 0.1f, MathF.Min(state.WalkAnimationSpeed * 2.5f, 1f), pose);
             CamelAnimations.IdleBaked.Apply(state.AgeInTicks / 20f, 1f, pose);
         }
+        else if (state.TypeId == HorseModelDefinition.HorseEntityTypeId
+            || state.TypeId == HorseModelDefinition.DonkeyEntityTypeId
+            || state.TypeId == HorseModelDefinition.MuleEntityTypeId
+            || state.TypeId == HorseModelDefinition.SkeletonHorseEntityTypeId
+            || state.TypeId == HorseModelDefinition.ZombieHorseEntityTypeId)
+        {
+            ApplyEquineWalk(state, pose);
+        }
         else if (state.TypeId == 154 || state.TypeId == 39 || state.TypeId == 68)
         {
             ApplyHumanoidWalk(state, pose);
@@ -75,6 +86,25 @@ public static class EntityAnimationController
     }
 
     /// <summary>Reference QuadrupedModel.setupAnim: head pitch and four legs from walkAnimationPos/Speed.</summary>
+    private static void ApplyEquineWalk(EntityRenderState state, EntityPose pose)
+    {
+        var speed = state.WalkAnimationSpeed;
+        var phase = state.WalkAnimationPos * 0.6662f;
+        var headPitch = state.Pitch * (MathF.PI / 180f);
+        if (speed > 0.2f)
+        {
+            headPitch += MathF.Cos(state.WalkAnimationPos * 0.8f) * 0.15f * speed;
+        }
+
+        pose.Add("head_parts", new PoseOffset(Vector3.Zero, new Vector3(headPitch, 0f, 0f), Vector3.Zero));
+        var legAnim = MathF.Cos(phase + MathF.PI);
+        var legX = legAnim * 0.8f * speed;
+        pose.Add("left_front_leg", new PoseOffset(Vector3.Zero, new Vector3(legX, 0f, 0f), Vector3.Zero));
+        pose.Add("right_front_leg", new PoseOffset(Vector3.Zero, new Vector3(-legX, 0f, 0f), Vector3.Zero));
+        pose.Add("left_hind_leg", new PoseOffset(Vector3.Zero, new Vector3(-legAnim * 0.5f * speed, 0f, 0f), Vector3.Zero));
+        pose.Add("right_hind_leg", new PoseOffset(Vector3.Zero, new Vector3(legAnim * 0.5f * speed, 0f, 0f), Vector3.Zero));
+        pose.Add("tail", new PoseOffset(new Vector3(0f, speed, speed * 2f), new Vector3(speed * 0.75f, 0f, 0f), Vector3.Zero));
+    }
     private static void ApplyHumanoidWalk(EntityRenderState state, EntityPose pose)
     {
         var headPitch = state.Pitch * (MathF.PI / 180f);
@@ -116,6 +146,7 @@ public static class EntityAnimationController
     private static void AddLegRotation(EntityPose pose, string part, float radians) =>
         pose.Add(part, new PoseOffset(Vector3.Zero, new Vector3(radians, 0f, 0f), Vector3.Zero));
 }
+
 
 
 
