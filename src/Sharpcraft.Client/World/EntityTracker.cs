@@ -215,7 +215,10 @@ public readonly record struct EntityRenderState(
     System.Numerics.Vector3 CollarTint = default,
     bool HasCollar = false,
     int Markings = 0,
-    EntityEquipment Equipment = default);
+    EntityEquipment Equipment = default,
+    float AgeInTicks = 0f,
+    float WalkAnimationPos = 0f,
+    float WalkAnimationSpeed = 0f);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -609,7 +612,8 @@ public sealed class EntityTracker
                 Markings: entity.Markings,
                 Equipment: new EntityEquipment(
                     entity.EquipmentItemAt(0), entity.EquipmentItemAt(1), entity.EquipmentItemAt(2), entity.EquipmentItemAt(3),
-                    entity.EquipmentItemAt(4), entity.EquipmentItemAt(5), entity.EquipmentItemAt(6), entity.EquipmentItemAt(7))));
+                    entity.EquipmentItemAt(4), entity.EquipmentItemAt(5), entity.EquipmentItemAt(6), entity.EquipmentItemAt(7)),
+                AgeInTicks: GameTime));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);
@@ -651,3 +655,4 @@ public sealed class EntityTracker
         return from + (delta * t);
     }
 }
+

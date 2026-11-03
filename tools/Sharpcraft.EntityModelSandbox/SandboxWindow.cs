@@ -77,6 +77,8 @@ internal static class SandboxWindow
         var markingsText = Environment.GetEnvironmentVariable("MC_SANDBOX_MARKINGS");
         var equipBodyText = Environment.GetEnvironmentVariable("MC_SANDBOX_EQUIP_BODY");
         var equipSaddleText = Environment.GetEnvironmentVariable("MC_SANDBOX_EQUIP_SADDLE");
+        var walkPosText = Environment.GetEnvironmentVariable("MC_SANDBOX_WALK_POS");
+        var walkSpeedText = Environment.GetEnvironmentVariable("MC_SANDBOX_WALK_SPEED");
         Console.WriteLine($"equip body={ItemId(equipBodyText)} saddle={ItemId(equipSaddleText)}");
         var entity = new EntityRenderState(1, typeId, 0f, 0f, 0f, 0f, 0f,
             HasChest: Environment.GetEnvironmentVariable("MC_SANDBOX_CHEST") == "1",
@@ -95,7 +97,9 @@ internal static class SandboxWindow
             CollarTint: ParseTint(collarText),
             HasCollar: collarText is { Length: 6 },
             Markings: int.TryParse(markingsText, out var markings) ? markings : 0,
-            Equipment: new EntityEquipment(-1, -1, -1, -1, -1, -1, ItemId(equipBodyText), ItemId(equipSaddleText)));
+            Equipment: new EntityEquipment(-1, -1, -1, -1, -1, -1, ItemId(equipBodyText), ItemId(equipSaddleText)),
+            WalkAnimationPos: float.TryParse(walkPosText, out var walkPos) ? walkPos : 0f,
+            WalkAnimationSpeed: float.TryParse(walkSpeedText, out var walkSpeed) ? walkSpeed : 1f);
         var mesher = new EntityModelMesher();
         var state = new Dictionary<string, FaceUvTransform>();
         var statePath = Path.Combine(Path.GetTempPath(), "sharpcraft-face-state.json");
@@ -114,11 +118,14 @@ internal static class SandboxWindow
         {
             var parts = model.Parts;
             var partName = parts[partIndex % parts.Count].Name;
+            var pose = new EntityPose();
+            EntityAnimationController.Apply(entity, pose);
             var layers = mesher.BuildLayers([entity], sprite, sprite.Width, sprite.Height, state,
                 onlyPart: isolateSelectedPart ? partName : null,
                 excludedPart: hideSelectedPart ? partName : null,
                 skinAtlas: atlas,
-                variants: variantTable);
+                variants: variantTable,
+                pose: pose);
             if (!hideSelectedPart)
             {
                 foreach (var layer in layers)
@@ -350,4 +357,5 @@ internal static class SandboxWindow
         return new ResourceManager(stack, 0);
     }
 }
+
 

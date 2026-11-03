@@ -2806,3 +2806,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `EntityModelMesher.Build/BuildLayers/BuildInto` 新增可选 `EntityPose`；`PartFrame` 在静态 pivot/rotation 上叠加动画 offset，装备副本按去前缀后的原名继承。
 - 新增 `AnimationPoseOffsetsAreAppliedBeforeMeshing`：Pig 头部 y 偏移会改变网格 bounds。
 - 注意：动画定义目前是 C# 行为数据（原版也是 Java 硬编码，不是资源 JSON）；A3 再按实体移植具体动画。
+
+### 2026-11-03 动画 A3：Pig 四足样板（T-551）
+
+- `EntityAnimationController` 实现 `QuadrupedModel.setupAnim`：head pitch + 四腿 `cos(walkPos*0.6662)*1.4*walkSpeed`，左右/前后相位差 π。
+- `EntityRenderState` 增加 `AgeInTicks/WalkAnimationPos/WalkAnimationSpeed`；沙盒通过 `MC_SANDBOX_WALK_POS/SPEED` 可复现两帧姿态（0 与 2.35）。
+- Pig 两帧截图已对照：腿摆方向/相位正确；Camel 关键帧动画下一步单独移植。
