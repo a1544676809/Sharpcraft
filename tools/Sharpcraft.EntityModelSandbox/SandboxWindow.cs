@@ -83,6 +83,7 @@ internal static class SandboxWindow
         var flapText = Environment.GetEnvironmentVariable("MC_SANDBOX_FLAP");
         var flapSpeedText = Environment.GetEnvironmentVariable("MC_SANDBOX_FLAP_SPEED");
         var tentacleText = Environment.GetEnvironmentVariable("MC_SANDBOX_TENTACLE");
+        var restingText = Environment.GetEnvironmentVariable("MC_SANDBOX_RESTING");
         var animationText = Environment.GetEnvironmentVariable("MC_SANDBOX_ANIMATION");
         var animationPausedText = Environment.GetEnvironmentVariable("MC_SANDBOX_ANIM_PAUSED");
         var animationTimeText = Environment.GetEnvironmentVariable("MC_SANDBOX_ANIM_TIME");
@@ -109,7 +110,8 @@ internal static class SandboxWindow
             AgeInTicks: float.TryParse(ageTicksText, out var ageTicks) ? ageTicks : 0f,
             Flap: float.TryParse(flapText, out var flap) ? flap : 0f,
             FlapSpeed: float.TryParse(flapSpeedText, out var flapSpeed) ? flapSpeed : 0f,
-            TentacleAngle: float.TryParse(tentacleText, out var tentacleAngle) ? tentacleAngle : 0f);
+            TentacleAngle: float.TryParse(tentacleText, out var tentacleAngle) ? tentacleAngle : 0f,
+            IsResting: restingText == "1");
         var animationClips = EntityAnimationController.ClipNames(typeId);
         var animationIndex = 0;
         if (animationText is { Length: > 0 } requestedAnimation)
@@ -407,6 +409,7 @@ internal static class SandboxWindow
         return new ResourceManager(stack, 0);
     }
 }
+
 
 
 

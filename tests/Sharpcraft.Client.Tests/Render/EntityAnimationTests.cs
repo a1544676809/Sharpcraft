@@ -217,6 +217,17 @@ public sealed class EntityAnimationTests
         Assert.Equal(0.5f, squidPose.Get("tentacle7").Rotation.X, 4);
     }
     [Fact]
+    public void BatFlyingAndRestingUseThePortedKeyframes()
+    {
+        var pose = new EntityPose();
+        BatAnimations.FlyingBaked.Apply(0f, 1f, pose);
+        Assert.Equal(40f * (MathF.PI / 180f), pose.Get("body").Rotation.X, 4);
+
+        pose.Clear();
+        BatAnimations.RestingBaked.Apply(0f, 1f, pose);
+        Assert.Equal(MathF.PI, pose.Get("body").Rotation.X, 4);
+    }
+    [Fact]
     public void BakingRejectsMissingParts()
     {
         var animation = new AnimationDefinition(1f, false, new Dictionary<string, IReadOnlyList<AnimationChannel>>
@@ -227,6 +238,7 @@ public sealed class EntityAnimationTests
         Assert.Throws<InvalidOperationException>(() => animation.Bake(new HashSet<string> { "head" }));
     }
 }
+
 
 
 

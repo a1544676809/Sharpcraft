@@ -24,6 +24,7 @@ public static class EntityAnimationController
         154 or 39 or 68 => ["idle", "walk"],
         VillagerModelDefinition.VillagerEntityTypeId or ChickenModelDefinition.ChickenEntityTypeId => ["idle", "walk"],
         SquidModelDefinition.SquidEntityTypeId or SquidModelDefinition.GlowSquidEntityTypeId => ["idle"],
+        BatModelDefinition.BatEntityTypeId => ["resting", "flying"],
         _ => []
     };
 
@@ -39,6 +40,12 @@ public static class EntityAnimationController
         if (animation == "idle" && state.TypeId == CamelModelDefinition.CamelEntityTypeId)
         {
             CamelAnimations.IdleBaked.Apply(seconds, 1f, pose);
+            return;
+        }
+
+        if (animation is "resting" or "flying" && state.TypeId == BatModelDefinition.BatEntityTypeId)
+        {
+            (animation == "resting" ? BatAnimations.RestingBaked : BatAnimations.FlyingBaked).Apply(seconds, 1f, pose);
             return;
         }
 
@@ -89,6 +96,17 @@ public static class EntityAnimationController
         else if (state.TypeId == SquidModelDefinition.SquidEntityTypeId || state.TypeId == SquidModelDefinition.GlowSquidEntityTypeId)
         {
             ApplySquid(state, pose);
+        }
+        else if (state.TypeId == BatModelDefinition.BatEntityTypeId)
+        {
+            if (state.IsResting)
+            {
+                BatAnimations.RestingBaked.Apply(state.AgeInTicks / 20f, 1f, pose);
+            }
+            else
+            {
+                BatAnimations.FlyingBaked.Apply(state.AgeInTicks / 20f, 1f, pose);
+            }
         }
         else if (state.TypeId == VillagerModelDefinition.VillagerEntityTypeId)
         {
@@ -174,6 +192,7 @@ public static class EntityAnimationController
     private static void AddLegRotation(EntityPose pose, string part, float radians) =>
         pose.Add(part, new PoseOffset(Vector3.Zero, new Vector3(radians, 0f, 0f), Vector3.Zero));
 }
+
 
 
 

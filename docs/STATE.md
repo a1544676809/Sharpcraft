@@ -2852,3 +2852,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - Chicken：`ChickenModel.setupAnim` 的 `flap=(sin(flap)+1)*flapSpeed` 翅膀 + 双腿相位；沙盒 `MC_SANDBOX_FLAP/FLAP_SPEED`。
 - Squid/GlowSquid：8 个 tentacle 的 `xRot = TentacleAngle`；沙盒 `MC_SANDBOX_TENTACLE`。
 - Chicken 暂停帧截图已验证；Squid 用姿态测试锁定，后续补截图。
+
+### 2026-11-03 动画 A8：Bat（T-559）
+
+- 移植 `BatAnimation.BAT_RESTING` / `BAT_FLYING`（0.5s 循环，LINEAR），含 head/body/feet/wing/wing_tip。
+- `EntityRenderState.IsResting` + 沙盒 `MC_SANDBOX_RESTING=1`；Bat 默认 `resting`，可用 `MC_SANDBOX_ANIMATION=flying`。
