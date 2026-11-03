@@ -112,7 +112,7 @@ internal static class SandboxWindow
             FlapSpeed: float.TryParse(flapSpeedText, out var flapSpeed) ? flapSpeed : 0f,
             TentacleAngle: float.TryParse(tentacleText, out var tentacleAngle) ? tentacleAngle : 0f,
             IsResting: restingText == "1");
-        var animationClips = EntityAnimationController.ClipNames(typeId);
+        var animationClips = EntityAnimationRegistry.Clips(typeId);
         var animationIndex = 0;
         if (animationText is { Length: > 0 } requestedAnimation)
         {
@@ -135,6 +135,8 @@ internal static class SandboxWindow
         var animationPlaying = animationPausedText != "1";
         var animationFixedTime = float.TryParse(animationTimeText, out var requestedAnimationTime) ? requestedAnimationTime : 0f;
         var animationStart = Environment.TickCount64;
+        var animationProvider = EntityAnimationRegistry.For(typeId);
+        var animationState = animationProvider?.CreateState();
         var mesher = new EntityModelMesher();
         var state = new Dictionary<string, FaceUvTransform>();
         var statePath = Path.Combine(Path.GetTempPath(), "sharpcraft-face-state.json");
@@ -157,9 +159,10 @@ internal static class SandboxWindow
                 ? (Environment.TickCount64 - animationStart) / 1000f
                 : animationFixedTime;
             var pose = new EntityPose();
-            if (animationName is not null)
+            if (animationName is not null && animationProvider is not null && animationState is not null)
             {
-                EntityAnimationController.ApplyClip(entity, pose, animationName, animationSeconds);
+                var animationFrame = EntityAnimationFrame.From(entity);
+                animationProvider.ApplyClip(animationState, in animationFrame, animationName, animationSeconds, pose);
             }
             var layers = mesher.BuildLayers([entity], sprite, sprite.Width, sprite.Height, state,
                 onlyPart: isolateSelectedPart ? partName : null,

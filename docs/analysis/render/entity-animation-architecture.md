@@ -36,22 +36,33 @@ updated: 2026-11-03
 
 ### 3.1 核心抽象
 
+已实现（`docs/modules/entity-animation.md` §4）：
+
 ```text
-IEntityAnimationProvider
+// Client.World —— 不含任何渲染类型，避免 World → Render 依赖
+readonly record struct EntityAnimationFrame(
+    TypeId, AgeInTicks, WalkAnimationPos, WalkAnimationSpeed, Pitch,
+    Flap, FlapSpeed, TentacleAngle,
+    IsResting, IsBaby, IsHidingInShell)          // 从 EntityRenderState.From 投影
+interface IEntityAnimationState { }               // 每生物可变状态的空标记
+
+// Client.Render —— 显式引用的渲染类型在这里
+interface IEntityAnimationProvider
   int TypeId
   IReadOnlyList<string> Clips
   IEntityAnimationState CreateState()
-  void Update(IEntityAnimationState state, in EntityAnimationFrame frame)
-  void Apply(IEntityAnimationState state, string clip, float seconds, EntityPose pose)
-
-IEntityAnimationState
-  每个生物自己的可变状态（动画时钟、上次姿态、特殊因子）
+  void Apply(IEntityAnimationState state, in EntityAnimationFrame frame, EntityPose pose)      // 游戏热路径
+  void ApplyClip(IEntityAnimationState state, in EntityAnimationFrame frame,
+                 string clip, float seconds, EntityPose pose)                                  // 沙盒/工具
+static class EntityAnimationRegistry
+  TryGet(typeId) / For(typeId) / CreateState(typeId) / Clips(typeId) / All
 ```
 
-- `EntityAnimationFrame` 只携带**所有生物共用**的输入：年龄、walk 参数、朝向/俯仰、baby、是否隐藏等；
-- 特殊字段（例如 Axolotl 的 inWater/onGround/moving、Frog 的 jump/croak AnimationState、Armadillo 的 roll state）由对应 `IEntityAnimationState.Update` 从通用帧与网络数据派生/保存；
+- `EntityAnimationFrame` 只携带**所有生物共用**、且已存在于通用 render state 的输入；
+- 特殊字段（例如 Axolotl 的 inWater/onGround/moving、Frog 的 jump/croak `AnimationState`、Armadillo 的 roll state）由对应 `IEntityAnimationState` 的具体实现从通用帧与网络数据派生/保存，**不进入 `EntityAnimationFrame`**；
 - `EntityAnimationRegistry` 只做 `TypeId → provider` 查找；
-- `EntityRenderState` 只增加一个 `IEntityAnimationState? Animation` 引用（每实体一个，不每帧分配），Mesher 调用 provider `Apply`。
+- `EntityRenderState` 增加一个 `IEntityAnimationState? Animation` 引用（每实体一个，不每帧分配），`EntityTracker` 通过注入的 `AnimationStateFactory` 在实体首次出现时创建，宿主把它接到 `EntityAnimationRegistry.CreateState`；
+- Mesher 在**每帧网格化前**为每个实体准备一份复用的 `EntityPose`，调用 provider `Apply` **一次/实体/帧**（而非每个渲染层各一次），三个 layer pass 只消费已算好的 pose。
 
 ### 3.2 每生物文件边界
 
@@ -112,9 +123,9 @@ Provider 的 `State` 是每实体一份的可变对象；`Apply` 只写 `EntityP
 
 ## 6. 迁移步骤
 
-1. Lead 完成 `IEntityAnimationProvider` / registry / frame / state 引用；
-2. 迁移现有 Animal/procedural controller，保留行为测试；
-3. 沙盒改为从 registry 列出 clips；
+1. **已完成（2026-11-03）** Lead 完成 `IEntityAnimationProvider` / registry / `EntityAnimationFrame` / `IEntityAnimationState` 引用与 Mesher 每实体 pose 接线；
+2. **已完成（2026-11-03）** 迁移现有四足/马/人形/村民/鸡/鱿鱼/蝙蝠/骆驼/犰狳/蛙/美西螈 controller，行为与原测试保持不变；
+3. **已完成（2026-11-03）** 沙盒改为从 registry 列出并播放 clips；
 4. 按生物派单（2–3 个并行）；
 5. Lead 每批做全量构建/测试/截图，更新 traceability 与 STATE。
 
@@ -182,12 +193,13 @@ assert after == before
 
 覆盖：四足 walk、两足 walk、Camel 关键帧、装备层 pose 继承；若某实体确实需要一次性缓存，在测试外 warm up，不得把稳态分配带入结论。
 
-## 7. 待评审问题
+## 7. 待评审问题（2026-11-03 已定）
 
-- `EntityAnimationFrame` 需要覆盖哪些通用字段，特殊状态字段由 provider state 保存还是由通用帧扩展；
-- provider state 的创建/释放时机（随 `TrackedEntity` 生命周期）；
-- 是否引入 `IEntityAnimationState` 接口到 `Client.World` 以避免 World→Render 依赖；
-- 是否将装备层动画继承也纳入 provider 的 pose 名称规则（当前用 part 名前缀剥离）。
+- **`EntityAnimationFrame` 字段集**：确定为 `TypeId, AgeInTicks, WalkAnimationPos, WalkAnimationSpeed, Pitch, Flap, FlapSpeed, TentacleAngle, IsResting, IsBaby, IsHidingInShell`，只含已存在于通用 render state 的输入；生物特殊因子一律进各自的 `IEntityAnimationState`，不扩通用帧。
+- **state 创建/释放时机**：随 `TrackedEntity` 生命周期——实体首次出现时由注入的 `AnimationStateFactory` 创建，实体移除时随引用一起丢弃；不每帧分配。
+- **World ↔ Render 归属**：`EntityAnimationFrame` 与 `IEntityAnimationState` 放 `Client.World`（不含渲染类型），provider / registry / `EntityPose` 放 `Client.Render`；`EntityTracker` 通过 `Func<int, IEntityAnimationState?>` 工厂注入，保持 World 不反向依赖 Render。
+- **装备层动画继承**：继续用 part 名前缀剥离（`equipment_` / `equipment_extra_`），由 Mesher 的 `PosePartName` 统一处理，provider 不感知装备副本。
+- **`Update` 与 `Apply` 的合并**：原方案分 `Update` + 字符串 `Apply`；为满足 §6.2 的“游戏内用索引/枚举、字符串只在沙盒解析”，合并为无字符串的 `Apply(state, frame, pose)` 供热路径，字符串仅在沙盒 `ApplyClip` 使用。
 
 ## 8. 参考资料
 

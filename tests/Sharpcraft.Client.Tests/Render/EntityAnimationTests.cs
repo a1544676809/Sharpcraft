@@ -3,6 +3,7 @@
 
 using System.Numerics;
 using Sharpcraft.Client.Render;
+using Sharpcraft.Client.World;
 using Xunit;
 
 namespace Sharpcraft.Client.Tests.Render;
@@ -98,7 +99,7 @@ public sealed class EntityAnimationTests
             WalkAnimationSpeed = 1f
         };
         var pose = new EntityPose();
-        EntityAnimationController.Apply(state, pose);
+        ApplyAnimation(state, pose);
 
         Assert.Equal(1.4f, pose.Get("right_hind_leg").Rotation.X, 4);
         Assert.Equal(-1.4f, pose.Get("left_hind_leg").Rotation.X, 4);
@@ -114,7 +115,7 @@ public sealed class EntityAnimationTests
             WalkAnimationSpeed = 1f
         };
         var pose = new EntityPose();
-        EntityAnimationController.Apply(state, pose);
+        ApplyAnimation(state, pose);
 
         Assert.Equal(2.5f * (MathF.PI / 180f), pose.Get("root").Rotation.Z, 4);
         Assert.Equal(22.5f * (MathF.PI / 180f), pose.Get("right_front_leg").Rotation.X, 4);
@@ -128,7 +129,7 @@ public sealed class EntityAnimationTests
             WalkAnimationSpeed = 1f
         };
         var zombiePose = new EntityPose();
-        EntityAnimationController.Apply(zombie, zombiePose);
+        ApplyAnimation(zombie, zombiePose);
         Assert.Equal(-1f, zombiePose.Get("right_arm").Rotation.X, 4);
         Assert.Equal(1f, zombiePose.Get("left_arm").Rotation.X, 4);
         Assert.Equal(1.4f, zombiePose.Get("right_leg").Rotation.X, 4);
@@ -140,7 +141,7 @@ public sealed class EntityAnimationTests
             WalkAnimationSpeed = 1f
         };
         var villagerPose = new EntityPose();
-        EntityAnimationController.Apply(villager, villagerPose);
+        ApplyAnimation(villager, villagerPose);
         Assert.Equal(0.7f, villagerPose.Get("right_leg").Rotation.X, 4);
         Assert.Equal(-0.7f, villagerPose.Get("left_leg").Rotation.X, 4);
     }
@@ -153,7 +154,7 @@ public sealed class EntityAnimationTests
             AgeInTicks = 0f
         };
         var pose = new EntityPose();
-        EntityAnimationController.Apply(state, pose);
+        ApplyAnimation(state, pose);
 
         Assert.Equal(5f * (MathF.PI / 180f), pose.Get("tail").Rotation.X, 4);
     }
@@ -168,10 +169,10 @@ public sealed class EntityAnimationTests
                 WalkAnimationSpeed = 1f
             };
             var pose = new EntityPose();
-            EntityAnimationController.Apply(state, pose);
+            ApplyAnimation(state, pose);
             Assert.Equal(1.4f, pose.Get("right_hind_leg").Rotation.X, 4);
             Assert.Equal(1.4f, pose.Get("left_front_leg").Rotation.X, 4);
-            Assert.Contains("walk", EntityAnimationController.ClipNames(typeId));
+            Assert.Contains("walk", EntityAnimationRegistry.Clips(typeId));
         }
     }
     [Fact]
@@ -183,13 +184,13 @@ public sealed class EntityAnimationTests
             WalkAnimationSpeed = 1f
         };
         var pose = new EntityPose();
-        EntityAnimationController.Apply(state, pose);
+        ApplyAnimation(state, pose);
 
         Assert.Equal(0.8f, pose.Get("right_front_leg").Rotation.X, 4);
         Assert.Equal(-0.8f, pose.Get("left_front_leg").Rotation.X, 4);
         Assert.Equal(0.5f, pose.Get("left_hind_leg").Rotation.X, 4);
         Assert.Equal(-0.5f, pose.Get("right_hind_leg").Rotation.X, 4);
-        Assert.Contains("walk", EntityAnimationController.ClipNames(HorseModelDefinition.HorseEntityTypeId));
+        Assert.Contains("walk", EntityAnimationRegistry.Clips(HorseModelDefinition.HorseEntityTypeId));
     }
     [Fact]
     public void ChickenWingsAndSquidTentaclesFollowTheirState()
@@ -202,7 +203,7 @@ public sealed class EntityAnimationTests
             FlapSpeed = 1f
         };
         var chickenPose = new EntityPose();
-        EntityAnimationController.Apply(chicken, chickenPose);
+        ApplyAnimation(chicken, chickenPose);
         Assert.Equal(1f, chickenPose.Get("right_wing").Rotation.Z, 4);
         Assert.Equal(-1f, chickenPose.Get("left_wing").Rotation.Z, 4);
         Assert.Equal(1.4f, chickenPose.Get("right_leg").Rotation.X, 4);
@@ -212,7 +213,7 @@ public sealed class EntityAnimationTests
             TentacleAngle = 0.5f
         };
         var squidPose = new EntityPose();
-        EntityAnimationController.Apply(squid, squidPose);
+        ApplyAnimation(squid, squidPose);
         Assert.Equal(0.5f, squidPose.Get("tentacle0").Rotation.X, 4);
         Assert.Equal(0.5f, squidPose.Get("tentacle7").Rotation.X, 4);
     }
@@ -236,6 +237,13 @@ public sealed class EntityAnimationTests
         });
 
         Assert.Throws<InvalidOperationException>(() => animation.Bake(new HashSet<string> { "head" }));
+    }
+
+    private static void ApplyAnimation(EntityRenderState state, EntityPose pose)
+    {
+        var provider = EntityAnimationRegistry.For(state.TypeId);
+        Assert.NotNull(provider);
+        provider!.Apply(provider.CreateState(), EntityAnimationFrame.From(state), pose);
     }
 }
 

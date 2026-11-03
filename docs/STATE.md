@@ -2877,3 +2877,12 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - `entity-animation-architecture.md` 状态改为 `已评审`，补充 6.2 GC/热路径约束：provider/动画静态缓存、每实体 state 与 EntityPose 复用、热路径禁止 new/LINQ/字符串拼接、每 provider 分配测试。
 - 后续实施 provider/state 改造时按该文档执行；未实现前不声称性能已达成。
+
+### 2026-11-03 动画基座 reform：provider 化（T-567）
+
+- 新增 `EntityAnimationFrame` + `IEntityAnimationState`（`Client.World`，零渲染依赖）与 `IEntityAnimationProvider` + `EntityAnimationRegistry`（`Client.Render`）；`EntityRenderState.Animation` 引用由 `EntityTracker` 注入的 `AnimationStateFactory` 创建（随实体生命周期）。
+- 现有 14 类 controller（四足/马/人形/村民/鸡/鱿鱼/蝙蝠/骆驼/犰狳/蛙/美西螈）全部迁入 11 个 provider，行为与旧测试保持不变；删除 `EntityAnimationController` 静态 switch。
+- `EntityModelMesher` 每帧每实体准备一份复用 `EntityPose`，provider `Apply` 只在一帧一次的网格化准备阶段调用（三个 layer pass 共用），装备副本仍按 part 名继承。
+- 沙盒 `ClipNames`/`ApplyClip` 改走 registry；新增 `EntityAnimationProviderTests`（registry 覆盖、clip 全量可播、11 条稳态零分配）。
+- **下一步具体动作**：①按 `entity-render-backlog.md` 逐生物派单（先 Warden/Creaking/EnderDragon/Ravager/Hoglin 等），每个 agent 只新增自己的 `<Creature>AnimationProvider.cs` + 测试 + 数据文件，禁止改共享文件、禁止 commit；②补齐阻塞完整动画的 render-state 字段（Adult Axolotl 四因子、Frog/Armadillo/Bat 的 `AnimationState`、Chicken flap 来源）；③装备层动画继承与 `EquipmentClientInfo` 资产化。
+- 全量构建 0 警告 0 错误；Client 764 / Common 454 / Architecture 31 绿。

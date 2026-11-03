@@ -17,6 +17,9 @@ public sealed class EntityModelMesher
     private readonly DynamicGeometry _geometry = new();
     private readonly DynamicGeometry[] _layerGeometries = [new(), new(), new()];
 
+    /// <summary>One reusable pose per entity in the current batch, so a steady frame does not allocate poses.</summary>
+    private readonly List<EntityPose> _animationPoses = [];
+
     private static readonly EntityGeometryLayerKind[] LayerKinds =
         [EntityGeometryLayerKind.Cutout, EntityGeometryLayerKind.Translucent, EntityGeometryLayerKind.Emissive];
 
@@ -59,13 +62,21 @@ public sealed class EntityModelMesher
     /// </summary>
     public IReadOnlyList<EntityGeometryLayer> BuildLayers(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, EntityPose? pose = null)
     {
+        // Called once per frame. Without an explicit (sandbox) pose, build one pose per entity here, before the three
+        // layer passes, so provider state updates run once per entity rather than once per layer.
+        var usePreparedPoses = pose is null;
+        if (usePreparedPoses)
+        {
+            PrepareAnimationPoses(entities);
+        }
+
         var layers = new List<EntityGeometryLayer>(3);
         for (var i = 0; i < LayerKinds.Length; i++)
         {
             var kind = LayerKinds[i];
             var geometry = _layerGeometries[i];
             var emissivePass = kind == EntityGeometryLayerKind.Emissive;
-            BuildInto(geometry, kind, entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants, emissivePass, pose);
+            BuildInto(geometry, kind, entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants, emissivePass, pose, usePreparedPoses);
             if (geometry.IndexCount > 0)
             {
                 layers.Add(new EntityGeometryLayer(kind.ToString().ToLowerInvariant(), kind, i, geometry));
@@ -75,7 +86,33 @@ public sealed class EntityModelMesher
         return layers;
     }
 
-    private DynamicGeometry BuildInto(DynamicGeometry target, EntityGeometryLayerKind? kindFilter, ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, bool emissivePass = false, EntityPose? pose = null)
+    /// <summary>
+    /// Fills <see cref="_animationPoses"/> for the current batch: one reused pose per entity, cleared and rebuilt from
+    /// the registry provider. Runs once per frame; allocates only when the batch grows.
+    /// </summary>
+    private void PrepareAnimationPoses(ReadOnlySpan<EntityRenderState> entities)
+    {
+        while (_animationPoses.Count < entities.Length)
+        {
+            _animationPoses.Add(new EntityPose());
+        }
+
+        for (var i = 0; i < entities.Length; i++)
+        {
+            var pose = _animationPoses[i];
+            pose.Clear();
+            var entity = entities[i];
+            if (entity.Animation is null || !EntityAnimationRegistry.TryGet(entity.TypeId, out var provider))
+            {
+                continue;
+            }
+
+            var frame = EntityAnimationFrame.From(entity);
+            provider.Apply(entity.Animation, in frame, pose);
+        }
+    }
+
+    private DynamicGeometry BuildInto(DynamicGeometry target, EntityGeometryLayerKind? kindFilter, ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, bool emissivePass = false, EntityPose? pose = null, bool usePreparedPoses = false)
     {
         target.Clear();
         var cubeCount = 0;
@@ -92,8 +129,10 @@ public sealed class EntityModelMesher
         var vertexFloats = 0;
         var indexCount = 0;
 
-        foreach (var entity in entities)
+        for (var entityIndex = 0; entityIndex < entities.Length; entityIndex++)
         {
+            var entity = entities[entityIndex];
+            var entityPose = usePreparedPoses ? _animationPoses[entityIndex] : pose;
             var model = ResolveModel(entity, variants);
             if (model is null)
             {
@@ -177,7 +216,7 @@ public sealed class EntityModelMesher
                     partSprite = partAtlas;
                 }
 
-                AddPart(part, target, kindFilter, emissivePass, min, max, partSprite, partSkinWidth, partSkinHeight, feet, entityTransform, PartMatrix(part, model.Parts, px, pose), transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount);
+                AddPart(part, target, kindFilter, emissivePass, min, max, partSprite, partSkinWidth, partSkinHeight, feet, entityTransform, PartMatrix(part, model.Parts, px, entityPose), transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount);
             }
         }
 

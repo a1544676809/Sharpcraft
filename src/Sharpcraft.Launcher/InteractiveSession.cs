@@ -258,6 +258,9 @@ internal sealed class InteractiveSession
         _interpolator = new PlayerInterpolator(player, _camera.Yaw);
         _live = live;
         _sync = live is null ? null : new PlayerSync();
+        // Animation state is created per tracked entity and carried through the render state; the registry lives in the
+        // rendering layer so the world model itself stays free of rendering types.
+        _entities.AnimationStateFactory = Sharpcraft.Client.Render.EntityAnimationRegistry.CreateState;
     }
 
     /// <summary>Creates a session with the player standing on the highest block under the view centre.</summary>

@@ -40,6 +40,12 @@ public sealed class TrackedEntity
     /// <summary>Persistent identity, when the server sent one.</summary>
     public Guid Uuid { get; internal set; }
 
+    /// <summary>
+    /// Per-entity animation state, created once when the entity is first tracked and dropped with it. Null when the
+    /// type has no animation provider or no state factory was injected.
+    /// </summary>
+    public IEntityAnimationState? Animation { get; internal set; }
+
     /// <summary>Feet position, current tick.</summary>
     public double X { get; internal set; }
 
@@ -222,7 +228,8 @@ public readonly record struct EntityRenderState(
     float Flap = 0f,
     float FlapSpeed = 0f,
     float TentacleAngle = 0f,
-    bool IsResting = false);
+    bool IsResting = false,
+    IEntityAnimationState? Animation = null);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -249,6 +256,13 @@ public sealed class EntityTracker
 
     private readonly Dictionary<int, TrackedEntity> _entities = [];
     private readonly List<EntityRenderState> _renderStates = [];
+
+    /// <summary>
+    /// Injected factory that creates a per-entity animation state for a type id, or null when the type has no
+    /// animation. The host wires this to <c>EntityAnimationRegistry.CreateState</c> so the world layer stays free of
+    /// any rendering dependency; tests that do not care about animation leave it null.
+    /// </summary>
+    public Func<int, IEntityAnimationState?>? AnimationStateFactory { get; set; }
 
     /// <summary>Entities currently tracked.</summary>
     public int Count => _entities.Count;
@@ -307,6 +321,7 @@ public sealed class EntityTracker
                 added.Z,
                 added.Yaw,
                 added.Pitch);
+            entity.Animation = AnimationStateFactory?.Invoke(added.TypeId);
             _entities[added.Id] = entity;
         }
 
@@ -617,7 +632,8 @@ public sealed class EntityTracker
                 Equipment: new EntityEquipment(
                     entity.EquipmentItemAt(0), entity.EquipmentItemAt(1), entity.EquipmentItemAt(2), entity.EquipmentItemAt(3),
                     entity.EquipmentItemAt(4), entity.EquipmentItemAt(5), entity.EquipmentItemAt(6), entity.EquipmentItemAt(7)),
-                AgeInTicks: GameTime));
+                AgeInTicks: GameTime,
+                Animation: entity.Animation));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);

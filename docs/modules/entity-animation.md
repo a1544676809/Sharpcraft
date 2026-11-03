@@ -37,6 +37,7 @@
 | --- | --- | --- |
 | 依赖 | `Client.Render.EntityModelPart` | pose 覆盖按 part name 应用 |
 | 依赖 | `Client.World.EntityRenderState` | `AgeInTicks`、walk 参数、动画状态 |
+| 提供 | `Client.World.EntityAnimationFrame` / `IEntityAnimationState` | 通用输入与每实体状态契约（World 侧，无渲染类型） |
 | 被依赖 | `EntityModelMesher` / 实体渲染器 | 每帧取 pose |
 | 被依赖 | 装备层 `WithEquipment`/`WithCopy` | 同名部件继承 pose |
 
@@ -46,10 +47,13 @@
 - `AnimationChannel`：target（Position/Rotation/Scale）、keyframes、interpolation；
 - `KeyframeAnimation`：`Bake(rootPartNames)`、`Apply(seconds, targetScale, PoseBuffer)`；
 - `AnimationState`：start tick、start/stop/animateWhen、elapsed millis；
-- `EntityPose`：`TryGet(partName)` → `PoseOffset(Position, Rotation, Scale)`；
-- `EntityAnimationController`：按实体类型与 render state 选择动画、计算 `EntityPose`。
+- `EntityPose`：`TryGet(partName)` / `Add(partName, PoseOffset)`（position/rotation/scale 加性覆盖）；
+- `EntityAnimationFrame`（`Client.World`）：通用动画输入，`From(EntityRenderState)` 投影；
+- `IEntityAnimationState`（`Client.World`）：每实体可变状态的空标记，具体实现归各 provider；
+- `IEntityAnimationProvider`（`Client.Render`）：`TypeId`、`Clips`、`CreateState()`、`Apply(state, frame, pose)`（热路径）、`ApplyClip(state, frame, clip, seconds, pose)`（沙盒/工具）；
+- `EntityAnimationRegistry`（`Client.Render`）：`TryGet` / `For` / `CreateState` / `Clips` / `All`，按 typeId 查找 provider。
 
-契约不暴露：原版 `ModelPart` 对象、WGPU 句柄、实体模拟对象。
+`EntityTracker` 通过注入的 `AnimationStateFactory` 为每个 `TrackedEntity` 创建一次 state，`EntityRenderState.Animation` 携带该引用；`EntityModelMesher` 每帧为每个实体准备一份复用 `EntityPose` 并调用一次 provider `Apply`。原 `EntityAnimationController` 的静态 switch 已删除。
 
 ## 5. 关键数据结构
 
@@ -57,8 +61,11 @@
 | --- | --- | --- | --- |
 | `AnimationDefinition` | 静态动画表 | 进程级只读 | 任意 |
 | `AnimationChannel` / `Keyframe` | 关键帧与插值 | 进程级只读 | 任意 |
-| `AnimationState` | 动画开始 tick | 每实体 | 主线程 |
-| `EntityPose` | 每帧部件覆盖 | 每帧、可复用缓冲 | 主线程 |
+| `IEntityAnimationProvider` | 每生物控制器（单例） | 注册期创建、进程级 | 任意 |
+| `IEntityAnimationState` | 每实体可变状态 | 随 `TrackedEntity`，首次出现创建 | 主线程 |
+| `EntityAnimationFrame` | 每帧通用输入（值类型） | 每帧、栈上 | 主线程 |
+| `AnimationState` | 动画开始 tick（状态实现内） | 每实体 | 主线程 |
+| `EntityPose` | 每实体部件覆盖（Mesher 复用缓冲） | 每实体、跨帧复用 | 主线程 |
 | `PoseOffset` | 位置/旋转/缩放增量 | 值类型 | 主线程 |
 
 ## 6. 行为对齐与偏离
@@ -77,11 +84,12 @@
 
 ## 7. 分阶段与验收
 
+0. **A0 provider 基座（已完成 2026-11-03）**：`IEntityAnimationProvider` + 每生物 `IEntityAnimationState` + `EntityAnimationRegistry` + `EntityAnimationFrame` + `EntityRenderState.Animation` 接线；现有 controller 全部迁入 provider，行为与旧测试不变；沙盒改从 registry 取 clip；每 provider 稳态零分配测试。
 1. **A1 求值内核**：`AnimationDefinition`/`KeyframeAnimation`/`AnimationState`/`EntityPose`；单元测试 Camel walk 和 Armadillo roll 的时间/循环/插值。
 2. **A2 网格接入**：`EntityModelMesher` 支持 pose buffer，装备副本同名继承；固定帧 screenshot/数值测试。
 3. **A3 四足样板**：Pig/Camel 的 idle+walk，接入真实 render state。
 4. **A4 两足样板**：Zombie/Villager 手臂与头部。
-5. **A5 实体扩展**：按 backlog 逐类移植；每类独立验收。
+5. **A5 实体扩展**：现有已移植者已在 A0 迁入 provider；其余按 backlog 逐类新增 provider，每类独立验收。
 
 ## 8. 未解决问题与风险
 
