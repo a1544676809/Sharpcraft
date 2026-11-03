@@ -2370,3 +2370,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
   pipeline = 半透明混合 + 深度 `GREATER_THAN_OR_EQUAL` + 不写深度（对齐 `RenderTypes.eyes`）。
 - 沙盒目视：Enderman 品红眼、Spider 红眼发光正常；无 pipeline/validation error。
 - 全量 Client **648 通过**（含 2 项新眼睛层测试）。
+
+### 2026-11-03 真服务器逐层验收（T-472/T-474 验收）
+
+- 本地离线服务器（127.0.0.1:25565）实测：窗口客户端正常进入，329 区块流式加载，无 pipeline/validation error。
+- 通过聊天命令 `summon` 生成实体：
+  - Enderman：`entity cull candidates=1`，截图中品红眼睛发光 → Emissive 层在真实窗口路径生效。
+  - Drowned：截图可进入世界（同账号还存在其它客户端残留玩家实体，画面被近距离玩家模型遮挡），外层半透明层已在沙盒确认。
+- 结论：分层路径（Cutout/Translucent/Emissive）在真实窗口 + 沙盒两条路径均可用；逐层“像素级”差异仍以沙盒固定机位为准（真服务器场景不可复现）。
