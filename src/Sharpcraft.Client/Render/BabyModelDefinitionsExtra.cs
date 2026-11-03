@@ -10,6 +10,7 @@ public static class BabyModelDefinitionsExtra
         "baby_cat",
         32,
         32,
+        EntityModelLayerHelpers.WithCollar(
         [
             PlayerModelDefinition.FromVanilla("head", 0f, 20f, -3.125f, -2.5f, -3f, -2.875f, 5f, 4f, 4f, 0, 0),
             PlayerModelDefinition.FromVanillaChild("right_ear", "head", 0f, 0f, 0f, -2f, -4f, -0.875f, 1f, 1f, 2f, 18, 0),
@@ -23,6 +24,7 @@ public static class BabyModelDefinitionsExtra
             PlayerModelDefinition.FromVanilla("tail1", 0f, 19.107f, 3.9151f, -0.5f, -0.107f, 0.0849f, 1f, 1f, 5f, 0, 18, rotationX: 0.567232f),
             PlayerModelDefinition.FromVanilla("tail2", 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0)
         ],
+        "entity/cat/cat_collar_baby"),
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/cat/cat_tabby_baby");
 
@@ -30,6 +32,7 @@ public static class BabyModelDefinitionsExtra
         "baby_wolf",
         32,
         32,
+        EntityModelLayerHelpers.WithCollar(
         [
             PlayerModelDefinition.FromVanilla("head", 0f, 18.25f, -4f, -2.99f, -3.25f, -3f, 6f, 5f, 5f, 0, 12, grow: 0.025f),
             PlayerModelDefinition.FromVanillaChild("snout", "head", 0f, 0f, 0f, -1.5f, -0.24f, -5f, 3f, 2f, 2f, 17, 12),
@@ -41,8 +44,9 @@ public static class BabyModelDefinitionsExtra
             PlayerModelDefinition.FromVanilla("right_front_leg", -1.5f, 21f, -3f, -1f, 0f, -1f, 2f, 3f, 2f, 0, 0),
             PlayerModelDefinition.FromVanilla("left_front_leg", 1.5f, 21f, -3f, -1f, 0f, -1f, 2f, 3f, 2f, 20, 0),
             PlayerModelDefinition.FromVanilla("tail", 0f, 19f, 3f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0, rotationX: 0.5236f),
-            PlayerModelDefinition.FromVanillaChild("tail_r1", "tail", 0f, -0.6f, 0.2f, -1f, -5.7f, -1f, 2f, 6f, 2f, 22, 16, rotationX: -3.1f)
+            PlayerModelDefinition.FromVanillaChild("tail_r1", "tail", 0f, -0.6f, 0.2f, -1f, -5.7f, -1f, 2f, 6f, 2f, 22, 16, rotationX: -3.1f),
         ],
+        "entity/wolf/wolf_collar_baby"),
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/wolf/wolf_baby",
         textureSelector: state => state.IsTame ? "entity/wolf/wolf_tame_baby" : state.IsAngry ? "entity/wolf/wolf_angry_baby" : "entity/wolf/wolf_baby",
@@ -190,6 +194,9 @@ public static class BabyModelDefinitionsExtra
     private static readonly string[] WolfVariantFiles =
         ["wolf", "wolf_spotted", "wolf_snowy", "wolf_black", "wolf_ashen", "wolf_rusty", "wolf_woods", "wolf_chestnut", "wolf_striped"];
 }
+
+
+
 
 
 

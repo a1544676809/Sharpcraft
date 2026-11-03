@@ -14,6 +14,7 @@ public static class WolfModelDefinition
         "wolf",
         64,
         64,
+        EntityModelLayerHelpers.WithCollar(
         [
             PlayerModelDefinition.FromVanilla("head", -1f, 13.5f, -7f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
             PlayerModelDefinition.FromVanillaChild("real_head", "head", 0f, 0f, 0f, -2f, -3f, -2f, 6f, 6f, 4f, 0, 0),
@@ -30,6 +31,7 @@ public static class WolfModelDefinition
                 rotationX: -MathF.PI / 5f),
             PlayerModelDefinition.FromVanillaChild("real_tail", "tail", 0f, 0f, 0f, 0f, 0f, -1f, 2f, 8f, 2f, 9, 18)
         ],
+        "entity/wolf/wolf_collar"),
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/wolf/wolf",
         textureSelector: state => state.IsTame
@@ -86,3 +88,7 @@ public static class WolfModelDefinition
         return variants;
     }
 }
+
+
+
+

@@ -2706,3 +2706,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - `Panda.Gene`：normal/lazy/worried/playful/brown/weak/aggressive（byte accessor 18）；成年纹理 `panda`/`panda_<gene>`，幼年 `panda_baby`/`panda_<gene>_baby`。
 - 补齐 `PandaModelDefinition.Variants`、`EntityVariantSpecs[97]`、`BabyModelDefinitionsMisc.Variants` 与 resolver 注册。
+
+### 2026-11-03 Cat / Wolf 项圈层（T-535）
+
+- `CollarAccessorIndex`：Cat=23、Wolf=21（DyeColor id），并用 TameMask 4 只给已驯服生成项圈；`EntityTracker` 解析成 `CollarTint/HasCollar`。
+- `EntityModelLayerHelpers.WithCollar` 克隆整模型为 `cat_collar(_baby)` / `wolf_collar(_baby)` 纹理副本，Grow +0.1 避免与本体共面，`TintSelector` 使用 CollarTint。
+- 成年/幼年 Cat/Wolf 的 Definition.Parts 都包含 collar 副本，变体自动继承；沙盒 `MC_SANDBOX_COLLAR=RRGGBB` 验收（幼猫红项圈可见）。

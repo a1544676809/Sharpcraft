@@ -284,8 +284,8 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("wolf", definition.Name);
-        // 11 visible cubes plus two empty group nodes ("head", "tail") that carry pivots for children.
-        Assert.Equal(13, definition.Parts.Count);
+        // 11 visible cubes plus two empty group nodes ("head", "tail"), doubled by the collar overlay copy.
+        Assert.Equal(26, definition.Parts.Count);
     }
 
     [Fact]

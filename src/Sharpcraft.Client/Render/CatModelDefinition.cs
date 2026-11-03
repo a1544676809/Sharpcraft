@@ -31,11 +31,13 @@ public static class CatModelDefinition
         PlayerModelDefinition.FromVanilla("right_front_leg", -1.2f, 14.1f, -5f, -1f, 0f, 0f, 2f, 10f, 2f, 40, 0)
     ];
 
+    private static readonly EntityModelPart[] CollarParts = EntityModelLayerHelpers.WithCollar(Parts, "entity/cat/cat_collar");
+
     public static readonly EntityModelDefinition Definition = new(
         "cat",
         64,
         32,
-        Parts,
+        CollarParts,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/cat/cat_tabby",
         0.8f);
@@ -44,7 +46,7 @@ public static class CatModelDefinition
         "ocelot",
         64,
         32,
-        Parts,
+        CollarParts,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/cat/ocelot");
 
@@ -76,7 +78,7 @@ public static class CatModelDefinition
                 "cat_" + key,
                 64,
                 32,
-                Parts,
+                CollarParts,
                 PlayerModelDefinition.DefaultFaceTransforms,
                 "entity/cat/cat_" + key,
                 0.8f);
@@ -85,3 +87,6 @@ public static class CatModelDefinition
         return variants;
     }
 }
+
+
+

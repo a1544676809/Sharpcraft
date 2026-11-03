@@ -103,6 +103,9 @@ public sealed class TrackedEntity
     /// <summary>True when the entity reports the AgeableMob baby flag (synced data index 16).</summary>
     public bool IsBaby { get; internal set; }
 
+    /// <summary>Raw dye id of a tamed cat/wolf collar, or -1 when unknown.</summary>
+    public int CollarColor { get; internal set; } = -1;
+
     /// <summary>
     /// Authoritative target position. Vanilla does not snap a remote entity to the position the server reports:
     /// it approaches it over a few ticks, which is why the rendered entity trails slightly behind the
@@ -176,7 +179,9 @@ public readonly record struct EntityRenderState(
     bool IsHidingInShell = false,
     System.Numerics.Vector3 Tint = default,
     System.Numerics.Vector3 PatternTint = default,
-    bool IsBaby = false);
+    bool IsBaby = false,
+    System.Numerics.Vector3 CollarTint = default,
+    bool HasCollar = false);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -438,6 +443,11 @@ public sealed class EntityTracker
                 entity.IsBaby = item.Value != 0;
                 applied = true;
             }
+            else if (spec.CollarAccessorIndex >= 0 && item.Index == spec.CollarAccessorIndex && item.Value != EntityDataItem.NotAnInteger)
+            {
+                entity.CollarColor = item.Value;
+                applied = true;
+            }
         }
 
         return applied;
@@ -542,7 +552,9 @@ public sealed class EntityTracker
                 IsHidingInShell: hidingInShell,
                 Tint: tint,
                 PatternTint: patternTint,
-                IsBaby: entity.IsBaby));
+                IsBaby: entity.IsBaby,
+                CollarTint: DyeTint(entity.CollarColor >= 0 ? entity.CollarColor : 14),
+                HasCollar: spec.CollarAccessorIndex >= 0 && spec.TameMask != 0 && (entity.Flags & spec.TameMask) != 0));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);

@@ -40,7 +40,8 @@ public readonly record struct EntityVariantSpec(
     int ColdMask = 0,
     int ChargingMask = 0,
     bool ShellHideStates = false,
-    Func<int, string>? KeySelector = null);
+    Func<int, string>? KeySelector = null,
+    int CollarAccessorIndex = -1);
 
 /// <summary>
 /// Answering "which synced-data field is the variant" for the entity types this client renders with variants.
@@ -66,7 +67,8 @@ public static class EntityVariantSpecs
             20,
             "cat_variant",
             ["tabby", "black", "red", "siamese", "british_shorthair", "calico", "persian", "ragdoll", "white", "jellie", "all_black"],
-            "tabby"),
+            "tabby",
+            FlagsAccessorIndex: 18, TameMask: 4, CollarAccessorIndex: 23),
 
         // Horse: AbstractHorse adds flags (18); the value packs markings into the high byte.
         [67] = new(19, null, ["white", "creamy", "chestnut", "brown", "black", "gray", "dark_brown"], "white"),
@@ -77,7 +79,7 @@ public static class EntityVariantSpecs
         // Wolf: TamableAnimal flags (18), owner (19), interested (20), collar (21), anger end time (22), variant (23).
         [152] = new(23, "wolf_variant",
             ["pale", "spotted", "snowy", "black", "ashen", "rusty", "woods", "chestnut", "striped"], "pale",
-            FlagsAccessorIndex: 18, TameMask: 4, AngerAccessorIndex: 22),
+            FlagsAccessorIndex: 18, TameMask: 4, AngerAccessorIndex: 22, CollarAccessorIndex: 21),
 
         // Fox: type id (18), byte flags (19) with the sleeping bit at 32.
         [55] = new(18, null, ["red", "snow"], "red", FlagsAccessorIndex: 19, SleepingMask: 32),

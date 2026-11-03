@@ -486,9 +486,9 @@ public sealed class EntityModelRegistrationTests
         var rabbit = EntityModelResolver.Resolve(RabbitModelDefinition.RabbitEntityTypeId, true);
 
         Assert.Equal("baby_cat", cat.Name);
-        Assert.Equal(11, cat.Parts.Count);
+        Assert.Equal(22, cat.Parts.Count);
         Assert.Equal("baby_wolf", wolf.Name);
-        Assert.Equal(11, wolf.Parts.Count);
+        Assert.Equal(22, wolf.Parts.Count);
         Assert.Equal("baby_fox", fox.Name);
         Assert.Equal(10, fox.Parts.Count);
         Assert.Equal("baby_rabbit", rabbit.Name);

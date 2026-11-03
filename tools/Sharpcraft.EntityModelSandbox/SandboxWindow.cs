@@ -68,6 +68,7 @@ internal static class SandboxWindow
         var patternTintText = Environment.GetEnvironmentVariable("MC_SANDBOX_PATTERN_TINT");
         var tint = ParseTint(tintText);
         var patternTint = ParseTint(patternTintText);
+        var collarText = Environment.GetEnvironmentVariable("MC_SANDBOX_COLLAR");
         var entity = new EntityRenderState(1, typeId, 0f, 0f, 0f, 0f, 0f,
             HasChest: Environment.GetEnvironmentVariable("MC_SANDBOX_CHEST") == "1",
             HasEgg: Environment.GetEnvironmentVariable("MC_SANDBOX_EGG") == "1",
@@ -81,7 +82,9 @@ internal static class SandboxWindow
             IsHidingInShell: sandboxState.Contains("shell", StringComparison.OrdinalIgnoreCase) || sandboxState.Contains("hiding", StringComparison.OrdinalIgnoreCase),
             Tint: tint,
             PatternTint: patternTint,
-            IsBaby: sandboxBaby);
+            IsBaby: sandboxBaby,
+            CollarTint: ParseTint(collarText),
+            HasCollar: collarText is { Length: 6 });
         var mesher = new EntityModelMesher();
         var state = new Dictionary<string, FaceUvTransform>();
         var statePath = Path.Combine(Path.GetTempPath(), "sharpcraft-face-state.json");
