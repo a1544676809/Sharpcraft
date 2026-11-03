@@ -2685,3 +2685,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - BabyZombie 8 部件（head 含 grow0.25 overlay 与空 hat group）；BabyDrowned 复用几何 + `drowned_outer_layer_baby` Translucent 克隆（15 部件）；BabyZombieVillager 10 部件（body overlay、hat/hat_rim/nose）；BabyVillager 12 部件（arms→right_hand(2 盒)/middlearm、双腿、头+hat+hat_rim+nose、body、bb_main）。
 - 全部 bind pose；生物群系幼年纹理（desert/jungle/...）尚未接入，当前用默认 villager_baby / zombie_villager_baby。动画未移植。
+
+### 2026-11-03 Baby Piglin / Zombified Piglin / Hoglin / Zoglin（T-531）
+
+- BabyPiglin 12 部件（body、head+head_snout、hat 空组、左右 ear/ear_r1、双臂双腿），纹理 piglin_baby / zombified_piglin_baby。
+- BabyHoglin 11 部件（head+左右侧块+左右耳、body+body_mane、四腿），纹理 hoglin_baby / zoglin_baby。
+- 全部 bind pose；动画未移植。沙盒四种目视正常。
