@@ -2788,3 +2788,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 关键发现：`HappyGhastHarnessModel` **不是**完整 base model 复制，只含 `harness` + `goggles` 两个部件。
 - 修正 `WithEquipment(baseCopy:false)`：保留基础 body 原纹理，只追加专用 harness/goggles；不再用 harness 纹理覆盖 base body。
 - 纹理使用模型声明 64×64（PNG 128×128 是 HD 2×，不影响 UV）；沙盒黑色 harness + 眼罩正确显示，body 保持原纹理。
+
+### 2026-11-03 实体渲染剩余清单（T-548）
+
+- 新增 `docs/analysis/render/entity-render-backlog.md`：把动画系统、装备特例、人形装备/Witch/Elytra、EquipmentClientInfo/组件、特殊层和真机验收固定为可执行清单。
+- 建议顺序：动画系统 → 装备特例 → 人形装备/手持物品 → 装备资产化。
+- 当前分支 `feature/item-registry`；装备核心已完成，剩余项不得提前标记完成。

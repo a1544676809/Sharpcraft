@@ -13,6 +13,7 @@
 | [`entity-equipment.md`](entity-equipment.md) | set_equipment 包、装备槽、物品栈编码、装备资产层与各实体装备层的实现边界 | 已评审 | 2026-11-03 |
 | [`entity-model-approximations.md`](entity-model-approximations.md) | 已完成实体模型中仍需父子层级变换才能精确等价的部分 | 已评审 | 2026-11-02 |
 | [`entity-model-migration.md`](entity-model-migration.md) | 原版生物模型来源、按复杂度排序的移植顺序、当前进度与已知缺口 | 已评审 | 2026-11-02 |
+| [`entity-render-backlog.md`](entity-render-backlog.md) | 装备层之后的实体渲染欠账：动画、装备特例、资产与验收顺序 | 草稿 | 2026-11-03 |
 | [`entity-render-layers.md`](entity-render-layers.md) | 合并 part 的简化实现与原版独立 RenderLayer 的差异、影响和修复契约 | 已评审 | 2026-11-02 |
 | [`entity-special-layers.md`](entity-special-layers.md) | 不属于普通 base/overlay cube 的实体渲染层清单，以及后续补充顺序 | 已评审 | 2026-11-02 |
 | [`entity-variants.md`](entity-variants.md) | 26.3 变体的三条来源、实体数据访问器索引表、注册表驱动解析、几何变体差异与首批范围 | 分析已定稿（依据 26.3 源码） | 2026-11-03 |

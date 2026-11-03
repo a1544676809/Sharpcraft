@@ -582,3 +582,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-546 | **Overlay 层 UV 分辨率无关修正**：`EntityModelMesher` 的独立纹理 overlay 曾用 `layerSprite.Width/Height` 归一化，高清同布局纹理会错位；改为 `partTextureWidth/Height`（模型/部件声明尺寸），与基础 UV 保持一致 | `docs/modules/entity-render.md` §12 | Client 704（构建/既有 UV 回归） | `Client/Render/EntityModelMesher` | 已完成 |
 
 
+| T-548 | **实体渲染剩余清单**：固定动画系统、装备特例（Happy ropes / Wolf crackiness / trader carpet / zombie nautilus coral）、人形装备/Witch/Elytra、EquipmentClientInfo/DataComponentPatch、特殊层与真机验收的记录与顺序 | `docs/analysis/render/entity-render-backlog.md` | —（文档任务） | — | 已完成 |
