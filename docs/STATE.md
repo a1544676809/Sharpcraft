@@ -2654,3 +2654,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - 现象：小狼尾巴朝前。根因：`tail_r1` 是“负 minY”的尾部盒，通用 child 旋转取反（存储 +3.1）会让尾尖绕到前方；改为 `rotationX: 3.1f`（存储 -3.1）后尾巴朝后，符合原版姿势。
 - 仅改 BabyWolf tail_r1；其他部件/UV/父子不变。
+
+### 2026-11-03 Baby Wolf 尾巴方向（T-525，替代 T-524）
+
+- 对照 `WolfModel.setupAnim`：每帧 `tail.xRot = state.tailAngle`；`Wolf.getTailAngle()` 野生默认 `π/5`。静态姿势应使用该默认朝向（存储 `-π/5`），`tail_r1` 保持原版 `-3.1`（存储 +3.1）。
+- 此前用 `createBodyLayer` 的 bind `-0.5236`（存储 +0.5236），导致尾巴朝前。已改为 `-MathF.PI/5f`；侧视确认尾巴在**后方**向下。

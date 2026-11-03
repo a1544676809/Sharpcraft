@@ -40,8 +40,8 @@ public static class BabyModelDefinitionsExtra
             PlayerModelDefinition.FromVanilla("left_hind_leg", 1.5f, 21f, 3f, -1f, 0f, -1f, 2f, 3f, 2f, 8, 22),
             PlayerModelDefinition.FromVanilla("right_front_leg", -1.5f, 21f, -3f, -1f, 0f, -1f, 2f, 3f, 2f, 0, 0),
             PlayerModelDefinition.FromVanilla("left_front_leg", 1.5f, 21f, -3f, -1f, 0f, -1f, 2f, 3f, 2f, 20, 0),
-            PlayerModelDefinition.FromVanilla("tail", 0f, 19f, 3f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0, rotationX: 0.5236f),
-            PlayerModelDefinition.FromVanillaChild("tail_r1", "tail", 0f, -0.6f, 0.2f, -1f, -5.7f, -1f, 2f, 6f, 2f, 22, 16, rotationX: 3.1f)
+            PlayerModelDefinition.FromVanilla("tail", 0f, 19f, 3f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0, rotationX: -MathF.PI / 5f),
+            PlayerModelDefinition.FromVanillaChild("tail_r1", "tail", 0f, -0.6f, 0.2f, -1f, -5.7f, -1f, 2f, 6f, 2f, 22, 16, rotationX: -3.1f)
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/wolf/wolf_baby",
@@ -190,5 +190,6 @@ public static class BabyModelDefinitionsExtra
     private static readonly string[] WolfVariantFiles =
         ["wolf", "wolf_spotted", "wolf_snowy", "wolf_black", "wolf_ashen", "wolf_rusty", "wolf_woods", "wolf_chestnut", "wolf_striped"];
 }
+
 
 
