@@ -2345,3 +2345,14 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
   `EntityModelRegistrationTests` 钉住 part 数与 Parent 关系、以及 type id。Client **642 通过**。
 - 沙盒目视：camel（长腿/驼峰/长颈）、rabbit（竖耳/蜷身）形态正常。
 - **A（父子层级）到此收口**：Horse/Fox/Wolf/Rabbit/Camel 5 个全部层级化并注册。
+
+## 2026-11-03 B 第一/二步：实体多 RenderLayer 提交（T-472，ADR-0021）
+
+- 客户端：`BuildLayers` 生成 Cutout/Translucent 两层（`Build` 仍合并）；Player overlays、Drowned outer、Slime outer
+  标为 Translucent，基础模型与 Skeleton clothing 保持 Cutout。
+- 框架：`WindowedRenderer.Run(..., entityLayers:)`，每层一份常驻 vertex/index 缓冲（≤4 层），按 `Order` 绘制；
+  新增 `fs_entity_cutout`（alpha 0.5、无混合、深度写），Translucent 复用 `fs_entity_translucent`（混合、深度写关）。
+- 验收：`EntityLayerTests` 4 项（无 overlay 仅 Cutout / Player 与 Drowned/Slime 产生 Translucent / 合并总量等于各层之和）；
+  沙盒窗口 6 秒运行无 shader validation error；全量 Client **646 通过**。
+- **未做**：Emissive（Enderman eyes）——独立深度 `>=`/不写/加色状态，留作下一步。
+- 注意：沙盒仍用合并 `Build` 路径，因此只验证了 shader/pipeline 编译；逐层像素验收需要真服务器窗口或把沙盒切到 layered 路径。

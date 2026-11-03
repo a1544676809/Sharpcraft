@@ -46,6 +46,7 @@ public static class WindowedRenderer
         Func<IReadOnlyList<long>?>? geometryRemovals = null,
         int expectedChunks = 0,
         Func<DynamicGeometry?>? dynamicGeometry = null,
+        Func<IReadOnlyList<EntityGeometryLayer>?>? entityLayers = null,
         Func<UiFrame, UiGeometry?>? uiGeometry = null,
     Func<IReadOnlyList<WorldTextDraw>?>? worldTextPerFrame = null,
         TextureData? glyphTexture = null,
@@ -273,6 +274,7 @@ public static class WindowedRenderer
         using var pipeline = CreatePipeline(device, format, pipelineLayout);
         using var cutoutPipeline = CreateCutoutPipeline(device, format, pipelineLayout);
         using var entityPipeline = CreateEntityPipeline(device, format, pipelineLayout);
+        using var entityCutoutPipeline = CreateEntityCutoutPipeline(device, format, pipelineLayout);
         using var skyPipeline = CreateSkyPipeline(device, format);
         // Celestial bodies and stars: the same backdrop draws the offscreen path uses, so the window and the exported
         // frame agree (docs/modules/clouds.md 6).
@@ -498,6 +500,24 @@ public static class WindowedRenderer
         var uiScale = 1f;
         var dynamicVertexCapacity = MinimumBufferBytes;
         var dynamicIndexCapacity = MinimumBufferBytes;
+
+        // Entity layers (docs/decisions/0021): a small fixed set of persistent buffers, one pair per layer, so a
+        // per-frame rewrite never allocates and the world arena stays untouched.
+        const int MaxEntityLayers = 4;
+        var entityLayerVertex = new WgpuBuffer[MaxEntityLayers];
+        var entityLayerIndex = new WgpuBuffer[MaxEntityLayers];
+        var entityLayerVertexCapacity = new ulong[MaxEntityLayers];
+        var entityLayerIndexCapacity = new ulong[MaxEntityLayers];
+        var entityLayerIndexCount = new uint[MaxEntityLayers];
+        var entityLayerKind = new EntityGeometryLayerKind[MaxEntityLayers];
+        var entityLayerDrawn = 0;
+        for (var layerIndex = 0; layerIndex < MaxEntityLayers; layerIndex++)
+        {
+            entityLayerVertex[layerIndex] = CreateGeometryBuffer(device, MinimumBufferBytes, BufferUsage.Vertex | BufferUsage.CopyDst);
+            entityLayerIndex[layerIndex] = CreateGeometryBuffer(device, MinimumBufferBytes, BufferUsage.Index | BufferUsage.CopyDst);
+            entityLayerVertexCapacity[layerIndex] = MinimumBufferBytes;
+            entityLayerIndexCapacity[layerIndex] = MinimumBufferBytes;
+        }
 
         // The helper is defined further down; the buffers above are created eagerly so no nullable state leaks.
 
@@ -945,6 +965,48 @@ public static class WindowedRenderer
                 dynamicIndexCount = (uint)dynamic.IndexCount;
             }
 
+            entityLayerDrawn = 0;
+            if (entityLayers is not null && entityLayers() is { Count: > 0 } layers)
+            {
+                var used = Math.Min(layers.Count, MaxEntityLayers);
+                for (var layerIndex = 0; layerIndex < used; layerIndex++)
+                {
+                    var layer = layers[layerIndex];
+                    var geometry = layer.Geometry;
+                    entityLayerIndexCount[layerIndex] = 0;
+                    entityLayerKind[layerIndex] = layer.Kind;
+                    if (geometry.IndexCount <= 0)
+                    {
+                        continue;
+                    }
+
+                    var neededVertex = (ulong)geometry.VertexFloats * sizeof(float);
+                    var neededIndex = (ulong)geometry.IndexCount * sizeof(uint);
+
+                    if (neededVertex > entityLayerVertexCapacity[layerIndex])
+                    {
+                        entityLayerVertex[layerIndex].Dispose();
+                        entityLayerVertexCapacity[layerIndex] = Math.Max(neededVertex * 2, MinimumBufferBytes);
+                        entityLayerVertex[layerIndex] = CreateGeometryBuffer(
+                            device, entityLayerVertexCapacity[layerIndex], BufferUsage.Vertex | BufferUsage.CopyDst);
+                    }
+
+                    if (neededIndex > entityLayerIndexCapacity[layerIndex])
+                    {
+                        entityLayerIndex[layerIndex].Dispose();
+                        entityLayerIndexCapacity[layerIndex] = Math.Max(neededIndex * 2, MinimumBufferBytes);
+                        entityLayerIndex[layerIndex] = CreateGeometryBuffer(
+                            device, entityLayerIndexCapacity[layerIndex], BufferUsage.Index | BufferUsage.CopyDst);
+                    }
+
+                    device.Queue.WriteBuffer(entityLayerVertex[layerIndex], 0, geometry.Vertices.AsSpan(0, geometry.VertexFloats));
+                    device.Queue.WriteBuffer(entityLayerIndex[layerIndex], 0, geometry.Indices.AsSpan(0, geometry.IndexCount));
+                    entityLayerIndexCount[layerIndex] = (uint)geometry.IndexCount;
+                }
+
+                entityLayerDrawn = used;
+            }
+
             var updatesThisFrame = 0;
 
             if (arena is not null)
@@ -1250,6 +1312,38 @@ public static class WindowedRenderer
                 {
                     pass.SetBindGroup(0, bindGroup);
                 }
+            }
+
+            // Entity layers (docs/decisions/0021): cutout layers share the opaque depth (writes on); translucent layers
+            // blend with depth writes off, which the pipeline state already encodes.
+            for (var layerIndex = 0; layerIndex < entityLayerDrawn; layerIndex++)
+            {
+                var layerIndexCount = entityLayerIndexCount[layerIndex];
+                if (layerIndexCount == 0)
+                {
+                    continue;
+                }
+
+                pass.SetPipeline(entityLayerKind[layerIndex] == EntityGeometryLayerKind.Translucent
+                    ? entityPipeline
+                    : entityCutoutPipeline);
+                pass.SetVertexBuffer(0, entityLayerVertex[layerIndex], 0, entityLayerVertexCapacity[layerIndex]);
+                pass.SetIndexBuffer(
+                    entityLayerIndex[layerIndex],
+                    WGPUIndexFormat.Uint32,
+                    0,
+                    (ulong)layerIndexCount * sizeof(uint));
+                if (entitySkinCreated)
+                {
+                    pass.SetBindGroup(0, entitySkinBindGroup);
+                }
+
+                pass.DrawIndexed(layerIndexCount, 1, 0, 0, 1);
+            }
+
+            if (entityLayerDrawn > 0 && entitySkinCreated)
+            {
+                pass.SetBindGroup(0, bindGroup);
             }
             else if (useStaticWorld)
             {
@@ -1687,6 +1781,12 @@ public static class WindowedRenderer
 
         dynamicVertex.Dispose();
         dynamicIndex.Dispose();
+        for (var layerIndex = 0; layerIndex < MaxEntityLayers; layerIndex++)
+        {
+            entityLayerVertex[layerIndex].Dispose();
+            entityLayerIndex[layerIndex].Dispose();
+        }
+
         if (entitySkinCreated)
         {
             entitySkinBindGroup.Dispose();
@@ -2049,6 +2149,31 @@ public static class WindowedRenderer
                     }
                 }
             ],
+            layout: layout,
+            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
+            multisample: MultisampleState.Default,
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float),
+            vertexStride: (ulong)VertexLayout.Stride,
+            vertexStepMode: WGPUVertexStepMode.Vertex,
+            vertexAttributes: VertexLayout.Attributes());
+    }
+
+    /// <summary>
+    /// Entity base/clothing layer: reference entityCutout semantics, alpha tested at 0.5 and opaque (docs/decisions/0021).
+    /// </summary>
+    private static RenderPipeline CreateEntityCutoutPipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
+    {
+        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
+        {
+            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText))
+        });
+
+        return device.CreateRenderPipeline(
+            shader,
+            "vs_main"u8,
+            shader,
+            "fs_entity_cutout"u8,
+            [new ColorTargetState(format)],
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
             multisample: MultisampleState.Default,

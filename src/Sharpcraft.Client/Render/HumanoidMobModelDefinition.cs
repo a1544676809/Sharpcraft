@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using Sharpcraft.Framework.Rendering;
+
 namespace Sharpcraft.Client.Render;
 
 /// <summary>
@@ -49,7 +51,7 @@ public static class HumanoidMobModelDefinition
         "entity/zombie/drowned");
 
     private static EntityModelLayer DrownedOuter(int textureX, int textureY) =>
-        new("drowned_outer", 0.25f, textureX, textureY, false, "entity/zombie/drowned_outer_layer");
+        new("drowned_outer", 0.25f, textureX, textureY, false, "entity/zombie/drowned_outer_layer", EntityGeometryLayerKind.Translucent);
 
     public static readonly EntityModelDefinition Husk = new(
         "husk",
@@ -126,3 +128,5 @@ public static class HumanoidMobModelDefinition
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/zombie/zombie");
 }
+
+

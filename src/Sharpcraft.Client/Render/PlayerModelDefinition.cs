@@ -3,6 +3,8 @@
 
 namespace Sharpcraft.Client.Render;
 
+using Sharpcraft.Framework.Rendering;
+
 /// <summary>
 /// One static model cuboid in model-pixel space. This is render data only: it never references an entity or world.
 /// </summary>
@@ -32,7 +34,8 @@ public readonly record struct EntityModelPart(
     float RotationZ = 0f,
     string? TexturePath = null,
     float Grow = 0f,
-    string? Parent = null);
+    string? Parent = null,
+    EntityGeometryLayerKind Kind = EntityGeometryLayerKind.Cutout);
 
 /// <summary>
 /// An outer skin layer around one base cuboid, expressed as a uniform growth and its own texture offset.
@@ -43,7 +46,8 @@ public readonly record struct EntityModelLayer(
     int TextureX,
     int TextureY,
     bool Mirror = false,
-    string? TexturePath = null);
+    string? TexturePath = null,
+    EntityGeometryLayerKind Kind = EntityGeometryLayerKind.Cutout);
 
 /// <summary>
 /// Static model definitions consumed by the entity mesher. The values follow the reference
@@ -67,12 +71,12 @@ public static class PlayerModelDefinition
 
     public static readonly EntityModelPart[] AdultParts =
     [
-        FromVanilla("head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0, overlays: [new("hat", 0.5f, 32, 0)]),
-        FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16, overlays: [new("jacket", 0.25f, 16, 32)]),
-        FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 32, 48, overlays: [new("left_sleeve", 0.25f, 48, 48)]),
-        FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16, overlays: [new("right_sleeve", 0.25f, 40, 32)]),
-        FromVanilla("left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 16, 48, overlays: [new("left_pants", 0.25f, 0, 48)]),
-        FromVanilla("right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16, overlays: [new("right_pants", 0.25f, 0, 32)])
+        FromVanilla("head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0, overlays: [new("hat", 0.5f, 32, 0, Kind: EntityGeometryLayerKind.Translucent)]),
+        FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16, overlays: [new("jacket", 0.25f, 16, 32, Kind: EntityGeometryLayerKind.Translucent)]),
+        FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 32, 48, overlays: [new("left_sleeve", 0.25f, 48, 48, Kind: EntityGeometryLayerKind.Translucent)]),
+        FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16, overlays: [new("right_sleeve", 0.25f, 40, 32, Kind: EntityGeometryLayerKind.Translucent)]),
+        FromVanilla("left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 16, 48, overlays: [new("left_pants", 0.25f, 0, 48, Kind: EntityGeometryLayerKind.Translucent)]),
+        FromVanilla("right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16, overlays: [new("right_pants", 0.25f, 0, 32, Kind: EntityGeometryLayerKind.Translucent)])
     ];
 
     /// <summary>
@@ -100,7 +104,8 @@ public static class PlayerModelDefinition
         float rotationY = 0f,
         float rotationZ = 0f,
         string? texturePath = null,
-        float grow = 0f)
+        float grow = 0f,
+        EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout)
     {
         var sourceCentreX = pivotX + minX + (width * 0.5f);
         var centreX = MathF.Round(mirrorX ? -sourceCentreX : sourceCentreX, 4);
@@ -125,7 +130,8 @@ public static class PlayerModelDefinition
             RotationY: rotationY,
             RotationZ: rotationZ,
             TexturePath: texturePath,
-            Grow: grow);
+            Grow: grow,
+            Kind: kind);
     }
 
     public static readonly EntityModelDefinition Definition =
@@ -160,7 +166,8 @@ public static class PlayerModelDefinition
         float rotationY = 0f,
         float rotationZ = 0f,
         string? texturePath = null,
-        float grow = 0f)
+        float grow = 0f,
+        EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout)
     {
         ArgumentException.ThrowIfNullOrEmpty(parent);
         return new EntityModelPart(
@@ -183,6 +190,8 @@ public static class PlayerModelDefinition
             RotationZ: rotationZ,
             TexturePath: texturePath,
             Grow: grow,
-            Parent: parent);
+            Parent: parent,
+            Kind: kind);
     }
 }
+

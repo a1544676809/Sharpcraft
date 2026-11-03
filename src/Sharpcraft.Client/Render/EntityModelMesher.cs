@@ -15,10 +15,68 @@ namespace Sharpcraft.Client.Render;
 public sealed class EntityModelMesher
 {
     private readonly DynamicGeometry _geometry = new();
+    private readonly DynamicGeometry[] _layerGeometries = [new(), new(), new()];
 
+    private static readonly EntityGeometryLayerKind[] LayerKinds =
+        [EntityGeometryLayerKind.Cutout, EntityGeometryLayerKind.Translucent, EntityGeometryLayerKind.Emissive];
+
+    /// <summary>Merged geometry of every layer, kept for callers that draw entities in one pass.</summary>
     public DynamicGeometry Build(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null)
     {
+        var layers = BuildLayers(entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants);
         _geometry.Clear();
+        var totalVertexFloats = 0;
+        var totalIndexCount = 0;
+        foreach (var layer in layers)
+        {
+            totalVertexFloats += layer.Geometry.VertexFloats;
+            totalIndexCount += layer.Geometry.IndexCount;
+        }
+
+        _geometry.Reserve(totalVertexFloats, totalIndexCount);
+        var vertexBase = 0;
+        var indexOffset = 0;
+        foreach (var layer in layers)
+        {
+            var geometry = layer.Geometry;
+            Array.Copy(geometry.Vertices, 0, _geometry.Vertices, vertexBase, geometry.VertexFloats);
+            for (var i = 0; i < geometry.IndexCount; i++)
+            {
+                _geometry.Indices[indexOffset + i] = (uint)(geometry.Indices[i] + (vertexBase / 14));
+            }
+
+            vertexBase += geometry.VertexFloats;
+            indexOffset += geometry.IndexCount;
+        }
+
+        _geometry.VertexFloats = totalVertexFloats;
+        _geometry.IndexCount = totalIndexCount;
+        return _geometry;
+    }
+
+    /// <summary>
+    /// Builds one geometry per reference render type, in draw order (cutout, translucent, emissive).
+    /// </summary>
+    public IReadOnlyList<EntityGeometryLayer> BuildLayers(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null)
+    {
+        var layers = new List<EntityGeometryLayer>(3);
+        for (var i = 0; i < LayerKinds.Length; i++)
+        {
+            var kind = LayerKinds[i];
+            var geometry = _layerGeometries[i];
+            BuildInto(geometry, kind, entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants);
+            if (geometry.IndexCount > 0)
+            {
+                layers.Add(new EntityGeometryLayer(kind.ToString().ToLowerInvariant(), kind, i, geometry));
+            }
+        }
+
+        return layers;
+    }
+
+    private DynamicGeometry BuildInto(DynamicGeometry target, EntityGeometryLayerKind? kindFilter, ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null)
+    {
+        target.Clear();
         var cubeCount = 0;
         foreach (var entity in entities)
         {
@@ -29,7 +87,7 @@ public sealed class EntityModelMesher
             }
         }
 
-        _geometry.Reserve((cubeCount + entities.Length * 2) * 24 * 14, (cubeCount + entities.Length * 2) * 36);
+        target.Reserve((cubeCount + entities.Length * 2) * 24 * 14, (cubeCount + entities.Length * 2) * 36);
         var vertexFloats = 0;
         var indexCount = 0;
 
@@ -74,6 +132,7 @@ public sealed class EntityModelMesher
                     // carry a pivot for its children.
                     continue;
                 }
+
                 var partSprite = sprite;
                 var partSkinWidth = skinWidthForModel;
                 var partSkinHeight = skinHeightForModel;
@@ -84,13 +143,13 @@ public sealed class EntityModelMesher
                     partSkinHeight = partAtlas.Height;
                 }
 
-                AddPart(part, min, max, partSprite, partSkinWidth, partSkinHeight, feet, entityTransform, PartMatrix(part, model.Parts, px), transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount);
+                AddPart(part, target, kindFilter, min, max, partSprite, partSkinWidth, partSkinHeight, feet, entityTransform, PartMatrix(part, model.Parts, px), transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount);
             }
         }
 
-        _geometry.VertexFloats = vertexFloats;
-        _geometry.IndexCount = indexCount;
-        return _geometry;
+        target.VertexFloats = vertexFloats;
+        target.IndexCount = indexCount;
+        return target;
     }
 
     private static EntityModelDefinition ResolveModel(EntityRenderState entity, EntityVariantTable? variants) =>
@@ -104,6 +163,8 @@ public sealed class EntityModelMesher
     /// </summary>
     private void AddPart(
         EntityModelPart part,
+        DynamicGeometry target,
+        EntityGeometryLayerKind? kindFilter,
         Vector3 min,
         Vector3 max,
         SpriteRect skin,
@@ -161,6 +222,7 @@ public sealed class EntityModelMesher
             return part.Mirror ? result with { FlipH = !result.FlipH } : result;
         }
 
+        var emitBase = kindFilter is null || part.Kind == kindFilter;
         var swapBodyDownUp = true;
         var d0u = swapBodyDownUp ? u22 : u2; var d0v = swapBodyDownUp ? v1 : v0;
         var d1u = swapBodyDownUp ? u2 : u1; var d1v = swapBodyDownUp ? v1 : v0;
@@ -171,18 +233,27 @@ public sealed class EntityModelMesher
         var u2u = swapBodyDownUp ? u1 : u2; var u2v = swapBodyDownUp ? v1 : v0;
         var u3u = swapBodyDownUp ? u2 : u22; var u3v = swapBodyDownUp ? v1 : v0;
 
-        AddFace(l1, l0, t0, t1, d0u, d0v, d1u, d1v, d2u, d2v, d3u, d3v, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("DOWN")); // DOWN
-        AddFace(t2, t3, l3, l2, u0u, u0v, u1u, u1v, u2u, u2v, u3u, u3v, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("UP")); // UP
-        AddFace(t0, l0, l3, t3, u3, v2, u2, v2, u2, v1, u3, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("WEST")); // WEST
-        AddFace(t1, t0, t3, t2, u2, v2, u1, v2, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("NORTH")); // NORTH
-        AddFace(l1, t1, t2, l2, u1, v2, u0, v2, u0, v1, u1, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("EAST")); // EAST
-        AddFace(l0, l1, l2, l3, u4, v2, u3, v2, u3, v1, u4, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("SOUTH")); // SOUTH
+        if (emitBase)
+        {
+        AddFace(l1, l0, t0, t1, d0u, d0v, d1u, d1v, d2u, d2v, d3u, d3v, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("DOWN"), target); // DOWN
+        AddFace(t2, t3, l3, l2, u0u, u0v, u1u, u1v, u2u, u2v, u3u, u3v, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("UP"), target); // UP
+        AddFace(t0, l0, l3, t3, u3, v2, u2, v2, u2, v1, u3, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("WEST"), target); // WEST
+        AddFace(t1, t0, t3, t2, u2, v2, u1, v2, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("NORTH"), target); // NORTH
+        AddFace(l1, t1, t2, l2, u1, v2, u0, v2, u0, v1, u1, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("EAST"), target); // EAST
+        AddFace(l0, l1, l2, l3, u4, v2, u3, v2, u3, v1, u4, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("SOUTH"), target); // SOUTH
+        }
+
 
         if (part.OverlayLayers is not null)
         {
             foreach (var layer in part.OverlayLayers)
             {
                 if (!LayerVisible(layer.Name, renderState))
+                {
+                    continue;
+                }
+
+                if (kindFilter is not null && layer.Kind != kindFilter)
                 {
                     continue;
                 }
@@ -205,7 +276,8 @@ public sealed class EntityModelMesher
                     part.PivotZ,
                     part.RotationX,
                     part.RotationY,
-                    part.RotationZ);
+                    part.RotationZ,
+                    Kind: layer.Kind);
                 var overlayMin = new Vector3(min.X - grow, min.Y - grow, min.Z - grow);
                 var overlayMax = new Vector3(max.X + grow, max.Y + grow, max.Z + grow);
                 var overlaySkin = skin;
@@ -218,7 +290,7 @@ public sealed class EntityModelMesher
                     overlayHeight = layerSprite.Height;
                 }
 
-                AddPart(overlay, overlayMin, overlayMax, overlaySkin, overlayWidth, overlayHeight, feet, entityTransform, partMatrix, transforms, defaultTransforms, renderState, skinAtlas, px, ref vertexFloats, ref indexCount);
+                AddPart(overlay, target, kindFilter, overlayMin, overlayMax, overlaySkin, overlayWidth, overlayHeight, feet, entityTransform, partMatrix, transforms, defaultTransforms, renderState, skinAtlas, px, ref vertexFloats, ref indexCount);
             }
         }
     }
@@ -288,7 +360,8 @@ public sealed class EntityModelMesher
         float au, float av, float bu, float bv, float cu, float cv, float du, float dv,
         SpriteRect skin, int skinWidth, int skinHeight,
         ref int vertexFloats, ref int indexCount,
-        FaceUvTransform transform)
+        FaceUvTransform transform,
+        DynamicGeometry target)
     {
         var uMin = MathF.Min(MathF.Min(au, bu), MathF.Min(cu, du));
         var uMax = MathF.Max(MathF.Max(au, bu), MathF.Max(cu, du));
@@ -299,17 +372,17 @@ public sealed class EntityModelMesher
         (cu, cv) = TransformUv(cu, cv, uMin, uMax, vMin, vMax, transform);
         (du, dv) = TransformUv(du, dv, uMin, uMax, vMin, vMax, transform);
         var first = (uint)(vertexFloats / 14);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, a, au / skinWidth, av / skinHeight, skin);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, b, bu / skinWidth, bv / skinHeight, skin);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, c, cu / skinWidth, cv / skinHeight, skin);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, d, du / skinWidth, dv / skinHeight, skin);
+        WriteVertex(target.Vertices, ref vertexFloats, a, au / skinWidth, av / skinHeight, skin);
+        WriteVertex(target.Vertices, ref vertexFloats, b, bu / skinWidth, bv / skinHeight, skin);
+        WriteVertex(target.Vertices, ref vertexFloats, c, cu / skinWidth, cv / skinHeight, skin);
+        WriteVertex(target.Vertices, ref vertexFloats, d, du / skinWidth, dv / skinHeight, skin);
 
-        _geometry.Indices[indexCount++] = first;
-        _geometry.Indices[indexCount++] = first + 1;
-        _geometry.Indices[indexCount++] = first + 2;
-        _geometry.Indices[indexCount++] = first;
-        _geometry.Indices[indexCount++] = first + 2;
-        _geometry.Indices[indexCount++] = first + 3;
+        target.Indices[indexCount++] = first;
+        target.Indices[indexCount++] = first + 1;
+        target.Indices[indexCount++] = first + 2;
+        target.Indices[indexCount++] = first;
+        target.Indices[indexCount++] = first + 2;
+        target.Indices[indexCount++] = first + 3;
     }
 
     private static (float U, float V) TransformUv(float u, float v, float uMin, float uMax, float vMin, float vMax, FaceUvTransform t)
@@ -346,4 +419,6 @@ public sealed class EntityModelMesher
         destination[offset++] = 0f;
     }
 }
+
+
 

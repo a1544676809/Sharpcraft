@@ -105,3 +105,15 @@ public sealed record EntityGeometryLayer(
 6. 再接需要 emissive 的 Enderman eyes。
 
 在这些层完成前，相关模型状态应为“静态近似/未完成”，不能标记为等效完成。
+
+## 6. 实施状态（2026-11-03，ADR-0021）
+
+- **第一步（客户端分层）已完成**：`EntityModelMesher.BuildLayers` 按 `EntityGeometryLayerKind` 返回
+  Cutout/Translucent 两份几何（`Build` 仍返回合并结果，供单 pass 调用）；基础部件与 Skeleton clothing 为 Cutout，
+  Player overlays、Drowned outer、Slime outer 标为 Translucent（`EntityModelLayer.Kind` / `EntityModelPart.Kind`）。
+- **第二步（框架分层绘制）已完成**：`WindowedRenderer` 接受 `entityLayers`，每层一份常驻缓冲；
+  Cutout 走新 `fs_entity_cutout`（alpha 0.5、无混合、深度写），Translucent 走原 `fs_entity_translucent`（混合、深度写关）；
+  绘制顺序按层 `Order`。
+- **未做**：Emissive（Enderman eyes 等）——需要独立的深度 `>=`/不写/加色状态，单独一步。
+- 验收：`EntityLayerTests` 钉住“无 overlay 只有 Cutout / Player 与 Drowned/Slime 产生 Translucent / 合并几何总量等于各层之和”；
+  窗口启动无 pipeline validation error。

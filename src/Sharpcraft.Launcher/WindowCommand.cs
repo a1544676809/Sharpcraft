@@ -411,7 +411,7 @@ internal static class WindowCommand
         var modelMesher = new Sharpcraft.Client.Render.EntityModelMesher();
         var variantTable = Sharpcraft.Client.Render.EntityVariantTable.FromRegistries(live?.Registries);
         var entitySource = entitySprite is { } sprite
-            ? new Func<DynamicGeometry>(() =>
+            ? new Func<IReadOnlyList<Sharpcraft.Framework.Rendering.EntityGeometryLayer>?>(() =>
             {
                 var states = session.EntityStates(session.PartialTick);
                 visibleEntities.Clear();
@@ -437,12 +437,12 @@ internal static class WindowCommand
                 if (entitySkinAtlas is not null)
                 {
                     var atlasSprite = new Sharpcraft.Client.Assets.SpriteRect(0, 0, entitySkinAtlas.Texture.Width, entitySkinAtlas.Texture.Height, 1) { U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f };
-                    return modelMesher.Build(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), atlasSprite, 64, 64, skinAtlas: entitySkinAtlas, variants: variantTable);
+                    return modelMesher.BuildLayers(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), atlasSprite, 64, 64, skinAtlas: entitySkinAtlas, variants: variantTable);
                 }
 
                 return entitySkinSprite is { } skinModel
-                    ? modelMesher.Build(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), skinModel, skinModel.Width == 1600 ? 64 : skinModel.Width, skinModel.Height == 1600 ? 64 : skinModel.Height, variants: variantTable)
-                    : entityMesher.Build(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), sprite);
+                    ? modelMesher.BuildLayers(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), skinModel, skinModel.Width == 1600 ? 64 : skinModel.Width, skinModel.Height == 1600 ? 64 : skinModel.Height, variants: variantTable)
+                    : null;
             })
             : null;
 
@@ -655,7 +655,8 @@ internal static class WindowCommand
                 return updates;
             },
             expectedChunks: InteractiveSession.ExpectedChunkCount(),
-            dynamicGeometry: entitySource,
+            dynamicGeometry: null,
+            entityLayers: entitySource,
             glyphTexture: glyphTexture,
             entitySkinTexture: entitySkin,
             spriteTextures: guiSprites?.Textures,
