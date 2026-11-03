@@ -2416,3 +2416,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - Frog：`root`(group)→body(+body_layer)/head(+head_layer、eyes→双眼)/croaking_body/tongue/双臂(+hand)/双腿(+foot)；注册 `frog_variant`（temperate/warm/cold，accessor 18，type id 56）。
 - Tadpole：body + 平面 tail，type id 134，纹理 16×16。
 - 静态 bind pose；跳跃/鼓鸣/舌/尾动画未移植。沙盒确认 warm（米白）、tadpole 外观正常。
+
+### 2026-11-03 Axolotl 模型（T-481）
+
+- `AxolotlModelDefinition`：body(+body_layer 背鳍)/head(+top/left/right gills)/四条扁腿/tail；`grow 0.001` 与 UV 按原版。
+- 5 个变体（lucy/wild/gold/cyan/blue，整数 accessor 18，type id 7），各换纹理 `entity/axolotl/axolotl_<name>`。
+- 静态 bind pose；游动/爬行/装死动画未移植。沙盒 blue 变体目视正常。

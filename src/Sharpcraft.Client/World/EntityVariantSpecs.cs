@@ -79,7 +79,10 @@ public static class EntityVariantSpecs
         [11] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 18, NectarMask: 8, AngerAccessorIndex: 19),
 
         // Frog: first accessor is the frog_variant holder.
-        [56] = new(18, "frog_variant", ["temperate", "warm", "cold"], "temperate")
+        [56] = new(18, "frog_variant", ["temperate", "warm", "cold"], "temperate"),
+
+        // Axolotl: integer variant (LUCY/WILD/GOLD/CYAN/BLUE).
+        [7] = new(18, null, ["lucy", "wild", "gold", "cyan", "blue"], "lucy")
     };
 
     /// <summary>Number of entity types with a variant field.</summary>

@@ -96,6 +96,18 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheAxolotlTypeIsRegisteredWithGillsAndVariants()
+    {
+        var definition = EntityModelResolver.Resolve(AxolotlModelDefinition.AxolotlEntityTypeId);
+
+        Assert.Equal("axolotl", definition.Name);
+        Assert.Equal(11, definition.Parts.Count);
+        Assert.Contains(definition.Parts, part => part.Name == "right_gills" && part.Parent == "head");
+        Assert.Equal(5, AxolotlModelDefinition.VariantKeys.Count);
+        Assert.Equal("entity/axolotl/axolotl_blue", EntityModelResolver.ResolveVariantStrict(AxolotlModelDefinition.AxolotlEntityTypeId, "blue").TexturePath);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).
