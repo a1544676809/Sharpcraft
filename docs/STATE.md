@@ -2638,3 +2638,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `EntityRenderState.IsBaby` 来自同步 index16（AgeableMob 白名单）；resolver/variant table 支持 baby 选择；Definitions 收录幼年纹理；沙盒 `MC_SANDBOX_BABY=1`。
 - 已实现 BabyPigModel（7 件, 32×32）、BabyCowModel（9 件, 64×64）、BabyChickenModel（8 件, 16×16），含 temperate/warm/cold 幼年纹理；静态 bind pose。
 - 后续按同一路径继续其余 Baby*（cat/wolf/horse/llama/fox/rabbit/camel/goat/panda/polar bear/squid/turtle/bee/dolphin/axolotl/strider/hoglin/piglin/zombie/villager/sniffer/armadillo/nautilus 等）。
+
+### 2026-11-03 Baby Cat / Wolf / Fox / Rabbit（T-522）
+
+- BabyFelineModel 11 部件（32×32，猫 11 变体含 all_black/ocelot 纹理命名规则）；BabyWolfModel 11 部件（9 变体，tame/angry 幼年纹理）；BabyFoxModel 10 部件（red/snow，sleep 幼年纹理）；BabyRabbitModel 17 部件（默认 brown_baby）。
+- 均走 `IsBaby` 选择与 `*_baby` 纹理；静态 bind pose（动画未移植）。**rabbit 的成年/幼年变体键尚未接入**（项目 Rabbit 定义当前只有单几何）。

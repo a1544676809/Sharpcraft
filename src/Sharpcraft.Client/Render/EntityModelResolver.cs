@@ -170,8 +170,10 @@ public static class EntityModelResolver
         Models[typeId] = definition;
     }
 
-    private static readonly Dictionary<int, EntityModelDefinition> BabyModels = new(BabyModelDefinitions.Models);
-    private static readonly Dictionary<(int TypeId, string Key), EntityModelDefinition> BabyVariantModels = new(BabyModelDefinitions.Variants);
+    private static readonly Dictionary<int, EntityModelDefinition> BabyModels =
+        new(BabyModelDefinitions.Models.Concat(BabyModelDefinitionsExtra.Models));
+    private static readonly Dictionary<(int TypeId, string Key), EntityModelDefinition> BabyVariantModels =
+        new(BabyModelDefinitions.Variants.Concat(BabyModelDefinitionsExtra.Variants));
 
     static EntityModelResolver()
     {

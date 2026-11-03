@@ -478,6 +478,25 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void BabyCatWolfFoxRabbitResolveToTheirOwnGeometry()
+    {
+        var cat = EntityModelResolver.Resolve(CatModelDefinition.CatEntityTypeId, true);
+        var wolf = EntityModelResolver.Resolve(WolfModelDefinition.WolfEntityTypeId, true);
+        var fox = EntityModelResolver.Resolve(FoxModelDefinition.FoxEntityTypeId, true);
+        var rabbit = EntityModelResolver.Resolve(RabbitModelDefinition.RabbitEntityTypeId, true);
+
+        Assert.Equal("baby_cat", cat.Name);
+        Assert.Equal(11, cat.Parts.Count);
+        Assert.Equal("baby_wolf", wolf.Name);
+        Assert.Equal(11, wolf.Parts.Count);
+        Assert.Equal("baby_fox", fox.Name);
+        Assert.Equal(10, fox.Parts.Count);
+        Assert.Equal("baby_rabbit", rabbit.Name);
+        Assert.Equal(17, rabbit.Parts.Count);
+        Assert.Equal("entity/cat/cat_all_black_baby", EntityModelResolver.ResolveVariantStrict(CatModelDefinition.CatEntityTypeId, "all_black", true).TexturePath);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).
