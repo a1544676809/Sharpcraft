@@ -129,6 +129,11 @@ public sealed class EntityModelMesher
 
             foreach (var part in model.Parts)
             {
+                if (part.VisibleWhen is not null && !part.VisibleWhen(entity))
+                {
+                    continue;
+                }
+
                 var centreX = part.CentreX * px;
                 var centreZ = part.CentreZ * px;
                 var bottom = part.Bottom * px;

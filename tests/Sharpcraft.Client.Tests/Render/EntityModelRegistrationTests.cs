@@ -359,6 +359,18 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheArmadilloSwapsItsBodyForTheShellCube()
+    {
+        var definition = EntityModelResolver.Resolve(ArmadilloModelDefinition.ArmadilloEntityTypeId);
+
+        Assert.Equal("armadillo", definition.Name);
+        Assert.Equal(14, definition.Parts.Count);
+        Assert.NotNull(definition.Parts.Single(part => part.Name == "body").VisibleWhen);
+        Assert.NotNull(definition.Parts.Single(part => part.Name == "cube").VisibleWhen);
+        Assert.NotSame(definition.Parts.Single(part => part.Name == "body").VisibleWhen, definition.Parts.Single(part => part.Name == "cube").VisibleWhen);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

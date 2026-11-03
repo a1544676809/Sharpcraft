@@ -3,6 +3,7 @@
 
 namespace Sharpcraft.Client.Render;
 
+using Sharpcraft.Client.World;
 using Sharpcraft.Framework.Rendering;
 
 /// <summary>
@@ -35,7 +36,8 @@ public readonly record struct EntityModelPart(
     string? TexturePath = null,
     float Grow = 0f,
     string? Parent = null,
-    EntityGeometryLayerKind Kind = EntityGeometryLayerKind.Cutout);
+    EntityGeometryLayerKind Kind = EntityGeometryLayerKind.Cutout,
+    Func<EntityRenderState, bool>? VisibleWhen = null);
 
 /// <summary>
 /// An outer skin layer around one base cuboid, expressed as a uniform growth and its own texture offset.

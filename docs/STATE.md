@@ -2568,3 +2568,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - 结构：neck→head（主体+snout、左右角 rotX 1.0996、mouth）、body（上/下两块板，rotX π/2）、四条 37 高的腿（前腿 UV64,0 / 后腿 UV96,0，左腿 mirror）。
 - 纹理 `entity/illager/ravager`（128×128），type id 112；静态 bind pose；行走/攻击/咆哮动画未移植。
+
+### 2026-11-03 部件可见性能力 + Armadillo（T-507/T-508）
+
+- 新增 `EntityModelPart.VisibleWhen`（按 `EntityRenderState` 判定是否发射该部件），mesher 在几何生成前跳过；已记录于 `docs/modules/entity-render.md` §11。
+- `EntityRenderState.IsHidingInShell` + `EntityTracker.StateStartTick`：按原版 `ArmadilloState.shouldHideInShell` 的 tick 阈值（IDLE 永不 / ROLLING >5 / SCARED 立即 / UNROLLING <26）计算。
+- Armadillo 模型：body（grow0.3 外层 + 内层）、tail、head（head_cube + 左右耳各一层旋转盒）、四腿、cube；norm 显示身体，shell 只显示 cube。纹理 `entity/armadillo/armadillo`，type id 4。
+- 静态 bind pose；滚动/探头动画未移植。沙盒 norm/shell 双状态验收通过。

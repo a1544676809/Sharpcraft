@@ -25,6 +25,7 @@ namespace Sharpcraft.Client.World;
 /// <param name="AngerAccessorIndex">Accessor carrying the anger end time as a long, or -1.</param>
 /// <param name="ColdMask">Flag bit that means "cold" (Strider suffocating boolean at 19).</param>
 /// <param name="ChargingMask">Flag bit that means charging (Vex flag bit 0).</param>
+/// <param name="ShellHideStates">True when the integer value is an Armadillo state whose ROLLING/SCARED/UNROLLING phase hides the body in the shell.</param>
 public readonly record struct EntityVariantSpec(
     int AccessorIndex,
     string? RegistryPath,
@@ -37,7 +38,8 @@ public readonly record struct EntityVariantSpec(
     int SleepingMask = 0,
     int AngerAccessorIndex = -1,
     int ColdMask = 0,
-    int ChargingMask = 0);
+    int ChargingMask = 0,
+    bool ShellHideStates = false);
 
 /// <summary>
 /// Answering "which synced-data field is the variant" for the entity types this client renders with variants.
@@ -110,7 +112,10 @@ public static class EntityVariantSpecs
         [110] = new(18, null, ["small", "medium", "large"], "small"),
 
         // Ghast: boolean charging flag at 16 (no AgeableMob in the chain).
-        [58] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 16, ChargingMask: 1)
+        [58] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 16, ChargingMask: 1),
+
+        // Armadillo: ArmadilloState enum at 18 (IDLE/ROLLING/SCARED/UNROLLING); the state drives shell visibility.
+        [4] = new(18, null, ["idle", "rolling", "scared", "unrolling"], "idle", ShellHideStates: true)
     };
 
     /// <summary>Number of entity types with a variant field.</summary>

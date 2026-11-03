@@ -97,6 +97,9 @@ public sealed class TrackedEntity
     /// <summary>Anger end time in game ticks, or long.MinValue when unknown.</summary>
     public long AngerEndTime { get; internal set; } = long.MinValue;
 
+    /// <summary>Game tick at which the variant/state value last changed (for states that depend on elapsed time).</summary>
+    public long StateStartTick { get; internal set; }
+
     /// <summary>
     /// Authoritative target position. Vanilla does not snap a remote entity to the position the server reports:
     /// it approaches it over a few ticks, which is why the rendered entity trails slightly behind the
@@ -166,7 +169,8 @@ public readonly record struct EntityRenderState(
     bool IsSleeping = false,
     bool HasNectar = false,
     bool IsCold = false,
-    bool IsCharging = false);
+    bool IsCharging = false,
+    bool IsHidingInShell = false);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -403,7 +407,13 @@ public sealed class EntityTracker
         {
             if (spec.AccessorIndex >= 0 && item.Index == spec.AccessorIndex && item.Value != EntityDataItem.NotAnInteger)
             {
-                entity.VariantId = item.Value & spec.ValueMask;
+                var variantValue = item.Value & spec.ValueMask;
+                if (variantValue != entity.VariantId)
+                {
+                    entity.StateStartTick = GameTime;
+                }
+
+                entity.VariantId = variantValue;
                 VariantUpdates++;
                 applied = true;
             }
@@ -490,6 +500,11 @@ public sealed class EntityTracker
         foreach (var entity in _entities.Values)
         {
             EntityVariantSpecs.TryGet(entity.TypeId, out var spec);
+            var stateTicks = GameTime - entity.StateStartTick;
+            var hidingInShell = spec.ShellHideStates
+                && (entity.VariantId == 2
+                    || (entity.VariantId == 1 && stateTicks > 5)
+                    || (entity.VariantId == 3 && stateTicks < 26));
             _renderStates.Add(new EntityRenderState(
                 entity.Id,
                 entity.TypeId,
@@ -504,7 +519,8 @@ public sealed class EntityTracker
                 IsSleeping: spec.SleepingMask != 0 && (entity.Flags & spec.SleepingMask) != 0,
                 HasNectar: spec.NectarMask != 0 && (entity.Flags & spec.NectarMask) != 0,
                 IsCold: spec.ColdMask != 0 && (entity.Flags & spec.ColdMask) != 0,
-                IsCharging: spec.ChargingMask != 0 && (entity.Flags & spec.ChargingMask) != 0));
+                IsCharging: spec.ChargingMask != 0 && (entity.Flags & spec.ChargingMask) != 0,
+                IsHidingInShell: hidingInShell));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);

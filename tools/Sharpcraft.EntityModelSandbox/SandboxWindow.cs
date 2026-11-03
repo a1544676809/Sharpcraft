@@ -72,7 +72,8 @@ internal static class SandboxWindow
             IsSleeping: sandboxState.Contains("sleeping", StringComparison.OrdinalIgnoreCase),
             HasNectar: sandboxState.Contains("nectar", StringComparison.OrdinalIgnoreCase),
             IsCold: sandboxState.Contains("cold", StringComparison.OrdinalIgnoreCase),
-            IsCharging: sandboxState.Contains("charging", StringComparison.OrdinalIgnoreCase));
+            IsCharging: sandboxState.Contains("charging", StringComparison.OrdinalIgnoreCase),
+            IsHidingInShell: sandboxState.Contains("shell", StringComparison.OrdinalIgnoreCase) || sandboxState.Contains("hiding", StringComparison.OrdinalIgnoreCase));
         var mesher = new EntityModelMesher();
         var state = new Dictionary<string, FaceUvTransform>();
         var statePath = Path.Combine(Path.GetTempPath(), "sharpcraft-face-state.json");

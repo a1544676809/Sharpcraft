@@ -64,6 +64,7 @@ public static class EntityModelResolver
         [HappyGhastModelDefinition.HappyGhastEntityTypeId] = HappyGhastModelDefinition.Definition,
         [PhantomModelDefinition.PhantomEntityTypeId] = PhantomModelDefinition.Definition,
         [RavagerModelDefinition.RavagerEntityTypeId] = RavagerModelDefinition.Definition,
+        [ArmadilloModelDefinition.ArmadilloEntityTypeId] = ArmadilloModelDefinition.Definition,
         [GuardianModelDefinition.GuardianEntityTypeId] = GuardianModelDefinition.Definition,
         [GuardianModelDefinition.ElderGuardianEntityTypeId] = GuardianModelDefinition.Elder,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,

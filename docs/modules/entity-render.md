@@ -138,3 +138,18 @@ P1 只做**静态姿态 + 朝向**，明确排除骨骼动画、物品装备渲�
 - 契约与状态见 `docs/decisions/0021-entity-render-layers.md` 与 `docs/analysis/render/entity-render-layers.md` §6。
 - 眼睛：`EntityModelDefinition.EmissiveTexturePath` 提供纹理（Enderman `enderman_eyes`、Spider `spider_eyes`），
   与基础几何共用，走 emissive 管线（无光照、深度 `>=`、不写、半透明混合）。
+
+## 11. 部件可见性（`VisibleWhen`）
+
+远端实体有些状态会**切换整组部件**，典型是犰狳：缩壳时 `body`（连同 head/tail）与四条腿隐藏，只显示 `cube`；出壳时相反。
+
+- `EntityModelPart` 新增 `Func<EntityRenderState, bool>? VisibleWhen`，`EntityModelMesher` 在发射部件前求值，false 则整部件（含其几何与 overlay）跳过。
+- 状态布尔放在 `EntityRenderState`（如 `IsHidingInShell`），由 `EntityTracker` 从同步数据计算；渲染层不读取同步字段。
+- 犰狳状态来源：`ARMADILLO_STATE` 是枚举序列化器（serializer id 36），访问器 18，值 0 IDLE / 1 ROLLING / 2 SCARED / 3 UNROLLING。隐藏条件按原版 `ArmadilloState.shouldHideInShell`：
+  - IDLE：永不隐藏；
+  - ROLLING：进入状态 **>5 tick** 后隐藏；
+  - SCARED：立即隐藏；
+  - UNROLLING：进入状态 **<26 tick** 时仍隐藏，之后展开。
+- 因此 `TrackedEntity` 记录 `StateStartTick`（状态值变化时更新为当前 `GameTime`），供上述时序判定使用。
+
+> 可见性只决定“是否发射几何”，不改变碰撞/音效等其他逻辑；与 RenderLayer 正交。
