@@ -65,6 +65,7 @@ public static class EntityModelResolver
         [PhantomModelDefinition.PhantomEntityTypeId] = PhantomModelDefinition.Definition,
         [RavagerModelDefinition.RavagerEntityTypeId] = RavagerModelDefinition.Definition,
         [ArmadilloModelDefinition.ArmadilloEntityTypeId] = ArmadilloModelDefinition.Definition,
+        [CopperGolemModelDefinition.CopperGolemEntityTypeId] = CopperGolemModelDefinition.Definition,
         [GuardianModelDefinition.GuardianEntityTypeId] = GuardianModelDefinition.Definition,
         [GuardianModelDefinition.ElderGuardianEntityTypeId] = GuardianModelDefinition.Elder,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,
@@ -178,6 +179,7 @@ public static class EntityModelResolver
         RegisterVariants(ShulkerModelDefinition.ShulkerEntityTypeId, ShulkerModelDefinition.Variants);
         RegisterVariants(SalmonModelDefinition.SalmonEntityTypeId, SalmonModelDefinition.Variants);
         RegisterVariants(PufferfishModelDefinition.PufferfishEntityTypeId, PufferfishModelDefinition.Variants);
+        RegisterVariants(CopperGolemModelDefinition.CopperGolemEntityTypeId, CopperGolemModelDefinition.Variants);
         RegisterVariants(LlamaModelDefinition.LlamaEntityTypeId, LlamaModelDefinition.Variants);
     }
 }

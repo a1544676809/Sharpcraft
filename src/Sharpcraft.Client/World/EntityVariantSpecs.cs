@@ -115,7 +115,10 @@ public static class EntityVariantSpecs
         [58] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 16, ChargingMask: 1),
 
         // Armadillo: ArmadilloState enum at 18 (IDLE/ROLLING/SCARED/UNROLLING); the state drives shell visibility.
-        [4] = new(18, null, ["idle", "rolling", "scared", "unrolling"], "idle", ShellHideStates: true)
+        [4] = new(18, null, ["idle", "rolling", "scared", "unrolling"], "idle", ShellHideStates: true),
+
+        // Copper Golem: WeatheringCopper.WeatherState at 18 (serializer 38), followed by the animation state at 19.
+        [28] = new(18, null, ["unaffected", "exposed", "weathered", "oxidized"], "unaffected")
     };
 
     /// <summary>Number of entity types with a variant field.</summary>

@@ -2575,3 +2575,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `EntityRenderState.IsHidingInShell` + `EntityTracker.StateStartTick`：按原版 `ArmadilloState.shouldHideInShell` 的 tick 阈值（IDLE 永不 / ROLLING >5 / SCARED 立即 / UNROLLING <26）计算。
 - Armadillo 模型：body（grow0.3 外层 + 内层）、tail、head（head_cube + 左右耳各一层旋转盒）、四腿、cube；norm 显示身体，shell 只显示 cube。纹理 `entity/armadillo/armadillo`，type id 4。
 - 静态 bind pose；滚动/探头动画未移植。沙盒 norm/shell 双状态验收通过。
+
+### 2026-11-03 Copper Golem 模型（T-509）
+
+- 结构：body、head（face grow0.015、nose、antenna、antenna_tip）、双臂、双腿，共 9 部件。
+- 4 级氧化变体（UNAFFECTED/EXPOSED/WEATHERED/OXIDIZED；`WeatheringCopper.WeatherState`，accessor 18，serializer 38，type id 28），每级 body texture + eye texture（emissive 层）。
+- 静态 bind pose；idle/交互动画、天线方块（BlockDecorationLayer）、装备层未移植。沙盒 unaffected/oxidized 目视正常。

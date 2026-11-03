@@ -371,6 +371,19 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheCopperGolemHasFourWeatheringTexturesAndEyes()
+    {
+        var definition = EntityModelResolver.Resolve(CopperGolemModelDefinition.CopperGolemEntityTypeId);
+
+        Assert.Equal("copper_golem", definition.Name);
+        Assert.Equal(9, definition.Parts.Count);
+        Assert.Equal("entity/copper_golem/copper_golem_eyes_weathered",
+            EntityModelResolver.ResolveVariantStrict(CopperGolemModelDefinition.CopperGolemEntityTypeId, "weathered").EmissiveTexturePath);
+        Assert.Equal("entity/copper_golem/copper_golem_oxidized",
+            EntityModelResolver.ResolveVariantStrict(CopperGolemModelDefinition.CopperGolemEntityTypeId, "oxidized").TexturePath);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).
