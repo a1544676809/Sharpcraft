@@ -44,6 +44,18 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheBeeTypeIsRegisteredWithBoneBodyAndWings()
+    {
+        var definition = EntityModelResolver.Resolve(BeeModelDefinition.BeeEntityTypeId);
+
+        Assert.Equal("bee", definition.Name);
+        Assert.Equal(10, definition.Parts.Count);
+        Assert.Contains(definition.Parts, part => part.Name == "body" && part.Parent == "bone");
+        Assert.Contains(definition.Parts, part => part.Name == "stinger" && part.Parent == "body");
+        Assert.Contains(definition.Parts, part => part.Name == "left_wing" && part.Parent == "bone");
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

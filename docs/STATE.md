@@ -2384,3 +2384,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `BatModelDefinition`：body+feet、两段式翅膀（body→wing→wing_tip）、独立 head+双耳；纹理 `entity/bat/bat`，type id 10（由 `EntityTypes` 注册序）。
 - 层级用 `Parent` 表达；静态 bind pose（BatAnimation 未移植）。
 - 注册于 resolver；`EntityModelRegistrationTests` 增加 bat 用例（9 部件、wing_tip/ear 的 Parent）；沙盒目视正常。
+
+### 2026-11-03 Bee 模型（T-476）
+
+- `BeeModelDefinition`：`bone`(空 group)→body(+stinger、左右触角)、两翅（yRot ±15°、左翅 mirror、grow 0.001）、前/中/后腿平面；纹理 `entity/bee/bee`，type id 11。
+- 注册 + 注册测试（10 部件、Parent 关系）；沙盒目视正常（黄身、蓝眼、薄翅、三对腿）。
+- **已知缺口**：BeeRenderer 的 angry / nectar 状态纹理（4 种，另有 baby 4 种）未接；扇翅动画未移植。
