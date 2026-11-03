@@ -2701,3 +2701,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - Baby Nautilus 9 部件（root/shell 3 层/body 2 层/3 mouth，64×64）；Baby Happy Ghast body+inner_body(grow-0.5)+9 tentacles，scale=`4×0.2375=0.95`，纹理 happy_ghast_baby；Baby Glow Squid 复用 BabySquid 几何，纹理 glow_squid_baby。
 - 全部 bind pose；动画未移植。至此有独立 Baby*Model 的幼年实体已全部铺完（除 ZombieNautilus 无独立幼年 renderer、以及各装备/群系纹理层）。
+
+### 2026-11-03 Panda 7 变体（T-534）
+
+- `Panda.Gene`：normal/lazy/worried/playful/brown/weak/aggressive（byte accessor 18）；成年纹理 `panda`/`panda_<gene>`，幼年 `panda_baby`/`panda_<gene>_baby`。
+- 补齐 `PandaModelDefinition.Variants`、`EntityVariantSpecs[97]`、`BabyModelDefinitionsMisc.Variants` 与 resolver 注册。

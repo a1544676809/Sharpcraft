@@ -86,4 +86,29 @@ public static class BabyModelDefinitionsMisc
             [105] = PolarBear,
             [141] = Turtle
         };
+
+    public static readonly IReadOnlyDictionary<(int TypeId, string Key), EntityModelDefinition> Variants = BuildVariants();
+
+    private static Dictionary<(int, string), EntityModelDefinition> BuildVariants()
+    {
+        var variants = new Dictionary<(int, string), EntityModelDefinition>
+        {
+            [(97, "normal")] = Panda
+        };
+        foreach (var key in PandaModelDefinition.VariantKeys)
+        {
+            if (key != "normal")
+            {
+                variants[(97, key)] = new EntityModelDefinition(
+                    "baby_panda_" + key,
+                    64,
+                    64,
+                    Panda.Parts,
+                    PlayerModelDefinition.DefaultFaceTransforms,
+                    "entity/panda/panda_" + key + "_baby");
+            }
+        }
+
+        return variants;
+    }
 }

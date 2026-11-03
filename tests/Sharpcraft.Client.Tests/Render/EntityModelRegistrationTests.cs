@@ -572,6 +572,8 @@ public sealed class EntityModelRegistrationTests
         Assert.Equal(9, EntityModelResolver.Resolve(62, true).Parts.Count);
         Assert.Equal(0.95f, EntityModelResolver.Resolve(59, true).Scale);
         Assert.Equal("entity/squid/glow_squid_baby", EntityModelResolver.Resolve(62, true).TexturePath);
+        Assert.Equal("entity/panda/panda_brown", EntityModelResolver.ResolveVariantStrict(97, "brown").TexturePath);
+        Assert.Equal("entity/panda/panda_lazy_baby", EntityModelResolver.ResolveVariantStrict(97, "lazy", true).TexturePath);
     }
 
     [Fact]

@@ -27,4 +27,31 @@ public static class PandaModelDefinition
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/panda/panda");
+
+    public static readonly IReadOnlyList<string> VariantKeys = ["normal", "lazy", "worried", "playful", "brown", "weak", "aggressive"];
+
+    public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants = BuildVariants();
+
+    private static Dictionary<string, EntityModelDefinition> BuildVariants()
+    {
+        var variants = new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)
+        {
+            ["normal"] = Definition
+        };
+        foreach (var key in VariantKeys)
+        {
+            if (key != "normal")
+            {
+                variants[key] = new EntityModelDefinition(
+                    "panda_" + key,
+                    64,
+                    64,
+                    Definition.Parts,
+                    PlayerModelDefinition.DefaultFaceTransforms,
+                    "entity/panda/panda_" + key);
+            }
+        }
+
+        return variants;
+    }
 }

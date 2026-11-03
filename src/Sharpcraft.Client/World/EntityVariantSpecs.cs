@@ -132,7 +132,10 @@ public static class EntityVariantSpecs
             KeySelector: TropicalFishPatternKey),
 
         // Rabbit: integer variant with a sparse "evil" id (99).
-        [111] = new(18, null, ["brown", "white", "black", "white_splotched", "gold", "salt", "evil"], "brown", KeySelector: RabbitKey)
+        [111] = new(18, null, ["brown", "white", "black", "white_splotched", "gold", "salt", "evil"], "brown", KeySelector: RabbitKey),
+
+        // Panda: main gene byte at 18 (NORMAL/LAZY/WORRIED/PLAYFUL/BROWN/WEAK/AGGRESSIVE).
+        [97] = new(18, null, ["normal", "lazy", "worried", "playful", "brown", "weak", "aggressive"], "normal")
     };
 
     /// <summary>Number of entity types with a variant field.</summary>

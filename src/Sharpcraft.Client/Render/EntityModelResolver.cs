@@ -184,6 +184,7 @@ public static class EntityModelResolver
         new(BabyModelDefinitions.Variants
             .Concat(BabyModelDefinitionsExtra.Variants)
             .Concat(BabyModelDefinitionsEquine.Variants)
+            .Concat(BabyModelDefinitionsMisc.Variants)
             .Concat(BabyModelDefinitionsAquatic.Variants));
 
     static EntityModelResolver()
@@ -206,5 +207,6 @@ public static class EntityModelResolver
         RegisterVariants(TropicalFishModelDefinition.TropicalFishEntityTypeId, TropicalFishModelDefinition.Variants);
         RegisterVariants(LlamaModelDefinition.LlamaEntityTypeId, LlamaModelDefinition.Variants);
         RegisterVariants(RabbitModelDefinition.RabbitEntityTypeId, RabbitModelDefinition.Variants);
+        RegisterVariants(PandaModelDefinition.PandaEntityTypeId, PandaModelDefinition.Variants);
     }
 }
