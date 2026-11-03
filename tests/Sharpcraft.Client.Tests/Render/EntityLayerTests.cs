@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using System.Numerics;
 using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
@@ -15,11 +16,43 @@ public sealed class EntityLayerTests
     private static EntityRenderState Entity(int typeId, int variant = 0) =>
         new(1, typeId, 0f, 0f, 0f, 0f, 0f, VariantId: variant);
 
+    private static (Vector3 Min, Vector3 Max) Bounds(DynamicGeometry geometry)
+    {
+        var min = new Vector3(float.MaxValue);
+        var max = new Vector3(float.MinValue);
+        for (var i = 0; i < geometry.VertexFloats; i += 14)
+        {
+            var point = new Vector3(geometry.Vertices[i], geometry.Vertices[i + 1], geometry.Vertices[i + 2]);
+            min = Vector3.Min(min, point);
+            max = Vector3.Max(max, point);
+        }
+
+        return (min, max);
+    }
+
     private static IReadOnlyList<EntityGeometryLayer> Layers(int typeId, int variant = 0)
     {
         var mesher = new EntityModelMesher();
         var sprite = new SpriteRect(0, 0, 64, 64, 1);
         return mesher.BuildLayers([Entity(typeId, variant)], sprite, 64, 64, variants: EntityVariantTable.Builtin);
+    }
+
+    [Fact]
+    public void CaveSpiderScalesTheSpiderGeometryUniformly()
+    {
+        var sprite = new SpriteRect(0, 0, 64, 32, 1);
+        Assert.Equal(0.7f, EntityModelResolver.Resolve(CaveSpiderModelDefinition.CaveSpiderEntityTypeId).Scale);
+        var spider = new EntityModelMesher().Build([Entity(SpiderModelDefinition.SpiderEntityTypeId)], sprite, 64, 32);
+        var a = Bounds(spider);
+        var cave = new EntityModelMesher().Build([Entity(CaveSpiderModelDefinition.CaveSpiderEntityTypeId)], sprite, 64, 32);
+        var b = Bounds(cave);
+
+        var sizeA = a.Max - a.Min;
+        var sizeB = b.Max - b.Min;
+
+        Assert.Equal(sizeA.X * 0.7f, sizeB.X, 2);
+        Assert.Equal(sizeA.Y * 0.7f, sizeB.Y, 2);
+        Assert.Equal(sizeA.Z * 0.7f, sizeB.Z, 2);
     }
 
     [Fact]

@@ -238,6 +238,17 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void SpiderLegsUseTheBakedRotationSigns()
+    {
+        // Spider parts are authored without the global X mirror (mirrorX: false), so the baked mapping only flips Y.
+        // For that mapping a reference zRot of -PI/4 stays -PI/4 in storage and the Y rotation is kept unchanged.
+        var leg = Assert.Single(EntityModelResolver.Resolve(SpiderModelDefinition.SpiderEntityTypeId).Parts, part => part.Name == "right_hind_leg");
+
+        Assert.Equal(MathF.PI / 4f, leg.RotationY, 4);
+        Assert.Equal(MathF.PI / 4f, leg.RotationZ, 4);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).
