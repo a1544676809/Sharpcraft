@@ -27,6 +27,7 @@
 | [`common-primitives.md`](common-primitives.md) | 提供全项目最底层、无副作用、无 IO 的值类型与容器。 | 已评审 | 2026-10-28 |
 | [`doc-indexer.md`](doc-indexer.md) | 从文档与源码目录生成目录索引，并在 CI 检查索引与模块覆盖 | 已评审 | 2026-10-29 |
 | [`entities.md`](entities.md) | 玩家不是特例，而是实体系统的一个成员。 | 已评审 | 2026-10-29 |
+| [`entity-equipment.md`](entity-equipment.md) | 把 set_equipment 的装备槽状态转成实体渲染状态，并为鞍、马甲、装饰、挽具、狼甲等提供独立的装备渲染层；手持物品模型渲染后置。 | 待评审 | 2026-11-03 |
 | [`entity-render.md`](entity-render.md) | M5.3 P1 静态实体模型、渲染状态、部件几何与渲染/游戏逻辑解耦 | 已评审 | 2026-11-02 |
 | [`input.md`](input.md) | 把平台输入收敛成与平台无关的动作状态，把客户端状态输出到窗口与日志。 | 已评审 | 2026-10-29 |
 | [`launcher.md`](launcher.md) | 独立跨平台启动器：认证、版本/资产获取、参数装配、进程启动。 | 已评审 | 2026-10-28 |

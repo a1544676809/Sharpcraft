@@ -2724,3 +2724,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `EntityVariantSpec.MarkingsShift`（Horse=8）把 variant int 高字节解析成 `Markings`（0/1/2/3/4）。
 - `WithHorseMarkings` 为成年/幼年 Horse 各生成 4 组叠加层：`horse_markings_white(_baby)` / `whitefield` / `whitedots` / `blackdots`，Grow+0.05，`VisibleWhen = state.Markings == id`。
 - 沙盒 `MC_SANDBOX_MARKINGS=1` 验收：成年棕马与幼年棕马均出现白袜子。
+
+### 2026-11-03 装备/物品渲染：规格先行（T-538）
+
+- 已产出 `docs/modules/entity-equipment.md`（状态 [待评审]）与 `docs/analysis/render/entity-equipment.md`。
+- 关键结论：当前无 `SetEquipment`/`ItemStack`/装备渲染实现；包 id 104、槽位 ordinal 0..7、空 patch 解码可先做；`EquipmentClientInfo` JSON 未在现有资产包中找到，需确认提取来源。
+- 下一步：等待用户评审规格后按 E1（协议与状态）→ E2（受控纹理映射）→ E3（实体装备层）实施；未评审前不写实现代码。
