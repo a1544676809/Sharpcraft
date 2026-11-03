@@ -66,6 +66,7 @@ public static class EntityModelResolver
         [RavagerModelDefinition.RavagerEntityTypeId] = RavagerModelDefinition.Definition,
         [ArmadilloModelDefinition.ArmadilloEntityTypeId] = ArmadilloModelDefinition.Definition,
         [CopperGolemModelDefinition.CopperGolemEntityTypeId] = CopperGolemModelDefinition.Definition,
+        [BreezeModelDefinition.BreezeEntityTypeId] = BreezeModelDefinition.Definition,
         [GuardianModelDefinition.GuardianEntityTypeId] = GuardianModelDefinition.Definition,
         [GuardianModelDefinition.ElderGuardianEntityTypeId] = GuardianModelDefinition.Elder,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,

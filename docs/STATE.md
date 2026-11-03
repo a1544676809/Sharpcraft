@@ -2581,3 +2581,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 结构：body、head（face grow0.015、nose、antenna、antenna_tip）、双臂、双腿，共 9 部件。
 - 4 级氧化变体（UNAFFECTED/EXPOSED/WEATHERED/OXIDIZED；`WeatheringCopper.WeatherState`，accessor 18，serializer 38，type id 28），每级 body texture + eye texture（emissive 层）。
 - 静态 bind pose；idle/交互动画、天线方块（BlockDecorationLayer）、装备层未移植。沙盒 unaffected/oxidized 目视正常。
+
+### 2026-11-03 Breeze 模型（T-510）
+
+- body/head/eyes/rods（3 根 rods 用原版 pivot 与三轴旋转）；wind_body→wind_bottom→wind_mid(三层)→wind_top(三层)，独立 `breeze_wind`（128×128，Translucent）；eyes 层 `breeze_eyes`（emissive-only，32×32），body `breeze`（32×32）。type id 17。
+- 新增部件级 `TextureWidth/Height`（不同 layer 纹理尺寸不同）、`IncludeInEmissive`、`EmissiveOnly`，见 `docs/modules/entity-render.md` §12。
+- 静态 bind pose；idle/shoot/slide 动画、wind UV 滚动、风层排序未移植。沙盒目视正常（紫色身体+白色风壳+发光眼）。

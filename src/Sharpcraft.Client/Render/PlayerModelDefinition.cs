@@ -37,7 +37,11 @@ public readonly record struct EntityModelPart(
     float Grow = 0f,
     string? Parent = null,
     EntityGeometryLayerKind Kind = EntityGeometryLayerKind.Cutout,
-    Func<EntityRenderState, bool>? VisibleWhen = null);
+    Func<EntityRenderState, bool>? VisibleWhen = null,
+    int TextureWidth = 0,
+    int TextureHeight = 0,
+    bool IncludeInEmissive = true,
+    bool EmissiveOnly = false);
 
 /// <summary>
 /// An outer skin layer around one base cuboid, expressed as a uniform growth and its own texture offset.

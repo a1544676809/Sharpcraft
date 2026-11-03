@@ -153,3 +153,10 @@ P1 只做**静态姿态 + 朝向**，明确排除骨骼动画、物品装备渲�
 - 因此 `TrackedEntity` 记录 `StateStartTick`（状态值变化时更新为当前 `GameTime`），供上述时序判定使用。
 
 > 可见性只决定“是否发射几何”，不改变碰撞/音效等其他逻辑；与 RenderLayer 正交。
+
+## 12. 部件级纹理尺寸与 Emissive-only
+
+- `EntityModelPart` 新增 `TextureWidth/Height`：UV 归一化按**该部件所属 layer 声明的纹理尺寸**（0 表示沿用模型默认）。Breeze 的 body 是 32×32、wind 是 128×128，必须按部件区分。
+- `IncludeInEmissive`（默认 true）控制该部件是否参与 emissive 眼睛 pass；wind 层设 false，避免眼睛贴图落到风壳上。
+- `EmissiveOnly`（默认 false）表示该部件**只在 emissive pass 发射**（Breeze 的 `eyes` 复制了 head 几何，只用于眼睛层）。
+- 这些字段只影响几何/纹理发射，不改变同步状态契约。

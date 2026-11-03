@@ -134,6 +134,14 @@ public sealed class EntityModelMesher
                     continue;
                 }
 
+                if (emissivePass ? !part.IncludeInEmissive : part.EmissiveOnly)
+                {
+                    continue;
+                }
+
+                var partTextureWidth = part.TextureWidth > 0 ? part.TextureWidth : model.TextureWidth;
+                var partTextureHeight = part.TextureHeight > 0 ? part.TextureHeight : model.TextureHeight;
+
                 var centreX = part.CentreX * px;
                 var centreZ = part.CentreZ * px;
                 var bottom = part.Bottom * px;
@@ -154,8 +162,8 @@ public sealed class EntityModelMesher
                 }
 
                 var partSprite = sprite;
-                var partSkinWidth = skinWidthForModel;
-                var partSkinHeight = skinHeightForModel;
+                var partSkinWidth = partTextureWidth;
+                var partSkinHeight = partTextureHeight;
                 if (!emissivePass && part.TexturePath is { Length: > 0 } partPath && skinAtlas?.Get(partPath) is { } partAtlas)
                 {
                     partSprite = partAtlas;

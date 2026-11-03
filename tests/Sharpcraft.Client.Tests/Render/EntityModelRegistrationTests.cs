@@ -384,6 +384,18 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheBreezeHasSeparateBodyWindAndEyesLayers()
+    {
+        var definition = EntityModelResolver.Resolve(BreezeModelDefinition.BreezeEntityTypeId);
+
+        Assert.Equal("breeze", definition.Name);
+        Assert.Contains(definition.Parts, part => part.Name == "wind_bottom" && part.Kind == EntityGeometryLayerKind.Translucent);
+        Assert.Contains(definition.Parts, part => part.Name == "eyes" && part.EmissiveOnly);
+        Assert.Equal("entity/breeze/breeze_eyes", definition.EmissiveTexturePath);
+        Assert.Contains("entity/breeze/breeze_wind", definition.TexturePaths);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).
