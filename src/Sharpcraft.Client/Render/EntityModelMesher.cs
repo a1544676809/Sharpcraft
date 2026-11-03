@@ -187,8 +187,8 @@ public sealed class EntityModelMesher
 
     private static EntityModelDefinition ResolveModel(EntityRenderState entity, EntityVariantTable? variants) =>
         variants is null
-            ? EntityModelResolver.Resolve(entity.TypeId)
-            : variants.Resolve(entity.TypeId, entity.VariantId);
+            ? EntityModelResolver.Resolve(entity.TypeId, entity.IsBaby)
+            : variants.Resolve(entity.TypeId, entity.VariantId, entity.IsBaby);
 
     private static bool HasEmissive(EntityModelDefinition model)
     {

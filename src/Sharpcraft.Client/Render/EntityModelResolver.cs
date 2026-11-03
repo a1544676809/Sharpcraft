@@ -113,7 +113,7 @@ public static class EntityModelResolver
     private static readonly Dictionary<(int TypeId, string Key), EntityModelDefinition> VariantModels = new();
 
     public static IReadOnlyCollection<EntityModelDefinition> Definitions =>
-        Models.Values.Concat(VariantModels.Values).Distinct().ToArray();
+        Models.Values.Concat(VariantModels.Values).Concat(BabyModels.Values).Concat(BabyVariantModels.Values).Distinct().ToArray();
 
     /// <summary>Registers a named variant for an entity type.</summary>
     public static void RegisterVariant(int typeId, string key, EntityModelDefinition definition)
@@ -134,22 +134,22 @@ public static class EntityModelResolver
     }
 
     /// <summary>Looks up a named variant, or null when the type has no such variant.</summary>
-    public static EntityModelDefinition? TryResolveVariant(int typeId, string key) =>
-        VariantModels.TryGetValue((typeId, key), out var definition) ? definition : null;
+    public static EntityModelDefinition? TryResolveVariant(int typeId, string key, bool baby = false) =>
+        (baby ? BabyVariantModels : VariantModels).TryGetValue((typeId, key), out var definition) ? definition : null;
 
     /// <summary>
     /// Looks up a named variant and throws when it is missing. Used by tools and tests so an unhandled variant is loud
     /// instead of silently falling back (docs/analysis/render/entity-variants.md 6).
     /// </summary>
-    public static EntityModelDefinition ResolveVariantStrict(int typeId, string key) =>
-        TryResolveVariant(typeId, key)
+    public static EntityModelDefinition ResolveVariantStrict(int typeId, string key, bool baby = false) =>
+        TryResolveVariant(typeId, key, baby)
         ?? throw new KeyNotFoundException($"no variant '{key}' registered for entity type {typeId}");
 
-    public static EntityModelDefinition? TryResolve(int typeId) =>
-        Models.TryGetValue(typeId, out var definition) ? definition : null;
+    public static EntityModelDefinition? TryResolve(int typeId, bool baby = false) =>
+        (baby ? BabyModels : Models).TryGetValue(typeId, out var definition) ? definition : null;
 
-    public static EntityModelDefinition Resolve(int typeId) =>
-        TryResolve(typeId) ?? Placeholder;
+    public static EntityModelDefinition Resolve(int typeId, bool baby = false) =>
+        TryResolve(typeId, baby) ?? Placeholder;
 
     public static int? FindTypeId(string name)
     {
@@ -169,6 +169,9 @@ public static class EntityModelResolver
         ArgumentNullException.ThrowIfNull(definition);
         Models[typeId] = definition;
     }
+
+    private static readonly Dictionary<int, EntityModelDefinition> BabyModels = new(BabyModelDefinitions.Models);
+    private static readonly Dictionary<(int TypeId, string Key), EntityModelDefinition> BabyVariantModels = new(BabyModelDefinitions.Variants);
 
     static EntityModelResolver()
     {

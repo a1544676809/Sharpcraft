@@ -460,6 +460,24 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void BabyPigCowChickenResolveToTheirOwnGeometryAndTextures()
+    {
+        var pig = EntityModelResolver.Resolve(PigModelDefinition.PigEntityTypeId, true);
+        var cow = EntityModelResolver.Resolve(CowModelDefinition.CowEntityTypeId, true);
+        var chicken = EntityModelResolver.Resolve(ChickenModelDefinition.ChickenEntityTypeId, true);
+
+        Assert.Equal("baby_pig", pig.Name);
+        Assert.Equal(7, pig.Parts.Count);
+        Assert.Equal("baby_cow", cow.Name);
+        Assert.Equal(9, cow.Parts.Count);
+        Assert.Equal("baby_chicken", chicken.Name);
+        Assert.Equal(8, chicken.Parts.Count);
+        Assert.Equal("entity/cow/cow_cold_baby",
+            EntityModelResolver.ResolveVariantStrict(CowModelDefinition.CowEntityTypeId, "cold", true).TexturePath);
+        Assert.Equal("baby_pig", EntityVariantTable.Builtin.Resolve(PigModelDefinition.PigEntityTypeId, 0, true).Name);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

@@ -79,11 +79,11 @@ public sealed class EntityVariantTable
     }
 
     /// <summary>Resolves a raw variant value, falling back to the default variant and recording a miss.</summary>
-    public EntityModelDefinition Resolve(int typeId, int variantId)
+    public EntityModelDefinition Resolve(int typeId, int variantId, bool baby = false)
     {
         if (!EntityVariantSpecs.TryGet(typeId, out var spec))
         {
-            return EntityModelResolver.Resolve(typeId);
+            return EntityModelResolver.Resolve(typeId, baby);
         }
 
         var value = variantId & spec.ValueMask;
@@ -92,19 +92,19 @@ public sealed class EntityVariantTable
             : _names.TryGetValue((typeId, value), out var mapped)
                 ? (name: mapped, found: true)
                 : (name: string.Empty, found: false);
-        if (known.found && EntityModelResolver.TryResolveVariant(typeId, known.name) is { } definition)
+        if (known.found && EntityModelResolver.TryResolveVariant(typeId, known.name, baby) is { } definition)
         {
             return definition;
         }
 
         _unknown.Add($"{typeId}:{(known.found ? known.name : value.ToString(System.Globalization.CultureInfo.InvariantCulture))}");
-        return EntityModelResolver.TryResolveVariant(typeId, spec.DefaultKey)
-            ?? EntityModelResolver.Resolve(typeId);
+        return EntityModelResolver.TryResolveVariant(typeId, spec.DefaultKey, baby)
+            ?? EntityModelResolver.Resolve(typeId, baby);
     }
 
     /// <summary>Resolves a raw variant value, throwing when no built-in definition exists.</summary>
     /// <exception cref="KeyNotFoundException">The value has no registered variant definition.</exception>
-    public EntityModelDefinition ResolveStrict(int typeId, int variantId)
+    public EntityModelDefinition ResolveStrict(int typeId, int variantId, bool baby = false)
     {
         if (!EntityVariantSpecs.TryGet(typeId, out var spec))
         {
@@ -114,7 +114,7 @@ public sealed class EntityVariantTable
         var value = variantId & spec.ValueMask;
         if (spec.KeySelector is { } selector)
         {
-            return EntityModelResolver.ResolveVariantStrict(typeId, selector(variantId));
+            return EntityModelResolver.ResolveVariantStrict(typeId, selector(variantId), baby);
         }
 
         if (!_names.TryGetValue((typeId, value), out var name))
@@ -122,6 +122,6 @@ public sealed class EntityVariantTable
             throw new KeyNotFoundException($"variant value {value} is not in the registry for entity type {typeId}");
         }
 
-        return EntityModelResolver.ResolveVariantStrict(typeId, name);
+        return EntityModelResolver.ResolveVariantStrict(typeId, name, baby);
     }
 }

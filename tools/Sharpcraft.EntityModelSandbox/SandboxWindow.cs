@@ -60,7 +60,8 @@ internal static class SandboxWindow
             }
         }
 
-        var model = variantTable.Resolve(typeId, variantId);
+        var sandboxBaby = Environment.GetEnvironmentVariable("MC_SANDBOX_BABY") == "1";
+        var model = variantTable.Resolve(typeId, variantId, sandboxBaby);
         var sprite = atlas.Get(model.TexturePath) ?? throw new InvalidDataException($"skin {model.TexturePath} missing from atlas");
         var sandboxState = Environment.GetEnvironmentVariable("MC_SANDBOX_STATE") ?? string.Empty;
         var tintText = Environment.GetEnvironmentVariable("MC_SANDBOX_TINT");
@@ -79,7 +80,8 @@ internal static class SandboxWindow
             IsCharging: sandboxState.Contains("charging", StringComparison.OrdinalIgnoreCase),
             IsHidingInShell: sandboxState.Contains("shell", StringComparison.OrdinalIgnoreCase) || sandboxState.Contains("hiding", StringComparison.OrdinalIgnoreCase),
             Tint: tint,
-            PatternTint: patternTint);
+            PatternTint: patternTint,
+            IsBaby: sandboxBaby);
         var mesher = new EntityModelMesher();
         var state = new Dictionary<string, FaceUvTransform>();
         var statePath = Path.Combine(Path.GetTempPath(), "sharpcraft-face-state.json");

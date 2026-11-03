@@ -174,3 +174,10 @@ P1 只做**静态姿态 + 朝向**，明确排除骨骼动画、物品装备渲�
 - 顶点色（vertex colour）由 mesher 写入 tint，`fs_entity_cutout` 用 `input.colour` 与 lightmap 相乘，等价于原版模型 tint。
 - 热带鱼用两个乘子：`Tint`（baseColor，作用于基础层）和 `PatternTint`（patternColor，作用于 pattern 复制层）。pattern 复制层与基础几何同顶点、同 draw 顺序，`LESS_EQUAL` 深度让后绘制者覆盖。
 - 变体键不按线性索引：`EntityVariantSpec.KeySelector` 可把原始 packed 值映射成名称；热带鱼 packed 值低 16 位是 pattern（含 base id），16..23 是 baseColor id，24..31 是 patternColor id。颜色表来自 `DyeColor.getTextureDiffuseColor()`。
+
+## 15. 幼年模型（IsBaby）
+
+- `EntityRenderState.IsBaby` 由 `EntityTracker` 从同步数据 index 16 的 `AgeableMob` baby 布尔解析（只对 `AgeableTypes` 白名单类型生效，避免把 Ghast charging 等 index 16 误判）。
+- `EntityModelResolver` 增加幼年字典：`Resolve(typeId, baby)`、`TryResolveVariant(typeId, key, baby)`；`EntityVariantTable.Resolve(..., baby)` 据此选择。
+- 幼年几何多数是独立 `Baby*Model`（不是简单缩放）；幼年纹理使用 `*_baby` / `*_*_baby`，与成年变体键一一对应。
+- 已铺：baby pig / cow / chicken（含 warm/cold 幼年纹理）。其余 Baby* 逐批补。

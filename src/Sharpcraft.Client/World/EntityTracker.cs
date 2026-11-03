@@ -100,6 +100,9 @@ public sealed class TrackedEntity
     /// <summary>Game tick at which the variant/state value last changed (for states that depend on elapsed time).</summary>
     public long StateStartTick { get; internal set; }
 
+    /// <summary>True when the entity reports the AgeableMob baby flag (synced data index 16).</summary>
+    public bool IsBaby { get; internal set; }
+
     /// <summary>
     /// Authoritative target position. Vanilla does not snap a remote entity to the position the server reports:
     /// it approaches it over a few ticks, which is why the rendered entity trails slightly behind the
@@ -172,7 +175,8 @@ public readonly record struct EntityRenderState(
     bool IsCharging = false,
     bool IsHidingInShell = false,
     System.Numerics.Vector3 Tint = default,
-    System.Numerics.Vector3 PatternTint = default);
+    System.Numerics.Vector3 PatternTint = default,
+    bool IsBaby = false);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -429,6 +433,11 @@ public sealed class EntityTracker
                 entity.AngerEndTime = item.LongValue;
                 applied = true;
             }
+            else if (item.Index == 16 && item.SerializerId == 8 && AgeableTypes.Contains(entity.TypeId))
+            {
+                entity.IsBaby = item.Value != 0;
+                applied = true;
+            }
         }
 
         return applied;
@@ -532,7 +541,8 @@ public sealed class EntityTracker
                 IsCharging: spec.ChargingMask != 0 && (entity.Flags & spec.ChargingMask) != 0,
                 IsHidingInShell: hidingInShell,
                 Tint: tint,
-                PatternTint: patternTint));
+                PatternTint: patternTint,
+                IsBaby: entity.IsBaby));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);
@@ -544,6 +554,13 @@ public sealed class EntityTracker
     [
         16383998, 16351261, 13061821, 3847130, 16701501, 8439583, 15961002, 4673362,
         10329495, 1481884, 8991416, 3949738, 8606770, 6192150, 11546150, 1908001
+    ];
+
+    /// <summary>Entity types whose synced data index 16 is the AgeableMob baby flag.</summary>
+    private static readonly HashSet<int> AgeableTypes =
+    [
+        4, 7, 11, 19, 21, 26, 30, 36, 59, 65, 67, 79, 89, 101, 102, 103, 111, 122,
+        132, 141, 143, 145, 152, 153, 156, 158
     ];
 
     private static System.Numerics.Vector3 DyeTint(int dyeId)

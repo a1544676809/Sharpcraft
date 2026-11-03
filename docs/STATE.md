@@ -2632,3 +2632,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 顶点 tint：`EntityModelPart.TintSelector`、`EntityRenderState.Tint/PatternTint`，mesher 写入顶点色；packed variant 通过 `EntityVariantSpec.KeySelector` 解 pattern，DyeColor texture diffuse 解 base/pattern 颜色。
 - Tropical Fish：small(5 部件)/large(6 部件) + 同几何 pattern 复制层（12 种 pattern 纹理，`PatternTint`），type id 140，纹理 32×32；静态 bind pose（摆尾/旋转/世界旋转未移植）。
 - 沙盒新增 `MC_SANDBOX_TINT` / `MC_SANDBOX_PATTERN_TINT`（十六进制 RRGGBB）用于颜色验收。
+
+### 2026-11-03 幼年模型基础设施 + Pig/Cow/Chicken（T-520/T-521）
+
+- `EntityRenderState.IsBaby` 来自同步 index16（AgeableMob 白名单）；resolver/variant table 支持 baby 选择；Definitions 收录幼年纹理；沙盒 `MC_SANDBOX_BABY=1`。
+- 已实现 BabyPigModel（7 件, 32×32）、BabyCowModel（9 件, 64×64）、BabyChickenModel（8 件, 16×16），含 temperate/warm/cold 幼年纹理；静态 bind pose。
+- 后续按同一路径继续其余 Baby*（cat/wolf/horse/llama/fox/rabbit/camel/goat/panda/polar bear/squid/turtle/bee/dolphin/axolotl/strider/hoglin/piglin/zombie/villager/sniffer/armadillo/nautilus 等）。
