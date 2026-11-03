@@ -56,6 +56,17 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheDolphinTypeIsRegisteredWithItsFinChain()
+    {
+        var definition = EntityModelResolver.Resolve(DolphinModelDefinition.DolphinEntityTypeId);
+
+        Assert.Equal("dolphin", definition.Name);
+        Assert.Equal(8, definition.Parts.Count);
+        Assert.Contains(definition.Parts, part => part.Name == "tail_fin" && part.Parent == "tail");
+        Assert.Contains(definition.Parts, part => part.Name == "nose" && part.Parent == "head");
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

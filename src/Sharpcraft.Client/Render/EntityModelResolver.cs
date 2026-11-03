@@ -36,6 +36,7 @@ public static class EntityModelResolver
         [CamelModelDefinition.CamelEntityTypeId] = CamelModelDefinition.Definition,
         [BatModelDefinition.BatEntityTypeId] = BatModelDefinition.Definition,
         [BeeModelDefinition.BeeEntityTypeId] = BeeModelDefinition.Definition,
+        [DolphinModelDefinition.DolphinEntityTypeId] = DolphinModelDefinition.Definition,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,
         [CatModelDefinition.CatEntityTypeId] = CatModelDefinition.Definition,
         [CatModelDefinition.OcelotEntityTypeId] = CatModelDefinition.Ocelot,

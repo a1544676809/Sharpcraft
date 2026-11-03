@@ -2398,3 +2398,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 已接：Wolf 9 变体 × wild/tame/angry；Fox red/snow × idle/sleep；Bee angry/nectar 四态（均按原版 `getTexture` 规则）。
 - 沙盒 `MC_SANDBOX_STATE=tame|angry|sleeping|nectar` 可强制状态；截图确认 Wolf tame、Bee nectar、Fox snow-sleeping 正确。
 - 测试：状态选择器 + tracker flag/anger 用例；全量 Client **653 通过**。
+
+### 2026-11-03 Dolphin 模型（T-478）
+
+- `DolphinModelDefinition`：body→back_fin、左右侧鳍（x/zRot）、head→nose、tail→tail_fin；纹理 `entity/dolphin/dolphin`，type id 36。
+- 注册 + 注册测试（8 部件、tail_fin/nose 的 Parent）；沙盒目视正常。
