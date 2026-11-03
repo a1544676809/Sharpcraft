@@ -85,6 +85,7 @@ public static class EntityModelResolver
         [IllagerModelDefinition.VindicatorEntityTypeId] = IllagerModelDefinition.Vindicator,
         [IllagerModelDefinition.EvokerEntityTypeId] = IllagerModelDefinition.Evoker,
         [IllagerModelDefinition.PillagerEntityTypeId] = IllagerModelDefinition.Pillager,
+        [IllagerModelDefinition.IllusionerEntityTypeId] = IllagerModelDefinition.Illusioner,
         [BlazeModelDefinition.BlazeEntityTypeId] = BlazeModelDefinition.Definition,
         [TurtleModelDefinition.TurtleEntityTypeId] = TurtleModelDefinition.Definition,
         [HumanoidMobModelDefinition.HuskEntityTypeId] = HumanoidMobModelDefinition.Husk,

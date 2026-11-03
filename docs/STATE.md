@@ -2520,3 +2520,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - GiantZombieModel 使用 humanoid 基础几何 + `MeshTransformer.scaling(6.0)`；我们复用 Zombie 几何并设 `Scale = 6`（等价，脚底锚点一致），纹理 `entity/zombie/zombie`，type id 60。
 - 静态 bind pose；僵尸手臂动画（animateZombieArms）与装备层未移植。
 - 沙盒调试工具新增 `MC_SANDBOX_DIST` / `MC_SANDBOX_TARGET_Y`，便于给巨型模型取景。
+
+### 2026-11-03 Illusioner 模型（T-498）
+
+- 复用 `IllagerModel` 几何（与 Evoker/Vindicator/Pillager 同一套），纹理 `entity/illager/illusioner`，type id 69。
+- 静态 bind pose；施法/隐身分身等渲染特例未移植。沙盒目视正常。

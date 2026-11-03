@@ -276,6 +276,16 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheIllusionerReusesTheIllagerGeometry()
+    {
+        var definition = EntityModelResolver.Resolve(IllagerModelDefinition.IllusionerEntityTypeId);
+
+        Assert.Equal("illusioner", definition.Name);
+        Assert.Equal("entity/illager/illusioner", definition.TexturePath);
+        Assert.Equal(IllagerModelDefinition.Evoker.Parts.Count, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

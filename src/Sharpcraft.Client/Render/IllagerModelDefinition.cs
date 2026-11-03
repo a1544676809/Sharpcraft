@@ -12,10 +12,12 @@ public static class IllagerModelDefinition
     public const int VindicatorEntityTypeId = 144;
     public const int EvokerEntityTypeId = 47;
     public const int PillagerEntityTypeId = 104;
+    public const int IllusionerEntityTypeId = 69;
 
     public static readonly EntityModelDefinition Vindicator = Create("vindicator", "entity/illager/vindicator");
     public static readonly EntityModelDefinition Evoker = Create("evoker", "entity/illager/evoker");
     public static readonly EntityModelDefinition Pillager = Create("pillager", "entity/illager/pillager");
+    public static readonly EntityModelDefinition Illusioner = Create("illusioner", "entity/illager/illusioner");
 
     private static EntityModelDefinition Create(string name, string texturePath) => new(
         name,
