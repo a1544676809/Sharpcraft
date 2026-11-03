@@ -78,29 +78,35 @@ internal static class SandboxWindow
         var hasLast = false;
         Vector2 last = default;
 
-        DynamicGeometry Build()
+        IReadOnlyList<EntityGeometryLayer> Build()
         {
             var parts = model.Parts;
             var partName = parts[partIndex % parts.Count].Name;
-            var geometry = mesher.Build([entity], sprite, sprite.Width, sprite.Height, state,
+            var layers = mesher.BuildLayers([entity], sprite, sprite.Width, sprite.Height, state,
                 onlyPart: isolateSelectedPart ? partName : null,
                 excludedPart: hideSelectedPart ? partName : null,
                 skinAtlas: atlas,
                 variants: variantTable);
             if (!hideSelectedPart)
             {
-                AppendSelectionHighlight(geometry, sprite, parts[partIndex % parts.Count], Faces[faceIndex]);
+                foreach (var layer in layers)
+                {
+                    if (layer.Kind == EntityGeometryLayerKind.Cutout)
+                    {
+                        AppendSelectionHighlight(layer.Geometry, sprite, parts[partIndex % parts.Count], Faces[faceIndex]);
+                        break;
+                    }
+                }
             }
 
-            return geometry;
+            return layers;
         }
 
-        var geometry = Build();
         var request = new FrameRequest(
             Width: 900,
             Height: 700,
-            Vertices: geometry.Vertices.AsSpan(0, geometry.VertexFloats).ToArray(),
-            Indices: geometry.Indices.AsSpan(0, geometry.IndexCount).ToArray(),
+            Vertices: [],
+            Indices: [],
             ClearColour: new Vector4(0.16f, 0.19f, 0.24f, 1f),
             CameraPosition: new Vector3(0f, 1.1f, -3.2f),
             CameraTarget: new Vector3(0f, 1.0f, 0f),
@@ -194,7 +200,8 @@ internal static class SandboxWindow
                     -MathF.Cos(yaw) * MathF.Cos(pitch)) * 3.4f;
                 return (eye, target);
             },
-            dynamicGeometry: Build);
+            dynamicGeometry: null,
+            entityLayers: Build);
 
         string Title()
         {

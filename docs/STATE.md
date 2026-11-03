@@ -2356,3 +2356,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
   沙盒窗口 6 秒运行无 shader validation error；全量 Client **646 通过**。
 - **未做**：Emissive（Enderman eyes）——独立深度 `>=`/不写/加色状态，留作下一步。
 - 注意：沙盒仍用合并 `Build` 路径，因此只验证了 shader/pipeline 编译；逐层像素验收需要真服务器窗口或把沙盒切到 layered 路径。
+
+### 2026-11-03 沙盒统一到分层路径（T-473）
+
+- `SandboxWindow` 不再把合并几何塞进 `FrameRequest.Vertices`，改为 `BuildLayers` + `entityLayers:`；部件高亮叠加在 Cutout 层。
+- 沙盒与真实窗口因此走同一条多层提交路径；Player（overlay 半透明）、Drowned（outer）、Slime（outer 半透明）目视确认。
+- 全量测试与 docs 门禁通过后提交。
