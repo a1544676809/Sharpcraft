@@ -335,6 +335,18 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void ThePhantomTypeHasTwoSegmentWingsAndTail()
+    {
+        var definition = EntityModelResolver.Resolve(PhantomModelDefinition.PhantomEntityTypeId);
+
+        Assert.Equal("phantom", definition.Name);
+        Assert.Equal(8, definition.Parts.Count);
+        Assert.Contains(definition.Parts, part => part.Name == "left_wing_tip" && part.Parent == "left_wing_base");
+        Assert.Contains(definition.Parts, part => part.Name == "tail_tip" && part.Parent == "tail_base");
+        Assert.Equal("entity/phantom/phantom_eyes", definition.EmissiveTexturePath);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

@@ -2558,3 +2558,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - 成年模型：`body` 16³ + 9 条触须（body 子级，长度 5/7/4/5/5/7/8/8/5），整体 `Scale = 4.0`；纹理 `entity/ghast/happy_ghast`（声明 64×64，PNG 128×128）。
 - 静态 bind pose；harness/ropes 层与幼年模型（0.2375 scale + inner_body）留待后续。
+
+### 2026-11-03 Phantom 模型（T-505）
+
+- `body`(+`head`)、`tail_base`→`tail_tip`、左右 `wing_base`→`wing_tip`（右翼 mirror）；纹理 `entity/phantom/phantom`，眼睛层 `phantom_eyes`，type id 100。
+- 静态 bind pose；扇翅/摆尾动画未移植。沙盒目视正常（蓝色翼膜 + 绿色发光眼）。
