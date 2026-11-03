@@ -174,6 +174,18 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheShulkerTypeHasLidBaseAndHeadWithColourVariants()
+    {
+        var definition = EntityModelResolver.Resolve(ShulkerModelDefinition.ShulkerEntityTypeId);
+
+        Assert.Equal("shulker", definition.Name);
+        Assert.Equal(3, definition.Parts.Count);
+        Assert.Contains(definition.Parts, part => part.Name == "lid");
+        Assert.Equal(16, ShulkerModelDefinition.VariantKeys.Count);
+        Assert.Equal("entity/shulker/shulker_light_blue", EntityModelResolver.ResolveVariantStrict(ShulkerModelDefinition.ShulkerEntityTypeId, "light_blue").TexturePath);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

@@ -95,7 +95,13 @@ public static class EntityVariantSpecs
         [142] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 16, ChargingMask: 1),
 
         // Parrot: TamableAnimal adds flags (18) and owner (19), then the integer variant at 20.
-        [99] = new(20, null, ["red_blue", "blue", "green", "yellow_blue", "gray"], "red_blue")
+        [99] = new(20, null, ["red_blue", "blue", "green", "yellow_blue", "gray"], "red_blue"),
+
+        // Shulker: attach face (16), peek (17), dye colour byte at 18 (16 = default colour).
+        [115] = new(18, null,
+            ["white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
+             "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"],
+            "default")
     };
 
     /// <summary>Number of entity types with a variant field.</summary>

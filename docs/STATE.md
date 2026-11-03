@@ -2454,3 +2454,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `ParrotModelDefinition`：body/tail/双翅/head(+head2/beak1/beak2/feather)/双腿；pivot 与旋转按原版（root 部件手动取反，子部件由 FromVanillaChild 处理）。
 - 5 变体（red_blue/blue/green/yellow_blue/gray，accessor 20，type id 99；gray 文件名是 `parrot_grey`）。
 - 静态 bind pose；站/飞/坐/肩/派对姿势与扇翅动画未移植。沙盒 blue 目视正常。
+
+### 2026-11-03 Shulker 模型（T-487）
+
+- `ShulkerModelDefinition`：lid / base / head 三部件（bind pose 盖子合上，head 在壳内）。
+- 16 个染料颜色变体（byte accessor 18，type id 115；值 16 = 无颜色 → 默认纹理），纹理 `shulker` / `shulker_<color>`。
+- 静态 bind pose；peek/开盖与头部动画未移植，原版 `entityCutoutZOffset` 的深度偏移未复刻。沙盒 light_blue 目视正常。
