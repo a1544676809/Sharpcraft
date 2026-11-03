@@ -76,7 +76,10 @@ public static class EntityVariantSpecs
         [55] = new(18, null, ["red", "snow"], "red", FlagsAccessorIndex: 19, SleepingMask: 32),
 
         // Bee: byte flags (18) with the nectar bit at 8; anger end time follows at 19. No variant registry.
-        [11] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 18, NectarMask: 8, AngerAccessorIndex: 19)
+        [11] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 18, NectarMask: 8, AngerAccessorIndex: 19),
+
+        // Frog: first accessor is the frog_variant holder.
+        [56] = new(18, "frog_variant", ["temperate", "warm", "cold"], "temperate")
     };
 
     /// <summary>Number of entity types with a variant field.</summary>

@@ -2410,3 +2410,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - Elder 复用几何，`scale 2.35` + `entity/guardian/guardian_elder`；type id 64 / 41。
 - **未移植**：spike 伸缩/尾摆动动画、Guardian 光束（不是模型部件）。
 - 注册 + 注册测试（23 部件、12 spike、Parent 关系、Elder scale）；沙盒目视正常（绿身橙刺红眼）。
+
+### 2026-11-03 Frog / Tadpole 模型（T-480）
+
+- Frog：`root`(group)→body(+body_layer)/head(+head_layer、eyes→双眼)/croaking_body/tongue/双臂(+hand)/双腿(+foot)；注册 `frog_variant`（temperate/warm/cold，accessor 18，type id 56）。
+- Tadpole：body + 平面 tail，type id 134，纹理 16×16。
+- 静态 bind pose；跳跃/鼓鸣/舌/尾动画未移植。沙盒确认 warm（米白）、tadpole 外观正常。

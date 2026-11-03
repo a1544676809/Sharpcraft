@@ -37,6 +37,8 @@ public static class EntityModelResolver
         [BatModelDefinition.BatEntityTypeId] = BatModelDefinition.Definition,
         [BeeModelDefinition.BeeEntityTypeId] = BeeModelDefinition.Definition,
         [DolphinModelDefinition.DolphinEntityTypeId] = DolphinModelDefinition.Definition,
+        [FrogModelDefinition.FrogEntityTypeId] = FrogModelDefinition.Definition,
+        [TadpoleModelDefinition.TadpoleEntityTypeId] = TadpoleModelDefinition.Definition,
         [GuardianModelDefinition.GuardianEntityTypeId] = GuardianModelDefinition.Definition,
         [GuardianModelDefinition.ElderGuardianEntityTypeId] = GuardianModelDefinition.Elder,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,
@@ -143,6 +145,7 @@ public static class EntityModelResolver
         RegisterVariants(HorseModelDefinition.HorseEntityTypeId, HorseModelDefinition.Variants);
         RegisterVariants(WolfModelDefinition.WolfEntityTypeId, WolfModelDefinition.Variants);
         RegisterVariants(FoxModelDefinition.FoxEntityTypeId, FoxModelDefinition.Variants);
+        RegisterVariants(FrogModelDefinition.FrogEntityTypeId, FrogModelDefinition.Variants);
         RegisterVariants(LlamaModelDefinition.LlamaEntityTypeId, LlamaModelDefinition.Variants);
     }
 }

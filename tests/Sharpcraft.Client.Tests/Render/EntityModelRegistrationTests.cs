@@ -82,6 +82,20 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheFrogAndTadpoleTypesAreRegistered()
+    {
+        var frog = EntityModelResolver.Resolve(FrogModelDefinition.FrogEntityTypeId);
+        var tadpole = EntityModelResolver.Resolve(TadpoleModelDefinition.TadpoleEntityTypeId);
+
+        Assert.Equal("frog", frog.Name);
+        Assert.Equal(18, frog.Parts.Count);
+        Assert.Contains(frog.Parts, part => part.Name == "right_eye" && part.Parent == "eyes");
+        Assert.Contains(frog.Parts, part => part.Name == "body_layer" && part.Parent == "body");
+        Assert.Equal("tadpole", tadpole.Name);
+        Assert.Equal(2, tadpole.Parts.Count);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).
