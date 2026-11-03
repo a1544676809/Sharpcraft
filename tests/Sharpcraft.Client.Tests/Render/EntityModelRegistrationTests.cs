@@ -310,6 +310,19 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheGhastTypeHasNineTentaclesAndTheShootingTexture()
+    {
+        var definition = EntityModelResolver.Resolve(GhastModelDefinition.GhastEntityTypeId);
+
+        Assert.Equal("ghast", definition.Name);
+        Assert.Equal(10, definition.Parts.Count);
+        Assert.Equal(9, definition.Parts.Count(part => part.Name.StartsWith("tentacle", StringComparison.Ordinal)));
+        Assert.Equal(13f, definition.Parts.Single(part => part.Name == "tentacle1").Height);
+        Assert.Equal(4.5f, definition.Scale);
+        Assert.NotNull(definition.TextureSelector);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

@@ -60,6 +60,7 @@ public static class EntityModelResolver
         [GiantModelDefinition.GiantEntityTypeId] = GiantModelDefinition.Definition,
         [SnifferModelDefinition.SnifferEntityTypeId] = SnifferModelDefinition.Definition,
         [CreakingModelDefinition.CreakingEntityTypeId] = CreakingModelDefinition.Definition,
+        [GhastModelDefinition.GhastEntityTypeId] = GhastModelDefinition.Definition,
         [GuardianModelDefinition.GuardianEntityTypeId] = GuardianModelDefinition.Definition,
         [GuardianModelDefinition.ElderGuardianEntityTypeId] = GuardianModelDefinition.Elder,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,

@@ -2536,3 +2536,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 结构：root / upper_body 两层 group；head 4 盒（主体/顶盖/左右侧板）、body 2 盒、right_arm 2 盒、left_arm 3 盒、左右腿 2/3 盒，共 18 部件。
 - 纹理 `entity/creaking/creaking`，眼睛层 `creaking_eyes`；type id 31。
 - 静态 bind pose；walk/attack/invulnerable/death 动画未移植。**已知差异**：原版眼睛层只在 `eyesGlowing` 时渲染且仅 head；我们始终渲染整个 emissive 头层（贴图其余透明，观感近似）。
+
+### 2026-11-03 Ghast 模型（T-501）
+
+- `body`（16×16×16）+ 9 条 `tentacle`（长度按原版 seeded `Random(1660)` 序列：8/13/9/11/11/10/12/9/12；pivot 由原版公式计算），整体 `Scale = 4.5`。
+- `ghast` / `ghast_shooting` 纹理由 boolean charging（accessor 16）选择；type id 58。
+- 静态 bind pose；触须摆动 `animateTentacles` 未移植。

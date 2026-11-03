@@ -107,7 +107,10 @@ public static class EntityVariantSpecs
         [113] = new(18, null, ["small", "medium", "large"], "medium"),
 
         // Pufferfish: puff state 0/1/2 selects a completely different model.
-        [110] = new(18, null, ["small", "medium", "large"], "small")
+        [110] = new(18, null, ["small", "medium", "large"], "small"),
+
+        // Ghast: boolean charging flag at 16 (no AgeableMob in the chain).
+        [58] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 16, ChargingMask: 1)
     };
 
     /// <summary>Number of entity types with a variant field.</summary>
