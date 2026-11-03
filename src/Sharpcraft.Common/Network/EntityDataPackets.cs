@@ -218,8 +218,14 @@ public static class EntityDataPackets
 
                 return DecodeStatus.Success;
 
-            case 18: // VILLAGER_DATA: type, profession, level
-                for (var i = 0; i < 3; i++)
+            case 18: // VILLAGER_DATA: type holder, profession holder, level
+                status = reader.TryReadVarInt(out value);
+                if (status != DecodeStatus.Success)
+                {
+                    return status;
+                }
+
+                for (var i = 0; i < 2; i++)
                 {
                     status = reader.TryReadVarInt(out _);
                     if (status != DecodeStatus.Success)

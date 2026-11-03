@@ -43,4 +43,32 @@ public static class VillagerModelDefinition
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/wandering_trader/wandering_trader",
         0.9375f);
+
+    public static readonly IReadOnlyList<string> VariantKeys = ["plains", "desert", "jungle", "savanna", "snow", "swamp", "taiga"];
+
+    public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
+        VariantMap(Definition.Parts, "entity/villager/type/", 0.9375f);
+
+    internal static Dictionary<string, EntityModelDefinition> VariantMap(
+        IReadOnlyList<EntityModelPart> parts,
+        string texturePrefix,
+        float scale,
+        string namePrefix = "villager_",
+        string baseTexture = "entity/villager/villager")
+    {
+        var variants = new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal);
+        foreach (var key in VariantKeys)
+        {
+            variants[key] = new EntityModelDefinition(
+                namePrefix + key,
+                64,
+                64,
+                EntityModelLayerHelpers.WithCopy(parts, texturePrefix + key, static _ => true, 0.05f),
+                PlayerModelDefinition.DefaultFaceTransforms,
+                baseTexture,
+                scale);
+        }
+
+        return variants;
+    }
 }

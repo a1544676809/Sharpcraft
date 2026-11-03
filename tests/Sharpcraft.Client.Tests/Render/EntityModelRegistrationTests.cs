@@ -577,6 +577,15 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void VillagerAndZombieVillagerHaveBiomeTypeLayers()
+    {
+        Assert.Contains("entity/villager/type/desert", EntityModelResolver.ResolveVariantStrict(143, "desert").TexturePaths);
+        Assert.Contains("entity/zombie_villager/type/jungle", EntityModelResolver.ResolveVariantStrict(157, "jungle").TexturePaths);
+        Assert.Contains("entity/villager/baby/taiga", EntityModelResolver.ResolveVariantStrict(143, "taiga", true).TexturePaths);
+        Assert.Contains("entity/zombie_villager/baby/snow", EntityModelResolver.ResolveVariantStrict(157, "snow", true).TexturePaths);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).
@@ -584,3 +593,4 @@ public sealed class EntityModelRegistrationTests
         Assert.Equal(111, RabbitModelDefinition.RabbitEntityTypeId);
     }
 }
+

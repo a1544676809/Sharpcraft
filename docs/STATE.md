@@ -2712,3 +2712,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `CollarAccessorIndex`：Cat=23、Wolf=21（DyeColor id），并用 TameMask 4 只给已驯服生成项圈；`EntityTracker` 解析成 `CollarTint/HasCollar`。
 - `EntityModelLayerHelpers.WithCollar` 克隆整模型为 `cat_collar(_baby)` / `wolf_collar(_baby)` 纹理副本，Grow +0.1 避免与本体共面，`TintSelector` 使用 CollarTint。
 - 成年/幼年 Cat/Wolf 的 Definition.Parts 都包含 collar 副本，变体自动继承；沙盒 `MC_SANDBOX_COLLAR=RRGGBB` 验收（幼猫红项圈可见）。
+
+### 2026-11-03 Villager / Zombie Villager 生物群系纹理层（T-536）
+
+- `EntityDataPackets` case 18 现在读出 `VILLAGER_DATA` 的第一个 VarInt（type holder），再跳过 profession/level；spec `[143]/[157]` 用 `villager_type` 注册表键（plains/desert/jungle/savanna/snow/swamp/taiga）。
+- 成年纹理 `entity/villager/type/<type>` / `entity/zombie_villager/type/<type>`；幼年 `entity/villager/baby/<type>` / `entity/zombie_villager/baby/<type>`；`EntityModelLayerHelpers.WithCopy` 整模型副本叠加（Grow+0.05）。
+- 沙盒沙漠村民/幼年沙漠村民/jungle 幼年僵尸村民目视正常。

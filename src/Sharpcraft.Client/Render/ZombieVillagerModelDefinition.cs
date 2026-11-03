@@ -28,4 +28,7 @@ public static class ZombieVillagerModelDefinition
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/zombie_villager/zombie_villager");
+
+    public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
+        VillagerModelDefinition.VariantMap(Definition.Parts, "entity/zombie_villager/type/", 1f, "zombie_villager_", "entity/zombie_villager/zombie_villager");
 }

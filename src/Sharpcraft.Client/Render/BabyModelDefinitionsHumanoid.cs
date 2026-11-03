@@ -85,6 +85,32 @@ public static class BabyModelDefinitionsHumanoid
             [143] = Villager
         };
 
+    public static readonly IReadOnlyDictionary<(int TypeId, string Key), EntityModelDefinition> Variants = BuildVariants();
+
+    private static Dictionary<(int, string), EntityModelDefinition> BuildVariants()
+    {
+        var variants = new Dictionary<(int, string), EntityModelDefinition>();
+        foreach (var key in VillagerModelDefinition.VariantKeys)
+        {
+            variants[(143, key)] = new EntityModelDefinition(
+                "baby_villager_" + key,
+                64,
+                64,
+                EntityModelLayerHelpers.WithCopy(Villager.Parts, "entity/villager/baby/" + key, static _ => true, 0.05f),
+                PlayerModelDefinition.DefaultFaceTransforms,
+                "entity/villager/villager_baby");
+            variants[(157, key)] = new EntityModelDefinition(
+                "baby_zombie_villager_" + key,
+                64,
+                64,
+                EntityModelLayerHelpers.WithCopy(ZombieVillager.Parts, "entity/zombie_villager/baby/" + key, static _ => true, 0.05f),
+                PlayerModelDefinition.DefaultFaceTransforms,
+                "entity/zombie_villager/zombie_villager_baby");
+        }
+
+        return variants;
+    }
+
     private static EntityModelPart[] BuildDrownedParts()
     {
         var parts = new List<EntityModelPart>(ZombieParts);

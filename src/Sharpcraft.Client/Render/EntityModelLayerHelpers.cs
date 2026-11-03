@@ -9,7 +9,11 @@ namespace Sharpcraft.Client.Render;
 /// <summary>Clones a model's geometry as a collar overlay: same parts, collar texture, collar-colour tint, only while tamed.</summary>
 public static class EntityModelLayerHelpers
 {
-    public static EntityModelPart[] WithCollar(IReadOnlyList<EntityModelPart> parts, string texturePath)
+    public static EntityModelPart[] WithCollar(IReadOnlyList<EntityModelPart> parts, string texturePath) =>
+        WithCopy(parts, texturePath, static state => state.HasCollar, 0.1f,
+            static state => state.CollarTint == default ? Vector3.One : state.CollarTint);
+
+    public static EntityModelPart[] WithCopy(IReadOnlyList<EntityModelPart> parts, string texturePath, Func<EntityRenderState, bool> visible, float inflate = 0.05f, Func<EntityRenderState, Vector3>? tint = null)
     {
         var result = new List<EntityModelPart>(parts.Count * 2);
         result.AddRange(parts);
@@ -17,14 +21,16 @@ public static class EntityModelLayerHelpers
         {
             result.Add(part with
             {
-                Name = "collar_" + part.Name,
+                Name = "copylayer_" + part.Name,
                 TexturePath = texturePath,
-                Grow = part.Grow + 0.1f,
-                TintSelector = static state => state.CollarTint == default ? Vector3.One : state.CollarTint,
-                VisibleWhen = static state => state.HasCollar
+                Grow = part.Grow + inflate,
+                TintSelector = tint,
+                VisibleWhen = visible
             });
         }
 
         return [.. result];
     }
+
+    private static bool static_hasCollar(EntityRenderState state) => state.HasCollar;
 }

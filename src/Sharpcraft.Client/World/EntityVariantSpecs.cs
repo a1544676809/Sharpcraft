@@ -137,7 +137,11 @@ public static class EntityVariantSpecs
         [111] = new(18, null, ["brown", "white", "black", "white_splotched", "gold", "salt", "evil"], "brown", KeySelector: RabbitKey),
 
         // Panda: main gene byte at 18 (NORMAL/LAZY/WORRIED/PLAYFUL/BROWN/WEAK/AGGRESSIVE).
-        [97] = new(18, null, ["normal", "lazy", "worried", "playful", "brown", "weak", "aggressive"], "normal")
+        [97] = new(18, null, ["normal", "lazy", "worried", "playful", "brown", "weak", "aggressive"], "normal"),
+
+        // Villager / Zombie Villager: VillagerData at 18 (type holder, profession, level); only the type is used.
+        [143] = new(18, "villager_type", ["plains", "desert", "jungle", "savanna", "snow", "swamp", "taiga"], "plains"),
+        [157] = new(18, "villager_type", ["plains", "desert", "jungle", "savanna", "snow", "swamp", "taiga"], "plains")
     };
 
     /// <summary>Number of entity types with a variant field.</summary>
