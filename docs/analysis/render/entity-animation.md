@@ -85,3 +85,4 @@ updated: 2026-11-03
 - `docs/modules/entity-animation.md`
 - `docs/analysis/render/entity-render-backlog.md`
 - `docs/analysis/render/entity-equipment.md`
+

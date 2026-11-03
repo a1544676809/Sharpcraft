@@ -80,7 +80,9 @@ internal static class SandboxWindow
         var walkPosText = Environment.GetEnvironmentVariable("MC_SANDBOX_WALK_POS");
         var walkSpeedText = Environment.GetEnvironmentVariable("MC_SANDBOX_WALK_SPEED");
         var ageTicksText = Environment.GetEnvironmentVariable("MC_SANDBOX_AGE_TICKS");
-        Console.WriteLine($"equip body={ItemId(equipBodyText)} saddle={ItemId(equipSaddleText)}");
+        var animationText = Environment.GetEnvironmentVariable("MC_SANDBOX_ANIMATION");
+        var animationPausedText = Environment.GetEnvironmentVariable("MC_SANDBOX_ANIM_PAUSED");
+        var animationTimeText = Environment.GetEnvironmentVariable("MC_SANDBOX_ANIM_TIME");
         var entity = new EntityRenderState(1, typeId, 0f, 0f, 0f, 0f, 0f,
             HasChest: Environment.GetEnvironmentVariable("MC_SANDBOX_CHEST") == "1",
             HasEgg: Environment.GetEnvironmentVariable("MC_SANDBOX_EGG") == "1",
@@ -102,6 +104,29 @@ internal static class SandboxWindow
             WalkAnimationPos: float.TryParse(walkPosText, out var walkPos) ? walkPos : 0f,
             WalkAnimationSpeed: float.TryParse(walkSpeedText, out var walkSpeed) ? walkSpeed : 1f,
             AgeInTicks: float.TryParse(ageTicksText, out var ageTicks) ? ageTicks : 0f);
+        var animationClips = EntityAnimationController.ClipNames(typeId);
+        var animationIndex = 0;
+        if (animationText is { Length: > 0 } requestedAnimation)
+        {
+            var requestedIndex = animationClips.ToList().FindIndex(name => string.Equals(name, requestedAnimation, StringComparison.OrdinalIgnoreCase));
+            if (requestedIndex < 0)
+            {
+                throw new InvalidDataException($"unknown animation '{requestedAnimation}' for '{requestedModel}'");
+            }
+
+            animationIndex = requestedIndex;
+        }
+
+        var defaultAnimation = animationClips.Count > 0 && animationClips.Contains("walk") ? "walk" : (animationClips.Count > 0 ? animationClips[0] : null);
+        if (animationText is not { Length: > 0 } && defaultAnimation is not null)
+        {
+            animationIndex = animationClips.ToList().IndexOf(defaultAnimation);
+        }
+
+        var animationName = animationText is { Length: > 0 } ? animationClips[animationIndex] : defaultAnimation;
+        var animationPlaying = animationPausedText != "1";
+        var animationFixedTime = float.TryParse(animationTimeText, out var requestedAnimationTime) ? requestedAnimationTime : 0f;
+        var animationStart = Environment.TickCount64;
         var mesher = new EntityModelMesher();
         var state = new Dictionary<string, FaceUvTransform>();
         var statePath = Path.Combine(Path.GetTempPath(), "sharpcraft-face-state.json");
@@ -120,8 +145,14 @@ internal static class SandboxWindow
         {
             var parts = model.Parts;
             var partName = parts[partIndex % parts.Count].Name;
+            var animationSeconds = animationPlaying && animationName is not null
+                ? (Environment.TickCount64 - animationStart) / 1000f
+                : animationFixedTime;
             var pose = new EntityPose();
-            EntityAnimationController.Apply(entity, pose);
+            if (animationName is not null)
+            {
+                EntityAnimationController.ApplyClip(entity, pose, animationName, animationSeconds);
+            }
             var layers = mesher.BuildLayers([entity], sprite, sprite.Width, sprite.Height, state,
                 onlyPart: isolateSelectedPart ? partName : null,
                 excludedPart: hideSelectedPart ? partName : null,
@@ -175,6 +206,17 @@ internal static class SandboxWindow
                 {
                     partIndex = (partIndex - 1 + model.Parts.Count) % model.Parts.Count;
                     faceIndex = 0;
+                }
+
+                if (input.JustPressed(InputKey.Tab) && animationClips.Count > 0)
+                {
+                    animationIndex = (animationIndex + 1) % animationClips.Count;
+                    animationName = animationClips[animationIndex];
+                    animationStart = Environment.TickCount64;
+                }
+                else if (input.JustPressed(InputKey.Enter))
+                {
+                    animationPlaying = !animationPlaying;
                 }
 
                 if (input.JustPressed(InputKey.Home))
@@ -251,7 +293,7 @@ internal static class SandboxWindow
             var current = state.TryGetValue(part + "." + face, out var value)
                 ? value
                 : FaceUvTransform.Identity;
-            return $"Sharpcraft sandbox | {part}.{face} | PageUp/Down part, Left/Right face, Space rotate, Shift flipH, Ctrl flipV, Home isolate, End hide | rot={current.Rotation} flipH={current.FlipH} flipV={current.FlipV} | isolate={isolateSelectedPart} hide={hideSelectedPart}";
+            return $"Sharpcraft sandbox | {part}.{face} | PageUp/Down part, Left/Right face, Space rotate, Shift flipH, Ctrl flipV, Home isolate, End hide | anim={animationName ?? "none"} play={animationPlaying} | Tab anim, Enter play/pause | rot={current.Rotation} flipH={current.FlipH} flipV={current.FlipV} | isolate={isolateSelectedPart} hide={hideSelectedPart}";
         }
     }
 
@@ -359,6 +401,8 @@ internal static class SandboxWindow
         return new ResourceManager(stack, 0);
     }
 }
+
+
 
 
 

@@ -2829,3 +2829,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - 移植 `CamelAnimation.CAMEL_IDLE`（4 秒、tail/head/ear 关键帧），`EntityAnimationController` 按 `AgeInTicks/20` 应用。
 - Camel walk + idle 样板完成；Pig idle 直接使用静态 bind pose。A4 Zombie/Villager 已由测试锁定。
+
+### 2026-11-03 沙盒动画播放/切换（T-555）
+
+- 沙盒新增 `MC_SANDBOX_ANIMATION`、`MC_SANDBOX_ANIM_PAUSED`、`MC_SANDBOX_ANIM_TIME`；`Tab` 切换可用动画，`Enter` 播放/暂停，标题显示 `anim/play`。
+- 以 Pig walk 的 0/0.75 秒暂停帧和连续播放 1 秒两帧验证；默认优先选 `walk`，当前动画清单来自 `EntityAnimationController.ClipNames`，没有动画的模型保持静态。
+
