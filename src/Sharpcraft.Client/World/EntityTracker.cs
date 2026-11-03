@@ -86,6 +86,12 @@ public sealed class TrackedEntity
     public bool OnGround { get; internal set; }
 
     /// <summary>
+    /// Raw appearance variant from synced entity data (registry index for registry-backed types, enum id for fixed
+    /// ones). Zero means "the entity's default variant"; see docs/analysis/render/entity-variants.md.
+    /// </summary>
+    public int VariantId { get; internal set; }
+
+    /// <summary>
     /// Authoritative target position. Vanilla does not snap a remote entity to the position the server reports:
     /// it approaches it over a few ticks, which is why the rendered entity trails slightly behind the
     /// authoritative one (docs/specs/network/entity-sync.md 9.4).
@@ -147,7 +153,8 @@ public readonly record struct EntityRenderState(
     bool ShowLeftPants = true,
     bool ShowRightPants = true,
     bool HasChest = false,
-    bool HasEgg = false);
+    bool HasEgg = false,
+    int VariantId = 0);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -205,6 +212,9 @@ public sealed class EntityTracker
 
     /// <summary>Entities removed by the server.</summary>
     public int Removals { get; private set; }
+
+    /// <summary>Variant values applied from synced entity data.</summary>
+    public int VariantUpdates { get; private set; }
 
     /// <summary>Introduces or replaces an entity.</summary>
     /// <param name="added">Parsed add-entity packet.</param>
@@ -357,6 +367,38 @@ public sealed class EntityTracker
         return true;
     }
 
+    /// <summary>
+    /// Applies the variant field from a <c>set_entity_data</c> packet, if this entity's type has one.
+    /// </summary>
+    /// <param name="id">Entity id the packet named.</param>
+    /// <param name="items">Decoded data items.</param>
+    /// <returns>True when a variant value was found and stored.</returns>
+    public bool ApplyEntityData(int id, ReadOnlySpan<EntityDataItem> items)
+    {
+        if (!_entities.TryGetValue(id, out var entity))
+        {
+            UnknownUpdates++;
+            return false;
+        }
+
+        if (!EntityVariantSpecs.TryGet(entity.TypeId, out var spec))
+        {
+            return false;
+        }
+
+        foreach (var item in items)
+        {
+            if (item.Index == spec.AccessorIndex && item.Value != EntityDataItem.NotAnInteger)
+            {
+                entity.VariantId = item.Value & spec.ValueMask;
+                VariantUpdates++;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>Removes entities the server dropped.</summary>
     /// <param name="ids">Entity ids.</param>
     /// <returns>How many were actually tracked.</returns>
@@ -428,7 +470,8 @@ public sealed class EntityTracker
                 (float)(entity.PreviousY + ((entity.Y - entity.PreviousY) * t)),
                 (float)(entity.PreviousZ + ((entity.Z - entity.PreviousZ) * t)),
                 Wrap360(LerpAngle(entity.PreviousYaw, entity.Yaw, t)),
-                entity.PreviousPitch + ((entity.Pitch - entity.PreviousPitch) * t)));
+                entity.PreviousPitch + ((entity.Pitch - entity.PreviousPitch) * t),
+                VariantId: entity.VariantId));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);

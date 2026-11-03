@@ -25,6 +25,26 @@ public ref struct PayloadReader
 
     private ReadOnlySpan<byte> Remaining => _buffer[Position..];
 
+    /// <summary>The unread tail, for formats that another reader parses in place (NBT roots).</summary>
+    public ReadOnlySpan<byte> RemainingSpan => _buffer[Position..];
+
+    /// <summary>Advances past <paramref name="count"/> bytes, reporting truncation instead of throwing.</summary>
+    public DecodeStatus TrySkip(int count)
+    {
+        if (count < 0)
+        {
+            return DecodeStatus.Invalid;
+        }
+
+        if (Remaining.Length < count)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        Position += count;
+        return DecodeStatus.Success;
+    }
+
     /// <summary>Reads a VarInt.</summary>
     public DecodeStatus TryReadVarInt(out int value)
     {

@@ -16,8 +16,7 @@ public static class EntityModelResolver
         [new EntityModelPart("body", 0f, 0f, 14f, 14f, 14f, 0, 0)]);
 
     private static readonly Dictionary<int, EntityModelDefinition> Models = new()
-    {
-        [EntityPlaceholderMesher.PlayerEntityTypeId] = PlayerModelDefinition.Definition,
+    {        [EntityPlaceholderMesher.PlayerEntityTypeId] = PlayerModelDefinition.Definition,
         [HumanoidMobModelDefinition.SkeletonEntityTypeId] = HumanoidMobModelDefinition.Skeleton,
         [HumanoidMobModelDefinition.StrayEntityTypeId] = HumanoidMobModelDefinition.Stray,
         [HumanoidMobModelDefinition.BoggedEntityTypeId] = HumanoidMobModelDefinition.Bogged,
@@ -64,7 +63,44 @@ public static class EntityModelResolver
         [HumanoidMobModelDefinition.ZombieEntityTypeId] = HumanoidMobModelDefinition.Zombie
     };
 
-    public static IReadOnlyCollection<EntityModelDefinition> Definitions => Models.Values.Distinct().ToArray();
+    /// <summary>
+    /// Variant definitions keyed by entity type id and registry entry name (docs/analysis/render/entity-variants.md).
+    /// The base <see cref="Models"/> entry for a type is its default variant.
+    /// </summary>
+    private static readonly Dictionary<(int TypeId, string Key), EntityModelDefinition> VariantModels = new();
+
+    public static IReadOnlyCollection<EntityModelDefinition> Definitions =>
+        Models.Values.Concat(VariantModels.Values).Distinct().ToArray();
+
+    /// <summary>Registers a named variant for an entity type.</summary>
+    public static void RegisterVariant(int typeId, string key, EntityModelDefinition definition)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        VariantModels[(typeId, key)] = definition;
+    }
+
+    /// <summary>Registers every variant of one entity type.</summary>
+    public static void RegisterVariants(int typeId, IReadOnlyDictionary<string, EntityModelDefinition> variants)
+    {
+        ArgumentNullException.ThrowIfNull(variants);
+        foreach (var pair in variants)
+        {
+            RegisterVariant(typeId, pair.Key, pair.Value);
+        }
+    }
+
+    /// <summary>Looks up a named variant, or null when the type has no such variant.</summary>
+    public static EntityModelDefinition? TryResolveVariant(int typeId, string key) =>
+        VariantModels.TryGetValue((typeId, key), out var definition) ? definition : null;
+
+    /// <summary>
+    /// Looks up a named variant and throws when it is missing. Used by tools and tests so an unhandled variant is loud
+    /// instead of silently falling back (docs/analysis/render/entity-variants.md 6).
+    /// </summary>
+    public static EntityModelDefinition ResolveVariantStrict(int typeId, string key) =>
+        TryResolveVariant(typeId, key)
+        ?? throw new KeyNotFoundException($"no variant '{key}' registered for entity type {typeId}");
 
     public static EntityModelDefinition? TryResolve(int typeId) =>
         Models.TryGetValue(typeId, out var definition) ? definition : null;
@@ -89,5 +125,15 @@ public static class EntityModelResolver
     {
         ArgumentNullException.ThrowIfNull(definition);
         Models[typeId] = definition;
+    }
+
+    static EntityModelResolver()
+    {
+        RegisterVariants(PigModelDefinition.PigEntityTypeId, PigModelDefinition.Variants);
+        RegisterVariants(CowModelDefinition.CowEntityTypeId, CowModelDefinition.Variants);
+        RegisterVariants(ChickenModelDefinition.ChickenEntityTypeId, ChickenModelDefinition.Variants);
+        RegisterVariants(CatModelDefinition.CatEntityTypeId, CatModelDefinition.Variants);
+        RegisterVariants(HorseModelDefinition.HorseEntityTypeId, HorseModelDefinition.Variants);
+        RegisterVariants(LlamaModelDefinition.LlamaEntityTypeId, LlamaModelDefinition.Variants);
     }
 }

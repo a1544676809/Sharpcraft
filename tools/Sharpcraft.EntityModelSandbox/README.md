@@ -31,7 +31,7 @@ dotnet run --project tools/Sharpcraft.EntityModelSandbox -c Release
 - 只有需要临时覆盖玩家皮肤时才设置 `MC_SANDBOX_SKIN`。
 
 ```powershell
-$env:MC_ASSETS_PACK="C:\path\to\minecraft-26.3.pack.zip"
+$env:MC_ASSETS_PACK="%LOCALAPPDATA%\MinecraftCSharp\packs\minecraft-26.3.pack.zip"
 $env:MC_SANDBOX_MODEL="skeleton"
 dotnet run --project tools/Sharpcraft.EntityModelSandbox -c Release -- --window
 ```

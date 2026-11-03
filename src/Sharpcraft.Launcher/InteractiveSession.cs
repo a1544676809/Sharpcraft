@@ -1427,6 +1427,19 @@ internal sealed class InteractiveSession
                     BlockEntityPackets.TryReadBlockEntityData(body, out _);
                     break;
 
+                // Synced entity data: the variant index is what decides an entity's appearance
+                // (docs/analysis/render/entity-variants.md 2).
+                case PacketIds.PlayClientbound.SetEntityData:
+                    {
+                        Span<EntityDataItem> items = stackalloc EntityDataItem[EntityDataPackets.MaxItems];
+                        if (EntityDataPackets.TryRead(body, out var dataEntityId, items, out var itemCount, out _) == DecodeStatus.Success)
+                        {
+                            _entities.ApplyEntityData(dataEntityId, items[..itemCount]);
+                        }
+
+                        break;
+                    }
+
                 case PacketIds.PlayClientbound.SetTime:
                     if (_world is not null)
                     {

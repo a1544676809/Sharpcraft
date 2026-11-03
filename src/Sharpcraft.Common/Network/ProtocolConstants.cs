@@ -238,6 +238,9 @@ public static class PacketIds
         /// <summary>Absolute velocity for an existing entity.</summary>
         public const int SetEntityMotion = 103;
 
+        /// <summary>Synced entity data: indexed values (variant, health, flags, ...).</summary>
+        public const int SetEntityData = 101;
+
         /// <summary>Absolute repositioning with velocity, angles and relative flags.</summary>
         public const int TeleportEntity = 128;
 

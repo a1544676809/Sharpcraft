@@ -16,13 +16,13 @@ public sealed class EntityModelMesher
 {
     private readonly DynamicGeometry _geometry = new();
 
-    public DynamicGeometry Build(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null)
+    public DynamicGeometry Build(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null)
     {
         _geometry.Clear();
         var cubeCount = 0;
         foreach (var entity in entities)
         {
-            var model = EntityModelResolver.Resolve(entity.TypeId);
+            var model = ResolveModel(entity, variants);
             foreach (var part in model.Parts)
             {
                 cubeCount += 1 + (part.OverlayLayers?.Count ?? 0);
@@ -35,7 +35,7 @@ public sealed class EntityModelMesher
 
         foreach (var entity in entities)
         {
-            var model = EntityModelResolver.Resolve(entity.TypeId);
+            var model = ResolveModel(entity, variants);
             if (model is null)
             {
                 continue;
@@ -86,6 +86,11 @@ public sealed class EntityModelMesher
         _geometry.IndexCount = indexCount;
         return _geometry;
     }
+
+    private static EntityModelDefinition ResolveModel(EntityRenderState entity, EntityVariantTable? variants) =>
+        variants is null
+            ? EntityModelResolver.Resolve(entity.TypeId)
+            : variants.Resolve(entity.TypeId, entity.VariantId);
 
     /// <summary>
     /// Emits the six faces in the reference <c>ModelPart.Cube</c> order. The UV corners below are the exact

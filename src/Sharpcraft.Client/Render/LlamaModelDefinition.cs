@@ -29,4 +29,36 @@ public static class LlamaModelDefinition
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/llama/llama_brown");
+
+    /// <summary>Llama coat ids, in the <c>Llama.Variant</c> enum order used on the wire.</summary>
+    public static readonly IReadOnlyList<string> VariantKeys = ["creamy", "white", "brown", "gray"];
+
+    /// <summary>Coat key to definition; the geometry is identical, only the texture changes.</summary>
+    public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants = BuildVariants();
+
+    private static Dictionary<string, EntityModelDefinition> BuildVariants()
+    {
+        var variants = new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)
+        {
+            ["brown"] = Definition
+        };
+
+        foreach (var key in VariantKeys)
+        {
+            if (key == "brown")
+            {
+                continue;
+            }
+
+            variants[key] = new EntityModelDefinition(
+                "llama_" + key,
+                128,
+                64,
+                Definition.Parts,
+                PlayerModelDefinition.DefaultFaceTransforms,
+                "entity/llama/llama_" + key);
+        }
+
+        return variants;
+    }
 }

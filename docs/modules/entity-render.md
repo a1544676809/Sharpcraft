@@ -88,9 +88,27 @@ P1 只做**静态姿态 + 朝向**，明确排除骨骼动画、物品装备渲�
 
 - [x] 渲染状态输入 `EntityRenderState` 与视锥剔除（T-344）
 - [x] 世界空间名字牌（T-351）
-- [ ] 玩家静态模型定义/网格/纹理接入（本模块下一片）
+- [x] 玩家静态模型定义/网格/纹理接入
+- [x] 变体（variant）系统：`set_entity_data` 解码 + 注册表驱动的纹理/模型选择（T-467）
 - [ ] 名称牌高度改为真实模型 `nameTagAttachment`
 - [ ] 其它实体类型模型（P1 后）
+
+## 8. 变体（variant）
+
+行为规格见 `docs/analysis/render/entity-variants.md`；本节只记模块契约。
+
+- **入口**：`EntityRenderState.VariantId` 是线上原始整型值（注册表下标或枚举 id），`EntityTracker.ApplyEntityData`
+  从 `set_entity_data`（clientbound 101）写入；字段缺失即默认变体（原版只发非默认值）。
+- **解析**：`EntityVariantSpecs`（`Client/World`）给出每类实体的访问器索引、注册表路径、名字表与默认名；
+  `EntityVariantTable`（`Client/Render`）把值解析成名字再查 `EntityModelResolver` 的变体定义。
+- **注册表优先**：configuration 阶段的 `registry_data` 到位时以服务器的条目顺序为准（位置即 id）；没有注册表数据时
+  回落到原版 bootstrap 顺序，因此离线/沙盒可测，但数据包新增或重排变体不会被识别。
+- **纹理与几何**：变体定义各自带 `TexturePath`，并随 `EntityModelResolver.Definitions` 一起进 skin atlas；
+  Pig/Cow/Chicken 的 warm/cold 是**几何变体**（ColdPig/WarmCow/ColdCow/ColdChicken），不是换图。
+- **未知变体**：渲染路径回落默认变体并记录 `EntityVariantTable.UnknownVariants`，不崩溃；
+  `ResolveVariantStrict` / `ResolveStrict` 抛出 `KeyNotFoundException`，供工具与自动化把缺口变成失败。
+- **不覆盖**：幼年模型与 baby 纹理、Wolf（tame/angry 三态）、Fox（睡眠态）——见分析文档 §5。
+
 
 ## 5.1 纹理坐标证据（避免再次猜测）
 

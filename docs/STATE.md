@@ -13,7 +13,7 @@ updated: 2026-10-29
 > 本文件只记录**易变状态**（AGENTS.md 4.2）。设计结论属于 `docs/modules/`，里程碑划分属于 `docs/milestones/roadmap.md`，索引属于 `docs/README.md`，决策属于 `docs/decisions/`。**不要在此复述它们。**
 > 每次收工必须与代码同一提交更新本文件，并写清"下一步具体动作"。
 
-最后更新：2026-10-31
+最后更新：2026-11-03
 
 ## 当前里程碑
 
@@ -2263,7 +2263,7 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 ## 2026-11-02 上下文压缩前交接
 
 **当前分支/工作目录**
-- 工作目录：`E:\source\repos\MinecraftCSharp\.agents\worktrees\...\m5.3-render-p1`
+- 工作目录：仓库内的 `m5.3-render-p1` worktree（不在文档里记本机绝对路径）
 - 最近提交到 `T-466`；Client 测试最近一次为 **620 通过**。
 
 **当前模型状态**
@@ -2274,7 +2274,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 现在 `EntityModelResolver` 只按 `TypeId` 解析；
 - 增加 `EntityRenderState.Variant`（或 VariantId）；
 - `EntityModelResolver` 支持 `(TypeId, Variant) -> EntityModelDefinition`；
-- 变体仅切换纹理，不改变几何；
+- ~~变体仅切换纹理，不改变几何~~ **已更正（2026-11-03）**：Pig/Cow/Chicken 的 warm/cold 同时更换几何
+  （ColdPig/WarmCow/ColdCow/ColdChicken）；Cat/Horse/Llama 才是纯纹理；
 - 首批目标：Pig/Cow/Chicken warm/cold、Llama 颜色、Cat 毛色、Horse 毛色；
 - 完成后可安全增加大量外观而不违反层级/图层原则。
 
@@ -2285,3 +2286,26 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 4. Enderman eyes、Slime/Guardian 等 emissive/beam 特殊层。
 5. `EntityPlaceholderMesher` 已接入 `EntityModelTransform`；后续模型定义继续迁移到 raw y-down/PartPose 坐标。
 
+
+## 2026-11-03 实体变体（variant）系统首批完成（T-467…T-469）
+
+- **数据链路已通**：`set_entity_data`（play clientbound **101**）由 `Common/Network/EntityDataPackets` 解码；
+  变体访问器索引按继承链累计（Pig 19、Cow 18、Chicken 18、Cat 20、Horse 19、Llama 20），见 `entity-variants.md` 2.1。
+  基础字段按 serializer 宽度跳过；遇到未建模 serializer（ITEM_STACK 等）**停止扫描并回退默认变体**，不猜长度。
+- **注册表优先**：configuration 阶段 `registry_data` 的 `pig_variant/cow_variant/chicken_variant/cat_variant`
+  条目顺序即 id；`EntityVariantTable` 优先用它，缺失时回落原版 bootstrap 顺序（沙盒/离屏可测）。
+- **纹理变体**：Cat 11、Horse 7、Llama 4；Horse 值高位是 markings，用 `&0xFF` 取毛色。
+- **几何变体**：Pig cold = body 加 0.5 外层（UV 28,32）；Cow warm = 头 4 个耳/角盒（2 个 mirror），
+  cow cold = body 0.5 外层（UV 20,32）+ snout UV 9,33 + 两根旋转 90° 的角；Chicken cold = body 0 宽鳍（UV 38,9）
+  + head 额外层（UV 44,0）。全部是平移/单轴旋转，未引入父子嵌套近似。
+- **未知变体契约（用户裁决）**：渲染路径回落默认并记录 `UnknownVariants`；`ResolveVariantStrict`/`ResolveStrict`
+  抛 `KeyNotFoundException`（工具/测试走严格路径）。见 `docs/analysis/render/entity-variants.md` §6。
+- **未覆盖**：幼年模型与 baby 纹理、Wolf（tame/angry）、Fox（睡眠态）——已在分析文档 §5 登记。
+- **门禁**：全量 `dotnet test Sharpcraft.slnx` 通过（Common 446 / Client 635 / Framework 107 / Launcher 91 /
+  Auth 25 / Modding 4 / Architecture 31）；`Docs.Indexer --check --check-coverage` ok；顺带把 14 行
+  traceability 的 `完成` 归一为 `已完成`、清掉 2 处文档里的本机绝对路径（文档漂移门禁曾因此失败）。
+- **下一步具体动作**：
+  1. 沙盒目视验收：`MC_SANDBOX_MODEL=pig|cow|chicken MC_SANDBOX_VARIANT=warm|cold`（以及 cat/horse/llama 的各色），
+     与 `mc-26.3-analysis` 源码几何逐部件对照；真服务器再走一次 `set_entity_data` 看变体切换计数。
+  2. 补 `Parent` + 局部 `PartPose` 递归变换，再解 Horse/Fox/Wolf/Rabbit/Camel 的层级近似。
+  3. 多 layer 提交（`EntityRenderLayerDefinition`）解决 Stray/Bogged clothing、Player overlays、Drowned/Slime outer。

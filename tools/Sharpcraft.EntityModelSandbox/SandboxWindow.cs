@@ -35,11 +35,37 @@ internal static class SandboxWindow
         var atlas = skinLibrary.Atlas ?? throw new InvalidDataException("no entity skin could be loaded from the asset pack");
         var requestedModel = Environment.GetEnvironmentVariable("MC_SANDBOX_MODEL") ?? "player";
         var typeId = EntityModelResolver.FindTypeId(requestedModel) ?? EntityPlaceholderMesher.PlayerEntityTypeId;
-        var model = EntityModelResolver.Resolve(typeId);
+        var variantTable = EntityVariantTable.Builtin;
+        var variantId = 0;
+        if (Environment.GetEnvironmentVariable("MC_SANDBOX_VARIANT") is { Length: > 0 } requestedVariant)
+        {
+            if (!EntityVariantSpecs.TryGet(typeId, out var variantSpec))
+            {
+                throw new InvalidDataException($"model '{requestedModel}' has no variants");
+            }
+
+            variantId = -1;
+            for (var i = 0; i < variantSpec.Keys.Count; i++)
+            {
+                if (string.Equals(variantSpec.Keys[i], requestedVariant, StringComparison.Ordinal))
+                {
+                    variantId = i;
+                    break;
+                }
+            }
+
+            if (variantId < 0)
+            {
+                throw new InvalidDataException($"unknown variant '{requestedVariant}' for '{requestedModel}'");
+            }
+        }
+
+        var model = variantTable.Resolve(typeId, variantId);
         var sprite = atlas.Get(model.TexturePath) ?? throw new InvalidDataException($"skin {model.TexturePath} missing from atlas");
         var entity = new EntityRenderState(1, typeId, 0f, 0f, 0f, 0f, 0f,
             HasChest: Environment.GetEnvironmentVariable("MC_SANDBOX_CHEST") == "1",
-            HasEgg: Environment.GetEnvironmentVariable("MC_SANDBOX_EGG") == "1");
+            HasEgg: Environment.GetEnvironmentVariable("MC_SANDBOX_EGG") == "1",
+            VariantId: variantId);
         var mesher = new EntityModelMesher();
         var state = new Dictionary<string, FaceUvTransform>();
         var statePath = Path.Combine(Path.GetTempPath(), "sharpcraft-face-state.json");
@@ -59,7 +85,8 @@ internal static class SandboxWindow
             var geometry = mesher.Build([entity], sprite, sprite.Width, sprite.Height, state,
                 onlyPart: isolateSelectedPart ? partName : null,
                 excludedPart: hideSelectedPart ? partName : null,
-                skinAtlas: atlas);
+                skinAtlas: atlas,
+                variants: variantTable);
             if (!hideSelectedPart)
             {
                 AppendSelectionHighlight(geometry, sprite, parts[partIndex % parts.Count], Faces[faceIndex]);

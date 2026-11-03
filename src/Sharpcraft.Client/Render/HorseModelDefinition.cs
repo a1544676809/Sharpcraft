@@ -67,4 +67,46 @@ public static class HorseModelDefinition
     public static readonly EntityModelDefinition SkeletonHorse = new(
         "skeleton_horse", 64, 64, HorseModelDefinition.Definition.Parts,
         PlayerModelDefinition.DefaultFaceTransforms, "entity/horse/horse_skeleton");
+
+    /// <summary>Horse coat ids, in the <c>Variant</c> enum order used on the wire.</summary>
+    public static readonly IReadOnlyList<string> VariantKeys =
+    [
+        "white", "creamy", "chestnut", "brown", "black", "gray", "dark_brown"
+    ];
+
+    /// <summary>Texture file stem per coat; the enum name "dark_brown" maps to "horse_darkbrown".</summary>
+    private static readonly string[] VariantFiles =
+    [
+        "horse_white", "horse_creamy", "horse_chestnut", "horse_brown", "horse_black", "horse_gray", "horse_darkbrown"
+    ];
+
+    /// <summary>Coat key to definition; the geometry is identical, only the texture changes.</summary>
+    public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants = BuildVariants();
+
+    private static Dictionary<string, EntityModelDefinition> BuildVariants()
+    {
+        var variants = new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)
+        {
+            ["brown"] = Definition
+        };
+
+        for (var i = 0; i < VariantKeys.Count; i++)
+        {
+            var key = VariantKeys[i];
+            if (key == "brown")
+            {
+                continue;
+            }
+
+            variants[key] = new EntityModelDefinition(
+                "horse_" + key,
+                64,
+                64,
+                Definition.Parts,
+                PlayerModelDefinition.DefaultFaceTransforms,
+                "entity/horse/" + VariantFiles[i]);
+        }
+
+        return variants;
+    }
 }
