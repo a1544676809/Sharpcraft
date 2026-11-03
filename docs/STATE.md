@@ -2649,3 +2649,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - BabyWolf：几何逐项核对通过；修正 **tame/angry 幼年纹理命名**（应为 `wolf_<variant>_tame_baby` / `wolf_<variant>_angry_baby`，旧实现拼成 `..._baby_tame`）；BabyFox red 补 `fox_sleep_baby` 选择器。
 - Rabbit：原项目只有单 `rabbit_brown`，补齐成年 7 变体（brown/white/black/white_splotched/gold/salt/evil；evil 用 `rabbit_caerbannog`），并补幼年 `*_baby` 对应纹理；`EntityVariantSpecs[111]` 用 KeySelector 处理 sparse id 99。
 - 逐项 AABB/部件数复核：BabyCat 11、BabyWolf 11、BabyFox 10、BabyRabbit 17；父子/UV/mirror/旋转与原版一致。
+
+### 2026-11-03 Baby Wolf 尾巴方向修正（T-524）
+
+- 现象：小狼尾巴朝前。根因：`tail_r1` 是“负 minY”的尾部盒，通用 child 旋转取反（存储 +3.1）会让尾尖绕到前方；改为 `rotationX: 3.1f`（存储 -3.1）后尾巴朝后，符合原版姿势。
+- 仅改 BabyWolf tail_r1；其他部件/UV/父子不变。
