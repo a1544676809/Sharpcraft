@@ -31,7 +31,8 @@ public readonly record struct EntityModelPart(
     float RotationY = 0f,
     float RotationZ = 0f,
     string? TexturePath = null,
-    float Grow = 0f);
+    float Grow = 0f,
+    string? Parent = null);
 
 /// <summary>
 /// An outer skin layer around one base cuboid, expressed as a uniform growth and its own texture offset.
@@ -129,4 +130,59 @@ public static class PlayerModelDefinition
 
     public static readonly EntityModelDefinition Definition =
         new("player", 64, 64, AdultParts, DefaultFaceTransforms, "entity/player/wide/steve");
+
+    /// <summary>
+    /// Builds a child part from the reference's y-down pivot/cube values, keeping them local to
+    /// <paramref name="parent"/> instead of baking an absolute position.
+    /// </summary>
+    /// <remarks>
+    /// A child cube is expressed relative to its own origin in the reference, so only the global X mirror and Y flip
+    /// are applied (no model-height offset), and single-axis rotations negate X and Y the same way roots do
+    /// (docs/analysis/render/entity-variants.md 3.1). The mesher composes the parent chain afterwards.
+    /// </remarks>
+    public static EntityModelPart FromVanillaChild(
+        string name,
+        string parent,
+        float pivotX,
+        float pivotY,
+        float pivotZ,
+        float minX,
+        float minY,
+        float minZ,
+        float width,
+        float height,
+        float depth,
+        int textureX,
+        int textureY,
+        bool mirror = false,
+        IReadOnlyList<EntityModelLayer>? overlays = null,
+        float rotationX = 0f,
+        float rotationY = 0f,
+        float rotationZ = 0f,
+        string? texturePath = null,
+        float grow = 0f)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(parent);
+        return new EntityModelPart(
+            name,
+            MathF.Round(-(minX + (width * 0.5f)), 4),
+            MathF.Round(-(minY + height), 4),
+            width,
+            height,
+            depth,
+            textureX,
+            textureY,
+            mirror,
+            overlays,
+            CentreZ: MathF.Round(minZ + (depth * 0.5f), 4),
+            PivotX: MathF.Round(-pivotX, 4),
+            PivotY: MathF.Round(-pivotY, 4),
+            PivotZ: pivotZ,
+            RotationX: -rotationX,
+            RotationY: -rotationY,
+            RotationZ: rotationZ,
+            TexturePath: texturePath,
+            Grow: grow,
+            Parent: parent);
+    }
 }

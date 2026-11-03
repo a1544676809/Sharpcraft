@@ -109,6 +109,18 @@ P1 只做**静态姿态 + 朝向**，明确排除骨骼动画、物品装备渲�
   `ResolveVariantStrict` / `ResolveStrict` 抛出 `KeyNotFoundException`，供工具与自动化把缺口变成失败。
 - **不覆盖**：幼年模型与 baby 纹理、Wolf（tame/angry 三态）、Fox（睡眠态）——见分析文档 §5。
 
+## 9. 父子层级（Parent + 局部 PartPose）
+
+- `EntityModelPart.Parent` 指向同一定义里的父部件；子部件的 `Pivot/CentreX/Bottom/CentreZ` 与旋转都按
+  **相对父原点**解释，由 `PlayerModelDefinition.FromVanillaChild` 生成（只做全局 X 镜像与 Y 翻转，不加 modelHeight 偏移）。
+- `EntityModelMesher` 为每个部件算一个 `Matrix4x4`：`PartFrame(part) = R(part) · T(pivot) · PartFrame(parent)`；
+  根部件的 cube 仍是绝对坐标，所以根的存储矩阵再左乘 `T(-pivot)`（等价于绕 pivot 旋转）。
+- 空 group 节点（宽高深全 0）只承载 pivot，不发射几何；Wolf 的 `head`/`tail` 就是这种节点。
+- 验收：`EntityModelHierarchyTests` 用 head_parts→head→right_ear 三层链与独立手算包围盒逐轴比对；其余根旋转部件由
+  `TheColdCowHornsSitAtTheVanillaPositionAfterTheRotationSignConversion` 钉住。
+- 尚未迁移：Rabbit（定义存在但未注册）、Camel（近似已撤销，待重做）。
+
+
 
 ## 5.1 纹理坐标证据（避免再次猜测）
 

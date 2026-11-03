@@ -22,9 +22,9 @@ updated: 2026-11-02
 
 | 模型 | 近似位置 | 原版关系 | 影响 | 状态 |
 | --- | --- | --- | --- | --- |
-| Horse | `head_parts` 下的 head/mane/upper_mouth、ears；`body` 下的 tail | 多层父 pivot/rotation | 静态正面可看，但旋转/耳尾位置不完全精确 | 待层级化 |
-| Fox | `tail` | `body` 子节点 | tail pivot 为手工合成 | 待层级化 |
-| Wolf | `real_head/ears`、`real_tail` | head/tail 子节点 | 头部/尾巴静态近似 | 待层级化 |
+| Horse | `head_parts` 下的 head/mane/upper_mouth、ears；`body` 下的 tail | 多层父 pivot/rotation | 已改用 `Parent` + 局部 `PartPose` 递归（T-470），静态几何逐顶点校验通过 | 已层级化 |
+| Fox | `tail` | `body` 子节点 | 已改用局部 pose（T-470） | 已层级化 |
+| Wolf | `real_head/ears`、`real_tail` | head/tail 子节点 | 增加空 group 节点（head/tail）承载 pivot，子部件局部 pose（T-470） | 已层级化 |
 | Rabbit | body/head/ears/frontlegs/backlegs | 多层 body/head/leg 子节点 | 当前近似模型**未注册**，不作为可用模型 | 待层级化 |
 | Camel | hump/tail/head/ears | body 子节点 | 近似实现已撤销 | 待层级化 |
 
@@ -51,3 +51,4 @@ updated: 2026-11-02
 ## 5. 渲染层近似
 
 `Skeleton clothing`、Player overlays、Drowned outer、Slime outer 目前把独立 RenderLayer 合并进同一 DynamicGeometry/draw，不能保证原版 layer 的 RenderType、深度、顺序和透明度等效。详见[实体渲染层架构差距](entity-render-layers.md)。
+

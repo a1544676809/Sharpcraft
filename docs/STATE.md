@@ -2321,3 +2321,14 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 新增回归 `TheColdCowHornsSitAtTheVanillaPositionAfterTheRotationSignConversion`：独立算出角的世界包围盒
   （右侧 x[4,6]、左侧 x[-6,-4]、y[22,24]、z[-16,-10] 模型像素）并逐轴断言，Client **636 通过**。
 - 用户复看沙盒确认“现在看起来正确了”。
+
+## 2026-11-03 父子层级变换（T-470）
+
+- 新增 `EntityModelPart.Parent` 与 `PlayerModelDefinition.FromVanillaChild`：子部件按父原点表达 pivot/cube/rotation；
+  mesher 用矩阵递归 `R·T(pivot)·PartFrame(parent)`，根部件仍存绝对 cube（左乘 `T(-pivot)` 等价绕 pivot 旋转）。
+- 空 group 节点（0×0×0）只承载 pivot，不发射几何（Wolf 的 head/tail）。
+- Horse / Fox / Wolf 改为层级定义，删除手工合成的“近似 pivot”；`entity-model-approximations.md` 状态更新。
+- 验收：`EntityModelHierarchyTests` 用 head_parts→head→right_ear 三层链，与独立手算包围盒逐轴一致；
+  ColdCow 角测试继续覆盖“根部件 + 旋转”。全量 Client 637 通过（`ChunkMeshCacheTests` 的 lightmap 用例是**既有偶发**
+  失败，单独重跑 3 次中 1 次通过，与本次改动无关，已记录待查）。
+- 未迁移：Rabbit（定义存在、未注册）、Camel（近似撤销，待重做）；下一步按同样方式补这两个。

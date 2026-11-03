@@ -16,17 +16,16 @@ public static class FoxModelDefinition
         32,
         [
             PlayerModelDefinition.FromVanilla("head", -1f, 16.5f, -3f, -3f, -2f, -5f, 8f, 6f, 6f, 1, 5),
-            PlayerModelDefinition.FromVanilla("right_ear", -1f, 16.5f, -3f, -3f, -4f, -4f, 2f, 2f, 1f, 8, 1),
-            PlayerModelDefinition.FromVanilla("left_ear", -1f, 16.5f, -3f, 3f, -4f, -4f, 2f, 2f, 1f, 15, 1),
-            PlayerModelDefinition.FromVanilla("nose", -1f, 16.5f, -3f, -1f, 2.01f, -8f, 4f, 2f, 3f, 6, 18),
+            PlayerModelDefinition.FromVanillaChild("right_ear", "head", 0f, 0f, 0f, -3f, -4f, -4f, 2f, 2f, 1f, 8, 1),
+            PlayerModelDefinition.FromVanillaChild("left_ear", "head", 0f, 0f, 0f, 3f, -4f, -4f, 2f, 2f, 1f, 15, 1),
+            PlayerModelDefinition.FromVanillaChild("nose", "head", 0f, 0f, 0f, -1f, 2.01f, -8f, 4f, 2f, 3f, 6, 18),
             PlayerModelDefinition.FromVanilla("body", 0f, 16f, -6f, -3f, 3.999f, -3.5f, 6f, 11f, 6f, 24, 15, rotationX: -MathF.PI / 2f),
             PlayerModelDefinition.FromVanilla("right_hind_leg", -5f, 17.5f, 7f, 2f, 0.5f, -1f, 2f, 6f, 2f, 13, 24),
             PlayerModelDefinition.FromVanilla("left_hind_leg", -1f, 17.5f, 7f, 2f, 0.5f, -1f, 2f, 6f, 2f, 4, 24),
             PlayerModelDefinition.FromVanilla("right_front_leg", -5f, 17.5f, 0f, 2f, 0.5f, -1f, 2f, 6f, 2f, 13, 24),
             PlayerModelDefinition.FromVanilla("left_front_leg", -1f, 17.5f, 0f, 2f, 0.5f, -1f, 2f, 6f, 2f, 4, 24),
-            // Body pivot (0,16,-6) + local tail offset (-4,15,-1) composed with body X rotation PI/2.
-            PlayerModelDefinition.FromVanilla("tail", -4f, 17f, 9f, 2f, 0f, -1f, 4f, 9f, 5f, 30, 0,
-                rotationX: -1.5183983f)
+            PlayerModelDefinition.FromVanillaChild("tail", "body", -4f, 15f, -1f, 2f, 0f, -1f, 4f, 9f, 5f, 30, 0,
+                rotationX: -0.05235988f)
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/fox/fox");

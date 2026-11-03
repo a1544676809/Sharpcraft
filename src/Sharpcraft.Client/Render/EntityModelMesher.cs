@@ -68,6 +68,12 @@ public sealed class EntityModelMesher
                 if (excludedPart is not null && part.Name == excludedPart) continue;
                 if (!entity.HasChest && (part.Name == "right_chest" || part.Name == "left_chest")) continue;
                 if (!entity.HasEgg && part.Name == "egg_belly") continue;
+                if (part.Width == 0f && part.Height == 0f && part.Depth == 0f)
+                {
+                    // Group node (the reference has empty ModelParts such as wolf "head"/"tail"); it only exists to
+                    // carry a pivot for its children.
+                    continue;
+                }
                 var partSprite = sprite;
                 var partSkinWidth = skinWidthForModel;
                 var partSkinHeight = skinHeightForModel;
@@ -78,7 +84,7 @@ public sealed class EntityModelMesher
                     partSkinHeight = partAtlas.Height;
                 }
 
-                AddPart(part, min, max, partSprite, partSkinWidth, partSkinHeight, feet, entityTransform, transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount);
+                AddPart(part, min, max, partSprite, partSkinWidth, partSkinHeight, feet, entityTransform, PartMatrix(part, model.Parts, px), transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount);
             }
         }
 
@@ -105,6 +111,7 @@ public sealed class EntityModelMesher
         int skinHeight,
         Vector3 feet,
         EntityModelTransform entityTransform,
+        Matrix4x4 partMatrix,
         IReadOnlyDictionary<string, FaceUvTransform>? transforms,
         IReadOnlyDictionary<string, FaceUvTransform> defaultTransforms,
         EntityRenderState renderState,
@@ -137,13 +144,11 @@ public sealed class EntityModelMesher
         var l1 = new Vector3(max.X, min.Y, max.Z);
         var l2 = new Vector3(max.X, max.Y, max.Z);
         var l3 = new Vector3(min.X, max.Y, max.Z);
-        if (part.RotationX != 0f || part.RotationY != 0f || part.RotationZ != 0f)
-        {
-            var pivot = feet + new Vector3(part.PivotX * px, part.PivotY * px, part.PivotZ * px);
-            Vector3 Apply(Vector3 point) => RotateAround(point, pivot, part.RotationX, part.RotationY, part.RotationZ);
-            t0 = Apply(t0); t1 = Apply(t1); t2 = Apply(t2); t3 = Apply(t3);
-            l0 = Apply(l0); l1 = Apply(l1); l2 = Apply(l2); l3 = Apply(l3);
-        }
+        // The part matrix already carries this part's own rotation and the whole parent chain, so the corners only
+        // need the matrix and then the entity-level transform.
+        Vector3 ToWorld(Vector3 point) => entityTransform.Apply(Vector3.Transform(point, partMatrix));
+        t0 = ToWorld(t0); t1 = ToWorld(t1); t2 = ToWorld(t2); t3 = ToWorld(t3);
+        l0 = ToWorld(l0); l1 = ToWorld(l1); l2 = ToWorld(l2); l3 = ToWorld(l3);
         FaceUvTransform T(string face)
         {
             var fallback = defaultTransforms.TryGetValue(face, out var defaultTransform)
@@ -166,12 +171,12 @@ public sealed class EntityModelMesher
         var u2u = swapBodyDownUp ? u1 : u2; var u2v = swapBodyDownUp ? v1 : v0;
         var u3u = swapBodyDownUp ? u2 : u22; var u3v = swapBodyDownUp ? v1 : v0;
 
-        AddFace(l1, l0, t0, t1, d0u, d0v, d1u, d1v, d2u, d2v, d3u, d3v, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, entityTransform, T("DOWN")); // DOWN
-        AddFace(t2, t3, l3, l2, u0u, u0v, u1u, u1v, u2u, u2v, u3u, u3v, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, entityTransform, T("UP")); // UP
-        AddFace(t0, l0, l3, t3, u3, v2, u2, v2, u2, v1, u3, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, entityTransform, T("WEST")); // WEST
-        AddFace(t1, t0, t3, t2, u2, v2, u1, v2, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, entityTransform, T("NORTH")); // NORTH
-        AddFace(l1, t1, t2, l2, u1, v2, u0, v2, u0, v1, u1, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, entityTransform, T("EAST")); // EAST
-        AddFace(l0, l1, l2, l3, u4, v2, u3, v2, u3, v1, u4, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, entityTransform, T("SOUTH")); // SOUTH
+        AddFace(l1, l0, t0, t1, d0u, d0v, d1u, d1v, d2u, d2v, d3u, d3v, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("DOWN")); // DOWN
+        AddFace(t2, t3, l3, l2, u0u, u0v, u1u, u1v, u2u, u2v, u3u, u3v, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("UP")); // UP
+        AddFace(t0, l0, l3, t3, u3, v2, u2, v2, u2, v1, u3, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("WEST")); // WEST
+        AddFace(t1, t0, t3, t2, u2, v2, u1, v2, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("NORTH")); // NORTH
+        AddFace(l1, t1, t2, l2, u1, v2, u0, v2, u0, v1, u1, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("EAST")); // EAST
+        AddFace(l0, l1, l2, l3, u4, v2, u3, v2, u3, v1, u4, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("SOUTH")); // SOUTH
 
         if (part.OverlayLayers is not null)
         {
@@ -213,18 +218,58 @@ public sealed class EntityModelMesher
                     overlayHeight = layerSprite.Height;
                 }
 
-                AddPart(overlay, overlayMin, overlayMax, overlaySkin, overlayWidth, overlayHeight, feet, entityTransform, transforms, defaultTransforms, renderState, skinAtlas, px, ref vertexFloats, ref indexCount);
+                AddPart(overlay, overlayMin, overlayMax, overlaySkin, overlayWidth, overlayHeight, feet, entityTransform, partMatrix, transforms, defaultTransforms, renderState, skinAtlas, px, ref vertexFloats, ref indexCount);
             }
         }
     }
 
-    private static Vector3 RotateAround(Vector3 point, Vector3 pivot, float rx, float ry, float rz)
+    private static Matrix4x4 RotationZyx(float rx, float ry, float rz) =>
+        Matrix4x4.CreateRotationZ(rz) * Matrix4x4.CreateRotationY(ry) * Matrix4x4.CreateRotationX(rx);
+
+    /// <summary>
+    /// Matrix that maps a point expressed relative to <paramref name="part"/>'s origin into entity space. This is the
+    /// frame other parts' pivots are expressed in, not the frame a part's own cube is stored in.
+    /// </summary>
+    private static Matrix4x4 PartFrame(EntityModelPart part, IReadOnlyList<EntityModelPart> parts, float px)
     {
-        var local = point - pivot;
-        if (rz != 0f) local = Vector3.Transform(local, Matrix4x4.CreateRotationZ(rz));
-        if (ry != 0f) local = Vector3.Transform(local, Matrix4x4.CreateRotationY(ry));
-        if (rx != 0f) local = Vector3.Transform(local, Matrix4x4.CreateRotationX(rx));
-        return pivot + local;
+        var pivot = new Vector3(part.PivotX * px, part.PivotY * px, part.PivotZ * px);
+        // Row-vector convention: "rotate, then translate" is Rotation * Translation.
+        var local = RotationZyx(part.RotationX, part.RotationY, part.RotationZ) * Matrix4x4.CreateTranslation(pivot);
+
+        if (part.Parent is not { Length: > 0 } parentName)
+        {
+            return local;
+        }
+
+        foreach (var candidate in parts)
+        {
+            if (string.Equals(candidate.Name, parentName, StringComparison.Ordinal))
+            {
+                return local * PartFrame(candidate, parts, px);
+            }
+        }
+
+        return local;
+    }
+
+    /// <summary>
+    /// Matrix that maps a part's stored cube coordinates into entity space.
+    /// </summary>
+    /// <remarks>
+    /// Root parts keep absolute model-space cubes (from <c>FromVanilla</c>), so they are rotated about their pivot with
+    /// the extra translate back. Child parts keep cubes relative to their own origin (from <c>FromVanillaChild</c>), so
+    /// their frame is already the storage transform.
+    /// </remarks>
+    private static Matrix4x4 PartMatrix(EntityModelPart part, IReadOnlyList<EntityModelPart> parts, float px)
+    {
+        var frame = PartFrame(part, parts, px);
+        if (part.Parent is { Length: > 0 })
+        {
+            return frame;
+        }
+
+        var pivot = new Vector3(part.PivotX * px, part.PivotY * px, part.PivotZ * px);
+        return Matrix4x4.CreateTranslation(-pivot) * frame;
     }
 
     private static bool LayerVisible(string name, EntityRenderState state) => name switch
@@ -243,7 +288,6 @@ public sealed class EntityModelMesher
         float au, float av, float bu, float bv, float cu, float cv, float du, float dv,
         SpriteRect skin, int skinWidth, int skinHeight,
         ref int vertexFloats, ref int indexCount,
-        EntityModelTransform entityTransform,
         FaceUvTransform transform)
     {
         var uMin = MathF.Min(MathF.Min(au, bu), MathF.Min(cu, du));
@@ -255,10 +299,10 @@ public sealed class EntityModelMesher
         (cu, cv) = TransformUv(cu, cv, uMin, uMax, vMin, vMax, transform);
         (du, dv) = TransformUv(du, dv, uMin, uMax, vMin, vMax, transform);
         var first = (uint)(vertexFloats / 14);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, a, au / skinWidth, av / skinHeight, skin, entityTransform);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, b, bu / skinWidth, bv / skinHeight, skin, entityTransform);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, c, cu / skinWidth, cv / skinHeight, skin, entityTransform);
-        WriteVertex(_geometry.Vertices, ref vertexFloats, d, du / skinWidth, dv / skinHeight, skin, entityTransform);
+        WriteVertex(_geometry.Vertices, ref vertexFloats, a, au / skinWidth, av / skinHeight, skin);
+        WriteVertex(_geometry.Vertices, ref vertexFloats, b, bu / skinWidth, bv / skinHeight, skin);
+        WriteVertex(_geometry.Vertices, ref vertexFloats, c, cu / skinWidth, cv / skinHeight, skin);
+        WriteVertex(_geometry.Vertices, ref vertexFloats, d, du / skinWidth, dv / skinHeight, skin);
 
         _geometry.Indices[indexCount++] = first;
         _geometry.Indices[indexCount++] = first + 1;
@@ -284,9 +328,8 @@ public sealed class EntityModelMesher
         return (uMin + nu * (uMax - uMin), vMin + nv * (vMax - vMin));
     }
 
-    private static void WriteVertex(float[] destination, ref int offset, Vector3 position, float u, float v, SpriteRect skin, EntityModelTransform entityTransform)
+    private static void WriteVertex(float[] destination, ref int offset, Vector3 world, float u, float v, SpriteRect skin)
     {
-        var world = entityTransform.Apply(position);
         destination[offset++] = world.X;
         destination[offset++] = world.Y;
         destination[offset++] = world.Z;
@@ -303,3 +346,4 @@ public sealed class EntityModelMesher
         destination[offset++] = 0f;
     }
 }
+
