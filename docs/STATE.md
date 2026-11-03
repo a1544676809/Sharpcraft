@@ -2718,3 +2718,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `EntityDataPackets` case 18 现在读出 `VILLAGER_DATA` 的第一个 VarInt（type holder），再跳过 profession/level；spec `[143]/[157]` 用 `villager_type` 注册表键（plains/desert/jungle/savanna/snow/swamp/taiga）。
 - 成年纹理 `entity/villager/type/<type>` / `entity/zombie_villager/type/<type>`；幼年 `entity/villager/baby/<type>` / `entity/zombie_villager/baby/<type>`；`EntityModelLayerHelpers.WithCopy` 整模型副本叠加（Grow+0.05）。
 - 沙盒沙漠村民/幼年沙漠村民/jungle 幼年僵尸村民目视正常。
+
+### 2026-11-03 Horse markings 层（T-537）
+
+- `EntityVariantSpec.MarkingsShift`（Horse=8）把 variant int 高字节解析成 `Markings`（0/1/2/3/4）。
+- `WithHorseMarkings` 为成年/幼年 Horse 各生成 4 组叠加层：`horse_markings_white(_baby)` / `whitefield` / `whitedots` / `blackdots`，Grow+0.05，`VisibleWhen = state.Markings == id`。
+- 沙盒 `MC_SANDBOX_MARKINGS=1` 验收：成年棕马与幼年棕马均出现白袜子。

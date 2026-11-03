@@ -69,6 +69,7 @@ internal static class SandboxWindow
         var tint = ParseTint(tintText);
         var patternTint = ParseTint(patternTintText);
         var collarText = Environment.GetEnvironmentVariable("MC_SANDBOX_COLLAR");
+        var markingsText = Environment.GetEnvironmentVariable("MC_SANDBOX_MARKINGS");
         var entity = new EntityRenderState(1, typeId, 0f, 0f, 0f, 0f, 0f,
             HasChest: Environment.GetEnvironmentVariable("MC_SANDBOX_CHEST") == "1",
             HasEgg: Environment.GetEnvironmentVariable("MC_SANDBOX_EGG") == "1",
@@ -84,7 +85,8 @@ internal static class SandboxWindow
             PatternTint: patternTint,
             IsBaby: sandboxBaby,
             CollarTint: ParseTint(collarText),
-            HasCollar: collarText is { Length: 6 });
+            HasCollar: collarText is { Length: 6 },
+            Markings: int.TryParse(markingsText, out var markings) ? markings : 0);
         var mesher = new EntityModelMesher();
         var state = new Dictionary<string, FaceUvTransform>();
         var statePath = Path.Combine(Path.GetTempPath(), "sharpcraft-face-state.json");

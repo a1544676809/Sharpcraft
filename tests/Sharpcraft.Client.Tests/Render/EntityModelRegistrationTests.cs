@@ -502,7 +502,7 @@ public sealed class EntityModelRegistrationTests
     [Fact]
     public void BabyHorseLlamaCamelDonkeyResolveToTheirOwnGeometry()
     {
-        Assert.Equal(10, EntityModelResolver.Resolve(HorseModelDefinition.HorseEntityTypeId, true).Parts.Count);
+        Assert.Equal(50, EntityModelResolver.Resolve(HorseModelDefinition.HorseEntityTypeId, true).Parts.Count);
         Assert.Equal(11, EntityModelResolver.Resolve(LlamaModelDefinition.LlamaEntityTypeId, true).Parts.Count);
         Assert.Equal(11, EntityModelResolver.Resolve(CamelModelDefinition.CamelEntityTypeId, true).Parts.Count);
         Assert.Equal(15, EntityModelResolver.Resolve(37, true).Parts.Count);
@@ -593,4 +593,5 @@ public sealed class EntityModelRegistrationTests
         Assert.Equal(111, RabbitModelDefinition.RabbitEntityTypeId);
     }
 }
+
 

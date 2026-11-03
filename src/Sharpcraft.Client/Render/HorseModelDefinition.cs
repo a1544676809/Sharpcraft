@@ -18,6 +18,7 @@ public static class HorseModelDefinition
         "horse",
         64,
         64,
+        EntityModelLayerHelpers.WithHorseMarkings(
         [
             PlayerModelDefinition.FromVanilla("body", 0f, 11f, 5f, -5f, -8f, -17f, 10f, 10f, 22f, 0, 32, grow: 0.05f),
             PlayerModelDefinition.FromVanilla("head_parts", 0f, 4f, -12f, -2.05f, -6f, -2f, 4f, 12f, 7f, 0, 35,
@@ -37,8 +38,10 @@ public static class HorseModelDefinition
             PlayerModelDefinition.FromVanilla("left_front_leg", 4f, 14f, -10f, -3f, -1.01f, -1.9f, 4f, 11f, 4f, 48, 21, mirror: true),
             PlayerModelDefinition.FromVanilla("right_front_leg", -4f, 14f, -10f, -1f, -1.01f, -1.9f, 4f, 11f, 4f, 48, 21),
             PlayerModelDefinition.FromVanillaChild("tail", "body", 0f, -5f, 2f, -1.5f, 0f, 0f, 3f, 14f, 4f, 42, 36,
-                rotationX: MathF.PI / 6f, grow: 0.05f)
+                rotationX: MathF.PI / 6f, grow: 0.05f),
         ],
+        "entity/horse/horse_markings_",
+        false),
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/horse/horse_brown");
 
@@ -110,3 +113,6 @@ public static class HorseModelDefinition
         return variants;
     }
 }
+
+
+

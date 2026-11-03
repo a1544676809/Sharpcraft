@@ -10,6 +10,7 @@ public static class BabyModelDefinitionsEquine
         "baby_horse",
         64,
         64,
+        EntityModelLayerHelpers.WithHorseMarkings(
         [
             PlayerModelDefinition.FromVanilla("body", 0f, 12.5f, 0f, -4f, -3.5f, -7f, 8f, 7f, 14f, 0, 13),
             PlayerModelDefinition.FromVanillaChild("tail", "body", 0f, -1f, 7f, -1.5f, -1.5f, -1f, 3f, 3f, 8f, 24, 34, rotationX: -0.7418f),
@@ -20,8 +21,10 @@ public static class BabyModelDefinitionsEquine
             PlayerModelDefinition.FromVanilla("head_parts", 0f, 10f, -6f, -2f, -6f, -2f, 4f, 8f, 4f, 30, 0, rotationX: -0.6109f),
             PlayerModelDefinition.FromVanillaChild("head", "head_parts", 0f, -6.0516f, -0.2951f, -3f, -3.9484f, -6.705f, 6f, 4f, 9f, 0, 0),
             PlayerModelDefinition.FromVanillaChild("left_ear", "head", 2f, -4.2484f, 1.9451f, -1f, -2.5f, -0.8f, 2f, 3f, 1f, 0, 4, rotationZ: 0.2618f),
-            PlayerModelDefinition.FromVanillaChild("right_ear", "head", -2f, -4.2484f, 1.645f, -1f, -2.5f, -0.5f, 2f, 3f, 1f, 0, 0, rotationZ: -0.2618f)
+            PlayerModelDefinition.FromVanillaChild("right_ear", "head", -2f, -4.2484f, 1.645f, -1f, -2.5f, -0.5f, 2f, 3f, 1f, 0, 0, rotationZ: -0.2618f),
         ],
+        "entity/horse/horse_markings_",
+        true),
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/horse/horse_brown_baby");
 
@@ -137,3 +140,5 @@ public static class BabyModelDefinitionsEquine
         return variants;
     }
 }
+
+

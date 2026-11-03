@@ -106,6 +106,9 @@ public sealed class TrackedEntity
     /// <summary>Raw dye id of a tamed cat/wolf collar, or -1 when unknown.</summary>
     public int CollarColor { get; internal set; } = -1;
 
+    /// <summary>Raw horse markings id (0 none, 1 white, 2 white field, 3 white dots, 4 black dots).</summary>
+    public int Markings { get; internal set; }
+
     /// <summary>
     /// Authoritative target position. Vanilla does not snap a remote entity to the position the server reports:
     /// it approaches it over a few ticks, which is why the rendered entity trails slightly behind the
@@ -181,7 +184,8 @@ public readonly record struct EntityRenderState(
     System.Numerics.Vector3 PatternTint = default,
     bool IsBaby = false,
     System.Numerics.Vector3 CollarTint = default,
-    bool HasCollar = false);
+    bool HasCollar = false,
+    int Markings = 0);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -425,6 +429,11 @@ public sealed class EntityTracker
                 }
 
                 entity.VariantId = variantValue;
+                if (spec.MarkingsShift >= 0)
+                {
+                    entity.Markings = (item.Value >> spec.MarkingsShift) & 0xFF;
+                }
+
                 VariantUpdates++;
                 applied = true;
             }
@@ -554,7 +563,8 @@ public sealed class EntityTracker
                 PatternTint: patternTint,
                 IsBaby: entity.IsBaby,
                 CollarTint: DyeTint(entity.CollarColor >= 0 ? entity.CollarColor : 14),
-                HasCollar: spec.CollarAccessorIndex >= 0 && spec.TameMask != 0 && (entity.Flags & spec.TameMask) != 0));
+                HasCollar: spec.CollarAccessorIndex >= 0 && spec.TameMask != 0 && (entity.Flags & spec.TameMask) != 0,
+                Markings: entity.Markings));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);

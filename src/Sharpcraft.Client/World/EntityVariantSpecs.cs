@@ -41,7 +41,8 @@ public readonly record struct EntityVariantSpec(
     int ChargingMask = 0,
     bool ShellHideStates = false,
     Func<int, string>? KeySelector = null,
-    int CollarAccessorIndex = -1);
+    int CollarAccessorIndex = -1,
+    int MarkingsShift = -1);
 
 /// <summary>
 /// Answering "which synced-data field is the variant" for the entity types this client renders with variants.
@@ -71,7 +72,7 @@ public static class EntityVariantSpecs
             FlagsAccessorIndex: 18, TameMask: 4, CollarAccessorIndex: 23),
 
         // Horse: AbstractHorse adds flags (18); the value packs markings into the high byte.
-        [67] = new(19, null, ["white", "creamy", "chestnut", "brown", "black", "gray", "dark_brown"], "white"),
+        [67] = new(19, null, ["white", "creamy", "chestnut", "brown", "black", "gray", "dark_brown"], "white", MarkingsShift: 8),
 
         // Llama: AbstractChestedHorse adds chest (18), then strength (19), then variant (20).
         [79] = new(20, null, ["creamy", "white", "brown", "gray"], "creamy"),

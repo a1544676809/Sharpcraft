@@ -194,7 +194,7 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("horse", definition.Name);
-        Assert.Equal(12, definition.Parts.Count);
+        Assert.Equal(60, definition.Parts.Count);
     }
 
     [Fact]
@@ -419,3 +419,6 @@ public sealed class EntityModelResolverTests
         Assert.Equal("placeholder", EntityModelResolver.Resolve(123456).Name);
     }
 }
+
+
+

@@ -33,4 +33,27 @@ public static class EntityModelLayerHelpers
     }
 
     private static bool static_hasCollar(EntityRenderState state) => state.HasCollar;
+
+    public static EntityModelPart[] WithHorseMarkings(IReadOnlyList<EntityModelPart> parts, string texturePrefix, bool baby)
+    {
+        (int Id, string Key)[] markings = [(1, "white"), (2, "whitefield"), (3, "whitedots"), (4, "blackdots")];
+        var result = new List<EntityModelPart>(parts.Count * (markings.Length + 1));
+        result.AddRange(parts);
+        foreach (var (id, key) in markings)
+        {
+            var path = texturePrefix + key + (baby ? "_baby" : string.Empty);
+            foreach (var part in parts)
+            {
+                result.Add(part with
+                {
+                    Name = "marking_" + key + "_" + part.Name,
+                    TexturePath = path,
+                    Grow = part.Grow + 0.05f,
+                    VisibleWhen = state => state.Markings == id
+                });
+            }
+        }
+
+        return [.. result];
+    }
 }
