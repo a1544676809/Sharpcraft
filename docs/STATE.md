@@ -2696,3 +2696,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - BabyStrider 6 部件（body+双 bristle? 实为 body + 2 legs + 3 bristles）；BabyHusk 复用 BabyZombie 8 部件，纹理 husk_baby；Snifflet 16 部件（bone/body 3 层/head 2 层/耳朵/nose/beak/六腿，128×128）；BabyArmadillo 13 部件（body 2 层、tail 2、head 4、四腿、shell cube，含 IsHidingInShell 可见性）。
 - 全部 bind pose；动画未移植。沙盒目视正常。
+
+### 2026-11-03 Baby Nautilus / Happy Ghast / Glow Squid（T-533）
+
+- Baby Nautilus 9 部件（root/shell 3 层/body 2 层/3 mouth，64×64）；Baby Happy Ghast body+inner_body(grow-0.5)+9 tentacles，scale=`4×0.2375=0.95`，纹理 happy_ghast_baby；Baby Glow Squid 复用 BabySquid 几何，纹理 glow_squid_baby。
+- 全部 bind pose；动画未移植。至此有独立 Baby*Model 的幼年实体已全部铺完（除 ZombieNautilus 无独立幼年 renderer、以及各装备/群系纹理层）。
