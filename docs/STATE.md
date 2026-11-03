@@ -2477,3 +2477,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `NautilusModelDefinition`：root(group)→shell(主体/中层/背板)、body(2 盒)→上/内/下嘴；纹理 `entity/nautilus/nautilus`，type id 89。
 - 静态 bind pose；游动动画与 armor/saddle 层未移植；Zombie Nautilus 另属独立模型。
 - **Tropical Fish 暂缓**：它需要「每层独立 tint（baseColor/patternColor）+ pattern 纹理层」，当前多 layer 契约没有 tint；先记为缺口，待 tint 基础设施。
+
+### 2026-11-03 Cave Spider / Trader Llama（T-491）
+
+- CaveSpider：复用 Spider 几何，scale 0.7，纹理 `entity/spider/cave_spider`，type id 22。
+- TraderLlama：复用 Llama 几何与 body 纹理 `entity/llama/llama_brown`，type id 138；**trader 地毯**是 `equipment/llama_body/trader_llama` 装饰层（装备渲染），未移植。
+- 两者均静态 bind pose；沙盒目视正常（发现并修正过一次 TraderLlama 误用不存在的 `entity/llama/trader_llama` 纹理 → 棋盘格）。

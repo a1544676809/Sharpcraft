@@ -225,6 +225,19 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void CaveSpiderAndTraderLlamaReuseExistingGeometry()
+    {
+        var caveSpider = EntityModelResolver.Resolve(CaveSpiderModelDefinition.CaveSpiderEntityTypeId);
+        var traderLlama = EntityModelResolver.Resolve(TraderLlamaModelDefinition.TraderLlamaEntityTypeId);
+
+        Assert.Equal("cave_spider", caveSpider.Name);
+        Assert.Equal(0.7f, caveSpider.Scale);
+        Assert.Equal("entity/spider/cave_spider", caveSpider.TexturePath);
+        Assert.Equal("trader_llama", traderLlama.Name);
+        Assert.Equal("entity/llama/llama_brown", traderLlama.TexturePath);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

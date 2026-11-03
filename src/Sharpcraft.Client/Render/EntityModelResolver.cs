@@ -54,6 +54,8 @@ public static class EntityModelResolver
         [SalmonModelDefinition.SalmonEntityTypeId] = SalmonModelDefinition.Definition,
         [PufferfishModelDefinition.PufferfishEntityTypeId] = PufferfishModelDefinition.Definition,
         [NautilusModelDefinition.NautilusEntityTypeId] = NautilusModelDefinition.Definition,
+        [CaveSpiderModelDefinition.CaveSpiderEntityTypeId] = CaveSpiderModelDefinition.Definition,
+        [TraderLlamaModelDefinition.TraderLlamaEntityTypeId] = TraderLlamaModelDefinition.Definition,
         [GuardianModelDefinition.GuardianEntityTypeId] = GuardianModelDefinition.Definition,
         [GuardianModelDefinition.ElderGuardianEntityTypeId] = GuardianModelDefinition.Elder,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,
