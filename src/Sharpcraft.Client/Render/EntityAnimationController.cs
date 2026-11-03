@@ -15,7 +15,8 @@ public static class EntityAnimationController
     /// <summary>Animation clip names exposed for a model; empty means the model has no animation in this phase.</summary>
     public static IReadOnlyList<string> ClipNames(int typeId) => typeId switch
     {
-        PigModelDefinition.PigEntityTypeId => ["idle", "walk"],
+        PigModelDefinition.PigEntityTypeId or CowModelDefinition.CowEntityTypeId or CowModelDefinition.MooshroomEntityTypeId
+            or SheepModelDefinition.SheepEntityTypeId or GoatModelDefinition.GoatEntityTypeId => ["idle", "walk"],
         CamelModelDefinition.CamelEntityTypeId => ["idle", "walk"],
         154 or 39 or 68 => ["idle", "walk"],
         VillagerModelDefinition.VillagerEntityTypeId => ["idle", "walk"],
@@ -50,7 +51,11 @@ public static class EntityAnimationController
     /// <summary>Builds the pose overrides for one entity state.</summary>
     public static void Apply(EntityRenderState state, EntityPose pose)
     {
-        if (state.TypeId == PigModelDefinition.PigEntityTypeId)
+        if (state.TypeId == PigModelDefinition.PigEntityTypeId
+            || state.TypeId == CowModelDefinition.CowEntityTypeId
+            || state.TypeId == CowModelDefinition.MooshroomEntityTypeId
+            || state.TypeId == SheepModelDefinition.SheepEntityTypeId
+            || state.TypeId == GoatModelDefinition.GoatEntityTypeId)
         {
             ApplyQuadrupedWalk(state, pose);
         }
@@ -111,6 +116,7 @@ public static class EntityAnimationController
     private static void AddLegRotation(EntityPose pose, string part, float radians) =>
         pose.Add(part, new PoseOffset(Vector3.Zero, new Vector3(radians, 0f, 0f), Vector3.Zero));
 }
+
 
 
 

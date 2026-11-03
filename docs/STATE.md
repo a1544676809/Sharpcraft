@@ -2835,3 +2835,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 沙盒新增 `MC_SANDBOX_ANIMATION`、`MC_SANDBOX_ANIM_PAUSED`、`MC_SANDBOX_ANIM_TIME`；`Tab` 切换可用动画，`Enter` 播放/暂停，标题显示 `anim/play`。
 - 以 Pig walk 的 0/0.75 秒暂停帧和连续播放 1 秒两帧验证；默认优先选 `walk`，当前动画清单来自 `EntityAnimationController.ClipNames`，没有动画的模型保持静态。
 
+
+### 2026-11-03 动画 A5：Cow/Sheep/Goat 四足（T-556）
+
+- Cow/Mooshroom/Sheep/Goat 复用 `QuadrupedModel.setupAnim` 的四腿相位；`ClipNames` 现在返回 idle/walk。
+- 这四种实体尚未单独做沙盒截图，先用参数化姿态测试锁定相位；后续与 Horse 等专用动画一起扩展。

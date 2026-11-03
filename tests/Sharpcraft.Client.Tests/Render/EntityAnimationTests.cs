@@ -158,6 +158,23 @@ public sealed class EntityAnimationTests
         Assert.Equal(5f * (MathF.PI / 180f), pose.Get("tail").Rotation.X, 4);
     }
     [Fact]
+    public void CowSheepGoatReuseTheQuadrupedWalkController()
+    {
+        foreach (var typeId in new[] { 30, 87, 114, 63 })
+        {
+            var state = new Sharpcraft.Client.World.EntityRenderState(1, typeId, 0f, 0f, 0f, 0f, 0f)
+            {
+                WalkAnimationPos = 0f,
+                WalkAnimationSpeed = 1f
+            };
+            var pose = new EntityPose();
+            EntityAnimationController.Apply(state, pose);
+            Assert.Equal(1.4f, pose.Get("right_hind_leg").Rotation.X, 4);
+            Assert.Equal(1.4f, pose.Get("left_front_leg").Rotation.X, 4);
+            Assert.Contains("walk", EntityAnimationController.ClipNames(typeId));
+        }
+    }
+    [Fact]
     public void BakingRejectsMissingParts()
     {
         var animation = new AnimationDefinition(1f, false, new Dictionary<string, IReadOnlyList<AnimationChannel>>
@@ -168,6 +185,8 @@ public sealed class EntityAnimationTests
         Assert.Throws<InvalidOperationException>(() => animation.Bake(new HashSet<string> { "head" }));
     }
 }
+
+
 
 
 
