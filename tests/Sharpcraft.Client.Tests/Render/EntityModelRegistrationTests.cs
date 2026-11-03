@@ -67,6 +67,21 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheGuardianAndElderShareGeometryWithASeparateScale()
+    {
+        var guardian = EntityModelResolver.Resolve(GuardianModelDefinition.GuardianEntityTypeId);
+        var elder = EntityModelResolver.Resolve(GuardianModelDefinition.ElderGuardianEntityTypeId);
+
+        Assert.Equal("guardian", guardian.Name);
+        Assert.Equal(23, guardian.Parts.Count);
+        Assert.Equal(12, guardian.Parts.Count(part => part.Name.StartsWith("spike", StringComparison.Ordinal)));
+        Assert.Contains(guardian.Parts, part => part.Name == "eye" && part.Parent == "head");
+        Assert.Contains(guardian.Parts, part => part.Name == "tail2_fin" && part.Parent == "tail2");
+        Assert.Equal("elder_guardian", elder.Name);
+        Assert.Equal(2.35f, elder.Scale);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

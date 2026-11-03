@@ -2403,3 +2403,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - `DolphinModelDefinition`：body→back_fin、左右侧鳍（x/zRot）、head→nose、tail→tail_fin；纹理 `entity/dolphin/dolphin`，type id 36。
 - 注册 + 注册测试（8 部件、tail_fin/nose 的 Parent）；沙盒目视正常。
+
+### 2026-11-03 Guardian / Elder Guardian 模型（T-479）
+
+- `GuardianModelDefinition`：head 主体 + 4 块壳、12 根 spike（生成式，按原版 SPIKE_X/Y/Z 与 π*旋转表）、eye、tail0→tail1→tail2（tail2 为 group + body/fin 两 cube）。
+- Elder 复用几何，`scale 2.35` + `entity/guardian/guardian_elder`；type id 64 / 41。
+- **未移植**：spike 伸缩/尾摆动动画、Guardian 光束（不是模型部件）。
+- 注册 + 注册测试（23 部件、12 spike、Parent 关系、Elder scale）；沙盒目视正常（绿身橙刺红眼）。
