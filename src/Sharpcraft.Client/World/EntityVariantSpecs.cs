@@ -104,7 +104,10 @@ public static class EntityVariantSpecs
             "default"),
 
         // Salmon: first accessor is the size variant (SMALL/MEDIUM/LARGE).
-        [113] = new(18, null, ["small", "medium", "large"], "medium")
+        [113] = new(18, null, ["small", "medium", "large"], "medium"),
+
+        // Pufferfish: puff state 0/1/2 selects a completely different model.
+        [110] = new(18, null, ["small", "medium", "large"], "small")
     };
 
     /// <summary>Number of entity types with a variant field.</summary>

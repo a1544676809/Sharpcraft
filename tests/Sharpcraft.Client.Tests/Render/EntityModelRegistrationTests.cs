@@ -201,6 +201,19 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void ThePufferfishHasThreePuffStateModels()
+    {
+        var small = EntityModelResolver.ResolveVariantStrict(PufferfishModelDefinition.PufferfishEntityTypeId, "small");
+        var medium = EntityModelResolver.ResolveVariantStrict(PufferfishModelDefinition.PufferfishEntityTypeId, "medium");
+        var large = EntityModelResolver.ResolveVariantStrict(PufferfishModelDefinition.PufferfishEntityTypeId, "large");
+
+        Assert.Equal(6, small.Parts.Count);
+        Assert.Equal(11, medium.Parts.Count);
+        Assert.Equal(13, large.Parts.Count);
+        Assert.All(new[] { small, medium, large }, model => Assert.Equal("entity/fish/pufferfish", model.TexturePath));
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

@@ -2466,3 +2466,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - Cod：body/head/nose/左右鳍/tail_fin/top_fin；type id 27，`fish/cod`。
 - Salmon：body_front/body_back(+back_fin、top_back_fin)/head/top_front_fin/左右鳍；3 个尺寸变体 small/medium/large（scale 0.5/1.0/1.5，accessor 18，type id 113）。
 - 静态 bind pose；摆尾动画未移植。沙盒 cod 与 salmon(large) 目视正常。
+### 2026-11-03 Pufferfish 模型（T-489）
+
+- 三个膨胀阶段各自独立几何：small(6 部件)/medium(11)/large(13)，共用 `entity/fish/pufferfish` 纹理。
+- puff state 0/1/2（int accessor 18，type id 110）；base 定义名为 `pufferfish`，`FindTypeId` 可用。
+- 静态 bind pose；鳍摆动画未移植。沙盒 large 目视正常。
