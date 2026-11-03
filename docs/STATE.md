@@ -2587,3 +2587,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - body/head/eyes/rods（3 根 rods 用原版 pivot 与三轴旋转）；wind_body→wind_bottom→wind_mid(三层)→wind_top(三层)，独立 `breeze_wind`（128×128，Translucent）；eyes 层 `breeze_eyes`（emissive-only，32×32），body `breeze`（32×32）。type id 17。
 - 新增部件级 `TextureWidth/Height`（不同 layer 纹理尺寸不同）、`IncludeInEmissive`、`EmissiveOnly`，见 `docs/modules/entity-render.md` §12。
 - 静态 bind pose；idle/shoot/slide 动画、wind UV 滚动、风层排序未移植。沙盒目视正常（紫色身体+白色风壳+发光眼）。
+
+### 2026-11-03 Zombie Nautilus 模型（T-511）
+
+- TEMPERATE：复用 Nautilus 部件 + `entity/nautilus/zombie_nautilus`（128×128）；WARM：再追加 corals（yellow/pink/blue/red 共 12 个部件）+ `entity/nautilus/zombie_nautilus_coral`。
+- 变体注册表 `zombie_nautilus_variant`（accessor 18，serializer 32，type id 156；内建键 temperate/warm）；静态 bind pose。
+- 未移植：游动动画、armor/saddle 装备层；**珊瑚层在原版有 body armor 时会隐藏**，当前始终显示（装备层未做，已登记）。
+- 沙盒 warm 目视正常（白壳 + 粉/黄/蓝/红珊瑚）。

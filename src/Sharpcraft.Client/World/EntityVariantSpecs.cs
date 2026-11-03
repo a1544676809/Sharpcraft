@@ -118,7 +118,10 @@ public static class EntityVariantSpecs
         [4] = new(18, null, ["idle", "rolling", "scared", "unrolling"], "idle", ShellHideStates: true),
 
         // Copper Golem: WeatheringCopper.WeatherState at 18 (serializer 38), followed by the animation state at 19.
-        [28] = new(18, null, ["unaffected", "exposed", "weathered", "oxidized"], "unaffected")
+        [28] = new(18, null, ["unaffected", "exposed", "weathered", "oxidized"], "unaffected"),
+
+        // Zombie Nautilus: registry-backed variant at 18 (TEMPERATE/WARM).
+        [156] = new(18, "zombie_nautilus_variant", ["temperate", "warm"], "temperate")
     };
 
     /// <summary>Number of entity types with a variant field.</summary>

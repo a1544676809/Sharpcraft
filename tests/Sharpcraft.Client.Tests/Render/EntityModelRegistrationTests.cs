@@ -396,6 +396,19 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheZombieNautilusWarmVariantAddsCorals()
+    {
+        var temperate = EntityModelResolver.ResolveVariantStrict(ZombieNautilusModelDefinition.ZombieNautilusEntityTypeId, "temperate");
+        var warm = EntityModelResolver.ResolveVariantStrict(ZombieNautilusModelDefinition.ZombieNautilusEntityTypeId, "warm");
+
+        Assert.Equal(9, temperate.Parts.Count);
+        Assert.Equal(21, warm.Parts.Count);
+        Assert.Contains(warm.Parts, part => part.Name == "corals" && part.Parent == "shell");
+        Assert.Contains(warm.Parts, part => part.Name == "red_coral_first" && part.Parent == "red_coral");
+        Assert.Equal("entity/nautilus/zombie_nautilus_coral", warm.TexturePath);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).
