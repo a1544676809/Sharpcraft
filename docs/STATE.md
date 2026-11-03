@@ -2525,3 +2525,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - 复用 `IllagerModel` 几何（与 Evoker/Vindicator/Pillager 同一套），纹理 `entity/illager/illusioner`，type id 69。
 - 静态 bind pose；施法/隐身分身等渲染特例未移植。沙盒目视正常。
+
+### 2026-11-03 Sniffer 模型（T-499）
+
+- 结构：`bone`(group)→`body`（主体、grow 0.5 外层、平底）、六条腿（前/中/后 ×左右）、`head`（主体+平顶、左右薄耳、nose、lower_beak）。
+- 纹理 `entity/sniffer/sniffer`（192×192），type id 122；静态 bind pose；sniff/dig/walk 动画未移植。幼年 `snifflet` 留待 baby 阶段。

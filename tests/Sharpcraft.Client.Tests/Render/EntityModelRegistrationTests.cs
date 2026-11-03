@@ -286,6 +286,18 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheSnifferTypeHasSixLegsAndAGrownBody()
+    {
+        var definition = EntityModelResolver.Resolve(SnifferModelDefinition.SnifferEntityTypeId);
+
+        Assert.Equal("sniffer", definition.Name);
+        Assert.Equal(16, definition.Parts.Count);
+        Assert.Equal(6, definition.Parts.Count(part => part.Name.EndsWith("_leg", StringComparison.Ordinal)));
+        Assert.Contains(definition.Parts, part => part.Name == "body_outer" && part.Parent == "body" && Math.Abs(part.Grow - 0.5f) < 0.001f);
+        Assert.Contains(definition.Parts, part => part.Name == "lower_beak" && part.Parent == "head");
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).
