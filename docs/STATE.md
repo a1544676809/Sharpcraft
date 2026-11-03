@@ -2872,3 +2872,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 ### 2026-11-03 动画架构收益/代价（T-565）
 
 - 在 `entity-animation-architecture.md` 6.1 记录 provider 方案相对原版的收益、代价/风险和抵消约束（每生物独立 state、完整状态清单、Lead 独立验收）。
+
+### 2026-11-03 实体动画架构评审通过（T-566）
+
+- `entity-animation-architecture.md` 状态改为 `已评审`，补充 6.2 GC/热路径约束：provider/动画静态缓存、每实体 state 与 EntityPose 复用、热路径禁止 new/LINQ/字符串拼接、每 provider 分配测试。
+- 后续实施 provider/state 改造时按该文档执行；未实现前不声称性能已达成。

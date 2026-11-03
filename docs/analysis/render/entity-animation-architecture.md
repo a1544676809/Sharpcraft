@@ -4,7 +4,7 @@
 <!-- doc
 title: 实体动画架构与团队并行方案
 summary: 现有动画 switch/共享 RenderState 的瓶颈，provider + 每生物状态上下文的组织方式与效率判断
-status: 草稿
+status: 已评审
 updated: 2026-11-03
 -->
 
@@ -145,6 +145,42 @@ Provider 的 `State` 是每实体一份的可变对象；`Apply` 只写 `EntityP
 - 任务书必须列出原版 `setupAnim` 的全部状态与缺失 render-state 字段，不得用“近似”补缺；
 - Lead 独立做全量构建、沙盒多帧验收和至少一个关键帧的源码抽查；
 - 任何未验收状态保持 `进行中`，不因“测试绿”直接写 `已完成`。
+
+## 6.2 GC 与热路径约束
+
+“性能更优”是设计潜力，不是自动成立。动画每实体、每帧、每通道执行，必须明确分配边界。
+
+### 允许/必须的一次性分配
+
+| 对象 | 分配时机 | 说明 |
+| --- | --- | --- |
+| `AnimationDefinition` / `Keyframe[]` / `KeyframeAnimation` | 启动或模型缓存时 | 静态/单例，只读 |
+| provider 实例 | 注册时 | 单例，不随实体创建 |
+| `IEntityAnimationState` | 实体首次创建时 | 每实体一份，随实体移除释放 |
+| `EntityPose` | 随 `IEntityAnimationState` 创建 | 每实体复用，不每帧 new |
+| part name → pose 槽位映射 | 模型缓存时 | 避免热路径字符串查找/拼接 |
+
+### 热路径分配禁令（每帧/每实体）
+
+- 禁止 `new EntityPose()`、`new Dictionary`、`new List`、闭包、LINQ、`string.Format`、字符串拼接；
+- clip 选择在游戏内用 **enum/索引**，字符串只允许在沙盒/工具入口解析；
+- `EntityAnimationFrame` 使用 `readonly struct`；特殊状态放在每实体 state 对象中，不放入通用字典；
+- provider `Apply` 只写 `EntityPose`，不得创建临时数组或对象；
+- 每实体 state / pose 只在实体生命周期内分配一次；沙盒可以分配，不能作为游戏热路径依据。
+
+### 验收
+
+每个 provider、每种实体类别至少增加一条分配测试：
+
+```text
+warm up N frames
+before = GC.GetAllocatedBytesForCurrentThread()
+run M frames (Apply + mesher)
+after = GC.GetAllocatedBytesForCurrentThread()
+assert after == before
+```
+
+覆盖：四足 walk、两足 walk、Camel 关键帧、装备层 pose 继承；若某实体确实需要一次性缓存，在测试外 warm up，不得把稳态分配带入结论。
 
 ## 7. 待评审问题
 
