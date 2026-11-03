@@ -535,6 +535,16 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void BabyZombieDrownedZombieVillagerAndVillagerResolveToTheirOwnGeometry()
+    {
+        Assert.Equal(8, EntityModelResolver.Resolve(154, true).Parts.Count);
+        Assert.Equal(15, EntityModelResolver.Resolve(39, true).Parts.Count);
+        Assert.Equal(10, EntityModelResolver.Resolve(157, true).Parts.Count);
+        Assert.Equal(12, EntityModelResolver.Resolve(143, true).Parts.Count);
+        Assert.Contains("entity/zombie/drowned_outer_layer_baby", EntityModelResolver.Resolve(39, true).TexturePaths);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).
