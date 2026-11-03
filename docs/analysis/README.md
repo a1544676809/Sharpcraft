@@ -24,7 +24,7 @@
 | [`assets/`](assets/README.md) | 7 |
 | [`common/`](common/README.md) | 7 |
 | [`gui/`](gui/README.md) | 1 |
-| [`render/`](render/README.md) | 17 |
+| [`render/`](render/README.md) | 18 |
 
 <!-- END GENERATED: docs/analysis -->
 

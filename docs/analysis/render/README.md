@@ -9,6 +9,7 @@
 
 | 文档 | 摘要 | 状态 | 最后更新 |
 | --- | --- | --- | --- |
+| [`entity-animation.md`](entity-animation.md) | 26.3 的 AnimationDefinition / KeyframeAnimation / ModelPart 姿态覆盖语义，以及本项目现状 | 草稿 | 2026-11-03 |
 | [`entity-coordinate-system.md`](entity-coordinate-system.md) | 地形/相机/实体状态/模型空间的坐标约定、当前已统一与未统一的部分 | 草稿 | 2026-11-02 |
 | [`entity-equipment.md`](entity-equipment.md) | set_equipment 包、装备槽、物品栈编码、装备资产层与各实体装备层的实现边界 | 已评审 | 2026-11-03 |
 | [`entity-model-approximations.md`](entity-model-approximations.md) | 已完成实体模型中仍需父子层级变换才能精确等价的部分 | 已评审 | 2026-11-02 |

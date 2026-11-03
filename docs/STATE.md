@@ -2794,3 +2794,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 新增 `docs/analysis/render/entity-render-backlog.md`：把动画系统、装备特例、人形装备/Witch/Elytra、EquipmentClientInfo/组件、特殊层和真机验收固定为可执行清单。
 - 建议顺序：动画系统 → 装备特例 → 人形装备/手持物品 → 装备资产化。
 - 当前分支 `feature/item-registry`；装备核心已完成，剩余项不得提前标记完成。
+
+### 2026-11-03 动画 A1：关键帧求值内核（T-549）
+
+- 新增 `docs/analysis/render/entity-animation.md` 与 `docs/modules/entity-animation.md`。
+- 实现 `EntityAnimation.cs`：AnimationDefinition/Channel/Keyframe、KeyframeAnimation（LINEAR/CATMULLROM、循环、targetScale）、AnimationState（50ms/tick）、EntityPose（同名部件加性累积）、KeyframeAnimations（POSITION Y 翻转、SCALE x-1）。
+- 测试 `EntityAnimationTests` 6 项；下一步 A2 把 pose 接入 `EntityModelMesher`，再选 Pig/Camel 做四足样板。

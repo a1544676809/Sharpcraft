@@ -583,3 +583,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 
 
 | T-548 | **实体渲染剩余清单**：固定动画系统、装备特例（Happy ropes / Wolf crackiness / trader carpet / zombie nautilus coral）、人形装备/Witch/Elytra、EquipmentClientInfo/DataComponentPatch、特殊层与真机验收的记录与顺序 | `docs/analysis/render/entity-render-backlog.md` | —（文档任务） | — | 已完成 |
+| T-549 | **动画 A1：关键帧求值内核**：`AnimationDefinition`/`AnimationChannel`/`Keyframe`/`KeyframeAnimation`/`AnimationState`/`EntityPose`；实现 50ms/tick、循环取模、LINEAR/CATMULLROM、POSITION Y 翻转、SCALE 加性、targetScale | `docs/analysis/render/entity-animation.md` 2 | Client 710（`EntityAnimationTests` 6） | `Client/Render/EntityAnimation` | 已完成 |
