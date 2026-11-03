@@ -2483,3 +2483,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - CaveSpider：复用 Spider 几何，scale 0.7，纹理 `entity/spider/cave_spider`，type id 22。
 - TraderLlama：复用 Llama 几何与 body 纹理 `entity/llama/llama_brown`，type id 138；**trader 地毯**是 `equipment/llama_body/trader_llama` 装饰层（装备渲染），未移植。
 - 两者均静态 bind pose；沙盒目视正常（发现并修正过一次 TraderLlama 误用不存在的 `entity/llama/trader_llama` 纹理 → 棋盘格）。
+
+### 2026-11-03 Cave Spider 眼睛层修正（T-492）
+
+- 原版 `CaveSpiderRenderer` 继承 `SpiderRenderer`，两者都加 `SpiderEyesLayer`，纹理同为 `entity/spider/spider_eyes` → 洞穴蜘蛛与普通蜘蛛眼睛**相同**。
+- 此前 `CaveSpiderModelDefinition` 漏了 `EmissiveTexturePath`，导致眼睛层缺失；已补上，现与蜘蛛一致。
+- 顺带补回归测试：蜘蛛腿旋转符号（mirrorX:false 的局部约定）与洞穴蜘蛛 = 0.7× 蜘蛛几何的逐轴断言。

@@ -233,6 +233,7 @@ public sealed class EntityModelRegistrationTests
         Assert.Equal("cave_spider", caveSpider.Name);
         Assert.Equal(0.7f, caveSpider.Scale);
         Assert.Equal("entity/spider/cave_spider", caveSpider.TexturePath);
+        Assert.Equal("entity/spider/spider_eyes", caveSpider.EmissiveTexturePath);
         Assert.Equal("trader_llama", traderLlama.Name);
         Assert.Equal("entity/llama/llama_brown", traderLlama.TexturePath);
     }
