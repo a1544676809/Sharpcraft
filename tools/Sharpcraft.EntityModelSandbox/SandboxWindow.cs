@@ -81,6 +81,8 @@ internal static class SandboxWindow
         var isolateSelectedPart = false;
         var hideSelectedPart = false;
         var yaw = float.TryParse(Environment.GetEnvironmentVariable("MC_SANDBOX_YAW"), out var requestedYaw) ? requestedYaw : 0f;
+        var cameraDistance = float.TryParse(Environment.GetEnvironmentVariable("MC_SANDBOX_DIST"), out var requestedDistance) ? requestedDistance : 3.4f;
+        var cameraTargetY = float.TryParse(Environment.GetEnvironmentVariable("MC_SANDBOX_TARGET_Y"), out var requestedTargetY) ? requestedTargetY : 1f;
         var pitch = -0.12f;
         var hasLast = false;
         Vector2 last = default;
@@ -200,11 +202,11 @@ internal static class SandboxWindow
                     hasLast = false;
                 }
 
-                var target = new Vector3(0f, 1.0f, 0f);
+                var target = new Vector3(0f, cameraTargetY, 0f);
                 var eye = target + new Vector3(
                     MathF.Sin(yaw) * MathF.Cos(pitch),
                     MathF.Sin(pitch),
-                    -MathF.Cos(yaw) * MathF.Cos(pitch)) * 3.4f;
+                    -MathF.Cos(yaw) * MathF.Cos(pitch)) * cameraDistance;
                 return (eye, target);
             },
             dynamicGeometry: null,

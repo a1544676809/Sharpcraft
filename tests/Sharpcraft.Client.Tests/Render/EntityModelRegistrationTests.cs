@@ -265,6 +265,17 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheGiantUsesTheZombieGeometryAtScaleSix()
+    {
+        var definition = EntityModelResolver.Resolve(GiantModelDefinition.GiantEntityTypeId);
+
+        Assert.Equal("giant", definition.Name);
+        Assert.Equal(6f, definition.Scale);
+        Assert.Equal("entity/zombie/zombie", definition.TexturePath);
+        Assert.Equal(HumanoidMobModelDefinition.Zombie.Parts.Count, definition.Parts.Count);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).
