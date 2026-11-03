@@ -33,7 +33,7 @@ public static class HumanoidMobModelDefinition
             PlayerModelDefinition.FromVanilla("right_leg", -2f, -5f, 0f, -1f, 0f, -1f, 2f, 30f, 2f, 56, 0, modelHeight: 25f)
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/enderman/enderman");
+        "entity/enderman/enderman", 1f, "entity/enderman/enderman_eyes");
 
     public static readonly EntityModelDefinition Drowned = new(
         "drowned",
@@ -128,5 +128,6 @@ public static class HumanoidMobModelDefinition
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/zombie/zombie");
 }
+
 
 

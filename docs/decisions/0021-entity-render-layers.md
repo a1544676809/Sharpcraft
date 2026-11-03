@@ -3,7 +3,7 @@
 
 # ADR-0021：实体多 RenderLayer 提交（替代单 geometry 单 draw）
 
-状态：已接受（2026-11-03，所有者确认按两步实施；Emissive eyes 留待后续）
+状态：已接受（2026-11-03；第一步分层、第二步分层绘制与 Emissive eyes 均已落地）
 相关：`docs/analysis/render/entity-render-layers.md`、`docs/modules/entity-render.md` §9、ADR-0020
 
 ## 背景
@@ -40,3 +40,4 @@ entity pipeline 一次 draw。原版是“一个基础模型 + 零到多个 Rend
 - 验收（第一步）：现有画面逐像素不变（回归）；`BuildLayers` 单测断言每层几何与层标签。
 - 验收（第二步）：Skeleton clothing / Player overlay / Drowned / Slime outer 的层标签、顺序、混合状态可断言；
   与合并路径的截图差异只出现在这些层的透明/重叠区域。
+

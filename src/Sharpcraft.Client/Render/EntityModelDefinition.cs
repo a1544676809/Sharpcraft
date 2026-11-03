@@ -16,7 +16,8 @@ public sealed class EntityModelDefinition
         IReadOnlyList<EntityModelPart> parts,
         IReadOnlyDictionary<string, FaceUvTransform>? faceTransforms = null,
         string? texturePath = null,
-        float scale = 1f)
+        float scale = 1f,
+        string? emissiveTexturePath = null)
     {
         Name = name;
         TextureWidth = textureWidth;
@@ -25,6 +26,7 @@ public sealed class EntityModelDefinition
         FaceTransforms = faceTransforms ?? new Dictionary<string, FaceUvTransform>();
         TexturePath = texturePath;
         Scale = scale;
+        EmissiveTexturePath = emissiveTexturePath;
     }
 
     public string Name { get; }
@@ -35,6 +37,12 @@ public sealed class EntityModelDefinition
     public string? TexturePath { get; }
     public float Scale { get; }
 
+    /// <summary>
+    /// Eyes texture drawn over the same geometry with the reference eyes render type (emissive, depth &gt;=, no writes),
+    /// or null when the model has no eyes layer (docs/decisions/0021).
+    /// </summary>
+    public string? EmissiveTexturePath { get; }
+
     public IEnumerable<string> TexturePaths
     {
         get
@@ -42,6 +50,11 @@ public sealed class EntityModelDefinition
             if (TexturePath is { Length: > 0 } main)
             {
                 yield return main;
+            }
+
+            if (EmissiveTexturePath is { Length: > 0 } emissive)
+            {
+                yield return emissive;
             }
 
             foreach (var part in Parts)

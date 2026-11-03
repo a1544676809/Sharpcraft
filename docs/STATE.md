@@ -2362,3 +2362,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `SandboxWindow` 不再把合并几何塞进 `FrameRequest.Vertices`，改为 `BuildLayers` + `entityLayers:`；部件高亮叠加在 Cutout 层。
 - 沙盒与真实窗口因此走同一条多层提交路径；Player（overlay 半透明）、Drowned（outer）、Slime（outer 半透明）目视确认。
 - 全量测试与 docs 门禁通过后提交。
+
+### 2026-11-03 Emissive 眼睛层（T-474）
+
+- `EntityModelDefinition.EmissiveTexturePath` 声明眼睛纹理（Enderman/Spider 已接）；`TexturePaths` 自动纳入皮肤图集。
+- Mesher 的 Emissive pass 用**同一几何 + 眼睛纹理**生成第三层；`fs_entity_emissive` 输出无光照样本（alpha 0.1 测试），
+  pipeline = 半透明混合 + 深度 `GREATER_THAN_OR_EQUAL` + 不写深度（对齐 `RenderTypes.eyes`）。
+- 沙盒目视：Enderman 品红眼、Spider 红眼发光正常；无 pipeline/validation error。
+- 全量 Client **648 通过**（含 2 项新眼睛层测试）。

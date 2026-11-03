@@ -64,7 +64,8 @@ public sealed class EntityModelMesher
         {
             var kind = LayerKinds[i];
             var geometry = _layerGeometries[i];
-            BuildInto(geometry, kind, entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants);
+            var emissivePass = kind == EntityGeometryLayerKind.Emissive;
+            BuildInto(geometry, kind, entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants, emissivePass);
             if (geometry.IndexCount > 0)
             {
                 layers.Add(new EntityGeometryLayer(kind.ToString().ToLowerInvariant(), kind, i, geometry));
@@ -74,7 +75,7 @@ public sealed class EntityModelMesher
         return layers;
     }
 
-    private DynamicGeometry BuildInto(DynamicGeometry target, EntityGeometryLayerKind? kindFilter, ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null)
+    private DynamicGeometry BuildInto(DynamicGeometry target, EntityGeometryLayerKind? kindFilter, ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, bool emissivePass = false)
     {
         target.Clear();
         var cubeCount = 0;
@@ -99,13 +100,29 @@ public sealed class EntityModelMesher
                 continue;
             }
 
+            if (emissivePass && model.EmissiveTexturePath is null)
+            {
+                continue;
+            }
+
             var px = (1f / 16f) * EntityPlaceholderMesher.ModelScale * model.Scale;
             var feet = Vector3.Zero;
             var entityTransform = EntityModelTransform.From(entity);
             var sprite = skin;
             var skinWidthForModel = skinWidth;
             var skinHeightForModel = skinHeight;
-            if (skinAtlas?.Get(model.TexturePath) is { } atlasSprite)
+            if (emissivePass)
+            {
+                if (skinAtlas?.Get(model.EmissiveTexturePath) is not { } eyeSprite)
+                {
+                    continue;
+                }
+
+                sprite = eyeSprite;
+                skinWidthForModel = eyeSprite.Width;
+                skinHeightForModel = eyeSprite.Height;
+            }
+            else if (skinAtlas?.Get(model.TexturePath) is { } atlasSprite)
             {
                 sprite = atlasSprite;
                 skinWidthForModel = atlasSprite.Width;
@@ -136,14 +153,14 @@ public sealed class EntityModelMesher
                 var partSprite = sprite;
                 var partSkinWidth = skinWidthForModel;
                 var partSkinHeight = skinHeightForModel;
-                if (part.TexturePath is { Length: > 0 } partPath && skinAtlas?.Get(partPath) is { } partAtlas)
+                if (!emissivePass && part.TexturePath is { Length: > 0 } partPath && skinAtlas?.Get(partPath) is { } partAtlas)
                 {
                     partSprite = partAtlas;
                     partSkinWidth = partAtlas.Width;
                     partSkinHeight = partAtlas.Height;
                 }
 
-                AddPart(part, target, kindFilter, min, max, partSprite, partSkinWidth, partSkinHeight, feet, entityTransform, PartMatrix(part, model.Parts, px), transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount);
+                AddPart(part, target, kindFilter, emissivePass, min, max, partSprite, partSkinWidth, partSkinHeight, feet, entityTransform, PartMatrix(part, model.Parts, px), transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount);
             }
         }
 
@@ -165,6 +182,7 @@ public sealed class EntityModelMesher
         EntityModelPart part,
         DynamicGeometry target,
         EntityGeometryLayerKind? kindFilter,
+        bool emissivePass,
         Vector3 min,
         Vector3 max,
         SpriteRect skin,
@@ -222,7 +240,7 @@ public sealed class EntityModelMesher
             return part.Mirror ? result with { FlipH = !result.FlipH } : result;
         }
 
-        var emitBase = kindFilter is null || part.Kind == kindFilter;
+        var emitBase = emissivePass || kindFilter is null || part.Kind == kindFilter;
         var swapBodyDownUp = true;
         var d0u = swapBodyDownUp ? u22 : u2; var d0v = swapBodyDownUp ? v1 : v0;
         var d1u = swapBodyDownUp ? u2 : u1; var d1v = swapBodyDownUp ? v1 : v0;
@@ -244,7 +262,7 @@ public sealed class EntityModelMesher
         }
 
 
-        if (part.OverlayLayers is not null)
+        if (!emissivePass && part.OverlayLayers is not null)
         {
             foreach (var layer in part.OverlayLayers)
             {
@@ -290,7 +308,7 @@ public sealed class EntityModelMesher
                     overlayHeight = layerSprite.Height;
                 }
 
-                AddPart(overlay, target, kindFilter, overlayMin, overlayMax, overlaySkin, overlayWidth, overlayHeight, feet, entityTransform, partMatrix, transforms, defaultTransforms, renderState, skinAtlas, px, ref vertexFloats, ref indexCount);
+                AddPart(overlay, target, kindFilter, emissivePass, overlayMin, overlayMax, overlaySkin, overlayWidth, overlayHeight, feet, entityTransform, partMatrix, transforms, defaultTransforms, renderState, skinAtlas, px, ref vertexFloats, ref indexCount);
             }
         }
     }

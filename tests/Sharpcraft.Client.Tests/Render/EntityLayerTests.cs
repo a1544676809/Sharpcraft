@@ -52,6 +52,35 @@ public sealed class EntityLayerTests
     }
 
     [Fact]
+    public void AnEyesModelGetsAnEmissiveLayerUsingTheEyesTexture()
+    {
+        var atlas = EntitySkinAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
+        {
+            ["entity/enderman/enderman"] = new TextureData(64, 32, new byte[64 * 32 * 4]),
+            ["entity/enderman/enderman_eyes"] = new TextureData(64, 32, new byte[64 * 32 * 4])
+        });
+
+        var mesher = new EntityModelMesher();
+        var sprite = new SpriteRect(0, 0, 64, 32, 1);
+        var layers = mesher.BuildLayers(
+            [Entity(HumanoidMobModelDefinition.EndermanEntityTypeId)], sprite, 64, 32, skinAtlas: atlas);
+
+        var eyes = Assert.Single(layers, layer => layer.Kind == EntityGeometryLayerKind.Emissive);
+        Assert.True(eyes.Geometry.IndexCount > 0);
+        Assert.Contains(layers, layer => layer.Kind == EntityGeometryLayerKind.Cutout);
+    }
+
+    [Fact]
+    public void AModelWithoutEyesTextureHasNoEmissiveLayer()
+    {
+        var mesher = new EntityModelMesher();
+        var sprite = new SpriteRect(0, 0, 64, 64, 1);
+        var layers = mesher.BuildLayers([Entity(CowModelDefinition.CowEntityTypeId)], sprite, 64, 64);
+
+        Assert.DoesNotContain(layers, layer => layer.Kind == EntityGeometryLayerKind.Emissive);
+    }
+
+    [Fact]
     public void TheMergedBuildMatchesTheSumOfTheLayers()
     {
         var mesher = new EntityModelMesher();

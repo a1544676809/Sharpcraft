@@ -275,6 +275,7 @@ public static class WindowedRenderer
         using var cutoutPipeline = CreateCutoutPipeline(device, format, pipelineLayout);
         using var entityPipeline = CreateEntityPipeline(device, format, pipelineLayout);
         using var entityCutoutPipeline = CreateEntityCutoutPipeline(device, format, pipelineLayout);
+        using var entityEmissivePipeline = CreateEntityEmissivePipeline(device, format, pipelineLayout);
         using var skyPipeline = CreateSkyPipeline(device, format);
         // Celestial bodies and stars: the same backdrop draws the offscreen path uses, so the window and the exported
         // frame agree (docs/modules/clouds.md 6).
@@ -1324,9 +1325,12 @@ public static class WindowedRenderer
                     continue;
                 }
 
-                pass.SetPipeline(entityLayerKind[layerIndex] == EntityGeometryLayerKind.Translucent
-                    ? entityPipeline
-                    : entityCutoutPipeline);
+                pass.SetPipeline(entityLayerKind[layerIndex] switch
+                {
+                    EntityGeometryLayerKind.Translucent => entityPipeline,
+                    EntityGeometryLayerKind.Emissive => entityEmissivePipeline,
+                    _ => entityCutoutPipeline
+                });
                 pass.SetVertexBuffer(0, entityLayerVertex[layerIndex], 0, entityLayerVertexCapacity[layerIndex]);
                 pass.SetIndexBuffer(
                     entityLayerIndex[layerIndex],
@@ -2178,6 +2182,53 @@ public static class WindowedRenderer
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
             multisample: MultisampleState.Default,
             depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float),
+            vertexStride: (ulong)VertexLayout.Stride,
+            vertexStepMode: WGPUVertexStepMode.Vertex,
+            vertexAttributes: VertexLayout.Attributes());
+    }
+
+    /// <summary>
+    /// Entity eyes layer: reference EYES pipeline — emissive colour, translucent blend, depth GREATER_THAN_OR_EQUAL and no
+    /// depth writes (docs/decisions/0021).
+    /// </summary>
+    private static RenderPipeline CreateEntityEmissivePipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
+    {
+        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
+        {
+            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText))
+        });
+
+        return device.CreateRenderPipeline(
+            shader,
+            "vs_main"u8,
+            shader,
+            "fs_entity_emissive"u8,
+            [
+                new ColorTargetState
+                {
+                    Format = format,
+                    WriteMask = ColorWriteMask.All,
+                    Blend = new WGPUBlendState
+                    {
+                        color = new WGPUBlendComponent
+                        {
+                            operation = WGPUBlendOperation.Add,
+                            srcFactor = WGPUBlendFactor.SrcAlpha,
+                            dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
+                        },
+                        alpha = new WGPUBlendComponent
+                        {
+                            operation = WGPUBlendOperation.Add,
+                            srcFactor = WGPUBlendFactor.One,
+                            dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
+                        }
+                    }
+                }
+            ],
+            layout: layout,
+            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
+            multisample: MultisampleState.Default,
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: false),
             vertexStride: (ulong)VertexLayout.Stride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
             vertexAttributes: VertexLayout.Attributes());

@@ -34,7 +34,7 @@ AGENTS.md 原则 12：不可逆或跨模块的决策必须在此留档，**只�
 | [`0018-native-vulkan-backend.md`](0018-native-vulkan-backend.md) | 为获得几何/细分/Mesh Shader/硬件光追/VRS 等 Vulkan 独有能力而新增原生后端的成本、收益与门槛 | 提议 | - |
 | [`0019-vertex-lightmap-contract.md`](0019-vertex-lightmap-contract.md) | 光照乘子（lightmap）目前在网格构建时按 (sky, block) 烘焙进顶点色，见 VanillaLightmap。 | 已接受（所有者 2026-11-01 “可以修改” 授权） | - |
 | [`0020-per-chunk-geometry-buffers.md`](0020-per-chunk-geometry-buffers.md) | 相关：ADR-0011（bulk upload spike）、docs/specs/network/play-movement.md 7.27、docs/modules/clouds.md | 已接受（2026-11-01） | - |
-| [`0021-entity-render-layers.md`](0021-entity-render-layers.md) | 相关：docs/analysis/render/entity-render-layers.md、docs/modules/entity-render.md §9、ADR-0020 | 已接受（2026-11-03，所有者确认按两步实施；Emissive eyes 留待后续） | - |
+| [`0021-entity-render-layers.md`](0021-entity-render-layers.md) | 相关：docs/analysis/render/entity-render-layers.md、docs/modules/entity-render.md §9、ADR-0020 | 已接受（2026-11-03；第一步分层、第二步分层绘制与 Emissive eyes 均已落地） | - |
 
 <!-- END GENERATED: docs/decisions -->
 

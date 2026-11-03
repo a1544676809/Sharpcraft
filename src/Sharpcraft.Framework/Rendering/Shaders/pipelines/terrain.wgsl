@@ -253,3 +253,27 @@ fn fs_entity_cutout(input : VertexOutput) -> @location(0) vec4<f32> {
     let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
     return vec4<f32>(mix(base, fog.colour.rgb, fogged), 1.0);
 }
+
+// Entity eyes pass: reference EYES pipeline (EMISSIVE, NO_CARDINAL_LIGHTING, depth GREATER_THAN_OR_EQUAL, no writes).
+// The sampled colour is emitted unlit so eyes glow; only the eye texels survive the alpha test.
+@fragment
+fn fs_entity_emissive(input : VertexOutput) -> @location(0) vec4<f32> {
+    let rectMin = input.spriteRect.xy;
+    let rectMax = input.spriteRect.zw;
+    let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
+    let gradientScale = rectMax - rectMin;
+    let sampled = textureSampleGrad(
+        atlasTexture,
+        atlasSampler,
+        atlasUv,
+        dpdx(input.uv) * gradientScale,
+        dpdy(input.uv) * gradientScale);
+
+    if (sampled.a < 0.1) {
+        discard;
+    }
+
+    let span = max(fog.range.y - fog.range.x, 0.001);
+    let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
+    return vec4<f32>(mix(sampled.rgb, fog.colour.rgb, fogged), sampled.a);
+}

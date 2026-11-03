@@ -114,7 +114,8 @@ public sealed record EntityGeometryLayer(
 - **第二步（框架分层绘制）已完成**：`WindowedRenderer` 接受 `entityLayers`，每层一份常驻缓冲；
   Cutout 走新 `fs_entity_cutout`（alpha 0.5、无混合、深度写），Translucent 走原 `fs_entity_translucent`（混合、深度写关）；
   绘制顺序按层 `Order`。
-- **未做**：Emissive（Enderman eyes 等）——需要独立的深度 `>=`/不写/加色状态，单独一步。
+- **Emissive（eyes）已完成**：`EntityModelDefinition.EmissiveTexturePath` 声明眼睛纹理；mesher 用同一几何 + 眼睛纹理再生成一层 `Emissive`；`fs_entity_emissive`（无光照样本、alpha 0.1 测试）+ 混合（SrcAlpha/OneMinusSrcAlpha）+ 深度 `>=` 不写。Enderman/Spider 已接入并目视确认（品红/红眼发光）。
 - 沙盒已统一走 `BuildLayers` + `entityLayers`（与窗口真实路径一致），Player/Drowned/Slime 的透明层已目视确认。\n- 验收：`EntityLayerTests` 钉住“无 overlay 只有 Cutout / Player 与 Drowned/Slime 产生 Translucent / 合并几何总量等于各层之和”；
   窗口启动无 pipeline validation error。
+
 

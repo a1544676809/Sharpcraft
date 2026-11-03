@@ -131,3 +131,10 @@ P1 只做**静态姿态 + 朝向**，明确排除骨骼动画、物品装备渲�
 - 原版 `ModelPart.Polygon` 的 UV 赋值是：
   `vertices[0]=(u1,v0)`、`vertices[1]=(u0,v0)`、`vertices[2]=(u0,v1)`、`vertices[3]=(u1,v1)`；
 - 因此 skin 不应做全局 `1-v` 翻转；之前该做法把面采样到透明区域，导致玩家消失。正确做法是保持 `SpriteRect` 顶部约定，按 `ModelPart.Polygon` 的顶点顺序生成 UV。
+
+## 10. RenderLayer 提交
+
+- 基础模型与 clothing → `Cutout`；Player overlays / Drowned outer / Slime outer → `Translucent`；眼睛 → `Emissive`。
+- 契约与状态见 `docs/decisions/0021-entity-render-layers.md` 与 `docs/analysis/render/entity-render-layers.md` §6。
+- 眼睛：`EntityModelDefinition.EmissiveTexturePath` 提供纹理（Enderman `enderman_eyes`、Spider `spider_eyes`），
+  与基础几何共用，走 emissive 管线（无光照、深度 `>=`、不写、半透明混合）。

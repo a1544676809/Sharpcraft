@@ -29,7 +29,7 @@ public static class SpiderModelDefinition
             Leg("left_front_leg", 4f, -1f, true, Pi / 4f, Pi / 4f)
         ],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/spider/spider");
+        "entity/spider/spider", 1f, "entity/spider/spider_eyes");
 
     private static EntityModelPart Leg(string name, float pivotX, float pivotZ, bool mirror, float rotationY, float rotationZ) =>
         PlayerModelDefinition.FromVanilla(
@@ -50,3 +50,4 @@ public static class SpiderModelDefinition
             rotationY: rotationY,
             rotationZ: -rotationZ);
 }
+
