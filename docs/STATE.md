@@ -2542,3 +2542,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `body`（16×16×16）+ 9 条 `tentacle`（长度按原版 seeded `Random(1660)` 序列：8/13/9/11/11/10/12/9/12；pivot 由原版公式计算），整体 `Scale = 4.5`。
 - `ghast` / `ghast_shooting` 纹理由 boolean charging（accessor 16）选择；type id 58。
 - 静态 bind pose；触须摆动 `animateTentacles` 未移植。
+
+### 2026-11-03 Ghast 贴图尺寸修正（T-502）
+
+- 现象：恶魂身体像“少了几面”。根因：`entity/ghast/ghast.png` 实际是 **128×64**，Definition 误写 `64×32`，UV 被按一半尺寸采样，命中透明像素。
+- 修正为 128×64；六面完整、脸部正常。以后新增模型须先从 pack 确认纹理实际尺寸（不要按模型 UV 最大值猜）。
