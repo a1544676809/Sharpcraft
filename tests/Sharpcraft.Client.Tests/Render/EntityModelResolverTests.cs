@@ -284,6 +284,8 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("wolf", definition.Name);
+        Assert.Equal(64, definition.TextureWidth);
+        Assert.Equal(32, definition.TextureHeight);
         // 11 visible cubes plus two empty group nodes ("head", "tail"), doubled by collar and equipment layers.
         Assert.Equal(52, definition.Parts.Count);
     }
@@ -419,6 +421,7 @@ public sealed class EntityModelResolverTests
         Assert.Equal("placeholder", EntityModelResolver.Resolve(123456).Name);
     }
 }
+
 
 
 

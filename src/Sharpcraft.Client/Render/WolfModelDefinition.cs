@@ -13,7 +13,7 @@ public static class WolfModelDefinition
     public static readonly EntityModelDefinition Definition = new(
         "wolf",
         64,
-        64,
+        32,
         EntityModelLayerHelpers.WithCollar(
         [
             PlayerModelDefinition.FromVanilla("head", -1f, 13.5f, -7f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
@@ -77,7 +77,7 @@ public static class WolfModelDefinition
             variants[key] = new EntityModelDefinition(
                 "wolf_" + key,
                 64,
-                64,
+                32,
                 Definition.Parts,
                 PlayerModelDefinition.DefaultFaceTransforms,
                 captured,
@@ -88,6 +88,9 @@ public static class WolfModelDefinition
         return variants;
     }
 }
+
+
+
 
 
 

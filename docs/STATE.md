@@ -2765,3 +2765,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - Horse `iron_horse_armor` 沙盒已目视：铁马甲可见；Horse 鞍只显示过渡纹理，专用 `EquineSaddleModel` 几何未移植。
 - 注意：通用“整模型副本”只适用于复用基础几何的装备纹理（Horse 盔甲、Wolf 甲等）；`CamelSaddleModel`、`HappyGhastHarnessModel`、`NautilusArmorModel`、`EquineSaddleModel` 都有独立附加几何，当前通用副本对它们只是过渡，不能算完成。
 
+
+### 2026-11-03 Wolf 纹理尺寸修正（T-544）
+
+- 原版 `LayerDefinitions` 的 `WOLF` / `WOLF_ARMOR` 都是 **64×32**；`WolfModelDefinition` 曾误写 64×64，导致狼本体与 wolf armor 的 UV 被按 64 高度归一化，装备外观异常。
+- 已改为 64×32（成年基础与全部变体）；狼甲使用 `CubeDeformation(0.2F)`，装备副本 Grow=0.2；沙盒 `wolf_armor` 目视通过。
+- 幼狼仍为 32×32，不受影响。

@@ -576,3 +576,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 
 | T-543 | **装备 E3 骨架 + Horse 装备层验收**：`EntityRenderState.Equipment`（8 槽 id）、`EntityModelResolver.Decorate` 按实体类型追加装备副本层并注册装备纹理；`EquipmentTextureCatalog` 动态 `TextureSelector`；`EntitySkinLibrary` 预加载装备纹理；Horse iron_horse_armor + saddle 沙盒目视通过 | `docs/modules/entity-equipment.md` E3 | Client 704（新增 selector 测试） | `Client/World/{EntityEquipment,EntityTracker}`、`Client/Render/{EntityModelResolver,EntityModelLayerHelpers,EntitySkinLibrary,EquipmentTextureCatalog}` | 进行中 |
 
+| T-544 | **Wolf 纹理尺寸修正 + 装备验收**：AdultWolfModel 的 WOLF/WOLF_ARMOR layer 是 64×32，此前 WolfModelDefinition 声明 64×64，导致 wolf armor（及本体 UV）错误；改为 64×32，狼甲 CubeDeformation 0.2 通过；沙盒 wolf_armor 目视通过 | `LayerDefinitions` WOLF/WOLF_ARMOR | Client 704（新增尺寸断言） | `Client/Render/{WolfModelDefinition,EntityModelLayerHelpers}` | 已完成 |

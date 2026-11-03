@@ -94,7 +94,7 @@ DataComponentPatch patch
 | Camel | `saddle` | CamelRenderer 鞍层 | `camel_saddle/saddle` | 待补专用装备几何 |
 | Nautilus / ZombieNautilus | `body`、`saddle` | NautilusRenderer/NautilusArmorModel | `nautilus_*` | 待补专用装备几何 |
 | Happy Ghast | `body`、挽具/绳索 | HappyGhastHarnessModel、RopesLayer | `happy_ghast_body/*`、`happy_ghast_ropes` | 待补专用装备几何 |
-| Wolf | `body` | WolfArmorLayer + crackiness | `wolf_armor`、`wolf_armor_crackiness_*` | 待补专用装备几何 |
+| Wolf | `body` | WolfArmorLayer + crackiness | `wolf_armor`、`wolf_armor_crackiness_*` | 已验证（修复 64×32） |
 | Witch | `mainhand` | WitchItemLayer / CrossedArmsItemLayer | 需要物品模型（药水） | 未开始（后置） |
 
 Witch 的手持物品依赖完整物品模型渲染，不属于第一阶段；装备/鞍系列不需要物品模型，只需物品身份与装备槽。
@@ -119,6 +119,7 @@ Witch 的手持物品依赖完整物品模型渲染，不属于第一阶段；�
 - `docs/specs/network/entity-sync.md`（包 id、SetEquipment 登记）
 - `docs/analysis/render/entity-special-layers.md`（特殊层总表）
 - `docs/modules/entity-equipment.md`（设计文档）
+
 
 
 
