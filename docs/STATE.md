@@ -2434,3 +2434,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `HoglinModelDefinition`：body(+mane)、head(root, xRot 0.8727, 左右耳 zRot ±2π/9, 左右角)、四腿（前腿 14、后腿 11 高）。
 - Zoglin 复用几何、`entity/hoglin/zoglin` 纹理；type id 65 / 153。静态 bind pose；头撞/行走动画未移植。
 - 注册 + 注册测试（11 部件、Parent、Zoglin 纹理）；沙盒目视正常。
+
+### 2026-11-03 Piglin 系模型（T-484）
+
+- 几何从 `PlayerModel.createMesh(false)` 出发：保留玩家 body/arms/legs 与其外层，替换 head 为猪头（10×8×8 + 鼻/两鼻孔 + 左右耳 ±π/6），hat 清空。
+- Piglin / Piglin Brute / Zombified Piglin 共用几何，纹理分别为 `piglin` / `piglin_brute` / `zombified_piglin`；type id 102/103/158。
+- 静态 bind pose；Piglin 的 arm pose（dancing/crossbow/admiring）与动画未移植。
+- **已知差异（记录）**：原版 Piglin 主模型 RenderType 是 `entityTranslucent`，我们与玩家模型一致走 Cutout（alpha=1 纹理观感相同，但渲染状态不完全等效）。
+- 注册 + 注册测试（11 部件、鼻/耳 Parent、三种纹理）；沙盒目视正常。

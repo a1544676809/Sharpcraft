@@ -132,6 +132,21 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void ThePiglinFamilySharesHumanoidGeometryWithAPiglinHead()
+    {
+        var piglin = EntityModelResolver.Resolve(PiglinModelDefinition.PiglinEntityTypeId);
+        var brute = EntityModelResolver.Resolve(PiglinModelDefinition.PiglinBruteEntityTypeId);
+        var zombified = EntityModelResolver.Resolve(PiglinModelDefinition.ZombifiedPiglinEntityTypeId);
+
+        Assert.Equal("piglin", piglin.Name);
+        Assert.Equal(11, piglin.Parts.Count);
+        Assert.Contains(piglin.Parts, part => part.Name == "head_nose" && part.Parent == "head");
+        Assert.Contains(piglin.Parts, part => part.Name == "left_ear" && part.Parent == "head");
+        Assert.Equal("entity/piglin/piglin_brute", brute.TexturePath);
+        Assert.Equal("entity/piglin/zombified_piglin", zombified.TexturePath);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).
