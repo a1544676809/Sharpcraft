@@ -95,3 +95,5 @@
 - `docs/analysis/render/entity-animation.md`
 - `docs/analysis/render/entity-render-backlog.md`
 - `docs/modules/entity-render.md`
+
+- docs/analysis/render/entity-animation-architecture.md

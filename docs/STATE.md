@@ -2863,3 +2863,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - Agent team 完成：Axolotl（13 tests）、Armadillo（7 tests）、Frog（11 tests）；所有定义按参考关键帧/程序化公式移植，测试 750 全绿。
 - Lead 接线 `EntityAnimationController`：Armadillo walk/roll、Frog 六 clip、Baby Axolotl 七 clip；`ClipNames` 可在沙盒切换。
 - 仍缺：成人 Axolotl 的 playingDead/inWater/onGround/moving 四因子与 body-relative yaw；Frog/Armadillo 的 one-shot `AnimationState` 字段。不能声称这些实体动画完整。
+### 2026-11-03 实体动画架构提案（T-564）
+
+- 新增 `docs/analysis/render/entity-animation-architecture.md`：判断当前 `EntityAnimationController` switch + 单一 RenderState 不适合按生物批量补全。
+- 提案：`IEntityAnimationProvider` + 每生物 `IEntityAnimationState` + registry；每生物垂直切片只新增自己的 Animations/Provider/Tests 文件，Lead 统一接线。
+- 该文档为待评审；实施前不创建共享接口代码。
