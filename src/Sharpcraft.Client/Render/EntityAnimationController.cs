@@ -22,6 +22,7 @@ public static class EntityAnimationController
         else if (state.TypeId == CamelModelDefinition.CamelEntityTypeId)
         {
             CamelAnimations.WalkBaked.Apply(state.WalkAnimationPos * 0.1f, MathF.Min(state.WalkAnimationSpeed * 2.5f, 1f), pose);
+            CamelAnimations.IdleBaked.Apply(state.AgeInTicks / 20f, 1f, pose);
         }
         else if (state.TypeId == 154 || state.TypeId == 39 || state.TypeId == 68)
         {
@@ -75,6 +76,7 @@ public static class EntityAnimationController
     private static void AddLegRotation(EntityPose pose, string part, float radians) =>
         pose.Add(part, new PoseOffset(Vector3.Zero, new Vector3(radians, 0f, 0f), Vector3.Zero));
 }
+
 
 
 

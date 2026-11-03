@@ -79,6 +79,7 @@ internal static class SandboxWindow
         var equipSaddleText = Environment.GetEnvironmentVariable("MC_SANDBOX_EQUIP_SADDLE");
         var walkPosText = Environment.GetEnvironmentVariable("MC_SANDBOX_WALK_POS");
         var walkSpeedText = Environment.GetEnvironmentVariable("MC_SANDBOX_WALK_SPEED");
+        var ageTicksText = Environment.GetEnvironmentVariable("MC_SANDBOX_AGE_TICKS");
         Console.WriteLine($"equip body={ItemId(equipBodyText)} saddle={ItemId(equipSaddleText)}");
         var entity = new EntityRenderState(1, typeId, 0f, 0f, 0f, 0f, 0f,
             HasChest: Environment.GetEnvironmentVariable("MC_SANDBOX_CHEST") == "1",
@@ -99,7 +100,8 @@ internal static class SandboxWindow
             Markings: int.TryParse(markingsText, out var markings) ? markings : 0,
             Equipment: new EntityEquipment(-1, -1, -1, -1, -1, -1, ItemId(equipBodyText), ItemId(equipSaddleText)),
             WalkAnimationPos: float.TryParse(walkPosText, out var walkPos) ? walkPos : 0f,
-            WalkAnimationSpeed: float.TryParse(walkSpeedText, out var walkSpeed) ? walkSpeed : 1f);
+            WalkAnimationSpeed: float.TryParse(walkSpeedText, out var walkSpeed) ? walkSpeed : 1f,
+            AgeInTicks: float.TryParse(ageTicksText, out var ageTicks) ? ageTicks : 0f);
         var mesher = new EntityModelMesher();
         var state = new Dictionary<string, FaceUvTransform>();
         var statePath = Path.Combine(Path.GetTempPath(), "sharpcraft-face-state.json");
@@ -357,5 +359,6 @@ internal static class SandboxWindow
         return new ResourceManager(stack, 0);
     }
 }
+
 
 

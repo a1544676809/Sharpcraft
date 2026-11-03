@@ -2824,3 +2824,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `EntityAnimationController` 增加 Humanoid（Zombie/Drowned/Husk）与 Villager 的 walk/idle 姿态：head pitch、手臂/腿 cos 相位；Villager 仅头+腿，腿幅为 Humanoid 的 0.5。
 - 沙盒 Zombie 0/2.35 两帧目视；Villager 由单元测试锁定相位。
 - A1–A4 第一阶段目标完成；下一步扩展到更多实体动画（wing/tail/tentacle/roll 等）。
+
+### 2026-11-03 动画 A3：Camel idle（T-554）
+
+- 移植 `CamelAnimation.CAMEL_IDLE`（4 秒、tail/head/ear 关键帧），`EntityAnimationController` 按 `AgeInTicks/20` 应用。
+- Camel walk + idle 样板完成；Pig idle 直接使用静态 bind pose。A4 Zombie/Villager 已由测试锁定。

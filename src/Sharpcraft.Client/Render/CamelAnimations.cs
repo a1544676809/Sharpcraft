@@ -12,6 +12,7 @@ namespace Sharpcraft.Client.Render;
 public static class CamelAnimations
 {
     public static readonly AnimationDefinition Walk = BuildWalk();
+    public static readonly AnimationDefinition Idle = BuildIdle();
 
     private static AnimationKeyframe K(float t, Vector3 v) =>
         new(t, v, AnimationInterpolation.CatmullRom);
@@ -95,6 +96,32 @@ public static class CamelAnimations
                 K(1.5f, KeyframeAnimations.DegreeVec(15.94102f, -8.42106f, 20.94102f)))]
         });
 
+    private static AnimationDefinition BuildIdle() =>
+        new(4f, false, new Dictionary<string, IReadOnlyList<AnimationChannel>>(StringComparer.Ordinal)
+        {
+            ["tail"] = [R(
+                K(0f, KeyframeAnimations.DegreeVec(5f, 0f, 0f)),
+                K(1f, KeyframeAnimations.DegreeVec(4.98107f, 0.43523f, -4.98107f)),
+                K(3f, KeyframeAnimations.DegreeVec(4.9872f, -0.29424f, 3.36745f)),
+                K(4f, KeyframeAnimations.DegreeVec(5f, 0f, 0f)))],
+            ["head"] = [R(
+                K(0f, KeyframeAnimations.DegreeVec(0f, 0f, 0f)),
+                K(2f, KeyframeAnimations.DegreeVec(-2.5f, 0f, 0f)),
+                K(4f, KeyframeAnimations.DegreeVec(0f, 0f, 0f)))],
+            ["left_ear"] = [R(
+                K(2.5f, KeyframeAnimations.DegreeVec(0f, 0f, -45f)),
+                K(2.625f, KeyframeAnimations.DegreeVec(0f, 0f, 22.5f)),
+                K(2.75f, KeyframeAnimations.DegreeVec(0f, 0f, -45f)),
+                K(2.875f, KeyframeAnimations.DegreeVec(0f, 0f, 22.5f)),
+                K(3f, KeyframeAnimations.DegreeVec(0f, 0f, -45f)))],
+            ["right_ear"] = [R(
+                K(2.5f, KeyframeAnimations.DegreeVec(0f, 0f, 45f)),
+                K(2.625f, KeyframeAnimations.DegreeVec(0f, 0f, -22.5f)),
+                K(2.75f, KeyframeAnimations.DegreeVec(0f, 0f, 45f)),
+                K(2.875f, KeyframeAnimations.DegreeVec(0f, 0f, -22.5f)),
+                K(3f, KeyframeAnimations.DegreeVec(0f, 0f, 45f)))]
+        });
+
     private static readonly IReadOnlySet<string> PartNames = new HashSet<string>(StringComparer.Ordinal)
     {
         "root", "head", "right_front_leg", "left_front_leg", "left_hind_leg", "right_hind_leg",
@@ -102,4 +129,5 @@ public static class CamelAnimations
     };
 
     public static readonly KeyframeAnimation WalkBaked = Walk.Bake(PartNames);
+    public static readonly KeyframeAnimation IdleBaked = Idle.Bake(PartNames);
 }
