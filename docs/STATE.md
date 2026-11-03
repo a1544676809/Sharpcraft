@@ -2600,3 +2600,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 结构：shoulders、ribcage（主柱 + 3 根肋板，rotX 0.20420352）、tail（pivot y=16.692228,z=1.527873，rotX 0.83252203）、center/right/left 三头。
 - 纹理 `entity/wither/wither`（64×64），type id 149；静态 bind pose。
 - 未移植：三头/肋骨/尾动画、invulnerable 纹理切换与 WitherArmorLayer。
+
+### 2026-11-03 Wither 静态姿势校正（T-513）
+
+- 修正 root 部件 xRot 符号（应为 `-vanilla`）；此前 ribcage/tail 用了正号。
+- 静态姿势固定为 `setupAnim(age=0)` 帧：`ribcage.xRot = -(0.065+0.05)*π = -0.36128316`，tail pivot `y=16.25444, z=3.034748`、`tail.xRot=-(0.265+0.1)*π=-1.14668132`。尾巴仍是原版单个 3×6×3 盒子，只是摆动动画未实现。

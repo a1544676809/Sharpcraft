@@ -417,7 +417,7 @@ public sealed class EntityModelRegistrationTests
         Assert.Equal(9, definition.Parts.Count);
         Assert.Equal(3, definition.Parts.Count(part => part.Name.EndsWith("head", StringComparison.Ordinal)));
         Assert.Equal(3, definition.Parts.Count(part => part.Name.StartsWith("rib_", StringComparison.Ordinal)));
-        Assert.Equal(0.20420352f, definition.Parts.Single(part => part.Name == "ribcage").RotationX);
+        Assert.Equal(-0.36128316f, definition.Parts.Single(part => part.Name == "ribcage").RotationX);
     }
 
     [Fact]
