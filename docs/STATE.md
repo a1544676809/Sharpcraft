@@ -2750,3 +2750,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `ItemRegistryTests` 校验数量与关键 id：saddle=949、white_carpet=580、red_harness=964、wolf_armor=1004、iron_horse_armor=1407、iron_nautilus_armor=1485。
 - 下一步 E2：装备纹理受控映射（以 `ItemInfo.Id` 标识符为 key）。
 
+
+### 2026-11-03 装备 E2：受控纹理映射（T-542）
+
+- `EquipmentTextureCatalog.Resolve(EquipmentAssetKind, ItemInfo)`：马甲 6 材质、9 类鞍、16 色地毯/挽具、鹦鹉螺 5 材质、狼甲 + overlay。
+- 以 `ItemInfo.Id`（标识符）为 key，不散落整数 id；不支持物品返回 null。
+- 测试：`EquipmentTextureCatalogTests` 5 项；下一步 E3 将装备层接入实体模型。

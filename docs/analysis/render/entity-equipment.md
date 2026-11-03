@@ -83,7 +83,7 @@ DataComponentPatch patch
 - 快乐恶魂：`entity/equipment/happy_ghast_body/<color>_harness` 与 `happy_ghast_ropes`；
 - 狼：`entity/wolf/wolf_armor` 及 `wolf_armor_crackiness_*`。
 
-实现前必须补一份“路径与物品对应表”到本文件，并在 `docs/traceability.md` 关联到对应实体验收项。
+实现前必须补一份“路径与物品对应表”到本文件，并在 `docs/traceability.md` 关联到对应实体验收项。**2026-11-03 已完成 E2 受控表：`EquipmentTextureCatalog`（`Client/Render`）以 `ItemInfo.Id` 为 key，覆盖 6 种马甲材质、9 类鞍、16 色地毯/挽具、5 种鹦鹉螺甲、狼甲；leather 与 wolf 甲带 overlay 路径。**
 
 ## 4. 各实体装备层清单
 
@@ -119,4 +119,5 @@ Witch 的手持物品依赖完整物品模型渲染，不属于第一阶段；�
 - `docs/specs/network/entity-sync.md`（包 id、SetEquipment 登记）
 - `docs/analysis/render/entity-special-layers.md`（特殊层总表）
 - `docs/modules/entity-equipment.md`（设计文档）
+
 
