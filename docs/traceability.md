@@ -577,6 +577,8 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-543 | **装备 E3 骨架 + Horse 装备层验收**：`EntityRenderState.Equipment`（8 槽 id）、`EntityModelResolver.Decorate` 按实体类型追加装备副本层并注册装备纹理；`EquipmentTextureCatalog` 动态 `TextureSelector`；`EntitySkinLibrary` 预加载装备纹理；Horse iron_horse_armor + saddle 沙盒目视通过 | `docs/modules/entity-equipment.md` E3 | Client 704（新增 selector 测试） | `Client/World/{EntityEquipment,EntityTracker}`、`Client/Render/{EntityModelResolver,EntityModelLayerHelpers,EntitySkinLibrary,EquipmentTextureCatalog}` | 进行中 |
 
 | T-544 | **Wolf 纹理尺寸修正 + 装备验收**：AdultWolfModel 的 WOLF/WOLF_ARMOR layer 是 64×32，此前 WolfModelDefinition 声明 64×64，导致 wolf armor（及本体 UV）错误；改为 64×32，狼甲 CubeDeformation 0.2 通过；沙盒 wolf_armor 目视通过 | `LayerDefinitions` WOLF/WOLF_ARMOR | Client 704（新增尺寸断言） | `Client/Render/{WolfModelDefinition,EntityModelLayerHelpers}` | 已完成 |
-| T-545 | **专用装备几何补齐**：`EquipmentModelParts` 增加 EquineSaddle 7 块、CamelSaddle 11 块、NautilusArmor 3 块 + NautilusSaddle 1 块、HappyHarness 2 块；`WithEquipment` 合并 base 副本 + extras，Happy harness 纹理 128×128；Camel/Nautilus 沙盒目视通过 | `docs/analysis/render/entity-equipment.md` | Client 704 | `Client/Render/{EquipmentModelParts,EntityModelLayerHelpers}` | 进行中 |
-
+| T-545 | **专用装备几何补齐**：`EquipmentModelParts` 增加 EquineSaddle 7 块、CamelSaddle 11 块、NautilusArmor 3 块 + NautilusSaddle 1 块、HappyHarness 2 块；`WithEquipment` 合并 base 副本 + extras；Camel/Nautilus/Wolf 沙盒目视通过 | `docs/analysis/render/entity-equipment.md` | Client 704 | `Client/Render/{EquipmentModelParts,EntityModelLayerHelpers}` | 已完成 |
+| T-547 | **Happy Ghast harness 正确实现**：`HappyGhastHarnessModel` 仅含 harness/goggles，不克隆基础 body；`WithEquipment(baseCopy:false)` 保留基础 body 原纹理 + 追加专属 harness 几何；纹理按模型声明 64×64（PNG 128×128 HD）归一化，沙盒目视通过 | `docs/analysis/render/entity-equipment.md` | Client 704 | `Client/Render/{EntityModelLayerHelpers,EntityModelResolver,EquipmentModelParts}` | 已完成 |
 | T-546 | **Overlay 层 UV 分辨率无关修正**：`EntityModelMesher` 的独立纹理 overlay 曾用 `layerSprite.Width/Height` 归一化，高清同布局纹理会错位；改为 `partTextureWidth/Height`（模型/部件声明尺寸），与基础 UV 保持一致 | `docs/modules/entity-render.md` §12 | Client 704（构建/既有 UV 回归） | `Client/Render/EntityModelMesher` | 已完成 |
+
+

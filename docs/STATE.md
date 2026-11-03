@@ -2782,3 +2782,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - 用户确认原则：UV 解析必须与 PNG 分辨率无关；同布局的高分辨率纹理不能改变 UV。
 - 基础部件已用 `model.TextureWidth/Height`；发现独立纹理 overlay 仍用 `layerSprite.Width/Height`，已改为 `partTextureWidth/Height`，HD 同布局 overlay 不再错位。
+
+### 2026-11-03 Happy Ghast harness 收尾（T-547）
+
+- 关键发现：`HappyGhastHarnessModel` **不是**完整 base model 复制，只含 `harness` + `goggles` 两个部件。
+- 修正 `WithEquipment(baseCopy:false)`：保留基础 body 原纹理，只追加专用 harness/goggles；不再用 harness 纹理覆盖 base body。
+- 纹理使用模型声明 64×64（PNG 128×128 是 HD 2×，不影响 UV）；沙盒黑色 harness + 眼罩正确显示，body 保持原纹理。

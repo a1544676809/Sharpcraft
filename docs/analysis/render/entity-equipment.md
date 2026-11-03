@@ -93,7 +93,7 @@ DataComponentPatch patch
 | Llama / TraderLlama | `body`（decor） | LlamaDecorLayer | `llama_body/*`，trader 地毯单独 | 纹理层已接入 |
 | Camel | `saddle` | CamelRenderer 鞍层 | `camel_saddle/saddle` | 已验证（CamelSaddleModel） |
 | Nautilus / ZombieNautilus | `body`、`saddle` | NautilusRenderer/NautilusArmorModel | `nautilus_*` | 已验证（NautilusArmor/Saddle） |
-| Happy Ghast | `body`、挽具/绳索 | HappyGhastHarnessModel、RopesLayer | `happy_ghast_body/*`、`happy_ghast_ropes` | Harness 几何已补，待最终验收 |
+| Happy Ghast | `body`、挽具/绳索 | HappyGhastHarnessModel、RopesLayer | `happy_ghast_body/*`、`happy_ghast_ropes` | 已验证（专用 harness/goggles 几何） |
 | Wolf | `body` | WolfArmorLayer + crackiness | `wolf_armor`、`wolf_armor_crackiness_*` | 已验证（修复 64×32） |
 | Witch | `mainhand` | WitchItemLayer / CrossedArmsItemLayer | 需要物品模型（药水） | 未开始（后置） |
 
@@ -112,13 +112,14 @@ Witch 的手持物品依赖完整物品模型渲染，不属于第一阶段；�
 2. **DataComponentPatch 非空**：第一阶段不支持，遇到即降级。
 3. **装备资产 JSON 未在资产包中找到**：需要确认 `EquipmentClientInfo` 的定义来源（是否应从 jar 的 data/assets 另提取），否则静态映射无法长期维护。
 4. **多装备层叠**：同一实体 simultaneous body+saddle、horse armor+saddle、狼甲裂纹等需要明确绘制顺序与冲突规则。
-5. **染色/自定义名称**：属于组件系统，第一阶段不渲染。\n6. **Happy Ghast harness UV**：原版 `HappyGhastModel` / `HappyGhastHarnessModel` 都是 `LayerDefinition.create(mesh,64,64).apply(scaling(4))`，纹理 PNG 为 128×128（HD）；当前通用副本只显示眼/面部挽具带，身体绑带仍与参考不符，需按 `EquipmentClientInfo` 的层 UV/纹理语义再对齐，未标记完成。
+5. **染色/自定义名称**：属于组件系统，第一阶段不渲染。\n6. **Happy Ghast harness**：已确认 `HappyGhastHarnessModel` 只包含 `harness` + `goggles` 两个专属部件（不复制基础 body）；已改为只追加这两个部件、保留基础 body 原纹理，纹理按模型声明 64×64（PNG 128×128）归一化，沙盒目视通过。
 
 ## 7. 参考资料
 
 - `docs/specs/network/entity-sync.md`（包 id、SetEquipment 登记）
 - `docs/analysis/render/entity-special-layers.md`（特殊层总表）
 - `docs/modules/entity-equipment.md`（设计文档）
+
 
 
 

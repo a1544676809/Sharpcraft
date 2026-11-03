@@ -34,25 +34,28 @@ public static class EntityModelLayerHelpers
 
     private static bool static_hasCollar(EntityRenderState state) => state.HasCollar;
 
-    public static EntityModelPart[] WithEquipment(IReadOnlyList<EntityModelPart> parts, EquipmentAssetKind kind, int slot, string fallbackTexture, bool overlay = false)
+    public static EntityModelPart[] WithEquipment(IReadOnlyList<EntityModelPart> parts, EquipmentAssetKind kind, int slot, string fallbackTexture, bool overlay = false, bool baseCopy = true)
     {
         var result = new List<EntityModelPart>(parts.Count * 2);
         result.AddRange(parts);
         var inflate = kind == EquipmentAssetKind.WolfBody ? 0.2f : 0.05f;
-        var textureWidth = kind == EquipmentAssetKind.HappyGhastBody ? 128 : 0;
-        var textureHeight = kind == EquipmentAssetKind.HappyGhastBody ? 128 : 0;
-        foreach (var part in parts)
+        const int textureWidth = 0;
+        const int textureHeight = 0;
+        if (baseCopy)
         {
-            result.Add(part with
+            foreach (var part in parts)
             {
-                Name = "equipment_" + kind + "_" + slot + (overlay ? "_overlay_" : "_") + part.Name,
-                TexturePath = fallbackTexture,
-                TextureSelector = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay),
-                Grow = part.Grow + inflate,
-                TextureWidth = textureWidth,
-                TextureHeight = textureHeight,
-                VisibleWhen = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay) is not null
-            });
+                result.Add(part with
+                {
+                    Name = "equipment_" + kind + "_" + slot + (overlay ? "_overlay_" : "_") + part.Name,
+                    TexturePath = fallbackTexture,
+                    TextureSelector = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay),
+                    Grow = part.Grow + inflate,
+                    TextureWidth = textureWidth,
+                    TextureHeight = textureHeight,
+                    VisibleWhen = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay) is not null
+                });
+            }
         }
 
         foreach (var part in EquipmentModelParts.For(kind))
@@ -62,6 +65,7 @@ public static class EntityModelLayerHelpers
                 Name = "equipment_extra_" + kind + "_" + slot + "_" + part.Name,
                 TexturePath = fallbackTexture,
                 TextureSelector = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay),
+                Grow = part.Grow + inflate,
                 TextureWidth = textureWidth,
                 TextureHeight = textureHeight,
                 VisibleWhen = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay) is not null
@@ -70,6 +74,7 @@ public static class EntityModelLayerHelpers
 
         return [.. result];
     }
+
     public static EntityModelPart[] WithHorseMarkings(IReadOnlyList<EntityModelPart> parts, string texturePrefix, bool baby)
     {        (int Id, string Key)[] markings = [(1, "white"), (2, "whitefield"), (3, "whitedots"), (4, "blackdots")];
         var result = new List<EntityModelPart>(parts.Count * (markings.Length + 1));
@@ -92,6 +97,8 @@ public static class EntityModelLayerHelpers
         return [.. result];
     }
 }
+
+
 
 
 

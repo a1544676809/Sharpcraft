@@ -343,8 +343,8 @@ public sealed class EntityModelMesher
                     overlaySkin = layerSprite;
                     // UVs are authored in the model/part texture grid. Use the declared dimensions, never the PNG
                     // resolution: an HD texture with the same layout must not shift overlay UVs.
-                    overlayWidth = partTextureWidth;
-                    overlayHeight = partTextureHeight;
+                    overlayWidth = skinWidth;
+                    overlayHeight = skinHeight;
                 }
 
                 AddPart(overlay, target, kindFilter, emissivePass, overlayMin, overlayMax, overlaySkin, overlayWidth, overlayHeight, feet, entityTransform, partMatrix, transforms, defaultTransforms, renderState, skinAtlas, px, ref vertexFloats, ref indexCount);
@@ -477,6 +477,7 @@ public sealed class EntityModelMesher
         destination[offset++] = 0f;
     }
 }
+
 
 
 

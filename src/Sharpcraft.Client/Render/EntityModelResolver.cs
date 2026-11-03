@@ -191,7 +191,7 @@ public static class EntityModelResolver
         var parts = definition.Parts;
         foreach (var (kind, slot, fallback) in layers)
         {
-            parts = EntityModelLayerHelpers.WithEquipment(parts, kind, slot, fallback);
+            parts = EntityModelLayerHelpers.WithEquipment(parts, kind, slot, fallback, baseCopy: kind != EquipmentAssetKind.HappyGhastBody);
         }
 
         var decorated = new EntityModelDefinition(
@@ -286,4 +286,5 @@ public static class EntityModelResolver
         RegisterVariants(ZombieVillagerModelDefinition.ZombieVillagerEntityTypeId, ZombieVillagerModelDefinition.Variants);
     }
 }
+
 

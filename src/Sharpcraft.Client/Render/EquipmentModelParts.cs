@@ -63,3 +63,5 @@ public static class EquipmentModelParts
         PlayerModelDefinition.FromVanilla("goggles", 0f, 14f, -5.5f, -8f, -2.5f, -2.5f, 16f, 5f, 5f, 0, 32, grow: 0.15f)
     ];
 }
+
+

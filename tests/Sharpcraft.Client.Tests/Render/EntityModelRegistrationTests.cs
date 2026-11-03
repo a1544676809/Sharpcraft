@@ -328,7 +328,7 @@ public sealed class EntityModelRegistrationTests
         var definition = EntityModelResolver.Resolve(HappyGhastModelDefinition.HappyGhastEntityTypeId);
 
         Assert.Equal("happy_ghast", definition.Name);
-        Assert.Equal(22, definition.Parts.Count);
+        Assert.Equal(12, definition.Parts.Count);
         Assert.All(definition.Parts.Where(part => part.Name.StartsWith("tentacle", StringComparison.Ordinal)), part => Assert.Equal("body", part.Parent));
         Assert.Equal(8f, definition.Parts.Single(part => part.Name == "tentacle6").Height);
         Assert.Equal(4f, definition.Scale);
@@ -568,7 +568,7 @@ public sealed class EntityModelRegistrationTests
     public void BabyNautilusHappyGhastGlowSquidResolveToTheirOwnGeometry()
     {
         Assert.Equal(43, EntityModelResolver.Resolve(89, true).Parts.Count);
-        Assert.Equal(24, EntityModelResolver.Resolve(59, true).Parts.Count);
+        Assert.Equal(13, EntityModelResolver.Resolve(59, true).Parts.Count);
         Assert.Equal(9, EntityModelResolver.Resolve(62, true).Parts.Count);
         Assert.Equal(0.95f, EntityModelResolver.Resolve(59, true).Scale);
         Assert.Equal("entity/squid/glow_squid_baby", EntityModelResolver.Resolve(62, true).TexturePath);
@@ -593,6 +593,7 @@ public sealed class EntityModelRegistrationTests
         Assert.Equal(111, RabbitModelDefinition.RabbitEntityTypeId);
     }
 }
+
 
 
 
