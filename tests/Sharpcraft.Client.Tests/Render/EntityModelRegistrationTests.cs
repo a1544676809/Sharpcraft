@@ -214,6 +214,17 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheNautilusTypeIsRegisteredWithShellAndMouth()
+    {
+        var definition = EntityModelResolver.Resolve(NautilusModelDefinition.NautilusEntityTypeId);
+
+        Assert.Equal("nautilus", definition.Name);
+        Assert.Equal(9, definition.Parts.Count);
+        Assert.Contains(definition.Parts, part => part.Name == "shell_mid" && part.Parent == "shell");
+        Assert.Contains(definition.Parts, part => part.Name == "inner_mouth" && part.Parent == "body");
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

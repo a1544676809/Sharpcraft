@@ -2471,3 +2471,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 三个膨胀阶段各自独立几何：small(6 部件)/medium(11)/large(13)，共用 `entity/fish/pufferfish` 纹理。
 - puff state 0/1/2（int accessor 18，type id 110）；base 定义名为 `pufferfish`，`FindTypeId` 可用。
 - 静态 bind pose；鳍摆动画未移植。沙盒 large 目视正常。
+
+### 2026-11-03 Nautilus 模型（T-490）
+
+- `NautilusModelDefinition`：root(group)→shell(主体/中层/背板)、body(2 盒)→上/内/下嘴；纹理 `entity/nautilus/nautilus`，type id 89。
+- 静态 bind pose；游动动画与 armor/saddle 层未移植；Zombie Nautilus 另属独立模型。
+- **Tropical Fish 暂缓**：它需要「每层独立 tint（baseColor/patternColor）+ pattern 纹理层」，当前多 layer 契约没有 tint；先记为缺口，待 tint 基础设施。

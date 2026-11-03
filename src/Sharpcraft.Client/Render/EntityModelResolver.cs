@@ -53,6 +53,7 @@ public static class EntityModelResolver
         [CodModelDefinition.CodEntityTypeId] = CodModelDefinition.Definition,
         [SalmonModelDefinition.SalmonEntityTypeId] = SalmonModelDefinition.Definition,
         [PufferfishModelDefinition.PufferfishEntityTypeId] = PufferfishModelDefinition.Definition,
+        [NautilusModelDefinition.NautilusEntityTypeId] = NautilusModelDefinition.Definition,
         [GuardianModelDefinition.GuardianEntityTypeId] = GuardianModelDefinition.Definition,
         [GuardianModelDefinition.ElderGuardianEntityTypeId] = GuardianModelDefinition.Elder,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,
