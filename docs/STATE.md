@@ -2594,3 +2594,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 变体注册表 `zombie_nautilus_variant`（accessor 18，serializer 32，type id 156；内建键 temperate/warm）；静态 bind pose。
 - 未移植：游动动画、armor/saddle 装备层；**珊瑚层在原版有 body armor 时会隐藏**，当前始终显示（装备层未做，已登记）。
 - 沙盒 warm 目视正常（白壳 + 粉/黄/蓝/红珊瑚）。
+
+### 2026-11-03 Wither 模型（T-512）
+
+- 结构：shoulders、ribcage（主柱 + 3 根肋板，rotX 0.20420352）、tail（pivot y=16.692228,z=1.527873，rotX 0.83252203）、center/right/left 三头。
+- 纹理 `entity/wither/wither`（64×64），type id 149；静态 bind pose。
+- 未移植：三头/肋骨/尾动画、invulnerable 纹理切换与 WitherArmorLayer。

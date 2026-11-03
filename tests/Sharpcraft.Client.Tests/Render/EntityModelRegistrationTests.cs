@@ -409,6 +409,18 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheWitherTypeHasThreeHeadsAndARibcage()
+    {
+        var definition = EntityModelResolver.Resolve(WitherBossModelDefinition.WitherEntityTypeId);
+
+        Assert.Equal("wither", definition.Name);
+        Assert.Equal(9, definition.Parts.Count);
+        Assert.Equal(3, definition.Parts.Count(part => part.Name.EndsWith("head", StringComparison.Ordinal)));
+        Assert.Equal(3, definition.Parts.Count(part => part.Name.StartsWith("rib_", StringComparison.Ordinal)));
+        Assert.Equal(0.20420352f, definition.Parts.Single(part => part.Name == "ribcage").RotationX);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

@@ -68,6 +68,7 @@ public static class EntityModelResolver
         [CopperGolemModelDefinition.CopperGolemEntityTypeId] = CopperGolemModelDefinition.Definition,
         [BreezeModelDefinition.BreezeEntityTypeId] = BreezeModelDefinition.Definition,
         [ZombieNautilusModelDefinition.ZombieNautilusEntityTypeId] = ZombieNautilusModelDefinition.Definition,
+        [WitherBossModelDefinition.WitherEntityTypeId] = WitherBossModelDefinition.Definition,
         [GuardianModelDefinition.GuardianEntityTypeId] = GuardianModelDefinition.Definition,
         [GuardianModelDefinition.ElderGuardianEntityTypeId] = GuardianModelDefinition.Elder,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,
