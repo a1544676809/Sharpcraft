@@ -421,6 +421,18 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheWardenTypeHasItsCoreBodyParts()
+    {
+        var definition = EntityModelResolver.Resolve(WardenModelDefinition.WardenEntityTypeId);
+
+        Assert.Equal("warden", definition.Name);
+        Assert.Equal(11, definition.Parts.Count);
+        Assert.Contains(definition.Parts, part => part.Name == "right_tendril" && part.Parent == "head");
+        Assert.Contains(definition.Parts, part => part.Name == "left_ribcage" && part.Parent == "body");
+        Assert.Contains(definition.Parts, part => part.Name == "left_leg" && part.Parent == "bone");
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

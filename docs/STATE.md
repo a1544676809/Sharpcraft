@@ -2605,3 +2605,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - 修正 root 部件 xRot 符号（应为 `-vanilla`）；此前 ribcage/tail 用了正号。
 - 静态姿势固定为 `setupAnim(age=0)` 帧：`ribcage.xRot = -(0.065+0.05)*π = -0.36128316`，tail pivot `y=16.25444, z=3.034748`、`tail.xRot=-(0.265+0.1)*π=-1.14668132`。尾巴仍是原版单个 3×6×3 盒子，只是摆动动画未实现。
+
+### 2026-11-03 Warden 基础几何（T-514，进行中）
+
+- 基础结构：bone→body（左右 ribcage、head→左右 tendril、左右 arm）、左右 leg，共 11 部件；纹理 `entity/warden/warden`（128×128），type id 146。
+- **未完成**：原版还有 bioluminescent / pulsating spots（两帧）/ heart / tendrils 四个 `LivingEntityEmissiveLayer`，需要“部件子集 + 每层独立 emissive 纹理”的能力；当前只有单 `EmissiveTexturePath`。动画全部未移植。
+- 下一步建议：先扩展 emissive 层为部件可指定 `EmissiveTexturePath`（或独立 layer 定义），再补 Warden 四层与 EnderDragon。
