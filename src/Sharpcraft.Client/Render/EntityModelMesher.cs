@@ -100,7 +100,7 @@ public sealed class EntityModelMesher
                 continue;
             }
 
-            if (emissivePass && model.EmissiveTexturePath is null)
+            if (emissivePass && !HasEmissive(model))
             {
                 continue;
             }
@@ -115,12 +115,15 @@ public sealed class EntityModelMesher
             var skinHeightForModel = model.TextureHeight;
             if (emissivePass)
             {
-                if (skinAtlas?.Get(model.EmissiveTexturePath) is not { } eyeSprite)
+                if (model.EmissiveTexturePath is { Length: > 0 } emissivePath)
                 {
-                    continue;
-                }
+                    if (skinAtlas?.Get(emissivePath) is not { } eyeSprite)
+                    {
+                        continue;
+                    }
 
-                sprite = eyeSprite;
+                    sprite = eyeSprite;
+                }
             }
             else if (skinAtlas?.Get(model.TextureSelector?.Invoke(entity) ?? model.TexturePath) is { } atlasSprite)
             {
@@ -134,7 +137,7 @@ public sealed class EntityModelMesher
                     continue;
                 }
 
-                if (emissivePass ? !part.IncludeInEmissive : part.EmissiveOnly)
+                if (emissivePass ? (!part.IncludeInEmissive || (part.EmissiveTexturePath is null && model.EmissiveTexturePath is null)) : part.EmissiveOnly)
                 {
                     continue;
                 }
@@ -164,6 +167,10 @@ public sealed class EntityModelMesher
                 var partSprite = sprite;
                 var partSkinWidth = partTextureWidth;
                 var partSkinHeight = partTextureHeight;
+                if (emissivePass && part.EmissiveTexturePath is { Length: > 0 } partEmissivePath && skinAtlas?.Get(partEmissivePath) is { } partEmissiveSprite)
+                {
+                    partSprite = partEmissiveSprite;
+                }
                 if (!emissivePass && part.TexturePath is { Length: > 0 } partPath && skinAtlas?.Get(partPath) is { } partAtlas)
                 {
                     partSprite = partAtlas;
@@ -182,6 +189,24 @@ public sealed class EntityModelMesher
         variants is null
             ? EntityModelResolver.Resolve(entity.TypeId)
             : variants.Resolve(entity.TypeId, entity.VariantId);
+
+    private static bool HasEmissive(EntityModelDefinition model)
+    {
+        if (model.EmissiveTexturePath is { Length: > 0 })
+        {
+            return true;
+        }
+
+        foreach (var part in model.Parts)
+        {
+            if (part.EmissiveTexturePath is { Length: > 0 })
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /// <summary>
     /// Emits the six faces in the reference <c>ModelPart.Cube</c> order. The UV corners below are the exact

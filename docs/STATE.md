@@ -2615,3 +2615,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 ### 2026-11-03 Wither 静态姿势回到 bind pose（T-515）
 
 - 用户澄清：静态姿势只需和**原版模型定义**一致，不必烘焙动画帧。已恢复 `createBodyLayer` 的 PartPose：`ribcage.xRot=-0.20420352`、`tail pivot y=16.692228/z=1.527873`、`tail.xRot=-0.83252203`（负号来自 y-down→y-up 转换）。T-513 的 age=0 烘焙不再采用。
+
+### 2026-11-03 多 emissive 层能力 + Warden 完成（T-516/T-514）
+
+- `EntityModelPart.EmissiveTexturePath`：部件级 emissive 贴图；`EmissiveOnly` 部件只走 emissive pass；`EntityModelDefinition.TexturePaths` 自动收录部件纹理与 emissive 纹理；mesher 在 emissive pass 按部件切换 sprite。
+- Warden 完整四层：bioluminescent 5 部件 / pulsating spots 6 部件（固定 spots_1 帧）/ heart 1 / tendrils 2（复用 `warden` 纹理），共 25 部件。纹理 128×128，type id 146；静态 bind pose，动画与 spots 两帧脉冲未移植。
+- 已记录于 `docs/modules/entity-render.md` §13。

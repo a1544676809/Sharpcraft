@@ -87,6 +87,11 @@ public sealed class EntityModelDefinition
                     yield return partTexture;
                 }
 
+                if (part.EmissiveTexturePath is { Length: > 0 } partEmissive)
+                {
+                    yield return partEmissive;
+                }
+
                 if (part.OverlayLayers is null)
                 {
                     continue;

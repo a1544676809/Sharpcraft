@@ -426,10 +426,12 @@ public sealed class EntityModelRegistrationTests
         var definition = EntityModelResolver.Resolve(WardenModelDefinition.WardenEntityTypeId);
 
         Assert.Equal("warden", definition.Name);
-        Assert.Equal(11, definition.Parts.Count);
+        Assert.Equal(25, definition.Parts.Count);
         Assert.Contains(definition.Parts, part => part.Name == "right_tendril" && part.Parent == "head");
         Assert.Contains(definition.Parts, part => part.Name == "left_ribcage" && part.Parent == "body");
         Assert.Contains(definition.Parts, part => part.Name == "left_leg" && part.Parent == "bone");
+        Assert.Contains(definition.Parts, part => part.Name == "bioluminescent_head" && part.EmissiveTexturePath == "entity/warden/warden_bioluminescent_layer");
+        Assert.Contains(definition.Parts, part => part.Name == "heart_body" && part.EmissiveOnly);
     }
 
     [Fact]

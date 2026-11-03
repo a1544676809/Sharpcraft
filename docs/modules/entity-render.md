@@ -160,3 +160,10 @@ P1 只做**静态姿态 + 朝向**，明确排除骨骼动画、物品装备渲�
 - `IncludeInEmissive`（默认 true）控制该部件是否参与 emissive 眼睛 pass；wind 层设 false，避免眼睛贴图落到风壳上。
 - `EmissiveOnly`（默认 false）表示该部件**只在 emissive pass 发射**（Breeze 的 `eyes` 复制了 head 几何，只用于眼睛层）。
 - 这些字段只影响几何/纹理发射，不改变同步状态契约。
+
+## 13. 部件级 emissive 纹理（多发光层）
+
+- `EntityModelPart` 新增 `EmissiveTexturePath`：该部件在 emissive pass 使用自己的发光贴图；为 null 时回退到模型的 `EmissiveTexturePath`。
+- `EntityModelDefinition.TexturePaths` 自动收集部件级 `TexturePath` 与 `EmissiveTexturePath`，skin atlas 会一并加载。
+- `EmissiveOnly = true` 的部件只在 emissive pass 发射，因此可以“复制一份基础几何”挂在同一父级下，专门承载某一层发光贴图，不参与普通绘制。
+- Warden 用此机制表达四层：bioluminescent、pulsating spots（本实现固定 spots_1）、heart、tendrils（纹理复用 `warden`）。真正的逐层 alpha/脉冲动画仍需动画系统。
