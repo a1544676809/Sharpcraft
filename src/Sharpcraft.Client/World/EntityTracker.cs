@@ -218,7 +218,10 @@ public readonly record struct EntityRenderState(
     EntityEquipment Equipment = default,
     float AgeInTicks = 0f,
     float WalkAnimationPos = 0f,
-    float WalkAnimationSpeed = 0f);
+    float WalkAnimationSpeed = 0f,
+    float Flap = 0f,
+    float FlapSpeed = 0f,
+    float TentacleAngle = 0f);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -655,4 +658,5 @@ public sealed class EntityTracker
         return from + (delta * t);
     }
 }
+
 

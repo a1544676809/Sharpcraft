@@ -192,6 +192,31 @@ public sealed class EntityAnimationTests
         Assert.Contains("walk", EntityAnimationController.ClipNames(HorseModelDefinition.HorseEntityTypeId));
     }
     [Fact]
+    public void ChickenWingsAndSquidTentaclesFollowTheirState()
+    {
+        var chicken = new Sharpcraft.Client.World.EntityRenderState(1, 26, 0f, 0f, 0f, 0f, 0f)
+        {
+            WalkAnimationPos = 0f,
+            WalkAnimationSpeed = 1f,
+            Flap = 0f,
+            FlapSpeed = 1f
+        };
+        var chickenPose = new EntityPose();
+        EntityAnimationController.Apply(chicken, chickenPose);
+        Assert.Equal(1f, chickenPose.Get("right_wing").Rotation.Z, 4);
+        Assert.Equal(-1f, chickenPose.Get("left_wing").Rotation.Z, 4);
+        Assert.Equal(1.4f, chickenPose.Get("right_leg").Rotation.X, 4);
+
+        var squid = new Sharpcraft.Client.World.EntityRenderState(1, 130, 0f, 0f, 0f, 0f, 0f)
+        {
+            TentacleAngle = 0.5f
+        };
+        var squidPose = new EntityPose();
+        EntityAnimationController.Apply(squid, squidPose);
+        Assert.Equal(0.5f, squidPose.Get("tentacle0").Rotation.X, 4);
+        Assert.Equal(0.5f, squidPose.Get("tentacle7").Rotation.X, 4);
+    }
+    [Fact]
     public void BakingRejectsMissingParts()
     {
         var animation = new AnimationDefinition(1f, false, new Dictionary<string, IReadOnlyList<AnimationChannel>>
@@ -202,6 +227,7 @@ public sealed class EntityAnimationTests
         Assert.Throws<InvalidOperationException>(() => animation.Bake(new HashSet<string> { "head" }));
     }
 }
+
 
 
 

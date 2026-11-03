@@ -22,7 +22,8 @@ public static class EntityAnimationController
             or HorseModelDefinition.ZombieHorseEntityTypeId => ["idle", "walk"],
         CamelModelDefinition.CamelEntityTypeId => ["idle", "walk"],
         154 or 39 or 68 => ["idle", "walk"],
-        VillagerModelDefinition.VillagerEntityTypeId => ["idle", "walk"],
+        VillagerModelDefinition.VillagerEntityTypeId or ChickenModelDefinition.ChickenEntityTypeId => ["idle", "walk"],
+        SquidModelDefinition.SquidEntityTypeId or SquidModelDefinition.GlowSquidEntityTypeId => ["idle"],
         _ => []
     };
 
@@ -46,7 +47,9 @@ public static class EntityAnimationController
             var frame = state with
             {
                 WalkAnimationPos = seconds * 10f,
-                WalkAnimationSpeed = 1f
+                WalkAnimationSpeed = 1f,
+                Flap = state.TypeId == ChickenModelDefinition.ChickenEntityTypeId ? seconds * 20f : state.Flap,
+                FlapSpeed = state.TypeId == ChickenModelDefinition.ChickenEntityTypeId ? 1f : state.FlapSpeed
             };
             Apply(frame, pose);
         }
@@ -79,6 +82,14 @@ public static class EntityAnimationController
         {
             ApplyHumanoidWalk(state, pose);
         }
+        else if (state.TypeId == ChickenModelDefinition.ChickenEntityTypeId)
+        {
+            ApplyChicken(state, pose);
+        }
+        else if (state.TypeId == SquidModelDefinition.SquidEntityTypeId || state.TypeId == SquidModelDefinition.GlowSquidEntityTypeId)
+        {
+            ApplySquid(state, pose);
+        }
         else if (state.TypeId == VillagerModelDefinition.VillagerEntityTypeId)
         {
             ApplyVillagerWalk(state, pose);
@@ -86,6 +97,23 @@ public static class EntityAnimationController
     }
 
     /// <summary>Reference QuadrupedModel.setupAnim: head pitch and four legs from walkAnimationPos/Speed.</summary>
+    private static void ApplyChicken(EntityRenderState state, EntityPose pose)
+    {
+        var flap = (MathF.Sin(state.Flap) + 1f) * state.FlapSpeed;
+        pose.Add("right_wing", new PoseOffset(Vector3.Zero, new Vector3(0f, 0f, flap), Vector3.Zero));
+        pose.Add("left_wing", new PoseOffset(Vector3.Zero, new Vector3(0f, 0f, -flap), Vector3.Zero));
+        var phase = state.WalkAnimationPos * 0.6662f;
+        pose.Add("right_leg", new PoseOffset(Vector3.Zero, new Vector3(MathF.Cos(phase) * 1.4f * state.WalkAnimationSpeed, 0f, 0f), Vector3.Zero));
+        pose.Add("left_leg", new PoseOffset(Vector3.Zero, new Vector3(MathF.Cos(phase + MathF.PI) * 1.4f * state.WalkAnimationSpeed, 0f, 0f), Vector3.Zero));
+    }
+
+    private static void ApplySquid(EntityRenderState state, EntityPose pose)
+    {
+        for (var i = 0; i < 8; i++)
+        {
+            pose.Add("tentacle" + i, new PoseOffset(Vector3.Zero, new Vector3(state.TentacleAngle, 0f, 0f), Vector3.Zero));
+        }
+    }
     private static void ApplyEquineWalk(EntityRenderState state, EntityPose pose)
     {
         var speed = state.WalkAnimationSpeed;
@@ -146,6 +174,8 @@ public static class EntityAnimationController
     private static void AddLegRotation(EntityPose pose, string part, float radians) =>
         pose.Add(part, new PoseOffset(Vector3.Zero, new Vector3(radians, 0f, 0f), Vector3.Zero));
 }
+
+
 
 
 

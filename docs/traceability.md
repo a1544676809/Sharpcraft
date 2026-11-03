@@ -594,3 +594,5 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 
 | T-556 | **动画 A5：Cow/Sheep/Goat 复用四足走路**：`EntityAnimationController` 将 Cow/Mooshroom/Sheep/Goat 接入 `QuadrupedModel.setupAnim` 的通用四腿相位，并在 `ClipNames` 暴露 idle/walk；新增参数化测试 | `docs/analysis/render/entity-animation.md` | Client 716（`CowSheepGoatReuseTheQuadrupedWalkController`） | `Client/Render/EntityAnimationController` | 已完成 |
 | T-557 | **动画 A6：Horse/Donkey/Mule/SkeletonHorse/ZombieHorse**：`AbstractEquineModel.setupAnim` 的 headParts pitch、四腿相位、tail rotation/position 接入；`ClipNames` 暴露 idle/walk；新增 HorseWalk 测试 | `docs/analysis/render/entity-animation.md` | Client 717（`HorseWalkUsesTheReferenceEquinePhases`） | `Client/Render/EntityAnimationController` | 已完成 |
+| T-558 | **动画 A7：Chicken/Squid 程序化动画**：Chicken 的翅膀 flap + 双腿相位、Squid/GlowSquid 的 8 触手角度；`EntityRenderState` 增加 Flap/FlapSpeed/TentacleAngle，沙盒支持 flap/tentacle 参数 | `docs/analysis/render/entity-animation.md` | Client 718（`ChickenWingsAndSquidTentaclesFollowTheirState`） | `Client/Render/EntityAnimationController`、`Client/World/EntityTracker`、`tools/.../SandboxWindow` | 已完成 |
+

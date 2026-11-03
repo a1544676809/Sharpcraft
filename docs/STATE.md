@@ -2846,3 +2846,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `AbstractEquineModel.setupAnim` 的成人基础路径接入：headParts pitch、四腿 cos 相位、tail rotation/position。
 - Horse/Donkey/Mule/SkeletonHorse/ZombieHorse 的 `ClipNames` 增加 idle/walk；HorseWalk 测试锁定相位。
 - 站立/进食/水生等状态和幼马特殊偏移尚未移植，不能算完整实体动画。
+
+### 2026-11-03 动画 A7：Chicken/Squid（T-558）
+
+- Chicken：`ChickenModel.setupAnim` 的 `flap=(sin(flap)+1)*flapSpeed` 翅膀 + 双腿相位；沙盒 `MC_SANDBOX_FLAP/FLAP_SPEED`。
+- Squid/GlowSquid：8 个 tentacle 的 `xRot = TentacleAngle`；沙盒 `MC_SANDBOX_TENTACLE`。
+- Chicken 暂停帧截图已验证；Squid 用姿态测试锁定，后续补截图。

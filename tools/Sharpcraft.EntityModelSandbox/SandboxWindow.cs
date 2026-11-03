@@ -80,6 +80,9 @@ internal static class SandboxWindow
         var walkPosText = Environment.GetEnvironmentVariable("MC_SANDBOX_WALK_POS");
         var walkSpeedText = Environment.GetEnvironmentVariable("MC_SANDBOX_WALK_SPEED");
         var ageTicksText = Environment.GetEnvironmentVariable("MC_SANDBOX_AGE_TICKS");
+        var flapText = Environment.GetEnvironmentVariable("MC_SANDBOX_FLAP");
+        var flapSpeedText = Environment.GetEnvironmentVariable("MC_SANDBOX_FLAP_SPEED");
+        var tentacleText = Environment.GetEnvironmentVariable("MC_SANDBOX_TENTACLE");
         var animationText = Environment.GetEnvironmentVariable("MC_SANDBOX_ANIMATION");
         var animationPausedText = Environment.GetEnvironmentVariable("MC_SANDBOX_ANIM_PAUSED");
         var animationTimeText = Environment.GetEnvironmentVariable("MC_SANDBOX_ANIM_TIME");
@@ -103,7 +106,10 @@ internal static class SandboxWindow
             Equipment: new EntityEquipment(-1, -1, -1, -1, -1, -1, ItemId(equipBodyText), ItemId(equipSaddleText)),
             WalkAnimationPos: float.TryParse(walkPosText, out var walkPos) ? walkPos : 0f,
             WalkAnimationSpeed: float.TryParse(walkSpeedText, out var walkSpeed) ? walkSpeed : 1f,
-            AgeInTicks: float.TryParse(ageTicksText, out var ageTicks) ? ageTicks : 0f);
+            AgeInTicks: float.TryParse(ageTicksText, out var ageTicks) ? ageTicks : 0f,
+            Flap: float.TryParse(flapText, out var flap) ? flap : 0f,
+            FlapSpeed: float.TryParse(flapSpeedText, out var flapSpeed) ? flapSpeed : 0f,
+            TentacleAngle: float.TryParse(tentacleText, out var tentacleAngle) ? tentacleAngle : 0f);
         var animationClips = EntityAnimationController.ClipNames(typeId);
         var animationIndex = 0;
         if (animationText is { Length: > 0 } requestedAnimation)
@@ -401,6 +407,7 @@ internal static class SandboxWindow
         return new ResourceManager(stack, 0);
     }
 }
+
 
 
 
