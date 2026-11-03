@@ -2428,3 +2428,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `StriderModelDefinition`：right/left_leg + body + 6 根 bristle（zRot 按原版）；`strider` / `strider_cold` 纹理由 `DATA_SUFFOCATING` 布尔（accessor 19）选择；type id 132。
 - **图集修复**：`EntitySkinAtlas` 改为**变高堆叠**（总高 = 各纹理高之和），否则 64×128 的 strider 纹理把行距抬到 128，条目一多就超过 8192 纹理上限。
 - 注册 + 注册测试（9 部件、6 bristle 均挂 body）；沙盒 cold 状态目视正常（紫红身体+须+双腿）。
+
+### 2026-11-03 Hoglin / Zoglin 模型（T-483）
+
+- `HoglinModelDefinition`：body(+mane)、head(root, xRot 0.8727, 左右耳 zRot ±2π/9, 左右角)、四腿（前腿 14、后腿 11 高）。
+- Zoglin 复用几何、`entity/hoglin/zoglin` 纹理；type id 65 / 153。静态 bind pose；头撞/行走动画未移植。
+- 注册 + 注册测试（11 部件、Parent、Zoglin 纹理）；沙盒目视正常。

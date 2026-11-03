@@ -119,6 +119,19 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheHoglinAndZoglinShareGeometryWithDifferentTextures()
+    {
+        var hoglin = EntityModelResolver.Resolve(HoglinModelDefinition.HoglinEntityTypeId);
+        var zoglin = EntityModelResolver.Resolve(HoglinModelDefinition.ZoglinEntityTypeId);
+
+        Assert.Equal("hoglin", hoglin.Name);
+        Assert.Equal(11, hoglin.Parts.Count);
+        Assert.Contains(hoglin.Parts, part => part.Name == "right_horn" && part.Parent == "head");
+        Assert.Contains(hoglin.Parts, part => part.Name == "mane" && part.Parent == "body");
+        Assert.Equal("entity/hoglin/zoglin", zoglin.TexturePath);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

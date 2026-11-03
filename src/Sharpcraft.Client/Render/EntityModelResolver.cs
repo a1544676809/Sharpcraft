@@ -41,6 +41,8 @@ public static class EntityModelResolver
         [TadpoleModelDefinition.TadpoleEntityTypeId] = TadpoleModelDefinition.Definition,
         [AxolotlModelDefinition.AxolotlEntityTypeId] = AxolotlModelDefinition.Definition,
         [StriderModelDefinition.StriderEntityTypeId] = StriderModelDefinition.Definition,
+        [HoglinModelDefinition.HoglinEntityTypeId] = HoglinModelDefinition.Definition,
+        [HoglinModelDefinition.ZoglinEntityTypeId] = HoglinModelDefinition.Zoglin,
         [GuardianModelDefinition.GuardianEntityTypeId] = GuardianModelDefinition.Definition,
         [GuardianModelDefinition.ElderGuardianEntityTypeId] = GuardianModelDefinition.Elder,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,
