@@ -298,6 +298,18 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheCreakingTypeHasItsGrasperLimbsAndEyes()
+    {
+        var definition = EntityModelResolver.Resolve(CreakingModelDefinition.CreakingEntityTypeId);
+
+        Assert.Equal("creaking", definition.Name);
+        Assert.Equal(18, definition.Parts.Count);
+        Assert.Contains(definition.Parts, part => part.Name == "head_plate_right" && part.Parent == "head");
+        Assert.Contains(definition.Parts, part => part.Name == "left_hand" && part.Parent == "left_arm");
+        Assert.Equal("entity/creaking/creaking_eyes", definition.EmissiveTexturePath);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

@@ -2530,3 +2530,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - 结构：`bone`(group)→`body`（主体、grow 0.5 外层、平底）、六条腿（前/中/后 ×左右）、`head`（主体+平顶、左右薄耳、nose、lower_beak）。
 - 纹理 `entity/sniffer/sniffer`（192×192），type id 122；静态 bind pose；sniff/dig/walk 动画未移植。幼年 `snifflet` 留待 baby 阶段。
+
+### 2026-11-03 Creaking 模型（T-500）
+
+- 结构：root / upper_body 两层 group；head 4 盒（主体/顶盖/左右侧板）、body 2 盒、right_arm 2 盒、left_arm 3 盒、左右腿 2/3 盒，共 18 部件。
+- 纹理 `entity/creaking/creaking`，眼睛层 `creaking_eyes`；type id 31。
+- 静态 bind pose；walk/attack/invulnerable/death 动画未移植。**已知差异**：原版眼睛层只在 `eyesGlowing` 时渲染且仅 head；我们始终渲染整个 emissive 头层（贴图其余透明，观感近似）。

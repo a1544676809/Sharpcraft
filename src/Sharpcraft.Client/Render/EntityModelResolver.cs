@@ -59,6 +59,7 @@ public static class EntityModelResolver
         [WitchModelDefinition.WitchEntityTypeId] = WitchModelDefinition.Definition,
         [GiantModelDefinition.GiantEntityTypeId] = GiantModelDefinition.Definition,
         [SnifferModelDefinition.SnifferEntityTypeId] = SnifferModelDefinition.Definition,
+        [CreakingModelDefinition.CreakingEntityTypeId] = CreakingModelDefinition.Definition,
         [GuardianModelDefinition.GuardianEntityTypeId] = GuardianModelDefinition.Definition,
         [GuardianModelDefinition.ElderGuardianEntityTypeId] = GuardianModelDefinition.Elder,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,
