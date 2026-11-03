@@ -2489,3 +2489,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 原版 `CaveSpiderRenderer` 继承 `SpiderRenderer`，两者都加 `SpiderEyesLayer`，纹理同为 `entity/spider/spider_eyes` → 洞穴蜘蛛与普通蜘蛛眼睛**相同**。
 - 此前 `CaveSpiderModelDefinition` 漏了 `EmissiveTexturePath`，导致眼睛层缺失；已补上，现与蜘蛛一致。
 - 顺带补回归测试：蜘蛛腿旋转符号（mirrorX:false 的局部约定）与洞穴蜘蛛 = 0.7× 蜘蛛几何的逐轴断言。
+
+### 2026-11-03 Emissive 眼睛穿透修复（T-493）
+
+- 现象：从背后也能看到眼睛。根因是原版 `RenderPipelines.EYES` 的 `GREATER_THAN_OR_EQUAL` 建立在原版深度约定上；我们的投影是标准 0..1 深度，照抄比较方向反了（远处片元通过 → 穿透）。
+- 修正：emissive pipeline 改为 **`LESS_EQUAL` + depth write off**；正视眼睛正常，背视 180° 不再出现眼睛。
+- 沙盒新增 `MC_SANDBOX_YAW`（调试工具）用于固定正面/背面机位验收；已用 3.14159 验证背视干净。
+- 该修复同时作用于 Enderman/Spider 眼睛层。

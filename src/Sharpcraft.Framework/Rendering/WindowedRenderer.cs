@@ -2228,7 +2228,7 @@ public static class WindowedRenderer
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
             multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: false),
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.LessEqual, write: false),
             vertexStride: (ulong)VertexLayout.Stride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
             vertexAttributes: VertexLayout.Attributes());

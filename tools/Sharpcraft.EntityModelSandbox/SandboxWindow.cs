@@ -80,7 +80,7 @@ internal static class SandboxWindow
         var faceIndex = 0;
         var isolateSelectedPart = false;
         var hideSelectedPart = false;
-        var yaw = 0f;
+        var yaw = float.TryParse(Environment.GetEnvironmentVariable("MC_SANDBOX_YAW"), out var requestedYaw) ? requestedYaw : 0f;
         var pitch = -0.12f;
         var hasLast = false;
         Vector2 last = default;
