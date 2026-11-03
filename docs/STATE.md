@@ -2675,3 +2675,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - BabyGoat 12 部件（含 body_lower、horn2/ear2/head_main）；BabyPanda 9 部件（默认 panda_baby；panda 7 变体尚未接入成年定义）；BabyPolarBear 9 部件；BabyTurtle 6 部件（16×16）。
 - 全部 bind pose；动画未移植。沙盒四种目视正常。
+
+### 2026-11-03 Baby Squid / Bee / Dolphin / Axolotl（T-529）
+
+- BabySquid 9 部件（body + 8 tentacle，按原版 cos/sin 布局）；BabyBee 9 部件（bone/antenna/body/stinger/双翅/三腿，纹理选择 angry/nectar × 幼年）；BabyDolphin 8 部件；BabyAxolotl 13 部件（含 root group、gills3、右后腿组），5 个变体 `axolotl_*_baby`。
+- 全部 bind pose；动画未移植。沙盒四种目视正常。
