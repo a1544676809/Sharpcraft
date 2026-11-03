@@ -25,8 +25,8 @@ updated: 2026-11-02
 | Horse | `head_parts` 下的 head/mane/upper_mouth、ears；`body` 下的 tail | 多层父 pivot/rotation | 已改用 `Parent` + 局部 `PartPose` 递归（T-470），静态几何逐顶点校验通过 | 已层级化 |
 | Fox | `tail` | `body` 子节点 | 已改用局部 pose（T-470） | 已层级化 |
 | Wolf | `real_head/ears`、`real_tail` | head/tail 子节点 | 增加空 group 节点（head/tail）承载 pivot，子部件局部 pose（T-470） | 已层级化 |
-| Rabbit | body/head/ears/frontlegs/backlegs | 多层 body/head/leg 子节点 | 当前近似模型**未注册**，不作为可用模型 | 待层级化 |
-| Camel | hump/tail/head/ears | body 子节点 | 近似实现已撤销 | 待层级化 |
+| Rabbit | body/head/ears/frontlegs/backlegs | 多层 body/head/leg 子节点 | 已改为 `Parent` + 局部 pose 并注册（T-471） | 已层级化 |
+| Camel | hump/tail/head/ears | body 子节点 | 按 `AdultCamelModel` 从零层级化并注册（T-471） | 已层级化 |
 
 ## 3. 已判定为不需要近似的模型
 
@@ -41,14 +41,15 @@ updated: 2026-11-02
 
 ## 4. 结论
 
-在实现通用的 `Parent` + 局部 `PartPose` 递归变换之前：
+在实现通用的 `Parent` + 局部 `PartPose` 递归变换之后（T-470/T-471）：
 
-- 不把上述近似模型继续当作“已完成”；
-- 不再添加新的近似模型；
-- 下一步优先实现父子层级变换，然后重做 Horse/Fox/Wolf/Rabbit/Camel 的精确版本。
+- Horse/Fox/Wolf/Rabbit/Camel 已全部改为层级定义，本节表格中的行不再被视为近似；
+- Rabbit 重新注册（type id 111），Camel 重新实现并注册（type id 19）；
+- 剩余仍需多 layer 提交的部分见 §5。
 
 
 ## 5. 渲染层近似
 
 `Skeleton clothing`、Player overlays、Drowned outer、Slime outer 目前把独立 RenderLayer 合并进同一 DynamicGeometry/draw，不能保证原版 layer 的 RenderType、深度、顺序和透明度等效。详见[实体渲染层架构差距](entity-render-layers.md)。
+
 

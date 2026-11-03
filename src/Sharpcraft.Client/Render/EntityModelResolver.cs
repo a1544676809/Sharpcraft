@@ -32,6 +32,8 @@ public static class EntityModelResolver
         [CowModelDefinition.CowEntityTypeId] = CowModelDefinition.Definition,
         [CowModelDefinition.MooshroomEntityTypeId] = CowModelDefinition.Mooshroom,
         [ChickenModelDefinition.ChickenEntityTypeId] = ChickenModelDefinition.Definition,
+        [RabbitModelDefinition.RabbitEntityTypeId] = RabbitModelDefinition.Definition,
+        [CamelModelDefinition.CamelEntityTypeId] = CamelModelDefinition.Definition,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,
         [CatModelDefinition.CatEntityTypeId] = CatModelDefinition.Definition,
         [CatModelDefinition.OcelotEntityTypeId] = CatModelDefinition.Ocelot,

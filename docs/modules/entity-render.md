@@ -118,7 +118,8 @@ P1 只做**静态姿态 + 朝向**，明确排除骨骼动画、物品装备渲�
 - 空 group 节点（宽高深全 0）只承载 pivot，不发射几何；Wolf 的 `head`/`tail` 就是这种节点。
 - 验收：`EntityModelHierarchyTests` 用 head_parts→head→right_ear 三层链与独立手算包围盒逐轴比对；其余根旋转部件由
   `TheColdCowHornsSitAtTheVanillaPositionAfterTheRotationSignConversion` 钉住。
-- 尚未迁移：Rabbit（定义存在但未注册）、Camel（近似已撤销，待重做）。
+- 已迁移：Horse / Fox / Wolf / Rabbit / Camel（Rabbit、Camel 为本轮新增注册；Camel type id 19 由 `EntityTypes` 注册序推导，
+  与既有 id 交叉验证）。
 
 
 

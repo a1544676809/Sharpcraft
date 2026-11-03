@@ -63,4 +63,38 @@ public sealed class EntityModelHierarchyTests
         Assert.Equal(-15.036f * px, min.Z, 2);
         Assert.Equal(-12.67f * px, max.Z, 2);
     }
+
+    [Fact]
+    public void TheRabbitHeadComposesBodyAndHeadRotations()
+    {
+        // body xRot -22.5deg -> head xRot +22.5deg -> cube; hand-composed in the baked y-up space.
+        var geometry = Vertices(RabbitModelDefinition.Definition, RabbitModelDefinition.RabbitEntityTypeId, "head");
+        var (min, max) = Bounds(geometry);
+
+        const float px = (1f / 16f) * EntityPlaceholderMesher.ModelScale;
+        Assert.Equal(-2.5f * px, min.X, 3);
+        Assert.Equal(2.5f * px, max.X, 3);
+        Assert.Equal(6.998f * px, min.Y, 2);
+        Assert.Equal(11.998f * px, max.Y, 2);
+        Assert.Equal(-5.478f * px, min.Z, 2);
+        Assert.Equal(-0.478f * px, max.Z, 2);
+    }
+
+    [Fact]
+    public void TheCamelHeadCubesFollowTheBodyAndHeadPivots()
+    {
+        var geometry = Vertices(CamelModelDefinition.Definition, CamelModelDefinition.CamelEntityTypeId, "head_lower");
+        var (min, max) = Bounds(geometry);
+
+        const float px = (1f / 16f) * EntityPlaceholderMesher.ModelScale;
+        Near(-3.5f * px, min.X);
+        Near(3.5f * px, max.X);
+        Near(22f * px, min.Y);
+        Near(30f * px, max.Y);
+        Near(-25f * px, min.Z);
+        Near(-6f * px, max.Z);
+    }
+
+    private static void Near(float expected, float actual) =>
+        Assert.True(MathF.Abs(expected - actual) < 1e-4f, $"expected {expected}, actual {actual}");
 }

@@ -2332,3 +2332,16 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
   ColdCow 角测试继续覆盖“根部件 + 旋转”。全量 Client 637 通过（`ChunkMeshCacheTests` 的 lightmap 用例是**既有偶发**
   失败，单独重跑 3 次中 1 次通过，与本次改动无关，已记录待查）。
 - 未迁移：Rabbit（定义存在、未注册）、Camel（近似撤销，待重做）；下一步按同样方式补这两个。
+
+## 2026-11-03 A 收尾：Rabbit + Camel 层级化（T-471）
+
+- **Rabbit** 重做：body(root, xRot -22.5°) → tail / head(+22.5°) → 左右耳；body → frontlegs(group) → 前后腿(+22.5°)；
+  body → backlegs(root group) → 左右后腿 group → haunch（yRot ±22.5°）。注册 type id **111**。
+- **Camel** 新建：body(root) → hump / tail / head(group) → head_lower/head_upper/head_snout + 左右耳；四腿为 root。
+  纹理 `entity/camel/camel`（128×128）。type id **19** —— 由 `EntityTypes.java` 的注册序推导，并用已有 Pig 101 / Cow 30 /
+  Turtle 141 等 id 反向校验（全部吻合）后才固化。
+- 空 group 节点沿用上一轮机制；Rabbit 的 frontlegs/backlegs/两条 hind_leg、Camel 的 head 都是 group（不发射几何）。
+- 验收：`EntityModelHierarchyTests` 新增 rabbit head（body+head 双旋转）与 camel head_lower 的逐轴包围盒，与独立手算一致；
+  `EntityModelRegistrationTests` 钉住 part 数与 Parent 关系、以及 type id。Client **642 通过**。
+- 沙盒目视：camel（长腿/驼峰/长颈）、rabbit（竖耳/蜷身）形态正常。
+- **A（父子层级）到此收口**：Horse/Fox/Wolf/Rabbit/Camel 5 个全部层级化并注册。
