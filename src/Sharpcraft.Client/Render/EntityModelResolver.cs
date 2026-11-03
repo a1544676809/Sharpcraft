@@ -46,6 +46,8 @@ public static class EntityModelResolver
         [PiglinModelDefinition.PiglinEntityTypeId] = PiglinModelDefinition.Definition,
         [PiglinModelDefinition.PiglinBruteEntityTypeId] = PiglinModelDefinition.Brute,
         [PiglinModelDefinition.ZombifiedPiglinEntityTypeId] = PiglinModelDefinition.Zombified,
+        [AllayModelDefinition.AllayEntityTypeId] = AllayModelDefinition.Definition,
+        [VexModelDefinition.VexEntityTypeId] = VexModelDefinition.Definition,
         [GuardianModelDefinition.GuardianEntityTypeId] = GuardianModelDefinition.Definition,
         [GuardianModelDefinition.ElderGuardianEntityTypeId] = GuardianModelDefinition.Elder,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,

@@ -2442,3 +2442,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 静态 bind pose；Piglin 的 arm pose（dancing/crossbow/admiring）与动画未移植。
 - **已知差异（记录）**：原版 Piglin 主模型 RenderType 是 `entityTranslucent`，我们与玩家模型一致走 Cutout（alpha=1 纹理观感相同，但渲染状态不完全等效）。
 - 注册 + 注册测试（11 部件、鼻/耳 Parent、三种纹理）；沙盒目视正常。
+
+### 2026-11-03 Allay / Vex 模型（T-485）
+
+- Allay：root(group)→head/body(+body_inner grow-0.2)/双臂/双翅；整体标为 Translucent（对应原版 `entityTranslucent`）；type id 2。
+- Vex：同构（root pivot -2.5、body/head pivot 20、臂 grow-0.1、左翅 mirror）；`vex`/`vex_charging` 由 DATA_FLAGS 充电位（accessor 16, bit0）选择；type id 142。
+- 静态 bind pose；飞行/舞动/充能动画与手持物品层未移植。沙盒 allay 与 vex charging 目视正常。

@@ -24,6 +24,7 @@ namespace Sharpcraft.Client.World;
 /// <param name="SleepingMask">Flag bit that means sleeping (Fox bit 5 = 32).</param>
 /// <param name="AngerAccessorIndex">Accessor carrying the anger end time as a long, or -1.</param>
 /// <param name="ColdMask">Flag bit that means "cold" (Strider suffocating boolean at 19).</param>
+/// <param name="ChargingMask">Flag bit that means charging (Vex flag bit 0).</param>
 public readonly record struct EntityVariantSpec(
     int AccessorIndex,
     string? RegistryPath,
@@ -35,7 +36,8 @@ public readonly record struct EntityVariantSpec(
     int NectarMask = 0,
     int SleepingMask = 0,
     int AngerAccessorIndex = -1,
-    int ColdMask = 0);
+    int ColdMask = 0,
+    int ChargingMask = 0);
 
 /// <summary>
 /// Answering "which synced-data field is the variant" for the entity types this client renders with variants.
@@ -87,7 +89,10 @@ public static class EntityVariantSpecs
         [7] = new(18, null, ["lucy", "wild", "gold", "cyan", "blue"], "lucy"),
 
         // Strider: boost time (18), then the boolean "suffocating" value at 19 (cold texture).
-        [132] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 19, ColdMask: 1)
+        [132] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 19, ColdMask: 1),
+
+        // Vex: byte flags at 16 (no AgeableMob in the chain), charging bit 0.
+        [142] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 16, ChargingMask: 1)
     };
 
     /// <summary>Number of entity types with a variant field.</summary>

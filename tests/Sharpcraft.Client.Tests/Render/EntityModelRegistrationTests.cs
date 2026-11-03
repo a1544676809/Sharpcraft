@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using Sharpcraft.Client.Render;
+using Sharpcraft.Framework.Rendering;
 using Xunit;
 
 namespace Sharpcraft.Client.Tests.Render;
@@ -144,6 +145,20 @@ public sealed class EntityModelRegistrationTests
         Assert.Contains(piglin.Parts, part => part.Name == "left_ear" && part.Parent == "head");
         Assert.Equal("entity/piglin/piglin_brute", brute.TexturePath);
         Assert.Equal("entity/piglin/zombified_piglin", zombified.TexturePath);
+    }
+
+    [Fact]
+    public void TheAllayAndVexUseTheSmallTranslucentBody()
+    {
+        var allay = EntityModelResolver.Resolve(AllayModelDefinition.AllayEntityTypeId);
+        var vex = EntityModelResolver.Resolve(VexModelDefinition.VexEntityTypeId);
+
+        Assert.Equal("allay", allay.Name);
+        Assert.Equal(8, allay.Parts.Count);
+        Assert.All(allay.Parts, part => Assert.Equal(EntityGeometryLayerKind.Translucent, part.Kind));
+        Assert.Contains(allay.Parts, part => part.Name == "left_wing" && part.Parent == "body");
+        Assert.Equal("vex", vex.Name);
+        Assert.Contains(vex.Parts, part => part.Name == "body_inner" && part.Parent == "body");
     }
 
     [Fact]
