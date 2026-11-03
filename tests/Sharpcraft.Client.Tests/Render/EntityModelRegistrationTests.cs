@@ -108,6 +108,17 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheStriderTypeHasSixBristlesUnderTheBody()
+    {
+        var definition = EntityModelResolver.Resolve(StriderModelDefinition.StriderEntityTypeId);
+
+        Assert.Equal("strider", definition.Name);
+        Assert.Equal(9, definition.Parts.Count);
+        Assert.Equal(6, definition.Parts.Count(part => part.Name.EndsWith("bristle", StringComparison.Ordinal)));
+        Assert.All(definition.Parts.Where(part => part.Name.EndsWith("bristle", StringComparison.Ordinal)), part => Assert.Equal("body", part.Parent));
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

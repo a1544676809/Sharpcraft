@@ -2422,3 +2422,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `AxolotlModelDefinition`：body(+body_layer 背鳍)/head(+top/left/right gills)/四条扁腿/tail；`grow 0.001` 与 UV 按原版。
 - 5 个变体（lucy/wild/gold/cyan/blue，整数 accessor 18，type id 7），各换纹理 `entity/axolotl/axolotl_<name>`。
 - 静态 bind pose；游动/爬行/装死动画未移植。沙盒 blue 变体目视正常。
+
+### 2026-11-03 Strider 模型（T-482）
+
+- `StriderModelDefinition`：right/left_leg + body + 6 根 bristle（zRot 按原版）；`strider` / `strider_cold` 纹理由 `DATA_SUFFOCATING` 布尔（accessor 19）选择；type id 132。
+- **图集修复**：`EntitySkinAtlas` 改为**变高堆叠**（总高 = 各纹理高之和），否则 64×128 的 strider 纹理把行距抬到 128，条目一多就超过 8192 纹理上限。
+- 注册 + 注册测试（9 部件、6 bristle 均挂 body）；沙盒 cold 状态目视正常（紫红身体+须+双腿）。

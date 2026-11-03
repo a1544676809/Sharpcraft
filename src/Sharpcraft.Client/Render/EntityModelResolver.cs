@@ -40,6 +40,7 @@ public static class EntityModelResolver
         [FrogModelDefinition.FrogEntityTypeId] = FrogModelDefinition.Definition,
         [TadpoleModelDefinition.TadpoleEntityTypeId] = TadpoleModelDefinition.Definition,
         [AxolotlModelDefinition.AxolotlEntityTypeId] = AxolotlModelDefinition.Definition,
+        [StriderModelDefinition.StriderEntityTypeId] = StriderModelDefinition.Definition,
         [GuardianModelDefinition.GuardianEntityTypeId] = GuardianModelDefinition.Definition,
         [GuardianModelDefinition.ElderGuardianEntityTypeId] = GuardianModelDefinition.Elder,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,

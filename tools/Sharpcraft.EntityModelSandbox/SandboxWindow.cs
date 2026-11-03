@@ -70,7 +70,8 @@ internal static class SandboxWindow
             IsTame: sandboxState.Contains("tame", StringComparison.OrdinalIgnoreCase),
             IsAngry: sandboxState.Contains("angry", StringComparison.OrdinalIgnoreCase),
             IsSleeping: sandboxState.Contains("sleeping", StringComparison.OrdinalIgnoreCase),
-            HasNectar: sandboxState.Contains("nectar", StringComparison.OrdinalIgnoreCase));
+            HasNectar: sandboxState.Contains("nectar", StringComparison.OrdinalIgnoreCase),
+            IsCold: sandboxState.Contains("cold", StringComparison.OrdinalIgnoreCase));
         var mesher = new EntityModelMesher();
         var state = new Dictionary<string, FaceUvTransform>();
         var statePath = Path.Combine(Path.GetTempPath(), "sharpcraft-face-state.json");

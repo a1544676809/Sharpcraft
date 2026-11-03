@@ -23,6 +23,7 @@ namespace Sharpcraft.Client.World;
 /// <param name="NectarMask">Flag bit that means carrying nectar (Bee bit 3 = 8).</param>
 /// <param name="SleepingMask">Flag bit that means sleeping (Fox bit 5 = 32).</param>
 /// <param name="AngerAccessorIndex">Accessor carrying the anger end time as a long, or -1.</param>
+/// <param name="ColdMask">Flag bit that means "cold" (Strider suffocating boolean at 19).</param>
 public readonly record struct EntityVariantSpec(
     int AccessorIndex,
     string? RegistryPath,
@@ -33,7 +34,8 @@ public readonly record struct EntityVariantSpec(
     int TameMask = 0,
     int NectarMask = 0,
     int SleepingMask = 0,
-    int AngerAccessorIndex = -1);
+    int AngerAccessorIndex = -1,
+    int ColdMask = 0);
 
 /// <summary>
 /// Answering "which synced-data field is the variant" for the entity types this client renders with variants.
@@ -82,7 +84,10 @@ public static class EntityVariantSpecs
         [56] = new(18, "frog_variant", ["temperate", "warm", "cold"], "temperate"),
 
         // Axolotl: integer variant (LUCY/WILD/GOLD/CYAN/BLUE).
-        [7] = new(18, null, ["lucy", "wild", "gold", "cyan", "blue"], "lucy")
+        [7] = new(18, null, ["lucy", "wild", "gold", "cyan", "blue"], "lucy"),
+
+        // Strider: boost time (18), then the boolean "suffocating" value at 19 (cold texture).
+        [132] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 19, ColdMask: 1)
     };
 
     /// <summary>Number of entity types with a variant field.</summary>
@@ -94,3 +99,4 @@ public static class EntityVariantSpecs
     /// <summary>Looks up the variant layout of an entity type.</summary>
     public static bool TryGet(int typeId, out EntityVariantSpec spec) => Specs.TryGetValue(typeId, out spec);
 }
+

@@ -39,28 +39,30 @@ public sealed class EntitySkinAtlas
 
         var cellWidth = images.Values.Max(image => image.Width);
         var cellHeight = images.Values.Max(image => image.Height);
-        var height = cellHeight * images.Count;
+        // Variable-height stacking: a 64x128 skin (strider) must not multiply the row pitch for every other skin, or
+        // the atlas exceeds the maximum texture height once there are many mobs.
+        var height = images.Values.Sum(image => image.Height);
         var pixels = new byte[cellWidth * height * 4];
         var sprites = new Dictionary<string, SpriteRect>(StringComparer.Ordinal);
-        var row = 0;
+        var rowOffset = 0;
         foreach (var pair in images)
         {
             var image = pair.Value;
             for (var y = 0; y < image.Height; y++)
             {
-                Buffer.BlockCopy(image.Rgba, y * image.Width * 4, pixels, ((row * cellHeight + y) * cellWidth) * 4, image.Width * 4);
+                Buffer.BlockCopy(image.Rgba, y * image.Width * 4, pixels, ((rowOffset + y) * cellWidth) * 4, image.Width * 4);
             }
 
             var logicalWidth = image.Width == 1600 ? 64 : image.Width;
             var logicalHeight = image.Height == 1600 ? 64 : image.Height;
-            sprites[pair.Key] = new SpriteRect(0, row * cellHeight, logicalWidth, logicalHeight, 1)
+            sprites[pair.Key] = new SpriteRect(0, rowOffset, logicalWidth, logicalHeight, 1)
             {
                 U0 = 0f,
-                V0 = (float)(row * cellHeight) / height,
+                V0 = (float)rowOffset / height,
                 U1 = (float)image.Width / cellWidth,
-                V1 = (float)((row * cellHeight) + image.Height) / height
+                V1 = (float)(rowOffset + image.Height) / height
             };
-            row++;
+            rowOffset += image.Height;
         }
 
         return new EntitySkinAtlas(new TextureData(cellWidth, height, pixels), sprites, cellWidth, cellHeight);

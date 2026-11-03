@@ -164,7 +164,8 @@ public readonly record struct EntityRenderState(
     bool IsTame = false,
     bool IsAngry = false,
     bool IsSleeping = false,
-    bool HasNectar = false);
+    bool HasNectar = false,
+    bool IsCold = false);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -500,7 +501,8 @@ public sealed class EntityTracker
                 IsTame: spec.TameMask != 0 && (entity.Flags & spec.TameMask) != 0,
                 IsAngry: spec.AngerAccessorIndex >= 0 && entity.AngerEndTime > GameTime,
                 IsSleeping: spec.SleepingMask != 0 && (entity.Flags & spec.SleepingMask) != 0,
-                HasNectar: spec.NectarMask != 0 && (entity.Flags & spec.NectarMask) != 0));
+                HasNectar: spec.NectarMask != 0 && (entity.Flags & spec.NectarMask) != 0,
+                IsCold: spec.ColdMask != 0 && (entity.Flags & spec.ColdMask) != 0));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);
