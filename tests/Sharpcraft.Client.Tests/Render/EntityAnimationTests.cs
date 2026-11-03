@@ -120,6 +120,31 @@ public sealed class EntityAnimationTests
         Assert.Equal(22.5f * (MathF.PI / 180f), pose.Get("right_front_leg").Rotation.X, 4);
     }
     [Fact]
+    public void HumanoidAndVillagerWalkPosesFollowTheReferencePhases()
+    {
+        var zombie = new Sharpcraft.Client.World.EntityRenderState(1, 154, 0f, 0f, 0f, 0f, 0f)
+        {
+            WalkAnimationPos = 0f,
+            WalkAnimationSpeed = 1f
+        };
+        var zombiePose = new EntityPose();
+        EntityAnimationController.Apply(zombie, zombiePose);
+        Assert.Equal(-1f, zombiePose.Get("right_arm").Rotation.X, 4);
+        Assert.Equal(1f, zombiePose.Get("left_arm").Rotation.X, 4);
+        Assert.Equal(1.4f, zombiePose.Get("right_leg").Rotation.X, 4);
+        Assert.Equal(-1.4f, zombiePose.Get("left_leg").Rotation.X, 4);
+
+        var villager = new Sharpcraft.Client.World.EntityRenderState(1, 143, 0f, 0f, 0f, 0f, 0f)
+        {
+            WalkAnimationPos = 0f,
+            WalkAnimationSpeed = 1f
+        };
+        var villagerPose = new EntityPose();
+        EntityAnimationController.Apply(villager, villagerPose);
+        Assert.Equal(0.7f, villagerPose.Get("right_leg").Rotation.X, 4);
+        Assert.Equal(-0.7f, villagerPose.Get("left_leg").Rotation.X, 4);
+    }
+    [Fact]
     public void BakingRejectsMissingParts()
     {
         var animation = new AnimationDefinition(1f, false, new Dictionary<string, IReadOnlyList<AnimationChannel>>
@@ -130,6 +155,7 @@ public sealed class EntityAnimationTests
         Assert.Throws<InvalidOperationException>(() => animation.Bake(new HashSet<string> { "head" }));
     }
 }
+
 
 
 

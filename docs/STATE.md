@@ -2818,3 +2818,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 移植 `CamelAnimation.CAMEL_WALK` 1.5 秒循环：root/head/四腿 rotation+position、耳、尾；CATMULLROM/LINEAR 按原版。
 - `EntityAnimationController` 用 `walkPos*0.1` 与 `min(walkSpeed*2.5,1)` 应用；Pig 程序化 sample 与 Camel 关键帧 sample 均有测试/两帧截图。
 - 下一步 A4：Zombie/Villager 两足手臂与头部；真实网络移动状态仍需后续接入。
+
+### 2026-11-03 动画 A4：Zombie/Villager 两足样板（T-553）
+
+- `EntityAnimationController` 增加 Humanoid（Zombie/Drowned/Husk）与 Villager 的 walk/idle 姿态：head pitch、手臂/腿 cos 相位；Villager 仅头+腿，腿幅为 Humanoid 的 0.5。
+- 沙盒 Zombie 0/2.35 两帧目视；Villager 由单元测试锁定相位。
+- A1–A4 第一阶段目标完成；下一步扩展到更多实体动画（wing/tail/tentacle/roll 等）。
