@@ -2553,3 +2553,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 真正根因：`EntityModelMesher` 用**贴图 PNG 实际分辨率**归一化 UV；原版用 **模型声明的纹理尺寸**（`ModelPart.Cube` 的 xTexSize/yTexSize）。恶魂声明 64×32，但 PNG 是 128×64（2× 分辨率），按 128×64 归一化后 UV 落进透明区，正面/底面消失。
 - 修正：`BuildInto` 现在一律用 `model.TextureWidth/Height` 归一化（贴图 sprite 只决定采样矩形，不影响 UV 归一化）；游戏与沙盒共用此路径。恶魂六面完整、脸部（眼/嘴/泪痕）正确。
 - 注意：T-502 里“把纹理尺寸改成 128×64”是错误方向，已回退为模型声明值 64×32；T-503 才是根因修复。
+
+### 2026-11-03 Happy Ghast 模型（T-504）
+
+- 成年模型：`body` 16³ + 9 条触须（body 子级，长度 5/7/4/5/5/7/8/8/5），整体 `Scale = 4.0`；纹理 `entity/ghast/happy_ghast`（声明 64×64，PNG 128×128）。
+- 静态 bind pose；harness/ropes 层与幼年模型（0.2375 scale + inner_body）留待后续。

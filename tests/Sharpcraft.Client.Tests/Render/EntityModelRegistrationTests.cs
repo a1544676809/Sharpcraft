@@ -323,6 +323,18 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheHappyGhastHasTentaclesUnderTheBody()
+    {
+        var definition = EntityModelResolver.Resolve(HappyGhastModelDefinition.HappyGhastEntityTypeId);
+
+        Assert.Equal("happy_ghast", definition.Name);
+        Assert.Equal(10, definition.Parts.Count);
+        Assert.All(definition.Parts.Where(part => part.Name.StartsWith("tentacle", StringComparison.Ordinal)), part => Assert.Equal("body", part.Parent));
+        Assert.Equal(8f, definition.Parts.Single(part => part.Name == "tentacle6").Height);
+        Assert.Equal(4f, definition.Scale);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).
