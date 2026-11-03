@@ -347,6 +347,18 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheRavagerTypeHasNeckHeadHornsAndFourLegs()
+    {
+        var definition = EntityModelResolver.Resolve(RavagerModelDefinition.RavagerEntityTypeId);
+
+        Assert.Equal("ravager", definition.Name);
+        Assert.Equal(12, definition.Parts.Count);
+        Assert.Contains(definition.Parts, part => part.Name == "mouth" && part.Parent == "head");
+        Assert.Contains(definition.Parts, part => part.Name == "left_horn" && part.Parent == "head");
+        Assert.Equal(4, definition.Parts.Count(part => part.Name.EndsWith("_leg", StringComparison.Ordinal)));
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

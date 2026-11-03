@@ -2563,3 +2563,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - `body`(+`head`)、`tail_base`→`tail_tip`、左右 `wing_base`→`wing_tip`（右翼 mirror）；纹理 `entity/phantom/phantom`，眼睛层 `phantom_eyes`，type id 100。
 - 静态 bind pose；扇翅/摆尾动画未移植。沙盒目视正常（蓝色翼膜 + 绿色发光眼）。
+
+### 2026-11-03 Ravager 模型（T-506）
+
+- 结构：neck→head（主体+snout、左右角 rotX 1.0996、mouth）、body（上/下两块板，rotX π/2）、四条 37 高的腿（前腿 UV64,0 / 后腿 UV96,0，左腿 mirror）。
+- 纹理 `entity/illager/ravager`（128×128），type id 112；静态 bind pose；行走/攻击/咆哮动画未移植。
