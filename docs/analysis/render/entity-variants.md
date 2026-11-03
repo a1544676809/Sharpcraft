@@ -76,6 +76,11 @@ updated: 2026-11-03
 
 这些变体几何都只用到平移/单轴旋转，**不含父子嵌套旋转**，因此可在现有扁平部件模型里精确表达。
 
+> **旋转符号约定（冷牛角曾经踩过）**：原版模型是 y-down，本仓库把 X、Y 取反（等价于绕 Z 转 180°）烘焙进部件坐标，
+> 因此单轴旋转要按 `rotationX = -原版 xRot`、`rotationY = -原版 yRot`、`rotationZ = +原版 zRot` 换算。
+> `ColdCowModel` 的两根角是 `xRot = +90°`，漏掉取反会让它们在 Z 方向偏 3 px（陷进头里而不是从头顶前方伸出）。
+> 回归用例 `TheColdCowHornsSitAtTheVanillaPositionAfterTheRotationSignConversion` 用独立算出的包围盒钉住这一点。
+
 ## 4. 整型枚举变体：常量表
 
 - Horse：0 white / 1 creamy / 2 chestnut / 3 brown / 4 black / 5 gray / 6 dark_brown，纹理

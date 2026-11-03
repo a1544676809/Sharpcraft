@@ -148,6 +148,44 @@ public sealed class EntityVariantTests
     }
 
     [Fact]
+    public void TheColdCowHornsSitAtTheVanillaPositionAfterTheRotationSignConversion()
+    {
+        // ColdCowModel adds two head children: right_horn at head-local (-4.5,-2.5,-3.5) with xRot = +90 degrees,
+        // left_horn at (5.5,-2.5,-5.0). The client bakes the reference's y-down/X-mirrored space into the part, which
+        // negates X and Y, so a reference xRot becomes -xRot here. Recomputing the rotated boxes by hand in that space
+        // gives these room-space extents (model pixels, feet at the origin, 1 block = 16 px scaled by ModelScale).
+        const float px = (1f / 16f) * EntityPlaceholderMesher.ModelScale;
+        AssertColdHorn("right_horn", minX: 4f, maxX: 6f, px);
+        AssertColdHorn("left_horn", minX: -6f, maxX: -4f, px);
+    }
+
+    private static void AssertColdHorn(string part, float minX, float maxX, float px)
+    {
+        var mesher = new EntityModelMesher();
+        var entity = new EntityRenderState(1, CowModelDefinition.CowEntityTypeId, 0f, 0f, 0f, 0f, 0f, VariantId: 2);
+        var sprite = new Sharpcraft.Client.Assets.SpriteRect(0, 0, 64, 64, 1);
+        var geometry = mesher.Build(
+            [entity], sprite, 64, 64, onlyPart: part, variants: EntityVariantTable.Builtin);
+
+        var min = new System.Numerics.Vector3(float.MaxValue);
+        var max = new System.Numerics.Vector3(float.MinValue);
+        for (var offset = 0; offset < geometry.VertexFloats; offset += 14)
+        {
+            var point = new System.Numerics.Vector3(
+                geometry.Vertices[offset], geometry.Vertices[offset + 1], geometry.Vertices[offset + 2]);
+            min = System.Numerics.Vector3.Min(min, point);
+            max = System.Numerics.Vector3.Max(max, point);
+        }
+
+        Assert.Equal(minX * px, min.X, 4);
+        Assert.Equal(maxX * px, max.X, 4);
+        Assert.Equal(22f * px, min.Y, 4);
+        Assert.Equal(24f * px, max.Y, 4);
+        Assert.Equal(-16f * px, min.Z, 4);
+        Assert.Equal(-10f * px, max.Z, 4);
+    }
+
+    [Fact]
     public void EveryVariantDefinitionIsExposedForTheSkinAtlas()
     {
         var textures = EntityModelResolver.Definitions

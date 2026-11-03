@@ -2309,3 +2309,15 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
      与 `mc-26.3-analysis` 源码几何逐部件对照；真服务器再走一次 `set_entity_data` 看变体切换计数。
   2. 补 `Parent` + 局部 `PartPose` 递归变换，再解 Horse/Fox/Wolf/Rabbit/Camel 的层级近似。
   3. 多 layer 提交（`EntityRenderLayerDefinition`）解决 Stray/Bogged clothing、Player overlays、Drowned/Slime outer。
+
+### 2026-11-03 冷牛角符号修正（用户目视校验）
+
+- 用户反馈寒带牛“角的位置不太对”。复查 `ColdCowModel`：两只角是 head 的子部件，
+  `right_horn` 局部 (-4.5,-2.5,-3.5)/`left_horn` (5.5,-2.5,-5.0)，`xRot = +90°`。
+- **根因**：本仓库把原版 y-down 空间的 X、Y 取反烘焙进部件（等价绕 Z 转 180°），单轴旋转必须取反：
+  `rotationX = -原版 xRot`。我先前写成 `+1.5708`，导致角在 Z 方向偏 3 px（陷在头里而非从头顶前方伸出）。
+  已改为 `-1.5708`；用已有模型交叉验证该约定（牛/猪 body `+π/2 → -π/2`、猫 tail `+0.9 → -0.9`、
+  马 head `+π/6 → -π/6`）。
+- 新增回归 `TheColdCowHornsSitAtTheVanillaPositionAfterTheRotationSignConversion`：独立算出角的世界包围盒
+  （右侧 x[4,6]、左侧 x[-6,-4]、y[22,24]、z[-16,-10] 模型像素）并逐轴断言，Client **636 通过**。
+- 用户复看沙盒确认“现在看起来正确了”。
