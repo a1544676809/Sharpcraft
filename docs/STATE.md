@@ -2611,3 +2611,7 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 基础结构：bone→body（左右 ribcage、head→左右 tendril、左右 arm）、左右 leg，共 11 部件；纹理 `entity/warden/warden`（128×128），type id 146。
 - **未完成**：原版还有 bioluminescent / pulsating spots（两帧）/ heart / tendrils 四个 `LivingEntityEmissiveLayer`，需要“部件子集 + 每层独立 emissive 纹理”的能力；当前只有单 `EmissiveTexturePath`。动画全部未移植。
 - 下一步建议：先扩展 emissive 层为部件可指定 `EmissiveTexturePath`（或独立 layer 定义），再补 Warden 四层与 EnderDragon。
+
+### 2026-11-03 Wither 静态姿势回到 bind pose（T-515）
+
+- 用户澄清：静态姿势只需和**原版模型定义**一致，不必烘焙动画帧。已恢复 `createBodyLayer` 的 PartPose：`ribcage.xRot=-0.20420352`、`tail pivot y=16.692228/z=1.527873`、`tail.xRot=-0.83252203`（负号来自 y-down→y-up 转换）。T-513 的 age=0 烘焙不再采用。
