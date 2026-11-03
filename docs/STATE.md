@@ -2659,3 +2659,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - 对照 `WolfModel.setupAnim`：每帧 `tail.xRot = state.tailAngle`；`Wolf.getTailAngle()` 野生默认 `π/5`。静态姿势应使用该默认朝向（存储 `-π/5`），`tail_r1` 保持原版 `-3.1`（存储 +3.1）。
 - 此前用 `createBodyLayer` 的 bind `-0.5236`（存储 +0.5236），导致尾巴朝前。已改为 `-MathF.PI/5f`；侧视确认尾巴在**后方**向下。
+
+### 2026-11-03 静态姿势统一策略：bind pose（T-526）
+
+- 用户决定：所有模型的静态姿势以原版 `createBodyLayer` 的 **bind pose** 为准，`setupAnim` 的默认帧/位移等动画系统实现时再统一烘焙。
+- 因此撤回 T-525：BabyWolf tail 组恢复 `offsetAndRotation(0,19,3,-0.5236)`（y-up 存储 +0.5236），`tail_r1` 保持原版 -3.1。
+- 已知观感差异：狼尾在 bind pose 下与游戏默认动画帧不同（游戏里 `tail.xRot=tailAngle` 且 y/z 有位移），这是“无动画”的预期结果，已记录。

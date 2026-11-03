@@ -554,4 +554,6 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-523 | **幼年 Wolf/Rabbit 代码级对照修正**：BabyWolf 的 tame/angry 幼年纹理命名改为 `wolf_<variant>_tame_baby` / `_angry_baby`（此前写成 `..._baby_tame`）；BabyFox red 补 `fox_sleep_baby`；补齐 Rabbit 成年 7 变体（brown/white/black/white_splotched/gold/salt/evil，evil→rabbit_caerbannog）与幼年对应纹理；`[111]` 变体 spec 支持 id 99 evil | `BabyWolfModel`、`BabyRabbitModel`、`Rabbit.Variant` | Client 692/构建测试 | `Client/Render/{BabyModelDefinitionsExtra,RabbitModelDefinition,EntityModelResolver}`、`Client/World/EntityVariantSpecs` | 已完成 |
 | T-524 | **Baby Wolf 尾巴方向初修（已废弃，见 T-525）**：曾尝试翻转 `tail_r1`，方向仍不对；对照 `WolfModel.setupAnim` + `Wolf.getTailAngle()` 后改为修正 tail 组朝向 | `BabyWolfModel` | — | `Client/Render/BabyModelDefinitionsExtra` | 已废弃 |
 
-| T-525 | **Baby Wolf 尾巴方向按原版修复**：`WolfModel.setupAnim` 每帧把 `tail.xRot` 设为 `getTailAngle()`，野生狼默认 `π/5`；静态姿势应使用该默认朝向（存储 `-π/5`），并保留 `tail_r1` 原版 `-3.1`。此前沿用 bind `-0.5236` 导致尾巴朝前 | `WolfModel.setupAnim`、`Wolf.getTailAngle` | Client 692/沙盒侧视截图 | `Client/Render/BabyModelDefinitionsExtra` | 已完成 |
+| T-525 | **Baby Wolf 尾巴按 setupAnim 默认帧修正（已废弃，见 T-526）**：曾把 tail 朝向改为 `-π/5`；用户决定统一使用原版 bind pose，故回退 | `WolfModel.setupAnim` | — | `Client/Render/BabyModelDefinitionsExtra` | 已废弃 |
+
+| T-526 | **统一静态姿势为原版 bind pose**：撤回 T-525，`BabyWolfModel` 的 tail 组恢复 `createBodyLayer` 的 `offsetAndRotation(0,19,3,-0.5236)`（存储 +0.5236），`tail_r1` 保持 -3.1；不做 setupAnim 的 y/z 烘焙，等动画系统统一处理 | `BabyWolfModel.createBodyLayer` | Client 692 | `Client/Render/BabyModelDefinitionsExtra` | 已完成 |
