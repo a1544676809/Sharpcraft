@@ -2741,11 +2741,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - 结论：`minecraft:item` 是内置注册表，`Item.STREAM_CODEC` 写 registry id；`RegistrySynchronization` 不包含 item，客户端必须用基线快照。
 - 新增 `docs/analysis/common/item-registry.md` 与 `docs/modules/item-registry.md`（均待评审）。
-- 下一步：从 `../mc-26.3-analysis/` 的 Java 分析环境导出 `BuiltInRegistries.ITEM.listElements()`，形成 `tests/Sharpcraft.Common.Tests/TestData/vanilla-item-order.txt`（纯标识符，不含资产），再实现 `ItemRegistry`。
+- 下一步：从 `../mc-26.3-analysis/` 的 Java 分析环境导出 `BuiltInRegistries.ITEM.listElements()`，形成 `src/Sharpcraft.Common/Registries/Data/vanilla-item-order.txt`（纯标识符，不含资产），再实现 `ItemRegistry`。
 
 ### 2026-11-03 物品注册表实现（T-541）
 
-- 从本地 26.3 客户端 jar 用分析 harness 导出 `BuiltInRegistries.ITEM.listElements()`：1658 项，jar SHA-1 `e877b6a07acd633fb3bb475002175cec036e7b87`；快照入库 `tests/Sharpcraft.Common.Tests/TestData/vanilla-item-order.txt`（纯标识符）。
+- 从本地 26.3 客户端 jar 用分析 harness 导出 `BuiltInRegistries.ITEM.listElements()`：1658 项，jar SHA-1 `e877b6a07acd633fb3bb475002175cec036e7b87`；快照入库 `src/Sharpcraft.Common/Registries/Data/vanilla-item-order.txt`（纯标识符）。
 - `ItemRegistry` 复用 `Registry<ItemInfo>`，按行号=id 加载并冻结；校验首项 `minecraft:air`、空快照失败。
 - `ItemRegistryTests` 校验数量与关键 id：saddle=949、white_carpet=580、red_harness=964、wolf_armor=1004、iron_horse_armor=1407、iron_nautilus_armor=1485。
 - 下一步 E2：装备纹理受控映射（以 `ItemInfo.Id` 标识符为 key）。
@@ -2756,3 +2756,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `EquipmentTextureCatalog.Resolve(EquipmentAssetKind, ItemInfo)`：马甲 6 材质、9 类鞍、16 色地毯/挽具、鹦鹉螺 5 材质、狼甲 + overlay。
 - 以 `ItemInfo.Id`（标识符）为 key，不散落整数 id；不支持物品返回 null。
 - 测试：`EquipmentTextureCatalogTests` 5 项；下一步 E3 将装备层接入实体模型。
+
+
+### 2026-11-03 装备 E3：渲染层骨架与 Horse 验收（T-543）
+
+- `EntityRenderState.Equipment` 8 槽；`TrackedEntity` 快照到渲染状态；沙盒 `MC_SANDBOX_EQUIP_BODY` / `MC_SANDBOX_EQUIP_SADDLE`（物品名）可设置。
+- `EntityModelResolver.Decorate` 按 typeId 追加装备副本层；`EntityModelLayerHelpers.WithEquipment` 用 part 级 `TextureSelector` 动态取纹理；`EntitySkinLibrary` 预加载 `EquipmentTextureCatalog.AllTexturePaths`。
+- Horse `iron_horse_armor` + `saddle` 沙盒已目视：铁马甲与鞍可见。其余装备实体（Llama/Camel/Nautilus/HappyGhast/Wolf 等）已走同一路径，待逐个截图验收。
+- 注意：装备副本使相关模型 Parts 数翻倍（Horse 60→240），测试已按真实结构更新。

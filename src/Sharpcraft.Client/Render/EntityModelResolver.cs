@@ -3,12 +3,31 @@
 
 namespace Sharpcraft.Client.Render;
 
+using Sharpcraft.Client.World;
+using Sharpcraft.Common.Registries;
+
 /// <summary>
 /// Resolves a render-only entity model definition from the registered entity type id. This is the C# equivalent of
 /// EntityModelSet.bakeLayer: no world or simulation dependency, and missing entries stay null for placeholder fallback.
 /// </summary>
 public static class EntityModelResolver
 {
+    /// <summary>Item identity table used by equipment layer selectors; defaults to the embedded baseline snapshot.</summary>
+    public static ItemRegistry? Items { get; set; } = ItemRegistry.LoadEmbedded();
+
+    /// <summary>Resolves a dynamic equipment texture for a render state slot, or null when the slot is empty/unsupported.</summary>
+    public static string? ResolveEquipmentTexture(EntityRenderState state, EquipmentAssetKind kind, int slot, bool overlay = false)
+    {
+        var itemId = state.Equipment[slot];
+        if (itemId < 0 || Items is null || Items.ById(itemId) is not { } item)
+        {
+            return null;
+        }
+
+        var texture = EquipmentTextureCatalog.Resolve(kind, item);
+        return overlay ? texture?.OverlayPath : texture?.PrimaryPath;
+    }
+
     public static readonly EntityModelDefinition Placeholder = new(
         "placeholder",
         64,
@@ -135,7 +154,9 @@ public static class EntityModelResolver
 
     /// <summary>Looks up a named variant, or null when the type has no such variant.</summary>
     public static EntityModelDefinition? TryResolveVariant(int typeId, string key, bool baby = false) =>
-        (baby ? BabyVariantModels : VariantModels).TryGetValue((typeId, key), out var definition) ? definition : null;
+        (baby ? BabyVariantModels : VariantModels).TryGetValue((typeId, key), out var definition)
+            ? Decorate(typeId, baby, definition)
+            : null;
 
     /// <summary>
     /// Looks up a named variant and throws when it is missing. Used by tools and tests so an unhandled variant is loud
@@ -146,14 +167,66 @@ public static class EntityModelResolver
         ?? throw new KeyNotFoundException($"no variant '{key}' registered for entity type {typeId}");
 
     public static EntityModelDefinition? TryResolve(int typeId, bool baby = false) =>
-        (baby ? BabyModels : Models).TryGetValue(typeId, out var definition) ? definition : null;
+        (baby ? BabyModels : Models).TryGetValue(typeId, out var definition) ? Decorate(typeId, baby, definition) : null;
 
     public static EntityModelDefinition Resolve(int typeId, bool baby = false) =>
         TryResolve(typeId, baby) ?? Placeholder;
 
-    public static int? FindTypeId(string name)
+    private static readonly Dictionary<(int TypeId, string Name, bool Baby), EntityModelDefinition> EquippedModels = new();
+
+    private static EntityModelDefinition Decorate(int typeId, bool baby, EntityModelDefinition definition)
     {
-        foreach (var pair in Models)
+        var layers = EquipmentLayers(typeId);
+        if (layers.Length == 0)
+        {
+            return definition;
+        }
+
+        var key = (typeId, definition.Name, baby);
+        if (EquippedModels.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        var parts = definition.Parts;
+        foreach (var (kind, slot, fallback) in layers)
+        {
+            parts = EntityModelLayerHelpers.WithEquipment(parts, kind, slot, fallback);
+        }
+
+        var decorated = new EntityModelDefinition(
+            definition.Name,
+            definition.TextureWidth,
+            definition.TextureHeight,
+            parts,
+            definition.FaceTransforms,
+            definition.TexturePath,
+            definition.Scale,
+            definition.EmissiveTexturePath,
+            definition.TextureSelector,
+            definition.AdditionalTexturePaths.Concat(EquipmentTextureCatalog.AllTexturePaths).Distinct(StringComparer.Ordinal).ToArray());
+        EquippedModels[key] = decorated;
+        return decorated;
+    }
+
+    private static (EquipmentAssetKind Kind, int Slot, string Fallback)[] EquipmentLayers(int typeId) => typeId switch
+    {
+        67 => [(EquipmentAssetKind.HorseBody, 6, "entity/equipment/horse_body/iron"),
+               (EquipmentAssetKind.HorseSaddle, 7, "entity/equipment/horse_saddle/saddle")],
+        37 => [(EquipmentAssetKind.DonkeySaddle, 7, "entity/equipment/donkey_saddle/saddle")],
+        88 => [(EquipmentAssetKind.MuleSaddle, 7, "entity/equipment/mule_saddle/saddle")],
+        119 => [(EquipmentAssetKind.SkeletonHorseSaddle, 7, "entity/equipment/skeleton_horse_saddle/saddle")],
+        155 => [(EquipmentAssetKind.ZombieHorseSaddle, 7, "entity/equipment/zombie_horse_saddle/saddle")],
+        19 => [(EquipmentAssetKind.CamelSaddle, 7, "entity/equipment/camel_saddle/saddle")],
+        79 or 138 => [(EquipmentAssetKind.LlamaBody, 6, "entity/equipment/llama_body/white")],
+        89 or 156 => [(EquipmentAssetKind.NautilusBody, 6, "entity/equipment/nautilus_body/iron"),
+                      (EquipmentAssetKind.NautilusSaddle, 7, "entity/equipment/nautilus_saddle/saddle")],
+        59 => [(EquipmentAssetKind.HappyGhastBody, 6, "entity/equipment/happy_ghast_body/white_harness")],
+        152 => [(EquipmentAssetKind.WolfBody, 6, "entity/equipment/wolf_body/armadillo_scute")],
+        _ => []
+    };
+    public static int? FindTypeId(string name)
+    {        foreach (var pair in Models)
         {
             if (string.Equals(pair.Value.Name, name, StringComparison.OrdinalIgnoreCase))
             {
@@ -213,3 +286,4 @@ public static class EntityModelResolver
         RegisterVariants(ZombieVillagerModelDefinition.ZombieVillagerEntityTypeId, ZombieVillagerModelDefinition.Variants);
     }
 }
+

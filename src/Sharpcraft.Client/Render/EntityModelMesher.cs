@@ -171,7 +171,8 @@ public sealed class EntityModelMesher
                 {
                     partSprite = partEmissiveSprite;
                 }
-                if (!emissivePass && part.TexturePath is { Length: > 0 } partPath && skinAtlas?.Get(partPath) is { } partAtlas)
+                var selectedPartPath = part.TextureSelector?.Invoke(entity) ?? part.TexturePath;
+                if (!emissivePass && selectedPartPath is { Length: > 0 } partPath && skinAtlas?.Get(partPath) is { } partAtlas)
                 {
                     partSprite = partAtlas;
                 }
@@ -474,6 +475,7 @@ public sealed class EntityModelMesher
         destination[offset++] = 0f;
     }
 }
+
 
 
 

@@ -79,6 +79,27 @@ public sealed class EquipmentTextureCatalogTests
     }
 
     [Fact]
+    public void HorseDefinitionExposesEquipmentSelectorsAndTexturePaths()
+    {
+        var registry = ItemRegistry.LoadEmbedded();
+        var armorId = registry.GetId(Identifier.Parse("minecraft:iron_horse_armor"));
+        Assert.Equal(1407, armorId);
+        Assert.Equal(949, registry.GetId(Identifier.Parse("minecraft:saddle")));
+
+        var definition = EntityModelResolver.Resolve(67);
+        var state = new Sharpcraft.Client.World.EntityRenderState(1, 67, 0, 0, 0, 0, 0)
+        {
+            Equipment = new Sharpcraft.Client.World.EntityEquipment(-1, -1, -1, -1, -1, -1, armorId, 949)
+        };
+
+        var bodyLayer = definition.Parts.First(part => part.Name.StartsWith("equipment_HorseBody_6_", StringComparison.Ordinal));
+        Assert.Equal("entity/equipment/horse_body/iron", bodyLayer.TextureSelector!(state));
+        var saddleLayer = definition.Parts.First(part => part.Name.StartsWith("equipment_HorseSaddle_7_", StringComparison.Ordinal));
+        Assert.Equal("entity/equipment/horse_saddle/saddle", saddleLayer.TextureSelector!(state));
+        Assert.Contains("entity/equipment/horse_body/iron", definition.TexturePaths);
+        Assert.Contains("entity/equipment/horse_saddle/saddle", definition.TexturePaths);
+    }
+    [Fact]
     public void UnsupportedItemsReturnNull()
     {
         Assert.Null(EquipmentTextureCatalog.Resolve(EquipmentAssetKind.HorseBody, Item("diamond")));
@@ -86,3 +107,4 @@ public sealed class EquipmentTextureCatalogTests
         Assert.Null(EquipmentTextureCatalog.Resolve(EquipmentAssetKind.WolfBody, Item("iron_horse_armor")));
     }
 }
+

@@ -157,7 +157,7 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("llama", definition.Name);
-        Assert.Equal(11, definition.Parts.Count);
+        Assert.Equal(22, definition.Parts.Count);
     }
 
     [Fact]
@@ -194,7 +194,7 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("horse", definition.Name);
-        Assert.Equal(60, definition.Parts.Count);
+        Assert.Equal(240, definition.Parts.Count);
     }
 
     [Fact]
@@ -284,8 +284,8 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("wolf", definition.Name);
-        // 11 visible cubes plus two empty group nodes ("head", "tail"), doubled by the collar overlay copy.
-        Assert.Equal(26, definition.Parts.Count);
+        // 11 visible cubes plus two empty group nodes ("head", "tail"), doubled by collar and equipment layers.
+        Assert.Equal(52, definition.Parts.Count);
     }
 
     [Fact]
@@ -419,6 +419,8 @@ public sealed class EntityModelResolverTests
         Assert.Equal("placeholder", EntityModelResolver.Resolve(123456).Name);
     }
 }
+
+
 
 
 

@@ -40,6 +40,25 @@ public sealed class ItemRegistry
     /// <summary>Looks up an item by identifier.</summary>
     public bool TryGet(Identifier id, out ItemInfo? item) => _registry.TryGet(id, out item);
 
+    /// <summary>Numeric registry id for an item, or -1 when absent.</summary>
+    public int GetId(Identifier id) => _registry.TryGet(id, out var item) && item is not null ? _registry.GetId(item) : -1;
+
+    /// <summary>Loads the embedded baseline snapshot, which is the runtime default.</summary>
+    public static ItemRegistry LoadEmbedded()
+    {
+        using var stream = typeof(ItemRegistry).Assembly.GetManifestResourceStream("Sharpcraft.Common.Registries.Data.vanilla-item-order.txt")
+            ?? throw new InvalidOperationException("embedded item registry snapshot is missing");
+        using var reader = new StreamReader(stream);
+        return FromLines(ReadLines(reader));
+    }
+
+    private static IEnumerable<string> ReadLines(StreamReader reader)
+    {
+        while (reader.ReadLine() is { } line)
+        {
+            yield return line;
+        }
+    }
     /// <summary>Loads the snapshot shipped under the test data directory.</summary>
     public static ItemRegistry Load(string path)
     {
@@ -72,4 +91,6 @@ public sealed class ItemRegistry
         return new ItemRegistry(identifiers);
     }
 }
+
+
 

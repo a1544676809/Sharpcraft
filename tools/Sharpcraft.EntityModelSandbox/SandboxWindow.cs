@@ -7,6 +7,7 @@ using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
 using Sharpcraft.Common.Imaging;
+using Sharpcraft.Common.Registries;
 using Sharpcraft.Framework.Platform;
 using Sharpcraft.Framework.Rendering;
 
@@ -19,6 +20,10 @@ namespace Sharpcraft.EntityModelSandbox;
 internal static class SandboxWindow
 {
     private static readonly string[] Faces = ["DOWN", "UP", "WEST", "NORTH", "EAST", "SOUTH"];
+    private static readonly ItemRegistry Items = ItemRegistry.LoadEmbedded();
+
+    private static int ItemId(string? name) =>
+        name is { Length: > 0 } ? Items.GetId(Sharpcraft.Common.Identifiers.Identifier.Parse("minecraft:" + name)) : -1;
 
     public static void Run()
     {
@@ -70,6 +75,9 @@ internal static class SandboxWindow
         var patternTint = ParseTint(patternTintText);
         var collarText = Environment.GetEnvironmentVariable("MC_SANDBOX_COLLAR");
         var markingsText = Environment.GetEnvironmentVariable("MC_SANDBOX_MARKINGS");
+        var equipBodyText = Environment.GetEnvironmentVariable("MC_SANDBOX_EQUIP_BODY");
+        var equipSaddleText = Environment.GetEnvironmentVariable("MC_SANDBOX_EQUIP_SADDLE");
+        Console.WriteLine($"equip body={ItemId(equipBodyText)} saddle={ItemId(equipSaddleText)}");
         var entity = new EntityRenderState(1, typeId, 0f, 0f, 0f, 0f, 0f,
             HasChest: Environment.GetEnvironmentVariable("MC_SANDBOX_CHEST") == "1",
             HasEgg: Environment.GetEnvironmentVariable("MC_SANDBOX_EGG") == "1",
@@ -86,7 +94,8 @@ internal static class SandboxWindow
             IsBaby: sandboxBaby,
             CollarTint: ParseTint(collarText),
             HasCollar: collarText is { Length: 6 },
-            Markings: int.TryParse(markingsText, out var markings) ? markings : 0);
+            Markings: int.TryParse(markingsText, out var markings) ? markings : 0,
+            Equipment: new EntityEquipment(-1, -1, -1, -1, -1, -1, ItemId(equipBodyText), ItemId(equipSaddleText)));
         var mesher = new EntityModelMesher();
         var state = new Dictionary<string, FaceUvTransform>();
         var statePath = Path.Combine(Path.GetTempPath(), "sharpcraft-face-state.json");
@@ -341,3 +350,4 @@ internal static class SandboxWindow
         return new ResourceManager(stack, 0);
     }
 }
+

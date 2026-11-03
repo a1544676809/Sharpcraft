@@ -43,7 +43,8 @@ public readonly record struct EntityModelPart(
     bool IncludeInEmissive = true,
     bool EmissiveOnly = false,
     string? EmissiveTexturePath = null,
-    Func<EntityRenderState, System.Numerics.Vector3>? TintSelector = null);
+    Func<EntityRenderState, System.Numerics.Vector3>? TintSelector = null,
+    Func<EntityRenderState, string?>? TextureSelector = null);
 
 /// <summary>
 /// An outer skin layer around one base cuboid, expressed as a uniform growth and its own texture offset.
@@ -202,4 +203,5 @@ public static class PlayerModelDefinition
             Kind: kind);
     }
 }
+
 

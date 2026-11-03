@@ -96,4 +96,40 @@ public static class EquipmentTextureCatalog
 
     /// <summary>All happy ghast harness item identifiers.</summary>
     public static IEnumerable<string> HappyGhastHarnessItems => CarpetColors.Select(color => color + "_harness");
+
+    /// <summary>All equipment textures modelled in this stage; handed to the skin loader with the equipment definition.</summary>
+    public static IReadOnlyList<string> AllTexturePaths { get; } = BuildAllTexturePaths();
+
+    private static List<string> BuildAllTexturePaths()
+    {
+        var paths = new List<string>();
+        foreach (var material in HorseBodyMaterials.Values)
+        {
+            paths.Add("entity/equipment/horse_body/" + material);
+        }
+
+        paths.Add("entity/equipment/horse_body/leather_overlay");
+        paths.AddRange([
+            "entity/equipment/horse_saddle/saddle", "entity/equipment/donkey_saddle/saddle",
+            "entity/equipment/mule_saddle/saddle", "entity/equipment/skeleton_horse_saddle/saddle",
+            "entity/equipment/zombie_horse_saddle/saddle", "entity/equipment/camel_saddle/saddle",
+            "entity/equipment/pig_saddle/saddle", "entity/equipment/strider_saddle/saddle",
+            "entity/equipment/nautilus_saddle/saddle"
+        ]);
+        foreach (var color in CarpetColors)
+        {
+            paths.Add("entity/equipment/llama_body/" + color);
+            paths.Add("entity/equipment/happy_ghast_body/" + color + "_harness");
+        }
+
+        foreach (var material in NautilusBodyMaterials.Values)
+        {
+            paths.Add("entity/equipment/nautilus_body/" + material);
+        }
+
+        paths.AddRange([
+            "entity/equipment/wolf_body/armadillo_scute", "entity/equipment/wolf_body/armadillo_scute_overlay"
+        ]);
+        return paths;
+    }
 }

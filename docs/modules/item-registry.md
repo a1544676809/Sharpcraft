@@ -41,7 +41,7 @@
 
 ## 4. 对外契约
 
-- `ItemRegistry.Load(snapshotPath, baseline)`：加载并冻结，失败返回可诊断错误。
+- `ItemRegistry.LoadEmbedded()`：从程序集内嵌的基线快照加载并冻结；`Load(path)` 保留给工具/测试。
 - `ItemRegistry.ById(int id)` → `ItemInfo?`
 - `ItemRegistry.TryGet(Identifier id, out ItemInfo?)`
 - `ItemRegistry.Entries`：只读、有序。
@@ -83,4 +83,6 @@
 
 - `docs/analysis/common/item-registry.md`
 - `docs/analysis/common/registry-order.md`
+
+
 

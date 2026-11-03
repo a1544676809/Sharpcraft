@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -16,6 +16,8 @@
       26.3 jar. It is metadata, not assets: no textures, models or code (AGENTS.md principle 3).
     -->
     <EmbeddedResource Include="Registries\Data\vanilla-block-states-26.3.tsv" />
+    <EmbeddedResource Include="Registries\Data\vanilla-item-order.txt" />
   </ItemGroup>
 
 </Project>
+

@@ -10,12 +10,7 @@ namespace Sharpcraft.Common.Tests;
 /// <summary>Vanilla item registry order and id contract (docs/analysis/common/item-registry.md).</summary>
 public sealed class ItemRegistryTests
 {
-    private static ItemRegistry LoadSnapshot()
-    {
-        var path = Path.Combine(AppContext.BaseDirectory, "TestData", "vanilla-item-order.txt");
-        Assert.True(File.Exists(path), $"item order snapshot missing from test output: {path}");
-        return ItemRegistry.Load(path);
-    }
+    private static ItemRegistry LoadSnapshot() => ItemRegistry.LoadEmbedded();
 
     [Fact]
     public void SnapshotHasTheBaselineItemCountAndAirAtZero()
@@ -57,4 +52,5 @@ public sealed class ItemRegistryTests
         Assert.Throws<InvalidDataException>(() => ItemRegistry.FromLines(["minecraft:stone"]));
     }
 }
+
 

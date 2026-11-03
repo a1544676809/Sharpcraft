@@ -15,7 +15,7 @@ updated: 2026-11-03
 - `minecraft:item` 是 **内置（built-in）注册表**，不是随数据包加载的动态注册表；客户端必须使用与基线 jar 一致的注册顺序。
 - `ItemStack` 的网络字段是 `Item.STREAM_CODEC = ByteBufCodecs.holderRegistry(Registries.ITEM)`，线上写的是 **registry id（VarInt）**，不是资源路径。
 - 因此 `set_equipment` 里的 `itemHolderId` 要正确解释，必须知道 26.3 的 **完整 item 注册顺序**。
-- 仓库当前没有 item 注册表、没有 item 顺序快照；必须先补一份**只含标识符的注册顺序快照**（不含任何游戏资产）。**2026-11-03 已从 26.3 jar 导出：1658 项，首项 `minecraft:air`；快照见 `tests/Sharpcraft.Common.Tests/TestData/vanilla-item-order.txt`。**
+- 仓库当前没有 item 注册表、没有 item 顺序快照；必须先补一份**只含标识符的注册顺序快照**（不含任何游戏资产）。**2026-11-03 已从 26.3 jar 导出：1658 项，首项 `minecraft:air`；快照见 `src/Sharpcraft.Common/Registries/Data/vanilla-item-order.txt`。**
 
 ## 2. 证据
 
@@ -45,7 +45,7 @@ updated: 2026-11-03
 
 ### 3.1 快照文件（仓库内）
 
-新增 `tests/Sharpcraft.Common.Tests/TestData/vanilla-item-order.txt`：
+新增 `src/Sharpcraft.Common/Registries/Data/vanilla-item-order.txt`：
 
 - 每行一个 `minecraft:<path>`，行号 = registry id（第一行 `minecraft:air` = 0）；
 - 文件头记录基线版本、jar SHA-1、导出日期与工具版本；
@@ -95,4 +95,5 @@ updated: 2026-11-03
 - `docs/analysis/render/entity-equipment.md`
 - `docs/specs/network/entity-sync.md`
 - `docs/modules/entity-equipment.md`
+
 

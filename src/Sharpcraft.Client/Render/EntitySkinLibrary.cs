@@ -29,28 +29,38 @@ public sealed class EntitySkinLibrary
         {
             foreach (var path in definition.TexturePaths)
             {
-                if (images.ContainsKey(path))
-                {
-                    continue;
-                }
-
-                if (path == "entity/player/wide/steve" && playerOverride is not null)
-                {
-                    images[path] = playerOverride;
-                    continue;
-                }
-
-                var data = resources.Read(ResourceKind.Texture, new Identifier("minecraft", path));
-                if (data is null)
-                {
-                    continue;
-                }
-
-                var image = PngDecoder.Decode(data);
-                images[path] = new TextureData(image.Width, image.Height, image.Pixels);
+                LoadTexture(path, images, resources, playerOverride);
             }
         }
 
+        foreach (var path in EquipmentTextureCatalog.AllTexturePaths)
+        {
+            LoadTexture(path, images, resources, playerOverride);
+        }
+
         return new EntitySkinLibrary(images.Count == 0 ? null : EntitySkinAtlas.FromTextures(images));
+    }
+
+    private static void LoadTexture(string path, Dictionary<string, TextureData> images, ResourceManager resources, TextureData? playerOverride)
+    {
+        if (images.ContainsKey(path))
+        {
+            return;
+        }
+
+        if (path == "entity/player/wide/steve" && playerOverride is not null)
+        {
+            images[path] = playerOverride;
+            return;
+        }
+
+        var data = resources.Read(ResourceKind.Texture, new Identifier("minecraft", path));
+        if (data is null)
+        {
+            return;
+        }
+
+        var image = PngDecoder.Decode(data);
+        images[path] = new TextureData(image.Width, image.Height, image.Pixels);
     }
 }
