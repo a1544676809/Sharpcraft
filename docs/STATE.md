@@ -2378,3 +2378,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
   - Enderman：`entity cull candidates=1`，截图中品红眼睛发光 → Emissive 层在真实窗口路径生效。
   - Drowned：截图可进入世界（同账号还存在其它客户端残留玩家实体，画面被近距离玩家模型遮挡），外层半透明层已在沙盒确认。
 - 结论：分层路径（Cutout/Translucent/Emissive）在真实窗口 + 沙盒两条路径均可用；逐层“像素级”差异仍以沙盒固定机位为准（真服务器场景不可复现）。
+
+### 2026-11-03 下一个：Bat 模型（T-475）
+
+- `BatModelDefinition`：body+feet、两段式翅膀（body→wing→wing_tip）、独立 head+双耳；纹理 `entity/bat/bat`，type id 10（由 `EntityTypes` 注册序）。
+- 层级用 `Parent` 表达；静态 bind pose（BatAnimation 未移植）。
+- 注册于 resolver；`EntityModelRegistrationTests` 增加 bat 用例（9 部件、wing_tip/ear 的 Parent）；沙盒目视正常。

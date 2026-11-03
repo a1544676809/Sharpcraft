@@ -33,6 +33,17 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheBatTypeIsRegisteredWithTwoSegmentWings()
+    {
+        var definition = EntityModelResolver.Resolve(BatModelDefinition.BatEntityTypeId);
+
+        Assert.Equal("bat", definition.Name);
+        Assert.Equal(9, definition.Parts.Count);
+        Assert.Contains(definition.Parts, part => part.Name == "right_wing_tip" && part.Parent == "right_wing");
+        Assert.Contains(definition.Parts, part => part.Name == "left_ear" && part.Parent == "head");
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).
