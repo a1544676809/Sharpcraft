@@ -2762,5 +2762,6 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - `EntityRenderState.Equipment` 8 槽；`TrackedEntity` 快照到渲染状态；沙盒 `MC_SANDBOX_EQUIP_BODY` / `MC_SANDBOX_EQUIP_SADDLE`（物品名）可设置。
 - `EntityModelResolver.Decorate` 按 typeId 追加装备副本层；`EntityModelLayerHelpers.WithEquipment` 用 part 级 `TextureSelector` 动态取纹理；`EntitySkinLibrary` 预加载 `EquipmentTextureCatalog.AllTexturePaths`。
-- Horse `iron_horse_armor` + `saddle` 沙盒已目视：铁马甲与鞍可见。其余装备实体（Llama/Camel/Nautilus/HappyGhast/Wolf 等）已走同一路径，待逐个截图验收。
-- 注意：装备副本使相关模型 Parts 数翻倍（Horse 60→240），测试已按真实结构更新。
+- Horse `iron_horse_armor` 沙盒已目视：铁马甲可见；Horse 鞍只显示过渡纹理，专用 `EquineSaddleModel` 几何未移植。
+- 注意：通用“整模型副本”只适用于复用基础几何的装备纹理（Horse 盔甲、Wolf 甲等）；`CamelSaddleModel`、`HappyGhastHarnessModel`、`NautilusArmorModel`、`EquineSaddleModel` 都有独立附加几何，当前通用副本对它们只是过渡，不能算完成。
+
