@@ -511,6 +511,19 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void BabyGoatPandaPolarBearTurtleResolveToTheirOwnGeometry()
+    {
+        Assert.Equal("baby_goat", EntityModelResolver.Resolve(63, true).Name);
+        Assert.Equal(12, EntityModelResolver.Resolve(63, true).Parts.Count);
+        Assert.Equal("baby_panda", EntityModelResolver.Resolve(97, true).Name);
+        Assert.Equal(9, EntityModelResolver.Resolve(97, true).Parts.Count);
+        Assert.Equal("baby_polar_bear", EntityModelResolver.Resolve(105, true).Name);
+        Assert.Equal(9, EntityModelResolver.Resolve(105, true).Parts.Count);
+        Assert.Equal("baby_turtle", EntityModelResolver.Resolve(141, true).Name);
+        Assert.Equal(6, EntityModelResolver.Resolve(141, true).Parts.Count);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

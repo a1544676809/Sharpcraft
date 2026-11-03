@@ -2670,3 +2670,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - BabyHorseModel 10 部件，7 马变体（white/creamy/chestnut/brown/black/gray/dark_brown，`horse_*_baby`）；BabyLlamaModel 11 部件，4 变体（creamy/white/brown/gray，`llama_*_baby`）；BabyCamelModel 11 部件（`camel_baby`）；BabyDonkeyModel 15 部件（`donkey_baby`）。
 - 全部按原版 bind pose；动画未移植。沙盒四种目视正常。
+
+### 2026-11-03 Baby Goat / Panda / Polar Bear / Turtle（T-528）
+
+- BabyGoat 12 部件（含 body_lower、horn2/ear2/head_main）；BabyPanda 9 部件（默认 panda_baby；panda 7 变体尚未接入成年定义）；BabyPolarBear 9 部件；BabyTurtle 6 部件（16×16）。
+- 全部 bind pose；动画未移植。沙盒四种目视正常。
