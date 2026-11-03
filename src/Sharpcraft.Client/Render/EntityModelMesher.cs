@@ -109,8 +109,10 @@ public sealed class EntityModelMesher
             var feet = Vector3.Zero;
             var entityTransform = EntityModelTransform.From(entity);
             var sprite = skin;
-            var skinWidthForModel = skinWidth;
-            var skinHeightForModel = skinHeight;
+            // UVs are authored against the model's declared texture size, not the image resolution (e.g. ghast declares
+            // 64x32 while its PNG is 128x64). Normalising by the image size would sample the wrong texels.
+            var skinWidthForModel = model.TextureWidth;
+            var skinHeightForModel = model.TextureHeight;
             if (emissivePass)
             {
                 if (skinAtlas?.Get(model.EmissiveTexturePath) is not { } eyeSprite)
@@ -119,14 +121,10 @@ public sealed class EntityModelMesher
                 }
 
                 sprite = eyeSprite;
-                skinWidthForModel = eyeSprite.Width;
-                skinHeightForModel = eyeSprite.Height;
             }
             else if (skinAtlas?.Get(model.TextureSelector?.Invoke(entity) ?? model.TexturePath) is { } atlasSprite)
             {
                 sprite = atlasSprite;
-                skinWidthForModel = atlasSprite.Width;
-                skinHeightForModel = atlasSprite.Height;
             }
 
             foreach (var part in model.Parts)
@@ -156,8 +154,6 @@ public sealed class EntityModelMesher
                 if (!emissivePass && part.TexturePath is { Length: > 0 } partPath && skinAtlas?.Get(partPath) is { } partAtlas)
                 {
                     partSprite = partAtlas;
-                    partSkinWidth = partAtlas.Width;
-                    partSkinHeight = partAtlas.Height;
                 }
 
                 AddPart(part, target, kindFilter, emissivePass, min, max, partSprite, partSkinWidth, partSkinHeight, feet, entityTransform, PartMatrix(part, model.Parts, px), transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount);

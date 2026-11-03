@@ -2547,3 +2547,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - 现象：恶魂身体像“少了几面”。根因：`entity/ghast/ghast.png` 实际是 **128×64**，Definition 误写 `64×32`，UV 被按一半尺寸采样，命中透明像素。
 - 修正为 128×64；六面完整、脸部正常。以后新增模型须先从 pack 确认纹理实际尺寸（不要按模型 UV 最大值猜）。
+
+### 2026-11-03 实体 UV 归一化修正（T-503）
+
+- 真正根因：`EntityModelMesher` 用**贴图 PNG 实际分辨率**归一化 UV；原版用 **模型声明的纹理尺寸**（`ModelPart.Cube` 的 xTexSize/yTexSize）。恶魂声明 64×32，但 PNG 是 128×64（2× 分辨率），按 128×64 归一化后 UV 落进透明区，正面/底面消失。
+- 修正：`BuildInto` 现在一律用 `model.TextureWidth/Height` 归一化（贴图 sprite 只决定采样矩形，不影响 UV 归一化）；游戏与沙盒共用此路径。恶魂六面完整、脸部（眼/嘴/泪痕）正确。
+- 注意：T-502 里“把纹理尺寸改成 128×64”是错误方向，已回退为模型声明值 64×32；T-503 才是根因修复。

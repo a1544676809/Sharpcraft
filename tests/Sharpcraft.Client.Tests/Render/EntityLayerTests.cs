@@ -56,6 +56,22 @@ public sealed class EntityLayerTests
     }
 
     [Fact]
+    public void ModelUvsAreNormalisedByTheDeclaredTextureSizeNotTheImageSize()
+    {
+        // Ghast declares a 64x32 texture while its PNG is 128x64; UVs must be divided by 64/32, so the widest body
+        // face still reaches U = 1. Normalising by the 128x64 image would only reach 0.5 and sample the wrong texels.
+        var sprite = new SpriteRect(0, 0, 128, 64, 1);
+        var geometry = new EntityModelMesher().Build([Entity(GhastModelDefinition.GhastEntityTypeId)], sprite, 128, 64);
+        var maxU = 0f;
+        for (var i = 6; i < geometry.VertexFloats; i += 14)
+        {
+            maxU = MathF.Max(maxU, geometry.Vertices[i]);
+        }
+
+        Assert.True(maxU > 0.9f, $"expected U near 1, got {maxU}");
+    }
+
+    [Fact]
     public void AModelWithoutOverlaysHasOnlyTheCutoutLayer()
     {
         var layers = Layers(CowModelDefinition.CowEntityTypeId);

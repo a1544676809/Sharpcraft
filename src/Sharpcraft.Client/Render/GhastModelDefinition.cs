@@ -44,8 +44,8 @@ public static class GhastModelDefinition
 
     public static readonly EntityModelDefinition Definition = new(
         "ghast",
-        128,
         64,
+        32,
         BuildParts(),
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/ghast/ghast",
