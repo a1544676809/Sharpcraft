@@ -101,7 +101,10 @@ public static class EntityVariantSpecs
         [115] = new(18, null,
             ["white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
              "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"],
-            "default")
+            "default"),
+
+        // Salmon: first accessor is the size variant (SMALL/MEDIUM/LARGE).
+        [113] = new(18, null, ["small", "medium", "large"], "medium")
     };
 
     /// <summary>Number of entity types with a variant field.</summary>

@@ -186,6 +186,21 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheCodAndSalmonAreRegisteredWithSalmonSizes()
+    {
+        var cod = EntityModelResolver.Resolve(CodModelDefinition.CodEntityTypeId);
+        var salmon = EntityModelResolver.Resolve(SalmonModelDefinition.SalmonEntityTypeId);
+
+        Assert.Equal("cod", cod.Name);
+        Assert.Equal(7, cod.Parts.Count);
+        Assert.Equal("salmon", salmon.Name);
+        Assert.Equal(8, salmon.Parts.Count);
+        Assert.Contains(salmon.Parts, part => part.Name == "back_fin" && part.Parent == "body_back");
+        Assert.Equal(0.5f, EntityModelResolver.ResolveVariantStrict(SalmonModelDefinition.SalmonEntityTypeId, "small").Scale);
+        Assert.Equal(1.5f, EntityModelResolver.ResolveVariantStrict(SalmonModelDefinition.SalmonEntityTypeId, "large").Scale);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

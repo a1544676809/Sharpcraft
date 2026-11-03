@@ -50,6 +50,8 @@ public static class EntityModelResolver
         [VexModelDefinition.VexEntityTypeId] = VexModelDefinition.Definition,
         [ParrotModelDefinition.ParrotEntityTypeId] = ParrotModelDefinition.Definition,
         [ShulkerModelDefinition.ShulkerEntityTypeId] = ShulkerModelDefinition.Definition,
+        [CodModelDefinition.CodEntityTypeId] = CodModelDefinition.Definition,
+        [SalmonModelDefinition.SalmonEntityTypeId] = SalmonModelDefinition.Definition,
         [GuardianModelDefinition.GuardianEntityTypeId] = GuardianModelDefinition.Definition,
         [GuardianModelDefinition.ElderGuardianEntityTypeId] = GuardianModelDefinition.Elder,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,
@@ -160,6 +162,7 @@ public static class EntityModelResolver
         RegisterVariants(AxolotlModelDefinition.AxolotlEntityTypeId, AxolotlModelDefinition.Variants);
         RegisterVariants(ParrotModelDefinition.ParrotEntityTypeId, ParrotModelDefinition.Variants);
         RegisterVariants(ShulkerModelDefinition.ShulkerEntityTypeId, ShulkerModelDefinition.Variants);
+        RegisterVariants(SalmonModelDefinition.SalmonEntityTypeId, SalmonModelDefinition.Variants);
         RegisterVariants(LlamaModelDefinition.LlamaEntityTypeId, LlamaModelDefinition.Variants);
     }
 }

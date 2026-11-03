@@ -2460,3 +2460,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `ShulkerModelDefinition`：lid / base / head 三部件（bind pose 盖子合上，head 在壳内）。
 - 16 个染料颜色变体（byte accessor 18，type id 115；值 16 = 无颜色 → 默认纹理），纹理 `shulker` / `shulker_<color>`。
 - 静态 bind pose；peek/开盖与头部动画未移植，原版 `entityCutoutZOffset` 的深度偏移未复刻。沙盒 light_blue 目视正常。
+
+### 2026-11-03 Cod / Salmon 模型（T-488）
+
+- Cod：body/head/nose/左右鳍/tail_fin/top_fin；type id 27，`fish/cod`。
+- Salmon：body_front/body_back(+back_fin、top_back_fin)/head/top_front_fin/左右鳍；3 个尺寸变体 small/medium/large（scale 0.5/1.0/1.5，accessor 18，type id 113）。
+- 静态 bind pose；摆尾动画未移植。沙盒 cod 与 salmon(large) 目视正常。
