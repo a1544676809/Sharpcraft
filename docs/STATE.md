@@ -2691,3 +2691,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - BabyPiglin 12 部件（body、head+head_snout、hat 空组、左右 ear/ear_r1、双臂双腿），纹理 piglin_baby / zombified_piglin_baby。
 - BabyHoglin 11 部件（head+左右侧块+左右耳、body+body_mane、四腿），纹理 hoglin_baby / zoglin_baby。
 - 全部 bind pose；动画未移植。沙盒四种目视正常。
+
+### 2026-11-03 Baby Strider / Husk / Sniffer / Armadillo（T-532）
+
+- BabyStrider 6 部件（body+双 bristle? 实为 body + 2 legs + 3 bristles）；BabyHusk 复用 BabyZombie 8 部件，纹理 husk_baby；Snifflet 16 部件（bone/body 3 层/head 2 层/耳朵/nose/beak/六腿，128×128）；BabyArmadillo 13 部件（body 2 层、tail 2、head 4、四腿、shell cube，含 IsHidingInShell 可见性）。
+- 全部 bind pose；动画未移植。沙盒目视正常。

@@ -555,6 +555,16 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void BabyStriderHuskSniffletArmadilloResolveToTheirOwnGeometry()
+    {
+        Assert.Equal(6, EntityModelResolver.Resolve(132, true).Parts.Count);
+        Assert.Equal(8, EntityModelResolver.Resolve(68, true).Parts.Count);
+        Assert.Equal(16, EntityModelResolver.Resolve(122, true).Parts.Count);
+        Assert.Equal(13, EntityModelResolver.Resolve(4, true).Parts.Count);
+        Assert.Equal("entity/armadillo/armadillo_baby", EntityModelResolver.Resolve(4, true).TexturePath);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

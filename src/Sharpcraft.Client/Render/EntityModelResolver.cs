@@ -177,7 +177,8 @@ public static class EntityModelResolver
             .Concat(BabyModelDefinitionsMisc.Models)
             .Concat(BabyModelDefinitionsAquatic.Models)
             .Concat(BabyModelDefinitionsHumanoid.Models)
-            .Concat(BabyModelDefinitionsNether.Models));
+            .Concat(BabyModelDefinitionsNether.Models)
+            .Concat(BabyModelDefinitionsOdd.Models));
     private static readonly Dictionary<(int TypeId, string Key), EntityModelDefinition> BabyVariantModels =
         new(BabyModelDefinitions.Variants
             .Concat(BabyModelDefinitionsExtra.Variants)
