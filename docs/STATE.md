@@ -2448,3 +2448,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - Allay：root(group)→head/body(+body_inner grow-0.2)/双臂/双翅；整体标为 Translucent（对应原版 `entityTranslucent`）；type id 2。
 - Vex：同构（root pivot -2.5、body/head pivot 20、臂 grow-0.1、左翅 mirror）；`vex`/`vex_charging` 由 DATA_FLAGS 充电位（accessor 16, bit0）选择；type id 142。
 - 静态 bind pose；飞行/舞动/充能动画与手持物品层未移植。沙盒 allay 与 vex charging 目视正常。
+
+### 2026-11-03 Parrot 模型（T-486）
+
+- `ParrotModelDefinition`：body/tail/双翅/head(+head2/beak1/beak2/feather)/双腿；pivot 与旋转按原版（root 部件手动取反，子部件由 FromVanillaChild 处理）。
+- 5 变体（red_blue/blue/green/yellow_blue/gray，accessor 20，type id 99；gray 文件名是 `parrot_grey`）。
+- 静态 bind pose；站/飞/坐/肩/派对姿势与扇翅动画未移植。沙盒 blue 目视正常。

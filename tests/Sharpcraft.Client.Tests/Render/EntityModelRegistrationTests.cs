@@ -162,6 +162,18 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheParrotTypeIsRegisteredWithItsVariants()
+    {
+        var definition = EntityModelResolver.Resolve(ParrotModelDefinition.ParrotEntityTypeId);
+
+        Assert.Equal("parrot", definition.Name);
+        Assert.Equal(11, definition.Parts.Count);
+        Assert.Contains(definition.Parts, part => part.Name == "beak1" && part.Parent == "head");
+        Assert.Equal("entity/parrot/parrot_grey", EntityModelResolver.ResolveVariantStrict(ParrotModelDefinition.ParrotEntityTypeId, "gray").TexturePath);
+        Assert.Equal("entity/parrot/parrot_yellow_blue", EntityModelResolver.ResolveVariantStrict(ParrotModelDefinition.ParrotEntityTypeId, "yellow_blue").TexturePath);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).

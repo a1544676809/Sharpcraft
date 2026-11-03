@@ -48,6 +48,7 @@ public static class EntityModelResolver
         [PiglinModelDefinition.ZombifiedPiglinEntityTypeId] = PiglinModelDefinition.Zombified,
         [AllayModelDefinition.AllayEntityTypeId] = AllayModelDefinition.Definition,
         [VexModelDefinition.VexEntityTypeId] = VexModelDefinition.Definition,
+        [ParrotModelDefinition.ParrotEntityTypeId] = ParrotModelDefinition.Definition,
         [GuardianModelDefinition.GuardianEntityTypeId] = GuardianModelDefinition.Definition,
         [GuardianModelDefinition.ElderGuardianEntityTypeId] = GuardianModelDefinition.Elder,
         [WolfModelDefinition.WolfEntityTypeId] = WolfModelDefinition.Definition,
@@ -156,6 +157,7 @@ public static class EntityModelResolver
         RegisterVariants(FoxModelDefinition.FoxEntityTypeId, FoxModelDefinition.Variants);
         RegisterVariants(FrogModelDefinition.FrogEntityTypeId, FrogModelDefinition.Variants);
         RegisterVariants(AxolotlModelDefinition.AxolotlEntityTypeId, AxolotlModelDefinition.Variants);
+        RegisterVariants(ParrotModelDefinition.ParrotEntityTypeId, ParrotModelDefinition.Variants);
         RegisterVariants(LlamaModelDefinition.LlamaEntityTypeId, LlamaModelDefinition.Variants);
     }
 }

@@ -92,7 +92,10 @@ public static class EntityVariantSpecs
         [132] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 19, ColdMask: 1),
 
         // Vex: byte flags at 16 (no AgeableMob in the chain), charging bit 0.
-        [142] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 16, ChargingMask: 1)
+        [142] = new(-1, null, ["default"], "default", FlagsAccessorIndex: 16, ChargingMask: 1),
+
+        // Parrot: TamableAnimal adds flags (18) and owner (19), then the integer variant at 20.
+        [99] = new(20, null, ["red_blue", "blue", "green", "yellow_blue", "gray"], "red_blue")
     };
 
     /// <summary>Number of entity types with a variant field.</summary>
