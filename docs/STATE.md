@@ -2508,3 +2508,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 对照原版 `VillagerModel.createBodyModel()`：`body`(8×12×6, UV16,20)、`jacket` 是 **body 的子级、grow 0.5**（8×20×6, UV0,38）、`arms` 是**单个组**（pivot 0,3,-1, rotX -0.75，三个盒：左右臂 + 中间横臂）。
 - 旧 Witch 直接复用项目 Villager 部件，`jacket` 为 root 且无 grow，与 body 同面产生 z-fighting，正面会混进 body 贴图（看起来像村民衣服）。现改为 Witch 自带精确结构，紫色长袍+绿色前襟显示正确。
 - **遗留**：项目通用 `VillagerModelDefinition` 也存在 jacket 无 grow、缺 hat_rim 的偏差，本次未动；后续单独修（避免影响已验收的村民）。
+
+### 2026-11-03 Villager 模型补全（T-496）
+
+- 对照原版 `VillagerModel.createBodyModel()` 修正此前偏差：`hat`/`hat_rim` 改为 head/hat 子级（hat grow 0.51；hat_rim 16×16×1 rotX -π/2）；`jacket` 改为 body 子级并 **grow 0.5**（旧实现 root 且无 grow → 与 body 共面 z-fighting）；`arms` 改为单组（rotX -0.75）下含左右臂 + 中间横臂三盒；`nose` 挂 head。
+- 纹理 `entity/villager/villager`（64×64），scale 0.9375；WanderingTrader 复用同一几何与 64×64 `wandering_trader` 纹理。
+- 静态 bind pose；村民原本的转头/走路动画未移植。沙盒目视正常（长袍/围裙/鼻子/交叉手臂）。

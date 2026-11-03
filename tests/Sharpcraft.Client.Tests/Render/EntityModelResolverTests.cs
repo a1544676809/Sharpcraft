@@ -115,15 +115,18 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
-    public void TheVillagerTypeResolvesToNinePartsAndScale()
+    public void TheVillagerTypeResolvesToItsFullBodyHierarchy()
     {
         var definition = EntityModelResolver.Resolve(VillagerModelDefinition.VillagerEntityTypeId);
 
         Assert.NotNull(definition);
         Assert.Equal("villager", definition.Name);
-        Assert.Equal(9, definition.Parts.Count);
+        Assert.Equal(12, definition.Parts.Count);
         Assert.Equal(0.9375f, definition.Scale);
-        Assert.NotEqual(0f, definition.Parts[4].RotationX);
+        Assert.Contains(definition.Parts, part => part.Name == "hat_rim" && part.Parent == "hat");
+        Assert.Contains(definition.Parts, part => part.Name == "jacket" && part.Parent == "body" && Math.Abs(part.Grow - 0.5f) < 0.001f);
+        Assert.Contains(definition.Parts, part => part.Name == "arms_left" && part.Parent == "arms");
+        Assert.NotEqual(0f, definition.Parts.Single(part => part.Name == "arms").RotationX);
     }
 
     [Fact]
