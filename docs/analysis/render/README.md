@@ -10,7 +10,7 @@
 | 文档 | 摘要 | 状态 | 最后更新 |
 | --- | --- | --- | --- |
 | [`entity-coordinate-system.md`](entity-coordinate-system.md) | 地形/相机/实体状态/模型空间的坐标约定、当前已统一与未统一的部分 | 草稿 | 2026-11-02 |
-| [`entity-equipment.md`](entity-equipment.md) | set_equipment 包、装备槽、物品栈编码、装备资产层与各实体装备层的实现边界 | 草稿 | 2026-11-03 |
+| [`entity-equipment.md`](entity-equipment.md) | set_equipment 包、装备槽、物品栈编码、装备资产层与各实体装备层的实现边界 | 已评审 | 2026-11-03 |
 | [`entity-model-approximations.md`](entity-model-approximations.md) | 已完成实体模型中仍需父子层级变换才能精确等价的部分 | 已评审 | 2026-11-02 |
 | [`entity-model-migration.md`](entity-model-migration.md) | 原版生物模型来源、按复杂度排序的移植顺序、当前进度与已知缺口 | 已评审 | 2026-11-02 |
 | [`entity-render-layers.md`](entity-render-layers.md) | 合并 part 的简化实现与原版独立 RenderLayer 的差异、影响和修复契约 | 已评审 | 2026-11-02 |

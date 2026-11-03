@@ -174,6 +174,24 @@ public sealed class EntityTrackerTests
         Assert.Equal(before, after);
     }
 
+    [Fact]
+    public void EquipmentSlotsAreStoredAndClearedPerEntity()
+    {
+        var tracker = new EntityTracker();
+        tracker.Add(Entity(9, x: 0, y: 0, z: 0));
+
+        Assert.True(tracker.ApplyEquipment(9, [new EquipmentItem(7, 123, 1), new EquipmentItem(6, 456, 1)]));
+        Assert.True(tracker.TryGet(9, out var entity));
+        Assert.Equal(123, entity!.EquipmentItemAt(7));
+        Assert.Equal(456, entity.EquipmentItemAt(6));
+        Assert.Equal(2, entity.EquipmentUpdates);
+
+        tracker.ApplyEquipment(9, [new EquipmentItem(7, 0, 0)]);
+        Assert.Equal(-1, entity.EquipmentItemAt(7));
+        Assert.Equal(0, entity.EquipmentCountAt(7));
+        Assert.False(tracker.ApplyEquipment(404, [new EquipmentItem(7, 1, 1)]));
+    }
+
     private static AddedEntity Entity(int id, double x, double y, double z, float yaw = 0f) =>
         new(id, Guid.Empty, TypeId: 1, x, y, z, 0f, 0f, 0f, 0f, yaw, yaw, 0);
 }

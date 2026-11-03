@@ -109,6 +109,35 @@ public sealed class TrackedEntity
     /// <summary>Raw horse markings id (0 none, 1 white, 2 white field, 3 white dots, 4 black dots).</summary>
     public int Markings { get; internal set; }
 
+    private readonly int[] _equipmentItemIds = [-1, -1, -1, -1, -1, -1, -1, -1];
+    private readonly int[] _equipmentCounts = new int[8];
+
+    /// <summary>Item registry id in <paramref name="slot"/> (0..7), or -1 when empty.</summary>
+    public int EquipmentItemAt(int slot) =>
+        (uint)slot < (uint)_equipmentItemIds.Length ? _equipmentItemIds[slot] : -1;
+
+    /// <summary>Stack count in <paramref name="slot"/>; 0 when empty.</summary>
+    public int EquipmentCountAt(int slot) =>
+        (uint)slot < (uint)_equipmentCounts.Length ? _equipmentCounts[slot] : 0;
+
+    public void ApplyEquipment(ReadOnlySpan<EquipmentItem> items)
+    {
+        foreach (var item in items)
+        {
+            if ((uint)item.Slot >= (uint)_equipmentItemIds.Length)
+            {
+                continue;
+            }
+
+            _equipmentItemIds[item.Slot] = item.IsEmpty ? -1 : item.ItemId;
+            _equipmentCounts[item.Slot] = item.IsEmpty ? 0 : item.Count;
+            EquipmentUpdates++;
+        }
+    }
+
+    /// <summary>Number of equipment slot updates applied, for diagnostics.</summary>
+    public int EquipmentUpdates { get; private set; }
+
     /// <summary>
     /// Authoritative target position. Vanilla does not snap a remote entity to the position the server reports:
     /// it approaches it over a few ticks, which is why the rendered entity trails slightly behind the
@@ -401,6 +430,18 @@ public sealed class EntityTracker
     /// <summary>
     /// Applies the variant field from a <c>set_entity_data</c> packet, if this entity's type has one.
     /// </summary>
+    /// <summary>Applies one set_equipment update to the tracked entity with <paramref name="id"/>.</summary>
+    public bool ApplyEquipment(int id, ReadOnlySpan<EquipmentItem> items)
+    {
+        if (!_entities.TryGetValue(id, out var entity))
+        {
+            return false;
+        }
+
+        entity.ApplyEquipment(items);
+        return true;
+    }
+
     /// <param name="id">Entity id the packet named.</param>
     /// <param name="items">Decoded data items.</param>
     /// <returns>True when a variant value was found and stored.</returns>

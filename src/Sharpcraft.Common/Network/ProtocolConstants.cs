@@ -240,6 +240,7 @@ public static class PacketIds
 
         /// <summary>Synced entity data: indexed values (variant, health, flags, ...).</summary>
         public const int SetEntityData = 101;
+        public const int SetEquipment = 104;
 
         /// <summary>Absolute repositioning with velocity, angles and relative flags.</summary>
         public const int TeleportEntity = 128;

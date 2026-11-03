@@ -2730,3 +2730,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 已产出 `docs/modules/entity-equipment.md`（状态 [待评审]）与 `docs/analysis/render/entity-equipment.md`。
 - 关键结论：当前无 `SetEquipment`/`ItemStack`/装备渲染实现；包 id 104、槽位 ordinal 0..7、空 patch 解码可先做；`EquipmentClientInfo` JSON 未在现有资产包中找到，需确认提取来源。
 - 下一步：等待用户评审规格后按 E1（协议与状态）→ E2（受控纹理映射）→ E3（实体装备层）实施；未评审前不写实现代码。
+
+### 2026-11-03 装备 E1：协议与状态（T-539）
+
+- 新增 `SetEquipmentPackets.TryRead`：id 104、slot continuation 位、空栈；非空 `DataComponentPatch` 记录 `HasDataComponents` 后停止。
+- `EntityTracker.ApplyEquipment` 保存 8 槽 item id/count，`TrackedEntity.EquipmentItemAt/EquipmentCountAt`；`InteractiveSession` 已接入包分发。
+- 测试：`SetEquipmentPacketTests` 4 项 + `EntityTrackerTests.EquipmentSlotsAreStoredAndClearedPerEntity`；下一阶段 E2 为受控物品→装备纹理映射。

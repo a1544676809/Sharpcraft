@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 Sharpcraft contributors -->
 
-状态：[待评审]
+状态：[已评审]
 基线：Minecraft 26.3
 证据：`docs/analysis/render/entity-equipment.md`
 最后更新：2026-11-03
@@ -95,3 +95,4 @@
 - `docs/analysis/render/entity-equipment.md`
 - `docs/specs/network/entity-sync.md`
 - `docs/modules/entity-render.md`
+

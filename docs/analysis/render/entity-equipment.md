@@ -4,7 +4,7 @@
 <!-- doc
 title: 实体装备与物品渲染差距
 summary: set_equipment 包、装备槽、物品栈编码、装备资产层与各实体装备层的实现边界
-status: 草稿
+status: 已评审
 updated: 2026-11-03
 -->
 
@@ -119,3 +119,4 @@ Witch 的手持物品依赖完整物品模型渲染，不属于第一阶段；�
 - `docs/specs/network/entity-sync.md`（包 id、SetEquipment 登记）
 - `docs/analysis/render/entity-special-layers.md`（特殊层总表）
 - `docs/modules/entity-equipment.md`（设计文档）
+
