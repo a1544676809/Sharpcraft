@@ -38,6 +38,9 @@ public static class EntityModelLayerHelpers
     {
         var result = new List<EntityModelPart>(parts.Count * 2);
         result.AddRange(parts);
+        var inflate = kind == EquipmentAssetKind.WolfBody ? 0.2f : 0.05f;
+        var textureWidth = kind == EquipmentAssetKind.HappyGhastBody ? 128 : 0;
+        var textureHeight = kind == EquipmentAssetKind.HappyGhastBody ? 128 : 0;
         foreach (var part in parts)
         {
             result.Add(part with
@@ -45,7 +48,22 @@ public static class EntityModelLayerHelpers
                 Name = "equipment_" + kind + "_" + slot + (overlay ? "_overlay_" : "_") + part.Name,
                 TexturePath = fallbackTexture,
                 TextureSelector = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay),
-                Grow = part.Grow + 0.05f,
+                Grow = part.Grow + inflate,
+                TextureWidth = textureWidth,
+                TextureHeight = textureHeight,
+                VisibleWhen = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay) is not null
+            });
+        }
+
+        foreach (var part in EquipmentModelParts.For(kind))
+        {
+            result.Add(part with
+            {
+                Name = "equipment_extra_" + kind + "_" + slot + "_" + part.Name,
+                TexturePath = fallbackTexture,
+                TextureSelector = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay),
+                TextureWidth = textureWidth,
+                TextureHeight = textureHeight,
                 VisibleWhen = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay) is not null
             });
         }
@@ -74,4 +92,5 @@ public static class EntityModelLayerHelpers
         return [.. result];
     }
 }
+
 

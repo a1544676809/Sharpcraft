@@ -90,10 +90,10 @@ DataComponentPatch patch
 | 实体 | 槽位/触发 | 原版层 | 第一阶段的纹理来源 | 状态 |
 | --- | --- | --- | --- | --- |
 | Horse / Donkey / Mule / undead horse | `body`、`saddle` | HorseRenderer 装备层 | `horse_body/*`、`horse_saddle/saddle` | 盔甲已验证；鞍专用几何待补 |
-| Llama / TraderLlama | `body`（decor） | LlamaDecorLayer | `llama_body/*`，trader 地毯单独 | 待补专用装备几何 |
-| Camel | `saddle` | CamelRenderer 鞍层 | `camel_saddle/saddle` | 待补专用装备几何 |
-| Nautilus / ZombieNautilus | `body`、`saddle` | NautilusRenderer/NautilusArmorModel | `nautilus_*` | 待补专用装备几何 |
-| Happy Ghast | `body`、挽具/绳索 | HappyGhastHarnessModel、RopesLayer | `happy_ghast_body/*`、`happy_ghast_ropes` | 待补专用装备几何 |
+| Llama / TraderLlama | `body`（decor） | LlamaDecorLayer | `llama_body/*`，trader 地毯单独 | 纹理层已接入 |
+| Camel | `saddle` | CamelRenderer 鞍层 | `camel_saddle/saddle` | 已验证（CamelSaddleModel） |
+| Nautilus / ZombieNautilus | `body`、`saddle` | NautilusRenderer/NautilusArmorModel | `nautilus_*` | 已验证（NautilusArmor/Saddle） |
+| Happy Ghast | `body`、挽具/绳索 | HappyGhastHarnessModel、RopesLayer | `happy_ghast_body/*`、`happy_ghast_ropes` | Harness 几何已补，待最终验收 |
 | Wolf | `body` | WolfArmorLayer + crackiness | `wolf_armor`、`wolf_armor_crackiness_*` | 已验证（修复 64×32） |
 | Witch | `mainhand` | WitchItemLayer / CrossedArmsItemLayer | 需要物品模型（药水） | 未开始（后置） |
 
@@ -119,6 +119,7 @@ Witch 的手持物品依赖完整物品模型渲染，不属于第一阶段；�
 - `docs/specs/network/entity-sync.md`（包 id、SetEquipment 登记）
 - `docs/analysis/render/entity-special-layers.md`（特殊层总表）
 - `docs/modules/entity-equipment.md`（设计文档）
+
 
 
 

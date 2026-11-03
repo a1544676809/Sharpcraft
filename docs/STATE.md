@@ -2771,3 +2771,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 原版 `LayerDefinitions` 的 `WOLF` / `WOLF_ARMOR` 都是 **64×32**；`WolfModelDefinition` 曾误写 64×64，导致狼本体与 wolf armor 的 UV 被按 64 高度归一化，装备外观异常。
 - 已改为 64×32（成年基础与全部变体）；狼甲使用 `CubeDeformation(0.2F)`，装备副本 Grow=0.2；沙盒 `wolf_armor` 目视通过。
 - 幼狼仍为 32×32，不受影响。
+
+### 2026-11-03 专用装备几何（T-545）
+
+- 新增 `EquipmentModelParts`：EquineSaddle 7 块、CamelSaddle 11 块、NautilusArmor 3 块、NautilusSaddle 1 块、HappyHarness 2 块；`WithEquipment` 在基础副本后追加这些几何。
+- 纹理尺寸：HappyHarness 使用 128×128，其余按实体模型/装备纹理实际尺寸；Camel 鞍、Nautilus 甲/鞍沙盒目视通过；Happy 挽具仍待最终验收。
+- 回归测试更新装备相关 Parts 数；Client 704 全绿。
