@@ -557,3 +557,4 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-525 | **Baby Wolf 尾巴按 setupAnim 默认帧修正（已废弃，见 T-526）**：曾把 tail 朝向改为 `-π/5`；用户决定统一使用原版 bind pose，故回退 | `WolfModel.setupAnim` | — | `Client/Render/BabyModelDefinitionsExtra` | 已废弃 |
 
 | T-526 | **统一静态姿势为原版 bind pose**：撤回 T-525，`BabyWolfModel` 的 tail 组恢复 `createBodyLayer` 的 `offsetAndRotation(0,19,3,-0.5236)`（存储 +0.5236），`tail_r1` 保持 -3.1；不做 setupAnim 的 y/z 烘焙，等动画系统统一处理 | `BabyWolfModel.createBodyLayer` | Client 692 | `Client/Render/BabyModelDefinitionsExtra` | 已完成 |
+| T-527 | **Baby Horse / Llama / Camel / Donkey 模型**：BabyHorseModel（10 部件，7 马变体 `horse_*_baby`）、BabyLlamaModel（11 部件，4 骆驼科变体 `llama_*_baby`）、BabyCamelModel（11 部件，`camel_baby`）、BabyDonkeyModel（15 部件，`donkey_baby`）；均按 bind pose | `BabyHorseModel`、`BabyLlamaModel`、`BabyCamelModel`、`BabyDonkeyModel` | Client 694/沙盒截图 | `Client/Render/BabyModelDefinitionsEquine` | 已完成 |

@@ -2665,3 +2665,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 用户决定：所有模型的静态姿势以原版 `createBodyLayer` 的 **bind pose** 为准，`setupAnim` 的默认帧/位移等动画系统实现时再统一烘焙。
 - 因此撤回 T-525：BabyWolf tail 组恢复 `offsetAndRotation(0,19,3,-0.5236)`（y-up 存储 +0.5236），`tail_r1` 保持原版 -3.1。
 - 已知观感差异：狼尾在 bind pose 下与游戏默认动画帧不同（游戏里 `tail.xRot=tailAngle` 且 y/z 有位移），这是“无动画”的预期结果，已记录。
+
+### 2026-11-03 Baby Horse / Llama / Camel / Donkey（T-527）
+
+- BabyHorseModel 10 部件，7 马变体（white/creamy/chestnut/brown/black/gray/dark_brown，`horse_*_baby`）；BabyLlamaModel 11 部件，4 变体（creamy/white/brown/gray，`llama_*_baby`）；BabyCamelModel 11 部件（`camel_baby`）；BabyDonkeyModel 15 部件（`donkey_baby`）。
+- 全部按原版 bind pose；动画未移植。沙盒四种目视正常。
