@@ -2777,3 +2777,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 新增 `EquipmentModelParts`：EquineSaddle 7 块、CamelSaddle 11 块、NautilusArmor 3 块、NautilusSaddle 1 块、HappyHarness 2 块；`WithEquipment` 在基础副本后追加这些几何。
 - 纹理尺寸：HappyHarness 使用 128×128，其余按实体模型/装备纹理实际尺寸；Camel 鞍、Nautilus 甲/鞍沙盒目视通过；Happy 挽具仍待最终验收。
 - 回归测试更新装备相关 Parts 数；Client 704 全绿。
+
+### 2026-11-03 Overlay 层 UV 分辨率无关（T-546）
+
+- 用户确认原则：UV 解析必须与 PNG 分辨率无关；同布局的高分辨率纹理不能改变 UV。
+- 基础部件已用 `model.TextureWidth/Height`；发现独立纹理 overlay 仍用 `layerSprite.Width/Height`，已改为 `partTextureWidth/Height`，HD 同布局 overlay 不再错位。

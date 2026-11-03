@@ -341,8 +341,10 @@ public sealed class EntityModelMesher
                 if (layer.TexturePath is { Length: > 0 } layerPath && skinAtlas?.Get(layerPath) is { } layerSprite)
                 {
                     overlaySkin = layerSprite;
-                    overlayWidth = layerSprite.Width;
-                    overlayHeight = layerSprite.Height;
+                    // UVs are authored in the model/part texture grid. Use the declared dimensions, never the PNG
+                    // resolution: an HD texture with the same layout must not shift overlay UVs.
+                    overlayWidth = partTextureWidth;
+                    overlayHeight = partTextureHeight;
                 }
 
                 AddPart(overlay, target, kindFilter, emissivePass, overlayMin, overlayMax, overlaySkin, overlayWidth, overlayHeight, feet, entityTransform, partMatrix, transforms, defaultTransforms, renderState, skinAtlas, px, ref vertexFloats, ref indexCount);
