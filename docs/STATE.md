@@ -2857,3 +2857,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - 移植 `BatAnimation.BAT_RESTING` / `BAT_FLYING`（0.5s 循环，LINEAR），含 head/body/feet/wing/wing_tip。
 - `EntityRenderState.IsResting` + 沙盒 `MC_SANDBOX_RESTING=1`；Bat 默认 `resting`，可用 `MC_SANDBOX_ANIMATION=flying`。
+
+### 2026-11-03 并行移植 Axolotl / Armadillo / Frog（T-560~T-563）
+
+- Agent team 完成：Axolotl（13 tests）、Armadillo（7 tests）、Frog（11 tests）；所有定义按参考关键帧/程序化公式移植，测试 750 全绿。
+- Lead 接线 `EntityAnimationController`：Armadillo walk/roll、Frog 六 clip、Baby Axolotl 七 clip；`ClipNames` 可在沙盒切换。
+- 仍缺：成人 Axolotl 的 playingDead/inWater/onGround/moving 四因子与 body-relative yaw；Frog/Armadillo 的 one-shot `AnimationState` 字段。不能声称这些实体动画完整。

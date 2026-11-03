@@ -25,6 +25,9 @@ public static class EntityAnimationController
         VillagerModelDefinition.VillagerEntityTypeId or ChickenModelDefinition.ChickenEntityTypeId => ["idle", "walk"],
         SquidModelDefinition.SquidEntityTypeId or SquidModelDefinition.GlowSquidEntityTypeId => ["idle"],
         BatModelDefinition.BatEntityTypeId => ["resting", "flying"],
+        ArmadilloModelDefinition.ArmadilloEntityTypeId => ["walk", "roll_up", "roll_out", "peek"],
+        FrogModelDefinition.FrogEntityTypeId => ["croak", "walk", "jump", "tongue", "swim", "idle_water"],
+        AxolotlModelDefinition.AxolotlEntityTypeId => ["baby_idle_floor", "idle_floor_underwater", "idle_underwater", "baby_swim", "walk_floor", "walk_floor_underwater", "play_dead"],
         _ => []
     };
 
@@ -47,6 +50,51 @@ public static class EntityAnimationController
         {
             (animation == "resting" ? BatAnimations.RestingBaked : BatAnimations.FlyingBaked).Apply(seconds, 1f, pose);
             return;
+        }
+
+        if (state.TypeId == ArmadilloModelDefinition.ArmadilloEntityTypeId && animation.StartsWith("roll_", StringComparison.Ordinal))
+        {
+            (animation == "roll_up" ? ArmadilloAnimations.RollUpBaked : ArmadilloAnimations.RollOutBaked).Apply(seconds, 1f, pose);
+            return;
+        }
+
+        if (state.TypeId == FrogModelDefinition.FrogEntityTypeId)
+        {
+            var clip = animation switch
+            {
+                "croak" => FrogAnimations.CroakBaked,
+                "walk" => FrogAnimations.WalkBaked,
+                "jump" => FrogAnimations.JumpBaked,
+                "tongue" => FrogAnimations.TongueBaked,
+                "swim" => FrogAnimations.SwimBaked,
+                "idle_water" => FrogAnimations.IdleWaterBaked,
+                _ => null
+            };
+            if (clip is not null)
+            {
+                clip.Apply(seconds, 1f, pose);
+                return;
+            }
+        }
+
+        if (state.TypeId == AxolotlModelDefinition.AxolotlEntityTypeId && state.IsBaby)
+        {
+            var clip = animation switch
+            {
+                "baby_idle_floor" => AxolotlAnimations.BabyIdleFloorBaked,
+                "idle_floor_underwater" => AxolotlAnimations.IdleFloorUnderwaterBaked,
+                "idle_underwater" => AxolotlAnimations.IdleUnderwaterBaked,
+                "baby_swim" => AxolotlAnimations.BabySwimBaked,
+                "walk_floor" => AxolotlAnimations.WalkFloorBaked,
+                "walk_floor_underwater" => AxolotlAnimations.WalkFloorUnderwaterBaked,
+                "play_dead" => AxolotlAnimations.PlayDeadBaked,
+                _ => null
+            };
+            if (clip is not null)
+            {
+                clip.Apply(seconds, 1f, pose);
+                return;
+            }
         }
 
         if (animation == "walk")
@@ -106,6 +154,39 @@ public static class EntityAnimationController
             else
             {
                 BatAnimations.FlyingBaked.Apply(state.AgeInTicks / 20f, 1f, pose);
+            }
+        }
+        else if (state.TypeId == ArmadilloModelDefinition.ArmadilloEntityTypeId)
+        {
+            if (state.IsHidingInShell)
+            {
+                ArmadilloAnimations.RollUpBaked.Apply(state.AgeInTicks / 20f, 1f, pose);
+            }
+            else
+            {
+                ArmadilloAnimations.WalkBaked.Apply(state.WalkAnimationPos * 0.825f, MathF.Min(state.WalkAnimationSpeed * 2.5f, 1f), pose);
+            }
+        }
+        else if (state.TypeId == FrogModelDefinition.FrogEntityTypeId)
+        {
+            if (state.WalkAnimationSpeed > 0f)
+            {
+                FrogAnimations.WalkBaked.Apply(state.WalkAnimationPos * 0.05f, MathF.Min(state.WalkAnimationSpeed * 2.5f, 1f), pose);
+            }
+            else
+            {
+                FrogAnimations.IdleWaterBaked.Apply(state.AgeInTicks / 20f, 1f, pose);
+            }
+        }
+        else if (state.TypeId == AxolotlModelDefinition.AxolotlEntityTypeId && state.IsBaby)
+        {
+            if (state.WalkAnimationSpeed > 0f)
+            {
+                AxolotlAnimations.WalkFloorBaked.Apply(state.WalkAnimationPos * 0.75f, MathF.Min(state.WalkAnimationSpeed * 30f, 1f), pose);
+            }
+            else
+            {
+                AxolotlAnimations.BabyIdleFloorBaked.Apply(state.AgeInTicks / 20f, 1f, pose);
             }
         }
         else if (state.TypeId == VillagerModelDefinition.VillagerEntityTypeId)
@@ -192,6 +273,7 @@ public static class EntityAnimationController
     private static void AddLegRotation(EntityPose pose, string part, float radians) =>
         pose.Add(part, new PoseOffset(Vector3.Zero, new Vector3(radians, 0f, 0f), Vector3.Zero));
 }
+
 
 
 
