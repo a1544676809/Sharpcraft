@@ -2496,3 +2496,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 修正：emissive pipeline 改为 **`LESS_EQUAL` + depth write off**；正视眼睛正常，背视 180° 不再出现眼睛。
 - 沙盒新增 `MC_SANDBOX_YAW`（调试工具）用于固定正面/背面机位验收；已用 3.14159 验证背视干净。
 - 该修复同时作用于 Enderman/Spider 眼睛层。
+
+### 2026-11-03 Witch 模型（T-494）
+
+- 复用 Villager body/jacket/arms/legs；替换 head 为 8×10×8，nose/mole 挂在 head/nose 下，帽子四级链 hat→hat2→hat3→hat4（原版 offset/rotation 全部保留）。
+- 纹理 `entity/witch/witch`（64×128），scale 0.9375，type id 148。
+- 静态 bind pose；WitchItemLayer（手持物品）与鼻子摆动动画未移植。沙盒目视帽子/袍子正常。

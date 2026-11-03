@@ -250,6 +250,19 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
+    public void TheWitchTypeIsRegisteredWithItsHatChain()
+    {
+        var definition = EntityModelResolver.Resolve(WitchModelDefinition.WitchEntityTypeId);
+
+        Assert.Equal("witch", definition.Name);
+        Assert.Equal(14, definition.Parts.Count);
+        Assert.Contains(definition.Parts, part => part.Name == "mole" && part.Parent == "nose");
+        Assert.Contains(definition.Parts, part => part.Name == "hat2" && part.Parent == "hat");
+        Assert.Contains(definition.Parts, part => part.Name == "hat4" && part.Parent == "hat3");
+        Assert.Equal(0.9375f, definition.Scale);
+    }
+
+    [Fact]
     public void TheCamelTypeIdMatchesTheBaselineEntityTypeOrder()
     {
         // Derived from EntityTypes registration order (validated against the ids the other models already use).
