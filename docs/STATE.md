@@ -3402,3 +3402,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **修复**：`delta = 原版赋值 − bindPivot`（`armBindPivotX=5`）。攻击时手臂基本不动、只随身体扭转移；与原版一致。
 - **回归**：新增 `HumanoidAttackArmTests`（网格右臂 bounds：攻击 vs 静止内缘差 <0.08 格，且旋转确有变化）；Client **1276** 全绿，构建 0 警告 0 错误；窗口已重启待目视。
 - **下一步具体动作**：①用户目视"攻击不再分离/跳跃抬头不甩 360°"；②通过后合并 `fix/entity-orientation-matrix` → `feature/item-registry`；③继续 SPEAR/STAB 与缺 provider 生物。
+
+## 2026-11-04 头部姿态逻辑等效验证（T-623，分支 `fix/entity-orientation-matrix`）
+
+- **逻辑等效（非目视）**：新增 `HumanoidHeadPoseTests`，对 8 个 humanoid 类型断言 `head.xRot = pitch`、`head.yRot = wrapDegrees(headYaw − bodyYaw)`、`head.zRot = 0`，覆盖 yaw 跨 0 回绕与陡 pitch。配合实体根 `180 − bodyRot`、`BodyRotationControl`（头/身随动、75° 钳制）——头部朝向逻辑闭环。
+- **pitch 钳制**：按参考 `Entity.setXRot` 在 add/move/teleport 处把 pitch 钳到 [-90,90]（此前只做有符号解码）。
+- **验证**：Client **1281**（+5 头部姿态）；构建 0 警告 0 错误。
+- **下一步具体动作（供选择）**：①合并 `fix/entity-orientation-matrix` → `feature/item-registry`（本轮的朝向/头/手/图集修复整体收口）；②按 T-419 文档继续把**其余 mob** 迁移到统一模型空间（去掉逐模型符号补偿）；③补 SPEAR/STAB；④补缺 provider 生物（Cat/Ocelot、ZombieVillager、Enderman、Slime、EnderDragon、Pufferfish、TropicalFish）；⑤baby 专属模型与装备层。
