@@ -28,7 +28,8 @@ public readonly record struct EntityAnimationFrame(
     float PartialTick = 0f,
     bool HasMainHandItem = false,
     bool HasOffHandItem = false,
-    int EntityId = 0)
+    int EntityId = 0,
+    bool IsOnGround = false)
 {
     /// <summary>Projects the generic render state onto the frame. The mesher calls this once per entity per frame.</summary>
     public static EntityAnimationFrame From(in EntityRenderState state) => new(
@@ -47,7 +48,8 @@ public readonly record struct EntityAnimationFrame(
         state.AnimationPartialTick,
         state.HasMainHandItem,
         state.HasOffHandItem,
-        state.Id);
+        state.Id,
+        state.IsOnGround);
 }
 
 /// <summary>

@@ -46,8 +46,8 @@ public sealed class TrackedEntity
     /// </summary>
     public IEntityAnimationState? Animation { get; internal set; }
 
-    /// <summary>Smoothed walk animation position/speed, advanced once per tick from actual movement.</summary>
-    public WalkAnimationState WalkAnimation { get; } = new();
+    /// <summary>Client-side presentation state (walk/flap/ground) advanced once per tick; never authoritative.</summary>
+    public EntityPresentationState Presentation { get; } = new();
 
     /// <summary>Feet position, current tick.</summary>
     public double X { get; internal set; }
@@ -235,7 +235,8 @@ public readonly record struct EntityRenderState(
     IEntityAnimationState? Animation = null,
     float AnimationPartialTick = 0f,
     bool HasMainHandItem = false,
-    bool HasOffHandItem = false);
+    bool HasOffHandItem = false,
+    bool IsOnGround = false);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -602,10 +603,15 @@ public sealed class EntityTracker
             var dz = (float)(entity.Z - entity.PreviousZ);
             var distance = MathF.Sqrt((dx * dx) + (dz * dz));
             var profile = WalkProfile.For(entity.TypeId, entity.IsBaby);
-            entity.WalkAnimation.Update(
+            entity.Presentation.Walk.Update(
                 MathF.Min(distance * profile.DistanceToSpeed, profile.MaxSpeed),
                 profile.Factor,
                 profile.PositionScale);
+
+            // Client-side presentation derivations (ADR-0022). Passenger tracking does not exist yet, so the flap
+            // clock uses "not on ground" as the airborne signal (documented deviation for ridden parrots).
+            entity.Presentation.IsOnGround = entity.OnGround;
+            entity.Presentation.Flap.Update(!entity.OnGround);
 
             if (entity.Animation is IEntityTickAnimationState tickState)
             {
@@ -674,8 +680,11 @@ public sealed class EntityTracker
                     entity.EquipmentItemAt(0), entity.EquipmentItemAt(1), entity.EquipmentItemAt(2), entity.EquipmentItemAt(3),
                     entity.EquipmentItemAt(4), entity.EquipmentItemAt(5), entity.EquipmentItemAt(6), entity.EquipmentItemAt(7)),
                 AgeInTicks: GameTime,
-                WalkAnimationPos: entity.WalkAnimation.Position(t),
-                WalkAnimationSpeed: entity.WalkAnimation.Speed(t),
+                WalkAnimationPos: entity.Presentation.Walk.Position(t),
+                WalkAnimationSpeed: entity.Presentation.Walk.Speed(t),
+                Flap: entity.Presentation.Flap.Flap(t),
+                FlapSpeed: entity.Presentation.Flap.Speed(t),
+                IsOnGround: entity.Presentation.IsOnGround,
                 Animation: entity.Animation,
                 AnimationPartialTick: t,
                 HasMainHandItem: entity.EquipmentItemAt(0) > 0,

@@ -2954,3 +2954,12 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 已落文档：`docs/decisions/0022-client-entity-presentation-state.md`（已采纳）、`docs/modules/entity-presentation-state.md`（待评审）。
 - 分期：P0 通用派生（isInWater/onGround/乘客/riding/flap/tentacle/pose）→ P1 逐生物可判定字段 → P2 仅同步来源字段。明确不做 AI/寻路/战斗/生成，无来源字段保持阻塞、不近似。
 - **下一步具体动作**：待模块文档评审通过（状态改 `[已评审]`）后实现 P0：`EntityPresentationState` + `EntityTracker` 接线 + `isInWater/onGround/乘客/flap/tentacle` 派生，先解锁 Squid/Bat/Parrot 的基础字段，再补逐生物。
+
+### 2026-11-04 客户端实体表现状态层 P0a 实现（T-575）
+
+- 模块文档状态改为 `[已评审]`，用户批准 P0。
+- 新增 [EntityPresentationState.cs](src/Sharpcraft.Client/World/EntityPresentationState.cs)（每实体，承载 `WalkAnimationState` + `FlapAnimationState` + `IsOnGround`）与 [FlapAnimationState.cs](src/Sharpcraft.Client/World/FlapAnimationState.cs)（逐式复刻 Chicken/Parrot 的 `flap/flapSpeed/flapping`）。
+- `EntityTracker.Tick` 派生 walk/flap/ground，`Interpolate` 投影到 `EntityRenderState`（新增 `IsOnGround`，`Flap/FlapSpeed` 真机有值），并接入 `EntityAnimationFrame.IsOnGround`。
+- 已知受控偏差：乘客项（骑乘鹦鹉不扇翅）暂无乘客同步，暂以 `!onGround` 代替；`isInWater`/`isRiding`/`tentacleAngle` 列为 P0b。
+- Client **912** 全绿（+2）；构建 0 警告 0 错误。
+- **下一步具体动作**：P0b —— ①本地水方块查询接 `isInWater`；②解码 `set_passengers` 以支持 `isRiding`；③读 `Squid.aiStep` 的 `tentacleMovement` 实现 `tentacleAngle`；随后补 Parrot/Strider 等。

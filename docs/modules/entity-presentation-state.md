@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Copyright (C) 2026 Sharpcraft contributors -->
 
-状态：[待评审]
+状态：[已评审]
 基线：Minecraft 26.3
 证据：`docs/decisions/0022-client-entity-presentation-state.md`；分析工作区 `ref://mc-26.3-analysis/src/...`（各生物 `*Renderer.extractRenderState` / `*Model.setupAnim`）
 最后更新：2026-11-04
@@ -73,7 +73,8 @@
 
 ## 7. 分期与验收
 
-- **P0 通用派生**：`isInWater`、`onGround`、乘客/`isRiding`、`flap/flapSpeed`、`tentacleAngle`；接入 `EntityAnimationFrame`。验收：原版公式逐值对照、每 tick 零分配、至少解锁 Squid/Bat/Parrot 的 flap/tentacle/pose 基础。
+- **P0a 通用派生（已实现 2026-11-04）**：`EntityPresentationState`（每实体）承载 `WalkAnimationState` + `FlapAnimationState` + `IsOnGround`；`EntityTracker.Tick` 派生 walk/flap/ground 并投影到 `EntityRenderState`/`EntityAnimationFrame`（新增 `IsOnGround`）。`FlapAnimationState` 逐式复刻 Chicken/Parrot 的 `flap/flapSpeed/flapping` 规则；已知偏差：乘客项（骑乘鹦鹉不扇翅）因暂无乘客同步，暂以 `!onGround` 代替，登记为受控偏差。验收：公式逐值测试、每 tick 零分配。
+- **P0b 待做**：`isInWater`（需本地水方块查询接入 ClientWorld）、`isRiding`/乘客（需先解码 `set_passengers`）、`tentacleAngle`（Squid 的 `tentacleMovement` 客户端运动状态，需读取 `Squid.aiStep` 后实现）。
 - **P1 逐生物可判定字段**：`isSuffocating`、`pose` 等；按生物补充动画测试。
 - **P2 同步来源字段**：仅在有同步数据/事件时接 `armPose/crossbow/swing`；否则登记阻塞。
 

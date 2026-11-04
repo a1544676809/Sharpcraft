@@ -29,7 +29,7 @@
 | [`entities.md`](entities.md) | 玩家不是特例，而是实体系统的一个成员。 | 已评审 | 2026-10-29 |
 | [`entity-animation.md`](entity-animation.md) | 在静态 bind pose 模型之上，按实体状态每帧计算部件的位置/旋转/缩放覆盖，供实体网格与装备层共同使用。 | 已评审 | 2026-11-03 |
 | [`entity-equipment.md`](entity-equipment.md) | 把 set_equipment 的装备槽状态转成实体渲染状态，并为鞍、马甲、装饰、挽具、狼甲等提供独立的装备渲染层；手持物品模型渲染后置。 | 已评审 | 2026-11-03 |
-| [`entity-presentation-state.md`](entity-presentation-state.md) | 在客户端每 tick 由同步数据与本地可确定信息派生渲染所需的实体表现状态（非权威），为动画/表现提供类似原版 extractRenderState 的输入。 | 待评审 | 2026-11-04 |
+| [`entity-presentation-state.md`](entity-presentation-state.md) | 在客户端每 tick 由同步数据与本地可确定信息派生渲染所需的实体表现状态（非权威），为动画/表现提供类似原版 extractRenderState 的输入。 | 已评审 | 2026-11-04 |
 | [`entity-render.md`](entity-render.md) | M5.3 P1 静态实体模型、渲染状态、部件几何与渲染/游戏逻辑解耦 | 已评审 | 2026-11-02 |
 | [`input.md`](input.md) | 把平台输入收敛成与平台无关的动作状态，把客户端状态输出到窗口与日志。 | 已评审 | 2026-10-29 |
 | [`item-registry.md`](item-registry.md) | 按基线 jar 的注册顺序提供只读物品身份表，供网络 ItemStack、装备映射与后续物品逻辑使用。 | 已评审 | 2026-11-03 |

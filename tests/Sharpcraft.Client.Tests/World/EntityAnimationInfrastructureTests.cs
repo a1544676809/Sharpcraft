@@ -116,6 +116,42 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.False(after.HasOffHandItem);
     }
 
+    [Fact]
+    public void FlapClockMatchesTheReferenceRule()
+    {
+        var flap = new FlapAnimationState();
+
+        flap.Update(airborne: true); // speed 0 -> 1.2 clamped to 1; flapping 1 -> 0.9; flap += 1.8
+        Assert.Equal(1.0f, flap.Speed(1f), 4);
+        Assert.Equal(1.8f, flap.Flap(1f), 4);
+
+        flap.Update(airborne: true); // speed stays 1; flapping 0.9 -> reset 1 -> 0.9; flap += 1.8
+        Assert.Equal(1.0f, flap.Speed(1f), 4);
+        Assert.Equal(3.6f, flap.Flap(1f), 4);
+
+        flap.Update(airborne: false); // speed 1 - 0.3 = 0.7
+        Assert.Equal(0.7f, flap.Speed(1f), 4);
+    }
+
+    [Fact]
+    public void TheTrackerDerivesGroundAndFlapPresentationState()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(8, typeId: 26));
+        tracker.ApplyMove(new EntityMove(8, 1.0, 0, 0, HasPosition: true, 0f, 0f, HasRotation: false, OnGround: false));
+        tracker.GameTime = 1;
+        tracker.Tick();
+
+        var airborne = tracker.Interpolate(1f)[0];
+        Assert.False(airborne.IsOnGround);
+        Assert.True(airborne.FlapSpeed > 0f, $"expected a flapping wing speed, was {airborne.FlapSpeed}");
+
+        tracker.ApplyMove(new EntityMove(8, 0, 0, 0, HasPosition: true, 0f, 0f, HasRotation: false, OnGround: true));
+        tracker.GameTime = 2;
+        tracker.Tick();
+        Assert.True(tracker.Interpolate(1f)[0].IsOnGround);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 
