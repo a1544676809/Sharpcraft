@@ -286,6 +286,41 @@ public sealed class SetEquipmentPacketTests
     }
 
     [Fact]
+    public void DyedColorAndTrimAreSkippedAndParsingContinues()
+    {
+        var dyed = DataComponentTypes.GetId("dyed_color");
+        var trim = DataComponentTypes.GetId("trim");
+        Assert.True(dyed >= 0 && trim >= 0);
+
+        var body = Body(
+            b =>
+            {
+                b.Add(0x80);
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(2));       // two added components
+                b.AddRange(VarInt(0));       // no removals
+                b.AddRange(VarInt(dyed));
+                b.AddRange(new byte[4]);     // rgb int
+                b.AddRange(VarInt(trim));
+                b.AddRange(VarInt(0));       // trim material
+                b.AddRange(VarInt(0));       // trim pattern
+            },
+            b =>
+            {
+                b.Add(7);
+                b.AddRange(VarInt(0));
+            });
+
+        var result = Read(body, out _, out var complete, out var status);
+
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.Equal(2, result.Length);
+        Assert.False(result[0].Components.Opaque);
+    }
+
+    [Fact]
     public void TruncatedStackReportsNeedMoreData()
     {
         var body = new List<byte>();

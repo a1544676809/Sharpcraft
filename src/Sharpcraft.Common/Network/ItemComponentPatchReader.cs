@@ -50,6 +50,21 @@ internal static class ItemComponentPatchReader
     private static readonly int AttackAnimation = DataComponentTypes.GetId("attack_animation");
     private static readonly int InteractAnimation = DataComponentTypes.GetId("interact_animation");
     private static readonly int DamageType = DataComponentTypes.GetId("damage_type");
+    private static readonly int Food = DataComponentTypes.GetId("food");
+    private static readonly int StoredEnchantments = DataComponentTypes.GetId("stored_enchantments");
+    private static readonly int Dye = DataComponentTypes.GetId("dye");
+    private static readonly int DyedColor = DataComponentTypes.GetId("dyed_color");
+    private static readonly int Trim = DataComponentTypes.GetId("trim");
+    private static readonly int MinimumAttackCharge = DataComponentTypes.GetId("minimum_attack_charge");
+    private static readonly int CreativeSlotLock = DataComponentTypes.GetId("creative_slot_lock");
+    private static readonly int IntangibleProjectile = DataComponentTypes.GetId("intangible_projectile");
+    private static readonly int DamageResistant = DataComponentTypes.GetId("damage_resistant");
+    private static readonly int Glider = DataComponentTypes.GetId("glider");
+    private static readonly int AdditionalTradeCost = DataComponentTypes.GetId("additional_trade_cost");
+    private static readonly int PotionDurationScale = DataComponentTypes.GetId("potion_duration_scale");
+    private static readonly int Instrument = DataComponentTypes.GetId("instrument");
+    private static readonly int OminousBottleAmplifier = DataComponentTypes.GetId("ominous_bottle_amplifier");
+    private static readonly int Waxed = DataComponentTypes.GetId("waxed");
 
     /// <summary>Reads one patch; returns false only when the stream is malformed (truncated).</summary>
     public static bool TryRead(ref PayloadReader reader, out ItemComponentInfo info, out bool hasUnknown)
@@ -251,6 +266,66 @@ internal static class ItemComponentPatchReader
         if (typeId == DamageType)
         {
             return reader.TryReadVarInt(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == Food)
+        {
+            return reader.TryReadVarInt(out _) == DecodeStatus.Success &&
+                   reader.TryReadFloat(out _) == DecodeStatus.Success &&
+                   reader.TryReadBool(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == StoredEnchantments)
+        {
+            return TrySkipEnchantments(ref reader, ref info);
+        }
+
+        if (typeId == Dye)
+        {
+            return reader.TryReadVarInt(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == DyedColor)
+        {
+            return reader.TryReadInt(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == Trim)
+        {
+            // material + pattern, both registry holders.
+            return reader.TryReadVarInt(out _) == DecodeStatus.Success &&
+                   reader.TryReadVarInt(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == MinimumAttackCharge)
+        {
+            return reader.TryReadFloat(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == CreativeSlotLock)
+        {
+            return reader.TryReadBool(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == IntangibleProjectile || typeId == Glider || typeId == Waxed)
+        {
+            // Unit components: no payload.
+            return true;
+        }
+
+        if (typeId == DamageResistant)
+        {
+            return reader.TryReadString(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == AdditionalTradeCost || typeId == OminousBottleAmplifier || typeId == Instrument)
+        {
+            return reader.TryReadVarInt(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == PotionDurationScale)
+        {
+            return reader.TryReadFloat(out _) == DecodeStatus.Success;
         }
 
         // Unknown positive component: no generic skip exists, so the caller must stop after this slot.

@@ -3167,6 +3167,13 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Client **1169**（+3），构建 0 警告 0 错误。
 - **下一步具体动作**：剩余多为 AI 依赖生物（Wither/Wolf/Fox/Panda/PolarBear/Rabbit）或组件表（food/tool/weapon/equippable）；按步选择。
 
+### 2026-11-04 组件表补全（装备相关，T-601）
+
+- 新增解析：`food`、`stored_enchantments`、`dye`、`dyed_color`、`trim`、`minimum_attack_charge`、`creative_slot_lock`、`intangible_projectile`、`damage_resistant`、`glider`、`additional_trade_cost`、`potion_duration_scale`、`instrument`、`ominous_bottle_amplifier`、`waxed`。
+- 剩余复杂组件（`tool`/`weapon`/`equippable`/`repairable`/`blocks_attacks`/`consumable`/`potion_contents`/`bundle_contents` 等）仍 opaque 安全停止。
+- 验证：Common **476**（+1）、Client **1169**，构建 0 警告 0 错误。
+- **下一步具体动作**：①继续补剩余复杂组件（tool/weapon/equippable 等，需要更多 codec 建模）；②回 AI 依赖生物；③收口。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。
