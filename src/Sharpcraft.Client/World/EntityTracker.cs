@@ -15,6 +15,7 @@ public sealed class TrackedEntity
         Id = id;
         TypeId = typeId;
         Presentation = new EntityPresentationState(typeId);
+        Presentation.InitializeRotation(yaw);
         X = x;
         Y = y;
         Z = z;
@@ -801,6 +802,7 @@ public sealed class EntityTracker
             var dz = (float)(entity.Z - entity.PreviousZ);
             var dy = (float)(entity.Y - entity.PreviousY);
             var distance = MathF.Sqrt((dx * dx) + (dz * dz));
+            entity.Presentation.TickBodyRotation(entity.Yaw, entity.HeadYaw, ((dx * dx) + (dz * dz)) > 2.5E-7f, 75f);
             var profile = WalkProfile.For(entity.TypeId, entity.IsBaby);
             entity.Presentation.Walk.Update(
                 MathF.Min(distance * profile.DistanceToSpeed, profile.MaxSpeed),
@@ -981,7 +983,7 @@ public sealed class EntityTracker
                 (float)(entity.PreviousX + ((entity.X - entity.PreviousX) * t)),
                 (float)(entity.PreviousY + ((entity.Y - entity.PreviousY) * t)),
                 (float)(entity.PreviousZ + ((entity.Z - entity.PreviousZ) * t)),
-                Wrap360(LerpAngle(entity.PreviousYaw, entity.Yaw, t)),
+                Wrap360(LerpAngle(entity.Presentation.BodyYawO, entity.Presentation.BodyYaw, t)),
                 entity.PreviousPitch + ((entity.Pitch - entity.PreviousPitch) * t),
                 VariantId: entity.VariantId,
                 IsTame: spec.TameMask != 0 && (entity.Flags & spec.TameMask) != 0,
@@ -1000,7 +1002,7 @@ public sealed class EntityTracker
                 Equipment: new EntityEquipment(
                     entity.EquipmentItemAt(0), entity.EquipmentItemAt(1), entity.EquipmentItemAt(2), entity.EquipmentItemAt(3),
                     entity.EquipmentItemAt(4), entity.EquipmentItemAt(5), entity.EquipmentItemAt(6), entity.EquipmentItemAt(7)),
-                AgeInTicks: GameTime,
+                AgeInTicks: GameTime + t,
                 WalkAnimationPos: entity.Presentation.Walk.Position(t),
                 WalkAnimationSpeed: entity.Presentation.Walk.Speed(t),
                 Flap: entity.Presentation.Flap.Flap(t),
@@ -1011,7 +1013,7 @@ public sealed class EntityTracker
                 IsVehicle: _passengers.ContainsKey(entity.Id),
                 IsSitting: entity.Presentation.IsSitting,
                 IsMoving: entity.Presentation.IsMoving,
-                HeadYaw: entity.HeadYaw,
+                HeadYaw: Wrap360(LerpAngle(entity.Presentation.HeadYawO, entity.Presentation.HeadYaw, t)),
                 SwingAnimation: entity.Presentation.Swing.Animation(t),
                 IsAggressive: entity.Presentation.IsAggressive,
                 MainHandItemId: entity.EquipmentItemAt(0),
