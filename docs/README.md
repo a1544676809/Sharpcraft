@@ -106,7 +106,7 @@
 | --- | --- |
 | [`analysis/`](analysis/README.md) | 36 |
 | [`architecture/`](architecture/README.md) | 1 |
-| [`decisions/`](decisions/README.md) | 25 |
+| [`decisions/`](decisions/README.md) | 26 |
 | [`milestones/`](milestones/README.md) | 2 |
 | [`modules/`](modules/README.md) | 27 |
 | [`repro/`](repro/README.md) | 0 |

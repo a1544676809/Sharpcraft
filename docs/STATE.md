@@ -3055,3 +3055,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **Bee（11）**：拍翅/上下浮动/翻滚；`rollAmount` 由 `DATA_FLAGS`(index18 byte, mask 2) 派生并 lerp；**stinger 可见性无 pose 通道，阻塞未近似**。
 - 注册 115/11。Client **1122**（Shulker 10 / Bee 11 新增）绿；Architecture 31。
 - **下一步具体动作**：①剩余 AI 依赖项（Rabbit hop/jumpTicks、Wither 多头、Wolf/Fox/Panda/PolarBear 状态）需要客户端 AI 或额外同步；②Illager/Piglin armPose 单列 ADR；③Shulker attach-face / Slime squish 渲染 transform 专项。
+
+### 2026-11-04 ADR-0023 起草：武装生物表现状态（armPose/crossbow/swing）
+
+- 起草 `docs/decisions/0023-client-armed-presentation-state.md`（状态 `提议`，待所有者评审）与 traceability T-588。
+- 结论要点：先补通用通道（解码 `ClientboundAnimatePacket`(2) → `SwingAnimation`、`MainArm`、十字弩计时）；能同步的（Piglin charging/dancing）走 synced；`isAggressive/isCelebrating/isAdmiring` 等 AI 派生布尔用**受限的窄判定**（仅表现层，无目标选择/寻路/结算），无法等效者保持阻塞。
+- **下一步具体动作**：等待评审；通过后先做 P2-A（Vindicator/Pillager/Evoker/Illusioner），再做 Piglin 系。
