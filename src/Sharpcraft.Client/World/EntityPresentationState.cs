@@ -24,6 +24,11 @@ public sealed class EntityPresentationState
         {
             Tentacle = new SquidTentacleAnimationState();
         }
+
+        if (typeId == 111)
+        {
+            RabbitHop = new RabbitHopAnimationState();
+        }
     }
 
     /// <summary>Walk position/speed smoothing, ported from the reference <c>WalkAnimationState</c>.</summary>
@@ -37,6 +42,9 @@ public sealed class EntityPresentationState
 
     /// <summary>Squid tentacle clock, or null for other types.</summary>
     public SquidTentacleAnimationState? Tentacle { get; }
+
+    /// <summary>Rabbit hop clock, or null for other types.</summary>
+    public RabbitHopAnimationState? RabbitHop { get; }
 
     /// <summary>The synced ground flag from the last move/teleport packet.</summary>
     public bool IsOnGround { get; internal set; }

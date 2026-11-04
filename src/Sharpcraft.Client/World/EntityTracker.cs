@@ -269,7 +269,9 @@ public readonly record struct EntityRenderState(
     float Health = 0f,
     int UnhappyCounter = 0,
     int SneezeCounter = 0,
-    bool IsStanding = false);
+    bool IsStanding = false,
+    float JumpCompletion = 0f,
+    bool IsJumping = false);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -533,6 +535,7 @@ public sealed class EntityTracker
         }
 
         entity.Presentation.Tentacle?.OnEntityEvent(eventId);
+        entity.Presentation.RabbitHop?.OnEntityEvent(eventId);
         return true;
     }
 
@@ -721,6 +724,7 @@ public sealed class EntityTracker
                 (int)MathF.Floor((float)entity.Y),
                 (int)MathF.Floor((float)entity.Z)) ?? false;
             entity.Presentation.Tentacle?.Update(entity.Presentation.IsInWater);
+            entity.Presentation.RabbitHop?.Tick();
             entity.Presentation.Swing.Tick();
             if (entity.Presentation.IsUsingItem)
             {
@@ -829,6 +833,8 @@ public sealed class EntityTracker
                 UnhappyCounter: entity.Presentation.UnhappyCounter,
                 SneezeCounter: entity.Presentation.SneezeCounter,
                 IsStanding: entity.Presentation.IsStanding,
+                JumpCompletion: entity.Presentation.RabbitHop?.Completion(t) ?? 0f,
+                IsJumping: entity.Presentation.RabbitHop?.IsJumping ?? false,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,

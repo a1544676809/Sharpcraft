@@ -401,6 +401,24 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.True(tracker.Interpolate(0f)[1].IsStanding);
     }
 
+    [Fact]
+    public void RabbitHopEventStartsAndAdvancesTheClock()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(23, typeId: RabbitModelDefinition.RabbitEntityTypeId));
+
+        Assert.True(tracker.ApplyEntityEvent(23, 1));
+        for (var tick = 1; tick <= 5; tick++)
+        {
+            tracker.GameTime = tick;
+            tracker.Tick();
+        }
+
+        var state = tracker.Interpolate(0f)[0];
+        Assert.True(state.IsJumping);
+        Assert.Equal(5f / 15f, state.JumpCompletion, 5);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 

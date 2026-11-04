@@ -3241,6 +3241,13 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Client **1232** 全量绿；Architecture 31。
 - **下一步具体动作**：评估 B 批本地计时基础设施（Rabbit hop 可由 entity_event id1 + 精确 tick 顺序解；Panda sit/eat 需更多字段；PolarBear 站立过渡 counter）；或转 C/D 其它。
 
+### 2026-11-04 B 批基础设施 + Rabbit hop（T-609 续）
+
+- 新增 `RabbitHopAnimationState`（entity_event 1 → jumpDuration=15/jumpTicks=0，每 tick 推进；`Completion(partial)` = 参考 getJumpCompletion），挂到 type 111 presentation；帧新增 `JumpCompletion`/`IsJumping`。
+- Rabbit provider 用 `JumpCompletion * 0.75s` 精确采样 HOP keyframes（15 tick = 0.75s），保留 idle-not-started head look；idle-head-tilt 仍阻塞（random/leash）。
+- 验证：Client **1236**（+4）全量绿。
+- **下一步具体动作**：PolarBear 站立过渡 counter、Panda sit/eat 需字段；或转 Wither 侧头/Parrot party。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

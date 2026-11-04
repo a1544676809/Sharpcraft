@@ -59,5 +59,5 @@ status: 已评审
 | Fox | `FoxAnimationProvider` | 走/蹲/睡/坐/扑/趴腿摆（faceplant 计数器）、head look、睡姿覆盖 | headRollAngle、crouchAmount/ageScale、腿可见性 |
 | Panda | `PandaAnimationProvider` | unhappy/sneeze 分支、四足走/head look | sitting/eating/scared/lying/rolling（输入缺失） |
 | PolarBear | `PolarBearAnimationProvider` | 基础四足、settled 站立姿态 | 6-tick 站立过渡 counter |
-| Rabbit | `RabbitAnimationProvider` | idle-not-started 的 head look | hop/jumpTicks、idle-head-tilt 计时、baby 模型 |
+| Rabbit | `RabbitAnimationProvider` | idle-not-started 的 head look + **hop（entity_event 1 → 15-tick 时钟，`JumpCompletion` 精确映射 0.75s 循环 keyframes）** | idle-head-tilt 计时（random/leash）、baby 模型 |
 | Wither | `WitherAnimationProvider` | ribcage/tail age bob、中心头 look | 左右头 per-head aim 数组 |
