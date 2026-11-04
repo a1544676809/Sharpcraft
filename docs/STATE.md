@@ -3116,6 +3116,14 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Common **470**（+3）、Client **1159**（+2）、构建 0 警告 0 错误。
 - **下一步具体动作**：①补 `enchantments`→`quick_charge` id 映射，使 `maxCrossbowChargeDuration` 随附魔变化；②扩展组件 codec 表（custom_name/attribute_modifiers 等）提升完整解析率；③`mainArm` 同步来源；④继续 backlog。
 
+### 2026-11-04 快速装填映射（T-594）
+
+- 新增 `EnchantmentTypes`：从 26.3 enchantment 注册顺序快照（排序路径，`quick_charge`=30）解析 id。
+- `ItemComponentPatchReader` 在 `enchantments` 中识别 `quick_charge` 等级 → `ItemComponentInfo.QuickChargeLevel`。
+- `EntityAnimationFrame.MainHandQuickChargeLevel` 投影；Illager/Piglin 的 `animateCrossbowCharge` 使用 `maxCharge = max(1, 25 - 5*level)`。
+- 验证：Common **472**（+2）、Client **1160**（+1），构建 0 警告 0 错误。
+- **下一步具体动作**：①扩展组件 codec 表（`custom_name`/`attribute_modifiers`/`lore` 等）提升完整解析率；②`mainArm` 同步来源；③继续 backlog。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

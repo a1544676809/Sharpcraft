@@ -33,8 +33,8 @@ public enum PiglinArmPose
 /// extracted pack via <see cref="EntityModelResolver.ItemTags"/>.
 /// </para>
 /// <para>
-/// The reference <c>mainArm</c> is not on the frame; DANCING/CROSSBOW_CHARGE assume the default right hand (all vanilla
-/// piglins are right-handed by default). Quick-charge enchant is not modelled for the charge duration.
+/// The reference <c>mainArm</c> is not on the frame; DANCING/CROSSBOW_CHARGE/CROSSBOW_HOLD assume the default right hand
+/// (all vanilla piglins are right-handed by default). The charge duration uses the main-hand quick-charge level.
 /// </para>
 /// </remarks>
 public sealed class PiglinAnimationProvider(int typeId) : IEntityAnimationProvider
@@ -180,7 +180,8 @@ public sealed class PiglinAnimationProvider(int typeId) : IEntityAnimationProvid
             case PiglinArmPose.CrossbowCharge:
             {
                 // AnimationUtils.animateCrossbowCharge(right, left, maxCharge, ticksUsingItem, holdingInRightArm=true).
-                var charge = Math.Clamp((frame.TicksUsingItem + frame.PartialTick) / MaxCrossbowChargeTicks, 0f, 1f);
+                var maxCharge = MathF.Max(1f, MaxCrossbowChargeTicks - (5f * frame.MainHandQuickChargeLevel));
+                var charge = Math.Clamp((frame.TicksUsingItem + frame.PartialTick) / maxCharge, 0f, 1f);
                 rY = -0.8f;
                 rX = -0.97079635f;
                 lX = -0.97079635f + (((-MathF.PI / 2f) - (-0.97079635f)) * charge);

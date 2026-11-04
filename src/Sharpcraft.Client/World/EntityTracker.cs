@@ -257,7 +257,8 @@ public readonly record struct EntityRenderState(
     bool IsUsingItem = false,
     int TicksUsingItem = 0,
     int OffHandItemId = -1,
-    bool MainHandChargedCrossbow = false);
+    bool MainHandChargedCrossbow = false,
+    int MainHandQuickChargeLevel = 0);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -788,6 +789,7 @@ public sealed class EntityTracker
                 TicksUsingItem: entity.Presentation.UseItemTicks,
                 OffHandItemId: entity.EquipmentItemAt(1),
                 MainHandChargedCrossbow: entity.EquipmentComponentsAt(0).HasChargedProjectiles,
+                MainHandQuickChargeLevel: entity.EquipmentComponentsAt(0).QuickChargeLevel,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,

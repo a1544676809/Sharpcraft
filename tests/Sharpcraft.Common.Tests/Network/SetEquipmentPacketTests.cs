@@ -152,6 +152,33 @@ public sealed class SetEquipmentPacketTests
     }
 
     [Fact]
+    public void EnchantmentsComponentYieldsQuickChargeLevel()
+    {
+        var enchantments = DataComponentTypes.GetId("enchantments");
+        var quickCharge = EnchantmentTypes.GetId("quick_charge");
+        Assert.True(enchantments >= 0 && quickCharge >= 0);
+
+        var body = Body(b =>
+        {
+            b.Add(0);
+            b.AddRange(VarInt(1));
+            b.AddRange(VarInt(1));           // crossbow
+            b.AddRange(VarInt(1));           // one added component
+            b.AddRange(VarInt(0));           // no removals
+            b.AddRange(VarInt(enchantments));
+            b.AddRange(VarInt(1));           // one enchantment
+            b.AddRange(VarInt(quickCharge));
+            b.AddRange(VarInt(2));           // quick_charge II
+        });
+
+        var result = Read(body, out _, out var complete, out var status);
+
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.Equal(2, result[0].Components.QuickChargeLevel);
+    }
+
+    [Fact]
     public void TruncatedStackReportsNeedMoreData()
     {
         var body = new List<byte>();

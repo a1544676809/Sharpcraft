@@ -333,9 +333,11 @@ public sealed class EntityAnimationInfrastructureTests
     {
         var tracker = new EntityTracker { GameTime = 0 };
         tracker.Add(Entity(16, typeId: PiglinModelDefinition.PiglinEntityTypeId));
-        tracker.ApplyEquipment(16, [new EquipmentItem(0, 1, 1, new ItemComponentInfo(HasChargedProjectiles: true))]);
+        tracker.ApplyEquipment(16, [new EquipmentItem(0, 1, 1, new ItemComponentInfo(HasChargedProjectiles: true, QuickChargeLevel: 2))]);
 
-        Assert.True(tracker.Interpolate(0f)[0].MainHandChargedCrossbow);
+        var state = tracker.Interpolate(0f)[0];
+        Assert.True(state.MainHandChargedCrossbow);
+        Assert.Equal(2, state.MainHandQuickChargeLevel);
     }
 
     private static AddedEntity Entity(int id, int typeId) =>

@@ -34,7 +34,8 @@ public sealed class PiglinAnimationTests
         int ticksUsingItem = 0,
         float partialTick = 0f,
         int offHandItemId = -1,
-        bool chargedCrossbow = false) => new(
+        bool chargedCrossbow = false,
+        int quickChargeLevel = 0) => new(
         TypeId: typeId,
         AgeInTicks: age,
         WalkAnimationPos: walkPos,
@@ -54,7 +55,8 @@ public sealed class PiglinAnimationTests
         IsPassenger: passenger,
         TicksUsingItem: ticksUsingItem,
         OffHandItemId: offHandItemId,
-        MainHandChargedCrossbow: chargedCrossbow);
+        MainHandChargedCrossbow: chargedCrossbow,
+        MainHandQuickChargeLevel: quickChargeLevel);
 
     private static EntityPose Apply(PiglinAnimationProvider provider, IEntityAnimationState state, in EntityAnimationFrame frame)
     {
@@ -152,6 +154,20 @@ public sealed class PiglinAnimationTests
         var full = Apply(provider, fullState, Frame(PiglinModelDefinition.PiglinEntityTypeId, ticksUsingItem: 25, partialTick: 0.9f));
         Assert.Equal(-MathF.PI / 2f, full.Get("left_arm").Rotation.X, 5);
         Assert.Equal(0.85f, full.Get("left_arm").Rotation.Y, 5);
+    }
+
+    [Fact]
+    public void QuickChargeShortensChargeDuration()
+    {
+        var provider = new PiglinAnimationProvider(PiglinModelDefinition.PiglinEntityTypeId);
+        var state = provider.CreateState();
+        ((IEntitySyncedDataAnimationState)state).OnSyncedData(18, 8, 1);
+
+        // Level II: maxCharge = 25 - 10 = 15, so 10 ticks is 2/3 of the pull.
+        var pose = Apply(provider, state, Frame(PiglinModelDefinition.PiglinEntityTypeId, ticksUsingItem: 10, quickChargeLevel: 2));
+
+        Assert.Equal(Lerp(2f / 3f, -0.97079635f, -MathF.PI / 2f), pose.Get("left_arm").Rotation.X, 5);
+        Assert.Equal(Lerp(2f / 3f, 0.4f, 0.85f), pose.Get("left_arm").Rotation.Y, 5);
     }
 
     [Fact]

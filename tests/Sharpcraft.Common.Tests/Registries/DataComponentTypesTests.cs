@@ -24,4 +24,11 @@ public sealed class DataComponentTypesTests
     {
         Assert.Equal(-1, DataComponentTypes.GetId("not_a_component"));
     }
+
+    [Fact]
+    public void ResolvesQuickChargeEnchantment()
+    {
+        Assert.Equal(30, EnchantmentTypes.GetId("quick_charge"));
+        Assert.Equal(-1, EnchantmentTypes.GetId("not_an_enchantment"));
+    }
 }

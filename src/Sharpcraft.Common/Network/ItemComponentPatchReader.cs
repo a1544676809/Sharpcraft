@@ -12,7 +12,8 @@ public readonly record struct ItemComponentInfo(
     int Damage = 0,
     int MaxDamage = 0,
     int RepairCost = 0,
-    bool Unbreakable = false)
+    bool Unbreakable = false,
+    int QuickChargeLevel = 0)
 {
     /// <summary>True when some component payload could not be decoded and the rest of the packet was skipped.</summary>
     public bool HasUnknownComponents => Opaque;
@@ -34,6 +35,7 @@ internal static class ItemComponentPatchReader
     private static readonly int Enchantments = DataComponentTypes.GetId("enchantments");
     private static readonly int RepairCost = DataComponentTypes.GetId("repair_cost");
     private static readonly int ChargedProjectiles = DataComponentTypes.GetId("charged_projectiles");
+    private static readonly int QuickCharge = EnchantmentTypes.GetId("quick_charge");
 
     /// <summary>Reads one patch; returns false only when the stream is malformed (truncated).</summary>
     public static bool TryRead(ref PayloadReader reader, out ItemComponentInfo info, out bool hasUnknown)
@@ -151,7 +153,7 @@ internal static class ItemComponentPatchReader
 
         if (typeId == Enchantments)
         {
-            return TrySkipEnchantments(ref reader);
+            return TrySkipEnchantments(ref reader, ref info);
         }
 
         if (typeId == ChargedProjectiles)
@@ -165,7 +167,7 @@ internal static class ItemComponentPatchReader
         return true;
     }
 
-    private static bool TrySkipEnchantments(ref PayloadReader reader)
+    private static bool TrySkipEnchantments(ref PayloadReader reader, ref ItemComponentInfo info)
     {
         if (reader.TryReadVarInt(out var count) != DecodeStatus.Success || count < 0)
         {
@@ -174,10 +176,15 @@ internal static class ItemComponentPatchReader
 
         for (var i = 0; i < count; i++)
         {
-            if (reader.TryReadVarInt(out _) != DecodeStatus.Success || // enchantment registry id
-                reader.TryReadVarInt(out _) != DecodeStatus.Success)   // level
+            if (reader.TryReadVarInt(out var enchantmentId) != DecodeStatus.Success ||
+                reader.TryReadVarInt(out var level) != DecodeStatus.Success)
             {
                 return false;
+            }
+
+            if (enchantmentId == QuickCharge)
+            {
+                info = info with { QuickChargeLevel = level };
             }
         }
 

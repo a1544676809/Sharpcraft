@@ -22,9 +22,8 @@ namespace Sharpcraft.Client.Render;
 /// <para>
 /// <b>Missing inputs (reported, not silently faked):</b>
 /// <list type="bullet">
-/// <item>Crossbow charge: reproduced from <c>frame.TicksUsingItem + frame.PartialTick</c> over the default 25-tick
-/// charge duration. Quick-charge enchantment is not modelled (it needs the item's data components), so a quick-charged
-/// crossbow charges visually at the default rate.</item>
+/// <item>Crossbow charge: reproduced from <c>frame.TicksUsingItem + frame.PartialTick</c> over <c>25 - 5*quick_charge</c>
+/// ticks; the quick-charge level comes from the main-hand <c>enchantments</c> component.</item>
 /// <item>The reference <c>mainArm</c> is not on the frame; the weapon swing uses the default right hand
 /// (all vanilla illagers are right-handed).</item>
 /// <item>The tracker reads <see cref="State.ArmPose"/> while building the render state (before the per-frame Apply), so
@@ -200,9 +199,9 @@ public sealed class IllagerAnimationProvider(int typeId) : IEntityAnimationProvi
 
             case IllagerArmPose.CrossbowCharge:
                 // AnimationUtils.animateCrossbowCharge(rightArm, leftArm, maxCharge, ticksUsingItem, holdingInRightArm: true).
-                // progress = min((ticksUsingItem + partialTick) / maxCharge, 1); maxCharge = default 25 ticks.
-                // Quick-charge enchantment is not modelled (needs the item's data components).
-                var charge = Math.Clamp((frame.TicksUsingItem + frame.PartialTick) / MaxCrossbowChargeTicks, 0f, 1f);
+                // progress = min((ticksUsingItem + partialTick) / maxCharge, 1); quick_charge shortens maxCharge by 5 ticks per level.
+                var maxCharge = MathF.Max(1f, MaxCrossbowChargeTicks - (5f * frame.MainHandQuickChargeLevel));
+                var charge = Math.Clamp((frame.TicksUsingItem + frame.PartialTick) / maxCharge, 0f, 1f);
                 rY = -0.8f;
                 rX = -0.97079635f;
                 lX = -0.97079635f + (((-MathF.PI / 2f) - (-0.97079635f)) * charge);
