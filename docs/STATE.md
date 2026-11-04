@@ -3199,6 +3199,14 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Common **480**（+1）、Client **1169**，构建 0 警告 0 错误。
 - **下一步具体动作**：仅剩 `can_place_on`/`can_break`（BlockPredicate）、`bees`（Occupant）、`profile`（GameProfile）三个复杂组件；或转 AI 依赖生物。
 
+### 2026-11-04 最后三项组件（T-606）
+
+- `can_place_on`/`can_break`：BlockPredicate（可选 blocks holderSet、StatePropertiesPredicate、NbtPredicate、精确组件匹配；partial 组件谓词未建模时安全 opaque）。
+- `bees`：Occupant（entity type + NBT + ticks/minTicks）。
+- `profile`：GameProfile/Partial + properties + skin patch。
+- 验证：Common **481**（+1）、Client **1169**，构建 0 警告 0 错误。
+- **下一步具体动作**：剩余零散组件（`debug_stick_state`/`container_loot`/`compostable`/`cooking_fuel`/`brewing_fuel`/`map_decorations`/`death_protection`/`tooltip_style`/`use_cooldown` 等）；或转 AI 依赖生物。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

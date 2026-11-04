@@ -105,7 +105,7 @@ public sealed class SetEquipmentPacketTests
                 b.AddRange(VarInt(123));
                 b.AddRange(VarInt(1));       // one added component
                 b.AddRange(VarInt(0));       // no removals
-                b.AddRange(VarInt(72));      // bees component is not modelled
+                b.AddRange(VarInt(75));      // container_loot is not modelled
             },
             b =>
             {
@@ -437,6 +437,39 @@ public sealed class SetEquipmentPacketTests
                 b.AddRange(VarInt(0));
                 b.AddRange(VarInt(sheepColor));
                 b.AddRange(VarInt(3));       // dye color id
+            },
+            b =>
+            {
+                b.Add(7);
+                b.AddRange(VarInt(0));
+            });
+
+        var result = Read(body, out _, out var complete, out var status);
+
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.Equal(2, result.Length);
+    }
+
+    [Fact]
+    public void BeesAndAdventurePredicatesAreSkipped()
+    {
+        var bees = DataComponentTypes.GetId("bees");
+        var canPlace = DataComponentTypes.GetId("can_place_on");
+        Assert.True(bees >= 0 && canPlace >= 0);
+
+        var body = Body(
+            b =>
+            {
+                b.Add(0x80);
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(2));
+                b.AddRange(VarInt(0));
+                b.AddRange(VarInt(bees));
+                b.AddRange(VarInt(0));       // no bees
+                b.AddRange(VarInt(canPlace));
+                b.AddRange(VarInt(0));       // no predicates
             },
             b =>
             {

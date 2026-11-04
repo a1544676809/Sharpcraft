@@ -93,6 +93,10 @@ internal static class ItemComponentPatchReader
     private static readonly int SignTextFront = DataComponentTypes.GetId("sign_text_front");
     private static readonly int SignTextBack = DataComponentTypes.GetId("sign_text_back");
     private static readonly int BucketEntityData = DataComponentTypes.GetId("bucket_entity_data");
+    private static readonly int Bees = DataComponentTypes.GetId("bees");
+    private static readonly int CanPlaceOn = DataComponentTypes.GetId("can_place_on");
+    private static readonly int CanBreak = DataComponentTypes.GetId("can_break");
+    private static readonly int Profile = DataComponentTypes.GetId("profile");
 
     private static readonly int[] SimpleIdComponents =
     [
@@ -528,6 +532,21 @@ internal static class ItemComponentPatchReader
             return reader.TryReadString(out _) == DecodeStatus.Success;
         }
 
+        if (typeId == Bees)
+        {
+            return TrySkipBees(ref reader);
+        }
+
+        if (typeId == CanPlaceOn || typeId == CanBreak)
+        {
+            return TrySkipAdventurePredicate(ref reader, ref hasUnknown);
+        }
+
+        if (typeId == Profile)
+        {
+            return TrySkipProfile(ref reader);
+        }
+
         if (Array.IndexOf(SimpleIdComponents, typeId) >= 0)
         {
             return reader.TryReadVarInt(out _) == DecodeStatus.Success;
@@ -843,6 +862,214 @@ internal static class ItemComponentPatchReader
 
         return reader.TryReadBool(out _) == DecodeStatus.Success &&
                reader.TryReadBool(out _) == DecodeStatus.Success;
+    }
+
+    private static bool TrySkipAdventurePredicate(ref PayloadReader reader, ref bool hasUnknown)
+    {
+        if (reader.TryReadVarInt(out var count) != DecodeStatus.Success || count < 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < count; i++)
+        {
+            if (!TrySkipBlockPredicate(ref reader, ref hasUnknown))
+            {
+                return false;
+            }
+
+            if (hasUnknown)
+            {
+                return true;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TrySkipBlockPredicate(ref PayloadReader reader, ref bool hasUnknown)
+    {
+        // optional blocks holder set
+        if (reader.TryReadBool(out var hasBlocks) != DecodeStatus.Success ||
+            (hasBlocks && !TrySkipHolderSet(ref reader)))
+        {
+            return false;
+        }
+
+        // optional state properties predicate
+        if (reader.TryReadBool(out var hasProperties) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        if (hasProperties)
+        {
+            if (reader.TryReadVarInt(out var properties) != DecodeStatus.Success || properties < 0)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < properties; i++)
+            {
+                if (reader.TryReadString(out _) != DecodeStatus.Success || // property name
+                    reader.TryReadBool(out var exact) != DecodeStatus.Success)
+                {
+                    return false;
+                }
+
+                if (exact)
+                {
+                    if (reader.TryReadString(out _) != DecodeStatus.Success)
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (reader.TryReadBool(out var hasMin) != DecodeStatus.Success ||
+                        (hasMin && reader.TryReadString(out _) != DecodeStatus.Success) ||
+                        reader.TryReadBool(out var hasMax) != DecodeStatus.Success ||
+                        (hasMax && reader.TryReadString(out _) != DecodeStatus.Success))
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        // optional NBT predicate
+        if (reader.TryReadBool(out var hasNbt) != DecodeStatus.Success ||
+            (hasNbt && !NbtTagReader.TrySkip(ref reader)))
+        {
+            return false;
+        }
+
+        // DataComponentMatchers: exact components, then partial predicates.
+        if (reader.TryReadVarInt(out var exactComponents) != DecodeStatus.Success || exactComponents < 0)
+        {
+            return false;
+        }
+
+        var info = default(ItemComponentInfo);
+        for (var i = 0; i < exactComponents; i++)
+        {
+            if (reader.TryReadVarInt(out var componentId) != DecodeStatus.Success)
+            {
+                return false;
+            }
+
+            if (!TryReadValue(ref reader, componentId, 0, ref info, ref hasUnknown))
+            {
+                return false;
+            }
+
+            if (hasUnknown)
+            {
+                return true;
+            }
+        }
+
+        if (reader.TryReadVarInt(out var partial) != DecodeStatus.Success || partial < 0)
+        {
+            return false;
+        }
+
+        if (partial > 0)
+        {
+            // Component predicate payloads are not modelled; stop safely.
+            hasUnknown = true;
+        }
+
+        return true;
+    }
+
+    private static bool TrySkipProfile(ref PayloadReader reader)
+    {
+        // Either<GameProfile, Partial>: true = full profile.
+        if (reader.TryReadBool(out var full) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        if (full)
+        {
+            if (!TrySkipUuid(ref reader) ||
+                reader.TryReadString(out _) != DecodeStatus.Success || // name
+                !TrySkipProperties(ref reader))
+            {
+                return false;
+            }
+        }
+        else
+        {
+            if (reader.TryReadBool(out var hasName) != DecodeStatus.Success ||
+                (hasName && reader.TryReadString(out _) != DecodeStatus.Success) ||
+                reader.TryReadBool(out var hasId) != DecodeStatus.Success ||
+                (hasId && !TrySkipUuid(ref reader)) ||
+                !TrySkipProperties(ref reader))
+            {
+                return false;
+            }
+        }
+
+        // Skin patch: body, cape, elytra textures (optional identifiers), then optional model.
+        for (var i = 0; i < 3; i++)
+        {
+            if (reader.TryReadBool(out var hasTexture) != DecodeStatus.Success ||
+                (hasTexture && reader.TryReadString(out _) != DecodeStatus.Success))
+            {
+                return false;
+            }
+        }
+
+        return reader.TryReadBool(out _) == DecodeStatus.Success;
+    }
+
+    private static bool TrySkipUuid(ref PayloadReader reader) =>
+        reader.TryReadLong(out _) == DecodeStatus.Success &&
+        reader.TryReadLong(out _) == DecodeStatus.Success;
+
+    private static bool TrySkipProperties(ref PayloadReader reader)
+    {
+        if (reader.TryReadVarInt(out var count) != DecodeStatus.Success || count < 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < count; i++)
+        {
+            if (reader.TryReadString(out _) != DecodeStatus.Success || // name
+                reader.TryReadString(out _) != DecodeStatus.Success || // value
+                reader.TryReadBool(out var hasSignature) != DecodeStatus.Success ||
+                (hasSignature && reader.TryReadString(out _) != DecodeStatus.Success))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TrySkipBees(ref PayloadReader reader)
+    {
+        if (reader.TryReadVarInt(out var count) != DecodeStatus.Success || count < 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < count; i++)
+        {
+            // Occupant: entity type id, entity-data compound tag, ticks in hive, min ticks in hive.
+            if (reader.TryReadVarInt(out _) != DecodeStatus.Success ||
+                !NbtTagReader.TrySkip(ref reader) ||
+                reader.TryReadVarInt(out _) != DecodeStatus.Success ||
+                reader.TryReadVarInt(out _) != DecodeStatus.Success)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static bool TrySkipBannerPatterns(ref PayloadReader reader)
