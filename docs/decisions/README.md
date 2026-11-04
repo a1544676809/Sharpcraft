@@ -38,6 +38,7 @@ AGENTS.md 原则 12：不可逆或跨模块的决策必须在此留档，**只�
 | [`0022-client-entity-presentation-state.md`](0022-client-entity-presentation-state.md) | 为何要建客户端实体表现状态层、明确排除权威 AI，以及影响面与复查条件 | 已采纳 | - |
 | [`0023-client-armed-presentation-state.md`](0023-client-armed-presentation-state.md) | 剩余 Illager/Piglin 等武装生物动画所需的手部姿态数据来源、分期与边界 | 已采纳 | - |
 | [`0024-client-entity-ai-presentation-state.md`](0024-client-entity-ai-presentation-state.md) | 为剩余 AI 依赖动画建立只读、非权威的客户端派生状态层 | 已采纳 | - |
+| [`0025-client-local-random-animation-equivalence.md`](0025-client-local-random-animation-equivalence.md) | 明确客户端私有 RNG 驱动的装饰动画以算法/分布/触发条件为等价标准 | 已采纳 | - |
 
 <!-- END GENERATED: docs/decisions -->
 

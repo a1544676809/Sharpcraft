@@ -3297,6 +3297,12 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Common **486**（+2）、Client **1250**（+1），构建 0 警告 0 错误。
 - **下一步具体动作**：仅 Rabbit idle（实体 RNG/leash）仍阻塞；或收口 B 轮。
 
+### 2026-11-04 ADR-0025：客户端本地随机动画等价口径
+
+- 确认：原版两个客户端实例的 Rabbit idle 随机时刻本来就不同（实体私有 `RandomSource.create()` 种子不网络同步），因此等价口径为**同算法/同分布/同触发条件**，不要求同种子。
+- ADR-0025 已采纳；Rabbit idle 由阻塞转为可实施，需补 `LegacyRandomSource` 实体实例、`isNoAi`（Mob flags bit0）与 `set_entity_link`(102) leash 状态。
+- **下一步具体动作**：按 ADR-0025 实现 Rabbit idle 基础设施与 keyframes。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

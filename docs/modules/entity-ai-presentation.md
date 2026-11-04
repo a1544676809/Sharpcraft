@@ -50,15 +50,15 @@ status: 已评审
 
 - 每批：全量构建 + Client/Architecture 测试；每个新增帧字段有测试。
 - 风险：客户端派生与服务器状态长期不一致；对策：字段级记录与复查条件（ADR-0024）。
+- **随机动画口径**：纯客户端、仅装饰的随机计时（如 Rabbit idle）按 ADR-0025 以“同算法/同分布/同触发条件”为等价，不要求同种子；逐实例随机值差异在原版两个客户端之间本来就存在。
 
 ## 6. 实施记录（2026-11-04）
-
 | 生物 | provider | 已实现 | 阻塞（未近似） |
 | --- | --- | --- | --- |
 | Wolf | `WolfAnimationProvider` | tail yaw、四腿/坐姿、head look、angry/wild tail pitch | 驯服尾巴角（缺 max health）、shake roll、headRollAngle |
 | Fox | `FoxAnimationProvider` | 走/蹲/睡/坐/扑/趴腿摆（faceplant 计数器）、head look、睡姿覆盖 | headRollAngle、crouchAmount/ageScale、腿可见性 |
 | Panda | `PandaAnimationProvider` | unhappy/sneeze、四足走/head look、**sit/eat/lie/roll（精确 `PandaPoseAnimationState` 缓冲）**、**scared（主线 WORRIED 基因 + 雷暴）** | — |
 | PolarBear | `PolarBearAnimationProvider` | 基础四足 + **完整站立缓动（`PolarBearStandAnimationState`：±1/tick, 0..6, lerp/6）** | — |
-| Rabbit | `RabbitAnimationProvider` | idle-not-started 的 head look + **hop（entity_event 1 → 15-tick 时钟，`JumpCompletion` 精确映射 0.75s 循环 keyframes）** | idle-head-tilt 计时（random/leash）、baby 模型 |
+| Rabbit | `RabbitAnimationProvider` | idle-not-started 的 head look + **hop（entity_event 1 → 15-tick 时钟，`JumpCompletion` 精确映射 0.75s 循环 keyframes）** | idle-head-tilt：按 ADR-0025 以同算法/同分布实现（待补 `LegacyRandomSource` 实体实例 + `isNoAi` + leash）；baby 模型 |
 | Wither | `WitherAnimationProvider` | ribcage/tail age bob、中心头 look、**左右头 aim（synced 目标 id + 目标眼高维度表 + 10°/40° rotlerp）** | — |
 | Parrot | 既有 `ParrotAnimationProvider` | flying/standing/sitting/on_shoulder + **PARTY（level event 1010/1011 → `IsPartyParrot`）** | — |
