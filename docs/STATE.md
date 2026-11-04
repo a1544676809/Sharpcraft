@@ -3385,3 +3385,12 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **头部带动身体**：新增 `EntityPresentationState.TickBodyRotation` 复刻 `BodyRotationControl.clientTick`（移动时身=实体 yaw、头钳 75°；静止时头偏 >15° 拖动身体到 ≤75°、稳定 >10 tick 后转正）；实体 yaw 用插值 `BodyYaw`、头用插值 `HeadYaw`。
 - **验证**：Client **1273**（+4 身体旋转），构建 0 警告 0 错误；窗口目视朝向正确、头/身随动（用户确认"现在对了"）。
 - **下一步具体动作**：①若目视通过，合并 `fix/entity-orientation-matrix` 回 `feature/item-registry`；②继续 SPEAR/STAB 与缺 provider 生物；③补逐像素/矩阵等效回归测试（当前为公式级单测）。
+
+## 2026-11-04 角度字节有符号解码（头 360° 甩动）+ 皮肤图集 2D 化（T-621，分支 `fix/entity-orientation-matrix`）
+
+- **触发条件**：玩家跳跃、僵尸抬头/低头跟随玩家时，头忽然转 360°，并伴随歪头。
+- **根因（对照原版）**：`EntityPackets.AngleFromByte` 把线缆 byte 当无符号 `[0,360)` 解码，而参考 `Mth.unpackDegrees` 的入参是**有符号 byte**（[-180,180)）。于是 pitch 被解成如 350°，而 `Pitch` 用**线性插值** `PreviousPitch→Pitch`，从 0 到 350 会扫过 180 → 头甩一圈；与 yaw 叠加也造成歪头。
+- **修复**：`AngleFromByte` 改 `(sbyte)value * 360/256`，pitch 落回 [-90,90]，插值连续。同步更新 3 个按无符号断言的角度解码测试（128→-180、192→-90），新增有符号角度用例。
+- **顺带修崩溃**：`EntitySkinAtlas` 原来把实体皮肤**竖向累加**，当前加载集高度 `sum=24000 > 16384`（GPU 上限）→ `wgpuDeviceCreateTexture` 校验失败崩溃。已改**二维网格**（选使最大边最小的列数），并核实资源包本身完好（11534 条目、743 张实体/装备 PNG 均正常，非断电损坏）。
+- **验证**：Common **492**、Client **1275**（+2 图集测试），构建 0 警告 0 错误；窗口正常运行出帧。
+- **下一步具体动作**：①请用户目视确认"跳跃抬头不再甩 360°/不歪头"；②通过后合并回 `feature/item-registry`；③若仍有轻微歪头再核对 `ModelPart` 的 `rotationZYX` 顺序（当前 `RotationZyx` 已按 Z-Y-X 组合，待极端 yaw+pitch 的逐矩阵验证）。
