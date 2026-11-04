@@ -97,5 +97,8 @@ public static class EntityAnimationRegistry
         new ArmadilloAnimationProvider(ArmadilloModelDefinition.ArmadilloEntityTypeId),
         new FrogAnimationProvider(FrogModelDefinition.FrogEntityTypeId),
         new AxolotlAnimationProvider(AxolotlModelDefinition.AxolotlEntityTypeId),
+        new WardenAnimationProvider(WardenModelDefinition.WardenEntityTypeId),
+        new CreakingAnimationProvider(),
+        new BreezeAnimationProvider(BreezeModelDefinition.BreezeEntityTypeId),
     ];
 }

@@ -34,6 +34,9 @@ public sealed class EntityAnimationProviderTests
         ArmadilloModelDefinition.ArmadilloEntityTypeId,
         FrogModelDefinition.FrogEntityTypeId,
         AxolotlModelDefinition.AxolotlEntityTypeId,
+        WardenModelDefinition.WardenEntityTypeId,
+        CreakingModelDefinition.CreakingEntityTypeId,
+        BreezeModelDefinition.BreezeEntityTypeId,
     ];
 
     [Fact]
@@ -90,6 +93,9 @@ public sealed class EntityAnimationProviderTests
     [InlineData(ArmadilloModelDefinition.ArmadilloEntityTypeId)]
     [InlineData(FrogModelDefinition.FrogEntityTypeId)]
     [InlineData(AxolotlModelDefinition.AxolotlEntityTypeId)]
+    [InlineData(WardenModelDefinition.WardenEntityTypeId)]
+    [InlineData(CreakingModelDefinition.CreakingEntityTypeId)]
+    [InlineData(BreezeModelDefinition.BreezeEntityTypeId)]
     public void ProviderApplyDoesNotAllocateOnceWarm(int typeId)
     {
         var provider = EntityAnimationRegistry.For(typeId)!;

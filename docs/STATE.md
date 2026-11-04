@@ -2886,3 +2886,13 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 沙盒 `ClipNames`/`ApplyClip` 改走 registry；新增 `EntityAnimationProviderTests`（registry 覆盖、clip 全量可播、11 条稳态零分配）。
 - **下一步具体动作**：①按 `entity-render-backlog.md` 逐生物派单（先 Warden/Creaking/EnderDragon/Ravager/Hoglin 等），每个 agent 只新增自己的 `<Creature>AnimationProvider.cs` + 测试 + 数据文件，禁止改共享文件、禁止 commit；②补齐阻塞完整动画的 render-state 字段（Adult Axolotl 四因子、Frog/Armadillo/Bat 的 `AnimationState`、Chicken flap 来源）；③装备层动画继承与 `EquipmentClientInfo` 资产化。
 - 全量构建 0 警告 0 错误；Client 764 / Common 454 / Architecture 31 绿。
+
+### 2026-11-04 动画批次 1 派单（Warden / Creaking / Breeze，T-568）
+
+- 智能体团队并行完成 3 个生物的垂直切片（各自只新增 `<Creature>Animations.cs` + `<Creature>AnimationProvider.cs` + 测试，禁改共享文件、禁 commit）；Lead 统一注册 registry（146 / 31 / 17）并做全量构建/测试。
+- 数据逐关键帧对照原版：Warden 6 clip、Creaking 4 clip、Breeze 6 clip（时长/循环/插值见 T-568）。
+- 热路径 `Apply` 只实现通用帧可表达的部分（head look / walk / idle wobble）；one-shot 与 Breeze 六 clip 仅沙盒 `ApplyClip`。**未完成原因**：render state 缺 `tendrilAnimation`、`canMove` 与各 `AnimationState` 时钟（攻击/音波/挖掘/浮现/咆哮/嗅探，Breeze 的 idle/shoot/slide/slideBack/inhale/longJump），需下一步补 `EntityTracker`/`EntityRenderState` 的状态提取。
+- 顺带补齐两个基座钩子（提交 `9094905`）：`EntityAnimationFrame.Yaw`（头部左右看）与 `EntityModelPart.PoseSource`（带前缀的发光/装备/花纹副本继承源部件 pose）。
+- **EnderDragon 未派单**：其 `setupAnim` 依赖 `DragonFlightHistory` 的 20 帧历史采样（`getHistoricalPos`）与 `flapTime`，当前 render state 完全没有飞行历史子系统，无法在等效前提下移植，需先补该基础设施再单独排期。
+- 全量构建 0 警告 0 错误；Client 803（新增 Warden 15 / Creaking 11 / Breeze 13）、Common 454、Architecture 31 绿（两次既有 flaky 在重跑后通过：`ChunkMeshCacheTests.*`、`EntityModelHierarchyTests.TheHorseEarLands…`）。
+- **下一步具体动作**：①补 `EntityRenderState`/`EntityTracker` 的动画状态提取（至少 `Warden/Creaking/Breeze` 的 AnimationState 时钟与 `canMove`），把 one-shot 接入热路径；②继续按 backlog 派单（Ravager/Hoglin/Sniffer/CopperGolem 等），EnderDragon 待飞行历史子系统。

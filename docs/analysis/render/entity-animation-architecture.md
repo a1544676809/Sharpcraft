@@ -126,7 +126,7 @@ Provider 的 `State` 是每实体一份的可变对象；`Apply` 只写 `EntityP
 1. **已完成（2026-11-03）** Lead 完成 `IEntityAnimationProvider` / registry / `EntityAnimationFrame` / `IEntityAnimationState` 引用与 Mesher 每实体 pose 接线；
 2. **已完成（2026-11-03）** 迁移现有四足/马/人形/村民/鸡/鱿鱼/蝙蝠/骆驼/犰狳/蛙/美西螈 controller，行为与原测试保持不变；
 3. **已完成（2026-11-03）** 沙盒改为从 registry 列出并播放 clips；
-4. 按生物派单（2–3 个并行）；
+4. **进行中** 按生物派单（2–3 个并行）；批次 1 的 Warden / Creaking / Breeze 数据 + provider + 沙盒 clip 已完成（T-568），热路径 one-shot 待 render-state 动画状态接线；
 5. Lead 每批做全量构建/测试/截图，更新 traceability 与 STATE。
 
 ## 6.1 与原版架构的收益与代价

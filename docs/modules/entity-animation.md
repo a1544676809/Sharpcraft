@@ -89,7 +89,7 @@
 2. **A2 网格接入**：`EntityModelMesher` 支持 pose buffer，装备副本同名继承；固定帧 screenshot/数值测试。
 3. **A3 四足样板**：Pig/Camel 的 idle+walk，接入真实 render state。
 4. **A4 两足样板**：Zombie/Villager 手臂与头部。
-5. **A5 实体扩展**：现有已移植者已在 A0 迁入 provider；其余按 backlog 逐类新增 provider，每类独立验收。
+5. **A5 实体扩展**：现有已移植者已在 A0 迁入 provider；其余按 backlog 逐类新增 provider，每类独立验收。批次 1（Warden / Creaking / Breeze）已完成数据 + provider + 沙盒 clip，热路径仅通用帧可表达部分；one-shot 与 Breeze 六 clip 待 render-state 动画状态接线（T-568）。
 
 ## 8. 未解决问题与风险
 
