@@ -13,7 +13,7 @@ updated: 2026-10-29
 > 本文件只记录**易变状态**（AGENTS.md 4.2）。设计结论属于 `docs/modules/`，里程碑划分属于 `docs/milestones/roadmap.md`，索引属于 `docs/README.md`，决策属于 `docs/decisions/`。**不要在此复述它们。**
 > 每次收工必须与代码同一提交更新本文件，并写清"下一步具体动作"。
 
-最后更新：2026-11-03
+最后更新：2026-11-04
 
 ## 当前里程碑
 
@@ -3097,3 +3097,30 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **阻塞（回退 DEFAULT，未近似）**：ADMIRING_ITEM（PIGLIN_LOVED 物品标签）、ATTACKING_WITH_MELEE_WEAPON（preferred-weapon 标签 + mainArm）、CROSSBOW_HOLD（CrossbowItem.isCharged 物品数据）。
 - Client **1156**（Piglin 10 新增）绿；构建 0 警告 0 错误。
 - **下一步具体动作**：①补物品标签/DataComponent 能力（可为 PIGLIN_LOVED/preferred-weapon/isCharged 解阻塞，也惠及装备/物品系统）；②mainArm 通用字段；③继续 backlog 或收口。
+
+## 2026-11-04 压缩前交接快照
+
+- **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。
+- **测试基线**：Client **1156**、Common **464**、Architecture **31**、Launcher 91、Framework 107、Auth 25、Modding 4。
+- **本轮已落地（都已有 commit 与 traceability）**：
+  - 表现状态层（ADR-0022）：walk/flap/tentacle/swing 时钟，位置/朝向/在水/乘客/装备/同步数据输入。
+  - 动画 provider：四足/马/人形/村民/鸡/鱿鱼/蝙蝠/骆驼/犰狳/青蛙/美西螈/Warden/Creaking/Breeze/Sniffer/CopperGolem/Nautilus/Ravager/Hoglin/Witch/Vex/Parrot/Strider/Tadpole/Ghast/Allay/Guardian/Spider/Silverfish/Blaze/Phantom/Cod/Salmon/SnowGolem/HappyGhast/IronGolem/Endermite/Dolphin/Llama(+Trader)/Turtle/Shulker/Bee/Illager 组/Piglin 组；另有复用 Creeper/Giant/WanderingTrader。
+  - ADR-0023 已采纳；P2-A swing 通道（`ClientboundSwingAnimationPacket` 123 + `SwingAnimationState`）、used-item 状态（`IsUsingItem`/`TicksUsingItem`）、`ArmPose` 可见性通道、Illager armPose 与十字弩蓄力进度。
+  - 并行 flaky 已用 `NonParallel` xUnit collection（`EntityAnimationProviderTests`/`EntityModelHierarchyTests`/`ChunkMeshCacheTests`/`EquipmentTextureCatalogTests`）收敛，连续两次全量 Client 全绿。
+
+### 下一步（已获用户批准：先补齐基础能力）
+
+目标：补**物品标签 / DataComponent** 基础能力，解锁 Piglin `ADMIRING_ITEM`(PIGLIN_LOVED)、`ATTACKING_WITH_MELEE_WEAPON`(preferred-weapon+mainArm)、`CROSSBOW_HOLD`(`CrossbowItem.isCharged`)，并让 Illager/Piglin 的快速装填附魔参与 `maxCrossbowChargeDuration`。建议顺序：
+
+1. **分析确认（不写码先确认）**：确认协议 item stack 的 component patch 结构（装备包 104 目前遇到非空 DataComponentPatch 即停止）；确认启动器资产提取是否包含 `data/minecraft/tags/item/**.json`（原则 3：只能在仓库外提取，仓库内只放提取器与清单）。
+2. **Common：`ItemTagRegistry`**：tag id → item id 集合，加载提取出的 tag JSON（支持 `values`/`replace`）；无资产时用合成 JSON 写单测；缺失时返回空集并可诊断。
+3. **Common：装备组件解析**：`SetEquipmentPackets` 解析物品栈组件，至少暴露 `charged_projectiles` 是否存在、`enchantments` 中 quick_charge 等级；保留原始组件供以后扩展（染色/纹饰）。
+4. **World/Frame 投影**：新增 `OffHandItemId`、`MainHandCrossbowCharged`、`CrossbowChargeDuration`（默认 25，可被 quick_charge 修正）与 `MainArm`（若找到同步来源）。
+5. **Provider 解阻塞**：Piglin 三姿态、Illager 蓄力时长；更新测试与 `docs/modules/entity-animation.md`、traceability 新任务行。
+6. 若提取层拿不到 `data/` 标签：先只做组件解析（可解 CROSSBOW_HOLD/快速装填），标签类（ADMIRING/MELEE）继续标阻塞并上报取舍。
+
+### 已知阻塞（未近似，供接手者判断）
+
+- Piglin：ADMIRING_ITEM / ATTACKING_WITH_MELEE_WEAPON / CROSSBOW_HOLD（见上）。
+- Illager/十字弩：快速装填附魔未建模（默认 25 tick）；`mainArm` 未在帧（武器挥击假定右手）。
+- 其它生物：Rabbit(hop/jumpTicks)、Wither(多头 rot 数组)、Wolf/Fox/Panda/PolarBear(状态)、Parrot PARTY、Guardian eye look、Turtle 产蛋、Bee stinger 可见性；Shulker attach-face、Slime/MagCube squish 属渲染 transform。
