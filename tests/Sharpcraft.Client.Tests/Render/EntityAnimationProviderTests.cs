@@ -40,6 +40,10 @@ public sealed class EntityAnimationProviderTests
         SnifferModelDefinition.SnifferEntityTypeId,
         CopperGolemModelDefinition.CopperGolemEntityTypeId,
         NautilusModelDefinition.NautilusEntityTypeId,
+        ZombieNautilusModelDefinition.ZombieNautilusEntityTypeId,
+        RavagerModelDefinition.RavagerEntityTypeId,
+        HoglinModelDefinition.HoglinEntityTypeId,
+        HoglinModelDefinition.ZoglinEntityTypeId,
     ];
 
     [Fact]
@@ -102,6 +106,10 @@ public sealed class EntityAnimationProviderTests
     [InlineData(SnifferModelDefinition.SnifferEntityTypeId)]
     [InlineData(CopperGolemModelDefinition.CopperGolemEntityTypeId)]
     [InlineData(NautilusModelDefinition.NautilusEntityTypeId)]
+    [InlineData(ZombieNautilusModelDefinition.ZombieNautilusEntityTypeId)]
+    [InlineData(RavagerModelDefinition.RavagerEntityTypeId)]
+    [InlineData(HoglinModelDefinition.HoglinEntityTypeId)]
+    [InlineData(HoglinModelDefinition.ZoglinEntityTypeId)]
     public void ProviderApplyDoesNotAllocateOnceWarm(int typeId)
     {
         var provider = EntityAnimationRegistry.For(typeId)!;

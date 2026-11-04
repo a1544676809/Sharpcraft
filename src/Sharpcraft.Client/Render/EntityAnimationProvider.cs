@@ -103,5 +103,9 @@ public static class EntityAnimationRegistry
         new SnifferAnimationProvider(SnifferModelDefinition.SnifferEntityTypeId),
         new CopperGolemAnimationProvider(CopperGolemModelDefinition.CopperGolemEntityTypeId),
         new NautilusAnimationProvider(NautilusModelDefinition.NautilusEntityTypeId),
+        new NautilusAnimationProvider(ZombieNautilusModelDefinition.ZombieNautilusEntityTypeId),
+        new RavagerAnimationProvider(RavagerModelDefinition.RavagerEntityTypeId),
+        new HoglinAnimationProvider(HoglinModelDefinition.HoglinEntityTypeId),
+        new HoglinAnimationProvider(HoglinModelDefinition.ZoglinEntityTypeId),
     ];
 }

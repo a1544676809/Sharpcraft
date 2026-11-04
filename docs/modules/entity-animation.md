@@ -104,7 +104,7 @@
 2. **A2 网格接入**：`EntityModelMesher` 支持 pose buffer，装备副本同名继承；固定帧 screenshot/数值测试。
 3. **A3 四足样板**：Pig/Camel 的 idle+walk，接入真实 render state。
 4. **A4 两足样板**：Zombie/Villager 手臂与头部。
-5. **A5 实体扩展**：现有已移植者已在 A0 迁入 provider；其余按 backlog 逐类新增 provider，每类独立验收。批次 1（Warden / Creaking / Breeze）已完成数据 + provider + 沙盒 clip，热路径仅通用帧可表达部分；one-shot 与 Breeze 六 clip 待 render-state 动画状态接线（T-568）。批次 2（Sniffer / Copper Golem / Nautilus）已完成：Sniffer 经 `SNIFFER_STATE(35)`、Copper Golem 经 `COPPER_GOLEM_STATE(37)` 驱动状态 clip（`walk_item` 仅沙盒），Nautilus swimming 纯热路径（T-571）。
+5. **A5 实体扩展**：现有已移植者已在 A0 迁入 provider；其余按 backlog 逐类新增 provider，每类独立验收。批次 1（Warden / Creaking / Breeze）已完成数据 + provider + 沙盒 clip，热路径仅通用帧可表达部分；one-shot 与 Breeze 六 clip 待 render-state 动画状态接线（T-568）。批次 2（Sniffer / Copper Golem / Nautilus）已完成：Sniffer 经 `SNIFFER_STATE(35)`、Copper Golem 经 `COPPER_GOLEM_STATE(37)` 驱动状态 clip（`walk_item` 已热路径，见 T-572），Nautilus swimming 纯热路径（T-571）。批次 3（Ravager / Hoglin+Zoglin / Nautilus→Zombie Nautilus）已完成：Ravager 程序化 attack/stun/roar（entity event 4/39/69 + tick 计数），Hoglin 程序化 headbutt（event 4），Zoglin 复用 Hoglin provider，Zombie Nautilus(156) 复用 Nautilus swim（T-573）。
 
 ## 8. 未解决问题与风险
 

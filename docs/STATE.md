@@ -2930,3 +2930,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **Copper Golem** 持有物品时改走 `walk_item` clip，并用加性 delta 复刻 `poseHeldItemArmsIfStill` 的绝对旋转 clamp（右臂 x/y/z 上界；左臂 x 上界、y/z 下界）。
 - 测试：`EntityTracker` 装备→flags 派生 1 项、Copper Golem 选择/clamp 1 项；Client 866 全绿。
 - **下一步具体动作**：①同概念可推广到 Zombie/Piglin/Illager 等 armed mob（各自 provider 读这两个 flag）；②评估 Zombie Nautilus(156) 复用 Nautilus；③继续按 backlog 派单生物。
+
+### 2026-11-04 动画批次 3：Ravager / Hoglin(+Zoglin) / Zombie Nautilus（T-573）
+
+- **Ravager**（112）：程序化 `setupAnim`（neck/mouth 的 attack·stun·roar + 头 + 四腿）；计数由 entity event 4→attack=10、39→stun=40、69→咆哮粒子，每 tick 递减，stun 归零→roarTick=20；用 `PartialTick` 还原 render 浮点。热路径。
+- **Hoglin**（65）：程序化 headbutt（event 4→10 tick）+ 耳/腿相位；**Zoglin（153）复用同一 provider**（同几何，不同纹理）。
+- **Zombie Nautilus（156）复用 Nautilus provider**（`ZombieNautilusCoralModel extends NautilusModel`，同 swim）。
+- 已注册 registry（112/65/153/156），纳入零分配测试。全量构建 0 警告 0 错误；Client 889（Ravager 12 / Hoglin 10 新增）绿；`ChunkMeshCacheTests.*` 仅并行 flaky，重跑通过。
+- **下一步具体动作**：①Parrot（flapAngle 可用 Flap/FlapSpeed，但 pose FLYING/SITTING/PARTY 需一个通用 `pose` 或生物状态，待定）；②Strider（isSuffocating/isRidden 字段）、Illager/Piglin（armed 臂姿 + 手持物 flag 已就绪）；③继续按 backlog 派单。
