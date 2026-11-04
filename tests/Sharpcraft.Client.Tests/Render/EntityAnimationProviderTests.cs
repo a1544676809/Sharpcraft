@@ -71,6 +71,8 @@ public sealed class EntityAnimationProviderTests
         LlamaModelDefinition.LlamaEntityTypeId,
         TraderLlamaModelDefinition.TraderLlamaEntityTypeId,
         TurtleModelDefinition.TurtleEntityTypeId,
+        ShulkerModelDefinition.ShulkerEntityTypeId,
+        BeeModelDefinition.BeeEntityTypeId,
     ];
 
     [Fact]
@@ -164,6 +166,8 @@ public sealed class EntityAnimationProviderTests
     [InlineData(LlamaModelDefinition.LlamaEntityTypeId)]
     [InlineData(TraderLlamaModelDefinition.TraderLlamaEntityTypeId)]
     [InlineData(TurtleModelDefinition.TurtleEntityTypeId)]
+    [InlineData(ShulkerModelDefinition.ShulkerEntityTypeId)]
+    [InlineData(BeeModelDefinition.BeeEntityTypeId)]
     public void ProviderApplyDoesNotAllocateOnceWarm(int typeId)
     {
         var provider = EntityAnimationRegistry.For(typeId)!;

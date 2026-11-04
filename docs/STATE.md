@@ -3047,3 +3047,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **WanderingTrader（145）** 复用 Villager provider（同几何）。
 - 注册 79/138/141/145。Client **1100**（Llama 11 / Turtle 8 新增 + 复用 2）绿；Architecture 31。
 - **下一步具体动作**：①剩余可派生（Bee 需 rollAmount、Rabbit 需 hop 状态、Wither 需多头 rot 数组等，视情况）；②Illager/Piglin armPose 单列 ADR；③Shulker/Slime 渲染 transform 专项。
+
+### 2026-11-04 动画批次 14：Shulker / Bee（T-587）
+
+- `EntityAnimationFrame` 增加 `HeadYaw`（来自 TrackedEntity.HeadYaw）与 `IsAngry`（来自 render state）。
+- **Shulker（115）**：`peekAmount` 由 `DATA_PEEK`(index17 byte) 客户端 lerp 派生；lid 位置/旋转 + head（HeadYaw/Yaw/Pitch）复刻；**attach-face 朝向属渲染变换，阻塞未近似**。
+- **Bee（11）**：拍翅/上下浮动/翻滚；`rollAmount` 由 `DATA_FLAGS`(index18 byte, mask 2) 派生并 lerp；**stinger 可见性无 pose 通道，阻塞未近似**。
+- 注册 115/11。Client **1122**（Shulker 10 / Bee 11 新增）绿；Architecture 31。
+- **下一步具体动作**：①剩余 AI 依赖项（Rabbit hop/jumpTicks、Wither 多头、Wolf/Fox/Panda/PolarBear 状态）需要客户端 AI 或额外同步；②Illager/Piglin armPose 单列 ADR；③Shulker attach-face / Slime squish 渲染 transform 专项。

@@ -135,5 +135,7 @@ public static class EntityAnimationRegistry
         new LlamaAnimationProvider(LlamaModelDefinition.LlamaEntityTypeId),
         new LlamaAnimationProvider(TraderLlamaModelDefinition.TraderLlamaEntityTypeId),
         new TurtleAnimationProvider(TurtleModelDefinition.TurtleEntityTypeId),
+        new ShulkerAnimationProvider(ShulkerModelDefinition.ShulkerEntityTypeId),
+        new BeeAnimationProvider(BeeModelDefinition.BeeEntityTypeId),
     ];
 }

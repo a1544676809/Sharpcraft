@@ -242,7 +242,8 @@ public readonly record struct EntityRenderState(
     bool IsPassenger = false,
     bool IsVehicle = false,
     bool IsSitting = false,
-    bool IsMoving = false);
+    bool IsMoving = false,
+    float HeadYaw = 0f);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -742,6 +743,7 @@ public sealed class EntityTracker
                 IsVehicle: _passengers.ContainsKey(entity.Id),
                 IsSitting: entity.Presentation.IsSitting,
                 IsMoving: entity.Presentation.IsMoving,
+                HeadYaw: entity.HeadYaw,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,
