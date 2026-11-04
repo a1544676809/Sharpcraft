@@ -111,5 +111,7 @@ public static class EntityAnimationRegistry
         new VexAnimationProvider(VexModelDefinition.VexEntityTypeId),
         new ParrotAnimationProvider(ParrotModelDefinition.ParrotEntityTypeId),
         new StriderAnimationProvider(StriderModelDefinition.StriderEntityTypeId),
+        new TadpoleAnimationProvider(TadpoleModelDefinition.TadpoleEntityTypeId),
+        new GhastAnimationProvider(GhastModelDefinition.GhastEntityTypeId),
     ];
 }

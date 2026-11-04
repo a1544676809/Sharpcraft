@@ -48,6 +48,8 @@ public sealed class EntityAnimationProviderTests
         VexModelDefinition.VexEntityTypeId,
         ParrotModelDefinition.ParrotEntityTypeId,
         StriderModelDefinition.StriderEntityTypeId,
+        TadpoleModelDefinition.TadpoleEntityTypeId,
+        GhastModelDefinition.GhastEntityTypeId,
     ];
 
     [Fact]
@@ -118,6 +120,8 @@ public sealed class EntityAnimationProviderTests
     [InlineData(VexModelDefinition.VexEntityTypeId)]
     [InlineData(ParrotModelDefinition.ParrotEntityTypeId)]
     [InlineData(StriderModelDefinition.StriderEntityTypeId)]
+    [InlineData(TadpoleModelDefinition.TadpoleEntityTypeId)]
+    [InlineData(GhastModelDefinition.GhastEntityTypeId)]
     public void ProviderApplyDoesNotAllocateOnceWarm(int typeId)
     {
         var provider = EntityAnimationRegistry.For(typeId)!;

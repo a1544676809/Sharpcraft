@@ -2986,3 +2986,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **Strider（132）**：复刻 `setupAnim`+`AdultStriderModel.customAnimations`（bristle 基线已在 bind pose，只加振荡；`isRidden=IsVehicle`）。`isSuffocating` 只影响纹理，不需要。
 - 已注册 99/132 并纳入零分配测试。Client **936**（Parrot 9 / Strider 12 新增）绿（`EquipmentTextureCatalogTests` 并行 flaky 重跑通过）。
 - **下一步具体动作**：①Parrot 补 `isInSittingPose`（TamableAnimal synced flags）与 party（若后续有点唱机状态）；②继续 backlog（Allay/Vex 已做部分，Tadpole 需 IsInWater、Ghast 触须需 tentacle 类、Guardian、Illager/Piglin 需 armPose 等）。
+
+### 2026-11-04 动画批次 6：Tadpole / Ghast（T-579）
+
+- **Tadpole（134）**：`amplitude = IsInWater ? 1.0 : 1.5`，`tail.yRot = -amplitude*0.25*sin(0.3*AgeInTicks)`；热路径。
+- **Ghast（58）**：九条触手 `0.2*sin(AgeInTicks*0.3 + i) + 0.4`；预计算 `tentacle0..8` 名称，无热路径字符串拼接；热路径。
+- 均程序化、零分配，注册 134/58 并纳入分配测试。Client **952**（Tadpole 9 / Ghast 6 新增）绿（`ChunkMeshCacheTests`/`EntityAnimationProviderTests` 并行分配 flaky 重跑通过）。
+- **下一步具体动作**：①Guardian（需 `spikesAnimation/tailAnimation/lookAt`）、Illager/Piglin（armPose/crossbow/swing）等仍依赖客户端 AI 或额外派生，需继续评估；②Allay 需 `dancingAnimationTicks`/`spinningProgress` 客户端派生；③保持 backlog。
