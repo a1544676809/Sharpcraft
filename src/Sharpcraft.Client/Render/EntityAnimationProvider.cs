@@ -126,5 +126,10 @@ public static class EntityAnimationRegistry
         new SnowGolemAnimationProvider(SnowGolemModelDefinition.SnowGolemEntityTypeId),
         new HappyGhastAnimationProvider(HappyGhastModelDefinition.HappyGhastEntityTypeId),
         new IronGolemAnimationProvider(IronGolemModelDefinition.IronGolemEntityTypeId),
+        // Models whose reference setupAnim is exactly the shared quadruped/humanoid walk: reuse those providers.
+        new QuadrupedAnimationProvider(CreeperModelDefinition.CreeperEntityTypeId),
+        new HumanoidAnimationProvider(GiantModelDefinition.GiantEntityTypeId),
+        new EndermiteAnimationProvider(EndermiteModelDefinition.EndermiteEntityTypeId),
+        new DolphinAnimationProvider(DolphinModelDefinition.DolphinEntityTypeId),
     ];
 }

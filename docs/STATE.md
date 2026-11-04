@@ -3031,3 +3031,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **IronGolem（71）**：复刻 setupAnim + 事件计数（attack 4→10、offer flower 11→400 / 34→0，每 tick 递减）+ PartialTick。
 - 注册 124/59/71 并纳入零分配测试。Client **1062**（SnowGolem 8 / HappyGhast 6 / IronGolem 14 新增）绿；Architecture 31。
 - **下一步具体动作**：①继续 backlog；②说明：Shulker attach-face / Slime squish 属渲染变换（非模型动画），应另做渲染 transform；Turtle 需 AI 状态；③Illager/Piglin armPose 单列 ADR。
+
+### 2026-11-04 动画批次 12：Endermite / Dolphin + 复用 Creeper/Giant（T-585）
+
+- `EntityAnimationFrame` / `EntityPresentationState` 增加 `IsMoving`（由每 tick 水平位移派生）。
+- **Endermite（43）**：四段 age 摆动（Silverfish 同构，系数 0.01/0.1）；**Dolphin（36）**：`IsMoving` 时 body/tail/tail_fin 余弦摆动。
+- **复用**：Creeper(32) 参考 setupAnim 恰为共享四足走路 → `QuadrupedAnimationProvider`；Giant(60) 复用 Zombie 人形几何 → `HumanoidAnimationProvider`。
+- 注册 43/36/32/60 并纳入零分配测试。Client 全量 1082（Endermite 10 / Dolphin 7 新增）；并行跑时偶发 `ChunkMeshCacheTests`/`EntityModelRegistrationTests` 单独类均绿（已知并行 flaky）。
+- **下一步具体动作**：①继续 backlog；②Llama/TraderLlama 需专门 provider（neck 等分组不同）；Turtle 需 AI；Shulker/Slime 走渲染 transform；③Illager/Piglin armPose 单列 ADR。

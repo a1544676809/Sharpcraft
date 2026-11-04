@@ -241,7 +241,8 @@ public readonly record struct EntityRenderState(
     bool IsInWater = false,
     bool IsPassenger = false,
     bool IsVehicle = false,
-    bool IsSitting = false);
+    bool IsSitting = false,
+    bool IsMoving = false);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -657,6 +658,7 @@ public sealed class EntityTracker
             // clock uses "not on ground" as the airborne signal (documented deviation for ridden parrots).
             entity.Presentation.IsOnGround = entity.OnGround;
             entity.Presentation.Flap.Update(!entity.OnGround);
+            entity.Presentation.IsMoving = distance > 3.0E-4f;
             entity.Presentation.IsInWater = World?.IsWaterAt(
                 (int)MathF.Floor((float)entity.X),
                 (int)MathF.Floor((float)entity.Y),
@@ -739,6 +741,7 @@ public sealed class EntityTracker
                 IsPassenger: _vehicleOf.ContainsKey(entity.Id),
                 IsVehicle: _passengers.ContainsKey(entity.Id),
                 IsSitting: entity.Presentation.IsSitting,
+                IsMoving: entity.Presentation.IsMoving,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,

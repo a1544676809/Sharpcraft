@@ -46,4 +46,7 @@ public sealed class EntityPresentationState
 
     /// <summary>The synced sitting flag for tamable mobs (TamableAnimal flags bit 0), used by the parrot pose.</summary>
     public bool IsSitting { get; internal set; }
+
+    /// <summary>Whether the entity moved horizontally this tick (reference Dolphin-style "isMoving").</summary>
+    public bool IsMoving { get; internal set; }
 }
