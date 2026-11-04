@@ -88,6 +88,7 @@ public static class EntityAnimationRegistry
         new HumanoidAnimationProvider(HumanoidMobModelDefinition.ZombieEntityTypeId),
         new HumanoidAnimationProvider(HumanoidMobModelDefinition.DrownedEntityTypeId),
         new HumanoidAnimationProvider(HumanoidMobModelDefinition.HuskEntityTypeId),
+        new HumanoidAnimationProvider(ZombieVillagerModelDefinition.ZombieVillagerEntityTypeId),
         new SkeletonAnimationProvider(HumanoidMobModelDefinition.SkeletonEntityTypeId),
         new SkeletonAnimationProvider(HumanoidMobModelDefinition.StrayEntityTypeId),
         new SkeletonAnimationProvider(HumanoidMobModelDefinition.BoggedEntityTypeId),
