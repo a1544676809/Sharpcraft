@@ -42,6 +42,8 @@ internal static class ItemComponentPatchReader
     private static readonly int Rarity = DataComponentTypes.GetId("rarity");
     private static readonly int ItemModel = DataComponentTypes.GetId("item_model");
     private static readonly int GlintOverride = DataComponentTypes.GetId("enchantment_glint_override");
+    private static readonly int AttributeModifiers = DataComponentTypes.GetId("attribute_modifiers");
+    private static readonly int CustomModelData = DataComponentTypes.GetId("custom_model_data");
 
     /// <summary>Reads one patch; returns false only when the stream is malformed (truncated).</summary>
     public static bool TryRead(ref PayloadReader reader, out ItemComponentInfo info, out bool hasUnknown)
@@ -206,9 +208,110 @@ internal static class ItemComponentPatchReader
             return reader.TryReadBool(out _) == DecodeStatus.Success;
         }
 
+        if (typeId == AttributeModifiers)
+        {
+            return TrySkipAttributeModifiers(ref reader);
+        }
+
+        if (typeId == CustomModelData)
+        {
+            return TrySkipCustomModelData(ref reader);
+        }
+
         // Unknown positive component: no generic skip exists, so the caller must stop after this slot.
         hasUnknown = true;
         info = info with { Opaque = true };
+        return true;
+    }
+
+    private static bool TrySkipAttributeModifiers(ref PayloadReader reader)
+    {
+        if (reader.TryReadVarInt(out var count) != DecodeStatus.Success || count < 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < count; i++)
+        {
+            // Entry: attribute holder id, modifier(id, amount, operation), slot group, display.
+            if (reader.TryReadVarInt(out _) != DecodeStatus.Success ||       // attribute
+                reader.TryReadString(out _) != DecodeStatus.Success ||       // modifier id
+                reader.TryReadDouble(out _) != DecodeStatus.Success ||       // amount
+                reader.TryReadVarInt(out _) != DecodeStatus.Success ||       // operation
+                reader.TryReadVarInt(out _) != DecodeStatus.Success)         // slot group
+            {
+                return false;
+            }
+
+            if (reader.TryReadVarInt(out var display) != DecodeStatus.Success)
+            {
+                return false;
+            }
+
+            if (display == 2 && !NbtTagReader.TrySkip(ref reader)) // override text
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TrySkipCustomModelData(ref PayloadReader reader)
+    {
+        // floats, flags, strings, colors: one VarInt-counted list each.
+        if (reader.TryReadVarInt(out var floats) != DecodeStatus.Success || floats < 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < floats; i++)
+        {
+            if (reader.TryReadFloat(out _) != DecodeStatus.Success)
+            {
+                return false;
+            }
+        }
+
+        if (reader.TryReadVarInt(out var flags) != DecodeStatus.Success || flags < 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < flags; i++)
+        {
+            if (reader.TryReadBool(out _) != DecodeStatus.Success)
+            {
+                return false;
+            }
+        }
+
+        if (reader.TryReadVarInt(out var strings) != DecodeStatus.Success || strings < 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < strings; i++)
+        {
+            if (reader.TryReadString(out _) != DecodeStatus.Success)
+            {
+                return false;
+            }
+        }
+
+        if (reader.TryReadVarInt(out var colors) != DecodeStatus.Success || colors < 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < colors; i++)
+        {
+            if (reader.TryReadInt(out _) != DecodeStatus.Success)
+            {
+                return false;
+            }
+        }
+
         return true;
     }
 

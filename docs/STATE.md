@@ -3132,6 +3132,13 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Common **473**（+1）、Client **1160**，构建 0 警告 0 错误。
 - **下一步具体动作**：①继续扩 `attribute_modifiers`/`custom_model_data`/`tooltip_display` 等复杂 codec；②`mainArm` 同步来源；③继续 backlog。
 
+### 2026-11-04 复杂组件 codec（T-596）
+
+- `ItemComponentPatchReader` 新增 `attribute_modifiers`（attribute id、modifier id、amount、operation、slot group、display；override 文本走 NBT）与 `custom_model_data`（float/bool/string/int 四列表）。
+- 装备包在面对这些常见组件时不再提前 opaque。
+- 验证：Common **474**（+1）、Client **1160**，构建 0 警告 0 错误。
+- **下一步具体动作**：①`tooltip_display` 等剩余组件；②`mainArm` 同步来源；③继续 backlog。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

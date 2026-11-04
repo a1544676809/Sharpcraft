@@ -216,6 +216,44 @@ public sealed class SetEquipmentPacketTests
     }
 
     [Fact]
+    public void AttributeModifiersAreSkippedAndParsingContinues()
+    {
+        var attributeModifiers = DataComponentTypes.GetId("attribute_modifiers");
+        Assert.True(attributeModifiers >= 0);
+
+        var body = Body(
+            b =>
+            {
+                b.Add(0x80);
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(1));       // one added component
+                b.AddRange(VarInt(0));       // no removals
+                b.AddRange(VarInt(attributeModifiers));
+                b.AddRange(VarInt(1));       // one entry
+                b.AddRange(VarInt(0));       // attribute id
+                b.AddRange(VarInt(1));       // modifier id length
+                b.Add((byte)'x');
+                b.AddRange(new byte[8]);     // amount 0.0 (big-endian double)
+                b.AddRange(VarInt(0));       // operation
+                b.AddRange(VarInt(0));       // slot group
+                b.AddRange(VarInt(0));       // display: default (no payload)
+            },
+            b =>
+            {
+                b.Add(7);
+                b.AddRange(VarInt(0));
+            });
+
+        var result = Read(body, out _, out var complete, out var status);
+
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.Equal(2, result.Length);
+        Assert.False(result[0].Components.Opaque);
+    }
+
+    [Fact]
     public void TruncatedStackReportsNeedMoreData()
     {
         var body = new List<byte>();
