@@ -362,6 +362,30 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.Equal(3, tracker.Interpolate(0f)[0].AttachFace);
     }
 
+    [Fact]
+    public void FoxAiFlagsProjectToTheFrame()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(19, typeId: FoxModelDefinition.FoxEntityTypeId));
+        tracker.ApplyEntityData(19, [new EntityDataItem(18, 0, 4 | 16 | 32 | 64)]);
+
+        var state = tracker.Interpolate(0f)[0];
+        Assert.True(state.IsCrouching);
+        Assert.True(state.IsPouncing);
+        Assert.True(state.IsSleeping);
+        Assert.True(state.IsFaceplanted);
+    }
+
+    [Fact]
+    public void WolfSittingFlagProjectsToTheFrame()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(20, typeId: WolfModelDefinition.WolfEntityTypeId));
+        tracker.ApplyEntityData(20, [new EntityDataItem(17, 8, 1)]);
+
+        Assert.True(tracker.Interpolate(0f)[0].IsSitting);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 

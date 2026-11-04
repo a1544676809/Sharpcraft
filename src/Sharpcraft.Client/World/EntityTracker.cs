@@ -262,7 +262,10 @@ public readonly record struct EntityRenderState(
     bool IsLeftHanded = false,
     float Squish = 0f,
     int CubeSize = 1,
-    int AttachFace = -1);
+    int AttachFace = -1,
+    bool IsCrouching = false,
+    bool IsPouncing = false,
+    bool IsFaceplanted = false);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -775,7 +778,7 @@ public sealed class EntityTracker
                 VariantId: entity.VariantId,
                 IsTame: spec.TameMask != 0 && (entity.Flags & spec.TameMask) != 0,
                 IsAngry: spec.AngerAccessorIndex >= 0 && entity.AngerEndTime > GameTime,
-                IsSleeping: spec.SleepingMask != 0 && (entity.Flags & spec.SleepingMask) != 0,
+                IsSleeping: (spec.SleepingMask != 0 && (entity.Flags & spec.SleepingMask) != 0) || entity.Presentation.IsSleeping,
                 HasNectar: spec.NectarMask != 0 && (entity.Flags & spec.NectarMask) != 0,
                 IsCold: spec.ColdMask != 0 && (entity.Flags & spec.ColdMask) != 0,
                 IsCharging: spec.ChargingMask != 0 && (entity.Flags & spec.ChargingMask) != 0,
@@ -814,6 +817,9 @@ public sealed class EntityTracker
                 Squish: entity.Presentation.OldSquish + ((entity.Presentation.Squish - entity.Presentation.OldSquish) * t),
                 CubeSize: entity.Presentation.CubeSize,
                 AttachFace: entity.Presentation.AttachFace,
+                IsCrouching: entity.Presentation.IsCrouching,
+                IsPouncing: entity.Presentation.IsPouncing,
+                IsFaceplanted: entity.Presentation.IsFaceplanted,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,
@@ -864,10 +870,21 @@ public sealed class EntityTracker
                 applied = true;
             }
 
-            // Parrot (type 99) TamableAnimal flags byte: index 17, serializer 8, bit 0 = sitting.
-            if (entity.TypeId == 99 && item.Index == 17 && item.SerializerId == 8)
+            // TamableAnimal flags byte (index 17, serializer 8): bit 0 = sitting (parrot/cat/ocelot/wolf).
+            if (item.Index == 17 && item.SerializerId == 8 && entity.TypeId is 21 or 92 or 99 or 152)
             {
                 entity.Presentation.IsSitting = (item.Value & 1) != 0;
+                applied = true;
+            }
+
+            // Fox flags byte (index 18, byte serializer): sitting/pouncing/sleeping/faceplanted/crouching bits.
+            if (item.Index == 18 && item.SerializerId == 0 && entity.TypeId == 55)
+            {
+                entity.Presentation.IsSitting = (item.Value & 1) != 0;
+                entity.Presentation.IsCrouching = (item.Value & 4) != 0;
+                entity.Presentation.IsPouncing = (item.Value & 16) != 0;
+                entity.Presentation.IsSleeping = (item.Value & 32) != 0;
+                entity.Presentation.IsFaceplanted = (item.Value & 64) != 0;
                 applied = true;
             }
 

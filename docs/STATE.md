@@ -3220,6 +3220,13 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 起草 **ADR-0024**（客户端实体 AI 表现状态 P2）与 `docs/modules/entity-ai-presentation.md`（Wolf/Fox/Panda/PolarBear/Rabbit/Wither/Parrot 字段来源与分批 A/B/C/D）；状态待评审。
 - **下一步具体动作**：等待 ADR-0024/模块文档评审；通过后按 A（通用布尔）→ B（本地计时器）→ C（Wither 多头）→ D（Parrot party）实施。
 
+### 2026-11-04 AI 表现状态：批次 A 基础设施
+
+- ADR-0024 改为 `已采纳`，`docs/modules/entity-ai-presentation.md` 标 `[已评审]`。
+- Fox flags（index18：sit bit1 / crouch bit4 / pounce bit16 / sleep bit32 / faceplant bit64）与 Tamable sitting（index17 ser8：cat/ocelot/parrot/wolf）进入 `EntityPresentationState` 与 `EntityAnimationFrame`（新增 `IsCrouching/IsPouncing/IsFaceplanted`；复用既有 `IsSleeping/IsSitting`）。
+- 验证：Client 全量绿（infra +2）。
+- **下一步具体动作**：①实现 Wolf/Fox provider（先可等效分支，tailAngle/headRoll/crouchAmount/shake 等本地量待 B）；②B 本地计时器（Rabbit/Panda/PolarBear）；③C Wither 多头；④D Parrot party。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

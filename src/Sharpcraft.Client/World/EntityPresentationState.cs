@@ -82,4 +82,16 @@ public sealed class EntityPresentationState
 
     /// <summary>Shulker attach face direction id (0..5), or -1 when not applicable.</summary>
     public int AttachFace { get; internal set; } = -1;
+
+    /// <summary>Fox/AI sleeping flag (Fox DATA_FLAGS bit 32).</summary>
+    public bool IsSleeping { get; internal set; }
+
+    /// <summary>Fox crouching flag (Fox DATA_FLAGS bit 4).</summary>
+    public bool IsCrouching { get; internal set; }
+
+    /// <summary>Fox pouncing flag (Fox DATA_FLAGS bit 16).</summary>
+    public bool IsPouncing { get; internal set; }
+
+    /// <summary>Fox faceplanted flag (Fox DATA_FLAGS bit 64).</summary>
+    public bool IsFaceplanted { get; internal set; }
 }
