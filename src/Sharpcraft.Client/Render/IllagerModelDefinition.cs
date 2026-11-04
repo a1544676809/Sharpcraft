@@ -30,13 +30,15 @@ public static class IllagerModelDefinition
             PlayerModelDefinition.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -3f, 8f, 12f, 6f, 16, 20),
             PlayerModelDefinition.FromVanilla("body_outer", 0f, 0f, 0f, -4f, 0f, -3f, 8f, 20f, 6f, 0, 38, grow: 0.5f),
             PlayerModelDefinition.FromVanilla("arms_right", 0f, 3f, -1f, -8f, -2f, -2f, 4f, 8f, 4f, 44, 22,
-                rotationX: 0.75f),
+                rotationX: 0.75f) with { VisibleWhen = static state => state.ArmPose == (int)IllagerArmPose.Crossed },
             PlayerModelDefinition.FromVanilla("arms_cross", 0f, 3f, -1f, -4f, 2f, -2f, 8f, 4f, 4f, 40, 38,
-                rotationX: 0.75f),
+                rotationX: 0.75f) with { VisibleWhen = static state => state.ArmPose == (int)IllagerArmPose.Crossed },
             PlayerModelDefinition.FromVanilla("arms_left", 0f, 3f, -1f, 4f, -2f, -2f, 4f, 8f, 4f, 44, 22,
-                mirror: true, rotationX: 0.75f),
-            PlayerModelDefinition.FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 46),
-            PlayerModelDefinition.FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 40, 46, mirror: true),
+                mirror: true, rotationX: 0.75f) with { VisibleWhen = static state => state.ArmPose == (int)IllagerArmPose.Crossed },
+            PlayerModelDefinition.FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 46)
+                with { VisibleWhen = static state => state.ArmPose != (int)IllagerArmPose.Crossed },
+            PlayerModelDefinition.FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 40, 46, mirror: true)
+                with { VisibleWhen = static state => state.ArmPose != (int)IllagerArmPose.Crossed },
             PlayerModelDefinition.FromVanilla("right_leg", -2f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 22),
             PlayerModelDefinition.FromVanilla("left_leg", 2f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 22, mirror: true)
         ],

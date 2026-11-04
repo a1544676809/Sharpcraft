@@ -91,7 +91,7 @@ public interface IEntityAnimationState
 /// <param name="GameTime">Client game time in ticks, the same clock the frame's age uses.</param>
 /// <param name="HorizontalDistance">Horizontal distance moved during the tick (blocks).</param>
 /// <param name="IsInWater">Whether the entity's feet block is water this tick.</param>
-public readonly record struct EntityAnimationTickContext(int GameTime, float HorizontalDistance, bool IsInWater = false);
+public readonly record struct EntityAnimationTickContext(int GameTime, float HorizontalDistance, bool IsInWater = false, int MainHandItemId = -1);
 
 /// <summary>
 /// Optional capability for states whose clips are triggered by a server <c>entity_event</c> packet. The tracker calls
@@ -131,4 +131,14 @@ public interface IEntitySyncedDataAnimationState
 {
     /// <summary>Called for every decoded integer-valued synced data item.</summary>
     void OnSyncedData(int index, int serializerId, int value);
+}
+
+/// <summary>
+/// Optional capability for providers that derive an arm-pose enum used by the mesh visibility (crossed arms vs the
+/// separate humanoid arms). The tracker projects this into the render state.
+/// </summary>
+public interface IEntityArmPoseAnimationState
+{
+    /// <summary>The provider's current arm-pose ordinal (provider-defined; 0 must mean "crossed arms").</summary>
+    int ArmPose { get; }
 }

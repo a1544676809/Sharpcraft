@@ -276,6 +276,35 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.Equal(1000, state.MainHandItemId);
     }
 
+    [Fact]
+    public void ArmPoseStateIsProjectedIntoTheRenderState()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.AnimationStateFactory = _ => new ArmPoseState();
+        tracker.Add(Entity(14, typeId: IllagerModelDefinition.VindicatorEntityTypeId));
+        Assert.Equal(3, tracker.Interpolate(0f)[0].ArmPose);
+    }
+
+    [Fact]
+    public void IllagerArmVisibilityFollowsArmPose()
+    {
+        var crossed = new EntityRenderState(1, IllagerModelDefinition.VindicatorEntityTypeId, 0, 0, 0, 0, 0, ArmPose: (int)IllagerArmPose.Crossed);
+        var open = new EntityRenderState(1, IllagerModelDefinition.VindicatorEntityTypeId, 0, 0, 0, 0, 0, ArmPose: (int)IllagerArmPose.Attacking);
+
+        var armsCross = IllagerModelDefinition.Vindicator.Parts.Single(part => part.Name == "arms_cross");
+        var rightArm = IllagerModelDefinition.Vindicator.Parts.Single(part => part.Name == "right_arm");
+
+        Assert.True(armsCross.VisibleWhen!(crossed));
+        Assert.False(armsCross.VisibleWhen!(open));
+        Assert.False(rightArm.VisibleWhen!(crossed));
+        Assert.True(rightArm.VisibleWhen!(open));
+    }
+
+    private sealed class ArmPoseState : IEntityAnimationState, IEntityArmPoseAnimationState
+    {
+        public int ArmPose => 3;
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 

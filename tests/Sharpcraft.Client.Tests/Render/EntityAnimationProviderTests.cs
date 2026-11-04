@@ -73,6 +73,10 @@ public sealed class EntityAnimationProviderTests
         TurtleModelDefinition.TurtleEntityTypeId,
         ShulkerModelDefinition.ShulkerEntityTypeId,
         BeeModelDefinition.BeeEntityTypeId,
+        IllagerModelDefinition.VindicatorEntityTypeId,
+        IllagerModelDefinition.EvokerEntityTypeId,
+        IllagerModelDefinition.PillagerEntityTypeId,
+        IllagerModelDefinition.IllusionerEntityTypeId,
     ];
 
     [Fact]
@@ -168,6 +172,10 @@ public sealed class EntityAnimationProviderTests
     [InlineData(TurtleModelDefinition.TurtleEntityTypeId)]
     [InlineData(ShulkerModelDefinition.ShulkerEntityTypeId)]
     [InlineData(BeeModelDefinition.BeeEntityTypeId)]
+    [InlineData(IllagerModelDefinition.VindicatorEntityTypeId)]
+    [InlineData(IllagerModelDefinition.EvokerEntityTypeId)]
+    [InlineData(IllagerModelDefinition.PillagerEntityTypeId)]
+    [InlineData(IllagerModelDefinition.IllusionerEntityTypeId)]
     public void ProviderApplyDoesNotAllocateOnceWarm(int typeId)
     {
         var provider = EntityAnimationRegistry.For(typeId)!;

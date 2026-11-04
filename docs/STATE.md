@@ -3074,3 +3074,12 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 已提交 swing 通道；本轮补 `EntityAnimationFrame.IsAggressive`（Mob flags index15 byte bit2，经 `IEntitySyncedDataAnimationState` 派生）与 `MainHandItemId`（装备槽 0），Client 1125。
 - **发现的阻塞**：`IllagerModelDefinition` 把参考的交叉臂组拆成 `arms_right/arms_cross/arms_left` 三个部件，且未设可见性；而参考按 `armPose==CROSSED` 切换"交叉臂组 vs 左右臂"可见性。当前 pose 模型**没有可见性通道**，直接做 provider 会出现"交叉臂与单独臂同时显示"的错误。
 - **下一步具体动作**：先给通用层加 `EntityRenderState.ArmPose`（或 `CrossedArms` 布尔）+ `EntityModelPart.VisibleWhen` 绑定，再实现 Illager provider；否则不近似。
+
+### 2026-11-04 动画批次 15：Illager 组（T-589）
+
+- 新增 `EntityRenderState.ArmPose` + `IllagerArmPose` 枚举；`IllagerModelDefinition` 通过 `VisibleWhen` 切换"交叉臂组（0=Crossed）vs 单独左右臂"；`IEntityArmPoseAnimationState` 由 provider 暴露、tracker 投影。
+- `EntityAnimationTickContext` 增 `MainHandItemId`。
+- **Illager provider** 复刻 `IllagerModel.setupAnim`（骑/走四肢 + ATTACKING/SPELLCASTING/BOW_AND_ARROW/CROSSBOW_HOLD/CROSSBOW_CHARGE/CELEBRATING），armPose 由 aggressive(Mob flags15 bit2)、celebrating(16/8)、spell(17/0)、charging(16/8)、持十字弩(MainHandItemId) 派生；Vindicator/Evoker/Pillager/Illusioner 分别按参考 getArmPose 选择。注册 144/47/104/69。
+- 阻塞：十字弩蓄力进度（`ticksUsingItem/maxCrossbowChargeDuration` 不在帧）→ 仅 draw-start 姿态；`mainArm` 未在帧 → 武器挥击假定右手。均记录、未近似。
+- Client **1144**（Illager 22 + ArmPose 2 新增）绿；构建 0 警告 0 错误。
+- **下一步具体动作**：①P2-B Piglin（同步 charging/dancing + 窄判定）；②补十字弩计时（used-item 状态）以实现蓄力进度；③继续 backlog。

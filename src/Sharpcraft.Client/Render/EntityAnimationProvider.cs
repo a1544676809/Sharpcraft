@@ -137,5 +137,9 @@ public static class EntityAnimationRegistry
         new TurtleAnimationProvider(TurtleModelDefinition.TurtleEntityTypeId),
         new ShulkerAnimationProvider(ShulkerModelDefinition.ShulkerEntityTypeId),
         new BeeAnimationProvider(BeeModelDefinition.BeeEntityTypeId),
+        new IllagerAnimationProvider(IllagerModelDefinition.VindicatorEntityTypeId),
+        new IllagerAnimationProvider(IllagerModelDefinition.EvokerEntityTypeId),
+        new IllagerAnimationProvider(IllagerModelDefinition.PillagerEntityTypeId),
+        new IllagerAnimationProvider(IllagerModelDefinition.IllusionerEntityTypeId),
     ];
 }
