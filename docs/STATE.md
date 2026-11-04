@@ -3394,3 +3394,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **顺带修崩溃**：`EntitySkinAtlas` 原来把实体皮肤**竖向累加**，当前加载集高度 `sum=24000 > 16384`（GPU 上限）→ `wgpuDeviceCreateTexture` 校验失败崩溃。已改**二维网格**（选使最大边最小的列数），并核实资源包本身完好（11534 条目、743 张实体/装备 PNG 均正常，非断电损坏）。
 - **验证**：Common **492**、Client **1275**（+2 图集测试），构建 0 警告 0 错误；窗口正常运行出帧。
 - **下一步具体动作**：①请用户目视确认"跳跃抬头不再甩 360°/不歪头"；②通过后合并回 `feature/item-registry`；③若仍有轻微歪头再核对 `ModelPart` 的 `rotationZYX` 顺序（当前 `RotationZyx` 已按 Z-Y-X 组合，待极端 yaw+pitch 的逐矩阵验证）。
+
+## 2026-11-04 攻击手臂"分离"修正（T-622，分支 `fix/entity-orientation-matrix`）
+
+- **量化（先测后改）**：`HumanoidAnimationProvider` 网格化右臂——静止世界 X 内缘 `0.205`，攻击 `0.450`，**向外平移约 0.245 格**（一整条手臂厚度），故一眼"分离"。
+- **根因（按原版语义）**：`HumanoidModel.setupAttackAnimation` 对 `rightArm/leftArm.x/z` 是**绝对赋值**（覆盖 ModelPart 的静息位置，静息 pivot 为 ∓5、z=0；cos≈1 时赋的值≈静息值，所以实际几乎不动）。但 `PoseOffset.Position` 是**相对 bind pivot 的增量**，我们直接把赋值当增量叠加 → 等于把 pivot 又加一遍 → 向外一整个人手臂厚度。
+- **修复**：`delta = 原版赋值 − bindPivot`（`armBindPivotX=5`）。攻击时手臂基本不动、只随身体扭转移；与原版一致。
+- **回归**：新增 `HumanoidAttackArmTests`（网格右臂 bounds：攻击 vs 静止内缘差 <0.08 格，且旋转确有变化）；Client **1276** 全绿，构建 0 警告 0 错误；窗口已重启待目视。
+- **下一步具体动作**：①用户目视"攻击不再分离/跳跃抬头不甩 360°"；②通过后合并 `fix/entity-orientation-matrix` → `feature/item-registry`；③继续 SPEAR/STAB 与缺 provider 生物。
