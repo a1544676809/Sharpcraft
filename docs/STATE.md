@@ -3227,6 +3227,13 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Client 全量绿（infra +2）。
 - **下一步具体动作**：①实现 Wolf/Fox provider（先可等效分支，tailAngle/headRoll/crouchAmount/shake 等本地量待 B）；②B 本地计时器（Rabbit/Panda/PolarBear）；③C Wither 多头；④D Parrot party。
 
+### 2026-11-04 AI 基础设施补齐（批次 A 完成）
+
+- 新增 presentation/frame：Fox flags（sit/crouch/pounce/sleep/faceplant）、Tamable sitting（cat/ocelot/parrot/wolf）、Panda `UnhappyCounter`/`SneezeCounter`（synced int）、PolarBear `IsStanding`（synced bool）、LivingEntity `Health`（若 float 可解码）。
+- `EntityAnimationTickContext` 增加 `VerticalDistance`、`IsOnGround`，供 B 批本地计时器使用。
+- 验证：Client **1172**（+3 投影），全量绿。
+- **下一步具体动作**：实现 Wolf/Fox provider（可等效分支），再 B：Rabbit/Panda/PolarBear 本地计时。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

@@ -52,7 +52,11 @@ public readonly record struct EntityAnimationFrame(
     bool IsSleeping = false,
     bool IsCrouching = false,
     bool IsPouncing = false,
-    bool IsFaceplanted = false)
+    bool IsFaceplanted = false,
+    float Health = 0f,
+    int UnhappyCounter = 0,
+    int SneezeCounter = 0,
+    bool IsStanding = false)
 {
     /// <summary>Projects the generic render state onto the frame. The mesher calls this once per entity per frame.</summary>
     public static EntityAnimationFrame From(in EntityRenderState state) => new(
@@ -95,7 +99,11 @@ public readonly record struct EntityAnimationFrame(
         state.IsSleeping,
         state.IsCrouching,
         state.IsPouncing,
-        state.IsFaceplanted);
+        state.IsFaceplanted,
+        state.Health,
+        state.UnhappyCounter,
+        state.SneezeCounter,
+        state.IsStanding);
 }
 
 /// <summary>
@@ -115,7 +123,7 @@ public interface IEntityAnimationState
 /// <param name="GameTime">Client game time in ticks, the same clock the frame's age uses.</param>
 /// <param name="HorizontalDistance">Horizontal distance moved during the tick (blocks).</param>
 /// <param name="IsInWater">Whether the entity's feet block is water this tick.</param>
-public readonly record struct EntityAnimationTickContext(int GameTime, float HorizontalDistance, bool IsInWater = false, int MainHandItemId = -1);
+public readonly record struct EntityAnimationTickContext(int GameTime, float HorizontalDistance, bool IsInWater = false, int MainHandItemId = -1, float VerticalDistance = 0f, bool IsOnGround = false);
 
 /// <summary>
 /// Optional capability for states whose clips are triggered by a server <c>entity_event</c> packet. The tracker calls

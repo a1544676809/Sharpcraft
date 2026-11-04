@@ -94,4 +94,16 @@ public sealed class EntityPresentationState
 
     /// <summary>Fox faceplanted flag (Fox DATA_FLAGS bit 64).</summary>
     public bool IsFaceplanted { get; internal set; }
+
+    /// <summary>Synced health (reference LivingEntity DATA_HEALTH).</summary>
+    public float Health { get; internal set; }
+
+    /// <summary>Panda unhappy counter (synced int, drives the unhappy head-shake).</summary>
+    public int UnhappyCounter { get; internal set; }
+
+    /// <summary>Panda sneeze counter (synced int).</summary>
+    public int SneezeCounter { get; internal set; }
+
+    /// <summary>Polar bear standing flag (synced boolean).</summary>
+    public bool IsStanding { get; internal set; }
 }

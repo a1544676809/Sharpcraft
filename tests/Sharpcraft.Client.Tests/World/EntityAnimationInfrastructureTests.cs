@@ -386,6 +386,21 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.True(tracker.Interpolate(0f)[0].IsSitting);
     }
 
+    [Fact]
+    public void PandaCountersAndPolarStandingProject()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(21, typeId: PandaModelDefinition.PandaEntityTypeId));
+        tracker.ApplyEntityData(21, [new EntityDataItem(17, 1, 5), new EntityDataItem(18, 1, 7)]);
+        var panda = tracker.Interpolate(0f)[0];
+        Assert.Equal(5, panda.UnhappyCounter);
+        Assert.Equal(7, panda.SneezeCounter);
+
+        tracker.Add(Entity(22, typeId: PolarBearModelDefinition.PolarBearEntityTypeId));
+        tracker.ApplyEntityData(22, [new EntityDataItem(17, 8, 1)]);
+        Assert.True(tracker.Interpolate(0f)[1].IsStanding);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 

@@ -265,7 +265,11 @@ public readonly record struct EntityRenderState(
     int AttachFace = -1,
     bool IsCrouching = false,
     bool IsPouncing = false,
-    bool IsFaceplanted = false);
+    bool IsFaceplanted = false,
+    float Health = 0f,
+    int UnhappyCounter = 0,
+    int SneezeCounter = 0,
+    bool IsStanding = false);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -683,6 +687,7 @@ public sealed class EntityTracker
             // calculateEntityAnimation (uses the movement delta, not the commanded velocity).
             var dx = (float)(entity.X - entity.PreviousX);
             var dz = (float)(entity.Z - entity.PreviousZ);
+            var dy = (float)(entity.Y - entity.PreviousY);
             var distance = MathF.Sqrt((dx * dx) + (dz * dz));
             var profile = WalkProfile.For(entity.TypeId, entity.IsBaby);
             entity.Presentation.Walk.Update(
@@ -728,7 +733,7 @@ public sealed class EntityTracker
 
             if (entity.Animation is IEntityTickAnimationState tickState)
             {
-                tickState.OnTick(new EntityAnimationTickContext((int)GameTime, distance, entity.Presentation.IsInWater, entity.EquipmentItemAt(0)));
+                tickState.OnTick(new EntityAnimationTickContext((int)GameTime, distance, entity.Presentation.IsInWater, entity.EquipmentItemAt(0), dy, entity.Presentation.IsOnGround));
             }
         }
     }
@@ -820,6 +825,10 @@ public sealed class EntityTracker
                 IsCrouching: entity.Presentation.IsCrouching,
                 IsPouncing: entity.Presentation.IsPouncing,
                 IsFaceplanted: entity.Presentation.IsFaceplanted,
+                Health: entity.Presentation.Health,
+                UnhappyCounter: entity.Presentation.UnhappyCounter,
+                SneezeCounter: entity.Presentation.SneezeCounter,
+                IsStanding: entity.Presentation.IsStanding,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,
@@ -888,7 +897,35 @@ public sealed class EntityTracker
                 applied = true;
             }
 
-            // Mob flags byte (index 15, byte serializer): bit 2 = aggressive, bit 1 = left-handed (reference Mob flags).
+            // LivingEntity health (index 9, float serializer 3) when the value was decoded.
+            if (item.Index == 9 && item.SerializerId == 3 && item.Value != EntityDataItem.NotAnInteger)
+            {
+                entity.Presentation.Health = BitConverter.Int32BitsToSingle(item.Value);
+                applied = true;
+            }
+
+            // Panda synced counters (unhappy index 17, sneeze index 18; int serializer 1).
+            if (entity.TypeId == 97 && item.SerializerId == 1 && item.Index is 17 or 18)
+            {
+                if (item.Index == 17)
+                {
+                    entity.Presentation.UnhappyCounter = item.Value;
+                }
+                else
+                {
+                    entity.Presentation.SneezeCounter = item.Value;
+                }
+
+                applied = true;
+            }
+
+            // Polar bear standing flag (index 17, boolean serializer 8).
+            if (entity.TypeId == 105 && item.Index == 17 && item.SerializerId == 8)
+            {
+                entity.Presentation.IsStanding = item.Value != 0;
+                applied = true;
+            }
+            // Mob flags byte (index 15, byte serializer): bit 2 = aggressive, bit 1 = left-handed.
             if (item.Index == 15 && item.SerializerId == 0)
             {
                 entity.Presentation.IsAggressive = (item.Value & 4) != 0;

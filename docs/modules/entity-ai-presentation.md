@@ -41,7 +41,7 @@ status: 已评审
 
 ## 4. 分批
 
-1. **A：通用布尔**：把 Wolf/Fox 等可同步的 `isSitting/isSleeping/isCrouching` 等加入表现状态与帧。
+1. **A：通用布尔/数值基础设施（已完成）**：Fox flags（sit/crouch/pounce/sleep/faceplant）、Tamable sitting（cat/ocelot/parrot/wolf）、Panda unhappy/sneeze counters、PolarBear standing、LivingEntity health（若 decode）→ presentation + frame；tick context 增加 `VerticalDistance`/`IsOnGround`。
 2. **B：本地计时器**：Rabbit hop/idle、Panda sneeze、PolarBear stand（复刻客户端计时，逐项测试）。
 3. **C：Wither 多头**：按参考维护每头 yaw/pitch 数组。
 4. **D：Parrot party**（若 jukebox 状态可得）。
