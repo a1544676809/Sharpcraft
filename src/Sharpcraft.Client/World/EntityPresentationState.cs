@@ -89,6 +89,9 @@ public sealed class EntityPresentationState
     /// <summary>Synced entity pose ordinal (Entity.DATA_POSE), used for pose-specific dimensions.</summary>
     public int Pose { get; internal set; }
 
+    /// <summary>Synced SCALE attribute value (default 1); multiplies dimensions and model size.</summary>
+    public float Scale { get; internal set; } = 1f;
+
     /// <summary>The synced ground flag from the last move/teleport packet.</summary>
     public bool IsOnGround { get; internal set; }
 

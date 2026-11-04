@@ -79,7 +79,7 @@ public sealed class TrackedEntity
     public float HeadYaw { get; internal set; }
 
     /// <summary>Eye height above the feet from the vanilla entity-type dimensions table (pose/age aware); 0 when unknown.</summary>
-    public float EyeHeight => EntityDimensionsRegistry.Get(TypeId, Presentation.Pose, IsBaby)?.EyeHeight ?? 0f;
+    public float EyeHeight => (EntityDimensionsRegistry.Get(TypeId, Presentation.Pose, IsBaby)?.EyeHeight ?? 0f) * Presentation.Scale;
 
     /// <summary>World-space eye Y (feet y + eye height).</summary>
     public float EyeY => (float)Y + EyeHeight;
@@ -294,7 +294,8 @@ public readonly record struct EntityRenderState(
     float WitherHeadYaw2 = 0f,
     float WitherHeadPitch2 = 0f,
     bool IsIdleHeadTiltStarted = false,
-    float IdleHeadTiltAgeTicks = 0f);
+    float IdleHeadTiltAgeTicks = 0f,
+    float Scale = 1f);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -559,6 +560,19 @@ public sealed class EntityTracker
 
         entity.Presentation.Tentacle?.OnEntityEvent(eventId);
         entity.Presentation.RabbitHop?.OnEntityEvent(eventId);
+        return true;
+    }
+
+    /// <summary>Applies the SCALE attribute value from an <c>update_attributes</c> packet.</summary>
+    public bool ApplyAttributes(int id, float scale)
+    {
+        if (!_entities.TryGetValue(id, out var entity))
+        {
+            UnknownUpdates++;
+            return false;
+        }
+
+        entity.Presentation.Scale = scale;
         return true;
     }
 
@@ -990,6 +1004,7 @@ public sealed class EntityTracker
                 IdleHeadTiltAgeTicks: (entity.Presentation.RabbitIdle?.IsStarted ?? false)
                     ? entity.Presentation.RabbitIdle!.AgeTicks((int)GameTime) + t
                     : 0f,
+                Scale: entity.Presentation.Scale,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,

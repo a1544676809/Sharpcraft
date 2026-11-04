@@ -20,6 +20,7 @@
     <EmbeddedResource Include="Registries\Data\vanilla-data-component-order.txt" />
     <EmbeddedResource Include="Registries\Data\vanilla-enchantment-order.txt" />
     <EmbeddedResource Include="Registries\Data\vanilla-entity-dimensions.tsv" />
+    <EmbeddedResource Include="Registries\Data\vanilla-attribute-order.txt" />
   </ItemGroup>
 
 </Project>

@@ -74,7 +74,8 @@ public readonly record struct EntityAnimationFrame(
     float WitherHeadYaw2 = 0f,
     float WitherHeadPitch2 = 0f,
     bool IsIdleHeadTiltStarted = false,
-    float IdleHeadTiltAgeTicks = 0f)
+    float IdleHeadTiltAgeTicks = 0f,
+    float Scale = 1f)
 {
     /// <summary>Projects the generic render state onto the frame. The mesher calls this once per entity per frame.</summary>
     public static EntityAnimationFrame From(in EntityRenderState state) => new(
@@ -139,7 +140,8 @@ public readonly record struct EntityAnimationFrame(
         state.WitherHeadYaw2,
         state.WitherHeadPitch2,
         state.IsIdleHeadTiltStarted,
-        state.IdleHeadTiltAgeTicks);
+        state.IdleHeadTiltAgeTicks,
+        state.Scale);
 }
 
 /// <summary>

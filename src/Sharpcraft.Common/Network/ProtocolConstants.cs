@@ -231,6 +231,10 @@ public static class PacketIds
         /// <remarks>Reference registration dump: play clientbound 102.</remarks>
         public const int SetEntityLink = 102;
 
+        /// <summary>Attribute update: entity id plus a list of (attribute id, base, modifiers).</summary>
+        /// <remarks>Reference registration dump: play clientbound 134.</remarks>
+        public const int UpdateAttributes = 134;
+
         /// <summary>Absolute player position: a teleport or a server correction.</summary>
         public const int PlayerPosition = 73;
 

@@ -1496,6 +1496,15 @@ internal sealed class InteractiveSession
 
                     break;
 
+                // SCALE attribute (and future attributes): update the entity's presentation scale.
+                case PacketIds.PlayClientbound.UpdateAttributes:
+                    if (UpdateAttributesPackets.TryRead(body, out var attributeEntityId, out var attributeScale) == DecodeStatus.Success)
+                    {
+                        _entities.ApplyAttributes(attributeEntityId, attributeScale);
+                    }
+
+                    break;
+
                 // Arm-swing animation: drives the presentation layer's swing clock for armed mobs.
                 case PacketIds.PlayClientbound.SwingAnimation:
                     if (SwingAnimationPackets.TryRead(body, out var swingEntityId, out var swingHand, out var swingType, out var swingDuration) == DecodeStatus.Success)

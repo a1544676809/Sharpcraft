@@ -515,6 +515,16 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.Equal(1.27f, entity!.EyeHeight, 4);
     }
 
+    [Fact]
+    public void ScaleAttributeMultipliesEyeHeight()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(31, typeId: 159));
+        Assert.True(tracker.ApplyAttributes(31, 2f));
+        Assert.True(tracker.TryGet(31, out var entity));
+        Assert.Equal(3.24f, entity!.EyeHeight, 4);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 

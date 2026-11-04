@@ -69,6 +69,14 @@ public sealed class EntityModelTransformTests
     }
 
     [Fact]
+    public void ScaleAttributeMultipliesTheModel()
+    {
+        var state = new Sharpcraft.Client.World.EntityRenderState(1, 159, 0, 0, 0, 0, 0, Scale: 2f);
+        var transform = EntityModelTransform.From(state);
+        Assert.Equal(new Vector3(2f, 2f, 2f), transform.Apply(new Vector3(1f, 1f, 1f)));
+    }
+
+    [Fact]
     public void YawRotatesAroundTheEntityYAxis()
     {
         var transform = new EntityModelTransform(Vector3.Zero, 90f, 0f);

@@ -3317,6 +3317,14 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Common **489**、Client **1253**，构建 0 警告 0 错误。
 - **下一步具体动作**：实体目标眼高基础已完成；继续 Wither/其它目标测试或收口。
 
+### 2026-11-04 SCALE 属性同步 + 模型缩放（T-616）
+
+- 新增 `AttributeTypes`（注册顺序 id，`scale`=30）与 `UpdateAttributesPackets`(134) 解码；`EntityPresentationState.Scale` 由 `ApplyAttributes` 更新（支持 add_value/add_multiplied_base/add_multiplied_total）。
+- `TrackedEntity.EyeY` 乘 Scale；`EntityRenderState.Scale` → `EntityModelTransform` 统一模型缩放（含动画/装备几何）。
+- 修正 `entity-presentation-state.md`：Parrot PARTY 已实现；新增 P3 属性同步章节。
+- 验证：Common **491**、Client **1255**，构建 0 警告 0 错误。
+- **下一步具体动作**：SCALE/目标眼高完成；继续校验 Wither/其它缩放实体或收口。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

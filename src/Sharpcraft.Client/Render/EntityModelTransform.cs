@@ -32,6 +32,7 @@ public readonly record struct EntityModelTransform(
             state.Pitch,
             ScaleXZ: width * size,
             ScaleY: (1f / width) * size,
+            Scale: state.Scale,
             HasAttachRotation: hasAttach,
             AttachRotation: hasAttach ? AttachQuaternion(state.AttachFace) : default,
             AttachPivot: new Vector3(0f, 0.5f, 0f));
