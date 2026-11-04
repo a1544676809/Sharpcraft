@@ -2,7 +2,10 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using Sharpcraft.Client.World;
+using Sharpcraft.Common.Identifiers;
 using Sharpcraft.Common.Network;
+using Sharpcraft.Common.Registries;
+using Sharpcraft.Common.World;
 using Xunit;
 
 namespace Sharpcraft.Client.Tests.World;
@@ -150,6 +153,44 @@ public sealed class EntityAnimationInfrastructureTests
         tracker.GameTime = 2;
         tracker.Tick();
         Assert.True(tracker.Interpolate(1f)[0].IsOnGround);
+    }
+
+    [Fact]
+    public void PassengerGraphDrivesRidingFlags()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(1, typeId: 65));
+        tracker.Add(Entity(2, typeId: 65));
+
+        tracker.ApplyPassengers(1, [2]);
+        var states = tracker.Interpolate(0f);
+
+        EntityRenderState? vehicle = null;
+        EntityRenderState? passenger = null;
+        foreach (var state in states)
+        {
+            if (state.Id == 1) vehicle = state;
+            if (state.Id == 2) passenger = state;
+        }
+
+        Assert.True(vehicle!.Value.IsVehicle);
+        Assert.False(vehicle.Value.IsPassenger);
+        Assert.True(passenger!.Value.IsPassenger);
+        Assert.False(passenger.Value.IsVehicle);
+    }
+
+    [Fact]
+    public void WaterAtTheFeetBlockSetsIsInWater()
+    {
+        var water = VanillaBlockRegistry.Layout.GetBaseId(Identifier.Parse("minecraft:water"));
+        var world = new ClientWorld(minSectionY: 0, sectionCount: 1);
+        world.AddChunk(0, 0).SetSection(new ChunkSection(singleState: water, sectionY: 0));
+
+        var tracker = new EntityTracker { World = world, GameTime = 0 };
+        tracker.Add(Entity(9, typeId: 130));
+        tracker.Tick();
+
+        Assert.True(tracker.Interpolate(1f)[0].IsInWater);
     }
 
     private static AddedEntity Entity(int id, int typeId) =>

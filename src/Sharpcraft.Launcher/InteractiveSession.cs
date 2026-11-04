@@ -255,6 +255,7 @@ internal sealed class InteractiveSession
         _language = language ?? Sharpcraft.Common.Localization.LanguageTable.Empty;
         _world = world;
         _pool = pool;
+        _entities.World = world;
         _interpolator = new PlayerInterpolator(player, _camera.Yaw);
         _live = live;
         _sync = live is null ? null : new PlayerSync();
@@ -1464,6 +1465,18 @@ internal sealed class InteractiveSession
                     }
 
                     break;
+
+                // Passenger graph: needed by the presentation layer (isRiding/isVehicle) and the flap clock.
+                case PacketIds.PlayClientbound.SetPassengers:
+                    {
+                        Span<int> passengers = stackalloc int[PassengerPackets.MaxPassengers];
+                        if (PassengerPackets.TryRead(body, out var vehicleId, passengers, out var passengerCount) == DecodeStatus.Success)
+                        {
+                            _entities.ApplyPassengers(vehicleId, passengers[..passengerCount]);
+                        }
+
+                        break;
+                    }
 
                 case PacketIds.PlayClientbound.SetTime:
                     if (_world is not null)

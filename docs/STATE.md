@@ -2963,3 +2963,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 已知受控偏差：乘客项（骑乘鹦鹉不扇翅）暂无乘客同步，暂以 `!onGround` 代替；`isInWater`/`isRiding`/`tentacleAngle` 列为 P0b。
 - Client **912** 全绿（+2）；构建 0 警告 0 错误。
 - **下一步具体动作**：P0b —— ①本地水方块查询接 `isInWater`；②解码 `set_passengers` 以支持 `isRiding`；③读 `Squid.aiStep` 的 `tentacleMovement` 实现 `tentacleAngle`；随后补 Parrot/Strider 等。
+
+### 2026-11-04 客户端实体表现状态层 P0b（T-576）
+
+- `isInWater`：`ClientWorld.IsWaterAt`（本地方块 `minecraft:water` 查询）；`InteractiveSession` 把 `World` 注入 `EntityTracker`，`Tick` 用脚下方块派生。
+- 乘客/riding：新增 `PassengerPackets`（clientbound 109），`EntityTracker.ApplyPassengers` 维护乘客图；`EntityRenderState`/`EntityAnimationFrame` 新增 `IsInWater`/`IsPassenger`/`IsVehicle`（`InteractiveSession` 分发 `SetPassengers`）。
+- `tentacleAngle`（Squid 的 `tentacleMovement/tentacleSpeed` 客户端随机运动）移入 P1，避免近似。
+- 验证：Common **461**（+3 `PassengerPacketsTests`）、Client **914**（+2 乘客图/进水），构建 0 警告 0 错误；文档门禁绿。
+- **下一步具体动作**：①P1 补 Squid `tentacleAngle`（客户端 `tentacleSpeed` 随机/事件 19）与 Bat `IsResting` 派生；②有了 `Flap/Pose`/`IsPassenger` 后接 Parrot（flapAngle+pose）、Strider（isRidden/isSuffocating）；③继续按 backlog。

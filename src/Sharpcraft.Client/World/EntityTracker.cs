@@ -236,7 +236,10 @@ public readonly record struct EntityRenderState(
     float AnimationPartialTick = 0f,
     bool HasMainHandItem = false,
     bool HasOffHandItem = false,
-    bool IsOnGround = false);
+    bool IsOnGround = false,
+    bool IsInWater = false,
+    bool IsPassenger = false,
+    bool IsVehicle = false);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -270,6 +273,16 @@ public sealed class EntityTracker
     /// any rendering dependency; tests that do not care about animation leave it null.
     /// </summary>
     public Func<int, IEntityAnimationState?>? AnimationStateFactory { get; set; }
+
+    /// <summary>
+    /// Optional read-only world used by the presentation layer for local queries (currently <c>isInWater</c>). Set by
+    /// the host; null means "unknown", and the derived flag stays false.
+    /// </summary>
+    public ClientWorld? World { get; set; }
+
+    // Passenger graph (from set_passengers). Low-frequency updates; arrays are fine.
+    private readonly Dictionary<int, int[]> _passengers = [];
+    private readonly Dictionary<int, int> _vehicleOf = [];
 
     /// <summary>Entities currently tracked.</summary>
     public int Count => _entities.Count;
@@ -492,6 +505,35 @@ public sealed class EntityTracker
         return true;
     }
 
+    /// <summary>Applies a <c>set_passengers</c> update (the vehicle's new passenger list).</summary>
+    /// <param name="vehicleId">Vehicle entity id.</param>
+    /// <param name="passengers">Passenger entity ids (empty clears the list).</param>
+    public bool ApplyPassengers(int vehicleId, ReadOnlySpan<int> passengers)
+    {
+        if (_passengers.TryGetValue(vehicleId, out var old))
+        {
+            foreach (var previous in old)
+            {
+                _vehicleOf.Remove(previous);
+            }
+        }
+
+        if (passengers.Length == 0)
+        {
+            _passengers.Remove(vehicleId);
+            return true;
+        }
+
+        var copy = passengers.ToArray();
+        _passengers[vehicleId] = copy;
+        foreach (var passenger in copy)
+        {
+            _vehicleOf[passenger] = vehicleId;
+        }
+
+        return true;
+    }
+
     /// <param name="id">Entity id the packet named.</param>
     /// <param name="items">Decoded data items.</param>
     /// <returns>True when a variant value was found and stored.</returns>
@@ -612,6 +654,10 @@ public sealed class EntityTracker
             // clock uses "not on ground" as the airborne signal (documented deviation for ridden parrots).
             entity.Presentation.IsOnGround = entity.OnGround;
             entity.Presentation.Flap.Update(!entity.OnGround);
+            entity.Presentation.IsInWater = World?.IsWaterAt(
+                (int)MathF.Floor((float)entity.X),
+                (int)MathF.Floor((float)entity.Y),
+                (int)MathF.Floor((float)entity.Z)) ?? false;
 
             if (entity.Animation is IEntityTickAnimationState tickState)
             {
@@ -685,6 +731,9 @@ public sealed class EntityTracker
                 Flap: entity.Presentation.Flap.Flap(t),
                 FlapSpeed: entity.Presentation.Flap.Speed(t),
                 IsOnGround: entity.Presentation.IsOnGround,
+                IsInWater: entity.Presentation.IsInWater,
+                IsPassenger: _vehicleOf.ContainsKey(entity.Id),
+                IsVehicle: _passengers.ContainsKey(entity.Id),
                 Animation: entity.Animation,
                 AnimationPartialTick: t,
                 HasMainHandItem: entity.EquipmentItemAt(0) > 0,

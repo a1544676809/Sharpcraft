@@ -24,4 +24,7 @@ public sealed class EntityPresentationState
 
     /// <summary>The synced ground flag from the last move/teleport packet.</summary>
     public bool IsOnGround { get; internal set; }
+
+    /// <summary>Whether the entity's feet block is water (local block query).</summary>
+    public bool IsInWater { get; internal set; }
 }

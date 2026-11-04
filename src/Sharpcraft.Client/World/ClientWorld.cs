@@ -406,6 +406,17 @@ public sealed class ClientWorld
         return chunk.GetBlockState(BlockCoordinates.SectionRelative(x), y, BlockCoordinates.SectionRelative(z), fallbackState);
     }
 
+    /// <summary>
+    /// True when the block at the position is water (reference <c>FluidTags.WATER</c>). Used by the presentation layer to
+    /// derive a client-side <c>isInWater</c> flag; unloaded chunks read as not water.
+    /// </summary>
+    public bool IsWaterAt(int x, int y, int z)
+    {
+        var state = GetBlockState(x, y, z);
+        var block = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(state);
+        return block is { } id && string.Equals(id.Path, "water", StringComparison.Ordinal);
+    }
+
     /// <summary>Biome id at a world block position, or -1 when the chunk/section is not loaded or carries no biome data.</summary>
     public int GetBiomeAt(int x, int y, int z)
     {

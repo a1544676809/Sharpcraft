@@ -215,6 +215,10 @@ public static class PacketIds
         /// <remarks>Reference registration dump: play clientbound 34.</remarks>
         public const int EntityEvent = 34;
 
+        /// <summary>Passengers of a vehicle: vehicle entity id, count, then passenger entity ids.</summary>
+        /// <remarks>Reference registration dump: play clientbound 109.</remarks>
+        public const int SetPassengers = 109;
+
         /// <summary>Absolute player position: a teleport or a server correction.</summary>
         public const int PlayerPosition = 73;
 

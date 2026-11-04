@@ -29,7 +29,10 @@ public readonly record struct EntityAnimationFrame(
     bool HasMainHandItem = false,
     bool HasOffHandItem = false,
     int EntityId = 0,
-    bool IsOnGround = false)
+    bool IsOnGround = false,
+    bool IsInWater = false,
+    bool IsPassenger = false,
+    bool IsVehicle = false)
 {
     /// <summary>Projects the generic render state onto the frame. The mesher calls this once per entity per frame.</summary>
     public static EntityAnimationFrame From(in EntityRenderState state) => new(
@@ -49,7 +52,10 @@ public readonly record struct EntityAnimationFrame(
         state.HasMainHandItem,
         state.HasOffHandItem,
         state.Id,
-        state.IsOnGround);
+        state.IsOnGround,
+        state.IsInWater,
+        state.IsPassenger,
+        state.IsVehicle);
 }
 
 /// <summary>
