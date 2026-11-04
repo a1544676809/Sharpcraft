@@ -2978,3 +2978,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - Bat(100) 的 `DATA_FLAGS`(index16 byte bit0) 派生 `IsResting`，投影到 render state；`BatAnimationProvider` 现在真机按休息/飞行切换。
 - 验证：Client **916**（+2：Squid 触手公式、Bat resting 路由），构建 0 警告 0 错误。
 - **下一步具体动作**：①Parrot（flapAngle 已有；pose FLYING/SITTING/ON_SHOULDER/PARTY 需基于 `IsPassenger`/`onGround`/variant 派生）；②Strider（`isRidden=IsVehicle` 已可用；`isSuffocating` 需读 `Strider.isSuffocating` 依据）；③继续 backlog。
+
+### 2026-11-04 动画批次 5：Parrot / Strider（T-578）
+
+- `EntityAnimationFrame` 新增 `IsTame`（Parrot pose 选择用）。
+- **Parrot（99）**：pose = `IsPassenger`→ON_SHOULDER / `!IsOnGround`→FLYING / else STANDING；`flapAngle=(sin(Flap)+1)*FlapSpeed`；复刻 `prepare`+`setupAnim`。**SITTING/PARTY 阻塞**（缺 `isInSittingPose` 同步位 / 点唱机 party 状态），未近似。
+- **Strider（132）**：复刻 `setupAnim`+`AdultStriderModel.customAnimations`（bristle 基线已在 bind pose，只加振荡；`isRidden=IsVehicle`）。`isSuffocating` 只影响纹理，不需要。
+- 已注册 99/132 并纳入零分配测试。Client **936**（Parrot 9 / Strider 12 新增）绿（`EquipmentTextureCatalogTests` 并行 flaky 重跑通过）。
+- **下一步具体动作**：①Parrot 补 `isInSittingPose`（TamableAnimal synced flags）与 party（若后续有点唱机状态）；②继续 backlog（Allay/Vex 已做部分，Tadpole 需 IsInWater、Ghast 触须需 tentacle 类、Guardian、Illager/Piglin 需 armPose 等）。

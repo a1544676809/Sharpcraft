@@ -75,7 +75,7 @@
 
 - **P0a 通用派生（已实现 2026-11-04）**：`EntityPresentationState`（每实体）承载 `WalkAnimationState` + `FlapAnimationState` + `IsOnGround`；`EntityTracker.Tick` 派生 walk/flap/ground 并投影到 `EntityRenderState`/`EntityAnimationFrame`（新增 `IsOnGround`）。`FlapAnimationState` 逐式复刻 Chicken/Parrot 的 `flap/flapSpeed/flapping` 规则；已知偏差：乘客项（骑乘鹦鹉不扇翅）因暂无乘客同步，暂以 `!onGround` 代替，登记为受控偏差。验收：公式逐值测试、每 tick 零分配。
 - **P0b（完成 2026-11-04）**：`isInWater` 已由 `ClientWorld.IsWaterAt`（本地方块 `minecraft:water` 查询）派生；`isRiding`/`isVehicle`/`isPassenger` 已由 `set_passengers`（clientbound 109）解码并维护乘客图，投影为 `IsInWater`/`IsPassenger`/`IsVehicle`。
-- **P1 逐生物可判定字段（进行中 2026-11-04）**：Squid `tentacleAngle` 已按 `Squid.aiStep` 的客户端 `tentacleMovement/tentacleSpeed`（每实体本地随机、事件 19 重置）派生；Bat `IsResting` 已由 `DATA_FLAGS`（index16 byte bit0）派生。其余 `isSuffocating`/`pose` 待补。
+- **P1 逐生物可判定字段（进行中 2026-11-04）**：Squid `tentacleAngle`（客户端 `tentacleMovement/tentacleSpeed`，事件 19 重置）、Bat `IsResting`（`DATA_FLAGS` bit0）、Parrot `pose`（FLYING/STANDING/ON_SHOULDER 由 `IsOnGround`/`IsPassenger`/`IsTame` 判定）与 Strider `isRidden`（`IsVehicle`）均已派生并在热路径生效。**仍阻塞**：Parrot 的 SITTING（`isInSittingPose` 同步位）与 PARTY（点唱机邻近状态）不在 frame，未做、未近似；Strider `isSuffocating` 仅影响纹理不影响 setupAnim。
 - **P2 同步来源字段**：仅在有同步数据/事件时接 `armPose/crossbow/swing`；否则登记阻塞。
 
 ## 8. 未解决问题与风险

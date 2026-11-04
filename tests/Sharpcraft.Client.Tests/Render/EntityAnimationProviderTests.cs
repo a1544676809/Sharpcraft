@@ -46,6 +46,8 @@ public sealed class EntityAnimationProviderTests
         HoglinModelDefinition.ZoglinEntityTypeId,
         WitchModelDefinition.WitchEntityTypeId,
         VexModelDefinition.VexEntityTypeId,
+        ParrotModelDefinition.ParrotEntityTypeId,
+        StriderModelDefinition.StriderEntityTypeId,
     ];
 
     [Fact]
@@ -114,6 +116,8 @@ public sealed class EntityAnimationProviderTests
     [InlineData(HoglinModelDefinition.ZoglinEntityTypeId)]
     [InlineData(WitchModelDefinition.WitchEntityTypeId)]
     [InlineData(VexModelDefinition.VexEntityTypeId)]
+    [InlineData(ParrotModelDefinition.ParrotEntityTypeId)]
+    [InlineData(StriderModelDefinition.StriderEntityTypeId)]
     public void ProviderApplyDoesNotAllocateOnceWarm(int typeId)
     {
         var provider = EntityAnimationRegistry.For(typeId)!;

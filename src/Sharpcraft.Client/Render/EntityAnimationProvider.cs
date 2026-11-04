@@ -109,5 +109,7 @@ public static class EntityAnimationRegistry
         new HoglinAnimationProvider(HoglinModelDefinition.ZoglinEntityTypeId),
         new WitchAnimationProvider(WitchModelDefinition.WitchEntityTypeId),
         new VexAnimationProvider(VexModelDefinition.VexEntityTypeId),
+        new ParrotAnimationProvider(ParrotModelDefinition.ParrotEntityTypeId),
+        new StriderAnimationProvider(StriderModelDefinition.StriderEntityTypeId),
     ];
 }
