@@ -129,7 +129,11 @@ public static class EntityAnimationRegistry
         // Models whose reference setupAnim is exactly the shared quadruped/humanoid walk: reuse those providers.
         new QuadrupedAnimationProvider(CreeperModelDefinition.CreeperEntityTypeId),
         new HumanoidAnimationProvider(GiantModelDefinition.GiantEntityTypeId),
+        new VillagerAnimationProvider(VillagerModelDefinition.WanderingTraderEntityTypeId),
         new EndermiteAnimationProvider(EndermiteModelDefinition.EndermiteEntityTypeId),
         new DolphinAnimationProvider(DolphinModelDefinition.DolphinEntityTypeId),
+        new LlamaAnimationProvider(LlamaModelDefinition.LlamaEntityTypeId),
+        new LlamaAnimationProvider(TraderLlamaModelDefinition.TraderLlamaEntityTypeId),
+        new TurtleAnimationProvider(TurtleModelDefinition.TurtleEntityTypeId),
     ];
 }

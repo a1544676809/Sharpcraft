@@ -67,6 +67,10 @@ public sealed class EntityAnimationProviderTests
         GiantModelDefinition.GiantEntityTypeId,
         EndermiteModelDefinition.EndermiteEntityTypeId,
         DolphinModelDefinition.DolphinEntityTypeId,
+        VillagerModelDefinition.WanderingTraderEntityTypeId,
+        LlamaModelDefinition.LlamaEntityTypeId,
+        TraderLlamaModelDefinition.TraderLlamaEntityTypeId,
+        TurtleModelDefinition.TurtleEntityTypeId,
     ];
 
     [Fact]
@@ -156,6 +160,10 @@ public sealed class EntityAnimationProviderTests
     [InlineData(GiantModelDefinition.GiantEntityTypeId)]
     [InlineData(EndermiteModelDefinition.EndermiteEntityTypeId)]
     [InlineData(DolphinModelDefinition.DolphinEntityTypeId)]
+    [InlineData(VillagerModelDefinition.WanderingTraderEntityTypeId)]
+    [InlineData(LlamaModelDefinition.LlamaEntityTypeId)]
+    [InlineData(TraderLlamaModelDefinition.TraderLlamaEntityTypeId)]
+    [InlineData(TurtleModelDefinition.TurtleEntityTypeId)]
     public void ProviderApplyDoesNotAllocateOnceWarm(int typeId)
     {
         var provider = EntityAnimationRegistry.For(typeId)!;

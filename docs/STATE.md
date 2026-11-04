@@ -3039,3 +3039,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **复用**：Creeper(32) 参考 setupAnim 恰为共享四足走路 → `QuadrupedAnimationProvider`；Giant(60) 复用 Zombie 人形几何 → `HumanoidAnimationProvider`。
 - 注册 43/36/32/60 并纳入零分配测试。Client 全量 1082（Endermite 10 / Dolphin 7 新增）；并行跑时偶发 `ChunkMeshCacheTests`/`EntityModelRegistrationTests` 单独类均绿（已知并行 flaky）。
 - **下一步具体动作**：①继续 backlog；②Llama/TraderLlama 需专门 provider（neck 等分组不同）；Turtle 需 AI；Shulker/Slime 走渲染 transform；③Illager/Piglin armPose 单列 ADR。
+
+### 2026-11-04 动画批次 13：Llama(+TraderLlama) / Turtle / WanderingTrader 复用（T-586）
+
+- **Llama（79）/ Trader Llama（138）**：头组（head/neck/left_ear/right_ear 同 pivot）同一旋转 + 四腿走；Trader Llama 复用。
+- **Turtle（141）**：`isOnLand = IsOnGround && !IsInWater`，陆/水两套腿姿；**产蛋子支**（`isLayingEgg` AI 状态）阻塞、未近似。
+- **WanderingTrader（145）** 复用 Villager provider（同几何）。
+- 注册 79/138/141/145。Client **1100**（Llama 11 / Turtle 8 新增 + 复用 2）绿；Architecture 31。
+- **下一步具体动作**：①剩余可派生（Bee 需 rollAmount、Rabbit 需 hop 状态、Wither 需多头 rot 数组等，视情况）；②Illager/Piglin armPose 单列 ADR；③Shulker/Slime 渲染 transform 专项。
