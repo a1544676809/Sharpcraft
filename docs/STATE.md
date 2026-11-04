@@ -3098,6 +3098,15 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - Client **1156**（Piglin 10 新增）绿；构建 0 警告 0 错误。
 - **下一步具体动作**：①补物品标签/DataComponent 能力（可为 PIGLIN_LOVED/preferred-weapon/isCharged 解阻塞，也惠及装备/物品系统）；②mainArm 通用字段；③继续 backlog 或收口。
 
+### 2026-11-04 物品标签基础能力（T-592）
+
+- `AssetSelection` 现额外提取 `data/minecraft/tags/item/**.json`（其余 data 仍跳过，仓库不含资产）。
+- 新增 Common `ItemTagRegistry`：解析 `values`（直接物品、`#嵌套标签`、对象 `{id,required}`），支持 `LoadDirectory` 与 `Parse`；`EntityModelResolver.ItemTags` 由 `FrameCommand.InstallItemTags()` 从 pack 载入（缺包/损坏时为空）。
+- `EntityAnimationFrame.OffHandItemId`（装备槽 1）投影。
+- **Piglin 解阻塞**：ADMIRING_ITEM（offhand ∈ `piglin_loved`）与 ATTACKING_WITH_MELEE_WEAPON（aggressive + mainhand ∈ `piglin_preferred_weapons`）已按参考 `PiglinModel` 复刻；CROSSBOW_HOLD 仍需 charged item-data，保持阻塞。mainArm 仍假定右手。
+- 测试：Common **467**（+3 tag）、Launcher **93**（+1 selection）、Client **1157**（+1 Piglin 姿态）。全量并行偶发 `ChunkMeshCacheTests`（既有）单类重跑稳定。
+- **下一步具体动作**：①实现装备 item stack 组件解析（至少 `charged_projectiles` 存在性 + `enchantments/quick_charge`）以解 CROSSBOW_HOLD 与快速装填；②`mainArm` 同步来源；③继续 backlog。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

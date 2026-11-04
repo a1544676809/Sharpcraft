@@ -3,6 +3,7 @@
 
 using System.Numerics;
 using Sharpcraft.Client.World;
+using Sharpcraft.Common.Identifiers;
 
 namespace Sharpcraft.Client.Render;
 
@@ -24,17 +25,15 @@ public enum PiglinArmPose
 /// </summary>
 /// <remarks>
 /// <para>
-/// Derivable arm poses: <b>DANCING</b> (synced, index 19 / serializer 8) and <b>CROSSBOW_CHARGE</b> (synced, index 18 /
-/// serializer 8, reproduced from <c>frame.TicksUsingItem + frame.PartialTick</c> over the default 25-tick charge);
-/// everything else is <b>DEFAULT</b>.
+/// Derivable arm poses: <b>DANCING</b> (synced, index 19 / serializer 8), <b>CROSSBOW_CHARGE</b> (synced, index 18 /
+/// serializer 8, reproduced from <c>frame.TicksUsingItem + frame.PartialTick</c> over the default 25-tick charge),
+/// <b>ADMIRING_ITEM</b> (offhand item in the <c>piglin_loved</c> tag) and <b>ATTACKING_WITH_MELEE_WEAPON</b> (aggressive
+/// and main hand in the <c>piglin_preferred_weapons</c> tag). Item tags come from the extracted pack via
+/// <see cref="EntityModelResolver.ItemTags"/>.
 /// </para>
 /// <para>
-/// <b>Blocked arm poses (reported, not faked — they fall back to DEFAULT):</b>
-/// <list type="bullet">
-/// <item>ADMIRING_ITEM needs the <c>PIGLIN_LOVED</c> item tag (offhand item) — not on the frame.</item>
-/// <item>ATTACKING_WITH_MELEE_WEAPON needs the preferred-weapon item tag (and mainArm) — not on the frame.</item>
-/// <item>CROSSBOW_HOLD needs <c>CrossbowItem.isCharged</c> item-data state — not on the frame.</item>
-/// </list>
+/// <b>Still blocked (reported, not faked — falls back to DEFAULT):</b> CROSSBOW_HOLD needs <c>CrossbowItem.isCharged</c>
+/// (item-data state that is not on the frame).
 /// </para>
 /// <para>
 /// The reference <c>mainArm</c> is not on the frame; DANCING/CROSSBOW_CHARGE assume the default right hand (all vanilla
@@ -62,10 +61,43 @@ public sealed class PiglinAnimationProvider(int typeId) : IEntityAnimationProvid
     public void Apply(IEntityAnimationState state, in EntityAnimationFrame frame, EntityPose pose)
     {
         var live = state as State;
-        var armPose = live is null
-            ? PiglinArmPose.Default
-            : (live.IsDancing ? PiglinArmPose.Dancing : live.IsCharging ? PiglinArmPose.CrossbowCharge : PiglinArmPose.Default);
-        ApplyPose(armPose, frame, pose);
+        ApplyPose(SelectArmPose(live, frame), frame, pose);
+    }
+
+    private static PiglinArmPose SelectArmPose(State? live, in EntityAnimationFrame frame)
+    {
+        if (live?.IsDancing == true)
+        {
+            return PiglinArmPose.Dancing;
+        }
+
+        if (IsInItemTag("piglin_loved", frame.OffHandItemId))
+        {
+            return PiglinArmPose.AdmiringItem;
+        }
+
+        if (frame.IsAggressive && IsInItemTag("piglin_preferred_weapons", frame.MainHandItemId))
+        {
+            return PiglinArmPose.AttackingWithMeleeWeapon;
+        }
+
+        if (live?.IsCharging == true)
+        {
+            return PiglinArmPose.CrossbowCharge;
+        }
+
+        // CROSSBOW_HOLD still needs CrossbowItem.isCharged item-data state; fall back to DEFAULT.
+        return PiglinArmPose.Default;
+    }
+
+    private static bool IsInItemTag(string path, int itemId)
+    {
+        if (itemId < 0 || EntityModelResolver.Items?.ById(itemId) is not { } item)
+        {
+            return false;
+        }
+
+        return EntityModelResolver.ItemTags.IsInTag(new Identifier("minecraft", path), item.Id);
     }
 
     public void ApplyClip(IEntityAnimationState state, in EntityAnimationFrame frame, string clip, float seconds, EntityPose pose)
@@ -124,6 +156,8 @@ public sealed class PiglinAnimationProvider(int typeId) : IEntityAnimationProvid
         var lPos = Vector3.Zero;
         var headPos = Vector3.Zero;
         var bodyPos = Vector3.Zero;
+        var headXRot = frame.Pitch * DegreesToRadians;
+        var headYRot = frame.Yaw * DegreesToRadians;
 
         switch (armPose)
         {
@@ -153,12 +187,46 @@ public sealed class PiglinAnimationProvider(int typeId) : IEntityAnimationProvid
                 break;
             }
 
+            case PiglinArmPose.AdmiringItem:
+            {
+                // Head looks at the admired item; the non-main arm holds it up.
+                headXRot = 0.5f;
+                headYRot = 0f;
+                lY = 0.5f;
+                lX = -0.9f;
+                break;
+            }
+
+            case PiglinArmPose.AttackingWithMeleeWeapon:
+            {
+                var swing = frame.SwingAnimation;
+                if (swing <= 0f)
+                {
+                    // holdWeaponHigh: main arm raised (mainArm is right for all vanilla piglins).
+                    rX = -1.8f;
+                    break;
+                }
+
+                var attack2 = MathF.Sin(swing * MathF.PI);
+                var attack = MathF.Sin((1f - ((1f - swing) * (1f - swing))) * MathF.PI);
+                rY = MathF.PI / 20f;
+                lY = -MathF.PI / 20f;
+                rX = -1.8849558f + (MathF.Cos(age * 0.09f) * 0.15f) + (attack2 * 2.2f) - (attack * 0.4f);
+                lX = (MathF.Cos(age * 0.19f) * 0.5f) + (attack2 * 1.2f) - (attack * 0.4f);
+                // bobArms: right scale +1, left scale -1.
+                rZ += MathF.Cos(age * 0.09f) * 0.05f + 0.05f;
+                rX += MathF.Sin(age * 0.067f) * 0.05f;
+                lZ -= MathF.Cos(age * 0.09f) * 0.05f + 0.05f;
+                lX -= MathF.Sin(age * 0.067f) * 0.05f;
+                break;
+            }
+
             case PiglinArmPose.Default:
             default:
                 break;
         }
 
-        pose.Add("head", new PoseOffset(headPos, new Vector3(frame.Pitch * DegreesToRadians, frame.Yaw * DegreesToRadians, 0f), Vector3.Zero));
+        pose.Add("head", new PoseOffset(headPos, new Vector3(headXRot, headYRot, 0f), Vector3.Zero));
         pose.Add("left_ear", new PoseOffset(Vector3.Zero, new Vector3(0f, 0f, leftEarZ), Vector3.Zero));
         pose.Add("right_ear", new PoseOffset(Vector3.Zero, new Vector3(0f, 0f, rightEarZ), Vector3.Zero));
         pose.Add("body", new PoseOffset(bodyPos, Vector3.Zero, Vector3.Zero));

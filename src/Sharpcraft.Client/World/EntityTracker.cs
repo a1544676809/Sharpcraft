@@ -249,7 +249,8 @@ public readonly record struct EntityRenderState(
     int MainHandItemId = -1,
     int ArmPose = 0,
     bool IsUsingItem = false,
-    int TicksUsingItem = 0);
+    int TicksUsingItem = 0,
+    int OffHandItemId = -1);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -778,6 +779,7 @@ public sealed class EntityTracker
                 ArmPose: entity.Animation is IEntityArmPoseAnimationState armPose ? armPose.ArmPose : 0,
                 IsUsingItem: entity.Presentation.IsUsingItem,
                 TicksUsingItem: entity.Presentation.UseItemTicks,
+                OffHandItemId: entity.EquipmentItemAt(1),
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,

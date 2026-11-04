@@ -4,15 +4,18 @@
 using System.Numerics;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
+using Sharpcraft.Common.Identifiers;
+using Sharpcraft.Common.Registries;
 using Xunit;
 
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>
-/// Piglin animation ported from <c>PiglinModel.setupAnim</c>: base head/ears/walk limbs plus the derivable DANCING and
-/// CROSSBOW_CHARGE arm poses. Blocked poses (ADMIRING_ITEM / ATTACKING_WITH_MELEE_WEAPON / CROSSBOW_HOLD) fall back to
-/// DEFAULT.
+/// Piglin animation ported from <c>PiglinModel.setupAnim</c>: base head/ears/walk limbs plus DANCING, CROSSBOW_CHARGE,
+/// ADMIRING_ITEM (piglin_loved tag) and ATTACKING_WITH_MELEE_WEAPON (piglin_preferred_weapons tag). CROSSBOW_HOLD stays
+/// blocked on the charged item-data state.
 /// </summary>
+[Collection(NonParallelCollection.Name)]
 public sealed class PiglinAnimationTests
 {
     private const float ToRad = MathF.PI / 180f;
@@ -29,7 +32,8 @@ public sealed class PiglinAnimationTests
         bool hasMainHand = false,
         bool passenger = false,
         int ticksUsingItem = 0,
-        float partialTick = 0f) => new(
+        float partialTick = 0f,
+        int offHandItemId = -1) => new(
         TypeId: typeId,
         AgeInTicks: age,
         WalkAnimationPos: walkPos,
@@ -47,7 +51,8 @@ public sealed class PiglinAnimationTests
         MainHandItemId: mainHandItemId,
         HasMainHandItem: hasMainHand,
         IsPassenger: passenger,
-        TicksUsingItem: ticksUsingItem);
+        TicksUsingItem: ticksUsingItem,
+        OffHandItemId: offHandItemId);
 
     private static EntityPose Apply(PiglinAnimationProvider provider, IEntityAnimationState state, in EntityAnimationFrame frame)
     {
@@ -191,6 +196,41 @@ public sealed class PiglinAnimationTests
         pose.Clear();
         provider.ApplyClip(state, in frame, "default", 0f, pose);
         Assert.Equal(0f, pose.Get("right_arm").Rotation.Z, 5);
+    }
+
+    [Fact]
+    public void AdmiringAndMeleePosesComeFromItemTags()
+    {
+        var items = EntityModelResolver.Items!;
+        var gold = items.GetId(Identifier.Parse("minecraft:gold_ingot"));
+        var sword = items.GetId(Identifier.Parse("minecraft:golden_sword"));
+        Assert.True(gold >= 0);
+        Assert.True(sword >= 0);
+
+        var previous = EntityModelResolver.ItemTags;
+        EntityModelResolver.ItemTags = ItemTagRegistry.Parse(
+        [
+            (Identifier.Parse("minecraft:piglin_loved"), """{"values":["minecraft:gold_ingot"]}"""),
+            (Identifier.Parse("minecraft:piglin_preferred_weapons"), """{"values":["minecraft:golden_sword"]}""")
+        ]);
+
+        try
+        {
+            var provider = new PiglinAnimationProvider(PiglinModelDefinition.PiglinEntityTypeId);
+            var state = provider.CreateState();
+
+            var admiring = Apply(provider, state, Frame(PiglinModelDefinition.PiglinEntityTypeId, offHandItemId: gold));
+            Assert.Equal(0.5f, admiring.Get("head").Rotation.X, 5);
+            Assert.Equal(0.5f, admiring.Get("left_arm").Rotation.Y, 5);
+            Assert.Equal(-0.9f, admiring.Get("left_arm").Rotation.X, 5);
+
+            var melee = Apply(provider, state, Frame(PiglinModelDefinition.PiglinEntityTypeId, aggressive: true, mainHandItemId: sword, hasMainHand: true));
+            Assert.Equal(-1.8f, melee.Get("right_arm").Rotation.X, 5);
+        }
+        finally
+        {
+            EntityModelResolver.ItemTags = previous;
+        }
     }
 
     [Fact]

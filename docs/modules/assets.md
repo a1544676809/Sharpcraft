@@ -15,7 +15,7 @@
 负责：
 
 - 版本与来源校验：确认 jar 属于 26.3 基线（SHA-1 比对），不匹配时给出可操作报错。
-- **打包**：把白名单类别（模型、纹理含 `.mcmeta`、blockstates、items、字体、shaders）打进**单个 pack 容器**，跳过 `net/`、`data/`、`com/`、`META-INF/`（ADR-0005）。
+- **打包**：把白名单类别（模型、纹理含 `.mcmeta`、blockstates、items、字体、shaders）打进**单个 pack 容器**，并额外提取物品标签表 `data/minecraft/tags/item/**.json`（客户端解析 `piglin_loved` 等标签所需）；其余 `net/`、`data/`、`com/`、`META-INF/` 跳过（ADR-0005）。
 - **索引挂载**：音频等走官方资产索引的类别，直接只读挂载官方 `objects/`，**不复制、不转存**。
 - 资源解析：以 `IAssetSource` 统一两个来源，定义覆盖顺序（模组包 > 基础 pack > 官方 objects > 内置兜底）。
 - 产物清单：pack 内含 `manifest.json`（条目 → 源条目、长度、SHA-256、提取时间），pack 文件名带自身哈希。
@@ -88,7 +88,7 @@
 | 输出目录在仓库内 | 拒绝执行 |
 | `.mcmeta` 与 `.png` | 必须成对进入 pack，不得只取 `.png` |
 | 索引资产缺失 | **只警告不阻断**（ADR-0005 裁决 1）：打印缺失项、期望路径与索引 id 后继续运行 |
-| `net/`、`data/`、`com/`、`META-INF/` | 一律跳过，并在报告中记录跳过数量 |
+| `net/`、`data/`（除 `data/minecraft/tags/item/`）、`com/`、`META-INF/` | 一律跳过，并在报告中记录跳过数量；物品标签表是唯一例外 |
 
 ## 7. 测试策略（不依赖真实 jar）
 

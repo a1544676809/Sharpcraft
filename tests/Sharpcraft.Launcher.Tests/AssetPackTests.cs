@@ -28,6 +28,8 @@ public sealed class AssetPackTests
     [InlineData("assets/.mcassetsroot", false)]
     [InlineData("net/minecraft/client/Main.class", false)]
     [InlineData("data/minecraft/loot_tables/x.json", false)]
+    [InlineData("data/minecraft/tags/item/planks.json", true)]
+    [InlineData("data/minecraft/tags/block/mineable/pickaxe.json", false)]
     [InlineData("com/mojang/x.class", false)]
     [InlineData("META-INF/MANIFEST.MF", false)]
     [InlineData("version.json", false)]

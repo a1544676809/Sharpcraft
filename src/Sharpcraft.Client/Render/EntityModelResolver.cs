@@ -15,6 +15,9 @@ public static class EntityModelResolver
     /// <summary>Item identity table used by equipment layer selectors; defaults to the embedded baseline snapshot.</summary>
     public static ItemRegistry? Items { get; set; } = ItemRegistry.LoadEmbedded();
 
+    /// <summary>Item tag table loaded from the extracted pack; empty until the launcher installs it.</summary>
+    public static ItemTagRegistry ItemTags { get; set; } = ItemTagRegistry.Empty;
+
     /// <summary>Resolves a dynamic equipment texture for a render state slot, or null when the slot is empty/unsupported.</summary>
     public static string? ResolveEquipmentTexture(EntityRenderState state, EquipmentAssetKind kind, int slot, bool overlay = false)
     {

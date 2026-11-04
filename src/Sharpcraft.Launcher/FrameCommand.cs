@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using System.IO.Compression;
 using System.Numerics;
 using Sharpcraft.Auth;
 using Sharpcraft.Launcher.Accounts;
@@ -309,6 +310,8 @@ internal static class FrameCommand
     internal static Sharpcraft.Client.Assets.ResourceManager CreateResourceManager()
     {
         var (stack, count) = BuildStack();
+
+        InstallItemTags();
 
         if (count > 0)
         {
@@ -673,6 +676,44 @@ internal static class FrameCommand
                 .OrderByDescending(File.GetLastWriteTimeUtc)
                 .FirstOrDefault()
             : null;
+    }
+
+    /// <summary>
+    /// Loads the item tag table extracted into the asset pack and installs it on the render resolver. Best effort: no
+    /// pack or a malformed entry leaves the table empty (tag-dependent poses stay on their documented fallback).
+    /// </summary>
+    internal static void InstallItemTags()
+    {
+        var packPath = FindPack();
+        if (packPath is null)
+        {
+            EntityModelResolver.ItemTags = ItemTagRegistry.Empty;
+            return;
+        }
+
+        try
+        {
+            using var archive = ZipFile.OpenRead(packPath);
+            var sources = new List<(Identifier Tag, string Json)>();
+            foreach (var entry in archive.Entries)
+            {
+                if (!entry.FullName.StartsWith(AssetSelection.ItemTagsPrefix, StringComparison.Ordinal) ||
+                    !entry.FullName.EndsWith(".json", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var relative = entry.FullName[AssetSelection.ItemTagsPrefix.Length..^".json".Length];
+                using var reader = new StreamReader(entry.Open());
+                sources.Add((new Identifier("minecraft", relative), reader.ReadToEnd()));
+            }
+
+            EntityModelResolver.ItemTags = sources.Count == 0 ? ItemTagRegistry.Empty : ItemTagRegistry.Parse(sources);
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or System.Text.Json.JsonException)
+        {
+            EntityModelResolver.ItemTags = ItemTagRegistry.Empty;
+        }
     }
 
     /// <summary>
