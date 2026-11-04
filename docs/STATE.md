@@ -3409,3 +3409,14 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **pitch 钳制**：按参考 `Entity.setXRot` 在 add/move/teleport 处把 pitch 钳到 [-90,90]（此前只做有符号解码）。
 - **验证**：Client **1281**（+5 头部姿态）；构建 0 警告 0 错误。
 - **下一步具体动作（供选择）**：①合并 `fix/entity-orientation-matrix` → `feature/item-registry`（本轮的朝向/头/手/图集修复整体收口）；②按 T-419 文档继续把**其余 mob** 迁移到统一模型空间（去掉逐模型符号补偿）；③补 SPEAR/STAB；④补缺 provider 生物（Cat/Ocelot、ZombieVillager、Enderman、Slime、EnderDragon、Pufferfish、TropicalFish）；⑤baby 专属模型与装备层。
+
+## 2026-11-04 实体补全恢复（ZombieVillager 已完成，Cat/Ocelot 待做）
+
+- 已合并 `fix/entity-orientation-matrix` → `feature/item-registry`（merge `fafd832`）；当前在此分支。
+- **T-624 完成**：ZombieVillager(157) 复用 `HumanoidAnimationProvider`（与僵尸族同构），Client 1281 全绿。
+- **Cat(21)/Ocelot(92) 尚未做**，需要一个专用 `FelineAnimationProvider`，已核对要点（供下次直接实现）：
+  - `AdultFelineModel.setupAnim`：头 pitch/相对 yaw、走路四腿（sprint 有不同相位）、crouch/sprint 尾巴、sit（大量 y/z 偏移）、`lieDownAmount/lieDownAmountTail/relaxStateOneAmount`。
+  - 我们的 `CatModelDefinition` 把 head 拆成 `head_main/nose/ear1/ear2` 四个 part（同 pivot），需同时旋转；`body` bind rotationX=-π/2、`tail1` bind -0.9、`tail2` 0 —— 原版多为**绝对赋值**，PoseOffset 是增量，需 `delta = 赋值 − bind`（同 T-622 手臂教训）。
+  - `sit` 可派生（TamableAnimal flags bit0，type 21 已在 presentation 解码）；`lieDown/relax` 是 Cat 的**synced 数据**（`IS_LYING`/`RELAX_STATE_ONE`），需确认 metadata 索引；`sprint` 需解码 shared flag bit3。三者未接前 Cat 只做 walk/crouch/sit，`lie/relax/sprint` 标阻塞。
+  - Ocelot 的 render state 只有 isCrouching/isSprinting（无 sit/lie/relax），实现更容易。
+- **下一步具体动作**：实现 `FelineAnimationProvider`（先 Ocelot，后 Cat 的 sit；lie/relax/sprint 记录阻塞），注册 21/92，补测试。
