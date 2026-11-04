@@ -3193,6 +3193,12 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Common **479**（+1）、Client **1169**，构建 0 警告 0 错误。
 - **下一步具体动作**：剩余 `can_place_on`/`can_break`/`bees`/`profile`/`banner_patterns`?（banner done）及变体/颜色组件，或转 AI 依赖生物。
 
+### 2026-11-04 变体/颜色组件（T-605）
+
+- 新增 17 个 VarInt-id 组件：`base_color`、`wolf_collar`、`fox_variant`、`salmon_size`、`parrot_variant`、`tropical_fish_*`、`mooshroom_variant`、`rabbit_variant`、`horse_variant`、`llama_variant`、`axolotl_variant`、`cat_collar`、`sheep_color`、`shulker_color`、`cushion_color`。
+- 验证：Common **480**（+1）、Client **1169**，构建 0 警告 0 错误。
+- **下一步具体动作**：仅剩 `can_place_on`/`can_break`（BlockPredicate）、`bees`（Occupant）、`profile`（GameProfile）三个复杂组件；或转 AI 依赖生物。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

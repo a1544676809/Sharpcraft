@@ -94,6 +94,27 @@ internal static class ItemComponentPatchReader
     private static readonly int SignTextBack = DataComponentTypes.GetId("sign_text_back");
     private static readonly int BucketEntityData = DataComponentTypes.GetId("bucket_entity_data");
 
+    private static readonly int[] SimpleIdComponents =
+    [
+        DataComponentTypes.GetId("base_color"),
+        DataComponentTypes.GetId("wolf_collar"),
+        DataComponentTypes.GetId("fox_variant"),
+        DataComponentTypes.GetId("salmon_size"),
+        DataComponentTypes.GetId("parrot_variant"),
+        DataComponentTypes.GetId("tropical_fish_pattern"),
+        DataComponentTypes.GetId("tropical_fish_base_color"),
+        DataComponentTypes.GetId("tropical_fish_pattern_color"),
+        DataComponentTypes.GetId("mooshroom_variant"),
+        DataComponentTypes.GetId("rabbit_variant"),
+        DataComponentTypes.GetId("horse_variant"),
+        DataComponentTypes.GetId("llama_variant"),
+        DataComponentTypes.GetId("axolotl_variant"),
+        DataComponentTypes.GetId("cat_collar"),
+        DataComponentTypes.GetId("sheep_color"),
+        DataComponentTypes.GetId("shulker_color"),
+        DataComponentTypes.GetId("cushion_color")
+    ];
+
     /// <summary>Reads one patch; returns false only when the stream is malformed (truncated).</summary>
     public static bool TryRead(ref PayloadReader reader, out ItemComponentInfo info, out bool hasUnknown)
     {
@@ -505,6 +526,11 @@ internal static class ItemComponentPatchReader
         if (typeId == NoteBlockSound || typeId == Lock)
         {
             return reader.TryReadString(out _) == DecodeStatus.Success;
+        }
+
+        if (Array.IndexOf(SimpleIdComponents, typeId) >= 0)
+        {
+            return reader.TryReadVarInt(out _) == DecodeStatus.Success;
         }
 
         // Unknown positive component: no generic skip exists, so the caller must stop after this slot.
