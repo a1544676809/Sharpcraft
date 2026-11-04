@@ -37,14 +37,22 @@ public sealed class HumanoidAnimationProvider : IEntityAnimationProvider
         }
     }
 
-    private static void ApplyWalk(in EntityAnimationFrame frame, EntityPose pose)
+    /// <summary>
+    /// Applies the shared <c>HumanoidModel.setupAnim</c> walk pose. <paramref name="applyArms"/> lets callers that
+    /// overwrite the arms afterwards (for example <see cref="SkeletonAnimationProvider"/>'s aggressive melee branch)
+    /// skip the opposing arm swing.
+    /// </summary>
+    internal static void ApplyWalk(in EntityAnimationFrame frame, EntityPose pose, bool applyArms = true)
     {
         var headPitch = frame.Pitch * (MathF.PI / 180f);
         pose.Add("head", new PoseOffset(Vector3.Zero, new Vector3(headPitch, 0f, 0f), Vector3.Zero));
         var phase = frame.WalkAnimationPos * 0.6662f;
         var speed = frame.WalkAnimationSpeed;
-        pose.Add("right_arm", new PoseOffset(Vector3.Zero, new Vector3(MathF.Cos(phase + MathF.PI) * speed, 0f, 0f), Vector3.Zero));
-        pose.Add("left_arm", new PoseOffset(Vector3.Zero, new Vector3(MathF.Cos(phase) * speed, 0f, 0f), Vector3.Zero));
+        if (applyArms)
+        {
+            pose.Add("right_arm", new PoseOffset(Vector3.Zero, new Vector3(MathF.Cos(phase + MathF.PI) * speed, 0f, 0f), Vector3.Zero));
+            pose.Add("left_arm", new PoseOffset(Vector3.Zero, new Vector3(MathF.Cos(phase) * speed, 0f, 0f), Vector3.Zero));
+        }
         pose.Add("right_leg", new PoseOffset(Vector3.Zero, new Vector3(MathF.Cos(phase) * 1.4f * speed, 0f, 0f), Vector3.Zero));
         pose.Add("left_leg", new PoseOffset(Vector3.Zero, new Vector3(MathF.Cos(phase + MathF.PI) * 1.4f * speed, 0f, 0f), Vector3.Zero));
     }

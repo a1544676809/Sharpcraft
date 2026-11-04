@@ -3360,3 +3360,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **属性系统（T-617，已完成 2026-11-04）**：`update_attributes`(134) 全量快照 → `TrackedAttributeMap`；SCALE → EyeY/模型缩放；FLOAT entity data → health；`MaxHealth` → Wolf tame `tailAngle`。未知属性安全跳过。
 - **其它剩余**：Skeleton/Stray/Bogged/WitherSkeleton 可试复用 `HumanoidAnimationProvider`；Cat/Ocelot、ZombieVillager 需专用 provider；baby 专属模型；装备层（人形护甲/Elytra/Witch item/HappyGhast 绳/Wolf armor crackiness/TraderLlama carpet/ZombieNautilus coral/EquipmentClientInfo）；`ChunkMeshCacheTests` 并行偶发。
 - **关键文件**：`Common/Network/UpdateAttributesPackets.cs`、`Common/Registries/AttributeTypes.cs`、`Client/World/EntityTracker.cs`、`Client/World/EntityPresentationState.cs`、`Client/Render/EntityModelTransform.cs`；详见 `docs/modules/entity-presentation-state.md` P3。
+
+## 2026-11-04 实体补全：Skeleton 组（T-618，已完成）
+
+- **分支 / HEAD**：`feature/item-registry`（本段文档随后提交）。构建 0 警告 0 错误；Client **1263**（+6），Common 491、Architecture 31 未变。
+- **已完成**：新增 `SkeletonAnimationProvider`，Skeleton(118)/Stray(131)/Bogged(16)/WitherSkeleton(150) 复用 `HumanoidAnimationProvider` 的走/头/腿，并补 `SkeletonModel.setupAnim` 的 `isAggressive && !isHoldingBow` 近战抬臂分支（含 `AnimationUtils.bobArms`，bow id 由 `ItemRegistry` 解析）。Stray/Bogged 的服装 overlay 部件此前是独立顶层部件、不吃姿态，已补 `PoseSource` 跟随对应基础部件（回归测试覆盖）。
+- **诚实边界（未近似，记录为后续）**：base humanoid provider 仍只是 `HumanoidModel.setupAnim` 的走路子集，未实现 `setupAttackAnimation`、arm pose（含 BOW_AND_ARROW）、crouch/passenger/swim、head yaw 与 `bobModelPart`——这些是 Zombie/Drowned/Husk 与 Skeleton 组**共享的既有简化**，需要新增 frame 输入后才可能等效；不声称完整等效。Bogged `isSheared` 蘑菇可见性同样待补。
+- **下一步具体动作**：从剩余“缺动画 provider”中挑下一批——建议 `Cat`/`Ocelot`（专用 `head_main`）或 `ZombieVillager`（`animateZombieArms` + 村民腿）；`Enderman`/`Slime`/`EnderDragon`/`Pufferfish`/`TropicalFish` 仍无 provider。

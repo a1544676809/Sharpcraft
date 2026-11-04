@@ -121,6 +121,44 @@ public sealed class EntityAnimationTests
         Assert.Equal(22.5f * (MathF.PI / 180f), pose.Get("right_front_leg").Rotation.X, 4);
     }
     [Fact]
+    public void SkeletonAggressiveMeleeOverridesTheArmsOnlyWhileNotHoldingABow()
+    {
+        var neutral = new Sharpcraft.Client.World.EntityRenderState(1, HumanoidMobModelDefinition.SkeletonEntityTypeId, 0f, 0f, 0f, 0f, 0f)
+        {
+            WalkAnimationPos = 0f,
+            WalkAnimationSpeed = 1f,
+            IsAggressive = false
+        };
+        var neutralPose = new EntityPose();
+        ApplyAnimation(neutral, neutralPose);
+        Assert.Equal(-1f, neutralPose.Get("right_arm").Rotation.X, 4);
+        Assert.Equal(1f, neutralPose.Get("left_arm").Rotation.X, 4);
+
+        // Aggressive and not holding a bow: the arms are raised to the melee stance plus AnimationUtils.bobArms.
+        var aggressive = neutral with { IsAggressive = true, SwingAnimation = 0f, AgeInTicks = 0f };
+        var aggressivePose = new EntityPose();
+        ApplyAnimation(aggressive, aggressivePose);
+        Assert.Equal(-MathF.PI / 2f, aggressivePose.Get("right_arm").Rotation.X, 4);
+        Assert.Equal(-0.1f, aggressivePose.Get("right_arm").Rotation.Y, 4);
+        Assert.Equal(0.1f, aggressivePose.Get("right_arm").Rotation.Z, 4);
+        Assert.Equal(-MathF.PI / 2f, aggressivePose.Get("left_arm").Rotation.X, 4);
+        Assert.Equal(0.1f, aggressivePose.Get("left_arm").Rotation.Y, 4);
+        Assert.Equal(-0.1f, aggressivePose.Get("left_arm").Rotation.Z, 4);
+        // The legs keep the humanoid walk phases.
+        Assert.Equal(1.4f, aggressivePose.Get("right_leg").Rotation.X, 4);
+        Assert.Equal(-1.4f, aggressivePose.Get("left_leg").Rotation.X, 4);
+
+        // Holding a bow suppresses the melee branch, so the arms fall back to the walk swing.
+        if (SkeletonAnimationProvider.BowItemId > 0)
+        {
+            var bowPose = new EntityPose();
+            ApplyAnimation(aggressive with { MainHandItemId = SkeletonAnimationProvider.BowItemId }, bowPose);
+            Assert.Equal(-1f, bowPose.Get("right_arm").Rotation.X, 4);
+            Assert.Equal(1f, bowPose.Get("left_arm").Rotation.X, 4);
+        }
+    }
+
+    [Fact]
     public void HumanoidAndVillagerWalkPosesFollowTheReferencePhases()
     {
         var zombie = new Sharpcraft.Client.World.EntityRenderState(1, 154, 0f, 0f, 0f, 0f, 0f)

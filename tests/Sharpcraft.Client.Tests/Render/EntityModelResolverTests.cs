@@ -27,6 +27,21 @@ public sealed class EntityModelResolverTests
     }
 
     [Fact]
+    public void SkeletonClothingOverlaysFollowTheirBasePartPose()
+    {
+        foreach (var typeId in new[] { HumanoidMobModelDefinition.StrayEntityTypeId, HumanoidMobModelDefinition.BoggedEntityTypeId })
+        {
+            var parts = EntityModelResolver.Resolve(typeId).Parts;
+            Assert.Equal("head", parts.Single(part => part.Name == "outer_head").PoseSource);
+            Assert.Equal("body", parts.Single(part => part.Name == "outer_body").PoseSource);
+            Assert.Equal("left_arm", parts.Single(part => part.Name == "outer_left_arm").PoseSource);
+            Assert.Equal("right_arm", parts.Single(part => part.Name == "outer_right_arm").PoseSource);
+            Assert.Equal("left_leg", parts.Single(part => part.Name == "outer_left_leg").PoseSource);
+            Assert.Equal("right_leg", parts.Single(part => part.Name == "outer_right_leg").PoseSource);
+        }
+    }
+
+    [Fact]
     public void TheSkeletonTypeResolvesToTheHumanoidSkeletonDefinition()
     {
         var definition = EntityModelResolver.Resolve(HumanoidMobModelDefinition.SkeletonEntityTypeId);

@@ -92,19 +92,21 @@ public static class HumanoidMobModelDefinition
     {
         var parts = new List<EntityModelPart>(Skeleton.Parts)
         {
+            // The clothing layer is baked as separate top-level parts, so each one declares the base part whose pose
+            // it follows; otherwise the overlay would stay in bind pose while the body animates.
             PlayerModelDefinition.FromVanilla("outer_head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0,
                 grow: grow, texturePath: overlayPath,
-                overlays: [new("outer_hat", 0.5f, 32, 0, false, overlayPath)]),
+                overlays: [new("outer_hat", 0.5f, 32, 0, false, overlayPath)]) with { PoseSource = "head" },
             PlayerModelDefinition.FromVanilla("outer_body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16,
-                grow: grow, texturePath: overlayPath),
+                grow: grow, texturePath: overlayPath) with { PoseSource = "body" },
             PlayerModelDefinition.FromVanilla("outer_left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 40, 16,
-                mirror: true, grow: grow, texturePath: overlayPath),
+                mirror: true, grow: grow, texturePath: overlayPath) with { PoseSource = "left_arm" },
             PlayerModelDefinition.FromVanilla("outer_right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16,
-                grow: grow, texturePath: overlayPath),
+                grow: grow, texturePath: overlayPath) with { PoseSource = "right_arm" },
             PlayerModelDefinition.FromVanilla("outer_left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16,
-                mirror: true, grow: grow, texturePath: overlayPath),
+                mirror: true, grow: grow, texturePath: overlayPath) with { PoseSource = "left_leg" },
             PlayerModelDefinition.FromVanilla("outer_right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16,
-                grow: grow, texturePath: overlayPath)
+                grow: grow, texturePath: overlayPath) with { PoseSource = "right_leg" }
         };
         return new EntityModelDefinition(name, 64, 32, parts, PlayerModelDefinition.DefaultFaceTransforms, texturePath);
     }

@@ -26,6 +26,10 @@ public sealed class EntityAnimationProviderTests
         HumanoidMobModelDefinition.ZombieEntityTypeId,
         HumanoidMobModelDefinition.DrownedEntityTypeId,
         HumanoidMobModelDefinition.HuskEntityTypeId,
+        HumanoidMobModelDefinition.SkeletonEntityTypeId,
+        HumanoidMobModelDefinition.StrayEntityTypeId,
+        HumanoidMobModelDefinition.BoggedEntityTypeId,
+        HumanoidMobModelDefinition.WitherSkeletonEntityTypeId,
         VillagerModelDefinition.VillagerEntityTypeId,
         ChickenModelDefinition.ChickenEntityTypeId,
         SquidModelDefinition.SquidEntityTypeId,
@@ -136,6 +140,10 @@ public sealed class EntityAnimationProviderTests
     [InlineData(PigModelDefinition.PigEntityTypeId)]
     [InlineData(HorseModelDefinition.HorseEntityTypeId)]
     [InlineData(HumanoidMobModelDefinition.ZombieEntityTypeId)]
+    [InlineData(HumanoidMobModelDefinition.SkeletonEntityTypeId)]
+    [InlineData(HumanoidMobModelDefinition.StrayEntityTypeId)]
+    [InlineData(HumanoidMobModelDefinition.BoggedEntityTypeId)]
+    [InlineData(HumanoidMobModelDefinition.WitherSkeletonEntityTypeId)]
     [InlineData(VillagerModelDefinition.VillagerEntityTypeId)]
     [InlineData(ChickenModelDefinition.ChickenEntityTypeId)]
     [InlineData(SquidModelDefinition.SquidEntityTypeId)]
