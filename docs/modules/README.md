@@ -27,7 +27,7 @@
 | [`common-primitives.md`](common-primitives.md) | 提供全项目最底层、无副作用、无 IO 的值类型与容器。 | 已评审 | 2026-10-28 |
 | [`doc-indexer.md`](doc-indexer.md) | 从文档与源码目录生成目录索引，并在 CI 检查索引与模块覆盖 | 已评审 | 2026-10-29 |
 | [`entities.md`](entities.md) | 玩家不是特例，而是实体系统的一个成员。 | 已评审 | 2026-10-29 |
-| [`entity-ai-presentation.md`](entity-ai-presentation.md) | AI 依赖动画所需的客户端只读派生字段、来源与分批 | 待评审 | - |
+| [`entity-ai-presentation.md`](entity-ai-presentation.md) | AI 依赖动画所需的客户端只读派生字段、来源与分批 | 已评审 | - |
 | [`entity-animation.md`](entity-animation.md) | 在静态 bind pose 模型之上，按实体状态每帧计算部件的位置/旋转/缩放覆盖，供实体网格与装备层共同使用。 | 已评审 | 2026-11-03 |
 | [`entity-equipment.md`](entity-equipment.md) | 把 set_equipment 的装备槽状态转成实体渲染状态，并为鞍、马甲、装饰、挽具、狼甲等提供独立的装备渲染层；手持物品模型渲染后置。 | 已评审 | 2026-11-04 |
 | [`entity-presentation-state.md`](entity-presentation-state.md) | 在客户端每 tick 由同步数据与本地可确定信息派生渲染所需的实体表现状态（非权威），为动画/表现提供类似原版 extractRenderState 的输入。 | 已评审 | 2026-11-04 |
