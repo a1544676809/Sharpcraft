@@ -137,6 +137,12 @@ public sealed class EntityPresentationState
     /// <summary>Panda lying-on-back flag (Panda flags bit 16).</summary>
     public bool IsOnBack { get; internal set; }
 
+    /// <summary>Parrot party flag (jukebox song playing nearby).</summary>
+    public bool IsPartyParrot { get; internal set; }
+
+    /// <summary>Jukebox block position that last started the party, or long.MinValue when none.</summary>
+    public long PartyJukebox { get; internal set; } = long.MinValue;
+
     /// <summary>Polar bear standing flag (synced boolean).</summary>
     public bool IsStanding { get; internal set; }
 }

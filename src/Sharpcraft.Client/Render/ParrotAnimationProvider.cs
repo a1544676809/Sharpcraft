@@ -26,13 +26,13 @@ namespace Sharpcraft.Client.Render;
 /// <see cref="StriderAnimationProvider"/>. The head rotation is the render-state pitch/yaw in radians.
 /// </para>
 /// <para>
-/// Blocked pose: PARTY cannot be selected because the jukebox party state is not carried by the frame. SITTING is
-/// selected from the synced TamableAnimal sitting flag. PARTY is intentionally not faked.
+/// Blocked pose: none — PARTY is selected from <see cref="EntityAnimationFrame.IsPartyParrot"/>, which the tracker derives from
+/// jukebox level events 1010/1011. SITTING comes from the synced TamableAnimal sitting flag.
 /// </para>
 /// </remarks>
 public sealed class ParrotAnimationProvider(int typeId) : IEntityAnimationProvider
 {
-    private static readonly string[] NominalClips = ["flying", "standing", "on_shoulder", "sitting"];
+    private static readonly string[] NominalClips = ["flying", "standing", "on_shoulder", "sitting", "party"];
 
     private const float DegreesToRadians = MathF.PI / 180f;
 
@@ -67,12 +67,20 @@ public sealed class ParrotAnimationProvider(int typeId) : IEntityAnimationProvid
             case "sitting":
                 ApplyPose(ParrotPose.Sitting, frame with { WalkAnimationSpeed = 0f }, pose);
                 break;
+            case "party":
+                ApplyPose(ParrotPose.Party, frame with { WalkAnimationSpeed = 0f }, pose);
+                break;
         }
     }
 
     /// <summary>Reference <c>ParrotModel.getPose</c> restricted to the poses the generic frame can select.</summary>
     private static ParrotPose SelectPose(in EntityAnimationFrame frame)
     {
+        if (frame.IsPartyParrot)
+        {
+            return ParrotPose.Party;
+        }
+
         if (frame.IsPassenger)
         {
             return ParrotPose.OnShoulder;
@@ -88,6 +96,22 @@ public sealed class ParrotAnimationProvider(int typeId) : IEntityAnimationProvid
 
     private static void ApplyPose(ParrotPose poseKind, in EntityAnimationFrame frame, EntityPose pose)
     {
+        if (poseKind == ParrotPose.Party)
+        {
+            // Reference PARTY: head/body/tail/wings oscillate on x by cos(age), y by sin(age); head zRot sin(age)*0.4;
+            // wings keep the flap roll; legs zRot ∓π/9. y is y-down in the reference, negated for y-up storage.
+            var xPos = MathF.Cos(frame.AgeInTicks);
+            var yPos = -MathF.Sin(frame.AgeInTicks);
+            pose.Add("head", new PoseOffset(new Vector3(xPos, yPos, 0f), new Vector3(0f, 0f, MathF.Sin(frame.AgeInTicks) * 0.4f), Vector3.Zero));
+            pose.Add("body", new PoseOffset(new Vector3(xPos, yPos, 0f), Vector3.Zero, Vector3.Zero));
+            pose.Add("tail", new PoseOffset(new Vector3(xPos, yPos, 0f), Vector3.Zero, Vector3.Zero));
+            pose.Add("left_wing", new PoseOffset(new Vector3(xPos, yPos, 0f), new Vector3(0f, 0f, -WingRollBase - ((MathF.Sin(frame.Flap) + 1f) * frame.FlapSpeed)), Vector3.Zero));
+            pose.Add("right_wing", new PoseOffset(new Vector3(xPos, yPos, 0f), new Vector3(0f, 0f, WingRollBase + ((MathF.Sin(frame.Flap) + 1f) * frame.FlapSpeed)), Vector3.Zero));
+            pose.Add("left_leg", new PoseOffset(Vector3.Zero, new Vector3(0f, 0f, -MathF.PI / 9f), Vector3.Zero));
+            pose.Add("right_leg", new PoseOffset(Vector3.Zero, new Vector3(0f, 0f, MathF.PI / 9f), Vector3.Zero));
+            return;
+        }
+
         if (poseKind == ParrotPose.Sitting)
         {
             // Reference prepare(SITTING): head/tail/body/wings y += 1.9, tail xRot += π/6, wing zRot ±0.0873; then the
@@ -144,13 +168,14 @@ public sealed class ParrotAnimationProvider(int typeId) : IEntityAnimationProvid
         pose.Add("right_leg", new PoseOffset(new Vector3(0f, bobY, 0f), new Vector3(rightLegXRot, 0f, 0f), Vector3.Zero));
     }
 
-    /// <summary>The four poses selectable from <see cref="EntityAnimationFrame"/> (PARTY still not selectable).</summary>
+    /// <summary>The poses selectable from <see cref="EntityAnimationFrame"/>.</summary>
     private enum ParrotPose
     {
         Flying,
         Standing,
         OnShoulder,
-        Sitting
+        Sitting,
+        Party
     }
 
     private sealed class State : IEntityAnimationState

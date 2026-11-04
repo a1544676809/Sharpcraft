@@ -278,7 +278,8 @@ public readonly record struct EntityRenderState(
     bool IsOnBack = false,
     float SitAmount = 0f,
     float LieOnBackAmount = 0f,
-    float RollAmount = 0f);
+    float RollAmount = 0f,
+    bool IsPartyParrot = false);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -546,6 +547,36 @@ public sealed class EntityTracker
         return true;
     }
 
+    /// <summary>Applies a jukebox level event (1010 start / 1011 stop) to nearby parrots.</summary>
+    public bool ApplyLevelEvent(int type, long packedPosition, int data)
+    {
+        if (type is not (1010 or 1011))
+        {
+            return false;
+        }
+
+        var (bx, by, bz) = BlockPositionCodec.UnpackBlockPosition(packedPosition);
+        var play = type == 1010;
+        foreach (var entity in _entities.Values)
+        {
+            if (entity.TypeId != 99)
+            {
+                continue;
+            }
+
+            // Reference AABB(blockPos).inflate(3.0) around the block, then the per-tick 3.46 center check.
+            if (entity.X >= bx - 3 && entity.X <= bx + 4 &&
+                entity.Y >= by - 3 && entity.Y <= by + 4 &&
+                entity.Z >= bz - 3 && entity.Z <= bz + 4)
+            {
+                entity.Presentation.IsPartyParrot = play;
+                entity.Presentation.PartyJukebox = play ? packedPosition : long.MinValue;
+            }
+        }
+
+        return true;
+    }
+
     /// <summary>Applies a <c>swing_animation</c> packet (clientbound 123) to the entity's arm-swing clock.</summary>
     public bool ApplySwingAnimation(int id, int hand, int animationType, int durationTicks)
     {
@@ -734,6 +765,19 @@ public sealed class EntityTracker
             entity.Presentation.RabbitHop?.Tick();
             entity.Presentation.PolarStand?.Tick(entity.Presentation.IsStanding);
             entity.Presentation.PandaPose?.Tick(entity.Presentation.IsSitting, entity.Presentation.IsOnBack, entity.Presentation.IsRolling);
+            if (entity.TypeId == 99 && entity.Presentation.IsPartyParrot && entity.Presentation.PartyJukebox != long.MinValue)
+            {
+                var (bx, by, bz) = BlockPositionCodec.UnpackBlockPosition(entity.Presentation.PartyJukebox);
+                var jx = entity.X - (bx + 0.5);
+                var jy = entity.Y - (by + 0.5);
+                var jz = entity.Z - (bz + 0.5);
+                if ((jx * jx) + (jy * jy) + (jz * jz) > 3.46 * 3.46)
+                {
+                    entity.Presentation.IsPartyParrot = false;
+                    entity.Presentation.PartyJukebox = long.MinValue;
+                }
+            }
+
             entity.Presentation.Swing.Tick();
             if (entity.Presentation.IsUsingItem)
             {
@@ -851,6 +895,7 @@ public sealed class EntityTracker
                 SitAmount: entity.Presentation.PandaPose?.SitAmount(t) ?? 0f,
                 LieOnBackAmount: entity.Presentation.PandaPose?.LieOnBackAmount(t) ?? 0f,
                 RollAmount: entity.Presentation.PandaPose?.RollAmount(t) ?? 0f,
+                IsPartyParrot: entity.Presentation.IsPartyParrot,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,

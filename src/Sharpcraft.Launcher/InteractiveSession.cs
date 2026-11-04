@@ -1478,6 +1478,15 @@ internal sealed class InteractiveSession
                         break;
                     }
 
+                // Jukebox level events drive parrot party state.
+                case PacketIds.PlayClientbound.LevelEvent:
+                    if (LevelEventPackets.TryRead(body, out var levelEventType, out var levelEventPos, out var levelEventData, out _) == DecodeStatus.Success)
+                    {
+                        _entities.ApplyLevelEvent(levelEventType, levelEventPos, levelEventData);
+                    }
+
+                    break;
+
                 // Arm-swing animation: drives the presentation layer's swing clock for armed mobs.
                 case PacketIds.PlayClientbound.SwingAnimation:
                     if (SwingAnimationPackets.TryRead(body, out var swingEntityId, out var swingHand, out var swingType, out var swingDuration) == DecodeStatus.Success)

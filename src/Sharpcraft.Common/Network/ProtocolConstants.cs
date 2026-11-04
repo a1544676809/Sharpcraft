@@ -223,6 +223,10 @@ public static class PacketIds
         /// <remarks>Reference registration dump: play clientbound 123.</remarks>
         public const int SwingAnimation = 123;
 
+        /// <summary>Level event: int event type, packed block position, int data, boolean global.</summary>
+        /// <remarks>Reference registration dump: play clientbound 47.</remarks>
+        public const int LevelEvent = 47;
+
         /// <summary>Absolute player position: a teleport or a server correction.</summary>
         public const int PlayerPosition = 73;
 

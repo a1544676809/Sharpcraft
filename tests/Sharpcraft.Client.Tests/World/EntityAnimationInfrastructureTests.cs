@@ -451,6 +451,19 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.Equal(0.375f, state.SitAmount, 5);
     }
 
+    [Fact]
+    public void JukeboxLevelEventStartsParrotParty()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(26, typeId: ParrotModelDefinition.ParrotEntityTypeId));
+
+        Assert.True(tracker.ApplyLevelEvent(1010, Sharpcraft.Common.Network.BlockPositionCodec.PackBlockPosition(0, 0, 0), 0));
+        Assert.True(tracker.Interpolate(0f)[0].IsPartyParrot);
+
+        Assert.True(tracker.ApplyLevelEvent(1011, Sharpcraft.Common.Network.BlockPositionCodec.PackBlockPosition(0, 0, 0), 0));
+        Assert.False(tracker.Interpolate(0f)[0].IsPartyParrot);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 

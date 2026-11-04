@@ -3276,6 +3276,13 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 以上均已在 `docs/modules/entity-ai-presentation.md` 记录，未近似。Wither 侧头同理。
 - **下一步具体动作**：B 轮可收口；剩余需新增数据源（level event/jukebox、thunder/gene、实体 RNG/leash）。
 
+### 2026-11-04 level event/jukebox 基础设施 + Parrot PARTY（T-610）
+
+- 新增 `LevelEventPackets`（clientbound 47：int type、packed BlockPos、int data、bool global），`InteractiveSession` 分发到 `EntityTracker.ApplyLevelEvent`。
+- **Parrot party 解阻塞**：1010/1011 对 AABB inflate 3 内的 parrot 设置 `IsPartyParrot`；tick 按 3.46 中心距清除；帧新增 `IsPartyParrot`；provider 新增 PARTY pose（cos/sin 摆动 + leg zRot ∓π/9）。
+- 验证：Common **484**（+2）、Client **1245**（+2），构建 0 警告 0 错误。
+- **下一步具体动作**：Panda scared（thunder/gene）与 Rabbit idle（实体 RNG/leash）仍需新数据源；或收口 B 轮。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

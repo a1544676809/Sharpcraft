@@ -27,7 +27,8 @@ public sealed class ParrotAnimationTests
         float age = 0f,
         bool onGround = true,
         bool passenger = false,
-        bool sitting = false) => new(
+        bool sitting = false,
+        bool party = false) => new(
         TypeId: ParrotModelDefinition.ParrotEntityTypeId,
         AgeInTicks: age,
         WalkAnimationPos: walkPos,
@@ -42,7 +43,8 @@ public sealed class ParrotAnimationTests
         IsHidingInShell: false,
         IsOnGround: onGround,
         IsPassenger: passenger,
-        IsSitting: sitting);
+        IsSitting: sitting,
+        IsPartyParrot: party);
 
     private static EntityPose Apply(in EntityAnimationFrame frame)
     {
@@ -60,12 +62,25 @@ public sealed class ParrotAnimationTests
     }
 
     [Fact]
-    public void ProviderAdvertisesTheFourClipsAndTypeId()
+    public void ProviderAdvertisesTheFiveClipsAndTypeId()
     {
         var provider = new ParrotAnimationProvider(ParrotModelDefinition.ParrotEntityTypeId);
         Assert.Equal(ParrotModelDefinition.ParrotEntityTypeId, provider.TypeId);
-        Assert.Equal(new[] { "flying", "standing", "on_shoulder", "sitting" }, provider.Clips);
+        Assert.Equal(new[] { "flying", "standing", "on_shoulder", "sitting", "party" }, provider.Clips);
         Assert.NotNull(provider.CreateState());
+    }
+
+    [Fact]
+    public void PartyPoseOscillatesAndSplaysTheLegs()
+    {
+        var pose = Apply(Frame(age: 0f, party: true));
+
+        // age 0: cos=1, sin=0 -> head/body tuck x+1, head zRot 0; legs zRot ∓π/9.
+        Assert.Equal(1f, pose.Get("head").Position.X, 5);
+        Assert.Equal(0f, pose.Get("head").Position.Y, 5);
+        Assert.Equal(0f, pose.Get("head").Rotation.Z, 5);
+        Assert.Equal(-MathF.PI / 9f, pose.Get("left_leg").Rotation.Z, 5);
+        Assert.Equal(MathF.PI / 9f, pose.Get("right_leg").Rotation.Z, 5);
     }
 
     [Fact]
