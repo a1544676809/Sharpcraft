@@ -422,7 +422,7 @@ public sealed class EntityTracker
         entity.Y = added.Y;
         entity.Z = added.Z;
         entity.Yaw = added.Yaw;
-        entity.Pitch = added.Pitch;
+        entity.Pitch = ClampPitch(added.Pitch);
         entity.HeadYaw = added.HeadYaw;
         entity.TargetX = added.X;
         entity.TargetY = added.Y;
@@ -471,7 +471,7 @@ public sealed class EntityTracker
         if (move.HasRotation)
         {
             entity.TargetYaw = move.Yaw;
-            entity.TargetPitch = move.Pitch;
+            entity.TargetPitch = ClampPitch(move.Pitch);
         }
 
         entity.OnGround = move.OnGround;
@@ -497,7 +497,7 @@ public sealed class EntityTracker
         entity.TargetY = Relative(teleport.Relatives, 1) ? entity.TargetY + teleport.Y : teleport.Y;
         entity.TargetZ = Relative(teleport.Relatives, 2) ? entity.TargetZ + teleport.Z : teleport.Z;
         entity.TargetYaw = Wrap360(Relative(teleport.Relatives, 3) ? entity.TargetYaw + teleport.Yaw : teleport.Yaw);
-        entity.TargetPitch = Relative(teleport.Relatives, 4) ? entity.TargetPitch + teleport.Pitch : teleport.Pitch;
+        entity.TargetPitch = ClampPitch(Relative(teleport.Relatives, 4) ? entity.TargetPitch + teleport.Pitch : teleport.Pitch);
         entity.LerpSteps = InterpolationSteps;
 
         entity.VelocityX = teleport.VelocityX;
@@ -1285,6 +1285,9 @@ public sealed class EntityTracker
         var rgb = DyeRgb[Math.Clamp(dyeId, 0, 15)];
         return new System.Numerics.Vector3(((rgb >> 16) & 0xFF) / 255f, ((rgb >> 8) & 0xFF) / 255f, (rgb & 0xFF) / 255f);
     }
+
+    /// <summary>Reference <c>Entity.setXRot</c> clamps pitch to [-90, 90].</summary>
+    private static float ClampPitch(float pitch) => Math.Clamp(pitch, -90f, 90f);
 
     /// <summary>Normalises an angle into [0, 360).</summary>
     private static float Wrap360(float degrees)
