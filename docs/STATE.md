@@ -3000,3 +3000,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **Allay（2）**：provider State 经 `IEntitySyncedDataAnimationState` 取 `DATA_DANCING`(index17 boolean)，`IEntityTickAnimationState` 派生 holding/dancing/spinning 计数，`Apply` 复刻 `AllayModel.setupAnim`（翅膀 flap、身体 flying 倾斜、root bob、手臂 idle/holding）。热路径。
 - 注册 2 并纳入零分配测试。Client **963**（Allay 10 / Parrot SITTING 1 新增）绿（`EntityModelRegistrationTests`/分配测试 并行 flaky 重跑通过）。
 - **下一步具体动作**：①Guardian 需 `spikesAnimation/tailAnimation` 与 lookAt/attack 目标派生（客户端），可评估；②Illager/Piglin 仍需 armPose/crossbow/swing（客户端 AI）；③继续 backlog。
+
+### 2026-11-04 动画批次 8：Guardian / Elder Guardian（T-581）
+
+- `EntityAnimationTickContext` 增加 `IsInWater`（供需要入水判定的 ticking 派生）。
+- **Guardian（64）/ Elder Guardian（41）**：provider State 复刻 `Guardian.aiStep` 的客户端 `clientSideTailAnimation`/`clientSideSpikesAnimation` 随机时钟（isMoving=HorizontalDistance，入水用 ctx），`Apply` 复刻 head look、12 个 spike 位置偏移（y-up 取反）、tail0/1/2 yRot。热路径、零分配。
+- **eye look 阻塞**：依赖 lookAtPosition/lookDirection/eyePosition（相机/目标），未近似；eye 保持 bind。
+- 注册 64/41 并纳入分配测试。Client **976**（Guardian 11 新增）绿。
+- **下一步具体动作**：①Illager/Piglin 需 armPose/crossbow/swing（客户端 AI），代价较大，建议单列 ADR/排期；②其余 backlog（Shulker/Wither 等）逐项评估；③保持 STATE/traceability 同步。

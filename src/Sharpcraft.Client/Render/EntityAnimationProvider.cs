@@ -114,5 +114,7 @@ public static class EntityAnimationRegistry
         new TadpoleAnimationProvider(TadpoleModelDefinition.TadpoleEntityTypeId),
         new GhastAnimationProvider(GhastModelDefinition.GhastEntityTypeId),
         new AllayAnimationProvider(AllayModelDefinition.AllayEntityTypeId),
+        new GuardianAnimationProvider(GuardianModelDefinition.GuardianEntityTypeId),
+        new GuardianAnimationProvider(GuardianModelDefinition.ElderGuardianEntityTypeId),
     ];
 }

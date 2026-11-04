@@ -665,7 +665,7 @@ public sealed class EntityTracker
 
             if (entity.Animation is IEntityTickAnimationState tickState)
             {
-                tickState.OnTick(new EntityAnimationTickContext((int)GameTime, distance));
+                tickState.OnTick(new EntityAnimationTickContext((int)GameTime, distance, entity.Presentation.IsInWater));
             }
         }
     }

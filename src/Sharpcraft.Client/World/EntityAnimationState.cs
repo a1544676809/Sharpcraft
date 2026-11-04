@@ -78,7 +78,8 @@ public interface IEntityAnimationState
 /// <summary>Per-tick context delivered to animation states that need to advance their own clocks.</summary>
 /// <param name="GameTime">Client game time in ticks, the same clock the frame's age uses.</param>
 /// <param name="HorizontalDistance">Horizontal distance moved during the tick (blocks).</param>
-public readonly record struct EntityAnimationTickContext(int GameTime, float HorizontalDistance);
+/// <param name="IsInWater">Whether the entity's feet block is water this tick.</param>
+public readonly record struct EntityAnimationTickContext(int GameTime, float HorizontalDistance, bool IsInWater = false);
 
 /// <summary>
 /// Optional capability for states whose clips are triggered by a server <c>entity_event</c> packet. The tracker calls
