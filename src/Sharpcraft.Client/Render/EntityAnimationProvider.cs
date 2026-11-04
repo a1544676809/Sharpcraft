@@ -123,5 +123,8 @@ public static class EntityAnimationRegistry
         new PhantomAnimationProvider(PhantomModelDefinition.PhantomEntityTypeId),
         new CodAnimationProvider(CodModelDefinition.CodEntityTypeId),
         new SalmonAnimationProvider(SalmonModelDefinition.SalmonEntityTypeId),
+        new SnowGolemAnimationProvider(SnowGolemModelDefinition.SnowGolemEntityTypeId),
+        new HappyGhastAnimationProvider(HappyGhastModelDefinition.HappyGhastEntityTypeId),
+        new IronGolemAnimationProvider(IronGolemModelDefinition.IronGolemEntityTypeId),
     ];
 }

@@ -3023,3 +3023,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **Cod（27）/ Salmon（113）**：`IsInWater` 决定振幅/角度，尾鳍 / body_back 正弦摆动。
 - 注册 100/27/113 并纳入零分配测试。Client **1033**（Phantom 9 / Cod 8 / Salmon 9 新增）绿；Architecture 31。
 - **下一步具体动作**：①继续可派生 backlog（Shulker 需 peek/attach、Turtle 需 isOnLand/isLayingEgg、Slime/MagmaCube 需 squish/size 派生）；②Illager/Piglin armPose 单列 ADR；③保持文档/STATE 同步。
+
+### 2026-11-04 动画批次 11：Snow Golem / Happy Ghast / Iron Golem（T-584）
+
+- **SnowGolem（124）**：纯 head/upperBody/arm 跟随（含镜像存储与 bind delta 处理）。
+- **HappyGhast（59）**：九触手 age 摆动；bodyItem 缩放分支缺字段 → 阻塞、未近似。
+- **IronGolem（71）**：复刻 setupAnim + 事件计数（attack 4→10、offer flower 11→400 / 34→0，每 tick 递减）+ PartialTick。
+- 注册 124/59/71 并纳入零分配测试。Client **1062**（SnowGolem 8 / HappyGhast 6 / IronGolem 14 新增）绿；Architecture 31。
+- **下一步具体动作**：①继续 backlog；②说明：Shulker attach-face / Slime squish 属渲染变换（非模型动画），应另做渲染 transform；Turtle 需 AI 状态；③Illager/Piglin armPose 单列 ADR。
