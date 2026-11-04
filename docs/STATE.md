@@ -3005,6 +3005,6 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - `EntityAnimationTickContext` 增加 `IsInWater`（供需要入水判定的 ticking 派生）。
 - **Guardian（64）/ Elder Guardian（41）**：provider State 复刻 `Guardian.aiStep` 的客户端 `clientSideTailAnimation`/`clientSideSpikesAnimation` 随机时钟（isMoving=HorizontalDistance，入水用 ctx），`Apply` 复刻 head look、12 个 spike 位置偏移（y-up 取反）、tail0/1/2 yRot。热路径、零分配。
-- **eye look 阻塞**：依赖 lookAtPosition/lookDirection/eyePosition（相机/目标），未近似；eye 保持 bind。
+- **eye look 阻塞**：依赖 lookAtPosition/lookDirection/eyePosition（相机/目标），未近似；eye 保持 bind。**所有者 2026-11-04 决定延后**，与"通用 look-at/相机派生"一起做（需新增 `EyePosition`/`LookTargetPosition`/`LookDirection` 字段、解析 Guardian `DATA_ID_ATTACK_TARGET`、注入玩家眼位并做 partialTick 插值）。
 - 注册 64/41 并纳入分配测试。Client **976**（Guardian 11 新增）绿。
 - **下一步具体动作**：①Illager/Piglin 需 armPose/crossbow/swing（客户端 AI），代价较大，建议单列 ADR/排期；②其余 backlog（Shulker/Wither 等）逐项评估；③保持 STATE/traceability 同步。
