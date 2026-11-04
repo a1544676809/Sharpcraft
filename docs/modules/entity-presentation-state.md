@@ -82,6 +82,7 @@
   - `SCALE` 写入 `EntityPresentationState.Scale`，`TrackedEntity.EyeY` 与 `EntityModelTransform` 使用 Scale；`MaxHealth` 可查询。
   - `EntityDataPackets` 已支持 FLOAT(serializer 3)，`LivingEntity` health(index 9) 进入 presentation；Wolf provider 用 health/max_health 计算 tame `tailAngle`。
   - 未知属性 id 安全跳过；属性整表随 `update_attributes` 替换。剩余仅装饰性 `shakeOffWater`/`headRollAngle`（Wolf）仍按帧缺字段记录。
+- **P4 humanoid 全链路输入（已实现 2026-11-04，T-619）**：新增 `SwimAmount`/`SwimAmountO`（`updateSwimAmount` 每 tick ±0.09）与 `IsFallFlying`（entity shared flags index 0 bit7）、`UseItemHand`（living flags bit1）；`SwingAnimationState` 保留 hand/type；`EntityRenderState` 投影 `SpeedValue`（fall-flying 时由 deltaMovement 计算，其余 1）、`SwimAmount`、`IsVisuallySwimming`（pose 3，或 pose 1 且非 fall-flying）、`IsFallFlying`、`UseItemHand`、`SwingHand`、`SwingType`。这些喂给 `HumanoidModelPose` 的完整 `HumanoidModel.setupAnim` 复刻。
 
 ## 8. 未解决问题与风险
 

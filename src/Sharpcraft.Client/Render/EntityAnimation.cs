@@ -62,6 +62,12 @@ public sealed class EntityPose
             current.Rotation + delta.Rotation,
             current.Scale + delta.Scale);
     }
+
+    /// <summary>
+    /// Writes an absolute offset for a part, discarding any previously accumulated value. Used by the humanoid
+    /// controller, whose branches assign (rather than offset) model-part transforms like the reference does.
+    /// </summary>
+    public void Set(string partName, in PoseOffset offset) => _offsets[partName] = offset;
 }
 
 /// <summary>Static animation data: length, looping and bone → channels.</summary>

@@ -116,8 +116,35 @@ public sealed class EntityPresentationState
     /// <summary>Whether the entity is using an item (reference DATA_LIVING_ENTITY_FLAGS bit 0).</summary>
     public bool IsUsingItem { get; internal set; }
 
+    /// <summary>Which hand is using the item: 0 = main, 1 = off (reference DATA_LIVING_ENTITY_FLAGS bit 1).</summary>
+    public int UseItemHand { get; internal set; }
+
     /// <summary>Ticks elapsed since the current item use started; reset when use stops.</summary>
     public int UseItemTicks { get; internal set; }
+
+    /// <summary>Elytra fall-flying flag (reference Entity shared flag bit 7).</summary>
+    public bool IsFallFlying { get; internal set; }
+
+    /// <summary>Current swim amount 0..1 (reference LivingEntity swimAmount).</summary>
+    public float SwimAmount { get; internal set; }
+
+    /// <summary>Swim amount at the previous tick (reference swimAmountO), for partial-tick interpolation.</summary>
+    public float SwimAmountO { get; internal set; }
+
+    /// <summary>
+    /// Advances the swim clock one tick (reference <c>LivingEntity.updateSwimAmount</c>): move 0.09 towards 1 while
+    /// visually swimming, otherwise 0.09 towards 0.
+    /// </summary>
+    public void UpdateSwimAmount(bool isVisuallySwimming)
+    {
+        SwimAmountO = SwimAmount;
+        SwimAmount = isVisuallySwimming
+            ? MathF.Min(1f, SwimAmount + 0.09f)
+            : MathF.Max(0f, SwimAmount - 0.09f);
+    }
+
+    /// <summary>Interpolates the swim amount at a partial tick (reference <c>getSwimAmount</c>).</summary>
+    public float SwimAmountAt(float partialTick) => SwimAmountO + ((SwimAmount - SwimAmountO) * partialTick);
 
     /// <summary>Cube-mob size from the synced <c>ID_SIZE</c> (1 for other entities).</summary>
     public int CubeSize { get; internal set; } = 1;

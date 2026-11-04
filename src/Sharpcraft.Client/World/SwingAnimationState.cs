@@ -15,6 +15,14 @@ public sealed class SwingAnimationState
     private float _previousAnimation;
     private bool _swinging;
     private int _durationTicks;
+    private int _hand;
+    private int _animationType;
+
+    /// <summary>Hand of the current (or last) swing: 0 = main, 1 = off (reference InteractionHand).</summary>
+    public int Hand => _hand;
+
+    /// <summary>Swing animation type of the current (or last) swing: 0 none / 1 whack / 2 stab.</summary>
+    public int AnimationType => _animationType;
 
     /// <summary>Reference <c>startIfAble</c>: starts a swing unless the current one is still in its first half.</summary>
     public bool StartIfAble(int hand, int animationType, int durationTicks)
@@ -30,6 +38,8 @@ public sealed class SwingAnimationState
 
     private void Start(int hand, int animationType, int durationTicks)
     {
+        _hand = hand;
+        _animationType = animationType;
         _durationTicks = durationTicks;
         _ticks = 0;
         _previousAnimation = 0f;

@@ -302,7 +302,14 @@ public readonly record struct EntityRenderState(
     bool IsIdleHeadTiltStarted = false,
     float IdleHeadTiltAgeTicks = 0f,
     float Scale = 1f,
-    float MaxHealth = 0f);
+    float MaxHealth = 0f,
+    float SpeedValue = 1f,
+    float SwimAmount = 0f,
+    bool IsVisuallySwimming = false,
+    bool IsFallFlying = false,
+    int UseItemHand = 0,
+    int SwingHand = 0,
+    int SwingType = 0);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -825,6 +832,8 @@ public sealed class EntityTracker
                 (int)MathF.Floor((float)entity.X),
                 (int)MathF.Floor((float)entity.Y),
                 (int)MathF.Floor((float)entity.Z)) ?? false;
+            var swimmingPose = entity.Presentation.Pose;
+            entity.Presentation.UpdateSwimAmount(swimmingPose == 3 || (swimmingPose == 1 && !entity.Presentation.IsFallFlying));
             entity.Presentation.Tentacle?.Update(entity.Presentation.IsInWater);
             entity.Presentation.RabbitHop?.Tick();
             entity.Presentation.RabbitIdle?.Tick((int)GameTime, entity.Presentation.IsNoAi, entity.Presentation.IsLeashed, entity.Presentation.RabbitHop?.IsJumping ?? false);
@@ -949,6 +958,23 @@ public sealed class EntityTracker
                 patternTint = DyeTint((entity.VariantId >> 24) & 0xFF);
             }
 
+            // Derived humanoid-render-state inputs (reference HumanoidMobRenderer.extractHumanoidRenderState).
+            var fallFlying = entity.Presentation.IsFallFlying;
+            var speedValue = 1f;
+            if (fallFlying)
+            {
+                var velocityLengthSqr = (float)((entity.VelocityX * entity.VelocityX) + (entity.VelocityY * entity.VelocityY) + (entity.VelocityZ * entity.VelocityZ));
+                speedValue = velocityLengthSqr / 0.2f;
+                speedValue *= speedValue * speedValue;
+                if (speedValue < 1f)
+                {
+                    speedValue = 1f;
+                }
+            }
+
+            var pose = entity.Presentation.Pose;
+            var visuallySwimming = pose == 3 || (pose == 1 && !fallFlying);
+
             _renderStates.Add(new EntityRenderState(
                 entity.Id,
                 entity.TypeId,
@@ -1028,6 +1054,13 @@ public sealed class EntityTracker
                     : 0f,
                 Scale: entity.Presentation.Scale,
                 MaxHealth: entity.MaxHealth,
+                SpeedValue: speedValue,
+                SwimAmount: entity.Presentation.SwimAmountAt(t),
+                IsVisuallySwimming: visuallySwimming,
+                IsFallFlying: fallFlying,
+                UseItemHand: entity.Presentation.UseItemHand,
+                SwingHand: entity.Presentation.Swing.Hand,
+                SwingType: entity.Presentation.Swing.AnimationType,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,
@@ -1191,10 +1224,18 @@ public sealed class EntityTracker
                 applied = true;
             }
 
-            // Living-entity flags byte (index 8, byte serializer): bit 0 = using item.
+            // Living-entity flags byte (index 8, byte serializer): bit 0 = using item, bit 1 = off-hand used.
             if (item.Index == 8 && item.SerializerId == 0)
             {
                 entity.Presentation.IsUsingItem = (item.Value & 1) != 0;
+                entity.Presentation.UseItemHand = (item.Value & 2) != 0 ? 1 : 0;
+                applied = true;
+            }
+
+            // Entity shared flags byte (index 0, byte serializer): bit 7 = elytra fall flying.
+            if (item.Index == 0 && item.SerializerId == 0)
+            {
+                entity.Presentation.IsFallFlying = (item.Value & 128) != 0;
                 applied = true;
             }
         }

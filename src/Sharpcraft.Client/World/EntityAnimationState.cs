@@ -76,7 +76,14 @@ public readonly record struct EntityAnimationFrame(
     bool IsIdleHeadTiltStarted = false,
     float IdleHeadTiltAgeTicks = 0f,
     float Scale = 1f,
-    float MaxHealth = 0f)
+    float MaxHealth = 0f,
+    float SpeedValue = 1f,
+    float SwimAmount = 0f,
+    bool IsVisuallySwimming = false,
+    bool IsFallFlying = false,
+    int UseItemHand = 0,
+    int SwingHand = 0,
+    int SwingType = 0)
 {
     /// <summary>Projects the generic render state onto the frame. The mesher calls this once per entity per frame.</summary>
     public static EntityAnimationFrame From(in EntityRenderState state) => new(
@@ -143,7 +150,14 @@ public readonly record struct EntityAnimationFrame(
         state.IsIdleHeadTiltStarted,
         state.IdleHeadTiltAgeTicks,
         state.Scale,
-        state.MaxHealth);
+        state.MaxHealth,
+        state.SpeedValue,
+        state.SwimAmount,
+        state.IsVisuallySwimming,
+        state.IsFallFlying,
+        state.UseItemHand,
+        state.SwingHand,
+        state.SwingType);
 }
 
 /// <summary>

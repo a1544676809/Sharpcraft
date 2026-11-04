@@ -3367,3 +3367,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **已完成**：新增 `SkeletonAnimationProvider`，Skeleton(118)/Stray(131)/Bogged(16)/WitherSkeleton(150) 复用 `HumanoidAnimationProvider` 的走/头/腿，并补 `SkeletonModel.setupAnim` 的 `isAggressive && !isHoldingBow` 近战抬臂分支（含 `AnimationUtils.bobArms`，bow id 由 `ItemRegistry` 解析）。Stray/Bogged 的服装 overlay 部件此前是独立顶层部件、不吃姿态，已补 `PoseSource` 跟随对应基础部件（回归测试覆盖）。
 - **诚实边界（未近似，记录为后续）**：base humanoid provider 仍只是 `HumanoidModel.setupAnim` 的走路子集，未实现 `setupAttackAnimation`、arm pose（含 BOW_AND_ARROW）、crouch/passenger/swim、head yaw 与 `bobModelPart`——这些是 Zombie/Drowned/Husk 与 Skeleton 组**共享的既有简化**，需要新增 frame 输入后才可能等效；不声称完整等效。Bogged `isSheared` 蘑菇可见性同样待补。
 - **下一步具体动作**：从剩余“缺动画 provider”中挑下一批——建议 `Cat`/`Ocelot`（专用 `head_main`）或 `ZombieVillager`（`animateZombieArms` + 村民腿）；`Enderman`/`Slime`/`EnderDragon`/`Pufferfish`/`TropicalFish` 仍无 provider。
+
+## 2026-11-04 humanoid 全链路等效补全（T-619，H1–H4 已完成）
+
+- **分支 / HEAD**：`feature/item-registry`（本段文档随后提交）。构建 0 警告 0 错误；Client **1269**，Architecture 31、Common 491 未变。
+- **已完成（不再简化）**：新增 `HumanoidModelPose` 完整复刻 `HumanoidModel.setupAnim`（头 yaw 相对 body/pitch、fall-flying 头、`/speedValue`、腿 ∓0.005、乘客、arm pose 集合、`setupAttackAnimation` WHACK、潜行位移、`bobModelPart`、`setupSwimAnimation`）；`HumanoidArmPoseResolver` 解析 SPEAR/BOW_AND_ARROW；Zombie/Drowned/Husk/Giant 走 `animateZombieArms`（手臂前伸，**修正了此前错误的走路摆臂**），Skeleton 族走激进抬臂。frame 新增 `SpeedValue/SwimAmount/IsVisuallySwimming/IsFallFlying/UseItemHand/SwingHand/SwingType`，`SwingAnimationState` 保留 hand/type；`EntityPose.Set` 支持绝对覆盖。
+- **阻塞（不近似，状态保持进行中）**：SPEAR arm pose 与 STAB 挥击依赖 `SpearAnimations`（长矛第三人称模型几何），未实现；CROSSBOW_* 姿态对 humanoid mob 渲染器不可达（玩家/Illager/Piglin 各自 provider）。
+- **验证边界**：所有分支用参考公式的数值单测覆盖（抬臂/僵尸臂/头 yaw/乘客/潜行/游泳/攻击门控）；本环境**无可见窗口**，未做逐像素目视验收。
+- **下一步具体动作**：①SPEAR/STAB 作为独立子任务（读 `SpearAnimations` 与长矛模型层）；②继续补剩余缺 provider 生物（Cat/Ocelot、ZombieVillager、Enderman、Slime、EnderDragon、Pufferfish、TropicalFish）；③Bogged `isSheared` 蘑菇可见性。

@@ -128,3 +128,10 @@ tick 速率实测 19.4–19.8/s，原因是 Windows `Task.Delay` 的 ~15.6 ms �
 - 缓解：先补核对（`ClientPackSource`、`Minecraft` 的 pack 注册、`DefaultPosition`），再冻结实现；核对结论写入 `docs/analysis/assets/resource-pack-stack.md` §5。
 - 复查条件：ADR-0015 评审通过、包来源顺序确认后关闭。
 - **2026-10-30 进展**：顺序与插入语义已核对到源码行（TOP=最高、BOTTOM=最低，vanilla 固定最低，发现包位于其上方），风险降为“已缓解，待实现验证”。
+
+## R-026 humanoid SPEAR 姿态与 STAB 挥击未实现（阻塞）
+
+- 概率：低（humanoid mob 持长矛/长矛挥击属罕见情形）；影响：中（该情形下手臂姿态不等效）。
+- 事实：`HumanoidModel.poseRightArm(SPEAR)` 与 `setupAttackAnimation(STAB)` 依赖 `SpearAnimations.thirdPersonHandUse/AttackHand`（长矛第三人称模型几何与物品栈细节），本次未移植，代码中显式 no-op 并记录。
+- 缓解：单列子任务，读 `SpearAnimations` 与长矛模型层后按参考实现，附数值测试；在此之前状态保持 `进行中`，不声称该分支等效。
+- 复查条件：SPEAR/STAB 移植并测试通过后关闭。

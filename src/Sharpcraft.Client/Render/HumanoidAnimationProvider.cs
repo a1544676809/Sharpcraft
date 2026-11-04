@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
-using System.Numerics;
 using Sharpcraft.Client.World;
 
 namespace Sharpcraft.Client.Render;
 
 /// <summary>
-/// Reference <c>HumanoidModel.setupAnim</c>: head pitch plus opposing arm and leg phases. Zombie, drowned and husk
-/// share this controller.
+/// Reference <c>ZombieModel.setupAnim</c> (shared by Zombie, Drowned, Husk and Giant): the full
+/// <c>HumanoidModel.setupAnim</c> chain plus the <c>animateZombieArms</c> override applied from
+/// <c>setupAttackAnimation</c>. See <see cref="HumanoidModelPose"/> for the shared pose maths.
 /// </summary>
 public sealed class HumanoidAnimationProvider : IEntityAnimationProvider
 {
@@ -22,39 +22,25 @@ public sealed class HumanoidAnimationProvider : IEntityAnimationProvider
 
     public IEntityAnimationState CreateState() => new State();
 
-    public void Apply(IEntityAnimationState state, in EntityAnimationFrame frame, EntityPose pose) => ApplyWalk(frame, pose);
+    public void Apply(IEntityAnimationState state, in EntityAnimationFrame frame, EntityPose pose) => ApplyZombie(frame, pose);
 
     public void ApplyClip(IEntityAnimationState state, in EntityAnimationFrame frame, string clip, float seconds, EntityPose pose)
     {
+        var sandbox = frame with { IsAggressive = false, SwingAnimation = 0f, SwingType = 0 };
         if (string.Equals(clip, "walk", StringComparison.Ordinal))
         {
-            var walk = frame with { WalkAnimationPos = seconds * 10f, WalkAnimationSpeed = 1f };
-            ApplyWalk(walk, pose);
+            ApplyZombie(sandbox with { WalkAnimationPos = seconds * 10f, WalkAnimationSpeed = 1f }, pose);
         }
         else
         {
-            ApplyWalk(frame with { WalkAnimationSpeed = 0f }, pose);
+            ApplyZombie(sandbox with { WalkAnimationSpeed = 0f }, pose);
         }
     }
 
-    /// <summary>
-    /// Applies the shared <c>HumanoidModel.setupAnim</c> walk pose. <paramref name="applyArms"/> lets callers that
-    /// overwrite the arms afterwards (for example <see cref="SkeletonAnimationProvider"/>'s aggressive melee branch)
-    /// skip the opposing arm swing.
-    /// </summary>
-    internal static void ApplyWalk(in EntityAnimationFrame frame, EntityPose pose, bool applyArms = true)
+    private static void ApplyZombie(in EntityAnimationFrame frame, EntityPose pose)
     {
-        var headPitch = frame.Pitch * (MathF.PI / 180f);
-        pose.Add("head", new PoseOffset(Vector3.Zero, new Vector3(headPitch, 0f, 0f), Vector3.Zero));
-        var phase = frame.WalkAnimationPos * 0.6662f;
-        var speed = frame.WalkAnimationSpeed;
-        if (applyArms)
-        {
-            pose.Add("right_arm", new PoseOffset(Vector3.Zero, new Vector3(MathF.Cos(phase + MathF.PI) * speed, 0f, 0f), Vector3.Zero));
-            pose.Add("left_arm", new PoseOffset(Vector3.Zero, new Vector3(MathF.Cos(phase) * speed, 0f, 0f), Vector3.Zero));
-        }
-        pose.Add("right_leg", new PoseOffset(Vector3.Zero, new Vector3(MathF.Cos(phase) * 1.4f * speed, 0f, 0f), Vector3.Zero));
-        pose.Add("left_leg", new PoseOffset(Vector3.Zero, new Vector3(MathF.Cos(phase + MathF.PI) * 1.4f * speed, 0f, 0f), Vector3.Zero));
+        HumanoidArmPoseResolver.Compute(frame, skeleton: false, out var right, out var left);
+        HumanoidModelPose.Apply(frame, pose, HumanoidVariant.Zombie, right, left, isHoldingBow: false);
     }
 
     private sealed class State : IEntityAnimationState
