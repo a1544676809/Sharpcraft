@@ -1,0 +1,50 @@
+<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
+
+<!-- doc
+title: 客户端实体 AI 表现状态
+summary: AI 依赖动画所需的客户端只读派生字段、来源与分批
+status: 待评审
+-->
+
+# 客户端实体 AI 表现状态
+
+基线：Minecraft 26.3。关联：ADR-0022、ADR-0023、ADR-0024。
+
+## 1. 职责范围
+
+负责：把**同步数据 + 事件 + 本地可确定信息**派生为渲染所需的 AI 类字段（坐下/睡眠/潜行/扑击/不悦/打喷嚏/站立/跳跃/多头朝向），不实现寻路、目标选择或战斗结算。
+
+不负责：服务端 AI 语义、寻路、目标/攻击判定、掉落/伤害计算。
+
+## 2. 字段来源清单（首批）
+
+| 生物 | 字段 | 来源 | 状态 |
+| --- | --- | --- | --- |
+| Wolf | `isSitting` | TamableAnimal flags（index 17 byte bit0） | 已有 `IsSitting` |
+| Wolf | `isAngry` | Mob flags bit2 | 已有 `IsAggressive` |
+| Wolf | `isSleeping` | 待确认（姿势/同步） | 待分析 |
+| Fox | `isCrouching` / `isSitting` / `isSleeping` / `isPouncing` / `isFaceplanted` | `Fox` 客户端字段；部分由 entity data（variant/flags）与本地状态派生 | 待分析 |
+| Panda | `isUnhappy` / `isSneezing` / `sneezeTime` | Panda 客户端字段（AI 状态） | 待分析 |
+| PolarBear | `standScale` | PolarBear 客户端字段（站立 AI） | 待分析 |
+| Rabbit | `hopAnimationState` / `idleHeadTiltAnimationState` | `jumpTicks` + `idleAnimationTimeout`（本地计时） | 待分析 |
+| Wither | `yHeadRots[]` / `xHeadRots[]` | Wither 客户端每头朝向 | 待分析 |
+| Parrot | party（唱片机） | 需 jukebox 状态 | 阻塞 |
+
+## 3. 设计约束
+
+- 每个字段必须对应参考 `setupAnim` 的输入，并有"输入→输出"测试。
+- 无法找到同步/本地来源的字段保持 `进行中`，不得用常量或猜测填充。
+- 派生代码集中在 `Client/World`（presentation/provider state），渲染层只读帧字段。
+
+## 4. 分批
+
+1. **A：通用布尔**：把 Wolf/Fox 等可同步的 `isSitting/isSleeping/isCrouching` 等加入表现状态与帧。
+2. **B：本地计时器**：Rabbit hop/idle、Panda sneeze、PolarBear stand（复刻客户端计时，逐项测试）。
+3. **C：Wither 多头**：按参考维护每头 yaw/pitch 数组。
+4. **D：Parrot party**（若 jukebox 状态可得）。
+
+## 5. 验收与风险
+
+- 每批：全量构建 + Client/Architecture 测试；每个新增帧字段有测试。
+- 风险：客户端派生与服务器状态长期不一致；对策：字段级记录与复查条件（ADR-0024）。

@@ -4,7 +4,7 @@
 状态：[已评审]
 基线：Minecraft 26.3
 证据：`docs/analysis/render/entity-equipment.md`
-最后更新：2026-11-03
+最后更新：2026-11-04
 
 # 实体装备与物品层
 
@@ -14,8 +14,8 @@
 
 负责：
 
-- 解析 `SetEquipment`（id 104）中的装备槽与物品身份（第一阶段仅空数据组件 patch）；
-- 维护每个实体的装备槽状态，并提供给渲染层；
+- 解析 `SetEquipment`（id 104）中的装备槽与物品身份（含完整 `DataComponentPatch`；99 个原版组件均有解码路径）；
+- 维护每个实体的装备槽状态（含解析出的组件子集），并提供给渲染层；
 - 为装备资产建立“物品身份 + 层类型 → 纹理/模型”的受控映射（第一阶段静态表）；
 - 在实体模型之上生成装备层，复用现有 `EntityModelDefinition` 部件副本、tint 与可见性能力；
 - 提供沙盒/测试可设置装备状态的显式入口。
@@ -24,7 +24,7 @@
 
 - 物品栏、容器 UI、物品拾取与网络交互；
 - 完整物品模型/方块物品渲染（Witch 手持药水后置）；
-- 数据组件系统（自定义名称、附魔、染色、裂纹以外的组件）；
+- 组件语义的**效果执行**（耐久扣除、附魔数值作用、食物回复等；客户端只解码展示所需字段）；
 - 装备伤害/耐久逻辑（服务端权威，客户端只呈现状态）。
 
 ## 2. 侧别归属
@@ -66,27 +66,33 @@
 
 - SetEquipment 的字节布局、槽位 ordinal、包 id 104：见 `docs/specs/network/entity-sync.md` 与 `docs/analysis/render/entity-equipment.md` 2。
 - 空栈（count ≤ 0）表示没有装备；后续条目沿用 continuation 位。
+- `DataComponentPatch` 由 `ItemComponentPatchReader` 解码：覆盖全部 99 个原版组件（文本/NBT、附魔、属性、染色/纹饰、食物/药水/书/容器等）；遇到未知组件 id 时标记 opaque 并安全停止。
 - 装备层在原版实体变换/动画下绘制；当前静态阶段沿用 bind pose。
 
-有意偏离（第一阶段）：
+已收敛（原第一阶段偏离）：
 
-- 仅支持空 `DataComponentPatch`；非空 patch 标记 unsupported 并保留旧状态，不猜测组件内容。
-- 物品/装备映射使用受控静态表，不引入完整物品注册表与 `EquipmentClientInfo` JSON 解析。
+- 非空 `DataComponentPatch` 不再降级：`damage`、`charged_projectiles`、`enchantments/quick_charge` 等已作为实体表现状态输入（详见 `docs/modules/entity-animation.md` 批次 12–32）。
+- 物品标签（`data/minecraft/tags/item`）由启动器提取并由 `ItemTagRegistry` 解析，支持 `piglin_loved`、`piglin_preferred_weapons` 等判定。
+
+仍存在（后续阶段）：
+
+- 物品/装备映射使用受控静态表，未引入完整 `EquipmentClientInfo` JSON 解析。
 - Witch 手持物品不渲染，装备/鞍层优先。
+- `tool`/`weapon` 等组件的**数值效果**只解析不执行（服务端权威）。
 
 以上偏离必须登记进受控偏差清单，并在后续阶段逐项收敛。
 
 ## 7. 分阶段实施与验收
 
-1. **E1 协议与状态**：解码 id 104，填 `EquipmentState`；单元测试覆盖单槽、多槽 continuation、空槽、非空 patch 降级。
+1. **E1 协议与状态**：解码 id 104，填 `EquipmentState`；单元测试覆盖单槽、多槽 continuation、空槽、完整组件 patch 与未知组件 opaque 降级。
 2. **E2 装备资产映射**：受控物品 → 纹理表；单元测试覆盖马甲材质、鞍、装饰、狼甲、快乐恶魂挽具。
 3. **E3 渲染层**：为 Horse/Donkey/Mule、Llama、Camel、Nautilus、Happy Ghast、Wolf 生成装备副本层；沙盒通过显式装备参数截图验收。
-4. **E4 后置**：完整物品注册表与组件 patch、Witch 手持物品模型。
+4. **E4 后置**：`EquipmentClientInfo` 资产化、完整物品模型渲染、Witch 手持物品模型。
 
 ## 8. 未解决问题与风险
 
 - 装备资产 `.json` 在现有资产包中缺失，需确认提取来源；否则静态映射无法长期维护。
-- 非空 DataComponentPatch 的边界与降级策略需评审。
+- 组件解码已覆盖 99 个原版组件，但**部分 predicate/partial 匹配**仍走 opaque 安全停止（仅影响极端自定义物品）。
 - 多装备层叠加顺序与鞍/甲冲突需要逐实体核对。
 - 静态 bind pose 下装备层与动画层的关系将来需随动画系统统一。
 

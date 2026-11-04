@@ -37,6 +37,7 @@ AGENTS.md 原则 12：不可逆或跨模块的决策必须在此留档，**只�
 | [`0021-entity-render-layers.md`](0021-entity-render-layers.md) | 相关：docs/analysis/render/entity-render-layers.md、docs/modules/entity-render.md §9、ADR-0020 | 已接受（2026-11-03；第一步分层、第二步分层绘制与 Emissive eyes 均已落地） | - |
 | [`0022-client-entity-presentation-state.md`](0022-client-entity-presentation-state.md) | 为何要建客户端实体表现状态层、明确排除权威 AI，以及影响面与复查条件 | 已采纳 | - |
 | [`0023-client-armed-presentation-state.md`](0023-client-armed-presentation-state.md) | 剩余 Illager/Piglin 等武装生物动画所需的手部姿态数据来源、分期与边界 | 已采纳 | - |
+| [`0024-client-entity-ai-presentation-state.md`](0024-client-entity-ai-presentation-state.md) | 为剩余 AI 依赖动画建立只读、非权威的客户端派生状态层 | 提议 | - |
 
 <!-- END GENERATED: docs/decisions -->
 

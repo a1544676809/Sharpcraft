@@ -3214,6 +3214,12 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Common **482**（+1）、Client **1169**，构建 0 警告 0 错误。
 - **下一步具体动作**：组件基础能力收口，转回 **AI 依赖生物（Wither 等）** 或其它 backlog。
 
+### 2026-11-04 组件文档收口 + AI 表现状态设计文档
+
+- 更新 `docs/modules/entity-equipment.md`：组件解码已覆盖全部 99 组件，E4 收敛为 EquipmentClientInfo/物品模型；同步更新偏离与风险。
+- 起草 **ADR-0024**（客户端实体 AI 表现状态 P2）与 `docs/modules/entity-ai-presentation.md`（Wolf/Fox/Panda/PolarBear/Rabbit/Wither/Parrot 字段来源与分批 A/B/C/D）；状态待评审。
+- **下一步具体动作**：等待 ADR-0024/模块文档评审；通过后按 A（通用布尔）→ B（本地计时器）→ C（Wither 多头）→ D（Parrot party）实施。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。
