@@ -2947,3 +2947,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 已注册 registry（148/142）并纳入零分配测试。Client 910（Witch 12 / Vex 13 新增）、Architecture 31 绿。
 - **重要阻塞结论**：Parrot / Strider / Illager（及 Piglin/Allay 等）的 `setupAnim` 依赖**客户端 AI 状态**（`flap/pose`、`isRiding/isSuffocating`、`armPose/crossbow/swing`），这些既非网络同步也不是现有 frame 字段，无法等效移植。需要先设计"客户端实体动画状态/AI 精简层"（较大子系统，需 ADR）或只做沙盒 clip + 标记进行中。
 - **下一步具体动作**：①就"是否新增客户端实体动画状态层"做决策（ADR）以解锁 Parrot/Strider/Illager/Piglin/Allay；②或继续派可等效的生物（如 Tadpole 需 IsInWater、Ghast 触须需 tentacle 派生等，仍各自缺字段）；③保持 backlog 更新。
+
+### 2026-11-04 决策：客户端实体表现状态层（ADR-0022，T-575）
+
+- 所有者确认：**不建"整个行为层"**（权威 AI 属服务端，越原则 4/5）；改为建**非权威的客户端实体表现状态层**，只做渲染驱动的派生字段。
+- 已落文档：`docs/decisions/0022-client-entity-presentation-state.md`（已采纳）、`docs/modules/entity-presentation-state.md`（待评审）。
+- 分期：P0 通用派生（isInWater/onGround/乘客/riding/flap/tentacle/pose）→ P1 逐生物可判定字段 → P2 仅同步来源字段。明确不做 AI/寻路/战斗/生成，无来源字段保持阻塞、不近似。
+- **下一步具体动作**：待模块文档评审通过（状态改 `[已评审]`）后实现 P0：`EntityPresentationState` + `EntityTracker` 接线 + `isInWater/onGround/乘客/flap/tentacle` 派生，先解锁 Squid/Bat/Parrot 的基础字段，再补逐生物。
