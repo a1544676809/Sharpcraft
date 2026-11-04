@@ -31,7 +31,9 @@ public sealed class PandaAnimationTests
         float sitAmount = 0f,
         float lieOnBackAmount = 0f,
         float rollAmount = 0f,
-        bool isEating = false) =>
+        bool isEating = false,
+        bool isWorried = false,
+        bool isThundering = false) =>
         new(
             TypeId,
             ageInTicks,
@@ -50,7 +52,9 @@ public sealed class PandaAnimationTests
             IsEating: isEating,
             SitAmount: sitAmount,
             LieOnBackAmount: lieOnBackAmount,
-            RollAmount: rollAmount);
+            RollAmount: rollAmount,
+            IsWorried: isWorried,
+            IsThundering: isThundering);
 
     private static EntityPose Apply(IEntityAnimationState state, IEntityAnimationProvider provider, in EntityAnimationFrame frame)
     {
@@ -64,7 +68,7 @@ public sealed class PandaAnimationTests
     {
         var provider = new PandaAnimationProvider(TypeId);
         Assert.Equal(97, provider.TypeId);
-        Assert.Equal(new[] { "idle", "walk", "unhappy", "sneeze", "sit", "eat", "lie", "roll" }, provider.Clips);
+        Assert.Equal(new[] { "idle", "walk", "unhappy", "sneeze", "sit", "eat", "scared", "lie", "roll" }, provider.Clips);
     }
 
     [Fact]
@@ -269,5 +273,54 @@ public sealed class PandaAnimationTests
         var roll = new EntityPose();
         provider.ApplyClip(state, frame, "roll", 0f, roll);
         Assert.Equal(2.0561945f, roll.Get("head").Rotation.X, 4);
+    }
+
+    [Fact]
+    public void ScaredOverridesTheSittingAndEatingPose()
+    {
+        var provider = new PandaAnimationProvider(TypeId);
+        var pose = Apply(
+            provider.CreateState(),
+            provider,
+            Frame(ageInTicks: 0f, sitAmount: 1f, isEating: true, isWorried: true, isThundering: true));
+
+        // isScared overrides after eating: head 2.1707964, front legs -0.9.
+        Assert.Equal(2.1707964f, pose.Get("head").Rotation.X, 4);
+        Assert.Equal(-0.9f, pose.Get("right_front_leg").Rotation.X, 4);
+        Assert.Equal(-0.9f, pose.Get("left_front_leg").Rotation.X, 4);
+        // Sitting zRot splay is still applied.
+        Assert.Equal(-0.27079642f, pose.Get("right_front_leg").Rotation.Z, 4);
+        Assert.Equal(1.7407963f - (MathF.PI / 2f), pose.Get("body").Rotation.X, 4);
+    }
+
+    [Fact]
+    public void ScaredIsOnlyAppliedWithBothWorriedAndThunderingWhileSitting()
+    {
+        var provider = new PandaAnimationProvider(TypeId);
+        var state = provider.CreateState();
+
+        // Sit + worried but not thundering → ordinary sit pose (head π/2), not scared.
+        var worriedOnly = Apply(state, provider, Frame(sitAmount: 1f, isWorried: true, isThundering: false));
+        Assert.Equal(MathF.PI / 2f, worriedOnly.Get("head").Rotation.X, 4);
+
+        // Sit + thundering but not worried → ordinary sit pose.
+        var thunderOnly = Apply(state, provider, Frame(sitAmount: 1f, isWorried: false, isThundering: true));
+        Assert.Equal(MathF.PI / 2f, thunderOnly.Get("head").Rotation.X, 4);
+
+        // Worried + thundering but not sitting → the branch is gated inside SitAmount > 0, so no override.
+        var notSitting = Apply(state, provider, Frame(sitAmount: 0f, isWorried: true, isThundering: true));
+        Assert.Equal(0f, notSitting.Get("head").Rotation.X, 4);
+    }
+
+    [Fact]
+    public void ApplyClipReconstructsScared()
+    {
+        var provider = new PandaAnimationProvider(TypeId);
+        var pose = new EntityPose();
+        provider.ApplyClip(provider.CreateState(), Frame(), "scared", 0f, pose);
+
+        Assert.Equal(2.1707964f, pose.Get("head").Rotation.X, 4);
+        Assert.Equal(-0.9f, pose.Get("right_front_leg").Rotation.X, 4);
+        Assert.Equal(-0.9f, pose.Get("left_front_leg").Rotation.X, 4);
     }
 }

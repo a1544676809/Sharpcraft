@@ -3283,6 +3283,13 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Common **484**（+2）、Client **1245**（+2），构建 0 警告 0 错误。
 - **下一步具体动作**：Panda scared（thunder/gene）与 Rabbit idle（实体 RNG/leash）仍需新数据源；或收口 B 轮。
 
+### 2026-11-04 Panda scared（天气/基因，T-611）
+
+- Panda main gene（index20 byte）→ `IsWorried`；`ClientWorld.IsThundering`（raw thunder level >0.5）→ 帧 `IsThundering`。
+- Panda provider 增加 `isScared = IsWorried && IsThundering`，严格 sit→eat→scared 覆盖。
+- 验证：Client **1249**（+4），全量绿。
+- **下一步具体动作**：仅剩 Rabbit idle（实体 RNG/leash）与 Wither 侧头（目标眼高）需新数据源。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

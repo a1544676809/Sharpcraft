@@ -57,7 +57,7 @@ status: 已评审
 | --- | --- | --- | --- |
 | Wolf | `WolfAnimationProvider` | tail yaw、四腿/坐姿、head look、angry/wild tail pitch | 驯服尾巴角（缺 max health）、shake roll、headRollAngle |
 | Fox | `FoxAnimationProvider` | 走/蹲/睡/坐/扑/趴腿摆（faceplant 计数器）、head look、睡姿覆盖 | headRollAngle、crouchAmount/ageScale、腿可见性 |
-| Panda | `PandaAnimationProvider` | unhappy/sneeze、四足走/head look、**sit/eat/lie/roll（精确 `PandaPoseAnimationState` 缓冲）** | IsScared（雷暴/基因输入） |
+| Panda | `PandaAnimationProvider` | unhappy/sneeze、四足走/head look、**sit/eat/lie/roll（精确 `PandaPoseAnimationState` 缓冲）**、**scared（主线 WORRIED 基因 + 雷暴）** | — |
 | PolarBear | `PolarBearAnimationProvider` | 基础四足 + **完整站立缓动（`PolarBearStandAnimationState`：±1/tick, 0..6, lerp/6）** | — |
 | Rabbit | `RabbitAnimationProvider` | idle-not-started 的 head look + **hop（entity_event 1 → 15-tick 时钟，`JumpCompletion` 精确映射 0.75s 循环 keyframes）** | idle-head-tilt 计时（random/leash）、baby 模型 |
 | Wither | `WitherAnimationProvider` | ribcage/tail age bob、中心头 look | 左右头 per-head aim：需要每头替代目标实体 id（同步）**加上目标眼高/头部世界坐标**；`EntityAnimationFrame` 无目标位置/眼高，且参考每头 `rotlerp` 是客户端 AI 瞄准状态，无法从单一 HeadYaw/Yaw 精确推出 |

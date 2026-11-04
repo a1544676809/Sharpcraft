@@ -95,6 +95,9 @@ public sealed class ClientWorld
     /// </summary>
     public float ThunderLevel(float partialTick) => LerpBetween(partialTick, _previousThunderLevel, _thunderLevel) * RainLevel(partialTick);
 
+    /// <summary>Reference <c>Level.isThundering</c>: the raw thunder level exceeds 0.5.</summary>
+    public bool IsThundering => _thunderLevel > 0.5f;
+
     /// <summary>Sets the rain level; the client takes the server's value directly (previous and current match).</summary>
     public void SetRainLevel(float level)
     {

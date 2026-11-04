@@ -279,7 +279,9 @@ public readonly record struct EntityRenderState(
     float SitAmount = 0f,
     float LieOnBackAmount = 0f,
     float RollAmount = 0f,
-    bool IsPartyParrot = false);
+    bool IsPartyParrot = false,
+    bool IsWorried = false,
+    bool IsThundering = false);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -896,6 +898,8 @@ public sealed class EntityTracker
                 LieOnBackAmount: entity.Presentation.PandaPose?.LieOnBackAmount(t) ?? 0f,
                 RollAmount: entity.Presentation.PandaPose?.RollAmount(t) ?? 0f,
                 IsPartyParrot: entity.Presentation.IsPartyParrot,
+                IsWorried: entity.Presentation.IsWorried,
+                IsThundering: World?.IsThundering ?? false,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,
@@ -990,6 +994,13 @@ public sealed class EntityTracker
             if (entity.TypeId == 97 && item.Index == 19 && item.SerializerId == 1)
             {
                 entity.Presentation.IsEating = item.Value > 0;
+                applied = true;
+            }
+
+            // Panda main gene byte (index 20): WORRIED id 2 drives isScared under thunder.
+            if (entity.TypeId == 97 && item.Index == 20 && item.SerializerId == 0)
+            {
+                entity.Presentation.IsWorried = item.Value == 2;
                 applied = true;
             }
 

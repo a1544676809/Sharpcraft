@@ -13,14 +13,10 @@ namespace Sharpcraft.Client.Render;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <c>isUnhappy = UnhappyCounter &gt; 0</c>, <c>sneezeTime = SneezeCounter</c>, <c>isSneezing = SneezeCounter &gt; 0</c>.
-/// The sit / lie / roll branches use <see cref="EntityAnimationFrame.SitAmount"/>,
-/// <see cref="EntityAnimationFrame.LieOnBackAmount"/>, <see cref="EntityAnimationFrame.RollAmount"/> and
-/// <see cref="EntityAnimationFrame.IsEating"/>.
-/// </para>
-/// <para>
-/// <b>Scared remains blocked</b>: the reference's <c>isScared</c> thundering/gene variant has no frame input and is not
-/// faked.
+/// <c>isUnhappy = UnhappyCounter &gt; 0</c>, <c>sneezeTime = SneezeCounter</c>, <c>isSneezing = SneezeCounter &gt; 0</c>,
+/// and <c>isScared = IsWorried &amp;&amp; IsThundering</c> (reference <c>Panda.isScared()</c>). The sit / lie / roll branches
+/// use <see cref="EntityAnimationFrame.SitAmount"/>, <see cref="EntityAnimationFrame.LieOnBackAmount"/>,
+/// <see cref="EntityAnimationFrame.RollAmount"/> and <see cref="EntityAnimationFrame.IsEating"/>.
 /// </para>
 /// </remarks>
 public sealed class PandaAnimationProvider(int typeId) : IEntityAnimationProvider
@@ -37,7 +33,7 @@ public sealed class PandaAnimationProvider(int typeId) : IEntityAnimationProvide
     /// <summary>Reference roll head target (<c>Mth.rotLerpRad(rollAmount, head.xRot, 2.0561945F)</c>).</summary>
     private const float RollHeadXRot = 2.0561945f;
 
-    private static readonly string[] NominalClips = ["idle", "walk", "unhappy", "sneeze", "sit", "eat", "lie", "roll"];
+    private static readonly string[] NominalClips = ["idle", "walk", "unhappy", "sneeze", "sit", "eat", "scared", "lie", "roll"];
 
     public int TypeId { get; } = typeId;
 
@@ -85,6 +81,9 @@ public sealed class PandaAnimationProvider(int typeId) : IEntityAnimationProvide
                 break;
             case "eat":
                 ApplyPose(rest with { SitAmount = 1f, IsEating = true }, false, false, 0, pose);
+                break;
+            case "scared":
+                ApplyPose(rest with { SitAmount = 1f, IsWorried = true, IsThundering = true }, false, false, 0, pose);
                 break;
             case "lie":
                 ApplyPose(rest with { LieOnBackAmount = 1f }, false, false, 0, pose);
@@ -164,7 +163,13 @@ public sealed class PandaAnimationProvider(int typeId) : IEntityAnimationProvide
                 leftFrontX = -0.4f - eat;
             }
 
-            // IsScared branch remains blocked (no thundering/gene input); not faked.
+            if (frame.IsWorried && frame.IsThundering)
+            {
+                // Panda.isScared(): worried main gene + thundering weather overrides the eating pose.
+                headX = 2.1707964f;
+                rightFrontX = -0.9f;
+                leftFrontX = -0.9f;
+            }
         }
 
         if (frame.LieOnBackAmount > 0f)

@@ -464,6 +464,20 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.False(tracker.Interpolate(0f)[0].IsPartyParrot);
     }
 
+    [Fact]
+    public void PandaWorriedGeneAndThunderProject()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.World = new ClientWorld(minSectionY: 0, sectionCount: 1);
+        tracker.World.SetThunderLevel(1f);
+        tracker.Add(Entity(27, typeId: PandaModelDefinition.PandaEntityTypeId));
+        tracker.ApplyEntityData(27, [new EntityDataItem(20, 0, 2)]);
+
+        var state = tracker.Interpolate(0f)[0];
+        Assert.True(state.IsWorried);
+        Assert.True(state.IsThundering);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 

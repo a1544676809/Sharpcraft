@@ -137,6 +137,9 @@ public sealed class EntityPresentationState
     /// <summary>Panda lying-on-back flag (Panda flags bit 16).</summary>
     public bool IsOnBack { get; internal set; }
 
+    /// <summary>Panda main gene is WORRIED (reference getVariant()==WORRIED).</summary>
+    public bool IsWorried { get; internal set; }
+
     /// <summary>Parrot party flag (jukebox song playing nearby).</summary>
     public bool IsPartyParrot { get; internal set; }
 
