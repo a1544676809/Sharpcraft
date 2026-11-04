@@ -22,9 +22,9 @@ namespace Sharpcraft.Client.Render;
 /// <para>
 /// <b>Missing inputs (reported, not silently faked):</b>
 /// <list type="bullet">
-/// <item>Crossbow charge: <c>ticksUsingItem</c> / <c>maxCrossbowChargeDuration</c> are not on the frame. The provider
-/// keeps the correct CROSSBOW_CHARGE selection and reproduces the documented static charge pose at draw progress 0
-/// (both arms' x-rotation = -0.97079635, holding yRot = -0.8, pulling yRot = 0.4); the progressive pull is blocked.</item>
+/// <item>Crossbow charge: reproduced from <c>frame.TicksUsingItem + frame.PartialTick</c> over the default 25-tick
+/// charge duration. Quick-charge enchantment is not modelled (it needs the item's data components), so a quick-charged
+/// crossbow charges visually at the default rate.</item>
 /// <item>The reference <c>mainArm</c> is not on the frame; the weapon swing uses the default right hand
 /// (all vanilla illagers are right-handed).</item>
 /// <item>The tracker reads <see cref="State.ArmPose"/> while building the render state (before the per-frame Apply), so
@@ -47,6 +47,9 @@ public sealed class IllagerAnimationProvider(int typeId) : IEntityAnimationProvi
     private const float RidingLegY = MathF.PI / 10f;
     private const float RidingLegZ = 0.07853982f;
     private const float AttackingArmDrop = -MathF.PI / 1.5f;
+
+    /// <summary>Default crossbow charge duration in ticks (CrossbowItem.getChargeDuration = floor(1.25 * 20)).</summary>
+    private const float MaxCrossbowChargeTicks = 25f;
 
     /// <summary>Item id of <c>minecraft:crossbow</c>, resolved once from the item registry.</summary>
     public static readonly int CrossbowItemId = ResolveCrossbowItemId();
@@ -196,11 +199,14 @@ public sealed class IllagerAnimationProvider(int typeId) : IEntityAnimationProvi
                 break;
 
             case IllagerArmPose.CrossbowCharge:
-                // Blocked partial: charge progress (ticksUsingItem) is unavailable, so pin the documented draw-start pose.
+                // AnimationUtils.animateCrossbowCharge(rightArm, leftArm, maxCharge, ticksUsingItem, holdingInRightArm: true).
+                // progress = min((ticksUsingItem + partialTick) / maxCharge, 1); maxCharge = default 25 ticks.
+                // Quick-charge enchantment is not modelled (needs the item's data components).
+                var charge = Math.Clamp((frame.TicksUsingItem + frame.PartialTick) / MaxCrossbowChargeTicks, 0f, 1f);
                 rY = -0.8f;
                 rX = -0.97079635f;
-                lX = -0.97079635f;
-                lY = 0.4f;
+                lX = -0.97079635f + (((-MathF.PI / 2f) - (-0.97079635f)) * charge);
+                lY = 0.4f + ((0.85f - 0.4f) * charge);
                 break;
 
             case IllagerArmPose.Celebrating:

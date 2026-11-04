@@ -3083,3 +3083,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 阻塞：十字弩蓄力进度（`ticksUsingItem/maxCrossbowChargeDuration` 不在帧）→ 仅 draw-start 姿态；`mainArm` 未在帧 → 武器挥击假定右手。均记录、未近似。
 - Client **1144**（Illager 22 + ArmPose 2 新增）绿；构建 0 警告 0 错误。
 - **下一步具体动作**：①P2-B Piglin（同步 charging/dancing + 窄判定）；②补十字弩计时（used-item 状态）以实现蓄力进度；③继续 backlog。
+
+### 2026-11-04 used-item 状态 + 十字弩蓄力进度（T-590）
+
+- 通用 used-item 状态：`DATA_LIVING_ENTITY_FLAGS`(index8 byte bit0) → `IsUsingItem`；本地每 tick 累加 `TicksUsingItem`（停止回零），投影 `EntityAnimationFrame.IsUsingItem/TicksUsingItem`。
+- Illager `CROSSBOW_CHARGE` 改为 `progress = min((TicksUsingItem+PartialTick)/25,1)`，复刻 `AnimationUtils.animateCrossbowCharge`（默认 25 tick；快速装填附魔需 item data components，未建模并记录）。
+- **并行 flaky 修复**：把 `EntityAnimationProviderTests`（分配断言）、`EntityModelHierarchyTests`、`ChunkMeshCacheTests`、`EquipmentTextureCatalogTests` 归入 `NonParallel` 串行 collection；连续两次全量 Client **1145** 全绿，flaky 消失。
+- **下一步具体动作**：①P2-B Piglin；②快速装填附魔（若有 item data components）补 `maxCrossbowChargeDuration`；③继续 backlog。

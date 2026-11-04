@@ -55,4 +55,10 @@ public sealed class EntityPresentationState
 
     /// <summary>Mob aggressive flag (reference <c>Mob.isAggressive</c>, synced DATA_MOB_FLAGS bit 2).</summary>
     public bool IsAggressive { get; internal set; }
+
+    /// <summary>Whether the entity is using an item (reference DATA_LIVING_ENTITY_FLAGS bit 0).</summary>
+    public bool IsUsingItem { get; internal set; }
+
+    /// <summary>Ticks elapsed since the current item use started; reset when use stops.</summary>
+    public int UseItemTicks { get; internal set; }
 }

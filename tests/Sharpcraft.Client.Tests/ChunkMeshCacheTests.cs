@@ -12,6 +12,7 @@ namespace Sharpcraft.Client.Tests;
 /// Incremental re-meshing (docs/specs/network/play-movement.md 7.19). The point of the cache is that a block
 /// change costs one chunk, not the whole world, so the tests assert the re-mesh count rather than the pixels.
 /// </summary>
+[Collection(NonParallelCollection.Name)]
 public sealed class ChunkMeshCacheTests
 {
     [Fact]

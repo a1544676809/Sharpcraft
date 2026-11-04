@@ -28,7 +28,10 @@ public sealed class IllagerAnimationTests
         bool aggressive = false,
         int mainHandItemId = -1,
         bool hasMainHand = false,
-        bool passenger = false) => new(
+        bool passenger = false,
+        int ticksUsingItem = 0,
+        float partialTick = 0f,
+        bool isUsingItem = false) => new(
         TypeId: typeId,
         AgeInTicks: age,
         WalkAnimationPos: walkPos,
@@ -41,11 +44,14 @@ public sealed class IllagerAnimationTests
         IsResting: false,
         IsBaby: false,
         IsHidingInShell: false,
+        PartialTick: partialTick,
         SwingAnimation: swing,
         IsAggressive: aggressive,
         MainHandItemId: mainHandItemId,
         HasMainHandItem: hasMainHand,
-        IsPassenger: passenger);
+        IsPassenger: passenger,
+        IsUsingItem: isUsingItem,
+        TicksUsingItem: ticksUsingItem);
 
     private static EntityPose Apply(IllagerAnimationProvider provider, IEntityAnimationState state, in EntityAnimationFrame frame)
     {
@@ -220,19 +226,46 @@ public sealed class IllagerAnimationTests
     }
 
     [Fact]
-    public void CrossbowChargeUsesTheDocumentedDrawStartPose()
+    public void CrossbowChargeProgressFollowsTicksUsingItem()
     {
-        // Charge progress is blocked (no ticksUsingItem on the frame); the draw-start pose is reproduced.
         var provider = new IllagerAnimationProvider(IllagerModelDefinition.PillagerEntityTypeId);
-        var state = provider.CreateState();
-        ((IEntitySyncedDataAnimationState)state).OnSyncedData(16, 8, 1);
-        var pose = Apply(provider, state, Frame(IllagerModelDefinition.PillagerEntityTypeId));
 
-        Assert.Equal((int)IllagerArmPose.CrossbowCharge, ArmPoseOf(state));
-        Assert.Equal(-0.8f, pose.Get("right_arm").Rotation.Y, 5);
-        Assert.Equal(-0.97079635f, pose.Get("right_arm").Rotation.X, 5);
-        Assert.Equal(-0.97079635f, pose.Get("left_arm").Rotation.X, 5);
-        Assert.Equal(0.4f, pose.Get("left_arm").Rotation.Y, 5);
+        // progress = min((ticksUsingItem + partialTick) / 25, 1).
+        static float Lerp(float t, float a, float b) => a + ((b - a) * t);
+
+        // ticks 0 -> progress 0: draw-start pose.
+        var startState = provider.CreateState();
+        ((IEntitySyncedDataAnimationState)startState).OnSyncedData(16, 8, 1);
+        var start = Apply(provider, startState, Frame(IllagerModelDefinition.PillagerEntityTypeId, isUsingItem: true));
+        Assert.Equal((int)IllagerArmPose.CrossbowCharge, ArmPoseOf(startState));
+        Assert.Equal(-0.8f, start.Get("right_arm").Rotation.Y, 5);
+        Assert.Equal(-0.97079635f, start.Get("right_arm").Rotation.X, 5);
+        Assert.Equal(Lerp(0f, -0.97079635f, -MathF.PI / 2f), start.Get("left_arm").Rotation.X, 5);
+        Assert.Equal(Lerp(0f, 0.4f, 0.85f), start.Get("left_arm").Rotation.Y, 5);
+
+        // mid: ticks 12 + partial 0.5 -> progress 0.5.
+        var midState = provider.CreateState();
+        ((IEntitySyncedDataAnimationState)midState).OnSyncedData(16, 8, 1);
+        var mid = Apply(provider, midState, Frame(IllagerModelDefinition.PillagerEntityTypeId, isUsingItem: true, ticksUsingItem: 12, partialTick: 0.5f));
+        Assert.Equal(0.5f, (12f + 0.5f) / 25f, 6);
+        Assert.Equal(Lerp(0.5f, -0.97079635f, -MathF.PI / 2f), mid.Get("left_arm").Rotation.X, 5);
+        Assert.Equal(Lerp(0.5f, 0.4f, 0.85f), mid.Get("left_arm").Rotation.Y, 5);
+
+        // full: ticks 25 -> progress 1 (fully drawn).
+        var fullState = provider.CreateState();
+        ((IEntitySyncedDataAnimationState)fullState).OnSyncedData(16, 8, 1);
+        var full = Apply(provider, fullState, Frame(IllagerModelDefinition.PillagerEntityTypeId, isUsingItem: true, ticksUsingItem: 25));
+        Assert.Equal(-MathF.PI / 2f, full.Get("left_arm").Rotation.X, 5);
+        Assert.Equal(0.85f, full.Get("left_arm").Rotation.Y, 5);
+        Assert.Equal(-0.8f, full.Get("right_arm").Rotation.Y, 5);
+        Assert.Equal(-0.97079635f, full.Get("right_arm").Rotation.X, 5);
+
+        // clamped: ticks past the duration stay at progress 1.
+        var overState = provider.CreateState();
+        ((IEntitySyncedDataAnimationState)overState).OnSyncedData(16, 8, 1);
+        var over = Apply(provider, overState, Frame(IllagerModelDefinition.PillagerEntityTypeId, isUsingItem: true, ticksUsingItem: 60, partialTick: 0.9f));
+        Assert.Equal(-MathF.PI / 2f, over.Get("left_arm").Rotation.X, 5);
+        Assert.Equal(0.85f, over.Get("left_arm").Rotation.Y, 5);
     }
 
     [Fact]

@@ -305,6 +305,29 @@ public sealed class EntityAnimationInfrastructureTests
         public int ArmPose => 3;
     }
 
+    [Fact]
+    public void UsingItemTicksAccumulateAndReset()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(15, typeId: 104));
+        tracker.ApplyEntityData(15, [new EntityDataItem(8, 0, 1)]); // living flags: using item
+
+        for (var tick = 1; tick <= 5; tick++)
+        {
+            tracker.GameTime = tick;
+            tracker.Tick();
+        }
+
+        var usingState = tracker.Interpolate(1f)[0];
+        Assert.True(usingState.IsUsingItem);
+        Assert.Equal(5, usingState.TicksUsingItem);
+
+        tracker.ApplyEntityData(15, [new EntityDataItem(8, 0, 0)]);
+        tracker.Tick();
+        Assert.False(tracker.Interpolate(1f)[0].IsUsingItem);
+        Assert.Equal(0, tracker.Interpolate(1f)[0].TicksUsingItem);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 

@@ -13,6 +13,7 @@ namespace Sharpcraft.Client.Tests.Render;
 /// chain (head_parts → head → right_ear) with the rotation only on head_parts, so it exercises the recursion without
 /// depending on animation.
 /// </summary>
+[Collection(NonParallelCollection.Name)]
 public sealed class EntityModelHierarchyTests
 {
     private static Vector3[] Vertices(EntityModelDefinition model, int typeId, string onlyPart)

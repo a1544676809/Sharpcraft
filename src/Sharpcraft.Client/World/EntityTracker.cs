@@ -247,7 +247,9 @@ public readonly record struct EntityRenderState(
     float SwingAnimation = 0f,
     bool IsAggressive = false,
     int MainHandItemId = -1,
-    int ArmPose = 0);
+    int ArmPose = 0,
+    bool IsUsingItem = false,
+    int TicksUsingItem = 0);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -683,6 +685,14 @@ public sealed class EntityTracker
                 (int)MathF.Floor((float)entity.Z)) ?? false;
             entity.Presentation.Tentacle?.Update(entity.Presentation.IsInWater);
             entity.Presentation.Swing.Tick();
+            if (entity.Presentation.IsUsingItem)
+            {
+                entity.Presentation.UseItemTicks++;
+            }
+            else
+            {
+                entity.Presentation.UseItemTicks = 0;
+            }
 
             if (entity.Animation is IEntityTickAnimationState tickState)
             {
@@ -766,6 +776,8 @@ public sealed class EntityTracker
                 IsAggressive: entity.Presentation.IsAggressive,
                 MainHandItemId: entity.EquipmentItemAt(0),
                 ArmPose: entity.Animation is IEntityArmPoseAnimationState armPose ? armPose.ArmPose : 0,
+                IsUsingItem: entity.Presentation.IsUsingItem,
+                TicksUsingItem: entity.Presentation.UseItemTicks,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,
@@ -827,6 +839,13 @@ public sealed class EntityTracker
             if (item.Index == 15 && item.SerializerId == 0)
             {
                 entity.Presentation.IsAggressive = (item.Value & 4) != 0;
+                applied = true;
+            }
+
+            // Living-entity flags byte (index 8, byte serializer): bit 0 = using item.
+            if (item.Index == 8 && item.SerializerId == 0)
+            {
+                entity.Presentation.IsUsingItem = (item.Value & 1) != 0;
                 applied = true;
             }
         }

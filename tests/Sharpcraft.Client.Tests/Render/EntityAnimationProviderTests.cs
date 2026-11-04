@@ -8,6 +8,7 @@ using Xunit;
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>Provider registry and per-provider steady-state allocation (docs/analysis/render/entity-animation-architecture.md 6.2).</summary>
+[Collection(NonParallelCollection.Name)]
 public sealed class EntityAnimationProviderTests
 {
     private static readonly int[] MigratedTypeIds =

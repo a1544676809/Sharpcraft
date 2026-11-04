@@ -9,6 +9,7 @@ using Xunit;
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>Controlled item → equipment texture mapping (docs/analysis/render/entity-equipment.md 3.2).</summary>
+[Collection(NonParallelCollection.Name)]
 public sealed class EquipmentTextureCatalogTests
 {
     private static ItemInfo Item(string path) => new(Identifier.Parse("minecraft:" + path));
