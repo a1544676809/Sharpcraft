@@ -1487,6 +1487,15 @@ internal sealed class InteractiveSession
 
                     break;
 
+                // Leash link: the Rabbit idle gate needs the client-side leashed flag.
+                case PacketIds.PlayClientbound.SetEntityLink:
+                    if (EntityLinkPackets.TryRead(body, out var linkSource, out var linkDestination) == DecodeStatus.Success)
+                    {
+                        _entities.ApplyEntityLink(linkSource, linkDestination);
+                    }
+
+                    break;
+
                 // Arm-swing animation: drives the presentation layer's swing clock for armed mobs.
                 case PacketIds.PlayClientbound.SwingAnimation:
                     if (SwingAnimationPackets.TryRead(body, out var swingEntityId, out var swingHand, out var swingType, out var swingDuration) == DecodeStatus.Success)

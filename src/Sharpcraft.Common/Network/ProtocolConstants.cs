@@ -227,6 +227,10 @@ public static class PacketIds
         /// <remarks>Reference registration dump: play clientbound 47.</remarks>
         public const int LevelEvent = 47;
 
+        /// <summary>Entity link/leash: int source entity id, int destination entity id (0 = detach).</summary>
+        /// <remarks>Reference registration dump: play clientbound 102.</remarks>
+        public const int SetEntityLink = 102;
+
         /// <summary>Absolute player position: a teleport or a server correction.</summary>
         public const int PlayerPosition = 73;
 

@@ -3303,6 +3303,13 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - ADR-0025 已采纳；Rabbit idle 由阻塞转为可实施，需补 `LegacyRandomSource` 实体实例、`isNoAi`（Mob flags bit0）与 `set_entity_link`(102) leash 状态。
 - **下一步具体动作**：按 ADR-0025 实现 Rabbit idle 基础设施与 keyframes。
 
+### 2026-11-04 Rabbit idle-head-tilt 完成（T-614）
+
+- 每 Rabbit 使用 Java 兼容 `LegacyRandomSource`（进程唯一种子；ADR-0025）：`idleAnimationTimeout=nextInt(40)+180`，`shouldPlayIdleAnimation`（无 leash、`!isNoAi`）。
+- 补 `isNoAi`（Mob flags bit0）与 `set_entity_link`(102) leash；帧 `IsIdleHeadTiltStarted/IdleHeadTiltAgeTicks`；provider 增加 IDLE_HEAD_TILT keyframes（ticks/20 采样），idle 时抑制 head look。
+- 验证：Common **488**、Client **1252**，构建 0 警告 0 错误。
+- **下一步具体动作**：B 轮全部可派生项完成；仅 baby 模型差异与数据源缺失项保持记录。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

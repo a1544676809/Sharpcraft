@@ -292,7 +292,9 @@ public readonly record struct EntityRenderState(
     float WitherHeadYaw1 = 0f,
     float WitherHeadPitch1 = 0f,
     float WitherHeadYaw2 = 0f,
-    float WitherHeadPitch2 = 0f);
+    float WitherHeadPitch2 = 0f,
+    bool IsIdleHeadTiltStarted = false,
+    float IdleHeadTiltAgeTicks = 0f);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -560,6 +562,19 @@ public sealed class EntityTracker
         return true;
     }
 
+    /// <summary>Applies a <c>set_entity_link</c> packet (leash attach/detach) to the source entity.</summary>
+    public bool ApplyEntityLink(int sourceId, int destinationId)
+    {
+        if (!_entities.TryGetValue(sourceId, out var entity))
+        {
+            UnknownUpdates++;
+            return false;
+        }
+
+        entity.Presentation.IsLeashed = destinationId != 0;
+        return true;
+    }
+
     /// <summary>Applies a jukebox level event (1010 start / 1011 stop) to nearby parrots.</summary>
     public bool ApplyLevelEvent(int type, long packedPosition, int data)
     {
@@ -776,6 +791,7 @@ public sealed class EntityTracker
                 (int)MathF.Floor((float)entity.Z)) ?? false;
             entity.Presentation.Tentacle?.Update(entity.Presentation.IsInWater);
             entity.Presentation.RabbitHop?.Tick();
+            entity.Presentation.RabbitIdle?.Tick((int)GameTime, entity.Presentation.IsNoAi, entity.Presentation.IsLeashed, entity.Presentation.RabbitHop?.IsJumping ?? false);
             entity.Presentation.PolarStand?.Tick(entity.Presentation.IsStanding);
             entity.Presentation.PandaPose?.Tick(entity.Presentation.IsSitting, entity.Presentation.IsOnBack, entity.Presentation.IsRolling);
             if (entity.TypeId == 99 && entity.Presentation.IsPartyParrot && entity.Presentation.PartyJukebox != long.MinValue)
@@ -970,6 +986,10 @@ public sealed class EntityTracker
                 WitherHeadPitch1: entity.Presentation.WitherHeads?.Pitch(0) ?? 0f,
                 WitherHeadYaw2: entity.Presentation.WitherHeads?.Yaw(1) ?? 0f,
                 WitherHeadPitch2: entity.Presentation.WitherHeads?.Pitch(1) ?? 0f,
+                IsIdleHeadTiltStarted: entity.Presentation.RabbitIdle?.IsStarted ?? false,
+                IdleHeadTiltAgeTicks: (entity.Presentation.RabbitIdle?.IsStarted ?? false)
+                    ? entity.Presentation.RabbitIdle!.AgeTicks((int)GameTime) + t
+                    : 0f,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,
@@ -1107,6 +1127,7 @@ public sealed class EntityTracker
             // Mob flags byte (index 15, byte serializer): bit 2 = aggressive, bit 1 = left-handed.
             if (item.Index == 15 && item.SerializerId == 0)
             {
+                entity.Presentation.IsNoAi = (item.Value & 1) != 0;
                 entity.Presentation.IsAggressive = (item.Value & 4) != 0;
                 entity.Presentation.IsLeftHanded = (item.Value & 2) != 0;
                 applied = true;

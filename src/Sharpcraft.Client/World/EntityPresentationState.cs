@@ -28,6 +28,7 @@ public sealed class EntityPresentationState
         if (typeId == 111)
         {
             RabbitHop = new RabbitHopAnimationState();
+            RabbitIdle = new RabbitIdleAnimationState();
         }
 
         if (typeId == 105)
@@ -61,6 +62,9 @@ public sealed class EntityPresentationState
     /// <summary>Rabbit hop clock, or null for other types.</summary>
     public RabbitHopAnimationState? RabbitHop { get; }
 
+    /// <summary>Rabbit idle-head-tilt clock, or null for other types.</summary>
+    public RabbitIdleAnimationState? RabbitIdle { get; }
+
     /// <summary>Polar bear stand ease clock, or null for other types.</summary>
     public PolarBearStandAnimationState? PolarStand { get; }
 
@@ -75,6 +79,12 @@ public sealed class EntityPresentationState
 
     /// <summary>Wither side-head alternative target entity id 2 (data index 18), or 0 when none.</summary>
     public int WitherTarget2 { get; internal set; }
+
+    /// <summary>Mob NoAI flag (Mob flags bit 0), used by the Rabbit idle gate.</summary>
+    public bool IsNoAi { get; internal set; }
+
+    /// <summary>Whether the entity has a leash holder (set by the set_entity_link packet).</summary>
+    public bool IsLeashed { get; internal set; }
 
     /// <summary>The synced ground flag from the last move/teleport packet.</summary>
     public bool IsOnGround { get; internal set; }

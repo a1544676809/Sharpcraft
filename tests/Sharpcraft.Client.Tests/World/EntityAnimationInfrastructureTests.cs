@@ -489,6 +489,22 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.Equal(1.62f, eyeY, 4);
     }
 
+    [Fact]
+    public void RabbitIdleStartsWithinItsRandomTimeout()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(29, typeId: RabbitModelDefinition.RabbitEntityTypeId));
+        for (var tick = 1; tick <= 230; tick++)
+        {
+            tracker.GameTime = tick;
+            tracker.Tick();
+        }
+
+        var state = tracker.Interpolate(0.5f)[0];
+        Assert.True(state.IsIdleHeadTiltStarted);
+        Assert.True(state.IdleHeadTiltAgeTicks >= 0f);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 

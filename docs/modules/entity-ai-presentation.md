@@ -59,6 +59,6 @@ status: 已评审
 | Fox | `FoxAnimationProvider` | 走/蹲/睡/坐/扑/趴腿摆（faceplant 计数器）、head look、睡姿覆盖 | headRollAngle、crouchAmount/ageScale、腿可见性 |
 | Panda | `PandaAnimationProvider` | unhappy/sneeze、四足走/head look、**sit/eat/lie/roll（精确 `PandaPoseAnimationState` 缓冲）**、**scared（主线 WORRIED 基因 + 雷暴）** | — |
 | PolarBear | `PolarBearAnimationProvider` | 基础四足 + **完整站立缓动（`PolarBearStandAnimationState`：±1/tick, 0..6, lerp/6）** | — |
-| Rabbit | `RabbitAnimationProvider` | idle-not-started 的 head look + **hop（entity_event 1 → 15-tick 时钟，`JumpCompletion` 精确映射 0.75s 循环 keyframes）** | idle-head-tilt：按 ADR-0025 以同算法/同分布实现（待补 `LegacyRandomSource` 实体实例 + `isNoAi` + leash）；baby 模型 |
+| Rabbit | `RabbitAnimationProvider` | idle-not-started head look、**hop（entity_event 1 精确时钟）**、**idle-head-tilt（ADR-0025：Java 兼容 LegacyRandomSource + `isNoAi` + `set_entity_link` leash 门控）** | baby 模型 |
 | Wither | `WitherAnimationProvider` | ribcage/tail age bob、中心头 look、**左右头 aim（synced 目标 id + 目标眼高维度表 + 10°/40° rotlerp）** | — |
 | Parrot | 既有 `ParrotAnimationProvider` | flying/standing/sitting/on_shoulder + **PARTY（level event 1010/1011 → `IsPartyParrot`）** | — |
