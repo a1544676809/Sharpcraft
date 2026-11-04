@@ -36,6 +36,12 @@ internal static class ItemComponentPatchReader
     private static readonly int RepairCost = DataComponentTypes.GetId("repair_cost");
     private static readonly int ChargedProjectiles = DataComponentTypes.GetId("charged_projectiles");
     private static readonly int QuickCharge = EnchantmentTypes.GetId("quick_charge");
+    private static readonly int CustomName = DataComponentTypes.GetId("custom_name");
+    private static readonly int ItemName = DataComponentTypes.GetId("item_name");
+    private static readonly int Lore = DataComponentTypes.GetId("lore");
+    private static readonly int Rarity = DataComponentTypes.GetId("rarity");
+    private static readonly int ItemModel = DataComponentTypes.GetId("item_model");
+    private static readonly int GlintOverride = DataComponentTypes.GetId("enchantment_glint_override");
 
     /// <summary>Reads one patch; returns false only when the stream is malformed (truncated).</summary>
     public static bool TryRead(ref PayloadReader reader, out ItemComponentInfo info, out bool hasUnknown)
@@ -159,6 +165,45 @@ internal static class ItemComponentPatchReader
         if (typeId == ChargedProjectiles)
         {
             return TrySkipChargedProjectiles(ref reader, depth, ref hasUnknown);
+        }
+
+        if (typeId == CustomName || typeId == ItemName)
+        {
+            // Text component: transmitted as one anonymous NBT tag.
+            return NbtTagReader.TrySkip(ref reader);
+        }
+
+        if (typeId == Lore)
+        {
+            if (reader.TryReadVarInt(out var lineCount) != DecodeStatus.Success || lineCount < 0)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < lineCount; i++)
+            {
+                if (!NbtTagReader.TrySkip(ref reader))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        if (typeId == Rarity)
+        {
+            return reader.TryReadVarInt(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == ItemModel)
+        {
+            return reader.TryReadString(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == GlintOverride)
+        {
+            return reader.TryReadBool(out _) == DecodeStatus.Success;
         }
 
         // Unknown positive component: no generic skip exists, so the caller must stop after this slot.

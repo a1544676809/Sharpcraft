@@ -3124,6 +3124,14 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Common **472**（+2）、Client **1160**（+1），构建 0 警告 0 错误。
 - **下一步具体动作**：①扩展组件 codec 表（`custom_name`/`attribute_modifiers`/`lore` 等）提升完整解析率；②`mainArm` 同步来源；③继续 backlog。
 
+### 2026-11-04 装备组件 codec 扩展（T-595）
+
+- 新增 `NbtTagReader`：递归跳过匿名网络 NBT（含 Compound/List/Array/String），深度上限 64。
+- `ItemComponentPatchReader` 新增支持：`custom_name`/`item_name`（单 NBT）、`lore`（NBT 列表）、`rarity`、`item_model`、`enchantment_glint_override`。
+- 效果：命名/带 lore/带模型覆盖的装备不再因未知组件提前 opaque，可继续解析后续装备槽。
+- 验证：Common **473**（+1）、Client **1160**，构建 0 警告 0 错误。
+- **下一步具体动作**：①继续扩 `attribute_modifiers`/`custom_model_data`/`tooltip_display` 等复杂 codec；②`mainArm` 同步来源；③继续 backlog。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

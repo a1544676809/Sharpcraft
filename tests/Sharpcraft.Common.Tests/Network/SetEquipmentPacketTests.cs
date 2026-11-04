@@ -179,6 +179,43 @@ public sealed class SetEquipmentPacketTests
     }
 
     [Fact]
+    public void TextComponentValueIsSkippedAndParsingContinues()
+    {
+        var customName = DataComponentTypes.GetId("custom_name");
+        Assert.True(customName >= 0);
+
+        var body = Body(
+            b =>
+            {
+                b.Add(0x80);                 // mainhand with continuation
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(1));       // one added component
+                b.AddRange(VarInt(0));       // no removals
+                b.AddRange(VarInt(customName));
+                // Text component as one anonymous NBT String tag: type 8, ushort length 3, "abc".
+                b.Add(8);
+                b.Add(0);
+                b.Add(3);
+                b.Add((byte)'a');
+                b.Add((byte)'b');
+                b.Add((byte)'c');
+            },
+            b =>
+            {
+                b.Add(7);                    // offhand, last slot
+                b.AddRange(VarInt(0));
+            });
+
+        var result = Read(body, out _, out var complete, out var status);
+
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.Equal(2, result.Length);
+        Assert.False(result[0].Components.Opaque);
+    }
+
+    [Fact]
     public void TruncatedStackReportsNeedMoreData()
     {
         var body = new List<byte>();
