@@ -3375,3 +3375,13 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **阻塞（不近似，状态保持进行中）**：SPEAR arm pose 与 STAB 挥击依赖 `SpearAnimations`（长矛第三人称模型几何），未实现；CROSSBOW_* 姿态对 humanoid mob 渲染器不可达（玩家/Illager/Piglin 各自 provider）。
 - **验证边界**：所有分支用参考公式的数值单测覆盖（抬臂/僵尸臂/头 yaw/乘客/潜行/游泳/攻击门控）；本环境**无可见窗口**，未做逐像素目视验收。
 - **下一步具体动作**：①SPEAR/STAB 作为独立子任务（读 `SpearAnimations` 与长矛模型层）；②继续补剩余缺 provider 生物（Cat/Ocelot、ZombieVillager、Enderman、Slime、EnderDragon、Pufferfish、TropicalFish）；③Bogged `isSheared` 蘑菇可见性。
+
+## 2026-11-04 实体朝向修正 + 身体旋转 + 亚 tick 龄期（T-620，分支 `fix/entity-orientation-matrix`）
+
+- **分支**：从 `feature/item-registry`（`3ed638e`）签出 `fix/entity-orientation-matrix` 专门做本修正，便于回退；提交 `37f9baa`（朝向变换链）与 `9c30531`（身体旋转+亚 tick）。
+- **根因（对照 `LivingEntityRenderer` 源码）**：①实体级应只做 `rotateDegrees(YP, 180 - bodyRot)`，且整身不 pitch（pitch 只在头部件）——此前整体用 `+Yaw` 并整身 pitch，导致"走路方向与身子朝向不一致 + 身体前倾"；②我们的顶点是模型 `scale(-1,-1,1)` 之后的副本，动画姿态旋转必须做共轭（X/Y 取反、Z 不变），此前直接抄角度 → 头/臂旋转方向错误（"头能转 180"）。
+- **已修正**：`EntityModelTransform.From` 改 `180 - Yaw`、`PitchDegrees=0`；`EntityModelMesher` 姿态旋转共轭；`HumanoidModelPose` 位置偏移补 X/Y 取反。**后果修正**：所有实体朝向/动画旋转方向统一对齐原版；依赖"yaw=0 即无旋转"的 3 个静态几何测试改为 yaw=180 以隔离朝向。
+- **平滑**：`EntityRenderState.AgeInTicks = tickCount + partialTick`（参考 `EntityRenderer.extractRenderState`），程序化 sin/cos 动画不再按 tick 阶跃。
+- **头部带动身体**：新增 `EntityPresentationState.TickBodyRotation` 复刻 `BodyRotationControl.clientTick`（移动时身=实体 yaw、头钳 75°；静止时头偏 >15° 拖动身体到 ≤75°、稳定 >10 tick 后转正）；实体 yaw 用插值 `BodyYaw`、头用插值 `HeadYaw`。
+- **验证**：Client **1273**（+4 身体旋转），构建 0 警告 0 错误；窗口目视朝向正确、头/身随动（用户确认"现在对了"）。
+- **下一步具体动作**：①若目视通过，合并 `fix/entity-orientation-matrix` 回 `feature/item-registry`；②继续 SPEAR/STAB 与缺 provider 生物；③补逐像素/矩阵等效回归测试（当前为公式级单测）。
