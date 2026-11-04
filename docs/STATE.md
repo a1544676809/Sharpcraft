@@ -2896,3 +2896,12 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **EnderDragon 未派单**：其 `setupAnim` 依赖 `DragonFlightHistory` 的 20 帧历史采样（`getHistoricalPos`）与 `flapTime`，当前 render state 完全没有飞行历史子系统，无法在等效前提下移植，需先补该基础设施再单独排期。
 - 全量构建 0 警告 0 错误；Client 803（新增 Warden 15 / Creaking 11 / Breeze 13）、Common 454、Architecture 31 绿（两次既有 flaky 在重跑后通过：`ChunkMeshCacheTests.*`、`EntityModelHierarchyTests.TheHorseEarLands…`）。
 - **下一步具体动作**：①补 `EntityRenderState`/`EntityTracker` 的动画状态提取（至少 `Warden/Creaking/Breeze` 的 AnimationState 时钟与 `canMove`），把 one-shot 接入热路径；②继续按 backlog 派单（Ravager/Hoglin/Sniffer/CopperGolem 等），EnderDragon 待飞行历史子系统。
+
+### 2026-11-04 动画通用状态基础设施（T-569）
+
+- **走路动画真机生效**：`WalkAnimationState` + `EntityTracker.Tick()` 用每 tick 实际水平位移驱动（默认 `min(dist*4,1)`/0.4/幼年位置×3，Creaking 覆写 `min(dist*25,3)`），`Interpolate` 输出 `WalkAnimationPos/Speed`（此前这两个字段恒为 0，游戏内所有走路动画其实都没动）。
+- **一次性 clip 有了触发通道**：`EntityAnimationFrame.Yaw` 与 `EntityModelPart.PoseSource`（提交 `9094905`）之外，本轮解码 `entity_event`(clientbound 34) 并路由到 `IEntityEventAnimationState`；`Tick()` 每 tick 回调 `IEntityTickAnimationState`；`AnimationClipPlayer` 从 `AnimationState` 时钟播放 baked clip。
+- **已接入**：Warden `entity_event` 4→attack、62→sonic_boom、61→触须倒计时（3 条）；Creaking 4→attack、66→invulnerable（含 15/8 tick 计数与 `animateWhen`）。
+- **仍缺（进行中）**：Warden 的 pose 驱动 emerge/dig/roar/sniff（需解析 `DATA_POSE` 同步字段）、Creaking death（`isTearingDown`/creaking-heart 状态）、`canMove`、Warden `tendrilAnimation` 的 partial-tick 插值。
+- 全量构建 0 警告 0 错误；Client 810（+7）、Common 457（+3）、Architecture 31 全绿。
+- **下一步具体动作**：①解析 `set_entity_data` 的 `Pose`（实体数据 accessor）并路由 `IEntityPoseAnimationState`，补 Warden 的 emerge/dig/roar/sniff 与 Creaking 的 `canMove`；②把 `tendrilAnimation` 做成双帧插值；③再按 backlog 派单（Ravager/Hoglin/Sniffer/CopperGolem）。

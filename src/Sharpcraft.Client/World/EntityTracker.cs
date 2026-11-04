@@ -46,6 +46,9 @@ public sealed class TrackedEntity
     /// </summary>
     public IEntityAnimationState? Animation { get; internal set; }
 
+    /// <summary>Smoothed walk animation position/speed, advanced once per tick from actual movement.</summary>
+    public WalkAnimationState WalkAnimation { get; } = new();
+
     /// <summary>Feet position, current tick.</summary>
     public double X { get; internal set; }
 
@@ -465,6 +468,26 @@ public sealed class EntityTracker
         return true;
     }
 
+    /// <summary>Routes one clientbound <c>entity_event</c> (packet 34) to the entity's animation state, if it listens.</summary>
+    /// <param name="id">Runtime entity id.</param>
+    /// <param name="eventId">Event id (reference <c>EntityEvent</c> constant).</param>
+    /// <returns>True when the entity was tracked.</returns>
+    public bool ApplyEntityEvent(int id, int eventId)
+    {
+        if (!_entities.TryGetValue(id, out var entity))
+        {
+            UnknownUpdates++;
+            return false;
+        }
+
+        if (entity.Animation is IEntityEventAnimationState listener)
+        {
+            listener.OnEntityEvent(eventId, (int)GameTime);
+        }
+
+        return true;
+    }
+
     /// <param name="id">Entity id the packet named.</param>
     /// <param name="items">Decoded data items.</param>
     /// <returns>True when a variant value was found and stored.</returns>
@@ -558,18 +581,32 @@ public sealed class EntityTracker
         {
             entity.PushPrevious();
 
-            if (entity.LerpSteps <= 0)
+            if (entity.LerpSteps > 0)
             {
-                continue;
+                var alpha = 1f / entity.LerpSteps;
+                entity.X += (entity.TargetX - entity.X) * alpha;
+                entity.Y += (entity.TargetY - entity.Y) * alpha;
+                entity.Z += (entity.TargetZ - entity.Z) * alpha;
+                entity.Yaw = Wrap360(LerpAngle(entity.Yaw, entity.TargetYaw, alpha));
+                entity.Pitch += (entity.TargetPitch - entity.Pitch) * alpha;
+                entity.LerpSteps--;
             }
 
-            var alpha = 1f / entity.LerpSteps;
-            entity.X += (entity.TargetX - entity.X) * alpha;
-            entity.Y += (entity.TargetY - entity.Y) * alpha;
-            entity.Z += (entity.TargetZ - entity.Z) * alpha;
-            entity.Yaw = Wrap360(LerpAngle(entity.Yaw, entity.TargetYaw, alpha));
-            entity.Pitch += (entity.TargetPitch - entity.Pitch) * alpha;
-            entity.LerpSteps--;
+            // Horizontal distance actually travelled this tick drives the walk animation, mirroring the reference
+            // calculateEntityAnimation (uses the movement delta, not the commanded velocity).
+            var dx = (float)(entity.X - entity.PreviousX);
+            var dz = (float)(entity.Z - entity.PreviousZ);
+            var distance = MathF.Sqrt((dx * dx) + (dz * dz));
+            var profile = WalkProfile.For(entity.TypeId, entity.IsBaby);
+            entity.WalkAnimation.Update(
+                MathF.Min(distance * profile.DistanceToSpeed, profile.MaxSpeed),
+                profile.Factor,
+                profile.PositionScale);
+
+            if (entity.Animation is IEntityTickAnimationState tickState)
+            {
+                tickState.OnTick(new EntityAnimationTickContext((int)GameTime, distance));
+            }
         }
     }
 
@@ -633,6 +670,8 @@ public sealed class EntityTracker
                     entity.EquipmentItemAt(0), entity.EquipmentItemAt(1), entity.EquipmentItemAt(2), entity.EquipmentItemAt(3),
                     entity.EquipmentItemAt(4), entity.EquipmentItemAt(5), entity.EquipmentItemAt(6), entity.EquipmentItemAt(7)),
                 AgeInTicks: GameTime,
+                WalkAnimationPos: entity.WalkAnimation.Position(t),
+                WalkAnimationSpeed: entity.WalkAnimation.Speed(t),
                 Animation: entity.Animation));
         }
 
@@ -640,6 +679,28 @@ public sealed class EntityTracker
     }
 
     private static bool Relative(int relatives, int bit) => (relatives & (1 << bit)) != 0;
+
+    private readonly record struct WalkAnimationProfile(float DistanceToSpeed, float MaxSpeed, float Factor, float PositionScale);
+
+    /// <summary>
+    /// Per-type walk animation mapping. The default mirrors <c>LivingEntity.updateWalkAnimation</c>
+    /// (target = min(distance*4, 1), factor 0.4, baby position scale 3); the Creaking overrides it with
+    /// min(distance*25, 3). Type ids are literals on purpose so this layer does not depend on the render model classes.
+    /// </summary>
+    private static class WalkProfile
+    {
+        private const int CreakingTypeId = 31;
+
+        public static WalkAnimationProfile For(int typeId, bool isBaby)
+        {
+            if (typeId == CreakingTypeId)
+            {
+                return new WalkAnimationProfile(25f, 3f, 0.4f, 1f);
+            }
+
+            return new WalkAnimationProfile(4f, 1f, 0.4f, isBaby ? 3f : 1f);
+        }
+    }
 
     private static readonly int[] DyeRgb =
     [

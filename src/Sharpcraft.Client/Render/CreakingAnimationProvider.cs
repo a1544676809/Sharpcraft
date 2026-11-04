@@ -40,6 +40,13 @@ public sealed class CreakingAnimationProvider : IEntityAnimationProvider
                 MathF.Min(frame.WalkAnimationSpeed, 1f),
                 pose);
         }
+
+        if (state is State clips)
+        {
+            AnimationClipPlayer.Apply(clips.Attack, CreakingAnimations.AttackBaked, frame.AgeInTicks, pose);
+            AnimationClipPlayer.Apply(clips.Invulnerable, CreakingAnimations.InvulnerableBaked, frame.AgeInTicks, pose);
+            AnimationClipPlayer.Apply(clips.Death, CreakingAnimations.DeathBaked, frame.AgeInTicks, pose);
+        }
     }
 
     public void ApplyClip(IEntityAnimationState state, in EntityAnimationFrame frame, string clip, float seconds, EntityPose pose)
@@ -55,7 +62,42 @@ public sealed class CreakingAnimationProvider : IEntityAnimationProvider
         animation?.Apply(seconds, 1f, pose);
     }
 
-    private sealed class State : IEntityAnimationState
+    private sealed class State : IEntityAnimationState, IEntityEventAnimationState, IEntityTickAnimationState
     {
+        public readonly AnimationState Attack = new();
+        public readonly AnimationState Invulnerable = new();
+        public readonly AnimationState Death = new();
+        private int _attackRemaining;
+        private int _invulnerabilityRemaining;
+
+        public void OnEntityEvent(int eventId, int gameTime)
+        {
+            switch (eventId)
+            {
+                case 4: // START_ATTACKING
+                    _attackRemaining = 15;
+                    break;
+                case 66: // SHAKE (hurt / invulnerable)
+                    _invulnerabilityRemaining = 8;
+                    break;
+            }
+        }
+
+        public void OnTick(in EntityAnimationTickContext context)
+        {
+            if (_attackRemaining > 0)
+            {
+                _attackRemaining--;
+            }
+
+            if (_invulnerabilityRemaining > 0)
+            {
+                _invulnerabilityRemaining--;
+            }
+
+            Attack.AnimateWhen(_attackRemaining > 0, context.GameTime);
+            Invulnerable.AnimateWhen(_invulnerabilityRemaining > 0, context.GameTime);
+            // Death is driven by the reference's isTearingDown(), which needs the creaking-heart state; not wired yet.
+        }
     }
 }

@@ -54,3 +54,28 @@ public readonly record struct EntityAnimationFrame(
 public interface IEntityAnimationState
 {
 }
+
+/// <summary>Per-tick context delivered to animation states that need to advance their own clocks.</summary>
+/// <param name="GameTime">Client game time in ticks, the same clock the frame's age uses.</param>
+/// <param name="HorizontalDistance">Horizontal distance moved during the tick (blocks).</param>
+public readonly record struct EntityAnimationTickContext(int GameTime, float HorizontalDistance);
+
+/// <summary>
+/// Optional capability for states whose clips are triggered by a server <c>entity_event</c> packet. The tracker calls
+/// this when a clientbound entity event arrives; unknown ids can be ignored.
+/// </summary>
+public interface IEntityEventAnimationState
+{
+    /// <summary>Handles one entity event (see the reference <c>EntityEvent</c> constants).</summary>
+    void OnEntityEvent(int eventId, int gameTime);
+}
+
+/// <summary>
+/// Optional capability for states that must advance counters or animation clocks once per tick (for example the
+/// Creaking attack/invulnerability timers or the Warden tendril countdown).
+/// </summary>
+public interface IEntityTickAnimationState
+{
+    /// <summary>Advances one tick. Called once per tracked entity per tick, before rendering.</summary>
+    void OnTick(in EntityAnimationTickContext context);
+}

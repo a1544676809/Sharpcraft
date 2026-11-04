@@ -1456,6 +1456,15 @@ internal sealed class InteractiveSession
                         break;
                     }
 
+                // Entity events start/stop animation state clocks (attack, sonic charge, tendril shiver, ...).
+                case PacketIds.PlayClientbound.EntityEvent:
+                    if (EntityEventPackets.TryRead(body, out var eventEntityId, out var eventId) == DecodeStatus.Success)
+                    {
+                        _entities.ApplyEntityEvent(eventEntityId, eventId);
+                    }
+
+                    break;
+
                 case PacketIds.PlayClientbound.SetTime:
                     if (_world is not null)
                     {

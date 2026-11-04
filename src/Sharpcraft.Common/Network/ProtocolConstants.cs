@@ -211,6 +211,10 @@ public static class PacketIds
         /// <remarks>Reference registration dump: play clientbound 39 (GameProtocols clientbound order index 40, id = index − 1; cross-checked with SetTime 116→115 and Login 51→50).</remarks>
         public const int GameEvent = 39;
 
+        /// <summary>Entity event: a fixed entity id plus one signed event byte (attack, hurt, sonic charge, ...).</summary>
+        /// <remarks>Reference registration dump: play clientbound 34.</remarks>
+        public const int EntityEvent = 34;
+
         /// <summary>Absolute player position: a teleport or a server correction.</summary>
         public const int PlayerPosition = 73;
 

@@ -81,6 +81,18 @@ public sealed class WardenAnimationProvider : IEntityAnimationProvider
             pose.Add("left_tendril", new PoseOffset(Vector3.Zero, new Vector3(tendrilXRot, 0f, 0f), Vector3.Zero));
             pose.Add("right_tendril", new PoseOffset(Vector3.Zero, new Vector3(-tendrilXRot, 0f, 0f), Vector3.Zero));
         }
+
+        // Event-triggered one-shots. Digging/emerge/roar/sniff start from a synced pose that is not decoded yet, so
+        // their clocks stay stopped for now; attack/sonic boom are driven by entity events.
+        if (state is State clips)
+        {
+            AnimationClipPlayer.Apply(clips.Attack, WardenAnimations.AttackBaked, frame.AgeInTicks, pose);
+            AnimationClipPlayer.Apply(clips.SonicBoom, WardenAnimations.SonicBoomBaked, frame.AgeInTicks, pose);
+            AnimationClipPlayer.Apply(clips.Digging, WardenAnimations.DigBaked, frame.AgeInTicks, pose);
+            AnimationClipPlayer.Apply(clips.Emerge, WardenAnimations.EmergeBaked, frame.AgeInTicks, pose);
+            AnimationClipPlayer.Apply(clips.Roar, WardenAnimations.RoarBaked, frame.AgeInTicks, pose);
+            AnimationClipPlayer.Apply(clips.Sniff, WardenAnimations.SniffBaked, frame.AgeInTicks, pose);
+        }
     }
 
     public void ApplyClip(IEntityAnimationState state, in EntityAnimationFrame frame, string clip, float seconds, EntityPose pose)
@@ -100,10 +112,44 @@ public sealed class WardenAnimationProvider : IEntityAnimationProvider
 
     /// <summary>
     /// Per-entity Warden animation state. <see cref="TendrilAnimation"/> mirrors the reference render state's tendril
-    /// sway multiplier; it stays 0 because no trajectory/anger input feeds it yet.
+    /// sway multiplier (a 10-tick countdown started by a tendril-shiver event); the six one-shot clips are clocks that
+    /// entity events start.
     /// </summary>
-    private sealed class State : IEntityAnimationState
+    private sealed class State : IEntityAnimationState, IEntityEventAnimationState, IEntityTickAnimationState
     {
-        public float TendrilAnimation { get; set; }
+        public readonly AnimationState Attack = new();
+        public readonly AnimationState SonicBoom = new();
+        public readonly AnimationState Digging = new();
+        public readonly AnimationState Emerge = new();
+        public readonly AnimationState Roar = new();
+        public readonly AnimationState Sniff = new();
+        private int _tendril;
+
+        public float TendrilAnimation => _tendril / 10f;
+
+        public void OnEntityEvent(int eventId, int gameTime)
+        {
+            switch (eventId)
+            {
+                case 4: // START_ATTACKING
+                    Roar.Stop();
+                    Attack.Start(gameTime);
+                    break;
+                case 61: // TENDRILS_SHIVER
+                    _tendril = 10;
+                    break;
+                case 62: // SONIC_CHARGE
+                    SonicBoom.Start(gameTime);
+                    break;
+            }
+        }
+
+        public void OnTick(in EntityAnimationTickContext context)
+        {
+            if (_tendril > 0)
+            {
+                _tendril--;
+            }
+        }
     }
 }

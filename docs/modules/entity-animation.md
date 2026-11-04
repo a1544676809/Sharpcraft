@@ -51,9 +51,18 @@
 - `EntityAnimationFrame`（`Client.World`）：通用动画输入，`From(EntityRenderState)` 投影；
 - `IEntityAnimationState`（`Client.World`）：每实体可变状态的空标记，具体实现归各 provider；
 - `IEntityAnimationProvider`（`Client.Render`）：`TypeId`、`Clips`、`CreateState()`、`Apply(state, frame, pose)`（热路径）、`ApplyClip(state, frame, clip, seconds, pose)`（沙盒/工具）；
-- `EntityAnimationRegistry`（`Client.Render`）：`TryGet` / `For` / `CreateState` / `Clips` / `All`，按 typeId 查找 provider。
+- `EntityAnimationRegistry`（`Client.Render`）：`TryGet` / `For` / `CreateState` / `Clips` / `All`，按 typeId 查找 provider；
+- `WalkAnimationState`（`Client.World`）：原版走路动画位置/速度的平滑与插值；
+- `EntityAnimationTickContext` + `IEntityTickAnimationState`（`Client.World`）：每 tick 回调（计数递减、时钟 `animateWhen`）；
+- `IEntityEventAnimationState`（`Client.World`）：`entity_event`（clientbound 34）触发的一次性 clip 时钟；
+- `AnimationClipPlayer`（`Client.Render`）：从 `AnimationState` 时钟按 `(age-startTick)*50ms` 播放 baked clip。
 
 `EntityTracker` 通过注入的 `AnimationStateFactory` 为每个 `TrackedEntity` 创建一次 state，`EntityRenderState.Animation` 携带该引用；`EntityModelMesher` 每帧为每个实体准备一份复用 `EntityPose` 并调用一次 provider `Apply`。原 `EntityAnimationController` 的静态 switch 已删除。
+
+**通用状态提取（2026-11-04）**：
+- `EntityTracker.Tick()` 用每 tick 实际水平位移驱动 `TrackedEntity.WalkAnimation`（原版 `calculateEntityAnimation` → `updateWalkAnimation`：默认 `min(dist*4,1)`/factor 0.4/幼年位置 ×3，Creaking 覆写 `min(dist*25,3)`），`Interpolate` 输出 `WalkAnimationPos/Speed`，因此走路动画在真机生效（此前恒为 0）。
+- `entity_event`（id 34）解码为 `entityId + eventId`，路由到 `IEntityEventAnimationState.OnEntityEvent`；Warden 以此启动 attack(4)/sonic_charge(62)/tendril(61)，Creaking 启动 attack(4)/invulnerability(66)。
+- `Tick()` 每 tick 调用 `IEntityTickAnimationState.OnTick`，让 Creaking 的攻击/无敌计数递减并 `animateWhen`，Warden 的触须倒计时递减。
 
 ## 5. 关键数据结构
 
@@ -63,6 +72,7 @@
 | `AnimationChannel` / `Keyframe` | 关键帧与插值 | 进程级只读 | 任意 |
 | `IEntityAnimationProvider` | 每生物控制器（单例） | 注册期创建、进程级 | 任意 |
 | `IEntityAnimationState` | 每实体可变状态 | 随 `TrackedEntity`，首次出现创建 | 主线程 |
+| `WalkAnimationState` | 走路位置/速度平滑 | 每实体、随 `TrackedEntity` | 主线程 |
 | `EntityAnimationFrame` | 每帧通用输入（值类型） | 每帧、栈上 | 主线程 |
 | `AnimationState` | 动画开始 tick（状态实现内） | 每实体 | 主线程 |
 | `EntityPose` | 每实体部件覆盖（Mesher 复用缓冲） | 每实体、跨帧复用 | 主线程 |
@@ -75,6 +85,8 @@
 - 每帧先回到 `initialPose`，再叠加动画增量（与 `Model.setupAnim → resetPose` 一致）；
 - `posVec` 的 Y 取反、`scaleVec` 是 `x-1` 的加性缩放；
 - 时间秒数、循环取模、二分找关键帧、`targetScale = min(walkSpeed*scale,1)`；
+- 走路位置/速度来自真实位移（`WalkAnimationState`，含幼年 ×3 与 Creaking 覆写），不再由沙盒伪造；
+- 一次性 clip 由 `entity_event` 与每 tick 计数驱动 `AnimationState`，再经 `AnimationClipPlayer` 按 `(age-startTick)*50ms` 采样；
 - 父子部件层级继承。
 
 偏离/限制：
