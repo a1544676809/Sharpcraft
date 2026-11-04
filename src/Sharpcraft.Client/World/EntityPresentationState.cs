@@ -43,4 +43,7 @@ public sealed class EntityPresentationState
 
     /// <summary>The synced resting flag for the types that carry one (bat flags bit 0).</summary>
     public bool IsResting { get; internal set; }
+
+    /// <summary>The synced sitting flag for tamable mobs (TamableAnimal flags bit 0), used by the parrot pose.</summary>
+    public bool IsSitting { get; internal set; }
 }

@@ -50,6 +50,7 @@ public sealed class EntityAnimationProviderTests
         StriderModelDefinition.StriderEntityTypeId,
         TadpoleModelDefinition.TadpoleEntityTypeId,
         GhastModelDefinition.GhastEntityTypeId,
+        AllayModelDefinition.AllayEntityTypeId,
     ];
 
     [Fact]
@@ -122,6 +123,7 @@ public sealed class EntityAnimationProviderTests
     [InlineData(StriderModelDefinition.StriderEntityTypeId)]
     [InlineData(TadpoleModelDefinition.TadpoleEntityTypeId)]
     [InlineData(GhastModelDefinition.GhastEntityTypeId)]
+    [InlineData(AllayModelDefinition.AllayEntityTypeId)]
     public void ProviderApplyDoesNotAllocateOnceWarm(int typeId)
     {
         var provider = EntityAnimationRegistry.For(typeId)!;

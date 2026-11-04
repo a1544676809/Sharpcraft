@@ -240,7 +240,8 @@ public readonly record struct EntityRenderState(
     bool IsOnGround = false,
     bool IsInWater = false,
     bool IsPassenger = false,
-    bool IsVehicle = false);
+    bool IsVehicle = false,
+    bool IsSitting = false);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -737,6 +738,7 @@ public sealed class EntityTracker
                 IsInWater: entity.Presentation.IsInWater,
                 IsPassenger: _vehicleOf.ContainsKey(entity.Id),
                 IsVehicle: _passengers.ContainsKey(entity.Id),
+                IsSitting: entity.Presentation.IsSitting,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,
@@ -784,6 +786,13 @@ public sealed class EntityTracker
             if (entity.TypeId == 100 && item.Index == 16 && item.SerializerId == 0)
             {
                 entity.Presentation.IsResting = (item.Value & 1) != 0;
+                applied = true;
+            }
+
+            // Parrot (type 99) TamableAnimal flags byte: index 17, serializer 8, bit 0 = sitting.
+            if (entity.TypeId == 99 && item.Index == 17 && item.SerializerId == 8)
+            {
+                entity.Presentation.IsSitting = (item.Value & 1) != 0;
                 applied = true;
             }
         }

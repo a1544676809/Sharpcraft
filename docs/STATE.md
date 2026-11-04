@@ -2993,3 +2993,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **Ghast（58）**：九条触手 `0.2*sin(AgeInTicks*0.3 + i) + 0.4`；预计算 `tentacle0..8` 名称，无热路径字符串拼接；热路径。
 - 均程序化、零分配，注册 134/58 并纳入分配测试。Client **952**（Tadpole 9 / Ghast 6 新增）绿（`ChunkMeshCacheTests`/`EntityAnimationProviderTests` 并行分配 flaky 重跑通过）。
 - **下一步具体动作**：①Guardian（需 `spikesAnimation/tailAnimation/lookAt`）、Illager/Piglin（armPose/crossbow/swing）等仍依赖客户端 AI 或额外派生，需继续评估；②Allay 需 `dancingAnimationTicks`/`spinningProgress` 客户端派生；③保持 backlog。
+
+### 2026-11-04 动画批次 7：Allay / Parrot SITTING（T-580）
+
+- `EntityAnimationFrame` 新增 `IsSitting`（Parrot 99 的 TamableAnimal flags byte index17 bit0 派生）；Parrot 增加 SITTING 姿势（参考 `prepare`），PARTY 仍缺点唱机状态。
+- **Allay（2）**：provider State 经 `IEntitySyncedDataAnimationState` 取 `DATA_DANCING`(index17 boolean)，`IEntityTickAnimationState` 派生 holding/dancing/spinning 计数，`Apply` 复刻 `AllayModel.setupAnim`（翅膀 flap、身体 flying 倾斜、root bob、手臂 idle/holding）。热路径。
+- 注册 2 并纳入零分配测试。Client **963**（Allay 10 / Parrot SITTING 1 新增）绿（`EntityModelRegistrationTests`/分配测试 并行 flaky 重跑通过）。
+- **下一步具体动作**：①Guardian 需 `spikesAnimation/tailAnimation` 与 lookAt/attack 目标派生（客户端），可评估；②Illager/Piglin 仍需 armPose/crossbow/swing（客户端 AI）；③继续 backlog。

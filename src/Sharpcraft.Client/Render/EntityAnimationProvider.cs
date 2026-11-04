@@ -113,5 +113,6 @@ public static class EntityAnimationRegistry
         new StriderAnimationProvider(StriderModelDefinition.StriderEntityTypeId),
         new TadpoleAnimationProvider(TadpoleModelDefinition.TadpoleEntityTypeId),
         new GhastAnimationProvider(GhastModelDefinition.GhastEntityTypeId),
+        new AllayAnimationProvider(AllayModelDefinition.AllayEntityTypeId),
     ];
 }

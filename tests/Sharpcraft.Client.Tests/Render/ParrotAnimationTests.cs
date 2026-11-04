@@ -26,7 +26,8 @@ public sealed class ParrotAnimationTests
         float walkSpeed = 0f,
         float age = 0f,
         bool onGround = true,
-        bool passenger = false) => new(
+        bool passenger = false,
+        bool sitting = false) => new(
         TypeId: ParrotModelDefinition.ParrotEntityTypeId,
         AgeInTicks: age,
         WalkAnimationPos: walkPos,
@@ -40,7 +41,8 @@ public sealed class ParrotAnimationTests
         IsBaby: false,
         IsHidingInShell: false,
         IsOnGround: onGround,
-        IsPassenger: passenger);
+        IsPassenger: passenger,
+        IsSitting: sitting);
 
     private static EntityPose Apply(in EntityAnimationFrame frame)
     {
@@ -58,12 +60,25 @@ public sealed class ParrotAnimationTests
     }
 
     [Fact]
-    public void ProviderAdvertisesTheThreeClipsAndTypeId()
+    public void ProviderAdvertisesTheFourClipsAndTypeId()
     {
         var provider = new ParrotAnimationProvider(ParrotModelDefinition.ParrotEntityTypeId);
         Assert.Equal(ParrotModelDefinition.ParrotEntityTypeId, provider.TypeId);
-        Assert.Equal(new[] { "flying", "standing", "on_shoulder" }, provider.Clips);
+        Assert.Equal(new[] { "flying", "standing", "on_shoulder", "sitting" }, provider.Clips);
         Assert.NotNull(provider.CreateState());
+    }
+
+    [Fact]
+    public void SittingPoseMatchesTheReferencePrepare()
+    {
+        var pose = Apply(Frame(onGround: true, sitting: true));
+
+        // prepare(SITTING): y += 1.9 on head/tail/body/wings (stored y-up -> -1.9), tail xRot += pi/6, wings zRot ±0.0873.
+        Assert.Equal(-1.9f, pose.Get("head").Position.Y, 4);
+        Assert.Equal(-1.9f, pose.Get("body").Position.Y, 4);
+        Assert.Equal(MathF.PI / 6f, pose.Get("tail").Rotation.X, 4);
+        Assert.Equal(0.0873f, pose.Get("right_wing").Rotation.Z, 4);
+        Assert.Equal(-0.0873f, pose.Get("left_wing").Rotation.Z, 4);
     }
 
     [Fact]

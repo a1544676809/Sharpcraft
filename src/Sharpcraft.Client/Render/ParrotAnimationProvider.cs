@@ -26,13 +26,13 @@ namespace Sharpcraft.Client.Render;
 /// <see cref="StriderAnimationProvider"/>. The head rotation is the render-state pitch/yaw in radians.
 /// </para>
 /// <para>
-/// Blocked poses: SITTING and PARTY cannot be selected because the sitting flag and the jukebox party state are not
-/// carried by the frame. They are intentionally not faked; only the three selectable poses are reproduced.
+/// Blocked pose: PARTY cannot be selected because the jukebox party state is not carried by the frame. SITTING is
+/// selected from the synced TamableAnimal sitting flag. PARTY is intentionally not faked.
 /// </para>
 /// </remarks>
 public sealed class ParrotAnimationProvider(int typeId) : IEntityAnimationProvider
 {
-    private static readonly string[] NominalClips = ["flying", "standing", "on_shoulder"];
+    private static readonly string[] NominalClips = ["flying", "standing", "on_shoulder", "sitting"];
 
     private const float DegreesToRadians = MathF.PI / 180f;
 
@@ -64,6 +64,9 @@ public sealed class ParrotAnimationProvider(int typeId) : IEntityAnimationProvid
             case "on_shoulder":
                 ApplyPose(ParrotPose.OnShoulder, frame with { WalkAnimationSpeed = 0f }, pose);
                 break;
+            case "sitting":
+                ApplyPose(ParrotPose.Sitting, frame with { WalkAnimationSpeed = 0f }, pose);
+                break;
         }
     }
 
@@ -75,11 +78,29 @@ public sealed class ParrotAnimationProvider(int typeId) : IEntityAnimationProvid
             return ParrotPose.OnShoulder;
         }
 
+        if (frame.IsSitting)
+        {
+            return ParrotPose.Sitting;
+        }
+
         return frame.IsOnGround ? ParrotPose.Standing : ParrotPose.Flying;
     }
 
     private static void ApplyPose(ParrotPose poseKind, in EntityAnimationFrame frame, EntityPose pose)
     {
+        if (poseKind == ParrotPose.Sitting)
+        {
+            // Reference prepare(SITTING): head/tail/body/wings y += 1.9, tail xRot += π/6, wing zRot ±0.0873; then the
+            // switch breaks, so no bob/flap/leg swing is added. Storage is y-up, so y is negated.
+            const float sitOffset = -1.9f;
+            pose.Add("head", new PoseOffset(new Vector3(0f, sitOffset, 0f), new Vector3(frame.Pitch * DegreesToRadians, frame.Yaw * DegreesToRadians, 0f), Vector3.Zero));
+            pose.Add("tail", new PoseOffset(new Vector3(0f, sitOffset, 0f), new Vector3(MathF.PI / 6f, 0f, 0f), Vector3.Zero));
+            pose.Add("body", new PoseOffset(new Vector3(0f, sitOffset, 0f), Vector3.Zero, Vector3.Zero));
+            pose.Add("left_wing", new PoseOffset(new Vector3(0f, sitOffset, 0f), new Vector3(0f, 0f, -WingRollBase), Vector3.Zero));
+            pose.Add("right_wing", new PoseOffset(new Vector3(0f, sitOffset, 0f), new Vector3(0f, 0f, WingRollBase), Vector3.Zero));
+            return;
+        }
+
         var flapAngle = (MathF.Sin(frame.Flap) + 1f) * frame.FlapSpeed;
         // Reference adds bobbingBody to each part's y (y-down); storage is y-up, so negate.
         var bobY = -(flapAngle * 0.3f);
@@ -123,12 +144,13 @@ public sealed class ParrotAnimationProvider(int typeId) : IEntityAnimationProvid
         pose.Add("right_leg", new PoseOffset(new Vector3(0f, bobY, 0f), new Vector3(rightLegXRot, 0f, 0f), Vector3.Zero));
     }
 
-    /// <summary>The three poses selectable from <see cref="EntityAnimationFrame"/>.</summary>
+    /// <summary>The four poses selectable from <see cref="EntityAnimationFrame"/> (PARTY still not selectable).</summary>
     private enum ParrotPose
     {
         Flying,
         Standing,
-        OnShoulder
+        OnShoulder,
+        Sitting
     }
 
     private sealed class State : IEntityAnimationState
