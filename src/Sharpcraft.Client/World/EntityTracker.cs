@@ -243,7 +243,8 @@ public readonly record struct EntityRenderState(
     bool IsVehicle = false,
     bool IsSitting = false,
     bool IsMoving = false,
-    float HeadYaw = 0f);
+    float HeadYaw = 0f,
+    float SwingAnimation = 0f);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -510,6 +511,19 @@ public sealed class EntityTracker
         return true;
     }
 
+    /// <summary>Applies a <c>swing_animation</c> packet (clientbound 123) to the entity's arm-swing clock.</summary>
+    public bool ApplySwingAnimation(int id, int hand, int animationType, int durationTicks)
+    {
+        if (!_entities.TryGetValue(id, out var entity))
+        {
+            UnknownUpdates++;
+            return false;
+        }
+
+        entity.Presentation.Swing.StartIfAble(hand, animationType, durationTicks);
+        return true;
+    }
+
     /// <summary>Applies a <c>set_passengers</c> update (the vehicle's new passenger list).</summary>
     /// <param name="vehicleId">Vehicle entity id.</param>
     /// <param name="passengers">Passenger entity ids (empty clears the list).</param>
@@ -665,6 +679,7 @@ public sealed class EntityTracker
                 (int)MathF.Floor((float)entity.Y),
                 (int)MathF.Floor((float)entity.Z)) ?? false;
             entity.Presentation.Tentacle?.Update(entity.Presentation.IsInWater);
+            entity.Presentation.Swing.Tick();
 
             if (entity.Animation is IEntityTickAnimationState tickState)
             {
@@ -744,6 +759,7 @@ public sealed class EntityTracker
                 IsSitting: entity.Presentation.IsSitting,
                 IsMoving: entity.Presentation.IsMoving,
                 HeadYaw: entity.HeadYaw,
+                SwingAnimation: entity.Presentation.Swing.Animation(t),
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,

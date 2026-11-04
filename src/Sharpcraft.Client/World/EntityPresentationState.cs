@@ -32,6 +32,9 @@ public sealed class EntityPresentationState
     /// <summary>Wing-flap clock for chickens/parrots, ported from the reference <c>flap</c> fields.</summary>
     public FlapAnimationState Flap { get; } = new();
 
+    /// <summary>Arm-swing clock, ported from the reference <c>LivingEntity.SwingState</c>.</summary>
+    public SwingAnimationState Swing { get; } = new();
+
     /// <summary>Squid tentacle clock, or null for other types.</summary>
     public SquidTentacleAnimationState? Tentacle { get; }
 

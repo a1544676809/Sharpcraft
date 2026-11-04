@@ -3061,3 +3061,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 起草 `docs/decisions/0023-client-armed-presentation-state.md`（状态 `提议`，待所有者评审）与 traceability T-588。
 - 结论要点：先补通用通道（解码 `ClientboundAnimatePacket`(2) → `SwingAnimation`、`MainArm`、十字弩计时）；能同步的（Piglin charging/dancing）走 synced；`isAggressive/isCelebrating/isAdmiring` 等 AI 派生布尔用**受限的窄判定**（仅表现层，无目标选择/寻路/结算），无法等效者保持阻塞。
 - **下一步具体动作**：等待评审；通过后先做 P2-A（Vindicator/Pillager/Evoker/Illusioner），再做 Piglin 系。
+
+### 2026-11-04 ADR-0023 通过 + P2-A swing 通道实现（T-588）
+
+- ADR-0023 状态改为 `已采纳`，并修正数据来源：挥臂是 `ClientboundSwingAnimationPacket`（clientbound **123**，`entityId/hand/type/duration`），不是旧的 `animate`(2)。
+- **P2-A 首片已实现**：解码 swing 包；新增 [SwingAnimationState.cs](src/Sharpcraft.Client/World/SwingAnimationState.cs)（复刻参考 `LivingEntity.SwingState`，含 startIfAble 半程拒绝）；`EntityPresentationState.Swing` + `EntityTracker.ApplySwingAnimation` + `EntityAnimationFrame.SwingAnimation`；`InteractiveSession` 分发 id 123。
+- 验证：Common **464**（+3 `SwingAnimationPacketsTests`）、Client **1124**（+2 swing 状态与路由），构建 0 警告 0 错误。
+- **下一步具体动作**：①用 swing 通道做 P2-A provider（Vindicator/Pillager/Evoker/Illusioner 的 armPose，需窄判定 aggressive/celebrating）；②再 P2-B Piglin（同步 charging/dancing + 窄判定）。

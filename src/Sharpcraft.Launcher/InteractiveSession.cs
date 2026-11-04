@@ -1478,6 +1478,15 @@ internal sealed class InteractiveSession
                         break;
                     }
 
+                // Arm-swing animation: drives the presentation layer's swing clock for armed mobs.
+                case PacketIds.PlayClientbound.SwingAnimation:
+                    if (SwingAnimationPackets.TryRead(body, out var swingEntityId, out var swingHand, out var swingType, out var swingDuration) == DecodeStatus.Success)
+                    {
+                        _entities.ApplySwingAnimation(swingEntityId, swingHand, swingType, swingDuration);
+                    }
+
+                    break;
+
                 case PacketIds.PlayClientbound.SetTime:
                     if (_world is not null)
                     {

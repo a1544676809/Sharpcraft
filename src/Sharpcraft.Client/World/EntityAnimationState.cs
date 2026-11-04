@@ -37,7 +37,8 @@ public readonly record struct EntityAnimationFrame(
     bool IsSitting = false,
     bool IsMoving = false,
     float HeadYaw = 0f,
-    bool IsAngry = false)
+    bool IsAngry = false,
+    float SwingAnimation = 0f)
 {
     /// <summary>Projects the generic render state onto the frame. The mesher calls this once per entity per frame.</summary>
     public static EntityAnimationFrame From(in EntityRenderState state) => new(
@@ -65,7 +66,8 @@ public readonly record struct EntityAnimationFrame(
         state.IsSitting,
         state.IsMoving,
         state.HeadYaw,
-        state.IsAngry);
+        state.IsAngry,
+        state.SwingAnimation);
 }
 
 /// <summary>

@@ -4,14 +4,14 @@
 <!-- doc
 title: ADR 0023：客户端武装生物表现状态（armPose / crossbow / swing）
 summary: 剩余 Illager/Piglin 等武装生物动画所需的手部姿态数据来源、分期与边界
-status: 提议
+status: 已采纳
 -->
 
 # 0023：客户端武装生物表现状态（armPose / crossbow / swing）
 
-- 状态：提议（待项目所有者评审）
+- 状态：已采纳
 - 日期：2026-11-04
-- 决策者：项目所有者（待确认）
+- 决策者：项目所有者（本会话确认）
 - 关联：`docs/decisions/0022-client-entity-presentation-state.md`、`docs/modules/entity-presentation-state.md`、`docs/traceability.md` T-588
 
 ## 背景
@@ -28,7 +28,7 @@ Illager 系（Vindicator / Pillager / Evoker / Illusioner）与 Piglin 系（Pig
 
 | 字段 | 来源 | 说明 |
 | --- | --- | --- |
-| `swingAnimation` | **缺失的网络包** | `ClientboundAnimatePacket`（clientbound 2）携带实体挥臂动作；当前尚未解码。`LivingEntity.getSwingAnimation(partial)` 由客户端本地挥臂计时派生。 |
+| `swingAnimation` | **新增网络包解码** | `ClientboundSwingAnimationPacket`（clientbound **123**）携带实体、手、动画类型与时长；当前尚未解码。`LivingEntity.getSwingAnimation(partial)` 由客户端 `SwingState` 派生（旧的 `ClientboundAnimatePacket`(2) 现在只含 wake/crit，不再承载挥臂）。 |
 | `mainArm` | 同步数据 | `LivingEntity.getMainArm`（实体属性，可同步/可配置）。 |
 | `ticksUsingItem` / `maxCrossbowChargeDuration` | 客户端使用物品状态 | 参考由实体 `getUseItem` / `CrossbowItem.getChargeDuration` 派生；需要实体 used-item 状态（部分可由 synced flags + 手中物品推断）。 |
 | Piglin `isChargingCrossbow` / `isDancing` | **synced boolean** | `DATA_IS_CHARGING_CROSSBOW` / `DATA_IS_DANCING`，可经 `IEntitySyncedDataAnimationState` 直接取得。 |
@@ -39,7 +39,7 @@ Illager 系（Vindicator / Pillager / Evoker / Illusioner）与 Piglin 系（Pig
 在 ADR-0022 的**非权威表现状态层**内新增一个 P2 子层"武装生物表现状态"，按数据来源优先选最省且可审计的方式：
 
 1. **先补通用数据通道（一次投入，多处复用）**
-   - 解码 `ClientboundAnimatePacket`（clientbound 2）→ 维护每实体 `swingAnimation`（参考 `LivingEntity.attackAnim/swingTime` 曲线），加入 `EntityAnimationFrame.SwingAnimation`；
+   - 解码 `ClientboundSwingAnimationPacket`（clientbound 123）→ 维护每实体 `swingAnimation`（参考 `LivingEntity.SwingState` 曲线），加入 `EntityAnimationFrame.SwingAnimation`；
    - 增加 `EntityAnimationFrame.MainArm`（枚举 Left/Right）；
    - 增加 `EntityAnimationFrame.UsingItem` / `CrossbowChargeTicks` / `MaxCrossbowChargeDuration`（由 synced flags/手中物品 + 本地计时派生）。
 2. **能同步的字段一律走同步**
@@ -76,5 +76,5 @@ Illager 系（Vindicator / Pillager / Evoker / Illusioner）与 Piglin 系（Pig
 ## 复查条件
 
 - 若确定服务端会额外同步 `isAggressive` 等字段，则优先改为纯同步实现，删除窄判定。
-- 若 `ClientboundAnimatePacket` 与参考 swing 曲线无法逐值对齐，登记受控偏差并重评。
+- 若 `ClientboundSwingAnimationPacket` 与参考 swing 曲线无法逐值对齐，登记受控偏差并重评。
 - 若该子层与服务器表现长期不一致，回到"仅同步"实现。

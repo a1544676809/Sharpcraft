@@ -219,6 +219,10 @@ public static class PacketIds
         /// <remarks>Reference registration dump: play clientbound 109.</remarks>
         public const int SetPassengers = 109;
 
+        /// <summary>Swing animation: entity id, hand, swing type and duration (1.21+ component codec).</summary>
+        /// <remarks>Reference registration dump: play clientbound 123.</remarks>
+        public const int SwingAnimation = 123;
+
         /// <summary>Absolute player position: a teleport or a server correction.</summary>
         public const int PlayerPosition = 73;
 

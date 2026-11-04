@@ -225,6 +225,43 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.True(tracker.Interpolate(1f)[0].IsInWater);
     }
 
+    [Fact]
+    public void SwingClockMatchesTheReferenceSwingState()
+    {
+        var swing = new SwingAnimationState();
+        Assert.True(swing.StartIfAble(hand: 0, animationType: 1, durationTicks: 10));
+        for (var tick = 0; tick < 5; tick++)
+        {
+            swing.Tick();
+        }
+
+        Assert.True(swing.IsSwinging);
+        Assert.Equal(0.4f, swing.Animation(1f), 4); // 4/10 after five ticks
+
+        // A restart while the current swing is within its first half is rejected.
+        var early = new SwingAnimationState();
+        early.StartIfAble(0, 1, 10);
+        early.Tick();
+        early.Tick();
+        Assert.False(early.StartIfAble(0, 1, 10));
+    }
+
+    [Fact]
+    public void SwingPacketsDriveTheTrackerSwingAnimation()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(12, typeId: 154));
+
+        Assert.True(tracker.ApplySwingAnimation(12, hand: 0, animationType: 1, durationTicks: 10));
+        for (var tick = 1; tick <= 5; tick++)
+        {
+            tracker.GameTime = tick;
+            tracker.Tick();
+        }
+
+        Assert.Equal(0.4f, tracker.Interpolate(1f)[0].SwingAnimation, 4);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 
