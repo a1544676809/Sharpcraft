@@ -233,7 +233,9 @@ public readonly record struct EntityRenderState(
     float TentacleAngle = 0f,
     bool IsResting = false,
     IEntityAnimationState? Animation = null,
-    float AnimationPartialTick = 0f);
+    float AnimationPartialTick = 0f,
+    bool HasMainHandItem = false,
+    bool HasOffHandItem = false);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -675,7 +677,9 @@ public sealed class EntityTracker
                 WalkAnimationPos: entity.WalkAnimation.Position(t),
                 WalkAnimationSpeed: entity.WalkAnimation.Speed(t),
                 Animation: entity.Animation,
-                AnimationPartialTick: t));
+                AnimationPartialTick: t,
+                HasMainHandItem: entity.EquipmentItemAt(0) > 0,
+                HasOffHandItem: entity.EquipmentItemAt(1) > 0));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);

@@ -32,7 +32,9 @@ public sealed class CopperGolemAnimationTests
         float walkPos = 0f,
         float walkSpeed = 0f,
         float pitch = 0f,
-        float yaw = 0f) =>
+        float yaw = 0f,
+        bool mainHandItem = false,
+        bool offHandItem = false) =>
         new(
             TypeId,
             ageInTicks,
@@ -45,7 +47,10 @@ public sealed class CopperGolemAnimationTests
             0f,
             false,
             false,
-            false);
+            false,
+            0f,
+            mainHandItem,
+            offHandItem);
 
     private static void AssertVec(Vector3 expected, Vector3 actual, int precision = 4)
     {
@@ -383,5 +388,26 @@ public sealed class CopperGolemAnimationTests
         var expected = new EntityPose();
         provider.ApplyClip(state, in frame, "item_drop", 0.5f, expected);
         AssertPoseMatches(expected, pose);
+    }
+
+    [Fact]
+    public void HoldingAnItemSelectsTheHeldItemWalkAndClampsTheArms()
+    {
+        var provider = new CopperGolemAnimationProvider(TypeId);
+        var state = provider.CreateState();
+
+        var holding = new EntityPose();
+        provider.Apply(state, Frame(walkPos: 3f, walkSpeed: 1f, mainHandItem: true), holding);
+
+        // poseHeldItemArmsIfStill: right arm x <= -50deg, y <= -6.5deg; left arm y >= +6.5deg, z >= +3.7deg.
+        Assert.True(holding.Get("right_arm").Rotation.X <= -0.8726f, $"right_arm.x={holding.Get("right_arm").Rotation.X}");
+        Assert.True(holding.Get("right_arm").Rotation.Y <= -0.1134f, $"right_arm.y={holding.Get("right_arm").Rotation.Y}");
+        Assert.True(holding.Get("left_arm").Rotation.Y >= 0.1134f, $"left_arm.y={holding.Get("left_arm").Rotation.Y}");
+
+        var plain = new EntityPose();
+        provider.Apply(state, Frame(walkPos: 3f, walkSpeed: 1f), plain);
+        Assert.True(
+            MathF.Abs(plain.Get("right_arm").Rotation.X - holding.Get("right_arm").Rotation.X) > 1e-3f,
+            "the held-item walk should differ from the plain walk");
     }
 }

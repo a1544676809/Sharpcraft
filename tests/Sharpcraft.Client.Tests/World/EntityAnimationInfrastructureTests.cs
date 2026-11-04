@@ -100,6 +100,22 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.Equal(0, recorder.LastSyncedValue);
     }
 
+    [Fact]
+    public void HeldItemFlagsComeFromTheEquipmentSlots()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(6, typeId: 28));
+
+        var before = tracker.Interpolate(0f)[0];
+        Assert.False(before.HasMainHandItem);
+        Assert.False(before.HasOffHandItem);
+
+        tracker.ApplyEquipment(6, [new EquipmentItem(0, 5, 1)]);
+        var after = tracker.Interpolate(0f)[0];
+        Assert.True(after.HasMainHandItem);
+        Assert.False(after.HasOffHandItem);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 

@@ -48,7 +48,7 @@
 - `KeyframeAnimation`：`Bake(rootPartNames)`、`Apply(seconds, targetScale, PoseBuffer)`；
 - `AnimationState`：start tick、start/stop/animateWhen、elapsed millis；
 - `EntityPose`：`TryGet(partName)` / `Add(partName, PoseOffset)`（position/rotation/scale 加性覆盖）；
-- `EntityAnimationFrame`（`Client.World`）：通用动画输入，`From(EntityRenderState)` 投影；
+- `EntityAnimationFrame`（`Client.World`）：通用动画输入，`From(EntityRenderState)` 投影；含 `PartialTick`、`HasMainHandItem`/`HasOffHandItem`（由装备槽 main/off hand 派生，对应原版 `ArmedEntityRenderState` 的手持物概念，供 Copper Golem 等持物生物选择 `walk_item`）；
 - `IEntityAnimationState`（`Client.World`）：每实体可变状态的空标记，具体实现归各 provider；
 - `IEntityAnimationProvider`（`Client.Render`）：`TypeId`、`Clips`、`CreateState()`、`Apply(state, frame, pose)`（热路径）、`ApplyClip(state, frame, clip, seconds, pose)`（沙盒/工具）；
 - `EntityAnimationRegistry`（`Client.Render`）：`TryGet` / `For` / `CreateState` / `Clips` / `All`，按 typeId 查找 provider；

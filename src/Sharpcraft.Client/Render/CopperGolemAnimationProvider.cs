@@ -15,11 +15,11 @@ namespace Sharpcraft.Client.Render;
 /// per tick from the synced <c>CopperGolemState</c> (entity data serializer id 37). All contributions are additive pose
 /// offsets against a zero bind pose, exactly like the reference <c>offset*</c> accumulators after <c>resetPose</c>.
 /// <para>
-/// The reference picks the held-item walk clip (<c>walk_item</c>) and clamps the arms via
-/// <c>poseHeldItemArmsIfStill</c> when either hand holds an item. <see cref="EntityAnimationFrame"/> does not carry the
-/// hand-item flags yet, so <see cref="Apply"/> always plays the plain walk clip; <c>walk_item</c> is reachable through
-/// <see cref="ApplyClip"/> only. The head-spin sound triggered inside the idle branch has no audio equivalent in the
-/// animation layer, so only the clock reset is reproduced.
+/// When either hand holds an item the reference plays the held-item walk clip (<c>walk_item</c>) and clamps the arms
+/// via <c>poseHeldItemArmsIfStill</c>; the generic frame now carries <see cref="EntityAnimationFrame.HasMainHandItem"/>
+/// and <see cref="EntityAnimationFrame.HasOffHandItem"/> derived from the equipped slots, so both branches run on the
+/// hot path. The head-spin sound triggered inside the idle branch has no audio equivalent in the animation layer, so
+/// only the clock reset is reproduced.
 /// </para>
 /// </remarks>
 public sealed class CopperGolemAnimationProvider(int typeId) : IEntityAnimationProvider
@@ -48,11 +48,19 @@ public sealed class CopperGolemAnimationProvider(int typeId) : IEntityAnimationP
         // Walk loop: reference applyWalk(walkPos, walkSpeed, 2.0F, 2.5F).
         //   elapsed seconds = walkPos * 50 * 2 / 1000 = walkPos * 0.1,
         //   target scale    = min(walkSpeed * 2.5, 1).
-        // The walk clip also poses the body, so this is the "body" part of the generic pose.
-        CopperGolemAnimations.WalkBaked.Apply(
-            frame.WalkAnimationPos * 0.1f,
-            MathF.Min(frame.WalkAnimationSpeed * 2.5f, 1f),
-            pose);
+        // When either hand holds an item the reference uses the held-item walk clip and clamps the arms
+        // (poseHeldItemArmsIfStill); otherwise it uses the plain walk clip.
+        var walkSeconds = frame.WalkAnimationPos * 0.1f;
+        var walkScale = MathF.Min(frame.WalkAnimationSpeed * 2.5f, 1f);
+        if (frame.HasMainHandItem || frame.HasOffHandItem)
+        {
+            CopperGolemAnimations.WalkItemBaked.Apply(walkSeconds, walkScale, pose);
+            ClampHeldItemArms(pose);
+        }
+        else
+        {
+            CopperGolemAnimations.WalkBaked.Apply(walkSeconds, walkScale, pose);
+        }
 
         if (state is State clips)
         {
@@ -78,6 +86,40 @@ public sealed class CopperGolemAnimationProvider(int typeId) : IEntityAnimationP
             _ => null
         };
         animation?.Apply(seconds, 1f, pose);
+    }
+
+    /// <summary>
+    /// Reference <c>poseHeldItemArmsIfStill</c>: clamp the absolute arm rotations so the held item clears the body.
+    /// Our pose is additive over a zero arm bind rotation, so the clamp is expressed as a delta on the accumulated
+    /// offset.
+    /// </summary>
+    private static void ClampHeldItemArms(EntityPose pose)
+    {
+        ClampRotation(pose, "right_arm", 0, upper: true, -0.87266463f);
+        ClampRotation(pose, "right_arm", 1, upper: true, -0.1134464f);
+        ClampRotation(pose, "right_arm", 2, upper: true, -0.064577185f);
+        ClampRotation(pose, "left_arm", 0, upper: true, -0.87266463f);
+        ClampRotation(pose, "left_arm", 1, upper: false, 0.1134464f);
+        ClampRotation(pose, "left_arm", 2, upper: false, 0.064577185f);
+    }
+
+    private static void ClampRotation(EntityPose pose, string part, int axis, bool upper, float limit)
+    {
+        var rotation = pose.Get(part).Rotation;
+        var value = axis == 0 ? rotation.X : axis == 1 ? rotation.Y : rotation.Z;
+        var clamped = upper ? MathF.Min(value, limit) : MathF.Max(value, limit);
+        var delta = clamped - value;
+        if (delta == 0f)
+        {
+            return;
+        }
+
+        var offset = axis == 0
+            ? new Vector3(delta, 0f, 0f)
+            : axis == 1
+                ? new Vector3(0f, delta, 0f)
+                : new Vector3(0f, 0f, delta);
+        pose.Add(part, new PoseOffset(Vector3.Zero, offset, Vector3.Zero));
     }
 
     /// <summary>Reference <c>CopperGolemState</c> ordinals (the values carried by serializer 37).</summary>

@@ -2922,3 +2922,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **Nautilus**：单一 swimming 循环，纯热路径（applyWalk `walkPos+age/5, speed+0.2, 2, 3`；body 偏航/俯仰 clamp ±10°）。
 - 全量构建 0 警告 0 错误；Client 864（新增 Sniffer 22 / Copper Golem 23 / Nautilus 4）、Common 458、Architecture 31 全绿。
 - **下一步具体动作**：①Copper Golem 补手持物字段以支持 `walk_item`；②评估 Zombie Nautilus(156) 复用 Nautilus provider（模型部件待核对）；③继续按 backlog 派单（Ravager/Hoglin/Parrot/Illagers/Strider 等），Armadillo/Sniffer 类可用 synced-state 通道。
+
+### 2026-11-04 通用手持物字段（T-572）
+
+- 结论：手持物是原版 `ArmedEntityRenderState` 的**通用**概念（所有 armed/humanoid 生物共用），不是生物特例，故放进通用层正确。
+- `EntityRenderState` / `EntityAnimationFrame` 增加 `HasMainHandItem` / `HasOffHandItem`，由 `EntityTracker` 从装备槽 0（main）/1（off）派生（`EquipmentItemAt > 0`）。
+- **Copper Golem** 持有物品时改走 `walk_item` clip，并用加性 delta 复刻 `poseHeldItemArmsIfStill` 的绝对旋转 clamp（右臂 x/y/z 上界；左臂 x 上界、y/z 下界）。
+- 测试：`EntityTracker` 装备→flags 派生 1 项、Copper Golem 选择/clamp 1 项；Client 866 全绿。
+- **下一步具体动作**：①同概念可推广到 Zombie/Piglin/Illager 等 armed mob（各自 provider 读这两个 flag）；②评估 Zombie Nautilus(156) 复用 Nautilus；③继续按 backlog 派单生物。
