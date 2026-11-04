@@ -3174,6 +3174,13 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Common **476**（+1）、Client **1169**，构建 0 警告 0 错误。
 - **下一步具体动作**：①继续补剩余复杂组件（tool/weapon/equippable 等，需要更多 codec 建模）；②回 AI 依赖生物；③收口。
 
+### 2026-11-04 复杂组件：tool/weapon/equippable/repairable/bundle_contents（T-602）
+
+- 新增通用 `holderSet` 解码（命名 tag / 显式 id 列表）。
+- 新增 `tool`（规则 holderSet + 可选 speed/correct + 默认速度/伤害/creative bool）、`weapon`、`equippable`（slot/sound/可选 asset/overlay/holderSet + 5 bool + shearing sound）、`repairable`、`bundle_contents`（item stack 模板列表）。
+- 验证：Common **477**（+1）、Client **1169**，构建 0 警告 0 错误。
+- **下一步具体动作**：剩余 `blocks_attacks`/`consumable`/`potion_contents`/`fireworks`/`banner_patterns` 等；继续或收口。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

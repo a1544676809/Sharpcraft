@@ -321,6 +321,43 @@ public sealed class SetEquipmentPacketTests
     }
 
     [Fact]
+    public void ToolComponentIsSkippedAndParsingContinues()
+    {
+        var tool = DataComponentTypes.GetId("tool");
+        Assert.True(tool >= 0);
+
+        var body = Body(
+            b =>
+            {
+                b.Add(0x80);
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(0));
+                b.AddRange(VarInt(tool));
+                b.AddRange(VarInt(1));       // one rule
+                b.AddRange(VarInt(2));       // holder set with one entry (count - 1 = 1)
+                b.AddRange(VarInt(0));       // block id
+                b.Add(0);                    // no speed
+                b.Add(0);                    // no correct-for-drops
+                b.AddRange(new byte[4]);     // default mining speed 0.0
+                b.AddRange(VarInt(1));       // damage per block
+                b.Add(1);                    // can destroy in creative
+            },
+            b =>
+            {
+                b.Add(7);
+                b.AddRange(VarInt(0));
+            });
+
+        var result = Read(body, out _, out var complete, out var status);
+
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.Equal(2, result.Length);
+    }
+
+    [Fact]
     public void TruncatedStackReportsNeedMoreData()
     {
         var body = new List<byte>();

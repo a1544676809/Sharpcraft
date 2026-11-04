@@ -65,6 +65,11 @@ internal static class ItemComponentPatchReader
     private static readonly int Instrument = DataComponentTypes.GetId("instrument");
     private static readonly int OminousBottleAmplifier = DataComponentTypes.GetId("ominous_bottle_amplifier");
     private static readonly int Waxed = DataComponentTypes.GetId("waxed");
+    private static readonly int Tool = DataComponentTypes.GetId("tool");
+    private static readonly int Weapon = DataComponentTypes.GetId("weapon");
+    private static readonly int Equippable = DataComponentTypes.GetId("equippable");
+    private static readonly int Repairable = DataComponentTypes.GetId("repairable");
+    private static readonly int BundleContents = DataComponentTypes.GetId("bundle_contents");
 
     /// <summary>Reads one patch; returns false only when the stream is malformed (truncated).</summary>
     public static bool TryRead(ref PayloadReader reader, out ItemComponentInfo info, out bool hasUnknown)
@@ -328,6 +333,32 @@ internal static class ItemComponentPatchReader
             return reader.TryReadFloat(out _) == DecodeStatus.Success;
         }
 
+        if (typeId == Tool)
+        {
+            return TrySkipTool(ref reader, depth, ref hasUnknown);
+        }
+
+        if (typeId == Weapon)
+        {
+            return reader.TryReadVarInt(out _) == DecodeStatus.Success &&
+                   reader.TryReadFloat(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == Equippable)
+        {
+            return TrySkipEquippable(ref reader);
+        }
+
+        if (typeId == Repairable)
+        {
+            return TrySkipHolderSet(ref reader);
+        }
+
+        if (typeId == BundleContents)
+        {
+            return TrySkipItemStackList(ref reader, depth, ref hasUnknown);
+        }
+
         // Unknown positive component: no generic skip exists, so the caller must stop after this slot.
         hasUnknown = true;
         info = info with { Opaque = true };
@@ -365,6 +396,165 @@ internal static class ItemComponentPatchReader
         }
 
         return true;
+    }
+
+    private static bool TrySkipHolderSet(ref PayloadReader reader)
+    {
+        if (reader.TryReadVarInt(out var countMinusOne) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        var count = countMinusOne - 1;
+        if (count == -1)
+        {
+            // Named tag set: one identifier string.
+            return reader.TryReadString(out _) == DecodeStatus.Success;
+        }
+
+        if (count < 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < count; i++)
+        {
+            if (reader.TryReadVarInt(out _) != DecodeStatus.Success) // registry holder id
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TrySkipTool(ref PayloadReader reader, int depth, ref bool hasUnknown)
+    {
+        if (reader.TryReadVarInt(out var ruleCount) != DecodeStatus.Success || ruleCount < 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < ruleCount; i++)
+        {
+            if (!TrySkipHolderSet(ref reader)) // blocks
+            {
+                return false;
+            }
+
+            if (reader.TryReadBool(out var hasSpeed) != DecodeStatus.Success)
+            {
+                return false;
+            }
+
+            if (hasSpeed && reader.TryReadFloat(out _) != DecodeStatus.Success)
+            {
+                return false;
+            }
+
+            if (reader.TryReadBool(out var hasCorrect) != DecodeStatus.Success)
+            {
+                return false;
+            }
+
+            if (hasCorrect && reader.TryReadBool(out _) != DecodeStatus.Success)
+            {
+                return false;
+            }
+        }
+
+        return reader.TryReadFloat(out _) == DecodeStatus.Success &&
+               reader.TryReadVarInt(out _) == DecodeStatus.Success &&
+               reader.TryReadBool(out _) == DecodeStatus.Success;
+    }
+
+    private static bool TrySkipEquippable(ref PayloadReader reader)
+    {
+        // slot, equip sound
+        if (reader.TryReadVarInt(out _) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out _) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        // optional asset id (resource key = identifier string)
+        if (reader.TryReadBool(out var hasAsset) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        if (hasAsset && reader.TryReadString(out _) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        // optional camera overlay (identifier)
+        if (reader.TryReadBool(out var hasOverlay) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        if (hasOverlay && reader.TryReadString(out _) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        // optional allowed-entity holder set
+        if (reader.TryReadBool(out var hasAllowed) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        if (hasAllowed && !TrySkipHolderSet(ref reader))
+        {
+            return false;
+        }
+
+        // five booleans (dispensable, swappable, damageOnHurt, equipOnInteract, canBeSheared) then shearing sound.
+        for (var i = 0; i < 5; i++)
+        {
+            if (reader.TryReadBool(out _) != DecodeStatus.Success)
+            {
+                return false;
+            }
+        }
+
+        return reader.TryReadVarInt(out _) == DecodeStatus.Success;
+    }
+
+    private static bool TrySkipItemStackList(ref PayloadReader reader, int depth, ref bool hasUnknown)
+    {
+        if (reader.TryReadVarInt(out var count) != DecodeStatus.Success || count < 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < count; i++)
+        {
+            if (!TrySkipItemStackTemplate(ref reader, depth, ref hasUnknown))
+            {
+                return false;
+            }
+
+            if (hasUnknown)
+            {
+                return true;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TrySkipItemStackTemplate(ref PayloadReader reader, int depth, ref bool hasUnknown)
+    {
+        if (reader.TryReadVarInt(out _) != DecodeStatus.Success || // item id
+            reader.TryReadVarInt(out _) != DecodeStatus.Success)   // count
+        {
+            return false;
+        }
+
+        var nested = default(ItemComponentInfo);
+        return TryReadPatch(ref reader, depth + 1, ref nested, ref hasUnknown);
     }
 
     private static bool TrySkipTooltipDisplay(ref PayloadReader reader)
