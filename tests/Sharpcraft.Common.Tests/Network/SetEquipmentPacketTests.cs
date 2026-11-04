@@ -104,8 +104,8 @@ public sealed class SetEquipmentPacketTests
                 b.AddRange(VarInt(1));
                 b.AddRange(VarInt(123));
                 b.AddRange(VarInt(1));       // one added component
-                b.AddRange(VarInt(98));      // component id 98 is not modelled
                 b.AddRange(VarInt(0));       // no removals
+                b.AddRange(VarInt(98));      // component id 98 is not modelled
             },
             b =>
             {
@@ -376,6 +376,37 @@ public sealed class SetEquipmentPacketTests
                 b.Add(0);                    // no custom color
                 b.AddRange(VarInt(0));       // no custom effects
                 b.Add(0);                    // no custom name
+            },
+            b =>
+            {
+                b.Add(7);
+                b.AddRange(VarInt(0));
+            });
+
+        var result = Read(body, out _, out var complete, out var status);
+
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.Equal(2, result.Length);
+    }
+
+    [Fact]
+    public void CustomDataNbtIsSkippedAndParsingContinues()
+    {
+        var customData = DataComponentTypes.GetId("custom_data");
+        Assert.True(customData >= 0);
+
+        var body = Body(
+            b =>
+            {
+                b.Add(0x80);
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(0));
+                b.AddRange(VarInt(customData));
+                b.Add(10);                   // NBT compound
+                b.Add(0);                    // end tag
             },
             b =>
             {

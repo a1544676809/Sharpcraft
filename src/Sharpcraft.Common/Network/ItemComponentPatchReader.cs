@@ -76,6 +76,23 @@ internal static class ItemComponentPatchReader
     private static readonly int Fireworks = DataComponentTypes.GetId("fireworks");
     private static readonly int FireworkExplosion = DataComponentTypes.GetId("firework_explosion");
     private static readonly int BannerPatterns = DataComponentTypes.GetId("banner_patterns");
+    private static readonly int CustomData = DataComponentTypes.GetId("custom_data");
+    private static readonly int UseRemainder = DataComponentTypes.GetId("use_remainder");
+    private static readonly int MapId = DataComponentTypes.GetId("map_id");
+    private static readonly int MapPostProcessing = DataComponentTypes.GetId("map_post_processing");
+    private static readonly int BlockState = DataComponentTypes.GetId("block_state");
+    private static readonly int PotDecorations = DataComponentTypes.GetId("pot_decorations");
+    private static readonly int Container = DataComponentTypes.GetId("container");
+    private static readonly int SuspiciousStew = DataComponentTypes.GetId("suspicious_stew_effects");
+    private static readonly int JukeboxPlayable = DataComponentTypes.GetId("jukebox_playable");
+    private static readonly int MobileVisibility = DataComponentTypes.GetId("mob_visibility");
+    private static readonly int WritableBook = DataComponentTypes.GetId("writable_book_content");
+    private static readonly int WrittenBook = DataComponentTypes.GetId("written_book_content");
+    private static readonly int NoteBlockSound = DataComponentTypes.GetId("note_block_sound");
+    private static readonly int Lock = DataComponentTypes.GetId("lock");
+    private static readonly int SignTextFront = DataComponentTypes.GetId("sign_text_front");
+    private static readonly int SignTextBack = DataComponentTypes.GetId("sign_text_back");
+    private static readonly int BucketEntityData = DataComponentTypes.GetId("bucket_entity_data");
 
     /// <summary>Reads one patch; returns false only when the stream is malformed (truncated).</summary>
     public static bool TryRead(ref PayloadReader reader, out ItemComponentInfo info, out bool hasUnknown)
@@ -395,6 +412,101 @@ internal static class ItemComponentPatchReader
             return TrySkipBannerPatterns(ref reader);
         }
 
+        if (typeId == CustomData || typeId == SignTextFront || typeId == SignTextBack || typeId == BucketEntityData)
+        {
+            return NbtTagReader.TrySkip(ref reader);
+        }
+
+        if (typeId == UseRemainder)
+        {
+            return TrySkipItemStackTemplate(ref reader, depth, ref hasUnknown);
+        }
+
+        if (typeId == MapId || typeId == MapPostProcessing || typeId == BlockState || typeId == JukeboxPlayable)
+        {
+            return reader.TryReadVarInt(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == PotDecorations)
+        {
+            for (var i = 0; i < 4; i++)
+            {
+                if (reader.TryReadBool(out var hasItem) != DecodeStatus.Success)
+                {
+                    return false;
+                }
+
+                if (hasItem && !TrySkipItemStackTemplate(ref reader, depth, ref hasUnknown))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        if (typeId == Container)
+        {
+            if (reader.TryReadVarInt(out var slots) != DecodeStatus.Success || slots < 0)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < slots; i++)
+            {
+                if (reader.TryReadBool(out var hasItem) != DecodeStatus.Success)
+                {
+                    return false;
+                }
+
+                if (hasItem && !TrySkipItemStackTemplate(ref reader, depth, ref hasUnknown))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        if (typeId == SuspiciousStew)
+        {
+            if (reader.TryReadVarInt(out var effects) != DecodeStatus.Success || effects < 0)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < effects; i++)
+            {
+                if (reader.TryReadVarInt(out _) != DecodeStatus.Success || // effect id
+                    reader.TryReadVarInt(out _) != DecodeStatus.Success)   // duration
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        if (typeId == MobileVisibility)
+        {
+            return TrySkipHolderSet(ref reader) && reader.TryReadFloat(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == WritableBook)
+        {
+            return TrySkipFilterableStrings(ref reader);
+        }
+
+        if (typeId == WrittenBook)
+        {
+            return TrySkipWrittenBook(ref reader, depth, ref hasUnknown);
+        }
+
+        if (typeId == NoteBlockSound || typeId == Lock)
+        {
+            return reader.TryReadString(out _) == DecodeStatus.Success;
+        }
+
         // Unknown positive component: no generic skip exists, so the caller must stop after this slot.
         hasUnknown = true;
         info = info with { Opaque = true };
@@ -432,6 +544,63 @@ internal static class ItemComponentPatchReader
         }
 
         return true;
+    }
+
+    private static bool TrySkipFilterableStrings(ref PayloadReader reader)
+    {
+        if (reader.TryReadVarInt(out var count) != DecodeStatus.Success || count < 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < count; i++)
+        {
+            if (!TrySkipFilterableString(ref reader))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TrySkipFilterableString(ref PayloadReader reader)
+    {
+        if (reader.TryReadString(out _) != DecodeStatus.Success ||
+            reader.TryReadBool(out var hasFiltered) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        return !hasFiltered || reader.TryReadString(out _) == DecodeStatus.Success;
+    }
+
+    private static bool TrySkipWrittenBook(ref PayloadReader reader, int depth, ref bool hasUnknown)
+    {
+        if (!TrySkipFilterableString(ref reader) || // title
+            reader.TryReadString(out _) != DecodeStatus.Success || // author
+            reader.TryReadVarInt(out _) != DecodeStatus.Success || // generation
+            reader.TryReadVarInt(out var pages) != DecodeStatus.Success ||
+            pages < 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < pages; i++)
+        {
+            if (!NbtTagReader.TrySkip(ref reader) || // raw component
+                reader.TryReadBool(out var hasFiltered) != DecodeStatus.Success)
+            {
+                return false;
+            }
+
+            if (hasFiltered && !NbtTagReader.TrySkip(ref reader))
+            {
+                return false;
+            }
+        }
+
+        return reader.TryReadBool(out _) == DecodeStatus.Success;
     }
 
     private static bool TrySkipBlocksAttacks(ref PayloadReader reader)

@@ -3187,6 +3187,12 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Common **478**（+1）、Client **1169**，构建 0 警告 0 错误。
 - **下一步具体动作**：剩余书籍/容器/蜂巢/地图等更少见组件，或转 AI 依赖生物。
 
+### 2026-11-04 其余物品组件（T-604）
+
+- 新增 NBT 类（`custom_data`/`sign_text_*`/`bucket_entity_data`）、`use_remainder`、`map_id`/`map_post_processing`/`block_state`/`jukebox_playable`、`pot_decorations`、`container`、`suspicious_stew_effects`、`mob_visibility`、`writable_book_content`/`written_book_content`、`note_block_sound`/`lock`。
+- 验证：Common **479**（+1）、Client **1169**，构建 0 警告 0 错误。
+- **下一步具体动作**：剩余 `can_place_on`/`can_break`/`bees`/`profile`/`banner_patterns`?（banner done）及变体/颜色组件，或转 AI 依赖生物。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。
