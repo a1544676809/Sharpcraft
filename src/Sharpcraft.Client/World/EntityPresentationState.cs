@@ -79,4 +79,7 @@ public sealed class EntityPresentationState
 
     /// <summary>Whether the cube mob was on the ground on the previous tick.</summary>
     public bool WasOnGround { get; internal set; }
+
+    /// <summary>Shulker attach face direction id (0..5), or -1 when not applicable.</summary>
+    public int AttachFace { get; internal set; } = -1;
 }

@@ -3160,6 +3160,13 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Client **1166**（+5），构建 0 警告 0 错误。
 - **下一步具体动作**：①Shulker attach-face 渲染 transform；②或回 AI 依赖生物 / 组件表。
 
+### 2026-11-04 Shulker attach-face（T-600）
+
+- `DATA_ATTACH_FACE_ID`（index16 direction serializer 12）→ `EntityRenderState.AttachFace`。
+- `EntityModelTransform` 按 `Direction.getRotation()`（opposite 面）在 (0,0.5,0) 处施加四元数旋转；贴墙/贴顶朝向生效。
+- 验证：Client **1169**（+3），构建 0 警告 0 错误。
+- **下一步具体动作**：剩余多为 AI 依赖生物（Wither/Wolf/Fox/Panda/PolarBear/Rabbit）或组件表（food/tool/weapon/equippable）；按步选择。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

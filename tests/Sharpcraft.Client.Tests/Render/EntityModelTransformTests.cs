@@ -48,6 +48,27 @@ public sealed class EntityModelTransformTests
     }
 
     [Fact]
+    public void AttachFaceRotatesAroundTheBlockPivot()
+    {
+        // Attached to the up face -> reference uses the opposite (down) rotation, i.e. 180 degrees around X at y=0.5.
+        var state = new Sharpcraft.Client.World.EntityRenderState(1, 115, 0, 0, 0, 0, 0, AttachFace: 1);
+        var transform = EntityModelTransform.From(state);
+
+        Assert.Equal(new Vector3(0f, 0.5f, 0f), transform.Apply(new Vector3(0f, 0.5f, 0f)));
+        var top = transform.Apply(new Vector3(0f, 1f, 0f));
+        Assert.Equal(0f, top.Y, 4);
+    }
+
+    [Fact]
+    public void NoAttachFaceLeavesTheModelUnchanged()
+    {
+        var state = new Sharpcraft.Client.World.EntityRenderState(1, 120, 0, 0, 0, 0, 0);
+        var transform = EntityModelTransform.From(state);
+
+        Assert.Equal(new Vector3(0f, 1f, 0f), transform.Apply(new Vector3(0f, 1f, 0f)));
+    }
+
+    [Fact]
     public void YawRotatesAroundTheEntityYAxis()
     {
         var transform = new EntityModelTransform(Vector3.Zero, 90f, 0f);

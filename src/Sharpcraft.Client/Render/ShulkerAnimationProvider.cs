@@ -25,8 +25,8 @@ namespace Sharpcraft.Client.Render;
 /// <c>8 − sin(bs)·8 − extra</c>. Rotations keep reference signs.
 /// </para>
 /// <para>
-/// <b>Blocked:</b> the shulker <c>attachFace</c> orientation is a renderer texture/pose transform
-/// (<c>ShulkerRenderer.setupRotations</c>), not model animation — it is not reproduced here and is not faked.
+/// <c>attachFace</c> orientation is a renderer transform (<c>ShulkerRenderer.setupRotations</c>): it is applied by
+/// <c>EntityModelTransform</c> from the synced attach-face direction, not by this provider.
 /// </para>
 /// </remarks>
 public sealed class ShulkerAnimationProvider(int typeId) : IEntityAnimationProvider

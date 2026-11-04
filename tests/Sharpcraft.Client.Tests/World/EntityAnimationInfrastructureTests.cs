@@ -352,6 +352,16 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.True(state.IsLeftHanded);
     }
 
+    [Fact]
+    public void ShulkerAttachFaceProjectsToTheFrame()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(18, typeId: ShulkerModelDefinition.ShulkerEntityTypeId));
+        tracker.ApplyEntityData(18, [new EntityDataItem(16, 12, 3)]); // direction serializer, south
+
+        Assert.Equal(3, tracker.Interpolate(0f)[0].AttachFace);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 

@@ -261,7 +261,8 @@ public readonly record struct EntityRenderState(
     int MainHandQuickChargeLevel = 0,
     bool IsLeftHanded = false,
     float Squish = 0f,
-    int CubeSize = 1);
+    int CubeSize = 1,
+    int AttachFace = -1);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -812,6 +813,7 @@ public sealed class EntityTracker
                 IsLeftHanded: entity.Presentation.IsLeftHanded,
                 Squish: entity.Presentation.OldSquish + ((entity.Presentation.Squish - entity.Presentation.OldSquish) * t),
                 CubeSize: entity.Presentation.CubeSize,
+                AttachFace: entity.Presentation.AttachFace,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,
@@ -874,6 +876,13 @@ public sealed class EntityTracker
             {
                 entity.Presentation.IsAggressive = (item.Value & 4) != 0;
                 entity.Presentation.IsLeftHanded = (item.Value & 2) != 0;
+                applied = true;
+            }
+
+            // Shulker attach face: DATA_ATTACH_FACE_ID (index 16, direction serializer 12).
+            if (entity.TypeId == 115 && item.Index == 16 && item.SerializerId == 12)
+            {
+                entity.Presentation.AttachFace = item.Value;
                 applied = true;
             }
 
