@@ -19,7 +19,7 @@ public sealed class EntityModelHierarchyTests
     private static Vector3[] Vertices(EntityModelDefinition model, int typeId, string onlyPart)
     {
         var mesher = new EntityModelMesher();
-        var entity = new EntityRenderState(1, typeId, 0f, 0f, 0f, 0f, 0f);
+        var entity = new EntityRenderState(1, typeId, 0f, 0f, 0f, 180f, 0f);
         var sprite = new Sharpcraft.Client.Assets.SpriteRect(0, 0, 64, 64, 1);
         var geometry = mesher.Build([entity], sprite, 64, 64, onlyPart: onlyPart, variants: EntityVariantTable.Builtin);
         var points = new Vector3[geometry.VertexFloats / 14];

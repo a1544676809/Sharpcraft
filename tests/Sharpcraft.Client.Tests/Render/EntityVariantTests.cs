@@ -162,7 +162,7 @@ public sealed class EntityVariantTests
     private static void AssertColdHorn(string part, float minX, float maxX, float px)
     {
         var mesher = new EntityModelMesher();
-        var entity = new EntityRenderState(1, CowModelDefinition.CowEntityTypeId, 0f, 0f, 0f, 0f, 0f, VariantId: 2);
+        var entity = new EntityRenderState(1, CowModelDefinition.CowEntityTypeId, 0f, 0f, 0f, 180f, 0f, VariantId: 2);
         var sprite = new Sharpcraft.Client.Assets.SpriteRect(0, 0, 64, 64, 1);
         var geometry = mesher.Build(
             [entity], sprite, 64, 64, onlyPart: part, variants: EntityVariantTable.Builtin);

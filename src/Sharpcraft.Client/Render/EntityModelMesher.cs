@@ -429,7 +429,10 @@ public sealed class EntityModelMesher
         var poseOffset = pose?.Get(PosePartName(part)) ?? PoseOffset.Zero;
         var pivot = new Vector3((part.PivotX + poseOffset.Position.X) * px, (part.PivotY + poseOffset.Position.Y) * px, (part.PivotZ + poseOffset.Position.Z) * px);
         // Row-vector convention: "rotate, then translate" is Rotation * Translation; animation scale is local.
-        var local = Matrix4x4.CreateScale(new Vector3(1f + poseOffset.Scale.X, 1f + poseOffset.Scale.Y, 1f + poseOffset.Scale.Z)) * RotationZyx(part.RotationX + poseOffset.Rotation.X, part.RotationY + poseOffset.Rotation.Y, part.RotationZ + poseOffset.Rotation.Z) * Matrix4x4.CreateTranslation(pivot);
+        // The model vertices are the reference model after scale(-1,-1,1) (see FromVanilla), so an animation rotation
+        // transcribed from the reference model space must be conjugated by that flip: X and Y angles are negated, Z is
+        // unchanged. Base (bind-pose) rotations are already stored in this space and are left untouched.
+        var local = Matrix4x4.CreateScale(new Vector3(1f + poseOffset.Scale.X, 1f + poseOffset.Scale.Y, 1f + poseOffset.Scale.Z)) * RotationZyx(part.RotationX - poseOffset.Rotation.X, part.RotationY - poseOffset.Rotation.Y, part.RotationZ + poseOffset.Rotation.Z) * Matrix4x4.CreateTranslation(pivot);
 
         if (part.Parent is not { Length: > 0 } parentName)
         {

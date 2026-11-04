@@ -511,8 +511,9 @@ internal static class HumanoidModelPose
 
         public readonly PoseOffset ToOffset()
         {
-            // Reference model space is y-down; the mesher stores y-up (KeyframeAnimations.PosVec negates Y), so flip Y.
-            return new PoseOffset(new Vector3(PosX, -PosY, PosZ), new Vector3(RotX, RotY, RotZ), Vector3.Zero);
+            // Reference model space is y-down; the mesher stores the scale(-1,-1,1)-flipped model, so position offsets
+            // are flipped in X and Y (Z unchanged), matching the vertex conversion in PlayerModelDefinition.FromVanilla.
+            return new PoseOffset(new Vector3(-PosX, -PosY, PosZ), new Vector3(RotX, RotY, RotZ), Vector3.Zero);
         }
     }
 }
