@@ -70,6 +70,12 @@ internal static class ItemComponentPatchReader
     private static readonly int Equippable = DataComponentTypes.GetId("equippable");
     private static readonly int Repairable = DataComponentTypes.GetId("repairable");
     private static readonly int BundleContents = DataComponentTypes.GetId("bundle_contents");
+    private static readonly int BlocksAttacks = DataComponentTypes.GetId("blocks_attacks");
+    private static readonly int Consumable = DataComponentTypes.GetId("consumable");
+    private static readonly int PotionContents = DataComponentTypes.GetId("potion_contents");
+    private static readonly int Fireworks = DataComponentTypes.GetId("fireworks");
+    private static readonly int FireworkExplosion = DataComponentTypes.GetId("firework_explosion");
+    private static readonly int BannerPatterns = DataComponentTypes.GetId("banner_patterns");
 
     /// <summary>Reads one patch; returns false only when the stream is malformed (truncated).</summary>
     public static bool TryRead(ref PayloadReader reader, out ItemComponentInfo info, out bool hasUnknown)
@@ -359,6 +365,36 @@ internal static class ItemComponentPatchReader
             return TrySkipItemStackList(ref reader, depth, ref hasUnknown);
         }
 
+        if (typeId == BlocksAttacks)
+        {
+            return TrySkipBlocksAttacks(ref reader);
+        }
+
+        if (typeId == Consumable)
+        {
+            return TrySkipConsumable(ref reader);
+        }
+
+        if (typeId == PotionContents)
+        {
+            return TrySkipPotionContents(ref reader);
+        }
+
+        if (typeId == Fireworks)
+        {
+            return TrySkipFireworks(ref reader);
+        }
+
+        if (typeId == FireworkExplosion)
+        {
+            return TrySkipFireworkExplosion(ref reader);
+        }
+
+        if (typeId == BannerPatterns)
+        {
+            return TrySkipBannerPatterns(ref reader);
+        }
+
         // Unknown positive component: no generic skip exists, so the caller must stop after this slot.
         hasUnknown = true;
         info = info with { Opaque = true };
@@ -390,6 +426,241 @@ internal static class ItemComponentPatchReader
             }
 
             if (display == 2 && !NbtTagReader.TrySkip(ref reader)) // override text
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TrySkipBlocksAttacks(ref PayloadReader reader)
+    {
+        if (reader.TryReadFloat(out _) != DecodeStatus.Success ||
+            reader.TryReadFloat(out _) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out var reductions) != DecodeStatus.Success ||
+            reductions < 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < reductions; i++)
+        {
+            if (reader.TryReadFloat(out _) != DecodeStatus.Success ||
+                reader.TryReadBool(out var hasType) != DecodeStatus.Success ||
+                (hasType && !TrySkipHolderSet(ref reader)) ||
+                reader.TryReadFloat(out _) != DecodeStatus.Success ||
+                reader.TryReadFloat(out _) != DecodeStatus.Success)
+            {
+                return false;
+            }
+        }
+
+        // ItemDamageFunction: threshold, base, factor.
+        if (reader.TryReadFloat(out _) != DecodeStatus.Success ||
+            reader.TryReadFloat(out _) != DecodeStatus.Success ||
+            reader.TryReadFloat(out _) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        if (reader.TryReadBool(out var hasBypassed) != DecodeStatus.Success ||
+            (hasBypassed && !TrySkipHolderSet(ref reader)) ||
+            reader.TryReadBool(out var hasBlockSound) != DecodeStatus.Success ||
+            (hasBlockSound && reader.TryReadVarInt(out _) != DecodeStatus.Success) ||
+            reader.TryReadBool(out var hasDisableSound) != DecodeStatus.Success ||
+            (hasDisableSound && reader.TryReadVarInt(out _) != DecodeStatus.Success))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool TrySkipConsumable(ref PayloadReader reader)
+    {
+        if (reader.TryReadFloat(out _) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out _) != DecodeStatus.Success || // ItemUseAnimation
+            reader.TryReadVarInt(out _) != DecodeStatus.Success || // sound
+            reader.TryReadBool(out _) != DecodeStatus.Success ||  // particles
+            reader.TryReadVarInt(out var effects) != DecodeStatus.Success ||
+            effects < 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < effects; i++)
+        {
+            if (reader.TryReadVarInt(out var type) != DecodeStatus.Success)
+            {
+                return false;
+            }
+
+            switch (type)
+            {
+                case 0: // apply_effects: effect list + probability
+                    if (reader.TryReadVarInt(out var count) != DecodeStatus.Success || count < 0)
+                    {
+                        return false;
+                    }
+
+                    for (var e = 0; e < count; e++)
+                    {
+                        if (!TrySkipMobEffect(ref reader))
+                        {
+                            return false;
+                        }
+                    }
+
+                    if (reader.TryReadFloat(out _) != DecodeStatus.Success)
+                    {
+                        return false;
+                    }
+
+                    break;
+                case 1: // remove_effects: holder set
+                    if (!TrySkipHolderSet(ref reader))
+                    {
+                        return false;
+                    }
+
+                    break;
+                case 2: // clear_all_effects: no payload
+                    break;
+                case 3: // teleport_randomly: float + bool
+                    if (reader.TryReadFloat(out _) != DecodeStatus.Success ||
+                        reader.TryReadBool(out _) != DecodeStatus.Success)
+                    {
+                        return false;
+                    }
+
+                    break;
+                case 4: // play_sound: sound id
+                    if (reader.TryReadVarInt(out _) != DecodeStatus.Success)
+                    {
+                        return false;
+                    }
+
+                    break;
+                default:
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TrySkipMobEffect(ref PayloadReader reader)
+    {
+        // effect id, then Details (recursive hidden effect).
+        return reader.TryReadVarInt(out _) == DecodeStatus.Success && TrySkipMobEffectDetails(ref reader, 0);
+    }
+
+    private static bool TrySkipMobEffectDetails(ref PayloadReader reader, int depth)
+    {
+        if (depth > MaxDepth ||
+            reader.TryReadVarInt(out _) != DecodeStatus.Success || // amplifier
+            reader.TryReadVarInt(out _) != DecodeStatus.Success || // duration
+            reader.TryReadBool(out _) != DecodeStatus.Success ||  // ambient
+            reader.TryReadBool(out _) != DecodeStatus.Success ||  // show particles
+            reader.TryReadBool(out _) != DecodeStatus.Success)    // show icon
+        {
+            return false;
+        }
+
+        if (reader.TryReadBool(out var hasHidden) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        return !hasHidden || TrySkipMobEffectDetails(ref reader, depth + 1);
+    }
+
+    private static bool TrySkipPotionContents(ref PayloadReader reader)
+    {
+        if (reader.TryReadBool(out var hasPotion) != DecodeStatus.Success ||
+            (hasPotion && reader.TryReadVarInt(out _) != DecodeStatus.Success) ||
+            reader.TryReadBool(out var hasColor) != DecodeStatus.Success ||
+            (hasColor && reader.TryReadInt(out _) != DecodeStatus.Success) ||
+            reader.TryReadVarInt(out var effects) != DecodeStatus.Success ||
+            effects < 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < effects; i++)
+        {
+            if (!TrySkipMobEffect(ref reader))
+            {
+                return false;
+            }
+        }
+
+        if (reader.TryReadBool(out var hasName) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        return !hasName || reader.TryReadString(out _) == DecodeStatus.Success;
+    }
+
+    private static bool TrySkipFireworks(ref PayloadReader reader)
+    {
+        if (reader.TryReadVarInt(out var flight) != DecodeStatus.Success || flight < 0 ||
+            reader.TryReadVarInt(out var count) != DecodeStatus.Success || count < 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < count; i++)
+        {
+            if (!TrySkipFireworkExplosion(ref reader))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TrySkipFireworkExplosion(ref PayloadReader reader)
+    {
+        if (reader.TryReadVarInt(out _) != DecodeStatus.Success) // shape
+        {
+            return false;
+        }
+
+        for (var list = 0; list < 2; list++) // colors, fade colors
+        {
+            if (reader.TryReadVarInt(out var count) != DecodeStatus.Success || count < 0)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < count; i++)
+            {
+                if (reader.TryReadInt(out _) != DecodeStatus.Success)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return reader.TryReadBool(out _) == DecodeStatus.Success &&
+               reader.TryReadBool(out _) == DecodeStatus.Success;
+    }
+
+    private static bool TrySkipBannerPatterns(ref PayloadReader reader)
+    {
+        if (reader.TryReadVarInt(out var count) != DecodeStatus.Success || count < 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < count; i++)
+        {
+            if (reader.TryReadVarInt(out _) != DecodeStatus.Success || // pattern holder
+                reader.TryReadVarInt(out _) != DecodeStatus.Success)   // dye color
             {
                 return false;
             }

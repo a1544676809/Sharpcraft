@@ -358,6 +358,39 @@ public sealed class SetEquipmentPacketTests
     }
 
     [Fact]
+    public void PotionContentsIsSkippedAndParsingContinues()
+    {
+        var potion = DataComponentTypes.GetId("potion_contents");
+        Assert.True(potion >= 0);
+
+        var body = Body(
+            b =>
+            {
+                b.Add(0x80);
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(0));
+                b.AddRange(VarInt(potion));
+                b.Add(0);                    // no potion id
+                b.Add(0);                    // no custom color
+                b.AddRange(VarInt(0));       // no custom effects
+                b.Add(0);                    // no custom name
+            },
+            b =>
+            {
+                b.Add(7);
+                b.AddRange(VarInt(0));
+            });
+
+        var result = Read(body, out _, out var complete, out var status);
+
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.Equal(2, result.Length);
+    }
+
+    [Fact]
     public void TruncatedStackReportsNeedMoreData()
     {
         var body = new List<byte>();
