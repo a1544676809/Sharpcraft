@@ -3268,6 +3268,14 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 当前 Wither provider 已实现可等效部分（ribcage/tail age bob + 中心头 look）。
 - **下一步具体动作**：Parrot party（需 jukebox 状态），或收口 B 轮。
 
+### 2026-11-04 B 轮剩余项结论（均按等效要求保持阻塞）
+
+- **Parrot PARTY**：由客户端 `LevelEventHandler` 的 jukebox 播放/停止事件驱动（`setRecordPlayingNearby`），不是 entity data；当前未解码该 level event / jukebox 歌曲状态 → 阻塞。
+- **Panda IsScared**：需 `isWorried`（基因）与当前雷暴状态，均不在帧 → 阻塞。
+- **Rabbit idle-head-tilt**：`idleAnimationTimeout = random.nextInt(40)+180` 使用实体私有 RNG，且依赖 leash/no-AI → 无法精确复刻 → 阻塞。
+- 以上均已在 `docs/modules/entity-ai-presentation.md` 记录，未近似。Wither 侧头同理。
+- **下一步具体动作**：B 轮可收口；剩余需新增数据源（level event/jukebox、thunder/gene、实体 RNG/leash）。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。
