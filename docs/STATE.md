@@ -3068,3 +3068,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **P2-A 首片已实现**：解码 swing 包；新增 [SwingAnimationState.cs](src/Sharpcraft.Client/World/SwingAnimationState.cs)（复刻参考 `LivingEntity.SwingState`，含 startIfAble 半程拒绝）；`EntityPresentationState.Swing` + `EntityTracker.ApplySwingAnimation` + `EntityAnimationFrame.SwingAnimation`；`InteractiveSession` 分发 id 123。
 - 验证：Common **464**（+3 `SwingAnimationPacketsTests`）、Client **1124**（+2 swing 状态与路由），构建 0 警告 0 错误。
 - **下一步具体动作**：①用 swing 通道做 P2-A provider（Vindicator/Pillager/Evoker/Illusioner 的 armPose，需窄判定 aggressive/celebrating）；②再 P2-B Piglin（同步 charging/dancing + 窄判定）。
+
+### 2026-11-04 P2-A 进展：swing 通道 + armed 通用输入
+
+- 已提交 swing 通道；本轮补 `EntityAnimationFrame.IsAggressive`（Mob flags index15 byte bit2，经 `IEntitySyncedDataAnimationState` 派生）与 `MainHandItemId`（装备槽 0），Client 1125。
+- **发现的阻塞**：`IllagerModelDefinition` 把参考的交叉臂组拆成 `arms_right/arms_cross/arms_left` 三个部件，且未设可见性；而参考按 `armPose==CROSSED` 切换"交叉臂组 vs 左右臂"可见性。当前 pose 模型**没有可见性通道**，直接做 provider 会出现"交叉臂与单独臂同时显示"的错误。
+- **下一步具体动作**：先给通用层加 `EntityRenderState.ArmPose`（或 `CrossedArms` 布尔）+ `EntityModelPart.VisibleWhen` 绑定，再实现 Illager provider；否则不近似。

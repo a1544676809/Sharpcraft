@@ -244,7 +244,9 @@ public readonly record struct EntityRenderState(
     bool IsSitting = false,
     bool IsMoving = false,
     float HeadYaw = 0f,
-    float SwingAnimation = 0f);
+    float SwingAnimation = 0f,
+    bool IsAggressive = false,
+    int MainHandItemId = -1);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -760,6 +762,8 @@ public sealed class EntityTracker
                 IsMoving: entity.Presentation.IsMoving,
                 HeadYaw: entity.HeadYaw,
                 SwingAnimation: entity.Presentation.Swing.Animation(t),
+                IsAggressive: entity.Presentation.IsAggressive,
+                MainHandItemId: entity.EquipmentItemAt(0),
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,
@@ -814,6 +818,13 @@ public sealed class EntityTracker
             if (entity.TypeId == 99 && item.Index == 17 && item.SerializerId == 8)
             {
                 entity.Presentation.IsSitting = (item.Value & 1) != 0;
+                applied = true;
+            }
+
+            // Mob flags byte (index 15, byte serializer): bit 2 = aggressive (reference Mob.isAggressive).
+            if (item.Index == 15 && item.SerializerId == 0)
+            {
+                entity.Presentation.IsAggressive = (item.Value & 4) != 0;
                 applied = true;
             }
         }

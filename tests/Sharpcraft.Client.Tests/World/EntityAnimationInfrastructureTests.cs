@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
 using Sharpcraft.Common.Identifiers;
 using Sharpcraft.Common.Network;
@@ -260,6 +261,19 @@ public sealed class EntityAnimationInfrastructureTests
         }
 
         Assert.Equal(0.4f, tracker.Interpolate(1f)[0].SwingAnimation, 4);
+    }
+
+    [Fact]
+    public void MobAggressiveFlagAndMainHandItemAreProjected()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(13, typeId: IllagerModelDefinition.VindicatorEntityTypeId));
+        tracker.ApplyEntityData(13, [new EntityDataItem(15, 0, 4)]); // Mob flags bit 2 = aggressive
+        tracker.ApplyEquipment(13, [new EquipmentItem(0, 1000, 1)]);
+
+        var state = tracker.Interpolate(0f)[0];
+        Assert.True(state.IsAggressive);
+        Assert.Equal(1000, state.MainHandItemId);
     }
 
     private static AddedEntity Entity(int id, int typeId) =>

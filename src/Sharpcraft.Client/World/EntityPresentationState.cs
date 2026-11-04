@@ -52,4 +52,7 @@ public sealed class EntityPresentationState
 
     /// <summary>Whether the entity moved horizontally this tick (reference Dolphin-style "isMoving").</summary>
     public bool IsMoving { get; internal set; }
+
+    /// <summary>Mob aggressive flag (reference <c>Mob.isAggressive</c>, synced DATA_MOB_FLAGS bit 2).</summary>
+    public bool IsAggressive { get; internal set; }
 }
