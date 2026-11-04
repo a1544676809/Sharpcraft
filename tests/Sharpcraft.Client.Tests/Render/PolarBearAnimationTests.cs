@@ -39,7 +39,8 @@ public sealed class PolarBearAnimationTests
             IsResting: false,
             IsBaby: isBaby,
             IsHidingInShell: false,
-            IsStanding: isStanding);
+            IsStanding: isStanding,
+            StandScale: isStanding ? 1f : 0f);
 
     private static EntityPose Apply(PolarBearAnimationProvider provider, in EntityAnimationFrame frame)
     {

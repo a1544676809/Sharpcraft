@@ -419,6 +419,21 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.Equal(5f / 15f, state.JumpCompletion, 5);
     }
 
+    [Fact]
+    public void PolarBearStandEaseAdvancesAndInterpolates()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(24, typeId: PolarBearModelDefinition.PolarBearEntityTypeId));
+        tracker.ApplyEntityData(24, [new EntityDataItem(17, 8, 1)]);
+        for (var tick = 1; tick <= 3; tick++)
+        {
+            tracker.GameTime = tick;
+            tracker.Tick();
+        }
+
+        Assert.Equal(2.5f / 6f, tracker.Interpolate(0.5f)[0].StandScale, 5);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 

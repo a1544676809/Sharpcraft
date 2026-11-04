@@ -12,13 +12,10 @@ namespace Sharpcraft.Client.Render;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Standing is settled-only.</b> The reference <c>standScale</c> is a client-lerped value
-/// (<c>Mth.lerp(partialTick, prev, current) / 6</c>) where <c>clientSideStandAnimation</c> ramps by 1 per tick toward 0…6.
-/// <see cref="EntityAnimationFrame"/> only carries <c>IsStanding</c>, not that counter, so the 6-tick ease-in/out cannot be
-/// reproduced. Once settled the counter is clamped (6 when standing, 0 when not), so
-/// <c>standScale = IsStanding ? 1 : 0</c> reproduces the settled reference pose exactly; the transient ramp is a known
-/// approximation, not a fake settled pose. <c>bodyAgeScale = state.ageScale</c> is reconstructed from
-/// <c>IsBaby</c> (<c>0.5</c> for babies, else <c>1</c>, matching <c>LivingEntity.getAgeScale</c>).
+/// <b>Standing uses the exact stand ease.</b> <see cref="EntityAnimationFrame.StandScale"/> comes from the ported
+/// <c>PolarBearStandAnimationState</c> (<c>lerp(partialTick, prev, current) / 6</c>, counter ±1 per tick clamped 0…6),
+/// so both the transient ramp and the settled pose match the reference. <c>bodyAgeScale = state.ageScale</c> is
+/// reconstructed from <c>IsBaby</c> (<c>0.5</c> babies, else <c>1</c>, matching <c>LivingEntity.getAgeScale</c>).
 /// </para>
 /// <para>
 /// The flat model splits the reference <c>head</c> part's extra cubes (mouth, ears) and the reference <c>body</c> part's
@@ -43,25 +40,25 @@ public sealed class PolarBearAnimationProvider(int typeId) : IEntityAnimationPro
     public IEntityAnimationState CreateState() => new State();
 
     public void Apply(IEntityAnimationState state, in EntityAnimationFrame frame, EntityPose pose) =>
-        ApplyPose(frame, frame.IsStanding, pose);
+        ApplyPose(frame, pose);
 
     public void ApplyClip(IEntityAnimationState state, in EntityAnimationFrame frame, string clip, float seconds, EntityPose pose)
     {
         switch (clip)
         {
             case "walk":
-                ApplyPose(frame with { WalkAnimationPos = seconds * 10f, WalkAnimationSpeed = 1f }, isStanding: false, pose);
+                ApplyPose(frame with { WalkAnimationPos = seconds * 10f, WalkAnimationSpeed = 1f, StandScale = 0f }, pose);
                 break;
             case "stand":
-                ApplyPose(frame with { WalkAnimationPos = 0f, WalkAnimationSpeed = 0f }, isStanding: true, pose);
+                ApplyPose(frame with { WalkAnimationPos = 0f, WalkAnimationSpeed = 0f, StandScale = 1f }, pose);
                 break;
             case "idle":
-                ApplyPose(frame with { WalkAnimationPos = 0f, WalkAnimationSpeed = 0f }, isStanding: false, pose);
+                ApplyPose(frame with { WalkAnimationPos = 0f, WalkAnimationSpeed = 0f, StandScale = 0f }, pose);
                 break;
         }
     }
 
-    private static void ApplyPose(in EntityAnimationFrame frame, bool isStanding, EntityPose pose)
+    private static void ApplyPose(in EntityAnimationFrame frame, EntityPose pose)
     {
         // Quadruped base.
         var phase = frame.WalkAnimationPos * 0.6662f;
@@ -83,11 +80,10 @@ public sealed class PolarBearAnimationProvider(int typeId) : IEntityAnimationPro
         var frontLegYPos = 0f;
         var frontLegZPos = 0f;
 
-        if (isStanding)
+        if (frame.StandScale > 0f)
         {
             var bodyAgeScale = frame.IsBaby ? 0.5f : 1f;
-            var standScale = 1f; // settled standing
-            var s = standScale * standScale;
+            var s = frame.StandScale * frame.StandScale;
 
             // head: xRot += s·π·0.15; y -= s·24; z += s·13 (position y negated for y-up storage).
             headX += s * MathF.PI * 0.15f;

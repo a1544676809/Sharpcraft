@@ -3248,6 +3248,13 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Client **1236**（+4）全量绿。
 - **下一步具体动作**：PolarBear 站立过渡 counter、Panda sit/eat 需字段；或转 Wither 侧头/Parrot party。
 
+### 2026-11-04 PolarBear 站立缓动（T-609 续）
+
+- 新增 `PolarBearStandAnimationState`（±1/tick，clamp 0..6；`Scale(partial)=lerp(prev,current)/6`），挂 type 105；帧新增 `StandScale`。
+- PolarBear provider 改用精确 `StandScale`（含过渡），不再使用 settled-only 假设。
+- 验证：Client **1237**（+1），全量绿。
+- **下一步具体动作**：Panda sit/eat 字段（Panda flags/sitAmount）或 Wither 侧头/Parrot party。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

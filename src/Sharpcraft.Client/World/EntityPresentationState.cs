@@ -29,6 +29,11 @@ public sealed class EntityPresentationState
         {
             RabbitHop = new RabbitHopAnimationState();
         }
+
+        if (typeId == 105)
+        {
+            PolarStand = new PolarBearStandAnimationState();
+        }
     }
 
     /// <summary>Walk position/speed smoothing, ported from the reference <c>WalkAnimationState</c>.</summary>
@@ -45,6 +50,9 @@ public sealed class EntityPresentationState
 
     /// <summary>Rabbit hop clock, or null for other types.</summary>
     public RabbitHopAnimationState? RabbitHop { get; }
+
+    /// <summary>Polar bear stand ease clock, or null for other types.</summary>
+    public PolarBearStandAnimationState? PolarStand { get; }
 
     /// <summary>The synced ground flag from the last move/teleport packet.</summary>
     public bool IsOnGround { get; internal set; }
