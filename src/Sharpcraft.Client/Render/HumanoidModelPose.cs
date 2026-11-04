@@ -291,10 +291,14 @@ internal static class HumanoidModelPose
                 body.RotY *= -1f;
             }
 
+            // Reference setupAttackAnimation *assigns* ModelPart.x/z to an absolute part position; the rest arm pivot is
+            // x = -5 (right) / +5 (left), z = 0. A PoseOffset is a delta from that bind pivot, so convert with
+            // delta = assigned - bindPivot. At rest this is ~0, so the arms stay attached (only the body twist moves them).
+            const float armBindPivotX = 5f;
             rightArm.PosZ = MathF.Sin(body.RotY) * 5f * ageScale;
-            rightArm.PosX = -MathF.Cos(body.RotY) * 5f * ageScale;
+            rightArm.PosX = (-MathF.Cos(body.RotY) * 5f * ageScale) + armBindPivotX;
             leftArm.PosZ = -MathF.Sin(body.RotY) * 5f * ageScale;
-            leftArm.PosX = MathF.Cos(body.RotY) * 5f * ageScale;
+            leftArm.PosX = (MathF.Cos(body.RotY) * 5f * ageScale) - armBindPivotX;
             rightArm.RotY += body.RotY;
             leftArm.RotY += body.RotY;
             leftArm.RotX += body.RotY;
