@@ -205,4 +205,96 @@ public sealed class EntityPresentationState
 
     /// <summary>Polar bear standing flag (synced boolean).</summary>
     public bool IsStanding { get; internal set; }
+
+    // Client-derived body/head rotation, ported from the reference BodyRotationControl. The body lags the head and,
+    // when the head turns beyond the mob's limit while idle, the body is dragged around to follow it.
+    /// <summary>Client-derived body yaw (reference <c>yBodyRot</c>), used for the entity-level yaw.</summary>
+    public float BodyYaw { get; internal set; }
+
+    /// <summary>Body yaw at the previous tick (reference <c>yBodyRotO</c>), for partial-tick interpolation.</summary>
+    public float BodyYawO { get; internal set; }
+
+    /// <summary>Effective head yaw (reference <c>yHeadRot</c>), clamped to the body while moving.</summary>
+    public float HeadYaw { get; internal set; }
+
+    /// <summary>Head yaw at the previous tick (reference <c>yHeadRotO</c>).</summary>
+    public float HeadYawO { get; internal set; }
+
+    private float _lastStableHeadYaw;
+    private int _headStableTime;
+
+    /// <summary>Seeds the body/head rotation to the spawn yaw so the first tick has no spurious turn.</summary>
+    public void InitializeRotation(float yaw)
+    {
+        BodyYaw = yaw;
+        BodyYawO = yaw;
+        HeadYaw = yaw;
+        HeadYawO = yaw;
+        _lastStableHeadYaw = yaw;
+        _headStableTime = 0;
+    }
+
+    /// <summary>
+    /// Advances the client-side body rotation one tick, porting the reference <c>BodyRotationControl.clientTick</c>:
+    /// while moving the body snaps to the entity yaw and the head is clamped to it; while idle, a head turn beyond 15°
+    /// drags the body to within <paramref name="maxHeadYaw"/> of the head, and a stable head is returned to front.
+    /// </summary>
+    public void TickBodyRotation(float entityYaw, float headYaw, bool moving, float maxHeadYaw)
+    {
+        BodyYawO = BodyYaw;
+        HeadYawO = HeadYaw;
+        HeadYaw = headYaw;
+
+        if (moving)
+        {
+            BodyYaw = entityYaw;
+            HeadYaw = RotateIfNecessary(HeadYaw, BodyYaw, maxHeadYaw);
+            _lastStableHeadYaw = HeadYaw;
+            _headStableTime = 0;
+            return;
+        }
+
+        if (MathF.Abs(HeadYaw - _lastStableHeadYaw) > 15f)
+        {
+            _headStableTime = 0;
+            _lastStableHeadYaw = HeadYaw;
+            BodyYaw = RotateIfNecessary(BodyYaw, HeadYaw, maxHeadYaw);
+        }
+        else
+        {
+            _headStableTime++;
+            if (_headStableTime > 10)
+            {
+                var timeSince = _headStableTime - 10;
+                var fraction = Math.Clamp(timeSince / 10f, 0f, 1f);
+                var remaining = maxHeadYaw * (1f - fraction);
+                BodyYaw = RotateIfNecessary(BodyYaw, HeadYaw, remaining);
+            }
+        }
+    }
+
+    /// <summary>Reference <c>Mth.rotateIfNecessary</c>: move <paramref name="baseAngle"/> toward the target until the
+    /// difference is within <paramref name="maxAngleDiff"/>; unchanged when already within.</summary>
+    private static float RotateIfNecessary(float baseAngle, float targetAngle, float maxAngleDiff)
+    {
+        var delta = Wrap180(targetAngle - baseAngle);
+        var clamped = Math.Clamp(delta, -maxAngleDiff, maxAngleDiff);
+        return targetAngle - clamped;
+    }
+
+    private static float Wrap180(float degrees)
+    {
+        var value = degrees % 360f;
+        if (value >= 180f)
+        {
+            value -= 360f;
+        }
+
+        if (value < -180f)
+        {
+            value += 360f;
+        }
+
+        return value;
+    }
 }

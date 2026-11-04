@@ -295,9 +295,10 @@ public static class EntityPackets
         return DecodeStatus.Success;
     }
 
-    /// <summary>Converts a wire angle byte to degrees; the encoding is a full turn over 256 steps.</summary>
+    /// <summary>Converts a wire angle byte to degrees; the encoding is a full turn over 256 steps and the reference
+    /// byte is signed (docs/specs/network/entity-sync.md), so the result lies in [-180, 180).</summary>
     /// <param name="value">Raw byte.</param>
-    public static float AngleFromByte(byte value) => value * (360f / 256f);
+    public static float AngleFromByte(byte value) => (sbyte)value * (360f / 256f);
 
     /// <summary>
     /// Reads the compressed vector used for velocities: fifteen bit components scaled by a power of two, with a

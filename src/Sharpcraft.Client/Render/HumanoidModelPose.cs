@@ -291,10 +291,14 @@ internal static class HumanoidModelPose
                 body.RotY *= -1f;
             }
 
+            // Reference setupAttackAnimation *assigns* ModelPart.x/z to an absolute part position; the rest arm pivot is
+            // x = -5 (right) / +5 (left), z = 0. A PoseOffset is a delta from that bind pivot, so convert with
+            // delta = assigned - bindPivot. At rest this is ~0, so the arms stay attached (only the body twist moves them).
+            const float armBindPivotX = 5f;
             rightArm.PosZ = MathF.Sin(body.RotY) * 5f * ageScale;
-            rightArm.PosX = -MathF.Cos(body.RotY) * 5f * ageScale;
+            rightArm.PosX = (-MathF.Cos(body.RotY) * 5f * ageScale) + armBindPivotX;
             leftArm.PosZ = -MathF.Sin(body.RotY) * 5f * ageScale;
-            leftArm.PosX = MathF.Cos(body.RotY) * 5f * ageScale;
+            leftArm.PosX = (MathF.Cos(body.RotY) * 5f * ageScale) - armBindPivotX;
             rightArm.RotY += body.RotY;
             leftArm.RotY += body.RotY;
             leftArm.RotX += body.RotY;
@@ -511,8 +515,9 @@ internal static class HumanoidModelPose
 
         public readonly PoseOffset ToOffset()
         {
-            // Reference model space is y-down; the mesher stores y-up (KeyframeAnimations.PosVec negates Y), so flip Y.
-            return new PoseOffset(new Vector3(PosX, -PosY, PosZ), new Vector3(RotX, RotY, RotZ), Vector3.Zero);
+            // Reference model space is y-down; the mesher stores the scale(-1,-1,1)-flipped model, so position offsets
+            // are flipped in X and Y (Z unchanged), matching the vertex conversion in PlayerModelDefinition.FromVanilla.
+            return new PoseOffset(new Vector3(-PosX, -PosY, PosZ), new Vector3(RotX, RotY, RotZ), Vector3.Zero);
         }
     }
 }

@@ -28,7 +28,7 @@ public sealed class EntityModelTransformTests
     [Fact]
     public void CubeSizeScalesTheWholeModel()
     {
-        var state = new Sharpcraft.Client.World.EntityRenderState(1, 120, 0, 0, 0, 0, 0, CubeSize: 4);
+        var state = new Sharpcraft.Client.World.EntityRenderState(1, 120, 0, 0, 0, 180f, 0, CubeSize: 4);
         var transform = EntityModelTransform.From(state);
 
         Assert.Equal(new Vector3(4f, 4f, 4f), transform.Apply(new Vector3(1f, 1f, 1f)));
@@ -37,7 +37,7 @@ public sealed class EntityModelTransformTests
     [Fact]
     public void SquishWidensAndShortensTheModel()
     {
-        var state = new Sharpcraft.Client.World.EntityRenderState(1, 120, 0, 0, 0, 0, 0, Squish: 1f, CubeSize: 1);
+        var state = new Sharpcraft.Client.World.EntityRenderState(1, 120, 0, 0, 0, 180f, 0, Squish: 1f, CubeSize: 1);
         var transform = EntityModelTransform.From(state);
 
         // size 1, ss = 1 / 1.5 = 0.6667, w = 0.6 -> x/z 0.6, y 1.6667.
@@ -51,7 +51,7 @@ public sealed class EntityModelTransformTests
     public void AttachFaceRotatesAroundTheBlockPivot()
     {
         // Attached to the up face -> reference uses the opposite (down) rotation, i.e. 180 degrees around X at y=0.5.
-        var state = new Sharpcraft.Client.World.EntityRenderState(1, 115, 0, 0, 0, 0, 0, AttachFace: 1);
+        var state = new Sharpcraft.Client.World.EntityRenderState(1, 115, 0, 0, 0, 180f, 0, AttachFace: 1);
         var transform = EntityModelTransform.From(state);
 
         Assert.Equal(new Vector3(0f, 0.5f, 0f), transform.Apply(new Vector3(0f, 0.5f, 0f)));
@@ -62,7 +62,7 @@ public sealed class EntityModelTransformTests
     [Fact]
     public void NoAttachFaceLeavesTheModelUnchanged()
     {
-        var state = new Sharpcraft.Client.World.EntityRenderState(1, 120, 0, 0, 0, 0, 0);
+        var state = new Sharpcraft.Client.World.EntityRenderState(1, 120, 0, 0, 0, 180f, 0);
         var transform = EntityModelTransform.From(state);
 
         Assert.Equal(new Vector3(0f, 1f, 0f), transform.Apply(new Vector3(0f, 1f, 0f)));
@@ -71,20 +71,20 @@ public sealed class EntityModelTransformTests
     [Fact]
     public void ScaleAttributeMultipliesTheModel()
     {
-        var state = new Sharpcraft.Client.World.EntityRenderState(1, 159, 0, 0, 0, 0, 0, Scale: 2f);
+        var state = new Sharpcraft.Client.World.EntityRenderState(1, 159, 0, 0, 0, 180f, 0, Scale: 2f);
         var transform = EntityModelTransform.From(state);
         Assert.Equal(new Vector3(2f, 2f, 2f), transform.Apply(new Vector3(1f, 1f, 1f)));
     }
 
     [Fact]
-    public void YawRotatesAroundTheEntityYAxis()
+    public void FromUsesTheReferenceBodyRotationAndNoEntityPitch()
     {
-        var transform = new EntityModelTransform(Vector3.Zero, 90f, 0f);
+        // Reference LivingEntityRenderer.submit rotates the whole entity by only (180 - bodyRot); head pitch is a model
+        // part rotation, never an entity-level pitch.
+        var state = new Sharpcraft.Client.World.EntityRenderState(1, 154, 0, 0, 0, 45f, 30f);
+        var transform = EntityModelTransform.From(state);
 
-        var rotated = transform.Apply(new Vector3(0f, 0f, -1f));
-
-        Assert.InRange(rotated.X, -1.001f, -0.999f);
-        Assert.InRange(rotated.Y, -0.001f, 0.001f);
-        Assert.InRange(rotated.Z, -0.001f, 0.001f);
+        Assert.Equal(135f, transform.YawDegrees, 4);
+        Assert.Equal(0f, transform.PitchDegrees, 4);
     }
 }

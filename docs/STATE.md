@@ -3375,3 +3375,37 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **阻塞（不近似，状态保持进行中）**：SPEAR arm pose 与 STAB 挥击依赖 `SpearAnimations`（长矛第三人称模型几何），未实现；CROSSBOW_* 姿态对 humanoid mob 渲染器不可达（玩家/Illager/Piglin 各自 provider）。
 - **验证边界**：所有分支用参考公式的数值单测覆盖（抬臂/僵尸臂/头 yaw/乘客/潜行/游泳/攻击门控）；本环境**无可见窗口**，未做逐像素目视验收。
 - **下一步具体动作**：①SPEAR/STAB 作为独立子任务（读 `SpearAnimations` 与长矛模型层）；②继续补剩余缺 provider 生物（Cat/Ocelot、ZombieVillager、Enderman、Slime、EnderDragon、Pufferfish、TropicalFish）；③Bogged `isSheared` 蘑菇可见性。
+
+## 2026-11-04 实体朝向修正 + 身体旋转 + 亚 tick 龄期（T-620，分支 `fix/entity-orientation-matrix`）
+
+- **分支**：从 `feature/item-registry`（`3ed638e`）签出 `fix/entity-orientation-matrix` 专门做本修正，便于回退；提交 `37f9baa`（朝向变换链）与 `9c30531`（身体旋转+亚 tick）。
+- **根因（对照 `LivingEntityRenderer` 源码）**：①实体级应只做 `rotateDegrees(YP, 180 - bodyRot)`，且整身不 pitch（pitch 只在头部件）——此前整体用 `+Yaw` 并整身 pitch，导致"走路方向与身子朝向不一致 + 身体前倾"；②我们的顶点是模型 `scale(-1,-1,1)` 之后的副本，动画姿态旋转必须做共轭（X/Y 取反、Z 不变），此前直接抄角度 → 头/臂旋转方向错误（"头能转 180"）。
+- **已修正**：`EntityModelTransform.From` 改 `180 - Yaw`、`PitchDegrees=0`；`EntityModelMesher` 姿态旋转共轭；`HumanoidModelPose` 位置偏移补 X/Y 取反。**后果修正**：所有实体朝向/动画旋转方向统一对齐原版；依赖"yaw=0 即无旋转"的 3 个静态几何测试改为 yaw=180 以隔离朝向。
+- **平滑**：`EntityRenderState.AgeInTicks = tickCount + partialTick`（参考 `EntityRenderer.extractRenderState`），程序化 sin/cos 动画不再按 tick 阶跃。
+- **头部带动身体**：新增 `EntityPresentationState.TickBodyRotation` 复刻 `BodyRotationControl.clientTick`（移动时身=实体 yaw、头钳 75°；静止时头偏 >15° 拖动身体到 ≤75°、稳定 >10 tick 后转正）；实体 yaw 用插值 `BodyYaw`、头用插值 `HeadYaw`。
+- **验证**：Client **1273**（+4 身体旋转），构建 0 警告 0 错误；窗口目视朝向正确、头/身随动（用户确认"现在对了"）。
+- **下一步具体动作**：①若目视通过，合并 `fix/entity-orientation-matrix` 回 `feature/item-registry`；②继续 SPEAR/STAB 与缺 provider 生物；③补逐像素/矩阵等效回归测试（当前为公式级单测）。
+
+## 2026-11-04 角度字节有符号解码（头 360° 甩动）+ 皮肤图集 2D 化（T-621，分支 `fix/entity-orientation-matrix`）
+
+- **触发条件**：玩家跳跃、僵尸抬头/低头跟随玩家时，头忽然转 360°，并伴随歪头。
+- **根因（对照原版）**：`EntityPackets.AngleFromByte` 把线缆 byte 当无符号 `[0,360)` 解码，而参考 `Mth.unpackDegrees` 的入参是**有符号 byte**（[-180,180)）。于是 pitch 被解成如 350°，而 `Pitch` 用**线性插值** `PreviousPitch→Pitch`，从 0 到 350 会扫过 180 → 头甩一圈；与 yaw 叠加也造成歪头。
+- **修复**：`AngleFromByte` 改 `(sbyte)value * 360/256`，pitch 落回 [-90,90]，插值连续。同步更新 3 个按无符号断言的角度解码测试（128→-180、192→-90），新增有符号角度用例。
+- **顺带修崩溃**：`EntitySkinAtlas` 原来把实体皮肤**竖向累加**，当前加载集高度 `sum=24000 > 16384`（GPU 上限）→ `wgpuDeviceCreateTexture` 校验失败崩溃。已改**二维网格**（选使最大边最小的列数），并核实资源包本身完好（11534 条目、743 张实体/装备 PNG 均正常，非断电损坏）。
+- **验证**：Common **492**、Client **1275**（+2 图集测试），构建 0 警告 0 错误；窗口正常运行出帧。
+- **下一步具体动作**：①请用户目视确认"跳跃抬头不再甩 360°/不歪头"；②通过后合并回 `feature/item-registry`；③若仍有轻微歪头再核对 `ModelPart` 的 `rotationZYX` 顺序（当前 `RotationZyx` 已按 Z-Y-X 组合，待极端 yaw+pitch 的逐矩阵验证）。
+
+## 2026-11-04 攻击手臂"分离"修正（T-622，分支 `fix/entity-orientation-matrix`）
+
+- **量化（先测后改）**：`HumanoidAnimationProvider` 网格化右臂——静止世界 X 内缘 `0.205`，攻击 `0.450`，**向外平移约 0.245 格**（一整条手臂厚度），故一眼"分离"。
+- **根因（按原版语义）**：`HumanoidModel.setupAttackAnimation` 对 `rightArm/leftArm.x/z` 是**绝对赋值**（覆盖 ModelPart 的静息位置，静息 pivot 为 ∓5、z=0；cos≈1 时赋的值≈静息值，所以实际几乎不动）。但 `PoseOffset.Position` 是**相对 bind pivot 的增量**，我们直接把赋值当增量叠加 → 等于把 pivot 又加一遍 → 向外一整个人手臂厚度。
+- **修复**：`delta = 原版赋值 − bindPivot`（`armBindPivotX=5`）。攻击时手臂基本不动、只随身体扭转移；与原版一致。
+- **回归**：新增 `HumanoidAttackArmTests`（网格右臂 bounds：攻击 vs 静止内缘差 <0.08 格，且旋转确有变化）；Client **1276** 全绿，构建 0 警告 0 错误；窗口已重启待目视。
+- **下一步具体动作**：①用户目视"攻击不再分离/跳跃抬头不甩 360°"；②通过后合并 `fix/entity-orientation-matrix` → `feature/item-registry`；③继续 SPEAR/STAB 与缺 provider 生物。
+
+## 2026-11-04 头部姿态逻辑等效验证（T-623，分支 `fix/entity-orientation-matrix`）
+
+- **逻辑等效（非目视）**：新增 `HumanoidHeadPoseTests`，对 8 个 humanoid 类型断言 `head.xRot = pitch`、`head.yRot = wrapDegrees(headYaw − bodyYaw)`、`head.zRot = 0`，覆盖 yaw 跨 0 回绕与陡 pitch。配合实体根 `180 − bodyRot`、`BodyRotationControl`（头/身随动、75° 钳制）——头部朝向逻辑闭环。
+- **pitch 钳制**：按参考 `Entity.setXRot` 在 add/move/teleport 处把 pitch 钳到 [-90,90]（此前只做有符号解码）。
+- **验证**：Client **1281**（+5 头部姿态）；构建 0 警告 0 错误。
+- **下一步具体动作（供选择）**：①合并 `fix/entity-orientation-matrix` → `feature/item-registry`（本轮的朝向/头/手/图集修复整体收口）；②按 T-419 文档继续把**其余 mob** 迁移到统一模型空间（去掉逐模型符号补偿）；③补 SPEAR/STAB；④补缺 provider 生物（Cat/Ocelot、ZombieVillager、Enderman、Slime、EnderDragon、Pufferfish、TropicalFish）；⑤baby 专属模型与装备层。

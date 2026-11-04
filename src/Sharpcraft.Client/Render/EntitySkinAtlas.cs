@@ -39,33 +39,61 @@ public sealed class EntitySkinAtlas
 
         var cellWidth = images.Values.Max(image => image.Width);
         var cellHeight = images.Values.Max(image => image.Height);
-        // Variable-height stacking: a 64x128 skin (strider) must not multiply the row pitch for every other skin, or
-        // the atlas exceeds the maximum texture height once there are many mobs.
-        var height = images.Values.Sum(image => image.Height);
-        var pixels = new byte[cellWidth * height * 4];
+
+        // Lay the skins out on a 2D grid instead of a single vertical column: stacking every skin vertically grows the
+        // atlas past the GPU maximum texture height (16384) once enough mobs are registered. We pick the column count
+        // that keeps the larger atlas dimension smallest.
+        var columns = ChooseColumns(images.Count, cellWidth, cellHeight);
+        var rows = (images.Count + columns - 1) / columns;
+        var width = columns * cellWidth;
+        var height = rows * cellHeight;
+        var pixels = new byte[width * height * 4];
         var sprites = new Dictionary<string, SpriteRect>(StringComparer.Ordinal);
-        var rowOffset = 0;
+        var index = 0;
         foreach (var pair in images)
         {
             var image = pair.Value;
-            for (var y = 0; y < image.Height; y++)
+            var x = (index % columns) * cellWidth;
+            var y = (index / columns) * cellHeight;
+            for (var row = 0; row < image.Height; row++)
             {
-                Buffer.BlockCopy(image.Rgba, y * image.Width * 4, pixels, ((rowOffset + y) * cellWidth) * 4, image.Width * 4);
+                Buffer.BlockCopy(image.Rgba, row * image.Width * 4, pixels, (((y + row) * width) + x) * 4, image.Width * 4);
             }
 
             var logicalWidth = image.Width == 1600 ? 64 : image.Width;
             var logicalHeight = image.Height == 1600 ? 64 : image.Height;
-            sprites[pair.Key] = new SpriteRect(0, rowOffset, logicalWidth, logicalHeight, 1)
+            sprites[pair.Key] = new SpriteRect(x, y, logicalWidth, logicalHeight, 1)
             {
-                U0 = 0f,
-                V0 = (float)rowOffset / height,
-                U1 = (float)image.Width / cellWidth,
-                V1 = (float)(rowOffset + image.Height) / height
+                U0 = (float)x / width,
+                V0 = (float)y / height,
+                U1 = (float)(x + image.Width) / width,
+                V1 = (float)(y + image.Height) / height
             };
-            rowOffset += image.Height;
+            index++;
         }
 
-        return new EntitySkinAtlas(new TextureData(cellWidth, height, pixels), sprites, cellWidth, cellHeight);
+        return new EntitySkinAtlas(new TextureData(width, height, pixels), sprites, cellWidth, cellHeight);
+    }
+
+    /// <summary>Chooses the grid column count that minimises the larger atlas dimension.</summary>
+    private static int ChooseColumns(int count, int cellWidth, int cellHeight)
+    {
+        var best = 1;
+        long bestMax = long.MaxValue;
+        for (var columns = 1; columns <= count; columns++)
+        {
+            var rows = (count + columns - 1) / columns;
+            long width = (long)columns * cellWidth;
+            long height = (long)rows * cellHeight;
+            var currentMax = Math.Max(width, height);
+            if (currentMax < bestMax)
+            {
+                bestMax = currentMax;
+                best = columns;
+            }
+        }
+
+        return best;
     }
 
     public static EntitySkinAtlas? Load(ResourceManager resources, IReadOnlyList<string> paths)

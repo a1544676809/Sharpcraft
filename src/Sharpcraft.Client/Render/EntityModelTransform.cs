@@ -28,8 +28,10 @@ public readonly record struct EntityModelTransform(
         var hasAttach = state.AttachFace >= 0;
         return new EntityModelTransform(
             new Vector3(state.X, state.Y, state.Z),
-            state.Yaw,
-            state.Pitch,
+            // Reference LivingEntityRenderer.submit applies only rotateDegrees(YP, 180 - bodyRot) to the whole entity;
+            // body tilt comes from model parts, never from an entity-level pitch (docs/specs/render/entity-transform.md).
+            180f - state.Yaw,
+            0f,
             ScaleXZ: width * size,
             ScaleY: (1f / width) * size,
             Scale: state.Scale,

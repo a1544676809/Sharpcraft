@@ -41,7 +41,7 @@ public sealed class EntityPacketsTests
         Assert.Equal(0.5f, entity.VelocityX, 2);
         Assert.Equal(90f, entity.Pitch, 2);
         Assert.Equal(45f, entity.Yaw, 2);
-        Assert.Equal(180f, entity.HeadYaw, 2);
+        Assert.Equal(-180f, entity.HeadYaw, 2);
         Assert.Equal(3, entity.Data);
     }
 
@@ -102,7 +102,7 @@ public sealed class EntityPacketsTests
         Assert.Equal(DecodeStatus.Success, status);
         Assert.Equal(0.5, move.DeltaY, 4);
         Assert.True(move.HasRotation);
-        Assert.Equal(180f, move.Yaw, 2);
+        Assert.Equal(-180f, move.Yaw, 2);
         Assert.Equal(90f, move.Pitch, 2);
     }
 
@@ -160,7 +160,17 @@ public sealed class EntityPacketsTests
 
         Assert.Equal(DecodeStatus.Success, status);
         Assert.Equal(12, id);
-        Assert.Equal(270f, headYaw, 2);
+        Assert.Equal(-90f, headYaw, 2);
+    }
+
+    [Fact]
+    public void AngleBytesAreDecodedAsSignedDegrees()
+    {
+        // The wire byte is signed: 0xF8 = -8 -> -11.25 degrees, 192 = -64 -> -90 degrees.
+        Assert.Equal(-11.25f, EntityPackets.AngleFromByte(0xF8), 2);
+        Assert.Equal(-90f, EntityPackets.AngleFromByte(192), 2);
+        Assert.Equal(0f, EntityPackets.AngleFromByte(0));
+        Assert.Equal(45f, EntityPackets.AngleFromByte(32), 2);
     }
 
     [Fact]
