@@ -254,6 +254,38 @@ public sealed class SetEquipmentPacketTests
     }
 
     [Fact]
+    public void TooltipDisplayIsSkippedAndParsingContinues()
+    {
+        var tooltip = DataComponentTypes.GetId("tooltip_display");
+        Assert.True(tooltip >= 0);
+
+        var body = Body(
+            b =>
+            {
+                b.Add(0x80);
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(1));       // one added component
+                b.AddRange(VarInt(0));       // no removals
+                b.AddRange(VarInt(tooltip));
+                b.Add(1);                    // hide tooltip
+                b.AddRange(VarInt(1));       // one hidden component
+                b.AddRange(VarInt(3));       // damage component id
+            },
+            b =>
+            {
+                b.Add(7);
+                b.AddRange(VarInt(0));
+            });
+
+        var result = Read(body, out _, out var complete, out var status);
+
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.Equal(2, result.Length);
+    }
+
+    [Fact]
     public void TruncatedStackReportsNeedMoreData()
     {
         var body = new List<byte>();

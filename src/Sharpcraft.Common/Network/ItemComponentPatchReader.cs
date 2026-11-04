@@ -44,6 +44,12 @@ internal static class ItemComponentPatchReader
     private static readonly int GlintOverride = DataComponentTypes.GetId("enchantment_glint_override");
     private static readonly int AttributeModifiers = DataComponentTypes.GetId("attribute_modifiers");
     private static readonly int CustomModelData = DataComponentTypes.GetId("custom_model_data");
+    private static readonly int TooltipDisplay = DataComponentTypes.GetId("tooltip_display");
+    private static readonly int UseEffects = DataComponentTypes.GetId("use_effects");
+    private static readonly int Enchantable = DataComponentTypes.GetId("enchantable");
+    private static readonly int AttackAnimation = DataComponentTypes.GetId("attack_animation");
+    private static readonly int InteractAnimation = DataComponentTypes.GetId("interact_animation");
+    private static readonly int DamageType = DataComponentTypes.GetId("damage_type");
 
     /// <summary>Reads one patch; returns false only when the stream is malformed (truncated).</summary>
     public static bool TryRead(ref PayloadReader reader, out ItemComponentInfo info, out bool hasUnknown)
@@ -218,6 +224,35 @@ internal static class ItemComponentPatchReader
             return TrySkipCustomModelData(ref reader);
         }
 
+        if (typeId == TooltipDisplay)
+        {
+            return TrySkipTooltipDisplay(ref reader);
+        }
+
+        if (typeId == UseEffects)
+        {
+            return reader.TryReadBool(out _) == DecodeStatus.Success &&
+                   reader.TryReadBool(out _) == DecodeStatus.Success &&
+                   reader.TryReadFloat(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == Enchantable)
+        {
+            return reader.TryReadVarInt(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == AttackAnimation || typeId == InteractAnimation)
+        {
+            // SwingAnimation: type id + duration.
+            return reader.TryReadVarInt(out _) == DecodeStatus.Success &&
+                   reader.TryReadVarInt(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == DamageType)
+        {
+            return reader.TryReadVarInt(out _) == DecodeStatus.Success;
+        }
+
         // Unknown positive component: no generic skip exists, so the caller must stop after this slot.
         hasUnknown = true;
         info = info with { Opaque = true };
@@ -249,6 +284,26 @@ internal static class ItemComponentPatchReader
             }
 
             if (display == 2 && !NbtTagReader.TrySkip(ref reader)) // override text
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TrySkipTooltipDisplay(ref PayloadReader reader)
+    {
+        if (reader.TryReadBool(out _) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out var count) != DecodeStatus.Success ||
+            count < 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < count; i++)
+        {
+            if (reader.TryReadVarInt(out _) != DecodeStatus.Success)
             {
                 return false;
             }
