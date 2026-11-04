@@ -57,6 +57,9 @@ public sealed class EntityAnimationProviderTests
         CaveSpiderModelDefinition.CaveSpiderEntityTypeId,
         SilverfishModelDefinition.SilverfishEntityTypeId,
         BlazeModelDefinition.BlazeEntityTypeId,
+        PhantomModelDefinition.PhantomEntityTypeId,
+        CodModelDefinition.CodEntityTypeId,
+        SalmonModelDefinition.SalmonEntityTypeId,
     ];
 
     [Fact]
@@ -136,6 +139,9 @@ public sealed class EntityAnimationProviderTests
     [InlineData(CaveSpiderModelDefinition.CaveSpiderEntityTypeId)]
     [InlineData(SilverfishModelDefinition.SilverfishEntityTypeId)]
     [InlineData(BlazeModelDefinition.BlazeEntityTypeId)]
+    [InlineData(PhantomModelDefinition.PhantomEntityTypeId)]
+    [InlineData(CodModelDefinition.CodEntityTypeId)]
+    [InlineData(SalmonModelDefinition.SalmonEntityTypeId)]
     public void ProviderApplyDoesNotAllocateOnceWarm(int typeId)
     {
         var provider = EntityAnimationRegistry.For(typeId)!;

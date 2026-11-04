@@ -3016,3 +3016,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **Blaze（14）**：12 根 rod 三环（半径 9/7/5）按 age 旋转/上下浮动 + head look；预计算 `part0..part11` 名称。
 - 注册 127/22/117/14 并纳入零分配测试。Client **1006**（Spider 12 / Silverfish 7 / Blaze 12 新增）绿；Architecture 31。
 - **下一步具体动作**：①继续 backlog 可派生生物（Shulker/Phantom/Wither/Turtle/Fish 等需先看 setupAnim 依赖）；②Illager/Piglin armPose 单列 ADR；③保持文档/STATE 同步。
+
+### 2026-11-04 动画批次 10：Phantom / Cod / Salmon（T-583）
+
+- **Phantom（100）**：`flapTime = EntityId*3 + AgeInTicks`，驱动翼 base/tip zRot（±cos(anim)*16°）与尾 base/tip xRot；翼 bind 含 ±0.1 z，偏移已减 bind。
+- **Cod（27）/ Salmon（113）**：`IsInWater` 决定振幅/角度，尾鳍 / body_back 正弦摆动。
+- 注册 100/27/113 并纳入零分配测试。Client **1033**（Phantom 9 / Cod 8 / Salmon 9 新增）绿；Architecture 31。
+- **下一步具体动作**：①继续可派生 backlog（Shulker 需 peek/attach、Turtle 需 isOnLand/isLayingEgg、Slime/MagmaCube 需 squish/size 派生）；②Illager/Piglin armPose 单列 ADR；③保持文档/STATE 同步。

@@ -120,5 +120,8 @@ public static class EntityAnimationRegistry
         new SpiderAnimationProvider(CaveSpiderModelDefinition.CaveSpiderEntityTypeId),
         new SilverfishAnimationProvider(SilverfishModelDefinition.SilverfishEntityTypeId),
         new BlazeAnimationProvider(BlazeModelDefinition.BlazeEntityTypeId),
+        new PhantomAnimationProvider(PhantomModelDefinition.PhantomEntityTypeId),
+        new CodAnimationProvider(CodModelDefinition.CodEntityTypeId),
+        new SalmonAnimationProvider(SalmonModelDefinition.SalmonEntityTypeId),
     ];
 }
