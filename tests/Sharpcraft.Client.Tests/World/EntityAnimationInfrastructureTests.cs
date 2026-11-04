@@ -328,6 +328,16 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.Equal(0, tracker.Interpolate(1f)[0].TicksUsingItem);
     }
 
+    [Fact]
+    public void ChargedCrossbowComponentProjectsToTheFrame()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(16, typeId: PiglinModelDefinition.PiglinEntityTypeId));
+        tracker.ApplyEquipment(16, [new EquipmentItem(0, 1, 1, new ItemComponentInfo(HasChargedProjectiles: true))]);
+
+        Assert.True(tracker.Interpolate(0f)[0].MainHandChargedCrossbow);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 

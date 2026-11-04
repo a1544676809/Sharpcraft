@@ -17,6 +17,7 @@
     -->
     <EmbeddedResource Include="Registries\Data\vanilla-block-states-26.3.tsv" />
     <EmbeddedResource Include="Registries\Data\vanilla-item-order.txt" />
+    <EmbeddedResource Include="Registries\Data\vanilla-data-component-order.txt" />
   </ItemGroup>
 
 </Project>

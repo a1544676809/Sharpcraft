@@ -121,10 +121,15 @@ public sealed class TrackedEntity
 
     private readonly int[] _equipmentItemIds = [-1, -1, -1, -1, -1, -1, -1, -1];
     private readonly int[] _equipmentCounts = new int[8];
+    private readonly ItemComponentInfo[] _equipmentComponents = new ItemComponentInfo[8];
 
     /// <summary>Item registry id in <paramref name="slot"/> (0..7), or -1 when empty.</summary>
     public int EquipmentItemAt(int slot) =>
         (uint)slot < (uint)_equipmentItemIds.Length ? _equipmentItemIds[slot] : -1;
+
+    /// <summary>Decoded component subset for the item in <paramref name="slot"/>; default when empty.</summary>
+    public ItemComponentInfo EquipmentComponentsAt(int slot) =>
+        (uint)slot < (uint)_equipmentComponents.Length ? _equipmentComponents[slot] : default;
 
     /// <summary>Stack count in <paramref name="slot"/>; 0 when empty.</summary>
     public int EquipmentCountAt(int slot) =>
@@ -141,6 +146,7 @@ public sealed class TrackedEntity
 
             _equipmentItemIds[item.Slot] = item.IsEmpty ? -1 : item.ItemId;
             _equipmentCounts[item.Slot] = item.IsEmpty ? 0 : item.Count;
+            _equipmentComponents[item.Slot] = item.IsEmpty ? default : item.Components;
             EquipmentUpdates++;
         }
     }
@@ -250,7 +256,8 @@ public readonly record struct EntityRenderState(
     int ArmPose = 0,
     bool IsUsingItem = false,
     int TicksUsingItem = 0,
-    int OffHandItemId = -1);
+    int OffHandItemId = -1,
+    bool MainHandChargedCrossbow = false);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -780,6 +787,7 @@ public sealed class EntityTracker
                 IsUsingItem: entity.Presentation.IsUsingItem,
                 TicksUsingItem: entity.Presentation.UseItemTicks,
                 OffHandItemId: entity.EquipmentItemAt(1),
+                MainHandChargedCrossbow: entity.EquipmentComponentsAt(0).HasChargedProjectiles,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,

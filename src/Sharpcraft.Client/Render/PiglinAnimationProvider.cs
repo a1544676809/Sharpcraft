@@ -27,13 +27,10 @@ public enum PiglinArmPose
 /// <para>
 /// Derivable arm poses: <b>DANCING</b> (synced, index 19 / serializer 8), <b>CROSSBOW_CHARGE</b> (synced, index 18 /
 /// serializer 8, reproduced from <c>frame.TicksUsingItem + frame.PartialTick</c> over the default 25-tick charge),
-/// <b>ADMIRING_ITEM</b> (offhand item in the <c>piglin_loved</c> tag) and <b>ATTACKING_WITH_MELEE_WEAPON</b> (aggressive
-/// and main hand in the <c>piglin_preferred_weapons</c> tag). Item tags come from the extracted pack via
-/// <see cref="EntityModelResolver.ItemTags"/>.
-/// </para>
-/// <para>
-/// <b>Still blocked (reported, not faked — falls back to DEFAULT):</b> CROSSBOW_HOLD needs <c>CrossbowItem.isCharged</c>
-/// (item-data state that is not on the frame).
+/// <b>ADMIRING_ITEM</b> (offhand item in the <c>piglin_loved</c> tag), <b>ATTACKING_WITH_MELEE_WEAPON</b> (aggressive and
+/// main hand in the <c>piglin_preferred_weapons</c> tag) and <b>CROSSBOW_HOLD</b> (main hand carries the synced
+/// <c>charged_projectiles</c> component, projected as <c>frame.MainHandChargedCrossbow</c>). Item tags come from the
+/// extracted pack via <see cref="EntityModelResolver.ItemTags"/>.
 /// </para>
 /// <para>
 /// The reference <c>mainArm</c> is not on the frame; DANCING/CROSSBOW_CHARGE assume the default right hand (all vanilla
@@ -86,7 +83,11 @@ public sealed class PiglinAnimationProvider(int typeId) : IEntityAnimationProvid
             return PiglinArmPose.CrossbowCharge;
         }
 
-        // CROSSBOW_HOLD still needs CrossbowItem.isCharged item-data state; fall back to DEFAULT.
+        if (frame.MainHandChargedCrossbow)
+        {
+            return PiglinArmPose.CrossbowHold;
+        }
+
         return PiglinArmPose.Default;
     }
 
@@ -218,6 +219,16 @@ public sealed class PiglinAnimationProvider(int typeId) : IEntityAnimationProvid
                 rX += MathF.Sin(age * 0.067f) * 0.05f;
                 lZ -= MathF.Cos(age * 0.09f) * 0.05f + 0.05f;
                 lX -= MathF.Sin(age * 0.067f) * 0.05f;
+                break;
+            }
+
+            case PiglinArmPose.CrossbowHold:
+            {
+                // AnimationUtils.animateCrossbowHold(right, left, head, holdingInRightArm=true).
+                rY = -0.3f + headYRot;
+                lY = 0.6f + headYRot;
+                rX = (-MathF.PI / 2f) + headXRot + 0.1f;
+                lX = -1.5f + headXRot;
                 break;
             }
 

@@ -33,7 +33,8 @@ public sealed class PiglinAnimationTests
         bool passenger = false,
         int ticksUsingItem = 0,
         float partialTick = 0f,
-        int offHandItemId = -1) => new(
+        int offHandItemId = -1,
+        bool chargedCrossbow = false) => new(
         TypeId: typeId,
         AgeInTicks: age,
         WalkAnimationPos: walkPos,
@@ -52,7 +53,8 @@ public sealed class PiglinAnimationTests
         HasMainHandItem: hasMainHand,
         IsPassenger: passenger,
         TicksUsingItem: ticksUsingItem,
-        OffHandItemId: offHandItemId);
+        OffHandItemId: offHandItemId,
+        MainHandChargedCrossbow: chargedCrossbow);
 
     private static EntityPose Apply(PiglinAnimationProvider provider, IEntityAnimationState state, in EntityAnimationFrame frame)
     {
@@ -231,6 +233,18 @@ public sealed class PiglinAnimationTests
         {
             EntityModelResolver.ItemTags = previous;
         }
+    }
+
+    [Fact]
+    public void ChargedCrossbowSelectsCrossbowHoldPose()
+    {
+        var provider = new PiglinAnimationProvider(PiglinModelDefinition.PiglinEntityTypeId);
+        var pose = Apply(provider, provider.CreateState(), Frame(PiglinModelDefinition.PiglinEntityTypeId, chargedCrossbow: true));
+
+        Assert.Equal(-0.3f, pose.Get("right_arm").Rotation.Y, 5);
+        Assert.Equal((-MathF.PI / 2f) + 0.1f, pose.Get("right_arm").Rotation.X, 5);
+        Assert.Equal(0.6f, pose.Get("left_arm").Rotation.Y, 5);
+        Assert.Equal(-1.5f, pose.Get("left_arm").Rotation.X, 5);
     }
 
     [Fact]

@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using Sharpcraft.Common.Network;
+using Sharpcraft.Common.Registries;
 using Xunit;
 
 namespace Sharpcraft.Common.Tests.Network;
@@ -94,7 +95,7 @@ public sealed class SetEquipmentPacketTests
     }
 
     [Fact]
-    public void NonEmptyComponentPatchIsReportedAndStopsParsing()
+    public void UnknownComponentIsReportedOpaqueAndStopsParsing()
     {
         var body = Body(
             b =>
@@ -102,12 +103,13 @@ public sealed class SetEquipmentPacketTests
                 b.Add(0x80);                 // mainhand with continuation
                 b.AddRange(VarInt(1));
                 b.AddRange(VarInt(123));
-                b.AddRange(VarInt(1));       // one added component; payload not modelled
-                b.AddRange(VarInt(0));
+                b.AddRange(VarInt(1));       // one added component
+                b.AddRange(VarInt(98));      // component id 98 is not modelled
+                b.AddRange(VarInt(0));       // no removals
             },
             b =>
             {
-                b.Add(7);                    // never reached because the patch length is unknown
+                b.Add(7);                    // never reached because the patch payload is unknown
                 b.AddRange(VarInt(0));
             });
 
@@ -116,7 +118,37 @@ public sealed class SetEquipmentPacketTests
         Assert.Equal(DecodeStatus.Success, status);
         Assert.False(complete);
         Assert.Single(result);
-        Assert.True(result[0].HasDataComponents);
+        Assert.True(result[0].Components.Opaque);
+    }
+
+    [Fact]
+    public void ChargedProjectilesAndDamageAreDecoded()
+    {
+        var charged = DataComponentTypes.GetId("charged_projectiles");
+        var damage = DataComponentTypes.GetId("damage");
+        Assert.True(charged >= 0);
+        Assert.True(damage >= 0);
+
+        var body = Body(b =>
+        {
+            b.Add(0);                        // mainhand, last slot
+            b.AddRange(VarInt(1));
+            b.AddRange(VarInt(1));           // crossbow
+            b.AddRange(VarInt(1));           // one added component (charged_projectiles)
+            b.AddRange(VarInt(0));           // no removed components
+            b.AddRange(VarInt(charged));
+            b.AddRange(VarInt(1));           // one projectile
+            b.AddRange(VarInt(262));         // arrow item id
+            b.AddRange(VarInt(1));           // count
+            b.AddRange(VarInt(0));           // nested patch: 0 added
+            b.AddRange(VarInt(0));           // nested patch: 0 removed
+        });
+
+        var result = Read(body, out _, out var complete, out var status);
+
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.True(result[0].Components.HasChargedProjectiles);
     }
 
     [Fact]

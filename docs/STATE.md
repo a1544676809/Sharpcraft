@@ -3107,6 +3107,15 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 测试：Common **467**（+3 tag）、Launcher **93**（+1 selection）、Client **1157**（+1 Piglin 姿态）。全量并行偶发 `ChunkMeshCacheTests`（既有）单类重跑稳定。
 - **下一步具体动作**：①实现装备 item stack 组件解析（至少 `charged_projectiles` 存在性 + `enchantments/quick_charge`）以解 CROSSBOW_HOLD 与快速装填；②`mainArm` 同步来源；③继续 backlog。
 
+### 2026-11-04 装备 item stack 组件解析（T-593）
+
+- 新增 `DataComponentTypes`：从 26.3 注册顺序快照（`vanilla-data-component-order.txt`，仅名称/顺序元数据）解析组件 id。
+- 新增 `ItemComponentPatchReader`：解码已知组件 `damage/max_damage/repair_cost/unbreakable/enchantments/charged_projectiles`；遇到未知正组件 → `Opaque` 并安全停止（不再破坏后续包）。
+- `EquipmentItem` 携带 `ItemComponentInfo`；`set_equipment` 可在组件存在时继续读取后续槽；`TrackedEntity.EquipmentComponentsAt` → `EntityAnimationFrame.MainHandChargedCrossbow`。
+- **Piglin CROSSBOW_HOLD 解阻塞**：`charged_projectiles` 存在即按参考 `animateCrossbowHold` 复刻。
+- 验证：Common **470**（+3）、Client **1159**（+2）、构建 0 警告 0 错误。
+- **下一步具体动作**：①补 `enchantments`→`quick_charge` id 映射，使 `maxCrossbowChargeDuration` 随附魔变化；②扩展组件 codec 表（custom_name/attribute_modifiers 等）提升完整解析率；③`mainArm` 同步来源；④继续 backlog。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

@@ -4,7 +4,7 @@
 namespace Sharpcraft.Common.Network;
 
 /// <summary>One equipment slot as sent by <c>set_equipment</c>; an empty stack has <see cref="Count"/> 0 and no item id.</summary>
-public readonly record struct EquipmentItem(int Slot, int ItemId, int Count, bool HasDataComponents = false)
+public readonly record struct EquipmentItem(int Slot, int ItemId, int Count, ItemComponentInfo Components = default)
 {
     /// <summary>True when the slot was explicitly emptied.</summary>
     public bool IsEmpty => Count <= 0;
@@ -14,10 +14,9 @@ public readonly record struct EquipmentItem(int Slot, int ItemId, int Count, boo
 /// Decodes the play <c>set_equipment</c> packet (clientbound 104).
 /// </summary>
 /// <remarks>
-/// Layout: VarInt entity id, then repeated (byte slot | 0x80 continuation, optional ItemStack). This first stage reads
-/// only stacks with an empty <c>DataComponentPatch</c>; if a non-empty patch is met the item is still reported with
-/// <see cref="EquipmentItem.HasDataComponents"/> = true and parsing stops, because component payloads have no generic
-/// skip length.
+/// Layout: VarInt entity id, then repeated (byte slot | 0x80 continuation, optional ItemStack). Component patches are
+/// decoded by <see cref="ItemComponentPatchReader"/>; a stack carrying a component whose codec is not implemented is
+/// reported with <see cref="ItemComponentInfo.Opaque"/> set and parsing stops so the stream is never desynchronised.
 /// </remarks>
 public static class SetEquipmentPackets
 {
@@ -76,27 +75,19 @@ public static class SetEquipmentPackets
                     return status;
                 }
 
-                status = reader.TryReadVarInt(out var added);
-                if (status != DecodeStatus.Success)
+                if (!ItemComponentPatchReader.TryRead(ref reader, out var components, out var hasUnknown))
                 {
-                    return status;
+                    return DecodeStatus.NeedMoreData;
                 }
 
-                status = reader.TryReadVarInt(out var removed);
-                if (status != DecodeStatus.Success)
-                {
-                    return status;
-                }
-
-                var hasData = added != 0 || removed != 0;
                 if (count < items.Length)
                 {
-                    items[count++] = new EquipmentItem(slot, itemId, stackCount, hasData);
+                    items[count++] = new EquipmentItem(slot, itemId, stackCount, components);
                 }
 
-                if (hasData)
+                if (hasUnknown || components.Opaque)
                 {
-                    // No generic skip length for component payloads: stop rather than desynchronise the stream.
+                    // An unknown component has no generic skip length: stop rather than desynchronise the stream.
                     return DecodeStatus.Success;
                 }
             }

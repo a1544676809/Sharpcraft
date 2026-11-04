@@ -43,7 +43,8 @@ public readonly record struct EntityAnimationFrame(
     int MainHandItemId = -1,
     bool IsUsingItem = false,
     int TicksUsingItem = 0,
-    int OffHandItemId = -1)
+    int OffHandItemId = -1,
+    bool MainHandChargedCrossbow = false)
 {
     /// <summary>Projects the generic render state onto the frame. The mesher calls this once per entity per frame.</summary>
     public static EntityAnimationFrame From(in EntityRenderState state) => new(
@@ -77,7 +78,8 @@ public readonly record struct EntityAnimationFrame(
         state.MainHandItemId,
         state.IsUsingItem,
         state.TicksUsingItem,
-        state.OffHandItemId);
+        state.OffHandItemId,
+        state.MainHandChargedCrossbow);
 }
 
 /// <summary>
