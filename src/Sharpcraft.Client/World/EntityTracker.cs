@@ -81,6 +81,12 @@ public sealed class TrackedEntity
     /// <summary>Eye height above the feet from the vanilla entity-type dimensions table (pose/age aware); 0 when unknown.</summary>
     public float EyeHeight => (EntityDimensionsRegistry.Get(TypeId, Presentation.Pose, IsBaby)?.EyeHeight ?? 0f) * Presentation.Scale;
 
+    /// <summary>Per-entity synced attribute map (SCALE and any other server-sent attributes).</summary>
+    public TrackedAttributeMap Attributes { get; } = new();
+
+    /// <summary>Synced max-health attribute, or 0 when the server has not sent it.</summary>
+    public float MaxHealth => Attributes.Get(AttributeTypes.GetId("max_health"), 0f);
+
     /// <summary>World-space eye Y (feet y + eye height).</summary>
     public float EyeY => (float)Y + EyeHeight;
 
@@ -295,7 +301,8 @@ public readonly record struct EntityRenderState(
     float WitherHeadPitch2 = 0f,
     bool IsIdleHeadTiltStarted = false,
     float IdleHeadTiltAgeTicks = 0f,
-    float Scale = 1f);
+    float Scale = 1f,
+    float MaxHealth = 0f);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -564,6 +571,21 @@ public sealed class EntityTracker
     }
 
     /// <summary>Applies the SCALE attribute value from an <c>update_attributes</c> packet.</summary>
+    /// <summary>Replaces the entity's synced attribute map and refreshes the SCALE presentation field.</summary>
+    public bool ApplyAttributes(int id, ReadOnlySpan<AttributeValue> values)
+    {
+        if (!_entities.TryGetValue(id, out var entity))
+        {
+            UnknownUpdates++;
+            return false;
+        }
+
+        entity.Attributes.Replace(values);
+        entity.Presentation.Scale = entity.Attributes.Get(AttributeTypes.GetId("scale"), 1f);
+        return true;
+    }
+
+    /// <summary>Convenience for tests/tools: sets the SCALE attribute only.</summary>
     public bool ApplyAttributes(int id, float scale)
     {
         if (!_entities.TryGetValue(id, out var entity))
@@ -1005,6 +1027,7 @@ public sealed class EntityTracker
                     ? entity.Presentation.RabbitIdle!.AgeTicks((int)GameTime) + t
                     : 0f,
                 Scale: entity.Presentation.Scale,
+                MaxHealth: entity.MaxHealth,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,
@@ -1079,10 +1102,10 @@ public sealed class EntityTracker
                 applied = true;
             }
 
-            // LivingEntity health (index 9, float serializer 3) when the value was decoded.
-            if (item.Index == 9 && item.SerializerId == 3 && item.Value != EntityDataItem.NotAnInteger)
+            // LivingEntity health (index 9, float serializer 3).
+            if (item.Index == 9 && item.SerializerId == 3 && item.HasFloat)
             {
-                entity.Presentation.Health = BitConverter.Int32BitsToSingle(item.Value);
+                entity.Presentation.Health = item.FloatValue;
                 applied = true;
             }
 

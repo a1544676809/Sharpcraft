@@ -26,7 +26,9 @@ public sealed class WolfAnimationTests
         bool isAngry = false,
         bool isSitting = false,
         bool isTame = false,
-        bool isBaby = false) => new(
+        bool isBaby = false,
+        float health = 0f,
+        float maxHealth = 0f) => new(
         TypeId: WolfModelDefinition.WolfEntityTypeId,
         AgeInTicks: 0f,
         WalkAnimationPos: walkPos,
@@ -41,7 +43,9 @@ public sealed class WolfAnimationTests
         IsHidingInShell: false,
         IsTame: isTame,
         IsSitting: isSitting,
-        IsAngry: isAngry);
+        IsAngry: isAngry,
+        Health: health,
+        MaxHealth: maxHealth);
 
     [Fact]
     public void ProviderExposesReferenceTypeIdAndClips()
@@ -143,7 +147,7 @@ public sealed class WolfAnimationTests
     }
 
     [Fact]
-    public void TailPitchUsesAngryAndWildAnglesButLeavesTameAtRest()
+    public void TailPitchUsesAngryWildAndHealthRatio()
     {
         var provider = new WolfAnimationProvider(WolfModelDefinition.WolfEntityTypeId);
 
@@ -155,10 +159,10 @@ public sealed class WolfAnimationTests
         provider.Apply(provider.CreateState(), Frame(), wild);
         Assert.Equal(0f, wild.Get("tail").Rotation.X, 4);
 
-        // Tame needs the health ratio (max health absent): deliberately at rest, not a faked angle.
+        // Tame: (0.55 - (8-4)/8 * 0.4) * pi - bind.
         var tame = new EntityPose();
-        provider.Apply(provider.CreateState(), Frame(isTame: true), tame);
-        Assert.Equal(0f, tame.Get("tail").Rotation.X, 4);
+        provider.Apply(provider.CreateState(), Frame(isTame: true, health: 4f, maxHealth: 8f), tame);
+        Assert.Equal((0.55f - (0.5f * 0.4f)) * MathF.PI - RefTailBindXRot, tame.Get("tail").Rotation.X, 4);
     }
 
     [Fact]

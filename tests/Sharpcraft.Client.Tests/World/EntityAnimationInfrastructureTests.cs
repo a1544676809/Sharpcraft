@@ -525,6 +525,27 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.Equal(3.24f, entity!.EyeHeight, 4);
     }
 
+    [Fact]
+    public void AttributeMapStoresAllValuesAndDrivesScale()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(32, typeId: 159));
+        Assert.True(tracker.ApplyAttributes(32, [new Sharpcraft.Common.Network.AttributeValue(30, 2f), new Sharpcraft.Common.Network.AttributeValue(23, 20f)]));
+        Assert.True(tracker.TryGet(32, out var entity));
+        Assert.Equal(2f, entity!.Presentation.Scale, 4);
+        Assert.Equal(20f, entity.MaxHealth, 4);
+    }
+
+    [Fact]
+    public void FloatEntityDataHealthIsDecoded()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(33, typeId: 152));
+        tracker.ApplyEntityData(33, [new EntityDataItem(9, 3, 0, FloatValue: 7.5f)]);
+        Assert.True(tracker.TryGet(33, out var entity));
+        Assert.Equal(7.5f, entity!.Presentation.Health, 4);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 

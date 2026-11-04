@@ -1496,14 +1496,17 @@ internal sealed class InteractiveSession
 
                     break;
 
-                // SCALE attribute (and future attributes): update the entity's presentation scale.
+                // SCALE attribute (and any other attributes): update the entity's presentation attribute map.
                 case PacketIds.PlayClientbound.UpdateAttributes:
-                    if (UpdateAttributesPackets.TryRead(body, out var attributeEntityId, out var attributeScale) == DecodeStatus.Success)
                     {
-                        _entities.ApplyAttributes(attributeEntityId, attributeScale);
-                    }
+                        Span<AttributeValue> attributes = stackalloc AttributeValue[128];
+                        if (UpdateAttributesPackets.TryRead(body, attributes, out var attributeCount, out var attributeEntityId) == DecodeStatus.Success)
+                        {
+                            _entities.ApplyAttributes(attributeEntityId, attributes[..attributeCount]);
+                        }
 
-                    break;
+                        break;
+                    }
 
                 // Arm-swing animation: drives the presentation layer's swing clock for armed mobs.
                 case PacketIds.PlayClientbound.SwingAnimation:

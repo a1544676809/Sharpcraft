@@ -14,13 +14,16 @@ namespace Sharpcraft.Common.Network;
 /// <param name="Value">
 /// Decoded integer value for the byte/integer serializers; <see cref="NotAnInteger"/> for every other serializer.
 /// </param>
-public readonly record struct EntityDataItem(int Index, int SerializerId, int Value, long LongValue = long.MinValue)
+public readonly record struct EntityDataItem(int Index, int SerializerId, int Value, long LongValue = long.MinValue, float FloatValue = float.NaN)
 {
     /// <summary>Sentinel stored in <see cref="Value"/> when the serializer does not carry an integer.</summary>
     public const int NotAnInteger = int.MinValue;
 
     /// <summary>Sentinel stored in <see cref="LongValue"/> when the serializer does not carry a long.</summary>
     public const long NotALong = long.MinValue;
+
+    /// <summary>True when <see cref="FloatValue"/> is available.</summary>
+    public bool HasFloat => !float.IsNaN(FloatValue);
 }
 
 /// <summary>
@@ -99,7 +102,7 @@ public static class EntityDataPackets
                 return status;
             }
 
-            status = TryReadValue(ref reader, serializerId, out var value, out var longValue, out var unsupported);
+            status = TryReadValue(ref reader, serializerId, out var value, out var longValue, out var floatValue, out var unsupported);
             if (unsupported)
             {
                 // Everything after this item is unreadable without the codec; stop and let the caller fall back.
@@ -113,7 +116,7 @@ public static class EntityDataPackets
 
             if (count < items.Length)
             {
-                items[count++] = new EntityDataItem(rawIndex, serializerId, value, longValue);
+                items[count++] = new EntityDataItem(rawIndex, serializerId, value, longValue, floatValue);
             }
             else
             {
@@ -129,10 +132,11 @@ public static class EntityDataPackets
     /// The ids follow the static registration order in <c>EntityDataSerializers</c>. Only the byte/integer family
     /// returns a value; everything else is skipped so the scan can continue to a later index.
     /// </remarks>
-    private static DecodeStatus TryReadValue(ref PayloadReader reader, int serializerId, out int value, out long longValue, out bool unsupported)
+    private static DecodeStatus TryReadValue(ref PayloadReader reader, int serializerId, out int value, out long longValue, out float floatValue, out bool unsupported)
     {
         value = EntityDataItem.NotAnInteger;
         longValue = EntityDataItem.NotALong;
+        floatValue = float.NaN;
         unsupported = false;
         DecodeStatus status;
 
@@ -157,7 +161,13 @@ public static class EntityDataPackets
                 return status;
 
             case 3: // FLOAT
-                return reader.TryReadFloat(out _);
+                status = reader.TryReadFloat(out var readFloat);
+                if (status == DecodeStatus.Success)
+                {
+                    floatValue = readFloat;
+                }
+
+                return status;
 
             case 4: // STRING
                 return reader.TryReadString(out _, 32767);

@@ -5,18 +5,26 @@ using Sharpcraft.Common.Registries;
 
 namespace Sharpcraft.Common.Network;
 
+/// <summary>One synced attribute value (already combined base + modifiers).</summary>
+public readonly record struct AttributeValue(int AttributeId, float Value);
+
 /// <summary>
-/// Decodes the play <c>update_attributes</c> packet (clientbound 134) and extracts the SCALE attribute value.
-/// Layout: entity id, list of (attribute id, base double, modifier list (id, amount, operation)).
+/// Decodes the play <c>update_attributes</c> packet (clientbound 134): entity id plus attribute snapshots
+/// (attribute id, base double, modifier list (id, amount, operation)).
 /// </summary>
 public static class UpdateAttributesPackets
 {
     private static readonly int ScaleAttribute = AttributeTypes.GetId("scale");
 
-    public static DecodeStatus TryRead(ReadOnlySpan<byte> body, out int entityId, out float scale)
+    /// <summary>Reads every attribute value into <paramref name="values"/>.</summary>
+    public static DecodeStatus TryRead(
+        ReadOnlySpan<byte> body,
+        Span<AttributeValue> values,
+        out int count,
+        out int entityId)
     {
+        count = 0;
         entityId = 0;
-        scale = 1f;
 
         var reader = new PayloadReader(body);
         if (reader.TryReadVarInt(out var packetId) != DecodeStatus.Success)
@@ -60,21 +68,46 @@ public static class UpdateAttributesPackets
 
                 switch (operation)
                 {
-                    case 0: // add_value
+                    case 0:
                         add += amount;
                         break;
-                    case 1: // add_multiplied_base
+                    case 1:
                         multipliedBase += amount;
                         break;
-                    case 2: // add_multiplied_total
+                    case 2:
                         multipliedTotal += amount;
                         break;
                 }
             }
 
-            if (attributeId == ScaleAttribute)
+            var value = (float)((baseValue + add) * (1 + multipliedBase) * (1 + multipliedTotal));
+            if (count < values.Length)
             {
-                scale = (float)((baseValue + add) * (1 + multipliedBase) * (1 + multipliedTotal));
+                values[count] = new AttributeValue(attributeId, value);
+            }
+
+            count++;
+        }
+
+        return DecodeStatus.Success;
+    }
+
+    /// <summary>Convenience overload returning only the SCALE value (default 1 when absent).</summary>
+    public static DecodeStatus TryRead(ReadOnlySpan<byte> body, out int entityId, out float scale)
+    {
+        Span<AttributeValue> values = stackalloc AttributeValue[128];
+        var status = TryRead(body, values, out var count, out entityId);
+        scale = 1f;
+        if (status != DecodeStatus.Success)
+        {
+            return status;
+        }
+
+        for (var i = 0; i < count && i < values.Length; i++)
+        {
+            if (values[i].AttributeId == ScaleAttribute)
+            {
+                scale = values[i].Value;
             }
         }
 

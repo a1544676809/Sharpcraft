@@ -77,19 +77,11 @@
 - **P0b（完成 2026-11-04）**：`isInWater` 已由 `ClientWorld.IsWaterAt`（本地方块 `minecraft:water` 查询）派生；`isRiding`/`isVehicle`/`isPassenger` 已由 `set_passengers`（clientbound 109）解码并维护乘客图，投影为 `IsInWater`/`IsPassenger`/`IsVehicle`。
 - **P1 逐生物可判定字段（进行中 2026-11-04）**：Squid `tentacleAngle`（客户端 `tentacleMovement/tentacleSpeed`，事件 19 重置）、Bat `IsResting`（`DATA_FLAGS` bit0）、Parrot `pose`（FLYING/STANDING/ON_SHOULDER/SITTING/PARTY；PARTY 由 `level_event` 1010/1011 派生）与 Strider `isRidden`（`IsVehicle`）均已派生并在热路径生效。Strider `isSuffocating` 仅影响纹理不影响 setupAnim。
 - **P2 同步来源字段（进行中）**：P2-A 已实现通用 swing 通道 —— 解码 `ClientboundSwingAnimationPacket`(123) 并在 `SwingAnimationState`（参考 `LivingEntity.SwingState`）中派生 `EntityAnimationFrame.SwingAnimation`；另补 **used-item 状态**（`DATA_LIVING_ENTITY_FLAGS` bit0 + 本地每 tick 计时）→ `IsUsingItem`/`TicksUsingItem`，十字弩蓄力进度按默认 25 tick 驱动（快速装填附魔未建模）。armPose 剩余 AI 派生布尔见 ADR-0023，未实现者保持阻塞、不近似。
-- **P3 SCALE / 属性同步（SCALE 已实现；通用属性系统未完成，2026-11-04）**：
-  - **已实现**：解码 `update_attributes`(134)；`AttributeTypes` 提供 40 个属性名/注册 id（`scale`=30）；提取 `SCALE` 的 base + `add_value`/`add_multiplied_base`/`add_multiplied_total`，写入 `EntityPresentationState.Scale`；`TrackedEntity.EyeY` 与 `EntityModelTransform` 使用 Scale。
-  - **未实现（重要缺口）**：
-    1. **没有每实体 `AttributeMap`**：`update_attributes` 中除 SCALE 外的所有快照（`max_health`、`movement_speed`、`attack_damage` 等）解析后丢弃，不能查询；
-    2. 没有通用 `GetAttribute(id)` / modifier 重算 API，也没有属性更新/替换的生命周期语义；
-    3. **float 类型的 entity data 尚未解码**：`LivingEntity` health（index 9, serializer 3）当前不进入 `EntityPresentationState.Health`（`EntityDataItem.Value` 为 NotAnInteger），因此 health 也不可用于动画；
-    4. 因此 **Wolf 的驯服尾巴角**仍无法计算（需要 `max_health` 与 health 比值）；这是当前唯一由属性/数值缺失导致的动画阻塞点。
-  - **建议后续（按序）**：
-    1. `TrackedAttributeMap`：每实体保存 `attributeId → (base, modifiers)`，`update_attributes` 整表替换（或按语义更新），提供 `GetAttribute(id)`；modifier 三类 operation 统一计算；
-    2. 扩展 `EntityDataPackets` 对 FLOAT（serializer 3）解码，把 health 投影到 presentation；
-    3. Wolf provider 使用 `max_health`/health 计算 `tailAngle` 的 tame 分支；
-    4. 测试：属性包多属性/多 modifier、属性替换、health、Wolf tail angle；热路径零分配。
-  - 复查条件：属性映射/生命周期与参考 `AttributeMap` 对齐；若服务端使用自定义属性 id，按未知属性安全跳过并记录。
+- **P3 属性同步（已实现 2026-11-04）**：
+  - 解码 `update_attributes`(134) 全量快照（attribute id、base、modifier），`AttributeTypes` 提供 40 个属性名/注册 id（`scale`=30，`max_health`=23）；modifier 三类 operation 统一计算后写入 `TrackedAttributeMap`（每实体 `attributeId → value`）。
+  - `SCALE` 写入 `EntityPresentationState.Scale`，`TrackedEntity.EyeY` 与 `EntityModelTransform` 使用 Scale；`MaxHealth` 可查询。
+  - `EntityDataPackets` 已支持 FLOAT(serializer 3)，`LivingEntity` health(index 9) 进入 presentation；Wolf provider 用 health/max_health 计算 tame `tailAngle`。
+  - 未知属性 id 安全跳过；属性整表随 `update_attributes` 替换。剩余仅装饰性 `shakeOffWater`/`headRollAngle`（Wolf）仍按帧缺字段记录。
 
 ## 8. 未解决问题与风险
 

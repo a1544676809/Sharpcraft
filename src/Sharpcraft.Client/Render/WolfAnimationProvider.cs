@@ -16,9 +16,10 @@ namespace Sharpcraft.Client.Render;
 /// Derivable from <see cref="EntityAnimationFrame"/> exactly: IsAngry, IsSitting, IsTame, IsBaby (age scale),
 /// Pitch/Yaw, WalkAnimationPos/WalkAnimationSpeed. The reference's three local render-state fields are NOT on the frame:
 /// <para>
-/// - <c>tailAngle</c> (Wolf.getTailAngle): the angry value 1.5393804 and the wild value π/5 are derived from IsAngry /
-///   IsTame; the tame branch needs the entity's health/max-health ratio, which the frame does not carry (max-health is
-///   absent), so a tamed wolf's tail pitch is left at the rest delta and reported as blocked. It is not faked.
+/// - <c>tailAngle</c> (Wolf.getTailAngle): angry value 1.5393804, wild value π/5, and the tame branch now uses the synced
+///   health/max-health ratio (health from entity data, max-health from the attribute map).
+///
+/// Not derivable (reported, not faked): <c>shakeOffWater</c> z-rolls and <c>headRollAngle</c> ("interested" tilt).
 /// </para>
 /// <para>
 /// - <c>shakeAnim</c> (Wolf.getShakeAnim): drives <c>getBodyRollAngle</c>, i.e. <c>body.zRot</c> plus the
@@ -99,6 +100,11 @@ public sealed class WolfAnimationProvider(int typeId) : IEntityAnimationProvider
         {
             // Wild tailAngle is π/5, exactly the bind, so the delta is zero.
             tailPitch = 0f;
+        }
+        else if (frame.MaxHealth > 0f)
+        {
+            var damageRatio = (frame.MaxHealth - frame.Health) / frame.MaxHealth;
+            tailPitch = (0.55f - (damageRatio * 0.4f)) * MathF.PI - RefTailBindXRot;
         }
 
         if (frame.IsSitting)
