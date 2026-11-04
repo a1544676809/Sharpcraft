@@ -55,6 +55,7 @@ public static class WardenModelDefinition
             parts.Add(source with
             {
                 Name = prefix + "_" + sourceName,
+                PoseSource = sourceName,
                 EmissiveOnly = true,
                 IncludeInEmissive = true,
                 EmissiveTexturePath = texturePath,

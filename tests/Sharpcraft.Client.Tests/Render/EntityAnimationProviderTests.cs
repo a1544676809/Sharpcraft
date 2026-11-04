@@ -120,6 +120,7 @@ public sealed class EntityAnimationProviderTests
         WalkAnimationPos: 3.25f,
         WalkAnimationSpeed: 0.8f,
         Pitch: 15f,
+        Yaw: -30f,
         Flap: 1.2f,
         FlapSpeed: 0.7f,
         TentacleAngle: 0.4f,

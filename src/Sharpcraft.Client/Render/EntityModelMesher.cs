@@ -391,8 +391,14 @@ public sealed class EntityModelMesher
         }
     }
 
-    private static string PosePartName(string name)
+    private static string PosePartName(EntityModelPart part)
     {
+        if (part.PoseSource is { Length: > 0 } source)
+        {
+            return source;
+        }
+
+        var name = part.Name;
         if (!name.StartsWith("equipment_", StringComparison.Ordinal))
         {
             return name;
@@ -420,7 +426,7 @@ public sealed class EntityModelMesher
     /// </summary>
     private static Matrix4x4 PartFrame(EntityModelPart part, IReadOnlyList<EntityModelPart> parts, float px, EntityPose? pose = null)
     {
-        var poseOffset = pose?.Get(PosePartName(part.Name)) ?? PoseOffset.Zero;
+        var poseOffset = pose?.Get(PosePartName(part)) ?? PoseOffset.Zero;
         var pivot = new Vector3((part.PivotX + poseOffset.Position.X) * px, (part.PivotY + poseOffset.Position.Y) * px, (part.PivotZ + poseOffset.Position.Z) * px);
         // Row-vector convention: "rotate, then translate" is Rotation * Translation; animation scale is local.
         var local = Matrix4x4.CreateScale(new Vector3(1f + poseOffset.Scale.X, 1f + poseOffset.Scale.Y, 1f + poseOffset.Scale.Z)) * RotationZyx(part.RotationX + poseOffset.Rotation.X, part.RotationY + poseOffset.Rotation.Y, part.RotationZ + poseOffset.Rotation.Z) * Matrix4x4.CreateTranslation(pivot);

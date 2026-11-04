@@ -22,6 +22,7 @@ public static class EntityModelLayerHelpers
             result.Add(part with
             {
                 Name = "copylayer_" + part.Name,
+                PoseSource = part.PoseSource ?? part.Name,
                 TexturePath = texturePath,
                 Grow = part.Grow + inflate,
                 TintSelector = tint,
@@ -48,6 +49,7 @@ public static class EntityModelLayerHelpers
                 result.Add(part with
                 {
                     Name = "equipment_" + kind + "_" + slot + (overlay ? "_overlay_" : "_") + part.Name,
+                    PoseSource = part.PoseSource ?? part.Name,
                     TexturePath = fallbackTexture,
                     TextureSelector = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay),
                     Grow = part.Grow + inflate,
@@ -87,6 +89,7 @@ public static class EntityModelLayerHelpers
                 result.Add(part with
                 {
                     Name = "marking_" + key + "_" + part.Name,
+                    PoseSource = part.PoseSource ?? part.Name,
                     TexturePath = path,
                     Grow = part.Grow + 0.05f,
                     VisibleWhen = state => state.Markings == id
