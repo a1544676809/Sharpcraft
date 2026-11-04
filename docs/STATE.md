@@ -3090,3 +3090,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - Illager `CROSSBOW_CHARGE` 改为 `progress = min((TicksUsingItem+PartialTick)/25,1)`，复刻 `AnimationUtils.animateCrossbowCharge`（默认 25 tick；快速装填附魔需 item data components，未建模并记录）。
 - **并行 flaky 修复**：把 `EntityAnimationProviderTests`（分配断言）、`EntityModelHierarchyTests`、`ChunkMeshCacheTests`、`EquipmentTextureCatalogTests` 归入 `NonParallel` 串行 collection；连续两次全量 Client **1145** 全绿，flaky 消失。
 - **下一步具体动作**：①P2-B Piglin；②快速装填附魔（若有 item data components）补 `maxCrossbowChargeDuration`；③继续 backlog。
+
+### 2026-11-04 P2-B：Piglin 组（T-591）
+
+- **Piglin/Brute/ZombifiedPiglin（102/103/158）**：共享模型；provider 复刻 base setupAnim（头/耳/走/骑）+ **DANCING**(synced 19) + **CROSSBOW_CHARGE**(synced 18 + used-item 进度) + DEFAULT，暴露 `PiglinArmPose`。注册 102/103/158。
+- **阻塞（回退 DEFAULT，未近似）**：ADMIRING_ITEM（PIGLIN_LOVED 物品标签）、ATTACKING_WITH_MELEE_WEAPON（preferred-weapon 标签 + mainArm）、CROSSBOW_HOLD（CrossbowItem.isCharged 物品数据）。
+- Client **1156**（Piglin 10 新增）绿；构建 0 警告 0 错误。
+- **下一步具体动作**：①补物品标签/DataComponent 能力（可为 PIGLIN_LOVED/preferred-weapon/isCharged 解阻塞，也惠及装备/物品系统）；②mainArm 通用字段；③继续 backlog 或收口。

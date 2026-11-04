@@ -78,6 +78,9 @@ public sealed class EntityAnimationProviderTests
         IllagerModelDefinition.EvokerEntityTypeId,
         IllagerModelDefinition.PillagerEntityTypeId,
         IllagerModelDefinition.IllusionerEntityTypeId,
+        PiglinModelDefinition.PiglinEntityTypeId,
+        PiglinModelDefinition.PiglinBruteEntityTypeId,
+        PiglinModelDefinition.ZombifiedPiglinEntityTypeId,
     ];
 
     [Fact]
@@ -177,6 +180,9 @@ public sealed class EntityAnimationProviderTests
     [InlineData(IllagerModelDefinition.EvokerEntityTypeId)]
     [InlineData(IllagerModelDefinition.PillagerEntityTypeId)]
     [InlineData(IllagerModelDefinition.IllusionerEntityTypeId)]
+    [InlineData(PiglinModelDefinition.PiglinEntityTypeId)]
+    [InlineData(PiglinModelDefinition.PiglinBruteEntityTypeId)]
+    [InlineData(PiglinModelDefinition.ZombifiedPiglinEntityTypeId)]
     public void ProviderApplyDoesNotAllocateOnceWarm(int typeId)
     {
         var provider = EntityAnimationRegistry.For(typeId)!;

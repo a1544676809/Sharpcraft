@@ -141,5 +141,8 @@ public static class EntityAnimationRegistry
         new IllagerAnimationProvider(IllagerModelDefinition.EvokerEntityTypeId),
         new IllagerAnimationProvider(IllagerModelDefinition.PillagerEntityTypeId),
         new IllagerAnimationProvider(IllagerModelDefinition.IllusionerEntityTypeId),
+        new PiglinAnimationProvider(PiglinModelDefinition.PiglinEntityTypeId),
+        new PiglinAnimationProvider(PiglinModelDefinition.PiglinBruteEntityTypeId),
+        new PiglinAnimationProvider(PiglinModelDefinition.ZombifiedPiglinEntityTypeId),
     ];
 }
