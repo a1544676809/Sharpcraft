@@ -8,19 +8,19 @@ namespace Sharpcraft.Client.Render;
 
 /// <summary>
 /// Reference <c>PandaModel.setupAnim</c> (which first runs <c>QuadrupedModel.setupAnim</c>). Derivable branches: head
-/// look + quadruped leg walk, the unhappy head shake / front-leg wave, and the sneeze head tilt.
+/// look + quadruped leg walk, unhappy head shake / front-leg wave, sneeze head tilt, sitting (with eating), lying on the
+/// back, and rolling.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <c>isUnhappy = UnhappyCounter &gt; 0</c>, <c>sneezeTime = SneezeCounter</c>. <c>isSneezing</c> is derived as
-/// <c>SneezeCounter &gt; 0</c> (the exact reference flag is the Panda flags bit 2, which is not on the frame; the counter
-/// is 1..20 while sneezing).
+/// <c>isUnhappy = UnhappyCounter &gt; 0</c>, <c>sneezeTime = SneezeCounter</c>, <c>isSneezing = SneezeCounter &gt; 0</c>.
+/// The sit / lie / roll branches use <see cref="EntityAnimationFrame.SitAmount"/>,
+/// <see cref="EntityAnimationFrame.LieOnBackAmount"/>, <see cref="EntityAnimationFrame.RollAmount"/> and
+/// <see cref="EntityAnimationFrame.IsEating"/>.
 /// </para>
 /// <para>
-/// <b>Blocked branches</b> (their inputs are not on <see cref="EntityAnimationFrame"/>): sitting/eating/scared
-/// (<c>sitAmount</c>, <c>isEating</c>, <c>isScared</c>), lying on back (<c>lieOnBackAmount</c>) and rolling
-/// (<c>rollAmount</c>). The <c>sitAmount == 0</c> reset of the legs' zRot is a no-op against the zero bind and is
-/// represented by simply not touching zRot.
+/// <b>Scared remains blocked</b>: the reference's <c>isScared</c> thundering/gene variant has no frame input and is not
+/// faked.
 /// </para>
 /// </remarks>
 public sealed class PandaAnimationProvider(int typeId) : IEntityAnimationProvider
@@ -28,7 +28,16 @@ public sealed class PandaAnimationProvider(int typeId) : IEntityAnimationProvide
     private const float DegreesToRadians = MathF.PI / 180f;
     private const float QuarterPi = MathF.PI / 4f;
 
-    private static readonly string[] NominalClips = ["idle", "walk", "unhappy", "sneeze"];
+    /// <summary>Reference body bind xRot (<c>PartPose.offsetAndRotation(0, 10, 0, π/2, …)</c>).</summary>
+    private const float BodyBindXRot = MathF.PI / 2f;
+
+    /// <summary>Reference <c>animateSitting</c> body target.</summary>
+    private const float SitBodyXRot = 1.7407963f;
+
+    /// <summary>Reference roll head target (<c>Mth.rotLerpRad(rollAmount, head.xRot, 2.0561945F)</c>).</summary>
+    private const float RollHeadXRot = 2.0561945f;
+
+    private static readonly string[] NominalClips = ["idle", "walk", "unhappy", "sneeze", "sit", "eat", "lie", "roll"];
 
     public int TypeId { get; } = typeId;
 
@@ -38,60 +47,81 @@ public sealed class PandaAnimationProvider(int typeId) : IEntityAnimationProvide
 
     public void Apply(IEntityAnimationState state, in EntityAnimationFrame frame, EntityPose pose)
     {
-        ApplyPose(
-            frame.AgeInTicks,
-            frame.Pitch,
-            frame.Yaw,
-            frame.WalkAnimationPos,
-            frame.WalkAnimationSpeed,
-            frame.UnhappyCounter > 0,
-            frame.SneezeCounter > 0,
-            frame.SneezeCounter,
-            pose);
+        ApplyPose(frame, frame.UnhappyCounter > 0, frame.SneezeCounter > 0, frame.SneezeCounter, pose);
     }
 
     public void ApplyClip(IEntityAnimationState state, in EntityAnimationFrame frame, string clip, float seconds, EntityPose pose)
     {
+        var rest = frame with
+        {
+            AgeInTicks = seconds * 20f,
+            WalkAnimationPos = 0f,
+            WalkAnimationSpeed = 0f,
+            UnhappyCounter = 0,
+            SneezeCounter = 0,
+            SitAmount = 0f,
+            IsEating = false,
+            LieOnBackAmount = 0f,
+            RollAmount = 0f
+        };
+
         switch (clip)
         {
             case "idle":
-                ApplyPose(seconds * 20f, frame.Pitch, frame.Yaw, 0f, 0f, false, false, 0, pose);
+                ApplyPose(rest, false, false, 0, pose);
                 break;
             case "walk":
-                ApplyPose(seconds * 20f, frame.Pitch, frame.Yaw, seconds * 10f, 1f, false, false, 0, pose);
+                ApplyPose(rest with { WalkAnimationPos = seconds * 10f, WalkAnimationSpeed = 1f }, false, false, 0, pose);
                 break;
             case "unhappy":
-                ApplyPose(seconds * 20f, frame.Pitch, frame.Yaw, 0f, 0f, true, false, 0, pose);
+                ApplyPose(rest with { UnhappyCounter = 1 }, true, false, 0, pose);
                 break;
             case "sneeze":
                 var sneezeTime = (int)(seconds * 20f);
-                ApplyPose(seconds * 20f, frame.Pitch, frame.Yaw, 0f, 0f, false, sneezeTime > 0, sneezeTime, pose);
+                ApplyPose(rest with { SneezeCounter = sneezeTime }, false, sneezeTime > 0, sneezeTime, pose);
+                break;
+            case "sit":
+                ApplyPose(rest with { SitAmount = 1f }, false, false, 0, pose);
+                break;
+            case "eat":
+                ApplyPose(rest with { SitAmount = 1f, IsEating = true }, false, false, 0, pose);
+                break;
+            case "lie":
+                ApplyPose(rest with { LieOnBackAmount = 1f }, false, false, 0, pose);
+                break;
+            case "roll":
+                ApplyPose(rest with { RollAmount = 1f }, false, false, 0, pose);
                 break;
         }
     }
 
     private static void ApplyPose(
-        float ageInTicks,
-        float pitch,
-        float yaw,
-        float walkPos,
-        float walkSpeed,
+        in EntityAnimationFrame frame,
         bool isUnhappy,
         bool isSneezing,
         int sneezeTime,
         EntityPose pose)
     {
+        var ageInTicks = frame.AgeInTicks;
+
         // Quadruped base: head pitch/yaw and the four legs' walk swing on xRot.
-        var headX = pitch * DegreesToRadians;
-        var headY = yaw * DegreesToRadians;
+        var headX = frame.Pitch * DegreesToRadians;
+        var headY = frame.Yaw * DegreesToRadians;
         var headZ = 0f;
 
-        var phase = walkPos * 0.6662f;
-        var amplitude = 1.4f * walkSpeed;
+        var phase = frame.WalkAnimationPos * 0.6662f;
+        var amplitude = 1.4f * frame.WalkAnimationSpeed;
         var rightHindX = MathF.Cos(phase) * amplitude;
         var leftHindX = MathF.Cos(phase + MathF.PI) * amplitude;
         var rightFrontX = leftHindX;
         var leftFrontX = rightHindX;
+
+        var rightHindZ = 0f;
+        var leftHindZ = 0f;
+        var rightFrontZ = 0f;
+        var leftFrontZ = 0f;
+
+        var bodyXRot = 0f; // additive offset from the bind (zero when not sitting)
 
         if (isUnhappy)
         {
@@ -116,11 +146,68 @@ public sealed class PandaAnimationProvider(int typeId) : IEntityAnimationProvide
             }
         }
 
+        if (frame.SitAmount > 0f)
+        {
+            // animateSitting: body/head lerp toward the sit pose and the four legs splay their zRot.
+            bodyXRot = RotLerpRad(frame.SitAmount, BodyBindXRot, SitBodyXRot) - BodyBindXRot;
+            headX = RotLerpRad(frame.SitAmount, headX, QuarterPi * 2f);
+            rightFrontZ = -0.27079642f;
+            leftFrontZ = 0.27079642f;
+            rightHindZ = 0.5707964f;
+            leftHindZ = -0.5707964f;
+
+            if (frame.IsEating)
+            {
+                var eat = 0.2f * MathF.Sin(ageInTicks * 0.6f);
+                headX = (QuarterPi * 2f) + eat;
+                rightFrontX = -0.4f - eat;
+                leftFrontX = -0.4f - eat;
+            }
+
+            // IsScared branch remains blocked (no thundering/gene input); not faked.
+        }
+
+        if (frame.LieOnBackAmount > 0f)
+        {
+            rightHindX = -0.6f * MathF.Sin(ageInTicks * 0.15f);
+            leftHindX = 0.6f * MathF.Sin(ageInTicks * 0.15f);
+            rightFrontX = 0.3f * MathF.Sin(ageInTicks * 0.25f);
+            leftFrontX = -0.3f * MathF.Sin(ageInTicks * 0.25f);
+            headX = RotLerpRad(frame.LieOnBackAmount, headX, QuarterPi * 2f);
+        }
+
+        if (frame.RollAmount > 0f)
+        {
+            headX = RotLerpRad(frame.RollAmount, headX, RollHeadXRot);
+            rightHindX = -0.5f * MathF.Sin(ageInTicks * 0.5f);
+            leftHindX = 0.5f * MathF.Sin(ageInTicks * 0.5f);
+            rightFrontX = 0.5f * MathF.Sin(ageInTicks * 0.5f);
+            leftFrontX = -0.5f * MathF.Sin(ageInTicks * 0.5f);
+        }
+
         pose.Add("head", new PoseOffset(Vector3.Zero, new Vector3(headX, headY, headZ), Vector3.Zero));
-        pose.Add("right_hind_leg", new PoseOffset(Vector3.Zero, new Vector3(rightHindX, 0f, 0f), Vector3.Zero));
-        pose.Add("left_hind_leg", new PoseOffset(Vector3.Zero, new Vector3(leftHindX, 0f, 0f), Vector3.Zero));
-        pose.Add("right_front_leg", new PoseOffset(Vector3.Zero, new Vector3(rightFrontX, 0f, 0f), Vector3.Zero));
-        pose.Add("left_front_leg", new PoseOffset(Vector3.Zero, new Vector3(leftFrontX, 0f, 0f), Vector3.Zero));
+        pose.Add("body", new PoseOffset(Vector3.Zero, new Vector3(bodyXRot, 0f, 0f), Vector3.Zero));
+        pose.Add("right_hind_leg", new PoseOffset(Vector3.Zero, new Vector3(rightHindX, 0f, rightHindZ), Vector3.Zero));
+        pose.Add("left_hind_leg", new PoseOffset(Vector3.Zero, new Vector3(leftHindX, 0f, leftHindZ), Vector3.Zero));
+        pose.Add("right_front_leg", new PoseOffset(Vector3.Zero, new Vector3(rightFrontX, 0f, rightFrontZ), Vector3.Zero));
+        pose.Add("left_front_leg", new PoseOffset(Vector3.Zero, new Vector3(leftFrontX, 0f, leftFrontZ), Vector3.Zero));
+    }
+
+    /// <summary>Reference <c>Mth.rotLerpRad</c>: shortest-arc interpolation in radians.</summary>
+    private static float RotLerpRad(float delta, float from, float to)
+    {
+        var diff = to - from;
+        while (diff < -MathF.PI)
+        {
+            diff += MathF.PI * 2f;
+        }
+
+        while (diff >= MathF.PI)
+        {
+            diff -= MathF.PI * 2f;
+        }
+
+        return from + (delta * diff);
     }
 
     private sealed class State : IEntityAnimationState

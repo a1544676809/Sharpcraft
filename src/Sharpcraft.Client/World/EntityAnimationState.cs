@@ -59,7 +59,13 @@ public readonly record struct EntityAnimationFrame(
     bool IsStanding = false,
     float JumpCompletion = 0f,
     bool IsJumping = false,
-    float StandScale = 0f)
+    float StandScale = 0f,
+    bool IsEating = false,
+    bool IsRolling = false,
+    bool IsOnBack = false,
+    float SitAmount = 0f,
+    float LieOnBackAmount = 0f,
+    float RollAmount = 0f)
 {
     /// <summary>Projects the generic render state onto the frame. The mesher calls this once per entity per frame.</summary>
     public static EntityAnimationFrame From(in EntityRenderState state) => new(
@@ -109,7 +115,13 @@ public readonly record struct EntityAnimationFrame(
         state.IsStanding,
         state.JumpCompletion,
         state.IsJumping,
-        state.StandScale);
+        state.StandScale,
+        state.IsEating,
+        state.IsRolling,
+        state.IsOnBack,
+        state.SitAmount,
+        state.LieOnBackAmount,
+        state.RollAmount);
 }
 
 /// <summary>

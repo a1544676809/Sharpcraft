@@ -434,6 +434,23 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.Equal(2.5f / 6f, tracker.Interpolate(0.5f)[0].StandScale, 5);
     }
 
+    [Fact]
+    public void PandaSitAmountAdvancesAndInterpolates()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(25, typeId: PandaModelDefinition.PandaEntityTypeId));
+        tracker.ApplyEntityData(25, [new EntityDataItem(22, 0, 8), new EntityDataItem(19, 1, 1)]);
+        for (var tick = 1; tick <= 3; tick++)
+        {
+            tracker.GameTime = tick;
+            tracker.Tick();
+        }
+
+        var state = tracker.Interpolate(0.5f)[0];
+        Assert.True(state.IsEating);
+        Assert.Equal(0.375f, state.SitAmount, 5);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 

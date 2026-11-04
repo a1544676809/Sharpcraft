@@ -34,6 +34,11 @@ public sealed class EntityPresentationState
         {
             PolarStand = new PolarBearStandAnimationState();
         }
+
+        if (typeId == 97)
+        {
+            PandaPose = new PandaPoseAnimationState();
+        }
     }
 
     /// <summary>Walk position/speed smoothing, ported from the reference <c>WalkAnimationState</c>.</summary>
@@ -53,6 +58,9 @@ public sealed class EntityPresentationState
 
     /// <summary>Polar bear stand ease clock, or null for other types.</summary>
     public PolarBearStandAnimationState? PolarStand { get; }
+
+    /// <summary>Panda sit/lie/roll amount clock, or null for other types.</summary>
+    public PandaPoseAnimationState? PandaPose { get; }
 
     /// <summary>The synced ground flag from the last move/teleport packet.</summary>
     public bool IsOnGround { get; internal set; }
@@ -119,6 +127,15 @@ public sealed class EntityPresentationState
 
     /// <summary>Panda sneeze counter (synced int).</summary>
     public int SneezeCounter { get; internal set; }
+
+    /// <summary>Panda eating flag (EAT_COUNTER &gt; 0).</summary>
+    public bool IsEating { get; internal set; }
+
+    /// <summary>Panda rolling flag (Panda flags bit 4).</summary>
+    public bool IsRolling { get; internal set; }
+
+    /// <summary>Panda lying-on-back flag (Panda flags bit 16).</summary>
+    public bool IsOnBack { get; internal set; }
 
     /// <summary>Polar bear standing flag (synced boolean).</summary>
     public bool IsStanding { get; internal set; }

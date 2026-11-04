@@ -272,7 +272,13 @@ public readonly record struct EntityRenderState(
     bool IsStanding = false,
     float JumpCompletion = 0f,
     bool IsJumping = false,
-    float StandScale = 0f);
+    float StandScale = 0f,
+    bool IsEating = false,
+    bool IsRolling = false,
+    bool IsOnBack = false,
+    float SitAmount = 0f,
+    float LieOnBackAmount = 0f,
+    float RollAmount = 0f);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -727,6 +733,7 @@ public sealed class EntityTracker
             entity.Presentation.Tentacle?.Update(entity.Presentation.IsInWater);
             entity.Presentation.RabbitHop?.Tick();
             entity.Presentation.PolarStand?.Tick(entity.Presentation.IsStanding);
+            entity.Presentation.PandaPose?.Tick(entity.Presentation.IsSitting, entity.Presentation.IsOnBack, entity.Presentation.IsRolling);
             entity.Presentation.Swing.Tick();
             if (entity.Presentation.IsUsingItem)
             {
@@ -838,6 +845,12 @@ public sealed class EntityTracker
                 JumpCompletion: entity.Presentation.RabbitHop?.Completion(t) ?? 0f,
                 IsJumping: entity.Presentation.RabbitHop?.IsJumping ?? false,
                 StandScale: entity.Presentation.PolarStand?.Scale(t) ?? 0f,
+                IsEating: entity.Presentation.IsEating,
+                IsRolling: entity.Presentation.IsRolling,
+                IsOnBack: entity.Presentation.IsOnBack,
+                SitAmount: entity.Presentation.PandaPose?.SitAmount(t) ?? 0f,
+                LieOnBackAmount: entity.Presentation.PandaPose?.LieOnBackAmount(t) ?? 0f,
+                RollAmount: entity.Presentation.PandaPose?.RollAmount(t) ?? 0f,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,
@@ -925,6 +938,22 @@ public sealed class EntityTracker
                     entity.Presentation.SneezeCounter = item.Value;
                 }
 
+                applied = true;
+            }
+
+            // Panda EAT_COUNTER (index 19, int serializer 1).
+            if (entity.TypeId == 97 && item.Index == 19 && item.SerializerId == 1)
+            {
+                entity.Presentation.IsEating = item.Value > 0;
+                applied = true;
+            }
+
+            // Panda flags byte (index 22, byte serializer): bit 4 rolling, bit 8 sitting, bit 16 on-back.
+            if (entity.TypeId == 97 && item.Index == 22 && item.SerializerId == 0)
+            {
+                entity.Presentation.IsRolling = (item.Value & 4) != 0;
+                entity.Presentation.IsSitting = (item.Value & 8) != 0;
+                entity.Presentation.IsOnBack = (item.Value & 16) != 0;
                 applied = true;
             }
 

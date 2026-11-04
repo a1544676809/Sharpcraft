@@ -3255,6 +3255,13 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Client **1237**（+1），全量绿。
 - **下一步具体动作**：Panda sit/eat 字段（Panda flags/sitAmount）或 Wither 侧头/Parrot party。
 
+### 2026-11-04 Panda sit/eat/lie/roll（T-609 续）
+
+- 新增 `PandaPoseAnimationState`（sit/onBack/roll 三个 amount：+0.15/−0.19 clamp0..1，lerp(partial)），挂 type 97；同步 Panda flags（index22 bit4/8/16）与 EAT_COUNTER（index19）进入 presentation；帧新增 `SitAmount/LieOnBackAmount/RollAmount/IsEating/IsRolling/IsOnBack`。
+- Panda provider 补齐 `animateSitting`、eating 覆盖、lie-on-back、rolling 分支；仅 `IsScared`（雷暴/基因）仍阻塞。
+- 验证：Client **1243**（+6），全量绿。
+- **下一步具体动作**：Wither 侧头（需 per-head targets）或 Parrot party（jukebox）；或收口。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

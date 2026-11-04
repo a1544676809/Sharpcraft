@@ -27,7 +27,11 @@ public sealed class PandaAnimationTests
         float pos = 0f,
         float speed = 0f,
         int unhappyCounter = 0,
-        int sneezeCounter = 0) =>
+        int sneezeCounter = 0,
+        float sitAmount = 0f,
+        float lieOnBackAmount = 0f,
+        float rollAmount = 0f,
+        bool isEating = false) =>
         new(
             TypeId,
             ageInTicks,
@@ -42,7 +46,11 @@ public sealed class PandaAnimationTests
             false,
             false,
             UnhappyCounter: unhappyCounter,
-            SneezeCounter: sneezeCounter);
+            SneezeCounter: sneezeCounter,
+            IsEating: isEating,
+            SitAmount: sitAmount,
+            LieOnBackAmount: lieOnBackAmount,
+            RollAmount: rollAmount);
 
     private static EntityPose Apply(IEntityAnimationState state, IEntityAnimationProvider provider, in EntityAnimationFrame frame)
     {
@@ -56,7 +64,7 @@ public sealed class PandaAnimationTests
     {
         var provider = new PandaAnimationProvider(TypeId);
         Assert.Equal(97, provider.TypeId);
-        Assert.Equal(new[] { "idle", "walk", "unhappy", "sneeze" }, provider.Clips);
+        Assert.Equal(new[] { "idle", "walk", "unhappy", "sneeze", "sit", "eat", "lie", "roll" }, provider.Clips);
     }
 
     [Fact]
@@ -180,5 +188,86 @@ public sealed class PandaAnimationTests
         {
             Assert.Contains(part, modelParts);
         }
+    }
+
+    [Fact]
+    public void SitBranchLerpsBodyAndHeadAndSplaysLegs()
+    {
+        var provider = new PandaAnimationProvider(TypeId);
+        var pose = Apply(provider.CreateState(), provider, Frame(sitAmount: 0.5f));
+
+        // body offset = rotLerpRad(0.5, π/2, 1.7407963) − π/2 (0.5 of a small delta).
+        Assert.Equal(0.5f * (1.7407963f - (MathF.PI / 2f)), pose.Get("body").Rotation.X, 4);
+        // head = rotLerpRad(0.5, 0, π/2) = π/4.
+        Assert.Equal(QuarterPi, pose.Get("head").Rotation.X, 4);
+        Assert.Equal(-0.27079642f, pose.Get("right_front_leg").Rotation.Z, 4);
+        Assert.Equal(0.27079642f, pose.Get("left_front_leg").Rotation.Z, 4);
+        Assert.Equal(0.5707964f, pose.Get("right_hind_leg").Rotation.Z, 4);
+        Assert.Equal(-0.5707964f, pose.Get("left_hind_leg").Rotation.Z, 4);
+    }
+
+    [Fact]
+    public void EatingOverridesTheHeadAndFrontLegsWhileSitting()
+    {
+        var provider = new PandaAnimationProvider(TypeId);
+        var pose = Apply(provider.CreateState(), provider, Frame(ageInTicks: 0f, sitAmount: 1f, isEating: true));
+
+        // age 0 → sin = 0.
+        Assert.Equal(MathF.PI / 2f, pose.Get("head").Rotation.X, 4);
+        Assert.Equal(-0.4f, pose.Get("right_front_leg").Rotation.X, 4);
+        Assert.Equal(-0.4f, pose.Get("left_front_leg").Rotation.X, 4);
+        // Sitting zRot splay is still applied.
+        Assert.Equal(-0.27079642f, pose.Get("right_front_leg").Rotation.Z, 4);
+    }
+
+    [Fact]
+    public void LieOnBackSwaysTheLegsAndTiltsTheHead()
+    {
+        var provider = new PandaAnimationProvider(TypeId);
+        var pose = Apply(provider.CreateState(), provider, Frame(ageInTicks: 2f, lieOnBackAmount: 1f));
+
+        Assert.Equal(-0.6f * MathF.Sin(2f * 0.15f), pose.Get("right_hind_leg").Rotation.X, 4);
+        Assert.Equal(0.6f * MathF.Sin(2f * 0.15f), pose.Get("left_hind_leg").Rotation.X, 4);
+        Assert.Equal(0.3f * MathF.Sin(2f * 0.25f), pose.Get("right_front_leg").Rotation.X, 4);
+        Assert.Equal(-0.3f * MathF.Sin(2f * 0.25f), pose.Get("left_front_leg").Rotation.X, 4);
+        Assert.Equal(MathF.PI / 2f, pose.Get("head").Rotation.X, 4);
+    }
+
+    [Fact]
+    public void RollBranchTiltsTheHeadAndSwingsTheLegs()
+    {
+        var provider = new PandaAnimationProvider(TypeId);
+        var pose = Apply(provider.CreateState(), provider, Frame(ageInTicks: 2f, rollAmount: 1f));
+
+        // head = rotLerpRad(1, 0, 2.0561945); the delta is within (−π, π) so no wrap.
+        Assert.Equal(2.0561945f, pose.Get("head").Rotation.X, 4);
+        Assert.Equal(-0.5f * MathF.Sin(2f * 0.5f), pose.Get("right_hind_leg").Rotation.X, 4);
+        Assert.Equal(0.5f * MathF.Sin(2f * 0.5f), pose.Get("left_hind_leg").Rotation.X, 4);
+        Assert.Equal(0.5f * MathF.Sin(2f * 0.5f), pose.Get("right_front_leg").Rotation.X, 4);
+        Assert.Equal(-0.5f * MathF.Sin(2f * 0.5f), pose.Get("left_front_leg").Rotation.X, 4);
+    }
+
+    [Fact]
+    public void ApplyClipReconstructsSitEatLieAndRoll()
+    {
+        var provider = new PandaAnimationProvider(TypeId);
+        var state = provider.CreateState();
+        var frame = Frame();
+
+        var sit = new EntityPose();
+        provider.ApplyClip(state, frame, "sit", 0f, sit);
+        Assert.Equal(1.7407963f - (MathF.PI / 2f), sit.Get("body").Rotation.X, 4);
+
+        var eat = new EntityPose();
+        provider.ApplyClip(state, frame, "eat", 0f, eat);
+        Assert.Equal(MathF.PI / 2f, eat.Get("head").Rotation.X, 4);
+
+        var lie = new EntityPose();
+        provider.ApplyClip(state, frame, "lie", 0f, lie);
+        Assert.Equal(MathF.PI / 2f, lie.Get("head").Rotation.X, 4);
+
+        var roll = new EntityPose();
+        provider.ApplyClip(state, frame, "roll", 0f, roll);
+        Assert.Equal(2.0561945f, roll.Get("head").Rotation.X, 4);
     }
 }
