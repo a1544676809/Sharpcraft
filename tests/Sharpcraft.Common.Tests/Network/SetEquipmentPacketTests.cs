@@ -105,7 +105,7 @@ public sealed class SetEquipmentPacketTests
                 b.AddRange(VarInt(123));
                 b.AddRange(VarInt(1));       // one added component
                 b.AddRange(VarInt(0));       // no removals
-                b.AddRange(VarInt(75));      // container_loot is not modelled
+                b.AddRange(VarInt(200));     // id outside the known component registry
             },
             b =>
             {
@@ -470,6 +470,36 @@ public sealed class SetEquipmentPacketTests
                 b.AddRange(VarInt(0));       // no bees
                 b.AddRange(VarInt(canPlace));
                 b.AddRange(VarInt(0));       // no predicates
+            },
+            b =>
+            {
+                b.Add(7);
+                b.AddRange(VarInt(0));
+            });
+
+        var result = Read(body, out _, out var complete, out var status);
+
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.Equal(2, result.Length);
+    }
+
+    [Fact]
+    public void AttackRangeIsSkipped()
+    {
+        var attackRange = DataComponentTypes.GetId("attack_range");
+        Assert.True(attackRange >= 0);
+
+        var body = Body(
+            b =>
+            {
+                b.Add(0x80);
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(1));
+                b.AddRange(VarInt(0));
+                b.AddRange(VarInt(attackRange));
+                b.AddRange(new byte[24]);   // six floats
             },
             b =>
             {

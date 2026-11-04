@@ -3207,6 +3207,13 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Common **481**（+1）、Client **1169**，构建 0 警告 0 错误。
 - **下一步具体动作**：剩余零散组件（`debug_stick_state`/`container_loot`/`compostable`/`cooking_fuel`/`brewing_fuel`/`map_decorations`/`death_protection`/`tooltip_style`/`use_cooldown` 等）；或转 AI 依赖生物。
 
+### 2026-11-04 零散组件收尾：99 组件全覆盖（T-607）
+
+- 新增 `use_cooldown`、`attack_range`、`tooltip_style`、`death_protection`、`villager_food`、`map_decorations`/`debug_stick_state`/`container_loot`(NBT)、`lodestone_tracker`、`sulfur_cube_content`、`compostable`/`cooking_fuel`/`brewing_fuel`、`piercing_weapon`、`kinetic_weapon`。
+- **至此 26.3 的 99 个数据组件全部有解析覆盖**；未知 id 仍安全 opaque。
+- 验证：Common **482**（+1）、Client **1169**，构建 0 警告 0 错误。
+- **下一步具体动作**：组件基础能力收口，转回 **AI 依赖生物（Wither 等）** 或其它 backlog。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

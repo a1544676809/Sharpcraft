@@ -97,6 +97,21 @@ internal static class ItemComponentPatchReader
     private static readonly int CanPlaceOn = DataComponentTypes.GetId("can_place_on");
     private static readonly int CanBreak = DataComponentTypes.GetId("can_break");
     private static readonly int Profile = DataComponentTypes.GetId("profile");
+    private static readonly int UseCooldown = DataComponentTypes.GetId("use_cooldown");
+    private static readonly int AttackRange = DataComponentTypes.GetId("attack_range");
+    private static readonly int TooltipStyle = DataComponentTypes.GetId("tooltip_style");
+    private static readonly int DeathProtection = DataComponentTypes.GetId("death_protection");
+    private static readonly int VillagerFood = DataComponentTypes.GetId("villager_food");
+    private static readonly int MapDecorations = DataComponentTypes.GetId("map_decorations");
+    private static readonly int DebugStickState = DataComponentTypes.GetId("debug_stick_state");
+    private static readonly int ContainerLoot = DataComponentTypes.GetId("container_loot");
+    private static readonly int LodestoneTracker = DataComponentTypes.GetId("lodestone_tracker");
+    private static readonly int SulfurCubeContent = DataComponentTypes.GetId("sulfur_cube_content");
+    private static readonly int Compostable = DataComponentTypes.GetId("compostable");
+    private static readonly int CookingFuel = DataComponentTypes.GetId("cooking_fuel");
+    private static readonly int BrewingFuel = DataComponentTypes.GetId("brewing_fuel");
+    private static readonly int PiercingWeapon = DataComponentTypes.GetId("piercing_weapon");
+    private static readonly int KineticWeapon = DataComponentTypes.GetId("kinetic_weapon");
 
     private static readonly int[] SimpleIdComponents =
     [
@@ -547,6 +562,116 @@ internal static class ItemComponentPatchReader
             return TrySkipProfile(ref reader);
         }
 
+        if (typeId == UseCooldown)
+        {
+            return reader.TryReadFloat(out _) == DecodeStatus.Success &&
+                   reader.TryReadBool(out var hasGroup) == DecodeStatus.Success &&
+                   (!hasGroup || reader.TryReadString(out _) == DecodeStatus.Success);
+        }
+
+        if (typeId == AttackRange)
+        {
+            for (var i = 0; i < 6; i++)
+            {
+                if (reader.TryReadFloat(out _) != DecodeStatus.Success)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        if (typeId == TooltipStyle)
+        {
+            return reader.TryReadString(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == DeathProtection)
+        {
+            return TrySkipConsumeEffects(ref reader);
+        }
+
+        if (typeId == VillagerFood)
+        {
+            return reader.TryReadVarInt(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == MapDecorations || typeId == DebugStickState || typeId == ContainerLoot)
+        {
+            // Codec-only components: network form is their NBT representation.
+            return NbtTagReader.TrySkip(ref reader);
+        }
+
+        if (typeId == LodestoneTracker)
+        {
+            if (reader.TryReadBool(out var hasTarget) != DecodeStatus.Success)
+            {
+                return false;
+            }
+
+            if (hasTarget && (reader.TryReadString(out _) != DecodeStatus.Success ||
+                              reader.TryReadLong(out _) != DecodeStatus.Success))
+            {
+                return false;
+            }
+
+            return reader.TryReadBool(out _) == DecodeStatus.Success;
+        }
+
+        if (typeId == SulfurCubeContent)
+        {
+            return TrySkipItemStackTemplate(ref reader, depth, ref hasUnknown);
+        }
+
+        if (typeId == Compostable)
+        {
+            return TrySkipResolvableInt(ref reader);
+        }
+
+        if (typeId == CookingFuel || typeId == BrewingFuel)
+        {
+            return TrySkipResolvableInt(ref reader) && TrySkipResolvableFloat(ref reader);
+        }
+
+        if (typeId == PiercingWeapon)
+        {
+            return reader.TryReadBool(out _) == DecodeStatus.Success &&
+                   reader.TryReadBool(out _) == DecodeStatus.Success &&
+                   TrySkipOptionalSound(ref reader) &&
+                   TrySkipOptionalSound(ref reader);
+        }
+
+        if (typeId == KineticWeapon)
+        {
+            if (reader.TryReadVarInt(out _) != DecodeStatus.Success ||
+                reader.TryReadVarInt(out _) != DecodeStatus.Success)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < 3; i++) // three optional conditions
+            {
+                if (reader.TryReadBool(out var hasCondition) != DecodeStatus.Success)
+                {
+                    return false;
+                }
+
+                if (hasCondition &&
+                    (reader.TryReadVarInt(out _) != DecodeStatus.Success ||
+                     reader.TryReadFloat(out _) != DecodeStatus.Success ||
+                     reader.TryReadFloat(out _) != DecodeStatus.Success))
+                {
+                    return false;
+                }
+            }
+
+            return reader.TryReadFloat(out _) == DecodeStatus.Success &&
+                   reader.TryReadFloat(out _) == DecodeStatus.Success &&
+                   TrySkipOptionalSound(ref reader) &&
+                   TrySkipOptionalSound(ref reader);
+        }
+
         if (Array.IndexOf(SimpleIdComponents, typeId) >= 0)
         {
             return reader.TryReadVarInt(out _) == DecodeStatus.Success;
@@ -693,12 +818,16 @@ internal static class ItemComponentPatchReader
 
     private static bool TrySkipConsumable(ref PayloadReader reader)
     {
-        if (reader.TryReadFloat(out _) != DecodeStatus.Success ||
-            reader.TryReadVarInt(out _) != DecodeStatus.Success || // ItemUseAnimation
-            reader.TryReadVarInt(out _) != DecodeStatus.Success || // sound
-            reader.TryReadBool(out _) != DecodeStatus.Success ||  // particles
-            reader.TryReadVarInt(out var effects) != DecodeStatus.Success ||
-            effects < 0)
+        return reader.TryReadFloat(out _) == DecodeStatus.Success &&
+               reader.TryReadVarInt(out _) == DecodeStatus.Success && // ItemUseAnimation
+               reader.TryReadVarInt(out _) == DecodeStatus.Success && // sound
+               reader.TryReadBool(out _) == DecodeStatus.Success &&  // particles
+               TrySkipConsumeEffects(ref reader);
+    }
+
+    private static bool TrySkipConsumeEffects(ref PayloadReader reader)
+    {
+        if (reader.TryReadVarInt(out var effects) != DecodeStatus.Success || effects < 0)
         {
             return false;
         }
@@ -739,7 +868,7 @@ internal static class ItemComponentPatchReader
                     }
 
                     break;
-                case 2: // clear_all_effects: no payload
+                case 2: // clear_all_effects
                     break;
                 case 3: // teleport_randomly: float + bool
                     if (reader.TryReadFloat(out _) != DecodeStatus.Success ||
@@ -762,6 +891,40 @@ internal static class ItemComponentPatchReader
         }
 
         return true;
+    }
+
+    private static bool TrySkipOptionalSound(ref PayloadReader reader)
+    {
+        if (reader.TryReadBool(out var hasSound) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        return !hasSound || reader.TryReadVarInt(out _) == DecodeStatus.Success;
+    }
+
+    private static bool TrySkipResolvableInt(ref PayloadReader reader)
+    {
+        if (reader.TryReadBool(out var isConstant) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        return isConstant
+            ? reader.TryReadInt(out _) == DecodeStatus.Success
+            : reader.TryReadString(out _) == DecodeStatus.Success; // provider resource key
+    }
+
+    private static bool TrySkipResolvableFloat(ref PayloadReader reader)
+    {
+        if (reader.TryReadBool(out var isConstant) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        return isConstant
+            ? reader.TryReadFloat(out _) == DecodeStatus.Success
+            : reader.TryReadString(out _) == DecodeStatus.Success;
     }
 
     private static bool TrySkipMobEffect(ref PayloadReader reader)
