@@ -17,6 +17,14 @@ public sealed class EntityDimensionsRegistryTests
     }
 
     [Fact]
+    public void AppliesPoseAndBabyScaling()
+    {
+        Assert.Equal(1.27f, EntityDimensionsRegistry.Get(159, pose: 5, isBaby: false)!.Value.EyeHeight, 4); // crouching
+        Assert.Equal(0.2f, EntityDimensionsRegistry.Get(159, pose: 2, isBaby: false)!.Value.EyeHeight, 4);  // sleeping
+        Assert.Equal(0.34f, EntityDimensionsRegistry.Get(152, pose: 0, isBaby: true)!.Value.EyeHeight, 4);  // baby wolf
+    }
+
+    [Fact]
     public void UnknownTypeIsNull()
     {
         Assert.Null(EntityDimensionsRegistry.Get(1000));

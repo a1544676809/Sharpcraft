@@ -86,6 +86,9 @@ public sealed class EntityPresentationState
     /// <summary>Whether the entity has a leash holder (set by the set_entity_link packet).</summary>
     public bool IsLeashed { get; internal set; }
 
+    /// <summary>Synced entity pose ordinal (Entity.DATA_POSE), used for pose-specific dimensions.</summary>
+    public int Pose { get; internal set; }
+
     /// <summary>The synced ground flag from the last move/teleport packet.</summary>
     public bool IsOnGround { get; internal set; }
 

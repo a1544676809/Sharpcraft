@@ -51,6 +51,7 @@ status: 已评审
 - 每批：全量构建 + Client/Architecture 测试；每个新增帧字段有测试。
 - 风险：客户端派生与服务器状态长期不一致；对策：字段级记录与复查条件（ADR-0024）。
 - **随机动画口径**：纯客户端、仅装饰的随机计时（如 Rabbit idle）按 ADR-0025 以“同算法/同分布/同触发条件”为等价，不要求同种子；逐实例随机值差异在原版两个客户端之间本来就存在。
+- **目标眼高精度**：`EntityDimensionsRegistry.Get(id, pose, isBaby)` 按参考 `LivingEntity.getDimensions(Pose)` 处理 sleeping（0.2）、玩家 crouch（1.27）/swim·fall-fly·spin（0.4）与 baby（0.5×）；`TrackedEntity.EyeY` 已 pose/age aware。
 
 ## 6. 实施记录（2026-11-04）
 | 生物 | provider | 已实现 | 阻塞（未近似） |

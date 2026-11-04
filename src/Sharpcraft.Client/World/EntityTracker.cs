@@ -78,8 +78,8 @@ public sealed class TrackedEntity
     /// <summary>Head yaw in degrees, driven by the separate rotate-head packet.</summary>
     public float HeadYaw { get; internal set; }
 
-    /// <summary>Eye height above the feet from the vanilla entity-type dimensions table; 0 when unknown.</summary>
-    public float EyeHeight => EntityDimensionsRegistry.Get(TypeId)?.EyeHeight ?? 0f;
+    /// <summary>Eye height above the feet from the vanilla entity-type dimensions table (pose/age aware); 0 when unknown.</summary>
+    public float EyeHeight => EntityDimensionsRegistry.Get(TypeId, Presentation.Pose, IsBaby)?.EyeHeight ?? 0f;
 
     /// <summary>World-space eye Y (feet y + eye height).</summary>
     public float EyeY => (float)Y + EyeHeight;
@@ -1019,6 +1019,12 @@ public sealed class EntityTracker
             if (item.Value == EntityDataItem.NotAnInteger)
             {
                 continue;
+            }
+
+            if (item.Index == PoseAccessorIndex && item.SerializerId == PoseSerializerId)
+            {
+                entity.Presentation.Pose = item.Value;
+                applied = true;
             }
 
             if (poseListener is not null && item.Index == PoseAccessorIndex && item.SerializerId == PoseSerializerId)

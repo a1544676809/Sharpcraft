@@ -505,6 +505,16 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.True(state.IdleHeadTiltAgeTicks >= 0f);
     }
 
+    [Fact]
+    public void PlayerCrouchPoseUsesCrouchingEyeHeight()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(30, typeId: 159));
+        tracker.ApplyEntityData(30, [new EntityDataItem(6, 20, 5)]); // Pose.CROUCHING
+        Assert.True(tracker.TryGet(30, out var entity));
+        Assert.Equal(1.27f, entity!.EyeHeight, 4);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 

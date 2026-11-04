@@ -3310,6 +3310,13 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Common **488**、Client **1252**，构建 0 警告 0 错误。
 - **下一步具体动作**：B 轮全部可派生项完成；仅 baby 模型差异与数据源缺失项保持记录。
 
+### 2026-11-04 实体目标眼高 pose/baby 精度（T-615）
+
+- `EntityDimensionsRegistry.Get(id,pose,isBaby)` 按参考 `LivingEntity.getDimensions(Pose)`：sleeping 0.2、玩家 crouch 1.27 / swim·fall-fly·spin 0.4、baby 0.5×；`Presentation.Pose` 解析 DATA_POSE；`TrackedEntity.EyeY` pose/age aware。
+- Wither 目标眼高自动受益。
+- 验证：Common **489**、Client **1253**，构建 0 警告 0 错误。
+- **下一步具体动作**：实体目标眼高基础已完成；继续 Wither/其它目标测试或收口。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

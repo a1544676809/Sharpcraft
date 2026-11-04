@@ -18,6 +18,39 @@ public static class EntityDimensionsRegistry
     public static EntityDimensionsInfo? Get(int typeId) =>
         (uint)typeId < (uint)Entries.Value.Length ? Entries.Value[typeId] : null;
 
+    /// <summary>
+    /// Pose- and age-aware dimensions, matching <c>LivingEntity.getDimensions(Pose)</c>: sleeping uses the shared
+    /// 0.2×0.2 box, babies scale by 0.5, and players use their pose table (crouch 1.27, swim/fall-fly 0.4 eye).
+    /// The generic SCALE attribute is not synced, so a non-1 scale is not represented.
+    /// </summary>
+    public static EntityDimensionsInfo? Get(int typeId, int pose, bool isBaby)
+    {
+        if (Get(typeId) is not { } baseDimensions)
+        {
+            return null;
+        }
+
+        // Pose ordinals: 0 standing, 1 fall flying, 2 sleeping, 3 swimming, 4 spin attack, 5 crouching.
+        if (pose == 2)
+        {
+            return new EntityDimensionsInfo(0.2f, 0.2f, 0.2f);
+        }
+
+        if (typeId == 159) // player
+        {
+            return pose switch
+            {
+                1 or 3 or 4 => new EntityDimensionsInfo(0.6f, 0.6f, 0.4f),
+                5 => new EntityDimensionsInfo(0.6f, 1.5f, 1.27f),
+                _ => baseDimensions
+            };
+        }
+
+        return isBaby
+            ? new EntityDimensionsInfo(baseDimensions.Width * 0.5f, baseDimensions.Height * 0.5f, baseDimensions.EyeHeight * 0.5f)
+            : baseDimensions;
+    }
+
     private static EntityDimensionsInfo[] Load()
     {
         using var stream = typeof(EntityDimensionsRegistry).Assembly
