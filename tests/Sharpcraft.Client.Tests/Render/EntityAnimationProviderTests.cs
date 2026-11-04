@@ -103,14 +103,14 @@ public sealed class EntityAnimationProviderTests
         var pose = new EntityPose();
         var frame = FrameFor(typeId);
 
-        for (var i = 0; i < 64; i++)
+        for (var i = 0; i < 512; i++)
         {
             pose.Clear();
             provider.Apply(state, in frame, pose);
         }
 
         var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 0; i < 128; i++)
+        for (var i = 0; i < 256; i++)
         {
             pose.Clear();
             provider.Apply(state, in frame, pose);

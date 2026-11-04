@@ -73,8 +73,8 @@ public sealed class WardenAnimationProvider : IEntityAnimationProvider
         pose.Add("left_arm", new PoseOffset(Vector3.Zero, new Vector3(-(0.8f * adjustedPosCosine * speedModifier), 0f, 0f), Vector3.Zero));
         pose.Add("right_arm", new PoseOffset(Vector3.Zero, new Vector3(-(0.8f * adjustedPosSine * speedModifier), 0f, 0f), Vector3.Zero));
 
-        // Tendrils: state-held factor defaults to 0 until the render state exposes tendrilAnimation.
-        var tendrilFactor = (state as State)?.TendrilAnimation ?? 0f;
+        // Tendrils: two-frame interpolation of the 10-tick shiver countdown, sampled with the partial tick.
+        var tendrilFactor = (state as State)?.GetTendrilAnimation(frame.PartialTick) ?? 0f;
         if (tendrilFactor != 0f)
         {
             var tendrilXRot = tendrilFactor * (MathF.Cos(frame.AgeInTicks * 2.25f) * MathF.PI * 0.1f);
@@ -111,11 +111,11 @@ public sealed class WardenAnimationProvider : IEntityAnimationProvider
     }
 
     /// <summary>
-    /// Per-entity Warden animation state. <see cref="TendrilAnimation"/> mirrors the reference render state's tendril
-    /// sway multiplier (a 10-tick countdown started by a tendril-shiver event); the six one-shot clips are clocks that
-    /// entity events start.
+    /// Per-entity Warden animation state. The six one-shot clips run off <see cref="AnimationState"/> clocks: attack and
+    /// sonic boom start from entity events, while emerge/dig/roar/sniff start from a synced pose. The tendril factor is a
+    /// 10-tick countdown started by a tendril-shiver event, interpolated across the partial tick.
     /// </summary>
-    private sealed class State : IEntityAnimationState, IEntityEventAnimationState, IEntityTickAnimationState
+    private sealed class State : IEntityAnimationState, IEntityEventAnimationState, IEntityTickAnimationState, IEntityPoseAnimationState
     {
         public readonly AnimationState Attack = new();
         public readonly AnimationState SonicBoom = new();
@@ -123,9 +123,11 @@ public sealed class WardenAnimationProvider : IEntityAnimationProvider
         public readonly AnimationState Emerge = new();
         public readonly AnimationState Roar = new();
         public readonly AnimationState Sniff = new();
-        private int _tendril;
+        private int _tendrilPrevious;
+        private int _tendrilCurrent;
 
-        public float TendrilAnimation => _tendril / 10f;
+        public float GetTendrilAnimation(float partialTick) =>
+            (_tendrilPrevious + ((_tendrilCurrent - _tendrilPrevious) * partialTick)) / 10f;
 
         public void OnEntityEvent(int eventId, int gameTime)
         {
@@ -136,7 +138,7 @@ public sealed class WardenAnimationProvider : IEntityAnimationProvider
                     Attack.Start(gameTime);
                     break;
                 case 61: // TENDRILS_SHIVER
-                    _tendril = 10;
+                    _tendrilCurrent = 10;
                     break;
                 case 62: // SONIC_CHARGE
                     SonicBoom.Start(gameTime);
@@ -144,11 +146,31 @@ public sealed class WardenAnimationProvider : IEntityAnimationProvider
             }
         }
 
+        public void OnPoseChanged(int poseId, int gameTime)
+        {
+            switch (poseId)
+            {
+                case 13: // EMERGING
+                    Emerge.Start(gameTime);
+                    break;
+                case 14: // DIGGING
+                    Digging.Start(gameTime);
+                    break;
+                case 11: // ROARING
+                    Roar.Start(gameTime);
+                    break;
+                case 12: // SNIFFING
+                    Sniff.Start(gameTime);
+                    break;
+            }
+        }
+
         public void OnTick(in EntityAnimationTickContext context)
         {
-            if (_tendril > 0)
+            _tendrilPrevious = _tendrilCurrent;
+            if (_tendrilCurrent > 0)
             {
-                _tendril--;
+                _tendrilCurrent--;
             }
         }
     }

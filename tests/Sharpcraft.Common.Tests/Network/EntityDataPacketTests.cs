@@ -83,6 +83,23 @@ public sealed class EntityDataPacketTests
     }
 
     [Fact]
+    public void ThePoseSerializerValueIsCapturedForAnimationRouting()
+    {
+        // Entity.DATA_POSE is index 6 with the POSE serializer (20); EMERGING is ordinal 13.
+        var body = Body(
+            b => { Item(b, 6, 20); b.AddRange(VarInt(13)); });
+
+        var result = Read(body, out _, out var complete, out var status);
+
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        var pose = Assert.Single(result);
+        Assert.Equal(6, pose.Index);
+        Assert.Equal(20, pose.SerializerId);
+        Assert.Equal(13, pose.Value);
+    }
+
+    [Fact]
     public void AnUnsupportedSerializerStopsTheScanInsteadOfGuessingALength()
     {
         var body = Body(

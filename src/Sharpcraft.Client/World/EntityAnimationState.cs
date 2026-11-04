@@ -24,7 +24,8 @@ public readonly record struct EntityAnimationFrame(
     float TentacleAngle,
     bool IsResting,
     bool IsBaby,
-    bool IsHidingInShell)
+    bool IsHidingInShell,
+    float PartialTick = 0f)
 {
     /// <summary>Projects the generic render state onto the frame. The mesher calls this once per entity per frame.</summary>
     public static EntityAnimationFrame From(in EntityRenderState state) => new(
@@ -39,7 +40,8 @@ public readonly record struct EntityAnimationFrame(
         state.TentacleAngle,
         state.IsResting,
         state.IsBaby,
-        state.IsHidingInShell);
+        state.IsHidingInShell,
+        state.AnimationPartialTick);
 }
 
 /// <summary>
@@ -78,4 +80,24 @@ public interface IEntityTickAnimationState
 {
     /// <summary>Advances one tick. Called once per tracked entity per tick, before rendering.</summary>
     void OnTick(in EntityAnimationTickContext context);
+}
+
+/// <summary>
+/// Optional capability for states whose clips are started by the synced entity <c>Pose</c> (entity data index 6):
+/// Warden emerge/dig/roar/sniff, for example.
+/// </summary>
+public interface IEntityPoseAnimationState
+{
+    /// <summary>Called when the synced pose changes. Ordinals follow the reference <c>Pose</c> enum (STANDING 0).</summary>
+    void OnPoseChanged(int poseId, int gameTime);
+}
+
+/// <summary>
+/// Optional capability for states that need one of their creature's own synced data fields (for example the Creaking
+/// <c>CAN_MOVE</c> / <c>IS_TEARING_DOWN</c> booleans). The state interprets the index; unknown indices are ignored.
+/// </summary>
+public interface IEntitySyncedDataAnimationState
+{
+    /// <summary>Called for every decoded integer-valued synced data item.</summary>
+    void OnSyncedData(int index, int serializerId, int value);
 }

@@ -33,7 +33,8 @@ public sealed class CreakingAnimationProvider : IEntityAnimationProvider
         var headYaw = frame.Yaw * (MathF.PI / 180f);
         pose.Add("head", new PoseOffset(Vector3.Zero, new Vector3(headPitch, headYaw, 0f), Vector3.Zero));
 
-        if (frame.WalkAnimationSpeed > 0f)
+        var clips = state as State;
+        if ((clips?.CanMove ?? true) && frame.WalkAnimationSpeed > 0f)
         {
             CreakingAnimations.WalkBaked.Apply(
                 frame.WalkAnimationPos * 0.05f,
@@ -41,7 +42,7 @@ public sealed class CreakingAnimationProvider : IEntityAnimationProvider
                 pose);
         }
 
-        if (state is State clips)
+        if (clips is not null)
         {
             AnimationClipPlayer.Apply(clips.Attack, CreakingAnimations.AttackBaked, frame.AgeInTicks, pose);
             AnimationClipPlayer.Apply(clips.Invulnerable, CreakingAnimations.InvulnerableBaked, frame.AgeInTicks, pose);
@@ -62,13 +63,17 @@ public sealed class CreakingAnimationProvider : IEntityAnimationProvider
         animation?.Apply(seconds, 1f, pose);
     }
 
-    private sealed class State : IEntityAnimationState, IEntityEventAnimationState, IEntityTickAnimationState
+    private sealed class State : IEntityAnimationState, IEntityEventAnimationState, IEntityTickAnimationState, IEntitySyncedDataAnimationState
     {
         public readonly AnimationState Attack = new();
         public readonly AnimationState Invulnerable = new();
         public readonly AnimationState Death = new();
         private int _attackRemaining;
         private int _invulnerabilityRemaining;
+        private bool _tearingDown;
+
+        /// <summary>Reference <c>CAN_MOVE</c> synced flag (entity data index 16); gates the walk loop.</summary>
+        public bool CanMove { get; private set; } = true;
 
         public void OnEntityEvent(int eventId, int gameTime)
         {
@@ -80,6 +85,24 @@ public sealed class CreakingAnimationProvider : IEntityAnimationProvider
                 case 66: // SHAKE (hurt / invulnerable)
                     _invulnerabilityRemaining = 8;
                     break;
+            }
+        }
+
+        public void OnSyncedData(int index, int serializerId, int value)
+        {
+            // Creaking data after Mob: CAN_MOVE=16, IS_ACTIVE=17, IS_TEARING_DOWN=18 (BOOLEAN serializer 8).
+            if (serializerId != 8)
+            {
+                return;
+            }
+
+            if (index == 16)
+            {
+                CanMove = value != 0;
+            }
+            else if (index == 18)
+            {
+                _tearingDown = value != 0;
             }
         }
 
@@ -97,7 +120,7 @@ public sealed class CreakingAnimationProvider : IEntityAnimationProvider
 
             Attack.AnimateWhen(_attackRemaining > 0, context.GameTime);
             Invulnerable.AnimateWhen(_invulnerabilityRemaining > 0, context.GameTime);
-            // Death is driven by the reference's isTearingDown(), which needs the creaking-heart state; not wired yet.
+            Death.AnimateWhen(_tearingDown, context.GameTime);
         }
     }
 }

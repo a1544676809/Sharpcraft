@@ -55,6 +55,8 @@
 - `WalkAnimationState`（`Client.World`）：原版走路动画位置/速度的平滑与插值；
 - `EntityAnimationTickContext` + `IEntityTickAnimationState`（`Client.World`）：每 tick 回调（计数递减、时钟 `animateWhen`）；
 - `IEntityEventAnimationState`（`Client.World`）：`entity_event`（clientbound 34）触发的一次性 clip 时钟；
+- `IEntityPoseAnimationState`（`Client.World`）：`set_entity_data` 的 `Pose`（accessor 6，serializer 20）变化时启动/切换 clip；
+- `IEntitySyncedDataAnimationState`（`Client.World`）：把生物自己的整型 synced data（如 Creaking `CAN_MOVE`=16 / `IS_TEARING_DOWN`=18）交给 state 解释；
 - `AnimationClipPlayer`（`Client.Render`）：从 `AnimationState` 时钟按 `(age-startTick)*50ms` 播放 baked clip。
 
 `EntityTracker` 通过注入的 `AnimationStateFactory` 为每个 `TrackedEntity` 创建一次 state，`EntityRenderState.Animation` 携带该引用；`EntityModelMesher` 每帧为每个实体准备一份复用 `EntityPose` 并调用一次 provider `Apply`。原 `EntityAnimationController` 的静态 switch 已删除。
@@ -62,7 +64,8 @@
 **通用状态提取（2026-11-04）**：
 - `EntityTracker.Tick()` 用每 tick 实际水平位移驱动 `TrackedEntity.WalkAnimation`（原版 `calculateEntityAnimation` → `updateWalkAnimation`：默认 `min(dist*4,1)`/factor 0.4/幼年位置 ×3，Creaking 覆写 `min(dist*25,3)`），`Interpolate` 输出 `WalkAnimationPos/Speed`，因此走路动画在真机生效（此前恒为 0）。
 - `entity_event`（id 34）解码为 `entityId + eventId`，路由到 `IEntityEventAnimationState.OnEntityEvent`；Warden 以此启动 attack(4)/sonic_charge(62)/tendril(61)，Creaking 启动 attack(4)/invulnerability(66)。
-- `Tick()` 每 tick 调用 `IEntityTickAnimationState.OnTick`，让 Creaking 的攻击/无敌计数递减并 `animateWhen`，Warden 的触须倒计时递减。
+- `Tick()` 每 tick 调用 `IEntityTickAnimationState.OnTick`，让 Creaking 的攻击/无敌计数递减并 `animateWhen`，Warden 的触须倒计时递减；`EntityAnimationFrame.PartialTick` 提供帧内插值，触须按原版双帧 `lerp` 取值。
+- `set_entity_data` 的 `Pose`（index 6 / serializer 20）路由到 `IEntityPoseAnimationState`：Warden `EMERGING(13)/DIGGING(14)/ROARING(11)/SNIFFING(12)` 启动对应 clip；`IEntitySyncedDataAnimationState` 把整型字段交给 state，Creaking 用 `CAN_MOVE(16)` 门控走路、`IS_TEARING_DOWN(18)` 驱动死亡 clip。
 
 ## 5. 关键数据结构
 

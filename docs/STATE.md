@@ -2905,3 +2905,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **仍缺（进行中）**：Warden 的 pose 驱动 emerge/dig/roar/sniff（需解析 `DATA_POSE` 同步字段）、Creaking death（`isTearingDown`/creaking-heart 状态）、`canMove`、Warden `tendrilAnimation` 的 partial-tick 插值。
 - 全量构建 0 警告 0 错误；Client 810（+7）、Common 457（+3）、Architecture 31 全绿。
 - **下一步具体动作**：①解析 `set_entity_data` 的 `Pose`（实体数据 accessor）并路由 `IEntityPoseAnimationState`，补 Warden 的 emerge/dig/roar/sniff 与 Creaking 的 `canMove`；②把 `tendrilAnimation` 做成双帧插值；③再按 backlog 派单（Ravager/Hoglin/Sniffer/CopperGolem）。
+
+### 2026-11-04 动画同步状态基础设施（T-570）
+
+- **`set_entity_data` 的 Pose 已解析**：`EntityDataPackets` 对 POSE（serializer 20）保留 VarInt 值（此前丢弃，且未知 serializer 会中止 variant 解析的隐患随之收敛）；`EntityTracker.HandleAnimationData` 在 variant 解析之前把 index 6 的 Pose 路由到 `IEntityPoseAnimationState`，把整型 synced data 路由 `IEntitySyncedDataAnimationState`。
+- **Warden 六 clip 全部可驱动**：entity event 4/62/61 + pose `EMERGING(13)/DIGGING(14)/ROARING(11)/SNIFFING(12)`；触须改为 `EntityAnimationFrame.PartialTick` 的**双帧 lerp**（`EntityRenderState.AnimationPartialTick` 由 `Interpolate(t)` 给出）。
+- **Creaking 状态完整**：`CAN_MOVE(16)` 门控走路（不再用 walkSpeed>0 近似）、`IS_TEARING_DOWN(18)` 驱动死亡 clip；attack/invulnerability 计数不变。
+- 全量构建 0 警告 0 错误；Client 814（+4）、Common 458（+1）、Architecture 31 全绿（`ChunkMeshCacheTests.*` 偶发并行 flaky，隔离/重跑通过；分配测试已把 warmup 提到 512 以抗 tiered 编译抖动）。
+- **下一步具体动作**：①Breeze 六个 `AnimationState` 尚未有事件/数据来源（其 `shoot/slide/...` 由 Breeze AI 客户端逻辑驱动），需评估是否引入客户端 AI 状态或先只保留沙盒 clip；②同类 synced 字段（Armadillo `ARMADILLO_STATE(36)`、Sniffer `SNIFFER_STATE(35)`、CopperGolem 等）可复用 `IEntitySyncedDataAnimationState`；③继续按 backlog 派单新生物。

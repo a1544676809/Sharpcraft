@@ -232,7 +232,8 @@ public readonly record struct EntityRenderState(
     float FlapSpeed = 0f,
     float TentacleAngle = 0f,
     bool IsResting = false,
-    IEntityAnimationState? Animation = null);
+    IEntityAnimationState? Animation = null,
+    float AnimationPartialTick = 0f);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -499,12 +500,13 @@ public sealed class EntityTracker
             return false;
         }
 
+        var applied = HandleAnimationData(entity, items);
+
         if (!EntityVariantSpecs.TryGet(entity.TypeId, out var spec))
         {
-            return false;
+            return applied;
         }
 
-        var applied = false;
         foreach (var item in items)
         {
             if (spec.AccessorIndex >= 0 && item.Index == spec.AccessorIndex && item.Value != EntityDataItem.NotAnInteger)
@@ -672,13 +674,52 @@ public sealed class EntityTracker
                 AgeInTicks: GameTime,
                 WalkAnimationPos: entity.WalkAnimation.Position(t),
                 WalkAnimationSpeed: entity.WalkAnimation.Speed(t),
-                Animation: entity.Animation));
+                Animation: entity.Animation,
+                AnimationPartialTick: t));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);
     }
 
     private static bool Relative(int relatives, int bit) => (relatives & (1 << bit)) != 0;
+
+    // Synced entity data: index 6 is Entity.DATA_POSE (Pose serializer id 20). Values are the reference Pose ordinals.
+    private const int PoseAccessorIndex = 6;
+    private const int PoseSerializerId = 20;
+
+    /// <summary>Routes synced pose and creature data to the per-entity animation state when it listens.</summary>
+    private bool HandleAnimationData(TrackedEntity entity, ReadOnlySpan<EntityDataItem> items)
+    {
+        var poseListener = entity.Animation as IEntityPoseAnimationState;
+        var dataListener = entity.Animation as IEntitySyncedDataAnimationState;
+        if (poseListener is null && dataListener is null)
+        {
+            return false;
+        }
+
+        var applied = false;
+        foreach (var item in items)
+        {
+            if (item.Value == EntityDataItem.NotAnInteger)
+            {
+                continue;
+            }
+
+            if (poseListener is not null && item.Index == PoseAccessorIndex && item.SerializerId == PoseSerializerId)
+            {
+                poseListener.OnPoseChanged(item.Value, (int)GameTime);
+                applied = true;
+            }
+
+            if (dataListener is not null)
+            {
+                dataListener.OnSyncedData(item.Index, item.SerializerId, item.Value);
+                applied = true;
+            }
+        }
+
+        return applied;
+    }
 
     private readonly record struct WalkAnimationProfile(float DistanceToSpeed, float MaxSpeed, float Factor, float PositionScale);
 

@@ -82,15 +82,37 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.False(tracker.ApplyEntityEvent(999, 4));
     }
 
+    [Fact]
+    public void SyncedPoseAndCreatureDataAreRoutedToTheAnimationState()
+    {
+        var tracker = new EntityTracker { GameTime = 9 };
+        var recorder = new RecordingState();
+        tracker.AnimationStateFactory = _ => recorder;
+        tracker.Add(Entity(5, typeId: 146));
+
+        // Pose index 6 / serializer 20 value 13 (EMERGING); Creaking-style CAN_MOVE at index 16 / boolean 8 value 0.
+        EntityDataItem[] items = [new(6, 20, 13), new(16, 8, 0)];
+        tracker.ApplyEntityData(5, items);
+
+        Assert.Equal(13, recorder.PoseId);
+        Assert.Equal(9, recorder.PoseGameTime);
+        Assert.Equal(16, recorder.LastSyncedIndex);
+        Assert.Equal(0, recorder.LastSyncedValue);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 
-    private sealed class RecordingState : IEntityAnimationState, IEntityEventAnimationState, IEntityTickAnimationState
+    private sealed class RecordingState : IEntityAnimationState, IEntityEventAnimationState, IEntityTickAnimationState, IEntityPoseAnimationState, IEntitySyncedDataAnimationState
     {
         public int EventId { get; private set; } = -1;
         public int EventGameTime { get; private set; }
         public int Ticks { get; private set; }
         public float LastDistance { get; private set; }
+        public int PoseId { get; private set; } = -1;
+        public int PoseGameTime { get; private set; }
+        public int LastSyncedIndex { get; private set; } = -1;
+        public int LastSyncedValue { get; private set; }
 
         public void OnEntityEvent(int eventId, int gameTime)
         {
@@ -102,6 +124,18 @@ public sealed class EntityAnimationInfrastructureTests
         {
             Ticks++;
             LastDistance = context.HorizontalDistance;
+        }
+
+        public void OnPoseChanged(int poseId, int gameTime)
+        {
+            PoseId = poseId;
+            PoseGameTime = gameTime;
+        }
+
+        public void OnSyncedData(int index, int serializerId, int value)
+        {
+            LastSyncedIndex = index;
+            LastSyncedValue = value;
         }
     }
 }

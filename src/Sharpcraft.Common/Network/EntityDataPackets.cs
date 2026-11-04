@@ -237,8 +237,10 @@ public static class EntityDataPackets
                 return DecodeStatus.Success;
 
             case 19: // OPTIONAL_UNSIGNED_INT
-            case 20: // POSE
                 return reader.TryReadVarInt(out _);
+
+            case 20: // POSE: VarInt ordinal (STANDING 0 .. INHALING 17)
+                return reader.TryReadVarInt(out value);
 
             case 21: // CAT_VARIANT
             case 22: // CAT_SOUND_VARIANT
