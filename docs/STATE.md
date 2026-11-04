@@ -3351,3 +3351,17 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - Piglin：ADMIRING_ITEM / ATTACKING_WITH_MELEE_WEAPON / CROSSBOW_HOLD（见上）。
 - Illager/十字弩：快速装填附魔未建模（默认 25 tick）；`mainArm` 未在帧（武器挥击假定右手）。
 - 其它生物：Rabbit(hop/jumpTicks)、Wither(多头 rot 数组)、Wolf/Fox/Panda/PolarBear(状态)、Parrot PARTY、Guardian eye look、Turtle 产蛋、Bee stinger 可见性；Shulker attach-face、Slime/MagCube squish 属渲染 transform。
+
+## 2026-11-04 最新交接（覆盖上方旧快照）
+
+- **分支**：`feature/item-registry`。**最近实现提交**：`1868979 feat(presentation): sync SCALE attribute and apply model scale`；本段文档随后提交。
+- **最新测试基线**：Common **491**、Client **1255**、Architecture **31**；构建 0 警告 0 错误。
+- **已完成**：99 个物品数据组件全解码；`item tags` 提取/`ItemTagRegistry`；表现状态层（位置/朝向/water/passenger/equip/pose/attributes-SCALE）；动画 provider 已覆盖四足/人形/村民/Illager/Piglin/Wolf/Fox/Panda/PolarBear/Rabbit/Wither/Shulker/Turtle/Slime/MagmaCube/Parrot/Piglin/等；Rabbit hop+idle、Parrot PARTY、Wither 侧头、Panda scared、实体维度/眼高（含 pose/baby）已完成。
+- **属性系统现状（T-617 / risk R-024）**：只实现了 SCALE。`update_attributes`(134) 的其它属性快照被丢弃；没有每实体 AttributeMap/通用 `GetAttribute`；FLOAT entity data（health）未解码。因此 **Wolf 驯服尾巴角仍阻塞**。
+- **属性系统下一步（严格按序）**：
+  1. `TrackedAttributeMap`（每实体 attributeId→base+modifiers，`update_attributes` 替换/更新，通用 modifier 计算）；
+  2. `EntityDataPackets` 支持 FLOAT(serializer 3) → health；
+  3. Wolf provider 用 `max_health`/health 计算 tame `tailAngle`；
+  4. 测试：多属性/多 modifier、属性替换、health、Wolf tail。
+- **其它剩余**：Skeleton/Stray/Bogged/WitherSkeleton 可试复用 `HumanoidAnimationProvider`；Cat/Ocelot、ZombieVillager 需专用 provider；baby 专属模型；装备层（人形护甲/Elytra/Witch item/HappyGhast 绳/Wolf armor crackiness/TraderLlama carpet/ZombieNautilus coral/EquipmentClientInfo）；`ChunkMeshCacheTests` 并行偶发。
+- **关键文件**：`Common/Network/UpdateAttributesPackets.cs`、`Common/Registries/AttributeTypes.cs`、`Client/World/EntityTracker.cs`、`Client/World/EntityPresentationState.cs`、`Client/Render/EntityModelTransform.cs`；详见 `docs/modules/entity-presentation-state.md` P3。
