@@ -180,6 +180,38 @@ public sealed class EntityAnimationInfrastructureTests
     }
 
     [Fact]
+    public void SquidTentacleClockMatchesTheReferenceWaterRule()
+    {
+        var tentacle = new SquidTentacleAnimationState();
+
+        // Underwater, the movement saturates at 2*pi, where the reference angle is zero.
+        for (var tick = 0; tick < 200; tick++)
+        {
+            tentacle.Update(isInWater: true);
+        }
+
+        Assert.Equal(0f, tentacle.Angle(1f), 4);
+
+        // Entity event 19 resets the movement, so the next underwater tick is back below pi and bends the tentacles.
+        tentacle.OnEntityEvent(19);
+        tentacle.Update(isInWater: true);
+        Assert.True(tentacle.Angle(1f) > 0f);
+    }
+
+    [Fact]
+    public void BatRestingFlagComesFromTheSyncedFlagsByte()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(11, typeId: 100));
+
+        tracker.ApplyEntityData(11, [new EntityDataItem(16, 0, 1)]);
+        Assert.True(tracker.Interpolate(0f)[0].IsResting);
+
+        tracker.ApplyEntityData(11, [new EntityDataItem(16, 0, 0)]);
+        Assert.False(tracker.Interpolate(0f)[0].IsResting);
+    }
+
+    [Fact]
     public void WaterAtTheFeetBlockSetsIsInWater()
     {
         var water = VanillaBlockRegistry.Layout.GetBaseId(Identifier.Parse("minecraft:water"));

@@ -13,6 +13,7 @@ public sealed class TrackedEntity
     {
         Id = id;
         TypeId = typeId;
+        Presentation = new EntityPresentationState(typeId);
         X = x;
         Y = y;
         Z = z;
@@ -46,8 +47,8 @@ public sealed class TrackedEntity
     /// </summary>
     public IEntityAnimationState? Animation { get; internal set; }
 
-    /// <summary>Client-side presentation state (walk/flap/ground) advanced once per tick; never authoritative.</summary>
-    public EntityPresentationState Presentation { get; } = new();
+    /// <summary>Client-side presentation state (walk/flap/tentacle/ground), advanced once per tick; never authoritative.</summary>
+    public EntityPresentationState Presentation { get; }
 
     /// <summary>Feet position, current tick.</summary>
     public double X { get; internal set; }
@@ -502,6 +503,7 @@ public sealed class EntityTracker
             listener.OnEntityEvent(eventId, (int)GameTime);
         }
 
+        entity.Presentation.Tentacle?.OnEntityEvent(eventId);
         return true;
     }
 
@@ -658,6 +660,7 @@ public sealed class EntityTracker
                 (int)MathF.Floor((float)entity.X),
                 (int)MathF.Floor((float)entity.Y),
                 (int)MathF.Floor((float)entity.Z)) ?? false;
+            entity.Presentation.Tentacle?.Update(entity.Presentation.IsInWater);
 
             if (entity.Animation is IEntityTickAnimationState tickState)
             {
@@ -734,6 +737,8 @@ public sealed class EntityTracker
                 IsInWater: entity.Presentation.IsInWater,
                 IsPassenger: _vehicleOf.ContainsKey(entity.Id),
                 IsVehicle: _passengers.ContainsKey(entity.Id),
+                TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
+                IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,
                 AnimationPartialTick: t,
                 HasMainHandItem: entity.EquipmentItemAt(0) > 0,
@@ -754,10 +759,6 @@ public sealed class EntityTracker
     {
         var poseListener = entity.Animation as IEntityPoseAnimationState;
         var dataListener = entity.Animation as IEntitySyncedDataAnimationState;
-        if (poseListener is null && dataListener is null)
-        {
-            return false;
-        }
 
         var applied = false;
         foreach (var item in items)
@@ -776,6 +777,13 @@ public sealed class EntityTracker
             if (dataListener is not null)
             {
                 dataListener.OnSyncedData(item.Index, item.SerializerId, item.Value);
+                applied = true;
+            }
+
+            // Bat (type 100) flags byte: index 16, serializer 0, bit 0 = resting.
+            if (entity.TypeId == 100 && item.Index == 16 && item.SerializerId == 0)
+            {
+                entity.Presentation.IsResting = (item.Value & 1) != 0;
                 applied = true;
             }
         }

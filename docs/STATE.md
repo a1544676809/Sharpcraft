@@ -2971,3 +2971,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - `tentacleAngle`（Squid 的 `tentacleMovement/tentacleSpeed` 客户端随机运动）移入 P1，避免近似。
 - 验证：Common **461**（+3 `PassengerPacketsTests`）、Client **914**（+2 乘客图/进水），构建 0 警告 0 错误；文档门禁绿。
 - **下一步具体动作**：①P1 补 Squid `tentacleAngle`（客户端 `tentacleSpeed` 随机/事件 19）与 Bat `IsResting` 派生；②有了 `Flap/Pose`/`IsPassenger` 后接 Parrot（flapAngle+pose）、Strider（isRidden/isSuffocating）；③继续按 backlog。
+
+### 2026-11-04 客户端实体表现状态层 P1：Squid 触手 + Bat resting（T-577）
+
+- 新增 [SquidTentacleAnimationState.cs](src/Sharpcraft.Client/World/SquidTentacleAnimationState.cs)：每实体本地随机 `tentacleSpeed`（`1/(rand+1)*0.2`）、`tentacleMovement`（客户端 >2π 截断）、入水/离水角度公式、entity event 19 重置；`EntityPresentationState` 对 typeId 130/62 启用，`EntityTracker.Tick` 用 `IsInWater` 更新并投影 `TentacleAngle`。
+- Bat(100) 的 `DATA_FLAGS`(index16 byte bit0) 派生 `IsResting`，投影到 render state；`BatAnimationProvider` 现在真机按休息/飞行切换。
+- 验证：Client **916**（+2：Squid 触手公式、Bat resting 路由），构建 0 警告 0 错误。
+- **下一步具体动作**：①Parrot（flapAngle 已有；pose FLYING/SITTING/ON_SHOULDER/PARTY 需基于 `IsPassenger`/`onGround`/variant 派生）；②Strider（`isRidden=IsVehicle` 已可用；`isSuffocating` 需读 `Strider.isSuffocating` 依据）；③继续 backlog。
