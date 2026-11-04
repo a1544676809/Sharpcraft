@@ -3008,3 +3008,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **eye look 阻塞**：依赖 lookAtPosition/lookDirection/eyePosition（相机/目标），未近似；eye 保持 bind。**所有者 2026-11-04 决定延后**，与"通用 look-at/相机派生"一起做（需新增 `EyePosition`/`LookTargetPosition`/`LookDirection` 字段、解析 Guardian `DATA_ID_ATTACK_TARGET`、注入玩家眼位并做 partialTick 插值）。
 - 注册 64/41 并纳入分配测试。Client **976**（Guardian 11 新增）绿。
 - **下一步具体动作**：①Illager/Piglin 需 armPose/crossbow/swing（客户端 AI），代价较大，建议单列 ADR/排期；②其余 backlog（Shulker/Wither 等）逐项评估；③保持 STATE/traceability 同步。
+
+### 2026-11-04 动画批次 9：Spider(+Cave Spider) / Silverfish / Blaze（T-582）
+
+- **Spider（127）/ Cave Spider（22）**：八腿四相位 yaw 摆动 + z 抬腿 + head look；Cave Spider 复用同 provider（几何同）。
+- **Silverfish（117）**：七段 body 的 yRot/x 摆动 + layer0/1/2 副本联动。
+- **Blaze（14）**：12 根 rod 三环（半径 9/7/5）按 age 旋转/上下浮动 + head look；预计算 `part0..part11` 名称。
+- 注册 127/22/117/14 并纳入零分配测试。Client **1006**（Spider 12 / Silverfish 7 / Blaze 12 新增）绿；Architecture 31。
+- **下一步具体动作**：①继续 backlog 可派生生物（Shulker/Phantom/Wither/Turtle/Fish 等需先看 setupAnim 依赖）；②Illager/Piglin armPose 单列 ADR；③保持文档/STATE 同步。

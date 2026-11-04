@@ -116,5 +116,9 @@ public static class EntityAnimationRegistry
         new AllayAnimationProvider(AllayModelDefinition.AllayEntityTypeId),
         new GuardianAnimationProvider(GuardianModelDefinition.GuardianEntityTypeId),
         new GuardianAnimationProvider(GuardianModelDefinition.ElderGuardianEntityTypeId),
+        new SpiderAnimationProvider(SpiderModelDefinition.SpiderEntityTypeId),
+        new SpiderAnimationProvider(CaveSpiderModelDefinition.CaveSpiderEntityTypeId),
+        new SilverfishAnimationProvider(SilverfishModelDefinition.SilverfishEntityTypeId),
+        new BlazeAnimationProvider(BlazeModelDefinition.BlazeEntityTypeId),
     ];
 }
