@@ -3152,6 +3152,14 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Client **1161**（+1），构建 0 警告 0 错误。
 - **下一步具体动作**：①回 animation backlog（剩余多为 AI/渲染 transform：Wither/Wolf/Fox/Panda/PolarBear、Rabbit 等）；②或继续补齐组件表（food/tool/weapon/equippable 等）。
 
+### 2026-11-04 Slime/MagmaCube squish（T-599）
+
+- 表现层新增 `AbstractCubeMob` squish 时钟（`Squish/OldSquish/TargetSquish/WasOnGround`，落地 -0.5、起跳 1.0、每 tick 0.5 收敛）与 `CubeSize`（synced `ID_SIZE` index16 int）。
+- `EntityModelTransform` 支持非均匀缩放（size × squish，x/z 与 y 不同），Slime/MagmaCube 的体型与挤压表现生效。
+- 新增 `MagmaCubeAnimationProvider`（八段按 `(i-4)*max(0,squish)*1.7`）；Slime 无模型动画。
+- 验证：Client **1166**（+5），构建 0 警告 0 错误。
+- **下一步具体动作**：①Shulker attach-face 渲染 transform；②或回 AI 依赖生物 / 组件表。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

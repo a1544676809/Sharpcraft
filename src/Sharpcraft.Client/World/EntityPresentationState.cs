@@ -64,4 +64,19 @@ public sealed class EntityPresentationState
 
     /// <summary>Ticks elapsed since the current item use started; reset when use stops.</summary>
     public int UseItemTicks { get; internal set; }
+
+    /// <summary>Cube-mob size from the synced <c>ID_SIZE</c> (1 for other entities).</summary>
+    public int CubeSize { get; internal set; } = 1;
+
+    /// <summary>Current squish value (reference <c>AbstractCubeMob.squish</c>).</summary>
+    public float Squish { get; internal set; }
+
+    /// <summary>Squish value at the previous tick (reference <c>oSquish</c>).</summary>
+    public float OldSquish { get; internal set; }
+
+    /// <summary>Squish target, -0.5 on landing and 1.0 on jump (reference <c>targetSquish</c>).</summary>
+    public float TargetSquish { get; internal set; }
+
+    /// <summary>Whether the cube mob was on the ground on the previous tick.</summary>
+    public bool WasOnGround { get; internal set; }
 }

@@ -144,5 +144,6 @@ public static class EntityAnimationRegistry
         new PiglinAnimationProvider(PiglinModelDefinition.PiglinEntityTypeId),
         new PiglinAnimationProvider(PiglinModelDefinition.PiglinBruteEntityTypeId),
         new PiglinAnimationProvider(PiglinModelDefinition.ZombifiedPiglinEntityTypeId),
+        new MagmaCubeAnimationProvider(MagmaCubeModelDefinition.MagmaCubeEntityTypeId),
     ];
 }

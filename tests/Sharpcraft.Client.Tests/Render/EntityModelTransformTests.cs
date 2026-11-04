@@ -26,6 +26,28 @@ public sealed class EntityModelTransformTests
     }
 
     [Fact]
+    public void CubeSizeScalesTheWholeModel()
+    {
+        var state = new Sharpcraft.Client.World.EntityRenderState(1, 120, 0, 0, 0, 0, 0, CubeSize: 4);
+        var transform = EntityModelTransform.From(state);
+
+        Assert.Equal(new Vector3(4f, 4f, 4f), transform.Apply(new Vector3(1f, 1f, 1f)));
+    }
+
+    [Fact]
+    public void SquishWidensAndShortensTheModel()
+    {
+        var state = new Sharpcraft.Client.World.EntityRenderState(1, 120, 0, 0, 0, 0, 0, Squish: 1f, CubeSize: 1);
+        var transform = EntityModelTransform.From(state);
+
+        // size 1, ss = 1 / 1.5 = 0.6667, w = 0.6 -> x/z 0.6, y 1.6667.
+        var result = transform.Apply(new Vector3(1f, 1f, 1f));
+        Assert.Equal(0.6f, result.X, 4);
+        Assert.Equal(1f / 0.6f, result.Y, 4);
+        Assert.Equal(0.6f, result.Z, 4);
+    }
+
+    [Fact]
     public void YawRotatesAroundTheEntityYAxis()
     {
         var transform = new EntityModelTransform(Vector3.Zero, 90f, 0f);

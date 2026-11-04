@@ -81,6 +81,7 @@ public sealed class EntityAnimationProviderTests
         PiglinModelDefinition.PiglinEntityTypeId,
         PiglinModelDefinition.PiglinBruteEntityTypeId,
         PiglinModelDefinition.ZombifiedPiglinEntityTypeId,
+        MagmaCubeModelDefinition.MagmaCubeEntityTypeId,
     ];
 
     [Fact]
@@ -183,6 +184,7 @@ public sealed class EntityAnimationProviderTests
     [InlineData(PiglinModelDefinition.PiglinEntityTypeId)]
     [InlineData(PiglinModelDefinition.PiglinBruteEntityTypeId)]
     [InlineData(PiglinModelDefinition.ZombifiedPiglinEntityTypeId)]
+    [InlineData(MagmaCubeModelDefinition.MagmaCubeEntityTypeId)]
     public void ProviderApplyDoesNotAllocateOnceWarm(int typeId)
     {
         var provider = EntityAnimationRegistry.For(typeId)!;

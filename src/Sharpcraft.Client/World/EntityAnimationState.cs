@@ -46,7 +46,9 @@ public readonly record struct EntityAnimationFrame(
     int OffHandItemId = -1,
     bool MainHandChargedCrossbow = false,
     int MainHandQuickChargeLevel = 0,
-    bool IsLeftHanded = false)
+    bool IsLeftHanded = false,
+    float Squish = 0f,
+    int CubeSize = 1)
 {
     /// <summary>Projects the generic render state onto the frame. The mesher calls this once per entity per frame.</summary>
     public static EntityAnimationFrame From(in EntityRenderState state) => new(
@@ -83,7 +85,9 @@ public readonly record struct EntityAnimationFrame(
         state.OffHandItemId,
         state.MainHandChargedCrossbow,
         state.MainHandQuickChargeLevel,
-        state.IsLeftHanded);
+        state.IsLeftHanded,
+        state.Squish,
+        state.CubeSize);
 }
 
 /// <summary>

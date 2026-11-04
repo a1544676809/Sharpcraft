@@ -259,7 +259,9 @@ public readonly record struct EntityRenderState(
     int OffHandItemId = -1,
     bool MainHandChargedCrossbow = false,
     int MainHandQuickChargeLevel = 0,
-    bool IsLeftHanded = false);
+    bool IsLeftHanded = false,
+    float Squish = 0f,
+    int CubeSize = 1);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -689,6 +691,22 @@ public sealed class EntityTracker
             entity.Presentation.IsOnGround = entity.OnGround;
             entity.Presentation.Flap.Update(!entity.OnGround);
             entity.Presentation.IsMoving = distance > 3.0E-4f;
+            if (entity.TypeId == 120 || entity.TypeId == 81)
+            {
+                var presentation = entity.Presentation;
+                presentation.OldSquish = presentation.Squish;
+                presentation.Squish += (presentation.TargetSquish - presentation.Squish) * 0.5f;
+                if (presentation.IsOnGround && !presentation.WasOnGround)
+                {
+                    presentation.TargetSquish = -0.5f;
+                }
+                else if (!presentation.IsOnGround && presentation.WasOnGround)
+                {
+                    presentation.TargetSquish = 1f;
+                }
+
+                presentation.WasOnGround = presentation.IsOnGround;
+            }
             entity.Presentation.IsInWater = World?.IsWaterAt(
                 (int)MathF.Floor((float)entity.X),
                 (int)MathF.Floor((float)entity.Y),
@@ -792,6 +810,8 @@ public sealed class EntityTracker
                 MainHandChargedCrossbow: entity.EquipmentComponentsAt(0).HasChargedProjectiles,
                 MainHandQuickChargeLevel: entity.EquipmentComponentsAt(0).QuickChargeLevel,
                 IsLeftHanded: entity.Presentation.IsLeftHanded,
+                Squish: entity.Presentation.OldSquish + ((entity.Presentation.Squish - entity.Presentation.OldSquish) * t),
+                CubeSize: entity.Presentation.CubeSize,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,
@@ -854,6 +874,13 @@ public sealed class EntityTracker
             {
                 entity.Presentation.IsAggressive = (item.Value & 4) != 0;
                 entity.Presentation.IsLeftHanded = (item.Value & 2) != 0;
+                applied = true;
+            }
+
+            // Cube-mob size: AbstractCubeMob.ID_SIZE is the first int accessor after Mob flags (index 16, serializer 2).
+            if (item.Index == 16 && item.SerializerId == 2 && (entity.TypeId == 120 || entity.TypeId == 81))
+            {
+                entity.Presentation.CubeSize = item.Value;
                 applied = true;
             }
 
