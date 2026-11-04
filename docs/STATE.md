@@ -2913,3 +2913,12 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **Creaking 状态完整**：`CAN_MOVE(16)` 门控走路（不再用 walkSpeed>0 近似）、`IS_TEARING_DOWN(18)` 驱动死亡 clip；attack/invulnerability 计数不变。
 - 全量构建 0 警告 0 错误；Client 814（+4）、Common 458（+1）、Architecture 31 全绿（`ChunkMeshCacheTests.*` 偶发并行 flaky，隔离/重跑通过；分配测试已把 warmup 提到 512 以抗 tiered 编译抖动）。
 - **下一步具体动作**：①Breeze 六个 `AnimationState` 尚未有事件/数据来源（其 `shoot/slide/...` 由 Breeze AI 客户端逻辑驱动），需评估是否引入客户端 AI 状态或先只保留沙盒 clip；②同类 synced 字段（Armadillo `ARMADILLO_STATE(36)`、Sniffer `SNIFFER_STATE(35)`、CopperGolem 等）可复用 `IEntitySyncedDataAnimationState`；③继续按 backlog 派单新生物。
+
+### 2026-11-04 动画批次 2：Sniffer / Copper Golem / Nautilus（T-571）
+
+- 智能体并行完成 3 个生物垂直切片（各自 3 文件），Lead 注册 registry（122/28/89）并全量构建/测试。
+- **Sniffer**：5 状态 clip（feeling_happy/scenting/sniffing/digging/rising）+ walk/sniff_search；`SNIFFER_STATE`(serializer 35) 状态机在**热路径**自动播放（`onSyncedDataUpdated` 的停/启语义已复刻）。
+- **Copper Golem**：7 clip（walk/idle/walk_item/item_drop/item_nodrop/noitem_get/noitem_noget）；`COPPER_GOLEM_STATE`(37) + 每 tick `setupAnimationStates`（含 idle 200–240 tick 调度）热路径播放；`walk_item` 需手持物字段，暂仅沙盒。
+- **Nautilus**：单一 swimming 循环，纯热路径（applyWalk `walkPos+age/5, speed+0.2, 2, 3`；body 偏航/俯仰 clamp ±10°）。
+- 全量构建 0 警告 0 错误；Client 864（新增 Sniffer 22 / Copper Golem 23 / Nautilus 4）、Common 458、Architecture 31 全绿。
+- **下一步具体动作**：①Copper Golem 补手持物字段以支持 `walk_item`；②评估 Zombie Nautilus(156) 复用 Nautilus provider（模型部件待核对）；③继续按 backlog 派单（Ravager/Hoglin/Parrot/Illagers/Strider 等），Armadillo/Sniffer 类可用 synced-state 通道。

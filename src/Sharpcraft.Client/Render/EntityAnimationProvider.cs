@@ -100,5 +100,8 @@ public static class EntityAnimationRegistry
         new WardenAnimationProvider(WardenModelDefinition.WardenEntityTypeId),
         new CreakingAnimationProvider(),
         new BreezeAnimationProvider(BreezeModelDefinition.BreezeEntityTypeId),
+        new SnifferAnimationProvider(SnifferModelDefinition.SnifferEntityTypeId),
+        new CopperGolemAnimationProvider(CopperGolemModelDefinition.CopperGolemEntityTypeId),
+        new NautilusAnimationProvider(NautilusModelDefinition.NautilusEntityTypeId),
     ];
 }

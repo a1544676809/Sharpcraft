@@ -37,6 +37,9 @@ public sealed class EntityAnimationProviderTests
         WardenModelDefinition.WardenEntityTypeId,
         CreakingModelDefinition.CreakingEntityTypeId,
         BreezeModelDefinition.BreezeEntityTypeId,
+        SnifferModelDefinition.SnifferEntityTypeId,
+        CopperGolemModelDefinition.CopperGolemEntityTypeId,
+        NautilusModelDefinition.NautilusEntityTypeId,
     ];
 
     [Fact]
@@ -96,6 +99,9 @@ public sealed class EntityAnimationProviderTests
     [InlineData(WardenModelDefinition.WardenEntityTypeId)]
     [InlineData(CreakingModelDefinition.CreakingEntityTypeId)]
     [InlineData(BreezeModelDefinition.BreezeEntityTypeId)]
+    [InlineData(SnifferModelDefinition.SnifferEntityTypeId)]
+    [InlineData(CopperGolemModelDefinition.CopperGolemEntityTypeId)]
+    [InlineData(NautilusModelDefinition.NautilusEntityTypeId)]
     public void ProviderApplyDoesNotAllocateOnceWarm(int typeId)
     {
         var provider = EntityAnimationRegistry.For(typeId)!;
