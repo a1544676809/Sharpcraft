@@ -107,5 +107,7 @@ public static class EntityAnimationRegistry
         new RavagerAnimationProvider(RavagerModelDefinition.RavagerEntityTypeId),
         new HoglinAnimationProvider(HoglinModelDefinition.HoglinEntityTypeId),
         new HoglinAnimationProvider(HoglinModelDefinition.ZoglinEntityTypeId),
+        new WitchAnimationProvider(WitchModelDefinition.WitchEntityTypeId),
+        new VexAnimationProvider(VexModelDefinition.VexEntityTypeId),
     ];
 }

@@ -2938,3 +2938,12 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **Zombie Nautilus（156）复用 Nautilus provider**（`ZombieNautilusCoralModel extends NautilusModel`，同 swim）。
 - 已注册 registry（112/65/153/156），纳入零分配测试。全量构建 0 警告 0 错误；Client 889（Ravager 12 / Hoglin 10 新增）绿；`ChunkMeshCacheTests.*` 仅并行 flaky，重跑通过。
 - **下一步具体动作**：①Parrot（flapAngle 可用 Flap/FlapSpeed，但 pose FLYING/SITTING/PARTY 需一个通用 `pose` 或生物状态，待定）；②Strider（isSuffocating/isRidden 字段）、Illager/Piglin（armed 臂姿 + 手持物 flag 已就绪）；③继续按 backlog 派单。
+
+### 2026-11-04 动画批次 4：Witch / Vex + 通用 EntityId（T-574）
+
+- 新增通用 `EntityAnimationFrame.EntityId`（来自 `EntityRenderState.Id`），供需要实体 id 的动画（Witch nose 抖动）使用。
+- **Witch（148）**：程序化 head/leg + nose 抖动（`0.01*(EntityId%10)`）+ 持物时 nose 覆盖；热路径。
+- **Vex（142）**：程序化 head/arm bob/wing flap；`isCharging` 由 `DATA_FLAGS_ID`(index16 byte bit0) 经 `IEntitySyncedDataAnimationState` 取得；`setArmsCharging` 用 `HasMainHandItem/HasOffHandItem`；热路径。
+- 已注册 registry（148/142）并纳入零分配测试。Client 910（Witch 12 / Vex 13 新增）、Architecture 31 绿。
+- **重要阻塞结论**：Parrot / Strider / Illager（及 Piglin/Allay 等）的 `setupAnim` 依赖**客户端 AI 状态**（`flap/pose`、`isRiding/isSuffocating`、`armPose/crossbow/swing`），这些既非网络同步也不是现有 frame 字段，无法等效移植。需要先设计"客户端实体动画状态/AI 精简层"（较大子系统，需 ADR）或只做沙盒 clip + 标记进行中。
+- **下一步具体动作**：①就"是否新增客户端实体动画状态层"做决策（ADR）以解锁 Parrot/Strider/Illager/Piglin/Allay；②或继续派可等效的生物（如 Tadpole 需 IsInWater、Ghast 触须需 tentacle 派生等，仍各自缺字段）；③保持 backlog 更新。
