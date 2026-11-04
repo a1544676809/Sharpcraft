@@ -50,3 +50,14 @@ status: 已评审
 
 - 每批：全量构建 + Client/Architecture 测试；每个新增帧字段有测试。
 - 风险：客户端派生与服务器状态长期不一致；对策：字段级记录与复查条件（ADR-0024）。
+
+## 6. 实施记录（2026-11-04）
+
+| 生物 | provider | 已实现 | 阻塞（未近似） |
+| --- | --- | --- | --- |
+| Wolf | `WolfAnimationProvider` | tail yaw、四腿/坐姿、head look、angry/wild tail pitch | 驯服尾巴角（缺 max health）、shake roll、headRollAngle |
+| Fox | `FoxAnimationProvider` | 走/蹲/睡/坐/扑/趴腿摆（faceplant 计数器）、head look、睡姿覆盖 | headRollAngle、crouchAmount/ageScale、腿可见性 |
+| Panda | `PandaAnimationProvider` | unhappy/sneeze 分支、四足走/head look | sitting/eating/scared/lying/rolling（输入缺失） |
+| PolarBear | `PolarBearAnimationProvider` | 基础四足、settled 站立姿态 | 6-tick 站立过渡 counter |
+| Rabbit | `RabbitAnimationProvider` | idle-not-started 的 head look | hop/jumpTicks、idle-head-tilt 计时、baby 模型 |
+| Wither | `WitherAnimationProvider` | ribcage/tail age bob、中心头 look | 左右头 per-head aim 数组 |

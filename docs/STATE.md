@@ -3234,6 +3234,13 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Client **1172**（+3 投影），全量绿。
 - **下一步具体动作**：实现 Wolf/Fox provider（可等效分支），再 B：Rabbit/Panda/PolarBear 本地计时。
 
+### 2026-11-04 AI provider 批次并行完成（T-609）
+
+- 并行派单 6 个 provider：Wolf(152)/Fox(55)/Panda(97)/PolarBear(105)/Rabbit(111)/Wither(149)，均注册到 `EntityAnimationRegistry`。
+- 可等效分支已实现；**阻塞逐条记录**：Wolf（驯服尾巴角/max health、shake roll、headRollAngle）、Fox（headRollAngle、crouchAmount、睡姿腿可见性）、Panda（坐/吃/吓/躺/滚）、PolarBear（6-tick 站立过渡）、Rabbit（hop/jumpTicks、idle 计时、baby）、Wither（左右头 per-head aim 数组）。
+- 验证：Client **1232** 全量绿；Architecture 31。
+- **下一步具体动作**：评估 B 批本地计时基础设施（Rabbit hop 可由 entity_event id1 + 精确 tick 顺序解；Panda sit/eat 需更多字段；PolarBear 站立过渡 counter）；或转 C/D 其它。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

@@ -145,5 +145,11 @@ public static class EntityAnimationRegistry
         new PiglinAnimationProvider(PiglinModelDefinition.PiglinBruteEntityTypeId),
         new PiglinAnimationProvider(PiglinModelDefinition.ZombifiedPiglinEntityTypeId),
         new MagmaCubeAnimationProvider(MagmaCubeModelDefinition.MagmaCubeEntityTypeId),
+        new WolfAnimationProvider(WolfModelDefinition.WolfEntityTypeId),
+        new FoxAnimationProvider(FoxModelDefinition.FoxEntityTypeId),
+        new PandaAnimationProvider(PandaModelDefinition.PandaEntityTypeId),
+        new PolarBearAnimationProvider(PolarBearModelDefinition.PolarBearEntityTypeId),
+        new RabbitAnimationProvider(RabbitModelDefinition.RabbitEntityTypeId),
+        new WitherAnimationProvider(WitherBossModelDefinition.WitherEntityTypeId),
     ];
 }

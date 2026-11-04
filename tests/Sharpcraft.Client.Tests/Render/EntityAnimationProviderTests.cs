@@ -82,6 +82,12 @@ public sealed class EntityAnimationProviderTests
         PiglinModelDefinition.PiglinBruteEntityTypeId,
         PiglinModelDefinition.ZombifiedPiglinEntityTypeId,
         MagmaCubeModelDefinition.MagmaCubeEntityTypeId,
+        WolfModelDefinition.WolfEntityTypeId,
+        FoxModelDefinition.FoxEntityTypeId,
+        PandaModelDefinition.PandaEntityTypeId,
+        PolarBearModelDefinition.PolarBearEntityTypeId,
+        RabbitModelDefinition.RabbitEntityTypeId,
+        WitherBossModelDefinition.WitherEntityTypeId,
     ];
 
     [Fact]
@@ -185,6 +191,12 @@ public sealed class EntityAnimationProviderTests
     [InlineData(PiglinModelDefinition.PiglinBruteEntityTypeId)]
     [InlineData(PiglinModelDefinition.ZombifiedPiglinEntityTypeId)]
     [InlineData(MagmaCubeModelDefinition.MagmaCubeEntityTypeId)]
+    [InlineData(WolfModelDefinition.WolfEntityTypeId)]
+    [InlineData(FoxModelDefinition.FoxEntityTypeId)]
+    [InlineData(PandaModelDefinition.PandaEntityTypeId)]
+    [InlineData(PolarBearModelDefinition.PolarBearEntityTypeId)]
+    [InlineData(RabbitModelDefinition.RabbitEntityTypeId)]
+    [InlineData(WitherBossModelDefinition.WitherEntityTypeId)]
     public void ProviderApplyDoesNotAllocateOnceWarm(int typeId)
     {
         var provider = EntityAnimationRegistry.For(typeId)!;
