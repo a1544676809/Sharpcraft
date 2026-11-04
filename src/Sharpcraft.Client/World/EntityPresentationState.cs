@@ -39,6 +39,11 @@ public sealed class EntityPresentationState
         {
             PandaPose = new PandaPoseAnimationState();
         }
+
+        if (typeId == 149)
+        {
+            WitherHeads = new WitherHeadAnimationState();
+        }
     }
 
     /// <summary>Walk position/speed smoothing, ported from the reference <c>WalkAnimationState</c>.</summary>
@@ -61,6 +66,15 @@ public sealed class EntityPresentationState
 
     /// <summary>Panda sit/lie/roll amount clock, or null for other types.</summary>
     public PandaPoseAnimationState? PandaPose { get; }
+
+    /// <summary>Wither side-head aim clock, or null for other types.</summary>
+    public WitherHeadAnimationState? WitherHeads { get; }
+
+    /// <summary>Wither side-head alternative target entity id 1 (data index 17), or 0 when none.</summary>
+    public int WitherTarget1 { get; internal set; }
+
+    /// <summary>Wither side-head alternative target entity id 2 (data index 18), or 0 when none.</summary>
+    public int WitherTarget2 { get; internal set; }
 
     /// <summary>The synced ground flag from the last move/teleport packet.</summary>
     public bool IsOnGround { get; internal set; }

@@ -3,6 +3,7 @@
 
 using System.Runtime.InteropServices;
 using Sharpcraft.Common.Network;
+using Sharpcraft.Common.Registries;
 
 namespace Sharpcraft.Client.World;
 
@@ -76,6 +77,12 @@ public sealed class TrackedEntity
 
     /// <summary>Head yaw in degrees, driven by the separate rotate-head packet.</summary>
     public float HeadYaw { get; internal set; }
+
+    /// <summary>Eye height above the feet from the vanilla entity-type dimensions table; 0 when unknown.</summary>
+    public float EyeHeight => EntityDimensionsRegistry.Get(TypeId)?.EyeHeight ?? 0f;
+
+    /// <summary>World-space eye Y (feet y + eye height).</summary>
+    public float EyeY => (float)Y + EyeHeight;
 
     /// <summary>Yaw at the previous tick.</summary>
     public float PreviousYaw { get; internal set; }
@@ -281,7 +288,11 @@ public readonly record struct EntityRenderState(
     float RollAmount = 0f,
     bool IsPartyParrot = false,
     bool IsWorried = false,
-    bool IsThundering = false);
+    bool IsThundering = false,
+    float WitherHeadYaw1 = 0f,
+    float WitherHeadPitch1 = 0f,
+    float WitherHeadYaw2 = 0f,
+    float WitherHeadPitch2 = 0f);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -795,6 +806,48 @@ public sealed class EntityTracker
                 tickState.OnTick(new EntityAnimationTickContext((int)GameTime, distance, entity.Presentation.IsInWater, entity.EquipmentItemAt(0), dy, entity.Presentation.IsOnGround));
             }
         }
+
+        UpdateWitherHeads();
+    }
+
+    private void UpdateWitherHeads()
+    {
+        Span<WitherHeadAim> aims = stackalloc WitherHeadAim[2];
+        Span<int> targets = stackalloc int[2];
+        foreach (var entity in _entities.Values)
+        {
+            if (entity.TypeId != 149 || entity.Presentation.WitherHeads is not { } heads)
+            {
+                continue;
+            }
+
+            targets[0] = entity.Presentation.WitherTarget1;
+            targets[1] = entity.Presentation.WitherTarget2;
+            for (var i = 0; i < 2; i++)
+            {
+                aims[i] = default;
+                var targetId = targets[i];
+                if (targetId <= 0 || !_entities.TryGetValue(targetId, out var target))
+                {
+                    continue;
+                }
+
+                // Reference getHeadX/Y/Z for head index i+1 (side heads): ±1.3 blocks around the body, height 2.2.
+                var angle = (entity.Yaw + (180f * (i + 1))) * (MathF.PI / 180f);
+                var hx = entity.X + (MathF.Cos(angle) * 1.3);
+                var hy = entity.Y + 2.2;
+                var hz = entity.Z + (MathF.Sin(angle) * 1.3);
+                var dx = target.X - hx;
+                var dy = target.EyeY - hy;
+                var dz = target.Z - hz;
+                var sd = MathF.Sqrt((float)((dx * dx) + (dz * dz)));
+                var targetYaw = (float)(Math.Atan2(dz, dx) * 180.0 / Math.PI) - 90f;
+                var targetPitch = (float)(-(Math.Atan2(dy, sd) * 180.0 / Math.PI));
+                aims[i] = new WitherHeadAim(true, targetYaw, targetPitch);
+            }
+
+            heads.Tick(entity.Yaw, aims);
+        }
     }
 
     /// <summary>Forgets every tracked entity.</summary>
@@ -804,6 +857,19 @@ public sealed class EntityTracker
     /// <param name="id">Entity id.</param>
     /// <param name="entity">Tracked entity when found.</param>
     public bool TryGet(int id, out TrackedEntity? entity) => _entities.TryGetValue(id, out entity);
+
+    /// <summary>Eye Y of another tracked entity, using the vanilla dimensions table (for target aiming).</summary>
+    public bool TryGetEyeY(int id, out float eyeY)
+    {
+        if (_entities.TryGetValue(id, out var entity))
+        {
+            eyeY = entity.EyeY;
+            return true;
+        }
+
+        eyeY = 0f;
+        return false;
+    }
 
     /// <summary>
     /// Builds the per-frame render states, interpolating between the previous and current tick. The returned span
@@ -900,6 +966,10 @@ public sealed class EntityTracker
                 IsPartyParrot: entity.Presentation.IsPartyParrot,
                 IsWorried: entity.Presentation.IsWorried,
                 IsThundering: World?.IsThundering ?? false,
+                WitherHeadYaw1: entity.Presentation.WitherHeads?.Yaw(0) ?? 0f,
+                WitherHeadPitch1: entity.Presentation.WitherHeads?.Pitch(0) ?? 0f,
+                WitherHeadYaw2: entity.Presentation.WitherHeads?.Yaw(1) ?? 0f,
+                WitherHeadPitch2: entity.Presentation.WitherHeads?.Pitch(1) ?? 0f,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,
@@ -994,6 +1064,21 @@ public sealed class EntityTracker
             if (entity.TypeId == 97 && item.Index == 19 && item.SerializerId == 1)
             {
                 entity.Presentation.IsEating = item.Value > 0;
+                applied = true;
+            }
+
+            // Wither side-head alternative targets (indices 17/18, int serializer 1).
+            if (entity.TypeId == 149 && item.SerializerId == 1 && item.Index is 17 or 18)
+            {
+                if (item.Index == 17)
+                {
+                    entity.Presentation.WitherTarget1 = item.Value;
+                }
+                else
+                {
+                    entity.Presentation.WitherTarget2 = item.Value;
+                }
+
                 applied = true;
             }
 

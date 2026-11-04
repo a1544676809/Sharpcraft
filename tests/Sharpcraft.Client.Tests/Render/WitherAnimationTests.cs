@@ -21,7 +21,11 @@ public sealed class WitherAnimationTests
         float pitch = 0f,
         float yaw = 0f,
         float headYaw = 0f,
-        float partialTick = 0f) => new(
+        float partialTick = 0f,
+        float headYaw1 = 0f,
+        float headPitch1 = 0f,
+        float headYaw2 = 0f,
+        float headPitch2 = 0f) => new(
         TypeId: WitherBossModelDefinition.WitherEntityTypeId,
         AgeInTicks: age,
         WalkAnimationPos: 0f,
@@ -35,7 +39,11 @@ public sealed class WitherAnimationTests
         IsBaby: false,
         IsHidingInShell: false,
         PartialTick: partialTick,
-        HeadYaw: headYaw);
+        HeadYaw: headYaw,
+        WitherHeadYaw1: headYaw1,
+        WitherHeadPitch1: headPitch1,
+        WitherHeadYaw2: headYaw2,
+        WitherHeadPitch2: headPitch2);
 
     private static EntityPose Apply(in EntityAnimationFrame frame)
     {
@@ -108,13 +116,16 @@ public sealed class WitherAnimationTests
     }
 
     [Fact]
-    public void SideHeadAimRotationsAreBlockedAndStayAtBindPose()
+    public void SideHeadsUseTheDerivedAimRotations()
     {
-        // right_head / left_head need the client per-head aim arrays (xHeadRots/yHeadRots) that the frame lacks.
-        var pose = Apply(Frame(age: 7f, pitch: 15f, yaw: -30f, headYaw: 60f));
+        // Side-head yaw is relative to the body: (headYawN - yaw); pitch is absolute.
+        var pose = Apply(Frame(age: 7f, pitch: 15f, yaw: -30f, headYaw: 60f,
+            headYaw1: 40f, headPitch1: 15f, headYaw2: -70f, headPitch2: -5f));
 
-        Assert.Equal(Vector3.Zero, pose.Get("right_head").Rotation);
-        Assert.Equal(Vector3.Zero, pose.Get("left_head").Rotation);
+        Assert.Equal(15f * ToRad, pose.Get("right_head").Rotation.X, 5);
+        Assert.Equal(70f * ToRad, pose.Get("right_head").Rotation.Y, 5);
+        Assert.Equal(-5f * ToRad, pose.Get("left_head").Rotation.X, 5);
+        Assert.Equal(-40f * ToRad, pose.Get("left_head").Rotation.Y, 5);
     }
 
     [Fact]

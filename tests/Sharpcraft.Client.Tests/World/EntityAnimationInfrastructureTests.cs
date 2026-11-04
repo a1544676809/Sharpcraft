@@ -478,6 +478,17 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.True(state.IsThundering);
     }
 
+    [Fact]
+    public void TrackedEntityExposesEyeHeightFromDimensions()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(28, typeId: 159)); // player
+        Assert.True(tracker.TryGet(28, out var entity));
+        Assert.Equal(1.62f, entity!.EyeHeight, 4);
+        Assert.True(tracker.TryGetEyeY(28, out var eyeY));
+        Assert.Equal(1.62f, eyeY, 4);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 

@@ -60,5 +60,5 @@ status: 已评审
 | Panda | `PandaAnimationProvider` | unhappy/sneeze、四足走/head look、**sit/eat/lie/roll（精确 `PandaPoseAnimationState` 缓冲）**、**scared（主线 WORRIED 基因 + 雷暴）** | — |
 | PolarBear | `PolarBearAnimationProvider` | 基础四足 + **完整站立缓动（`PolarBearStandAnimationState`：±1/tick, 0..6, lerp/6）** | — |
 | Rabbit | `RabbitAnimationProvider` | idle-not-started 的 head look + **hop（entity_event 1 → 15-tick 时钟，`JumpCompletion` 精确映射 0.75s 循环 keyframes）** | idle-head-tilt 计时（random/leash）、baby 模型 |
-| Wither | `WitherAnimationProvider` | ribcage/tail age bob、中心头 look | 左右头 per-head aim：需要每头替代目标实体 id（同步）**加上目标眼高/头部世界坐标**；`EntityAnimationFrame` 无目标位置/眼高，且参考每头 `rotlerp` 是客户端 AI 瞄准状态，无法从单一 HeadYaw/Yaw 精确推出 |
+| Wither | `WitherAnimationProvider` | ribcage/tail age bob、中心头 look、**左右头 aim（synced 目标 id + 目标眼高维度表 + 10°/40° rotlerp）** | — |
 | Parrot | 既有 `ParrotAnimationProvider` | flying/standing/sitting/on_shoulder + **PARTY（level event 1010/1011 → `IsPartyParrot`）** | — |

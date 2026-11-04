@@ -68,7 +68,11 @@ public readonly record struct EntityAnimationFrame(
     float RollAmount = 0f,
     bool IsPartyParrot = false,
     bool IsWorried = false,
-    bool IsThundering = false)
+    bool IsThundering = false,
+    float WitherHeadYaw1 = 0f,
+    float WitherHeadPitch1 = 0f,
+    float WitherHeadYaw2 = 0f,
+    float WitherHeadPitch2 = 0f)
 {
     /// <summary>Projects the generic render state onto the frame. The mesher calls this once per entity per frame.</summary>
     public static EntityAnimationFrame From(in EntityRenderState state) => new(
@@ -127,7 +131,11 @@ public readonly record struct EntityAnimationFrame(
         state.RollAmount,
         state.IsPartyParrot,
         state.IsWorried,
-        state.IsThundering);
+        state.IsThundering,
+        state.WitherHeadYaw1,
+        state.WitherHeadPitch1,
+        state.WitherHeadYaw2,
+        state.WitherHeadPitch2);
 }
 
 /// <summary>

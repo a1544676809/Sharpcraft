@@ -32,10 +32,9 @@ namespace Sharpcraft.Client.Render;
 /// procedural providers.
 /// </para>
 /// <para>
-/// Blocked (left at the bind pose): <c>right_head</c> / <c>left_head</c> require <c>WitherRenderState.xHeadRots[2]</c>
-/// and <c>yHeadRots[2]</c> plus <c>bodyRot</c>. Those arrays are the client-side per-head aim rotations computed in
-/// <c>WitherBoss.aiStep</c> from each head's alternative target entity and head world position; they are independent
-/// of the single synced head yaw / body yaw and therefore cannot be derived from <see cref="EntityAnimationFrame"/>.
+/// Side heads use <see cref="EntityAnimationFrame.WitherHeadYaw1"/>/<see cref="EntityAnimationFrame.WitherHeadPitch1"/>
+/// and the head-2 pair, derived by <c>WitherHeadAnimationState</c> from the synced alternative target ids, target eye
+/// positions (entity dimensions table) and the reference 10°/40° per-tick aim limits. Relative yaw = head yaw − body yaw.
 /// </para>
 /// </remarks>
 public sealed class WitherAnimationProvider(int typeId) : IEntityAnimationProvider
@@ -63,17 +62,28 @@ public sealed class WitherAnimationProvider(int typeId) : IEntityAnimationProvid
     public IEntityAnimationState CreateState() => new State();
 
     public void Apply(IEntityAnimationState state, in EntityAnimationFrame frame, EntityPose pose) =>
-        ApplyPose(frame.AgeInTicks + frame.PartialTick, frame.Pitch, frame.HeadYaw, frame.Yaw, pose);
+        ApplyPose(frame.AgeInTicks + frame.PartialTick, frame.Pitch, frame.HeadYaw, frame.Yaw,
+            frame.WitherHeadYaw1, frame.WitherHeadPitch1, frame.WitherHeadYaw2, frame.WitherHeadPitch2, pose);
 
     public void ApplyClip(IEntityAnimationState state, in EntityAnimationFrame frame, string clip, float seconds, EntityPose pose)
     {
         if (string.Equals(clip, "idle", StringComparison.Ordinal))
         {
-            ApplyPose(seconds * 20f, frame.Pitch, frame.HeadYaw, frame.Yaw, pose);
+            ApplyPose(seconds * 20f, frame.Pitch, frame.HeadYaw, frame.Yaw,
+                frame.WitherHeadYaw1, frame.WitherHeadPitch1, frame.WitherHeadYaw2, frame.WitherHeadPitch2, pose);
         }
     }
 
-    private static void ApplyPose(float ageInTicks, float pitch, float headYaw, float yaw, EntityPose pose)
+    private static void ApplyPose(
+        float ageInTicks,
+        float pitch,
+        float headYaw,
+        float yaw,
+        float headYaw1,
+        float headPitch1,
+        float headYaw2,
+        float headPitch2,
+        EntityPose pose)
     {
         var anim = MathF.Cos(ageInTicks * 0.1f);
 
@@ -93,6 +103,10 @@ public sealed class WitherAnimationProvider(int typeId) : IEntityAnimationProvid
         // centre head look: state.yRot = headRot - bodyRot (relative), state.xRot = pitch.
         var relativeYaw = WrapDegrees(headYaw - yaw);
         pose.Add("center_head", Rotation(pitch * DegreesToRadians, relativeYaw * DegreesToRadians, 0f));
+
+        // side heads: relative yaw = headYawN - bodyRot, xRot = headPitchN.
+        pose.Add("right_head", Rotation(headPitch1 * DegreesToRadians, WrapDegrees(headYaw1 - yaw) * DegreesToRadians, 0f));
+        pose.Add("left_head", Rotation(headPitch2 * DegreesToRadians, WrapDegrees(headYaw2 - yaw) * DegreesToRadians, 0f));
     }
 
     private static PoseOffset Rotation(float x, float y, float z) =>

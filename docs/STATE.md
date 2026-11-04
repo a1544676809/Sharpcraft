@@ -3290,6 +3290,13 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Client **1249**（+4），全量绿。
 - **下一步具体动作**：仅剩 Rabbit idle（实体 RNG/leash）与 Wither 侧头（目标眼高）需新数据源。
 
+### 2026-11-04 实体维度/眼高表 + Wither 侧头 aim（T-612）
+
+- 新增 `vanilla-entity-dimensions.tsv` / `EntityDimensionsRegistry`（注册顺序 id → width/height/eyeHeight），`TrackedEntity.EyeHeight/EyeY`、`EntityTracker.TryGetEyeY`。
+- `WitherHeadAnimationState`：读取同步替代目标 id，按目标实体眼高/头部世界坐标计算每头目标角，10°/40° rotlerp；帧新增 `WitherHeadYaw/Pitch1/2`；Wither provider 驱动左右头。
+- 验证：Common **486**（+2）、Client **1250**（+1），构建 0 警告 0 错误。
+- **下一步具体动作**：仅 Rabbit idle（实体 RNG/leash）仍阻塞；或收口 B 轮。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。
