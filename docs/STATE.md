@@ -3145,6 +3145,13 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Common **475**（+1）、Client **1160**，构建 0 警告 0 错误。
 - **下一步具体动作**：①`mainArm` 同步来源；②继续 backlog。
 
+### 2026-11-04 mainArm 同步（T-598）
+
+- `Mob` flags（index15 byte）bit1 → `IsLeftHanded` → `EntityAnimationFrame.IsLeftHanded`。
+- Illager/Piglin 的 ADMIRING、CROSSBOW_HOLD、CROSSBOW_CHARGE、ATTACKING 武器挥击按主手镜像（左撇子生物表现正确）。
+- 验证：Client **1161**（+1），构建 0 警告 0 错误。
+- **下一步具体动作**：①回 animation backlog（剩余多为 AI/渲染 transform：Wither/Wolf/Fox/Panda/PolarBear、Rabbit 等）；②或继续补齐组件表（food/tool/weapon/equippable 等）。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。

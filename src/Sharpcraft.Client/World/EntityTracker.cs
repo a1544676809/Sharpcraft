@@ -258,7 +258,8 @@ public readonly record struct EntityRenderState(
     int TicksUsingItem = 0,
     int OffHandItemId = -1,
     bool MainHandChargedCrossbow = false,
-    int MainHandQuickChargeLevel = 0);
+    int MainHandQuickChargeLevel = 0,
+    bool IsLeftHanded = false);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -790,6 +791,7 @@ public sealed class EntityTracker
                 OffHandItemId: entity.EquipmentItemAt(1),
                 MainHandChargedCrossbow: entity.EquipmentComponentsAt(0).HasChargedProjectiles,
                 MainHandQuickChargeLevel: entity.EquipmentComponentsAt(0).QuickChargeLevel,
+                IsLeftHanded: entity.Presentation.IsLeftHanded,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,
@@ -847,10 +849,11 @@ public sealed class EntityTracker
                 applied = true;
             }
 
-            // Mob flags byte (index 15, byte serializer): bit 2 = aggressive (reference Mob.isAggressive).
+            // Mob flags byte (index 15, byte serializer): bit 2 = aggressive, bit 1 = left-handed (reference Mob flags).
             if (item.Index == 15 && item.SerializerId == 0)
             {
                 entity.Presentation.IsAggressive = (item.Value & 4) != 0;
+                entity.Presentation.IsLeftHanded = (item.Value & 2) != 0;
                 applied = true;
             }
 

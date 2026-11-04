@@ -56,6 +56,9 @@ public sealed class EntityPresentationState
     /// <summary>Mob aggressive flag (reference <c>Mob.isAggressive</c>, synced DATA_MOB_FLAGS bit 2).</summary>
     public bool IsAggressive { get; internal set; }
 
+    /// <summary>Mob left-handed flag (reference <c>Mob.isLeftHanded</c>, synced DATA_MOB_FLAGS bit 1).</summary>
+    public bool IsLeftHanded { get; internal set; }
+
     /// <summary>Whether the entity is using an item (reference DATA_LIVING_ENTITY_FLAGS bit 0).</summary>
     public bool IsUsingItem { get; internal set; }
 

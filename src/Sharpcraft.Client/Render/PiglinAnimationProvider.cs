@@ -182,10 +182,21 @@ public sealed class PiglinAnimationProvider(int typeId) : IEntityAnimationProvid
                 // AnimationUtils.animateCrossbowCharge(right, left, maxCharge, ticksUsingItem, holdingInRightArm=true).
                 var maxCharge = MathF.Max(1f, MaxCrossbowChargeTicks - (5f * frame.MainHandQuickChargeLevel));
                 var charge = Math.Clamp((frame.TicksUsingItem + frame.PartialTick) / maxCharge, 0f, 1f);
-                rY = -0.8f;
-                rX = -0.97079635f;
-                lX = -0.97079635f + (((-MathF.PI / 2f) - (-0.97079635f)) * charge);
-                lY = 0.4f + ((0.85f - 0.4f) * charge);
+                if (!frame.IsLeftHanded)
+                {
+                    rY = -0.8f;
+                    rX = -0.97079635f;
+                    lX = -0.97079635f + (((-MathF.PI / 2f) - (-0.97079635f)) * charge);
+                    lY = 0.4f + ((0.85f - 0.4f) * charge);
+                }
+                else
+                {
+                    lY = 0.8f;
+                    lX = -0.97079635f;
+                    rX = -0.97079635f + (((-MathF.PI / 2f) - (-0.97079635f)) * charge);
+                    rY = -(0.4f + ((0.85f - 0.4f) * charge));
+                }
+
                 break;
             }
 
@@ -194,8 +205,17 @@ public sealed class PiglinAnimationProvider(int typeId) : IEntityAnimationProvid
                 // Head looks at the admired item; the non-main arm holds it up.
                 headXRot = 0.5f;
                 headYRot = 0f;
-                lY = 0.5f;
-                lX = -0.9f;
+                if (frame.IsLeftHanded)
+                {
+                    rY = -0.5f;
+                    rX = -0.9f;
+                }
+                else
+                {
+                    lY = 0.5f;
+                    lX = -0.9f;
+                }
+
                 break;
             }
 
@@ -204,17 +224,37 @@ public sealed class PiglinAnimationProvider(int typeId) : IEntityAnimationProvid
                 var swing = frame.SwingAnimation;
                 if (swing <= 0f)
                 {
-                    // holdWeaponHigh: main arm raised (mainArm is right for all vanilla piglins).
-                    rX = -1.8f;
+                    // holdWeaponHigh: main arm raised.
+                    if (frame.IsLeftHanded)
+                    {
+                        lX = -1.8f;
+                    }
+                    else
+                    {
+                        rX = -1.8f;
+                    }
+
                     break;
                 }
 
                 var attack2 = MathF.Sin(swing * MathF.PI);
                 var attack = MathF.Sin((1f - ((1f - swing) * (1f - swing))) * MathF.PI);
+                var mainRight = !frame.IsLeftHanded;
                 rY = MathF.PI / 20f;
                 lY = -MathF.PI / 20f;
-                rX = -1.8849558f + (MathF.Cos(age * 0.09f) * 0.15f) + (attack2 * 2.2f) - (attack * 0.4f);
-                lX = (MathF.Cos(age * 0.19f) * 0.5f) + (attack2 * 1.2f) - (attack * 0.4f);
+                if (mainRight)
+                {
+                    rX = -1.8849558f + (MathF.Cos(age * 0.09f) * 0.15f);
+                    lX = (MathF.Cos(age * 0.19f) * 0.5f) + (attack2 * 1.2f) - (attack * 0.4f);
+                    rX += (attack2 * 2.2f) - (attack * 0.4f);
+                }
+                else
+                {
+                    rX = (MathF.Cos(age * 0.19f) * 0.5f) + (attack2 * 1.2f) - (attack * 0.4f);
+                    lX = -1.8849558f + (MathF.Cos(age * 0.09f) * 0.15f);
+                    lX += (attack2 * 2.2f) - (attack * 0.4f);
+                }
+
                 // bobArms: right scale +1, left scale -1.
                 rZ += MathF.Cos(age * 0.09f) * 0.05f + 0.05f;
                 rX += MathF.Sin(age * 0.067f) * 0.05f;
@@ -225,11 +265,23 @@ public sealed class PiglinAnimationProvider(int typeId) : IEntityAnimationProvid
 
             case PiglinArmPose.CrossbowHold:
             {
-                // AnimationUtils.animateCrossbowHold(right, left, head, holdingInRightArm=true).
-                rY = -0.3f + headYRot;
-                lY = 0.6f + headYRot;
-                rX = (-MathF.PI / 2f) + headXRot + 0.1f;
-                lX = -1.5f + headXRot;
+                // AnimationUtils.animateCrossbowHold(right, left, head, holdingInRightArm = main arm is right).
+                var mainRight = !frame.IsLeftHanded;
+                if (mainRight)
+                {
+                    rY = -0.3f + headYRot;
+                    lY = 0.6f + headYRot;
+                    rX = (-MathF.PI / 2f) + headXRot + 0.1f;
+                    lX = -1.5f + headXRot;
+                }
+                else
+                {
+                    lY = 0.3f + headYRot;
+                    rY = -0.6f + headYRot;
+                    lX = (-MathF.PI / 2f) + headXRot + 0.1f;
+                    rX = -1.5f + headXRot;
+                }
+
                 break;
             }
 

@@ -35,7 +35,8 @@ public sealed class PiglinAnimationTests
         float partialTick = 0f,
         int offHandItemId = -1,
         bool chargedCrossbow = false,
-        int quickChargeLevel = 0) => new(
+        int quickChargeLevel = 0,
+        bool leftHanded = false) => new(
         TypeId: typeId,
         AgeInTicks: age,
         WalkAnimationPos: walkPos,
@@ -56,7 +57,8 @@ public sealed class PiglinAnimationTests
         TicksUsingItem: ticksUsingItem,
         OffHandItemId: offHandItemId,
         MainHandChargedCrossbow: chargedCrossbow,
-        MainHandQuickChargeLevel: quickChargeLevel);
+        MainHandQuickChargeLevel: quickChargeLevel,
+        IsLeftHanded: leftHanded);
 
     private static EntityPose Apply(PiglinAnimationProvider provider, IEntityAnimationState state, in EntityAnimationFrame frame)
     {
@@ -241,6 +243,11 @@ public sealed class PiglinAnimationTests
             Assert.Equal(0.5f, admiring.Get("head").Rotation.X, 5);
             Assert.Equal(0.5f, admiring.Get("left_arm").Rotation.Y, 5);
             Assert.Equal(-0.9f, admiring.Get("left_arm").Rotation.X, 5);
+
+            var leftHanded = Apply(provider, state, Frame(PiglinModelDefinition.PiglinEntityTypeId, offHandItemId: gold, leftHanded: true));
+            Assert.Equal(-0.5f, leftHanded.Get("right_arm").Rotation.Y, 5);
+            Assert.Equal(-0.9f, leftHanded.Get("right_arm").Rotation.X, 5);
+            Assert.Equal(0f, leftHanded.Get("left_arm").Rotation.X, 5);
 
             var melee = Apply(provider, state, Frame(PiglinModelDefinition.PiglinEntityTypeId, aggressive: true, mainHandItemId: sword, hasMainHand: true));
             Assert.Equal(-1.8f, melee.Get("right_arm").Rotation.X, 5);

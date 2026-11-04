@@ -161,15 +161,23 @@ public sealed class IllagerAnimationProvider(int typeId) : IEntityAnimationProvi
                 }
                 else
                 {
-                    // swingWeaponDown(mainArm = RIGHT) then bobArms.
+                    // swingWeaponDown(mainArm) then bobArms.
                     var attack2 = MathF.Sin(frame.SwingAnimation * MathF.PI);
                     var attack = MathF.Sin((1f - ((1f - frame.SwingAnimation) * (1f - frame.SwingAnimation))) * MathF.PI);
                     rY = MathF.PI / 20f;
                     lY = -MathF.PI / 20f;
                     rZ = bobZ;
                     lZ = -bobZ;
-                    rX = -1.8849558f + (MathF.Cos(age * 0.09f) * 0.15f) + (attack2 * 2.2f) - (attack * 0.4f) + bobX;
-                    lX = (MathF.Cos(age * 0.19f) * 0.5f) + (attack2 * 1.2f) - (attack * 0.4f) - bobX;
+                    if (!frame.IsLeftHanded)
+                    {
+                        rX = -1.8849558f + (MathF.Cos(age * 0.09f) * 0.15f) + (attack2 * 2.2f) - (attack * 0.4f) + bobX;
+                        lX = (MathF.Cos(age * 0.19f) * 0.5f) + (attack2 * 1.2f) - (attack * 0.4f) - bobX;
+                    }
+                    else
+                    {
+                        rX = (MathF.Cos(age * 0.19f) * 0.5f) + (attack2 * 1.2f) - (attack * 0.4f) + bobX;
+                        lX = -1.8849558f + (MathF.Cos(age * 0.09f) * 0.15f) + (attack2 * 2.2f) - (attack * 0.4f) - bobX;
+                    }
                 }
 
                 break;
@@ -191,21 +199,43 @@ public sealed class IllagerAnimationProvider(int typeId) : IEntityAnimationProvi
                 break;
 
             case IllagerArmPose.CrossbowHold:
-                rY = -0.3f + headYaw;
-                lY = 0.6f + headYaw;
-                rX = (-MathF.PI / 2f) + headPitch + 0.1f;
-                lX = -1.5f + headPitch;
+                if (!frame.IsLeftHanded)
+                {
+                    rY = -0.3f + headYaw;
+                    lY = 0.6f + headYaw;
+                    rX = (-MathF.PI / 2f) + headPitch + 0.1f;
+                    lX = -1.5f + headPitch;
+                }
+                else
+                {
+                    lY = 0.3f + headYaw;
+                    rY = -0.6f + headYaw;
+                    lX = (-MathF.PI / 2f) + headPitch + 0.1f;
+                    rX = -1.5f + headPitch;
+                }
+
                 break;
 
             case IllagerArmPose.CrossbowCharge:
-                // AnimationUtils.animateCrossbowCharge(rightArm, leftArm, maxCharge, ticksUsingItem, holdingInRightArm: true).
+                // AnimationUtils.animateCrossbowCharge(rightArm, leftArm, maxCharge, ticksUsingItem, holdingInRightArm: main is right).
                 // progress = min((ticksUsingItem + partialTick) / maxCharge, 1); quick_charge shortens maxCharge by 5 ticks per level.
                 var maxCharge = MathF.Max(1f, MaxCrossbowChargeTicks - (5f * frame.MainHandQuickChargeLevel));
                 var charge = Math.Clamp((frame.TicksUsingItem + frame.PartialTick) / maxCharge, 0f, 1f);
-                rY = -0.8f;
-                rX = -0.97079635f;
-                lX = -0.97079635f + (((-MathF.PI / 2f) - (-0.97079635f)) * charge);
-                lY = 0.4f + ((0.85f - 0.4f) * charge);
+                if (!frame.IsLeftHanded)
+                {
+                    rY = -0.8f;
+                    rX = -0.97079635f;
+                    lX = -0.97079635f + (((-MathF.PI / 2f) - (-0.97079635f)) * charge);
+                    lY = 0.4f + ((0.85f - 0.4f) * charge);
+                }
+                else
+                {
+                    lY = 0.8f;
+                    lX = -0.97079635f;
+                    rX = -0.97079635f + (((-MathF.PI / 2f) - (-0.97079635f)) * charge);
+                    rY = -(0.4f + ((0.85f - 0.4f) * charge));
+                }
+
                 break;
 
             case IllagerArmPose.Celebrating:

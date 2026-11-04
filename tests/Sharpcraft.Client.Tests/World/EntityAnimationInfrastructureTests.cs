@@ -340,6 +340,18 @@ public sealed class EntityAnimationInfrastructureTests
         Assert.Equal(2, state.MainHandQuickChargeLevel);
     }
 
+    [Fact]
+    public void MobFlagsProjectAggressiveAndLeftHanded()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(17, typeId: PiglinModelDefinition.PiglinEntityTypeId));
+        tracker.ApplyEntityData(17, [new EntityDataItem(15, 0, 6)]); // bits 1 (left-handed) and 2 (aggressive)
+
+        var state = tracker.Interpolate(0f)[0];
+        Assert.True(state.IsAggressive);
+        Assert.True(state.IsLeftHanded);
+    }
+
     private static AddedEntity Entity(int id, int typeId) =>
         new(id, Guid.Empty, typeId, 0, 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, 0);
 
