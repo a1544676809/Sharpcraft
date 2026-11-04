@@ -3262,6 +3262,12 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 验证：Client **1243**（+6），全量绿。
 - **下一步具体动作**：Wither 侧头（需 per-head targets）或 Parrot party（jukebox）；或收口。
 
+### 2026-11-04 Wither 侧头可行性评估
+
+- 结论：**左右头 per-head aim 仍阻塞**。参考需要每头替代目标实体 id + 目标实体的眼高/头部世界坐标 + 客户端每 tick `rotlerp(40°/10°)` 的瞄准状态；`EntityAnimationFrame` 只有单一 `HeadYaw`/`Yaw`，`TrackedEntity` 也不保存目标眼高。仅做"无目标时朝身体 yaw 缓动"会在有目标时明显不等效，故未实现、不近似。
+- 当前 Wither provider 已实现可等效部分（ribcage/tail age bob + 中心头 look）。
+- **下一步具体动作**：Parrot party（需 jukebox 状态），或收口 B 轮。
+
 ## 2026-11-04 压缩前交接快照
 
 - **分支 / HEAD**：`feature/item-registry`，`41b1e70 feat(render): Piglin group animation with derivable arm poses`。工作区除本文件外应干净。
