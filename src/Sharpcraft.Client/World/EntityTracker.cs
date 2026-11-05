@@ -348,6 +348,7 @@ public sealed class TrackedEntity
 /// <param name="ShowRightSleeve">Whether the right sleeve overlay is visible.</param>
 /// <param name="ShowLeftPants">Whether the left pants overlay is visible.</param>
 /// <param name="ShowRightPants">Whether the right pants overlay is visible.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.entity.state.EntityRenderState", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/state/EntityRenderState.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public readonly record struct EntityRenderState(
     int Id,
     int TypeId,

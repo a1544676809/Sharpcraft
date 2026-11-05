@@ -16,6 +16,7 @@ namespace Sharpcraft.Common.Identifiers;
 ///   <item><c>default(Identifier)</c> is not a valid identifier; its members read as empty strings.</item>
 /// </list>
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.resources.Identifier", "ref://mc-26.3-analysis/src/net/minecraft/resources/Identifier.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public readonly struct Identifier : IEquatable<Identifier>, IComparable<Identifier>
 {
     /// <summary>Separator between namespace and path.</summary>

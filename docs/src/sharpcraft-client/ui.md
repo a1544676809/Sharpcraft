@@ -80,3 +80,13 @@
 `UiMarkupTests`（9 项）：默认文档的树形、注释与自闭合、三类拒绝（未知元素/未知属性/根元素不是 `Screen`）、
 颜色两种写法、背景 + 每可见字符一格、堆叠间距与内边距落位、以及 64 帧零分配。
 `UiGeometryTests`（7 项）守护几何与批处理本身。
+
+<!-- BEGIN GENERATED: class-map -->
+
+| Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
+| --- | --- | --- | --- | --- | --- | --- |
+| Sharpcraft.Client | Sharpcraft.Client.Ui.ChatLog | Mirror | Partial | net.minecraft.client.multiplayer.chat.ChatLog | ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/chat/ChatLog.java | auto-resolved by name; verify |
+| Sharpcraft.Client | Sharpcraft.Client.Ui.GuiSpriteScaling | Mirror | Partial | net.minecraft.client.resources.metadata.gui.GuiSpriteScaling | ref://mc-26.3-analysis/src/net/minecraft/client/resources/metadata/gui/GuiSpriteScaling.java | auto-resolved by name; verify |
+| Sharpcraft.Client | Sharpcraft.Client.Ui.Tooltip | Mirror | Partial | net.minecraft.client.gui.components.Tooltip | ref://mc-26.3-analysis/src/net/minecraft/client/gui/components/Tooltip.java | auto-resolved by name; verify |
+
+<!-- END GENERATED: class-map -->

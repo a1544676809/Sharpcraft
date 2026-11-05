@@ -9,6 +9,7 @@ namespace Sharpcraft.Common.World;
 /// One column of chunk sections. Block coordinates are chunk-local in <c>[0, 15]</c>; the world
 /// Y axis spans <see cref="MinSectionY"/>..<see cref="MaxSectionY"/> inclusive.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.chunk.LevelChunk", "ref://mc-26.3-analysis/src/net/minecraft/world/level/chunk/LevelChunk.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed class LevelChunk
 {
     private readonly ChunkSection?[] _sections;

@@ -14,6 +14,7 @@ namespace Sharpcraft.Client.Render;
 /// <param name="Y">Block Y of the entity's block.</param>
 /// <param name="Z">Block Z of the entity's block.</param>
 /// <param name="TypeId">Registry id of the block entity type.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/state/BlockEntityRenderState.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public readonly record struct BlockEntityRenderState(float X, float Y, float Z, int TypeId);
 
 /// <summary>

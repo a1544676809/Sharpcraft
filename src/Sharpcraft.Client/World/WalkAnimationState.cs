@@ -14,6 +14,7 @@ namespace Sharpcraft.Client.World;
 /// <c>position(partial) = (position - speed * (1 - partial)) * positionScale</c>
 /// (docs/analysis/render/entity-animation.md).
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.entity.WalkAnimationState", "ref://mc-26.3-analysis/src/net/minecraft/world/entity/WalkAnimationState.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed class WalkAnimationState
 {
     private float _speedOld;

@@ -7,6 +7,7 @@ namespace Sharpcraft.Common.Identifiers;
 /// Thrown when an <see cref="Identifier"/> violates the naming rules.
 /// Mirrors the vanilla split between namespace and path diagnostics.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.IdentifierException", "ref://mc-26.3-analysis/src/net/minecraft/IdentifierException.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed class IdentifierException : Exception
 {
     /// <summary>Creates the exception with a message.</summary>

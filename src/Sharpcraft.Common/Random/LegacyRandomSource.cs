@@ -14,6 +14,7 @@ namespace Sharpcraft.Common.Random;
 /// Vanilla's <c>RandomSource.create(seed)</c> returns this implementation, not xoroshiro;
 /// entities, block random ticks and particles all draw from it.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.levelgen.LegacyRandomSource", "ref://mc-26.3-analysis/src/net/minecraft/world/level/levelgen/LegacyRandomSource.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed class LegacyRandomSource : IRandomSource
 {
     private const int ModulusBits = 48;

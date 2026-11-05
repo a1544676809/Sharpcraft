@@ -11,6 +11,7 @@ namespace Sharpcraft.Common.Registries;
 /// Ids are assigned in insertion order and are never reused; the by-id side is sparse
 /// until filled. Values are compared by reference, matching the vanilla identity map.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.core.IdMapper", "ref://mc-26.3-analysis/src/net/minecraft/core/IdMapper.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed class IdMapper<T>
     where T : class
 {

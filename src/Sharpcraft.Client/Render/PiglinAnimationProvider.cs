@@ -8,6 +8,7 @@ using Sharpcraft.Common.Identifiers;
 namespace Sharpcraft.Client.Render;
 
 /// <summary>Piglin arm poses in reference <c>PiglinArmPose</c> ordinal order.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.entity.monster.piglin.PiglinArmPose", "ref://mc-26.3-analysis/src/net/minecraft/world/entity/monster/piglin/PiglinArmPose.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public enum PiglinArmPose
 {
     AttackingWithMeleeWeapon = 0,

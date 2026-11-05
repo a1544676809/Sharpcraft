@@ -16,6 +16,7 @@ namespace Sharpcraft.Common.World;
 /// Vanilla uses three strategies (single value, local palette, global direct); this type supports
 /// the first two for writing and all three for reading.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.chunk.PalettedContainer", "ref://mc-26.3-analysis/src/net/minecraft/world/level/chunk/PalettedContainer.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed class PalettedContainer
 {
     /// <summary>Maximum bits per entry used with a local palette.</summary>

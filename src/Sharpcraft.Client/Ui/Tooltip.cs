@@ -13,6 +13,7 @@ namespace Sharpcraft.Client.Ui;
 /// The colours are the reference's: a near black background with a purple frame. The box is kept inside the canvas so a
 /// run near an edge does not put its tip off screen.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.gui.components.Tooltip", "ref://mc-26.3-analysis/src/net/minecraft/client/gui/components/Tooltip.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public static class Tooltip
 {
     /// <summary>Background of the box.</summary>

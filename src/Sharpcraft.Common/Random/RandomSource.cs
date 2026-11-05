@@ -11,6 +11,7 @@ namespace Sharpcraft.Common.Random;
 /// xoroshiro; this was confirmed both in source and by comparing observed streams
 /// (docs/analysis/common/random-vectors.md).
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.util.RandomSource", "ref://mc-26.3-analysis/src/net/minecraft/util/RandomSource.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public static class RandomSource
 {
     /// <summary>Creates the default generator for a seed.</summary>

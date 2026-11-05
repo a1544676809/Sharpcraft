@@ -8,6 +8,7 @@ namespace Sharpcraft.Common.Random;
 /// <c>MarsagliaPolarGaussian</c>: every second call returns the cached sample, and
 /// reseeding must clear the cache.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.levelgen.MarsagliaPolarGaussian", "ref://mc-26.3-analysis/src/net/minecraft/world/level/levelgen/MarsagliaPolarGaussian.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed class MarsagliaPolarGaussian
 {
     private readonly IRandomSource _source;

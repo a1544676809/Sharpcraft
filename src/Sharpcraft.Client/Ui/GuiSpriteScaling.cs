@@ -38,6 +38,7 @@ public readonly record struct GuiSpriteBorder(int Left, int Top, int Right, int 
 /// <c>nine_slice</c> with a nominal size, per-side borders and an optional inner stretch. The nominal size is what the
 /// sprite is treated as, which is not necessarily the image's pixel size, so a resource pack can re-scale the art.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.resources.metadata.gui.GuiSpriteScaling", "ref://mc-26.3-analysis/src/net/minecraft/client/resources/metadata/gui/GuiSpriteScaling.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed record GuiSpriteScaling
 {
     /// <summary>Scaling form.</summary>

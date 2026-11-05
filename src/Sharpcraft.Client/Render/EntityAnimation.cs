@@ -196,6 +196,7 @@ public sealed class KeyframeAnimation
 }
 
 /// <summary>Reference-compatible animation clock: start tick and elapsed milliseconds.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.entity.AnimationState", "ref://mc-26.3-analysis/src/net/minecraft/world/entity/AnimationState.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed class AnimationState
 {
     private const int Stopped = int.MinValue;

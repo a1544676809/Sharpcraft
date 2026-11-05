@@ -23,6 +23,7 @@ public sealed record BlockFaceTextures(Identifier Top, Identifier Side, Identifi
 /// tiles the texture inside each quad. Multipart conditions, property-driven variants, overlays and
 /// tint indices are out of scope and documented as such.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.block.BlockModelResolver", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/BlockModelResolver.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed class BlockModelResolver
 {
     private readonly AssetStack _stack;

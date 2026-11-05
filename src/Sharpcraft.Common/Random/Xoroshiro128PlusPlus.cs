@@ -10,6 +10,7 @@ namespace Sharpcraft.Common.Random;
 /// <c>XoroshiroRandomSource</c>), bit-compatible with 26.3.
 /// See docs/analysis/common/random.md.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.levelgen.Xoroshiro128PlusPlus", "ref://mc-26.3-analysis/src/net/minecraft/world/level/levelgen/Xoroshiro128PlusPlus.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed class Xoroshiro128PlusPlus
 {
     private const long FallbackLo = unchecked((long)0x9E37_79B9_7F4A_7C15UL);

@@ -14,6 +14,7 @@ namespace Sharpcraft.Common.Network;
 /// <param name="HandshakeHost">Address to advertise in the handshake (the user-supplied one).</param>
 /// <param name="HandshakePort">Port to advertise in the handshake.</param>
 /// <param name="UsedSrv">Whether an SRV record was used.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.multiplayer.resolver.ResolvedServerAddress", "ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/resolver/ResolvedServerAddress.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed record ResolvedServerAddress(
     string ConnectHost,
     int ConnectPort,
@@ -30,6 +31,7 @@ public sealed record ResolvedServerAddress(
 /// The handshake keeps advertising the address the user typed, because proxies and
 /// forwarding setups match on it; only the TCP destination comes from the SRV record.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.multiplayer.resolver.ServerAddressResolver", "ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/resolver/ServerAddressResolver.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public static class ServerAddressResolver
 {
     /// <summary>Default Minecraft port.</summary>

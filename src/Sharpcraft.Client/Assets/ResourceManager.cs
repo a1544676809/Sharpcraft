@@ -14,6 +14,7 @@ namespace Sharpcraft.Client.Assets;
 /// what we did before, discovered and opened the same packs several times and would have made a reload fire more than
 /// once. This type owns the stack for the whole session instead.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.server.packs.resources.ResourceManager", "ref://mc-26.3-analysis/src/net/minecraft/server/packs/resources/ResourceManager.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed class ResourceManager : IDisposable
 {
     private AssetStack _stack;

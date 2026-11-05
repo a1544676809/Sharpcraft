@@ -22,7 +22,7 @@ public static class ClassMapTool
     private const string EndMarker = "<!-- END GENERATED: class-map -->";
 
     private static readonly string[] ScanProjects =
-        ["Sharpcraft.Client", "Sharpcraft.Common", "Sharpcraft.Framework", "Sharpcraft.Server", "Sharpcraft.Auth", "Sharpcraft.Modding", "Sharpcraft.Launcher"];
+        ["Sharpcraft.Client", "Sharpcraft.Common",  "Sharpcraft.Server", "Sharpcraft.Auth", "Sharpcraft.Modding", "Sharpcraft.Launcher"];
 
     private static readonly Regex NamespaceRx = new(@"^\s*namespace\s+([\w.]+)", RegexOptions.Compiled);
     private static readonly Regex AttrRx = new(@"\[(?:[\w.]+\.)?ReferenceClass\(\s*""(?<cls>[^""]+)""\s*,\s*""(?<path>[^""]+)""(?<rest>[^\]]*)\]", RegexOptions.Compiled);
@@ -428,5 +428,6 @@ public static class ClassMapTool
         return [simple];
     }
 }
+
 
 

@@ -8,6 +8,7 @@ namespace Sharpcraft.Common.World;
 /// <c>ColorMapColorUtil.get</c> (docs/modules/weather-and-sky-color.md 6.1). Inputs are expected already clamped to
 /// 0..1 (the reference clamps them before calling, in <c>Biome.getGrassColorFromTexture</c>).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.ColorMapColorUtil", "ref://mc-26.3-analysis/src/net/minecraft/world/level/ColorMapColorUtil.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public static class ColorMapColorUtil
 {
     /// <summary>

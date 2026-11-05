@@ -53,8 +53,11 @@
 | Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
 | --- | --- | --- | --- | --- | --- | --- |
 | Sharpcraft.Client | Sharpcraft.Client.World.EntityAnimationFrame | Adapter | Partial | net.minecraft.client.renderer.entity.state.LivingEntityRenderState | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/state/LivingEntityRenderState.java | Snapshot fed to animation providers |
+| Sharpcraft.Client | Sharpcraft.Client.World.EntityEquipment | Mirror | Partial | net.minecraft.world.entity.EntityEquipment | ref://mc-26.3-analysis/src/net/minecraft/world/entity/EntityEquipment.java | auto-resolved by name; verify |
 | Sharpcraft.Client | Sharpcraft.Client.World.EntityPresentationState | Merged | Partial | net.minecraft.world.entity.Entity | ref://mc-26.3-analysis/src/net/minecraft/world/entity/Entity.java | Client-side presentation state aggregated from synced data |
+| Sharpcraft.Client | Sharpcraft.Client.World.EntityRenderState | Mirror | Partial | net.minecraft.client.renderer.entity.state.EntityRenderState | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/state/EntityRenderState.java | auto-resolved by name; verify |
 | Sharpcraft.Client | Sharpcraft.Client.World.EntityTracker | Merged | Partial | net.minecraft.client.multiplayer.ClientLevel | ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/ClientLevel.java | Merges ClientLevel/Entity/SteppedInterpolationHandler responsibilities; position sync per T-639/T-640 |
 | Sharpcraft.Client | Sharpcraft.Client.World.SwingAnimationState | Merged | Partial | net.minecraft.world.entity.LivingEntity | ref://mc-26.3-analysis/src/net/minecraft/world/entity/LivingEntity.java | swingDuration/swingTime/swinging fields |
+| Sharpcraft.Client | Sharpcraft.Client.World.WalkAnimationState | Mirror | Partial | net.minecraft.world.entity.WalkAnimationState | ref://mc-26.3-analysis/src/net/minecraft/world/entity/WalkAnimationState.java | auto-resolved by name; verify |
 
 <!-- END GENERATED: class-map -->

@@ -4,6 +4,7 @@
 namespace Sharpcraft.Common.Registries;
 
 /// <summary>Numeric ids of the vanilla attributes, from the registration-order snapshot (names/order metadata only).</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.attribute.AttributeTypes", "ref://mc-26.3-analysis/src/net/minecraft/world/attribute/AttributeTypes.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public static class AttributeTypes
 {
     private static readonly Lazy<Dictionary<string, int>> Ids = new(Load);

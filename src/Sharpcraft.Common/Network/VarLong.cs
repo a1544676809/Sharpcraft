@@ -7,6 +7,7 @@ namespace Sharpcraft.Common.Network;
 /// Base-128 variable-length integer encoding for 64-bit values
 /// (docs/specs/network/primitives-varint.md).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.network.VarLong", "ref://mc-26.3-analysis/src/net/minecraft/network/VarLong.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public static class VarLong
 {
     /// <summary>Maximum encoded size of a 64-bit value.</summary>

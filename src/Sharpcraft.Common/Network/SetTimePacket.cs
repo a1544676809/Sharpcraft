@@ -4,6 +4,7 @@
 namespace Sharpcraft.Common.Network;
 
 /// <summary>Network state of one world clock (docs/modules/time.md): total ticks, sub-tick partial, and rate.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.clock.ClockNetworkState", "ref://mc-26.3-analysis/src/net/minecraft/world/clock/ClockNetworkState.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public readonly record struct ClockNetworkState(long TotalTicks, float PartialTick, float Rate);
 
 /// <summary>

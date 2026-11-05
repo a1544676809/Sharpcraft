@@ -7,21 +7,6 @@
 
 | Sharpcraft type | 我们的文件 | 候选原版类 | 匹配路径 | 状态 |
 | --- | --- | --- | --- | --- |
-| Sharpcraft.Auth.AuthError | src/Sharpcraft.Auth/AuthModels.cs | AuthError |  | 未匹配 |
-| Sharpcraft.Auth.AuthException | src/Sharpcraft.Auth/AuthModels.cs | AuthException |  | 未匹配 |
-| Sharpcraft.Auth.DeviceCodeChallenge | src/Sharpcraft.Auth/AuthModels.cs | DeviceCodeChallenge |  | 未匹配 |
-| Sharpcraft.Auth.MicrosoftToken | src/Sharpcraft.Auth/AuthModels.cs | MicrosoftToken |  | 未匹配 |
-| Sharpcraft.Auth.MinecraftProfile | src/Sharpcraft.Auth/AuthModels.cs | MinecraftProfile |  | 未匹配 |
-| Sharpcraft.Auth.MinecraftSession | src/Sharpcraft.Auth/AuthModels.cs | MinecraftSession |  | 未匹配 |
-| Sharpcraft.Auth.XboxUserToken | src/Sharpcraft.Auth/AuthModels.cs | XboxUserToken |  | 未匹配 |
-| Sharpcraft.Auth.XstsToken | src/Sharpcraft.Auth/AuthModels.cs | XstsToken |  | 未匹配 |
-| Sharpcraft.Auth.DeviceCodeFlow | src/Sharpcraft.Auth/DeviceCodeFlow.cs | DeviceCodeFlow |  | 未匹配 |
-| Sharpcraft.Auth.IdentityEndpoints | src/Sharpcraft.Auth/IdentityEndpoints.cs | IdentityEndpoints |  | 未匹配 |
-| Sharpcraft.Auth.MinecraftServicesClient | src/Sharpcraft.Auth/MinecraftServicesClient.cs | MinecraftServicesClient |  | 未匹配 |
-| Sharpcraft.Auth.SessionServerClient | src/Sharpcraft.Auth/SessionServerClient.cs | SessionServerClient |  | 未匹配 |
-| Sharpcraft.Auth.StoredTokens | src/Sharpcraft.Auth/TokenStore.cs | StoredTokens |  | 未匹配 |
-| Sharpcraft.Auth.TokenStore | src/Sharpcraft.Auth/TokenStore.cs | TokenStore |  | 未匹配 |
-| Sharpcraft.Auth.XboxLiveAuthenticator | src/Sharpcraft.Auth/XboxLiveAuthenticator.cs | XboxLiveAuthenticator |  | 未匹配 |
 | Sharpcraft.Client.Assets.AnimationFrameSize | src/Sharpcraft.Client/Assets/AnimationFrameSize.cs | AnimationFrameSize |  | 未匹配 |
 | Sharpcraft.Client.Assets.AssetPackEntry | src/Sharpcraft.Client/Assets/AssetPackManifest.cs | AssetPackEntry |  | 未匹配 |
 | Sharpcraft.Client.Assets.AssetPackManifest | src/Sharpcraft.Client/Assets/AssetPackManifest.cs | AssetPackManifest |  | 未匹配 |
@@ -75,12 +60,7 @@
 | Sharpcraft.Client.Input.InputAction | src/Sharpcraft.Client/Input/InputMapper.cs | InputAction |  | 未匹配 |
 | Sharpcraft.Client.Input.InputMapper | src/Sharpcraft.Client/Input/InputMapper.cs | InputMapper |  | 未匹配 |
 | Sharpcraft.Client.Input.KeyBindings | src/Sharpcraft.Client/Input/InputMapper.cs | KeyBindings |  | 未匹配 |
-| Sharpcraft.Client.Render.AllayAnimationProvider | src/Sharpcraft.Client/Render/AllayAnimationProvider.cs | AllayModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/allay/AllayModel.java | resolved |
-| Sharpcraft.Client.Render.AllayModelDefinition | src/Sharpcraft.Client/Render/AllayModelDefinition.cs | AllayModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/allay/AllayModel.java | resolved |
 | Sharpcraft.Client.Render.AnimationClipPlayer | src/Sharpcraft.Client/Render/AnimationClipPlayer.cs | AnimationClipPlayer |  | 未匹配 |
-| Sharpcraft.Client.Render.ArmadilloAnimationProvider | src/Sharpcraft.Client/Render/ArmadilloAnimationProvider.cs | ArmadilloModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/armadillo/ArmadilloModel.java | resolved |
-| Sharpcraft.Client.Render.ArmadilloAnimations | src/Sharpcraft.Client/Render/ArmadilloAnimations.cs | ArmadilloAnimation | ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/ArmadilloAnimation.java | resolved |
-| Sharpcraft.Client.Render.ArmadilloModelDefinition | src/Sharpcraft.Client/Render/ArmadilloModelDefinition.cs | ArmadilloModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/armadillo/ArmadilloModel.java | resolved |
 | Sharpcraft.Client.Render.AxolotlAnimationProvider | src/Sharpcraft.Client/Render/AxolotlAnimationProvider.cs | AxolotlModel / AxolotlAnimation |  | 未匹配 |
 | Sharpcraft.Client.Render.AxolotlAnimations | src/Sharpcraft.Client/Render/AxolotlAnimations.cs | AxolotlAnimation |  | 未匹配 |
 | Sharpcraft.Client.Render.AxolotlModelDefinition | src/Sharpcraft.Client/Render/AxolotlModelDefinition.cs | AxolotlModel |  | 未匹配 |
@@ -93,15 +73,8 @@
 | Sharpcraft.Client.Render.BabyModelDefinitionsMisc | src/Sharpcraft.Client/Render/BabyModelDefinitionsMisc.cs | BabyModelDefinitionsMisc |  | 未匹配 |
 | Sharpcraft.Client.Render.BabyModelDefinitionsNether | src/Sharpcraft.Client/Render/BabyModelDefinitionsNether.cs | BabyModelDefinitionsNether |  | 未匹配 |
 | Sharpcraft.Client.Render.BabyModelDefinitionsOdd | src/Sharpcraft.Client/Render/BabyModelDefinitionsOdd.cs | BabyModelDefinitionsOdd |  | 未匹配 |
-| Sharpcraft.Client.Render.BatAnimationProvider | src/Sharpcraft.Client/Render/BatAnimationProvider.cs | BatModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/ambient/BatModel.java | resolved |
-| Sharpcraft.Client.Render.BatAnimations | src/Sharpcraft.Client/Render/BatAnimations.cs | BatAnimation | ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/BatAnimation.java | resolved |
-| Sharpcraft.Client.Render.BatModelDefinition | src/Sharpcraft.Client/Render/BatModelDefinition.cs | BatModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/ambient/BatModel.java | resolved |
-| Sharpcraft.Client.Render.BeeAnimationProvider | src/Sharpcraft.Client/Render/BeeAnimationProvider.cs | BeeModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/bee/BeeModel.java | resolved |
-| Sharpcraft.Client.Render.BeeModelDefinition | src/Sharpcraft.Client/Render/BeeModelDefinition.cs | BeeModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/bee/BeeModel.java | resolved |
 | Sharpcraft.Client.Render.BiomeTint | src/Sharpcraft.Client/Render/BiomeTint.cs | BiomeTint |  | 未匹配 |
 | Sharpcraft.Client.Render.BlockTintKind | src/Sharpcraft.Client/Render/BiomeTint.cs | BlockTintKind |  | 未匹配 |
-| Sharpcraft.Client.Render.BlazeAnimationProvider | src/Sharpcraft.Client/Render/BlazeAnimationProvider.cs | BlazeModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/blaze/BlazeModel.java | resolved |
-| Sharpcraft.Client.Render.BlazeModelDefinition | src/Sharpcraft.Client/Render/BlazeModelDefinition.cs | BlazeModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/blaze/BlazeModel.java | resolved |
 | Sharpcraft.Client.Render.BlockEntityPlaceholderMesher | src/Sharpcraft.Client/Render/BlockEntityPlaceholderMesher.cs | BlockEntityPlaceholderMesher |  | 未匹配 |
 | Sharpcraft.Client.Render.BlockEntityRenderState | src/Sharpcraft.Client/Render/BlockEntityPlaceholderMesher.cs | BlockEntityRenderState | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/state/BlockEntityRenderState.java | resolved |
 | Sharpcraft.Client.Render.BlockLayer | src/Sharpcraft.Client/Render/BlockLayerRules.cs | BlockLayer |  | 未匹配 |
@@ -109,19 +82,11 @@
 | Sharpcraft.Client.Render.BlockLightFlicker | src/Sharpcraft.Client/Render/BlockLightFlicker.cs | BlockLightFlicker |  | 未匹配 |
 | Sharpcraft.Client.Render.BlockRenderLayers | src/Sharpcraft.Client/Render/BlockRenderLayers.cs | BlockRenderLayers |  | 未匹配 |
 | Sharpcraft.Client.Render.BlockTintTable | src/Sharpcraft.Client/Render/BlockTintTable.cs | BlockTintTable |  | 未匹配 |
-| Sharpcraft.Client.Render.BreezeAnimationProvider | src/Sharpcraft.Client/Render/BreezeAnimationProvider.cs | BreezeModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/breeze/BreezeModel.java | resolved |
-| Sharpcraft.Client.Render.BreezeAnimations | src/Sharpcraft.Client/Render/BreezeAnimations.cs | BreezeAnimation | ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/BreezeAnimation.java | resolved |
-| Sharpcraft.Client.Render.BreezeModelDefinition | src/Sharpcraft.Client/Render/BreezeModelDefinition.cs | BreezeModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/breeze/BreezeModel.java | resolved |
-| Sharpcraft.Client.Render.CamelAnimationProvider | src/Sharpcraft.Client/Render/CamelAnimationProvider.cs | CamelModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/camel/CamelModel.java | resolved |
-| Sharpcraft.Client.Render.CamelAnimations | src/Sharpcraft.Client/Render/CamelAnimations.cs | CamelAnimation | ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/CamelAnimation.java | resolved |
-| Sharpcraft.Client.Render.CamelModelDefinition | src/Sharpcraft.Client/Render/CamelModelDefinition.cs | CamelModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/camel/CamelModel.java | resolved |
 | Sharpcraft.Client.Render.CameraJitter | src/Sharpcraft.Client/Render/CameraJitter.cs | CameraJitter |  | 未匹配 |
 | Sharpcraft.Client.Render.CatModelDefinition | src/Sharpcraft.Client/Render/CatModelDefinition.cs | CatModel |  | 未匹配 |
 | Sharpcraft.Client.Render.CaveSpiderModelDefinition | src/Sharpcraft.Client/Render/CaveSpiderModelDefinition.cs | CaveSpiderModel |  | 未匹配 |
 | Sharpcraft.Client.Render.CelestialGeometry | src/Sharpcraft.Client/Render/CelestialGeometry.cs | CelestialGeometry |  | 未匹配 |
 | Sharpcraft.Client.Render.CelestialMeshBuilder | src/Sharpcraft.Client/Render/CelestialMeshBuilder.cs | CelestialMeshBuilder |  | 未匹配 |
-| Sharpcraft.Client.Render.ChickenAnimationProvider | src/Sharpcraft.Client/Render/ChickenAnimationProvider.cs | ChickenModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/chicken/ChickenModel.java | resolved |
-| Sharpcraft.Client.Render.ChickenModelDefinition | src/Sharpcraft.Client/Render/ChickenModelDefinition.cs | ChickenModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/chicken/ChickenModel.java | resolved |
 | Sharpcraft.Client.Render.ChunkMeshCache | src/Sharpcraft.Client/Render/ChunkMeshCache.cs | ChunkMeshCache |  | 未匹配 |
 | Sharpcraft.Client.Render.ChunkMesher | src/Sharpcraft.Client/Render/ChunkMesher.cs | ChunkMesher |  | 未匹配 |
 | Sharpcraft.Client.Render.MeshData | src/Sharpcraft.Client/Render/ChunkMesher.cs | MeshData | ref://mc-26.3-analysis/src/com/mojang/blaze3d/vertex/MeshData.java | resolved |
@@ -132,38 +97,16 @@
 | Sharpcraft.Client.Render.CloudMeshBuilder | src/Sharpcraft.Client/Render/CloudMeshBuilder.cs | CloudMeshBuilder |  | 未匹配 |
 | Sharpcraft.Client.Render.CloudQuad | src/Sharpcraft.Client/Render/CloudMeshBuilder.cs | CloudQuad |  | 未匹配 |
 | Sharpcraft.Client.Render.CloudRangePolicy | src/Sharpcraft.Client/Render/CloudRangePolicy.cs | CloudRangePolicy |  | 未匹配 |
-| Sharpcraft.Client.Render.CodAnimationProvider | src/Sharpcraft.Client/Render/CodAnimationProvider.cs | CodModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/fish/CodModel.java | resolved |
-| Sharpcraft.Client.Render.CodModelDefinition | src/Sharpcraft.Client/Render/CodModelDefinition.cs | CodModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/fish/CodModel.java | resolved |
-| Sharpcraft.Client.Render.CopperGolemAnimationProvider | src/Sharpcraft.Client/Render/CopperGolemAnimationProvider.cs | CopperGolemModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/golem/CopperGolemModel.java | resolved |
-| Sharpcraft.Client.Render.CopperGolemAnimations | src/Sharpcraft.Client/Render/CopperGolemAnimations.cs | CopperGolemAnimation | ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/CopperGolemAnimation.java | resolved |
-| Sharpcraft.Client.Render.CopperGolemModelDefinition | src/Sharpcraft.Client/Render/CopperGolemModelDefinition.cs | CopperGolemModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/golem/CopperGolemModel.java | resolved |
-| Sharpcraft.Client.Render.CowModelDefinition | src/Sharpcraft.Client/Render/CowModelDefinition.cs | CowModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/cow/CowModel.java | resolved |
-| Sharpcraft.Client.Render.CreakingAnimationProvider | src/Sharpcraft.Client/Render/CreakingAnimationProvider.cs | CreakingModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/creaking/CreakingModel.java | resolved |
-| Sharpcraft.Client.Render.CreakingAnimations | src/Sharpcraft.Client/Render/CreakingAnimations.cs | CreakingAnimation | ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/CreakingAnimation.java | resolved |
-| Sharpcraft.Client.Render.CreakingModelDefinition | src/Sharpcraft.Client/Render/CreakingModelDefinition.cs | CreakingModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/creaking/CreakingModel.java | resolved |
-| Sharpcraft.Client.Render.CreeperModelDefinition | src/Sharpcraft.Client/Render/CreeperModelDefinition.cs | CreeperModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/creeper/CreeperModel.java | resolved |
-| Sharpcraft.Client.Render.DolphinAnimationProvider | src/Sharpcraft.Client/Render/DolphinAnimationProvider.cs | DolphinModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/dolphin/DolphinModel.java | resolved |
-| Sharpcraft.Client.Render.DolphinModelDefinition | src/Sharpcraft.Client/Render/DolphinModelDefinition.cs | DolphinModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/dolphin/DolphinModel.java | resolved |
-| Sharpcraft.Client.Render.EnderDragonAnimationProvider | src/Sharpcraft.Client/Render/EnderDragonAnimationProvider.cs | EnderDragonModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/dragon/EnderDragonModel.java | resolved |
 | Sharpcraft.Client.Render.State | src/Sharpcraft.Client/Render/EnderDragonAnimationProvider.cs | State |  | 未匹配 |
-| Sharpcraft.Client.Render.EnderDragonModelDefinition | src/Sharpcraft.Client/Render/EnderDragonModelDefinition.cs | EnderDragonModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/dragon/EnderDragonModel.java | resolved |
-| Sharpcraft.Client.Render.EndermanAnimationProvider | src/Sharpcraft.Client/Render/EndermanAnimationProvider.cs | EndermanModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/enderman/EndermanModel.java | resolved |
-| Sharpcraft.Client.Render.EndermiteAnimationProvider | src/Sharpcraft.Client/Render/EndermiteAnimationProvider.cs | EndermiteModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/endermite/EndermiteModel.java | resolved |
-| Sharpcraft.Client.Render.EndermiteModelDefinition | src/Sharpcraft.Client/Render/EndermiteModelDefinition.cs | EndermiteModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/endermite/EndermiteModel.java | resolved |
-| Sharpcraft.Client.Render.AnimationChannel | src/Sharpcraft.Client/Render/EntityAnimation.cs | AnimationChannel | ref://mc-26.3-analysis/src/net/minecraft/client/animation/AnimationChannel.java | resolved |
-| Sharpcraft.Client.Render.AnimationDefinition | src/Sharpcraft.Client/Render/EntityAnimation.cs | AnimationDefinition | ref://mc-26.3-analysis/src/net/minecraft/client/animation/AnimationDefinition.java | resolved |
 | Sharpcraft.Client.Render.AnimationInterpolation | src/Sharpcraft.Client/Render/EntityAnimation.cs | AnimationInterpolation |  | 未匹配 |
 | Sharpcraft.Client.Render.AnimationKeyframe | src/Sharpcraft.Client/Render/EntityAnimation.cs | AnimationKeyframe |  | 未匹配 |
 | Sharpcraft.Client.Render.AnimationState | src/Sharpcraft.Client/Render/EntityAnimation.cs | AnimationState | ref://mc-26.3-analysis/src/net/minecraft/world/entity/AnimationState.java | resolved |
 | Sharpcraft.Client.Render.AnimationTarget | src/Sharpcraft.Client/Render/EntityAnimation.cs | AnimationTarget |  | 未匹配 |
 | Sharpcraft.Client.Render.EntityPose | src/Sharpcraft.Client/Render/EntityAnimation.cs | EntityPose |  | 未匹配 |
 | Sharpcraft.Client.Render.Entry | src/Sharpcraft.Client/Render/EntityAnimation.cs | Entry |  | 未匹配 |
-| Sharpcraft.Client.Render.KeyframeAnimation | src/Sharpcraft.Client/Render/EntityAnimation.cs | KeyframeAnimation | ref://mc-26.3-analysis/src/net/minecraft/client/animation/KeyframeAnimation.java | resolved |
-| Sharpcraft.Client.Render.KeyframeAnimations | src/Sharpcraft.Client/Render/EntityAnimation.cs | KeyframeAnimation | ref://mc-26.3-analysis/src/net/minecraft/client/animation/KeyframeAnimation.java | resolved |
 | Sharpcraft.Client.Render.PoseOffset | src/Sharpcraft.Client/Render/EntityAnimation.cs | PoseOffset |  | 未匹配 |
 | Sharpcraft.Client.Render.EntityAnimationRegistry | src/Sharpcraft.Client/Render/EntityAnimationProvider.cs | EntityAnimationRegistry |  | 未匹配 |
 | Sharpcraft.Client.Render.IEntityAnimationProvider | src/Sharpcraft.Client/Render/EntityAnimationProvider.cs | IEntityModel / IEntityAnimation |  | 未匹配 |
-| Sharpcraft.Client.Render.EntityModelDefinition | src/Sharpcraft.Client/Render/EntityModelDefinition.cs | EntityModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/EntityModel.java | resolved |
 | Sharpcraft.Client.Render.EntityModelLayerHelpers | src/Sharpcraft.Client/Render/EntityModelLayerHelpers.cs | EntityModelLayerHelpers |  | 未匹配 |
 | Sharpcraft.Client.Render.EntityModelResolver | src/Sharpcraft.Client/Render/EntityModelResolver.cs | EntityModelResolver |  | 未匹配 |
 | Sharpcraft.Client.Render.EntityPlaceholderMesher | src/Sharpcraft.Client/Render/EntityPlaceholderMesher.cs | EntityPlaceholderMesher |  | 未匹配 |
@@ -178,119 +121,39 @@
 | Sharpcraft.Client.Render.FaceUvTransform | src/Sharpcraft.Client/Render/FaceUvTransform.cs | FaceUvTransform |  | 未匹配 |
 | Sharpcraft.Client.Render.FelineAnimationProvider | src/Sharpcraft.Client/Render/FelineAnimationProvider.cs | FelineModel / FelineAnimation |  | 未匹配 |
 | Sharpcraft.Client.Render.FluidSurface | src/Sharpcraft.Client/Render/FluidSurface.cs | FluidSurface |  | 未匹配 |
-| Sharpcraft.Client.Render.FoxAnimationProvider | src/Sharpcraft.Client/Render/FoxAnimationProvider.cs | FoxModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/fox/FoxModel.java | resolved |
-| Sharpcraft.Client.Render.FoxModelDefinition | src/Sharpcraft.Client/Render/FoxModelDefinition.cs | FoxModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/fox/FoxModel.java | resolved |
-| Sharpcraft.Client.Render.FrogAnimationProvider | src/Sharpcraft.Client/Render/FrogAnimationProvider.cs | FrogModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/frog/FrogModel.java | resolved |
-| Sharpcraft.Client.Render.FrogAnimations | src/Sharpcraft.Client/Render/FrogAnimations.cs | FrogAnimation | ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/FrogAnimation.java | resolved |
-| Sharpcraft.Client.Render.FrogModelDefinition | src/Sharpcraft.Client/Render/FrogModelDefinition.cs | FrogModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/frog/FrogModel.java | resolved |
-| Sharpcraft.Client.Render.GhastAnimationProvider | src/Sharpcraft.Client/Render/GhastAnimationProvider.cs | GhastModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/ghast/GhastModel.java | resolved |
-| Sharpcraft.Client.Render.GhastModelDefinition | src/Sharpcraft.Client/Render/GhastModelDefinition.cs | GhastModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/ghast/GhastModel.java | resolved |
 | Sharpcraft.Client.Render.GiantModelDefinition | src/Sharpcraft.Client/Render/GiantModelDefinition.cs | GiantModel |  | 未匹配 |
-| Sharpcraft.Client.Render.GoatModelDefinition | src/Sharpcraft.Client/Render/GoatModelDefinition.cs | GoatModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/goat/GoatModel.java | resolved |
-| Sharpcraft.Client.Render.GuardianAnimationProvider | src/Sharpcraft.Client/Render/GuardianAnimationProvider.cs | GuardianModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/guardian/GuardianModel.java | resolved |
 | Sharpcraft.Client.Render.State | src/Sharpcraft.Client/Render/GuardianAnimationProvider.cs | State |  | 未匹配 |
-| Sharpcraft.Client.Render.GuardianModelDefinition | src/Sharpcraft.Client/Render/GuardianModelDefinition.cs | GuardianModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/guardian/GuardianModel.java | resolved |
-| Sharpcraft.Client.Render.HappyGhastAnimationProvider | src/Sharpcraft.Client/Render/HappyGhastAnimationProvider.cs | HappyGhastModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/ghast/HappyGhastModel.java | resolved |
-| Sharpcraft.Client.Render.HappyGhastModelDefinition | src/Sharpcraft.Client/Render/HappyGhastModelDefinition.cs | HappyGhastModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/ghast/HappyGhastModel.java | resolved |
-| Sharpcraft.Client.Render.HoglinAnimationProvider | src/Sharpcraft.Client/Render/HoglinAnimationProvider.cs | HoglinModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/hoglin/HoglinModel.java | resolved |
-| Sharpcraft.Client.Render.HoglinModelDefinition | src/Sharpcraft.Client/Render/HoglinModelDefinition.cs | HoglinModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/hoglin/HoglinModel.java | resolved |
-| Sharpcraft.Client.Render.HorseModelDefinition | src/Sharpcraft.Client/Render/HorseModelDefinition.cs | HorseModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/equine/HorseModel.java | resolved |
-| Sharpcraft.Client.Render.HumanoidAnimationProvider | src/Sharpcraft.Client/Render/HumanoidAnimationProvider.cs | HumanoidModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/HumanoidModel.java | resolved |
 | Sharpcraft.Client.Render.HumanoidMobModelDefinition | src/Sharpcraft.Client/Render/HumanoidMobModelDefinition.cs | HumanoidMobModel |  | 未匹配 |
-| Sharpcraft.Client.Render.IllagerAnimationProvider | src/Sharpcraft.Client/Render/IllagerAnimationProvider.cs | IllagerModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/illager/IllagerModel.java | resolved |
 | Sharpcraft.Client.Render.IllagerArmPose | src/Sharpcraft.Client/Render/IllagerArmPose.cs | IllagerArmPose |  | 未匹配 |
-| Sharpcraft.Client.Render.IllagerModelDefinition | src/Sharpcraft.Client/Render/IllagerModelDefinition.cs | IllagerModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/illager/IllagerModel.java | resolved |
-| Sharpcraft.Client.Render.IronGolemAnimationProvider | src/Sharpcraft.Client/Render/IronGolemAnimationProvider.cs | IronGolemModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/golem/IronGolemModel.java | resolved |
-| Sharpcraft.Client.Render.IronGolemModelDefinition | src/Sharpcraft.Client/Render/IronGolemModelDefinition.cs | IronGolemModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/golem/IronGolemModel.java | resolved |
 | Sharpcraft.Client.Render.LayerSinks | src/Sharpcraft.Client/Render/LayerSinks.cs | LayerSinks |  | 未匹配 |
-| Sharpcraft.Client.Render.LlamaAnimationProvider | src/Sharpcraft.Client/Render/LlamaAnimationProvider.cs | LlamaModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/llama/LlamaModel.java | resolved |
-| Sharpcraft.Client.Render.LlamaModelDefinition | src/Sharpcraft.Client/Render/LlamaModelDefinition.cs | LlamaModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/llama/LlamaModel.java | resolved |
-| Sharpcraft.Client.Render.MagmaCubeAnimationProvider | src/Sharpcraft.Client/Render/MagmaCubeAnimationProvider.cs | MagmaCubeModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/slime/MagmaCubeModel.java | resolved |
-| Sharpcraft.Client.Render.MagmaCubeModelDefinition | src/Sharpcraft.Client/Render/MagmaCubeModelDefinition.cs | MagmaCubeModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/slime/MagmaCubeModel.java | resolved |
 | Sharpcraft.Client.Render.MeshBuffer | src/Sharpcraft.Client/Render/MeshBuffer.cs | MeshBuffer |  | 未匹配 |
 | Sharpcraft.Client.Render.MeshBuildPolicy | src/Sharpcraft.Client/Render/MeshBuildPolicy.cs | MeshBuildPolicy |  | 未匹配 |
 | Sharpcraft.Client.Render.MeshedChunk | src/Sharpcraft.Client/Render/MeshedChunk.cs | MeshedChunk |  | 未匹配 |
 | Sharpcraft.Client.Render.NameplateProjection | src/Sharpcraft.Client/Render/NameplateProjection.cs | NameplateProjection |  | 未匹配 |
-| Sharpcraft.Client.Render.NautilusAnimationProvider | src/Sharpcraft.Client/Render/NautilusAnimationProvider.cs | NautilusModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/nautilus/NautilusModel.java | resolved |
-| Sharpcraft.Client.Render.NautilusAnimations | src/Sharpcraft.Client/Render/NautilusAnimations.cs | NautilusAnimation | ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/NautilusAnimation.java | resolved |
-| Sharpcraft.Client.Render.NautilusModelDefinition | src/Sharpcraft.Client/Render/NautilusModelDefinition.cs | NautilusModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/nautilus/NautilusModel.java | resolved |
 | Sharpcraft.Client.Render.OcclusionCulling | src/Sharpcraft.Client/Render/OcclusionCulling.cs | OcclusionCulling |  | 未匹配 |
-| Sharpcraft.Client.Render.PandaAnimationProvider | src/Sharpcraft.Client/Render/PandaAnimationProvider.cs | PandaModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/panda/PandaModel.java | resolved |
-| Sharpcraft.Client.Render.PandaModelDefinition | src/Sharpcraft.Client/Render/PandaModelDefinition.cs | PandaModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/panda/PandaModel.java | resolved |
-| Sharpcraft.Client.Render.ParrotAnimationProvider | src/Sharpcraft.Client/Render/ParrotAnimationProvider.cs | ParrotModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/parrot/ParrotModel.java | resolved |
-| Sharpcraft.Client.Render.ParrotModelDefinition | src/Sharpcraft.Client/Render/ParrotModelDefinition.cs | ParrotModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/parrot/ParrotModel.java | resolved |
-| Sharpcraft.Client.Render.PhantomAnimationProvider | src/Sharpcraft.Client/Render/PhantomAnimationProvider.cs | PhantomModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/phantom/PhantomModel.java | resolved |
-| Sharpcraft.Client.Render.PhantomModelDefinition | src/Sharpcraft.Client/Render/PhantomModelDefinition.cs | PhantomModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/phantom/PhantomModel.java | resolved |
-| Sharpcraft.Client.Render.PigModelDefinition | src/Sharpcraft.Client/Render/PigModelDefinition.cs | PigModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/pig/PigModel.java | resolved |
-| Sharpcraft.Client.Render.PiglinAnimationProvider | src/Sharpcraft.Client/Render/PiglinAnimationProvider.cs | PiglinModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/piglin/PiglinModel.java | resolved |
 | Sharpcraft.Client.Render.PiglinArmPose | src/Sharpcraft.Client/Render/PiglinAnimationProvider.cs | PiglinArmPose | ref://mc-26.3-analysis/src/net/minecraft/world/entity/monster/piglin/PiglinArmPose.java | resolved |
-| Sharpcraft.Client.Render.PiglinModelDefinition | src/Sharpcraft.Client/Render/PiglinModelDefinition.cs | PiglinModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/piglin/PiglinModel.java | resolved |
 | Sharpcraft.Client.Render.EntityModelLayer | src/Sharpcraft.Client/Render/PlayerModelDefinition.cs | EntityModelLayer |  | 未匹配 |
-| Sharpcraft.Client.Render.PolarBearAnimationProvider | src/Sharpcraft.Client/Render/PolarBearAnimationProvider.cs | PolarBearModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/polarbear/PolarBearModel.java | resolved |
-| Sharpcraft.Client.Render.PolarBearModelDefinition | src/Sharpcraft.Client/Render/PolarBearModelDefinition.cs | PolarBearModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/polarbear/PolarBearModel.java | resolved |
 | Sharpcraft.Client.Render.PufferfishAnimationProvider | src/Sharpcraft.Client/Render/PufferfishAnimationProvider.cs | PufferfishModel / PufferfishAnimation |  | 未匹配 |
 | Sharpcraft.Client.Render.PufferfishModelDefinition | src/Sharpcraft.Client/Render/PufferfishModelDefinition.cs | PufferfishModel |  | 未匹配 |
-| Sharpcraft.Client.Render.QuadrupedAnimationProvider | src/Sharpcraft.Client/Render/QuadrupedAnimationProvider.cs | QuadrupedModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/QuadrupedModel.java | resolved |
-| Sharpcraft.Client.Render.RabbitAnimationProvider | src/Sharpcraft.Client/Render/RabbitAnimationProvider.cs | RabbitModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/rabbit/RabbitModel.java | resolved |
-| Sharpcraft.Client.Render.RabbitModelDefinition | src/Sharpcraft.Client/Render/RabbitModelDefinition.cs | RabbitModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/rabbit/RabbitModel.java | resolved |
-| Sharpcraft.Client.Render.RavagerAnimationProvider | src/Sharpcraft.Client/Render/RavagerAnimationProvider.cs | RavagerModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/ravager/RavagerModel.java | resolved |
-| Sharpcraft.Client.Render.RavagerModelDefinition | src/Sharpcraft.Client/Render/RavagerModelDefinition.cs | RavagerModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/ravager/RavagerModel.java | resolved |
 | Sharpcraft.Client.Render.FrameHistory | src/Sharpcraft.Client/Render/Reprojection.cs | FrameHistory |  | 未匹配 |
 | Sharpcraft.Client.Render.Reprojection | src/Sharpcraft.Client/Render/Reprojection.cs | Reprojection |  | 未匹配 |
-| Sharpcraft.Client.Render.SalmonAnimationProvider | src/Sharpcraft.Client/Render/SalmonAnimationProvider.cs | SalmonModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/fish/SalmonModel.java | resolved |
-| Sharpcraft.Client.Render.SalmonModelDefinition | src/Sharpcraft.Client/Render/SalmonModelDefinition.cs | SalmonModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/fish/SalmonModel.java | resolved |
-| Sharpcraft.Client.Render.SheepModelDefinition | src/Sharpcraft.Client/Render/SheepModelDefinition.cs | SheepModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/sheep/SheepModel.java | resolved |
-| Sharpcraft.Client.Render.ShulkerAnimationProvider | src/Sharpcraft.Client/Render/ShulkerAnimationProvider.cs | ShulkerModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/shulker/ShulkerModel.java | resolved |
-| Sharpcraft.Client.Render.ShulkerModelDefinition | src/Sharpcraft.Client/Render/ShulkerModelDefinition.cs | ShulkerModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/shulker/ShulkerModel.java | resolved |
-| Sharpcraft.Client.Render.SilverfishAnimationProvider | src/Sharpcraft.Client/Render/SilverfishAnimationProvider.cs | SilverfishModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/silverfish/SilverfishModel.java | resolved |
-| Sharpcraft.Client.Render.SilverfishModelDefinition | src/Sharpcraft.Client/Render/SilverfishModelDefinition.cs | SilverfishModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/silverfish/SilverfishModel.java | resolved |
-| Sharpcraft.Client.Render.SkeletonAnimationProvider | src/Sharpcraft.Client/Render/SkeletonAnimationProvider.cs | SkeletonModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/skeleton/SkeletonModel.java | resolved |
 | Sharpcraft.Client.Render.SkyVisibility | src/Sharpcraft.Client/Render/SkyVisibility.cs | SkyVisibility |  | 未匹配 |
-| Sharpcraft.Client.Render.SlimeModelDefinition | src/Sharpcraft.Client/Render/SlimeModelDefinition.cs | SlimeModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/slime/SlimeModel.java | resolved |
 | Sharpcraft.Client.Render.SmoothLighting | src/Sharpcraft.Client/Render/SmoothLighting.cs | SmoothLighting |  | 未匹配 |
-| Sharpcraft.Client.Render.SnifferAnimationProvider | src/Sharpcraft.Client/Render/SnifferAnimationProvider.cs | SnifferModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/sniffer/SnifferModel.java | resolved |
-| Sharpcraft.Client.Render.SnifferAnimations | src/Sharpcraft.Client/Render/SnifferAnimations.cs | SnifferAnimation | ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/SnifferAnimation.java | resolved |
-| Sharpcraft.Client.Render.SnifferModelDefinition | src/Sharpcraft.Client/Render/SnifferModelDefinition.cs | SnifferModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/sniffer/SnifferModel.java | resolved |
-| Sharpcraft.Client.Render.SnowGolemAnimationProvider | src/Sharpcraft.Client/Render/SnowGolemAnimationProvider.cs | SnowGolemModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/golem/SnowGolemModel.java | resolved |
-| Sharpcraft.Client.Render.SnowGolemModelDefinition | src/Sharpcraft.Client/Render/SnowGolemModelDefinition.cs | SnowGolemModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/golem/SnowGolemModel.java | resolved |
-| Sharpcraft.Client.Render.SpiderAnimationProvider | src/Sharpcraft.Client/Render/SpiderAnimationProvider.cs | SpiderModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/spider/SpiderModel.java | resolved |
-| Sharpcraft.Client.Render.SpiderModelDefinition | src/Sharpcraft.Client/Render/SpiderModelDefinition.cs | SpiderModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/spider/SpiderModel.java | resolved |
-| Sharpcraft.Client.Render.SquidAnimationProvider | src/Sharpcraft.Client/Render/SquidAnimationProvider.cs | SquidModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/squid/SquidModel.java | resolved |
-| Sharpcraft.Client.Render.SquidModelDefinition | src/Sharpcraft.Client/Render/SquidModelDefinition.cs | SquidModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/squid/SquidModel.java | resolved |
 | Sharpcraft.Client.Render.LegacyRandom | src/Sharpcraft.Client/Render/StarField.cs | LegacyRandom |  | 未匹配 |
 | Sharpcraft.Client.Render.StarField | src/Sharpcraft.Client/Render/StarField.cs | StarField |  | 未匹配 |
 | Sharpcraft.Client.Render.StateCullTable | src/Sharpcraft.Client/Render/StateCullTable.cs | StateCullTable |  | 未匹配 |
 | Sharpcraft.Client.Render.QuadVisual | src/Sharpcraft.Client/Render/StateVisualCache.cs | QuadVisual |  | 未匹配 |
 | Sharpcraft.Client.Render.StateVisualCache | src/Sharpcraft.Client/Render/StateVisualCache.cs | StateVisualCache |  | 未匹配 |
-| Sharpcraft.Client.Render.StriderAnimationProvider | src/Sharpcraft.Client/Render/StriderAnimationProvider.cs | StriderModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/strider/StriderModel.java | resolved |
-| Sharpcraft.Client.Render.StriderModelDefinition | src/Sharpcraft.Client/Render/StriderModelDefinition.cs | StriderModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/strider/StriderModel.java | resolved |
-| Sharpcraft.Client.Render.TadpoleAnimationProvider | src/Sharpcraft.Client/Render/TadpoleAnimationProvider.cs | TadpoleModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/frog/TadpoleModel.java | resolved |
-| Sharpcraft.Client.Render.TadpoleModelDefinition | src/Sharpcraft.Client/Render/TadpoleModelDefinition.cs | TadpoleModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/frog/TadpoleModel.java | resolved |
 | Sharpcraft.Client.Render.TraderLlamaModelDefinition | src/Sharpcraft.Client/Render/TraderLlamaModelDefinition.cs | TraderLlamaModel |  | 未匹配 |
 | Sharpcraft.Client.Render.TranslucentOrder | src/Sharpcraft.Client/Render/TranslucentOrder.cs | TranslucentOrder |  | 未匹配 |
 | Sharpcraft.Client.Render.TropicalFishAnimationProvider | src/Sharpcraft.Client/Render/TropicalFishAnimationProvider.cs | TropicalFishModel / TropicalFishAnimation |  | 未匹配 |
 | Sharpcraft.Client.Render.TropicalFishModelDefinition | src/Sharpcraft.Client/Render/TropicalFishModelDefinition.cs | TropicalFishModel |  | 未匹配 |
-| Sharpcraft.Client.Render.TurtleAnimationProvider | src/Sharpcraft.Client/Render/TurtleAnimationProvider.cs | TurtleModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/turtle/TurtleModel.java | resolved |
-| Sharpcraft.Client.Render.TurtleModelDefinition | src/Sharpcraft.Client/Render/TurtleModelDefinition.cs | TurtleModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/turtle/TurtleModel.java | resolved |
 | Sharpcraft.Client.Render.LightmapParameters | src/Sharpcraft.Client/Render/VanillaLightmap.cs | LightmapParameters |  | 未匹配 |
 | Sharpcraft.Client.Render.VanillaLightmap | src/Sharpcraft.Client/Render/VanillaLightmap.cs | VanillaLightmap |  | 未匹配 |
-| Sharpcraft.Client.Render.VexAnimationProvider | src/Sharpcraft.Client/Render/VexAnimationProvider.cs | VexModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/vex/VexModel.java | resolved |
-| Sharpcraft.Client.Render.VexModelDefinition | src/Sharpcraft.Client/Render/VexModelDefinition.cs | VexModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/vex/VexModel.java | resolved |
 | Sharpcraft.Client.Render.ViewFrustum | src/Sharpcraft.Client/Render/ViewFrustum.cs | ViewFrustum |  | 未匹配 |
-| Sharpcraft.Client.Render.VillagerAnimationProvider | src/Sharpcraft.Client/Render/VillagerAnimationProvider.cs | VillagerModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/npc/VillagerModel.java | resolved |
-| Sharpcraft.Client.Render.VillagerModelDefinition | src/Sharpcraft.Client/Render/VillagerModelDefinition.cs | VillagerModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/npc/VillagerModel.java | resolved |
-| Sharpcraft.Client.Render.WardenAnimationProvider | src/Sharpcraft.Client/Render/WardenAnimationProvider.cs | WardenModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/warden/WardenModel.java | resolved |
-| Sharpcraft.Client.Render.WardenAnimations | src/Sharpcraft.Client/Render/WardenAnimations.cs | WardenAnimation | ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/WardenAnimation.java | resolved |
-| Sharpcraft.Client.Render.WardenModelDefinition | src/Sharpcraft.Client/Render/WardenModelDefinition.cs | WardenModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/warden/WardenModel.java | resolved |
-| Sharpcraft.Client.Render.WitchAnimationProvider | src/Sharpcraft.Client/Render/WitchAnimationProvider.cs | WitchModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/witch/WitchModel.java | resolved |
-| Sharpcraft.Client.Render.WitchModelDefinition | src/Sharpcraft.Client/Render/WitchModelDefinition.cs | WitchModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/witch/WitchModel.java | resolved |
 | Sharpcraft.Client.Render.WitherAnimationProvider | src/Sharpcraft.Client/Render/WitherAnimationProvider.cs | WitherModel / WitherAnimation |  | 未匹配 |
-| Sharpcraft.Client.Render.WitherBossModelDefinition | src/Sharpcraft.Client/Render/WitherBossModelDefinition.cs | WitherBossModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/wither/WitherBossModel.java | resolved |
-| Sharpcraft.Client.Render.WolfAnimationProvider | src/Sharpcraft.Client/Render/WolfAnimationProvider.cs | WolfModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/wolf/WolfModel.java | resolved |
-| Sharpcraft.Client.Render.WolfModelDefinition | src/Sharpcraft.Client/Render/WolfModelDefinition.cs | WolfModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/wolf/WolfModel.java | resolved |
 | Sharpcraft.Client.Render.WorldTextMeshBuilder | src/Sharpcraft.Client/Render/WorldTextMeshBuilder.cs | WorldTextMeshBuilder |  | 未匹配 |
 | Sharpcraft.Client.Render.ZombieNautilusModelDefinition | src/Sharpcraft.Client/Render/ZombieNautilusModelDefinition.cs | ZombieNautilusModel |  | 未匹配 |
-| Sharpcraft.Client.Render.ZombieVillagerModelDefinition | src/Sharpcraft.Client/Render/ZombieVillagerModelDefinition.cs | ZombieVillagerModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/zombie/ZombieVillagerModel.java | resolved |
 | Sharpcraft.Client.Ui.ActionBar | src/Sharpcraft.Client/Ui/ActionBar.cs | ActionBar |  | 未匹配 |
 | Sharpcraft.Client.Ui.BitmapFont | src/Sharpcraft.Client/Ui/BitmapFont.cs | BitmapFont |  | 未匹配 |
 | Sharpcraft.Client.Ui.Glyph | src/Sharpcraft.Client/Ui/BitmapFont.cs | Glyph |  | 未匹配 |
@@ -593,30 +456,3 @@
 | Sharpcraft.Framework.Rendering.VertexLayout | src/Sharpcraft.Framework/Rendering/VertexLayout.cs | VertexLayout |  | 未匹配 |
 | Sharpcraft.Framework.Rendering.WindowedRenderer | src/Sharpcraft.Framework/Rendering/WindowedRenderer.cs | WindowedRenderer |  | 未匹配 |
 | Sharpcraft.Framework.Rendering.WorldTextDraw | src/Sharpcraft.Framework/Rendering/WorldTextDraw.cs | WorldTextDraw |  | 未匹配 |
-| Sharpcraft.Launcher.Accounts.AccountKind | src/Sharpcraft.Launcher/Accounts/AccountRecord.cs | AccountKind |  | 未匹配 |
-| Sharpcraft.Launcher.Accounts.AccountRecord | src/Sharpcraft.Launcher/Accounts/AccountRecord.cs | AccountRecord |  | 未匹配 |
-| Sharpcraft.Launcher.Accounts.GateResult | src/Sharpcraft.Launcher/Accounts/AccountRecord.cs | GateResult |  | 未匹配 |
-| Sharpcraft.Launcher.Accounts.OfflineLoginGate | src/Sharpcraft.Launcher/Accounts/AccountRecord.cs | OfflineLoginGate |  | 未匹配 |
-| Sharpcraft.Launcher.Accounts.AccountStore | src/Sharpcraft.Launcher/Accounts/AccountStore.cs | AccountStore |  | 未匹配 |
-| Sharpcraft.Launcher.Accounts.AccountsCommand | src/Sharpcraft.Launcher/Accounts/AccountsCommand.cs | AccountsCommand |  | 未匹配 |
-| Sharpcraft.Launcher.Assets.AssetPackBuilder | src/Sharpcraft.Launcher/Assets/AssetPackBuilder.cs | AssetPackBuilder |  | 未匹配 |
-| Sharpcraft.Launcher.Assets.AssetPackResult | src/Sharpcraft.Launcher/Assets/AssetPackBuilder.cs | AssetPackResult |  | 未匹配 |
-| Sharpcraft.Launcher.Assets.AssetSelection | src/Sharpcraft.Launcher/Assets/AssetSelection.cs | AssetSelection |  | 未匹配 |
-| Sharpcraft.Launcher.Assets.HostPaths | src/Sharpcraft.Launcher/Assets/HostPaths.cs | HostPaths |  | 未匹配 |
-| Sharpcraft.Launcher.Assets.JarVerificationException | src/Sharpcraft.Launcher/Assets/JarVerifier.cs | JarVerificationException |  | 未匹配 |
-| Sharpcraft.Launcher.Assets.JarVerifier | src/Sharpcraft.Launcher/Assets/JarVerifier.cs | JarVerifier |  | 未匹配 |
-| Sharpcraft.Launcher.Assets.VersionManifest | src/Sharpcraft.Launcher/Assets/VersionManifest.cs | VersionManifest |  | 未匹配 |
-| Sharpcraft.Launcher.Diagnostics.HostDebugOptions | src/Sharpcraft.Launcher/Diagnostics/HostDebugOptions.cs | HostDebugOptions |  | 未匹配 |
-| Sharpcraft.Launcher.Diagnostics.SpeedOverlay | src/Sharpcraft.Launcher/Diagnostics/SpeedOverlay.cs | SpeedOverlay |  | 未匹配 |
-| Sharpcraft.Launcher.Launch.LaunchCommand | src/Sharpcraft.Launcher/Launch/LaunchCommand.cs | LaunchCommand |  | 未匹配 |
-| Sharpcraft.Launcher.Launch.LaunchContext | src/Sharpcraft.Launcher/Launch/LaunchPlan.cs | LaunchContext |  | 未匹配 |
-| Sharpcraft.Launcher.Launch.LaunchPlan | src/Sharpcraft.Launcher/Launch/LaunchPlan.cs | LaunchPlan |  | 未匹配 |
-| Sharpcraft.Launcher.Launch.LaunchPlanBuilder | src/Sharpcraft.Launcher/Launch/LaunchPlan.cs | LaunchPlanBuilder |  | 未匹配 |
-| Sharpcraft.Launcher.LauncherCommand | src/Sharpcraft.Launcher/LauncherCommandLine.cs | LauncherCommand |  | 未匹配 |
-| Sharpcraft.Launcher.LauncherCommandLine | src/Sharpcraft.Launcher/LauncherCommandLine.cs | LauncherCommandLine |  | 未匹配 |
-| Sharpcraft.Launcher.Transport.HostTransport | src/Sharpcraft.Launcher/Transport/HostTransport.cs | HostTransport |  | 未匹配 |
-| Sharpcraft.Modding.IModContext | src/Sharpcraft.Modding/IModContext.cs | IModContext |  | 未匹配 |
-| Sharpcraft.Modding.ISharpcraftMod | src/Sharpcraft.Modding/ISharpcraftMod.cs | ISharpcraftMod |  | 未匹配 |
-| Sharpcraft.Modding.ModHandle | src/Sharpcraft.Modding/ModHandle.cs | ModHandle |  | 未匹配 |
-| Sharpcraft.Modding.ModHost | src/Sharpcraft.Modding/ModHost.cs | ModHost |  | 未匹配 |
-| Sharpcraft.Modding.ModLoadContext | src/Sharpcraft.Modding/ModLoadContext.cs | ModLoadContext |  | 未匹配 |

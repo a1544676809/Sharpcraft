@@ -9,6 +9,7 @@ namespace Sharpcraft.Common.Random;
 /// Per-key reproducible random sequence (used by loot tables in 26.3): the stream
 /// depends only on the world seed and the key, never on call order.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.RandomSequence", "ref://mc-26.3-analysis/src/net/minecraft/world/RandomSequence.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed class RandomSequence
 {
     private readonly XoroshiroRandomSource _source;

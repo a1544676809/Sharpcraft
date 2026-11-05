@@ -23,6 +23,7 @@ public enum FluidKind
 /// the block's <c>level</c> property (0..15) is the legacy encoding (source = 0, flowing 1..7, falling 8..15); the
 /// internal amount is 1..8 and the surface <see cref="OwnHeight"/> is <c>amount / 9</c>, so a full source is 8/9, not 1.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.material.FluidState", "ref://mc-26.3-analysis/src/net/minecraft/world/level/material/FluidState.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public readonly record struct FluidState(FluidKind Kind, int Amount, bool Falling)
 {
     /// <summary>True when this state carries no fluid.</summary>

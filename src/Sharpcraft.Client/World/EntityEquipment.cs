@@ -7,6 +7,7 @@ namespace Sharpcraft.Client.World;
 /// Eight equipment slot item ids (mainhand, offhand, feet, legs, chest, head, body, saddle), with -1 for empty.
 /// Kept as a value type so a per-frame render state carries it without allocating.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.entity.EntityEquipment", "ref://mc-26.3-analysis/src/net/minecraft/world/entity/EntityEquipment.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public readonly record struct EntityEquipment(
     int MainHand,
     int OffHand,

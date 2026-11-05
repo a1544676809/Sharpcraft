@@ -13,6 +13,7 @@ namespace Sharpcraft.Client.Assets;
 /// with holes to the cutout layer, anything else to the solid layer
 /// (ref://mc-26.3-analysis/src/net/minecraft/client/renderer/chunk/ChunkSectionLayer.java).
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("com.mojang.blaze3d.platform.Transparency", "ref://mc-26.3-analysis/src/com/mojang/blaze3d/platform/Transparency.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public readonly record struct Transparency(bool HasTransparent, bool HasTranslucent)
 {
     /// <summary>Opaque texture: no transparent and no translucent pixels.</summary>

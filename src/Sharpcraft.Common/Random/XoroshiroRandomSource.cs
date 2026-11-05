@@ -13,6 +13,7 @@ namespace Sharpcraft.Common.Random;
 /// Vanilla uses this generator for world generation and for loot sequences, while
 /// <see cref="RandomSource.Create"/> stays on the legacy LCG.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.levelgen.XoroshiroRandomSource", "ref://mc-26.3-analysis/src/net/minecraft/world/level/levelgen/XoroshiroRandomSource.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed class XoroshiroRandomSource : IRandomSource
 {
     /// <summary>Vanilla widens this float constant, so it must not be replaced by the exact 2^-24.</summary>

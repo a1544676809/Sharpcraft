@@ -15,6 +15,7 @@ namespace Sharpcraft.Common.Network;
 /// record. Assuming one shape is why the client showed <c>name: text</c> where the reference showed
 /// <c>&lt;name&gt; text</c>.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.network.chat.ChatTypeDecoration", "ref://mc-26.3-analysis/src/net/minecraft/network/chat/ChatTypeDecoration.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed class ChatTypeDecoration
 {
     /// <summary>Parameter that resolves to the sender's display name.</summary>

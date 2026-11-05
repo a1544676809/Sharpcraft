@@ -1335,6 +1335,7 @@ public static class ChunkMesher
 /// <param name="Vertices">Interleaved position and colour floats.</param>
 /// <param name="Indices">Triangle indices.</param>
 /// <param name="BlockCount">Number of solid blocks that contributed faces.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("com.mojang.blaze3d.vertex.MeshData", "ref://mc-26.3-analysis/src/com/mojang/blaze3d/vertex/MeshData.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed record MeshData(float[] Vertices, uint[] Indices, int BlockCount)
 {
     /// <summary>Vertex count.</summary>

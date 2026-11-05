@@ -14,6 +14,7 @@ namespace Sharpcraft.Common.Random;
 /// <see cref="SetDecorationSeed"/> forces odd multipliers and adds, while
 /// <see cref="SetLargeFeatureSeed"/> multiplies raw values and XORs.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.levelgen.WorldgenRandom", "ref://mc-26.3-analysis/src/net/minecraft/world/level/levelgen/WorldgenRandom.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed class WorldgenRandom : IRandomSource
 {
     /// <summary>Generator algorithm selection, mirroring the data-pack switch.</summary>

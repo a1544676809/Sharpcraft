@@ -15,6 +15,7 @@ namespace Sharpcraft.Client.Ui;
 /// unobtrusive without a timer per line. Lines keep their styled runs: flattening them to one colour would lose the
 /// difference between a team name, an ordinary message and an error.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.multiplayer.chat.ChatLog", "ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/chat/ChatLog.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed class ChatLog
 {
     /// <summary>Lines kept for scrollback.</summary>

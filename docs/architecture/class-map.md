@@ -20,6 +20,10 @@ AGENTS.md §3.5 硬约束：**每个模块文档必须写明我们的类型对�
 - **门禁**：`tools/verify/check-classmap.ps1` + `tests/Sharpcraft.Architecture.Tests/ClassMapTests.cs`（CI 与 `dotnet test` 均执行）。
 - **合规**：仓库内**不出现原版源码**，只存类名与 `ref://` 指针；引用解析到本机分析目录 `%MC_ANALYSIS_ROOT%`（默认同级 `../mc-26.3-analysis`）。
 
+## 覆盖范围
+- 当前扫描：`Client / Common / Server / Auth / Modding / Launcher`。
+- **`Sharpcraft.Framework` 暂不纳入**：按边界规则 Framework 不引用 `Common`，无法使用 `Sharpcraft.Common.Reference` 属性；后续若要覆盖，需把 `ReferenceClassAttribute` 迁到独立的极简元数据程序集（不属游戏/宿主）并让 Framework 引用它。此为已知受控例外，登记于此。
+
 ## 流程
 1. 新建/修改类型时加 `[ReferenceClass(...)]`；
 2. `dotnet run --project tools/Sharpcraft.ClassMap -- --write`；

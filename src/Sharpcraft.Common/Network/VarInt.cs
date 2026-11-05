@@ -20,6 +20,7 @@ public enum DecodeStatus
 /// Base-128 variable-length integer encoding used by the Minecraft protocol
 /// (docs/specs/network/primitives-varint.md).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.network.VarInt", "ref://mc-26.3-analysis/src/net/minecraft/network/VarInt.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public static class VarInt
 {
     /// <summary>Maximum encoded size of a 32-bit value.</summary>

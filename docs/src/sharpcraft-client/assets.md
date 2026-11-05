@@ -76,3 +76,13 @@
 - **动态注册表**：`registry_data` 驱动的布局尚未接（T-042），服务器增删或重排方块时状态 id 会错位。
 - 图集未做 mipmap 与 alpha 排序，远处纹理有闪烁（见 `docs/modules/render.md`）。
 - 图集缓冲随包重建而未复用；多包频繁切换时需要池化。
+
+<!-- BEGIN GENERATED: class-map -->
+
+| Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
+| --- | --- | --- | --- | --- | --- | --- |
+| Sharpcraft.Client | Sharpcraft.Client.Assets.BlockModelResolver | Mirror | Partial | net.minecraft.client.renderer.block.BlockModelResolver | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/BlockModelResolver.java | auto-resolved by name; verify |
+| Sharpcraft.Client | Sharpcraft.Client.Assets.ResourceManager | Mirror | Partial | net.minecraft.server.packs.resources.ResourceManager | ref://mc-26.3-analysis/src/net/minecraft/server/packs/resources/ResourceManager.java | auto-resolved by name; verify |
+| Sharpcraft.Client | Sharpcraft.Client.Assets.Transparency | Mirror | Partial | com.mojang.blaze3d.platform.Transparency | ref://mc-26.3-analysis/src/com/mojang/blaze3d/platform/Transparency.java | auto-resolved by name; verify |
+
+<!-- END GENERATED: class-map -->

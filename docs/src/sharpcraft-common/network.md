@@ -54,11 +54,17 @@ serverbound 可用"发坏包看服务端报错"探针验证；**clientbound 不�
 | Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
 | --- | --- | --- | --- | --- | --- | --- |
 | Sharpcraft.Common | Sharpcraft.Common.Network.AddedEntity | Mirror | Full | net.minecraft.network.protocol.game.ClientboundAddEntityPacket | ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundAddEntityPacket.java |  |
+| Sharpcraft.Common | Sharpcraft.Common.Network.ChatTypeDecoration | Mirror | Partial | net.minecraft.network.chat.ChatTypeDecoration | ref://mc-26.3-analysis/src/net/minecraft/network/chat/ChatTypeDecoration.java | auto-resolved by name; verify |
+| Sharpcraft.Common | Sharpcraft.Common.Network.ClockNetworkState | Mirror | Partial | net.minecraft.world.clock.ClockNetworkState | ref://mc-26.3-analysis/src/net/minecraft/world/clock/ClockNetworkState.java | auto-resolved by name; verify |
 | Sharpcraft.Common | Sharpcraft.Common.Network.EntityMove | Mirror | Full | net.minecraft.network.protocol.game.ClientboundMoveEntityPacket | ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundMoveEntityPacket.java |  |
 | Sharpcraft.Common | Sharpcraft.Common.Network.EntityPackets | Merged | Partial | net.minecraft.network.protocol.game.ClientboundMoveEntityPacket | ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundMoveEntityPacket.java | Codec hub for add/move/position_sync/teleport/motion packets |
 | Sharpcraft.Common | Sharpcraft.Common.Network.EntityPositionSyncUpdate | Mirror | Full | net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket | ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundEntityPositionSyncPacket.java |  |
 | Sharpcraft.Common | Sharpcraft.Common.Network.EntityTeleport | Mirror | Full | net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket | ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket.java |  |
 | Sharpcraft.Common | Sharpcraft.Common.Network.PayloadReader | Adapter | Partial | net.minecraft.network.FriendlyByteBuf | ref://mc-26.3-analysis/src/net/minecraft/network/FriendlyByteBuf.java | Minimal big-endian reader subset |
 | Sharpcraft.Common | Sharpcraft.Common.Network.PositionPathStep | Mirror | Full | net.minecraft.world.entity.PositionStep | ref://mc-26.3-analysis/src/net/minecraft/world/entity/PositionStep.java |  |
+| Sharpcraft.Common | Sharpcraft.Common.Network.ResolvedServerAddress | Mirror | Partial | net.minecraft.client.multiplayer.resolver.ResolvedServerAddress | ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/resolver/ResolvedServerAddress.java | auto-resolved by name; verify |
+| Sharpcraft.Common | Sharpcraft.Common.Network.ServerAddressResolver | Mirror | Partial | net.minecraft.client.multiplayer.resolver.ServerAddressResolver | ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/resolver/ServerAddressResolver.java | auto-resolved by name; verify |
+| Sharpcraft.Common | Sharpcraft.Common.Network.VarInt | Mirror | Partial | net.minecraft.network.VarInt | ref://mc-26.3-analysis/src/net/minecraft/network/VarInt.java | auto-resolved by name; verify |
+| Sharpcraft.Common | Sharpcraft.Common.Network.VarLong | Mirror | Partial | net.minecraft.network.VarLong | ref://mc-26.3-analysis/src/net/minecraft/network/VarLong.java | auto-resolved by name; verify |
 
 <!-- END GENERATED: class-map -->

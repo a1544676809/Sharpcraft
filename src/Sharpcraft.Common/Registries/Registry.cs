@@ -18,6 +18,7 @@ namespace Sharpcraft.Common.Registries;
 ///   <item>Numeric ids come from the same insertion order, so they stay consistent with iteration.</item>
 /// </list>
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.core.Registry", "ref://mc-26.3-analysis/src/net/minecraft/core/Registry.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
 public sealed class Registry<T>
     where T : class
 {

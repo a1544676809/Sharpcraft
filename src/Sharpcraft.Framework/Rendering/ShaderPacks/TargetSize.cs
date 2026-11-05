@@ -35,3 +35,4 @@ public abstract record TargetSize
         _ => throw new InvalidOperationException("unknown target size")
     };
 }
+
