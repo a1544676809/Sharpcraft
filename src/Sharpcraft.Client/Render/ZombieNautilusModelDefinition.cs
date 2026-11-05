@@ -30,6 +30,20 @@ public static class ZombieNautilusModelDefinition
         PlayerModelDefinition.FromVanillaChild("red_coral_first", "red_coral", 0f, 0f, 0f, -4.5f, -5.5f, 0f, 6f, 10f, 0f, 0, 112, rotationY: 0.7854f)
     ];
 
+    // Reference ZombieNautilusCoralModel: the coral growths are hidden while body armour is worn.
+    private static readonly EntityModelPart[] CoralPartsWhileUnarmored = HideWhileArmored();
+
+    private static EntityModelPart[] HideWhileArmored()
+    {
+        var result = new EntityModelPart[CoralParts.Length];
+        for (var i = 0; i < CoralParts.Length; i++)
+        {
+            result[i] = CoralParts[i] with { VisibleWhen = static state => state.Equipment[6] <= 0 };
+        }
+
+        return result;
+    }
+
     public static readonly EntityModelDefinition Definition = new(
         "zombie_nautilus",
         128,
@@ -46,7 +60,7 @@ public static class ZombieNautilusModelDefinition
                 "zombie_nautilus_coral",
                 128,
                 128,
-                [.. NautilusModelDefinition.Definition.Parts, .. CoralParts],
+                [.. NautilusModelDefinition.Definition.Parts, .. CoralPartsWhileUnarmored],
                 PlayerModelDefinition.DefaultFaceTransforms,
                 "entity/nautilus/zombie_nautilus_coral")
         };

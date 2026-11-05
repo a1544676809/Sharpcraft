@@ -3463,3 +3463,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **限制（记录）**：材质/槽位按护甲物品名兜底；`equippable` 组件的 assetId 尚未解析，模组/自定义护甲不会渲染。
 - **验证**：Client **1329** 全绿（+8 护甲测试），构建 0 警告 0 错误。
 - **下一步具体动作**：①解析 `equippable` 组件 assetId（支持模组护甲）；②Elytra 层；③baby 人形护甲变形；④其余装备特例（HappyGhast 绳、Wolf 裂纹、Witch 持物、TraderLlama 地毯、ZombieNautilus coral）。
+
+## 2026-11-05 装备特例批次 + 手持物品立项（T-631/T-632）
+
+- **T-632 已完成**：ZombieNautilus 珊瑚层随体甲隐藏（`CoralParts` 加 `VisibleWhen = state.Equipment[6] <= 0`，对齐 `ZombieNautilusCoralModel`）。TraderLlama 地毯确认复用 `llama_body/*`，无需额外层。Client **1330** 全绿。
+- **T-631 记录（未开始）**：物品模型/手持物品渲染是独立子系统（item 模型 JSON+纹理+display 变换+按 hand 挂接），依赖项 Witch/Piglin/Illager/玩家持物；不并入实体动画批次。
+- **下一步具体动作**：①Wolf armor 裂纹（需 durability/Crackiness）；②Happy Ghast 绳索（需 leash holder 状态）；③baby 人形护甲变形；④Elytra 层；⑤SPEAR/STAB；⑥EnderDragon 飞行历史。可继续用团队并行。
