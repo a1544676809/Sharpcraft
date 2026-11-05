@@ -27,6 +27,8 @@ public sealed class EntityAnimationProviderTests
         HumanoidMobModelDefinition.DrownedEntityTypeId,
         HumanoidMobModelDefinition.HuskEntityTypeId,
         ZombieVillagerModelDefinition.ZombieVillagerEntityTypeId,
+        CatModelDefinition.CatEntityTypeId,
+        CatModelDefinition.OcelotEntityTypeId,
         HumanoidMobModelDefinition.SkeletonEntityTypeId,
         HumanoidMobModelDefinition.StrayEntityTypeId,
         HumanoidMobModelDefinition.BoggedEntityTypeId,
@@ -142,6 +144,8 @@ public sealed class EntityAnimationProviderTests
     [InlineData(HorseModelDefinition.HorseEntityTypeId)]
     [InlineData(HumanoidMobModelDefinition.ZombieEntityTypeId)]
     [InlineData(ZombieVillagerModelDefinition.ZombieVillagerEntityTypeId)]
+    [InlineData(CatModelDefinition.CatEntityTypeId)]
+    [InlineData(CatModelDefinition.OcelotEntityTypeId)]
     [InlineData(HumanoidMobModelDefinition.SkeletonEntityTypeId)]
     [InlineData(HumanoidMobModelDefinition.StrayEntityTypeId)]
     [InlineData(HumanoidMobModelDefinition.BoggedEntityTypeId)]
