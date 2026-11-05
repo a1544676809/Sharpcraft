@@ -3525,3 +3525,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 已分级：P0 世界/区块/光照（block_changed_ack/block_event/light_update/chunks_biomes/explode…）、P1 玩家状态（player_abilities/respawn/set_experience/…）、P2 容器、P3 音频/聊天、P4 UI。
 - 分析：docs/analysis/protocol/play-clientbound-coverage.md；可重复审计脚本：tools/verify/audit-unhandled-packets.ps1。
 - 下一步：按 P0→P1 补齐解码/分发并加回归（防 T-640 式整包漏接）。
+
+## 2026-11-05 开始补 Play Clientbound 包（T-642）
+
+- 已补：`block_changed_ack(4)`、`set_experience(105)`、`set_held_slot(107)`（解码+分发）。审计 handled 41→44、未处理 103→100。
+- 回归：SimpleClientboundPacketsTests（3 项）。
+- 下一步：继续 P0（light_update/chunks_biomes/block_event/block_destruction/explode）与 P1。

@@ -8,7 +8,11 @@ param([string]$AnalysisRoot = '')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 if ([string]::IsNullOrWhiteSpace($AnalysisRoot)) {
-    $AnalysisRoot = if ($env:MC_ANALYSIS_ROOT) { $env:MC_ANALYSIS_ROOT } else { Join-Path (Split-Path -Parent $root) 'mc-26.3-analysis' }
+    if ($env:MC_ANALYSIS_ROOT) { $AnalysisRoot = $env:MC_ANALYSIS_ROOT } else {
+        $d = [System.IO.DirectoryInfo]$root
+        while ($d -ne $null) { $cand = Join-Path ($(if ($d.Parent) { $d.Parent.FullName } else { $d.FullName })) 'mc-26.3-analysis'; if (Test-Path $cand) { $AnalysisRoot = $cand; break }; $d = $d.Parent }
+        if (-not $AnalysisRoot) { $AnalysisRoot = Join-Path (Split-Path -Parent $root) 'mc-26.3-analysis' }
+    }
 }
 $table = Join-Path $AnalysisRoot 'vectors/packet-tables.txt'
 if (-not (Test-Path $table)) { "SKIP reason=no-reference-table path=$table"; exit 3 }
@@ -28,3 +32,4 @@ $missing = $ref | Where-Object { -not $handled.ContainsKey($_.Key) } | Sort-Obje
 "reference=$($ref.Count) handled=$($handled.Count) missing=$($missing.Count)"
 $missing | ForEach-Object { '{0,3}  {1}' -f $_.Id, $_.Key }
 exit 0
+

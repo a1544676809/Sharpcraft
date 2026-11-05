@@ -369,4 +369,37 @@ public static class PlayPackets
         writer.WriteVarInt(sequence);
         return buffer[..writer.Position].ToArray();
     }
+
+    /// <summary>Reads <c>block_changed_ack</c> (clientbound 4): a VarInt prediction sequence.</summary>
+    public static DecodeStatus TryReadBlockChangedAck(ReadOnlySpan<byte> body, out int sequence)
+    {
+        sequence = 0;
+        var reader = new PayloadReader(body);
+        return reader.TryReadVarInt(out sequence);
+    }
+
+    /// <summary>Reads <c>set_held_slot</c> (clientbound 107): a VarInt hotbar slot.</summary>
+    public static DecodeStatus TryReadSetHeldSlot(ReadOnlySpan<byte> body, out int slot)
+    {
+        slot = 0;
+        var reader = new PayloadReader(body);
+        return reader.TryReadVarInt(out slot);
+    }
+
+    /// <summary>Reads <c>set_experience</c> (clientbound 105): float progress, VarInt total, VarInt level.</summary>
+    public static DecodeStatus TryReadSetExperience(ReadOnlySpan<byte> body, out float progress, out int total, out int level)
+    {
+        progress = 0f;
+        total = 0;
+        level = 0;
+        var reader = new PayloadReader(body);
+        if (reader.TryReadFloat(out progress) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out total) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out level) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        return DecodeStatus.Success;
+    }
 }

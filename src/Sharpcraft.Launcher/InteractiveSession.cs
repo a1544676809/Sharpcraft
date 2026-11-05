@@ -72,6 +72,10 @@ internal sealed class InteractiveSession
     /// <summary>Number of ticks this session has run, used by the host speed readout.</summary>
     public long TickIndex { get; private set; }
     private readonly bool _diagEnabled = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
+    private int _selectedHotbarSlot;
+    private float _experienceProgress;
+    private int _totalExperience;
+    private int _experienceLevel;
     private int _diagFrames;
     private readonly bool _packetLog = Environment.GetEnvironmentVariable("MC_PACKET_LOG") == "1";
     private int _packetLogCount;
@@ -1828,6 +1832,32 @@ internal sealed class InteractiveSession
                     if (EntityPackets.TryReadSetEntityMotion(body[reader.Position..], out var motion) == DecodeStatus.Success)
                     {
                         _entities.ApplyMotion(motion);
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.BlockChangedAck:
+                    if (PlayPackets.TryReadBlockChangedAck(body[reader.Position..], out _) == DecodeStatus.Success)
+                    {
+                        // Prediction ack: no client-side prediction sequence is tracked yet, so nothing to apply.
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.SetHeldSlot:
+                    if (PlayPackets.TryReadSetHeldSlot(body[reader.Position..], out var heldSlot) == DecodeStatus.Success)
+                    {
+                        _selectedHotbarSlot = heldSlot;
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.SetExperience:
+                    if (PlayPackets.TryReadSetExperience(body[reader.Position..], out var xpProgress, out var xpTotal, out var xpLevel) == DecodeStatus.Success)
+                    {
+                        _experienceProgress = xpProgress;
+                        _totalExperience = xpTotal;
+                        _experienceLevel = xpLevel;
                     }
 
                     break;

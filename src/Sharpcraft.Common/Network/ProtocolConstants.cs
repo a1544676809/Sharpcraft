@@ -219,6 +219,18 @@ public static class PacketIds
         /// <remarks>Reference registration dump: play clientbound 35 (ClientboundEntityPositionSyncPacket).</remarks>
         public const int EntityPositionSync = 35;
 
+        /// <summary>Acknowledgement of a block-change prediction sequence.</summary>
+        /// <remarks>Reference registration dump: play clientbound 4.</remarks>
+        public const int BlockChangedAck = 4;
+
+        /// <summary>Server-authoritative selected hotbar slot.</summary>
+        /// <remarks>Reference registration dump: play clientbound 107.</remarks>
+        public const int SetHeldSlot = 107;
+
+        /// <summary>Player experience progress/total/level.</summary>
+        /// <remarks>Reference registration dump: play clientbound 105.</remarks>
+        public const int SetExperience = 105;
+
         /// <summary>Passengers of a vehicle: vehicle entity id, count, then passenger entity ids.</summary>
         /// <remarks>Reference registration dump: play clientbound 109.</remarks>
         public const int SetPassengers = 109;
