@@ -259,6 +259,14 @@ public static class PacketIds
         /// <remarks>Reference registration dump: play clientbound 79.</remarks>
         public const int RemoveMobEffect = 79;
 
+        /// <summary>Set the chunk cache centre (VarInt x, VarInt z).</summary>
+        /// <remarks>Reference registration dump: play clientbound 96.</remarks>
+        public const int SetChunkCacheCenter = 96;
+
+        /// <summary>Set the chunk cache radius (VarInt radius).</summary>
+        /// <remarks>Reference registration dump: play clientbound 97.</remarks>
+        public const int SetChunkCacheRadius = 97;
+
         /// <summary>Passengers of a vehicle: vehicle entity id, count, then passenger entity ids.</summary>
         /// <remarks>Reference registration dump: play clientbound 109.</remarks>
         public const int SetPassengers = 109;

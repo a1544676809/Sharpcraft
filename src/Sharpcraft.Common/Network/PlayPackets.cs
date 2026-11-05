@@ -542,4 +542,43 @@ public static class PlayPackets
 
         return DecodeStatus.Success;
     }
+
+    /// <summary>Reads <c>forget_level_chunk</c> (clientbound 38): a packed ChunkPos long.</summary>
+    public static DecodeStatus TryReadForgetLevelChunk(ReadOnlySpan<byte> body, out int chunkX, out int chunkZ)
+    {
+        chunkX = 0;
+        chunkZ = 0;
+        var reader = new PayloadReader(body);
+        if (reader.TryReadLong(out var packed) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        chunkX = unchecked((int)packed);
+        chunkZ = unchecked((int)(packed >> 32));
+        return DecodeStatus.Success;
+    }
+
+    /// <summary>Reads <c>set_chunk_cache_center</c> (clientbound 96): VarInt x, VarInt z.</summary>
+    public static DecodeStatus TryReadSetChunkCacheCenter(ReadOnlySpan<byte> body, out int chunkX, out int chunkZ)
+    {
+        chunkX = 0;
+        chunkZ = 0;
+        var reader = new PayloadReader(body);
+        if (reader.TryReadVarInt(out chunkX) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out chunkZ) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        return DecodeStatus.Success;
+    }
+
+    /// <summary>Reads <c>set_chunk_cache_radius</c> (clientbound 97): a VarInt radius.</summary>
+    public static DecodeStatus TryReadSetChunkCacheRadius(ReadOnlySpan<byte> body, out int radius)
+    {
+        radius = 0;
+        var reader = new PayloadReader(body);
+        return reader.TryReadVarInt(out radius);
+    }
 }

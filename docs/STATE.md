@@ -3541,3 +3541,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - 已补 damage_event(25)/hurt_animation(43)/update_mob_effect(135)/remove_mob_effect(79)。审计 handled 47→51、未处理 97→93。
 - 下一步：继续 P1 剩余（take_item_entity/move_vehicle 等）或进入 P0 世界类攻坚。
+
+## 2026-11-05 补 P0 区块类包（T-645）
+
+- 已补 chunk_batch_start(12)/forget_level_chunk(38)/set_chunk_cache_center(96)/set_chunk_cache_radius(97)；forget 现在真正 RemoveChunk。审计 handled 51→55、未处理 93→89。
+- 下一步：light_update(49)/chunks_biomes(13) 较复杂（需世界光照/群系接入），再 block_event/block_destruction/explode。

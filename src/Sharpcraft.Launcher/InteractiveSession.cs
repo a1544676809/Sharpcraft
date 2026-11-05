@@ -84,6 +84,9 @@ internal sealed class InteractiveSession
     private int _lastHurtEntityId;
     private float _lastHurtYaw;
     private readonly System.Collections.Generic.Dictionary<int, System.Collections.Generic.HashSet<int>> _mobEffects = new();
+    private int _chunkCacheCenterX;
+    private int _chunkCacheCenterZ;
+    private int _chunkCacheRadius;
     private int _diagFrames;
     private readonly bool _packetLog = Environment.GetEnvironmentVariable("MC_PACKET_LOG") == "1";
     private int _packetLogCount;
@@ -1840,6 +1843,35 @@ internal sealed class InteractiveSession
                     if (EntityPackets.TryReadSetEntityMotion(body[reader.Position..], out var motion) == DecodeStatus.Success)
                     {
                         _entities.ApplyMotion(motion);
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.ChunkBatchStart:
+                    // Empty marker packet; batch-finished (id 11) drives the ack. Nothing to apply.
+                    break;
+
+                case PacketIds.PlayClientbound.ForgetLevelChunk:
+                    if (PlayPackets.TryReadForgetLevelChunk(body[reader.Position..], out var forgetX, out var forgetZ) == DecodeStatus.Success)
+                    {
+                        _world?.RemoveChunk(forgetX, forgetZ);
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.SetChunkCacheCenter:
+                    if (PlayPackets.TryReadSetChunkCacheCenter(body[reader.Position..], out var cacheX, out var cacheZ) == DecodeStatus.Success)
+                    {
+                        _chunkCacheCenterX = cacheX;
+                        _chunkCacheCenterZ = cacheZ;
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.SetChunkCacheRadius:
+                    if (PlayPackets.TryReadSetChunkCacheRadius(body[reader.Position..], out var cacheRadius) == DecodeStatus.Success)
+                    {
+                        _chunkCacheRadius = cacheRadius;
                     }
 
                     break;

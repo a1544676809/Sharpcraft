@@ -103,4 +103,24 @@ public sealed class SimpleClientboundPacketsTests
         Assert.Equal(3, entity);
         Assert.Equal(1, effect);
     }
+
+    [Fact]
+    public void ForgetLevelChunkUnpacksPackedLong()
+    {
+        // x=1, z=2 -> pack = (2<<32)|1 = 0x0000000200000001.
+        var body = new byte[] { 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01 };
+        Assert.Equal(DecodeStatus.Success, PlayPackets.TryReadForgetLevelChunk(body, out var x, out var z));
+        Assert.Equal(1, x);
+        Assert.Equal(2, z);
+    }
+
+    [Fact]
+    public void ChunkCacheCenterAndRadiusReadVarInts()
+    {
+        Assert.Equal(DecodeStatus.Success, PlayPackets.TryReadSetChunkCacheCenter(new byte[] { 0x01, 0x02 }, out var cx, out var cz));
+        Assert.Equal(1, cx);
+        Assert.Equal(2, cz);
+        Assert.Equal(DecodeStatus.Success, PlayPackets.TryReadSetChunkCacheRadius(new byte[] { 0x0A }, out var r));
+        Assert.Equal(10, r);
+    }
 }
