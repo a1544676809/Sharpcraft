@@ -137,6 +137,48 @@ public static class EntityModelLayerHelpers
     private static readonly Vector3 BabyOuterGrow = new(-0.1f, 0.5f, 0.3f);
     private static readonly Vector3 BabyInnerGrow = new(-0.1f, 0.3f, 0.3f);
 
+    /// <summary>
+    /// Baby humanoid armor by cloning the base baby parts (identical geometry/pose/feet), with per-axis baby
+    /// deformation and the humanoid_baby texture layer. Guarantees the armor sits exactly on the base model.
+    /// </summary>
+    public static EntityModelPart[] WithBabyArmorFromBase(IReadOnlyList<EntityModelPart> parts, EquipmentAssetKind kind, int slot, string fallbackTexture)
+    {
+        string[] visible = slot switch
+        {
+            5 => ["head"],
+            4 => ["body", "left_arm", "right_arm"],
+            3 => ["body", "left_leg", "right_leg"],
+            2 => ["left_leg", "right_leg"],
+            _ => []
+        };
+        var grow = slot == 3 ? BabyInnerGrow : BabyOuterGrow;
+        var result = new List<EntityModelPart>(parts.Count * 2);
+        result.AddRange(parts);
+        foreach (var part in parts)
+        {
+            if (part.Name.StartsWith("equipment_", StringComparison.Ordinal) || Array.IndexOf(visible, part.Name) < 0)
+            {
+                continue;
+            }
+
+            result.Add(part with
+            {
+                Name = "equipment_" + kind + "_" + slot + "_" + part.Name,
+                PoseSource = part.PoseSource ?? part.Name,
+                TexturePath = fallbackTexture,
+                TextureSelector = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot),
+                Grow = 0f,
+                GrowXyz = grow,
+                OverlayLayers = null,
+                TextureWidth = 64,
+                TextureHeight = 64,
+                VisibleWhen = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot) is not null
+            });
+        }
+
+        return [.. result];
+    }
+
     /// <summary>Baby humanoid armor layer for one slot: dedicated baby mesh parts with per-axis deformation.</summary>
     public static EntityModelPart[] WithBabyArmorSlot(IReadOnlyList<EntityModelPart> parts, EquipmentAssetKind kind, int slot, string fallbackTexture)
     {

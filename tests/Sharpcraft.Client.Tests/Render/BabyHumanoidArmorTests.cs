@@ -20,13 +20,13 @@ public sealed class BabyHumanoidArmorTests
 
         Assert.Contains("equipment_HumanoidArmorBaby_5_head", names);
         Assert.Contains("equipment_HumanoidArmorBaby_4_body", names);
-        Assert.Contains("equipment_HumanoidArmorBaby_3_waist", names);
-        Assert.Contains("equipment_HumanoidArmorBaby_2_right_foot", names);
+        Assert.Contains("equipment_HumanoidArmorBaby_3_left_leg", names);
+        Assert.Contains("equipment_HumanoidArmorBaby_2_left_leg", names);
         // The head slot must not carry body/legs.
         Assert.DoesNotContain("equipment_HumanoidArmorBaby_5_body", names);
 
-        var waist = definition.Parts.First(part => part.Name == "equipment_HumanoidArmorBaby_3_waist");
-        Assert.NotNull(waist.GrowXyz);
+        var leg = definition.Parts.First(part => part.Name == "equipment_HumanoidArmorBaby_3_left_leg");
+        Assert.NotNull(leg.GrowXyz);
     }
 
     [Fact]

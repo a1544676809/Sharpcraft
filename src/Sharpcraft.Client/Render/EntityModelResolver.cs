@@ -196,7 +196,7 @@ public static class EntityModelResolver
         {
             foreach (var slot in HumanoidArmorSlots)
             {
-                parts = EntityModelLayerHelpers.WithBabyArmorSlot(parts, EquipmentAssetKind.HumanoidArmorBaby, slot, "entity/equipment/humanoid_baby/iron");
+                parts = EntityModelLayerHelpers.WithBabyArmorFromBase(parts, EquipmentAssetKind.HumanoidArmorBaby, slot, "entity/equipment/humanoid_baby/iron");
             }
         }
         else
