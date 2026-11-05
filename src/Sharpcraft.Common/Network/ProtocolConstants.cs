@@ -275,6 +275,18 @@ public static class PacketIds
         /// <remarks>Reference registration dump: play clientbound 7.</remarks>
         public const int BlockEvent = 7;
 
+        /// <summary>Set the camera entity id (spectator / third-person override).</summary>
+        /// <remarks>Reference registration dump: play clientbound 95.</remarks>
+        public const int SetCamera = 95;
+
+        /// <summary>An item entity was collected by an entity.</summary>
+        /// <remarks>Reference registration dump: play clientbound 127.</remarks>
+        public const int TakeItemEntity = 127;
+
+        /// <summary>Projectile acceleration power update.</summary>
+        /// <remarks>Reference registration dump: play clientbound 138.</remarks>
+        public const int ProjectilePower = 138;
+
         /// <summary>Passengers of a vehicle: vehicle entity id, count, then passenger entity ids.</summary>
         /// <remarks>Reference registration dump: play clientbound 109.</remarks>
         public const int SetPassengers = 109;

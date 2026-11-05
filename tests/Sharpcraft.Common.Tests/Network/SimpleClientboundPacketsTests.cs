@@ -155,4 +155,30 @@ public sealed class SimpleClientboundPacketsTests
         Assert.Equal(2, b1);
         Assert.Equal(3, block);
     }
+
+    [Fact]
+    public void SetCameraReadsEntityId()
+    {
+        Assert.Equal(DecodeStatus.Success, PlayPackets.TryReadSetCamera(new byte[] { 0x05 }, out var cameraId));
+        Assert.Equal(5, cameraId);
+    }
+
+    [Fact]
+    public void TakeItemEntityReadsThreeVarInts()
+    {
+        Assert.Equal(DecodeStatus.Success, PlayPackets.TryReadTakeItemEntity(new byte[] { 0x0A, 0x0B, 0x03 }, out var item, out var collector, out var amount));
+        Assert.Equal(10, item);
+        Assert.Equal(11, collector);
+        Assert.Equal(3, amount);
+    }
+
+    [Fact]
+    public void ProjectilePowerReadsVarIntAndDouble()
+    {
+        // VarInt 4 then double 1.5 = 0x3FF8000000000000.
+        var body = new byte[] { 0x04, 0x3F, 0xF8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+        Assert.Equal(DecodeStatus.Success, PlayPackets.TryReadProjectilePower(body, out var entity, out var power));
+        Assert.Equal(4, entity);
+        Assert.Equal(1.5d, power);
+    }
 }

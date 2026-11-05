@@ -3551,3 +3551,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - 已补 block_destruction(5)/block_event(7)。审计 handled 55→57、未处理 89→87。
 - 下一步：light_update(49)/chunks_biomes(13) 需世界光照/群系存储接入（较大）；或 explode(36)。
+
+## 2026-11-05 补 set_camera/take_item/projectile_power（T-647）
+
+- 已补 set_camera(95)/take_item_entity(127)/projectile_power(138)。审计 handled 57→60、未处理 87→84。
+- 下一步：重量级 light_update(49)/chunks_biomes(13)/explode(36) 需世界子系统接入。

@@ -639,4 +639,44 @@ public static class PlayPackets
         b1 = b1Byte;
         return DecodeStatus.Success;
     }
+
+    /// <summary>Reads <c>set_camera</c> (clientbound 95): VarInt camera entity id.</summary>
+    public static DecodeStatus TryReadSetCamera(ReadOnlySpan<byte> body, out int cameraId)
+    {
+        cameraId = 0;
+        var reader = new PayloadReader(body);
+        return reader.TryReadVarInt(out cameraId);
+    }
+
+    /// <summary>Reads <c>take_item_entity</c> (clientbound 127): item id, collector id, amount (all VarInt).</summary>
+    public static DecodeStatus TryReadTakeItemEntity(ReadOnlySpan<byte> body, out int itemId, out int collectorId, out int amount)
+    {
+        itemId = 0;
+        collectorId = 0;
+        amount = 0;
+        var reader = new PayloadReader(body);
+        if (reader.TryReadVarInt(out itemId) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out collectorId) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out amount) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        return DecodeStatus.Success;
+    }
+
+    /// <summary>Reads <c>projectile_power</c> (clientbound 138): VarInt entity id, double acceleration power.</summary>
+    public static DecodeStatus TryReadProjectilePower(ReadOnlySpan<byte> body, out int entityId, out double accelerationPower)
+    {
+        entityId = 0;
+        accelerationPower = 0d;
+        var reader = new PayloadReader(body);
+        if (reader.TryReadVarInt(out entityId) != DecodeStatus.Success ||
+            reader.TryReadDouble(out accelerationPower) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        return DecodeStatus.Success;
+    }
 }

@@ -89,6 +89,10 @@ internal sealed class InteractiveSession
     private int _chunkCacheRadius;
     private readonly System.Collections.Generic.Dictionary<long, int> _blockDestruction = new();
     private int _lastBlockEventX, _lastBlockEventY, _lastBlockEventZ, _lastBlockEventB0, _lastBlockEventB1, _lastBlockEventBlock;
+    private int _cameraEntityId;
+    private int _lastTakeItemId, _lastCollectorId, _lastTakeAmount;
+    private int _lastProjectileEntity;
+    private double _lastProjectilePower;
     private int _diagFrames;
     private readonly bool _packetLog = Environment.GetEnvironmentVariable("MC_PACKET_LOG") == "1";
     private int _packetLogCount;
@@ -1845,6 +1849,33 @@ internal sealed class InteractiveSession
                     if (EntityPackets.TryReadSetEntityMotion(body[reader.Position..], out var motion) == DecodeStatus.Success)
                     {
                         _entities.ApplyMotion(motion);
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.SetCamera:
+                    if (PlayPackets.TryReadSetCamera(body[reader.Position..], out var cameraId) == DecodeStatus.Success)
+                    {
+                        _cameraEntityId = cameraId;
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.TakeItemEntity:
+                    if (PlayPackets.TryReadTakeItemEntity(body[reader.Position..], out var takeItem, out var collector, out var takeAmount) == DecodeStatus.Success)
+                    {
+                        _lastTakeItemId = takeItem;
+                        _lastCollectorId = collector;
+                        _lastTakeAmount = takeAmount;
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.ProjectilePower:
+                    if (PlayPackets.TryReadProjectilePower(body[reader.Position..], out var projectileEntity, out var projectilePower) == DecodeStatus.Success)
+                    {
+                        _lastProjectileEntity = projectileEntity;
+                        _lastProjectilePower = projectilePower;
                     }
 
                     break;
