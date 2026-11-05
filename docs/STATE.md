@@ -3435,3 +3435,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **修复（临时）**：`PlayPackets.TryReadSetHealth` 解本地生命值；`health<=0` 且未请求过则发 `ClientCommand(PERFORM_RESPAWN)`，`health>0` 复位；`PlayerCombatKill` 同样只在未请求时发一次。
 - **偏差（记录）**：原版默认显示死亡界面、点击才重生（仅 `showDeathScreen==false`/`doImmediateRespawn` 自动）。当前无死亡界面，**先一律自动复活**，作为受控临时偏差；死亡界面列为后续任务（需 `showDeathScreen` 跟踪 + overlay + 重生按钮）。
 - **下一步具体动作**：①实现死亡界面（`showDeathScreen` 跟踪、DeathScreen overlay、重生按钮）；②继续实体补全（Cat lie/relax、Enderman、Slime 等）。
+
+## 2026-11-05 Enderman 动画完成（T-627）
+
+- **已完成**：新增 `EndermanAnimationProvider`(42)：复用完整 humanoid 姿态（新增 `HumanoidVariant.Plain`，不做僵尸/骷髅覆盖），再施加 Enderman 长肢阻尼（arm/leg `xRot ×0.5` 且 clamp ±0.4）。
+- **阻塞（不近似）**：持方块 `carriedBlock` 手臂姿态（block state 未解码）、creepy 头下沉（原版 head vs hat 分开位移，我们 hat 是 head overlay）。
+- **验证**：Client **1291**（+2 Enderman + 注册分配），构建 0 警告 0 错误。
+- **下一步具体动作**：继续缺 provider 生物：Slime（大概率只需 squish transform，可确认）、EnderDragon、Pufferfish、TropicalFish；Cat lie/relax + sprint flag；SPEAR/STAB；装备层 / baby 模型。

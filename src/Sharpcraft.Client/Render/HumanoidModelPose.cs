@@ -25,6 +25,9 @@ internal enum HumanoidArmPose
 /// <summary>Which concrete humanoid subclass drives the pose. Both share <c>HumanoidModel.setupAnim</c>.</summary>
 internal enum HumanoidVariant
 {
+    /// <summary>Plain <c>HumanoidModel.setupAnim</c> with no subclass arm override (e.g. Enderman base).</summary>
+    Plain,
+
     /// <summary>Zombie/Drowned/Husk/Giant: <c>setupAttackAnimation</c> also runs <c>animateZombieArms</c>.</summary>
     Zombie,
 
