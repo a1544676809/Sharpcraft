@@ -268,6 +268,8 @@ LICENSE                        # LGPL-3.0-or-later 附加许可 + 并入的 GPL-
 - 文档同样受原则 3 约束：只写行为与架构，不粘贴原始实现；证据以指针形式引用仓库外的分析工作区。
 - 文档体系细节（目录划分、状态标记、写作规范）以 `docs/README.md` 为准，二者冲突时以本文件为准。
 
+- **模块文档 MUST 写明"实现 ↔ 原版类"对应**：每篇 `docs/modules/<模块>.md`（以及对应的 `docs/src/<project>/<module>.md`）MUST 包含一节"实现与原版类对应"，逐条列出本仓实现的每个类/关键类型分别对应 26.3 的哪个原版类（例如 `EntityTracker` ↔ `ClientLevel`/`Entity`/`SteppedInterpolationHandler`），并写明未实现、合并或行为差异之处。目的是让"对照原版"可核查、防止漏实现（教训：T-640 漏接 `entity_position_sync`(35)）。
+
 ### 3.6 工具链与自动化防线（机器硬约束）
 
 - **构建与测试标准命令**：
