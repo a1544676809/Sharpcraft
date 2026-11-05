@@ -106,8 +106,8 @@ public static class EntityModelLayerHelpers
                 TextureSelector = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot),
                 Grow = grow,
                 OverlayLayers = null,
-                TextureWidth = 0,
-                TextureHeight = 0,
+                TextureWidth = 64,
+                TextureHeight = 32,
                 VisibleWhen = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot) is not null
             });
         }
