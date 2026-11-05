@@ -294,6 +294,11 @@ public static class ClassMapTool
         {
             foreach (var e in entries)
             {
+                if (e.Kind == "New")
+                {
+                    continue;
+                }
+
                 if (!e.ReferencePath.StartsWith(RefPrefix, StringComparison.Ordinal))
                 {
                     violations.Add($"reference path must start with {RefPrefix}: {e.TypeName} -> {e.ReferencePath}");

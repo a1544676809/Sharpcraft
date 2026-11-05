@@ -153,5 +153,32 @@
 | Sharpcraft.Common | Sharpcraft.Common.Network.EntityTeleport | Mirror | Full | net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket | ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket.java |  |
 | Sharpcraft.Common | Sharpcraft.Common.Network.PayloadReader | Adapter | Partial | net.minecraft.network.FriendlyByteBuf | ref://mc-26.3-analysis/src/net/minecraft/network/FriendlyByteBuf.java | Minimal big-endian reader subset |
 | Sharpcraft.Common | Sharpcraft.Common.Network.PositionPathStep | Mirror | Full | net.minecraft.world.entity.PositionStep | ref://mc-26.3-analysis/src/net/minecraft/world/entity/PositionStep.java |  |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Accounts.AccountKind | New | Full | sharpcraft.AccountKind | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Accounts.AccountRecord | New | Full | sharpcraft.AccountRecord | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Accounts.AccountStore | New | Full | sharpcraft.AccountStore | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Accounts.AccountsCommand | New | Full | sharpcraft.AccountsCommand | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Accounts.GateResult | New | Full | sharpcraft.GateResult | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Accounts.OfflineLoginGate | New | Full | sharpcraft.OfflineLoginGate | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Assets.AssetPackBuilder | New | Full | sharpcraft.AssetPackBuilder | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Assets.AssetPackResult | New | Full | sharpcraft.AssetPackResult | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Assets.AssetSelection | New | Full | sharpcraft.AssetSelection | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Assets.HostPaths | New | Full | sharpcraft.HostPaths | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Assets.JarVerificationException | New | Full | sharpcraft.JarVerificationException | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Assets.JarVerifier | New | Full | sharpcraft.JarVerifier | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Assets.VersionManifest | New | Full | sharpcraft.VersionManifest | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Diagnostics.HostDebugOptions | New | Full | sharpcraft.HostDebugOptions | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Diagnostics.SpeedOverlay | New | Full | sharpcraft.SpeedOverlay | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Launch.LaunchCommand | New | Full | sharpcraft.LaunchCommand | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Launch.LaunchContext | New | Full | sharpcraft.LaunchContext | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Launch.LaunchPlan | New | Full | sharpcraft.LaunchPlan | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Launch.LaunchPlanBuilder | New | Full | sharpcraft.LaunchPlanBuilder | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.LauncherCommand | New | Full | sharpcraft.LauncherCommand | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.LauncherCommandLine | New | Full | sharpcraft.LauncherCommandLine | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Transport.HostTransport | New | Full | sharpcraft.HostTransport | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Modding | Sharpcraft.Modding.IModContext | New | Full | sharpcraft.IModContext | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Modding | Sharpcraft.Modding.ISharpcraftMod | New | Full | sharpcraft.ISharpcraftMod | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Modding | Sharpcraft.Modding.ModHandle | New | Full | sharpcraft.ModHandle | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Modding | Sharpcraft.Modding.ModHost | New | Full | sharpcraft.ModHost | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Modding | Sharpcraft.Modding.ModLoadContext | New | Full | sharpcraft.ModLoadContext | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
 
 <!-- END GENERATED: class-map -->

@@ -22,3 +22,12 @@
 
 - 新增调试开关 MUST 只在本目录解析；MUST NOT 下沉到 `Common` / `Client` / `Framework`。
 - 自动化检查：`tools/verify/check-diagnostics-separation.ps1`（游戏程序集环境变量读取数 MUST 为 0）。
+
+<!-- BEGIN GENERATED: class-map -->
+
+| Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
+| --- | --- | --- | --- | --- | --- | --- |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Diagnostics.HostDebugOptions | New | Full | sharpcraft.HostDebugOptions | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+| Sharpcraft.Launcher | Sharpcraft.Launcher.Diagnostics.SpeedOverlay | New | Full | sharpcraft.SpeedOverlay | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
+
+<!-- END GENERATED: class-map -->

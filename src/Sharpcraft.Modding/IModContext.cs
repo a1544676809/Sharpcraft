@@ -8,6 +8,7 @@ namespace Sharpcraft.Modding;
 /// make the contract unable to evolve, and would also break unloadability by pinning host state
 /// (docs/modules/modding.md 4).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.IModContext", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public interface IModContext
 {
     /// <summary>Identifier of the mod currently being loaded.</summary>

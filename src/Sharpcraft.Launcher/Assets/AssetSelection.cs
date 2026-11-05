@@ -10,6 +10,7 @@ namespace Sharpcraft.Launcher.Assets;
 /// table (<c>data/minecraft/tags/item/</c>), which the client needs to resolve item tags such as
 /// <c>piglin_loved</c> / preferred weapons without shipping any Minecraft data in the repository.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.AssetSelection", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public static class AssetSelection
 {
     /// <summary>Prefix shared by every resource under the virtual file system.</summary>

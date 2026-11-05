@@ -17,6 +17,7 @@ namespace Sharpcraft.Launcher.Assets;
 /// <param name="AssetIndexTotalSize">Index total size in bytes, or 0 when absent.</param>
 /// <param name="ClientJarSha1">Expected SHA-1 of the client jar.</param>
 /// <param name="ClientJarSize">Client jar size in bytes, or 0 when absent.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.VersionManifest", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public sealed record VersionManifest(
     string Id,
     string? AssetIndexId,

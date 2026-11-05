@@ -18,6 +18,7 @@ namespace Sharpcraft.Launcher.Diagnostics;
 /// </para>
 /// <para>Principle 13: this lives in the host diagnostics folder and is off unless the host enables it.</para>
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.SpeedOverlay", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public sealed class SpeedOverlay
 {
     private long _lastTick = -1;

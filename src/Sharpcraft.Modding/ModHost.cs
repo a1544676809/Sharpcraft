@@ -10,6 +10,7 @@ namespace Sharpcraft.Modding;
 /// the context, to a mod instance, or to a type from a mod: doing so would pin the context and the unload
 /// check would fail (docs/modules/modding.md 5).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.ModHost", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public sealed class ModHost
 {
     private readonly List<WeakReference<ModLoadContext>> _contexts = [];

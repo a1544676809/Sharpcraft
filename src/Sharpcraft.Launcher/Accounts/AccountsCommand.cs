@@ -11,6 +11,7 @@ namespace Sharpcraft.Launcher.Accounts;
 /// evaluated on every call from the current list, never from a stored flag
 /// (docs/modules/accounts.md §4, ADR-0006).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.AccountsCommand", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public static class AccountsCommand
 {
     /// <summary>Exit code when the offline gate refuses.</summary>

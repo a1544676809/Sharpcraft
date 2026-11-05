@@ -11,6 +11,7 @@ namespace Sharpcraft.Launcher.Assets;
 /// (docs/modules/assets.md §6). A mismatch is always fatal: the pipeline must never extract from a
 /// jar of unknown provenance (AGENTS.md principle 3).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.JarVerifier", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public static class JarVerifier
 {
     /// <summary>Computes the SHA-1 of a file without loading it into memory.</summary>
@@ -92,6 +93,7 @@ public static class JarVerifier
 }
 
 /// <summary>Raised when a jar cannot be trusted as the expected baseline artifact.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.JarVerificationException", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public sealed class JarVerificationException : Exception
 {
     /// <summary>Creates the exception with both hashes and an actionable hint.</summary>

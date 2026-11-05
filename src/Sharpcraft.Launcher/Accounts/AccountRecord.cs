@@ -6,6 +6,7 @@ using System.Globalization;
 namespace Sharpcraft.Launcher.Accounts;
 
 /// <summary>How an account was obtained. The two kinds are never interchangeable.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.AccountKind", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public enum AccountKind
 {
     /// <summary>Signed in through the official chain; the only kind that unlocks offline play.</summary>
@@ -21,6 +22,7 @@ public enum AccountKind
 /// <param name="Uuid">Profile UUID; for offline accounts this is derived, never random.</param>
 /// <param name="VerifiedAt">Last successful official verification; null for offline accounts.</param>
 /// <param name="CreatedAt">When the entry was added.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.AccountRecord", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public sealed record AccountRecord(
     AccountKind Kind,
     string Name,
@@ -41,6 +43,7 @@ public sealed record AccountRecord(
 /// purpose: a cached flag is the only way deleting the last premium account could fail to
 /// invalidate offline play immediately (ADR-0006).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.OfflineLoginGate", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public static class OfflineLoginGate
 {
     /// <summary>Evaluates whether offline play is currently allowed.</summary>
@@ -62,4 +65,5 @@ public static class OfflineLoginGate
 /// <summary>Outcome of the gate.</summary>
 /// <param name="Available">Whether offline play may proceed.</param>
 /// <param name="Reason">Explanation for logs and user-facing errors.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.GateResult", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public sealed record GateResult(bool Available, string Reason);

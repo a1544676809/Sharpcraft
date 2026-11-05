@@ -8,6 +8,7 @@ namespace Sharpcraft.Modding;
 /// reference to the mod instance or its load context would make the context permanently unreclaimable, and
 /// the unload check would then fail by design (docs/modules/modding.md 5).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.ModHandle", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public sealed class ModHandle
 {
     internal ModHandle(string id, string entryTypeName, WeakReference<object> instance, WeakReference<ModLoadContext> context)

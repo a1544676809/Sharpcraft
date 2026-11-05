@@ -16,6 +16,7 @@ namespace Sharpcraft.Launcher.Launch;
 /// index, sign in, then hand a token-free command line to the client
 /// (docs/modules/launcher.md §5.1).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.LaunchCommand", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public static class LaunchCommand
 {
     /// <summary>Environment variable that prints the plan instead of starting a process.</summary>

@@ -16,6 +16,7 @@ namespace Sharpcraft.Launcher.Launch;
 /// <param name="PackPath">Base asset pack.</param>
 /// <param name="AssetIndexId">Official asset index id.</param>
 /// <param name="SessionFilePath">Session file holding the token.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.LaunchPlan", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public sealed record LaunchPlan(
     string VersionId,
     string ClientPath,
@@ -80,6 +81,7 @@ public sealed record LaunchPlan(
 /// <param name="GameDirectory">Instance directory.</param>
 /// <param name="Profile">Signed-in profile.</param>
 /// <param name="AccessToken">Minecraft access token.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.LaunchContext", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public sealed record LaunchContext(
     string VersionId,
     string JarPath,
@@ -91,6 +93,7 @@ public sealed record LaunchContext(
     string AccessToken);
 
 /// <summary>Assembles the client command line. Pure so it can be tested without spawning.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.LaunchPlanBuilder", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public static class LaunchPlanBuilder
 {
     /// <summary>Environment variable that overrides the client executable path.</summary>

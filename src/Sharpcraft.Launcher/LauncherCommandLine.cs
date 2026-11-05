@@ -4,6 +4,7 @@
 namespace Sharpcraft.Launcher;
 
 /// <summary>Supported launcher commands (docs/modules/launcher.md 3).</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.LauncherCommand", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public enum LauncherCommand
 {
     /// <summary>Show usage.</summary>
@@ -44,6 +45,7 @@ public enum LauncherCommand
 /// <param name="Command">Command to run.</param>
 /// <param name="Target">Target address for commands that need one.</param>
 /// <param name="Error">Parse error, when the line is invalid.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.LauncherCommandLine", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public sealed record LauncherCommandLine(LauncherCommand Command, string? Target, string? Error)
 {
     /// <summary>Usage text.</summary>

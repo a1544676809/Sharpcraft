@@ -13,6 +13,7 @@ namespace Sharpcraft.Launcher.Transport;
 /// IPv4 answered in milliseconds). This factory races the resolved addresses instead, so the
 /// reachable family wins immediately and an unreachable one costs nothing.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.HostTransport", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public static class HostTransport
 {
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);

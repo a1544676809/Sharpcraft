@@ -13,6 +13,7 @@ namespace Sharpcraft.Launcher.Accounts;
 /// Persists the account list outside the repository with an HMAC envelope. A failed check means the
 /// list is untrusted, so offline play stays unavailable instead of being repaired (ADR-0006 §6).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.AccountStore", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public sealed class AccountStore
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)

@@ -15,6 +15,7 @@ namespace Sharpcraft.Launcher.Diagnostics;
 /// Principle 13: the game assemblies read no environment, so deleting this file (and the folder) removes the debugging
 /// behaviour without touching the game. Every setter here has a game-side default that means "debug off".
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.HostDebugOptions", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public static class HostDebugOptions
 {
     /// <summary>Applies every switch that the host owns.</summary>

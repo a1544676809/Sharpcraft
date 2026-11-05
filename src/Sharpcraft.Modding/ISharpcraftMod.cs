@@ -13,6 +13,7 @@ namespace Sharpcraft.Modding;
 /// assembly keeps its type alive and the context then leaks, which the host's unload check reports as a
 /// failure.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.ISharpcraftMod", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public interface ISharpcraftMod
 {
     /// <summary>Mod identifier; used in diagnostics and unload bookkeeping.</summary>

@@ -21,6 +21,7 @@ namespace Sharpcraft.Launcher.Assets;
 /// <param name="Reused">True when an existing pack for the same jar was reused.</param>
 /// <param name="ExcludedCounts">Entries skipped, grouped by top-level directory.</param>
 /// <param name="Elapsed">Wall-clock build time.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.AssetPackResult", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public sealed record AssetPackResult(
     string PackPath,
     string VersionId,
@@ -49,6 +50,7 @@ public sealed record AssetPackResult(
 /// manifest plus the whitelisted entries at their original paths, published atomically and named
 /// after its own hash.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.AssetPackBuilder", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public static class AssetPackBuilder
 {
     /// <summary>Fixed timestamp so the same jar always produces byte-identical packs.</summary>

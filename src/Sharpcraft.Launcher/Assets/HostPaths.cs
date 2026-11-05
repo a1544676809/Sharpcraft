@@ -7,6 +7,7 @@ namespace Sharpcraft.Launcher.Assets;
 /// Location rules for host-side data. The asset pipeline must never write inside the repository
 /// (AGENTS.md principle 3, risk R-014).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.HostPaths", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public static class HostPaths
 {
     /// <summary>Files that identify the repository root.</summary>

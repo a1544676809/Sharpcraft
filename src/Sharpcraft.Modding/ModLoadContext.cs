@@ -11,6 +11,7 @@ namespace Sharpcraft.Modding;
 /// <see cref="ISharpcraftMod"/> keeps a single identity; every other dependency is resolved from the mod
 /// directory or the default context (docs/modules/modding.md 4).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.ModLoadContext", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public sealed class ModLoadContext : AssemblyLoadContext
 {
     private readonly string _directory;
