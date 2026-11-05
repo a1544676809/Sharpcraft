@@ -267,6 +267,14 @@ public static class PacketIds
         /// <remarks>Reference registration dump: play clientbound 97.</remarks>
         public const int SetChunkCacheRadius = 97;
 
+        /// <summary>Block destruction progress for an entity (crack overlay).</summary>
+        /// <remarks>Reference registration dump: play clientbound 5.</remarks>
+        public const int BlockDestruction = 5;
+
+        /// <summary>Block event (position + block + two event bytes).</summary>
+        /// <remarks>Reference registration dump: play clientbound 7.</remarks>
+        public const int BlockEvent = 7;
+
         /// <summary>Passengers of a vehicle: vehicle entity id, count, then passenger entity ids.</summary>
         /// <remarks>Reference registration dump: play clientbound 109.</remarks>
         public const int SetPassengers = 109;

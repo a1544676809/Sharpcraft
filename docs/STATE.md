@@ -3546,3 +3546,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - 已补 chunk_batch_start(12)/forget_level_chunk(38)/set_chunk_cache_center(96)/set_chunk_cache_radius(97)；forget 现在真正 RemoveChunk。审计 handled 51→55、未处理 93→89。
 - 下一步：light_update(49)/chunks_biomes(13) 较复杂（需世界光照/群系接入），再 block_event/block_destruction/explode。
+
+## 2026-11-05 补 block_destruction/block_event（T-646）
+
+- 已补 block_destruction(5)/block_event(7)。审计 handled 55→57、未处理 89→87。
+- 下一步：light_update(49)/chunks_biomes(13) 需世界光照/群系存储接入（较大）；或 explode(36)。

@@ -581,4 +581,62 @@ public static class PlayPackets
         var reader = new PayloadReader(body);
         return reader.TryReadVarInt(out radius);
     }
+
+    /// <summary>Reads <c>block_destruction</c> (clientbound 5): VarInt entity id, packed BlockPos long, u8 progress.</summary>
+    public static DecodeStatus TryReadBlockDestruction(
+        ReadOnlySpan<byte> body,
+        out int entityId,
+        out int x,
+        out int y,
+        out int z,
+        out int progress)
+    {
+        entityId = 0;
+        x = 0;
+        y = 0;
+        z = 0;
+        progress = 0;
+        var reader = new PayloadReader(body);
+        if (reader.TryReadVarInt(out entityId) != DecodeStatus.Success ||
+            reader.TryReadLong(out var packed) != DecodeStatus.Success ||
+            reader.TryReadByte(out var progressByte) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        (x, y, z) = BlockPositionCodec.UnpackBlockPosition(packed);
+        progress = progressByte;
+        return DecodeStatus.Success;
+    }
+
+    /// <summary>Reads <c>block_event</c> (clientbound 7): packed BlockPos long, u8 b0, u8 b1, VarInt block registry id.</summary>
+    public static DecodeStatus TryReadBlockEvent(
+        ReadOnlySpan<byte> body,
+        out int x,
+        out int y,
+        out int z,
+        out int b0,
+        out int b1,
+        out int blockId)
+    {
+        x = 0;
+        y = 0;
+        z = 0;
+        b0 = 0;
+        b1 = 0;
+        blockId = 0;
+        var reader = new PayloadReader(body);
+        if (reader.TryReadLong(out var packed) != DecodeStatus.Success ||
+            reader.TryReadByte(out var b0Byte) != DecodeStatus.Success ||
+            reader.TryReadByte(out var b1Byte) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out blockId) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        (x, y, z) = BlockPositionCodec.UnpackBlockPosition(packed);
+        b0 = b0Byte;
+        b1 = b1Byte;
+        return DecodeStatus.Success;
+    }
 }

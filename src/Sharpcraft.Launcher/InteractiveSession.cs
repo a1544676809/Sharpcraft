@@ -87,6 +87,8 @@ internal sealed class InteractiveSession
     private int _chunkCacheCenterX;
     private int _chunkCacheCenterZ;
     private int _chunkCacheRadius;
+    private readonly System.Collections.Generic.Dictionary<long, int> _blockDestruction = new();
+    private int _lastBlockEventX, _lastBlockEventY, _lastBlockEventZ, _lastBlockEventB0, _lastBlockEventB1, _lastBlockEventBlock;
     private int _diagFrames;
     private readonly bool _packetLog = Environment.GetEnvironmentVariable("MC_PACKET_LOG") == "1";
     private int _packetLogCount;
@@ -1843,6 +1845,35 @@ internal sealed class InteractiveSession
                     if (EntityPackets.TryReadSetEntityMotion(body[reader.Position..], out var motion) == DecodeStatus.Success)
                     {
                         _entities.ApplyMotion(motion);
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.BlockDestruction:
+                    if (PlayPackets.TryReadBlockDestruction(body[reader.Position..], out _, out var bdX, out var bdY, out var bdZ, out var bdProgress) == DecodeStatus.Success)
+                    {
+                        var key = Sharpcraft.Common.Network.BlockPositionCodec.PackBlockPosition(bdX, bdY, bdZ);
+                        if (bdProgress == 0)
+                        {
+                            _blockDestruction.Remove(key);
+                        }
+                        else
+                        {
+                            _blockDestruction[key] = bdProgress;
+                        }
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.BlockEvent:
+                    if (PlayPackets.TryReadBlockEvent(body[reader.Position..], out var evX, out var evY, out var evZ, out var evB0, out var evB1, out var evBlock) == DecodeStatus.Success)
+                    {
+                        _lastBlockEventX = evX;
+                        _lastBlockEventY = evY;
+                        _lastBlockEventZ = evZ;
+                        _lastBlockEventB0 = evB0;
+                        _lastBlockEventB1 = evB1;
+                        _lastBlockEventBlock = evBlock;
                     }
 
                     break;

@@ -123,4 +123,36 @@ public sealed class SimpleClientboundPacketsTests
         Assert.Equal(DecodeStatus.Success, PlayPackets.TryReadSetChunkCacheRadius(new byte[] { 0x0A }, out var r));
         Assert.Equal(10, r);
     }
+
+    [Fact]
+    public void BlockDestructionReadsEntityPosProgress()
+    {
+        var body = new byte[10];
+        body[0] = 0x01; // entity id
+        System.Buffers.Binary.BinaryPrimitives.WriteInt64BigEndian(body.AsSpan(1), BlockPositionCodec.PackBlockPosition(1, 2, 3));
+        body[9] = 0x05; // progress
+        Assert.Equal(DecodeStatus.Success, PlayPackets.TryReadBlockDestruction(body, out var id, out var x, out var y, out var z, out var progress));
+        Assert.Equal(1, id);
+        Assert.Equal(1, x);
+        Assert.Equal(2, y);
+        Assert.Equal(3, z);
+        Assert.Equal(5, progress);
+    }
+
+    [Fact]
+    public void BlockEventReadsPosBytesAndBlock()
+    {
+        var body = new byte[11];
+        System.Buffers.Binary.BinaryPrimitives.WriteInt64BigEndian(body.AsSpan(0), BlockPositionCodec.PackBlockPosition(0, 0, 0));
+        body[8] = 0x01; // b0
+        body[9] = 0x02; // b1
+        body[10] = 0x03; // block id
+        Assert.Equal(DecodeStatus.Success, PlayPackets.TryReadBlockEvent(body, out var x, out var y, out var z, out var b0, out var b1, out var block));
+        Assert.Equal(0, x);
+        Assert.Equal(0, y);
+        Assert.Equal(0, z);
+        Assert.Equal(1, b0);
+        Assert.Equal(2, b1);
+        Assert.Equal(3, block);
+    }
 }
