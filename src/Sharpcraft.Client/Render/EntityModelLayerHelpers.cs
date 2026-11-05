@@ -77,8 +77,47 @@ public static class EntityModelLayerHelpers
         return [.. result];
     }
 
+    /// <summary>Humanoid armor layer for one slot: clones only that slot's parts with the outer/inner deformation.</summary>
+    public static EntityModelPart[] WithArmorSlot(IReadOnlyList<EntityModelPart> parts, EquipmentAssetKind kind, int slot, string fallbackTexture)
+    {
+        string[] visible = slot switch
+        {
+            5 => ["head"],
+            4 => ["body", "left_arm", "right_arm"],
+            3 => ["body", "left_leg", "right_leg"],
+            2 => ["left_leg", "right_leg"],
+            _ => []
+        };
+        var grow = slot == 3 ? 0.5f : 1.0f; // leggings use the inner deformation, everything else the outer one
+        var result = new List<EntityModelPart>(parts.Count + visible.Length);
+        result.AddRange(parts);
+        foreach (var part in parts)
+        {
+            if (Array.IndexOf(visible, part.Name) < 0)
+            {
+                continue;
+            }
+
+            result.Add(part with
+            {
+                Name = "equipment_" + kind + "_" + slot + "_" + part.Name,
+                PoseSource = part.PoseSource ?? part.Name,
+                TexturePath = fallbackTexture,
+                TextureSelector = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot),
+                Grow = grow,
+                OverlayLayers = null,
+                TextureWidth = 0,
+                TextureHeight = 0,
+                VisibleWhen = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot) is not null
+            });
+        }
+
+        return [.. result];
+    }
+
     public static EntityModelPart[] WithHorseMarkings(IReadOnlyList<EntityModelPart> parts, string texturePrefix, bool baby)
-    {        (int Id, string Key)[] markings = [(1, "white"), (2, "whitefield"), (3, "whitedots"), (4, "blackdots")];
+    {
+        (int Id, string Key)[] markings = [(1, "white"), (2, "whitefield"), (3, "whitedots"), (4, "blackdots")];
         var result = new List<EntityModelPart>(parts.Count * (markings.Length + 1));
         result.AddRange(parts);
         foreach (var (id, key) in markings)

@@ -88,6 +88,7 @@
 2. **E2 装备资产映射**：受控物品 → 纹理表；单元测试覆盖马甲材质、鞍、装饰、狼甲、快乐恶魂挽具。
 3. **E3 渲染层**：为 Horse/Donkey/Mule、Llama、Camel、Nautilus、Happy Ghast、Wolf 生成装备副本层；沙盒通过显式装备参数截图验收。
 4. **E4 后置**：`EquipmentClientInfo` 资产化、完整物品模型渲染、Witch 手持物品模型。
+5. **E5 人形护甲（已实现 2026-11-05，T-630）**：新增 `HumanoidArmor`/`HumanoidLeggings` 资产类型；`WithArmorSlot` 按槽只克隆对应部件（head / body+arms / body+legs / legs）并施加外(1.0)/内(0.5)变形；Zombie/Drowned/Husk/Skeleton/Stray/Bogged/WitherSkeleton/ZombieVillager 接四槽护甲层。**限制**：材质/槽位按护甲物品名兜底（`equippable` 组件 assetId 尚未解析，模组护甲不渲染）。
 
 ## 8. 未解决问题与风险
 

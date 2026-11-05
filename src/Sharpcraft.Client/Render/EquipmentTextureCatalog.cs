@@ -21,7 +21,11 @@ public enum EquipmentAssetKind
     NautilusBody,
     NautilusSaddle,
     WolfBody,
-    HappyGhastBody
+    HappyGhastBody,
+    /// <summary>Humanoid armor outer layer (head/chest/feet): same humanoid geometry, outer deformation.</summary>
+    HumanoidArmor,
+    /// <summary>Humanoid armor leggings (legs): same humanoid geometry, inner deformation, leggings texture layer.</summary>
+    HumanoidLeggings
 }
 
 /// <summary>Resolved equipment textures; <see cref="OverlayPath"/> is optional (leather horse armor, wolf armor).</summary>
@@ -87,8 +91,48 @@ public static class EquipmentTextureCatalog
             EquipmentAssetKind.WolfBody when path == "wolf_armor" =>
                 new("entity/equipment/wolf_body/armadillo_scute",
                     "entity/equipment/wolf_body/armadillo_scute_overlay"),
+            EquipmentAssetKind.HumanoidArmor when TryArmorMaterial(path, out var armorMaterial) =>
+                new("entity/equipment/humanoid/" + armorMaterial),
+            EquipmentAssetKind.HumanoidLeggings when TryArmorMaterial(path, out var leggingsMaterial) =>
+                new("entity/equipment/humanoid_leggings/" + leggingsMaterial),
             _ => null
         };
+    }
+
+    private static readonly string[] ArmorSuffixes = ["_helmet", "_chestplate", "_leggings", "_boots"];
+    private static readonly string[] ArmorMaterials = ["leather", "chainmail", "iron", "gold", "diamond", "netherite", "turtle_scute"];
+
+    /// <summary>Maps a vanilla armor item path to its equipment asset material (turtle_helmet → turtle_scute).</summary>
+    private static bool TryArmorMaterial(string path, out string material)
+    {
+        material = string.Empty;
+        if (string.Equals(path, "turtle_helmet", StringComparison.Ordinal))
+        {
+            material = "turtle_scute";
+            return true;
+        }
+
+        foreach (var suffix in ArmorSuffixes)
+        {
+            if (!path.EndsWith(suffix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            material = path[..^suffix.Length] switch
+            {
+                "leather" => "leather",
+                "chainmail" => "chainmail",
+                "iron" => "iron",
+                "golden" => "gold",
+                "diamond" => "diamond",
+                "netherite" => "netherite",
+                _ => string.Empty
+            };
+            return material.Length > 0;
+        }
+
+        return false;
     }
 
     /// <summary>All llama carpet item identifiers, used by tests and the entity renderer.</summary>
@@ -130,6 +174,13 @@ public static class EquipmentTextureCatalog
         paths.AddRange([
             "entity/equipment/wolf_body/armadillo_scute", "entity/equipment/wolf_body/armadillo_scute_overlay"
         ]);
+
+        foreach (var material in ArmorMaterials)
+        {
+            paths.Add("entity/equipment/humanoid/" + material);
+            paths.Add("entity/equipment/humanoid_leggings/" + material);
+        }
+
         return paths;
     }
 }

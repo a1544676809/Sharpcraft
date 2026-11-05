@@ -3456,3 +3456,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **已完成**：同步解码 `IS_LYING`(index21)/`RELAX_STATE_ONE`(index22)（BOOLEAN）与 shared flag bit3(sprint)；`EntityPresentationState` 每 tick 累积 lieDown/lieDownTail/relax 三档时钟并按 partial 插值投影到 `EntityRenderState`/`EntityAnimationFrame`；`FelineAnimationProvider` 增加 sprint（腿相位+尾巴）、lieDown（head zRot/yRot、前后腿、尾巴 rotlerp）、relax（head pitch lerp）分支。
 - **验证**：Client **1321** 全绿（+3 猫科分支：sprint/lieDown/relax），构建 0 警告 0 错误。
 - **下一步具体动作**：①SPEAR/STAB（需 `SpearAnimations`，仍阻塞）；②装备层 / baby 专属模型；③EnderDragon 飞行历史子系统；④如所有实体 provider 覆盖完成，收口到里程碑/性能验证。
+
+## 2026-11-05 人形护甲层（T-630）
+
+- **已完成**：`EquipmentAssetKind` 加 `HumanoidArmor/HumanoidLeggings`；`EquipmentTextureCatalog` 按护甲物品名解析 `entity/equipment/humanoid/<material>` 与 `humanoid_leggings/<material>`（leather/chainmail/iron/gold/diamond/netherite/turtle_scute）并纳入资产清单；`EntityModelLayerHelpers.WithArmorSlot` 按槽只克隆对应部件（head / body+arms / body+legs / legs）并施加外(1.0)/内(0.5)变形；`EntityModelResolver` 给 Zombie/Drowned/Husk/Skeleton/Stray/Bogged/WitherSkeleton/ZombieVillager 接上四槽护甲层。
+- **限制（记录）**：材质/槽位按护甲物品名兜底；`equippable` 组件的 assetId 尚未解析，模组/自定义护甲不会渲染。
+- **验证**：Client **1329** 全绿（+8 护甲测试），构建 0 警告 0 错误。
+- **下一步具体动作**：①解析 `equippable` 组件 assetId（支持模组护甲）；②Elytra 层；③baby 人形护甲变形；④其余装备特例（HappyGhast 绳、Wolf 裂纹、Witch 持物、TraderLlama 地毯、ZombieNautilus coral）。

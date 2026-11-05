@@ -537,10 +537,10 @@ public sealed class EntityModelRegistrationTests
     [Fact]
     public void BabyZombieDrownedZombieVillagerAndVillagerResolveToTheirOwnGeometry()
     {
-        Assert.Equal(8, EntityModelResolver.Resolve(154, true).Parts.Count);
-        Assert.Equal(15, EntityModelResolver.Resolve(39, true).Parts.Count);
-        Assert.Equal(10, EntityModelResolver.Resolve(157, true).Parts.Count);
-        Assert.Equal(12, EntityModelResolver.Resolve(143, true).Parts.Count);
+        Assert.Equal(8, EntityModelResolver.Resolve(154, true).Parts.Count(p => !p.Name.StartsWith("equipment_")));
+        Assert.Equal(15, EntityModelResolver.Resolve(39, true).Parts.Count(p => !p.Name.StartsWith("equipment_")));
+        Assert.Equal(10, EntityModelResolver.Resolve(157, true).Parts.Count(p => !p.Name.StartsWith("equipment_")));
+        Assert.Equal(12, EntityModelResolver.Resolve(143, true).Parts.Count(p => !p.Name.StartsWith("equipment_")));
         Assert.Contains("entity/zombie/drowned_outer_layer_baby", EntityModelResolver.Resolve(39, true).TexturePaths);
     }
 
@@ -557,10 +557,10 @@ public sealed class EntityModelRegistrationTests
     [Fact]
     public void BabyStriderHuskSniffletArmadilloResolveToTheirOwnGeometry()
     {
-        Assert.Equal(6, EntityModelResolver.Resolve(132, true).Parts.Count);
-        Assert.Equal(8, EntityModelResolver.Resolve(68, true).Parts.Count);
-        Assert.Equal(16, EntityModelResolver.Resolve(122, true).Parts.Count);
-        Assert.Equal(13, EntityModelResolver.Resolve(4, true).Parts.Count);
+        Assert.Equal(6, EntityModelResolver.Resolve(132, true).Parts.Count(p => !p.Name.StartsWith("equipment_")));
+        Assert.Equal(8, EntityModelResolver.Resolve(68, true).Parts.Count(p => !p.Name.StartsWith("equipment_")));
+        Assert.Equal(16, EntityModelResolver.Resolve(122, true).Parts.Count(p => !p.Name.StartsWith("equipment_")));
+        Assert.Equal(13, EntityModelResolver.Resolve(4, true).Parts.Count(p => !p.Name.StartsWith("equipment_")));
         Assert.Equal("entity/armadillo/armadillo_baby", EntityModelResolver.Resolve(4, true).TexturePath);
     }
 

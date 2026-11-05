@@ -48,7 +48,7 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("skeleton", definition.Name);
-        Assert.Equal(6, definition.Parts.Count);
+        Assert.Equal(6, definition.Parts.Count(p => !p.Name.StartsWith("equipment_")));
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("zombie_villager", definition.Name);
-        Assert.Equal(8, definition.Parts.Count);
+        Assert.Equal(8, definition.Parts.Count(p => !p.Name.StartsWith("equipment_")));
     }
 
     [Fact]
@@ -426,7 +426,7 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("zombie", definition.Name);
-        Assert.Equal(6, definition.Parts.Count);
+        Assert.Equal(6, definition.Parts.Count(p => !p.Name.StartsWith("equipment_")));
     }
 
     [Fact]

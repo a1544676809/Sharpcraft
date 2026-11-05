@@ -194,7 +194,9 @@ public static class EntityModelResolver
         var parts = definition.Parts;
         foreach (var (kind, slot, fallback) in layers)
         {
-            parts = EntityModelLayerHelpers.WithEquipment(parts, kind, slot, fallback, baseCopy: kind != EquipmentAssetKind.HappyGhastBody);
+            parts = kind is EquipmentAssetKind.HumanoidArmor or EquipmentAssetKind.HumanoidLeggings
+                ? EntityModelLayerHelpers.WithArmorSlot(parts, kind, slot, fallback)
+                : EntityModelLayerHelpers.WithEquipment(parts, kind, slot, fallback, baseCopy: kind != EquipmentAssetKind.HappyGhastBody);
         }
 
         var decorated = new EntityModelDefinition(
@@ -212,6 +214,14 @@ public static class EntityModelResolver
         return decorated;
     }
 
+    private static readonly (EquipmentAssetKind Kind, int Slot, string Fallback)[] HumanoidArmorLayers =
+    [
+        (EquipmentAssetKind.HumanoidArmor, 5, "entity/equipment/humanoid/iron"),
+        (EquipmentAssetKind.HumanoidArmor, 4, "entity/equipment/humanoid/iron"),
+        (EquipmentAssetKind.HumanoidLeggings, 3, "entity/equipment/humanoid_leggings/iron"),
+        (EquipmentAssetKind.HumanoidArmor, 2, "entity/equipment/humanoid/iron")
+    ];
+
     private static (EquipmentAssetKind Kind, int Slot, string Fallback)[] EquipmentLayers(int typeId) => typeId switch
     {
         67 => [(EquipmentAssetKind.HorseBody, 6, "entity/equipment/horse_body/iron"),
@@ -226,6 +236,7 @@ public static class EntityModelResolver
                       (EquipmentAssetKind.NautilusSaddle, 7, "entity/equipment/nautilus_saddle/saddle")],
         59 => [(EquipmentAssetKind.HappyGhastBody, 6, "entity/equipment/happy_ghast_body/white_harness")],
         152 => [(EquipmentAssetKind.WolfBody, 6, "entity/equipment/wolf_body/armadillo_scute")],
+        154 or 39 or 68 or 118 or 131 or 16 or 150 or 157 => HumanoidArmorLayers,
         _ => []
     };
     public static int? FindTypeId(string name)
