@@ -129,7 +129,7 @@ public static class ClassMapTool
 
         sb.AppendLine();
         sb.AppendLine("<!-- END GENERATED: class-map -->");
-        return sb.ToString();
+        return sb.ToString().Replace("\r\n", "\n");
     }
 
     private static string ReadBaseline(string root)
@@ -213,4 +213,5 @@ public static class ClassMapTool
         return violations;
     }
 }
+
 
