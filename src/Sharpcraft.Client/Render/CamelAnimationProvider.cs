@@ -9,6 +9,7 @@ namespace Sharpcraft.Client.Render;
 /// Reference <c>CamelModel.setupAnim</c>: the ported 1.5 s walk loop plus the 4 s idle loop. Walk time is
 /// <c>walkPos * 0.1</c> and its target scale is <c>min(walkSpeed * 2.5, 1)</c>; idle time is age in seconds.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.camel.CamelModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/camel/CamelModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class CamelAnimationProvider : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle", "walk"];

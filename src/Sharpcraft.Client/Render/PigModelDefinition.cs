@@ -11,6 +11,7 @@ namespace Sharpcraft.Client.Render;
 /// normal geometry and only changes the texture; "cold" uses <c>ColdPigModel</c>, which adds a 0.5-pixel outer layer to
 /// the body (UV 28,32). Baby models are out of scope for now.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.pig.PigModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/pig/PigModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class PigModelDefinition
 {
     public const int PigEntityTypeId = 101;

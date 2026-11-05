@@ -10,6 +10,7 @@ namespace Sharpcraft.Client.Render;
 /// Reference <c>SquidModel.setupAnim</c>: all eight tentacles rotate by the synced tentacle angle. Squid and glow
 /// squid share this controller.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.squid.SquidModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/squid/SquidModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class SquidAnimationProvider : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle"];

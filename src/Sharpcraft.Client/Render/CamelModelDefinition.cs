@@ -10,6 +10,7 @@ namespace Sharpcraft.Client.Render;
 /// The reference puts hump/tail/head under the body, and the three head cubes plus both ears under that head part; this
 /// definition mirrors that hierarchy instead of composing absolute pivots (docs/modules/entity-render.md 9).
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.camel.CamelModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/camel/CamelModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class CamelModelDefinition
 {
     public const int CamelEntityTypeId = 19;

@@ -7,6 +7,7 @@ namespace Sharpcraft.Client.Render;
 /// CreakingModel: root/upper_body groups, a multi-box head, two body slabs, long grasper arms and two legs.
 /// The emissive eyes layer only contains the head; the reference gates it on the eyesGlowing state.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.creaking.CreakingModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/creaking/CreakingModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class CreakingModelDefinition
 {
     public const int CreakingEntityTypeId = 31;

@@ -18,6 +18,7 @@ namespace Sharpcraft.Client.Render;
 /// match <see cref="EndermiteModelDefinition"/> (segment0..segment3) and are precomputed so the hot path never
 /// concatenates strings.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.endermite.EndermiteModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/endermite/EndermiteModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class EndermiteAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private static readonly string[] SegmentNames = ["segment0", "segment1", "segment2", "segment3"];

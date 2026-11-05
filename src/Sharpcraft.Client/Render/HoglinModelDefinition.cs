@@ -9,6 +9,7 @@ namespace Sharpcraft.Client.Render;
 /// <remarks>
 /// Bind pose only. Zoglin reuses the geometry with its own texture. Headbutt/walk animations are not ported.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.hoglin.HoglinModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/hoglin/HoglinModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class HoglinModelDefinition
 {
     public const int HoglinEntityTypeId = 65;

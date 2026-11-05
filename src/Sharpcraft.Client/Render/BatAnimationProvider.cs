@@ -8,6 +8,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// Reference <c>BatModel.setupAnim</c>: rest and flight are two ported looping keyframe clips.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.ambient.BatModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/ambient/BatModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class BatAnimationProvider : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["resting", "flying"];

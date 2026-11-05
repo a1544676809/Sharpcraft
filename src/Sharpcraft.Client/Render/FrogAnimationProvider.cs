@@ -10,6 +10,7 @@ namespace Sharpcraft.Client.Render;
 /// <c>min(walkSpeed * 2.5, 1)</c>; standing plays the water idle loop. The one-shot clips (croak, jump, tongue) are
 /// exposed for the sandbox and for the future interaction state wiring.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.frog.FrogModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/frog/FrogModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class FrogAnimationProvider : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["croak", "walk", "jump", "tongue", "swim", "idle_water"];

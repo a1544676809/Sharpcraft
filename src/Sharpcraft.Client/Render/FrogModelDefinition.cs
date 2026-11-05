@@ -10,6 +10,7 @@ namespace Sharpcraft.Client.Render;
 /// Bind pose only. Frog variants are registry entries that pick a texture (temperate/warm/cold); the croaking body is a
 /// static part here because the croak animation is not ported.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.frog.FrogModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/frog/FrogModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class FrogModelDefinition
 {
     public const int FrogEntityTypeId = 56;

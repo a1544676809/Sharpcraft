@@ -6,6 +6,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// SilverfishModel: seven root body segments plus three root layer cubes.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.silverfish.SilverfishModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/silverfish/SilverfishModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class SilverfishModelDefinition
 {
     public const int SilverfishEntityTypeId = 117;

@@ -21,6 +21,7 @@ namespace Sharpcraft.Client.Render;
 /// yet, so tendrils stay at rest until that field is wired. All contributions are additive pose offsets, matching the
 /// reference's offset-style accumulators against a zero bind pose.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.warden.WardenModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/warden/WardenModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class WardenAnimationProvider : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["attack", "sonic_boom", "dig", "emerge", "roar", "sniff"];

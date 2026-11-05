@@ -6,6 +6,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// PolarBearModel: head with mouth/ears, two body cubes, and four legs; the layer scales by 1.2.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.polarbear.PolarBearModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/polarbear/PolarBearModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class PolarBearModelDefinition
 {
     public const int PolarBearEntityTypeId = 105;

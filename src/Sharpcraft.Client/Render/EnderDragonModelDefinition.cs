@@ -7,6 +7,7 @@ namespace Sharpcraft.Client.Render;
 /// EnderDragonModel: head/jaw, five neck segments, twelve tail segments, body with scales, two two-segment wings and
 /// four three-segment legs. Bind pose corresponds to the model definition; flight animation is not ported.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.dragon.EnderDragonModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/dragon/EnderDragonModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class EnderDragonModelDefinition
 {
     public const int EnderDragonEntityTypeId = 44;

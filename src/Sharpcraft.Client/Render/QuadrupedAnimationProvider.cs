@@ -10,6 +10,7 @@ namespace Sharpcraft.Client.Render;
 /// Reference <c>QuadrupedModel.setupAnim</c>: head pitch plus four legs from the walk phase. Pig, cow, mooshroom,
 /// sheep and goat share this controller; idle is the same formula at walk speed zero.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.QuadrupedModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/QuadrupedModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class QuadrupedAnimationProvider : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle", "walk"];

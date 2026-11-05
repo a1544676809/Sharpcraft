@@ -12,6 +12,7 @@ namespace Sharpcraft.Client.Render;
 /// outer body layer, snout UV 9,33 and two rotated horn children). The head has no rotation, so its children collapse
 /// to plain pivot offsets in this flat model.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.cow.CowModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/cow/CowModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class CowModelDefinition
 {
     public const int CowEntityTypeId = 30;

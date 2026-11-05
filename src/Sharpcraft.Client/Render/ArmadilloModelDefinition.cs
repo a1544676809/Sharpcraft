@@ -9,6 +9,7 @@ namespace Sharpcraft.Client.Render;
 /// AdultArmadilloModel: grown body shell with head/ears/tail, four small legs, and a separate rolled-up cube.
 /// The body/legs/tail hide while the armadillo is in its shell and the cube replaces them.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.armadillo.ArmadilloModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/armadillo/ArmadilloModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class ArmadilloModelDefinition
 {
     public const int ArmadilloEntityTypeId = 4;

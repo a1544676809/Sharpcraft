@@ -26,6 +26,7 @@ namespace Sharpcraft.Client.Render;
 /// +11, base angle 0.47123894, rate -0.05π per tick).
 /// </para>
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.blaze.BlazeModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/blaze/BlazeModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class BlazeAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private const float DegreesToRadians = MathF.PI / 180f;

@@ -16,6 +16,7 @@ namespace Sharpcraft.Client.Render;
 /// elapsed clock, swim and walk from the walk animation position/speed. The definition data below is
 /// independent of how the controller feeds the clock.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.animation.definitions.FrogAnimation", "ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/FrogAnimation.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class FrogAnimations
 {
     private static readonly IReadOnlySet<string> PartNames = new HashSet<string>(StringComparer.Ordinal)

@@ -27,6 +27,7 @@ namespace Sharpcraft.Client.Render;
 /// <see cref="EntityAnimationFrame"/>. Only the non-laying land branch (<c>layEgg = 1</c>, amplitude 1) is ported.
 /// </para>
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.turtle.TurtleModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/turtle/TurtleModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class TurtleAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private const float DegreesToRadians = MathF.PI / 180f;

@@ -6,6 +6,7 @@ using Sharpcraft.Framework.Rendering;
 namespace Sharpcraft.Client.Render;
 
 /// <summary>AllayModel: small floating body with two arms and two flat wings; the whole model is translucent.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.allay.AllayModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/allay/AllayModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class AllayModelDefinition
 {
     public const int AllayEntityTypeId = 2;

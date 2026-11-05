@@ -24,6 +24,7 @@ namespace Sharpcraft.Client.Render;
 /// events (4 → attack 10, 11 → offer 400, 34 → offer 0) and decrement once per tick, exactly like
 /// <c>IronGolem.handleEntityEvent</c> / <c>IronGolem.aiStep</c>.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.golem.IronGolemModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/golem/IronGolemModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class IronGolemAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private const float DegreesToRadians = MathF.PI / 180f;

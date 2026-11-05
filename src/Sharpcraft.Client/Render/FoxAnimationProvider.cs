@@ -34,6 +34,7 @@ namespace Sharpcraft.Client.Render;
 /// </list>
 /// </para>
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.fox.FoxModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/fox/FoxModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class FoxAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle", "walk", "crouch", "sleep", "sit", "pounce", "faceplant"];

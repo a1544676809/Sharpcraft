@@ -9,6 +9,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// Reference <c>VillagerModel.setupAnim</c>: head pitch plus a half amplitude leg swing.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.npc.VillagerModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/npc/VillagerModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class VillagerAnimationProvider : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle", "walk"];

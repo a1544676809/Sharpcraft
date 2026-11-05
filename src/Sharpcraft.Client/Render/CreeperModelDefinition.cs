@@ -7,6 +7,7 @@ namespace Sharpcraft.Client.Render;
 /// CreeperModel's static cubes: head/body plus four 4x6x4 legs offset in Z. All values are raw PartPose/cube
 /// values and go through the shared vanilla factory.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.creeper.CreeperModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/creeper/CreeperModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class CreeperModelDefinition
 {
     public const int CreeperEntityTypeId = 32;

@@ -25,6 +25,7 @@ namespace Sharpcraft.Client.Render;
 /// z-rotations (∓1) are never touched. Rotations keep the reference signs.
 /// </para>
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.golem.SnowGolemModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/golem/SnowGolemModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class SnowGolemAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle", "look"];

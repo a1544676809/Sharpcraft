@@ -24,6 +24,7 @@ namespace Sharpcraft.Client.Render;
 /// same lifecycle as the reference's <c>attackAnimationRemainingTicks</c>. The render state's <c>isConverting</c> flag
 /// is not read by <c>setupAnim</c> and is therefore not an animation input.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.hoglin.HoglinModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/hoglin/HoglinModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class HoglinAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     /// <summary>Reference <c>DEFAULT_HEAD_X_ROT</c>.</summary>

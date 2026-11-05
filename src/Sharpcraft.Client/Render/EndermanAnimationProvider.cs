@@ -15,6 +15,7 @@ namespace Sharpcraft.Client.Render;
 /// decoded yet) and the creepy head drop (<c>isCreepy</c> moves head and hat in opposite directions; our hat is an
 /// overlay of the head part, not a separate part).
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.enderman.EndermanModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/enderman/EndermanModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class EndermanAnimationProvider : IEntityAnimationProvider
 {
     private const float LimbClamp = 0.4f;

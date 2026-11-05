@@ -7,6 +7,7 @@ namespace Sharpcraft.Client.Render;
 /// AdultRabbitModel: body with tail, head with ears, front legs and hind haunches, all through the reference's nested
 /// pivots (body → head → ears, body → frontlegs, body → backlegs → hind legs → haunch).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.rabbit.RabbitModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/rabbit/RabbitModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class RabbitModelDefinition
 {
     public const int RabbitEntityTypeId = 111;

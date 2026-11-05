@@ -7,6 +7,7 @@ namespace Sharpcraft.Client.Render;
 /// RavagerModel: a neck carrying the big head with snout, two horns and a mouth; a rotated two-slab body and four tall
 /// legs. Bind pose only; walk/attack/roar animations are not ported.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.ravager.RavagerModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/ravager/RavagerModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class RavagerModelDefinition
 {
     public const int RavagerEntityTypeId = 112;

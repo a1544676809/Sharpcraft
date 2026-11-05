@@ -27,6 +27,7 @@ namespace Sharpcraft.Client.Render;
 /// vertical delta is negated, x/z keep the reference sign.
 /// </para>
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.polarbear.PolarBearModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/polarbear/PolarBearModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class PolarBearAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private const float DegreesToRadians = MathF.PI / 180f;

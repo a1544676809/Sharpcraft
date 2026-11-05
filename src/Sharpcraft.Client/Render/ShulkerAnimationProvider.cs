@@ -29,6 +29,7 @@ namespace Sharpcraft.Client.Render;
 /// <c>EntityModelTransform</c> from the synced attach-face direction, not by this provider.
 /// </para>
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.shulker.ShulkerModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/shulker/ShulkerModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class ShulkerAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     /// <summary>Synced data index of the reference <c>DATA_PEEK_ID</c> byte.</summary>

@@ -6,6 +6,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// BlazeModel: one head cube and twelve root rods arranged in three rings.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.blaze.BlazeModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/blaze/BlazeModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class BlazeModelDefinition
 {
     public const int BlazeEntityTypeId = 14;

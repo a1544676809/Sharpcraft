@@ -11,6 +11,7 @@ namespace Sharpcraft.Client.Render;
 /// from <c>walkPos + age/5</c> with the walk mapping <c>applyWalk(pos, speed + 0.2, 2.0, 3.0)</c>. Unlike the hostile
 /// mob clips this one needs no animation-state clock, so it plays on the hot path in-game.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.nautilus.NautilusModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/nautilus/NautilusModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class NautilusAnimationProvider : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["swimming"];

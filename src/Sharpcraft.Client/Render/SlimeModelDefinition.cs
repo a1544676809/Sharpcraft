@@ -8,6 +8,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// SlimeModel's inner cube/eyes/mouth plus the separate outer cube, expressed directly in vanilla cube coordinates.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.slime.SlimeModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/slime/SlimeModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class SlimeModelDefinition
 {
     public const int SlimeEntityTypeId = 120;

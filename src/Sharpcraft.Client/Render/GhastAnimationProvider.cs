@@ -16,6 +16,7 @@ namespace Sharpcraft.Client.Render;
 /// reference value. Part names match <see cref="GhastModelDefinition"/> (tentacle0 … tentacle8) and are held in a
 /// precomputed array so the hot path never concatenates strings.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.ghast.GhastModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/ghast/GhastModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class GhastAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     // Precomputed so the hot path never concatenates strings; index i is "tentacle{i}".

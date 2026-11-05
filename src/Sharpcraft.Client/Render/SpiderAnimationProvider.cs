@@ -17,6 +17,7 @@ namespace Sharpcraft.Client.Render;
 /// The right legs add the swing/lift and the left legs subtract it. All values are additive rotation offsets over the
 /// leg bind pose (rotations keep the reference signs). No leg x rotation is animated.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.spider.SpiderModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/spider/SpiderModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class SpiderAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle", "walk"];

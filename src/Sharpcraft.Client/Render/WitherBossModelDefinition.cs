@@ -7,6 +7,7 @@ namespace Sharpcraft.Client.Render;
 /// WitherBossModel: shoulders, a ribcage with three rib slabs, a tail, a centre head and two side heads.
 /// Bind pose only; head/ribcage animation and the invulnerable armour layer are not ported.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.wither.WitherBossModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/wither/WitherBossModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class WitherBossModelDefinition
 {
     public const int WitherEntityTypeId = 149;

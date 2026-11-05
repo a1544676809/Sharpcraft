@@ -7,6 +7,7 @@ namespace Sharpcraft.Client.Render;
 /// IllagerModel: shared geometry for Vindicator/Evoker/Pillager. Head/hat/nose, body + 20px outer body,
 /// crossed-arm group and four Humanoid limbs.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.illager.IllagerModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/illager/IllagerModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class IllagerModelDefinition
 {
     public const int VindicatorEntityTypeId = 144;

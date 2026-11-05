@@ -26,6 +26,7 @@ namespace Sharpcraft.Client.Render;
 /// speed, entity id, main-hand item), so the hot path is fully implemented. <c>isHoldingPotion</c> is not read by
 /// <c>setupAnim</c>, so only <c>isHoldingItem</c> is needed.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.witch.WitchModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/witch/WitchModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class WitchAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle", "walk", "hold_item"];

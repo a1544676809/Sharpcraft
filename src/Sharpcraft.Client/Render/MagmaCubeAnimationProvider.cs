@@ -11,6 +11,7 @@ namespace Sharpcraft.Client.Render;
 /// (<c>cube[i].y = -(4 - i) * max(0, squish) * 1.7</c> in y-down model space; our pose offsets are y-up).
 /// Slime has no model animation: its squish is only the renderer scale, applied by <see cref="EntityModelTransform"/>.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.slime.MagmaCubeModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/slime/MagmaCubeModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class MagmaCubeAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle"];

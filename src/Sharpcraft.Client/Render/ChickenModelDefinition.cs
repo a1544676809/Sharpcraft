@@ -10,6 +10,7 @@ namespace Sharpcraft.Client.Render;
 /// Variants come from the <c>chicken_variant</c> registry (docs/analysis/render/entity-variants.md 3). "warm" keeps the
 /// normal geometry; "cold" uses <c>ColdChickenModel</c> (a zero-width fin on the body and an extra head layer).
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.chicken.ChickenModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/chicken/ChickenModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class ChickenModelDefinition
 {
     public const int ChickenEntityTypeId = 26;

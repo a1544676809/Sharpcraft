@@ -25,6 +25,7 @@ namespace Sharpcraft.Client.Render;
 /// flying, so both wings' yRot get the corresponding additive offset.
 /// </para>
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.bee.BeeModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/bee/BeeModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class BeeAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private const float DegreesToRadians = MathF.PI / 180f;

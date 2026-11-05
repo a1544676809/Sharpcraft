@@ -6,6 +6,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// EndermiteModel: four root segments with fixed sizes/texture offsets, no parent transforms.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.endermite.EndermiteModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/endermite/EndermiteModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class EndermiteModelDefinition
 {
     public const int EndermiteEntityTypeId = 43;

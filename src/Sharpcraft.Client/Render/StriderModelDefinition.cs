@@ -10,6 +10,7 @@ namespace Sharpcraft.Client.Render;
 /// Bind pose only. The reference swaps to a cold texture when the strider is suffocating (overworld), driven by the
 /// boolean synced value; the saddle layer is not ported.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.strider.StriderModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/strider/StriderModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class StriderModelDefinition
 {
     public const int StriderEntityTypeId = 132;

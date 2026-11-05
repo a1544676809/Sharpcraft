@@ -6,6 +6,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// AdultWolfModel: real head with ears/snout, body + upper body, four 2x8x2 legs, and the real tail.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.wolf.WolfModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/wolf/WolfModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class WolfModelDefinition
 {
     public const int WolfEntityTypeId = 152;

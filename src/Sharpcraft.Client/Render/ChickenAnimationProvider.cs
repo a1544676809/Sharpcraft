@@ -9,6 +9,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// Reference <c>ChickenModel.setupAnim</c>: wing flap from the flap clock plus a two-leg walk phase.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.chicken.ChickenModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/chicken/ChickenModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class ChickenAnimationProvider : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle", "walk"];

@@ -21,6 +21,7 @@ namespace Sharpcraft.Client.Render;
 /// keyframe (the reference evaluates <c>nextFrame.interpolation()</c>), so each timestamp carries the reference's own
 /// interpolation rather than a per-channel default.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.animation.definitions.SnifferAnimation", "ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/SnifferAnimation.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class SnifferAnimations
 {
     /// <summary>Feeling-happy clip (reference <c>SNIFFER_HAPPY</c>, 2.0 s loop).</summary>

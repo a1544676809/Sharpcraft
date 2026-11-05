@@ -22,6 +22,7 @@ namespace Sharpcraft.Client.Render;
 /// only the clock reset is reproduced.
 /// </para>
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.golem.CopperGolemModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/golem/CopperGolemModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class CopperGolemAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     /// <summary>Reference <c>EntityDataSerializers.COPPER_GOLEM_STATE</c> id used to route the synced state ordinal.</summary>

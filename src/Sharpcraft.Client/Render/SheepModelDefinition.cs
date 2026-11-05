@@ -7,6 +7,7 @@ namespace Sharpcraft.Client.Render;
 /// SheepModel (base) + SheepFurModel (wool), both expressed as independent raw cubes. The base legs are 4x12x4;
 /// the wool legs are separate 4x6x4 cubes with grow 0.5 and must not be modeled as overlays of the base legs.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.sheep.SheepModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/sheep/SheepModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class SheepModelDefinition
 {
     public const int SheepEntityTypeId = 114;

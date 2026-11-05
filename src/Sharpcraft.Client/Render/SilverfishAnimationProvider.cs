@@ -18,6 +18,7 @@ namespace Sharpcraft.Client.Render;
 /// <see cref="SilverfishModelDefinition"/> (segment0..segment6, layer0..layer2) and are precomputed so the hot path never
 /// concatenates strings.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.silverfish.SilverfishModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/silverfish/SilverfishModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class SilverfishAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private static readonly string[] SegmentNames =

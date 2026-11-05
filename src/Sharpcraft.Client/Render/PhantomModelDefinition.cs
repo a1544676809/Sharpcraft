@@ -7,6 +7,7 @@ namespace Sharpcraft.Client.Render;
 /// PhantomModel: body with head, a two-segment tail and two two-segment wings. The eyes layer uses phantom_eyes.
 /// Bind pose only; wing flap and tail sway are not ported.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.phantom.PhantomModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/phantom/PhantomModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class PhantomModelDefinition
 {
     public const int PhantomEntityTypeId = 100;

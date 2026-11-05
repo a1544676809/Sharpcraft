@@ -7,6 +7,7 @@ namespace Sharpcraft.Client.Render;
 /// HappyGhastModel (adult): one 16x16x16 body with nine tentacles hanging from its underside, scaled 4x.
 /// Bind pose only; harness/ropes layers and baby model are not ported.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.ghast.HappyGhastModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/ghast/HappyGhastModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class HappyGhastModelDefinition
 {
     public const int HappyGhastEntityTypeId = 59;

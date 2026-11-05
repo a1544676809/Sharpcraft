@@ -18,6 +18,7 @@ namespace Sharpcraft.Client.Render;
 /// <see cref="HappyGhastModelDefinition"/> (tentacle0..tentacle8) and are precomputed so the hot path never concatenates
 /// strings.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.ghast.HappyGhastModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/ghast/HappyGhastModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class HappyGhastAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     // Precomputed so the hot path never concatenates strings; index i is "tentacle{i}".

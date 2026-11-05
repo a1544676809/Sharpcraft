@@ -6,6 +6,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// SnowGolemModel: head, upper/lower body and two laterally rotated arms. The reference uses -0.5 cube deformation.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.golem.SnowGolemModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/golem/SnowGolemModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class SnowGolemModelDefinition
 {
     public const int SnowGolemEntityTypeId = 124;

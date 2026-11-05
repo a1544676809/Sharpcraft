@@ -6,6 +6,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// SpiderModel: head + two body cubes + eight rotated 16x2x2 legs, all expressed as vanilla PartPose/cube values.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.spider.SpiderModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/spider/SpiderModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class SpiderModelDefinition
 {
     public const int SpiderEntityTypeId = 127;

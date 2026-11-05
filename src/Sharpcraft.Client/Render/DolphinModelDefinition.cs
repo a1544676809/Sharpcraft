@@ -7,6 +7,7 @@ namespace Sharpcraft.Client.Render;
 /// DolphinModel: body with back fin and both side fins, a two-segment tail, and a head with nose. All pivots and the
 /// bind rotations follow the reference; animations are not ported.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.dolphin.DolphinModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/dolphin/DolphinModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class DolphinModelDefinition
 {
     public const int DolphinEntityTypeId = 36;

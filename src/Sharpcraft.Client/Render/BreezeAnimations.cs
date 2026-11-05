@@ -18,6 +18,7 @@ namespace Sharpcraft.Client.Render;
 /// <c>longJump</c>) sampled at <c>state.ageInTicks</c>. Every clip below is translated verbatim from the reference
 /// keyframes; the per-state start ticks are supplied elsewhere when those clocks exist.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.animation.definitions.BreezeAnimation", "ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/BreezeAnimation.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class BreezeAnimations
 {
     public static readonly AnimationDefinition Idle = BuildIdle();

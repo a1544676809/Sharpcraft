@@ -9,6 +9,7 @@ using Sharpcraft.Client.World;
 /// A render-only entity model definition. This mirrors the role of the reference LayerDefinition/EntityModelSet:
 /// named parts, texture dimensions and per-face UV defaults. It never references entity simulation.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.EntityModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/EntityModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class EntityModelDefinition
 {
     public EntityModelDefinition(

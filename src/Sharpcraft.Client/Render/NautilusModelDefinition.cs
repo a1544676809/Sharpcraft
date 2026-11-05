@@ -7,6 +7,7 @@ namespace Sharpcraft.Client.Render;
 /// NautilusModel: a three-box shell, a body with a back layer and three mouth parts, all under an empty root pivot.
 /// </summary>
 /// <remarks>Bind pose only; swimming animation and the armor/saddle layers are not ported. Zombie Nautilus has its own model.</remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.nautilus.NautilusModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/nautilus/NautilusModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class NautilusModelDefinition
 {
     public const int NautilusEntityTypeId = 89;

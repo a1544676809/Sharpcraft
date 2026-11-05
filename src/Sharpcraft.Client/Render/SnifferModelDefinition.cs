@@ -7,6 +7,7 @@ namespace Sharpcraft.Client.Render;
 /// SnifferModel: an empty bone root, body with a 0.5-grown outer layer and a flat belly, six legs, and a head with two
 /// thin ears, nose and lower beak. Bind pose only; the sniff/dig/walk animations are not ported.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.sniffer.SnifferModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/sniffer/SnifferModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class SnifferModelDefinition
 {
     public const int SnifferEntityTypeId = 122;

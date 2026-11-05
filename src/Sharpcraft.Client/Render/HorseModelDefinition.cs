@@ -6,6 +6,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// AbstractEquineModel / HorseModel: body, head parts with mane and mouth, four legs and tail.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.equine.HorseModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/equine/HorseModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class HorseModelDefinition
 {
     public const int HorseEntityTypeId = 67;

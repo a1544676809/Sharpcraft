@@ -19,6 +19,7 @@ namespace Sharpcraft.Client.Render;
 /// <see cref="EntityAnimationFrame.RollAmount"/> and <see cref="EntityAnimationFrame.IsEating"/>.
 /// </para>
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.panda.PandaModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/panda/PandaModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class PandaAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private const float DegreesToRadians = MathF.PI / 180f;

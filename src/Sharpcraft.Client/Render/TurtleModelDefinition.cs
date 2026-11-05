@@ -6,6 +6,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// AdultTurtleModel: root head/body shell/belly, four flat legs and the optional egg belly.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.turtle.TurtleModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/turtle/TurtleModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class TurtleModelDefinition
 {
     public const int TurtleEntityTypeId = 141;

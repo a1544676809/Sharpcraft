@@ -10,6 +10,7 @@ namespace Sharpcraft.Client.Render;
 /// <c>HumanoidModel.setupAnim</c> chain plus the <c>animateZombieArms</c> override applied from
 /// <c>setupAttackAnimation</c>. See <see cref="HumanoidModelPose"/> for the shared pose maths.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.HumanoidModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/HumanoidModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class HumanoidAnimationProvider : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle", "walk"];

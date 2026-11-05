@@ -4,6 +4,7 @@
 namespace Sharpcraft.Client.Render;
 
 /// <summary>TadpoleModel: a small body and a flat tail, both root parts; static bind pose.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.frog.TadpoleModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/frog/TadpoleModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class TadpoleModelDefinition
 {
     public const int TadpoleEntityTypeId = 134;

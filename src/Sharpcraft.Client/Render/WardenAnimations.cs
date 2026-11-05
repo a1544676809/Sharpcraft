@@ -19,6 +19,7 @@ namespace Sharpcraft.Client.Render;
 /// The clips are referenced by the model's six <c>AnimationState</c> clocks, which the generic render-state frame does
 /// not carry yet, so <see cref="WardenAnimationProvider.ApplyClip"/> is the only consumer for now.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.animation.definitions.WardenAnimation", "ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/WardenAnimation.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class WardenAnimations
 {
     public static readonly AnimationDefinition Attack = BuildAttack();

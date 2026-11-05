@@ -6,6 +6,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// MagmaCubeModel: eight stacked segment cubes plus the inside cube, all in raw model coordinates.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.slime.MagmaCubeModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/slime/MagmaCubeModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class MagmaCubeModelDefinition
 {
     public const int MagmaCubeEntityTypeId = 81;

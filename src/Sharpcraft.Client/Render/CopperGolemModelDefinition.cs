@@ -7,6 +7,7 @@ namespace Sharpcraft.Client.Render;
 /// CopperGolemModel: a small humanoid with body, head (face + nose + two antenna boxes), two arms and two legs.
 /// Four weathering states swap both the body texture and the emissive eye texture.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.golem.CopperGolemModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/golem/CopperGolemModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class CopperGolemModelDefinition
 {
     public const int CopperGolemEntityTypeId = 28;

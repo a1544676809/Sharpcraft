@@ -10,6 +10,7 @@ namespace Sharpcraft.Client.Render;
 /// clocks sampled at <c>state.ageInTicks</c>. The clips are exposed through <see cref="ApplyClip"/>; the hot-path
 /// <see cref="Apply"/> writes nothing until those clocks reach the frame (see the remarks on <see cref="Apply"/>).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.breeze.BreezeModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/breeze/BreezeModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class BreezeAnimationProvider : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle", "shoot", "slide", "slide_back", "inhale", "jump"];

@@ -6,6 +6,7 @@ using System.Numerics;
 namespace Sharpcraft.Client.Render;
 
 /// <summary>Reference BatAnimation data (hardcoded behaviour data, not a resource).</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.animation.definitions.BatAnimation", "ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/BatAnimation.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class BatAnimations
 {
     public static readonly AnimationDefinition Resting = BuildResting();

@@ -341,12 +341,14 @@ public static class ClassMapTool
         sb.Append("<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->\n<!-- Copyright (C) 2026 Sharpcraft contributors -->\n\n");
         sb.Append("# Class-map 提案（人工核对，勿直接提交）\n\n");
         sb.Append("由 `tools/Sharpcraft.ClassMap -- --propose` 生成。仅含类名与 ref:// 指针，无原版源码。\n\n");
-        sb.Append("| Sharpcraft type | 候选原版类 | 匹配路径 | 状态 |\n| --- | --- | --- | --- |\n");
+        sb.Append("| Sharpcraft type | 我们的文件 | 候选原版类 | 匹配路径 | 状态 |\n| --- | --- | --- | --- | --- |\n");
 
         var resolved = 0;
         foreach (var item in unannotated)
         {
-            var typeFull = item[(item.IndexOf("::", StringComparison.Ordinal) + 2)..].Trim();
+            var sep = item.IndexOf("::", StringComparison.Ordinal);
+            var ourFile = item[..sep].Trim();
+            var typeFull = item[(sep + 2)..].Trim();
             var simple = typeFull[(typeFull.LastIndexOf('.') + 1)..];
             var candidates = Candidates(simple);
             string? chosen = null;
@@ -368,7 +370,7 @@ public static class ClassMapTool
                 resolved++;
             }
 
-            sb.Append("| ").Append(typeFull).Append(" | ").Append(chosen ?? string.Join(" / ", candidates)).Append(" | ")
+            sb.Append("| ").Append(typeFull).Append(" | ").Append(ourFile).Append(" | ").Append(chosen ?? string.Join(" / ", candidates)).Append(" | ")
               .Append(pathText).Append(" | ").Append(status).Append(" |\n");
         }
 

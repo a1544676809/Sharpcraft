@@ -9,6 +9,7 @@ namespace Sharpcraft.Client.Render;
 /// Reference <c>ArmadilloModel.setupAnim</c>: while hiding in its shell it plays the roll-up clip; otherwise it walks.
 /// Walk time is <c>walkPos * 0.825</c> and target scale <c>min(walkSpeed * 2.5, 1)</c>.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.armadillo.ArmadilloModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/armadillo/ArmadilloModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class ArmadilloAnimationProvider : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["walk", "roll_up", "roll_out", "peek"];

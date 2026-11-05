@@ -15,6 +15,7 @@ namespace Sharpcraft.Client.Render;
 /// The reference sets an absolute <c>yRot</c> on a root part whose bind rotation is zero, so the additive pose offset is
 /// the value itself. No other part is touched by <c>setupAnim</c> (body_front, head and the fins keep their bind pose).
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.fish.SalmonModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/fish/SalmonModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class SalmonAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle", "swim"];

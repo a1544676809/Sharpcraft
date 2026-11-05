@@ -9,6 +9,7 @@ namespace Sharpcraft.Client.Render;
 /// Reference <c>NautilusAnimation.SWIMMING</c>: a 1 s looping mouth/body squash cycle. Values are behaviour data
 /// re-expressed with our additive pose conventions (SCALE is x-1, rotations are degrees converted to radians).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.animation.definitions.NautilusAnimation", "ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/NautilusAnimation.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class NautilusAnimations
 {
     public static readonly AnimationDefinition Swimming = BuildSwimming();

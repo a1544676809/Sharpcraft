@@ -7,6 +7,7 @@ namespace Sharpcraft.Client.Render;
 /// VillagerModel: head with grown hat and a rotated hat rim, nose, body with a grown jacket, a crossed-arm group and legs.
 /// All values are raw PartPose/cube values; villagerLikeScale 0.9375 is applied at the definition level.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.npc.VillagerModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/npc/VillagerModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class VillagerModelDefinition
 {
     public const int VillagerEntityTypeId = 143;

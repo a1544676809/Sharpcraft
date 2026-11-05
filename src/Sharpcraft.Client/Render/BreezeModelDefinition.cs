@@ -10,6 +10,7 @@ namespace Sharpcraft.Client.Render;
 /// Base body texture is 32x32; wind uses a 128x128 texture and eyes use an emissive 32x32 texture.
 /// </summary>
 /// <remarks>Bind pose only; idle/shoot/slide animations and the wind UV scroll are not ported.</remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.breeze.BreezeModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/breeze/BreezeModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class BreezeModelDefinition
 {
     public const int BreezeEntityTypeId = 17;

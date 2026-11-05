@@ -28,6 +28,7 @@ namespace Sharpcraft.Client.Render;
 /// transition observable from a plain OnSyncedData → Apply sequence.
 /// </para>
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.sniffer.SnifferModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/sniffer/SnifferModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class SnifferAnimationProvider : IEntityAnimationProvider
 {
     private const int SnifferStateSerializerId = 35;

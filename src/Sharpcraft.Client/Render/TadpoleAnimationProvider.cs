@@ -16,6 +16,7 @@ namespace Sharpcraft.Client.Render;
 /// reference sign in the pose system (rotations are added to the part rotations). Part names match
 /// <see cref="TadpoleModelDefinition"/> (body, tail).
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.frog.TadpoleModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/frog/TadpoleModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class TadpoleAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle", "swim"];

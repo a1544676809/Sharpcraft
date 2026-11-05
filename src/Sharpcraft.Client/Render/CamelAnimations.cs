@@ -9,6 +9,7 @@ namespace Sharpcraft.Client.Render;
 /// Reference CamelAnimation data, expressed as behaviour data (the reference hardcodes these in Java, not JSON).
 /// All angles are converted to radians and positions use the reference Y inversion through <see cref="KeyframeAnimations"/>.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.animation.definitions.CamelAnimation", "ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/CamelAnimation.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class CamelAnimations
 {
     public static readonly AnimationDefinition Walk = BuildWalk();

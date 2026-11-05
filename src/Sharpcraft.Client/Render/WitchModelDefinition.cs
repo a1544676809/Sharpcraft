@@ -11,6 +11,7 @@ namespace Sharpcraft.Client.Render;
 /// Bind pose only. The reference starts from <c>VillagerModel.createBodyModel()</c> and replaces only the head/nose;
 /// the jacket is a 0.5-grown outer layer of the body. Held-item and nose-wiggle animations are not ported.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.witch.WitchModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/witch/WitchModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class WitchModelDefinition
 {
     public const int WitchEntityTypeId = 148;

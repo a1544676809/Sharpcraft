@@ -6,6 +6,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// SquidModel: one 12x16x12 body and eight 2x18x2 tentacles rotated around Y.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.squid.SquidModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/squid/SquidModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class SquidModelDefinition
 {
     public const int SquidEntityTypeId = 130;

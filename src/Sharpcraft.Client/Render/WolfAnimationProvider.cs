@@ -33,6 +33,7 @@ namespace Sharpcraft.Client.Render;
 /// Absolute reference assignments are reduced to deltas from the reference bind values (the mesh stores the negated
 /// bind); positions and increments are used directly, matching the sibling Fox provider.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.wolf.WolfModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/wolf/WolfModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class WolfAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle", "walk", "sit"];

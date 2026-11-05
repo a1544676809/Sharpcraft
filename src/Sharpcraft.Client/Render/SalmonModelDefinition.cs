@@ -6,6 +6,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// SalmonModel: two body segments with fins and a head. Three synced size variants scale the same geometry 0.5/1.0/1.5.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.fish.SalmonModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/fish/SalmonModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class SalmonModelDefinition
 {
     public const int SalmonEntityTypeId = 113;

@@ -4,6 +4,7 @@
 namespace Sharpcraft.Client.Render;
 
 /// <summary>CodModel: body, head, nose, two side fins, tail fin and a flat top fin; static bind pose.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.fish.CodModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/fish/CodModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class CodModelDefinition
 {
     public const int CodEntityTypeId = 27;

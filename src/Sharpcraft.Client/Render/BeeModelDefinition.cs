@@ -11,6 +11,7 @@ namespace Sharpcraft.Client.Render;
 /// Static bind pose (the wing flap animation is not ported). The renderer also swaps in angry/nectar textures by entity
 /// state; those state textures are not wired yet (docs/analysis/render/entity-variants.md).
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.bee.BeeModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/bee/BeeModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class BeeModelDefinition
 {
     public const int BeeEntityTypeId = 11;

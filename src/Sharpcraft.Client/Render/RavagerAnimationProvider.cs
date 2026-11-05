@@ -20,6 +20,7 @@ namespace Sharpcraft.Client.Render;
 /// only while roaring uses that derived <c>roarAnimation</c>. Attack/stun/roar counters are advanced by the tracker via
 /// <see cref="IEntityTickAnimationState"/>; <see cref="Apply"/> only reads them.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.ravager.RavagerModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/ravager/RavagerModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class RavagerAnimationProvider : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle", "walk", "attack", "stun", "roar"];

@@ -7,6 +7,7 @@ namespace Sharpcraft.Client.Render;
 /// GhastModel: one 16x16x16 body and nine tentacles whose lengths come from the reference's seeded Random(1660).
 /// The whole model is scaled 4.5x. Charging swaps to the shooting texture. Tentacle sway is not ported.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.ghast.GhastModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/ghast/GhastModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class GhastModelDefinition
 {
     public const int GhastEntityTypeId = 58;

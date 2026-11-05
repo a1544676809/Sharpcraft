@@ -18,6 +18,7 @@ namespace Sharpcraft.Client.Render;
 /// are 0, so these absolute values are the additive offsets. Chest visibility is handled by the mesher
 /// (<c>HasChest</c>) and is not animated here. Part names match <see cref="LlamaModelDefinition"/>.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.llama.LlamaModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/llama/LlamaModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class LlamaAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle", "walk"];

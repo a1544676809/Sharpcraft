@@ -6,6 +6,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// ParrotModel: body, tail, two wings, a head with crest/beak parts, and two small legs. Poses/animations are not ported.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.parrot.ParrotModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/parrot/ParrotModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class ParrotModelDefinition
 {
     public const int ParrotEntityTypeId = 99;

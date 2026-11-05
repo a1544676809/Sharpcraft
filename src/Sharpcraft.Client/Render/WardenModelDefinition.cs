@@ -10,6 +10,7 @@ namespace Sharpcraft.Client.Render;
 /// tendrils). Each emissive layer re-uses a subset of the base geometry with its own texture.
 /// </summary>
 /// <remarks>Bind pose only; attack/sonic-boom/dig/emerge/roar/sniff animations and the spots two-frame pulse are not ported.</remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.warden.WardenModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/warden/WardenModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class WardenModelDefinition
 {
     public const int WardenEntityTypeId = 146;

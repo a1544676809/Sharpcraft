@@ -21,6 +21,7 @@ namespace Sharpcraft.Client.Render;
 /// When the dolphin is not moving the tail and tail fin keep their bind pose (no pose entries). Part names match
 /// <see cref="DolphinModelDefinition"/>.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.dolphin.DolphinModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/dolphin/DolphinModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class DolphinAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private const float DegreesToRadians = MathF.PI / 180f;

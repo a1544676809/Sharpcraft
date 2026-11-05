@@ -26,6 +26,7 @@ namespace Sharpcraft.Client.Render;
 /// the reference <c>.y +=</c> bob is emitted as a negative Position.Y offset.
 /// </para>
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.allay.AllayModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/allay/AllayModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class AllayAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     /// <summary>Synced data index of the reference <c>DATA_DANCING</c> boolean.</summary>

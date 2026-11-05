@@ -18,6 +18,7 @@ namespace Sharpcraft.Client.Render;
 /// x-rotation is 0, so its offset is the assigned value. Rotations keep the reference signs. Part names match
 /// <see cref="PhantomModelDefinition"/>: tail_base/tail_tip and left/right wing base/tip (body and head are static).
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.phantom.PhantomModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/phantom/PhantomModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class PhantomAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle", "flap"];

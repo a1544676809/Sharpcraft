@@ -6,6 +6,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// LlamaModel: head/neck/ears, rotated body, two chest boxes and four 4x14x4 legs.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.llama.LlamaModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/llama/LlamaModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class LlamaModelDefinition
 {
     public const int LlamaEntityTypeId = 79;

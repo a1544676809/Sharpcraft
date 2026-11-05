@@ -6,6 +6,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// GoatModel: head parts (ears/goatee/horns/nose), two body cubes and four 3x6x3/3x10x3 legs.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.goat.GoatModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/goat/GoatModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class GoatModelDefinition
 {
     public const int GoatEntityTypeId = 63;

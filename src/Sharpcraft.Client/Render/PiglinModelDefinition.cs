@@ -11,6 +11,7 @@ namespace Sharpcraft.Client.Render;
 /// hat), so arms, legs and their outer layers are the player ones. Zombified Piglin and Piglin Brute share this geometry
 /// and differ only by texture. Animations and the piglin arm poses are not ported.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.piglin.PiglinModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/piglin/PiglinModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class PiglinModelDefinition
 {
     public const int PiglinEntityTypeId = 102;

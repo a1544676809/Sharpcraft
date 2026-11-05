@@ -30,6 +30,7 @@ namespace Sharpcraft.Client.Render;
 /// jukebox level events 1010/1011. SITTING comes from the synced TamableAnimal sitting flag.
 /// </para>
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.parrot.ParrotModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/parrot/ParrotModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class ParrotAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["flying", "standing", "on_shoulder", "sitting", "party"];

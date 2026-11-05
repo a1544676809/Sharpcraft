@@ -17,6 +17,7 @@ namespace Sharpcraft.Client.Render;
 /// this provider uses <see cref="EntityAnimationFrame.WalkAnimationSpeed"/> &gt; 0 as the stand-in; the real flag and
 /// the per-clip attack/invulnerability/death clocks are not part of <see cref="EntityAnimationFrame"/> yet.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.creaking.CreakingModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/creaking/CreakingModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class CreakingAnimationProvider : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["walk", "attack", "invulnerable", "death"];

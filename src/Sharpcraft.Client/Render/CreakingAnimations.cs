@@ -16,6 +16,7 @@ namespace Sharpcraft.Client.Render;
 /// clock-agnostic and the controller decides how each clip is fed. All bone names match parts in
 /// <see cref="CreakingModelDefinition"/>.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.animation.definitions.CreakingAnimation", "ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/CreakingAnimation.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class CreakingAnimations
 {
     public static readonly AnimationDefinition Walk = BuildWalk();

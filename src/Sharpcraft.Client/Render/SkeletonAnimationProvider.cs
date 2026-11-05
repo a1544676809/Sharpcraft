@@ -10,6 +10,7 @@ namespace Sharpcraft.Client.Render;
 /// <c>HumanoidModel.setupAnim</c> chain plus an aggressive melee-arm stance applied when the mob is aggressive and
 /// not holding a bow. See <see cref="HumanoidModelPose"/> for the shared pose maths.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.skeleton.SkeletonModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/skeleton/SkeletonModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class SkeletonAnimationProvider : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle", "walk"];

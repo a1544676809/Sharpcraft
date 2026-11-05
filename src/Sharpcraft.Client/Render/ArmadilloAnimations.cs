@@ -17,6 +17,7 @@ namespace Sharpcraft.Client.Render;
 /// armadillo hides in its shell. Roll-up, roll-out and peek are one-shot <c>AnimationState</c> clips sampled at the
 /// entity age.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.animation.definitions.ArmadilloAnimation", "ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/ArmadilloAnimation.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class ArmadilloAnimations
 {
     public static readonly AnimationDefinition RollUp = BuildRollUp();

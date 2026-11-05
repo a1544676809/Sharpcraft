@@ -7,6 +7,7 @@ namespace Sharpcraft.Client.Render;
 /// BatModel: body with feet and two-segment wings, plus a separate head with ears. All pivots are the reference's; the
 /// animation system is not ported, so the static pose is the bind pose.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.ambient.BatModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/ambient/BatModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class BatModelDefinition
 {
     public const int BatEntityTypeId = 10;

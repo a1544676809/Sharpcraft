@@ -11,6 +11,7 @@ namespace Sharpcraft.Client.Render;
 /// <c>-amplitude·0.45·sin(0.6·ageInTicks)</c>, with <c>amplitude = 1.0</c> in water and <c>1.5</c> out of water (the
 /// out-of-water flop is wider). The bind yRot is 0, so the value is used directly as an additive pose offset.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.fish.CodModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/fish/CodModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class CodAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private const string TailFinPart = "tail_fin";

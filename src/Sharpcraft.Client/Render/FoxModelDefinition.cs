@@ -6,6 +6,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// AdultFoxModel: head with ears/nose, rotated body, four legs and a tail.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.fox.FoxModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/fox/FoxModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class FoxModelDefinition
 {
     public const int FoxEntityTypeId = 55;

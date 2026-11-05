@@ -24,6 +24,7 @@ namespace Sharpcraft.Client.Render;
 /// <para>Keyframe data written as behaviour data from <c>RabbitAnimation</c>; no Java copied. Baby rabbits use a different
 /// mesh/animation and are out of scope.</para>
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.rabbit.RabbitModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/rabbit/RabbitModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class RabbitAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle", "hop", "idle_head_tilt"];

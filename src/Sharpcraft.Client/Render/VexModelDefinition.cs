@@ -6,6 +6,7 @@ using Sharpcraft.Framework.Rendering;
 namespace Sharpcraft.Client.Render;
 
 /// <summary>VexModel: small floating body with arms and flat wings; charging switches to the charging texture.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.vex.VexModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/vex/VexModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class VexModelDefinition
 {
     public const int VexEntityTypeId = 142;

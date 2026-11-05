@@ -6,6 +6,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// IronGolemModel: root head/body cubes, two long arms and two legs.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.golem.IronGolemModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/golem/IronGolemModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class IronGolemModelDefinition
 {
     public const int IronGolemEntityTypeId = 71;

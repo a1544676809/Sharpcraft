@@ -34,6 +34,7 @@ public readonly record struct AnimationKeyframe(
 }
 
 /// <summary>A single target's keyframe track for one part.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.animation.AnimationChannel", "ref://mc-26.3-analysis/src/net/minecraft/client/animation/AnimationChannel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed record AnimationChannel(AnimationTarget Target, AnimationKeyframe[] Keyframes);
 
 /// <summary>Named pose offsets for one entity part (all values are additive, as in the reference offset* methods).</summary>
@@ -71,6 +72,7 @@ public sealed class EntityPose
 }
 
 /// <summary>Static animation data: length, looping and bone → channels.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.animation.AnimationDefinition", "ref://mc-26.3-analysis/src/net/minecraft/client/animation/AnimationDefinition.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class AnimationDefinition
 {
     public AnimationDefinition(float lengthInSeconds, bool looping, IReadOnlyDictionary<string, IReadOnlyList<AnimationChannel>> boneAnimations)
@@ -105,6 +107,7 @@ public sealed class AnimationDefinition
 }
 
 /// <summary>Baked animation evaluator. Immutable after construction and safe to cache per model.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.animation.KeyframeAnimation", "ref://mc-26.3-analysis/src/net/minecraft/client/animation/KeyframeAnimation.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class KeyframeAnimation
 {
     public readonly record struct Entry(string PartName, AnimationTarget Target, AnimationKeyframe[] Keyframes);
@@ -228,6 +231,7 @@ public sealed class AnimationState
 }
 
 /// <summary>Reference vector constructors for animation data (POSITION Y is inverted; SCALE is additive).</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.animation.KeyframeAnimation", "ref://mc-26.3-analysis/src/net/minecraft/client/animation/KeyframeAnimation.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class KeyframeAnimations
 {
     public static Vector3 PosVec(float x, float y, float z) => new(x, -y, z);

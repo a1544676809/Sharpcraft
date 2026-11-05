@@ -7,6 +7,7 @@ namespace Sharpcraft.Client.Render;
 /// ZombieVillagerModel extends HumanoidModel: 8x10x8 head with nose, body with a 20px outer cube,
 /// Humanoid arms/legs. It is not the VillagerModel geometry.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.zombie.ZombieVillagerModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/zombie/ZombieVillagerModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class ZombieVillagerModelDefinition
 {
     public const int ZombieVillagerEntityTypeId = 157;

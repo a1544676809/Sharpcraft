@@ -11,6 +11,7 @@ namespace Sharpcraft.Client.Render;
 /// Bind pose only. The reference uses <c>entityCutoutZOffset</c>; the depth offset is not replicated. Peek/lid and head
 /// animations are not ported.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.shulker.ShulkerModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/shulker/ShulkerModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class ShulkerModelDefinition
 {
     public const int ShulkerEntityTypeId = 115;

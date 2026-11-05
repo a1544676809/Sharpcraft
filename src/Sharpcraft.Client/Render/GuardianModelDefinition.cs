@@ -10,6 +10,7 @@ namespace Sharpcraft.Client.Render;
 /// Bind pose only. The elder guardian reuses the same geometry at scale 2.35 with a different texture. The spike layout
 /// follows the reference's SPIKE_X/Y/Z and rotation tables; the target beam layer is not a model part and is not ported.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.guardian.GuardianModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/guardian/GuardianModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class GuardianModelDefinition
 {
     public const int GuardianEntityTypeId = 64;

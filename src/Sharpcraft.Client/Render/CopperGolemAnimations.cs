@@ -9,6 +9,7 @@ namespace Sharpcraft.Client.Render;
 /// CopperGolemAnimation reference keyframe data (behaviour data; the reference hardcodes these in Java, not JSON).
 /// Angles are converted to radians and positions use the reference Y inversion through <see cref="KeyframeAnimations"/>.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.animation.definitions.CopperGolemAnimation", "ref://mc-26.3-analysis/src/net/minecraft/client/animation/definitions/CopperGolemAnimation.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class CopperGolemAnimations
 {
     public static readonly AnimationDefinition COPPER_GOLEM_WALK = BuildCOPPER_GOLEM_WALK();

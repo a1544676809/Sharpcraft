@@ -6,6 +6,7 @@ namespace Sharpcraft.Client.Render;
 /// <summary>
 /// PandaModel: head with nose/ears, one large rotated body cube, and four 6x9x6 legs.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.panda.PandaModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/panda/PandaModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class PandaModelDefinition
 {
     public const int PandaEntityTypeId = 97;

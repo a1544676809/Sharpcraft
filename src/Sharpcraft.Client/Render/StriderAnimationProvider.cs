@@ -26,6 +26,7 @@ namespace Sharpcraft.Client.Render;
 /// Part names match <see cref="StriderModelDefinition"/>.
 /// </para>
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.strider.StriderModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/strider/StriderModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class StriderAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle", "walk"];

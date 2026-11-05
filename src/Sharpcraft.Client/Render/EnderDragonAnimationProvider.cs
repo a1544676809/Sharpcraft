@@ -41,6 +41,7 @@ namespace Sharpcraft.Client.Render;
 /// need the dragon phase / inWall / death flags, which the frame and tick context do not carry.</item>
 /// </list>
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.dragon.EnderDragonModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/dragon/EnderDragonModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class EnderDragonAnimationProvider(int typeId) : IEntityAnimationProvider
 {
     private static readonly string[] NominalClips = ["idle"];
