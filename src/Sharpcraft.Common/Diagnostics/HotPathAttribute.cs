@@ -13,6 +13,7 @@ namespace Sharpcraft.Common.Diagnostics;
     AttributeTargets.Method | AttributeTargets.Constructor | AttributeTargets.Property,
     AllowMultiple = false,
     Inherited = false)]
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.HotPathAttribute", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft internal utility; no reference counterpart")]
 public sealed class HotPathAttribute : Attribute
 {
     /// <summary>Creates the marker without a description.</summary>

@@ -11,6 +11,7 @@ namespace Sharpcraft.Common.Imaging;
 /// <param name="Width">Pixel width.</param>
 /// <param name="Height">Pixel height.</param>
 /// <param name="Pixels">RGBA bytes, four per pixel.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.RgbaImage", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft internal utility; no reference counterpart")]
 public sealed record RgbaImage(int Width, int Height, byte[] Pixels)
 {
     /// <summary>Bytes per pixel in <see cref="Pixels"/>.</summary>
@@ -35,6 +36,7 @@ public sealed record RgbaImage(int Width, int Height, byte[] Pixels)
 /// depth-8-only decoder silently refused — with all five scanline filters. Interlacing stays
 /// unsupported and is reported rather than guessed (docs/modules/render.md §6.1).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.PngDecoder", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft internal utility; no reference counterpart")]
 public static class PngDecoder
 {
     private static ReadOnlySpan<byte> Signature => [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];

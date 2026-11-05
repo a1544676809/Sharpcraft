@@ -11,6 +11,7 @@ namespace Sharpcraft.Common.Imaging;
 /// Minimal PNG writer for RGBA8 frames. No third-party imaging dependency: the format needs
 /// only zlib deflate and CRC32, both available in the BCL.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.PngEncoder", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft internal utility; no reference counterpart")]
 public static class PngEncoder
 {
     private static readonly byte[] Signature = [0x89, (byte)'P', (byte)'N', (byte)'G', 0x0D, 0x0A, 0x1A, 0x0A];
@@ -88,6 +89,7 @@ public static class PngEncoder
 }
 
 /// <summary>CRC32 (ISO-HDLC) used by PNG chunk checksums.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.Crc32", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft internal utility; no reference counterpart")]
 public static class Crc32
 {
     private static readonly uint[] Table = BuildTable();
