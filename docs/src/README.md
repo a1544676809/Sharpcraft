@@ -14,7 +14,7 @@
 | 目录 | 文档数 |
 | --- | --- |
 | [`sharpcraft-client/`](sharpcraft-client/README.md) | 6 |
-| [`sharpcraft-common/`](sharpcraft-common/README.md) | 3 |
+| [`sharpcraft-common/`](sharpcraft-common/README.md) | 4 |
 | [`sharpcraft-framework/`](sharpcraft-framework/README.md) | 2 |
 | [`sharpcraft-launcher/`](sharpcraft-launcher/README.md) | 1 |
 

@@ -17,6 +17,8 @@
 | 文档 | 摘要 | 状态 | 最后更新 |
 | --- | --- | --- | --- |
 | [`boundaries.md`](boundaries.md) | 本文是原则 5 的落地依据：每个子系统归属哪一侧、证据是什么、哪些必须拆分。 | 草稿 | 2026-10-28 |
+| [`class-map.generated.md`](class-map.generated.md) |  | 未标注 | - |
+| [`class-map.md`](class-map.md) | AGENTS.md §3.5 硬约束：每个模块文档必须写明我们的类型对应原版哪些类。 | 已评审 | 2026-11-05 |
 
 <!-- END GENERATED: docs/architecture -->
 

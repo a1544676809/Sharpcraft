@@ -105,13 +105,13 @@
 | 目录 | 文档数 |
 | --- | --- |
 | [`analysis/`](analysis/README.md) | 36 |
-| [`architecture/`](architecture/README.md) | 1 |
+| [`architecture/`](architecture/README.md) | 3 |
 | [`decisions/`](decisions/README.md) | 28 |
 | [`milestones/`](milestones/README.md) | 2 |
 | [`modules/`](modules/README.md) | 28 |
 | [`repro/`](repro/README.md) | 0 |
 | [`specs/`](specs/README.md) | 23 |
-| [`src/`](src/README.md) | 12 |
+| [`src/`](src/README.md) | 13 |
 | [`tools/`](tools/README.md) | 1 |
 
 <!-- END GENERATED: docs -->

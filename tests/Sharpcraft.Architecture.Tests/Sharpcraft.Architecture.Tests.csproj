@@ -27,6 +27,7 @@
     <ProjectReference Include="..\..\src\Sharpcraft.Launcher\Sharpcraft.Launcher.csproj" />
     <ProjectReference Include="..\..\src\Sharpcraft.Modding\Sharpcraft.Modding.csproj" />
     <ProjectReference Include="..\..\tools\Sharpcraft.Docs.Indexer\Sharpcraft.Docs.Indexer.csproj" />
+    <ProjectReference Include="..\..\tools\Sharpcraft.ClassMap\Sharpcraft.ClassMap.csproj" />
   </ItemGroup>
 
 </Project>

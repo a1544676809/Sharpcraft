@@ -461,6 +461,7 @@ public readonly record struct EntityRenderState(
 /// the interface path is a hot path under principle 3.6.
 /// </para>
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.multiplayer.ClientLevel", "ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/ClientLevel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Merged, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Merges ClientLevel/Entity/SteppedInterpolationHandler responsibilities; position sync per T-639/T-640")]
 public sealed class EntityTracker
 {
     /// <summary>Upper bound on tracked entities; a runaway server must not grow this dictionary without limit.</summary>

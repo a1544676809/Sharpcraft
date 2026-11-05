@@ -8,6 +8,7 @@ namespace Sharpcraft.Client.Game;
 /// arrive, and the leftover time becomes an interpolation factor for rendering
 /// (docs/modules/input.md 6).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.Timer", "ref://mc-26.3-analysis/src/net/minecraft/client/Timer.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Fixed-timestep accumulator + partialTick (alpha)")]
 public sealed class TickLoop
 {
     /// <summary>Length of one simulation tick.</summary>
