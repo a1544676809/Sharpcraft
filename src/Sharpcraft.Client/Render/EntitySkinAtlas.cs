@@ -12,6 +12,7 @@ namespace Sharpcraft.Client.Render;
 /// A tiny vertical atlas of entity skins. Every cell is a 64x64 logical skin; the mesh uses the rect for its model's
 /// TexturePath, so player and zombie can share one texture binding. This is intentionally separate from the block atlas.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.EntitySkinAtlas", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/texture/TextureAtlas.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Our 2D-grid skin atlas builder; no direct reference counterpart")]
 public sealed class EntitySkinAtlas
 {
     private readonly Dictionary<string, SpriteRect> _sprites;

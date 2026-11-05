@@ -12,6 +12,7 @@ namespace Sharpcraft.Client.Render;
 /// Builds the static player model from <see cref="PlayerModelDefinition"/> and the default skin. This is render-only:
 /// it consumes <see cref="EntityRenderState"/> and never touches world or entity simulation.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.geom.ModelPart", "ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/ModelPart.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Builds vertex geometry equivalent to ModelPart cuboids")]
 public sealed class EntityModelMesher
 {
     private readonly DynamicGeometry _geometry = new();

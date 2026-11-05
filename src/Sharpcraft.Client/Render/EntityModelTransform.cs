@@ -9,6 +9,7 @@ namespace Sharpcraft.Client.Render;
 /// One entity-level transform from model-local space to world space. The mesher builds vertices around the entity
 /// origin and applies this once, instead of adding feet coordinates into every part.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.entity.LivingEntityRenderer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/LivingEntityRenderer.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Merged, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Entity-level transform chain (scale/rotate/feet offset, docs/specs/render/entity-transform.md)")]
 public readonly record struct EntityModelTransform(
     Vector3 Translation,
     float YawDegrees,

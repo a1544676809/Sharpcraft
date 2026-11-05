@@ -156,11 +156,8 @@ src/Sharpcraft.Client/Render/EntityAnimationProvider.cs :: Sharpcraft.Client.Ren
 src/Sharpcraft.Client/Render/EntityAnimationProvider.cs :: Sharpcraft.Client.Render.IEntityAnimationProvider
 src/Sharpcraft.Client/Render/EntityModelDefinition.cs :: Sharpcraft.Client.Render.EntityModelDefinition
 src/Sharpcraft.Client/Render/EntityModelLayerHelpers.cs :: Sharpcraft.Client.Render.EntityModelLayerHelpers
-src/Sharpcraft.Client/Render/EntityModelMesher.cs :: Sharpcraft.Client.Render.EntityModelMesher
 src/Sharpcraft.Client/Render/EntityModelResolver.cs :: Sharpcraft.Client.Render.EntityModelResolver
-src/Sharpcraft.Client/Render/EntityModelTransform.cs :: Sharpcraft.Client.Render.EntityModelTransform
 src/Sharpcraft.Client/Render/EntityPlaceholderMesher.cs :: Sharpcraft.Client.Render.EntityPlaceholderMesher
-src/Sharpcraft.Client/Render/EntitySkinAtlas.cs :: Sharpcraft.Client.Render.EntitySkinAtlas
 src/Sharpcraft.Client/Render/EntitySkinLibrary.cs :: Sharpcraft.Client.Render.EntitySkinLibrary
 src/Sharpcraft.Client/Render/EntitySkinTexture.cs :: Sharpcraft.Client.Render.EntitySkinTexture
 src/Sharpcraft.Client/Render/EntityVariantTable.cs :: Sharpcraft.Client.Render.EntityVariantTable
@@ -220,8 +217,6 @@ src/Sharpcraft.Client/Render/PiglinAnimationProvider.cs :: Sharpcraft.Client.Ren
 src/Sharpcraft.Client/Render/PiglinAnimationProvider.cs :: Sharpcraft.Client.Render.PiglinArmPose
 src/Sharpcraft.Client/Render/PiglinModelDefinition.cs :: Sharpcraft.Client.Render.PiglinModelDefinition
 src/Sharpcraft.Client/Render/PlayerModelDefinition.cs :: Sharpcraft.Client.Render.EntityModelLayer
-src/Sharpcraft.Client/Render/PlayerModelDefinition.cs :: Sharpcraft.Client.Render.EntityModelPart
-src/Sharpcraft.Client/Render/PlayerModelDefinition.cs :: Sharpcraft.Client.Render.PlayerModelDefinition
 src/Sharpcraft.Client/Render/PolarBearAnimationProvider.cs :: Sharpcraft.Client.Render.PolarBearAnimationProvider
 src/Sharpcraft.Client/Render/PolarBearModelDefinition.cs :: Sharpcraft.Client.Render.PolarBearModelDefinition
 src/Sharpcraft.Client/Render/PufferfishAnimationProvider.cs :: Sharpcraft.Client.Render.PufferfishAnimationProvider

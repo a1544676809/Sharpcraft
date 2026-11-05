@@ -15,6 +15,7 @@ using Sharpcraft.Framework.Rendering;
 /// <param name="Width">X size in pixels.</param>
 /// <param name="Height">Y size in pixels.</param>
 /// <param name="Depth">Z size in pixels.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.geom.ModelPart", "ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/ModelPart.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "One model cuboid/part: pivot, box, UV, overlays")]
 public readonly record struct EntityModelPart(
     string Name,
     float CentreX,
@@ -64,6 +65,7 @@ public readonly record struct EntityModelLayer(
 /// Static model definitions consumed by the entity mesher. The values follow the reference
 /// `HumanoidModel.createMesh` player parts (docs/modules/entity-render.md).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.PlayerModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/PlayerModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Merged, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Helper to build humanoid/player part geometry")]
 public static class PlayerModelDefinition
 {
     /// <summary>Model height in pixels: head top is 32 pixels above the feet.</summary>
