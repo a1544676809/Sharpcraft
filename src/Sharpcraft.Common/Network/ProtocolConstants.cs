@@ -243,6 +243,22 @@ public static class PacketIds
         /// <remarks>Reference registration dump: play clientbound 22.</remarks>
         public const int Cooldown = 22;
 
+        /// <summary>Damage event: entity, damage type, cause/direct ids, optional source position.</summary>
+        /// <remarks>Reference registration dump: play clientbound 25.</remarks>
+        public const int DamageEvent = 25;
+
+        /// <summary>Hurt animation (entity id + yaw).</summary>
+        /// <remarks>Reference registration dump: play clientbound 43.</remarks>
+        public const int HurtAnimation = 43;
+
+        /// <summary>Add/update a mob effect on an entity.</summary>
+        /// <remarks>Reference registration dump: play clientbound 135.</remarks>
+        public const int UpdateMobEffect = 135;
+
+        /// <summary>Remove a mob effect from an entity.</summary>
+        /// <remarks>Reference registration dump: play clientbound 79.</remarks>
+        public const int RemoveMobEffect = 79;
+
         /// <summary>Passengers of a vehicle: vehicle entity id, count, then passenger entity ids.</summary>
         /// <remarks>Reference registration dump: play clientbound 109.</remarks>
         public const int SetPassengers = 109;

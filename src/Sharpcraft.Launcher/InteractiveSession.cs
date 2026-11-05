@@ -80,6 +80,10 @@ internal sealed class InteractiveSession
     private float _flyingSpeed = 0.05f, _walkingSpeed = 0.1f;
     private int _simulationDistance;
     private readonly System.Collections.Generic.Dictionary<string, int> _cooldowns = new(StringComparer.Ordinal);
+    private int _lastDamageEntityId;
+    private int _lastHurtEntityId;
+    private float _lastHurtYaw;
+    private readonly System.Collections.Generic.Dictionary<int, System.Collections.Generic.HashSet<int>> _mobEffects = new();
     private int _diagFrames;
     private readonly bool _packetLog = Environment.GetEnvironmentVariable("MC_PACKET_LOG") == "1";
     private int _packetLogCount;
@@ -1836,6 +1840,45 @@ internal sealed class InteractiveSession
                     if (EntityPackets.TryReadSetEntityMotion(body[reader.Position..], out var motion) == DecodeStatus.Success)
                     {
                         _entities.ApplyMotion(motion);
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.DamageEvent:
+                    if (PlayPackets.TryReadDamageEvent(body[reader.Position..], out var dmgEntity, out _, out _, out _, out _, out _, out _, out _) == DecodeStatus.Success)
+                    {
+                        _lastDamageEntityId = dmgEntity;
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.HurtAnimation:
+                    if (PlayPackets.TryReadHurtAnimation(body[reader.Position..], out var hurtEntity, out var hurtYaw) == DecodeStatus.Success)
+                    {
+                        _lastHurtEntityId = hurtEntity;
+                        _lastHurtYaw = hurtYaw;
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.UpdateMobEffect:
+                    if (PlayPackets.TryReadUpdateMobEffect(body[reader.Position..], out var effEntity, out var effId, out _, out _, out _) == DecodeStatus.Success)
+                    {
+                        if (!_mobEffects.TryGetValue(effEntity, out var set))
+                        {
+                            _mobEffects[effEntity] = set = new System.Collections.Generic.HashSet<int>();
+                        }
+
+                        set.Add(effId);
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.RemoveMobEffect:
+                    if (PlayPackets.TryReadRemoveMobEffect(body[reader.Position..], out var rmEntity, out var rmEffect) == DecodeStatus.Success
+                        && _mobEffects.TryGetValue(rmEntity, out var rmSet))
+                    {
+                        rmSet.Remove(rmEffect);
                     }
 
                     break;

@@ -3536,3 +3536,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - 已补 player_abilities(65)/set_simulation_distance(113)/cooldown(22)。审计 handled 44→47、未处理 100→97。
 - 下一步：继续低成本 P1（damage_event/hurt_animation/update_mob_effect/remove_mob_effect）与 P0 世界类。
+
+## 2026-11-05 补 damage/hurt/effects 包（T-644）
+
+- 已补 damage_event(25)/hurt_animation(43)/update_mob_effect(135)/remove_mob_effect(79)。审计 handled 47→51、未处理 97→93。
+- 下一步：继续 P1 剩余（take_item_entity/move_vehicle 等）或进入 P0 世界类攻坚。

@@ -61,4 +61,46 @@ public sealed class SimpleClientboundPacketsTests
         Assert.Equal("abc", group);
         Assert.Equal(20, duration);
     }
+
+    [Fact]
+    public void DamageEventReadsIdsWithoutPosition()
+    {
+        var body = new byte[] { 0x0A, 0x02, 0x00, 0x00, 0x00 };
+        Assert.Equal(DecodeStatus.Success, PlayPackets.TryReadDamageEvent(body, out var id, out var type, out var cause, out var direct, out var hasPos, out _, out _, out _));
+        Assert.Equal(10, id);
+        Assert.Equal(2, type);
+        Assert.Equal(-1, cause);
+        Assert.Equal(-1, direct);
+        Assert.False(hasPos);
+    }
+
+    [Fact]
+    public void HurtAnimationReadsIdAndYaw()
+    {
+        var body = new byte[] { 0x05, 0x42, 0xB4, 0x00, 0x00 };
+        Assert.Equal(DecodeStatus.Success, PlayPackets.TryReadHurtAnimation(body, out var id, out var yaw));
+        Assert.Equal(5, id);
+        Assert.Equal(90f, yaw);
+    }
+
+    [Fact]
+    public void UpdateMobEffectReadsFields()
+    {
+        // entity 3, effect 1, amplifier 2, duration 200 (VarInt C8 01), flags 1.
+        var body = new byte[] { 0x03, 0x01, 0x02, 0xC8, 0x01, 0x01 };
+        Assert.Equal(DecodeStatus.Success, PlayPackets.TryReadUpdateMobEffect(body, out var entity, out var effect, out var amp, out var duration, out var flags));
+        Assert.Equal(3, entity);
+        Assert.Equal(1, effect);
+        Assert.Equal(2, amp);
+        Assert.Equal(200, duration);
+        Assert.Equal(1, flags);
+    }
+
+    [Fact]
+    public void RemoveMobEffectReadsIds()
+    {
+        Assert.Equal(DecodeStatus.Success, PlayPackets.TryReadRemoveMobEffect(new byte[] { 0x03, 0x01 }, out var entity, out var effect));
+        Assert.Equal(3, entity);
+        Assert.Equal(1, effect);
+    }
 }

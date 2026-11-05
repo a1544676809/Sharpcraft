@@ -442,4 +442,104 @@ public static class PlayPackets
 
         return DecodeStatus.Success;
     }
+
+    /// <summary>Reads <c>damage_event</c> (clientbound 25): ids and an optional source position.</summary>
+    public static DecodeStatus TryReadDamageEvent(
+        ReadOnlySpan<byte> body,
+        out int entityId,
+        out int damageTypeId,
+        out int sourceCauseId,
+        out int sourceDirectId,
+        out bool hasPosition,
+        out double x,
+        out double y,
+        out double z)
+    {
+        entityId = 0;
+        damageTypeId = 0;
+        sourceCauseId = -1;
+        sourceDirectId = -1;
+        hasPosition = false;
+        x = 0d;
+        y = 0d;
+        z = 0d;
+        var reader = new PayloadReader(body);
+        if (reader.TryReadVarInt(out entityId) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out damageTypeId) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out var causeRaw) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out var directRaw) != DecodeStatus.Success ||
+            reader.TryReadBool(out hasPosition) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        sourceCauseId = causeRaw - 1;
+        sourceDirectId = directRaw - 1;
+        if (hasPosition &&
+            (reader.TryReadDouble(out x) != DecodeStatus.Success ||
+             reader.TryReadDouble(out y) != DecodeStatus.Success ||
+             reader.TryReadDouble(out z) != DecodeStatus.Success))
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        return DecodeStatus.Success;
+    }
+
+    /// <summary>Reads <c>hurt_animation</c> (clientbound 43): VarInt entity id, float yaw.</summary>
+    public static DecodeStatus TryReadHurtAnimation(ReadOnlySpan<byte> body, out int entityId, out float yaw)
+    {
+        entityId = 0;
+        yaw = 0f;
+        var reader = new PayloadReader(body);
+        if (reader.TryReadVarInt(out entityId) != DecodeStatus.Success ||
+            reader.TryReadFloat(out yaw) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        return DecodeStatus.Success;
+    }
+
+    /// <summary>Reads <c>update_mob_effect</c> (clientbound 135): entity/effect ids, amplifier, duration, flags byte.</summary>
+    public static DecodeStatus TryReadUpdateMobEffect(
+        ReadOnlySpan<byte> body,
+        out int entityId,
+        out int effectId,
+        out int amplifier,
+        out int durationTicks,
+        out byte flags)
+    {
+        entityId = 0;
+        effectId = 0;
+        amplifier = 0;
+        durationTicks = 0;
+        flags = 0;
+        var reader = new PayloadReader(body);
+        if (reader.TryReadVarInt(out entityId) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out effectId) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out amplifier) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out durationTicks) != DecodeStatus.Success ||
+            reader.TryReadByte(out flags) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        return DecodeStatus.Success;
+    }
+
+    /// <summary>Reads <c>remove_mob_effect</c> (clientbound 79): VarInt entity id, VarInt effect id.</summary>
+    public static DecodeStatus TryReadRemoveMobEffect(ReadOnlySpan<byte> body, out int entityId, out int effectId)
+    {
+        entityId = 0;
+        effectId = 0;
+        var reader = new PayloadReader(body);
+        if (reader.TryReadVarInt(out entityId) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out effectId) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        return DecodeStatus.Success;
+    }
 }
