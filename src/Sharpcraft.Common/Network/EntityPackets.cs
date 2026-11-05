@@ -17,6 +17,7 @@ namespace Sharpcraft.Common.Network;
 /// <param name="Yaw">Yaw in degrees.</param>
 /// <param name="HeadYaw">Head yaw in degrees.</param>
 /// <param name="Data">Type specific payload, such as a projectile's owner.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.network.protocol.game.ClientboundAddEntityPacket", "ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundAddEntityPacket.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full)]
 public sealed record AddedEntity(
     int Id,
     Guid Uuid,
@@ -42,6 +43,7 @@ public sealed record AddedEntity(
 /// <param name="Pitch">Pitch in degrees, when present.</param>
 /// <param name="HasRotation">True when the packet carried a rotation.</param>
 /// <param name="OnGround">Whether the entity reports standing on ground.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.network.protocol.game.ClientboundMoveEntityPacket", "ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundMoveEntityPacket.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full)]
 public readonly record struct EntityMove(
     int Id,
     double DeltaX,
@@ -55,9 +57,11 @@ public readonly record struct EntityMove(
     int Ticks = 1);
 
 /// <summary>One absolute step of a <c>PositionPath.Stepped</c> (entity_position_sync).</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.entity.PositionStep", "ref://mc-26.3-analysis/src/net/minecraft/world/entity/PositionStep.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full)]
 public readonly record struct PositionPathStep(double X, double Y, double Z, int TickOffset);
 
 /// <summary>Decoded <c>entity_position_sync</c> (id 35): absolute position or stepped path plus rotation and ground flag.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket", "ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundEntityPositionSyncPacket.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full)]
 public readonly record struct EntityPositionSyncUpdate(
     int Id,
     double X,
@@ -81,6 +85,7 @@ public readonly record struct EntityPositionSyncUpdate(
 /// <param name="Pitch">Pitch in degrees.</param>
 /// <param name="Relatives">Raw relative flags, applied by the client.</param>
 /// <param name="OnGround">Whether the entity reports standing on ground.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket", "ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full)]
 public readonly record struct EntityTeleport(
     int Id,
     double X,
@@ -106,6 +111,7 @@ public readonly record struct EntityMotion(int Id, float X, float Y, float Z);
 /// ways that silently corrupt every following field if they are guessed: three angle bytes on add, a compressed
 /// velocity vector, and a packed properties word plus a stepped delta on movement.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.network.protocol.game.ClientboundMoveEntityPacket", "ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundMoveEntityPacket.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Merged, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Codec hub for add/move/position_sync/teleport/motion packets")]
 public static class EntityPackets
 {
     /// <summary>Reads an <c>add_entity</c> body.</summary>

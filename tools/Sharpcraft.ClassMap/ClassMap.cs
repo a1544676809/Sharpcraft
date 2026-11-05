@@ -29,7 +29,7 @@ public static class ClassMapTool
     private static readonly Regex KindRx = new(@"Kind\s*=\s*(?:[\w.]+\.)?ReferenceKind\.(?<v>\w+)", RegexOptions.Compiled);
     private static readonly Regex StatusRx = new(@"Status\s*=\s*(?:[\w.]+\.)?ReferenceStatus\.(?<v>\w+)", RegexOptions.Compiled);
     private static readonly Regex NoteRx = new(@"Note\s*=\s*""(?<v>[^""]*)""", RegexOptions.Compiled);
-    private static readonly Regex TypeRx = new(@"^\s*(?<mods>(?:(?:public|internal|protected|private|static|sealed|abstract|partial|readonly|ref|unsafe|new)\s+)*)(?:class|record|struct|interface|enum)\s+(?<name>\w+)", RegexOptions.Compiled);
+    private static readonly Regex TypeRx = new(@"^\s*(?<mods>(?:(?:public|internal|protected|private|static|sealed|abstract|partial|readonly|ref|unsafe|new)\s+)*)(?:class|record(?:\s+(?:struct|class))?|struct|interface|enum)\s+(?<name>\w+)", RegexOptions.Compiled);
 
     public sealed record Entry(string Project, string ModuleDir, string TypeName, string ReferenceClass, string ReferencePath, string Kind, string Status, string Note);
 
@@ -311,4 +311,5 @@ public static class ClassMapTool
         return violations;
     }
 }
+
 

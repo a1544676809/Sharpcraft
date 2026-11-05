@@ -9,6 +9,7 @@ namespace Sharpcraft.Common.Network;
 /// Reads primitive payload fields from a buffer, reporting truncation as
 /// <see cref="DecodeStatus.NeedMoreData"/> instead of throwing.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.network.FriendlyByteBuf", "ref://mc-26.3-analysis/src/net/minecraft/network/FriendlyByteBuf.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Minimal big-endian reader subset")]
 public ref struct PayloadReader
 {
     private readonly ReadOnlySpan<byte> _buffer;

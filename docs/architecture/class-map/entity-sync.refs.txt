@@ -1,0 +1,11 @@
+# entity-sync reverse coverage list (AGENTS 3.5 / class-map Phase 2).
+# Each reference (vanilla 26.3) FQ class must be mapped by some [ReferenceClass] annotation, or prefixed with '!'
+# to mark it intentionally out of scope (e.g. implemented inline in another type). No reference source is stored here.
+net.minecraft.network.protocol.game.ClientboundAddEntityPacket
+net.minecraft.network.protocol.game.ClientboundMoveEntityPacket
+net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket
+net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket
+net.minecraft.network.FriendlyByteBuf
+net.minecraft.world.entity.PositionStep
+!net.minecraft.network.protocol.game.VecDelta
+!net.minecraft.world.entity.PositionPath

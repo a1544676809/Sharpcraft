@@ -48,3 +48,17 @@ serverbound 可用"发坏包看服务端报错"探针验证；**clientbound 不�
 
 每类包都有构造字节用例，重点覆盖"版本差异点"（三角度字节、压缩向量、打包属性、分段增量、
 `Rot` 用布尔而非打包属性）。门禁与文档漂移检查见 `tools/Sharpcraft.Docs.Indexer`。
+
+<!-- BEGIN GENERATED: class-map -->
+
+| Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
+| --- | --- | --- | --- | --- | --- | --- |
+| Sharpcraft.Common | Sharpcraft.Common.Network.AddedEntity | Mirror | Full | net.minecraft.network.protocol.game.ClientboundAddEntityPacket | ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundAddEntityPacket.java |  |
+| Sharpcraft.Common | Sharpcraft.Common.Network.EntityMove | Mirror | Full | net.minecraft.network.protocol.game.ClientboundMoveEntityPacket | ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundMoveEntityPacket.java |  |
+| Sharpcraft.Common | Sharpcraft.Common.Network.EntityPackets | Merged | Partial | net.minecraft.network.protocol.game.ClientboundMoveEntityPacket | ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundMoveEntityPacket.java | Codec hub for add/move/position_sync/teleport/motion packets |
+| Sharpcraft.Common | Sharpcraft.Common.Network.EntityPositionSyncUpdate | Mirror | Full | net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket | ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundEntityPositionSyncPacket.java |  |
+| Sharpcraft.Common | Sharpcraft.Common.Network.EntityTeleport | Mirror | Full | net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket | ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket.java |  |
+| Sharpcraft.Common | Sharpcraft.Common.Network.PayloadReader | Adapter | Partial | net.minecraft.network.FriendlyByteBuf | ref://mc-26.3-analysis/src/net/minecraft/network/FriendlyByteBuf.java | Minimal big-endian reader subset |
+| Sharpcraft.Common | Sharpcraft.Common.Network.PositionPathStep | Mirror | Full | net.minecraft.world.entity.PositionStep | ref://mc-26.3-analysis/src/net/minecraft/world/entity/PositionStep.java |  |
+
+<!-- END GENERATED: class-map -->

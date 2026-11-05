@@ -9,5 +9,12 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | Sharpcraft.Client | Sharpcraft.Client.Game.TickLoop | Mirror | Full | net.minecraft.client.Timer | ref://mc-26.3-analysis/src/net/minecraft/client/Timer.java | Fixed-timestep accumulator + partialTick (alpha) |
 | Sharpcraft.Client | Sharpcraft.Client.World.EntityTracker | Merged | Partial | net.minecraft.client.multiplayer.ClientLevel | ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/ClientLevel.java | Merges ClientLevel/Entity/SteppedInterpolationHandler responsibilities; position sync per T-639/T-640 |
+| Sharpcraft.Common | Sharpcraft.Common.Network.AddedEntity | Mirror | Full | net.minecraft.network.protocol.game.ClientboundAddEntityPacket | ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundAddEntityPacket.java |  |
+| Sharpcraft.Common | Sharpcraft.Common.Network.EntityMove | Mirror | Full | net.minecraft.network.protocol.game.ClientboundMoveEntityPacket | ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundMoveEntityPacket.java |  |
+| Sharpcraft.Common | Sharpcraft.Common.Network.EntityPackets | Merged | Partial | net.minecraft.network.protocol.game.ClientboundMoveEntityPacket | ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundMoveEntityPacket.java | Codec hub for add/move/position_sync/teleport/motion packets |
+| Sharpcraft.Common | Sharpcraft.Common.Network.EntityPositionSyncUpdate | Mirror | Full | net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket | ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundEntityPositionSyncPacket.java |  |
+| Sharpcraft.Common | Sharpcraft.Common.Network.EntityTeleport | Mirror | Full | net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket | ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket.java |  |
+| Sharpcraft.Common | Sharpcraft.Common.Network.PayloadReader | Adapter | Partial | net.minecraft.network.FriendlyByteBuf | ref://mc-26.3-analysis/src/net/minecraft/network/FriendlyByteBuf.java | Minimal big-endian reader subset |
+| Sharpcraft.Common | Sharpcraft.Common.Network.PositionPathStep | Mirror | Full | net.minecraft.world.entity.PositionStep | ref://mc-26.3-analysis/src/net/minecraft/world/entity/PositionStep.java |  |
 
 <!-- END GENERATED: class-map -->
