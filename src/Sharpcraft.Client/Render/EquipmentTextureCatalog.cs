@@ -27,7 +27,9 @@ public enum EquipmentAssetKind
     /// <summary>Humanoid armor leggings (legs): same humanoid geometry, inner deformation, leggings texture layer.</summary>
     HumanoidLeggings,
     /// <summary>Baby humanoid armor: dedicated baby mesh, non-uniform deformation, humanoid_baby texture layer.</summary>
-    HumanoidArmorBaby
+    HumanoidArmorBaby,
+    /// <summary>Elytra wings (chest-glider); rendered as a dedicated two-wing model.</summary>
+    Elytra
 }
 
 /// <summary>Resolved equipment textures; <see cref="OverlayPath"/> is optional (leather horse armor, wolf armor).</summary>
@@ -99,6 +101,8 @@ public static class EquipmentTextureCatalog
                 new("entity/equipment/humanoid_leggings/" + leggingsMaterial),
             EquipmentAssetKind.HumanoidArmorBaby when TryArmorMaterial(path, out var babyMaterial) =>
                 new("entity/equipment/humanoid_baby/" + babyMaterial),
+            EquipmentAssetKind.Elytra when path == "elytra" =>
+                new("entity/equipment/wings/elytra"),
             _ => null
         };
     }
@@ -195,6 +199,7 @@ public static class EquipmentTextureCatalog
         }
 
         paths.Add("entity/equipment/humanoid_baby/leather_overlay");
+        paths.Add("entity/equipment/wings/elytra");
 
         return paths;
     }

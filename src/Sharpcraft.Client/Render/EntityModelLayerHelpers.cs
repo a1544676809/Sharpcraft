@@ -229,6 +229,53 @@ public static class EntityModelLayerHelpers
         return [.. result];
     }
 
+    /// <summary>
+    /// Adds the two elytra wing boxes (reference ElytraModel.createLayer: pivot ±5, box 10x20x2 at tex 22,0, base
+    /// rotation ±(pi/12,0,∓pi/12), grow 1.0). Rendered when the chest slot holds an elytra (glider). Flap rotation
+    /// (elytraRotX/Y/Z) is not yet driven — a recorded follow-up.
+    /// </summary>
+    public static EntityModelPart[] WithElytra(IReadOnlyList<EntityModelPart> parts)
+    {
+        var result = new List<EntityModelPart>(parts.Count + 2);
+        result.AddRange(parts);
+        result.Add(new EntityModelPart(
+            "equipment_Elytra_4_left_wing",
+            CentreX: -5f,
+            Bottom: 18f,
+            Width: 10f,
+            Height: 20f,
+            Depth: 2f,
+            TextureX: 22,
+            TextureY: 0,
+            CentreZ: 2f,
+            RotationX: MathF.PI / 12f,
+            RotationZ: -MathF.PI / 12f,
+            Grow: 1f,
+            TexturePath: "entity/equipment/wings/elytra",
+            TextureWidth: 64,
+            TextureHeight: 32,
+            VisibleWhen: static state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4) is not null));
+        result.Add(new EntityModelPart(
+            "equipment_Elytra_4_right_wing",
+            CentreX: 5f,
+            Bottom: 18f,
+            Width: 10f,
+            Height: 20f,
+            Depth: 2f,
+            TextureX: 22,
+            TextureY: 0,
+            Mirror: true,
+            CentreZ: 2f,
+            RotationX: MathF.PI / 12f,
+            RotationZ: MathF.PI / 12f,
+            Grow: 1f,
+            TexturePath: "entity/equipment/wings/elytra",
+            TextureWidth: 64,
+            TextureHeight: 32,
+            VisibleWhen: static state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4) is not null));
+        return [.. result];
+    }
+
     public static EntityModelPart[] WithHorseMarkings(IReadOnlyList<EntityModelPart> parts, string texturePrefix, bool baby)
     {
         (int Id, string Key)[] markings = [(1, "white"), (2, "whitefield"), (3, "whitedots"), (4, "blackdots")];

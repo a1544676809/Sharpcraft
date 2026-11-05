@@ -103,3 +103,5 @@
 - `docs/specs/network/entity-sync.md`
 - `docs/modules/entity-render.md`
 
+
+- **Elytra（T-648 第1步）**：双翼模型层已加（WithElytra，胸槽 elytra 可见，纹理 ntity/equipment/wings/elytra）；扇动（lytraRotX/Y/Z）与独立放置为后续。

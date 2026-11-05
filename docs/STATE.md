@@ -3556,3 +3556,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 
 - 已补 set_camera(95)/take_item_entity(127)/projectile_power(138)。审计 handled 57→60、未处理 87→84。
 - 下一步：重量级 light_update(49)/chunks_biomes(13)/explode(36) 需世界子系统接入。
+
+## 2026-11-05 Elytra 第1步（T-648）
+
+- 已加 Elytra 资产/纹理 + 双翼模型层（胸槽 elytra 可见），humanoid 接入。Client 1338 全绿。
+- 阻塞（记录）：翼扇动 elytraRotX/Y/Z（滑翔旋转物理）未接，当前静态翼。
+- 下一步：补 elytraRot 派生 + WingsLayer 独立放置/旋转；或先目视验收静态翼位置。

@@ -207,6 +207,11 @@ public static class EntityModelResolver
                     ? EntityModelLayerHelpers.WithArmorSlot(parts, kind, slot, fallback)
                     : EntityModelLayerHelpers.WithEquipment(parts, kind, slot, fallback, baseCopy: kind != EquipmentAssetKind.HappyGhastBody);
             }
+
+            if (ReferenceEquals(layers, HumanoidArmorLayers))
+            {
+                parts = EntityModelLayerHelpers.WithElytra(parts);
+            }
         }
 
         // Wolf armor shows a crackiness overlay based on the chest/body slot durability.
