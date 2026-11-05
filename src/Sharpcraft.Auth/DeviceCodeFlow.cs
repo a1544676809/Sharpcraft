@@ -10,6 +10,7 @@ namespace Sharpcraft.Auth;
 /// Microsoft identity device code flow (docs/modules/auth.md 3): request a user code, then poll
 /// until the user finishes, honouring the provider's back-off and error contract.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.DeviceCodeFlow", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Authentication library; no reference counterpart")]
 public sealed class DeviceCodeFlow
 {
     /// <summary>Scopes needed for Minecraft sign-in; <c>offline_access</c> yields a refresh token.</summary>

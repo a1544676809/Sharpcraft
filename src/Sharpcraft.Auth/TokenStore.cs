@@ -10,6 +10,7 @@ namespace Sharpcraft.Auth;
 /// only and refuses any location inside a repository working tree
 /// (docs/modules/auth.md 5).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.TokenStore", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Authentication library; no reference counterpart")]
 public sealed class TokenStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.General) { WriteIndented = true };
@@ -174,6 +175,7 @@ public sealed class TokenStore
     /// <param name="MinecraftExpiresAt">Minecraft session expiry.</param>
     /// <param name="ProfileId">Profile id of the signed-in account, without dashes.</param>
     /// <param name="ProfileName">Profile name of the signed-in account.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.StoredTokens", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Authentication library; no reference counterpart")]
     public sealed record StoredTokens(
         string ClientId,
         string Scope,

@@ -4,6 +4,7 @@
 namespace Sharpcraft.Auth;
 
 /// <summary>Distinguishable failure kinds of the authentication chain (docs/modules/auth.md 4).</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.AuthError", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Authentication library; no reference counterpart")]
 public enum AuthError
 {
     /// <summary>Unexpected or unmapped failure.</summary>
@@ -35,6 +36,7 @@ public enum AuthError
 }
 
 /// <summary>Authentication failure with a classified reason and no token material.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.AuthException", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Authentication library; no reference counterpart")]
 public sealed class AuthException : Exception
 {
     /// <summary>Creates a failure.</summary>
@@ -59,6 +61,7 @@ public sealed class AuthException : Exception
 /// <param name="ExpiresIn">How long the challenge stays valid.</param>
 /// <param name="Interval">Minimum polling interval.</param>
 /// <param name="Message">Provider-rendered instructions.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.DeviceCodeChallenge", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Authentication library; no reference counterpart")]
 public sealed record DeviceCodeChallenge(
     string DeviceCode,
     string UserCode,
@@ -76,25 +79,30 @@ public sealed record DeviceCodeChallenge(
 /// <param name="AccessToken">Access token for downstream services.</param>
 /// <param name="RefreshToken">Refresh token, sensitive; never log.</param>
 /// <param name="ExpiresAt">Absolute expiry in UTC.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.MicrosoftToken", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Authentication library; no reference counterpart")]
 public sealed record MicrosoftToken(string AccessToken, string? RefreshToken, DateTimeOffset ExpiresAt);
 
 /// <summary>Xbox Live user token plus its user hash.</summary>
 /// <param name="Token">XBL user token.</param>
 /// <param name="UserHash">User hash used to build the XSTS identity token.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.XboxUserToken", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Authentication library; no reference counterpart")]
 public sealed record XboxUserToken(string Token, string UserHash);
 
 /// <summary>XSTS authorisation result.</summary>
 /// <param name="Token">XSTS token.</param>
 /// <param name="UserHash">User hash to embed in the identity token.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.XstsToken", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Authentication library; no reference counterpart")]
 public sealed record XstsToken(string Token, string UserHash);
 
 /// <summary>Minecraft session obtained from the services API.</summary>
 /// <param name="AccessToken">Session token passed to the client.</param>
 /// <param name="ExpiresAt">Absolute expiry in UTC.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.MinecraftSession", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Authentication library; no reference counterpart")]
 public sealed record MinecraftSession(string AccessToken, DateTimeOffset ExpiresAt);
 
 /// <summary>Player profile from the services API.</summary>
 /// <param name="Id">Profile id without dashes, as the API returns it.</param>
 /// <param name="Name">Player name.</param>
 /// <param name="Skins">Whether the profile exposes skins.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.MinecraftProfile", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Authentication library; no reference counterpart")]
 public sealed record MinecraftProfile(string Id, string Name, bool Skins);

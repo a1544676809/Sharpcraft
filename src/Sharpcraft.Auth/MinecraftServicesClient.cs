@@ -11,6 +11,7 @@ namespace Sharpcraft.Auth;
 /// Minecraft services: exchange an XSTS token for a session and read the player profile
 /// (docs/modules/auth.md 3, steps 5-6).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.MinecraftServicesClient", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Authentication library; no reference counterpart")]
 public sealed class MinecraftServicesClient
 {
     private static readonly Uri LoginUri = new("https://api.minecraftservices.com/authentication/login_with_xbox");

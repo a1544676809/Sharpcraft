@@ -11,6 +11,7 @@ namespace Sharpcraft.Auth;
 /// Session server registration ("joinServer"), the step that tells Mojang which server the
 /// player is joining (docs/specs/network/encryption.md 1).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.SessionServerClient", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Authentication library; no reference counterpart")]
 public sealed class SessionServerClient
 {
     private static readonly Uri JoinUri = new("https://sessionserver.mojang.com/session/minecraft/join");

@@ -22,6 +22,7 @@ namespace Sharpcraft.Auth;
 /// Both accept the device code grant and the refresh grant, but the request bodies differ:
 /// the Microsoft account endpoint also needs <c>response_type=device_code</c>.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.IdentityEndpoints", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Authentication library; no reference counterpart")]
 public sealed record IdentityEndpoints(Uri DeviceCodeUri, Uri TokenUri, string ClientId, bool UsesMicrosoftAccountEndpoint)
 {
     /// <summary>Community client id used by third-party launchers (Microsoft account family).</summary>

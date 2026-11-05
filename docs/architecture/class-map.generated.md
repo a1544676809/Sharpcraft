@@ -7,6 +7,21 @@
 
 | Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
 | --- | --- | --- | --- | --- | --- | --- |
+| Sharpcraft.Auth | Sharpcraft.Auth.AuthError | New | Full | sharpcraft.AuthError | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
+| Sharpcraft.Auth | Sharpcraft.Auth.AuthException | New | Full | sharpcraft.AuthException | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
+| Sharpcraft.Auth | Sharpcraft.Auth.DeviceCodeChallenge | New | Full | sharpcraft.DeviceCodeChallenge | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
+| Sharpcraft.Auth | Sharpcraft.Auth.DeviceCodeFlow | New | Full | sharpcraft.DeviceCodeFlow | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
+| Sharpcraft.Auth | Sharpcraft.Auth.IdentityEndpoints | New | Full | sharpcraft.IdentityEndpoints | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
+| Sharpcraft.Auth | Sharpcraft.Auth.MicrosoftToken | New | Full | sharpcraft.MicrosoftToken | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
+| Sharpcraft.Auth | Sharpcraft.Auth.MinecraftProfile | New | Full | sharpcraft.MinecraftProfile | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
+| Sharpcraft.Auth | Sharpcraft.Auth.MinecraftServicesClient | New | Full | sharpcraft.MinecraftServicesClient | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
+| Sharpcraft.Auth | Sharpcraft.Auth.MinecraftSession | New | Full | sharpcraft.MinecraftSession | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
+| Sharpcraft.Auth | Sharpcraft.Auth.SessionServerClient | New | Full | sharpcraft.SessionServerClient | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
+| Sharpcraft.Auth | Sharpcraft.Auth.StoredTokens | New | Full | sharpcraft.StoredTokens | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
+| Sharpcraft.Auth | Sharpcraft.Auth.TokenStore | New | Full | sharpcraft.TokenStore | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
+| Sharpcraft.Auth | Sharpcraft.Auth.XboxLiveAuthenticator | New | Full | sharpcraft.XboxLiveAuthenticator | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
+| Sharpcraft.Auth | Sharpcraft.Auth.XboxUserToken | New | Full | sharpcraft.XboxUserToken | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
+| Sharpcraft.Auth | Sharpcraft.Auth.XstsToken | New | Full | sharpcraft.XstsToken | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
 | Sharpcraft.Client | Sharpcraft.Client.Game.TickLoop | Mirror | Full | net.minecraft.client.Timer | ref://mc-26.3-analysis/src/net/minecraft/client/Timer.java | Fixed-timestep accumulator + partialTick (alpha) |
 | Sharpcraft.Client | Sharpcraft.Client.Render.AllayAnimationProvider | Mirror | Partial | net.minecraft.client.model.animal.allay.AllayModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/allay/AllayModel.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.Render.AllayModelDefinition | Mirror | Partial | net.minecraft.client.model.animal.allay.AllayModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/allay/AllayModel.java |  |

@@ -9,6 +9,7 @@ namespace Sharpcraft.Auth;
 /// <summary>
 /// Xbox Live user authentication and XSTS authorisation (docs/modules/auth.md 3, steps 3-4).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.XboxLiveAuthenticator", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Authentication library; no reference counterpart")]
 public sealed class XboxLiveAuthenticator
 {
     private const long NoXboxProfileCode = 2148916233L;
