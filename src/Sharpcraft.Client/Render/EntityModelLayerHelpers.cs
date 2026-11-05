@@ -105,7 +105,7 @@ public static class EntityModelLayerHelpers
                 TexturePath = fallbackTexture,
                 TextureSelector = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot),
                 Grow = grow,
-                OverlayLayers = null,
+                OverlayLayers = slot == 5 ? HatOnly(part) : null,
                 TextureWidth = 64,
                 TextureHeight = 32,
                 VisibleWhen = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot) is not null
@@ -113,6 +113,25 @@ public static class EntityModelLayerHelpers
         }
 
         return [.. result];
+    }
+
+    /// <summary>Keeps only the reference hat box overlay (the helmet's outer layer); its texture follows the armor sprite.</summary>
+    private static IReadOnlyList<EntityModelLayer>? HatOnly(EntityModelPart part)
+    {
+        if (part.OverlayLayers is not { } layers)
+        {
+            return null;
+        }
+
+        foreach (var layer in layers)
+        {
+            if (string.Equals(layer.Name, "hat", StringComparison.Ordinal))
+            {
+                return [layer];
+            }
+        }
+
+        return null;
     }
 
     public static EntityModelPart[] WithHorseMarkings(IReadOnlyList<EntityModelPart> parts, string texturePrefix, bool baby)
