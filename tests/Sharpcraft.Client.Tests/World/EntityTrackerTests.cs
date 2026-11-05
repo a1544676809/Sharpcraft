@@ -57,6 +57,25 @@ public sealed class EntityTrackerTests
     }
 
     [Fact]
+    public void ConsecutiveMovePacketsTrackWithoutAccumulatedLag()
+    {
+        // Regression: a fixed 3-step lerp with per-tick packets left entities ~3*velocity behind (sink/float). The
+        // stepped queue consumes one step per tick, so the rendered position tracks the target within ~one step.
+        var tracker = new EntityTracker();
+        tracker.Add(Entity(9, x: 0, y: 0, z: 0));
+        for (var i = 0; i < 20; i++)
+        {
+            tracker.GameTime = i + 1;
+            tracker.ApplyMove(new EntityMove(9, 0, 0.42, 0, HasPosition: true, 0f, 0f, HasRotation: false, OnGround: false));
+            tracker.Tick();
+        }
+
+        Assert.True(tracker.TryGet(9, out var entity));
+        var lag = Math.Abs(entity!.Y - entity.TargetY);
+        Assert.True(lag < 1.0, $"position lagged the target by {lag:F3} blocks");
+    }
+
+    [Fact]
     public void AnUpdateForAnUnknownEntityIsCountedInsteadOfThrown()
     {
         var tracker = new EntityTracker();

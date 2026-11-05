@@ -3501,3 +3501,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **结论**：视觉"悬空"来自**站立方块高度**（脚下方块顶≈191.5，旁边棋盘块更低一层）+ baby 腿仅 ~0.25 格很近，并非渲染 bug。诊断代码已移除（`0a60ea2`）。
 - **过程记录**：期间试过"克隆 base 部件"导致护甲贴图损坏且仍悬空，已 `git revert`（`9307300`）；专用 `createBabyArmorMesh` 版本保留（T-634 已完成）。
 - **下一步具体动作**：①Elytra（含 `ELYTRA_BABY`）；②Happy Ghast 绳索；③SPEAR/STAB；④EnderDragon 飞行历史。
+
+## 2026-11-05 实体插值移植 SteppedInterpolationHandler（T-639）
+
+- **原版机制（证据）**：`LivingEntity.createInterpolationHandler()` 覆写为 `SteppedInterpolationHandler`（非 NO_OP）。它维护**步进队列**：每移动包 `interpolateTo` 入队一个 step（`tickOffset=updateInterval`），每 tick `doInterpolate` 按 `currentStepTicks/tickOffset` 在 `lastStepPosRot→step` 插值 `setPos/setRot`，再 `advance`（`interpolationSpeed` 平滑地消费 ticks）。因此"包快→队列叠加但每 tick 只消费一份"：既不累积滞后，也不跳变。
+- **本次实现（T-639）**：`TrackedEntity` 移植该队列（`_steps`/`EnqueueInterpolation`/`StepInterpolation`/`Advance`），`Tick` 以 `StepInterpolation` 取代旧固定 3 步 lerp；`EnqueueMove` 按"距上次包刻数"设 `tickOffset`（每 tick 包→1，稀疏→3）。回归 `ConsecutiveMovePacketsTrackWithoutAccumulatedLag`。
+- **过程**：T-637/T-638 两次近似已 `git reset` 丢弃（回到 27aafe0 后再做本移植）。
+- **验证**：构建 0 警告；Client 1334 通过（另 1 项已知并行 flaky `HumanoidAttackArm`，单独通过）。
+- **下一步具体动作**：重启窗口目视验证玩家/僵尸跳跃·下落·上下移动是否平滑且不陷地/浮空；通过后 Elytra（含 ELYTRA_BABY）。

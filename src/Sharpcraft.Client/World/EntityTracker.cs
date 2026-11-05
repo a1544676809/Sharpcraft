@@ -191,6 +191,103 @@ public sealed class TrackedEntity
     public int LerpSteps { get; internal set; }
 
     /// <summary>Copies the current state into the previous one, so a later update interpolates from here.</summary>
+    private readonly List<InterpStep> _steps = new();
+    private double _lastStepX, _lastStepY, _lastStepZ;
+    private float _lastStepYaw, _lastStepPitch;
+    private float _currentStepTicks = 1f, _remainingTicks, _interpSpeed = 1f;
+
+    private readonly record struct InterpStep(double X, double Y, double Z, float Yaw, float Pitch, int TickOffset);
+
+    /// <summary>Port of SteppedInterpolationHandler.startInterpolating: enqueue a move step of tickOffset = update interval.</summary>
+    internal void EnqueueInterpolation(double x, double y, double z, float yaw, float pitch, int tickOffset)
+    {
+        if (_steps.Count == 0)
+        {
+            _lastStepX = X;
+            _lastStepY = Y;
+            _lastStepZ = Z;
+            _lastStepYaw = Yaw;
+            _lastStepPitch = Pitch;
+            _currentStepTicks = 1f;
+        }
+
+        _steps.Add(new InterpStep(x, y, z, yaw, pitch, tickOffset));
+        _remainingTicks += tickOffset;
+    }
+
+    /// <summary>Game tick when the last move/teleport packet for this entity was applied (adaptive step size).</summary>
+    public long LastMoveTick { get; internal set; }
+
+    /// <summary>Port of SteppedInterpolationHandler.doInterpolate + advance: move one tick along the queued steps.</summary>
+    internal void StepInterpolation()
+    {
+        if (_steps.Count == 0 && _remainingTicks <= 0f)
+        {
+            return;
+        }
+
+        while (_steps.Count > 0)
+        {
+            var step = _steps[0];
+            if (_currentStepTicks < step.TickOffset)
+            {
+                var a = _currentStepTicks / step.TickOffset;
+                X = LerpD(_lastStepX, step.X, a);
+                Y = LerpD(_lastStepY, step.Y, a);
+                Z = LerpD(_lastStepZ, step.Z, a);
+                Yaw = Wrap360L(LerpAngleL(_lastStepYaw, step.Yaw, a));
+                Pitch = LerpF(_lastStepPitch, step.Pitch, a);
+                break;
+            }
+
+            _currentStepTicks -= step.TickOffset;
+            _lastStepX = step.X;
+            _lastStepY = step.Y;
+            _lastStepZ = step.Z;
+            _lastStepYaw = step.Yaw;
+            _lastStepPitch = step.Pitch;
+            _steps.RemoveAt(0);
+            if (_steps.Count == 0)
+            {
+                X = _lastStepX;
+                Y = _lastStepY;
+                Z = _lastStepZ;
+                Yaw = Wrap360L(_lastStepYaw);
+                Pitch = _lastStepPitch;
+            }
+        }
+
+        Advance(1f, EntityTracker.InterpolationSteps);
+    }
+
+    private void Advance(float ticks, int steps)
+    {
+        var targetSpeed = MathF.Max(_remainingTicks / steps, 1f);
+        _interpSpeed = LerpF(_interpSpeed, targetSpeed, 1f / steps);
+        if (ticks * _interpSpeed < _remainingTicks)
+        {
+            ticks *= _interpSpeed;
+        }
+        else
+        {
+            ticks = _remainingTicks;
+            _interpSpeed = 1f;
+        }
+
+        _currentStepTicks += ticks;
+        _remainingTicks -= ticks;
+    }
+
+    private static float LerpD(double from, double to, float a) => (float)(from + ((to - from) * a));
+
+    private static float LerpF(float from, float to, float a) => from + ((to - from) * a);
+
+    private static float Wrap360L(float d) { var v = d % 360f; return v < 0f ? v + 360f : v; }
+
+    private static float ShortL(float d) { var v = d % 360f; if (v >= 180f) v -= 360f; if (v < -180f) v += 360f; return v; }
+
+    private static float LerpAngleL(float a, float b, float t) => Wrap360L(a + (ShortL(b - a) * t));
+
     internal void PushPrevious()
     {
         PreviousX = X;
@@ -435,6 +532,7 @@ public sealed class EntityTracker
         entity.TargetYaw = added.Yaw;
         entity.TargetPitch = added.Pitch;
         entity.LerpSteps = 0;
+        entity.LastMoveTick = GameTime - InterpolationSteps;
         entity.VelocityX = added.VelocityX;
         entity.VelocityY = added.VelocityY;
         entity.VelocityZ = added.VelocityZ;
@@ -480,9 +578,16 @@ public sealed class EntityTracker
         }
 
         entity.OnGround = move.OnGround;
-        entity.LerpSteps = InterpolationSteps;
+        EnqueueMove(entity);
         MovesApplied++;
         return true;
+    }
+
+    private void EnqueueMove(TrackedEntity entity)
+    {
+        var offset = (int)Math.Clamp(GameTime - entity.LastMoveTick, 1, InterpolationSteps);
+        entity.LastMoveTick = GameTime;
+        entity.EnqueueInterpolation(entity.TargetX, entity.TargetY, entity.TargetZ, entity.TargetYaw, entity.TargetPitch, offset);
     }
 
     /// <summary>Applies an absolute repositioning, honouring the per-component relative flags.</summary>
@@ -503,7 +608,7 @@ public sealed class EntityTracker
         entity.TargetZ = Relative(teleport.Relatives, 2) ? entity.TargetZ + teleport.Z : teleport.Z;
         entity.TargetYaw = Wrap360(Relative(teleport.Relatives, 3) ? entity.TargetYaw + teleport.Yaw : teleport.Yaw);
         entity.TargetPitch = ClampPitch(Relative(teleport.Relatives, 4) ? entity.TargetPitch + teleport.Pitch : teleport.Pitch);
-        entity.LerpSteps = InterpolationSteps;
+        EnqueueMove(entity);
 
         entity.VelocityX = teleport.VelocityX;
         entity.VelocityY = teleport.VelocityY;
@@ -790,16 +895,7 @@ public sealed class EntityTracker
         {
             entity.PushPrevious();
 
-            if (entity.LerpSteps > 0)
-            {
-                var alpha = 1f / entity.LerpSteps;
-                entity.X += (entity.TargetX - entity.X) * alpha;
-                entity.Y += (entity.TargetY - entity.Y) * alpha;
-                entity.Z += (entity.TargetZ - entity.Z) * alpha;
-                entity.Yaw = Wrap360(LerpAngle(entity.Yaw, entity.TargetYaw, alpha));
-                entity.Pitch += (entity.TargetPitch - entity.Pitch) * alpha;
-                entity.LerpSteps--;
-            }
+            entity.StepInterpolation();
 
             // Horizontal distance actually travelled this tick drives the walk animation, mirroring the reference
             // calculateEntityAnimation (uses the movement delta, not the commanded velocity).
@@ -1372,6 +1468,9 @@ public sealed class EntityTracker
         return from + (delta * t);
     }
 }
+
+
+
 
 
 
