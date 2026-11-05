@@ -310,6 +310,116 @@ public static class ClassMapTool
 
         return violations;
     }
+
+    /// <summary>Writes docs/architecture/class-map.proposals.md: derived candidate reference classes for unannotated
+    /// public types (by naming) resolved against the local analysis workspace. Review-only; never edits attributes.</summary>
+    public static (int Total, int Resolved) Propose(string root)
+    {
+        var (entries, unannotated) = Scan(root);
+        var analysisRoot = Environment.GetEnvironmentVariable("MC_ANALYSIS_ROOT");
+        if (string.IsNullOrEmpty(analysisRoot))
+        {
+            analysisRoot = FindAnalysisRoot(root);
+        }
+
+        var index = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        if (Directory.Exists(analysisRoot))
+        {
+            foreach (var jf in Directory.EnumerateFiles(analysisRoot, "*.java", SearchOption.AllDirectories))
+            {
+                var simple = Path.GetFileNameWithoutExtension(jf);
+                if (!index.TryGetValue(simple, out var list))
+                {
+                    index[simple] = list = new List<string>();
+                }
+
+                list.Add(jf[(analysisRoot.Length + 1)..].Replace('\\', '/'));
+            }
+        }
+
+        var sb = new StringBuilder();
+        sb.Append("<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->\n<!-- Copyright (C) 2026 Sharpcraft contributors -->\n\n");
+        sb.Append("# Class-map 提案（人工核对，勿直接提交）\n\n");
+        sb.Append("由 `tools/Sharpcraft.ClassMap -- --propose` 生成。仅含类名与 ref:// 指针，无原版源码。\n\n");
+        sb.Append("| Sharpcraft type | 候选原版类 | 匹配路径 | 状态 |\n| --- | --- | --- | --- |\n");
+
+        var resolved = 0;
+        foreach (var item in unannotated)
+        {
+            var typeFull = item[(item.IndexOf("::", StringComparison.Ordinal) + 2)..].Trim();
+            var simple = typeFull[(typeFull.LastIndexOf('.') + 1)..];
+            var candidates = Candidates(simple);
+            string? chosen = null;
+            List<string>? paths = null;
+            foreach (var cand in candidates)
+            {
+                if (index.TryGetValue(cand, out var p) && p.Count > 0)
+                {
+                    chosen = cand;
+                    paths = p;
+                    break;
+                }
+            }
+
+            var status = chosen is null ? (index.Count == 0 ? "no-analysis-root" : "未匹配") : paths!.Count == 1 ? "resolved" : "ambiguous";
+            var pathText = paths is null ? string.Empty : string.Join("<br>", paths.Select(p => "ref://mc-26.3-analysis/" + p));
+            if (status == "resolved")
+            {
+                resolved++;
+            }
+
+            sb.Append("| ").Append(typeFull).Append(" | ").Append(chosen ?? string.Join(" / ", candidates)).Append(" | ")
+              .Append(pathText).Append(" | ").Append(status).Append(" |\n");
+        }
+
+        var outPath = Path.Combine(root, "docs", "architecture", "class-map.proposals.md");
+        Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
+        File.WriteAllText(outPath, sb.ToString().Replace("\r\n", "\n"));
+        return (unannotated.Count, resolved);
+    }
+
+    private static string FindAnalysisRoot(string root)
+    {
+        var dir = new DirectoryInfo(root);
+        while (dir is not null)
+        {
+            var sibling = Path.Combine(dir.Parent?.FullName ?? dir.FullName, "mc-26.3-analysis");
+            if (Directory.Exists(sibling))
+            {
+                return sibling;
+            }
+
+            dir = dir.Parent;
+        }
+
+        return Path.Combine(Path.GetDirectoryName(root.TrimEnd(Path.DirectorySeparatorChar))!, "mc-26.3-analysis");
+    }
+
+    private static string[] Candidates(string simple)
+    {
+        string b;
+        if (simple.EndsWith("AnimationProvider", StringComparison.Ordinal) && (b = simple[..^"AnimationProvider".Length]).Length > 0)
+        {
+            return [b + "Model", b + "Animation"];
+        }
+
+        if (simple.EndsWith("ModelDefinition", StringComparison.Ordinal) && (b = simple[..^"ModelDefinition".Length]).Length > 0)
+        {
+            return [b + "Model"];
+        }
+
+        if (simple.EndsWith("Animations", StringComparison.Ordinal) && (b = simple[..^"Animations".Length]).Length > 0)
+        {
+            return [b + "Animation"];
+        }
+
+        if (simple.EndsWith("Provider", StringComparison.Ordinal) && (b = simple[..^"Provider".Length]).Length > 0)
+        {
+            return [b];
+        }
+
+        return [simple];
+    }
 }
 
 

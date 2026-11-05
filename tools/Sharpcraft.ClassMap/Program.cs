@@ -26,6 +26,13 @@ internal static class Program
                 return 0;
             }
 
+            case "--propose":
+            {
+                var (total, resolved) = ClassMapTool.Propose(root);
+                Console.WriteLine($"class-map: proposals written for {total} unannotated types ({resolved} resolved against analysis workspace). Review docs/architecture/class-map.proposals.md");
+                return 0;
+            }
+
             case "--check":
             default:
             {
