@@ -1300,6 +1300,14 @@ public sealed class EntityTracker
 
                 applied = true;
             }
+
+            // AgeableMob baby flag (index 16, boolean serializer). Handled here so it works for every ageable type,
+            // including those without an EntityVariantSpec (e.g. zombies).
+            if (item.Index == 16 && item.SerializerId == 8 && AgeableTypes.Contains(entity.TypeId))
+            {
+                entity.IsBaby = item.Value != 0;
+                applied = true;
+            }
         }
 
         return applied;
@@ -1336,8 +1344,8 @@ public sealed class EntityTracker
     /// <summary>Entity types whose synced data index 16 is the AgeableMob baby flag.</summary>
     private static readonly HashSet<int> AgeableTypes =
     [
-        4, 7, 11, 19, 21, 26, 30, 36, 59, 65, 67, 79, 89, 101, 102, 103, 111, 122,
-        132, 141, 143, 145, 152, 153, 156, 158
+        4, 7, 11, 19, 21, 26, 30, 36, 39, 59, 65, 67, 79, 89, 101, 102, 103, 111, 122,
+        132, 141, 143, 145, 152, 153, 154, 156, 157, 158
     ];
 
     private static System.Numerics.Vector3 DyeTint(int dyeId)

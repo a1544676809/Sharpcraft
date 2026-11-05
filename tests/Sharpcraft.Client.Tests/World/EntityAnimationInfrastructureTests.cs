@@ -377,6 +377,16 @@ public sealed class EntityAnimationInfrastructureTests
     }
 
     [Fact]
+    public void ZombieBabyFlagProjectsToTheFrame()
+    {
+        var tracker = new EntityTracker { GameTime = 0 };
+        tracker.Add(Entity(30, typeId: 154));
+        tracker.ApplyEntityData(30, [new EntityDataItem(16, 8, 1)]);
+
+        Assert.True(tracker.Interpolate(0f)[0].IsBaby);
+    }
+
+    [Fact]
     public void WolfSittingFlagProjectsToTheFrame()
     {
         var tracker = new EntityTracker { GameTime = 0 };

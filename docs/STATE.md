@@ -3487,3 +3487,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **已完成**：新增 `BabyHumanoidArmorParts`（head/body/waist/arms/legs/left_foot/right_foot）；`WithBabyArmorSlot` 按 BABY 槽位可见性克隆并施加逐轴变形（腿/waist 额外 -0.1）；`EquipmentAssetKind.HumanoidArmorBaby`→`entity/equipment/humanoid_baby/<material>`（64×64，含 copper/leather_overlay）；`Decorate` 对 baby humanoid 类型改走该路径，替换原近似；armOffset=ZERO。
 - **验证**：Client **1333** 全绿（+2 baby 护甲），构建 0 警告 0 错误。
 - **下一步具体动作**：①Elytra 层（含 `ELYTRA_BABY`，胸槽 elytra + `IsFallFlying` → `entity/equipment/wings/elytra`）；②Happy Ghast 绳索；③SPEAR/STAB；④EnderDragon 飞行历史；⑤物品模型/手持物品（T-631 未开始）。
+
+## 2026-11-05 baby 标志解码修复（T-636）
+
+- **根因**：baby 标志(index16/BOOLEAN)解码原在 `ApplyEntityData` 的变体 spec 分支之后；僵尸无 `EntityVariantSpec` → 提前 return，游戏内 baby 僵尸 `IsBaby` 恒 false → 成人模型（"大僵尸"，与所贴对比图一致）。
+- **修复**：搬到 `HandleAnimationData`（所有类型都跑）；`AgeableTypes` 增 39/154/157；测试 type154 解码 IsBaby=true。
+- **验证**：Client **1334**（+1 baby 解码）；构建 0 警告 0 错误（全量仅剩已知并行 flaky `HumanoidAttackArmTests`，单独跑通过）。
+- **下一步具体动作**：重启窗口目视 baby 僵尸体型/护甲；然后 Elytra（含 ELYTRA_BABY）。
