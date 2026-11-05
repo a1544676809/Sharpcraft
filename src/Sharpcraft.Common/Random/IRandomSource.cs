@@ -7,6 +7,7 @@ namespace Sharpcraft.Common.Random;
 /// Random source with the semantics of Minecraft 26.3's <c>RandomSource</c>.
 /// Implementations are <b>not</b> thread-safe; one instance belongs to one thread.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.util.RandomSource", "ref://mc-26.3-analysis/src/net/minecraft/util/RandomSource.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public interface IRandomSource
 {
     /// <summary>Reseeds the source, resetting any cached derived state.</summary>

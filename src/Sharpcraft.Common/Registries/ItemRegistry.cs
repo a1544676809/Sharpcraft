@@ -6,12 +6,14 @@ using Sharpcraft.Common.Identifiers;
 namespace Sharpcraft.Common.Registries;
 
 /// <summary>One entry of the vanilla item registry; only the identity is modelled at this stage.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.item.ItemStack", "ref://mc-26.3-analysis/src/net/minecraft/world/item/ItemStack.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed record ItemInfo(Identifier Id);
 
 /// <summary>
 /// Read-only vanilla item registry loaded from a registration-order snapshot. Line number after comments is the
 /// numeric id, so lookup and enumeration share the same source of truth (docs/analysis/common/item-registry.md).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.core.registries.BuiltInRegistries", "ref://mc-26.3-analysis/src/net/minecraft/core/registries/BuiltInRegistries.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Merged, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class ItemRegistry
 {
     private readonly Registry<ItemInfo> _registry = new();

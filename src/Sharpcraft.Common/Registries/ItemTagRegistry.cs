@@ -11,6 +11,7 @@ namespace Sharpcraft.Common.Registries;
 /// The repository never contains the tag files themselves; the launcher extracts them outside the checkout and the
 /// client parses them at startup (AGENTS.md principle 3).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.tags.ItemTags", "ref://mc-26.3-analysis/src/net/minecraft/tags/ItemTags.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Merged, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class ItemTagRegistry
 {
     private readonly Dictionary<Identifier, HashSet<Identifier>> _tags;

@@ -7,6 +7,7 @@ namespace Sharpcraft.Common.Registries;
 /// Numeric ids of the vanilla data component types, read from the registration-order snapshot captured from the 26.3
 /// jar. Only names and order are stored (protocol metadata, not assets).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.core.component.DataComponents", "ref://mc-26.3-analysis/src/net/minecraft/core/component/DataComponents.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Merged, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class DataComponentTypes
 {
     private static readonly Lazy<Dictionary<string, int>> Ids = new(Load);

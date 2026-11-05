@@ -18,6 +18,7 @@ namespace Sharpcraft.Common.Registries;
 /// or reorder blocks will disagree with it, which is why the live <c>registry_data</c> packet remains
 /// the authority when it is available (T-039).
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.block.Blocks", "ref://mc-26.3-analysis/src/net/minecraft/world/level/block/Blocks.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Merged, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class VanillaBlockRegistry
 {
     /// <summary>Resource name of the embedded snapshot.</summary>

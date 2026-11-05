@@ -305,7 +305,6 @@ src/Sharpcraft.Common/Network/UpdateAttributesPackets.cs :: Sharpcraft.Common.Ne
 src/Sharpcraft.Common/Network/Utf8StringCodec.cs :: Sharpcraft.Common.Network.Utf8StringCodec
 src/Sharpcraft.Common/Network/VarInt.cs :: Sharpcraft.Common.Network.DecodeStatus
 src/Sharpcraft.Common/Random/IPositionalRandomFactory.cs :: Sharpcraft.Common.Random.IPositionalRandomFactory
-src/Sharpcraft.Common/Random/IRandomSource.cs :: Sharpcraft.Common.Random.IRandomSource
 src/Sharpcraft.Common/Random/JavaStringHash.cs :: Sharpcraft.Common.Random.JavaStringHash
 src/Sharpcraft.Common/Random/LegacyPositionalRandomFactory.cs :: Sharpcraft.Common.Random.LegacyPositionalRandomFactory
 src/Sharpcraft.Common/Random/PositionalSeed.cs :: Sharpcraft.Common.Random.PositionalSeed
@@ -319,15 +318,10 @@ src/Sharpcraft.Common/Registries/BlockStateDefinition.cs :: Sharpcraft.Common.Re
 src/Sharpcraft.Common/Registries/BlockStateLayout.cs :: Sharpcraft.Common.Registries.BlockStateLayout
 src/Sharpcraft.Common/Registries/BlockStateLayout.cs :: Sharpcraft.Common.Registries.Entry
 src/Sharpcraft.Common/Registries/BlockStateProperty.cs :: Sharpcraft.Common.Registries.BlockStateProperty
-src/Sharpcraft.Common/Registries/DataComponentTypes.cs :: Sharpcraft.Common.Registries.DataComponentTypes
 src/Sharpcraft.Common/Registries/EnchantmentTypes.cs :: Sharpcraft.Common.Registries.EnchantmentTypes
 src/Sharpcraft.Common/Registries/EntityDimensionsRegistry.cs :: Sharpcraft.Common.Registries.EntityDimensionsInfo
 src/Sharpcraft.Common/Registries/EntityDimensionsRegistry.cs :: Sharpcraft.Common.Registries.EntityDimensionsRegistry
-src/Sharpcraft.Common/Registries/ItemRegistry.cs :: Sharpcraft.Common.Registries.ItemInfo
-src/Sharpcraft.Common/Registries/ItemRegistry.cs :: Sharpcraft.Common.Registries.ItemRegistry
-src/Sharpcraft.Common/Registries/ItemTagRegistry.cs :: Sharpcraft.Common.Registries.ItemTagRegistry
 src/Sharpcraft.Common/Registries/Registry.cs :: Sharpcraft.Common.Registries.Entry
-src/Sharpcraft.Common/Registries/VanillaBlockRegistry.cs :: Sharpcraft.Common.Registries.VanillaBlockRegistry
 src/Sharpcraft.Common/World/BiomeRegistry.cs :: Sharpcraft.Common.World.BiomeClimate
 src/Sharpcraft.Common/World/BiomeRegistry.cs :: Sharpcraft.Common.World.BiomeEffects
 src/Sharpcraft.Common/World/BiomeRegistry.cs :: Sharpcraft.Common.World.BiomeEntry
