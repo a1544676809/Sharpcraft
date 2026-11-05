@@ -3494,3 +3494,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **修复**：搬到 `HandleAnimationData`（所有类型都跑）；`AgeableTypes` 增 39/154/157；测试 type154 解码 IsBaby=true。
 - **验证**：Client **1334**（+1 baby 解码）；构建 0 警告 0 错误（全量仅剩已知并行 flaky `HumanoidAttackArmTests`，单独跑通过）。
 - **下一步具体动作**：重启窗口目视 baby 僵尸体型/护甲；然后 Elytra（含 ELYTRA_BABY）。
+
+## 2026-11-05 baby 护甲"悬空"排查结论（非 bug）
+
+- **诊断**：临时打印 baby 僵尸各部件世界最小 Y，`entityY=191.500`；base 左右腿 `minWorldY=191.500`（脚底=实体 Y），护甲腿 191.489、靴 191.472（略低于脚底）。→ **模型与护甲几何垂直完全正确、已着地**，不存在悬空偏移。
+- **结论**：视觉"悬空"来自**站立方块高度**（脚下方块顶≈191.5，旁边棋盘块更低一层）+ baby 腿仅 ~0.25 格很近，并非渲染 bug。诊断代码已移除（`0a60ea2`）。
+- **过程记录**：期间试过"克隆 base 部件"导致护甲贴图损坏且仍悬空，已 `git revert`（`9307300`）；专用 `createBabyArmorMesh` 版本保留（T-634 已完成）。
+- **下一步具体动作**：①Elytra（含 `ELYTRA_BABY`）；②Happy Ghast 绳索；③SPEAR/STAB；④EnderDragon 飞行历史。
