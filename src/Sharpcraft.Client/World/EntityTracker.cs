@@ -306,7 +306,15 @@ public sealed class TrackedEntity
         _remainingTicks -= ticks;
     }
 
-    private static float LerpD(double from, double to, float a) => (float)(from + ((to - from) * a));
+    private static double LerpD(double from, double to, float a) => from + ((to - from) * a);
+
+    internal void ClearInterpolation()
+    {
+        _steps.Clear();
+        _remainingTicks = 0f;
+        _currentStepTicks = 1f;
+        _interpSpeed = 1f;
+    }
 
     private static float LerpF(float from, float to, float a) => from + ((to - from) * a);
 
@@ -623,6 +631,58 @@ public sealed class EntityTracker
         var offset = (int)Math.Clamp(GameTime - entity.LastMoveTick, 1, InterpolationSteps);
         entity.LastMoveTick = GameTime;
         entity.EnqueueInterpolation(entity.TargetX, entity.TargetY, entity.TargetZ, entity.TargetYaw, entity.TargetPitch, offset);
+    }
+
+    /// <summary>Applies a high-precision entity position sync (id 35): resets the codec base to the absolute position and
+    /// either snaps (far) or enqueues the path for interpolation, matching ClientPacketListener.handleEntityPositionSync.</summary>
+    public bool ApplyPositionSync(in EntityPositionSyncUpdate sync)
+    {
+        if (!_entities.TryGetValue(sync.Id, out var entity))
+        {
+            UnknownUpdates++;
+            return false;
+        }
+
+        entity.PushPrevious();
+        var dx = sync.X - entity.X;
+        var dy = sync.Y - entity.Y;
+        var dz = sync.Z - entity.Z;
+        var tooBigToInterpolate = (dx * dx) + (dy * dy) + (dz * dz) > 4096.0;
+        var yaw = Wrap360(sync.Yaw);
+        var pitch = ClampPitch(sync.Pitch);
+
+        entity.CodecBaseX = sync.X;
+        entity.CodecBaseY = sync.Y;
+        entity.CodecBaseZ = sync.Z;
+        entity.TargetX = sync.X;
+        entity.TargetY = sync.Y;
+        entity.TargetZ = sync.Z;
+        entity.TargetYaw = yaw;
+        entity.TargetPitch = pitch;
+        entity.OnGround = sync.OnGround;
+
+        if (tooBigToInterpolate)
+        {
+            entity.X = sync.X;
+            entity.Y = sync.Y;
+            entity.Z = sync.Z;
+            entity.Yaw = yaw;
+            entity.Pitch = pitch;
+            entity.ClearInterpolation();
+        }
+        else if (sync.IsStepped && sync.Steps is { Count: > 0 } steps)
+        {
+            foreach (var step in steps)
+            {
+                entity.EnqueueInterpolation(step.X, step.Y, step.Z, yaw, pitch, Math.Clamp(step.TickOffset, 1, 20));
+            }
+        }
+        else
+        {
+            entity.EnqueueInterpolation(sync.X, sync.Y, sync.Z, yaw, pitch, InterpolationSteps);
+        }
+
+        return true;
     }
 
     /// <summary>Applies an absolute repositioning, honouring the per-component relative flags.</summary>

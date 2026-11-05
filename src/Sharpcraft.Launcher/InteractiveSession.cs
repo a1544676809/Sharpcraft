@@ -1832,6 +1832,14 @@ internal sealed class InteractiveSession
 
                     break;
 
+                case PacketIds.PlayClientbound.EntityPositionSync:
+                    if (EntityPackets.TryReadEntityPositionSync(body[reader.Position..], out var posSync) == DecodeStatus.Success)
+                    {
+                        _entities.ApplyPositionSync(posSync);
+                    }
+
+                    break;
+
                 case PacketIds.PlayClientbound.TeleportEntity:
                     if (EntityPackets.TryReadTeleportEntity(body[reader.Position..], out var teleport) == DecodeStatus.Success)
                     {

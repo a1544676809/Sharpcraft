@@ -54,6 +54,21 @@ public readonly record struct EntityMove(
     bool OnGround,
     int Ticks = 1);
 
+/// <summary>One absolute step of a <c>PositionPath.Stepped</c> (entity_position_sync).</summary>
+public readonly record struct PositionPathStep(double X, double Y, double Z, int TickOffset);
+
+/// <summary>Decoded <c>entity_position_sync</c> (id 35): absolute position or stepped path plus rotation and ground flag.</summary>
+public readonly record struct EntityPositionSyncUpdate(
+    int Id,
+    double X,
+    double Y,
+    double Z,
+    float Yaw,
+    float Pitch,
+    bool OnGround,
+    bool IsStepped,
+    IReadOnlyList<PositionPathStep>? Steps);
+
 /// <summary>An absolute repositioning of an entity.</summary>
 /// <param name="Id">Runtime entity id.</param>
 /// <param name="X">Absolute x.</param>
@@ -355,6 +370,71 @@ public static class EntityPackets
     /// Reads a movement delta. Zero on an axis means "keep the current value" rather than "no movement", which is
     /// why the caller must treat it as such (docs/specs/network/entity-sync.md 4.1).
     /// </summary>
+    /// <summary>Reads an <c>entity_position_sync</c> body (id + PositionPath + yRot/xRot float + onGround).</summary>
+    public static DecodeStatus TryReadEntityPositionSync(ReadOnlySpan<byte> body, out EntityPositionSyncUpdate sync)
+    {
+        sync = default;
+        var reader = new PayloadReader(body);
+
+        if (reader.TryReadVarInt(out var id) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out var pathType) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        double ex = 0d, ey = 0d, ez = 0d;
+        var isStepped = pathType == 1;
+        List<PositionPathStep>? steps = null;
+
+        if (pathType == 0)
+        {
+            if (reader.TryReadDouble(out ex) != DecodeStatus.Success ||
+                reader.TryReadDouble(out ey) != DecodeStatus.Success ||
+                reader.TryReadDouble(out ez) != DecodeStatus.Success)
+            {
+                return DecodeStatus.NeedMoreData;
+            }
+        }
+        else if (isStepped)
+        {
+            if (reader.TryReadVarInt(out var stepCount) != DecodeStatus.Success || stepCount < 0 || stepCount > 256)
+            {
+                return DecodeStatus.NeedMoreData;
+            }
+
+            steps = new List<PositionPathStep>(stepCount);
+            for (var i = 0; i < stepCount; i++)
+            {
+                if (reader.TryReadDouble(out var sx) != DecodeStatus.Success ||
+                    reader.TryReadDouble(out var sy) != DecodeStatus.Success ||
+                    reader.TryReadDouble(out var sz) != DecodeStatus.Success ||
+                    reader.TryReadVarInt(out var tickOffset) != DecodeStatus.Success)
+                {
+                    return DecodeStatus.NeedMoreData;
+                }
+
+                ex = sx;
+                ey = sy;
+                ez = sz;
+                steps.Add(new PositionPathStep(sx, sy, sz, tickOffset));
+            }
+        }
+        else
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        if (reader.TryReadFloat(out var yRot) != DecodeStatus.Success ||
+            reader.TryReadFloat(out var xRot) != DecodeStatus.Success ||
+            reader.TryReadBool(out var onGround) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        sync = new EntityPositionSyncUpdate(id, ex, ey, ez, yRot, xRot, onGround, isStepped, steps);
+        return DecodeStatus.Success;
+    }
+
     private static bool TryReadVecDelta(
         ref PayloadReader reader,
         int stepCount,

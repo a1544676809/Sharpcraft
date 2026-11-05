@@ -166,6 +166,35 @@ public sealed class EntityTrackerTests
     }
 
     [Fact]
+    public void PositionSyncResetsCodecBaseAndCorrectsVerticalDrift()
+    {
+        var tracker = new EntityTracker();
+        tracker.Add(Entity(11, x: 0, y: 191.0, z: 0));
+
+        // Four observed negative/net move deltas drag the codec base below the block.
+        foreach (var dY in new[] { 0.5605, -0.6233, 0.0725, -0.1641 })
+        {
+            tracker.ApplyMove(new EntityMove(11, 0, dY, 0, HasPosition: true, 0f, 0f, HasRotation: false, OnGround: false));
+        }
+
+        for (var i = 0; i < 4; i++)
+        {
+            tracker.Tick();
+        }
+
+        Assert.True(tracker.TryGet(11, out var entity));
+        Assert.True(entity!.Y < 191.0, $"expected drift below 191 but was {entity.Y}");
+
+        // entity_position_sync (id 35): absolute reset to 191.0 on ground.
+        tracker.ApplyPositionSync(new EntityPositionSyncUpdate(11, 0, 191.0, 0, 0f, 0f, OnGround: true, IsStepped: false, Steps: null));
+        tracker.Tick();
+        tracker.Tick();
+        tracker.Tick();
+        Assert.Equal(191.0, entity.Y, 4);
+        Assert.Equal(191.0, entity.CodecBaseY, 4);
+    }
+
+    [Fact]
     public void InterpolationDoesNotAllocateOnceWarm()
     {
         var tracker = new EntityTracker();

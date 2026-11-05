@@ -215,6 +215,10 @@ public static class PacketIds
         /// <remarks>Reference registration dump: play clientbound 34.</remarks>
         public const int EntityEvent = 34;
 
+        /// <summary>High-precision entity position sync (absolute or stepped path). Sent on ground transitions, precision overflow, and forced periodic realignment.</summary>
+        /// <remarks>Reference registration dump: play clientbound 35 (ClientboundEntityPositionSyncPacket).</remarks>
+        public const int EntityPositionSync = 35;
+
         /// <summary>Passengers of a vehicle: vehicle entity id, count, then passenger entity ids.</summary>
         /// <remarks>Reference registration dump: play clientbound 109.</remarks>
         public const int SetPassengers = 109;
