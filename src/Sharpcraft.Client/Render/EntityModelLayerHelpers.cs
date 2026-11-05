@@ -150,6 +150,15 @@ public static class EntityModelLayerHelpers
         };
         var baseGrow = slot == 3 ? BabyInnerGrow : BabyOuterGrow;
         var legInset = new Vector3(0.1f, 0.1f, 0.1f);
+        var baseBottoms = new Dictionary<string, float>(StringComparer.Ordinal);
+        foreach (var basePart in parts)
+        {
+            if (!basePart.Name.StartsWith("equipment_", StringComparison.Ordinal))
+            {
+                baseBottoms[basePart.Name] = basePart.Bottom;
+            }
+        }
+
         var result = new List<EntityModelPart>(parts.Count + visible.Length);
         result.AddRange(parts);
         foreach (var part in BabyHumanoidArmorParts.Parts)
@@ -160,10 +169,13 @@ public static class EntityModelLayerHelpers
             }
 
             var grow = part.Name is "left_leg" or "right_leg" or "waist" ? baseGrow - legInset : baseGrow;
+            var poseSource = BabyPoseSource(part.Name);
+            var bottom = baseBottoms.TryGetValue(poseSource, out var baseBottom) ? baseBottom : part.Bottom;
             result.Add(part with
             {
                 Name = "equipment_" + kind + "_" + slot + "_" + part.Name,
-                PoseSource = BabyPoseSource(part.Name),
+                Bottom = bottom,
+                PoseSource = poseSource,
                 TexturePath = fallbackTexture,
                 TextureSelector = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot),
                 Grow = 0f,
