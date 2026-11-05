@@ -488,7 +488,7 @@ public sealed class EntityModelRegistrationTests
         Assert.Equal("baby_cat", cat.Name);
         Assert.Equal(22, cat.Parts.Count);
         Assert.Equal("baby_wolf", wolf.Name);
-        Assert.Equal(44, wolf.Parts.Count);
+        Assert.Equal(44, wolf.Parts.Count(p => !p.Name.StartsWith("crackiness_")));
         Assert.Equal("baby_fox", fox.Name);
         Assert.Equal(10, fox.Parts.Count);
         Assert.Equal("baby_rabbit", rabbit.Name);

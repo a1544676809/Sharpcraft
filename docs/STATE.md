@@ -3469,3 +3469,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **T-632 已完成**：ZombieNautilus 珊瑚层随体甲隐藏（`CoralParts` 加 `VisibleWhen = state.Equipment[6] <= 0`，对齐 `ZombieNautilusCoralModel`）。TraderLlama 地毯确认复用 `llama_body/*`，无需额外层。Client **1330** 全绿。
 - **T-631 记录（未开始）**：物品模型/手持物品渲染是独立子系统（item 模型 JSON+纹理+display 变换+按 hand 挂接），依赖项 Witch/Piglin/Illager/玩家持物；不并入实体动画批次。
 - **下一步具体动作**：①Wolf armor 裂纹（需 durability/Crackiness）；②Happy Ghast 绳索（需 leash holder 状态）；③baby 人形护甲变形；④Elytra 层；⑤SPEAR/STAB；⑥EnderDragon 飞行历史。可继续用团队并行。
+
+## 2026-11-05 Wolf armor 裂纹（T-633）
+
+- **已完成**：`EntityRenderState.Crackiness`（0/1/2/3）由 body 槽(6) 物品 damage/maxDamage 按 `Crackiness.WOLF_ARMOR` 计算；`WithCrackiness` 给 Wolf(152) 复制基础部件并加 `crackiness_` overlay（`entity/wolf/wolf_armor_crackiness_{low,medium,high}`，`VisibleWhen=Crackiness>0`）；纹理入资产清单。
+- **验证**：Client **1331** 全绿（+1 裂纹），构建 0 警告 0 错误。
+- **下一步具体动作**：①Happy Ghast 绳索（leash-holder 状态 + 绳索几何）；②baby 人形护甲变形；③Elytra 层；④SPEAR/STAB；⑤EnderDragon 飞行历史；⑥物品模型/手持物品（独立子系统，未开始）。

@@ -172,7 +172,9 @@ public static class EquipmentTextureCatalog
         }
 
         paths.AddRange([
-            "entity/equipment/wolf_body/armadillo_scute", "entity/equipment/wolf_body/armadillo_scute_overlay"
+            "entity/equipment/wolf_body/armadillo_scute", "entity/equipment/wolf_body/armadillo_scute_overlay",
+            "entity/wolf/wolf_armor_crackiness_low", "entity/wolf/wolf_armor_crackiness_medium",
+            "entity/wolf/wolf_armor_crackiness_high"
         ]);
 
         foreach (var material in ArmorMaterials)

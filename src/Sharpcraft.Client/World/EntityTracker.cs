@@ -314,7 +314,8 @@ public readonly record struct EntityRenderState(
     bool IsSprinting = false,
     float LieDownAmount = 0f,
     float LieDownAmountTail = 0f,
-    float RelaxStateOneAmount = 0f);
+    float RelaxStateOneAmount = 0f,
+    int Crackiness = 0);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -1006,6 +1007,15 @@ public sealed class EntityTracker
             var pose = entity.Presentation.Pose;
             var visuallySwimming = pose == 3 || (pose == 1 && !fallFlying);
 
+            // Wolf armor crackiness (reference Crackiness.WOLF_ARMOR over body-slot durability; 0 none, 1 low, 2 medium, 3 high).
+            var crackiness = 0;
+            var bodyComponents = entity.EquipmentComponentsAt(6);
+            if (entity.EquipmentItemAt(6) > 0 && bodyComponents.MaxDamage > 0)
+            {
+                var remaining = (float)(bodyComponents.MaxDamage - bodyComponents.Damage) / bodyComponents.MaxDamage;
+                crackiness = remaining < 0.32f ? 3 : remaining < 0.69f ? 2 : remaining < 0.95f ? 1 : 0;
+            }
+
             _renderStates.Add(new EntityRenderState(
                 entity.Id,
                 entity.TypeId,
@@ -1096,6 +1106,7 @@ public sealed class EntityTracker
                 LieDownAmount: entity.Presentation.LieDownAmountO + ((entity.Presentation.LieDownAmount - entity.Presentation.LieDownAmountO) * t),
                 LieDownAmountTail: entity.Presentation.LieDownAmountTailO + ((entity.Presentation.LieDownAmountTail - entity.Presentation.LieDownAmountTailO) * t),
                 RelaxStateOneAmount: entity.Presentation.RelaxStateOneAmountO + ((entity.Presentation.RelaxStateOneAmount - entity.Presentation.RelaxStateOneAmountO) * t),
+                Crackiness: crackiness,
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,

@@ -302,7 +302,7 @@ public sealed class EntityModelResolverTests
         Assert.Equal(64, definition.TextureWidth);
         Assert.Equal(32, definition.TextureHeight);
         // 11 visible cubes plus two empty group nodes ("head", "tail"), doubled by collar and equipment layers.
-        Assert.Equal(52, definition.Parts.Count);
+        Assert.Equal(52, definition.Parts.Count(p => !p.Name.StartsWith("crackiness_")));
     }
 
     [Fact]

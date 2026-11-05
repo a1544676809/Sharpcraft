@@ -199,6 +199,12 @@ public static class EntityModelResolver
                 : EntityModelLayerHelpers.WithEquipment(parts, kind, slot, fallback, baseCopy: kind != EquipmentAssetKind.HappyGhastBody);
         }
 
+        // Wolf armor shows a crackiness overlay based on the chest/body slot durability.
+        if (typeId == 152)
+        {
+            parts = EntityModelLayerHelpers.WithCrackiness(parts);
+        }
+
         var decorated = new EntityModelDefinition(
             definition.Name,
             definition.TextureWidth,

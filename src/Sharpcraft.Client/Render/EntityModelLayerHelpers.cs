@@ -134,6 +134,38 @@ public static class EntityModelLayerHelpers
         return null;
     }
 
+    /// <summary>Copies the base parts with a crackiness overlay texture (wolf armor durability levels).</summary>
+    public static EntityModelPart[] WithCrackiness(IReadOnlyList<EntityModelPart> parts)
+    {
+        var result = new List<EntityModelPart>(parts.Count * 2);
+        result.AddRange(parts);
+        foreach (var part in parts)
+        {
+            if (part.Name.StartsWith("equipment_", StringComparison.Ordinal) || part.Name.StartsWith("crackiness_", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            result.Add(part with
+            {
+                Name = "crackiness_" + part.Name,
+                PoseSource = part.PoseSource ?? part.Name,
+                TextureSelector = static state => state.Crackiness switch
+                {
+                    1 => "entity/wolf/wolf_armor_crackiness_low",
+                    2 => "entity/wolf/wolf_armor_crackiness_medium",
+                    3 => "entity/wolf/wolf_armor_crackiness_high",
+                    _ => null
+                },
+                Grow = part.Grow + 0.21f,
+                OverlayLayers = null,
+                VisibleWhen = static state => state.Crackiness > 0
+            });
+        }
+
+        return [.. result];
+    }
+
     public static EntityModelPart[] WithHorseMarkings(IReadOnlyList<EntityModelPart> parts, string texturePrefix, bool baby)
     {
         (int Id, string Key)[] markings = [(1, "white"), (2, "whitefield"), (3, "whitedots"), (4, "blackdots")];
