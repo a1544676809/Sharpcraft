@@ -402,4 +402,44 @@ public static class PlayPackets
 
         return DecodeStatus.Success;
     }
+
+    /// <summary>Reads <c>player_abilities</c> (clientbound 65): byte flags, float flyingSpeed, float walkingSpeed.</summary>
+    public static DecodeStatus TryReadPlayerAbilities(ReadOnlySpan<byte> body, out byte flags, out float flyingSpeed, out float walkingSpeed)
+    {
+        flags = 0;
+        flyingSpeed = 0f;
+        walkingSpeed = 0f;
+        var reader = new PayloadReader(body);
+        if (reader.TryReadByte(out flags) != DecodeStatus.Success ||
+            reader.TryReadFloat(out flyingSpeed) != DecodeStatus.Success ||
+            reader.TryReadFloat(out walkingSpeed) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        return DecodeStatus.Success;
+    }
+
+    /// <summary>Reads <c>set_simulation_distance</c> (clientbound 113): a VarInt distance.</summary>
+    public static DecodeStatus TryReadSetSimulationDistance(ReadOnlySpan<byte> body, out int simulationDistance)
+    {
+        simulationDistance = 0;
+        var reader = new PayloadReader(body);
+        return reader.TryReadVarInt(out simulationDistance);
+    }
+
+    /// <summary>Reads <c>cooldown</c> (clientbound 22): a cooldown-group Identifier string then a VarInt duration.</summary>
+    public static DecodeStatus TryReadCooldown(ReadOnlySpan<byte> body, out string group, out int duration)
+    {
+        group = string.Empty;
+        duration = 0;
+        var reader = new PayloadReader(body);
+        if (reader.TryReadString(out group) != DecodeStatus.Success ||
+            reader.TryReadVarInt(out duration) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        return DecodeStatus.Success;
+    }
 }

@@ -231,6 +231,18 @@ public static class PacketIds
         /// <remarks>Reference registration dump: play clientbound 105.</remarks>
         public const int SetExperience = 105;
 
+        /// <summary>Player abilities bitfield and movement speeds.</summary>
+        /// <remarks>Reference registration dump: play clientbound 65.</remarks>
+        public const int PlayerAbilities = 65;
+
+        /// <summary>Server-authoritative simulation distance (chunks).</summary>
+        /// <remarks>Reference registration dump: play clientbound 113.</remarks>
+        public const int SetSimulationDistance = 113;
+
+        /// <summary>Item cooldown for a group for a number of ticks.</summary>
+        /// <remarks>Reference registration dump: play clientbound 22.</remarks>
+        public const int Cooldown = 22;
+
         /// <summary>Passengers of a vehicle: vehicle entity id, count, then passenger entity ids.</summary>
         /// <remarks>Reference registration dump: play clientbound 109.</remarks>
         public const int SetPassengers = 109;

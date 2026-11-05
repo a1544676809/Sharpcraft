@@ -33,4 +33,32 @@ public sealed class SimpleClientboundPacketsTests
         Assert.Equal(100, total);
         Assert.Equal(7, level);
     }
+
+    [Fact]
+    public void PlayerAbilitiesReadsFlagsAndSpeeds()
+    {
+        // flags 0x07 (invulnerable|flying|mayfly), flySpeed 0.05f, walkSpeed 0.1f.
+        var body = new byte[] { 0x07, 0x3D, 0x4C, 0xCC, 0xCD, 0x3D, 0xCC, 0xCC, 0xCD };
+        Assert.Equal(DecodeStatus.Success, PlayPackets.TryReadPlayerAbilities(body, out var flags, out var fly, out var walk));
+        Assert.Equal(0x07, flags);
+        Assert.Equal(0.05f, fly, 4);
+        Assert.Equal(0.1f, walk, 4);
+    }
+
+    [Fact]
+    public void SetSimulationDistanceReadsVarInt()
+    {
+        Assert.Equal(DecodeStatus.Success, PlayPackets.TryReadSetSimulationDistance(new byte[] { 0x0A }, out var distance));
+        Assert.Equal(10, distance);
+    }
+
+    [Fact]
+    public void CooldownReadsGroupAndDuration()
+    {
+        // Identifier string "abc" (len 3) then VarInt duration 20.
+        var body = new byte[] { 0x03, (byte)'a', (byte)'b', (byte)'c', 0x14 };
+        Assert.Equal(DecodeStatus.Success, PlayPackets.TryReadCooldown(body, out var group, out var duration));
+        Assert.Equal("abc", group);
+        Assert.Equal(20, duration);
+    }
 }

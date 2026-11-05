@@ -76,6 +76,10 @@ internal sealed class InteractiveSession
     private float _experienceProgress;
     private int _totalExperience;
     private int _experienceLevel;
+    private bool _canFly, _flying, _invulnerable, _instabuild;
+    private float _flyingSpeed = 0.05f, _walkingSpeed = 0.1f;
+    private int _simulationDistance;
+    private readonly System.Collections.Generic.Dictionary<string, int> _cooldowns = new(StringComparer.Ordinal);
     private int _diagFrames;
     private readonly bool _packetLog = Environment.GetEnvironmentVariable("MC_PACKET_LOG") == "1";
     private int _packetLogCount;
@@ -1832,6 +1836,35 @@ internal sealed class InteractiveSession
                     if (EntityPackets.TryReadSetEntityMotion(body[reader.Position..], out var motion) == DecodeStatus.Success)
                     {
                         _entities.ApplyMotion(motion);
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.PlayerAbilities:
+                    if (PlayPackets.TryReadPlayerAbilities(body[reader.Position..], out var abilityFlags, out var flySpeed, out var walkSpeed) == DecodeStatus.Success)
+                    {
+                        _invulnerable = (abilityFlags & 1) != 0;
+                        _flying = (abilityFlags & 2) != 0;
+                        _canFly = (abilityFlags & 4) != 0;
+                        _instabuild = (abilityFlags & 8) != 0;
+                        _flyingSpeed = flySpeed;
+                        _walkingSpeed = walkSpeed;
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.SetSimulationDistance:
+                    if (PlayPackets.TryReadSetSimulationDistance(body[reader.Position..], out var simDistance) == DecodeStatus.Success)
+                    {
+                        _simulationDistance = simDistance;
+                    }
+
+                    break;
+
+                case PacketIds.PlayClientbound.Cooldown:
+                    if (PlayPackets.TryReadCooldown(body[reader.Position..], out var cooldownGroup, out var cooldownDuration) == DecodeStatus.Success)
+                    {
+                        _cooldowns[cooldownGroup] = cooldownDuration;
                     }
 
                     break;

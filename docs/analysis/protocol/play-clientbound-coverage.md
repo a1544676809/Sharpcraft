@@ -4,9 +4,9 @@
 # Play Clientbound 包覆盖审计
 
 基线：Minecraft 26.3（protocol 777）。证据：`ref://mc-26.3-analysis/vectors/packet-tables.txt`（原版注册转储）与 `src/Sharpcraft.Launcher/InteractiveSession.cs` 的 `case PacketIds.PlayClientbound.*`。
-生成方式：用注册转储列出全部 **144** 个 play clientbound 包，减去实际 `case` 处理的 **44** 个，得到**未处理 100** 个（下表）。仅类名/ID，无原版源码。
+生成方式：用注册转储列出全部 **144** 个 play clientbound 包，减去实际 `case` 处理的 **47** 个，得到**未处理 97** 个（下表）。仅类名/ID，无原版源码。
 
-## 未处理清单（100）\n\n> 已补：`block_changed_ack(4)`、`set_experience(105)`、`set_held_slot(107)`（见 T-642），故从下表移除。
+## 未处理清单（97）\n\n> 已补：`block_changed_ack(4)`、`set_experience(105)`、`set_held_slot(107)`（见 T-642），故从下表移除。
 
 按 ID：0 bundle_delimiter, 2 animate(?), 3 award_stats, 4 block_changed_ack, 5 block_destruction, 7 block_event, 9 boss_event, 10 change_difficulty, 12 chunk_batch_start, 13 chunks_biomes, 15 command_suggestions, 16 commands, 17 container_close, 18 container_set_content, 19 container_set_data, 20 container_set_slot, 21 cookie_request, 22 cooldown, 23 custom_chat_completions, 24 custom_payload, 25 damage_event, 26–29 debug, 30 debug_sample, 36 explode, 37 add_transient_block, 38 forget_level_chunk, 40 game_rule_values, 41 game_test_highlight_pos, 42 mount_screen_open, 43 hurt_animation, 44 initialize_border, 48 level_particles, 49 light_update, 50 login, 51 low_disk_space_warning, 52 map_item_data, 53 merchant_offers, 56 move_minecart_along_track, 58 move_vehicle, 59 open_book, 60 open_screen, 61 open_sign_editor, 63 pong_response, 64 place_ghost_recipe, 65 player_abilities, 67 player_combat_end, 68 player_combat_enter, 72 player_look_at, 75/76/77 recipe_book_*, 79 remove_mob_effect, 80 reset_score, 81 resource_pack_pop, 82 resource_pack_push, 83 post_effects, 84 respawn, 87 select_advancements_tab, 88 server_data, 90–94 border, 95 set_camera, 96/97 chunk_cache, 98 set_cursor_item, 99 set_default_spawn_position, 100 set_display_objective, 105 set_experience, 107 set_held_slot, 108 set_objective, 110 set_player_inventory, 111 set_player_team, 112 set_score, 113 set_simulation_distance, 117 set_titles_animation, 118 sound_entity, 119 sound, 120 start_configuration, 121 stop_sound, 122 store_cookie, 125 tab_list, 126 tag_query, 127 take_item_entity, 129/130/131/132 test/ticking/transfer, 133 update_advancements, 135 update_mob_effect, 136 update_recipes, 137 update_tags, 138 projectile_power, 139/140/141 custom_report/server_links/waypoint, 142/143 clear/show_dialog。
 
@@ -31,4 +31,5 @@
 ## 说明
 - 本表是"当前**未**处理"的全集；`case` 覆盖 `41`。部分包可能由别的入口间接处理（需逐条核对），但**绝大多数确为未实现**。
 - 下一步：按 P0→P1 顺序补齐解码与分发，并为每个补上的包加 traceability 行与最小回归（防再出现 T-640 式"整包漏接"）。
+
 

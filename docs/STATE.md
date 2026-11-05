@@ -3531,3 +3531,8 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 已补：`block_changed_ack(4)`、`set_experience(105)`、`set_held_slot(107)`（解码+分发）。审计 handled 41→44、未处理 103→100。
 - 回归：SimpleClientboundPacketsTests（3 项）。
 - 下一步：继续 P0（light_update/chunks_biomes/block_event/block_destruction/explode）与 P1。
+
+## 2026-11-05 继续补 clientbound 包（T-643）
+
+- 已补 player_abilities(65)/set_simulation_distance(113)/cooldown(22)。审计 handled 44→47、未处理 100→97。
+- 下一步：继续低成本 P1（damage_event/hurt_animation/update_mob_effect/remove_mob_effect）与 P0 世界类。
