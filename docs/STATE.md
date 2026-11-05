@@ -3475,3 +3475,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **已完成**：`EntityRenderState.Crackiness`（0/1/2/3）由 body 槽(6) 物品 damage/maxDamage 按 `Crackiness.WOLF_ARMOR` 计算；`WithCrackiness` 给 Wolf(152) 复制基础部件并加 `crackiness_` overlay（`entity/wolf/wolf_armor_crackiness_{low,medium,high}`，`VisibleWhen=Crackiness>0`）；纹理入资产清单。
 - **验证**：Client **1331** 全绿（+1 裂纹），构建 0 警告 0 错误。
 - **下一步具体动作**：①Happy Ghast 绳索（leash-holder 状态 + 绳索几何）；②baby 人形护甲变形；③Elytra 层；④SPEAR/STAB；⑤EnderDragon 飞行历史；⑥物品模型/手持物品（独立子系统，未开始）。
+
+## 2026-11-05 逐轴 grow 前置（T-635）
+
+- **已完成**：`EntityModelPart` 增可选 `GrowXyz`（`Vector3?`，默认 null 回退原标量 `Grow`）；`EntityModelMesher` 构建 min/max 时按轴取 grow。用于表达原版非均匀 `CubeDeformation`（baby 护甲 `BABY_OUTER=(-0.1,0.5,0.3)` / `BABY_INNER=(-0.1,0.3,0.3)`）。向后兼容，全量测试无回归。
+- **验证**：Client **1331** 全绿，构建 0 警告 0 错误。
+- **下一步具体动作（T-634）**：基于逐轴 grow 实现 baby 人形护甲——新建 `createBabyArmorMesh` 部件集（head/body/waist/arms/legs/left_foot/right_foot），BABY 槽位可见性（HEAD head；CHEST body+arms；LEGS legs+waist；FEET feet），`HUMANOID_BABY`→`entity/equipment/humanoid_baby/<material>`（64×64，含 copper/leather_overlay），armOffset=ZERO；替换现有近似。完成后再做 Elytra（含 `ELYTRA_BABY`）。

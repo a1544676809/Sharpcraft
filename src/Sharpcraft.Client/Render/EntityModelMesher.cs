@@ -190,8 +190,11 @@ public sealed class EntityModelMesher
                 var halfW = part.Width * px * 0.5f;
                 var halfD = part.Depth * px * 0.5f;
                 var grow = part.Grow * px;
-                var min = new Vector3(feet.X + centreX - halfW - grow, feet.Y + bottom - grow, feet.Z + centreZ - halfD - grow);
-                var max = new Vector3(feet.X + centreX + halfW + grow, feet.Y + bottom + (part.Height * px) + grow, feet.Z + centreZ + halfD + grow);
+                var growX = part.GrowXyz is { } gx ? gx.X * px : grow;
+                var growY = part.GrowXyz is { } gy ? gy.Y * px : grow;
+                var growZ = part.GrowXyz is { } gz ? gz.Z * px : grow;
+                var min = new Vector3(feet.X + centreX - halfW - growX, feet.Y + bottom - growY, feet.Z + centreZ - halfD - growZ);
+                var max = new Vector3(feet.X + centreX + halfW + growX, feet.Y + bottom + (part.Height * px) + growY, feet.Z + centreZ + halfD + growZ);
                 if (onlyPart is not null && part.Name != onlyPart) continue;
                 if (excludedPart is not null && part.Name == excludedPart) continue;
                 if (!entity.HasChest && (part.Name == "right_chest" || part.Name == "left_chest")) continue;
