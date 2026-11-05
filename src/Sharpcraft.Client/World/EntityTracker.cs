@@ -218,6 +218,34 @@ public sealed class TrackedEntity
     /// <summary>Game tick when the last move/teleport packet for this entity was applied (adaptive step size).</summary>
     public long LastMoveTick { get; internal set; }
 
+    internal float RemainingTicks => _remainingTicks;
+
+    internal float CurrentStepTicks => _currentStepTicks;
+
+    /// <summary>Diagnostics: last move packet's raw Y delta and total move packets seen.</summary>
+    public double LastDeltaY { get; internal set; }
+
+    /// <summary>Diagnostics: number of position-bearing move packets applied.</summary>
+    public long MovePackets { get; internal set; }
+
+    /// <summary>Diagnostics: Y taken from the AddEntity packet when this entity spawned.</summary>
+    public double SpawnY { get; internal set; }
+
+    /// <summary>Diagnostics: largest absolute per-packet Y delta ever seen.</summary>
+    public double MaxAbsDeltaY { get; internal set; }
+
+    /// <summary>Reference VecDeltaCodec base: absolute position the next relative move delta is decoded against.</summary>
+    public double CodecBaseX { get; internal set; }
+
+    /// <inheritdoc cref="CodecBaseX"/>
+    public double CodecBaseY { get; internal set; }
+
+    /// <inheritdoc cref="CodecBaseX"/>
+    public double CodecBaseZ { get; internal set; }
+
+    /// <summary>Diagnostics: number of move packets with a non-zero Y delta.</summary>
+    public long NonZeroDeltaYCount { get; internal set; }
+
     /// <summary>Port of SteppedInterpolationHandler.doInterpolate + advance: move one tick along the queued steps.</summary>
     internal void StepInterpolation()
     {
@@ -532,6 +560,10 @@ public sealed class EntityTracker
         entity.TargetYaw = added.Yaw;
         entity.TargetPitch = added.Pitch;
         entity.LerpSteps = 0;
+        entity.SpawnY = added.Y;
+        entity.CodecBaseX = added.X;
+        entity.CodecBaseY = added.Y;
+        entity.CodecBaseZ = added.Z;
         entity.LastMoveTick = GameTime - InterpolationSteps;
         entity.VelocityX = added.VelocityX;
         entity.VelocityY = added.VelocityY;
@@ -554,21 +586,13 @@ public sealed class EntityTracker
 
         if (move.HasPosition)
         {
-            // Zero is "keep this axis", which is what the wire format means rather than "moved by nothing".
-            if (move.DeltaX != 0d)
-            {
-                entity.TargetX += move.DeltaX;
-            }
-
-            if (move.DeltaY != 0d)
-            {
-                entity.TargetY += move.DeltaY;
-            }
-
-            if (move.DeltaZ != 0d)
-            {
-                entity.TargetZ += move.DeltaZ;
-            }
+            // Reference VecDeltaCodec.decode: absolute = codecBase + delta (delta 0 keeps the axis), then base = end.
+            entity.TargetX = move.DeltaX != 0d ? entity.CodecBaseX + move.DeltaX : entity.CodecBaseX;
+            entity.TargetY = move.DeltaY != 0d ? entity.CodecBaseY + move.DeltaY : entity.CodecBaseY;
+            entity.TargetZ = move.DeltaZ != 0d ? entity.CodecBaseZ + move.DeltaZ : entity.CodecBaseZ;
+            entity.CodecBaseX = entity.TargetX;
+            entity.CodecBaseY = entity.TargetY;
+            entity.CodecBaseZ = entity.TargetZ;
         }
 
         if (move.HasRotation)
@@ -578,6 +602,13 @@ public sealed class EntityTracker
         }
 
         entity.OnGround = move.OnGround;
+        entity.LastDeltaY = move.DeltaY;
+        entity.MovePackets++;
+        if (Math.Abs(move.DeltaY) > 1e-6)
+        {
+            entity.NonZeroDeltaYCount++;
+            entity.MaxAbsDeltaY = Math.Max(entity.MaxAbsDeltaY, Math.Abs(move.DeltaY));
+        }
         EnqueueMove(entity);
         MovesApplied++;
         return true;
@@ -608,6 +639,9 @@ public sealed class EntityTracker
         entity.TargetZ = Relative(teleport.Relatives, 2) ? entity.TargetZ + teleport.Z : teleport.Z;
         entity.TargetYaw = Wrap360(Relative(teleport.Relatives, 3) ? entity.TargetYaw + teleport.Yaw : teleport.Yaw);
         entity.TargetPitch = ClampPitch(Relative(teleport.Relatives, 4) ? entity.TargetPitch + teleport.Pitch : teleport.Pitch);
+        entity.CodecBaseX = entity.TargetX;
+        entity.CodecBaseY = entity.TargetY;
+        entity.CodecBaseZ = entity.TargetZ;
         EnqueueMove(entity);
 
         entity.VelocityX = teleport.VelocityX;
@@ -1065,6 +1099,25 @@ public sealed class EntityTracker
     /// is valid until the next call and is reused, so a steady frame allocates nothing.
     /// </summary>
     /// <param name="alpha">Fraction into the current tick, 0..1.</param>
+    /// <summary>Read-only interpolation snapshot for host-side diagnostics (no allocation beyond the caller's builder).</summary>
+    public int AppendInterpDebug(System.Text.StringBuilder sb, int limit)
+    {
+        var n = 0;
+        foreach (var pair in _entities)
+        {
+            if (n >= limit)
+            {
+                break;
+            }
+
+            var e = pair.Value;
+            sb.Append($"[{e.Id} t{e.TypeId} Y={e.Y:F2}->{e.TargetY:F2} spawnY={e.SpawnY:F2} maxdY={e.MaxAbsDeltaY:F3} nz={e.NonZeroDeltaYCount} rem={e.RemainingTicks:F2} cur={e.CurrentStepTicks:F2} dY={e.LastDeltaY:F3} n={e.MovePackets}] ");
+            n++;
+        }
+
+        return n;
+    }
+
     public ReadOnlySpan<EntityRenderState> Interpolate(float alpha)
     {
         var t = Math.Clamp(alpha, 0f, 1f);

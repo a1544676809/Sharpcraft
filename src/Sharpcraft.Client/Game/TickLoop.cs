@@ -59,5 +59,5 @@ public sealed class TickLoop
     }
 
     /// <summary>Fraction into the next tick, for interpolating rendered positions.</summary>
-    public float Alpha => (float)(_accumulatorSeconds / TickInterval.TotalSeconds);
+    public float Alpha => (float)Math.Clamp(_accumulatorSeconds / TickInterval.TotalSeconds, 0.0, 0.9999);
 }
