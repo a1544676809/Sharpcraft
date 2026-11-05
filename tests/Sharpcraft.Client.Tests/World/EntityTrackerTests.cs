@@ -38,7 +38,7 @@ public sealed class EntityTrackerTests
         // gap per tick, so the rendered entity trails the authoritative one by a few ticks.
         var tracker = new EntityTracker();
         tracker.Add(Entity(7, x: 0, y: 0, z: 0));
-        tracker.ApplyMove(new EntityMove(7, 3.0, 0, 0, HasPosition: true, 0f, 0f, HasRotation: false, OnGround: true));
+        tracker.ApplyMove(new EntityMove(7, 3.0, 0, 0, HasPosition: true, 0f, 0f, HasRotation: false, OnGround: true, Ticks: 3));
 
         Assert.True(tracker.TryGet(7, out var entity));
         Assert.Equal(0.0, entity!.X, 4);
@@ -142,7 +142,7 @@ public sealed class EntityTrackerTests
         tracker.Add(Entity(5, x: 0, y: 0, z: 0, yaw: 350f));
 
         // Rotating from 350 to 10 must pass through 0 rather than the long way round.
-        tracker.ApplyMove(new EntityMove(5, 4.0, 0, 0, HasPosition: true, 10f, 0f, HasRotation: true, OnGround: true));
+        tracker.ApplyMove(new EntityMove(5, 4.0, 0, 0, HasPosition: true, 10f, 0f, HasRotation: true, OnGround: true, Ticks: 3));
         tracker.Tick();
 
         var atStart = tracker.Interpolate(0f)[0];

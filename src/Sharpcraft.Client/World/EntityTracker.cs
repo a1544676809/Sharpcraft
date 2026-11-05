@@ -609,7 +609,11 @@ public sealed class EntityTracker
             entity.NonZeroDeltaYCount++;
             entity.MaxAbsDeltaY = Math.Max(entity.MaxAbsDeltaY, Math.Abs(move.DeltaY));
         }
-        EnqueueMove(entity);
+        var moveTicks = move.HasPosition && move.Ticks > 0
+            ? Math.Clamp(move.Ticks, 1, 20)
+            : Math.Clamp((int)(GameTime - entity.LastMoveTick), 1, InterpolationSteps);
+        entity.LastMoveTick = GameTime;
+        entity.EnqueueInterpolation(entity.TargetX, entity.TargetY, entity.TargetZ, entity.TargetYaw, entity.TargetPitch, moveTicks);
         MovesApplied++;
         return true;
     }

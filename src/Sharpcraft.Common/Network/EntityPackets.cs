@@ -51,7 +51,8 @@ public readonly record struct EntityMove(
     float Yaw,
     float Pitch,
     bool HasRotation,
-    bool OnGround);
+    bool OnGround,
+    int Ticks = 1);
 
 /// <summary>An absolute repositioning of an entity.</summary>
 /// <param name="Id">Runtime entity id.</param>
@@ -190,6 +191,7 @@ public static class EntityPackets
         var deltaX = 0d;
         var deltaY = 0d;
         var deltaZ = 0d;
+        var ticks = 1;
 
         if (hasPosition)
         {
@@ -201,7 +203,7 @@ public static class EntityPackets
             onGround = (properties & 1) != 0;
             var stepCount = properties >>> 1;
 
-            if (!TryReadVecDelta(ref reader, stepCount, out deltaX, out deltaY, out deltaZ))
+            if (!TryReadVecDelta(ref reader, stepCount, out deltaX, out deltaY, out deltaZ, out ticks))
             {
                 return DecodeStatus.NeedMoreData;
             }
@@ -226,7 +228,7 @@ public static class EntityPackets
             pitch = AngleFromByte(pitchByte);
         }
 
-        move = new EntityMove(id, deltaX, deltaY, deltaZ, hasPosition, yaw, pitch, hasRotation, onGround);
+        move = new EntityMove(id, deltaX, deltaY, deltaZ, hasPosition, yaw, pitch, hasRotation, onGround, ticks);
         return DecodeStatus.Success;
     }
 
@@ -358,12 +360,14 @@ public static class EntityPackets
         int stepCount,
         out double deltaX,
         out double deltaY,
-        out double deltaZ)
+        out double deltaZ,
+        out int ticks)
     {
         const double UnitsPerBlock = 4096.0;
         deltaX = 0d;
         deltaY = 0d;
         deltaZ = 0d;
+        ticks = 1;
 
         if (stepCount <= 0)
         {
@@ -383,21 +387,24 @@ public static class EntityPackets
             return false;
         }
 
-        // Steps play out over the following ticks; until the animation path exists the total is applied at once,
-        // which is the same end position (docs/specs/network/entity-sync.md 4.1).
+        // Reference VecDelta.Stepped: each step is VarInt(ticks) + 3 shorts. We keep the total ticks so the
+        // interpolation queue can advance the step over the reference's per-step tick span.
+        var totalTicks = 0;
         for (var step = 0; step < stepCount; step++)
         {
-            if (reader.TryReadVarInt(out _) != DecodeStatus.Success ||
+            if (reader.TryReadVarInt(out var stepTicks) != DecodeStatus.Success ||
                 !TryReadDeltaTriple(ref reader, out var lx, out var ly, out var lz))
             {
                 return false;
             }
 
+            totalTicks += stepTicks;
             deltaX += lx / UnitsPerBlock;
             deltaY += ly / UnitsPerBlock;
             deltaZ += lz / UnitsPerBlock;
         }
 
+        ticks = totalTicks > 0 ? totalTicks : 1;
         return true;
     }
 
