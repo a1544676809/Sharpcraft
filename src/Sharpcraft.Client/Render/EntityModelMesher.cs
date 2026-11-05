@@ -24,8 +24,7 @@ public sealed class EntityModelMesher
         [EntityGeometryLayerKind.Cutout, EntityGeometryLayerKind.Translucent, EntityGeometryLayerKind.Emissive];
 
     /// <summary>Merged geometry of every layer, kept for callers that draw entities in one pass.</summary>
-    public DynamicGeometry Build(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, EntityPose? pose = null)
-    {
+    public DynamicGeometry Build(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, EntityPose? pose = null)    {
         var layers = BuildLayers(entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants, pose);
         _geometry.Clear();
         var totalVertexFloats = 0;
