@@ -104,7 +104,7 @@
 
 | 目录 | 文档数 |
 | --- | --- |
-| [`analysis/`](analysis/README.md) | 36 |
+| [`analysis/`](analysis/README.md) | 37 |
 | [`architecture/`](architecture/README.md) | 4 |
 | [`decisions/`](decisions/README.md) | 28 |
 | [`milestones/`](milestones/README.md) | 2 |

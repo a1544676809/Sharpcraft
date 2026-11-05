@@ -3518,3 +3518,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **验证**：用户实测**已成功修复**；Client 1336（+1），构建 0 警告 0 错误。
 - **教训（记录）**：此前只对照了 move/teleport，漏掉整个高精度同步包——后续必须**完整核对 Play Clientbound 包集合**再判断"已对照原版"。
 - **下一步具体动作**：继续实体系统（Elytra 等）；并安排一次 Play Clientbound 包覆盖审计，补齐缺失包处理。
+
+## 2026-11-05 Play Clientbound 包覆盖审计（T-641）
+
+- 原版 play clientbound 共 144 个；`InteractiveSession` 实际 `case` 处理 41 个；**未处理 103 个**。
+- 已分级：P0 世界/区块/光照（block_changed_ack/block_event/light_update/chunks_biomes/explode…）、P1 玩家状态（player_abilities/respawn/set_experience/…）、P2 容器、P3 音频/聊天、P4 UI。
+- 分析：docs/analysis/protocol/play-clientbound-coverage.md；可重复审计脚本：tools/verify/audit-unhandled-packets.ps1。
+- 下一步：按 P0→P1 补齐解码/分发并加回归（防 T-640 式整包漏接）。
