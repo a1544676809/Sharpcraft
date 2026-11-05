@@ -53,6 +53,7 @@ internal sealed class InteractiveSession
     private readonly Sharpcraft.Client.Ui.Title _title = new();
     private bool _diagnosticChatSent;
     private bool _playerLoadedSent;
+    private bool _respawnRequested;
 
     // True once the server has placed us. Until then the client must not simulate: with no position it would fall
     // through an empty world while the server is still generating, which reads as the player dropping into the void.
@@ -1420,10 +1421,33 @@ internal sealed class InteractiveSession
 
                     break;
 
-                // A death notice. The reference waits for the player to click respawn on the death screen; there is no
-                // death screen yet, so the respawn request goes out straight away. Recorded as a deviation in STATE.
+                // Death notice. The reference opens the death screen and respawns when the player clicks; this client has
+                // no death screen yet, so it auto-respawns (temporary deviation recorded in docs/STATE.md).
                 case PacketIds.PlayClientbound.PlayerCombatKill:
-                    _live.Send(PlayPackets.BuildClientCommand(0));
+                    if (!_respawnRequested)
+                    {
+                        _live.Send(PlayPackets.BuildClientCommand(0));
+                        _respawnRequested = true;
+                    }
+
+                    break;
+
+                // Local health. A player who joins while dead (health 0) receives no chunks until they respawn, so
+                // request it once; a positive health clears the guard after the respawn lands.
+                case PacketIds.PlayClientbound.SetHealth:
+                    if (PlayPackets.TryReadSetHealth(body, out var localHealth) == DecodeStatus.Success)
+                    {
+                        if (localHealth > 0f)
+                        {
+                            _respawnRequested = false;
+                        }
+                        else if (!_respawnRequested)
+                        {
+                            _live.Send(PlayPackets.BuildClientCommand(0));
+                            _respawnRequested = true;
+                        }
+                    }
+
                     break;
 
                 // Block entity updates carry the position, the type and a fresh NBT tag. Decoding them keeps the packet

@@ -3427,3 +3427,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **阻塞（不近似，保持记录）**：Cat `lieDown/relax`（synced `IS_LYING`/`RELAX_STATE_ONE` 的 metadata 索引未确认）、`sprint` 尾巴（shared flag bit3 未解码）。
 - **验证**：Client **1288**（+4 猫科 + 注册/分配），构建 0 警告 0 错误。
 - **下一步具体动作**：①补 Cat lie/relax 的 metadata 解码与 sprint flag（解除最后两个猫科分支）；②继续缺 provider 生物：Enderman、Slime、EnderDragon、Pufferfish、TropicalFish；③SPEAR/STAB；④装备层 / baby 模型；⑤如需目视验收可重启窗口放猫/豹猫。
+
+## 2026-11-05 进服已死导致空世界（T-626，已修·临时偏差）
+
+- **现象**：连服后世界空、`stream loaded=0`，服务端不发区块；查服务端日志世界有地形、连接正常。
+- **根因**：角色**进服时处于死亡态**——服务端在死亡态不下发区块；而客户端既未处理 `SetHealth`(106) 也不知道自己死了，故不复活 → 一直空。玩家手动复活后再连即正常（实测 `loaded→685`、3 个僵尸可见）。
+- **修复（临时）**：`PlayPackets.TryReadSetHealth` 解本地生命值；`health<=0` 且未请求过则发 `ClientCommand(PERFORM_RESPAWN)`，`health>0` 复位；`PlayerCombatKill` 同样只在未请求时发一次。
+- **偏差（记录）**：原版默认显示死亡界面、点击才重生（仅 `showDeathScreen==false`/`doImmediateRespawn` 自动）。当前无死亡界面，**先一律自动复活**，作为受控临时偏差；死亡界面列为后续任务（需 `showDeathScreen` 跟踪 + overlay + 重生按钮）。
+- **下一步具体动作**：①实现死亡界面（`showDeathScreen` 跟踪、DeathScreen overlay、重生按钮）；②继续实体补全（Cat lie/relax、Enderman、Slime 等）。

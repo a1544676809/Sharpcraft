@@ -69,6 +69,24 @@ public static class PlayPackets
         return buffer[..writer.Position].ToArray();
     }
 
+    /// <summary>Decodes the local player's health/food update (clientbound <c>set_health</c>, id 106).</summary>
+    public static DecodeStatus TryReadSetHealth(ReadOnlySpan<byte> body, out float health)
+    {
+        health = 0f;
+        var reader = new PayloadReader(body);
+        if (reader.TryReadVarInt(out var packetId) != DecodeStatus.Success)
+        {
+            return DecodeStatus.NeedMoreData;
+        }
+
+        if (packetId != PacketIds.PlayClientbound.SetHealth)
+        {
+            return DecodeStatus.Invalid;
+        }
+
+        return reader.TryReadFloat(out health);
+    }
+
     /// <summary>Decodes the JoinGame header including the spawn info prefix.</summary>
     public static DecodeStatus TryReadJoinGame(ReadOnlySpan<byte> body, out JoinGameInfo info)
     {
