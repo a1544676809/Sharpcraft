@@ -3509,3 +3509,12 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **过程**：T-637/T-638 两次近似已 `git reset` 丢弃（回到 27aafe0 后再做本移植）。
 - **验证**：构建 0 警告；Client 1334 通过（另 1 项已知并行 flaky `HumanoidAttackArm`，单独通过）。
 - **下一步具体动作**：重启窗口目视验证玩家/僵尸跳跃·下落·上下移动是否平滑且不陷地/浮空；通过后 Elytra（含 ELYTRA_BABY）。
+
+## 2026-11-05 陷地/浮空真正根因：漏接 entity_position_sync(35)（T-640，已修复并验证）
+
+- **现象**：生物被顶/跳后稳定浮空或陷地 0.4~0.7、不回收；原版正常；服务端权威 `Y=191.0`。
+- **根因**：服务器在 onGround 起降、超 short 精度、每 400 tick 强制对齐时发 **`ClientboundEntityPositionSyncPacket`(Play Clientbound 35)**，携带**绝对 PositionPath** 并重置 `VecDeltaCodec.base`；我们只处理 move(54/55/57)+teleport(128)，**完全漏接 35**，导致 base 永不重置、漂移永不回收。
+- **修复**：`EntityPositionSync=35`；`TryReadEntityPositionSync`（id+PositionPath Linear/Stepped+yRot/xRot float+onGround bool）；`ApplyPositionSync`（重置 codec base；>4096 snap 否则入队）；分发接线；回归 `PositionSyncResetsCodecBaseAndCorrectsVerticalDrift`。
+- **验证**：用户实测**已成功修复**；Client 1336（+1），构建 0 警告 0 错误。
+- **教训（记录）**：此前只对照了 move/teleport，漏掉整个高精度同步包——后续必须**完整核对 Play Clientbound 包集合**再判断"已对照原版"。
+- **下一步具体动作**：继续实体系统（Elytra 等）；并安排一次 Play Clientbound 包覆盖审计，补齐缺失包处理。

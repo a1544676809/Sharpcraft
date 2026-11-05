@@ -279,3 +279,9 @@ bool   onGround
 
 M5 第一步的**跟踪正确性成立**：静止逐位一致，平地运动误差在 1/4096 量化级。
 渲染侧还需补 3 刻插值（T-090）才算在观感上与原版一致。
+
+### 9.8 高精度同步包 `entity_position_sync`（Play Clientbound id 35）
+
+1.21.2+/26.3 将高精度实体位置从 `teleport_entity(128)` 拆出：`ClientboundEntityPositionSyncPacket`（id **35**）在生物**起降换 onGround、位移超 short 精度、每 400 tick 强制对齐、骑乘状态变化**时下发，携带**绝对 `PositionPath`**（Linear: 3×double；Stepped: VarInt 步数 + 每步 3×double + VarInt tickOffset）+ `yRot/xRot`(float) + `onGround`(bool)，并重置服务端 `VecDeltaCodec.base`。
+- 客户端处理：`entity.getPositionCodec().setBase(endPosition)`；非本地权威时，距离²>4096 直接 `snapTo`，否则按 `PositionPath` 入队插值；`setOnGround`。
+- **重要**：若漏接此包，常规 move 增量下的微小漂移将**永远无法回收**（本仓 T-640）。完整覆盖 Play Clientbound（尤其 id 35）是位置同步正确的前提。
