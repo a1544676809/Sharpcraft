@@ -98,3 +98,17 @@ L3 比自测更硬：原版服务端的移动校验是外部判据，绕不过�
 - 潜行缩小碰撞盒、液体、攀爬、鞘翅、实体挤压。
 - 与服务端的权威同步与预测回滚（M5）。
 - 移动常量仍需一次**行为对照实验**（实测起跳高度与行走 10 格耗时）后再收紧测试区间。
+
+<!-- BEGIN GENERATED: class-map -->
+
+| Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
+| --- | --- | --- | --- | --- | --- | --- |
+| Sharpcraft.Common | Sharpcraft.Common.Entities.Aabb | Mirror | Full | net.minecraft.world.phys.AABB | ref://mc-26.3-analysis/src/net/minecraft/world/phys/AABB.java |  |
+| Sharpcraft.Common | Sharpcraft.Common.Entities.EmptyEntityWorld | New | Full | sharpcraft.EmptyEntityWorld | ref://mc-26.3-analysis/src/net/minecraft/world/level/Level.java | Test/placeholder world; no reference counterpart |
+| Sharpcraft.Common | Sharpcraft.Common.Entities.Entity | Mirror | Partial | net.minecraft.world.entity.Entity | ref://mc-26.3-analysis/src/net/minecraft/world/entity/Entity.java | Entity state + interpolation-related position fields |
+| Sharpcraft.Common | Sharpcraft.Common.Entities.EntityDimensions | Mirror | Full | net.minecraft.world.entity.EntityDimensions | ref://mc-26.3-analysis/src/net/minecraft/world/entity/EntityDimensions.java |  |
+| Sharpcraft.Common | Sharpcraft.Common.Entities.IEntityWorld | Adapter | Partial | net.minecraft.world.level.Level | ref://mc-26.3-analysis/src/net/minecraft/world/level/Level.java | Narrow world port used by entity physics |
+| Sharpcraft.Common | Sharpcraft.Common.Entities.LivingEntity | Mirror | Partial | net.minecraft.world.entity.LivingEntity | ref://mc-26.3-analysis/src/net/minecraft/world/entity/LivingEntity.java |  |
+| Sharpcraft.Common | Sharpcraft.Common.Entities.PlayerEntity | Mirror | Partial | net.minecraft.world.entity.player.Player | ref://mc-26.3-analysis/src/net/minecraft/world/entity/player/Player.java |  |
+
+<!-- END GENERATED: class-map -->

@@ -12,6 +12,7 @@ namespace Sharpcraft.Common.Entities;
 /// <param name="Width">Full width and depth.</param>
 /// <param name="Height">Full height.</param>
 /// <param name="EyeHeight">Eye offset above the feet.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.entity.EntityDimensions", "ref://mc-26.3-analysis/src/net/minecraft/world/entity/EntityDimensions.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full)]
 public readonly record struct EntityDimensions(float Width, float Height, float EyeHeight)
 {
     /// <summary>Vanilla derives the eye height from the body height when a type does not override it.</summary>

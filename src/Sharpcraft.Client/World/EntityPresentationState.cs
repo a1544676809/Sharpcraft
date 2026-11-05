@@ -14,6 +14,7 @@ namespace Sharpcraft.Client.World;
 /// Further derivations (isInWater, passengers/isRiding, tentacle angle, pose) are staged P0b/P1 in
 /// docs/modules/entity-presentation-state.md.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.entity.Entity", "ref://mc-26.3-analysis/src/net/minecraft/world/entity/Entity.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Merged, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Client-side presentation state aggregated from synced data")]
 public sealed class EntityPresentationState
 {
     /// <summary>Creates the state, enabling the squid tentacle clock for squid/glow-squid type ids.</summary>

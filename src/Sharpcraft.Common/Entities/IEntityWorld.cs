@@ -8,6 +8,7 @@ namespace Sharpcraft.Common.Entities;
 /// Kept as an interface so the entity layer never learns about block registries, and so tests describe
 /// terrain with a few lines instead of building a world (docs/modules/entities.md 1).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.Level", "ref://mc-26.3-analysis/src/net/minecraft/world/level/Level.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Narrow world port used by entity physics")]
 public interface IEntityWorld
 {
     /// <summary>True when the block at the given coordinates blocks movement.</summary>
@@ -27,6 +28,7 @@ public interface IEntityWorld
 }
 
 /// <summary>A world where nothing blocks movement; useful as a null object and in tests.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.EmptyEntityWorld", "ref://mc-26.3-analysis/src/net/minecraft/world/level/Level.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Test/placeholder world; no reference counterpart")]
 public sealed class EmptyEntityWorld : IEntityWorld
 {
     /// <summary>Shared instance.</summary>

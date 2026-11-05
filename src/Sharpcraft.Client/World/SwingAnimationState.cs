@@ -8,6 +8,7 @@ namespace Sharpcraft.Client.World;
 /// of ticks, animating 0..1 across its duration, and restarts are rejected while the previous swing is at most half
 /// elapsed.
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.entity.LivingEntity", "ref://mc-26.3-analysis/src/net/minecraft/world/entity/LivingEntity.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Merged, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "swingDuration/swingTime/swinging fields")]
 public sealed class SwingAnimationState
 {
     private int _ticks;

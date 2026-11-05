@@ -12,6 +12,7 @@ namespace Sharpcraft.Client.World;
 /// <see cref="IEntityAnimationState"/>; they must not be pushed into this shared struct
 /// (docs/analysis/render/entity-animation-architecture.md 3.1, 6.2).
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.entity.state.LivingEntityRenderState", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/state/LivingEntityRenderState.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Snapshot fed to animation providers")]
 public readonly record struct EntityAnimationFrame(
     int TypeId,
     float AgeInTicks,

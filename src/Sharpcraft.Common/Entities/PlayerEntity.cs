@@ -9,6 +9,7 @@ namespace Sharpcraft.Common.Entities;
 /// The player entity: vanilla dimensions and movement speed, plus the mapping from an input intent to the
 /// travel input vector (docs/modules/entities.md 5).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.entity.player.Player", "ref://mc-26.3-analysis/src/net/minecraft/world/entity/player/Player.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class PlayerEntity : LivingEntity
 {
     /// <summary>Player movement speed attribute value.</summary>

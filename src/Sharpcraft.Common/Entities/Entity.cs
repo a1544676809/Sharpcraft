@@ -10,6 +10,7 @@ namespace Sharpcraft.Common.Entities;
 /// The movement order and the collision flags follow vanilla's <c>Entity.move</c>
 /// (docs/modules/entities.md 4).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.entity.Entity", "ref://mc-26.3-analysis/src/net/minecraft/world/entity/Entity.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Entity state + interpolation-related position fields")]
 public abstract class Entity
 {
     /// <summary>Largest per-axis step before a move is split, so fast entities cannot tunnel.</summary>

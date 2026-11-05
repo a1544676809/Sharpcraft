@@ -321,7 +321,6 @@ src/Sharpcraft.Client/Ui/UiScreenLayout.cs :: Sharpcraft.Client.Ui.UiStyle
 src/Sharpcraft.Client/Ui/UiScreenLayout.cs :: Sharpcraft.Client.Ui.UiStyles
 src/Sharpcraft.Client/World/ChunkWorkerPool.cs :: Sharpcraft.Client.World.ChunkWorkerPool
 src/Sharpcraft.Client/World/ClientWorld.cs :: Sharpcraft.Client.World.ClientWorld
-src/Sharpcraft.Client/World/EntityAnimationState.cs :: Sharpcraft.Client.World.EntityAnimationFrame
 src/Sharpcraft.Client/World/EntityAnimationState.cs :: Sharpcraft.Client.World.EntityAnimationTickContext
 src/Sharpcraft.Client/World/EntityAnimationState.cs :: Sharpcraft.Client.World.IEntityAnimationState
 src/Sharpcraft.Client/World/EntityAnimationState.cs :: Sharpcraft.Client.World.IEntityArmPoseAnimationState
@@ -330,7 +329,6 @@ src/Sharpcraft.Client/World/EntityAnimationState.cs :: Sharpcraft.Client.World.I
 src/Sharpcraft.Client/World/EntityAnimationState.cs :: Sharpcraft.Client.World.IEntitySyncedDataAnimationState
 src/Sharpcraft.Client/World/EntityAnimationState.cs :: Sharpcraft.Client.World.IEntityTickAnimationState
 src/Sharpcraft.Client/World/EntityEquipment.cs :: Sharpcraft.Client.World.EntityEquipment
-src/Sharpcraft.Client/World/EntityPresentationState.cs :: Sharpcraft.Client.World.EntityPresentationState
 src/Sharpcraft.Client/World/EntityTracker.cs :: Sharpcraft.Client.World.EntityRenderState
 src/Sharpcraft.Client/World/EntityTracker.cs :: Sharpcraft.Client.World.TrackedEntity
 src/Sharpcraft.Client/World/EntityVariantSpecs.cs :: Sharpcraft.Client.World.EntityVariantSpec
@@ -346,20 +344,12 @@ src/Sharpcraft.Client/World/RabbitIdleAnimationState.cs :: Sharpcraft.Client.Wor
 src/Sharpcraft.Client/World/SceneFingerprint.cs :: Sharpcraft.Client.World.SceneFingerprint
 src/Sharpcraft.Client/World/SceneRecorder.cs :: Sharpcraft.Client.World.SceneRecorder
 src/Sharpcraft.Client/World/SquidTentacleAnimationState.cs :: Sharpcraft.Client.World.SquidTentacleAnimationState
-src/Sharpcraft.Client/World/SwingAnimationState.cs :: Sharpcraft.Client.World.SwingAnimationState
 src/Sharpcraft.Client/World/TrackedAttributeMap.cs :: Sharpcraft.Client.World.TrackedAttributeMap
 src/Sharpcraft.Client/World/WalkAnimationState.cs :: Sharpcraft.Client.World.WalkAnimationState
 src/Sharpcraft.Client/World/WitherHeadAnimationState.cs :: Sharpcraft.Client.World.WitherHeadAim
 src/Sharpcraft.Client/World/WitherHeadAnimationState.cs :: Sharpcraft.Client.World.WitherHeadAnimationState
 src/Sharpcraft.Common/Coordinates/BlockCoordinates.cs :: Sharpcraft.Common.Coordinates.BlockCoordinates
 src/Sharpcraft.Common/Diagnostics/HotPathAttribute.cs :: Sharpcraft.Common.Diagnostics.HotPathAttribute
-src/Sharpcraft.Common/Entities/Aabb.cs :: Sharpcraft.Common.Entities.Aabb
-src/Sharpcraft.Common/Entities/Entity.cs :: Sharpcraft.Common.Entities.Entity
-src/Sharpcraft.Common/Entities/EntityDimensions.cs :: Sharpcraft.Common.Entities.EntityDimensions
-src/Sharpcraft.Common/Entities/IEntityWorld.cs :: Sharpcraft.Common.Entities.EmptyEntityWorld
-src/Sharpcraft.Common/Entities/IEntityWorld.cs :: Sharpcraft.Common.Entities.IEntityWorld
-src/Sharpcraft.Common/Entities/LivingEntity.cs :: Sharpcraft.Common.Entities.LivingEntity
-src/Sharpcraft.Common/Entities/PlayerEntity.cs :: Sharpcraft.Common.Entities.PlayerEntity
 src/Sharpcraft.Common/Identifiers/Identifier.cs :: Sharpcraft.Common.Identifiers.Identifier
 src/Sharpcraft.Common/Identifiers/IdentifierException.cs :: Sharpcraft.Common.Identifiers.IdentifierException
 src/Sharpcraft.Common/Imaging/PngDecoder.cs :: Sharpcraft.Common.Imaging.PngDecoder

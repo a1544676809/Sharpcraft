@@ -11,6 +11,7 @@ namespace Sharpcraft.Common.Entities;
 /// </summary>
 /// <param name="Min">Corner with the smallest coordinates.</param>
 /// <param name="Max">Corner with the largest coordinates.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.phys.AABB", "ref://mc-26.3-analysis/src/net/minecraft/world/phys/AABB.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full)]
 public readonly record struct Aabb(Vector3 Min, Vector3 Max)
 {
     /// <summary>True when the two boxes overlap on every axis.</summary>

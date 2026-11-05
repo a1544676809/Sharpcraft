@@ -11,6 +11,7 @@ namespace Sharpcraft.Common.Entities;
 /// <c>LivingEntity.travelInAir</c> and <c>handleRelativeFrictionAndCalculateMovement</c>
 /// (docs/modules/entities.md 3).
 /// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.entity.LivingEntity", "ref://mc-26.3-analysis/src/net/minecraft/world/entity/LivingEntity.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public abstract class LivingEntity : Entity
 {
     /// <summary>Gravity per tick squared (vanilla <c>DEFAULT_BASE_GRAVITY</c>).</summary>
