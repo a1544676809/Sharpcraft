@@ -3481,3 +3481,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **已完成**：`EntityModelPart` 增可选 `GrowXyz`（`Vector3?`，默认 null 回退原标量 `Grow`）；`EntityModelMesher` 构建 min/max 时按轴取 grow。用于表达原版非均匀 `CubeDeformation`（baby 护甲 `BABY_OUTER=(-0.1,0.5,0.3)` / `BABY_INNER=(-0.1,0.3,0.3)`）。向后兼容，全量测试无回归。
 - **验证**：Client **1331** 全绿，构建 0 警告 0 错误。
 - **下一步具体动作（T-634）**：基于逐轴 grow 实现 baby 人形护甲——新建 `createBabyArmorMesh` 部件集（head/body/waist/arms/legs/left_foot/right_foot），BABY 槽位可见性（HEAD head；CHEST body+arms；LEGS legs+waist；FEET feet），`HUMANOID_BABY`→`entity/equipment/humanoid_baby/<material>`（64×64，含 copper/leather_overlay），armOffset=ZERO；替换现有近似。完成后再做 Elytra（含 `ELYTRA_BABY`）。
+
+## 2026-11-05 baby 人形护甲专用网格（T-634 完成）
+
+- **已完成**：新增 `BabyHumanoidArmorParts`（head/body/waist/arms/legs/left_foot/right_foot）；`WithBabyArmorSlot` 按 BABY 槽位可见性克隆并施加逐轴变形（腿/waist 额外 -0.1）；`EquipmentAssetKind.HumanoidArmorBaby`→`entity/equipment/humanoid_baby/<material>`（64×64，含 copper/leather_overlay）；`Decorate` 对 baby humanoid 类型改走该路径，替换原近似；armOffset=ZERO。
+- **验证**：Client **1333** 全绿（+2 baby 护甲），构建 0 警告 0 错误。
+- **下一步具体动作**：①Elytra 层（含 `ELYTRA_BABY`，胸槽 elytra + `IsFallFlying` → `entity/equipment/wings/elytra`）；②Happy Ghast 绳索；③SPEAR/STAB；④EnderDragon 飞行历史；⑤物品模型/手持物品（T-631 未开始）。

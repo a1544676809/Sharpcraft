@@ -134,6 +134,57 @@ public static class EntityModelLayerHelpers
         return null;
     }
 
+    private static readonly Vector3 BabyOuterGrow = new(-0.1f, 0.5f, 0.3f);
+    private static readonly Vector3 BabyInnerGrow = new(-0.1f, 0.3f, 0.3f);
+
+    /// <summary>Baby humanoid armor layer for one slot: dedicated baby mesh parts with per-axis deformation.</summary>
+    public static EntityModelPart[] WithBabyArmorSlot(IReadOnlyList<EntityModelPart> parts, EquipmentAssetKind kind, int slot, string fallbackTexture)
+    {
+        string[] visible = slot switch
+        {
+            5 => ["head"],
+            4 => ["body", "left_arm", "right_arm"],
+            3 => ["left_leg", "right_leg", "waist"],
+            2 => ["right_foot", "left_foot"],
+            _ => []
+        };
+        var baseGrow = slot == 3 ? BabyInnerGrow : BabyOuterGrow;
+        var legInset = new Vector3(0.1f, 0.1f, 0.1f);
+        var result = new List<EntityModelPart>(parts.Count + visible.Length);
+        result.AddRange(parts);
+        foreach (var part in BabyHumanoidArmorParts.Parts)
+        {
+            if (Array.IndexOf(visible, part.Name) < 0)
+            {
+                continue;
+            }
+
+            var grow = part.Name is "left_leg" or "right_leg" or "waist" ? baseGrow - legInset : baseGrow;
+            result.Add(part with
+            {
+                Name = "equipment_" + kind + "_" + slot + "_" + part.Name,
+                PoseSource = BabyPoseSource(part.Name),
+                TexturePath = fallbackTexture,
+                TextureSelector = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot),
+                Grow = 0f,
+                GrowXyz = grow,
+                TextureWidth = 64,
+                TextureHeight = 64,
+                VisibleWhen = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot) is not null
+            });
+        }
+
+        return [.. result];
+    }
+
+    private static string BabyPoseSource(string name) => name switch
+    {
+        "waist" => "body",
+        "right_foot" => "left_leg",
+        "left_foot" => "right_leg",
+        _ => name
+    };
+
     /// <summary>Copies the base parts with a crackiness overlay texture (wolf armor durability levels).</summary>
     public static EntityModelPart[] WithCrackiness(IReadOnlyList<EntityModelPart> parts)
     {

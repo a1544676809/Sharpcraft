@@ -25,7 +25,9 @@ public enum EquipmentAssetKind
     /// <summary>Humanoid armor outer layer (head/chest/feet): same humanoid geometry, outer deformation.</summary>
     HumanoidArmor,
     /// <summary>Humanoid armor leggings (legs): same humanoid geometry, inner deformation, leggings texture layer.</summary>
-    HumanoidLeggings
+    HumanoidLeggings,
+    /// <summary>Baby humanoid armor: dedicated baby mesh, non-uniform deformation, humanoid_baby texture layer.</summary>
+    HumanoidArmorBaby
 }
 
 /// <summary>Resolved equipment textures; <see cref="OverlayPath"/> is optional (leather horse armor, wolf armor).</summary>
@@ -95,12 +97,15 @@ public static class EquipmentTextureCatalog
                 new("entity/equipment/humanoid/" + armorMaterial),
             EquipmentAssetKind.HumanoidLeggings when TryArmorMaterial(path, out var leggingsMaterial) =>
                 new("entity/equipment/humanoid_leggings/" + leggingsMaterial),
+            EquipmentAssetKind.HumanoidArmorBaby when TryArmorMaterial(path, out var babyMaterial) =>
+                new("entity/equipment/humanoid_baby/" + babyMaterial),
             _ => null
         };
     }
 
     private static readonly string[] ArmorSuffixes = ["_helmet", "_chestplate", "_leggings", "_boots"];
-    private static readonly string[] ArmorMaterials = ["leather", "chainmail", "iron", "gold", "diamond", "netherite", "turtle_scute"];
+    private static readonly string[] ArmorMaterials = ["leather", "chainmail", "copper", "iron", "gold", "diamond", "netherite", "turtle_scute"];
+    private static readonly string[] BabyArmorMaterials = ["leather", "chainmail", "copper", "iron", "gold", "diamond", "netherite"];
 
     /// <summary>Maps a vanilla armor item path to its equipment asset material (turtle_helmet → turtle_scute).</summary>
     private static bool TryArmorMaterial(string path, out string material)
@@ -123,6 +128,7 @@ public static class EquipmentTextureCatalog
             {
                 "leather" => "leather",
                 "chainmail" => "chainmail",
+                "copper" => "copper",
                 "iron" => "iron",
                 "golden" => "gold",
                 "diamond" => "diamond",
@@ -182,6 +188,13 @@ public static class EquipmentTextureCatalog
             paths.Add("entity/equipment/humanoid/" + material);
             paths.Add("entity/equipment/humanoid_leggings/" + material);
         }
+
+        foreach (var material in BabyArmorMaterials)
+        {
+            paths.Add("entity/equipment/humanoid_baby/" + material);
+        }
+
+        paths.Add("entity/equipment/humanoid_baby/leather_overlay");
 
         return paths;
     }

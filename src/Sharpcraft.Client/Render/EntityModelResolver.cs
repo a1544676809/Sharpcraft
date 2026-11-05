@@ -192,11 +192,21 @@ public static class EntityModelResolver
         }
 
         var parts = definition.Parts;
-        foreach (var (kind, slot, fallback) in layers)
+        if (baby && ReferenceEquals(layers, HumanoidArmorLayers))
         {
-            parts = kind is EquipmentAssetKind.HumanoidArmor or EquipmentAssetKind.HumanoidLeggings
-                ? EntityModelLayerHelpers.WithArmorSlot(parts, kind, slot, fallback)
-                : EntityModelLayerHelpers.WithEquipment(parts, kind, slot, fallback, baseCopy: kind != EquipmentAssetKind.HappyGhastBody);
+            foreach (var slot in HumanoidArmorSlots)
+            {
+                parts = EntityModelLayerHelpers.WithBabyArmorSlot(parts, EquipmentAssetKind.HumanoidArmorBaby, slot, "entity/equipment/humanoid_baby/iron");
+            }
+        }
+        else
+        {
+            foreach (var (kind, slot, fallback) in layers)
+            {
+                parts = kind is EquipmentAssetKind.HumanoidArmor or EquipmentAssetKind.HumanoidLeggings
+                    ? EntityModelLayerHelpers.WithArmorSlot(parts, kind, slot, fallback)
+                    : EntityModelLayerHelpers.WithEquipment(parts, kind, slot, fallback, baseCopy: kind != EquipmentAssetKind.HappyGhastBody);
+            }
         }
 
         // Wolf armor shows a crackiness overlay based on the chest/body slot durability.
@@ -219,6 +229,8 @@ public static class EntityModelResolver
         EquippedModels[key] = decorated;
         return decorated;
     }
+
+    private static readonly int[] HumanoidArmorSlots = [5, 4, 3, 2];
 
     private static readonly (EquipmentAssetKind Kind, int Slot, string Fallback)[] HumanoidArmorLayers =
     [
