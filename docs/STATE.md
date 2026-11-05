@@ -3442,3 +3442,11 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **阻塞（不近似）**：持方块 `carriedBlock` 手臂姿态（block state 未解码）、creepy 头下沉（原版 head vs hat 分开位移，我们 hat 是 head overlay）。
 - **验证**：Client **1291**（+2 Enderman + 注册分配），构建 0 警告 0 错误。
 - **下一步具体动作**：继续缺 provider 生物：Slime（大概率只需 squish transform，可确认）、EnderDragon、Pufferfish、TropicalFish；Cat lie/relax + sprint flag；SPEAR/STAB；装备层 / baby 模型。
+
+## 2026-11-05 团队并行：鱼 + 末影龙 + synced-data 修正（T-628）
+
+- **并行完成（智能体团队）**：`PufferfishAnimationProvider`(110，三态同公式，覆盖两套鳍名)、`TropicalFishAnimationProvider`(140，仅 tail，pattern 无差异)、`EnderDragonAnimationProvider`(44，flapTime tick 驱动拍翅/口/四肢)。已由 Lead 统一注册 110/140/44 并加入注册/分配测试。
+- **阻塞（记录、不近似，均为整实体 pose-stack 变换，非部件 pose）**：Pufferfish 垂直浮动、TropicalFish 整体摆动/离水翻倒、EnderDragon 颈部/尾/头历史轨迹（`DragonFlightHistory`）与 root 变换。
+- **顺带修正现存 synced-data 缺陷**：TamableAnimal 坐姿 index 17/8 → **18/BYTE bit0**；AbstractCubeMob ID_SIZE 16/2 → **18/INT**（此前 size 恒 1）；补 `targetSquish *= 0.6` 每 tick 衰减。Slime(120) 确认仅需 squish 变换、无需 provider（squish 管线修正后生效）。
+- **验证**：Client **1318** 全绿，构建 0 警告 0 错误。
+- **下一步具体动作**：①Cat lie/relax + sprint（需 IsSprinting/lieDown/relax 字段 + Cat tick 累积，调查已给出 index 21/22 BOOLEAN 与 shared flag bit3）；②SPEAR/STAB；③装备层 / baby 模型；④EnderDragon 飞行历史子系统（解阻塞剩余 ~80%）。

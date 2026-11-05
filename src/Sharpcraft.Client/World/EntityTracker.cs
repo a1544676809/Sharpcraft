@@ -828,6 +828,8 @@ public sealed class EntityTracker
                     presentation.TargetSquish = 1f;
                 }
 
+                // Reference AbstractCubeMob.tick decays the squish target by 0.6 every tick.
+                presentation.TargetSquish *= 0.6f;
                 presentation.WasOnGround = presentation.IsOnGround;
             }
             entity.Presentation.IsInWater = World?.IsWaterAt(
@@ -1119,8 +1121,8 @@ public sealed class EntityTracker
                 applied = true;
             }
 
-            // TamableAnimal flags byte (index 17, serializer 8): bit 0 = sitting (parrot/cat/ocelot/wolf).
-            if (item.Index == 17 && item.SerializerId == 8 && entity.TypeId is 21 or 92 or 99 or 152)
+            // TamableAnimal flags byte (index 18, byte serializer): bit 0 = sitting (parrot/cat/ocelot/wolf).
+            if (item.Index == 18 && item.SerializerId == 0 && entity.TypeId is 21 or 92 or 99 or 152)
             {
                 entity.Presentation.IsSitting = (item.Value & 1) != 0;
                 applied = true;
@@ -1219,8 +1221,8 @@ public sealed class EntityTracker
                 applied = true;
             }
 
-            // Cube-mob size: AbstractCubeMob.ID_SIZE is the first int accessor after Mob flags (index 16, serializer 2).
-            if (item.Index == 16 && item.SerializerId == 2 && (entity.TypeId == 120 || entity.TypeId == 81))
+            // Cube-mob size: AbstractCubeMob.ID_SIZE is an INT accessor after the AgeableMob prefix (index 18, serializer 1).
+            if (item.Index == 18 && item.SerializerId == 1 && (entity.TypeId == 120 || entity.TypeId == 81))
             {
                 entity.Presentation.CubeSize = item.Value;
                 applied = true;

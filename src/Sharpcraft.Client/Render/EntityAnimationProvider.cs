@@ -159,5 +159,8 @@ public static class EntityAnimationRegistry
         new PolarBearAnimationProvider(PolarBearModelDefinition.PolarBearEntityTypeId),
         new RabbitAnimationProvider(RabbitModelDefinition.RabbitEntityTypeId),
         new WitherAnimationProvider(WitherBossModelDefinition.WitherEntityTypeId),
+        new PufferfishAnimationProvider(PufferfishModelDefinition.PufferfishEntityTypeId),
+        new TropicalFishAnimationProvider(TropicalFishModelDefinition.TropicalFishEntityTypeId),
+        new EnderDragonAnimationProvider(EnderDragonModelDefinition.EnderDragonEntityTypeId),
     ];
 }

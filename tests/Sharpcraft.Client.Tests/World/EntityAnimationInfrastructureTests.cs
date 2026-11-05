@@ -381,7 +381,7 @@ public sealed class EntityAnimationInfrastructureTests
     {
         var tracker = new EntityTracker { GameTime = 0 };
         tracker.Add(Entity(20, typeId: WolfModelDefinition.WolfEntityTypeId));
-        tracker.ApplyEntityData(20, [new EntityDataItem(17, 8, 1)]);
+        tracker.ApplyEntityData(20, [new EntityDataItem(18, 0, 1)]);
 
         Assert.True(tracker.Interpolate(0f)[0].IsSitting);
     }

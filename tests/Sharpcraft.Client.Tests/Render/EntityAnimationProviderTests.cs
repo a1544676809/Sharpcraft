@@ -96,6 +96,9 @@ public sealed class EntityAnimationProviderTests
         PolarBearModelDefinition.PolarBearEntityTypeId,
         RabbitModelDefinition.RabbitEntityTypeId,
         WitherBossModelDefinition.WitherEntityTypeId,
+        PufferfishModelDefinition.PufferfishEntityTypeId,
+        TropicalFishModelDefinition.TropicalFishEntityTypeId,
+        EnderDragonModelDefinition.EnderDragonEntityTypeId,
     ];
 
     [Fact]
@@ -213,6 +216,9 @@ public sealed class EntityAnimationProviderTests
     [InlineData(PolarBearModelDefinition.PolarBearEntityTypeId)]
     [InlineData(RabbitModelDefinition.RabbitEntityTypeId)]
     [InlineData(WitherBossModelDefinition.WitherEntityTypeId)]
+    [InlineData(PufferfishModelDefinition.PufferfishEntityTypeId)]
+    [InlineData(TropicalFishModelDefinition.TropicalFishEntityTypeId)]
+    [InlineData(EnderDragonModelDefinition.EnderDragonEntityTypeId)]
     public void ProviderApplyDoesNotAllocateOnceWarm(int typeId)
     {
         var provider = EntityAnimationRegistry.For(typeId)!;
