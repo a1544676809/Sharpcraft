@@ -13,9 +13,8 @@ namespace Sharpcraft.Client.Render;
 /// Our <see cref="CatModelDefinition"/> splits the reference "head" group into four parts that share one pivot, so the
 /// head rotation is applied to all four. The reference assigns several part transforms absolutely (body xRot = pi/2,
 /// tail1 = 0.9, tail2 = 0); a <see cref="PoseOffset"/> is a delta from the bind pose, so those become
-/// <c>delta = assigned - bind</c>. Position offsets follow the mesher's y-up part space (Y negated, Z unchanged; the
-/// derivable offsets only use Y/Z). Blocked (recorded, not approximated): cat lieDown/relax (synced IS_LYING /
-/// RELAX_STATE_ONE not decoded yet) and sprint tail (shared flags bit 3 not decoded).
+/// <c>delta = assigned - bind</c>. Position offsets follow the mesher's y-up part space (Y negated, Z unchanged).
+/// Sprint, cat lieDown and relax are driven by decoded frame fields (shared flag bit 3, synced IS_LYING/RELAX_STATE_ONE).
 /// </remarks>
 public sealed class FelineAnimationProvider : IEntityAnimationProvider
 {
@@ -49,7 +48,7 @@ public sealed class FelineAnimationProvider : IEntityAnimationProvider
 
     public void ApplyClip(IEntityAnimationState state, in EntityAnimationFrame frame, string clip, float seconds, EntityPose pose)
     {
-        var sandbox = frame with { IsSitting = false, IsCrouching = false };
+        var sandbox = frame with { IsSitting = false, IsCrouching = false, IsSprinting = false, LieDownAmount = 0f, LieDownAmountTail = 0f, RelaxStateOneAmount = 0f };
         if (string.Equals(clip, "walk", StringComparison.Ordinal))
         {
             ApplyFeline(sandbox with { WalkAnimationPos = seconds * 10f, WalkAnimationSpeed = 1f }, pose);
@@ -65,25 +64,25 @@ public sealed class FelineAnimationProvider : IEntityAnimationProvider
         var ageScale = frame.IsBaby ? 0.5f : 1f;
         var sitting = _isCat && frame.IsSitting;
         var crouching = frame.IsCrouching;
+        var sprinting = frame.IsSprinting;
 
-        // Part rotations (delta from bind) and positions (y-up, model pixels).
+        // Part rotations (delta from bind) and positions (vanilla y-down model pixels; Y is negated at emit).
         var bodyRotX = 0f;
         float leftHind = 0f, rightHind = 0f, leftFront = 0f, rightFront = 0f;
+        var rightFrontZRot = 0f;
+        var rightHindZRot = 0f;
         var tail1RotX = 0f;
         var tail2RotX = 0f;
 
-        var bodyY = 0f;
-        var bodyZ = 0f;
-        var headY = 0f;
-        var headZ = 0f;
-        var tail1Y = 0f;
-        var tail1Z = 0f;
-        var tail2Y = 0f;
-        var tail2Z = 0f;
-        var frontY = 0f;
-        var frontZ = 0f;
-        var hindY = 0f;
-        var hindZ = 0f;
+        float bodyY = 0f, bodyZ = 0f;
+        float headY = 0f, headZ = 0f;
+        float tail1Y = 0f, tail1Z = 0f, tail2Y = 0f, tail2Z = 0f;
+        float lfX = 0f, lfY = 0f, lfZ = 0f, rfX = 0f, rfY = 0f, rfZ = 0f;
+        float lhX = 0f, lhY = 0f, lhZ = 0f, rhX = 0f, rhY = 0f, rhZ = 0f;
+
+        var headPitch = frame.Pitch * DegToRad;
+        var headYaw = WrapDegrees(frame.HeadYaw - frame.Yaw) * DegToRad;
+        var headZRot = 0f;
 
         if (crouching)
         {
@@ -95,23 +94,37 @@ public sealed class FelineAnimationProvider : IEntityAnimationProvider
             tail1RotX = (Pi / 2f) - Tail1BindXRot; // absolute pi/2 vs bind 0.9
             tail2RotX = Pi / 2f;                    // absolute pi/2 vs bind 0
         }
-
-        // Head look (absolute pitch + head-relative yaw).
-        var headPitch = frame.Pitch * DegToRad;
-        var headYaw = WrapDegrees(frame.HeadYaw - frame.Yaw) * DegToRad;
+        else if (sprinting)
+        {
+            tail2Y += 15f - 20f; // tail2.y = tail1.y (bind 15) - tail2 bind 20
+            tail2Z += 2f * ageScale;
+            tail1RotX = (Pi / 2f) - Tail1BindXRot;
+            tail2RotX = Pi / 2f;
+        }
 
         if (!sitting)
         {
             // body xRot = pi/2 (== bind), so no delta.
             var animationPos = frame.WalkAnimationPos;
             var animationSpeed = frame.WalkAnimationSpeed;
-            leftHind = MathF.Cos(animationPos * 0.6662f) * animationSpeed;
-            rightHind = MathF.Cos((animationPos * 0.6662f) + Pi) * animationSpeed;
-            leftFront = MathF.Cos((animationPos * 0.6662f) + Pi) * animationSpeed;
-            rightFront = MathF.Cos(animationPos * 0.6662f) * animationSpeed;
-            tail2RotX = crouching
-                ? 1.7278761f + (0.47123894f * MathF.Cos(animationPos) * animationSpeed)
-                : 1.7278761f + ((Pi / 4f) * MathF.Cos(animationPos) * animationSpeed);
+            if (sprinting)
+            {
+                leftHind = MathF.Cos(animationPos * 0.6662f) * animationSpeed;
+                rightHind = MathF.Cos((animationPos * 0.6662f) + 0.3f) * animationSpeed;
+                leftFront = MathF.Cos((animationPos * 0.6662f) + Pi + 0.3f) * animationSpeed;
+                rightFront = MathF.Cos((animationPos * 0.6662f) + Pi) * animationSpeed;
+                tail2RotX = 1.7278761f + ((Pi / 10f) * MathF.Cos(animationPos) * animationSpeed);
+            }
+            else
+            {
+                leftHind = MathF.Cos(animationPos * 0.6662f) * animationSpeed;
+                rightHind = MathF.Cos((animationPos * 0.6662f) + Pi) * animationSpeed;
+                leftFront = MathF.Cos((animationPos * 0.6662f) + Pi) * animationSpeed;
+                rightFront = MathF.Cos(animationPos * 0.6662f) * animationSpeed;
+                tail2RotX = crouching
+                    ? 1.7278761f + (0.47123894f * MathF.Cos(animationPos) * animationSpeed)
+                    : 1.7278761f + ((Pi / 4f) * MathF.Cos(animationPos) * animationSpeed);
+            }
         }
 
         if (sitting)
@@ -130,28 +143,53 @@ public sealed class FelineAnimationProvider : IEntityAnimationProvider
 
             leftFront = -Pi / 20f;
             rightFront = -Pi / 20f;
-            frontY += 2f * ageScale;
-            frontZ -= 2f * ageScale;
+            lfY = rfY = 2f * ageScale;
+            lfZ = rfZ = -2f * ageScale;
 
             leftHind = -Pi / 2f;
             rightHind = -Pi / 2f;
-            hindY += 3f * ageScale;
-            hindZ -= 4f * ageScale;
+            lhY = rhY = 3f * ageScale;
+            lhZ = rhZ = -4f * ageScale;
+        }
+
+        if (frame.LieDownAmount > 0f)
+        {
+            var amount = frame.LieDownAmount;
+            headZRot = Lerp(amount, headZRot, -1.2707963f);
+            headYaw = Lerp(amount, headYaw, 1.2707963f);
+            leftFront = -1.2707963f;
+            rightFront = -0.47079635f;
+            rightFrontZRot = -0.2f;
+            rfX += ageScale;
+            leftHind = -0.4f;
+            rightHind = 0.5f;
+            rightHindZRot = -0.5f;
+            rhX += 0.8f * ageScale;
+            rhY += 2f * ageScale;
+            tail1RotX = Lerp(frame.LieDownAmountTail, tail1RotX, 0.8f);
+            tail2RotX = Lerp(frame.LieDownAmountTail, tail2RotX, -0.4f);
+        }
+
+        if (frame.RelaxStateOneAmount > 0f)
+        {
+            headPitch = Lerp(frame.RelaxStateOneAmount, headPitch, -0.58177644f);
         }
 
         foreach (var part in HeadParts)
         {
-            pose.Add(part, new PoseOffset(new Vector3(0f, -headY, headZ), new Vector3(headPitch, headYaw, 0f), Vector3.Zero));
+            pose.Add(part, new PoseOffset(new Vector3(0f, -headY, headZ), new Vector3(headPitch, headYaw, headZRot), Vector3.Zero));
         }
 
         pose.Add("body", new PoseOffset(new Vector3(0f, -bodyY, bodyZ), new Vector3(bodyRotX, 0f, 0f), Vector3.Zero));
         pose.Add("tail1", new PoseOffset(new Vector3(0f, -tail1Y, tail1Z), new Vector3(tail1RotX, 0f, 0f), Vector3.Zero));
         pose.Add("tail2", new PoseOffset(new Vector3(0f, -tail2Y, tail2Z), new Vector3(tail2RotX, 0f, 0f), Vector3.Zero));
-        pose.Add("left_hind_leg", new PoseOffset(new Vector3(0f, -hindY, hindZ), new Vector3(leftHind, 0f, 0f), Vector3.Zero));
-        pose.Add("right_hind_leg", new PoseOffset(new Vector3(0f, -hindY, hindZ), new Vector3(rightHind, 0f, 0f), Vector3.Zero));
-        pose.Add("left_front_leg", new PoseOffset(new Vector3(0f, -frontY, frontZ), new Vector3(leftFront, 0f, 0f), Vector3.Zero));
-        pose.Add("right_front_leg", new PoseOffset(new Vector3(0f, -frontY, frontZ), new Vector3(rightFront, 0f, 0f), Vector3.Zero));
+        pose.Add("left_hind_leg", new PoseOffset(new Vector3(-lhX, -lhY, lhZ), new Vector3(leftHind, 0f, 0f), Vector3.Zero));
+        pose.Add("right_hind_leg", new PoseOffset(new Vector3(-rhX, -rhY, rhZ), new Vector3(rightHind, 0f, rightHindZRot), Vector3.Zero));
+        pose.Add("left_front_leg", new PoseOffset(new Vector3(-lfX, -lfY, lfZ), new Vector3(leftFront, 0f, 0f), Vector3.Zero));
+        pose.Add("right_front_leg", new PoseOffset(new Vector3(-rfX, -rfY, rfZ), new Vector3(rightFront, 0f, rightFrontZRot), Vector3.Zero));
     }
+
+    private static float Lerp(float alpha, float from, float to) => from + (alpha * (to - from));
 
     private static float WrapDegrees(float degrees)
     {

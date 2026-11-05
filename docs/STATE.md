@@ -3450,3 +3450,9 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - **顺带修正现存 synced-data 缺陷**：TamableAnimal 坐姿 index 17/8 → **18/BYTE bit0**；AbstractCubeMob ID_SIZE 16/2 → **18/INT**（此前 size 恒 1）；补 `targetSquish *= 0.6` 每 tick 衰减。Slime(120) 确认仅需 squish 变换、无需 provider（squish 管线修正后生效）。
 - **验证**：Client **1318** 全绿，构建 0 警告 0 错误。
 - **下一步具体动作**：①Cat lie/relax + sprint（需 IsSprinting/lieDown/relax 字段 + Cat tick 累积，调查已给出 index 21/22 BOOLEAN 与 shared flag bit3）；②SPEAR/STAB；③装备层 / baby 模型；④EnderDragon 飞行历史子系统（解阻塞剩余 ~80%）。
+
+## 2026-11-05 Cat lie/relax + sprint 解阻塞（T-629）
+
+- **已完成**：同步解码 `IS_LYING`(index21)/`RELAX_STATE_ONE`(index22)（BOOLEAN）与 shared flag bit3(sprint)；`EntityPresentationState` 每 tick 累积 lieDown/lieDownTail/relax 三档时钟并按 partial 插值投影到 `EntityRenderState`/`EntityAnimationFrame`；`FelineAnimationProvider` 增加 sprint（腿相位+尾巴）、lieDown（head zRot/yRot、前后腿、尾巴 rotlerp）、relax（head pitch lerp）分支。
+- **验证**：Client **1321** 全绿（+3 猫科分支：sprint/lieDown/relax），构建 0 警告 0 错误。
+- **下一步具体动作**：①SPEAR/STAB（需 `SpearAnimations`，仍阻塞）；②装备层 / baby 专属模型；③EnderDragon 飞行历史子系统；④如所有实体 provider 覆盖完成，收口到里程碑/性能验证。

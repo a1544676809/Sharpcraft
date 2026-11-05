@@ -83,7 +83,11 @@ public readonly record struct EntityAnimationFrame(
     bool IsFallFlying = false,
     int UseItemHand = 0,
     int SwingHand = 0,
-    int SwingType = 0)
+    int SwingType = 0,
+    bool IsSprinting = false,
+    float LieDownAmount = 0f,
+    float LieDownAmountTail = 0f,
+    float RelaxStateOneAmount = 0f)
 {
     /// <summary>Projects the generic render state onto the frame. The mesher calls this once per entity per frame.</summary>
     public static EntityAnimationFrame From(in EntityRenderState state) => new(
@@ -157,7 +161,11 @@ public readonly record struct EntityAnimationFrame(
         state.IsFallFlying,
         state.UseItemHand,
         state.SwingHand,
-        state.SwingType);
+        state.SwingType,
+        state.IsSprinting,
+        state.LieDownAmount,
+        state.LieDownAmountTail,
+        state.RelaxStateOneAmount);
 }
 
 /// <summary>

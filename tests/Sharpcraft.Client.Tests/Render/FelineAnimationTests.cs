@@ -70,4 +70,40 @@ public sealed class FelineAnimationTests
         var pose = Apply(CatModelDefinition.OcelotEntityTypeId, Frame(CatModelDefinition.OcelotEntityTypeId, 0f, 0f, 0f, sitting: true, walkPos: 0f, walkSpeed: 0f));
         Assert.Equal(0f, pose.Get("body").Rotation.X, 4);
     }
+
+    [Fact]
+    public void SprintingUsesTheReferenceLegPhasesAndTail()
+    {
+        var frame = Frame(CatModelDefinition.CatEntityTypeId, 0f, 0f, 0f, sitting: false, walkPos: 0f, walkSpeed: 1f) with { IsSprinting = true };
+        var pose = Apply(CatModelDefinition.CatEntityTypeId, frame);
+
+        Assert.Equal(1f, pose.Get("left_hind_leg").Rotation.X, 4);
+        Assert.Equal(MathF.Cos(0.3f), pose.Get("right_hind_leg").Rotation.X, 4);
+        Assert.Equal(MathF.Cos(MathF.PI + 0.3f), pose.Get("left_front_leg").Rotation.X, 4);
+        Assert.Equal(-1f, pose.Get("right_front_leg").Rotation.X, 4);
+        Assert.Equal(1.7278761f + (MathF.PI / 10f), pose.Get("tail2").Rotation.X, 3);
+    }
+
+    [Fact]
+    public void LieDownTiltsTheHeadAndSplaysTheLegs()
+    {
+        var frame = Frame(CatModelDefinition.CatEntityTypeId, 0f, 0f, 0f, sitting: false, walkPos: 0f, walkSpeed: 0f)
+            with { LieDownAmount = 1f, LieDownAmountTail = 1f };
+        var pose = Apply(CatModelDefinition.CatEntityTypeId, frame);
+
+        Assert.Equal(-1.2707963f, pose.Get("head_main").Rotation.Z, 4);
+        Assert.Equal(1.2707963f, pose.Get("head_main").Rotation.Y, 4);
+        Assert.Equal(-1.2707963f, pose.Get("left_front_leg").Rotation.X, 4);
+        Assert.Equal(-0.2f, pose.Get("right_front_leg").Rotation.Z, 4);
+        Assert.Equal(0.8f, pose.Get("tail1").Rotation.X, 4);
+        Assert.Equal(-0.4f, pose.Get("tail2").Rotation.X, 4);
+    }
+
+    [Fact]
+    public void RelaxStateOneLerpsTheHeadPitch()
+    {
+        var frame = Frame(CatModelDefinition.CatEntityTypeId, 0f, 0f, pitch: 0f, sitting: false, walkPos: 0f, walkSpeed: 0f) with { RelaxStateOneAmount = 1f };
+        var pose = Apply(CatModelDefinition.CatEntityTypeId, frame);
+        Assert.Equal(-0.58177644f, pose.Get("head_main").Rotation.X, 4);
+    }
 }

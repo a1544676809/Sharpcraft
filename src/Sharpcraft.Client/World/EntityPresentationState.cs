@@ -206,6 +206,33 @@ public sealed class EntityPresentationState
     /// <summary>Polar bear standing flag (synced boolean).</summary>
     public bool IsStanding { get; internal set; }
 
+    /// <summary>Sprinting flag (reference Entity shared flag bit 3).</summary>
+    public bool IsSprinting { get; internal set; }
+
+    /// <summary>Cat lying flag (reference Cat IS_LYING, synced boolean).</summary>
+    public bool IsLying { get; internal set; }
+
+    /// <summary>Cat relax-state-one flag (reference Cat RELAX_STATE_ONE, synced boolean).</summary>
+    public bool IsRelaxStateOne { get; internal set; }
+
+    /// <summary>Cat lie-down amount 0..1 (reference <c>lieDownAmount</c>).</summary>
+    public float LieDownAmount { get; internal set; }
+
+    /// <summary>Cat lie-down amount at the previous tick (for partial-tick interpolation).</summary>
+    public float LieDownAmountO { get; internal set; }
+
+    /// <summary>Cat lie-down tail amount 0..1 (reference <c>lieDownAmountTail</c>).</summary>
+    public float LieDownAmountTail { get; internal set; }
+
+    /// <summary>Cat lie-down tail amount at the previous tick.</summary>
+    public float LieDownAmountTailO { get; internal set; }
+
+    /// <summary>Cat relax-state-one amount 0..1 (reference <c>relaxStateOneAmount</c>).</summary>
+    public float RelaxStateOneAmount { get; internal set; }
+
+    /// <summary>Cat relax-state-one amount at the previous tick.</summary>
+    public float RelaxStateOneAmountO { get; internal set; }
+
     // Client-derived body/head rotation, ported from the reference BodyRotationControl. The body lags the head and,
     // when the head turns beyond the mob's limit while idle, the body is dragged around to follow it.
     /// <summary>Client-derived body yaw (reference <c>yBodyRot</c>), used for the entity-level yaw.</summary>

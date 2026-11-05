@@ -310,7 +310,11 @@ public readonly record struct EntityRenderState(
     bool IsFallFlying = false,
     int UseItemHand = 0,
     int SwingHand = 0,
-    int SwingType = 0);
+    int SwingType = 0,
+    bool IsSprinting = false,
+    float LieDownAmount = 0f,
+    float LieDownAmountTail = 0f,
+    float RelaxStateOneAmount = 0f);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -838,6 +842,29 @@ public sealed class EntityTracker
                 (int)MathF.Floor((float)entity.Z)) ?? false;
             var swimmingPose = entity.Presentation.Pose;
             entity.Presentation.UpdateSwimAmount(swimmingPose == 3 || (swimmingPose == 1 && !entity.Presentation.IsFallFlying));
+
+            // Cat lie-down / relax clocks (reference Cat.updateLieDownAmount / updateRelaxStateOneAmount).
+            if (entity.TypeId == 21)
+            {
+                var cat = entity.Presentation;
+                cat.LieDownAmountO = cat.LieDownAmount;
+                cat.LieDownAmountTailO = cat.LieDownAmountTail;
+                cat.RelaxStateOneAmountO = cat.RelaxStateOneAmount;
+                if (cat.IsLying)
+                {
+                    cat.LieDownAmount = MathF.Min(1f, cat.LieDownAmount + 0.15f);
+                    cat.LieDownAmountTail = MathF.Min(1f, cat.LieDownAmountTail + 0.08f);
+                }
+                else
+                {
+                    cat.LieDownAmount = MathF.Max(0f, cat.LieDownAmount - 0.22f);
+                    cat.LieDownAmountTail = MathF.Max(0f, cat.LieDownAmountTail - 0.13f);
+                }
+
+                cat.RelaxStateOneAmount = cat.IsRelaxStateOne
+                    ? MathF.Min(1f, cat.RelaxStateOneAmount + 0.1f)
+                    : MathF.Max(0f, cat.RelaxStateOneAmount - 0.13f);
+            }
             entity.Presentation.Tentacle?.Update(entity.Presentation.IsInWater);
             entity.Presentation.RabbitHop?.Tick();
             entity.Presentation.RabbitIdle?.Tick((int)GameTime, entity.Presentation.IsNoAi, entity.Presentation.IsLeashed, entity.Presentation.RabbitHop?.IsJumping ?? false);
@@ -1065,6 +1092,10 @@ public sealed class EntityTracker
                 UseItemHand: entity.Presentation.UseItemHand,
                 SwingHand: entity.Presentation.Swing.Hand,
                 SwingType: entity.Presentation.Swing.AnimationType,
+                IsSprinting: entity.Presentation.IsSprinting,
+                LieDownAmount: entity.Presentation.LieDownAmountO + ((entity.Presentation.LieDownAmount - entity.Presentation.LieDownAmountO) * t),
+                LieDownAmountTail: entity.Presentation.LieDownAmountTailO + ((entity.Presentation.LieDownAmountTail - entity.Presentation.LieDownAmountTailO) * t),
+                RelaxStateOneAmount: entity.Presentation.RelaxStateOneAmountO + ((entity.Presentation.RelaxStateOneAmount - entity.Presentation.RelaxStateOneAmountO) * t),
                 TentacleAngle: entity.Presentation.Tentacle?.Angle(t) ?? 0f,
                 IsResting: entity.Presentation.IsResting,
                 Animation: entity.Animation,
@@ -1236,10 +1267,26 @@ public sealed class EntityTracker
                 applied = true;
             }
 
-            // Entity shared flags byte (index 0, byte serializer): bit 7 = elytra fall flying.
+            // Entity shared flags byte (index 0, byte serializer): bit 3 = sprinting, bit 7 = elytra fall flying.
             if (item.Index == 0 && item.SerializerId == 0)
             {
+                entity.Presentation.IsSprinting = (item.Value & 8) != 0;
                 entity.Presentation.IsFallFlying = (item.Value & 128) != 0;
+                applied = true;
+            }
+
+            // Cat IS_LYING / RELAX_STATE_ONE (boolean serializers, indices 21 and 22).
+            if (entity.TypeId == 21 && item.SerializerId == 8 && item.Index is 21 or 22)
+            {
+                if (item.Index == 21)
+                {
+                    entity.Presentation.IsLying = item.Value != 0;
+                }
+                else
+                {
+                    entity.Presentation.IsRelaxStateOne = item.Value != 0;
+                }
+
                 applied = true;
             }
         }
