@@ -24,4 +24,4 @@ AGENTS.md §3.5 硬约束：**每个模块文档必须写明我们的类型对�
 1. 新建/修改类型时加 `[ReferenceClass(...)]`；
 2. `dotnet run --project tools/Sharpcraft.ClassMap -- --write`；
 3. 逐步为存量类型补注解，随后 `--update-baseline` 缩减基线；
-4. Phase 2：把对应表自动注入各 `docs/src/<project>/<module>.md`，并加**反向覆盖**（`docs/architecture/class-map/<subsystem>.refs.txt` 列出应实现的原版类，校验均已映射或标 OutOfScope）。
+4. （已实现）Phase 2：对应表**自动注入**各 `docs/src/<project>/<module>.md`（`<!-- BEGIN GENERATED: class-map -->` 块）；**反向覆盖**：`docs/architecture/class-map/<subsystem>.refs.txt` 列出应实现的原版类（每行一个全限定类名，`!` 前缀标 OutOfScope），`--check` 校验均已映射或显式豁免。示例见 `docs/architecture/class-map/client-core.refs.txt`。

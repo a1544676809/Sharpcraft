@@ -47,3 +47,11 @@
 
 - `VecDelta` 的分段形态按求和一次应用（终点一致、缺逐刻播放），见 T-091。
 - 实体元数据（皮肤、装备、状态）尚未解析；M5 第一步只要求"看得到在动"。
+
+<!-- BEGIN GENERATED: class-map -->
+
+| Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
+| --- | --- | --- | --- | --- | --- | --- |
+| Sharpcraft.Client | Sharpcraft.Client.World.EntityTracker | Merged | Partial | net.minecraft.client.multiplayer.ClientLevel | ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/ClientLevel.java | Merges ClientLevel/Entity/SteppedInterpolationHandler responsibilities; position sync per T-639/T-640 |
+
+<!-- END GENERATED: class-map -->

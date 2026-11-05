@@ -39,3 +39,11 @@
 
 - 插值尚未用于渲染：相机直接取实体当前眼位，没有在两 tick 之间插值。实体移动较慢，1 tick 的抖动不明显，
   但高速移动（下落、冲刺）会看出来，届时按 `Alpha` 插值。
+
+<!-- BEGIN GENERATED: class-map -->
+
+| Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
+| --- | --- | --- | --- | --- | --- | --- |
+| Sharpcraft.Client | Sharpcraft.Client.Game.TickLoop | Mirror | Full | net.minecraft.client.Timer | ref://mc-26.3-analysis/src/net/minecraft/client/Timer.java | Fixed-timestep accumulator + partialTick (alpha) |
+
+<!-- END GENERATED: class-map -->

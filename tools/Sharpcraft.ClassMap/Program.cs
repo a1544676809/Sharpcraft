@@ -14,15 +14,15 @@ internal static class Program
         {
             case "--write":
             {
-                var (annotated, unannotated) = ClassMapTool.Write(root, updateBaseline: false);
-                Console.WriteLine($"class-map: wrote generated page ({annotated} annotated, {unannotated} unannotated).");
+                var (annotated, injected, unannotated) = ClassMapTool.Write(root, updateBaseline: false);
+                Console.WriteLine($"class-map: wrote ({annotated} annotated, {injected} module docs injected, {unannotated} unannotated).");
                 return 0;
             }
 
             case "--update-baseline":
             {
-                var (annotated, unannotated) = ClassMapTool.Write(root, updateBaseline: true);
-                Console.WriteLine($"class-map: updated baseline ({annotated} annotated, {unannotated} unannotated).");
+                var (annotated, injected, unannotated) = ClassMapTool.Write(root, updateBaseline: true);
+                Console.WriteLine($"class-map: updated baseline ({annotated} annotated, {injected} module docs injected, {unannotated} unannotated).");
                 return 0;
             }
 

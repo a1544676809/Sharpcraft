@@ -1,0 +1,6 @@
+# Reverse coverage list for the client core timing/level classes (AGENTS 3.5, class-map Phase 2).
+# Each line is a reference (vanilla 26.3) fully-qualified class name that must be mapped by a [ReferenceClass]
+# annotation, or prefixed with '!' to mark it intentionally out of scope. No reference source is stored here.
+net.minecraft.client.Timer
+net.minecraft.client.multiplayer.ClientLevel
+!net.minecraft.client.Minecraft
