@@ -3420,3 +3420,10 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
   - `sit` 可派生（TamableAnimal flags bit0，type 21 已在 presentation 解码）；`lieDown/relax` 是 Cat 的**synced 数据**（`IS_LYING`/`RELAX_STATE_ONE`），需确认 metadata 索引；`sprint` 需解码 shared flag bit3。三者未接前 Cat 只做 walk/crouch/sit，`lie/relax/sprint` 标阻塞。
   - Ocelot 的 render state 只有 isCrouching/isSprinting（无 sit/lie/relax），实现更容易。
 - **下一步具体动作**：实现 `FelineAnimationProvider`（先 Ocelot，后 Cat 的 sit；lie/relax/sprint 记录阻塞），注册 21/92，补测试。
+
+## 2026-11-05 Cat/Ocelot 猫科动画完成（T-625）
+
+- **已完成**：新增 `FelineAnimationProvider`（Cat 21 / Ocelot 92），复刻 `AdultFelineModel.setupAnim`：head pitch + 相对 yaw 施到 `head_main/nose/ear1/ear2` 四部件；走路四腿相位；crouch/sit 的 body/tail/leg 偏移；`body(π/2)`、`tail1(0.9)` 等绝对赋值按 `delta=赋值−bind` 换算（T-622 同类教训提前处理）。Cat 支持坐姿（TamableAnimal flags bit0），Ocelot 忽略坐姿。
+- **阻塞（不近似，保持记录）**：Cat `lieDown/relax`（synced `IS_LYING`/`RELAX_STATE_ONE` 的 metadata 索引未确认）、`sprint` 尾巴（shared flag bit3 未解码）。
+- **验证**：Client **1288**（+4 猫科 + 注册/分配），构建 0 警告 0 错误。
+- **下一步具体动作**：①补 Cat lie/relax 的 metadata 解码与 sprint flag（解除最后两个猫科分支）；②继续缺 provider 生物：Enderman、Slime、EnderDragon、Pufferfish、TropicalFish；③SPEAR/STAB；④装备层 / baby 模型；⑤如需目视验收可重启窗口放猫/豹猫。
