@@ -132,3 +132,16 @@ dotnet run --project src/Sharpcraft.Client --no-build -- `
 - 无服务器时可用本地场景开关（宿主诊断，经 `--debugOptionsFile` 显式传入，例如 `MC_FRAME_LOCAL=1`）。
 - 边界（原则 7.1 不变）：直接启动客户端是**开发/第三方启动器形态**，本项目分发的门户仍是启动器；离线身份只产生本地会话。
 
+
+## 9. 调试代码分离（原则 13）
+
+本模块中的**开发/诊断命令**（`frame`、`window`、`walk`、`play`）与 `Diagnostics/HostDebugOptions` 属于**调试宿主代码**，不是产品运行路径：
+
+- 产品启动路径 `launch` = 组装原版参数 → `Process.Start` 启动独立 `Sharpcraft.Client.exe` → 启动器退出；**游戏本体（Client）不依赖启动器**，也不引用 Launcher。
+- 调试命令集中在 Launcher 的 `Diagnostics/` 与 `Program` 的少量分发分支；它们通过进程内 `Sharpcraft.Client.Game`（仅调试用）或直接调用运行。
+- **整体删除步骤（移除全部调试能力，游戏照常运行）**：
+  1. 删除 `src/Sharpcraft.Launcher/Diagnostics/` 目录；
+  2. 删除 `Program.cs` 中 `FrameAsync/WindowAsync/WalkAsync/PlayAsync` 方法及 `frame/window/walk/play` 的 switch 分支，并移除 `Sharpcraft.Client.Assets/Game/World` 的 using；
+  3. 删除 `Sharpcraft.Launcher.csproj` 中对 `Sharpcraft.Client` 的 `ProjectReference`。
+  → 剩余 Launcher 只保留 `login/logout/accounts/assets/probe/launch/help`；`Sharpcraft.Client.exe` 独立运行完全不受影响（`dotnet build` 全绿、游戏可离线进服）。
+- 调试参数仍由 Launcher 解析环境变量后以显式选项传入：`HostDebugOptions.Collect()` → Client 的 `--debugOptionsFile`；游戏程序集（`Framework/Client/Common/Assets`）**零环境变量读取**（`check-diagnostics-separation.ps1` / `DiagnosticsSeparationTests` 保证）。

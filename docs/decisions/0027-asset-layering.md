@@ -76,3 +76,7 @@ updated: 2026-11-06
   该项因以下具体限制未在本轮完成：`play` 无对应客户端 CLI 模式；`frame` 的本地场景开关（`MC_FRAME_REPLAY` 等）
   依赖客户端内部场景构建；`HostDebugOptions` 仍直接设置客户端静态项（`ChatLog.BackgroundOpacity`、`PackWatcher.IsEnabled`）。
 - 当上述限制被 CLI 显式选项覆盖后，重新评估移除 `Sharpcraft.Client` 项目引用并启用"启动器不得引用客户端"架构断言。
+
+## 6. R-025 收口（2026-11-06）
+
+按原则 13，Launcher 对 `Sharpcraft.Client` 的唯一残留引用仅用于**开发诊断命令**（frame/window/walk/play）与 `Diagnostics/HostDebugOptions`；产品 `launch` 已是"spawn 独立 Client 进程后退出"，游戏本体不依赖启动器。该残留**可整体删除**（见 launcher.md §9 删除步骤），删除后游戏照常运行。因此 R-025 按"调试代码可分离"口径收口，不再视为运行期耦合。
