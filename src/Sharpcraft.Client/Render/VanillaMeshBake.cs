@@ -26,7 +26,7 @@ namespace Sharpcraft.Client.Render;
 /// </para>
 /// </remarks>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.geom.builders.MeshTransformer", "ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/builders/MeshTransformer.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Centralised vanilla MeshTransformer scaling bake for flattened EntityModelPart geometry")]
-public static class VanillaMeshBake
+public static partial class VanillaMeshBake
 {
     /// <summary>Reference pivot height constant used by <c>MeshTransformer.scaling</c>.</summary>
     public const float ReferencePivotHeight = 24.016f;
