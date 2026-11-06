@@ -63,8 +63,8 @@ updated: 2026-11-06
 
 ## 最近提交
 
+- `bd424b3` fix(render): decouple baby elytra UVs and preserve stepped move deltas (T-663/T-664)
+- `5a5a9c9` docs: record the latest commits in STATE
 - `7b68fe3` feat(render): finish the baby elytra variant (ELYTRA_BABY) (T-662)
 - `b1b65df` merge: main (principle 14 guardrails, Phase 0/1 foundation)
 - `b4d32e2` docs: reconcile the equivalence matrix with the branch state
-- `12ed409` feat(render): elytra baby variant (ELYTRA_BABY, 0.5-scaled wings)
-- `114cb4e` refactor(launcher): drop Sharpcraft.Client reference; dev commands defer to standalone client (R-025 done)
