@@ -89,6 +89,12 @@ public sealed class ChunkMeshCache
     /// </summary>
     public LightmapParameters Lighting { get; set; } = LightmapParameters.DayOverworld;
 
+    /// <summary>Whether greedy face merging is enabled when meshing.</summary>
+    public bool MergeFaces { get; set; } = true;
+
+    /// <summary>Whether per-vertex ambient occlusion is enabled when meshing.</summary>
+    public bool AmbientOcclusion { get; set; } = true;
+
     public MeshData Build(
         ClientWorld world,
         BlockSpriteMap? sprites = null,
@@ -114,10 +120,24 @@ public sealed class ChunkMeshCache
         }
 
         // One table for the whole pass: it depends only on the atlas and the layout, not on the chunk.
-        var cullTable = Layers?.Layout is { } cullLayout && sprites is not null
+        var layers = Layers;
+        var cullTable = layers?.Layout is { } cullLayout && sprites is not null
             ? new StateCullTable(cullLayout, sprites)
             : null;
-        var visualCache = new StateVisualCache(sprites, Layers?.Layout);
+        var visualCache = new StateVisualCache(sprites, layers?.Layout);
+
+        // Built once per pass so every chunk meshes with identical parameters, matching the worker pool path.
+        var context = new MeshingContext(
+            Sprites: sprites,
+            Layout: layers?.Layout,
+            Tint: layers?.Tint,
+            Cull: cullTable,
+            Visuals: visualCache,
+            Lighting: Lighting,
+            MergeFaces: MergeFaces,
+            AmbientOcclusion: AmbientOcclusion,
+            AirState: 0,
+            MaxBlocks: maxBlocks);
 
         foreach (var chunk in world.GetChunks())
         {
@@ -140,21 +160,7 @@ public sealed class ChunkMeshCache
             }
 
             using var buffer = new MeshBuffer(512);
-            var layers = Layers;
-            ChunkMesher.MeshChunk(
-                world,
-                chunk,
-                airState: 0,
-                buffer,
-                maxBlocks,
-                sprites,
-                translucent: layers?.Translucent,
-                layout: layers?.Layout,
-                cutout: layers?.Cutout,
-                tint: layers?.Tint,
-                cull: cullTable,
-                visuals: visualCache,
-                lighting: Lighting);
+            ChunkMesher.MeshChunk(world, chunk, buffer, layers?.Cutout, layers?.Translucent, in context);
             _meshes[key] = buffer.ToMeshData(0);
             remeshed++;
         }

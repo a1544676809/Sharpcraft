@@ -79,7 +79,20 @@ public sealed class LevelChunk
 
     /// <summary>Attaches a block entity, as decoded from the chunk packet.</summary>
     /// <param name="record">Block entity to attach.</param>
-    public void AddBlockEntity(BlockEntityRecord record) => _blockEntities.Add(record);
+    public void AddBlockEntity(BlockEntityRecord record)
+    {
+        for (var i = 0; i < _blockEntities.Count; i++)
+        {
+            var existing = _blockEntities[i];
+            if (existing.LocalX == record.LocalX && existing.Y == record.Y && existing.LocalZ == record.LocalZ)
+            {
+                _blockEntities[i] = record;
+                return;
+            }
+        }
+
+        _blockEntities.Add(record);
+    }
 
     /// <summary>Block state at chunk-local coordinates, or <paramref name="fallbackState"/> when absent.</summary>
     public int GetBlockState(int x, int y, int z, int fallbackState = 0)

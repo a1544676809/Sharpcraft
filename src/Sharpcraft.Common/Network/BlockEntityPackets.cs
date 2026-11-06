@@ -44,14 +44,14 @@ public static class BlockEntityPackets
             return DecodeStatus.NeedMoreData;
         }
 
-        var status = NbtReader.TryReadNetworkRoot(body[reader.Position..], out _, out _);
+        var status = NbtReader.TryReadNetworkRoot(body[reader.Position..], out var tag, out _);
 
         if (status != DecodeStatus.Success)
         {
             return status;
         }
 
-        blockEntity = new BlockEntityUpdate(x, y, z, typeId);
+        blockEntity = new BlockEntityUpdate(x, y, z, typeId, tag);
         return DecodeStatus.Success;
     }
 }
@@ -61,4 +61,5 @@ public static class BlockEntityPackets
 /// <param name="Y">Absolute block Y.</param>
 /// <param name="Z">Absolute block Z.</param>
 /// <param name="TypeId">Registry id of the block entity type.</param>
-public readonly record struct BlockEntityUpdate(int X, int Y, int Z, int TypeId);
+/// <param name="Tag">Optional NBT compound carried with the update.</param>
+public readonly record struct BlockEntityUpdate(int X, int Y, int Z, int TypeId, NbtCompound? Tag = null);

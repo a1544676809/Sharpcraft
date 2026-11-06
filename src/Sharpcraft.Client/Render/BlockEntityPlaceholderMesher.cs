@@ -3,6 +3,7 @@
 
 using System.Numerics;
 using Sharpcraft.Client.Assets;
+using Sharpcraft.Common.World;
 using Sharpcraft.Framework.Rendering;
 
 namespace Sharpcraft.Client.Render;
@@ -34,6 +35,11 @@ public sealed class BlockEntityPlaceholderMesher
     public const float GenericSize = 12f / 16f;
 
     /// <summary>Type id treated as a chest until per-type sizes are extracted.</summary>
+    /// <remarks>
+    /// Sizing now uses <c>VanillaBlockEntityTypes.IsChestLike(entity.TypeId)</c>, so all chest-like types receive
+    /// <c>ChestSize</c>. This constant no longer drives that decision; it is retained only because an existing test
+    /// constructs its chest entity with this id.
+    /// </remarks>
     public const int ChestTypeId = 1;
 
     private readonly DynamicGeometry _geometry = new();
@@ -64,7 +70,7 @@ public sealed class BlockEntityPlaceholderMesher
         for (var index = 0; index < entities.Length; index++)
         {
             var entity = entities[index];
-            var size = entity.TypeId == ChestTypeId ? ChestSize : GenericSize;
+            var size = VanillaBlockEntityTypes.IsChestLike(entity.TypeId) ? ChestSize : GenericSize;
 
             // The reference chest model spans one to fifteen pixels horizontally and sits on the block floor, so the
             // placeholder is centred and starts at the block bottom (ref ChestModel: bottom addBox(1,0,1,14,10,14)).

@@ -18,3 +18,20 @@ public sealed record LayerSinks(
     MeshBuffer? Cutout,
     MeshBuffer? Translucent,
     BiomeTint? Tint);
+
+/// <summary>
+/// Immutable meshing configuration shared by synchronous cache builds and background worker threads
+/// so both paths pass identical parameters to <see cref="ChunkMesher.MeshChunk(Sharpcraft.Client.World.ClientWorld, Sharpcraft.Common.World.LevelChunk, MeshBuffer, MeshBuffer?, MeshBuffer?, in MeshingContext)"/>.
+/// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.MeshingContext", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft-only immutable parameter bundle unifying synchronous and worker meshing paths")]
+public readonly record struct MeshingContext(
+    BlockSpriteMap? Sprites = null,
+    BlockStateLayout? Layout = null,
+    BiomeTint? Tint = null,
+    StateCullTable? Cull = null,
+    StateVisualCache? Visuals = null,
+    LightmapParameters? Lighting = null,
+    bool MergeFaces = true,
+    bool AmbientOcclusion = true,
+    int AirState = 0,
+    int MaxBlocks = 2_000_000);

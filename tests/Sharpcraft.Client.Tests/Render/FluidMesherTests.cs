@@ -108,4 +108,57 @@ public sealed class FluidMesherTests
         Assert.Equal(2 * 6 * 16 * 16, opaque.IndexCount / ChunkMesher.IndicesPerQuad);
         Assert.Equal(0, translucent.IndexCount);
     }
+
+    [Fact]
+    public void WaterNextToTranslucentNeighbourKeepsThatFace()
+    {
+        // Reference FluidRenderer: a noOcclusion neighbour (glass) does not hide the adjacent fluid face, so a single
+        // water block with glass on one side still shows all six faces (matrix row 11).
+        var layout = new BlockStateLayout(
+        [
+            (new Identifier("minecraft", "air"), 1),
+            (new Identifier("minecraft", "water"), 1),
+            (new Identifier("minecraft", "glass"), 1)
+        ]);
+
+        Assert.Equal(6, WaterFaceCountWithSideNeighbour(layout, sideState: 2));
+    }
+
+    [Fact]
+    public void WaterNextToOpaqueNeighbourCullsThatFace()
+    {
+        // A solid opaque neighbour (stone) does hide the shared face, so only five water faces remain. This is the
+        // control for the translucent case above: same geometry, one neighbour that occludes.
+        var layout = new BlockStateLayout(
+        [
+            (new Identifier("minecraft", "air"), 1),
+            (new Identifier("minecraft", "water"), 1),
+            (new Identifier("minecraft", "stone"), 1)
+        ]);
+
+        Assert.Equal(5, WaterFaceCountWithSideNeighbour(layout, sideState: 2));
+    }
+
+    private static int WaterFaceCountWithSideNeighbour(BlockStateLayout layout, int sideState)
+    {
+        // The neighbour lives in the EAST chunk, which is deliberately NOT meshed. Neighbourhood resolves it across the
+        // border for the face-occlusion query, but because that chunk is never meshed the neighbour's own translucent
+        // geometry never enters the buffer. This isolates the water's face count as the only observed quantity.
+        var world = new ClientWorld(minSectionY: 0, sectionCount: 1);
+        var centre = world.AddChunk(0, 0);
+        centre.SetSection(new ChunkSection(singleState: 0, sectionY: 0)); // all air
+        centre.SetBlockState(15, 8, 8, 1);                                 // water at the east edge (world x = 15)
+        centre.ApplyLight(LightData.FullSky(centre.Light.LightSectionCount));
+        centre.MarkLoaded();
+
+        var east = world.AddChunk(1, 0);
+        east.SetSection(new ChunkSection(singleState: 0, sectionY: 0));
+        east.SetBlockState(0, 8, 8, sideState);                            // neighbour at world x = 16
+        east.MarkLoaded();
+
+        using var opaque = new MeshBuffer();
+        using var translucent = new MeshBuffer();
+        ChunkMesher.MeshChunk(world, centre, airState: 0, opaque, maxBlocks: 1000, sprites: null, translucent, layout);
+        return translucent.IndexCount / ChunkMesher.IndicesPerQuad;
+    }
 }

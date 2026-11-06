@@ -1398,18 +1398,24 @@ internal sealed class InteractiveSession
                 Console.WriteLine($"pkt#{_packetLogCount} id={packetId} len={body.Length} hex={Convert.ToHexString(prefix)}");
             }
 
+            // Transport-level replies (keep-alive, ping, chunk batch) share one implementation with the warm-up
+            // session, so the reply encoding lives in exactly one place (AGENTS.md principle 14).
+            var transportKeepAlives = 0;
+            var transportPings = 0;
+            var transportBatches = 0;
+            if (PlaySession.TryHandleTransport(
+                    packetId,
+                    ref reader,
+                    pkt => { _live!.Send(pkt); },
+                    ref transportKeepAlives,
+                    ref transportPings,
+                    ref transportBatches))
+            {
+                continue;
+            }
+
             switch (packetId)
             {
-                case PacketIds.PlayClientbound.KeepAlive:
-                    reader.TryReadLong(out var keepAliveId);
-                    _live.Send(PlayPackets.BuildKeepAliveReply(keepAliveId));
-                    break;
-
-                case PacketIds.PlayClientbound.Ping:
-                    reader.TryReadInt(out var pingId);
-                    _live.Send(PlayPackets.BuildPongReply(pingId));
-                    break;
-
                 case PacketIds.PlayClientbound.PlayerPosition:
                     if (_sync is not null &&
                         PlayMovementPackets.TryReadPlayerPosition(body[reader.Position..], out var correction) == DecodeStatus.Success &&
@@ -2082,11 +2088,6 @@ internal sealed class InteractiveSession
                         AdoptRotation(yaw, pitch);
                     }
 
-                    break;
-
-                case PacketIds.PlayClientbound.ChunkBatchFinished:
-                    // The server waits for the acknowledgement before sending the next batch.
-                    _live.Send(PlayPackets.BuildChunkBatchReceived(8f));
                     break;
 
                 case PacketIds.PlayClientbound.Disconnect:

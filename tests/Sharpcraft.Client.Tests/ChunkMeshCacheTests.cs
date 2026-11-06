@@ -57,16 +57,16 @@ public sealed class ChunkMeshCacheTests
         second.SetSection(new ChunkSection(singleState: 2, sectionY: 0));
 
         var cache = new ChunkMeshCache();
-        cache.Build(world, maxChunksPerBuild: 64);
+        cache.Build(world, maxChunksPerBuild: 64, maxMillisecondsPerBuild: double.MaxValue);
         Assert.Equal(2, cache.LastRemeshedChunks);
 
         // Nothing changed: the next build must not touch the mesher at all.
-        cache.Build(world, maxChunksPerBuild: 64);
+        cache.Build(world, maxChunksPerBuild: 64, maxMillisecondsPerBuild: double.MaxValue);
         Assert.Equal(0, cache.LastRemeshedChunks);
 
         // One interior block changes, so exactly one chunk is re-meshed.
         world.SetBlockState(8, 8, 8, state: 3);
-        cache.Build(world, maxChunksPerBuild: 64);
+        cache.Build(world, maxChunksPerBuild: 64, maxMillisecondsPerBuild: double.MaxValue);
         Assert.Equal(1, cache.LastRemeshedChunks);
         Assert.Equal(2, cache.LastTotalChunks);
     }
@@ -81,7 +81,7 @@ public sealed class ChunkMeshCacheTests
         second.SetSection(new ChunkSection(singleState: 2, sectionY: 0));
 
         var cache = new ChunkMeshCache();
-        var mesh = cache.Build(world, maxChunksPerBuild: 64);
+        var mesh = cache.Build(world, maxChunksPerBuild: 64, maxMillisecondsPerBuild: double.MaxValue);
 
         var vertexCount = mesh.Vertices.Length / ChunkMesher.FloatsPerVertex;
         Assert.All(mesh.Indices, index => Assert.InRange(index, 0u, (uint)vertexCount - 1));
@@ -95,16 +95,16 @@ public sealed class ChunkMeshCacheTests
         world.AddChunk(1, 0).SetSection(new ChunkSection(singleState: 2, sectionY: 0));
 
         var cache = new ChunkMeshCache();
-        cache.Build(world, maxChunksPerBuild: 64);
+        cache.Build(world, maxChunksPerBuild: 64, maxMillisecondsPerBuild: double.MaxValue);
         Assert.Equal(2, cache.LastRemeshedChunks);
 
         // Same day/night state: the lightmap is unchanged, so nothing is re-meshed.
-        cache.Build(world, maxChunksPerBuild: 64);
+        cache.Build(world, maxChunksPerBuild: 64, maxMillisecondsPerBuild: double.MaxValue);
         Assert.Equal(0, cache.LastRemeshedChunks);
 
         // Night changes the lightmap, which is baked per vertex, so every chunk must rebuild.
         cache.Lighting = LightmapParameters.OverworldAt(18000);
-        cache.Build(world, maxChunksPerBuild: 64);
+        cache.Build(world, maxChunksPerBuild: 64, maxMillisecondsPerBuild: double.MaxValue);
         Assert.Equal(2, cache.LastRemeshedChunks);
     }
 }

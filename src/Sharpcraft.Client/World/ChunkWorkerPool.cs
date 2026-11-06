@@ -429,22 +429,19 @@ public sealed class ChunkWorkerPool : IDisposable
         using var cutoutScratch = layers is null ? null : new MeshBuffer(256);
         using var translucentScratch = layers is null ? null : new MeshBuffer(256);
 
-        ChunkMesher.MeshChunk(
-            _world,
-            chunk,
-            airState: 0,
-            buffer,
-            2_000_000,
-            _sprites,
-            translucent: translucentScratch,
-            layout: layers?.Layout,
-            cutout: cutoutScratch,
-            tint: layers?.Tint,
-            cull: _cullTable ??= BuildCullTable(),
-            visuals: _visualCache ??= new Sharpcraft.Client.Render.StateVisualCache(_sprites, _layers?.Layout),
-            merge: _mergeFaces,
-            ambientOcclusion: _ambientOcclusion,
-            lighting: _lighting);
+        var context = new MeshingContext(
+            Sprites: _sprites,
+            Layout: layers?.Layout,
+            Tint: layers?.Tint,
+            Cull: _cullTable ??= BuildCullTable(),
+            Visuals: _visualCache ??= new Sharpcraft.Client.Render.StateVisualCache(_sprites, layers?.Layout),
+            Lighting: _lighting,
+            MergeFaces: _mergeFaces,
+            AmbientOcclusion: _ambientOcclusion,
+            AirState: 0,
+            MaxBlocks: 2_000_000);
+
+        ChunkMesher.MeshChunk(_world, chunk, buffer, cutoutScratch, translucentScratch, in context);
         var mesh = buffer.ToMeshData(0);
 
         MeshesBuilt++;

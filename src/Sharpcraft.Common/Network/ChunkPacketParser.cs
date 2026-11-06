@@ -269,14 +269,12 @@ public static DecodeStatus TryRead(
             return status;
         }
 
-        record = new BlockEntityRecord((packedXz >> 4) & 0xF, y, packedXz & 0xF, typeId);
-
         // No "payload follows" flag exists in 26.3: OPTIONAL_COMPOUND_TAG delegates straight to writeNbt, which
         // encodes an absent tag as a lone End byte. Reading a boolean here shifted every record by one byte,
         // which is what produced the unreadable block entities and the chunks that never appeared
         // (docs/specs/network/play-movement.md 7.28).
         var nbtStart = reader.Position;
-        status = NbtReader.TryReadNetworkRoot(body[reader.Position..], out _, out var consumed);
+        status = NbtReader.TryReadNetworkRoot(body[reader.Position..], out var tag, out var consumed);
         if (status != DecodeStatus.Success)
         {
             var head = string.Join(' ', body.Slice(nbtStart, Math.Min(16, body.Length - nbtStart)).ToArray()
@@ -286,6 +284,7 @@ public static DecodeStatus TryRead(
         }
 
         reader.Skip(consumed);
+        record = new BlockEntityRecord((packedXz >> 4) & 0xF, y, packedXz & 0xF, typeId, tag);
         return DecodeStatus.Success;
     }
 }
