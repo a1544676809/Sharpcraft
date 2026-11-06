@@ -5,20 +5,17 @@ using Sharpcraft.Framework.Rendering;
 
 namespace Sharpcraft.Client.Render;
 
-/// <summary>Baby zombie/drowned/zombie villager/villager models.</summary>
+/// <summary>
+/// Baby zombie/drowned/zombie villager/villager models. Zombie, zombie villager and villager parts are declared with the
+/// <c>VanillaMeshDefinition</c> DSL (including nested child parts) and baked via <c>VanillaMeshBake.Bake</c> (T-674);
+/// the drowned outer copies and the variant copy layers are still built from those baked parts.
+/// </summary>
 public static class BabyModelDefinitionsHumanoid
 {
-    private static readonly EntityModelPart[] ZombieParts =
-    [
-        PlayerModelDefinition.FromVanilla("body", 0f, 17.5f, 0f, -2f, -2.5f, -1f, 4f, 5f, 2f, 16, 16),
-        PlayerModelDefinition.FromVanilla("head", 0f, 15.25f, 0f, -3f, -6.25f, -3f, 6f, 6f, 6f, 3, 3),
-        PlayerModelDefinition.FromVanillaChild("head_overlay", "head", 0f, 0f, 0f, -3f, -6.15f, -3f, 6f, 6f, 6f, 35, 3, grow: 0.25f),
-        PlayerModelDefinition.FromVanillaChild("hat", "head", 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-        PlayerModelDefinition.FromVanilla("right_arm", -3f, 15.5f, 0f, -1f, -0.5f, -1f, 2f, 5f, 2f, 36, 16),
-        PlayerModelDefinition.FromVanilla("left_arm", 3f, 15.5f, 0f, -1f, -0.5f, -1f, 2f, 5f, 2f, 28, 16),
-        PlayerModelDefinition.FromVanilla("right_leg", -1f, 20f, 0f, -1f, 0f, -1f, 2f, 4f, 2f, 8, 16),
-        PlayerModelDefinition.FromVanilla("left_leg", 1f, 20f, 0f, -1f, 0f, -1f, 2f, 4f, 2f, 0, 16)
-    ];
+    /// <summary>Declarative DSL tree for the baby zombie parts (T-674).</summary>
+    private static readonly VanillaMeshDefinition ZombieMesh = BuildZombieMesh();
+
+    private static readonly EntityModelPart[] ZombieParts = [.. VanillaMeshBake.Bake(ZombieMesh, 0, 0)];
 
     public static readonly EntityModelDefinition Zombie = new(
         "baby_zombie",
@@ -36,43 +33,25 @@ public static class BabyModelDefinitionsHumanoid
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/zombie/drowned_baby");
 
+    /// <summary>Declarative DSL tree for the baby zombie villager parts (T-674).</summary>
+    private static readonly VanillaMeshDefinition ZombieVillagerMesh = BuildZombieVillagerMesh();
+
     public static readonly EntityModelDefinition ZombieVillager = new(
         "baby_zombie_villager",
         64,
         64,
-        [
-            PlayerModelDefinition.FromVanilla("body", 0f, 18.75f, 0f, -2f, -2.75f, -1.5f, 4f, 5f, 3f, 0, 15),
-            PlayerModelDefinition.FromVanillaChild("body_overlay", "body", 0f, 0f, 0f, -2f, -2.75f, -1.5f, 4f, 6f, 3f, 16, 22, grow: 0.1f),
-            PlayerModelDefinition.FromVanilla("head", 0f, 16f, 0f, -4f, -8f, -3.5f, 8f, 8f, 7f, 0, 0),
-            PlayerModelDefinition.FromVanillaChild("hat", "head", 0f, -4f, 0f, -4f, -4f, -3.5f, 8f, 8f, 7f, 0, 31, grow: 0.3f),
-            PlayerModelDefinition.FromVanillaChild("hat_rim", "head", 0f, -4.5f, 0f, -7f, -0.5f, -6f, 14f, 1f, 12f, 0, 46),
-            PlayerModelDefinition.FromVanillaChild("nose", "head", 0f, -1f, -4f, -1f, -1f, -0.5f, 2f, 2f, 1f, 23, 0),
-            PlayerModelDefinition.FromVanilla("right_arm", -3f, 15.5f, 0f, -1f, -0.5f, -1f, 2f, 5f, 2f, 24, 15),
-            PlayerModelDefinition.FromVanilla("left_arm", 3f, 15.5f, 0f, -1f, -0.5f, -1f, 2f, 5f, 2f, 16, 15),
-            PlayerModelDefinition.FromVanilla("right_leg", -1f, 21.5f, 0f, -1f, -0.5f, -1f, 2f, 3f, 2f, 8, 23),
-            PlayerModelDefinition.FromVanilla("left_leg", 1f, 21.5f, 0f, -1f, -0.5f, -1f, 2f, 3f, 2f, 0, 23)
-        ],
+        [.. VanillaMeshBake.Bake(ZombieVillagerMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/zombie_villager/zombie_villager_baby");
+
+    /// <summary>Declarative DSL tree for the baby villager parts (T-674).</summary>
+    private static readonly VanillaMeshDefinition VillagerMesh = BuildVillagerMesh();
 
     public static readonly EntityModelDefinition Villager = new(
         "baby_villager",
         64,
         64,
-        [
-            PlayerModelDefinition.FromVanilla("arms", 0f, 17.5f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            PlayerModelDefinition.FromVanillaChild("right_hand", "arms", -3f, 1.4025f, -0.9599f, -1f, -2.4925f, -1.8401f, 2f, 4f, 2f, 36, 15, rotationX: -1.0472f),
-            PlayerModelDefinition.FromVanillaChild("right_hand_2", "right_hand", 0f, 0f, 0f, 5f, -2.4925f, -1.8401f, 2f, 4f, 2f, 16, 15),
-            PlayerModelDefinition.FromVanillaChild("middlearm_r1", "arms", 0f, 0.9024f, -1.8175f, -2f, -0.9924f, -0.9825f, 4f, 2f, 2f, 24, 17, rotationX: -1.0472f),
-            PlayerModelDefinition.FromVanilla("right_leg", -1f, 21.5f, 0f, -1f, -0.5f, -1f, 2f, 3f, 2f, 8, 23),
-            PlayerModelDefinition.FromVanilla("left_leg", 1f, 21.5f, 0f, -1f, -0.5f, -1f, 2f, 3f, 2f, 0, 23),
-            PlayerModelDefinition.FromVanilla("head", 0f, 16f, 0f, -4f, -8f, -3.5f, 8f, 8f, 7f, 0, 0),
-            PlayerModelDefinition.FromVanillaChild("hat", "head", 0f, -4f, 0f, -4f, -4f, -3.5f, 8f, 8f, 7f, 0, 30, grow: 0.3f),
-            PlayerModelDefinition.FromVanillaChild("hat_rim", "head", 0f, -4.5f, 0f, -7f, -0.5f, -6f, 14f, 1f, 12f, 0, 45),
-            PlayerModelDefinition.FromVanillaChild("nose", "head", 0f, -2f, -4f, -1f, 0f, -0.5f, 2f, 2f, 1f, 23, 0),
-            PlayerModelDefinition.FromVanilla("body", 0f, 18.75f, 0f, -2f, -2.75f, -1.5f, 4f, 5f, 3f, 0, 15),
-            PlayerModelDefinition.FromVanilla("bb_main", 0.5f, 24f, 0f, -2.5f, -8f, -1.5f, 4f, 6f, 3f, 16, 21, grow: 0.2f)
-        ],
+        [.. VanillaMeshBake.Bake(VillagerMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/villager/villager_baby");
 
@@ -130,5 +109,85 @@ public static class BabyModelDefinitionsHumanoid
         }
 
         return [.. parts];
+    }
+
+    private static VanillaMeshDefinition BuildZombieMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 17.5f, 0f),
+            new VanillaCubeDefinition("body", 16, 16, -2f, -2.5f, -1f, 4f, 5f, 2f));
+        var head = root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 15.25f, 0f),
+            new VanillaCubeDefinition("head", 3, 3, -3f, -6.25f, -3f, 6f, 6f, 6f));
+        head.AddOrReplaceChild("head_overlay", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("head_overlay", 35, 3, -3f, -6.15f, -3f, 6f, 6f, 6f, Grow: 0.25f));
+        head.AddOrReplaceChild("hat", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("hat", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f));
+        root.AddOrReplaceChild("right_arm", VanillaPartPose.Offset(-3f, 15.5f, 0f),
+            new VanillaCubeDefinition("right_arm", 36, 16, -1f, -0.5f, -1f, 2f, 5f, 2f));
+        root.AddOrReplaceChild("left_arm", VanillaPartPose.Offset(3f, 15.5f, 0f),
+            new VanillaCubeDefinition("left_arm", 28, 16, -1f, -0.5f, -1f, 2f, 5f, 2f));
+        root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-1f, 20f, 0f),
+            new VanillaCubeDefinition("right_leg", 8, 16, -1f, 0f, -1f, 2f, 4f, 2f));
+        root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(1f, 20f, 0f),
+            new VanillaCubeDefinition("left_leg", 0, 16, -1f, 0f, -1f, 2f, 4f, 2f));
+        return new VanillaMeshDefinition(root);
+    }
+
+    private static VanillaMeshDefinition BuildZombieVillagerMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        var body = root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 18.75f, 0f),
+            new VanillaCubeDefinition("body", 0, 15, -2f, -2.75f, -1.5f, 4f, 5f, 3f));
+        body.AddOrReplaceChild("body_overlay", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("body_overlay", 16, 22, -2f, -2.75f, -1.5f, 4f, 6f, 3f, Grow: 0.1f));
+        var head = root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 16f, 0f),
+            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -3.5f, 8f, 8f, 7f));
+        head.AddOrReplaceChild("hat", VanillaPartPose.Offset(0f, -4f, 0f),
+            new VanillaCubeDefinition("hat", 0, 31, -4f, -4f, -3.5f, 8f, 8f, 7f, Grow: 0.3f));
+        head.AddOrReplaceChild("hat_rim", VanillaPartPose.Offset(0f, -4.5f, 0f),
+            new VanillaCubeDefinition("hat_rim", 0, 46, -7f, -0.5f, -6f, 14f, 1f, 12f));
+        head.AddOrReplaceChild("nose", VanillaPartPose.Offset(0f, -1f, -4f),
+            new VanillaCubeDefinition("nose", 23, 0, -1f, -1f, -0.5f, 2f, 2f, 1f));
+        root.AddOrReplaceChild("right_arm", VanillaPartPose.Offset(-3f, 15.5f, 0f),
+            new VanillaCubeDefinition("right_arm", 24, 15, -1f, -0.5f, -1f, 2f, 5f, 2f));
+        root.AddOrReplaceChild("left_arm", VanillaPartPose.Offset(3f, 15.5f, 0f),
+            new VanillaCubeDefinition("left_arm", 16, 15, -1f, -0.5f, -1f, 2f, 5f, 2f));
+        root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-1f, 21.5f, 0f),
+            new VanillaCubeDefinition("right_leg", 8, 23, -1f, -0.5f, -1f, 2f, 3f, 2f));
+        root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(1f, 21.5f, 0f),
+            new VanillaCubeDefinition("left_leg", 0, 23, -1f, -0.5f, -1f, 2f, 3f, 2f));
+        return new VanillaMeshDefinition(root);
+    }
+
+    private static VanillaMeshDefinition BuildVillagerMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        var arms = root.AddOrReplaceChild("arms", VanillaPartPose.Offset(0f, 17.5f, 0f),
+            new VanillaCubeDefinition("arms", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f));
+        var rightHand = arms.AddOrReplaceChild("right_hand",
+            VanillaPartPose.OffsetAndRotation(-3f, 1.4025f, -0.9599f, -1.0472f, 0f, 0f),
+            new VanillaCubeDefinition("right_hand", 36, 15, -1f, -2.4925f, -1.8401f, 2f, 4f, 2f));
+        rightHand.AddOrReplaceChild("right_hand_2", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("right_hand_2", 16, 15, 5f, -2.4925f, -1.8401f, 2f, 4f, 2f));
+        arms.AddOrReplaceChild("middlearm_r1",
+            VanillaPartPose.OffsetAndRotation(0f, 0.9024f, -1.8175f, -1.0472f, 0f, 0f),
+            new VanillaCubeDefinition("middlearm_r1", 24, 17, -2f, -0.9924f, -0.9825f, 4f, 2f, 2f));
+        root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-1f, 21.5f, 0f),
+            new VanillaCubeDefinition("right_leg", 8, 23, -1f, -0.5f, -1f, 2f, 3f, 2f));
+        root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(1f, 21.5f, 0f),
+            new VanillaCubeDefinition("left_leg", 0, 23, -1f, -0.5f, -1f, 2f, 3f, 2f));
+        var head = root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 16f, 0f),
+            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -3.5f, 8f, 8f, 7f));
+        head.AddOrReplaceChild("hat", VanillaPartPose.Offset(0f, -4f, 0f),
+            new VanillaCubeDefinition("hat", 0, 30, -4f, -4f, -3.5f, 8f, 8f, 7f, Grow: 0.3f));
+        head.AddOrReplaceChild("hat_rim", VanillaPartPose.Offset(0f, -4.5f, 0f),
+            new VanillaCubeDefinition("hat_rim", 0, 45, -7f, -0.5f, -6f, 14f, 1f, 12f));
+        head.AddOrReplaceChild("nose", VanillaPartPose.Offset(0f, -2f, -4f),
+            new VanillaCubeDefinition("nose", 23, 0, -1f, 0f, -0.5f, 2f, 2f, 1f));
+        root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 18.75f, 0f),
+            new VanillaCubeDefinition("body", 0, 15, -2f, -2.75f, -1.5f, 4f, 5f, 3f));
+        root.AddOrReplaceChild("bb_main", VanillaPartPose.Offset(0.5f, 24f, 0f),
+            new VanillaCubeDefinition("bb_main", 16, 21, -2.5f, -8f, -1.5f, 4f, 6f, 3f, Grow: 0.2f));
+        return new VanillaMeshDefinition(root);
     }
 }
