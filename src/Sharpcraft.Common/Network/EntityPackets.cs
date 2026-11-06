@@ -43,6 +43,8 @@ public sealed record AddedEntity(
 /// <param name="Pitch">Pitch in degrees, when present.</param>
 /// <param name="HasRotation">True when the packet carried a rotation.</param>
 /// <param name="OnGround">Whether the entity reports standing on ground.</param>
+/// <param name="Ticks">Total ticks across all stepped deltas.</param>
+/// <param name="Steps">Per-step raw fixed-point deltas for <c>VecDelta.Stepped</c>; null for a linear delta.</param>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.network.protocol.game.ClientboundMoveEntityPacket", "ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundMoveEntityPacket.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full)]
 public readonly record struct EntityMove(
     int Id,
@@ -54,7 +56,12 @@ public readonly record struct EntityMove(
     float Pitch,
     bool HasRotation,
     bool OnGround,
-    int Ticks = 1);
+    int Ticks = 1,
+    IReadOnlyList<VecDeltaStep>? Steps = null);
+
+/// <summary>One raw <c>VecDelta.Stepped.DeltaStep</c> in fixed-point (1/4096 block) units.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.network.protocol.game.VecDelta.Stepped.DeltaStep", "ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/VecDelta.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full)]
+public readonly record struct VecDeltaStep(short DeltaX, short DeltaY, short DeltaZ, int Ticks);
 
 /// <summary>One absolute step of a <c>PositionPath.Stepped</c> (entity_position_sync).</summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.entity.PositionStep", "ref://mc-26.3-analysis/src/net/minecraft/world/entity/PositionStep.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full)]
@@ -213,6 +220,7 @@ public static class EntityPackets
         var deltaY = 0d;
         var deltaZ = 0d;
         var ticks = 1;
+        List<VecDeltaStep>? steps = null;
 
         if (hasPosition)
         {
@@ -224,7 +232,7 @@ public static class EntityPackets
             onGround = (properties & 1) != 0;
             var stepCount = properties >>> 1;
 
-            if (!TryReadVecDelta(ref reader, stepCount, out deltaX, out deltaY, out deltaZ, out ticks))
+            if (!TryReadVecDelta(ref reader, stepCount, out deltaX, out deltaY, out deltaZ, out ticks, out steps))
             {
                 return DecodeStatus.NeedMoreData;
             }
@@ -249,7 +257,7 @@ public static class EntityPackets
             pitch = AngleFromByte(pitchByte);
         }
 
-        move = new EntityMove(id, deltaX, deltaY, deltaZ, hasPosition, yaw, pitch, hasRotation, onGround, ticks);
+        move = new EntityMove(id, deltaX, deltaY, deltaZ, hasPosition, yaw, pitch, hasRotation, onGround, ticks, steps);
         return DecodeStatus.Success;
     }
 
@@ -447,13 +455,15 @@ public static class EntityPackets
         out double deltaX,
         out double deltaY,
         out double deltaZ,
-        out int ticks)
+        out int ticks,
+        out List<VecDeltaStep>? steps)
     {
         const double UnitsPerBlock = 4096.0;
         deltaX = 0d;
         deltaY = 0d;
         deltaZ = 0d;
         ticks = 1;
+        steps = null;
 
         if (stepCount <= 0)
         {
@@ -473,8 +483,9 @@ public static class EntityPackets
             return false;
         }
 
-        // Reference VecDelta.Stepped: each step is VarInt(ticks) + 3 shorts. We keep the total ticks so the
-        // interpolation queue can advance the step over the reference's per-step tick span.
+        // Reference VecDelta.Stepped: each step is VarInt(ticks) + 3 shorts. The per-step positions are absolute when
+        // decoded against the entity's VecDeltaCodec base, so keep every step instead of collapsing them to one delta.
+        steps = new List<VecDeltaStep>(stepCount);
         var totalTicks = 0;
         for (var step = 0; step < stepCount; step++)
         {
@@ -488,6 +499,7 @@ public static class EntityPackets
             deltaX += lx / UnitsPerBlock;
             deltaY += ly / UnitsPerBlock;
             deltaZ += lz / UnitsPerBlock;
+            steps.Add(new VecDeltaStep(lx, ly, lz, stepTicks));
         }
 
         ticks = totalTicks > 0 ? totalTicks : 1;

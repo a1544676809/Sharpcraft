@@ -273,6 +273,10 @@ public static class EntityModelLayerHelpers
                 TexturePath: "entity/equipment/wings/elytra",
                 TextureWidth: 64,
                 TextureHeight: 32,
+                UvWidth: 10,
+                UvHeight: 20,
+                UvDepth: 2,
+                YOffsetSelector: static state => state.IsCrouching ? -1.5f : 0f,
                 VisibleWhen: static state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4) is not null,
                 RotationSelector: static state => new System.Numerics.Vector3(-state.ElytraRotX, -state.ElytraRotY, state.ElytraRotZ)));
             result.Add(new EntityModelPart(
@@ -294,6 +298,10 @@ public static class EntityModelLayerHelpers
                 TexturePath: "entity/equipment/wings/elytra",
                 TextureWidth: 64,
                 TextureHeight: 32,
+                UvWidth: 10,
+                UvHeight: 20,
+                UvDepth: 2,
+                YOffsetSelector: static state => state.IsCrouching ? -1.5f : 0f,
                 VisibleWhen: static state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4) is not null,
                 RotationSelector: static state => new System.Numerics.Vector3(-state.ElytraRotX, state.ElytraRotY, -state.ElytraRotZ)));
             return [.. result];
@@ -313,6 +321,7 @@ public static class EntityModelLayerHelpers
             {
                 TextureWidth = 64,
                 TextureHeight = 32,
+                YOffsetSelector = static state => state.IsCrouching ? -3f : 0f,
                 VisibleWhen = static state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4) is not null,
                 RotationSelector = static state => new System.Numerics.Vector3(-state.ElytraRotX, -state.ElytraRotY, state.ElytraRotZ)
             });
@@ -324,6 +333,7 @@ public static class EntityModelLayerHelpers
             {
                 TextureWidth = 64,
                 TextureHeight = 32,
+                YOffsetSelector = static state => state.IsCrouching ? -3f : 0f,
                 VisibleWhen = static state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4) is not null,
                 RotationSelector = static state => new System.Numerics.Vector3(-state.ElytraRotX, state.ElytraRotY, -state.ElytraRotZ)
             });

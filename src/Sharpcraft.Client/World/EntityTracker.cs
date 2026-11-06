@@ -597,24 +597,52 @@ public sealed class EntityTracker
 
         entity.PushPrevious();
 
-        if (move.HasPosition)
-        {
-            // Reference VecDeltaCodec.decode: absolute = codecBase + delta (delta 0 keeps the axis), then base = end.
-            entity.TargetX = move.DeltaX != 0d ? entity.CodecBaseX + move.DeltaX : entity.CodecBaseX;
-            entity.TargetY = move.DeltaY != 0d ? entity.CodecBaseY + move.DeltaY : entity.CodecBaseY;
-            entity.TargetZ = move.DeltaZ != 0d ? entity.CodecBaseZ + move.DeltaZ : entity.CodecBaseZ;
-            entity.CodecBaseX = entity.TargetX;
-            entity.CodecBaseY = entity.TargetY;
-            entity.CodecBaseZ = entity.TargetZ;
-        }
-
-        if (move.HasRotation)
-        {
-            entity.TargetYaw = move.Yaw;
-            entity.TargetPitch = ClampPitch(move.Pitch);
-        }
-
         entity.OnGround = move.OnGround;
+        if (move.HasPosition && move.Steps is { Count: > 0 } steps)
+        {
+            // Reference VecDelta.Stepped.decode: decode each fixed-point delta against the running codec base, then feed
+            // every absolute step (with its own tick span) to SteppedInterpolationHandler.addSteps.
+            foreach (var step in steps)
+            {
+                entity.TargetX = step.DeltaX != 0 ? entity.CodecBaseX + (step.DeltaX / 4096.0) : entity.CodecBaseX;
+                entity.TargetY = step.DeltaY != 0 ? entity.CodecBaseY + (step.DeltaY / 4096.0) : entity.CodecBaseY;
+                entity.TargetZ = step.DeltaZ != 0 ? entity.CodecBaseZ + (step.DeltaZ / 4096.0) : entity.CodecBaseZ;
+                entity.CodecBaseX = entity.TargetX;
+                entity.CodecBaseY = entity.TargetY;
+                entity.CodecBaseZ = entity.TargetZ;
+                var stepTicks = Math.Clamp(step.Ticks > 0 ? step.Ticks : 1, 1, 20);
+                entity.EnqueueInterpolation(entity.TargetX, entity.TargetY, entity.TargetZ,
+                    move.HasRotation ? move.Yaw : entity.TargetYaw,
+                    move.HasRotation ? ClampPitch(move.Pitch) : entity.TargetPitch,
+                    stepTicks);
+            }
+        }
+        else
+        {
+            if (move.HasPosition)
+            {
+                // Reference VecDeltaCodec.decode: absolute = codecBase + delta (delta 0 keeps the axis), then base = end.
+                entity.TargetX = move.DeltaX != 0d ? entity.CodecBaseX + move.DeltaX : entity.CodecBaseX;
+                entity.TargetY = move.DeltaY != 0d ? entity.CodecBaseY + move.DeltaY : entity.CodecBaseY;
+                entity.TargetZ = move.DeltaZ != 0d ? entity.CodecBaseZ + move.DeltaZ : entity.CodecBaseZ;
+                entity.CodecBaseX = entity.TargetX;
+                entity.CodecBaseY = entity.TargetY;
+                entity.CodecBaseZ = entity.TargetZ;
+            }
+
+            if (move.HasRotation)
+            {
+                entity.TargetYaw = move.Yaw;
+                entity.TargetPitch = ClampPitch(move.Pitch);
+            }
+
+            var moveTicks = move.HasPosition && move.Ticks > 0
+                ? Math.Clamp(move.Ticks, 1, 20)
+                : Math.Clamp((int)(GameTime - entity.LastMoveTick), 1, InterpolationSteps);
+            entity.EnqueueInterpolation(entity.TargetX, entity.TargetY, entity.TargetZ, entity.TargetYaw, entity.TargetPitch, moveTicks);
+        }
+
+        entity.LastMoveTick = GameTime;
         entity.LastDeltaY = move.DeltaY;
         entity.MovePackets++;
         if (Math.Abs(move.DeltaY) > 1e-6)
@@ -622,11 +650,6 @@ public sealed class EntityTracker
             entity.NonZeroDeltaYCount++;
             entity.MaxAbsDeltaY = Math.Max(entity.MaxAbsDeltaY, Math.Abs(move.DeltaY));
         }
-        var moveTicks = move.HasPosition && move.Ticks > 0
-            ? Math.Clamp(move.Ticks, 1, 20)
-            : Math.Clamp((int)(GameTime - entity.LastMoveTick), 1, InterpolationSteps);
-        entity.LastMoveTick = GameTime;
-        entity.EnqueueInterpolation(entity.TargetX, entity.TargetY, entity.TargetZ, entity.TargetYaw, entity.TargetPitch, moveTicks);
         MovesApplied++;
         return true;
     }

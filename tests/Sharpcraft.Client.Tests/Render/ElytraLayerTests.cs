@@ -47,6 +47,10 @@ public sealed class ElytraLayerTests
         Assert.Equal(-2.5f, left.PivotX);
         Assert.Equal(body.CentreZ + 2f, left.PivotZ);
         Assert.Equal(0.5f, left.Grow);
+        // UV sampling uses the un-scaled CubeDefinition box: MeshTransformer.scaling only scales the root pose.
+        Assert.Equal(10, left.UvWidth);
+        Assert.Equal(20, left.UvHeight);
+        Assert.Equal(2, left.UvDepth);
     }
 
     [Fact]

@@ -102,14 +102,15 @@
 - `docs/analysis/render/entity-equipment.md`
 - `docs/specs/network/entity-sync.md`
 - `docs/modules/entity-render.md`
-## 10. Elytra 翼层（T-648..T-652 / T-662）
+## 10. Elytra 翼层（T-648..T-652 / T-662 / T-663）
 
 ### 10.1 原版 26.3 源码映射表
 
 | 本模块概念 / 方法 | 原版类与方法路径（`ref://...`） | 精确常量 / 公式 / 树结构 | 位序 / 正负号 / 色彩空间约定 | 缺省 / 越界回退值 |
 | --- | --- | --- | --- | --- |
 | `WithElytra` 成人翼盒 | `ref://mc-26.3-analysis/src/net/minecraft/client/model/object/equipment/ElytraModel.java#createLayer` | 左翼 `texOffs(22,0).addBox(-10,0,0,10,20,2,new CubeDeformation(1.0F))`，`PartPose.offsetAndRotation(5,0,0, π/12, 0, −π/12)`；右翼 `mirror()`、`addBox(0,0,0,10,20,2,1.0F)`、pivot −5、zRot +π/12 | 模型 y 向下、x 向右；`FromVanilla(modelHeight=bodyTop)` 转换：`centreX=−(pivotX+minX+w/2)`、`bottom=modelHeight−(pivotY+minY+h)`、`centreZ=pivotZ+minZ+d/2` | 胸槽无 elytra 时 `VisibleWhen` 不通过 |
-| `WithElytra` 婴儿翼盒 | 同上 + `ElytraModel.BABY_TRANSFORMER = MeshTransformer.scaling(0.5F)` | `MeshTransformer.scaling(0.5)` = `pose.scaled(0.5).translated(0, 24.016×(1−0.5)=12.008, 0)`：尺寸 10×20×2→5×10×1，pivot ±5→±2.5，grow 1→0.5；y-down 翼盒 12.008..22.008、pivot 12.008；`WingsLayer` 的 +0.125 格平移不缩放 | 换成 y-up（modelHeight 24）：`Bottom≈2`、`PivotY≈12`；`CentreZ=body.CentreZ+2.5`、`PivotZ=body.CentreZ+2` | `Decorate` 只为 humanoid 附加 |
+| `WithElytra` 婴儿翼盒 | 同上 + `ElytraModel.BABY_TRANSFORMER = MeshTransformer.scaling(0.5F)` | `MeshTransformer.scaling(0.5)` = `pose.scaled(0.5).translated(0, 24.016×(1−0.5)=12.008, 0)`，且 `MeshDefinition.transformed` **只改 root PartPose，子 CubeDefinition 保持 10×20×2**；渲染几何因此为 5×10×1，pivot ±5→±2.5，grow 1→0.5；y-down 翼盒 12.008..22.008、pivot 12.008；`WingsLayer` 的 +0.125 格平移不缩放 | 换成 y-up（modelHeight 24）：`Bottom≈2`、`PivotY≈12`；UV 采样必须仍是 `UvWidth=10, UvHeight=20, UvDepth=2`；`CentreZ=body.CentreZ+2.5`、`PivotZ=body.CentreZ+2` | `Decorate` 只为 humanoid 附加 |
+| `EntityModelPart` UV 解耦 | `ref://.../MeshDefinition.java#transformed` | 几何尺寸（`Width/Height/Depth`）与 UV 采样盒尺寸分离；`UvWidth/UvHeight/UvDepth` 为 0 时回退到几何尺寸 | 一律使用 `ModelPart.Cube` 的原始 CubeDefinition 尺寸，缩放只作用于渲染变换 | 未设置时行为与旧版一致 |
 | `WingsLayer.submit` 平移 | `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/layers/WingsLayer.java#submit` | `poseStack.translate(0, 0, 0.125F)` = +2 模型像素；`state.isBaby ? elytraBabyModel : elytraModel` | z 正方向朝背后 | 无 `EQUIPPABLE` 或 `assetId` 为空时不绘制 |
 | `ElytraModel.setupAnim` 旋转 | `ref://mc-26.3-analysis/src/net/minecraft/client/model/object/equipment/ElytraModel.java#setupAnim` | 左翼 `y = crouching ? 3.0 : 0`；`xRot=state.elytraRotX`、`yRot=state.elytraRotY`、`zRot=state.elytraRotZ`；右翼 yRot/zRot 取反 | 左 `(−X,−Y,+Z)` / 右 `(−X,+Y,−Z)`（`RotationSelector`） | 无状态时默认 (π/12, 0, −π/12) |
 | `ElytraAnimationState` 姿态驱动 | `ref://mc-26.3-analysis/src/net/minecraft/world/entity/ElytraAnimationState.java` | standing=(π/12,0,−π/12)；crouching=(2π/9,0.0873,−π/4)；fallflying 按 `ratio=1−(−normalizedVelocity.y)^1.5` 在 (π/12,−π/12)→(π/9,−π/2) 插值；每 tick `0.3*(target−cur)` | 弧度；x/y/z 轴 | 速度长度 < 1e−6 时 ratio=1 |
@@ -121,13 +122,16 @@
 `tests/Sharpcraft.Client.Tests/Render/ElytraLayerTests.cs`、`ElytraWingGeometryTests.cs`。
 
 1. **成人翼部件**：`Width=10, Height=20, Depth=2, Grow=1, CentreX=0, Bottom=bodyTop−20, PivotY=bodyTop, PivotZ=body.CentreZ+2, CentreZ=body.CentreZ+3, tex(22,0)/64×32`。
-2. **婴儿翼部件**：`Width=5, Height=10, Depth=1, Grow=0.5, CentreX=0, Bottom=2, PivotY=12, PivotX=∓2.5, PivotZ=body.CentreZ+2, CentreZ=body.CentreZ+2.5`（由 `MeshTransformer.scaling(0.5)` 的 12.008 y 偏移换算，不再是 `bodyTop−10`）。
+2. **婴儿翼部件**：`Width=5, Height=10, Depth=1, Grow=0.5, CentreX=0, Bottom=2, PivotY=12, PivotX=∓2.5, PivotZ=body.CentreZ+2, CentreZ=body.CentreZ+2.5`（由 `MeshTransformer.scaling(0.5)` 的 12.008 y 偏移换算，不再是 `bodyTop−10`）；`UvWidth=10, UvHeight=20, UvDepth=2`，六个面 UV 与成人完全一致。
 3. **成人网格角点**：两翼各为同一 `x[−6,6]`、`y[bodyTop−21, bodyTop+1]`、`z[body.CentreZ+1, body.CentreZ+5]` 的 10×20×2 外扩盒（测试以 bodyTop=24 断言 y[3,25]、z[1,5]），每翼 6 面 ×4 角点。
 4. **UV 表**：六面按 `ModelPart.Polygon` 取 `u0=22,u1=24,u2=34,u3=36,u4=46,v0=0,v1=2,v2=22`；右翼 WEST/EAST 的 u 段按镜像交换为 22..24 / 34..36。
-5. **婴儿网格**：胸槽 elytra 的 baby zombie 产出 2 翼 ×6 面 ×4 角点 = 48 顶点（`VertexFloats/14=48`）。
+5. **婴儿网格**：胸槽 elytra 的 baby zombie 产出 2 翼 ×6 面 ×4 角点 = 48 顶点（`VertexFloats/14=48`）；六个面的 UV 必须与成人逐值相同（`BabyWingsSampleTheSameReferenceTexelsAsTheAdultModel`）。
+6. **潜行偏移**：`ElytraModel.setupAnim` 的 `leftWing.y += 3` 在婴儿 root 0.5 缩放下实际下移 1.5 模型像素、成人下移 3 像素（`CrouchingDropsTheBabyWingsByTheRootScaledReferenceOffset`）。
 6. **姿态**：standing `elytraRot=(π/12,0,−π/12)` 时两翼形成在 x=0 相交的浅 V，左右大面法线 X 分量相反且非零（非共面）；crouch 时 y=3px。
 
 ### 10.3 已知偏差
 
 - 右翼镜像的 WEST/EAST 面 u 段修复（T-649）为通用 cube-meshing 行为，已由几何测试锁定。
 - 两翼在参考模型中为**全宽重叠**的镜像同形翼板；曾按“各占半边”实现，属于对参考的误读，已于 T-650/T-662 收敛回参考几何。
+- **T-663 修正**：初版 T-662 把几何尺寸和 UV 采样盒一起缩小（5×10×1），导致 `u4/v2` 从 46/22 缩到 34/11、采样到透明区；现在 `EntityModelPart` 的 `UvWidth/UvHeight/UvDepth` 保持 10/20/2，几何仍用 5×10×1，并补上潜行 1.5px/3px 位移。
+- 婴儿翼 `PivotY=12` 来自 `MeshTransformer.scaling` 的 12.008 y 偏移；`BabyZombieModel` 肩线在 9px，翼上缘因此会进入头部后侧 3px（参考同一变换亦然）。如果实机确认原版没有该叠压，再单独登记受控偏差调整。

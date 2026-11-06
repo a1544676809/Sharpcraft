@@ -48,7 +48,11 @@ public readonly record struct EntityModelPart(
     Func<EntityRenderState, string?>? TextureSelector = null,
     string? PoseSource = null,
     System.Numerics.Vector3? GrowXyz = null,
-    Func<EntityRenderState, System.Numerics.Vector3>? RotationSelector = null);
+    Func<EntityRenderState, System.Numerics.Vector3>? RotationSelector = null,
+    int UvWidth = 0,
+    int UvHeight = 0,
+    int UvDepth = 0,
+    Func<EntityRenderState, float>? YOffsetSelector = null);
 
 /// <summary>
 /// An outer skin layer around one base cuboid, expressed as a uniform growth and its own texture offset.

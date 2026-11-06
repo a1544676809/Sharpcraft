@@ -193,6 +193,16 @@ public sealed class EntityModelMesher
                     };
                 }
 
+                if (part.YOffsetSelector is { } yOffsetSelector)
+                {
+                    var yOffset = yOffsetSelector(entity);
+                    part = part with
+                    {
+                        Bottom = part.Bottom + yOffset,
+                        PivotY = part.PivotY + yOffset
+                    };
+                }
+
                 var partTextureWidth = part.TextureWidth > 0 ? part.TextureWidth : model.TextureWidth;
                 var partTextureHeight = part.TextureHeight > 0 ? part.TextureHeight : model.TextureHeight;
 
@@ -288,9 +298,9 @@ public sealed class EntityModelMesher
         ref int vertexFloats,
         ref int indexCount)
     {
-        var d = part.Depth;
-        var w = part.Width;
-        var h = part.Height;
+        var d = part.UvDepth > 0 ? part.UvDepth : part.Depth;
+        var w = part.UvWidth > 0 ? part.UvWidth : part.Width;
+        var h = part.UvHeight > 0 ? part.UvHeight : part.Height;
         var tx = part.TextureX;
         var ty = part.TextureY;
 

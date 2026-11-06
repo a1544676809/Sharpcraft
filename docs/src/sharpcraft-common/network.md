@@ -66,5 +66,6 @@ serverbound 可用"发坏包看服务端报错"探针验证；**clientbound 不�
 | Sharpcraft.Common | Sharpcraft.Common.Network.ServerAddressResolver | Mirror | Partial | net.minecraft.client.multiplayer.resolver.ServerAddressResolver | ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/resolver/ServerAddressResolver.java | auto-resolved by name; verify |
 | Sharpcraft.Common | Sharpcraft.Common.Network.VarInt | Mirror | Partial | net.minecraft.network.VarInt | ref://mc-26.3-analysis/src/net/minecraft/network/VarInt.java | auto-resolved by name; verify |
 | Sharpcraft.Common | Sharpcraft.Common.Network.VarLong | Mirror | Partial | net.minecraft.network.VarLong | ref://mc-26.3-analysis/src/net/minecraft/network/VarLong.java | auto-resolved by name; verify |
+| Sharpcraft.Common | Sharpcraft.Common.Network.VecDeltaStep | Mirror | Full | net.minecraft.network.protocol.game.VecDelta.Stepped.DeltaStep | ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/VecDelta.java |  |
 
 <!-- END GENERATED: class-map -->

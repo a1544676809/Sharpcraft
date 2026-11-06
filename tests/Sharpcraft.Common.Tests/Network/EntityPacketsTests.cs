@@ -127,7 +127,7 @@ public sealed class EntityPacketsTests
     }
 
     [Fact]
-    public void ASteppedDeltaSumsItsSteps()
+    public void ASteppedDeltaKeepsItsPerStepFixedPointDeltas()
     {
         Span<byte> buffer = stackalloc byte[48];
         var writer = new PayloadWriter(buffer);
@@ -146,6 +146,12 @@ public sealed class EntityPacketsTests
 
         Assert.Equal(DecodeStatus.Success, status);
         Assert.Equal(1.0, move.DeltaX, 4);
+        Assert.NotNull(move.Steps);
+        Assert.Equal(2, move.Steps!.Count);
+        Assert.Equal(2048, move.Steps[0].DeltaX);
+        Assert.Equal(1, move.Steps[0].Ticks);
+        Assert.Equal(2048, move.Steps[1].DeltaX);
+        Assert.Equal(2, move.Steps[1].Ticks);
     }
 
     [Fact]

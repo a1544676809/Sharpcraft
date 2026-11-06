@@ -40,11 +40,12 @@ updated: 2026-11-06
 
 ## 已完成（近期）
 
-1. **T-662 Elytra baby 收尾（2026-11-06）**：`ElytraModel.BABY_TRANSFORMER = MeshTransformer.scaling(0.5F)` 的 scale 后 y 偏移 `24.016×(1−0.5)=12.008` 已计入，婴儿翼盒为参考全宽 5×10×1（grow 0.5），y-up `Bottom=2`、`PivotY=12`、`PivotX=∓2.5`、`CentreZ=body.CentreZ+2.5`；`Kind=Elytra`、临时诊断全部删除；13 项 Elytra 测试通过。
-2. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
-3. **T-648..T-650 / T-651..T-653 渲染与解耦（2026-11-05~06）**：Elytra 翼盒与 UV 原版等价、双翼镜像全宽；流体面剔除修复（玻璃后水可见）；云 OIT depth-bounds 写深度；`Sharpcraft.Assets` 分层 + 启动器/客户端解耦（ADR-0026/0027）。
-4. **实体模型/动画批量落地（2026-11-02~05）**：全部 baby 模型族、villager/zombie/horse 变体、cat/wolf 项圈、panda 基因、大量动画 provider 与测试。
-5. **协议与渲染长尾（2026-11-01~05）**：Play Clientbound 覆盖审计 + P0/P1 包批次（T-642..T-647）；反相 Z 迁移；参考 OIT 云/流体；天空盘逐像素近似。
+1. **T-662 / T-663 Elytra baby 收尾（2026-11-06）**：`ElytraModel.BABY_TRANSFORMER = MeshTransformer.scaling(0.5F)` 的 scale 后 y 偏移 `24.016×(1−0.5)=12.008` 已计入（`Bottom=2`、`PivotY=12`）；**T-663 修复 UV**：`MeshDefinition.transformed` 只改 root pose，子 CubeDefinition 仍 10×20×2，`EntityModelPart.UvWidth/UvHeight/UvDepth=10/20/2` 保持与成人相同采样；补 `YOffsetSelector` crouch 位移（婴儿 1.5px / 成人 3px）。15 项 Elytra 测试通过。
+2. **T-664 VecDelta.Stepped（2026-11-06）**：`EntityMove` 携带逐步 fixed-point delta，`EntityTracker.ApplyMove` 逐 step 解码并按其 ticks 入队，不再丢失多步轨迹。
+3. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
+4. **T-648..T-650 / T-651..T-653 渲染与解耦（2026-11-05~06）**：Elytra 翼盒与 UV 原版等价、双翼镜像全宽；流体面剔除修复（玻璃后水可见）；云 OIT depth-bounds 写深度；`Sharpcraft.Assets` 分层 + 启动器/客户端解耦（ADR-0026/0027）。
+5. **实体模型/动画批量落地（2026-11-02~05）**：全部 baby 模型族、villager/zombie/horse 变体、cat/wolf 项圈、panda 基因、大量动画 provider 与测试。
+6. **协议与渲染长尾（2026-11-01~05）**：Play Clientbound 覆盖审计 + P0/P1 包批次（T-642..T-647）；反相 Z 迁移；参考 OIT 云/流体；天空盘逐像素近似。
 
 ## 阻塞项
 

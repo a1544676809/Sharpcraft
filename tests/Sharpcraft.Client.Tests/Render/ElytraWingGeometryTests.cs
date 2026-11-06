@@ -34,14 +34,16 @@ public sealed class ElytraWingGeometryTests
     private static void AssertClose(float expected, float actual) =>
         Assert.True(MathF.Abs(expected - actual) <= 1e-3f, $"expected {expected}, actual {actual}");
 
-    private static (Vector3 Pos, Vector2 UvPx)[] WingVertices()
+    private static (Vector3 Pos, Vector2 UvPx)[] WingVertices(bool baby = false, bool crouching = false)
     {
         var items = ItemRegistry.LoadEmbedded();
         var elytraId = items.GetId(Identifier.Parse("minecraft:elytra"));
         Assert.True(elytraId >= 0, "elytra item id missing from embedded registry");
 
         var state = new EntityRenderState(1, ZombieTypeId, 0f, 0f, 0f, 0f, 0f,
-            Equipment: new EntityEquipment(-1, -1, -1, -1, elytraId, -1, -1, -1));
+            Equipment: new EntityEquipment(-1, -1, -1, -1, elytraId, -1, -1, -1),
+            IsBaby: baby,
+            IsCrouching: crouching);
         var layers = new EntityModelMesher().BuildLayers(
             [state], new SpriteRect(0, 0, 64, 32, 1), 64, 64, variants: EntityVariantTable.Builtin);
         var elytra = Assert.Single(layers, layer => layer.Kind == EntityGeometryLayerKind.Elytra);
@@ -192,6 +194,47 @@ public sealed class ElytraWingGeometryTests
 
         AssertClose(1.492f * Px, minY);
         AssertClose(12.492f * Px, maxY);
+    }
+
+    [Fact]
+    public void BabyWingsSampleTheSameReferenceTexelsAsTheAdultModel()
+    {
+        // ELYTRA_BABY scales only the root pose; CubeDefinition dimensions stay 10x20x2, so the six face UV rectangles
+        // must be byte-for-byte identical to the adult wings even though the rendered boxes are half-sized.
+        var adult = WingVertices();
+        var baby = WingVertices(baby: true);
+        Assert.Equal(48, baby.Length);
+        Assert.Equal(adult.Length, baby.Length);
+        for (var i = 0; i < adult.Length; i++)
+        {
+            AssertClose(adult[i].UvPx.X, baby[i].UvPx.X);
+            AssertClose(adult[i].UvPx.Y, baby[i].UvPx.Y);
+        }
+    }
+
+    [Fact]
+    public void CrouchingDropsTheBabyWingsByTheRootScaledReferenceOffset()
+    {
+        // ElytraModel.setupAnim sets leftWing.y = 3.0 in local wing space; the ELYTRA_BABY root scale 0.5 makes that a
+        // 1.5 model-pixel drop. The adult wing drops the full 3 pixels.
+        var adultStanding = WingVertices();
+        var adultCrouching = WingVertices(crouching: true);
+        var babyStanding = WingVertices(baby: true);
+        var babyCrouching = WingVertices(baby: true, crouching: true);
+
+        static float MinY((System.Numerics.Vector3 Pos, System.Numerics.Vector2 UvPx)[] vertices)
+        {
+            var min = float.MaxValue;
+            foreach (var vertex in vertices)
+            {
+                min = MathF.Min(min, vertex.Pos.Y);
+            }
+
+            return min;
+        }
+
+        AssertClose(MinY(adultStanding) - MinY(adultCrouching), 3f * Px);
+        AssertClose(MinY(babyStanding) - MinY(babyCrouching), 1.5f * Px);
     }
 
     [Fact]
