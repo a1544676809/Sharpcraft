@@ -7,7 +7,9 @@
 
 <!-- BEGIN GENERATED: docs/src -->
 
-（本目录暂无文档。）
+| 文档 | 摘要 | 状态 | 最后更新 |
+| --- | --- | --- | --- |
+| [`sharpcraft-assets.md`](sharpcraft-assets.md) | 底层资源包栈、pack 格式、索引对象与只读来源；只依赖 Sharpcraft.Common | 已实现 | 2026-11-06 |
 
 子目录：
 

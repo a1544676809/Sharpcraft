@@ -3,7 +3,7 @@
 
 using Sharpcraft.Common.Identifiers;
 
-namespace Sharpcraft.Client.Assets;
+namespace Sharpcraft.Assets;
 
 /// <summary>
 /// The one place resources are read from (docs/analysis/assets/resource-pack-stack.md).

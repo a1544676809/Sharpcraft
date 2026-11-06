@@ -12,7 +12,7 @@ namespace Sharpcraft.Architecture.Tests;
 /// </summary>
 public sealed class DiagnosticsSeparationTests
 {
-    private static readonly string[] GameAssemblies = ["Sharpcraft.Framework", "Sharpcraft.Client", "Sharpcraft.Common"];
+    private static readonly string[] GameAssemblies = ["Sharpcraft.Framework", "Sharpcraft.Client", "Sharpcraft.Common", "Sharpcraft.Assets"];
 
     [Fact]
     public void TheGameAssembliesReadNoEnvironmentVariables()

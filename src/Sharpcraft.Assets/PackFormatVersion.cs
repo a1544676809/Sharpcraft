@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
-namespace Sharpcraft.Client.Assets;
+namespace Sharpcraft.Assets;
 
 /// <summary>
 /// A pack format number, major plus the minor that was introduced with 25w31a

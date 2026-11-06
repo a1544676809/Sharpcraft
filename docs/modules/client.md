@@ -13,9 +13,11 @@
 
 ## 1. 侧别归属与依赖
 
-- 游戏逻辑 **Client** 侧；依赖 `Sharpcraft.Common` 与 `Sharpcraft.Framework`。
+- 游戏逻辑 **Client** 侧；依赖 `Sharpcraft.Common`、`Sharpcraft.Assets`（底层资源包/索引 IO）与 `Sharpcraft.Framework`。
 - **禁止**依赖 `Sharpcraft.Launcher`（外围宿主）与 `Sharpcraft.Auth`（认证库属宿主外围）。架构测试强制。
 - 在线 join 的 HTTP 交互由客户端内的 `GameConnector` 直接完成（协议层），不引入 `Auth` 依赖。
+- 资源栈分层（ADR-0027）：内置 jar 包（`--pack`）在下，外部索引只读叠加（`--assetsDir`+`--assetIndex`）在上，
+  用户资源包（`--resourcePackDir`）最上；非 `en_us` 语言与音频由索引叠加提供。
 
 ## 2. 游戏入口（`Program.Main`）
 

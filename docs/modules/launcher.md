@@ -30,8 +30,9 @@
 
 ## 2. 侧别归属
 
-- 外围宿主层。可引用 `Auth`、`Framework`、`Common`；`Common`/`Client`/`Server` MUST NOT 引用它（架构测试已强制，ADR-0026 增补）。
-- 为使开发/诊断工具可复用客户端游戏库，启动器**仅对这些工具**引用 `Sharpcraft.Client`（`InternalsVisibleTo`）；产品启动路径只按可执行路径 `spawn`，不引用其类型。客户端本体不依赖启动器。
+- 外围宿主层。可引用 `Auth`、`Framework`、`Common`、`Assets`；`Common`/`Client`/`Server` MUST NOT 引用它（架构测试已强制，ADR-0026 增补）。
+- **资产打包与自检**改用底层库 `Sharpcraft.Assets`（ADR-0027），不再为了复用资源栈而借道 `Sharpcraft.Client`。
+- 为使开发/诊断工具可复用客户端游戏库，启动器**仅对这些工具**引用 `Sharpcraft.Client`（`InternalsVisibleTo`）；产品启动路径只按可执行路径 `spawn`，不引用其类型。客户端本体不依赖启动器（R-025 残余见 ADR-0027 §5）。
 
 ## 3. 命令契约
 

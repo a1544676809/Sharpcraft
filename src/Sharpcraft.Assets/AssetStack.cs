@@ -3,7 +3,7 @@
 
 using Sharpcraft.Common.Identifiers;
 
-namespace Sharpcraft.Client.Assets;
+namespace Sharpcraft.Assets;
 
 /// <summary>How a missing resource is treated (docs/modules/asset-resolution.md §6).</summary>
 public enum MissingResourcePolicy

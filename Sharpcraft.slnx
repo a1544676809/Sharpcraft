@@ -23,6 +23,7 @@
     <Platform Name="x64" />
   </Configurations>
   <Folder Name="/src/">
+    <Project Path="src/Sharpcraft.Assets/Sharpcraft.Assets.csproj" />
     <Project Path="src/Sharpcraft.Auth/Sharpcraft.Auth.csproj" />
     <Project Path="src/Sharpcraft.Client/Sharpcraft.Client.csproj" />
     <Project Path="src/Sharpcraft.Common/Sharpcraft.Common.csproj" />

@@ -3,7 +3,7 @@
 
 using Sharpcraft.Common.Identifiers;
 
-namespace Sharpcraft.Client.Assets;
+namespace Sharpcraft.Assets;
 
 /// <summary>
 /// Exposes one installed resource pack as an asset source (docs/analysis/assets/resource-pack-stack.md).

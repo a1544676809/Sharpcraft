@@ -24,6 +24,7 @@ public sealed class AssemblyBoundaryTests
     private const string Auth = "Sharpcraft.Auth";
     private const string Launcher = "Sharpcraft.Launcher";
     private const string DocsIndexer = "Sharpcraft.Docs.Indexer";
+    private const string Assets = "Sharpcraft.Assets";
 
     [Theory]
     [InlineData(Client, Server)]
@@ -51,7 +52,23 @@ public sealed class AssemblyBoundaryTests
     [InlineData(Common, Launcher)]
     [InlineData(Common, Auth)]
     [InlineData(Common, Framework)]
+    [InlineData(Common, Assets)]
     public void CommonMustNotReferenceUpperLayers(string assemblyName, string forbidden)
+    {
+        Assert.DoesNotContain(forbidden, DependenciesOf(assemblyName));
+    }
+
+    /// <summary>
+    /// ADR-0027: the low-level asset library depends only on Common. It must never pull the engine, the game, or the host
+    /// back in, otherwise the launcher could not reuse it without also loading a game assembly.
+    /// </summary>
+    [Theory]
+    [InlineData(Assets, Framework)]
+    [InlineData(Assets, Client)]
+    [InlineData(Assets, Launcher)]
+    [InlineData(Assets, Auth)]
+    [InlineData(Assets, Server)]
+    public void AssetsMustNotReferenceUpperLayers(string assemblyName, string forbidden)
     {
         Assert.DoesNotContain(forbidden, DependenciesOf(assemblyName));
     }

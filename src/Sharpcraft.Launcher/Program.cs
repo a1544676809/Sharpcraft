@@ -547,7 +547,7 @@ internal static class Program
             var indexPath = Path.Combine(assetsDirectory, "indexes", assetIndexId + ".json");
             if (File.Exists(indexPath))
             {
-                stack.Add(OfficialObjectsSource.Open(indexPath, assetIndexId));
+                stack.Add(IndexedAssetSource.Open(indexPath, assetIndexId));
             }
             else
             {

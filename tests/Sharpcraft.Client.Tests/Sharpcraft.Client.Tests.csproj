@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Using Include="Sharpcraft.Assets" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Sharpcraft.Assets\Sharpcraft.Assets.csproj" />
     <ProjectReference Include="..\..\src\Sharpcraft.Client\Sharpcraft.Client.csproj" />
   </ItemGroup>
 

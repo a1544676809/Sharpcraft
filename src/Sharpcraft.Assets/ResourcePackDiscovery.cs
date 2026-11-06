@@ -3,7 +3,7 @@
 
 using System.IO.Compression;
 
-namespace Sharpcraft.Client.Assets;
+namespace Sharpcraft.Assets;
 
 /// <summary>
 /// Finds the packs a player has installed (docs/analysis/assets/resource-pack-stack.md).

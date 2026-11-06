@@ -4,7 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Sharpcraft.Client.Assets;
+namespace Sharpcraft.Assets;
 
 /// <summary>One payload entry recorded in the pack manifest.</summary>
 /// <param name="Name">Path inside the pack, identical to the jar entry name.</param>

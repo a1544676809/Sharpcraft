@@ -3,7 +3,7 @@
 
 using System.IO.Compression;
 
-namespace Sharpcraft.Client.Assets;
+namespace Sharpcraft.Assets;
 
 /// <summary>Whether a pack is a folder or an archive.</summary>
 public enum ResourcePackKind

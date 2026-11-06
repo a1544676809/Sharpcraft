@@ -206,7 +206,7 @@ internal static class FrameCommand
     /// <param name="stack">Asset stack to read from.</param>
     /// <param name="reference">Identifier such as <c>minecraft:include/space</c>.</param>
     private static string? ReadFontReference(
-        Sharpcraft.Client.Assets.ResourceManager resources,
+        Sharpcraft.Assets.ResourceManager resources,
         string reference)
     {
         var colon = reference.IndexOf(':');
@@ -235,7 +235,7 @@ internal static class FrameCommand
     /// </summary>
     /// <param name="resources">Session resource manager.</param>
     internal static Sharpcraft.Common.Localization.LanguageTable PrepareLanguage(
-        Sharpcraft.Client.Assets.ResourceManager resources)
+        Sharpcraft.Assets.ResourceManager resources)
     {
         ArgumentNullException.ThrowIfNull(resources);
 
@@ -291,7 +291,7 @@ internal static class FrameCommand
     /// One manager per session, as the reference keeps one resource manager. Packs are discovered once here, so the font,
     /// the tooltip sprites and the language table all see the same overrides and a reload has a single place to rebuild.
     /// </remarks>
-    internal static Sharpcraft.Client.Assets.ResourceManager CreateResourceManager()
+    internal static Sharpcraft.Assets.ResourceManager CreateResourceManager()
     {
         var (stack, count) = BuildStack();
 
@@ -303,7 +303,7 @@ internal static class FrameCommand
         }
 
         // The factory lets a reload rebuild the same stack later without any loader knowing how it was built.
-        return new Sharpcraft.Client.Assets.ResourceManager(stack, count, BuildStack);
+        return new Sharpcraft.Assets.ResourceManager(stack, count, BuildStack);
     }
 
     /// <summary>The pack folders named by <c>MC_RESOURCE_PACKS</c>, split and trimmed.</summary>
@@ -337,16 +337,16 @@ internal static class FrameCommand
     /// machine may still say "snapshot 8" from before an upgrade, so the number must not be inferred from a path. The value
     /// is overridable because a wrong number here would reject packs that are in fact fine.
     /// </remarks>
-    private static Sharpcraft.Client.Assets.PackFormatVersion ResolveClientPackFormat()
+    private static Sharpcraft.Assets.PackFormatVersion ResolveClientPackFormat()
     {
         var configured = GameOptions.Get("MC_PACK_FORMAT");
 
-        if (Sharpcraft.Client.Assets.PackFormatVersion.TryParse(configured, out var parsed))
+        if (Sharpcraft.Assets.PackFormatVersion.TryParse(configured, out var parsed))
         {
             return parsed;
         }
 
-        return new Sharpcraft.Client.Assets.PackFormatVersion(97, 1);
+        return new Sharpcraft.Assets.PackFormatVersion(97, 1);
     }
 
     /// <summary>Drops a trailing <c>.png</c> from a provider's file name.</summary>
@@ -354,8 +354,13 @@ internal static class FrameCommand
     private static string StripTextureExtension(string path) =>
         path.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? path[..^4] : path;
 
-    /// <summary>Builds a stack from the base pack plus every installed pack.</summary>
+    /// <summary>Builds a stack from the base pack, the external asset index, then every installed pack.</summary>
     /// <returns>The stack and how many installed packs it carries.</returns>
+    /// <remarks>
+    /// Layering matches vanilla (ADR-0027): builtin jar pack (bottom), the read-only external asset index as an
+    /// overlay (audio + every language), then the user resource packs (top). A missing external index degrades to the
+    /// jar pack's <c>en_us</c> instead of failing.
+    /// </remarks>
     private static (AssetStack Stack, int PackCount) BuildStack()
     {
         var stack = new AssetStack { Policy = MissingResourcePolicy.Warn }
@@ -368,19 +373,60 @@ internal static class FrameCommand
             stack.Add(new ZipAssetSource(packPath, "base-pack"));
         }
 
+        AddIndexedAssets(stack);
+
         var count = 0;
         var clientFormat = ResolveClientPackFormat();
 
         foreach (var folder in ResourcePackFolders())
         {
-            foreach (var pack in Sharpcraft.Client.Assets.ResourcePackDiscovery.Discover(folder, clientFormat))
+            foreach (var pack in Sharpcraft.Assets.ResourcePackDiscovery.Discover(folder, clientFormat))
             {
-                stack.Add(new Sharpcraft.Client.Assets.ResourcePackSource(pack));
+                stack.Add(new Sharpcraft.Assets.ResourcePackSource(pack));
                 count++;
             }
         }
 
         return (stack, count);
+    }
+
+    /// <summary>
+    /// Adds the external asset index as a read-only overlay above the jar pack, when the host supplied
+    /// <c>--assetsDir</c> and <c>--assetIndex</c> (ADR-0027). Everything that reads through the stack, including the
+    /// language loader, therefore sees non-<c>en_us</c> locales and audio without any copy into the repository.
+    /// </summary>
+    /// <param name="stack">Stack to extend; unchanged when the index is not configured or not present.</param>
+    private static void AddIndexedAssets(AssetStack stack)
+    {
+        var assetsDirectory = GameOptions.Get("MC_ASSETS_DIR");
+        var indexId = GameOptions.Get("MC_ASSET_INDEX");
+
+        if (string.IsNullOrWhiteSpace(assetsDirectory) || string.IsNullOrWhiteSpace(indexId))
+        {
+            return;
+        }
+
+        var indexPath = Path.Combine(assetsDirectory, "indexes", indexId + ".json");
+        if (!File.Exists(indexPath))
+        {
+            Console.WriteLine(
+                $"[assets] external index {indexId} not found at {indexPath}; continuing with the jar pack only " +
+                "(sounds and non-English languages unavailable)");
+            return;
+        }
+
+        try
+        {
+            var source = IndexedAssetSource.Open(indexPath, indexId);
+            stack.Add(source);
+            Console.WriteLine($"[assets] external index {indexId}: {source.ObjectCount} objects (read-only overlay)");
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or InvalidOperationException or System.Text.Json.JsonException)
+        {
+            Console.WriteLine(
+                $"[assets] external index {indexId} could not be mounted ({exception.Message}); " +
+                "continuing with the jar pack only");
+        }
     }
 
     /// <summary>
@@ -394,7 +440,7 @@ internal static class FrameCommand
     /// <param name="resources">Session resource manager, so a pack may override the metadata too.</param>
     /// <param name="name">Sprite name, such as <c>frame</c>.</param>
     private static Sharpcraft.Client.Ui.GuiSpriteScaling ReadScaling(
-        Sharpcraft.Client.Assets.ResourceManager resources,
+        Sharpcraft.Assets.ResourceManager resources,
         string name)
     {
         using var stream = resources.OpenFile(
@@ -411,7 +457,7 @@ internal static class FrameCommand
     }
 
     internal static Sharpcraft.Client.Ui.GuiSpriteAtlas? PrepareGuiSprites(
-        Sharpcraft.Client.Assets.ResourceManager resources)
+        Sharpcraft.Assets.ResourceManager resources)
     {
         ArgumentNullException.ThrowIfNull(resources);
 
@@ -445,7 +491,7 @@ internal static class FrameCommand
     }
 
     internal static Sharpcraft.Client.Ui.BitmapFont? PrepareFont(
-        Sharpcraft.Client.Assets.ResourceManager resources)
+        Sharpcraft.Assets.ResourceManager resources)
     {
         ArgumentNullException.ThrowIfNull(resources);
 
@@ -527,7 +573,7 @@ internal static class FrameCommand
     /// Resolving block models costs about half a second on a full pack while building the atlas costs about thirty
     /// milliseconds, so a reload that only changed pixels must not pay for the models again.
     /// </remarks>
-    internal static SpriteAtlas? PrepareAtlas(Sharpcraft.Client.Assets.ResourceManager resources)
+    internal static SpriteAtlas? PrepareAtlas(Sharpcraft.Assets.ResourceManager resources)
     {
         ArgumentNullException.ThrowIfNull(resources);
 
@@ -541,7 +587,7 @@ internal static class FrameCommand
     internal static BlockSpriteMap PrepareMap(
         SpriteAtlas atlas,
         BlockStateLayout? layout,
-        Sharpcraft.Client.Assets.ResourceManager resources)
+        Sharpcraft.Assets.ResourceManager resources)
     {
         ArgumentNullException.ThrowIfNull(atlas);
         ArgumentNullException.ThrowIfNull(resources);
@@ -568,7 +614,7 @@ internal static class FrameCommand
 
     internal static (SpriteAtlas Atlas, BlockSpriteMap Map)? PrepareSprites(
         BlockStateLayout? layout,
-        Sharpcraft.Client.Assets.ResourceManager? resources = null)
+        Sharpcraft.Assets.ResourceManager? resources = null)
     {
         if (layout is null)
         {
@@ -601,6 +647,7 @@ internal static class FrameCommand
             stack = new AssetStack { Policy = MissingResourcePolicy.Warn }
                 .Add(new BuiltInFallbackSource())
                 .Add(new ZipAssetSource(packPath, "base-pack"));
+            AddIndexedAssets(stack);
         }
 
         var timer = System.Diagnostics.Stopwatch.StartNew();
@@ -1643,7 +1690,7 @@ internal static class FrameCommand
     internal static FrameRequest AttachCelestial(
         FrameRequest request,
         ClientWorld world,
-        Sharpcraft.Client.Assets.ResourceManager resources,
+        Sharpcraft.Assets.ResourceManager resources,
         Vector3? skyColour = null,
         Vector3? fogColour = null)
     {

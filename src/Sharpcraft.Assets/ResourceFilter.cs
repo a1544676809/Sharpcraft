@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Sharpcraft.Common.Identifiers;
 
-namespace Sharpcraft.Client.Assets;
+namespace Sharpcraft.Assets;
 
 /// <summary>
 /// A pack's <c>filter</c> block: paths it hides from every lower priority pack

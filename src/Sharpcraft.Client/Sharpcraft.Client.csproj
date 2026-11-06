@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\Sharpcraft.Assets\Sharpcraft.Assets.csproj" />
     <ProjectReference Include="..\Sharpcraft.Common\Sharpcraft.Common.csproj" />
     <ProjectReference Include="..\Sharpcraft.Framework\Sharpcraft.Framework.csproj" />
   </ItemGroup>
@@ -10,6 +11,11 @@
          starts the client as a separate process. Tests need the same access for the game-options contracts. -->
     <InternalsVisibleTo Include="Sharpcraft.Launcher" />
     <InternalsVisibleTo Include="Sharpcraft.Client.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Low-level pack/format/IO types live in Sharpcraft.Assets; render-side pack consumers stay here. -->
+    <Using Include="Sharpcraft.Assets" />
   </ItemGroup>
 
   <PropertyGroup>

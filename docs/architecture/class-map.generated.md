@@ -7,6 +7,8 @@
 
 | Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
 | --- | --- | --- | --- | --- | --- | --- |
+| Sharpcraft.Assets | Sharpcraft.Assets.IndexedAssetSource | Mirror | Partial | net.minecraft.server.packs.resources.IndexedAssetSource | ref://mc-26.3-analysis/src/net/minecraft/server/packs/resources/IndexedAssetSource.java | createIndexFs equivalent: index maps logical path -> objects/<h2>/<sha1>; read-only overlay |
+| Sharpcraft.Assets | Sharpcraft.Assets.ResourceManager | Mirror | Partial | net.minecraft.server.packs.resources.ResourceManager | ref://mc-26.3-analysis/src/net/minecraft/server/packs/resources/ResourceManager.java | auto-resolved by name; verify |
 | Sharpcraft.Auth | Sharpcraft.Auth.AuthError | New | Full | sharpcraft.AuthError | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
 | Sharpcraft.Auth | Sharpcraft.Auth.AuthException | New | Full | sharpcraft.AuthException | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
 | Sharpcraft.Auth | Sharpcraft.Auth.DeviceCodeChallenge | New | Full | sharpcraft.DeviceCodeChallenge | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
@@ -23,7 +25,6 @@
 | Sharpcraft.Auth | Sharpcraft.Auth.XboxUserToken | New | Full | sharpcraft.XboxUserToken | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
 | Sharpcraft.Auth | Sharpcraft.Auth.XstsToken | New | Full | sharpcraft.XstsToken | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
 | Sharpcraft.Client | Sharpcraft.Client.Assets.BlockModelResolver | Mirror | Partial | net.minecraft.client.renderer.block.BlockModelResolver | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/BlockModelResolver.java | auto-resolved by name; verify |
-| Sharpcraft.Client | Sharpcraft.Client.Assets.ResourceManager | Mirror | Partial | net.minecraft.server.packs.resources.ResourceManager | ref://mc-26.3-analysis/src/net/minecraft/server/packs/resources/ResourceManager.java | auto-resolved by name; verify |
 | Sharpcraft.Client | Sharpcraft.Client.Assets.Transparency | Mirror | Partial | com.mojang.blaze3d.platform.Transparency | ref://mc-26.3-analysis/src/com/mojang/blaze3d/platform/Transparency.java | auto-resolved by name; verify |
 | Sharpcraft.Client | Sharpcraft.Client.Game.SpeedOverlay | New | Full | sharpcraft.SpeedOverlay | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
 | Sharpcraft.Client | Sharpcraft.Client.Game.TickLoop | Mirror | Full | net.minecraft.client.Timer | ref://mc-26.3-analysis/src/net/minecraft/client/Timer.java | Fixed-timestep accumulator + partialTick (alpha) |

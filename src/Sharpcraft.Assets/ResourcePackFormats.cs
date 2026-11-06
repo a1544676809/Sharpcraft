@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 
-namespace Sharpcraft.Client.Assets;
+namespace Sharpcraft.Assets;
 
 /// <summary>
 /// Reads the format range a pack declares (docs/analysis/assets/resource-pack-format.md).

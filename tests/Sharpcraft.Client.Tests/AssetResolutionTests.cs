@@ -149,7 +149,7 @@ public sealed class AssetResolutionTests
         var indexPath = fixture.WriteIndex("34", new Dictionary<string, string>());
 
         var mismatch = Assert.Throws<InvalidOperationException>(
-            () => OfficialObjectsSource.Open(indexPath, expectedIndexId: "32"));
+            () => IndexedAssetSource.Open(indexPath, expectedIndexId: "32"));
 
         Assert.Contains("id mismatch", mismatch.Message, StringComparison.Ordinal);
     }
@@ -169,7 +169,7 @@ public sealed class AssetResolutionTests
                 ["minecraft/textures/block/missing.png"] = absent
             });
 
-        var source = OfficialObjectsSource.Open(indexPath, expectedIndexId: "34");
+        var source = IndexedAssetSource.Open(indexPath, expectedIndexId: "34");
         fixture.WriteObject(present, """{"greeting":"hi"}""");
 
         using var stack = new AssetStack { Policy = MissingResourcePolicy.Warn, Warn = _ => { } }

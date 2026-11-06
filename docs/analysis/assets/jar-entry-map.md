@@ -78,6 +78,24 @@ status: 草稿
 
 **结论**：jar 内资产（模型、纹理、blockstates、items、font、particles、shaders）打进 pack；音频与语言从官方索引只读挂载。
 
+### 4.1 26.3（assetIndex=34）实测分类
+
+对一台安装了 26.3 的机器实测 `indexes/34.json` 的 `objects` 分类（逻辑路径前缀，共数千条）：
+
+| 前缀 | 条目数 | 说明 |
+| --- | --- | --- |
+| `minecraft/sounds/`（`.ogg`） | 4,961 | 音频，索引的绝大多数 |
+| `minecraft/lang/` | 142 | 全部语言（jar 仅 `en_us`/`deprecated`） |
+| `realms/textures/` | 15 | Realms 界面纹理 |
+| `minecraft/textures/` | 7 | 少量纹理（其余纹理只在 jar 内） |
+| `icons/` | 若干 | 窗口图标（`icon_16x16.png` 等） |
+| `minecraft/font/` | 5 | 少量字体定义/位图字体 |
+| `resourcepacks/` | 2 | 内置资源包预览/占位 |
+| `minecraft/sounds.json` / `pack.mcmeta` | 各 1 | 音效事件表与包元数据 |
+
+**结论（26.3 复核）**：音频与多语言必须经外部索引只读叠加；模型/纹理/blockstates 仍由 jar 包提供。
+两者在资源栈中的顺序见 ADR-0027（jar 包在下、索引叠加在上、用户包最上）。
+
 ## 5. 仍未确认的点
 
 1. **基线版本的索引 id**：26.3 的 `assetIndex.id` 必须与 `version.json` 一致，否则拒绝挂载（实测 26.3 为 `34`，26.2 为 `32`，说明索引 id 随版本变化）。

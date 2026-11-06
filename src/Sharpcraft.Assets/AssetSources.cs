@@ -7,7 +7,7 @@ using System.Text.Json;
 using Sharpcraft.Common.Identifiers;
 using Sharpcraft.Common.Imaging;
 
-namespace Sharpcraft.Client.Assets;
+namespace Sharpcraft.Assets;
 
 /// <summary>
 /// Assets stored in a zip: either our own pack (with <c>manifest.json</c> and per-entry hashes) or a
@@ -279,18 +279,26 @@ public sealed class DirectoryAssetSource : IAssetSource, IMetadataAssetSource
 
 /// <summary>
 /// Read-only mount of the official asset index: <c>indexes/&lt;id&gt;.json</c> plus
-/// <c>objects/&lt;ab&gt;/&lt;sha1&gt;</c>. Nothing is copied (ADR-0005).
+/// <c>objects/&lt;ab&gt;/&lt;sha1&gt;</c>. Nothing is copied (ADR-0005, ADR-0027).
 /// </summary>
-public sealed class OfficialObjectsSource : IAssetSource
+/// <remarks>
+/// Reference-equivalent to <c>IndexedAssetSource.createIndexFs(assetsDir, assetIndex)</c>: the index maps a logical
+/// path relative to the client resource root (<c>minecraft/lang/zh_cn.json</c>, <c>minecraft/sounds.json</c>,
+/// <c>icons/…</c>, <c>pack.mcmeta</c>) to a SHA-1 object under <c>objects/</c>. The mount is layered on top of the
+/// built-in jar pack so the external index supplies audio and every language while the jar pack still answers the
+/// models, textures and blockstates only the jar carries.
+/// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.server.packs.resources.IndexedAssetSource", "ref://mc-26.3-analysis/src/net/minecraft/server/packs/resources/IndexedAssetSource.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "createIndexFs equivalent: index maps logical path -> objects/<h2>/<sha1>; read-only overlay")]
+public sealed class IndexedAssetSource : IAssetSource, IMetadataAssetSource
 {
     private readonly Dictionary<string, string> _objects = new(StringComparer.Ordinal);
     private readonly string _objectsRoot;
 
-    private OfficialObjectsSource(string indexPath, string objectsRoot, string indexId)
+    private IndexedAssetSource(string indexPath, string objectsRoot, string indexId)
     {
         Path = indexPath;
         _objectsRoot = objectsRoot;
-        Id = "official-objects:" + indexId;
+        Id = "indexed-assets:" + indexId;
     }
 
     /// <summary>Path of the index JSON.</summary>
@@ -309,7 +317,7 @@ public sealed class OfficialObjectsSource : IAssetSource
     /// <param name="indexPath">Path to <c>indexes/&lt;id&gt;.json</c>.</param>
     /// <param name="expectedIndexId">When supplied, the index file name must match it.</param>
     /// <exception cref="InvalidOperationException">The index is missing or its id does not match.</exception>
-    public static OfficialObjectsSource Open(string indexPath, string? expectedIndexId = null)
+    public static IndexedAssetSource Open(string indexPath, string? expectedIndexId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(indexPath);
 
@@ -332,7 +340,7 @@ public sealed class OfficialObjectsSource : IAssetSource
         assetsRoot = System.IO.Path.GetDirectoryName(assetsRoot) ?? ".";
         var objectsRoot = System.IO.Path.Combine(assetsRoot, "objects");
 
-        var source = new OfficialObjectsSource(indexPath, objectsRoot, indexId);
+        var source = new IndexedAssetSource(indexPath, objectsRoot, indexId);
         source.LoadIndex();
         return source;
     }
@@ -340,10 +348,32 @@ public sealed class OfficialObjectsSource : IAssetSource
     /// <inheritdoc />
     public bool TryOpen(ResourceKind kind, Identifier location, out Stream content)
     {
-        content = Stream.Null;
-
         // Index keys are relative to the client root: "minecraft/textures/block/stone.png".
         var key = ResourcePath.FilePath(kind, location)["assets/".Length..];
+        return TryOpenKey(key, out content);
+    }
+
+    /// <inheritdoc />
+    public bool TryOpenPath(string relativePath, out Stream content)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
+
+        // Callers pass pack-relative paths ("assets/minecraft/…"); the index keys drop the "assets/" root.
+        var key = relativePath.StartsWith(ResourcePath.ClientRoot + "/", StringComparison.Ordinal)
+            ? relativePath[(ResourcePath.ClientRoot.Length + 1)..]
+            : relativePath;
+
+        return TryOpenKey(key.Replace('\\', '/'), out content);
+    }
+
+    /// <inheritdoc />
+    public bool TryOpenMetadata(ResourceKind kind, Identifier location, out Stream content) =>
+        TryOpenPath(ResourcePath.MetadataPath(ResourcePath.FilePath(kind, location)), out content);
+
+    private bool TryOpenKey(string key, out Stream content)
+    {
+        content = Stream.Null;
+
         if (!_objects.TryGetValue(key, out var hash))
         {
             return false;

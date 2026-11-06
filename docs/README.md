@@ -106,12 +106,12 @@
 | --- | --- |
 | [`analysis/`](analysis/README.md) | 37 |
 | [`architecture/`](architecture/README.md) | 4 |
-| [`decisions/`](decisions/README.md) | 29 |
+| [`decisions/`](decisions/README.md) | 30 |
 | [`milestones/`](milestones/README.md) | 2 |
 | [`modules/`](modules/README.md) | 29 |
 | [`repro/`](repro/README.md) | 0 |
 | [`specs/`](specs/README.md) | 23 |
-| [`src/`](src/README.md) | 14 |
+| [`src/`](src/README.md) | 15 |
 | [`tools/`](tools/README.md) | 1 |
 
 <!-- END GENERATED: docs -->

@@ -319,6 +319,16 @@ public sealed record ClientArguments(
             values["MC_ASSETS_PACK"] = PackPath;
         }
 
+        if (!string.IsNullOrWhiteSpace(AssetsDirectory))
+        {
+            values["MC_ASSETS_DIR"] = AssetsDirectory;
+        }
+
+        if (!string.IsNullOrWhiteSpace(AssetIndexId))
+        {
+            values["MC_ASSET_INDEX"] = AssetIndexId;
+        }
+
         if (!string.IsNullOrWhiteSpace(ResourcePackDir))
         {
             values["MC_RESOURCE_PACKS"] = ResourcePackDir;

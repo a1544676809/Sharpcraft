@@ -4,7 +4,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace Sharpcraft.Client.Assets;
+namespace Sharpcraft.Assets;
 
 /// <summary>One <c>overlays.entries</c> element: a folder that applies for a range of pack formats.</summary>
 /// <param name="MinFormat">Lowest pack format the folder applies to.</param>

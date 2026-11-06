@@ -27,6 +27,22 @@ updated: 2026-10-29
 - **下一步具体动作**：`git` 尚未提交（等所有者）；启动器 `assets` 命令仍复用 `Sharpcraft.Client.Assets`（预存在耦合，
   记为 R-025 残余），后续可把资产栈抽到共享库以彻底满足"启动器只按路径启动客户端"。
 
+## 2026-11-06 资源分层与 Sharpcraft.Assets 拆分（ADR-0027）
+
+- **已完成（Goal A）**：新增 `src/Sharpcraft.Assets`（`net10.0`，只引用 `Sharpcraft.Common`）；`ResourcePath` / `AssetStack` /
+  `ResourcePack` / `ResourcePackStack` / `ResourcePackDiscovery` / `ResourcePackFormats` / `ResourcePackOverlays` /
+  `ResourcePackSource` / `AssetPackManifest` / `AssetSources` / `ResourceManager` 等迁入，命名空间 `Sharpcraft.Assets`。
+  渲染侧（`SpriteAtlas*`、`BlockSpriteMap`、`BlockModelResolver`、字体/颜色/云等、`PackWatcher`）保留在 `Client/Assets`。
+- **已完成（Goal A 新类型）**：`IndexedAssetSource`（参考等价 `IndexedAssetSource.createIndexFs`）：解析
+  `indexes/<id>.json` 的 `objects` 映射 → `objects/<h2>/<sha1>` 只读；支持 `pack.mcmeta`/`sounds.json`/`icons/*` 原始路径。
+- **已完成（Goal B）**：客户端资源栈 = 内置兜底 < `--pack` jar 包 < `--assetsDir`+`--assetIndex` 索引叠加 < `--resourcePackDir`；
+  语言加载经同一 `ResourceManager`，非 `en_us` 从索引命中，索引缺失降级为 jar `en_us`。
+- **冒烟**：缺失 assetsDir 时打印降级警告并呈现首帧（`language: en_us`）；用真实 `assets`（index 34，5147 objects）时
+  `language: zh_cn (8665 keys)`、首帧呈现、退出码 0。
+- **未完成（Goal C 残余）**：`frame/window/walk/play` 仍进程内调用 `Sharpcraft.Client.Game`，故 `Launcher` 仍 `ProjectReference`
+  `Sharpcraft.Client`；`assets` 已改用 `Sharpcraft.Assets`。彻底解耦需把这些命令改为 `spawn` 客户端进程（具体阻塞见 ADR-0027 §5）。
+- **下一步具体动作**：为客户端 CLI 增加 `--play`/本地场景开关的显式参数，然后把启动器 dev 命令改为 spawn 并启用"启动器不得引用客户端"架构断言。
+
 ## 当前里程碑
 
 **规划顺序**：M1 → M2 → M3 → M4 → M5 → M6（定义与出口条件见 `docs/milestones/roadmap.md`，

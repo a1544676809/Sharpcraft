@@ -6,8 +6,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Sharpcraft.Assets\Sharpcraft.Assets.csproj" />
     <ProjectReference Include="..\..\src\Sharpcraft.Client\Sharpcraft.Client.csproj" />
     <ProjectReference Include="..\..\src\Sharpcraft.Common\Sharpcraft.Common.csproj" />
     <ProjectReference Include="..\..\src\Sharpcraft.Framework\Sharpcraft.Framework.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Sharpcraft.Assets" />
   </ItemGroup>
 </Project>

@@ -97,7 +97,7 @@ public static class LaunchCommand
             {
                 try
                 {
-                    var index = OfficialObjectsSource.Open(indexPath, indexId);
+                    var index = IndexedAssetSource.Open(indexPath, indexId);
                     Console.WriteLine($"[launch] official index {indexId}: {index.ObjectCount} objects (read-only mount)");
                     index.Dispose();
                 }

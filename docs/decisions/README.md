@@ -40,6 +40,7 @@ AGENTS.md 原则 12：不可逆或跨模块的决策必须在此留档，**只�
 | [`0024-client-entity-ai-presentation-state.md`](0024-client-entity-ai-presentation-state.md) | 为剩余 AI 依赖动画建立只读、非权威的客户端派生状态层 | 已采纳 | - |
 | [`0025-client-local-random-animation-equivalence.md`](0025-client-local-random-animation-equivalence.md) | 明确客户端私有 RNG 驱动的装饰动画以算法/分布/触发条件为等价标准 | 已采纳 | - |
 | [`0026-launcher-client-decoupling.md`](0026-launcher-client-decoupling.md) | 在本次变更之前，全部游戏运行时都住在 Sharpcraft.Launcher：WindowCommand（开窗 + 游戏循环）、 InteractiveSession（输入、相机、UI、聊天、实体表现）、LivePlaySession… | 已接受（2026-11-06，所有者批准范围 A） | - |
+| [`0027-asset-layering.md`](0027-asset-layering.md) | 参考原版的资产分层（内置 jar 包 + 外部索引只读叠加 + 用户资源包），并把底层 pack/格式/IO 类型下沉为独立库 Sharpcraft.Assets | 已接受 | 2026-11-06 |
 
 <!-- END GENERATED: docs/decisions -->
 

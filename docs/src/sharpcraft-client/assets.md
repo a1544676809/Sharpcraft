@@ -3,24 +3,31 @@
 
 状态：[已评审]
 基线：Minecraft 26.3
-证据：ADR-0007；`docs/analysis/assets/resource-resolution.md`；`docs/analysis/assets/block-models.md`
-最后更新：2026-10-29
+证据：ADR-0007；ADR-0027；`docs/analysis/assets/resource-resolution.md`；`docs/analysis/assets/block-models.md`
+最后更新：2026-11-06
 授权：用户 2026-10-28 决定"资源与图集归客户端"，启动器只负责校验与打包（ADR-0007）。
 
-# Client/Assets —— 资源栈、图集与方块贴图解析
+# Client/Assets —— 图集与方块贴图解析（渲染侧）
 
-把"一个方块该显示哪张纹理"从路径猜测做成数据驱动的解析链：资源栈 → 方块状态与模型 → 图集 → 精灵矩形。
+把"一个方块该显示哪张纹理"从路径猜测做成数据驱动的解析链：资源栈（`Sharpcraft.Assets`）→ 方块状态与模型 → 图集 → 精灵矩形。
+
+> 2026-11-06 起，底层 pack/格式/IO 类型（资源栈、包、路径规则、索引来源、`ResourceManager`）已下沉到
+> 独立库 `Sharpcraft.Assets`（ADR-0027）。本目录只保留**渲染侧**类型。
 
 ## 1. 职责范围
 
 负责：
 
-- 有序资源栈（`AssetStack`）：按原版语义叠加多个来源，后压入的包优先；缺失资源按策略处理（告警或严格）。
-- 资源路径规则（`ResourcePath`）：`assets/<namespace>/<kind>/<path>.<ext>` 的拼装与解析，`kind` 覆盖 `textures`、`blockstates`、`models` 等。
-- 图集（`SpriteAtlas`）：把纹理按货架算法拼进一张方形纹理，记录精灵的像素矩形与半纹素内缩后的 UV 矩形。
+- 图集（`SpriteAtlas` / `SpriteAtlasBuilder`）：把纹理按货架算法拼进一张方形纹理，记录精灵的像素矩形与半纹素内缩后的 UV 矩形。
 - 方块贴图解析（`BlockSpriteMap` 与 `BlockModelResolver`）：`blockstates` → 首个变体 → 模型 → `parent` 链合并 `textures` → 递归解析 `#变量` → 每面纹理；失败时回落到名字约定、再回落到 `<名字>_top/_side/_bottom`，最后才是 missing 精灵。
+- 字体现（`BitmapFontDefinition`）、颜色表（`Colormap`）、云与天体精灵、动画帧尺寸与 mip 链等渲染附属物。
 
-明确不负责：
+明确不负责（自 2026-11-06 起由 `Sharpcraft.Assets` 负责）：
+
+- 有序资源栈（`AssetStack`）、资源路径规则（`ResourcePath`）、资源包发现/格式/overlay、索引只读叠加（`IndexedAssetSource`）、
+  会话级 `ResourceManager`。见 [`docs/src/sharpcraft-assets.md`](../sharpcraft-assets.md)。
+
+其余不负责：
 
 - 不读 jar、不校验 jar：那是启动器资产管线的职责（原则 3、8）。
 - 不做窗口与 GPU 绑定：这里只产出像素与矩形，上传纹理与采样在 `Framework/Rendering`。
@@ -28,28 +35,30 @@
 
 ## 2. 侧别归属
 
-- 归属：`Client`。
-- 判定依据：用户资源包会替换纹理与模型，图集必须按"当前生效的包栈"在客户端侧重��；把资源与图集放在客户端后，启动器不必知道任何渲染细节，只能通过既有的 `Launcher → Client` 引用复用同一套路径规则（ADR-0007）。
+- 归属：`Client`（渲染侧）。
+- 判定依据：用户资源包会替换纹理与模型，图集必须按“当前生效的包栈”在客户端侧重算；底层栈与来源在 `Sharpcraft.Assets`，
+  本目录只消费它（ADR-0007、ADR-0027）。
 
 ## 3. 依赖关系
 
 | 方向 | 对象 | 说明 |
 | --- | --- | --- |
 | 依赖 | `Sharpcraft.Common` | `Identifier`、`Registries.BlockStateLayout`、`Imaging`（PNG 解码） |
+| 依赖 | `Sharpcraft.Assets` | `AssetStack`、`ResourceKind`、`ResourcePath`、`ResourceManager`、来源实现 |
 | 被依赖 | `Sharpcraft.Client/Render` | 网格构建按面取精灵矩形 |
-| 被依赖 | `Sharpcraft.Launcher` | 出图与验收命令复用同一套解析 |
+| 被依赖 | `Sharpcraft.Launcher` | 出图与验收命令复用同一套解析（仅开发工具；见 ADR-0027 残余） |
 | 不依赖 | `Sharpcraft.Framework`、`Sharpcraft.Launcher` | 不得反向依赖，由架构测试守护 |
 
 ## 4. 对外契约
 
 | 类型 | 契约 |
 | --- | --- |
-| `IAssetSource` | `TryRead(ResourcePath)` 返回字节或 null；实现包括 zip 包、目录、官方索引对象、内置兜底 |
-| `AssetStack` | `Read(kind, id)`；`Policy` 决定缺失时告警还是抛错；包按压入顺序后进先出 |
 | `SpriteAtlas` | `Sprites`（id → `SpriteRect`）、`Pixels`、`Get`、`Contains`；`MissingSprite` 恒存在 |
 | `SpriteRect` | 像素矩形与 `U0/V0/U1/V1`（已按半纹素内缩） |
 | `BlockSpriteMap` | `ForState(int, BlockFace)` 与 `ForBlock(Identifier, BlockFace)`；有布局时是数组下标查表 |
 | `BlockModelResolver` | `Resolve(Identifier)` 返回每面纹理或 null，内部带缓存 |
+
+> 资源栈与来源的对外契约见 [`docs/src/sharpcraft-assets.md`](../sharpcraft-assets.md)。
 
 ## 5. 关键结构与生命周期
 
@@ -82,7 +91,6 @@
 | Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
 | --- | --- | --- | --- | --- | --- | --- |
 | Sharpcraft.Client | Sharpcraft.Client.Assets.BlockModelResolver | Mirror | Partial | net.minecraft.client.renderer.block.BlockModelResolver | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/BlockModelResolver.java | auto-resolved by name; verify |
-| Sharpcraft.Client | Sharpcraft.Client.Assets.ResourceManager | Mirror | Partial | net.minecraft.server.packs.resources.ResourceManager | ref://mc-26.3-analysis/src/net/minecraft/server/packs/resources/ResourceManager.java | auto-resolved by name; verify |
 | Sharpcraft.Client | Sharpcraft.Client.Assets.Transparency | Mirror | Partial | com.mojang.blaze3d.platform.Transparency | ref://mc-26.3-analysis/src/com/mojang/blaze3d/platform/Transparency.java | auto-resolved by name; verify |
 
 <!-- END GENERATED: class-map -->

@@ -12,13 +12,14 @@
 
 
 
-## 资源加载的归属（ADR-0007）
+## 资源加载的归属（ADR-0007 / ADR-0027）
 
 | 组件 | 归属 | 理由 |
 | --- | --- | --- |
-| 资源解析栈（`IAssetSource`、包栈、路径推导） | `Client/Assets/` | 资源包替换纹理后图集必须在客户端重建；原版由客户端持有资源管理器 |
+| 低层资源栈（`IAssetSource`、包栈、路径推导、索引来源、`ResourceManager`） | `Sharpcraft.Assets`（只依赖 `Common`） | 启动器与客户端共享同一份只读 IO；`Assets` 不引用 `Framework`/`Client`/`Launcher` |
+| 渲染侧资源（图集、方块贴图解析、字体） | `Client/Assets/` | 资源包替换纹理后图集必须在客户端重建；原版由客户端持有资源管理器 |
 | 资产打包与 jar 校验 | `Launcher` | 原则 3/8：提取与校验属于外围宿主层，游戏逻辑不得读 jar |
-| 复用方式 | `Launcher → Client`（既有引用） | 只有一份解析实现；`Client → Launcher` 仍然禁止 |
+| 复用方式 | `Launcher → Assets`、`Client → Assets` | 只有一份解析实现；`Client → Launcher`、`Assets → Client` 仍然禁止（架构测试守护） |
 
 ## 1. 判定规则
 
