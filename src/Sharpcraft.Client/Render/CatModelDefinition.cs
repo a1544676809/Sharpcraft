@@ -9,27 +9,18 @@ namespace Sharpcraft.Client.Render;
 /// </summary>
 /// <remarks>
 /// Cat variants only change the texture (docs/analysis/render/entity-variants.md 3); the registry entry name is the
-/// suffix of <c>entity/cat/cat_&lt;name&gt;</c>.
+/// suffix of <c>entity/cat/cat_&lt;name&gt;</c>. Parts are declared with the <c>VanillaMeshDefinition</c> DSL and baked
+/// via <c>VanillaMeshBake.Bake</c> (T-684); WithCollar, variants and scale are unchanged.
 /// </remarks>
 public static class CatModelDefinition
 {
     public const int CatEntityTypeId = 21;
     public const int OcelotEntityTypeId = 92;
 
-    private static readonly EntityModelPart[] Parts =
-    [
-        PlayerModelDefinition.FromVanilla("head_main", 0f, 15f, -9f, -2.5f, -2f, -3f, 5f, 4f, 5f, 0, 0),
-        PlayerModelDefinition.FromVanilla("nose", 0f, 15f, -9f, -1.5f, -0.001f, -4f, 3f, 2f, 2f, 0, 24),
-        PlayerModelDefinition.FromVanilla("ear1", 0f, 15f, -9f, -2f, -3f, 0f, 1f, 1f, 2f, 0, 10),
-        PlayerModelDefinition.FromVanilla("ear2", 0f, 15f, -9f, 1f, -3f, 0f, 1f, 1f, 2f, 6, 10),
-        PlayerModelDefinition.FromVanilla("body", 0f, 12f, -10f, -2f, 3f, -8f, 4f, 16f, 6f, 20, 0, rotationX: -MathF.PI / 2f),
-        PlayerModelDefinition.FromVanilla("tail1", 0f, 15f, 8f, -0.5f, 0f, 0f, 1f, 8f, 1f, 0, 15, rotationX: -0.9f),
-        PlayerModelDefinition.FromVanilla("tail2", 0f, 20f, 14f, -0.5f, 0f, 0f, 1f, 8f, 1f, 4, 15),
-        PlayerModelDefinition.FromVanilla("left_hind_leg", 1.1f, 18f, 5f, -1f, 0f, 1f, 2f, 6f, 2f, 8, 13),
-        PlayerModelDefinition.FromVanilla("right_hind_leg", -1.1f, 18f, 5f, -1f, 0f, 1f, 2f, 6f, 2f, 8, 13),
-        PlayerModelDefinition.FromVanilla("left_front_leg", 1.2f, 14.1f, -5f, -1f, 0f, 0f, 2f, 10f, 2f, 40, 0),
-        PlayerModelDefinition.FromVanilla("right_front_leg", -1.2f, 14.1f, -5f, -1f, 0f, 0f, 2f, 10f, 2f, 40, 0)
-    ];
+    /// <summary>Declarative DSL tree for the eleven cat parts (T-684).</summary>
+    private static readonly VanillaMeshDefinition CatMesh = BuildCatMesh();
+
+    private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(CatMesh, 0, 0)];
 
     private static readonly EntityModelPart[] CollarParts = EntityModelLayerHelpers.WithCollar(Parts, "entity/cat/cat_collar");
 
@@ -85,6 +76,34 @@ public static class CatModelDefinition
         }
 
         return variants;
+    }
+
+    private static VanillaMeshDefinition BuildCatMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddOrReplaceChild("head_main", VanillaPartPose.Offset(0f, 15f, -9f),
+            new VanillaCubeDefinition("head_main", 0, 0, -2.5f, -2f, -3f, 5f, 4f, 5f));
+        root.AddOrReplaceChild("nose", VanillaPartPose.Offset(0f, 15f, -9f),
+            new VanillaCubeDefinition("nose", 0, 24, -1.5f, -0.001f, -4f, 3f, 2f, 2f));
+        root.AddOrReplaceChild("ear1", VanillaPartPose.Offset(0f, 15f, -9f),
+            new VanillaCubeDefinition("ear1", 0, 10, -2f, -3f, 0f, 1f, 1f, 2f));
+        root.AddOrReplaceChild("ear2", VanillaPartPose.Offset(0f, 15f, -9f),
+            new VanillaCubeDefinition("ear2", 6, 10, 1f, -3f, 0f, 1f, 1f, 2f));
+        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 12f, -10f, -MathF.PI / 2f, 0f, 0f),
+            new VanillaCubeDefinition("body", 20, 0, -2f, 3f, -8f, 4f, 16f, 6f));
+        root.AddOrReplaceChild("tail1", VanillaPartPose.OffsetAndRotation(0f, 15f, 8f, -0.9f, 0f, 0f),
+            new VanillaCubeDefinition("tail1", 0, 15, -0.5f, 0f, 0f, 1f, 8f, 1f));
+        root.AddOrReplaceChild("tail2", VanillaPartPose.Offset(0f, 20f, 14f),
+            new VanillaCubeDefinition("tail2", 4, 15, -0.5f, 0f, 0f, 1f, 8f, 1f));
+        root.AddOrReplaceChild("left_hind_leg", VanillaPartPose.Offset(1.1f, 18f, 5f),
+            new VanillaCubeDefinition("left_hind_leg", 8, 13, -1f, 0f, 1f, 2f, 6f, 2f));
+        root.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-1.1f, 18f, 5f),
+            new VanillaCubeDefinition("right_hind_leg", 8, 13, -1f, 0f, 1f, 2f, 6f, 2f));
+        root.AddOrReplaceChild("left_front_leg", VanillaPartPose.Offset(1.2f, 14.1f, -5f),
+            new VanillaCubeDefinition("left_front_leg", 40, 0, -1f, 0f, 0f, 2f, 10f, 2f));
+        root.AddOrReplaceChild("right_front_leg", VanillaPartPose.Offset(-1.2f, 14.1f, -5f),
+            new VanillaCubeDefinition("right_front_leg", 40, 0, -1f, 0f, 0f, 2f, 10f, 2f));
+        return new VanillaMeshDefinition(root);
     }
 }
 
