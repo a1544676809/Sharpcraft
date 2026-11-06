@@ -36,6 +36,29 @@ public static class HostDebugOptions
     }
 
     /// <summary>
+    /// Collects the host's debug switches into an explicit, plain dictionary for the game library.
+    /// </summary>
+    /// <remarks>
+    /// Principle 13: the game assemblies read no environment. This is the single place the host turns its own
+    /// environment into values the game can consume; a host that sets nothing yields an empty dictionary, which the
+    /// game treats as "debug off".
+    /// </remarks>
+    public static IReadOnlyDictionary<string, string> Collect()
+    {
+        var values = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (System.Collections.DictionaryEntry entry in Environment.GetEnvironmentVariables())
+        {
+            if (entry.Key is string name && entry.Value is string value && name.StartsWith("MC_", StringComparison.Ordinal))
+            {
+                values[name] = value;
+            }
+        }
+
+        return values;
+    }
+
+    /// <summary>
     /// The frame options this host debug configuration asks for. Every field defaults to the plain frame, so a host that
     /// passes nothing renders exactly as production does.
     /// </summary>

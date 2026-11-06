@@ -13,7 +13,7 @@ using Sharpcraft.Common.Network;
 using Sharpcraft.Framework.Platform;
 using Sharpcraft.Framework.Rendering;
 
-namespace Sharpcraft.Launcher;
+namespace Sharpcraft.Client.Game;
 
 /// <summary>
 /// Glue between the window, the input mapper, the player entity and the camera. Kept here rather than in
@@ -71,7 +71,7 @@ internal sealed class InteractiveSession
 
     /// <summary>Number of ticks this session has run, used by the host speed readout.</summary>
     public long TickIndex { get; private set; }
-    private readonly bool _diagEnabled = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
+    private readonly bool _diagEnabled = GameOptions.Get("MC_DIAG") == "1";
     private int _selectedHotbarSlot;
     private float _experienceProgress;
     private int _totalExperience;
@@ -94,7 +94,7 @@ internal sealed class InteractiveSession
     private int _lastProjectileEntity;
     private double _lastProjectilePower;
     private int _diagFrames;
-    private readonly bool _packetLog = Environment.GetEnvironmentVariable("MC_PACKET_LOG") == "1";
+    private readonly bool _packetLog = GameOptions.Get("MC_PACKET_LOG") == "1";
     private int _packetLogCount;
     private const int PacketLogLimit = 400;
     private readonly Sharpcraft.Client.Render.BlockLightFlicker _blockLightFlicker = new();
@@ -119,7 +119,7 @@ internal sealed class InteractiveSession
 
     private static int ReadViewDistanceChunks()
     {
-        var raw = Environment.GetEnvironmentVariable("MC_VIEW_DISTANCE");
+        var raw = GameOptions.Get("MC_VIEW_DISTANCE");
         return int.TryParse(raw, out var parsed) ? Math.Clamp(parsed, 2, 32) : 12;
     }
 
@@ -521,9 +521,9 @@ internal sealed class InteractiveSession
         var click = _chatLog.ClickFor(index, hit);
         Console.WriteLine($"chat probe: entry={entry} line={index} run={hit} click={(click is null ? "none" : click.Action + ":" + click.Value)}");
 
-        if (click is not null && Environment.GetEnvironmentVariable("MC_CHAT_PROBE_CLICK") == "1")
+        if (click is not null && GameOptions.Get("MC_CHAT_PROBE_CLICK") == "1")
         {
-            var shift = Environment.GetEnvironmentVariable("MC_CHAT_PROBE_SHIFT") == "1";
+            var shift = GameOptions.Get("MC_CHAT_PROBE_SHIFT") == "1";
             var handled = TryClickChat(x, y, shift);
             Console.WriteLine($"chat probe: shift={shift} acted={handled} prompt='{_chat.Text}' open={_chat.IsOpen}");
         }
@@ -634,7 +634,7 @@ internal sealed class InteractiveSession
     /// </remarks>
     private void PrepareDebugPrompt()
     {
-        var text = Environment.GetEnvironmentVariable("MC_CHAT_DEBUG_TEXT");
+        var text = GameOptions.Get("MC_CHAT_DEBUG_TEXT");
 
         if (string.IsNullOrEmpty(text))
         {
@@ -867,7 +867,7 @@ internal sealed class InteractiveSession
             return;
         }
 
-        var line = Environment.GetEnvironmentVariable("MC_CHAT_SAY");
+        var line = GameOptions.Get("MC_CHAT_SAY");
 
         if (string.IsNullOrWhiteSpace(line))
         {
@@ -1096,7 +1096,7 @@ internal sealed class InteractiveSession
         }
 
         // Verification hook: walk forward without a keyboard so an unattended run exercises the network path.
-        if (Environment.GetEnvironmentVariable("MC_WINDOW_AUTOWALK") == "1")
+        if (GameOptions.Get("MC_WINDOW_AUTOWALK") == "1")
         {
             frame = frame with { Forward = 1f };
         }
@@ -1154,7 +1154,7 @@ internal sealed class InteractiveSession
 
                 // Verification hook: print the tracked entities so their positions can be compared against the
                 // other client's own report of where it is (docs/specs/network/entity-sync.md 7).
-                if (Environment.GetEnvironmentVariable("MC_ENTITY_LOG") == "1" && _tickCounter % 20 == 0)
+                if (GameOptions.Get("MC_ENTITY_LOG") == "1" && _tickCounter % 20 == 0)
                 {
                     var states = _entities.Interpolate(0f);
                     var self = _player.Position;
@@ -1173,7 +1173,7 @@ internal sealed class InteractiveSession
                 // Console writes block for tens of milliseconds on Windows, and this runs on the tick thread,
                 // where a stall shows up as a hitch once per interval. Diagnostics are therefore opt in, so the
                 // shipping path never performs I/O while ticking.
-                if (Environment.GetEnvironmentVariable("MC_DIAG") == "1" && _tickCounter % 40 == 0)
+                if (GameOptions.Get("MC_DIAG") == "1" && _tickCounter % 40 == 0)
                 {
                     var (pressed, accepted, inAir) = JumpStats;
                     Console.WriteLine(
@@ -1189,7 +1189,7 @@ internal sealed class InteractiveSession
 
                 // Diagnostic hook: sweep the pitch so the head direction can be checked from a second client
                 // without driving two windows at once.
-                if (Environment.GetEnvironmentVariable("MC_CAMERA_SWEEP") == "1")
+                if (GameOptions.Get("MC_CAMERA_SWEEP") == "1")
                 {
                     var sweep = MathF.Sin(_tickCounter * 0.05f * 0.9f) * (80f * (MathF.PI / 180f));
                     _camera.SetLook(_camera.Yaw, sweep);
@@ -1569,7 +1569,7 @@ internal sealed class InteractiveSession
                         if (SetTimePacketCodec.TryRead(ref setTimeReader, out var setTime) == DecodeStatus.Success)
                         {
                             _world.ApplyTime(setTime);
-                            if (Environment.GetEnvironmentVariable("MC_DIAG") == "1")
+                            if (GameOptions.Get("MC_DIAG") == "1")
                             {
                                 var clocks = new System.Text.StringBuilder();
                                 foreach (var kv in setTime.Clocks)
@@ -2099,7 +2099,7 @@ internal sealed class InteractiveSession
                     {
                         Console.WriteLine($"unhandled packet id={packetId} bytes={body.Length}");
                     }
-                    else if (Environment.GetEnvironmentVariable("MC_PACKET_TRACE") == "1")
+                    else if (GameOptions.Get("MC_PACKET_TRACE") == "1")
                     {
                         Console.WriteLine($"unhandled packet id={packetId} bytes={body.Length}");
                     }

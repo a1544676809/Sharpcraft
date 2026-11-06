@@ -2,13 +2,15 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using Sharpcraft.Client;
+using Sharpcraft.Common.Lifecycle;
 using Xunit;
 
 namespace Sharpcraft.Client.Tests;
 
 /// <summary>
-/// The client side of the launcher handoff (docs/modules/launcher.md §5.1): it must accept the
-/// launcher's arguments, reject incomplete ones, and never degrade silently.
+/// The client's vanilla-style command line (docs/decisions/0026-launcher-client-decoupling.md §4 and
+/// docs/modules/client.md §3): it must accept a launcher handoff and a vanilla offline start, apply vanilla
+/// defaults, derive the offline UUID, and ignore unknown arguments.
 /// </summary>
 public sealed class ClientArgumentTests
 {
@@ -35,22 +37,58 @@ public sealed class ClientArgumentTests
     }
 
     [Fact]
-    public void MissingVersionAndGameDirectoryAreBothReported()
+    public void MissingVersionIsReported()
     {
         var arguments = ClientArguments.Parse(["--username", "Steve"]);
 
         Assert.False(arguments.IsUsable);
         Assert.Contains(arguments.Errors, error => error.Contains("--version", StringComparison.Ordinal));
-        Assert.Contains(arguments.Errors, error => error.Contains("--gameDir", StringComparison.Ordinal));
     }
 
     [Fact]
-    public void IdentityIsRequiredSomehow()
+    public void VanillaDefaultsDeriveTheOfflineUuidAndName()
     {
-        var arguments = ClientArguments.Parse(["--version", "26.3", "--gameDir", "."]);
+        var arguments = ClientArguments.Parse(["--version", "26.3"]);
 
-        Assert.False(arguments.IsUsable);
-        Assert.Contains(arguments.Errors, error => error.Contains("--sessionFile", StringComparison.Ordinal));
+        Assert.True(arguments.IsUsable);
+        Assert.False(string.IsNullOrWhiteSpace(arguments.GameDirectory));
+        Assert.False(string.IsNullOrWhiteSpace(arguments.Username));
+        Assert.StartsWith("Player", arguments.Username!, StringComparison.Ordinal);
+        Assert.Equal(
+            OfflineIdentity.FormatUuid(OfflineIdentity.DeriveUuid(arguments.Username!)),
+            arguments.Uuid);
+    }
+
+    [Fact]
+    public void InvalidUuidFallsBackToTheOfflineDerivation()
+    {
+        var arguments = ClientArguments.Parse(["--version", "26.3", "--username", "Steve", "--uuid", "not-a-uuid"]);
+
+        Assert.True(arguments.IsUsable);
+        Assert.Equal(OfflineIdentity.FormatUuid(OfflineIdentity.DeriveUuid("Steve")), arguments.Uuid);
+    }
+
+    [Fact]
+    public void VanillaQuickPlayAndSizeParse()
+    {
+        var arguments = ClientArguments.Parse(
+        [
+            "--version", "26.3",
+            "--accessToken", "0",
+            "--username", "OfflineTester1",
+            "--offlineDeveloperMode",
+            "--quickPlayMultiplayer", "127.0.0.1:25565",
+            "--width", "1280",
+            "--height", "720",
+            "--versionType", "release"
+        ]);
+
+        Assert.True(arguments.IsUsable);
+        Assert.Equal("127.0.0.1:25565", arguments.QuickPlayMultiplayer);
+        Assert.Equal(1280, arguments.Width);
+        Assert.Equal(720, arguments.Height);
+        Assert.Equal("release", arguments.VersionType);
+        Assert.True(arguments.OfflineDeveloperMode);
     }
 
     [Fact]
@@ -63,7 +101,7 @@ public sealed class ClientArgumentTests
     }
 
     [Fact]
-    public void UnknownSwitchesAreToleratedForThirdPartyLaunchers()
+    public void UnknownSwitchesAndNonOptionsAreToleratedForThirdPartyLaunchers()
     {
         var arguments = ClientArguments.Parse(
         [
@@ -71,7 +109,8 @@ public sealed class ClientArgumentTests
             "--gameDir", ".",
             "--username", "Steve",
             "--width", "1280",
-            "--demo"
+            "--demo",
+            "stray-non-option"
         ]);
 
         Assert.True(arguments.IsUsable);

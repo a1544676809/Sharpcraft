@@ -5,7 +5,7 @@ using System.Numerics;
 using Sharpcraft.Client.Ui;
 using Sharpcraft.Framework.Rendering;
 
-namespace Sharpcraft.Launcher.Diagnostics;
+namespace Sharpcraft.Client.Game;
 
 /// <summary>
 /// Walking speed readout, computed the way the reference debug screen does it.
@@ -26,7 +26,7 @@ public sealed class SpeedOverlay
     private float _blocksPerTick;
 
     /// <summary>True when the host asked for the overlay.</summary>
-    public static bool Enabled => Environment.GetEnvironmentVariable("MC_SPEED_OVERLAY") == "1";
+    public static bool Enabled => GameOptions.Get("MC_SPEED_OVERLAY") == "1";
 
     /// <summary>Records the position at the end of a tick, mirroring the reference <c>computeSpeed</c>.</summary>
     /// <param name="position">Position after this tick.</param>

@@ -3,10 +3,9 @@
 
 using System.Collections.Concurrent;
 using System.Net.Sockets;
-using Sharpcraft.Auth;
 using Sharpcraft.Common.Network;
 
-namespace Sharpcraft.Launcher;
+namespace Sharpcraft.Client.Game;
 
 /// <summary>
 /// Keeps a play connection alive while the client runs (docs/src/sharpcraft-launcher/live-session.md).
@@ -50,28 +49,12 @@ internal sealed class LivePlaySession : IDisposable
     internal static async Task<LivePlaySession> ConnectAsync(
         string address,
         HttpClient http,
+        GameIdentity identity,
         CancellationToken cancellationToken)
     {
-        var signedIn = await AuthenticationFlow.EnsureSignedInAsync(
-            http,
-            TokenStore.CreateDefault(),
-            forceInteractive: false,
-            onChallenge: (challenge, _) =>
-            {
-                Console.WriteLine($"Open {challenge.VerificationUri} and enter the code: {challenge.UserCode}");
-                return Task.CompletedTask;
-            },
-            cancellationToken).ConfigureAwait(false);
-
-        Console.WriteLine($"Signed in as {signedIn.Profile.Name}");
-
-        var join = new SessionServerClient(http);
-        var (outcome, connection) = await MinecraftLoginClient.LoginAsync(
-            address,
-            (signedIn.Profile.Name, signedIn.Profile.Id),
-            signedIn.Session.AccessToken,
-            (token, hash, ct) => join.JoinAsync(signedIn.Session, signedIn.Profile.Id, hash, ct),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+        var (outcome, connection) = await GameConnector
+            .LoginAsync(address, http, identity, cancellationToken)
+            .ConfigureAwait(false);
 
         if (!outcome.Success || connection is null)
         {

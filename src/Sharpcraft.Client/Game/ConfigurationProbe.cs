@@ -3,7 +3,7 @@
 
 using Sharpcraft.Common.Network;
 
-namespace Sharpcraft.Launcher;
+namespace Sharpcraft.Client.Game;
 
 /// <summary>
 /// Walks the configuration phase far enough to prove the login chain works against a real

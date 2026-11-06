@@ -301,20 +301,21 @@ public static class LaunchCommand
 
         Console.WriteLine($"[launch] starting {Path.GetFileName(plan.ClientPath)}");
 
-        using var process = Process.Start(startInfo);
+        var process = Process.Start(startInfo);
         if (process is null)
         {
             Console.Error.WriteLine("[launch] failed to start the client process");
             return 1;
         }
 
-        process.WaitForExit();
-
+        // The client is a separate process (ADR-0026): the launcher returns as soon as it is started, so the
+        // launcher window can close while the game keeps running. We deliberately do not WaitForExit here.
         Console.WriteLine(string.Format(
             CultureInfo.InvariantCulture,
-            "[launch] client exited with code {0}",
-            process.ExitCode));
+            "[launch] client started (pid {0}); the launcher may exit now",
+            process.Id));
 
-        return process.ExitCode;
+        process.Dispose();
+        return 0;
     }
 }

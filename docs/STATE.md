@@ -13,7 +13,19 @@ updated: 2026-10-29
 > 本文件只记录**易变状态**（AGENTS.md 4.2）。设计结论属于 `docs/modules/`，里程碑划分属于 `docs/milestones/roadmap.md`，索引属于 `docs/README.md`，决策属于 `docs/decisions/`。**不要在此复述它们。**
 > 每次收工必须与代码同一提交更新本文件，并写清"下一步具体动作"。
 
-最后更新：2026-11-04
+最后更新：2026-11-06
+
+## 2026-11-06 启动器 / 客户端解耦（ADR-0026）
+
+- **已完成**：`Sharpcraft.Client` 成为独立游戏可执行程序；`WindowCommand` / `InteractiveSession` / `LivePlaySession` /
+  `ConfigurationProbe` / `FrameCommand` / `WalkCommand` / `SpeedOverlay` 从启动器迁入 `src/Sharpcraft.Client/Game/`。
+- **产品 launch = 装配 vanilla 参数 → spawn 独立客户端进程 → 启动器退出**（不再 `WaitForExit`）。
+- **边界**：客户端仅依赖 `Common`/`Framework`，架构测试新增"客户端不得引用 Launcher/Auth"断言并通过。
+- **原则 13**：游戏程序集不读环境变量；宿主经 `GameOptions` / `--debugOptionsFile` 显式传入。
+- **冒烟（已跑通）**：直接启动 `Sharpcraft.Client.exe`，`--offlineDeveloperMode --quickPlayMultiplayer 127.0.0.1:25565`
+  开窗并进 play（9 区块、127 个实体、聊天/生物群系注册表），无启动器进程。
+- **下一步具体动作**：`git` 尚未提交（等所有者）；启动器 `assets` 命令仍复用 `Sharpcraft.Client.Assets`（预存在耦合，
+  记为 R-025 残余），后续可把资产栈抽到共享库以彻底满足"启动器只按路径启动客户端"。
 
 ## 当前里程碑
 

@@ -3,8 +3,8 @@
 
 状态：[已评审]
 基线：Minecraft 26.3
-证据：`docs/modules/input.md` §6（帧节奏）
-最后更新：2026-10-29
+证据：`docs/modules/input.md` §6（帧节奏）、`docs/modules/client.md`、ADR-0026
+最后更新：2026-11-06
 
 # Client/Game —— 固定步长循环
 
@@ -40,10 +40,29 @@
 - 插值尚未用于渲染：相机直接取实体当前眼位，没有在两 tick 之间插值。实体移动较慢，1 tick 的抖动不明显，
   但高速移动（下落、冲刺）会看出来，届时按 `Alpha` 插值。
 
+## 6. 游戏运行时入口（ADR-0026）
+
+本目录在本次解耦后承载客户端的游戏运行时（从启动器迁入）：
+
+| 类型 | 说明 |
+| --- | --- |
+| `WindowCommand` | 开窗 + 游戏主循环；装配资源/UI/会话 |
+| `InteractiveSession` | 固定 20 Hz tick、输入、相机、聊天/标题/动作栏、实体表现 |
+| `LivePlaySession` | 长连接收发（收在后台任务、发在调用线程） |
+| `ConfigurationProbe` | 登录后配置阶段（keepalive/ping/known-packs/资源包/准则）到 play |
+| `FrameCommand` | 离屏渲染与资源管线（供窗口路径复用） |
+| `WalkCommand` | 无渲染行走验证 |
+| `GameConnector` / `GameIdentity` | 登录入口与身份（在线 join / 离线 no-op join） |
+| `GameOptions` | 宿主显式注入的只读调试选项快照（替代环境变量，原则 13） |
+| `GamePaths` | 客户端自负的默认目录（不依赖启动器） |
+
+详见 `docs/modules/client.md`。`TickLoop`（上文）是被 `InteractiveSession` 使用的固定步长内核。
+
 <!-- BEGIN GENERATED: class-map -->
 
 | Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
 | --- | --- | --- | --- | --- | --- | --- |
+| Sharpcraft.Client | Sharpcraft.Client.Game.SpeedOverlay | New | Full | sharpcraft.SpeedOverlay | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
 | Sharpcraft.Client | Sharpcraft.Client.Game.TickLoop | Mirror | Full | net.minecraft.client.Timer | ref://mc-26.3-analysis/src/net/minecraft/client/Timer.java | Fixed-timestep accumulator + partialTick (alpha) |
 
 <!-- END GENERATED: class-map -->

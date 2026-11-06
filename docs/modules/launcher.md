@@ -3,12 +3,13 @@
 
 状态：[已评审]
 基线：Minecraft 26.3
-最后更新：2026-10-28
-授权：用户 2026-10-28 要求"优先走设备码流程，可以继续做"，并同意用最小 CLI 做人工验收。
+最后更新：2026-11-06
+授权：用户 2026-11-06 批准范围 A（启动器与游戏本体解耦，见 ADR-0026）；2026-10-28 授权设备码流程与最小 CLI 验收。
 
 # 启动器模块（Sharpcraft.Launcher）
 
-独立跨平台启动器：认证、版本/资产获取、参数装配、进程启动。**本阶段只实现"认证验收切片"**，其余待决策项就绪后再做。
+独立跨平台启动器：认证、版本/资产获取、参数装配、**以独立进程启动客户端**。**产品启动路径 = 装配参数 → spawn 客户端 → 启动器退出**（ADR-0026）。
+游戏运行时（开窗、游戏循环、连接、渲染）已迁入 `Sharpcraft.Client/Game/`，不再住在本程序集。
 
 ## 1. 本阶段范围
 
@@ -17,17 +18,20 @@
 - 命令行入口与子命令分发（`login` / `probe` / `help`）。
 - `login`：驱动 `Sharpcraft.Auth` 完成设备码登录，输出账号档案名与 UUID。
 - `probe`：对服务器做状态查询（复用 `Common` 的网络层），用于诊断。
+- `assets`：校验 jar 并提取/复用资产 pack（原则 3）。
+- `accounts`：多账号列表与离线闸门（原则 7.1）。
+- `launch`：校验 → 打包 → 挂载 → 登录 → **装配 vanilla 参数并以独立进程启动客户端 → 启动器返回（不再等待子进程）**。
+- 开发/诊断：`frame` / `window` / `walk` / `play`（见 §3.1），仅用于联调，不构成产品路径。
 
-明确不负责（本阶段）：
+明确不负责：
 
-- 版本清单解析、依赖/资产下载与提取（原则 3、8，待资产管线评审）。
-- 游戏进程启动与参数装配。
-- 多账号管理与 UI（原则 7.1）。
-- 离线登录解锁策略（原则 7.1，属于产品策略，须用户书面确认后实现）。
+- 游戏运行时（窗口、游戏循环、连接、渲染）：已迁入 `Sharpcraft.Client`（ADR-0026）。
+- 版本清单解析、依赖/资产下载（原则 3、8，待资产管线评审）。
 
 ## 2. 侧别归属
 
-- 外围宿主层。可引用 `Auth`、`Framework`、`Common`；`Common`/`Client`/`Server` MUST NOT 引用它（架构测试已强制）。
+- 外围宿主层。可引用 `Auth`、`Framework`、`Common`；`Common`/`Client`/`Server` MUST NOT 引用它（架构测试已强制，ADR-0026 增补）。
+- 为使开发/诊断工具可复用客户端游戏库，启动器**仅对这些工具**引用 `Sharpcraft.Client`（`InternalsVisibleTo`）；产品启动路径只按可执行路径 `spawn`，不引用其类型。客户端本体不依赖启动器。
 
 ## 3. 命令契约
 
@@ -39,12 +43,22 @@
 | `probe <address>` | 状态查询（支持 SRV） | 协议版本、版本名、在线人数、延迟、MOTD |
 | `help` / 无参数 | 用法 | 用法文本 |
 | `assets <jar> [<version-json>]` | 校验 jar 并打包/复用资产 pack | pack 路径、条目数、跳过的顶层目录 |
-| `launch <jar> <version-json>` | 校验 → 打包 → 挂载 → 登录 → 启动客户端 | 计划（令牌脱敏）与客户端退出码 |
+| `launch <jar> <version-json>` | 校验 → 打包 → 挂载 → 登录 → 装配 vanilla 参数 → **以独立进程启动客户端 → 返回（不等子进程）** | 计划（令牌脱敏）与已启动的客户端进程 id；启动器随后可退出 |
 | `accounts` | 列出本机账号与离线可用性 | 类型、名字、UUID、最近校验时间 |
 | `accounts add-offline <name>` | 新增离线账号（受闸门约束） | 成功或拒绝原因 |
 | `accounts remove <name>` | 删除账号 | 成功或"不存在" |
 | `launch ... --offline <name>` | 用离线账号启动（受闸门约束） | 同 `launch` |
 | 未知命令 | 报错 | 用法 + 退出码 2 |
+
+### 3.1 开发/诊断命令与游戏运行时
+
+`frame` / `window` / `walk` / `play` 是联调诊断，**不是产品路径**。它们经客户端游戏库
+（`Sharpcraft.Client.Game`）在开发工具进程内运行；宿主（启动器）把环境开关解释为显式 `GameOptions`，
+再交给游戏库（原则 13）。客户端进程本身不读环境变量。
+
+产品路径 `launch` 只做参数装配与进程启动：组装 `--version / --accessToken / --username / --uuid /
+--offlineDeveloperMode / --gameDir / --assetsDir / --assetIndex / --versionType / --pack / --sessionFile`
+并 `spawn` 客户端，随后**立即返回，不 `WaitForExit`**。启动器退出后客户端继续运行（ADR-0026）。
 
 ## 4. 令牌处理
 
@@ -57,9 +71,13 @@
 
 | 码 | 含义 |
 | --- | --- |
-| 0 | 成功 |
-| 1 | 认证或网络失败（已打印分类原因） |
+| 0 | 成功（`launch` 成功启动客户端进程即返回 0） |
+| 1 | 认证或网络失败（已打印分类原因），或客户端进程启动失败 |
 | 2 | 用法错误 |
+| 4 | jar 校验失败 / 离线闸门拒绝 |
+
+> `launch` **不再**回传客户端退出码：两者是独立进程，客户端在启动器退出后自行运行。客户端自身的退出码见
+> `docs/modules/client.md`。
 
 ## 6. 测试要求
 
@@ -95,20 +113,21 @@
 - 客户端退出码与 §5 一致：`2` 参数不合法、`3` 交接不可用、`0` 成功。
 - `launch` 的完整链路（含真实认证与进程启动）待网络恢复后再跑一次；**不提供跳过认证的开关**（原则 7.1：不得存在未登录即可启动游戏的路径）。
 
-### 8.2 开发用直接 CLI 进服（不经过启动器界面）
+### 8.2 开发用直接启动客户端（不经过启动器界面）
 
-调试/联调时常需要在**不打开启动器界面**的情况下反复以不同身份进本地 offline-mode 服务器。既有诊断路径（host 侧，原则 13）：
+调试/联调时常需要在**不打开启动器界面**的情况下反复以不同身份进本地 offline-mode 服务器。现在客户端是独立可执行程序，
+可直接用 vanilla 形态参数启动，**无需启动器进程**（ADR-0026）：
 
 ```powershell
-$env:MC_ASSETS_PACK = "$env:LOCALAPPDATA\MinecraftCSharp\packs\minecraft-26.3-<hash>.pack.zip"
-$env:MC_ASSETS_OUT  = "$env:LOCALAPPDATA\MinecraftCSharp\packs"
-$env:MC_LOGIN_NAME  = '<任意离线用户名>'      # LoginNameOverride：仅改 LoginStart 的 name
-$env:MC_WINDOW_SECONDS = '3600'
-dotnet run --project src/Sharpcraft.Launcher --no-build -- window 127.0.0.1:25565
+dotnet run --project src/Sharpcraft.Client --no-build -- `
+  --version 26.3 --accessToken 0 --username OfflineTester1 `
+  --offlineDeveloperMode --quickPlayMultiplayer 127.0.0.1:25565 `
+  --gameDir "$env:LOCALAPPDATA\MinecraftCSharp\instances\26.3" `
+  --pack "$env:LOCALAPPDATA\MinecraftCSharp\packs\minecraft-26.3-<hash>.pack.zip"
 ```
 
-- 机制：`MC_LOGIN_NAME` 映射到 `MinecraftLoginClient.LoginNameOverride`（见 `src/Sharpcraft.Common/Network/MinecraftLoginClient.cs` 的注释）。**online-mode 服务器会拒绝与正版会话不匹配的名字**；**offline-mode 服务器不做校验**，会按该名字派生 `OfflinePlayer:<name>` 的离线 UUID。
-- 因此：**每个不同的 `MC_LOGIN_NAME` 都会在服务器上生成一个不同的离线 UUID 玩家**（历史上一堆不同用户名的离线 UUID 即由此而来），无需为每个身份单独登录。
-- 无网络/纯本地时可用本地场景，不需要地址：`MC_FRAME_LOCAL=1`（演示世界）或 `MC_FRAME_WATER=1`（水域场景），仍用 `-- window`。
-- 边界（原则 7.1 不变）：该 CLI 仍是**启动器进程**，启动时会先取得一次会话（可用缓存）；它**不是**"未登录即可游玩"的产品路径，也不是分发形态，仅用于开发/联调的自备 offline-mode 服务器。
+- 机制：`--offlineDeveloperMode` 选择离线身份并用 no-op join；`--quickPlayMultiplayer` 直接进服（原版 26.3 已移除 `--server`/`--port`）。
+- **online-mode 服务器会拒绝与正版会话不匹配的身份**；offline-mode 服务器按 `OfflinePlayer:<name>` 派生离线 UUID。
+- 无服务器时可用本地场景开关（宿主诊断，经 `--debugOptionsFile` 显式传入，例如 `MC_FRAME_LOCAL=1`）。
+- 边界（原则 7.1 不变）：直接启动客户端是**开发/第三方启动器形态**，本项目分发的门户仍是启动器；离线身份只产生本地会话。
 

@@ -8,7 +8,7 @@ using Sharpcraft.Client.World;
 using Sharpcraft.Common.Entities;
 using Sharpcraft.Common.Network;
 
-namespace Sharpcraft.Launcher;
+namespace Sharpcraft.Client.Game;
 
 /// <summary>
 /// Walks a player on a live server without rendering, so the movement packets can be verified against a real
@@ -64,10 +64,10 @@ internal static class WalkCommand
         var survived = false;
 
         var clock = Stopwatch.StartNew();
-        var interval = TimeSpan.FromMilliseconds(int.TryParse(Environment.GetEnvironmentVariable("MC_WALK_INTERVAL_MS"), out var intervalMs) ? intervalMs : 50);
+        var interval = TimeSpan.FromMilliseconds(int.TryParse(GameOptions.Get("MC_WALK_INTERVAL_MS"), out var intervalMs) ? intervalMs : 50);
         var lastSend = TimeSpan.Zero;
         var lastTrace = TimeSpan.Zero;
-        var sendEveryTicks = int.TryParse(Environment.GetEnvironmentVariable("MC_WALK_SEND_EVERY_TICKS"), out var every) && every > 0 ? every : 1;
+        var sendEveryTicks = int.TryParse(GameOptions.Get("MC_WALK_SEND_EVERY_TICKS"), out var every) && every > 0 ? every : 1;
         var tickCounter = 0;
         var blockChanges = 0;
         var breakSequence = 0;
@@ -80,7 +80,7 @@ internal static class WalkCommand
     var gapsOver55 = 0;
     var backToBackTicks = 0;
     var tickIntervals = 0;
-        var maxSends = int.TryParse(Environment.GetEnvironmentVariable("MC_WALK_MAX_SENDS"), out var max) ? max : int.MaxValue;
+        var maxSends = int.TryParse(GameOptions.Get("MC_WALK_MAX_SENDS"), out var max) ? max : int.MaxValue;
 
         // The server teleports a joining player to spawn and waits for the acknowledgement. Moving before
         // answering that teleport is a protocol violation, so the walk waits for it first.
@@ -124,7 +124,7 @@ internal static class WalkCommand
                             // loaded. The packet has an empty body, so the id is the whole payload.
                             // Probe mode: send one id with a deliberately oversized body, then stop. The server names the
             // packet it tried to decode in its log, which is the only authoritative id table we have.
-            if (int.TryParse(Environment.GetEnvironmentVariable("MC_PROBE_ID"), out var probeId) && probeId > 0)
+            if (int.TryParse(GameOptions.Get("MC_PROBE_ID"), out var probeId) && probeId > 0)
             {
                 var probe = new byte[64];
                 var probeWriter = new PayloadWriter(probe);
@@ -139,7 +139,7 @@ internal static class WalkCommand
                 await Task.Delay(600, cancellationToken).ConfigureAwait(false);
                 return new Result(0, corrections, 0, reason, true, keepAliveReplies, batchAcks);
             }
-            if (int.TryParse(Environment.GetEnvironmentVariable("MC_LOAD_ID"), out var loadId) && loadId > 0)
+            if (int.TryParse(GameOptions.Get("MC_LOAD_ID"), out var loadId) && loadId > 0)
                             {
                                 var loadPacket = new byte[2];
                                 var loadWriter = new PayloadWriter(loadPacket);
@@ -344,20 +344,20 @@ internal static class WalkCommand
                     tickCounter++;
                     var tickStart = Stopwatch.GetTimestamp();
 
-                    if (Environment.GetEnvironmentVariable("MC_WALK_FREEZE") != "1")
+                    if (GameOptions.Get("MC_WALK_FREEZE") != "1")
                     {
-                        player.Tick(forward: 1f, strafe: 0f, jumping: Environment.GetEnvironmentVariable("MC_WALK_JUMP") == "1" && player.OnGround, sprinting: false, yaw: 0f, sneaking: Environment.GetEnvironmentVariable("MC_WALK_SNEAK") == "1");
+                        player.Tick(forward: 1f, strafe: 0f, jumping: GameOptions.Get("MC_WALK_JUMP") == "1" && player.OnGround, sprinting: false, yaw: 0f, sneaking: GameOptions.Get("MC_WALK_SNEAK") == "1");
                     }
 
                     var yawDegrees = sync.CurrentYawDegrees;
                     var pitchDegrees = sync.CurrentPitchDegrees;
-                    var kind = Environment.GetEnvironmentVariable("MC_WALK_FORCE_POS") == "1"
+                    var kind = GameOptions.Get("MC_WALK_FORCE_POS") == "1"
                         ? MovePacketKind.PositionAndRotation
                         : sync.Decide(player, yawDegrees, pitchDegrees);
 
                     if (sync.Build(kind, player, yawDegrees, pitchDegrees) is { } packet)
                     {
-                        if (Environment.GetEnvironmentVariable("MC_WALK_EXCHANGE") == "1" && sent % 20 == 0)
+                        if (GameOptions.Get("MC_WALK_EXCHANGE") == "1" && sent % 20 == 0)
         {
             log($"send {sent}: at ({player.Position.X:F2},{player.Position.Y:F2},{player.Position.Z:F2}) ground={player.OnGround}");
         }
@@ -372,7 +372,7 @@ internal static class WalkCommand
 
                     // Verification hook: destroy the ground block one step ahead, so the server answers
                     // with a block update and the remesh path gets exercised end to end.
-                    if (Environment.GetEnvironmentVariable("MC_WALK_BREAK") == "1" && tickCounter % 20 == 0)
+                    if (GameOptions.Get("MC_WALK_BREAK") == "1" && tickCounter % 20 == 0)
                     {
                         var yawRadians = sync.CurrentYawDegrees * (MathF.PI / 180f);
                         var ahead = new Vector3(
@@ -435,7 +435,7 @@ internal static class WalkCommand
                     deadline = startTimestamp + (tickCounter * tickPeriodTicks);
                 }
 
-                if (Environment.GetEnvironmentVariable("MC_WALK_QUIET") != "1" && clock.Elapsed - lastTrace >= TimeSpan.FromSeconds(1))
+                if (GameOptions.Get("MC_WALK_QUIET") != "1" && clock.Elapsed - lastTrace >= TimeSpan.FromSeconds(1))
                 {
                     lastTrace = clock.Elapsed;
                     log($"t={clock.Elapsed.TotalSeconds:F3} at ({player.Position.X:F2},{player.Position.Y:F2},{player.Position.Z:F2}) " +

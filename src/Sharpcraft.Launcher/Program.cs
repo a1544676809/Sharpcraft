@@ -7,6 +7,7 @@ using Sharpcraft.Common.Imaging;
 using Sharpcraft.Launcher.Accounts;
 using Sharpcraft.Launcher.Assets;
 using Sharpcraft.Client.Assets;
+using Sharpcraft.Client.Game;
 using Sharpcraft.Launcher.Launch;
 using Sharpcraft.Launcher.Transport;
 using Sharpcraft.Client.World;
@@ -24,6 +25,10 @@ internal static class Program
     private static async Task<int> Main(string[] args)
     {
         Sharpcraft.Launcher.Diagnostics.HostDebugOptions.Apply();
+
+        // The dev/diagnostic commands run the game library in this process; hand it the host's explicit options so
+        // the game code reads no environment itself (AGENTS.md principle 13).
+        Sharpcraft.Client.Game.GameOptions.Configure(Sharpcraft.Launcher.Diagnostics.HostDebugOptions.Collect());
 
         // Real-time loops need finer sleep granularity than the default; on Windows that is about
         // 15.6 ms, which makes a 50 ms tick wait overshoot and the simulation run slow
@@ -140,13 +145,34 @@ internal static class Program
             ? collect
             : 6;
 
+        // Sign in once; the chunk preload and the walk share the same identity.
+        AuthenticationFlow.SignedIn signedIn;
+        try
+        {
+            signedIn = await AuthenticationFlow.EnsureSignedInAsync(
+                http,
+                TokenStore.CreateDefault(),
+                forceInteractive: false,
+                onChallenge: PrintChallenge,
+                cancellation.Token).ConfigureAwait(false);
+        }
+        catch (AuthException exception)
+        {
+            Console.Error.WriteLine($"login failed [{exception.Error}] {exception.Message}");
+            return 1;
+        }
+
+        Console.WriteLine($"Signed in as {signedIn.Profile.Name}");
+        AccountsCommand.RecordPremiumSignIn(signedIn.Profile.Name, signedIn.Profile.Id);
+        var identity = new GameIdentity(signedIn.Profile.Name, signedIn.Profile.Id, signedIn.Session.AccessToken, Offline: false);
+
         ClientWorld? world = null;
         try
         {
             Console.WriteLine($"collecting chunks for {collectSeconds}s...");
             // The walk path opens its own session below, so the collected connection is released here.
             var preparedWorld = await WindowCommand
-                .ServerWorldAsync(address, http, collectSeconds, cancellation.Token)
+                .ServerWorldAsync(address, http, collectSeconds, identity, cancellation.Token)
                 .ConfigureAwait(false);
             world = preparedWorld.World;
             preparedWorld.Live?.Dispose();
@@ -163,16 +189,6 @@ internal static class Program
 
         try
         {
-            var signedIn = await AuthenticationFlow.EnsureSignedInAsync(
-                http,
-                TokenStore.CreateDefault(),
-                forceInteractive: false,
-                onChallenge: PrintChallenge,
-                cancellation.Token).ConfigureAwait(false);
-
-            Console.WriteLine($"Signed in as {signedIn.Profile.Name}");
-            AccountsCommand.RecordPremiumSignIn(signedIn.Profile.Name, signedIn.Profile.Id);
-
             var join = new SessionServerClient(http);
             var (outcome, connection) = await MinecraftLoginClient.LoginAsync(
                 address,
@@ -395,9 +411,20 @@ internal static class Program
             ? parsed
             : 8;
 
+        GameIdentity identity;
         try
         {
-            var path = await FrameCommand.RunAsync(address, http, 960, 540, seconds, cancellation.Token).ConfigureAwait(false);
+            identity = await ResolveDevIdentityAsync(http, cancellation.Token).ConfigureAwait(false);
+        }
+        catch (AuthException exception)
+        {
+            PrintExceptionChain(exception);
+            return ReportAuthFailure(exception);
+        }
+
+        try
+        {
+            var path = await FrameCommand.RunAsync(address, http, 960, 540, seconds, identity, cancellation.Token).ConfigureAwait(false);
             Console.WriteLine($"frame written to {path}");
             return 0;
         }
@@ -617,6 +644,32 @@ internal static class Program
     private static int WindowHeight() =>
         int.TryParse(Environment.GetEnvironmentVariable("MC_WINDOW_HEIGHT"), out var height) && height > 0 ? height : 540;
 
+    /// <summary>True when the caller supplied a local scene through the environment, so no server is needed.</summary>
+    private static bool IsLocalScene() =>
+        Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 } ||
+        Environment.GetEnvironmentVariable("MC_FRAME_WATER") == "1" ||
+        Environment.GetEnvironmentVariable("MC_FRAME_REPLAY") is { Length: > 0 };
+
+    /// <summary>
+    /// Builds the identity the game library runs as for a dev/diagnostic command. A local scene needs no sign-in;
+    /// a real server uses the launcher's normal authentication (this is host plumbing, not the client's job).
+    /// </summary>
+    private static async Task<GameIdentity> ResolveDevIdentityAsync(HttpClient http, CancellationToken cancellationToken)
+    {
+        if (IsLocalScene())
+        {
+            return new GameIdentity("Player", string.Empty, string.Empty, Offline: true);
+        }
+
+        var signedIn = await AuthenticationFlow
+            .EnsureSignedInAsync(http, TokenStore.CreateDefault(), forceInteractive: false, onChallenge: PrintChallenge, cancellationToken)
+            .ConfigureAwait(false);
+
+        Console.WriteLine($"Signed in as {signedIn.Profile.Name}");
+        AccountsCommand.RecordPremiumSignIn(signedIn.Profile.Name, signedIn.Profile.Id);
+        return new GameIdentity(signedIn.Profile.Name, signedIn.Profile.Id, signedIn.Session.AccessToken, Offline: false);
+    }
+
     private static async Task<int> WindowAsync(string? address)
     {
         using var cancellation = CancelOnCtrlC();
@@ -632,9 +685,20 @@ internal static class Program
             ? TimeSpan.FromSeconds(windowSeconds)
             : TimeSpan.FromSeconds(8);
 
+        GameIdentity identity;
         try
         {
-            var path = await WindowCommand.RunAsync(address, http, WindowWidth(), WindowHeight(), seconds, frames, visibleFor, cancellation.Token)
+            identity = await ResolveDevIdentityAsync(http, cancellation.Token).ConfigureAwait(false);
+        }
+        catch (AuthException exception)
+        {
+            PrintExceptionChain(exception);
+            return ReportAuthFailure(exception);
+        }
+
+        try
+        {
+            var path = await WindowCommand.RunAsync(address, http, WindowWidth(), WindowHeight(), seconds, frames, visibleFor, identity, cancellation.Token)
                 .ConfigureAwait(false);
             Console.WriteLine($"frame written to {path}");
             return 0;

@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
-using Sharpcraft.Auth;
 using Sharpcraft.Common.Registries;
-using Sharpcraft.Launcher.Assets;
 using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.Input;
@@ -12,7 +10,7 @@ using Sharpcraft.Client.World;
 using Sharpcraft.Common.Network;
 using Sharpcraft.Framework.Rendering;
 
-namespace Sharpcraft.Launcher;
+namespace Sharpcraft.Client.Game;
 
 /// <summary>
 /// Opens a window and presents the collected world for a few seconds, then writes the same frame
@@ -23,7 +21,7 @@ internal static class WindowCommand
     /// <summary>Runs the windowed presentation and returns the screenshot path.</summary>
     /// <summary>The block layout this run resolves against, which differs only for the demo layout.</summary>
     private static BlockStateLayout? CurrentLayout() =>
-        Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 }
+        GameOptions.Get("MC_FRAME_LOCAL") is { Length: > 0 }
             ? FrameCommand.DemoLayout()
             : VanillaBlockRegistry.Layout;
 
@@ -56,34 +54,39 @@ internal static class WindowCommand
         int height,
         int collectSeconds,
         int frames,
-        TimeSpan visibleFor,
+        TimeSpan? visibleFor,
+        GameIdentity identity,
         CancellationToken cancellationToken)
     {
         ClientWorld world;
         LivePlaySession? joinedEarly = null;
 
-        if (Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 })
+        if (GameOptions.Get("MC_FRAME_LOCAL") is { Length: > 0 })
         {
             world = FrameCommand.BuildDemoWorld();
         }
-        else if (Environment.GetEnvironmentVariable("MC_FRAME_WATER") == "1")
+        else if (GameOptions.Get("MC_FRAME_WATER") == "1")
         {
             world = FrameCommand.BuildWaterWorld(VanillaBlockRegistry.Layout);
             Console.WriteLine("window: water demo scene selected");
         }
-        else if (Environment.GetEnvironmentVariable("MC_FRAME_REPLAY") is { Length: > 0 } replayPath)
+        else if (GameOptions.Get("MC_FRAME_REPLAY") is { Length: > 0 } replayPath)
         {
             world = FrameCommand.LoadReplay(replayPath);
         }
         else if (address is not null)
         {
-            var preparedWorld = await ServerWorldAsync(address, http, collectSeconds, cancellationToken).ConfigureAwait(false);
+            var preparedWorld = await ServerWorldAsync(address, http, collectSeconds, identity, cancellationToken).ConfigureAwait(false);
             world = preparedWorld.World;
             joinedEarly = preparedWorld.Live;
         }
         else
         {
-            throw new InvalidOperationException("window needs an address, MC_FRAME_LOCAL=1 or MC_FRAME_REPLAY=<file>");
+            // Standalone start with no server argument: singleplayer/local as applicable. There is no
+            // integrated server yet (AGENTS.md principle 4, open item), so a local demo world is shown
+            // rather than failing: the client must still run without a launcher or an address.
+            world = FrameCommand.BuildDemoWorld();
+            Console.WriteLine("window: no server address; showing a local world");
         }
 
         // The windowed path uses the same atlas and block layout as the offscreen path, otherwise the
@@ -93,7 +96,7 @@ internal static class WindowCommand
         using var resources = FrameCommand.CreateResourceManager();
 
         (SpriteAtlas Atlas, BlockSpriteMap Map)? prepared = FrameCommand.PrepareSprites(
-            Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 }
+            GameOptions.Get("MC_FRAME_LOCAL") is { Length: > 0 }
                 ? FrameCommand.DemoLayout()
                 : VanillaBlockRegistry.Layout,
             resources);
@@ -115,9 +118,9 @@ internal static class WindowCommand
         var workerPool = new ChunkWorkerPool(
             world,
             prepared?.Map,
-            fifoMeshOrder: Sharpcraft.Launcher.Diagnostics.HostDebugOptions.FifoMeshOrder,
-            mergeFaces: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoMergeFaces,
-            ambientOcclusion: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoAmbientOcclusion);
+            fifoMeshOrder: GameOptions.Get("MC_MESH_FIFO") == "1",
+            mergeFaces: GameOptions.Get("MC_MESH_NOMERGE") != "1",
+            ambientOcclusion: GameOptions.Get("MC_NO_AO") != "1");
         Console.WriteLine($"chunk workers: {workerPool.WorkerCount} (of {Environment.ProcessorCount} logical processors)");
 
         var meshCache = new ChunkMeshCache(workerPool);
@@ -138,8 +141,8 @@ internal static class WindowCommand
         var meshOrderSeen = 0;
         var meshOrderDistanceSum = 0f;
         // Host side speed readout, only when the host asks for it (principle 13 keeps it out of the game).
-        var speedOverlay = Sharpcraft.Launcher.Diagnostics.SpeedOverlay.Enabled
-            ? new Sharpcraft.Launcher.Diagnostics.SpeedOverlay()
+        var speedOverlay = SpeedOverlay.Enabled
+            ? new SpeedOverlay()
             : null;
 
         var geometryEpoch = 0;
@@ -147,7 +150,7 @@ internal static class WindowCommand
     var uploadQueue = new Queue<Sharpcraft.Client.Render.MeshedChunk>();
         long drainedTotal = 0;
         var renderFrames = 0;
-        var streamDiag = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
+        var streamDiag = GameOptions.Get("MC_DIAG") == "1";
         var diagClock = System.Diagnostics.Stopwatch.StartNew();
 
         // The block atlas the terrain samples. A reload replaces it; whether the geometry must be rebuilt depends on
@@ -236,12 +239,12 @@ internal static class WindowCommand
         LivePlaySession? live = joinedEarly;
         if (live is null &&
             address is not null &&
-            Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is not { Length: > 0 } &&
-            Environment.GetEnvironmentVariable("MC_FRAME_REPLAY") is not { Length: > 0 })
+            GameOptions.Get("MC_FRAME_LOCAL") is not { Length: > 0 } &&
+            GameOptions.Get("MC_FRAME_REPLAY") is not { Length: > 0 })
         {
             try
             {
-                live = await LivePlaySession.ConnectAsync(address, http, cancellationToken).ConfigureAwait(false);
+                live = await LivePlaySession.ConnectAsync(address, http, identity, cancellationToken).ConfigureAwait(false);
                 Console.WriteLine("live: connected, movement will be sent while the window runs");
             }
             catch (Exception exception) when (exception is InvalidOperationException or IOException)
@@ -275,7 +278,7 @@ internal static class WindowCommand
                 Console.WriteLine($"biomes: {biomes.Entries.Count} from the server; per-biome block tint enabled");
             }
 
-            if (Environment.GetEnvironmentVariable("MC_DIAG") == "1")
+            if (GameOptions.Get("MC_DIAG") == "1")
             {
                 Console.WriteLine("chat type table: " + string.Join(", ", chatTypes.Describe()));
             }
@@ -292,20 +295,20 @@ internal static class WindowCommand
         session.SetCloudTexture(Sharpcraft.Client.Assets.CloudTexture.Load(resources));
 
         // Cloud options mirror the reference: CloudStatus OFF/FAST/FANCY and the separate cloudRange (chunks).
-        var cloudMode = (Environment.GetEnvironmentVariable("MC_CLOUD_MODE") ?? "fancy").ToLowerInvariant();
-        var cloudRange = Environment.GetEnvironmentVariable("MC_CLOUD_RANGE") is { Length: > 0 } rangeText
+        var cloudMode = (GameOptions.Get("MC_CLOUD_MODE") ?? "fancy").ToLowerInvariant();
+        var cloudRange = GameOptions.Get("MC_CLOUD_RANGE") is { Length: > 0 } rangeText
             && int.TryParse(rangeText, out var parsedRange) ? parsedRange : 128;
-        var cloudOit = Environment.GetEnvironmentVariable("MC_CLOUD_OIT") is not "0";
-        var cloudAdaptive = Environment.GetEnvironmentVariable("MC_CLOUD_ADAPTIVE") == "1";
-        var oitLowPrecision = Environment.GetEnvironmentVariable("MC_OIT_LOW_PRECISION") == "1";
-        var cloudDepth = Environment.GetEnvironmentVariable("MC_CLOUD_DEPTH") == "1";
-        var presentMode = Environment.GetEnvironmentVariable("MC_PRESENT_MODE")?.ToLowerInvariant() switch
+        var cloudOit = GameOptions.Get("MC_CLOUD_OIT") is not "0";
+        var cloudAdaptive = GameOptions.Get("MC_CLOUD_ADAPTIVE") == "1";
+        var oitLowPrecision = GameOptions.Get("MC_OIT_LOW_PRECISION") == "1";
+        var cloudDepth = GameOptions.Get("MC_CLOUD_DEPTH") == "1";
+        var presentMode = GameOptions.Get("MC_PRESENT_MODE")?.ToLowerInvariant() switch
         {
             "immediate" => Brew.Wgpu.Native.WGPUPresentMode.Immediate,
             "mailbox" => Brew.Wgpu.Native.WGPUPresentMode.Mailbox,
             _ => Brew.Wgpu.Native.WGPUPresentMode.Fifo
         };
-        var skyDiscMode = (Environment.GetEnvironmentVariable("MC_SKY_DISC_MODE") ?? "vanilla").ToLowerInvariant();
+        var skyDiscMode = (GameOptions.Get("MC_SKY_DISC_MODE") ?? "vanilla").ToLowerInvariant();
         var skyDiscVanilla = skyDiscMode != "fast" && skyDiscMode != "optimized";
         session.SetCloudOptions(
             enabled: cloudMode != "off",
@@ -316,7 +319,7 @@ internal static class WindowCommand
 
         // The gradient sky is static day blue; use a flat SKY_COLOR clear colour instead (vanilla sky is SKY_COLOR).
         // MC_SKY_GRADIENT=1 keeps the gradient pass for experimentation, default stays flat.
-        var skyGradient = Environment.GetEnvironmentVariable("MC_SKY_GRADIENT") == "1";
+        var skyGradient = GameOptions.Get("MC_SKY_GRADIENT") == "1";
         request = request with { SkipGradientSky = !skyGradient };
 
         // Sun, moon, stars and the sunrise band: the window now has the celestial pass, so populate its draws/textures.
@@ -347,7 +350,7 @@ internal static class WindowCommand
         // The document comes from one managed location and nowhere else: no environment variable and no command
         // line option can point the client at an arbitrary file (docs/decisions/0010). Editing that file reloads
         // the interface while the game runs; a broken edit keeps the previous screen.
-        var uiPath = UiDocumentFile.EnsureExists(HostPaths.DefaultUiDirectory(), UiScreenLayout.DefaultDocument);
+        var uiPath = UiDocumentFile.EnsureExists(GamePaths.DefaultUiDirectory(), UiScreenLayout.DefaultDocument);
         using var uiLoader = new UiDocumentLoader(uiPath);
         uiLoader.Start();
 
@@ -393,7 +396,7 @@ internal static class WindowCommand
         });
 
         // Without an atlas there is no cell to sample, so entity boxes are simply not drawn.
-        var customSkinPath = Environment.GetEnvironmentVariable("MC_PLAYER_SKIN");
+        var customSkinPath = GameOptions.Get("MC_PLAYER_SKIN");
         Sharpcraft.Framework.Rendering.TextureData? customSkin = null;
         if (customSkinPath is { Length: > 0 } && File.Exists(customSkinPath))
         {
@@ -449,14 +452,14 @@ internal static class WindowCommand
         // A local demo scene has no player to steer, so the fixed camera from the request is used instead of the
         // one that follows the session player (whose position is meaningless without a server).
         var hasLocalScene =
-            Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 } ||
-            Environment.GetEnvironmentVariable("MC_FRAME_WATER") == "1" ||
-            Environment.GetEnvironmentVariable("MC_FRAME_REPLAY") is { Length: > 0 };
+            GameOptions.Get("MC_FRAME_LOCAL") is { Length: > 0 } ||
+            GameOptions.Get("MC_FRAME_WATER") == "1" ||
+            GameOptions.Get("MC_FRAME_REPLAY") is { Length: > 0 };
 
         // Host-only light probe (MC_LIGHT_PROBE=1): prints the sky/block light the mesher will read around the player, so
         // a too-dark scene can be told apart from a lighting-model problem. Principle 13: parsed here, in the host.
         var lightProbeTick = 0;
-        var lightProbe = Environment.GetEnvironmentVariable("MC_LIGHT_PROBE") == "1";
+        var lightProbe = GameOptions.Get("MC_LIGHT_PROBE") == "1";
         var frameClock = System.Diagnostics.Stopwatch.StartNew();
         var previousFrameMs = 0.0;
         var removedChunks = new List<long>();
@@ -529,7 +532,7 @@ internal static class WindowCommand
                 removedChunks.AddRange(world.RemoveChunksOutside(
                     playerChunkX,
                     playerChunkZ,
-                    Sharpcraft.Launcher.InteractiveSession.ViewDistanceChunks + 2));
+                    InteractiveSession.ViewDistanceChunks + 2));
                 foreach (var removed in removedChunks)
                 {
                     meshCache.Remove(removed);
@@ -663,7 +666,7 @@ internal static class WindowCommand
             textureSource: uiTextures,
             atlasSource: atlasSource,
             geometryEpoch: () => geometryEpoch,
-            diagnostics: Sharpcraft.Launcher.Diagnostics.HostDebugOptions.ForFrame(),
+            diagnostics: GameOptions.ForFrame(),
             lightmapPerFrame: () => session.CurrentLightmap(),
             fogPerFrame: () => session.CurrentFogColour(),
             clearColourPerFrame: () => session.CurrentFogColour(),
@@ -678,7 +681,7 @@ internal static class WindowCommand
                 var fog = session.CurrentFogColour();
                 return (session.CurrentSkyColour(),
                     new System.Numerics.Vector3(fog.X, fog.Y, fog.Z),
-                    MathF.Min(Sharpcraft.Launcher.InteractiveSession.ViewDistanceChunks * 16f, 512f), session.Player.Position + new System.Numerics.Vector3(0f, 1.62f, 0f));
+                    MathF.Min(InteractiveSession.ViewDistanceChunks * 16f, 512f), session.Player.Position + new System.Numerics.Vector3(0f, 1.62f, 0f));
             },
             celestialPerFrame: () =>
             {
@@ -782,7 +785,7 @@ internal static class WindowCommand
                     session.CanvasHeight = canvasHeight;
 
                     // An unattended run cannot move the pointer, so a fixed probe point can report what it resolves to.
-                    var probe = Environment.GetEnvironmentVariable("MC_CHAT_PROBE");
+                    var probe = GameOptions.Get("MC_CHAT_PROBE");
 
                     if (probe is { Length: > 0 } && session.ChatTicks % 100 == 0)
                     {
@@ -815,7 +818,7 @@ internal static class WindowCommand
                     }
 
                     // A fixed preview point, because an unattended run cannot move the pointer onto a hover target.
-                    var preview = Environment.GetEnvironmentVariable("MC_TOOLTIP_PREVIEW");
+                    var preview = GameOptions.Get("MC_TOOLTIP_PREVIEW");
 
                     if (preview is { Length: > 0 })
                     {
@@ -887,14 +890,14 @@ internal static class WindowCommand
             world,
             width,
             height,
-            Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 }
+            GameOptions.Get("MC_FRAME_LOCAL") is { Length: > 0 }
                 ? FrameCommand.DemoLayout()
                 : VanillaBlockRegistry.Layout);
     }
 
     private static (int Width, int Height)? ParseSelfResize()
     {
-        if (Environment.GetEnvironmentVariable("MC_WINDOW_SELFRESIZE") is not { Length: > 0 } raw)
+        if (GameOptions.Get("MC_WINDOW_SELFRESIZE") is not { Length: > 0 } raw)
         {
             return null;
         }
@@ -917,28 +920,12 @@ internal static class WindowCommand
         string address,
         HttpClient http,
         int collectSeconds,
+        GameIdentity identity,
         CancellationToken cancellationToken)
     {
-        var signedIn = await AuthenticationFlow.EnsureSignedInAsync(
-            http,
-            TokenStore.CreateDefault(),
-            forceInteractive: false,
-            onChallenge: (challenge, _) =>
-            {
-                Console.WriteLine($"Open {challenge.VerificationUri} and enter the code: {challenge.UserCode}");
-                return Task.CompletedTask;
-            },
-            cancellationToken).ConfigureAwait(false);
-
-        Console.WriteLine($"Signed in as {signedIn.Profile.Name}");
-
-        var join = new SessionServerClient(http);
-        var (outcome, connection) = await MinecraftLoginClient.LoginAsync(
-            address,
-            (signedIn.Profile.Name, signedIn.Profile.Id),
-            signedIn.Session.AccessToken,
-            (token, hash, ct) => join.JoinAsync(signedIn.Session, signedIn.Profile.Id, hash, ct),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+        var (outcome, connection) = await GameConnector
+            .LoginAsync(address, http, identity, cancellationToken)
+            .ConfigureAwait(false);
 
         if (!outcome.Success || connection is null)
         {
@@ -950,7 +937,7 @@ internal static class WindowCommand
                 connection,
                 TimeSpan.FromSeconds(20),
                 cancellationToken,
-                log: Environment.GetEnvironmentVariable("MC_PACKET_LOG") == "1" ? Console.WriteLine : null).ConfigureAwait(false);
+                log: GameOptions.Get("MC_PACKET_LOG") == "1" ? Console.WriteLine : null).ConfigureAwait(false);
 
             if (!probe.ReachedPlay)
             {
@@ -960,7 +947,7 @@ internal static class WindowCommand
             // Vanilla does not fill the whole view distance before showing the world, it waits for the ground
             // near the player and renders while the rest streams in. Nine chunks is a three by three patch, which
             // arrives in a fraction of a second and is enough for a first frame.
-            var startChunks = Environment.GetEnvironmentVariable("MC_START_CHUNKS") is { } rawStart && int.TryParse(rawStart, out var parsedStart)
+            var startChunks = GameOptions.Get("MC_START_CHUNKS") is { } rawStart && int.TryParse(rawStart, out var parsedStart)
                 ? parsedStart
                 : 9;
 

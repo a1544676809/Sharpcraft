@@ -33,6 +33,18 @@ public sealed class AssemblyBoundaryTests
         Assert.DoesNotContain(forbidden, DependenciesOf(assemblyName));
     }
 
+    /// <summary>
+    /// ADR-0026: the client is a standalone game executable. It must not depend on the launcher (host) or the
+    /// authentication library (host plumbing); it receives its identity through the command line/session file.
+    /// </summary>
+    [Theory]
+    [InlineData(Client, Launcher)]
+    [InlineData(Client, Auth)]
+    public void ClientMustNotReferenceHostOrAuth(string assemblyName, string forbidden)
+    {
+        Assert.DoesNotContain(forbidden, DependenciesOf(assemblyName));
+    }
+
     [Theory]
     [InlineData(Common, Client)]
     [InlineData(Common, Server)]

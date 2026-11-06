@@ -28,6 +28,5 @@
 | Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
 | --- | --- | --- | --- | --- | --- | --- |
 | Sharpcraft.Launcher | Sharpcraft.Launcher.Diagnostics.HostDebugOptions | New | Full | sharpcraft.HostDebugOptions | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
-| Sharpcraft.Launcher | Sharpcraft.Launcher.Diagnostics.SpeedOverlay | New | Full | sharpcraft.SpeedOverlay | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
 
 <!-- END GENERATED: class-map -->

@@ -25,6 +25,7 @@
 | Sharpcraft.Client | Sharpcraft.Client.Assets.BlockModelResolver | Mirror | Partial | net.minecraft.client.renderer.block.BlockModelResolver | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/BlockModelResolver.java | auto-resolved by name; verify |
 | Sharpcraft.Client | Sharpcraft.Client.Assets.ResourceManager | Mirror | Partial | net.minecraft.server.packs.resources.ResourceManager | ref://mc-26.3-analysis/src/net/minecraft/server/packs/resources/ResourceManager.java | auto-resolved by name; verify |
 | Sharpcraft.Client | Sharpcraft.Client.Assets.Transparency | Mirror | Partial | com.mojang.blaze3d.platform.Transparency | ref://mc-26.3-analysis/src/com/mojang/blaze3d/platform/Transparency.java | auto-resolved by name; verify |
+| Sharpcraft.Client | Sharpcraft.Client.Game.SpeedOverlay | New | Full | sharpcraft.SpeedOverlay | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
 | Sharpcraft.Client | Sharpcraft.Client.Game.TickLoop | Mirror | Full | net.minecraft.client.Timer | ref://mc-26.3-analysis/src/net/minecraft/client/Timer.java | Fixed-timestep accumulator + partialTick (alpha) |
 | Sharpcraft.Client | Sharpcraft.Client.Render.AllayAnimationProvider | Mirror | Partial | net.minecraft.client.model.animal.allay.AllayModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/allay/AllayModel.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.Render.AllayModelDefinition | Mirror | Partial | net.minecraft.client.model.animal.allay.AllayModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/allay/AllayModel.java |  |
@@ -157,6 +158,7 @@
 | Sharpcraft.Client | Sharpcraft.Client.Render.WolfAnimationProvider | Mirror | Partial | net.minecraft.client.model.animal.wolf.WolfModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/wolf/WolfModel.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.Render.WolfModelDefinition | Mirror | Partial | net.minecraft.client.model.animal.wolf.WolfModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/wolf/WolfModel.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.Render.ZombieVillagerModelDefinition | Mirror | Partial | net.minecraft.client.model.monster.zombie.ZombieVillagerModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/zombie/ZombieVillagerModel.java |  |
+| Sharpcraft.Client | Sharpcraft.Client.ClientRunMode | New | Full | sharpcraft.ClientRunMode | ref://mc-26.3-analysis/src/net/minecraft/client/main/Main.java | Sharpcraft extension for diagnostic modes; no vanilla counterpart |
 | Sharpcraft.Client | Sharpcraft.Client.Ui.ChatLog | Mirror | Partial | net.minecraft.client.multiplayer.chat.ChatLog | ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/chat/ChatLog.java | auto-resolved by name; verify |
 | Sharpcraft.Client | Sharpcraft.Client.Ui.GuiSpriteScaling | Mirror | Partial | net.minecraft.client.resources.metadata.gui.GuiSpriteScaling | ref://mc-26.3-analysis/src/net/minecraft/client/resources/metadata/gui/GuiSpriteScaling.java | auto-resolved by name; verify |
 | Sharpcraft.Client | Sharpcraft.Client.Ui.Tooltip | Mirror | Partial | net.minecraft.client.gui.components.Tooltip | ref://mc-26.3-analysis/src/net/minecraft/client/gui/components/Tooltip.java | auto-resolved by name; verify |
@@ -229,7 +231,6 @@
 | Sharpcraft.Launcher | Sharpcraft.Launcher.Assets.JarVerifier | New | Full | sharpcraft.JarVerifier | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
 | Sharpcraft.Launcher | Sharpcraft.Launcher.Assets.VersionManifest | New | Full | sharpcraft.VersionManifest | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
 | Sharpcraft.Launcher | Sharpcraft.Launcher.Diagnostics.HostDebugOptions | New | Full | sharpcraft.HostDebugOptions | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
-| Sharpcraft.Launcher | Sharpcraft.Launcher.Diagnostics.SpeedOverlay | New | Full | sharpcraft.SpeedOverlay | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
 | Sharpcraft.Launcher | Sharpcraft.Launcher.Launch.LaunchCommand | New | Full | sharpcraft.LaunchCommand | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
 | Sharpcraft.Launcher | Sharpcraft.Launcher.Launch.LaunchContext | New | Full | sharpcraft.LaunchContext | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
 | Sharpcraft.Launcher | Sharpcraft.Launcher.Launch.LaunchPlan | New | Full | sharpcraft.LaunchPlan | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |

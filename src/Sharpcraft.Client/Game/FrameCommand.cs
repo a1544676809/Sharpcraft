@@ -3,9 +3,6 @@
 
 using System.IO.Compression;
 using System.Numerics;
-using Sharpcraft.Auth;
-using Sharpcraft.Launcher.Accounts;
-using Sharpcraft.Launcher.Assets;
 using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
@@ -15,7 +12,7 @@ using Sharpcraft.Common.Network;
 using Sharpcraft.Common.Registries;
 using Sharpcraft.Framework.Rendering;
 
-namespace Sharpcraft.Launcher;
+namespace Sharpcraft.Client.Game;
 
 /// <summary>
 /// Collects real chunks from a server, meshes them and renders one offscreen frame to a PNG
@@ -27,8 +24,12 @@ internal static class FrameCommand
     // must not re-read and re-decode the PNGs each time.
     private static readonly Dictionary<Sharpcraft.Common.Identifiers.Identifier, TextureData> CelestialTextureCache = [];
 
+    /// <summary>Prefix of the item tag data extracted for the client's tag registry.</summary>
+    internal const string ItemTagsPrefix = "data/minecraft/tags/item/";
+
     // Host diagnostics: print the rebuilt celestial state only when MC_DIAG is on (rebuilds now run every frame).
-    private static readonly bool LogCelestial = Environment.GetEnvironmentVariable("MC_DIAG") == "1";
+    private static bool LogCelestial => GameOptions.Flag("MC_DIAG");
+
     /// <summary>Runs the whole pipeline and returns the output path.</summary>
     internal static async Task<string> RunAsync(
         string address,
@@ -36,58 +37,41 @@ internal static class FrameCommand
         int width,
         int height,
         int collectSeconds,
+        GameIdentity identity,
         CancellationToken cancellationToken)
     {
-        if (Environment.GetEnvironmentVariable("MC_SUN_TEST") is { Length: > 0 } ||
-            Environment.GetEnvironmentVariable("MC_MOON_TEST") is { Length: > 0 })
+        if (GameOptions.Get("MC_SUN_TEST") is { Length: > 0 } ||
+            GameOptions.Get("MC_MOON_TEST") is { Length: > 0 })
         {
             return RenderSunTest(width, height);
         }
 
-        if (Environment.GetEnvironmentVariable("MC_COLOR_TEST") is { Length: > 0 })
+        if (GameOptions.Get("MC_COLOR_TEST") is { Length: > 0 })
         {
             return RenderColorTest(width, height);
         }
 
-        if (Environment.GetEnvironmentVariable("MC_SKY_DISC_TEST") is { Length: > 0 })
+        if (GameOptions.Get("MC_SKY_DISC_TEST") is { Length: > 0 })
         {
             return RenderSkyDiscTest(width, height);
         }
 
-        if (Environment.GetEnvironmentVariable("MC_FRAME_LOCAL") is { Length: > 0 })
+        if (GameOptions.Get("MC_FRAME_LOCAL") is { Length: > 0 })
         {
             return RenderLocal(width, height);
         }
 
-        if (Environment.GetEnvironmentVariable("MC_FRAME_REPLAY") is { Length: > 0 } replayPath)
+        if (GameOptions.Get("MC_FRAME_REPLAY") is { Length: > 0 } replayPath)
         {
             // Real chunk data uses the baseline block layout so state ids resolve to blocks.
             return RenderWorld(LoadReplay(replayPath), width, height, VanillaBlockRegistry.Layout);
         }
 
-        var signedIn = await AuthenticationFlow.EnsureSignedInAsync(
-            http,
-            TokenStore.CreateDefault(),
-            forceInteractive: false,
-            onChallenge: (challenge, _) =>
-            {
-                DeviceCodePrompter.Show(challenge);
-                return Task.CompletedTask;
-            },
-            cancellationToken,
-            onSignedIn: AccountsCommand.RecordPremiumSignIn).ConfigureAwait(false);
+        var (outcome, connection) = await GameConnector
+            .LoginAsync(address, http, identity, cancellationToken)
+            .ConfigureAwait(false);
 
-        Console.WriteLine($"Signed in as {signedIn.Profile.Name}");
-
-        var join = new SessionServerClient(http);
-        var (outcome, connection) = await MinecraftLoginClient.LoginAsync(
-            address,
-            (signedIn.Profile.Name, signedIn.Profile.Id),
-            signedIn.Session.AccessToken,
-            (token, hash, ct) => join.JoinAsync(signedIn.Session, signedIn.Profile.Id, hash, ct),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        if (!outcome.Success)
+        if (!outcome.Success || connection is null)
         {
             throw new InvalidOperationException($"server refused the login: {outcome.Reason}");
         }
@@ -259,7 +243,7 @@ internal static class FrameCommand
         // message must not appear in English.
         // MC_LANGUAGE pins the language for a run, which is how the Chinese path can be verified on an English
         // machine; otherwise the machine's own language is used, as the reference does.
-        var forced = Environment.GetEnvironmentVariable("MC_LANGUAGE");
+        var forced = GameOptions.Get("MC_LANGUAGE");
         var candidates = Sharpcraft.Common.Localization.LocaleSelector.Candidates(
             string.IsNullOrWhiteSpace(forced)
                 ? System.Globalization.CultureInfo.CurrentUICulture.Name
@@ -325,7 +309,7 @@ internal static class FrameCommand
     /// <summary>The pack folders named by <c>MC_RESOURCE_PACKS</c>, split and trimmed.</summary>
     internal static IReadOnlyList<string> ResourcePackFolders()
     {
-        var configured = Environment.GetEnvironmentVariable("MC_RESOURCE_PACKS");
+        var configured = GameOptions.Get("MC_RESOURCE_PACKS");
 
         if (string.IsNullOrWhiteSpace(configured))
         {
@@ -355,7 +339,7 @@ internal static class FrameCommand
     /// </remarks>
     private static Sharpcraft.Client.Assets.PackFormatVersion ResolveClientPackFormat()
     {
-        var configured = Environment.GetEnvironmentVariable("MC_PACK_FORMAT");
+        var configured = GameOptions.Get("MC_PACK_FORMAT");
 
         if (Sharpcraft.Client.Assets.PackFormatVersion.TryParse(configured, out var parsed))
         {
@@ -626,7 +610,7 @@ internal static class FrameCommand
         var models = new BlockModelResolver(stack);
         var map = new BlockSpriteMap(atlas, layout, models);
 
-        if (Environment.GetEnvironmentVariable("MC_DEBUG_SPRITES") is "1" && layout is not null)
+        if (GameOptions.Get("MC_DEBUG_SPRITES") is "1" && layout is not null)
         {
             // Which blocks still have no texture, so the gap is measured instead of guessed.
             var missing = atlas.Sprites[SpriteAtlas.MissingSprite];
@@ -661,15 +645,15 @@ internal static class FrameCommand
     /// <summary>Finds the newest asset pack the launcher produced.</summary>
     internal static string? FindPack()
     {
-        var configured = Environment.GetEnvironmentVariable("MC_ASSETS_PACK");
+        var configured = GameOptions.Get("MC_ASSETS_PACK");
         if (!string.IsNullOrWhiteSpace(configured) && File.Exists(configured))
         {
             return configured;
         }
 
-        var directory = Environment.GetEnvironmentVariable("MC_ASSETS_OUT") is { Length: > 0 } output
+        var directory = GameOptions.Get("MC_ASSETS_OUT") is { Length: > 0 } output
             ? output
-            : HostPaths.DefaultPacksDirectory();
+            : GamePaths.DefaultPacksDirectory();
 
         return Directory.Exists(directory)
             ? Directory.EnumerateFiles(directory, "*.pack.zip")
@@ -697,13 +681,13 @@ internal static class FrameCommand
             var sources = new List<(Identifier Tag, string Json)>();
             foreach (var entry in archive.Entries)
             {
-                if (!entry.FullName.StartsWith(AssetSelection.ItemTagsPrefix, StringComparison.Ordinal) ||
+                if (!entry.FullName.StartsWith(FrameCommand.ItemTagsPrefix, StringComparison.Ordinal) ||
                     !entry.FullName.EndsWith(".json", StringComparison.Ordinal))
                 {
                     continue;
                 }
 
-                var relative = entry.FullName[AssetSelection.ItemTagsPrefix.Length..^".json".Length];
+                var relative = entry.FullName[FrameCommand.ItemTagsPrefix.Length..^".json".Length];
                 using var reader = new StreamReader(entry.Open());
                 sources.Add((new Identifier("minecraft", relative), reader.ReadToEnd()));
             }
@@ -891,7 +875,7 @@ internal static class FrameCommand
 
                 blocks += Sharpcraft.Client.Render.ChunkMesher.MeshChunk(
                     world, chunk, airState: 0, buffer, maxBlocks: 2_000_000 - blocks, sprites: sprites, translucent: translucent, layout: layout, cutout: cutout, tint: tint,
-                    merge: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoMergeFaces, lighting: lighting);
+                    merge: GameOptions.Get("MC_MESH_NOMERGE") != "1", lighting: lighting);
 
                 ranges.Add((before, buffer.IndexCount - before));
 
@@ -909,7 +893,7 @@ internal static class FrameCommand
             mesh = buffer.ToMeshData(blocks);
             drawRanges = [.. ranges];
 
-            if (Environment.GetEnvironmentVariable("MC_FRAME_BLOCK_ENTITIES") == "1")
+            if (GameOptions.Get("MC_FRAME_BLOCK_ENTITIES") == "1")
             {
                 var states = new List<Sharpcraft.Client.Render.BlockEntityRenderState>();
 
@@ -991,7 +975,7 @@ internal static class FrameCommand
                 {
                     Sharpcraft.Client.Render.ChunkMesher.MeshChunk(
                         world, chunk, airState: 0, opaqueSink, maxBlocks: 2_000_000, sprites: sprites, translucent: translucentBuffer, layout: layout, cutout: cutoutBuffer, tint: tint,
-                        merge: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoMergeFaces, lighting: lighting);
+                        merge: GameOptions.Get("MC_MESH_NOMERGE") != "1", lighting: lighting);
                 }
 
                 if (translucentBuffer.IndexCount > 0)
@@ -1029,7 +1013,7 @@ internal static class FrameCommand
         var (eye, target) = CameraMath.DefaultCamera(centre, radius);
 
         // A fixed camera makes an occlusion test reproducible; six comma separated numbers.
-        if (Environment.GetEnvironmentVariable("MC_FRAME_CAM") is { Length: > 0 } cameraText)
+        if (GameOptions.Get("MC_FRAME_CAM") is { Length: > 0 } cameraText)
         {
             var parts = cameraText.Split(',');
 
@@ -1067,7 +1051,7 @@ internal static class FrameCommand
             eye,
             target)
         {
-        Diagnostics = Sharpcraft.Launcher.Diagnostics.HostDebugOptions.ForFrame(),
+        Diagnostics = GameOptions.ForFrame(),
             Lightmap = ToLightmapUniform(lighting),
             FogColour = EffectiveFogColour(world),
             Atlas = atlas,
@@ -1089,7 +1073,7 @@ internal static class FrameCommand
         Console.WriteLine($"scene: chunks {world.LoadedChunkCount}, minSectionY {firstChunk?.MinSectionY}, sections {firstChunk?.SectionCount}, " +
             $"fingerprint 0x{Sharpcraft.Client.World.SceneFingerprint.Of(world):X16}");
 
-        if (Environment.GetEnvironmentVariable("MC_FRAME_RECORD") is { Length: > 0 } recordPath)
+        if (GameOptions.Get("MC_FRAME_RECORD") is { Length: > 0 } recordPath)
         {
             // Keep the scene so later runs render exactly the same world instead of whatever the server shipped.
             Sharpcraft.Client.World.SceneRecorder.Save(world, recordPath);
@@ -1114,7 +1098,7 @@ internal static class FrameCommand
             tint = tint.WithBiomes(world.GetBiomeAt, biomes, blendRadius: 2);
         }
 
-        if (Environment.GetEnvironmentVariable("MC_BIOME_PROBE") == "1" && biomes is not null)
+        if (GameOptions.Get("MC_BIOME_PROBE") == "1" && biomes is not null)
         {
             Console.WriteLine($"biome probe: registry {biomes.Entries.Count} entries");
             var seen = new HashSet<int>();
@@ -1189,7 +1173,7 @@ internal static class FrameCommand
         // Per-cell clouds (docs/modules/clouds.md 2); appended after the celestial draws so it is not overwritten and
         // drawn with the same position-colour pass before terrain.
         if (biomes is not null
-            && Environment.GetEnvironmentVariable("MC_NO_CLOUDS") != "1"
+            && GameOptions.Get("MC_NO_CLOUDS") != "1"
             && Sharpcraft.Client.Assets.CloudTexture.Load(tintResources) is { } cloudTexture
             && BuildCloudDraw(world, cloudTexture, request.CameraPosition) is { } cloudDraw)
         {
@@ -1197,7 +1181,7 @@ internal static class FrameCommand
         }
 
         // Opt-in sky disc: replace the gradient backdrop with the SKY_COLOR disc (docs/modules/weather-and-sky-color.md 6.2).
-        if (Environment.GetEnvironmentVariable("MC_SKY_DISC") == "1" && biomes is not null)
+        if (GameOptions.Get("MC_SKY_DISC") == "1" && biomes is not null)
         {
             var eye = request.CameraPosition;
             var sampleX = (int)MathF.Floor(eye.X);
@@ -1225,7 +1209,7 @@ internal static class FrameCommand
         Console.WriteLine($"rendered on adapter: {frame.AdapterName}");
 
 
-        if (Environment.GetEnvironmentVariable("MC_FRAME_TRANSLUCENT_TEST") == "1" && request.TranslucentIndices is { Length: > 0 })
+        if (GameOptions.Get("MC_FRAME_TRANSLUCENT_TEST") == "1" && request.TranslucentIndices is { Length: > 0 })
         {
             // The same frame without the translucent layer, so the difference is exactly what blending contributed.
             var opaqueOnly = OffscreenRenderer.Render(request with { TranslucentVertices = null, TranslucentIndices = null });
@@ -1237,11 +1221,11 @@ internal static class FrameCommand
         }
 
 
-        if (Environment.GetEnvironmentVariable("MC_FRAME_CULLTEST") == "1" && request.DrawRanges is { Length: > 0 } ranges)
+        if (GameOptions.Get("MC_FRAME_CULLTEST") == "1" && request.DrawRanges is { Length: > 0 } ranges)
         {
             // Two checks in one: with the natural decision the picture must not change at all, and with a forced drop it must
             // change, which proves the ranges are actually honoured rather than silently merged back into one draw.
-            var forced = Environment.GetEnvironmentVariable("MC_FRAME_CULL_FORCE") == "1";
+            var forced = GameOptions.Get("MC_FRAME_CULL_FORCE") == "1";
             var dropped = 0;
             var modified = new (int FirstIndex, int IndexCount)[ranges.Length];
 
@@ -1288,7 +1272,7 @@ internal static class FrameCommand
 
             for (var index = 0; index < ranges.Length; index++)
             {
-                var forcedIndex = Environment.GetEnvironmentVariable("MC_FRAME_CULL_FORCE_INDEX") is { Length: > 0 } indexText && int.TryParse(indexText, out var parsedIndex)
+                var forcedIndex = GameOptions.Get("MC_FRAME_CULL_FORCE_INDEX") is { Length: > 0 } indexText && int.TryParse(indexText, out var parsedIndex)
                     ? parsedIndex
                     : 0;
                 var skip = forced ? index == forcedIndex : occluded[index];
@@ -1315,12 +1299,12 @@ internal static class FrameCommand
                 (difference.Mismatches > 0 ? $", first at ({difference.FirstX},{difference.FirstY})" : string.Empty));
         }
 
-        if (Environment.GetEnvironmentVariable("MC_FRAME_COMPARE") is { Length: > 0 } baselinePath && File.Exists(baselinePath))
+        if (GameOptions.Get("MC_FRAME_COMPARE") is { Length: > 0 } baselinePath && File.Exists(baselinePath))
         {
             // Compare against a reference frame: zero mismatches is the only acceptable result for an optimisation that
             // claims not to change the picture, and a blend may round by one, which the tolerance covers.
             var baseline = Sharpcraft.Common.Imaging.PngDecoder.Decode(File.ReadAllBytes(baselinePath));
-            var tolerance = int.TryParse(Environment.GetEnvironmentVariable("MC_FRAME_TOLERANCE"), out var parsed) ? parsed : 0;
+            var tolerance = int.TryParse(GameOptions.Get("MC_FRAME_TOLERANCE"), out var parsed) ? parsed : 0;
             var difference = Sharpcraft.Framework.Rendering.PixelComparison.Compare(
                 baseline.Pixels,
                 frame.Rgba,
@@ -1332,7 +1316,7 @@ internal static class FrameCommand
                 ? $"compare: identical ({frame.Width}x{frame.Height}, max channel delta {difference.MaxChannelDelta}, tolerance {tolerance})"
                 : $"compare: {difference.Mismatches} pixel(s) differ, first at ({difference.FirstX},{difference.FirstY}), max channel delta {difference.MaxChannelDelta}");
         }
-        if (Environment.GetEnvironmentVariable("MC_FRAME_PROBE") is { Length: > 0 } probeText)
+        if (GameOptions.Get("MC_FRAME_PROBE") is { Length: > 0 } probeText)
         {
             // Sample named pixels from the rendered frame, so a claim about a colour is a number taken from the image.
             foreach (var pair in probeText.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -1352,7 +1336,7 @@ internal static class FrameCommand
             }
         }
 
-        if (Environment.GetEnvironmentVariable("MC_FRAME_CULL") == "1" && frame.Depth is { } depthPixels)
+        if (GameOptions.Get("MC_FRAME_CULL") == "1" && frame.Depth is { } depthPixels)
         {
             // Conservative occlusion decision over the chunk boxes, using the verified pyramid from this frame's depth.
             var linear = new float[depthPixels.Length];
@@ -1413,7 +1397,7 @@ internal static class FrameCommand
     internal static string RenderSunTest(int width, int height)
     {
         // MC_MOON_TEST switches to the moon (size 20) so the moon sprite can be verified the same way as the sun.
-        var isMoon = Environment.GetEnvironmentVariable("MC_MOON_TEST") is { Length: > 0 };
+        var isMoon = GameOptions.Get("MC_MOON_TEST") is { Length: > 0 };
         var bodySize = isMoon ? 20f : 30f;
         var label = isMoon ? "moon" : "sun";
 
@@ -1428,7 +1412,7 @@ internal static class FrameCommand
         ]);
 
         // With MC_SUN_TEST_PACK set, draw the real sprite from the pack instead, to check its orientation and UVs.
-        if (Environment.GetEnvironmentVariable("MC_SUN_TEST_PACK") is { Length: > 0 })
+        if (GameOptions.Get("MC_SUN_TEST_PACK") is { Length: > 0 })
         {
             using var resources = CreateResourceManager();
             var identifier = isMoon ? CelestialSprites.MoonPhase(0) : CelestialSprites.Sun;
@@ -1477,7 +1461,7 @@ internal static class FrameCommand
     /// tick for verification; otherwise it is the world clock.
     /// </summary>
     internal static int EffectiveDayTime(ClientWorld world) =>
-        Environment.GetEnvironmentVariable("MC_FORCE_DAYTIME") is { Length: > 0 } text && int.TryParse(text, out var forced)
+        GameOptions.Get("MC_FORCE_DAYTIME") is { Length: > 0 } text && int.TryParse(text, out var forced)
             ? forced
             : world.DayTime;
 
@@ -1486,13 +1470,13 @@ internal static class FrameCommand
     /// otherwise it is the overworld clock's partial tick (matching the reference EnvironmentAttributeProbe).
     /// </summary>
     internal static float EffectiveDayTimePartial(ClientWorld world) =>
-        Environment.GetEnvironmentVariable("MC_FORCE_PARTIAL") is { Length: > 0 } text && float.TryParse(text, out var forced)
+        GameOptions.Get("MC_FORCE_PARTIAL") is { Length: > 0 } text && float.TryParse(text, out var forced)
             ? Math.Clamp(forced, 0f, 1f)
             : world.DayTimePartial;
 
     /// <summary>Rain level at a sub-tick fraction, with <c>MC_FORCE_RAIN</c> override for verification.</summary>
     internal static float EffectiveRainLevel(ClientWorld world, float partialTick) =>
-        Environment.GetEnvironmentVariable("MC_FORCE_RAIN") is { Length: > 0 } text && float.TryParse(text, out var forced)
+        GameOptions.Get("MC_FORCE_RAIN") is { Length: > 0 } text && float.TryParse(text, out var forced)
             ? Math.Clamp(forced, 0f, 1f)
             : world.RainLevel(partialTick);
 
@@ -1500,7 +1484,7 @@ internal static class FrameCommand
     internal static float EffectiveThunderLevel(ClientWorld world, float partialTick)
     {
         var rain = EffectiveRainLevel(world, partialTick);
-        return Environment.GetEnvironmentVariable("MC_FORCE_THUNDER") is { Length: > 0 } text && float.TryParse(text, out var forced)
+        return GameOptions.Get("MC_FORCE_THUNDER") is { Length: > 0 } text && float.TryParse(text, out var forced)
             ? Math.Clamp(forced, 0f, 1f) * rain
             : world.ThunderLevel(partialTick);
     }
@@ -1680,13 +1664,13 @@ internal static class FrameCommand
         // The moon phase follows total world ticks (one phase per 24000 ticks); angles follow the day clock.
         var totalTicks = world.TryGetClock(ClientWorld.OverworldClockId, out var clock) ? clock.TotalTicks : world.GameTime;
         var moonPhaseIndex = Sharpcraft.Common.World.SkyAttributeTracks.MoonPhaseIndex(totalTicks);
-        var moonAngle = Environment.GetEnvironmentVariable("MC_MOON_ANGLE") is { Length: > 0 } moonText &&
+        var moonAngle = GameOptions.Get("MC_MOON_ANGLE") is { Length: > 0 } moonText &&
             float.TryParse(moonText, out var parsedMoonAngle)
             ? parsedMoonAngle
             : Sharpcraft.Common.World.SkyTimelines.MoonAngleDegrees(dayTime, partialTick);
 
         // A fixed angle is available for verification; otherwise the sun follows the overworld clock.
-        var sunAngle = Environment.GetEnvironmentVariable("MC_SUN_ANGLE") is { Length: > 0 } angleText &&
+        var sunAngle = GameOptions.Get("MC_SUN_ANGLE") is { Length: > 0 } angleText &&
             float.TryParse(angleText, out var parsedAngle)
             ? parsedAngle
             : Sharpcraft.Common.World.SkyTimelines.SunAngleDegrees(dayTime, partialTick);
@@ -1976,7 +1960,7 @@ internal static class FrameCommand
     /// </summary>
     internal static string RenderSkyDiscTest(int width, int height)
     {
-        var temperature = Environment.GetEnvironmentVariable("MC_BIOME_TEMP") is { Length: > 0 } text && float.TryParse(text, out var parsed)
+        var temperature = GameOptions.Get("MC_BIOME_TEMP") is { Length: > 0 } text && float.TryParse(text, out var parsed)
             ? parsed
             : 0.5f;
         var packed = Sharpcraft.Common.World.SkyColour.FromTemperature(temperature);
@@ -2074,10 +2058,10 @@ internal static class FrameCommand
 
         AddDisc(CelestialGeometry.SkyDisc(16f), Matrix4x4.CreateTranslation(eye), new Vector4(skyColour, 1f));
 
-        var horizon = Environment.GetEnvironmentVariable("MC_HORIZON") is { Length: > 0 } horizonText && float.TryParse(horizonText, out var parsedHorizon)
+        var horizon = GameOptions.Get("MC_HORIZON") is { Length: > 0 } horizonText && float.TryParse(horizonText, out var parsedHorizon)
             ? parsedHorizon
             : 63f;
-        var underwater = Environment.GetEnvironmentVariable("MC_UNDERWATER") == "1";
+        var underwater = GameOptions.Get("MC_UNDERWATER") == "1";
         if (SkyVisibility.ShouldRenderDarkDisc(eye.Y, horizon, underwater))
         {
             AddDisc(CelestialGeometry.SkyDisc(-16f), Matrix4x4.CreateTranslation(eye + new Vector3(0f, 12f, 0f)), new Vector4(0f, 0f, 0f, 1f));
@@ -2106,7 +2090,7 @@ internal static class FrameCommand
     {
         var world = BuildDemoWorld();
 
-        if (Environment.GetEnvironmentVariable("MC_DEMO_STATE") is { Length: > 0 } forced &&
+        if (GameOptions.Get("MC_DEMO_STATE") is { Length: > 0 } forced &&
             int.TryParse(forced, out var forcedState))
         {
             // Diagnostic: paint every block with one state so a wrong sprite is unmistakable.
@@ -2136,7 +2120,7 @@ internal static class FrameCommand
         // would exercise is used here as well.
         var prepared = PrepareSprites(DemoLayout());
 
-        if (Environment.GetEnvironmentVariable("MC_DEBUG_SPRITES") is "1")
+        if (GameOptions.Get("MC_DEBUG_SPRITES") is "1")
         {
             for (var y = 0; y < 12; y++)
             {
@@ -2144,7 +2128,7 @@ internal static class FrameCommand
             }
         }
         var mesh = ChunkMesher.Mesh(world, airState: 0, maxBlocks: 2_000_000, sprites: prepared?.Map,
-            merge: !Sharpcraft.Launcher.Diagnostics.HostDebugOptions.NoMergeFaces, lighting: EffectiveLighting(world));
+            merge: GameOptions.Get("MC_MESH_NOMERGE") != "1", lighting: EffectiveLighting(world));
         Console.WriteLine($"local demo: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
         var bounds = (Min: new Vector3(0, -16, 0), Max: new Vector3(16, 16, 16));
@@ -2169,9 +2153,9 @@ internal static class FrameCommand
         request = AttachCelestial(request, world, resources);
 
         // Opt-in sky disc for local verification: synthetic temperature, gradient replaced by the SKY_COLOR disc.
-        if (Environment.GetEnvironmentVariable("MC_SKY_DISC") == "1")
+        if (GameOptions.Get("MC_SKY_DISC") == "1")
         {
-            var temperature = Environment.GetEnvironmentVariable("MC_BIOME_TEMP") is { Length: > 0 } text && float.TryParse(text, out var parsed)
+            var temperature = GameOptions.Get("MC_BIOME_TEMP") is { Length: > 0 } text && float.TryParse(text, out var parsed)
                 ? parsed
                 : 0.5f;
             var packed = SkyTintColour(temperature);
@@ -2184,7 +2168,7 @@ internal static class FrameCommand
 
         Console.WriteLine($"rendered on adapter: {frame.AdapterName}");
 
-        if (Environment.GetEnvironmentVariable("MC_DEBUG_SPRITES") is "1")
+        if (GameOptions.Get("MC_DEBUG_SPRITES") is "1")
         {
             // Sample a few pixels so a wrong sprite shows up as a number, not as an impression.
             foreach (var (label, x, y) in new[]
@@ -2201,12 +2185,12 @@ internal static class FrameCommand
             }
         }
 
-        if (Environment.GetEnvironmentVariable("MC_FRAME_COMPARE") is { Length: > 0 } baselinePath && File.Exists(baselinePath))
+        if (GameOptions.Get("MC_FRAME_COMPARE") is { Length: > 0 } baselinePath && File.Exists(baselinePath))
         {
             // Compare against a reference frame: zero mismatches is the only acceptable result for an optimisation that
             // claims not to change the picture, and a blend may round by one, which the tolerance covers.
             var baseline = Sharpcraft.Common.Imaging.PngDecoder.Decode(File.ReadAllBytes(baselinePath));
-            var tolerance = int.TryParse(Environment.GetEnvironmentVariable("MC_FRAME_TOLERANCE"), out var parsed) ? parsed : 0;
+            var tolerance = int.TryParse(GameOptions.Get("MC_FRAME_TOLERANCE"), out var parsed) ? parsed : 0;
             var difference = Sharpcraft.Framework.Rendering.PixelComparison.Compare(
                 baseline.Pixels,
                 frame.Rgba,
