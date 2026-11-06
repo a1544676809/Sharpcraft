@@ -7,10 +7,9 @@ namespace Sharpcraft.Client.Render;
 
 /// <summary>
 /// Humanoid mob definitions. Every part is written in the reference's y-down pivot/cube form and converted by the
-/// centralized bake: Enderman, Drowned, Husk, Skeleton and Zombie declare their parts with the
-/// <c>VanillaMeshDefinition</c> DSL and bake via <c>VanillaMeshBake.Bake</c> (T-672/T-673); only the clothing overlay
-/// parts in <c>WithClothing</c> still use <see cref="PlayerModelDefinition.FromVanilla"/> directly. No per-model
-/// Bottom/CentreX arithmetic remains here.
+/// centralized bake: all definitions here declare their parts with the <c>VanillaMeshDefinition</c> DSL and bake via
+/// <c>VanillaMeshBake.Bake</c> (T-672/T-673/T-675), including the clothing overlay parts in <c>WithClothing</c> that
+/// carry a <c>PoseSource</c>. No per-model Bottom/CentreX arithmetic remains here.
 /// </summary>
 public static class HumanoidMobModelDefinition
 {
@@ -158,25 +157,39 @@ public static class HumanoidMobModelDefinition
 
     private static EntityModelDefinition WithClothing(string name, string texturePath, string overlayPath, float grow)
     {
-        var parts = new List<EntityModelPart>(Skeleton.Parts)
-        {
-            // The clothing layer is baked as separate top-level parts, so each one declares the base part whose pose
-            // it follows; otherwise the overlay would stay in bind pose while the body animates.
-            PlayerModelDefinition.FromVanilla("outer_head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0,
-                grow: grow, texturePath: overlayPath,
-                overlays: [new("outer_hat", 0.5f, 32, 0, false, overlayPath)]) with { PoseSource = "head" },
-            PlayerModelDefinition.FromVanilla("outer_body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16,
-                grow: grow, texturePath: overlayPath) with { PoseSource = "body" },
-            PlayerModelDefinition.FromVanilla("outer_left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 40, 16,
-                mirror: true, grow: grow, texturePath: overlayPath) with { PoseSource = "left_arm" },
-            PlayerModelDefinition.FromVanilla("outer_right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16,
-                grow: grow, texturePath: overlayPath) with { PoseSource = "right_arm" },
-            PlayerModelDefinition.FromVanilla("outer_left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16,
-                mirror: true, grow: grow, texturePath: overlayPath) with { PoseSource = "left_leg" },
-            PlayerModelDefinition.FromVanilla("outer_right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16,
-                grow: grow, texturePath: overlayPath) with { PoseSource = "right_leg" }
-        };
+        var parts = new List<EntityModelPart>(Skeleton.Parts);
+        parts.AddRange(VanillaMeshBake.Bake(BuildClothingMesh(overlayPath, grow), 0, 0));
         return new EntityModelDefinition(name, 64, 32, parts, PlayerModelDefinition.DefaultFaceTransforms, texturePath);
+    }
+
+    /// <summary>
+    /// Clothing overlay parts (T-675). Each is a top-level part that declares the base part whose pose it follows via
+    /// <c>PoseSource</c>; otherwise the overlay would stay in bind pose while the body animates.
+    /// </summary>
+    private static VanillaMeshDefinition BuildClothingMesh(string overlayPath, float grow)
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddOrReplaceChild("outer_head", VanillaPartPose.Offset(0f, 0f, 0f),
+            new VanillaCubeDefinition("outer_head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f,
+                Grow: grow, TexturePath: overlayPath,
+                Overlays: [new("outer_hat", 0.5f, 32, 0, false, overlayPath)],
+                PoseSource: "head"));
+        root.AddOrReplaceChild("outer_body", VanillaPartPose.Offset(0f, 0f, 0f),
+            new VanillaCubeDefinition("outer_body", 16, 16, -4f, 0f, -2f, 8f, 12f, 4f,
+                Grow: grow, TexturePath: overlayPath, PoseSource: "body"));
+        root.AddOrReplaceChild("outer_left_arm", VanillaPartPose.Offset(5f, 2f, 0f),
+            new VanillaCubeDefinition("outer_left_arm", 40, 16, -1f, -2f, -2f, 4f, 12f, 4f,
+                Mirror: true, Grow: grow, TexturePath: overlayPath, PoseSource: "left_arm"));
+        root.AddOrReplaceChild("outer_right_arm", VanillaPartPose.Offset(-5f, 2f, 0f),
+            new VanillaCubeDefinition("outer_right_arm", 40, 16, -3f, -2f, -2f, 4f, 12f, 4f,
+                Grow: grow, TexturePath: overlayPath, PoseSource: "right_arm"));
+        root.AddOrReplaceChild("outer_left_leg", VanillaPartPose.Offset(1.9f, 12f, 0f),
+            new VanillaCubeDefinition("outer_left_leg", 0, 16, -2f, 0f, -2f, 4f, 12f, 4f,
+                Mirror: true, Grow: grow, TexturePath: overlayPath, PoseSource: "left_leg"));
+        root.AddOrReplaceChild("outer_right_leg", VanillaPartPose.Offset(-1.9f, 12f, 0f),
+            new VanillaCubeDefinition("outer_right_leg", 0, 16, -2f, 0f, -2f, 4f, 12f, 4f,
+                Grow: grow, TexturePath: overlayPath, PoseSource: "right_leg"));
+        return new VanillaMeshDefinition(root);
     }
 
     public static readonly EntityModelDefinition WitherSkeleton = new(

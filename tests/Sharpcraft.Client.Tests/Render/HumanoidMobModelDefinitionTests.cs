@@ -8,8 +8,8 @@ using Xunit;
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>
-/// T-672/T-673: proves the DSL-baked humanoid parts are value-identical to the legacy FromVanilla records, and that
-/// the skeleton variants that reuse Skeleton geometry keep their shared parts and clothing pose sources.
+/// T-672/T-673/T-675: proves the DSL-baked humanoid parts are value-identical to the legacy FromVanilla records, and
+/// that the skeleton variants that reuse Skeleton geometry keep their shared parts and clothing pose sources.
 /// </summary>
 public sealed class HumanoidMobModelDefinitionTests
 {
@@ -114,6 +114,54 @@ public sealed class HumanoidMobModelDefinitionTests
         AssertPartsMatch(expectedEnderman, HumanoidMobModelDefinition.Enderman.Parts);
         AssertPartsMatch(expectedDrowned, HumanoidMobModelDefinition.Drowned.Parts);
         AssertPartsMatch(expectedHusk, HumanoidMobModelDefinition.Husk.Parts);
+    }
+
+    /// <summary>
+    /// T-675: proves the DSL-baked Stray/Bogged clothing outer parts (grow, overlay texture path, PoseSource) are
+    /// value-identical to the legacy FromVanilla records, and that the six names and pose links are preserved.
+    /// </summary>
+    [Fact]
+    public void StrayAndBoggedOuterPartsMatchLegacyRecords()
+    {
+        AssertOuterParts(HumanoidMobModelDefinition.Stray, "entity/skeleton/stray_overlay", 0.25f);
+        AssertOuterParts(HumanoidMobModelDefinition.Bogged, "entity/skeleton/bogged_overlay", 0.2f);
+    }
+
+    private static void AssertOuterParts(EntityModelDefinition definition, string overlayPath, float grow)
+    {
+        var expected = new[]
+        {
+            PlayerModelDefinition.FromVanilla("outer_head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0,
+                grow: grow, texturePath: overlayPath,
+                overlays: [new("outer_hat", 0.5f, 32, 0, false, overlayPath)]) with { PoseSource = "head" },
+            PlayerModelDefinition.FromVanilla("outer_body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16,
+                grow: grow, texturePath: overlayPath) with { PoseSource = "body" },
+            PlayerModelDefinition.FromVanilla("outer_left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 40, 16,
+                mirror: true, grow: grow, texturePath: overlayPath) with { PoseSource = "left_arm" },
+            PlayerModelDefinition.FromVanilla("outer_right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16,
+                grow: grow, texturePath: overlayPath) with { PoseSource = "right_arm" },
+            PlayerModelDefinition.FromVanilla("outer_left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16,
+                mirror: true, grow: grow, texturePath: overlayPath) with { PoseSource = "left_leg" },
+            PlayerModelDefinition.FromVanilla("outer_right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16,
+                grow: grow, texturePath: overlayPath) with { PoseSource = "right_leg" }
+        };
+
+        var baseCount = HumanoidMobModelDefinition.Skeleton.Parts.Count;
+        Assert.Equal(baseCount + expected.Length, definition.Parts.Count);
+        for (var i = 0; i < baseCount; i++)
+        {
+            ModelPartAssertions.AssertEqual(HumanoidMobModelDefinition.Skeleton.Parts[i], definition.Parts[i]);
+        }
+
+        var names = new[] { "outer_head", "outer_body", "outer_left_arm", "outer_right_arm", "outer_left_leg", "outer_right_leg" };
+        var poseSources = new[] { "head", "body", "left_arm", "right_arm", "left_leg", "right_leg" };
+        for (var i = 0; i < expected.Length; i++)
+        {
+            var outer = definition.Parts[baseCount + i];
+            ModelPartAssertions.AssertEqual(expected[i], outer);
+            Assert.Equal(names[i], outer.Name);
+            Assert.Equal(poseSources[i], outer.PoseSource);
+        }
     }
 
     /// <summary>Mirror of the private DrownedOuter layer factory (same values) for the legacy expectations.</summary>

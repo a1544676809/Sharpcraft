@@ -24,7 +24,8 @@ public readonly record struct VanillaPartPose(float X, float Y, float Z, float R
 
 /// <summary>
 /// One cuboid of a part in reference coordinates. <c>Name</c> becomes the flattened <c>EntityModelPart.Name</c>; a
-/// part whose descendants need a parent link should name its primary cuboid after the part itself.
+/// part whose descendants need a parent link should name its primary cuboid after the part itself. An optional
+/// <c>PoseSource</c> names the base part whose pose this cuboid follows (used by top-level overlay layers).
 /// </summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.geom.builders.CubeDefinition", "ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/builders/CubeDefinition.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Declarative cuboid DSL value; baked into EntityModelPart by VanillaMeshBake")]
 public readonly record struct VanillaCubeDefinition(
@@ -41,7 +42,8 @@ public readonly record struct VanillaCubeDefinition(
     bool Mirror = false,
     IReadOnlyList<EntityModelLayer>? Overlays = null,
     string? TexturePath = null,
-    EntityGeometryLayerKind Kind = EntityGeometryLayerKind.Cutout);
+    EntityGeometryLayerKind Kind = EntityGeometryLayerKind.Cutout,
+    string? PoseSource = null);
 
 /// <summary>
 /// One node of the declarative model tree. Direct children of <c>VanillaMeshDefinition.Root</c> are root parts;
@@ -226,6 +228,11 @@ static partial class VanillaMeshBake
                     mirror: cube.Mirror, overlays: cube.Overlays,
                     rotationX: part.Pose.RotationX, rotationY: part.Pose.RotationY, rotationZ: part.Pose.RotationZ,
                     texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind);
+
+            if (cube.PoseSource is not null)
+            {
+                baked = baked with { PoseSource = cube.PoseSource };
+            }
 
             parts.Add(textureWidth == 0 && textureHeight == 0
                 ? baked
