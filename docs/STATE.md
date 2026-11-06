@@ -62,8 +62,8 @@ updated: 2026-11-06
 
 ## 最近提交
 
+- `7b68fe3` feat(render): finish the baby elytra variant (ELYTRA_BABY) (T-662)
 - `b1b65df` merge: main (principle 14 guardrails, Phase 0/1 foundation)
+- `b4d32e2` docs: reconcile the equivalence matrix with the branch state
 - `12ed409` feat(render): elytra baby variant (ELYTRA_BABY, 0.5-scaled wings)
 - `114cb4e` refactor(launcher): drop Sharpcraft.Client reference; dev commands defer to standalone client (R-025 done)
-- `93996a8` feat(assets): extract Sharpcraft.Assets low-level layer; mount external asset index (ADR-0027)
-- `94a9f0b` feat(render): reversed-Z migration, elytra wings, OIT cloud/fluid fixes
