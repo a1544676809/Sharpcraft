@@ -44,6 +44,60 @@ public static class PlaySession
 
     public static string? ChunkDumpDirectory { get; set; }
 
+    /// <summary>
+    /// Handles transport-level clientbound play packets (KeepAlive, Ping, ChunkBatchFinished) in one shared path.
+    /// </summary>
+    /// <remarks>
+    /// The warm-up loop and <c>LivePlaySession</c> both call this so a transport reply is encoded exactly once
+    /// (AGENTS.md principle 14: a single packet dispatcher).
+    /// </remarks>
+    /// <param name="packetId">The already-decoded packet id.</param>
+    /// <param name="reader">Reader positioned at the payload after the packet id.</param>
+    /// <param name="send">Callback that writes one outbound packet body.</param>
+    /// <param name="keepAlives">Number of keep-alives answered; incremented on success.</param>
+    /// <param name="pings">Number of pings answered; incremented on success.</param>
+    /// <param name="batchesAcknowledged">Number of chunk batches acknowledged; incremented on success.</param>
+    /// <param name="desiredChunksPerTick">Chunks per tick requested in the batch acknowledgement.</param>
+    /// <returns><see langword="true"/> when the packet was a transport packet handled here; otherwise <see langword="false"/>.</returns>
+    public static bool TryHandleTransport(
+        int packetId,
+        ref PayloadReader reader,
+        Action<byte[]> send,
+        ref int keepAlives,
+        ref int pings,
+        ref int batchesAcknowledged,
+        float desiredChunksPerTick = DesiredChunksPerTick)
+    {
+        switch (packetId)
+        {
+            case PacketIds.PlayClientbound.KeepAlive:
+                if (reader.TryReadLong(out var keepAliveId) == DecodeStatus.Success)
+                {
+                    send(PlayPackets.BuildKeepAliveReply(keepAliveId));
+                    keepAlives++;
+                }
+
+                return true;
+
+            case PacketIds.PlayClientbound.Ping:
+                if (reader.TryReadInt(out var pingId) == DecodeStatus.Success)
+                {
+                    send(PlayPackets.BuildPongReply(pingId));
+                    pings++;
+                }
+
+                return true;
+
+            case PacketIds.PlayClientbound.ChunkBatchFinished:
+                send(PlayPackets.BuildChunkBatchReceived(desiredChunksPerTick));
+                batchesAcknowledged++;
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
     /// <summary>Runs the loop for a bounded time.</summary>
     /// <param name="connection">Connection already in the play phase.</param>
     /// <param name="duration">How long to stay connected.</param>
@@ -75,9 +129,9 @@ public static class PlaySession
         var layout = (SectionCount: 24, MinSectionY: -4, AirState: 0);
         var haveLayout = false;
 
-        // Packets the live session needs but that arrive during this preload (before it takes over the connection):
-        // the join-time full clock sync (set_time) and game events (weather) would otherwise be lost here, because the
-        // default branch below only counts them.
+        // Packets the live session needs but that arrive during this preload (before it takes over the connection)
+        // are deferred: the join-time full clock sync, game events (weather) and every other unhandled packet, so
+        // LivePlaySession.Adopt can replay them once it takes over.
         var deferred = new List<byte[]>();
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -100,6 +154,18 @@ public static class PlaySession
                 }
 
                 counts[packetId] = counts.TryGetValue(packetId, out var seen) ? seen + 1 : 1;
+
+                // Transport-level replies share one implementation with the live session (principle 14).
+                if (TryHandleTransport(
+                        packetId,
+                        ref reader,
+                        pkt => connection.Send(pkt),
+                        ref keepAlives,
+                        ref pings,
+                        ref batchesAcknowledged))
+                {
+                    continue;
+                }
 
                 switch (packetId)
                 {
@@ -146,31 +212,6 @@ public static class PlaySession
                         break;
                     }
 
-                    // The server sends one batch at a time and waits for this reply, so a session that never answers it
-                // stops receiving chunks after the first batch.
-                case PacketIds.PlayClientbound.ChunkBatchFinished:
-                    connection.Send(PlayPackets.BuildChunkBatchReceived(DesiredChunksPerTick));
-                    batchesAcknowledged++;
-                    break;
-
-                case PacketIds.PlayClientbound.KeepAlive:
-                        if (reader.TryReadLong(out var keepAliveId) == DecodeStatus.Success)
-                        {
-                            connection.Send(PlayPackets.BuildKeepAliveReply(keepAliveId));
-                            keepAlives++;
-                        }
-
-                        break;
-
-                    case PacketIds.PlayClientbound.Ping:
-                        if (reader.TryReadInt(out var pingId) == DecodeStatus.Success)
-                        {
-                            connection.Send(PlayPackets.BuildPongReply(pingId));
-                            pings++;
-                        }
-
-                        break;
-
                     case PacketIds.PlayClientbound.Login:
                         if (PlayPackets.TryReadJoinGame(body, out var info) == DecodeStatus.Success)
                         {
@@ -191,11 +232,17 @@ public static class PlaySession
 
                     case PacketIds.PlayClientbound.PlayerPosition:
                 {
+                    // Preload without a player entity (for example WindowCommand) must preserve the server's join
+                    // teleport so LivePlaySession.Adopt can reuse the exact position the server chose.
+                    if (player is null || sync is null)
+                    {
+                        deferred.Add(body.ToArray());
+                        break;
+                    }
+
                     // A server correction: teleports snap and are acknowledged, small deviations are blended
                     // towards (docs/specs/network/play-movement.md 4).
-                    if (player is not null &&
-                        sync is not null &&
-                        PlayMovementPackets.TryReadPlayerPosition(body[reader.Position..], out var correction) == DecodeStatus.Success &&
+                    if (PlayMovementPackets.TryReadPlayerPosition(body[reader.Position..], out var correction) == DecodeStatus.Success &&
                         correction is not null)
                     {
                         var (yaw, pitch) = orientationProvider();
@@ -232,10 +279,9 @@ public static class PlaySession
                         return new PlaySessionStats(joinGame, keepAlives, pings, counts, "start_configuration", false, chunksReceived, chunksFailed, batchesAcknowledged, deferred);
 
                     default:
-                        if (packetId == PacketIds.PlayClientbound.SetTime || packetId == PacketIds.PlayClientbound.GameEvent)
-                        {
-                            deferred.Add(body.ToArray());
-                        }
+                        // Defer every unhandled packet so LivePlaySession.Adopt never loses entities, player info,
+                        // block updates, chat, or time/weather that arrive during preload.
+                        deferred.Add(body.ToArray());
 
                         log?.Invoke($"play <- id {packetId} ({body.Length} bytes)");
 

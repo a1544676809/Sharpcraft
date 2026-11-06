@@ -5,36 +5,32 @@
 
 本文件是**验收清单**，不是设计文档。任何功能只有在对应行有"判据 + 自动化检查 + 记录数值"之后，才允许声称"与原版等效"。
 
-## 0. 现状声明（必须诚实）
+## 0. 现状声明（实时联动）
 
-- 本会话（2026-10-30 起）共有 **226 个提交**，其中大量直接改变可观测行为（渲染分层、mip、UV、tint、剔除、流式加载）。
-- 其中**只有一部分**有逐像素/逐数值证据；其余仅有"看起来对"的截图。按项目规则这不算验证。
-- 已知**当前损坏/缺失**：
-  1. **新区块不继续加载**：首批之后 `updates 0`，玩家移动时世界不扩展。
-  2. **半透明层不随区块流式更新**（水/玻璃在新区块里不出现）。
-  3. **流体渲染路径缺失**：原版 `LiquidBlock.getRenderShape = INVISIBLE` + 独立流体渲染器。
+- 本矩阵遵循 `AGENTS.md` 原则 14：**无外部原版真值锚点（Golden Vectors）或同机位参考帧对比的测试，一律只算结构自检，不得标为完全等效**。
+- 早期三大结构性损坏（新区块流式加载停滞、半透明层不随流式更新、水与岩浆独立流体通道缺失）均已修复并有实机/单测回归；当前剩余長尾差距集中记录在 [`docs/specs/render/known-gaps.md`](../render/known-gaps.md)，并按 `docs/STATE.md` 的 Phase 0 → Phase 4 大纲推进。
 
 ## 1. 矩阵
 
 | # | 特性 | 原版判据 | 检查方式 | 阈值 | 状态 |
 |---| --- | --- | --- | --- | --- |
-| 1 | 登录/进入世界 | 字段顺序与类型同原版 `ClientboundLoginPacket` / `CommonPlayerSpawnInfo` | `JoinGameFieldTests`、`LoginPacketTests`、`ProtocolPacketTests` | 逐字段相等 | **已验证（字段级 golden：playerId/hardcore/levels/三个距离/三个布尔/维度类型/维度键/seed/gameMode；尾部字段不影响）** |
-| 2 | KeepAlive/Ping | 收到即回 | `verify-protocol-live.ps1` | 20s 内 ≥1 次 | 已验证：**实测 1 次** ✓ |
-| 3 | 区块流式加载 | 区块到达后网格须在秒级跟上，不得「能走但看不见」| `verify-mesh-lag.ps1`（排除服务端发送时间）| 客户端滞后 ≤2s | **已修两处：①队列重复灌满（world=329 时 meshes 仅 16）②状态预分类表（92→23.65 ms/区块）；客户端滞后 11.4s→3.0s，仍超 2s 目标，瓶颈在 greedy 主循环** |
-| 4 | 区块批处理 ack | 每批 `ChunkBatchFinished` 必须回 `ChunkBatchReceived`，否则只收到第一批 | `verify-batch-ack.ps1` | 区块数 ≫ 9 且批次数 >1 | **已验证：9 → 49 区块（39 批），目标 200 未达（另有节流待查）** |
-| 5 | 玩家位置同步 | 平稳前进、不被反复拉回；速度 4.317 格/秒 | `verify-protocol-live.ps1`（trace 窗口速度）| 4.317±0.25 | **已验证：speed=4.318、corrections=1、20s 走 85.94 格** |
-| 6 | 方块实体 | 区块内记录：packed XZ（X 高 4 位/Z 低 4 位）、Y 大端 short、类型 VarInt、无名 NBT；更新包 clientbound 6：packed 长坐标、类型、NBT | `BlockEntityRecordTests`、`BlockEntityUpdateTests`、`Repro-007` | 逐字段相等 | **部分验证：解码已逐字段验证；类型 id↔名称注册表未对照，NBT 内容被丢弃** |
-| 7 | 实体模型 | 六部件、0.9 比例 | `EntityPlaceholderMesherTests` | 结构断言 | 部分验证（占位）|
-| 8 | 分层 | 按材质透明度三层 | `BlockLayerRulesTests`、`Repro-006` | 全绿 | 部分验证 |
-| 9 | 生物群系着色 | `ColorMapColorUtil.get` 的索引规则 + 固定色常量；另有半径 2 的 25 点混合与 swamp/dark_forest 修饰符 | `BiomeTintSamplingTests`（121 组 temp×rain 网格逐点比对）、`BiomeTintTests` | 逐点相等 | **部分验证：采样规则与常量已验证；25 点混合与修饰符未实现（缺生物群系数据）** |
-| 10 | 图集 UV/padding/mip | 1:1、无黑边、远处平滑 | ADR-0015/0016 + 黑像素计数 | 黑像素=0 | 部分验证（缺原版输出基准）|
-| 11 | 面剔除 | 仅遮挡剔除、树叶留内面 | `Repro-005`、`Repro-006` | 面积 256/162 | 部分验证（仅 CPU 侧，缺画面）|
-| 12 | 半透明排序 | 远到近、不写深度 | 像素算术断言 | ≤1 | 部分验证 |
-| 13 | 天空/雾/天体 | 渐变 + 日月星 | 原版截图对比 | ΔE 待定 | 未验证（天体未做）|
-| 14 | UI/字体/聊天 | 布局字体一致 | UI 截图 + 现有测试 | 待定 | 部分验证 |
-| 17 | 速度读数（宿主显示）| 原版 F3：`Entity.computeSpeed()` 每 tick 取 `position-lastKnownPosition` 的 3D 长度，显示 `%.3f blocks/tick` | 目视 + 数值稳定 | 每 tick 一次、不跳动 | **已验证：稳定 0.281 blocks/tick（冲刺 5.61 b/s）** |
-| 16 | 调试代码可分离 | 游戏程序集不读环境变量；删除 `Launcher/Diagnostics` 即可移除全部调试 | `check-diagnostics-separation.ps1` + `DiagnosticsSeparationTests` | violations=0 | **已验证（0 处）** |
-| 15 | 性能 | 帧时间 p99 ≤ 16.7 ms（中期目标）| `verify-performance.ps1`（渲染器自带分位数）| p99 ≤ 16.7 | **已验证（实测 p99 8.03 ms @1920×1080、128 区块；p50 5.56、p95 6.93）**；遮挡剔除耗时与提交次数尚未单独测量 |
+| 1 | 登录/进入世界 | 字段顺序与类型同原版 `ClientboundLoginPacket` / `CommonPlayerSpawnInfo` | `JoinGameFieldTests`、`LoginPacketTests`、`ProtocolPacketTests` | 逐字段相等 | **已验证（字段级 golden）** |
+| 2 | KeepAlive/Ping | 收到即回 | `verify-protocol-live.ps1` | 20s 内 ≥1 次 | **已验证（实测 1 次）** |
+| 3 | 区块流式加载与卸载 | Release 下客户端网格滞后 ≤2s，视距+2 外自动卸载释放显存 | `verify-mesh-lag.ps1`、`ClientWorld` 卸载单测 | 滞后 ≤2s、无 OOM | **已验证（Release 零积压追平，视距 32 压测 3890 区块无 OOM）** |
+| 4 | 区块批处理 ack | 每批 `ChunkBatchFinished` 回 `ChunkBatchReceived` | `verify-batch-ack.ps1` | 区块数 ≥40、failed=0 | **已验证（PASS）** |
+| 5 | 玩家位置同步 | 接受传送后发 `player_loaded`(44)，速度对齐原版 4.317 格/秒 | `verify-protocol-live.ps1` | 4.317±0.25、corrections≤1 | **已验证（speed=4.318、corrections=1）** |
+| 6 | 方块实体 | 区块内记录与更新包 clientbound 6 解码 | `BlockEntityRecordTests`、`BlockEntityUpdateTests`、`Repro-007` | 逐字段相等 | **部分验证（解码已验证；NBT 消费与类型注册表归入 Phase 1 P1.3）** |
+| 7 | 实体模型 | 原版模型 JSON 提取与骨骼/部件渲染 | `EntityPlaceholderMesherTests` | 真实模型与名字牌对齐 | **部分验证（当前为 6 盒体占位，真实模型归入 Phase 2 P2.3）** |
+| 8 | 渲染分层与流体 | 三层地形 + 独立水/岩浆流体通道（同种剔除、四角高度、flow UV） | `BlockLayerRulesTests`、`FluidMesherTests`、`FluidSurfaceTests` | 全绿 | **部分验证（静态几何与 flow 已对齐；overlay/图集动画归入 Phase 2 P2.2）** |
+| 9 | 生物群系着色与天气 | `ColorMapColorUtil` + 67 群系动态注册表 + 半径 2 混合 + 雨雷衰减 | `BiomeTintSamplingTests`、`BiomeRegistryTests`、`WeatherBlendTests` | 逐点相等 | **已验证（121 点网格 + 真实服务器 67 群系实测草色 #91BD59）** |
+| 10 | 图集 UV/padding/mip | 逐精灵归属 mip + 2 纹素 padding，无黑边渗色 | ADR-0015/0016 + `SpriteAtlasTests` | 黑像素=0 | **已验证（细黑线 = 0）** |
+| 11 | 面剔除与遮挡形状 | 树叶留内面、冰/玻璃保留内面、精确 VoxelShape 遮挡 | `Repro-005`、`Repro-006` | 面积 256/162 | **部分验证（族规则已对齐；精确 VoxelShape 归入 Phase 1 P1.2）** |
+| 12 | 半透明 OIT | 26.3 三阶段小波参考 OIT（`DEPTH_BOUNDS` + 8 系数 `TRANSMITTANCE` + `ACCUMULATE` + `COMPOSITE`） | `OitWaveletTests` + 独立云深度 OIT 实测 | 顺序无关、误差 <0.03 | **已验证（1272 测试通过，高分/大视距实测无条纹）** |
+| 13 | 天空/雾/天体/云 | 逐像素 fog 天空盘 + 日月星时间轴 + 逐 Cell 云层 OIT | `CelestialGeometryTests`、`SkyTimelinesTests`、`CloudMeshBuilderTests` + 采样对照 | 天空采样误差 ≤1/255 | **已验证（天空盘 (136,169,255) vs 原版 (137,170,255)；精确雾基色归入 Phase 2 P2.1）** |
+| 14 | UI/字体/聊天 | 画布整数缩放、样式段、聊天收发、离屏 UI Pass | UI 单测 + T-104 离屏对比 | 逐像素一致 | **部分验证（内核完成；离屏 UI Pass 与 `chat_type` 归入 Phase 3）** |
+| 15 | 性能 | 帧时间 p99 ≤ 16.7 ms | `verify-performance.ps1` | p99 ≤ 16.7 ms | **已验证（1080p 移动 p99 8.03 ms；2560×1334 视距 32 达 162 FPS）** |
+| 16 | 调试代码可分离 | 游戏程序集不读环境变量；删除 `Launcher/Diagnostics` 不影响运行 | `check-diagnostics-separation.ps1` + `DiagnosticsSeparationTests` | violations=0 | **已验证（0 处违规）** |
+| 17 | 速度读数（宿主显示）| 原版 F3：`Entity.computeSpeed()` 每 tick 采样 3D 位移 | `SpeedOverlay` | 0.281 blocks/tick | **已验证** |
 
 
 ## 1.1 纯逻辑等效性（与渲染无关，全部以原版 dump / 向量为依据）

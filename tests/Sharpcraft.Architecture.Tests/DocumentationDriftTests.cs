@@ -159,6 +159,21 @@ public sealed partial class DocumentationDriftTests
         }
 
         Assert.Contains("最后更新：", text, StringComparison.Ordinal);
+
+        var lineCount = File.ReadAllLines(state).Length;
+        Assert.True(lineCount <= 150,
+            $"docs/STATE.md has {lineCount} lines, exceeding the 150-line cap (AGENTS.md principle 14)");
+    }
+
+    [Fact]
+    public void ModuleTemplateRequiresVanillaSourceMappingAndGoldenVectors()
+    {
+        var template = Path.Combine(RepositoryRoot(), "docs", "_templates", "module-doc.md");
+        Assert.True(File.Exists(template), "docs/_templates/module-doc.md is missing");
+
+        var text = File.ReadAllText(template);
+        Assert.Contains("原版源码映射表", text, StringComparison.Ordinal);
+        Assert.Contains("真值向量（Golden Vectors）", text, StringComparison.Ordinal);
     }
 
     [Fact]

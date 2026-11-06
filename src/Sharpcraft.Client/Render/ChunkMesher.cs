@@ -7,6 +7,10 @@ using Sharpcraft.Common.World;
 
 using Sharpcraft.Client.Assets;
 
+// `BlockFace` here always means the atlas texture bucket (Top/Side/Bottom); the six-direction
+// BlockFace lives in Sharpcraft.Common.World and is not referenced by this file.
+using BlockFace = Sharpcraft.Client.Assets.BlockFace;
+
 namespace Sharpcraft.Client.Render;
 
 /// <summary>
@@ -170,6 +174,31 @@ public static class ChunkMesher
 
         return solidBlocks;
     }
+
+    /// <summary>Meshes one chunk using a unified <see cref="MeshingContext"/>.</summary>
+    public static int MeshChunk(
+        ClientWorld world,
+        LevelChunk chunk,
+        MeshBuffer buffer,
+        MeshBuffer? cutout,
+        MeshBuffer? translucent,
+        in MeshingContext context) =>
+        MeshChunk(
+            world,
+            chunk,
+            context.AirState,
+            buffer,
+            context.MaxBlocks,
+            context.Sprites,
+            translucent: translucent,
+            layout: context.Layout,
+            cutout: cutout,
+            tint: context.Tint,
+            cull: context.Cull,
+            visuals: context.Visuals,
+            merge: context.MergeFaces,
+            ambientOcclusion: context.AmbientOcclusion,
+            lighting: context.Lighting);
 
     /// <summary>Merges the faces of one direction inside one section into as few quads as possible.</summary>
     private static void MergeSectionFaces(
