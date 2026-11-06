@@ -87,15 +87,39 @@ public static class PlayerModelDefinition
         ["SOUTH"] = new(0, true, false)
     };
 
-    public static readonly EntityModelPart[] AdultParts =
-    [
-        FromVanilla("head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0, overlays: [new("hat", 0.5f, 32, 0, Kind: EntityGeometryLayerKind.Translucent)]),
-        FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16, overlays: [new("jacket", 0.25f, 16, 32, Kind: EntityGeometryLayerKind.Translucent)]),
-        FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 32, 48, overlays: [new("left_sleeve", 0.25f, 48, 48, Kind: EntityGeometryLayerKind.Translucent)]),
-        FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16, overlays: [new("right_sleeve", 0.25f, 40, 32, Kind: EntityGeometryLayerKind.Translucent)]),
-        FromVanilla("left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 16, 48, overlays: [new("left_pants", 0.25f, 0, 48, Kind: EntityGeometryLayerKind.Translucent)]),
-        FromVanilla("right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16, overlays: [new("right_pants", 0.25f, 0, 32, Kind: EntityGeometryLayerKind.Translucent)])
-    ];
+    /// <summary>
+    /// Declarative DSL tree for the six adult player parts (T-671). The root group's direct children are baked as root
+    /// parts via <c>VanillaMeshBake.BakeRoot</c>, producing exactly the legacy <c>FromVanilla</c> records. Kept private:
+    /// other model definitions still call the FromVanilla/FromVanillaChild helpers directly.
+    /// </summary>
+    private static readonly VanillaMeshDefinition AdultMesh = BuildAdultMesh();
+
+    /// <summary>The baked adult player parts, identical to the former hand-written FromVanilla array.</summary>
+    public static readonly EntityModelPart[] AdultParts = [.. VanillaMeshBake.Bake(AdultMesh, 0, 0)];
+
+    private static VanillaMeshDefinition BuildAdultMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 0f, 0f),
+            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f,
+                Overlays: [new("hat", 0.5f, 32, 0, Kind: EntityGeometryLayerKind.Translucent)]));
+        root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 0f, 0f),
+            new VanillaCubeDefinition("body", 16, 16, -4f, 0f, -2f, 8f, 12f, 4f,
+                Overlays: [new("jacket", 0.25f, 16, 32, Kind: EntityGeometryLayerKind.Translucent)]));
+        root.AddOrReplaceChild("left_arm", VanillaPartPose.Offset(5f, 2f, 0f),
+            new VanillaCubeDefinition("left_arm", 32, 48, -1f, -2f, -2f, 4f, 12f, 4f,
+                Overlays: [new("left_sleeve", 0.25f, 48, 48, Kind: EntityGeometryLayerKind.Translucent)]));
+        root.AddOrReplaceChild("right_arm", VanillaPartPose.Offset(-5f, 2f, 0f),
+            new VanillaCubeDefinition("right_arm", 40, 16, -3f, -2f, -2f, 4f, 12f, 4f,
+                Overlays: [new("right_sleeve", 0.25f, 40, 32, Kind: EntityGeometryLayerKind.Translucent)]));
+        root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(1.9f, 12f, 0f),
+            new VanillaCubeDefinition("left_leg", 16, 48, -2f, 0f, -2f, 4f, 12f, 4f,
+                Overlays: [new("left_pants", 0.25f, 0, 48, Kind: EntityGeometryLayerKind.Translucent)]));
+        root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-1.9f, 12f, 0f),
+            new VanillaCubeDefinition("right_leg", 0, 16, -2f, 0f, -2f, 4f, 12f, 4f,
+                Overlays: [new("right_pants", 0.25f, 0, 32, Kind: EntityGeometryLayerKind.Translucent)]));
+        return new VanillaMeshDefinition(root);
+    }
 
     /// <summary>
     /// Builds an EntityModelPart from the reference's y-down pivot/cube values. The conversion is centralized in

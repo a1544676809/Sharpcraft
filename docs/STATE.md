@@ -48,10 +48,11 @@ updated: 2026-11-06
 6. **T-668 LivePlaySession 有界队列（2026-11-06）**：64 MiB `BoundedReceiveQueue` + 原子字节计数；`PumpAsync` 的异常统一写入 `_failure`，队列溢出直接判定会话失效；5 项队列/格式化测试通过。
 7. **T-669 根/子骨骼坐标烘焙集中化（2026-11-06）**：`VanillaMeshBake.BakeRoot/BakeChild` 收纳 `FromVanilla/FromVanillaChild` 转换，`PlayerModelDefinition` 改为薄委托；3 项/4 cases 转换等价测试通过。
 8. **T-670 Vanilla MeshDefinition DSL 核心（2026-11-06）**：新增 `VanillaPartPose/VanillaCubeDefinition/VanillaPartDefinition/VanillaMeshDefinition` + `VanillaMeshBake.Bake`；pre-order 展平、纹理继承/覆盖、重复名/空 root 校验；4 项测试通过。
-9. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
-10. **T-648..T-650 / T-651..T-653 渲染与解耦（2026-11-05~06）**：Elytra 翼盒与 UV 原版等价、双翼镜像全宽；流体面剔除修复（玻璃后水可见）；云 OIT depth-bounds 写深度；`Sharpcraft.Assets` 分层 + 启动器/客户端解耦（ADR-0026/0027）。
-11. **实体模型/动画批量落地（2026-11-02~05）**：全部 baby 模型族、villager/zombie/horse 变体、cat/wolf 项圈、panda 基因、大量动画 provider 与测试。
-12. **协议与渲染长尾（2026-11-01~05）**：Play Clientbound 覆盖审计 + P0/P1 包批次（T-642..T-647）；反相 Z 迁移；参考 OIT 云/流体；天空盘逐像素近似。
+9. **T-671 首个真实模型 DSL 迁移（2026-11-06）**：`PlayerModelDefinition.AdultParts` 改为 `VanillaMeshDefinition` 树 + `VanillaMeshBake.Bake`；`FromVanilla/FromVanillaChild` 保留；新增结构化值比较器，`OverlayLayers` 按值比较；3 项测试通过。
+10. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
+11. **T-648..T-650 / T-651..T-653 渲染与解耦（2026-11-05~06）**：Elytra 翼盒与 UV 原版等价、双翼镜像全宽；流体面剔除修复（玻璃后水可见）；云 OIT depth-bounds 写深度；`Sharpcraft.Assets` 分层 + 启动器/客户端解耦（ADR-0026/0027）。
+12. **实体模型/动画批量落地（2026-11-02~05）**：全部 baby 模型族、villager/zombie/horse 变体、cat/wolf 项圈、panda 基因、大量动画 provider 与测试。
+13. **协议与渲染长尾（2026-11-01~05）**：Play Clientbound 覆盖审计 + P0/P1 包批次（T-642..T-647）；反相 Z 迁移；参考 OIT 云/流体；天空盘逐像素近似。
 
 ## 阻塞项
 
