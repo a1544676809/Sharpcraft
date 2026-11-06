@@ -2,12 +2,13 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using Sharpcraft.Client.Render;
+using Sharpcraft.Framework.Rendering;
 using Xunit;
 
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>
-/// T-672: proves the DSL-baked Zombie / Skeleton parts are value-identical to the legacy FromVanilla records, and that
+/// T-672/T-673: proves the DSL-baked humanoid parts are value-identical to the legacy FromVanilla records, and that
 /// the skeleton variants that reuse Skeleton geometry keep their shared parts and clothing pose sources.
 /// </summary>
 public sealed class HumanoidMobModelDefinitionTests
@@ -66,6 +67,58 @@ public sealed class HumanoidMobModelDefinitionTests
             }
         }
     }
+
+    /// <summary>
+    /// T-673: proves the DSL-baked Enderman / Drowned / Husk parts (including the DrownedOuter overlay layers and the
+    /// enderman's 25f model height) are identical to the legacy FromVanilla records.
+    /// </summary>
+    [Fact]
+    public void EndermanDrownedHuskMatchLegacyFromVanillaRecords()
+    {
+        var expectedEnderman = new[]
+        {
+            PlayerModelDefinition.FromVanilla("head", 0f, -13f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0,
+                overlays: [new("hat", -0.5f, 0, 16)], modelHeight: 25f),
+            PlayerModelDefinition.FromVanilla("body", 0f, -14f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 32, 16, modelHeight: 25f),
+            PlayerModelDefinition.FromVanilla("left_arm", 5f, -12f, 0f, -1f, -2f, -1f, 2f, 30f, 2f, 56, 0, mirror: true, modelHeight: 25f),
+            PlayerModelDefinition.FromVanilla("right_arm", -5f, -12f, 0f, -1f, -2f, -1f, 2f, 30f, 2f, 56, 0, modelHeight: 25f),
+            PlayerModelDefinition.FromVanilla("left_leg", 2f, -5f, 0f, -1f, 0f, -1f, 2f, 30f, 2f, 56, 0, mirror: true, modelHeight: 25f),
+            PlayerModelDefinition.FromVanilla("right_leg", -2f, -5f, 0f, -1f, 0f, -1f, 2f, 30f, 2f, 56, 0, modelHeight: 25f)
+        };
+        var expectedDrowned = new[]
+        {
+            PlayerModelDefinition.FromVanilla("head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0,
+                overlays: [new("hat", 0.5f, 32, 0), DrownedOuter(0, 0)]),
+            PlayerModelDefinition.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16,
+                overlays: [DrownedOuter(16, 16)]),
+            PlayerModelDefinition.FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 32, 48,
+                overlays: [DrownedOuter(32, 48)]),
+            PlayerModelDefinition.FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16,
+                overlays: [DrownedOuter(40, 16)]),
+            PlayerModelDefinition.FromVanilla("left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 16, 48,
+                overlays: [DrownedOuter(16, 48)]),
+            PlayerModelDefinition.FromVanilla("right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16,
+                overlays: [DrownedOuter(0, 16)])
+        };
+        var expectedHusk = new[]
+        {
+            PlayerModelDefinition.FromVanilla("head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0,
+                overlays: [new("hat", 0.5f, 32, 0)]),
+            PlayerModelDefinition.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16),
+            PlayerModelDefinition.FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 40, 16, mirror: true),
+            PlayerModelDefinition.FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16),
+            PlayerModelDefinition.FromVanilla("left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16, mirror: true),
+            PlayerModelDefinition.FromVanilla("right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16)
+        };
+
+        AssertPartsMatch(expectedEnderman, HumanoidMobModelDefinition.Enderman.Parts);
+        AssertPartsMatch(expectedDrowned, HumanoidMobModelDefinition.Drowned.Parts);
+        AssertPartsMatch(expectedHusk, HumanoidMobModelDefinition.Husk.Parts);
+    }
+
+    /// <summary>Mirror of the private DrownedOuter layer factory (same values) for the legacy expectations.</summary>
+    private static EntityModelLayer DrownedOuter(int textureX, int textureY) =>
+        new("drowned_outer", 0.25f, textureX, textureY, false, "entity/zombie/drowned_outer_layer", EntityGeometryLayerKind.Translucent);
 
     /// <summary>Value-wise array comparison via the shared oracle (record equality is not valid for overlay lists).</summary>
     private static void AssertPartsMatch(EntityModelPart[] expected, IReadOnlyList<EntityModelPart> actual)
