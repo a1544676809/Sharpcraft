@@ -19,12 +19,12 @@
 | 3 | 区块流式加载与卸载 | Release 下客户端网格滞后 ≤2s，视距+2 外自动卸载释放显存 | `verify-mesh-lag.ps1`、`ClientWorld` 卸载单测 | 滞后 ≤2s、无 OOM | **已验证（Release 零积压追平，视距 32 压测 3890 区块无 OOM）** |
 | 4 | 区块批处理 ack | 每批 `ChunkBatchFinished` 回 `ChunkBatchReceived` | `verify-batch-ack.ps1` | 区块数 ≥40、failed=0 | **已验证（PASS）** |
 | 5 | 玩家位置同步 | 接受传送后发 `player_loaded`(44)，速度对齐原版 4.317 格/秒 | `verify-protocol-live.ps1` | 4.317±0.25、corrections≤1 | **已验证（speed=4.318、corrections=1）** |
-| 6 | 方块实体 | 区块内记录与更新包 clientbound 6 解码 | `BlockEntityRecordTests`、`BlockEntityUpdateTests`、`Repro-007` | 逐字段相等 | **部分验证（解码已验证；NBT 消费与类型注册表归入 Phase 1 P1.3）** |
-| 7 | 实体模型 | 原版模型 JSON 提取与骨骼/部件渲染 | `EntityPlaceholderMesherTests` | 真实模型与名字牌对齐 | **部分验证（当前为 6 盒体占位，真实模型归入 Phase 2 P2.3）** |
+| 6 | 方块实体 | 区块内记录与更新包 clientbound 6 解码 | `BlockEntityRecordTests`、`BlockEntityUpdateTests`、`Repro-007` | 逐字段相等 | **部分验证（解码已验证；NBT 保留与 49 条类型注册表已完成 T-657/T-658；NBT 消费待后续）** |
+| 7 | 实体模型 | 原版模型 JSON 提取与骨骼/部件渲染 | `EntityPlaceholderMesherTests` | 真实模型与名字牌对齐 | **部分验证（真实部件模型与逐实体动画 provider 已落地 T-355..T-663 系列；名字牌与 held item 尚余）** |
 | 8 | 渲染分层与流体 | 三层地形 + 独立水/岩浆流体通道（同种剔除、四角高度、flow UV） | `BlockLayerRulesTests`、`FluidMesherTests`、`FluidSurfaceTests` | 全绿 | **部分验证（静态几何与 flow 已对齐；overlay/图集动画归入 Phase 2 P2.2）** |
 | 9 | 生物群系着色与天气 | `ColorMapColorUtil` + 67 群系动态注册表 + 半径 2 混合 + 雨雷衰减 | `BiomeTintSamplingTests`、`BiomeRegistryTests`、`WeatherBlendTests` | 逐点相等 | **已验证（121 点网格 + 真实服务器 67 群系实测草色 #91BD59）** |
 | 10 | 图集 UV/padding/mip | 逐精灵归属 mip + 2 纹素 padding，无黑边渗色 | ADR-0015/0016 + `SpriteAtlasTests` | 黑像素=0 | **已验证（细黑线 = 0）** |
-| 11 | 面剔除与遮挡形状 | 树叶留内面、冰/玻璃保留内面、精确 VoxelShape 遮挡 | `Repro-005`、`Repro-006` | 面积 256/162 | **部分验证（族规则已对齐；精确 VoxelShape 归入 Phase 1 P1.2）** |
+| 11 | 面剔除与遮挡形状 | 树叶留内面、冰/玻璃保留内面、精确 VoxelShape 遮挡 | `Repro-005`、`Repro-006` | 面积 256/162 | **部分验证（族规则已对齐；`OcclusionShape` 已完成 T-659，接入 `ChunkMesher` 归入 P1.5）** |
 | 12 | 半透明 OIT | 26.3 三阶段小波参考 OIT（`DEPTH_BOUNDS` + 8 系数 `TRANSMITTANCE` + `ACCUMULATE` + `COMPOSITE`） | `OitWaveletTests` + 独立云深度 OIT 实测 | 顺序无关、误差 <0.03 | **已验证（1272 测试通过，高分/大视距实测无条纹）** |
 | 13 | 天空/雾/天体/云 | 逐像素 fog 天空盘 + 日月星时间轴 + 逐 Cell 云层 OIT | `CelestialGeometryTests`、`SkyTimelinesTests`、`CloudMeshBuilderTests` + 采样对照 | 天空采样误差 ≤1/255 | **已验证（天空盘 (136,169,255) vs 原版 (137,170,255)；精确雾基色归入 Phase 2 P2.1）** |
 | 14 | UI/字体/聊天 | 画布整数缩放、样式段、聊天收发、离屏 UI Pass | UI 单测 + T-104 离屏对比 | 逐像素一致 | **部分验证（内核完成；离屏 UI Pass 与 `chat_type` 归入 Phase 3）** |
