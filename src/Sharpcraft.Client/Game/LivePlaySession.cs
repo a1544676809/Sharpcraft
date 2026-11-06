@@ -15,10 +15,13 @@ namespace Sharpcraft.Client.Game;
 internal sealed class LivePlaySession : IDisposable
 {
     private readonly MinecraftConnection _connection;
-    private readonly ConcurrentQueue<byte[]> _incoming = new();
+    private readonly BoundedReceiveQueue _incoming = new();
     private readonly CancellationTokenSource _stop = new();
     private Task _pump = Task.CompletedTask;
     private volatile string _failure = string.Empty;
+
+    /// <summary>Message used when the bounded receive queue rejects a packet.</summary>
+    internal const string QueueOverflowMessage = "receive queue exceeded 64 MiB";
 
     private LivePlaySession(MinecraftConnection connection, Sharpcraft.Common.Network.DynamicRegistries? registries = null)
     {
@@ -92,16 +95,24 @@ internal sealed class LivePlaySession : IDisposable
         var session = new LivePlaySession(connection, registries);
 
         // Packets the preload consumed (join clock sync, weather game events) are replayed into the queue so the live
-        // session applies them exactly as if it had owned the connection from the start.
+        // session applies them exactly as if it had owned the connection from the start. A deferred packet that would
+        // overflow the bounded queue marks the session dead instead of growing it without bound.
         if (deferredPackets is not null)
         {
             foreach (var body in deferredPackets)
             {
-                session._incoming.Enqueue(body);
+                if (!session.TryEnqueueReceived(body))
+                {
+                    break;
+                }
             }
         }
 
-        session.Start(cancellationToken);
+        if (session.IsAlive)
+        {
+            session.Start(cancellationToken);
+        }
+
         return session;
     }
 
@@ -148,6 +159,23 @@ internal sealed class LivePlaySession : IDisposable
         _stop.Dispose();
     }
 
+    /// <summary>Queues a received packet body, marking the session dead when the bounded queue is full.</summary>
+    private bool TryEnqueueReceived(byte[] body)
+    {
+        if (_incoming.TryEnqueue(body))
+        {
+            return true;
+        }
+
+        _failure = _incoming.OverflowReason ?? QueueOverflowMessage;
+        _stop.Cancel();
+        return false;
+    }
+
+    /// <summary>Formats a receive-pump fault so protocol/decode failures are surfaced instead of silently faulting the task.</summary>
+    internal static string DescribePumpFailure(Exception exception) =>
+        $"receive pump failed: {exception.GetType().Name}: {exception.Message}";
+
     private async Task PumpAsync(CancellationToken cancellationToken)
     {
         try
@@ -155,16 +183,118 @@ internal sealed class LivePlaySession : IDisposable
             while (!cancellationToken.IsCancellationRequested)
             {
                 var body = await _connection.ReceiveAsync(cancellationToken).ConfigureAwait(false);
-                _incoming.Enqueue(body);
+                if (!TryEnqueueReceived(body))
+                {
+                    return;
+                }
             }
         }
         catch (OperationCanceledException)
         {
             // Shutdown.
         }
-        catch (Exception exception) when (exception is IOException or SocketException or ObjectDisposedException)
+        catch (OutOfMemoryException)
         {
-            _failure = exception.Message;
+            // Resource exhaustion is not a recoverable connection fault; let it propagate.
+            throw;
+        }
+        catch (Exception exception)
+        {
+            // Any other failure (protocol/decode, socket, disposal) must surface through IsAlive/Failure.
+            _failure = DescribePumpFailure(exception);
         }
     }
+}
+
+/// <summary>
+/// Bounded, thread-safe receive queue used by <see cref="LivePlaySession"/>. The receive pump is the only producer (plus
+/// the one-shot deferred replay in <see cref="LivePlaySession.Adopt"/>), so a single atomic byte counter is enough to
+/// enforce the cap without locks.
+/// </summary>
+internal sealed class BoundedReceiveQueue
+{
+    /// <summary>Default cap: 64 MiB of buffered packet bodies.</summary>
+    public const long MaxBufferedBytes = 64L * 1024 * 1024;
+
+    private readonly ConcurrentQueue<byte[]> _queue = new();
+    private readonly long _maxBufferedBytes;
+    private long _bufferedBytes;
+    private int _overflowed;
+    private string? _overflowReason;
+
+    internal BoundedReceiveQueue(long maxBufferedBytes = MaxBufferedBytes)
+    {
+        if (maxBufferedBytes <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxBufferedBytes), maxBufferedBytes, "queue cap must be positive");
+        }
+
+        _maxBufferedBytes = maxBufferedBytes;
+    }
+
+    /// <summary>Current buffered byte count across all queued bodies.</summary>
+    public long BufferedBytes => Interlocked.Read(ref _bufferedBytes);
+
+    /// <summary>The configured cap in bytes.</summary>
+    public long MaxBytes => _maxBufferedBytes;
+
+    /// <summary>True once an enqueue was rejected or would have exceeded the cap; sticky for the queue's lifetime.</summary>
+    public bool Overflowed => Volatile.Read(ref _overflowed) != 0;
+
+    /// <summary>The first overflow reason, or null while nothing overflowed.</summary>
+    public string? OverflowReason => Volatile.Read(ref _overflowReason);
+
+    /// <summary>
+    /// Enqueues <paramref name="body"/> if it fits under the cap. Returns false and records the overflow reason when the
+    /// body would exceed the cap or the queue already overflowed (further enqueues stay rejected).
+    /// </summary>
+    public bool TryEnqueue(byte[] body)
+    {
+        ArgumentNullException.ThrowIfNull(body);
+
+        if (Overflowed)
+        {
+            return false;
+        }
+
+        var length = (long)body.Length;
+        long current;
+        do
+        {
+            current = Interlocked.Read(ref _bufferedBytes);
+            if (current + length > _maxBufferedBytes)
+            {
+                MarkOverflow($"receive queue exceeded {FormatLimit(_maxBufferedBytes)}");
+                return false;
+            }
+        }
+        while (Interlocked.CompareExchange(ref _bufferedBytes, current + length, current) != current);
+
+        _queue.Enqueue(body);
+        return true;
+    }
+
+    /// <summary>Removes the next body and subtracts its length from the byte count.</summary>
+    public bool TryDequeue(out byte[] body)
+    {
+        if (_queue.TryDequeue(out body!))
+        {
+            Interlocked.Add(ref _bufferedBytes, -(long)body.Length);
+            return true;
+        }
+
+        body = null!;
+        return false;
+    }
+
+    private void MarkOverflow(string reason)
+    {
+        if (Interlocked.Exchange(ref _overflowed, 1) == 0)
+        {
+            Volatile.Write(ref _overflowReason, reason);
+        }
+    }
+
+    private static string FormatLimit(long limit) =>
+        limit % (1024 * 1024) == 0 ? $"{limit / (1024 * 1024)} MiB" : $"{limit} bytes";
 }
