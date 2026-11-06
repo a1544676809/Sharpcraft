@@ -8,7 +8,9 @@ namespace Sharpcraft.Client.Render;
 
 /// <summary>
 /// Tropical fish: two body shapes (small/large) tinted by the base colour, plus a pattern copy of the same geometry
-/// tinted by the pattern colour. Bind pose only; tail sway and rotation offsets are not ported.
+/// tinted by the pattern colour. Bind pose only; tail sway and rotation offsets are not ported. Parts are declared with
+/// the <c>VanillaMeshDefinition</c> DSL and baked via <c>VanillaMeshBake.Bake</c> (T-680); the pattern-copy logic is
+/// unchanged.
 /// </summary>
 public static class TropicalFishModelDefinition
 {
@@ -20,24 +22,14 @@ public static class TropicalFishModelDefinition
         "flopper", "stripey", "glitter", "blockfish", "betty", "clayfish"
     ];
 
-    private static readonly EntityModelPart[] SmallParts =
-    [
-        PlayerModelDefinition.FromVanilla("body", 0f, 22f, 0f, -1f, -1.5f, -3f, 2f, 3f, 6f, 0, 0),
-        PlayerModelDefinition.FromVanilla("tail", 0f, 22f, 3f, 0f, -1.5f, 0f, 0f, 3f, 6f, 22, -6),
-        PlayerModelDefinition.FromVanilla("right_fin", -1f, 22.5f, 0f, -2f, -1f, 0f, 2f, 2f, 0f, 2, 16, rotationY: -MathF.PI / 4f),
-        PlayerModelDefinition.FromVanilla("left_fin", 1f, 22.5f, 0f, 0f, -1f, 0f, 2f, 2f, 0f, 2, 12, rotationY: MathF.PI / 4f),
-        PlayerModelDefinition.FromVanilla("top_fin", 0f, 20.5f, -3f, 0f, -3f, 0f, 0f, 3f, 6f, 10, -5)
-    ];
+    /// <summary>Declarative DSL trees for the two tropical fish body shapes (T-680).</summary>
+    private static readonly VanillaMeshDefinition SmallMesh = BuildSmallMesh();
 
-    private static readonly EntityModelPart[] LargeParts =
-    [
-        PlayerModelDefinition.FromVanilla("body", 0f, 19f, 0f, -1f, -3f, -3f, 2f, 6f, 6f, 0, 20),
-        PlayerModelDefinition.FromVanilla("tail", 0f, 19f, 3f, 0f, -3f, 0f, 0f, 6f, 5f, 21, 16),
-        PlayerModelDefinition.FromVanilla("right_fin", -1f, 20f, 0f, -2f, 0f, 0f, 2f, 2f, 0f, 2, 16, rotationY: -MathF.PI / 4f),
-        PlayerModelDefinition.FromVanilla("left_fin", 1f, 20f, 0f, 0f, 0f, 0f, 2f, 2f, 0f, 2, 12, rotationY: MathF.PI / 4f),
-        PlayerModelDefinition.FromVanilla("top_fin", 0f, 16f, -3f, 0f, -4f, 0f, 0f, 4f, 6f, 20, 11),
-        PlayerModelDefinition.FromVanilla("bottom_fin", 0f, 22f, -3f, 0f, 0f, 0f, 0f, 4f, 6f, 20, 21)
-    ];
+    private static readonly EntityModelPart[] SmallParts = [.. VanillaMeshBake.Bake(SmallMesh, 0, 0)];
+
+    private static readonly VanillaMeshDefinition LargeMesh = BuildLargeMesh();
+
+    private static readonly EntityModelPart[] LargeParts = [.. VanillaMeshBake.Bake(LargeMesh, 0, 0)];
 
     public static readonly EntityModelDefinition Definition = Variant("tropical_fish", "tropical_a", "tropical_a_pattern_1", SmallParts);
 
@@ -83,5 +75,39 @@ public static class TropicalFishModelDefinition
             [.. parts],
             PlayerModelDefinition.DefaultFaceTransforms,
             "entity/fish/" + baseTexture);
+    }
+
+    private static VanillaMeshDefinition BuildSmallMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 22f, 0f),
+            new VanillaCubeDefinition("body", 0, 0, -1f, -1.5f, -3f, 2f, 3f, 6f));
+        root.AddOrReplaceChild("tail", VanillaPartPose.Offset(0f, 22f, 3f),
+            new VanillaCubeDefinition("tail", 22, -6, 0f, -1.5f, 0f, 0f, 3f, 6f));
+        root.AddOrReplaceChild("right_fin", VanillaPartPose.OffsetAndRotation(-1f, 22.5f, 0f, 0f, -MathF.PI / 4f, 0f),
+            new VanillaCubeDefinition("right_fin", 2, 16, -2f, -1f, 0f, 2f, 2f, 0f));
+        root.AddOrReplaceChild("left_fin", VanillaPartPose.OffsetAndRotation(1f, 22.5f, 0f, 0f, MathF.PI / 4f, 0f),
+            new VanillaCubeDefinition("left_fin", 2, 12, 0f, -1f, 0f, 2f, 2f, 0f));
+        root.AddOrReplaceChild("top_fin", VanillaPartPose.Offset(0f, 20.5f, -3f),
+            new VanillaCubeDefinition("top_fin", 10, -5, 0f, -3f, 0f, 0f, 3f, 6f));
+        return new VanillaMeshDefinition(root);
+    }
+
+    private static VanillaMeshDefinition BuildLargeMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 19f, 0f),
+            new VanillaCubeDefinition("body", 0, 20, -1f, -3f, -3f, 2f, 6f, 6f));
+        root.AddOrReplaceChild("tail", VanillaPartPose.Offset(0f, 19f, 3f),
+            new VanillaCubeDefinition("tail", 21, 16, 0f, -3f, 0f, 0f, 6f, 5f));
+        root.AddOrReplaceChild("right_fin", VanillaPartPose.OffsetAndRotation(-1f, 20f, 0f, 0f, -MathF.PI / 4f, 0f),
+            new VanillaCubeDefinition("right_fin", 2, 16, -2f, 0f, 0f, 2f, 2f, 0f));
+        root.AddOrReplaceChild("left_fin", VanillaPartPose.OffsetAndRotation(1f, 20f, 0f, 0f, MathF.PI / 4f, 0f),
+            new VanillaCubeDefinition("left_fin", 2, 12, 0f, 0f, 0f, 2f, 2f, 0f));
+        root.AddOrReplaceChild("top_fin", VanillaPartPose.Offset(0f, 16f, -3f),
+            new VanillaCubeDefinition("top_fin", 20, 11, 0f, -4f, 0f, 0f, 4f, 6f));
+        root.AddOrReplaceChild("bottom_fin", VanillaPartPose.Offset(0f, 22f, -3f),
+            new VanillaCubeDefinition("bottom_fin", 20, 21, 0f, 0f, 0f, 0f, 4f, 6f));
+        return new VanillaMeshDefinition(root);
     }
 }
