@@ -6,11 +6,8 @@ using Sharpcraft.Common.Identifiers;
 using Sharpcraft.Common.Imaging;
 using Sharpcraft.Launcher.Accounts;
 using Sharpcraft.Launcher.Assets;
-using Sharpcraft.Client.Assets;
-using Sharpcraft.Client.Game;
 using Sharpcraft.Launcher.Launch;
 using Sharpcraft.Launcher.Transport;
-using Sharpcraft.Client.World;
 using Sharpcraft.Common.Network;
 using Sharpcraft.Framework.Rendering;
 
@@ -24,11 +21,8 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
-        Sharpcraft.Launcher.Diagnostics.HostDebugOptions.Apply();
 
-        // The dev/diagnostic commands run the game library in this process; hand it the host's explicit options so
-        // the game code reads no environment itself (AGENTS.md principle 13).
-        Sharpcraft.Client.Game.GameOptions.Configure(Sharpcraft.Launcher.Diagnostics.HostDebugOptions.Collect());
+        
 
         // Real-time loops need finer sleep granularity than the default; on Windows that is about
         // 15.6 ms, which makes a 50 ms tick wait overshoot and the simulation run slow
@@ -65,6 +59,13 @@ internal static class Program
     {
         Console.WriteLine(LauncherCommandLine.Usage);
         return 0;
+    }
+
+    private static int DevMoved(string command)
+    {
+        Console.Error.WriteLine($"\x27{command}\x27 is a development/diagnostic command; run the standalone client instead:");
+        Console.Error.WriteLine("  Sharpcraft.Client.exe --window|--frame|--walk --quickPlayMultiplayer <host:port> ... (docs/modules/client.md)");
+        return 2;
     }
 
     private static int Logout()
@@ -134,315 +135,23 @@ internal static class Program
     /// <summary>
     /// Signs in, joins play, and walks forward for a bounded time so the movement packets meet a real server.
     /// </summary>
-    private static async Task<int> WalkAsync(string address)
+    private static async Task<int> WalkAsync(string? target)
     {
-        using var cancellation = CancelOnCtrlC();
-        using var http = CreateHttpClient();
-
-        // The server validates movement against its own terrain, so the walk first collects the chunks the
-        // same way the window does and then walks on that world.
-        var collectSeconds = Environment.GetEnvironmentVariable("MC_WALK_COLLECT") is { } rawCollect && int.TryParse(rawCollect, out var collect)
-            ? collect
-            : 6;
-
-        // Sign in once; the chunk preload and the walk share the same identity.
-        AuthenticationFlow.SignedIn signedIn;
-        try
-        {
-            signedIn = await AuthenticationFlow.EnsureSignedInAsync(
-                http,
-                TokenStore.CreateDefault(),
-                forceInteractive: false,
-                onChallenge: PrintChallenge,
-                cancellation.Token).ConfigureAwait(false);
-        }
-        catch (AuthException exception)
-        {
-            Console.Error.WriteLine($"login failed [{exception.Error}] {exception.Message}");
-            return 1;
-        }
-
-        Console.WriteLine($"Signed in as {signedIn.Profile.Name}");
-        AccountsCommand.RecordPremiumSignIn(signedIn.Profile.Name, signedIn.Profile.Id);
-        var identity = new GameIdentity(signedIn.Profile.Name, signedIn.Profile.Id, signedIn.Session.AccessToken, Offline: false);
-
-        ClientWorld? world = null;
-        try
-        {
-            Console.WriteLine($"collecting chunks for {collectSeconds}s...");
-            // The walk path opens its own session below, so the collected connection is released here.
-            var preparedWorld = await WindowCommand
-                .ServerWorldAsync(address, http, collectSeconds, identity, cancellation.Token)
-                .ConfigureAwait(false);
-            world = preparedWorld.World;
-            preparedWorld.Live?.Dispose();
-            Console.WriteLine($"world: {world.LoadedChunkCount} chunks, spawn will come from the teleport");
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or IOException)
-        {
-            Console.WriteLine($"chunk collection failed ({exception.Message}); walking on a flat world instead");
-        }
-
-        var seconds = Environment.GetEnvironmentVariable("MC_WALK_SECONDS") is { } raw && double.TryParse(raw, out var parsed)
-            ? parsed
-            : 5d;
-
-        try
-        {
-            var join = new SessionServerClient(http);
-            var (outcome, connection) = await MinecraftLoginClient.LoginAsync(
-                address,
-                (signedIn.Profile.Name, signedIn.Profile.Id),
-                signedIn.Session.AccessToken,
-                (token, hash, token2) => join.JoinAsync(signedIn.Session, signedIn.Profile.Id, hash, token2),
-                cancellationToken: cancellation.Token).ConfigureAwait(false);
-
-            if (!outcome.Success || connection is null)
-            {
-                Console.Error.WriteLine($"server refused the login: {outcome.Reason}");
-                return 1;
-            }
-
-            using (connection)
-            {
-                var probe = await ConfigurationProbe.RunAsync(
-                    connection,
-                    TimeSpan.FromSeconds(20),
-                    cancellation.Token,
-                    log: line => Console.WriteLine($"  {line}")).ConfigureAwait(false);
-
-                if (!probe.ReachedPlay)
-                {
-                    Console.Error.WriteLine($"did not reach play: {probe.Reason}");
-                    return 1;
-                }
-
-                Console.WriteLine($"walking forward for {seconds:0.#}s...");
-                var result = await WalkCommand
-                    .RunAsync(
-                        connection,
-                        seconds,
-                        line => Console.WriteLine($"  {line}"),
-                        cancellation.Token,
-                        world)
-                    .ConfigureAwait(false);
-
-                // The server is the judge: it accepts movement, corrects it, or drops the connection.
-                Console.WriteLine(
-                    $"walk: sent={result.TicksSent} corrections={result.Corrections} " +
-                    $"distance={result.Distance:F2} blocks survived={result.Survived}");
-
-                Console.WriteLine(
-                    $"protocol: ticks={result.TicksSent} corrections={result.Corrections} distance={result.Distance:F2} " +
-                    $"keepalives={result.KeepAliveReplies} batchacks={result.BatchAcks} survived={result.Survived}");
-
-                if (!result.Survived)
-                {
-                    Console.Error.WriteLine($"server dropped us: {result.DisconnectReason}");
-                    return 1;
-                }
-
-                Console.WriteLine($"expected distance for {seconds:0.#}s of walking is about {4.317 * seconds:F1} blocks");
-                return 0;
-            }
-        }
-        catch (AuthException exception)
-        {
-            Console.Error.WriteLine($"login failed [{exception.Error}] {exception.Message}");
-            return 1;
-        }
-        catch (InvalidOperationException exception)
-        {
-            Console.Error.WriteLine(exception.Message);
-            return 1;
-        }
+        await Task.CompletedTask;
+        return DevMoved("walk");
     }
 
     /// <summary>Signs in, then walks the login and configuration phases of a real server.</summary>
-    private static async Task<int> PlayAsync(string address)
+    private static async Task<int> PlayAsync(string? target)
     {
-        using var cancellation = CancelOnCtrlC();
-        using var http = CreateHttpClient();
-
-        try
-        {
-            var signedIn = await AuthenticationFlow.EnsureSignedInAsync(
-                http,
-                TokenStore.CreateDefault(),
-                forceInteractive: false,
-                onChallenge: PrintChallenge,
-                cancellation.Token).ConfigureAwait(false);
-
-            Console.WriteLine($"Signed in as {signedIn.Profile.Name} ({signedIn.Profile.Id})");
-            AccountsCommand.RecordPremiumSignIn(signedIn.Profile.Name, signedIn.Profile.Id);
-
-            var join = new SessionServerClient(http);
-            var (outcome, connection) = await MinecraftLoginClient.LoginAsync(
-                address,
-                (signedIn.Profile.Name, signedIn.Profile.Id),
-                signedIn.Session.AccessToken,
-                (token, hash, token2) => join.JoinAsync(signedIn.Session, signedIn.Profile.Id, hash, token2),
-                cancellationToken: cancellation.Token).ConfigureAwait(false);
-
-            Console.WriteLine(
-                $"login: success={outcome.Success} encrypted={outcome.Encrypted} " +
-                $"compression={outcome.CompressionThreshold} hash={ShortHash(outcome.ServerHash)}");
-
-            if (!outcome.Success)
-            {
-                Console.Error.WriteLine($"server refused the login: {outcome.Reason}");
-                return 1;
-            }
-
-            using (connection)
-            {
-                var probe = await ConfigurationProbe.RunAsync(
-                    connection!,
-                    TimeSpan.FromSeconds(20),
-                    cancellation.Token,
-                    log: line => Console.WriteLine($"  {line}")).ConfigureAwait(false);
-
-                Console.WriteLine($"configuration packets: {probe.Sequence.Count}");
-                if (!probe.ReachedPlay)
-                {
-                    Console.Error.WriteLine($"did not reach play: {probe.Reason}");
-                    return 1;
-                }
-
-                Console.WriteLine(
-                    $"registries: {probe.Registries.RegistryKeys.Count} registries, {probe.Registries.TotalEntries} entries");
-                var holdSeconds = PlayHoldSeconds();
-                var layout = ResolveDimensionLayout(probe.Registries);
-                ClientWorld? world = null;
-                long nonAirBlocks = 0;
-                long lightArrays = 0;
-                Console.WriteLine($"reached the play phase; holding the connection for {holdSeconds}s...");
-                var stats = await PlaySession.RunAsync(
-                    connection!,
-                    TimeSpan.FromSeconds(holdSeconds),
-                    cancellation.Token,
-                    log: line => Console.WriteLine($"  {line}"),
-                    dimensionLayout: joinGame =>
-                    {
-                        var info = layout(joinGame.DimensionTypeId);
-                        world ??= new ClientWorld(info.MinSectionY, info.SectionCount);
-                        return (info.SectionCount, info.MinSectionY, 0);
-                    },
-                    onChunk: parsed =>
-                    {
-                        world?.AddChunk(parsed);
-                        lightArrays += parsed.Light.ArrayCount;
-                        for (var i = 0; i < parsed.Chunk.SectionCount; i++)
-                        {
-                            nonAirBlocks += parsed.Chunk.GetSection(parsed.Chunk.MinSectionY + i)?.NonAirCount ?? 0;
-                        }
-
-                        return true;
-                    }).ConfigureAwait(false);
-
-                Console.WriteLine($"play stats: packets={stats.TotalPackets} keepAlive={stats.KeepAlivesAnswered} " +
-                                  $"ping={stats.PingsAnswered} survived={stats.Survived}");
-                Console.WriteLine($"chunks: received={stats.ChunksReceived} failed={stats.ChunksFailed} " +
-                                  $"world={world?.LoadedChunkCount ?? 0} nonAirBlocks={nonAirBlocks} " +
-                                  $"lightArrays={lightArrays}");
-                if (world is not null)
-                {
-                    Console.WriteLine($"  block at (0,64,0) = state {world.GetBlockState(0, 64, 0)}");
-                }
-                if (stats.JoinGame is { } joinGame)
-                {
-                    Console.WriteLine($"  join: entity={joinGame.PlayerId} hardcore={joinGame.Hardcore} " +
-                                      $"max={joinGame.MaxPlayers} view={joinGame.ChunkRadius} sim={joinGame.SimulationDistance}");
-                    Console.WriteLine($"  levels: {string.Join(", ", joinGame.Levels)}");
-                }
-
-                var top = stats.PacketCounts.OrderByDescending(pair => pair.Value).Take(8)
-                    .Select(pair => $"id {pair.Key} x{pair.Value}");
-                Console.WriteLine($"  most frequent: {string.Join(", ", top)}");
-
-                if (!string.IsNullOrEmpty(stats.DisconnectedReason))
-                {
-                    Console.Error.WriteLine($"server disconnected us: {stats.DisconnectedReason}");
-                    return 1;
-                }
-
-                Console.WriteLine(stats.Survived ? "connection stayed healthy; disconnecting as planned" : "connection ended early");
-                return stats.Survived ? 0 : 1;
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            Console.Error.WriteLine("cancelled");
-            return 1;
-        }
-        catch (AuthException exception)
-        {
-            PrintExceptionChain(exception);
-            return ReportAuthFailure(exception);
-        }
-        catch (Exception exception) when (exception is IOException or InvalidDataException or TimeoutException)
-        {
-            Console.Error.WriteLine($"connection failed: {exception.Message}");
-            return 1;
-        }
+        await Task.CompletedTask;
+        return DevMoved("play");
     }
 
-    private static async Task<int> FrameAsync(string address)
+    private static async Task<int> FrameAsync(string? target)
     {
-        if (Environment.GetEnvironmentVariable("MC_FRAME_REPLAY") is { Length: > 0 } replayPath && File.Exists(replayPath))
-        {
-            // Replay a recorded scene: no server, therefore no variance between runs.
-            var recorded = Environment.GetEnvironmentVariable("MC_FRAME_LEAVES") == "1"
-                ? FrameCommand.BuildLeavesWorld(Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout)
-                : Environment.GetEnvironmentVariable("MC_FRAME_WATER") == "1"
-                ? FrameCommand.BuildWaterWorld(Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout)
-                : Environment.GetEnvironmentVariable("MC_FRAME_OCCLUDER") == "1"
-                    ? FrameCommand.BuildOccluderWorld()
-                    : Sharpcraft.Client.World.SceneRecorder.Load(replayPath);
-            var replayPathOut = FrameCommand.RenderWorld(recorded, 960, 540);
-            Console.WriteLine($"frame written to {replayPathOut}");
-            return 0;
-        }
-
-        using var cancellation = CancelOnCtrlC();
-        using var http = CreateHttpClient();
-
-        var seconds = Environment.GetEnvironmentVariable("MC_FRAME_SECONDS") is { } raw && int.TryParse(raw, out var parsed)
-            ? parsed
-            : 8;
-
-        GameIdentity identity;
-        try
-        {
-            identity = await ResolveDevIdentityAsync(http, cancellation.Token).ConfigureAwait(false);
-        }
-        catch (AuthException exception)
-        {
-            PrintExceptionChain(exception);
-            return ReportAuthFailure(exception);
-        }
-
-        try
-        {
-            var path = await FrameCommand.RunAsync(address, http, 960, 540, seconds, identity, cancellation.Token).ConfigureAwait(false);
-            Console.WriteLine($"frame written to {path}");
-            return 0;
-        }
-        catch (RenderingUnavailableException exception)
-        {
-            Console.Error.WriteLine($"rendering unavailable: {exception.Message}");
-            return 3;
-        }
-        catch (AuthException exception)
-        {
-            PrintExceptionChain(exception);
-            return ReportAuthFailure(exception);
-        }
-        catch (Exception exception) when (exception is IOException or InvalidOperationException or InvalidDataException or TimeoutException)
-        {
-            Console.Error.WriteLine($"frame failed: {exception.Message}");
-            return 1;
-        }
+        await Task.CompletedTask;
+        return DevMoved("frame");
     }
 
     /// <summary>Runs the launch flow: verify, pack, sign in, start the client (docs/modules/launcher.md §5.1).</summary>
@@ -612,21 +321,6 @@ internal static class Program
             }
         }
 
-        // The client owns stitching (ADR-0007); the launcher reuses it to prove real data works.
-        var stitchTimer = System.Diagnostics.Stopwatch.StartNew();
-        try
-        {
-            var atlas = SpriteAtlasBuilder.Build(stack);
-            stitchTimer.Stop();
-            Console.WriteLine(
-                $"  atlas                  {atlas.Width}x{atlas.Height}  " +
-                $"{atlas.Sprites.Count} sprites  {stitchTimer.Elapsed.TotalMilliseconds:F0} ms");
-        }
-        catch (InvalidOperationException exception)
-        {
-            Console.WriteLine($"  atlas failed: {exception.Message}");
-        }
-
         var textures = stack.ListAll(ResourcePath.Prefix(ResourceKind.Texture)).Count;
         var languages = stack.ListAll(ResourcePath.Prefix(ResourceKind.Language)).Count;
         Console.WriteLine($"  listed textures        {textures,9}");
@@ -654,82 +348,11 @@ internal static class Program
     /// Builds the identity the game library runs as for a dev/diagnostic command. A local scene needs no sign-in;
     /// a real server uses the launcher's normal authentication (this is host plumbing, not the client's job).
     /// </summary>
-    private static async Task<GameIdentity> ResolveDevIdentityAsync(HttpClient http, CancellationToken cancellationToken)
+
+    private static async Task<int> WindowAsync(string? target)
     {
-        if (IsLocalScene())
-        {
-            return new GameIdentity("Player", string.Empty, string.Empty, Offline: true);
-        }
-
-        var signedIn = await AuthenticationFlow
-            .EnsureSignedInAsync(http, TokenStore.CreateDefault(), forceInteractive: false, onChallenge: PrintChallenge, cancellationToken)
-            .ConfigureAwait(false);
-
-        Console.WriteLine($"Signed in as {signedIn.Profile.Name}");
-        AccountsCommand.RecordPremiumSignIn(signedIn.Profile.Name, signedIn.Profile.Id);
-        return new GameIdentity(signedIn.Profile.Name, signedIn.Profile.Id, signedIn.Session.AccessToken, Offline: false);
-    }
-
-    private static async Task<int> WindowAsync(string? address)
-    {
-        using var cancellation = CancelOnCtrlC();
-        using var http = CreateHttpClient();
-
-        var seconds = Environment.GetEnvironmentVariable("MC_FRAME_SECONDS") is { } raw && int.TryParse(raw, out var parsed)
-            ? parsed
-            : 8;
-        var frames = Environment.GetEnvironmentVariable("MC_WINDOW_FRAMES") is { } frameRaw && int.TryParse(frameRaw, out var frameCount)
-            ? frameCount
-            : 0;
-        var visibleFor = Environment.GetEnvironmentVariable("MC_WINDOW_SECONDS") is { } secondsRaw && int.TryParse(secondsRaw, out var windowSeconds)
-            ? TimeSpan.FromSeconds(windowSeconds)
-            : TimeSpan.FromSeconds(8);
-
-        GameIdentity identity;
-        try
-        {
-            identity = await ResolveDevIdentityAsync(http, cancellation.Token).ConfigureAwait(false);
-        }
-        catch (AuthException exception)
-        {
-            PrintExceptionChain(exception);
-            return ReportAuthFailure(exception);
-        }
-
-        try
-        {
-            var path = await WindowCommand.RunAsync(address, http, WindowWidth(), WindowHeight(), seconds, frames, visibleFor, identity, cancellation.Token)
-                .ConfigureAwait(false);
-            Console.WriteLine($"frame written to {path}");
-            return 0;
-        }
-        catch (RenderingUnavailableException exception)
-        {
-            Console.Error.WriteLine($"rendering unavailable: {exception.Message}");
-            return 3;
-        }
-        catch (PlatformNotSupportedException exception)
-        {
-            Console.Error.WriteLine($"window unavailable on this platform: {exception.Message}");
-            return 3;
-        }
-        catch (AuthException exception)
-        {
-            PrintExceptionChain(exception);
-            return ReportAuthFailure(exception);
-        }
-        catch (Exception exception) when (exception is IOException or InvalidOperationException or InvalidDataException or TimeoutException)
-        {
-            Console.Error.WriteLine($"window failed: {exception.Message}");
-            return 1;
-        }
-        catch (Exception exception)
-        {
-            // Anything else used to escape and take the process down with only a native panic to show for it, which hid
-            // the managed fault. Print the whole chain so the real failure is visible.
-            Console.Error.WriteLine($"window crashed: {exception}");
-            return 1;
-        }
+        await Task.CompletedTask;
+        return DevMoved("window");
     }
 
     private static async Task<int> ProbeAsync(string address)

@@ -44,6 +44,19 @@ internal static class Program
         // The client reads no environment (principle 13): every debug switch comes from the host explicitly.
         GameOptions.Configure(parsed.BuildDebugValues());
 
+    // Apply host-provided diagnostics (explicit options only; the game reads no environment — principle 13).
+    Sharpcraft.Client.Assets.PackWatcher.IsEnabled =
+        GameOptions.Flag(Sharpcraft.Client.Assets.PackWatcher.SwitchName);
+    Sharpcraft.Common.Network.PlaySession.ChunkDumpDirectory = GameOptions.Get("MC_DUMP_CHUNK_DIR");
+    if (float.TryParse(
+            GameOptions.Get("MC_TEXT_BACKGROUND_OPACITY"),
+            System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out var debugOpacity))
+    {
+        Sharpcraft.Client.Ui.ChatLog.BackgroundOpacity = Math.Clamp(debugOpacity, 0f, 1f);
+    }
+
         using var timerResolution = Sharpcraft.Framework.Platform.TimerResolution.Elevate();
 
         try

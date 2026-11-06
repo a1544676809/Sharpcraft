@@ -2,9 +2,6 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Globalization;
-using Sharpcraft.Client.Assets;
-using Sharpcraft.Client.Ui;
-using Sharpcraft.Common.Network;
 
 namespace Sharpcraft.Launcher.Diagnostics;
 
@@ -18,23 +15,6 @@ namespace Sharpcraft.Launcher.Diagnostics;
 [Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.HostDebugOptions", "ref://mc-26.3-analysis/src", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Sharpcraft host/infra; no reference counterpart")]
 public static class HostDebugOptions
 {
-    /// <summary>Applies every switch that the host owns.</summary>
-    public static void Apply()
-    {
-        MinecraftLoginClient.LoginNameOverride = Environment.GetEnvironmentVariable("MC_LOGIN_NAME");
-        PlaySession.ChunkDumpDirectory = Environment.GetEnvironmentVariable("MC_DUMP_CHUNK_DIR");
-        PackWatcher.IsEnabled = Environment.GetEnvironmentVariable(PackWatcher.SwitchName) == "1";
-
-        if (double.TryParse(
-                Environment.GetEnvironmentVariable("MC_TEXT_BACKGROUND_OPACITY"),
-                NumberStyles.Float,
-                CultureInfo.InvariantCulture,
-                out var opacity))
-        {
-            ChatLog.BackgroundOpacity = Math.Clamp((float)opacity, 0f, 1f);
-        }
-    }
-
     /// <summary>
     /// Collects the host's debug switches into an explicit, plain dictionary for the game library.
     /// </summary>

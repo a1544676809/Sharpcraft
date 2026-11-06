@@ -7,7 +7,7 @@ using Sharpcraft.Auth;
 using Sharpcraft.Common.Lifecycle;
 using Sharpcraft.Launcher.Accounts;
 using Sharpcraft.Launcher.Assets;
-using Sharpcraft.Client.Assets;
+using Sharpcraft.Assets;
 
 namespace Sharpcraft.Launcher.Launch;
 
@@ -319,3 +319,4 @@ public static class LaunchCommand
         return 0;
     }
 }
+

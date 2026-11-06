@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-using Sharpcraft.Client.Assets;
+using Sharpcraft.Assets;
 
 namespace Sharpcraft.Launcher.Assets;
 
@@ -266,3 +266,4 @@ public static class AssetPackBuilder
         return total;
     }
 }
+

@@ -46,6 +46,13 @@ public sealed class AssemblyBoundaryTests
         Assert.DoesNotContain(forbidden, DependenciesOf(assemblyName));
     }
 
+    [Fact]
+    public void LauncherMustNotReferenceClient()
+    {
+        // Product launch spawns the client executable; the launcher must not depend on the client assembly.
+        Assert.DoesNotContain(Client, DependenciesOf(Launcher));
+    }
+
     [Theory]
     [InlineData(Common, Client)]
     [InlineData(Common, Server)]

@@ -80,3 +80,7 @@ updated: 2026-11-06
 ## 6. R-025 收口（2026-11-06）
 
 按原则 13，Launcher 对 `Sharpcraft.Client` 的唯一残留引用仅用于**开发诊断命令**（frame/window/walk/play）与 `Diagnostics/HostDebugOptions`；产品 `launch` 已是"spawn 独立 Client 进程后退出"，游戏本体不依赖启动器。该残留**可整体删除**（见 launcher.md §9 删除步骤），删除后游戏照常运行。因此 R-025 按"调试代码可分离"口径收口，不再视为运行期耦合。
+
+## 7. R-025 最终收口（2026-11-06）
+
+已物理移除 `Launcher → Sharpcraft.Client` 项目引用：Launcher 的 `frame/window/walk/play` 改为提示使用独立 `Sharpcraft.Client.exe`，进程内游戏调用与 `SpriteAtlasBuilder` 校验已删除，`HostDebugOptions.Apply` 的客户端静态设置移除（改由 Client 从显式 `--debugOptionsFile` 读取）。新增架构测试 `LauncherMustNotReferenceClient`。产品 `launch` 仅 spawn+exit；游戏本体完全独立。
