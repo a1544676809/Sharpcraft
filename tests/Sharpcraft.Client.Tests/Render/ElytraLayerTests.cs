@@ -31,16 +31,21 @@ public sealed class ElytraLayerTests
     [Fact]
     public void BabyHumanoidCarriesHalfSizedWings()
     {
-        // Reference ELYTRA_BABY = ElytraModel scaled by 0.5: dims/pivots/offsets halved.
+        // Reference ELYTRA_BABY = ElytraModel.createLayer().apply(MeshTransformer.scaling(0.5F)). The transformer scales
+        // every pose by 0.5 and then translates y by 24.016 * (1 - 0.5) = 12.008 in the y-down model frame: the wing
+        // box becomes y 12.008..22.008 and the pivot y 12.008, i.e. bottom ≈ 2 and pivotY ≈ 12 in our y-up frame.
         var parts = EntityModelResolver.Resolve(154, baby: true).Parts;
+        var body = parts.Single(part => part.Name == "body");
         var left = parts.Single(part => part.Name == "equipment_Elytra_4_left_wing");
         Assert.Equal(5f, left.Width);
         Assert.Equal(10f, left.Height);
         Assert.Equal(1f, left.Depth);
         Assert.Equal(2f, left.Bottom);
         Assert.Equal(12f, left.PivotY);
-        Assert.Equal(-3.25f, left.CentreX);
-        Assert.Equal(1.5f, left.CentreZ);
+        Assert.Equal(0f, left.CentreX);
+        Assert.Equal(body.CentreZ + 2.5f, left.CentreZ);
+        Assert.Equal(-2.5f, left.PivotX);
+        Assert.Equal(body.CentreZ + 2f, left.PivotZ);
         Assert.Equal(0.5f, left.Grow);
     }
 

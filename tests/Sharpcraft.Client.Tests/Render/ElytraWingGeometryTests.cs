@@ -16,11 +16,12 @@ using Xunit;
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>
-/// Elytra wing slab geometry and UVs. The reference <c>ElytraModel.createLayer</c> cube is
-/// <c>texOffs(22, 0).addBox(-10, 0, 0, 10, 20, 2, new CubeDeformation(1.0F))</c> (right wing mirrored); reading the two
-/// boxes literally makes them coincident, so we keep the reference box size/texture but give each wing its own half of
-/// the back (pivoting on the spine) with a one-pixel seam. The expected corners/UVs below are derived from
-/// <c>ModelPart.Cube</c> (uniform grow, but the mirror operator reflects the cube in X) and the per-face <c>Polygon</c>
+/// Elytra wing slab geometry and UVs. The reference <c>ElytraModel.createLayer</c> left wing is
+/// <c>texOffs(22, 0).addBox(-10, 0, 0, 10, 20, 2, new CubeDeformation(1.0F))</c> at pivot +5; the right wing is the
+/// mirrored counterpart at pivot -5 with box minX 0. Each box therefore spans model x [-5, 5]: the two full-width slabs
+/// intentionally overlap on the back, exactly as the reference. Their opposing X rotations (ElytraModel.setupAnim)
+/// form the shallow V that keeps the large faces from being coplanar. The expected corners/UVs below are derived from
+/// <c>ModelPart.Cube</c> (uniform grow; the mirror operator reflects the cube in X) and the per-face <c>Polygon</c>
 /// u/v rectangles, then mapped through our <c>FromVanilla</c> x-mirror + y-up conversion and the <c>WingsLayer</c>
 /// +0.125-block (2 model px) z translation.
 /// </summary>
@@ -161,6 +162,36 @@ public sealed class ElytraWingGeometryTests
         AssertClose(24f, westMaxU);
         AssertClose(34f, eastMinU);
         AssertClose(36f, eastMaxU);
+    }
+
+    [Fact]
+    public void BabyWingsAreMeshedWhenChestHasElytra()
+    {
+        var items = ItemRegistry.LoadEmbedded();
+        var elytraId = items.GetId(Identifier.Parse("minecraft:elytra"));
+        var state = new EntityRenderState(
+            1, ZombieTypeId, 0f, 0f, 0f, 0f, 0f,
+            Equipment: new EntityEquipment(-1, -1, -1, -1, elytraId, -1, -1, -1),
+            IsBaby: true);
+        var layers = new EntityModelMesher().BuildLayers(
+            [state], new SpriteRect(0, 0, 64, 64, 1), 64, 64, variants: EntityVariantTable.Builtin);
+        var elytra = Assert.Single(layers, layer => layer.Kind == EntityGeometryLayerKind.Elytra);
+        Assert.True(elytra.Geometry.VertexFloats > 0, "baby elytra wings must produce geometry");
+        Assert.Equal(48, elytra.Geometry.VertexFloats / 14); // 2 wings x 6 faces x 4 corners
+
+        // Golden bounds from MeshTransformer.scaling(0.5): scale then +12.008 y-down => y-up box 1.992..11.992, plus
+        // the 0.5 grow on every side => 1.492..12.492 model px. Yaw does not change Y.
+        var minY = float.MaxValue;
+        var maxY = float.MinValue;
+        for (var v = 0; v < 48; v++)
+        {
+            var y = elytra.Geometry.Vertices[v * 14 + 1];
+            minY = MathF.Min(minY, y);
+            maxY = MathF.Max(maxY, y);
+        }
+
+        AssertClose(1.492f * Px, minY);
+        AssertClose(12.492f * Px, maxY);
     }
 
     [Fact]

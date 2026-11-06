@@ -4,7 +4,7 @@
 状态：[已评审]
 基线：Minecraft 26.3
 证据：`docs/analysis/render/entity-equipment.md`
-最后更新：2026-11-04
+最后更新：2026-11-06
 
 # 实体装备与物品层
 
@@ -102,9 +102,32 @@
 - `docs/analysis/render/entity-equipment.md`
 - `docs/specs/network/entity-sync.md`
 - `docs/modules/entity-render.md`
+## 10. Elytra 翼层（T-648..T-652 / T-662）
 
+### 10.1 原版 26.3 源码映射表
 
-- **Elytra（T-648 第1步）**：双翼模型层已加（WithElytra，胸槽 elytra 可见，纹理 ntity/equipment/wings/elytra）；扇动（lytraRotX/Y/Z）与独立放置为后续。
-- **Elytra 翼盒与原版等价（T-649）**：`ElytraModel.createLayer` 的左右翼盒为 `texOffs(22,0).addBox(-10,0,0,10,20,2, CubeDeformation(1.0))`，右翼 `mirror()`；`ModelPart.Cube` 对 grow 做 min/max 均匀外扩，`Polygon` 每面取 u0..u4 / v0..v2 的固定矩形。`WithElytra` 以 `FromVanilla(modelHeight=bodyTop)` 复现（pivot ±5、bottom=bodyTop-20、z 含 WingsLayer +0.125 格 = +2px）。**根因（已修复）**：镜像部件（右翼）的 WEST/EAST 两个 X 面在网格里采样了另一侧的 u 段；现按 `part.Mirror` 交换两 X 面 u 段（通用 cube-meshing 修复，非镜像面/非镜像部件不受影响）。六面角点与 UV 由 `ElytraWingGeometryTests` 锁定。
-- **Elytra 翼面 z-fight 根因（T-650，已定位）**：翼面条纹与几何/UV/pose 无关。`ElytraModel.createLayer` 的左右翼是**镜像同形**的 10×20×2 叠加翼板（pivot ±5；`ModelPart.Cube` 的 `mirror` 只交换绕序与 UV，不改变方块几何位置），折叠姿态下两翼大面近平行、仅在 x=0 附近相交，中心区深度差极小。原版用**反相 Z（reversed-Z）**：`Projection.getMatrix` 交换 near/far（`ref://mc-26.3-analysis/src/net/minecraft/client/renderer/Projection.java` 67–75），主深度以 `clearDepthTexture(main,0.0)` 清除（`.../GameRenderer.java` 503 行），`DepthStencilState.DEFAULT = (GREATER_THAN_OR_EQUAL, writeDepth=true, bias 0)`（`.../DepthStencilState.java`），`ARMOR_CUTOUT_NO_CULL` 继承 DEFAULT 且 `cull(false)`（`.../RenderPipelines.java` 448–456）。本引擎已迁移到反相 Z，条纹消失；但两翼仍是**共面覆盖整背**的叠加翼板，因此仍表现为"重叠、无中心缝、前后交替"。
-- **Elytra 双翼改为各自半边 + 中心缝（T-650，已实施）**：根因是两翼盒按字面读为镜像同形叠加、各自覆盖整背 x[-5,5]，两片共面大面在同深度反复互覆 → 无接缝且前后交替。`WithElytra` 保持参考盒尺寸/纹理（10×20×2、tex 22,0、grow1）与 `WingsLayer` +2px z，但让每翼只占背面一半：`CentreX=∓6.5`、`PivotX=0`（脊柱）、`PivotZ=CentreZ+2`；1px 均匀外扩由 1.5px 外移吸收，两翼内缘之间留 1px 中心缝，互不重叠。旋转仍由 `ElytraAnimationState` 驱动：左 `(−xRot,−yRot,+zRot)`、右 `(−xRot,+yRot,−zRot)`（互为镜像）；静止位（xRot=π/12,zRot=−π/12）两翼呈浅 V、外尖向后下并留中心缝，滑翔位（zRot→−π/2）向两侧展开。`ElytraWingGeometryTests` 由"两翼同一 x[-6,6]"改为每翼半边角点并断言中心 1px 缝不重叠；六面 UV 不变（仍由参考纹理布局锁定）。
+| 本模块概念 / 方法 | 原版类与方法路径（`ref://...`） | 精确常量 / 公式 / 树结构 | 位序 / 正负号 / 色彩空间约定 | 缺省 / 越界回退值 |
+| --- | --- | --- | --- | --- |
+| `WithElytra` 成人翼盒 | `ref://mc-26.3-analysis/src/net/minecraft/client/model/object/equipment/ElytraModel.java#createLayer` | 左翼 `texOffs(22,0).addBox(-10,0,0,10,20,2,new CubeDeformation(1.0F))`，`PartPose.offsetAndRotation(5,0,0, π/12, 0, −π/12)`；右翼 `mirror()`、`addBox(0,0,0,10,20,2,1.0F)`、pivot −5、zRot +π/12 | 模型 y 向下、x 向右；`FromVanilla(modelHeight=bodyTop)` 转换：`centreX=−(pivotX+minX+w/2)`、`bottom=modelHeight−(pivotY+minY+h)`、`centreZ=pivotZ+minZ+d/2` | 胸槽无 elytra 时 `VisibleWhen` 不通过 |
+| `WithElytra` 婴儿翼盒 | 同上 + `ElytraModel.BABY_TRANSFORMER = MeshTransformer.scaling(0.5F)` | `MeshTransformer.scaling(0.5)` = `pose.scaled(0.5).translated(0, 24.016×(1−0.5)=12.008, 0)`：尺寸 10×20×2→5×10×1，pivot ±5→±2.5，grow 1→0.5；y-down 翼盒 12.008..22.008、pivot 12.008；`WingsLayer` 的 +0.125 格平移不缩放 | 换成 y-up（modelHeight 24）：`Bottom≈2`、`PivotY≈12`；`CentreZ=body.CentreZ+2.5`、`PivotZ=body.CentreZ+2` | `Decorate` 只为 humanoid 附加 |
+| `WingsLayer.submit` 平移 | `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/layers/WingsLayer.java#submit` | `poseStack.translate(0, 0, 0.125F)` = +2 模型像素；`state.isBaby ? elytraBabyModel : elytraModel` | z 正方向朝背后 | 无 `EQUIPPABLE` 或 `assetId` 为空时不绘制 |
+| `ElytraModel.setupAnim` 旋转 | `ref://mc-26.3-analysis/src/net/minecraft/client/model/object/equipment/ElytraModel.java#setupAnim` | 左翼 `y = crouching ? 3.0 : 0`；`xRot=state.elytraRotX`、`yRot=state.elytraRotY`、`zRot=state.elytraRotZ`；右翼 yRot/zRot 取反 | 左 `(−X,−Y,+Z)` / 右 `(−X,+Y,−Z)`（`RotationSelector`） | 无状态时默认 (π/12, 0, −π/12) |
+| `ElytraAnimationState` 姿态驱动 | `ref://mc-26.3-analysis/src/net/minecraft/world/entity/ElytraAnimationState.java` | standing=(π/12,0,−π/12)；crouching=(2π/9,0.0873,−π/4)；fallflying 按 `ratio=1−(−normalizedVelocity.y)^1.5` 在 (π/12,−π/12)→(π/9,−π/2) 插值；每 tick `0.3*(target−cur)` | 弧度；x/y/z 轴 | 速度长度 < 1e−6 时 ratio=1 |
+| 翼纹理 | `EquipmentClientInfo.LayerType.WINGS`；`WingsLayer` 的玩家披风/鞘翼皮肤覆盖 | 默认 `entity/equipment/wings/elytra`，64×32，tex(22,0) | sRGB，与实体纹理一致 | 玩家自定义 elytra/cape 纹理优先（后续） |
+
+### 10.2 真值向量（Golden Vectors）
+
+采样来源：`ElytraModel.java` / `WingsLayer.java` 的精确常量静态推导；测试落点：
+`tests/Sharpcraft.Client.Tests/Render/ElytraLayerTests.cs`、`ElytraWingGeometryTests.cs`。
+
+1. **成人翼部件**：`Width=10, Height=20, Depth=2, Grow=1, CentreX=0, Bottom=bodyTop−20, PivotY=bodyTop, PivotZ=body.CentreZ+2, CentreZ=body.CentreZ+3, tex(22,0)/64×32`。
+2. **婴儿翼部件**：`Width=5, Height=10, Depth=1, Grow=0.5, CentreX=0, Bottom=2, PivotY=12, PivotX=∓2.5, PivotZ=body.CentreZ+2, CentreZ=body.CentreZ+2.5`（由 `MeshTransformer.scaling(0.5)` 的 12.008 y 偏移换算，不再是 `bodyTop−10`）。
+3. **成人网格角点**：两翼各为同一 `x[−6,6]`、`y[bodyTop−21, bodyTop+1]`、`z[body.CentreZ+1, body.CentreZ+5]` 的 10×20×2 外扩盒（测试以 bodyTop=24 断言 y[3,25]、z[1,5]），每翼 6 面 ×4 角点。
+4. **UV 表**：六面按 `ModelPart.Polygon` 取 `u0=22,u1=24,u2=34,u3=36,u4=46,v0=0,v1=2,v2=22`；右翼 WEST/EAST 的 u 段按镜像交换为 22..24 / 34..36。
+5. **婴儿网格**：胸槽 elytra 的 baby zombie 产出 2 翼 ×6 面 ×4 角点 = 48 顶点（`VertexFloats/14=48`）。
+6. **姿态**：standing `elytraRot=(π/12,0,−π/12)` 时两翼形成在 x=0 相交的浅 V，左右大面法线 X 分量相反且非零（非共面）；crouch 时 y=3px。
+
+### 10.3 已知偏差
+
+- 右翼镜像的 WEST/EAST 面 u 段修复（T-649）为通用 cube-meshing 行为，已由几何测试锁定。
+- 两翼在参考模型中为**全宽重叠**的镜像同形翼板；曾按“各占半边”实现，属于对参考的误读，已于 T-650/T-662 收敛回参考几何。
