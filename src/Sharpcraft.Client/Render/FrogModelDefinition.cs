@@ -8,35 +8,18 @@ namespace Sharpcraft.Client.Render;
 /// </summary>
 /// <remarks>
 /// Bind pose only. Frog variants are registry entries that pick a texture (temperate/warm/cold); the croaking body is a
-/// static part here because the croak animation is not ported.
+/// static part here because the croak animation is not ported. Parts are declared with the <c>VanillaMeshDefinition</c>
+/// DSL and baked via <c>VanillaMeshBake.Bake</c> (T-677); the empty root pivot and zero-size pivot groups are preserved.
 /// </remarks>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.frog.FrogModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/frog/FrogModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class FrogModelDefinition
 {
     public const int FrogEntityTypeId = 56;
 
-    private static readonly EntityModelPart[] Parts =
-    [
-        PlayerModelDefinition.FromVanilla("root", 0f, 24f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-        PlayerModelDefinition.FromVanillaChild("body", "root", 0f, -2f, 4f, -3.5f, -2f, -8f, 7f, 3f, 9f, 3, 1),
-        PlayerModelDefinition.FromVanillaChild("body_layer", "body", 0f, 0f, 0f, -3.5f, -1f, -8f, 7f, 0f, 9f, 23, 22),
-        PlayerModelDefinition.FromVanillaChild("head", "body", 0f, -2f, -1f, -3.5f, -2f, -7f, 7f, 3f, 9f, 0, 13),
-        PlayerModelDefinition.FromVanillaChild("head_layer", "head", 0f, 0f, 0f, -3.5f, -1f, -7f, 7f, 0f, 9f, 23, 13),
-        PlayerModelDefinition.FromVanillaChild("eyes", "head", -0.5f, 0f, 2f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-        PlayerModelDefinition.FromVanillaChild("right_eye", "eyes", -1.5f, -3f, -6.5f, -1.5f, -1f, -1.5f, 3f, 2f, 3f, 0, 0),
-        PlayerModelDefinition.FromVanillaChild("left_eye", "eyes", 2.5f, -3f, -6.5f, -1.5f, -1f, -1.5f, 3f, 2f, 3f, 0, 5),
-        PlayerModelDefinition.FromVanillaChild("croaking_body", "body", 0f, -1f, -5f, -3.5f, -0.1f, -2.9f, 7f, 2f, 3f, 26, 5,
-            grow: -0.1f),
-        PlayerModelDefinition.FromVanillaChild("tongue", "body", 0f, -1.01f, 1f, -2f, 0f, -7.1f, 4f, 0f, 7f, 17, 13),
-        PlayerModelDefinition.FromVanillaChild("left_arm", "body", 4f, -1f, -6.5f, -1f, 0f, -1f, 2f, 3f, 3f, 0, 32),
-        PlayerModelDefinition.FromVanillaChild("left_hand", "left_arm", 0f, 3f, -1f, -4f, 0.01f, -4f, 8f, 0f, 8f, 18, 40),
-        PlayerModelDefinition.FromVanillaChild("right_arm", "body", -4f, -1f, -6.5f, -1f, 0f, -1f, 2f, 3f, 3f, 0, 38),
-        PlayerModelDefinition.FromVanillaChild("right_hand", "right_arm", 0f, 3f, 0f, -4f, 0.01f, -5f, 8f, 0f, 8f, 2, 40),
-        PlayerModelDefinition.FromVanillaChild("left_leg", "root", 3.5f, -3f, 4f, -1f, 0f, -2f, 3f, 3f, 4f, 14, 25),
-        PlayerModelDefinition.FromVanillaChild("left_foot", "left_leg", 2f, 3f, 0f, -4f, 0.01f, -4f, 8f, 0f, 8f, 2, 32),
-        PlayerModelDefinition.FromVanillaChild("right_leg", "root", -3.5f, -3f, 4f, -2f, 0f, -2f, 3f, 3f, 4f, 0, 25),
-        PlayerModelDefinition.FromVanillaChild("right_foot", "right_leg", -2f, 3f, 0f, -4f, 0.01f, -4f, 8f, 0f, 8f, 18, 32)
-    ];
+    /// <summary>Declarative DSL tree for the nested frog parts (T-677).</summary>
+    private static readonly VanillaMeshDefinition FrogMesh = BuildFrogMesh();
+
+    private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(FrogMesh, 0, 0)];
 
     public static readonly EntityModelDefinition Definition = new(
         "frog",
@@ -75,5 +58,51 @@ public static class FrogModelDefinition
         }
 
         return variants;
+    }
+
+    /// <summary>
+    /// The empty root pivot carries body (with its own nested head/eyes/arms chain) and the two hind legs. Zero-size
+    /// cubes are pure pivot groups; pre-order baking reproduces the original flat part order and parent links.
+    /// </summary>
+    private static VanillaMeshDefinition BuildFrogMesh()
+    {
+        var container = new VanillaPartDefinition("container", VanillaPartPose.Zero);
+        var root = container.AddOrReplaceChild("root", VanillaPartPose.Offset(0f, 24f, 0f),
+            new VanillaCubeDefinition("root", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f));
+        var body = root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, -2f, 4f),
+            new VanillaCubeDefinition("body", 3, 1, -3.5f, -2f, -8f, 7f, 3f, 9f));
+        body.AddOrReplaceChild("body_layer", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("body_layer", 23, 22, -3.5f, -1f, -8f, 7f, 0f, 9f));
+        var head = body.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, -2f, -1f),
+            new VanillaCubeDefinition("head", 0, 13, -3.5f, -2f, -7f, 7f, 3f, 9f));
+        head.AddOrReplaceChild("head_layer", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("head_layer", 23, 13, -3.5f, -1f, -7f, 7f, 0f, 9f));
+        var eyes = head.AddOrReplaceChild("eyes", VanillaPartPose.Offset(-0.5f, 0f, 2f),
+            new VanillaCubeDefinition("eyes", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f));
+        eyes.AddOrReplaceChild("right_eye", VanillaPartPose.Offset(-1.5f, -3f, -6.5f),
+            new VanillaCubeDefinition("right_eye", 0, 0, -1.5f, -1f, -1.5f, 3f, 2f, 3f));
+        eyes.AddOrReplaceChild("left_eye", VanillaPartPose.Offset(2.5f, -3f, -6.5f),
+            new VanillaCubeDefinition("left_eye", 0, 5, -1.5f, -1f, -1.5f, 3f, 2f, 3f));
+        body.AddOrReplaceChild("croaking_body", VanillaPartPose.Offset(0f, -1f, -5f),
+            new VanillaCubeDefinition("croaking_body", 26, 5, -3.5f, -0.1f, -2.9f, 7f, 2f, 3f, Grow: -0.1f));
+        body.AddOrReplaceChild("tongue", VanillaPartPose.Offset(0f, -1.01f, 1f),
+            new VanillaCubeDefinition("tongue", 17, 13, -2f, 0f, -7.1f, 4f, 0f, 7f));
+        var leftArm = body.AddOrReplaceChild("left_arm", VanillaPartPose.Offset(4f, -1f, -6.5f),
+            new VanillaCubeDefinition("left_arm", 0, 32, -1f, 0f, -1f, 2f, 3f, 3f));
+        leftArm.AddOrReplaceChild("left_hand", VanillaPartPose.Offset(0f, 3f, -1f),
+            new VanillaCubeDefinition("left_hand", 18, 40, -4f, 0.01f, -4f, 8f, 0f, 8f));
+        var rightArm = body.AddOrReplaceChild("right_arm", VanillaPartPose.Offset(-4f, -1f, -6.5f),
+            new VanillaCubeDefinition("right_arm", 0, 38, -1f, 0f, -1f, 2f, 3f, 3f));
+        rightArm.AddOrReplaceChild("right_hand", VanillaPartPose.Offset(0f, 3f, 0f),
+            new VanillaCubeDefinition("right_hand", 2, 40, -4f, 0.01f, -5f, 8f, 0f, 8f));
+        var leftLeg = root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(3.5f, -3f, 4f),
+            new VanillaCubeDefinition("left_leg", 14, 25, -1f, 0f, -2f, 3f, 3f, 4f));
+        leftLeg.AddOrReplaceChild("left_foot", VanillaPartPose.Offset(2f, 3f, 0f),
+            new VanillaCubeDefinition("left_foot", 2, 32, -4f, 0.01f, -4f, 8f, 0f, 8f));
+        var rightLeg = root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-3.5f, -3f, 4f),
+            new VanillaCubeDefinition("right_leg", 0, 25, -2f, 0f, -2f, 3f, 3f, 4f));
+        rightLeg.AddOrReplaceChild("right_foot", VanillaPartPose.Offset(-2f, 3f, 0f),
+            new VanillaCubeDefinition("right_foot", 18, 32, -4f, 0.01f, -4f, 8f, 0f, 8f));
+        return new VanillaMeshDefinition(container);
     }
 }
