@@ -98,8 +98,9 @@ public static class PlayerModelDefinition
     ];
 
     /// <summary>
-    /// Builds an EntityModelPart from the reference's y-down pivot/cube values. The conversion is centralized here so
-    /// individual model definitions do not need to hand-flip Bottom/CentreX.
+    /// Builds an EntityModelPart from the reference's y-down pivot/cube values. The conversion is centralized in
+    /// <c>VanillaMeshBake.BakeRoot</c> so individual model definitions do not need to hand-flip Bottom/CentreX; this
+    /// method is a thin, byte-equivalent delegate kept for all existing callers.
     /// </summary>
     public static EntityModelPart FromVanilla(
         string name,
@@ -125,31 +126,29 @@ public static class PlayerModelDefinition
         float grow = 0f,
         EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout)
     {
-        var sourceCentreX = pivotX + minX + (width * 0.5f);
-        var centreX = MathF.Round(mirrorX ? -sourceCentreX : sourceCentreX, 4);
-        var bottom = MathF.Round(modelHeight - (pivotY + minY + height), 4);
-        var centreZ = MathF.Round(pivotZ + minZ + (depth * 0.5f), 4);
-        return new EntityModelPart(
+        return VanillaMeshBake.BakeRoot(
             name,
-            centreX,
-            bottom,
+            pivotX,
+            pivotY,
+            pivotZ,
+            minX,
+            minY,
+            minZ,
             width,
             height,
             depth,
             textureX,
             textureY,
             mirror,
+            mirrorX,
             overlays,
-            CentreZ: centreZ,
-            PivotX: mirrorX ? -pivotX : pivotX,
-            PivotY: modelHeight - pivotY,
-            PivotZ: pivotZ,
-            RotationX: rotationX,
-            RotationY: rotationY,
-            RotationZ: rotationZ,
-            TexturePath: texturePath,
-            Grow: grow,
-            Kind: kind);
+            modelHeight,
+            rotationX,
+            rotationY,
+            rotationZ,
+            texturePath,
+            grow,
+            kind);
     }
 
     public static readonly EntityModelDefinition Definition =
@@ -157,7 +156,8 @@ public static class PlayerModelDefinition
 
     /// <summary>
     /// Builds a child part from the reference's y-down pivot/cube values, keeping them local to
-    /// <paramref name="parent"/> instead of baking an absolute position.
+    /// <paramref name="parent"/> instead of baking an absolute position. The conversion is centralized in
+    /// <c>VanillaMeshBake.BakeChild</c>; this method is a thin, byte-equivalent delegate kept for all existing callers.
     /// </summary>
     /// <remarks>
     /// A child cube is expressed relative to its own origin in the reference, so only the global X mirror and Y flip
@@ -187,11 +187,15 @@ public static class PlayerModelDefinition
         float grow = 0f,
         EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout)
     {
-        ArgumentException.ThrowIfNullOrEmpty(parent);
-        return new EntityModelPart(
+        return VanillaMeshBake.BakeChild(
             name,
-            MathF.Round(-(minX + (width * 0.5f)), 4),
-            MathF.Round(-(minY + height), 4),
+            parent,
+            pivotX,
+            pivotY,
+            pivotZ,
+            minX,
+            minY,
+            minZ,
             width,
             height,
             depth,
@@ -199,17 +203,12 @@ public static class PlayerModelDefinition
             textureY,
             mirror,
             overlays,
-            CentreZ: MathF.Round(minZ + (depth * 0.5f), 4),
-            PivotX: MathF.Round(-pivotX, 4),
-            PivotY: MathF.Round(-pivotY, 4),
-            PivotZ: pivotZ,
-            RotationX: -rotationX,
-            RotationY: -rotationY,
-            RotationZ: rotationZ,
-            TexturePath: texturePath,
-            Grow: grow,
-            Parent: parent,
-            Kind: kind);
+            rotationX,
+            rotationY,
+            rotationZ,
+            texturePath,
+            grow,
+            kind);
     }
 }
 

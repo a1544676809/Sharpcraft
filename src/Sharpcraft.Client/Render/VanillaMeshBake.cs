@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Numerics;
+using Sharpcraft.Framework.Rendering;
 
 namespace Sharpcraft.Client.Render;
 
@@ -98,4 +99,114 @@ public static class VanillaMeshBake
     }
 
     private static int RoundDimension(float value) => (int)MathF.Round(value);
+
+    /// <summary>
+    /// Bakes a root part from the reference y-down pivot/cube values. This is the exact conversion formerly in
+    /// <c>PlayerModelDefinition.FromVanilla</c>: the global X mirror, the y-down to y-up model-height flip, and the
+    /// pass-through rotations. Root cubes keep an absolute model-space position.
+    /// </summary>
+    public static EntityModelPart BakeRoot(
+        string name,
+        float pivotX,
+        float pivotY,
+        float pivotZ,
+        float minX,
+        float minY,
+        float minZ,
+        float width,
+        float height,
+        float depth,
+        int textureX,
+        int textureY,
+        bool mirror = false,
+        bool mirrorX = true,
+        IReadOnlyList<EntityModelLayer>? overlays = null,
+        float modelHeight = 24f,
+        float rotationX = 0f,
+        float rotationY = 0f,
+        float rotationZ = 0f,
+        string? texturePath = null,
+        float grow = 0f,
+        EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout)
+    {
+        var sourceCentreX = pivotX + minX + (width * 0.5f);
+        var centreX = MathF.Round(mirrorX ? -sourceCentreX : sourceCentreX, 4);
+        var bottom = MathF.Round(modelHeight - (pivotY + minY + height), 4);
+        var centreZ = MathF.Round(pivotZ + minZ + (depth * 0.5f), 4);
+        return new EntityModelPart(
+            name,
+            centreX,
+            bottom,
+            width,
+            height,
+            depth,
+            textureX,
+            textureY,
+            mirror,
+            overlays,
+            CentreZ: centreZ,
+            PivotX: mirrorX ? -pivotX : pivotX,
+            PivotY: modelHeight - pivotY,
+            PivotZ: pivotZ,
+            RotationX: rotationX,
+            RotationY: rotationY,
+            RotationZ: rotationZ,
+            TexturePath: texturePath,
+            Grow: grow,
+            Kind: kind);
+    }
+
+    /// <summary>
+    /// Bakes a child part from the reference y-down pivot/cube values, keeping the cube local to
+    /// <paramref name="parent"/> (no model-height offset). This is the exact conversion formerly in
+    /// <c>PlayerModelDefinition.FromVanillaChild</c>: only the global X mirror and Y flip are applied, and X/Y
+    /// rotations negate while Z is unchanged. The mesher composes the parent chain afterwards.
+    /// </summary>
+    public static EntityModelPart BakeChild(
+        string name,
+        string parent,
+        float pivotX,
+        float pivotY,
+        float pivotZ,
+        float minX,
+        float minY,
+        float minZ,
+        float width,
+        float height,
+        float depth,
+        int textureX,
+        int textureY,
+        bool mirror = false,
+        IReadOnlyList<EntityModelLayer>? overlays = null,
+        float rotationX = 0f,
+        float rotationY = 0f,
+        float rotationZ = 0f,
+        string? texturePath = null,
+        float grow = 0f,
+        EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(parent);
+        return new EntityModelPart(
+            name,
+            MathF.Round(-(minX + (width * 0.5f)), 4),
+            MathF.Round(-(minY + height), 4),
+            width,
+            height,
+            depth,
+            textureX,
+            textureY,
+            mirror,
+            overlays,
+            CentreZ: MathF.Round(minZ + (depth * 0.5f), 4),
+            PivotX: MathF.Round(-pivotX, 4),
+            PivotY: MathF.Round(-pivotY, 4),
+            PivotZ: pivotZ,
+            RotationX: -rotationX,
+            RotationY: -rotationY,
+            RotationZ: rotationZ,
+            TexturePath: texturePath,
+            Grow: grow,
+            Parent: parent,
+            Kind: kind);
+    }
 }
