@@ -7,7 +7,9 @@ namespace Sharpcraft.Client.Render;
 
 /// <summary>
 /// Humanoid mob definitions. Every part is written in the reference's y-down pivot/cube form and converted by
-/// <see cref="PlayerModelDefinition.FromVanilla"/>; no per-model Bottom/CentreX arithmetic remains here.
+/// <see cref="PlayerModelDefinition.FromVanilla"/>; no per-model Bottom/CentreX arithmetic remains here. Zombie and
+/// Skeleton instead declare their parts with the <c>VanillaMeshDefinition</c> DSL and bake via <c>VanillaMeshBake.Bake</c>
+/// (T-672), which routes through the same centralized conversion.
 /// </summary>
 public static class HumanoidMobModelDefinition
 {
@@ -69,20 +71,35 @@ public static class HumanoidMobModelDefinition
         "entity/zombie/husk",
         1.0625f);
 
+    /// <summary>Declarative DSL tree for the skeleton's six parts (T-672).</summary>
+    private static readonly VanillaMeshDefinition SkeletonMesh = BuildSkeletonMesh();
+
     public static readonly EntityModelDefinition Skeleton = new(
         "skeleton",
         64,
         32,
-        [
-            PlayerModelDefinition.FromVanilla("head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0, overlays: [new("hat", 0.5f, 32, 0)]),
-            PlayerModelDefinition.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16),
-            PlayerModelDefinition.FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -1f, 2f, 12f, 2f, 40, 16, mirror: true),
-            PlayerModelDefinition.FromVanilla("right_arm", -5f, 2f, 0f, -1f, -2f, -1f, 2f, 12f, 2f, 40, 16),
-            PlayerModelDefinition.FromVanilla("left_leg", 2f, 12f, 0f, -1f, 0f, -1f, 2f, 12f, 2f, 0, 16, mirror: true),
-            PlayerModelDefinition.FromVanilla("right_leg", -2f, 12f, 0f, -1f, 0f, -1f, 2f, 12f, 2f, 0, 16)
-        ],
+        [.. VanillaMeshBake.Bake(SkeletonMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/skeleton/skeleton");
+
+    private static VanillaMeshDefinition BuildSkeletonMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 0f, 0f),
+            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f,
+                Overlays: [new("hat", 0.5f, 32, 0)]));
+        root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 0f, 0f),
+            new VanillaCubeDefinition("body", 16, 16, -4f, 0f, -2f, 8f, 12f, 4f));
+        root.AddOrReplaceChild("left_arm", VanillaPartPose.Offset(5f, 2f, 0f),
+            new VanillaCubeDefinition("left_arm", 40, 16, -1f, -2f, -1f, 2f, 12f, 2f, Mirror: true));
+        root.AddOrReplaceChild("right_arm", VanillaPartPose.Offset(-5f, 2f, 0f),
+            new VanillaCubeDefinition("right_arm", 40, 16, -1f, -2f, -1f, 2f, 12f, 2f));
+        root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(2f, 12f, 0f),
+            new VanillaCubeDefinition("left_leg", 0, 16, -1f, 0f, -1f, 2f, 12f, 2f, Mirror: true));
+        root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-2f, 12f, 0f),
+            new VanillaCubeDefinition("right_leg", 0, 16, -1f, 0f, -1f, 2f, 12f, 2f));
+        return new VanillaMeshDefinition(root);
+    }
 
     public static readonly EntityModelDefinition Stray = WithClothing("stray", "entity/skeleton/stray", "entity/skeleton/stray_overlay", 0.25f);
 
@@ -115,20 +132,35 @@ public static class HumanoidMobModelDefinition
         "wither_skeleton", 64, 32, Skeleton.Parts, PlayerModelDefinition.DefaultFaceTransforms,
         "entity/skeleton/wither_skeleton");
 
+    /// <summary>Declarative DSL tree for the zombie's six parts (T-672).</summary>
+    private static readonly VanillaMeshDefinition ZombieMesh = BuildZombieMesh();
+
     public static readonly EntityModelDefinition Zombie = new(
         "zombie",
         64,
         64,
-        [
-            PlayerModelDefinition.FromVanilla("head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0, overlays: [new("hat", 0.5f, 32, 0)]),
-            PlayerModelDefinition.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16),
-            PlayerModelDefinition.FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 40, 16, mirror: true),
-            PlayerModelDefinition.FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16),
-            PlayerModelDefinition.FromVanilla("left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16, mirror: true),
-            PlayerModelDefinition.FromVanilla("right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16)
-        ],
+        [.. VanillaMeshBake.Bake(ZombieMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/zombie/zombie");
+
+    private static VanillaMeshDefinition BuildZombieMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 0f, 0f),
+            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f,
+                Overlays: [new("hat", 0.5f, 32, 0)]));
+        root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 0f, 0f),
+            new VanillaCubeDefinition("body", 16, 16, -4f, 0f, -2f, 8f, 12f, 4f));
+        root.AddOrReplaceChild("left_arm", VanillaPartPose.Offset(5f, 2f, 0f),
+            new VanillaCubeDefinition("left_arm", 40, 16, -1f, -2f, -2f, 4f, 12f, 4f, Mirror: true));
+        root.AddOrReplaceChild("right_arm", VanillaPartPose.Offset(-5f, 2f, 0f),
+            new VanillaCubeDefinition("right_arm", 40, 16, -3f, -2f, -2f, 4f, 12f, 4f));
+        root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(1.9f, 12f, 0f),
+            new VanillaCubeDefinition("left_leg", 0, 16, -2f, 0f, -2f, 4f, 12f, 4f, Mirror: true));
+        root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-1.9f, 12f, 0f),
+            new VanillaCubeDefinition("right_leg", 0, 16, -2f, 0f, -2f, 4f, 12f, 4f));
+        return new VanillaMeshDefinition(root);
+    }
 }
 
 
