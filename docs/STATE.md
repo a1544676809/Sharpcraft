@@ -56,10 +56,11 @@ updated: 2026-11-06
 14. **T-676 Pig/Cow/Chicken DSL 迁移（2026-11-06）**：三套 Normal/Warm/Cold 四足模型改走 DSL，保留 cold overlays/snout UV/horn rotations/zero-width fin；4 项测试通过。
 15. **T-677 Sheep/Rabbit/Frog/Tadpole DSL 迁移（2026-11-06）**：12/13/18/2 部件（含深层 child 树与 zero-size pivot）全部改走 DSL；7 项值/顺序/Parent/变体测试通过。
 16. **T-678 Allay/Bat/Bee DSL 迁移（2026-11-06）**：8/9/10 部件树改走 DSL，Allay Translucent、Bee textureSelector 保留；7 项测试通过；Breeze 留待 DSL 增加 EmissiveOnly/per-part texture 字段。
-17. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
-18. **T-648..T-650 / T-651..T-653 渲染与解耦（2026-11-05~06）**：Elytra 翼盒与 UV 原版等价、双翼镜像全宽；流体面剔除修复（玻璃后水可见）；云 OIT depth-bounds 写深度；`Sharpcraft.Assets` 分层 + 启动器/客户端解耦（ADR-0026/0027）。
-19. **实体模型/动画批量落地（2026-11-02~05）**：全部 baby 模型族、villager/zombie/horse 变体、cat/wolf 项圈、panda 基因、大量动画 provider 与测试。
-20. **协议与渲染长尾（2026-11-01~05）**：Play Clientbound 覆盖审计 + P0/P1 包批次（T-642..T-647）；反相 Z 迁移；参考 OIT 云/流体；天空盘逐像素近似。
+17. **T-679 Breeze DSL 迁移（2026-11-06）**：DSL 增加 `IncludeInEmissive/EmissiveOnly/TextureWidth/TextureHeight` per-cube 字段；Breeze 17 部件（EmissiveOnly eyes + 7 个 wind shell）迁移完成；4 项测试通过。
+18. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
+19. **T-648..T-650 / T-651..T-653 渲染与解耦（2026-11-05~06）**：Elytra 翼盒与 UV 原版等价、双翼镜像全宽；流体面剔除修复（玻璃后水可见）；云 OIT depth-bounds 写深度；`Sharpcraft.Assets` 分层 + 启动器/客户端解耦（ADR-0026/0027）。
+20. **实体模型/动画批量落地（2026-11-02~05）**：全部 baby 模型族、villager/zombie/horse 变体、cat/wolf 项圈、panda 基因、大量动画 provider 与测试。
+21. **协议与渲染长尾（2026-11-01~05）**：Play Clientbound 覆盖审计 + P0/P1 包批次（T-642..T-647）；反相 Z 迁移；参考 OIT 云/流体；天空盘逐像素近似。
 
 ## 阻塞项
 

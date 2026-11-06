@@ -25,7 +25,9 @@ public readonly record struct VanillaPartPose(float X, float Y, float Z, float R
 /// <summary>
 /// One cuboid of a part in reference coordinates. <c>Name</c> becomes the flattened <c>EntityModelPart.Name</c>; a
 /// part whose descendants need a parent link should name its primary cuboid after the part itself. An optional
-/// <c>PoseSource</c> names the base part whose pose this cuboid follows (used by top-level overlay layers).
+/// <c>PoseSource</c> names the base part whose pose this cuboid follows (used by top-level overlay layers). The
+/// emissive flags and texture dimensions are per-cube overrides; a non-zero <c>TextureWidth</c>/<c>TextureHeight</c>
+/// takes precedence over the mesh-level dimensions passed to <c>VanillaMeshBake.Bake</c>.
 /// </summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.geom.builders.CubeDefinition", "ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/builders/CubeDefinition.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Declarative cuboid DSL value; baked into EntityModelPart by VanillaMeshBake")]
 public readonly record struct VanillaCubeDefinition(
@@ -43,7 +45,11 @@ public readonly record struct VanillaCubeDefinition(
     IReadOnlyList<EntityModelLayer>? Overlays = null,
     string? TexturePath = null,
     EntityGeometryLayerKind Kind = EntityGeometryLayerKind.Cutout,
-    string? PoseSource = null);
+    string? PoseSource = null,
+    bool IncludeInEmissive = true,
+    bool EmissiveOnly = false,
+    int TextureWidth = 0,
+    int TextureHeight = 0);
 
 /// <summary>
 /// One node of the declarative model tree. Direct children of <c>VanillaMeshDefinition.Root</c> are root parts;
@@ -234,9 +240,18 @@ static partial class VanillaMeshBake
                 baked = baked with { PoseSource = cube.PoseSource };
             }
 
-            parts.Add(textureWidth == 0 && textureHeight == 0
+            baked = baked with
+            {
+                IncludeInEmissive = cube.IncludeInEmissive,
+                EmissiveOnly = cube.EmissiveOnly
+            };
+
+            // A non-zero per-cube texture dimension wins over the mesh-level Bake dimension.
+            var effectiveWidth = cube.TextureWidth > 0 ? cube.TextureWidth : textureWidth;
+            var effectiveHeight = cube.TextureHeight > 0 ? cube.TextureHeight : textureHeight;
+            parts.Add(effectiveWidth == 0 && effectiveHeight == 0
                 ? baked
-                : baked with { TextureWidth = textureWidth, TextureHeight = textureHeight });
+                : baked with { TextureWidth = effectiveWidth, TextureHeight = effectiveHeight });
         }
     }
 }
