@@ -95,3 +95,20 @@
 - 客户端退出码与 §5 一致：`2` 参数不合法、`3` 交接不可用、`0` 成功。
 - `launch` 的完整链路（含真实认证与进程启动）待网络恢复后再跑一次；**不提供跳过认证的开关**（原则 7.1：不得存在未登录即可启动游戏的路径）。
 
+### 8.2 开发用直接 CLI 进服（不经过启动器界面）
+
+调试/联调时常需要在**不打开启动器界面**的情况下反复以不同身份进本地 offline-mode 服务器。既有诊断路径（host 侧，原则 13）：
+
+```powershell
+$env:MC_ASSETS_PACK = "$env:LOCALAPPDATA\MinecraftCSharp\packs\minecraft-26.3-<hash>.pack.zip"
+$env:MC_ASSETS_OUT  = "$env:LOCALAPPDATA\MinecraftCSharp\packs"
+$env:MC_LOGIN_NAME  = '<任意离线用户名>'      # LoginNameOverride：仅改 LoginStart 的 name
+$env:MC_WINDOW_SECONDS = '3600'
+dotnet run --project src/Sharpcraft.Launcher --no-build -- window 127.0.0.1:25565
+```
+
+- 机制：`MC_LOGIN_NAME` 映射到 `MinecraftLoginClient.LoginNameOverride`（见 `src/Sharpcraft.Common/Network/MinecraftLoginClient.cs` 的注释）。**online-mode 服务器会拒绝与正版会话不匹配的名字**；**offline-mode 服务器不做校验**，会按该名字派生 `OfflinePlayer:<name>` 的离线 UUID。
+- 因此：**每个不同的 `MC_LOGIN_NAME` 都会在服务器上生成一个不同的离线 UUID 玩家**（历史上一堆不同用户名的离线 UUID 即由此而来），无需为每个身份单独登录。
+- 无网络/纯本地时可用本地场景，不需要地址：`MC_FRAME_LOCAL=1`（演示世界）或 `MC_FRAME_WATER=1`（水域场景），仍用 `-- window`。
+- 边界（原则 7.1 不变）：该 CLI 仍是**启动器进程**，启动时会先取得一次会话（可用缓存）；它**不是**"未登录即可游玩"的产品路径，也不是分发形态，仅用于开发/联调的自备 offline-mode 服务器。
+

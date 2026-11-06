@@ -250,8 +250,9 @@ fn loadCoefficients(pixel : vec2<i32>) -> array<f32, 8> {
     return coefficients;
 }
 
-// Stage 1: record the per-pixel depth range. r = -closestLinear, g = +furthestLinear, b = -closestDevice (for the
-// composite's depth write), a = -closestOpaqueLinear (or a very negative sentinel when nothing here is fully opaque).
+// Stage 1: record the per-pixel depth range. r = -closestLinear, g = +furthestLinear, b = +closestDevice (for the
+// composite's depth write; reversed-Z keeps the nearest surface as the largest device depth under MAX blending),
+// a = -closestOpaqueLinear (or a very negative sentinel when nothing here is fully opaque).
 struct DepthBoundsOutput {
     @location(0) bounds : vec4<f32>,
 };
@@ -269,7 +270,7 @@ fn fs_depth_bounds(input : VertexOutput) -> DepthBoundsOutput {
     let opaqueLinear = select(-65504.0, -linear, alpha > 0.99);
 
     var output : DepthBoundsOutput;
-    output.bounds = vec4<f32>(-linear, linear, -device, opaqueLinear);
+    output.bounds = vec4<f32>(-linear, linear, device, opaqueLinear);
     return output;
 }
 

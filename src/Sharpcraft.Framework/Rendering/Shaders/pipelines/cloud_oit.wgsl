@@ -193,7 +193,7 @@ fn fs_depth_bounds(input : VertexOutput) -> DepthBoundsOutput {
     let device = input.deviceDepth;
     let opaqueLinear = select(-65504.0, -linear, input.cloudAlpha > 0.99);
     var output : DepthBoundsOutput;
-    output.bounds = vec4<f32>(-linear, linear, -device, opaqueLinear);
+    output.bounds = vec4<f32>(-linear, linear, device, opaqueLinear);
     return output;
 }
 

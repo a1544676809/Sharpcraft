@@ -842,10 +842,30 @@ public static class ChunkMesher
 
                     bool IsSameFluid(int wx, int wy, int wz) => layout.BlockAt(nb.GetBlockState(wx, wy, wz, 0)) is { } sameRef && sameRef.Path == fluidPath;
 
-                    bool IsSolid(int wx, int wy, int wz)
+                    // A fluid face is hidden only by a block that actually occludes light. A translucent neighbour (the
+                    // glass family, ice) must NOT hide it: the reference FluidRenderer keeps a fluid's side face unless the
+                    // neighbour is the same fluid, so water behind glass stays visible. Culling against any non-air block
+                    // (the old name-based test) dropped the water face in front of glass and made the water vanish.
+                    bool IsOccluding(int wx, int wy, int wz)
                     {
-                        var block = layout.BlockAt(nb.GetBlockState(wx, wy, wz, 0));
-                        return block is { } value && value.Path != "air" && value.Path != "water" && value.Path != "lava";
+                        var neighbourState = nb.GetBlockState(wx, wy, wz, 0);
+                        if (neighbourState == 0 || layout?.BlockAt(neighbourState) is not { } neighbourBlock)
+                        {
+                            return neighbourState != 0;
+                        }
+
+                        // Explicit translucent materials (glass, ice, fluids) never occlude, whatever the atlas says.
+                        if (BlockRenderLayers.IsTranslucent(neighbourBlock))
+                        {
+                            return false;
+                        }
+
+                        if (sprites?.TransparencyOf(neighbourBlock) is not { } transparency)
+                        {
+                            return true;
+                        }
+
+                        return !transparency.HasTransparent && !transparency.HasTranslucent;
                     }
 
                     float CellHeight(int ddx, int ddz)
@@ -939,7 +959,7 @@ public static class ChunkMesher
                     }
 
                     // Bottom: only when the cell below is neither water nor solid.
-                    if (!IsSameFluid(bx, by - 1, bz) && !IsSolid(bx, by - 1, bz))
+                    if (!IsSameFluid(bx, by - 1, bz) && !IsOccluding(bx, by - 1, bz))
                     {
                         var colour = Face(0.5f);
                         var yb = lowY + epsilon;
@@ -964,7 +984,7 @@ public static class ChunkMesher
                     var sideFlowSprite = sprites?.FluidFlow(blockId) ?? sideSprite;
 
                     // -Z (z = bz): corners (0,0) and (1,0)
-                    if (!IsSameFluid(bx, by, bz - 1) && !IsSolid(bx, by, bz - 1))
+                    if (!IsSameFluid(bx, by, bz - 1) && !IsOccluding(bx, by, bz - 1))
                     {
                         var colour = Face(0.8f);
                         Emit(
@@ -978,7 +998,7 @@ public static class ChunkMesher
                     }
 
                     // +Z (z = bz + 1): corners (1,1) and (0,1)
-                    if (!IsSameFluid(bx, by, bz + 1) && !IsSolid(bx, by, bz + 1))
+                    if (!IsSameFluid(bx, by, bz + 1) && !IsOccluding(bx, by, bz + 1))
                     {
                         var colour = Face(0.8f);
                         Emit(
@@ -992,7 +1012,7 @@ public static class ChunkMesher
                     }
 
                     // -X (x = bx): corners (0,1) and (0,0)
-                    if (!IsSameFluid(bx - 1, by, bz) && !IsSolid(bx - 1, by, bz))
+                    if (!IsSameFluid(bx - 1, by, bz) && !IsOccluding(bx - 1, by, bz))
                     {
                         var colour = Face(0.6f);
                         Emit(
@@ -1006,7 +1026,7 @@ public static class ChunkMesher
                     }
 
                     // +X (x = bx + 1): corners (1,0) and (1,1)
-                    if (!IsSameFluid(bx + 1, by, bz) && !IsSolid(bx + 1, by, bz))
+                    if (!IsSameFluid(bx + 1, by, bz) && !IsOccluding(bx + 1, by, bz))
                     {
                         var colour = Face(0.6f);
                         Emit(

@@ -24,7 +24,7 @@ public static class OcclusionCulling
     /// <param name="viewProjection">Combined matrix.</param>
     /// <param name="min">Rectangle minimum.</param>
     /// <param name="max">Rectangle maximum.</param>
-    /// <param name="nearestDepth">Smallest depth of the box; zero-to-one.</param>
+    /// <param name="nearestDepth">Window depth of the box's nearest corner; zero-to-one.</param>
     /// <returns>False when the box is entirely behind the camera and nothing can be said.</returns>
     public static bool TryProjectBox(
         Vector3 centre,
@@ -38,6 +38,10 @@ public static class OcclusionCulling
         max = new Vector2(float.MinValue);
         nearestDepth = float.MaxValue;
 
+        // The nearest corner is the one with the smallest view distance (clip.w = -viewZ for this projection family),
+        // which is independent of the depth range convention: standard-Z gives it the smallest window depth, reversed-Z
+        // the largest. Selecting by clip.w keeps the reference correct under either.
+        var nearestW = float.MaxValue;
         var anyInFront = false;
 
         for (var corner = 0; corner < 8; corner++)
@@ -61,7 +65,13 @@ public static class OcclusionCulling
 
             min = Vector2.Min(min, screen);
             max = Vector2.Max(max, screen);
-            nearestDepth = MathF.Min(nearestDepth, clip.Z / clip.W);
+
+            if (clip.W < nearestW)
+            {
+                nearestW = clip.W;
+                nearestDepth = clip.Z / clip.W;
+            }
+
             anyInFront = true;
         }
 

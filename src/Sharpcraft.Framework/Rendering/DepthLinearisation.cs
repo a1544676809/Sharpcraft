@@ -7,29 +7,31 @@ namespace Sharpcraft.Framework.Rendering;
 /// Converts window depth back to a distance along the view axis, in blocks.
 /// </summary>
 /// <remarks>
-/// Window depth is distributed by inverse distance, so almost the whole far field compresses into the last few thousandths:
-/// measured on the recorded scene it ran from 0.9986 to 1.0 for terrain tens of blocks away. Comparing occlusion in that
-/// domain is meaningless, so anything that reasons about "how far is this" converts first.
+/// The engine uses reversed-Z (near maps to depth 1, far to depth 0), so window depth is distributed by inverse distance
+/// with the far field compressed near zero: on the recorded scene, terrain tens of blocks away sat at a window depth of
+/// only about 0.0014. Comparing occlusion in that domain is meaningless, so anything that reasons about "how far is this"
+/// converts first.
 /// </remarks>
 public static class DepthLinearisation
 {
     /// <summary>View-space distance for a window depth value.</summary>
-    /// <param name="depth">Window depth, zero to one.</param>
+    /// <param name="depth">Window depth, zero to one (1 is the near plane, 0 the far plane).</param>
     /// <param name="near">Near plane.</param>
     /// <param name="far">Far plane.</param>
     public static float ToDistance(float depth, float near, float far)
     {
         if (depth >= 1f)
         {
-            return far;
+            return near;
         }
 
         if (depth <= 0f)
         {
-            return near;
+            return far;
         }
 
-        return near * far / (far - (depth * (far - near)));
+        // Invert depth = near * (far - d) / (d * (far - near)) for d.
+        return near * far / ((depth * (far - near)) + near);
     }
 
     /// <summary>Window depth for a view-space distance, the inverse of <see cref="ToDistance"/>.</summary>
@@ -37,7 +39,7 @@ public static class DepthLinearisation
     /// <param name="near">Near plane.</param>
     /// <param name="far">Far plane.</param>
     public static float ToDepth(float distance, float near, float far) =>
-        distance <= 0f ? 0f : far / (far - near) * (1f - (near / distance));
+        distance <= 0f ? 0f : near * (far - distance) / (distance * (far - near));
 
     /// <summary>Converts a whole buffer in place.</summary>
     /// <param name="depth">Window depths, converted to distances on return.</param>

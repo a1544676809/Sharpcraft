@@ -15,7 +15,7 @@
 | [`known-gaps.md`](known-gaps.md) | 当前渲染管线尚未做或仍为受控偏差的事项清单（几何/天空/雾/云/性能） | 草稿 | 2026-11-01 |
 | [`lighting.md`](lighting.md) | 证据指针：ref://mc-26.3-analysis/src/net/minecraft/client/renderer/Lightmap.java、 .../LightmapRenderStateExtractor.java、..… | 草案（待评审）。范围：方块几何的逐顶点光照与 lightmap 乘子。 | - |
 | [`occlusion-culling.md`](occlusion-culling.md) | Hi-Z 两阶段方案、分期、预算与验收；不依赖硬件遮挡查询 | 草稿 | - |
-| [`oit-reference.md`](oit-reference.md) | 26.3 的 OIT 三阶段行为规格，作为窗口唯一采用的透明管线 | 已实现（2026-10-31） | 2026-10-31 |
+| [`oit-reference.md`](oit-reference.md) | 26.3 的 OIT 三阶段行为规格，作为窗口唯一采用的透明管线 | 已实现（反向 Z 适配，2026-11-05） | 2026-11-05 |
 | [`optimization-plan.md`](optimization-plan.md) | 云 OIT/云几何、OIT 目标、天体与绘制路径的分阶段优化与验收标准 | 已评审 | 2026-11-01 |
 | [`pipeline.md`](pipeline.md) | 阶段划分、几何与缓冲区策略、实体与方块实体、2D 合成、预算与分期 | 已评审 | 2026-10-29 |
 | [`shader-organisation.md`](shader-organisation.md) | 文件布局、命名、include、绑定单一来源、启动期自检、与测试门禁；WGSL 语境下的严谨约定 | 草稿 | - |

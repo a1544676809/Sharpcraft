@@ -275,6 +275,7 @@ public static class WindowedRenderer
         using var cutoutPipeline = CreateCutoutPipeline(device, format, pipelineLayout);
         using var entityPipeline = CreateEntityPipeline(device, format, pipelineLayout);
         using var entityCutoutPipeline = CreateEntityCutoutPipeline(device, format, pipelineLayout);
+        using var entityElytraPipeline = CreateEntityElytraPipeline(device, format, pipelineLayout);
         using var entityEmissivePipeline = CreateEntityEmissivePipeline(device, format, pipelineLayout);
         using var skyPipeline = CreateSkyPipeline(device, format);
         // Celestial bodies and stars: the same backdrop draws the offscreen path uses, so the window and the exported
@@ -294,7 +295,7 @@ public static class WindowedRenderer
         // Clouds change every frame (scroll/camera), so their position-colour draw set is updated per frame.
         using var cloudColour = cloudsPerFrame is null
             ? null
-            : new OffscreenRenderer.CelestialColorResources(device, request with { CelestialColorDraws = [] }, cameraBuffer, VertexLayout.CameraUniformSize, format, WGPUCompareFunction.LessEqual);
+            : new OffscreenRenderer.CelestialColorResources(device, request with { CelestialColorDraws = [] }, cameraBuffer, VertexLayout.CameraUniformSize, format, WGPUCompareFunction.GreaterEqual);
         using var cloudOit = cloudOitEnabled && cloudColour is not null
             ? new CloudOitResources(device, cameraBuffer, VertexLayout.CameraUniformSize)
             : null;
@@ -326,7 +327,7 @@ public static class WindowedRenderer
         using var refAccumulatePipeline = CreateAccumulatePipeline(device, refAccumulatePipelineLayout, format: oitTargetFormat);
         using var refCullPipeline = CreateCullPipeline(device, refCullPipelineLayout, oitTargetFormat);
         using var refCompositePipeline = CreateCompositePipeline(device, format, refCompositePipelineLayout);
-        using var cloudCompositePipeline = CreateCompositePipeline(device, format, refCompositePipelineLayout, WGPUCompareFunction.LessEqual);
+        using var cloudCompositePipeline = CreateCompositePipeline(device, format, refCompositePipelineLayout, WGPUCompareFunction.GreaterEqual);
         using var blitDepthLayout = device.CreateBindGroupLayout(
         [
             BindGroupLayoutEntry.Texture(0, ShaderStage.Fragment, WGPUTextureSampleType.Depth, WGPUTextureViewDimension._2D, false),
@@ -613,9 +614,14 @@ public static class WindowedRenderer
                     BindGroupEntry.TextureView(0, refAccumulateView),
                     BindGroupEntry.TextureView(1, refTransmittance0View),
                     BindGroupEntry.TextureView(2, refTransmittance1View),
-                    BindGroupEntry.TextureView(3, refDepthBoundsCulledView)
+                    // The composite writes the closest translucent device depth from the original terrain depth bounds,
+                    // matching the reference composite (which samples the un-culled target); clouds are excluded from
+                    // this depth write, exactly as the reference excludes them.
+                    BindGroupEntry.TextureView(3, refDepthBoundsView)
                 ]);
-            if (cloudDepthEnabled)
+            // Clouds always get an independent depth target so the cloud depth-bounds write never pollutes the main
+            // depth the terrain transparency passes test against (otherwise glass/water behind a cloud are culled).
+            if (cloudOit is not null)
             {
                 cloudDepthTexture = CreateDepthTexture(device, frameWidth, frameHeight);
                 cloudDepthView = cloudDepthTexture.CreateView();
@@ -1171,7 +1177,7 @@ public static class WindowedRenderer
                     ClearValue = new WGPUColor { r = frameColour.X, g = frameColour.Y, b = frameColour.Z, a = frameColour.W }
                 }
             ],
-            DepthStencilAttachment.DepthClear(depthView));
+            DepthStencilAttachment.DepthClear(depthView, 0f));
 
             // Sky first, over the cleared target; world geometry then draws on top of it. When the caller supplies a flat
             // SKY_COLOR through the clear colour, the gradient sky is skipped.
@@ -1329,6 +1335,7 @@ public static class WindowedRenderer
                 {
                     EntityGeometryLayerKind.Translucent => entityPipeline,
                     EntityGeometryLayerKind.Emissive => entityEmissivePipeline,
+                    EntityGeometryLayerKind.Elytra => entityElytraPipeline,
                     _ => entityCutoutPipeline
                 });
                 pass.SetVertexBuffer(0, entityLayerVertex[layerIndex], 0, entityLayerVertexCapacity[layerIndex]);
@@ -1438,12 +1445,20 @@ public static class WindowedRenderer
                     }
                 }
 
+                // Terrain transparency (glass/water) tests depth against the opaque main depth only; cloud depth writes
+                // go to a separate target below so they cannot cull translucent terrain behind a cloud.
                 var depthLoadStore = new DepthStencilAttachment
                 {
-                    View = cloudDepthTargetsCreated ? cloudDepthView : depthView,
+                    View = depthView,
                     DepthLoadOp = WGPULoadOp.Load,
                     DepthStoreOp = WGPUStoreOp.Store
                 };
+
+                // Cloud OIT stages use the independent cloud depth target (blitted from the opaque depth above), so the
+                // cloud depth-bounds write culls only the cloud's own interior faces without hiding terrain behind it.
+                var cloudOitDepth = cloudDepthTargetsCreated
+                    ? new DepthStencilAttachment { View = cloudDepthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store }
+                    : depthLoadStore;
 
                 // Stage 1: depth bounds. Cleared very negative so MAX blending keeps the closest and furthest.
                 var boundsPass = encoder.BeginRenderPass(
@@ -1462,17 +1477,6 @@ public static class WindowedRenderer
                 DrawReferenceGeometry(boundsPass);
                 boundsPass.End();
 
-                if (cloudOit is not null)
-                {
-                    var cloudBoundsPass = encoder.BeginRenderPass(
-                        [new ColorAttachment { View = refDepthBoundsView, LoadOp = WGPULoadOp.Load, StoreOp = WGPUStoreOp.Store }],
-                        depthLoadStore);
-                    cloudBoundsPass.SetPipeline(cloudDepthBoundsPipeline);
-                    cloudBoundsPass.SetBindGroup(0, cloudOit.BindGroup);
-                    cloudOit.DrawGeometry(cloudBoundsPass);
-                    cloudBoundsPass.End();
-                }
-
                 // Stage 1b: clip the furthest bound to the nearest opaque surface.
                 var cullPass = encoder.BeginRenderPass(
                 [
@@ -1489,6 +1493,20 @@ public static class WindowedRenderer
                 cullPass.SetBindGroup(0, refCullBindGroup);
                 cullPass.Draw(3);
                 cullPass.End();
+
+                // Stage 1c: clouds add their own depth bounds into the culled target, after the cull. This mirrors the
+                // reference cloud parameters, which use the already-culled bounds target, so cloud bounds never widen the
+                // cull applied to the terrain translucent layer and never leak into the composite's depth write.
+                if (cloudOit is not null)
+                {
+                    var cloudBoundsPass = encoder.BeginRenderPass(
+                        [new ColorAttachment { View = refDepthBoundsCulledView, LoadOp = WGPULoadOp.Load, StoreOp = WGPUStoreOp.Store }],
+                        cloudOitDepth);
+                    cloudBoundsPass.SetPipeline(cloudDepthBoundsPipeline);
+                    cloudBoundsPass.SetBindGroup(0, cloudOit.BindGroup);
+                    cloudOit.DrawGeometry(cloudBoundsPass);
+                    cloudBoundsPass.End();
+                }
 
                 // Stage 2: wavelet transmittance, additively blended into two RGBA16F targets.
                 var transmittancePass = encoder.BeginRenderPass(
@@ -1522,7 +1540,7 @@ public static class WindowedRenderer
                             new ColorAttachment { View = refTransmittance0View, LoadOp = WGPULoadOp.Load, StoreOp = WGPUStoreOp.Store },
                             new ColorAttachment { View = refTransmittance1View, LoadOp = WGPULoadOp.Load, StoreOp = WGPUStoreOp.Store }
                         ],
-                        depthLoadStore);
+                        cloudOitDepth);
                     cloudTransPass.SetPipeline(cloudTransmittancePipeline);
                     cloudTransPass.SetBindGroup(0, cloudOit.BindGroup);
                     cloudTransPass.SetBindGroup(1, refTransmittanceBindGroup);
@@ -1552,7 +1570,7 @@ public static class WindowedRenderer
                 {
                     var cloudAccumPass = encoder.BeginRenderPass(
                         [new ColorAttachment { View = refAccumulateView, LoadOp = WGPULoadOp.Load, StoreOp = WGPUStoreOp.Store }],
-                        depthLoadStore);
+                        cloudOitDepth);
                     cloudAccumPass.SetPipeline(cloudAccumulatePipeline);
                     cloudAccumPass.SetBindGroup(0, cloudOit.BindGroup);
                     cloudAccumPass.SetBindGroup(1, refAccumulateBindGroup);
@@ -1914,7 +1932,7 @@ public static class WindowedRenderer
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
             multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.LessEqual, write: depthWrite),
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: depthWrite),
             vertexStride: (ulong)VertexLayout.Stride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
             vertexAttributes: VertexLayout.Attributes());
@@ -1948,7 +1966,7 @@ public static class WindowedRenderer
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
             multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.LessEqual, write: depthWrite),
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: depthWrite),
             vertexStride: (ulong)VertexLayout.Stride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
             vertexAttributes: VertexLayout.Attributes());
@@ -1982,7 +2000,7 @@ public static class WindowedRenderer
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
             multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.LessEqual, write: depthWrite),
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: depthWrite),
             vertexStride: (ulong)VertexLayout.Stride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
             vertexAttributes: VertexLayout.Attributes());
@@ -2110,7 +2128,7 @@ public static class WindowedRenderer
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
             multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float),
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: true),
             vertexStride: (ulong)VertexLayout.Stride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
             vertexAttributes: VertexLayout.Attributes());
@@ -2156,7 +2174,7 @@ public static class WindowedRenderer
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
             multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float),
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: true),
             vertexStride: (ulong)VertexLayout.Stride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
             vertexAttributes: VertexLayout.Attributes());
@@ -2166,6 +2184,33 @@ public static class WindowedRenderer
     /// Entity base/clothing layer: reference entityCutout semantics, alpha tested at 0.5 and opaque (docs/decisions/0021).
     /// </summary>
     private static RenderPipeline CreateEntityCutoutPipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
+    {        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
+        {
+            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText))
+        });
+
+        return device.CreateRenderPipeline(
+            shader,
+            "vs_main"u8,
+            shader,
+            "fs_entity_cutout"u8,
+            [new ColorTargetState(format)],
+            layout: layout,
+            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
+            multisample: MultisampleState.Default,
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: true),
+            vertexStride: (ulong)VertexLayout.Stride,
+            vertexStepMode: WGPUVertexStepMode.Vertex,
+            vertexAttributes: VertexLayout.Attributes());
+    }
+
+    /// <summary>
+    /// Entity equipment layer (armor/elytra): reference <c>armor_cutout_no_cull</c> pipeline, whose depth state is
+    /// <c>DepthStencilState.DEFAULT = (GREATER_THAN_OR_EQUAL, writeDepth=true, depthBias=0)</c> over the reference's
+    /// reversed-Z buffer. Our buffer is also reversed-Z, so the compare is <c>GREATER_EQUAL</c> with depth write and no
+    /// bias. No culling (armor_cutout_no_cull is <c>withCull(false)</c>). Submitted as its own draw after the base model.
+    /// </summary>
+    private static RenderPipeline CreateEntityElytraPipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
     {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
         {
@@ -2181,7 +2226,7 @@ public static class WindowedRenderer
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
             multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float),
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: true),
             vertexStride: (ulong)VertexLayout.Stride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
             vertexAttributes: VertexLayout.Attributes());
@@ -2228,7 +2273,7 @@ public static class WindowedRenderer
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
             multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.LessEqual, write: false),
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: false),
             vertexStride: (ulong)VertexLayout.Stride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
             vertexAttributes: VertexLayout.Attributes());
@@ -2250,7 +2295,7 @@ public static class WindowedRenderer
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
             multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float),
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: true),
             vertexStride: (ulong)VertexLayout.Stride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
             vertexAttributes: VertexLayout.Attributes());

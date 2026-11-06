@@ -57,6 +57,9 @@ public sealed class EntityPresentationState
     /// <summary>Arm-swing clock, ported from the reference <c>LivingEntity.SwingState</c>.</summary>
     public SwingAnimationState Swing { get; } = new();
 
+    /// <summary>Elytra wing rotation state, ported from the reference <c>ElytraAnimationState</c>.</summary>
+    public ElytraAnimationState Elytra { get; } = new();
+
     /// <summary>Squid tentacle clock, or null for other types.</summary>
     public SquidTentacleAnimationState? Tentacle { get; }
 

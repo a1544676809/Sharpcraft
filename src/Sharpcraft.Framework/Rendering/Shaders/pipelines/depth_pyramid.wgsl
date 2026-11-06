@@ -40,10 +40,9 @@ fn cs_downsample(@builtin(global_invocation_id) id : vec3<u32>) {
             var value = raw;
 
             if (params.convert != 0u) {
-                value = select(
-                    params.near * params.far / (params.far - raw * (params.far - params.near)),
-                    params.far,
-                    raw >= 1.0);
+                // Reversed-Z: window depth 1 is the near plane and 0 the far plane. Invert
+                // depth = near * (far - d) / (d * (far - near)) to recover the view distance.
+                value = params.near * params.far / (raw * (params.far - params.near) + params.near);
             }
 
             farthest = max(farthest, value);

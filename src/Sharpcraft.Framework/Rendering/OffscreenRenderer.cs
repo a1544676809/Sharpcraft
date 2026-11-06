@@ -93,7 +93,8 @@ public static class OffscreenRenderer
             {
                 var window = BitConverter.ToSingle(depthMapped.Slice((y * depthPadded) + (x * 4), 4));
 
-                if (window >= 1f)
+                // Reversed-Z: the sky / far plane is depth 0 (depth 1 is the near plane).
+                if (window <= 0f)
                 {
                     continue;
                 }
@@ -170,8 +171,10 @@ public static class OffscreenRenderer
 
         var mapped = depthReadback.GetMappedRange<byte>(0, (nuint)depthSize);
         var depths = new float[width * height];
-        var nearest = float.MaxValue;
-        var farthest = 0f;
+        // Reversed-Z: depth 1 is the near plane and 0 the far plane, so the physically nearest pixel carries the LARGEST
+        // raw depth. Track both ends of the raw range and convert each to a distance for the report.
+        var minRaw = float.MaxValue;
+        var maxRaw = 0f;
         var centre = BitConverter.ToSingle(mapped.Slice(((height / 2) * depthPadded) + ((width / 2) * 4), 4));
 
         for (var y = 0; y < height; y++)
@@ -181,14 +184,14 @@ public static class OffscreenRenderer
                 var value = BitConverter.ToSingle(mapped.Slice((y * depthPadded) + (x * 4), 4));
                 depths[(y * width) + x] = value;
 
-                if (value < nearest)
+                if (value < minRaw)
                 {
-                    nearest = value;
+                    minRaw = value;
                 }
 
-                if (value > farthest)
+                if (value > maxRaw)
                 {
-                    farthest = value;
+                    maxRaw = value;
                 }
             }
         }
@@ -197,9 +200,9 @@ public static class OffscreenRenderer
         var near = 0.1f;
         var far = 2000f;
         Console.WriteLine(
-            $"depth: {width}x{height} nearest {nearest:F4} ({DepthLinearisation.ToDistance(nearest, near, far):F1} blocks) " +
-            $"farthest {farthest:F4} ({DepthLinearisation.ToDistance(farthest, near, far):F1} blocks) " +
-            $"centre {centre:F4} ({DepthLinearisation.ToDistance(centre, near, far):F1} blocks)");
+            $"depth: {width}x{height} nearest {DepthLinearisation.ToDistance(maxRaw, near, far):F1} blocks (raw {maxRaw:F4}) " +
+            $"farthest {DepthLinearisation.ToDistance(minRaw, near, far):F1} blocks (raw {minRaw:F4}) " +
+            $"centre {DepthLinearisation.ToDistance(centre, near, far):F1} blocks");
 
         return depths;
     }
@@ -316,7 +319,7 @@ public static class OffscreenRenderer
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
             multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float),
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: true),
             vertexStride: (ulong)VertexLayout.Stride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
             vertexAttributes: VertexLayout.Attributes());
@@ -363,7 +366,7 @@ public static class OffscreenRenderer
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
             multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.LessEqual, write: false),
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: false),
             vertexStride: (ulong)VertexLayout.Stride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
             vertexAttributes: VertexLayout.Attributes());
@@ -388,7 +391,7 @@ public static class OffscreenRenderer
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
             multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float),
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: true),
             vertexStride: (ulong)VertexLayout.Stride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
             vertexAttributes: VertexLayout.Attributes());
@@ -431,7 +434,7 @@ public static class OffscreenRenderer
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
             multisample: MultisampleState.Default,
             // Part of the backdrop by default: depth always passes and nothing is written, so terrain covers it. Clouds pass
-            // LessEqual instead so terrain and other clouds occlude them (drawn after the world).
+            // GreaterEqual instead so terrain and other clouds occlude them (drawn after the world).
             depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, depthCompare, write: false),
             vertexStride: (ulong)VertexLayout.PositionColorStride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
@@ -697,7 +700,7 @@ public static class OffscreenRenderer
                     ClearValue = new WGPUColor { r = colour.X, g = colour.Y, b = colour.Z, a = colour.W }
                 }
             ],
-            DepthStencilAttachment.DepthClear(depthView));
+            DepthStencilAttachment.DepthClear(depthView, 0f));
 
             // Sky first: it fills the cleared target, then the world draws over it. Skipped when the caller supplies a sky
             // disc backdrop instead (SkipGradientSky).

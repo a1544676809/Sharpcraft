@@ -12,16 +12,28 @@ namespace Sharpcraft.Framework.Tests;
 public sealed class CameraMathTests
 {
     [Fact]
-    public void ProjectionMapsNearToZeroAndFarToOne()
+    public void ProjectionMapsNearToOneAndFarToZero()
     {
         var projection = CameraMath.BuildProjection(fieldOfViewDegrees: 60f, aspectRatio: 1.5f, near: 0.5f, far: 500f);
 
-        // A point on the near plane lands on z/w = 0, the far plane on z/w = 1 (WebGPU clip range).
+        // Reversed-Z: a point on the near plane lands on z/w = 1, the far plane on z/w = 0 (WebGPU clip range).
         var nearPoint = Vector4.Transform(new Vector3(0, 0, -0.5f), projection);
         var farPoint = Vector4.Transform(new Vector3(0, 0, -500f), projection);
 
-        Assert.Equal(0f, nearPoint.Z / nearPoint.W, 4);
-        Assert.Equal(1f, farPoint.Z / farPoint.W, 4);
+        Assert.Equal(1f, nearPoint.Z / nearPoint.W, 4);
+        Assert.Equal(0f, farPoint.Z / farPoint.W, 4);
+    }
+
+    [Fact]
+    public void ProjectionIsMonotonicallyReversedBetweenThePlanes()
+    {
+        var projection = CameraMath.BuildProjection(fieldOfViewDegrees: 60f, aspectRatio: 1.5f, near: 0.5f, far: 500f);
+
+        // Distance grows away from the camera, so reversed-Z window depth must fall.
+        var nearer = Vector4.Transform(new Vector3(0, 0, -2f), projection);
+        var farther = Vector4.Transform(new Vector3(0, 0, -50f), projection);
+
+        Assert.True(nearer.Z / nearer.W > farther.Z / farther.W);
     }
 
     [Fact]

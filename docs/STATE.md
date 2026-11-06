@@ -3562,3 +3562,18 @@ CPU 参考，行为对齐 `oit_add_transmittance.glsl`/`oit_sample.glsl`，独�
 - 已加 Elytra 资产/纹理 + 双翼模型层（胸槽 elytra 可见），humanoid 接入。Client 1338 全绿。
 - 阻塞（记录）：翼扇动 elytraRotX/Y/Z（滑翔旋转物理）未接，当前静态翼。
 - 下一步：补 elytraRot 派生 + WingsLayer 独立放置/旋转；或先目视验收静态翼位置。
+
+## 2026-11-05 Elytra 双翼各自半边 + 中心缝（T-650）
+
+- 反相 Z 迁移后翼面条纹已消失，但两翼仍**共面覆盖整背**（两翼盒按字面为镜像同形叠加）→ 无中心缝、前后交替。
+- 修复：`WithElytra` 每翼只占背面一半（`CentreX=∓6.5`、`PivotX=0` 脊柱、`PivotZ=CentreZ+2`，保持 10×20×2 / tex22,0 / grow1），1.5px 外移吸收 1px 外扩 → 留 1px 中心缝且不重叠；旋转沿用 `ElytraAnimationState`（左 −x/−y/+z、右 −x/+y/−z，互为镜像）。
+- 沙盒（僵尸+胸槽 elytra，背面/滑翔）出图：两翼分离、中心缝清晰、无交替；滑翔位向两侧展开。
+- 回归：`ElytraWingGeometryTests` 改为每翼半边角点并断言中心缝不重叠；`ElytraLayerTests` 不变。
+- 下一步：真机窗口目视（站立与滑翔），确认外尖向后下、缝宽合适；若嫌静止翼张角偏大，可再评估是否把静止目标角在动画层收窄。
+
+## 2026-11-05 OIT 两个回归修复（未提交）
+
+- **玻璃后看不到水**：根因在网格层，不在 OIT——`ChunkMesher.EmitSectionFluids` 把"邻居非 air/water/lava"一律当实心，透明玻璃也据此剔除了水朝向相机的那一面。改为按"是否真正遮挡（不透明）"判定（`BlockRenderLayers.IsTranslucent` 优先，其次贴图 alpha）；玻璃/冰/流体永不遮挡，与 `FluidRenderer.shouldRenderFace` 一致。新增 `FluidFaceCullingTests`（2 项）。头less 窗口 OIT：修复前玻璃+水与"只有玻璃"逐像素 0 差异，修复后 bounds 含水面、44865 像素变化。
+- **玩家周围 3×3 云更白**：`OIT_CLOUDS` 的 depth-bounds 阶段在原版是写深度的（`withDepthBoundsModifier(...DEFAULT)`），用于剔除云网格在相机 3×3 邻域额外生成的内部面（`FLAG_INSIDE_FACE`）；此前改成不写深度 → 内部面与常规面同深度双重累计。已恢复 `cloudDepthBoundsPipeline` 的 `depthWrite: true`。
+- 保留待父任务处理：`Sharpcraft.Launcher` 两个用户进程拒绝访问无法结束（构建/测试不受影响）；未提交（按任务要求）。
+

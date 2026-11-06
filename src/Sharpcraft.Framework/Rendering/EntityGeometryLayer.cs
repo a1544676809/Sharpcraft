@@ -9,6 +9,9 @@ public enum EntityGeometryLayerKind
     /// <summary>Alpha tested, no blending, depth writes on (base model, clothing).</summary>
     Cutout,
 
+    /// <summary>Equipment layer (armor/elytra): alpha tested, no blending, submitted as its own draw after the base model.</summary>
+    Elytra,
+
     /// <summary>Blended, depth writes off (player overlays, drowned outer, slime outer).</summary>
     Translucent,
 

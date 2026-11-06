@@ -449,7 +449,10 @@ public readonly record struct EntityRenderState(
     float LieDownAmount = 0f,
     float LieDownAmountTail = 0f,
     float RelaxStateOneAmount = 0f,
-    int Crackiness = 0);
+    int Crackiness = 0,
+    float ElytraRotX = 0f,
+    float ElytraRotY = 0f,
+    float ElytraRotZ = 0f);
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -1015,6 +1018,13 @@ public sealed class EntityTracker
             entity.Presentation.IsOnGround = entity.OnGround;
             entity.Presentation.Flap.Update(!entity.OnGround);
             entity.Presentation.IsMoving = distance > 3.0E-4f;
+            // Reference LivingEntity.tick -> elytraAnimationState.tick(); drives wing rotations from pose + velocity.
+            entity.Presentation.Elytra.Tick(
+                entity.Presentation.IsFallFlying,
+                entity.Presentation.IsCrouching,
+                (float)entity.VelocityX,
+                (float)entity.VelocityY,
+                (float)entity.VelocityZ);
             if (entity.TypeId == 120 || entity.TypeId == 81)
             {
                 var presentation = entity.Presentation;
@@ -1314,6 +1324,9 @@ public sealed class EntityTracker
                 SwimAmount: entity.Presentation.SwimAmountAt(t),
                 IsVisuallySwimming: visuallySwimming,
                 IsFallFlying: fallFlying,
+                ElytraRotX: entity.Presentation.Elytra.GetRotX(t),
+                ElytraRotY: entity.Presentation.Elytra.GetRotY(t),
+                ElytraRotZ: entity.Presentation.Elytra.GetRotZ(t),
                 UseItemHand: entity.Presentation.UseItemHand,
                 SwingHand: entity.Presentation.Swing.Hand,
                 SwingType: entity.Presentation.Swing.AnimationType,

@@ -27,4 +27,19 @@ public sealed class ElytraLayerTests
         Assert.Contains("equipment_Elytra_4_left_wing", names);
         Assert.Contains("equipment_Elytra_4_right_wing", names);
     }
+
+    [Fact]
+    public void WingsHangFromTheBodyInModelSpace()
+    {
+        var parts = EntityModelResolver.Resolve(154).Parts;
+        var body = parts.Single(part => part.Name == "body");
+        var left = parts.Single(part => part.Name == "equipment_Elytra_4_left_wing");
+        Assert.Equal(body.Bottom + body.Height - 20f, left.Bottom);
+        Assert.Equal(body.Bottom + body.Height, left.PivotY);
+        Assert.Equal(body.CentreZ + 2f, left.PivotZ);
+        Assert.Equal(body.CentreZ + 3f, left.CentreZ);
+        Assert.Equal(64, left.TextureWidth);
+        Assert.Equal(32, left.TextureHeight);
+        Assert.Equal("entity/equipment/wings/elytra", left.TexturePath);
+    }
 }

@@ -4,8 +4,8 @@
 <!-- doc
 title: 原版 OIT 参考管线（depth-bounds + 小波透射率）
 summary: 26.3 的 OIT 三阶段行为规格，作为窗口唯一采用的透明管线
-status: 已实现（2026-10-31）
-updated: 2026-10-31
+status: 已实现（反向 Z 适配，2026-11-05）
+updated: 2026-11-05
 -->
 
 # 原版 OIT 参考管线（depth-bounds + 小波透射率）
@@ -134,27 +134,37 @@ Pass 顺序（在加权 OIT 的同等位置替换/追加）：
 - 深度约定：`deviceToLinearDepth` 依赖投影矩阵项与深度范围 `[0,1]` 或 `[-1,1]`；须与我们 `CameraMath` 投影一致核对。
 - 开关落地须遵守原则 13：`MC_TRANSPARENCY` 只在宿主层解析，游戏程序集只收显式选项；失败回落 weighted。
 
-## 10. 实现约束：标准 Z 适配（关键，勿照抄符号）
+## 10. 实现约束：反向 Z 适配（关键）
 
-原版是**反向 Z**：`GREATER_THAN_OR_EQUAL` 深度比较 + 深度边界用 `MAX` 混合即可同时得到"最近线性/最远线性/最近器件"。
-我们是**标准 Z**（`CameraMath.BuildProjection` 产出 WebGPU `[0,1]` 深度、近 0 远 1，深度比较 `LessEqual`，清 `1.0`），
-所以所有"最近/最远"的取法都要翻转，否则会得到一个看着像、其实深度方向反了的画面。落地约定：
+引擎已迁移到**反向 Z**：`CameraMath.BuildProjection` 让近平面映射到 1、远平面映射到 0（WebGPU `[0,1]` 深度），
+深度比较 `GREATER_THAN_OR_EQUAL`、深度清 `0.0`。这与原版一致，因此"最近/最远"的取法**无需再翻转**，直接照原版语义即可：
 
-| 事项 | 原版（反向 Z）| 我们（标准 Z）|
-| --- | --- | --- |
-| 深度比较（OIT 三阶段）| `GREATER_THAN_OR_EQUAL` | `LESS_EQUAL`；仍不写深度 |
-| 深度边界编码到 RGBA16F（混合 `MAX`）| `(-linear, linear, device, opaqueDevice)` | `(-linear, +linear, -device, alpha>0.99 ? -linear : -65504)` |
-| 还原 | 直接读 | `closestLinear = -r`、`furthestLinear = g`、`closestDevice = -b`、`opaqueLinear = -a` |
-| composite 的 `frag_depth` | `= b`（最近器件）| `= -b` |
+| 事项 | 约定（反向 Z，与原版一致）|
+| --- | --- |
+| 深度比较（OIT 三阶段）| `GREATER_THAN_OR_EQUAL`；不写深度 |
+| 深度边界编码到 RGBA16F（混合 `MAX`）| `(-linear, +linear, device, alpha>0.99 ? -linear : -65504)`，`device` 为反向 Z 器件深度（近≈1、远≈0）|
+| 还原 | `closestLinear = -r`、`furthestLinear = g`、`closestDevice = b`、`closestOpaqueLinear = -a` |
+| composite 的 `frag_depth` | `= b`（最近器件深度）|
 
-理由：四个通道**都取 `MAX`** 仍是自洽的——`r:MAX(-linear)=-最近`、`g:MAX(+linear)=最远`、`b:MAX(-device)=-最近器件`、
+理由：四个通道**都取 `MAX`** 自洽——`r:MAX(-linear)=-最近`、`g:MAX(+linear)=最远`、`b:MAX(device)=最近器件`（反向 Z 下最近者器件深度最大）、
 `a:MAX(-linear_opaque | -65504)=-最近不透明线性`（无则不透明为 `-65504`⇒还原 65504⇒`min(g,65504)=g`，等价"无上限"）。
-注意：目标格式用 **RGBA16F**，因为本后端 RGBA32F 不支持混合；16F 在远处（~2000 方块）线性深度约有 ±1–2 方块量化，reference 可接受。
+`depth_bounds_cull` 全在线性域（`min(g, -a)`），因此它的取法与器件深度方向无关，不需翻转。
+注意：目标格式用 **RGBA16F**（后端能提供可混合 RGBA32F 时按 `Float32Blendable` 能力选择）；16F 在远处（~2000 方块）线性深度约有 ±1–2 方块量化，reference 可接受。
 
 线性深度**直接复用顶点着色器已输出的 `fogDistance = clip.w`（= 视距，单位方块）**，不引入 `ProjMat`；器件深度用
-`clip.z/clip.w`（NDC z）作为插值传递。`depth_bounds_cull` 与 `composite` 在此约定下翻转比较与符号。
+`clip.z/clip.w`（NDC z）作为插值传递。
 
-## 11. 未实现清单（本轮只做地形半透明，其余形成文档不做）
+**云半透明组与地形半透明组共用一次 OIT resolve（`cloudParams` 结构）**：云的三阶段在 `depth_bounds_cull` **之后**、把自身深度边界
+写入 *culled* 目标（与参考 `cloudParams` 用 culled 深度边界一致）。云的 `depth-bounds` **必须写深度**：原版 `OIT_CLOUDS` 用
+`withDepthBoundsModifier(depthBounds -> DepthStencilState.DEFAULT)` 把深度写打开（只有该阶段写，transmittance/accumulate 不写），
+用来剔除云网格在相机 **3×3 格邻域**内额外生成的"内部面"（`CloudRenderer.buildExtrudedCell` 的 `FLAG_INSIDE_FACE`）；
+不写则内部面与常规面在同一深度被 OIT 双重累计，玩家周围的云会明显更白。
+composite 的深度写入读取**原始（未裁剪、地形专属）**深度边界的 `b`，与原版 `OIT_COMPOSITE` 采样未裁剪目标一致。这样云的深度既不会
+被当成 composite 深度写出，题述"透过云看不到玻璃和水"即由此而来。
+偏差（已记录）：参考给云用**独立**的 cloud depth 目标（`BLIT_DEPTH_DURING_DEPTH_BOUNDS` 从主深度初始化）；本实现的默认共享路径把云的
+深度写进主深度附件，随后 composite 会用原始地形边界的 `b` 覆写主深度，因此地形半透明解析与最终深度不受影响。
+
+## 11. 未实现清单（本轮只做地形半透明与其他已接内容的说明）
 
 以下属于原版 OIT 的一部分，但当前客户端**没有对应内容**，故本规格**不实现**，待内容存在后再接：
 

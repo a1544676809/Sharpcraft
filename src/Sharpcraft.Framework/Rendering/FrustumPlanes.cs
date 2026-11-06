@@ -9,8 +9,10 @@ namespace Sharpcraft.Framework.Rendering;
 /// The six planes of a view frustum, extracted from a view projection matrix.
 /// </summary>
 /// <remarks>
-/// wgpu clips to zero to one in depth like the Direct3D convention, so the near plane is the third row itself rather
-/// than the sum of the third and fourth. Planes point inwards and are normalised so the distance test is in world units.
+/// wgpu clips to zero to one in depth like the Direct3D convention. Under reversed-Z the near plane is where
+/// clip.z equals clip.w (row3 minus row2) and the far plane is where clip.z is zero (row2); the six planes as a set are
+/// the same either way, so whether they are ordered near-then-far only affects labels. Planes point inwards and are
+/// normalised so the distance test is in world units.
 /// </remarks>
 public static class FrustumPlanes
 {
@@ -35,8 +37,9 @@ public static class FrustumPlanes
         destination[1] = Normalise(row3 - row0);
         destination[2] = Normalise(row3 + row1);
         destination[3] = Normalise(row3 - row1);
-        destination[4] = Normalise(row2);
-        destination[5] = Normalise(row3 - row2);
+        // Reversed-Z: near is clip.z == clip.w (row3 - row2); far is clip.z == 0 (row2).
+        destination[4] = Normalise(row3 - row2);
+        destination[5] = Normalise(row2);
     }
 
     /// <summary>True when any part of the box lies inside the frustum.</summary>

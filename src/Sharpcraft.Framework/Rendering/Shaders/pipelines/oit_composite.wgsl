@@ -146,7 +146,8 @@ fn fs_composite(input : FullscreenOutput) -> CompositeOutput {
     let normalization = select(1.0, coverage / accumulated.a, accumulated.a > 0.00001);
     output.colour = vec4<f32>(accumulated.rgb * normalization, coverage);
 
-    // b stores -closestDevice; the scene is standard Z so the nearest surface is the smallest device depth.
-    output.depth = -textureLoad(depthBoundsTexture, pixel, 0).b;
+    // b stores the closest device depth directly; the scene is reversed-Z so the nearest surface is the LARGEST device
+    // depth, which the depth-bounds stage's MAX blend keeps.
+    output.depth = textureLoad(depthBoundsTexture, pixel, 0).b;
     return output;
 }

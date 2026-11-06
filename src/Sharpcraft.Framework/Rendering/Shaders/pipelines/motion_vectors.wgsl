@@ -31,7 +31,8 @@ fn cs_motion(@builtin(global_invocation_id) id : vec3<u32>) {
     let index = id.y * params.width + id.x;
     let window = source[id.y * params.stride + id.x];
 
-    if (window >= 1.0) {
+    // Reversed-Z: depth 1 is the near plane, 0 the far plane, so the sky reads as 0.
+    if (window <= 0.0) {
         motion[index] = vec2<f32>(0.0, 0.0);
         return;
     }

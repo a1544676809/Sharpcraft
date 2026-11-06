@@ -19,6 +19,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Tests share process-wide statics (ItemRegistry, EntityModelResolver caches); run collections serially. -->
+    <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Sharpcraft.Client\Sharpcraft.Client.csproj" />
   </ItemGroup>
 

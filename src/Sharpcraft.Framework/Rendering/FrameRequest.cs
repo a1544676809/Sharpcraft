@@ -264,7 +264,9 @@ public static class CameraMath
     }
 
     /// <summary>
-    /// Perspective projection mapped to WebGPU's clip space: z in 0..1 instead of -1..1.
+    /// Perspective projection mapped to WebGPU's clip space (z in 0..1 instead of -1..1) using the reversed-Z
+    /// convention the reference uses: the near plane maps to depth 1 and the far plane to depth 0
+    /// (ref://mc-26.3-analysis/src/net/minecraft/client/renderer/Projection.java).
     /// </summary>
     public static Matrix4x4 BuildProjection(float fieldOfViewDegrees, float aspectRatio, float near, float far)
     {
@@ -279,13 +281,17 @@ public static class CameraMath
         }
 
         var f = 1f / MathF.Tan(fieldOfViewDegrees * (MathF.PI / 180f) / 2f);
-        var range = far / (near - far);
+
+        // Reversed-Z: keep the row-vector convention and M34 = -1 (so clip.w is the view distance), but make
+        // clip.z / clip.w map the near plane to 1 and the far plane to 0. With view z = -distance,
+        // clip.z = (near / (far - near)) * (far - distance), hence M33 = near / (far - near) and M43 = M33 * far.
+        var range = near / (far - near);
 
         return new Matrix4x4(
             f / aspectRatio, 0, 0, 0,
             0, f, 0, 0,
             0, 0, range, -1,
-            0, 0, range * near, 0);
+            0, 0, range * far, 0);
     }
 
     /// <summary>

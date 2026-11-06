@@ -16,13 +16,13 @@ namespace Sharpcraft.Client.Render;
 public sealed class EntityModelMesher
 {
     private readonly DynamicGeometry _geometry = new();
-    private readonly DynamicGeometry[] _layerGeometries = [new(), new(), new()];
+    private readonly DynamicGeometry[] _layerGeometries = [new(), new(), new(), new()];
 
     /// <summary>One reusable pose per entity in the current batch, so a steady frame does not allocate poses.</summary>
     private readonly List<EntityPose> _animationPoses = [];
 
     private static readonly EntityGeometryLayerKind[] LayerKinds =
-        [EntityGeometryLayerKind.Cutout, EntityGeometryLayerKind.Translucent, EntityGeometryLayerKind.Emissive];
+        [EntityGeometryLayerKind.Cutout, EntityGeometryLayerKind.Elytra, EntityGeometryLayerKind.Translucent, EntityGeometryLayerKind.Emissive];
 
     /// <summary>Merged geometry of every layer, kept for callers that draw entities in one pass.</summary>
     public DynamicGeometry Build(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, EntityPose? pose = null)    {
@@ -169,8 +169,9 @@ public sealed class EntityModelMesher
                 sprite = atlasSprite;
             }
 
-            foreach (var part in model.Parts)
+            foreach (var originalPart in model.Parts)
             {
+                var part = originalPart;
                 if (part.VisibleWhen is not null && !part.VisibleWhen(entity))
                 {
                     continue;
@@ -179,6 +180,17 @@ public sealed class EntityModelMesher
                 if (emissivePass ? (!part.IncludeInEmissive || (part.EmissiveTexturePath is null && model.EmissiveTexturePath is null)) : part.EmissiveOnly)
                 {
                     continue;
+                }
+
+                if (part.RotationSelector is { } rotationSelector)
+                {
+                    var selectedRotation = rotationSelector(entity);
+                    part = part with
+                    {
+                        RotationX = selectedRotation.X,
+                        RotationY = selectedRotation.Y,
+                        RotationZ = selectedRotation.Z
+                    };
                 }
 
                 var partTextureWidth = part.TextureWidth > 0 ? part.TextureWidth : model.TextureWidth;
@@ -330,13 +342,28 @@ public sealed class EntityModelMesher
         var u2u = swapBodyDownUp ? u1 : u2; var u2v = swapBodyDownUp ? v1 : v0;
         var u3u = swapBodyDownUp ? u2 : u22; var u3v = swapBodyDownUp ? v1 : v0;
 
+        // The reference CubeListBuilder.mirror() reflects the whole cube in X, which also swaps which
+        // texture chunk the WEST and EAST faces sample. Our model space is already X-mirrored relative to
+        // the reference, so for a non-mirrored part the two differences cancel (WEST<->EAST u-range). For a
+        // mirrored part the reference reflection cancels our own, leaving the native assignment, so the two
+        // X-normal faces must sample the opposite side's u-range (u0..u1 <-> u2..u3). DOWN/UP/NORTH/SOUTH
+        // only flip horizontally and need no such swap.
+        var westU0 = part.Mirror ? u1 : u3;
+        var westU1 = part.Mirror ? u0 : u2;
+        var westU2 = part.Mirror ? u0 : u2;
+        var westU3 = part.Mirror ? u1 : u3;
+        var eastU0 = part.Mirror ? u3 : u1;
+        var eastU1 = part.Mirror ? u2 : u0;
+        var eastU2 = part.Mirror ? u2 : u0;
+        var eastU3 = part.Mirror ? u3 : u1;
+
         if (emitBase)
         {
         AddFace(l1, l0, t0, t1, d0u, d0v, d1u, d1v, d2u, d2v, d3u, d3v, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("DOWN"), partTint, target); // DOWN
         AddFace(t2, t3, l3, l2, u0u, u0v, u1u, u1v, u2u, u2v, u3u, u3v, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("UP"), partTint, target); // UP
-        AddFace(t0, l0, l3, t3, u3, v2, u2, v2, u2, v1, u3, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("WEST"), partTint, target); // WEST
+        AddFace(t0, l0, l3, t3, westU0, v2, westU1, v2, westU2, v1, westU3, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("WEST"), partTint, target); // WEST
         AddFace(t1, t0, t3, t2, u2, v2, u1, v2, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("NORTH"), partTint, target); // NORTH
-        AddFace(l1, t1, t2, l2, u1, v2, u0, v2, u0, v1, u1, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("EAST"), partTint, target); // EAST
+        AddFace(l1, t1, t2, l2, eastU0, v2, eastU1, v2, eastU2, v1, eastU3, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("EAST"), partTint, target); // EAST
         AddFace(l0, l1, l2, l3, u4, v2, u3, v2, u3, v1, u4, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("SOUTH"), partTint, target); // SOUTH
         }
 
@@ -421,7 +448,7 @@ public sealed class EntityModelMesher
         return second < 0 ? name : remainder[(second + 1)..];
     }
     private static Matrix4x4 RotationZyx(float rx, float ry, float rz) =>
-        Matrix4x4.CreateRotationZ(rz) * Matrix4x4.CreateRotationY(ry) * Matrix4x4.CreateRotationX(rx);
+        Matrix4x4.CreateRotationX(rx) * Matrix4x4.CreateRotationY(ry) * Matrix4x4.CreateRotationZ(rz);
 
     /// <summary>
     /// Matrix that maps a point expressed relative to <paramref name="part"/>'s origin into entity space. This is the

@@ -52,6 +52,7 @@
 
 | Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
 | --- | --- | --- | --- | --- | --- | --- |
+| Sharpcraft.Client | Sharpcraft.Client.World.ElytraAnimationState | Mirror | Full | net.minecraft.world.entity.ElytraAnimationState | ref://mc-26.3-analysis/src/net/minecraft/world/entity/ElytraAnimationState.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.World.EntityAnimationFrame | Adapter | Partial | net.minecraft.client.renderer.entity.state.LivingEntityRenderState | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/state/LivingEntityRenderState.java | Snapshot fed to animation providers |
 | Sharpcraft.Client | Sharpcraft.Client.World.EntityEquipment | Mirror | Partial | net.minecraft.world.entity.EntityEquipment | ref://mc-26.3-analysis/src/net/minecraft/world/entity/EntityEquipment.java | auto-resolved by name; verify |
 | Sharpcraft.Client | Sharpcraft.Client.World.EntityPresentationState | Merged | Partial | net.minecraft.world.entity.Entity | ref://mc-26.3-analysis/src/net/minecraft/world/entity/Entity.java | Client-side presentation state aggregated from synced data |

@@ -18,15 +18,16 @@ public sealed class DepthLinearisationTests
     [Fact]
     public void TheEndsMapToThePlanes()
     {
-        Assert.Equal(Near, DepthLinearisation.ToDistance(0f, Near, Far), 4);
-        Assert.Equal(Far, DepthLinearisation.ToDistance(1f, Near, Far), 2);
+        // Reversed-Z: depth 1 is the near plane, depth 0 is the far plane.
+        Assert.Equal(Near, DepthLinearisation.ToDistance(1f, Near, Far), 4);
+        Assert.Equal(Far, DepthLinearisation.ToDistance(0f, Near, Far), 2);
     }
 
     [Fact]
     public void ATypicalWindowDepthBecomesAUsableDistance()
     {
-        // 0.9986 is what the recorded scene reported for terrain tens of blocks away.
-        var distance = DepthLinearisation.ToDistance(0.9986f, Near, Far);
+        // Reversed-Z compresses the far field toward zero; a surface about seventy blocks away sits near 0.0014.
+        var distance = DepthLinearisation.ToDistance(0.0013786f, Near, Far);
 
         Assert.InRange(distance, 40f, 90f);
     }
@@ -42,8 +43,9 @@ public sealed class DepthLinearisationTests
     }
 
     [Fact]
-    public void DistanceGrowsWithDepth()
+    public void DistanceFallsAsReversedDepthGrows()
     {
-        Assert.True(DepthLinearisation.ToDistance(0.99f, Near, Far) > DepthLinearisation.ToDistance(0.5f, Near, Far));
+        // Reversed-Z: a larger window depth means a nearer surface, so the recovered distance must shrink.
+        Assert.True(DepthLinearisation.ToDistance(0.99f, Near, Far) < DepthLinearisation.ToDistance(0.5f, Near, Far));
     }
 }

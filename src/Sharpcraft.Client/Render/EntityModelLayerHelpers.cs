@@ -3,6 +3,7 @@
 
 using System.Numerics;
 using Sharpcraft.Client.World;
+using Sharpcraft.Framework.Rendering;
 
 namespace Sharpcraft.Client.Render;
 
@@ -230,49 +231,52 @@ public static class EntityModelLayerHelpers
     }
 
     /// <summary>
-    /// Adds the two elytra wing boxes (reference ElytraModel.createLayer: pivot ±5, box 10x20x2 at tex 22,0, base
-    /// rotation ±(pi/12,0,∓pi/12), grow 1.0). Rendered when the chest slot holds an elytra (glider). Flap rotation
-    /// (elytraRotX/Y/Z) is not yet driven — a recorded follow-up.
+    /// Adds the two elytra wing boxes (reference <c>ElytraModel.createLayer</c>: pivot ±5, box 10x20x2 at tex 22,0).
+    /// Positioned relative to the body top so it works for any humanoid model; wing rotation is driven by
+    /// <see cref="ElytraAnimationState"/>. Rendered when the chest slot holds an elytra (glider).
     /// </summary>
     public static EntityModelPart[] WithElytra(IReadOnlyList<EntityModelPart> parts)
     {
         var result = new List<EntityModelPart>(parts.Count + 2);
         result.AddRange(parts);
-        result.Add(new EntityModelPart(
-            "equipment_Elytra_4_left_wing",
-            CentreX: -5f,
-            Bottom: 18f,
-            Width: 10f,
-            Height: 20f,
-            Depth: 2f,
-            TextureX: 22,
-            TextureY: 0,
-            CentreZ: 2f,
-            RotationX: MathF.PI / 12f,
-            RotationZ: -MathF.PI / 12f,
-            Grow: 1f,
-            TexturePath: "entity/equipment/wings/elytra",
-            TextureWidth: 64,
-            TextureHeight: 32,
-            VisibleWhen: static state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4) is not null));
-        result.Add(new EntityModelPart(
-            "equipment_Elytra_4_right_wing",
-            CentreX: 5f,
-            Bottom: 18f,
-            Width: 10f,
-            Height: 20f,
-            Depth: 2f,
-            TextureX: 22,
-            TextureY: 0,
-            Mirror: true,
-            CentreZ: 2f,
-            RotationX: MathF.PI / 12f,
-            RotationZ: MathF.PI / 12f,
-            Grow: 1f,
-            TexturePath: "entity/equipment/wings/elytra",
-            TextureWidth: 64,
-            TextureHeight: 32,
-            VisibleWhen: static state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4) is not null));
+        EntityModelPart body = default;
+        foreach (var part in parts)
+        {
+            if (part.Name == "body")
+            {
+                body = part;
+                break;
+            }
+        }
+
+        // Wings hang from the body's top (shoulder line) down 20 px, in the same model space as the body.
+        // FromVanilla with modelHeight = bodyTop reproduces the reference ElytraModel box (bottom = modelHeight - 20,
+        // pivotY = modelHeight) without relying on an absolute modelHeight. The pivot Z is shifted by the WingsLayer
+        // translate(0,0,0.125) (+2 model px) so both the pivot and the box move back together.
+        var bodyTop = body.Bottom + body.Height;
+        var wingPivotZ = body.CentreZ + 2f;
+        result.Add(PlayerModelDefinition.FromVanilla(
+            "equipment_Elytra_4_left_wing", 5f, 0f, wingPivotZ, -10f, 0f, 0f, 10f, 20f, 2f, 22, 0,
+            modelHeight: bodyTop,
+            texturePath: "entity/equipment/wings/elytra", grow: 1f, kind: EntityGeometryLayerKind.Elytra)
+            with
+            {
+                TextureWidth = 64,
+                TextureHeight = 32,
+                VisibleWhen = static state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4) is not null,
+                RotationSelector = static state => new System.Numerics.Vector3(-state.ElytraRotX, -state.ElytraRotY, state.ElytraRotZ)
+            });
+        result.Add(PlayerModelDefinition.FromVanilla(
+            "equipment_Elytra_4_right_wing", -5f, 0f, wingPivotZ, 0f, 0f, 0f, 10f, 20f, 2f, 22, 0, mirror: true,
+            modelHeight: bodyTop,
+            texturePath: "entity/equipment/wings/elytra", grow: 1f, kind: EntityGeometryLayerKind.Elytra)
+            with
+            {
+                TextureWidth = 64,
+                TextureHeight = 32,
+                VisibleWhen = static state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4) is not null,
+                RotationSelector = static state => new System.Numerics.Vector3(-state.ElytraRotX, state.ElytraRotY, -state.ElytraRotZ)
+            });
         return [.. result];
     }
 
@@ -300,6 +304,9 @@ public static class EntityModelLayerHelpers
         return [.. result];
     }
 }
+
+
+
 
 
 
