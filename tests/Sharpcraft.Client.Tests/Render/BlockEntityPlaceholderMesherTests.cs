@@ -3,6 +3,7 @@
 
 using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
+using Sharpcraft.Common.World;
 using Xunit;
 
 namespace Sharpcraft.Client.Tests.Render;
@@ -39,6 +40,42 @@ public sealed class BlockEntityPlaceholderMesherTests
         Assert.Equal(64f, minY, 4);
         Assert.Equal(10.5f, (minX + maxX) / 2f, 3);
         Assert.Equal(-2.5f, (minZ + maxZ) / 2f, 3);
+    }
+
+    [Fact]
+    public void SizingFollowsTheChestLikeClassNotASingleTypeId()
+    {
+        foreach (var typeId in new[]
+        {
+            VanillaBlockEntityTypes.Chest,
+            VanillaBlockEntityTypes.TrappedChest,
+            VanillaBlockEntityTypes.EnderChest,
+            VanillaBlockEntityTypes.ShulkerBox
+        })
+        {
+            var (xExtent, zExtent) = Extents(typeId);
+            Assert.Equal(BlockEntityPlaceholderMesher.ChestSize, xExtent, 3);
+            Assert.Equal(BlockEntityPlaceholderMesher.ChestSize, zExtent, 3);
+        }
+
+        foreach (var typeId in new[]
+        {
+            VanillaBlockEntityTypes.Furnace,
+            7 // sign is registry id 7 in the 26.3 block_entity_type order; no constant is defined for it
+        })
+        {
+            var (xExtent, zExtent) = Extents(typeId);
+            Assert.Equal(BlockEntityPlaceholderMesher.GenericSize, xExtent, 3);
+            Assert.Equal(BlockEntityPlaceholderMesher.GenericSize, zExtent, 3);
+        }
+
+        static (float X, float Z) Extents(int typeId)
+        {
+            var mesher = new BlockEntityPlaceholderMesher();
+            var geometry = mesher.Build([new BlockEntityRenderState(10f, 64f, -3f, typeId)], Sprite());
+            var (minX, maxX, _, _, minZ, maxZ) = Bounds(geometry);
+            return (maxX - minX, maxZ - minZ);
+        }
     }
 
     [Fact]

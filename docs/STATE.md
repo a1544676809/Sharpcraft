@@ -45,6 +45,7 @@ updated: 2026-11-06
 3. **T-344 宪章原则 14 与防呆门禁落地（2026-11-06）**：`AGENTS.md` 新增原则 14 与 3.7 节；`docs/_templates/module-doc.md` 强制要求原版源码映射表与 Golden Vectors；`STATE.md` 压缩至 150 行内并由 `DocumentationDriftTests` 守护。
 4. **T-330..T-343 天空盘、OIT 与视距 32 压测（2026-11-01）**：原版逐像素 fog 天空盘落地（采样 `(136,169,255)` vs 原版 `(137,170,255)`）；每区块独立缓冲支持视距 32（1770 区块 / 154 FPS）与古城室内（155 FPS）；删除旧单缓冲 Arena 死代码；视距+2 外区块自动卸载释放显存（T-327）。
 5. **T-250..T-326 云层、参考 OIT、时间天气与流体通道（2026-10-31~11-01）**：三阶段小波 OIT + 逐 cell 云；`set_time` 时钟、Lightmap UBO（ADR-0019）、雨雷同步、67 群系着色、水与岩浆独立流体通道。
+6. **T-350 方块实体占位尺寸（2026-11-06）**：`BlockEntityPlaceholderMesher` 按 `VanillaBlockEntityTypes.IsChestLike` 分类取 14px，非箱子类 12px；新增 1 用例。
 
 ## 阻塞项
 
