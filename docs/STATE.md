@@ -33,7 +33,7 @@ updated: 2026-11-06
 | 阶段 | 核心目标（聚焦游戏本体） | 关键子任务 | 状态 |
 | --- | --- | --- | --- |
 | **Phase 0** | 架构单轨收敛与防呆基建 | P0.1 宪章与 `STATE.md` 门禁（完成）；P0.2 `PlaySession.TryHandleTransport` 单轨化（完成）；P0.4 `MeshingContext` 网格构建入口单轨化（完成）；P0.3 `Framework/Rendering` 帧 Pass 单轨收敛 | **仅剩 P0.3 待做** |
-| **Phase 1** | 核心数据地基补齐（`Common`/`Client`） | P1.1 方块实体类型注册表（完成 T-348）；P1.2 `block-shape` `OcclusionShape` 逐面遮挡（完成 T-349）；P1.3 方块实体 NBT 保留（完成 T-347）；P1.4 `registry_data` 动态装配 `BlockStateLayout`（T-042，待做）；P1.5 把 `OcclusionShape` 接入 `ChunkMesher` 替换 `IsSolid`（待做） | **进行中（1.1/1.2/1.3 完成，1278 测试全绿）** |
+| **Phase 1** | 核心数据地基补齐（`Common`/`Client`） | P1.1 方块实体类型注册表（完成 T-348）；P1.2 `block-shape` `OcclusionShape` 逐面遮挡（完成 T-349）；P1.3 方块实体 NBT 保留（完成 T-347）；P1.4 `registry_data` 动态装配 `BlockStateLayout`（T-042，待做）；P1.5 把 `OcclusionShape` 接入 `ChunkMesher` 替换 `IsSolid`（前置切片 T-351 完成，完整接入待做） | **进行中（1.1/1.2/1.3 完成；P1.5 前置切片完成；全量 1281 通过）** |
 | **Phase 2** | M5.3 渲染长尾缺口清零（`Client`/`Framework`） | P2.1 `AtmosphericFogEnvironment`/`WaterFogEnvironment` 精确混合与水下暗盘；P2.2 流体 `water_overlay`/反向顶面/图集动画；P2.3 实体真实模型与名字牌 | 待开始 |
 | **Phase 3** | M5.2 界面层与 HUD 闭环（`Client`/`Framework`） | P3.1 统一渲染管线接入 UI Pass（T-104）；P3.2 `chat_type` 注册表装饰（T-127）与基础 HUD | 待开始 |
 | **Phase 4** | M6 模组与着色器包收口（`Modding`/`Framework`） | P4.1 定位并修复 `ModLoadContext` ALC 卸载强引用（R-019）；P4.2 `ShaderPackDescription` 驱动统一管线执行与故障回退 | 待开始 |
@@ -46,6 +46,7 @@ updated: 2026-11-06
 4. **T-330..T-343 天空盘、OIT 与视距 32 压测（2026-11-01）**：原版逐像素 fog 天空盘落地（采样 `(136,169,255)` vs 原版 `(137,170,255)`）；每区块独立缓冲支持视距 32（1770 区块 / 154 FPS）与古城室内（155 FPS）；删除旧单缓冲 Arena 死代码；视距+2 外区块自动卸载释放显存（T-327）。
 5. **T-250..T-326 云层、参考 OIT、时间天气与流体通道（2026-10-31~11-01）**：三阶段小波 OIT + 逐 cell 云；`set_time` 时钟、Lightmap UBO（ADR-0019）、雨雷同步、67 群系着色、水与岩浆独立流体通道。
 6. **T-350 方块实体占位尺寸（2026-11-06）**：`BlockEntityPlaceholderMesher` 按 `VanillaBlockEntityTypes.IsChestLike` 分类取 14px，非箱子类 12px；新增 1 用例。
+7. **T-351 流体面半透明邻居（2026-11-06）**：`ChunkMesher` 流体面剔除排除 translucent 邻居（P1.5 前置切片）；新增 2 用例；全量 1281 通过。
 
 ## 阻塞项
 

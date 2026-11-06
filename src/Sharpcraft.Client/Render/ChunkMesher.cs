@@ -874,7 +874,14 @@ public static class ChunkMesher
                     bool IsSolid(int wx, int wy, int wz)
                     {
                         var block = layout.BlockAt(nb.GetBlockState(wx, wy, wz, 0));
-                        return block is { } value && value.Path != "air" && value.Path != "water" && value.Path != "lava";
+                        return block is { } value
+                            && value.Path != "air"
+                            && value.Path != "water"
+                            && value.Path != "lava"
+                            // A translucent-layer neighbour (ice, glass) never hides a fluid face. The reference
+                            // FluidRenderer asks the neighbour for its face-occlusion shape, and these blocks are
+                            // marked noOcclusion, so that shape is empty (docs/modules/block-shape.md 4, matrix row 11).
+                            && !BlockRenderLayers.IsTranslucent(value);
                     }
 
                     float CellHeight(int ddx, int ddz)
