@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using Sharpcraft.Client.World;
 using Sharpcraft.Framework.Rendering;
 
 namespace Sharpcraft.Client.Render;
@@ -27,7 +28,9 @@ public readonly record struct VanillaPartPose(float X, float Y, float Z, float R
 /// part whose descendants need a parent link should name its primary cuboid after the part itself. An optional
 /// <c>PoseSource</c> names the base part whose pose this cuboid follows (used by top-level overlay layers). The
 /// emissive flags and texture dimensions are per-cube overrides; a non-zero <c>TextureWidth</c>/<c>TextureHeight</c>
-/// takes precedence over the mesh-level dimensions passed to <c>VanillaMeshBake.Bake</c>.
+/// takes precedence over the mesh-level dimensions passed to <c>VanillaMeshBake.Bake</c>. <c>MirrorX</c> selects
+/// the root X-reflection (root parts only; child parts are always mirrored by <c>BakeChild</c>). An optional
+/// <c>VisibleWhen</c> predicate is copied onto the baked part (used by arm-pose variants).
 /// </summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.geom.builders.CubeDefinition", "ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/builders/CubeDefinition.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Declarative cuboid DSL value; baked into EntityModelPart by VanillaMeshBake")]
 public readonly record struct VanillaCubeDefinition(
@@ -49,7 +52,9 @@ public readonly record struct VanillaCubeDefinition(
     bool IncludeInEmissive = true,
     bool EmissiveOnly = false,
     int TextureWidth = 0,
-    int TextureHeight = 0);
+    int TextureHeight = 0,
+    bool MirrorX = true,
+    Func<EntityRenderState, bool>? VisibleWhen = null);
 
 /// <summary>
 /// One node of the declarative model tree. Direct children of <c>VanillaMeshDefinition.Root</c> are root parts;
@@ -222,7 +227,7 @@ static partial class VanillaMeshBake
                     cube.MinX, cube.MinY, cube.MinZ,
                     cube.Width, cube.Height, cube.Depth,
                     cube.TextureX, cube.TextureY,
-                    mirror: cube.Mirror, overlays: cube.Overlays, modelHeight: modelHeight,
+                    mirror: cube.Mirror, mirrorX: cube.MirrorX, overlays: cube.Overlays, modelHeight: modelHeight,
                     rotationX: part.Pose.RotationX, rotationY: part.Pose.RotationY, rotationZ: part.Pose.RotationZ,
                     texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind)
                 : BakeChild(
@@ -238,6 +243,11 @@ static partial class VanillaMeshBake
             if (cube.PoseSource is not null)
             {
                 baked = baked with { PoseSource = cube.PoseSource };
+            }
+
+            if (cube.VisibleWhen is not null)
+            {
+                baked = baked with { VisibleWhen = cube.VisibleWhen };
             }
 
             baked = baked with

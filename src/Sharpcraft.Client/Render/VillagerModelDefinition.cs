@@ -5,7 +5,9 @@ namespace Sharpcraft.Client.Render;
 
 /// <summary>
 /// VillagerModel: head with grown hat and a rotated hat rim, nose, body with a grown jacket, a crossed-arm group and legs.
-/// All values are raw PartPose/cube values; villagerLikeScale 0.9375 is applied at the definition level.
+/// All values are raw PartPose/cube values; villagerLikeScale 0.9375 is applied at the definition level. Parts are
+/// declared with the <c>VanillaMeshDefinition</c> DSL and baked via <c>VanillaMeshBake.Bake</c> (T-683) with per-cube
+/// <c>MirrorX: false</c> on the head/body/arms roots; variants and scale are unchanged.
 /// </summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.npc.VillagerModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/npc/VillagerModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class VillagerModelDefinition
@@ -13,25 +15,14 @@ public static class VillagerModelDefinition
     public const int VillagerEntityTypeId = 143;
     public const int WanderingTraderEntityTypeId = 145;
 
+    /// <summary>Declarative DSL tree for the twelve villager parts (T-683).</summary>
+    private static readonly VanillaMeshDefinition VillagerMesh = BuildVillagerMesh();
+
     public static readonly EntityModelDefinition Definition = new(
         "villager",
         64,
         64,
-        [
-            PlayerModelDefinition.FromVanilla("head", 0f, 0f, 0f, -4f, -10f, -4f, 8f, 10f, 8f, 0, 0, mirrorX: false),
-            PlayerModelDefinition.FromVanillaChild("hat", "head", 0f, 0f, 0f, -4f, -10f, -4f, 8f, 10f, 8f, 32, 0, grow: 0.51f),
-            PlayerModelDefinition.FromVanillaChild("hat_rim", "hat", 0f, 0f, 0f, -8f, -8f, -6f, 16f, 16f, 1f, 30, 47,
-                rotationX: -MathF.PI / 2f),
-            PlayerModelDefinition.FromVanillaChild("nose", "head", 0f, -2f, 0f, -1f, -1f, -6f, 2f, 4f, 2f, 24, 0),
-            PlayerModelDefinition.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -3f, 8f, 12f, 6f, 16, 20, mirrorX: false),
-            PlayerModelDefinition.FromVanillaChild("jacket", "body", 0f, 0f, 0f, -4f, 0f, -3f, 8f, 20f, 6f, 0, 38, grow: 0.5f),
-            PlayerModelDefinition.FromVanilla("arms", 0f, 3f, -1f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0, mirrorX: false, rotationX: 0.75f),
-            PlayerModelDefinition.FromVanillaChild("arms_left", "arms", 0f, 0f, 0f, -8f, -2f, -2f, 4f, 8f, 4f, 44, 22),
-            PlayerModelDefinition.FromVanillaChild("arms_right", "arms", 0f, 0f, 0f, 4f, -2f, -2f, 4f, 8f, 4f, 44, 22, mirror: true),
-            PlayerModelDefinition.FromVanillaChild("arms_middle", "arms", 0f, 0f, 0f, -4f, 2f, -2f, 8f, 4f, 4f, 40, 38),
-            PlayerModelDefinition.FromVanilla("right_leg", -2f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 22),
-            PlayerModelDefinition.FromVanilla("left_leg", 2f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 22, mirror: true)
-        ],
+        [.. VanillaMeshBake.Bake(VillagerMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/villager/villager",
         0.9375f);
@@ -71,5 +62,35 @@ public static class VillagerModelDefinition
         }
 
         return variants;
+    }
+
+    private static VanillaMeshDefinition BuildVillagerMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        var head = root.AddOrReplaceChild("head", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("head", 0, 0, -4f, -10f, -4f, 8f, 10f, 8f, MirrorX: false));
+        var hat = head.AddOrReplaceChild("hat", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("hat", 32, 0, -4f, -10f, -4f, 8f, 10f, 8f, Grow: 0.51f));
+        hat.AddOrReplaceChild("hat_rim", VanillaPartPose.OffsetAndRotation(0f, 0f, 0f, -MathF.PI / 2f, 0f, 0f),
+            new VanillaCubeDefinition("hat_rim", 30, 47, -8f, -8f, -6f, 16f, 16f, 1f));
+        head.AddOrReplaceChild("nose", VanillaPartPose.Offset(0f, -2f, 0f),
+            new VanillaCubeDefinition("nose", 24, 0, -1f, -1f, -6f, 2f, 4f, 2f));
+        var body = root.AddOrReplaceChild("body", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("body", 16, 20, -4f, 0f, -3f, 8f, 12f, 6f, MirrorX: false));
+        body.AddOrReplaceChild("jacket", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("jacket", 0, 38, -4f, 0f, -3f, 8f, 20f, 6f, Grow: 0.5f));
+        var arms = root.AddOrReplaceChild("arms", VanillaPartPose.OffsetAndRotation(0f, 3f, -1f, 0.75f, 0f, 0f),
+            new VanillaCubeDefinition("arms", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, MirrorX: false));
+        arms.AddOrReplaceChild("arms_left", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("arms_left", 44, 22, -8f, -2f, -2f, 4f, 8f, 4f));
+        arms.AddOrReplaceChild("arms_right", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("arms_right", 44, 22, 4f, -2f, -2f, 4f, 8f, 4f, Mirror: true));
+        arms.AddOrReplaceChild("arms_middle", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("arms_middle", 40, 38, -4f, 2f, -2f, 8f, 4f, 4f));
+        root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-2f, 12f, 0f),
+            new VanillaCubeDefinition("right_leg", 0, 22, -2f, 0f, -2f, 4f, 12f, 4f));
+        root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(2f, 12f, 0f),
+            new VanillaCubeDefinition("left_leg", 0, 22, -2f, 0f, -2f, 4f, 12f, 4f, Mirror: true));
+        return new VanillaMeshDefinition(root);
     }
 }
