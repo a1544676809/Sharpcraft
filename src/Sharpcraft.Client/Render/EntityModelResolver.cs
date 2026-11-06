@@ -198,6 +198,8 @@ public static class EntityModelResolver
             {
                 parts = EntityModelLayerHelpers.WithBabyArmorSlot(parts, EquipmentAssetKind.HumanoidArmorBaby, slot, "entity/equipment/humanoid_baby/iron");
             }
+
+            parts = EntityModelLayerHelpers.WithElytra(parts, baby: true);
         }
         else
         {

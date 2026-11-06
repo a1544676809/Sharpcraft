@@ -29,6 +29,22 @@ public sealed class ElytraLayerTests
     }
 
     [Fact]
+    public void BabyHumanoidCarriesHalfSizedWings()
+    {
+        // Reference ELYTRA_BABY = ElytraModel scaled by 0.5: dims/pivots/offsets halved.
+        var parts = EntityModelResolver.Resolve(154, baby: true).Parts;
+        var left = parts.Single(part => part.Name == "equipment_Elytra_4_left_wing");
+        Assert.Equal(5f, left.Width);
+        Assert.Equal(10f, left.Height);
+        Assert.Equal(1f, left.Depth);
+        Assert.Equal(2f, left.Bottom);
+        Assert.Equal(12f, left.PivotY);
+        Assert.Equal(-3.25f, left.CentreX);
+        Assert.Equal(1.5f, left.CentreZ);
+        Assert.Equal(0.5f, left.Grow);
+    }
+
+    [Fact]
     public void WingsHangFromTheBodyInModelSpace()
     {
         var parts = EntityModelResolver.Resolve(154).Parts;

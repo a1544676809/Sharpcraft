@@ -235,10 +235,54 @@ public static class EntityModelLayerHelpers
     /// Positioned relative to the body top so it works for any humanoid model; wing rotation is driven by
     /// <see cref="ElytraAnimationState"/>. Rendered when the chest slot holds an elytra (glider).
     /// </summary>
-    public static EntityModelPart[] WithElytra(IReadOnlyList<EntityModelPart> parts)
+    public static EntityModelPart[] WithElytra(IReadOnlyList<EntityModelPart> parts, bool baby = false)
     {
         var result = new List<EntityModelPart>(parts.Count + 2);
         result.AddRange(parts);
+        if (baby)
+        {
+            // Reference ELYTRA_BABY uses the same ElytraModel mesh with MeshTransformer.scaling(0.5): every dimension,
+            // pivot and foot-relative offset is halved (adult reference box: bottom 4, height 20, width 10, depth 2,
+            // pivotY 24, centreZ 3, grow 1). Texture layout (64x32, tex 22,0) is unchanged.
+            result.Add(new EntityModelPart(
+                "equipment_Elytra_4_left_wing",
+                CentreX: -3.25f,
+                Bottom: 2f,
+                Width: 5f,
+                Height: 10f,
+                Depth: 1f,
+                TextureX: 22,
+                TextureY: 0,
+                CentreZ: 1.5f,
+                PivotX: 0f,
+                PivotY: 12f,
+                Grow: 0.5f,
+                TexturePath: "entity/equipment/wings/elytra",
+                TextureWidth: 64,
+                TextureHeight: 32,
+                VisibleWhen: static state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4) is not null,
+                RotationSelector: static state => new System.Numerics.Vector3(-state.ElytraRotX, -state.ElytraRotY, state.ElytraRotZ)));
+            result.Add(new EntityModelPart(
+                "equipment_Elytra_4_right_wing",
+                CentreX: 3.25f,
+                Bottom: 2f,
+                Width: 5f,
+                Height: 10f,
+                Depth: 1f,
+                TextureX: 22,
+                TextureY: 0,
+                Mirror: true,
+                CentreZ: 1.5f,
+                PivotX: 0f,
+                PivotY: 12f,
+                Grow: 0.5f,
+                TexturePath: "entity/equipment/wings/elytra",
+                TextureWidth: 64,
+                TextureHeight: 32,
+                VisibleWhen: static state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4) is not null,
+                RotationSelector: static state => new System.Numerics.Vector3(-state.ElytraRotX, state.ElytraRotY, -state.ElytraRotZ)));
+            return [.. result];
+        }
         EntityModelPart body = default;
         foreach (var part in parts)
         {
