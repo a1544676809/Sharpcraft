@@ -10,17 +10,23 @@ public static class BabyModelDefinitionsFinal
     private static readonly VanillaMeshDefinition NautilusMesh = BuildNautilusMesh();
     private static readonly VanillaMeshDefinition HappyGhastMesh = BuildHappyGhastMesh();
 
+    private static readonly CompiledEntityModel NautilusCompiled = VanillaMeshBakery.Build(NautilusMesh, 64, 64);
+    private static readonly CompiledEntityModel HappyGhastCompiled = VanillaMeshBakery.Build(HappyGhastMesh, 64, 64);
+
     public static readonly EntityModelDefinition Nautilus = new(
         "baby_nautilus", 64, 64, [.. VanillaMeshBake.Bake(NautilusMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/nautilus/nautilus_baby");
+        PlayerModelDefinition.DefaultFaceTransforms, "entity/nautilus/nautilus_baby",
+        compiled: NautilusCompiled);
 
     public static readonly EntityModelDefinition HappyGhast = new(
         "baby_happy_ghast", 64, 64, [.. VanillaMeshBake.Bake(HappyGhastMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/ghast/happy_ghast_baby", 0.95f);
+        PlayerModelDefinition.DefaultFaceTransforms, "entity/ghast/happy_ghast_baby", 0.95f,
+        compiled: HappyGhastCompiled);
 
     public static readonly EntityModelDefinition GlowSquid = new(
         "baby_glow_squid", 32, 32, BabyModelDefinitionsAquatic.Squid.Parts,
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/squid/glow_squid_baby");
+        PlayerModelDefinition.DefaultFaceTransforms, "entity/squid/glow_squid_baby",
+        compiled: BabyModelDefinitionsAquatic.Squid.Compiled);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>

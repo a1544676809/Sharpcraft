@@ -16,17 +16,26 @@ public static class BabyModelDefinitionsMisc
     private static readonly VanillaMeshDefinition TurtleMesh = BuildTurtleMesh();
     private static readonly EntityModelPart[] TurtleParts = [.. VanillaMeshBake.Bake(TurtleMesh, 0, 0)];
 
+    private static readonly CompiledEntityModel GoatCompiled = VanillaMeshBakery.Build(GoatMesh, 64, 64);
+    private static readonly CompiledEntityModel PandaCompiled = VanillaMeshBakery.Build(PandaMesh, 64, 64);
+    private static readonly CompiledEntityModel PolarBearCompiled = VanillaMeshBakery.Build(PolarBearMesh, 64, 64);
+    private static readonly CompiledEntityModel TurtleCompiled = VanillaMeshBakery.Build(TurtleMesh, 16, 16);
+
     public static readonly EntityModelDefinition Goat = new(
-        "baby_goat", 64, 64, GoatParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/goat/goat_baby");
+        "baby_goat", 64, 64, GoatParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/goat/goat_baby",
+        compiled: GoatCompiled);
 
     public static readonly EntityModelDefinition Panda = new(
-        "baby_panda", 64, 64, PandaParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/panda/panda_baby");
+        "baby_panda", 64, 64, PandaParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/panda/panda_baby",
+        compiled: PandaCompiled);
 
     public static readonly EntityModelDefinition PolarBear = new(
-        "baby_polar_bear", 64, 64, PolarBearParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/bear/polarbear_baby");
+        "baby_polar_bear", 64, 64, PolarBearParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/bear/polarbear_baby",
+        compiled: PolarBearCompiled);
 
     public static readonly EntityModelDefinition Turtle = new(
-        "baby_turtle", 16, 16, TurtleParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/turtle/turtle_baby");
+        "baby_turtle", 16, 16, TurtleParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/turtle/turtle_baby",
+        compiled: TurtleCompiled);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>
@@ -55,7 +64,8 @@ public static class BabyModelDefinitionsMisc
                     64,
                     PandaParts,
                     PlayerModelDefinition.DefaultFaceTransforms,
-                    "entity/panda/panda_" + key + "_baby");
+                    "entity/panda/panda_" + key + "_baby",
+                    compiled: PandaCompiled);
             }
         }
 

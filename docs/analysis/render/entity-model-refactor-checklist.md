@@ -338,3 +338,11 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - Baby Horse 的四种 markings 通过 `WithHorseMarkings(CompiledEntityModel, ..., baby: true)` 生成 `WithModelLayer` 树复制层，保留 `marking_*` 纹理 selector、`Markings` 可见性与 Translucent kind；
 - Bee 的状态纹理 selector、各模型扁平 `Parts`、变体名、纹理路径与动画 provider 均保持不变；
 - 树测试增加 baby aquatic/equine compiled 断言，树测试共 26 项。
+
+### 2026-11-07 — T-737 剩余幼年模型树迁移
+
+- `BabyModelDefinitionsMisc` 的 Goat/Panda/PolarBear/Turtle 及 panda 全部基因变体接入 `Compiled`（Turtle 使用 16×16 纹理尺寸）；
+- `BabyModelDefinitionsOdd` 的 Strider/Snifflet/犰狳接入 `Compiled`；Husk 复用 `BabyModelDefinitionsHumanoid.Zombie` 编译树；犰狳的 unrolled/rolled `VisibleWhen` 由树节点继承保留；
+- `BabyModelDefinitionsFinal` 的 Nautilus/HappyGhast 接入 `Compiled`（HappyGhast 保留 0.95 定义级 scale）；GlowSquid 复用 `BabyModelDefinitionsAquatic.Squid` 编译树；
+- 三个文件均无 `WithCopy`/collar/overlay 变体，故未新增树复制层；扁平 `Parts`、变体名、纹理路径与动画 provider 保持不变；
+- 树测试增加剩余 baby 模型 compiled/变体/复用关系断言，树测试共 27 项。

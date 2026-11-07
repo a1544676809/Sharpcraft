@@ -23,18 +23,26 @@ public static class BabyModelDefinitionsOdd
     private static readonly VanillaMeshDefinition ArmadilloMesh = BuildArmadilloMesh();
     private static readonly EntityModelPart[] ArmadilloParts = BuildArmadilloParts();
 
+    private static readonly CompiledEntityModel StriderCompiled = VanillaMeshBakery.Build(StriderMesh, 32, 32);
+    private static readonly CompiledEntityModel SniffletCompiled = VanillaMeshBakery.Build(SniffletMesh, 128, 128);
+    private static readonly CompiledEntityModel ArmadilloCompiled = VanillaMeshBakery.Build(ArmadilloMesh, 64, 64);
+
     public static readonly EntityModelDefinition Strider = new(
-        "baby_strider", 32, 32, StriderParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/strider/strider_baby");
+        "baby_strider", 32, 32, StriderParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/strider/strider_baby",
+        compiled: StriderCompiled);
 
     public static readonly EntityModelDefinition Husk = new(
         "baby_husk", 64, 64, BabyModelDefinitionsHumanoid.Zombie.Parts,
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/zombie/husk_baby");
+        PlayerModelDefinition.DefaultFaceTransforms, "entity/zombie/husk_baby",
+        compiled: BabyModelDefinitionsHumanoid.Zombie.Compiled);
 
     public static readonly EntityModelDefinition Snifflet = new(
-        "baby_sniffer", 128, 128, SniffletParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/sniffer/snifflet");
+        "baby_sniffer", 128, 128, SniffletParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/sniffer/snifflet",
+        compiled: SniffletCompiled);
 
     public static readonly EntityModelDefinition Armadillo = new(
-        "baby_armadillo", 64, 64, ArmadilloParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/armadillo/armadillo_baby");
+        "baby_armadillo", 64, 64, ArmadilloParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/armadillo/armadillo_baby",
+        compiled: ArmadilloCompiled);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>

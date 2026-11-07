@@ -385,6 +385,30 @@ public sealed class EntityModelTreeBakeryTests
     }
 
     [Fact]
+    public void RemainingBabyModelsExposeCompiledTrees()
+    {
+        Assert.NotNull(BabyModelDefinitionsMisc.Goat.Compiled);
+        Assert.NotNull(BabyModelDefinitionsMisc.Panda.Compiled);
+        Assert.NotNull(BabyModelDefinitionsMisc.PolarBear.Compiled);
+        Assert.NotNull(BabyModelDefinitionsMisc.Turtle.Compiled);
+        Assert.NotNull(BabyModelDefinitionsMisc.Variants[(97, "normal")].Compiled);
+        Assert.NotNull(BabyModelDefinitionsMisc.Variants[(97, "lazy")].Compiled);
+        Assert.NotNull(BabyModelDefinitionsOdd.Strider.Compiled);
+        Assert.NotNull(BabyModelDefinitionsOdd.Husk.Compiled);
+        Assert.NotNull(BabyModelDefinitionsOdd.Snifflet.Compiled);
+        Assert.NotNull(BabyModelDefinitionsOdd.Armadillo.Compiled);
+        Assert.NotNull(BabyModelDefinitionsFinal.Nautilus.Compiled);
+        Assert.NotNull(BabyModelDefinitionsFinal.HappyGhast.Compiled);
+        Assert.NotNull(BabyModelDefinitionsFinal.GlowSquid.Compiled);
+
+        Assert.Same(BabyModelDefinitionsFinal.GlowSquid.Compiled, BabyModelDefinitionsAquatic.Squid.Compiled);
+        Assert.Same(BabyModelDefinitionsOdd.Husk.Compiled, BabyModelDefinitionsHumanoid.Zombie.Compiled);
+        Assert.NotNull(BabyModelDefinitionsFinal.GlowSquid.Compiled!.Find("body"));
+        Assert.NotNull(BabyModelDefinitionsFinal.Nautilus.Compiled!.Find("shell"));
+        Assert.NotNull(BabyModelDefinitionsOdd.Armadillo.Compiled!.Find("cube"));
+    }
+
+    [Fact]
     public void BabyZombieUsesDedicatedBabyArmorTree()
     {
         var baby = EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId, baby: true);
