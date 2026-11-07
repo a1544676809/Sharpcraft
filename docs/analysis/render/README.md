@@ -23,6 +23,7 @@
 | [`entity-special-layers.md`](entity-special-layers.md) | 不属于普通 base/overlay cube 的实体渲染层清单，以及后续补充顺序 | 已评审 | 2026-11-02 |
 | [`entity-variants.md`](entity-variants.md) | 26.3 变体的三条来源、实体数据访问器索引表、注册表驱动解析、几何变体差异与首批范围 | 分析已定稿（依据 26.3 源码） | 2026-11-03 |
 | [`lighting-color-space.md`](lighting-color-space.md) | 26.3 block 着色器全程 sRGB 域直接相乘；据此修正我们误加的 gamma 解码/编码 | 草稿 | 2026-11-01 |
+| [`next-actions-hard-constraints.md`](next-actions-hard-constraints.md) | 根据外部硬约束蓝图、全量审查稿与当前树/装备层进度整理的下一步执行清单 | 已评审（排期文档） | 2026-11-07 |
 | [`offscreen-ui-pass.md`](offscreen-ui-pass.md) | T-104 / T-159 的行为规格：离屏路径补上界面 pass，并用已知颜色反查 gamma 与通道顺序 | 草稿 | - |
 | [`shader-organisation.md`](shader-organisation.md) | 原版 93 个着色器条目的组织规范；我们当前的内联状态与改造建议 | 草稿 | - |
 | [`shader-pack-anatomy.md`](shader-pack-anatomy.md) | 真实 Iris 包的文件布局、阶段清单、包装层与共享翻译单元、选项系统；全部为行为级描述 | 草稿 | - |
@@ -31,5 +32,11 @@
 | [`upscaling-and-raytracing.md`](upscaling-and-raytracing.md) | 逐项核实 DLSS / XeSS / FSR / 硬件光追的可用性、依据，以及无论选谁都必须先具备的管线输入 | 草稿 | - |
 | [`vanilla-equivalence-check.md`](vanilla-equivalence-check.md) | 逐项把我们的实现与原版参考对照。 | 未标注 | - |
 | [`world-space-text.md`](world-space-text.md) | 原版世界空间文字（名字牌、告示牌、文本展示实体等）的提交契约、坐标、字体、背景、朝向与光照语义 | 草稿 | 2026-11-02 |
+
+子目录：
+
+| 目录 | 文档数 |
+| --- | --- |
+| [`external/`](external/README.md) | 2 |
 
 <!-- END GENERATED: docs/analysis/render -->
