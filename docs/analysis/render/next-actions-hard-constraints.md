@@ -85,6 +85,7 @@ Z-fighting 与 equipment clearance 不混入本任务；先走诊断报告，规
 - `equippable` 组件现在保留 `EquippableAssetId`，经 `EntityTracker` 传入 `EntityRenderState` 和 texture selector；
 - `EquipmentTexture` 已携带 `UsePlayerTexture` 与 `ColourWhenUndyed` 元数据；
 - `EquipmentClientInfo.ResolveTrim` 已按 material/pattern 选择第一条匹配的 trim override；
+- `dyed_color` 组件已进入 `ItemComponentInfo`/`EntityTracker`/`EntityRenderState`，`ResolveEquipmentTint` 将染料颜色转成 `EntityModelCube` 的 tint selector；
 - 已有 `EquipmentClientInfoTests` 覆盖 iron/leather/saddle/elytra 形状、非法输入、asset-driven resolution、自定义 asset id、dye/player-texture 元数据与 trim predicate；
 - T-748d：资产纹理路径已进入 atlas —— `EntitySkinLibrary.Load` 遍历 `EquipmentTextureCatalog.Assets.TexturePaths` 并复用 `LoadTexture` 的按路径去重，`EquipmentClientInfoTests` 补资产层纹理路径断言；
 - 尚未完成 dye/glint/player-texture 的最终着色与 trim 纹理/palette 的实际渲染。

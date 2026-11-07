@@ -14,7 +14,8 @@ public readonly record struct ItemComponentInfo(
     int RepairCost = 0,
     bool Unbreakable = false,
     int QuickChargeLevel = 0,
-    string? EquippableAssetId = null)
+    string? EquippableAssetId = null,
+    int? DyedColor = null)
 {
     /// <summary>True when some component payload could not be decoded and the rest of the packet was skipped.</summary>
     public bool HasUnknownComponents => Opaque;
@@ -356,7 +357,13 @@ internal static class ItemComponentPatchReader
 
         if (typeId == DyedColor)
         {
-            return reader.TryReadInt(out _) == DecodeStatus.Success;
+            if (reader.TryReadInt(out var value) != DecodeStatus.Success)
+            {
+                return false;
+            }
+
+            info = info with { DyedColor = value };
+            return true;
         }
 
         if (typeId == Trim)

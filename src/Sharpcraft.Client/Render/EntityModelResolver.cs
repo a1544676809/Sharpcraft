@@ -3,6 +3,7 @@
 
 namespace Sharpcraft.Client.Render;
 
+using System.Numerics;
 using Sharpcraft.Client.World;
 using Sharpcraft.Common.Registries;
 using Sharpcraft.Framework.Rendering;
@@ -34,6 +35,27 @@ public static class EntityModelResolver
 
         var texture = EquipmentTextureCatalog.Resolve(kind, item, equippableAssetId: state.EquipmentAssetIdAt(slot));
         return overlay ? texture?.OverlayPath : texture?.PrimaryPath;
+    }
+
+    /// <summary>Resolves the leather/dyed tint for an equipment slot, or white when the item is not dyeable.</summary>
+    public static Vector3 ResolveEquipmentTint(EntityRenderState state, EquipmentAssetKind kind, int slot)
+    {
+        var itemId = state.Equipment[slot];
+        if (itemId < 0 || Items is null || Items.ById(itemId) is not { } item)
+        {
+            return Vector3.One;
+        }
+
+        var texture = EquipmentTextureCatalog.Resolve(kind, item, equippableAssetId: state.EquipmentAssetIdAt(slot));
+        if ((state.EquipmentDyeColorAt(slot) ?? texture?.ColourWhenUndyed) is not { } rgb)
+        {
+            return Vector3.One;
+        }
+
+        return new Vector3(
+            ((rgb >> 16) & 0xFF) / 255f,
+            ((rgb >> 8) & 0xFF) / 255f,
+            (rgb & 0xFF) / 255f);
     }
 
     public static readonly EntityModelDefinition Placeholder = new(
@@ -305,7 +327,9 @@ public static class EntityModelResolver
                     definition.Scale,
                     textureSelector: selector,
                     additionalTexturePaths: [layerTexture],
-                    compiled: equipmentTree);
+                    compiled: EntityModelLayerHelpers.WithTint(
+                        equipmentTree,
+                        state => EntityModelResolver.ResolveEquipmentTint(state, effectiveKind, slot)));
                 customLayers.Add(new EntityRenderLayerDefinition(
                     layerName,
                     EntityGeometryLayerKind.Elytra,

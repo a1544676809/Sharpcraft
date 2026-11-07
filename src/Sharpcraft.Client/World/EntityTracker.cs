@@ -137,6 +137,7 @@ public sealed class TrackedEntity
     private readonly int[] _equipmentCounts = new int[8];
     private readonly ItemComponentInfo[] _equipmentComponents = new ItemComponentInfo[8];
     private readonly string?[] _equipmentAssetIds = new string?[8];
+    private readonly int?[] _equipmentDyeColors = new int?[8];
 
     /// <summary>Item registry id in <paramref name="slot"/> (0..7), or -1 when empty.</summary>
     public int EquipmentItemAt(int slot) =>
@@ -152,6 +153,13 @@ public sealed class TrackedEntity
 
     /// <summary>All eight equippable asset ids, reused by the per-frame render state.</summary>
     public IReadOnlyList<string?> EquipmentAssetIds => _equipmentAssetIds;
+
+    /// <summary>Dyed-colour component for one equipment slot, or null when absent.</summary>
+    public int? EquipmentDyeColorAt(int slot) =>
+        (uint)slot < (uint)_equipmentDyeColors.Length ? _equipmentDyeColors[slot] : null;
+
+    /// <summary>All eight dyed-colour components, reused by the per-frame render state.</summary>
+    public IReadOnlyList<int?> EquipmentDyeColors => _equipmentDyeColors;
 
     /// <summary>Stack count in <paramref name="slot"/>; 0 when empty.</summary>
     public int EquipmentCountAt(int slot) =>
@@ -170,6 +178,7 @@ public sealed class TrackedEntity
             _equipmentCounts[item.Slot] = item.IsEmpty ? 0 : item.Count;
             _equipmentComponents[item.Slot] = item.IsEmpty ? default : item.Components;
             _equipmentAssetIds[item.Slot] = item.IsEmpty ? null : item.Components.EquippableAssetId;
+            _equipmentDyeColors[item.Slot] = item.IsEmpty ? null : item.Components.DyedColor;
             EquipmentUpdates++;
         }
     }
@@ -462,11 +471,16 @@ public readonly record struct EntityRenderState(
     float ElytraRotX = 0f,
     float ElytraRotY = 0f,
     float ElytraRotZ = 0f,
-    IReadOnlyList<string?>? EquipmentAssetIds = null)
+    IReadOnlyList<string?>? EquipmentAssetIds = null,
+    IReadOnlyList<int?>? EquipmentDyeColors = null)
 {
     /// <summary>Equippable asset id for one equipment slot, when the item supplied one.</summary>
     public string? EquipmentAssetIdAt(int slot) =>
         EquipmentAssetIds is { } ids && (uint)slot < (uint)ids.Count ? ids[slot] : null;
+
+    /// <summary>Dyed-colour component for one equipment slot, when the item supplied one.</summary>
+    public int? EquipmentDyeColorAt(int slot) =>
+        EquipmentDyeColors is { } colors && (uint)slot < (uint)colors.Count ? colors[slot] : null;
 }
 
 /// <summary>
@@ -1379,7 +1393,8 @@ public sealed class EntityTracker
                 AnimationPartialTick: t,
                 HasMainHandItem: entity.EquipmentItemAt(0) > 0,
                 HasOffHandItem: entity.EquipmentItemAt(1) > 0,
-                EquipmentAssetIds: entity.EquipmentAssetIds));
+                EquipmentAssetIds: entity.EquipmentAssetIds,
+                EquipmentDyeColors: entity.EquipmentDyeColors));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);
