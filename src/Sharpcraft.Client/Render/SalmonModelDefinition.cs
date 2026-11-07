@@ -17,6 +17,9 @@ public static class SalmonModelDefinition
 
     private static readonly EntityModelPart[] Parts = BuildParts();
 
+    private static readonly CompiledEntityModel SalmonCompiled =
+        VanillaMeshBakery.Build(SalmonMesh, 32, 32);
+
     /// <summary>
     /// The reference lists the three root body parts before the child fins, while <c>Bake</c> emits children
     /// depth-first. Reorder the baked parts by name (values untouched) to keep the flat array order identical.
@@ -49,7 +52,8 @@ public static class SalmonModelDefinition
         32,
         Parts,
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/fish/salmon");
+        "entity/fish/salmon",
+        compiled: SalmonCompiled);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants = BuildVariants();
 
@@ -68,7 +72,8 @@ public static class SalmonModelDefinition
                     Parts,
                     PlayerModelDefinition.DefaultFaceTransforms,
                     "entity/fish/salmon",
-                    VariantScale[i]);
+                    VariantScale[i],
+                    compiled: SalmonCompiled);
         }
 
         return variants;

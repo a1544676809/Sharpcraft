@@ -18,6 +18,9 @@ public static class VillagerModelDefinition
     /// <summary>Declarative DSL tree for the twelve villager parts (T-683).</summary>
     private static readonly VanillaMeshDefinition VillagerMesh = BuildVillagerMesh();
 
+    private static readonly CompiledEntityModel VillagerCompiled =
+        VanillaMeshBakery.Build(VillagerMesh, 64, 64);
+
     public static readonly EntityModelDefinition Definition = new(
         "villager",
         64,
@@ -25,7 +28,8 @@ public static class VillagerModelDefinition
         [.. VanillaMeshBake.Bake(VillagerMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/villager/villager",
-        0.9375f);
+        0.9375f,
+        compiled: VillagerCompiled);
 
     public static readonly EntityModelDefinition WanderingTrader = new(
         "wandering_trader",
@@ -34,31 +38,44 @@ public static class VillagerModelDefinition
         Definition.Parts,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/wandering_trader/wandering_trader",
-        0.9375f);
+        0.9375f,
+        compiled: VillagerCompiled);
 
     public static readonly IReadOnlyList<string> VariantKeys = ["plains", "desert", "jungle", "savanna", "snow", "swamp", "taiga"];
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
-        VariantMap(Definition.Parts, "entity/villager/type/", 0.9375f);
+        VariantMap(Definition.Parts, "entity/villager/type/", 0.9375f, baseCompiled: VillagerCompiled);
 
     internal static Dictionary<string, EntityModelDefinition> VariantMap(
         IReadOnlyList<EntityModelPart> parts,
         string texturePrefix,
         float scale,
         string namePrefix = "villager_",
-        string baseTexture = "entity/villager/villager")
+        string baseTexture = "entity/villager/villager",
+        CompiledEntityModel? baseCompiled = null)
     {
         var variants = new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal);
         foreach (var key in VariantKeys)
         {
+            var texturePath = texturePrefix + key;
+            var compiled = baseCompiled is null
+                ? null
+                : EntityModelLayerHelpers.WithModelLayer(
+                    baseCompiled,
+                    baseCompiled,
+                    "copylayer_",
+                    _ => texturePath,
+                    fallbackTexture: texturePath,
+                    inflate: 0.05f);
             variants[key] = new EntityModelDefinition(
                 namePrefix + key,
                 64,
                 64,
-                EntityModelLayerHelpers.WithCopy(parts, texturePrefix + key, static _ => true, 0.05f),
+                EntityModelLayerHelpers.WithCopy(parts, texturePath, static _ => true, 0.05f),
                 PlayerModelDefinition.DefaultFaceTransforms,
                 baseTexture,
-                scale);
+                scale,
+                compiled: compiled);
         }
 
         return variants;

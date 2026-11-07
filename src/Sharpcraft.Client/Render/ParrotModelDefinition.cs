@@ -17,6 +17,9 @@ public static class ParrotModelDefinition
 
     private static readonly EntityModelPart[] Parts = BuildParts();
 
+    private static readonly CompiledEntityModel ParrotCompiled =
+        VanillaMeshBakery.Build(ParrotMesh, 32, 32);
+
     /// <summary>Synced variant ids in enum order: RED_BLUE, BLUE, GREEN, YELLOW_BLUE, GRAY.</summary>
     public static readonly IReadOnlyList<string> VariantKeys = ["red_blue", "blue", "green", "yellow_blue", "gray"];
 
@@ -28,7 +31,8 @@ public static class ParrotModelDefinition
         32,
         Parts,
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/parrot/parrot_red_blue");
+        "entity/parrot/parrot_red_blue",
+        compiled: ParrotCompiled);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants = BuildVariants();
 
@@ -52,7 +56,8 @@ public static class ParrotModelDefinition
                 32,
                 Parts,
                 PlayerModelDefinition.DefaultFaceTransforms,
-                "entity/parrot/" + VariantFiles[i]);
+                "entity/parrot/" + VariantFiles[i],
+                compiled: ParrotCompiled);
         }
 
         return variants;

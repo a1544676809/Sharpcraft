@@ -269,3 +269,13 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - `HumanoidArmorTrees.ForBabyPiglin(slot)`：按 `AbstractPiglinModel.createBabyArmorMeshSet` 使用 uniform 0.7 deformation、arm offset `(0.5,-0.5,0)`、空 ears 组；
 - `EntityModelResolver` 对 baby piglin 传入 piglin 标志并使用 `HumanoidArmorBaby` 纹理族；
 - 树测试增加 baby piglin armor 断言，树测试共 19 项。
+
+### 2026-11-07 — T-728 剩余 adult 模型树迁移
+
+- Axolotl、Parrot、Salmon、TropicalFish、Villager、ZombieVillager 全部接入 `Compiled`；
+- 各变体共享对应 compiled tree：
+  - Salmon 的 small/medium/large 仍通过定义级 `Scale` 区分；
+  - TropicalFish 的 pattern copy 通过 `WithModelLayer` 生成树层，并保留 `PatternTint` tint selector 与 pattern 纹理 selector；
+  - Villager 的群系变体通过 `WithModelLayer` 生成 `copylayer_` 树层（+0.05 grow）；
+  - Axolotl/Parrot/ZombieVillager 变体直接共享 compiled tree；
+- `EntityModelTreeBakeryTests` 增加剩余模型 compiled/variant 断言，树测试共 20 项。

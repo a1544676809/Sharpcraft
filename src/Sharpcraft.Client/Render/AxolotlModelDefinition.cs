@@ -19,6 +19,9 @@ public static class AxolotlModelDefinition
 
     private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(AxolotlMesh, 0, 0)];
 
+    private static readonly CompiledEntityModel AxolotlCompiled =
+        VanillaMeshBakery.Build(AxolotlMesh, 64, 64);
+
     /// <summary>Synced variant ids: LUCY, WILD, GOLD, CYAN, BLUE.</summary>
     public static readonly IReadOnlyList<string> VariantKeys = ["lucy", "wild", "gold", "cyan", "blue"];
 
@@ -28,7 +31,8 @@ public static class AxolotlModelDefinition
         64,
         Parts,
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/axolotl/axolotl_lucy");
+        "entity/axolotl/axolotl_lucy",
+        compiled: AxolotlCompiled);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants = BuildVariants();
 
@@ -52,7 +56,8 @@ public static class AxolotlModelDefinition
                 64,
                 Parts,
                 PlayerModelDefinition.DefaultFaceTransforms,
-                "entity/axolotl/axolotl_" + key);
+                "entity/axolotl/axolotl_" + key,
+                compiled: AxolotlCompiled);
         }
 
         return variants;

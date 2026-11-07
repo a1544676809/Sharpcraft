@@ -16,16 +16,26 @@ public static class ZombieVillagerModelDefinition
     /// <summary>Declarative DSL tree for the eight zombie-villager parts (T-683).</summary>
     private static readonly VanillaMeshDefinition ZombieVillagerMesh = BuildZombieVillagerMesh();
 
+    private static readonly CompiledEntityModel ZombieVillagerCompiled =
+        VanillaMeshBakery.Build(ZombieVillagerMesh, 64, 64);
+
     public static readonly EntityModelDefinition Definition = new(
         "zombie_villager",
         64,
         64,
         [.. VanillaMeshBake.Bake(ZombieVillagerMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/zombie_villager/zombie_villager");
+        "entity/zombie_villager/zombie_villager",
+        compiled: ZombieVillagerCompiled);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
-        VillagerModelDefinition.VariantMap(Definition.Parts, "entity/zombie_villager/type/", 1f, "zombie_villager_", "entity/zombie_villager/zombie_villager");
+        VillagerModelDefinition.VariantMap(
+            Definition.Parts,
+            "entity/zombie_villager/type/",
+            1f,
+            "zombie_villager_",
+            "entity/zombie_villager/zombie_villager",
+            ZombieVillagerCompiled);
 
     private static VanillaMeshDefinition BuildZombieVillagerMesh()
     {

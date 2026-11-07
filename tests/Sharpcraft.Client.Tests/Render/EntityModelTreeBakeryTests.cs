@@ -229,6 +229,27 @@ public sealed class EntityModelTreeBakeryTests
     }
 
     [Fact]
+    public void RemainingAdultModelsExposeCompiledTreesAndVariantLayers()
+    {
+        Assert.NotNull(AxolotlModelDefinition.Definition.Compiled);
+        Assert.NotNull(AxolotlModelDefinition.Variants["blue"].Compiled);
+        Assert.NotNull(ParrotModelDefinition.Definition.Compiled);
+        Assert.NotNull(ParrotModelDefinition.Variants["gray"].Compiled);
+        Assert.NotNull(SalmonModelDefinition.Definition.Compiled);
+        Assert.NotNull(SalmonModelDefinition.Variants["large"].Compiled);
+        Assert.NotNull(TropicalFishModelDefinition.Definition.Compiled);
+        Assert.NotNull(TropicalFishModelDefinition.Variants["clayfish"].Compiled);
+        Assert.NotNull(VillagerModelDefinition.Definition.Compiled);
+        Assert.NotNull(VillagerModelDefinition.Variants["plains"].Compiled);
+        Assert.NotNull(ZombieVillagerModelDefinition.Definition.Compiled);
+
+        var pattern = TropicalFishModelDefinition.Definition.Compiled!.Find("pattern_body");
+        Assert.NotNull(pattern);
+        Assert.NotNull(pattern.Cubes[0].TextureSelector);
+        Assert.NotNull(VillagerModelDefinition.Variants["plains"].Compiled!.Find("copylayer_head"));
+    }
+
+    [Fact]
     public void PiglinUsesPlayerArmorGeometryWithEmptyEars()
     {
         Assert.NotNull(PiglinModelDefinition.Definition.Compiled);

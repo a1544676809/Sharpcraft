@@ -243,7 +243,8 @@ public static class EntityModelLayerHelpers
         EntityGeometryLayerKind? kind = null,
         float inflate = 0f,
         Func<string, EntityRenderState, Vector3>? rotationSelector = null,
-        Func<string, EntityRenderState, float>? yOffsetSelector = null)
+        Func<string, EntityRenderState, float>? yOffsetSelector = null,
+        Func<EntityRenderState, Vector3>? tintSelector = null)
     {
         var layerParts = new List<EntityModelPartNode>();
 
@@ -277,7 +278,7 @@ public static class EntityModelLayerHelpers
                 rotationSelector: rotationSelector is null ? source.RotationSelector : state => rotationSelector(source.Name, state),
                 yOffsetSelector: yOffsetSelector is null ? source.YOffsetSelector : state => yOffsetSelector(source.Name, state),
                 poseSource: source.PoseSource ?? source.Name,
-                tintSelector: source.TintSelector);
+                tintSelector: tintSelector ?? source.TintSelector);
             layerParts.Add(node);
             return node;
         }

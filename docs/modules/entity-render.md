@@ -203,6 +203,7 @@ DSL 现状与约束：
 - T-725 补齐幼年：`HumanoidArmorTrees.ForBaby` 按 `createBabyArmorMeshSet` 的四槽树（outer `(-0.1,0.5,0.3)`、inner `(-0.1,0.3,0.3)`、waist/leg `extend(-0.1)`）；baby Elytra 使用 0.5 root scale 的 5×10×1 翼并保留 10×20×2 UV 采样。幼年 humanoid 定义与 villager 变体已接入 `Compiled`。
 - T-726 Piglin：`PiglinModelDefinition` 的 player body/arms/legs + piglin head 组成编译树；`HumanoidArmorTrees.ForPiglin` 在 player armor 四槽树上补空 `left_ear`/`right_ear` 组；type 102/103/158 使用独立 `PiglinArmorLayers`。
 - T-727 baby Piglin：`HumanoidArmorTrees.ForBabyPiglin` 使用 uniform 0.7 deformation、arm offset `(0.5,-0.5,0)` 与空 ears 组；baby Piglin/Zombified Piglin 基础接入 `Compiled`。
+- T-728 剩余 adult 模型：Axolotl/Parrot/Salmon/TropicalFish/Villager/ZombieVillager 全部接入 `Compiled`；TropicalFish pattern 与 Villager 群系变体通过 `WithModelLayer` 生成树复制层，Salmon 大小变体继续使用定义级 `Scale`。
 - 现有 DSL 仍缺 **三轴 `GrowXyz`** 与 **`PartPose` 三轴 Scale**；完整覆盖幼年护甲等 reference 数据前必须补齐。
 - 完整的模型/装备树结构、动画与测试差距见 [`entity-model-parity-gap.md`](../analysis/render/entity-model-parity-gap.md)；逐项施工清单见 [`entity-model-refactor-checklist.md`](../analysis/render/entity-model-refactor-checklist.md)。
 - 迁移测试中的 `LegacyModelPartFactory` 只是旧实现值 oracle，不是原版 Golden Vector；后续应改为读取自动提取的 `vanilla-model-facts.json`。

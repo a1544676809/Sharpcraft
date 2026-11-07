@@ -27,11 +27,18 @@ public static class TropicalFishModelDefinition
 
     private static readonly EntityModelPart[] SmallParts = [.. VanillaMeshBake.Bake(SmallMesh, 0, 0)];
 
+    private static readonly CompiledEntityModel SmallCompiled =
+        VanillaMeshBakery.Build(SmallMesh, 32, 32);
+
     private static readonly VanillaMeshDefinition LargeMesh = BuildLargeMesh();
 
     private static readonly EntityModelPart[] LargeParts = [.. VanillaMeshBake.Bake(LargeMesh, 0, 0)];
 
-    public static readonly EntityModelDefinition Definition = Variant("tropical_fish", "tropical_a", "tropical_a_pattern_1", SmallParts);
+    private static readonly CompiledEntityModel LargeCompiled =
+        VanillaMeshBakery.Build(LargeMesh, 32, 32);
+
+    public static readonly EntityModelDefinition Definition = Variant(
+        "tropical_fish", "tropical_a", "tropical_a_pattern_1", SmallParts, SmallCompiled);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants = BuildVariants();
 
@@ -49,32 +56,51 @@ public static class TropicalFishModelDefinition
             var fileIndex = (index % 6) + 1;
             var baseName = large ? "tropical_b" : "tropical_a";
             var patternName = baseName + "_pattern_" + fileIndex.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            variants[key] = Variant("tropical_fish_" + key, baseName, patternName, large ? LargeParts : SmallParts);
+            variants[key] = Variant(
+                "tropical_fish_" + key,
+                baseName,
+                patternName,
+                large ? LargeParts : SmallParts,
+                large ? LargeCompiled : SmallCompiled);
         }
 
         return variants;
     }
 
-    private static EntityModelDefinition Variant(string name, string baseTexture, string patternTexture, EntityModelPart[] bodyParts)
+    private static EntityModelDefinition Variant(
+        string name,
+        string baseTexture,
+        string patternTexture,
+        EntityModelPart[] bodyParts,
+        CompiledEntityModel bodyCompiled)
     {
         var parts = new List<EntityModelPart>(bodyParts);
+        var patternPath = "entity/fish/" + patternTexture;
         foreach (var part in bodyParts)
         {
             parts.Add(part with
             {
                 Name = "pattern_" + part.Name,
-                TexturePath = "entity/fish/" + patternTexture,
+                TexturePath = patternPath,
                 TintSelector = static state => state.PatternTint == default ? Vector3.One : state.PatternTint
             });
         }
 
+        var compiled = EntityModelLayerHelpers.WithModelLayer(
+            bodyCompiled,
+            bodyCompiled,
+            "pattern_",
+            _ => patternPath,
+            fallbackTexture: patternPath,
+            tintSelector: static state => state.PatternTint == default ? Vector3.One : state.PatternTint);
         return new EntityModelDefinition(
             name,
             32,
             32,
             [.. parts],
             PlayerModelDefinition.DefaultFaceTransforms,
-            "entity/fish/" + baseTexture);
+            "entity/fish/" + baseTexture,
+            compiled: compiled);
     }
 
     private static VanillaMeshDefinition BuildSmallMesh()
