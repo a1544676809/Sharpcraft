@@ -39,6 +39,13 @@ public sealed class EntitySkinLibrary
             LoadTexture(path, images, resources, playerOverride);
         }
 
+        // Equipment assets parsed from the resource pack can reference textures outside the static catalog. LoadTexture
+        // already de-duplicates by path, so the asset paths can be appended without a separate set.
+        foreach (var path in EquipmentTextureCatalog.Assets.TexturePaths)
+        {
+            LoadTexture(path, images, resources, playerOverride);
+        }
+
         return new EntitySkinLibrary(images.Count == 0 ? null : EntitySkinAtlas.FromTextures(images));
     }
 

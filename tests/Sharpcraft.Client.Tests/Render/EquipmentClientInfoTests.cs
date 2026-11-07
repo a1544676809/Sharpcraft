@@ -146,6 +146,26 @@ public sealed class EquipmentClientInfoTests
     }
 
     [Fact]
+    public void AssetRegistryExposesEquipmentLayerTexturePaths()
+    {
+        const string json = """
+            {
+              "layers": {
+                "humanoid": [{ "texture": "minecraft:custom_tex" }]
+              }
+            }
+            """;
+        var info = EquipmentClientInfo.Parse(Encoding.UTF8.GetBytes(json));
+        var registry = EquipmentAssetRegistry.From(
+            new Dictionary<Identifier, EquipmentClientInfo>
+            {
+                [new Identifier("minecraft", "custom_armor")] = info
+            });
+
+        Assert.Contains("entity/equipment/humanoid/custom_tex", registry.TexturePaths);
+    }
+
+    [Fact]
     public void RejectsUnknownLayerAndMissingTexture()
     {
         Assert.Throws<InvalidDataException>(() =>
