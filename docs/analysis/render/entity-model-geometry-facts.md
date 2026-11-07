@@ -187,7 +187,11 @@ updated: 2026-11-07
 
 ## 5. 后续验证清单
 
-1. 实现原版事实提取器，至少提取 `texOffs/addBox`、`PartPose.offsetAndRotation`、`CubeDeformation(growX,growY,growZ)`、`MeshTransformer.scaling`。
+1. **已实现（2026-11-07，T-707）**：`tools/Sharpcraft.ReferenceVerifier` 可扫描 `mc-26.3-analysis` 并输出纯数字事实快照：
+   - `dotnet run --project tools/Sharpcraft.ReferenceVerifier -- --write`
+   - 默认输出 `artifacts/reference/vanilla-model-facts.json`（本地生成、被 `.gitignore` 覆盖，不进仓库）；
+   - 默认覆盖 Elytra、Warden、Breeze、AdultRabbit、AdultFox；后续按解析器覆盖逐批扩展到全部 model 类；
+   - 输出只包含类名、`ref://` 路径、part 名/父链、`PartPose` 数值、`CubeDefinition` 数值与 grow，不包含 Java 源码或注释。
 2. 为 BabyZombie + Elytra、Fox、Rabbit、Spider、Warden 生成原版 Golden Vector。
 3. 依据事实补齐 DSL 的三轴 grow / scale，再迁移仍有非均匀 deformation 的装备层。
 4. 在 Golden Vector 通过后，再决定是否统一 root/child 旋转符号。
