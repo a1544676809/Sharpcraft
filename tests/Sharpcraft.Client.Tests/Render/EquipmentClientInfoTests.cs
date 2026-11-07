@@ -125,6 +125,19 @@ public sealed class EquipmentClientInfoTests
                 EquipmentAssetKind.HorseSaddle,
                 new ItemInfo(new Identifier("minecraft", "saddle")));
             Assert.Equal("entity/equipment/horse_saddle/saddle", saddle?.PrimaryPath);
+
+            var custom = EquipmentClientInfo.Parse(Encoding.UTF8.GetBytes(
+                """{"layers":{"humanoid":[{"texture":"minecraft:emerald"}]}}"""));
+            EquipmentTextureCatalog.Assets = EquipmentAssetRegistry.From(
+                new Dictionary<Identifier, EquipmentClientInfo>
+                {
+                    [new Identifier("minecraft", "custom_armor")] = custom
+                });
+            var overridden = EquipmentTextureCatalog.Resolve(
+                EquipmentAssetKind.HumanoidArmor,
+                new ItemInfo(new Identifier("minecraft", "iron_helmet")),
+                equippableAssetId: "minecraft:custom_armor");
+            Assert.Equal("entity/equipment/humanoid/emerald", overridden?.PrimaryPath);
         }
         finally
         {

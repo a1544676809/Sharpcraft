@@ -82,8 +82,9 @@ Z-fighting 与 equipment clearance 不混入本任务；先走诊断报告，规
 - 新增 `ResourceKind.Equipment`，路径为 `assets/<namespace>/equipment/<path>.json`；
 - 新增 `EquipmentAssetRegistry`，`EquipmentTextureCatalog.LoadAssets` 从资源栈加载已知资产，`Resolve` 优先使用
   解析出的层纹理，静态 catalog 作为 fallback；
-- 已有 `EquipmentClientInfoTests` 覆盖 iron/leather/saddle/elytra 形状、非法输入与 asset-driven texture resolution；
-- 尚未完成 item → equipment asset 的组件级绑定、dye/glint/player-texture 的最终着色与 trim 渲染。
+- `equippable` 组件现在保留 `EquippableAssetId`，经 `EntityTracker` 传入 `EntityRenderState` 和 texture selector；
+- 已有 `EquipmentClientInfoTests` 覆盖 iron/leather/saddle/elytra 形状、非法输入、asset-driven resolution 与自定义 asset id；
+- 尚未完成 dye/glint/player-texture 的最终着色与 trim 渲染。
 
 ### T-749 EntityTracker T-668 复核（P1，已完成回归核验）
 

@@ -39,7 +39,7 @@ public sealed class SetEquipmentPacketTests
 
     private static EquipmentItem[] Read(byte[] body, out int entityId, out bool complete, out DecodeStatus status)
     {
-        Span<EquipmentItem> items = stackalloc EquipmentItem[SetEquipmentPackets.MaxSlots];
+        var items = new EquipmentItem[SetEquipmentPackets.MaxSlots];
         status = SetEquipmentPackets.TryRead(body, out entityId, items, out var count, out complete);
         return items[..count].ToArray();
     }
@@ -149,6 +149,39 @@ public sealed class SetEquipmentPacketTests
         Assert.Equal(DecodeStatus.Success, status);
         Assert.True(complete);
         Assert.True(result[0].Components.HasChargedProjectiles);
+    }
+
+    [Fact]
+    public void EquippableComponentCapturesItsAssetId()
+    {
+        var equippable = DataComponentTypes.GetId("equippable");
+        Assert.True(equippable >= 0);
+
+        var body = Body(b =>
+        {
+            b.Add(5);
+            b.AddRange(VarInt(1));
+            b.AddRange(VarInt(1));
+            b.AddRange(VarInt(1));       // one added component
+            b.AddRange(VarInt(0));       // no removals
+            b.AddRange(VarInt(equippable));
+            b.AddRange(VarInt(5));       // slot: head
+            b.AddRange(VarInt(0));       // equip sound
+            b.Add(1);                    // has asset id
+            var asset = System.Text.Encoding.UTF8.GetBytes("minecraft:iron");
+            b.AddRange(VarInt(asset.Length));
+            b.AddRange(asset);
+            b.Add(0);                    // no camera overlay
+            b.Add(0);                    // no allowed entity set
+            b.AddRange(new byte[5]);     // five booleans
+            b.AddRange(VarInt(0));       // shearing sound
+        });
+
+        var result = Read(body, out _, out var complete, out var status);
+
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.Equal("minecraft:iron", result[0].Components.EquippableAssetId);
     }
 
     [Fact]

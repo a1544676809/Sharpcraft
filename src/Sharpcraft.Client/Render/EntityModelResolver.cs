@@ -20,7 +20,11 @@ public static class EntityModelResolver
     public static ItemTagRegistry ItemTags { get; set; } = ItemTagRegistry.Empty;
 
     /// <summary>Resolves a dynamic equipment texture for a render state slot, or null when the slot is empty/unsupported.</summary>
-    public static string? ResolveEquipmentTexture(EntityRenderState state, EquipmentAssetKind kind, int slot, bool overlay = false)
+    public static string? ResolveEquipmentTexture(
+        EntityRenderState state,
+        EquipmentAssetKind kind,
+        int slot,
+        bool overlay = false)
     {
         var itemId = state.Equipment[slot];
         if (itemId < 0 || Items is null || Items.ById(itemId) is not { } item)
@@ -28,7 +32,7 @@ public static class EntityModelResolver
             return null;
         }
 
-        var texture = EquipmentTextureCatalog.Resolve(kind, item);
+        var texture = EquipmentTextureCatalog.Resolve(kind, item, equippableAssetId: state.EquipmentAssetIdAt(slot));
         return overlay ? texture?.OverlayPath : texture?.PrimaryPath;
     }
 

@@ -1499,7 +1499,7 @@ internal sealed class InteractiveSession
                 // Equipment slots: identity only in this stage; see docs/modules/entity-equipment.md E1.
                 case PacketIds.PlayClientbound.SetEquipment:
                     {
-                        Span<EquipmentItem> equipment = stackalloc EquipmentItem[SetEquipmentPackets.MaxSlots];
+                        var equipment = new EquipmentItem[SetEquipmentPackets.MaxSlots];
                         if (SetEquipmentPackets.TryRead(body, out var equipmentEntityId, equipment, out var equipmentCount, out _) == DecodeStatus.Success)
                         {
                             _entities.ApplyEquipment(equipmentEntityId, equipment[..equipmentCount]);

@@ -290,6 +290,9 @@ public sealed class EntityTrackerTests
         Assert.Equal(456, entity.EquipmentItemAt(6));
         Assert.Equal(2, entity.EquipmentUpdates);
 
+        tracker.ApplyEquipment(9, [new EquipmentItem(5, 123, 1, new ItemComponentInfo(EquippableAssetId: "minecraft:iron"))]);
+        Assert.Equal("minecraft:iron", entity.EquipmentAssetIdAt(5));
+
         tracker.ApplyEquipment(9, [new EquipmentItem(7, 0, 0)]);
         Assert.Equal(-1, entity.EquipmentItemAt(7));
         Assert.Equal(0, entity.EquipmentCountAt(7));

@@ -71,10 +71,10 @@ public static class EquipmentTextureCatalog
     ];
 
     /// <summary>Resolves the texture for <paramref name="kind"/> and an equipped item, or null when unsupported.</summary>
-    public static EquipmentTexture? Resolve(EquipmentAssetKind kind, ItemInfo item, bool baby = false)
+    public static EquipmentTexture? Resolve(EquipmentAssetKind kind, ItemInfo item, bool baby = false, string? equippableAssetId = null)
     {
         var path = item.Id.Path;
-        if (TryResolveFromAssets(kind, path, baby) is { } fromAssets)
+        if (TryResolveFromAssets(kind, path, baby, equippableAssetId) is { } fromAssets)
         {
             return fromAssets;
         }
@@ -145,10 +145,23 @@ public static class EquipmentTextureCatalog
         return ids;
     }
 
-    private static EquipmentTexture? TryResolveFromAssets(EquipmentAssetKind kind, string itemPath, bool baby)
+    private static EquipmentTexture? TryResolveFromAssets(
+        EquipmentAssetKind kind,
+        string itemPath,
+        bool baby,
+        string? equippableAssetId)
     {
-        if (!TryGetAssetBinding(kind, itemPath, baby, out var assetId, out var layerType)
-            || Assets.Get(assetId) is not { } info)
+        if (!TryGetAssetBinding(kind, itemPath, baby, out var assetId, out var layerType))
+        {
+            return null;
+        }
+
+        if (equippableAssetId is not null && Identifier.TryParse(equippableAssetId, out var overridden))
+        {
+            assetId = overridden;
+        }
+
+        if (Assets.Get(assetId) is not { } info)
         {
             return null;
         }

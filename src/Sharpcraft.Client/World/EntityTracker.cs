@@ -136,6 +136,7 @@ public sealed class TrackedEntity
     private readonly int[] _equipmentItemIds = [-1, -1, -1, -1, -1, -1, -1, -1];
     private readonly int[] _equipmentCounts = new int[8];
     private readonly ItemComponentInfo[] _equipmentComponents = new ItemComponentInfo[8];
+    private readonly string?[] _equipmentAssetIds = new string?[8];
 
     /// <summary>Item registry id in <paramref name="slot"/> (0..7), or -1 when empty.</summary>
     public int EquipmentItemAt(int slot) =>
@@ -144,6 +145,13 @@ public sealed class TrackedEntity
     /// <summary>Decoded component subset for the item in <paramref name="slot"/>; default when empty.</summary>
     public ItemComponentInfo EquipmentComponentsAt(int slot) =>
         (uint)slot < (uint)_equipmentComponents.Length ? _equipmentComponents[slot] : default;
+
+    /// <summary>Equippable asset id decoded from the slot's item component, or null when absent.</summary>
+    public string? EquipmentAssetIdAt(int slot) =>
+        (uint)slot < (uint)_equipmentAssetIds.Length ? _equipmentAssetIds[slot] : null;
+
+    /// <summary>All eight equippable asset ids, reused by the per-frame render state.</summary>
+    public IReadOnlyList<string?> EquipmentAssetIds => _equipmentAssetIds;
 
     /// <summary>Stack count in <paramref name="slot"/>; 0 when empty.</summary>
     public int EquipmentCountAt(int slot) =>
@@ -161,6 +169,7 @@ public sealed class TrackedEntity
             _equipmentItemIds[item.Slot] = item.IsEmpty ? -1 : item.ItemId;
             _equipmentCounts[item.Slot] = item.IsEmpty ? 0 : item.Count;
             _equipmentComponents[item.Slot] = item.IsEmpty ? default : item.Components;
+            _equipmentAssetIds[item.Slot] = item.IsEmpty ? null : item.Components.EquippableAssetId;
             EquipmentUpdates++;
         }
     }
@@ -452,7 +461,13 @@ public readonly record struct EntityRenderState(
     int Crackiness = 0,
     float ElytraRotX = 0f,
     float ElytraRotY = 0f,
-    float ElytraRotZ = 0f);
+    float ElytraRotZ = 0f,
+    IReadOnlyList<string?>? EquipmentAssetIds = null)
+{
+    /// <summary>Equippable asset id for one equipment slot, when the item supplied one.</summary>
+    public string? EquipmentAssetIdAt(int slot) =>
+        EquipmentAssetIds is { } ids && (uint)slot < (uint)ids.Count ? ids[slot] : null;
+}
 
 /// <summary>
 /// Keeps the entities the server told us about (docs/specs/network/entity-sync.md 5).
@@ -1363,7 +1378,8 @@ public sealed class EntityTracker
                 Animation: entity.Animation,
                 AnimationPartialTick: t,
                 HasMainHandItem: entity.EquipmentItemAt(0) > 0,
-                HasOffHandItem: entity.EquipmentItemAt(1) > 0));
+                HasOffHandItem: entity.EquipmentItemAt(1) > 0,
+                EquipmentAssetIds: entity.EquipmentAssetIds));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);

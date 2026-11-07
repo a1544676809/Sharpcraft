@@ -13,7 +13,8 @@ public readonly record struct ItemComponentInfo(
     int MaxDamage = 0,
     int RepairCost = 0,
     bool Unbreakable = false,
-    int QuickChargeLevel = 0)
+    int QuickChargeLevel = 0,
+    string? EquippableAssetId = null)
 {
     /// <summary>True when some component payload could not be decoded and the rest of the packet was skipped.</summary>
     public bool HasUnknownComponents => Opaque;
@@ -409,7 +410,7 @@ internal static class ItemComponentPatchReader
 
         if (typeId == Equippable)
         {
-            return TrySkipEquippable(ref reader);
+            return TrySkipEquippable(ref reader, ref info);
         }
 
         if (typeId == Repairable)
@@ -1324,7 +1325,7 @@ internal static class ItemComponentPatchReader
                reader.TryReadBool(out _) == DecodeStatus.Success;
     }
 
-    private static bool TrySkipEquippable(ref PayloadReader reader)
+    private static bool TrySkipEquippable(ref PayloadReader reader, ref ItemComponentInfo info)
     {
         // slot, equip sound
         if (reader.TryReadVarInt(out _) != DecodeStatus.Success ||
@@ -1339,9 +1340,14 @@ internal static class ItemComponentPatchReader
             return false;
         }
 
-        if (hasAsset && reader.TryReadString(out _) != DecodeStatus.Success)
+        if (hasAsset)
         {
-            return false;
+            if (reader.TryReadString(out var asset) != DecodeStatus.Success)
+            {
+                return false;
+            }
+
+            info = info with { EquippableAssetId = asset };
         }
 
         // optional camera overlay (identifier)
