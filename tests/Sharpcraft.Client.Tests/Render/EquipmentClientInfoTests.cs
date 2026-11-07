@@ -166,6 +166,43 @@ public sealed class EquipmentClientInfoTests
     }
 
     [Fact]
+    public void ParsedDyeableAndPlayerTextureMetadataReachResolvedTexture()
+    {
+        const string json = """
+            {
+              "layers": {
+                "humanoid": [{ "texture": "minecraft:leather", "dyeable": { "color_when_undyed": -6265536 } }],
+                "wings": [{ "texture": "minecraft:elytra", "use_player_texture": true }]
+              }
+            }
+            """;
+        var info = EquipmentClientInfo.Parse(Encoding.UTF8.GetBytes(json));
+        var previous = EquipmentTextureCatalog.Assets;
+        EquipmentTextureCatalog.Assets = EquipmentAssetRegistry.From(
+            new Dictionary<Identifier, EquipmentClientInfo>
+            {
+                [new Identifier("minecraft", "leather")] = info,
+                [new Identifier("minecraft", "elytra")] = info
+            });
+        try
+        {
+            var leather = EquipmentTextureCatalog.Resolve(
+                EquipmentAssetKind.HumanoidArmor,
+                new ItemInfo(new Identifier("minecraft", "leather_helmet")));
+            Assert.Equal(-6265536, leather?.ColourWhenUndyed);
+
+            var elytra = EquipmentTextureCatalog.Resolve(
+                EquipmentAssetKind.Elytra,
+                new ItemInfo(new Identifier("minecraft", "elytra")));
+            Assert.True(elytra?.UsePlayerTexture);
+        }
+        finally
+        {
+            EquipmentTextureCatalog.Assets = previous;
+        }
+    }
+
+    [Fact]
     public void RejectsUnknownLayerAndMissingTexture()
     {
         Assert.Throws<InvalidDataException>(() =>

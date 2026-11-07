@@ -33,8 +33,12 @@ public enum EquipmentAssetKind
     Elytra
 }
 
-/// <summary>Resolved equipment textures; <see cref="OverlayPath"/> is optional (leather horse armor, wolf armor).</summary>
-public sealed record EquipmentTexture(string PrimaryPath, string? OverlayPath = null);
+/// <summary>Resolved equipment textures; overlay, dye and player-texture metadata are optional.</summary>
+public sealed record EquipmentTexture(
+    string PrimaryPath,
+    string? OverlayPath = null,
+    bool UsePlayerTexture = false,
+    int? ColourWhenUndyed = null);
 
 /// <summary>
 /// Controlled item → equipment texture mapping for the first equipment stage. Keys are item identifiers, never magic
@@ -176,7 +180,11 @@ public static class EquipmentTextureCatalog
         var overlay = layers.Count > 1
             ? EquipmentAssetRegistry.EquipmentLayerPath(layerType, layers[1].Texture.Path)
             : null;
-        return new EquipmentTexture(primary, overlay);
+        return new EquipmentTexture(
+            primary,
+            overlay,
+            layers[0].UsePlayerTexture,
+            layers[0].Dyeable?.ColourWhenUndyed);
     }
 
     private static bool TryGetAssetBinding(
