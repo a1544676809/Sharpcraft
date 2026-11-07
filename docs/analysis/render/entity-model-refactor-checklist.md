@@ -262,3 +262,10 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - `HumanoidArmorTrees.ForPiglin(slot)`：复用 player armor 四槽几何，并在 head 下补空 `left_ear`/`right_ear` 组（`AbstractPiglinModel.removeEars`）；
 - `EntityModelResolver` 为 type 102/103/158 增加独立 `PiglinArmorLayers`（不与 humanoid 的 `HumanoidArmorLayers` 共享引用，避免误加 Elytra）；
 - 树测试增加 piglin armor 断言，树测试共 18 项。
+
+### 2026-11-07 — T-727 Baby Piglin 专用护甲树
+
+- `BabyModelDefinitionsNether` 的 baby Piglin/Zombified Piglin 接入 `Compiled`；
+- `HumanoidArmorTrees.ForBabyPiglin(slot)`：按 `AbstractPiglinModel.createBabyArmorMeshSet` 使用 uniform 0.7 deformation、arm offset `(0.5,-0.5,0)`、空 ears 组；
+- `EntityModelResolver` 对 baby piglin 传入 piglin 标志并使用 `HumanoidArmorBaby` 纹理族；
+- 树测试增加 baby piglin armor 断言，树测试共 19 项。

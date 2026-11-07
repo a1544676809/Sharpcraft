@@ -48,6 +48,14 @@ internal static class HumanoidArmorTrees
         BuildSlot(5, player: true, piglin: true)
     ];
 
+    private static readonly CompiledEntityModel[] BabyPiglin =
+    [
+        BuildBabyPiglinSlot(2),
+        BuildBabyPiglinSlot(3),
+        BuildBabyPiglinSlot(4),
+        BuildBabyPiglinSlot(5)
+    ];
+
     /// <summary>Returns the armor model for an equipment slot: 2 feet, 3 legs, 4 chest, 5 head.</summary>
     public static CompiledEntityModel For(int slot, bool player) =>
         (player ? Player : Adult)[slot - 2];
@@ -57,6 +65,9 @@ internal static class HumanoidArmorTrees
 
     /// <summary>Returns the piglin armor model: player armor geometry with empty ear groups under the head.</summary>
     public static CompiledEntityModel ForPiglin(int slot) => Piglin[slot - 2];
+
+    /// <summary>Returns the baby piglin armor model: baby armor with 0.7 deformation and the piglin arm offset.</summary>
+    public static CompiledEntityModel ForBabyPiglin(int slot) => BabyPiglin[slot - 2];
 
     private static CompiledEntityModel BuildSlot(int slot, bool player, bool piglin = false)
     {
@@ -134,6 +145,63 @@ internal static class HumanoidArmorTrees
                 ? new VanillaCubeDefinition("right_arm", 30, 25, -1f, 0f, -1.53f, 2f, 5f, 3f, GrowXyz: outer)
                 : ZeroCube("right_arm"));
         root.AddOrReplaceChild("left_arm", VanillaPartPose.Offset(3.5f, 15.5f, 0f),
+            slot == 4
+                ? new VanillaCubeDefinition("left_arm", 30, 17, -1f, 0f, -1.53f, 2f, 5f, 3f, GrowXyz: outer)
+                : ZeroCube("left_arm"));
+        root.AddOrReplaceChild("inner_body", VanillaPartPose.Offset(0f, 18f, 0f), ZeroCube("inner_body"));
+        var leftLeg = root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(1.5f, 20f, 0.5f),
+            slot is 2 or 3
+                ? new VanillaCubeDefinition("left_leg", 18, 24, -2f, -0.2f, -2f, 3f, 4f, 3f,
+                    GrowXyz: (slot == 3 ? inner : outer) + inset)
+                : ZeroCube("left_leg"));
+        var rightLeg = root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-1.5f, 20f, 0.5f),
+            slot is 2 or 3
+                ? new VanillaCubeDefinition("right_leg", 18, 17, -1f, -0.2f, -2f, 3f, 4f, 3f,
+                    GrowXyz: (slot == 3 ? inner : outer) + inset)
+                : ZeroCube("right_leg"));
+        if (slot == 2)
+        {
+            leftLeg.AddOrReplaceChild("right_foot", VanillaPartPose.Zero,
+                new VanillaCubeDefinition("right_foot", 0, 25, -2f, 2.9f, -2f, 3f, 1f, 3f, GrowXyz: outer));
+            rightLeg.AddOrReplaceChild("left_foot", VanillaPartPose.Zero,
+                new VanillaCubeDefinition("left_foot", 0, 29, -1f, 2.9f, -2f, 3f, 1f, 3f, Mirror: true, GrowXyz: outer));
+        }
+        else if (slot != 3)
+        {
+            leftLeg.AddOrReplaceChild("right_foot", VanillaPartPose.Zero, ZeroCube("right_foot"));
+            rightLeg.AddOrReplaceChild("left_foot", VanillaPartPose.Zero, ZeroCube("left_foot"));
+        }
+
+        return VanillaMeshBakery.Build(new VanillaMeshDefinition(root), 64, 64);
+    }
+
+    private static CompiledEntityModel BuildBabyPiglinSlot(int slot)
+    {
+        // AbstractPiglinModel.createBabyArmorMeshSet uses uniform 0.7 deformation and the reference arm offset.
+        var outer = new Vector3(0.7f);
+        var inner = new Vector3(0.7f);
+        var inset = new Vector3(-0.1f);
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        var head = root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 15f, 0f),
+            slot == 5
+                ? new VanillaCubeDefinition("head", 0, 0, -4.5f, -7f, -4.5f, 9f, 8f, 8f, GrowXyz: outer)
+                : ZeroCube("head"));
+        head.AddOrReplaceChild("hat", VanillaPartPose.Zero, ZeroCube("hat"));
+        head.AddOrReplaceChild("left_ear", VanillaPartPose.Zero, ZeroCube("left_ear"));
+        head.AddOrReplaceChild("right_ear", VanillaPartPose.Zero, ZeroCube("right_ear"));
+        root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 18f, 0f),
+            slot == 4
+                ? new VanillaCubeDefinition("body", 0, 17, -3f, -3f, -1.5f, 6f, 5f, 3f, GrowXyz: outer)
+                : ZeroCube("body"));
+        root.AddOrReplaceChild("waist", VanillaPartPose.Offset(0f, 19f, 0f),
+            slot == 3
+                ? new VanillaCubeDefinition("waist", 0, 36, -3f, -1.2f, -1.49f, 5.9f, 2f, 2.9f, GrowXyz: inner + inset)
+                : ZeroCube("waist"));
+        root.AddOrReplaceChild("right_arm", VanillaPartPose.Offset(-4f, 15f, 0f),
+            slot == 4
+                ? new VanillaCubeDefinition("right_arm", 30, 25, -1f, 0f, -1.53f, 2f, 5f, 3f, GrowXyz: outer)
+                : ZeroCube("right_arm"));
+        root.AddOrReplaceChild("left_arm", VanillaPartPose.Offset(4f, 15f, 0f),
             slot == 4
                 ? new VanillaCubeDefinition("left_arm", 30, 17, -1f, 0f, -1.53f, 2f, 5f, 3f, GrowXyz: outer)
                 : ZeroCube("left_arm"));

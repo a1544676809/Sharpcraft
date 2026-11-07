@@ -48,11 +48,12 @@ internal static class EquipmentModelTrees
     {
         if (kind is EquipmentAssetKind.HumanoidArmor or EquipmentAssetKind.HumanoidLeggings or EquipmentAssetKind.HumanoidArmorBaby)
         {
-            return baby
-                ? HumanoidArmorTrees.ForBaby(slot)
-                : piglin
-                    ? HumanoidArmorTrees.ForPiglin(slot)
-                    : HumanoidArmorTrees.For(slot, player);
+            if (piglin)
+            {
+                return baby ? HumanoidArmorTrees.ForBabyPiglin(slot) : HumanoidArmorTrees.ForPiglin(slot);
+            }
+
+            return baby ? HumanoidArmorTrees.ForBaby(slot) : HumanoidArmorTrees.For(slot, player);
         }
 
         return For(kind);

@@ -11,13 +11,17 @@ public static class BabyModelDefinitionsNether
 
     private static readonly EntityModelPart[] PiglinParts = [.. VanillaMeshBake.Bake(PiglinMesh, 0, 0)];
 
+    private static readonly CompiledEntityModel PiglinCompiled =
+        VanillaMeshBakery.Build(PiglinMesh, 64, 64);
+
     public static readonly EntityModelDefinition Piglin = new(
         "baby_piglin",
         64,
         64,
         PiglinParts,
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/piglin/piglin_baby");
+        "entity/piglin/piglin_baby",
+        compiled: PiglinCompiled);
 
     public static readonly EntityModelDefinition ZombifiedPiglin = new(
         "baby_zombified_piglin",
@@ -25,7 +29,8 @@ public static class BabyModelDefinitionsNether
         64,
         PiglinParts,
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/piglin/zombified_piglin_baby");
+        "entity/piglin/zombified_piglin_baby",
+        compiled: PiglinCompiled);
 
     private static readonly VanillaMeshDefinition HoglinMesh = BuildHoglinMesh();
 

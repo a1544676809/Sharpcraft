@@ -243,6 +243,24 @@ public sealed class EntityModelTreeBakeryTests
     }
 
     [Fact]
+    public void BabyPiglinUsesUniformSevenTenthsArmorTree()
+    {
+        var baby = EntityModelResolver.Resolve(PiglinModelDefinition.PiglinEntityTypeId, baby: true);
+        Assert.NotNull(baby.Compiled);
+        var head = baby.Compiled!.Find("equipment_HumanoidArmorBaby_5_head");
+        Assert.NotNull(head);
+        var headGrow = head.Cubes[0].GrowXyz;
+        Assert.NotNull(headGrow);
+        Assert.Equal(0.7f, headGrow!.Value.X, 3);
+        Assert.Equal(0.7f, headGrow.Value.Y, 3);
+        Assert.Equal(0.7f, headGrow.Value.Z, 3);
+        Assert.NotNull(baby.Compiled.Find("equipment_HumanoidArmorBaby_5_left_ear"));
+        var waist = baby.Compiled.Find("equipment_HumanoidArmorBaby_3_waist");
+        Assert.NotNull(waist);
+        Assert.Equal(0.6f, waist.Cubes[0].GrowXyz!.Value.X, 3);
+    }
+
+    [Fact]
     public void BabyZombieUsesDedicatedBabyArmorTree()
     {
         var baby = EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId, baby: true);

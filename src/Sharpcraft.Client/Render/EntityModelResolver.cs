@@ -238,7 +238,7 @@ public static class EntityModelResolver
                         slot,
                         player: !baby && typeId == EntityPlaceholderMesher.PlayerEntityTypeId,
                         baby: baby,
-                        piglin: !baby && typeId is (PiglinModelDefinition.PiglinEntityTypeId
+                        piglin: typeId is (PiglinModelDefinition.PiglinEntityTypeId
                             or PiglinModelDefinition.PiglinBruteEntityTypeId
                             or PiglinModelDefinition.ZombifiedPiglinEntityTypeId))
                     : EquipmentModelTrees.For(kind);
