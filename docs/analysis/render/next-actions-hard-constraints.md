@@ -99,6 +99,13 @@ Z-fighting 与 equipment clearance 不混入本任务；先走诊断报告，规
 - 已补 `SteppedMoveConsumesExactlyItsTickSpan`：step 的 ticks 只消耗一次；
 - 当前实现通过三组回归，未发现 T-668 所述的生产缺陷；保留测试作为防回归。
 
+### T-751 Entity layer 性能分组（P2，已完成）
+
+- `EntityModelMesher.BuildModelBackedLayers` 从「每层每实体一次 `BuildInto` + `AppendGeometry`」改为按有效层模型分组，同组实体一次 `BuildInto`、一次 Append；
+- 组键为 `entityLayer.Model ?? model` 加 `AllCubes` 与 `TextureSelector`；`VisibleWhen` 仍按实体逐个过滤，plan 名称/kind/order 与返回层顺序不变，`AllCubes`/emissive/modelOverride/纹理 selector/动画 pose 语义不变；
+- 为让紧凑分组 span 仍能取到原批次下标的 pose，`BuildInto` 增加可选 `poses` 列表；plan 字典、组记录、实体与 pose 列表全是复用字段并就地清空，稳态帧不产生每层分配；
+- `EntityLayerTests` 增加多实体同模型几何计数/层顺序断言，并覆盖 `VisibleWhen` 过滤与混合模型分组；既有层顺序/装备层测试保持全绿。
+
 ## 4. 执行约束
 
 - 先补原版 facts 与门禁，再修改生产行为；

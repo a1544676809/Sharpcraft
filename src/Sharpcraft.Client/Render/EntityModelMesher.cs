@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Numerics;
+using System.Runtime.InteropServices;
 using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.World;
 using Sharpcraft.Framework.Rendering;
@@ -21,6 +22,30 @@ public sealed partial class EntityModelMesher
 
     /// <summary>One reusable pose per entity in the current batch, so a steady frame does not allocate poses.</summary>
     private readonly List<EntityPose> _animationPoses = [];
+
+    /// <summary>
+    /// Reused plan/group buffers for <see cref="BuildModelBackedLayers"/>. Cleared per frame/layer so a steady frame
+    /// allocates no dictionaries, group records or entity lists.
+    /// </summary>
+    private readonly Dictionary<(string Name, EntityGeometryLayerKind Kind, int Order), EntityRenderLayerDefinition> _modelBackedPlanByKey = new();
+    private readonly List<EntityRenderLayerDefinition> _modelBackedPlan = [];
+    private readonly List<LayerGroup> _layerGroups = [];
+    private readonly Dictionary<LayerGroupKey, int> _layerGroupByKey = new();
+    private readonly List<EntityRenderState> _groupEntities = [];
+    private readonly List<EntityPose?> _groupPoses = [];
+
+    /// <summary>Everything <c>BuildInto</c> observes for a layer besides the per-entity state and visibility.</summary>
+    private readonly record struct LayerGroupKey(
+        EntityModelDefinition Model,
+        bool AllCubes,
+        Func<EntityRenderState, string?>? TextureSelector);
+
+    private sealed class LayerGroup
+    {
+        public EntityModelDefinition Model = null!;
+        public EntityRenderLayerDefinition Layer = null!;
+        public readonly List<int> EntityIndices = [];
+    }
 
     /// <summary>Merged geometry of every layer, kept for callers that draw entities in one pass.</summary>
     public DynamicGeometry Build(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, EntityPose? pose = null)    {
@@ -140,9 +165,9 @@ public sealed partial class EntityModelMesher
     }
 
     /// <summary>
-    /// Builds every model-backed layer with its own model/texture. The initial implementation conservatively builds one
-    /// entity at a time into a reused scratch geometry, then appends it to the layer's batch geometry; a later
-    /// performance task can group equal model definitions without changing the layer contract.
+    /// Builds every model-backed layer with its own model/texture. Entities resolving to the same effective layer
+    /// model (and the same BuildInto settings) are meshed in one call and appended once, rather than one scratch
+    /// build/append per entity. The plan order, per-entity visibility, poses and texture selectors are unchanged.
     /// </summary>
     private IReadOnlyList<EntityGeometryLayer> BuildModelBackedLayers(
         ReadOnlySpan<EntityRenderState> entities,
@@ -157,21 +182,23 @@ public sealed partial class EntityModelMesher
         EntityPose? pose,
         bool usePreparedPoses)
     {
-        var byKey = new Dictionary<(string Name, EntityGeometryLayerKind Kind, int Order), EntityRenderLayerDefinition>();
+        _modelBackedPlanByKey.Clear();
         foreach (var entity in entities)
         {
             foreach (var layer in ResolveModel(entity, variants).RenderLayers)
             {
-                byKey[(layer.Name, layer.Kind, layer.Order)] = layer;
+                _modelBackedPlanByKey[(layer.Name, layer.Kind, layer.Order)] = layer;
             }
         }
 
-        var plan = byKey.Values.ToList();
-        plan.Sort(static (left, right) =>
+        _modelBackedPlan.Clear();
+        _modelBackedPlan.AddRange(_modelBackedPlanByKey.Values);
+        _modelBackedPlan.Sort(static (left, right) =>
         {
             var order = left.Order.CompareTo(right.Order);
             return order != 0 ? order : string.CompareOrdinal(left.Name, right.Name);
         });
+        var plan = _modelBackedPlan;
         while (_layerGeometries.Count < plan.Count)
         {
             _layerGeometries.Add(new DynamicGeometry());
@@ -185,6 +212,11 @@ public sealed partial class EntityModelMesher
             var target = _layerGeometries[layerIndex];
             var scratch = _layerScratch[layerIndex];
             target.Clear();
+
+            // One grouping pass for this layer. Plan/group buffers are pooled fields cleared in place, so a steady
+            // frame allocates no dictionaries, group records or entity lists per layer.
+            _layerGroupByKey.Clear();
+            var groupCount = 0;
             for (var entityIndex = 0; entityIndex < entities.Length; entityIndex++)
             {
                 var entity = entities[entityIndex];
@@ -204,11 +236,41 @@ public sealed partial class EntityModelMesher
                     continue;
                 }
 
-                scratch.Clear();
+                var effectiveModel = entityLayer.Model ?? model;
+                var key = new LayerGroupKey(effectiveModel, entityLayer.AllCubes, entityLayer.TextureSelector);
+                if (!_layerGroupByKey.TryGetValue(key, out var groupIndex))
+                {
+                    groupIndex = groupCount++;
+                    while (_layerGroups.Count <= groupIndex)
+                    {
+                        _layerGroups.Add(new LayerGroup());
+                    }
+
+                    var created = _layerGroups[groupIndex];
+                    created.Model = effectiveModel;
+                    created.Layer = entityLayer;
+                    created.EntityIndices.Clear();
+                    _layerGroupByKey[key] = groupIndex;
+                }
+
+                _layerGroups[groupIndex].EntityIndices.Add(entityIndex);
+            }
+
+            for (var groupIndex = 0; groupIndex < groupCount; groupIndex++)
+            {
+                var group = _layerGroups[groupIndex];
+                _groupEntities.Clear();
+                _groupPoses.Clear();
+                foreach (var entityIndex in group.EntityIndices)
+                {
+                    _groupEntities.Add(entities[entityIndex]);
+                    _groupPoses.Add(usePreparedPoses ? _animationPoses[entityIndex] : pose);
+                }
+
                 BuildInto(
                     scratch,
-                    entityLayer.AllCubes ? null : entityLayer.Kind,
-                    [entity],
+                    group.Layer.AllCubes ? null : group.Layer.Kind,
+                    CollectionsMarshal.AsSpan(_groupEntities),
                     skin,
                     skinWidth,
                     skinHeight,
@@ -217,11 +279,11 @@ public sealed partial class EntityModelMesher
                     excludedPart,
                     skinAtlas,
                     variants,
-                    entityLayer.Kind == EntityGeometryLayerKind.Emissive,
-                    usePreparedPoses ? _animationPoses[entityIndex] : pose,
+                    group.Layer.Kind == EntityGeometryLayerKind.Emissive,
                     usePreparedPoses: false,
-                    modelOverride: entityLayer.Model ?? model,
-                    layerTextureSelector: entityLayer.TextureSelector);
+                    modelOverride: group.Model,
+                    layerTextureSelector: group.Layer.TextureSelector,
+                    poses: _groupPoses);
                 AppendGeometry(target, scratch);
             }
 
@@ -289,7 +351,7 @@ public sealed partial class EntityModelMesher
         }
     }
 
-    private DynamicGeometry BuildInto(DynamicGeometry target, EntityGeometryLayerKind? kindFilter, ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, bool emissivePass = false, EntityPose? pose = null, bool usePreparedPoses = false, EntityModelDefinition? modelOverride = null, Func<EntityRenderState, string?>? layerTextureSelector = null, Func<EntityRenderState, bool>? entityFilter = null)
+    private DynamicGeometry BuildInto(DynamicGeometry target, EntityGeometryLayerKind? kindFilter, ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, bool emissivePass = false, EntityPose? pose = null, bool usePreparedPoses = false, EntityModelDefinition? modelOverride = null, Func<EntityRenderState, string?>? layerTextureSelector = null, Func<EntityRenderState, bool>? entityFilter = null, IReadOnlyList<EntityPose?>? poses = null)
     {
         target.Clear();
         var cubeCount = 0;
@@ -329,7 +391,9 @@ public sealed partial class EntityModelMesher
                 continue;
             }
 
-            var entityPose = usePreparedPoses ? _animationPoses[entityIndex] : pose;
+            // Grouped batches carry their own pose list indexed by the compact span; otherwise use the per-batch
+            // prepared poses (indexed by the original entity order) or one explicit pose for the whole span.
+            var entityPose = poses is not null ? poses[entityIndex] : usePreparedPoses ? _animationPoses[entityIndex] : pose;
             var model = modelOverride ?? ResolveModel(entity, variants);
             if (model is null)
             {

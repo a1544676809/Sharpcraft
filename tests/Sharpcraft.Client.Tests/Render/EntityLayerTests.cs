@@ -103,6 +103,60 @@ public sealed class EntityLayerTests
         Assert.Contains(layers, layer => layer.Kind == EntityGeometryLayerKind.Elytra);
     }
 
+    [Fact]
+    public void ModelBackedLayersGroupSameModelEntitiesWithoutChangingLayerOrder()
+    {
+        var helmet = ItemRegistry.LoadEmbedded().GetId(Identifier.Parse("minecraft:iron_helmet"));
+        Assert.True(helmet >= 0, "iron helmet item id missing from embedded registry");
+        var armored = Entity(HumanoidMobModelDefinition.ZombieEntityTypeId) with
+        {
+            Equipment = new EntityEquipment(-1, -1, -1, -1, -1, helmet, -1, -1)
+        };
+        var unarmored = Entity(HumanoidMobModelDefinition.ZombieEntityTypeId);
+        var sprite = new SpriteRect(0, 0, 64, 64, 1);
+
+        var single = new EntityModelMesher().BuildLayers([armored], sprite, 64, 64, variants: EntityVariantTable.Builtin);
+        var pair = new EntityModelMesher().BuildLayers([armored, armored], sprite, 64, 64, variants: EntityVariantTable.Builtin);
+        var mixed = new EntityModelMesher().BuildLayers([armored, unarmored], sprite, 64, 64, variants: EntityVariantTable.Builtin);
+
+        // Grouping must not change the layer plan's name/kind/order or the returned draw order.
+        Assert.Equal(
+            single.Select(layer => (layer.Name, layer.Kind, layer.Order)),
+            pair.Select(layer => (layer.Name, layer.Kind, layer.Order)));
+        Assert.Equal(
+            single.Select(layer => (layer.Name, layer.Kind, layer.Order)),
+            mixed.Select(layer => (layer.Name, layer.Kind, layer.Order)));
+
+        // Two entities sharing one layer model are built in a single batch: every layer has exactly twice the geometry.
+        foreach (var (one, two) in single.Zip(pair))
+        {
+            Assert.Equal(one.Geometry.VertexFloats * 2, two.Geometry.VertexFloats);
+            Assert.Equal(one.Geometry.IndexCount * 2, two.Geometry.IndexCount);
+        }
+
+        // VisibleWhen is still evaluated per entity: the equipment layer only receives the armored entity, while the
+        // base cutout layer receives both.
+        var singleByName = single.ToDictionary(layer => layer.Name, StringComparer.Ordinal);
+        var mixedByName = mixed.ToDictionary(layer => layer.Name, StringComparer.Ordinal);
+        Assert.Equal(singleByName["cutout"].Geometry.IndexCount * 2, mixedByName["cutout"].Geometry.IndexCount);
+        Assert.Equal(
+            singleByName["equipment_HumanoidArmor_5"].Geometry.IndexCount,
+            mixedByName["equipment_HumanoidArmor_5"].Geometry.IndexCount);
+
+        // A batch mixing different models still yields one plan entry per (name, kind, order), with one group per
+        // effective model; the cutout geometry is the sum of the two single-entity cutouts.
+        var cow = Entity(CowModelDefinition.CowEntityTypeId);
+        var cowCutout = Assert.Single(
+            new EntityModelMesher().BuildLayers([cow], sprite, 64, 64, variants: EntityVariantTable.Builtin),
+            layer => layer.Name == "cutout");
+        var mixedModels = new EntityModelMesher().BuildLayers([armored, cow], sprite, 64, 64,
+            variants: EntityVariantTable.Builtin);
+        var mixedCutout = Assert.Single(mixedModels, layer => layer.Name == "cutout");
+        Assert.Equal(
+            singleByName["cutout"].Geometry.IndexCount + cowCutout.Geometry.IndexCount,
+            mixedCutout.Geometry.IndexCount);
+    }
+
     private static EntityRenderState BabyWithHelmet(int typeId)
     {
         var helmet = ItemRegistry.LoadEmbedded().GetId(Identifier.Parse("minecraft:iron_helmet"));
