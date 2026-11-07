@@ -181,3 +181,14 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - Cat collar 使用 reference `AdultCatModel.COLLAR_DEFORMATION = new CubeDeformation(0.01F)`；
 - Wolf collar 使用同一模型几何、collar texture、零 grow；
 - Cat/Wolf 所有变体接入 compiled tree；collar 节点通过 `VisibleWhen: HasCollar` 和 `CollarTint` 工作。
+
+### 2026-11-07 — T-719 Warden emissive 树层
+
+- 新增 `EntityModelLayerHelpers.WithEmissiveLayer(CompiledEntityModel, ...)`；
+- 按 reference `retainExactParts` 语义只保留指定 source 节点的 cube，保留祖先 group 以维持 pose；
+- Warden 四层：
+  - `bioluminescent_`：head/arms/legs；
+  - `spots_`：body/head/arms/legs；
+  - `heart_`：body；
+  - `tendril_glow_`：left/right tendril；
+- 基座 + 四层 emissive 全部进入 `Compiled`；`EmissiveOnly` / `EmissiveTexturePath` 由树路径过滤。

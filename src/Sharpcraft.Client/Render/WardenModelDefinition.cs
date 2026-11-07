@@ -20,13 +20,19 @@ public static class WardenModelDefinition
 
     private static readonly EntityModelPart[] BaseParts = [.. VanillaMeshBake.Bake(WardenMesh, 0, 0)];
 
+    private static readonly CompiledEntityModel BaseCompiled =
+        VanillaMeshBakery.Build(WardenMesh, 128, 128, texturePath: "entity/warden/warden");
+
+    private static readonly CompiledEntityModel CompiledModel = BuildCompiled();
+
     public static readonly EntityModelDefinition Definition = new(
         "warden",
         128,
         128,
         BuildParts(),
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/warden/warden");
+        "entity/warden/warden",
+        compiled: CompiledModel);
 
     private static EntityModelPart[] BuildParts()
     {
@@ -36,6 +42,31 @@ public static class WardenModelDefinition
         AddLayer(parts, "heart", "entity/warden/warden_heart", "body");
         AddLayer(parts, "tendril_glow", "entity/warden/warden", "left_tendril", "right_tendril");
         return [.. parts];
+    }
+
+    private static CompiledEntityModel BuildCompiled()
+    {
+        var compiled = BaseCompiled;
+        compiled = EntityModelLayerHelpers.WithEmissiveLayer(
+            compiled,
+            "bioluminescent_",
+            "entity/warden/warden_bioluminescent_layer",
+            new HashSet<string>(StringComparer.Ordinal) { "head", "left_arm", "right_arm", "left_leg", "right_leg" });
+        compiled = EntityModelLayerHelpers.WithEmissiveLayer(
+            compiled,
+            "spots_",
+            "entity/warden/warden_pulsating_spots_1",
+            new HashSet<string>(StringComparer.Ordinal) { "body", "head", "left_arm", "right_arm", "left_leg", "right_leg" });
+        compiled = EntityModelLayerHelpers.WithEmissiveLayer(
+            compiled,
+            "heart_",
+            "entity/warden/warden_heart",
+            new HashSet<string>(StringComparer.Ordinal) { "body" });
+        return EntityModelLayerHelpers.WithEmissiveLayer(
+            compiled,
+            "tendril_glow_",
+            "entity/warden/warden",
+            new HashSet<string>(StringComparer.Ordinal) { "left_tendril", "right_tendril" });
     }
 
     private static void AddLayer(List<EntityModelPart> parts, string prefix, string texturePath, params string[] sourceNames)

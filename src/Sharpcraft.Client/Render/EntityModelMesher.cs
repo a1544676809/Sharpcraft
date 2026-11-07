@@ -194,6 +194,7 @@ public sealed partial class EntityModelMesher
                     entityTransform,
                     transforms,
                     model.FaceTransforms,
+                    model.EmissiveTexturePath,
                     onlyPart,
                     excludedPart,
                     skinAtlas,
@@ -648,6 +649,7 @@ public sealed partial class EntityModelMesher
         EntityModelTransform entityTransform,
         IReadOnlyDictionary<string, FaceUvTransform>? transforms,
         IReadOnlyDictionary<string, FaceUvTransform> defaultTransforms,
+        string? modelEmissivePath,
         string? onlyPart,
         string? excludedPart,
         EntitySkinAtlas? skinAtlas,
@@ -696,6 +698,13 @@ public sealed partial class EntityModelMesher
             foreach (var cube in node.Cubes)
             {
                 if (cube.Width == 0f && cube.Height == 0f && cube.Depth == 0f)
+                {
+                    continue;
+                }
+
+                if (emissivePass
+                    ? (!cube.IncludeInEmissive || (cube.EmissiveTexturePath is null && modelEmissivePath is null))
+                    : cube.EmissiveOnly)
                 {
                     continue;
                 }

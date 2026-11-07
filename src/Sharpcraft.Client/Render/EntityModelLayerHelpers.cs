@@ -96,6 +96,102 @@ public static class EntityModelLayerHelpers
         return new CompiledEntityModel(root, parts, cubes);
     }
 
+    /// <summary>
+    /// Builds a tree-derived emissive subset layer using the reference retainExactParts semantics: only the named
+    /// source nodes keep their cubes; ancestor group nodes are retained to preserve the pose chain, while selected
+    /// nodes do not gain descendants they did not retain.
+    /// </summary>
+    public static CompiledEntityModel WithEmissiveLayer(
+        CompiledEntityModel model,
+        string prefix,
+        string texturePath,
+        IReadOnlySet<string> sourceNames)
+    {
+        var layerParts = new List<EntityModelPartNode>();
+
+        EntityModelPartNode? CloneNode(EntityModelPartNode source, string? parent)
+        {
+            var selected = sourceNames.Contains(source.Name);
+            var children = new List<EntityModelPartNode>();
+            foreach (var child in source.Children)
+            {
+                var cloned = CloneNode(child, prefix + source.Name);
+                if (cloned is not null)
+                {
+                    children.Add(cloned);
+                }
+            }
+
+            if (!selected && children.Count == 0)
+            {
+                return null;
+            }
+
+            var cubes = selected
+                ? source.Cubes.Select(cube => cube with
+                {
+                    Name = prefix + cube.Name,
+                    EmissiveOnly = true,
+                    IncludeInEmissive = true,
+                    EmissiveTexturePath = texturePath
+                }).ToArray()
+                : [];
+            var node = new EntityModelPartNode(
+                prefix + source.Name,
+                parent,
+                source.PivotX,
+                source.PivotY,
+                source.PivotZ,
+                source.RotationX,
+                source.RotationY,
+                source.RotationZ,
+                cubes,
+                children,
+                visibleWhen: source.VisibleWhen,
+                rotationSelector: source.RotationSelector,
+                yOffsetSelector: source.YOffsetSelector,
+                poseSource: source.PoseSource ?? source.Name,
+                tintSelector: source.TintSelector);
+            layerParts.Add(node);
+            return node;
+        }
+
+        var children = new List<EntityModelPartNode>(model.Root.Children.Count * 2);
+        children.AddRange(model.Root.Children);
+        foreach (var child in model.Root.Children)
+        {
+            var cloned = CloneNode(child, parent: null);
+            if (cloned is not null)
+            {
+                children.Add(cloned);
+            }
+        }
+
+        var root = new EntityModelPartNode(
+            model.Root.Name,
+            parent: null,
+            pivotX: 0f,
+            pivotY: 0f,
+            pivotZ: 0f,
+            rotationX: 0f,
+            rotationY: 0f,
+            rotationZ: 0f,
+            cubes: [],
+            children);
+
+        var parts = new List<EntityModelPartNode>(model.Parts.Count + layerParts.Count);
+        parts.AddRange(model.Parts);
+        parts.AddRange(layerParts);
+        var cubes = new List<EntityModelCube>(model.Cubes.Count + layerParts.Sum(part => part.Cubes.Count));
+        cubes.AddRange(model.Cubes);
+        foreach (var part in layerParts)
+        {
+            cubes.AddRange(part.Cubes);
+        }
+
+        return new CompiledEntityModel(root, parts, cubes);
+    }
+
     public static EntityModelPart[] WithCopy(IReadOnlyList<EntityModelPart> parts, string texturePath, Func<EntityRenderState, bool> visible, float inflate = 0.05f, Func<EntityRenderState, Vector3>? tint = null)
     {
         var result = new List<EntityModelPart>(parts.Count * 2);

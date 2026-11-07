@@ -68,6 +68,23 @@ public sealed class EntityModelTreeBakeryTests
     }
 
     [Fact]
+    public void WardenExposesEmissiveTreeLayers()
+    {
+        var warden = WardenModelDefinition.Definition.Compiled;
+        Assert.NotNull(warden);
+        Assert.True(warden!.Cubes.Count > 10);
+        Assert.NotNull(warden.Find("bioluminescent_head"));
+        Assert.NotNull(warden.Find("spots_body"));
+        Assert.NotNull(warden.Find("heart_body"));
+        Assert.NotNull(warden.Find("tendril_glow_left_tendril"));
+
+        var geometry = new EntityModelMesher().Build(
+            [new EntityRenderState(1, WardenModelDefinition.WardenEntityTypeId, 0f, 0f, 0f, 0f, 0f)],
+            new SpriteRect(0, 0, 128, 128, 1), 128, 128);
+        Assert.True(geometry.VertexFloats > 0);
+    }
+
+    [Fact]
     public void CatAndWolfExposeTreeCollars()
     {
         var cat = CatModelDefinition.Definition.Compiled;
