@@ -12,27 +12,46 @@ public static class BabyModelDefinitionsExtra
     private static readonly VanillaMeshDefinition FoxMesh = BuildFoxMesh();
     private static readonly VanillaMeshDefinition RabbitMesh = BuildRabbitMesh();
 
+    private static readonly CompiledEntityModel CatCompiled =
+        EntityModelLayerHelpers.WithCollar(
+            VanillaMeshBakery.Build(CatMesh, 32, 32),
+            "entity/cat/cat_collar_baby",
+            inflate: 0.1f);
+
+    private static readonly CompiledEntityModel WolfCompiled =
+        EntityModelLayerHelpers.WithCollar(
+            VanillaMeshBakery.Build(WolfMesh, 32, 32),
+            "entity/wolf/wolf_collar_baby",
+            inflate: 0.1f);
+
+    private static readonly CompiledEntityModel FoxCompiled = VanillaMeshBakery.Build(FoxMesh, 32, 32);
+    private static readonly CompiledEntityModel RabbitCompiled = VanillaMeshBakery.Build(RabbitMesh, 32, 32);
+
     public static readonly EntityModelDefinition Cat = new(
         "baby_cat", 32, 32,
         EntityModelLayerHelpers.WithCollar([.. VanillaMeshBake.Bake(CatMesh, 0, 0)], "entity/cat/cat_collar_baby"),
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/cat/cat_tabby_baby");
+        PlayerModelDefinition.DefaultFaceTransforms, "entity/cat/cat_tabby_baby",
+        compiled: CatCompiled);
 
     public static readonly EntityModelDefinition Wolf = new(
         "baby_wolf", 32, 32,
         EntityModelLayerHelpers.WithCollar([.. VanillaMeshBake.Bake(WolfMesh, 0, 0)], "entity/wolf/wolf_collar_baby"),
         PlayerModelDefinition.DefaultFaceTransforms, "entity/wolf/wolf_baby",
         textureSelector: state => state.IsTame ? "entity/wolf/wolf_tame_baby" : state.IsAngry ? "entity/wolf/wolf_angry_baby" : "entity/wolf/wolf_baby",
-        additionalTexturePaths: ["entity/wolf/wolf_tame_baby", "entity/wolf/wolf_angry_baby"]);
+        additionalTexturePaths: ["entity/wolf/wolf_tame_baby", "entity/wolf/wolf_angry_baby"],
+        compiled: WolfCompiled);
 
     public static readonly EntityModelDefinition Fox = new(
         "baby_fox", 32, 32, [.. VanillaMeshBake.Bake(FoxMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms, "entity/fox/fox_baby",
         textureSelector: state => state.IsSleeping ? "entity/fox/fox_sleep_baby" : "entity/fox/fox_baby",
-        additionalTexturePaths: ["entity/fox/fox_sleep_baby"]);
+        additionalTexturePaths: ["entity/fox/fox_sleep_baby"],
+        compiled: FoxCompiled);
 
     public static readonly EntityModelDefinition Rabbit = new(
         "baby_rabbit", 32, 32, [.. VanillaMeshBake.Bake(RabbitMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/rabbit/rabbit_brown_baby");
+        PlayerModelDefinition.DefaultFaceTransforms, "entity/rabbit/rabbit_brown_baby",
+        compiled: RabbitCompiled);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>
@@ -59,7 +78,7 @@ public static class BabyModelDefinitionsExtra
         {
             if (key != "tabby")
             {
-                variants[(CatModelDefinition.CatEntityTypeId, key)] = new("baby_cat_" + key, 32, 32, Cat.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/cat/cat_" + key + "_baby");
+                variants[(CatModelDefinition.CatEntityTypeId, key)] = new("baby_cat_" + key, 32, 32, Cat.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/cat/cat_" + key + "_baby", compiled: CatCompiled);
             }
         }
 
@@ -86,7 +105,8 @@ public static class BabyModelDefinitionsExtra
                 PlayerModelDefinition.DefaultFaceTransforms,
                 captured,
                 textureSelector: state => state.IsTame ? tame : state.IsAngry ? angry : captured,
-                additionalTexturePaths: [tame, angry]);
+                additionalTexturePaths: [tame, angry],
+                compiled: WolfCompiled);
         }
 
         variants[(FoxModelDefinition.FoxEntityTypeId, "snow")] = new(
@@ -97,7 +117,8 @@ public static class BabyModelDefinitionsExtra
             PlayerModelDefinition.DefaultFaceTransforms,
             "entity/fox/fox_snow_baby",
             textureSelector: state => state.IsSleeping ? "entity/fox/fox_snow_sleep_baby" : "entity/fox/fox_snow_baby",
-            additionalTexturePaths: ["entity/fox/fox_snow_sleep_baby"]);
+            additionalTexturePaths: ["entity/fox/fox_snow_sleep_baby"],
+            compiled: FoxCompiled);
 
         var rabbitFiles = new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -119,7 +140,8 @@ public static class BabyModelDefinitionsExtra
                     32,
                     Rabbit.Parts,
                     PlayerModelDefinition.DefaultFaceTransforms,
-                    "entity/rabbit/" + rabbitFiles[key] + "_baby");
+                    "entity/rabbit/" + rabbitFiles[key] + "_baby",
+                    compiled: RabbitCompiled);
             }
         }
 

@@ -14,17 +14,24 @@ public static class BabyModelDefinitions
     private static readonly VanillaMeshDefinition CowMesh = BuildCowMesh();
     private static readonly VanillaMeshDefinition ChickenMesh = BuildChickenMesh();
 
+    private static readonly CompiledEntityModel PigCompiled = VanillaMeshBakery.Build(PigMesh, 32, 32);
+    private static readonly CompiledEntityModel CowCompiled = VanillaMeshBakery.Build(CowMesh, 64, 64);
+    private static readonly CompiledEntityModel ChickenCompiled = VanillaMeshBakery.Build(ChickenMesh, 16, 16);
+
     public static readonly EntityModelDefinition Pig = new(
         "baby_pig", 32, 32, [.. VanillaMeshBake.Bake(PigMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/pig/pig_temperate_baby");
+        PlayerModelDefinition.DefaultFaceTransforms, "entity/pig/pig_temperate_baby",
+        compiled: PigCompiled);
 
     public static readonly EntityModelDefinition Cow = new(
         "baby_cow", 64, 64, [.. VanillaMeshBake.Bake(CowMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/cow/cow_temperate_baby");
+        PlayerModelDefinition.DefaultFaceTransforms, "entity/cow/cow_temperate_baby",
+        compiled: CowCompiled);
 
     public static readonly EntityModelDefinition Chicken = new(
         "baby_chicken", 16, 16, [.. VanillaMeshBake.Bake(ChickenMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/chicken/chicken_temperate_baby");
+        PlayerModelDefinition.DefaultFaceTransforms, "entity/chicken/chicken_temperate_baby",
+        compiled: ChickenCompiled);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>
@@ -45,12 +52,12 @@ public static class BabyModelDefinitions
             [(ChickenModelDefinition.ChickenEntityTypeId, "temperate")] = Chicken
         };
 
-        variants[(PigModelDefinition.PigEntityTypeId, "warm")] = new("baby_pig_warm", 32, 32, Pig.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/pig/pig_warm_baby");
-        variants[(PigModelDefinition.PigEntityTypeId, "cold")] = new("baby_pig_cold", 32, 32, Pig.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/pig/pig_cold_baby");
-        variants[(CowModelDefinition.CowEntityTypeId, "warm")] = new("baby_cow_warm", 64, 64, Cow.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/cow/cow_warm_baby");
-        variants[(CowModelDefinition.CowEntityTypeId, "cold")] = new("baby_cow_cold", 64, 64, Cow.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/cow/cow_cold_baby");
-        variants[(ChickenModelDefinition.ChickenEntityTypeId, "warm")] = new("baby_chicken_warm", 16, 16, Chicken.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/chicken/chicken_warm_baby");
-        variants[(ChickenModelDefinition.ChickenEntityTypeId, "cold")] = new("baby_chicken_cold", 16, 16, Chicken.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/chicken/chicken_cold_baby");
+        variants[(PigModelDefinition.PigEntityTypeId, "warm")] = new("baby_pig_warm", 32, 32, Pig.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/pig/pig_warm_baby", compiled: PigCompiled);
+        variants[(PigModelDefinition.PigEntityTypeId, "cold")] = new("baby_pig_cold", 32, 32, Pig.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/pig/pig_cold_baby", compiled: PigCompiled);
+        variants[(CowModelDefinition.CowEntityTypeId, "warm")] = new("baby_cow_warm", 64, 64, Cow.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/cow/cow_warm_baby", compiled: CowCompiled);
+        variants[(CowModelDefinition.CowEntityTypeId, "cold")] = new("baby_cow_cold", 64, 64, Cow.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/cow/cow_cold_baby", compiled: CowCompiled);
+        variants[(ChickenModelDefinition.ChickenEntityTypeId, "warm")] = new("baby_chicken_warm", 16, 16, Chicken.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/chicken/chicken_warm_baby", compiled: ChickenCompiled);
+        variants[(ChickenModelDefinition.ChickenEntityTypeId, "cold")] = new("baby_chicken_cold", 16, 16, Chicken.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/chicken/chicken_cold_baby", compiled: ChickenCompiled);
         return variants;
     }
 

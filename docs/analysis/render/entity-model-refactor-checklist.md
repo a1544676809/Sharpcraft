@@ -317,3 +317,10 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - `EntityModelMesher.BuildLayers` 使用当前批次模型定义的并集按 `Order` 排序，不再使用固定 `LayerKinds` 数组；
 - `WindowedRenderer` 的 entity layer 缓冲从固定 4 组改为按层数增长，避免超过 4 层被截断（RF-22）；
 - `EntityLayerTests` 增加显式 order 断言；RF-18 的独立 per-layer model/texture/visible 仍待接线。
+
+### 2026-11-07 — T-734 幼年基础模型树迁移
+
+- `BabyModelDefinitions` 的 Pig/Cow/Chicken 及 warm/cold 变体接入 `Compiled`；
+- `BabyModelDefinitionsExtra` 的 Cat/Wolf/Fox/Rabbit 及全部变体接入 `Compiled`；
+- Baby Cat/Wolf 的 collar 通过 `WithCollar(CompiledEntityModel)` 生成树层；
+- 树测试增加 baby farm/pet compiled 断言，树测试共 25 项。

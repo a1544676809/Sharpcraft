@@ -347,6 +347,22 @@ public sealed class EntityModelTreeBakeryTests
     }
 
     [Fact]
+    public void BabyFarmAndPetModelsExposeCompiledTrees()
+    {
+        Assert.NotNull(BabyModelDefinitions.Pig.Compiled);
+        Assert.NotNull(BabyModelDefinitions.Cow.Compiled);
+        Assert.NotNull(BabyModelDefinitions.Chicken.Compiled);
+        Assert.NotNull(BabyModelDefinitions.Variants[(PigModelDefinition.PigEntityTypeId, "cold")].Compiled);
+        Assert.NotNull(BabyModelDefinitionsExtra.Cat.Compiled);
+        Assert.NotNull(BabyModelDefinitionsExtra.Wolf.Compiled);
+        Assert.NotNull(BabyModelDefinitionsExtra.Fox.Compiled);
+        Assert.NotNull(BabyModelDefinitionsExtra.Rabbit.Compiled);
+        Assert.NotNull(BabyModelDefinitionsExtra.Variants[(WolfModelDefinition.WolfEntityTypeId, "snowy")].Compiled);
+        Assert.NotNull(BabyModelDefinitionsExtra.Variants[(RabbitModelDefinition.RabbitEntityTypeId, "evil")].Compiled);
+        Assert.NotNull(BabyModelDefinitionsExtra.Cat.Compiled!.Find("collar_head"));
+    }
+
+    [Fact]
     public void BabyZombieUsesDedicatedBabyArmorTree()
     {
         var baby = EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId, baby: true);
