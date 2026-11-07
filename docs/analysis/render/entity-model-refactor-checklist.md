@@ -365,3 +365,11 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - baby humanoid 的 Elytra 层改用 `BuildElytraLayer(baseCompiled, baby)` 的幼年两翼树，避免切换到独立层后丢失幼年鞘翅；baby Piglin 不生成 Elytra 层（与合并路径一致）；
 - 基础层仍来自 `definition.RenderLayers` 的 cutout/translucent/emissive；成人分支参数逐值不变；其余 baby 装备（马鞍/羊驼装饰等）继续走 merged compiled；
 - `BuildModelBackedLayers` 无需修改即可对 baby 实体生效；`EntityLayerTests` 新增 2 项断言，全量 Client 1556 项通过。
+
+### 2026-11-07 — T-741 模型定义覆盖 / 层顺序门禁（质量门禁）
+
+- 新增 `EntityModelTreeCoverageTests`（3 项）：扫描 `EntityModelResolver.Definitions` 全注册表（基础 / 成人变体 / 幼年变体；派生的装备定义不在注册表内）；
+- 断言每个定义有 `Compiled`、编译树 `Root` 非空且 `Parts`/`Cubes` 非空；零 cube 组节点合法但整棵快照不可为空，`BuildElytraLayer` 的空树属于派生层模型、不进注册表；
+- 断言 `RenderLayers` 非空、`Name`/`Order` 唯一、按 `Order` 升序声明且至少含 Cutout，不钉具体层数；
+- 门禁发现真实缺口：`BabyModelDefinitionsNether` 的 `baby_hoglin`/`baby_zoglin` 仍在 legacy flat 路径（T-727 只迁移了同文件的 baby Piglin）。按要求只报告、不改生产代码；测试用显式棘轮基线钉住这两个名字，新增未迁移定义或基线过期都会失败，收口需后续迁移任务；
+- 全量 Client 1559 项通过。
