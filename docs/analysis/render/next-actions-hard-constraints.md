@@ -62,11 +62,11 @@ Z-fighting 与 equipment clearance 不混入本任务；先走诊断报告，规
   - `T-745b-2`：`WindowedRenderer` 的主场景 Pass 也已改为 `RecordScenePasses`；静态世界回退保留原顺序；
   - `T-745c`（后续）：OIT、云、WorldText、UI 目前只存在于窗口路径，Offscreen 没有对应实现；它们不算跨渲染器双轨债务。若 Offscreen 将来补齐这些功能，必须复用同一套 PostPass 计划。窗口/离屏主场景的几何/像素一致性验收仍待补。
 
-### T-746 EntityModelPart 类型收紧（P1）
+### T-746 EntityModelPart 类型收紧（P1，部分完成）
 
-- 将 `EntityModelPart` 构造函数改为 `internal`；
-- 禁止在 `VanillaMeshTransformer` / 集中 baker 之外 `new EntityModelPart` 或直接改几何 `with`；
-- 增加架构测试扫描生产代码。
+- `T-746a`（本刀）：`EntityModelPart` 改为显式 `readonly record struct`，带参数的构造函数为 `internal`；
+- 增加 `EntityModelPartEncapsulationTests`：禁止 public 参数化构造，并只允许 `EntityModelMesher`/`EntityModelResolver`/`VanillaMeshBake` 构造 baked part；
+- `T-746b`（后续）：清理模型定义中绕过 baker 的几何 `with` 克隆，并把允许位置进一步收紧；不能把当前部分完成误报为全部完成。
 
 ### T-747 ModHost ALC 收口（P1，已实现代码硬化）
 

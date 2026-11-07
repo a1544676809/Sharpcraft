@@ -9,50 +9,127 @@ using Sharpcraft.Framework.Rendering;
 /// <summary>
 /// One static model cuboid in model-pixel space. This is render data only: it never references an entity or world.
 /// </summary>
-/// <param name="Name">Part name for diagnostics and future overlays.</param>
-/// <param name="CentreX">Horizontal centre offset in model pixels.</param>
-/// <param name="Bottom">Bottom Y in model pixels, measured from the feet.</param>
-/// <param name="Width">X size in pixels.</param>
-/// <param name="Height">Y size in pixels.</param>
-/// <param name="Depth">Z size in pixels.</param>
+/// <remarks>
+/// The parameterized constructor is internal so model-definition files cannot construct baked geometry directly;
+/// the definition DSL and the centralized baker are the only intended construction paths. The public properties remain
+/// init-only for record <c>with</c> composition inside the Client assembly and for test inspection.
+/// </remarks>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.geom.ModelPart", "ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/ModelPart.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "One model cuboid/part: pivot, box, UV, overlays")]
-public readonly record struct EntityModelPart(
-    string Name,
-    float CentreX,
-    float Bottom,
-    float Width,
-    float Height,
-    float Depth,
-    int TextureX = 0,
-    int TextureY = 0,
-    bool Mirror = false,
-    IReadOnlyList<EntityModelLayer>? OverlayLayers = null,
-    float CentreZ = 0f,
-    float PivotX = 0f,
-    float PivotY = 0f,
-    float PivotZ = 0f,
-    float RotationX = 0f,
-    float RotationY = 0f,
-    float RotationZ = 0f,
-    string? TexturePath = null,
-    float Grow = 0f,
-    string? Parent = null,
-    EntityGeometryLayerKind Kind = EntityGeometryLayerKind.Cutout,
-    Func<EntityRenderState, bool>? VisibleWhen = null,
-    int TextureWidth = 0,
-    int TextureHeight = 0,
-    bool IncludeInEmissive = true,
-    bool EmissiveOnly = false,
-    string? EmissiveTexturePath = null,
-    Func<EntityRenderState, System.Numerics.Vector3>? TintSelector = null,
-    Func<EntityRenderState, string?>? TextureSelector = null,
-    string? PoseSource = null,
-    System.Numerics.Vector3? GrowXyz = null,
-    Func<EntityRenderState, System.Numerics.Vector3>? RotationSelector = null,
-    int UvWidth = 0,
-    int UvHeight = 0,
-    int UvDepth = 0,
-    Func<EntityRenderState, float>? YOffsetSelector = null);
+public readonly record struct EntityModelPart
+{
+    public string Name { get; init; }
+    public float CentreX { get; init; }
+    public float Bottom { get; init; }
+    public float Width { get; init; }
+    public float Height { get; init; }
+    public float Depth { get; init; }
+    public int TextureX { get; init; }
+    public int TextureY { get; init; }
+    public bool Mirror { get; init; }
+    public IReadOnlyList<EntityModelLayer>? OverlayLayers { get; init; }
+    public float CentreZ { get; init; }
+    public float PivotX { get; init; }
+    public float PivotY { get; init; }
+    public float PivotZ { get; init; }
+    public float RotationX { get; init; }
+    public float RotationY { get; init; }
+    public float RotationZ { get; init; }
+    public string? TexturePath { get; init; }
+    public float Grow { get; init; }
+    public string? Parent { get; init; }
+    public EntityGeometryLayerKind Kind { get; init; }
+    public Func<EntityRenderState, bool>? VisibleWhen { get; init; }
+    public int TextureWidth { get; init; }
+    public int TextureHeight { get; init; }
+    public bool IncludeInEmissive { get; init; }
+    public bool EmissiveOnly { get; init; }
+    public string? EmissiveTexturePath { get; init; }
+    public Func<EntityRenderState, System.Numerics.Vector3>? TintSelector { get; init; }
+    public Func<EntityRenderState, string?>? TextureSelector { get; init; }
+    public string? PoseSource { get; init; }
+    public System.Numerics.Vector3? GrowXyz { get; init; }
+    public Func<EntityRenderState, System.Numerics.Vector3>? RotationSelector { get; init; }
+    public int UvWidth { get; init; }
+    public int UvHeight { get; init; }
+    public int UvDepth { get; init; }
+    public Func<EntityRenderState, float>? YOffsetSelector { get; init; }
+
+    internal EntityModelPart(
+        string Name,
+        float CentreX,
+        float Bottom,
+        float Width,
+        float Height,
+        float Depth,
+        int TextureX = 0,
+        int TextureY = 0,
+        bool Mirror = false,
+        IReadOnlyList<EntityModelLayer>? OverlayLayers = null,
+        float CentreZ = 0f,
+        float PivotX = 0f,
+        float PivotY = 0f,
+        float PivotZ = 0f,
+        float RotationX = 0f,
+        float RotationY = 0f,
+        float RotationZ = 0f,
+        string? TexturePath = null,
+        float Grow = 0f,
+        string? Parent = null,
+        EntityGeometryLayerKind Kind = EntityGeometryLayerKind.Cutout,
+        Func<EntityRenderState, bool>? VisibleWhen = null,
+        int TextureWidth = 0,
+        int TextureHeight = 0,
+        bool IncludeInEmissive = true,
+        bool EmissiveOnly = false,
+        string? EmissiveTexturePath = null,
+        Func<EntityRenderState, System.Numerics.Vector3>? TintSelector = null,
+        Func<EntityRenderState, string?>? TextureSelector = null,
+        string? PoseSource = null,
+        System.Numerics.Vector3? GrowXyz = null,
+        Func<EntityRenderState, System.Numerics.Vector3>? RotationSelector = null,
+        int UvWidth = 0,
+        int UvHeight = 0,
+        int UvDepth = 0,
+        Func<EntityRenderState, float>? YOffsetSelector = null)
+    {
+        this.Name = Name;
+        this.CentreX = CentreX;
+        this.Bottom = Bottom;
+        this.Width = Width;
+        this.Height = Height;
+        this.Depth = Depth;
+        this.TextureX = TextureX;
+        this.TextureY = TextureY;
+        this.Mirror = Mirror;
+        this.OverlayLayers = OverlayLayers;
+        this.CentreZ = CentreZ;
+        this.PivotX = PivotX;
+        this.PivotY = PivotY;
+        this.PivotZ = PivotZ;
+        this.RotationX = RotationX;
+        this.RotationY = RotationY;
+        this.RotationZ = RotationZ;
+        this.TexturePath = TexturePath;
+        this.Grow = Grow;
+        this.Parent = Parent;
+        this.Kind = Kind;
+        this.VisibleWhen = VisibleWhen;
+        this.TextureWidth = TextureWidth;
+        this.TextureHeight = TextureHeight;
+        this.IncludeInEmissive = IncludeInEmissive;
+        this.EmissiveOnly = EmissiveOnly;
+        this.EmissiveTexturePath = EmissiveTexturePath;
+        this.TintSelector = TintSelector;
+        this.TextureSelector = TextureSelector;
+        this.PoseSource = PoseSource;
+        this.GrowXyz = GrowXyz;
+        this.RotationSelector = RotationSelector;
+        this.UvWidth = UvWidth;
+        this.UvHeight = UvHeight;
+        this.UvDepth = UvDepth;
+        this.YOffsetSelector = YOffsetSelector;
+    }
+}
 
 /// <summary>
 /// An outer skin layer around one base cuboid, expressed as a uniform growth and its own texture offset.
