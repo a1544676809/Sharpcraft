@@ -80,6 +80,19 @@ public sealed class EntityModelTreeBakeryTests
     }
 
     [Fact]
+    public void SimpleModelsExposeCompiledTrees()
+    {
+        Assert.NotNull(PandaModelDefinition.Definition.Compiled);
+        Assert.NotNull(GoatModelDefinition.Definition.Compiled);
+        Assert.NotNull(FrogModelDefinition.Definition.Compiled);
+        Assert.NotNull(TadpoleModelDefinition.Definition.Compiled);
+        Assert.NotNull(BatModelDefinition.Definition.Compiled);
+        Assert.NotNull(AllayModelDefinition.Definition.Compiled);
+        Assert.NotNull(BeeModelDefinition.Definition.Compiled);
+        Assert.NotNull(VexModelDefinition.Definition.Compiled);
+    }
+
+    [Fact]
     public void TreeMesherBuildsBreezeGeometry()
     {
         var state = new EntityRenderState(1, BreezeModelDefinition.BreezeEntityTypeId, 0f, 0f, 0f, 0f, 0f);

@@ -15,11 +15,11 @@ public static class GoatModelDefinition
     /// <summary>Declarative DSL tree for the twelve goat parts (T-685).</summary>
     private static readonly VanillaMeshDefinition GoatMesh = BuildGoatMesh();
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "goat",
         64,
         64,
-        [.. VanillaMeshBake.Bake(GoatMesh, 0, 0)],
+        GoatMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/goat/goat");
 

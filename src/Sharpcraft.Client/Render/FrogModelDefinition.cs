@@ -21,11 +21,11 @@ public static class FrogModelDefinition
 
     private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(FrogMesh, 0, 0)];
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "frog",
         48,
         48,
-        Parts,
+        FrogMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/frog/frog_temperate");
 
@@ -54,7 +54,8 @@ public static class FrogModelDefinition
                 48,
                 Parts,
                 PlayerModelDefinition.DefaultFaceTransforms,
-                "entity/frog/frog_" + key);
+                "entity/frog/frog_" + key,
+                compiled: Definition.Compiled);
         }
 
         return variants;

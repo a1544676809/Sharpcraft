@@ -15,11 +15,11 @@ public static class TadpoleModelDefinition
     /// <summary>Declarative DSL tree for the two tadpole parts (T-677).</summary>
     private static readonly VanillaMeshDefinition TadpoleMesh = BuildTadpoleMesh();
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "tadpole",
         16,
         16,
-        [.. VanillaMeshBake.Bake(TadpoleMesh, 0, 0)],
+        TadpoleMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/tadpole/tadpole");
 

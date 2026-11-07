@@ -15,11 +15,11 @@ public static class PandaModelDefinition
     /// <summary>Declarative DSL tree for the nine panda parts (T-684).</summary>
     private static readonly VanillaMeshDefinition PandaMesh = BuildPandaMesh();
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "panda",
         64,
         64,
-        [.. VanillaMeshBake.Bake(PandaMesh, 0, 0)],
+        PandaMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/panda/panda");
 
@@ -43,7 +43,8 @@ public static class PandaModelDefinition
                     64,
                     Definition.Parts,
                     PlayerModelDefinition.DefaultFaceTransforms,
-                    "entity/panda/panda_" + key);
+                    "entity/panda/panda_" + key,
+                    compiled: Definition.Compiled);
             }
         }
 

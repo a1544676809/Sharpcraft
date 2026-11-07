@@ -21,11 +21,11 @@ public static class BeeModelDefinition
     /// <summary>Declarative DSL tree for the ten nested bee parts (T-678).</summary>
     private static readonly VanillaMeshDefinition BeeMesh = BuildBeeMesh();
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "bee",
         64,
         64,
-        [.. VanillaMeshBake.Bake(BeeMesh, 0, 0)],
+        BeeMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/bee/bee",
         textureSelector: state => state.IsAngry

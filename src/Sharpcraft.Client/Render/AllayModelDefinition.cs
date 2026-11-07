@@ -18,11 +18,11 @@ public static class AllayModelDefinition
     /// <summary>Declarative DSL tree for the eight allay parts (T-678); every part is translucent.</summary>
     private static readonly VanillaMeshDefinition AllayMesh = BuildAllayMesh();
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "allay",
         32,
         32,
-        [.. VanillaMeshBake.Bake(AllayMesh, 0, 0)],
+        AllayMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/allay/allay");
 

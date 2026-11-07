@@ -147,3 +147,18 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - Rabbit（全部变体，T-714 已接入）。
 
 同时修正树路径 root pose 平移：`PartMatrix` 的 root 反平移必须使用**未加动画 offset 的 base pivot**，否则根节点动画位移被抵消；`EntityLayerTests.AnimationPoseOffsetsAreAppliedBeforeMeshing` 已重新通过。
+
+### 2026-11-07 — T-716 simple model batch
+
+新增 `EntityModelDefinition.FromTree(...)` 作为迁移入口：一次生成 legacy `Parts` 和 `Compiled`，模型定义不再手写两个数组。
+
+已通过 `FromTree` 迁移：
+
+- Panda（全部变体）；
+- Goat；
+- Frog（全部变体）；
+- Tadpole；
+- Bat；
+- Allay；
+- Bee（状态纹理 selector）；
+- Vex（充能纹理 selector）。

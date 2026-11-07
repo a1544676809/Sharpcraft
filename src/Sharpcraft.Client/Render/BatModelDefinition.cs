@@ -16,11 +16,11 @@ public static class BatModelDefinition
     /// <summary>Declarative DSL tree for the nine nested bat parts (T-678).</summary>
     private static readonly VanillaMeshDefinition BatMesh = BuildBatMesh();
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "bat",
         32,
         32,
-        [.. VanillaMeshBake.Bake(BatMesh, 0, 0)],
+        BatMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/bat/bat");
 

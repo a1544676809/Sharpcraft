@@ -15,11 +15,11 @@ public static class VexModelDefinition
 
     private static readonly VanillaMeshDefinition VexMesh = BuildVexMesh();
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "vex",
         32,
         32,
-        [.. VanillaMeshBake.Bake(VexMesh, 0, 0)],
+        VexMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/illager/vex",
         textureSelector: state => state.IsCharging ? "entity/illager/vex_charging" : "entity/illager/vex",

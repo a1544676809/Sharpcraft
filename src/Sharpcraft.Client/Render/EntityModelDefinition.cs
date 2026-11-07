@@ -64,6 +64,39 @@ public sealed class EntityModelDefinition
     /// <summary>Structural tree model when the definition has been migrated to the tree path; null uses legacy flat parts.</summary>
     public CompiledEntityModel? Compiled { get; }
 
+    /// <summary>
+    /// Creates a definition from a declarative mesh: the legacy flat <see cref="Parts"/> remain available for compatibility,
+    /// while <see cref="Compiled"/> is produced once by the structural bakery.
+    /// </summary>
+    public static EntityModelDefinition FromTree(
+        string name,
+        int textureWidth,
+        int textureHeight,
+        VanillaMeshDefinition mesh,
+        IReadOnlyDictionary<string, FaceUvTransform>? faceTransforms = null,
+        string? texturePath = null,
+        float scale = 1f,
+        string? emissiveTexturePath = null,
+        Func<EntityRenderState, string?>? textureSelector = null,
+        IReadOnlyList<string>? additionalTexturePaths = null)
+    {
+        ArgumentNullException.ThrowIfNull(mesh);
+        var parts = VanillaMeshBake.Bake(mesh, 0, 0);
+        var compiled = VanillaMeshBakery.Build(mesh, textureWidth, textureHeight, texturePath: texturePath);
+        return new EntityModelDefinition(
+            name,
+            textureWidth,
+            textureHeight,
+            parts,
+            faceTransforms,
+            texturePath,
+            scale,
+            emissiveTexturePath,
+            textureSelector,
+            additionalTexturePaths,
+            compiled);
+    }
+
     public IEnumerable<string> TexturePaths
     {
         get
