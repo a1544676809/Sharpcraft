@@ -72,7 +72,7 @@ public static class PlayerSkinTexturesParser
                 metadata.TryGetProperty("model", out var model) &&
                 model.ValueKind == JsonValueKind.String)
             {
-                slim = string.Equals(model.GetString(), "slim", StringComparison.OrdinalIgnoreCase);
+                slim = string.Equals(model.GetString(), "slim", StringComparison.Ordinal);
             }
 
             textures = new PlayerSkinTextures(

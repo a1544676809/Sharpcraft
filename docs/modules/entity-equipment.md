@@ -167,7 +167,7 @@
 - `PlayerSkinTexturesParser` 解析 `textures` 属性；`PlayerSkinCache` 按 UUID 缓存下载结果并把 body/cape/elytra 纹理注册进 `EntitySkinLibrary` atlas；玩家基础模型通过 `PlayerBodyTexture` selector 使用 body 路径。
 - `EntityRenderState.PlayerElytraOverride` 实现 `elytra > cape(showCape)` 的优先级；`EntityModelResolver.ResolveEquipmentTexture` 在 `UsePlayerTexture` 为真时替换第一层纹理。
 - `PlayerSkinCache` 的下载线程只做 IO/PNG 解码，atlas 注册在宿主帧线程；`WindowedRenderer` 的 entity skin 纹理源支持运行期重建。
-- `PlayerModelType.SLIM` 的独立皮肤模型已由 §12 接入；纹理属性签名校验仍缺少原版公钥与验签语义（见 §12.3），登记为阻塞项。
+- `PlayerModelType.SLIM` 的独立皮肤模型已由 §12 接入；纹理属性签名校验仍缺少原版公钥与验签语义（见 §14），登记为阻塞项。
 
 ## 12. SLIM 玩家模型（T-752 补全）
 

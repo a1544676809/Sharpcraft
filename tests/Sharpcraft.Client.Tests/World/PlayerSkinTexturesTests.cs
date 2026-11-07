@@ -42,6 +42,17 @@ public sealed class PlayerSkinTexturesTests
     }
 
     [Fact]
+    public void TheModelNameIsCaseSensitiveLikeTheReferenceLookup()
+    {
+        var property = Property("""
+            { "textures": { "SKIN": { "url": "https://textures.minecraft.net/texture/aaaa", "metadata": { "model": "SLIM" } } } }
+            """);
+
+        Assert.True(PlayerSkinTexturesParser.TryParse(property, out var textures));
+        Assert.False(textures.Slim);
+    }
+
+    [Fact]
     public void MissingCapeAndElytraAreNull()
     {
         var property = Property("""
