@@ -74,7 +74,7 @@ DataComponentPatch patch
 
 ### 3.2 装备资产（EquipmentClientInfo）
 
-原版渲染层不是直接用固定路径绑定物品，而是通过客户端 `EquipmentClientInfo`（装备资产定义）把“物品 + 层类型”映射到纹理与模型。该资产定义的 `.json` 已确认位于分析工作区 `assets/minecraft/equipment/`（例如 `iron.json`、`leather.json`、`saddle.json`、`elytra.json`）。2026-11-07 已新增 `EquipmentClientInfo` 解析模型与 `ResourceKind.Equipment`；渲染层尚未完成 item → equipment asset 绑定，因此当前仍以静态 `EquipmentTextureCatalog` 为绘制来源。
+原版渲染层不是直接用固定路径绑定物品，而是通过客户端 `EquipmentClientInfo`（装备资产定义）把“物品 + 层类型”映射到纹理与模型。该资产定义的 `.json` 已确认位于分析工作区 `assets/minecraft/equipment/`（例如 `iron.json`、`leather.json`、`saddle.json`、`elytra.json`）。2026-11-07 已新增 `EquipmentClientInfo` 解析模型、`ResourceKind.Equipment` 与 `EquipmentAssetRegistry`；`EntitySkinLibrary.Load` 会从资源栈加载已知装备资产，`EquipmentTextureCatalog.Resolve` 优先使用解析出的层纹理，静态 catalog 作为 fallback。item → equipment asset 的组件级绑定以及 dye/glint/player-texture/trim 的最终着色仍未完成。
 
 因此第一阶段采用**受控静态映射**：
 

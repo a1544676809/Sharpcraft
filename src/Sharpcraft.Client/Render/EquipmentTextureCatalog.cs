@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using Sharpcraft.Common.Identifiers;
 using Sharpcraft.Common.Registries;
 
 namespace Sharpcraft.Client.Render;
@@ -41,6 +42,9 @@ public sealed record EquipmentTexture(string PrimaryPath, string? OverlayPath = 
 /// </summary>
 public static class EquipmentTextureCatalog
 {
+    /// <summary>Parsed equipment assets; empty until the resource stack is installed, with the static table as fallback.</summary>
+    public static EquipmentAssetRegistry Assets { get; set; } = EquipmentAssetRegistry.Empty;
+
     private static readonly Dictionary<string, string> HorseBodyMaterials = new(StringComparer.Ordinal)
     {
         ["leather_horse_armor"] = "leather",
@@ -70,6 +74,11 @@ public static class EquipmentTextureCatalog
     public static EquipmentTexture? Resolve(EquipmentAssetKind kind, ItemInfo item, bool baby = false)
     {
         var path = item.Id.Path;
+        if (TryResolveFromAssets(kind, path, baby) is { } fromAssets)
+        {
+            return fromAssets;
+        }
+
         var saddle = path == "saddle";
 
         return kind switch
@@ -105,6 +114,158 @@ public static class EquipmentTextureCatalog
                 new("entity/equipment/wings/elytra"),
             _ => null
         };
+    }
+
+    /// <summary>Loads the known equipment asset JSONs from the resource stack; static mapping remains the fallback.</summary>
+    public static void LoadAssets(ResourceManager resources) =>
+        Assets = EquipmentAssetRegistry.Load(resources, EquipmentAssetIds);
+
+    /// <summary>All equipment asset ids shipped by 26.3's client resource pack.</summary>
+    public static IReadOnlyList<Identifier> EquipmentAssetIds { get; } = BuildEquipmentAssetIds();
+
+    private static List<Identifier> BuildEquipmentAssetIds()
+    {
+        var ids = new List<Identifier>();
+        foreach (var material in new[] { "chainmail", "copper", "diamond", "gold", "iron", "leather", "netherite", "turtle_scute" })
+        {
+            ids.Add(new Identifier("minecraft", material));
+        }
+
+        ids.Add(new Identifier("minecraft", "saddle"));
+        ids.Add(new Identifier("minecraft", "armadillo_scute"));
+        ids.Add(new Identifier("minecraft", "elytra"));
+        ids.Add(new Identifier("minecraft", "trader_llama"));
+        ids.Add(new Identifier("minecraft", "trader_llama_baby"));
+        foreach (var color in CarpetColors)
+        {
+            ids.Add(new Identifier("minecraft", color + "_carpet"));
+            ids.Add(new Identifier("minecraft", color + "_harness"));
+        }
+
+        return ids;
+    }
+
+    private static EquipmentTexture? TryResolveFromAssets(EquipmentAssetKind kind, string itemPath, bool baby)
+    {
+        if (!TryGetAssetBinding(kind, itemPath, baby, out var assetId, out var layerType)
+            || Assets.Get(assetId) is not { } info)
+        {
+            return null;
+        }
+
+        var layers = info.GetLayers(layerType);
+        if (layers.Count == 0)
+        {
+            return null;
+        }
+
+        var primary = EquipmentAssetRegistry.EquipmentLayerPath(layerType, layers[0].Texture.Path);
+        var overlay = layers.Count > 1
+            ? EquipmentAssetRegistry.EquipmentLayerPath(layerType, layers[1].Texture.Path)
+            : null;
+        return new EquipmentTexture(primary, overlay);
+    }
+
+    private static bool TryGetAssetBinding(
+        EquipmentAssetKind kind,
+        string itemPath,
+        bool baby,
+        out Identifier assetId,
+        out EquipmentLayerType layerType)
+    {
+        assetId = default;
+        layerType = default;
+        switch (kind)
+        {
+            case EquipmentAssetKind.HumanoidArmor:
+            case EquipmentAssetKind.HumanoidLeggings:
+            case EquipmentAssetKind.HumanoidArmorBaby:
+                if (!TryArmorMaterial(itemPath, out var armorMaterial))
+                {
+                    return false;
+                }
+
+                assetId = new Identifier("minecraft", armorMaterial);
+                layerType = kind switch
+                {
+                    EquipmentAssetKind.HumanoidLeggings => EquipmentLayerType.HumanoidLeggings,
+                    EquipmentAssetKind.HumanoidArmorBaby => EquipmentLayerType.HumanoidBaby,
+                    _ => EquipmentLayerType.Humanoid
+                };
+                return true;
+
+            case EquipmentAssetKind.HorseBody:
+                if (!HorseBodyMaterials.TryGetValue(itemPath, out var horseMaterial))
+                {
+                    return false;
+                }
+
+                assetId = new Identifier("minecraft", horseMaterial);
+                layerType = EquipmentLayerType.HorseBody;
+                return true;
+
+            case EquipmentAssetKind.NautilusBody:
+                if (!NautilusBodyMaterials.TryGetValue(itemPath, out var nautilusMaterial))
+                {
+                    return false;
+                }
+
+                assetId = new Identifier("minecraft", nautilusMaterial);
+                layerType = EquipmentLayerType.NautilusBody;
+                return true;
+
+            case EquipmentAssetKind.LlamaBody when itemPath.EndsWith("_carpet", StringComparison.Ordinal):
+                assetId = new Identifier("minecraft", itemPath);
+                layerType = EquipmentLayerType.LlamaBody;
+                return true;
+
+            case EquipmentAssetKind.HappyGhastBody when itemPath.EndsWith("_harness", StringComparison.Ordinal):
+                assetId = new Identifier("minecraft", itemPath);
+                layerType = EquipmentLayerType.HappyGhastBody;
+                return true;
+
+            case EquipmentAssetKind.WolfBody when itemPath == "wolf_armor":
+                assetId = new Identifier("minecraft", "armadillo_scute");
+                layerType = EquipmentLayerType.WolfBody;
+                return true;
+
+            case EquipmentAssetKind.Elytra when itemPath == "elytra":
+                assetId = new Identifier("minecraft", "elytra");
+                layerType = EquipmentLayerType.Wings;
+                return true;
+
+            case EquipmentAssetKind.HorseSaddle:
+            case EquipmentAssetKind.DonkeySaddle:
+            case EquipmentAssetKind.MuleSaddle:
+            case EquipmentAssetKind.SkeletonHorseSaddle:
+            case EquipmentAssetKind.ZombieHorseSaddle:
+            case EquipmentAssetKind.CamelSaddle:
+            case EquipmentAssetKind.PigSaddle:
+            case EquipmentAssetKind.StriderSaddle:
+            case EquipmentAssetKind.NautilusSaddle:
+                if (itemPath != "saddle")
+                {
+                    return false;
+                }
+
+                assetId = new Identifier("minecraft", "saddle");
+                layerType = kind switch
+                {
+                    EquipmentAssetKind.HorseSaddle => EquipmentLayerType.HorseSaddle,
+                    EquipmentAssetKind.DonkeySaddle => EquipmentLayerType.DonkeySaddle,
+                    EquipmentAssetKind.MuleSaddle => EquipmentLayerType.MuleSaddle,
+                    EquipmentAssetKind.SkeletonHorseSaddle => EquipmentLayerType.SkeletonHorseSaddle,
+                    EquipmentAssetKind.ZombieHorseSaddle => EquipmentLayerType.ZombieHorseSaddle,
+                    EquipmentAssetKind.CamelSaddle => EquipmentLayerType.CamelSaddle,
+                    EquipmentAssetKind.PigSaddle => EquipmentLayerType.PigSaddle,
+                    EquipmentAssetKind.StriderSaddle => EquipmentLayerType.StriderSaddle,
+                    _ => EquipmentLayerType.NautilusSaddle
+                };
+                return true;
+
+            default:
+                return false;
+        }
     }
 
     private static readonly string[] ArmorSuffixes = ["_helmet", "_chestplate", "_leggings", "_boots"];

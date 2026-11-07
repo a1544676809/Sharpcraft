@@ -25,6 +25,7 @@ public sealed class EntitySkinLibrary
     {
         ArgumentNullException.ThrowIfNull(resources);
         var images = new Dictionary<string, TextureData>(StringComparer.Ordinal);
+        EquipmentTextureCatalog.LoadAssets(resources);
         foreach (var definition in EntityModelResolver.Definitions)
         {
             foreach (var path in definition.TexturePaths)

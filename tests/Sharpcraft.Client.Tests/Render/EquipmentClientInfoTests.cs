@@ -4,6 +4,7 @@
 using System.Text;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Common.Identifiers;
+using Sharpcraft.Common.Registries;
 using Xunit;
 
 namespace Sharpcraft.Client.Tests.Render;
@@ -92,6 +93,43 @@ public sealed class EquipmentClientInfoTests
         Assert.Equal(
             "assets/minecraft/equipment/iron.json",
             ResourcePath.FilePath(ResourceKind.Equipment, new Identifier("minecraft", "iron")));
+    }
+
+    [Fact]
+    public void ResolvesTexturesFromParsedAssetsBeforeStaticFallback()
+    {
+        const string json = """
+            {
+              "layers": {
+                "humanoid": [{ "texture": "minecraft:iron" }],
+                "horse_saddle": [{ "texture": "minecraft:saddle" }]
+              }
+            }
+            """;
+        var info = EquipmentClientInfo.Parse(Encoding.UTF8.GetBytes(json));
+        var previous = EquipmentTextureCatalog.Assets;
+        EquipmentTextureCatalog.Assets = EquipmentAssetRegistry.From(
+            new Dictionary<Identifier, EquipmentClientInfo>
+            {
+                [new Identifier("minecraft", "iron")] = info,
+                [new Identifier("minecraft", "saddle")] = info
+            });
+        try
+        {
+            var armor = EquipmentTextureCatalog.Resolve(
+                EquipmentAssetKind.HumanoidArmor,
+                new ItemInfo(new Identifier("minecraft", "iron_helmet")));
+            Assert.Equal("entity/equipment/humanoid/iron", armor?.PrimaryPath);
+
+            var saddle = EquipmentTextureCatalog.Resolve(
+                EquipmentAssetKind.HorseSaddle,
+                new ItemInfo(new Identifier("minecraft", "saddle")));
+            Assert.Equal("entity/equipment/horse_saddle/saddle", saddle?.PrimaryPath);
+        }
+        finally
+        {
+            EquipmentTextureCatalog.Assets = previous;
+        }
     }
 
     [Fact]
