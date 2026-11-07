@@ -84,12 +84,12 @@ Z-fighting 与 equipment clearance 不混入本任务；先走诊断报告，规
 - 尚未把解析结果接入 `EquipmentTextureCatalog`/渲染状态；静态 catalog 仍是当前绘制来源，后续需要 item→equipment asset
   绑定与真实 ResourceManager 加载。
 
-### T-749 EntityTracker T-668 复核（P1）
+### T-749 EntityTracker T-668 复核（P1，已完成回归核验）
 
-- `StepInterpolation` 同帧双重 Advance；
-- `TryReadVecDelta` 多步正负抵消；
-- `PositionPath.Stepped` 时长计算；
-- 补最小复现与回归用例后再判定是否修复。
+- 已补 `ASteppedDeltaKeepsOppositeSignedSteps`：正负 fixed-point delta 不被净和吞掉；
+- 已补 `SteppedMoveDoesNotCollapseOppositeSignedDeltas`：`ApplyMove` 逐 step 走完正负位移；
+- 已补 `SteppedMoveConsumesExactlyItsTickSpan`：step 的 ticks 只消耗一次；
+- 当前实现通过三组回归，未发现 T-668 所述的生产缺陷；保留测试作为防回归。
 
 ## 4. 执行约束
 

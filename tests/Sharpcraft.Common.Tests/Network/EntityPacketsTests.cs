@@ -155,6 +155,32 @@ public sealed class EntityPacketsTests
     }
 
     [Fact]
+    public void ASteppedDeltaKeepsOppositeSignedSteps()
+    {
+        Span<byte> buffer = stackalloc byte[48];
+        var writer = new PayloadWriter(buffer);
+        writer.WriteVarInt(11);
+        writer.WriteVarInt((2 << 1) | 1); // onGround, two steps
+        writer.WriteVarInt(1);
+        writer.WriteUnsignedShort(2048);
+        writer.WriteUnsignedShort(0);
+        writer.WriteUnsignedShort(0);
+        writer.WriteVarInt(1);
+        writer.WriteUnsignedShort(unchecked((ushort)(short)-2048));
+        writer.WriteUnsignedShort(0);
+        writer.WriteUnsignedShort(0);
+
+        var status = EntityPackets.TryReadMoveEntity(buffer[..writer.Position], hasPosition: true, hasRotation: false, out var move);
+
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.Equal(0.0, move.DeltaX, 4);
+        Assert.NotNull(move.Steps);
+        Assert.Equal(2, move.Steps!.Count);
+        Assert.Equal(2048, move.Steps[0].DeltaX);
+        Assert.Equal(-2048, move.Steps[1].DeltaX);
+    }
+
+    [Fact]
     public void RotateHeadParsesTheAngleByte()
     {
         Span<byte> buffer = stackalloc byte[8];

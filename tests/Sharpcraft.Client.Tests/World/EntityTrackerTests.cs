@@ -195,6 +195,62 @@ public sealed class EntityTrackerTests
     }
 
     [Fact]
+    public void SteppedMoveDoesNotCollapseOppositeSignedDeltas()
+    {
+        var tracker = new EntityTracker();
+        tracker.Add(Entity(12, x: 0, y: 0, z: 0));
+        tracker.ApplyMove(new EntityMove(
+            12,
+            0,
+            0,
+            0,
+            HasPosition: true,
+            0f,
+            0f,
+            HasRotation: false,
+            OnGround: true,
+            Ticks: 2,
+            Steps:
+            [
+                new VecDeltaStep(4096, 0, 0, 1),
+                new VecDeltaStep(-4096, 0, 0, 1)
+            ]));
+
+        Assert.True(tracker.TryGet(12, out var entity));
+        Assert.Equal(0.0, entity!.TargetX, 4);
+        tracker.Tick();
+        Assert.True(entity.X > 0.0, "the positive step should be visible before the negative step");
+        tracker.Tick();
+        Assert.Equal(0.0, entity.X, 4);
+    }
+
+    [Fact]
+    public void SteppedMoveConsumesExactlyItsTickSpan()
+    {
+        var tracker = new EntityTracker();
+        tracker.Add(Entity(13, x: 0, y: 0, z: 0));
+        tracker.ApplyMove(new EntityMove(
+            13,
+            1,
+            0,
+            0,
+            HasPosition: true,
+            0f,
+            0f,
+            HasRotation: false,
+            OnGround: true,
+            Ticks: 3,
+            Steps: [new VecDeltaStep(4096, 0, 0, 3)]));
+
+        Assert.True(tracker.TryGet(13, out var entity));
+        tracker.Tick();
+        tracker.Tick();
+        tracker.Tick();
+        Assert.Equal(1.0, entity!.X, 4);
+        Assert.Equal(0, entity.LerpSteps);
+    }
+
+    [Fact]
     public void InterpolationDoesNotAllocateOnceWarm()
     {
         var tracker = new EntityTracker();
