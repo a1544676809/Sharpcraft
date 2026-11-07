@@ -129,13 +129,14 @@ public sealed class PlayerSkinCache
 
     private LoadedSkin? Load(PlayerSkinTextures textures)
     {
-        var body = textures.Body is { } bodyTexture ? LoadTexture(bodyTexture) : null;
+        // Only SKIN/body textures go through the reference legacy-skin pass; cape and elytra are kept as downloaded.
+        var body = textures.Body is { } bodyTexture ? LoadTexture(bodyTexture, processLegacySkin: true) : null;
         var cape = textures.Cape is { } capeTexture ? LoadTexture(capeTexture) : null;
         var elytra = textures.Elytra is { } elytraTexture ? LoadTexture(elytraTexture) : null;
         return new LoadedSkin(textures, body, cape, elytra);
     }
 
-    private TextureData? LoadTexture(PlayerSkinTexture texture)
+    private TextureData? LoadTexture(PlayerSkinTexture texture, bool processLegacySkin = false)
     {
         var path = texture.Path;
         var slash = path.LastIndexOf('/');
@@ -181,9 +182,130 @@ public sealed class PlayerSkinCache
         }
 
         var image = PngDecoder.Decode(contents);
-        return image.Width > 0 && image.Height > 0
-            ? new TextureData(image.Width, image.Height, image.Pixels)
-            : null;
+        if (image.Width <= 0 || image.Height <= 0)
+        {
+            return null;
+        }
+
+        if (processLegacySkin)
+        {
+            var converted = ProcessLegacySkin(image);
+            if (converted is null)
+            {
+                return null;
+            }
+
+            image = converted;
+        }
+
+        return new TextureData(image.Width, image.Height, image.Pixels);
+    }
+
+    /// <summary>
+    /// Reproduces the reference legacy-skin pass for SKIN/body textures: 64×32 is expanded to 64×64, the lower
+    /// leg/arm regions are synthesised, and the head/body/hat alpha regions are normalised. Unsupported sizes return
+    /// null so the caller drops the texture instead of registering a malformed one (docs/modules/entity-equipment.md §13).
+    /// </summary>
+    private static RgbaImage? ProcessLegacySkin(RgbaImage image)
+    {
+        if (image.Width != 64 || (image.Height != 32 && image.Height != 64))
+        {
+            return null;
+        }
+
+        var isLegacy = image.Height == 32;
+        byte[] pixels;
+        if (isLegacy)
+        {
+            // The reference allocates a zeroed 64×64 image and copyFrom copies only the source's first 64*32*4 bytes;
+            // fillRect(0,32,64,32,0) is already satisfied by the zeroed tail.
+            pixels = new byte[64 * 64 * 4];
+            Array.Copy(image.Pixels, pixels, image.Pixels.Length);
+
+            CopyRect(pixels, 4, 16, 16, 32, 4, 4);
+            CopyRect(pixels, 8, 16, 16, 32, 4, 4);
+            CopyRect(pixels, 0, 20, 24, 32, 4, 12);
+            CopyRect(pixels, 4, 20, 16, 32, 4, 12);
+            CopyRect(pixels, 8, 20, 8, 32, 4, 12);
+            CopyRect(pixels, 12, 20, 16, 32, 4, 12);
+            CopyRect(pixels, 44, 16, -8, 32, 4, 4);
+            CopyRect(pixels, 48, 16, -8, 32, 4, 4);
+            CopyRect(pixels, 40, 20, 0, 32, 4, 12);
+            CopyRect(pixels, 44, 20, -8, 32, 4, 12);
+            CopyRect(pixels, 48, 20, -16, 32, 4, 12);
+            CopyRect(pixels, 52, 20, -8, 32, 4, 12);
+        }
+        else
+        {
+            pixels = (byte[])image.Pixels.Clone();
+        }
+
+        SetNoAlpha(pixels, 0, 0, 32, 16);
+        if (isLegacy)
+        {
+            DoNotchTransparencyHack(pixels, 32, 0, 64, 32);
+        }
+
+        SetNoAlpha(pixels, 0, 16, 64, 32);
+        SetNoAlpha(pixels, 16, 48, 48, 64);
+        return new RgbaImage(64, 64, pixels);
+    }
+
+    /// <summary>
+    /// Reference <c>NativeImage.copyRect(startX, startY, offsetX, offsetY, sizeX, sizeY, swapX, swapY)</c>: the third
+    /// and fourth arguments are offsets from the source origin, not absolute coordinates. All legacy-skin copies use
+    /// swapX=true / swapY=false and copy the raw four-channel pixel, so no channel reordering is needed.
+    /// </summary>
+    private static void CopyRect(byte[] pixels, int startX, int startY, int offsetX, int offsetY, int sizeX, int sizeY)
+    {
+        var targetX = startX + offsetX;
+        var targetY = startY + offsetY;
+        for (var y = 0; y < sizeY; y++)
+        {
+            for (var x = 0; x < sizeX; x++)
+            {
+                var dx = sizeX - 1 - x;
+                var source = (((startY + y) * 64) + startX + x) * 4;
+                var target = (((targetY + y) * 64) + targetX + dx) * 4;
+                for (var channel = 0; channel < 4; channel++)
+                {
+                    pixels[target + channel] = pixels[source + channel];
+                }
+            }
+        }
+    }
+
+    private static void DoNotchTransparencyHack(byte[] pixels, int x0, int y0, int x1, int y1)
+    {
+        for (var y = y0; y < y1; y++)
+        {
+            for (var x = x0; x < x1; x++)
+            {
+                if (pixels[(((y * 64) + x) * 4) + 3] < 128)
+                {
+                    return;
+                }
+            }
+        }
+
+        for (var y = y0; y < y1; y++)
+        {
+            for (var x = x0; x < x1; x++)
+            {
+                pixels[(((y * 64) + x) * 4) + 3] = 0;
+            }
+        }
+    }
+
+    private static void SetNoAlpha(byte[] pixels, int x0, int y0, int x1, int y1)
+    {
+        for (var y = y0; y < y1; y++)
+        {
+            for (var x = x0; x < x1; x++)
+            {
+                pixels[(((y * 64) + x) * 4) + 3] = 255;
+            }
+        }
     }
 
     private static byte[]? Download(Uri uri)

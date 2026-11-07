@@ -200,3 +200,34 @@
 - slim 护甲仍复用 `HumanoidArmorTrees` 的 wide 玩家四槽树（原版用 `PLAYER_SLIM_ARMOR`）；仅影响窄臂玩家穿戴护甲时的外观，登记为后续收敛项。
 - 纹理属性签名校验依赖 `com.mojang.authlib` 的 `unpackTextures` 与 Mojang 公钥，当前分析工作区与 `Sharpcraft.Auth` 均不提供，按原则 4.1 登记为阻塞，不伪造校验。
 - `PlayerSkinCache`/`EntitySkinLibrary` 的档案下载与 atlas 注册未改动。
+
+## 13. 旧版 64×32 皮肤转换（T-752 补全）
+
+### 13.1 原版 26.3 源码映射表
+
+| 本模块概念 / 方法 | 原版类与方法路径（`ref://...`） | 精确常量 / 公式 / 树结构 | 位序 / 正负号 / 色彩空间约定 | 缺省 / 越界回退值 |
+| --- | --- | --- | --- | --- |
+| 转换入口 | `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/texture/SkinTextureDownloader.java#downloadAndRegisterSkin` | `processLegacySkin` 仅当调用方传入的 `processLegacySkin` 为真时执行；下载器只对 SKIN/body 传 true | — | cape/elytra 不转换；其它尺寸丢弃 |
+| 尺寸判定 | 同上 `#processLegacySkin` | `width == 64 && (height == 32 || height == 64)`；`isLegacy = height == 32` | — | 不满足则丢弃纹理并报错 |
+| 扩图 / 清空 | 同上，`ref://mc-26.3-analysis/src/com/mojang/blaze3d/platform/NativeImage.java#copyFrom` / `#fillRect` | 新建 64×64 清零图；`copyFrom` 在宽度相同时复制源前 `64*32*4` 字节（上半 32 行）；`fillRect(0,32,64,32,0)` 清空下半 32 行 | 行主序 RGBA8；仓库 `RgbaImage.Pixels` 每像素 4 字节、alpha 为第 4 字节 | — |
+| 区域复制 | `#copyRect(startX,startY,offsetX,offsetY,sizeX,sizeY,swapX,swapY)` | 目标原点 = `(startX+offsetX, startY+offsetY)`；`swapX` 时 `dx=sizeX-1-x`；12 组依次为 `(4,16,16,32,4,4)`、`(8,16,16,32,4,4)`、`(0,20,24,32,4,12)`、`(4,20,16,32,4,12)`、`(8,20,8,32,4,12)`、`(12,20,16,32,4,12)`、`(44,16,-8,32,4,4)`、`(48,16,-8,32,4,4)`、`(40,20,0,32,4,12)`、`(44,20,-8,32,4,12)`、`(48,20,-16,32,4,12)`、`(52,20,-8,32,4,12)`，全部 `swapX=true, swapY=false` | 源 y=16/20，目标 y=48/52；复制的是原始 4 字节，不换通道 | — |
+| alpha 修正 | 同上 `#setNoAlpha` / `#doNotchTransparencyHack`，`ref://mc-26.3-analysis/src/net/minecraft/util/ARGB.java#opaque` / `#transparent` | `setNoAlpha` = alpha 置 255，依次作用于 `(0,0,32,16)`、`(0,16,64,32)`、`(16,48,48,64)`；`doNotchTransparencyHack(32,0,64,32)` 仅 legacy：若该区所有像素 alpha≥128，则整区 alpha 置 0 | `ARGB.alpha = color >>> 24`（最高字节），`opaque = color|0xFF000000`，`transparent = color&0xFFFFFF` | 区内任一 alpha<128 则整区不改 |
+
+### 13.2 真值向量（Golden Vectors）
+
+采样来源：上述 `SkinTextureDownloader` / `NativeImage` / `ARGB` 的精确常量静态推导；测试落点：
+`tests/Sharpcraft.Client.Tests/Render/PlayerSkinCacheTests.cs`（合成 64×32 PNG，离线）。
+
+1. **尺寸**：64×32 输入 → 64×64 输出；上半 32 行的 RGB 逐值保持，alpha 会按 13.1 的 `setNoAlpha`/Notch hack 规则修正（不保证逐字节不变）。
+2. **下半部**：y∈[32,48) 在复制前为全 0（透明）；12 组 `copyRect` 把源 y∈[16,32) 的腿/臂区域写到 y∈[48,64)，y∈[32,48) 保持透明。
+3. **首两组复制**：`(4,16,16,32,4,4,true,false)` 目标 `(20,48)` 水平镜像；`(8,16,16,32,4,4,true,false)` 目标 `(24,48)`；源像素在目标处左右翻转后逐值相同。
+4. **不透明区**：`(0,0,32,16)`、`(0,16,64,32)`、`(16,48,48,64)` 三区所有像素 alpha=255。
+5. **Notch hack**：当 `(32,0,64,32)` 全不透明时该区 alpha 全为 0；只要有一个 alpha<128 则该区保持原样。
+6. **64×64**：不扩图、不复制，但仍应用 3 组 `setNoAlpha`；cape/elytra 的下载结果完全不经过转换器。
+7. **错误尺寸**：非 64 宽或高度既非 32 也非 64 时转换失败并回退（不注册路径），与参考丢弃行为一致。
+
+### 13.3 当前实现与已知限制
+
+- 转换在 `PlayerSkinCache.LoadTexture` 的 body/SKIN 分支内完成（下载线程做 IO/PNG 解码与像素处理）；`EntitySkinLibrary` 仍按 64×64 消费，cape/elytra 不调用转换。
+- `TextureData` 与 atlas 注册仍使用 `RgbaImage` 的 RGBA 字节数组；不引入第三方图像库、不访问网络。
+- `processLegacySkin` 的 `url` 参数只用于原版报错信息，本实现不做 URL 过滤；不复制任何反编译代码或资产进仓库。
