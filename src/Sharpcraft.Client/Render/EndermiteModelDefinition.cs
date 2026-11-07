@@ -14,11 +14,11 @@ public static class EndermiteModelDefinition
 
     private static readonly VanillaMeshDefinition EndermiteMesh = BuildEndermiteMesh();
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "endermite",
         64,
         32,
-        [.. VanillaMeshBake.Bake(EndermiteMesh, 0, 0)],
+        EndermiteMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/endermite/endermite");
 

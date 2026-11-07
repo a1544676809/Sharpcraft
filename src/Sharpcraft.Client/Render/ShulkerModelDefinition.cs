@@ -28,11 +28,11 @@ public static class ShulkerModelDefinition
         "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"
     ];
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "shulker",
         64,
         64,
-        Parts,
+        ShulkerMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/shulker/shulker");
 
@@ -49,7 +49,8 @@ public static class ShulkerModelDefinition
                 64,
                 Parts,
                 PlayerModelDefinition.DefaultFaceTransforms,
-                "entity/shulker/shulker_" + key);
+                "entity/shulker/shulker_" + key,
+                compiled: Definition.Compiled);
         }
 
         return variants;

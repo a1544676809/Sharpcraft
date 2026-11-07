@@ -14,11 +14,11 @@ public static class CreeperModelDefinition
 
     private static readonly VanillaMeshDefinition CreeperMesh = BuildCreeperMesh();
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "creeper",
         64,
         32,
-        [.. VanillaMeshBake.Bake(CreeperMesh, 0, 0)],
+        CreeperMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/creeper/creeper");
 

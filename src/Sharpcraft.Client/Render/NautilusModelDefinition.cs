@@ -15,11 +15,11 @@ public static class NautilusModelDefinition
 
     private static readonly VanillaMeshDefinition NautilusMesh = BuildNautilusMesh();
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "nautilus",
         128,
         128,
-        [.. VanillaMeshBake.Bake(NautilusMesh, 0, 0)],
+        NautilusMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/nautilus/nautilus");
 

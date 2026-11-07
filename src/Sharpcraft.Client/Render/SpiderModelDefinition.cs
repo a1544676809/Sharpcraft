@@ -15,13 +15,14 @@ public static class SpiderModelDefinition
 
     private static readonly VanillaMeshDefinition SpiderMesh = BuildSpiderMesh();
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "spider",
         64,
         32,
-        [.. VanillaMeshBake.Bake(SpiderMesh, 0, 0)],
+        SpiderMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/spider/spider", 1f, "entity/spider/spider_eyes");
+        "entity/spider/spider",
+        emissiveTexturePath: "entity/spider/spider_eyes");
 
     private static VanillaMeshDefinition BuildSpiderMesh()
     {

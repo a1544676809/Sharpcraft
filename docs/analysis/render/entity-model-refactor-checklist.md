@@ -162,3 +162,15 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - Allay；
 - Bee（状态纹理 selector）；
 - Vex（充能纹理 selector）。
+
+### 2026-11-07 — T-717 arthropod/aquatic batch
+
+通过 `FromTree` 迁移：
+
+- Creeper；
+- Spider（保留 emissive eyes）；
+- Endermite；
+- Shulker（全部 dye 变体共享 compiled tree）；
+- Squid（GlowSquid 共享 compiled tree）；
+- Nautilus；
+- CaveSpider 复用 Spider compiled tree，并保留模型级 `Scale=0.7`。

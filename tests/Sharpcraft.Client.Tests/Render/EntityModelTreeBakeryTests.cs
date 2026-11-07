@@ -90,6 +90,14 @@ public sealed class EntityModelTreeBakeryTests
         Assert.NotNull(AllayModelDefinition.Definition.Compiled);
         Assert.NotNull(BeeModelDefinition.Definition.Compiled);
         Assert.NotNull(VexModelDefinition.Definition.Compiled);
+        Assert.NotNull(CreeperModelDefinition.Definition.Compiled);
+        Assert.NotNull(SpiderModelDefinition.Definition.Compiled);
+        Assert.NotNull(EndermiteModelDefinition.Definition.Compiled);
+        Assert.NotNull(ShulkerModelDefinition.Definition.Compiled);
+        Assert.NotNull(ShulkerModelDefinition.Variants["blue"].Compiled);
+        Assert.NotNull(SquidModelDefinition.Definition.Compiled);
+        Assert.NotNull(SquidModelDefinition.GlowSquid.Compiled);
+        Assert.NotNull(NautilusModelDefinition.Definition.Compiled);
     }
 
     [Fact]

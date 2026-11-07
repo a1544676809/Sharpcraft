@@ -17,11 +17,11 @@ public static class SquidModelDefinition
 
     private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(SquidMesh, 0, 0)];
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "squid",
         64,
         32,
-        Parts,
+        SquidMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/squid/squid");
 
@@ -31,7 +31,8 @@ public static class SquidModelDefinition
         32,
         Parts,
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/squid/glow_squid");
+        "entity/squid/glow_squid",
+        compiled: Definition.Compiled);
 
     private static VanillaMeshDefinition BuildSquidMesh()
     {

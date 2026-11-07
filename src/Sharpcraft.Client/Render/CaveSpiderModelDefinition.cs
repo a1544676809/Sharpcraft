@@ -16,5 +16,6 @@ public static class CaveSpiderModelDefinition
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/spider/cave_spider",
         0.7f,
-        "entity/spider/spider_eyes");
+        "entity/spider/spider_eyes",
+        compiled: SpiderModelDefinition.Definition.Compiled);
 }
