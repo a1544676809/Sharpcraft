@@ -22,6 +22,8 @@ public static class BreezeModelDefinition
     /// <summary>Declarative DSL tree for the body and wind-shell parts (T-679).</summary>
     private static readonly VanillaMeshDefinition BreezeMesh = BuildBreezeMesh();
 
+    internal static VanillaMeshDefinition Mesh => BreezeMesh;
+
     public static readonly EntityModelDefinition Definition = new(
         "breeze",
         32,
@@ -47,28 +49,22 @@ public static class BreezeModelDefinition
         rods.AddOrReplaceChild("rod_3", VanillaPartPose.OffsetAndRotation(0f, -3f, -3f, 0.3927f, 0f, 0f),
             new VanillaCubeDefinition("rod_3", 0, 17, -1f, 0f, -3f, 2f, 8f, 2f));
         var head = body.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 4f, 0f),
-            new VanillaCubeDefinition("head", 4, 24, -5f, -5f, -4.2f, 10f, 3f, 4f));
-        head.AddOrReplaceChild("head_cube", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("head", 4, 24, -5f, -5f, -4.2f, 10f, 3f, 4f),
             new VanillaCubeDefinition("head_cube", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f));
         var eyes = head.AddOrReplaceChild("eyes", VanillaPartPose.Zero,
-            new VanillaCubeDefinition("eyes", 4, 24, -5f, -5f, -4.2f, 10f, 3f, 4f, EmissiveOnly: true));
-        eyes.AddOrReplaceChild("eyes_cube", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("eyes", 4, 24, -5f, -5f, -4.2f, 10f, 3f, 4f, EmissiveOnly: true),
             new VanillaCubeDefinition("eyes_cube", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f, EmissiveOnly: true));
         var windBody = root.AddOrReplaceChild("wind_body", VanillaPartPose.Zero,
             new VanillaCubeDefinition("wind_body", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f));
         var windBottom = windBody.AddOrReplaceChild("wind_bottom", VanillaPartPose.Offset(0f, 24f, 0f),
             WindCube("wind_bottom", 1, 83, -2.5f, -7f, -2.5f, 5f, 7f, 5f));
         var windMid = windBottom.AddOrReplaceChild("wind_mid", VanillaPartPose.Offset(0f, -7f, 0f),
-            WindCube("wind_mid", 74, 28, -6f, -6f, -6f, 12f, 6f, 12f));
-        windMid.AddOrReplaceChild("wind_mid_mid", VanillaPartPose.Zero,
-            WindCube("wind_mid_mid", 78, 32, -4f, -6f, -4f, 8f, 6f, 8f));
-        windMid.AddOrReplaceChild("wind_mid_inner", VanillaPartPose.Zero,
+            WindCube("wind_mid", 74, 28, -6f, -6f, -6f, 12f, 6f, 12f),
+            WindCube("wind_mid_mid", 78, 32, -4f, -6f, -4f, 8f, 6f, 8f),
             WindCube("wind_mid_inner", 49, 71, -2.5f, -6f, -2.5f, 5f, 6f, 5f));
         var windTop = windMid.AddOrReplaceChild("wind_top", VanillaPartPose.Offset(0f, -6f, 0f),
-            WindCube("wind_top", 0, 0, -9f, -8f, -9f, 18f, 8f, 18f));
-        windTop.AddOrReplaceChild("wind_top_mid", VanillaPartPose.Zero,
-            WindCube("wind_top_mid", 6, 6, -6f, -8f, -6f, 12f, 8f, 12f));
-        windTop.AddOrReplaceChild("wind_top_inner", VanillaPartPose.Zero,
+            WindCube("wind_top", 0, 0, -9f, -8f, -9f, 18f, 8f, 18f),
+            WindCube("wind_top_mid", 6, 6, -6f, -8f, -6f, 12f, 8f, 12f),
             WindCube("wind_top_inner", 105, 57, -2.5f, -8f, -2.5f, 5f, 8f, 5f));
         return new VanillaMeshDefinition(root);
     }

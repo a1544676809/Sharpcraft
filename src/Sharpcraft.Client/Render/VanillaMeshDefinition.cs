@@ -3,6 +3,7 @@
 
 using Sharpcraft.Client.World;
 using Sharpcraft.Framework.Rendering;
+using System.Numerics;
 
 namespace Sharpcraft.Client.Render;
 
@@ -54,7 +55,8 @@ public readonly record struct VanillaCubeDefinition(
     int TextureWidth = 0,
     int TextureHeight = 0,
     bool MirrorX = true,
-    Func<EntityRenderState, bool>? VisibleWhen = null);
+    Func<EntityRenderState, bool>? VisibleWhen = null,
+    Vector3? GrowXyz = null);
 
 /// <summary>
 /// One node of the declarative model tree. Direct children of <c>VanillaMeshDefinition.Root</c> are root parts;
@@ -212,6 +214,7 @@ static partial class VanillaMeshBake
         int textureWidth,
         int textureHeight)
     {
+        var first = true;
         foreach (var cube in part.Cubes)
         {
             if (!producedNames.Add(cube.Name))
@@ -219,26 +222,51 @@ static partial class VanillaMeshBake
                 throw new InvalidOperationException($"Duplicate part name '{cube.Name}' while baking a VanillaMeshDefinition; part names must be unique.");
             }
 
+            if (part.Cubes.Count > 1 && !string.Equals(part.Cubes[0].Name, part.Name, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"A multi-cube part '{part.Name}' must name its first cube after the part.");
+            }
+
             var effectiveTexturePath = cube.TexturePath ?? texturePath;
-            EntityModelPart baked = parentName is null
-                ? BakeRoot(
-                    cube.Name,
-                    part.Pose.X, part.Pose.Y, part.Pose.Z,
-                    cube.MinX, cube.MinY, cube.MinZ,
-                    cube.Width, cube.Height, cube.Depth,
-                    cube.TextureX, cube.TextureY,
-                    mirror: cube.Mirror, mirrorX: cube.MirrorX, overlays: cube.Overlays, modelHeight: modelHeight,
-                    rotationX: part.Pose.RotationX, rotationY: part.Pose.RotationY, rotationZ: part.Pose.RotationZ,
-                    texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind)
-                : BakeChild(
-                    cube.Name, parentName,
-                    part.Pose.X, part.Pose.Y, part.Pose.Z,
+            EntityModelPart baked;
+            if (first)
+            {
+                baked = parentName is null
+                    ? BakeRoot(
+                        cube.Name,
+                        part.Pose.X, part.Pose.Y, part.Pose.Z,
+                        cube.MinX, cube.MinY, cube.MinZ,
+                        cube.Width, cube.Height, cube.Depth,
+                        cube.TextureX, cube.TextureY,
+                        mirror: cube.Mirror, mirrorX: cube.MirrorX, overlays: cube.Overlays, modelHeight: modelHeight,
+                        rotationX: part.Pose.RotationX, rotationY: part.Pose.RotationY, rotationZ: part.Pose.RotationZ,
+                        texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind)
+                    : BakeChild(
+                        cube.Name, parentName,
+                        part.Pose.X, part.Pose.Y, part.Pose.Z,
+                        cube.MinX, cube.MinY, cube.MinZ,
+                        cube.Width, cube.Height, cube.Depth,
+                        cube.TextureX, cube.TextureY,
+                        mirror: cube.Mirror, overlays: cube.Overlays,
+                        rotationX: part.Pose.RotationX, rotationY: part.Pose.RotationY, rotationZ: part.Pose.RotationZ,
+                        texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind);
+            }
+            else
+            {
+                // Additional cubes share the part pose. The flat runtime represents them as zero-pivot children of
+                // the first cube/part node, so the parent chain applies the shared pose exactly once.
+                baked = BakeChild(
+                    cube.Name, part.Name,
+                    0f, 0f, 0f,
                     cube.MinX, cube.MinY, cube.MinZ,
                     cube.Width, cube.Height, cube.Depth,
                     cube.TextureX, cube.TextureY,
                     mirror: cube.Mirror, overlays: cube.Overlays,
-                    rotationX: part.Pose.RotationX, rotationY: part.Pose.RotationY, rotationZ: part.Pose.RotationZ,
+                    rotationX: 0f, rotationY: 0f, rotationZ: 0f,
                     texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind);
+            }
+
+            first = false;
 
             if (cube.PoseSource is not null)
             {

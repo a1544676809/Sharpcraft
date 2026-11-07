@@ -90,7 +90,8 @@ updated: 2026-11-06
 48. **T-710 实体模型与原版差距总表（2026-11-07）**：新增 `entity-model-parity-gap.md`，汇总模型定义/烘焙、运行时/动画、装备/附加层、测试差距；明确装备也采用“独立槽位树/基础树派生树 + 集中烘焙”，并将 M1–M12/R1–R6/E1–E12/T1–T4 作为后续返工边界。
 49. **T-711 待验证问题核对（2026-11-07）**：确认原版 HashMap 顺序不等于插入顺序（Breeze rods 等）、PartPose 三轴 scale 使用范围、Armadillo 零组节点可见性遗漏、装备层固定 kind 顺序差异，以及 EquipmentClientInfo 19 种 layer/染料/trim/玩家纹理字段。
 50. **T-712 实体模型改造点清单（2026-11-07）**：新增 `entity-model-refactor-checklist.md`，将差距拆为 RF-01..RF-28（DSL、节点表/bakery、Mesher、装备/附加层、动画、渲染层、facts/Golden/门禁与清理），并给出依赖顺序与禁止返工路径。
-51. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
+51. **T-713 树烘焙基础 + Breeze 多 cube 迁移（2026-11-07）**：新增 `EntityModelCube`/`EntityModelPartNode`/`CompiledEntityModel`/`VanillaMeshBakery`；Breeze DSL 改为原版 multi-cube part 结构；测试覆盖 Breeze 11 part/14 cube 与 Armadillo 零 cube 组节点。
+52. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
 48. **T-648..T-650 / T-651..T-653 渲染与解耦（2026-11-05~06）**：Elytra 翼盒与 UV 原版等价、双翼镜像全宽；流体面剔除修复（玻璃后水可见）；云 OIT depth-bounds 写深度；`Sharpcraft.Assets` 分层 + 启动器/客户端解耦（ADR-0026/0027）。
 49. **实体模型/动画批量落地（2026-11-02~05）**：全部 baby 模型族、villager/zombie/horse 变体、cat/wolf 项圈、panda 基因、大量动画 provider 与测试。
 50. **协议与渲染长尾（2026-11-01~05）**：Play Clientbound 覆盖审计 + P0/P1 包批次（T-642..T-647）；反相 Z 迁移；参考 OIT 云/流体；天空盘逐像素近似。

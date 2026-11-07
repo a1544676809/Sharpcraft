@@ -99,3 +99,23 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - 不允许在 `EquipmentModelParts` 里继续堆额外盒子来模拟完整装备树；
 - 不允许把 `EquipmentClientInfo` 的全量资产解析混入本轮树迁移；
 - 不允许在未补 facts 前把任何模型标记为“原版等效”。
+
+## 9. 当前进度
+
+### 2026-11-07 — RF-07..RF-09 基础落地（T-713）
+
+已落地：
+
+- `EntityModelCube`：多 cube 的纯数据类型；
+- `EntityModelPartNode`：节点拥有 cube 列表 + children，零 cube 组节点可保留；
+- `CompiledEntityModel`：root + pre-order part/cube 快照；
+- `VanillaMeshBakery`：从 `VanillaMeshDefinition` 树构建结构模型；
+- Breeze DSL 已改为原版结构：`head`/`eyes`/`wind_mid`/`wind_top` 为 multi-cube part；
+- `EntityModelTreeBakeryTests`：Breeze 11 part/14 cube、Armadillo 14 part 且 `head` 零 cube 组节点保留。
+
+未完成（下一刀）：
+
+- RF-10：`EntityModelDefinition` / resolver 接入 `CompiledEntityModel`；
+- RF-11/RF-12：Mesher 按节点/cube range 遍历，移除 `PartFrame` 名字查找；
+- RF-03/RF-04：`GrowXyz`/`PartPose` scale 的完整 bake；
+- RF-14..：装备树迁移。

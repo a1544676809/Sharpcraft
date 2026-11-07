@@ -22,6 +22,8 @@ public static class ArmadilloModelDefinition
 
     private static readonly VanillaMeshDefinition ArmadilloMesh = BuildArmadilloMesh();
 
+    internal static VanillaMeshDefinition Mesh => ArmadilloMesh;
+
     public static readonly EntityModelDefinition Definition = new(
         "armadillo",
         64,
