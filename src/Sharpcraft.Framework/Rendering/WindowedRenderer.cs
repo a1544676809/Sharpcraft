@@ -1190,42 +1190,8 @@ public static class WindowedRenderer
             ],
             DepthStencilAttachment.DepthClear(depthView, 0f));
 
-            // Sky first, over the cleared target; world geometry then draws on top of it. When the caller supplies a flat
-            // SKY_COLOR through the clear colour, the gradient sky is skipped.
-            if (!currentRequest.SkipGradientSky)
-            {
-                pass.SetPipeline(skyPipeline);
-                pass.Draw(3);
-            }
-
-            // Sun/moon (textured) then sunrise/stars (position-colour), still before terrain so world geometry covers them.
-            // Sun/moon/star/sunrise geometry depends on the world clock, so rebuild the small draw set each frame while
-            // keeping the loaded textures/pipelines.
-            if (celestialPerFrame?.Invoke() is { } celestialUpdate)
-            {
-                celestial?.SetDraws(celestialUpdate.Draws);
-                celestialColour?.SetDraws(celestialUpdate.Colors);
-                skyDiscColour?.SetDraws(celestialUpdate.SkyDiscs);
-            }
-
-            // Apply the camera delta AFTER any per-frame draw rebuild: a freshly built draw uses the base (initial) camera
-            // model, so translating first would be overwritten and the bodies would stay anchored in the world.
-            celestial?.UpdateCamera(celestialDelta);
-            celestialColour?.UpdateCamera(celestialDelta);
-            skyDiscColour?.UpdateCamera(celestialDelta);
-
-            if (skyDiscVanillaResources is not null && skyDiscPerFrame?.Invoke() is { } skyDiscState)
-            {
-                skyDiscVanillaResources.Update(skyDiscState.Sky, skyDiscState.Fog, skyDiscState.SkyFogEnd, skyDiscState.Eye);
-                skyDiscVanillaResources.Draw(pass);
-            }
-
-            skyDiscColour?.Draw(pass);
-            celestial?.Draw(pass);
-            celestialColour?.Draw(pass);
-
-            // Clouds are drawn after the transparent terrain (below), with depth testing, matching the reference order.
-
+            // Camera/light/fog uniforms are frame setup, not pass ordering. The scene pass sequence itself comes from
+            // WorldRenderPipeline so the windowed path and the offscreen path share one execution order.
             pass.SetPipeline(pipeline);
             // Rewriting 64 bytes is the whole cost of moving the camera; the staging buffers are reused.
             var cameraMs = (System.Diagnostics.Stopwatch.GetTimestamp() - cameraStarted) * 1000d
@@ -1280,116 +1246,178 @@ public static class WindowedRenderer
                 FrustumPlanes.Extract(viewProjection, frustumPlanes);
             }
 
-            if (arena is { ChunkCount: > 0 })
-            {
-                if (disableCulling)
-                {
-                    arena.Draw(pass);
-                }
-                else
-                {
-                    arena.Draw(pass, frustumPlanes);
-                }
-            }
-
-            if (arenaCutout is { ChunkCount: > 0 })
-            {
-                pass.SetPipeline(cutoutPipeline);
-                pass.SetBindGroup(0, bindGroup);
-
-                if (disableCulling)
-                {
-                    arenaCutout.Draw(pass);
-                }
-                else
-                {
-                    arenaCutout.Draw(pass, frustumPlanes);
-                }
-            }
-
-            // Translucent terrain is not drawn here: it writes the order independent targets in the next pass, so that the
-            // blended result does not depend on triangle order (docs/specs/render/pipeline.md 15).
-
             // The reference draws every section from the same per section buffers; it has no separate static copy of the
             // world. Drawing the preloaded combined mesh next to the arena kept the first few chunks on a second path with
             // its own colour, so the static copy is used only until the arena holds anything.
             var useStaticWorld = arena is null || arena.ChunkCount == 0;
 
-            if (dynamicIndexCount > 0)
+            void DrawScenePass(WorldRenderPassKind kind)
             {
-                pass.SetPipeline(entityPipeline);
-                pass.SetVertexBuffer(0, dynamicVertex, 0, dynamicVertexCapacity);
-                pass.SetIndexBuffer(dynamicIndex, WGPUIndexFormat.Uint32, 0, (ulong)dynamicIndexCount * sizeof(uint));
-                if (entitySkinCreated)
+                switch (kind)
                 {
-                    pass.SetBindGroup(0, entitySkinBindGroup);
+                    case WorldRenderPassKind.Sky:
+                    {
+                        // Sky first, over the cleared target; world geometry then draws on top of it. When the caller
+                        // supplies a flat SKY_COLOR through the clear colour, the gradient sky is skipped.
+                        if (!currentRequest.SkipGradientSky)
+                        {
+                            pass.SetPipeline(skyPipeline);
+                            pass.Draw(3);
+                        }
+
+                        // Sun/moon (textured) then sunrise/stars (position-colour), still before terrain so world
+                        // geometry covers them.
+                        if (celestialPerFrame?.Invoke() is { } celestialUpdate)
+                        {
+                            celestial?.SetDraws(celestialUpdate.Draws);
+                            celestialColour?.SetDraws(celestialUpdate.Colors);
+                            skyDiscColour?.SetDraws(celestialUpdate.SkyDiscs);
+                        }
+
+                        // Apply the camera delta AFTER any per-frame draw rebuild: a freshly built draw uses the base
+                        // (initial) camera model, so translating first would be overwritten and the bodies would stay
+                        // anchored in the world.
+                        celestial?.UpdateCamera(celestialDelta);
+                        celestialColour?.UpdateCamera(celestialDelta);
+                        skyDiscColour?.UpdateCamera(celestialDelta);
+
+                        if (skyDiscVanillaResources is not null && skyDiscPerFrame?.Invoke() is { } skyDiscState)
+                        {
+                            skyDiscVanillaResources.Update(skyDiscState.Sky, skyDiscState.Fog, skyDiscState.SkyFogEnd, skyDiscState.Eye);
+                            skyDiscVanillaResources.Draw(pass);
+                        }
+
+                        skyDiscColour?.Draw(pass);
+                        celestial?.Draw(pass);
+                        celestialColour?.Draw(pass);
+                        break;
+                    }
+
+                    case WorldRenderPassKind.TerrainOpaque:
+                    {
+                        pass.SetPipeline(pipeline);
+                        pass.SetBindGroup(0, bindGroup);
+                        if (arena is { ChunkCount: > 0 })
+                        {
+                            if (disableCulling)
+                            {
+                                arena.Draw(pass);
+                            }
+                            else
+                            {
+                                arena.Draw(pass, frustumPlanes);
+                            }
+                        }
+
+                        // Clouds are drawn after the transparent terrain (below), matching the reference order.
+                        break;
+                    }
+
+                    case WorldRenderPassKind.TerrainCutout:
+                    {
+                        if (arenaCutout is not { ChunkCount: > 0 })
+                        {
+                            break;
+                        }
+
+                        pass.SetPipeline(cutoutPipeline);
+                        pass.SetBindGroup(0, bindGroup);
+                        if (disableCulling)
+                        {
+                            arenaCutout.Draw(pass);
+                        }
+                        else
+                        {
+                            arenaCutout.Draw(pass, frustumPlanes);
+                        }
+                        break;
+                    }
+
+                    case WorldRenderPassKind.Entities:
+                    {
+                        if (dynamicIndexCount > 0)
+                        {
+                            pass.SetPipeline(entityPipeline);
+                            pass.SetVertexBuffer(0, dynamicVertex, 0, dynamicVertexCapacity);
+                            pass.SetIndexBuffer(dynamicIndex, WGPUIndexFormat.Uint32, 0, (ulong)dynamicIndexCount * sizeof(uint));
+                            if (entitySkinCreated)
+                            {
+                                pass.SetBindGroup(0, entitySkinBindGroup);
+                            }
+
+                            pass.DrawIndexed(dynamicIndexCount, 1, 0, 0, 1);
+                            if (entitySkinCreated)
+                            {
+                                pass.SetBindGroup(0, bindGroup);
+                            }
+                        }
+
+                        // Entity layers (docs/decisions/0021): cutout layers share the opaque depth (writes on);
+                        // translucent layers blend with depth writes off, which the pipeline state already encodes.
+                        for (var layerIndex = 0; layerIndex < entityLayerDrawn; layerIndex++)
+                        {
+                            var layerIndexCount = entityLayerIndexCount[layerIndex];
+                            if (layerIndexCount == 0)
+                            {
+                                continue;
+                            }
+
+                            pass.SetPipeline(entityLayerKind[layerIndex] switch
+                            {
+                                EntityGeometryLayerKind.Translucent => entityPipeline,
+                                EntityGeometryLayerKind.Emissive => entityEmissivePipeline,
+                                EntityGeometryLayerKind.Elytra => entityElytraPipeline,
+                                _ => entityCutoutPipeline
+                            });
+                            pass.SetVertexBuffer(0, entityLayerVertex[layerIndex], 0, entityLayerVertexCapacity[layerIndex]);
+                            pass.SetIndexBuffer(
+                                entityLayerIndex[layerIndex],
+                                WGPUIndexFormat.Uint32,
+                                0,
+                                (ulong)layerIndexCount * sizeof(uint));
+                            if (entitySkinCreated)
+                            {
+                                pass.SetBindGroup(0, entitySkinBindGroup);
+                            }
+
+                            pass.DrawIndexed(layerIndexCount, 1, 0, 0, 1);
+                        }
+
+                        if (entityLayerDrawn > 0 && entitySkinCreated)
+                        {
+                            pass.SetBindGroup(0, bindGroup);
+                        }
+                        else if (useStaticWorld)
+                        {
+                            pass.SetVertexBuffer(0, vertexBuffer);
+                            pass.SetIndexBuffer(indexBuffer, WGPUIndexFormat.Uint32);
+                            pass.DrawIndexed((uint)currentRequest.Indices.Length);
+                        }
+
+                        // The static fallback keeps its original post-entity order. Translucent terrain is not drawn
+                        // here: it writes the order independent targets in the next pass (docs/specs/render/pipeline.md 15).
+                        if (useStaticWorld && currentRequest.CutoutVertices is { Length: > 0 } windowCutoutVertices &&
+                            currentRequest.CutoutIndices is { Length: > 0 } windowCutoutIndices)
+                        {
+                            using var windowCutoutVertexBuffer = device.CreateBufferInit(
+                                new BufferInitDescriptor { Usage = BufferUsage.Vertex },
+                                windowCutoutVertices.AsSpan());
+                            using var windowCutoutIndexBuffer = device.CreateBufferInit(
+                                new BufferInitDescriptor { Usage = BufferUsage.Index },
+                                windowCutoutIndices.AsSpan());
+
+                            pass.SetPipeline(cutoutPipeline);
+                            pass.SetBindGroup(0, bindGroup);
+                            pass.SetVertexBuffer(0, windowCutoutVertexBuffer);
+                            pass.SetIndexBuffer(windowCutoutIndexBuffer, WGPUIndexFormat.Uint32);
+                            pass.DrawIndexed((uint)windowCutoutIndices.Length);
+                        }
+                        break;
+                    }
                 }
-
-                pass.DrawIndexed(dynamicIndexCount, 1, 0, 0, 1);
-                if (entitySkinCreated)
-                {
-                    pass.SetBindGroup(0, bindGroup);
-                }
             }
 
-            // Entity layers (docs/decisions/0021): cutout layers share the opaque depth (writes on); translucent layers
-            // blend with depth writes off, which the pipeline state already encodes.
-            for (var layerIndex = 0; layerIndex < entityLayerDrawn; layerIndex++)
-            {
-                var layerIndexCount = entityLayerIndexCount[layerIndex];
-                if (layerIndexCount == 0)
-                {
-                    continue;
-                }
-
-                pass.SetPipeline(entityLayerKind[layerIndex] switch
-                {
-                    EntityGeometryLayerKind.Translucent => entityPipeline,
-                    EntityGeometryLayerKind.Emissive => entityEmissivePipeline,
-                    EntityGeometryLayerKind.Elytra => entityElytraPipeline,
-                    _ => entityCutoutPipeline
-                });
-                pass.SetVertexBuffer(0, entityLayerVertex[layerIndex], 0, entityLayerVertexCapacity[layerIndex]);
-                pass.SetIndexBuffer(
-                    entityLayerIndex[layerIndex],
-                    WGPUIndexFormat.Uint32,
-                    0,
-                    (ulong)layerIndexCount * sizeof(uint));
-                if (entitySkinCreated)
-                {
-                    pass.SetBindGroup(0, entitySkinBindGroup);
-                }
-
-                pass.DrawIndexed(layerIndexCount, 1, 0, 0, 1);
-            }
-
-            if (entityLayerDrawn > 0 && entitySkinCreated)
-            {
-                pass.SetBindGroup(0, bindGroup);
-            }
-            else if (useStaticWorld)
-            {
-                pass.SetVertexBuffer(0, vertexBuffer);
-                pass.SetIndexBuffer(indexBuffer, WGPUIndexFormat.Uint32);
-                pass.DrawIndexed((uint)currentRequest.Indices.Length);
-            }
-
-            if (useStaticWorld && currentRequest.CutoutVertices is { Length: > 0 } windowCutoutVertices &&
-                currentRequest.CutoutIndices is { Length: > 0 } windowCutoutIndices)
-            {
-                using var windowCutoutVertexBuffer = device.CreateBufferInit(
-                    new BufferInitDescriptor { Usage = BufferUsage.Vertex },
-                    windowCutoutVertices.AsSpan());
-                using var windowCutoutIndexBuffer = device.CreateBufferInit(
-                    new BufferInitDescriptor { Usage = BufferUsage.Index },
-                    windowCutoutIndices.AsSpan());
-
-                pass.SetPipeline(cutoutPipeline);
-                pass.SetBindGroup(0, bindGroup);
-                pass.SetVertexBuffer(0, windowCutoutVertexBuffer);
-                pass.SetIndexBuffer(windowCutoutIndexBuffer, WGPUIndexFormat.Uint32);
-                pass.DrawIndexed((uint)windowCutoutIndices.Length);
-            }
+            WorldRenderPipeline.RecordScenePasses(DrawScenePass);
 
             // The main pass ends here: sky, opaque terrain and the cutout layer (which shares the opaque depth) have all
             // been drawn. Translucent terrain and the interface each get their own pass so the order independent resolve
