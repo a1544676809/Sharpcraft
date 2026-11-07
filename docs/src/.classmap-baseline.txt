@@ -50,7 +50,6 @@ src/Sharpcraft.Client/Input/InputMapper.cs :: Sharpcraft.Client.Input.KeyBinding
 src/Sharpcraft.Client/Render/AnimationClipPlayer.cs :: Sharpcraft.Client.Render.AnimationClipPlayer
 src/Sharpcraft.Client/Render/AxolotlAnimationProvider.cs :: Sharpcraft.Client.Render.AxolotlAnimationProvider
 src/Sharpcraft.Client/Render/AxolotlAnimations.cs :: Sharpcraft.Client.Render.AxolotlAnimations
-src/Sharpcraft.Client/Render/AxolotlModelDefinition.cs :: Sharpcraft.Client.Render.AxolotlModelDefinition
 src/Sharpcraft.Client/Render/BabyModelDefinitions.cs :: Sharpcraft.Client.Render.BabyModelDefinitions
 src/Sharpcraft.Client/Render/BabyModelDefinitionsAquatic.cs :: Sharpcraft.Client.Render.BabyModelDefinitionsAquatic
 src/Sharpcraft.Client/Render/BabyModelDefinitionsEquine.cs :: Sharpcraft.Client.Render.BabyModelDefinitionsEquine

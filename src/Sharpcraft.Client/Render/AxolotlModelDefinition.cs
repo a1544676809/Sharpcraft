@@ -8,25 +8,16 @@ namespace Sharpcraft.Client.Render;
 /// </summary>
 /// <remarks>
 /// Bind pose only. Variants (lucy/wild/gold/cyan/blue) are a synced integer, not a registry, and only swap the texture.
+/// Parts are declared with the <c>VanillaMeshDefinition</c> DSL and baked via <c>VanillaMeshBake</c> (T-686).
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.axolotl.AxolotlModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/axolotl/AxolotlModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class AxolotlModelDefinition
 {
     public const int AxolotlEntityTypeId = 7;
 
-    private static readonly EntityModelPart[] Parts =
-    [
-        PlayerModelDefinition.FromVanilla("body", 0f, 19.5f, 5f, -4f, -2f, -9f, 8f, 4f, 10f, 0, 11),
-        PlayerModelDefinition.FromVanillaChild("body_layer", "body", 0f, 0f, 0f, 0f, -3f, -8f, 0f, 5f, 9f, 2, 17),
-        PlayerModelDefinition.FromVanillaChild("head", "body", 0f, 0f, -9f, -4f, -3f, -5f, 8f, 5f, 5f, 0, 1, grow: 0.001f),
-        PlayerModelDefinition.FromVanillaChild("top_gills", "head", 0f, -3f, -1f, -4f, -3f, 0f, 8f, 3f, 0f, 3, 37, grow: 0.001f),
-        PlayerModelDefinition.FromVanillaChild("left_gills", "head", -4f, 0f, -1f, -3f, -5f, 0f, 3f, 7f, 0f, 0, 40, grow: 0.001f),
-        PlayerModelDefinition.FromVanillaChild("right_gills", "head", 4f, 0f, -1f, 0f, -5f, 0f, 3f, 7f, 0f, 11, 40, grow: 0.001f),
-        PlayerModelDefinition.FromVanillaChild("right_hind_leg", "body", -3.5f, 1f, -1f, -2f, 0f, 0f, 3f, 5f, 0f, 2, 13, grow: 0.001f),
-        PlayerModelDefinition.FromVanillaChild("left_hind_leg", "body", 3.5f, 1f, -1f, -1f, 0f, 0f, 3f, 5f, 0f, 2, 13, grow: 0.001f),
-        PlayerModelDefinition.FromVanillaChild("right_front_leg", "body", -3.5f, 1f, -8f, -2f, 0f, 0f, 3f, 5f, 0f, 2, 13, grow: 0.001f),
-        PlayerModelDefinition.FromVanillaChild("left_front_leg", "body", 3.5f, 1f, -8f, -1f, 0f, 0f, 3f, 5f, 0f, 2, 13, grow: 0.001f),
-        PlayerModelDefinition.FromVanillaChild("tail", "body", 0f, 0f, 1f, 0f, -3f, 0f, 0f, 5f, 12f, 2, 19)
-    ];
+    private static readonly VanillaMeshDefinition AxolotlMesh = BuildAxolotlMesh();
+
+    private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(AxolotlMesh, 0, 0)];
 
     /// <summary>Synced variant ids: LUCY, WILD, GOLD, CYAN, BLUE.</summary>
     public static readonly IReadOnlyList<string> VariantKeys = ["lucy", "wild", "gold", "cyan", "blue"];
@@ -65,5 +56,33 @@ public static class AxolotlModelDefinition
         }
 
         return variants;
+    }
+
+    private static VanillaMeshDefinition BuildAxolotlMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        var body = root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 19.5f, 5f),
+            new VanillaCubeDefinition("body", 0, 11, -4f, -2f, -9f, 8f, 4f, 10f));
+        body.AddOrReplaceChild("body_layer", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("body_layer", 2, 17, 0f, -3f, -8f, 0f, 5f, 9f));
+        var head = body.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 0f, -9f),
+            new VanillaCubeDefinition("head", 0, 1, -4f, -3f, -5f, 8f, 5f, 5f, Grow: 0.001f));
+        head.AddOrReplaceChild("top_gills", VanillaPartPose.Offset(0f, -3f, -1f),
+            new VanillaCubeDefinition("top_gills", 3, 37, -4f, -3f, 0f, 8f, 3f, 0f, Grow: 0.001f));
+        head.AddOrReplaceChild("left_gills", VanillaPartPose.Offset(-4f, 0f, -1f),
+            new VanillaCubeDefinition("left_gills", 0, 40, -3f, -5f, 0f, 3f, 7f, 0f, Grow: 0.001f));
+        head.AddOrReplaceChild("right_gills", VanillaPartPose.Offset(4f, 0f, -1f),
+            new VanillaCubeDefinition("right_gills", 11, 40, 0f, -5f, 0f, 3f, 7f, 0f, Grow: 0.001f));
+        body.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-3.5f, 1f, -1f),
+            new VanillaCubeDefinition("right_hind_leg", 2, 13, -2f, 0f, 0f, 3f, 5f, 0f, Grow: 0.001f));
+        body.AddOrReplaceChild("left_hind_leg", VanillaPartPose.Offset(3.5f, 1f, -1f),
+            new VanillaCubeDefinition("left_hind_leg", 2, 13, -1f, 0f, 0f, 3f, 5f, 0f, Grow: 0.001f));
+        body.AddOrReplaceChild("right_front_leg", VanillaPartPose.Offset(-3.5f, 1f, -8f),
+            new VanillaCubeDefinition("right_front_leg", 2, 13, -2f, 0f, 0f, 3f, 5f, 0f, Grow: 0.001f));
+        body.AddOrReplaceChild("left_front_leg", VanillaPartPose.Offset(3.5f, 1f, -8f),
+            new VanillaCubeDefinition("left_front_leg", 2, 13, -1f, 0f, 0f, 3f, 5f, 0f, Grow: 0.001f));
+        body.AddOrReplaceChild("tail", VanillaPartPose.Offset(0f, 0f, 1f),
+            new VanillaCubeDefinition("tail", 2, 19, 0f, -3f, 0f, 0f, 5f, 12f));
+        return new VanillaMeshDefinition(root);
     }
 }
