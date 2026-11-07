@@ -560,15 +560,13 @@ public static class EntityModelLayerHelpers
         result.AddRange(parts);
         foreach (var part in parts)
         {
-            result.Add(part with
-            {
-                Name = "copylayer_" + part.Name,
-                PoseSource = part.PoseSource ?? part.Name,
-                TexturePath = texturePath,
-                Grow = part.Grow + inflate,
-                TintSelector = tint,
-                VisibleWhen = visible
-            });
+            result.Add(part.With(
+                Name: "copylayer_" + part.Name,
+                PoseSource: part.PoseSource ?? part.Name,
+                TexturePath: texturePath,
+                Grow: part.Grow + inflate,
+                TintSelector: tint,
+                VisibleWhen: visible));
         }
 
         return [.. result];
@@ -587,32 +585,28 @@ public static class EntityModelLayerHelpers
         {
             foreach (var part in parts)
             {
-                result.Add(part with
-                {
-                    Name = "equipment_" + kind + "_" + slot + (overlay ? "_overlay_" : "_") + part.Name,
-                    PoseSource = part.PoseSource ?? part.Name,
-                    TexturePath = fallbackTexture,
-                    TextureSelector = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay),
-                    Grow = part.Grow + inflate,
-                    TextureWidth = textureWidth,
-                    TextureHeight = textureHeight,
-                    VisibleWhen = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay) is not null
-                });
+                result.Add(part.With(
+                    Name: "equipment_" + kind + "_" + slot + (overlay ? "_overlay_" : "_") + part.Name,
+                    PoseSource: part.PoseSource ?? part.Name,
+                    TexturePath: fallbackTexture,
+                    TextureSelector: state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay),
+                    Grow: part.Grow + inflate,
+                    TextureWidth: textureWidth,
+                    TextureHeight: textureHeight,
+                    VisibleWhen: state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay) is not null));
             }
         }
 
         foreach (var part in EquipmentModelParts.For(kind))
         {
-            result.Add(part with
-            {
-                Name = "equipment_extra_" + kind + "_" + slot + "_" + part.Name,
-                TexturePath = fallbackTexture,
-                TextureSelector = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay),
-                Grow = part.Grow + inflate,
-                TextureWidth = textureWidth,
-                TextureHeight = textureHeight,
-                VisibleWhen = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay) is not null
-            });
+            result.Add(part.With(
+                Name: "equipment_extra_" + kind + "_" + slot + "_" + part.Name,
+                TexturePath: fallbackTexture,
+                TextureSelector: state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay),
+                Grow: part.Grow + inflate,
+                TextureWidth: textureWidth,
+                TextureHeight: textureHeight,
+                VisibleWhen: state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay) is not null));
         }
 
         return [.. result];
@@ -639,18 +633,17 @@ public static class EntityModelLayerHelpers
                 continue;
             }
 
-            result.Add(part with
-            {
-                Name = "equipment_" + kind + "_" + slot + "_" + part.Name,
-                PoseSource = part.PoseSource ?? part.Name,
-                TexturePath = fallbackTexture,
-                TextureSelector = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot),
-                Grow = grow,
-                OverlayLayers = slot == 5 ? HatOnly(part) : null,
-                TextureWidth = 64,
-                TextureHeight = 32,
-                VisibleWhen = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot) is not null
-            });
+            result.Add(part.With(
+                Name: "equipment_" + kind + "_" + slot + "_" + part.Name,
+                PoseSource: part.PoseSource ?? part.Name,
+                TexturePath: fallbackTexture,
+                TextureSelector: state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot),
+                Grow: grow,
+                ClearOverlayLayers: slot != 5,
+                OverlayLayers: slot == 5 ? HatOnly(part) : null,
+                TextureWidth: 64,
+                TextureHeight: 32,
+                VisibleWhen: state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot) is not null));
         }
 
         return [.. result];
@@ -712,19 +705,17 @@ public static class EntityModelLayerHelpers
             var grow = part.Name is "left_leg" or "right_leg" or "waist" ? baseGrow - legInset : baseGrow;
             var poseSource = BabyPoseSource(part.Name);
             var bottom = baseBottoms.TryGetValue(poseSource, out var baseBottom) ? baseBottom : part.Bottom;
-            result.Add(part with
-            {
-                Name = "equipment_" + kind + "_" + slot + "_" + part.Name,
-                Bottom = bottom,
-                PoseSource = poseSource,
-                TexturePath = fallbackTexture,
-                TextureSelector = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot),
-                Grow = 0f,
-                GrowXyz = grow,
-                TextureWidth = 64,
-                TextureHeight = 64,
-                VisibleWhen = state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot) is not null
-            });
+            result.Add(part.With(
+                Name: "equipment_" + kind + "_" + slot + "_" + part.Name,
+                Bottom: bottom,
+                PoseSource: poseSource,
+                TexturePath: fallbackTexture,
+                TextureSelector: state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot),
+                Grow: 0f,
+                GrowXyz: grow,
+                TextureWidth: 64,
+                TextureHeight: 64,
+                VisibleWhen: state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot) is not null));
         }
 
         return [.. result];
@@ -750,21 +741,19 @@ public static class EntityModelLayerHelpers
                 continue;
             }
 
-            result.Add(part with
-            {
-                Name = "crackiness_" + part.Name,
-                PoseSource = part.PoseSource ?? part.Name,
-                TextureSelector = static state => state.Crackiness switch
+            result.Add(part.With(
+                Name: "crackiness_" + part.Name,
+                PoseSource: part.PoseSource ?? part.Name,
+                TextureSelector: static state => state.Crackiness switch
                 {
                     1 => "entity/wolf/wolf_armor_crackiness_low",
                     2 => "entity/wolf/wolf_armor_crackiness_medium",
                     3 => "entity/wolf/wolf_armor_crackiness_high",
                     _ => null
                 },
-                Grow = part.Grow + 0.21f,
-                OverlayLayers = null,
-                VisibleWhen = static state => state.Crackiness > 0
-            });
+                Grow: part.Grow + 0.21f,
+                ClearOverlayLayers: true,
+                VisibleWhen: static state => state.Crackiness > 0));
         }
 
         return [.. result];
@@ -892,14 +881,12 @@ public static class EntityModelLayerHelpers
             var path = texturePrefix + key + (baby ? "_baby" : string.Empty);
             foreach (var part in parts)
             {
-                result.Add(part with
-                {
-                    Name = "marking_" + key + "_" + part.Name,
-                    PoseSource = part.PoseSource ?? part.Name,
-                    TexturePath = path,
-                    Grow = part.Grow,
-                    VisibleWhen = state => state.Markings == id
-                });
+                result.Add(part.With(
+                    Name: "marking_" + key + "_" + part.Name,
+                    PoseSource: part.PoseSource ?? part.Name,
+                    TexturePath: path,
+                    Grow: part.Grow,
+                    VisibleWhen: state => state.Markings == id));
             }
         }
 

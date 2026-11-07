@@ -49,6 +49,28 @@ public sealed class EntityModelPartEncapsulationTests
     }
 
     [Fact]
+    public void BakedPartClonesOnlyLiveInTheCentralTransformer()
+    {
+        var root = RepositoryLocator.Root;
+        var renderRoot = Path.Combine(root, "src", "Sharpcraft.Client", "Render");
+        var offenders = new List<string>();
+        foreach (var file in Directory.EnumerateFiles(renderRoot, "*.cs"))
+        {
+            if (Path.GetFileName(file) == "VanillaMeshBake.cs")
+            {
+                continue;
+            }
+
+            if (Regex.IsMatch(File.ReadAllText(file), @"\b(part|source)\s+with\b"))
+            {
+                offenders.Add(Path.GetFileName(file));
+            }
+        }
+
+        Assert.True(offenders.Count == 0, "baked-part clones outside the central transformer: " + string.Join(", ", offenders));
+    }
+
+    [Fact]
     public void ModelDefinitionsDoNotGrowNewGeometryCloneSites()
     {
         // Ratchet for T-746b: these three legacy flat-path copy helpers still use `part/source with`. They are

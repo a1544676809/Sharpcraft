@@ -407,22 +407,18 @@ public sealed partial class EntityModelMesher
                 if (part.RotationSelector is { } rotationSelector)
                 {
                     var selectedRotation = rotationSelector(entity);
-                    part = part with
-                    {
-                        RotationX = selectedRotation.X,
-                        RotationY = selectedRotation.Y,
-                        RotationZ = selectedRotation.Z
-                    };
+                    part = part.With(
+                        RotationX: selectedRotation.X,
+                        RotationY: selectedRotation.Y,
+                        RotationZ: selectedRotation.Z);
                 }
 
                 if (part.YOffsetSelector is { } yOffsetSelector)
                 {
                     var yOffset = yOffsetSelector(entity);
-                    part = part with
-                    {
-                        Bottom = part.Bottom + yOffset,
-                        PivotY = part.PivotY + yOffset
-                    };
+                    part = part.With(
+                        Bottom: part.Bottom + yOffset,
+                        PivotY: part.PivotY + yOffset);
                 }
 
                 var partTextureWidth = part.TextureWidth > 0 ? part.TextureWidth : model.TextureWidth;
