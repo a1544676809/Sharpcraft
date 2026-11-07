@@ -40,17 +40,17 @@ updated: 2026-11-07
 
 ## 3. 下一阶段任务
 
-### T-744 ModelGeometryInvariantTests（P0）
+### T-744 UV/面积全量扫描（P0，先落地）
 
-新增 `tests/Sharpcraft.Architecture.Tests/ModelGeometryInvariantTests.cs`：
+扩展 `tests/Sharpcraft.Architecture.Tests/ModelUvInvariantTests.cs`：
 
-1. 遍历全注册模型、全部变体、全部装备组合与全部 `Compiled.Cubes`，检查 UV 边界/面积。
+1. 遍历全注册模型、全部变体、成人/幼年解析结果与装备树的 `Compiled.Cubes`，检查 UV 边界和面积。
 2. 检查幼年/成年共享贴图的 UV 跨度守恒，不仅限于 Elytra。
-3. 扫描共面反法线三角形，检测 Z-fighting。
-4. 扫描装备层与基础身体/头部的静止姿态 clearance。
-5. 对合法覆盖层使用显式、会收缩的基线，禁止无限白名单。
+3. 对已知原版越界（baby llama chest）保留显式、会收缩的基线。
 
-验收：不修改模型即可自动扫描；新增违规模型或装备层立即失败。
+Z-fighting 与 equipment clearance 不混入本任务；先走诊断报告，规则稳定后再升级为门禁。判定依据见 [`model-geometry-invariant-policy.md`](model-geometry-invariant-policy.md)。
+
+验收：不修改模型即可自动扫描；新增违规 compiled cube 立即失败。
 
 ### T-745 RendererSingleTrackTests（P1）
 

@@ -113,6 +113,114 @@ public sealed class ModelUvInvariantTests
     }
 
     [Fact]
+    public void AllCompiledModelCubesHaveUvInsideTheirTexture()
+    {
+        var violations = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var definition in EntityModelResolver.Definitions)
+        {
+            if (definition.Compiled is not { } compiled)
+            {
+                continue;
+            }
+
+            foreach (var cube in compiled.Cubes)
+            {
+                if (cube.Width <= 0f || cube.Height <= 0f || cube.Depth <= 0f)
+                {
+                    continue;
+                }
+
+                var textureWidth = cube.TextureWidth > 0 ? cube.TextureWidth : definition.TextureWidth;
+                var textureHeight = cube.TextureHeight > 0 ? cube.TextureHeight : definition.TextureHeight;
+                var d = cube.UvDepth > 0 ? cube.UvDepth : cube.Depth;
+                var w = cube.UvWidth > 0 ? cube.UvWidth : cube.Width;
+                var h = cube.UvHeight > 0 ? cube.UvHeight : cube.Height;
+                var span = UvSpan(d, w, h, cube.TextureX, cube.TextureY);
+                var key = $"{definition.Name}/{cube.Name}";
+                if (textureWidth <= 0 || textureHeight <= 0
+                    || span.U0 < 0f || span.U0 > span.U4 + 1e-3f || span.U4 > textureWidth + 1e-3f
+                    || span.V0 < 0f || span.V0 > span.V2 + 1e-3f || span.V2 > textureHeight + 1e-3f
+                    || span.U4 - span.U0 <= 0f || span.V2 - span.V0 <= 0f)
+                {
+                    if (!ExpectedReferenceUvOvershoots.Contains(key))
+                    {
+                        violations[key] = $"uv {span.U0}..{span.U4} x {span.V0}..{span.V2} outside 0..{textureWidth} x 0..{textureHeight}";
+                    }
+                }
+            }
+        }
+
+        Assert.True(
+            violations.Count == 0,
+            "Compiled model cubes outside their texture:\n  "
+            + string.Join("\n  ", violations.Select(pair => $"{pair.Key}: {pair.Value}")));
+    }
+
+    [Fact]
+    public void AllResolvedEquipmentTreesHaveUvInsideTheirTexture()
+    {
+        var violations = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var typeId in EntityModelResolver.RegisteredTypeIds)
+        {
+            foreach (var baby in new[] { false, true })
+            {
+                var definition = EntityModelResolver.Resolve(typeId, baby);
+                if (definition.Compiled is not { } compiled)
+                {
+                    continue;
+                }
+
+                foreach (var cube in compiled.Cubes)
+                {
+                    if (cube.Width <= 0f || cube.Height <= 0f || cube.Depth <= 0f)
+                    {
+                        continue;
+                    }
+
+                    var textureWidth = cube.TextureWidth > 0 ? cube.TextureWidth : definition.TextureWidth;
+                    var textureHeight = cube.TextureHeight > 0 ? cube.TextureHeight : definition.TextureHeight;
+                    var d = cube.UvDepth > 0 ? cube.UvDepth : cube.Depth;
+                    var w = cube.UvWidth > 0 ? cube.UvWidth : cube.Width;
+                    var h = cube.UvHeight > 0 ? cube.UvHeight : cube.Height;
+                    var span = UvSpan(d, w, h, cube.TextureX, cube.TextureY);
+                    var key = $"{typeId}/{(baby ? "baby" : "adult")}/{definition.Name}/{cube.Name}";
+                    if (textureWidth <= 0 || textureHeight <= 0
+                        || span.U0 < 0f || span.U0 > span.U4 + 1e-3f || span.U4 > textureWidth + 1e-3f
+                        || span.V0 < 0f || span.V0 > span.V2 + 1e-3f || span.V2 > textureHeight + 1e-3f
+                        || span.U4 - span.U0 <= 0f || span.V2 - span.V0 <= 0f)
+                    {
+                        // Baby llama chest cubes are a reference-declared UV overshoot (see baseline above).
+                        if (!definition.Name.StartsWith("baby_llama", StringComparison.Ordinal)
+                            || (cube.Name != "right_chest" && cube.Name != "left_chest"))
+                        {
+                            violations[key] = $"uv {span.U0}..{span.U4} x {span.V0}..{span.V2} outside 0..{textureWidth} x 0..{textureHeight}";
+                        }
+                    }
+                }
+            }
+        }
+
+        Assert.True(
+            violations.Count == 0,
+            "Resolved equipment trees outside their texture:\n  "
+            + string.Join("\n  ", violations.Select(pair => $"{pair.Key}: {pair.Value}")));
+    }
+
+    private static (float U0, float U1, float U2, float U3, float U4, float V0, float V1, float V2) UvSpan(
+        float d, float w, float h, int textureX, int textureY)
+    {
+        var u0 = textureX;
+        var u1 = u0 + d;
+        var u2 = u1 + w;
+        var u3 = u2 + d;
+        var u4 = u3 + w;
+        var v0 = textureY;
+        var v1 = v0 + d;
+        var v2 = v1 + h;
+        return (u0, u1, u2, u3, u4, v0, v1, v2);
+    }
+
+    [Fact]
     public void AdultAndBabyElytraShareTheSameUvSpan()
     {
         var adultWing = FindElytraLeftWing(EntityModelResolver.Resolve(ZombieTypeId, baby: false));

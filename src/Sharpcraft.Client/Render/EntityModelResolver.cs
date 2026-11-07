@@ -138,6 +138,10 @@ public static class EntityModelResolver
     public static IReadOnlyCollection<EntityModelDefinition> Definitions =>
         Models.Values.Concat(VariantModels.Values).Concat(BabyModels.Values).Concat(BabyVariantModels.Values).Distinct().ToArray();
 
+    /// <summary>Every registered entity type id, used by registry-wide model gates.</summary>
+    public static IReadOnlyCollection<int> RegisteredTypeIds =>
+        Models.Keys.Concat(BabyModels.Keys).Distinct().Order().ToArray();
+
     /// <summary>Registers a named variant for an entity type.</summary>
     public static void RegisterVariant(int typeId, string key, EntityModelDefinition definition)
     {
