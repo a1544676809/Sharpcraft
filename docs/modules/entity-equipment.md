@@ -167,4 +167,36 @@
 - `PlayerSkinTexturesParser` 解析 `textures` 属性；`PlayerSkinCache` 按 UUID 缓存下载结果并把 body/cape/elytra 纹理注册进 `EntitySkinLibrary` atlas；玩家基础模型通过 `PlayerBodyTexture` selector 使用 body 路径。
 - `EntityRenderState.PlayerElytraOverride` 实现 `elytra > cape(showCape)` 的优先级；`EntityModelResolver.ResolveEquipmentTexture` 在 `UsePlayerTexture` 为真时替换第一层纹理。
 - `PlayerSkinCache` 的下载线程只做 IO/PNG 解码，atlas 注册在宿主帧线程；`WindowedRenderer` 的 entity skin 纹理源支持运行期重建。
-- 未实现 `PlayerModelType.SLIM` 的独立皮肤模型（当前玩家几何固定 wide）；未做纹理属性签名校验（离线服务器通常不带签名）。这两项不改变 `use_player_texture` 的路径选择，但会影响极端外观一致性，登记为后续收敛项。
+- `PlayerModelType.SLIM` 的独立皮肤模型已由 §12 接入；纹理属性签名校验仍缺少原版公钥与验签语义（见 §12.3），登记为阻塞项。
+
+## 12. SLIM 玩家模型（T-752 补全）
+
+### 12.1 原版 26.3 源码映射表
+
+| 本模块概念 / 方法 | 原版类与方法路径（`ref://...`） | 精确常量 / 公式 / 树结构 | 位序 / 正负号 / 色彩空间约定 | 缺省 / 越界回退值 |
+| --- | --- | --- | --- | --- |
+| 玩家模型选择 | `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/player/AvatarRenderer.java#AvatarRenderer` | 构造参数 `slimSteve` 决定 bake `ModelLayers.PLAYER_SLIM`/`PLAYER`，护甲为 `PLAYER_SLIM_ARMOR`/`PLAYER_ARMOR` | `slim=true` 为 3px 手臂 | 无档案属性时由 `DefaultPlayerSkin.get(profileId)` 选取 |
+| 宽/窄手臂网格 | `ref://mc-26.3-analysis/src/net/minecraft/client/model/player/PlayerModel.java#createMesh` | slim：左臂 tex(32,48) 盒 `(-1,-2,-2,3,12,4)`、右臂 tex(40,16) 盒 `(-2,-2,-2,3,12,4)`；wide：左 `(-1,-2,-2,4,12,4)`、右 `(-3,-2,-2,4,12,4)`；二者 pivot 均 `(±5,2,0)`；袖层 UV 不变、宽随臂宽、外扩 0.25 | 原版 y-down；DSL 经集中 bake 转换，`CentreX=−(pivotX+minX+w/2)`；纹理 64×64，sRGB | 未知/非玩家模型按 wide |
+| 腿/裤/外套层 | 同上 | 两模型逐值相同：左腿 tex(16,48) `(-2,0,-2,4,12,4)` pivot `(1.9,12,0)`、左裤 tex(0,48)、右裤 tex(0,32)、外套 tex(16,32) `(-4,0,-2,8,12,4)`；层外扩 0.25 | 同上 | — |
+| 档案 model 字段 | `ref://mc-26.3-analysis/src/net/minecraft/client/resources/SkinManager.java#registerTextures` | `PlayerModelType.byLegacyServicesName(skinInfo.getMetadata("model"))`；无 SKIN 条目时取 `DefaultPlayerSkin.get(profileId)` | 字符串 `slim` 区分大小写语义之外的其它值按 wide | 缺字段按 wide |
+| 默认皮肤表 | `ref://mc-26.3-analysis/src/net/minecraft/client/resources/DefaultPlayerSkin.java` | 18 项：索引 0..8 为 `entity/player/slim/<name>` + SLIM，9..17 为 `entity/player/wide/<name>` + WIDE；`get(UUID)` = `DEFAULT_SKINS[Math.floorMod(uuid.hashCode(), 18)]`；`getDefaultSkin()` 固定索引 6 = `entity/player/slim/steve` | Java `UUID.hashCode()` 位序；`Math.floorMod` 结果非负 | 无档案属性时按 UUID 索引 |
+
+### 12.2 真值向量（Golden Vectors）
+
+采样来源：上述 `PlayerModel.createMesh` / `DefaultPlayerSkin` 的精确常量静态推导；测试落点：
+`tests/Sharpcraft.Client.Tests/Render/PlayerSlimModelTests.cs`。
+
+1. **臂宽**：wide 左右臂 `Width=4`；slim 左右臂 `Width=3`；`Height=12`、`Depth=4`、基础 `Grow=0` 两者相同。
+2. **UV 起点**：两模型左臂 tex(32,48)、右臂 tex(40,16)、左袖 tex(48,48)、右袖 tex(40,32) 完全一致；差异只在展开宽度（`u4−texX = 2·(d+w)`：wide `2·(4+4)=16`、slim `2·(4+3)=14`）。
+3. **右臂偏移**：wide 右臂盒 minX=−3、slim minX=−2，转换后表现为不同 `CentreX`；左臂 minX 恒为 −1。
+4. **非臂部件不变**：head/body/双腿/裤/外套的盒尺寸、UV 与层外扩在两模型逐值相同。
+5. **默认纹理与模型一致**：`Slim=true` 且无自定义 body 纹理时回退 `entity/player/slim/steve`；`Slim=false` 回退 `entity/player/wide/steve`；不得交叉回退；自定义 body 纹理优先。
+6. **wide 路径不回归**：未带 slim 标记的玩家仍解析到原 `Definition`（臂宽 4）。
+
+### 12.3 当前实现与已知限制
+
+- `PlayerModelDefinition` 新增 `SlimDefinition`（同一 DSL 树，仅手臂盒按 12.2 替换），`EntityRenderState.Slim` 由 `PlayerSkinTextures.Slim` 透传；`EntityModelMesher.ResolveModel` 对玩家类型按该标记选择经过 `Decorate` 的 slim 变体，wide 定义与纹理 selector 保持原样。
+- **未实现** `DefaultPlayerSkin.get(UUID)` 的 Java `UUID.hashCode()` 索引选择：缺少 ≥5 组原版 UUID→默认皮肤真值向量，按原则 14 不以自证测试充当等效性证据；当前无档案属性统一沿用既有 wide 默认，登记为受控偏差。
+- slim 护甲仍复用 `HumanoidArmorTrees` 的 wide 玩家四槽树（原版用 `PLAYER_SLIM_ARMOR`）；仅影响窄臂玩家穿戴护甲时的外观，登记为后续收敛项。
+- 纹理属性签名校验依赖 `com.mojang.authlib` 的 `unpackTextures` 与 Mojang 公钥，当前分析工作区与 `Sharpcraft.Auth` 均不提供，按原则 4.1 登记为阻塞，不伪造校验。
+- `PlayerSkinCache`/`EntitySkinLibrary` 的档案下载与 atlas 注册未改动。

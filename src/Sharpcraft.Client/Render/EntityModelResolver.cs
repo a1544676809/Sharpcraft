@@ -234,6 +234,18 @@ public static class EntityModelResolver
     public static EntityModelDefinition Resolve(int typeId, bool baby = false) =>
         TryResolve(typeId, baby) ?? Placeholder;
 
+    /// <summary>Variant key used for the slim player model.</summary>
+    public const string SlimPlayerVariantKey = "slim";
+
+    /// <summary>
+    /// Resolves the decorated player model for the requested arm width. Slim is registered as a named variant so it
+    /// passes through <see cref="Decorate"/> and keeps the same equipment layers as the wide player.
+    /// </summary>
+    public static EntityModelDefinition ResolvePlayerModel(bool slim) =>
+        slim && TryResolveVariant(EntityPlaceholderMesher.PlayerEntityTypeId, SlimPlayerVariantKey) is { } slimModel
+            ? slimModel
+            : Resolve(EntityPlaceholderMesher.PlayerEntityTypeId);
+
     private static readonly Dictionary<(int TypeId, string Name, bool Baby), EntityModelDefinition> EquippedModels = new();
 
     private static EntityModelDefinition Decorate(int typeId, bool baby, EntityModelDefinition definition)
@@ -594,6 +606,7 @@ public static class EntityModelResolver
 
     static EntityModelResolver()
     {
+        RegisterVariant(EntityPlaceholderMesher.PlayerEntityTypeId, SlimPlayerVariantKey, PlayerModelDefinition.SlimDefinition);
         RegisterVariants(PigModelDefinition.PigEntityTypeId, PigModelDefinition.Variants);
         RegisterVariants(CowModelDefinition.CowEntityTypeId, CowModelDefinition.Variants);
         RegisterVariants(ChickenModelDefinition.ChickenEntityTypeId, ChickenModelDefinition.Variants);

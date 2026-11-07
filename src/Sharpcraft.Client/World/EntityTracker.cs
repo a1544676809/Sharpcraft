@@ -486,7 +486,8 @@ public readonly record struct EntityRenderState(
     string? PlayerBodyTexture = null,
     string? PlayerCapeTexture = null,
     string? PlayerElytraTexture = null,
-    bool ShowCape = true)
+    bool ShowCape = true,
+    bool Slim = false)
 {
     /// <summary>Equippable asset id for one equipment slot, when the item supplied one.</summary>
     public string? EquipmentAssetIdAt(int slot) =>
@@ -1442,7 +1443,8 @@ public sealed class EntityTracker
                 EquipmentGlintOverrides: entity.EquipmentGlintOverrides,
                 PlayerBodyTexture: playerSkin?.Body?.Path,
                 PlayerCapeTexture: playerSkin?.Cape?.Path,
-                PlayerElytraTexture: playerSkin?.Elytra?.Path));
+                PlayerElytraTexture: playerSkin?.Elytra?.Path,
+                Slim: playerSkin?.Slim ?? false));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);

@@ -533,10 +533,19 @@ public sealed partial class EntityModelMesher
         return target;
     }
 
-    private static EntityModelDefinition ResolveModel(EntityRenderState entity, EntityVariantTable? variants) =>
-        variants is null
+    private static EntityModelDefinition ResolveModel(EntityRenderState entity, EntityVariantTable? variants)
+    {
+        // The player profile's slim flag selects the 3px-arm model before any registry-variant lookup; all other
+        // entities (and wide players) keep the existing resolution path unchanged.
+        if (entity.Slim && entity.TypeId == EntityPlaceholderMesher.PlayerEntityTypeId)
+        {
+            return EntityModelResolver.ResolvePlayerModel(slim: true);
+        }
+
+        return variants is null
             ? EntityModelResolver.Resolve(entity.TypeId, entity.IsBaby)
             : variants.Resolve(entity.TypeId, entity.VariantId, entity.IsBaby);
+    }
 
     private static bool HasEmissive(EntityModelDefinition model)
     {

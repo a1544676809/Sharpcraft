@@ -242,7 +242,16 @@ public static class PlayerModelDefinition
     private static readonly CompiledEntityModel AdultCompiled =
         VanillaMeshBakery.Build(AdultMesh, 64, 64);
 
-    private static VanillaMeshDefinition BuildAdultMesh()
+    /// <summary>Slim variant of the adult DSL tree; only the two arm boxes differ (T-752 follow-up).</summary>
+    private static readonly VanillaMeshDefinition SlimMesh = BuildAdultMesh(slim: true);
+
+    /// <summary>Baked slim player parts; every non-arm value is identical to <see cref="AdultParts"/>.</summary>
+    public static readonly EntityModelPart[] SlimParts = [.. VanillaMeshBake.Bake(SlimMesh, 0, 0)];
+
+    private static readonly CompiledEntityModel SlimCompiled =
+        VanillaMeshBakery.Build(SlimMesh, 64, 64);
+
+    private static VanillaMeshDefinition BuildAdultMesh(bool slim = false)
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 0f, 0f),
@@ -252,10 +261,10 @@ public static class PlayerModelDefinition
             new VanillaCubeDefinition("body", 16, 16, -4f, 0f, -2f, 8f, 12f, 4f,
                 Overlays: [new("jacket", 0.25f, 16, 32, Kind: EntityGeometryLayerKind.Translucent)]));
         root.AddOrReplaceChild("left_arm", VanillaPartPose.Offset(5f, 2f, 0f),
-            new VanillaCubeDefinition("left_arm", 32, 48, -1f, -2f, -2f, 4f, 12f, 4f,
+            new VanillaCubeDefinition("left_arm", 32, 48, -1f, -2f, -2f, slim ? 3f : 4f, 12f, 4f,
                 Overlays: [new("left_sleeve", 0.25f, 48, 48, Kind: EntityGeometryLayerKind.Translucent)]));
         root.AddOrReplaceChild("right_arm", VanillaPartPose.Offset(-5f, 2f, 0f),
-            new VanillaCubeDefinition("right_arm", 40, 16, -3f, -2f, -2f, 4f, 12f, 4f,
+            new VanillaCubeDefinition("right_arm", 40, 16, slim ? -2f : -3f, -2f, -2f, slim ? 3f : 4f, 12f, 4f,
                 Overlays: [new("right_sleeve", 0.25f, 40, 32, Kind: EntityGeometryLayerKind.Translucent)]));
         root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(1.9f, 12f, 0f),
             new VanillaCubeDefinition("left_leg", 16, 48, -2f, 0f, -2f, 4f, 12f, 4f,
@@ -270,6 +279,15 @@ public static class PlayerModelDefinition
         new("player", 64, 64, AdultParts, DefaultFaceTransforms, "entity/player/wide/steve",
             textureSelector: static state => state.PlayerBodyTexture ?? "entity/player/wide/steve",
             compiled: AdultCompiled);
+
+    /// <summary>Slim (3px arm) player model; its default body texture belongs to the same model family.</summary>
+    public static readonly EntityModelDefinition SlimDefinition =
+        new("player_slim", 64, 64, SlimParts, DefaultFaceTransforms, "entity/player/slim/steve",
+            textureSelector: static state => state.PlayerBodyTexture ?? "entity/player/slim/steve",
+            compiled: SlimCompiled);
+
+    /// <summary>Selects the wide or slim player definition for an arm-width flag.</summary>
+    public static EntityModelDefinition For(bool slim) => slim ? SlimDefinition : Definition;
 
 }
 
