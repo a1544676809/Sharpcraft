@@ -102,7 +102,7 @@ public sealed class ArmadilloAxolotlSnifferWardenModelDefinitionTests
             LegacyModelPartFactory.FromVanilla("bone", 0f, 24f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
             LegacyModelPartFactory.FromVanillaChild("body", "bone", 0f, -21f, 0f, -9f, -13f, -4f, 18f, 21f, 11f, 0, 0),
             LegacyModelPartFactory.FromVanillaChild("right_ribcage", "body", -7f, -2f, -4f, -2f, -11f, -0.1f, 9f, 21f, 0f, 90, 11),
-            LegacyModelPartFactory.FromVanillaChild("left_ribcage", "body", 7f, -2f, -4f, -7f, -11f, -0.1f, 9f, 21f, 0f, 90, 11),
+            LegacyModelPartFactory.FromVanillaChild("left_ribcage", "body", 7f, -2f, -4f, -7f, -11f, -0.1f, 9f, 21f, 0f, 90, 11, mirror: true),
             LegacyModelPartFactory.FromVanillaChild("head", "body", 0f, -13f, 0f, -8f, -16f, -5f, 16f, 16f, 10f, 0, 32),
             LegacyModelPartFactory.FromVanillaChild("right_tendril", "head", -8f, -12f, 0f, -16f, -13f, 0f, 16f, 16f, 0f, 52, 32),
             LegacyModelPartFactory.FromVanillaChild("left_tendril", "head", 8f, -12f, 0f, 0f, -13f, 0f, 16f, 16f, 0f, 58, 0),

@@ -79,13 +79,13 @@ public static class FoxModelDefinition
         body.AddOrReplaceChild("tail", VanillaPartPose.OffsetAndRotation(-4f, 15f, -1f, -0.05235988f, 0f, 0f),
             new VanillaCubeDefinition("tail", 30, 0, 2f, 0f, -1f, 4f, 9f, 5f));
         root.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-5f, 17.5f, 7f),
-            new VanillaCubeDefinition("right_hind_leg", 13, 24, 2f, 0.5f, -1f, 2f, 6f, 2f));
+            new VanillaCubeDefinition("right_hind_leg", 13, 24, 2f, 0.5f, -1f, 2f, 6f, 2f, Grow: 0.001f));
         root.AddOrReplaceChild("left_hind_leg", VanillaPartPose.Offset(-1f, 17.5f, 7f),
-            new VanillaCubeDefinition("left_hind_leg", 4, 24, 2f, 0.5f, -1f, 2f, 6f, 2f));
+            new VanillaCubeDefinition("left_hind_leg", 4, 24, 2f, 0.5f, -1f, 2f, 6f, 2f, Grow: 0.001f));
         root.AddOrReplaceChild("right_front_leg", VanillaPartPose.Offset(-5f, 17.5f, 0f),
-            new VanillaCubeDefinition("right_front_leg", 13, 24, 2f, 0.5f, -1f, 2f, 6f, 2f));
+            new VanillaCubeDefinition("right_front_leg", 13, 24, 2f, 0.5f, -1f, 2f, 6f, 2f, Grow: 0.001f));
         root.AddOrReplaceChild("left_front_leg", VanillaPartPose.Offset(-1f, 17.5f, 0f),
-            new VanillaCubeDefinition("left_front_leg", 4, 24, 2f, 0.5f, -1f, 2f, 6f, 2f));
+            new VanillaCubeDefinition("left_front_leg", 4, 24, 2f, 0.5f, -1f, 2f, 6f, 2f, Grow: 0.001f));
         return new VanillaMeshDefinition(root);
     }
 }

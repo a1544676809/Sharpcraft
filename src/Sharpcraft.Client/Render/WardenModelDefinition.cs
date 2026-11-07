@@ -65,7 +65,7 @@ public static class WardenModelDefinition
         body.AddOrReplaceChild("right_ribcage", VanillaPartPose.Offset(-7f, -2f, -4f),
             new VanillaCubeDefinition("right_ribcage", 90, 11, -2f, -11f, -0.1f, 9f, 21f, 0f));
         body.AddOrReplaceChild("left_ribcage", VanillaPartPose.Offset(7f, -2f, -4f),
-            new VanillaCubeDefinition("left_ribcage", 90, 11, -7f, -11f, -0.1f, 9f, 21f, 0f));
+            new VanillaCubeDefinition("left_ribcage", 90, 11, -7f, -11f, -0.1f, 9f, 21f, 0f, Mirror: true));
         var head = body.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, -13f, 0f),
             new VanillaCubeDefinition("head", 0, 32, -8f, -16f, -5f, 16f, 16f, 10f));
         head.AddOrReplaceChild("right_tendril", VanillaPartPose.Offset(-8f, -12f, 0f),

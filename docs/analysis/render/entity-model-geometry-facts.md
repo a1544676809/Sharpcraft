@@ -192,10 +192,14 @@ updated: 2026-11-07
    - 默认输出 `artifacts/reference/vanilla-model-facts.json`（本地生成、被 `.gitignore` 覆盖，不进仓库）；
    - 默认覆盖 Elytra、Warden、Breeze、AdultRabbit、AdultFox；后续按解析器覆盖逐批扩展到全部 model 类；
    - 输出只包含类名、`ref://` 路径、part 名/父链、`PartPose` 数值、`CubeDefinition` 数值与 grow，不包含 Java 源码或注释。
-2. 为 BabyZombie + Elytra、Fox、Rabbit、Spider、Warden 生成原版 Golden Vector。
-3. 依据事实补齐 DSL 的三轴 grow / scale，再迁移仍有非均匀 deformation 的装备层。
-4. 在 Golden Vector 通过后，再决定是否统一 root/child 旋转符号。
-5. 最后才建立 Z-fighting / clearance 门禁，并对已知合法覆盖层登记 allowlist。
+2. **已实现（2026-11-07，T-708）**：`tests/Sharpcraft.Client.Tests/Render/ReferenceModelFactsTests.cs` 读取本文件的数值事实并对比 Warden、AdultFox、AdultRabbit 的 DSL 输出；Elytra 额外断言 10×20×2 / `texOffs(22,0)` / `grow 1` / ±π/12 常量。Golden 测试发现了两个旧迁移遗漏：
+   - Warden `left_ribcage` 缺少原版的 `mirror`（已在 `WardenModelDefinition` 修复）；
+   - AdultFox 四条腿缺少 `CubeDeformation(0.001)`（已在 `FoxModelDefinition` 修复）。
+   Breeze 暂不做 part-by-part 对比：原版 `head`/`eyes`/`wind_mid`/`wind_top` 是多 cube part，当前扁平表示拆成伪 part，需要几何级 Golden Vector 再覆盖。
+3. 为 BabyZombie + Elytra、Fox、Rabbit、Spider、Warden 生成原版 Golden Vector。
+4. 依据事实补齐 DSL 的三轴 grow / scale，再迁移仍有非均匀 deformation 的装备层。
+5. 在 Golden Vector 通过后，再决定是否统一 root/child 旋转符号。
+6. 最后才建立 Z-fighting / clearance 门禁，并对已知合法覆盖层登记 allowlist。
 
 ## 6. 结论
 

@@ -1,0 +1,1467 @@
+{
+  "schemaVersion": 1,
+  "baseline": "26.3",
+  "models": [
+    {
+      "class": "AdultFoxModel",
+      "source": "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/fox/AdultFoxModel.java",
+      "textureWidth": 48,
+      "textureHeight": 32,
+      "parts": [
+        {
+          "name": "head",
+          "parent": null,
+          "pose": {
+            "x": -1,
+            "y": 16.5,
+            "z": -3,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 1,
+              "textureY": 5,
+              "minX": -3,
+              "minY": -2,
+              "minZ": -5,
+              "width": 8,
+              "height": 6,
+              "depth": 6,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "right_ear",
+          "parent": "head",
+          "pose": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 8,
+              "textureY": 1,
+              "minX": -3,
+              "minY": -4,
+              "minZ": -4,
+              "width": 2,
+              "height": 2,
+              "depth": 1,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "left_ear",
+          "parent": "head",
+          "pose": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 15,
+              "textureY": 1,
+              "minX": 3,
+              "minY": -4,
+              "minZ": -4,
+              "width": 2,
+              "height": 2,
+              "depth": 1,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "nose",
+          "parent": "head",
+          "pose": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 6,
+              "textureY": 18,
+              "minX": -1,
+              "minY": 2.01,
+              "minZ": -8,
+              "width": 4,
+              "height": 2,
+              "depth": 3,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "body",
+          "parent": null,
+          "pose": {
+            "x": 0,
+            "y": 16,
+            "z": -6,
+            "rotationX": 1.5707963267948966,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 24,
+              "textureY": 15,
+              "minX": -3,
+              "minY": 3.999,
+              "minZ": -3.5,
+              "width": 6,
+              "height": 11,
+              "depth": 6,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "right_hind_leg",
+          "parent": null,
+          "pose": {
+            "x": -5,
+            "y": 17.5,
+            "z": 7,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 13,
+              "textureY": 24,
+              "minX": 2,
+              "minY": 0.5,
+              "minZ": -1,
+              "width": 2,
+              "height": 6,
+              "depth": 2,
+              "growX": 0.001,
+              "growY": 0.001,
+              "growZ": 0.001,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "left_hind_leg",
+          "parent": null,
+          "pose": {
+            "x": -1,
+            "y": 17.5,
+            "z": 7,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 4,
+              "textureY": 24,
+              "minX": 2,
+              "minY": 0.5,
+              "minZ": -1,
+              "width": 2,
+              "height": 6,
+              "depth": 2,
+              "growX": 0.001,
+              "growY": 0.001,
+              "growZ": 0.001,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "right_front_leg",
+          "parent": null,
+          "pose": {
+            "x": -5,
+            "y": 17.5,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 13,
+              "textureY": 24,
+              "minX": 2,
+              "minY": 0.5,
+              "minZ": -1,
+              "width": 2,
+              "height": 6,
+              "depth": 2,
+              "growX": 0.001,
+              "growY": 0.001,
+              "growZ": 0.001,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "left_front_leg",
+          "parent": null,
+          "pose": {
+            "x": -1,
+            "y": 17.5,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 4,
+              "textureY": 24,
+              "minX": 2,
+              "minY": 0.5,
+              "minZ": -1,
+              "width": 2,
+              "height": 6,
+              "depth": 2,
+              "growX": 0.001,
+              "growY": 0.001,
+              "growZ": 0.001,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "tail",
+          "parent": "body",
+          "pose": {
+            "x": -4,
+            "y": 15,
+            "z": -1,
+            "rotationX": -0.05235988,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 30,
+              "textureY": 0,
+              "minX": 2,
+              "minY": 0,
+              "minZ": -1,
+              "width": 4,
+              "height": 9,
+              "depth": 5,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "class": "AdultRabbitModel",
+      "source": "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/rabbit/AdultRabbitModel.java",
+      "textureWidth": 64,
+      "textureHeight": 64,
+      "parts": [
+        {
+          "name": "body",
+          "parent": null,
+          "pose": {
+            "x": 0,
+            "y": 23,
+            "z": 4,
+            "rotationX": -0.3927,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 0,
+              "textureY": 0,
+              "minX": -4,
+              "minY": -6,
+              "minZ": -9,
+              "width": 8,
+              "height": 6,
+              "depth": 10,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "tail",
+          "parent": "body",
+          "pose": {
+            "x": 0,
+            "y": -4.9916,
+            "z": 0.0125,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 20,
+              "textureY": 16,
+              "minX": -2,
+              "minY": -3.0084,
+              "minZ": -1.0125,
+              "width": 4,
+              "height": 4,
+              "depth": 4,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "head",
+          "parent": "body",
+          "pose": {
+            "x": 0,
+            "y": -5.2929,
+            "z": -8.1213,
+            "rotationX": 0.3927,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 0,
+              "textureY": 16,
+              "minX": -2.5,
+              "minY": -3,
+              "minZ": -4,
+              "width": 5,
+              "height": 5,
+              "depth": 5,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "left_ear",
+          "parent": "head",
+          "pose": {
+            "x": 1.5,
+            "y": -3.7071,
+            "z": -0.8787,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 32,
+              "textureY": 0,
+              "minX": -1,
+              "minY": -4.2929,
+              "minZ": -0.1213,
+              "width": 2,
+              "height": 5,
+              "depth": 1,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "right_ear",
+          "parent": "head",
+          "pose": {
+            "x": -1.5,
+            "y": -3.7071,
+            "z": -0.8787,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 26,
+              "textureY": 0,
+              "minX": -1,
+              "minY": -4.2929,
+              "minZ": -0.1213,
+              "width": 2,
+              "height": 5,
+              "depth": 1,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "frontlegs",
+          "parent": "body",
+          "pose": {
+            "x": 0,
+            "y": -1.5349,
+            "z": -6.3108,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": []
+        },
+        {
+          "name": "right_front_leg",
+          "parent": "frontlegs",
+          "pose": {
+            "x": -2,
+            "y": 1.9239,
+            "z": 0.3827,
+            "rotationX": 0.3927,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 36,
+              "textureY": 18,
+              "minX": -0.9,
+              "minY": -1,
+              "minZ": -0.9,
+              "width": 2,
+              "height": 4,
+              "depth": 2,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "left_front_leg",
+          "parent": "frontlegs",
+          "pose": {
+            "x": 2,
+            "y": 1.9239,
+            "z": 0.4827,
+            "rotationX": 0.3927,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 44,
+              "textureY": 18,
+              "minX": -1,
+              "minY": -1,
+              "minZ": -1,
+              "width": 2,
+              "height": 4,
+              "depth": 2,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "backlegs",
+          "parent": null,
+          "pose": {
+            "x": 0,
+            "y": 23,
+            "z": 4,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": []
+        },
+        {
+          "name": "right_hind_leg",
+          "parent": "backlegs",
+          "pose": {
+            "x": -3,
+            "y": 0.5,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": []
+        },
+        {
+          "name": "right_haunch",
+          "parent": "right_hind_leg",
+          "pose": {
+            "x": 0,
+            "y": -0.5,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0.3927,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 20,
+              "textureY": 24,
+              "minX": -1,
+              "minY": 0,
+              "minZ": -5,
+              "width": 2,
+              "height": 1,
+              "depth": 6,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "left_hind_leg",
+          "parent": "backlegs",
+          "pose": {
+            "x": 3,
+            "y": 0.5,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": []
+        },
+        {
+          "name": "left_haunch",
+          "parent": "left_hind_leg",
+          "pose": {
+            "x": 0,
+            "y": -0.5,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": -0.3927,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 36,
+              "textureY": 24,
+              "minX": -1,
+              "minY": 0,
+              "minZ": -5,
+              "width": 2,
+              "height": 1,
+              "depth": 6,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "class": "BreezeModel",
+      "source": "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/breeze/BreezeModel.java",
+      "textureWidth": 32,
+      "textureHeight": 32,
+      "parts": [
+        {
+          "name": "body",
+          "parent": null,
+          "pose": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": []
+        },
+        {
+          "name": "rods",
+          "parent": "body",
+          "pose": {
+            "x": 0,
+            "y": 8,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": []
+        },
+        {
+          "name": "rod_1",
+          "parent": "rods",
+          "pose": {
+            "x": 2.5981,
+            "y": -3,
+            "z": 1.5,
+            "rotationX": -2.7489,
+            "rotationY": -1.0472,
+            "rotationZ": 3.1416,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 0,
+              "textureY": 17,
+              "minX": -1,
+              "minY": 0,
+              "minZ": -3,
+              "width": 2,
+              "height": 8,
+              "depth": 2,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "rod_2",
+          "parent": "rods",
+          "pose": {
+            "x": -2.5981,
+            "y": -3,
+            "z": 1.5,
+            "rotationX": -2.7489,
+            "rotationY": 1.0472,
+            "rotationZ": 3.1416,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 0,
+              "textureY": 17,
+              "minX": -1,
+              "minY": 0,
+              "minZ": -3,
+              "width": 2,
+              "height": 8,
+              "depth": 2,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "rod_3",
+          "parent": "rods",
+          "pose": {
+            "x": 0,
+            "y": -3,
+            "z": -3,
+            "rotationX": 0.3927,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 0,
+              "textureY": 17,
+              "minX": -1,
+              "minY": 0,
+              "minZ": -3,
+              "width": 2,
+              "height": 8,
+              "depth": 2,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "head",
+          "parent": "body",
+          "pose": {
+            "x": 0,
+            "y": 4,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 4,
+              "textureY": 24,
+              "minX": -5,
+              "minY": -5,
+              "minZ": -4.2,
+              "width": 10,
+              "height": 3,
+              "depth": 4,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            },
+            {
+              "textureX": 0,
+              "textureY": 0,
+              "minX": -4,
+              "minY": -8,
+              "minZ": -4,
+              "width": 8,
+              "height": 8,
+              "depth": 8,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "eyes",
+          "parent": "head",
+          "pose": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 4,
+              "textureY": 24,
+              "minX": -5,
+              "minY": -5,
+              "minZ": -4.2,
+              "width": 10,
+              "height": 3,
+              "depth": 4,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            },
+            {
+              "textureX": 0,
+              "textureY": 0,
+              "minX": -4,
+              "minY": -8,
+              "minZ": -4,
+              "width": 8,
+              "height": 8,
+              "depth": 8,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "wind_body",
+          "parent": null,
+          "pose": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": []
+        },
+        {
+          "name": "wind_bottom",
+          "parent": "wind_body",
+          "pose": {
+            "x": 0,
+            "y": 24,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 1,
+              "textureY": 83,
+              "minX": -2.5,
+              "minY": -7,
+              "minZ": -2.5,
+              "width": 5,
+              "height": 7,
+              "depth": 5,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "wind_mid",
+          "parent": "wind_bottom",
+          "pose": {
+            "x": 0,
+            "y": -7,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 74,
+              "textureY": 28,
+              "minX": -6,
+              "minY": -6,
+              "minZ": -6,
+              "width": 12,
+              "height": 6,
+              "depth": 12,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            },
+            {
+              "textureX": 78,
+              "textureY": 32,
+              "minX": -4,
+              "minY": -6,
+              "minZ": -4,
+              "width": 8,
+              "height": 6,
+              "depth": 8,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            },
+            {
+              "textureX": 49,
+              "textureY": 71,
+              "minX": -2.5,
+              "minY": -6,
+              "minZ": -2.5,
+              "width": 5,
+              "height": 6,
+              "depth": 5,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "wind_top",
+          "parent": "wind_mid",
+          "pose": {
+            "x": 0,
+            "y": -6,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 0,
+              "textureY": 0,
+              "minX": -9,
+              "minY": -8,
+              "minZ": -9,
+              "width": 18,
+              "height": 8,
+              "depth": 18,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            },
+            {
+              "textureX": 6,
+              "textureY": 6,
+              "minX": -6,
+              "minY": -8,
+              "minZ": -6,
+              "width": 12,
+              "height": 8,
+              "depth": 12,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            },
+            {
+              "textureX": 105,
+              "textureY": 57,
+              "minX": -2.5,
+              "minY": -8,
+              "minZ": -2.5,
+              "width": 5,
+              "height": 8,
+              "depth": 5,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "class": "WardenModel",
+      "source": "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/warden/WardenModel.java",
+      "textureWidth": 128,
+      "textureHeight": 128,
+      "parts": [
+        {
+          "name": "bone",
+          "parent": null,
+          "pose": {
+            "x": 0,
+            "y": 24,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": []
+        },
+        {
+          "name": "body",
+          "parent": "bone",
+          "pose": {
+            "x": 0,
+            "y": -21,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 0,
+              "textureY": 0,
+              "minX": -9,
+              "minY": -13,
+              "minZ": -4,
+              "width": 18,
+              "height": 21,
+              "depth": 11,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "right_ribcage",
+          "parent": "body",
+          "pose": {
+            "x": -7,
+            "y": -2,
+            "z": -4,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 90,
+              "textureY": 11,
+              "minX": -2,
+              "minY": -11,
+              "minZ": -0.1,
+              "width": 9,
+              "height": 21,
+              "depth": 0,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "left_ribcage",
+          "parent": "body",
+          "pose": {
+            "x": 7,
+            "y": -2,
+            "z": -4,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 90,
+              "textureY": 11,
+              "minX": -7,
+              "minY": -11,
+              "minZ": -0.1,
+              "width": 9,
+              "height": 21,
+              "depth": 0,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": true
+            }
+          ]
+        },
+        {
+          "name": "head",
+          "parent": "body",
+          "pose": {
+            "x": 0,
+            "y": -13,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 0,
+              "textureY": 32,
+              "minX": -8,
+              "minY": -16,
+              "minZ": -5,
+              "width": 16,
+              "height": 16,
+              "depth": 10,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "right_tendril",
+          "parent": "head",
+          "pose": {
+            "x": -8,
+            "y": -12,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 52,
+              "textureY": 32,
+              "minX": -16,
+              "minY": -13,
+              "minZ": 0,
+              "width": 16,
+              "height": 16,
+              "depth": 0,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "left_tendril",
+          "parent": "head",
+          "pose": {
+            "x": 8,
+            "y": -12,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 58,
+              "textureY": 0,
+              "minX": 0,
+              "minY": -13,
+              "minZ": 0,
+              "width": 16,
+              "height": 16,
+              "depth": 0,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "right_arm",
+          "parent": "body",
+          "pose": {
+            "x": -13,
+            "y": -13,
+            "z": 1,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 44,
+              "textureY": 50,
+              "minX": -4,
+              "minY": 0,
+              "minZ": -4,
+              "width": 8,
+              "height": 28,
+              "depth": 8,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "left_arm",
+          "parent": "body",
+          "pose": {
+            "x": 13,
+            "y": -13,
+            "z": 1,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 0,
+              "textureY": 58,
+              "minX": -4,
+              "minY": 0,
+              "minZ": -4,
+              "width": 8,
+              "height": 28,
+              "depth": 8,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "right_leg",
+          "parent": "bone",
+          "pose": {
+            "x": -5.9,
+            "y": -13,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 76,
+              "textureY": 48,
+              "minX": -3.1,
+              "minY": 0,
+              "minZ": -3,
+              "width": 6,
+              "height": 13,
+              "depth": 6,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "left_leg",
+          "parent": "bone",
+          "pose": {
+            "x": 5.9,
+            "y": -13,
+            "z": 0,
+            "rotationX": 0,
+            "rotationY": 0,
+            "rotationZ": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 76,
+              "textureY": 76,
+              "minX": -2.9,
+              "minY": 0,
+              "minZ": -3,
+              "width": 6,
+              "height": 13,
+              "depth": 6,
+              "growX": 0,
+              "growY": 0,
+              "growZ": 0,
+              "mirror": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "class": "ElytraModel",
+      "source": "ref://mc-26.3-analysis/src/net/minecraft/client/model/object/equipment/ElytraModel.java",
+      "textureWidth": 64,
+      "textureHeight": 32,
+      "parts": [
+        {
+          "name": "left_wing",
+          "parent": null,
+          "pose": {
+            "x": 5,
+            "y": 0,
+            "z": 0,
+            "rotationX": 0.2617993877991494,
+            "rotationY": 0,
+            "rotationZ": -0.2617993877991494,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 22,
+              "textureY": 0,
+              "minX": -10,
+              "minY": 0,
+              "minZ": 0,
+              "width": 10,
+              "height": 20,
+              "depth": 2,
+              "growX": 1,
+              "growY": 1,
+              "growZ": 1,
+              "mirror": false
+            }
+          ]
+        },
+        {
+          "name": "right_wing",
+          "parent": null,
+          "pose": {
+            "x": -5,
+            "y": 0,
+            "z": 0,
+            "rotationX": 0.2617993877991494,
+            "rotationY": 0,
+            "rotationZ": 0.2617993877991494,
+            "scaleX": 1,
+            "scaleY": 1,
+            "scaleZ": 1
+          },
+          "cubes": [
+            {
+              "textureX": 22,
+              "textureY": 0,
+              "minX": 0,
+              "minY": 0,
+              "minZ": 0,
+              "width": 10,
+              "height": 20,
+              "depth": 2,
+              "growX": 1,
+              "growY": 1,
+              "growZ": 1,
+              "mirror": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
