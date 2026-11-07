@@ -17,13 +17,16 @@ public static class SheepModelDefinition
     /// <summary>Declarative DSL tree for the twelve base + wool parts (T-677).</summary>
     private static readonly VanillaMeshDefinition SheepMesh = BuildSheepMesh();
 
+    private static readonly CompiledEntityModel CompiledModel = VanillaMeshBakery.Build(SheepMesh, 64, 32);
+
     public static readonly EntityModelDefinition Definition = new(
         "sheep",
         64,
         32,
         [.. VanillaMeshBake.Bake(SheepMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/sheep/sheep");
+        "entity/sheep/sheep",
+        compiled: CompiledModel);
 
     private static VanillaMeshDefinition BuildSheepMesh()
     {

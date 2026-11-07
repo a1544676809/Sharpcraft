@@ -21,9 +21,13 @@ public static class ChickenModelDefinition
 
     private static readonly EntityModelPart[] NormalParts = [.. VanillaMeshBake.Bake(NormalMesh, 0, 0)];
 
+    private static readonly CompiledEntityModel NormalCompiled = VanillaMeshBakery.Build(NormalMesh, 64, 32);
+
     private static readonly VanillaMeshDefinition ColdMesh = BuildColdMesh();
 
     private static readonly EntityModelPart[] ColdParts = [.. VanillaMeshBake.Bake(ColdMesh, 0, 0)];
+
+    private static readonly CompiledEntityModel ColdCompiled = VanillaMeshBakery.Build(ColdMesh, 64, 32);
 
     public static readonly EntityModelDefinition Definition = new(
         "chicken",
@@ -31,15 +35,16 @@ public static class ChickenModelDefinition
         32,
         NormalParts,
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/chicken/chicken_temperate");
+        "entity/chicken/chicken_temperate",
+        compiled: NormalCompiled);
 
     /// <summary>Variant key to definition, keyed by the registry entry name.</summary>
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
         new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)
         {
             ["temperate"] = Definition,
-            ["warm"] = new("chicken_warm", 64, 32, NormalParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/chicken/chicken_warm"),
-            ["cold"] = new("chicken_cold", 64, 32, ColdParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/chicken/chicken_cold")
+            ["warm"] = new("chicken_warm", 64, 32, NormalParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/chicken/chicken_warm", compiled: NormalCompiled),
+            ["cold"] = new("chicken_cold", 64, 32, ColdParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/chicken/chicken_cold", compiled: ColdCompiled)
         };
 
     private static VanillaMeshDefinition BuildNormalMesh()

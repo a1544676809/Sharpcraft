@@ -51,6 +51,35 @@ public sealed class EntityModelTreeBakeryTests
     }
 
     [Fact]
+    public void FoxAndRabbitDefinitionsExposeCompiledTrees()
+    {
+        Assert.NotNull(FoxModelDefinition.Definition.Compiled);
+        Assert.NotNull(RabbitModelDefinition.Definition.Compiled);
+
+        var fox = FoxModelDefinition.Definition.Compiled!;
+        Assert.Equal(10, fox.Parts.Count);
+        Assert.Equal("body", Assert.IsType<EntityModelPartNode>(fox.Find("tail")).Parent);
+
+        var rabbit = RabbitModelDefinition.Definition.Compiled!;
+        Assert.Equal(13, rabbit.Parts.Count);
+        Assert.Empty(Assert.IsType<EntityModelPartNode>(rabbit.Find("frontlegs")).Cubes);
+        Assert.Empty(Assert.IsType<EntityModelPartNode>(rabbit.Find("backlegs")).Cubes);
+        Assert.Contains(rabbit.Find("right_front_leg"), rabbit.Find("frontlegs")!.Children);
+    }
+
+    [Fact]
+    public void FarmModelsExposeCompiledTrees()
+    {
+        Assert.NotNull(PigModelDefinition.Definition.Compiled);
+        Assert.NotNull(PigModelDefinition.Variants["cold"].Compiled);
+        Assert.NotNull(CowModelDefinition.Definition.Compiled);
+        Assert.NotNull(CowModelDefinition.Variants["warm"].Compiled);
+        Assert.NotNull(ChickenModelDefinition.Definition.Compiled);
+        Assert.NotNull(ChickenModelDefinition.Variants["cold"].Compiled);
+        Assert.NotNull(SheepModelDefinition.Definition.Compiled);
+    }
+
+    [Fact]
     public void TreeMesherBuildsBreezeGeometry()
     {
         var state = new EntityRenderState(1, BreezeModelDefinition.BreezeEntityTypeId, 0f, 0f, 0f, 0f, 0f);

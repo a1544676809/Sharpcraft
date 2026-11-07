@@ -24,13 +24,19 @@ public static class CowModelDefinition
 
     private static readonly EntityModelPart[] NormalParts = [.. VanillaMeshBake.Bake(NormalMesh, 0, 0)];
 
+    private static readonly CompiledEntityModel NormalCompiled = VanillaMeshBakery.Build(NormalMesh, 64, 64);
+
     private static readonly VanillaMeshDefinition WarmMesh = BuildWarmMesh();
 
     private static readonly EntityModelPart[] WarmParts = [.. VanillaMeshBake.Bake(WarmMesh, 0, 0)];
 
+    private static readonly CompiledEntityModel WarmCompiled = VanillaMeshBakery.Build(WarmMesh, 64, 64);
+
     private static readonly VanillaMeshDefinition ColdMesh = BuildColdMesh();
 
     private static readonly EntityModelPart[] ColdParts = [.. VanillaMeshBake.Bake(ColdMesh, 0, 0)];
+
+    private static readonly CompiledEntityModel ColdCompiled = VanillaMeshBakery.Build(ColdMesh, 64, 64);
 
     public static readonly EntityModelDefinition Definition = new(
         "cow",
@@ -38,7 +44,8 @@ public static class CowModelDefinition
         64,
         NormalParts,
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/cow/cow_temperate");
+        "entity/cow/cow_temperate",
+        compiled: NormalCompiled);
 
     public static readonly EntityModelDefinition Mooshroom = new(
         "mooshroom",
@@ -46,15 +53,16 @@ public static class CowModelDefinition
         64,
         NormalParts,
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/cow/mooshroom_red");
+        "entity/cow/mooshroom_red",
+        compiled: NormalCompiled);
 
     /// <summary>Variant key to definition, keyed by the registry entry name.</summary>
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
         new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)
         {
             ["temperate"] = Definition,
-            ["warm"] = new("cow_warm", 64, 64, WarmParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/cow/cow_warm"),
-            ["cold"] = new("cow_cold", 64, 64, ColdParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/cow/cow_cold")
+            ["warm"] = new("cow_warm", 64, 64, WarmParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/cow/cow_warm", compiled: WarmCompiled),
+            ["cold"] = new("cow_cold", 64, 64, ColdParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/cow/cow_cold", compiled: ColdCompiled)
         };
 
     private static VanillaMeshDefinition BuildNormalMesh()

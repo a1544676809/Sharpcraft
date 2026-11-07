@@ -16,6 +16,11 @@ public static class FoxModelDefinition
     /// <summary>Declarative DSL tree for the ten fox parts (T-684).</summary>
     private static readonly VanillaMeshDefinition FoxMesh = BuildFoxMesh();
 
+    internal static VanillaMeshDefinition Mesh => FoxMesh;
+
+    private static readonly CompiledEntityModel CompiledModel =
+        VanillaMeshBakery.Build(FoxMesh, 48, 32, texturePath: "entity/fox/fox");
+
     private static EntityModelPart[] BuildParts()
     {
         // The reference lists the tail (a child of body) last, after all four legs; Bake emits children depth-first.
@@ -43,7 +48,7 @@ public static class FoxModelDefinition
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/fox/fox",
         textureSelector: state => state.IsSleeping ? "entity/fox/fox_sleep" : "entity/fox/fox",
-        additionalTexturePaths: ["entity/fox/fox_sleep"]);
+        additionalTexturePaths: ["entity/fox/fox_sleep"], compiled: CompiledModel);
 
     /// <summary>Fox type names: RED and SNOW, matching the synced integer type id order.</summary>
     public static readonly IReadOnlyList<string> VariantKeys = ["red", "snow"];
@@ -60,7 +65,7 @@ public static class FoxModelDefinition
                 PlayerModelDefinition.DefaultFaceTransforms,
                 "entity/fox/fox_snow",
                 textureSelector: state => state.IsSleeping ? "entity/fox/fox_snow_sleep" : "entity/fox/fox_snow",
-                additionalTexturePaths: ["entity/fox/fox_snow_sleep"])
+                additionalTexturePaths: ["entity/fox/fox_snow_sleep"], compiled: CompiledModel)
         };
 
     private static VanillaMeshDefinition BuildFoxMesh()

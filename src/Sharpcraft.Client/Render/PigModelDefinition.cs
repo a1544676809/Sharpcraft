@@ -22,9 +22,13 @@ public static class PigModelDefinition
 
     private static readonly EntityModelPart[] NormalParts = [.. VanillaMeshBake.Bake(NormalMesh, 0, 0)];
 
+    private static readonly CompiledEntityModel NormalCompiled = VanillaMeshBakery.Build(NormalMesh, 64, 64);
+
     private static readonly VanillaMeshDefinition ColdMesh = BuildPigMesh([new("cold_pig_layer", 0.5f, 28, 32)]);
 
     private static readonly EntityModelPart[] ColdParts = [.. VanillaMeshBake.Bake(ColdMesh, 0, 0)];
+
+    private static readonly CompiledEntityModel ColdCompiled = VanillaMeshBakery.Build(ColdMesh, 64, 64);
 
     public static readonly EntityModelDefinition Definition = new(
         "pig",
@@ -32,15 +36,16 @@ public static class PigModelDefinition
         64,
         NormalParts,
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/pig/pig_temperate");
+        "entity/pig/pig_temperate",
+        compiled: NormalCompiled);
 
     /// <summary>Variant key to definition, keyed by the registry entry name ("temperate", "warm", "cold").</summary>
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
         new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)
         {
             ["temperate"] = Definition,
-            ["warm"] = new("pig_warm", 64, 64, NormalParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/pig/pig_warm"),
-            ["cold"] = new("pig_cold", 64, 64, ColdParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/pig/pig_cold")
+            ["warm"] = new("pig_warm", 64, 64, NormalParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/pig/pig_warm", compiled: NormalCompiled),
+            ["cold"] = new("pig_cold", 64, 64, ColdParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/pig/pig_cold", compiled: ColdCompiled)
         };
 
     /// <summary>

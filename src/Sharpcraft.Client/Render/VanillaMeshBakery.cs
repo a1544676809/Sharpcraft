@@ -52,7 +52,6 @@ public static class VanillaMeshBakery
             }
 
             var baked = BakeCube(part, cube, parentName, modelHeight);
-            var effectiveTexturePath = cube.TexturePath ?? texturePath;
             cubes.Add(new EntityModelCube(
                 cube.Name,
                 baked.CentreX,
@@ -65,7 +64,7 @@ public static class VanillaMeshBakery
                 baked.TextureY,
                 baked.Mirror,
                 cube.Overlays,
-                effectiveTexturePath,
+                cube.TexturePath,
                 cube.Grow,
                 cube.GrowXyz,
                 cube.Kind,

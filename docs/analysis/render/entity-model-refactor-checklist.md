@@ -134,3 +134,16 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - RF-12：树路径的 `PoseSource`/装备层 mapping 尚未接入；旧 `PartFrame` 仅保留给未迁移的扁平模型；
 - 其余模型仍走 `EntityModelPart` 扁平路径，需逐模型迁移；
 - RF-14 起装备树仍未开始。
+
+### 2026-11-07 — T-715 farm/quadruped 树路径批量迁移
+
+已迁移到 `Compiled` 路径：
+
+- Pig（temperate/warm/cold）；
+- Cow（temperate/warm/cold + Mooshroom）；
+- Chicken（temperate/warm/cold）；
+- Sheep；
+- Fox（red/snow，T-714 已接入）；
+- Rabbit（全部变体，T-714 已接入）。
+
+同时修正树路径 root pose 平移：`PartMatrix` 的 root 反平移必须使用**未加动画 offset 的 base pivot**，否则根节点动画位移被抵消；`EntityLayerTests.AnimationPoseOffsetsAreAppliedBeforeMeshing` 已重新通过。

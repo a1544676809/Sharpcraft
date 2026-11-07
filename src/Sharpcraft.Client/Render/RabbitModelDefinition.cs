@@ -16,13 +16,19 @@ public static class RabbitModelDefinition
     /// <summary>Declarative DSL tree for the nested rabbit parts (T-677).</summary>
     private static readonly VanillaMeshDefinition RabbitMesh = BuildRabbitMesh();
 
+    internal static VanillaMeshDefinition Mesh => RabbitMesh;
+
+    private static readonly CompiledEntityModel CompiledModel =
+        VanillaMeshBakery.Build(RabbitMesh, 64, 64, texturePath: "entity/rabbit/rabbit_brown");
+
     public static readonly EntityModelDefinition Definition = new(
         "rabbit",
         64,
         64,
         [.. VanillaMeshBake.Bake(RabbitMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/rabbit/rabbit_brown");
+        "entity/rabbit/rabbit_brown",
+        compiled: CompiledModel);
 
     public static readonly IReadOnlyList<string> VariantKeys = ["brown", "white", "black", "white_splotched", "gold", "salt", "evil"];
 
@@ -48,7 +54,7 @@ public static class RabbitModelDefinition
         {
             if (key != "brown")
             {
-                variants[key] = new EntityModelDefinition("rabbit_" + key, 64, 64, Definition.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/rabbit/" + files[key]);
+                variants[key] = new EntityModelDefinition("rabbit_" + key, 64, 64, Definition.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/rabbit/" + files[key], compiled: CompiledModel);
             }
         }
 
