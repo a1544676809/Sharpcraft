@@ -4,30 +4,48 @@
 namespace Sharpcraft.Client.Render;
 
 /// <summary>
-/// PolarBearModel: head with mouth/ears, two body cubes, and four legs; the layer scales by 1.2.
+/// PolarBearModel: head with mouth/ears, two body cubes, and four legs; the layer scales by 1.2. Parts are declared with
+/// the <c>VanillaMeshDefinition</c> DSL and baked via <c>VanillaMeshBake</c> (T-687).
 /// </summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.polarbear.PolarBearModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/polarbear/PolarBearModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class PolarBearModelDefinition
 {
     public const int PolarBearEntityTypeId = 105;
 
+    private static readonly VanillaMeshDefinition PolarBearMesh = BuildPolarBearMesh();
+
     public static readonly EntityModelDefinition Definition = new(
         "polar_bear",
         128,
         64,
-        [
-            PlayerModelDefinition.FromVanilla("head", 0f, 10f, -16f, -3.5f, -3f, -3f, 7f, 7f, 7f, 0, 0),
-            PlayerModelDefinition.FromVanilla("mouth", 0f, 10f, -16f, -2.5f, 1f, -6f, 5f, 3f, 3f, 0, 44),
-            PlayerModelDefinition.FromVanilla("right_ear", 0f, 10f, -16f, -4.5f, -4f, -1f, 2f, 2f, 1f, 26, 0),
-            PlayerModelDefinition.FromVanilla("left_ear", 0f, 10f, -16f, 2.5f, -4f, -1f, 2f, 2f, 1f, 26, 0, mirror: true),
-            PlayerModelDefinition.FromVanilla("body", -2f, 9f, 12f, -5f, -13f, -7f, 14f, 14f, 11f, 0, 19, rotationX: -MathF.PI / 2f),
-            PlayerModelDefinition.FromVanilla("body_upper", -2f, 9f, 12f, -4f, -25f, -7f, 12f, 12f, 10f, 39, 0, rotationX: -MathF.PI / 2f),
-            PlayerModelDefinition.FromVanilla("right_hind_leg", -4.5f, 14f, 6f, -2f, 0f, -2f, 4f, 10f, 8f, 50, 22),
-            PlayerModelDefinition.FromVanilla("left_hind_leg", 4.5f, 14f, 6f, -2f, 0f, -2f, 4f, 10f, 8f, 50, 22),
-            PlayerModelDefinition.FromVanilla("right_front_leg", -3.5f, 14f, -8f, -2f, 0f, -2f, 4f, 10f, 6f, 50, 40),
-            PlayerModelDefinition.FromVanilla("left_front_leg", 3.5f, 14f, -8f, -2f, 0f, -2f, 4f, 10f, 6f, 50, 40)
-        ],
+        [.. VanillaMeshBake.Bake(PolarBearMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/bear/polarbear",
         1.2f);
+
+    private static VanillaMeshDefinition BuildPolarBearMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 10f, -16f),
+            new VanillaCubeDefinition("head", 0, 0, -3.5f, -3f, -3f, 7f, 7f, 7f));
+        root.AddOrReplaceChild("mouth", VanillaPartPose.Offset(0f, 10f, -16f),
+            new VanillaCubeDefinition("mouth", 0, 44, -2.5f, 1f, -6f, 5f, 3f, 3f));
+        root.AddOrReplaceChild("right_ear", VanillaPartPose.Offset(0f, 10f, -16f),
+            new VanillaCubeDefinition("right_ear", 26, 0, -4.5f, -4f, -1f, 2f, 2f, 1f));
+        root.AddOrReplaceChild("left_ear", VanillaPartPose.Offset(0f, 10f, -16f),
+            new VanillaCubeDefinition("left_ear", 26, 0, 2.5f, -4f, -1f, 2f, 2f, 1f, Mirror: true));
+        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(-2f, 9f, 12f, -MathF.PI / 2f, 0f, 0f),
+            new VanillaCubeDefinition("body", 0, 19, -5f, -13f, -7f, 14f, 14f, 11f));
+        root.AddOrReplaceChild("body_upper", VanillaPartPose.OffsetAndRotation(-2f, 9f, 12f, -MathF.PI / 2f, 0f, 0f),
+            new VanillaCubeDefinition("body_upper", 39, 0, -4f, -25f, -7f, 12f, 12f, 10f));
+        root.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-4.5f, 14f, 6f),
+            new VanillaCubeDefinition("right_hind_leg", 50, 22, -2f, 0f, -2f, 4f, 10f, 8f));
+        root.AddOrReplaceChild("left_hind_leg", VanillaPartPose.Offset(4.5f, 14f, 6f),
+            new VanillaCubeDefinition("left_hind_leg", 50, 22, -2f, 0f, -2f, 4f, 10f, 8f));
+        root.AddOrReplaceChild("right_front_leg", VanillaPartPose.Offset(-3.5f, 14f, -8f),
+            new VanillaCubeDefinition("right_front_leg", 50, 40, -2f, 0f, -2f, 4f, 10f, 6f));
+        root.AddOrReplaceChild("left_front_leg", VanillaPartPose.Offset(3.5f, 14f, -8f),
+            new VanillaCubeDefinition("left_front_leg", 50, 40, -2f, 0f, -2f, 4f, 10f, 6f));
+        return new VanillaMeshDefinition(root);
+    }
 }
