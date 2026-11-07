@@ -225,7 +225,7 @@ public static class EntityModelResolver
 
         var baseCompiled = definition.Compiled;
         IReadOnlyList<EntityRenderLayerDefinition>? renderLayers = null;
-        if (!baby && baseCompiled is not null && ReferenceEquals(layers, HumanoidArmorLayers))
+        if (!baby && baseCompiled is not null && layers.Length > 0)
         {
             var baseLayerModel = new EntityModelDefinition(
                 definition.Name,
@@ -255,65 +255,112 @@ public static class EntityModelResolver
                     definition.TexturePath,
                     definition.TextureSelector));
             }
+
             var order = 10;
+            var piglin = typeId is (PiglinModelDefinition.PiglinEntityTypeId
+                or PiglinModelDefinition.PiglinBruteEntityTypeId
+                or PiglinModelDefinition.ZombifiedPiglinEntityTypeId);
             foreach (var (kind, slot, fallback) in layers)
             {
-                var effectiveKind = kind;
                 if (EquipmentModelTrees.For(
                         kind,
                         slot,
                         player: typeId == EntityPlaceholderMesher.PlayerEntityTypeId,
                         baby: false,
-                        piglin: typeId is (PiglinModelDefinition.PiglinEntityTypeId
-                            or PiglinModelDefinition.PiglinBruteEntityTypeId
-                            or PiglinModelDefinition.ZombifiedPiglinEntityTypeId)) is not { } equipmentTree)
+                        piglin: piglin) is not { } equipmentTree)
                 {
                     continue;
                 }
 
-                Func<EntityRenderState, string?> selector = state =>
-                    EntityModelResolver.ResolveEquipmentTexture(state, effectiveKind, slot);
+                var fixedTexture = typeId == 138 && kind == EquipmentAssetKind.LlamaBody
+                    ? "entity/equipment/llama_body/trader_llama"
+                    : null;
+                Func<EntityRenderState, string?> selector = fixedTexture is null
+                    ? state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot)
+                    : _ => fixedTexture;
                 var layerModel = new EntityModelDefinition(
                     "equipment_" + kind + "_" + slot,
                     definition.TextureWidth,
                     definition.TextureHeight,
                     [],
                     definition.FaceTransforms,
-                    fallback,
+                    fixedTexture ?? fallback,
                     definition.Scale,
                     textureSelector: selector,
-                    additionalTexturePaths: [fallback],
+                    additionalTexturePaths: [fixedTexture ?? fallback],
                     compiled: equipmentTree);
                 customLayers.Add(new EntityRenderLayerDefinition(
                     "equipment_" + kind + "_" + slot,
                     EntityGeometryLayerKind.Elytra,
                     order++,
                     layerModel,
-                    fallback,
+                    fixedTexture ?? fallback,
                     selector,
-                    state => EntityModelResolver.ResolveEquipmentTexture(state, effectiveKind, slot) is not null));
+                    state => selector(state) is not null,
+                    AllCubes: true));
             }
 
-            var elytraCompiled = EntityModelLayerHelpers.BuildElytraLayer(baseCompiled);
-            var elytraModel = new EntityModelDefinition(
-                "elytra",
-                definition.TextureWidth,
-                definition.TextureHeight,
-                [],
-                definition.FaceTransforms,
-                "entity/equipment/wings/elytra",
-                definition.Scale,
-                textureSelector: state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4),
-                additionalTexturePaths: ["entity/equipment/wings/elytra"],
-                compiled: elytraCompiled);
-            customLayers.Add(new EntityRenderLayerDefinition(
-                "elytra",
-                EntityGeometryLayerKind.Elytra,
-                order,
-                elytraModel,
-                "entity/equipment/wings/elytra",
-                state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4),
-                state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4) is not null));
+            if (typeId == 152 && EquipmentModelTrees.For(EquipmentAssetKind.WolfBody) is { } wolfArmor)
+            {
+                Func<EntityRenderState, string?> crackSelector = static state => state.Crackiness switch
+                {
+                    1 => "entity/wolf/wolf_armor_crackiness_low",
+                    2 => "entity/wolf/wolf_armor_crackiness_medium",
+                    3 => "entity/wolf/wolf_armor_crackiness_high",
+                    _ => null
+                };
+                var crackinessModel = new EntityModelDefinition(
+                    "crackiness",
+                    definition.TextureWidth,
+                    definition.TextureHeight,
+                    [],
+                    definition.FaceTransforms,
+                    "entity/wolf/wolf_armor_crackiness_low",
+                    definition.Scale,
+                    textureSelector: crackSelector,
+                    additionalTexturePaths:
+                    [
+                        "entity/wolf/wolf_armor_crackiness_low",
+                        "entity/wolf/wolf_armor_crackiness_medium",
+                        "entity/wolf/wolf_armor_crackiness_high"
+                    ],
+                    compiled: wolfArmor);
+                customLayers.Add(new EntityRenderLayerDefinition(
+                    "crackiness",
+                    EntityGeometryLayerKind.Elytra,
+                    order++,
+                    crackinessModel,
+                    "entity/wolf/wolf_armor_crackiness_low",
+                    crackSelector,
+                    static state => state.Crackiness > 0,
+                    AllCubes: true));
+            }
+
+            if (ReferenceEquals(layers, HumanoidArmorLayers))
+            {
+                var elytraCompiled = EntityModelLayerHelpers.BuildElytraLayer(baseCompiled);
+                var elytraModel = new EntityModelDefinition(
+                    "elytra",
+                    definition.TextureWidth,
+                    definition.TextureHeight,
+                    [],
+                    definition.FaceTransforms,
+                    "entity/equipment/wings/elytra",
+                    definition.Scale,
+                    textureSelector: state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4),
+                    additionalTexturePaths: ["entity/equipment/wings/elytra"],
+                    compiled: elytraCompiled);
+                customLayers.Add(new EntityRenderLayerDefinition(
+                    "elytra",
+                    EntityGeometryLayerKind.Elytra,
+                    order,
+                    elytraModel,
+                    "entity/equipment/wings/elytra",
+                    state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4),
+                    state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4) is not null,
+                    AllCubes: true));
+            }
+
             renderLayers = customLayers;
         }
 

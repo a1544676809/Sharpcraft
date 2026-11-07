@@ -207,7 +207,7 @@ public sealed partial class EntityModelMesher
                 scratch.Clear();
                 BuildInto(
                     scratch,
-                    entityLayer.Kind,
+                    entityLayer.AllCubes ? null : entityLayer.Kind,
                     [entity],
                     skin,
                     skinWidth,

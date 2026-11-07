@@ -128,6 +128,8 @@ public sealed record EntityGeometryLayer(
 - `EntityRenderLayerDefinition` 扩展为带 `EntityModelDefinition Model`、`TexturePath`、`TextureSelector`、
   `VisibleWhen` 的层模型；`EntityModelMesher.BuildModelBackedLayers` 对带 Model 的层按实体单独建几何并追加；
 - humanoid 四槽护甲与 Elytra 已改为模型级独立层；基础模型/衣服/透明 overlay 仍按原 kind 层输出；
-- 剩余：把非 humanoid 装备树也接成模型级层、把 per-layer 几何构建从“逐实体临时几何”优化为按模型分组。
+- T-739 后 Horse/Donkey/Mule/SkeletonHorse/ZombieHorse、Camel、Llama、Nautilus、HappyGhast、Wolf、Piglin 的装备树
+  也改为模型级独立层；`AllCubes` 用于让装备树（cube Kind=Cutout）走 Elytra pipeline；
+- 剩余：把 per-layer 几何构建从“逐实体临时几何”优化为按模型分组。
 
 

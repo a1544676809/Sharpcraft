@@ -116,7 +116,8 @@ updated: 2026-11-07
 74. **T-736 Horse markings 生长值修复（2026-11-07）**：按 `HorseMarkingLayer` 语义去掉 legacy flat markings 的 `+0.05f` inflation，与编译树一致。
 75. **T-737 剩余幼年模型树迁移（2026-11-07）**：Baby Misc（Goat/Panda/PolarBear/Turtle）、Odd（Strider/Husk/Snifflet/犰狳）、Final（Nautilus/HappyGhast/GlowSquid）及变体接入 `Compiled`；Husk/GlowSquid 复用已有编译树；树测试 27 项通过。
 76. **T-738 模型级实体层（humanoid 护甲/Elytra）（2026-11-07）**：`EntityRenderLayerDefinition` 增加独立 Model/纹理/可见性；`BuildModelBackedLayers` 支持模型级层；humanoid 护甲与 Elytra 独立层接线；当前逐实体构建，性能分组待后续。
-77. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
+77. **T-739 全量非 baby 装备独立层（2026-11-07）**：马/驴/骡/骷髅马/僵尸马、骆驼、羊驼、鹦鹉螺、快乐恶魂、狼、Piglin 装备树改为模型级独立层；`AllCubes` 修复装备层 pipeline；Wolf crackiness 独立层；全量 Client 1554 项通过。
+78. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
 48. **T-648..T-650 / T-651..T-653 渲染与解耦（2026-11-05~06）**：Elytra 翼盒与 UV 原版等价、双翼镜像全宽；流体面剔除修复（玻璃后水可见）；云 OIT depth-bounds 写深度；`Sharpcraft.Assets` 分层 + 启动器/客户端解耦（ADR-0026/0027）。
 49. **实体模型/动画批量落地（2026-11-02~05）**：全部 baby 模型族、villager/zombie/horse 变体、cat/wolf 项圈、panda 基因、大量动画 provider 与测试。
 50. **协议与渲染长尾（2026-11-01~05）**：Play Clientbound 覆盖审计 + P0/P1 包批次（T-642..T-647）；反相 Z 迁移；参考 OIT 云/流体；天空盘逐像素近似。

@@ -337,7 +337,9 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - `EntityModelMesher.BuildModelBackedLayers`：带独立 `Model` 的层按实体建几何并追加，`BuildLayers` 不再只能按 kind 聚合；
 - `EntityModelResolver.Decorate` 为 humanoid 成人四槽护甲与 Elytra 生成独立 `EntityRenderLayerDefinition` 模型层；
 - `EntityModelLayerHelpers.BuildElytraLayer` 返回带 wing rotation/crouch selector 的独立两翼树；
-- 当前实现为正确性优先的逐实体 scratch 构建，后续性能任务可按模型定义分组优化；非 humanoid 装备层仍走 merged compiled。
+- 当前实现为正确性优先的逐实体 scratch 构建，后续性能任务可按模型定义分组优化；
+- T-739 扩到所有非 baby 装备模型：Horse/Donkey/Mule/SkeletonHorse/ZombieHorse、Camel、Llama、Nautilus、HappyGhast、Wolf、Piglin 的装备树都生成独立 `EntityRenderLayerDefinition`；
+- 装备 layer 使用 `AllCubes: true`，因为装备树 cube 的 `Kind` 是 Cutout 而 layer 需要 Elytra pipeline；Wolf crackiness 和 humanoid Elytra 也独立成层。
 
 ### 2026-11-07 — T-735 幼年水生 / 马科模型树迁移
 

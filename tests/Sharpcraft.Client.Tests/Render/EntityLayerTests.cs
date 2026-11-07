@@ -87,6 +87,21 @@ public sealed class EntityLayerTests
     }
 
     [Fact]
+    public void NonHumanoidEquipmentUsesIndependentModelLayers()
+    {
+        var state = Entity(HorseModelDefinition.HorseEntityTypeId) with
+        {
+            Equipment = new EntityEquipment(-1, -1, -1, -1, -1, -1, 1407, 949)
+        };
+        var mesher = new EntityModelMesher();
+        var layers = mesher.BuildLayers([state], new SpriteRect(0, 0, 64, 64, 1), 64, 64,
+            variants: EntityVariantTable.Builtin);
+        Assert.Contains(layers, layer => layer.Name == "equipment_HorseBody_6");
+        Assert.Contains(layers, layer => layer.Name == "equipment_HorseSaddle_7");
+        Assert.Contains(layers, layer => layer.Kind == EntityGeometryLayerKind.Elytra);
+    }
+
+    [Fact]
     public void LayerOrderComesFromExplicitDefinitions()
     {
         var layers = Layers(HumanoidMobModelDefinition.DrownedEntityTypeId);
