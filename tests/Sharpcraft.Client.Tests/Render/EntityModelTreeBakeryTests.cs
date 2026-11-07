@@ -363,6 +363,27 @@ public sealed class EntityModelTreeBakeryTests
     }
 
     [Fact]
+    public void BabyAquaticAndEquineModelsExposeCompiledTrees()
+    {
+        Assert.NotNull(BabyModelDefinitionsAquatic.Squid.Compiled);
+        Assert.NotNull(BabyModelDefinitionsAquatic.Bee.Compiled);
+        Assert.NotNull(BabyModelDefinitionsAquatic.Dolphin.Compiled);
+        Assert.NotNull(BabyModelDefinitionsAquatic.Axolotl.Compiled);
+        Assert.NotNull(BabyModelDefinitionsAquatic.Variants[(7, "lucy")].Compiled);
+        Assert.NotNull(BabyModelDefinitionsAquatic.Variants[(7, "wild")].Compiled);
+        Assert.NotNull(BabyModelDefinitionsEquine.Horse.Compiled);
+        Assert.NotNull(BabyModelDefinitionsEquine.Llama.Compiled);
+        Assert.NotNull(BabyModelDefinitionsEquine.Camel.Compiled);
+        Assert.NotNull(BabyModelDefinitionsEquine.Donkey.Compiled);
+        Assert.NotNull(BabyModelDefinitionsEquine.Variants[(HorseModelDefinition.HorseEntityTypeId, "black")].Compiled);
+        Assert.NotNull(BabyModelDefinitionsEquine.Variants[(LlamaModelDefinition.LlamaEntityTypeId, "white")].Compiled);
+
+        Assert.NotNull(BabyModelDefinitionsAquatic.Squid.Compiled!.Find("body"));
+        Assert.NotNull(BabyModelDefinitionsAquatic.Dolphin.Compiled!.Find("tail_fin"));
+        Assert.NotNull(BabyModelDefinitionsEquine.Horse.Compiled!.Find("marking_white_body"));
+    }
+
+    [Fact]
     public void BabyZombieUsesDedicatedBabyArmorTree()
     {
         var baby = EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId, baby: true);

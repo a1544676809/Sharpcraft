@@ -324,3 +324,11 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - `BabyModelDefinitionsExtra` 的 Cat/Wolf/Fox/Rabbit 及全部变体接入 `Compiled`；
 - Baby Cat/Wolf 的 collar 通过 `WithCollar(CompiledEntityModel)` 生成树层；
 - 树测试增加 baby farm/pet compiled 断言，树测试共 25 项。
+
+### 2026-11-07 — T-735 幼年水生 / 马科模型树迁移
+
+- `BabyModelDefinitionsAquatic` 的 Squid/Bee/Dolphin/Axolotl 及 axolotl 全部色型变体接入 `Compiled`；
+- `BabyModelDefinitionsEquine` 的 Horse/Llama/Camel/Donkey 及马/羊驼毛色变体接入 `Compiled`；
+- Baby Horse 的四种 markings 通过 `WithHorseMarkings(CompiledEntityModel, ..., baby: true)` 生成 `WithModelLayer` 树复制层，保留 `marking_*` 纹理 selector、`Markings` 可见性与 Translucent kind；
+- Bee 的状态纹理 selector、各模型扁平 `Parts`、变体名、纹理路径与动画 provider 均保持不变；
+- 树测试增加 baby aquatic/equine compiled 断言，树测试共 26 项。

@@ -210,6 +210,7 @@ DSL 现状与约束：
 - T-732：ZombieNautilus warm 变体的 coral 子树通过 `AddChild` 挂到基础 Nautilus `shell` 节点，保留 `Equipment[6] <= 0` 可见性。
 - T-733：`EntityModelDefinition.RenderLayers` 提供显式 `cutout/elytra/translucent/emissive` 顺序（0/10/20/30），`BuildLayers` 按批次并集排序；`WindowedRenderer` entity layer 缓冲按层数动态增长。独立 per-layer model/texture/visible 仍待接线。
 - T-734：Baby Pig/Cow/Chicken 与 Baby Cat/Wolf/Fox/Rabbit 全部变体接入 `Compiled`；Baby Cat/Wolf collar 使用树层。
+- T-735：Baby Squid/Bee/Dolphin/Axolotl 与 Baby Horse/Llama/Camel/Donkey 及全部色型/毛色变体接入 `Compiled`；Baby Horse markings 使用 `WithModelLayer` 树复制层，纹理 selector 与 `Markings` 可见性保持。
 - 现有 DSL 仍缺 **三轴 `GrowXyz`** 与 **`PartPose` 三轴 Scale**；完整覆盖幼年护甲等 reference 数据前必须补齐。
 - 完整的模型/装备树结构、动画与测试差距见 [`entity-model-parity-gap.md`](../analysis/render/entity-model-parity-gap.md)；逐项施工清单见 [`entity-model-refactor-checklist.md`](../analysis/render/entity-model-refactor-checklist.md)。
 - 迁移测试中的 `LegacyModelPartFactory` 只是旧实现值 oracle，不是原版 Golden Vector；后续应改为读取自动提取的 `vanilla-model-facts.json`。
