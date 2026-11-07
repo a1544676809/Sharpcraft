@@ -371,5 +371,12 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - 新增 `EntityModelTreeCoverageTests`（3 项）：扫描 `EntityModelResolver.Definitions` 全注册表（基础 / 成人变体 / 幼年变体；派生的装备定义不在注册表内）；
 - 断言每个定义有 `Compiled`、编译树 `Root` 非空且 `Parts`/`Cubes` 非空；零 cube 组节点合法但整棵快照不可为空，`BuildElytraLayer` 的空树属于派生层模型、不进注册表；
 - 断言 `RenderLayers` 非空、`Name`/`Order` 唯一、按 `Order` 升序声明且至少含 Cutout，不钉具体层数；
-- 门禁发现真实缺口：`BabyModelDefinitionsNether` 的 `baby_hoglin`/`baby_zoglin` 仍在 legacy flat 路径（T-727 只迁移了同文件的 baby Piglin）。按要求只报告、不改生产代码；测试用显式棘轮基线钉住这两个名字，新增未迁移定义或基线过期都会失败，收口需后续迁移任务；
+- 门禁发现真实缺口：`BabyModelDefinitionsNether` 的 `baby_hoglin`/`baby_zoglin` 仍在 legacy flat 路径（T-727 只迁移了同文件的 baby Piglin）；当时按要求只报告、不改生产代码，用棘轮基线钉住并登记待后续迁移，该缺口已由 T-742 收口、基线删除；
 - 全量 Client 1559 项通过。
+
+### 2026-11-07 — T-742 baby Hoglin/Zoglin 树路径收口
+
+- `BabyModelDefinitionsNether` 新增 `HoglinCompiled = VanillaMeshBakery.Build(HoglinMesh, 64, 64)`；`Hoglin`/`Zoglin` 通过 `compiled:` 共享同一棵树，扁平 `Parts`、纹理路径与变体名不变；
+- 删除 T-741 门禁的 `KnownLegacyFlatDefinitions` 棘轮基线：`EveryRegisteredDefinitionHasACompiledTree` 恢复严格断言（任何新增未迁移定义即失败、无遗留缺口），`EveryCompiledTreeHasARootAndGeometry` 不再跳过任何定义；
+- 新增 `BabyHoglinAndZoglinShareOneCompiledTree`：断言两者 `Compiled` 非空、共享同一实例且 Cubes 非空；覆盖门禁共 4 项；
+- 全量 Client 1560 项通过。

@@ -215,7 +215,8 @@ DSL 现状与约束：
 - T-735：Baby Squid/Bee/Dolphin/Axolotl 与 Baby Horse/Llama/Camel/Donkey 及全部色型/毛色变体接入 `Compiled`；Baby Horse markings 使用 `WithModelLayer` 树复制层，纹理 selector 与 `Markings` 可见性保持。
 - T-737：Baby Goat/Panda/PolarBear/Turtle、Strider/Husk/Snifflet/犰狳、Nautilus/HappyGhast/GlowSquid 及 panda 基因变体全部接入 `Compiled`；Husk 复用 baby Zombie 树、GlowSquid 复用 baby Squid 树，犰狳 rolled/unrolled 可见性由树节点继承保留。
 - T-740：baby humanoid 与 baby Piglin 四槽护甲改为模型级独立层（`HumanoidArmorBaby` 纹理族 + `ForBaby`/`ForBabyPiglin` 树，`AllCubes: true`）；baby Elytra 同步使用幼年两翼独立层；其余 baby 装备仍为 merged compiled。
-- T-741：新增全注册表模型树覆盖与层顺序不变量门禁（Compiled 非空、Root/Parts/Cubes 非空、RenderLayers Name/Order 唯一且升序、含 Cutout）；发现并登记 baby Hoglin/Zoglin 仍在 flat 路径的已知缺口（棘轮基线，待后续迁移）。
+- T-741：新增全注册表模型树覆盖与层顺序不变量门禁（Compiled 非空、Root/Parts/Cubes 非空、RenderLayers Name/Order 唯一且升序、含 Cutout）；发现并登记 baby Hoglin/Zoglin 的 flat 路径缺口（棘轮基线），已由 T-742 收口。
+- T-742：baby Hoglin/Zoglin 接入 `HoglinCompiled`（共享同一编译树）；T-741 棘轮基线删除，覆盖门禁恢复严格全量断言。
 - 现有 DSL 仍缺 **三轴 `GrowXyz`** 与 **`PartPose` 三轴 Scale**；完整覆盖幼年护甲等 reference 数据前必须补齐。
 - 完整的模型/装备树结构、动画与测试差距见 [`entity-model-parity-gap.md`](../analysis/render/entity-model-parity-gap.md)；逐项施工清单见 [`entity-model-refactor-checklist.md`](../analysis/render/entity-model-refactor-checklist.md)。
 - 迁移测试中的 `LegacyModelPartFactory` 只是旧实现值 oracle，不是原版 Golden Vector；后续应改为读取自动提取的 `vanilla-model-facts.json`。

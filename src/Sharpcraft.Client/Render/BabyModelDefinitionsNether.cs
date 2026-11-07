@@ -36,13 +36,17 @@ public static class BabyModelDefinitionsNether
 
     private static readonly EntityModelPart[] HoglinParts = [.. VanillaMeshBake.Bake(HoglinMesh, 0, 0)];
 
+    private static readonly CompiledEntityModel HoglinCompiled =
+        VanillaMeshBakery.Build(HoglinMesh, 64, 64);
+
     public static readonly EntityModelDefinition Hoglin = new(
         "baby_hoglin",
         64,
         64,
         HoglinParts,
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/hoglin/hoglin_baby");
+        "entity/hoglin/hoglin_baby",
+        compiled: HoglinCompiled);
 
     public static readonly EntityModelDefinition Zoglin = new(
         "baby_zoglin",
@@ -50,7 +54,8 @@ public static class BabyModelDefinitionsNether
         64,
         HoglinParts,
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/hoglin/zoglin_baby");
+        "entity/hoglin/zoglin_baby",
+        compiled: HoglinCompiled);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>
