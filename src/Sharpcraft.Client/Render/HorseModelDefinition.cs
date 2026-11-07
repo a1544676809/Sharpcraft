@@ -4,7 +4,9 @@
 namespace Sharpcraft.Client.Render;
 
 /// <summary>
-/// AbstractEquineModel / HorseModel: body, head parts with mane and mouth, four legs and tail.
+/// AbstractEquineModel / HorseModel: body, head parts with mane and mouth, four legs and tail. Parts are declared with
+/// the <c>VanillaMeshDefinition</c> DSL and baked via <c>VanillaMeshBake.Bake</c> (T-685); WithHorseMarkings, the five
+/// equine definitions and the seven coat variants are unchanged.
 /// </summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.equine.HorseModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/equine/HorseModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class HorseModelDefinition
@@ -15,34 +17,36 @@ public static class HorseModelDefinition
     public const int ZombieHorseEntityTypeId = 155;
     public const int SkeletonHorseEntityTypeId = 119;
 
+    /// <summary>Declarative DSL tree for the twelve horse parts (T-685).</summary>
+    private static readonly VanillaMeshDefinition HorseMesh = BuildHorseMesh();
+
+    private static EntityModelPart[] BuildParts()
+    {
+        // The reference lists all head_parts children before the head's ear grandchildren, and the tail (child of body)
+        // last; Bake emits children depth-first. Reorder by name (values untouched) to keep the flat order identical.
+        var baked = VanillaMeshBake.Bake(HorseMesh, 0, 0);
+        var byName = new Dictionary<string, EntityModelPart>(StringComparer.Ordinal);
+        foreach (var part in baked)
+        {
+            byName[part.Name] = part;
+        }
+
+        return
+        [
+            byName["body"], byName["head_parts"], byName["head"], byName["mane"], byName["upper_mouth"],
+            byName["left_ear"], byName["right_ear"], byName["left_hind_leg"], byName["right_hind_leg"],
+            byName["left_front_leg"], byName["right_front_leg"], byName["tail"]
+        ];
+    }
+
     public static readonly EntityModelDefinition Definition = new(
         "horse",
         64,
         64,
         EntityModelLayerHelpers.WithHorseMarkings(
-        [
-            PlayerModelDefinition.FromVanilla("body", 0f, 11f, 5f, -5f, -8f, -17f, 10f, 10f, 22f, 0, 32, grow: 0.05f),
-            PlayerModelDefinition.FromVanilla("head_parts", 0f, 4f, -12f, -2.05f, -6f, -2f, 4f, 12f, 7f, 0, 35,
-                rotationX: -MathF.PI / 6f),
-            PlayerModelDefinition.FromVanillaChild("head", "head_parts", 0f, 0f, 0f, -3f, -11f, -2f, 6f, 5f, 7f, 0, 13,
-                grow: 0.05f),
-            PlayerModelDefinition.FromVanillaChild("mane", "head_parts", 0f, 0f, 0f, -1f, -11f, 5.01f, 2f, 16f, 2f, 56, 36,
-                grow: 0.05f),
-            PlayerModelDefinition.FromVanillaChild("upper_mouth", "head_parts", 0f, 0f, 0f, -2f, -11f, -7f, 4f, 5f, 5f, 0, 25,
-                grow: 0.05f),
-            PlayerModelDefinition.FromVanillaChild("left_ear", "head", 0f, 0f, 0f, 0.55f, -13f, 4f, 2f, 3f, 1f, 19, 16,
-                grow: -0.001f),
-            PlayerModelDefinition.FromVanillaChild("right_ear", "head", 0f, 0f, 0f, -2.55f, -13f, 4f, 2f, 3f, 1f, 19, 16,
-                grow: -0.001f),
-            PlayerModelDefinition.FromVanilla("left_hind_leg", 4f, 14f, 7f, -3f, -1.01f, -1f, 4f, 11f, 4f, 48, 21, mirror: true),
-            PlayerModelDefinition.FromVanilla("right_hind_leg", -4f, 14f, 7f, -1f, -1.01f, -1f, 4f, 11f, 4f, 48, 21),
-            PlayerModelDefinition.FromVanilla("left_front_leg", 4f, 14f, -10f, -3f, -1.01f, -1.9f, 4f, 11f, 4f, 48, 21, mirror: true),
-            PlayerModelDefinition.FromVanilla("right_front_leg", -4f, 14f, -10f, -1f, -1.01f, -1.9f, 4f, 11f, 4f, 48, 21),
-            PlayerModelDefinition.FromVanillaChild("tail", "body", 0f, -5f, 2f, -1.5f, 0f, 0f, 3f, 14f, 4f, 42, 36,
-                rotationX: MathF.PI / 6f, grow: 0.05f),
-        ],
-        "entity/horse/horse_markings_",
-        false),
+            BuildParts(),
+            "entity/horse/horse_markings_",
+            false),
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/horse/horse_brown");
 
@@ -112,6 +116,36 @@ public static class HorseModelDefinition
         }
 
         return variants;
+    }
+
+    private static VanillaMeshDefinition BuildHorseMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        var body = root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 11f, 5f),
+            new VanillaCubeDefinition("body", 0, 32, -5f, -8f, -17f, 10f, 10f, 22f, Grow: 0.05f));
+        body.AddOrReplaceChild("tail", VanillaPartPose.OffsetAndRotation(0f, -5f, 2f, MathF.PI / 6f, 0f, 0f),
+            new VanillaCubeDefinition("tail", 42, 36, -1.5f, 0f, 0f, 3f, 14f, 4f, Grow: 0.05f));
+        var headParts = root.AddOrReplaceChild("head_parts", VanillaPartPose.OffsetAndRotation(0f, 4f, -12f, -MathF.PI / 6f, 0f, 0f),
+            new VanillaCubeDefinition("head_parts", 0, 35, -2.05f, -6f, -2f, 4f, 12f, 7f));
+        var head = headParts.AddOrReplaceChild("head", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("head", 0, 13, -3f, -11f, -2f, 6f, 5f, 7f, Grow: 0.05f));
+        head.AddOrReplaceChild("left_ear", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("left_ear", 19, 16, 0.55f, -13f, 4f, 2f, 3f, 1f, Grow: -0.001f));
+        head.AddOrReplaceChild("right_ear", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("right_ear", 19, 16, -2.55f, -13f, 4f, 2f, 3f, 1f, Grow: -0.001f));
+        headParts.AddOrReplaceChild("mane", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("mane", 56, 36, -1f, -11f, 5.01f, 2f, 16f, 2f, Grow: 0.05f));
+        headParts.AddOrReplaceChild("upper_mouth", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("upper_mouth", 0, 25, -2f, -11f, -7f, 4f, 5f, 5f, Grow: 0.05f));
+        root.AddOrReplaceChild("left_hind_leg", VanillaPartPose.Offset(4f, 14f, 7f),
+            new VanillaCubeDefinition("left_hind_leg", 48, 21, -3f, -1.01f, -1f, 4f, 11f, 4f, Mirror: true));
+        root.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-4f, 14f, 7f),
+            new VanillaCubeDefinition("right_hind_leg", 48, 21, -1f, -1.01f, -1f, 4f, 11f, 4f));
+        root.AddOrReplaceChild("left_front_leg", VanillaPartPose.Offset(4f, 14f, -10f),
+            new VanillaCubeDefinition("left_front_leg", 48, 21, -3f, -1.01f, -1.9f, 4f, 11f, 4f, Mirror: true));
+        root.AddOrReplaceChild("right_front_leg", VanillaPartPose.Offset(-4f, 14f, -10f),
+            new VanillaCubeDefinition("right_front_leg", 48, 21, -1f, -1.01f, -1.9f, 4f, 11f, 4f));
+        return new VanillaMeshDefinition(root);
     }
 }
 

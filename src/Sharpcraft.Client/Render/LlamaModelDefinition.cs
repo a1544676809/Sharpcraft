@@ -4,30 +4,22 @@
 namespace Sharpcraft.Client.Render;
 
 /// <summary>
-/// LlamaModel: head/neck/ears, rotated body, two chest boxes and four 4x14x4 legs.
+/// LlamaModel: head/neck/ears, rotated body, two chest boxes and four 4x14x4 legs. Parts are declared with the
+/// <c>VanillaMeshDefinition</c> DSL and baked via <c>VanillaMeshBake.Bake</c> (T-685); the four coats are unchanged.
 /// </summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.llama.LlamaModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/llama/LlamaModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class LlamaModelDefinition
 {
     public const int LlamaEntityTypeId = 79;
 
+    /// <summary>Declarative DSL tree for the eleven llama parts (T-685).</summary>
+    private static readonly VanillaMeshDefinition LlamaMesh = BuildLlamaMesh();
+
     public static readonly EntityModelDefinition Definition = new(
         "llama",
         128,
         64,
-        [
-            PlayerModelDefinition.FromVanilla("head", 0f, 7f, -6f, -2f, -14f, -10f, 4f, 4f, 9f, 0, 0),
-            PlayerModelDefinition.FromVanilla("neck", 0f, 7f, -6f, -4f, -16f, -6f, 8f, 18f, 6f, 0, 14),
-            PlayerModelDefinition.FromVanilla("left_ear", 0f, 7f, -6f, -4f, -19f, -4f, 3f, 3f, 2f, 17, 0),
-            PlayerModelDefinition.FromVanilla("right_ear", 0f, 7f, -6f, 1f, -19f, -4f, 3f, 3f, 2f, 17, 0),
-            PlayerModelDefinition.FromVanilla("body", 0f, 5f, 2f, -6f, -10f, -7f, 12f, 18f, 10f, 29, 0, rotationX: -MathF.PI / 2f),
-            PlayerModelDefinition.FromVanilla("right_chest", -8.5f, 3f, 3f, -3f, 0f, 0f, 8f, 8f, 3f, 45, 28, rotationY: -MathF.PI / 2f),
-            PlayerModelDefinition.FromVanilla("left_chest", 5.5f, 3f, 3f, -3f, 0f, 0f, 8f, 8f, 3f, 45, 41, rotationY: -MathF.PI / 2f),
-            PlayerModelDefinition.FromVanilla("right_hind_leg", -3.5f, 10f, 6f, -2f, 0f, -2f, 4f, 14f, 4f, 29, 29),
-            PlayerModelDefinition.FromVanilla("left_hind_leg", 3.5f, 10f, 6f, -2f, 0f, -2f, 4f, 14f, 4f, 29, 29),
-            PlayerModelDefinition.FromVanilla("right_front_leg", -3.5f, 10f, -5f, -2f, 0f, -2f, 4f, 14f, 4f, 29, 29),
-            PlayerModelDefinition.FromVanilla("left_front_leg", 3.5f, 10f, -5f, -2f, 0f, -2f, 4f, 14f, 4f, 29, 29)
-        ],
+        [.. VanillaMeshBake.Bake(LlamaMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/llama/llama_brown");
 
@@ -61,5 +53,33 @@ public static class LlamaModelDefinition
         }
 
         return variants;
+    }
+
+    private static VanillaMeshDefinition BuildLlamaMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 7f, -6f),
+            new VanillaCubeDefinition("head", 0, 0, -2f, -14f, -10f, 4f, 4f, 9f));
+        root.AddOrReplaceChild("neck", VanillaPartPose.Offset(0f, 7f, -6f),
+            new VanillaCubeDefinition("neck", 0, 14, -4f, -16f, -6f, 8f, 18f, 6f));
+        root.AddOrReplaceChild("left_ear", VanillaPartPose.Offset(0f, 7f, -6f),
+            new VanillaCubeDefinition("left_ear", 17, 0, -4f, -19f, -4f, 3f, 3f, 2f));
+        root.AddOrReplaceChild("right_ear", VanillaPartPose.Offset(0f, 7f, -6f),
+            new VanillaCubeDefinition("right_ear", 17, 0, 1f, -19f, -4f, 3f, 3f, 2f));
+        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 5f, 2f, -MathF.PI / 2f, 0f, 0f),
+            new VanillaCubeDefinition("body", 29, 0, -6f, -10f, -7f, 12f, 18f, 10f));
+        root.AddOrReplaceChild("right_chest", VanillaPartPose.OffsetAndRotation(-8.5f, 3f, 3f, 0f, -MathF.PI / 2f, 0f),
+            new VanillaCubeDefinition("right_chest", 45, 28, -3f, 0f, 0f, 8f, 8f, 3f));
+        root.AddOrReplaceChild("left_chest", VanillaPartPose.OffsetAndRotation(5.5f, 3f, 3f, 0f, -MathF.PI / 2f, 0f),
+            new VanillaCubeDefinition("left_chest", 45, 41, -3f, 0f, 0f, 8f, 8f, 3f));
+        root.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-3.5f, 10f, 6f),
+            new VanillaCubeDefinition("right_hind_leg", 29, 29, -2f, 0f, -2f, 4f, 14f, 4f));
+        root.AddOrReplaceChild("left_hind_leg", VanillaPartPose.Offset(3.5f, 10f, 6f),
+            new VanillaCubeDefinition("left_hind_leg", 29, 29, -2f, 0f, -2f, 4f, 14f, 4f));
+        root.AddOrReplaceChild("right_front_leg", VanillaPartPose.Offset(-3.5f, 10f, -5f),
+            new VanillaCubeDefinition("right_front_leg", 29, 29, -2f, 0f, -2f, 4f, 14f, 4f));
+        root.AddOrReplaceChild("left_front_leg", VanillaPartPose.Offset(3.5f, 10f, -5f),
+            new VanillaCubeDefinition("left_front_leg", 29, 29, -2f, 0f, -2f, 4f, 14f, 4f));
+        return new VanillaMeshDefinition(root);
     }
 }
