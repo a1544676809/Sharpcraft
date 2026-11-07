@@ -258,15 +258,7 @@ public static class EntityModelLayerHelpers
             // 10x20x2 cube so baby wings sample the same texels as the adult (T-663). The baked vertical coordinates are
             // snapped to whole model pixels (11.992 -> 12, 1.992 -> 2) so the historical whole-pixel baby pivots stay
             // byte-identical.
-            var referenceWings = new[]
-            {
-                PlayerModelDefinition.FromVanilla(
-                    "equipment_Elytra_4_left_wing", 5f, 0f, 0f, -10f, 0f, 0f, 10f, 20f, 2f, 22, 0,
-                    modelHeight: 24f, texturePath: "entity/equipment/wings/elytra", grow: 1f, kind: EntityGeometryLayerKind.Elytra),
-                PlayerModelDefinition.FromVanilla(
-                    "equipment_Elytra_4_right_wing", -5f, 0f, 0f, 0f, 0f, 0f, 10f, 20f, 2f, 22, 0, mirror: true,
-                    modelHeight: 24f, texturePath: "entity/equipment/wings/elytra", grow: 1f, kind: EntityGeometryLayerKind.Elytra)
-            };
+            var referenceWings = BuildElytraWings(24f, 0f);
             var layerZ = body.CentreZ + 2f;
             foreach (var wing in VanillaMeshBake.Scale(referenceWings, 0.5f, modelHeight: 24f))
             {
@@ -296,31 +288,37 @@ public static class EntityModelLayerHelpers
         // translate(0,0,0.125) (+2 model px) so both the pivot and the box move back together.
         var bodyTop = body.Bottom + body.Height;
         var wingPivotZ = body.CentreZ + 2f;
-        result.Add(PlayerModelDefinition.FromVanilla(
-            "equipment_Elytra_4_left_wing", 5f, 0f, wingPivotZ, -10f, 0f, 0f, 10f, 20f, 2f, 22, 0,
-            modelHeight: bodyTop,
-            texturePath: "entity/equipment/wings/elytra", grow: 1f, kind: EntityGeometryLayerKind.Elytra)
-            with
+        foreach (var wing in BuildElytraWings(bodyTop, wingPivotZ))
+        {
+            var isRight = wing.Name == "equipment_Elytra_4_right_wing";
+            result.Add(wing with
             {
                 TextureWidth = 64,
                 TextureHeight = 32,
                 YOffsetSelector = static state => state.IsCrouching ? -3f : 0f,
                 VisibleWhen = static state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4) is not null,
-                RotationSelector = static state => new System.Numerics.Vector3(-state.ElytraRotX, -state.ElytraRotY, state.ElytraRotZ)
+                RotationSelector = isRight
+                    ? static state => new System.Numerics.Vector3(-state.ElytraRotX, state.ElytraRotY, -state.ElytraRotZ)
+                    : static state => new System.Numerics.Vector3(-state.ElytraRotX, -state.ElytraRotY, state.ElytraRotZ)
             });
-        result.Add(PlayerModelDefinition.FromVanilla(
-            "equipment_Elytra_4_right_wing", -5f, 0f, wingPivotZ, 0f, 0f, 0f, 10f, 20f, 2f, 22, 0, mirror: true,
-            modelHeight: bodyTop,
-            texturePath: "entity/equipment/wings/elytra", grow: 1f, kind: EntityGeometryLayerKind.Elytra)
-            with
-            {
-                TextureWidth = 64,
-                TextureHeight = 32,
-                YOffsetSelector = static state => state.IsCrouching ? -3f : 0f,
-                VisibleWhen = static state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4) is not null,
-                RotationSelector = static state => new System.Numerics.Vector3(-state.ElytraRotX, state.ElytraRotY, -state.ElytraRotZ)
-            });
+        }
+
         return [.. result];
+    }
+
+    private static EntityModelPart[] BuildElytraWings(float modelHeight, float wingPivotZ)
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddOrReplaceChild("equipment_Elytra_4_left_wing",
+            VanillaPartPose.Offset(5f, 0f, wingPivotZ),
+            new VanillaCubeDefinition("equipment_Elytra_4_left_wing", 22, 0, -10f, 0f, 0f, 10f, 20f, 2f,
+                Grow: 1f, Kind: EntityGeometryLayerKind.Elytra));
+        root.AddOrReplaceChild("equipment_Elytra_4_right_wing",
+            VanillaPartPose.Offset(-5f, 0f, wingPivotZ),
+            new VanillaCubeDefinition("equipment_Elytra_4_right_wing", 22, 0, 0f, 0f, 0f, 10f, 20f, 2f,
+                Mirror: true, Grow: 1f, Kind: EntityGeometryLayerKind.Elytra));
+        return [.. VanillaMeshBake.Bake(new VanillaMeshDefinition(root), 0, 0,
+            modelHeight: modelHeight, texturePath: "entity/equipment/wings/elytra")];
     }
 
     public static EntityModelPart[] WithHorseMarkings(IReadOnlyList<EntityModelPart> parts, string texturePrefix, bool baby)
