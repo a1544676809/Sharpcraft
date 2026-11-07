@@ -68,6 +68,17 @@ public sealed class EntityModelTreeBakeryTests
     }
 
     [Fact]
+    public void CamelEquipmentAddsTreeSaddleParts()
+    {
+        Assert.NotNull(CamelModelDefinition.Definition.Compiled);
+        var decorated = EntityModelResolver.Resolve(CamelModelDefinition.CamelEntityTypeId);
+        Assert.NotNull(decorated.Compiled);
+        Assert.NotNull(decorated.Compiled!.Find("saddle_lower"));
+        Assert.NotNull(decorated.Compiled.Find("bridle_lower"));
+        Assert.NotNull(decorated.Compiled.Find("reins_front"));
+    }
+
+    [Fact]
     public void WardenExposesEmissiveTreeLayers()
     {
         var warden = WardenModelDefinition.Definition.Compiled;

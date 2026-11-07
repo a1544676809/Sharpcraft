@@ -212,3 +212,10 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 
 - Illager 共享模型的 Vindicator/Evoker/Pillager/Illusioner；
 - Witch（0.9375 scale）。
+
+### 2026-11-07 — T-722 Camel 基础树 + 鞍装备树
+
+- `CamelModelDefinition` 接入 `Compiled`；
+- 新增 `WithEquipment(CompiledEntityModel, ...)`：把 `EquipmentModelParts` 的额外 saddle/bridle/reins 节点挂到基础 `body`/`head` 节点，不扁平化基础模型；
+- `EntityModelResolver.Decorate` 对 Camel（type 19）使用 compiled equipment tree；
+- 额外装备节点保留 `ResolveEquipmentTexture` 可见性。

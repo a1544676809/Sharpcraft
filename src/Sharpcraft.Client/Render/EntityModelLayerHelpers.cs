@@ -192,6 +192,129 @@ public static class EntityModelLayerHelpers
         return new CompiledEntityModel(root, parts, cubes);
     }
 
+    /// <summary>
+    /// Attaches the reference's extra saddle/armor boxes to the matching base tree nodes without flattening the base.
+    /// The extra boxes keep their reference parent names (body/head), and the base nodes keep their original cubes.
+    /// </summary>
+    public static CompiledEntityModel WithEquipment(
+        CompiledEntityModel model,
+        EquipmentAssetKind kind,
+        int slot,
+        string fallbackTexture)
+    {
+        var extras = EquipmentModelParts.For(kind);
+        var attached = new Dictionary<string, List<EntityModelPartNode>>(StringComparer.Ordinal);
+        foreach (var part in extras)
+        {
+            var parent = part.Parent;
+            if (parent is null)
+            {
+                continue;
+            }
+
+            var cube = new EntityModelCube(
+                part.Name,
+                part.CentreX,
+                part.Bottom,
+                part.CentreZ,
+                part.Width,
+                part.Height,
+                part.Depth,
+                part.TextureX,
+                part.TextureY,
+                part.Mirror,
+                part.OverlayLayers,
+                fallbackTexture,
+                part.Grow,
+                part.GrowXyz,
+                part.Kind,
+                TextureWidth: part.TextureWidth,
+                TextureHeight: part.TextureHeight,
+                IncludeInEmissive: part.IncludeInEmissive,
+                EmissiveOnly: part.EmissiveOnly);
+            var node = new EntityModelPartNode(
+                part.Name,
+                parent,
+                part.PivotX,
+                part.PivotY,
+                part.PivotZ,
+                part.RotationX,
+                part.RotationY,
+                part.RotationZ,
+                [cube],
+                [],
+                visibleWhen: state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot) is not null,
+                poseSource: part.PoseSource ?? part.Name);
+            if (!attached.TryGetValue(parent, out var list))
+            {
+                list = [];
+                attached[parent] = list;
+            }
+
+            list.Add(node);
+        }
+
+        var parts = new List<EntityModelPartNode>();
+        var cubes = new List<EntityModelCube>();
+
+        EntityModelPartNode CloneNode(EntityModelPartNode source, string? parent)
+        {
+            var children = source.Children.Select(child => CloneNode(child, source.Name)).ToList();
+            if (attached.TryGetValue(source.Name, out var added))
+            {
+                children.AddRange(added);
+            }
+
+            var node = new EntityModelPartNode(
+                source.Name,
+                parent,
+                source.PivotX,
+                source.PivotY,
+                source.PivotZ,
+                source.RotationX,
+                source.RotationY,
+                source.RotationZ,
+                source.Cubes,
+                children,
+                visibleWhen: source.VisibleWhen,
+                rotationSelector: source.RotationSelector,
+                yOffsetSelector: source.YOffsetSelector,
+                poseSource: source.PoseSource,
+                tintSelector: source.TintSelector);
+            parts.Add(node);
+            cubes.AddRange(source.Cubes);
+            return node;
+        }
+
+        var rootChildren = new List<EntityModelPartNode>(model.Root.Children.Count);
+        foreach (var child in model.Root.Children)
+        {
+            rootChildren.Add(CloneNode(child, parent: null));
+        }
+
+        foreach (var list in attached.Values)
+        {
+            foreach (var node in list)
+            {
+                parts.Add(node);
+                cubes.AddRange(node.Cubes);
+            }
+        }
+
+        var root = new EntityModelPartNode(
+            model.Root.Name,
+            parent: null,
+            pivotX: 0f,
+            pivotY: 0f,
+            pivotZ: 0f,
+            rotationX: 0f,
+            rotationY: 0f,
+            rotationZ: 0f,
+            cubes: [],
+            rootChildren);
+        return new CompiledEntityModel(root, parts, cubes);
+    }
+
     public static EntityModelPart[] WithCopy(IReadOnlyList<EntityModelPart> parts, string texturePath, Func<EntityRenderState, bool> visible, float inflate = 0.05f, Func<EntityRenderState, Vector3>? tint = null)
     {
         var result = new List<EntityModelPart>(parts.Count * 2);

@@ -99,7 +99,8 @@ updated: 2026-11-06
 57. **T-719 Warden emissive 树层（2026-11-07）**：新增 `WithEmissiveLayer(CompiledEntityModel)`；Warden 四层 emissive 按 retainExactParts 语义接入 compiled tree；树路径按 cube flags 过滤 emissive pass。
 58. **T-720 剩余无装备模型批（2026-11-07）**：Phantom/Ravager/PolarBear/Silverfish/IronGolem/SnowGolem/Creaking/CopperGolem 通过 `FromTree` 接入编译树；emissive eyes、1.2 scale、weathering 变体保留。
 59. **T-721 Illager/Witch 迁移（2026-11-07）**：Illager 的 Vindicator/Evoker/Pillager/Illusioner 与 Witch 通过 `FromTree` 接入编译树。
-60. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
+60. **T-722 Camel 基础树 + 鞍装备树（2026-11-07）**：Camel 接入 compiled tree；新增 `WithEquipment(CompiledEntityModel)` 将 saddle/bridle/reins 节点挂到基础 body/head；Decorate 对 Camel 使用 compiled equipment tree。
+61. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
 48. **T-648..T-650 / T-651..T-653 渲染与解耦（2026-11-05~06）**：Elytra 翼盒与 UV 原版等价、双翼镜像全宽；流体面剔除修复（玻璃后水可见）；云 OIT depth-bounds 写深度；`Sharpcraft.Assets` 分层 + 启动器/客户端解耦（ADR-0026/0027）。
 49. **实体模型/动画批量落地（2026-11-02~05）**：全部 baby 模型族、villager/zombie/horse 变体、cat/wolf 项圈、panda 基因、大量动画 provider 与测试。
 50. **协议与渲染长尾（2026-11-01~05）**：Play Clientbound 覆盖审计 + P0/P1 包批次（T-642..T-647）；反相 Z 迁移；参考 OIT 云/流体；天空盘逐像素近似。

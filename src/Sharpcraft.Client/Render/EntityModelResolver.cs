@@ -232,7 +232,14 @@ public static class EntityModelResolver
             definition.Scale,
             definition.EmissiveTexturePath,
             definition.TextureSelector,
-            definition.AdditionalTexturePaths.Concat(EquipmentTextureCatalog.AllTexturePaths).Distinct(StringComparer.Ordinal).ToArray());
+            definition.AdditionalTexturePaths.Concat(EquipmentTextureCatalog.AllTexturePaths).Distinct(StringComparer.Ordinal).ToArray(),
+            compiled: typeId == CamelModelDefinition.CamelEntityTypeId && definition.Compiled is { } camelCompiled
+                ? EntityModelLayerHelpers.WithEquipment(
+                    camelCompiled,
+                    EquipmentAssetKind.CamelSaddle,
+                    7,
+                    "entity/equipment/camel_saddle/saddle")
+                : null);
         EquippedModels[key] = decorated;
         return decorated;
     }

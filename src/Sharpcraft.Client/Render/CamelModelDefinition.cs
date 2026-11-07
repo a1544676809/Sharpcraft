@@ -19,13 +19,19 @@ public static class CamelModelDefinition
     /// <summary>Declarative DSL tree for the thirteen camel parts (T-685).</summary>
     private static readonly VanillaMeshDefinition CamelMesh = BuildCamelMesh();
 
+    internal static VanillaMeshDefinition Mesh => CamelMesh;
+
+    private static readonly CompiledEntityModel CompiledModel =
+        VanillaMeshBakery.Build(CamelMesh, 128, 128, texturePath: "entity/camel/camel");
+
     public static readonly EntityModelDefinition Definition = new(
         "camel",
         128,
         128,
         [.. VanillaMeshBake.Bake(CamelMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/camel/camel");
+        "entity/camel/camel",
+        compiled: CompiledModel);
 
     private static VanillaMeshDefinition BuildCamelMesh()
     {
