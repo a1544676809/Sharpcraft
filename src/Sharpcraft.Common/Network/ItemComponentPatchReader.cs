@@ -15,7 +15,8 @@ public readonly record struct ItemComponentInfo(
     bool Unbreakable = false,
     int QuickChargeLevel = 0,
     string? EquippableAssetId = null,
-    int? DyedColor = null)
+    int? DyedColor = null,
+    bool? GlintOverride = null)
 {
     /// <summary>True when some component payload could not be decoded and the rest of the packet was skipped.</summary>
     public bool HasUnknownComponents => Opaque;
@@ -296,7 +297,13 @@ internal static class ItemComponentPatchReader
 
         if (typeId == GlintOverride)
         {
-            return reader.TryReadBool(out _) == DecodeStatus.Success;
+            if (reader.TryReadBool(out var value) != DecodeStatus.Success)
+            {
+                return false;
+            }
+
+            info = info with { GlintOverride = value };
+            return true;
         }
 
         if (typeId == AttributeModifiers)

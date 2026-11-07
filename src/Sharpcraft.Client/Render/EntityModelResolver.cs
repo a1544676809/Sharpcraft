@@ -33,7 +33,11 @@ public static class EntityModelResolver
             return null;
         }
 
-        var texture = EquipmentTextureCatalog.Resolve(kind, item, equippableAssetId: state.EquipmentAssetIdAt(slot));
+        var texture = EquipmentTextureCatalog.Resolve(
+            kind,
+            item,
+            equippableAssetId: state.EquipmentAssetIdAt(slot),
+            glintOverride: state.EquipmentGlintOverrideAt(slot));
         return overlay ? texture?.OverlayPath : texture?.PrimaryPath;
     }
 

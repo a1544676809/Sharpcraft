@@ -185,6 +185,30 @@ public sealed class SetEquipmentPacketTests
     }
 
     [Fact]
+    public void GlintOverrideComponentCapturesFlag()
+    {
+        var glint = DataComponentTypes.GetId("enchantment_glint_override");
+        Assert.True(glint >= 0);
+
+        var body = Body(b =>
+        {
+            b.Add(5);
+            b.AddRange(VarInt(1));
+            b.AddRange(VarInt(1));
+            b.AddRange(VarInt(1));       // one added component
+            b.AddRange(VarInt(0));       // no removals
+            b.AddRange(VarInt(glint));
+            b.Add(1);                    // true
+        });
+
+        var result = Read(body, out _, out var complete, out var status);
+
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.True(result[0].Components.GlintOverride);
+    }
+
+    [Fact]
     public void EnchantmentsComponentYieldsQuickChargeLevel()
     {
         var enchantments = DataComponentTypes.GetId("enchantments");

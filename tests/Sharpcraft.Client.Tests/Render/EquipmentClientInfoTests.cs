@@ -215,8 +215,10 @@ public sealed class EquipmentClientInfoTests
 
             var elytra = EquipmentTextureCatalog.Resolve(
                 EquipmentAssetKind.Elytra,
-                new ItemInfo(new Identifier("minecraft", "elytra")));
+                new ItemInfo(new Identifier("minecraft", "elytra")),
+                glintOverride: true);
             Assert.True(elytra?.UsePlayerTexture);
+            Assert.True(elytra?.Glint);
         }
         finally
         {

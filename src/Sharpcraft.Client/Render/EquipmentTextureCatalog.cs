@@ -38,7 +38,8 @@ public sealed record EquipmentTexture(
     string PrimaryPath,
     string? OverlayPath = null,
     bool UsePlayerTexture = false,
-    int? ColourWhenUndyed = null);
+    int? ColourWhenUndyed = null,
+    bool Glint = false);
 
 /// <summary>
 /// Controlled item → equipment texture mapping for the first equipment stage. Keys are item identifiers, never magic
@@ -75,10 +76,15 @@ public static class EquipmentTextureCatalog
     ];
 
     /// <summary>Resolves the texture for <paramref name="kind"/> and an equipped item, or null when unsupported.</summary>
-    public static EquipmentTexture? Resolve(EquipmentAssetKind kind, ItemInfo item, bool baby = false, string? equippableAssetId = null)
+    public static EquipmentTexture? Resolve(
+        EquipmentAssetKind kind,
+        ItemInfo item,
+        bool baby = false,
+        string? equippableAssetId = null,
+        bool? glintOverride = null)
     {
         var path = item.Id.Path;
-        if (TryResolveFromAssets(kind, path, baby, equippableAssetId) is { } fromAssets)
+        if (TryResolveFromAssets(kind, path, baby, equippableAssetId, glintOverride) is { } fromAssets)
         {
             return fromAssets;
         }
@@ -153,7 +159,8 @@ public static class EquipmentTextureCatalog
         EquipmentAssetKind kind,
         string itemPath,
         bool baby,
-        string? equippableAssetId)
+        string? equippableAssetId,
+        bool? glintOverride)
     {
         if (!TryGetAssetBinding(kind, itemPath, baby, out var assetId, out var layerType))
         {
@@ -184,7 +191,8 @@ public static class EquipmentTextureCatalog
             primary,
             overlay,
             layers[0].UsePlayerTexture,
-            layers[0].Dyeable?.ColourWhenUndyed);
+            layers[0].Dyeable?.ColourWhenUndyed,
+            glintOverride == true);
     }
 
     private static bool TryGetAssetBinding(

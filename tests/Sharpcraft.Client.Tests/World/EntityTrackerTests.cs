@@ -290,9 +290,10 @@ public sealed class EntityTrackerTests
         Assert.Equal(456, entity.EquipmentItemAt(6));
         Assert.Equal(2, entity.EquipmentUpdates);
 
-        tracker.ApplyEquipment(9, [new EquipmentItem(5, 123, 1, new ItemComponentInfo(EquippableAssetId: "minecraft:iron", DyedColor: 0xFF0000))]);
+        tracker.ApplyEquipment(9, [new EquipmentItem(5, 123, 1, new ItemComponentInfo(EquippableAssetId: "minecraft:iron", DyedColor: 0xFF0000, GlintOverride: true))]);
         Assert.Equal("minecraft:iron", entity.EquipmentAssetIdAt(5));
         Assert.Equal(0xFF0000, entity.EquipmentDyeColorAt(5));
+        Assert.True(entity.EquipmentGlintOverrideAt(5));
 
         tracker.ApplyEquipment(9, [new EquipmentItem(7, 0, 0)]);
         Assert.Equal(-1, entity.EquipmentItemAt(7));

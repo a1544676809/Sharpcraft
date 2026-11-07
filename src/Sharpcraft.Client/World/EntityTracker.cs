@@ -138,6 +138,7 @@ public sealed class TrackedEntity
     private readonly ItemComponentInfo[] _equipmentComponents = new ItemComponentInfo[8];
     private readonly string?[] _equipmentAssetIds = new string?[8];
     private readonly int?[] _equipmentDyeColors = new int?[8];
+    private readonly bool?[] _equipmentGlints = new bool?[8];
 
     /// <summary>Item registry id in <paramref name="slot"/> (0..7), or -1 when empty.</summary>
     public int EquipmentItemAt(int slot) =>
@@ -161,6 +162,13 @@ public sealed class TrackedEntity
     /// <summary>All eight dyed-colour components, reused by the per-frame render state.</summary>
     public IReadOnlyList<int?> EquipmentDyeColors => _equipmentDyeColors;
 
+    /// <summary>Glint override for one equipment slot, or null when the stack did not specify one.</summary>
+    public bool? EquipmentGlintOverrideAt(int slot) =>
+        (uint)slot < (uint)_equipmentGlints.Length ? _equipmentGlints[slot] : null;
+
+    /// <summary>All eight glint overrides, reused by the per-frame render state.</summary>
+    public IReadOnlyList<bool?> EquipmentGlintOverrides => _equipmentGlints;
+
     /// <summary>Stack count in <paramref name="slot"/>; 0 when empty.</summary>
     public int EquipmentCountAt(int slot) =>
         (uint)slot < (uint)_equipmentCounts.Length ? _equipmentCounts[slot] : 0;
@@ -179,6 +187,7 @@ public sealed class TrackedEntity
             _equipmentComponents[item.Slot] = item.IsEmpty ? default : item.Components;
             _equipmentAssetIds[item.Slot] = item.IsEmpty ? null : item.Components.EquippableAssetId;
             _equipmentDyeColors[item.Slot] = item.IsEmpty ? null : item.Components.DyedColor;
+            _equipmentGlints[item.Slot] = item.IsEmpty ? null : item.Components.GlintOverride;
             EquipmentUpdates++;
         }
     }
@@ -472,7 +481,8 @@ public readonly record struct EntityRenderState(
     float ElytraRotY = 0f,
     float ElytraRotZ = 0f,
     IReadOnlyList<string?>? EquipmentAssetIds = null,
-    IReadOnlyList<int?>? EquipmentDyeColors = null)
+    IReadOnlyList<int?>? EquipmentDyeColors = null,
+    IReadOnlyList<bool?>? EquipmentGlintOverrides = null)
 {
     /// <summary>Equippable asset id for one equipment slot, when the item supplied one.</summary>
     public string? EquipmentAssetIdAt(int slot) =>
@@ -481,6 +491,10 @@ public readonly record struct EntityRenderState(
     /// <summary>Dyed-colour component for one equipment slot, when the item supplied one.</summary>
     public int? EquipmentDyeColorAt(int slot) =>
         EquipmentDyeColors is { } colors && (uint)slot < (uint)colors.Count ? colors[slot] : null;
+
+    /// <summary>Glint override for one equipment slot, when the item supplied one.</summary>
+    public bool? EquipmentGlintOverrideAt(int slot) =>
+        EquipmentGlintOverrides is { } glints && (uint)slot < (uint)glints.Count ? glints[slot] : null;
 }
 
 /// <summary>
@@ -1394,7 +1408,8 @@ public sealed class EntityTracker
                 HasMainHandItem: entity.EquipmentItemAt(0) > 0,
                 HasOffHandItem: entity.EquipmentItemAt(1) > 0,
                 EquipmentAssetIds: entity.EquipmentAssetIds,
-                EquipmentDyeColors: entity.EquipmentDyeColors));
+                EquipmentDyeColors: entity.EquipmentDyeColors,
+                EquipmentGlintOverrides: entity.EquipmentGlintOverrides));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);
