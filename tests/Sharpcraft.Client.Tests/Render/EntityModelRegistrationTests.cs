@@ -140,7 +140,8 @@ public sealed class EntityModelRegistrationTests
         var zombified = EntityModelResolver.Resolve(PiglinModelDefinition.ZombifiedPiglinEntityTypeId);
 
         Assert.Equal("piglin", piglin.Name);
-        Assert.Equal(11, piglin.Parts.Count);
+        Assert.Equal(11, PiglinModelDefinition.Definition.Parts.Count);
+        Assert.Equal(20, piglin.Parts.Count);
         Assert.Contains(piglin.Parts, part => part.Name == "head_nose" && part.Parent == "head");
         Assert.Contains(piglin.Parts, part => part.Name == "left_ear" && part.Parent == "head");
         Assert.Equal("entity/piglin/piglin_brute", brute.TexturePath);
@@ -547,8 +548,8 @@ public sealed class EntityModelRegistrationTests
     [Fact]
     public void BabyPiglinZombifiedPiglinHoglinZoglinResolveToTheirOwnGeometry()
     {
-        Assert.Equal(12, EntityModelResolver.Resolve(102, true).Parts.Count);
-        Assert.Equal(12, EntityModelResolver.Resolve(158, true).Parts.Count);
+        Assert.Equal(12, EntityModelResolver.Resolve(102, true).Parts.Count(part => !part.Name.StartsWith("equipment_")));
+        Assert.Equal(12, EntityModelResolver.Resolve(158, true).Parts.Count(part => !part.Name.StartsWith("equipment_")));
         Assert.Equal(11, EntityModelResolver.Resolve(65, true).Parts.Count);
         Assert.Equal(11, EntityModelResolver.Resolve(153, true).Parts.Count);
         Assert.Equal("entity/hoglin/zoglin_baby", EntityModelResolver.Resolve(153, true).TexturePath);

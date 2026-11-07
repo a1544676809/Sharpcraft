@@ -237,7 +237,10 @@ public static class EntityModelResolver
                         effectiveKind,
                         slot,
                         player: !baby && typeId == EntityPlaceholderMesher.PlayerEntityTypeId,
-                        baby: baby)
+                        baby: baby,
+                        piglin: !baby && typeId is (PiglinModelDefinition.PiglinEntityTypeId
+                            or PiglinModelDefinition.PiglinBruteEntityTypeId
+                            or PiglinModelDefinition.ZombifiedPiglinEntityTypeId))
                     : EquipmentModelTrees.For(kind);
                 if (equipmentTree is { })
                 {
@@ -291,6 +294,14 @@ public static class EntityModelResolver
         (EquipmentAssetKind.HumanoidArmor, 2, "entity/equipment/humanoid/iron")
     ];
 
+    private static readonly (EquipmentAssetKind Kind, int Slot, string Fallback)[] PiglinArmorLayers =
+    [
+        (EquipmentAssetKind.HumanoidArmor, 5, "entity/equipment/humanoid/iron"),
+        (EquipmentAssetKind.HumanoidArmor, 4, "entity/equipment/humanoid/iron"),
+        (EquipmentAssetKind.HumanoidLeggings, 3, "entity/equipment/humanoid_leggings/iron"),
+        (EquipmentAssetKind.HumanoidArmor, 2, "entity/equipment/humanoid/iron")
+    ];
+
     private static (EquipmentAssetKind Kind, int Slot, string Fallback)[] EquipmentLayers(int typeId) => typeId switch
     {
         67 => [(EquipmentAssetKind.HorseBody, 6, "entity/equipment/horse_body/iron"),
@@ -304,6 +315,7 @@ public static class EntityModelResolver
         89 or 156 => [(EquipmentAssetKind.NautilusBody, 6, "entity/equipment/nautilus_body/iron"),
                       (EquipmentAssetKind.NautilusSaddle, 7, "entity/equipment/nautilus_saddle/saddle")],
         59 => [(EquipmentAssetKind.HappyGhastBody, 6, "entity/equipment/happy_ghast_body/white_harness")],
+        102 or 103 or 158 => PiglinArmorLayers,
         152 => [(EquipmentAssetKind.WolfBody, 6, "entity/equipment/wolf_body/armadillo_scute")],
         159 => HumanoidArmorLayers,
         154 or 39 or 68 or 118 or 131 or 16 or 150 or 157 => HumanoidArmorLayers,

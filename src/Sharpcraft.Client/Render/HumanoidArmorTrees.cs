@@ -40,6 +40,14 @@ internal static class HumanoidArmorTrees
         BuildBabySlot(5)
     ];
 
+    private static readonly CompiledEntityModel[] Piglin =
+    [
+        BuildSlot(2, player: true, piglin: true),
+        BuildSlot(3, player: true, piglin: true),
+        BuildSlot(4, player: true, piglin: true),
+        BuildSlot(5, player: true, piglin: true)
+    ];
+
     /// <summary>Returns the armor model for an equipment slot: 2 feet, 3 legs, 4 chest, 5 head.</summary>
     public static CompiledEntityModel For(int slot, bool player) =>
         (player ? Player : Adult)[slot - 2];
@@ -47,7 +55,10 @@ internal static class HumanoidArmorTrees
     /// <summary>Returns the dedicated baby armor model for an equipment slot.</summary>
     public static CompiledEntityModel ForBaby(int slot) => Baby[slot - 2];
 
-    private static CompiledEntityModel BuildSlot(int slot, bool player)
+    /// <summary>Returns the piglin armor model: player armor geometry with empty ear groups under the head.</summary>
+    public static CompiledEntityModel ForPiglin(int slot) => Piglin[slot - 2];
+
+    private static CompiledEntityModel BuildSlot(int slot, bool player, bool piglin = false)
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         var head = root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 0f, 0f),
@@ -58,6 +69,11 @@ internal static class HumanoidArmorTrees
             slot == 5
                 ? new VanillaCubeDefinition("hat", 32, 0, -4f, -8f, -4f, 8f, 8f, 8f, Grow: OuterGrow + 0.5f)
                 : ZeroCube("hat"));
+        if (piglin)
+        {
+            head.AddOrReplaceChild("left_ear", VanillaPartPose.Zero, ZeroCube("left_ear"));
+            head.AddOrReplaceChild("right_ear", VanillaPartPose.Zero, ZeroCube("right_ear"));
+        }
         var body = root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 0f, 0f),
             slot is 4 or 3
                 ? new VanillaCubeDefinition("body", 16, 16, -4f, 0f, -2f, 8f, 12f, 4f,

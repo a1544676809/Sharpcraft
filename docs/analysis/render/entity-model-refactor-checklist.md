@@ -255,3 +255,10 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - `EntityModelLayerHelpers.WithElytra(CompiledEntityModel, baby)` 增加 baby 分支：root scale 0.5 → 5×10×1 翼，Bottom 2 / PivotY 12，UV 仍按 10×20×2 采样；`EntityModelCube`/DSL 增加 UvWidth/UvHeight/UvDepth 覆盖；
 - `EntityModelResolver.Decorate` baby 分支改用 `HumanoidArmorBaby` 纹理族和 baby 槽位树；
 - `EntityModelTreeBakeryTests` 增加 baby armor 断言，树测试共 17 项。
+
+### 2026-11-07 — T-726 Piglin 护甲树
+
+- `PiglinModelDefinition` 接入 `Compiled`：player 的 body/arms/legs + piglin head 组成独立树，Piglin/Brute/Zombified 共享；
+- `HumanoidArmorTrees.ForPiglin(slot)`：复用 player armor 四槽几何，并在 head 下补空 `left_ear`/`right_ear` 组（`AbstractPiglinModel.removeEars`）；
+- `EntityModelResolver` 为 type 102/103/158 增加独立 `PiglinArmorLayers`（不与 humanoid 的 `HumanoidArmorLayers` 共享引用，避免误加 Elytra）；
+- 树测试增加 piglin armor 断言，树测试共 18 项。

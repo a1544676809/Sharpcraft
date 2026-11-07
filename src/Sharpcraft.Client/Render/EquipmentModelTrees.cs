@@ -39,11 +39,20 @@ internal static class EquipmentModelTrees
         VanillaMeshBakery.Build(WolfModelDefinition.BuildBodyMesh(0.2f), 64, 32);
 
     /// <summary>Returns the armor model for a humanoid slot or the baked layer model for another equipment kind.</summary>
-    public static CompiledEntityModel? For(EquipmentAssetKind kind, int slot, bool player = false, bool baby = false)
+    public static CompiledEntityModel? For(
+        EquipmentAssetKind kind,
+        int slot,
+        bool player = false,
+        bool baby = false,
+        bool piglin = false)
     {
         if (kind is EquipmentAssetKind.HumanoidArmor or EquipmentAssetKind.HumanoidLeggings or EquipmentAssetKind.HumanoidArmorBaby)
         {
-            return baby ? HumanoidArmorTrees.ForBaby(slot) : HumanoidArmorTrees.For(slot, player);
+            return baby
+                ? HumanoidArmorTrees.ForBaby(slot)
+                : piglin
+                    ? HumanoidArmorTrees.ForPiglin(slot)
+                    : HumanoidArmorTrees.For(slot, player);
         }
 
         return For(kind);

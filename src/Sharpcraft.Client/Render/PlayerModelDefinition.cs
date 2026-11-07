@@ -93,6 +93,9 @@ public static class PlayerModelDefinition
     /// </summary>
     private static readonly VanillaMeshDefinition AdultMesh = BuildAdultMesh();
 
+    /// <summary>The declarative adult mesh, shared with humanoid families that replace only one part (Piglin).</summary>
+    internal static VanillaMeshDefinition AdultMeshDefinition => AdultMesh;
+
     /// <summary>The baked adult player parts, identical to the former hand-written flat array.</summary>
     public static readonly EntityModelPart[] AdultParts = [.. VanillaMeshBake.Bake(AdultMesh, 0, 0)];
 

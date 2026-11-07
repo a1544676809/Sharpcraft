@@ -30,7 +30,7 @@ updated: 2026-11-07
 
 | 任务 | 状态 / 关键点 |
 | --- | --- |
-| **实体模型与动画主线** | 真实部件模型 + 逐实体动画 provider 已大量落地（humanoid/baby/quadruped/aquatic/nether 等）；非人形装备层已树化（T-723）；成人/幼年 humanoid 四槽护甲与 Elytra 已树化（T-724/T-725）；剩余：Piglin 专用护甲树、T-631 held-item/item-model（解锁 SPEAR/STAB）、Happy Ghast ropes、EnderDragon flight history、Parrot PARTY / Bee stinger / Guardian eye look / Piglin crossbow-hold |
+| **实体模型与动画主线** | 真实部件模型 + 逐实体动画 provider 已大量落地（humanoid/baby/quadruped/aquatic/nether 等）；非人形装备层已树化（T-723）；成人/幼年 humanoid 四槽护甲与 Elytra 已树化（T-724/T-725）；Piglin 护甲树已接入（T-726）；剩余：T-631 held-item/item-model（解锁 SPEAR/STAB）、Happy Ghast ropes、EnderDragon flight history、Parrot PARTY / Bee stinger / Guardian eye look / Piglin crossbow-hold |
 | **架构：原则 14 / Phase 0 / Phase 1** | 已从 main 合入 T-654..T-661（原则 14、STATE 门禁、`PlaySession.TryHandleTransport`、`MeshingContext`、方块实体 NBT/类型注册表、`OcclusionShape`）。剩余：P0.3 帧 Pass 单轨化、P1.4 `registry_data` 动态装配、P1.5 `OcclusionShape` 完整接入 `ChunkMesher` 替换 `IsSolid` |
 
 ## 未提交改动
@@ -103,7 +103,8 @@ updated: 2026-11-07
 61. **T-723 非人形装备树迁移（2026-11-07）**：新增 `EquipmentModelTrees` 与 `WithModelLayer`；马/驴/骡/骷髅马/僵尸马、骆驼、羊驼、鹦鹉螺、快乐恶魂、狼甲全部装备层改为独立烘焙树；马 markings、狼 crackiness 改树复制层；`EntityModelCube.TextureSelector` 支持装备槽位动态纹理；树测试 15 项通过。
 62. **T-724 成人 humanoid 护甲/Elytra 树层（2026-11-07）**：HumanoidMob 八个定义与 Player 基础接入 `Compiled`；新增 `HumanoidArmorTrees` 四槽独立树（outer 1.0 / inner 0.5 / legs-0.1 / hat+0.5，Player 含空 sleeve/pants/jacket 组）；新增 `WithElytra(CompiledEntityModel)` 两翼树；修正树 root yOffset 双重位移；树测试 16 项通过。
 63. **T-725 幼年 humanoid 护甲 / baby Elytra 树层（2026-11-07）**：Baby Zombie/Drowned/ZombieVillager/Villager 与变体接入 `Compiled`；`HumanoidArmorTrees.ForBaby` 四槽树（baby outer/inner deformation，waist/leg `extend(-0.1)`，foot 父链保留）；`WithElytra(..., baby)` 使用 5×10×1 翼与 10×20×2 UV；`EntityModelCube`/DSL 增加 UV 覆盖；树测试 17 项通过。
-64. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
+64. **T-726 Piglin 护甲树（2026-11-07）**：Piglin 的 player body/arms/legs + piglin head 组成 `Compiled`；`HumanoidArmorTrees.ForPiglin` 复用 player armor 四槽并补空 ears；type 102/103/158 使用独立 `PiglinArmorLayers`；树测试 18 项通过。
+65. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
 48. **T-648..T-650 / T-651..T-653 渲染与解耦（2026-11-05~06）**：Elytra 翼盒与 UV 原版等价、双翼镜像全宽；流体面剔除修复（玻璃后水可见）；云 OIT depth-bounds 写深度；`Sharpcraft.Assets` 分层 + 启动器/客户端解耦（ADR-0026/0027）。
 49. **实体模型/动画批量落地（2026-11-02~05）**：全部 baby 模型族、villager/zombie/horse 变体、cat/wolf 项圈、panda 基因、大量动画 provider 与测试。
 50. **协议与渲染长尾（2026-11-01~05）**：Play Clientbound 覆盖审计 + P0/P1 包批次（T-642..T-647）；反相 Z 迁移；参考 OIT 云/流体；天空盘逐像素近似。

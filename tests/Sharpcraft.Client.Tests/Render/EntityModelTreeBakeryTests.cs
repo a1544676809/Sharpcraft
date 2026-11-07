@@ -229,6 +229,20 @@ public sealed class EntityModelTreeBakeryTests
     }
 
     [Fact]
+    public void PiglinUsesPlayerArmorGeometryWithEmptyEars()
+    {
+        Assert.NotNull(PiglinModelDefinition.Definition.Compiled);
+        var piglin = EntityModelResolver.Resolve(PiglinModelDefinition.PiglinEntityTypeId);
+        Assert.NotNull(piglin.Compiled);
+        var head = piglin.Compiled!.Find("equipment_HumanoidArmor_5_head");
+        Assert.NotNull(head);
+        Assert.NotNull(piglin.Compiled.Find("equipment_HumanoidArmor_5_hat"));
+        Assert.NotNull(piglin.Compiled.Find("equipment_HumanoidArmor_5_left_ear"));
+        Assert.NotNull(piglin.Compiled.Find("equipment_HumanoidArmor_5_right_ear"));
+        Assert.NotNull(piglin.Compiled.Find("equipment_HumanoidArmor_4_body"));
+    }
+
+    [Fact]
     public void BabyZombieUsesDedicatedBabyArmorTree()
     {
         var baby = EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId, baby: true);

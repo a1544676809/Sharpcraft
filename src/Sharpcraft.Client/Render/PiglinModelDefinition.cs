@@ -38,6 +38,26 @@ public static class PiglinModelDefinition
         return [.. parts];
     }
 
+    private static readonly VanillaMeshDefinition PiglinMesh = BuildPiglinMesh();
+
+    private static readonly CompiledEntityModel PiglinCompiled =
+        VanillaMeshBakery.Build(PiglinMesh, 64, 64);
+
+    private static VanillaMeshDefinition BuildPiglinMesh()
+    {
+        var children = new List<VanillaPartDefinition>();
+        foreach (var child in PlayerModelDefinition.AdultMeshDefinition.Root!.Children)
+        {
+            if (child.Name != "head")
+            {
+                children.Add(child);
+            }
+        }
+
+        children.AddRange(PiglinHeadMesh.Root!.Children);
+        return new VanillaMeshDefinition(new VanillaPartDefinition("root", VanillaPartPose.Zero, children: children));
+    }
+
     private static VanillaMeshDefinition BuildPiglinHeadMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
@@ -62,7 +82,8 @@ public static class PiglinModelDefinition
         64,
         BuildParts(),
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/piglin/piglin");
+        "entity/piglin/piglin",
+        compiled: PiglinCompiled);
 
     public static readonly EntityModelDefinition Brute = new(
         "piglin_brute",
@@ -70,7 +91,8 @@ public static class PiglinModelDefinition
         64,
         BuildParts(),
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/piglin/piglin_brute");
+        "entity/piglin/piglin_brute",
+        compiled: PiglinCompiled);
 
     public static readonly EntityModelDefinition Zombified = new(
         "zombified_piglin",
@@ -78,5 +100,6 @@ public static class PiglinModelDefinition
         64,
         BuildParts(),
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/piglin/zombified_piglin");
+        "entity/piglin/zombified_piglin",
+        compiled: PiglinCompiled);
 }
