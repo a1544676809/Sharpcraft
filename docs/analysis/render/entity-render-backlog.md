@@ -5,7 +5,7 @@
 title: 实体渲染剩余清单
 summary: 装备层之后的实体渲染欠账：动画、装备特例、资产与验收顺序
 status: 草稿
-updated: 2026-11-03
+updated: 2026-11-07
 -->
 
 # 实体渲染剩余清单
@@ -20,33 +20,32 @@ updated: 2026-11-03
 
 ## 2. 高优先级：动画系统
 
-**状态：未开始；这是当前最大的可观察差距。**
+**状态：provider 基础已大量落地，真实场景多帧验收仍未完成。**
 
-- 所有实体目前仍是 `createBodyLayer()` 的静态 bind pose；没有 `setupAnim` 的逐帧骨骼动画。
-- 需要先定义：骨骼/部件变换模型、动画通道（位置/旋转/缩放）、关键帧与插值、状态机（idle/walk/attack/eat 等）、动画资源或数据来源。
-- 典型欠账：四足腿摆动、尾巴/耳朵、鸟翅、蝙蝠/恶魂触手、Axolotl 游动、Armadillo 翻滚、Creaking/Warden/EnderDragon、僵尸/村民手臂、Happy Ghast 触手等。
+- 已存在大量 `*AnimationProvider`（Humanoid、Quadruped、Feline、Equine、Axolotl、Nautilus、Warden、Creaking、Breeze、Sniffer 等）；动画通道/关键帧/姿态覆盖已有基础实现。
+- 仍未完成的是：真实服务端场景下的多帧姿态对比、动画与装备层的统一变换验收，以及 EnderDragon flight history 等长尾状态。
 - 验收不能只看静态截图：需要固定场景下多帧姿态对比，或按参考动画的关键帧数值验证。
-- 动画完成后，静态 bind pose 的装备层也必须跟随同一套变换。
+- 动画完成后，装备层必须跟随同一套变换。
 
 ## 3. 装备层剩余
 
 | 项 | 现状 | 依赖 / 验收 |
 | --- | --- | --- |
 | Happy Ghast `RopesLayer` | 挽具/眼罩已通过；绳索层未做 | 需要 `isLeashHolder` 状态；按 `HappyGhastRopes` 层渲染并验证 |
-| Wolf armor 裂纹 | 基础 wolf armor 已通过；裂纹未做 | 需要护甲损伤/`Crackiness` 状态，接 `wolf_armor_crackiness_*` |
-| Trader Llama 地毯 | 普通 16 色地毯已接 | `trader_llama` 专用装饰层/纹理 |
-| Zombie Nautilus 珊瑚 | 模型与纹理已接 | 有 body armor 时隐藏 coral 层（装备状态联动） |
-| 人形装备 | 未接 | Player/Zombie/Skeleton 等头盔、胸甲、腿甲、靴子 |
+| Wolf armor 裂纹 | 已接入独立 crackiness 层 | 继续做损伤状态真机验证 |
+| Trader Llama 地毯 | 普通 16 色地毯与 trader 专用纹理已接 | 继续做装备槽联动测试 |
+| Zombie Nautilus 珊瑚 | 暖变体 coral 层已接入，`Equipment[6]` 有甲时隐藏 | 继续做 body armor 联动测试 |
+| 人形装备 | 已接入四槽独立护甲层 | 继续补 dye/trim/玩家纹理视觉验收 |
 | Witch 手持物品 | 未接 | 需要物品模型渲染（后置）；`WitchItemLayer`/`CrossedArmsItemLayer` |
-| Elytra | 未接 | `entity/equipment/wings/elytra` 与飞行姿态 |
+| Elytra | 已接入独立两翼层 | glint / `use_player_texture` 渲染未接 |
 
 ## 4. 装备资产与组件
 
 | 项 | 现状 | 后续 |
 | --- | --- | --- |
-| `EquipmentClientInfo` JSON | 当前为静态受控映射；jar 有 `assets/minecraft/equipment/*.json` 但提取包未带 | 增加装备资产加载/校验，替换部分静态表 |
-| `DataComponentPatch` | 只支持空 patch | 实现组件表与非空 patch；未知组件要可降级 |
-| 皮革染色 / trim | 未做 | `dyeable` overlay、trim palette；依赖组件 |
+| `EquipmentClientInfo` JSON | 已解析 19 LayerType、dyeable/use_player_texture/trim_overrides，并从资源栈加载 | 继续替换剩余静态 fallback 路径 |
+| `DataComponentPatch` | 已覆盖 equippable、dyed_color、glint override 等常用组件；非空未知 patch 仍会降级 | 继续补组件表并保持未知组件可诊断 |
+| 皮革染色 / trim | `dyed_color` 已进入 tint selector；`ResolveTrim` 已选择 predicate | trim texture/palette 的实际渲染、glint pass 与玩家纹理替换 |
 | 物品注册表 | 26.3 固定快照，已内嵌 | 升级需重导快照；模组/自定义物品只做 unknown 降级 |
 
 ## 5. 特殊层与状态依赖
@@ -64,10 +63,10 @@ updated: 2026-11-03
 
 ## 7. 建议顺序
 
-1. **动画系统**（先做骨架/通道/状态机与一个四足 + 一个人形样板）。
-2. 装备特例：ropes → crackiness → trader carpet → zombie nautilus coral。
-3. 人形装备 / Witch / Elytra（依赖物品模型时后置）。
-4. `EquipmentClientInfo` 资产化与组件 patch。
+1. **动画系统真实场景验收**：provider 已大量存在，优先做固定场景多帧姿态对比。
+2. 装备特例：Happy Ghast ropes 是当前剩余的主体；其余已接入的 crackiness/trader carpet/zombie coral 只差联动验收。
+3. Witch 手持物品（依赖物品模型，后置）。
+4. 装备资产收尾：trim texture/palette、glint pass、`use_player_texture` 最终着色。
 
 每项落地时在 `docs/traceability.md` 增加独立任务行，测试列不得留空；完成前状态用 `进行中`，不要提前写 `已完成`。
 

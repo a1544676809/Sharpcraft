@@ -23,18 +23,18 @@ updated: 2026-11-07
 
 | 外部建议 | 当前状态 | 结论 |
 | --- | --- | --- |
-| 全模型 UV 边界/缩放等价门禁 | `ModelUvInvariantTests` 已存在，但主要扫描 flat `Parts` 与 Elytra 特例 | 部分完成，需扩到 compiled cubes、全部变体和装备层 |
-| Z-fighting 自动检测 | 无对应测试 | 未完成 |
-| 装备 clearance / 穿模检测 | 无对应测试 | 未完成 |
+| 全模型 UV 边界/缩放等价门禁 | `ModelUvInvariantTests` 已扩到 compiled cubes、全注册类型、成人/幼年和 resolved equipment trees | 基本完成，Z-fighting/clearance 仍单列 |
+| Z-fighting 自动检测 | 无对应测试，按策略先做诊断 | 未完成 |
+| 装备 clearance / 穿模检测 | 无对应测试，按策略先做诊断 | 未完成 |
 | 协议包全链路覆盖门禁 | `ProtocolDispatchGateTests` 已存在，按源码引用/allowlist 检查 | 基本完成，严格解码分支覆盖仍可加强 |
 | ReferenceVerifier 多 cube/零组/装备树 facts | 仍只默认覆盖少量模型，schema 未扩展 | 未完成 |
-| `EntityModelPart` 只能由 baker 构造 | 仍是 public record struct，可直接 `new` / `with` | 未完成 |
+| `EntityModelPart` 只能由 baker 构造 | 参数化构造已 internal；`With` 收口完成，`with` 仅集中 transformer 保留 | 已完成（T-746） |
 | 原版同签名 `CubeListBuilder` / `MeshTransformer` | 已有 `VanillaMeshDefinition` 与集中 `VanillaMeshTransformer.Scale`，但没有同签名构建器/强类型弧度/UvBox | 部分完成 |
 | 幼年鞘翅 UV/挂点/潜行偏移 | 当前 `UvWidth/UvHeight/UvDepth`、baby 翼 pivot 与 crouch 已落地并有测试 | 已完成 |
 | `OverlayLayers` 不继承 `GrowXyz` | 当前 overlay 构造已改为重新构造 part，未见原缺陷路径 | 代码已收敛，缺专门回归 |
-| EntityTracker / VecDelta / PositionPath 三缺陷 | 代码有相关改动，但无独立 T-668 回归门禁 | 待复核 |
-| `ModHost` collectible ALC 闭包/流式加载 | `ModHost` 仍有 `RemoveAll` 闭包与 `LoadFromAssemblyPath` | 未完成 |
-| `WindowedRenderer` / `OffscreenRenderer` 单轨化 | 两个类仍分别约 2311 / 1588 行，无共享 `WorldRenderPipeline` | 未完成 |
+| EntityTracker / VecDelta / PositionPath 三缺陷 | T-749 已补正负 step、逐 step、ticks 回归，当前实现通过 | 已完成复核 |
+| `ModHost` collectible ALC 闭包/流式加载 | 已去闭包、流式加载、`NoInlining`；R-019 GC 回收探针仍未稳定转绿 | 代码已硬化，R-019 独立风险 |
+| `WindowedRenderer` / `OffscreenRenderer` 单轨化 | 主场景 Pass 已共用 `RecordScenePasses`；OIT/云/WorldText/UI 仍窗口独有，完整壳抽取未完成 | 部分完成（T-745） |
 | `InteractiveSession` 拆分 | 仍约 2112 行 | 未完成 |
 | `ChunkMesher` 贪心矩形合并 | `RectangleIsUniformlyLit` 路径仍在 | 未完成 |
 
@@ -62,7 +62,7 @@ Z-fighting 与 equipment clearance 不混入本任务；先走诊断报告，规
   - `T-745b-2`：`WindowedRenderer` 的主场景 Pass 也已改为 `RecordScenePasses`；静态世界回退保留原顺序；
   - `T-745c`（后续）：OIT、云、WorldText、UI 目前只存在于窗口路径，Offscreen 没有对应实现；它们不算跨渲染器双轨债务。若 Offscreen 将来补齐这些功能，必须复用同一套 PostPass 计划。窗口/离屏主场景的几何/像素一致性验收仍待补。
 
-### T-746 EntityModelPart 类型收紧（P1，部分完成）
+### T-746 EntityModelPart 类型收紧（P1，已完成）
 
 - `T-746a`（本刀）：`EntityModelPart` 改为显式 `readonly record struct`，带参数的构造函数为 `internal`；
 - 增加 `EntityModelPartEncapsulationTests`：禁止 public 参数化构造，并只允许 `EntityModelMesher`/`EntityModelResolver`/`VanillaMeshBake` 构造 baked part；

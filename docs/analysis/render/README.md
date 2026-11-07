@@ -18,7 +18,7 @@
 | [`entity-model-migration.md`](entity-model-migration.md) | 原版生物模型来源、按复杂度排序的移植顺序、当前进度与已知缺口 | 已评审 | 2026-11-02 |
 | [`entity-model-parity-gap.md`](entity-model-parity-gap.md) | 实体模型定义、烘焙、运行时、动画与装备/附加层相对 Minecraft 26.3 的完整差距清单 | 已评审 | 2026-11-07 |
 | [`entity-model-refactor-checklist.md`](entity-model-refactor-checklist.md) | 从当前扁平 EntityModelPart 迁移到树定义 + 集中烘焙的逐项工程改造清单与验收条件 | 已评审 | 2026-11-07 |
-| [`entity-render-backlog.md`](entity-render-backlog.md) | 装备层之后的实体渲染欠账：动画、装备特例、资产与验收顺序 | 草稿 | 2026-11-03 |
+| [`entity-render-backlog.md`](entity-render-backlog.md) | 装备层之后的实体渲染欠账：动画、装备特例、资产与验收顺序 | 草稿 | 2026-11-07 |
 | [`entity-render-layers.md`](entity-render-layers.md) | 合并 part 的简化实现与原版独立 RenderLayer 的差异、影响和修复契约 | 已评审 | 2026-11-02 |
 | [`entity-special-layers.md`](entity-special-layers.md) | 不属于普通 base/overlay cube 的实体渲染层清单，以及后续补充顺序 | 已评审 | 2026-11-02 |
 | [`entity-variants.md`](entity-variants.md) | 26.3 变体的三条来源、实体数据访问器索引表、注册表驱动解析、几何变体差异与首批范围 | 分析已定稿（依据 26.3 源码） | 2026-11-03 |
