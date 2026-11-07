@@ -26,6 +26,9 @@ namespace Sharpcraft.Framework.Rendering;
 /// </remarks>
 public static class WindowedRenderer
 {
+    /// <summary>Shared canonical pass plan; the windowed shell must keep this order when extracting the pipeline.</summary>
+    public static IReadOnlyList<WorldRenderPass> PassPlan => WorldRenderPipeline.DefaultPasses;
+
     /// <summary>Runs a window showing the supplied geometry.</summary>
     /// <param name="request">Frame request; width and height are overridden by the window size.</param>
     /// <param name="frames">How many frames to present before closing (0 means until the user closes it).</param>

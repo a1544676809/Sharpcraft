@@ -18,6 +18,8 @@ namespace Sharpcraft.Framework.Rendering;
 /// </remarks>
 public static class OffscreenRenderer
 {
+    /// <summary>Shared canonical pass plan; the offscreen shell must keep this order when extracting the pipeline.</summary>
+    public static IReadOnlyList<WorldRenderPass> PassPlan => WorldRenderPipeline.DefaultPasses;
 
     /// <summary>
     /// Full-screen gradient for the sky stage: a shade at the zenith fading to the horizon colour.
