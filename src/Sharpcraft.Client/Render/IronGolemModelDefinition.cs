@@ -14,11 +14,11 @@ public static class IronGolemModelDefinition
 
     private static readonly VanillaMeshDefinition IronGolemMesh = BuildIronGolemMesh();
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "iron_golem",
         128,
         128,
-        [.. VanillaMeshBake.Bake(IronGolemMesh, 0, 0)],
+        IronGolemMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/iron_golem/iron_golem");
 

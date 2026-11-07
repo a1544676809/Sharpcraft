@@ -15,15 +15,14 @@ public static class CreakingModelDefinition
 
     private static readonly VanillaMeshDefinition CreakingMesh = BuildCreakingMesh();
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "creaking",
         64,
         64,
-        [.. VanillaMeshBake.Bake(CreakingMesh, 0, 0)],
+        CreakingMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/creaking/creaking",
-        1f,
-        "entity/creaking/creaking_eyes");
+        emissiveTexturePath: "entity/creaking/creaking_eyes");
 
     private static VanillaMeshDefinition BuildCreakingMesh()
     {

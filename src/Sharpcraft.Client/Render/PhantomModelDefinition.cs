@@ -15,15 +15,14 @@ public static class PhantomModelDefinition
 
     private static readonly VanillaMeshDefinition PhantomMesh = BuildPhantomMesh();
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "phantom",
         64,
         64,
-        [.. VanillaMeshBake.Bake(PhantomMesh, 0, 0)],
+        PhantomMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/phantom/phantom",
-        1f,
-        "entity/phantom/phantom_eyes");
+        emissiveTexturePath: "entity/phantom/phantom_eyes");
 
     private static VanillaMeshDefinition BuildPhantomMesh()
     {

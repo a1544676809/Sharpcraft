@@ -15,8 +15,6 @@ public static class CopperGolemModelDefinition
 
     private static readonly VanillaMeshDefinition CopperGolemMesh = BuildCopperGolemMesh();
 
-    private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(CopperGolemMesh, 0, 0)];
-
     /// <summary>Weathering states in registry order: UNAFFECTED, EXPOSED, WEATHERED, OXIDIZED.</summary>
     public static readonly IReadOnlyList<string> VariantKeys = ["unaffected", "exposed", "weathered", "oxidized"];
 
@@ -27,15 +25,14 @@ public static class CopperGolemModelDefinition
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants = BuildVariants();
 
-    private static EntityModelDefinition Create(string name, int index) => new(
+    private static EntityModelDefinition Create(string name, int index) => EntityModelDefinition.FromTree(
         name,
         64,
         64,
-        Parts,
+        CopperGolemMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/copper_golem/" + BodyFiles[index],
-        1f,
-        "entity/copper_golem/" + EyeFiles[index],
+        emissiveTexturePath: "entity/copper_golem/" + EyeFiles[index],
         additionalTexturePaths: ["entity/copper_golem/" + EyeFiles[index]]);
 
     private static Dictionary<string, EntityModelDefinition> BuildVariants()

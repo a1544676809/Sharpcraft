@@ -14,11 +14,11 @@ public static class SnowGolemModelDefinition
 
     private static readonly VanillaMeshDefinition SnowGolemMesh = BuildSnowGolemMesh();
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "snow_golem",
         64,
         64,
-        [.. VanillaMeshBake.Bake(SnowGolemMesh, 0, 0)],
+        SnowGolemMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/snow_golem/snow_golem");
 

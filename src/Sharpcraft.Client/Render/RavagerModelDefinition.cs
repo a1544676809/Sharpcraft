@@ -15,11 +15,11 @@ public static class RavagerModelDefinition
 
     private static readonly VanillaMeshDefinition RavagerMesh = BuildRavagerMesh();
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "ravager",
         128,
         128,
-        [.. VanillaMeshBake.Bake(RavagerMesh, 0, 0)],
+        RavagerMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/illager/ravager");
 

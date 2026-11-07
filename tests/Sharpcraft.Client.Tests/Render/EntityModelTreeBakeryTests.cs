@@ -137,6 +137,14 @@ public sealed class EntityModelTreeBakeryTests
         Assert.NotNull(SquidModelDefinition.Definition.Compiled);
         Assert.NotNull(SquidModelDefinition.GlowSquid.Compiled);
         Assert.NotNull(NautilusModelDefinition.Definition.Compiled);
+        Assert.NotNull(PhantomModelDefinition.Definition.Compiled);
+        Assert.NotNull(RavagerModelDefinition.Definition.Compiled);
+        Assert.NotNull(PolarBearModelDefinition.Definition.Compiled);
+        Assert.NotNull(SilverfishModelDefinition.Definition.Compiled);
+        Assert.NotNull(IronGolemModelDefinition.Definition.Compiled);
+        Assert.NotNull(SnowGolemModelDefinition.Definition.Compiled);
+        Assert.NotNull(CreakingModelDefinition.Definition.Compiled);
+        Assert.NotNull(CopperGolemModelDefinition.Definition.Compiled);
     }
 
     [Fact]

@@ -14,11 +14,11 @@ public static class SilverfishModelDefinition
 
     private static readonly VanillaMeshDefinition SilverfishMesh = BuildSilverfishMesh();
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "silverfish",
         64,
         32,
-        [.. VanillaMeshBake.Bake(SilverfishMesh, 0, 0)],
+        SilverfishMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/silverfish/silverfish");
 

@@ -192,3 +192,16 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
   - `heart_`：body；
   - `tendril_glow_`：left/right tendril；
 - 基座 + 四层 emissive 全部进入 `Compiled`；`EmissiveOnly` / `EmissiveTexturePath` 由树路径过滤。
+
+### 2026-11-07 — T-720 剩余无装备模型批
+
+通过 `FromTree` 迁移：
+
+- Phantom（保留 emissive eyes）；
+- Ravager；
+- PolarBear（1.2 scale）；
+- Silverfish；
+- IronGolem；
+- SnowGolem；
+- Creaking（保留 emissive eyes）；
+- CopperGolem（四种 weathering 纹理 + eye texture）。

@@ -14,11 +14,11 @@ public static class PolarBearModelDefinition
 
     private static readonly VanillaMeshDefinition PolarBearMesh = BuildPolarBearMesh();
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "polar_bear",
         128,
         64,
-        [.. VanillaMeshBake.Bake(PolarBearMesh, 0, 0)],
+        PolarBearMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/bear/polarbear",
         1.2f);
