@@ -704,97 +704,128 @@ public static class OffscreenRenderer
             ],
             DepthStencilAttachment.DepthClear(depthView, 0f));
 
-            // Sky first: it fills the cleared target, then the world draws over it. Skipped when the caller supplies a sky
-            // disc backdrop instead (SkipGradientSky).
-            if (!request.SkipGradientSky)
+            // The scene pass order comes from WorldRenderPipeline; each kind is a no-op when this request has no such
+            // geometry. The GPU state and buffer lifetimes stay local to this shell.
+            void DrawScenePass(WorldRenderPassKind kind)
             {
-                using var skyPipeline = CreateSkyPipeline(device, WGPUTextureFormat.RGBA8Unorm);
-                pass.SetPipeline(skyPipeline);
-                pass.Draw(3);
-            }
-
-            // Sun and moon sit in the sky backdrop, before terrain, so world geometry covers them.
-            celestial?.Draw(pass);
-
-            // Sunrise band and stars, drawn on top of the bodies but still behind world geometry.
-            celestialColour?.Draw(pass);
-
-            if (hasGeometry)
-            {
-                pass.SetPipeline(pipeline);
-                pass.SetBindGroup(0, bindGroup, []);
-                pass.SetVertexBuffer(0, vertexBuffer);
-                pass.SetIndexBuffer(indexBuffer, WGPUIndexFormat.Uint32);
-
-                if (request.DrawRanges is { Length: > 0 } ranges)
+                switch (kind)
                 {
-                    // One call per chunk, so an omitted chunk actually disappears rather than being merged into one draw.
-                    foreach (var (firstIndex, indexCount) in ranges)
+                    case WorldRenderPassKind.Sky:
                     {
-                        if (indexCount > 0)
+                        // Sky first: it fills the cleared target, then the world draws over it. Skipped when the caller
+                        // supplies a sky disc backdrop instead (SkipGradientSky).
+                        if (!request.SkipGradientSky)
                         {
-                            pass.DrawIndexed((uint)indexCount, 1, (uint)firstIndex, 0, 0);
+                            using var skyPipeline = CreateSkyPipeline(device, WGPUTextureFormat.RGBA8Unorm);
+                            pass.SetPipeline(skyPipeline);
+                            pass.Draw(3);
                         }
+
+                        // Sun and moon sit in the sky backdrop, before terrain, so world geometry covers them.
+                        celestial?.Draw(pass);
+
+                        // Sunrise band and stars, drawn on top of the bodies but still behind world geometry.
+                        celestialColour?.Draw(pass);
+                        break;
+                    }
+
+                    case WorldRenderPassKind.TerrainOpaque:
+                    {
+                        if (!hasGeometry)
+                        {
+                            break;
+                        }
+
+                        pass.SetPipeline(pipeline);
+                        pass.SetBindGroup(0, bindGroup, []);
+                        pass.SetVertexBuffer(0, vertexBuffer);
+                        pass.SetIndexBuffer(indexBuffer, WGPUIndexFormat.Uint32);
+
+                        if (request.DrawRanges is { Length: > 0 } ranges)
+                        {
+                            // One call per chunk, so an omitted chunk actually disappears rather than being merged into one draw.
+                            foreach (var (firstIndex, indexCount) in ranges)
+                            {
+                                if (indexCount > 0)
+                                {
+                                    pass.DrawIndexed((uint)indexCount, 1, (uint)firstIndex, 0, 0);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            pass.DrawIndexed((uint)request.Indices.Length);
+                        }
+                        break;
+                    }
+
+                    case WorldRenderPassKind.TerrainCutout:
+                    {
+                        if (request.CutoutVertices is not { Length: > 0 } cutoutVertices ||
+                            request.CutoutIndices is not { Length: > 0 } cutoutIndices)
+                        {
+                            break;
+                        }
+
+                        using var cutoutPipeline = CreateCutoutPipeline(device, pipelineLayout);
+                        using var cutoutVertexBuffer = device.CreateBufferInit(
+                            new BufferInitDescriptor { Usage = BufferUsage.Vertex },
+                            cutoutVertices.AsSpan());
+                        using var cutoutIndexBuffer = device.CreateBufferInit(
+                            new BufferInitDescriptor { Usage = BufferUsage.Index },
+                            cutoutIndices.AsSpan());
+
+                        pass.SetPipeline(cutoutPipeline);
+                        pass.SetBindGroup(0, bindGroup, []);
+                        pass.SetVertexBuffer(0, cutoutVertexBuffer);
+                        pass.SetIndexBuffer(cutoutIndexBuffer, WGPUIndexFormat.Uint32);
+                        pass.DrawIndexed((uint)cutoutIndices.Length);
+                        break;
+                    }
+
+                    case WorldRenderPassKind.Translucent:
+                    {
+                        if (request.TranslucentVertices is not { Length: > 0 } translucentVertices ||
+                            request.TranslucentIndices is not { Length: > 0 } translucentIndices)
+                        {
+                            break;
+                        }
+
+                        // Blended, no depth writes, drawn last: the order of these calls is what makes overlapping water read right.
+                        using var translucentPipeline = CreateTranslucentPipeline(device, pipelineLayout, request.Diagnostics?.AlphaOne == true);
+                        using var translucentVertexBuffer = device.CreateBufferInit(
+                            new BufferInitDescriptor { Usage = BufferUsage.Vertex },
+                            translucentVertices.AsSpan());
+                        using var translucentIndexBuffer = device.CreateBufferInit(
+                            new BufferInitDescriptor { Usage = BufferUsage.Index },
+                            translucentIndices.AsSpan());
+
+                        pass.SetPipeline(translucentPipeline);
+                        pass.SetBindGroup(0, bindGroup, []);
+                        pass.SetVertexBuffer(0, translucentVertexBuffer);
+                        pass.SetIndexBuffer(translucentIndexBuffer, WGPUIndexFormat.Uint32);
+
+                        if (request.TranslucentRanges is { Length: > 0 } translucentRanges)
+                        {
+                            // Drawn in the order the caller sorted them, which is far to near.
+                            foreach (var (firstIndex, indexCount) in translucentRanges)
+                            {
+                                if (indexCount > 0)
+                                {
+                                    pass.DrawIndexed((uint)indexCount, 1, (uint)firstIndex, 0, 0);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            pass.DrawIndexed((uint)translucentIndices.Length);
+                        }
+                        break;
                     }
                 }
-                else
-                {
-                    pass.DrawIndexed((uint)request.Indices.Length);
-                }
             }
 
-            if (request.CutoutVertices is { Length: > 0 } cutoutVertices &&
-                request.CutoutIndices is { Length: > 0 } cutoutIndices)
-            {
-                using var cutoutPipeline = CreateCutoutPipeline(device, pipelineLayout);
-                using var cutoutVertexBuffer = device.CreateBufferInit(
-                    new BufferInitDescriptor { Usage = BufferUsage.Vertex },
-                    cutoutVertices.AsSpan());
-                using var cutoutIndexBuffer = device.CreateBufferInit(
-                    new BufferInitDescriptor { Usage = BufferUsage.Index },
-                    cutoutIndices.AsSpan());
-
-                pass.SetPipeline(cutoutPipeline);
-                pass.SetBindGroup(0, bindGroup, []);
-                pass.SetVertexBuffer(0, cutoutVertexBuffer);
-                pass.SetIndexBuffer(cutoutIndexBuffer, WGPUIndexFormat.Uint32);
-                pass.DrawIndexed((uint)cutoutIndices.Length);
-            }
-
-            if (request.TranslucentVertices is { Length: > 0 } translucentVertices &&
-                request.TranslucentIndices is { Length: > 0 } translucentIndices)
-            {
-                // Blended, no depth writes, drawn last: the order of these calls is what makes overlapping water read right.
-                using var translucentPipeline = CreateTranslucentPipeline(device, pipelineLayout, request.Diagnostics?.AlphaOne == true);
-                using var translucentVertexBuffer = device.CreateBufferInit(
-                    new BufferInitDescriptor { Usage = BufferUsage.Vertex },
-                    translucentVertices.AsSpan());
-                using var translucentIndexBuffer = device.CreateBufferInit(
-                    new BufferInitDescriptor { Usage = BufferUsage.Index },
-                    translucentIndices.AsSpan());
-
-                pass.SetPipeline(translucentPipeline);
-                pass.SetBindGroup(0, bindGroup, []);
-                pass.SetVertexBuffer(0, translucentVertexBuffer);
-                pass.SetIndexBuffer(translucentIndexBuffer, WGPUIndexFormat.Uint32);
-
-                if (request.TranslucentRanges is { Length: > 0 } translucentRanges)
-                {
-                    // Drawn in the order the caller sorted them, which is far to near.
-                    foreach (var (firstIndex, indexCount) in translucentRanges)
-                    {
-                        if (indexCount > 0)
-                        {
-                            pass.DrawIndexed((uint)indexCount, 1, (uint)firstIndex, 0, 0);
-                        }
-                    }
-                }
-                else
-                {
-                    pass.DrawIndexed((uint)translucentIndices.Length);
-                }
-            }
-
+            WorldRenderPipeline.RecordScenePasses(DrawScenePass);
             pass.End();
 
             encoder.CopyTextureToBuffer(

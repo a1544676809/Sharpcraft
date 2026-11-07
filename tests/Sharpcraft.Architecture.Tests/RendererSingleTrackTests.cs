@@ -40,6 +40,18 @@ public sealed class RendererSingleTrackTests
     }
 
     [Fact]
+    public void RecordScenePassesUsesTheCanonicalOrder()
+    {
+        var drawn = new List<WorldRenderPassKind>();
+        var recorder = new FramePassRecorder();
+
+        WorldRenderPipeline.RecordScenePasses(drawn.Add, recorder);
+
+        Assert.Equal(WorldRenderPipeline.DefaultPasses.Select(pass => pass.Kind), drawn);
+        Assert.Equal(WorldRenderPipeline.DefaultPasses.Select(pass => pass.Name), recorder.Passes);
+    }
+
+    [Fact]
     public void RendererShellsStayUnderLineRatchet()
     {
         var root = RepositoryLocator.Root;

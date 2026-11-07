@@ -121,7 +121,7 @@ updated: 2026-11-07
 79. **T-741 模型树覆盖/层顺序门禁（2026-11-07）**：新增全注册表不变量测试 3 项；登记 baby Hoglin/Zoglin 的 flat 路径缺口（棘轮基线，不改生产代码），已由 T-742 收口；全量 Client 1559 项通过。
 80. **T-742 baby Hoglin/Zoglin 树路径收口（2026-11-07）**：两者共享 `HoglinCompiled`；删除 T-741 棘轮基线、覆盖门禁恢复严格全量断言；全量 Client 1560 项通过。
 81. **T-743 硬约束后续行动文档 + 外部审查稿存档（2026-11-07）**：新增 `next-actions-hard-constraints.md` 与 `external/` 两份原始审查稿；STATE 下一步指向新排期文档。
-82. **T-744/T-745a UV 与单轨阶段一（2026-11-07）**：`ModelUvInvariantTests` 扩展到 `Compiled.Cubes`、resolved equipment trees、全注册类型与成人/幼年；新增 `WorldRenderPipeline`/`FramePassRecorder` 共享 pass 顺序契约，两个渲染器暴露同一 `PassPlan` 并受壳文件行数棘轮；Z-fighting/clearance 与真实 Pass 迁移留后续。
+82. **T-744/T-745a/b-1 UV 与单轨阶段一（2026-11-07）**：`ModelUvInvariantTests` 扩展到 `Compiled.Cubes`、resolved equipment trees、全注册类型与成人/幼年；`WorldRenderPipeline`/`FramePassRecorder` 共享 pass 顺序；`OffscreenRenderer` 主场景已用 `RecordScenePasses`，两个渲染器受壳文件行数棘轮；Windowed 主场景与 Z-fighting/clearance 留后续。
 83. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
 49. **实体模型/动画、渲染与协议长尾（2026-11-02~06）**：全部 baby 模型族、villager/zombie/horse 变体、cat/wolf 项圈、panda 基因、动画 provider 与测试；Play Clientbound 覆盖审计 + P0/P1 包批次（T-642..T-647）、反相 Z、参考 OIT 云/流体与天空盘逐像素近似；T-648..T-650/T-651..T-653 完成 Elytra 翼盒/UV、流体面剔除、云 OIT depth-bounds 与 `Sharpcraft.Assets` 分层。
 

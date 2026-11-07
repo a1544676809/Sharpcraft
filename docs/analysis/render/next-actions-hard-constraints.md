@@ -58,6 +58,8 @@ Z-fighting 与 equipment clearance 不混入本任务；先走诊断报告，规
 
 - **T-745a（本刀）**：新增 `WorldRenderPipeline` / `FramePassRecorder` 的共享 pass 顺序契约，两个渲染器引用同一 plan；增加 plan 顺序与 recorder 单元测试。只建立契约，不伪称已完成世界 Pass 迁移。
 - **T-745b（后续）**：把两边的世界 Pass 录制实际迁入共享 `WorldRenderPipeline`，保留多 Pass/多 RenderTarget；窗口只负责最终上屏，离屏只负责目标与回读；增加壳文件行数与依赖门禁、窗口/离屏几何一致性测试。
+  - `T-745b-1`（本刀）：`OffscreenRenderer` 的主场景 Pass 已改为 `WorldRenderPipeline.RecordScenePasses`，共享 sky/opaque/cutout/entities/translucent 顺序；
+  - `T-745b-2`：`WindowedRenderer` 的主场景 Pass 仍待迁移；其余 OIT/云/UI 的跨渲染器抽取在其后。
 
 ### T-746 EntityModelPart 类型收紧（P1）
 

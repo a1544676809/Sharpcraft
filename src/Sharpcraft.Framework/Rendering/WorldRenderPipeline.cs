@@ -57,6 +57,20 @@ public static class WorldRenderPipeline
             }
         }
     }
+
+    /// <summary>
+    /// Executes the canonical scene pass order. Renderers provide one draw callback per pass kind; kinds they do not
+    /// render are no-ops. This keeps the ordering single-sourced while the GPU state remains in the concrete shell.
+    /// </summary>
+    public static void RecordScenePasses(Action<WorldRenderPassKind> draw, FramePassRecorder? recorder = null)
+    {
+        ArgumentNullException.ThrowIfNull(draw);
+        foreach (var pass in DefaultPasses)
+        {
+            recorder?.Record(pass.Name);
+            draw(pass.Kind);
+        }
+    }
 }
 
 /// <summary>Small recorder used by diagnostics/tests to assert actual pass order without touching GPU state.</summary>
