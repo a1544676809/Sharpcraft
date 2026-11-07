@@ -104,13 +104,18 @@ public sealed class EntityLayerTests
     }
 
     [Fact]
-    public void PlayerBodySelectorUsesTheProfileSkinAndFallsBackToSteve()
+    public void PlayerBodySelectorUsesTheProfileSkinAndFallsBackToTheUuidDefault()
     {
         var model = EntityModelResolver.Resolve(EntityPlaceholderMesher.PlayerEntityTypeId);
         Assert.NotNull(model.TextureSelector);
-        Assert.Equal("entity/player/wide/steve", model.TextureSelector!(Entity(EntityPlaceholderMesher.PlayerEntityTypeId)));
+        // Java-sampled index 15 -> entity/player/wide/steve.
+        var state = Entity(EntityPlaceholderMesher.PlayerEntityTypeId) with
+        {
+            Uuid = Guid.Parse("61699b2e-d327-4a01-9f1e-0ea8c3f06bc6")
+        };
+        Assert.Equal("entity/player/wide/steve", model.TextureSelector!(state));
         Assert.Equal("skins/from-player", model.TextureSelector!(
-            Entity(EntityPlaceholderMesher.PlayerEntityTypeId) with { PlayerBodyTexture = "skins/from-player" }));
+            state with { PlayerBodyTexture = "skins/from-player" }));
     }
 
     [Fact]

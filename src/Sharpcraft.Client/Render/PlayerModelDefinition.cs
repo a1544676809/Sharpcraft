@@ -277,13 +277,15 @@ public static class PlayerModelDefinition
 
     public static readonly EntityModelDefinition Definition =
         new("player", 64, 64, AdultParts, DefaultFaceTransforms, "entity/player/wide/steve",
-            textureSelector: static state => state.PlayerBodyTexture ?? "entity/player/wide/steve",
+            textureSelector: static state => state.PlayerBodyTexture ?? DefaultPlayerSkin.Get(state.Uuid).Path,
+            additionalTexturePaths: DefaultPlayerSkin.AllPaths,
             compiled: AdultCompiled);
 
     /// <summary>Slim (3px arm) player model; its default body texture belongs to the same model family.</summary>
     public static readonly EntityModelDefinition SlimDefinition =
         new("player_slim", 64, 64, SlimParts, DefaultFaceTransforms, "entity/player/slim/steve",
-            textureSelector: static state => state.PlayerBodyTexture ?? "entity/player/slim/steve",
+            textureSelector: static state => state.PlayerBodyTexture ?? DefaultPlayerSkin.Get(state.Uuid).Path,
+            additionalTexturePaths: DefaultPlayerSkin.AllPaths,
             compiled: SlimCompiled);
 
     /// <summary>Selects the wide or slim player definition for an arm-width flag.</summary>

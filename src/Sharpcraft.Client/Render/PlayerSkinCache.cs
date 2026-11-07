@@ -85,7 +85,10 @@ public sealed class PlayerSkinCache
             var requireSecure = _localProfileId is { } local && entry.Id != local;
             if (requireSecure && state != ProfileSignatureState.Signed)
             {
-                _ready[entry.Id] = new PlayerSkinTextures(null, null, null, Slim: false, SignatureState: state);
+                // The reference falls back to DefaultPlayerSkin.get(profileId); keep its slim flag here as well so
+                // the cached value and the renderer agree even before the render state is built.
+                _ready[entry.Id] = new PlayerSkinTextures(
+                    null, null, null, DefaultPlayerSkin.Get(entry.Id).Slim, SignatureState: state);
                 continue;
             }
 

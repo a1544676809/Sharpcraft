@@ -3,6 +3,7 @@
 
 using System.Runtime.InteropServices;
 using Sharpcraft.AuthLib;
+using Sharpcraft.Client.Render;
 using Sharpcraft.Common.Network;
 using Sharpcraft.Common.Registries;
 
@@ -488,7 +489,8 @@ public readonly record struct EntityRenderState(
     string? PlayerCapeTexture = null,
     string? PlayerElytraTexture = null,
     bool ShowCape = true,
-    bool Slim = false)
+    bool Slim = false,
+    Guid Uuid = default)
 {
     /// <summary>Equippable asset id for one equipment slot, when the item supplied one.</summary>
     public string? EquipmentAssetIdAt(int slot) =>
@@ -1339,6 +1341,11 @@ public sealed class EntityTracker
                 playerSkin = skinLookup(entity.Uuid);
             }
 
+            // With no usable profile body texture the reference falls back to the UUID-indexed default skin, which
+            // also decides the arm width. Keep the Slim flag and the body texture on the same default.
+            var hasCustomBody = playerSkin?.Body is not null;
+            var slim = hasCustomBody ? playerSkin!.Value.Slim : DefaultPlayerSkin.Get(entity.Uuid).Slim;
+
             _renderStates.Add(new EntityRenderState(
                 entity.Id,
                 entity.TypeId,
@@ -1445,7 +1452,8 @@ public sealed class EntityTracker
                 PlayerBodyTexture: playerSkin?.Body?.Path,
                 PlayerCapeTexture: playerSkin?.Cape?.Path,
                 PlayerElytraTexture: playerSkin?.Elytra?.Path,
-                Slim: playerSkin?.Slim ?? false));
+                Slim: slim,
+                Uuid: entity.Uuid));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);

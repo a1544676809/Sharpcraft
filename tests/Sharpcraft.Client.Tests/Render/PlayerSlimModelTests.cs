@@ -73,14 +73,21 @@ public sealed class PlayerSlimModelTests
     {
         var wide = EntityModelResolver.ResolvePlayerModel(slim: false);
         var slim = EntityModelResolver.ResolvePlayerModel(slim: true);
-        var state = new EntityRenderState(1, EntityPlaceholderMesher.PlayerEntityTypeId, 0f, 0f, 0f, 0f, 0f);
+        // Java-sampled wide default (index 15 -> wide/steve) and slim default (index 0 -> slim/alex).
+        var wideState = new EntityRenderState(1, EntityPlaceholderMesher.PlayerEntityTypeId, 0f, 0f, 0f, 0f, 0f,
+            Uuid: Guid.Parse("61699b2e-d327-4a01-9f1e-0ea8c3f06bc6"));
+        var slimState = wideState with
+        {
+            Uuid = Guid.Parse("069a79f4-44e9-4726-a5be-fca90e38aaf5"),
+            Slim = true
+        };
 
-        Assert.Equal("entity/player/wide/steve", wide.TextureSelector!(state));
-        Assert.Equal("entity/player/slim/steve", slim.TextureSelector!(state));
+        Assert.Equal("entity/player/wide/steve", wide.TextureSelector!(wideState));
+        Assert.Equal("entity/player/slim/alex", slim.TextureSelector!(slimState));
         Assert.Equal(4f, Arm(wide.Parts, "left_arm").Width);
         Assert.Equal(3f, Arm(slim.Parts, "left_arm").Width);
 
-        var custom = state with { PlayerBodyTexture = "skins/custom" };
+        var custom = wideState with { PlayerBodyTexture = "skins/custom" };
         Assert.Equal("skins/custom", slim.TextureSelector!(custom));
 
         Assert.Same(PlayerModelDefinition.SlimDefinition, PlayerModelDefinition.For(true));

@@ -180,6 +180,8 @@
 | 腿/裤/外套层 | 同上 | 两模型逐值相同：左腿 tex(16,48) `(-2,0,-2,4,12,4)` pivot `(1.9,12,0)`、左裤 tex(0,48)、右裤 tex(0,32)、外套 tex(16,32) `(-4,0,-2,8,12,4)`；层外扩 0.25 | 同上 | — |
 | 档案 model 字段 | `ref://mc-26.3-analysis/src/net/minecraft/client/resources/SkinManager.java#registerTextures` | `PlayerModelType.byLegacyServicesName(skinInfo.getMetadata("model"))`；无 SKIN 条目时取 `DefaultPlayerSkin.get(profileId)` | 字符串 `slim` 区分大小写语义之外的其它值按 wide | 缺字段按 wide |
 | 默认皮肤表 | `ref://mc-26.3-analysis/src/net/minecraft/client/resources/DefaultPlayerSkin.java` | 18 项：索引 0..8 为 `entity/player/slim/<name>` + SLIM，9..17 为 `entity/player/wide/<name>` + WIDE；`get(UUID)` = `DEFAULT_SKINS[Math.floorMod(uuid.hashCode(), 18)]`；`getDefaultSkin()` 固定索引 6 = `entity/player/slim/steve` | Java `UUID.hashCode()` 位序；`Math.floorMod` 结果非负 | 无档案属性时按 UUID 索引 |
+| UUID 哈希与 Guid 位序 | `java.util.UUID.hashCode()`（JDK 公开契约）+ `ref://mc-26.3-analysis/src/net/minecraft/client/resources/DefaultPlayerSkin.java#get` | `hilo = mostSigBits ^ leastSigBits`；`hashCode = (int)(hilo >> 32) ^ (int)hilo`，等价于低 32 位的 `most ^ (most >>> 32) ^ least ^ (least >>> 32)`；`index = Math.floorMod(hashCode, 18)` | `most`/`least` 是 canonical UUID 字符串的前/后 16 个十六进制位（big-endian long）；.NET `Guid.GetHashCode()` 与 Java 无关，**禁止**使用；`Guid.ToString("N")` 或 `Guid.TryWriteBytes(..., bigEndian: true)` 才是正确来源 | `Guid.Empty` → hash 0 → 索引 0 → `entity/player/slim/alex` |
+| 名称表顺序 | 同上 `DEFAULT_SKINS` | `alex, ari, efe, kai, makena, noor, steve, sunny, zuri`；`index % 9` 取名；`index < 9` 为 slim 目录，否则 wide 目录 | 目录名小写；sRGB 纹理 64×64 | — |
 
 ### 12.2 真值向量（Golden Vectors）
 
@@ -193,10 +195,27 @@
 5. **默认纹理与模型一致**：`Slim=true` 且无自定义 body 纹理时回退 `entity/player/slim/steve`；`Slim=false` 回退 `entity/player/wide/steve`；不得交叉回退；自定义 body 纹理优先。
 6. **wide 路径不回归**：未带 slim 标记的玩家仍解析到原 `Definition`（臂宽 4）。
 
+**Java 采样真值向量（UUID → 默认皮肤）**：用 GraalVM JDK 25 的 `jshell` 运行 `java.util.UUID.hashCode()` + `Math.floorMod(h, 18)` + `DefaultPlayerSkin` 的 18 项名称/目录表采样得到，脚本与输出只在仓库外核对、不入库；测试落点 `tests/Sharpcraft.Client.Tests/Render/DefaultPlayerSkinTests.cs`。`hash` 列同时由 JDK 与公式独立计算并逐值一致，不是按 C# 实现反推。
+
+| # | UUID | hashCode | index | 默认 body path | slim |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `00000000-0000-0000-0000-000000000000` | 0 | 0 | `entity/player/slim/alex` | true |
+| 2 | `00000000-0000-0000-0000-000000000001` | 1 | 1 | `entity/player/slim/ari` | true |
+| 3 | `069a79f4-44e9-4726-a5be-fca90e38aaf5` | -369792882 | 0 | `entity/player/slim/alex` | true |
+| 4 | `853c80ef-3c37-49fd-aa49-938b674adae6` | 1946714239 | 1 | `entity/player/slim/ari` | true |
+| 5 | `61699b2e-d327-4a01-9f1e-0ea8c3f06bc6` | -291457983 | 15 | `entity/player/wide/steve` | false |
+| 6 | `ffffffff-ffff-ffff-ffff-ffffffffffff` | 0 | 0 | `entity/player/slim/alex` | true |
+| 7 | `80000000-0000-0000-0000-000000000000` | -2147483648 | 16 | `entity/player/wide/sunny` | false |
+| 8 | `a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d` | -488453171 | 13 | `entity/player/wide/makena` | false |
+| 9 | `deadbeef-0000-0000-0000-00000000cafe` | -559057903 | 11 | `entity/player/wide/efe` | false |
+| 10 | `12345678-1234-5678-9abc-def012345678` | -2004318072 | 0 | `entity/player/slim/alex` | true |
+
+`getDefaultSkin()` 固定索引 6 → `entity/player/slim/steve`（slim=true），不随 UUID 变化。
+
 ### 12.3 当前实现与已知限制
 
 - `PlayerModelDefinition` 新增 `SlimDefinition`（同一 DSL 树，仅手臂盒按 12.2 替换），`EntityRenderState.Slim` 由 `PlayerSkinTextures.Slim` 透传；`EntityModelMesher.ResolveModel` 对玩家类型按该标记选择经过 `Decorate` 的 slim 变体，wide 定义与纹理 selector 保持原样。
-- **未实现** `DefaultPlayerSkin.get(UUID)` 的 Java `UUID.hashCode()` 索引选择：缺少 ≥5 组原版 UUID→默认皮肤真值向量，按原则 14 不以自证测试充当等效性证据；当前无档案属性统一沿用既有 wide 默认，登记为受控偏差。
+- `DefaultPlayerSkin.get(UUID)` 已按 12.2 的 Java 真值向量实现：`DefaultPlayerSkin.Get(Guid)` 返回 `(Path, Slim)`，使用 `Guid.TryWriteBytes(bigEndian: true)` 取 most/least 两个 long、`JavaUuidHashCode` + `Math.floorMod` 语义，18 条路径预生成、稳态零分配；`EntityRenderState.Uuid` 由 `EntityTracker` 透传，`PlayerModelDefinition` 两个定义的无皮肤回退改为按 UUID 取默认路径，`EntityTracker`/`PlayerSkinCache` 在无可用 body 时按同一默认皮肤的 `Slim` 设置模型标记，纹理与模型始终一致；wide 路径不回归。
 - slim 护甲仍复用 `HumanoidArmorTrees` 的 wide 玩家四槽树（原版用 `PLAYER_SLIM_ARMOR`）；仅影响窄臂玩家穿戴护甲时的外观，登记为后续收敛项。
 - 纹理属性签名校验已由 `Sharpcraft.AuthLib` 实现（§14）：公钥发现、`SHA1withRSA` 验签和纹理 URL 策略均在该中性共享库；`PlayerSkinCache` 按本地 UUID 区分 `requireSecure`。
 - `PlayerSkinCache` 的档案下载仍按原版 `SkinManager` 的 body/cape/elytra 组合语义：任一请求的纹理失败则整体回退默认皮肤；atlas 注册路径不变。
