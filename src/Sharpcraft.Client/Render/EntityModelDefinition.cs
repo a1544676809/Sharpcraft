@@ -4,6 +4,7 @@
 namespace Sharpcraft.Client.Render;
 
 using Sharpcraft.Client.World;
+using Sharpcraft.Framework.Rendering;
 
 /// <summary>
 /// A render-only entity model definition. This mirrors the role of the reference LayerDefinition/EntityModelSet:
@@ -23,7 +24,8 @@ public sealed class EntityModelDefinition
         string? emissiveTexturePath = null,
         Func<EntityRenderState, string?>? textureSelector = null,
         IReadOnlyList<string>? additionalTexturePaths = null,
-        CompiledEntityModel? compiled = null)
+        CompiledEntityModel? compiled = null,
+        IReadOnlyList<EntityRenderLayerDefinition>? renderLayers = null)
     {
         Name = name;
         TextureWidth = textureWidth;
@@ -36,7 +38,17 @@ public sealed class EntityModelDefinition
         TextureSelector = textureSelector;
         AdditionalTexturePaths = additionalTexturePaths ?? [];
         Compiled = compiled;
+        RenderLayers = renderLayers ?? DefaultRenderLayers;
     }
+
+    /// <summary>Default cutout/elytra/translucent/emissive layer order shared by entity models.</summary>
+    public static readonly IReadOnlyList<EntityRenderLayerDefinition> DefaultRenderLayers =
+    [
+        new("cutout", EntityGeometryLayerKind.Cutout, 0),
+        new("elytra", EntityGeometryLayerKind.Elytra, 10),
+        new("translucent", EntityGeometryLayerKind.Translucent, 20),
+        new("emissive", EntityGeometryLayerKind.Emissive, 30)
+    ];
 
     public string Name { get; }
     public int TextureWidth { get; }
@@ -64,6 +76,9 @@ public sealed class EntityModelDefinition
     /// <summary>Structural tree model when the definition has been migrated to the tree path; null uses legacy flat parts.</summary>
     public CompiledEntityModel? Compiled { get; }
 
+    /// <summary>Explicit render-layer order for this model; defaults to the shared cutout/elytra/translucent/emissive order.</summary>
+    public IReadOnlyList<EntityRenderLayerDefinition> RenderLayers { get; }
+
     /// <summary>
     /// Creates a definition from a declarative mesh: the legacy flat <see cref="Parts"/> remain available for compatibility,
     /// while <see cref="Compiled"/> is produced once by the structural bakery.
@@ -78,7 +93,8 @@ public sealed class EntityModelDefinition
         float scale = 1f,
         string? emissiveTexturePath = null,
         Func<EntityRenderState, string?>? textureSelector = null,
-        IReadOnlyList<string>? additionalTexturePaths = null)
+        IReadOnlyList<string>? additionalTexturePaths = null,
+        IReadOnlyList<EntityRenderLayerDefinition>? renderLayers = null)
     {
         ArgumentNullException.ThrowIfNull(mesh);
         var parts = VanillaMeshBake.Bake(mesh, 0, 0);
@@ -94,7 +110,8 @@ public sealed class EntityModelDefinition
             emissiveTexturePath,
             textureSelector,
             additionalTexturePaths,
-            compiled);
+            compiled,
+            renderLayers);
     }
 
     public IEnumerable<string> TexturePaths

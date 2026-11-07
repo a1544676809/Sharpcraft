@@ -309,3 +309,11 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - `ZombieNautilusModelDefinition` 新增 `BuildCoralBodyMesh`：基础 Nautilus mesh 的 `shell` 节点下挂 `corals` 子树，生成 warm variant 的完整 `Compiled`；
 - coral 节点保留 `Equipment[6] <= 0` 的 `VisibleWhen`（穿甲时隐藏）；
 - 树测试增加 warm coral 父子关系/可见性断言，树测试共 24 项。
+
+### 2026-11-07 — T-733 显式层顺序计划 + 动态层缓冲
+
+- 新增 `EntityRenderLayerDefinition { Name, Kind, Order }`；`EntityModelDefinition.RenderLayers` 默认给出
+  `cutout 0 / elytra 10 / translucent 20 / emissive 30`；
+- `EntityModelMesher.BuildLayers` 使用当前批次模型定义的并集按 `Order` 排序，不再使用固定 `LayerKinds` 数组；
+- `WindowedRenderer` 的 entity layer 缓冲从固定 4 组改为按层数增长，避免超过 4 层被截断（RF-22）；
+- `EntityLayerTests` 增加显式 order 断言；RF-18 的独立 per-layer model/texture/visible 仍待接线。

@@ -118,4 +118,14 @@ public sealed record EntityGeometryLayer(
 - 沙盒已统一走 `BuildLayers` + `entityLayers`（与窗口真实路径一致），Player/Drowned/Slime 的透明层已目视确认。\n- 验收：`EntityLayerTests` 钉住“无 overlay 只有 Cutout / Player 与 Drowned/Slime 产生 Translucent / 合并几何总量等于各层之和”；
   窗口启动无 pipeline validation error。
 
+## 7. 实施状态（2026-11-07，T-733）
+
+- `EntityModelDefinition` 增加 `RenderLayers`（`EntityRenderLayerDefinition { Name, Kind, Order }`），默认顺序为
+  `cutout 0 / elytra 10 / translucent 20 / emissive 30`；
+- `EntityModelMesher.BuildLayers` 从当前批次的模型定义取并集并按 `Order` 排序，不再使用固定
+  `Cutout→Elytra→Translucent→Emissive` 数组；几何仍按 kind 聚合，独立的 per-layer model/texture/visible 尚未接线；
+- `WindowedRenderer` 的 entity layer 缓冲由固定 4 组改为按层数增长，层数超过 4 不再截断；
+- 剩余：把 `EntityRenderLayerDefinition` 扩展为带独立 `EntityModelDefinition`/`TexturePath`/`VisibleWhen` 的层模型，
+  并把装备层从按 kind 合并改为独立提交。
+
 

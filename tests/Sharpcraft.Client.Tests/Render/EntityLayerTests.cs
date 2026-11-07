@@ -87,6 +87,18 @@ public sealed class EntityLayerTests
     }
 
     [Fact]
+    public void LayerOrderComesFromExplicitDefinitions()
+    {
+        var layers = Layers(HumanoidMobModelDefinition.DrownedEntityTypeId);
+        var cutout = Assert.Single(layers, layer => layer.Kind == EntityGeometryLayerKind.Cutout);
+        var translucent = Assert.Single(layers, layer => layer.Kind == EntityGeometryLayerKind.Translucent);
+        Assert.Equal(0, cutout.Order);
+        Assert.Equal(20, translucent.Order);
+        Assert.Equal(4, EntityModelDefinition.DefaultRenderLayers.Count);
+        Assert.Equal(0, EntityModelDefinition.DefaultRenderLayers[0].Order);
+    }
+
+    [Fact]
     public void AModelWithoutOverlaysHasOnlyTheCutoutLayer()
     {
         var layers = Layers(CowModelDefinition.CowEntityTypeId);

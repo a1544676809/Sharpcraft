@@ -503,23 +503,30 @@ public static class WindowedRenderer
         var dynamicVertexCapacity = MinimumBufferBytes;
         var dynamicIndexCapacity = MinimumBufferBytes;
 
-        // Entity layers (docs/decisions/0021): a small fixed set of persistent buffers, one pair per layer, so a
-        // per-frame rewrite never allocates and the world arena stays untouched.
-        const int MaxEntityLayers = 4;
-        var entityLayerVertex = new WgpuBuffer[MaxEntityLayers];
-        var entityLayerIndex = new WgpuBuffer[MaxEntityLayers];
-        var entityLayerVertexCapacity = new ulong[MaxEntityLayers];
-        var entityLayerIndexCapacity = new ulong[MaxEntityLayers];
-        var entityLayerIndexCount = new uint[MaxEntityLayers];
-        var entityLayerKind = new EntityGeometryLayerKind[MaxEntityLayers];
+        // Entity layers (docs/decisions/0021): persistent buffers grow with the layer plan instead of a fixed cap, so
+        // an explicit per-layer definition can add a new pass without truncation.
+        var entityLayerVertex = new List<WgpuBuffer>();
+        var entityLayerIndex = new List<WgpuBuffer>();
+        var entityLayerVertexCapacity = new List<ulong>();
+        var entityLayerIndexCapacity = new List<ulong>();
+        var entityLayerIndexCount = new List<uint>();
+        var entityLayerKind = new List<EntityGeometryLayerKind>();
         var entityLayerDrawn = 0;
-        for (var layerIndex = 0; layerIndex < MaxEntityLayers; layerIndex++)
+
+        void EnsureEntityLayerCapacity(int count)
         {
-            entityLayerVertex[layerIndex] = CreateGeometryBuffer(device, MinimumBufferBytes, BufferUsage.Vertex | BufferUsage.CopyDst);
-            entityLayerIndex[layerIndex] = CreateGeometryBuffer(device, MinimumBufferBytes, BufferUsage.Index | BufferUsage.CopyDst);
-            entityLayerVertexCapacity[layerIndex] = MinimumBufferBytes;
-            entityLayerIndexCapacity[layerIndex] = MinimumBufferBytes;
+            while (entityLayerVertex.Count < count)
+            {
+                entityLayerVertex.Add(CreateGeometryBuffer(device, MinimumBufferBytes, BufferUsage.Vertex | BufferUsage.CopyDst));
+                entityLayerIndex.Add(CreateGeometryBuffer(device, MinimumBufferBytes, BufferUsage.Index | BufferUsage.CopyDst));
+                entityLayerVertexCapacity.Add(MinimumBufferBytes);
+                entityLayerIndexCapacity.Add(MinimumBufferBytes);
+                entityLayerIndexCount.Add(0);
+                entityLayerKind.Add(default);
+            }
         }
+
+        EnsureEntityLayerCapacity(4);
 
         // The helper is defined further down; the buffers above are created eagerly so no nullable state leaks.
 
@@ -975,7 +982,8 @@ public static class WindowedRenderer
             entityLayerDrawn = 0;
             if (entityLayers is not null && entityLayers() is { Count: > 0 } layers)
             {
-                var used = Math.Min(layers.Count, MaxEntityLayers);
+                var used = layers.Count;
+                EnsureEntityLayerCapacity(used);
                 for (var layerIndex = 0; layerIndex < used; layerIndex++)
                 {
                     var layer = layers[layerIndex];
@@ -1803,7 +1811,7 @@ public static class WindowedRenderer
 
         dynamicVertex.Dispose();
         dynamicIndex.Dispose();
-        for (var layerIndex = 0; layerIndex < MaxEntityLayers; layerIndex++)
+        for (var layerIndex = 0; layerIndex < entityLayerVertex.Count; layerIndex++)
         {
             entityLayerVertex[layerIndex].Dispose();
             entityLayerIndex[layerIndex].Dispose();

@@ -98,7 +98,7 @@ updated: 2026-11-07
 | E8 | Collar/项圈、狼甲裂痕等副层 | 原版各为独立 LayerDefinition，通常从基础树变换/追加 cube | Cat/Wolf collar 与 Wolf crackiness 已是 tree 复制层；其余 flat 副层待迁移 | 成人副层已树化；幼年护甲等仍待 | 部分迁移（T-723） |
 | E9 | 装备纹理解析 | `EquipmentClientInfo`：19 个 `LayerType`，每个类型是 `Layer` 列表；每层含 `texture`、可选 `dyeable.color_when_undyed`、`use_player_texture`；另有 `trim_overrides`、染料/盔甲纹饰/glint | `EquipmentTextureCatalog` 只做 item→primary/overlay 路径的静态映射；无层列表、染料、玩家纹理、trim、glint | 模组/新装备资产和染色/纹饰不能完整表达 | 缺失（已核对字段） |
 | E10 | 装备层每部件可见性 | 模型 `setupAnim` 可设置 `reins.visible = isRidden` 等；`EquipmentLayerRenderer` 按层提交 | 树路径已支持节点级 `VisibleWhen`；马 saddle line 与骆驼 reins 按 `IsVehicle` 控制；其他槽位状态仍待 | 已覆盖骑乘鞍部件；其余槽位状态待补 | 部分迁移（T-723） |
-| E11 | 装备层渲染顺序/类型 | 每个 `RenderLayer` 通过 `submitNodeCollector.order(nextOrder++)` 独立提交；类型/深度/混合独立 | `BuildLayers` 固定 `Cutout → Elytra → Translucent → Emissive`，`EntityGeometryLayer.Order` 只是该固定数组下标；没有装备层独立 order | 装备层与基础层/其它 render layer 的顺序和混合语义不等价 | 部分验证 |
+| E11 | 装备层渲染顺序/类型 | 每个 `RenderLayer` 通过 `submitNodeCollector.order(nextOrder++)` 独立提交；类型/深度/混合独立 | `EntityModelDefinition.RenderLayers` 提供显式 Name/Kind/Order；`BuildLayers` 按批次并集排序，WindowedRenderer 缓冲动态增长；几何仍按 kind 聚合，装备层尚未成为独立层模型 | 顺序计划已显式化；独立 layer model/texture/visible 待接线 | 部分迁移（T-733） |
 | E12 | 护甲/装备与基础模型的 deform 语义 | 每个槽位独立的 `CubeDeformation`/PartPose 作用在完整树 | 成人四槽 outer 1.0 / inner 0.5 / legs-0.1 / hat+0.5；幼年四槽 outer `(-0.1,0.5,0.3)` / inner `(-0.1,0.3,0.3)`；Piglin 使用相同槽位树并补空 ears；baby Piglin 使用 uniform 0.7 + arm offset | 成人/幼年/Piglin/baby Piglin 四槽均已对齐 | 已迁移（T-724/T-725/T-726/T-727） |
 
 ### 3.4 测试与验收

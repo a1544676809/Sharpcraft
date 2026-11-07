@@ -16,13 +16,10 @@ namespace Sharpcraft.Client.Render;
 public sealed partial class EntityModelMesher
 {
     private readonly DynamicGeometry _geometry = new();
-    private readonly DynamicGeometry[] _layerGeometries = [new(), new(), new(), new()];
+    private readonly List<DynamicGeometry> _layerGeometries = [new(), new(), new(), new()];
 
     /// <summary>One reusable pose per entity in the current batch, so a steady frame does not allocate poses.</summary>
     private readonly List<EntityPose> _animationPoses = [];
-
-    private static readonly EntityGeometryLayerKind[] LayerKinds =
-        [EntityGeometryLayerKind.Cutout, EntityGeometryLayerKind.Elytra, EntityGeometryLayerKind.Translucent, EntityGeometryLayerKind.Emissive];
 
     /// <summary>Merged geometry of every layer, kept for callers that draw entities in one pass.</summary>
     public DynamicGeometry Build(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, EntityPose? pose = null)    {
@@ -70,20 +67,54 @@ public sealed partial class EntityModelMesher
             PrepareAnimationPoses(entities);
         }
 
-        var layers = new List<EntityGeometryLayer>(3);
-        for (var i = 0; i < LayerKinds.Length; i++)
+        var plan = BuildLayerPlan(entities, variants);
+        while (_layerGeometries.Count < plan.Count)
         {
-            var kind = LayerKinds[i];
+            _layerGeometries.Add(new DynamicGeometry());
+        }
+
+        var layers = new List<EntityGeometryLayer>(plan.Count);
+        for (var i = 0; i < plan.Count; i++)
+        {
+            var definition = plan[i];
+            var kind = definition.Kind;
             var geometry = _layerGeometries[i];
             var emissivePass = kind == EntityGeometryLayerKind.Emissive;
             BuildInto(geometry, kind, entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants, emissivePass, pose, usePreparedPoses);
             if (geometry.IndexCount > 0)
             {
-                layers.Add(new EntityGeometryLayer(kind.ToString().ToLowerInvariant(), kind, i, geometry));
+                layers.Add(new EntityGeometryLayer(definition.Name, kind, definition.Order, geometry));
             }
         }
 
         return layers;
+    }
+
+    /// <summary>
+    /// Builds the batch's layer plan from every model's explicit render-layer definitions. Duplicate kinds collapse to
+    /// the earliest declared order, then the plan is sorted by <see cref="EntityRenderLayerDefinition.Order"/>.
+    /// </summary>
+    private static List<EntityRenderLayerDefinition> BuildLayerPlan(
+        ReadOnlySpan<EntityRenderState> entities,
+        EntityVariantTable? variants)
+    {
+        var byKind = new Dictionary<EntityGeometryLayerKind, EntityRenderLayerDefinition>();
+        foreach (var entity in entities)
+        {
+            var model = ResolveModel(entity, variants);
+            foreach (var layer in model.RenderLayers)
+            {
+                if (!byKind.TryGetValue(layer.Kind, out var existing) || layer.Order < existing.Order)
+                {
+                    byKind[layer.Kind] = layer;
+                }
+            }
+        }
+
+        var plan = new List<EntityRenderLayerDefinition>(byKind.Count);
+        plan.AddRange(byKind.Values);
+        plan.Sort(static (left, right) => left.Order.CompareTo(right.Order));
+        return plan;
     }
 
     /// <summary>
