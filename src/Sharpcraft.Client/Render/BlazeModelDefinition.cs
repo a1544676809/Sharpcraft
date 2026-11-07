@@ -16,13 +16,17 @@ public static class BlazeModelDefinition
     /// <summary>Declarative DSL tree for the head and twelve computed rods (T-681).</summary>
     private static readonly VanillaMeshDefinition BlazeMesh = BuildBlazeMesh();
 
+    private static readonly CompiledEntityModel BlazeCompiled =
+        VanillaMeshBakery.Build(BlazeMesh, 64, 32);
+
     public static readonly EntityModelDefinition Definition = new(
         "blaze",
         64,
         32,
         [.. VanillaMeshBake.Bake(BlazeMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/blaze/blaze");
+        "entity/blaze/blaze",
+        compiled: BlazeCompiled);
 
     private static VanillaMeshDefinition BuildBlazeMesh()
     {

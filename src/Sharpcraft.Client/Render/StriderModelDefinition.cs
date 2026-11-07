@@ -19,6 +19,9 @@ public static class StriderModelDefinition
     /// <summary>Declarative DSL tree for the nine strider parts (T-681).</summary>
     private static readonly VanillaMeshDefinition StriderMesh = BuildStriderMesh();
 
+    private static readonly CompiledEntityModel StriderCompiled =
+        VanillaMeshBakery.Build(StriderMesh, 64, 128);
+
     public static readonly EntityModelDefinition Definition = new(
         "strider",
         64,
@@ -27,7 +30,8 @@ public static class StriderModelDefinition
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/strider/strider",
         textureSelector: state => state.IsCold ? "entity/strider/strider_cold" : "entity/strider/strider",
-        additionalTexturePaths: ["entity/strider/strider_cold"]);
+        additionalTexturePaths: ["entity/strider/strider_cold"],
+        compiled: StriderCompiled);
 
     private static VanillaMeshDefinition BuildStriderMesh()
     {

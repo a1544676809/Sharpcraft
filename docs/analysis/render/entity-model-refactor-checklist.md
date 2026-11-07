@@ -287,3 +287,10 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - Ghast 保留 4.5 scale、charging texture selector 与 shooting additional path；
 - Turtle 保留 egg_belly 可见性名与 128×64 纹理尺寸；
 - 树测试增加第二批 compiled/part-count 断言，树测试共 21 项。
+
+### 2026-11-07 — T-730 第三批剩余 adult 模型树迁移
+
+- Blaze、Hoglin/Zoglin、Slime、Strider、Sniffer、Giant 接入 `Compiled`；
+- Giant 复用 `HumanoidMobModelDefinition.Zombie.Compiled` 并保留 6× scale；
+- Strider 保留 cold texture selector 与 additional path；Slime outer_cube 保留 Translucent kind；
+- 树测试增加第三批 compiled/part-count 断言，树测试共 22 项。

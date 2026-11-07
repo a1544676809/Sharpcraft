@@ -18,5 +18,6 @@ public static class GiantModelDefinition
         HumanoidMobModelDefinition.Zombie.Parts,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/zombie/zombie",
-        6f);
+        6f,
+        compiled: HumanoidMobModelDefinition.Zombie.Compiled);
 }

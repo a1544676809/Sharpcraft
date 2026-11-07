@@ -16,13 +16,17 @@ public static class SlimeModelDefinition
 
     private static readonly VanillaMeshDefinition SlimeMesh = BuildSlimeMesh();
 
+    private static readonly CompiledEntityModel SlimeCompiled =
+        VanillaMeshBakery.Build(SlimeMesh, 64, 32);
+
     public static readonly EntityModelDefinition Definition = new(
         "slime",
         64,
         32,
         [.. VanillaMeshBake.Bake(SlimeMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/slime/slime");
+        "entity/slime/slime",
+        compiled: SlimeCompiled);
 
     private static VanillaMeshDefinition BuildSlimeMesh()
     {

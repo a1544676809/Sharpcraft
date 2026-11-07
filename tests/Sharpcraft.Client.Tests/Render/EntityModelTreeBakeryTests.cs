@@ -229,6 +229,25 @@ public sealed class EntityModelTreeBakeryTests
     }
 
     [Fact]
+    public void ThirdAdultBatchExposesCompiledTrees()
+    {
+        Assert.NotNull(BlazeModelDefinition.Definition.Compiled);
+        Assert.NotNull(HoglinModelDefinition.Definition.Compiled);
+        Assert.NotNull(HoglinModelDefinition.Zoglin.Compiled);
+        Assert.NotNull(SlimeModelDefinition.Definition.Compiled);
+        Assert.NotNull(StriderModelDefinition.Definition.Compiled);
+        Assert.NotNull(SnifferModelDefinition.Definition.Compiled);
+        Assert.NotNull(GiantModelDefinition.Definition.Compiled);
+
+        Assert.Equal(13, BlazeModelDefinition.Definition.Compiled!.Parts.Count);
+        Assert.Equal(11, HoglinModelDefinition.Definition.Compiled!.Parts.Count);
+        Assert.Equal(5, SlimeModelDefinition.Definition.Compiled!.Parts.Count);
+        Assert.Equal(9, StriderModelDefinition.Definition.Compiled!.Parts.Count);
+        Assert.Equal(16, SnifferModelDefinition.Definition.Compiled!.Parts.Count);
+        Assert.Equal(6, GiantModelDefinition.Definition.Compiled!.Parts.Count);
+    }
+
+    [Fact]
     public void SecondAdultBatchExposesCompiledTrees()
     {
         Assert.NotNull(CodModelDefinition.Definition.Compiled);

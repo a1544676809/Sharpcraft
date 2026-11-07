@@ -21,13 +21,17 @@ public static class HoglinModelDefinition
 
     private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(HoglinMesh, 0, 0)];
 
+    private static readonly CompiledEntityModel HoglinCompiled =
+        VanillaMeshBakery.Build(HoglinMesh, 128, 64);
+
     public static readonly EntityModelDefinition Definition = new(
         "hoglin",
         128,
         64,
         Parts,
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/hoglin/hoglin");
+        "entity/hoglin/hoglin",
+        compiled: HoglinCompiled);
 
     public static readonly EntityModelDefinition Zoglin = new(
         "zoglin",
@@ -35,7 +39,8 @@ public static class HoglinModelDefinition
         64,
         Parts,
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/hoglin/zoglin");
+        "entity/hoglin/zoglin",
+        compiled: HoglinCompiled);
 
     private static VanillaMeshDefinition BuildHoglinMesh()
     {
