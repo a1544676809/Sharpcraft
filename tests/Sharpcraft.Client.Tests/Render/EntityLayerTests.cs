@@ -113,6 +113,41 @@ public sealed class EntityLayerTests
     }
 
     [Fact]
+    public void GlintOverrideAddsAnIndependentEquipmentLayer()
+    {
+        var helmet = ItemRegistry.LoadEmbedded().GetId(Identifier.Parse("minecraft:iron_helmet"));
+        Assert.True(helmet >= 0, "iron helmet item id missing from embedded registry");
+        var glints = new bool?[8];
+        glints[5] = true;
+        var state = Entity(HumanoidMobModelDefinition.ZombieEntityTypeId) with
+        {
+            Equipment = new EntityEquipment(-1, -1, -1, -1, -1, helmet, -1, -1),
+            EquipmentGlintOverrides = glints
+        };
+
+        Assert.True(state.EquipmentGlintOverrideAt(5));
+        Assert.Contains(EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId).RenderLayers,
+            layer => layer.Name == "glint_HumanoidArmor_5");
+        var variantModel = EntityVariantTable.Builtin.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId, 0);
+        Assert.Contains(variantModel.RenderLayers, layer => layer.Name == "glint_HumanoidArmor_5");
+        var variantGlint = variantModel.RenderLayers.Single(layer => layer.Name == "glint_HumanoidArmor_5");
+        Assert.True(variantGlint.VisibleWhen!(state));
+        Assert.NotNull(variantGlint.Model);
+        Assert.NotNull(variantGlint.Model!.Compiled);
+        var glintLayer = EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId).RenderLayers
+            .Single(layer => layer.Name == "glint_HumanoidArmor_5");
+        Assert.True(glintLayer.VisibleWhen!(state));
+        Assert.NotNull(glintLayer.Model);
+        Assert.NotNull(glintLayer.Model!.Compiled);
+        Assert.NotEmpty(glintLayer.Model.Compiled!.Cubes);
+        Assert.All(glintLayer.Model.Compiled.Cubes, cube => Assert.True(cube.IncludeInEmissive));
+        var layers = new EntityModelMesher().BuildLayers(
+            [state], new SpriteRect(0, 0, 64, 64, 1), 64, 64, variants: EntityVariantTable.Builtin);
+
+        Assert.Contains(layers, layer => layer.Name == "glint_HumanoidArmor_5");
+    }
+
+    [Fact]
     public void BabyHumanoidArmorUsesIndependentModelLayers()
     {
         var state = BabyWithHelmet(154);

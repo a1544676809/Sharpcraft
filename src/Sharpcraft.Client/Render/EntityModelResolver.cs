@@ -356,6 +356,29 @@ public static class EntityModelResolver
                     selector,
                     state => selector(state) is not null,
                     AllCubes: true));
+
+                const string glintTexture = "misc/enchanted_glint_armor";
+                var glintModel = new EntityModelDefinition(
+                    "glint_" + effectiveKind + "_" + slot,
+                    definition.TextureWidth,
+                    definition.TextureHeight,
+                    [],
+                    definition.FaceTransforms,
+                    glintTexture,
+                    definition.Scale,
+                    emissiveTexturePath: glintTexture,
+                    textureSelector: state => state.EquipmentGlintOverrideAt(slot) == true ? glintTexture : null,
+                    additionalTexturePaths: [glintTexture],
+                    compiled: EntityModelLayerHelpers.WithEmissiveTexture(equipmentTree, glintTexture));
+                customLayers.Add(new EntityRenderLayerDefinition(
+                    "glint_" + effectiveKind + "_" + slot,
+                    EntityGeometryLayerKind.Elytra,
+                    order++,
+                    glintModel,
+                    glintTexture,
+                    state => state.EquipmentGlintOverrideAt(slot) == true ? glintTexture : null,
+                    state => state.EquipmentGlintOverrideAt(slot) == true,
+                    AllCubes: true));
             }
 
             if (typeId == 152 && EquipmentModelTrees.For(EquipmentAssetKind.WolfBody) is { } wolfArmor)

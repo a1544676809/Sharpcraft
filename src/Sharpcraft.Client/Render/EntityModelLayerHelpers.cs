@@ -315,6 +315,55 @@ public static class EntityModelLayerHelpers
         return new CompiledEntityModel(root, parts, cubes);
     }
 
+    /// <summary>Returns a tree copy whose cubes use the supplied emissive texture path.</summary>
+    public static CompiledEntityModel WithEmissiveTexture(CompiledEntityModel model, string texturePath)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(texturePath);
+        var parts = new List<EntityModelPartNode>();
+        EntityModelPartNode Clone(EntityModelPartNode source, string? parent)
+        {
+            var cubes = source.Cubes.Select(cube => cube with
+            {
+                EmissiveTexturePath = texturePath,
+                IncludeInEmissive = true
+            }).ToArray();
+            var children = source.Children.Select(child => Clone(child, source.Name)).ToArray();
+            var node = new EntityModelPartNode(
+                source.Name,
+                parent,
+                source.PivotX,
+                source.PivotY,
+                source.PivotZ,
+                source.RotationX,
+                source.RotationY,
+                source.RotationZ,
+                cubes,
+                children,
+                visibleWhen: source.VisibleWhen,
+                rotationSelector: source.RotationSelector,
+                yOffsetSelector: source.YOffsetSelector,
+                poseSource: source.PoseSource,
+                tintSelector: source.TintSelector);
+            parts.Add(node);
+            return node;
+        }
+
+        var children = model.Root.Children.Select(child => Clone(child, parent: null)).ToArray();
+        var root = new EntityModelPartNode(
+            model.Root.Name,
+            parent: null,
+            pivotX: 0f,
+            pivotY: 0f,
+            pivotZ: 0f,
+            rotationX: 0f,
+            rotationY: 0f,
+            rotationZ: 0f,
+            cubes: [],
+            children);
+        var cubes = parts.SelectMany(part => part.Cubes).ToArray();
+        return new CompiledEntityModel(root, parts, cubes);
+    }
+
     /// <summary>Returns a tree copy whose nodes use the supplied tint selector; null leaves the tree unchanged.</summary>
     public static CompiledEntityModel WithTint(
         CompiledEntityModel model,

@@ -392,6 +392,7 @@ public static class EquipmentTextureCatalog
 
         paths.Add("entity/equipment/humanoid_baby/leather_overlay");
         paths.Add("entity/equipment/wings/elytra");
+        paths.Add("misc/enchanted_glint_armor");
 
         return paths;
     }
