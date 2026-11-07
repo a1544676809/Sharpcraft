@@ -30,7 +30,6 @@ public sealed partial class EntityModelMesher
     private readonly Dictionary<(string Name, EntityGeometryLayerKind Kind, int Order), EntityRenderLayerDefinition> _modelBackedPlanByKey = new();
     private readonly List<EntityRenderLayerDefinition> _modelBackedPlan = [];
     private readonly List<LayerGroup> _layerGroups = [];
-    private readonly Dictionary<LayerGroupKey, int> _layerGroupByKey = new();
     private readonly List<EntityRenderState> _groupEntities = [];
     private readonly List<EntityPose?> _groupPoses = [];
 
@@ -213,10 +212,12 @@ public sealed partial class EntityModelMesher
             var scratch = _layerScratch[layerIndex];
             target.Clear();
 
-            // One grouping pass for this layer. Plan/group buffers are pooled fields cleared in place, so a steady
-            // frame allocates no dictionaries, group records or entity lists per layer.
-            _layerGroupByKey.Clear();
+            // One grouping pass for this layer. Groups are contiguous runs only: merging non-adjacent entities with
+            // the same model would reorder vertex data, which is not equivalent to the reference's entity submission
+            // order (and matters for translucent ties). Buffers are pooled fields cleared in place.
             var groupCount = 0;
+            var activeGroup = -1;
+            var activeKey = default(LayerGroupKey);
             for (var entityIndex = 0; entityIndex < entities.Length; entityIndex++)
             {
                 var entity = entities[entityIndex];
@@ -238,22 +239,22 @@ public sealed partial class EntityModelMesher
 
                 var effectiveModel = entityLayer.Model ?? model;
                 var key = new LayerGroupKey(effectiveModel, entityLayer.AllCubes, entityLayer.TextureSelector);
-                if (!_layerGroupByKey.TryGetValue(key, out var groupIndex))
+                if (activeGroup < 0 || !key.Equals(activeKey))
                 {
-                    groupIndex = groupCount++;
-                    while (_layerGroups.Count <= groupIndex)
+                    activeGroup = groupCount++;
+                    activeKey = key;
+                    while (_layerGroups.Count <= activeGroup)
                     {
                         _layerGroups.Add(new LayerGroup());
                     }
 
-                    var created = _layerGroups[groupIndex];
+                    var created = _layerGroups[activeGroup];
                     created.Model = effectiveModel;
                     created.Layer = entityLayer;
                     created.EntityIndices.Clear();
-                    _layerGroupByKey[key] = groupIndex;
                 }
 
-                _layerGroups[groupIndex].EntityIndices.Add(entityIndex);
+                _layerGroups[activeGroup].EntityIndices.Add(entityIndex);
             }
 
             for (var groupIndex = 0; groupIndex < groupCount; groupIndex++)

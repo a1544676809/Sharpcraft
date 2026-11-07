@@ -202,6 +202,70 @@ public sealed class EntityLayerTests
     }
 
     [Fact]
+    public void ModelGroupingPreservesInterleavedSubmissionOrder()
+    {
+        var states = new[]
+        {
+            Entity(HumanoidMobModelDefinition.DrownedEntityTypeId),
+            Entity(SlimeModelDefinition.SlimeEntityTypeId),
+            Entity(HumanoidMobModelDefinition.DrownedEntityTypeId)
+        };
+        var sprite = new SpriteRect(0, 0, 64, 64, 1);
+        var mesher = new EntityModelMesher();
+        var combined = mesher.BuildLayers(states, sprite, 64, 64, variants: EntityVariantTable.Builtin);
+        var reference = new Dictionary<string, List<float>>(StringComparer.Ordinal);
+        foreach (var state in states)
+        {
+            var single = new EntityModelMesher().BuildLayers([state], sprite, 64, 64, variants: EntityVariantTable.Builtin);
+            foreach (var layer in single)
+            {
+                if (!reference.TryGetValue(layer.Name, out var values))
+                {
+                    values = [];
+                    reference[layer.Name] = values;
+                }
+
+                for (var i = 0; i < layer.Geometry.VertexFloats; i++)
+                {
+                    values.Add(layer.Geometry.Vertices[i]);
+                }
+            }
+        }
+
+        var changed = 0;
+        var translucentChanged = 0;
+        foreach (var layer in combined)
+        {
+            if (!reference.TryGetValue(layer.Name, out var expected))
+            {
+                continue;
+            }
+
+            var actual = layer.Geometry.Vertices;
+            var mismatches = 0;
+            for (var i = 0; i < layer.Geometry.VertexFloats && i < expected.Count; i++)
+            {
+                if (actual[i] != expected[i])
+                {
+                    mismatches++;
+                }
+            }
+
+            if (mismatches > 0)
+            {
+                changed++;
+                if (layer.Kind == EntityGeometryLayerKind.Translucent)
+                {
+                    translucentChanged++;
+                }
+            }
+        }
+
+        Assert.Equal(0, changed);
+        Assert.Equal(0, translucentChanged);
+    }
+
+    [Fact]
     public void BabyHumanoidArmorUsesIndependentModelLayers()
     {
         var state = BabyWithHelmet(154);
