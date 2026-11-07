@@ -34,6 +34,10 @@ updated: 2026-11-07
 | 模型节点变换 | `ModelPart.translateAndRotate`、`ModelPart.render` | `ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/ModelPart.java` |
 | 局部姿态 | `PartPose`（offset/rotation/xScale/yScale/zScale） | `ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/PartPose.java` |
 | 三轴膨胀 | `CubeDeformation(growX, growY, growZ)` | `ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/builders/CubeDeformation.java` |
+| 多 cube 构建 | `CubeListBuilder`（`texOffs`/`mirror`/`addBox`） | `ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/builders/CubeListBuilder.java` |
+| 部件树定义 | `PartDefinition`（cube 列表 + children map） | `ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/builders/PartDefinition.java` |
+| 部件树烘焙 | `PartDefinition.bake`、`ModelPart`（cube 列表 + children map） | `ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/builders/PartDefinition.java`、`ref://.../ModelPart.java` |
+| 模型层烘焙 | `EntityModelSet.bakeLayer` | `ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/EntityModelSet.java` |
 | 立方体与 UV | `CubeDefinition.bake`、`ModelPart.Cube` | `ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/builders/CubeDefinition.java`、`ref://.../ModelPart.java` |
 | 缩放变换 | `MeshTransformer.scaling(factor)` | `ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/builders/MeshTransformer.java` |
 | 根节点变换边界 | `MeshDefinition.transformed`、`PartDefinition.transformed` | `ref://.../builders/MeshDefinition.java`、`ref://.../builders/PartDefinition.java` |
@@ -141,6 +145,23 @@ updated: 2026-11-07
 在项目的 y-up 存储中，这对应 body 的 `Bottom = 4`、`Height = 5`、`bodyTop = 9`；head 的 `Bottom = 9`、`Height = 6`。
 
 因此幼年背部装备的挂点不得高于 `bodyTop`；幼年鞘翅应以 `bodyTop` 为上限/锚点，而不是硬编码 12。
+
+### 3.7 原版模型管线没有扁平化阶段
+
+原版的模型构建与运行结构始终是树，而不是“一个 cuboid 一个 part”的扁平数组：
+
+- `CubeListBuilder` 内部维护 `List<CubeDefinition>`；`texOffs`/`mirror` 是构建状态，`addBox` 每次追加一个 cube，所以一个 part 可以拥有多个 cube。
+- `PartDefinition` 持有 `List<CubeDefinition>` 和 `Map<String, PartDefinition> children`；`bake` 递归烘焙 children，再把当前 part 的 cube 列表整体烘焙成 `List<ModelPart.Cube>`。
+- `ModelPart` 持有 `List<ModelPart.Cube> cubes` 和 `Map<String, ModelPart> children`；渲染时先应用一次当前 part 的 `translateAndRotate`，绘制该 part 的所有 cube，再递归 children。
+- `EntityModelSet.bakeLayer` 返回的是 `LayerDefinition.bakeRoot()` 的 `ModelPart` 根节点，不经过任何扁平数组转换。
+
+因此：
+
+- **原版没有“每 cube 一个 part”的表示**；
+- 原版的一个 `ModelPart` 可以同时拥有多个 cube 和多个 children；
+- 当前项目的 `VanillaPartDefinition` 树已经保留了原版结构；真正造成信息丢失的是 `VanillaMeshBake.Bake` 的 `EmitCubes`——它为每个 cube 创建一个 `EntityModelPart`，并把父链降级为字符串 `Parent`。
+
+结论：扁平化只能是**渲染批次边界的可选展开步骤**，不能是模型定义的唯一存储形态。后续若要满足“写生物时保有结构”，应让 `VanillaMeshDefinition` / `EntityModelPart` 的树成为唯一模型真相源，把扁平数组限定为某一个集中方法的输出。
 
 ## 4. 对本项目 DSL 与门禁的约束
 

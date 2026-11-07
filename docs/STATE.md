@@ -86,7 +86,8 @@ updated: 2026-11-06
 44. **T-706 原版模型几何事实内化（2026-11-07）**：新增 `docs/analysis/render/entity-model-geometry-facts.md`；核实 `ModelPart` 变换、`CubeDeformation` 三轴、Cube UV、`MeshTransformer.scaling`、幼年 Elytra 与 BabyZombie 常量；同步更新 entity-render / coordinate / migration 文档。
 45. **T-707 原版事实提取器（2026-11-07）**：新增 `tools/Sharpcraft.ReferenceVerifier`，默认提取 Elytra/Warden/Breeze/AdultRabbit/AdultFox 的纯数字模型事实到 `artifacts/reference/vanilla-model-facts.json`；`--write`/`--check` 可用。
 46. **T-708 Golden Vector 模型事实回归（2026-11-07）**：新增 `ReferenceModelFactsTests`（4 项），用提取事实校验 Warden/AdultFox/AdultRabbit/Elytra；修复 Warden `left_ribcage` mirror 与 AdultFox 腿部 `grow=0.001` 两处旧迁移遗漏。
-47. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
+47. **T-709 原版模型树结构核对（2026-11-07）**：确认原版 `CubeListBuilder → PartDefinition.bake → ModelPart` 全程保存 part/cube 树，没有扁平化；当前 DSL 的树已保留结构，只有 `VanillaMeshBake.Bake.EmitCubes` 把每个 cube 摊平成 `EntityModelPart`。后续应由集中 bakery 批量产出运行时模型，而不是在模型定义里手工扁平化。
+48. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
 48. **T-648..T-650 / T-651..T-653 渲染与解耦（2026-11-05~06）**：Elytra 翼盒与 UV 原版等价、双翼镜像全宽；流体面剔除修复（玻璃后水可见）；云 OIT depth-bounds 写深度；`Sharpcraft.Assets` 分层 + 启动器/客户端解耦（ADR-0026/0027）。
 49. **实体模型/动画批量落地（2026-11-02~05）**：全部 baby 模型族、villager/zombie/horse 变体、cat/wolf 项圈、panda 基因、大量动画 provider 与测试。
 50. **协议与渲染长尾（2026-11-01~05）**：Play Clientbound 覆盖审计 + P0/P1 包批次（T-642..T-647）；反相 Z 迁移；参考 OIT 云/流体；天空盘逐像素近似。
