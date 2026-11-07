@@ -17,6 +17,9 @@ public static class ZombieNautilusModelDefinition
 
     private static readonly VanillaMeshDefinition CoralMesh = BuildCoralMesh();
 
+    private static readonly CompiledEntityModel CoralCompiled =
+        VanillaMeshBakery.Build(BuildCoralBodyMesh(), 128, 128);
+
     private static readonly EntityModelPart[] CoralParts = BuildCoralParts();
 
     // Reference ZombieNautilusCoralModel: the coral growths are hidden while body armour is worn.
@@ -67,16 +70,30 @@ public static class ZombieNautilusModelDefinition
                 128,
                 [.. NautilusModelDefinition.Definition.Parts, .. CoralPartsWhileUnarmored],
                 PlayerModelDefinition.DefaultFaceTransforms,
-                "entity/nautilus/zombie_nautilus_coral")
+                "entity/nautilus/zombie_nautilus_coral",
+                compiled: CoralCompiled)
         };
 
-    private static VanillaMeshDefinition BuildCoralMesh()
+    /// <summary>Base nautilus body plus the coral growth subtree attached under the real shell node.</summary>
+    private static VanillaMeshDefinition BuildCoralBodyMesh()
+    {
+        var mesh = NautilusModelDefinition.BuildBodyMesh(0f);
+        var shell = mesh.Root!.GetChild("root")!.GetChild("shell")!;
+        var coralGrowth = BuildCoralMesh(hideWhenArmored: true).Root!.GetChild("shell")!.GetChild("corals")!;
+        shell.AddChild(coralGrowth);
+        return mesh;
+    }
+
+    private static VanillaMeshDefinition BuildCoralMesh(bool hideWhenArmored = false)
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         var shell = root.AddOrReplaceChild("shell", VanillaPartPose.Zero,
             new VanillaCubeDefinition("shell", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f));
-        var corals = shell.AddOrReplaceChild("corals", VanillaPartPose.Offset(8f, 4.5f, -8f),
-            new VanillaCubeDefinition("corals", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f));
+        var coralsCube = hideWhenArmored
+            ? new VanillaCubeDefinition("corals", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f,
+                VisibleWhen: static state => state.Equipment[6] <= 0)
+            : new VanillaCubeDefinition("corals", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f);
+        var corals = shell.AddOrReplaceChild("corals", VanillaPartPose.Offset(8f, 4.5f, -8f), coralsCube);
         var yellow = corals.AddOrReplaceChild("yellow_coral", VanillaPartPose.Offset(0f, -11f, 11f),
             new VanillaCubeDefinition("yellow_coral", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f));
         yellow.AddOrReplaceChild("yellow_coral_second", VanillaPartPose.OffsetAndRotation(0f, 0f, 2f, 0f, -0.7854f, 0f),

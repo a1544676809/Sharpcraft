@@ -229,6 +229,19 @@ public sealed class EntityModelTreeBakeryTests
     }
 
     [Fact]
+    public void ZombieNautilusWarmVariantAttachesCoralUnderShell()
+    {
+        var warm = ZombieNautilusModelDefinition.Variants["warm"];
+        Assert.NotNull(warm.Compiled);
+        var corals = warm.Compiled!.Find("corals");
+        Assert.NotNull(corals);
+        var plain = new EntityRenderState(1, ZombieNautilusModelDefinition.ZombieNautilusEntityTypeId, 0f, 0f, 0f, 0f, 0f);
+        var armored = plain with { Equipment = new EntityEquipment(-1, -1, -1, -1, -1, -1, 1, -1) };
+        Assert.True(corals.VisibleWhen!(plain));
+        Assert.False(corals.VisibleWhen(armored));
+    }
+
+    [Fact]
     public void FourthAdultBatchExposesCompiledTrees()
     {
         Assert.NotNull(GuardianModelDefinition.Definition.Compiled);

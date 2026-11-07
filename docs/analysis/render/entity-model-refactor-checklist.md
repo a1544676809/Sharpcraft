@@ -302,3 +302,10 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - WitherBoss 接入 `Compiled`；
 - ZombieNautilus temperate 接入 `Compiled`（复用 Nautilus 编译树）；warm coral 变体仍为 flat（coral 子树需挂到基础 shell 节点，后续处理）；
 - 树测试增加第四批 compiled/part-count 断言，树测试共 23 项。
+
+### 2026-11-07 — T-732 ZombieNautilus warm coral 树
+
+- `VanillaPartDefinition.AddChild` 支持把已构建子树挂到指定节点；
+- `ZombieNautilusModelDefinition` 新增 `BuildCoralBodyMesh`：基础 Nautilus mesh 的 `shell` 节点下挂 `corals` 子树，生成 warm variant 的完整 `Compiled`；
+- coral 节点保留 `Equipment[6] <= 0` 的 `VisibleWhen`（穿甲时隐藏）；
+- 树测试增加 warm coral 父子关系/可见性断言，树测试共 24 项。

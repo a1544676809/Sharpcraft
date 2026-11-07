@@ -130,6 +130,19 @@ public sealed class VanillaPartDefinition
         _cubes.Add(cube);
         return this;
     }
+
+    /// <summary>Attaches an already-built child subtree, preserving its pose and descendants.</summary>
+    public VanillaPartDefinition AddChild(VanillaPartDefinition child)
+    {
+        ArgumentNullException.ThrowIfNull(child);
+        if (GetChild(child.Name) is not null)
+        {
+            throw new InvalidOperationException($"Duplicate child name '{child.Name}' under part '{Name}'.");
+        }
+
+        _children.Add(child);
+        return this;
+    }
 }
 
 /// <summary>
