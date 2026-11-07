@@ -100,7 +100,7 @@ public static class EntityModelLayerHelpers
     /// Adds the two Elytra wings as a tree layer derived from the base body cube (reference ElytraModel: pivot ±5,
     /// 10x20x2 at tex 22,0, 1.0 grow). Wing animation is supplied through node rotation selectors.
     /// </summary>
-    public static CompiledEntityModel WithElytra(CompiledEntityModel model)
+    public static CompiledEntityModel WithElytra(CompiledEntityModel model, bool baby = false)
     {
         var body = model.Find("body");
         if (body is null)
@@ -116,7 +116,9 @@ public static class EntityModelLayerHelpers
 
         var modelHeight = bodyCube.Bottom + bodyCube.Height;
         var wingPivotZ = bodyCube.CentreZ + 2f;
-        var wings = VanillaMeshBakery.Build(BuildElytraWingsMesh(modelHeight, wingPivotZ, string.Empty), 64, 32);
+        var wings = baby
+            ? VanillaMeshBakery.Build(BuildBabyElytraWingsMesh(wingPivotZ), 64, 32)
+            : VanillaMeshBakery.Build(BuildElytraWingsMesh(modelHeight, wingPivotZ, string.Empty), 64, 32);
         return WithModelLayer(
             model,
             wings,
@@ -127,7 +129,7 @@ public static class EntityModelLayerHelpers
             rotationSelector: static (name, state) => name == "right_wing"
                 ? new Vector3(-state.ElytraRotX, state.ElytraRotY, -state.ElytraRotZ)
                 : new Vector3(-state.ElytraRotX, -state.ElytraRotY, state.ElytraRotZ),
-            yOffsetSelector: static (_, state) => state.IsCrouching ? -3f : 0f);
+            yOffsetSelector: (_, state) => state.IsCrouching ? (baby ? -1.5f : -3f) : 0f);
     }
 
     /// <summary>
@@ -806,6 +808,24 @@ public static class EntityModelLayerHelpers
             VanillaPartPose.Offset(-5f, 0f, wingPivotZ),
             new VanillaCubeDefinition(namePrefix + "right_wing", 22, 0, 0f, 0f, 0f, 10f, 20f, 2f,
                 Mirror: true, Grow: 1f, Kind: EntityGeometryLayerKind.Elytra));
+        return new VanillaMeshDefinition(root);
+    }
+
+    /// <summary>
+    /// Baby Elytra = ElytraModel.createLayer() through BABY_TRANSFORMER (root scale 0.5, y offset 12.008). The baked
+    /// 10x20x2 wing becomes a 5x10x1 box with Bottom 2 and PivotY 12; UV sampling stays on the original texels.
+    /// </summary>
+    private static VanillaMeshDefinition BuildBabyElytraWingsMesh(float wingPivotZ)
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddOrReplaceChild("left_wing", VanillaPartPose.Offset(2.5f, 12f, wingPivotZ),
+            new VanillaCubeDefinition("left_wing", 22, 0, -5f, 0f, 0f, 5f, 10f, 1f,
+                Grow: 0.5f, Kind: EntityGeometryLayerKind.Elytra,
+                UvWidth: 10, UvHeight: 20, UvDepth: 2));
+        root.AddOrReplaceChild("right_wing", VanillaPartPose.Offset(-2.5f, 12f, wingPivotZ),
+            new VanillaCubeDefinition("right_wing", 22, 0, 0f, 0f, 0f, 5f, 10f, 1f,
+                Mirror: true, Grow: 0.5f, Kind: EntityGeometryLayerKind.Elytra,
+                UvWidth: 10, UvHeight: 20, UvDepth: 2));
         return new VanillaMeshDefinition(root);
     }
 

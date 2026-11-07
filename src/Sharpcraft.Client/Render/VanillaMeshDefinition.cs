@@ -56,7 +56,10 @@ public readonly record struct VanillaCubeDefinition(
     int TextureHeight = 0,
     bool MirrorX = true,
     Func<EntityRenderState, bool>? VisibleWhen = null,
-    Vector3? GrowXyz = null);
+    Vector3? GrowXyz = null,
+    int UvWidth = 0,
+    int UvHeight = 0,
+    int UvDepth = 0);
 
 /// <summary>
 /// One node of the declarative model tree. Direct children of <c>VanillaMeshDefinition.Root</c> are root parts;

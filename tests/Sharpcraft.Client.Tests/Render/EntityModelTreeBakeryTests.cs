@@ -229,6 +229,31 @@ public sealed class EntityModelTreeBakeryTests
     }
 
     [Fact]
+    public void BabyZombieUsesDedicatedBabyArmorTree()
+    {
+        var baby = EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId, baby: true);
+        Assert.NotNull(baby.Compiled);
+        var head = baby.Compiled!.Find("equipment_HumanoidArmorBaby_5_head");
+        Assert.NotNull(head);
+        var headGrow = head.Cubes[0].GrowXyz;
+        Assert.NotNull(headGrow);
+        Assert.Equal(-0.1f, headGrow!.Value.X, 3);
+        Assert.Equal(0.5f, headGrow.Value.Y, 3);
+        Assert.Equal(0.3f, headGrow.Value.Z, 3);
+
+        var waist = baby.Compiled.Find("equipment_HumanoidArmorBaby_3_waist");
+        Assert.NotNull(waist);
+        var waistGrow = waist.Cubes[0].GrowXyz;
+        Assert.NotNull(waistGrow);
+        Assert.Equal(-0.2f, waistGrow!.Value.X, 3);
+        Assert.Equal(0.2f, waistGrow.Value.Y, 3);
+        Assert.Equal(0.2f, waistGrow.Value.Z, 3);
+        var foot = baby.Compiled.Find("equipment_HumanoidArmorBaby_2_right_foot");
+        Assert.NotNull(foot);
+        Assert.NotNull(baby.Compiled.Find("equipment_HumanoidArmorBaby_2_left_leg"));
+    }
+
+    [Fact]
     public void WardenExposesEmissiveTreeLayers()
     {
         var warden = WardenModelDefinition.Definition.Compiled;

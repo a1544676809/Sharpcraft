@@ -227,8 +227,17 @@ public static class EntityModelResolver
         {
             foreach (var (kind, slot, fallback) in layers)
             {
-                var equipmentTree = kind is EquipmentAssetKind.HumanoidArmor or EquipmentAssetKind.HumanoidLeggings
-                    ? EquipmentModelTrees.For(kind, slot, player: typeId == EntityPlaceholderMesher.PlayerEntityTypeId)
+                var effectiveKind = baby && kind is (EquipmentAssetKind.HumanoidArmor or EquipmentAssetKind.HumanoidLeggings)
+                    ? EquipmentAssetKind.HumanoidArmorBaby
+                    : kind;
+                var equipmentTree = effectiveKind is (EquipmentAssetKind.HumanoidArmor
+                    or EquipmentAssetKind.HumanoidLeggings
+                    or EquipmentAssetKind.HumanoidArmorBaby)
+                    ? EquipmentModelTrees.For(
+                        effectiveKind,
+                        slot,
+                        player: !baby && typeId == EntityPlaceholderMesher.PlayerEntityTypeId,
+                        baby: baby)
                     : EquipmentModelTrees.For(kind);
                 if (equipmentTree is { })
                 {
@@ -236,7 +245,12 @@ public static class EntityModelResolver
                         ? "entity/equipment/llama_body/trader_llama"
                         : null;
                     compiled = EntityModelLayerHelpers.WithEquipment(
-                        compiled, equipmentTree, kind, slot, fallback, fixedTexture: fixedTexture);
+                        compiled,
+                        equipmentTree,
+                        effectiveKind,
+                        slot,
+                        baby ? "entity/equipment/humanoid_baby/iron" : fallback,
+                        fixedTexture: fixedTexture);
                 }
             }
 
@@ -247,7 +261,7 @@ public static class EntityModelResolver
 
             if (ReferenceEquals(layers, HumanoidArmorLayers))
             {
-                compiled = EntityModelLayerHelpers.WithElytra(compiled);
+                compiled = EntityModelLayerHelpers.WithElytra(compiled, baby);
             }
         }
 

@@ -244,3 +244,14 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - 新增 `EntityModelLayerHelpers.WithElytra(CompiledEntityModel)`：从基础 body cube 派生两翼树，`Elytra` kind、动态纹理、wing rotation selector、crouch `YOffsetSelector`；
 - 修正树路径 root 节点 `YOffsetSelector` 与 pivot 抵消：`basePivot` 含 yOffset，使鞍/翼的 crouch 位移只生效一次；
 - `EntityModelTreeBakeryTests` 增加 humanoid compiled/armor/Elytra 断言，树测试共 16 项。
+
+### 2026-11-07 — T-725 幼年 humanoid 护甲 / baby Elytra 树层
+
+- `BabyModelDefinitionsHumanoid` 的 Zombie/Drowned/ZombieVillager/Villager 基础与 villager 变体全部接入 `Compiled`；Drowned outer、baby villager 变体用 `WithModelLayer` 树复制；
+- 新增 `HumanoidArmorTrees.ForBaby(slot)`：按 `HumanoidModel.createBabyArmorMeshSet` 生成四套 baby 槽位树：
+  - outer deformation `(-0.1, 0.5, 0.3)`，inner `(-0.1, 0.3, 0.3)`；
+  - waist / leg cube 在对应槽位再 `extend(-0.1)`；
+  - left_leg/right_leg 的 foot 子节点按 reference `retainExactParts` 保留；
+- `EntityModelLayerHelpers.WithElytra(CompiledEntityModel, baby)` 增加 baby 分支：root scale 0.5 → 5×10×1 翼，Bottom 2 / PivotY 12，UV 仍按 10×20×2 采样；`EntityModelCube`/DSL 增加 UvWidth/UvHeight/UvDepth 覆盖；
+- `EntityModelResolver.Decorate` baby 分支改用 `HumanoidArmorBaby` 纹理族和 baby 槽位树；
+- `EntityModelTreeBakeryTests` 增加 baby armor 断言，树测试共 17 项。
