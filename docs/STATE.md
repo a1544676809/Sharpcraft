@@ -72,10 +72,11 @@ updated: 2026-11-06
 30. **T-692 CopperGolem/Creaking/IronGolem/SnowGolem DSL 迁移（2026-11-07）**：四套模型迁移；CopperGolem 4 风化变体、Creaking emissive eyes 保持；5 项测试通过。
 31. **T-693 Parrot/Turtle/ZombieNautilus DSL 迁移（2026-11-07）**：Parrot/Turtle 及 ZombieNautilus coral 子层迁移；ZombieNautilus 护甲 hidden VisibleWhen 保持；3 项测试通过。
 32. **T-694 Baby Nether DSL 迁移（2026-11-07）**：baby Piglin/Hoglin 迁移，Piglin/ZombifiedPiglin、Hoglin/Zoglin 共享关系保持；2 项测试通过。
-33. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
-34. **T-648..T-650 / T-651..T-653 渲染与解耦（2026-11-05~06）**：Elytra 翼盒与 UV 原版等价、双翼镜像全宽；流体面剔除修复（玻璃后水可见）；云 OIT depth-bounds 写深度；`Sharpcraft.Assets` 分层 + 启动器/客户端解耦（ADR-0026/0027）。
-35. **实体模型/动画批量落地（2026-11-02~05）**：全部 baby 模型族、villager/zombie/horse 变体、cat/wolf 项圈、panda 基因、大量动画 provider 与测试。
-36. **协议与渲染长尾（2026-11-01~05）**：Play Clientbound 覆盖审计 + P0/P1 包批次（T-642..T-647）；反相 Z 迁移；参考 OIT 云/流体；天空盘逐像素近似。
+33. **T-695 Baby Misc DSL 迁移（2026-11-07）**：baby Goat/Panda/PolarBear/Turtle 迁移，Panda 变体与 child 结构保持；4 项测试通过。
+34. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
+35. **T-648..T-650 / T-651..T-653 渲染与解耦（2026-11-05~06）**：Elytra 翼盒与 UV 原版等价、双翼镜像全宽；流体面剔除修复（玻璃后水可见）；云 OIT depth-bounds 写深度；`Sharpcraft.Assets` 分层 + 启动器/客户端解耦（ADR-0026/0027）。
+36. **实体模型/动画批量落地（2026-11-02~05）**：全部 baby 模型族、villager/zombie/horse 变体、cat/wolf 项圈、panda 基因、大量动画 provider 与测试。
+37. **协议与渲染长尾（2026-11-01~05）**：Play Clientbound 覆盖审计 + P0/P1 包批次（T-642..T-647）；反相 Z 迁移；参考 OIT 云/流体；天空盘逐像素近似。
 
 ## 阻塞项
 
