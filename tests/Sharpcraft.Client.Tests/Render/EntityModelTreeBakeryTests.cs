@@ -194,6 +194,41 @@ public sealed class EntityModelTreeBakeryTests
     }
 
     [Fact]
+    public void HumanoidMobsExposeCompiledTreesAndArmorSlotLayers()
+    {
+        Assert.NotNull(HumanoidMobModelDefinition.Zombie.Compiled);
+        Assert.NotNull(HumanoidMobModelDefinition.Drowned.Compiled);
+        Assert.NotNull(HumanoidMobModelDefinition.Husk.Compiled);
+        Assert.NotNull(HumanoidMobModelDefinition.Skeleton.Compiled);
+        Assert.NotNull(HumanoidMobModelDefinition.Stray.Compiled);
+        Assert.NotNull(HumanoidMobModelDefinition.Bogged.Compiled);
+        Assert.NotNull(HumanoidMobModelDefinition.WitherSkeleton.Compiled);
+
+        var zombie = EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId);
+        Assert.NotNull(zombie.Compiled);
+        var head = zombie.Compiled!.Find("equipment_HumanoidArmor_5_head");
+        Assert.NotNull(head);
+        Assert.Single(head.Cubes);
+        Assert.Equal(1.0f, head.Cubes[0].Grow, 3);
+        var hat = zombie.Compiled.Find("equipment_HumanoidArmor_5_hat");
+        Assert.NotNull(hat);
+        Assert.Equal(1.5f, hat.Cubes[0].Grow, 3);
+
+        var chest = zombie.Compiled.Find("equipment_HumanoidArmor_4_body");
+        Assert.NotNull(chest);
+        Assert.Equal(1.0f, chest.Cubes[0].Grow, 3);
+        var leggings = zombie.Compiled.Find("equipment_HumanoidLeggings_3_body");
+        Assert.NotNull(leggings);
+        Assert.Equal(0.5f, leggings.Cubes[0].Grow, 3);
+        var leggingsLeg = zombie.Compiled.Find("equipment_HumanoidLeggings_3_left_leg");
+        Assert.NotNull(leggingsLeg);
+        Assert.Equal(0.4f, leggingsLeg.Cubes[0].Grow, 3);
+        var boots = zombie.Compiled.Find("equipment_HumanoidArmor_2_left_leg");
+        Assert.NotNull(boots);
+        Assert.Equal(0.9f, boots.Cubes[0].Grow, 3);
+    }
+
+    [Fact]
     public void WardenExposesEmissiveTreeLayers()
     {
         var warden = WardenModelDefinition.Definition.Compiled;

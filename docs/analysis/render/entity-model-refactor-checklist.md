@@ -231,3 +231,16 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - 狼甲：`WolfBody` 使用 0.2 deformation 全树；crackiness 改为基于 0.2 狼甲树的 damage-texture 复制层；
 - 鞍座 riding parts（马左右 saddle line、骆驼 reins）按 `IsVehicle` 控制可见性；
 - `EntityModelTreeBakeryTests` 新增 Horse/Donkey/Llama/Nautilus/HappyGhast/Wolf 装备树断言，树测试共 15 项。
+
+### 2026-11-07 — T-724 成人 humanoid 护甲/Elytra 树层
+
+- `HumanoidMobModelDefinition` 的 Enderman/Drowned/Husk/Skeleton/Stray/Bogged/WitherSkeleton/Zombie 全部接入 `Compiled`；Stray/Bogged 的 clothing overlay 用 `WithModelLayer` 合并为独立树；Player 基础模型也接入 `Compiled` 并挂四槽护甲树；
+- 新增 `HumanoidArmorTrees`：四槽独立树
+  - HEAD：head + hat（outer 1.0，hat 1.5）
+  - CHEST：body/left_arm/right_arm（outer 1.0）
+  - LEGS：body/left_leg/right_leg（inner 0.5，腿 cube 0.4）
+  - FEET：left_leg/right_leg（outer 1.0，腿 cube 0.9）
+  - 非槽 root parts 保留零 cube 空组；Player 额外保留空 jacket/sleeve/pants 组
+- 新增 `EntityModelLayerHelpers.WithElytra(CompiledEntityModel)`：从基础 body cube 派生两翼树，`Elytra` kind、动态纹理、wing rotation selector、crouch `YOffsetSelector`；
+- 修正树路径 root 节点 `YOffsetSelector` 与 pivot 抵消：`basePivot` 含 yOffset，使鞍/翼的 crouch 位移只生效一次；
+- `EntityModelTreeBakeryTests` 增加 humanoid compiled/armor/Elytra 断言，树测试共 16 项。

@@ -88,18 +88,18 @@ updated: 2026-11-07
 
 | # | 差异 | 原版 | 当前实现 | 影响 | 状态 |
 | --- | --- | --- | --- | --- | --- |
-| E1 | 人形护甲是独立四套树 | `HumanoidModel.createArmorMeshSet` 生成 head/chest/legs/feet 四套 `MeshDefinition`；`PlayerModel` 补 sleeve/pants 空节点 | `WithArmorSlot` 从**已烘焙基础 parts** `with` 克隆可见槽位，按槽设置 Grow/Texture | 护甲与基础模型同结构但非独立树；hat 等 overlay 只能特判；zero-cube 组节点丢失 | 结构差异 |
-| E2 | 幼年护甲使用独立 baby mesh | `createBabyArmorMeshSet` 生成完整 baby 树，non-uniform deformation | `BabyHumanoidArmorParts` 用 DSL 生成独立部件，但 `WithBabyArmorSlot` 再从基础 parts 克隆/拼装 | 几何接近，但父链、group 节点、装备层结构不保真 | 结构差异 |
+| E1 | 人形护甲是独立四套树 | `HumanoidModel.createArmorMeshSet` 生成 head/chest/legs/feet 四套 `MeshDefinition`；`PlayerModel` 补 sleeve/pants 空节点 | `HumanoidArmorTrees` 按槽生成独立树：head+hat、chest、legs、feet；非槽 root parts 保留空组；player 空 sleeve/pants/jacket 已保留 | 成人四槽已按原版树结构落地 | 已迁移（T-724） |
+| E2 | 幼年护甲使用独立 baby mesh | `createBabyArmorMeshSet` 生成完整 baby 树，non-uniform deformation | `BabyHumanoidArmorParts` 用 DSL 生成独立部件，但 `WithBabyArmorSlot` 再从基础 parts 克隆/拼装 | 成人护甲已树化；幼年仍走 flat 装配 | 部分迁移（T-724） |
 | E3 | 马鞍从基础 body 树派生 | `EquineSaddleModel` 从 `createBodyMesh` 起，在 body/head_parts 挂 saddle/mouth/line/head_saddle/wrap | `EquipmentModelTrees` 烘焙完整 equine saddle tree；`ridingParts` 用 `IsVehicle` 可见性；`WithModelLayer` 合并且保留父链 | 已按原版树结构落地 | 已迁移（T-723） |
 | E4 | 骆驼鞍从基础树派生 | `CamelSaddleModel` 从 `createBodyMesh` 起，在 body/head 挂 saddle/reins/bridle；`reins.visible = state.isRidden` | 完整 camel saddle tree + multi-cube saddle/bridle + `reins` `IsVehicle` 可见性 | 已按原版树结构落地 | 已迁移（T-723） |
 | E5 | 鹦鹉螺甲/鞍从基础树派生 | `NautilusArmorModel` 从基础树挂 shell（3 cube）；Saddle 独立 | `NautilusModelDefinition.BuildBodyMesh` 保留 multi-cube shell/body；Armor/Saddle 各自完整树 | 已按原版树结构落地 | 已迁移（T-723） |
 | E6 | 快乐恶魂挽具/绳索模型 | `HappyGhastHarnessModel` 独立 harness 树；body ropes 使用带 deformation 的基础树 | base `Compiled` + `HappyGhastBody` 独立 harness/goggles tree；ropes 仍为待办 | harness 层已树化；绳索层仍缺 | 部分迁移（T-723） |
-| E7 | Elytra 独立树 | `ElytraModel` 两翼独立 `MeshDefinition`；WingsLayer 单独实例 | `BuildElytraWings` 建两翼树后 `Bake`，再 `with` 扩展为装备层；加到基础 flat parts | 几何当前已验证；但 wing 与 body 无树关系，儿童/潜行偏移靠在 helper 中补偿 | 结构差异（几何已对齐） |
+| E7 | Elytra 独立树 | `ElytraModel` 两翼独立 `MeshDefinition`；WingsLayer 单独实例 | `WithElytra(CompiledEntityModel)` 从基础 body cube 派生两翼树，wing rotation / crouch yOffset 由节点 selector 驱动；baby 仍走 flat 补偿 | 成人 Elytra 已树化；baby 仍待 | 已迁移（T-724，成人） |
 | E8 | Collar/项圈、狼甲裂痕等副层 | 原版各为独立 LayerDefinition，通常从基础树变换/追加 cube | Cat/Wolf collar 与 Wolf crackiness 已是 tree 复制层；其余 flat 副层待迁移 | 成人副层已树化；幼年护甲等仍待 | 部分迁移（T-723） |
 | E9 | 装备纹理解析 | `EquipmentClientInfo`：19 个 `LayerType`，每个类型是 `Layer` 列表；每层含 `texture`、可选 `dyeable.color_when_undyed`、`use_player_texture`；另有 `trim_overrides`、染料/盔甲纹饰/glint | `EquipmentTextureCatalog` 只做 item→primary/overlay 路径的静态映射；无层列表、染料、玩家纹理、trim、glint | 模组/新装备资产和染色/纹饰不能完整表达 | 缺失（已核对字段） |
 | E10 | 装备层每部件可见性 | 模型 `setupAnim` 可设置 `reins.visible = isRidden` 等；`EquipmentLayerRenderer` 按层提交 | 树路径已支持节点级 `VisibleWhen`；马 saddle line 与骆驼 reins 按 `IsVehicle` 控制；其他槽位状态仍待 | 已覆盖骑乘鞍部件；其余槽位状态待补 | 部分迁移（T-723） |
 | E11 | 装备层渲染顺序/类型 | 每个 `RenderLayer` 通过 `submitNodeCollector.order(nextOrder++)` 独立提交；类型/深度/混合独立 | `BuildLayers` 固定 `Cutout → Elytra → Translucent → Emissive`，`EntityGeometryLayer.Order` 只是该固定数组下标；没有装备层独立 order | 装备层与基础层/其它 render layer 的顺序和混合语义不等价 | 部分验证 |
-| E12 | 护甲/装备与基础模型的 deform 语义 | 每个槽位独立的 `CubeDeformation`/PartPose 作用在完整树 | 多数用标量 Grow + base copy；幼年用 `GrowXyz` | 非均匀/槽位组合会继续手写 | 结构差异 |
+| E12 | 护甲/装备与基础模型的 deform 语义 | 每个槽位独立的 `CubeDeformation`/PartPose 作用在完整树 | 成人四槽已按 outer 1.0 / inner 0.5 / legs-0.1 / hat+0.5 逐槽烘焙；幼年仍用 flat `GrowXyz` | 成人四槽已对齐；幼年待 RF-14 | 部分迁移（T-724） |
 
 ### 3.4 测试与验收
 

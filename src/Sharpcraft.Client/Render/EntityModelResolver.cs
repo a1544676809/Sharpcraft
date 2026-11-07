@@ -227,7 +227,10 @@ public static class EntityModelResolver
         {
             foreach (var (kind, slot, fallback) in layers)
             {
-                if (EquipmentModelTrees.For(kind) is { } equipmentTree)
+                var equipmentTree = kind is EquipmentAssetKind.HumanoidArmor or EquipmentAssetKind.HumanoidLeggings
+                    ? EquipmentModelTrees.For(kind, slot, player: typeId == EntityPlaceholderMesher.PlayerEntityTypeId)
+                    : EquipmentModelTrees.For(kind);
+                if (equipmentTree is { })
                 {
                     var fixedTexture = typeId == 138 && kind == EquipmentAssetKind.LlamaBody
                         ? "entity/equipment/llama_body/trader_llama"
@@ -240,6 +243,11 @@ public static class EntityModelResolver
             if (typeId == 152 && EquipmentModelTrees.For(EquipmentAssetKind.WolfBody) is { } wolfArmor)
             {
                 compiled = EntityModelLayerHelpers.WithCrackiness(compiled, wolfArmor);
+            }
+
+            if (ReferenceEquals(layers, HumanoidArmorLayers))
+            {
+                compiled = EntityModelLayerHelpers.WithElytra(compiled);
             }
         }
 
@@ -283,6 +291,7 @@ public static class EntityModelResolver
                       (EquipmentAssetKind.NautilusSaddle, 7, "entity/equipment/nautilus_saddle/saddle")],
         59 => [(EquipmentAssetKind.HappyGhastBody, 6, "entity/equipment/happy_ghast_body/white_harness")],
         152 => [(EquipmentAssetKind.WolfBody, 6, "entity/equipment/wolf_body/armadillo_scute")],
+        159 => HumanoidArmorLayers,
         154 or 39 or 68 or 118 or 131 or 16 or 150 or 157 => HumanoidArmorLayers,
         _ => []
     };

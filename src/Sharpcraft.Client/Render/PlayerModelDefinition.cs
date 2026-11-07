@@ -96,6 +96,9 @@ public static class PlayerModelDefinition
     /// <summary>The baked adult player parts, identical to the former hand-written flat array.</summary>
     public static readonly EntityModelPart[] AdultParts = [.. VanillaMeshBake.Bake(AdultMesh, 0, 0)];
 
+    private static readonly CompiledEntityModel AdultCompiled =
+        VanillaMeshBakery.Build(AdultMesh, 64, 64);
+
     private static VanillaMeshDefinition BuildAdultMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
@@ -121,7 +124,8 @@ public static class PlayerModelDefinition
     }
 
     public static readonly EntityModelDefinition Definition =
-        new("player", 64, 64, AdultParts, DefaultFaceTransforms, "entity/player/wide/steve");
+        new("player", 64, 64, AdultParts, DefaultFaceTransforms, "entity/player/wide/steve",
+            compiled: AdultCompiled);
 
 }
 

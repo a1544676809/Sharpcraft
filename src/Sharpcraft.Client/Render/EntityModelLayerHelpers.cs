@@ -97,6 +97,40 @@ public static class EntityModelLayerHelpers
     }
 
     /// <summary>
+    /// Adds the two Elytra wings as a tree layer derived from the base body cube (reference ElytraModel: pivot ±5,
+    /// 10x20x2 at tex 22,0, 1.0 grow). Wing animation is supplied through node rotation selectors.
+    /// </summary>
+    public static CompiledEntityModel WithElytra(CompiledEntityModel model)
+    {
+        var body = model.Find("body");
+        if (body is null)
+        {
+            return model;
+        }
+
+        var bodyCube = body.Cubes.FirstOrDefault(cube => cube.Height > 0f);
+        if (bodyCube.Height <= 0f)
+        {
+            return model;
+        }
+
+        var modelHeight = bodyCube.Bottom + bodyCube.Height;
+        var wingPivotZ = bodyCube.CentreZ + 2f;
+        var wings = VanillaMeshBakery.Build(BuildElytraWingsMesh(modelHeight, wingPivotZ, string.Empty), 64, 32);
+        return WithModelLayer(
+            model,
+            wings,
+            "equipment_Elytra_4_",
+            state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4),
+            state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4) is not null,
+            "entity/equipment/wings/elytra",
+            rotationSelector: static (name, state) => name == "right_wing"
+                ? new Vector3(-state.ElytraRotX, state.ElytraRotY, -state.ElytraRotZ)
+                : new Vector3(-state.ElytraRotX, -state.ElytraRotY, state.ElytraRotZ),
+            yOffsetSelector: static (_, state) => state.IsCrouching ? -3f : 0f);
+    }
+
+    /// <summary>
     /// Builds a tree-derived emissive subset layer using the reference retainExactParts semantics: only the named
     /// source nodes keep their cubes; ancestor group nodes are retained to preserve the pose chain, while selected
     /// nodes do not gain descendants they did not retain.
@@ -205,7 +239,9 @@ public static class EntityModelLayerHelpers
         Func<EntityRenderState, bool>? visible = null,
         string? fallbackTexture = null,
         EntityGeometryLayerKind? kind = null,
-        float inflate = 0f)
+        float inflate = 0f,
+        Func<string, EntityRenderState, Vector3>? rotationSelector = null,
+        Func<string, EntityRenderState, float>? yOffsetSelector = null)
     {
         var layerParts = new List<EntityModelPartNode>();
 
@@ -236,8 +272,8 @@ public static class EntityModelLayerHelpers
                 cubes,
                 children,
                 visibleWhen: state => (visible?.Invoke(state) ?? true) && (source.VisibleWhen?.Invoke(state) ?? true),
-                rotationSelector: source.RotationSelector,
-                yOffsetSelector: source.YOffsetSelector,
+                rotationSelector: rotationSelector is null ? source.RotationSelector : state => rotationSelector(source.Name, state),
+                yOffsetSelector: yOffsetSelector is null ? source.YOffsetSelector : state => yOffsetSelector(source.Name, state),
                 poseSource: source.PoseSource ?? source.Name,
                 tintSelector: source.TintSelector);
             layerParts.Add(node);
@@ -755,19 +791,22 @@ public static class EntityModelLayerHelpers
         return [.. result];
     }
 
-    private static EntityModelPart[] BuildElytraWings(float modelHeight, float wingPivotZ)
+    private static EntityModelPart[] BuildElytraWings(float modelHeight, float wingPivotZ) =>
+        [.. VanillaMeshBake.Bake(BuildElytraWingsMesh(modelHeight, wingPivotZ, "equipment_Elytra_4_"), 0, 0,
+            modelHeight: modelHeight, texturePath: "entity/equipment/wings/elytra")];
+
+    private static VanillaMeshDefinition BuildElytraWingsMesh(float modelHeight, float wingPivotZ, string namePrefix)
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        root.AddOrReplaceChild("equipment_Elytra_4_left_wing",
+        root.AddOrReplaceChild(namePrefix + "left_wing",
             VanillaPartPose.Offset(5f, 0f, wingPivotZ),
-            new VanillaCubeDefinition("equipment_Elytra_4_left_wing", 22, 0, -10f, 0f, 0f, 10f, 20f, 2f,
+            new VanillaCubeDefinition(namePrefix + "left_wing", 22, 0, -10f, 0f, 0f, 10f, 20f, 2f,
                 Grow: 1f, Kind: EntityGeometryLayerKind.Elytra));
-        root.AddOrReplaceChild("equipment_Elytra_4_right_wing",
+        root.AddOrReplaceChild(namePrefix + "right_wing",
             VanillaPartPose.Offset(-5f, 0f, wingPivotZ),
-            new VanillaCubeDefinition("equipment_Elytra_4_right_wing", 22, 0, 0f, 0f, 0f, 10f, 20f, 2f,
+            new VanillaCubeDefinition(namePrefix + "right_wing", 22, 0, 0f, 0f, 0f, 10f, 20f, 2f,
                 Mirror: true, Grow: 1f, Kind: EntityGeometryLayerKind.Elytra));
-        return [.. VanillaMeshBake.Bake(new VanillaMeshDefinition(root), 0, 0,
-            modelHeight: modelHeight, texturePath: "entity/equipment/wings/elytra")];
+        return new VanillaMeshDefinition(root);
     }
 
     public static EntityModelPart[] WithHorseMarkings(IReadOnlyList<EntityModelPart> parts, string texturePrefix, bool baby)

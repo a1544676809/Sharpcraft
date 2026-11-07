@@ -690,7 +690,7 @@ public sealed partial class EntityModelMesher
                     rotation.Z + poseOffset.Rotation.Z)
                 * Matrix4x4.CreateTranslation(pivot);
             var frame = local * parentFrame;
-            var basePivot = new Vector3(node.PivotX * px, node.PivotY * px, node.PivotZ * px);
+            var basePivot = new Vector3(node.PivotX * px, (node.PivotY + yOffset) * px, node.PivotZ * px);
             var partMatrix = node.Parent is null
                 ? Matrix4x4.CreateTranslation(-basePivot) * frame
                 : frame;

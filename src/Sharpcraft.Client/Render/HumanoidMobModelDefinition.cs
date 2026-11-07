@@ -25,13 +25,17 @@ public static class HumanoidMobModelDefinition
     /// <summary>Declarative DSL tree for the enderman's six parts (T-673).</summary>
     private static readonly VanillaMeshDefinition EndermanMesh = BuildEndermanMesh();
 
+    private static readonly CompiledEntityModel EndermanCompiled =
+        VanillaMeshBakery.Build(EndermanMesh, 64, 32, modelHeight: 25f);
+
     public static readonly EntityModelDefinition Enderman = new(
         "enderman",
         64,
         32,
         [.. VanillaMeshBake.Bake(EndermanMesh, 0, 0, modelHeight: 25f)],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/enderman/enderman", 1f, "entity/enderman/enderman_eyes");
+        "entity/enderman/enderman", 1f, "entity/enderman/enderman_eyes",
+        compiled: EndermanCompiled);
 
     private static VanillaMeshDefinition BuildEndermanMesh()
     {
@@ -55,13 +59,17 @@ public static class HumanoidMobModelDefinition
     /// <summary>Declarative DSL tree for the drowned's six parts (T-673).</summary>
     private static readonly VanillaMeshDefinition DrownedMesh = BuildDrownedMesh();
 
+    private static readonly CompiledEntityModel DrownedCompiled =
+        VanillaMeshBakery.Build(DrownedMesh, 64, 64);
+
     public static readonly EntityModelDefinition Drowned = new(
         "drowned",
         64,
         64,
         [.. VanillaMeshBake.Bake(DrownedMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/zombie/drowned");
+        "entity/zombie/drowned",
+        compiled: DrownedCompiled);
 
     private static VanillaMeshDefinition BuildDrownedMesh()
     {
@@ -93,6 +101,9 @@ public static class HumanoidMobModelDefinition
     /// <summary>Declarative DSL tree for the husk's six parts (T-673).</summary>
     private static readonly VanillaMeshDefinition HuskMesh = BuildHuskMesh();
 
+    private static readonly CompiledEntityModel HuskCompiled =
+        VanillaMeshBakery.Build(HuskMesh, 64, 64);
+
     public static readonly EntityModelDefinition Husk = new(
         "husk",
         64,
@@ -100,7 +111,8 @@ public static class HumanoidMobModelDefinition
         [.. VanillaMeshBake.Bake(HuskMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/zombie/husk",
-        1.0625f);
+        1.0625f,
+        compiled: HuskCompiled);
 
     private static VanillaMeshDefinition BuildHuskMesh()
     {
@@ -124,13 +136,17 @@ public static class HumanoidMobModelDefinition
     /// <summary>Declarative DSL tree for the skeleton's six parts (T-672).</summary>
     private static readonly VanillaMeshDefinition SkeletonMesh = BuildSkeletonMesh();
 
+    private static readonly CompiledEntityModel SkeletonCompiled =
+        VanillaMeshBakery.Build(SkeletonMesh, 64, 32);
+
     public static readonly EntityModelDefinition Skeleton = new(
         "skeleton",
         64,
         32,
         [.. VanillaMeshBake.Bake(SkeletonMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/skeleton/skeleton");
+        "entity/skeleton/skeleton",
+        compiled: SkeletonCompiled);
 
     private static VanillaMeshDefinition BuildSkeletonMesh()
     {
@@ -158,8 +174,18 @@ public static class HumanoidMobModelDefinition
     private static EntityModelDefinition WithClothing(string name, string texturePath, string overlayPath, float grow)
     {
         var parts = new List<EntityModelPart>(Skeleton.Parts);
-        parts.AddRange(VanillaMeshBake.Bake(BuildClothingMesh(overlayPath, grow), 0, 0));
-        return new EntityModelDefinition(name, 64, 32, parts, PlayerModelDefinition.DefaultFaceTransforms, texturePath);
+        var clothingMesh = BuildClothingMesh(overlayPath, grow);
+        parts.AddRange(VanillaMeshBake.Bake(clothingMesh, 0, 0));
+        var clothingCompiled = VanillaMeshBakery.Build(clothingMesh, 64, 32);
+        var compiled = EntityModelLayerHelpers.WithModelLayer(
+            SkeletonCompiled,
+            clothingCompiled,
+            "outer_",
+            _ => overlayPath,
+            fallbackTexture: overlayPath);
+        return new EntityModelDefinition(
+            name, 64, 32, parts, PlayerModelDefinition.DefaultFaceTransforms, texturePath,
+            compiled: compiled);
     }
 
     /// <summary>
@@ -194,10 +220,13 @@ public static class HumanoidMobModelDefinition
 
     public static readonly EntityModelDefinition WitherSkeleton = new(
         "wither_skeleton", 64, 32, Skeleton.Parts, PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/skeleton/wither_skeleton");
+        "entity/skeleton/wither_skeleton", compiled: SkeletonCompiled);
 
     /// <summary>Declarative DSL tree for the zombie's six parts (T-672).</summary>
     private static readonly VanillaMeshDefinition ZombieMesh = BuildZombieMesh();
+
+    private static readonly CompiledEntityModel ZombieCompiled =
+        VanillaMeshBakery.Build(ZombieMesh, 64, 64);
 
     public static readonly EntityModelDefinition Zombie = new(
         "zombie",
@@ -205,7 +234,8 @@ public static class HumanoidMobModelDefinition
         64,
         [.. VanillaMeshBake.Bake(ZombieMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/zombie/zombie");
+        "entity/zombie/zombie",
+        compiled: ZombieCompiled);
 
     private static VanillaMeshDefinition BuildZombieMesh()
     {
