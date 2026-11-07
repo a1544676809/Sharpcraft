@@ -75,11 +75,14 @@ Z-fighting 与 equipment clearance 不混入本任务；先走诊断报告，规
 - `UnloadProbe` 同步改用流式加载；
 - R-019 的 GC 回收测量仍受运行时/宿主影响，未将其强行标绿；本任务只保证宿主侧不再主动持有强引用。
 
-### T-748 EquipmentClientInfo（P2）
+### T-748 EquipmentClientInfo（P2，解析层已落地）
 
-- 19 个 LayerType、每层 texture/dyeable/use_player_texture；
-- trim_overrides、glint、玩家披风/鞘翅纹理；
-- 静态 `EquipmentTextureCatalog` 退化为 fallback。
+- 已新增 `EquipmentClientInfo` 数据模型与 JSON 解析：19 个 `EquipmentLayerType`、texture、dyeable、
+  use_player_texture、trim_overrides；
+- 新增 `ResourceKind.Equipment`，路径为 `assets/<namespace>/equipment/<path>.json`；
+- 已有 `EquipmentClientInfoTests` 覆盖 iron/leather/saddle/elytra 形状与非法输入；
+- 尚未把解析结果接入 `EquipmentTextureCatalog`/渲染状态；静态 catalog 仍是当前绘制来源，后续需要 item→equipment asset
+  绑定与真实 ResourceManager 加载。
 
 ### T-749 EntityTracker T-668 复核（P1）
 

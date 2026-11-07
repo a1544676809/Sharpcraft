@@ -28,6 +28,9 @@ public enum ResourceKind
     /// <summary><c>particles/&lt;path&gt;.json</c>.</summary>
     Particle,
 
+    /// <summary><c>equipment/&lt;path&gt;.json</c>.</summary>
+    Equipment,
+
     /// <summary><c>lang/&lt;locale&gt;.json</c>.</summary>
     Language
 }
@@ -50,6 +53,7 @@ public static class ResourcePath
         ResourceKind.Texture => "textures",
         ResourceKind.Font => "font",
         ResourceKind.Particle => "particles",
+        ResourceKind.Equipment => "equipment",
         ResourceKind.Language => "lang",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "unknown resource kind")
     };
