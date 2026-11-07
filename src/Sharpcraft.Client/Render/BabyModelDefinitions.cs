@@ -5,60 +5,26 @@ namespace Sharpcraft.Client.Render;
 
 /// <summary>
 /// Baby models whose geometry differs from the adult model (pig, cow, chicken). Each variant keeps the same geometry and
-/// swaps to the matching <c>*_baby</c> texture.
+/// swaps to the matching <c>*_baby</c> texture. Parts are declared with the <c>VanillaMeshDefinition</c> DSL and baked
+/// via <c>VanillaMeshBake</c> (T-701).
 /// </summary>
 public static class BabyModelDefinitions
 {
+    private static readonly VanillaMeshDefinition PigMesh = BuildPigMesh();
+    private static readonly VanillaMeshDefinition CowMesh = BuildCowMesh();
+    private static readonly VanillaMeshDefinition ChickenMesh = BuildChickenMesh();
+
     public static readonly EntityModelDefinition Pig = new(
-        "baby_pig",
-        32,
-        32,
-        [
-            PlayerModelDefinition.FromVanilla("body", 0f, 19f, 0.5f, -3.5f, -3f, -4.5f, 7f, 6f, 9f, 0, 0),
-            PlayerModelDefinition.FromVanilla("head", 0f, 19f, -2f, -3.5f, -5f, -5f, 7f, 6f, 6f, 0, 15, grow: 0.025f),
-            PlayerModelDefinition.FromVanillaChild("snout", "head", 0f, 0f, 0f, -1.5f, -1.975f, -6f, 3f, 2f, 1f, 6, 27, grow: 0.015f),
-            PlayerModelDefinition.FromVanilla("left_front_leg", 2.5f, 22f, -3f, -1f, 0f, -1f, 2f, 2f, 2f, 0, 0),
-            PlayerModelDefinition.FromVanilla("right_front_leg", -2.5f, 22f, -3f, -1f, 0f, -1f, 2f, 2f, 2f, 23, 0),
-            PlayerModelDefinition.FromVanilla("left_hind_leg", 2.5f, 22f, 4f, -1f, 0f, -1f, 2f, 2f, 2f, 0, 4),
-            PlayerModelDefinition.FromVanilla("right_hind_leg", -2.5f, 22f, 4f, -1f, 0f, -1f, 2f, 2f, 2f, 23, 4)
-        ],
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/pig/pig_temperate_baby");
+        "baby_pig", 32, 32, [.. VanillaMeshBake.Bake(PigMesh, 0, 0)],
+        PlayerModelDefinition.DefaultFaceTransforms, "entity/pig/pig_temperate_baby");
 
     public static readonly EntityModelDefinition Cow = new(
-        "baby_cow",
-        64,
-        64,
-        [
-            PlayerModelDefinition.FromVanilla("head", 0f, 13.569f, -5.1667f, -3f, -4.569f, -4.8333f, 6f, 6f, 5f, 0, 18),
-            PlayerModelDefinition.FromVanillaChild("ear_right", "head", 0f, 0f, 0f, 3f, -5.569f, -3.8333f, 1f, 2f, 1f, 8, 29),
-            PlayerModelDefinition.FromVanillaChild("ear_left", "head", 0f, 0f, 0f, -4f, -5.569f, -3.8333f, 1f, 2f, 1f, 4, 29, mirror: true),
-            PlayerModelDefinition.FromVanillaChild("snout", "head", 0f, 0f, 0f, -2f, -1.569f, -5.8333f, 4f, 3f, 1f, 12, 29),
-            PlayerModelDefinition.FromVanilla("body", 3f, 19f, -5f, -7f, -7f, -1f, 8f, 6f, 12f, 0, 0),
-            PlayerModelDefinition.FromVanilla("right_front_leg", -2.5f, 18f, -3.5f, -1.5f, 0f, -1.5f, 3f, 6f, 3f, 22, 18),
-            PlayerModelDefinition.FromVanilla("left_front_leg", 2.5f, 18f, -3.5f, -1.5f, 0f, -1.5f, 3f, 6f, 3f, 34, 18),
-            PlayerModelDefinition.FromVanilla("right_hind_leg", -2.5f, 18f, 3.5f, -1.5f, 0f, -1.5f, 3f, 6f, 3f, 22, 27),
-            PlayerModelDefinition.FromVanilla("left_hind_leg", 2.5f, 18f, 3.5f, -1.5f, 0f, -1.5f, 3f, 6f, 3f, 34, 27)
-        ],
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/cow/cow_temperate_baby");
+        "baby_cow", 64, 64, [.. VanillaMeshBake.Bake(CowMesh, 0, 0)],
+        PlayerModelDefinition.DefaultFaceTransforms, "entity/cow/cow_temperate_baby");
 
     public static readonly EntityModelDefinition Chicken = new(
-        "baby_chicken",
-        16,
-        16,
-        [
-            PlayerModelDefinition.FromVanilla("body", 0f, 20.25f, -1.25f, -2f, -2.25f, -0.75f, 4f, 4f, 4f, 0, 0),
-            PlayerModelDefinition.FromVanillaChild("beak", "body", 0f, 0f, 0f, -1f, -0.25f, -1.75f, 2f, 1f, 1f, 10, 8),
-            PlayerModelDefinition.FromVanilla("left_leg", 1f, 22f, 0.5f, -0.5f, 0f, 0f, 1f, 2f, 0f, 2, 2),
-            PlayerModelDefinition.FromVanillaChild("left_foot", "left_leg", 0f, 0f, 0f, -0.5f, 2f, -1f, 1f, 0f, 1f, 0, 1),
-            PlayerModelDefinition.FromVanilla("right_leg", -1f, 22f, 0.5f, -0.5f, 0f, 0f, 1f, 2f, 0f, 0, 2),
-            PlayerModelDefinition.FromVanillaChild("right_foot", "right_leg", 0f, 0f, 0f, -0.5f, 2f, -1f, 1f, 0f, 1f, 0, 0),
-            PlayerModelDefinition.FromVanilla("right_wing", 2f, 20f, 0f, 0f, 0f, -1f, 1f, 0f, 2f, 6, 8),
-            PlayerModelDefinition.FromVanilla("left_wing", -2f, 20f, 0f, -1f, 0f, -1f, 1f, 0f, 2f, 4, 8)
-        ],
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/chicken/chicken_temperate_baby");
+        "baby_chicken", 16, 16, [.. VanillaMeshBake.Bake(ChickenMesh, 0, 0)],
+        PlayerModelDefinition.DefaultFaceTransforms, "entity/chicken/chicken_temperate_baby");
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>
@@ -87,5 +53,70 @@ public static class BabyModelDefinitions
         variants[(ChickenModelDefinition.ChickenEntityTypeId, "cold")] = new("baby_chicken_cold", 16, 16, Chicken.Parts, PlayerModelDefinition.DefaultFaceTransforms, "entity/chicken/chicken_cold_baby");
         return variants;
     }
-}
 
+    private static VanillaMeshDefinition BuildPigMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 19f, 0.5f),
+            new VanillaCubeDefinition("body", 0, 0, -3.5f, -3f, -4.5f, 7f, 6f, 9f));
+        var head = root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 19f, -2f),
+            new VanillaCubeDefinition("head", 0, 15, -3.5f, -5f, -5f, 7f, 6f, 6f, Grow: 0.025f));
+        head.AddOrReplaceChild("snout", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("snout", 6, 27, -1.5f, -1.975f, -6f, 3f, 2f, 1f, Grow: 0.015f));
+        root.AddOrReplaceChild("left_front_leg", VanillaPartPose.Offset(2.5f, 22f, -3f),
+            new VanillaCubeDefinition("left_front_leg", 0, 0, -1f, 0f, -1f, 2f, 2f, 2f));
+        root.AddOrReplaceChild("right_front_leg", VanillaPartPose.Offset(-2.5f, 22f, -3f),
+            new VanillaCubeDefinition("right_front_leg", 23, 0, -1f, 0f, -1f, 2f, 2f, 2f));
+        root.AddOrReplaceChild("left_hind_leg", VanillaPartPose.Offset(2.5f, 22f, 4f),
+            new VanillaCubeDefinition("left_hind_leg", 0, 4, -1f, 0f, -1f, 2f, 2f, 2f));
+        root.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-2.5f, 22f, 4f),
+            new VanillaCubeDefinition("right_hind_leg", 23, 4, -1f, 0f, -1f, 2f, 2f, 2f));
+        return new VanillaMeshDefinition(root);
+    }
+
+    private static VanillaMeshDefinition BuildCowMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        var head = root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 13.569f, -5.1667f),
+            new VanillaCubeDefinition("head", 0, 18, -3f, -4.569f, -4.8333f, 6f, 6f, 5f));
+        head.AddOrReplaceChild("ear_right", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("ear_right", 8, 29, 3f, -5.569f, -3.8333f, 1f, 2f, 1f));
+        head.AddOrReplaceChild("ear_left", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("ear_left", 4, 29, -4f, -5.569f, -3.8333f, 1f, 2f, 1f, Mirror: true));
+        head.AddOrReplaceChild("snout", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("snout", 12, 29, -2f, -1.569f, -5.8333f, 4f, 3f, 1f));
+        root.AddOrReplaceChild("body", VanillaPartPose.Offset(3f, 19f, -5f),
+            new VanillaCubeDefinition("body", 0, 0, -7f, -7f, -1f, 8f, 6f, 12f));
+        root.AddOrReplaceChild("right_front_leg", VanillaPartPose.Offset(-2.5f, 18f, -3.5f),
+            new VanillaCubeDefinition("right_front_leg", 22, 18, -1.5f, 0f, -1.5f, 3f, 6f, 3f));
+        root.AddOrReplaceChild("left_front_leg", VanillaPartPose.Offset(2.5f, 18f, -3.5f),
+            new VanillaCubeDefinition("left_front_leg", 34, 18, -1.5f, 0f, -1.5f, 3f, 6f, 3f));
+        root.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-2.5f, 18f, 3.5f),
+            new VanillaCubeDefinition("right_hind_leg", 22, 27, -1.5f, 0f, -1.5f, 3f, 6f, 3f));
+        root.AddOrReplaceChild("left_hind_leg", VanillaPartPose.Offset(2.5f, 18f, 3.5f),
+            new VanillaCubeDefinition("left_hind_leg", 34, 27, -1.5f, 0f, -1.5f, 3f, 6f, 3f));
+        return new VanillaMeshDefinition(root);
+    }
+
+    private static VanillaMeshDefinition BuildChickenMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        var body = root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 20.25f, -1.25f),
+            new VanillaCubeDefinition("body", 0, 0, -2f, -2.25f, -0.75f, 4f, 4f, 4f));
+        body.AddOrReplaceChild("beak", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("beak", 10, 8, -1f, -0.25f, -1.75f, 2f, 1f, 1f));
+        var leftLeg = root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(1f, 22f, 0.5f),
+            new VanillaCubeDefinition("left_leg", 2, 2, -0.5f, 0f, 0f, 1f, 2f, 0f));
+        leftLeg.AddOrReplaceChild("left_foot", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("left_foot", 0, 1, -0.5f, 2f, -1f, 1f, 0f, 1f));
+        var rightLeg = root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-1f, 22f, 0.5f),
+            new VanillaCubeDefinition("right_leg", 0, 2, -0.5f, 0f, 0f, 1f, 2f, 0f));
+        rightLeg.AddOrReplaceChild("right_foot", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("right_foot", 0, 0, -0.5f, 2f, -1f, 1f, 0f, 1f));
+        root.AddOrReplaceChild("right_wing", VanillaPartPose.Offset(2f, 20f, 0f),
+            new VanillaCubeDefinition("right_wing", 6, 8, 0f, 0f, -1f, 1f, 0f, 2f));
+        root.AddOrReplaceChild("left_wing", VanillaPartPose.Offset(-2f, 20f, 0f),
+            new VanillaCubeDefinition("left_wing", 4, 8, -1f, 0f, -1f, 1f, 0f, 2f));
+        return new VanillaMeshDefinition(root);
+    }
+}
