@@ -104,6 +104,43 @@ public sealed class EntityLayerTests
     }
 
     [Fact]
+    public void PlayerBodySelectorUsesTheProfileSkinAndFallsBackToSteve()
+    {
+        var model = EntityModelResolver.Resolve(EntityPlaceholderMesher.PlayerEntityTypeId);
+        Assert.NotNull(model.TextureSelector);
+        Assert.Equal("entity/player/wide/steve", model.TextureSelector!(Entity(EntityPlaceholderMesher.PlayerEntityTypeId)));
+        Assert.Equal("skins/from-player", model.TextureSelector!(
+            Entity(EntityPlaceholderMesher.PlayerEntityTypeId) with { PlayerBodyTexture = "skins/from-player" }));
+    }
+
+    [Fact]
+    public void UsePlayerTexturePrefersTheElytraThenTheCape()
+    {
+        var elytra = ItemRegistry.LoadEmbedded().GetId(Identifier.Parse("minecraft:elytra"));
+        Assert.True(elytra >= 0, "elytra item id missing from embedded registry");
+        var state = Entity(EntityPlaceholderMesher.PlayerEntityTypeId) with
+        {
+            Equipment = new EntityEquipment(-1, -1, -1, -1, elytra, -1, -1, -1)
+        };
+
+        Assert.Equal("entity/equipment/wings/elytra", EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4));
+        Assert.Equal("elytra/from-player", EntityModelResolver.ResolveEquipmentTexture(
+            state with { PlayerElytraTexture = "elytra/from-player" }, EquipmentAssetKind.Elytra, 4));
+        Assert.Equal("capes/from-player", EntityModelResolver.ResolveEquipmentTexture(
+            state with { PlayerCapeTexture = "capes/from-player" }, EquipmentAssetKind.Elytra, 4));
+        Assert.Equal("entity/equipment/wings/elytra", EntityModelResolver.ResolveEquipmentTexture(
+            state with { PlayerCapeTexture = "capes/from-player", ShowCape = false }, EquipmentAssetKind.Elytra, 4));
+
+        // Only the avatar renderer passes a player texture; another humanoid wearing elytra keeps the layer texture.
+        var zombie = Entity(HumanoidMobModelDefinition.ZombieEntityTypeId) with
+        {
+            Equipment = new EntityEquipment(-1, -1, -1, -1, elytra, -1, -1, -1),
+            PlayerElytraTexture = "elytra/from-player"
+        };
+        Assert.Equal("entity/equipment/wings/elytra", EntityModelResolver.ResolveEquipmentTexture(zombie, EquipmentAssetKind.Elytra, 4));
+    }
+
+    [Fact]
     public void ModelBackedLayersGroupSameModelEntitiesWithoutChangingLayerOrder()
     {
         var helmet = ItemRegistry.LoadEmbedded().GetId(Identifier.Parse("minecraft:iron_helmet"));

@@ -114,7 +114,7 @@
 | `WingsLayer.submit` 平移 | `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/layers/WingsLayer.java#submit` | `poseStack.translate(0, 0, 0.125F)` = +2 模型像素；`state.isBaby ? elytraBabyModel : elytraModel` | z 正方向朝背后 | 无 `EQUIPPABLE` 或 `assetId` 为空时不绘制 |
 | `ElytraModel.setupAnim` 旋转 | `ref://mc-26.3-analysis/src/net/minecraft/client/model/object/equipment/ElytraModel.java#setupAnim` | 左翼 `y = crouching ? 3.0 : 0`；`xRot=state.elytraRotX`、`yRot=state.elytraRotY`、`zRot=state.elytraRotZ`；右翼 yRot/zRot 取反 | 左 `(−X,−Y,+Z)` / 右 `(−X,+Y,−Z)`（`RotationSelector`） | 无状态时默认 (π/12, 0, −π/12) |
 | `ElytraAnimationState` 姿态驱动 | `ref://mc-26.3-analysis/src/net/minecraft/world/entity/ElytraAnimationState.java` | standing=(π/12,0,−π/12)；crouching=(2π/9,0.0873,−π/4)；fallflying 按 `ratio=1−(−normalizedVelocity.y)^1.5` 在 (π/12,−π/12)→(π/9,−π/2) 插值；每 tick `0.3*(target−cur)` | 弧度；x/y/z 轴 | 速度长度 < 1e−6 时 ratio=1 |
-| 翼纹理 | `EquipmentClientInfo.LayerType.WINGS`；`WingsLayer` 的玩家披风/鞘翼皮肤覆盖 | 默认 `entity/equipment/wings/elytra`，64×32，tex(22,0) | sRGB，与实体纹理一致 | 玩家自定义 elytra/cape 纹理优先（后续） |
+| 翼纹理 | `EquipmentClientInfo.LayerType.WINGS`；`WingsLayer` 的玩家披风/鞘翼皮肤覆盖 | 默认 `entity/equipment/wings/elytra`，64×32，tex(22,0) | sRGB，与实体纹理一致 | 玩家自定义 elytra/cape 纹理优先（T-752 已接） |
 
 ### 10.2 真值向量（Golden Vectors）
 
@@ -135,3 +135,36 @@
 - 两翼在参考模型中为**全宽重叠**的镜像同形翼板；曾按“各占半边”实现，属于对参考的误读，已于 T-650/T-662 收敛回参考几何。
 - **T-663 修正**：初版 T-662 把几何尺寸和 UV 采样盒一起缩小（5×10×1），导致 `u4/v2` 从 46/22 缩到 34/11、采样到透明区；现在 `EntityModelPart` 的 `UvWidth/UvHeight/UvDepth` 保持 10/20/2，几何仍用 5×10×1，并补上潜行 1.5px/3px 位移。
 - 婴儿翼 `PivotY=12` 来自 `MeshTransformer.scaling` 的 12.008 y 偏移；`BabyZombieModel` 肩线在 9px，翼上缘因此会进入头部后侧 3px（参考同一变换亦然）。如果实机确认原版没有该叠压，再单独登记受控偏差调整。
+
+## 11. `use_player_texture`（玩家披风/鞘翅纹理替换）
+
+### 11.1 原版 26.3 源码映射表
+
+| 本模块概念 / 方法 | 原版类与方法路径（`ref://...`） | 精确常量 / 公式 / 树结构 | 位序 / 正负号 / 色彩空间约定 | 缺省 / 越界回退值 |
+| --- | --- | --- | --- | --- |
+| 玩家纹理覆盖入口 | `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/layers/WingsLayer.java#submit` | 仅 `AvatarRenderState` 传入 `playerElytraTexture`；胸槽 `EQUIPPABLE.assetId` 为空时不绘制 | — | 无玩家皮肤时传 `null` |
+| 玩家纹理优先级 | `WingsLayer.getPlayerElytraTexture` | `skin.elytra()?.texturePath()` 优先；否则 `skin.cape()?.texturePath()`，且仅当 `showCape == true` | — | 两者皆空返回 `null` |
+| 装备层替换条件 | `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/layers/EquipmentLayerRenderer.java#renderLayers` | `layer.usePlayerTexture() && playerTextureOverride != null ? playerTextureOverride : layerTextureLookup.apply(...)` | 只替换第一层；后续层不继承 | 覆盖为 `null` 时使用层纹理 |
+| 玩家皮肤纹理路径 | `SkinManager.TextureCache.getTextureLocation` | `skins/<sha1>` / `capes/<sha1>` / `elytra/<sha1>`；`<sha1>` = SHA-1(unencodedChars(URL 最后一段 hash)) | 十六进制小写 | 下载失败回退默认皮肤 |
+| 档案纹理属性 | `ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundPlayerInfoUpdatePacket.java` 的 `ADD_PLAYER` | `GAME_PROFILE_PROPERTIES` 中名为 `textures` 的属性值是 base64 JSON；`textures.SKIN/CAPE/ELYTRA.url` | JSON 键大写；URL 只接受 http/https | 无属性/解析失败回退默认皮肤 |
+
+### 11.2 真值向量（Golden Vectors）
+
+采样来源：上述 `WingsLayer`/`EquipmentLayerRenderer` 的精确条件与 `SkinManager` 的路径公式；测试落点：
+`tests/Sharpcraft.Client.Tests/Render/EntityLayerTests.cs`、`tests/Sharpcraft.Client.Tests/World/PlayerSkinTexturesTests.cs`、
+`tests/Sharpcraft.Client.Tests/Render/PlayerSkinCacheTests.cs`。
+
+1. **无皮肤属性**：玩家穿 elytra，`PlayerElytraOverride == null` → 使用 `entity/equipment/wings/elytra`。
+2. **仅披风且 showCape=true**：`CAPE` 存在、`ELYTRA` 缺失 → 使用 `capes/<sha1>`。
+3. **鞘翅优先**：`CAPE` 与 `ELYTRA` 同时存在 → 使用 `elytra/<sha1>`，披风不参与。
+4. **showCape=false**：仅 `CAPE` 存在 → 回退 `entity/equipment/wings/elytra`。
+5. **非玩家 humanoid**：Zombie 穿 elytra，即使 state 带 `PlayerElytraTexture` → 仍使用 `entity/equipment/wings/elytra`；`WingsLayer` 只为 `AvatarRenderState` 提供覆盖。
+6. **路径公式**：URL hash `abc123` → `capes/689307d2fc53af0fb941bc1bb42737ce4f3ef540`；hash `deadbeef` → `elytra/8c00f528eca4aa2abd8617baad2a9fb47e0a2097`（SHA-1 over UTF-16LE code units）。
+7. **下载失败**：某纹理下载/解码失败时该纹理路径置空，不把缺失路径交给 atlas；回退层纹理。
+
+### 11.3 当前实现与已知限制
+
+- `PlayerSkinTexturesParser` 解析 `textures` 属性；`PlayerSkinCache` 按 UUID 缓存下载结果并把 body/cape/elytra 纹理注册进 `EntitySkinLibrary` atlas；玩家基础模型通过 `PlayerBodyTexture` selector 使用 body 路径。
+- `EntityRenderState.PlayerElytraOverride` 实现 `elytra > cape(showCape)` 的优先级；`EntityModelResolver.ResolveEquipmentTexture` 在 `UsePlayerTexture` 为真时替换第一层纹理。
+- `PlayerSkinCache` 的下载线程只做 IO/PNG 解码，atlas 注册在宿主帧线程；`WindowedRenderer` 的 entity skin 纹理源支持运行期重建。
+- 未实现 `PlayerModelType.SLIM` 的独立皮肤模型（当前玩家几何固定 wide）；未做纹理属性签名校验（离线服务器通常不带签名）。这两项不改变 `use_player_texture` 的路径选择，但会影响极端外观一致性，登记为后续收敛项。

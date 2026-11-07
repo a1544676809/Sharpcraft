@@ -51,7 +51,18 @@ public static class EntityModelResolver
         bool overlay = false)
     {
         var texture = ResolveEquipmentTextureInfo(state, kind, slot);
-        return overlay ? texture?.OverlayPath : texture?.PrimaryPath;
+        if (overlay)
+        {
+            return texture?.OverlayPath;
+        }
+
+        // EquipmentLayerRenderer replaces the first layer's texture with the avatar texture when the layer opts in;
+        // only WingsLayer supplies that override, so the substitution is limited to the elytra equipment family.
+        return kind == EquipmentAssetKind.Elytra &&
+               texture is { UsePlayerTexture: true } &&
+               state.PlayerElytraOverride is { Length: > 0 } playerTexture
+            ? playerTexture
+            : texture?.PrimaryPath;
     }
 
     /// <summary>Resolves the leather/dyed tint for an equipment slot, or white when the item is not dyeable.</summary>

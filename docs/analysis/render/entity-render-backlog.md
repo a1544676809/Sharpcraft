@@ -37,7 +37,7 @@ updated: 2026-11-07
 | Zombie Nautilus 珊瑚 | 暖变体 coral 层已接入，`Equipment[6]` 有甲时隐藏 | 继续做 body armor 联动测试 |
 | 人形装备 | 已接入四槽独立护甲层 | 继续补 dye/trim/玩家纹理视觉验收 |
 | Witch 手持物品 | 未接 | 需要物品模型渲染（后置）；`WitchItemLayer`/`CrossedArmsItemLayer` |
-| Elytra | 已接入独立两翼层 | glint / `use_player_texture` 渲染未接 |
+| Elytra | 已接入独立两翼层 | `use_player_texture` 已接（T-752）；glint 独立层已接 |
 
 ## 4. 装备资产与组件
 

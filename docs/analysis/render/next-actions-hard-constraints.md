@@ -90,7 +90,8 @@ Z-fighting 与 equipment clearance 不混入本任务；先走诊断报告，规
 - 已有 `EquipmentClientInfoTests` 覆盖 iron/leather/saddle/elytra 形状、非法输入、asset-driven resolution、自定义 asset id、dye/player-texture 元数据与 trim predicate；
 - T-748d：资产纹理路径已进入 atlas —— `EntitySkinLibrary.Load` 遍历 `EquipmentTextureCatalog.Assets.TexturePaths` 并复用 `LoadTexture` 的按路径去重，`EquipmentClientInfoTests` 补资产层纹理路径断言；
 - T-748i：`EntityModelResolver.ResolveEquipmentTextureInfo` 暴露完整 `EquipmentTexture`（primary/overlay/dye/glint），`ResolveEquipmentTexture` 改为薄委托选 Primary/Overlay、行为不变；`EquipmentClientInfoTests` 补 dyeable 元数据与委托一致性断言；
-- 尚未完成 dye/glint/player-texture 的最终着色与 trim 纹理/palette 的实际渲染。
+- T-752：`use_player_texture` 已接完整渲染路径 —— `player_list` 保留 `textures` 档案属性，`PlayerSkinCache` 按 vanilla 缓存规则下载 cape/elytra 并注册进实体 atlas，`EntityRenderState.PlayerElytraOverride` 实现 elytra > cape(showCape)，装备第一层在 `UsePlayerTexture` 时替换纹理；`PlayerSkinTexturesTests`/`PlayerSkinCacheTests`/`EntityLayerTests` 覆盖路径与优先级。
+- 尚未完成 dye/glint/player-texture 的最终着色与 trim 纹理/palette 的实际渲染（player-texture 的 SLIM 几何与签名校验见 T-752 已知限制）。
 
 ### T-749 EntityTracker T-668 复核（P1，已完成回归核验）
 

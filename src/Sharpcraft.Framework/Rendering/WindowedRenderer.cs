@@ -53,7 +53,7 @@ public static class WindowedRenderer
         Func<UiFrame, UiGeometry?>? uiGeometry = null,
     Func<IReadOnlyList<WorldTextDraw>?>? worldTextPerFrame = null,
         TextureData? glyphTexture = null,
-    TextureData? entitySkinTexture = null,
+    AtlasTextureSource? entitySkinSource = null,
         IReadOnlyList<TextureData>? spriteTextures = null,
         UiTextureSource? textureSource = null,
         AtlasTextureSource? atlasSource = null,
@@ -239,40 +239,10 @@ public static class WindowedRenderer
                 BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
             ]);
 
-        Texture entitySkinGpu = default;
-        TextureView entitySkinView = default;
-        BindGroup entitySkinBindGroup = default;
-        var entitySkinCreated = false;
-        if (entitySkinTexture is { } skinData)
+        using var entitySkin = new EntitySkinTextureGpu();
+        if (entitySkinSource?.Atlas is { } skinData)
         {
-            entitySkinGpu = device.CreateTexture(new TextureDescriptor
-            {
-                Size = new WGPUExtent3D { width = (uint)skinData.Width, height = (uint)skinData.Height, depthOrArrayLayers = 1 },
-                MipLevelCount = 1,
-                SampleCount = 1,
-                Dimension = WGPUTextureDimension._2D,
-                Format = WGPUTextureFormat.RGBA8Unorm,
-                Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
-            });
-            device.Queue.WriteTexture(
-                entitySkinGpu,
-                skinData.Rgba,
-                (uint)(skinData.Width * 4),
-                (uint)skinData.Height,
-                new WGPUExtent3D { width = (uint)skinData.Width, height = (uint)skinData.Height, depthOrArrayLayers = 1 },
-                0,
-                new WGPUOrigin3D { x = 0, y = 0, z = 0 });
-            entitySkinView = entitySkinGpu.CreateView();
-            entitySkinBindGroup = device.CreateBindGroup(
-                bindGroupLayout,
-                [
-                    BindGroupEntry.TextureView(0, entitySkinView),
-                    BindGroupEntry.Sampler(1, atlasSampler),
-                    BindGroupEntry.Buffer(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize),
-                    BindGroupEntry.Buffer(3, fogBuffer, 0, 32),
-                    BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
-                ]);
-            entitySkinCreated = true;
+            entitySkin.Upload(device, bindGroupLayout, skinData, cameraBuffer, fogBuffer, lightmapBuffer, atlasSampler);
         }
         using var pipeline = CreatePipeline(device, format, pipelineLayout);
         using var cutoutPipeline = CreateCutoutPipeline(device, format, pipelineLayout);
@@ -674,6 +644,7 @@ public static class WindowedRenderer
         var appliedTextureVersion = textureSource?.Version ?? 0;
         var appliedGeometryEpoch = geometryEpoch?.Invoke() ?? 0;
         var appliedAtlasVersion = atlasSource?.Version ?? 0;
+        var appliedEntitySkinVersion = entitySkinSource?.Version ?? 0;
 
         while (true)
         {
@@ -761,6 +732,23 @@ public static class WindowedRenderer
                     ]);
 
                 Console.WriteLine($"ui: atlas re-uploaded (version {appliedAtlasVersion}, {refreshedAtlas.Width}x{refreshedAtlas.Height})");
+            }
+
+            if (entitySkinSource is not null && entitySkinSource.Version != appliedEntitySkinVersion)
+            {
+                appliedEntitySkinVersion = entitySkinSource.Version;
+
+                // Player skins arrive after the world starts, so the entity atlas can grow while the window is open.
+                // Its geometry is rebuilt every frame from the current sprite rects, which makes replacing the GPU
+                // texture and its bind group sufficient.
+                if (entitySkinSource.Atlas is { } refreshedSkin)
+                {
+                    entitySkin.Upload(device, bindGroupLayout, refreshedSkin, cameraBuffer, fogBuffer, lightmapBuffer, atlasSampler);
+                }
+                else
+                {
+                    entitySkin.Clear();
+                }
             }
 
             if (textureSource is not null && textureSource.Version != appliedTextureVersion)
@@ -1345,13 +1333,13 @@ public static class WindowedRenderer
                             pass.SetPipeline(entityPipeline);
                             pass.SetVertexBuffer(0, dynamicVertex, 0, dynamicVertexCapacity);
                             pass.SetIndexBuffer(dynamicIndex, WGPUIndexFormat.Uint32, 0, (ulong)dynamicIndexCount * sizeof(uint));
-                            if (entitySkinCreated)
+                            if (entitySkin.Created)
                             {
-                                pass.SetBindGroup(0, entitySkinBindGroup);
+                                pass.SetBindGroup(0, entitySkin.BindGroup);
                             }
 
                             pass.DrawIndexed(dynamicIndexCount, 1, 0, 0, 1);
-                            if (entitySkinCreated)
+                            if (entitySkin.Created)
                             {
                                 pass.SetBindGroup(0, bindGroup);
                             }
@@ -1381,15 +1369,15 @@ public static class WindowedRenderer
                                 WGPUIndexFormat.Uint32,
                                 0,
                                 (ulong)layerIndexCount * sizeof(uint));
-                            if (entitySkinCreated)
+                            if (entitySkin.Created)
                             {
-                                pass.SetBindGroup(0, entitySkinBindGroup);
+                                pass.SetBindGroup(0, entitySkin.BindGroup);
                             }
 
                             pass.DrawIndexed(layerIndexCount, 1, 0, 0, 1);
                         }
 
-                        if (entityLayerDrawn > 0 && entitySkinCreated)
+                        if (entityLayerDrawn > 0 && entitySkin.Created)
                         {
                             pass.SetBindGroup(0, bindGroup);
                         }
@@ -1854,12 +1842,6 @@ public static class WindowedRenderer
             entityLayerIndex[layerIndex].Dispose();
         }
 
-        if (entitySkinCreated)
-        {
-            entitySkinBindGroup.Dispose();
-            entitySkinView.Dispose();
-            entitySkinGpu.Dispose();
-        }
         uiVertex.Dispose();
         uiIndex.Dispose();
         uiTransformBuffer.Dispose();

@@ -121,7 +121,7 @@ public static class EquipmentTextureCatalog
             EquipmentAssetKind.HumanoidArmorBaby when TryArmorMaterial(path, out var babyMaterial) =>
                 new("entity/equipment/humanoid_baby/" + babyMaterial),
             EquipmentAssetKind.Elytra when path == "elytra" =>
-                new("entity/equipment/wings/elytra"),
+                new("entity/equipment/wings/elytra", UsePlayerTexture: true),
             _ => null
         };
     }

@@ -320,6 +320,13 @@ internal sealed class InteractiveSession
     /// <summary>The player list the server described.</summary>
     public PlayerListRoster PlayerList => _playerList;
 
+    /// <summary>Player-skin lookup forwarded to the entity tracker; set by the host after the skin cache exists.</summary>
+    public Func<Guid, PlayerSkinTextures?>? PlayerSkinLookup
+    {
+        get => _entities.PlayerSkinLookup;
+        set => _entities.PlayerSkinLookup = value;
+    }
+
     /// <summary>The chat prompt.</summary>
     public ChatInput Chat => _chat;
 

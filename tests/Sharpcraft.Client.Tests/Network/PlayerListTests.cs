@@ -40,6 +40,30 @@ public sealed class PlayerListTests
     }
 
     [Fact]
+    public void AnAddPacketKeepsTheTexturesProfileProperty()
+    {
+        var body = Body(
+            actions: PlayerListActions.AddPlayer,
+            count: 1,
+            writer =>
+            {
+                WriteUuid(writer, Alice);
+                WriteString(writer, "Alice");
+                WriteVarInt(writer, 1);
+                WriteString(writer, "textures");
+                WriteString(writer, "base64-textures");
+                writer.WriteByte(0); // unsigned
+            });
+
+        Assert.Equal(DecodeStatus.Success, PlayerListPackets.TryReadPlayerInfoUpdate(body, out _, out var entries));
+        Assert.Equal("base64-textures", Assert.Single(entries).TexturesProperty);
+
+        var roster = new PlayerListRoster();
+        roster.Apply(entries);
+        Assert.Equal("base64-textures", roster.Entries[0].TexturesProperty);
+    }
+
+    [Fact]
     public void AnAddPacketWithNullChatSessionStillParsesTheName()
     {
         var body = Body(

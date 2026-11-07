@@ -482,7 +482,11 @@ public readonly record struct EntityRenderState(
     float ElytraRotZ = 0f,
     IReadOnlyList<string?>? EquipmentAssetIds = null,
     IReadOnlyList<int?>? EquipmentDyeColors = null,
-    IReadOnlyList<bool?>? EquipmentGlintOverrides = null)
+    IReadOnlyList<bool?>? EquipmentGlintOverrides = null,
+    string? PlayerBodyTexture = null,
+    string? PlayerCapeTexture = null,
+    string? PlayerElytraTexture = null,
+    bool ShowCape = true)
 {
     /// <summary>Equippable asset id for one equipment slot, when the item supplied one.</summary>
     public string? EquipmentAssetIdAt(int slot) =>
@@ -495,6 +499,20 @@ public readonly record struct EntityRenderState(
     /// <summary>Glint override for one equipment slot, when the item supplied one.</summary>
     public bool? EquipmentGlintOverrideAt(int slot) =>
         EquipmentGlintOverrides is { } glints && (uint)slot < (uint)glints.Count ? glints[slot] : null;
+
+    /// <summary>
+    /// Player texture used by equipment layers marked <c>use_player_texture</c>. The reference prefers an explicit
+    /// elytra texture and falls back to the cape only while the cape model part is shown (WingsLayer.getPlayerElytraTexture);
+    /// a non-player entity has no avatar skin and therefore no override.
+    /// </summary>
+    public string? PlayerElytraOverride =>
+        TypeId != 159 // Entity type 159 is the player (EntityPlaceholderMesher.PlayerEntityTypeId).
+            ? null
+            : !string.IsNullOrEmpty(PlayerElytraTexture)
+                ? PlayerElytraTexture
+                : ShowCape && !string.IsNullOrEmpty(PlayerCapeTexture)
+                    ? PlayerCapeTexture
+                    : null;
 }
 
 /// <summary>
@@ -530,6 +548,12 @@ public sealed class EntityTracker
     /// any rendering dependency; tests that do not care about animation leave it null.
     /// </summary>
     public Func<int, IEntityAnimationState?>? AnimationStateFactory { get; set; }
+
+    /// <summary>
+    /// Optional player-skin lookup keyed by profile UUID. The host wires it to the skin cache; null means only the
+    /// default player texture is available, which is also what the reference falls back to.
+    /// </summary>
+    public Func<Guid, PlayerSkinTextures?>? PlayerSkinLookup { get; set; }
 
     /// <summary>
     /// Optional read-only world used by the presentation layer for local queries (currently <c>isInWater</c>). Set by
@@ -1307,6 +1331,12 @@ public sealed class EntityTracker
                 crackiness = remaining < 0.32f ? 3 : remaining < 0.69f ? 2 : remaining < 0.95f ? 1 : 0;
             }
 
+            PlayerSkinTextures? playerSkin = null;
+            if (entity.TypeId == 159 && entity.Uuid != Guid.Empty && PlayerSkinLookup is { } skinLookup)
+            {
+                playerSkin = skinLookup(entity.Uuid);
+            }
+
             _renderStates.Add(new EntityRenderState(
                 entity.Id,
                 entity.TypeId,
@@ -1409,7 +1439,10 @@ public sealed class EntityTracker
                 HasOffHandItem: entity.EquipmentItemAt(1) > 0,
                 EquipmentAssetIds: entity.EquipmentAssetIds,
                 EquipmentDyeColors: entity.EquipmentDyeColors,
-                EquipmentGlintOverrides: entity.EquipmentGlintOverrides));
+                EquipmentGlintOverrides: entity.EquipmentGlintOverrides,
+                PlayerBodyTexture: playerSkin?.Body?.Path,
+                PlayerCapeTexture: playerSkin?.Cape?.Path,
+                PlayerElytraTexture: playerSkin?.Elytra?.Path));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);

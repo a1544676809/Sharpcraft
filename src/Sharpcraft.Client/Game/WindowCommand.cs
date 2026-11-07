@@ -406,11 +406,21 @@ internal static class WindowCommand
 
         var playerSkin = customSkin ?? Sharpcraft.Client.Render.EntitySkinTexture.Load(resources);
         var entitySkinLibrary = Sharpcraft.Client.Render.EntitySkinLibrary.Load(resources, playerSkin);
-        var entitySkinAtlas = entitySkinLibrary.Atlas;
-        var entitySkin = entitySkinAtlas?.Texture ?? playerSkin;
+        var entitySkinTextureSource = new Sharpcraft.Framework.Rendering.AtlasTextureSource();
+        entitySkinTextureSource.Update(entitySkinLibrary.Atlas?.Texture ?? playerSkin);
         var entitySkinSprite = playerSkin is { } skin
             ? new Sharpcraft.Client.Assets.SpriteRect(0, 0, skin.Width, skin.Height, 1) { U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f }
             : (Sharpcraft.Client.Assets.SpriteRect?)null;
+        var playerSkins = new Sharpcraft.Client.Render.PlayerSkinCache(
+            Sharpcraft.Client.Render.PlayerSkinCache.DefaultCacheDirectory(GameOptions.Get("MC_ASSETS_DIR")),
+            (path, image) =>
+            {
+                if (entitySkinLibrary.TryAddTexture(path, image))
+                {
+                    entitySkinTextureSource.Update(entitySkinLibrary.Atlas?.Texture);
+                }
+            });
+        session.PlayerSkinLookup = playerSkins.TryGet;
         var modelMesher = new Sharpcraft.Client.Render.EntityModelMesher();
         var variantTable = Sharpcraft.Client.Render.EntityVariantTable.FromRegistries(live?.Registries);
         var entitySource = entitySprite is { } sprite
@@ -437,7 +447,7 @@ internal static class WindowCommand
                     Console.WriteLine($"entity cull: candidates={states.Length} visible={visibleEntities.Count} culled={states.Length - visibleEntities.Count}");
                 }
 
-                if (entitySkinAtlas is not null)
+                if (entitySkinLibrary.Atlas is { } entitySkinAtlas)
                 {
                     var atlasSprite = new Sharpcraft.Client.Assets.SpriteRect(0, 0, entitySkinAtlas.Texture.Width, entitySkinAtlas.Texture.Height, 1) { U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f };
                     return modelMesher.BuildLayers(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), atlasSprite, 64, 64, skinAtlas: entitySkinAtlas, variants: variantTable);
@@ -494,6 +504,14 @@ internal static class WindowCommand
             }
 
             session.CaptureMouse(window, index == 0);
+
+            // Apply skin arrivals between frames: the renderer checks the texture version before it builds the next
+            // frame's entity geometry, so the atlas and its sprite rects change together.
+            playerSkins.Sync(session.PlayerList.Entries);
+            if (playerSkins.Pump() > 0)
+            {
+                entitySkinTextureSource.Update(entitySkinLibrary.Atlas?.Texture);
+            }
         },
             hasLocalScene
                 ? null
@@ -661,7 +679,7 @@ internal static class WindowCommand
             dynamicGeometry: null,
             entityLayers: entitySource,
             glyphTexture: glyphTexture,
-            entitySkinTexture: entitySkin,
+            entitySkinSource: entitySkinTextureSource,
             spriteTextures: guiSprites?.Textures,
             textureSource: uiTextures,
             atlasSource: atlasSource,
