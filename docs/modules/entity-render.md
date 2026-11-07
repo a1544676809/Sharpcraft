@@ -214,6 +214,7 @@ DSL 现状与约束：
 - T-739：所有非 baby 装备模型（马/驴/骡/骷髅马/僵尸马、骆驼、羊驼、鹦鹉螺、快乐恶魂、狼、Piglin）的装备树都改为独立层；`AllCubes` 让装备层走 Elytra pipeline，Wolf crackiness 独立成层。
 - T-735：Baby Squid/Bee/Dolphin/Axolotl 与 Baby Horse/Llama/Camel/Donkey 及全部色型/毛色变体接入 `Compiled`；Baby Horse markings 使用 `WithModelLayer` 树复制层，纹理 selector 与 `Markings` 可见性保持。
 - T-737：Baby Goat/Panda/PolarBear/Turtle、Strider/Husk/Snifflet/犰狳、Nautilus/HappyGhast/GlowSquid 及 panda 基因变体全部接入 `Compiled`；Husk 复用 baby Zombie 树、GlowSquid 复用 baby Squid 树，犰狳 rolled/unrolled 可见性由树节点继承保留。
+- T-740：baby humanoid 与 baby Piglin 四槽护甲改为模型级独立层（`HumanoidArmorBaby` 纹理族 + `ForBaby`/`ForBabyPiglin` 树，`AllCubes: true`）；baby Elytra 同步使用幼年两翼独立层；其余 baby 装备仍为 merged compiled。
 - 现有 DSL 仍缺 **三轴 `GrowXyz`** 与 **`PartPose` 三轴 Scale**；完整覆盖幼年护甲等 reference 数据前必须补齐。
 - 完整的模型/装备树结构、动画与测试差距见 [`entity-model-parity-gap.md`](../analysis/render/entity-model-parity-gap.md)；逐项施工清单见 [`entity-model-refactor-checklist.md`](../analysis/render/entity-model-refactor-checklist.md)。
 - 迁移测试中的 `LegacyModelPartFactory` 只是旧实现值 oracle，不是原版 Golden Vector；后续应改为读取自动提取的 `vanilla-model-facts.json`。

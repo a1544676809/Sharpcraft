@@ -130,6 +130,9 @@ public sealed record EntityGeometryLayer(
 - humanoid 四槽护甲与 Elytra 已改为模型级独立层；基础模型/衣服/透明 overlay 仍按原 kind 层输出；
 - T-739 后 Horse/Donkey/Mule/SkeletonHorse/ZombieHorse、Camel、Llama、Nautilus、HappyGhast、Wolf、Piglin 的装备树
   也改为模型级独立层；`AllCubes` 用于让装备树（cube Kind=Cutout）走 Elytra pipeline；
+- T-740 后 baby humanoid / baby Piglin 四槽护甲也改为模型级独立层：使用 `HumanoidArmorBaby` 纹理族与
+  `EquipmentModelTrees.For(..., baby: true, piglin: ...)` 的幼年护甲树，层名 `equipment_HumanoidArmorBaby_<slot>`；
+  baby humanoid 的 Elytra 层改用幼年两翼树；其余 baby 装备（马鞍、羊驼装饰等）仍走 merged compiled；
 - 剩余：把 per-layer 几何构建从“逐实体临时几何”优化为按模型分组。
 
 

@@ -225,7 +225,9 @@ public static class EntityModelResolver
 
         var baseCompiled = definition.Compiled;
         IReadOnlyList<EntityRenderLayerDefinition>? renderLayers = null;
-        if (!baby && baseCompiled is not null && layers.Length > 0)
+        var babyArmorLayers = baby &&
+            (ReferenceEquals(layers, HumanoidArmorLayers) || ReferenceEquals(layers, PiglinArmorLayers));
+        if ((!baby || babyArmorLayers) && baseCompiled is not null && layers.Length > 0)
         {
             var baseLayerModel = new EntityModelDefinition(
                 definition.Name,
@@ -262,11 +264,14 @@ public static class EntityModelResolver
                 or PiglinModelDefinition.ZombifiedPiglinEntityTypeId);
             foreach (var (kind, slot, fallback) in layers)
             {
+                var effectiveKind = baby && kind is (EquipmentAssetKind.HumanoidArmor or EquipmentAssetKind.HumanoidLeggings)
+                    ? EquipmentAssetKind.HumanoidArmorBaby
+                    : kind;
                 if (EquipmentModelTrees.For(
-                        kind,
+                        effectiveKind,
                         slot,
                         player: typeId == EntityPlaceholderMesher.PlayerEntityTypeId,
-                        baby: false,
+                        baby: baby,
                         piglin: piglin) is not { } equipmentTree)
                 {
                     continue;
@@ -275,26 +280,30 @@ public static class EntityModelResolver
                 var fixedTexture = typeId == 138 && kind == EquipmentAssetKind.LlamaBody
                     ? "entity/equipment/llama_body/trader_llama"
                     : null;
+                var layerTexture = baby && effectiveKind == EquipmentAssetKind.HumanoidArmorBaby
+                    ? "entity/equipment/humanoid_baby/iron"
+                    : fixedTexture ?? fallback;
                 Func<EntityRenderState, string?> selector = fixedTexture is null
-                    ? state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot)
+                    ? state => EntityModelResolver.ResolveEquipmentTexture(state, effectiveKind, slot)
                     : _ => fixedTexture;
+                var layerName = "equipment_" + effectiveKind + "_" + slot;
                 var layerModel = new EntityModelDefinition(
-                    "equipment_" + kind + "_" + slot,
+                    layerName,
                     definition.TextureWidth,
                     definition.TextureHeight,
                     [],
                     definition.FaceTransforms,
-                    fixedTexture ?? fallback,
+                    layerTexture,
                     definition.Scale,
                     textureSelector: selector,
-                    additionalTexturePaths: [fixedTexture ?? fallback],
+                    additionalTexturePaths: [layerTexture],
                     compiled: equipmentTree);
                 customLayers.Add(new EntityRenderLayerDefinition(
-                    "equipment_" + kind + "_" + slot,
+                    layerName,
                     EntityGeometryLayerKind.Elytra,
                     order++,
                     layerModel,
-                    fixedTexture ?? fallback,
+                    layerTexture,
                     selector,
                     state => selector(state) is not null,
                     AllCubes: true));
@@ -338,7 +347,7 @@ public static class EntityModelResolver
 
             if (ReferenceEquals(layers, HumanoidArmorLayers))
             {
-                var elytraCompiled = EntityModelLayerHelpers.BuildElytraLayer(baseCompiled);
+                var elytraCompiled = EntityModelLayerHelpers.BuildElytraLayer(baseCompiled, baby);
                 var elytraModel = new EntityModelDefinition(
                     "elytra",
                     definition.TextureWidth,

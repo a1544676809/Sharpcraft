@@ -5,6 +5,8 @@ using System.Numerics;
 using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
+using Sharpcraft.Common.Identifiers;
+using Sharpcraft.Common.Registries;
 using Sharpcraft.Framework.Rendering;
 using Xunit;
 
@@ -99,6 +101,49 @@ public sealed class EntityLayerTests
         Assert.Contains(layers, layer => layer.Name == "equipment_HorseBody_6");
         Assert.Contains(layers, layer => layer.Name == "equipment_HorseSaddle_7");
         Assert.Contains(layers, layer => layer.Kind == EntityGeometryLayerKind.Elytra);
+    }
+
+    private static EntityRenderState BabyWithHelmet(int typeId)
+    {
+        var helmet = ItemRegistry.LoadEmbedded().GetId(Identifier.Parse("minecraft:iron_helmet"));
+        Assert.True(helmet >= 0, "iron helmet item id missing from embedded registry");
+        return new EntityRenderState(1, typeId, 0f, 0f, 0f, 0f, 0f,
+            Equipment: new EntityEquipment(-1, -1, -1, -1, -1, helmet, -1, -1),
+            IsBaby: true);
+    }
+
+    [Fact]
+    public void BabyHumanoidArmorUsesIndependentModelLayers()
+    {
+        var state = BabyWithHelmet(154);
+        var layers = new EntityModelMesher().BuildLayers(
+            [state], new SpriteRect(0, 0, 64, 64, 1), 64, 64, variants: EntityVariantTable.Builtin);
+
+        var armor = Assert.Single(layers, layer => layer.Name == "equipment_HumanoidArmorBaby_5");
+        Assert.Equal(EntityGeometryLayerKind.Elytra, armor.Kind);
+        Assert.True(armor.Geometry.IndexCount > 0);
+
+        var unarmored = state with { Equipment = new EntityEquipment(-1, -1, -1, -1, -1, -1, -1, -1) };
+        var plain = new EntityModelMesher().BuildLayers(
+            [unarmored], new SpriteRect(0, 0, 64, 64, 1), 64, 64, variants: EntityVariantTable.Builtin);
+        Assert.DoesNotContain(plain, layer => layer.Name == "equipment_HumanoidArmorBaby_5");
+    }
+
+    [Fact]
+    public void BabyPiglinArmorUsesIndependentModelLayers()
+    {
+        var layers = new EntityModelMesher().BuildLayers(
+            [BabyWithHelmet(102)], new SpriteRect(0, 0, 64, 64, 1), 64, 64,
+            variants: EntityVariantTable.Builtin);
+        Assert.Contains(layers, layer => layer.Name == "equipment_HumanoidArmorBaby_5");
+
+        var piglinArmor = Assert.Single(EntityModelResolver.Resolve(102, true).RenderLayers,
+            layer => layer.Name == "equipment_HumanoidArmorBaby_5");
+        var zombieArmor = Assert.Single(EntityModelResolver.Resolve(154, true).RenderLayers,
+            layer => layer.Name == "equipment_HumanoidArmorBaby_5");
+        Assert.NotNull(piglinArmor.Model?.Compiled);
+        Assert.NotSame(piglinArmor.Model!.Compiled, zombieArmor.Model!.Compiled);
+        Assert.NotNull(piglinArmor.Model.Compiled!.Find("left_ear"));
     }
 
     [Fact]

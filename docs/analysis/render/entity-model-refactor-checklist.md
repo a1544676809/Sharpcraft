@@ -356,3 +356,12 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - `BabyModelDefinitionsFinal` 的 Nautilus/HappyGhast 接入 `Compiled`（HappyGhast 保留 0.95 定义级 scale）；GlowSquid 复用 `BabyModelDefinitionsAquatic.Squid` 编译树；
 - 三个文件均无 `WithCopy`/collar/overlay 变体，故未新增树复制层；扁平 `Parts`、变体名、纹理路径与动画 provider 保持不变；
 - 树测试增加剩余 baby 模型 compiled/变体/复用关系断言，树测试共 27 项。
+
+### 2026-11-07 — T-740 baby humanoid / baby Piglin 护甲独立层
+
+- `EntityModelResolver.Decorate` 的独立层分支从 `!baby` 放宽为「非 baby，或 baby 且层集合为 `HumanoidArmorLayers`/`PiglinArmorLayers`」；
+- 四槽 baby 护甲层使用 `HumanoidArmorBaby` 纹理族（`entity/equipment/humanoid_baby/iron`），`EquipmentModelTrees.For(effectiveKind, slot, baby: true, piglin: ...)` 返回 `ForBaby`/`ForBabyPiglin` 树；层名 `equipment_HumanoidArmorBaby_<slot>`；
+- 装备层保留 `AllCubes: true`，使 Cutout cube 走 Elytra pipeline；装备纹理 selector 与 `VisibleWhen` 语义保持；
+- baby humanoid 的 Elytra 层改用 `BuildElytraLayer(baseCompiled, baby)` 的幼年两翼树，避免切换到独立层后丢失幼年鞘翅；baby Piglin 不生成 Elytra 层（与合并路径一致）；
+- 基础层仍来自 `definition.RenderLayers` 的 cutout/translucent/emissive；成人分支参数逐值不变；其余 baby 装备（马鞍/羊驼装饰等）继续走 merged compiled；
+- `BuildModelBackedLayers` 无需修改即可对 baby 实体生效；`EntityLayerTests` 新增 2 项断言，全量 Client 1556 项通过。
