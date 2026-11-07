@@ -519,7 +519,7 @@ internal static class HumanoidModelPose
         public readonly PoseOffset ToOffset()
         {
             // Reference model space is y-down; the mesher stores the scale(-1,-1,1)-flipped model, so position offsets
-            // are flipped in X and Y (Z unchanged), matching the vertex conversion in PlayerModelDefinition.FromVanilla.
+            // are flipped in X and Y (Z unchanged), matching the vertex conversion in VanillaMeshBake.BakeRoot.
             return new PoseOffset(new Vector3(-PosX, -PosY, PosZ), new Vector3(RotX, RotY, RotZ), Vector3.Zero);
         }
     }

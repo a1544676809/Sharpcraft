@@ -84,13 +84,13 @@ public sealed class PiglinModelDefinitionTests
 
     private static EntityModelPart[] ExpectedHeadParts() =>
     [
-        PlayerModelDefinition.FromVanilla("head", 0f, 0f, 0f, -5f, -8f, -4f, 10f, 8f, 8f, 0, 0),
-        PlayerModelDefinition.FromVanillaChild("head_nose", "head", 0f, 0f, 0f, -2f, -4f, -5f, 4f, 4f, 1f, 31, 1),
-        PlayerModelDefinition.FromVanillaChild("head_nostril_right", "head", 0f, 0f, 0f, 2f, -2f, -5f, 1f, 2f, 1f, 2, 4),
-        PlayerModelDefinition.FromVanillaChild("head_nostril_left", "head", 0f, 0f, 0f, -3f, -2f, -5f, 1f, 2f, 1f, 2, 0),
-        PlayerModelDefinition.FromVanillaChild("left_ear", "head", 4.5f, -6f, 0f, 0f, 0f, -2f, 1f, 5f, 4f, 51, 6,
+        LegacyModelPartFactory.FromVanilla("head", 0f, 0f, 0f, -5f, -8f, -4f, 10f, 8f, 8f, 0, 0),
+        LegacyModelPartFactory.FromVanillaChild("head_nose", "head", 0f, 0f, 0f, -2f, -4f, -5f, 4f, 4f, 1f, 31, 1),
+        LegacyModelPartFactory.FromVanillaChild("head_nostril_right", "head", 0f, 0f, 0f, 2f, -2f, -5f, 1f, 2f, 1f, 2, 4),
+        LegacyModelPartFactory.FromVanillaChild("head_nostril_left", "head", 0f, 0f, 0f, -3f, -2f, -5f, 1f, 2f, 1f, 2, 0),
+        LegacyModelPartFactory.FromVanillaChild("left_ear", "head", 4.5f, -6f, 0f, 0f, 0f, -2f, 1f, 5f, 4f, 51, 6,
             rotationZ: -MathF.PI / 6f),
-        PlayerModelDefinition.FromVanillaChild("right_ear", "head", -4.5f, -6f, 0f, -1f, 0f, -2f, 1f, 5f, 4f, 39, 6,
+        LegacyModelPartFactory.FromVanillaChild("right_ear", "head", -4.5f, -6f, 0f, -1f, 0f, -2f, 1f, 5f, 4f, 39, 6,
             rotationZ: MathF.PI / 6f)
     ];
 }

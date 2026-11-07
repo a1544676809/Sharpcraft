@@ -9,7 +9,7 @@ namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>
 /// Centralization step 2 (T-669): pins that <c>VanillaMeshBake.BakeRoot</c> / <c>VanillaMeshBake.BakeChild</c>
-/// reproduce the exact y-down → y-up conversion that <c>PlayerModelDefinition.FromVanilla</c> /
+/// reproduce the exact y-down → y-up conversion that <c>LegacyModelPartFactory.FromVanilla</c> /
 /// <c>FromVanillaChild</c> now delegate to. The delegating helpers must stay byte-equivalent for every existing
 /// caller, so both the full record equality and the individual converted fields are asserted here.
 /// </summary>
@@ -20,7 +20,7 @@ public sealed class VanillaMeshBakeConversionTests
     [InlineData(false)]
     public void BakeRootMatchesFromVanillaForMirroredAndNonMirrored(bool mirrorX)
     {
-        var fromDefinition = PlayerModelDefinition.FromVanilla(
+        var fromDefinition = LegacyModelPartFactory.FromVanilla(
             "root_sample", 3f, 5f, 2f, -2f, -3f, -1f, 4f, 6f, 8f, 10, 20,
             mirror: false, mirrorX: mirrorX, overlays: null, modelHeight: 24f,
             rotationX: 0.1f, rotationY: 0.2f, rotationZ: 0.3f,
@@ -59,7 +59,7 @@ public sealed class VanillaMeshBakeConversionTests
     public void BakeChildMatchesFromVanillaChildForRotatedSample()
     {
         const string parent = "body";
-        var fromDefinition = PlayerModelDefinition.FromVanillaChild(
+        var fromDefinition = LegacyModelPartFactory.FromVanillaChild(
             "child_sample", parent, 2f, 4f, 1f, -2f, -5f, -1f, 6f, 4f, 4f, 8, 16,
             mirror: false, overlays: null,
             rotationX: 0.3f, rotationY: -0.4f, rotationZ: 0.5f,

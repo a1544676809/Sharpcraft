@@ -188,63 +188,63 @@ public sealed class CatWolfFoxPandaModelDefinitionTests
 
     private static EntityModelPart[] ExpectedCatBaseParts() =>
     [
-        PlayerModelDefinition.FromVanilla("head_main", 0f, 15f, -9f, -2.5f, -2f, -3f, 5f, 4f, 5f, 0, 0),
-        PlayerModelDefinition.FromVanilla("nose", 0f, 15f, -9f, -1.5f, -0.001f, -4f, 3f, 2f, 2f, 0, 24),
-        PlayerModelDefinition.FromVanilla("ear1", 0f, 15f, -9f, -2f, -3f, 0f, 1f, 1f, 2f, 0, 10),
-        PlayerModelDefinition.FromVanilla("ear2", 0f, 15f, -9f, 1f, -3f, 0f, 1f, 1f, 2f, 6, 10),
-        PlayerModelDefinition.FromVanilla("body", 0f, 12f, -10f, -2f, 3f, -8f, 4f, 16f, 6f, 20, 0, rotationX: -MathF.PI / 2f),
-        PlayerModelDefinition.FromVanilla("tail1", 0f, 15f, 8f, -0.5f, 0f, 0f, 1f, 8f, 1f, 0, 15, rotationX: -0.9f),
-        PlayerModelDefinition.FromVanilla("tail2", 0f, 20f, 14f, -0.5f, 0f, 0f, 1f, 8f, 1f, 4, 15),
-        PlayerModelDefinition.FromVanilla("left_hind_leg", 1.1f, 18f, 5f, -1f, 0f, 1f, 2f, 6f, 2f, 8, 13),
-        PlayerModelDefinition.FromVanilla("right_hind_leg", -1.1f, 18f, 5f, -1f, 0f, 1f, 2f, 6f, 2f, 8, 13),
-        PlayerModelDefinition.FromVanilla("left_front_leg", 1.2f, 14.1f, -5f, -1f, 0f, 0f, 2f, 10f, 2f, 40, 0),
-        PlayerModelDefinition.FromVanilla("right_front_leg", -1.2f, 14.1f, -5f, -1f, 0f, 0f, 2f, 10f, 2f, 40, 0)
+        LegacyModelPartFactory.FromVanilla("head_main", 0f, 15f, -9f, -2.5f, -2f, -3f, 5f, 4f, 5f, 0, 0),
+        LegacyModelPartFactory.FromVanilla("nose", 0f, 15f, -9f, -1.5f, -0.001f, -4f, 3f, 2f, 2f, 0, 24),
+        LegacyModelPartFactory.FromVanilla("ear1", 0f, 15f, -9f, -2f, -3f, 0f, 1f, 1f, 2f, 0, 10),
+        LegacyModelPartFactory.FromVanilla("ear2", 0f, 15f, -9f, 1f, -3f, 0f, 1f, 1f, 2f, 6, 10),
+        LegacyModelPartFactory.FromVanilla("body", 0f, 12f, -10f, -2f, 3f, -8f, 4f, 16f, 6f, 20, 0, rotationX: -MathF.PI / 2f),
+        LegacyModelPartFactory.FromVanilla("tail1", 0f, 15f, 8f, -0.5f, 0f, 0f, 1f, 8f, 1f, 0, 15, rotationX: -0.9f),
+        LegacyModelPartFactory.FromVanilla("tail2", 0f, 20f, 14f, -0.5f, 0f, 0f, 1f, 8f, 1f, 4, 15),
+        LegacyModelPartFactory.FromVanilla("left_hind_leg", 1.1f, 18f, 5f, -1f, 0f, 1f, 2f, 6f, 2f, 8, 13),
+        LegacyModelPartFactory.FromVanilla("right_hind_leg", -1.1f, 18f, 5f, -1f, 0f, 1f, 2f, 6f, 2f, 8, 13),
+        LegacyModelPartFactory.FromVanilla("left_front_leg", 1.2f, 14.1f, -5f, -1f, 0f, 0f, 2f, 10f, 2f, 40, 0),
+        LegacyModelPartFactory.FromVanilla("right_front_leg", -1.2f, 14.1f, -5f, -1f, 0f, 0f, 2f, 10f, 2f, 40, 0)
     ];
 
     private static EntityModelPart[] ExpectedWolfBaseParts() =>
     [
-        PlayerModelDefinition.FromVanilla("head", -1f, 13.5f, -7f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-        PlayerModelDefinition.FromVanillaChild("real_head", "head", 0f, 0f, 0f, -2f, -3f, -2f, 6f, 6f, 4f, 0, 0),
-        PlayerModelDefinition.FromVanillaChild("right_ear", "head", 0f, 0f, 0f, -2f, -5f, 0f, 2f, 2f, 1f, 16, 14),
-        PlayerModelDefinition.FromVanillaChild("left_ear", "head", 0f, 0f, 0f, 2f, -5f, 0f, 2f, 2f, 1f, 16, 14),
-        PlayerModelDefinition.FromVanillaChild("snout", "head", 0f, 0f, 0f, -0.5f, -0.001f, -5f, 3f, 3f, 4f, 0, 10),
-        PlayerModelDefinition.FromVanilla("body", 0f, 14f, 2f, -3f, -2f, -3f, 6f, 9f, 6f, 18, 14, rotationX: -MathF.PI / 2f),
-        PlayerModelDefinition.FromVanilla("upper_body", -1f, 14f, -3f, -3f, -3f, -3f, 8f, 6f, 7f, 21, 0, rotationX: -MathF.PI / 2f),
-        PlayerModelDefinition.FromVanilla("right_hind_leg", -2.5f, 16f, 7f, 0f, 0f, -1f, 2f, 8f, 2f, 0, 18),
-        PlayerModelDefinition.FromVanilla("left_hind_leg", 0.5f, 16f, 7f, 0f, 0f, -1f, 2f, 8f, 2f, 0, 18),
-        PlayerModelDefinition.FromVanilla("right_front_leg", -2.5f, 16f, -4f, 0f, 0f, -1f, 2f, 8f, 2f, 0, 18),
-        PlayerModelDefinition.FromVanilla("left_front_leg", 0.5f, 16f, -4f, 0f, 0f, -1f, 2f, 8f, 2f, 0, 18),
-        PlayerModelDefinition.FromVanilla("tail", -1f, 12f, 8f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0,
+        LegacyModelPartFactory.FromVanilla("head", -1f, 13.5f, -7f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+        LegacyModelPartFactory.FromVanillaChild("real_head", "head", 0f, 0f, 0f, -2f, -3f, -2f, 6f, 6f, 4f, 0, 0),
+        LegacyModelPartFactory.FromVanillaChild("right_ear", "head", 0f, 0f, 0f, -2f, -5f, 0f, 2f, 2f, 1f, 16, 14),
+        LegacyModelPartFactory.FromVanillaChild("left_ear", "head", 0f, 0f, 0f, 2f, -5f, 0f, 2f, 2f, 1f, 16, 14),
+        LegacyModelPartFactory.FromVanillaChild("snout", "head", 0f, 0f, 0f, -0.5f, -0.001f, -5f, 3f, 3f, 4f, 0, 10),
+        LegacyModelPartFactory.FromVanilla("body", 0f, 14f, 2f, -3f, -2f, -3f, 6f, 9f, 6f, 18, 14, rotationX: -MathF.PI / 2f),
+        LegacyModelPartFactory.FromVanilla("upper_body", -1f, 14f, -3f, -3f, -3f, -3f, 8f, 6f, 7f, 21, 0, rotationX: -MathF.PI / 2f),
+        LegacyModelPartFactory.FromVanilla("right_hind_leg", -2.5f, 16f, 7f, 0f, 0f, -1f, 2f, 8f, 2f, 0, 18),
+        LegacyModelPartFactory.FromVanilla("left_hind_leg", 0.5f, 16f, 7f, 0f, 0f, -1f, 2f, 8f, 2f, 0, 18),
+        LegacyModelPartFactory.FromVanilla("right_front_leg", -2.5f, 16f, -4f, 0f, 0f, -1f, 2f, 8f, 2f, 0, 18),
+        LegacyModelPartFactory.FromVanilla("left_front_leg", 0.5f, 16f, -4f, 0f, 0f, -1f, 2f, 8f, 2f, 0, 18),
+        LegacyModelPartFactory.FromVanilla("tail", -1f, 12f, 8f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0,
             rotationX: -MathF.PI / 5f),
-        PlayerModelDefinition.FromVanillaChild("real_tail", "tail", 0f, 0f, 0f, 0f, 0f, -1f, 2f, 8f, 2f, 9, 18)
+        LegacyModelPartFactory.FromVanillaChild("real_tail", "tail", 0f, 0f, 0f, 0f, 0f, -1f, 2f, 8f, 2f, 9, 18)
     ];
 
     private static EntityModelPart[] ExpectedFoxParts() =>
     [
-        PlayerModelDefinition.FromVanilla("head", -1f, 16.5f, -3f, -3f, -2f, -5f, 8f, 6f, 6f, 1, 5),
-        PlayerModelDefinition.FromVanillaChild("right_ear", "head", 0f, 0f, 0f, -3f, -4f, -4f, 2f, 2f, 1f, 8, 1),
-        PlayerModelDefinition.FromVanillaChild("left_ear", "head", 0f, 0f, 0f, 3f, -4f, -4f, 2f, 2f, 1f, 15, 1),
-        PlayerModelDefinition.FromVanillaChild("nose", "head", 0f, 0f, 0f, -1f, 2.01f, -8f, 4f, 2f, 3f, 6, 18),
-        PlayerModelDefinition.FromVanilla("body", 0f, 16f, -6f, -3f, 3.999f, -3.5f, 6f, 11f, 6f, 24, 15, rotationX: -MathF.PI / 2f),
-        PlayerModelDefinition.FromVanilla("right_hind_leg", -5f, 17.5f, 7f, 2f, 0.5f, -1f, 2f, 6f, 2f, 13, 24),
-        PlayerModelDefinition.FromVanilla("left_hind_leg", -1f, 17.5f, 7f, 2f, 0.5f, -1f, 2f, 6f, 2f, 4, 24),
-        PlayerModelDefinition.FromVanilla("right_front_leg", -5f, 17.5f, 0f, 2f, 0.5f, -1f, 2f, 6f, 2f, 13, 24),
-        PlayerModelDefinition.FromVanilla("left_front_leg", -1f, 17.5f, 0f, 2f, 0.5f, -1f, 2f, 6f, 2f, 4, 24),
-        PlayerModelDefinition.FromVanillaChild("tail", "body", -4f, 15f, -1f, 2f, 0f, -1f, 4f, 9f, 5f, 30, 0,
+        LegacyModelPartFactory.FromVanilla("head", -1f, 16.5f, -3f, -3f, -2f, -5f, 8f, 6f, 6f, 1, 5),
+        LegacyModelPartFactory.FromVanillaChild("right_ear", "head", 0f, 0f, 0f, -3f, -4f, -4f, 2f, 2f, 1f, 8, 1),
+        LegacyModelPartFactory.FromVanillaChild("left_ear", "head", 0f, 0f, 0f, 3f, -4f, -4f, 2f, 2f, 1f, 15, 1),
+        LegacyModelPartFactory.FromVanillaChild("nose", "head", 0f, 0f, 0f, -1f, 2.01f, -8f, 4f, 2f, 3f, 6, 18),
+        LegacyModelPartFactory.FromVanilla("body", 0f, 16f, -6f, -3f, 3.999f, -3.5f, 6f, 11f, 6f, 24, 15, rotationX: -MathF.PI / 2f),
+        LegacyModelPartFactory.FromVanilla("right_hind_leg", -5f, 17.5f, 7f, 2f, 0.5f, -1f, 2f, 6f, 2f, 13, 24),
+        LegacyModelPartFactory.FromVanilla("left_hind_leg", -1f, 17.5f, 7f, 2f, 0.5f, -1f, 2f, 6f, 2f, 4, 24),
+        LegacyModelPartFactory.FromVanilla("right_front_leg", -5f, 17.5f, 0f, 2f, 0.5f, -1f, 2f, 6f, 2f, 13, 24),
+        LegacyModelPartFactory.FromVanilla("left_front_leg", -1f, 17.5f, 0f, 2f, 0.5f, -1f, 2f, 6f, 2f, 4, 24),
+        LegacyModelPartFactory.FromVanillaChild("tail", "body", -4f, 15f, -1f, 2f, 0f, -1f, 4f, 9f, 5f, 30, 0,
             rotationX: -0.05235988f)
     ];
 
     private static EntityModelPart[] ExpectedPandaParts() =>
     [
-        PlayerModelDefinition.FromVanilla("head", 0f, 11.5f, -17f, -6.5f, -5f, -4f, 13f, 10f, 9f, 0, 6),
-        PlayerModelDefinition.FromVanilla("nose", 0f, 11.5f, -17f, -3.5f, 0f, -6f, 7f, 5f, 2f, 45, 16),
-        PlayerModelDefinition.FromVanilla("left_ear", 0f, 11.5f, -17f, 3.5f, -8f, -1f, 5f, 4f, 1f, 52, 25),
-        PlayerModelDefinition.FromVanilla("right_ear", 0f, 11.5f, -17f, -8.5f, -8f, -1f, 5f, 4f, 1f, 52, 25),
-        PlayerModelDefinition.FromVanilla("body", 0f, 10f, 0f, -9.5f, -13f, -6.5f, 19f, 26f, 13f, 0, 25, rotationX: -MathF.PI / 2f),
-        PlayerModelDefinition.FromVanilla("right_hind_leg", -5.5f, 15f, 9f, -3f, 0f, -3f, 6f, 9f, 6f, 40, 0),
-        PlayerModelDefinition.FromVanilla("left_hind_leg", 5.5f, 15f, 9f, -3f, 0f, -3f, 6f, 9f, 6f, 40, 0),
-        PlayerModelDefinition.FromVanilla("right_front_leg", -5.5f, 15f, -9f, -3f, 0f, -3f, 6f, 9f, 6f, 40, 0),
-        PlayerModelDefinition.FromVanilla("left_front_leg", 5.5f, 15f, -9f, -3f, 0f, -3f, 6f, 9f, 6f, 40, 0)
+        LegacyModelPartFactory.FromVanilla("head", 0f, 11.5f, -17f, -6.5f, -5f, -4f, 13f, 10f, 9f, 0, 6),
+        LegacyModelPartFactory.FromVanilla("nose", 0f, 11.5f, -17f, -3.5f, 0f, -6f, 7f, 5f, 2f, 45, 16),
+        LegacyModelPartFactory.FromVanilla("left_ear", 0f, 11.5f, -17f, 3.5f, -8f, -1f, 5f, 4f, 1f, 52, 25),
+        LegacyModelPartFactory.FromVanilla("right_ear", 0f, 11.5f, -17f, -8.5f, -8f, -1f, 5f, 4f, 1f, 52, 25),
+        LegacyModelPartFactory.FromVanilla("body", 0f, 10f, 0f, -9.5f, -13f, -6.5f, 19f, 26f, 13f, 0, 25, rotationX: -MathF.PI / 2f),
+        LegacyModelPartFactory.FromVanilla("right_hind_leg", -5.5f, 15f, 9f, -3f, 0f, -3f, 6f, 9f, 6f, 40, 0),
+        LegacyModelPartFactory.FromVanilla("left_hind_leg", 5.5f, 15f, 9f, -3f, 0f, -3f, 6f, 9f, 6f, 40, 0),
+        LegacyModelPartFactory.FromVanilla("right_front_leg", -5.5f, 15f, -9f, -3f, 0f, -3f, 6f, 9f, 6f, 40, 0),
+        LegacyModelPartFactory.FromVanilla("left_front_leg", 5.5f, 15f, -9f, -3f, 0f, -3f, 6f, 9f, 6f, 40, 0)
     ];
 
     private static void AssertNamesAndParentsPrefix(IReadOnlyList<EntityModelPart> parts, string[] names, string?[] parents)

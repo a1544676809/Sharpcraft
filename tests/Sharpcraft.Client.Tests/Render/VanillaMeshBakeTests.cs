@@ -28,7 +28,7 @@ public sealed class VanillaMeshBakeTests
         Assert.True(MathF.Abs(expected - actual) <= tolerance, $"expected {expected}, actual {actual}");
 
     /// <summary>The reference ElytraModel left/right wing (10×20×2 at tex 22,0, pivot ±5, grow 1) in its 24.008 frame.</summary>
-    private static EntityModelPart ReferenceWing(bool right) => PlayerModelDefinition.FromVanilla(
+    private static EntityModelPart ReferenceWing(bool right) => LegacyModelPartFactory.FromVanilla(
         right ? "equipment_Elytra_4_right_wing" : "equipment_Elytra_4_left_wing",
         right ? -5f : 5f,
         0f,
@@ -87,7 +87,7 @@ public sealed class VanillaMeshBakeTests
         AssertClose(2.5f, withLayer.CentreZ);
 
         // The migrated WithElytra helper snaps the sub-pixel result to the historical whole-pixel baby pivots.
-        var body = PlayerModelDefinition.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16);
+        var body = LegacyModelPartFactory.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16);
         var migrated = EntityModelLayerHelpers.WithElytra([body], baby: true)
             .Single(part => part.Name == "equipment_Elytra_4_left_wing");
         Assert.Equal(2f, migrated.Bottom);
@@ -151,7 +151,7 @@ public sealed class VanillaMeshBakeTests
     [Fact]
     public void WithElytraBabyPreservesTheCrouchYOffsetSelector()
     {
-        var body = PlayerModelDefinition.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16);
+        var body = LegacyModelPartFactory.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16);
         var wings = EntityModelLayerHelpers.WithElytra([body], baby: true);
         var wing = Assert.Single(wings, part => part.Name == "equipment_Elytra_4_left_wing");
         Assert.NotNull(wing.YOffsetSelector);

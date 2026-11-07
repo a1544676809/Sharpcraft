@@ -18,11 +18,11 @@ public sealed class SlimeMagmaCubeShulkerVexModelDefinitionTests
     {
         var expected = new[]
         {
-            PlayerModelDefinition.FromVanilla("cube", 0f, 0f, 0f, -3f, 17f, -3f, 6f, 6f, 6f, 0, 16),
-            PlayerModelDefinition.FromVanilla("right_eye", 0f, 0f, 0f, -3.25f, 18f, -3.5f, 2f, 2f, 2f, 32, 0),
-            PlayerModelDefinition.FromVanilla("left_eye", 0f, 0f, 0f, 1.25f, 18f, -3.5f, 2f, 2f, 2f, 32, 4),
-            PlayerModelDefinition.FromVanilla("mouth", 0f, 0f, 0f, 0f, 21f, -3.5f, 1f, 1f, 1f, 32, 8),
-            PlayerModelDefinition.FromVanilla("outer_cube", 0f, 0f, 0f, -4f, 16f, -4f, 8f, 8f, 8f, 0, 0, kind: EntityGeometryLayerKind.Translucent)
+            LegacyModelPartFactory.FromVanilla("cube", 0f, 0f, 0f, -3f, 17f, -3f, 6f, 6f, 6f, 0, 16),
+            LegacyModelPartFactory.FromVanilla("right_eye", 0f, 0f, 0f, -3.25f, 18f, -3.5f, 2f, 2f, 2f, 32, 0),
+            LegacyModelPartFactory.FromVanilla("left_eye", 0f, 0f, 0f, 1.25f, 18f, -3.5f, 2f, 2f, 2f, 32, 4),
+            LegacyModelPartFactory.FromVanilla("mouth", 0f, 0f, 0f, 0f, 21f, -3.5f, 1f, 1f, 1f, 32, 8),
+            LegacyModelPartFactory.FromVanilla("outer_cube", 0f, 0f, 0f, -4f, 16f, -4f, 8f, 8f, 8f, 0, 0, kind: EntityGeometryLayerKind.Translucent)
         };
         AssertPartsMatch(expected, SlimeModelDefinition.Definition.Parts);
     }
@@ -32,15 +32,15 @@ public sealed class SlimeMagmaCubeShulkerVexModelDefinitionTests
     {
         var expected = new[]
         {
-            PlayerModelDefinition.FromVanilla("cube0", 0f, 0f, 0f, -4f, 16f, -4f, 8f, 1f, 8f, 0, 0),
-            PlayerModelDefinition.FromVanilla("cube1", 0f, 0f, 0f, -4f, 17f, -4f, 8f, 1f, 8f, 0, 9),
-            PlayerModelDefinition.FromVanilla("cube2", 0f, 0f, 0f, -4f, 18f, -4f, 8f, 1f, 8f, 0, 18),
-            PlayerModelDefinition.FromVanilla("cube3", 0f, 0f, 0f, -4f, 19f, -4f, 8f, 1f, 8f, 0, 27),
-            PlayerModelDefinition.FromVanilla("cube4", 0f, 0f, 0f, -4f, 20f, -4f, 8f, 1f, 8f, 32, 0),
-            PlayerModelDefinition.FromVanilla("cube5", 0f, 0f, 0f, -4f, 21f, -4f, 8f, 1f, 8f, 32, 9),
-            PlayerModelDefinition.FromVanilla("cube6", 0f, 0f, 0f, -4f, 22f, -4f, 8f, 1f, 8f, 32, 18),
-            PlayerModelDefinition.FromVanilla("cube7", 0f, 0f, 0f, -4f, 23f, -4f, 8f, 1f, 8f, 32, 27),
-            PlayerModelDefinition.FromVanilla("inside_cube", 0f, 0f, 0f, -2f, 18f, -2f, 4f, 4f, 4f, 24, 40)
+            LegacyModelPartFactory.FromVanilla("cube0", 0f, 0f, 0f, -4f, 16f, -4f, 8f, 1f, 8f, 0, 0),
+            LegacyModelPartFactory.FromVanilla("cube1", 0f, 0f, 0f, -4f, 17f, -4f, 8f, 1f, 8f, 0, 9),
+            LegacyModelPartFactory.FromVanilla("cube2", 0f, 0f, 0f, -4f, 18f, -4f, 8f, 1f, 8f, 0, 18),
+            LegacyModelPartFactory.FromVanilla("cube3", 0f, 0f, 0f, -4f, 19f, -4f, 8f, 1f, 8f, 0, 27),
+            LegacyModelPartFactory.FromVanilla("cube4", 0f, 0f, 0f, -4f, 20f, -4f, 8f, 1f, 8f, 32, 0),
+            LegacyModelPartFactory.FromVanilla("cube5", 0f, 0f, 0f, -4f, 21f, -4f, 8f, 1f, 8f, 32, 9),
+            LegacyModelPartFactory.FromVanilla("cube6", 0f, 0f, 0f, -4f, 22f, -4f, 8f, 1f, 8f, 32, 18),
+            LegacyModelPartFactory.FromVanilla("cube7", 0f, 0f, 0f, -4f, 23f, -4f, 8f, 1f, 8f, 32, 27),
+            LegacyModelPartFactory.FromVanilla("inside_cube", 0f, 0f, 0f, -2f, 18f, -2f, 4f, 4f, 4f, 24, 40)
         };
         AssertPartsMatch(expected, MagmaCubeModelDefinition.Definition.Parts);
     }
@@ -50,9 +50,9 @@ public sealed class SlimeMagmaCubeShulkerVexModelDefinitionTests
     {
         var expected = new[]
         {
-            PlayerModelDefinition.FromVanilla("lid", 0f, 24f, 0f, -8f, -16f, -8f, 16f, 12f, 16f, 0, 0),
-            PlayerModelDefinition.FromVanilla("base", 0f, 24f, 0f, -8f, -8f, -8f, 16f, 8f, 16f, 0, 28),
-            PlayerModelDefinition.FromVanilla("head", 0f, 12f, 0f, -3f, 0f, -3f, 6f, 6f, 6f, 0, 52)
+            LegacyModelPartFactory.FromVanilla("lid", 0f, 24f, 0f, -8f, -16f, -8f, 16f, 12f, 16f, 0, 0),
+            LegacyModelPartFactory.FromVanilla("base", 0f, 24f, 0f, -8f, -8f, -8f, 16f, 8f, 16f, 0, 28),
+            LegacyModelPartFactory.FromVanilla("head", 0f, 12f, 0f, -3f, 0f, -3f, 6f, 6f, 6f, 0, 52)
         };
         AssertPartsMatch(expected, ShulkerModelDefinition.Definition.Parts);
         foreach (var key in ShulkerModelDefinition.VariantKeys)
@@ -71,14 +71,14 @@ public sealed class SlimeMagmaCubeShulkerVexModelDefinitionTests
     {
         var expected = new[]
         {
-            PlayerModelDefinition.FromVanilla("root", 0f, -2.5f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            PlayerModelDefinition.FromVanillaChild("head", "root", 0f, 20f, 0f, -2.5f, -5f, -2.5f, 5f, 5f, 5f, 0, 0),
-            PlayerModelDefinition.FromVanillaChild("body", "root", 0f, 20f, 0f, -1.5f, 0f, -1f, 3f, 4f, 2f, 0, 10),
-            PlayerModelDefinition.FromVanillaChild("body_inner", "body", 0f, 0f, 0f, -1.5f, 1f, -1f, 3f, 5f, 2f, 0, 16, grow: -0.2f),
-            PlayerModelDefinition.FromVanillaChild("right_arm", "body", -1.75f, 0.25f, 0f, -1.25f, -0.5f, -1f, 2f, 4f, 2f, 23, 0, grow: -0.1f),
-            PlayerModelDefinition.FromVanillaChild("left_arm", "body", 1.75f, 0.25f, 0f, -0.75f, -0.5f, -1f, 2f, 4f, 2f, 23, 6, grow: -0.1f),
-            PlayerModelDefinition.FromVanillaChild("left_wing", "body", 0.5f, 1f, 1f, 0f, 0f, 0f, 0f, 5f, 8f, 16, 14, mirror: true),
-            PlayerModelDefinition.FromVanillaChild("right_wing", "body", -0.5f, 1f, 1f, 0f, 0f, 0f, 0f, 5f, 8f, 16, 14)
+            LegacyModelPartFactory.FromVanilla("root", 0f, -2.5f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+            LegacyModelPartFactory.FromVanillaChild("head", "root", 0f, 20f, 0f, -2.5f, -5f, -2.5f, 5f, 5f, 5f, 0, 0),
+            LegacyModelPartFactory.FromVanillaChild("body", "root", 0f, 20f, 0f, -1.5f, 0f, -1f, 3f, 4f, 2f, 0, 10),
+            LegacyModelPartFactory.FromVanillaChild("body_inner", "body", 0f, 0f, 0f, -1.5f, 1f, -1f, 3f, 5f, 2f, 0, 16, grow: -0.2f),
+            LegacyModelPartFactory.FromVanillaChild("right_arm", "body", -1.75f, 0.25f, 0f, -1.25f, -0.5f, -1f, 2f, 4f, 2f, 23, 0, grow: -0.1f),
+            LegacyModelPartFactory.FromVanillaChild("left_arm", "body", 1.75f, 0.25f, 0f, -0.75f, -0.5f, -1f, 2f, 4f, 2f, 23, 6, grow: -0.1f),
+            LegacyModelPartFactory.FromVanillaChild("left_wing", "body", 0.5f, 1f, 1f, 0f, 0f, 0f, 0f, 5f, 8f, 16, 14, mirror: true),
+            LegacyModelPartFactory.FromVanillaChild("right_wing", "body", -0.5f, 1f, 1f, 0f, 0f, 0f, 0f, 5f, 8f, 16, 14)
         };
         for (var i = 0; i < expected.Length; i++)
         {

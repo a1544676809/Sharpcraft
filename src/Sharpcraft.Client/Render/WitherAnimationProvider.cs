@@ -28,7 +28,7 @@ namespace Sharpcraft.Client.Render;
 /// </list>
 /// <para>
 /// Rotation offsets use the reference signs; the mesher stores the X/Y bind negations in the model definition (see
-/// <c>PlayerModelDefinition.FromVanilla</c> and <c>FoxAnimationProvider.Rotation</c>), consistent with the other
+/// <c>VanillaMeshBake.BakeRoot</c> and <c>FoxAnimationProvider.Rotation</c>), consistent with the other
 /// procedural providers.
 /// </para>
 /// <para>

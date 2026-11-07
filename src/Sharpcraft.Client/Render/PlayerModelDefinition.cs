@@ -89,12 +89,11 @@ public static class PlayerModelDefinition
 
     /// <summary>
     /// Declarative DSL tree for the six adult player parts (T-671). The root group's direct children are baked as root
-    /// parts via <c>VanillaMeshBake.BakeRoot</c>, producing exactly the legacy <c>FromVanilla</c> records. Kept private:
-    /// other model definitions still call the FromVanilla/FromVanillaChild helpers directly.
+    /// parts via <c>VanillaMeshBake.BakeRoot</c>, producing exactly the legacy flat part records.
     /// </summary>
     private static readonly VanillaMeshDefinition AdultMesh = BuildAdultMesh();
 
-    /// <summary>The baked adult player parts, identical to the former hand-written FromVanilla array.</summary>
+    /// <summary>The baked adult player parts, identical to the former hand-written flat array.</summary>
     public static readonly EntityModelPart[] AdultParts = [.. VanillaMeshBake.Bake(AdultMesh, 0, 0)];
 
     private static VanillaMeshDefinition BuildAdultMesh()
@@ -121,119 +120,9 @@ public static class PlayerModelDefinition
         return new VanillaMeshDefinition(root);
     }
 
-    /// <summary>
-    /// Builds an EntityModelPart from the reference's y-down pivot/cube values. The conversion is centralized in
-    /// <c>VanillaMeshBake.BakeRoot</c> so individual model definitions do not need to hand-flip Bottom/CentreX; this
-    /// method is a thin, byte-equivalent delegate kept for all existing callers.
-    /// </summary>
-    public static EntityModelPart FromVanilla(
-        string name,
-        float pivotX,
-        float pivotY,
-        float pivotZ,
-        float minX,
-        float minY,
-        float minZ,
-        float width,
-        float height,
-        float depth,
-        int textureX,
-        int textureY,
-        bool mirror = false,
-        bool mirrorX = true,
-        IReadOnlyList<EntityModelLayer>? overlays = null,
-        float modelHeight = 24f,
-        float rotationX = 0f,
-        float rotationY = 0f,
-        float rotationZ = 0f,
-        string? texturePath = null,
-        float grow = 0f,
-        EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout)
-    {
-        return VanillaMeshBake.BakeRoot(
-            name,
-            pivotX,
-            pivotY,
-            pivotZ,
-            minX,
-            minY,
-            minZ,
-            width,
-            height,
-            depth,
-            textureX,
-            textureY,
-            mirror,
-            mirrorX,
-            overlays,
-            modelHeight,
-            rotationX,
-            rotationY,
-            rotationZ,
-            texturePath,
-            grow,
-            kind);
-    }
-
     public static readonly EntityModelDefinition Definition =
         new("player", 64, 64, AdultParts, DefaultFaceTransforms, "entity/player/wide/steve");
 
-    /// <summary>
-    /// Builds a child part from the reference's y-down pivot/cube values, keeping them local to
-    /// <paramref name="parent"/> instead of baking an absolute position. The conversion is centralized in
-    /// <c>VanillaMeshBake.BakeChild</c>; this method is a thin, byte-equivalent delegate kept for all existing callers.
-    /// </summary>
-    /// <remarks>
-    /// A child cube is expressed relative to its own origin in the reference, so only the global X mirror and Y flip
-    /// are applied (no model-height offset), and single-axis rotations negate X and Y the same way roots do
-    /// (docs/analysis/render/entity-variants.md 3.1). The mesher composes the parent chain afterwards.
-    /// </remarks>
-    public static EntityModelPart FromVanillaChild(
-        string name,
-        string parent,
-        float pivotX,
-        float pivotY,
-        float pivotZ,
-        float minX,
-        float minY,
-        float minZ,
-        float width,
-        float height,
-        float depth,
-        int textureX,
-        int textureY,
-        bool mirror = false,
-        IReadOnlyList<EntityModelLayer>? overlays = null,
-        float rotationX = 0f,
-        float rotationY = 0f,
-        float rotationZ = 0f,
-        string? texturePath = null,
-        float grow = 0f,
-        EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout)
-    {
-        return VanillaMeshBake.BakeChild(
-            name,
-            parent,
-            pivotX,
-            pivotY,
-            pivotZ,
-            minX,
-            minY,
-            minZ,
-            width,
-            height,
-            depth,
-            textureX,
-            textureY,
-            mirror,
-            overlays,
-            rotationX,
-            rotationY,
-            rotationZ,
-            texturePath,
-            grow,
-            kind);
-    }
 }
 
 

@@ -35,7 +35,7 @@ public sealed class WitchAnimationProvider(int typeId) : IEntityAnimationProvide
 
     /// <summary>
     /// Nose bind pivot Y in the mesher's y-up storage. The reference <c>PartPose.offset(0, -2, 0)</c> is stored as
-    /// <c>-pivotY</c>, i.e. <c>+2</c> (see <see cref="PlayerModelDefinition.FromVanillaChild"/>).
+    /// <c>-pivotY</c>, i.e. <c>+2</c> (see <see cref="VanillaMeshBake.BakeChild"/>).
     /// </summary>
     private const float NoseBindStoredY = 2f;
 

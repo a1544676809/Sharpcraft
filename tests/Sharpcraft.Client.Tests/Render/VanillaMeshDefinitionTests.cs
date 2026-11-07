@@ -10,7 +10,7 @@ namespace Sharpcraft.Client.Tests.Render;
 /// <summary>
 /// Core vanilla mesh DSL bake tests (T-670). Pins that <c>VanillaMeshBake.Bake</c> flattens a declarative
 /// <c>VanillaMeshDefinition</c> into exactly the same <c>EntityModelPart</c> values the legacy
-/// <c>PlayerModelDefinition.FromVanilla</c>/<c>FromVanillaChild</c> helpers produce, and that the tree order, parent
+/// <c>LegacyModelPartFactory.FromVanilla</c>/<c>FromVanillaChild</c> helpers produce, and that the tree order, parent
 /// links, inherited texture metadata and malformed-input guards behave as specified.
 /// </summary>
 public sealed class VanillaMeshDefinitionTests
@@ -21,12 +21,12 @@ public sealed class VanillaMeshDefinitionTests
         var overlays = new[] { new EntityModelLayer("jacket", 0.25f, 16, 32, Kind: EntityGeometryLayerKind.Translucent) };
 
         // Legacy expectations: a root "body" and a "head" attached to it, with non-trivial pose and metadata.
-        var expectedBody = PlayerModelDefinition.FromVanilla(
+        var expectedBody = LegacyModelPartFactory.FromVanilla(
             "body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16,
             mirror: true, overlays: overlays,
             rotationX: 0.1f, rotationY: -0.2f, rotationZ: 0.3f,
             grow: 0.5f, kind: EntityGeometryLayerKind.Translucent);
-        var expectedHead = PlayerModelDefinition.FromVanillaChild(
+        var expectedHead = LegacyModelPartFactory.FromVanillaChild(
             "head", "body", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0,
             rotationX: 0.1f, rotationY: -0.2f, rotationZ: 0.3f);
 

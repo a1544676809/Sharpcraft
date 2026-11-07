@@ -120,38 +120,38 @@ public sealed class NetherModelDefinitionTests
 
     private static EntityModelPart[] ExpectedHoglinParts() =>
     [
-        PlayerModelDefinition.FromVanilla("body", 0f, 7f, 0f, -8f, -7f, -13f, 16f, 14f, 26f, 1, 1),
-        PlayerModelDefinition.FromVanillaChild("mane", "body", 0f, -14f, -7f, 0f, 0f, -9f, 0f, 10f, 19f, 90, 33, grow: 0.001f),
-        PlayerModelDefinition.FromVanilla("head", 0f, 2f, -12f, -7f, -3f, -19f, 14f, 6f, 19f, 61, 1,
+        LegacyModelPartFactory.FromVanilla("body", 0f, 7f, 0f, -8f, -7f, -13f, 16f, 14f, 26f, 1, 1),
+        LegacyModelPartFactory.FromVanillaChild("mane", "body", 0f, -14f, -7f, 0f, 0f, -9f, 0f, 10f, 19f, 90, 33, grow: 0.001f),
+        LegacyModelPartFactory.FromVanilla("head", 0f, 2f, -12f, -7f, -3f, -19f, 14f, 6f, 19f, 61, 1,
             rotationX: -0.87266463f),
-        PlayerModelDefinition.FromVanillaChild("right_ear", "head", -6f, -2f, -3f, -6f, -1f, -2f, 6f, 1f, 4f, 1, 1,
+        LegacyModelPartFactory.FromVanillaChild("right_ear", "head", -6f, -2f, -3f, -6f, -1f, -2f, 6f, 1f, 4f, 1, 1,
             rotationZ: -MathF.PI * 2f / 9f),
-        PlayerModelDefinition.FromVanillaChild("left_ear", "head", 6f, -2f, -3f, 0f, -1f, -2f, 6f, 1f, 4f, 1, 6,
+        LegacyModelPartFactory.FromVanillaChild("left_ear", "head", 6f, -2f, -3f, 0f, -1f, -2f, 6f, 1f, 4f, 1, 6,
             rotationZ: MathF.PI * 2f / 9f),
-        PlayerModelDefinition.FromVanillaChild("right_horn", "head", -7f, 2f, -12f, -1f, -11f, -1f, 2f, 11f, 2f, 10, 13),
-        PlayerModelDefinition.FromVanillaChild("left_horn", "head", 7f, 2f, -12f, -1f, -11f, -1f, 2f, 11f, 2f, 1, 13),
-        PlayerModelDefinition.FromVanilla("right_front_leg", -4f, 10f, -8.5f, -3f, 0f, -3f, 6f, 14f, 6f, 66, 42),
-        PlayerModelDefinition.FromVanilla("left_front_leg", 4f, 10f, -8.5f, -3f, 0f, -3f, 6f, 14f, 6f, 41, 42),
-        PlayerModelDefinition.FromVanilla("right_hind_leg", -5f, 13f, 10f, -2.5f, 0f, -2.5f, 5f, 11f, 5f, 21, 45),
-        PlayerModelDefinition.FromVanilla("left_hind_leg", 5f, 13f, 10f, -2.5f, 0f, -2.5f, 5f, 11f, 5f, 0, 45)
+        LegacyModelPartFactory.FromVanillaChild("right_horn", "head", -7f, 2f, -12f, -1f, -11f, -1f, 2f, 11f, 2f, 10, 13),
+        LegacyModelPartFactory.FromVanillaChild("left_horn", "head", 7f, 2f, -12f, -1f, -11f, -1f, 2f, 11f, 2f, 1, 13),
+        LegacyModelPartFactory.FromVanilla("right_front_leg", -4f, 10f, -8.5f, -3f, 0f, -3f, 6f, 14f, 6f, 66, 42),
+        LegacyModelPartFactory.FromVanilla("left_front_leg", 4f, 10f, -8.5f, -3f, 0f, -3f, 6f, 14f, 6f, 41, 42),
+        LegacyModelPartFactory.FromVanilla("right_hind_leg", -5f, 13f, 10f, -2.5f, 0f, -2.5f, 5f, 11f, 5f, 21, 45),
+        LegacyModelPartFactory.FromVanilla("left_hind_leg", 5f, 13f, 10f, -2.5f, 0f, -2.5f, 5f, 11f, 5f, 0, 45)
     ];
 
     private static EntityModelPart[] ExpectedStriderParts() =>
     [
-        PlayerModelDefinition.FromVanilla("right_leg", -4f, 8f, 0f, -2f, 0f, -2f, 4f, 16f, 4f, 0, 32),
-        PlayerModelDefinition.FromVanilla("left_leg", 4f, 8f, 0f, -2f, 0f, -2f, 4f, 16f, 4f, 0, 55),
-        PlayerModelDefinition.FromVanilla("body", 0f, 1f, 0f, -8f, -6f, -8f, 16f, 14f, 16f, 0, 0),
-        PlayerModelDefinition.FromVanillaChild("right_bottom_bristle", "body", -8f, 4f, -8f, -12f, 0f, 0f, 12f, 0f, 16f, 16, 65,
+        LegacyModelPartFactory.FromVanilla("right_leg", -4f, 8f, 0f, -2f, 0f, -2f, 4f, 16f, 4f, 0, 32),
+        LegacyModelPartFactory.FromVanilla("left_leg", 4f, 8f, 0f, -2f, 0f, -2f, 4f, 16f, 4f, 0, 55),
+        LegacyModelPartFactory.FromVanilla("body", 0f, 1f, 0f, -8f, -6f, -8f, 16f, 14f, 16f, 0, 0),
+        LegacyModelPartFactory.FromVanillaChild("right_bottom_bristle", "body", -8f, 4f, -8f, -12f, 0f, 0f, 12f, 0f, 16f, 16, 65,
             mirror: true, rotationZ: -1.2217305f),
-        PlayerModelDefinition.FromVanillaChild("right_middle_bristle", "body", -8f, -1f, -8f, -12f, 0f, 0f, 12f, 0f, 16f, 16, 49,
+        LegacyModelPartFactory.FromVanillaChild("right_middle_bristle", "body", -8f, -1f, -8f, -12f, 0f, 0f, 12f, 0f, 16f, 16, 49,
             mirror: true, rotationZ: -1.134464f),
-        PlayerModelDefinition.FromVanillaChild("right_top_bristle", "body", -8f, -5f, -8f, -12f, 0f, 0f, 12f, 0f, 16f, 16, 33,
+        LegacyModelPartFactory.FromVanillaChild("right_top_bristle", "body", -8f, -5f, -8f, -12f, 0f, 0f, 12f, 0f, 16f, 16, 33,
             mirror: true, rotationZ: -0.87266463f),
-        PlayerModelDefinition.FromVanillaChild("left_top_bristle", "body", 8f, -6f, -8f, 0f, 0f, 0f, 12f, 0f, 16f, 16, 33,
+        LegacyModelPartFactory.FromVanillaChild("left_top_bristle", "body", 8f, -6f, -8f, 0f, 0f, 0f, 12f, 0f, 16f, 16, 33,
             rotationZ: 0.87266463f),
-        PlayerModelDefinition.FromVanillaChild("left_middle_bristle", "body", 8f, -2f, -8f, 0f, 0f, 0f, 12f, 0f, 16f, 16, 49,
+        LegacyModelPartFactory.FromVanillaChild("left_middle_bristle", "body", 8f, -2f, -8f, 0f, 0f, 0f, 12f, 0f, 16f, 16, 49,
             rotationZ: 1.134464f),
-        PlayerModelDefinition.FromVanillaChild("left_bottom_bristle", "body", 8f, 3f, -8f, 0f, 0f, 0f, 12f, 0f, 16f, 16, 65,
+        LegacyModelPartFactory.FromVanillaChild("left_bottom_bristle", "body", 8f, 3f, -8f, 0f, 0f, 0f, 12f, 0f, 16f, 16, 65,
             rotationZ: 1.2217305f)
     ];
 
@@ -159,7 +159,7 @@ public sealed class NetherModelDefinitionTests
     {
         var parts = new List<EntityModelPart>
         {
-            PlayerModelDefinition.FromVanilla("head", 0f, 0f, 0f, -4f, -4f, -4f, 8f, 8f, 8f, 0, 0)
+            LegacyModelPartFactory.FromVanilla("head", 0f, 0f, 0f, -4f, -4f, -4f, 8f, 8f, 8f, 0, 0)
         };
         var angle = 0f;
         for (var i = 0; i < 4; i++)
@@ -186,20 +186,20 @@ public sealed class NetherModelDefinitionTests
     }
 
     private static void AddRod(List<EntityModelPart> parts, int index, float x, float y, float z) =>
-        parts.Add(PlayerModelDefinition.FromVanilla($"part{index}", x, y, z, 0f, 0f, 0f, 2f, 8f, 2f, 0, 16));
+        parts.Add(LegacyModelPartFactory.FromVanilla($"part{index}", x, y, z, 0f, 0f, 0f, 2f, 8f, 2f, 0, 16));
 
     private static EntityModelPart[] ExpectedGhastParts()
     {
         var lengths = new[] { 8, 13, 9, 11, 11, 10, 12, 9, 12 };
         var parts = new List<EntityModelPart>
         {
-            PlayerModelDefinition.FromVanilla("body", 0f, 17.6f, 0f, -8f, -8f, -8f, 16f, 16f, 16f, 0, 0)
+            LegacyModelPartFactory.FromVanilla("body", 0f, 17.6f, 0f, -8f, -8f, -8f, 16f, 16f, 16f, 0, 0)
         };
         for (var i = 0; i < 9; i++)
         {
             var xo = ((i % 3 - i / 3 % 2 * 0.5f + 0.25f) - 1f) * 5f;
             var yo = (i / 3 / 2 * 2 - 1f) * 5f;
-            parts.Add(PlayerModelDefinition.FromVanilla("tentacle" + i, xo, 24.6f, yo, -1f, 0f, -1f, 2f, lengths[i], 2f, 0, 0));
+            parts.Add(LegacyModelPartFactory.FromVanilla("tentacle" + i, xo, 24.6f, yo, -1f, 0f, -1f, 2f, lengths[i], 2f, 0, 0));
         }
 
         return [.. parts];
@@ -221,12 +221,12 @@ public sealed class NetherModelDefinitionTests
         };
         var parts = new List<EntityModelPart>
         {
-            PlayerModelDefinition.FromVanilla("body", 0f, 16f, 0f, -8f, -8f, -8f, 16f, 16f, 16f, 0, 0)
+            LegacyModelPartFactory.FromVanilla("body", 0f, 16f, 0f, -8f, -8f, -8f, 16f, 16f, 16f, 0, 0)
         };
         for (var i = 0; i < tentacles.Length; i++)
         {
             var (x, y, z, length) = tentacles[i];
-            parts.Add(PlayerModelDefinition.FromVanillaChild("tentacle" + i, "body", x, y, z,
+            parts.Add(LegacyModelPartFactory.FromVanillaChild("tentacle" + i, "body", x, y, z,
                 -1f, 0f, -1f, 2f, length, 2f, 0, 0));
         }
 

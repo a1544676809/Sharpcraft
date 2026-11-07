@@ -101,9 +101,9 @@ public static partial class VanillaMeshBake
     private static int RoundDimension(float value) => (int)MathF.Round(value);
 
     /// <summary>
-    /// Bakes a root part from the reference y-down pivot/cube values. This is the exact conversion formerly in
-    /// <c>PlayerModelDefinition.FromVanilla</c>: the global X mirror, the y-down to y-up model-height flip, and the
-    /// pass-through rotations. Root cubes keep an absolute model-space position.
+    /// Bakes a root part from the reference y-down pivot/cube values. This is the exact legacy conversion: the global
+    /// X mirror, the y-down to y-up model-height flip, and the pass-through rotations. Root cubes keep an absolute
+    /// model-space position.
     /// </summary>
     public static EntityModelPart BakeRoot(
         string name,
@@ -158,9 +158,9 @@ public static partial class VanillaMeshBake
 
     /// <summary>
     /// Bakes a child part from the reference y-down pivot/cube values, keeping the cube local to
-    /// <paramref name="parent"/> (no model-height offset). This is the exact conversion formerly in
-    /// <c>PlayerModelDefinition.FromVanillaChild</c>: only the global X mirror and Y flip are applied, and X/Y
-    /// rotations negate while Z is unchanged. The mesher composes the parent chain afterwards.
+    /// <paramref name="parent"/> (no model-height offset). This is the exact legacy child conversion: only the global X
+    /// mirror and Y flip are applied, and X/Y rotations negate while Z is unchanged. The mesher composes the parent chain
+    /// afterwards.
     /// </summary>
     public static EntityModelPart BakeChild(
         string name,
