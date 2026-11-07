@@ -122,6 +122,8 @@ updated: 2026-11-07
 
 ## 5. 避免返工的实施顺序
 
+逐项工程改造清单见 [`entity-model-refactor-checklist.md`](entity-model-refactor-checklist.md)；本文 §5 只列顺序。
+
 1. **先做运行时节点表**：`EntityModelPartNode`（cube range + child range + parent index）与 `EntityModelCube`；`VanillaMeshBakery` 从树编译。
 2. **再补 DSL 值能力**：`VanillaPartPose` 三轴 scale、`VanillaCubeDefinition.GrowXyz`、`MeshTransformer`/`BabyModelTransform` 语义；不要先在 helper 里继续手算。
 3. **迁移基础模型**：Breeze（多 cube）→ Warden（零组节点/多 layer）→ Fox/Rabbit（Golden 已有）→ 其余；删除 `BuildParts()` 的名字重排。
