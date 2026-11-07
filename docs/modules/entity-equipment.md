@@ -231,3 +231,27 @@
 - 转换在 `PlayerSkinCache.LoadTexture` 的 body/SKIN 分支内完成（下载线程做 IO/PNG 解码与像素处理）；`EntitySkinLibrary` 仍按 64×64 消费，cape/elytra 不调用转换。
 - `TextureData` 与 atlas 注册仍使用 `RgbaImage` 的 RGBA 字节数组；不引入第三方图像库、不访问网络。
 - `processLegacySkin` 的 `url` 参数只用于原版报错信息，本实现不做 URL 过滤；不复制任何反编译代码或资产进仓库。
+
+## 14. `textures` 属性签名校验（T-752c，阻塞）
+
+### 14.1 调查结论（只记行为/架构）
+
+| 项 | 结论 |
+| --- | --- |
+| 原版入口 | `SkinManager` 的档案纹理缓存把验签整体委托给会话服务的 `unpackTextures(Property)`；`net.minecraft` 侧只消费 `SignatureState` |
+| `INVALID` | 仅记录警告，纹理仍进入后续注册，不直接丢弃 |
+| `SIGNED` | `PlayerSkin.secure()` 等价于 `signatureState() == SIGNED` |
+| `requireSecure` | `PlayerInfo.createSkinLookup` 取 `!isLocalPlayer(profileId)`；社交/举报界面显式传 true。只有 requireSecure 为真时未签名/无效签名才回退 `DefaultPlayerSkin.get(profile)`；本地玩家即使未签名也使用档案纹理 |
+| 本仓现状 | `PlayerListPackets.TryReadProfileProperties` 读取 `signed` 标志并跳过（上限 4096 字节）签名串但不保留；`PlayerSkinTextures` 无签名状态字段 |
+| 验签设施 | `src/Sharpcraft.Auth` 及全部 `src` 无 RSA/公钥/验签 API；分析工作区无 `com.mojang.authlib` 源、无 textures 属性公钥 |
+
+### 14.2 结构化上报（AGENTS.md 4.1）
+
+1. **已尝试路径**：定位 `SkinManager`/`PlayerInfo`/社交与举报界面的签名消费点；全仓检索 `SignatureState`、`unpackTextures`、RSA/公钥/Verify；确认 `PlayerListPackets` 只保留 textures 值；核查外部分析工作区路径与内容。
+2. **具体卡点**：缺少 (a) Mojang 为 `textures` 属性签名的 RSA 公钥（位于 authlib，而非 26.3 客户端分析工作区），(b) authlib `unpackTextures` 的签名数据格式、算法与 `SignatureState` 完整枚举语义，(c) 本仓任何公钥/验签基础设施。另外「校验失败即回退默认皮肤」并非原版无条件行为，只在 `requireSecure=true` 时成立。
+3. **需要提供的输入**：authlib 源或官方公开验签规格与公钥；或项目所有者明确「本阶段只记录签名存在性、不做密码学校验」的书面决策；以及是否按 `requireSecure`（本地/远程）区分回退策略。
+4. **可选方案与影响面**：A) 提供凭据后实现完整验签 + `SignatureState` 字段 + 有效/无效签名测试（影响 `PlayerSkinTextures`、`PlayerSkinCache`、`PlayerListPackets`、`EntityTracker`）；B) 仅解析并透传 `signed`/签名字节、显式标注「未验签」，不做密码学判断（不把未验签写成已验签）；C) 保持现状并在追踪矩阵登记阻塞。**倾向 C**：在缺少可验证凭据前不伪造校验，符合原则 3/14 与 4.1；若选 B 需明确书面授权。
+
+### 14.3 当前状态
+
+未实现任何验签或签名状态字段；`PlayerSkinTextures`/`PlayerSkinCache` 的下载与 atlas 注册路径不变；不把「已忽略签名」写成「已验签」。

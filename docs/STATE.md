@@ -127,7 +127,7 @@ updated: 2026-11-07
 
 ## 阻塞项
 
-- 无硬阻塞。
+- **T-752c 阻塞**：缺少 Mojang `textures` 属性验签公钥与 authlib 验签语义，按 AGENTS 4.1 上报、未伪造校验（详见 entity-equipment.md §14）；其余无硬阻塞。
 - **R-017**：XSTS 端点偶发网络抖动，联网全链路验收脚本含重试策略。
 - **R-019**：模组 `AssemblyLoadContext` 热卸载后的 GC 回收探针尚未稳定转绿（排入 Phase 4 P4.1）。
 
