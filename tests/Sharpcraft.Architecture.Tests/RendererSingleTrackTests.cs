@@ -40,6 +40,17 @@ public sealed class RendererSingleTrackTests
     }
 
     [Fact]
+    public void RendererShellsStayUnderLineRatchet()
+    {
+        var root = RepositoryLocator.Root;
+        var windowedLines = File.ReadAllLines(Path.Combine(root, "src", "Sharpcraft.Framework", "Rendering", "WindowedRenderer.cs")).Length;
+        var offscreenLines = File.ReadAllLines(Path.Combine(root, "src", "Sharpcraft.Framework", "Rendering", "OffscreenRenderer.cs")).Length;
+
+        Assert.True(windowedLines <= 2400, $"WindowedRenderer.cs grew to {windowedLines} lines; extract passes instead of adding a parallel shell.");
+        Assert.True(offscreenLines <= 1700, $"OffscreenRenderer.cs grew to {offscreenLines} lines; extract passes instead of adding a parallel shell.");
+    }
+
+    [Fact]
     public void FramePassRecorderKeepsTheRecordedOrder()
     {
         var recorder = new FramePassRecorder();
