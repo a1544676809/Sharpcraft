@@ -37,6 +37,28 @@ public sealed class EquipmentClientInfoTests
     }
 
     [Fact]
+    public void ResolvesTrimOverrideByMaterialAndPattern()
+    {
+        const string json = """
+            {
+              "layers": { "humanoid": [{ "texture": "minecraft:iron" }] },
+              "trim_overrides": [
+                { "palette": "minecraft:trim/iron_darker", "when": { "material": "minecraft:iron" } },
+                { "palette": "minecraft:trim/gold_darker", "when": { "pattern": "minecraft:spire" } }
+              ]
+            }
+            """;
+        var info = EquipmentClientInfo.Parse(Encoding.UTF8.GetBytes(json));
+        var iron = new Identifier("minecraft", "iron");
+
+        Assert.Equal(new Identifier("minecraft", "trim/iron_darker"), info.ResolveTrim(iron, null)?.Palette);
+        Assert.Null(info.ResolveTrim(new Identifier("minecraft", "gold"), null));
+        Assert.Equal(
+            new Identifier("minecraft", "trim/gold_darker"),
+            info.ResolveTrim(null, new Identifier("minecraft", "spire"))?.Palette);
+    }
+
+    [Fact]
     public void ParsesDyeableAndPlayerTextureFlags()
     {
         const string json = """

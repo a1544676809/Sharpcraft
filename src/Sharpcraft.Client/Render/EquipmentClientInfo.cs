@@ -64,6 +64,27 @@ public sealed record EquipmentClientInfo(
     public IReadOnlyList<EquipmentClientLayer> GetLayers(EquipmentLayerType type) =>
         Layers.TryGetValue(type, out var layers) ? layers : [];
 
+    /// <summary>Returns the first trim override whose material/pattern predicate matches, or null.</summary>
+    public EquipmentTrimOverride? ResolveTrim(Identifier? material, Identifier? pattern)
+    {
+        foreach (var trim in TrimOverrides)
+        {
+            if (trim.When.Material is { } requiredMaterial && !Equals(requiredMaterial, material))
+            {
+                continue;
+            }
+
+            if (trim.When.Pattern is { } requiredPattern && !Equals(requiredPattern, pattern))
+            {
+                continue;
+            }
+
+            return trim;
+        }
+
+        return null;
+    }
+
     /// <summary>Reads one equipment asset through the resource manager.</summary>
     public static EquipmentClientInfo Load(ResourceManager resources, Identifier id)
     {
