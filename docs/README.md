@@ -108,10 +108,10 @@
 | [`architecture/`](architecture/README.md) | 4 |
 | [`decisions/`](decisions/README.md) | 30 |
 | [`milestones/`](milestones/README.md) | 2 |
-| [`modules/`](modules/README.md) | 29 |
+| [`modules/`](modules/README.md) | 30 |
 | [`repro/`](repro/README.md) | 0 |
 | [`specs/`](specs/README.md) | 23 |
-| [`src/`](src/README.md) | 15 |
+| [`src/`](src/README.md) | 16 |
 | [`tools/`](tools/README.md) | 1 |
 
 <!-- END GENERATED: docs -->

@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Numerics;
+using Sharpcraft.AuthLib;
 using Sharpcraft.Client.Camera;
 using Sharpcraft.Client.Game;
 using Sharpcraft.Client.Input;

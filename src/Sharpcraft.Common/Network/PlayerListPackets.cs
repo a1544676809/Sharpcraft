@@ -50,6 +50,7 @@ public enum PlayerListActions
 /// <param name="ShowHat">Hat flag when carried.</param>
 /// <param name="HasDisplayName">True when a display name was present, which needs component text to render.</param>
 /// <param name="TexturesProperty">Base64 <c>textures</c> profile property when the add-player action carried one.</param>
+/// <param name="TexturesSignature">Base64 signature of the <c>textures</c> property, or null when unsigned.</param>
 public readonly record struct PlayerInfoUpdate(
     Guid Id,
     string? Name,
@@ -59,7 +60,8 @@ public readonly record struct PlayerInfoUpdate(
     int? ListOrder,
     bool? ShowHat,
     bool HasDisplayName,
-    string? TexturesProperty = null);
+    string? TexturesProperty = null,
+    string? TexturesSignature = null);
 
 /// <summary>
 /// Parsers for the player list packets (docs/modules/ui.md 13, M5 exit criteria).
@@ -161,6 +163,7 @@ public static class PlayerListPackets
 
         string? name = null;
         string? texturesProperty = null;
+        string? texturesSignature = null;
         var hasDisplayName = false;
         int? gameMode = null;
         bool? listed = null;
@@ -171,7 +174,7 @@ public static class PlayerListPackets
         if (actions.HasFlag(PlayerListActions.AddPlayer))
         {
             if (reader.TryReadString(out var profileName, maxLength: 16) != DecodeStatus.Success ||
-                !TryReadProfileProperties(ref reader, out texturesProperty))
+                !TryReadProfileProperties(ref reader, out texturesProperty, out texturesSignature))
             {
                 return false;
             }
@@ -249,14 +252,19 @@ public static class PlayerListPackets
             showHat = hat;
         }
 
-        entry = new PlayerInfoUpdate(id, name, gameMode, listed, latency, listOrder, showHat, hasDisplayName, texturesProperty);
+        entry = new PlayerInfoUpdate(
+            id, name, gameMode, listed, latency, listOrder, showHat, hasDisplayName, texturesProperty, texturesSignature);
         return true;
     }
 
-    /// <summary>Reads the profile property map, keeping only the base64 <c>textures</c> payload.</summary>
-    private static bool TryReadProfileProperties(ref PayloadReader reader, out string? texturesProperty)
+    /// <summary>Reads the profile property map, keeping the base64 <c>textures</c> payload and its signature.</summary>
+    private static bool TryReadProfileProperties(
+        ref PayloadReader reader,
+        out string? texturesProperty,
+        out string? texturesSignature)
     {
         texturesProperty = null;
+        texturesSignature = null;
 
         if (reader.TryReadVarInt(out var count) != DecodeStatus.Success || count < 0 || count > 64)
         {
@@ -272,7 +280,8 @@ public static class PlayerListPackets
                 return false;
             }
 
-            if (signed && reader.TryReadString(out _, maxLength: 4096) != DecodeStatus.Success)
+            string? signature = null;
+            if (signed && reader.TryReadString(out signature, maxLength: 4096) != DecodeStatus.Success)
             {
                 return false;
             }
@@ -280,6 +289,7 @@ public static class PlayerListPackets
             if (string.Equals(name, "textures", StringComparison.Ordinal))
             {
                 texturesProperty = value;
+                texturesSignature = signature;
             }
         }
 

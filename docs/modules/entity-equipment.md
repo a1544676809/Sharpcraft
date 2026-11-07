@@ -167,7 +167,7 @@
 - `PlayerSkinTexturesParser` 解析 `textures` 属性；`PlayerSkinCache` 按 UUID 缓存下载结果并把 body/cape/elytra 纹理注册进 `EntitySkinLibrary` atlas；玩家基础模型通过 `PlayerBodyTexture` selector 使用 body 路径。
 - `EntityRenderState.PlayerElytraOverride` 实现 `elytra > cape(showCape)` 的优先级；`EntityModelResolver.ResolveEquipmentTexture` 在 `UsePlayerTexture` 为真时替换第一层纹理。
 - `PlayerSkinCache` 的下载线程只做 IO/PNG 解码，atlas 注册在宿主帧线程；`WindowedRenderer` 的 entity skin 纹理源支持运行期重建。
-- `PlayerModelType.SLIM` 的独立皮肤模型已由 §12 接入；纹理属性签名校验仍缺少原版公钥与验签语义（见 §14），登记为阻塞项。
+- `PlayerModelType.SLIM` 的独立皮肤模型已由 §12 接入；纹理属性签名校验已由 §14 的 `Sharpcraft.AuthLib` + `PlayerSkinCache` 接入。
 
 ## 12. SLIM 玩家模型（T-752 补全）
 
@@ -198,8 +198,8 @@
 - `PlayerModelDefinition` 新增 `SlimDefinition`（同一 DSL 树，仅手臂盒按 12.2 替换），`EntityRenderState.Slim` 由 `PlayerSkinTextures.Slim` 透传；`EntityModelMesher.ResolveModel` 对玩家类型按该标记选择经过 `Decorate` 的 slim 变体，wide 定义与纹理 selector 保持原样。
 - **未实现** `DefaultPlayerSkin.get(UUID)` 的 Java `UUID.hashCode()` 索引选择：缺少 ≥5 组原版 UUID→默认皮肤真值向量，按原则 14 不以自证测试充当等效性证据；当前无档案属性统一沿用既有 wide 默认，登记为受控偏差。
 - slim 护甲仍复用 `HumanoidArmorTrees` 的 wide 玩家四槽树（原版用 `PLAYER_SLIM_ARMOR`）；仅影响窄臂玩家穿戴护甲时的外观，登记为后续收敛项。
-- 纹理属性签名校验依赖 `com.mojang.authlib` 的 `unpackTextures` 与 Mojang 公钥，当前分析工作区与 `Sharpcraft.Auth` 均不提供，按原则 4.1 登记为阻塞，不伪造校验。
-- `PlayerSkinCache`/`EntitySkinLibrary` 的档案下载与 atlas 注册未改动。
+- 纹理属性签名校验已由 `Sharpcraft.AuthLib` 实现（§14）：公钥发现、`SHA1withRSA` 验签和纹理 URL 策略均在该中性共享库；`PlayerSkinCache` 按本地 UUID 区分 `requireSecure`。
+- `PlayerSkinCache` 的档案下载仍按原版 `SkinManager` 的 body/cape/elytra 组合语义：任一请求的纹理失败则整体回退默认皮肤；atlas 注册路径不变。
 
 ## 13. 旧版 64×32 皮肤转换（T-752 补全）
 
@@ -232,7 +232,7 @@
 - `TextureData` 与 atlas 注册仍使用 `RgbaImage` 的 RGBA 字节数组；不引入第三方图像库、不访问网络。
 - `processLegacySkin` 的 `url` 参数只用于原版报错信息，本实现不做 URL 过滤；不复制任何反编译代码或资产进仓库。
 
-## 14. `textures` 属性签名校验（T-752c，阻塞）
+## 14. `textures` 属性签名校验（T-752c，已实现）
 
 ### 14.1 调查结论（只记行为/架构）
 
@@ -242,8 +242,9 @@
 | `INVALID` | 仅记录警告，纹理仍进入后续注册，不直接丢弃 |
 | `SIGNED` | `PlayerSkin.secure()` 等价于 `signatureState() == SIGNED` |
 | `requireSecure` | `PlayerInfo.createSkinLookup` 取 `!isLocalPlayer(profileId)`；社交/举报界面显式传 true。只有 requireSecure 为真时未签名/无效签名才回退 `DefaultPlayerSkin.get(profile)`；本地玩家即使未签名也使用档案纹理 |
-| 本仓现状 | `PlayerListPackets.TryReadProfileProperties` 读取 `signed` 标志并跳过（上限 4096 字节）签名串但不保留；`PlayerSkinTextures` 无签名状态字段 |
-| 验签设施 | `src/Sharpcraft.Auth` 及全部 `src` 无 RSA/公钥/验签 API；分析工作区无 `com.mojang.authlib` 源、无 textures 属性公钥 |
+| 实现前现状（历史） | `PlayerListPackets.TryReadProfileProperties` 读取 `signed` 标志并跳过（上限 4096 字节）签名串但不保留；`PlayerSkinTextures` 无签名状态字段 |
+| 验签设施（历史调查） | 当时 `src/Sharpcraft.Auth` 及全部 `src` 无 RSA/公钥/验签 API；分析工作区无 `com.mojang.authlib` 源、无 textures 属性公钥 |
+| 当前实现 | `Sharpcraft.AuthLib`（中性共享库）提供 `ProfileProperty`/`ProfileSignatureState`/`ProfileSignatureKeySet`/`MinecraftServicesKeyClient`；`PlayerSkinTextures` 携带 `SignatureState`；`PlayerSkinCache` 按本地 UUID 判定 `requireSecure` |
 
 ### 14.2 结构化上报（AGENTS.md 4.1）
 
@@ -254,4 +255,11 @@
 
 ### 14.3 当前状态
 
-未实现任何验签或签名状态字段；`PlayerSkinTextures`/`PlayerSkinCache` 的下载与 atlas 注册路径不变；不把「已忽略签名」写成「已验签」。
+已实现：
+
+- `Sharpcraft.AuthLib` 从 discovery 文档加载 `authentication.endpoints.getPublicKeys` 与 `profiles.endpoints.getTexture.validUris`，再读取 `profilePropertyKeys[].publicKey`；
+- `ProfileSignatureKeySet` 使用 `SHA1withRSA` / `PKCS#1` 验证 `ProfileProperty`，产出 `Unsigned` / `Invalid` / `Signed`；
+- `PlayerSkinTextures` 携带 `SignatureState`，`PlayerSkinCache` 对远程玩家要求 `Signed`，本地玩家允许 `Unsigned` / `Invalid`（与原版 `requireSecure` 一致）；
+- 纹理 URL 仅接受 discovery 允许的 `textures.minecraft.net/texture/` 前缀；任一请求纹理失败时 body/cape/elytra 组合整体回退默认皮肤。
+
+验证：`tests/Sharpcraft.AuthLib.Tests/ProfileSignatureTests.cs`（3 项）、`tests/Sharpcraft.Client.Tests/World/PlayerSkinTexturesTests.cs`、`PlayerSkinCacheTests` 覆盖签名状态、URL 策略与本地/远程差异。

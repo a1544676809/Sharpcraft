@@ -13,6 +13,7 @@ namespace Sharpcraft.Client.World;
 /// <param name="Listed">Whether the server wants this player shown in the list.</param>
 /// <param name="ListOrder">Server supplied sort order.</param>
 /// <param name="TexturesProperty">Base64 <c>textures</c> profile property, or null when the server did not supply one.</param>
+/// <param name="TexturesSignature">Base64 signature of the <c>textures</c> property, or null when unsigned.</param>
 public readonly record struct PlayerListEntry(
     Guid Id,
     string Name,
@@ -20,7 +21,8 @@ public readonly record struct PlayerListEntry(
     int Latency,
     bool Listed,
     int ListOrder,
-    string? TexturesProperty = null);
+    string? TexturesProperty = null,
+    string? TexturesSignature = null);
 
 /// <summary>
 /// The player list the server describes (docs/modules/ui.md 13).
@@ -79,7 +81,7 @@ public sealed class PlayerListRoster
 
             if (update.TexturesProperty is { } textures)
             {
-                entry = entry with { TexturesProperty = textures };
+                entry = entry with { TexturesProperty = textures, TexturesSignature = update.TexturesSignature };
             }
         }
     }

@@ -20,6 +20,7 @@
 | [`asset-resolution.md`](asset-resolution.md) | 把多个资产来源变成一个行为与原版一致的只读资源视图：给定 Identifier，得到唯一一份数据；给定前缀，能列出全部可用资源。 | 已评审 | 2026-10-28 |
 | [`assets.md`](assets.md) | 把用户本地的原版 jar 变成客户端可消费的只读资源目录，且仓库内不出现任何资产（原则 3）。 | 已评审 | 2026-10-29 |
 | [`auth.md`](auth.md) | 负责"从微软账号到 Minecraft 会话令牌"的完整链路，供启动器与客户端共用。 | 已评审 | 2026-10-28 |
+| [`authlib.md`](authlib.md) | 承接原版 com.mojang.authlib 中客户端、服务端和启动器共用的档案属性、公钥发现与签名校验能力；不承载游戏逻辑或启动器编排。 | 已评审 | 2026-11-07 |
 | [`block-shape.md`](block-shape.md) | 提供方块状态的体素形状（OcclusionShape）及逐面遮挡判定（BlockOccludes / IsFaceOccludedByState），支撑流体面剔除与非完整方块（半砖、台阶、透明/树叶）面剔除。 | 已评审 | 2026-11-06 |
 | [`block-state.md`](block-state.md) | 把协议里的全局方块状态 id 等价、零分配地解码成（方块 + 属性取值），并支持反向编码，作为渲染、流体、碰撞、模型匹配等一切"按状态分派"的公共基础。 | 已评审 | 2026-10-31 |
 | [`build-scaffolding.md`](build-scaffolding.md) | 提供所有后续模块赖以存在的工程底座：解决方案结构、程序集划分、编译期约束、测试基础设施、边界自动校验。 | 草稿 | 2026-10-28 |

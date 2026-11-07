@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Text;
+using Sharpcraft.AuthLib;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
 using Sharpcraft.Common.Imaging;
@@ -70,6 +71,29 @@ public sealed class PlayerSkinCacheTests
                 Directory.Delete(cacheDirectory, recursive: true);
             }
         }
+    }
+
+    [Fact]
+    public void RemoteUnsignedProfileIsNotPublishedWhenAKeySetIsConfigured()
+    {
+        var cacheDirectory = Path.Combine(Path.GetTempPath(), "sharpcraft-skin-test-" + Guid.NewGuid().ToString("N"));
+        var registered = new List<string>();
+        var cache = new PlayerSkinCache(
+            cacheDirectory,
+            (path, _) => registered.Add(path),
+            _ => throw new InvalidOperationException("remote unsigned texture must not download"),
+            signatureKeys: ProfileSignatureKeySet.Empty,
+            localProfileId: Guid.NewGuid());
+        var id = Guid.NewGuid();
+        cache.Sync([new PlayerListEntry(id, "Alice", 1, 20, true, 0, ProfileProperty())]);
+
+        var textures = cache.TryGet(id);
+        Assert.True(textures is not null);
+        Assert.Null(textures!.Value.Body);
+        Assert.Null(textures.Value.Cape);
+        Assert.Null(textures.Value.Elytra);
+        Assert.Equal(ProfileSignatureState.Unsigned, textures.Value.SignatureState);
+        Assert.Empty(registered);
     }
 
     [Fact]
@@ -179,6 +203,7 @@ public sealed class PlayerSkinCacheTests
         var (textures, registered) = Run(PngEncoder.EncodeRgba(32, 32, new byte[32 * 32 * 4]));
         Assert.True(textures is not null, "profile did not become ready");
         Assert.Null(textures!.Value.Body);
-        Assert.Equal(32, registered[textures.Value.Cape!.Value.Path].Height);
+        Assert.Null(textures.Value.Cape);
+        Assert.Empty(registered);
     }
 }

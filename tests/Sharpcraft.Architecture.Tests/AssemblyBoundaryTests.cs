@@ -22,6 +22,7 @@ public sealed class AssemblyBoundaryTests
     private const string Common = "Sharpcraft.Common";
     private const string Framework = "Sharpcraft.Framework";
     private const string Auth = "Sharpcraft.Auth";
+    private const string AuthLib = "Sharpcraft.AuthLib";
     private const string Launcher = "Sharpcraft.Launcher";
     private const string DocsIndexer = "Sharpcraft.Docs.Indexer";
     private const string Assets = "Sharpcraft.Assets";
@@ -46,6 +47,20 @@ public sealed class AssemblyBoundaryTests
         Assert.DoesNotContain(forbidden, DependenciesOf(assemblyName));
     }
 
+    /// <summary>
+    /// The neutral auth/profile library is shared by the game sides and the host; it must stay below all of them.
+    /// </summary>
+    [Theory]
+    [InlineData(AuthLib, Client)]
+    [InlineData(AuthLib, Server)]
+    [InlineData(AuthLib, Framework)]
+    [InlineData(AuthLib, Launcher)]
+    [InlineData(AuthLib, Auth)]
+    public void NeutralAuthLibMustNotReferenceGameOrHostAssemblies(string assemblyName, string forbidden)
+    {
+        Assert.DoesNotContain(forbidden, DependenciesOf(assemblyName));
+    }
+
     [Fact]
     public void LauncherMustNotReferenceClient()
     {
@@ -58,6 +73,7 @@ public sealed class AssemblyBoundaryTests
     [InlineData(Common, Server)]
     [InlineData(Common, Launcher)]
     [InlineData(Common, Auth)]
+    [InlineData(Common, AuthLib)]
     [InlineData(Common, Framework)]
     [InlineData(Common, Assets)]
     public void CommonMustNotReferenceUpperLayers(string assemblyName, string forbidden)
@@ -74,6 +90,7 @@ public sealed class AssemblyBoundaryTests
     [InlineData(Assets, Client)]
     [InlineData(Assets, Launcher)]
     [InlineData(Assets, Auth)]
+    [InlineData(Assets, AuthLib)]
     [InlineData(Assets, Server)]
     public void AssetsMustNotReferenceUpperLayers(string assemblyName, string forbidden)
     {
@@ -90,6 +107,7 @@ public sealed class AssemblyBoundaryTests
     [InlineData(Common, DocsIndexer)]
     [InlineData(Framework, DocsIndexer)]
     [InlineData(Auth, DocsIndexer)]
+    [InlineData(AuthLib, DocsIndexer)]
     [InlineData(Launcher, DocsIndexer)]
     public void ProductAssembliesMustNotReferenceEngineeringTooling(string assemblyName, string forbidden)
     {

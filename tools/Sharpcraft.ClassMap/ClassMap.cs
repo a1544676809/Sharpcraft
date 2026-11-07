@@ -22,7 +22,7 @@ public static class ClassMapTool
     private const string EndMarker = "<!-- END GENERATED: class-map -->";
 
     private static readonly string[] ScanProjects =
-        ["Sharpcraft.Client", "Sharpcraft.Common",  "Sharpcraft.Server", "Sharpcraft.Auth", "Sharpcraft.Modding", "Sharpcraft.Launcher", "Sharpcraft.Assets"];
+        ["Sharpcraft.Client", "Sharpcraft.Common", "Sharpcraft.Server", "Sharpcraft.Auth", "Sharpcraft.AuthLib", "Sharpcraft.Modding", "Sharpcraft.Launcher", "Sharpcraft.Assets"];
 
     private static readonly Regex NamespaceRx = new(@"^\s*namespace\s+([\w.]+)", RegexOptions.Compiled);
     private static readonly Regex AttrRx = new(@"\[(?:[\w.]+\.)?ReferenceClass\(\s*""(?<cls>[^""]+)""\s*,\s*""(?<path>[^""]+)""(?<rest>[^\]]*)\]", RegexOptions.Compiled);
@@ -148,7 +148,7 @@ public static class ClassMapTool
     /// <summary>Maps a source (project, moduleDir) to its docs/src module document path.</summary>
     private static string DocPath(string root, string project, string moduleDir)
     {
-        var slug = project.ToLowerInvariant().Replace('.', '-');
+        var slug = ProjectSlug(project);
         var relative = "docs/src/" + slug;
         if (!string.IsNullOrEmpty(moduleDir))
         {
@@ -156,6 +156,36 @@ public static class ClassMapTool
         }
 
         return Path.Combine(root, (relative + ".md").Replace('/', Path.DirectorySeparatorChar));
+    }
+
+    private static string ProjectSlug(string value)
+    {
+        var builder = new StringBuilder(value.Length + 4);
+        for (var index = 0; index < value.Length; index++)
+        {
+            var character = value[index];
+            if (char.IsUpper(character))
+            {
+                var previous = index > 0 ? value[index - 1] : '\0';
+                var next = index + 1 < value.Length ? value[index + 1] : '\0';
+                if (index > 0 && (char.IsLower(previous) || char.IsDigit(previous) || (char.IsUpper(previous) && char.IsLower(next))))
+                {
+                    builder.Append('-');
+                }
+
+                builder.Append(char.ToLowerInvariant(character));
+            }
+            else if (character == '.')
+            {
+                builder.Append('-');
+            }
+            else
+            {
+                builder.Append(character);
+            }
+        }
+
+        return builder.ToString();
     }
 
     public static (int Annotated, int Injected, int Unannotated) Write(string root, bool updateBaseline)

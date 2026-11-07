@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Sharpcraft.Assets\Sharpcraft.Assets.csproj" />
+    <ProjectReference Include="..\Sharpcraft.AuthLib\Sharpcraft.AuthLib.csproj" />
     <ProjectReference Include="..\Sharpcraft.Common\Sharpcraft.Common.csproj" />
     <ProjectReference Include="..\Sharpcraft.Framework\Sharpcraft.Framework.csproj" />
   </ItemGroup>

@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Sharpcraft.Assets\Sharpcraft.Assets.csproj" />
+    <ProjectReference Include="..\..\src\Sharpcraft.AuthLib\Sharpcraft.AuthLib.csproj" />
     <ProjectReference Include="..\..\src\Sharpcraft.Common\Sharpcraft.Common.csproj" />
     <ProjectReference Include="..\..\src\Sharpcraft.Framework\Sharpcraft.Framework.csproj" />
     <ProjectReference Include="..\..\src\Sharpcraft.Client\Sharpcraft.Client.csproj" />

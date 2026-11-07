@@ -25,6 +25,7 @@
   <Folder Name="/src/">
     <Project Path="src/Sharpcraft.Assets/Sharpcraft.Assets.csproj" />
     <Project Path="src/Sharpcraft.Auth/Sharpcraft.Auth.csproj" />
+    <Project Path="src/Sharpcraft.AuthLib/Sharpcraft.AuthLib.csproj" />
     <Project Path="src/Sharpcraft.Client/Sharpcraft.Client.csproj" />
     <Project Path="src/Sharpcraft.Common/Sharpcraft.Common.csproj" />
     <Project Path="src/Sharpcraft.Framework/Sharpcraft.Framework.csproj" />
@@ -35,6 +36,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Sharpcraft.Architecture.Tests/Sharpcraft.Architecture.Tests.csproj" />
     <Project Path="tests/Sharpcraft.Auth.Tests/Sharpcraft.Auth.Tests.csproj" />
+    <Project Path="tests/Sharpcraft.AuthLib.Tests/Sharpcraft.AuthLib.Tests.csproj" />
     <Project Path="tests/Sharpcraft.Launcher.Tests/Sharpcraft.Launcher.Tests.csproj" />
     <Project Path="tests/Sharpcraft.Client.Tests/Sharpcraft.Client.Tests.csproj" />
     <Project Path="tests/Sharpcraft.Framework.Tests/Sharpcraft.Framework.Tests.csproj" />

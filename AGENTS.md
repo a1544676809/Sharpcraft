@@ -78,6 +78,7 @@
 - MUST 在两侧代码中禁止凭直觉放置逻辑；归属不清时标记为待分析项，而不是就地实现。
 - 边界违背（例如客户端代码直接推进世界刻）视为架构缺陷，需修复而非绕过。
 - 上述三侧只描述**游戏逻辑**。外围宿主层（启动器、认证、启动生命周期、资产管线、日志、更新）**不属于任何一侧**，MUST 单独成层，且 MUST NOT 被游戏逻辑直接引用（详见原则 7、8）。
+- **唯一例外**：`Sharpcraft.AuthLib` 是中性共享库（原版 `authlib` 的等价物），只依赖 `Common` 与 BCL，MUST NOT 引用 `Client` / `Server` / `Framework` / `Launcher` / `Auth`；`Client` / `Server` / `Auth` 可以引用它。`Sharpcraft.Auth` 仍属外围宿主层，原有的引用限制不变。
 
 ### 原则 6：跨平台原生支持，渲染后端为 WGPU
 
@@ -233,7 +234,8 @@
   Sharpcraft.Client/      # 客户端（可被任意启动器以命令行启动）
   Sharpcraft.Server/      # 服务端侧（集成服务端 / 权威逻辑）
   Sharpcraft.Common/      # 跨侧共享
-  Sharpcraft.Auth/        # 认证库：MSA / Xbox Live / XSTS / Minecraft 服务
+  Sharpcraft.Auth/        # 认证编排库：MSA / Xbox Live / XSTS / Minecraft 登录（外围宿主层）
+  Sharpcraft.AuthLib/     # 中性共享库（原版 authlib 等价物）：GameProfile/属性/公钥验签/会话服务
 /src/Framework                 # 引擎层：WGPU 渲染、窗口、输入、资源、音频、性能基建
 /src/Modding                   # 模组 API 契约 + 加载器 + 热加载宿主
 /tools                         # jar 分析工具、资产提取器（不含产物）
@@ -244,7 +246,8 @@ LICENSE                        # LGPL-3.0-or-later 附加许可 + 并入的 GPL-
 ```
 
 - 目录名、程序集划分 `[待定]`，待分析结果与评审确认后定稿。
-- `Sharpcraft.Auth` 被启动器与客户端共用，但 MUST NOT 被 `Common` / 游戏逻辑依赖。
+- `Sharpcraft.Auth` 是启动器认证编排（外围宿主层），MUST NOT 被 `Common` / 游戏逻辑依赖。
+- `Sharpcraft.AuthLib` 是中性共享库（原版 `authlib` 等价物）：只依赖 `Common` 与 BCL，MUST NOT 引用 `Client` / `Server` / `Framework` / `Launcher` / `Auth`；`Client` / `Server` / `Auth` 可以引用它。该例外不改变 `Sharpcraft.Auth` 的宿主层限制。
 - `tools`、`docs`、`benchmarks` MUST NOT 承载任何原始代码或资产。
 
 ### 3.4 分析与文档产出

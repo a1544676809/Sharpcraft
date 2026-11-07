@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using Sharpcraft.AuthLib;
 using Sharpcraft.Common.Registries;
 using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
@@ -411,6 +412,9 @@ internal static class WindowCommand
         var entitySkinSprite = playerSkin is { } skin
             ? new Sharpcraft.Client.Assets.SpriteRect(0, 0, skin.Width, skin.Height, 1) { U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f }
             : (Sharpcraft.Client.Assets.SpriteRect?)null;
+        using var signatureKeyClient = new MinecraftServicesKeyClient(http);
+        var signatureKeys = await signatureKeyClient.GetAsync(!identity.Offline, cancellationToken).ConfigureAwait(false);
+        var localProfileId = Guid.TryParse(identity.Uuid, out var parsedProfileId) ? parsedProfileId : (Guid?)null;
         var playerSkins = new Sharpcraft.Client.Render.PlayerSkinCache(
             Sharpcraft.Client.Render.PlayerSkinCache.DefaultCacheDirectory(GameOptions.Get("MC_ASSETS_DIR")),
             (path, image) =>
@@ -419,7 +423,9 @@ internal static class WindowCommand
                 {
                     entitySkinTextureSource.Update(entitySkinLibrary.Atlas?.Texture);
                 }
-            });
+            },
+            signatureKeys: signatureKeys,
+            localProfileId: localProfileId);
         session.PlayerSkinLookup = playerSkins.TryGet;
         var modelMesher = new Sharpcraft.Client.Render.EntityModelMesher();
         var variantTable = Sharpcraft.Client.Render.EntityVariantTable.FromRegistries(live?.Registries);

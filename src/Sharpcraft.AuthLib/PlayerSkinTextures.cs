@@ -5,38 +5,49 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace Sharpcraft.Client.World;
+namespace Sharpcraft.AuthLib;
 
 /// <summary>One texture named by a player profile: the URL to download and the atlas path it is registered under.</summary>
 /// <param name="Path">Atlas path, for example <c>capes/&lt;sha1&gt;</c>.</param>
 /// <param name="Url">Absolute HTTP(S) URL from the profile property.</param>
-[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.resources.SkinManager.TextureCache", "ref://mc-26.3-analysis/src/net/minecraft/client/resources/SkinManager.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "One cached profile texture; download is handled by PlayerSkinCache")]
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.resources.SkinManager.TextureCache", "ref://mc-26.3-analysis/src/net/minecraft/client/resources/SkinManager.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "One cached profile texture; download is handled by the client skin cache")]
 public readonly record struct PlayerSkinTexture(string Path, string Url);
 
 /// <summary>
-/// The parts of a player profile the renderer consumes (reference <c>PlayerSkin</c> plus the texture-property codec).
-/// The body texture is kept for the player model; cape and elytra are the only inputs of <c>use_player_texture</c>.
+/// The parts of a player profile the renderer consumes, plus the signature state of the property that supplied them.
 /// </summary>
 /// <param name="Body">Skin texture, or null when the property had no SKIN entry.</param>
 /// <param name="Cape">Cape texture, or null.</param>
 /// <param name="Elytra">Elytra texture, or null.</param>
 /// <param name="Slim">True when the SKIN metadata model is <c>slim</c>.</param>
-[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.entity.player.PlayerSkin", "ref://mc-26.3-analysis/src/net/minecraft/world/entity/player/PlayerSkin.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Body/cape/elytra paths plus slim model flag")]
+/// <param name="SignatureState">Signature state computed from the property signature.</param>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.entity.player.PlayerSkin", "ref://mc-26.3-analysis/src/net/minecraft/world/entity/player/PlayerSkin.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Body/cape/elytra paths, slim model flag and signature state")]
 public readonly record struct PlayerSkinTextures(
     PlayerSkinTexture? Body,
     PlayerSkinTexture? Cape,
     PlayerSkinTexture? Elytra,
-    bool Slim);
+    bool Slim,
+    ProfileSignatureState SignatureState = ProfileSignatureState.Unsigned);
 
 /// <summary>
 /// Decodes the base64 <c>textures</c> profile property. The payload is the same JSON shape the session service
 /// returns: a top-level <c>textures</c> object whose SKIN/CAPE/ELYTRA entries carry a URL.
 /// </summary>
-[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.resources.SkinManager", "ref://mc-26.3-analysis/src/net/minecraft/client/resources/SkinManager.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Decodes the textures profile property instead of authlib's MinecraftProfileTextures")]
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.resources.SkinManager", "ref://mc-26.3-analysis/src/net/minecraft/client/resources/SkinManager.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Decodes the textures profile property and applies the discovery URL policy")]
 public static class PlayerSkinTexturesParser
 {
     /// <summary>Parses a profile property value; returns false for null, malformed base64 or malformed JSON.</summary>
-    public static bool TryParse(string? property, out PlayerSkinTextures textures)
+    public static bool TryParse(string? property, out PlayerSkinTextures textures) =>
+        TryParse(property, isAllowedTextureUrl: null, out textures);
+
+    /// <summary>
+    /// Parses a profile property value and applies the optional discovered texture URL policy. When a URL is not
+    /// allowed, the whole payload is rejected, matching the reference's EMPTY result for an invalid texture domain.
+    /// </summary>
+    public static bool TryParse(
+        string? property,
+        Func<string, bool>? isAllowedTextureUrl,
+        out PlayerSkinTextures textures)
     {
         textures = default;
 
@@ -75,11 +86,17 @@ public static class PlayerSkinTexturesParser
                 slim = string.Equals(model.GetString(), "slim", StringComparison.Ordinal);
             }
 
-            textures = new PlayerSkinTextures(
-                ReadTexture(texturesElement, "SKIN", "skins"),
-                ReadTexture(texturesElement, "CAPE", "capes"),
-                ReadTexture(texturesElement, "ELYTRA", "elytra"),
-                slim);
+            var body = ReadTexture(texturesElement, "SKIN", "skins", isAllowedTextureUrl);
+            var cape = ReadTexture(texturesElement, "CAPE", "capes", isAllowedTextureUrl);
+            var elytra = ReadTexture(texturesElement, "ELYTRA", "elytra", isAllowedTextureUrl);
+            if (body is null && texturesElement.TryGetProperty("SKIN", out _) ||
+                cape is null && texturesElement.TryGetProperty("CAPE", out _) ||
+                elytra is null && texturesElement.TryGetProperty("ELYTRA", out _))
+            {
+                return false;
+            }
+
+            textures = new PlayerSkinTextures(body, cape, elytra, slim);
             return true;
         }
         catch (JsonException)
@@ -108,10 +125,18 @@ public static class PlayerSkinTexturesParser
         return kind + "/" + Convert.ToHexStringLower(digest);
     }
 
-    private static PlayerSkinTexture? ReadTexture(JsonElement textures, string key, string kind)
+    private static PlayerSkinTexture? ReadTexture(
+        JsonElement textures,
+        string key,
+        string kind,
+        Func<string, bool>? isAllowedTextureUrl)
     {
-        if (!textures.TryGetProperty(key, out var element) ||
-            element.ValueKind != JsonValueKind.Object ||
+        if (!textures.TryGetProperty(key, out var element))
+        {
+            return null;
+        }
+
+        if (element.ValueKind != JsonValueKind.Object ||
             !element.TryGetProperty("url", out var urlElement) ||
             urlElement.ValueKind != JsonValueKind.String)
         {
@@ -121,7 +146,8 @@ public static class PlayerSkinTexturesParser
         var url = urlElement.GetString();
         if (string.IsNullOrWhiteSpace(url) ||
             !Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
-            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
+            (isAllowedTextureUrl is not null && !isAllowedTextureUrl(url)))
         {
             return null;
         }

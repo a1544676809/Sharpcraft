@@ -64,6 +64,31 @@ public sealed class PlayerListTests
     }
 
     [Fact]
+    public void AnAddPacketKeepsTheTexturesSignature()
+    {
+        var body = Body(
+            actions: PlayerListActions.AddPlayer,
+            count: 1,
+            writer =>
+            {
+                WriteUuid(writer, Alice);
+                WriteString(writer, "Alice");
+                WriteVarInt(writer, 1);
+                WriteString(writer, "textures");
+                WriteString(writer, "base64-textures");
+                writer.WriteByte(1); // signed
+                WriteString(writer, "base64-signature");
+            });
+
+        Assert.Equal(DecodeStatus.Success, PlayerListPackets.TryReadPlayerInfoUpdate(body, out _, out var entries));
+        Assert.Equal("base64-signature", Assert.Single(entries).TexturesSignature);
+
+        var roster = new PlayerListRoster();
+        roster.Apply(entries);
+        Assert.Equal("base64-signature", roster.Entries[0].TexturesSignature);
+    }
+
+    [Fact]
     public void AnAddPacketWithNullChatSessionStillParsesTheName()
     {
         var body = Body(

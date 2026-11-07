@@ -123,8 +123,21 @@
 | `/src/Framework` | WGPU 渲染抽象、窗口、输入、资源加载、音频后端、性能基础设施 |
 | `/src/Modding` | 模组 API 契约与热加载宿主 |
 | `Sharpcraft.Auth` / `Launcher` | 认证链路、版本与资产获取、启动编排 |
+| `Sharpcraft.AuthLib` | 原版 `com.mojang.authlib` 的中性共享部分：`GameProfile` / 档案属性 / 公钥验签 / 会话服务；被 Client、Server、Auth 引用，自身不引用任何一侧或宿主层 |
 
 此表与 AGENTS.md 3.3 的目录草案一致；程序集是否进一步细拆（如 `Common.World` / `Common.Network`）留待模块文档评审时决定。
+
+### 7.1 中性共享库 `Sharpcraft.AuthLib`
+
+原版没有独立的 `Common` 程序集；`com.mojang.authlib` 是客户端与服务端都加载的普通库。因此我们新增一个中性共享库承接其可共享部分：
+
+- `Sharpcraft.AuthLib` 只依赖 `Sharpcraft.Common` 与 BCL；
+- `Client` / `Server` / `Auth` 可以引用它；
+- `Sharpcraft.AuthLib` MUST NOT 引用 `Client` / `Server` / `Framework` / `Launcher` / `Auth`；
+- `Sharpcraft.AuthLib` MUST NOT 读取环境变量或承载调试开关（原则 13）；
+- `Sharpcraft.Auth` 仍是外围宿主层，`Client` MUST NOT 直接引用 `Sharpcraft.Auth`。
+
+机器检查：`AssemblyBoundaryTests.NeutralAuthLibMustNotReferenceGameOrHostAssemblies` 与 `ClientMustNotReferenceHostOrAuth`。
 
 ## 8. 待验证项
 

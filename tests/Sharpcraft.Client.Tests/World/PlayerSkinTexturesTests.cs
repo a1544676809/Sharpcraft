@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Text;
-using Sharpcraft.Client.World;
+using Sharpcraft.AuthLib;
 using Xunit;
 
 namespace Sharpcraft.Client.Tests.World;

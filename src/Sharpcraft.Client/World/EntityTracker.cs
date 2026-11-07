@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Runtime.InteropServices;
+using Sharpcraft.AuthLib;
 using Sharpcraft.Common.Network;
 using Sharpcraft.Common.Registries;
 

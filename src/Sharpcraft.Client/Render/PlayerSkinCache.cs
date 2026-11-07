@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using Sharpcraft.AuthLib;
 using Sharpcraft.Client.World;
 using Sharpcraft.Common.Imaging;
 using Sharpcraft.Framework.Rendering;
@@ -18,7 +19,9 @@ public sealed class PlayerSkinCache
     private readonly string _cacheDirectory;
     private readonly Action<string, TextureData> _registerTexture;
     private readonly Func<Uri, byte[]?> _download;
-    private readonly Dictionary<Guid, string> _requested = [];
+    private readonly ProfileSignatureKeySet? _signatureKeys;
+    private readonly Guid? _localProfileId;
+    private readonly Dictionary<Guid, (string Property, string? Signature)> _requested = [];
     private readonly Dictionary<Guid, PlayerSkinTextures> _ready = [];
     private readonly List<PendingSkin> _pending = [];
 
@@ -30,13 +33,22 @@ public sealed class PlayerSkinCache
     /// <param name="cacheDirectory">Directory for downloaded texture files.</param>
     /// <param name="registerTexture">Main-thread callback that adds a decoded texture to the skin atlas.</param>
     /// <param name="download">Optional HTTP fetcher, for tests; null uses the shared <see cref="HttpClient"/>.</param>
-    public PlayerSkinCache(string cacheDirectory, Action<string, TextureData> registerTexture, Func<Uri, byte[]?>? download = null)
+    /// <param name="signatureKeys">Trusted profile-property keys and URL policy, or null for unverified local-only use.</param>
+    /// <param name="localProfileId">Local profile UUID; remote players require a signed property when keys are supplied.</param>
+    public PlayerSkinCache(
+        string cacheDirectory,
+        Action<string, TextureData> registerTexture,
+        Func<Uri, byte[]?>? download = null,
+        ProfileSignatureKeySet? signatureKeys = null,
+        Guid? localProfileId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(cacheDirectory);
         ArgumentNullException.ThrowIfNull(registerTexture);
         _cacheDirectory = cacheDirectory;
         _registerTexture = registerTexture;
         _download = download ?? Download;
+        _signatureKeys = signatureKeys;
+        _localProfileId = localProfileId;
     }
 
     /// <summary>Default cache directory; mirrors the reference's assets-dir <c>skins</c> folder when one is supplied.</summary>
@@ -55,18 +67,35 @@ public sealed class PlayerSkinCache
         for (var index = 0; index < entries.Length; index++)
         {
             var entry = entries[index];
-            if (entry.TexturesProperty is not { Length: > 0 } property ||
-                (_requested.TryGetValue(entry.Id, out var previous) && string.Equals(previous, property, StringComparison.Ordinal)))
+            if (entry.TexturesProperty is not { Length: > 0 } property)
             {
                 continue;
             }
 
-            _requested[entry.Id] = property;
-            if (!PlayerSkinTexturesParser.TryParse(property, out var textures))
+            if (_requested.TryGetValue(entry.Id, out var previous) &&
+                string.Equals(previous.Property, property, StringComparison.Ordinal) &&
+                string.Equals(previous.Signature, entry.TexturesSignature, StringComparison.Ordinal))
             {
                 continue;
             }
 
+            _requested[entry.Id] = (property, entry.TexturesSignature);
+            var state = _signatureKeys?.Validate(new ProfileProperty("textures", property, entry.TexturesSignature))
+                ?? ProfileSignatureState.Unsigned;
+            var requireSecure = _localProfileId is { } local && entry.Id != local;
+            if (requireSecure && state != ProfileSignatureState.Signed)
+            {
+                _ready[entry.Id] = new PlayerSkinTextures(null, null, null, Slim: false, SignatureState: state);
+                continue;
+            }
+
+            Func<string, bool>? isAllowedTextureUrl = _signatureKeys is null ? null : _signatureKeys.IsAllowedTextureUrl;
+            if (!PlayerSkinTexturesParser.TryParse(property, isAllowedTextureUrl, out var textures))
+            {
+                continue;
+            }
+
+            textures = textures with { SignatureState = state };
             if (textures.Body is null && textures.Cape is null && textures.Elytra is null)
             {
                 _ready[entry.Id] = textures;
@@ -95,6 +124,17 @@ public sealed class PlayerSkinCache
                 continue;
             }
 
+            // The reference composes body, cape and elytra into one PlayerSkin future; if any requested texture
+            // fails, the whole profile falls back to the default skin rather than mixing partial assets.
+            var failed = (loaded.Textures.Body is not null && loaded.Body is null) ||
+                         (loaded.Textures.Cape is not null && loaded.Cape is null) ||
+                         (loaded.Textures.Elytra is not null && loaded.Elytra is null);
+            if (failed)
+            {
+                _ready[pending.Id] = loaded.Textures with { Body = null, Cape = null, Elytra = null };
+                continue;
+            }
+
             if (loaded.Body is not null && loaded.Textures.Body is { } body)
             {
                 _registerTexture(body.Path, loaded.Body);
@@ -110,14 +150,7 @@ public sealed class PlayerSkinCache
                 _registerTexture(elytra.Path, loaded.Elytra);
             }
 
-            // A failed download must not point the renderer at a path the atlas does not contain; drop only the
-            // texture that failed so the layer falls back to the equipment texture, like the reference default skin.
-            _ready[pending.Id] = loaded.Textures with
-            {
-                Body = loaded.Body is null ? null : loaded.Textures.Body,
-                Cape = loaded.Cape is null ? null : loaded.Textures.Cape,
-                Elytra = loaded.Elytra is null ? null : loaded.Textures.Elytra
-            };
+            _ready[pending.Id] = loaded.Textures;
             completed++;
         }
 
