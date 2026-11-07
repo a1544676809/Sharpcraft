@@ -23,11 +23,11 @@ public static class WitchModelDefinition
     /// <summary>Declarative DSL tree for the fourteen witch parts (T-683).</summary>
     private static readonly VanillaMeshDefinition WitchMesh = BuildWitchMesh();
 
-    public static readonly EntityModelDefinition Definition = new(
+    public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "witch",
         64,
         128,
-        [.. VanillaMeshBake.Bake(WitchMesh, 0, 0)],
+        WitchMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/witch/witch",
         0.9375f);

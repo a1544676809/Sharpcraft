@@ -24,11 +24,11 @@ public static class IllagerModelDefinition
     public static readonly EntityModelDefinition Pillager = Create("pillager", "entity/illager/pillager");
     public static readonly EntityModelDefinition Illusioner = Create("illusioner", "entity/illager/illusioner");
 
-    private static EntityModelDefinition Create(string name, string texturePath) => new(
+    private static EntityModelDefinition Create(string name, string texturePath) => EntityModelDefinition.FromTree(
         name,
         64,
         64,
-        [.. VanillaMeshBake.Bake(IllagerMesh, 0, 0)],
+        IllagerMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         texturePath);
 

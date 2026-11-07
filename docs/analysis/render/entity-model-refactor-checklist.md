@@ -205,3 +205,10 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - SnowGolem；
 - Creaking（保留 emissive eyes）；
 - CopperGolem（四种 weathering 纹理 + eye texture）。
+
+### 2026-11-07 — T-721 Illager/Witch
+
+通过 `FromTree` 迁移：
+
+- Illager 共享模型的 Vindicator/Evoker/Pillager/Illusioner；
+- Witch（0.9375 scale）。

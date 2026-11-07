@@ -145,6 +145,9 @@ public sealed class EntityModelTreeBakeryTests
         Assert.NotNull(SnowGolemModelDefinition.Definition.Compiled);
         Assert.NotNull(CreakingModelDefinition.Definition.Compiled);
         Assert.NotNull(CopperGolemModelDefinition.Definition.Compiled);
+        Assert.NotNull(WitchModelDefinition.Definition.Compiled);
+        Assert.NotNull(IllagerModelDefinition.Vindicator.Compiled);
+        Assert.NotNull(IllagerModelDefinition.Evoker.Compiled);
     }
 
     [Fact]
