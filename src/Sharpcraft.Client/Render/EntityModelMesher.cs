@@ -13,7 +13,7 @@ namespace Sharpcraft.Client.Render;
 /// it consumes <see cref="EntityRenderState"/> and never touches world or entity simulation.
 /// </summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.geom.ModelPart", "ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/ModelPart.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Builds vertex geometry equivalent to ModelPart cuboids")]
-public sealed class EntityModelMesher
+public sealed partial class EntityModelMesher
 {
     private readonly DynamicGeometry _geometry = new();
     private readonly DynamicGeometry[] _layerGeometries = [new(), new(), new(), new()];
@@ -119,6 +119,16 @@ public sealed class EntityModelMesher
         foreach (var entity in entities)
         {
             var model = ResolveModel(entity, variants);
+            if (model.Compiled is { } compiled)
+            {
+                foreach (var cube in compiled.Cubes)
+                {
+                    cubeCount += 1 + (cube.Overlays?.Count ?? 0);
+                }
+
+                continue;
+            }
+
             foreach (var part in model.Parts)
             {
                 cubeCount += 1 + (part.OverlayLayers?.Count ?? 0);
@@ -167,6 +177,30 @@ public sealed class EntityModelMesher
             else if (skinAtlas?.Get(model.TextureSelector?.Invoke(entity) ?? model.TexturePath) is { } atlasSprite)
             {
                 sprite = atlasSprite;
+            }
+
+            if (model.Compiled is { } compiledModel)
+            {
+                BuildCompiledEntity(
+                    compiledModel,
+                    target,
+                    kindFilter,
+                    entity,
+                    entityPose,
+                    px,
+                    sprite,
+                    skinWidthForModel,
+                    skinHeightForModel,
+                    entityTransform,
+                    transforms,
+                    model.FaceTransforms,
+                    onlyPart,
+                    excludedPart,
+                    skinAtlas,
+                    emissivePass,
+                    ref vertexFloats,
+                    ref indexCount);
+                continue;
             }
 
             foreach (var originalPart in model.Parts)
@@ -267,6 +301,17 @@ public sealed class EntityModelMesher
             if (part.EmissiveTexturePath is { Length: > 0 })
             {
                 return true;
+            }
+        }
+
+        if (model.Compiled is { } compiled)
+        {
+            foreach (var cube in compiled.Cubes)
+            {
+                if (cube.EmissiveTexturePath is { Length: > 0 })
+                {
+                    return true;
+                }
             }
         }
 
@@ -585,14 +630,191 @@ public sealed class EntityModelMesher
         destination[offset++] = 1f;
         destination[offset++] = 0f;
     }
+
+    /// <summary>
+    /// Tree-path renderer: walks the structural model, computes one matrix per node, emits each node's cube range and
+    /// inherits each node's visible predicate to its whole subtree.
+    /// </summary>
+    private void BuildCompiledEntity(
+        CompiledEntityModel compiled,
+        DynamicGeometry target,
+        EntityGeometryLayerKind? kindFilter,
+        EntityRenderState entity,
+        EntityPose? entityPose,
+        float px,
+        SpriteRect sprite,
+        int skinWidth,
+        int skinHeight,
+        EntityModelTransform entityTransform,
+        IReadOnlyDictionary<string, FaceUvTransform>? transforms,
+        IReadOnlyDictionary<string, FaceUvTransform> defaultTransforms,
+        string? onlyPart,
+        string? excludedPart,
+        EntitySkinAtlas? skinAtlas,
+        bool emissivePass,
+        ref int vertexFloats,
+        ref int indexCount)
+    {
+        var vertexFloatsLocal = vertexFloats;
+        var indexCountLocal = indexCount;
+
+        void Emit(EntityModelPartNode node, Matrix4x4 parentFrame)
+        {
+            if (node.VisibleWhen is not null && !node.VisibleWhen(entity))
+            {
+                return;
+            }
+
+            var poseName = node.PoseSource ?? node.Name;
+            var poseOffset = entityPose?.Get(poseName) ?? PoseOffset.Zero;
+            var rotation = new Vector3(node.RotationX, node.RotationY, node.RotationZ);
+            if (node.RotationSelector is { } rotationSelector)
+            {
+                rotation = rotationSelector(entity);
+            }
+
+            var yOffset = node.YOffsetSelector?.Invoke(entity) ?? 0f;
+            var pivot = new Vector3(
+                (node.PivotX + poseOffset.Position.X) * px,
+                (node.PivotY + poseOffset.Position.Y + yOffset) * px,
+                (node.PivotZ + poseOffset.Position.Z) * px);
+            var local = Matrix4x4.CreateScale(new Vector3(
+                    1f + poseOffset.Scale.X,
+                    1f + poseOffset.Scale.Y,
+                    1f + poseOffset.Scale.Z))
+                * RotationZyx(
+                    rotation.X - poseOffset.Rotation.X,
+                    rotation.Y - poseOffset.Rotation.Y,
+                    rotation.Z + poseOffset.Rotation.Z)
+                * Matrix4x4.CreateTranslation(pivot);
+            var frame = local * parentFrame;
+            var partMatrix = node.Parent is null
+                ? Matrix4x4.CreateTranslation(-pivot) * frame
+                : frame;
+
+            foreach (var cube in node.Cubes)
+            {
+                if (cube.Width == 0f && cube.Height == 0f && cube.Depth == 0f)
+                {
+                    continue;
+                }
+
+                if (onlyPart is not null && !string.Equals(cube.Name, onlyPart, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (excludedPart is not null && string.Equals(cube.Name, excludedPart, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (!entity.HasChest && (cube.Name == "right_chest" || cube.Name == "left_chest"))
+                {
+                    continue;
+                }
+
+                if (!entity.HasEgg && cube.Name == "egg_belly")
+                {
+                    continue;
+                }
+
+                var part = new EntityModelPart(
+                    Name: cube.Name,
+                    CentreX: cube.CentreX,
+                    Bottom: cube.Bottom + yOffset,
+                    Width: cube.Width,
+                    Height: cube.Height,
+                    Depth: cube.Depth,
+                    TextureX: cube.TextureX,
+                    TextureY: cube.TextureY,
+                    Mirror: cube.Mirror,
+                    OverlayLayers: cube.Overlays,
+                    CentreZ: cube.CentreZ,
+                    PivotX: node.PivotX,
+                    PivotY: node.PivotY + yOffset,
+                    PivotZ: node.PivotZ,
+                    RotationX: node.RotationX,
+                    RotationY: node.RotationY,
+                    RotationZ: node.RotationZ,
+                    TexturePath: cube.TexturePath,
+                    Grow: cube.Grow,
+                    Parent: node.Parent,
+                    Kind: cube.Kind,
+                    VisibleWhen: node.VisibleWhen,
+                    TextureWidth: cube.TextureWidth,
+                    TextureHeight: cube.TextureHeight,
+                    IncludeInEmissive: cube.IncludeInEmissive,
+                    EmissiveOnly: cube.EmissiveOnly,
+                    EmissiveTexturePath: cube.EmissiveTexturePath,
+                    GrowXyz: cube.GrowXyz,
+                    UvWidth: cube.UvWidth,
+                    UvHeight: cube.UvHeight,
+                    UvDepth: cube.UvDepth);
+
+                var centreX = cube.CentreX * px;
+                var centreZ = cube.CentreZ * px;
+                var bottom = (cube.Bottom + yOffset) * px;
+                var halfW = cube.Width * px * 0.5f;
+                var halfD = cube.Depth * px * 0.5f;
+                var grow = cube.Grow * px;
+                var growX = cube.GrowXyz is { } gx ? gx.X * px : grow;
+                var growY = cube.GrowXyz is { } gy ? gy.Y * px : grow;
+                var growZ = cube.GrowXyz is { } gz ? gz.Z * px : grow;
+                var min = new Vector3(centreX - halfW - growX, bottom - growY, centreZ - halfD - growZ);
+                var max = new Vector3(centreX + halfW + growX, bottom + (cube.Height * px) + growY, centreZ + halfD + growZ);
+
+                var partTextureWidth = cube.TextureWidth > 0 ? cube.TextureWidth : skinWidth;
+                var partTextureHeight = cube.TextureHeight > 0 ? cube.TextureHeight : skinHeight;
+                var partSprite = sprite;
+                if (emissivePass
+                    && cube.EmissiveTexturePath is { Length: > 0 } partEmissivePath
+                    && skinAtlas?.Get(partEmissivePath) is { } partEmissiveSprite)
+                {
+                    partSprite = partEmissiveSprite;
+                }
+
+                if (!emissivePass
+                    && cube.TexturePath is { Length: > 0 } partPath
+                    && skinAtlas?.Get(partPath) is { } partAtlas)
+                {
+                    partSprite = partAtlas;
+                }
+
+                AddPart(
+                    part,
+                    target,
+                    kindFilter,
+                    emissivePass,
+                    min,
+                    max,
+                    partSprite,
+                    partTextureWidth,
+                    partTextureHeight,
+                    Vector3.Zero,
+                    entityTransform,
+                    partMatrix,
+                    transforms,
+                    defaultTransforms,
+                    entity,
+                    skinAtlas,
+                    px,
+                    ref vertexFloatsLocal,
+                    ref indexCountLocal);
+            }
+
+            foreach (var child in node.Children)
+            {
+                Emit(child, frame);
+            }
+        }
+
+        foreach (var child in compiled.Root.Children)
+        {
+            Emit(child, Matrix4x4.Identity);
+        }
+
+        vertexFloats = vertexFloatsLocal;
+        indexCount = indexCountLocal;
+    }
 }
-
-
-
-
-
-
-
-
-
-

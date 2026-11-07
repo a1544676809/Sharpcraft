@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
+using Sharpcraft.Client.World;
 using Xunit;
 
 namespace Sharpcraft.Client.Tests.Render;
@@ -46,5 +48,48 @@ public sealed class EntityModelTreeBakeryTests
 
         var body = Assert.IsType<EntityModelPartNode>(compiled.Find("body"));
         Assert.Single(body.Cubes);
+    }
+
+    [Fact]
+    public void TreeMesherBuildsBreezeGeometry()
+    {
+        var state = new EntityRenderState(1, BreezeModelDefinition.BreezeEntityTypeId, 0f, 0f, 0f, 0f, 0f);
+        var geometry = new EntityModelMesher().Build(
+            [state],
+            new SpriteRect(0, 0, 32, 32, 1),
+            32,
+            32);
+
+        Assert.True(geometry.VertexFloats > 0);
+        Assert.True(geometry.IndexCount > 0);
+    }
+
+    [Fact]
+    public void TreeMesherInheritsArmadilloGroupVisibility()
+    {
+        var unrolled = new EntityRenderState(1, ArmadilloModelDefinition.ArmadilloEntityTypeId, 0f, 0f, 0f, 0f, 0f);
+        var rolled = new EntityRenderState(1, ArmadilloModelDefinition.ArmadilloEntityTypeId, 0f, 0f, 0f, 0f, 0f, IsHidingInShell: true);
+        Assert.NotNull(ArmadilloModelDefinition.Definition.Compiled);
+        Assert.NotNull(EntityModelResolver.Resolve(ArmadilloModelDefinition.ArmadilloEntityTypeId).Compiled);
+        Assert.Same(ArmadilloModelDefinition.Definition.Compiled, EntityModelResolver.Resolve(ArmadilloModelDefinition.ArmadilloEntityTypeId).Compiled);
+        Assert.Single(ArmadilloModelDefinition.Definition.Compiled!.Find("body")!.Cubes);
+        Assert.Equal(6, ArmadilloModelDefinition.Definition.Compiled!.Root.Children.Count);
+        var cubeNode = Assert.IsType<EntityModelPartNode>(ArmadilloModelDefinition.Definition.Compiled!.Find("cube"));
+        var bodyNode = Assert.IsType<EntityModelPartNode>(ArmadilloModelDefinition.Definition.Compiled!.Find("body"));
+        Assert.NotNull(bodyNode.VisibleWhen);
+        Assert.True(bodyNode.VisibleWhen!(unrolled));
+        Assert.False(bodyNode.VisibleWhen!(rolled));
+        Assert.NotNull(cubeNode.VisibleWhen);
+        Assert.True(cubeNode.VisibleWhen!(rolled));
+        Assert.False(cubeNode.VisibleWhen!(unrolled));
+        var unrolledMesher = new EntityModelMesher();
+        var rolledMesher = new EntityModelMesher();
+        var unrolledGeometry = unrolledMesher.Build([unrolled], new SpriteRect(0, 0, 64, 64, 1), 64, 64);
+        var rolledGeometry = rolledMesher.Build([rolled], new SpriteRect(0, 0, 64, 64, 1), 64, 64);
+
+        Assert.True(unrolledGeometry.VertexFloats > 0);
+        Assert.True(rolledGeometry.VertexFloats > 0);
+        Assert.True(rolledGeometry.VertexFloats < unrolledGeometry.VertexFloats,
+            $"rolled={rolledGeometry.VertexFloats}, unrolled={unrolledGeometry.VertexFloats}");
     }
 }

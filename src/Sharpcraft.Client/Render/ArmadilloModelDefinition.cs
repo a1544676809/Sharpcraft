@@ -24,13 +24,17 @@ public static class ArmadilloModelDefinition
 
     internal static VanillaMeshDefinition Mesh => ArmadilloMesh;
 
+    private static readonly CompiledEntityModel CompiledModel =
+        VanillaMeshBakery.Build(ArmadilloMesh, 64, 64, texturePath: "entity/armadillo/armadillo");
+
     public static readonly EntityModelDefinition Definition = new(
         "armadillo",
         64,
         64,
         [.. VanillaMeshBake.Bake(ArmadilloMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/armadillo/armadillo");
+        "entity/armadillo/armadillo",
+        compiled: CompiledModel);
 
     private static VanillaMeshDefinition BuildArmadilloMesh()
     {

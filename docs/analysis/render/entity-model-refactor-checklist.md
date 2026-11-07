@@ -119,3 +119,18 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - RF-11/RF-12：Mesher 按节点/cube range 遍历，移除 `PartFrame` 名字查找；
 - RF-03/RF-04：`GrowXyz`/`PartPose` scale 的完整 bake；
 - RF-14..：装备树迁移。
+
+### 2026-11-07 — RF-10/RF-11 树渲染接入（T-714）
+
+已落地：
+
+- `EntityModelDefinition` 新增可选 `Compiled`；
+- Breeze/Armadillo 的定义同时提供 `CompiledEntityModel`（旧 `Parts` 保留为兼容数据）；
+- `EntityModelMesher` 增加树路径：按节点递归计算矩阵、遍历 cube、父节点 `VisibleWhen` 继承到子树；
+- `EntityModelTreeBakeryTests` 增加 Breeze 几何 smoke 与 Armadillo rolled/unrolled 可见性测试。
+
+仍未完成：
+
+- RF-12：树路径的 `PoseSource`/装备层 mapping 尚未接入；旧 `PartFrame` 仅保留给未迁移的扁平模型；
+- 其余模型仍走 `EntityModelPart` 扁平路径，需逐模型迁移；
+- RF-14 起装备树仍未开始。

@@ -61,8 +61,8 @@ updated: 2026-11-07
 | # | 差异 | 原版 | 当前实现 | 影响 | 状态 |
 | --- | --- | --- | --- | --- | --- |
 | M1 | 模型是树，不是扁平 part 数组 | `PartDefinition`/`ModelPart` 均为 cube 列表 + children map | `EntityModelPart` 是“one static model cuboid”；`Bake` 每个 cube 产生一个 part，父链为 `Parent` 字符串 | 多 cube、组节点、动画/装备层都会丢失结构 | 结构差异 |
-| M2 | 一个 part 可拥有多个 cube | `CubeListBuilder.addBox` 多次追加；Breeze `head` 2 个、`eyes` 2 个、`wind_mid` 3 个、`wind_top` 3 个；Camel saddle 3 个、bridle 5 个 | 一个 `EntityModelPart` 一个 cube；多 cube part 被拆成伪 part | Breeze 只能做几何级对比；part 数量/身份不等价 | 结构差异 |
-| M3 | 零 cube 组节点必须存在 | `CubeListBuilder.create()` 创建的 head/hat/head_parts 等空节点；`PartDefinition.bake` 保留 | `EmitCubes` 不产生对应 `EntityModelPart`；靠 fake parent 过滤 | 父 pivot/rotation 丢失，装备/护甲无法正确挂载 | 结构差异 |
+| M2 | 一个 part 可拥有多个 cube | `CubeListBuilder.addBox` 多次追加；Breeze `head` 2 个、`eyes` 2 个、`wind_mid` 3 个、`wind_top` 3 个；Camel saddle 3 个、bridle 5 个 | `VanillaMeshBakery` 已支持多 cube；Breeze/Armadillo 已走树路径，其余模型仍走旧 `EmitCubes` 扁平路径 | Breeze 已按 11 part/14 cube 验证；其余模型仍可能在树迁移时变化 | 结构差异（部分迁移） |
+| M3 | 零 cube 组节点必须存在 | `CubeListBuilder.create()` 创建的 head/hat/head_parts 等空节点；`PartDefinition.bake` 保留 | `VanillaMeshBakery` 保留零 cube 节点；旧 `EmitCubes` 仍丢弃 | Breeze/Armadillo 树路径已覆盖；旧路径模型仍有 fake parent 风险 | 结构差异（部分迁移） |
 | M4 | `addOrReplaceChild` 的替换与合并语义 | `PartDefinition.addOrReplaceChild` 可替换并合并旧 children；有 `clearRecursively`/`retainExactParts`/`retainPartsAndChildren` | `VanillaPartDefinition.AddOrReplaceChild` 遇到重名直接抛异常；没有 retain/clear | 无法表达原版护甲槽位裁剪和派生树 | 缺失 |
 | M5 | `PartPose` 三轴 scale | `PartPose` 有 `xScale/yScale/zScale`；`BabyModelTransform`、`DragonHeadModel`、`EndCrystalModel`、`ArrowModel`、`SpinAttackEffectModel` 使用 | `VanillaPartPose` 只有 offset + rotation；`EntityPose` 的 Scale 是动画增量 | 不能原始等价地构建带 bind scale 的模型；后续模型需手工预缩放 | 缺失 |
 | M6 | `MeshTransformer` / `BabyModelTransform` 通用变换 | `scaling` 只改 root pose；`BabyModelTransform` 按 head/body root child 分别 translate+scale | 只有 `VanillaMeshBake.Scale`，语义是“扁平 part 逐 part 缩放”；仅用于 Elytra root-only 两翼 | 嵌套模型缩放、幼年变换、Giant/Husk 等 scale 不通用；容易再次手算 | 缺失 |
@@ -70,7 +70,7 @@ updated: 2026-11-07
 | M8 | `CubeDefinition` 可见面集合 | `CubeDefinition` 存 `Set<Direction> visibleFaces`，可只生成部分面 | `VanillaCubeDefinition` 无 visibleFaces；mesher 总是生成六面 | 当前 mob 模型未使用；方块实体 ChestModel 使用；未来复用 DSL 会缺功能 | 范围外 |
 | M9 | `CubeDefinition` xTexScale/yTexScale | 支持每个 cube 的 UV scale；PlayerCape 使用 `1.0, 0.5` | DSL 无该字段；只有 texture width/height 覆盖 | 玩家披风等非 mob 模型不能复用；当前 mob 范围外 | 范围外 |
 | M10 | 子节点顺序 | `PartDefinition` 用 `HashMap` 保存 children；原版渲染遍历 map | DSL 用有序 `List`，并按 pre-order 烘焙 | **已确认**：Java HashMap 顺序不是插入顺序（Breeze `rods` 插入 `rod_1,rod_2,rod_3`，迭代为 `rod_2,rod_3,rod_1`；Warden `body` 同样变化）；透明/覆盖顺序可能与原版不同 | 已确认差异 |
-| M11 | `ModelPart.visible` 子树继承 | 父节点 `visible=false` 时整个子树不渲染 | `VisibleWhen` 是每个 part 单独求值，子 part 不会因父 part false 自动跳过；零 cube 组节点还被 `EmitCubes` 丢弃 | **已确认实例**：Armadillo/BabyArmadillo 的 `head`/`body` 组节点带 `VisibleWhen: Unrolled`，但 `head_cube`/`body_inner` 子 cube 没有谓词，卷壳状态仍可能渲染 | 缺失（已实证） |
+| M11 | `ModelPart.visible` 子树继承 | 父节点 `visible=false` 时整个子树不渲染 | 树路径已实现父节点 `VisibleWhen` 子树继承（Breeze/Armadillo）；旧扁平路径仍按 part 单独求值，零 cube 组节点会被丢弃 | 旧路径下 Armadillo/BabyArmadillo 的 group predicate 仍可能遗漏；树路径已用 rolled/unrolled 测试锁定 | 部分修复（树路径） |
 | M12 | `ModelPart.skipDraw` | 节点可跳过自身 cube 但仍递归 children | 没有 `skipDraw` 字段 | 目前 mob 模型未使用；未来层模型可能用 | 范围外 |
 
 ### 3.2 运行时、动画与查询

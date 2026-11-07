@@ -22,7 +22,8 @@ public sealed class EntityModelDefinition
         float scale = 1f,
         string? emissiveTexturePath = null,
         Func<EntityRenderState, string?>? textureSelector = null,
-        IReadOnlyList<string>? additionalTexturePaths = null)
+        IReadOnlyList<string>? additionalTexturePaths = null,
+        CompiledEntityModel? compiled = null)
     {
         Name = name;
         TextureWidth = textureWidth;
@@ -34,6 +35,7 @@ public sealed class EntityModelDefinition
         EmissiveTexturePath = emissiveTexturePath;
         TextureSelector = textureSelector;
         AdditionalTexturePaths = additionalTexturePaths ?? [];
+        Compiled = compiled;
     }
 
     public string Name { get; }
@@ -58,6 +60,9 @@ public sealed class EntityModelDefinition
 
     /// <summary>Textures the selector can return, loaded into the skin atlas up front.</summary>
     public IReadOnlyList<string> AdditionalTexturePaths { get; }
+
+    /// <summary>Structural tree model when the definition has been migrated to the tree path; null uses legacy flat parts.</summary>
+    public CompiledEntityModel? Compiled { get; }
 
     public IEnumerable<string> TexturePaths
     {
@@ -103,6 +108,35 @@ public sealed class EntityModelDefinition
                     if (layer.TexturePath is { Length: > 0 } overlay)
                     {
                         yield return overlay;
+                    }
+                }
+            }
+
+            if (Compiled is { } compiled)
+            {
+                foreach (var cube in compiled.Cubes)
+                {
+                    if (cube.TexturePath is { Length: > 0 } cubeTexture)
+                    {
+                        yield return cubeTexture;
+                    }
+
+                    if (cube.EmissiveTexturePath is { Length: > 0 } cubeEmissive)
+                    {
+                        yield return cubeEmissive;
+                    }
+
+                    if (cube.Overlays is null)
+                    {
+                        continue;
+                    }
+
+                    foreach (var layer in cube.Overlays)
+                    {
+                        if (layer.TexturePath is { Length: > 0 } overlay)
+                        {
+                            yield return overlay;
+                        }
                     }
                 }
             }

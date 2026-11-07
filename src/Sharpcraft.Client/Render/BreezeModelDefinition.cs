@@ -24,6 +24,9 @@ public static class BreezeModelDefinition
 
     internal static VanillaMeshDefinition Mesh => BreezeMesh;
 
+    private static readonly CompiledEntityModel CompiledModel =
+        VanillaMeshBakery.Build(BreezeMesh, 32, 32, texturePath: "entity/breeze/breeze");
+
     public static readonly EntityModelDefinition Definition = new(
         "breeze",
         32,
@@ -33,7 +36,7 @@ public static class BreezeModelDefinition
         "entity/breeze/breeze",
         1f,
         "entity/breeze/breeze_eyes",
-        additionalTexturePaths: ["entity/breeze/breeze_wind", "entity/breeze/breeze_eyes"]);
+        additionalTexturePaths: ["entity/breeze/breeze_wind", "entity/breeze/breeze_eyes"], compiled: CompiledModel);
 
     private static VanillaMeshDefinition BuildBreezeMesh()
     {
