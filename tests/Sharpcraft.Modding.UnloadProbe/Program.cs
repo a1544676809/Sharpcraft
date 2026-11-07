@@ -95,7 +95,10 @@ static WeakReference<AssemblyLoadContext> LoadAndUnload()
     File.Copy(typeof(ModHost).Assembly.Location, payload);
 
     var context = new ModLoadContext("loaded", directory);
-    context.LoadFromAssemblyPath(payload);
+    using (var stream = File.OpenRead(payload))
+    {
+        context.LoadFromStream(stream);
+    }
     context.Unload();
 
     return new WeakReference<AssemblyLoadContext>(context);

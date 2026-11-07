@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Sharpcraft.Modding;
 
@@ -57,7 +58,8 @@ public sealed class ModHost
 
         try
         {
-            var assembly = context.LoadFromAssemblyPath(fullPath);
+            using var assemblyStream = File.OpenRead(fullPath);
+            var assembly = context.LoadFromStream(assemblyStream);
             var entryType = FindEntryType(assembly);
             var modContext = new HostContext(name, GameVersion);
 
@@ -86,6 +88,7 @@ public sealed class ModHost
     /// <summary>Unloads a mod: calls its unload hook, then marks the context collectible.</summary>
     /// <param name="handle">Handle returned by <see cref="Load"/>.</param>
     /// <returns>True when the context was marked for unload.</returns>
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public bool Unload(ModHandle handle)
     {
         ArgumentNullException.ThrowIfNull(handle);
@@ -109,8 +112,14 @@ public sealed class ModHost
             return false;
         }
 
-        _contexts.RemoveAll(reference =>
-            !reference.TryGetTarget(out var loaded) || ReferenceEquals(loaded, context));
+        for (var index = _contexts.Count - 1; index >= 0; index--)
+        {
+            var reference = _contexts[index];
+            if (!reference.TryGetTarget(out var loaded) || ReferenceEquals(loaded, context))
+            {
+                _contexts.RemoveAt(index);
+            }
+        }
 
         return UnloadQuietly(context);
     }

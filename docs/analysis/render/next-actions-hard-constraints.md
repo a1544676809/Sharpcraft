@@ -68,11 +68,12 @@ Z-fighting 与 equipment clearance 不混入本任务；先走诊断报告，规
 - 禁止在 `VanillaMeshTransformer` / 集中 baker 之外 `new EntityModelPart` 或直接改几何 `with`；
 - 增加架构测试扫描生产代码。
 
-### T-747 ModHost ALC 收口（P1）
+### T-747 ModHost ALC 收口（P1，已实现代码硬化）
 
-- 消除 `_contexts.RemoveAll` 闭包捕获；
-- 使用流式加载/非同名程序集验证 collectible ALC 回收；
-- `UnloadProbe` 保持为仓库外测试负载，不进入生产路径。
+- 消除了 `_contexts.RemoveAll` 的闭包捕获，改为反向索引扫描；
+- `Unload` 加 `NoInlining`，主程序集改为 `LoadFromStream`；
+- `UnloadProbe` 同步改用流式加载；
+- R-019 的 GC 回收测量仍受运行时/宿主影响，未将其强行标绿；本任务只保证宿主侧不再主动持有强引用。
 
 ### T-748 EquipmentClientInfo（P2）
 
