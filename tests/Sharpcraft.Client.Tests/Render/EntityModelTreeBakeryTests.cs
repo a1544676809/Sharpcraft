@@ -229,6 +229,25 @@ public sealed class EntityModelTreeBakeryTests
     }
 
     [Fact]
+    public void SecondAdultBatchExposesCompiledTrees()
+    {
+        Assert.NotNull(CodModelDefinition.Definition.Compiled);
+        Assert.NotNull(DolphinModelDefinition.Definition.Compiled);
+        Assert.NotNull(GhastModelDefinition.Definition.Compiled);
+        Assert.NotNull(MagmaCubeModelDefinition.Definition.Compiled);
+        Assert.NotNull(TurtleModelDefinition.Definition.Compiled);
+        Assert.NotNull(PufferfishModelDefinition.Definition.Compiled);
+        Assert.NotNull(PufferfishModelDefinition.Variants["medium"].Compiled);
+        Assert.NotNull(PufferfishModelDefinition.Variants["large"].Compiled);
+
+        Assert.Equal(7, CodModelDefinition.Definition.Compiled!.Parts.Count);
+        Assert.Equal(8, DolphinModelDefinition.Definition.Compiled!.Parts.Count);
+        Assert.Equal(10, GhastModelDefinition.Definition.Compiled!.Parts.Count);
+        Assert.Equal(9, MagmaCubeModelDefinition.Definition.Compiled!.Parts.Count);
+        Assert.Equal(8, TurtleModelDefinition.Definition.Compiled!.Parts.Count);
+    }
+
+    [Fact]
     public void RemainingAdultModelsExposeCompiledTreesAndVariantLayers()
     {
         Assert.NotNull(AxolotlModelDefinition.Definition.Compiled);

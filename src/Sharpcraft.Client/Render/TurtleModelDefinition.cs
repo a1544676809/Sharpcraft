@@ -14,13 +14,17 @@ public static class TurtleModelDefinition
 
     private static readonly VanillaMeshDefinition TurtleMesh = BuildTurtleMesh();
 
+    private static readonly CompiledEntityModel TurtleCompiled =
+        VanillaMeshBakery.Build(TurtleMesh, 128, 64);
+
     public static readonly EntityModelDefinition Definition = new(
         "turtle",
         128,
         64,
         [.. VanillaMeshBake.Bake(TurtleMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/turtle/turtle");
+        "entity/turtle/turtle",
+        compiled: TurtleCompiled);
 
     private static VanillaMeshDefinition BuildTurtleMesh()
     {

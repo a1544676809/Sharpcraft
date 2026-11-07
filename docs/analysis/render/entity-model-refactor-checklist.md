@@ -279,3 +279,11 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
   - Villager 的群系变体通过 `WithModelLayer` 生成 `copylayer_` 树层（+0.05 grow）；
   - Axolotl/Parrot/ZombieVillager 变体直接共享 compiled tree；
 - `EntityModelTreeBakeryTests` 增加剩余模型 compiled/variant 断言，树测试共 20 项。
+
+### 2026-11-07 — T-729 第二批剩余 adult 模型树迁移
+
+- Cod、Dolphin、Ghast、MagmaCube、Turtle 接入 `Compiled`；
+- Pufferfish 的 small/medium/large 三个独立 mesh 分别接入 `Compiled`；
+- Ghast 保留 4.5 scale、charging texture selector 与 shooting additional path；
+- Turtle 保留 egg_belly 可见性名与 128×64 纹理尺寸；
+- 树测试增加第二批 compiled/part-count 断言，树测试共 21 项。

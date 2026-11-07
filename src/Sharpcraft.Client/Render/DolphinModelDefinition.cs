@@ -16,13 +16,17 @@ public static class DolphinModelDefinition
     /// <summary>Declarative DSL tree for the eight nested dolphin parts (T-680).</summary>
     private static readonly VanillaMeshDefinition DolphinMesh = BuildDolphinMesh();
 
+    private static readonly CompiledEntityModel DolphinCompiled =
+        VanillaMeshBakery.Build(DolphinMesh, 64, 64);
+
     public static readonly EntityModelDefinition Definition = new(
         "dolphin",
         64,
         64,
         [.. VanillaMeshBake.Bake(DolphinMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/dolphin/dolphin");
+        "entity/dolphin/dolphin",
+        compiled: DolphinCompiled);
 
     private static VanillaMeshDefinition BuildDolphinMesh()
     {

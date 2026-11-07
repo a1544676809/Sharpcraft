@@ -15,13 +15,17 @@ public static class CodModelDefinition
     /// <summary>Declarative DSL tree for the seven cod parts (T-680).</summary>
     private static readonly VanillaMeshDefinition CodMesh = BuildCodMesh();
 
+    private static readonly CompiledEntityModel CodCompiled =
+        VanillaMeshBakery.Build(CodMesh, 32, 32);
+
     public static readonly EntityModelDefinition Definition = new(
         "cod",
         32,
         32,
         [.. VanillaMeshBake.Bake(CodMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/fish/cod");
+        "entity/fish/cod",
+        compiled: CodCompiled);
 
     private static VanillaMeshDefinition BuildCodMesh()
     {

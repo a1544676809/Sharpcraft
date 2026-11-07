@@ -19,6 +19,9 @@ public static class GhastModelDefinition
     /// <summary>Declarative DSL tree for the body and nine seeded tentacle lengths (T-681).</summary>
     private static readonly VanillaMeshDefinition GhastMesh = BuildGhastMesh();
 
+    private static readonly CompiledEntityModel GhastCompiled =
+        VanillaMeshBakery.Build(GhastMesh, 64, 32);
+
     private static VanillaMeshDefinition BuildGhastMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
@@ -45,5 +48,6 @@ public static class GhastModelDefinition
         "entity/ghast/ghast",
         4.5f,
         textureSelector: state => state.IsCharging ? "entity/ghast/ghast_shooting" : "entity/ghast/ghast",
-        additionalTexturePaths: ["entity/ghast/ghast_shooting"]);
+        additionalTexturePaths: ["entity/ghast/ghast_shooting"],
+        compiled: GhastCompiled);
 }

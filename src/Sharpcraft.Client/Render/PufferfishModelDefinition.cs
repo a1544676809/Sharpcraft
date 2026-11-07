@@ -16,13 +16,22 @@ public static class PufferfishModelDefinition
 
     private static readonly EntityModelPart[] SmallParts = [.. VanillaMeshBake.Bake(SmallMesh, 0, 0)];
 
+    private static readonly CompiledEntityModel SmallCompiled =
+        VanillaMeshBakery.Build(SmallMesh, 32, 32);
+
     private static readonly VanillaMeshDefinition MediumMesh = BuildMediumMesh();
 
     private static readonly EntityModelPart[] MediumParts = [.. VanillaMeshBake.Bake(MediumMesh, 0, 0)];
 
+    private static readonly CompiledEntityModel MediumCompiled =
+        VanillaMeshBakery.Build(MediumMesh, 32, 32);
+
     private static readonly VanillaMeshDefinition LargeMesh = BuildLargeMesh();
 
     private static readonly EntityModelPart[] LargeParts = [.. VanillaMeshBake.Bake(LargeMesh, 0, 0)];
+
+    private static readonly CompiledEntityModel LargeCompiled =
+        VanillaMeshBakery.Build(LargeMesh, 32, 32);
 
     /// <summary>Puff state ids: 0 small, 1 medium, 2 large.</summary>
     public static readonly IReadOnlyList<string> VariantKeys = ["small", "medium", "large"];
@@ -33,14 +42,15 @@ public static class PufferfishModelDefinition
         32,
         SmallParts,
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/fish/pufferfish");
+        "entity/fish/pufferfish",
+        compiled: SmallCompiled);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
         new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)
         {
             ["small"] = Definition,
-            ["medium"] = new("pufferfish_medium", 32, 32, MediumParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/fish/pufferfish"),
-            ["large"] = new("pufferfish_large", 32, 32, LargeParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/fish/pufferfish")
+            ["medium"] = new("pufferfish_medium", 32, 32, MediumParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/fish/pufferfish", compiled: MediumCompiled),
+            ["large"] = new("pufferfish_large", 32, 32, LargeParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/fish/pufferfish", compiled: LargeCompiled)
         };
 
     private static VanillaMeshDefinition BuildSmallMesh()
