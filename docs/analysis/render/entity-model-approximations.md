@@ -10,6 +10,8 @@ updated: 2026-11-02
 
 # 实体模型近似实现清单
 
+> 本文是 2026-11-02 的近似清单，保留历史记录；当前完整差距与目标架构见 [`entity-model-parity-gap.md`](entity-model-parity-gap.md)。
+
 ## 1. 判定标准
 
 以下情况视为“近似实现”：

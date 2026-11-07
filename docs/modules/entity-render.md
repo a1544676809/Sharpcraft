@@ -198,6 +198,7 @@ DSL 现状与约束：
 
 - `VanillaMeshDefinition` + `VanillaMeshBake` 已覆盖全部生产模型/装备/护甲几何；生产代码不再直接调用 legacy `FromVanilla` 工厂。
 - 现有 DSL 仍缺 **三轴 `GrowXyz`** 与 **`PartPose` 三轴 Scale**；完整覆盖幼年护甲等 reference 数据前必须补齐。
+- 完整的模型/装备树结构、动画与测试差距见 [`entity-model-parity-gap.md`](../analysis/render/entity-model-parity-gap.md)。
 - 迁移测试中的 `LegacyModelPartFactory` 只是旧实现值 oracle，不是原版 Golden Vector；后续应改为读取自动提取的 `vanilla-model-facts.json`。
 - Z-fighting / clearance 门禁必须先以原版事实校准并登记合法覆盖层，再上线，避免假阳性。
 
