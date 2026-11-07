@@ -3,6 +3,7 @@
 
 using System.Text;
 using Sharpcraft.Client.Render;
+using Sharpcraft.Client.World;
 using Sharpcraft.Common.Identifiers;
 using Sharpcraft.Common.Registries;
 using Xunit;
@@ -219,6 +220,54 @@ public sealed class EquipmentClientInfoTests
                 glintOverride: true);
             Assert.True(elytra?.UsePlayerTexture);
             Assert.True(elytra?.Glint);
+        }
+        finally
+        {
+            EquipmentTextureCatalog.Assets = previous;
+        }
+    }
+
+    [Fact]
+    public void ResolvedEquipmentTextureInfoCarriesDyeMetadata()
+    {
+        const string json = """
+            {
+              "layers": {
+                "humanoid": [
+                  { "texture": "minecraft:leather", "dyeable": { "color_when_undyed": -6265536 } },
+                  { "texture": "minecraft:leather_overlay" }
+                ]
+              }
+            }
+            """;
+        var info = EquipmentClientInfo.Parse(Encoding.UTF8.GetBytes(json));
+        var previous = EquipmentTextureCatalog.Assets;
+        EquipmentTextureCatalog.Assets = EquipmentAssetRegistry.From(
+            new Dictionary<Identifier, EquipmentClientInfo>
+            {
+                [new Identifier("minecraft", "leather")] = info
+            });
+        try
+        {
+            var helmet = ItemRegistry.LoadEmbedded().GetId(Identifier.Parse("minecraft:leather_helmet"));
+            Assert.True(helmet >= 0, "leather helmet item id missing from embedded registry");
+
+            var state = new EntityRenderState(1, 154, 0f, 0f, 0f, 0f, 0f,
+                Equipment: new EntityEquipment(-1, -1, -1, -1, -1, helmet, -1, -1),
+                EquipmentDyeColors: new int?[] { null, null, null, null, null, 0x3F2A1B, null, null });
+
+            var texture = EntityModelResolver.ResolveEquipmentTextureInfo(
+                state, EquipmentAssetKind.HumanoidArmor, 5);
+            Assert.NotNull(texture);
+            Assert.Equal("entity/equipment/humanoid/leather", texture!.PrimaryPath);
+            Assert.Equal("entity/equipment/humanoid/leather_overlay", texture.OverlayPath);
+            Assert.Equal(-6265536, texture.ColourWhenUndyed);
+
+            // ResolveEquipmentTexture stays a thin selector over the same resolved info (behaviour unchanged).
+            Assert.Equal(texture.PrimaryPath,
+                EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.HumanoidArmor, 5));
+            Assert.Equal(texture.OverlayPath,
+                EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.HumanoidArmor, 5, overlay: true));
         }
         finally
         {

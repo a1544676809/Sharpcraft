@@ -89,6 +89,7 @@ Z-fighting 与 equipment clearance 不混入本任务；先走诊断报告，规
 - `enchantment_glint_override` 已解析并透传到 `EquipmentTexture.Glint`，但 renderer 仍无 glint pass；
 - 已有 `EquipmentClientInfoTests` 覆盖 iron/leather/saddle/elytra 形状、非法输入、asset-driven resolution、自定义 asset id、dye/player-texture 元数据与 trim predicate；
 - T-748d：资产纹理路径已进入 atlas —— `EntitySkinLibrary.Load` 遍历 `EquipmentTextureCatalog.Assets.TexturePaths` 并复用 `LoadTexture` 的按路径去重，`EquipmentClientInfoTests` 补资产层纹理路径断言；
+- T-748i：`EntityModelResolver.ResolveEquipmentTextureInfo` 暴露完整 `EquipmentTexture`（primary/overlay/dye/glint），`ResolveEquipmentTexture` 改为薄委托选 Primary/Overlay、行为不变；`EquipmentClientInfoTests` 补 dyeable 元数据与委托一致性断言；
 - 尚未完成 dye/glint/player-texture 的最终着色与 trim 纹理/palette 的实际渲染。
 
 ### T-749 EntityTracker T-668 复核（P1，已完成回归核验）

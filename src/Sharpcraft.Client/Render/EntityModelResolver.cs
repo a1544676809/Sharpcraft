@@ -20,12 +20,15 @@ public static class EntityModelResolver
     /// <summary>Item tag table loaded from the extracted pack; empty until the launcher installs it.</summary>
     public static ItemTagRegistry ItemTags { get; set; } = ItemTagRegistry.Empty;
 
-    /// <summary>Resolves a dynamic equipment texture for a render state slot, or null when the slot is empty/unsupported.</summary>
-    public static string? ResolveEquipmentTexture(
+    /// <summary>
+    /// Resolves the full equipment texture metadata (primary/overlay paths, dye, player texture and glint) for one
+    /// render state slot, or null when the slot is empty/unsupported. Callers that need more than a path should use
+    /// this instead of <see cref="ResolveEquipmentTexture"/>.
+    /// </summary>
+    public static EquipmentTexture? ResolveEquipmentTextureInfo(
         EntityRenderState state,
         EquipmentAssetKind kind,
-        int slot,
-        bool overlay = false)
+        int slot)
     {
         var itemId = state.Equipment[slot];
         if (itemId < 0 || Items is null || Items.ById(itemId) is not { } item)
@@ -33,11 +36,21 @@ public static class EntityModelResolver
             return null;
         }
 
-        var texture = EquipmentTextureCatalog.Resolve(
+        return EquipmentTextureCatalog.Resolve(
             kind,
             item,
             equippableAssetId: state.EquipmentAssetIdAt(slot),
             glintOverride: state.EquipmentGlintOverrideAt(slot));
+    }
+
+    /// <summary>Resolves a dynamic equipment texture for a render state slot, or null when the slot is empty/unsupported.</summary>
+    public static string? ResolveEquipmentTexture(
+        EntityRenderState state,
+        EquipmentAssetKind kind,
+        int slot,
+        bool overlay = false)
+    {
+        var texture = ResolveEquipmentTextureInfo(state, kind, slot);
         return overlay ? texture?.OverlayPath : texture?.PrimaryPath;
     }
 
