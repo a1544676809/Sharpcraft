@@ -69,8 +69,8 @@ updated: 2026-11-07
 | M7 | `CubeDeformation` 三轴 grow | 支持 `(growX,growY,growZ)`；幼年护甲 `(-0.1,0.5,0.3)` / `(-0.1,0.3,0.3)` | `VanillaCubeDefinition` 只有标量 `Grow`；`EntityModelPart.GrowXyz` 只能由 helper 直接写 | 完整 DSL 无法表达幼年护甲和未来非均匀变形 | 结构差异 |
 | M8 | `CubeDefinition` 可见面集合 | `CubeDefinition` 存 `Set<Direction> visibleFaces`，可只生成部分面 | `VanillaCubeDefinition` 无 visibleFaces；mesher 总是生成六面 | 当前 mob 模型未使用；方块实体 ChestModel 使用；未来复用 DSL 会缺功能 | 范围外 |
 | M9 | `CubeDefinition` xTexScale/yTexScale | 支持每个 cube 的 UV scale；PlayerCape 使用 `1.0, 0.5` | DSL 无该字段；只有 texture width/height 覆盖 | 玩家披风等非 mob 模型不能复用；当前 mob 范围外 | 范围外 |
-| M10 | 子节点顺序 | `PartDefinition` 用 `HashMap` 保存 children；原版渲染遍历 map | DSL 用有序 `List`，并按 pre-order 烘焙 | 渲染顺序可能与原版 HashMap 顺序不同；透明/覆盖顺序需要参考帧验证 | 待验证 |
-| M11 | `ModelPart.visible` 子树继承 | 父节点 `visible=false` 时整个子树不渲染 | `VisibleWhen` 是每个 part 单独求值，子 part 不会因父 part false 自动跳过 | 组级可见性/换装层可能露出本应隐藏的子部件 | 缺失 |
+| M10 | 子节点顺序 | `PartDefinition` 用 `HashMap` 保存 children；原版渲染遍历 map | DSL 用有序 `List`，并按 pre-order 烘焙 | **已确认**：Java HashMap 顺序不是插入顺序（Breeze `rods` 插入 `rod_1,rod_2,rod_3`，迭代为 `rod_2,rod_3,rod_1`；Warden `body` 同样变化）；透明/覆盖顺序可能与原版不同 | 已确认差异 |
+| M11 | `ModelPart.visible` 子树继承 | 父节点 `visible=false` 时整个子树不渲染 | `VisibleWhen` 是每个 part 单独求值，子 part 不会因父 part false 自动跳过；零 cube 组节点还被 `EmitCubes` 丢弃 | **已确认实例**：Armadillo/BabyArmadillo 的 `head`/`body` 组节点带 `VisibleWhen: Unrolled`，但 `head_cube`/`body_inner` 子 cube 没有谓词，卷壳状态仍可能渲染 | 缺失（已实证） |
 | M12 | `ModelPart.skipDraw` | 节点可跳过自身 cube 但仍递归 children | 没有 `skipDraw` 字段 | 目前 mob 模型未使用；未来层模型可能用 | 范围外 |
 
 ### 3.2 运行时、动画与查询
@@ -96,9 +96,9 @@ updated: 2026-11-07
 | E6 | 快乐恶魂挽具/绳索模型 | `HappyGhastHarnessModel` 独立 harness 树；body ropes 使用带 deformation 的基础树 | 额外 harness 盒 + `WithEquipment` 基础复制；ropes 目前仍为待办/近似 | 挽具层结构、绳索层缺失 | 结构差异/缺失 |
 | E7 | Elytra 独立树 | `ElytraModel` 两翼独立 `MeshDefinition`；WingsLayer 单独实例 | `BuildElytraWings` 建两翼树后 `Bake`，再 `with` 扩展为装备层；加到基础 flat parts | 几何当前已验证；但 wing 与 body 无树关系，儿童/潜行偏移靠在 helper 中补偿 | 结构差异（几何已对齐） |
 | E8 | Collar/项圈、狼甲裂痕等副层 | 原版各为独立 LayerDefinition，通常从基础树变换/追加 cube | `WithCollar`/`WithCopy`/`WithCrackiness` 对 flat parts `with` 复制并加 Grow | 结构/层级不可见；多 cube/组节点将来会丢 | 结构差异 |
-| E9 | 装备纹理解析 | `EquipmentClientInfo` 的 layer 数据 | 静态 `EquipmentTextureCatalog` + item id/名称兜底 | 模组/新装备资产不能完整表达；已有受控偏差 | 缺失（已知） |
-| E10 | 装备层每部件可见性 | 模型 `setupAnim` 可设置 `reins.visible` 等 | `WithEquipment` 的 `VisibleWhen` 只看纹理是否存在；没有 `isRidden`/槽位状态 | 缰绳等部件可能在不该显示时显示 | 缺失 |
-| E11 | 装备层渲染顺序/类型 | 独立 RenderLayer、RenderType、层顺序 | `EntityGeometryLayerKind` + 合并几何 | 透明/覆盖顺序可能不等价；已有 `entity-render-layers.md` 记录 | 部分验证 |
+| E9 | 装备纹理解析 | `EquipmentClientInfo`：19 个 `LayerType`，每个类型是 `Layer` 列表；每层含 `texture`、可选 `dyeable.color_when_undyed`、`use_player_texture`；另有 `trim_overrides`、染料/盔甲纹饰/glint | `EquipmentTextureCatalog` 只做 item→primary/overlay 路径的静态映射；无层列表、染料、玩家纹理、trim、glint | 模组/新装备资产和染色/纹饰不能完整表达 | 缺失（已核对字段） |
+| E10 | 装备层每部件可见性 | 模型 `setupAnim` 可设置 `reins.visible = isRidden` 等；`EquipmentLayerRenderer` 按层提交 | `WithEquipment` 的 `VisibleWhen` 只看纹理是否存在；没有 `isRidden`/槽位状态 | 缰绳等部件可能在不该显示时显示 | 缺失 |
+| E11 | 装备层渲染顺序/类型 | 每个 `RenderLayer` 通过 `submitNodeCollector.order(nextOrder++)` 独立提交；类型/深度/混合独立 | `BuildLayers` 固定 `Cutout → Elytra → Translucent → Emissive`，`EntityGeometryLayer.Order` 只是该固定数组下标；没有装备层独立 order | 装备层与基础层/其它 render layer 的顺序和混合语义不等价 | 部分验证 |
 | E12 | 护甲/装备与基础模型的 deform 语义 | 每个槽位独立的 `CubeDeformation`/PartPose 作用在完整树 | 多数用标量 Grow + base copy；幼年用 `GrowXyz` | 非均匀/槽位组合会继续手写 | 结构差异 |
 
 ### 3.4 测试与验收
@@ -144,3 +144,79 @@ updated: 2026-11-07
 3. `ModelPart.visible` 子树隐藏在现有 mob 中的具体使用点；当前 `VisibleWhen` 是否有遗漏。
 4. 装备层各 `RenderLayer` 的绘制顺序、深度和透明度语义；需与 `entity-render-layers.md` 对照。
 5. `EquipmentClientInfo` 的完整资产字段与当前静态 catalog 的差距。
+
+## 8. 2026-11-07 验证结果
+
+### 8.1 HashMap 子节点顺序
+
+已确认原版不是插入顺序：
+
+- `PartDefinition` 用 `Maps.newHashMap()` 保存 children；
+- `bake` 从 `entrySet()` 收集到 `Object2ObjectArrayMap`；
+- 用 Java `HashMap` 复现 26.3 facts（按源码插入顺序）：
+  - Breeze `rods`：插入 `rod_1, rod_2, rod_3`，迭代顺序 `rod_2, rod_3, rod_1`；
+  - Warden `body`：插入 `right_ribcage, left_ribcage, head, right_arm, left_arm`，迭代顺序 `head, right_arm, left_arm, left_ribcage, right_ribcage`；
+  - AdultFox root：插入 `head, body, right_hind_leg, left_hind_leg, right_front_leg, left_front_leg`，迭代顺序 `head, right_front_leg, right_hind_leg, left_hind_leg, body, left_front_leg`。
+
+结论：当前 DSL 的 pre-order 列表顺序**不是**原版渲染顺序。透明/覆盖/同深度几何可能需要原版 HashMap 顺序；先不要继续基于“列表顺序”做视觉断言。后续 bakery 应把原版迭代顺序作为显式事实输出（或证明所有 cutout 几何顺序无关，透明层再按原版顺序提交）。
+
+### 8.2 `PartPose` 三轴 scale 的实际范围
+
+原版 `PartPose` 的 scale 不是死代码，已确认用于：
+
+- `BabyModelTransform`：按 head/body root child 做 translate + scale；
+- `DragonHeadModel`：`offset(0,-7.986666,0).scaled(0.75)`；
+- `EndCrystalModel`：`withScale(0.875)` / `withScale(0.765625)`；
+- `ArrowModel`：`withScale(0.8)`，以及整个 mesh `.scaled(0.9)`；
+- `SpinAttackEffectModel`：`PartPose.ZERO.withScale(scale)`。
+
+当前状态：
+
+- `EntityModelDefinition.Scale` 可以覆盖整模型缩放（Giant/Husk 等），但不是 `PartPose` 的局部 subtree scale；
+- `VanillaPartPose` 没有 scale；
+- 当前已注册 mob 的 bind pose 大多已手工预缩放；没有发现当前 mob 必须靠缺失的 `PartPose` scale 才能显示，但这是完整 DSL 的明确阻塞项。
+
+### 8.3 `ModelPart.visible` 子树隐藏
+
+原版当前 mob 中实际使用 `visible` 的主要是 `PlayerModel` 的 show* 部件；这些部件在扁平模型中按单 part `VisibleWhen` 可以覆盖。
+
+但已确认两个真实遗漏：
+
+- `ArmadilloModelDefinition`：`head` 组节点（零 cube）带 `VisibleWhen: Unrolled`，`head_cube` 子 cube 没有谓词；
+- `BabyModelDefinitionsOdd` 的 Armadillo：`body` 组节点带 `VisibleWhen: Unrolled`，`body_inner` 子 cube 没有谓词。
+
+因为 `EmitCubes` 丢弃零 cube 组节点，`head_cube`/`body_inner` 在 rolled 状态仍可能被发射；这不是“未来风险”，是当前可复现的结构性 bug，应由树/子树可见性修复。
+
+### 8.4 装备 RenderLayer 顺序
+
+原版 `EquipmentLayerRenderer` 对每个 `EquipmentClientInfo.Layer` 使用 `submitNodeCollector.order(nextOrder++)` 独立提交；每个 `RenderLayer`（WingsLayer、WolfArmorLayer 等）有独立 submit 顺序、纹理、RenderType、深度/混合。
+
+当前：
+
+- `EntityModelMesher.BuildLayers` 顺序固定为 `Cutout → Elytra → Translucent → Emissive`；
+- `EntityGeometryLayer.Order` 只是该固定数组下标；
+- 基础模型与装备层没有独立 `EntityRenderLayerDefinition`，装备层按 part `Kind` 合并进同一几何。
+
+结论：E11 确认，不是“可能不等价”，而是当前装备层没有原版 `order` 语义；后续必须按树层定义 + 显式 order 提交。
+
+### 8.5 `EquipmentClientInfo` 完整字段
+
+已核对 `EquipmentClientInfo`：
+
+- `layers: Map<LayerType, List<Layer>>`，`LayerType` 共 **19** 种（HUMANOID、HUMANOID_LEGGINGS、HUMANOID_BABY、WINGS、WOLF_BODY、HORSE_BODY、LLAMA_BODY、各鞍、HAPPY_GHAST_BODY、NAUTILUS_BODY/SADDLE 等）；
+- 每个 `Layer` 有 `texture`、可选 `dyeable.color_when_undyed`、`use_player_texture`；
+- 还有 `trim_overrides`；`EquipmentLayerRenderer` 处理染料、盔甲纹饰、glint、`use_player_texture` 的玩家披风/鞘翅纹理。
+
+当前 `EquipmentTextureCatalog` 只有 `PrimaryPath`/可选 `OverlayPath` 的静态 item→path 映射，没有层列表、染色、玩家纹理、trim、glint。E9 确认。
+
+## 9. 结论
+
+五项待验证问题已核实：
+
+1. **顺序**：原版 HashMap 顺序不是插入顺序，当前列表顺序不等价；需要显式的事实/层级顺序。
+2. **PartPose scale**：确实被原版使用；当前 mob 大多手工预缩放，但 DSL 缺失。
+3. **visible**：原版 mob 只在 PlayerModel 用 show*；但 Armadillo 的零 group/子 cube 已确认存在可见性遗漏。
+4. **装备层顺序**：原版按每个层独立 `order` 提交，当前固定 kind 顺序，不等价。
+5. **EquipmentClientInfo**：19 种 layer type + dye/trim/use_player_texture，当前静态 catalog 远未覆盖。
+
+这五项中，**第 1、3、4 项必须进入树/bakery 重构验收**；第 2 项进入 DSL 值能力；第 5 项单独立项，不能混入模型树任务。
