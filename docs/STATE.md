@@ -95,7 +95,8 @@ updated: 2026-11-06
 53. **T-715 农畜/四足批迁移（2026-11-07）**：Pig/Cow/Chicken/Sheep 及全部变体接入编译树，Fox/Rabbit 变体同步接入；修正树路径 root pose 平移抵消问题。
 54. **T-716 简单模型 FromTree 批量迁移（2026-11-07）**：新增 `EntityModelDefinition.FromTree`；Panda/Goat/Frog/Tadpole/Bat/Allay/Bee/Vex 通过统一入口接入树路径，状态纹理 selector 保留。
 55. **T-717 节肢/水生批迁移（2026-11-07）**：Creeper/Spider/Endermite/Shulker/Squid/Nautilus 通过 `FromTree` 接入编译树；CaveSpider 复用 Spider tree 与 0.7 scale；Spider eyes 保留。
-56. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
+56. **T-718 Cat/Wolf collar 树层（2026-11-07）**：新增 `WithCollar(CompiledEntityModel)` 递归树克隆；Cat 0.01 grow、Wolf 零 grow；Cat/Wolf 全部变体接入 compiled tree。
+57. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
 48. **T-648..T-650 / T-651..T-653 渲染与解耦（2026-11-05~06）**：Elytra 翼盒与 UV 原版等价、双翼镜像全宽；流体面剔除修复（玻璃后水可见）；云 OIT depth-bounds 写深度；`Sharpcraft.Assets` 分层 + 启动器/客户端解耦（ADR-0026/0027）。
 49. **实体模型/动画批量落地（2026-11-02~05）**：全部 baby 模型族、villager/zombie/horse 变体、cat/wolf 项圈、panda 基因、大量动画 provider 与测试。
 50. **协议与渲染长尾（2026-11-01~05）**：Play Clientbound 覆盖审计 + P0/P1 包批次（T-642..T-647）；反相 Z 迁移；参考 OIT 云/流体；天空盘逐像素近似。

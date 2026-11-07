@@ -174,3 +174,10 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - Squid（GlowSquid 共享 compiled tree）；
 - Nautilus；
 - CaveSpider 复用 Spider compiled tree，并保留模型级 `Scale=0.7`。
+
+### 2026-11-07 — T-718 Cat/Wolf collar 树层
+
+- 新增 `EntityModelLayerHelpers.WithCollar(CompiledEntityModel, ...)`：递归克隆树节点/cube，保留父子关系；
+- Cat collar 使用 reference `AdultCatModel.COLLAR_DEFORMATION = new CubeDeformation(0.01F)`；
+- Wolf collar 使用同一模型几何、collar texture、零 grow；
+- Cat/Wolf 所有变体接入 compiled tree；collar 节点通过 `VisibleWhen: HasCollar` 和 `CollarTint` 工作。

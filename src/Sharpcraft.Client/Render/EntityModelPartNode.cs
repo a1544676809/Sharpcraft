@@ -57,7 +57,8 @@ public sealed class EntityModelPartNode
         Func<Sharpcraft.Client.World.EntityRenderState, bool>? visibleWhen = null,
         Func<Sharpcraft.Client.World.EntityRenderState, Vector3>? rotationSelector = null,
         Func<Sharpcraft.Client.World.EntityRenderState, float>? yOffsetSelector = null,
-        string? poseSource = null)
+        string? poseSource = null,
+        Func<Sharpcraft.Client.World.EntityRenderState, Vector3>? tintSelector = null)
     {
         Name = name;
         Parent = parent;
@@ -73,6 +74,7 @@ public sealed class EntityModelPartNode
         RotationSelector = rotationSelector;
         YOffsetSelector = yOffsetSelector;
         PoseSource = poseSource;
+        TintSelector = tintSelector;
     }
 
     public string Name { get; }
@@ -89,6 +91,7 @@ public sealed class EntityModelPartNode
     public Func<Sharpcraft.Client.World.EntityRenderState, Vector3>? RotationSelector { get; }
     public Func<Sharpcraft.Client.World.EntityRenderState, float>? YOffsetSelector { get; }
     public string? PoseSource { get; }
+    public Func<Sharpcraft.Client.World.EntityRenderState, Vector3>? TintSelector { get; }
 }
 
 /// <summary>

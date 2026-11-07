@@ -14,6 +14,88 @@ public static class EntityModelLayerHelpers
         WithCopy(parts, texturePath, static state => state.HasCollar, 0.1f,
             static state => state.CollarTint == default ? Vector3.One : state.CollarTint);
 
+    /// <summary>
+    /// Adds a tree-derived collar layer without flattening the base model. Cat uses the reference 0.01 growth;
+    /// Wolf's collar layer re-renders the same geometry with the collar texture and therefore uses zero growth.
+    /// </summary>
+    public static CompiledEntityModel WithCollar(
+        CompiledEntityModel model,
+        string texturePath,
+        float inflate,
+        Func<EntityRenderState, bool>? visible = null)
+    {
+        var visibleWhen = visible ?? (static state => state.HasCollar);
+        var tint = (EntityRenderState state) =>
+            state.CollarTint == default ? Vector3.One : state.CollarTint;
+        var clonedParts = new List<EntityModelPartNode>();
+
+        EntityModelPartNode CloneNode(EntityModelPartNode source, string? parent)
+        {
+            var name = "collar_" + source.Name;
+            var cubes = source.Cubes
+                .Select(cube => cube with
+                {
+                    Name = "collar_" + cube.Name,
+                    TexturePath = texturePath,
+                    Grow = cube.Grow + inflate,
+                    GrowXyz = cube.GrowXyz is { } grow
+                        ? new Vector3(grow.X + inflate, grow.Y + inflate, grow.Z + inflate)
+                        : null
+                })
+                .ToArray();
+            var children = source.Children.Select(child => CloneNode(child, name)).ToArray();
+            var node = new EntityModelPartNode(
+                name,
+                parent,
+                source.PivotX,
+                source.PivotY,
+                source.PivotZ,
+                source.RotationX,
+                source.RotationY,
+                source.RotationZ,
+                cubes,
+                children,
+                visibleWhen: state => visibleWhen(state) && (source.VisibleWhen?.Invoke(state) ?? true),
+                rotationSelector: source.RotationSelector,
+                yOffsetSelector: source.YOffsetSelector,
+                poseSource: source.PoseSource ?? source.Name,
+                tintSelector: tint);
+            clonedParts.Add(node);
+            return node;
+        }
+
+        var children = new List<EntityModelPartNode>(model.Root.Children.Count * 2);
+        children.AddRange(model.Root.Children);
+        foreach (var child in model.Root.Children)
+        {
+            children.Add(CloneNode(child, parent: null));
+        }
+
+        var root = new EntityModelPartNode(
+            model.Root.Name,
+            parent: null,
+            pivotX: 0f,
+            pivotY: 0f,
+            pivotZ: 0f,
+            rotationX: 0f,
+            rotationY: 0f,
+            rotationZ: 0f,
+            cubes: [],
+            children);
+
+        var parts = new List<EntityModelPartNode>(model.Parts.Count + clonedParts.Count);
+        parts.AddRange(model.Parts);
+        parts.AddRange(clonedParts);
+        var cubes = new List<EntityModelCube>(model.Cubes.Count + clonedParts.Sum(part => part.Cubes.Count));
+        cubes.AddRange(model.Cubes);
+        foreach (var part in clonedParts)
+        {
+            cubes.AddRange(part.Cubes);
+        }
+
+        return new CompiledEntityModel(root, parts, cubes);
+    }
+
     public static EntityModelPart[] WithCopy(IReadOnlyList<EntityModelPart> parts, string texturePath, Func<EntityRenderState, bool> visible, float inflate = 0.05f, Func<EntityRenderState, Vector3>? tint = null)
     {
         var result = new List<EntityModelPart>(parts.Count * 2);

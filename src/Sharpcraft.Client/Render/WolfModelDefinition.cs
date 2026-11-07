@@ -16,6 +16,12 @@ public static class WolfModelDefinition
     /// <summary>Declarative DSL tree for the thirteen wolf parts (T-684).</summary>
     private static readonly VanillaMeshDefinition WolfMesh = BuildWolfMesh();
 
+    private static readonly CompiledEntityModel BaseCompiled =
+        VanillaMeshBakery.Build(WolfMesh, 64, 32, texturePath: "entity/wolf/wolf");
+
+    private static readonly CompiledEntityModel CompiledModel =
+        EntityModelLayerHelpers.WithCollar(BaseCompiled, "entity/wolf/wolf_collar", inflate: 0f);
+
     public static readonly EntityModelDefinition Definition = new(
         "wolf",
         64,
@@ -30,7 +36,8 @@ public static class WolfModelDefinition
             : state.IsAngry
                 ? "entity/wolf/wolf_angry"
                 : "entity/wolf/wolf",
-        additionalTexturePaths: ["entity/wolf/wolf_tame", "entity/wolf/wolf_angry"]);
+        additionalTexturePaths: ["entity/wolf/wolf_tame", "entity/wolf/wolf_angry"],
+        compiled: CompiledModel);
 
     /// <summary>Registry entry names of the wolf variants, in vanilla bootstrap order.</summary>
     public static readonly IReadOnlyList<string> VariantKeys =
@@ -73,7 +80,8 @@ public static class WolfModelDefinition
                 PlayerModelDefinition.DefaultFaceTransforms,
                 captured,
                 textureSelector: state => state.IsTame ? captured + "_tame" : state.IsAngry ? captured + "_angry" : captured,
-                additionalTexturePaths: [tame, angry]);
+                additionalTexturePaths: [tame, angry],
+                compiled: CompiledModel);
         }
 
         return variants;

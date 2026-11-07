@@ -24,6 +24,12 @@ public static class CatModelDefinition
 
     private static readonly EntityModelPart[] CollarParts = EntityModelLayerHelpers.WithCollar(Parts, "entity/cat/cat_collar");
 
+    private static readonly CompiledEntityModel BaseCompiled =
+        VanillaMeshBakery.Build(CatMesh, 64, 32, texturePath: "entity/cat/cat_tabby");
+
+    private static readonly CompiledEntityModel CompiledModel =
+        EntityModelLayerHelpers.WithCollar(BaseCompiled, "entity/cat/cat_collar", inflate: 0.01f);
+
     public static readonly EntityModelDefinition Definition = new(
         "cat",
         64,
@@ -31,7 +37,8 @@ public static class CatModelDefinition
         CollarParts,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/cat/cat_tabby",
-        0.8f);
+        0.8f,
+        compiled: CompiledModel);
 
     public static readonly EntityModelDefinition Ocelot = new(
         "ocelot",
@@ -39,7 +46,8 @@ public static class CatModelDefinition
         32,
         CollarParts,
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/cat/ocelot");
+        "entity/cat/ocelot",
+        compiled: CompiledModel);
 
     /// <summary>Registry entry names, in the vanilla bootstrap order used when no registry data is available.</summary>
     public static readonly IReadOnlyList<string> VariantKeys =
@@ -72,7 +80,8 @@ public static class CatModelDefinition
                 CollarParts,
                 PlayerModelDefinition.DefaultFaceTransforms,
                 "entity/cat/cat_" + key,
-                0.8f);
+                0.8f,
+                compiled: CompiledModel);
         }
 
         return variants;

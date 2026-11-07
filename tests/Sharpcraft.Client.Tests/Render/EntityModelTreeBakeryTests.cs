@@ -68,6 +68,28 @@ public sealed class EntityModelTreeBakeryTests
     }
 
     [Fact]
+    public void CatAndWolfExposeTreeCollars()
+    {
+        var cat = CatModelDefinition.Definition.Compiled;
+        Assert.NotNull(cat);
+        Assert.Equal(22, cat!.Parts.Count);
+        Assert.NotNull(cat.Find("collar_head_main"));
+
+        var wolf = WolfModelDefinition.Definition.Compiled;
+        Assert.NotNull(wolf);
+        Assert.Equal(26, wolf!.Parts.Count);
+        Assert.NotNull(wolf.Find("collar_head"));
+
+        var catWithout = new EntityModelMesher().Build(
+            [new EntityRenderState(1, CatModelDefinition.CatEntityTypeId, 0f, 0f, 0f, 0f, 0f)],
+            new SpriteRect(0, 0, 64, 32, 1), 64, 32);
+        var catWith = new EntityModelMesher().Build(
+            [new EntityRenderState(1, CatModelDefinition.CatEntityTypeId, 0f, 0f, 0f, 0f, 0f, HasCollar: true)],
+            new SpriteRect(0, 0, 64, 32, 1), 64, 32);
+        Assert.True(catWith.VertexFloats > catWithout.VertexFloats);
+    }
+
+    [Fact]
     public void FarmModelsExposeCompiledTrees()
     {
         Assert.NotNull(PigModelDefinition.Definition.Compiled);

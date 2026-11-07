@@ -749,6 +749,7 @@ public sealed partial class EntityModelMesher
                     EmissiveOnly: cube.EmissiveOnly,
                     EmissiveTexturePath: cube.EmissiveTexturePath,
                     GrowXyz: cube.GrowXyz,
+                    TintSelector: node.TintSelector,
                     UvWidth: cube.UvWidth,
                     UvHeight: cube.UvHeight,
                     UvDepth: cube.UvDepth);
