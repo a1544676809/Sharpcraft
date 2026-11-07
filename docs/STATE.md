@@ -108,7 +108,8 @@ updated: 2026-11-07
 66. **T-728 剩余 adult 模型树迁移（2026-11-07）**：Axolotl/Parrot/Salmon/TropicalFish/Villager/ZombieVillager 接入 `Compiled`；TropicalFish pattern、Villager 群系变体使用树复制层；树测试 20 项通过。
 67. **T-729 第二批剩余 adult 模型树迁移（2026-11-07）**：Cod/Dolphin/Ghast/MagmaCube/Turtle 与 Pufferfish 三形态接入 `Compiled`；树测试 21 项通过。
 68. **T-730 第三批剩余 adult 模型树迁移（2026-11-07）**：Blaze/Hoglin/Zoglin/Slime/Strider/Sniffer/Giant 接入 `Compiled`；Giant 复用 Zombie 树并保留 6× scale；树测试 22 项通过。
-69. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
+69. **T-731 第四批模型树迁移（2026-11-07）**：Guardian/ElderGuardian、EnderDragon、WitherBoss 接入 `Compiled`；ZombieNautilus temperate 复用 Nautilus 树；warm coral 变体待 coral 子树挂载；树测试 23 项通过。
+70. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
 48. **T-648..T-650 / T-651..T-653 渲染与解耦（2026-11-05~06）**：Elytra 翼盒与 UV 原版等价、双翼镜像全宽；流体面剔除修复（玻璃后水可见）；云 OIT depth-bounds 写深度；`Sharpcraft.Assets` 分层 + 启动器/客户端解耦（ADR-0026/0027）。
 49. **实体模型/动画批量落地（2026-11-02~05）**：全部 baby 模型族、villager/zombie/horse 变体、cat/wolf 项圈、panda 基因、大量动画 provider 与测试。
 50. **协议与渲染长尾（2026-11-01~05）**：Play Clientbound 覆盖审计 + P0/P1 包批次（T-642..T-647）；反相 Z 迁移；参考 OIT 云/流体；天空盘逐像素近似。

@@ -15,13 +15,17 @@ public static class WitherBossModelDefinition
 
     private static readonly VanillaMeshDefinition WitherMesh = BuildWitherMesh();
 
+    private static readonly CompiledEntityModel WitherCompiled =
+        VanillaMeshBakery.Build(WitherMesh, 64, 64);
+
     public static readonly EntityModelDefinition Definition = new(
         "wither",
         64,
         64,
         [.. VanillaMeshBake.Bake(WitherMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/wither/wither");
+        "entity/wither/wither",
+        compiled: WitherCompiled);
 
     private static VanillaMeshDefinition BuildWitherMesh()
     {

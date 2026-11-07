@@ -229,6 +229,20 @@ public sealed class EntityModelTreeBakeryTests
     }
 
     [Fact]
+    public void FourthAdultBatchExposesCompiledTrees()
+    {
+        Assert.NotNull(GuardianModelDefinition.Definition.Compiled);
+        Assert.NotNull(GuardianModelDefinition.Elder.Compiled);
+        Assert.NotNull(EnderDragonModelDefinition.Definition.Compiled);
+        Assert.NotNull(WitherBossModelDefinition.Definition.Compiled);
+        Assert.NotNull(ZombieNautilusModelDefinition.Definition.Compiled);
+
+        Assert.Equal(23, GuardianModelDefinition.Definition.Compiled!.Parts.Count);
+        Assert.Equal(9, WitherBossModelDefinition.Definition.Compiled!.Parts.Count);
+        Assert.Equal(66, EnderDragonModelDefinition.Definition.Compiled!.Parts.Count);
+    }
+
+    [Fact]
     public void ThirdAdultBatchExposesCompiledTrees()
     {
         Assert.NotNull(BlazeModelDefinition.Definition.Compiled);

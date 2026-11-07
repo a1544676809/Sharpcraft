@@ -294,3 +294,11 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - Giant 复用 `HumanoidMobModelDefinition.Zombie.Compiled` 并保留 6× scale；
 - Strider 保留 cold texture selector 与 additional path；Slime outer_cube 保留 Translucent kind；
 - 树测试增加第三批 compiled/part-count 断言，树测试共 22 项。
+
+### 2026-11-07 — T-731 第四批模型树迁移
+
+- Guardian / ElderGuardian 共享同一 `Compiled`，Elder 保留 2.35 scale；
+- EnderDragon 接入 `Compiled`（256×256 纹理，完整头/颈/尾/翼/腿树）；
+- WitherBoss 接入 `Compiled`；
+- ZombieNautilus temperate 接入 `Compiled`（复用 Nautilus 编译树）；warm coral 变体仍为 flat（coral 子树需挂到基础 shell 节点，后续处理）；
+- 树测试增加第四批 compiled/part-count 断言，树测试共 23 项。

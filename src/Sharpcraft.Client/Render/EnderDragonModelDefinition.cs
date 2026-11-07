@@ -15,13 +15,17 @@ public static class EnderDragonModelDefinition
 
     private static readonly VanillaMeshDefinition DragonMesh = BuildDragonMesh();
 
+    private static readonly CompiledEntityModel DragonCompiled =
+        VanillaMeshBakery.Build(DragonMesh, 256, 256);
+
     public static readonly EntityModelDefinition Definition = new(
         "ender_dragon",
         256,
         256,
         BuildParts(),
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/enderdragon/dragon");
+        "entity/enderdragon/dragon",
+        compiled: DragonCompiled);
 
     private static EntityModelPart[] BuildParts()
     {

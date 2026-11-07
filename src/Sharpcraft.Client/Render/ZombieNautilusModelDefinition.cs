@@ -54,7 +54,8 @@ public static class ZombieNautilusModelDefinition
         128,
         NautilusModelDefinition.Definition.Parts,
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/nautilus/zombie_nautilus");
+        "entity/nautilus/zombie_nautilus",
+        compiled: NautilusModelDefinition.Definition.Compiled);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
         new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)

@@ -27,13 +27,17 @@ public static class GuardianModelDefinition
 
     private static readonly VanillaMeshDefinition GuardianMesh = BuildGuardianMesh();
 
+    private static readonly CompiledEntityModel GuardianCompiled =
+        VanillaMeshBakery.Build(GuardianMesh, 64, 64);
+
     public static readonly EntityModelDefinition Definition = new(
         "guardian",
         64,
         64,
         [.. VanillaMeshBake.Bake(GuardianMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/guardian/guardian");
+        "entity/guardian/guardian",
+        compiled: GuardianCompiled);
 
     public static readonly EntityModelDefinition Elder = new(
         "elder_guardian",
@@ -42,7 +46,8 @@ public static class GuardianModelDefinition
         [.. VanillaMeshBake.Bake(GuardianMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/guardian/guardian_elder",
-        2.35f);
+        2.35f,
+        compiled: GuardianCompiled);
 
     private static VanillaMeshDefinition BuildGuardianMesh()
     {
