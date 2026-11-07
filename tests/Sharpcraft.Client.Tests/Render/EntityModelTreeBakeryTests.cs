@@ -90,6 +90,7 @@ public sealed class EntityModelTreeBakeryTests
         Assert.NotNull(horse.Find("marking_white_head_parts"));
         Assert.NotNull(horse.Find("marking_blackdots_tail"));
         Assert.Equal(EntityGeometryLayerKind.Translucent, horse.Find("marking_white_tail")!.Cubes[0].Kind);
+        Assert.Equal(horse.Find("tail")!.Cubes[0].Grow, horse.Find("marking_white_tail")!.Cubes[0].Grow);
 
         var baseState = new EntityRenderState(1, HorseModelDefinition.HorseEntityTypeId, 0f, 0f, 0f, 0f, 0f);
         var markedState = baseState with { Markings = 1 };

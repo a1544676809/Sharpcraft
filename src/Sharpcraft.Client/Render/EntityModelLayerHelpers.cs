@@ -845,7 +845,7 @@ public static class EntityModelLayerHelpers
                     Name = "marking_" + key + "_" + part.Name,
                     PoseSource = part.PoseSource ?? part.Name,
                     TexturePath = path,
-                    Grow = part.Grow + 0.05f,
+                    Grow = part.Grow,
                     VisibleWhen = state => state.Markings == id
                 });
             }

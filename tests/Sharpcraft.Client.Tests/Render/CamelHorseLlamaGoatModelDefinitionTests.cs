@@ -67,7 +67,7 @@ public sealed class CamelHorseLlamaGoatModelDefinitionTests
                 var copy = parts[12 + m * 12 + i];
                 Assert.Equal("marking_" + keys[m] + "_" + basePart.Name, copy.Name);
                 Assert.Equal("entity/horse/horse_markings_" + keys[m], copy.TexturePath);
-                Assert.Equal(basePart.Grow + 0.05f, copy.Grow);
+                Assert.Equal(basePart.Grow, copy.Grow);
                 Assert.Equal(basePart.PoseSource ?? basePart.Name, copy.PoseSource);
                 Assert.NotNull(copy.VisibleWhen);
                 Assert.True(copy.VisibleWhen!(HorseState(ids[m])));

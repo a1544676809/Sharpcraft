@@ -325,6 +325,12 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - Baby Cat/Wolf 的 collar 通过 `WithCollar(CompiledEntityModel)` 生成树层；
 - 树测试增加 baby farm/pet compiled 断言，树测试共 25 项。
 
+### 2026-11-07 — T-736 Horse markings 生长值修复
+
+- 核查 `HorseMarkingLayer`：原版直接用 parent model 的同一几何重绘 translucent marking 纹理，没有额外 inflation；
+- 修正 legacy flat `WithHorseMarkings(EntityModelPart[])` 的 `Grow + 0.05f`，改为与基础 part 相同；
+- 编译树 helper 原本已无 inflate，保持一致；更新 markings 断言，增加 tree 侧 grow 相等断言。
+
 ### 2026-11-07 — T-735 幼年水生 / 马科模型树迁移
 
 - `BabyModelDefinitionsAquatic` 的 Squid/Bee/Dolphin/Axolotl 及 axolotl 全部色型变体接入 `Compiled`；
