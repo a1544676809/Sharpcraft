@@ -10,6 +10,8 @@ updated: 2026-11-02
 
 # 生物模型移植清单与进展
 
+> 历史快照说明：第 3–6 节是 2026-11-02 的移植计划与当时的缺口记录，已不作为当前状态依据。当前 DSL/模型迁移状态见第 8 节。
+
 ## 1. 原版模型来源
 
 原版生物模型不是 `models/entity/*.json`，而是 Java 程序化 `LayerDefinition`：
@@ -136,3 +138,11 @@ updated: 2026-11-02
 
 Enderman 眼睛、Player 双层透明、Drowned outer 等不属于普通 cube overlay 的特例，统一记录在
 [实体特殊层与材质](entity-special-layers.md)，模型移植完成后再补。
+
+## 8. 2026-11-07 当前状态（覆盖第 3–6 节历史快照）
+
+- **DSL 迁移完成**：`PlayerModelDefinition`、`HumanoidMobModelDefinition`、全部 `BabyModelDefinitions*`、`Pig/Cow/Chicken`、`Sheep/Rabbit/Frog/Tadpole`、`Cat/Wolf/Fox/Panda`、`Camel/Horse/Llama/Goat`、`Cod/Salmon/Pufferfish/TropicalFish/Dolphin`、`Allay/Bat/Bee/Breeze`、`Hoglin/Strider/Blaze/Ghast/HappyGhast`、`Enderman/Drowned/Husk`、`Villager/Witch/Illager`、`Armadillo/Axolotl/Sniffer/Warden`、`Guardian/Squid`、`EnderDragon/Endermite/Nautilus`、`Creeper/Spider/WitherBoss`、`Phantom/Ravager/PolarBear/Silverfish`、`Slime/MagmaCube/Shulker/Vex`、`Parrot/Turtle/ZombieNautilus`、`CopperGolem/Creaking/IronGolem/SnowGolem` 等均已通过 `VanillaMeshDefinition` 构建。
+- **装备/护甲层**：`EquipmentModelParts`、`BabyHumanoidArmorParts`、`WithElytra` 的两翼也已 DSL 化；`LegacyModelPartFactory` 仅存在于测试工程，作为独立 oracle。
+- **生产 legacy 工厂**：`PlayerModelDefinition.FromVanilla/FromVanillaChild` 已无生产调用并移除。
+- **剩余事实缺口**：DSL 仍缺三轴 `GrowXyz` 与 `PartPose` 三轴 scale；root/child 旋转共轭仍需 Golden Vector 验证；真正的原版事实提取器尚未落地。详见 [原版实体模型几何事实基线](entity-model-geometry-facts.md)。
+- **验收基线**：最近全量 `dotnet test` 通过（2325），`class-map`、`docs index/coverage` 均通过；实机客户端已启动验证。

@@ -183,3 +183,21 @@ P1 只做**静态姿态 + 朝向**，明确排除骨骼动画、物品装备渲�
 - 幼年几何多数是独立 `Baby*Model`（不是简单缩放）；幼年纹理使用 `*_baby` / `*_*_baby`，与成年变体键一一对应。
 - 已铺：baby pig / cow / chicken（含 warm/cold 幼年纹理）。其余 Baby* 逐批补。
 
+## 16. 原版几何事实基线与 DSL 现状（2026-11-07）
+
+完整源码事实、公式和结论已内化到 [`docs/analysis/render/entity-model-geometry-facts.md`](../analysis/render/entity-model-geometry-facts.md)。本模块只保留必须遵守的摘要：
+
+- `ModelPart` 的变换顺序统一为 `translate(pivot) → rotationZYX(z,y,x) → scale(x,y,z)`；根节点与子节点没有两套旋转规则。
+- `CubeDeformation` 支持三轴 grow；当前参考模型中的非均匀值只出现在幼年护甲层。
+- `Cube` 的 UV 由未膨胀的 `width/height/depth` 决定；几何 grow 不改变 UV 采样尺寸。
+- `MeshTransformer.scaling(factor)` 只改 root `PartPose`（`scaled(factor)` + `translated(0, 24.016*(1-factor), 0)`），子 `CubeDefinition` 不变；不能把扁平 part 缩放的 `VanillaMeshBake.Scale` 当作通用替代。
+- 幼年鞘翅：10×20×2 cube、`texOffs(22,0)`、root 0.5 缩放、WingsLayer +0.125 block（+2 px）；潜行实际下移 1.5 px。当前实现与此一致。
+- 幼年僵尸：body `Bottom=4/Height=5`、`bodyTop=9`；head `Bottom=9/Height=6`；幼年背部装备挂点不得高于 `bodyTop`。
+
+DSL 现状与约束：
+
+- `VanillaMeshDefinition` + `VanillaMeshBake` 已覆盖全部生产模型/装备/护甲几何；生产代码不再直接调用 legacy `FromVanilla` 工厂。
+- 现有 DSL 仍缺 **三轴 `GrowXyz`** 与 **`PartPose` 三轴 Scale**；完整覆盖幼年护甲等 reference 数据前必须补齐。
+- 迁移测试中的 `LegacyModelPartFactory` 只是旧实现值 oracle，不是原版 Golden Vector；后续应改为读取自动提取的 `vanilla-model-facts.json`。
+- Z-fighting / clearance 门禁必须先以原版事实校准并登记合法覆盖层，再上线，避免假阳性。
+

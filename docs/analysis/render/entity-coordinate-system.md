@@ -5,12 +5,23 @@
 title: 实体坐标系统调查
 summary: 地形/相机/实体状态/模型空间的坐标约定、当前已统一与未统一的部分
 status: 草稿
-updated: 2026-11-02
+updated: 2026-11-07
 -->
 
 # 实体坐标系统调查
 
-## 1. 结论先行
+> **2026-11-07 复核说明**：第 1–7 节保留 2026-11-02 的历史分析，其中“实体模型空间没有统一转换”的结论已被当前实现取代。现在模型几何由 `VanillaMeshDefinition` DSL 统一烘焙，实体根变换由 `EntityModelTransform` 统一应用；`EntityModelPart` 同时保存 y-up 烘焙坐标与独立的 `UvWidth/UvHeight/UvDepth`。字段级事实见 [原版实体模型几何事实基线](entity-model-geometry-facts.md)。
+>
+> 仍待验证的是 **root/child 静态旋转符号的共轭约定**：原版 `ModelPart.translateAndRotate` 对所有节点使用同一 `rotationZYX(z,y,x)`，因此必须用原版 Golden Vector 验证当前 `BakeRoot` 原始角与 `BakeChild` `-X/-Y/+Z` 的差异，不能仅凭文档做全局符号修改。
+
+## 0. 2026-11-07 当前状态摘要
+
+- 模型定义：全部生产模型/装备/护甲已迁移到 DSL；生产代码无 `FromVanilla` 直接调用。
+- 实体根变换：`EntityModelTransform` 已统一 `Translation + Yaw/Pitch + Scale`。
+- 模型局部存储：`EntityModelPart` 使用 y-up 烘焙坐标；UV 采样尺寸独立为 `UvWidth/UvHeight/UvDepth`。
+- 仍需补：DSL 三轴 `GrowXyz` / `PartPose` 三轴 scale；root/child 旋转 Golden Vector；原版事实自动提取器。
+
+## 1. 结论先行（2026-11-02 历史快照）
 
 - **地形/方块/相机**：已经是统一的世界坐标，Y-up，单位为方块；不需要为实体渲染再做一次地图转换。
 - **实体世界状态**：`EntityRenderState.X/Y/Z` 是脚底世界坐标，Y-up，与地形一致。
