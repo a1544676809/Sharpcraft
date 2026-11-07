@@ -137,12 +137,10 @@ public static class BabyModelDefinitionsHumanoid
                 continue;
             }
 
-            parts.Add(source with
-            {
-                Name = "outer_" + source.Name,
-                TexturePath = "entity/zombie/drowned_outer_layer_baby",
-                Kind = EntityGeometryLayerKind.Translucent
-            });
+            parts.Add(source.With(
+                Name: "outer_" + source.Name,
+                TexturePath: "entity/zombie/drowned_outer_layer_baby",
+                Kind: EntityGeometryLayerKind.Translucent));
         }
 
         return [.. parts];

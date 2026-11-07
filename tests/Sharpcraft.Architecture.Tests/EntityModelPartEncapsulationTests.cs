@@ -28,6 +28,7 @@ public sealed class EntityModelPartEncapsulationTests
         {
             "EntityModelMesher.cs",
             "EntityModelResolver.cs",
+            "PlayerModelDefinition.cs",
             "VanillaMeshBake.cs"
         };
         var root = RepositoryLocator.Root;
@@ -52,12 +53,7 @@ public sealed class EntityModelPartEncapsulationTests
     {
         // Ratchet for T-746b: these three legacy flat-path copy helpers still use `part/source with`. They are
         // deliberately pinned; fixing one requires shrinking this set in the same commit.
-        var known = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "BabyModelDefinitionsHumanoid.cs",
-            "TropicalFishModelDefinition.cs",
-            "WardenModelDefinition.cs"
-        };
+        var known = new HashSet<string>(StringComparer.Ordinal);
 
         var root = RepositoryLocator.Root;
         var renderRoot = Path.Combine(root, "src", "Sharpcraft.Client", "Render");

@@ -129,6 +129,56 @@ public readonly record struct EntityModelPart
         this.UvDepth = UvDepth;
         this.YOffsetSelector = YOffsetSelector;
     }
+
+    /// <summary>Returns a copy with the metadata fields used by model-definition layers overridden.</summary>
+    public EntityModelPart With(
+        string? Name = null,
+        string? TexturePath = null,
+        EntityGeometryLayerKind? Kind = null,
+        string? PoseSource = null,
+        bool? EmissiveOnly = null,
+        bool? IncludeInEmissive = null,
+        string? EmissiveTexturePath = null,
+        Func<EntityRenderState, System.Numerics.Vector3>? TintSelector = null)
+    {
+        return new EntityModelPart(
+            Name ?? this.Name,
+            CentreX,
+            Bottom,
+            Width,
+            Height,
+            Depth,
+            TextureX,
+            TextureY,
+            Mirror,
+            OverlayLayers,
+            CentreZ,
+            PivotX,
+            PivotY,
+            PivotZ,
+            RotationX,
+            RotationY,
+            RotationZ,
+            TexturePath ?? this.TexturePath,
+            Grow,
+            Parent,
+            Kind ?? this.Kind,
+            VisibleWhen,
+            TextureWidth,
+            TextureHeight,
+            IncludeInEmissive ?? this.IncludeInEmissive,
+            EmissiveOnly ?? this.EmissiveOnly,
+            EmissiveTexturePath ?? this.EmissiveTexturePath,
+            TintSelector ?? this.TintSelector,
+            TextureSelector,
+            PoseSource ?? this.PoseSource,
+            GrowXyz,
+            RotationSelector,
+            UvWidth,
+            UvHeight,
+            UvDepth,
+            YOffsetSelector);
+    }
 }
 
 /// <summary>

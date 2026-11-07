@@ -74,15 +74,13 @@ public static class WardenModelDefinition
         foreach (var sourceName in sourceNames)
         {
             var source = BaseParts.Single(part => part.Name == sourceName);
-            parts.Add(source with
-            {
-                Name = prefix + "_" + sourceName,
-                PoseSource = sourceName,
-                EmissiveOnly = true,
-                IncludeInEmissive = true,
-                EmissiveTexturePath = texturePath,
-                Kind = EntityGeometryLayerKind.Cutout
-            });
+            parts.Add(source.With(
+                Name: prefix + "_" + sourceName,
+                PoseSource: sourceName,
+                EmissiveOnly: true,
+                IncludeInEmissive: true,
+                EmissiveTexturePath: texturePath,
+                Kind: EntityGeometryLayerKind.Cutout));
         }
     }
 

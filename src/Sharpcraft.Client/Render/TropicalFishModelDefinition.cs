@@ -78,12 +78,10 @@ public static class TropicalFishModelDefinition
         var patternPath = "entity/fish/" + patternTexture;
         foreach (var part in bodyParts)
         {
-            parts.Add(part with
-            {
-                Name = "pattern_" + part.Name,
-                TexturePath = patternPath,
-                TintSelector = static state => state.PatternTint == default ? Vector3.One : state.PatternTint
-            });
+            parts.Add(part.With(
+                Name: "pattern_" + part.Name,
+                TexturePath: patternPath,
+                TintSelector: static state => state.PatternTint == default ? Vector3.One : state.PatternTint));
         }
 
         var compiled = EntityModelLayerHelpers.WithModelLayer(

@@ -66,7 +66,7 @@ Z-fighting 与 equipment clearance 不混入本任务；先走诊断报告，规
 
 - `T-746a`（本刀）：`EntityModelPart` 改为显式 `readonly record struct`，带参数的构造函数为 `internal`；
 - 增加 `EntityModelPartEncapsulationTests`：禁止 public 参数化构造，并只允许 `EntityModelMesher`/`EntityModelResolver`/`VanillaMeshBake` 构造 baked part；
-- `T-746b`（后续）：清理模型定义中绕过 baker 的几何 `with` 克隆；当前已加 `ModelDefinitionsDoNotGrowNewGeometryCloneSites` 棘轮（3 个已知文件），新增克隆会失败，修复一个必须同步收缩基线；不能把当前部分完成误报为全部完成。
+- `T-746b`（已收缩）：模型定义中的 `part/source with` 克隆已改为 `EntityModelPart.With(...)`；`ModelDefinitionsDoNotGrowNewGeometryCloneSites` 基线已清空，新增克隆会失败；helper/mesher 内部剩余的几何克隆仍留给后续清理。
 
 ### T-747 ModHost ALC 收口（P1，已实现代码硬化）
 
