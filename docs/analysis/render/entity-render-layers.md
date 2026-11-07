@@ -125,7 +125,9 @@ public sealed record EntityGeometryLayer(
 - `EntityModelMesher.BuildLayers` 从当前批次的模型定义取并集并按 `Order` 排序，不再使用固定
   `Cutout→Elytra→Translucent→Emissive` 数组；几何仍按 kind 聚合，独立的 per-layer model/texture/visible 尚未接线；
 - `WindowedRenderer` 的 entity layer 缓冲由固定 4 组改为按层数增长，层数超过 4 不再截断；
-- 剩余：把 `EntityRenderLayerDefinition` 扩展为带独立 `EntityModelDefinition`/`TexturePath`/`VisibleWhen` 的层模型，
-  并把装备层从按 kind 合并改为独立提交。
+- `EntityRenderLayerDefinition` 扩展为带 `EntityModelDefinition Model`、`TexturePath`、`TextureSelector`、
+  `VisibleWhen` 的层模型；`EntityModelMesher.BuildModelBackedLayers` 对带 Model 的层按实体单独建几何并追加；
+- humanoid 四槽护甲与 Elytra 已改为模型级独立层；基础模型/衣服/透明 overlay 仍按原 kind 层输出；
+- 剩余：把非 humanoid 装备树也接成模型级层、把 per-layer 几何构建从“逐实体临时几何”优化为按模型分组。
 
 

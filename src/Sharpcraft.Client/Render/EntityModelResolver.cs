@@ -5,6 +5,7 @@ namespace Sharpcraft.Client.Render;
 
 using Sharpcraft.Client.World;
 using Sharpcraft.Common.Registries;
+using Sharpcraft.Framework.Rendering;
 
 /// <summary>
 /// Resolves a render-only entity model definition from the registered entity type id. This is the C# equivalent of
@@ -222,6 +223,100 @@ public static class EntityModelResolver
             parts = EntityModelLayerHelpers.WithCrackiness(parts);
         }
 
+        var baseCompiled = definition.Compiled;
+        IReadOnlyList<EntityRenderLayerDefinition>? renderLayers = null;
+        if (!baby && baseCompiled is not null && ReferenceEquals(layers, HumanoidArmorLayers))
+        {
+            var baseLayerModel = new EntityModelDefinition(
+                definition.Name,
+                definition.TextureWidth,
+                definition.TextureHeight,
+                definition.Parts,
+                definition.FaceTransforms,
+                definition.TexturePath,
+                definition.Scale,
+                definition.EmissiveTexturePath,
+                definition.TextureSelector,
+                definition.AdditionalTexturePaths,
+                compiled: baseCompiled);
+            var customLayers = new List<EntityRenderLayerDefinition>();
+            foreach (var baseLayer in definition.RenderLayers)
+            {
+                if (baseLayer.Kind == EntityGeometryLayerKind.Elytra)
+                {
+                    continue;
+                }
+
+                customLayers.Add(new EntityRenderLayerDefinition(
+                    baseLayer.Name,
+                    baseLayer.Kind,
+                    baseLayer.Order,
+                    baseLayerModel,
+                    definition.TexturePath,
+                    definition.TextureSelector));
+            }
+            var order = 10;
+            foreach (var (kind, slot, fallback) in layers)
+            {
+                var effectiveKind = kind;
+                if (EquipmentModelTrees.For(
+                        kind,
+                        slot,
+                        player: typeId == EntityPlaceholderMesher.PlayerEntityTypeId,
+                        baby: false,
+                        piglin: typeId is (PiglinModelDefinition.PiglinEntityTypeId
+                            or PiglinModelDefinition.PiglinBruteEntityTypeId
+                            or PiglinModelDefinition.ZombifiedPiglinEntityTypeId)) is not { } equipmentTree)
+                {
+                    continue;
+                }
+
+                Func<EntityRenderState, string?> selector = state =>
+                    EntityModelResolver.ResolveEquipmentTexture(state, effectiveKind, slot);
+                var layerModel = new EntityModelDefinition(
+                    "equipment_" + kind + "_" + slot,
+                    definition.TextureWidth,
+                    definition.TextureHeight,
+                    [],
+                    definition.FaceTransforms,
+                    fallback,
+                    definition.Scale,
+                    textureSelector: selector,
+                    additionalTexturePaths: [fallback],
+                    compiled: equipmentTree);
+                customLayers.Add(new EntityRenderLayerDefinition(
+                    "equipment_" + kind + "_" + slot,
+                    EntityGeometryLayerKind.Elytra,
+                    order++,
+                    layerModel,
+                    fallback,
+                    selector,
+                    state => EntityModelResolver.ResolveEquipmentTexture(state, effectiveKind, slot) is not null));
+            }
+
+            var elytraCompiled = EntityModelLayerHelpers.BuildElytraLayer(baseCompiled);
+            var elytraModel = new EntityModelDefinition(
+                "elytra",
+                definition.TextureWidth,
+                definition.TextureHeight,
+                [],
+                definition.FaceTransforms,
+                "entity/equipment/wings/elytra",
+                definition.Scale,
+                textureSelector: state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4),
+                additionalTexturePaths: ["entity/equipment/wings/elytra"],
+                compiled: elytraCompiled);
+            customLayers.Add(new EntityRenderLayerDefinition(
+                "elytra",
+                EntityGeometryLayerKind.Elytra,
+                order,
+                elytraModel,
+                "entity/equipment/wings/elytra",
+                state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4),
+                state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4) is not null));
+            renderLayers = customLayers;
+        }
+
         var compiled = definition.Compiled;
         if (compiled is not null)
         {
@@ -279,7 +374,8 @@ public static class EntityModelResolver
             definition.EmissiveTexturePath,
             definition.TextureSelector,
             definition.AdditionalTexturePaths.Concat(EquipmentTextureCatalog.AllTexturePaths).Distinct(StringComparer.Ordinal).ToArray(),
-            compiled: compiled);
+            compiled: compiled,
+            renderLayers: renderLayers);
         EquippedModels[key] = decorated;
         return decorated;
     }

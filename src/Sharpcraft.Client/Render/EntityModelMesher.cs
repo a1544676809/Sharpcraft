@@ -17,6 +17,7 @@ public sealed partial class EntityModelMesher
 {
     private readonly DynamicGeometry _geometry = new();
     private readonly List<DynamicGeometry> _layerGeometries = [new(), new(), new(), new()];
+    private readonly List<DynamicGeometry> _layerScratch = [new(), new(), new(), new()];
 
     /// <summary>One reusable pose per entity in the current batch, so a steady frame does not allocate poses.</summary>
     private readonly List<EntityPose> _animationPoses = [];
@@ -65,6 +66,11 @@ public sealed partial class EntityModelMesher
         if (usePreparedPoses)
         {
             PrepareAnimationPoses(entities);
+        }
+
+        if (HasModelBackedLayers(entities, variants))
+        {
+            return BuildModelBackedLayers(entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants, pose, usePreparedPoses);
         }
 
         var plan = BuildLayerPlan(entities, variants);
@@ -117,6 +123,146 @@ public sealed partial class EntityModelMesher
         return plan;
     }
 
+    private bool HasModelBackedLayers(ReadOnlySpan<EntityRenderState> entities, EntityVariantTable? variants)
+    {
+        foreach (var entity in entities)
+        {
+            foreach (var layer in ResolveModel(entity, variants).RenderLayers)
+            {
+                if (layer.Model is not null)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Builds every model-backed layer with its own model/texture. The initial implementation conservatively builds one
+    /// entity at a time into a reused scratch geometry, then appends it to the layer's batch geometry; a later
+    /// performance task can group equal model definitions without changing the layer contract.
+    /// </summary>
+    private IReadOnlyList<EntityGeometryLayer> BuildModelBackedLayers(
+        ReadOnlySpan<EntityRenderState> entities,
+        SpriteRect skin,
+        int skinWidth,
+        int skinHeight,
+        IReadOnlyDictionary<string, FaceUvTransform>? transforms,
+        string? onlyPart,
+        string? excludedPart,
+        EntitySkinAtlas? skinAtlas,
+        EntityVariantTable? variants,
+        EntityPose? pose,
+        bool usePreparedPoses)
+    {
+        var byKey = new Dictionary<(string Name, EntityGeometryLayerKind Kind, int Order), EntityRenderLayerDefinition>();
+        foreach (var entity in entities)
+        {
+            foreach (var layer in ResolveModel(entity, variants).RenderLayers)
+            {
+                byKey[(layer.Name, layer.Kind, layer.Order)] = layer;
+            }
+        }
+
+        var plan = byKey.Values.ToList();
+        plan.Sort(static (left, right) =>
+        {
+            var order = left.Order.CompareTo(right.Order);
+            return order != 0 ? order : string.CompareOrdinal(left.Name, right.Name);
+        });
+        while (_layerGeometries.Count < plan.Count)
+        {
+            _layerGeometries.Add(new DynamicGeometry());
+            _layerScratch.Add(new DynamicGeometry());
+        }
+
+        var layers = new List<EntityGeometryLayer>(plan.Count);
+        for (var layerIndex = 0; layerIndex < plan.Count; layerIndex++)
+        {
+            var definition = plan[layerIndex];
+            var target = _layerGeometries[layerIndex];
+            var scratch = _layerScratch[layerIndex];
+            target.Clear();
+            for (var entityIndex = 0; entityIndex < entities.Length; entityIndex++)
+            {
+                var entity = entities[entityIndex];
+                var model = ResolveModel(entity, variants);
+                EntityRenderLayerDefinition? entityLayer = null;
+                foreach (var candidate in model.RenderLayers)
+                {
+                    if (candidate.Name == definition.Name && candidate.Kind == definition.Kind && candidate.Order == definition.Order)
+                    {
+                        entityLayer = candidate;
+                        break;
+                    }
+                }
+
+                if (entityLayer is null || (entityLayer.VisibleWhen is not null && !entityLayer.VisibleWhen(entity)))
+                {
+                    continue;
+                }
+
+                scratch.Clear();
+                BuildInto(
+                    scratch,
+                    entityLayer.Kind,
+                    [entity],
+                    skin,
+                    skinWidth,
+                    skinHeight,
+                    transforms,
+                    onlyPart,
+                    excludedPart,
+                    skinAtlas,
+                    variants,
+                    entityLayer.Kind == EntityGeometryLayerKind.Emissive,
+                    usePreparedPoses ? _animationPoses[entityIndex] : pose,
+                    usePreparedPoses: false,
+                    modelOverride: entityLayer.Model ?? model,
+                    layerTextureSelector: entityLayer.TextureSelector);
+                AppendGeometry(target, scratch);
+            }
+
+            if (target.IndexCount > 0)
+            {
+                layers.Add(new EntityGeometryLayer(definition.Name, definition.Kind, definition.Order, target));
+            }
+        }
+
+        return layers;
+    }
+
+    private static void AppendGeometry(DynamicGeometry target, DynamicGeometry source)
+    {
+        var neededVertices = target.VertexFloats + source.VertexFloats;
+        if (target.Vertices.Length < neededVertices)
+        {
+            var vertices = new float[Math.Max(neededVertices, target.Vertices.Length * 2)];
+            Array.Copy(target.Vertices, vertices, target.VertexFloats);
+            target.Vertices = vertices;
+        }
+
+        var neededIndices = target.IndexCount + source.IndexCount;
+        if (target.Indices.Length < neededIndices)
+        {
+            var indices = new uint[Math.Max(neededIndices, target.Indices.Length * 2)];
+            Array.Copy(target.Indices, indices, target.IndexCount);
+            target.Indices = indices;
+        }
+
+        var vertexBase = (uint)(target.VertexFloats / 14);
+        Array.Copy(source.Vertices, 0, target.Vertices, target.VertexFloats, source.VertexFloats);
+        for (var i = 0; i < source.IndexCount; i++)
+        {
+            target.Indices[target.IndexCount + i] = source.Indices[i] + vertexBase;
+        }
+
+        target.VertexFloats = neededVertices;
+        target.IndexCount = neededIndices;
+    }
+
     /// <summary>
     /// Fills <see cref="_animationPoses"/> for the current batch: one reused pose per entity, cleared and rebuilt from
     /// the registry provider. Runs once per frame; allocates only when the batch grows.
@@ -143,13 +289,18 @@ public sealed partial class EntityModelMesher
         }
     }
 
-    private DynamicGeometry BuildInto(DynamicGeometry target, EntityGeometryLayerKind? kindFilter, ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, bool emissivePass = false, EntityPose? pose = null, bool usePreparedPoses = false)
+    private DynamicGeometry BuildInto(DynamicGeometry target, EntityGeometryLayerKind? kindFilter, ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, bool emissivePass = false, EntityPose? pose = null, bool usePreparedPoses = false, EntityModelDefinition? modelOverride = null, Func<EntityRenderState, string?>? layerTextureSelector = null, Func<EntityRenderState, bool>? entityFilter = null)
     {
         target.Clear();
         var cubeCount = 0;
         foreach (var entity in entities)
         {
-            var model = ResolveModel(entity, variants);
+            if (entityFilter is not null && !entityFilter(entity))
+            {
+                continue;
+            }
+
+            var model = modelOverride ?? ResolveModel(entity, variants);
             if (model.Compiled is { } compiled)
             {
                 foreach (var cube in compiled.Cubes)
@@ -173,8 +324,13 @@ public sealed partial class EntityModelMesher
         for (var entityIndex = 0; entityIndex < entities.Length; entityIndex++)
         {
             var entity = entities[entityIndex];
+            if (entityFilter is not null && !entityFilter(entity))
+            {
+                continue;
+            }
+
             var entityPose = usePreparedPoses ? _animationPoses[entityIndex] : pose;
-            var model = ResolveModel(entity, variants);
+            var model = modelOverride ?? ResolveModel(entity, variants);
             if (model is null)
             {
                 continue;
@@ -205,7 +361,7 @@ public sealed partial class EntityModelMesher
                     sprite = eyeSprite;
                 }
             }
-            else if (skinAtlas?.Get(model.TextureSelector?.Invoke(entity) ?? model.TexturePath) is { } atlasSprite)
+            else if (skinAtlas?.Get(layerTextureSelector?.Invoke(entity) ?? model.TextureSelector?.Invoke(entity) ?? model.TexturePath) is { } atlasSprite)
             {
                 sprite = atlasSprite;
             }

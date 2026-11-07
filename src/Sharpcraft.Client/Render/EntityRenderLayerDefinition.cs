@@ -13,4 +13,8 @@ namespace Sharpcraft.Client.Render;
 public sealed record EntityRenderLayerDefinition(
     string Name,
     EntityGeometryLayerKind Kind,
-    int Order);
+    int Order,
+    EntityModelDefinition? Model = null,
+    string? TexturePath = null,
+    Func<Sharpcraft.Client.World.EntityRenderState, string?>? TextureSelector = null,
+    Func<Sharpcraft.Client.World.EntityRenderState, bool>? VisibleWhen = null);

@@ -210,6 +210,7 @@ DSL 现状与约束：
 - T-732：ZombieNautilus warm 变体的 coral 子树通过 `AddChild` 挂到基础 Nautilus `shell` 节点，保留 `Equipment[6] <= 0` 可见性。
 - T-733：`EntityModelDefinition.RenderLayers` 提供显式 `cutout/elytra/translucent/emissive` 顺序（0/10/20/30），`BuildLayers` 按批次并集排序；`WindowedRenderer` entity layer 缓冲按层数动态增长。独立 per-layer model/texture/visible 仍待接线。
 - T-734：Baby Pig/Cow/Chicken 与 Baby Cat/Wolf/Fox/Rabbit 全部变体接入 `Compiled`；Baby Cat/Wolf collar 使用树层。
+- T-738：`EntityRenderLayerDefinition` 增加独立 `Model`/纹理 selector/可见性；humanoid 四槽护甲与 Elytra 已改为模型级独立层，`BuildModelBackedLayers` 正确性优先地逐实体建几何（性能分组待后续）。
 - T-735：Baby Squid/Bee/Dolphin/Axolotl 与 Baby Horse/Llama/Camel/Donkey 及全部色型/毛色变体接入 `Compiled`；Baby Horse markings 使用 `WithModelLayer` 树复制层，纹理 selector 与 `Markings` 可见性保持。
 - T-737：Baby Goat/Panda/PolarBear/Turtle、Strider/Husk/Snifflet/犰狳、Nautilus/HappyGhast/GlowSquid 及 panda 基因变体全部接入 `Compiled`；Husk 复用 baby Zombie 树、GlowSquid 复用 baby Squid 树，犰狳 rolled/unrolled 可见性由树节点继承保留。
 - 现有 DSL 仍缺 **三轴 `GrowXyz`** 与 **`PartPose` 三轴 Scale**；完整覆盖幼年护甲等 reference 数据前必须补齐。

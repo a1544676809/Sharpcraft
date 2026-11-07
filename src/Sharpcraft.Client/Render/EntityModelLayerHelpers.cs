@@ -315,6 +315,58 @@ public static class EntityModelLayerHelpers
         return new CompiledEntityModel(root, parts, cubes);
     }
 
+    /// <summary>Builds the Elytra two-wing geometry as an independent compiled layer model.</summary>
+    public static CompiledEntityModel BuildElytraLayer(CompiledEntityModel model, bool baby = false)
+    {
+        var body = model.Find("body");
+        var bodyCube = body?.Cubes.FirstOrDefault(cube => cube.Height > 0f);
+        if (bodyCube is null || bodyCube.Value.Height <= 0f)
+        {
+            return new CompiledEntityModel(model.Root, [], []);
+        }
+
+        var modelHeight = bodyCube.Value.Bottom + bodyCube.Value.Height;
+        var wingPivotZ = bodyCube.Value.CentreZ + 2f;
+        var wings = baby
+            ? VanillaMeshBakery.Build(BuildBabyElytraWingsMesh(wingPivotZ), 64, 32)
+            : VanillaMeshBakery.Build(BuildElytraWingsMesh(modelHeight, wingPivotZ, string.Empty), 64, 32);
+        return WithElytraSelectors(wings, baby);
+    }
+
+    private static CompiledEntityModel WithElytraSelectors(CompiledEntityModel wings, bool baby)
+    {
+        var parts = new List<EntityModelPartNode>();
+        var cubes = new List<EntityModelCube>();
+        EntityModelPartNode Clone(EntityModelPartNode source, string? parent)
+        {
+            var children = source.Children.Select(child => Clone(child, source.Name)).ToArray();
+            var node = new EntityModelPartNode(
+                source.Name,
+                parent,
+                source.PivotX,
+                source.PivotY,
+                source.PivotZ,
+                source.RotationX,
+                source.RotationY,
+                source.RotationZ,
+                source.Cubes,
+                children,
+                rotationSelector: state => source.Name == "right_wing"
+                    ? new Vector3(-state.ElytraRotX, state.ElytraRotY, -state.ElytraRotZ)
+                    : new Vector3(-state.ElytraRotX, -state.ElytraRotY, state.ElytraRotZ),
+                yOffsetSelector: state => state.IsCrouching ? (baby ? -1.5f : -3f) : 0f,
+                poseSource: source.Name);
+            parts.Add(node);
+            cubes.AddRange(source.Cubes);
+            return node;
+        }
+
+        var children = wings.Root.Children.Select(child => Clone(child, null)).ToArray();
+        var root = new EntityModelPartNode(
+            wings.Root.Name, null, 0f, 0f, 0f, 0f, 0f, 0f, [], children);
+        return new CompiledEntityModel(root, parts, cubes);
+    }
+
     /// <summary>
     /// Adds one full-tree copy per horse marking variant (reference HorseMarkingLayer re-renders the parent model with a
     /// translucent marking texture; the geometry itself is not inflated).

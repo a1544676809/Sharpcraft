@@ -331,6 +331,14 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - 修正 legacy flat `WithHorseMarkings(EntityModelPart[])` 的 `Grow + 0.05f`，改为与基础 part 相同；
 - 编译树 helper 原本已无 inflate，保持一致；更新 markings 断言，增加 tree 侧 grow 相等断言。
 
+### 2026-11-07 — T-738 模型级实体层（humanoid 护甲/Elytra）
+
+- `EntityRenderLayerDefinition` 增加 `Model` / `TexturePath` / `TextureSelector` / `VisibleWhen`；
+- `EntityModelMesher.BuildModelBackedLayers`：带独立 `Model` 的层按实体建几何并追加，`BuildLayers` 不再只能按 kind 聚合；
+- `EntityModelResolver.Decorate` 为 humanoid 成人四槽护甲与 Elytra 生成独立 `EntityRenderLayerDefinition` 模型层；
+- `EntityModelLayerHelpers.BuildElytraLayer` 返回带 wing rotation/crouch selector 的独立两翼树；
+- 当前实现为正确性优先的逐实体 scratch 构建，后续性能任务可按模型定义分组优化；非 humanoid 装备层仍走 merged compiled。
+
 ### 2026-11-07 — T-735 幼年水生 / 马科模型树迁移
 
 - `BabyModelDefinitionsAquatic` 的 Squid/Bee/Dolphin/Axolotl 及 axolotl 全部色型变体接入 `Compiled`；
