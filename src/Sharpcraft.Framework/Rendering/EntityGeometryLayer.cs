@@ -16,7 +16,10 @@ public enum EntityGeometryLayerKind
     Translucent,
 
     /// <summary>Emissive eyes: additive, depth test greater-or-equal, no writes (not used yet).</summary>
-    Emissive
+    Emissive,
+
+    /// <summary>Enchanted glint overlay: additive, depth test greater-or-equal, no writes.</summary>
+    Glint
 }
 
 /// <summary>

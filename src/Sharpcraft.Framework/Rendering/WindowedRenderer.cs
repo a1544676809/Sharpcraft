@@ -280,6 +280,7 @@ public static class WindowedRenderer
         using var entityCutoutPipeline = CreateEntityCutoutPipeline(device, format, pipelineLayout);
         using var entityElytraPipeline = CreateEntityElytraPipeline(device, format, pipelineLayout);
         using var entityEmissivePipeline = CreateEntityEmissivePipeline(device, format, pipelineLayout);
+        using var entityGlintPipeline = CreateEntityGlintPipeline(device, format, pipelineLayout);
         using var skyPipeline = CreateSkyPipeline(device, format);
         // Celestial bodies and stars: the same backdrop draws the offscreen path uses, so the window and the exported
         // frame agree (docs/modules/clouds.md 6).
@@ -1216,7 +1217,11 @@ public static class WindowedRenderer
 
             // Per-frame lightmap parameters: day/night changes only this block, never the mesh.
             var frameLightmapBytes = new byte[Shaders.ShaderBindings.LightmapBytes];
-            LightmapUniformCodec.Write(lightmapPerFrame?.Invoke() ?? currentRequest.Lightmap, frameLightmapBytes);
+            var frameLightmap = lightmapPerFrame?.Invoke() ?? currentRequest.Lightmap;
+            var glintTime = currentRequest.GlintTime != 0f
+                ? currentRequest.GlintTime
+                : (float)(System.Diagnostics.Stopwatch.GetTimestamp() / (double)System.Diagnostics.Stopwatch.Frequency);
+            LightmapUniformCodec.Write(frameLightmap with { Padding = glintTime }, frameLightmapBytes);
             device.Queue.WriteBuffer(lightmapBuffer, 0, frameLightmapBytes.AsSpan());
 
             // Per-frame fog colour (time/weather driven); the range stays as configured.
@@ -1366,6 +1371,7 @@ public static class WindowedRenderer
                             {
                                 EntityGeometryLayerKind.Translucent => entityPipeline,
                                 EntityGeometryLayerKind.Emissive => entityEmissivePipeline,
+                                EntityGeometryLayerKind.Glint => entityGlintPipeline,
                                 EntityGeometryLayerKind.Elytra => entityElytraPipeline,
                                 _ => entityCutoutPipeline
                             });
@@ -2305,6 +2311,50 @@ public static class WindowedRenderer
                             operation = WGPUBlendOperation.Add,
                             srcFactor = WGPUBlendFactor.One,
                             dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
+                        }
+                    }
+                }
+            ],
+            layout: layout,
+            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
+            multisample: MultisampleState.Default,
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: false),
+            vertexStride: (ulong)VertexLayout.Stride,
+            vertexStepMode: WGPUVertexStepMode.Vertex,
+            vertexAttributes: VertexLayout.Attributes());
+    }
+
+    /// <summary>Enchanted glint overlay: additive, depth test greater-or-equal and no depth writes.</summary>
+    private static RenderPipeline CreateEntityGlintPipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
+    {
+        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
+        {
+            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText))
+        });
+
+        return device.CreateRenderPipeline(
+            shader,
+            "vs_main"u8,
+            shader,
+            "fs_entity_glint"u8,
+            [
+                new ColorTargetState
+                {
+                    Format = format,
+                    WriteMask = ColorWriteMask.All,
+                    Blend = new WGPUBlendState
+                    {
+                        color = new WGPUBlendComponent
+                        {
+                            operation = WGPUBlendOperation.Add,
+                            srcFactor = WGPUBlendFactor.SrcAlpha,
+                            dstFactor = WGPUBlendFactor.One
+                        },
+                        alpha = new WGPUBlendComponent
+                        {
+                            operation = WGPUBlendOperation.Add,
+                            srcFactor = WGPUBlendFactor.One,
+                            dstFactor = WGPUBlendFactor.Zero
                         }
                     }
                 }

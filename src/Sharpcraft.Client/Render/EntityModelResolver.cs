@@ -372,7 +372,7 @@ public static class EntityModelResolver
                     compiled: EntityModelLayerHelpers.WithEmissiveTexture(equipmentTree, glintTexture));
                 customLayers.Add(new EntityRenderLayerDefinition(
                     "glint_" + effectiveKind + "_" + slot,
-                    EntityGeometryLayerKind.Elytra,
+                    EntityGeometryLayerKind.Glint,
                     order++,
                     glintModel,
                     glintTexture,

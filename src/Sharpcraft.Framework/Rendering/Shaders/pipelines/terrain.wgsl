@@ -277,3 +277,28 @@ fn fs_entity_emissive(input : VertexOutput) -> @location(0) vec4<f32> {
     let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
     return vec4<f32>(mix(sampled.rgb, fog.colour.rgb, fogged), sampled.a);
 }
+
+// Enchanted glint overlay: the reference scrolls the enchantment texture over the model and adds it on top of the
+// already shaded layer. The lightmap padding slot carries the host glint clock (seconds), so no extra uniform binding
+// is needed for this single overlay pass.
+@fragment
+fn fs_entity_glint(input : VertexOutput) -> @location(0) vec4<f32> {
+    let rectMin = input.spriteRect.xy;
+    let rectMax = input.spriteRect.zw;
+    let local = input.uv - floor(input.uv);
+    let scroll = vec2<f32>(lightmap.padding * 0.015, lightmap.padding * 0.005);
+    let atlasUv = rectMin + fract(local + scroll) * (rectMax - rectMin);
+    let gradientScale = rectMax - rectMin;
+    let sampled = textureSampleGrad(
+        atlasTexture,
+        atlasSampler,
+        atlasUv,
+        dpdx(input.uv) * gradientScale,
+        dpdy(input.uv) * gradientScale);
+
+    if (sampled.a < 0.01) {
+        discard;
+    }
+
+    return vec4<f32>(sampled.rgb * 1.35, sampled.a * 0.65);
+}

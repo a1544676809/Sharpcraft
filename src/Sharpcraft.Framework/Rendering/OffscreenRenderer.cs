@@ -619,7 +619,7 @@ public static class OffscreenRenderer
 
             // Lightmap parameters (sky/block factors and colours); rewritten per frame so day/night needs no re-mesh.
             var lightmapBytes = new byte[Shaders.ShaderBindings.LightmapBytes];
-            LightmapUniformCodec.Write(request.Lightmap, lightmapBytes);
+            LightmapUniformCodec.Write(request.Lightmap with { Padding = request.GlintTime }, lightmapBytes);
             using var lightmapBuffer = device.CreateBufferInit(
                 new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
                 lightmapBytes.AsSpan());

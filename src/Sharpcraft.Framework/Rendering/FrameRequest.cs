@@ -39,6 +39,9 @@ public sealed record FrameRequest(
     /// </summary>
     public LightmapUniform Lightmap { get; init; } = LightmapUniform.Day;
 
+    /// <summary>Host glint clock in seconds, passed through the lightmap padding slot for the glint overlay shader.</summary>
+    public float GlintTime { get; init; }
+
     /// <summary>
     /// Fog colour (RGB 0..1) for this frame. The reference multiplies a base fog colour by the time/weather fog
     /// timeline; the host recomputes this per frame (docs/modules/weather-and-sky-color.md 6.3).
