@@ -30,6 +30,9 @@ public static class HappyGhastModelDefinition
     /// <summary>Declarative DSL tree for the body and the nine Tentacles-table tentacles (T-681).</summary>
     private static readonly VanillaMeshDefinition HappyGhastMesh = BuildHappyGhastMesh();
 
+    private static readonly CompiledEntityModel HappyGhastCompiled =
+        VanillaMeshBakery.Build(HappyGhastMesh, 64, 64);
+
     private static VanillaMeshDefinition BuildHappyGhastMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
@@ -53,5 +56,6 @@ public static class HappyGhastModelDefinition
         [.. VanillaMeshBake.Bake(HappyGhastMesh, 0, 0)],
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/ghast/happy_ghast",
-        4f);
+        4f,
+        compiled: HappyGhastCompiled);
 }

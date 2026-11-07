@@ -14,7 +14,7 @@ public static class WolfModelDefinition
     public const int WolfEntityTypeId = 152;
 
     /// <summary>Declarative DSL tree for the thirteen wolf parts (T-684).</summary>
-    private static readonly VanillaMeshDefinition WolfMesh = BuildWolfMesh();
+    private static readonly VanillaMeshDefinition WolfMesh = BuildBodyMesh(0f);
 
     private static readonly CompiledEntityModel BaseCompiled =
         VanillaMeshBakery.Build(WolfMesh, 64, 32, texturePath: "entity/wolf/wolf");
@@ -87,42 +87,35 @@ public static class WolfModelDefinition
         return variants;
     }
 
-    private static VanillaMeshDefinition BuildWolfMesh()
+    internal static VanillaMeshDefinition BuildBodyMesh(float addedGrow)
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         var head = root.AddOrReplaceChild("head", VanillaPartPose.Offset(-1f, 13.5f, -7f),
             new VanillaCubeDefinition("head", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f));
         head.AddOrReplaceChild("real_head", VanillaPartPose.Zero,
-            new VanillaCubeDefinition("real_head", 0, 0, -2f, -3f, -2f, 6f, 6f, 4f));
+            new VanillaCubeDefinition("real_head", 0, 0, -2f, -3f, -2f, 6f, 6f, 4f, Grow: addedGrow));
         head.AddOrReplaceChild("right_ear", VanillaPartPose.Zero,
-            new VanillaCubeDefinition("right_ear", 16, 14, -2f, -5f, 0f, 2f, 2f, 1f));
+            new VanillaCubeDefinition("right_ear", 16, 14, -2f, -5f, 0f, 2f, 2f, 1f, Grow: addedGrow));
         head.AddOrReplaceChild("left_ear", VanillaPartPose.Zero,
-            new VanillaCubeDefinition("left_ear", 16, 14, 2f, -5f, 0f, 2f, 2f, 1f));
+            new VanillaCubeDefinition("left_ear", 16, 14, 2f, -5f, 0f, 2f, 2f, 1f, Grow: addedGrow));
         head.AddOrReplaceChild("snout", VanillaPartPose.Zero,
-            new VanillaCubeDefinition("snout", 0, 10, -0.5f, -0.001f, -5f, 3f, 3f, 4f));
+            new VanillaCubeDefinition("snout", 0, 10, -0.5f, -0.001f, -5f, 3f, 3f, 4f, Grow: addedGrow));
         root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 14f, 2f, -MathF.PI / 2f, 0f, 0f),
-            new VanillaCubeDefinition("body", 18, 14, -3f, -2f, -3f, 6f, 9f, 6f));
+            new VanillaCubeDefinition("body", 18, 14, -3f, -2f, -3f, 6f, 9f, 6f, Grow: addedGrow));
         root.AddOrReplaceChild("upper_body", VanillaPartPose.OffsetAndRotation(-1f, 14f, -3f, -MathF.PI / 2f, 0f, 0f),
-            new VanillaCubeDefinition("upper_body", 21, 0, -3f, -3f, -3f, 8f, 6f, 7f));
+            new VanillaCubeDefinition("upper_body", 21, 0, -3f, -3f, -3f, 8f, 6f, 7f, Grow: addedGrow));
         root.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-2.5f, 16f, 7f),
-            new VanillaCubeDefinition("right_hind_leg", 0, 18, 0f, 0f, -1f, 2f, 8f, 2f));
+            new VanillaCubeDefinition("right_hind_leg", 0, 18, 0f, 0f, -1f, 2f, 8f, 2f, Grow: addedGrow));
         root.AddOrReplaceChild("left_hind_leg", VanillaPartPose.Offset(0.5f, 16f, 7f),
-            new VanillaCubeDefinition("left_hind_leg", 0, 18, 0f, 0f, -1f, 2f, 8f, 2f));
+            new VanillaCubeDefinition("left_hind_leg", 0, 18, 0f, 0f, -1f, 2f, 8f, 2f, Grow: addedGrow));
         root.AddOrReplaceChild("right_front_leg", VanillaPartPose.Offset(-2.5f, 16f, -4f),
-            new VanillaCubeDefinition("right_front_leg", 0, 18, 0f, 0f, -1f, 2f, 8f, 2f));
+            new VanillaCubeDefinition("right_front_leg", 0, 18, 0f, 0f, -1f, 2f, 8f, 2f, Grow: addedGrow));
         root.AddOrReplaceChild("left_front_leg", VanillaPartPose.Offset(0.5f, 16f, -4f),
-            new VanillaCubeDefinition("left_front_leg", 0, 18, 0f, 0f, -1f, 2f, 8f, 2f));
+            new VanillaCubeDefinition("left_front_leg", 0, 18, 0f, 0f, -1f, 2f, 8f, 2f, Grow: addedGrow));
         var tail = root.AddOrReplaceChild("tail", VanillaPartPose.OffsetAndRotation(-1f, 12f, 8f, -MathF.PI / 5f, 0f, 0f),
             new VanillaCubeDefinition("tail", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f));
         tail.AddOrReplaceChild("real_tail", VanillaPartPose.Zero,
-            new VanillaCubeDefinition("real_tail", 9, 18, 0f, 0f, -1f, 2f, 8f, 2f));
+            new VanillaCubeDefinition("real_tail", 9, 18, 0f, 0f, -1f, 2f, 8f, 2f, Grow: addedGrow));
         return new VanillaMeshDefinition(root);
     }
 }
-
-
-
-
-
-
-

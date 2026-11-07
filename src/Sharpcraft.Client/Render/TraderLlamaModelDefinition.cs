@@ -17,5 +17,6 @@ public static class TraderLlamaModelDefinition
         64,
         LlamaModelDefinition.Definition.Parts,
         PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/llama/llama_brown");
+        "entity/llama/llama_brown",
+        compiled: LlamaModelDefinition.Definition.Compiled);
 }

@@ -5,7 +5,7 @@
 title: STATE —— 跨会话进度锚点
 summary: 当前里程碑、进行中、未提交改动、阻塞、下一步、总体行动大纲
 status: 活文档
-updated: 2026-11-06
+updated: 2026-11-07
 -->
 
 # STATE —— 跨会话进度锚点
@@ -13,7 +13,7 @@ updated: 2026-11-06
 > 本文件只记录**易变状态**，且受原则 14 与架构测试硬约束：**严格控制在 150 行以内**（历史排障记录由 Git 历史保存，禁止在此写流水账）。
 > 设计结论见 `docs/modules/`，里程碑定义见 `docs/milestones/roadmap.md`，已知缺口见 `docs/specs/render/known-gaps.md`，验收矩阵见 `docs/specs/quality/vanilla-equivalence-matrix.md`。
 
-最后更新：2026-11-06
+最后更新：2026-11-07
 
 ## 当前里程碑
 
@@ -30,7 +30,7 @@ updated: 2026-11-06
 
 | 任务 | 状态 / 关键点 |
 | --- | --- |
-| **实体模型与动画主线** | 真实部件模型 + 逐实体动画 provider 已大量落地（humanoid/baby/quadruped/aquatic/nether 等）；剩余：T-631 held-item/item-model（解锁 SPEAR/STAB）、Happy Ghast ropes、EnderDragon flight history、Parrot PARTY / Bee stinger / Guardian eye look / Piglin crossbow-hold |
+| **实体模型与动画主线** | 真实部件模型 + 逐实体动画 provider 已大量落地（humanoid/baby/quadruped/aquatic/nether 等）；非人形装备层已树化（T-723）；剩余：人形护甲四槽/幼年护甲/Elytra 树层（RF-14/16）、T-631 held-item/item-model（解锁 SPEAR/STAB）、Happy Ghast ropes、EnderDragon flight history、Parrot PARTY / Bee stinger / Guardian eye look / Piglin crossbow-hold |
 | **架构：原则 14 / Phase 0 / Phase 1** | 已从 main 合入 T-654..T-661（原则 14、STATE 门禁、`PlaySession.TryHandleTransport`、`MeshingContext`、方块实体 NBT/类型注册表、`OcclusionShape`）。剩余：P0.3 帧 Pass 单轨化、P1.4 `registry_data` 动态装配、P1.5 `OcclusionShape` 完整接入 `ChunkMesher` 替换 `IsSolid` |
 
 ## 未提交改动
@@ -100,7 +100,8 @@ updated: 2026-11-06
 58. **T-720 剩余无装备模型批（2026-11-07）**：Phantom/Ravager/PolarBear/Silverfish/IronGolem/SnowGolem/Creaking/CopperGolem 通过 `FromTree` 接入编译树；emissive eyes、1.2 scale、weathering 变体保留。
 59. **T-721 Illager/Witch 迁移（2026-11-07）**：Illager 的 Vindicator/Evoker/Pillager/Illusioner 与 Witch 通过 `FromTree` 接入编译树。
 60. **T-722 Camel 基础树 + 鞍装备树（2026-11-07）**：Camel 接入 compiled tree；新增 `WithEquipment(CompiledEntityModel)` 将 saddle/bridle/reins 节点挂到基础 body/head；Decorate 对 Camel 使用 compiled equipment tree。
-61. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
+61. **T-723 非人形装备树迁移（2026-11-07）**：新增 `EquipmentModelTrees` 与 `WithModelLayer`；马/驴/骡/骷髅马/僵尸马、骆驼、羊驼、鹦鹉螺、快乐恶魂、狼甲全部装备层改为独立烘焙树；马 markings、狼 crackiness 改树复制层；`EntityModelCube.TextureSelector` 支持装备槽位动态纹理；树测试 15 项通过。
+62. **T-654..T-661 main 合并（2026-11-06）**：原则 14 + 单轨收敛 + 方块实体/遮挡地基并入本分支；`PlaySession` 冲突取 main 的“未处理包全部延迟”版本；traceability 编号顺延（原 main T-344..T-351 → T-654..T-661）。
 48. **T-648..T-650 / T-651..T-653 渲染与解耦（2026-11-05~06）**：Elytra 翼盒与 UV 原版等价、双翼镜像全宽；流体面剔除修复（玻璃后水可见）；云 OIT depth-bounds 写深度；`Sharpcraft.Assets` 分层 + 启动器/客户端解耦（ADR-0026/0027）。
 49. **实体模型/动画批量落地（2026-11-02~05）**：全部 baby 模型族、villager/zombie/horse 变体、cat/wolf 项圈、panda 基因、大量动画 provider 与测试。
 50. **协议与渲染长尾（2026-11-01~05）**：Play Clientbound 覆盖审计 + P0/P1 包批次（T-642..T-647）；反相 Z 迁移；参考 OIT 云/流体；天空盘逐像素近似。

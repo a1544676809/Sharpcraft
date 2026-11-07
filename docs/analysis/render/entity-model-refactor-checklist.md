@@ -219,3 +219,15 @@ RF-24..26 (Facts/Golden/Invariants) run before each migration; RF-27 cleanup las
 - 新增 `WithEquipment(CompiledEntityModel, ...)`：把 `EquipmentModelParts` 的额外 saddle/bridle/reins 节点挂到基础 `body`/`head` 节点，不扁平化基础模型；
 - `EntityModelResolver.Decorate` 对 Camel（type 19）使用 compiled equipment tree；
 - 额外装备节点保留 `ResolveEquipmentTexture` 可见性。
+
+### 2026-11-07 — T-723 非人形装备层独立树迁移
+
+- 新增 `EquipmentModelTrees`：按原版装备模型类分别烘焙完整装备树（马甲 `HorseModel` 0.1 deformation、马鞍 `EquineSaddleModel`、骆驼鞍 `CamelSaddleModel`、羊驼装饰 `LlamaModel` 0.5、鹦鹉螺甲/鞍、快乐恶魂挽具、狼甲 0.2）；
+- 新增 `EntityModelLayerHelpers.WithModelLayer`：把独立烘焙的装备树按 root 级 layer 合并，节点名加 `equipment_<kind>_<slot>_` 前缀、`PoseSource` 保留原节点名；装备纹理通过 `EntityModelCube.TextureSelector` 按槽位动态选择；
+- 马：`Horse/Donkey/Mule/ZombieHorse/SkeletonHorse` 全部接入 `Compiled`；Donkey/Mule 使用独立 donkey 树（胸部箱 + donkey 耳朵）；Horse markings 改为完整树复制层（translucent、无 grow）；补上 reference `livingHorseScale = 1.1F`（普通马，骷髅/僵尸马不加）；
+- 羊驼：head/neck/ears 改为原版 multi-cube part，`LlamaBody` 装饰层使用 0.5 deformation tree；Trader Llama 默认 trader 纹理层接入；
+- 鹦鹉螺：shell/body 改为原版 multi-cube part；Armor shell 使用 0.01 tree、Saddle shell 使用单 cube 0.2 tree；
+- 快乐恶魂：base 接入 `Compiled`，harness/goggles 独立树；
+- 狼甲：`WolfBody` 使用 0.2 deformation 全树；crackiness 改为基于 0.2 狼甲树的 damage-texture 复制层；
+- 鞍座 riding parts（马左右 saddle line、骆驼 reins）按 `IsVehicle` 控制可见性；
+- `EntityModelTreeBakeryTests` 新增 Horse/Donkey/Llama/Nautilus/HappyGhast/Wolf 装备树断言，树测试共 15 项。

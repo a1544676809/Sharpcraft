@@ -91,6 +91,7 @@ public sealed class CamelHorseLlamaGoatModelDefinitionTests
         Assert.Equal(64, HorseModelDefinition.Definition.TextureWidth);
         Assert.Equal(64, HorseModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/horse/horse_brown", HorseModelDefinition.Definition.TexturePath);
+        Assert.Equal(1.1f, HorseModelDefinition.Definition.Scale);
         Assert.Equal(60, HorseModelDefinition.Definition.Parts.Count);
         Assert.Equal("donkey", HorseModelDefinition.Donkey.Name);
         Assert.Equal("entity/horse/donkey", HorseModelDefinition.Donkey.TexturePath);
@@ -178,12 +179,9 @@ public sealed class CamelHorseLlamaGoatModelDefinitionTests
         LegacyModelPartFactory.FromVanilla("body", 0f, 11f, 5f, -5f, -8f, -17f, 10f, 10f, 22f, 0, 32, grow: 0.05f),
         LegacyModelPartFactory.FromVanilla("head_parts", 0f, 4f, -12f, -2.05f, -6f, -2f, 4f, 12f, 7f, 0, 35,
             rotationX: -MathF.PI / 6f),
-        LegacyModelPartFactory.FromVanillaChild("head", "head_parts", 0f, 0f, 0f, -3f, -11f, -2f, 6f, 5f, 7f, 0, 13,
-            grow: 0.05f),
-        LegacyModelPartFactory.FromVanillaChild("mane", "head_parts", 0f, 0f, 0f, -1f, -11f, 5.01f, 2f, 16f, 2f, 56, 36,
-            grow: 0.05f),
-        LegacyModelPartFactory.FromVanillaChild("upper_mouth", "head_parts", 0f, 0f, 0f, -2f, -11f, -7f, 4f, 5f, 5f, 0, 25,
-            grow: 0.05f),
+        LegacyModelPartFactory.FromVanillaChild("head", "head_parts", 0f, 0f, 0f, -3f, -11f, -2f, 6f, 5f, 7f, 0, 13),
+        LegacyModelPartFactory.FromVanillaChild("mane", "head_parts", 0f, 0f, 0f, -1f, -11f, 5.01f, 2f, 16f, 2f, 56, 36),
+        LegacyModelPartFactory.FromVanillaChild("upper_mouth", "head_parts", 0f, 0f, 0f, -2f, -11f, -7f, 4f, 5f, 5f, 0, 25),
         LegacyModelPartFactory.FromVanillaChild("left_ear", "head", 0f, 0f, 0f, 0.55f, -13f, 4f, 2f, 3f, 1f, 19, 16,
             grow: -0.001f),
         LegacyModelPartFactory.FromVanillaChild("right_ear", "head", 0f, 0f, 0f, -2.55f, -13f, 4f, 2f, 3f, 1f, 19, 16,
@@ -193,18 +191,20 @@ public sealed class CamelHorseLlamaGoatModelDefinitionTests
         LegacyModelPartFactory.FromVanilla("left_front_leg", 4f, 14f, -10f, -3f, -1.01f, -1.9f, 4f, 11f, 4f, 48, 21, mirror: true),
         LegacyModelPartFactory.FromVanilla("right_front_leg", -4f, 14f, -10f, -1f, -1.01f, -1.9f, 4f, 11f, 4f, 48, 21),
         LegacyModelPartFactory.FromVanillaChild("tail", "body", 0f, -5f, 2f, -1.5f, 0f, 0f, 3f, 14f, 4f, 42, 36,
-            rotationX: MathF.PI / 6f, grow: 0.05f)
+            rotationX: MathF.PI / 6f)
     ];
 
     private static EntityModelPart[] ExpectedLlamaParts() =>
     [
         LegacyModelPartFactory.FromVanilla("head", 0f, 7f, -6f, -2f, -14f, -10f, 4f, 4f, 9f, 0, 0),
-        LegacyModelPartFactory.FromVanilla("neck", 0f, 7f, -6f, -4f, -16f, -6f, 8f, 18f, 6f, 0, 14),
-        LegacyModelPartFactory.FromVanilla("left_ear", 0f, 7f, -6f, -4f, -19f, -4f, 3f, 3f, 2f, 17, 0),
-        LegacyModelPartFactory.FromVanilla("right_ear", 0f, 7f, -6f, 1f, -19f, -4f, 3f, 3f, 2f, 17, 0),
+        LegacyModelPartFactory.FromVanillaChild("neck", "head", 0f, 0f, 0f, -4f, -16f, -6f, 8f, 18f, 6f, 0, 14),
+        LegacyModelPartFactory.FromVanillaChild("left_ear", "head", 0f, 0f, 0f, -4f, -19f, -4f, 3f, 3f, 2f, 17, 0),
+        LegacyModelPartFactory.FromVanillaChild("right_ear", "head", 0f, 0f, 0f, 1f, -19f, -4f, 3f, 3f, 2f, 17, 0),
         LegacyModelPartFactory.FromVanilla("body", 0f, 5f, 2f, -6f, -10f, -7f, 12f, 18f, 10f, 29, 0, rotationX: -MathF.PI / 2f),
-        LegacyModelPartFactory.FromVanilla("right_chest", -8.5f, 3f, 3f, -3f, 0f, 0f, 8f, 8f, 3f, 45, 28, rotationY: -MathF.PI / 2f),
-        LegacyModelPartFactory.FromVanilla("left_chest", 5.5f, 3f, 3f, -3f, 0f, 0f, 8f, 8f, 3f, 45, 41, rotationY: -MathF.PI / 2f),
+        LegacyModelPartFactory.FromVanilla("right_chest", -8.5f, 3f, 3f, -3f, 0f, 0f, 8f, 8f, 3f, 45, 28, rotationY: -MathF.PI / 2f)
+            with { VisibleWhen = static state => state.HasChest },
+        LegacyModelPartFactory.FromVanilla("left_chest", 5.5f, 3f, 3f, -3f, 0f, 0f, 8f, 8f, 3f, 45, 41, rotationY: -MathF.PI / 2f)
+            with { VisibleWhen = static state => state.HasChest },
         LegacyModelPartFactory.FromVanilla("right_hind_leg", -3.5f, 10f, 6f, -2f, 0f, -2f, 4f, 14f, 4f, 29, 29),
         LegacyModelPartFactory.FromVanilla("left_hind_leg", 3.5f, 10f, 6f, -2f, 0f, -2f, 4f, 14f, 4f, 29, 29),
         LegacyModelPartFactory.FromVanilla("right_front_leg", -3.5f, 10f, -5f, -2f, 0f, -2f, 4f, 14f, 4f, 29, 29),

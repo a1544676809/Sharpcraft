@@ -222,6 +222,27 @@ public static class EntityModelResolver
             parts = EntityModelLayerHelpers.WithCrackiness(parts);
         }
 
+        var compiled = definition.Compiled;
+        if (compiled is not null)
+        {
+            foreach (var (kind, slot, fallback) in layers)
+            {
+                if (EquipmentModelTrees.For(kind) is { } equipmentTree)
+                {
+                    var fixedTexture = typeId == 138 && kind == EquipmentAssetKind.LlamaBody
+                        ? "entity/equipment/llama_body/trader_llama"
+                        : null;
+                    compiled = EntityModelLayerHelpers.WithEquipment(
+                        compiled, equipmentTree, kind, slot, fallback, fixedTexture: fixedTexture);
+                }
+            }
+
+            if (typeId == 152 && EquipmentModelTrees.For(EquipmentAssetKind.WolfBody) is { } wolfArmor)
+            {
+                compiled = EntityModelLayerHelpers.WithCrackiness(compiled, wolfArmor);
+            }
+        }
+
         var decorated = new EntityModelDefinition(
             definition.Name,
             definition.TextureWidth,
@@ -233,13 +254,7 @@ public static class EntityModelResolver
             definition.EmissiveTexturePath,
             definition.TextureSelector,
             definition.AdditionalTexturePaths.Concat(EquipmentTextureCatalog.AllTexturePaths).Distinct(StringComparer.Ordinal).ToArray(),
-            compiled: typeId == CamelModelDefinition.CamelEntityTypeId && definition.Compiled is { } camelCompiled
-                ? EntityModelLayerHelpers.WithEquipment(
-                    camelCompiled,
-                    EquipmentAssetKind.CamelSaddle,
-                    7,
-                    "entity/equipment/camel_saddle/saddle")
-                : null);
+            compiled: compiled);
         EquippedModels[key] = decorated;
         return decorated;
     }

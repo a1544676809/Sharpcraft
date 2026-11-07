@@ -50,11 +50,12 @@ public sealed class EntityModelHierarchyTests
     {
         // right_ear is a head child with a zero pose; head is a zero-pose child of head_parts. The reference therefore
         // places the ear at head_parts pivot + RotX(+30deg) * cube. Recomputed by hand in the baked y-up space:
-        // x in [0.55, 2.55], y in [30.66, 33.758], z in [-15.036, -12.67] model pixels.
+        // x in [0.55, 2.55], y in [30.66, 33.758], z in [-15.036, -12.67] model pixels, scaled by the reference
+        // livingHorseScale of 1.1.
         var geometry = Vertices(HorseModelDefinition.Definition, HorseModelDefinition.HorseEntityTypeId, "right_ear");
         Assert.NotEmpty(geometry);
 
-        const float px = (1f / 16f) * EntityPlaceholderMesher.ModelScale;
+        const float px = (1f / 16f) * EntityPlaceholderMesher.ModelScale * 1.1f;
         var (min, max) = Bounds(geometry);
 
         Assert.Equal(0.55f * px, min.X, 3);

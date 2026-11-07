@@ -785,8 +785,9 @@ public sealed partial class EntityModelMesher
                     partSprite = partEmissiveSprite;
                 }
 
+                var selectedPartPath = cube.TextureSelector?.Invoke(entity) ?? cube.TexturePath;
                 if (!emissivePass
-                    && cube.TexturePath is { Length: > 0 } partPath
+                    && selectedPartPath is { Length: > 0 } partPath
                     && skinAtlas?.Get(partPath) is { } partAtlas)
                 {
                     partSprite = partAtlas;

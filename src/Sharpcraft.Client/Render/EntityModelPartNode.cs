@@ -34,7 +34,8 @@ public readonly record struct EntityModelCube(
     int TextureHeight = 0,
     bool IncludeInEmissive = true,
     bool EmissiveOnly = false,
-    string? EmissiveTexturePath = null);
+    string? EmissiveTexturePath = null,
+    Func<Sharpcraft.Client.World.EntityRenderState, string?>? TextureSelector = null);
 
 /// <summary>
 /// One node of the baked, structurally-preserving model tree. Unlike the legacy <see cref="EntityModelPart"/>, a node

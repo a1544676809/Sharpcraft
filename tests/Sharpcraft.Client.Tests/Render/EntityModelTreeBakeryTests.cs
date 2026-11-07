@@ -4,6 +4,7 @@
 using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
+using Sharpcraft.Framework.Rendering;
 using Xunit;
 
 namespace Sharpcraft.Client.Tests.Render;
@@ -73,9 +74,123 @@ public sealed class EntityModelTreeBakeryTests
         Assert.NotNull(CamelModelDefinition.Definition.Compiled);
         var decorated = EntityModelResolver.Resolve(CamelModelDefinition.CamelEntityTypeId);
         Assert.NotNull(decorated.Compiled);
-        Assert.NotNull(decorated.Compiled!.Find("saddle_lower"));
-        Assert.NotNull(decorated.Compiled.Find("bridle_lower"));
-        Assert.NotNull(decorated.Compiled.Find("reins_front"));
+        var saddle = decorated.Compiled!.Find("equipment_CamelSaddle_7_saddle");
+        Assert.NotNull(saddle);
+        Assert.Equal(3, saddle.Cubes.Count);
+        Assert.NotNull(decorated.Compiled.Find("equipment_CamelSaddle_7_bridle"));
+        Assert.NotNull(decorated.Compiled.Find("equipment_CamelSaddle_7_reins"));
+    }
+
+    [Fact]
+    public void HorseExposesCompiledTreeAndMarkingLayers()
+    {
+        var horse = HorseModelDefinition.Definition.Compiled;
+        Assert.NotNull(horse);
+        Assert.Equal(60, horse!.Parts.Count);
+        Assert.NotNull(horse.Find("marking_white_head_parts"));
+        Assert.NotNull(horse.Find("marking_blackdots_tail"));
+        Assert.Equal(EntityGeometryLayerKind.Translucent, horse.Find("marking_white_tail")!.Cubes[0].Kind);
+
+        var baseState = new EntityRenderState(1, HorseModelDefinition.HorseEntityTypeId, 0f, 0f, 0f, 0f, 0f);
+        var markedState = baseState with { Markings = 1 };
+        var mesher = new EntityModelMesher();
+        var baseVertexFloats = mesher.Build([baseState], new SpriteRect(0, 0, 64, 64, 1), 64, 64).VertexFloats;
+        var markedVertexFloats = mesher.Build([markedState], new SpriteRect(0, 0, 64, 64, 1), 64, 64).VertexFloats;
+        Assert.True(markedVertexFloats > baseVertexFloats);
+    }
+
+    [Fact]
+    public void HorseEquipmentAddsIndependentArmorAndSaddleTrees()
+    {
+        var decorated = EntityModelResolver.Resolve(HorseModelDefinition.HorseEntityTypeId);
+        Assert.NotNull(decorated.Compiled);
+        var armorBody = decorated.Compiled!.Find("equipment_HorseBody_6_body");
+        Assert.NotNull(armorBody);
+        Assert.Equal(0.05f, armorBody.Cubes[0].Grow, 3);
+        var armorHead = decorated.Compiled.Find("equipment_HorseBody_6_head");
+        Assert.NotNull(armorHead);
+        Assert.Equal(0.1f, armorHead.Cubes[0].Grow, 3);
+
+        var saddle = decorated.Compiled.Find("equipment_HorseSaddle_7_saddle");
+        Assert.NotNull(saddle);
+        Assert.Single(saddle.Cubes);
+        var leftLine = decorated.Compiled.Find("equipment_HorseSaddle_7_left_saddle_line");
+        Assert.NotNull(leftLine);
+        var noSaddle = new EntityRenderState(1, HorseModelDefinition.HorseEntityTypeId, 0f, 0f, 0f, 0f, 0f);
+        var withSaddle = noSaddle with
+        {
+            Equipment = new EntityEquipment(-1, -1, -1, -1, -1, -1, -1, 949),
+            IsVehicle = true
+        };
+        Assert.False(leftLine.VisibleWhen!(noSaddle));
+        Assert.True(leftLine.VisibleWhen(withSaddle));
+    }
+
+    [Fact]
+    public void DonkeyAndMuleUseTheDonkeyCompiledTree()
+    {
+        Assert.NotNull(HorseModelDefinition.Donkey.Compiled);
+        Assert.Equal(14, HorseModelDefinition.Donkey.Compiled!.Parts.Count);
+        Assert.NotNull(HorseModelDefinition.Donkey.Compiled.Find("left_chest"));
+        Assert.NotNull(HorseModelDefinition.Donkey.Compiled.Find("right_chest"));
+        Assert.Contains(HorseModelDefinition.Donkey.Compiled.Find("head")!.Children, child => child.Name == "left_ear");
+
+        var mule = EntityModelResolver.Resolve(HorseModelDefinition.MuleEntityTypeId);
+        Assert.NotNull(mule.Compiled);
+        var saddle = mule.Compiled!.Find("equipment_MuleSaddle_7_saddle");
+        Assert.NotNull(saddle);
+    }
+
+    [Fact]
+    public void LlamaKeepsTheReferenceMultiCubeHeadAndDecorTree()
+    {
+        var llama = LlamaModelDefinition.Definition.Compiled;
+        Assert.NotNull(llama);
+        Assert.Equal(8, llama!.Parts.Count);
+        var head = llama.Find("head");
+        Assert.NotNull(head);
+        Assert.Equal(4, head.Cubes.Count);
+        Assert.Null(llama.Find("neck"));
+
+        var decorated = EntityModelResolver.Resolve(LlamaModelDefinition.LlamaEntityTypeId);
+        Assert.NotNull(decorated.Compiled);
+        var decorHead = decorated.Compiled!.Find("equipment_LlamaBody_6_head");
+        Assert.NotNull(decorHead);
+        Assert.Equal(4, decorHead.Cubes.Count);
+        Assert.Equal(0.5f, decorHead.Cubes[0].Grow, 3);
+
+        var trader = EntityModelResolver.Resolve(TraderLlamaModelDefinition.TraderLlamaEntityTypeId);
+        Assert.NotNull(trader.Compiled);
+        var traderDecor = trader.Compiled!.Find("equipment_LlamaBody_6_head");
+        Assert.NotNull(traderDecor);
+        var plainState = new EntityRenderState(1, TraderLlamaModelDefinition.TraderLlamaEntityTypeId, 0f, 0f, 0f, 0f, 0f);
+        Assert.True(traderDecor.VisibleWhen!(plainState));
+        Assert.Equal("entity/equipment/llama_body/trader_llama", traderDecor.Cubes[0].TextureSelector!(plainState));
+    }
+
+    [Fact]
+    public void NautilusAndHappyGhastExposeCompiledEquipmentTrees()
+    {
+        var nautilus = NautilusModelDefinition.Definition.Compiled;
+        Assert.NotNull(nautilus);
+        Assert.Equal(3, nautilus!.Find("shell")!.Cubes.Count);
+        Assert.Equal(2, nautilus.Find("body")!.Cubes.Count);
+
+        var decoratedNautilus = EntityModelResolver.Resolve(NautilusModelDefinition.NautilusEntityTypeId);
+        Assert.NotNull(decoratedNautilus.Compiled);
+        var armorShell = decoratedNautilus.Compiled!.Find("equipment_NautilusBody_6_shell");
+        Assert.NotNull(armorShell);
+        Assert.Equal(3, armorShell.Cubes.Count);
+        Assert.Equal(0.01f, armorShell.Cubes[0].Grow, 3);
+        Assert.NotNull(decoratedNautilus.Compiled.Find("equipment_NautilusSaddle_7_shell"));
+
+        var happy = HappyGhastModelDefinition.Definition.Compiled;
+        Assert.NotNull(happy);
+        Assert.Equal(10, happy!.Parts.Count);
+        var decoratedHappy = EntityModelResolver.Resolve(HappyGhastModelDefinition.HappyGhastEntityTypeId);
+        Assert.NotNull(decoratedHappy.Compiled);
+        Assert.Single(decoratedHappy.Compiled!.Find("equipment_HappyGhastBody_6_harness")!.Cubes);
+        Assert.NotNull(decoratedHappy.Compiled.Find("equipment_HappyGhastBody_6_goggles"));
     }
 
     [Fact]
@@ -107,6 +222,15 @@ public sealed class EntityModelTreeBakeryTests
         Assert.NotNull(wolf);
         Assert.Equal(26, wolf!.Parts.Count);
         Assert.NotNull(wolf.Find("collar_head"));
+
+        var decoratedWolf = EntityModelResolver.Resolve(WolfModelDefinition.WolfEntityTypeId);
+        Assert.NotNull(decoratedWolf.Compiled);
+        var wolfArmor = decoratedWolf.Compiled!.Find("equipment_WolfBody_6_body");
+        Assert.NotNull(wolfArmor);
+        Assert.Equal(0.2f, wolfArmor.Cubes[0].Grow, 3);
+        var crackiness = decoratedWolf.Compiled.Find("crackiness_body");
+        Assert.NotNull(crackiness);
+        Assert.Equal(0.2f, crackiness.Cubes[0].Grow, 3);
 
         var catWithout = new EntityModelMesher().Build(
             [new EntityRenderState(1, CatModelDefinition.CatEntityTypeId, 0f, 0f, 0f, 0f, 0f)],

@@ -193,6 +193,154 @@ public static class EntityModelLayerHelpers
     }
 
     /// <summary>
+    /// Merges a separately baked tree model as an independent root-level layer without flattening either tree. Node
+    /// names are prefixed while PoseSource keeps the source node name, so animation offsets still match the base model.
+    /// This mirrors the reference equipment models that extend the base model and are baked from their own mesh.
+    /// </summary>
+    public static CompiledEntityModel WithModelLayer(
+        CompiledEntityModel model,
+        CompiledEntityModel layer,
+        string prefix,
+        Func<EntityRenderState, string?> textureSelector,
+        Func<EntityRenderState, bool>? visible = null,
+        string? fallbackTexture = null,
+        EntityGeometryLayerKind? kind = null,
+        float inflate = 0f)
+    {
+        var layerParts = new List<EntityModelPartNode>();
+
+        EntityModelPartNode CloneNode(EntityModelPartNode source, string? parent)
+        {
+            var name = prefix + source.Name;
+            var cubes = source.Cubes.Select(cube => cube with
+            {
+                Name = prefix + cube.Name,
+                TexturePath = fallbackTexture,
+                TextureSelector = textureSelector,
+                Kind = kind ?? cube.Kind,
+                Grow = cube.Grow + inflate,
+                GrowXyz = cube.GrowXyz is { } grow
+                    ? new Vector3(grow.X + inflate, grow.Y + inflate, grow.Z + inflate)
+                    : null
+            }).ToArray();
+            var children = source.Children.Select(child => CloneNode(child, name)).ToArray();
+            var node = new EntityModelPartNode(
+                name,
+                parent,
+                source.PivotX,
+                source.PivotY,
+                source.PivotZ,
+                source.RotationX,
+                source.RotationY,
+                source.RotationZ,
+                cubes,
+                children,
+                visibleWhen: state => (visible?.Invoke(state) ?? true) && (source.VisibleWhen?.Invoke(state) ?? true),
+                rotationSelector: source.RotationSelector,
+                yOffsetSelector: source.YOffsetSelector,
+                poseSource: source.PoseSource ?? source.Name,
+                tintSelector: source.TintSelector);
+            layerParts.Add(node);
+            return node;
+        }
+
+        var children = new List<EntityModelPartNode>(model.Root.Children.Count + layer.Root.Children.Count);
+        children.AddRange(model.Root.Children);
+        foreach (var child in layer.Root.Children)
+        {
+            children.Add(CloneNode(child, parent: null));
+        }
+
+        var root = new EntityModelPartNode(
+            model.Root.Name,
+            parent: null,
+            pivotX: 0f,
+            pivotY: 0f,
+            pivotZ: 0f,
+            rotationX: 0f,
+            rotationY: 0f,
+            rotationZ: 0f,
+            cubes: [],
+            children);
+
+        var parts = new List<EntityModelPartNode>(model.Parts.Count + layerParts.Count);
+        parts.AddRange(model.Parts);
+        parts.AddRange(layerParts);
+        var cubes = new List<EntityModelCube>(model.Cubes.Count + layerParts.Sum(part => part.Cubes.Count));
+        cubes.AddRange(model.Cubes);
+        foreach (var part in layerParts)
+        {
+            cubes.AddRange(part.Cubes);
+        }
+
+        return new CompiledEntityModel(root, parts, cubes);
+    }
+
+    /// <summary>
+    /// Adds one full-tree copy per horse marking variant (reference HorseMarkingLayer re-renders the parent model with a
+    /// translucent marking texture; the geometry itself is not inflated).
+    /// </summary>
+    public static CompiledEntityModel WithHorseMarkings(
+        CompiledEntityModel model,
+        string texturePrefix,
+        bool baby)
+    {
+        (int Id, string Key)[] markings = [(1, "white"), (2, "whitefield"), (3, "whitedots"), (4, "blackdots")];
+        var result = model;
+        foreach (var (id, key) in markings)
+        {
+            var path = texturePrefix + key + (baby ? "_baby" : string.Empty);
+            result = WithModelLayer(
+                result,
+                model,
+                "marking_" + key + "_",
+                _ => path,
+                state => state.Markings == id,
+                path,
+                EntityGeometryLayerKind.Translucent);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Merges a separately baked equipment tree (for example <c>EquineSaddleModel</c> or <c>NautilusArmorModel</c>) as an
+    /// independent layer, with the layer texture resolved from the entity's equipment slot.
+    /// </summary>
+    public static CompiledEntityModel WithEquipment(
+        CompiledEntityModel model,
+        CompiledEntityModel equipmentModel,
+        EquipmentAssetKind kind,
+        int slot,
+        string fallbackTexture,
+        bool overlay = false,
+        string? fixedTexture = null)
+    {
+        Func<EntityRenderState, string?> selector = fixedTexture is null
+            ? state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay)
+            : _ => fixedTexture;
+        Func<EntityRenderState, bool> visible = fixedTexture is null
+            ? state => EntityModelResolver.ResolveEquipmentTexture(state, kind, slot, overlay) is not null
+            : static _ => true;
+        return WithModelLayer(model, equipmentModel, "equipment_" + kind + "_" + slot + "_", selector, visible, fallbackTexture);
+    }
+
+    /// <summary>Wolf-armor crackiness overlay drawn with the already inflated (0.2) armor tree and a damage texture.</summary>
+    public static CompiledEntityModel WithCrackiness(CompiledEntityModel model, CompiledEntityModel armorModel) =>
+        WithModelLayer(
+            model,
+            armorModel,
+            "crackiness_",
+            static state => state.Crackiness switch
+            {
+                1 => "entity/wolf/wolf_armor_crackiness_low",
+                2 => "entity/wolf/wolf_armor_crackiness_medium",
+                3 => "entity/wolf/wolf_armor_crackiness_high",
+                _ => null
+            },
+            static state => state.Crackiness > 0);
+
+    /// <summary>
     /// Attaches the reference's extra saddle/armor boxes to the matching base tree nodes without flattening the base.
     /// The extra boxes keep their reference parent names (body/head), and the base nodes keep their original cubes.
     /// </summary>

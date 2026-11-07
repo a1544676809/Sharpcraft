@@ -197,6 +197,8 @@ P1 只做**静态姿态 + 朝向**，明确排除骨骼动画、物品装备渲�
 DSL 现状与约束：
 
 - `VanillaMeshDefinition` + `VanillaMeshBake` 已覆盖全部生产模型/装备/护甲几何；生产代码不再直接调用 legacy `FromVanilla` 工厂。
+- 装备层自 T-723 起采用**独立烘焙树**：`EquipmentModelTrees` 按原版装备模型类生成完整 `CompiledEntityModel`，`EntityModelLayerHelpers.WithModelLayer` 在 root 级合并、节点加 `equipment_<kind>_<slot>_` 前缀、`PoseSource` 保留原节点名；`EntityModelCube.TextureSelector` 负责按槽位动态选纹理。
+- 已树化的非人形装备层：马甲/马鞍/驴骡鞍/骷髅马鞍/僵尸马鞍、骆驼鞍（含 `IsVehicle` reins）、羊驼装饰（含 trader 默认纹理）、鹦鹉螺甲/鞍、快乐恶魂挽具、狼甲与 crackiness；人形护甲、幼年护甲与 Elytra 仍待 RF-14/RF-16。
 - 现有 DSL 仍缺 **三轴 `GrowXyz`** 与 **`PartPose` 三轴 Scale**；完整覆盖幼年护甲等 reference 数据前必须补齐。
 - 完整的模型/装备树结构、动画与测试差距见 [`entity-model-parity-gap.md`](../analysis/render/entity-model-parity-gap.md)；逐项施工清单见 [`entity-model-refactor-checklist.md`](../analysis/render/entity-model-refactor-checklist.md)。
 - 迁移测试中的 `LegacyModelPartFactory` 只是旧实现值 oracle，不是原版 Golden Vector；后续应改为读取自动提取的 `vanilla-model-facts.json`。

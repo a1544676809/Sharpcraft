@@ -176,6 +176,8 @@ public static class EquipmentTextureCatalog
             paths.Add("entity/equipment/happy_ghast_body/" + color + "_harness");
         }
 
+        paths.AddRange(["entity/equipment/llama_body/trader_llama", "entity/equipment/llama_body/trader_llama_baby"]);
+
         foreach (var material in NautilusBodyMaterials.Values)
         {
             paths.Add("entity/equipment/nautilus_body/" + material);

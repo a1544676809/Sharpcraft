@@ -24,6 +24,34 @@ public static class CamelModelDefinition
     private static readonly CompiledEntityModel CompiledModel =
         VanillaMeshBakery.Build(CamelMesh, 128, 128, texturePath: "entity/camel/camel");
 
+    internal static VanillaMeshDefinition BuildBodyMesh() => BuildCamelMesh();
+
+    /// <summary>
+    /// Reference <c>CamelSaddleModel.createSaddleLayer</c>: the full camel body plus saddle, reins and bridle parts.
+    /// The reins part is only visible while the camel is ridden.
+    /// </summary>
+    internal static VanillaMeshDefinition BuildSaddleMesh()
+    {
+        var mesh = BuildCamelMesh();
+        var body = mesh.Root!.GetChild("body")!;
+        body.AddOrReplaceChild("saddle", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("saddle", 74, 64, -4.5f, -17f, -15.5f, 9f, 5f, 11f, Grow: 0.05f),
+            new VanillaCubeDefinition("saddle_upper", 92, 114, -3.5f, -20f, -15.5f, 7f, 3f, 11f, Grow: 0.05f),
+            new VanillaCubeDefinition("saddle_base", 0, 89, -7.5f, -12f, -23.5f, 15f, 12f, 27f, Grow: 0.05f));
+        var head = body.GetChild("head")!;
+        head.AddOrReplaceChild("reins", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("reins", 98, 42, 3.51f, -18f, -17f, 0f, 7f, 15f, VisibleWhen: static state => state.IsVehicle),
+            new VanillaCubeDefinition("reins_front", 84, 57, -3.5f, -18f, -2f, 7f, 7f, 0f),
+            new VanillaCubeDefinition("reins_left", 98, 42, -3.51f, -18f, -17f, 0f, 7f, 15f));
+        head.AddOrReplaceChild("bridle", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("bridle", 60, 87, -3.5f, -7f, -15f, 7f, 8f, 19f, Grow: 0.05f),
+            new VanillaCubeDefinition("bridle_upper", 21, 64, -3.5f, -21f, -15f, 7f, 14f, 7f, Grow: 0.05f),
+            new VanillaCubeDefinition("bridle_snout", 50, 64, -2.5f, -21f, -21f, 5f, 5f, 6f, Grow: 0.05f),
+            new VanillaCubeDefinition("bridle_right", 74, 70, 2.5f, -19f, -18f, 1f, 2f, 2f),
+            new VanillaCubeDefinition("bridle_left", 74, 70, -3.5f, -19f, -18f, 1f, 2f, 2f, Mirror: true));
+        return mesh;
+    }
+
     public static readonly EntityModelDefinition Definition = new(
         "camel",
         128,
