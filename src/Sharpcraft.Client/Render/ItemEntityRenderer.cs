@@ -62,4 +62,35 @@ public static class ItemEntityRenderer
     /// <summary>Reference scatter offset in [-spread, spread): <c>(random.nextFloat() * 2 - 1) * spread</c>.</summary>
     public static float ScatterOffset(float randomUnit, float spread = ScatterSpread) =>
         ((randomUnit * 2f) - 1f) * spread;
+
+    /// <summary>
+    /// Reference submission for one item entity: <c>translate(0, bob + minOffsetY, 0)</c> then
+    /// <c>rotate(YP, spin)</c>, in that order, so the row-vector matrix is translation × rotation.
+    /// </summary>
+    public static System.Numerics.Matrix4x4 RootTransform(float ageInTicks, float bobPhase, ItemModelExtents extents) =>
+        System.Numerics.Matrix4x4.CreateTranslation(0f, BobHeight(ageInTicks, bobPhase) + GroundOffset(extents), 0f)
+        * System.Numerics.Matrix4x4.CreateRotationY(Spin(ageInTicks, bobPhase));
+
+    /// <summary>
+    /// Offset of one item inside a thin stack: the column starts at <see cref="BulkStartZ"/> and advances by
+    /// <see cref="BulkZStep"/> per item, with the reference's half-amplitude jitter on X and Y.
+    /// </summary>
+    public static System.Numerics.Vector3 ThinItemOffset(
+        ItemModelExtents extents,
+        int index,
+        int count,
+        float randomX,
+        float randomY)
+    {
+        var z = BulkStartZ(extents, count) + (BulkZStep(extents) * index);
+        var jitter = ScatterSpread * 0.5f;
+        return new System.Numerics.Vector3(
+            ScatterOffset(randomX, jitter),
+            ScatterOffset(randomY, jitter),
+            z);
+    }
+
+    /// <summary>Offset of one item inside a thick stack: every item after the first is scattered in all three axes.</summary>
+    public static System.Numerics.Vector3 ThickItemOffset(float randomX, float randomY, float randomZ) =>
+        new(ScatterOffset(randomX), ScatterOffset(randomY), ScatterOffset(randomZ));
 }
