@@ -299,12 +299,27 @@ public static class EntityModelResolver
             }
         }
 
-        // Placement measured against the reference chain (truth/HeldAnchorProbe3.java, run on the shipped JOML): in the
-        // reference model frame the item centre sits 1/16 outward, 12+3=15/16 down the arm and 5/16 forward of the arm
-        // pivot. Sharpcraft stores models y-up but mirrored in X, so from the arm pivot the same point is
-        //   (+-1/16, -9/16, -5/16)
-        // and a regression test pins the world position. The reference also rotates the item by XP -90 / YP 180 before
-        // its display transform; that orientation half is still missing and is tracked under T-765.
+        // Reference data, captured from the shipped JOML build so it stays checkable later (probes live in
+        // tools/Sharpcraft.ItemRender.Audit/truth/):
+        //
+        //   ItemInHandLayer.submitArmWithItem, column form (each call post-multiplies):
+        //       M_ref = T_hand · Rx(-90°) · Ry(180°) · T_off · D
+        //       T_off = (±1, 2, -10)/16 adult, (0, 1, -4.5)/16 baby (not armor stand); left hand mirrors X
+        //
+        //   AnchorAxes.java, images of A_ref = Rx(-90°)·Ry(180°)·T_off in the reference model frame:
+        //       ex -> (-1.0000,  0.0000,  0.0000)
+        //       ey -> ( 0.0000,  0.0000, -1.0000)
+        //       ez -> ( 0.0000, -1.0000,  0.0000)
+        //       origin -> (-0.0625, 0.6250, -0.1250)
+        //
+        //   HeldAnchorProbe3.java, arm pivot at (-0.3125, 0.125, 0) (right hand, y-down model frame):
+        //       item centre -> (-0.3750, 0.6875, -0.3125)
+        //       hand end    -> (-0.3125, 0.8750,  0.0000)
+        //
+        // Sharpcraft stores models y-up and mirrored in X and mutates row vectors, so the reference vector cannot be used
+        // verbatim: from the arm pivot the same placement is (+-1/16, -9/16, -5/16) — 1/16 outward, 15/16 down the arm,
+        // 5/16 forward — and HeldItemAnchorTests pins it. The *orientation* half of A_ref (the XP -90 / YP 180 spin) is
+        // not reproduced yet, so held items currently lie flat in the hand; that is tracked under T-765.
         var offsetX = baby ? 0f : (offhand ? -1f : 1f);
         var offsetY = baby ? -6f : -9f;
         var offsetZ = baby ? -3f : -5f;
