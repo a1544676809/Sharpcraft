@@ -135,7 +135,7 @@ updated: 2026-11-07
 
 > 下一阶段执行清单见 [`docs/analysis/render/next-actions-hard-constraints.md`](analysis/render/next-actions-hard-constraints.md)；下面为原有 backlog。
 
-1. **T-631 held-item/item-model**：T-631a 数据层 + T-631b Witch 药水 + T-631c `ItemAtlas`/独立 item bind group/held_item + T-631d special 描述符与 **10/13** special 模型已接。T-631e 已落地：pattern/base color 解码、盾牌 sprite 选择、逐立方体 `TextureSelector`/`TintSelector`、`DyeColors` 真值表、banner/shield 图案叠加层（6 层共面）、`SpearAnimations`（含 STAB 施加到 `held_item`）；chest/shulker 的 `openness`/`attachment`/`chest_type` 已核实原版全部取缺省值、静态烘焙等效。**下一步（按序）**：① STAB 覆盖 special 模型部件 + 转向符号视觉验收；② 掉落物/展示框/GUI；③ bell/book/copper_golem_statue；④ held-item 手骨锚点对齐 `translateToHand`。
+1. **T-631 held-item/item-model**：T-631a 数据层 + T-631b Witch 药水 + T-631c `ItemAtlas`/独立 item bind group/held_item + T-631d special 描述符与 **10/13** special 模型已接。T-631e 已落地：pattern/base color 解码、盾牌 sprite 选择、逐立方体 `TextureSelector`/`TintSelector`、`DyeColors` 真值表、banner/shield 图案叠加层（6 层共面）、`SpearAnimations`（STAB 施加到 `held_item`）。**下一项 T-761 掉落物渲染**：首切片已完成 `set_entity_data` 的 `ITEM_STACK`(7) 解码（物品实体首次拿到 item id + count）；接着做 `ItemEntityRenderer` 的 bob/spin/多件铺开与展示框、GUI。另：**T-759** 方块实体真实几何、**T-760** 网格 DSL `visibleFaces` 已独立登记待做。
 2. **EnderDragon flight history**：已接（T-757）；剩余动画长尾（Bee stinger / Guardian eye look）按 backlog 推进。
 3. **P1.5（`Client/Render/ChunkMesher`）**：用 `OcclusionShape.IsFaceOccludedByState/Self` 替换 `IsSolid` 近似；配 `FluidMesherTests` 真值回归。
 4. **P1.4（T-042）**：提取 26.3 `registry_data` 真值向量，把服务器下发注册表动态装配进 `BlockStateLayout`。
