@@ -82,6 +82,35 @@ public sealed class EntityVariantTrackingTests
     }
 
     [Fact]
+    public void AnItemEntityExposesItsSyncedItemStack()
+    {
+        var tracker = new EntityTracker();
+        tracker.Add(new AddedEntity(11, Guid.Empty, EntityTracker.ItemEntityTypeId, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+
+        var applied = tracker.ApplyEntityData(11,
+            [new EntityDataItem(EntityTracker.ItemEntityItemAccessorIndex, 7, EntityDataItem.NotAnInteger, ItemId: 42, ItemCount: 3)]);
+
+        Assert.True(applied);
+        var state = tracker.Interpolate(0f)[0];
+        Assert.Equal(42, state.ItemEntityItemId);
+        Assert.Equal(3, state.ItemEntityCount);
+    }
+
+    [Fact]
+    public void AnEmptyItemEntityStackLeavesTheItemUnknown()
+    {
+        var tracker = new EntityTracker();
+        tracker.Add(new AddedEntity(12, Guid.Empty, EntityTracker.ItemEntityTypeId, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+
+        // An empty stack decodes to ItemId -1 / count 0, which must not be mistaken for "item id 0".
+        var applied = tracker.ApplyEntityData(12,
+            [new EntityDataItem(EntityTracker.ItemEntityItemAccessorIndex, 7, EntityDataItem.NotAnInteger, ItemId: -1, ItemCount: 0)]);
+
+        Assert.False(applied);
+        Assert.Equal(-1, tracker.Interpolate(0f)[0].ItemEntityItemId);
+    }
+
+    [Fact]
     public void AnUpdateForAnUnknownEntityIsCounted()
     {
         var tracker = new EntityTracker();

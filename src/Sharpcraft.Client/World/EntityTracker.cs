@@ -123,6 +123,16 @@ public sealed class TrackedEntity
     /// </summary>
     public int VariantId { get; internal set; }
 
+    /// <summary>
+    /// Item id carried by an item entity (<c>ItemEntity.DATA_ITEM</c>), or -1 when unknown. The item stack lives in the
+    /// entity's synced data as an <c>ITEM_STACK</c> serializer, so this is the first place a dropped item becomes
+    /// renderable.
+    /// </summary>
+    public int ItemStackItemId { get; internal set; } = -1;
+
+    /// <summary>Stack count carried by an item entity, or zero when unknown.</summary>
+    public int ItemStackCount { get; internal set; }
+
     /// <summary>Raw byte flag word from synced entity data (tame/nectar/sleeping bits).</summary>
     public int Flags { get; internal set; }
 
@@ -452,6 +462,8 @@ public readonly record struct EntityRenderState(
     bool HasChest = false,
     bool HasEgg = false,
     int VariantId = 0,
+    int ItemEntityItemId = -1,
+    int ItemEntityCount = 0,
     bool IsTame = false,
     bool IsAngry = false,
     bool IsSleeping = false,
@@ -621,6 +633,15 @@ public readonly record struct EntityRenderState(
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.multiplayer.ClientLevel", "ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/ClientLevel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Merged, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Merges ClientLevel/Entity/SteppedInterpolationHandler responsibilities; position sync per T-639/T-640")]
 public sealed class EntityTracker
 {
+    /// <summary>
+    /// <c>minecraft:item</c> registry id. Derived from the registration order in
+    /// <c>ref://mc-26.3-analysis/src/net/minecraft/world/entity/EntityTypes.java</c>; the same derivation yields 148 for
+    /// witch and 152 for wolf, which match the ids already used across this repo.
+    /// </summary>
+    public const int ItemEntityTypeId = 72;
+
+    /// <summary>Accessor index of <c>ItemEntity.DATA_ITEM</c> (Entity owns 0-7, ItemEntity defines this next).</summary>
+    public const int ItemEntityItemAccessorIndex = 8;
     /// <summary>Upper bound on tracked entities; a runaway server must not grow this dictionary without limit.</summary>
     public const int MaxTrackedEntities = 4096;
 
@@ -1099,6 +1120,21 @@ public sealed class EntityTracker
 
         var applied = HandleAnimationData(entity, items);
 
+        // Item entities carry their stack in synced data. The accessor index is 8 because Entity itself defines eight
+        // accessors (0-7) and ItemEntity extends Entity directly (docs/analysis/render/entity-variants.md 2.1).
+        if (entity.TypeId == ItemEntityTypeId)
+        {
+            foreach (var item in items)
+            {
+                if (item.Index == ItemEntityItemAccessorIndex && item.ItemId >= 0)
+                {
+                    entity.ItemStackItemId = item.ItemId;
+                    entity.ItemStackCount = item.ItemCount;
+                    applied = true;
+                }
+            }
+        }
+
         if (!EntityVariantSpecs.TryGet(entity.TypeId, out var spec))
         {
             return applied;
@@ -1457,6 +1493,8 @@ public sealed class EntityTracker
                 Wrap360(LerpAngle(entity.Presentation.BodyYawO, entity.Presentation.BodyYaw, t)),
                 entity.PreviousPitch + ((entity.Pitch - entity.PreviousPitch) * t),
                 VariantId: entity.VariantId,
+                ItemEntityItemId: entity.ItemStackItemId,
+                ItemEntityCount: entity.ItemStackCount,
                 IsTame: spec.TameMask != 0 && (entity.Flags & spec.TameMask) != 0,
                 IsAngry: spec.AngerAccessorIndex >= 0 && entity.AngerEndTime > GameTime,
                 IsSleeping: (spec.SleepingMask != 0 && (entity.Flags & spec.SleepingMask) != 0) || entity.Presentation.IsSleeping,
