@@ -16,7 +16,9 @@ public readonly record struct ItemComponentInfo(
     int QuickChargeLevel = 0,
     string? EquippableAssetId = null,
     int? DyedColor = null,
-    bool? GlintOverride = null)
+    bool? GlintOverride = null,
+    string? TrimMaterialId = null,
+    string? TrimPatternId = null)
 {
     /// <summary>True when some component payload could not be decoded and the rest of the packet was skipped.</summary>
     public bool HasUnknownComponents => Opaque;
@@ -375,9 +377,19 @@ internal static class ItemComponentPatchReader
 
         if (typeId == Trim)
         {
-            // material + pattern, both registry holders.
-            return reader.TryReadVarInt(out _) == DecodeStatus.Success &&
-                   reader.TryReadVarInt(out _) == DecodeStatus.Success;
+            // ArmorTrim.STREAM_CODEC: material holder id, then pattern holder id.
+            if (reader.TryReadVarInt(out var materialIndex) != DecodeStatus.Success ||
+                reader.TryReadVarInt(out var patternIndex) != DecodeStatus.Success)
+            {
+                return false;
+            }
+
+            info = info with
+            {
+                TrimMaterialId = TrimMaterialRegistry.IdAt(materialIndex),
+                TrimPatternId = TrimPatternRegistry.IdAt(patternIndex)
+            };
+            return true;
         }
 
         if (typeId == MinimumAttackCharge)

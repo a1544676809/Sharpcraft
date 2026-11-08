@@ -49,6 +49,11 @@ public sealed class EntitySkinLibrary
             LoadTexture(path, images, resources, playerOverride);
         }
 
+        foreach (var pair in TrimTextureCatalog.Load(resources))
+        {
+            images.TryAdd(pair.Key, pair.Value);
+        }
+
         return new EntitySkinLibrary(images);
     }
 

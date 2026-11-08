@@ -185,6 +185,31 @@ public sealed class SetEquipmentPacketTests
     }
 
     [Fact]
+    public void TrimComponentCapturesMaterialAndPatternIds()
+    {
+        var trim = DataComponentTypes.GetId("trim");
+        Assert.True(trim >= 0);
+
+        var body = Body(b =>
+        {
+            b.Add(4);                    // chest
+            b.AddRange(VarInt(1));
+            b.AddRange(VarInt(1));
+            b.AddRange(VarInt(1));       // one added component
+            b.AddRange(VarInt(0));       // no removals
+            b.AddRange(VarInt(trim));
+            b.AddRange(VarInt(1));       // material: iron (bootstrap index)
+            b.AddRange(VarInt(2));       // pattern: coast
+        });
+
+        var result = Read(body, out _, out var complete, out var status);
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.Equal("minecraft:iron", result[0].Components.TrimMaterialId);
+        Assert.Equal("minecraft:coast", result[0].Components.TrimPatternId);
+    }
+
+    [Fact]
     public void GlintOverrideComponentCapturesFlag()
     {
         var glint = DataComponentTypes.GetId("enchantment_glint_override");

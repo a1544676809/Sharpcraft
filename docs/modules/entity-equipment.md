@@ -283,3 +283,38 @@
 - 纹理 URL 仅接受 discovery 允许的 `textures.minecraft.net/texture/` 前缀；任一请求纹理失败时 body/cape/elytra 组合整体回退默认皮肤。
 
 验证：`tests/Sharpcraft.AuthLib.Tests/ProfileSignatureTests.cs`（3 项）、`tests/Sharpcraft.Client.Tests/World/PlayerSkinTexturesTests.cs`、`PlayerSkinCacheTests` 覆盖签名状态、URL 策略与本地/远程差异。
+
+## 15. Trim 纹理 / palette（T-754）
+
+### 15.1 原版 26.3 源码映射表
+
+| 本模块概念 / 方法 | 原版类与方法路径（`ref://...`） | 精确常量 / 公式 / 结构 | 位序 / 正负号 / 色彩空间约定 | 缺省 / 越界回退值 |
+| --- | --- | --- | --- | --- |
+| trim 组件解码 | `ArmorTrim.STREAM_CODEC` / `TrimMaterial.STREAM_CODEC` / `TrimPattern.STREAM_CODEC` | `ArmorTrim(material, pattern)` 两个 registry holder id，依次 VarInt | — | 未知 id 保留 null，不破坏包边界 |
+| trim material 注册顺序 | `ref://mc-26.3-analysis/src/net/minecraft/world/item/equipment/trim/TrimMaterials.java` | quartz, iron, netherite, redstone, copper, gold, emerald, diamond, lapis, amethyst, resin（11） | `palette_id = minecraft:trim/<id>` | 无匹配 → 不绘制 trim |
+| trim pattern 注册顺序 | `ref://mc-26.3-analysis/src/net/minecraft/world/item/equipment/trim/TrimPatterns.java` | sentry, dune, coast, wild, ward, eye, vex, tide, snout, rib, spire, wayfinder, shaper, silence, raiser, host, flow, bolt（18） | `asset_id = minecraft:<id>`；26.3 全部 `decal=false` | 无匹配 → 不绘制 trim |
+| palette 映射 | `ref://mc-26.3-analysis/src/net/minecraft/client/resources/palette/PaletteMapping.java` | `base`/`target` 必须同尺寸；opaque base 颜色映射到 target；输出 `alpha = baseAlpha * targetAlpha / 255` | base `trim_base.png` 为 8×1 灰度；target 为 8×1 RGB | 尺寸不等或缺失 → `PaletteMapping.NONE` |
+| trim 纹理路径 | `EquipmentClientInfo.LayerType.trimAssetPrefix()` | `trims/entity/<layer>/<pattern asset id>`；humanoid 与 humanoid_leggings；baby 不绘制 trim | `textures/` 前缀由资源层补 | 缺纹理 → 不绘制 |
+| trim 渲染层 | `EquipmentLayerRenderer.renderLayers` / `RenderTypes.armorTrim` | 同一 armor 模型；trim 在 armor 层之后、glint 之前；`armorTrim(texture, decal)`，decal 使用 `ARMOR_DECAL_CUTOUT_NO_CULL`（`EQUAL`, no depth write） | 当前全部 decal=false，等价使用 `armor_cutout_no_cull`（`Elytra` 管线） | `hasTrim=false`（HUMANOID_BABY）不绘制 |
+| trim override | `EquipmentClientInfo.TrimOverride` / `ResolveTrim` | 第一条 material/pattern predicate 匹配的 override 可覆盖 texture/palette | — | 未匹配使用 pattern/material 默认路径 |
+
+### 15.2 真值向量（Golden Vectors）
+
+采样来源：`TrimMaterials.java` / `TrimPatterns.java` 的 bootstrap 顺序、`PaletteMapping.java` 的精确公式、`HumanoidArmorLayer`/`EquipmentLayerRenderer` 的层顺序；测试落点：
+`tests/Sharpcraft.Client.Tests/Render/TrimTextureTests.cs`。
+
+1. **material 顺序**：索引 0 = `minecraft:quartz`，索引 1 = `minecraft:iron`，索引 10 = `minecraft:resin`；`iron.palette_id = minecraft:trim/iron`。
+2. **pattern 顺序**：索引 0 = `minecraft:sentry`，索引 2 = `minecraft:coast`，索引 17 = `minecraft:bolt`；`coast.asset_id = minecraft:coast`。
+3. **palette 像素**：base `[224,192,160,128,96,64,32,0]`；target `iron` 的前三项为 `[197,210,212]`、`[191,201,200]`、`[157,170,170]`；trim 的 224 像素映射为 197/210/212，透明 alpha=0 保持透明。
+4. **纹理尺寸**：trim humanoid/humanoid_leggings 为 64×32；`trim_base` 与 material palette 为 8×1。
+5. **路径**：`Path(Humanoid, "minecraft:coast", "minecraft:iron") = trims/entity/humanoid/coast/iron`；leggings 对应 `humanoid_leggings/coast/iron`。
+6. **渲染顺序**：armor 层 order 10 → trim 层 11 → glint 层 12（同一槽位）；无 trim 时 trim 层不可见。
+7. **组件解码**：`trim` 组件 material=1 / pattern=2 → `minecraft:iron` / `minecraft:coast`（按 bootstrap 表）；越界 id → null。
+
+### 15.3 当前实现与已知限制
+
+- `ItemComponentInfo.TrimMaterialId` / `TrimPatternId` 由 `ItemComponentPatchReader` 解码；`TrimMaterialRegistry` / `TrimPatternRegistry` 给出 26.3 bootstrap 顺序。
+- `TrimTextureCatalog` 加载 `textures/palettes/trim_base.png`、`textures/palettes/trim/<material>.png` 和 `textures/trims/entity/humanoid[_leggings]/<pattern>.png`，按 `PaletteMapping` 做 CPU 映射，生成 `TextureData` 并加入 `EntitySkinLibrary` atlas。
+- `EntityModelResolver` 为 humanoid armor 槽位添加 `trim_<kind>_<slot>` 层，复用对应 armor 树；无 trim 组件时不可见。
+- 未实现：`trim_overrides` 的实际 texture/palette 替换；trim 与附魔 glint 的 `trimmedArmorGlint` 仍走现有 glint 条件（当前只响应 `enchantment_glint_override`）。
+- 动态 `registry_data` 的 trim material/pattern holder 顺序仍使用 26.3 bootstrap 静态表；服务器重排/模组注册时需要后续动态注册表接入。

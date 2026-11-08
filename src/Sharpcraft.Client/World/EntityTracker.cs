@@ -141,6 +141,8 @@ public sealed class TrackedEntity
     private readonly string?[] _equipmentAssetIds = new string?[8];
     private readonly int?[] _equipmentDyeColors = new int?[8];
     private readonly bool?[] _equipmentGlints = new bool?[8];
+    private readonly string?[] _equipmentTrimMaterials = new string?[8];
+    private readonly string?[] _equipmentTrimPatterns = new string?[8];
 
     /// <summary>Item registry id in <paramref name="slot"/> (0..7), or -1 when empty.</summary>
     public int EquipmentItemAt(int slot) =>
@@ -171,6 +173,20 @@ public sealed class TrackedEntity
     /// <summary>All eight glint overrides, reused by the per-frame render state.</summary>
     public IReadOnlyList<bool?> EquipmentGlintOverrides => _equipmentGlints;
 
+    /// <summary>Trim material registry id for one equipment slot, or null when the item has no trim.</summary>
+    public string? EquipmentTrimMaterialAt(int slot) =>
+        (uint)slot < (uint)_equipmentTrimMaterials.Length ? _equipmentTrimMaterials[slot] : null;
+
+    /// <summary>All eight trim material ids, reused by the per-frame render state.</summary>
+    public IReadOnlyList<string?> EquipmentTrimMaterials => _equipmentTrimMaterials;
+
+    /// <summary>Trim pattern registry id for one equipment slot, or null when the item has no trim.</summary>
+    public string? EquipmentTrimPatternAt(int slot) =>
+        (uint)slot < (uint)_equipmentTrimPatterns.Length ? _equipmentTrimPatterns[slot] : null;
+
+    /// <summary>All eight trim pattern ids, reused by the per-frame render state.</summary>
+    public IReadOnlyList<string?> EquipmentTrimPatterns => _equipmentTrimPatterns;
+
     /// <summary>Stack count in <paramref name="slot"/>; 0 when empty.</summary>
     public int EquipmentCountAt(int slot) =>
         (uint)slot < (uint)_equipmentCounts.Length ? _equipmentCounts[slot] : 0;
@@ -190,6 +206,8 @@ public sealed class TrackedEntity
             _equipmentAssetIds[item.Slot] = item.IsEmpty ? null : item.Components.EquippableAssetId;
             _equipmentDyeColors[item.Slot] = item.IsEmpty ? null : item.Components.DyedColor;
             _equipmentGlints[item.Slot] = item.IsEmpty ? null : item.Components.GlintOverride;
+            _equipmentTrimMaterials[item.Slot] = item.IsEmpty ? null : item.Components.TrimMaterialId;
+            _equipmentTrimPatterns[item.Slot] = item.IsEmpty ? null : item.Components.TrimPatternId;
             EquipmentUpdates++;
         }
     }
@@ -485,6 +503,8 @@ public readonly record struct EntityRenderState(
     IReadOnlyList<string?>? EquipmentAssetIds = null,
     IReadOnlyList<int?>? EquipmentDyeColors = null,
     IReadOnlyList<bool?>? EquipmentGlintOverrides = null,
+    IReadOnlyList<string?>? EquipmentTrimMaterials = null,
+    IReadOnlyList<string?>? EquipmentTrimPatterns = null,
     string? PlayerBodyTexture = null,
     string? PlayerCapeTexture = null,
     string? PlayerElytraTexture = null,
@@ -503,6 +523,14 @@ public readonly record struct EntityRenderState(
     /// <summary>Glint override for one equipment slot, when the item supplied one.</summary>
     public bool? EquipmentGlintOverrideAt(int slot) =>
         EquipmentGlintOverrides is { } glints && (uint)slot < (uint)glints.Count ? glints[slot] : null;
+
+    /// <summary>Trim material registry id for one equipment slot, when the item supplied one.</summary>
+    public string? EquipmentTrimMaterialAt(int slot) =>
+        EquipmentTrimMaterials is { } materials && (uint)slot < (uint)materials.Count ? materials[slot] : null;
+
+    /// <summary>Trim pattern registry id for one equipment slot, when the item supplied one.</summary>
+    public string? EquipmentTrimPatternAt(int slot) =>
+        EquipmentTrimPatterns is { } patterns && (uint)slot < (uint)patterns.Count ? patterns[slot] : null;
 
     /// <summary>
     /// Player texture used by equipment layers marked <c>use_player_texture</c>. The reference prefers an explicit
@@ -1449,6 +1477,8 @@ public sealed class EntityTracker
                 EquipmentAssetIds: entity.EquipmentAssetIds,
                 EquipmentDyeColors: entity.EquipmentDyeColors,
                 EquipmentGlintOverrides: entity.EquipmentGlintOverrides,
+                EquipmentTrimMaterials: entity.EquipmentTrimMaterials,
+                EquipmentTrimPatterns: entity.EquipmentTrimPatterns,
                 PlayerBodyTexture: playerSkin?.Body?.Path,
                 PlayerCapeTexture: playerSkin?.Cape?.Path,
                 PlayerElytraTexture: playerSkin?.Elytra?.Path,

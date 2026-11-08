@@ -65,6 +65,18 @@ public static class EntityModelResolver
             : texture?.PrimaryPath;
     }
 
+    /// <summary>
+    /// Resolves the palette-mapped trim texture for one humanoid armor slot, or null when the item has no trim.
+    /// </summary>
+    public static string? ResolveTrimTexture(EntityRenderState state, EquipmentLayerType layerType, int slot)
+    {
+        var pattern = state.EquipmentTrimPatternAt(slot);
+        var material = state.EquipmentTrimMaterialAt(slot);
+        return pattern is null || material is null
+            ? null
+            : TrimTextureCatalog.Path(layerType, pattern, material);
+    }
+
     /// <summary>Resolves the leather/dyed tint for an equipment slot, or white when the item is not dyeable.</summary>
     public static Vector3 ResolveEquipmentTint(EntityRenderState state, EquipmentAssetKind kind, int slot)
     {
@@ -379,6 +391,37 @@ public static class EntityModelResolver
                     selector,
                     state => selector(state) is not null,
                     AllCubes: true));
+
+                var trimLayerType = effectiveKind switch
+                {
+                    EquipmentAssetKind.HumanoidArmor => EquipmentLayerType.Humanoid,
+                    EquipmentAssetKind.HumanoidLeggings => EquipmentLayerType.HumanoidLeggings,
+                    _ => (EquipmentLayerType?)null
+                };
+                if (trimLayerType is { } trimType)
+                {
+                    Func<EntityRenderState, string?> trimSelector = state => ResolveTrimTexture(state, trimType, slot);
+                    var trimName = "trim_" + effectiveKind + "_" + slot;
+                    var trimModel = new EntityModelDefinition(
+                        trimName,
+                        definition.TextureWidth,
+                        definition.TextureHeight,
+                        [],
+                        definition.FaceTransforms,
+                        texturePath: null,
+                        definition.Scale,
+                        textureSelector: trimSelector,
+                        compiled: equipmentTree);
+                    customLayers.Add(new EntityRenderLayerDefinition(
+                        trimName,
+                        EntityGeometryLayerKind.Elytra,
+                        order++,
+                        trimModel,
+                        null,
+                        trimSelector,
+                        state => trimSelector(state) is not null,
+                        AllCubes: true));
+                }
 
                 const string glintTexture = "misc/enchanted_glint_armor";
                 var glintModel = new EntityModelDefinition(
