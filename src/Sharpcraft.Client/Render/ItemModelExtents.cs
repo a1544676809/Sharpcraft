@@ -1,0 +1,73 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// Copyright (C) 2026 Sharpcraft contributors
+
+using System.Numerics;
+
+namespace Sharpcraft.Client.Render;
+
+/// <summary>
+/// Model-space extents of a resolved item model, the input <c>ItemEntityRenderer</c> needs for
+/// <c>minOffsetY = -bbox.minY + 0.0625</c> and for the <c>modelDepth &gt; 0.0625</c> layout branch.
+/// </summary>
+/// <remarks>
+/// The reference derives this from <c>ItemStackRenderState.visitExtents</c>, which walks the submitted quads. We bake
+/// geometry instead of quads, so the same answer comes from the baked cuboids.
+/// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.item.ItemStackRenderState", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/item/ItemStackRenderState.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "getModelBoundingBox/visitExtents equivalent computed from baked geometry")]
+public readonly record struct ItemModelExtents(Vector3 Min, Vector3 Max)
+{
+    /// <summary>
+    /// Depth of a generated flat item. Reference <c>ItemModelGenerator</c> extrudes every layer between
+    /// <c>MIN_Z = 7.5</c> and <c>MAX_Z = 8.5</c> model pixels, i.e. one sixteenth of a block.
+    /// </summary>
+    public const float FlatItemDepth = 1f / 16f;
+
+    /// <summary>
+    /// Extents of a generated flat item: the reference box runs from <c>(0,0,7.5)</c> to <c>(16,16,8.5)</c> model pixels
+    /// with UVs <c>0,0 - 16,16</c>.
+    /// </summary>
+    public static readonly ItemModelExtents FlatItem = new(
+        new Vector3(0f, 0f, 7.5f / 16f),
+        new Vector3(1f, 1f, 8.5f / 16f));
+
+    /// <summary>
+    /// The reference threshold that separates a flat item from a genuinely three-dimensional one. A generated item sits
+    /// exactly at this depth, so the comparison is strictly greater and flat drops stay in a single column.
+    /// </summary>
+    public const float FlatItemThreshold = 0.0625f;
+
+    /// <summary>Depth (Z size) of the extents.</summary>
+    public float Depth => Max.Z - Min.Z;
+
+    /// <summary>True when the model is deeper than a generated flat item, which switches item entities to the scattered layout.</summary>
+    public bool IsDeeperThanFlatItem => Depth > FlatItemThreshold;
+
+    /// <summary>
+    /// Extents of a baked model, taken as the axis-aligned box of its cuboids. Cuboids are stored in y-up model pixels,
+    /// so the result is divided back into blocks.
+    /// </summary>
+    public static ItemModelExtents FromModel(EntityModelDefinition definition)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        var compiled = definition.Compiled;
+        if (compiled is null || compiled.Cubes.Count == 0)
+        {
+            return FlatItem;
+        }
+
+        var px = definition.Scale / 16f;
+        var min = new Vector3(float.MaxValue);
+        var max = new Vector3(float.MinValue);
+        foreach (var cube in compiled.Cubes)
+        {
+            var halfWidth = cube.Width * 0.5f;
+            var halfDepth = cube.Depth * 0.5f;
+            var low = new Vector3(cube.CentreX - halfWidth, cube.Bottom, cube.CentreZ - halfDepth);
+            var high = new Vector3(cube.CentreX + halfWidth, cube.Bottom + cube.Height, cube.CentreZ + halfDepth);
+            min = Vector3.Min(min, low);
+            max = Vector3.Max(max, high);
+        }
+
+        return new ItemModelExtents(min * px, max * px);
+    }
+}
