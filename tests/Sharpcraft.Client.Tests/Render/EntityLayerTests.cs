@@ -13,6 +13,7 @@ using Xunit;
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>Per-render-type entity layer split (docs/decisions/0021).</summary>
+[Collection("TrimRegistry")]
 public sealed class EntityLayerTests
 {
     private static EntityRenderState Entity(int typeId, int variant = 0) =>

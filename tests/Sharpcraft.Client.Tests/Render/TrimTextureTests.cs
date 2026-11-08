@@ -13,6 +13,7 @@ using Xunit;
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>Trim registry order, palette mapping and the humanoid trim render layer.</summary>
+[Collection("TrimRegistry")]
 public sealed class TrimTextureTests
 {
     [Fact]

@@ -36,7 +36,7 @@ public static class TrimTextureCatalog
             EquipmentLayerType.HumanoidLeggings => "humanoid_leggings",
             _ => throw new ArgumentOutOfRangeException(nameof(layerType), layerType, "trim is only defined for humanoid armor layers")
         };
-        var pattern = LocalPath(patternId);
+        var pattern = LocalPath(TrimRegistryTable.PatternForId(patternId)?.AssetId ?? patternId);
         var material = LocalPath(materialId);
         var overrideInfo = ResolveOverride(equipmentInfo, patternId, materialId);
         var textureSuffix = overrideInfo?.Texture is { } texture
@@ -59,7 +59,7 @@ public static class TrimTextureCatalog
         }
 
         var palettes = new Dictionary<string, TextureData>(StringComparer.Ordinal);
-        foreach (var material in TrimMaterialRegistry.Entries)
+        foreach (var material in TrimRegistryTable.Materials)
         {
             if (TryLoad(resources, "palettes/" + LocalPath(material.PaletteId), out var palette))
             {
@@ -68,7 +68,7 @@ public static class TrimTextureCatalog
         }
 
         var patterns = new Dictionary<(EquipmentLayerType Layer, string Pattern), TextureData>();
-        foreach (var pattern in TrimPatternRegistry.Entries)
+        foreach (var pattern in TrimRegistryTable.Patterns)
         {
             var patternPath = LocalPath(pattern.AssetId);
             foreach (var layerType in new[] { EquipmentLayerType.Humanoid, EquipmentLayerType.HumanoidLeggings })
@@ -81,9 +81,9 @@ public static class TrimTextureCatalog
             }
         }
 
-        foreach (var pattern in TrimPatternRegistry.Entries)
+        foreach (var pattern in TrimRegistryTable.Patterns)
         {
-            foreach (var material in TrimMaterialRegistry.Entries)
+            foreach (var material in TrimRegistryTable.Materials)
             {
                 if (!palettes.TryGetValue(material.Id, out var targetPalette))
                 {
@@ -110,9 +110,9 @@ public static class TrimTextureCatalog
         // pattern texture. Generate the matching atlas variants under their equipment-specific keys.
         foreach (var equipmentInfo in EquipmentTextureCatalog.Assets.All)
         {
-            foreach (var pattern in TrimPatternRegistry.Entries)
+            foreach (var pattern in TrimRegistryTable.Patterns)
             {
-                foreach (var material in TrimMaterialRegistry.Entries)
+                foreach (var material in TrimRegistryTable.Materials)
                 {
                     var overrideInfo = ResolveOverride(equipmentInfo, pattern.Id, material.Id);
                     if (overrideInfo is null)

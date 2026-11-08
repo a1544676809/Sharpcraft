@@ -8,6 +8,7 @@ using Xunit;
 namespace Sharpcraft.Common.Tests.Network;
 
 /// <summary>Decodes clientbound set_equipment (docs/analysis/render/entity-equipment.md 2).</summary>
+[Collection("TrimRegistry")]
 public sealed class SetEquipmentPacketTests
 {
     private static byte[] VarInt(int value)
