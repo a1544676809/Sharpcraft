@@ -125,4 +125,26 @@ public static class ItemModelGeometry
 
         return quads;
     }
+
+    /// <summary>
+    /// Moves every corner by <paramref name="matrix"/> and leaves the UVs untouched, which is how the reference applies
+    /// the item display transform and the item entity placement on top of the baked model.
+    /// </summary>
+    public static List<ItemModelQuad> Transform(IReadOnlyList<ItemModelQuad> quads, Matrix4x4 matrix)
+    {
+        ArgumentNullException.ThrowIfNull(quads);
+        var transformed = new List<ItemModelQuad>(quads.Count);
+        foreach (var quad in quads)
+        {
+            transformed.Add(quad with
+            {
+                Corner0 = Vector3.Transform(quad.Corner0, matrix),
+                Corner1 = Vector3.Transform(quad.Corner1, matrix),
+                Corner2 = Vector3.Transform(quad.Corner2, matrix),
+                Corner3 = Vector3.Transform(quad.Corner3, matrix)
+            });
+        }
+
+        return transformed;
+    }
 }

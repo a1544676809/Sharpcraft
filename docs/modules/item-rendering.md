@@ -83,6 +83,12 @@
 - 面纹理 `#variable` 的解析 MUST 在整条父链合并完成后进行（原版同样后处理），否则子模型引用父层纹理槽会解析失败。
 - `uv` 缺失时按 `FaceBakery.defaultFaceUV` 的六方向投影自动生成；`rotation`、`tintindex`、`cullface` 原样保留。
 
+### 3.6 图集归属（已核实，非阻塞）
+
+26.3 把精灵分在两个图集：`atlases/items.json` 只收 `item/` 目录与盔甲纹饰置换，`atlases/blocks.json` 收 `block/` 目录与 conduit/bell/book 特例。因此方块类物品模型引用的 `block/*` 纹理在原版来自 **blocks 图集**。
+
+本仓只维护**一个**动态打包的物品图集（`ItemAtlas`），纹理路径由 `EnsureItemTextures` 按实际引用收集后从资源管理器读取。由于图集是内部实现细节、像素来源一致，把 `block/*` 精灵收进同一图集**不改变可观测结果**，不构成简化。前提是「引用什么就收集什么」，新增解析路径（如 `elements` 面纹理）MUST 同步把新的纹理路径纳入收集。
+
 ## 4. 真值向量（Golden Vectors）
 
 采样来源：`assets/minecraft/models/item/*.json`、`assets/minecraft/items/*.json`、`ItemDisplayContext`、`ItemTransforms` / `ItemTransform`。测试落点：`tests/Sharpcraft.Client.Tests/Render/ItemModelResolverTests.cs`（T-631a）。

@@ -90,6 +90,29 @@ public sealed class ItemModelGeometryTests
     }
 
     [Fact]
+    public void TransformMovesCornersButKeepsUvs()
+    {
+        var quads = ItemModelGeometry.Build([FullCube()]);
+        // Row vectors apply left to right, so scale first then translate: y = y * 0.5 + 0.5.
+        var moved = ItemModelGeometry.Transform(
+            quads,
+            Matrix4x4.CreateScale(0.5f) * Matrix4x4.CreateTranslation(0f, 0.5f, 0f));
+
+        Assert.Equal(quads.Count, moved.Count);
+        for (var index = 0; index < quads.Count; index++)
+        {
+            Assert.Equal(quads[index].Uv0, moved[index].Uv0);
+            Assert.Equal(quads[index].Uv2, moved[index].Uv2);
+            Assert.Equal(quads[index].Texture, moved[index].Texture);
+            Assert.Equal(quads[index].Direction, moved[index].Direction);
+        }
+
+        // Scale then translate: the full cube shrinks to half a block and rests half a block up.
+        Assert.All(moved, quad => Assert.True(quad.Corner0.Y is 0.5f or 1.0f));
+        Assert.Contains(moved, quad => quad.Corner0 == new Vector3(0f, 0.5f, 0.5f));
+    }
+
+    [Fact]
     public void UnlistedFacesAreNotEmitted()
     {
         var faces = new Dictionary<ModelFaceDirection, ItemModelFace>
