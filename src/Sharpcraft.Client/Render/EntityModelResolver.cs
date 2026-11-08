@@ -5,6 +5,7 @@ namespace Sharpcraft.Client.Render;
 
 using System.Numerics;
 using Sharpcraft.Client.World;
+using Sharpcraft.Common.Identifiers;
 using Sharpcraft.Common.Registries;
 using Sharpcraft.Framework.Rendering;
 
@@ -72,9 +73,18 @@ public static class EntityModelResolver
     {
         var pattern = state.EquipmentTrimPatternAt(slot);
         var material = state.EquipmentTrimMaterialAt(slot);
-        return pattern is null || material is null
-            ? null
-            : TrimTextureCatalog.Path(layerType, pattern, material);
+        if (pattern is null || material is null)
+        {
+            return null;
+        }
+
+        EquipmentClientInfo? equipmentInfo = null;
+        if (state.EquipmentAssetIdAt(slot) is { } assetId && Identifier.TryParse(assetId, out var equipmentAsset))
+        {
+            equipmentInfo = EquipmentTextureCatalog.Assets.Get(equipmentAsset);
+        }
+
+        return TrimTextureCatalog.Path(layerType, pattern, material, equipmentInfo);
     }
 
     /// <summary>Resolves the leather/dyed tint for an equipment slot, or white when the item is not dyeable.</summary>

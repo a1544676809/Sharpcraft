@@ -4,6 +4,7 @@
 using Sharpcraft.Assets;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
+using Sharpcraft.Common.Identifiers;
 using Sharpcraft.Common.Imaging;
 using Sharpcraft.Common.Registries;
 using Sharpcraft.Framework.Rendering;
@@ -47,6 +48,22 @@ public sealed class TrimTextureTests
         Assert.NotNull(mapped);
         Assert.Equal((197, 210, 212, 255), Pixel(mapped!, 0));
         Assert.Equal((0, 0, 0, 0), Pixel(mapped!, 1));
+    }
+
+    [Fact]
+    public void EquipmentTrimPaletteOverrideChangesTheTextureKey()
+    {
+        var info = new EquipmentClientInfo(
+            new Dictionary<EquipmentLayerType, IReadOnlyList<EquipmentClientLayer>>
+            {
+                [EquipmentLayerType.Humanoid] = [new(new Identifier("minecraft", "iron"))]
+            },
+            [new EquipmentTrimOverride(
+                new EquipmentTrimPredicate(Material: new Identifier("minecraft", "iron")),
+                Palette: new Identifier("minecraft", "trim/iron_darker"))]);
+
+        Assert.Equal("trims/entity/humanoid/coast/iron/trim/iron_darker",
+            TrimTextureCatalog.Path(EquipmentLayerType.Humanoid, "minecraft:coast", "minecraft:iron", info));
     }
 
     [Fact]

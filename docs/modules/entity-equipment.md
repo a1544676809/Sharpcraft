@@ -310,11 +310,13 @@
 5. **路径**：`Path(Humanoid, "minecraft:coast", "minecraft:iron") = trims/entity/humanoid/coast/iron`；leggings 对应 `humanoid_leggings/coast/iron`。
 6. **渲染顺序**：armor 层 order 10 → trim 层 11 → glint 层 12（同一槽位）；无 trim 时 trim 层不可见。
 7. **组件解码**：`trim` 组件 material=1 / pattern=2 → `minecraft:iron` / `minecraft:coast`（按 bootstrap 表）；越界 id → null。
+8. **palette override**：equipment asset 的 `trim_overrides` 匹配 `material=minecraft:iron` 且 `palette=minecraft:trim/iron_darker` 时，纹理 key 为 `trims/entity/humanoid/coast/iron/trim/iron_darker`。
 
 ### 15.3 当前实现与已知限制
 
 - `ItemComponentInfo.TrimMaterialId` / `TrimPatternId` 由 `ItemComponentPatchReader` 解码；`TrimMaterialRegistry` / `TrimPatternRegistry` 给出 26.3 bootstrap 顺序。
 - `TrimTextureCatalog` 加载 `textures/palettes/trim_base.png`、`textures/palettes/trim/<material>.png` 和 `textures/trims/entity/humanoid[_leggings]/<pattern>.png`，按 `PaletteMapping` 做 CPU 映射，生成 `TextureData` 并加入 `EntitySkinLibrary` atlas。
 - `EntityModelResolver` 为 humanoid armor 槽位添加 `trim_<kind>_<slot>` 层，复用对应 armor 树；无 trim 组件时不可见。
-- 未实现：`trim_overrides` 的实际 texture/palette 替换；trim 与附魔 glint 的 `trimmedArmorGlint` 仍走现有 glint 条件（当前只响应 `enchantment_glint_override`）。
+- `trim_overrides` 的 **palette** 替换已按 equipment asset 接入（例如 iron/gold 的 `*_darker` 变体）；**texture** override 仍未实现。
+- trim 与附魔 glint 的 `trimmedArmorGlint` 仍走现有 glint 条件（当前只响应 `enchantment_glint_override`）。
 - 动态 `registry_data` 的 trim material/pattern holder 顺序仍使用 26.3 bootstrap 静态表；服务器重排/模组注册时需要后续动态注册表接入。

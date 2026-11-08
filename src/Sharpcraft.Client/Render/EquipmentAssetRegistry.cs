@@ -51,6 +51,9 @@ public sealed class EquipmentAssetRegistry
 
     public EquipmentClientInfo? Get(Identifier id) => _assets.TryGetValue(id, out var info) ? info : null;
 
+    /// <summary>Every loaded asset, used to pre-generate trim palette variants.</summary>
+    public IEnumerable<EquipmentClientInfo> All => _assets.Values;
+
     /// <summary>All texture paths referenced by loaded assets, for the skin atlas.</summary>
     public IEnumerable<string> TexturePaths
     {
