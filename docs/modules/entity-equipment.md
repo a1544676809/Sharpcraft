@@ -318,5 +318,5 @@
 - `TrimTextureCatalog` 加载 `textures/palettes/trim_base.png`、`textures/palettes/trim/<material>.png` 和 `textures/trims/entity/humanoid[_leggings]/<pattern>.png`，按 `PaletteMapping` 做 CPU 映射，生成 `TextureData` 并加入 `EntitySkinLibrary` atlas。
 - `EntityModelResolver` 为 humanoid armor 槽位添加 `trim_<kind>_<slot>` 层，复用对应 armor 树；无 trim 组件时不可见。
 - `trim_overrides` 的 **palette** 替换已按 equipment asset 接入（例如 iron/gold 的 `*_darker` 变体）；**texture** override 仍未实现。
-- trim 与附魔 glint 的 `trimmedArmorGlint` 仍走现有 glint 条件（当前只响应 `enchantment_glint_override`）。
+- trim 与附魔 glint 的 `trimmedArmorGlint` 仍由现有 Glint 层近似；已支持 `enchantment_glint_override` 与 enchantment presence，但未拆分 trim/no-trim 的独立 render type。
 - 动态 `registry_data` 的 trim material/pattern holder 顺序仍使用 26.3 bootstrap 静态表；服务器重排/模组注册时需要后续动态注册表接入。

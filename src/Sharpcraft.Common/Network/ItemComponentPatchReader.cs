@@ -18,7 +18,8 @@ public readonly record struct ItemComponentInfo(
     int? DyedColor = null,
     bool? GlintOverride = null,
     string? TrimMaterialId = null,
-    string? TrimPatternId = null)
+    string? TrimPatternId = null,
+    bool HasEnchantments = false)
 {
     /// <summary>True when some component payload could not be decoded and the rest of the packet was skipped.</summary>
     public bool HasUnknownComponents => Opaque;
@@ -255,7 +256,7 @@ internal static class ItemComponentPatchReader
 
         if (typeId == Enchantments)
         {
-            return TrySkipEnchantments(ref reader, ref info);
+            return TrySkipEnchantments(ref reader, ref info, trackEnchantmentPresence: true);
         }
 
         if (typeId == ChargedProjectiles)
@@ -1523,11 +1524,19 @@ internal static class ItemComponentPatchReader
         return true;
     }
 
-    private static bool TrySkipEnchantments(ref PayloadReader reader, ref ItemComponentInfo info)
+    private static bool TrySkipEnchantments(
+        ref PayloadReader reader,
+        ref ItemComponentInfo info,
+        bool trackEnchantmentPresence = false)
     {
         if (reader.TryReadVarInt(out var count) != DecodeStatus.Success || count < 0)
         {
             return false;
+        }
+
+        if (trackEnchantmentPresence && count > 0)
+        {
+            info = info with { HasEnchantments = true };
         }
 
         for (var i = 0; i < count; i++)

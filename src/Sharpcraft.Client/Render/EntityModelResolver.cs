@@ -87,6 +87,13 @@ public static class EntityModelResolver
         return TrimTextureCatalog.Path(layerType, pattern, material, equipmentInfo);
     }
 
+    /// <summary>
+    /// Resolves the item's foil state for the glint layer: an explicit glint override wins, otherwise enchantment
+    /// presence enables the overlay.
+    /// </summary>
+    public static bool ResolveEquipmentFoil(EntityRenderState state, int slot) =>
+        state.EquipmentGlintOverrideAt(slot) ?? state.EquipmentHasEnchantmentsAt(slot) ?? false;
+
     /// <summary>Resolves the leather/dyed tint for an equipment slot, or white when the item is not dyeable.</summary>
     public static Vector3 ResolveEquipmentTint(EntityRenderState state, EquipmentAssetKind kind, int slot)
     {
@@ -443,7 +450,7 @@ public static class EntityModelResolver
                     glintTexture,
                     definition.Scale,
                     emissiveTexturePath: glintTexture,
-                    textureSelector: state => state.EquipmentGlintOverrideAt(slot) == true ? glintTexture : null,
+                    textureSelector: state => ResolveEquipmentFoil(state, slot) ? glintTexture : null,
                     additionalTexturePaths: [glintTexture],
                     compiled: EntityModelLayerHelpers.WithEmissiveTexture(equipmentTree, glintTexture));
                 customLayers.Add(new EntityRenderLayerDefinition(
@@ -452,8 +459,8 @@ public static class EntityModelResolver
                     order++,
                     glintModel,
                     glintTexture,
-                    state => state.EquipmentGlintOverrideAt(slot) == true ? glintTexture : null,
-                    state => state.EquipmentGlintOverrideAt(slot) == true,
+                    state => ResolveEquipmentFoil(state, slot) ? glintTexture : null,
+                    state => ResolveEquipmentFoil(state, slot),
                     AllCubes: true));
             }
 

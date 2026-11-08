@@ -244,6 +244,22 @@ public sealed class EntityLayerTests
     }
 
     [Fact]
+    public void EnchantmentPresenceEnablesTheArmorGlintLayer()
+    {
+        var enchanted = new bool?[8];
+        enchanted[5] = true;
+        var state = Entity(HumanoidMobModelDefinition.ZombieEntityTypeId) with
+        {
+            EquipmentHasEnchantments = enchanted
+        };
+
+        Assert.True(EntityModelResolver.ResolveEquipmentFoil(state, 5));
+        var glint = EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId).RenderLayers
+            .Single(layer => layer.Name == "glint_HumanoidArmor_5");
+        Assert.True(glint.VisibleWhen!(state));
+    }
+
+    [Fact]
     public void ModelGroupingPreservesInterleavedSubmissionOrder()
     {
         var states = new[]

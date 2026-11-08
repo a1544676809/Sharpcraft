@@ -258,6 +258,7 @@ public sealed class SetEquipmentPacketTests
         Assert.Equal(DecodeStatus.Success, status);
         Assert.True(complete);
         Assert.Equal(2, result[0].Components.QuickChargeLevel);
+        Assert.True(result[0].Components.HasEnchantments);
     }
 
     [Fact]

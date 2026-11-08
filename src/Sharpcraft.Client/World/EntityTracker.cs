@@ -141,6 +141,7 @@ public sealed class TrackedEntity
     private readonly string?[] _equipmentAssetIds = new string?[8];
     private readonly int?[] _equipmentDyeColors = new int?[8];
     private readonly bool?[] _equipmentGlints = new bool?[8];
+    private readonly bool?[] _equipmentHasEnchantments = new bool?[8];
     private readonly string?[] _equipmentTrimMaterials = new string?[8];
     private readonly string?[] _equipmentTrimPatterns = new string?[8];
 
@@ -172,6 +173,13 @@ public sealed class TrackedEntity
 
     /// <summary>All eight glint overrides, reused by the per-frame render state.</summary>
     public IReadOnlyList<bool?> EquipmentGlintOverrides => _equipmentGlints;
+
+    /// <summary>Whether one equipment slot's item has enchantments, when known.</summary>
+    public bool? EquipmentHasEnchantmentsAt(int slot) =>
+        (uint)slot < (uint)_equipmentHasEnchantments.Length ? _equipmentHasEnchantments[slot] : null;
+
+    /// <summary>All eight enchantment-presence flags, reused by the per-frame render state.</summary>
+    public IReadOnlyList<bool?> EquipmentHasEnchantments => _equipmentHasEnchantments;
 
     /// <summary>Trim material registry id for one equipment slot, or null when the item has no trim.</summary>
     public string? EquipmentTrimMaterialAt(int slot) =>
@@ -206,6 +214,7 @@ public sealed class TrackedEntity
             _equipmentAssetIds[item.Slot] = item.IsEmpty ? null : item.Components.EquippableAssetId;
             _equipmentDyeColors[item.Slot] = item.IsEmpty ? null : item.Components.DyedColor;
             _equipmentGlints[item.Slot] = item.IsEmpty ? null : item.Components.GlintOverride;
+            _equipmentHasEnchantments[item.Slot] = item.IsEmpty ? null : item.Components.HasEnchantments;
             _equipmentTrimMaterials[item.Slot] = item.IsEmpty ? null : item.Components.TrimMaterialId;
             _equipmentTrimPatterns[item.Slot] = item.IsEmpty ? null : item.Components.TrimPatternId;
             EquipmentUpdates++;
@@ -503,6 +512,7 @@ public readonly record struct EntityRenderState(
     IReadOnlyList<string?>? EquipmentAssetIds = null,
     IReadOnlyList<int?>? EquipmentDyeColors = null,
     IReadOnlyList<bool?>? EquipmentGlintOverrides = null,
+    IReadOnlyList<bool?>? EquipmentHasEnchantments = null,
     IReadOnlyList<string?>? EquipmentTrimMaterials = null,
     IReadOnlyList<string?>? EquipmentTrimPatterns = null,
     string? PlayerBodyTexture = null,
@@ -523,6 +533,10 @@ public readonly record struct EntityRenderState(
     /// <summary>Glint override for one equipment slot, when the item supplied one.</summary>
     public bool? EquipmentGlintOverrideAt(int slot) =>
         EquipmentGlintOverrides is { } glints && (uint)slot < (uint)glints.Count ? glints[slot] : null;
+
+    /// <summary>Enchantment-presence flag for one equipment slot, when known.</summary>
+    public bool? EquipmentHasEnchantmentsAt(int slot) =>
+        EquipmentHasEnchantments is { } enchanted && (uint)slot < (uint)enchanted.Count ? enchanted[slot] : null;
 
     /// <summary>Trim material registry id for one equipment slot, when the item supplied one.</summary>
     public string? EquipmentTrimMaterialAt(int slot) =>
@@ -1477,6 +1491,7 @@ public sealed class EntityTracker
                 EquipmentAssetIds: entity.EquipmentAssetIds,
                 EquipmentDyeColors: entity.EquipmentDyeColors,
                 EquipmentGlintOverrides: entity.EquipmentGlintOverrides,
+                EquipmentHasEnchantments: entity.EquipmentHasEnchantments,
                 EquipmentTrimMaterials: entity.EquipmentTrimMaterials,
                 EquipmentTrimPatterns: entity.EquipmentTrimPatterns,
                 PlayerBodyTexture: playerSkin?.Body?.Path,
