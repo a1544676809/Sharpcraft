@@ -50,3 +50,6 @@ desktop.ini
 tokens.json
 *tokens.json
 msa-tokens.json
+
+# Local Visual Studio MCP bridge settings (machine specific)
+.mcp/
