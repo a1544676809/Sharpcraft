@@ -139,6 +139,30 @@ public sealed class DroppedItemMesherTests
         Assert.Equal(4, sideFaces.Count);
         Assert.Contains(sideFaces, quad => quad.Direction == ModelFaceDirection.Up);
         Assert.Contains(sideFaces, quad => quad.Direction == ModelFaceDirection.West);
+
+        // The pixel sits at sprite cell (4,4); sprite Y grows downward while model Y grows upward, so its model row is
+        // 16 - 4 - 1 = 11 px. Every one of the four quads must live inside that single cell's footprint.
+        foreach (var quad in sideFaces)
+        {
+            for (var corner = 0; corner < 4; corner++)
+            {
+                var point = quad.Corner(corner);
+                Assert.InRange(point.X, 4f / 16f - 1e-4f, 5f / 16f + 1e-4f);
+                Assert.InRange(point.Z, 7.5f / 16f - 1e-4f, 8.5f / 16f + 1e-4f);
+                if (quad.Direction == ModelFaceDirection.Up)
+                {
+                    Assert.Equal(12f / 16f, point.Y, 4);
+                }
+                else if (quad.Direction == ModelFaceDirection.Down)
+                {
+                    Assert.Equal(11f / 16f, point.Y, 4);
+                }
+                else
+                {
+                    Assert.InRange(point.Y, 11f / 16f - 1e-4f, 12f / 16f + 1e-4f);
+                }
+            }
+        }
     }
 
     [Fact]
