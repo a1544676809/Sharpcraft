@@ -121,29 +121,41 @@ public static class EntityModelResolver
         return ItemModels.Resolve(item.Id.ToString())?.SpecialProperties;
     }
 
-    /// <summary>Resolves the atlas texture for skull/chest-like special models.</summary>
+    /// <summary>Resolves the atlas texture for skull/chest/banner/pot/conduit/end-cube special models.</summary>
     public static string? ResolveHeldItemSpecialTexture(EntityRenderState state, bool offhand = false)
     {
         var specialType = ResolveHeldItemSpecial(state, offhand);
         var properties = ResolveHeldItemSpecialProperties(state, offhand);
-        if (specialType is "minecraft:chest" or "minecraft:shulker_box")
+        switch (specialType)
         {
-            var texture = properties is not null && properties.TryGetValue("texture", out var value)
-                ? value
-                : "minecraft:normal";
-            if (!Identifier.TryParse(texture, out var textureId))
+            case "minecraft:chest":
+            case "minecraft:shulker_box":
             {
-                return null;
+                var fallback = specialType == "minecraft:chest" ? "minecraft:normal" : "minecraft:shulker";
+                var texture = properties is not null && properties.TryGetValue("texture", out var value)
+                    ? value
+                    : fallback;
+                if (!Identifier.TryParse(texture, out var textureId))
+                {
+                    return null;
+                }
+
+                return (specialType == "minecraft:chest" ? "entity/chest/" : "entity/shulker/") + textureId.Path;
             }
 
-            return specialType == "minecraft:chest"
-                ? "entity/chest/" + textureId.Path
-                : "entity/shulker/" + textureId.Path;
-        }
-
-        if (specialType is not ("minecraft:head" or "minecraft:player_head"))
-        {
-            return null;
+            case "minecraft:banner":
+                return SpecialItemModelDefinition.BannerTexture;
+            case "minecraft:decorated_pot":
+                return SpecialItemModelDefinition.DecoratedPotTexture;
+            case "minecraft:conduit":
+                return SpecialItemModelDefinition.ConduitTexture;
+            case "minecraft:end_cube":
+                return SpecialItemModelDefinition.EndPortalTexture;
+            case "minecraft:head":
+            case "minecraft:player_head":
+                break;
+            default:
+                return null;
         }
 
         var kind = properties is not null && properties.TryGetValue("kind", out var kindValue) ? kindValue : "player";
@@ -158,6 +170,12 @@ public static class EntityModelResolver
             _ => DefaultPlayerSkin.Get(state.Uuid).Path
         };
     }
+
+    /// <summary>Decorated pot sides sample their own pottery-pattern sprite.</summary>
+    public static string? ResolveHeldItemPotSideTexture(EntityRenderState state, bool offhand = false) =>
+        ResolveHeldItemSpecial(state, offhand) == "minecraft:decorated_pot"
+            ? SpecialItemModelDefinition.DecoratedPotSideTexture
+            : null;
 
     /// <summary>Resolves one hand's first item-atlas texture path, or null when unknown.</summary>
     public static string? ResolveHeldItemTexture(EntityRenderState state, bool offhand = false)
@@ -667,6 +685,7 @@ public static class EntityModelResolver
             AddSpecialHeadLayers(heldLayers);
             AddSpecialChestLayers(heldLayers);
             AddSpecialShulkerLayers(heldLayers);
+            AddSpecialBannerPotConduitLayers(heldLayers);
             renderLayers = heldLayers;
         }
 
@@ -853,6 +872,65 @@ public static class EntityModelResolver
             VisibleWhen: state => ResolveHeldItemSpecial(state, offhand: true) == "minecraft:shulker_box",
             AllCubes: true,
             UsesItemAtlas: true));
+    }
+
+    /// <summary>
+    /// Adds one special-model layer pair. <paramref name="selector"/> receives the off-hand flag so callers can reuse a
+    /// single texture resolver for both hands.
+    /// </summary>
+    private static void AddSpecialPair(
+        List<EntityRenderLayerDefinition> layers,
+        string name,
+        string specialType,
+        EntityModelDefinition right,
+        EntityModelDefinition left,
+        int order,
+        Func<EntityRenderState, bool, string?> selector)
+    {
+        layers.Add(new EntityRenderLayerDefinition(
+            "held_special_" + name + "_right",
+            EntityGeometryLayerKind.Cutout,
+            order,
+            right,
+            TexturePath: null,
+            TextureSelector: state => selector(state, false),
+            VisibleWhen: state => ResolveHeldItemSpecial(state, offhand: false) == specialType,
+            AllCubes: true,
+            UsesItemAtlas: true));
+        layers.Add(new EntityRenderLayerDefinition(
+            "held_special_" + name + "_left",
+            EntityGeometryLayerKind.Cutout,
+            order + 1,
+            left,
+            TexturePath: null,
+            TextureSelector: state => selector(state, true),
+            VisibleWhen: state => ResolveHeldItemSpecial(state, offhand: true) == specialType,
+            AllCubes: true,
+            UsesItemAtlas: true));
+    }
+
+    private static void AddSpecialBannerPotConduitLayers(List<EntityRenderLayerDefinition> layers)
+    {
+        // Banner body and flag are two reference models sharing the banner_base sprite.
+        AddSpecialPair(layers, "banner", "minecraft:banner",
+            SpecialItemModelDefinition.BannerStanding, SpecialItemModelDefinition.BannerStanding, 66,
+            (state, offhand) => ResolveHeldItemSpecialTexture(state, offhand));
+        AddSpecialPair(layers, "banner_flag", "minecraft:banner",
+            SpecialItemModelDefinition.BannerFlagStanding, SpecialItemModelDefinition.BannerFlagStanding, 68,
+            (state, offhand) => ResolveHeldItemSpecialTexture(state, offhand));
+        // Decorated pot uses a base sprite plus a per-pattern side sprite.
+        AddSpecialPair(layers, "pot", "minecraft:decorated_pot",
+            SpecialItemModelDefinition.DecoratedPot, SpecialItemModelDefinition.DecoratedPot, 70,
+            (state, offhand) => ResolveHeldItemSpecialTexture(state, offhand));
+        AddSpecialPair(layers, "pot_sides", "minecraft:decorated_pot",
+            SpecialItemModelDefinition.DecoratedPotSides, SpecialItemModelDefinition.DecoratedPotSides, 72,
+            (state, offhand) => ResolveHeldItemPotSideTexture(state, offhand));
+        AddSpecialPair(layers, "conduit", "minecraft:conduit",
+            SpecialItemModelDefinition.Conduit, SpecialItemModelDefinition.Conduit, 74,
+            (state, offhand) => ResolveHeldItemSpecialTexture(state, offhand));
+        AddSpecialPair(layers, "end_cube", "minecraft:end_cube",
+            SpecialItemModelDefinition.EndCube, SpecialItemModelDefinition.EndCube, 76,
+            (state, offhand) => ResolveHeldItemSpecialTexture(state, offhand));
     }
 
     private static bool IsHarnessItem(int itemId) =>

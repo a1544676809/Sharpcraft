@@ -449,7 +449,9 @@ internal static class WindowCommand
                              EntityModelResolver.ResolveHeldItemTexture(entity, offhand: false),
                              EntityModelResolver.ResolveHeldItemTexture(entity, offhand: true),
                              EntityModelResolver.ResolveHeldItemSpecialTexture(entity, offhand: false),
-                             EntityModelResolver.ResolveHeldItemSpecialTexture(entity, offhand: true)
+                             EntityModelResolver.ResolveHeldItemSpecialTexture(entity, offhand: true),
+                             EntityModelResolver.ResolveHeldItemPotSideTexture(entity, offhand: false),
+                             EntityModelResolver.ResolveHeldItemPotSideTexture(entity, offhand: true)
                          })
                 {
                     if (path is null || itemAtlas.Contains(path))

@@ -49,6 +49,48 @@ public sealed class SpecialItemModelDefinitionTests
     }
 
     [Fact]
+    public void BannerHasPoleBarAndFlag()
+    {
+        var standing = SpecialItemModelDefinition.BannerStanding.Compiled!.Parts.Select(part => part.Name).ToArray();
+        Assert.Contains("pole", standing);
+        Assert.Contains("bar", standing);
+        var wall = SpecialItemModelDefinition.BannerWall.Compiled!.Parts.Select(part => part.Name).ToArray();
+        Assert.DoesNotContain("pole", wall);
+        Assert.Contains("bar", wall);
+        Assert.Contains("flag",
+            SpecialItemModelDefinition.BannerFlagStanding.Compiled!.Parts.Select(part => part.Name));
+    }
+
+    [Fact]
+    public void DecoratedPotMatchesTheReferenceCuboids()
+    {
+        var baseParts = SpecialItemModelDefinition.DecoratedPot.Compiled!.Parts.Select(part => part.Name).ToArray();
+        Assert.Contains("neck", baseParts);
+        Assert.Contains("top", baseParts);
+        Assert.Contains("bottom", baseParts);
+        var sides = SpecialItemModelDefinition.DecoratedPotSides.Compiled!.Parts.Select(part => part.Name).ToArray();
+        Assert.Equal(4, sides.Length);
+        Assert.Contains("front", sides);
+        Assert.Contains("back", sides);
+        Assert.Contains("left", sides);
+        Assert.Contains("right", sides);
+    }
+
+    [Fact]
+    public void ConduitAndEndCubeUseReferenceCubeSizes()
+    {
+        var shell = SpecialItemModelDefinition.Conduit.Compiled!.Find("shell")!.Cubes.Single();
+        Assert.Equal(6f, shell.Width);
+        Assert.Equal(6f, shell.Height);
+        Assert.Equal(6f, shell.Depth);
+
+        var cube = SpecialItemModelDefinition.EndCube.Compiled!.Find("cube")!.Cubes.Single();
+        Assert.Equal(16f, cube.Width);
+        Assert.Equal(16f, cube.Height);
+        Assert.Equal(16f, cube.Depth);
+    }
+
+    [Fact]
     public void HeldSpecialModelsCarryTheArmPivot()
     {
         Assert.NotNull(SpecialItemModelDefinition.HeldTridentRight.Compiled!.Find("right_arm"));

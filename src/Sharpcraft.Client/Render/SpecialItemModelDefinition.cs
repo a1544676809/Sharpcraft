@@ -8,12 +8,65 @@ namespace Sharpcraft.Client.Render;
 /// shulker, chest and component-driven special renderers remain separate work.
 /// </summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.special.SpecialModelRenderer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/special/SpecialModelRenderer.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
-[Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-SPECIAL-MODELS", "T-631e", Note = "Only trident/shield/head/chest/shulker shapes are ported; banner, bell, book, conduit, decorated pot, copper golem statue and end cube are absent")]
+[Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-SPECIAL-MODELS", "T-631e", Note = "10 of 13 reference special renderers ported; bell, book and copper golem statue are absent")]
 [Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-SPECIAL-STATE", "T-631e", Note = "ChestSpecialRenderer openness/chestType and ShulkerBoxSpecialRenderer openness are ignored; shield patterns and dye are not composed")]
 public static class SpecialItemModelDefinition
 {
     public const string TridentTexture = "entity/trident/trident";
     public const string ShieldTexture = "entity/shield/shield_base_nopattern";
+    public const string BannerTexture = "entity/banner_base";
+    public const string DecoratedPotTexture = "entity/decorated_pot/decorated_pot_base";
+    public const string DecoratedPotSideTexture = "entity/decorated_pot/decorated_pot_side";
+    public const string ConduitTexture = "entity/conduit/base";
+    public const string EndPortalTexture = "entity/end_portal/end_portal";
+
+    /// <summary>Standing banner: pole and bar, 64×64 texture (reference <c>BannerModel.createBodyLayer(true)</c>).</summary>
+    public static readonly EntityModelDefinition BannerStanding = EntityModelDefinition.FromTree(
+        "special_banner_standing", 64, 64, BuildBannerMesh(standing: true),
+        PlayerModelDefinition.DefaultFaceTransforms, BannerTexture, 1f,
+        additionalTexturePaths: [BannerTexture]);
+
+    /// <summary>Wall banner: bar only, positioned for the wall attachment.</summary>
+    public static readonly EntityModelDefinition BannerWall = EntityModelDefinition.FromTree(
+        "special_banner_wall", 64, 64, BuildBannerMesh(standing: false),
+        PlayerModelDefinition.DefaultFaceTransforms, BannerTexture, 1f,
+        additionalTexturePaths: [BannerTexture]);
+
+    /// <summary>Standing banner flag plane (reference <c>BannerFlagModel.createFlagLayer(true)</c>).</summary>
+    public static readonly EntityModelDefinition BannerFlagStanding = EntityModelDefinition.FromTree(
+        "special_banner_flag_standing", 64, 64, BuildBannerFlagMesh(standing: true),
+        PlayerModelDefinition.DefaultFaceTransforms, BannerTexture, 1f,
+        additionalTexturePaths: [BannerTexture]);
+
+    /// <summary>Wall banner flag plane.</summary>
+    public static readonly EntityModelDefinition BannerFlagWall = EntityModelDefinition.FromTree(
+        "special_banner_flag_wall", 64, 64, BuildBannerFlagMesh(standing: false),
+        PlayerModelDefinition.DefaultFaceTransforms, BannerTexture, 1f,
+        additionalTexturePaths: [BannerTexture]);
+
+    /// <summary>Decorated pot base: neck, top and bottom planes (reference <c>DecoratedPotRenderer.createBaseLayer</c>).</summary>
+    public static readonly EntityModelDefinition DecoratedPot = EntityModelDefinition.FromTree(
+        "special_decorated_pot", 32, 32, BuildDecoratedPotBaseMesh(),
+        PlayerModelDefinition.DefaultFaceTransforms, DecoratedPotTexture, 1f,
+        additionalTexturePaths: [DecoratedPotTexture]);
+
+    /// <summary>Decorated pot side planes; one plane per cardinal face.</summary>
+    public static readonly EntityModelDefinition DecoratedPotSides = EntityModelDefinition.FromTree(
+        "special_decorated_pot_sides", 16, 16, BuildDecoratedPotSidesMesh(),
+        PlayerModelDefinition.DefaultFaceTransforms, DecoratedPotSideTexture, 1f,
+        additionalTexturePaths: [DecoratedPotSideTexture]);
+
+    /// <summary>Conduit shell cube (reference <c>ConduitRenderer.createShellLayer</c>), 32×16 texture.</summary>
+    public static readonly EntityModelDefinition Conduit = EntityModelDefinition.FromTree(
+        "special_conduit", 32, 16, BuildConduitMesh(),
+        PlayerModelDefinition.DefaultFaceTransforms, ConduitTexture, 1f,
+        additionalTexturePaths: [ConduitTexture]);
+
+    /// <summary>End portal/gateway cube: the reference submits all six faces of a unit block.</summary>
+    public static readonly EntityModelDefinition EndCube = EntityModelDefinition.FromTree(
+        "special_end_cube", 16, 16, BuildEndCubeMesh(),
+        PlayerModelDefinition.DefaultFaceTransforms, EndPortalTexture, 1f,
+        additionalTexturePaths: [EndPortalTexture]);
 
     /// <summary>Chest item model: bottom, lid and lock (64×64 texture). The texture is selected from the special property.</summary>
     public static readonly EntityModelDefinition Chest = EntityModelDefinition.FromTree(
@@ -111,6 +164,80 @@ public static class SpecialItemModelDefinition
         "held_special_shield_left", 64, 64, BuildShieldMesh(held: true, left: true),
         PlayerModelDefinition.DefaultFaceTransforms, ShieldTexture, 1f,
         additionalTexturePaths: [ShieldTexture]);
+
+    private static VanillaMeshDefinition BuildBannerMesh(bool standing)
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        if (standing)
+        {
+            // Reference BannerModel: pole texOffs(44,0) box(-1,-42,-1, 2,42,2).
+            root.AddOrReplaceChild("pole", VanillaPartPose.Zero,
+                new VanillaCubeDefinition("pole", 44, 0, -1f, -42f, -1f, 2f, 42f, 2f));
+        }
+
+        // Reference BannerModel: bar texOffs(0,42), y/z depend on the attachment.
+        root.AddOrReplaceChild("bar", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("bar", 0, 42, -10f, standing ? -44f : -20.5f, standing ? -1f : 9.5f, 20f, 2f, 2f));
+        return new VanillaMeshDefinition(root);
+    }
+
+    private static VanillaMeshDefinition BuildBannerFlagMesh(bool standing)
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        // Reference BannerFlagModel.createFlagLayer: texOffs(0,0) box(-10,0,-2, 20,40,1) under the attachment pose.
+        root.AddOrReplaceChild("flag",
+            VanillaPartPose.Offset(0f, standing ? -44f : -20.5f, standing ? 0f : 10.5f),
+            new VanillaCubeDefinition("flag", 0, 0, -10f, 0f, -2f, 20f, 40f, 1f));
+        return new VanillaMeshDefinition(root);
+    }
+
+    private static VanillaMeshDefinition BuildDecoratedPotBaseMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        // Reference DecoratedPotRenderer.createBaseLayer: neck rotated pi about X, deflated ring plus inflated rim.
+        root.AddOrReplaceChild("neck", VanillaPartPose.OffsetAndRotation(0f, 37f, 16f, MathF.PI, 0f, 0f),
+            new VanillaCubeDefinition("neck", 0, 0, 4f, 17f, 4f, 8f, 3f, 8f, Grow: -0.1f),
+            new VanillaCubeDefinition("neck_rim", 0, 5, 5f, 20f, 5f, 6f, 1f, 6f, Grow: 0.2f));
+
+        root.AddOrReplaceChild("top", VanillaPartPose.Offset(1f, 16f, 1f),
+            new VanillaCubeDefinition("top", -14, 13, 0f, 0f, 0f, 14f, 0f, 14f));
+        root.AddOrReplaceChild("bottom", VanillaPartPose.Offset(1f, 0f, 1f),
+            new VanillaCubeDefinition("bottom", -14, 13, 0f, 0f, 0f, 14f, 0f, 14f));
+        return new VanillaMeshDefinition(root);
+    }
+
+    private static VanillaMeshDefinition BuildDecoratedPotSidesMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        // Reference DecoratedPotRenderer.createSidesLayer: one 14x16 plane per cardinal face.
+        root.AddOrReplaceChild("back", VanillaPartPose.OffsetAndRotation(15f, 16f, 1f, 0f, 0f, MathF.PI),
+            new VanillaCubeDefinition("back", 1, 0, 0f, 0f, 0f, 14f, 16f, 0f));
+        root.AddOrReplaceChild("left", VanillaPartPose.OffsetAndRotation(1f, 16f, 1f, 0f, -MathF.PI / 2f, MathF.PI),
+            new VanillaCubeDefinition("left", 1, 0, 0f, 0f, 0f, 14f, 16f, 0f));
+        root.AddOrReplaceChild("right", VanillaPartPose.OffsetAndRotation(15f, 16f, 15f, 0f, MathF.PI / 2f, MathF.PI),
+            new VanillaCubeDefinition("right", 1, 0, 0f, 0f, 0f, 14f, 16f, 0f));
+        root.AddOrReplaceChild("front", VanillaPartPose.OffsetAndRotation(1f, 16f, 15f, MathF.PI, 0f, 0f),
+            new VanillaCubeDefinition("front", 1, 0, 0f, 0f, 0f, 14f, 16f, 0f));
+        return new VanillaMeshDefinition(root);
+    }
+
+    private static VanillaMeshDefinition BuildConduitMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        // Reference ConduitRenderer.createShellLayer: texOffs(0,0) box(-3,-3,-3, 6,6,6) on a 32x16 sheet.
+        root.AddOrReplaceChild("shell", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("shell", 0, 0, -3f, -3f, -3f, 6f, 6f, 6f));
+        return new VanillaMeshDefinition(root);
+    }
+
+    private static VanillaMeshDefinition BuildEndCubeMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        // Reference AbstractEndPortalRenderer.submitSpecial submits every face of the unit cube (0,0,0)..(1,1,1).
+        root.AddOrReplaceChild("cube", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("cube", 0, 0, 0f, 0f, 0f, 16f, 16f, 16f));
+        return new VanillaMeshDefinition(root);
+    }
 
     private static VanillaMeshDefinition BuildShulkerMesh(bool held = false, bool left = false)
     {
