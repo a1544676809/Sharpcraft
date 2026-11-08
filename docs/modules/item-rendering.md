@@ -87,7 +87,7 @@
 
 - **T-631a**：item id → model id 解析、parent/texture/display 合并、10 个 display context、5 组 Golden Vectors；不生成 mesh。**已完成**（`965ab53`）。
 - **T-631b**：`item/generated` / `item/handheld` 的最小 quad mesh 与 item atlas；Witch 药水验收。**进行中**：Witch 药水已用 flat quad（`EntityModelMesher.AddFlatQuad`，`item/potion` 进入实体 atlas）；独立 item atlas/通用 item model 纹理层仍待补。
-- **T-631c**：其他 item model 类型（select/condition/composite/special）与掉落物/展示框/GUI 复用。**进行中**：`ItemAtlas` 数据层已完成（16×16 网格、missing checkerboard、按路径加载）；WindowedRenderer 的独立 item bind group/Item 层接线仍待补。
+- **T-631c**：其他 item model 类型（select/condition/composite/special）与掉落物/展示框/GUI 复用。**进行中**：`ItemAtlas` 数据层、WindowedRenderer 独立 item bind group、`EntityGeometryLayer.UsesItemAtlas` 与 Witch layer 接线已完成；其他 item model 类型与 drop/display/GUI 复用仍待补。
 
 ## 7. 风险与限制
 

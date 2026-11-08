@@ -13,7 +13,7 @@ namespace Sharpcraft.Client.Render;
 /// TexturePath, so player and zombie can share one texture binding. This is intentionally separate from the block atlas.
 /// </summary>
 [Sharpcraft.Common.Reference.ReferenceClass("sharpcraft.EntitySkinAtlas", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/texture/TextureAtlas.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.New, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "Our 2D-grid skin atlas builder; no direct reference counterpart")]
-public sealed class EntitySkinAtlas
+public sealed class EntitySkinAtlas : ISpriteAtlas
 {
     private readonly Dictionary<string, SpriteRect> _sprites;
     private EntitySkinAtlas(TextureData texture, Dictionary<string, SpriteRect> sprites, int cellWidth, int cellHeight)

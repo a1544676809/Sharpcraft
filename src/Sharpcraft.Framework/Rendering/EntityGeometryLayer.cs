@@ -31,13 +31,19 @@ public enum EntityGeometryLayerKind
 /// </remarks>
 public sealed class EntityGeometryLayer
 {
-    public EntityGeometryLayer(string name, EntityGeometryLayerKind kind, int order, DynamicGeometry geometry)
+    public EntityGeometryLayer(
+        string name,
+        EntityGeometryLayerKind kind,
+        int order,
+        DynamicGeometry geometry,
+        bool usesItemAtlas = false)
     {
         ArgumentNullException.ThrowIfNull(geometry);
         Name = name;
         Kind = kind;
         Order = order;
         Geometry = geometry;
+        UsesItemAtlas = usesItemAtlas;
     }
 
     /// <summary>Diagnostic name ("cutout", "translucent", "emissive").</summary>
@@ -51,4 +57,7 @@ public sealed class EntityGeometryLayer
 
     /// <summary>Geometry, owned by the producer and reused every frame.</summary>
     public DynamicGeometry Geometry { get; }
+
+    /// <summary>True when the layer samples the item atlas rather than the entity skin atlas.</summary>
+    public bool UsesItemAtlas { get; }
 }

@@ -33,18 +33,29 @@ public static class WitchModelDefinition
         WitchMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/witch/witch",
+        0.9375f);
+
+    /// <summary>
+    /// Standalone layer model for the held potion quad. It repeats the head/nose pivots so the layer inherits the same
+    /// `head`/`nose` pose names as the base witch model, while sampling the item atlas.
+    /// </summary>
+    public static readonly EntityModelDefinition HeldPotionDefinition = EntityModelDefinition.FromTree(
+        "witch_held_potion",
+        64,
+        128,
+        BuildHeldPotionMesh(),
+        PlayerModelDefinition.DefaultFaceTransforms,
+        PotionTexture,
         0.9375f,
         additionalTexturePaths: [PotionTexture]);
 
-    private static VanillaMeshDefinition BuildWitchMesh()
+    private static VanillaMeshDefinition BuildHeldPotionMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         var head = root.AddOrReplaceChild("head", VanillaPartPose.Zero,
-            new VanillaCubeDefinition("head", 0, 0, -4f, -10f, -4f, 8f, 10f, 8f, MirrorX: false));
+            new VanillaCubeDefinition("head", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f));
         var nose = head.AddOrReplaceChild("nose", VanillaPartPose.Offset(0f, -2f, 0f),
-            new VanillaCubeDefinition("nose", 24, 0, -1f, -1f, -6f, 2f, 4f, 2f));
-        nose.AddOrReplaceChild("mole", VanillaPartPose.Offset(0f, -2f, 0f),
-            new VanillaCubeDefinition("mole", 0, 0, 0f, 3f, -6.75f, 1f, 1f, 1f, Grow: -0.25f));
+            new VanillaCubeDefinition("nose", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f));
         nose.AddOrReplaceChild("held_potion", VanillaPartPose.Offset(0f, 0f, -8f),
             new VanillaCubeDefinition(
                 "held_potion",
@@ -61,7 +72,19 @@ public static class WitchModelDefinition
                 TextureHeight: 16,
                 UvWidth: 16,
                 UvHeight: 16,
-                VisibleWhen: static state => state.IsHoldingPotion));
+                UsesItemAtlas: true));
+        return new VanillaMeshDefinition(root);
+    }
+
+    private static VanillaMeshDefinition BuildWitchMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        var head = root.AddOrReplaceChild("head", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("head", 0, 0, -4f, -10f, -4f, 8f, 10f, 8f, MirrorX: false));
+        var nose = head.AddOrReplaceChild("nose", VanillaPartPose.Offset(0f, -2f, 0f),
+            new VanillaCubeDefinition("nose", 24, 0, -1f, -1f, -6f, 2f, 4f, 2f));
+        nose.AddOrReplaceChild("mole", VanillaPartPose.Offset(0f, -2f, 0f),
+            new VanillaCubeDefinition("mole", 0, 0, 0f, 3f, -6.75f, 1f, 1f, 1f, Grow: -0.25f));
         var hat = head.AddOrReplaceChild("hat", VanillaPartPose.Offset(-5f, -10.03125f, -5f),
             new VanillaCubeDefinition("hat", 0, 64, 0f, 0f, 0f, 10f, 2f, 10f));
         var hat2 = hat.AddOrReplaceChild("hat2", VanillaPartPose.OffsetAndRotation(1.75f, -4f, 2f, -0.05235988f, 0f, 0.02617994f),

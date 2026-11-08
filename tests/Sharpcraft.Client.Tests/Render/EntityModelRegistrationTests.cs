@@ -256,9 +256,8 @@ public sealed class EntityModelRegistrationTests
         var definition = EntityModelResolver.Resolve(WitchModelDefinition.WitchEntityTypeId);
 
         Assert.Equal("witch", definition.Name);
-        Assert.Equal(15, definition.Parts.Count);
+        Assert.Equal(14, definition.Parts.Count);
         Assert.Contains(definition.Parts, part => part.Name == "mole" && part.Parent == "nose");
-        Assert.Contains(definition.Parts, part => part.Name == "held_potion" && part.Parent == "nose" && part.Depth == 0f);
         Assert.Contains(definition.Parts, part => part.Name == "jacket" && part.Parent == "body" && Math.Abs(part.Grow - 0.5f) < 0.001f);
         Assert.Contains(definition.Parts, part => part.Name == "arms_left" && part.Parent == "arms");
         Assert.Contains(definition.Parts, part => part.Name == "hat2" && part.Parent == "hat");

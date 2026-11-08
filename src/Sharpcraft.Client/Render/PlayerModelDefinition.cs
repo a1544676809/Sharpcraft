@@ -53,6 +53,7 @@ public readonly record struct EntityModelPart
     public int UvHeight { get; init; }
     public int UvDepth { get; init; }
     public Func<EntityRenderState, float>? YOffsetSelector { get; init; }
+    public bool UsesItemAtlas { get; init; }
 
     internal EntityModelPart(
         string Name,
@@ -90,7 +91,8 @@ public readonly record struct EntityModelPart
         int UvWidth = 0,
         int UvHeight = 0,
         int UvDepth = 0,
-        Func<EntityRenderState, float>? YOffsetSelector = null)
+        Func<EntityRenderState, float>? YOffsetSelector = null,
+        bool UsesItemAtlas = false)
     {
         this.Name = Name;
         this.CentreX = CentreX;
@@ -128,6 +130,7 @@ public readonly record struct EntityModelPart
         this.UvHeight = UvHeight;
         this.UvDepth = UvDepth;
         this.YOffsetSelector = YOffsetSelector;
+        this.UsesItemAtlas = UsesItemAtlas;
     }
 
     /// <summary>Returns a copy with the metadata fields used by model-definition layers overridden.</summary>

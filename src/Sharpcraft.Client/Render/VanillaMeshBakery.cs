@@ -74,7 +74,8 @@ public static class VanillaMeshBakery
                 EmissiveOnly: cube.EmissiveOnly,
                 UvWidth: cube.UvWidth,
                 UvHeight: cube.UvHeight,
-                UvDepth: cube.UvDepth));
+                UvDepth: cube.UvDepth,
+                UsesItemAtlas: cube.UsesItemAtlas));
         }
 
         var children = new List<EntityModelPartNode>(part.Children.Count);

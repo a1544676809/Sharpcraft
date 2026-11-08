@@ -409,6 +409,9 @@ internal static class WindowCommand
         var entitySkinLibrary = Sharpcraft.Client.Render.EntitySkinLibrary.Load(resources, playerSkin);
         var entitySkinTextureSource = new Sharpcraft.Framework.Rendering.AtlasTextureSource();
         entitySkinTextureSource.Update(entitySkinLibrary.Atlas?.Texture ?? playerSkin);
+        var itemAtlas = Sharpcraft.Client.Render.ItemAtlas.Load(resources, [Sharpcraft.Client.Render.WitchModelDefinition.PotionTexture]);
+        var itemAtlasSource = new Sharpcraft.Framework.Rendering.AtlasTextureSource();
+        itemAtlasSource.Update(itemAtlas.Texture);
         var entitySkinSprite = playerSkin is { } skin
             ? new Sharpcraft.Client.Assets.SpriteRect(0, 0, skin.Width, skin.Height, 1) { U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f }
             : (Sharpcraft.Client.Assets.SpriteRect?)null;
@@ -456,11 +459,11 @@ internal static class WindowCommand
                 if (entitySkinLibrary.Atlas is { } entitySkinAtlas)
                 {
                     var atlasSprite = new Sharpcraft.Client.Assets.SpriteRect(0, 0, entitySkinAtlas.Texture.Width, entitySkinAtlas.Texture.Height, 1) { U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f };
-                    return modelMesher.BuildLayers(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), atlasSprite, 64, 64, skinAtlas: entitySkinAtlas, variants: variantTable);
+                    return modelMesher.BuildLayers(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), atlasSprite, 64, 64, skinAtlas: entitySkinAtlas, variants: variantTable, itemAtlas: itemAtlas);
                 }
 
                 return entitySkinSprite is { } skinModel
-                    ? modelMesher.BuildLayers(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), skinModel, skinModel.Width == 1600 ? 64 : skinModel.Width, skinModel.Height == 1600 ? 64 : skinModel.Height, variants: variantTable)
+                    ? modelMesher.BuildLayers(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), skinModel, skinModel.Width == 1600 ? 64 : skinModel.Width, skinModel.Height == 1600 ? 64 : skinModel.Height, variants: variantTable, itemAtlas: itemAtlas)
                     : null;
             })
             : null;
@@ -686,6 +689,7 @@ internal static class WindowCommand
             entityLayers: entitySource,
             glyphTexture: glyphTexture,
             entitySkinSource: entitySkinTextureSource,
+            itemAtlasSource: itemAtlasSource,
             spriteTextures: guiSprites?.Textures,
             textureSource: uiTextures,
             atlasSource: atlasSource,

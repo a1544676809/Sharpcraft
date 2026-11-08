@@ -18,4 +18,5 @@ public sealed record EntityRenderLayerDefinition(
     string? TexturePath = null,
     Func<Sharpcraft.Client.World.EntityRenderState, string?>? TextureSelector = null,
     Func<Sharpcraft.Client.World.EntityRenderState, bool>? VisibleWhen = null,
-    bool AllCubes = false);
+    bool AllCubes = false,
+    bool UsesItemAtlas = false);

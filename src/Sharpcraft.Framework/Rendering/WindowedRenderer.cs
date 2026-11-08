@@ -51,6 +51,7 @@ public static class WindowedRenderer
         Func<DynamicGeometry?>? dynamicGeometry = null,
         Func<IReadOnlyList<EntityGeometryLayer>?>? entityLayers = null,
         Func<UiFrame, UiGeometry?>? uiGeometry = null,
+        AtlasTextureSource? itemAtlasSource = null,
     Func<IReadOnlyList<WorldTextDraw>?>? worldTextPerFrame = null,
         TextureData? glyphTexture = null,
     AtlasTextureSource? entitySkinSource = null,
@@ -244,6 +245,10 @@ public static class WindowedRenderer
         {
             entitySkin.Upload(device, bindGroupLayout, skinData, cameraBuffer, fogBuffer, lightmapBuffer, atlasSampler);
         }
+
+        using var itemAtlasGpu = new EntitySkinTextureGpu();
+        if (itemAtlasSource?.Atlas is { } itemData)
+            itemAtlasGpu.Upload(device, bindGroupLayout, itemData, cameraBuffer, fogBuffer, lightmapBuffer, atlasSampler);
         using var pipeline = CreatePipeline(device, format, pipelineLayout);
         using var cutoutPipeline = CreateCutoutPipeline(device, format, pipelineLayout);
         using var entityPipeline = CreateEntityPipeline(device, format, pipelineLayout);
@@ -485,6 +490,7 @@ public static class WindowedRenderer
         var entityLayerIndexCapacity = new List<ulong>();
         var entityLayerIndexCount = new List<uint>();
         var entityLayerKind = new List<EntityGeometryLayerKind>();
+        var entityLayerUsesItemAtlas = new List<bool>();
         var entityLayerDrawn = 0;
 
         void EnsureEntityLayerCapacity(int count)
@@ -497,11 +503,10 @@ public static class WindowedRenderer
                 entityLayerIndexCapacity.Add(MinimumBufferBytes);
                 entityLayerIndexCount.Add(0);
                 entityLayerKind.Add(default);
+                entityLayerUsesItemAtlas.Add(false);
             }
         }
-
         EnsureEntityLayerCapacity(4);
-
         // The helper is defined further down; the buffers above are created eagerly so no nullable state leaks.
 
 
@@ -645,6 +650,7 @@ public static class WindowedRenderer
         var appliedGeometryEpoch = geometryEpoch?.Invoke() ?? 0;
         var appliedAtlasVersion = atlasSource?.Version ?? 0;
         var appliedEntitySkinVersion = entitySkinSource?.Version ?? 0;
+        var appliedItemAtlasVersion = itemAtlasSource?.Version ?? 0;
 
         while (true)
         {
@@ -748,6 +754,19 @@ public static class WindowedRenderer
                 else
                 {
                     entitySkin.Clear();
+                }
+            }
+
+            if (itemAtlasSource is not null && itemAtlasSource.Version != appliedItemAtlasVersion)
+            {
+                appliedItemAtlasVersion = itemAtlasSource.Version;
+                if (itemAtlasSource.Atlas is { } refreshedItems)
+                {
+                    itemAtlasGpu.Upload(device, bindGroupLayout, refreshedItems, cameraBuffer, fogBuffer, lightmapBuffer, atlasSampler);
+                }
+                else
+                {
+                    itemAtlasGpu.Clear();
                 }
             }
 
@@ -982,6 +1001,7 @@ public static class WindowedRenderer
                     var geometry = layer.Geometry;
                     entityLayerIndexCount[layerIndex] = 0;
                     entityLayerKind[layerIndex] = layer.Kind;
+                    entityLayerUsesItemAtlas[layerIndex] = layer.UsesItemAtlas;
                     if (geometry.IndexCount <= 0)
                     {
                         continue;
@@ -1369,7 +1389,11 @@ public static class WindowedRenderer
                                 WGPUIndexFormat.Uint32,
                                 0,
                                 (ulong)layerIndexCount * sizeof(uint));
-                            if (entitySkin.Created)
+                            if (entityLayerUsesItemAtlas[layerIndex] && itemAtlasGpu.Created)
+                            {
+                                pass.SetBindGroup(0, itemAtlasGpu.BindGroup);
+                            }
+                            else if (entitySkin.Created)
                             {
                                 pass.SetBindGroup(0, entitySkin.BindGroup);
                             }
@@ -1377,7 +1401,7 @@ public static class WindowedRenderer
                             pass.DrawIndexed(layerIndexCount, 1, 0, 0, 1);
                         }
 
-                        if (entityLayerDrawn > 0 && entitySkin.Created)
+                        if (entityLayerDrawn > 0 && (entitySkin.Created || itemAtlasGpu.Created))
                         {
                             pass.SetBindGroup(0, bindGroup);
                         }

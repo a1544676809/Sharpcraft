@@ -250,12 +250,23 @@ public sealed class EntityLayerTests
         var holding = Entity(WitchModelDefinition.WitchEntityTypeId) with { IsHoldingPotion = true };
         var idle = holding with { IsHoldingPotion = false };
         var definition = EntityModelResolver.Resolve(WitchModelDefinition.WitchEntityTypeId);
-        var part = definition.Compiled!.Find("held_potion");
+        var layer = definition.RenderLayers.Single(entry => entry.Name == "held_potion");
+        var part = WitchModelDefinition.HeldPotionDefinition.Compiled!.Find("held_potion");
 
         Assert.NotNull(part);
-        Assert.True(part!.VisibleWhen!(holding));
-        Assert.False(part.VisibleWhen!(idle));
-        Assert.Contains(WitchModelDefinition.PotionTexture, WitchModelDefinition.Definition.AdditionalTexturePaths);
+        Assert.True(layer.UsesItemAtlas);
+        Assert.True(layer.VisibleWhen!(holding));
+        Assert.False(layer.VisibleWhen!(idle));
+        Assert.Contains(WitchModelDefinition.PotionTexture, WitchModelDefinition.HeldPotionDefinition.AdditionalTexturePaths);
+        var itemAtlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
+        {
+            [WitchModelDefinition.PotionTexture] = new(16, 16, new byte[16 * 16 * 4])
+        });
+        var layers = new EntityModelMesher().BuildLayers(
+            [holding], new SpriteRect(0, 0, 16, 16, 1), 16, 16, itemAtlas: itemAtlas);
+        var itemLayer = layers.Single(entry => entry.Name == "held_potion");
+        Assert.True(itemLayer.UsesItemAtlas);
+        Assert.True(itemLayer.Geometry.VertexFloats >= 8 * 4);
         var geometry = new EntityModelMesher().Build(
             [holding], new SpriteRect(0, 0, 16, 16, 1), 16, 16);
         Assert.True(geometry.VertexFloats >= 8 * 4);

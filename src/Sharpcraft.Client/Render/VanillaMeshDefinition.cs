@@ -59,7 +59,8 @@ public readonly record struct VanillaCubeDefinition(
     Vector3? GrowXyz = null,
     int UvWidth = 0,
     int UvHeight = 0,
-    int UvDepth = 0);
+    int UvDepth = 0,
+    bool UsesItemAtlas = false);
 
 /// <summary>
 /// One node of the declarative model tree. Direct children of <c>VanillaMeshDefinition.Root</c> are root parts;

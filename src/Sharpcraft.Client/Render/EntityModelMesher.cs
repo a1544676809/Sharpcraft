@@ -47,8 +47,8 @@ public sealed partial class EntityModelMesher
     }
 
     /// <summary>Merged geometry of every layer, kept for callers that draw entities in one pass.</summary>
-    public DynamicGeometry Build(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, EntityPose? pose = null)    {
-        var layers = BuildLayers(entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants, pose);
+    public DynamicGeometry Build(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, ISpriteAtlas? skinAtlas = null, EntityVariantTable? variants = null, EntityPose? pose = null, ISpriteAtlas? itemAtlas = null)    {
+        var layers = BuildLayers(entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants, pose, itemAtlas);
         _geometry.Clear();
         var totalVertexFloats = 0;
         var totalIndexCount = 0;
@@ -82,7 +82,7 @@ public sealed partial class EntityModelMesher
     /// <summary>
     /// Builds one geometry per reference render type, in draw order (cutout, translucent, emissive).
     /// </summary>
-    public IReadOnlyList<EntityGeometryLayer> BuildLayers(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, EntityPose? pose = null)
+    public IReadOnlyList<EntityGeometryLayer> BuildLayers(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, ISpriteAtlas? skinAtlas = null, EntityVariantTable? variants = null, EntityPose? pose = null, ISpriteAtlas? itemAtlas = null)
     {
         // Called once per frame. Without an explicit (sandbox) pose, build one pose per entity here, before the three
         // layer passes, so provider state updates run once per entity rather than once per layer.
@@ -94,7 +94,7 @@ public sealed partial class EntityModelMesher
 
         if (HasModelBackedLayers(entities, variants))
         {
-            return BuildModelBackedLayers(entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants, pose, usePreparedPoses);
+            return BuildModelBackedLayers(entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants, pose, usePreparedPoses, itemAtlas);
         }
 
         var plan = BuildLayerPlan(entities, variants);
@@ -110,10 +110,11 @@ public sealed partial class EntityModelMesher
             var kind = definition.Kind;
             var geometry = _layerGeometries[i];
             var emissivePass = kind == EntityGeometryLayerKind.Emissive;
-            BuildInto(geometry, kind, entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants, emissivePass, pose, usePreparedPoses);
+            var layerAtlas = definition.UsesItemAtlas ? itemAtlas : skinAtlas;
+            BuildInto(geometry, kind, entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, layerAtlas, variants, emissivePass, pose, usePreparedPoses);
             if (geometry.IndexCount > 0)
             {
-                layers.Add(new EntityGeometryLayer(definition.Name, kind, definition.Order, geometry));
+                layers.Add(new EntityGeometryLayer(definition.Name, kind, definition.Order, geometry, definition.UsesItemAtlas));
             }
         }
 
@@ -176,10 +177,11 @@ public sealed partial class EntityModelMesher
         IReadOnlyDictionary<string, FaceUvTransform>? transforms,
         string? onlyPart,
         string? excludedPart,
-        EntitySkinAtlas? skinAtlas,
+        ISpriteAtlas? skinAtlas,
         EntityVariantTable? variants,
         EntityPose? pose,
-        bool usePreparedPoses)
+        bool usePreparedPoses,
+        ISpriteAtlas? itemAtlas)
     {
         _modelBackedPlanByKey.Clear();
         foreach (var entity in entities)
@@ -278,7 +280,7 @@ public sealed partial class EntityModelMesher
                     transforms,
                     onlyPart,
                     excludedPart,
-                    skinAtlas,
+                    group.Layer.UsesItemAtlas ? itemAtlas : skinAtlas,
                     variants,
                     group.Layer.Kind == EntityGeometryLayerKind.Emissive,
                     usePreparedPoses: false,
@@ -290,7 +292,7 @@ public sealed partial class EntityModelMesher
 
             if (target.IndexCount > 0)
             {
-                layers.Add(new EntityGeometryLayer(definition.Name, definition.Kind, definition.Order, target));
+                layers.Add(new EntityGeometryLayer(definition.Name, definition.Kind, definition.Order, target, definition.UsesItemAtlas));
             }
         }
 
@@ -352,7 +354,7 @@ public sealed partial class EntityModelMesher
         }
     }
 
-    private DynamicGeometry BuildInto(DynamicGeometry target, EntityGeometryLayerKind? kindFilter, ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, EntitySkinAtlas? skinAtlas = null, EntityVariantTable? variants = null, bool emissivePass = false, EntityPose? pose = null, bool usePreparedPoses = false, EntityModelDefinition? modelOverride = null, Func<EntityRenderState, string?>? layerTextureSelector = null, Func<EntityRenderState, bool>? entityFilter = null, IReadOnlyList<EntityPose?>? poses = null)
+    private DynamicGeometry BuildInto(DynamicGeometry target, EntityGeometryLayerKind? kindFilter, ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, ISpriteAtlas? skinAtlas = null, EntityVariantTable? variants = null, bool emissivePass = false, EntityPose? pose = null, bool usePreparedPoses = false, EntityModelDefinition? modelOverride = null, Func<EntityRenderState, string?>? layerTextureSelector = null, Func<EntityRenderState, bool>? entityFilter = null, IReadOnlyList<EntityPose?>? poses = null)
     {
         target.Clear();
         var cubeCount = 0;
@@ -597,7 +599,7 @@ public sealed partial class EntityModelMesher
         IReadOnlyDictionary<string, FaceUvTransform>? transforms,
         IReadOnlyDictionary<string, FaceUvTransform> defaultTransforms,
         EntityRenderState renderState,
-        EntitySkinAtlas? skinAtlas,
+        ISpriteAtlas? skinAtlas,
         float px,
         ref int vertexFloats,
         ref int indexCount)
@@ -943,7 +945,7 @@ public sealed partial class EntityModelMesher
         string? modelEmissivePath,
         string? onlyPart,
         string? excludedPart,
-        EntitySkinAtlas? skinAtlas,
+        ISpriteAtlas? skinAtlas,
         bool emissivePass,
         bool applyRootPose,
         ref int vertexFloats,

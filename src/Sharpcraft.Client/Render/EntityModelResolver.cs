@@ -282,7 +282,7 @@ public static class EntityModelResolver
     private static EntityModelDefinition Decorate(int typeId, bool baby, EntityModelDefinition definition)
     {
         var layers = EquipmentLayers(typeId);
-        if (layers.Length == 0)
+        if (layers.Length == 0 && typeId != WitchModelDefinition.WitchEntityTypeId)
         {
             return definition;
         }
@@ -528,6 +528,23 @@ public static class EntityModelResolver
             }
 
             renderLayers = customLayers;
+        }
+
+        if (typeId == WitchModelDefinition.WitchEntityTypeId)
+        {
+            var existing = renderLayers ?? definition.RenderLayers;
+            var witchLayers = new List<EntityRenderLayerDefinition>(existing);
+            witchLayers.Add(new EntityRenderLayerDefinition(
+                "held_potion",
+                EntityGeometryLayerKind.Cutout,
+                40,
+                WitchModelDefinition.HeldPotionDefinition,
+                WitchModelDefinition.PotionTexture,
+                static _ => WitchModelDefinition.PotionTexture,
+                static state => state.IsHoldingPotion,
+                AllCubes: true,
+                UsesItemAtlas: true));
+            renderLayers = witchLayers;
         }
 
         if (typeId == HappyGhastModelDefinition.HappyGhastEntityTypeId)
