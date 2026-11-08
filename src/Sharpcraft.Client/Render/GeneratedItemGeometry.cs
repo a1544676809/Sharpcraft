@@ -30,7 +30,8 @@ public static class GeneratedItemGeometry
         string texture,
         int width,
         int height,
-        Func<int, int, byte> alphaAt)
+        Func<int, int, byte> alphaAt,
+        int tintIndex = 0)
     {
         ArgumentNullException.ThrowIfNull(output);
         ArgumentException.ThrowIfNullOrEmpty(texture);
@@ -55,22 +56,22 @@ public static class GeneratedItemGeometry
                 // Neighbour tests mirror the reference: UP looks above, DOWN below, LEFT left, RIGHT right.
                 if (alphaAt(x, y - 1) == 0)
                 {
-                    AppendFace(output, texture, x, y, SideDirection.Up, xScale, yScale);
+                    AppendFace(output, texture, x, y, SideDirection.Up, xScale, yScale, tintIndex);
                 }
 
                 if (alphaAt(x, y + 1) == 0)
                 {
-                    AppendFace(output, texture, x, y, SideDirection.Down, xScale, yScale);
+                    AppendFace(output, texture, x, y, SideDirection.Down, xScale, yScale, tintIndex);
                 }
 
                 if (alphaAt(x - 1, y) == 0)
                 {
-                    AppendFace(output, texture, x, y, SideDirection.Left, xScale, yScale);
+                    AppendFace(output, texture, x, y, SideDirection.Left, xScale, yScale, tintIndex);
                 }
 
                 if (alphaAt(x + 1, y) == 0)
                 {
-                    AppendFace(output, texture, x, y, SideDirection.Right, xScale, yScale);
+                    AppendFace(output, texture, x, y, SideDirection.Right, xScale, yScale, tintIndex);
                 }
             }
         }
@@ -83,7 +84,8 @@ public static class GeneratedItemGeometry
         int y,
         SideDirection side,
         float xScale,
-        float yScale)
+        float yScale,
+        int tintIndex)
     {
         var u0 = x + UvShrink;
         var u1 = x + 1f - UvShrink;
@@ -145,7 +147,7 @@ public static class GeneratedItemGeometry
         };
 
         var uv = new Vector4(u0 * xScale, v0 * yScale, u1 * xScale, v1 * yScale);
-        var face = new ItemModelFace(texture, uv);
+        var face = new ItemModelFace(texture, uv, TintIndex: tintIndex);
         var direction = side switch
         {
             SideDirection.Up => ModelFaceDirection.Up,

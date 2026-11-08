@@ -52,6 +52,9 @@ public sealed class DroppedItemMesherTests
         // and the opposite face's corner 0 is 7.5/16.
         Assert.Equal(8.5f / 16f, quads[0].Corner0.Z, 6);
         Assert.Equal(7.5f / 16f, quads[1].Corner0.Z, 6);
+        // The reference bakes generated layers with the layer index as the tint index, so a flat item such as
+        // short_grass must carry tint 0 or its tint source never applies.
+        Assert.All(quads, quad => Assert.Equal(0, quad.TintIndex));
         // The reference gives the north face explicitly reversed U so the far face lines up with the near one; the
         // generic auto-UV would return the same 0..16 range and show a mirrored sprite instead.
         Assert.Equal(new Vector2(0f, 0f), quads[0].Uv0);

@@ -93,6 +93,8 @@
 | `minecraft:grass` | `GrassColor.get(temperature, downfall)` → `ColorMapColorUtil.get` | 已实现：`rain = downfall·temp`、`x = (1−temp)·255`、`y = (1−rain)·255`、`index = y<<8\|x`，色表从 `textures/colormap/grass.png` 运行时读取（256×256 校验） |
 | `dye` / `potion` / `leaves` 等 | 各自 `ItemTintSource` | 未实现，面保持白色 |
 
+**生成型物品的 tint index 是图层序号**：原版 `ItemModelGenerator.ItemLayerKey.compute` 以 `this.layerIndex` 构造 `MaterialInfo`，所以 `layer0` 的面必须带 `tintindex = 0`。留成 `-1` 会让所有 tint 来源对平面物品静默失效（症状：`short_grass` 掉在地上是灰色，而方块模型类如 `oak_leaves` 正常）。侧面挤出属于同一图层，也必须带同一 tint index。
+
 真值：`oak_leaves` 的 `constant = -12012264`；`grass_block`/`short_grass` 的 `grass = {temperature:0.5, downfall:1.0}`，按上式得到 index `0x7F7F`。缺色表时回退原版默认值（品红 `0xFFFF00FF`），不臆造颜色。
 ### 3.5.1 生成型物品（`builtin/generated`）
 

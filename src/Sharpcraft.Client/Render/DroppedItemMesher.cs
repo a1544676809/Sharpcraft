@@ -178,8 +178,11 @@ public sealed class DroppedItemMesher
 
         var from = new Vector3(0f, 0f, 7.5f);
         var to = new Vector3(16f, 16f, 8.5f);
-        var south = new ItemModelFace(texture, new Vector4(0f, 0f, 16f, 16f));
-        var north = new ItemModelFace(texture, new Vector4(16f, 0f, 0f, 16f));
+        // The reference bakes generated layers with the layer index as the tint index, so layer0 is tint 0; leaving it
+        // at -1 silently disables every tint source on flat items such as short_grass.
+        const int layerTintIndex = 0;
+        var south = new ItemModelFace(texture, new Vector4(0f, 0f, 16f, 16f), TintIndex: layerTintIndex);
+        var north = new ItemModelFace(texture, new Vector4(16f, 0f, 0f, 16f), TintIndex: layerTintIndex);
         output.Add(BuildQuad(from, to, ModelFaceDirection.South, south));
         output.Add(BuildQuad(from, to, ModelFaceDirection.North, north));
 
