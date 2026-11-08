@@ -135,7 +135,7 @@ updated: 2026-11-07
 
 > 下一阶段执行清单见 [`docs/analysis/render/next-actions-hard-constraints.md`](analysis/render/next-actions-hard-constraints.md)；下面为原有 backlog。
 
-1. **T-631 held-item/item-model**：T-631a 已接 `ItemModelResolver` 数据层与 5 组 Golden Vectors；T-631b 已接 Witch 药水 flat item quad（`EntityModelMesher.AddFlatQuad`，`item/potion` 进入实体 atlas）；T-631c 的 `ItemAtlas` 数据层、WindowedRenderer 独立 item bind group/Item 层、Witch 与成人/幼年 humanoid held_item 已接（item model layer0/layer1 按需装入 item atlas）；T-631d 已接 special 描述符与 trident/shield/head/chest/shulker held 模型；T-631e 已登记全部刻意简化（静态 property、手骨锚点、item atlas、shield patterns、chest/shulker 开合、其余 special、drop/display/GUI）与视觉审计计划，其他 special/SPEAR/STAB 仍待补。
+1. **T-631 held-item/item-model**：T-631a 已接 `ItemModelResolver` 数据层与 5 组 Golden Vectors；T-631b 已接 Witch 药水 flat item quad；T-631c 的 `ItemAtlas`、WindowedRenderer 独立 item bind group、Witch 与成人/幼年 humanoid held_item 已接；T-631d 已接 special 描述符与 **10/13** special 模型（trident/shield/head/player_head/chest/shulker_box/banner/decorated_pot/conduit/end_cube），缺 bell/book/copper_golem_statue；T-631e 已登记全部刻意简化（静态 property、手骨锚点、item atlas 验收、shield patterns、chest/shulker 开合、drop/display/GUI）与视觉审计计划。**下一步（按序）**：① shield banner patterns + special 动态属性（需 entity tint 机制）；② SPEAR/STAB 挥击位移（`SpearAnimations.thirdPersonAttackItem`，可基于 `EntityPose` 的 `held_item` 偏移）；③ 掉落物/展示框/GUI（需新渲染路径）；④ bell/book/copper_golem_statue 三种 special 模型。
 2. **EnderDragon flight history**：已接（T-757）；剩余动画长尾（Bee stinger / Guardian eye look）按 backlog 推进。
 3. **P1.5（`Client/Render/ChunkMesher`）**：用 `OcclusionShape.IsFaceOccludedByState/Self` 替换 `IsSolid` 近似；配 `FluidMesherTests` 真值回归。
 4. **P1.4（T-042）**：提取 26.3 `registry_data` 真值向量，把服务器下发注册表动态装配进 `BlockStateLayout`。
