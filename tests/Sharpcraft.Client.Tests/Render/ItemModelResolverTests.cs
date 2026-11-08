@@ -141,15 +141,20 @@ public sealed class ItemModelResolverTests
             Assert.Equal(-5f, ground.Translation.Y, 6);
             Assert.Equal(2f * 0.0625f, ground.Translation.Z, 6);
 
-            // NO_TRANSFORM still centres the model; a real transform keeps its own translation and scale.
+            // NO_TRANSFORM still centres the model; a real transform centres first, then scales, rotates and translates,
+            // so the model centre (0.5, 0.5, 0.5) lands exactly on the transform's translation.
             var centred = ItemDisplayTransform.None.ToMatrix();
             Assert.Equal(new System.Numerics.Vector3(-0.5f, -0.5f, -0.5f),
                 System.Numerics.Vector3.Transform(System.Numerics.Vector3.Zero, centred));
-            // The reference order is translate, rotate, scale, then centre by -0.5, so the 0.25 translation is scaled to
-            // 0.5 by the model scale and the centring shift brings it back to x = 0.
+            Assert.Equal(System.Numerics.Vector3.Zero,
+                System.Numerics.Vector3.Transform(new System.Numerics.Vector3(0.5f), centred));
+
             var scaled = new ItemDisplayTransform(default, new System.Numerics.Vector3(0.25f, 0f, 0f),
                 new System.Numerics.Vector3(2f, 2f, 2f)).ToMatrix();
-            Assert.Equal(new System.Numerics.Vector3(0f, -0.5f, -0.5f),
+            Assert.Equal(new System.Numerics.Vector3(0.25f, 0f, 0f),
+                System.Numerics.Vector3.Transform(new System.Numerics.Vector3(0.5f), scaled));
+            // A scaled corner keeps its distance from that centre: half a block becomes a quarter.
+            Assert.Equal(new System.Numerics.Vector3(-0.75f, -1f, -1f),
                 System.Numerics.Vector3.Transform(System.Numerics.Vector3.Zero, scaled));
         }
         finally

@@ -83,6 +83,25 @@ public sealed class DroppedItemMesherTests
         Assert.NotEqual(first, DroppedItemMesher.PhaseOf(43));
     }
 
+    [Fact]
+    public void EnsureCapacityGrowsAnEmptyGeometryBeforeWriting()
+    {
+        // Regression: a freshly constructed DynamicGeometry has empty arrays, so the first dropped item of a session
+        // wrote out of bounds and killed the render thread.
+        var geometry = new Sharpcraft.Framework.Rendering.DynamicGeometry();
+        Assert.Empty(geometry.Vertices);
+        Assert.Empty(geometry.Indices);
+
+        DroppedItemMesher.EnsureCapacity(geometry, vertexFloats: 0, indexCount: 0);
+        Assert.True(geometry.Vertices.Length >= 4 * DroppedItemMesher.VertexStride);
+        Assert.True(geometry.Indices.Length >= 6);
+
+        // A second call that already fits must not shrink anything.
+        var vertexLength = geometry.Vertices.Length;
+        DroppedItemMesher.EnsureCapacity(geometry, vertexFloats: 0, indexCount: 0);
+        Assert.Equal(vertexLength, geometry.Vertices.Length);
+    }
+
     [Theory]
     [InlineData(0, 1)]
     [InlineData(1, 1)]

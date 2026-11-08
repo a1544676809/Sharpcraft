@@ -64,12 +64,30 @@ public static class ItemEntityRenderer
         ((randomUnit * 2f) - 1f) * spread;
 
     /// <summary>
-    /// Reference submission for one item entity: <c>translate(0, bob + minOffsetY, 0)</c> then
-    /// <c>rotate(YP, spin)</c>, in that order, so the row-vector matrix is translation × rotation.
+    /// Reference pose for one item entity: <c>translate(0, bob + minOffsetY, 0)</c> then <c>rotate(YP, spin)</c>. In the
+    /// row-vector convention the reference's column order is reversed, so this is rotation times translation.
     /// </summary>
     public static System.Numerics.Matrix4x4 RootTransform(float ageInTicks, float bobPhase, ItemModelExtents extents) =>
-        System.Numerics.Matrix4x4.CreateTranslation(0f, BobHeight(ageInTicks, bobPhase) + GroundOffset(extents), 0f)
-        * System.Numerics.Matrix4x4.CreateRotationY(Spin(ageInTicks, bobPhase));
+        System.Numerics.Matrix4x4.CreateRotationY(Spin(ageInTicks, bobPhase))
+        * System.Numerics.Matrix4x4.CreateTranslation(0f, BobHeight(ageInTicks, bobPhase) + GroundOffset(extents), 0f);
+
+    /// <summary>
+    /// Full placement of one drawn item: the reference stack is
+    /// <c>T_entity · T_bob · R_spin · T_offset · itemTransform</c> with column vectors, so with row vectors every factor
+    /// reverses. The item transform therefore applies *first* to the model, which is what makes the drop spin about its
+    /// own centre instead of orbiting the entity origin.
+    /// </summary>
+    public static System.Numerics.Matrix4x4 Placement(
+        in System.Numerics.Matrix4x4 itemTransform,
+        ItemModelExtents extents,
+        float ageInTicks,
+        float bobPhase,
+        System.Numerics.Vector3 offset,
+        System.Numerics.Vector3 entityPosition) =>
+        itemTransform
+        * System.Numerics.Matrix4x4.CreateTranslation(offset)
+        * RootTransform(ageInTicks, bobPhase, extents)
+        * System.Numerics.Matrix4x4.CreateTranslation(entityPosition);
 
     /// <summary>
     /// Offset of one item inside a thin stack: the column starts at <see cref="BulkStartZ"/> and advances by

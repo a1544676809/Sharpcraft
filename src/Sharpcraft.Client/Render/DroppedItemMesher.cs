@@ -90,7 +90,6 @@ public sealed class DroppedItemMesher
             var ground = resolution.Display.TryGetValue(ItemDisplayContext.Ground, out var display)
                 ? display.ToMatrix()
                 : ItemDisplayTransform.None.ToMatrix();
-            var root = ItemEntityRenderer.RootTransform(entity.AgeInTicks, PhaseOf(entity.Id), extents);
             var scattered = ItemEntityRenderer.UsesScatteredLayout(extents);
             var count = RenderedAmount(entity.ItemEntityCount);
 
@@ -108,10 +107,13 @@ public sealed class DroppedItemMesher
                         RandomUnit(entity.Id, itemIndex, 0),
                         RandomUnit(entity.Id, itemIndex, 1));
 
-                var world = Matrix4x4.CreateTranslation(offset)
-                    * ground
-                    * root
-                    * Matrix4x4.CreateTranslation(entity.X, entity.Y, entity.Z);
+                var world = ItemEntityRenderer.Placement(
+                    ground,
+                    extents,
+                    entity.AgeInTicks,
+                    PhaseOf(entity.Id),
+                    offset,
+                    new Vector3(entity.X, entity.Y, entity.Z));
 
                 foreach (var quad in _quads)
                 {
@@ -249,6 +251,11 @@ public sealed class DroppedItemMesher
         ref int vertexFloats,
         ref int indexCount)
     {
+        // The buffers are owned by this instance and reused, so the capacity has to be grown before writing: a fresh
+        // DynamicGeometry starts with empty arrays, and the first dropped item in a session would otherwise write out of
+        // bounds. Reserve doubles, so after the first frames this settles to no allocations.
+        EnsureCapacity(_geometry, vertexFloats, indexCount);
+
         var first = (uint)(vertexFloats / VertexStride);
         for (var corner = 0; corner < 4; corner++)
         {
@@ -261,6 +268,23 @@ public sealed class DroppedItemMesher
         _geometry.Indices[indexCount++] = first;
         _geometry.Indices[indexCount++] = first + 2;
         _geometry.Indices[indexCount++] = first + 3;
+    }
+
+    /// <summary>
+    /// Grows a reused dynamic geometry so four more vertices and six more indices fit. <see cref="DynamicGeometry"/>
+    /// starts with empty arrays, so writing a quad before reserving throws — which is exactly what happened the first
+    /// time a drop appeared in a live session.
+    /// </summary>
+    internal static void EnsureCapacity(DynamicGeometry geometry, int vertexFloats, int indexCount)
+    {
+        ArgumentNullException.ThrowIfNull(geometry);
+        const int quadFloats = 4 * VertexStride;
+        const int quadIndices = 6;
+        if (geometry.Vertices.Length < vertexFloats + quadFloats ||
+            geometry.Indices.Length < indexCount + quadIndices)
+        {
+            geometry.Reserve(vertexFloats + quadFloats, indexCount + quadIndices);
+        }
     }
 
     private static void WriteVertex(float[] destination, ref int offset, Vector3 position, Vector2 uv, SpriteRect sprite)

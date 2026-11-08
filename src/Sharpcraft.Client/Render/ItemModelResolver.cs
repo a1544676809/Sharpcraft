@@ -41,10 +41,16 @@ public readonly record struct ItemDisplayTransform(
     public bool IsNone => RotationDegrees == Vector3.Zero && Translation == Vector3.Zero && Scale == Vector3.One;
 
     /// <summary>
-    /// Builds the row-vector matrix of the reference <c>ItemTransform.apply</c> sequence: translate, rotate by
-    /// <c>rotationXYZ</c>, scale, then shift by −0.5 on every axis. <paramref name="applyLeftHandFix"/> negates the X
-    /// translation and the Y/Z rotations exactly as the reference does for the left-hand contexts.
+    /// Builds the row-vector matrix of the reference <c>ItemTransform.apply</c> sequence.
     /// </summary>
+    /// <remarks>
+    /// The reference calls <c>translate</c>, <c>rotate</c>, <c>scale</c>, then <c>translate(-0.5)</c>, and its matrices
+    /// are column-vector, so a vertex sees the <b>last</b> call first: centre, then scale, then rotate, then translate.
+    /// Row vectors evaluate left to right, so this reverses the call order — centring is innermost, not outermost.
+    /// Getting that backwards makes an item orbit a corner instead of spinning about its own centre.
+    /// <paramref name="applyLeftHandFix"/> negates the X translation and the Y/Z rotations exactly as the reference does
+    /// for the left-hand contexts.
+    /// </remarks>
     public Matrix4x4 ToMatrix(bool applyLeftHandFix = false)
     {
         var translation = applyLeftHandFix
@@ -60,12 +66,12 @@ public readonly record struct ItemDisplayTransform(
         }
 
         const float degToRad = MathF.PI / 180f;
-        return Matrix4x4.CreateTranslation(translation)
+        return Matrix4x4.CreateTranslation(CentreOffset)
+            * Matrix4x4.CreateScale(Scale)
             * Matrix4x4.CreateRotationX(rotation.X * degToRad)
             * Matrix4x4.CreateRotationY(rotation.Y * degToRad)
             * Matrix4x4.CreateRotationZ(rotation.Z * degToRad)
-            * Matrix4x4.CreateScale(Scale)
-            * Matrix4x4.CreateTranslation(CentreOffset);
+            * Matrix4x4.CreateTranslation(translation);
     }
 }
 

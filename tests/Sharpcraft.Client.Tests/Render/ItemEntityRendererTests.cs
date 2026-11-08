@@ -93,6 +93,51 @@ public sealed class ItemEntityRendererTests
     }
 
     [Fact]
+    public void TheItemTransformAppliesBeforeTheSpin()
+    {
+        // The reference order is T_entity · T_bob · R_spin · T_offset · itemTransform (column vectors). With row vectors
+        // that reverses, so the item transform is innermost. A dropped flat item must therefore spin about its own
+        // centre: the model centre (0.5, 0.5, 0.5) lands on the entity position plus the rotated offset, whatever the
+        // spin angle is.
+        var extents = ItemModelExtents.FlatItem;
+        var centre = new System.Numerics.Vector3(0.5f, 0.5f, 0.5f);
+        var entity = new System.Numerics.Vector3(10f, 0f, -4f);
+
+        foreach (var age in new[] { 0f, 10f, 20f, 31f })
+        {
+            var placement = ItemEntityRenderer.Placement(
+                ItemDisplayTransform.None.ToMatrix(), extents, age, bobPhase: 0f,
+                offset: System.Numerics.Vector3.Zero, entityPosition: entity);
+
+            var placed = System.Numerics.Vector3.Transform(centre, placement);
+            Assert.Equal(10f, placed.X, 4);
+            Assert.Equal(-4f, placed.Z, 4);
+            // The only vertical movement is bob + the ground clearance.
+            Assert.Equal(
+                ItemEntityRenderer.BobHeight(age, 0f) + ItemEntityRenderer.GroundOffset(extents),
+                placed.Y,
+                4);
+        }
+    }
+
+    [Fact]
+    public void TheStackOffsetIsRotatedByTheSpin()
+    {
+        // Offsets sit inside the spin, so a thin stack's Z column turns with the drop instead of staying world aligned.
+        var extents = ItemModelExtents.FlatItem;
+        const float quarterTurn = MathF.PI / 2f;
+        var placement = ItemEntityRenderer.Placement(
+            ItemDisplayTransform.None.ToMatrix(), extents, ageInTicks: 10f, bobPhase: quarterTurn - 0.5f,
+            offset: new System.Numerics.Vector3(0f, 0f, 1f), entityPosition: System.Numerics.Vector3.Zero);
+
+        var centre = System.Numerics.Vector3.Transform(new System.Numerics.Vector3(0.5f, 0.5f, 0.5f), placement);
+        // spin = age/20 + phase = 0.5 + (π/2 − 0.5) = π/2. A quarter turn about +Y maps +Z onto +X under the same
+        // convention the reference uses (x' = x·cos + z·sin, z' = −x·sin + z·cos).
+        Assert.Equal(1f, centre.X, 4);
+        Assert.Equal(0f, centre.Z, 4);
+    }
+
+    [Fact]
     public void ThinStackItemsSpreadAlongAZColumnWithHalfAmplitudeJitter()
     {
         var extents = ItemModelExtents.FlatItem;

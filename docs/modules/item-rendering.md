@@ -83,6 +83,21 @@
 - 面纹理 `#variable` 的解析 MUST 在整条父链合并完成后进行（原版同样后处理），否则子模型引用父层纹理槽会解析失败。
 - `uv` 缺失时按 `FaceBakery.defaultFaceUV` 的六方向投影自动生成；`rotation`、`tintindex`、`cullface` 原样保留。
 
+### 3.7 行向量下的合成顺序（易错点）
+
+原版是列向量矩阵，`ItemTransform.apply` 依次调用 `translate(t)` → `rotate(rotationXYZ)` → `scale(s)` → `translate(-0.5,-0.5,-0.5)`，列向量累积为 `M = T·R·S·T(-0.5)`，因此**顶点最先被 `-0.5` 居中**，最后才平移。`LayerRenderState.applyTransform` 再 `mulPose(localTransform)`。
+
+本仓用 `System.Numerics`（行向量、`p' = p·M`），乘法顺序必须整体反过来：
+
+| 阶段（顶点作用顺序） | 行向量写法 |
+| --- | --- |
+| 居中 `-0.5` | 最左 |
+| `scale` | |
+| `rotateX·rotateY·rotateZ` | |
+| `translate(t)` | 最右 |
+
+掉落物整体为 `itemTransform · T_offset · R_spin · T_bob · T_entity`。**踩过的两个坑**：把 `-0.5` 居中写在外层会让物品绕角落公转而不是自转；把 `ground` 放在旋转外侧会出现同样的公转假象（先修后者，登录态复测时才发现前者）。
+
 ### 3.6 图集归属（已核实，非阻塞）
 
 26.3 把精灵分在两个图集：`atlases/items.json` 只收 `item/` 目录与盔甲纹饰置换，`atlases/blocks.json` 收 `block/` 目录与 conduit/bell/book 特例。因此方块类物品模型引用的 `block/*` 纹理在原版来自 **blocks 图集**。
