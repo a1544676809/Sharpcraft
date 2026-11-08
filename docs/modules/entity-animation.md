@@ -98,7 +98,7 @@
 - 动画状态中的交互/攻击状态先用客户端可观测的简化输入，后续补 AI 状态同步。
 - **玩家此前完全没有动画**：`EntityAnimationRegistry` 只登记了人形怪，玩家类型（159）没有 provider，因此走路/攻击/潜行都不动。现已补 `PlayerAnimationProvider`（`HumanoidVariant.Plain` + `HumanoidArmPoseResolver`），玩家模型的手/袖/裤是**挂在基部件上的 overlay**，随姿态自动跟随，不需要像原版那样逐个 `copyFrom`。
 - **手臂姿态选择已按 `AvatarRenderer.getArmPose` 补齐**（`HumanoidArmPoseResolver.ComputeForAvatar`）：逐手取 `EMPTY`/`ITEM`/`BLOCK`/`BOW_AND_ARROW`/`THROW_TRIDENT`/`CROSSBOW_CHARGE`/`SPYGLASS`/`TOOT_HORN`/`BRUSH`/`SPEAR`，主手双手姿态时副手降为 `ITEM`/`EMPTY`，再按 `IsLeftHanded` 分配到左右臂。**两处已知简化**：①`CROSSBOW_HOLD` 需要 `charged_projectiles` 组件（未解码），当前只要「未挥击且持弩」就取该姿态；②「正在使用的手」在原版是本地权威的 `getUsedItemHand()`，客户端只有环境标志，故主手优先。
-- **`use_animation` 组件未解码**：姿态映射改为按原版物品名（`shield`/`bow`/`trident`/`crossbow`/`spyglass`/`goat_horn`/`brush`）查表，数据包自定义该组件时不生效。
+- **26.3 根本没有 `use_animation` 组件**（已核实）：使用动画来自 ①逐物品覆写（`BowItem`→BOW、`BrushItem`→BRUSH、`CrossbowItem`→CROSSBOW、`InstrumentItem`→TOOT_HORN、`SpyglassItem`→SPYGLASS、`TridentItem`→TRIDENT、`BundleItem`→BUNDLE）；②基类 `Item.getUseAnimation`：`CONSUMABLE.animation()` → 否则 `BLOCKS_ATTACKS` → BLOCK → 否则 `KINETIC_WEAPON` → SPEAR → 否则 NONE。而 `AvatarRenderer` 的 switch 只认 BLOCK/BOW/TRIDENT/CROSSBOW/SPYGLASS/TOOT_HORN/BRUSH/SPEAR，`EAT`/`DRINK`/`BUNDLE` 都落到 ITEM，所以**不需要解码 `CONSUMABLE`**。原版物品按名查表与原版等价；**剩余简化**是「模组物品自定义 `blocks_attacks`/`kinetic_weapon` 组件或子类覆写」不会被识别。
 
 ### 6.1 玩家走路摆幅真值（26.3）
 

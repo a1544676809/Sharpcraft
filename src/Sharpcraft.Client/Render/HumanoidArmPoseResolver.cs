@@ -92,8 +92,11 @@ internal static class HumanoidArmPoseResolver
         isMainHand || frame.MainHandItemId <= 0;
 
     /// <summary>
-    /// Pose implied by the item's reference <c>use_animation</c> component. The component itself is not decoded, so the
-    /// vanilla item names that declare each animation are mapped here.
+    /// Pose implied by the item's use animation. This baseline has no <c>use_animation</c> component: the animation
+    /// comes from per-item overrides (bow, brush, crossbow, instrument, spyglass, trident) plus the base
+    /// <c>Item.getUseAnimation</c> rules (<c>blocks_attacks</c> to BLOCK, <c>kinetic_weapon</c> to SPEAR, otherwise
+    /// <c>consumable.animation()</c>, which has no arm pose). Only BLOCK and SPEAR have to be recognised here, and the
+    /// vanilla items that reach this point are identified by name.
     /// </summary>
     private static HumanoidArmPose? UseAnimationAt(int itemId) => ItemName(itemId) switch
     {
