@@ -108,6 +108,22 @@ public sealed class SpecialItemModelDefinitionTests
     }
 
     [Fact]
+    public void PatternOverlayBakesOneCoplanarCopyPerLayer()
+    {
+        var parts = SpecialItemModelDefinition.BannerFlagPatternsRight.Compiled!.Parts
+            .Where(part => part.Name.StartsWith("flag_", StringComparison.Ordinal))
+            .ToArray();
+        Assert.Equal(SpecialItemModelDefinition.MaxBannerPatternLayers, parts.Length);
+        // Without decoded layers every copy stays hidden, so a plain banner renders exactly as before.
+        Assert.All(parts, part => Assert.False(part.VisibleWhen!(default!)));
+        // The shield overlay covers both reference cubes per layer.
+        var shieldPlates = SpecialItemModelDefinition.ShieldPatternsRight.Compiled!.Parts
+            .Where(part => part.Name.StartsWith("plate_", StringComparison.Ordinal))
+            .Sum(part => part.Cubes.Count);
+        Assert.Equal(SpecialItemModelDefinition.MaxBannerPatternLayers * 2, shieldPlates);
+    }
+
+    [Fact]
     public void HeldSpecialModelsCarryTheArmPivot()
     {
         Assert.NotNull(SpecialItemModelDefinition.HeldTridentRight.Compiled!.Find("right_arm"));

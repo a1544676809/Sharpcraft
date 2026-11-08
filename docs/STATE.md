@@ -135,7 +135,7 @@ updated: 2026-11-07
 
 > 下一阶段执行清单见 [`docs/analysis/render/next-actions-hard-constraints.md`](analysis/render/next-actions-hard-constraints.md)；下面为原有 backlog。
 
-1. **T-631 held-item/item-model**：T-631a 数据层 + T-631b Witch 药水 + T-631c `ItemAtlas`/独立 item bind group/held_item + T-631d special 描述符与 **10/13** special 模型（trident/shield/head/player_head/chest/shulker_box/banner/decorated_pot/conduit/end_cube）已接。T-631e 已落地：`banner_patterns`/`base_color` 解码（`BannerPatternTable` 43 项 + `registry_data` 动态排序）、`EquipmentHasBannerPatterns` 透传、盾牌按 `hasPatterns` 在 `shield_base`/`shield_base_nopattern` 间切换、网格 DSL 新增**逐立方体 `TextureSelector` + `TintSelector`**（图案叠加的前置）。**下一步（按序）**：① 用新 DSL 烘焙 banner/shield 图案叠加层（逐层 pattern sprite + dye tint）；② chest `openness`/`chest_type` 与 shulker `openness`；③ SPEAR/STAB；④ 掉落物/展示框/GUI；⑤ bell/book/copper_golem_statue。
+1. **T-631 held-item/item-model**：T-631a 数据层 + T-631b Witch 药水 + T-631c `ItemAtlas`/独立 item bind group/held_item + T-631d special 描述符与 **10/13** special 模型已接。T-631e 已落地：`banner_patterns`/`base_color` 解码（`BannerPatternTable` 43 项 + 动态注册表）、盾牌按 `hasPatterns` 选 sprite、网格 DSL 逐立方体 `TextureSelector`/`TintSelector`、`DyeColors` 真值表、**banner/shield 图案叠加层**（各 20 份共面副本，逐层 sprite + dye tint，`GreaterEqual` 共面已验证）。**下一步（按序）**：① chest `openness`/`chest_type` 与 shulker `openness`、banner `attachment`；② SPEAR/STAB；③ 掉落物/展示框/GUI；④ bell/book/copper_golem_statue。
 2. **EnderDragon flight history**：已接（T-757）；剩余动画长尾（Bee stinger / Guardian eye look）按 backlog 推进。
 3. **P1.5（`Client/Render/ChunkMesher`）**：用 `OcclusionShape.IsFaceOccludedByState/Self` 替换 `IsSolid` 近似；配 `FluidMesherTests` 真值回归。
 4. **P1.4（T-042）**：提取 26.3 `registry_data` 真值向量，把服务器下发注册表动态装配进 `BlockStateLayout`。

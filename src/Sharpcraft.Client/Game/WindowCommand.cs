@@ -442,17 +442,26 @@ internal static class WindowCommand
 
         void EnsureItemTextures(IReadOnlyList<EntityRenderState> entities)
         {
+            static void AddIfPresent(List<string> target, string? path)
+            {
+                if (path is not null)
+                {
+                    target.Add(path);
+                }
+            }
+
             foreach (var entity in entities)
             {
-                foreach (var path in new[]
-                         {
-                             EntityModelResolver.ResolveHeldItemTexture(entity, offhand: false),
-                             EntityModelResolver.ResolveHeldItemTexture(entity, offhand: true),
-                             EntityModelResolver.ResolveHeldItemSpecialTexture(entity, offhand: false),
-                             EntityModelResolver.ResolveHeldItemSpecialTexture(entity, offhand: true),
-                             EntityModelResolver.ResolveHeldItemPotSideTexture(entity, offhand: false),
-                             EntityModelResolver.ResolveHeldItemPotSideTexture(entity, offhand: true)
-                         })
+                List<string> paths = [];
+                AddIfPresent(paths, EntityModelResolver.ResolveHeldItemTexture(entity, offhand: false));
+                AddIfPresent(paths, EntityModelResolver.ResolveHeldItemTexture(entity, offhand: true));
+                AddIfPresent(paths, EntityModelResolver.ResolveHeldItemSpecialTexture(entity, offhand: false));
+                AddIfPresent(paths, EntityModelResolver.ResolveHeldItemSpecialTexture(entity, offhand: true));
+                AddIfPresent(paths, EntityModelResolver.ResolveHeldItemPotSideTexture(entity, offhand: false));
+                AddIfPresent(paths, EntityModelResolver.ResolveHeldItemPotSideTexture(entity, offhand: true));
+                paths.AddRange(EntityModelResolver.ResolveHeldItemPatternSprites(entity, offhand: false));
+                paths.AddRange(EntityModelResolver.ResolveHeldItemPatternSprites(entity, offhand: true));
+                foreach (var path in paths)
                 {
                     if (path is null || itemAtlas.Contains(path))
                     {

@@ -181,6 +181,34 @@ public static class EntityModelResolver
             ? SpecialItemModelDefinition.DecoratedPotSideTexture
             : null;
 
+    /// <summary>Decoded banner pattern layers for the item in one hand, or null when it carries none.</summary>
+    public static IReadOnlyList<Sharpcraft.Common.Network.BannerPatternLayer>? ResolveHeldItemBannerPatterns(
+        EntityRenderState state,
+        bool offhand = false) =>
+        state.EquipmentBannerPatternsAt(offhand ? 1 : 0);
+
+    /// <summary>Atlas sprites a held banner or shield needs for its pattern layers.</summary>
+    public static IReadOnlyList<string> ResolveHeldItemPatternSprites(EntityRenderState state, bool offhand = false)
+    {
+        var layers = ResolveHeldItemBannerPatterns(state, offhand);
+        if (layers is null || layers.Count == 0)
+        {
+            return [];
+        }
+
+        var prefix = ResolveHeldItemSpecial(state, offhand) == "minecraft:shield" ? "entity/shield/" : "entity/banner/";
+        var result = new List<string>(layers.Count);
+        foreach (var layer in layers)
+        {
+            if (layer.PatternAssetId is { Length: > 0 } asset)
+            {
+                result.Add(prefix + asset);
+            }
+        }
+
+        return result;
+    }
+
     /// <summary>Resolves one hand's first item-atlas texture path, or null when unknown.</summary>
     public static string? ResolveHeldItemTexture(EntityRenderState state, bool offhand = false)
     {
@@ -925,6 +953,16 @@ public static class EntityModelResolver
         AddSpecialPair(layers, "banner_flag", "minecraft:banner",
             SpecialItemModelDefinition.BannerFlagStanding, SpecialItemModelDefinition.BannerFlagStanding, 68,
             (state, offhand) => ResolveHeldItemSpecialTexture(state, offhand));
+        AddSpecialPair(layers, "banner_patterns", "minecraft:banner",
+            SpecialItemModelDefinition.BannerFlagPatternsRight, SpecialItemModelDefinition.BannerFlagPatternsLeft, 80,
+            (state, offhand) => ResolveHeldItemPatternSprites(state, offhand).Count > 0
+                ? SpecialItemModelDefinition.BannerTexture
+                : null);
+        AddSpecialPair(layers, "shield_patterns", "minecraft:shield",
+            SpecialItemModelDefinition.ShieldPatternsRight, SpecialItemModelDefinition.ShieldPatternsLeft, 82,
+            (state, offhand) => ResolveHeldItemPatternSprites(state, offhand).Count > 0
+                ? SpecialItemModelDefinition.ShieldTexture
+                : null);
         // Decorated pot uses a base sprite plus a per-pattern side sprite.
         AddSpecialPair(layers, "pot", "minecraft:decorated_pot",
             SpecialItemModelDefinition.DecoratedPot, SpecialItemModelDefinition.DecoratedPot, 70,

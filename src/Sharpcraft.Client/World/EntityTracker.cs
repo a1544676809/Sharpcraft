@@ -149,6 +149,7 @@ public sealed class TrackedEntity
     private readonly bool?[] _equipmentGlints = new bool?[8];
     private readonly bool?[] _equipmentHasEnchantments = new bool?[8];
     private readonly bool?[] _equipmentHasBannerPatterns = new bool?[8];
+    private readonly IReadOnlyList<Sharpcraft.Common.Network.BannerPatternLayer>?[] _equipmentBannerPatternLayers = new IReadOnlyList<Sharpcraft.Common.Network.BannerPatternLayer>?[8];
     private readonly string?[] _equipmentTrimMaterials = new string?[8];
     private readonly string?[] _equipmentTrimPatterns = new string?[8];
 
@@ -198,6 +199,14 @@ public sealed class TrackedEntity
     /// <summary>All eight banner-pattern-presence flags, reused by the per-frame render state.</summary>
     public IReadOnlyList<bool?> EquipmentHasBannerPatterns => _equipmentHasBannerPatterns;
 
+    /// <summary>Decoded banner pattern layers for one equipment slot, or null when the item carries none.</summary>
+    public IReadOnlyList<Sharpcraft.Common.Network.BannerPatternLayer>? EquipmentBannerPatternsAt(int slot) =>
+        (uint)slot < (uint)_equipmentBannerPatternLayers.Length ? _equipmentBannerPatternLayers[slot] : null;
+
+    /// <summary>All eight decoded banner pattern layer lists, reused by the per-frame render state.</summary>
+    public IReadOnlyList<IReadOnlyList<Sharpcraft.Common.Network.BannerPatternLayer>?> EquipmentBannerPatternLayers =>
+        _equipmentBannerPatternLayers;
+
     /// <summary>Trim material registry id for one equipment slot, or null when the item has no trim.</summary>
     public string? EquipmentTrimMaterialAt(int slot) =>
         (uint)slot < (uint)_equipmentTrimMaterials.Length ? _equipmentTrimMaterials[slot] : null;
@@ -237,6 +246,7 @@ public sealed class TrackedEntity
             _equipmentHasBannerPatterns[item.Slot] = item.IsEmpty
                 ? null
                 : (item.Components.BannerPatternLayers is { Count: > 0 } || item.Components.BaseColorId is not null);
+            _equipmentBannerPatternLayers[item.Slot] = item.IsEmpty ? null : item.Components.BannerPatternLayers;
             EquipmentUpdates++;
         }
     }
@@ -535,6 +545,7 @@ public readonly record struct EntityRenderState(
     IReadOnlyList<bool?>? EquipmentGlintOverrides = null,
     IReadOnlyList<bool?>? EquipmentHasEnchantments = null,
     IReadOnlyList<bool?>? EquipmentHasBannerPatterns = null,
+    IReadOnlyList<IReadOnlyList<Sharpcraft.Common.Network.BannerPatternLayer>?>? EquipmentBannerPatternLayers = null,
     IReadOnlyList<string?>? EquipmentTrimMaterials = null,
     IReadOnlyList<string?>? EquipmentTrimPatterns = null,
     string? PlayerBodyTexture = null,
@@ -568,6 +579,10 @@ public readonly record struct EntityRenderState(
     /// <summary>Banner-pattern-presence flag for one equipment slot, when known.</summary>
     public bool? EquipmentHasBannerPatternsAt(int slot) =>
         EquipmentHasBannerPatterns is { } patterned && (uint)slot < (uint)patterned.Count ? patterned[slot] : null;
+
+    /// <summary>Decoded banner pattern layers for one equipment slot, or null when the item carries none.</summary>
+    public IReadOnlyList<Sharpcraft.Common.Network.BannerPatternLayer>? EquipmentBannerPatternsAt(int slot) =>
+        EquipmentBannerPatternLayers is { } layers && (uint)slot < (uint)layers.Count ? layers[slot] : null;
 
     /// <summary>Trim material registry id for one equipment slot, when the item supplied one.</summary>
     public string? EquipmentTrimMaterialAt(int slot) =>
@@ -1539,6 +1554,7 @@ public sealed class EntityTracker
                 EquipmentGlintOverrides: entity.EquipmentGlintOverrides,
                 EquipmentHasEnchantments: entity.EquipmentHasEnchantments,
                 EquipmentHasBannerPatterns: entity.EquipmentHasBannerPatterns,
+                EquipmentBannerPatternLayers: entity.EquipmentBannerPatternLayers,
                 EquipmentTrimMaterials: entity.EquipmentTrimMaterials,
                 EquipmentTrimPatterns: entity.EquipmentTrimPatterns,
                 PlayerBodyTexture: playerSkin?.Body?.Path,
