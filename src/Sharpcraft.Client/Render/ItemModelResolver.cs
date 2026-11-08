@@ -67,11 +67,18 @@ public readonly record struct ItemDisplayTransform(
         }
 
         const float degToRad = MathF.PI / 180f;
+        // The reference builds this rotation with JOML's `new Quaternionf().rotationXYZ(rx, ry, rz)`. Its golden vectors
+        // (tests/Sharpcraft.Client.Tests/Data/item-display-truth.json, captured from the shipped JOML build) show that
+        // this equals multiplying the axis quaternions as qx * qy * qz in System.Numerics' multiplication order — an
+        // Euler product like RotationX * RotationY * RotationZ does *not* reproduce it and rotates items the wrong way.
+        var rotationQuaternion =
+            Quaternion.CreateFromAxisAngle(Vector3.UnitX, rotation.X * degToRad) *
+            Quaternion.CreateFromAxisAngle(Vector3.UnitY, rotation.Y * degToRad) *
+            Quaternion.CreateFromAxisAngle(Vector3.UnitZ, rotation.Z * degToRad);
+
         return Matrix4x4.CreateTranslation(CentreOffset)
             * Matrix4x4.CreateScale(Scale)
-            * Matrix4x4.CreateRotationX(rotation.X * degToRad)
-            * Matrix4x4.CreateRotationY(rotation.Y * degToRad)
-            * Matrix4x4.CreateRotationZ(rotation.Z * degToRad)
+            * Matrix4x4.CreateFromQuaternion(rotationQuaternion)
             * Matrix4x4.CreateTranslation(translation);
     }
 }

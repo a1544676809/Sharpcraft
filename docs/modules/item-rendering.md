@@ -172,6 +172,31 @@ dotnet run --project tools/Sharpcraft.ItemRender.Audit -- --pack <pack.zip> --ch
 **仍然存在的简化**（`SIM-ITEM-COMPOSITE-FIRST`，`T-766`）：`composite` 只取**第一个**子模型并忽略子项的 `transformation`，所以床只画出床头一半。要画全需要 resolution 从"单个模型"升级为"模型列表"，属独立任务。
 
 缺失 display 的分布同样说明问题不在解析：`thirdperson_righthand` 只缺 `minecraft:air`（空物品，正常），`head` 缺 706（原版多数物品本来就没有 head 变换），真正需要关注的是 `firstperson_righthand` 缺 10 个（`spyglass`、`heavy_core`、各类头颅），它们走 special 渲染器。
+### 3.5.5 display 变换真值（L3，含一次真实 bug 修复）
+
+`ItemTransform.apply` 的调用序列（原文 `ref://mc-26.3-analysis/src/net/minecraft/client/resources/model/cuboid/ItemTransform.java`）：
+
+```
+translate(translation)            // JSON 里已乘 1/16 并 clamp 到 ±5
+rotate(new Quaternionf().rotationXYZ(rx, ry, rz))
+scale(scale)                      // clamp 到 ±4
+translate(-0.5, -0.5, -0.5)       // 居中
+NO_TRANSFORM 是特例：只做 translate(-0.5,-0.5,-0.5)
+左手指纹修复：translation.x、rotation.y、rotation.z 取反
+```
+
+**真值来源不是手推**：`tools/Sharpcraft.ItemRender.Audit/truth/DisplayTransformProbe.java` 直接跑游戏自带的 `joml-1.10.9.jar`，按上面序列构造矩阵并把一组模型点映射结果写成 `tests/Sharpcraft.Client.Tests/Data/item-display-truth.json`（6 个 case：箱子 gui/ground/fixed/第三人称、纯旋转探针、非等比缩放探针，每组 6 个点）。C# 侧 `ItemDisplayTransformGoldenTests` 逐点对照。
+
+**由此抓到的真实 bug**：我们原来用欧拉乘积 `Rx·Ry·Rz`（`Matrix4x4.CreateRotationX * CreateRotationY * CreateRotationZ`）来复现 `rotationXYZ`，**这是错的**。金标准显示 JOML 的结果等价于四元数按 `qx * qy * qz` 相乘：
+
+```
+qx = CreateFromAxisAngle(UnitX, rx), qy = ..., qz = ...
+R  = CreateFromQuaternion(qx * qy * qz)
+```
+
+修复前 `chest_gui` 的点 (1,0,0) 期望 `(0.000000, -0.049662, -0.538983)`、实际 `(-0.080881, -0.114383, -0.522823)`；修复后全部 36 个点吻合到 1e-4。也就是说**所有带旋转的 display 上下文（GUI、掉落物 ground、手持第三人称）此前朝向都是错的**，这也解释了手持物品"位置/朝向莫名"的现象。
+
+其余随附测试：四个上下文的缩放（gui 0.625 / ground 0.25 / fixed 0.5 / 第三人称 0.375）、中心点映射到 translation、线性部分缩放、`NO_TRANSFORM` 只居中、左手修复语义。
 ### 3.6 图集归属（已核实，非阻塞）
 
 26.3 把精灵分在两个图集：`atlases/items.json` 只收 `item/` 目录与盔甲纹饰置换，`atlases/blocks.json` 收 `block/` 目录与 conduit/bell/book 特例。因此方块类物品模型引用的 `block/*` 纹理在原版来自 **blocks 图集**。
