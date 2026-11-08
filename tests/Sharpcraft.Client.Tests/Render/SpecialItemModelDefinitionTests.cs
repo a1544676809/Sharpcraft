@@ -41,6 +41,14 @@ public sealed class SpecialItemModelDefinitionTests
     }
 
     [Fact]
+    public void ShulkerBoxModelHasLidAndBase()
+    {
+        var names = SpecialItemModelDefinition.ShulkerBox.Compiled!.Parts.Select(part => part.Name).ToArray();
+        Assert.Contains("lid", names);
+        Assert.Contains("base", names);
+    }
+
+    [Fact]
     public void HeldSpecialModelsCarryTheArmPivot()
     {
         Assert.NotNull(SpecialItemModelDefinition.HeldTridentRight.Compiled!.Find("right_arm"));

@@ -135,7 +135,7 @@ updated: 2026-11-07
 
 > 下一阶段执行清单见 [`docs/analysis/render/next-actions-hard-constraints.md`](analysis/render/next-actions-hard-constraints.md)；下面为原有 backlog。
 
-1. **T-631 held-item/item-model**：T-631a 已接 `ItemModelResolver` 数据层与 5 组 Golden Vectors；T-631b 已接 Witch 药水 flat item quad（`EntityModelMesher.AddFlatQuad`，`item/potion` 进入实体 atlas）；T-631c 的 `ItemAtlas` 数据层、WindowedRenderer 独立 item bind group/Item 层、Witch 与成人/幼年 humanoid held_item 已接（item model layer0/layer1 按需装入 item atlas）；T-631d 已接 special 描述符与 trident/shield/head/chest held 模型，其他 special 类型与完整手持/SPEAR/STAB 仍待补。
+1. **T-631 held-item/item-model**：T-631a 已接 `ItemModelResolver` 数据层与 5 组 Golden Vectors；T-631b 已接 Witch 药水 flat item quad（`EntityModelMesher.AddFlatQuad`，`item/potion` 进入实体 atlas）；T-631c 的 `ItemAtlas` 数据层、WindowedRenderer 独立 item bind group/Item 层、Witch 与成人/幼年 humanoid held_item 已接（item model layer0/layer1 按需装入 item atlas）；T-631d 已接 special 描述符与 trident/shield/head/chest/shulker held 模型，其他 special 类型与完整手持/SPEAR/STAB 仍待补。
 2. **EnderDragon flight history**：已接（T-757）；剩余动画长尾（Bee stinger / Guardian eye look）按 backlog 推进。
 3. **P1.5（`Client/Render/ChunkMesher`）**：用 `OcclusionShape.IsFaceOccludedByState/Self` 替换 `IsSolid` 近似；配 `FluidMesherTests` 真值回归。
 4. **P1.4（T-042）**：提取 26.3 `registry_data` 真值向量，把服务器下发注册表动态装配进 `BlockStateLayout`。

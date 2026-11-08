@@ -666,6 +666,7 @@ public static class EntityModelResolver
             AddSpecialHandLayers(heldLayers, "shield", "minecraft:shield", SpecialItemModelDefinition.HeldShieldRight, SpecialItemModelDefinition.HeldShieldLeft, SpecialItemModelDefinition.ShieldTexture);
             AddSpecialHeadLayers(heldLayers);
             AddSpecialChestLayers(heldLayers);
+            AddSpecialShulkerLayers(heldLayers);
             renderLayers = heldLayers;
         }
 
@@ -826,6 +827,30 @@ public static class EntityModelResolver
             TexturePath: null,
             TextureSelector: state => ResolveHeldItemSpecialTexture(state, offhand: true),
             VisibleWhen: state => ResolveHeldItemSpecial(state, offhand: true) == "minecraft:chest",
+            AllCubes: true,
+            UsesItemAtlas: true));
+    }
+
+    private static void AddSpecialShulkerLayers(List<EntityRenderLayerDefinition> layers)
+    {
+        layers.Add(new EntityRenderLayerDefinition(
+            "held_special_shulker_right",
+            EntityGeometryLayerKind.Cutout,
+            64,
+            SpecialItemModelDefinition.HeldShulkerRight,
+            TexturePath: null,
+            TextureSelector: state => ResolveHeldItemSpecialTexture(state, offhand: false),
+            VisibleWhen: state => ResolveHeldItemSpecial(state, offhand: false) == "minecraft:shulker_box",
+            AllCubes: true,
+            UsesItemAtlas: true));
+        layers.Add(new EntityRenderLayerDefinition(
+            "held_special_shulker_left",
+            EntityGeometryLayerKind.Cutout,
+            65,
+            SpecialItemModelDefinition.HeldShulkerLeft,
+            TexturePath: null,
+            TextureSelector: state => ResolveHeldItemSpecialTexture(state, offhand: true),
+            VisibleWhen: state => ResolveHeldItemSpecial(state, offhand: true) == "minecraft:shulker_box",
             AllCubes: true,
             UsesItemAtlas: true));
     }

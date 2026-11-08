@@ -31,6 +31,24 @@ public static class SpecialItemModelDefinition
         "held_special_chest_left", 64, 64, BuildChestMesh(held: true, left: true),
         PlayerModelDefinition.DefaultFaceTransforms, texturePath: null, 1f);
 
+    /// <summary>Shulker box item model: lid plus base; texture comes from the special property.</summary>
+    public static readonly EntityModelDefinition ShulkerBox = EntityModelDefinition.FromTree(
+        "special_shulker_box",
+        64,
+        64,
+        BuildShulkerMesh(),
+        PlayerModelDefinition.DefaultFaceTransforms,
+        texturePath: null,
+        1f);
+
+    public static readonly EntityModelDefinition HeldShulkerRight = EntityModelDefinition.FromTree(
+        "held_special_shulker_right", 64, 64, BuildShulkerMesh(held: true),
+        PlayerModelDefinition.DefaultFaceTransforms, texturePath: null, 1f);
+
+    public static readonly EntityModelDefinition HeldShulkerLeft = EntityModelDefinition.FromTree(
+        "held_special_shulker_left", 64, 64, BuildShulkerMesh(held: true, left: true),
+        PlayerModelDefinition.DefaultFaceTransforms, texturePath: null, 1f);
+
     /// <summary>Mob/player skull cube (8×8×8); the texture is selected from the special `kind` property.</summary>
     public static readonly EntityModelDefinition Skull = EntityModelDefinition.FromTree(
         "special_skull",
@@ -91,6 +109,21 @@ public static class SpecialItemModelDefinition
         "held_special_shield_left", 64, 64, BuildShieldMesh(held: true, left: true),
         PlayerModelDefinition.DefaultFaceTransforms, ShieldTexture, 1f,
         additionalTexturePaths: [ShieldTexture]);
+
+    private static VanillaMeshDefinition BuildShulkerMesh(bool held = false, bool left = false)
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        var parent = held
+            ? root.AddOrReplaceChild(left ? "left_arm" : "right_arm",
+                VanillaPartPose.Offset(left ? 5f : -5f, 2f, 0f),
+                new VanillaCubeDefinition(left ? "left_arm" : "right_arm", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f))
+            : root;
+        parent.AddOrReplaceChild("lid", VanillaPartPose.Offset(0f, 24f, 0f),
+            new VanillaCubeDefinition("lid", 0, 0, -8f, -16f, -8f, 16f, 12f, 16f));
+        parent.AddOrReplaceChild("base", VanillaPartPose.Offset(0f, 24f, 0f),
+            new VanillaCubeDefinition("base", 0, 28, -8f, -8f, -8f, 16f, 8f, 16f));
+        return new VanillaMeshDefinition(root);
+    }
 
     private static VanillaMeshDefinition BuildChestMesh(bool held = false, bool left = false)
     {
