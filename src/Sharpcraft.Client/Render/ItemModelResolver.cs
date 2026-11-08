@@ -33,6 +33,40 @@ public readonly record struct ItemDisplayTransform(
 {
     /// <summary>The reference NO_TRANSFORM: zero rotation/translation and unit scale.</summary>
     public static readonly ItemDisplayTransform None = new(Vector3.Zero, Vector3.Zero, Vector3.One);
+
+    /// <summary>Reference <c>NO_TRANSFORM</c> still centres the model by this much.</summary>
+    public static readonly Vector3 CentreOffset = new(-0.5f, -0.5f, -0.5f);
+
+    /// <summary>True when this transform is the reference <c>NO_TRANSFORM</c>.</summary>
+    public bool IsNone => RotationDegrees == Vector3.Zero && Translation == Vector3.Zero && Scale == Vector3.One;
+
+    /// <summary>
+    /// Builds the row-vector matrix of the reference <c>ItemTransform.apply</c> sequence: translate, rotate by
+    /// <c>rotationXYZ</c>, scale, then shift by −0.5 on every axis. <paramref name="applyLeftHandFix"/> negates the X
+    /// translation and the Y/Z rotations exactly as the reference does for the left-hand contexts.
+    /// </summary>
+    public Matrix4x4 ToMatrix(bool applyLeftHandFix = false)
+    {
+        var translation = applyLeftHandFix
+            ? new Vector3(-Translation.X, Translation.Y, Translation.Z)
+            : Translation;
+        var rotation = applyLeftHandFix
+            ? new Vector3(RotationDegrees.X, -RotationDegrees.Y, -RotationDegrees.Z)
+            : RotationDegrees;
+
+        if (IsNone)
+        {
+            return Matrix4x4.CreateTranslation(CentreOffset);
+        }
+
+        const float degToRad = MathF.PI / 180f;
+        return Matrix4x4.CreateTranslation(translation)
+            * Matrix4x4.CreateRotationX(rotation.X * degToRad)
+            * Matrix4x4.CreateRotationY(rotation.Y * degToRad)
+            * Matrix4x4.CreateRotationZ(rotation.Z * degToRad)
+            * Matrix4x4.CreateScale(Scale)
+            * Matrix4x4.CreateTranslation(CentreOffset);
+    }
 }
 
 /// <summary>One item model's resolved parent chain, texture slots and display transforms.</summary>
@@ -298,11 +332,16 @@ public sealed class ItemModelResolver
 
     private static ItemDisplayTransform ParseTransform(JsonElement element)
     {
+        // Reference ItemTransform.Deserializer: rotation is taken raw, translation is scaled by 0.0625 *first* and then
+        // clamped to +/-5 blocks, and scale is clamped to +/-4 in model units.
         var rotation = ReadVector(element, "rotation", Vector3.Zero, clamp: 0f);
-        var translation = ReadVector(element, "translation", Vector3.Zero, clamp: 5f) * 0.0625f;
-        var scale = ReadVector(element, "scale", Vector3.One, clamp: 4f);
+        var translation = Clamp(ReadVector(element, "translation", Vector3.Zero, clamp: 0f) * 0.0625f, 5f);
+        var scale = Clamp(ReadVector(element, "scale", Vector3.One, clamp: 0f), 4f);
         return new ItemDisplayTransform(rotation, translation, scale);
     }
+
+    private static Vector3 Clamp(Vector3 vector, float limit) =>
+        Vector3.Clamp(vector, new Vector3(-limit), new Vector3(limit));
 
     private static Vector3 ReadVector(JsonElement element, string name, Vector3 fallback, float clamp)
     {
@@ -319,9 +358,7 @@ public sealed class ItemModelResolver
         }
 
         var vector = new Vector3(values[0], values[1], values[2]);
-        return clamp > 0f
-            ? Vector3.Clamp(vector, new Vector3(-clamp), new Vector3(clamp))
-            : vector;
+        return clamp > 0f ? Clamp(vector, clamp) : vector;
     }
 
     private sealed class ModelParts

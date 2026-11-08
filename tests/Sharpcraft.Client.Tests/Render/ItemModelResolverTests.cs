@@ -51,6 +51,69 @@ public sealed class ItemModelResolverTests
     }
 
     [Fact]
+    public void DisplayTranslationIsScaledThenClampedToFiveBlocks()
+    {
+        // Reference ItemTransform.Deserializer multiplies by 0.0625 and only then clamps to +/-5 blocks, so an oversized
+        // translation saturates at five blocks rather than at 5/16 of a block.
+        var root = Path.Combine(Path.GetTempPath(), "sharpcraft-item-model-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Write(root, "assets/minecraft/items/test_far.json",
+                """{"model":{"type":"minecraft:model","model":"minecraft:item/far"}}""");
+            Write(root, "assets/minecraft/models/item/far.json",
+                """{"parent":"builtin/generated","textures":{"layer0":"minecraft:item/far"},"display":{"ground":{"translation":[100,-100,2]}}}""");
+
+            using var stack = new AssetStack { Policy = MissingResourcePolicy.Warn, Warn = _ => { } }
+                .Add(new DirectoryAssetSource(root, "item-test"));
+            using var resources = new ResourceManager(stack, 1);
+            var model = new ItemModelResolver(resources).Resolve("minecraft:test_far");
+
+            var ground = model!.Display[ItemDisplayContext.Ground];
+            Assert.Equal(5f, ground.Translation.X, 6);
+            Assert.Equal(-5f, ground.Translation.Y, 6);
+            Assert.Equal(2f * 0.0625f, ground.Translation.Z, 6);
+
+            // NO_TRANSFORM still centres the model; a real transform keeps its own translation and scale.
+            var centred = ItemDisplayTransform.None.ToMatrix();
+            Assert.Equal(new System.Numerics.Vector3(-0.5f, -0.5f, -0.5f),
+                System.Numerics.Vector3.Transform(System.Numerics.Vector3.Zero, centred));
+            // The reference order is translate, rotate, scale, then centre by -0.5, so the 0.25 translation is scaled to
+            // 0.5 by the model scale and the centring shift brings it back to x = 0.
+            var scaled = new ItemDisplayTransform(default, new System.Numerics.Vector3(0.25f, 0f, 0f),
+                new System.Numerics.Vector3(2f, 2f, 2f)).ToMatrix();
+            Assert.Equal(new System.Numerics.Vector3(0f, -0.5f, -0.5f),
+                System.Numerics.Vector3.Transform(System.Numerics.Vector3.Zero, scaled));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void LeftHandFixNegatesTheXTranslationAndYZRotations()
+    {
+        var transform = new ItemDisplayTransform(
+            new System.Numerics.Vector3(10f, 20f, 30f),
+            new System.Numerics.Vector3(0.5f, 0.25f, 0f),
+            System.Numerics.Vector3.One);
+
+        var right = transform.ToMatrix();
+        var left = transform.ToMatrix(applyLeftHandFix: true);
+        Assert.NotEqual(right, left);
+
+        // The reference negates translation.x and rotation.y/z, and leaves translation.y/z and rotation.x alone.
+        var flipped = new ItemDisplayTransform(
+            new System.Numerics.Vector3(10f, -20f, -30f),
+            new System.Numerics.Vector3(-0.5f, 0.25f, 0f),
+            System.Numerics.Vector3.One);
+        Assert.Equal(flipped.ToMatrix(), left);
+    }
+
+    [Fact]
     public void SelectConditionAndRangeUseTheirStaticFallbackModels()
     {
         var root = Path.Combine(Path.GetTempPath(), "sharpcraft-item-model-" + Guid.NewGuid().ToString("N"));
