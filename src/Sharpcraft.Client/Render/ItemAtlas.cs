@@ -123,6 +123,13 @@ public sealed class ItemAtlas : ISpriteAtlas
     /// <summary>Whether a texture path is already packed.</summary>
     public bool Contains(string? texturePath) => texturePath is not null && _sprites.ContainsKey(texturePath);
 
+    /// <summary>
+    /// Pixels of one packed texture, or null when the atlas does not hold it. Generated item models need this to scan
+    /// the sprite border and decide which side faces to extrude.
+    /// </summary>
+    public TextureData? GetTexture(string? texturePath) =>
+        texturePath is not null && _images.TryGetValue(texturePath, out var image) ? image : null;
+
     /// <summary>Returns a new atlas with one additional texture, or this atlas when it already exists.</summary>
     public ItemAtlas WithTexture(string texturePath, TextureData image)
     {

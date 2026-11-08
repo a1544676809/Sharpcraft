@@ -52,6 +52,10 @@ public sealed class DroppedItemMesherTests
         // and the opposite face's corner 0 is 7.5/16.
         Assert.Equal(8.5f / 16f, quads[0].Corner0.Z, 6);
         Assert.Equal(7.5f / 16f, quads[1].Corner0.Z, 6);
+        // The reference gives the north face explicitly reversed U so the far face lines up with the near one; the
+        // generic auto-UV would return the same 0..16 range and show a mirrored sprite instead.
+        Assert.Equal(new Vector2(0f, 0f), quads[0].Uv0);
+        Assert.Equal(new Vector2(1f, 0f), quads[1].Uv0);
     }
 
     [Fact]
@@ -100,6 +104,49 @@ public sealed class DroppedItemMesherTests
         var vertexLength = geometry.Vertices.Length;
         DroppedItemMesher.EnsureCapacity(geometry, vertexFloats: 0, indexCount: 0);
         Assert.Equal(vertexLength, geometry.Vertices.Length);
+    }
+
+    [Fact]
+    public void AGeneratedSpriteGetsSideFacesAroundItsOpaquePixels()
+    {
+        // Reference behaviour: every opaque pixel whose neighbour in a direction is transparent extrudes one quad, so a
+        // fully opaque 16x16 sprite gets 16 quads per side and a flat item stops looking like paper.
+        var sideFaces = new List<ItemModelQuad>();
+        GeneratedItemGeometry.AppendSideFaces(
+            sideFaces, "item/apple", 16, 16, (x, y) =>
+                x >= 0 && y >= 0 && x < 16 && y < 16 ? (byte)255 : (byte)0);
+
+        Assert.Equal(64, sideFaces.Count);
+        Assert.Equal(16, sideFaces.Count(quad => quad.Direction == ModelFaceDirection.Up));
+        Assert.Equal(16, sideFaces.Count(quad => quad.Direction == ModelFaceDirection.Down));
+        Assert.Equal(16, sideFaces.Count(quad => quad.Direction == ModelFaceDirection.East));
+        Assert.Equal(16, sideFaces.Count(quad => quad.Direction == ModelFaceDirection.West));
+        // The extrusion is one pixel deep, running from z 7.5 to 8.5 model pixels, so every side quad spans 1/16 block.
+        Assert.All(sideFaces, quad =>
+        {
+            var zs = new[] { quad.Corner0.Z, quad.Corner1.Z, quad.Corner2.Z, quad.Corner3.Z };
+            Assert.Equal(1f / 16f, zs.Max() - zs.Min(), 5);
+        });
+    }
+
+    [Fact]
+    public void ASingleOpaquePixelExtrudesFourSideFaces()
+    {
+        var sideFaces = new List<ItemModelQuad>();
+        GeneratedItemGeometry.AppendSideFaces(
+            sideFaces, "item/dot", 16, 16, (x, y) => x == 4 && y == 4 ? (byte)255 : (byte)0);
+
+        Assert.Equal(4, sideFaces.Count);
+        Assert.Contains(sideFaces, quad => quad.Direction == ModelFaceDirection.Up);
+        Assert.Contains(sideFaces, quad => quad.Direction == ModelFaceDirection.West);
+    }
+
+    [Fact]
+    public void ATransparentSpriteExtrudesNothing()
+    {
+        var sideFaces = new List<ItemModelQuad>();
+        GeneratedItemGeometry.AppendSideFaces(sideFaces, "item/empty", 16, 16, (_, _) => 0);
+        Assert.Empty(sideFaces);
     }
 
     [Theory]

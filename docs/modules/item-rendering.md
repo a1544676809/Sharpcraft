@@ -83,6 +83,20 @@
 - 面纹理 `#variable` 的解析 MUST 在整条父链合并完成后进行（原版同样后处理），否则子模型引用父层纹理槽会解析失败。
 - `uv` 缺失时按 `FaceBakery.defaultFaceUV` 的六方向投影自动生成；`rotation`、`tintindex`、`cullface` 原样保留。
 
+### 3.5.1 生成型物品（`builtin/generated`）
+
+`ItemModelGenerator.bakeExtrudedSprite` 与元素模型不是一套逻辑，MUST 单独实现：
+
+| 项 | 原版 | 说明 |
+| --- | --- | --- |
+| 几何 | 盒 `(0,0,7.5)–(16,16,8.5)` | 深度仍是 1/16 |
+| 正面 UV | `SOUTH_FACE_UVS = (0,0,16,16)` | |
+| 背面 UV | `NORTH_FACE_UVS = (16,0,0,16)` | **U 显式反向**，令远面与近面重合 |
+| 提交方式 | `addUnculledFace` ×2 | 两面都会画，**不依赖剔除** |
+| 侧面 | `bakeSideFaces` 扫描 sprite 边缘像素逐个挤出面 | **已实现** `GeneratedItemGeometry`：逐像素检测四面透明邻接，`UV_SHRINK = 0.1`，深度同为 7.5–8.5；仅扫描静态首帧（原版遍历 `getUniqueFrames`，动画帧未处理） |
+
+**踩过的坑**：背面若沿用 `defaultFaceUV`（整块元素得到 `(0,0,16,16)`）就与正面同向，于是「背面镜像精灵」与正面叠成 V 形双剑；必须显式给反向 U。
+
 ### 3.7 行向量下的合成顺序（易错点）
 
 原版是列向量矩阵，`ItemTransform.apply` 依次调用 `translate(t)` → `rotate(rotationXYZ)` → `scale(s)` → `translate(-0.5,-0.5,-0.5)`，列向量累积为 `M = T·R·S·T(-0.5)`，因此**顶点最先被 `-0.5` 居中**，最后才平移。`LayerRenderState.applyTransform` 再 `mulPose(localTransform)`。
@@ -152,7 +166,7 @@
 | SIM-ITEM-SPECIAL-MODELS | special 模型覆盖 | `src/net/minecraft/client/renderer/special/SpecialModelRenderers.java`（注册 13 种：bell/banner/book/conduit/chest/copper_golem_statue/head/player_head/shulker_box/shield/trident/decorated_pot/end_cube） | 13 种 `SpecialModelRenderer` 各自烘焙模型并提交几何 | 已移植 10 种：trident/shield/head/player_head/chest/shulker_box/banner（本体+旗面）/decorated_pot（base+sides）/conduit/end_cube | 缺 `bell`/`book`/`copper_golem_statue` 三种；`banner` 未做 `attachment`（ground/wall）与摆动相位，`decorated_pot` 未读 `POT_DECORATIONS` 选 side 图案，`end_cube` 用 `entity/end_portal/end_portal` 贴图近似原版 `endPortal`/`endGateway` shader | 规格已就绪 | `T-631e` |
 | SIM-ITEM-SPECIAL-STATE | special 参数与组合 | `.../special/ChestSpecialRenderer.java`、`.../special/ShulkerBoxSpecialRenderer.java`、`.../special/ShieldSpecialRenderer.java`、`.../blockentity/BannerRenderer.java` | `ChestSpecialRenderer.Unbaked(texture, openness, chestType)` 按 `chest_type` 烘焙单体/左/右模型并 `setupAnim(openness)`；`ShulkerBoxSpecialRenderer` 用 `openness` 抬升 lid；`ShieldSpecialRenderer` 依 `BannerPatternLayers`+`BASE_COLOR` 选基准 sprite，`BannerRenderer.submitPatterns` 逐层以 `bannerPattern` 渲染类型 + dye 色再提交同一模型 | `banner_patterns`/`base_color` 已解码并透传到 `EntityRenderState`；盾牌按 `hasPatterns` 选 sprite；**图案叠加层已实现**：banner 旗面/shield 各烘焙 6 份共面副本，逐层用 `entity/banner/<asset>`、`entity/shield/<asset>` sprite + `DyeColors` tint，按层索引 `VisibleWhen` 裁剪；`GreaterEqual` 深度模式已验证支持共面 | **已核实（仅限物品形态）**：26.3 全部 `assets/minecraft/items/*.json` 中 `openness` / `attachment` / `chest_type` 出现次数均为 **0**（对 `items/*.json` 逐文件 grep），因此**物品 special 渲染器**恒取缺省 `0.0F` / `ground` / `single`，当前静态烘焙对物品形态等效。**世界内的箱子/潜影盒是另一条路径**：`ChestRenderer` 用 `ChestBlock.opennessCombiner(blockEntity).get(partialTicks)`、`ShulkerBoxRenderer` 用 `blockEntity.getProgress(partialTicks)` 在运行时取开合度，本仓方块实体目前只有 `BlockEntityPlaceholderMesher` 占位盒（T-241），**没有任何真实箱子/潜影盒几何与开盖动画**，属于独立的方块实体建模任务（T-759）而非 `openness` 细节；届时还需为网格 DSL 补 `visibleFaces` 逐面隐藏能力（原版双箱 `allOfEnumExcept(EAST/WEST)`、饰纹陶罐侧面 `EnumSet.of(NORTH)` 依赖它，见 T-760） | 规格已就绪 | `T-631e` |
 | SIM-ITEM-ATLAS-VALIDATION | item atlas 验收 | `src/net/minecraft/client/renderer/texture/ItemTextureAtlas.java`（原版 item 纹理走独立 atlas 与 sprite 系统） | 原版 item sprite 由 atlas 打包 + sprite 元数据决定 UV | 自研 `ItemAtlas` 网格打包，按可见实体主/副手纹理**按需增量**加入 | 无真实资源包下的 UV/尺寸/missing sprite 回归；`WithTexture` 每次重建整张图，未做与原版 atlas 的逐 sprite 对照 | 规格已就绪 | `T-631e` |
-| SIM-ITEM-DROP-DISPLAY-GUI | 掉落物 / 展示框 / GUI | `.../item/ItemDisplayContext.java`（10 个上下文）、`.../entity/item/ItemEntityRenderer.java`、`.../item/ItemEntityRenderState.java`、`.../entity/ItemFrameRenderer.java` | 同一套 item model 在 10 个 display context 下复用；掉落物用 `getRenderedAmount(count)`（1/2/3/4/5 分桶）、`bob = sin(age/10 + bobOffs)·0.1 + 0.1`、`minOffsetY = -bbox.minY + 0.0625`、`getSpin = age/20 + bobOffs`、厚薄两种堆叠布局；`bobOffs` 是 `random.nextFloat()·2π`（本地随机、不同步） | **掉落物已接**：`DroppedItemMesher` 解析模型 → `ItemModelGeometry` 出 quad → `ItemModelExtents.ForDisplay` 取包围盒 → `ItemEntityRenderer` 的出 Bob/Spin/接地/堆叠 → `ItemDisplayTransform.ToMatrix()` 消费 `ground` 变换，作为 `dropped_item` 图层追加。`getRenderedAmount` 分桶逐档对应 | ① **special 模型（trident/shield/chest 等）在掉落物路径不绘制**，只画 `elements` 与生成型精灵；② 元素 `rotation` 未施加；③ `tintindex` 染色未施加；④ 抖动随机数用「实体 id 派生」的稳定值（原版用渲染器 `random`，逐次可能不同）——分布一致但取值不同；⑤ 展示框与 GUI 仍未实现 | 规格已就绪 | `T-761` |
+| SIM-ITEM-DROP-DISPLAY-GUI | 掉落物 / 展示框 / GUI | `.../item/ItemDisplayContext.java`（10 个上下文）、`.../entity/item/ItemEntityRenderer.java`、`.../item/ItemEntityRenderState.java`、`.../resources/model/cuboid/ItemModelGenerator.java`、`.../entity/ItemFrameRenderer.java` | 同一套 item model 在 10 个 display context 下复用；掉落物用 `getRenderedAmount(count)`（1/2/3/4/5 分桶）、`bob = sin(age/10 + bobOffs)·0.1 + 0.1`、`minOffsetY = -bbox.minY + 0.0625`、`getSpin = age/20 + bobOffs`、厚薄两种堆叠布局；`bobOffs` 是 `random.nextFloat()·2π`（本地随机、不同步）；生成型物品两面均 `addUnculledFace` 且背面 UV 反向，另有 `bakeSideFaces` 按 sprite 边缘挤出侧面 | **掉落物已接**：`DroppedItemMesher` 解析模型 → `ItemModelGeometry` 出 quad → `ItemModelExtents.ForDisplay` 取包围盒 → `ItemEntityRenderer` 的出 Bob/Spin/接地/堆叠 → `ItemDisplayTransform.ToMatrix()` 消费 `ground` 变换，作为 `dropped_item` 图层追加。`getRenderedAmount` 分桶与生成型物品的前后两面 UV 已逐项对上，**真实服务器截图确认**自转与单剑外观正确 | ① **special 模型（trident/shield/chest 等）在掉落物路径不绘制**，只画 `elements` 与生成型精灵；② 元素 `rotation` 未施加；③ `tintindex` 染色未施加；④ 抖动随机数用「实体 id 派生」的稳定值（原版用渲染器 `random`，逐次可能不同）——分布一致但取值不同；⑤ 展示框与 GUI 仍未实现；⑥ `bakeSideFaces` 侧面已实现，但只扫描静态首帧（原版遍历 `getUniqueFrames`，动画 sprite 的其余帧未挤出面） | 规格已就绪 | `T-761` |
 
 <!-- simplification:SIM-ITEM-MODEL-STATIC-FALLBACK task:T-631e -->
 <!-- simplification:SIM-ITEM-RENDER-STATE task:T-631e -->

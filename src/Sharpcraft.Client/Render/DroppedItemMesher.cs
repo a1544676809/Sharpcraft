@@ -80,7 +80,7 @@ public sealed class DroppedItemMesher
             }
 
             _quads.Clear();
-            CollectQuads(_quads, resolution);
+            CollectQuads(_quads, resolution, itemAtlas as ItemAtlas);
             if (_quads.Count == 0)
             {
                 continue;
@@ -138,8 +138,18 @@ public sealed class DroppedItemMesher
         return new EntityGeometryLayer(LayerName, EntityGeometryLayerKind.Cutout, 900, _geometry, usesItemAtlas: true);
     }
 
-    /// <summary>Fills <paramref name="output"/> with the model's quads, falling back to the generated flat sprite box.</summary>
-    public static void CollectQuads(List<ItemModelQuad> output, ItemModelResolution resolution)
+    /// <summary>Fills <paramref name="output"/> with the model's quads, falling back to the generated sprite box.</summary>
+    public static void CollectQuads(List<ItemModelQuad> output, ItemModelResolution resolution) =>
+        CollectQuads(output, resolution, atlas: null);
+
+    /// <summary>
+    /// Fills <paramref name="output"/> with the model's quads. When <paramref name="atlas"/> holds the sprite pixels, a
+    /// generated model also gets its extruded side faces, which is what gives a flat drop visible thickness.
+    /// </summary>
+    public static void CollectQuads(
+        List<ItemModelQuad> output,
+        ItemModelResolution resolution,
+        ItemAtlas? atlas)
     {
         ArgumentNullException.ThrowIfNull(output);
         ArgumentNullException.ThrowIfNull(resolution);
@@ -155,7 +165,10 @@ public sealed class DroppedItemMesher
             return;
         }
 
-        // No elements: the model is a generated sprite. ItemModelGenerator extrudes each layer between z 7.5 and 8.5.
+        // No elements: the model is a generated sprite. The reference emits both faces as *unculled* quads, so both are
+        // always drawn, and it gives the north face explicitly reversed UVs (16,0,0,16) so that the far face lines up
+        // with the near one instead of showing a mirror image. Using the generic auto-UV here (0,0,16,16 for a full
+        // element) makes the back face read as a second, mirrored blade.
         var texture = resolution.Textures.TryGetValue("layer0", out var layer0) ? IdentifierPath(layer0) : null;
         if (texture is null)
         {
@@ -164,10 +177,22 @@ public sealed class DroppedItemMesher
 
         var from = new Vector3(0f, 0f, 7.5f);
         var to = new Vector3(16f, 16f, 8.5f);
-        var face = new ItemModelFace(texture, ItemModelElement.AutoUv(ModelFaceDirection.South, from, to));
-        var back = new ItemModelFace(texture, ItemModelElement.AutoUv(ModelFaceDirection.North, from, to));
-        output.Add(BuildQuad(from, to, ModelFaceDirection.South, face));
-        output.Add(BuildQuad(from, to, ModelFaceDirection.North, back));
+        var south = new ItemModelFace(texture, new Vector4(0f, 0f, 16f, 16f));
+        var north = new ItemModelFace(texture, new Vector4(16f, 0f, 0f, 16f));
+        output.Add(BuildQuad(from, to, ModelFaceDirection.South, south));
+        output.Add(BuildQuad(from, to, ModelFaceDirection.North, north));
+
+        if (atlas?.GetTexture(texture) is { } pixels)
+        {
+            GeneratedItemGeometry.AppendSideFaces(
+                output,
+                texture,
+                pixels.Width,
+                pixels.Height,
+                (x, y) => x >= 0 && y >= 0 && x < pixels.Width && y < pixels.Height
+                    ? pixels.Rgba[(((y * pixels.Width) + x) * 4) + 3]
+                    : (byte)0);
+        }
     }
 
     /// <summary>
