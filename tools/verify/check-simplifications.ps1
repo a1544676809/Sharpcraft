@@ -41,10 +41,20 @@ foreach ($file in Get-ChildItem (Join-Path $Root 'src') -Recurse -File -Filter '
 $documented = @{}
 foreach ($file in Get-ChildItem (Join-Path $Root 'docs/modules') -Recurse -File -Filter '*.md') {
     $lineNumber = 0
+    $inFence = $false
     foreach ($line in [System.IO.File]::ReadLines($file.FullName)) {
         $lineNumber++
+        # Fenced code blocks hold examples, not registrations.
+        if ($line.TrimStart().StartsWith('```')) {
+            $inFence = -not $inFence
+            continue
+        }
+
+        if ($inFence) { continue }
+
         foreach ($match in $docMarker.Matches($line)) {
-            $documented[$match.Groups[1].Value] = [pscustomobject]@{
+            $id = $match.Groups[1].Value
+            $documented[$id] = [pscustomobject]@{
                 Task = $match.Groups[2].Value
                 File = $file.FullName.Substring($Root.Length).TrimStart('\', '/')
                 Line = $lineNumber

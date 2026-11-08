@@ -49,7 +49,9 @@ public sealed record ItemModelResolution(
 /// T-631a layer: it deliberately returns no geometry or GPU state.
 /// </summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.item.ItemModelResolver", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/item/ItemModelResolver.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
-[Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-MODEL-STATIC-FALLBACK", "T-631e", Note = "Selector/condition/range dispatch use static fallbacks until state properties are implemented")]
+[Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-MODEL-STATIC-FALLBACK", "T-631e", Note = "Vanilla selects renderer by ItemStackRenderState layers; Sharpcraft resolves one descriptor and takes the static fallback branch")]
+[Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-RENDER-STATE", "T-631e", Note = "No ItemStackRenderState equivalent: no layer list, foil type, tint layers, particle material or model extents")]
+[Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-DROP-DISPLAY-GUI", "T-631e", Note = "ItemDisplayContext and ItemTransform are parsed but not consumed; drops, item frames and GUI items are not rendered")]
 public sealed class ItemModelResolver
 {
     private static readonly IReadOnlyDictionary<string, ItemDisplayContext> ContextNames =

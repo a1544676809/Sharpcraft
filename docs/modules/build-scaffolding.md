@@ -56,7 +56,11 @@
   - 测试工程与**有意为之**的分析器误报同样走上述通道，不做整工程 `NoWarn`。
 - **Trim / AOT 兼容性分析器暂不启用**：运行时形态（JIT / AOT / 单文件）仍是 `[待定]`（原则 1、待决项 1），现在开启会为"可能永不采用的形态"持续刷警告，而 3.6 又不允许压制，形成死锁。待运行时形态定稿后随 ADR 一起启用。
 - 标准命令：本地 `dotnet build` + `dotnet test`（含编译）；CI 用 `dotnet build` 后 `dotnet test --no-build`。**不要**在没有先构建的情况下用 `--no-build`，否则会跑旧二进制得到假绿。
-- **简化登记门禁（原则 15）**：`Directory.Build.targets` 在 `CoreCompile` 前执行 `tools/verify/check-simplifications.ps1`。源码中的 `[Simplification("ID", "TASK")]` 必须在 `docs/modules` 有匹配的 `<!-- simplification:ID task:TASK -->` 记录，否则构建直接失败；解决后删除代码标记，文档标记保留。
+- **简化登记门禁（原则 15）**：`Directory.Build.targets` 在编译前执行 `tools/verify/check-simplifications.ps1`。源码中的 `[Simplification("ID", "TASK")]` 必须在 `docs/modules` 有匹配的机器标记记录，否则构建直接失败；解决后删除代码标记，文档标记保留。机器标记写法（放在 fenced code block 之外才被计入）：
+
+```
+<!-- simplification:SIM-EXAMPLE-ID task:T-000 -->
+```
 - 不设置中央包管理（`Directory.Packages.props`）：当前测试依赖少，引入正式第三方依赖时再统一（见待决项）。
 
 ## 6. 测试基础设施

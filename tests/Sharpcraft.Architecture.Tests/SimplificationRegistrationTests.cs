@@ -27,8 +27,21 @@ public sealed class SimplificationRegistrationTests
         foreach (var file in Directory.EnumerateFiles(
                      Path.Combine(RepositoryLocator.Root, "docs", "modules"), "*.md", SearchOption.AllDirectories))
         {
+            var inFence = false;
             foreach (var line in File.ReadLines(file))
             {
+                // Fenced code blocks hold examples, not registrations.
+                if (line.TrimStart().StartsWith("```", StringComparison.Ordinal))
+                {
+                    inFence = !inFence;
+                    continue;
+                }
+
+                if (inFence)
+                {
+                    continue;
+                }
+
                 var match = DocMarker.Match(line);
                 if (match.Success)
                 {
