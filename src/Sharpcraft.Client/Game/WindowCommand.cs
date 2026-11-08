@@ -447,7 +447,9 @@ internal static class WindowCommand
                 foreach (var path in new[]
                          {
                              EntityModelResolver.ResolveHeldItemTexture(entity, offhand: false),
-                             EntityModelResolver.ResolveHeldItemTexture(entity, offhand: true)
+                             EntityModelResolver.ResolveHeldItemTexture(entity, offhand: true),
+                             EntityModelResolver.ResolveHeldItemSpecialTexture(entity, offhand: false),
+                             EntityModelResolver.ResolveHeldItemSpecialTexture(entity, offhand: true)
                          })
                 {
                     if (path is null || itemAtlas.Contains(path))

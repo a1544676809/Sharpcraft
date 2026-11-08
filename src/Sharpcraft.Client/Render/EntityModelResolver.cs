@@ -109,6 +109,40 @@ public static class EntityModelResolver
         return ItemModels.Resolve(item.Id.ToString())?.SpecialRendererType;
     }
 
+    /// <summary>Resolves one hand's special-renderer string properties, or null when not a special model.</summary>
+    public static IReadOnlyDictionary<string, string>? ResolveHeldItemSpecialProperties(EntityRenderState state, bool offhand = false)
+    {
+        var itemId = offhand ? state.OffHandItemId : state.MainHandItemId;
+        if (ItemModels is null || Items?.ById(itemId) is not { } item)
+        {
+            return null;
+        }
+
+        return ItemModels.Resolve(item.Id.ToString())?.SpecialProperties;
+    }
+
+    /// <summary>Resolves the atlas texture for skull-like special models.</summary>
+    public static string? ResolveHeldItemSpecialTexture(EntityRenderState state, bool offhand = false)
+    {
+        if (ResolveHeldItemSpecial(state, offhand) is not ("minecraft:head" or "minecraft:player_head"))
+        {
+            return null;
+        }
+
+        var properties = ResolveHeldItemSpecialProperties(state, offhand);
+        var kind = properties is not null && properties.TryGetValue("kind", out var value) ? value : "player";
+        return kind switch
+        {
+            "skeleton" => "entity/skeleton/skeleton",
+            "wither_skeleton" => "entity/skeleton/wither_skeleton",
+            "zombie" => "entity/zombie/zombie",
+            "creeper" => "entity/creeper/creeper",
+            "dragon" => "entity/enderdragon/dragon",
+            "piglin" => "entity/piglin/piglin",
+            _ => DefaultPlayerSkin.Get(state.Uuid).Path
+        };
+    }
+
     /// <summary>Resolves one hand's first item-atlas texture path, or null when unknown.</summary>
     public static string? ResolveHeldItemTexture(EntityRenderState state, bool offhand = false)
     {
@@ -614,6 +648,7 @@ public static class EntityModelResolver
                 UsesItemAtlas: true));
             AddSpecialHandLayers(heldLayers, "trident", "minecraft:trident", SpecialItemModelDefinition.HeldTridentRight, SpecialItemModelDefinition.HeldTridentLeft, SpecialItemModelDefinition.TridentTexture);
             AddSpecialHandLayers(heldLayers, "shield", "minecraft:shield", SpecialItemModelDefinition.HeldShieldRight, SpecialItemModelDefinition.HeldShieldLeft, SpecialItemModelDefinition.ShieldTexture);
+            AddSpecialHeadLayers(heldLayers);
             renderLayers = heldLayers;
         }
 
@@ -726,6 +761,30 @@ public static class EntityModelResolver
             texture,
             _ => texture,
             state => ResolveHeldItemSpecial(state, offhand: true) == specialType,
+            AllCubes: true,
+            UsesItemAtlas: true));
+    }
+
+    private static void AddSpecialHeadLayers(List<EntityRenderLayerDefinition> layers)
+    {
+        layers.Add(new EntityRenderLayerDefinition(
+            "held_special_head_right",
+            EntityGeometryLayerKind.Cutout,
+            60,
+            SpecialItemModelDefinition.HeldSkullRight,
+            TexturePath: null,
+            TextureSelector: state => ResolveHeldItemSpecialTexture(state, offhand: false),
+            VisibleWhen: state => ResolveHeldItemSpecial(state, offhand: false) is "minecraft:head" or "minecraft:player_head",
+            AllCubes: true,
+            UsesItemAtlas: true));
+        layers.Add(new EntityRenderLayerDefinition(
+            "held_special_head_left",
+            EntityGeometryLayerKind.Cutout,
+            61,
+            SpecialItemModelDefinition.HeldSkullLeft,
+            TexturePath: null,
+            TextureSelector: state => ResolveHeldItemSpecialTexture(state, offhand: true),
+            VisibleWhen: state => ResolveHeldItemSpecial(state, offhand: true) is "minecraft:head" or "minecraft:player_head",
             AllCubes: true,
             UsesItemAtlas: true));
     }

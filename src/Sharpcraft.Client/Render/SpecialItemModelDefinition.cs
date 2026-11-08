@@ -13,6 +13,24 @@ public static class SpecialItemModelDefinition
     public const string TridentTexture = "entity/trident/trident";
     public const string ShieldTexture = "entity/shield/shield_base_nopattern";
 
+    /// <summary>Mob/player skull cube (8×8×8); the texture is selected from the special `kind` property.</summary>
+    public static readonly EntityModelDefinition Skull = EntityModelDefinition.FromTree(
+        "special_skull",
+        64,
+        32,
+        BuildSkullMesh(),
+        PlayerModelDefinition.DefaultFaceTransforms,
+        texturePath: null,
+        1f);
+
+    public static readonly EntityModelDefinition HeldSkullRight = EntityModelDefinition.FromTree(
+        "held_special_skull_right", 64, 32, BuildSkullMesh(held: true),
+        PlayerModelDefinition.DefaultFaceTransforms, texturePath: null, 1f);
+
+    public static readonly EntityModelDefinition HeldSkullLeft = EntityModelDefinition.FromTree(
+        "held_special_skull_left", 64, 32, BuildSkullMesh(held: true, left: true),
+        PlayerModelDefinition.DefaultFaceTransforms, texturePath: null, 1f);
+
     /// <summary>Trident model: pole plus base and three spikes (32×32 texture).</summary>
     public static readonly EntityModelDefinition Trident = EntityModelDefinition.FromTree(
         "special_trident",
@@ -55,6 +73,19 @@ public static class SpecialItemModelDefinition
         "held_special_shield_left", 64, 64, BuildShieldMesh(held: true, left: true),
         PlayerModelDefinition.DefaultFaceTransforms, ShieldTexture, 1f,
         additionalTexturePaths: [ShieldTexture]);
+
+    private static VanillaMeshDefinition BuildSkullMesh(bool held = false, bool left = false)
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        var parent = held
+            ? root.AddOrReplaceChild(left ? "left_arm" : "right_arm",
+                VanillaPartPose.Offset(left ? 5f : -5f, 2f, 0f),
+                new VanillaCubeDefinition(left ? "left_arm" : "right_arm", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f))
+            : root;
+        parent.AddOrReplaceChild("head", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f));
+        return new VanillaMeshDefinition(root);
+    }
 
     private static VanillaMeshDefinition BuildTridentMesh(bool held = false, bool left = false)
     {

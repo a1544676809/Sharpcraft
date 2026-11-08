@@ -41,7 +41,8 @@ public sealed record ItemModelResolution(
     string ModelId,
     IReadOnlyDictionary<string, string> Textures,
     IReadOnlyDictionary<ItemDisplayContext, ItemDisplayTransform> Display,
-    string? SpecialRendererType = null);
+    string? SpecialRendererType = null,
+    IReadOnlyDictionary<string, string>? SpecialProperties = null);
 
 /// <summary>
 /// Resolves the item model selected by an item id or an <c>item_model</c> component. This is the data-only
@@ -167,7 +168,20 @@ public sealed class ItemModelResolver
                     specialType.ValueKind == JsonValueKind.String
                     ? specialType.GetString()
                     : null;
-                return baseModel with { SpecialRendererType = rendererType };
+                Dictionary<string, string>? properties = null;
+                if (specialModel.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var property in specialModel.EnumerateObject())
+                    {
+                        if (property.Value.ValueKind == JsonValueKind.String)
+                        {
+                            properties ??= new Dictionary<string, string>(StringComparer.Ordinal);
+                            properties[property.Name] = property.Value.GetString()!;
+                        }
+                    }
+                }
+
+                return baseModel with { SpecialRendererType = rendererType, SpecialProperties = properties };
             default:
                 // special/selectors with unsupported properties deliberately fall back to no drawable model.
                 return null;

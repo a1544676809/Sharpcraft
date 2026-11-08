@@ -21,6 +21,17 @@ public sealed class SpecialItemModelDefinitionTests
     }
 
     [Fact]
+    public void SkullModelHasAnEightPixelHeadCube()
+    {
+        var part = SpecialItemModelDefinition.Skull.Compiled!.Find("head");
+        Assert.NotNull(part);
+        var cube = part!.Cubes.Single();
+        Assert.Equal(8f, cube.Width);
+        Assert.Equal(8f, cube.Height);
+        Assert.Equal(8f, cube.Depth);
+    }
+
+    [Fact]
     public void HeldSpecialModelsCarryTheArmPivot()
     {
         Assert.NotNull(SpecialItemModelDefinition.HeldTridentRight.Compiled!.Find("right_arm"));

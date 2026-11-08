@@ -86,7 +86,7 @@ public sealed class ItemModelResolverTests
         try
         {
             Write(root, "assets/minecraft/items/test_special.json",
-                """{"model":{"type":"minecraft:special","base":"minecraft:item/default","model":{"type":"minecraft:book"}}}""");
+                """{"model":{"type":"minecraft:special","base":"minecraft:item/default","model":{"type":"minecraft:head","kind":"creeper"}}}""");
             Write(root, "assets/minecraft/models/item/default.json",
                 """{"parent":"builtin/generated","textures":{"layer0":"minecraft:item/default"}}""");
 
@@ -96,7 +96,8 @@ public sealed class ItemModelResolverTests
             var model = new ItemModelResolver(resources).Resolve("minecraft:test_special");
 
             Assert.NotNull(model);
-            Assert.Equal("minecraft:book", model!.SpecialRendererType);
+            Assert.Equal("minecraft:head", model!.SpecialRendererType);
+            Assert.Equal("creeper", model.SpecialProperties!["kind"]);
             Assert.Equal("minecraft:item/default", model.Textures["layer0"]);
         }
         finally

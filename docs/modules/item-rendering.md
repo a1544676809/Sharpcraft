@@ -89,7 +89,7 @@
 - **T-631a**：item id → model id 解析、parent/texture/display 合并、10 个 display context、5 组 Golden Vectors；不生成 mesh。**已完成**（`965ab53`）。
 - **T-631b**：`item/generated` / `item/handheld` 的最小 quad mesh 与 item atlas；Witch 药水验收。**进行中**：Witch 药水已用 flat quad（`EntityModelMesher.AddFlatQuad`，`item/potion` 进入实体 atlas）；独立 item atlas/通用 item model 纹理层仍待补。
 - **T-631c**：其他 item model 类型（select/condition/composite/special）与掉落物/展示框/GUI 复用。**进行中**：`ItemAtlas` 数据层、WindowedRenderer 独立 item bind group、`EntityGeometryLayer.UsesItemAtlas`、Witch layer 与成人/幼年 humanoid `held_item_right`/`held_item_left` 层已完成；`ItemModelResolver` 已支持 `select`/`condition`/`range_dispatch`/`composite` 的静态 fallback 模型，`layer0/layer1` 已由 WindowCommand 按可见实体按需装入 item atlas。`special` 模型、动态 property 与 drop/display/GUI 复用仍待补。
-- **T-631d**：`minecraft:special` 描述符解析已接（base 模型 + `model.type`），不把 special 物品误当 flat quad；当前已移植 trident/shield 的 special 模型与成人主/副手 held 层，banner/shulker/chest/head/decorated_pot/conduit/end_cube 等仍待实现。
+- **T-631d**：`minecraft:special` 描述符解析已接（base 模型 + `model.type` + 字符串属性），不把 special 物品误当 flat quad；当前已移植 trident/shield 与 head/player_head skull 的 special 模型与成人主/副手 held 层，banner/shulker/chest/decorated_pot/conduit/end_cube 等仍待实现。
 
 ## 7. 风险与限制
 
