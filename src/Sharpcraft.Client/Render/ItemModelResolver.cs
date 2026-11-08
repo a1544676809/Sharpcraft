@@ -76,7 +76,12 @@ public sealed record ItemModelResolution(
     IReadOnlyDictionary<string, string> Textures,
     IReadOnlyDictionary<ItemDisplayContext, ItemDisplayTransform> Display,
     string? SpecialRendererType = null,
-    IReadOnlyDictionary<string, string>? SpecialProperties = null);
+    IReadOnlyDictionary<string, string>? SpecialProperties = null,
+    IReadOnlyList<ItemModelElement>? Elements = null)
+{
+    /// <summary>Resolved cuboids of the model, empty when the model has no <c>elements</c>.</summary>
+    public IReadOnlyList<ItemModelElement> Cuboids => Elements ?? [];
+}
 
 /// <summary>
 /// Resolves the item model selected by an item id or an <c>item_model</c> component. This is the data-only
@@ -279,7 +284,39 @@ public sealed class ItemModelResolver
         return new ItemModelResolution(
             modelId,
             new Dictionary<string, string>(merged.Textures, StringComparer.Ordinal),
-            new Dictionary<ItemDisplayContext, ItemDisplayTransform>(merged.Display));
+            new Dictionary<ItemDisplayContext, ItemDisplayTransform>(merged.Display),
+            Elements: ResolveElementTextures(merged.Elements, merged.Textures));
+    }
+
+    /// <summary>
+    /// Resolves every face's <c>#variable</c> reference through the fully merged texture map. The reference does this
+    /// after merging the parent chain, which is why the raw names are kept while loading.
+    /// </summary>
+    private static IReadOnlyList<ItemModelElement> ResolveElementTextures(
+        List<ItemModelElement> elements,
+        IReadOnlyDictionary<string, string> textures)
+    {
+        if (elements.Count == 0)
+        {
+            return elements;
+        }
+
+        var resolved = new List<ItemModelElement>(elements.Count);
+        foreach (var element in elements)
+        {
+            var faces = new Dictionary<ModelFaceDirection, ItemModelFace>(element.Faces.Count);
+            foreach (var (direction, face) in element.Faces)
+            {
+                faces[direction] = face with
+                {
+                    Texture = face.Texture is { } raw ? ResolveTextureReference(raw, textures) : null
+                };
+            }
+
+            resolved.Add(new ItemModelElement(element.From, element.To, faces));
+        }
+
+        return resolved;
     }
 
     private bool LoadModel(Identifier modelId, ModelParts target, int depth)
@@ -327,6 +364,110 @@ public sealed class ItemModelResolver
             }
         }
 
+            // A model that declares elements replaces whatever the parent chain contributed, matching the reference
+            // loader. Texture references are resolved later, once the whole chain has been merged.
+            if (root.TryGetProperty("elements", out var elements) && elements.ValueKind == JsonValueKind.Array)
+            {
+                target.Elements = ParseElements(elements);
+            }
+
+        return true;
+    }
+
+    private static List<ItemModelElement> ParseElements(JsonElement elements)
+    {
+        var parsed = new List<ItemModelElement>(elements.GetArrayLength());
+        foreach (var element in elements.EnumerateArray())
+        {
+            if (element.ValueKind != JsonValueKind.Object ||
+                !TryReadVector(element, "from", out var from) ||
+                !TryReadVector(element, "to", out var to))
+            {
+                continue;
+            }
+
+            var faces = new Dictionary<ModelFaceDirection, ItemModelFace>();
+            if (element.TryGetProperty("faces", out var faceObject) && faceObject.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var face in faceObject.EnumerateObject())
+                {
+                    if (!FaceNames.TryGetValue(face.Name, out var direction) || face.Value.ValueKind != JsonValueKind.Object)
+                    {
+                        continue;
+                    }
+
+                    var faceElement = face.Value;
+                    var texture = faceElement.TryGetProperty("texture", out var textureElement) &&
+                        textureElement.ValueKind == JsonValueKind.String
+                        ? textureElement.GetString()!
+                        : null;
+                    // Reference FaceBakery.defaultFaceUV is used whenever the JSON omits "uv".
+                    var uv = faceElement.TryGetProperty("uv", out var uvElement) &&
+                        uvElement.ValueKind == JsonValueKind.Array &&
+                        uvElement.GetArrayLength() == 4
+                        ? new Vector4(
+                            uvElement[0].GetSingle(),
+                            uvElement[1].GetSingle(),
+                            uvElement[2].GetSingle(),
+                            uvElement[3].GetSingle())
+                        : ItemModelElement.AutoUv(direction, from, to);
+                    var rotation = faceElement.TryGetProperty("rotation", out var rotationElement) &&
+                        rotationElement.ValueKind == JsonValueKind.Number
+                        ? rotationElement.GetInt32()
+                        : 0;
+                    var tintIndex = faceElement.TryGetProperty("tintindex", out var tintElement) &&
+                        tintElement.ValueKind == JsonValueKind.Number
+                        ? tintElement.GetInt32()
+                        : -1;
+                    ModelFaceDirection? cullFace = faceElement.TryGetProperty("cullface", out var cullElement) &&
+                        cullElement.ValueKind == JsonValueKind.String &&
+                        FaceNames.TryGetValue(cullElement.GetString()!, out var cullDirection)
+                        ? cullDirection
+                        : null;
+                    faces[direction] = new ItemModelFace(texture, uv, rotation, tintIndex, cullFace);
+                }
+            }
+
+            parsed.Add(new ItemModelElement(from, to, faces));
+        }
+
+        return parsed;
+    }
+
+    /// <summary>Follows <c>#variable</c> indirection through the merged texture map, as the reference loader does.</summary>
+    private static string? ResolveTextureReference(string value, IReadOnlyDictionary<string, string> textures)
+    {
+        var current = value;
+        for (var hop = 0; hop < 8; hop++)
+        {
+            if (current.StartsWith('#'))
+            {
+                if (!textures.TryGetValue(current[1..], out var next))
+                {
+                    return null;
+                }
+
+                current = next;
+                continue;
+            }
+
+            return Identifier.TryParse(current, out var id) ? id.Path : current;
+        }
+
+        return null;
+    }
+
+    private static bool TryReadVector(JsonElement element, string name, out Vector3 value)
+    {
+        value = default;
+        if (!element.TryGetProperty(name, out var array) ||
+            array.ValueKind != JsonValueKind.Array ||
+            array.GetArrayLength() != 3)
+        {
+            return false;
+        }
+
+        value = new Vector3(array[0].GetSingle(), array[1].GetSingle(), array[2].GetSingle());
         return true;
     }
 
@@ -361,9 +502,21 @@ public sealed class ItemModelResolver
         return clamp > 0f ? Clamp(vector, clamp) : vector;
     }
 
+    private static readonly IReadOnlyDictionary<string, ModelFaceDirection> FaceNames =
+        new Dictionary<string, ModelFaceDirection>(StringComparer.Ordinal)
+        {
+            ["down"] = ModelFaceDirection.Down,
+            ["up"] = ModelFaceDirection.Up,
+            ["north"] = ModelFaceDirection.North,
+            ["south"] = ModelFaceDirection.South,
+            ["west"] = ModelFaceDirection.West,
+            ["east"] = ModelFaceDirection.East
+        };
+
     private sealed class ModelParts
     {
         public Dictionary<string, string> Textures { get; } = new(StringComparer.Ordinal);
         public Dictionary<ItemDisplayContext, ItemDisplayTransform> Display { get; } = [];
+        public List<ItemModelElement> Elements { get; set; } = [];
     }
 }

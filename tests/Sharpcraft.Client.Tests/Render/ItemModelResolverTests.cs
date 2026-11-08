@@ -51,6 +51,74 @@ public sealed class ItemModelResolverTests
     }
 
     [Fact]
+    public void BlockElementsResolveAutoUvAndTextureIndirection()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "sharpcraft-item-model-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            // items/stone.json -> block/stone -> block/cube_all -> block/cube (elements) -> block/block.
+            Write(root, "assets/minecraft/items/test_stone.json",
+                """{"model":{"type":"minecraft:model","model":"minecraft:block/test_stone"}}""");
+            Write(root, "assets/minecraft/models/block/test_stone.json",
+                """{"parent":"minecraft:block/test_cube_all","textures":{"all":"minecraft:block/test_stone_tex"}}""");
+            Write(root, "assets/minecraft/models/block/test_cube_all.json",
+                """{"parent":"minecraft:block/test_cube","textures":{"particle":"#all","down":"#all","up":"#all","north":"#all","east":"#all","south":"#all","west":"#all"}}""");
+            Write(root, "assets/minecraft/models/block/test_cube.json",
+                """
+                {"parent":"minecraft:block/test_block","elements":[
+                  {"from":[0,0,0],"to":[16,16,16],"faces":{
+                    "down":{"texture":"#down","cullface":"down"},
+                    "up":{"texture":"#up","cullface":"up"},
+                    "north":{"texture":"#north","cullface":"north"},
+                    "south":{"texture":"#south","cullface":"south"},
+                    "west":{"texture":"#west","cullface":"west"},
+                    "east":{"texture":"#east","cullface":"east"}}}]}
+                """);
+            Write(root, "assets/minecraft/models/block/test_block.json",
+                """{"gui_light":"side","display":{"ground":{"translation":[0,3,0],"scale":[0.25,0.25,0.25]}}}""");
+
+            using var stack = new AssetStack { Policy = MissingResourcePolicy.Warn, Warn = _ => { } }
+                .Add(new DirectoryAssetSource(root, "item-test"));
+            using var resources = new ResourceManager(stack, 1);
+            var model = new ItemModelResolver(resources).Resolve("minecraft:test_stone");
+
+            Assert.NotNull(model);
+            var element = Assert.Single(model!.Cuboids);
+            Assert.Equal(new System.Numerics.Vector3(0f, 0f, 0f), element.From);
+            Assert.Equal(new System.Numerics.Vector3(16f, 16f, 16f), element.To);
+            Assert.Equal(6, element.Faces.Count);
+
+            // "#down" -> "#all" -> minecraft:block/test_stone_tex resolves to the path form item atlases use.
+            Assert.Equal("block/test_stone_tex", element.Faces[ModelFaceDirection.Down].Texture);
+            Assert.Equal(ModelFaceDirection.Down, element.Faces[ModelFaceDirection.Down].CullFace);
+            // Full-cube auto UV for DOWN is (from.x, 16-to.z, to.x, 16-from.z) = (0,0,16,16);
+            // NORTH is (16-to.x, 16-to.y, 16-from.x, 16-from.y) which also collapses to (0,0,16,16) on a full cube.
+            Assert.Equal(new System.Numerics.Vector4(0f, 0f, 16f, 16f), element.Faces[ModelFaceDirection.Down].Uv);
+            Assert.Equal(new System.Numerics.Vector4(0f, 0f, 16f, 16f), element.Faces[ModelFaceDirection.North].Uv);
+            // A partial element proves the projection actually flips: from (2,0,1) to (10,4,9) gives NORTH
+            // (16-10, 16-4, 16-2, 16-0) = (6,12,14,16).
+            Assert.Equal(
+                new System.Numerics.Vector4(6f, 12f, 14f, 16f),
+                ItemModelElement.AutoUv(
+                    ModelFaceDirection.North,
+                    new System.Numerics.Vector3(2f, 0f, 1f),
+                    new System.Numerics.Vector3(10f, 4f, 9f)));
+
+            // The ground transform comes from block/block, three parents up.
+            var ground = model.Display[ItemDisplayContext.Ground];
+            Assert.Equal(3f * 0.0625f, ground.Translation.Y, 6);
+            Assert.Equal(0.25f, ground.Scale.X, 6);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void DisplayTranslationIsScaledThenClampedToFiveBlocks()
     {
         // Reference ItemTransform.Deserializer multiplies by 0.0625 and only then clamps to +/-5 blocks, so an oversized
