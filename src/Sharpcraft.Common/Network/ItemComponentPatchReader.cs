@@ -20,11 +20,20 @@ public readonly record struct ItemComponentInfo(
     string? TrimMaterialId = null,
     string? TrimPatternId = null,
     bool HasEnchantments = false,
-    string? ItemModelId = null)
+    string? ItemModelId = null,
+    int? BaseColorId = null,
+    IReadOnlyList<BannerPatternLayer>? BannerPatternLayers = null)
 {
     /// <summary>True when some component payload could not be decoded and the rest of the packet was skipped.</summary>
     public bool HasUnknownComponents => Opaque;
 }
+
+/// <summary>
+/// One <c>banner_patterns</c> layer: the pattern's registry asset id plus its dye colour id (reference
+/// <c>BannerPatternLayers.Layer</c>).
+/// </summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.block.entity.BannerPatternLayers.Layer", "ref://mc-26.3-analysis/src/net/minecraft/world/level/block/entity/BannerPatternLayers.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
+public readonly record struct BannerPatternLayer(int DyeColorId, string? PatternAssetId);
 
 /// <summary>
 /// Decodes the item-stack component patch used by <c>set_equipment</c>. The wire format has no generic skip, so only a
@@ -83,6 +92,7 @@ internal static class ItemComponentPatchReader
     private static readonly int Fireworks = DataComponentTypes.GetId("fireworks");
     private static readonly int FireworkExplosion = DataComponentTypes.GetId("firework_explosion");
     private static readonly int BannerPatterns = DataComponentTypes.GetId("banner_patterns");
+    private static readonly int BaseColor = DataComponentTypes.GetId("base_color");
     private static readonly int CustomData = DataComponentTypes.GetId("custom_data");
     private static readonly int UseRemainder = DataComponentTypes.GetId("use_remainder");
     private static readonly int MapId = DataComponentTypes.GetId("map_id");
@@ -484,7 +494,7 @@ internal static class ItemComponentPatchReader
 
         if (typeId == BannerPatterns)
         {
-            return TrySkipBannerPatterns(ref reader);
+            return TryReadBannerPatterns(ref reader, ref info);
         }
 
         if (typeId == CustomData || typeId == SignTextFront || typeId == SignTextBack || typeId == BucketEntityData)
@@ -705,6 +715,17 @@ internal static class ItemComponentPatchReader
                    reader.TryReadFloat(out _) == DecodeStatus.Success &&
                    TrySkipOptionalSound(ref reader) &&
                    TrySkipOptionalSound(ref reader);
+        }
+
+        if (typeId == BaseColor)
+        {
+            if (reader.TryReadVarInt(out var colorId) != DecodeStatus.Success)
+            {
+                return false;
+            }
+
+            info = info with { BaseColorId = colorId };
+            return true;
         }
 
         if (Array.IndexOf(SimpleIdComponents, typeId) >= 0)
@@ -1270,22 +1291,26 @@ internal static class ItemComponentPatchReader
         return true;
     }
 
-    private static bool TrySkipBannerPatterns(ref PayloadReader reader)
+    private static bool TryReadBannerPatterns(ref PayloadReader reader, ref ItemComponentInfo info)
     {
         if (reader.TryReadVarInt(out var count) != DecodeStatus.Success || count < 0)
         {
             return false;
         }
 
+        var layers = count == 0 ? null : new List<BannerPatternLayer>(count);
         for (var i = 0; i < count; i++)
         {
-            if (reader.TryReadVarInt(out _) != DecodeStatus.Success || // pattern holder
-                reader.TryReadVarInt(out _) != DecodeStatus.Success)   // dye color
+            if (reader.TryReadVarInt(out var patternIndex) != DecodeStatus.Success ||
+                reader.TryReadVarInt(out var dyeColor) != DecodeStatus.Success)
             {
                 return false;
             }
+
+            layers?.Add(new BannerPatternLayer(dyeColor, BannerPatternTable.AssetAt(patternIndex)));
         }
 
+        info = info with { BannerPatternLayers = layers };
         return true;
     }
 

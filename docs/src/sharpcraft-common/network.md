@@ -54,6 +54,7 @@ serverbound 可用"发坏包看服务端报错"探针验证；**clientbound 不�
 | Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
 | --- | --- | --- | --- | --- | --- | --- |
 | Sharpcraft.Common | Sharpcraft.Common.Network.AddedEntity | Mirror | Full | net.minecraft.network.protocol.game.ClientboundAddEntityPacket | ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundAddEntityPacket.java |  |
+| Sharpcraft.Common | Sharpcraft.Common.Network.BannerPatternLayer | Mirror | Partial | net.minecraft.world.level.block.entity.BannerPatternLayers.Layer | ref://mc-26.3-analysis/src/net/minecraft/world/level/block/entity/BannerPatternLayers.java |  |
 | Sharpcraft.Common | Sharpcraft.Common.Network.ChatTypeDecoration | Mirror | Partial | net.minecraft.network.chat.ChatTypeDecoration | ref://mc-26.3-analysis/src/net/minecraft/network/chat/ChatTypeDecoration.java | auto-resolved by name; verify |
 | Sharpcraft.Common | Sharpcraft.Common.Network.ClockNetworkState | Mirror | Partial | net.minecraft.world.clock.ClockNetworkState | ref://mc-26.3-analysis/src/net/minecraft/world/clock/ClockNetworkState.java | auto-resolved by name; verify |
 | Sharpcraft.Common | Sharpcraft.Common.Network.EntityMove | Mirror | Full | net.minecraft.network.protocol.game.ClientboundMoveEntityPacket | ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundMoveEntityPacket.java |  |

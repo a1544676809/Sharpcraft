@@ -260,6 +260,62 @@ public sealed class SetEquipmentPacketTests
     }
 
     [Fact]
+    public void BannerPatternsComponentCapturesLayersAndDyeColors()
+    {
+        var bannerPatterns = DataComponentTypes.GetId("banner_patterns");
+        Assert.True(bannerPatterns >= 0);
+
+        var body = Body(b =>
+        {
+            b.Add(0);
+            b.AddRange(VarInt(1));
+            b.AddRange(VarInt(1));
+            b.AddRange(VarInt(1));              // one added component
+            b.AddRange(VarInt(0));              // no removals
+            b.AddRange(VarInt(bannerPatterns));
+            b.AddRange(VarInt(2));              // two layers
+            b.AddRange(VarInt(1));              // square_bottom_left
+            b.AddRange(VarInt(4));              // yellow
+            b.AddRange(VarInt(0));              // base
+            b.AddRange(VarInt(15));             // black
+        });
+
+        var result = Read(body, out _, out var complete, out var status);
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        var layers = result[0].Components.BannerPatternLayers;
+        Assert.NotNull(layers);
+        Assert.Equal(2, layers!.Count);
+        Assert.Equal(4, layers[0].DyeColorId);
+        Assert.Equal("square_bottom_left", layers[0].PatternAssetId);
+        Assert.Equal(15, layers[1].DyeColorId);
+        Assert.Equal("base", layers[1].PatternAssetId);
+    }
+
+    [Fact]
+    public void BaseColorComponentCapturesTheDyeId()
+    {
+        var baseColor = DataComponentTypes.GetId("base_color");
+        Assert.True(baseColor >= 0);
+
+        var body = Body(b =>
+        {
+            b.Add(0);
+            b.AddRange(VarInt(1));
+            b.AddRange(VarInt(1));
+            b.AddRange(VarInt(1));              // one added component
+            b.AddRange(VarInt(0));              // no removals
+            b.AddRange(VarInt(baseColor));
+            b.AddRange(VarInt(9));              // cyan
+        });
+
+        var result = Read(body, out _, out var complete, out var status);
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.Equal(9, result[0].Components.BaseColorId);
+    }
+
+    [Fact]
     public void EnchantmentsComponentYieldsQuickChargeLevel()
     {
         var enchantments = DataComponentTypes.GetId("enchantments");
