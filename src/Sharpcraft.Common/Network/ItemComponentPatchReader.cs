@@ -387,8 +387,8 @@ internal static class ItemComponentPatchReader
 
             info = info with
             {
-                TrimMaterialId = TrimMaterialRegistry.IdAt(materialIndex),
-                TrimPatternId = TrimPatternRegistry.IdAt(patternIndex)
+                TrimMaterialId = TrimRegistryTable.MaterialIdAt(materialIndex),
+                TrimPatternId = TrimRegistryTable.PatternIdAt(patternIndex)
             };
             return true;
         }

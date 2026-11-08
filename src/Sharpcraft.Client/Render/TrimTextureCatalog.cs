@@ -38,9 +38,14 @@ public static class TrimTextureCatalog
         };
         var pattern = LocalPath(patternId);
         var material = LocalPath(materialId);
-        var paletteSuffix = PaletteSuffix(equipmentInfo, patternId, materialId);
-        return "trims/entity/" + layer + "/" + pattern + "/" + material +
-               (paletteSuffix is null ? string.Empty : "/" + paletteSuffix);
+        var overrideInfo = ResolveOverride(equipmentInfo, patternId, materialId);
+        var textureSuffix = overrideInfo?.Texture is { } texture
+            ? "/tex/" + LocalPath(texture.ToString())
+            : string.Empty;
+        var paletteSuffix = overrideInfo?.Palette is { } palette
+            ? "/" + LocalPath(palette.ToString())
+            : string.Empty;
+        return "trims/entity/" + layer + "/" + pattern + "/" + material + textureSuffix + paletteSuffix;
     }
 
     /// <summary>Loads and palette-maps every bootstrap pattern/material pair for both humanoid armor layers.</summary>
@@ -101,27 +106,41 @@ public static class TrimTextureCatalog
             }
         }
 
-        // Equipment assets may replace the material palette (for example iron armor uses iron_darker trim).
+        // Equipment assets may replace the material palette (for example iron armor uses iron_darker trim) or the
+        // pattern texture. Generate the matching atlas variants under their equipment-specific keys.
         foreach (var equipmentInfo in EquipmentTextureCatalog.Assets.All)
         {
             foreach (var pattern in TrimPatternRegistry.Entries)
             {
                 foreach (var material in TrimMaterialRegistry.Entries)
                 {
-                    var paletteSuffix = PaletteSuffix(equipmentInfo, pattern.Id, material.Id);
-                    if (paletteSuffix is null || !TryLoad(resources, "palettes/" + paletteSuffix, out var targetPalette))
+                    var overrideInfo = ResolveOverride(equipmentInfo, pattern.Id, material.Id);
+                    if (overrideInfo is null)
                     {
                         continue;
                     }
 
+                    var paletteId = overrideInfo.Palette;
+                    TextureData? targetPalette = null;
+                    if (paletteId is { } palette && !TryLoad(resources, "palettes/" + LocalPath(palette.ToString()), out targetPalette))
+                    {
+                        continue;
+                    }
+
+                    var baseTexturePath = overrideInfo.Texture is { } texture
+                        ? LocalPath(texture.ToString())
+                        : LocalPath(pattern.AssetId);
                     foreach (var layerType in new[] { EquipmentLayerType.Humanoid, EquipmentLayerType.HumanoidLeggings })
                     {
-                        if (!patterns.TryGetValue((layerType, pattern.Id), out var trimTexture))
+                        var layer = layerType == EquipmentLayerType.Humanoid ? "humanoid" : "humanoid_leggings";
+                        if (!TryLoad(resources, "trims/entity/" + layer + "/" + baseTexturePath, out var trimTexture))
                         {
                             continue;
                         }
 
-                        var mapped = MapPalette(basePalette, targetPalette, trimTexture);
+                        var mapped = targetPalette is null
+                            ? trimTexture
+                            : MapPalette(basePalette, targetPalette, trimTexture);
                         if (mapped is not null)
                         {
                             result[Path(layerType, pattern.Id, material.Id, equipmentInfo)] = mapped;
@@ -203,7 +222,10 @@ public static class TrimTextureCatalog
         return true;
     }
 
-    private static string? PaletteSuffix(EquipmentClientInfo? equipmentInfo, string patternId, string materialId)
+    private static EquipmentTrimOverride? ResolveOverride(
+        EquipmentClientInfo? equipmentInfo,
+        string patternId,
+        string materialId)
     {
         if (equipmentInfo is null ||
             !Identifier.TryParse(patternId, out var pattern) ||
@@ -212,9 +234,7 @@ public static class TrimTextureCatalog
             return null;
         }
 
-        return equipmentInfo.ResolveTrim(material, pattern)?.Palette is { } palette
-            ? LocalPath(palette.ToString())
-            : null;
+        return equipmentInfo.ResolveTrim(material, pattern);
     }
 
     private static string LocalPath(string id)

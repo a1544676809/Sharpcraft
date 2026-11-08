@@ -64,6 +64,18 @@ public sealed class TrimTextureTests
 
         Assert.Equal("trims/entity/humanoid/coast/iron/trim/iron_darker",
             TrimTextureCatalog.Path(EquipmentLayerType.Humanoid, "minecraft:coast", "minecraft:iron", info));
+
+        var textureOverride = info with
+        {
+            TrimOverrides =
+            [
+                new EquipmentTrimOverride(
+                    new EquipmentTrimPredicate(Material: new Identifier("minecraft", "iron")),
+                    Texture: new Identifier("minecraft", "custom"))
+            ]
+        };
+        Assert.Equal("trims/entity/humanoid/coast/iron/tex/custom",
+            TrimTextureCatalog.Path(EquipmentLayerType.Humanoid, "minecraft:coast", "minecraft:iron", textureOverride));
     }
 
     [Fact]

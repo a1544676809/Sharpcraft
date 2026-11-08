@@ -281,6 +281,7 @@ internal sealed class InteractiveSession
         _entities.World = world;
         _interpolator = new PlayerInterpolator(player, _camera.Yaw);
         _live = live;
+        Sharpcraft.Common.Registries.TrimRegistryTable.Configure(live?.Registries);
         _sync = live is null ? null : new PlayerSync();
         // Animation state is created per tracked entity and carried through the render state; the registry lives in the
         // rendering layer so the world model itself stays free of rendering types.
