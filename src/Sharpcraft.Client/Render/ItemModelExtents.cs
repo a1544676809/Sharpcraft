@@ -43,6 +43,63 @@ public readonly record struct ItemModelExtents(Vector3 Min, Vector3 Max)
     public bool IsDeeperThanFlatItem => Depth > FlatItemThreshold;
 
     /// <summary>
+    /// The reference visits extents *after* <c>LayerRenderState.applyTransform</c>, so the display transform (including
+    /// its −0.5 centring and scale) is part of the box the item entity layout measures. This transforms the eight
+    /// corners and re-boxes them, exactly like the reference collecting transformed corner points.
+    /// </summary>
+    public ItemModelExtents Transformed(Matrix4x4 matrix)
+    {
+        var min = new Vector3(float.MaxValue);
+        var max = new Vector3(float.MinValue);
+        for (var corner = 0; corner < 8; corner++)
+        {
+            var point = new Vector3(
+                (corner & 1) == 0 ? Min.X : Max.X,
+                (corner & 2) == 0 ? Min.Y : Max.Y,
+                (corner & 4) == 0 ? Min.Z : Max.Z);
+            var transformed = Vector3.Transform(point, matrix);
+            min = Vector3.Min(min, transformed);
+            max = Vector3.Max(max, transformed);
+        }
+
+        return new ItemModelExtents(min, max);
+    }
+
+    /// <summary>
+    /// Extents of a resolved item model in model space (pixels over sixteen, Y up). Cuboid models use their
+    /// <c>elements</c>; models without elements — generated and handheld sprites — use <see cref="FlatItem"/>.
+    /// </summary>
+    public static ItemModelExtents FromResolution(ItemModelResolution resolution)
+    {
+        ArgumentNullException.ThrowIfNull(resolution);
+        var cuboids = resolution.Cuboids;
+        if (cuboids.Count == 0)
+        {
+            return FlatItem;
+        }
+
+        var min = new Vector3(float.MaxValue);
+        var max = new Vector3(float.MinValue);
+        foreach (var element in cuboids)
+        {
+            min = Vector3.Min(min, Vector3.Min(element.From, element.To));
+            max = Vector3.Max(max, Vector3.Max(element.From, element.To));
+        }
+
+        return new ItemModelExtents(min / 16f, max / 16f);
+    }
+
+    /// <summary>Extents for a display context: the model box after its <c>ItemTransform</c>, matching the reference.</summary>
+    public static ItemModelExtents ForDisplay(ItemModelResolution resolution, ItemDisplayContext context)
+    {
+        ArgumentNullException.ThrowIfNull(resolution);
+        var baseExtents = FromResolution(resolution);
+        return resolution.Display.TryGetValue(context, out var transform)
+            ? baseExtents.Transformed(transform.ToMatrix())
+            : baseExtents.Transformed(ItemDisplayTransform.None.ToMatrix());
+    }
+
+    /// <summary>
     /// Baked cuboids live in entity space, where the model's feet are <see cref="ModelHeightPixels"/> pixels up. This is
     /// the bakery's default <c>modelHeight</c>, and it has to be removed to get back to model space.
     /// </summary>

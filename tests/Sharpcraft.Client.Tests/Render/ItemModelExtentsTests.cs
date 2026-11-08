@@ -35,6 +35,56 @@ public sealed class ItemModelExtentsTests
     }
 
     [Fact]
+    public void ACuboidModelUsesItsElementsAndBecomesDeep()
+    {
+        var resolution = new ItemModelResolution(
+            "minecraft:block/stone",
+            new Dictionary<string, string>(),
+            new Dictionary<ItemDisplayContext, ItemDisplayTransform>
+            {
+                [ItemDisplayContext.Ground] = new(default, new System.Numerics.Vector3(0f, 3f * 0.0625f, 0f),
+                    new System.Numerics.Vector3(0.25f, 0.25f, 0.25f))
+            },
+            Elements:
+            [
+                new ItemModelElement(
+                    new System.Numerics.Vector3(0f, 0f, 0f),
+                    new System.Numerics.Vector3(16f, 16f, 16f),
+                    new Dictionary<ModelFaceDirection, ItemModelFace>())
+            ]);
+
+        var model = ItemModelExtents.FromResolution(resolution);
+        Assert.Equal(0f, model.Min.X, 6);
+        Assert.Equal(1f, model.Max.X, 6);
+        Assert.Equal(1f, model.Max.Z - model.Min.Z, 6);
+
+        // The reference measures the box after the display transform: ground scale 0.25 shrinks the cube to a quarter
+        // block, which still clears the flat-item threshold.
+        var ground = ItemModelExtents.ForDisplay(resolution, ItemDisplayContext.Ground);
+        Assert.Equal(0.25f, ground.Max.X - ground.Min.X, 6);
+        Assert.Equal(0.25f, ground.Depth, 6);
+        Assert.True(ground.IsDeeperThanFlatItem);
+    }
+
+    [Fact]
+    public void AFlatModelStaysThinAfterTheDisplayTransform()
+    {
+        var resolution = new ItemModelResolution(
+            "minecraft:item/iron_sword",
+            new Dictionary<string, string>(),
+            new Dictionary<ItemDisplayContext, ItemDisplayTransform>
+            {
+                [ItemDisplayContext.Ground] = new(default, System.Numerics.Vector3.Zero,
+                    new System.Numerics.Vector3(0.25f, 0.25f, 0.25f))
+            });
+
+        // No elements: the generated sprite box is used, and scaling by a quarter keeps it well under the threshold.
+        var ground = ItemModelExtents.ForDisplay(resolution, ItemDisplayContext.Ground);
+        Assert.Equal(0.0625f * 0.25f, ground.Depth, 6);
+        Assert.False(ground.IsDeeperThanFlatItem);
+    }
+
+    [Fact]
     public void AThreeDimensionalModelIsDeeperThanAFlatItem()
     {
         var chest = ItemModelExtents.FromModel(SpecialItemModelDefinition.Chest);
