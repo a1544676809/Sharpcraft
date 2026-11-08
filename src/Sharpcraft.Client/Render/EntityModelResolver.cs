@@ -235,6 +235,25 @@ public static class EntityModelResolver
         return identifier.Path;
     }
 
+    /// <summary>Resolves one hand's item tint (tint index 0), or white when the item has no tint source.</summary>
+    public static Vector3 ResolveHeldItemTint(EntityRenderState state, bool offhand = false)
+    {
+        var itemId = offhand ? state.OffHandItemId : state.MainHandItemId;
+        if (ItemModels is null || Items?.ById(itemId) is not { } item)
+        {
+            return Vector3.One;
+        }
+
+        var model = ItemModels.Resolve(item.Id.ToString());
+        return model is null || model.SpecialRendererType is not null
+            ? Vector3.One
+            : TintOf(model, ItemModels.GrassColormap);
+    }
+
+    /// <summary>Tint index 0 of a resolved model, or white when it declares no tint source.</summary>
+    public static Vector3 TintOf(ItemModelResolution? model, GrassColorMap? grass) =>
+        model is null ? Vector3.One : model.TintFor(0, grass);
+
     /// <summary>Resolves the leather/dyed tint for an equipment slot, or white when the item is not dyeable.</summary>
     public static Vector3 ResolveEquipmentTint(EntityRenderState state, EquipmentAssetKind kind, int slot)
     {

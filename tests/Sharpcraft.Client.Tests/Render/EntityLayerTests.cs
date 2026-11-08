@@ -300,6 +300,32 @@ public sealed class EntityLayerTests
     }
 
     [Fact]
+    public void HeldItemQuadCarriesAHandTintSelector()
+    {
+        // Leaves and short grass are gray sprites in vanilla and only look right when the item tint multiplies the
+        // vertex colour, so the held quad must expose a tint selector just like the drop path.
+        var part = HeldItemModelDefinition.Definition.Compiled!.Find("held_item");
+        Assert.NotNull(part);
+        Assert.NotNull(part!.TintSelector);
+    }
+
+    [Fact]
+    public void TintOfReturnsWhiteWhenTheModelHasNoTintSource()
+    {
+        var plain = new ItemModelResolution(
+            "minecraft:item/iron_sword",
+            new Dictionary<string, string>(),
+            new Dictionary<ItemDisplayContext, ItemDisplayTransform>());
+        Assert.Equal(System.Numerics.Vector3.One, EntityModelResolver.TintOf(plain, grass: null));
+        Assert.Equal(System.Numerics.Vector3.One, EntityModelResolver.TintOf(null, grass: null));
+
+        var tinted = plain with { Tints = [new ItemTintSource(ItemTintKind.Constant, unchecked((int)0xFF008000), 0d, 0d)] };
+        var color = EntityModelResolver.TintOf(tinted, grass: null);
+        Assert.Equal(0f, color.X, 6);
+        Assert.Equal(128f / 255f, color.Y, 6);
+    }
+
+    [Fact]
     public void HappyGhastRopesRequireLeashAndHarness()
     {
         var harness = EntityModelResolver.Items!.GetId(Identifier.Parse("minecraft:white_harness"));
