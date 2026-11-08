@@ -200,6 +200,59 @@ public sealed class DroppedItemMesher
     }
 
     /// <summary>
+    /// Appends resolved quads with a caller-supplied transform. Shared by the drop path and the held-item pass so both
+    /// emit the identical vertex layout and tinting; returns how many quads were written.
+    /// </summary>
+    public static int EmitQuads(
+        DynamicGeometry geometry,
+        List<ItemModelQuad> quads,
+        in Matrix4x4 world,
+        ISpriteAtlas atlas,
+        ItemModelResolution resolution,
+        GrassColorMap? grass,
+        ref int vertexFloats,
+        ref int indexCount)
+    {
+        ArgumentNullException.ThrowIfNull(geometry);
+        ArgumentNullException.ThrowIfNull(quads);
+        ArgumentNullException.ThrowIfNull(atlas);
+        ArgumentNullException.ThrowIfNull(resolution);
+
+        var written = 0;
+        foreach (var quad in quads)
+        {
+            if (atlas.Get(quad.Texture) is not { } sprite)
+            {
+                continue;
+            }
+
+            EnsureCapacity(geometry, vertexFloats, indexCount + 6);
+            var first = (uint)(vertexFloats / VertexStride);
+            var tint = resolution.TintFor(quad.TintIndex, grass);
+            for (var corner = 0; corner < 4; corner++)
+            {
+                WriteVertex(
+                    geometry.Vertices,
+                    ref vertexFloats,
+                    Vector3.Transform(quad.Corner(corner), world),
+                    quad.Uv(corner),
+                    sprite,
+                    tint);
+            }
+
+            geometry.Indices[indexCount++] = first;
+            geometry.Indices[indexCount++] = first + 1;
+            geometry.Indices[indexCount++] = first + 2;
+            geometry.Indices[indexCount++] = first;
+            geometry.Indices[indexCount++] = first + 2;
+            geometry.Indices[indexCount++] = first + 3;
+            written++;
+        }
+
+        return written;
+    }
+
+    /// <summary>
     /// Texture paths a dropped item needs in the item atlas. Element models contribute one path per face; generated
     /// models contribute their <c>layer0</c>.
     /// </summary>

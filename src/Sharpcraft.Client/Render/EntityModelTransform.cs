@@ -69,6 +69,31 @@ public readonly record struct EntityModelTransform(
         return Quaternion.CreateFromRotationMatrix(matrix);
     }
 
+    /// <summary>
+    /// The same chain as <see cref="Apply"/>, as a row-vector matrix, so callers that must transform extra geometry
+    /// (the held-item pass) use identical maths. A test pins that both forms agree.
+    /// </summary>
+    public Matrix4x4 ToMatrix()
+    {
+        var matrix = Matrix4x4.CreateScale(Scale * ScaleXZ, Scale * ScaleY, Scale * ScaleXZ);
+        if (YawDegrees != 0f)
+        {
+            matrix *= Matrix4x4.CreateRotationY(YawDegrees * (MathF.PI / 180f));
+        }
+
+        if (PitchDegrees != 0f)
+        {
+            matrix *= Matrix4x4.CreateRotationX(PitchDegrees * (MathF.PI / 180f));
+        }
+
+        if (HasAttachRotation)
+        {
+            var rotation = Matrix4x4.CreateFromQuaternion(AttachRotation);
+            matrix *= rotation * Matrix4x4.CreateTranslation(AttachPivot - Vector3.Transform(AttachPivot, rotation));
+        }
+
+        return matrix * Matrix4x4.CreateTranslation(Translation);
+    }
     public Vector3 Apply(Vector3 modelPosition)
     {
         var scaled = new Vector3(

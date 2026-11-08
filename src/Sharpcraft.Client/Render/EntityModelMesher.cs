@@ -23,6 +23,9 @@ public sealed partial class EntityModelMesher
     /// <summary>One reusable pose per entity in the current batch, so a steady frame does not allocate poses.</summary>
     private readonly List<EntityPose> _animationPoses = [];
 
+    /// <summary>Poses prepared for the most recent layer build, indexed like the batch that produced them.</summary>
+    public IReadOnlyList<EntityPose> PreparedPoses => _animationPoses;
+
     /// <summary>
     /// Reused plan/group buffers for <see cref="BuildModelBackedLayers"/>. Cleared per frame/layer so a steady frame
     /// allocates no dictionaries, group records or entity lists.
@@ -132,7 +135,7 @@ public sealed partial class EntityModelMesher
         var byKind = new Dictionary<EntityGeometryLayerKind, EntityRenderLayerDefinition>();
         foreach (var entity in entities)
         {
-            var model = ResolveModel(entity, variants);
+            var model = ResolveEntityModel(entity, variants);
             foreach (var layer in model.RenderLayers)
             {
                 if (!byKind.TryGetValue(layer.Kind, out var existing) || layer.Order < existing.Order)
@@ -152,7 +155,7 @@ public sealed partial class EntityModelMesher
     {
         foreach (var entity in entities)
         {
-            foreach (var layer in ResolveModel(entity, variants).RenderLayers)
+            foreach (var layer in ResolveEntityModel(entity, variants).RenderLayers)
             {
                 if (layer.Model is not null)
                 {
@@ -186,7 +189,7 @@ public sealed partial class EntityModelMesher
         _modelBackedPlanByKey.Clear();
         foreach (var entity in entities)
         {
-            foreach (var layer in ResolveModel(entity, variants).RenderLayers)
+            foreach (var layer in ResolveEntityModel(entity, variants).RenderLayers)
             {
                 _modelBackedPlanByKey[(layer.Name, layer.Kind, layer.Order)] = layer;
             }
@@ -223,7 +226,7 @@ public sealed partial class EntityModelMesher
             for (var entityIndex = 0; entityIndex < entities.Length; entityIndex++)
             {
                 var entity = entities[entityIndex];
-                var model = ResolveModel(entity, variants);
+                var model = ResolveEntityModel(entity, variants);
                 EntityRenderLayerDefinition? entityLayer = null;
                 foreach (var candidate in model.RenderLayers)
                 {
@@ -368,7 +371,7 @@ public sealed partial class EntityModelMesher
                 continue;
             }
 
-            var model = modelOverride ?? ResolveModel(entity, variants);
+            var model = modelOverride ?? ResolveEntityModel(entity, variants);
             if (model.Compiled is { } compiled)
             {
                 foreach (var cube in compiled.Cubes)
@@ -400,7 +403,7 @@ public sealed partial class EntityModelMesher
             // Grouped batches carry their own pose list indexed by the compact span; otherwise use the per-batch
             // prepared poses (indexed by the original entity order) or one explicit pose for the whole span.
             var entityPose = poses is not null ? poses[entityIndex] : usePreparedPoses ? _animationPoses[entityIndex] : pose;
-            var model = modelOverride ?? ResolveModel(entity, variants);
+            var model = modelOverride ?? ResolveEntityModel(entity, variants);
             if (model is null)
             {
                 continue;
@@ -539,7 +542,7 @@ public sealed partial class EntityModelMesher
         return target;
     }
 
-    private static EntityModelDefinition ResolveModel(EntityRenderState entity, EntityVariantTable? variants)
+    public static EntityModelDefinition ResolveEntityModel(EntityRenderState entity, EntityVariantTable? variants)
     {
         // The player profile's slim flag selects the 3px-arm model before any registry-variant lookup; all other
         // entities (and wide players) keep the existing resolution path unchanged.
@@ -805,13 +808,7 @@ public sealed partial class EntityModelMesher
                 rotation.Y - poseOffset.Rotation.Y,
                 rotation.Z + poseOffset.Rotation.Z)
             * Matrix4x4.CreateTranslation(pivot);
-        var frame = local * parentFrame;
-        if (node.TransformSelector is { } transformSelector)
-        {
-            frame = transformSelector(entity) * frame;
-        }
-
-        return frame;
+        return local * parentFrame;
     }
 
     /// <summary>

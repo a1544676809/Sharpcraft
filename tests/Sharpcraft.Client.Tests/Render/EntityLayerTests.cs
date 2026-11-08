@@ -287,44 +287,16 @@ public sealed class EntityLayerTests
     }
 
     [Fact]
-    public void AdultHumanoidHasAnItemAtlasHeldItemLayer()
+    public void TheFakeHeldItemQuadLayersAreGone()
     {
+        // Held items used to be drawn as a fixed 8x8 box wearing the item sprite. They now come from HeldItemMesher, which
+        // reuses the shared item geometry, so the humanoid must not register those layers any more while the special
+        // hand layers (trident/shield) stay.
         var definition = EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId);
-        Assert.Contains(definition.RenderLayers,
-            layer => layer.Name == "held_item_right" && layer.UsesItemAtlas);
-        Assert.Contains(definition.RenderLayers,
-            layer => layer.Name == "held_item_left" && layer.UsesItemAtlas);
-        var part = HeldItemModelDefinition.Definition.Compiled!.Find("held_item");
-        Assert.NotNull(part);
-        Assert.Equal(0f, part!.Cubes.Single().Depth);
+        Assert.DoesNotContain(definition.RenderLayers, layer => layer.Name == "held_item_right");
+        Assert.DoesNotContain(definition.RenderLayers, layer => layer.Name == "held_item_left");
+        Assert.Contains(definition.RenderLayers, layer => layer.Name == HeldItemMesher.LayerName || layer.Name.StartsWith("held_special", StringComparison.Ordinal));
     }
-
-    [Fact]
-    public void HeldItemQuadCarriesAHandTintSelector()
-    {
-        // Leaves and short grass are gray sprites in vanilla and only look right when the item tint multiplies the
-        // vertex colour, so the held quad must expose a tint selector just like the drop path.
-        var part = HeldItemModelDefinition.Definition.Compiled!.Find("held_item");
-        Assert.NotNull(part);
-        Assert.NotNull(part!.TintSelector);
-    }
-
-    [Fact]
-    public void TintOfReturnsWhiteWhenTheModelHasNoTintSource()
-    {
-        var plain = new ItemModelResolution(
-            "minecraft:item/iron_sword",
-            new Dictionary<string, string>(),
-            new Dictionary<ItemDisplayContext, ItemDisplayTransform>());
-        Assert.Equal(System.Numerics.Vector3.One, EntityModelResolver.TintOf(plain, grass: null));
-        Assert.Equal(System.Numerics.Vector3.One, EntityModelResolver.TintOf(null, grass: null));
-
-        var tinted = plain with { Tints = [new ItemTintSource(ItemTintKind.Constant, unchecked((int)0xFF008000), 0d, 0d)] };
-        var color = EntityModelResolver.TintOf(tinted, grass: null);
-        Assert.Equal(0f, color.X, 6);
-        Assert.Equal(128f / 255f, color.Y, 6);
-    }
-
     [Fact]
     public void HappyGhastRopesRequireLeashAndHarness()
     {

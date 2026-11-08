@@ -76,7 +76,6 @@ public sealed class EntityModelPartNode
         VisibleWhen = visibleWhen;
         RotationSelector = rotationSelector;
         YOffsetSelector = yOffsetSelector;
-        TransformSelector = transformSelector;
         PoseSource = poseSource;
         TintSelector = tintSelector;
     }
@@ -94,9 +93,6 @@ public sealed class EntityModelPartNode
     public Func<Sharpcraft.Client.World.EntityRenderState, bool>? VisibleWhen { get; }
     public Func<Sharpcraft.Client.World.EntityRenderState, Vector3>? RotationSelector { get; }
     public Func<Sharpcraft.Client.World.EntityRenderState, float>? YOffsetSelector { get; }
-
-    /// <summary>Extra per-entity matrix applied in this node's local space (held-item anchor).</summary>
-    public Func<Sharpcraft.Client.World.EntityRenderState, System.Numerics.Matrix4x4>? TransformSelector { get; }
     public string? PoseSource { get; }
     public Func<Sharpcraft.Client.World.EntityRenderState, Vector3>? TintSelector { get; }
 }

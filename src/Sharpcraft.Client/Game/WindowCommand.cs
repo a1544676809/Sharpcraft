@@ -439,26 +439,39 @@ internal static class WindowCommand
         session.PlayerSkinLookup = playerSkins.TryGet;
         var modelMesher = new Sharpcraft.Client.Render.EntityModelMesher();
         var droppedItemMesher = new Sharpcraft.Client.Render.DroppedItemMesher();
+        var heldItemMesher = new Sharpcraft.Client.Render.HeldItemMesher();
         var variantTable = Sharpcraft.Client.Render.EntityVariantTable.FromRegistries(live?.Registries);
 
         /// <summary>
         /// Adds the dropped-item layer after the entity layers. Both branches of the entity path funnel here so the drop
         /// geometry is produced by exactly one place, whichever entity skin path is active.
         /// </summary>
-        IReadOnlyList<Sharpcraft.Framework.Rendering.EntityGeometryLayer>? AppendDroppedItems(
+        IReadOnlyList<Sharpcraft.Framework.Rendering.EntityGeometryLayer>? AppendItemLayers(
             IReadOnlyList<Sharpcraft.Framework.Rendering.EntityGeometryLayer>? layers,
             IReadOnlyList<EntityRenderState> entities)
         {
-            var dropLayer = droppedItemMesher.Build(entities, itemAtlas);
-            if (dropLayer is null)
+            // Drops and held items both consume the shared item geometry; held items additionally need the poses the
+            // entity layers were just built with, so this runs after BuildLayers.
+            var extra = new List<Sharpcraft.Framework.Rendering.EntityGeometryLayer>(2);
+            if (droppedItemMesher.Build(entities, itemAtlas) is { } dropLayer)
+            {
+                extra.Add(dropLayer);
+            }
+
+            if (heldItemMesher.Build(entities, modelMesher.PreparedPoses, variantTable, itemAtlas) is { } heldLayer)
+            {
+                extra.Add(heldLayer);
+            }
+
+            if (extra.Count == 0)
             {
                 return layers;
             }
 
             var combined = layers is null
-                ? new List<Sharpcraft.Framework.Rendering.EntityGeometryLayer>(1)
+                ? new List<Sharpcraft.Framework.Rendering.EntityGeometryLayer>(extra.Count)
                 : [.. layers];
-            combined.Add(dropLayer);
+            combined.AddRange(extra);
             return combined;
         }
 
@@ -535,13 +548,13 @@ internal static class WindowCommand
                 if (entitySkinLibrary.Atlas is { } entitySkinAtlas)
                 {
                     var atlasSprite = new Sharpcraft.Client.Assets.SpriteRect(0, 0, entitySkinAtlas.Texture.Width, entitySkinAtlas.Texture.Height, 1) { U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f };
-                    return AppendDroppedItems(
+                    return AppendItemLayers(
                         modelMesher.BuildLayers(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), atlasSprite, 64, 64, skinAtlas: entitySkinAtlas, variants: variantTable, itemAtlas: itemAtlas),
                         visibleEntities);
                 }
 
                 return entitySkinSprite is { } skinModel
-                    ? AppendDroppedItems(
+                    ? AppendItemLayers(
                         modelMesher.BuildLayers(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), skinModel, skinModel.Width == 1600 ? 64 : skinModel.Width, skinModel.Height == 1600 ? 64 : skinModel.Height, variants: variantTable, itemAtlas: itemAtlas),
                         visibleEntities)
                     : null;

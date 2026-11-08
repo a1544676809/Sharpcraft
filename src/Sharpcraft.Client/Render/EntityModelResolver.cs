@@ -235,6 +235,21 @@ public static class EntityModelResolver
         return identifier.Path;
     }
 
+    /// <summary>
+    /// Resolves one hand's item model, or null when the hand is empty, the item is unknown, or the model is a special
+    /// renderer (those keep their own hand layers).
+    /// </summary>
+    public static ItemModelResolution? ResolveHeldItemModel(EntityRenderState state, bool offhand = false)
+    {
+        var itemId = offhand ? state.OffHandItemId : state.MainHandItemId;
+        if (ItemModels is null || Items?.ById(itemId) is not { } item)
+        {
+            return null;
+        }
+
+        var model = ItemModels.Resolve(item.Id.ToString());
+        return model is null || model.SpecialRendererType is not null ? null : model;
+    }
     /// <summary>Resolves one hand's item tint (tint index 0), or white when the item has no tint source.</summary>
     public static Vector3 ResolveHeldItemTint(EntityRenderState state, bool offhand = false)
     {
@@ -750,26 +765,6 @@ public static class EntityModelResolver
         {
             var existing = renderLayers ?? definition.RenderLayers;
             var heldLayers = new List<EntityRenderLayerDefinition>(existing);
-            heldLayers.Add(new EntityRenderLayerDefinition(
-                "held_item_right",
-                EntityGeometryLayerKind.Cutout,
-                50,
-                baby ? HeldItemModelDefinition.BabyDefinition : HeldItemModelDefinition.Definition,
-                TexturePath: null,
-                TextureSelector: state => ResolveHeldItemTexture(state, offhand: false),
-                VisibleWhen: state => ResolveHeldItemTexture(state, offhand: false) is not null,
-                AllCubes: true,
-                UsesItemAtlas: true));
-            heldLayers.Add(new EntityRenderLayerDefinition(
-                "held_item_left",
-                EntityGeometryLayerKind.Cutout,
-                51,
-                baby ? HeldItemModelDefinition.BabyLeftDefinition : HeldItemModelDefinition.LeftDefinition,
-                TexturePath: null,
-                TextureSelector: state => ResolveHeldItemTexture(state, offhand: true),
-                VisibleWhen: state => ResolveHeldItemTexture(state, offhand: true) is not null,
-                AllCubes: true,
-                UsesItemAtlas: true));
             AddSpecialHandLayers(heldLayers, "trident", "minecraft:trident", SpecialItemModelDefinition.HeldTridentRight, SpecialItemModelDefinition.HeldTridentLeft, SpecialItemModelDefinition.TridentTexture,
                 static (_, _) => SpecialItemModelDefinition.TridentTexture);
             AddSpecialHandLayers(heldLayers, "shield", "minecraft:shield", SpecialItemModelDefinition.HeldShieldRight, SpecialItemModelDefinition.HeldShieldLeft, SpecialItemModelDefinition.ShieldTexture,
