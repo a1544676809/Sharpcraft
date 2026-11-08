@@ -75,7 +75,8 @@ public static class VanillaMeshBakery
                 UvWidth: cube.UvWidth,
                 UvHeight: cube.UvHeight,
                 UvDepth: cube.UvDepth,
-                UsesItemAtlas: cube.UsesItemAtlas));
+                UsesItemAtlas: cube.UsesItemAtlas,
+                TextureSelector: cube.TextureSelector));
         }
 
         var children = new List<EntityModelPartNode>(part.Children.Count);
@@ -98,7 +99,8 @@ public static class VanillaMeshBakery
             cubes,
             children,
             firstCube?.VisibleWhen,
-            poseSource: firstCube?.PoseSource);
+            poseSource: firstCube?.PoseSource,
+            tintSelector: firstCube?.TintSelector);
     }
 
     private static EntityModelPart BakeCube(

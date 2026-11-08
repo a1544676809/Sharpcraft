@@ -60,7 +60,9 @@ public readonly record struct VanillaCubeDefinition(
     int UvWidth = 0,
     int UvHeight = 0,
     int UvDepth = 0,
-    bool UsesItemAtlas = false);
+    bool UsesItemAtlas = false,
+    Func<EntityRenderState, string?>? TextureSelector = null,
+    Func<EntityRenderState, Vector3>? TintSelector = null);
 
 /// <summary>
 /// One node of the declarative model tree. Direct children of <c>VanillaMeshDefinition.Root</c> are root parts;

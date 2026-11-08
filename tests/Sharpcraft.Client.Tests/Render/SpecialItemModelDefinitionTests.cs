@@ -91,6 +91,23 @@ public sealed class SpecialItemModelDefinitionTests
     }
 
     [Fact]
+    public void CubeLevelTextureAndTintSelectorsSurviveBaking()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddOrReplaceChild("plane", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("plane", 0, 0, 0f, 0f, 0f, 16f, 16f, 1f,
+                TextureSelector: static _ => "entity/shield/shield_base",
+                TintSelector: static _ => new System.Numerics.Vector3(0.5f, 0.25f, 0.75f)));
+        var definition = EntityModelDefinition.FromTree(
+            "selector_probe", 16, 16, new VanillaMeshDefinition(root),
+            PlayerModelDefinition.DefaultFaceTransforms, "entity/shield/base", 1f);
+
+        var part = definition.Compiled!.Find("plane")!;
+        Assert.Equal("entity/shield/shield_base", part.Cubes.Single().TextureSelector!(default!));
+        Assert.Equal(new System.Numerics.Vector3(0.5f, 0.25f, 0.75f), part.TintSelector!(default!));
+    }
+
+    [Fact]
     public void HeldSpecialModelsCarryTheArmPivot()
     {
         Assert.NotNull(SpecialItemModelDefinition.HeldTridentRight.Compiled!.Find("right_arm"));
