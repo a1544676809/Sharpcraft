@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Sharpcraft.Assets\Sharpcraft.Assets.csproj" />
+    <ProjectReference Include="..\..\src\Sharpcraft.Client\Sharpcraft.Client.csproj" />
+    <ProjectReference Include="..\..\src\Sharpcraft.Common\Sharpcraft.Common.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Sharpcraft.Assets" />
+  </ItemGroup>
+</Project>

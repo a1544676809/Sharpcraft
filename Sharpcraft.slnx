@@ -51,6 +51,7 @@
     <Project Path="tools/Sharpcraft.ClassMap/Sharpcraft.ClassMap.csproj" />
     <Project Path="tools/Sharpcraft.Docs.Indexer/Sharpcraft.Docs.Indexer.csproj" />
     <Project Path="tools/Sharpcraft.ItemRender.Audit/Sharpcraft.ItemRender.Audit.csproj" />
+    <Project Path="tools/Sharpcraft.ItemRender.Sheet/Sharpcraft.ItemRender.Sheet.csproj" />
     <Project Path="tools/Sharpcraft.ReferenceVerifier/Sharpcraft.ReferenceVerifier.csproj" />
   </Folder>
 </Solution>

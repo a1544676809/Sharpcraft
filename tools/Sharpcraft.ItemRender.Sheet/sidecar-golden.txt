@@ -1,0 +1,24 @@
+minecraft:iron_sword	quads:82	display:ground
+minecraft:diamond_pickaxe	quads:74	display:ground
+minecraft:short_grass	quads:180	display:ground
+minecraft:apple	quads:56	display:ground
+minecraft:bread	quads:60	display:ground
+minecraft:torch	quads:26	display:ground
+minecraft:stick	quads:54	display:ground
+minecraft:bucket	quads:54	display:ground
+minecraft:bow	quads:98	display:ground
+minecraft:arrow	quads:56	display:ground
+minecraft:wheat	quads:84	display:ground
+minecraft:book	quads:64	display:ground
+minecraft:compass	quads:54	display:ground
+minecraft:clock	quads:62	display:ground
+minecraft:iron_ingot	quads:58	display:ground
+minecraft:diamond	quads:52	display:ground
+minecraft:cooked_beef	quads:52	display:ground
+minecraft:ender_pearl	quads:54	display:ground
+minecraft:chest	special:minecraft:chest
+minecraft:shield	special:minecraft:shield
+minecraft:trident	special:minecraft:trident
+minecraft:oak_leaves	quads:6	display:ground
+minecraft:redstone	quads:48	display:ground
+minecraft:copper_ingot	quads:58	display:ground

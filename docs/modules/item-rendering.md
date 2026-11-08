@@ -197,6 +197,22 @@ R  = CreateFromQuaternion(qx * qy * qz)
 修复前 `chest_gui` 的点 (1,0,0) 期望 `(0.000000, -0.049662, -0.538983)`、实际 `(-0.080881, -0.114383, -0.522823)`；修复后全部 36 个点吻合到 1e-4。也就是说**所有带旋转的 display 上下文（GUI、掉落物 ground、手持第三人称）此前朝向都是错的**，这也解释了手持物品"位置/朝向莫名"的现象。
 
 其余随附测试：四个上下文的缩放（gui 0.625 / ground 0.25 / fixed 0.5 / 第三人称 0.375）、中心点映射到 translation、线性部分缩放、`NO_TRANSFORM` 只居中、左手修复语义。
+### 3.5.6 接触表渲染（L4）
+
+`tools/Sharpcraft.ItemRender.Sheet` 把一批物品按**固定机位 + 固定光照**渲进一张 PNG，用的就是共享物品几何链路（`ItemModelResolver` → `DroppedItemMesher.CollectQuads` → display 变换），因此图和游戏里看到的等价，只是排成网格便于比对。
+
+```
+dotnet run --project tools/Sharpcraft.ItemRender.Sheet -- --pack <pack.zip> \
+    --out sheet.png --context ground [--items a,b,c] [--check sidecar-golden.txt]
+```
+
+- 渲染是**纯 CPU 软光栅**（无 GPU、无窗口），保证图片只取决于几何与贴图，可复现
+- 默认 24 个物品、6 列、每格 128px；`--context` 支持 ground/gui/fixed/thirdperson_righthand，可直接与原版同上下文截图对照
+- 与 PNG 同目录输出 `.txt` sidecar：每个物品解析成多少 quad、是否 special
+
+**金标准用 sidecar 而不是像素哈希**：PNG 是原版贴图的衍生物，按原则 3 不得进仓库；sidecar 只含物品 id 与几何计数，可安全提交，且一样能抓几何/解析回归。当前 `sidecar-golden.txt` 覆盖默认 24 物品在 ground 上下文的结果。
+
+已知可见缺口（有意保留，便于对照时一眼看出）：`chest` / `shield` / `trident` 三个格子是空的——它们走 special 渲染器，不在本几何链路内。
 ### 3.6 图集归属（已核实，非阻塞）
 
 26.3 把精灵分在两个图集：`atlases/items.json` 只收 `item/` 目录与盔甲纹饰置换，`atlases/blocks.json` 收 `block/` 目录与 conduit/bell/book 特例。因此方块类物品模型引用的 `block/*` 纹理在原版来自 **blocks 图集**。
