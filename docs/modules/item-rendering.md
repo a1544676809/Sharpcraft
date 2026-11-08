@@ -47,7 +47,8 @@
 5. 以模型 id 读取 `assets/<namespace>/models/<path>.json`，沿 `parent` 递归合并：
    - `textures`：子层覆盖父层，保留 `layer0..layerN`；
    - `display`：子层 context 覆盖父层，缺失 context 继承父层；
-   - `gui_light`、`elements`、`overrides` 等保留给后续 mesh 阶段。
+   - `elements`：子层声明则**整体替换**父层，不合并；
+   - `gui_light`、`overrides` 等保留给后续 mesh 阶段。
 
 ### 3.2 display context
 
@@ -60,6 +61,27 @@
 - 实体手持层先选 item model（`ItemModelResolver`），再取 `display` 中对应 context 的 transform。
 - 第三/第一人称 context 由渲染器传入；Witch 药水优先走 `WitchItemLayer` 的头/鼻锚点，其他物品走 `CrossedArmsItemLayer`。
 - `SPEAR`/`STAB` 在 `ItemInHandLayer` 的 STAB 分支使用 `SpearAnimations.thirdPersonAttackItem`；T-631a 只记录，不在本刀实现。
+
+### 3.4 模型包围盒（extents）与空间约定
+
+原版在 `ItemStackRenderState.visitExtents` 里先 `layer.applyTransform(pose)` 再收集角点，因此 `getModelBoundingBox()` 得到的是**应用 display 变换之后**的盒子（含 `-0.5` 居中与 scale）。掉落物的 `minOffsetY = -bbox.minY + 0.0625` 与 `modelDepth > 0.0625` 都以此为准。
+
+本仓对应实现：`ItemModelExtents.FromResolution`（元素模型）与 `FromModel`（special 模型）产出模型空间盒子，`Transformed(matrix)` 变换 8 角后重取 AABB，`ForDisplay(resolution, context)` 套用该 context 的 `ItemTransform.ToMatrix()`。
+
+**两类模型处于不同的"作者空间"，这不是缺陷，原版同样如此**：
+
+| 模型族 | 作者空间 | 例子 | 证据 |
+| --- | --- | --- | --- |
+| 方块 / 元素模型（`elements`） | Y 向上，0–16 | `block/cube` 的 `from [0,0,0] to [16,16,16]` | `FaceBakery.defaultFaceUV` 直接用元素坐标 |
+| 实体型 special 模型 | Y 向下（原点以上为负） | `SkullModel.createHeadModel` 的 `addBox(-4,-8,-4, 8,8,8)` | `ModelPart.getExtentsForGui` **不施加** `scale(-1,-1,1)`，直接输出作者坐标 |
+
+因此 `FromModel` 会把烘焙存储的 Y 向上坐标取反回作者空间，`FromResolution` 保持 Y 向上；同一个 item model 的所有层只来自同一族，不会混用。
+
+### 3.5 元素模型解析
+
+- `elements` 由**子模型整体替换**父链贡献，不做合并。
+- 面纹理 `#variable` 的解析 MUST 在整条父链合并完成后进行（原版同样后处理），否则子模型引用父层纹理槽会解析失败。
+- `uv` 缺失时按 `FaceBakery.defaultFaceUV` 的六方向投影自动生成；`rotation`、`tintindex`、`cullface` 原样保留。
 
 ## 4. 真值向量（Golden Vectors）
 
