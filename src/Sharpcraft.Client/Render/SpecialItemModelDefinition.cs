@@ -14,6 +14,13 @@ public static class SpecialItemModelDefinition
 {
     public const string TridentTexture = "entity/trident/trident";
     public const string ShieldTexture = "entity/shield/shield_base_nopattern";
+    public const string ShieldPatternedTexture = "entity/shield/shield_base";
+
+    /// <summary>
+    /// Reference <c>ShieldSpecialRenderer</c> sprite choice: the patterned base is used once the stack carries banner
+    /// patterns or a base colour.
+    /// </summary>
+    public static string ShieldSprite(bool hasPatterns) => hasPatterns ? ShieldPatternedTexture : ShieldTexture;
     public const string BannerTexture = "entity/banner_base";
     public const string DecoratedPotTexture = "entity/decorated_pot/decorated_pot_base";
     public const string DecoratedPotSideTexture = "entity/decorated_pot/decorated_pot_side";

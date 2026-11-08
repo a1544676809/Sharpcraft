@@ -148,6 +148,7 @@ public sealed class TrackedEntity
     private readonly int?[] _equipmentDyeColors = new int?[8];
     private readonly bool?[] _equipmentGlints = new bool?[8];
     private readonly bool?[] _equipmentHasEnchantments = new bool?[8];
+    private readonly bool?[] _equipmentHasBannerPatterns = new bool?[8];
     private readonly string?[] _equipmentTrimMaterials = new string?[8];
     private readonly string?[] _equipmentTrimPatterns = new string?[8];
 
@@ -187,6 +188,16 @@ public sealed class TrackedEntity
     /// <summary>All eight enchantment-presence flags, reused by the per-frame render state.</summary>
     public IReadOnlyList<bool?> EquipmentHasEnchantments => _equipmentHasEnchantments;
 
+    /// <summary>
+    /// Whether one equipment slot's item carries banner patterns or a base colour. The reference shield renderer picks
+    /// between the patterned and unpatterned base sprite from exactly this condition.
+    /// </summary>
+    public bool? EquipmentHasBannerPatternsAt(int slot) =>
+        (uint)slot < (uint)_equipmentHasBannerPatterns.Length ? _equipmentHasBannerPatterns[slot] : null;
+
+    /// <summary>All eight banner-pattern-presence flags, reused by the per-frame render state.</summary>
+    public IReadOnlyList<bool?> EquipmentHasBannerPatterns => _equipmentHasBannerPatterns;
+
     /// <summary>Trim material registry id for one equipment slot, or null when the item has no trim.</summary>
     public string? EquipmentTrimMaterialAt(int slot) =>
         (uint)slot < (uint)_equipmentTrimMaterials.Length ? _equipmentTrimMaterials[slot] : null;
@@ -223,6 +234,9 @@ public sealed class TrackedEntity
             _equipmentHasEnchantments[item.Slot] = item.IsEmpty ? null : item.Components.HasEnchantments;
             _equipmentTrimMaterials[item.Slot] = item.IsEmpty ? null : item.Components.TrimMaterialId;
             _equipmentTrimPatterns[item.Slot] = item.IsEmpty ? null : item.Components.TrimPatternId;
+            _equipmentHasBannerPatterns[item.Slot] = item.IsEmpty
+                ? null
+                : (item.Components.BannerPatternLayers is { Count: > 0 } || item.Components.BaseColorId is not null);
             EquipmentUpdates++;
         }
     }
@@ -520,6 +534,7 @@ public readonly record struct EntityRenderState(
     IReadOnlyList<int?>? EquipmentDyeColors = null,
     IReadOnlyList<bool?>? EquipmentGlintOverrides = null,
     IReadOnlyList<bool?>? EquipmentHasEnchantments = null,
+    IReadOnlyList<bool?>? EquipmentHasBannerPatterns = null,
     IReadOnlyList<string?>? EquipmentTrimMaterials = null,
     IReadOnlyList<string?>? EquipmentTrimPatterns = null,
     string? PlayerBodyTexture = null,
@@ -549,6 +564,10 @@ public readonly record struct EntityRenderState(
     /// <summary>Enchantment-presence flag for one equipment slot, when known.</summary>
     public bool? EquipmentHasEnchantmentsAt(int slot) =>
         EquipmentHasEnchantments is { } enchanted && (uint)slot < (uint)enchanted.Count ? enchanted[slot] : null;
+
+    /// <summary>Banner-pattern-presence flag for one equipment slot, when known.</summary>
+    public bool? EquipmentHasBannerPatternsAt(int slot) =>
+        EquipmentHasBannerPatterns is { } patterned && (uint)slot < (uint)patterned.Count ? patterned[slot] : null;
 
     /// <summary>Trim material registry id for one equipment slot, when the item supplied one.</summary>
     public string? EquipmentTrimMaterialAt(int slot) =>
@@ -1519,6 +1538,7 @@ public sealed class EntityTracker
                 EquipmentDyeColors: entity.EquipmentDyeColors,
                 EquipmentGlintOverrides: entity.EquipmentGlintOverrides,
                 EquipmentHasEnchantments: entity.EquipmentHasEnchantments,
+                EquipmentHasBannerPatterns: entity.EquipmentHasBannerPatterns,
                 EquipmentTrimMaterials: entity.EquipmentTrimMaterials,
                 EquipmentTrimPatterns: entity.EquipmentTrimPatterns,
                 PlayerBodyTexture: playerSkin?.Body?.Path,

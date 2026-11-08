@@ -210,6 +210,20 @@ public sealed class EntityLayerTests
     }
 
     [Fact]
+    public void ShieldTextureFollowsBannerPatternPresence()
+    {
+        var plain = Entity(HumanoidMobModelDefinition.ZombieEntityTypeId);
+        Assert.Null(plain.EquipmentHasBannerPatternsAt(0));
+        Assert.Equal("entity/shield/shield_base_nopattern", SpecialItemModelDefinition.ShieldSprite(false));
+        Assert.Equal("entity/shield/shield_base", SpecialItemModelDefinition.ShieldSprite(true));
+
+        var patterned = new bool?[8];
+        patterned[0] = true;
+        var withPatterns = plain with { EquipmentHasBannerPatterns = patterned };
+        Assert.True(withPatterns.EquipmentHasBannerPatternsAt(0));
+    }
+
+    [Fact]
     public void GlintOverrideAddsAnIndependentEquipmentLayer()
     {
         var helmet = ItemRegistry.LoadEmbedded().GetId(Identifier.Parse("minecraft:iron_helmet"));

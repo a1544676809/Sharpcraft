@@ -145,6 +145,10 @@ public static class EntityModelResolver
 
             case "minecraft:banner":
                 return SpecialItemModelDefinition.BannerTexture;
+            case "minecraft:shield":
+                // The reference picks the patterned base sprite when patterns or a base colour are present.
+                return SpecialItemModelDefinition.ShieldSprite(
+                    state.EquipmentHasBannerPatternsAt(offhand ? 1 : 0) ?? false);
             case "minecraft:decorated_pot":
                 return SpecialItemModelDefinition.DecoratedPotTexture;
             case "minecraft:conduit":
@@ -680,8 +684,10 @@ public static class EntityModelResolver
                 VisibleWhen: state => ResolveHeldItemTexture(state, offhand: true) is not null,
                 AllCubes: true,
                 UsesItemAtlas: true));
-            AddSpecialHandLayers(heldLayers, "trident", "minecraft:trident", SpecialItemModelDefinition.HeldTridentRight, SpecialItemModelDefinition.HeldTridentLeft, SpecialItemModelDefinition.TridentTexture);
-            AddSpecialHandLayers(heldLayers, "shield", "minecraft:shield", SpecialItemModelDefinition.HeldShieldRight, SpecialItemModelDefinition.HeldShieldLeft, SpecialItemModelDefinition.ShieldTexture);
+            AddSpecialHandLayers(heldLayers, "trident", "minecraft:trident", SpecialItemModelDefinition.HeldTridentRight, SpecialItemModelDefinition.HeldTridentLeft, SpecialItemModelDefinition.TridentTexture,
+                static (_, _) => SpecialItemModelDefinition.TridentTexture);
+            AddSpecialHandLayers(heldLayers, "shield", "minecraft:shield", SpecialItemModelDefinition.HeldShieldRight, SpecialItemModelDefinition.HeldShieldLeft, SpecialItemModelDefinition.ShieldTexture,
+                ResolveHeldItemSpecialTexture);
             AddSpecialHeadLayers(heldLayers);
             AddSpecialChestLayers(heldLayers);
             AddSpecialShulkerLayers(heldLayers);
@@ -777,7 +783,8 @@ public static class EntityModelResolver
         string specialType,
         EntityModelDefinition right,
         EntityModelDefinition left,
-        string texture)
+        string staticTexture,
+        Func<EntityRenderState, bool, string?> selector)
     {
         var order = 52 + (layers.Count * 2);
         layers.Add(new EntityRenderLayerDefinition(
@@ -785,8 +792,8 @@ public static class EntityModelResolver
             EntityGeometryLayerKind.Cutout,
             order,
             right,
-            texture,
-            _ => texture,
+            staticTexture,
+            state => selector(state, false),
             state => ResolveHeldItemSpecial(state, offhand: false) == specialType,
             AllCubes: true,
             UsesItemAtlas: true));
@@ -795,8 +802,8 @@ public static class EntityModelResolver
             EntityGeometryLayerKind.Cutout,
             order + 1,
             left,
-            texture,
-            _ => texture,
+            staticTexture,
+            state => selector(state, true),
             state => ResolveHeldItemSpecial(state, offhand: true) == specialType,
             AllCubes: true,
             UsesItemAtlas: true));
