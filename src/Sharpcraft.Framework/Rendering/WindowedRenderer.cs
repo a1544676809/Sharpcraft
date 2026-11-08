@@ -2326,17 +2326,18 @@ public static class WindowedRenderer
                     WriteMask = ColorWriteMask.All,
                     Blend = new WGPUBlendState
                     {
+                        // BlendFunction.GLINT: SRC_COLOR * src + ONE * dst for colour, ZERO/ONE for alpha.
                         color = new WGPUBlendComponent
                         {
                             operation = WGPUBlendOperation.Add,
-                            srcFactor = WGPUBlendFactor.SrcAlpha,
+                            srcFactor = WGPUBlendFactor.Src,
                             dstFactor = WGPUBlendFactor.One
                         },
                         alpha = new WGPUBlendComponent
                         {
                             operation = WGPUBlendOperation.Add,
-                            srcFactor = WGPUBlendFactor.One,
-                            dstFactor = WGPUBlendFactor.Zero
+                            srcFactor = WGPUBlendFactor.Zero,
+                            dstFactor = WGPUBlendFactor.One
                         }
                     }
                 }
@@ -2344,7 +2345,8 @@ public static class WindowedRenderer
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
             multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: false),
+            // GLINT uses EQUAL against the already-written armor depth and never writes depth.
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.Equal, write: false),
             vertexStride: (ulong)VertexLayout.Stride,
             vertexStepMode: WGPUVertexStepMode.Vertex,
             vertexAttributes: VertexLayout.Attributes());

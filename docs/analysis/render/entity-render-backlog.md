@@ -45,7 +45,7 @@ updated: 2026-11-07
 | --- | --- | --- |
 | `EquipmentClientInfo` JSON | 已解析 19 LayerType、dyeable/use_player_texture/trim_overrides，并从资源栈加载 | 继续替换剩余静态 fallback 路径 |
 | `DataComponentPatch` | 已覆盖 equippable、dyed_color、glint override 等常用组件；非空未知 patch 仍会降级 | 继续补组件表并保持未知组件可诊断 |
-| 皮革染色 / trim | `dyed_color` 已进入 tint selector；`ResolveTrim` 已选择 predicate；trim texture/palette 已由 `TrimTextureCatalog` 与 humanoid armor trim 层接入（T-754） | trim override 的 texture/palette 替换、trimmedArmorGlint 仍待补 |
+| 皮革染色 / trim | `dyed_color` 已进入 tint selector；`ResolveTrim` 已选择 predicate；trim texture/palette、装备 palette/texture override 与完整 GLINT pass 已接入（T-754） | 视觉验收与自定义 trim entry NBT 仍待补 |
 | 物品注册表 | 26.3 固定快照，已内嵌 | 升级需重导快照；模组/自定义物品只做 unknown 降级 |
 
 ## 5. 特殊层与状态依赖
@@ -66,7 +66,7 @@ updated: 2026-11-07
 1. **动画系统真实场景验收**：provider 已大量存在，优先做固定场景多帧姿态对比。
 2. 装备特例：Happy Ghast ropes 是当前剩余的主体；其余已接入的 crackiness/trader carpet/zombie coral 只差联动验收。
 3. Witch 手持物品（依赖物品模型，后置）。
-4. 装备资产收尾：trim texture/palette 已接（T-754），剩余 trim override/trimmedArmorGlint、glint pass 与 `use_player_texture` 最终着色。
+4. 装备资产收尾：trim texture/palette、palette/texture override 与完整 GLINT pass 已接（T-754），剩余视觉验收与自定义 trim entry NBT 解析。
 
 每项落地时在 `docs/traceability.md` 增加独立任务行，测试列不得留空；完成前状态用 `进行中`，不要提前写 `已完成`。
 

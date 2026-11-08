@@ -278,16 +278,27 @@ fn fs_entity_emissive(input : VertexOutput) -> @location(0) vec4<f32> {
     return vec4<f32>(mix(sampled.rgb, fog.colour.rgb, fogged), sampled.a);
 }
 
-// Enchanted glint overlay: the reference scrolls the enchantment texture over the model and adds it on top of the
-// already shaded layer. The lightmap padding slot carries the host glint clock (seconds), so no extra uniform binding
-// is needed for this single overlay pass.
+// Enchanted armor glint overlay. The reference samples the glint texture through a time-varying UV matrix
+// (TextureTransform.ARMOR_ENTITY_GLINT_TEXTURING): translate by (-offsetU, offsetV), rotate by 10 degrees, then scale
+// by 0.16. The lightmap padding slot carries the host glint clock in seconds so the pass needs no extra uniform.
 @fragment
 fn fs_entity_glint(input : VertexOutput) -> @location(0) vec4<f32> {
     let rectMin = input.spriteRect.xy;
     let rectMax = input.spriteRect.zw;
+
+    // Default options: glintSpeed = 0.5, glintStrength = 0.75 (Options.java).
+    let millis = floor(lightmap.padding * 1000.0 * 0.5 * 8.0);
+    let offsetU = (millis - floor(millis / 110000.0) * 110000.0) / 110000.0;
+    let offsetV = (millis - floor(millis / 30000.0) * 30000.0) / 30000.0;
+    let angle = 0.17453292; // pi / 18
+    let ca = cos(angle);
+    let sa = sin(angle);
     let local = input.uv - floor(input.uv);
-    let scroll = vec2<f32>(lightmap.padding * 0.015, lightmap.padding * 0.005);
-    let atlasUv = rectMin + fract(local + scroll) * (rectMax - rectMin);
+    let rotated = vec2<f32>(
+        (ca * local.x) - (sa * local.y),
+        (sa * local.x) + (ca * local.y)) * 0.16;
+    let glintUv = rotated + vec2<f32>(-offsetU, offsetV);
+    let atlasUv = rectMin + fract(glintUv) * (rectMax - rectMin);
     let gradientScale = rectMax - rectMin;
     let sampled = textureSampleGrad(
         atlasTexture,
@@ -296,9 +307,12 @@ fn fs_entity_glint(input : VertexOutput) -> @location(0) vec4<f32> {
         dpdx(input.uv) * gradientScale,
         dpdy(input.uv) * gradientScale);
 
-    if (sampled.a < 0.01) {
+    if (sampled.a < 0.1) {
         discard;
     }
 
-    return vec4<f32>(sampled.rgb * 1.35, sampled.a * 0.65);
+    let span = max(fog.range.y - fog.range.x, 0.001);
+    let fogFactor = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
+    let fade = (1.0 - fogFactor) * 0.75; // glintStrength default
+    return vec4<f32>(sampled.rgb * input.colour * fade, sampled.a);
 }
