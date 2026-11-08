@@ -127,6 +127,25 @@
 
 掉落物整体为 `itemTransform · T_offset · R_spin · T_bob · T_entity`。**踩过的两个坑**：把 `-0.5` 居中写在外层会让物品绕角落公转而不是自转；把 `ground` 放在旋转外侧会出现同样的公转假象（先修后者，登录态复测时才发现前者）。
 
+### 3.5.3 special 模型掉落物（待实现，规格已就绪）
+
+**已核实的原版事实**
+
+- `ChestSpecialRenderer.submit` 只是 `submitNodeCollector.submitModel(model, openness, poseStack, ...)`，**不做任何额外变换**；也就是说 special 模型直接在「当前 pose」上提交，而当前 pose 就是 3.7 那条链路（实体位姿 → `T_entity·T_bob·R_spin·T_offset·itemTransform`）。
+- `getExtents` 同样以空 `PoseStack` 走 `ModelPart.getExtentsForGui`，因此「包围盒」与「提交几何」处在同一空间。
+
+**本仓的难点（必须先定，不能猜）**
+
+special 定义（`SpecialItemModelDefinition`）走的是**实体烘焙链**：`VanillaMeshBakery` 默认 `modelHeight = 24`，且把作者坐标（实体模型 y 向下）翻成 y 向上存储。而 `ItemModelExtents.FromModel` 又按 `y_item = (24 − bakedY) · scale` 还原为「作者空间」。
+
+于是「实体几何 → 物品模型空间」这一步**含有一次 Y 镜像**。对胸甲这类近似对称的模型影响很小，但对 trident / shield / 旗帜这类有明显朝向的模型，镜像会直接画错。
+
+**候选方案（需评审后择一）**
+
+1. **分离烘焙**：为 special 物品另写一套「物品空间」几何描述（0..16 像素、Y 向上、无 24px 偏移），与实体模型互不复用。缺点：与实体模型重复描述（违反单轨倾向），但空间语义最清晰。
+2. **复用 `EntityModelMesher`**：给 mesher 增加 `BuildDefinition(definition, skin, skinAtlas, pose)` 公开入口，掉落物路径用它产出实体空间几何，再整体套一次「去 24px + 转物品空间」的变换。缺点：需要在共享 mesher 上加公开 API，且仍要处理镜像朝向。
+
+**结论**：在选定方案并给出 trident 朝向真值向量（正/反面截图）之前，掉落物路径对 special 模型保持「不绘制」，仍是已登记的 `SIM-ITEM-SPECIAL-MODELS` 范围。
 ### 3.6 图集归属（已核实，非阻塞）
 
 26.3 把精灵分在两个图集：`atlases/items.json` 只收 `item/` 目录与盔甲纹饰置换，`atlases/blocks.json` 收 `block/` 目录与 conduit/bell/book 特例。因此方块类物品模型引用的 `block/*` 纹理在原版来自 **blocks 图集**。
