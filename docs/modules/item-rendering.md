@@ -145,6 +145,33 @@
 **后果**：任何直接绘制这些存储立方体的路径都会上下颠倒并带上 24px 偏移。**尚未实测确认**手持路径是否另行补偿：先前一次「手持箱子异常」的截图无效（当时 `/summon` 用的是已废弃的 `HandItems` 键，僵尸其实没拿东西；26.3 必须用 `equipment:{mainhand:{…}}`）。
 
 **修复方向**：为方块类 special 增加「Y 向上、无 24px 偏移」的烘焙模式，而不是沿用活体的 `(24 − y)` 变换；`ItemModelExtents.FromModel` 里的 `(24 − bakedY)` 逆变换届时也应换成直接读取。
+### 3.5.4 物品渲染解析审计（L1 等效性检查层）
+
+`tools/Sharpcraft.ItemRender.Audit` 是物品渲染等效性检查的**第一层**：纯数值、不依赖 GPU，覆盖**注册表全量**物品。它把"某个物品解析成什么、在 7 个 display 上下文中各得到什么变换和包围盒"变成可 diff 的事实，而不是靠截图目测。
+
+用法：
+
+```
+dotnet run --project tools/Sharpcraft.ItemRender.Audit -- --pack <pack.zip> --out audit.jsonl
+dotnet run --project tools/Sharpcraft.ItemRender.Audit -- --pack <pack.zip> --check tools/Sharpcraft.ItemRender.Audit/baseline.txt
+```
+
+基线（`baseline.txt`）是棘轮：解析种类计数、未解析清单、各上下文缺失 display 的数量，任何一项变化都会让 `--check` 失败。
+
+**首轮结果**（1658 物品）：
+
+| 种类 | 数量 |
+| --- | --- |
+| `elements`（模型自带 elements） | 835 |
+| `generated`（生成型两层面片） | 760 |
+| `special:*`（chest 11 / shulker 17 / banner 16 / statue 8 / head 6 / player_head 1 / shield 1 / trident 1 / conduit 1 / decorated_pot 1） | 63 |
+| 未解析 | **0** |
+
+审计当时发现的真实缺陷：**17 张床全部解析失败**。原因是 `composite` 的子项是"完整模型定义"（`{"type":"minecraft:model","model":"block/white_bed_head"}`），而 `ResolveFirstCase` 只接受"`model` 是对象"的选择器形态，于是整串被跳过。修复后未解析从 17 降到 0。
+
+**仍然存在的简化**（`SIM-ITEM-COMPOSITE-FIRST`，`T-766`）：`composite` 只取**第一个**子模型并忽略子项的 `transformation`，所以床只画出床头一半。要画全需要 resolution 从"单个模型"升级为"模型列表"，属独立任务。
+
+缺失 display 的分布同样说明问题不在解析：`thirdperson_righthand` 只缺 `minecraft:air`（空物品，正常），`head` 缺 706（原版多数物品本来就没有 head 变换），真正需要关注的是 `firstperson_righthand` 缺 10 个（`spyglass`、`heavy_core`、各类头颅），它们走 special 渲染器。
 ### 3.6 图集归属（已核实，非阻塞）
 
 26.3 把精灵分在两个图集：`atlases/items.json` 只收 `item/` 目录与盔甲纹饰置换，`atlases/blocks.json` 收 `block/` 目录与 conduit/bell/book 特例。因此方块类物品模型引用的 `block/*` 纹理在原版来自 **blocks 图集**。
@@ -204,6 +231,7 @@
 <!-- simplification:SIM-ITEM-MODEL-STATIC-FALLBACK task:T-631e -->
 <!-- simplification:SIM-ITEM-RENDER-STATE task:T-631e -->
 <!-- simplification:SIM-ITEM-HELD-ANCHOR task:T-631e -->
+<!-- simplification:SIM-ITEM-COMPOSITE-FIRST task:T-766 -->
 <!-- simplification:SIM-ITEM-SPECIAL-MODELS task:T-631e -->
 <!-- simplification:SIM-ITEM-SPECIAL-STATE task:T-631e -->
 <!-- simplification:SIM-ITEM-ATLAS-VALIDATION task:T-631e -->

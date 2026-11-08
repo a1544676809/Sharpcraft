@@ -1,0 +1,21 @@
+items 1658
+kind elements 835
+kind generated 760
+kind special:minecraft:banner 16
+kind special:minecraft:chest 11
+kind special:minecraft:conduit 1
+kind special:minecraft:copper_golem_statue 8
+kind special:minecraft:decorated_pot 1
+kind special:minecraft:head 6
+kind special:minecraft:player_head 1
+kind special:minecraft:shield 1
+kind special:minecraft:shulker_box 17
+kind special:minecraft:trident 1
+unresolved 0
+missing-display thirdperson_lefthand 1
+missing-display thirdperson_righthand 1
+missing-display firstperson_righthand 10
+missing-display head 706
+missing-display gui 757
+missing-display ground 1
+missing-display fixed 1

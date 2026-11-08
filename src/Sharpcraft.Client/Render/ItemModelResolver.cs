@@ -114,6 +114,7 @@ public sealed record ItemModelResolution(
 [Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-MODEL-STATIC-FALLBACK", "T-631e", Note = "Vanilla selects renderer by ItemStackRenderState layers; Sharpcraft resolves one descriptor and takes the static fallback branch")]
 [Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-RENDER-STATE", "T-631e", Note = "No ItemStackRenderState equivalent: no layer list, foil type, tint layers, particle material or model extents")]
 [Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-DROP-DISPLAY-GUI", "T-761", Note = "Drops consume the ground ItemTransform, but item frames and GUI items are still unrendered")]
+[Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-COMPOSITE-FIRST", "T-766", Note = "A composite item model resolves only its first sub-model and ignores each child transformation; vanilla draws every member (beds are head + foot)")]
 public sealed class ItemModelResolver
 {
     private static readonly IReadOnlyDictionary<string, ItemDisplayContext> ContextNames =
@@ -319,6 +320,14 @@ public sealed class ItemModelResolver
             if (entry.ValueKind != JsonValueKind.Object)
             {
                 continue;
+            }
+
+            // Entries come in two shapes: a full model definition (composite children carry their own "type") and the
+            // selector form where "model" holds a nested definition object.
+            if (entry.TryGetProperty("type", out _) && entry.TryGetProperty("model", out var inner) &&
+                inner.ValueKind == JsonValueKind.String && ResolveElement(entry, depth + 1) is { } direct)
+            {
+                return direct;
             }
 
             if (entry.TryGetProperty("model", out var nested) && nested.ValueKind == JsonValueKind.Object &&
