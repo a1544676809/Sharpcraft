@@ -26,7 +26,8 @@ public static class EnderDragonModelDefinition
         BuildParts(),
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/enderdragon/dragon",
-        compiled: DragonCompiled);
+        compiled: DragonCompiled,
+        applyRootPose: true);
 
     private static EntityModelPart[] BuildParts()
     {

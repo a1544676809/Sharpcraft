@@ -25,7 +25,8 @@ public sealed class EntityModelDefinition
         Func<EntityRenderState, string?>? textureSelector = null,
         IReadOnlyList<string>? additionalTexturePaths = null,
         CompiledEntityModel? compiled = null,
-        IReadOnlyList<EntityRenderLayerDefinition>? renderLayers = null)
+        IReadOnlyList<EntityRenderLayerDefinition>? renderLayers = null,
+        bool applyRootPose = false)
     {
         Name = name;
         TextureWidth = textureWidth;
@@ -39,6 +40,7 @@ public sealed class EntityModelDefinition
         AdditionalTexturePaths = additionalTexturePaths ?? [];
         Compiled = compiled;
         RenderLayers = renderLayers ?? DefaultRenderLayers;
+        ApplyRootPose = applyRootPose;
     }
 
     /// <summary>Default cutout/elytra/translucent/emissive layer order shared by entity models.</summary>
@@ -78,6 +80,9 @@ public sealed class EntityModelDefinition
 
     /// <summary>Explicit render-layer order for this model; defaults to the shared cutout/elytra/translucent/emissive order.</summary>
     public IReadOnlyList<EntityRenderLayerDefinition> RenderLayers { get; }
+
+    /// <summary>Whether the compiled root group itself accepts a pose (EnderDragon root y/z/xRot).</summary>
+    public bool ApplyRootPose { get; }
 
     /// <summary>
     /// Creates a definition from a declarative mesh: the legacy flat <see cref="Parts"/> remain available for compatibility,

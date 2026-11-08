@@ -50,14 +50,16 @@ public sealed class EnderDragonAnimationTests
         return pose;
     }
 
-    private static void Tick(EnderDragonAnimationProvider.State state, float horizontalDistance, float verticalDistance) =>
-        ((IEntityTickAnimationState)state).OnTick(new EntityAnimationTickContext(1, horizontalDistance, false, -1, verticalDistance, true));
+    private static void Tick(EnderDragonAnimationProvider.State state, float horizontalDistance, float verticalDistance, int phase = 10, bool dying = false) =>
+        ((IEntityTickAnimationState)state).OnTick(new EntityAnimationTickContext(
+            1, horizontalDistance, false, -1, verticalDistance, true, DragonPhase: phase, DragonDying: dying));
 
     [Fact]
     public void ProviderAdvertisesTypeIdAndIdleClip()
     {
         var provider = NewProvider();
         Assert.Equal(EnderDragonModelDefinition.EnderDragonEntityTypeId, provider.TypeId);
+        Assert.True(EnderDragonModelDefinition.Definition.ApplyRootPose);
         Assert.Equal(new[] { "idle" }, provider.Clips);
         Assert.NotNull(provider.CreateState());
         Assert.IsType<EnderDragonAnimationProvider.State>(provider.CreateState());
@@ -94,6 +96,10 @@ public sealed class EnderDragonAnimationTests
         Assert.Equal(0.0017109f, pose.Get("left_hind_leg_tip").Rotation.X, 5);
         Assert.Equal(0.0017109f, pose.Get("left_hind_foot").Rotation.X, 5);
         Assert.Equal(pose.Get("left_hind_leg").Rotation, pose.Get("right_hind_leg").Rotation);
+
+        // Root group: z = -48 and a non-zero flap bounce offset.
+        Assert.Equal(-48f, pose.Get("root").Position.Z, 5);
+        Assert.NotEqual(0f, pose.Get("root").Position.Y);
     }
 
     [Fact]
@@ -141,6 +147,19 @@ public sealed class EnderDragonAnimationTests
         var horizontal = (EnderDragonAnimationProvider.State)provider.CreateState();
         Tick(horizontal, horizontalDistance: 0.5f, verticalDistance: 0f); // 0.2 / (0.5*10 + 1) = 0.03333..
         Assert.Equal(0.0333333f, horizontal.FlapTime, 5);
+    }
+
+    [Fact]
+    public void SittingAndDyingPhasesChangeTheFlapClock()
+    {
+        var provider = NewProvider();
+        var sitting = (EnderDragonAnimationProvider.State)provider.CreateState();
+        Tick(sitting, horizontalDistance: 0f, verticalDistance: 0f, phase: 5);
+        Assert.Equal(0.1f, sitting.FlapTime, 5);
+
+        var dying = (EnderDragonAnimationProvider.State)provider.CreateState();
+        Tick(dying, horizontalDistance: 0f, verticalDistance: 0f, phase: 9, dying: true);
+        Assert.Equal(0f, dying.FlapTime, 5);
     }
 
     [Fact]

@@ -106,6 +106,15 @@ public sealed class EnderDragonAnimationProvider(int typeId) : IEntityAnimationP
         AddRotation(pose, "right_hind_leg", legDelta, 0f, 0f);
         AddRotation(pose, "right_hind_leg_tip", legDelta, 0f, 0f);
         AddRotation(pose, "right_hind_foot", legDelta, 0f, 0f);
+
+        // EnderDragonModel root group: y = (bounce - 2) * 16, z = -48, xRot = bounce * 2 degrees. Pose storage is
+        // y-up, so the reference y translation is negated; the mesher applies the root frame around the group origin.
+        var rootY = (bounce - 2f) * 16f;
+        var rootXRot = bounce * 2f * (MathF.PI / 180f);
+        pose.Add("root", new PoseOffset(
+            new Vector3(0f, -rootY, -48f),
+            new Vector3(-rootXRot, 0f, 0f),
+            Vector3.Zero));
     }
 
     private static void ApplyFlightPose(
@@ -240,9 +249,20 @@ public sealed class EnderDragonAnimationProvider(int typeId) : IEntityAnimationP
         public void OnTick(in EntityAnimationTickContext context)
         {
             PreviousFlapTime = FlapTime;
+            if (context.DragonDying)
+            {
+                return;
+            }
+
+            if (context.DragonPhase is 5 or 6 or 7)
+            {
+                FlapTime += 0.1f;
+                return;
+            }
+
             var flapSpeed = 0.2f / ((context.HorizontalDistance * 10f) + 1f);
             flapSpeed *= MathF.Pow(2f, context.VerticalDistance);
-            FlapTime += flapSpeed;
+            FlapTime += context.DragonInWall ? flapSpeed * 0.5f : flapSpeed;
         }
     }
 }

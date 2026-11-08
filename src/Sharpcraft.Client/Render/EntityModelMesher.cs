@@ -451,6 +451,7 @@ public sealed partial class EntityModelMesher
                     excludedPart,
                     skinAtlas,
                     emissivePass,
+                    model.ApplyRootPose,
                     ref vertexFloats,
                     ref indexCount);
                 continue;
@@ -911,6 +912,7 @@ public sealed partial class EntityModelMesher
         string? excludedPart,
         EntitySkinAtlas? skinAtlas,
         bool emissivePass,
+        bool applyRootPose,
         ref int vertexFloats,
         ref int indexCount)
     {
@@ -1078,9 +1080,19 @@ public sealed partial class EntityModelMesher
             }
         }
 
+        var rootPose = applyRootPose
+            ? entityPose?.Get(compiled.Root.Name) ?? PoseOffset.Zero
+            : PoseOffset.Zero;
+        var rootFrame = Matrix4x4.CreateScale(new Vector3(
+                1f + rootPose.Scale.X,
+                1f + rootPose.Scale.Y,
+                1f + rootPose.Scale.Z))
+            * RotationZyx(-rootPose.Rotation.X, -rootPose.Rotation.Y, rootPose.Rotation.Z)
+            * Matrix4x4.CreateTranslation(rootPose.Position * px);
+
         foreach (var child in compiled.Root.Children)
         {
-            Emit(child, Matrix4x4.Identity);
+            Emit(child, rootFrame);
         }
 
         vertexFloats = vertexFloatsLocal;

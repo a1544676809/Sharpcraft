@@ -132,7 +132,9 @@
 
 - `DragonFlightHistory` 作为 `TrackedEntity` 的私有历史，`EntityTracker.Tick` 对 type 44 每 tick 记录 `(Y, Yaw)`，`EntityRenderState`/`EntityAnimationFrame` 携带引用和 partial tick。
 - `EnderDragonAnimationProvider` 在 flap pose 之后按原版公式计算 neck/head/body/tail；`DragonIsLandingOrTakingOff`/`DragonIsSitting` 来自 phase 15（int）与 `EnderDragonPhase` id 3/4、5/6/7。
-- **仍未实现**：`root.y/z/xRot` 的整模型根变换（当前模型没有可 pose 的 root 节点）；`distanceToEgg` 为 0（需要高度图蛋位置）；sitting 的 `flapTime += 0.1`、inWall `×0.5`、dying freeze 和 deathTime 分支。
+- `EnderDragonModelDefinition.ApplyRootPose` 为 true，`EntityModelMesher` 对编译根组施加 root y/z/xRot；provider 同时输出 root pose。
+- `DragonDistanceToEgg` 使用 `(0, heightmap, 0)` 的 End 主岛蛋位置平方距离；fight origin 尚未同步，默认假设世界原点。
+- sitting 的 `flapTime += 0.1` 与 dying freeze 已接；inWall `×0.5` 仍缺碰撞状态，deathTime/Ray 尚未接。
 
 ## 9. 未解决问题与风险
 

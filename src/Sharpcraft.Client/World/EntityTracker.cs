@@ -1254,7 +1254,15 @@ public sealed class EntityTracker
 
             if (entity.Animation is IEntityTickAnimationState tickState)
             {
-                tickState.OnTick(new EntityAnimationTickContext((int)GameTime, distance, entity.Presentation.IsInWater, entity.EquipmentItemAt(0), dy, entity.Presentation.IsOnGround));
+                tickState.OnTick(new EntityAnimationTickContext(
+                    (int)GameTime,
+                    distance,
+                    entity.Presentation.IsInWater,
+                    entity.EquipmentItemAt(0),
+                    dy,
+                    entity.Presentation.IsOnGround,
+                    DragonPhase: entity.DragonPhase,
+                    DragonDying: entity.TypeId == EnderDragonModelDefinition.EnderDragonEntityTypeId && entity.DragonPhase == 9));
             }
         }
 
@@ -1520,10 +1528,38 @@ public sealed class EntityTracker
                 DragonFlightHistory: dragon ? entity.DragonFlightHistory : null,
                 DragonIsLandingOrTakingOff: dragon && (entity.DragonPhase is 3 or 4),
                 DragonIsSitting: dragon && (entity.DragonPhase is 5 or 6 or 7),
-                DragonDistanceToEgg: 0));
+                DragonDistanceToEgg: dragon ? DragonDistanceToEgg(entity) : 0));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);
+    }
+
+    /// <summary>
+    /// Squared distance from the dragon to the End podium egg at (0, heightmap, 0). The fight origin is currently
+    /// assumed to be the world origin; the client does not synchronise the fight object.
+    /// </summary>
+    private double DragonDistanceToEgg(TrackedEntity entity)
+    {
+        var height = 0;
+        if (World is { } world)
+        {
+            var maxY = ((world.MinSectionY + world.SectionCount) * 16) - 1;
+            for (var y = maxY; y >= world.MinSectionY * 16; y--)
+            {
+                var state = world.GetBlockState(0, y, 0);
+                if (VanillaBlockRegistry.Layout.BlockAt(state) is { } block &&
+                    !string.Equals(block.Path, "air", StringComparison.Ordinal))
+                {
+                    height = y;
+                    break;
+                }
+            }
+        }
+
+        var dx = entity.X - 0.5;
+        var dy = entity.Y - (height + 0.5);
+        var dz = entity.Z - 0.5;
+        return (dx * dx) + (dy * dy) + (dz * dz);
     }
 
     private static bool Relative(int relatives, int bit) => (relatives & (1 << bit)) != 0;

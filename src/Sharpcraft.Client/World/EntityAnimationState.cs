@@ -194,7 +194,16 @@ public interface IEntityAnimationState
 /// <param name="GameTime">Client game time in ticks, the same clock the frame's age uses.</param>
 /// <param name="HorizontalDistance">Horizontal distance moved during the tick (blocks).</param>
 /// <param name="IsInWater">Whether the entity's feet block is water this tick.</param>
-public readonly record struct EntityAnimationTickContext(int GameTime, float HorizontalDistance, bool IsInWater = false, int MainHandItemId = -1, float VerticalDistance = 0f, bool IsOnGround = false);
+public readonly record struct EntityAnimationTickContext(
+    int GameTime,
+    float HorizontalDistance,
+    bool IsInWater = false,
+    int MainHandItemId = -1,
+    float VerticalDistance = 0f,
+    bool IsOnGround = false,
+    int DragonPhase = 10,
+    bool DragonInWall = false,
+    bool DragonDying = false);
 
 /// <summary>
 /// Optional capability for states whose clips are triggered by a server <c>entity_event</c> packet. The tracker calls
