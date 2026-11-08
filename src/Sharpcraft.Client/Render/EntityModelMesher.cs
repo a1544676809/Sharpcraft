@@ -772,6 +772,106 @@ public sealed partial class EntityModelMesher
         var second = remainder.IndexOf('_');
         return second < 0 ? name : remainder[(second + 1)..];
     }
+    /// <summary>
+    /// Frame matrix of one node, given its parent frame. Shared by the geometry walk and by
+    /// <see cref="PartWorldMatrix"/> so the two can never drift apart.
+    /// </summary>
+    private static Matrix4x4 NodeFrame(
+        EntityModelPartNode node,
+        Matrix4x4 parentFrame,
+        EntityRenderState entity,
+        EntityPose? entityPose,
+        float px)
+    {
+        var poseName = node.PoseSource ?? node.Name;
+        var poseOffset = entityPose?.Get(poseName) ?? PoseOffset.Zero;
+        var rotation = new Vector3(node.RotationX, node.RotationY, node.RotationZ);
+        if (node.RotationSelector is { } rotationSelector)
+        {
+            rotation = rotationSelector(entity);
+        }
+
+        var yOffset = node.YOffsetSelector?.Invoke(entity) ?? 0f;
+        var pivot = new Vector3(
+            (node.PivotX + poseOffset.Position.X) * px,
+            (node.PivotY + poseOffset.Position.Y + yOffset) * px,
+            (node.PivotZ + poseOffset.Position.Z) * px);
+        var local = Matrix4x4.CreateScale(new Vector3(
+                1f + poseOffset.Scale.X,
+                1f + poseOffset.Scale.Y,
+                1f + poseOffset.Scale.Z))
+            * RotationZyx(
+                rotation.X - poseOffset.Rotation.X,
+                rotation.Y - poseOffset.Rotation.Y,
+                rotation.Z + poseOffset.Rotation.Z)
+            * Matrix4x4.CreateTranslation(pivot);
+        var frame = local * parentFrame;
+        if (node.TransformSelector is { } transformSelector)
+        {
+            frame = transformSelector(entity) * frame;
+        }
+
+        return frame;
+    }
+
+    /// <summary>
+    /// World matrix of a named part of a baked model, in the units the geometry path uses. Callers that must attach
+    /// extra geometry to a posed part (the held-item pass hanging quads on the hand) use this instead of duplicating
+    /// the frame maths.
+    /// </summary>
+    public static Matrix4x4 PartWorldMatrix(
+        EntityModelDefinition definition,
+        EntityRenderState entity,
+        string partName,
+        EntityPose? pose = null,
+        bool applyRootPose = true)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        var compiled = definition.Compiled;
+        if (compiled is null)
+        {
+            return Matrix4x4.Identity;
+        }
+
+        var px = (1f / 16f) * EntityPlaceholderMesher.ModelScale * definition.Scale;
+        var rootPose = applyRootPose ? pose?.Get(compiled.Root.Name) ?? PoseOffset.Zero : PoseOffset.Zero;
+        var rootFrame = Matrix4x4.CreateScale(new Vector3(
+                1f + rootPose.Scale.X,
+                1f + rootPose.Scale.Y,
+                1f + rootPose.Scale.Z))
+            * RotationZyx(-rootPose.Rotation.X, -rootPose.Rotation.Y, rootPose.Rotation.Z)
+            * Matrix4x4.CreateTranslation(rootPose.Position * px);
+
+        Matrix4x4? found = null;
+        void Walk(EntityModelPartNode node, Matrix4x4 parentFrame)
+        {
+            if (found is not null)
+            {
+                return;
+            }
+
+            var frame = NodeFrame(node, parentFrame, entity, pose, px);
+            if (string.Equals(node.Name, partName, StringComparison.Ordinal))
+            {
+                found = node.Parent is null
+                    ? Matrix4x4.CreateTranslation(-new Vector3(node.PivotX * px, node.PivotY * px, node.PivotZ * px)) * frame
+                    : frame;
+                return;
+            }
+
+            foreach (var child in node.Children)
+            {
+                Walk(child, frame);
+            }
+        }
+
+        foreach (var child in compiled.Root.Children)
+        {
+            Walk(child, rootFrame);
+        }
+
+        return found ?? Matrix4x4.Identity;
+    }
     private static Matrix4x4 RotationZyx(float rx, float ry, float rz) =>
         Matrix4x4.CreateRotationX(rx) * Matrix4x4.CreateRotationY(ry) * Matrix4x4.CreateRotationZ(rz);
 
@@ -964,33 +1064,8 @@ public sealed partial class EntityModelMesher
                 return;
             }
 
-            var poseName = node.PoseSource ?? node.Name;
-            var poseOffset = entityPose?.Get(poseName) ?? PoseOffset.Zero;
-            var rotation = new Vector3(node.RotationX, node.RotationY, node.RotationZ);
-            if (node.RotationSelector is { } rotationSelector)
-            {
-                rotation = rotationSelector(entity);
-            }
-
+            var frame = NodeFrame(node, parentFrame, entity, entityPose, px);
             var yOffset = node.YOffsetSelector?.Invoke(entity) ?? 0f;
-            var pivot = new Vector3(
-                (node.PivotX + poseOffset.Position.X) * px,
-                (node.PivotY + poseOffset.Position.Y + yOffset) * px,
-                (node.PivotZ + poseOffset.Position.Z) * px);
-            var local = Matrix4x4.CreateScale(new Vector3(
-                    1f + poseOffset.Scale.X,
-                    1f + poseOffset.Scale.Y,
-                    1f + poseOffset.Scale.Z))
-                * RotationZyx(
-                    rotation.X - poseOffset.Rotation.X,
-                    rotation.Y - poseOffset.Rotation.Y,
-                    rotation.Z + poseOffset.Rotation.Z)
-                * Matrix4x4.CreateTranslation(pivot);
-            var frame = local * parentFrame;
-            if (node.TransformSelector is { } transformSelector)
-            {
-                frame = transformSelector(entity) * frame;
-            }
 
             var basePivot = new Vector3(node.PivotX * px, (node.PivotY + yOffset) * px, node.PivotZ * px);
             var partMatrix = node.Parent is null
