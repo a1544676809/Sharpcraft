@@ -43,8 +43,14 @@ public readonly record struct ItemModelExtents(Vector3 Min, Vector3 Max)
     public bool IsDeeperThanFlatItem => Depth > FlatItemThreshold;
 
     /// <summary>
-    /// Extents of a baked model, taken as the axis-aligned box of its cuboids. Cuboids are stored in y-up model pixels,
-    /// so the result is divided back into blocks.
+    /// Baked cuboids live in entity space, where the model's feet are <see cref="ModelHeightPixels"/> pixels up. This is
+    /// the bakery's default <c>modelHeight</c>, and it has to be removed to get back to model space.
+    /// </summary>
+    public const float ModelHeightPixels = 24f;
+
+    /// <summary>
+    /// Extents of a baked model, taken as the axis-aligned box of its cuboids and returned in the reference's model
+    /// space: pixels divided by sixteen, with the Y axis negated back from our y-up storage.
     /// </summary>
     public static ItemModelExtents FromModel(EntityModelDefinition definition)
     {
@@ -55,7 +61,7 @@ public readonly record struct ItemModelExtents(Vector3 Min, Vector3 Max)
             return FlatItem;
         }
 
-        var px = definition.Scale / 16f;
+        var scale = definition.Scale / 16f;
         var min = new Vector3(float.MaxValue);
         var max = new Vector3(float.MinValue);
         foreach (var cube in compiled.Cubes)
@@ -68,6 +74,11 @@ public readonly record struct ItemModelExtents(Vector3 Min, Vector3 Max)
             max = Vector3.Max(max, high);
         }
 
-        return new ItemModelExtents(min * px, max * px);
+        // Shift out of entity space, scale into blocks, then mirror Y back to the reference model frame.
+        var yLow = -(max.Y - ModelHeightPixels) * scale;
+        var yHigh = -(min.Y - ModelHeightPixels) * scale;
+        return new ItemModelExtents(
+            new Vector3(min.X * scale, yLow, min.Z * scale),
+            new Vector3(max.X * scale, yHigh, max.Z * scale));
     }
 }
