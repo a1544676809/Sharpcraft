@@ -135,7 +135,7 @@ updated: 2026-11-07
 
 > 下一阶段执行清单见 [`docs/analysis/render/next-actions-hard-constraints.md`](analysis/render/next-actions-hard-constraints.md)；下面为原有 backlog。
 
-1. **T-631 held-item/item-model**：T-631a 数据层 + T-631b Witch 药水 + T-631c `ItemAtlas`/独立 item bind group/held_item + T-631d special 描述符与 **10/13** special 模型已接。T-631e 已落地：`banner_patterns`/`base_color` 解码（`BannerPatternTable` 43 项 + 动态注册表）、盾牌按 `hasPatterns` 选 sprite、网格 DSL 逐立方体 `TextureSelector`/`TintSelector`、`DyeColors` 真值表、**banner/shield 图案叠加层**（各 20 份共面副本，逐层 sprite + dye tint，`GreaterEqual` 共面已验证）。**下一步（按序）**：① chest `openness`/`chest_type` 与 shulker `openness`、banner `attachment`；② SPEAR/STAB；③ 掉落物/展示框/GUI；④ bell/book/copper_golem_statue。
+1. **T-631 held-item/item-model**：T-631a 数据层 + T-631b Witch 药水 + T-631c `ItemAtlas`/独立 item bind group/held_item + T-631d special 描述符与 **10/13** special 模型已接。T-631e 已落地：pattern/base color 解码、盾牌 sprite 选择、逐立方体 `TextureSelector`/`TintSelector`、`DyeColors` 真值表、banner/shield 图案叠加层（6 层共面）、`SpearAnimations`（含 STAB 施加到 `held_item`）；chest/shulker 的 `openness`/`attachment`/`chest_type` 已核实原版全部取缺省值、静态烘焙等效。**下一步（按序）**：① STAB 覆盖 special 模型部件 + 转向符号视觉验收；② 掉落物/展示框/GUI；③ bell/book/copper_golem_statue；④ held-item 手骨锚点对齐 `translateToHand`。
 2. **EnderDragon flight history**：已接（T-757）；剩余动画长尾（Bee stinger / Guardian eye look）按 backlog 推进。
 3. **P1.5（`Client/Render/ChunkMesher`）**：用 `OcclusionShape.IsFaceOccludedByState/Self` 替换 `IsSolid` 近似；配 `FluidMesherTests` 真值回归。
 4. **P1.4（T-042）**：提取 26.3 `registry_data` 真值向量，把服务器下发注册表动态装配进 `BlockStateLayout`。

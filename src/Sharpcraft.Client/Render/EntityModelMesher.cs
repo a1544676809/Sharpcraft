@@ -344,6 +344,9 @@ public sealed partial class EntityModelMesher
             var pose = _animationPoses[i];
             pose.Clear();
             var entity = entities[i];
+            // STAB swings pull the held item forward regardless of whether the entity has an animation provider, so the
+            // spear offset is applied before the early-out below.
+            SpearAnimations.ApplyThirdPersonAttackItem(entity.SwingAnimation, entity.SwingType, 0f, pose);
             if (entity.Animation is null || !EntityAnimationRegistry.TryGet(entity.TypeId, out var provider))
             {
                 continue;
