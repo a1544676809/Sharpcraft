@@ -32,6 +32,15 @@ public sealed class SpecialItemModelDefinitionTests
     }
 
     [Fact]
+    public void ChestModelHasBottomLidAndLock()
+    {
+        var names = SpecialItemModelDefinition.Chest.Compiled!.Parts.Select(part => part.Name).ToArray();
+        Assert.Contains("bottom", names);
+        Assert.Contains("lid", names);
+        Assert.Contains("lock", names);
+    }
+
+    [Fact]
     public void HeldSpecialModelsCarryTheArmPivot()
     {
         Assert.NotNull(SpecialItemModelDefinition.HeldTridentRight.Compiled!.Find("right_arm"));
