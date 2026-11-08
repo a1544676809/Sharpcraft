@@ -40,7 +40,8 @@ public readonly record struct ItemDisplayTransform(
 public sealed record ItemModelResolution(
     string ModelId,
     IReadOnlyDictionary<string, string> Textures,
-    IReadOnlyDictionary<ItemDisplayContext, ItemDisplayTransform> Display);
+    IReadOnlyDictionary<ItemDisplayContext, ItemDisplayTransform> Display,
+    string? SpecialRendererType = null);
 
 /// <summary>
 /// Resolves the item model selected by an item id or an <c>item_model</c> component. This is the data-only
@@ -151,6 +152,22 @@ public sealed class ItemModelResolver
                 return model.TryGetProperty("models", out var models) && models.ValueKind == JsonValueKind.Array
                     ? ResolveFirstCase(models, depth)
                     : null;
+            case "minecraft:special":
+                if (!model.TryGetProperty("base", out var baseElement) ||
+                    baseElement.ValueKind != JsonValueKind.String ||
+                    !Identifier.TryParse(baseElement.GetString()!, out var baseId) ||
+                    ResolveModel(baseId.ToString()) is not { } baseModel)
+                {
+                    return null;
+                }
+
+                var rendererType = model.TryGetProperty("model", out var specialModel) &&
+                    specialModel.ValueKind == JsonValueKind.Object &&
+                    specialModel.TryGetProperty("type", out var specialType) &&
+                    specialType.ValueKind == JsonValueKind.String
+                    ? specialType.GetString()
+                    : null;
+                return baseModel with { SpecialRendererType = rendererType };
             default:
                 // special/selectors with unsupported properties deliberately fall back to no drawable model.
                 return null;

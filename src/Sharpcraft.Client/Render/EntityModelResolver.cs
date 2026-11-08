@@ -107,7 +107,7 @@ public static class EntityModelResolver
         }
 
         var model = ItemModels.Resolve(item.Id.ToString());
-        if (model is null)
+        if (model is null || model.SpecialRendererType is not null)
         {
             return null;
         }

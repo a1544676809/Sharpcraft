@@ -43,7 +43,8 @@
 1. 优先读取 `ItemComponentInfo.ItemModelId`（`item_model` 组件，字符串资源 id）。
 2. 缺失时读取 `assets/<namespace>/items/<item-path>.json` 的 `model` 对象；`type = minecraft:model` 时取 `model` 字段。
 3. `type = minecraft:empty` → 不绘制；未知 type → missing model。
-4. 以模型 id 读取 `assets/<namespace>/models/<path>.json`，沿 `parent` 递归合并：
+4. **special 描述符**：`type = minecraft:special` 时保留 `base` 模型与 `model.type`（SpecialModelRenderer 类型），但 T-631d 之前不生成 special geometry；该模型不进入 flat-quad held-item 路径。
+5. 以模型 id 读取 `assets/<namespace>/models/<path>.json`，沿 `parent` 递归合并：
    - `textures`：子层覆盖父层，保留 `layer0..layerN`；
    - `display`：子层 context 覆盖父层，缺失 context 继承父层；
    - `gui_light`、`elements`、`overrides` 等保留给后续 mesh 阶段。
@@ -88,6 +89,7 @@
 - **T-631a**：item id → model id 解析、parent/texture/display 合并、10 个 display context、5 组 Golden Vectors；不生成 mesh。**已完成**（`965ab53`）。
 - **T-631b**：`item/generated` / `item/handheld` 的最小 quad mesh 与 item atlas；Witch 药水验收。**进行中**：Witch 药水已用 flat quad（`EntityModelMesher.AddFlatQuad`，`item/potion` 进入实体 atlas）；独立 item atlas/通用 item model 纹理层仍待补。
 - **T-631c**：其他 item model 类型（select/condition/composite/special）与掉落物/展示框/GUI 复用。**进行中**：`ItemAtlas` 数据层、WindowedRenderer 独立 item bind group、`EntityGeometryLayer.UsesItemAtlas`、Witch layer 与成人/幼年 humanoid `held_item_right`/`held_item_left` 层已完成；`ItemModelResolver` 已支持 `select`/`condition`/`range_dispatch`/`composite` 的静态 fallback 模型，`layer0/layer1` 已由 WindowCommand 按可见实体按需装入 item atlas。`special` 模型、动态 property 与 drop/display/GUI 复用仍待补。
+- **T-631d**：`minecraft:special` 描述符解析已接（base 模型 + `model.type`），不把 special 物品误当 flat quad；实际 `SpecialModelRenderer`（book/shield/trident/banner/shulker/chest 等）仍待实现。
 
 ## 7. 风险与限制
 
