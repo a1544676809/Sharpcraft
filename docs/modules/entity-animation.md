@@ -96,6 +96,29 @@
 
 - 第一版只覆盖 idle/walk 和少量实体，不一次性移植全部实体动画；
 - 动画状态中的交互/攻击状态先用客户端可观测的简化输入，后续补 AI 状态同步。
+- **玩家此前完全没有动画**：`EntityAnimationRegistry` 只登记了人形怪，玩家类型（159）没有 provider，因此走路/攻击/潜行都不动。现已补 `PlayerAnimationProvider`（`HumanoidVariant.Plain` + `HumanoidArmPoseResolver`），玩家模型的手/袖/裤是**挂在基部件上的 overlay**，随姿态自动跟随，不需要像原版那样逐个 `copyFrom`。
+- **手臂姿态选择仍不完整**：`HumanoidArmPose` 枚举与 `HumanoidModelPose` 的姿态数学都已具备（含 CROSSBOW_*、SPYGLASS、TOOT_HORN、THROW_TRIDENT、BRUSH），但 `HumanoidArmPoseResolver` 目前只返回 `Empty` / `Spear` / `BowAndArrow`，其余姿态永远不会被选中。
+
+### 6.1 玩家走路摆幅真值（26.3）
+
+`HumanoidModel.setupAnim` 的四处赋值（`speedValue = max(1, state.speedValue)`）：
+
+```
+rightArm.xRot = cos(pos · 0.6662 + π) · 2.0 · speed · 0.5 / speedValue
+leftArm.xRot  = cos(pos · 0.6662)     · 2.0 · speed · 0.5 / speedValue
+rightLeg.xRot = cos(pos · 0.6662)     · 1.4 · speed / speedValue
+leftLeg.xRot  = cos(pos · 0.6662 + π) · 1.4 · speed / speedValue
+rightLeg.yRot =  0.005 ; leftLeg.yRot = -0.005 ; zRot 同理
+```
+
+外加 `AnimationUtils.bobArms`（每帧都跑，静止时手臂也不为零）：
+
+```
+xRot ± sin(age · 0.067) · 0.05
+zRot ± (cos(age · 0.09) · 0.05 + 0.05)
+```
+
+**注意**：手臂摆幅是 `2.0 · 0.5 = 1.0`，腿是 `1.4`，两者**不相等**；早期测试误以为「手臂与腿等幅反向」而失败，实际实现是对的、断言是错的。测试已改为直接编码上述公式。
 
 ## 7. 分阶段与验收
 

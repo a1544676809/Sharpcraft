@@ -88,6 +88,7 @@ public static class EntityAnimationRegistry
         new HumanoidAnimationProvider(HumanoidMobModelDefinition.ZombieEntityTypeId),
         new HumanoidAnimationProvider(HumanoidMobModelDefinition.DrownedEntityTypeId),
         new HumanoidAnimationProvider(HumanoidMobModelDefinition.HuskEntityTypeId),
+        new PlayerAnimationProvider(),
         new EndermanAnimationProvider(HumanoidMobModelDefinition.EndermanEntityTypeId),
         new HumanoidAnimationProvider(ZombieVillagerModelDefinition.ZombieVillagerEntityTypeId),
         new FelineAnimationProvider(CatModelDefinition.CatEntityTypeId, isCat: true),
