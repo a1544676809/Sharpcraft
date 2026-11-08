@@ -438,7 +438,29 @@ internal static class WindowCommand
             localProfileId: localProfileId);
         session.PlayerSkinLookup = playerSkins.TryGet;
         var modelMesher = new Sharpcraft.Client.Render.EntityModelMesher();
+        var droppedItemMesher = new Sharpcraft.Client.Render.DroppedItemMesher();
         var variantTable = Sharpcraft.Client.Render.EntityVariantTable.FromRegistries(live?.Registries);
+
+        /// <summary>
+        /// Adds the dropped-item layer after the entity layers. Both branches of the entity path funnel here so the drop
+        /// geometry is produced by exactly one place, whichever entity skin path is active.
+        /// </summary>
+        IReadOnlyList<Sharpcraft.Framework.Rendering.EntityGeometryLayer>? AppendDroppedItems(
+            IReadOnlyList<Sharpcraft.Framework.Rendering.EntityGeometryLayer>? layers,
+            IReadOnlyList<EntityRenderState> entities)
+        {
+            var dropLayer = droppedItemMesher.Build(entities, itemAtlas);
+            if (dropLayer is null)
+            {
+                return layers;
+            }
+
+            var combined = layers is null
+                ? new List<Sharpcraft.Framework.Rendering.EntityGeometryLayer>(1)
+                : [.. layers];
+            combined.Add(dropLayer);
+            return combined;
+        }
 
         void EnsureItemTextures(IReadOnlyList<EntityRenderState> entities)
         {
@@ -457,6 +479,7 @@ internal static class WindowCommand
                 AddIfPresent(paths, EntityModelResolver.ResolveHeldItemTexture(entity, offhand: true));
                 AddIfPresent(paths, EntityModelResolver.ResolveHeldItemSpecialTexture(entity, offhand: false));
                 AddIfPresent(paths, EntityModelResolver.ResolveHeldItemSpecialTexture(entity, offhand: true));
+                paths.AddRange(Sharpcraft.Client.Render.DroppedItemMesher.ResolveTextures(entity));
                 AddIfPresent(paths, EntityModelResolver.ResolveHeldItemPotSideTexture(entity, offhand: false));
                 AddIfPresent(paths, EntityModelResolver.ResolveHeldItemPotSideTexture(entity, offhand: true));
                 paths.AddRange(EntityModelResolver.ResolveHeldItemPatternSprites(entity, offhand: false));
@@ -512,11 +535,15 @@ internal static class WindowCommand
                 if (entitySkinLibrary.Atlas is { } entitySkinAtlas)
                 {
                     var atlasSprite = new Sharpcraft.Client.Assets.SpriteRect(0, 0, entitySkinAtlas.Texture.Width, entitySkinAtlas.Texture.Height, 1) { U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f };
-                    return modelMesher.BuildLayers(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), atlasSprite, 64, 64, skinAtlas: entitySkinAtlas, variants: variantTable, itemAtlas: itemAtlas);
+                    return AppendDroppedItems(
+                        modelMesher.BuildLayers(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), atlasSprite, 64, 64, skinAtlas: entitySkinAtlas, variants: variantTable, itemAtlas: itemAtlas),
+                        visibleEntities);
                 }
 
                 return entitySkinSprite is { } skinModel
-                    ? modelMesher.BuildLayers(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), skinModel, skinModel.Width == 1600 ? 64 : skinModel.Width, skinModel.Height == 1600 ? 64 : skinModel.Height, variants: variantTable, itemAtlas: itemAtlas)
+                    ? AppendDroppedItems(
+                        modelMesher.BuildLayers(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(visibleEntities), skinModel, skinModel.Width == 1600 ? 64 : skinModel.Width, skinModel.Height == 1600 ? 64 : skinModel.Height, variants: variantTable, itemAtlas: itemAtlas),
+                        visibleEntities)
                     : null;
             })
             : null;
