@@ -576,7 +576,7 @@ public static class EntityModelResolver
             renderLayers = witchLayers;
         }
 
-        if (!baby && ReferenceEquals(layers, HumanoidArmorLayers))
+        if (ReferenceEquals(layers, HumanoidArmorLayers))
         {
             var existing = renderLayers ?? definition.RenderLayers;
             var heldLayers = new List<EntityRenderLayerDefinition>(existing);
@@ -584,7 +584,7 @@ public static class EntityModelResolver
                 "held_item_right",
                 EntityGeometryLayerKind.Cutout,
                 50,
-                HeldItemModelDefinition.Definition,
+                baby ? HeldItemModelDefinition.BabyDefinition : HeldItemModelDefinition.Definition,
                 TexturePath: null,
                 TextureSelector: state => ResolveHeldItemTexture(state, offhand: false),
                 VisibleWhen: state => ResolveHeldItemTexture(state, offhand: false) is not null,
@@ -594,7 +594,7 @@ public static class EntityModelResolver
                 "held_item_left",
                 EntityGeometryLayerKind.Cutout,
                 51,
-                HeldItemModelDefinition.LeftDefinition,
+                baby ? HeldItemModelDefinition.BabyLeftDefinition : HeldItemModelDefinition.LeftDefinition,
                 TexturePath: null,
                 TextureSelector: state => ResolveHeldItemTexture(state, offhand: true),
                 VisibleWhen: state => ResolveHeldItemTexture(state, offhand: true) is not null,

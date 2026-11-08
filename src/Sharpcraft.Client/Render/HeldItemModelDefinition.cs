@@ -29,13 +29,33 @@ public static class HeldItemModelDefinition
         texturePath: null,
         1f);
 
-    private static VanillaMeshDefinition BuildMesh(bool left = false)
+    /// <summary>Baby humanoid right-hand variant (arms are 3 px from the centre and 15.5 px high).</summary>
+    public static readonly EntityModelDefinition BabyDefinition = EntityModelDefinition.FromTree(
+        "held_item_baby_right",
+        64,
+        64,
+        BuildMesh(left: false, baby: true),
+        PlayerModelDefinition.DefaultFaceTransforms,
+        texturePath: null,
+        1f);
+
+    /// <summary>Baby humanoid left-hand variant.</summary>
+    public static readonly EntityModelDefinition BabyLeftDefinition = EntityModelDefinition.FromTree(
+        "held_item_baby_left",
+        64,
+        64,
+        BuildMesh(left: true, baby: true),
+        PlayerModelDefinition.DefaultFaceTransforms,
+        texturePath: null,
+        1f);
+
+    private static VanillaMeshDefinition BuildMesh(bool left = false, bool baby = false)
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         var arm = root.AddOrReplaceChild(left ? "left_arm" : "right_arm",
-            VanillaPartPose.Offset(left ? 5f : -5f, 2f, 0f),
+            VanillaPartPose.Offset(left ? (baby ? 3f : 5f) : (baby ? -3f : -5f), baby ? 15.5f : 2f, 0f),
             new VanillaCubeDefinition(left ? "left_arm" : "right_arm", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f));
-        arm.AddOrReplaceChild("held_item", VanillaPartPose.Offset(0f, -10f, -4f),
+        arm.AddOrReplaceChild("held_item", VanillaPartPose.Offset(0f, baby ? -5f : -10f, baby ? -3f : -4f),
             new VanillaCubeDefinition(
                 "held_item",
                 0,
