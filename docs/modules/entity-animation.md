@@ -97,7 +97,8 @@
 - 第一版只覆盖 idle/walk 和少量实体，不一次性移植全部实体动画；
 - 动画状态中的交互/攻击状态先用客户端可观测的简化输入，后续补 AI 状态同步。
 - **玩家此前完全没有动画**：`EntityAnimationRegistry` 只登记了人形怪，玩家类型（159）没有 provider，因此走路/攻击/潜行都不动。现已补 `PlayerAnimationProvider`（`HumanoidVariant.Plain` + `HumanoidArmPoseResolver`），玩家模型的手/袖/裤是**挂在基部件上的 overlay**，随姿态自动跟随，不需要像原版那样逐个 `copyFrom`。
-- **手臂姿态选择仍不完整**：`HumanoidArmPose` 枚举与 `HumanoidModelPose` 的姿态数学都已具备（含 CROSSBOW_*、SPYGLASS、TOOT_HORN、THROW_TRIDENT、BRUSH），但 `HumanoidArmPoseResolver` 目前只返回 `Empty` / `Spear` / `BowAndArrow`，其余姿态永远不会被选中。
+- **手臂姿态选择已按 `AvatarRenderer.getArmPose` 补齐**（`HumanoidArmPoseResolver.ComputeForAvatar`）：逐手取 `EMPTY`/`ITEM`/`BLOCK`/`BOW_AND_ARROW`/`THROW_TRIDENT`/`CROSSBOW_CHARGE`/`SPYGLASS`/`TOOT_HORN`/`BRUSH`/`SPEAR`，主手双手姿态时副手降为 `ITEM`/`EMPTY`，再按 `IsLeftHanded` 分配到左右臂。**两处已知简化**：①`CROSSBOW_HOLD` 需要 `charged_projectiles` 组件（未解码），当前只要「未挥击且持弩」就取该姿态；②「正在使用的手」在原版是本地权威的 `getUsedItemHand()`，客户端只有环境标志，故主手优先。
+- **`use_animation` 组件未解码**：姿态映射改为按原版物品名（`shield`/`bow`/`trident`/`crossbow`/`spyglass`/`goat_horn`/`brush`）查表，数据包自定义该组件时不生效。
 
 ### 6.1 玩家走路摆幅真值（26.3）
 

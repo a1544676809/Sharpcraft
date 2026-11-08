@@ -100,6 +100,30 @@ public sealed class PlayerAnimationTests
     }
 
     [Fact]
+    public void ABowThatIsBeingUsedRaisesTheMainArm()
+    {
+        // Reference AvatarRenderer: BOW_AND_ARROW comes from a stack whose use animation is BOW while the entity is
+        // using it, and it is two-handed, so the off arm falls back to ITEM/EMPTY.
+        var bowId = Sharpcraft.Client.Render.EntityModelResolver.Items?.GetId(
+            Sharpcraft.Common.Identifiers.Identifier.Parse("minecraft:bow")) ?? -1;
+        if (bowId <= 0)
+        {
+            return; // embedded registry unavailable in this host
+        }
+
+        var provider = new PlayerAnimationProvider();
+        var usingPose = new EntityPose();
+        var usingFrame = Frame() with { MainHandItemId = bowId, IsUsingItem = true, IsLeftHanded = false };
+        provider.Apply(provider.CreateState(), in usingFrame, usingPose);
+
+        var heldPose = new EntityPose();
+        var heldFrame = Frame() with { MainHandItemId = bowId, IsLeftHanded = false };
+        provider.Apply(provider.CreateState(), in heldFrame, heldPose);
+
+        // BOW_AND_ARROW is not the ITEM pose, so the arm rotation must differ from merely holding the bow.
+        Assert.NotEqual(heldPose.Get("right_arm").Rotation.X, usingPose.Get("right_arm").Rotation.X, 4);
+    }
+    [Fact]
     public void TheHeadTracksPitchAndYaw()
     {
         var provider = new PlayerAnimationProvider();

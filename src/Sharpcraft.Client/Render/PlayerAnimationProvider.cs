@@ -43,7 +43,8 @@ public sealed class PlayerAnimationProvider : IEntityAnimationProvider
 
     private static void ApplyPlayer(in EntityAnimationFrame frame, EntityPose pose)
     {
-        HumanoidArmPoseResolver.Compute(frame, skeleton: false, out var right, out var left);
+        // PlayerRenderer resolves poses through AvatarRenderer, not the mob renderer rule.
+        HumanoidArmPoseResolver.ComputeForAvatar(frame, out var right, out var left);
         HumanoidModelPose.Apply(
             frame,
             pose,
