@@ -93,6 +93,25 @@
 
 ## 7. 风险与限制
 
+### 7.1 已知刻意的简化（必须后续解决）
+
+| 简化项 | 当前实现 | 等价性缺口 | 计划 |
+| --- | --- | --- | --- |
+| `select` / `condition` / `range_dispatch` | 仅取静态 fallback 或首个分支 | 未求值 `property`、组件、距离、use 状态等真实条件 | `T-631e` |
+| item model `transformation` | `ItemModelResolver` 只解析 display，未合成 special/general `transformation` | 3D item/special 的局部变换可能偏差 | `T-631e` |
+| held item 手臂锚点 | `HeldItemModelDefinition` 固定 `right_arm`/`left_arm` pivot 与近似 offset | 未复刻 `ItemInHandLayer` 的 hand anchor、baby offset、STAB/使用中姿态 | `T-631e` |
+| item atlas | 按可见实体主/副手纹理按需打包，使用自研网格 | 无真实资源包/完整 item atlas 的 UV、missing sprite、尺寸回归 | `T-631e` |
+| `shield` | 只有 plate/handle + no-pattern base 纹理 | 未组合 banner patterns、dye、foil/glint | `T-631e` |
+| `chest` / `shulker_box` | 基础 bottom/lid/base/lock 几何与 texture 选择 | 未实现 lid openness、double chest、shulker orientation/开合 | `T-631e` |
+| `banner` / `decorated_pot` / `conduit` / `end_cube` | 未实现 | 不能渲染对应 special item | `T-631e` |
+| `minecraft:special` 参数 | 只保留字符串属性 | 未解析/应用复杂组件、颜色、图案、profile | `T-631e` |
+| item 渲染状态 | 无完整 `ItemStackRenderState` 层/foil/tint 模型 | 多层、染色、glint、GUI/ground 组合未验证 | `T-631e` |
+| 掉落物 / 展示框 / GUI | 未实现 | 仅实体手持路径 | `T-631e` |
+
+这些简化不得以“已完成”收口；在视觉/真值验收前对应进度保持 `进行中`。
+
+### 7.2 其他限制
+
 - 26.3 的 `items/*.json` 与旧版 `models/item` 结构不同；必须按 26.3 的 item model 类型分发，不能只读旧 parent 字段。
 - `ItemStackRenderState` 的层/foil/tint 结构未在仓库实现；T-631a 只建立解析数据，不提前造渲染状态。
 - 物品 atlas 与 block atlas 分离；不能复用 block atlas 的 sprite 假设。
