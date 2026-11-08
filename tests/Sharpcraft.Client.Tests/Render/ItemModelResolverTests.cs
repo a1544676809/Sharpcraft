@@ -51,6 +51,35 @@ public sealed class ItemModelResolverTests
     }
 
     [Fact]
+    public void SelectConditionAndRangeUseTheirStaticFallbackModels()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "sharpcraft-item-model-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Write(root, "assets/minecraft/items/test_complex.json",
+                """{"model":{"type":"minecraft:select","fallback":{"type":"minecraft:model","model":"minecraft:item/default"},"cases":[{"when":"special","model":{"type":"minecraft:condition","on_false":{"type":"minecraft:model","model":"minecraft:item/default"}}}]}}""");
+            Write(root, "assets/minecraft/models/item/default.json",
+                """{"parent":"builtin/generated","textures":{"layer0":"minecraft:item/default"}}""");
+
+            using var stack = new AssetStack { Policy = MissingResourcePolicy.Warn, Warn = _ => { } }
+                .Add(new DirectoryAssetSource(root, "item-test"));
+            using var resources = new ResourceManager(stack, 1);
+            var model = new ItemModelResolver(resources).Resolve("minecraft:test_complex");
+
+            Assert.NotNull(model);
+            Assert.Equal("minecraft:item/default", model!.ModelId);
+            Assert.Equal("minecraft:item/default", model.Textures["layer0"]);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void ComponentModelIdOverridesTheItemDefault()
     {
         var root = Path.Combine(Path.GetTempPath(), "sharpcraft-item-model-" + Guid.NewGuid().ToString("N"));

@@ -111,19 +111,74 @@ public sealed class ItemModelResolver
             return null;
         }
 
-        if (string.Equals(typeElement.GetString(), "minecraft:empty", StringComparison.Ordinal))
+        return ResolveElement(modelElement, depth: 0);
+    }
+
+    private ItemModelResolution? ResolveElement(JsonElement model, int depth)
+    {
+        if (depth > 8 ||
+            !model.TryGetProperty("type", out var typeElement) ||
+            typeElement.ValueKind != JsonValueKind.String)
         {
             return null;
         }
 
-        if (!modelElement.TryGetProperty("model", out var modelIdElement) ||
-            modelIdElement.ValueKind != JsonValueKind.String ||
-            !Identifier.TryParse(modelIdElement.GetString()!, out var modelId))
+        var type = typeElement.GetString();
+        switch (type)
         {
-            return null;
+            case "minecraft:empty":
+                return null;
+            case "minecraft:model":
+                return model.TryGetProperty("model", out var modelIdElement) &&
+                       modelIdElement.ValueKind == JsonValueKind.String &&
+                       Identifier.TryParse(modelIdElement.GetString()!, out var modelId)
+                    ? ResolveModel(modelId.ToString())
+                    : null;
+            case "minecraft:select":
+                return TryResolveNested(model, "fallback", depth) ??
+                       (model.TryGetProperty("cases", out var cases) && cases.ValueKind == JsonValueKind.Array
+                           ? ResolveFirstCase(cases, depth)
+                           : null);
+            case "minecraft:condition":
+                return TryResolveNested(model, "on_false", depth) ??
+                       TryResolveNested(model, "on_true", depth);
+            case "minecraft:range_dispatch":
+                return TryResolveNested(model, "fallback", depth) ??
+                       (model.TryGetProperty("entries", out var entries) && entries.ValueKind == JsonValueKind.Array
+                           ? ResolveFirstCase(entries, depth)
+                           : null);
+            case "minecraft:composite":
+                return model.TryGetProperty("models", out var models) && models.ValueKind == JsonValueKind.Array
+                    ? ResolveFirstCase(models, depth)
+                    : null;
+            default:
+                // special/selectors with unsupported properties deliberately fall back to no drawable model.
+                return null;
+        }
+    }
+
+    private ItemModelResolution? TryResolveNested(JsonElement model, string property, int depth) =>
+        model.TryGetProperty(property, out var nested) && nested.ValueKind == JsonValueKind.Object
+            ? ResolveElement(nested, depth + 1)
+            : null;
+
+    private ItemModelResolution? ResolveFirstCase(JsonElement array, int depth)
+    {
+        foreach (var entry in array.EnumerateArray())
+        {
+            if (entry.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            if (entry.TryGetProperty("model", out var nested) && nested.ValueKind == JsonValueKind.Object &&
+                ResolveElement(nested, depth + 1) is { } resolved)
+            {
+                return resolved;
+            }
         }
 
-        return ResolveModel(modelId.ToString());
+        return null;
     }
 
     private ItemModelResolution? ResolveModel(string modelId)
