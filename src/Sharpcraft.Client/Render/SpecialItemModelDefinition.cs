@@ -28,10 +28,12 @@ public static class SpecialItemModelDefinition
     public const string EndPortalTexture = "entity/end_portal/end_portal";
 
     /// <summary>
-    /// Vanilla renders one coplanar copy of the flag per pattern layer, tinted by that layer's dye. The reference has no
-    /// hard cap; the loom is limited to 20 layers, which is the bound baked here.
+    /// Vanilla renders one coplanar copy of the flag per pattern layer and the client itself imposes no cap; the loom
+    /// refuses to add a seventh layer (<c>LoomMenu.hasMaxPatterns</c>: <c>layers().size() &gt;= 6</c>). Six is therefore
+    /// the largest layer count reachable through normal gameplay, and it is the bound baked here. Layers beyond six can
+    /// only come from externally edited components and are dropped.
     /// </summary>
-    public const int MaxBannerPatternLayers = 20;
+    public const int MaxBannerPatternLayers = 6;
 
     /// <summary>Banner flag pattern overlays, one coplanar copy per layer.</summary>
     public static readonly EntityModelDefinition BannerFlagPatternsRight = CreatePatternOverlay(
