@@ -85,6 +85,32 @@ public sealed class ItemModelExtentsTests
     }
 
     [Fact]
+    public void AHandheldSwordDropIsHalfABlockWide()
+    {
+        // items/iron_sword -> item/iron_sword -> item/handheld -> item/generated. Only item/generated declares a ground
+        // transform: translation (0,2,0) model pixels and scale 0.5, so a handled drop is 0.5 x 0.5 blocks with a
+        // 0.03125 block extrusion - thinner than the flat-item threshold, which keeps it in the single-column layout.
+        var resolution = new ItemModelResolution(
+            "minecraft:item/iron_sword",
+            new Dictionary<string, string> { ["layer0"] = "minecraft:item/iron_sword" },
+            new Dictionary<ItemDisplayContext, ItemDisplayTransform>
+            {
+                [ItemDisplayContext.Ground] = new(
+                    default,
+                    new System.Numerics.Vector3(0f, 2f * 0.0625f, 0f),
+                    new System.Numerics.Vector3(0.5f, 0.5f, 0.5f))
+            });
+
+        var ground = ItemModelExtents.ForDisplay(resolution, ItemDisplayContext.Ground);
+        Assert.Equal(0.5f, ground.Max.X - ground.Min.X, 6);
+        Assert.Equal(0.5f, ground.Max.Y - ground.Min.Y, 6);
+        Assert.Equal(0.03125f, ground.Depth, 6);
+        Assert.False(ground.IsDeeperThanFlatItem);
+        // The stack step is depth * 1.5, the reference offsetZ.
+        Assert.Equal(0.046875f, ItemEntityRenderer.BulkZStep(ground), 6);
+    }
+
+    [Fact]
     public void AThreeDimensionalModelIsDeeperThanAFlatItem()
     {
         var chest = ItemModelExtents.FromModel(SpecialItemModelDefinition.Chest);

@@ -97,6 +97,8 @@
 
 **踩过的坑**：背面若沿用 `defaultFaceUV`（整块元素得到 `(0,0,16,16)`）就与正面同向，于是「背面镜像精灵」与正面叠成 V 形双剑；必须显式给反向 U。
 
+**掉落物尺寸真值**：`item/handheld` 与 `item/iron_sword` 都不声明 `ground`，只有祖先 `item/generated` 声明 `ground = { rotation:[0,0,0], translation:[0,2,0], scale:[0.5,0.5,0.5] }`。因此生成型掉落物实际是 **0.5 × 0.5 格**、厚 **0.03125 格**（`0.0625 × 0.5`），低于 `0.0625` 阈值故走单列布局，堆叠步长 `0.03125 × 1.5 = 0.046875`。
+
 ### 3.7 行向量下的合成顺序（易错点）
 
 原版是列向量矩阵，`ItemTransform.apply` 依次调用 `translate(t)` → `rotate(rotationXYZ)` → `scale(s)` → `translate(-0.5,-0.5,-0.5)`，列向量累积为 `M = T·R·S·T(-0.5)`，因此**顶点最先被 `-0.5` 居中**，最后才平移。`LayerRenderState.applyTransform` 再 `mulPose(localTransform)`。
