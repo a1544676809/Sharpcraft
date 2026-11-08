@@ -411,7 +411,12 @@ internal static class WindowCommand
         entitySkinTextureSource.Update(entitySkinLibrary.Atlas?.Texture ?? playerSkin);
         var itemModelResolver = new Sharpcraft.Client.Render.ItemModelResolver(resources);
         Sharpcraft.Client.Render.EntityModelResolver.ItemModels = itemModelResolver;
-        var itemAtlas = Sharpcraft.Client.Render.ItemAtlas.Load(resources, [Sharpcraft.Client.Render.WitchModelDefinition.PotionTexture]);
+        var itemAtlas = Sharpcraft.Client.Render.ItemAtlas.Load(resources,
+        [
+            Sharpcraft.Client.Render.WitchModelDefinition.PotionTexture,
+            Sharpcraft.Client.Render.SpecialItemModelDefinition.TridentTexture,
+            Sharpcraft.Client.Render.SpecialItemModelDefinition.ShieldTexture
+        ]);
         var itemAtlasSource = new Sharpcraft.Framework.Rendering.AtlasTextureSource();
         itemAtlasSource.Update(itemAtlas.Texture);
         var entitySkinSprite = playerSkin is { } skin

@@ -97,6 +97,18 @@ public static class EntityModelResolver
     public static bool ResolveEquipmentFoil(EntityRenderState state, int slot) =>
         state.EquipmentGlintOverrideAt(slot) ?? state.EquipmentHasEnchantmentsAt(slot) ?? false;
 
+    /// <summary>Resolves one hand's special renderer type, or null when the item is not a special model.</summary>
+    public static string? ResolveHeldItemSpecial(EntityRenderState state, bool offhand = false)
+    {
+        var itemId = offhand ? state.OffHandItemId : state.MainHandItemId;
+        if (ItemModels is null || Items?.ById(itemId) is not { } item)
+        {
+            return null;
+        }
+
+        return ItemModels.Resolve(item.Id.ToString())?.SpecialRendererType;
+    }
+
     /// <summary>Resolves one hand's first item-atlas texture path, or null when unknown.</summary>
     public static string? ResolveHeldItemTexture(EntityRenderState state, bool offhand = false)
     {
@@ -600,6 +612,8 @@ public static class EntityModelResolver
                 VisibleWhen: state => ResolveHeldItemTexture(state, offhand: true) is not null,
                 AllCubes: true,
                 UsesItemAtlas: true));
+            AddSpecialHandLayers(heldLayers, "trident", "minecraft:trident", SpecialItemModelDefinition.HeldTridentRight, SpecialItemModelDefinition.HeldTridentLeft, SpecialItemModelDefinition.TridentTexture);
+            AddSpecialHandLayers(heldLayers, "shield", "minecraft:shield", SpecialItemModelDefinition.HeldShieldRight, SpecialItemModelDefinition.HeldShieldLeft, SpecialItemModelDefinition.ShieldTexture);
             renderLayers = heldLayers;
         }
 
@@ -683,6 +697,37 @@ public static class EntityModelResolver
             renderLayers: renderLayers);
         EquippedModels[key] = decorated;
         return decorated;
+    }
+
+    private static void AddSpecialHandLayers(
+        List<EntityRenderLayerDefinition> layers,
+        string name,
+        string specialType,
+        EntityModelDefinition right,
+        EntityModelDefinition left,
+        string texture)
+    {
+        var order = 52 + (layers.Count * 2);
+        layers.Add(new EntityRenderLayerDefinition(
+            "held_special_" + name + "_right",
+            EntityGeometryLayerKind.Cutout,
+            order,
+            right,
+            texture,
+            _ => texture,
+            state => ResolveHeldItemSpecial(state, offhand: false) == specialType,
+            AllCubes: true,
+            UsesItemAtlas: true));
+        layers.Add(new EntityRenderLayerDefinition(
+            "held_special_" + name + "_left",
+            EntityGeometryLayerKind.Cutout,
+            order + 1,
+            left,
+            texture,
+            _ => texture,
+            state => ResolveHeldItemSpecial(state, offhand: true) == specialType,
+            AllCubes: true,
+            UsesItemAtlas: true));
     }
 
     private static bool IsHarnessItem(int itemId) =>
