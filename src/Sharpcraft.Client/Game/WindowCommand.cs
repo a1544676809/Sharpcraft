@@ -409,6 +409,8 @@ internal static class WindowCommand
         var entitySkinLibrary = Sharpcraft.Client.Render.EntitySkinLibrary.Load(resources, playerSkin);
         var entitySkinTextureSource = new Sharpcraft.Framework.Rendering.AtlasTextureSource();
         entitySkinTextureSource.Update(entitySkinLibrary.Atlas?.Texture ?? playerSkin);
+        var itemModelResolver = new Sharpcraft.Client.Render.ItemModelResolver(resources);
+        Sharpcraft.Client.Render.EntityModelResolver.ItemModels = itemModelResolver;
         var itemAtlas = Sharpcraft.Client.Render.ItemAtlas.Load(resources, [Sharpcraft.Client.Render.WitchModelDefinition.PotionTexture]);
         var itemAtlasSource = new Sharpcraft.Framework.Rendering.AtlasTextureSource();
         itemAtlasSource.Update(itemAtlas.Texture);
@@ -432,6 +434,31 @@ internal static class WindowCommand
         session.PlayerSkinLookup = playerSkins.TryGet;
         var modelMesher = new Sharpcraft.Client.Render.EntityModelMesher();
         var variantTable = Sharpcraft.Client.Render.EntityVariantTable.FromRegistries(live?.Registries);
+
+        void EnsureItemTextures(IReadOnlyList<EntityRenderState> entities)
+        {
+            foreach (var entity in entities)
+            {
+                var path = EntityModelResolver.ResolveHeldItemTexture(entity);
+                if (path is null || itemAtlas.Contains(path))
+                {
+                    continue;
+                }
+
+                var bytes = resources.Read(
+                    Sharpcraft.Assets.ResourceKind.Texture,
+                    new Sharpcraft.Common.Identifiers.Identifier("minecraft", path));
+                if (bytes is null)
+                {
+                    continue;
+                }
+
+                var image = Sharpcraft.Common.Imaging.PngDecoder.Decode(bytes);
+                itemAtlas = itemAtlas.WithTexture(path, new TextureData(image.Width, image.Height, image.Pixels));
+                itemAtlasSource.Update(itemAtlas.Texture);
+            }
+        }
+
         var entitySource = entitySprite is { } sprite
             ? new Func<IReadOnlyList<Sharpcraft.Framework.Rendering.EntityGeometryLayer>?>(() =>
             {
@@ -455,6 +482,8 @@ internal static class WindowCommand
                 {
                     Console.WriteLine($"entity cull: candidates={states.Length} visible={visibleEntities.Count} culled={states.Length - visibleEntities.Count}");
                 }
+
+                EnsureItemTextures(visibleEntities);
 
                 if (entitySkinLibrary.Atlas is { } entitySkinAtlas)
                 {

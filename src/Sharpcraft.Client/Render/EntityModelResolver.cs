@@ -18,6 +18,9 @@ public static class EntityModelResolver
     /// <summary>Item identity table used by equipment layer selectors; defaults to the embedded baseline snapshot.</summary>
     public static ItemRegistry? Items { get; set; } = ItemRegistry.LoadEmbedded();
 
+    /// <summary>Item model resolver installed by the window host; used by held-item layer selectors.</summary>
+    public static ItemModelResolver? ItemModels { get; set; }
+
     /// <summary>Item tag table loaded from the extracted pack; empty until the launcher installs it.</summary>
     public static ItemTagRegistry ItemTags { get; set; } = ItemTagRegistry.Empty;
 
@@ -93,6 +96,31 @@ public static class EntityModelResolver
     /// </summary>
     public static bool ResolveEquipmentFoil(EntityRenderState state, int slot) =>
         state.EquipmentGlintOverrideAt(slot) ?? state.EquipmentHasEnchantmentsAt(slot) ?? false;
+
+    /// <summary>Resolves the main-hand item's first item-atlas texture path, or null when unknown.</summary>
+    public static string? ResolveHeldItemTexture(EntityRenderState state)
+    {
+        if (ItemModels is null || Items?.ById(state.MainHandItemId) is not { } item)
+        {
+            return null;
+        }
+
+        var model = ItemModels.Resolve(item.Id.ToString());
+        if (model is null)
+        {
+            return null;
+        }
+
+        var texture = model.Textures.TryGetValue("layer1", out var layer1)
+            ? layer1
+            : model.Textures.TryGetValue("layer0", out var layer0) ? layer0 : null;
+        if (texture is null || !Identifier.TryParse(texture, out var identifier))
+        {
+            return null;
+        }
+
+        return identifier.Path;
+    }
 
     /// <summary>Resolves the leather/dyed tint for an equipment slot, or white when the item is not dyeable.</summary>
     public static Vector3 ResolveEquipmentTint(EntityRenderState state, EquipmentAssetKind kind, int slot)
@@ -545,6 +573,23 @@ public static class EntityModelResolver
                 AllCubes: true,
                 UsesItemAtlas: true));
             renderLayers = witchLayers;
+        }
+
+        if (!baby && ReferenceEquals(layers, HumanoidArmorLayers))
+        {
+            var existing = renderLayers ?? definition.RenderLayers;
+            var heldLayers = new List<EntityRenderLayerDefinition>(existing);
+            heldLayers.Add(new EntityRenderLayerDefinition(
+                "held_item",
+                EntityGeometryLayerKind.Cutout,
+                50,
+                HeldItemModelDefinition.Definition,
+                TexturePath: null,
+                TextureSelector: ResolveHeldItemTexture,
+                VisibleWhen: state => ResolveHeldItemTexture(state) is not null,
+                AllCubes: true,
+                UsesItemAtlas: true));
+            renderLayers = heldLayers;
         }
 
         if (typeId == HappyGhastModelDefinition.HappyGhastEntityTypeId)

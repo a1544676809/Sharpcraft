@@ -273,6 +273,17 @@ public sealed class EntityLayerTests
     }
 
     [Fact]
+    public void AdultHumanoidHasAnItemAtlasHeldItemLayer()
+    {
+        var definition = EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId);
+        Assert.Contains(definition.RenderLayers,
+            layer => layer.Name == "held_item" && layer.UsesItemAtlas);
+        var part = HeldItemModelDefinition.Definition.Compiled!.Find("held_item");
+        Assert.NotNull(part);
+        Assert.Equal(0f, part!.Cubes.Single().Depth);
+    }
+
+    [Fact]
     public void HappyGhastRopesRequireLeashAndHarness()
     {
         var harness = EntityModelResolver.Items!.GetId(Identifier.Parse("minecraft:white_harness"));

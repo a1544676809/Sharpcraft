@@ -17,11 +17,18 @@ namespace Sharpcraft.Client.Render;
 public sealed class ItemAtlas : ISpriteAtlas
 {
     private readonly Dictionary<string, SpriteRect> _sprites;
+    private readonly Dictionary<string, TextureData> _images;
 
-    private ItemAtlas(TextureData texture, Dictionary<string, SpriteRect> sprites, int cellWidth, int cellHeight)
+    private ItemAtlas(
+        TextureData texture,
+        Dictionary<string, SpriteRect> sprites,
+        Dictionary<string, TextureData> images,
+        int cellWidth,
+        int cellHeight)
     {
         Texture = texture;
         _sprites = sprites;
+        _images = images;
         CellWidth = cellWidth;
         CellHeight = cellHeight;
     }
@@ -82,7 +89,13 @@ public sealed class ItemAtlas : ISpriteAtlas
             index++;
         }
 
-        return new ItemAtlas(new TextureData(width, height, pixels), sprites, cellWidth, cellHeight);
+        var imageCopy = new Dictionary<string, TextureData>(images.Count, StringComparer.Ordinal);
+        foreach (var pair in images)
+        {
+            imageCopy[pair.Key] = pair.Value;
+        }
+
+        return new ItemAtlas(new TextureData(width, height, pixels), sprites, imageCopy, cellWidth, cellHeight);
     }
 
     /// <summary>Loads the requested item texture paths through the resource manager.</summary>
@@ -106,6 +119,26 @@ public sealed class ItemAtlas : ISpriteAtlas
         return FromTextures(images);
     }
 
+    /// <summary>Whether a texture path is already packed.</summary>
+    public bool Contains(string? texturePath) => texturePath is not null && _sprites.ContainsKey(texturePath);
+
+    /// <summary>Returns a new atlas with one additional texture, or this atlas when it already exists.</summary>
+    public ItemAtlas WithTexture(string texturePath, TextureData image)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(texturePath);
+        ArgumentNullException.ThrowIfNull(image);
+        if (_sprites.ContainsKey(texturePath))
+        {
+            return this;
+        }
+
+        var images = new Dictionary<string, TextureData>(_images, StringComparer.Ordinal)
+        {
+            [texturePath] = image
+        };
+        return FromTextures(images);
+    }
+
     private static ItemAtlas Missing()
     {
         const int size = 16;
@@ -126,6 +159,7 @@ public sealed class ItemAtlas : ISpriteAtlas
         return new ItemAtlas(
             new TextureData(size, size, pixels),
             new Dictionary<string, SpriteRect>(StringComparer.Ordinal),
+            new Dictionary<string, TextureData>(StringComparer.Ordinal),
             size,
             size);
     }
