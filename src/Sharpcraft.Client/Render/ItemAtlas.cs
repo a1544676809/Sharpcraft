@@ -14,6 +14,7 @@ namespace Sharpcraft.Client.Render;
 /// kept out of the entity atlas so item model resolution and item loading can grow independently.
 /// </summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.resources.model.sprite.ItemAtlas", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/texture/ItemTextureAtlas.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Sharpcraft item atlas; no direct reference counterpart")]
+[Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-ATLAS-VALIDATION", "T-631e", Note = "Synthetic packing tests only; real resource-pack UV validation is pending")]
 public sealed class ItemAtlas : ISpriteAtlas
 {
     private readonly Dictionary<string, SpriteRect> _sprites;

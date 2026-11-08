@@ -1,0 +1,14 @@
+<Project>
+
+  <!--
+    AGENTS.md principle 15: every active [Simplification] marker must have a machine-readable
+    entry in docs/modules. This runs before compilation so a missing registration is a build failure,
+    not only a documentation/test failure.
+  -->
+  <Target Name="CheckSimplificationRegistration"
+          BeforeTargets="Build"
+          Condition="('$(MSBuildProjectName)' == 'Sharpcraft.Client' or '$(MSBuildProjectName)' == 'Sharpcraft.Common') and '$(DesignTimeBuild)' != 'true' and Exists('$(MSBuildThisFileDirectory)tools/verify/check-simplifications.ps1')">
+    <Exec Command="pwsh -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)tools/verify/check-simplifications.ps1&quot;" />
+  </Target>
+
+</Project>

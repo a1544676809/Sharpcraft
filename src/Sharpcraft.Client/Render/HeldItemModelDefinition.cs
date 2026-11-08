@@ -8,6 +8,7 @@ namespace Sharpcraft.Client.Render;
 /// the arm, while the quad samples the independent item atlas through the layer texture selector.
 /// </summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.entity.layers.ItemInHandLayer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/layers/ItemInHandLayer.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
+[Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-HELD-ANCHOR", "T-631e", Note = "Arm pivots and item offsets approximate ItemInHandLayer")]
 public static class HeldItemModelDefinition
 {
     public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(

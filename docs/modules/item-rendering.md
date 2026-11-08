@@ -108,7 +108,12 @@
 | item 渲染状态 | 无完整 `ItemStackRenderState` 层/foil/tint 模型 | 多层、染色、glint、GUI/ground 组合未验证 | `T-631e` |
 | 掉落物 / 展示框 / GUI | 未实现 | 仅实体手持路径 | `T-631e` |
 
-这些简化不得以“已完成”收口；在视觉/真值验收前对应进度保持 `进行中`。
+<!-- simplification:SIM-ITEM-MODEL-STATIC-FALLBACK task:T-631e -->
+<!-- simplification:SIM-ITEM-HELD-ANCHOR task:T-631e -->
+<!-- simplification:SIM-ITEM-SPECIAL-MODELS task:T-631e -->
+<!-- simplification:SIM-ITEM-ATLAS-VALIDATION task:T-631e -->
+
+这些简化不得以“已完成”收口；在视觉/真值验收前对应进度保持 `进行中`。解决后从代码移除 `[Simplification]` 标记，但本节的记录与上面的机器标记 MUST 保留。
 
 ### 7.2 其他限制
 

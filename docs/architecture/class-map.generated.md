@@ -215,6 +215,7 @@
 | Sharpcraft.Client | Sharpcraft.Client.World.SwingAnimationState | Merged | Partial | net.minecraft.world.entity.LivingEntity | ref://mc-26.3-analysis/src/net/minecraft/world/entity/LivingEntity.java | swingDuration/swingTime/swinging fields |
 | Sharpcraft.Client | Sharpcraft.Client.World.WalkAnimationState | Mirror | Partial | net.minecraft.world.entity.WalkAnimationState | ref://mc-26.3-analysis/src/net/minecraft/world/entity/WalkAnimationState.java | auto-resolved by name; verify |
 | Sharpcraft.Common | Sharpcraft.Common.Diagnostics.HotPathAttribute | New | Full | sharpcraft.HotPathAttribute | ref://mc-26.3-analysis/src | Sharpcraft internal utility; no reference counterpart |
+| Sharpcraft.Common | Sharpcraft.Common.Diagnostics.SimplificationAttribute | New | Full | sharpcraft.SimplificationAttribute | ref://mc-26.3-analysis/src | Sharpcraft internal utility; no reference counterpart |
 | Sharpcraft.Common | Sharpcraft.Common.Entities.Aabb | Mirror | Full | net.minecraft.world.phys.AABB | ref://mc-26.3-analysis/src/net/minecraft/world/phys/AABB.java |  |
 | Sharpcraft.Common | Sharpcraft.Common.Entities.EmptyEntityWorld | New | Full | sharpcraft.EmptyEntityWorld | ref://mc-26.3-analysis/src/net/minecraft/world/level/Level.java | Test/placeholder world; no reference counterpart |
 | Sharpcraft.Common | Sharpcraft.Common.Entities.Entity | Mirror | Partial | net.minecraft.world.entity.Entity | ref://mc-26.3-analysis/src/net/minecraft/world/entity/Entity.java | Entity state + interpolation-related position fields |

@@ -8,6 +8,7 @@ namespace Sharpcraft.Client.Render;
 /// shulker, chest and component-driven special renderers remain separate work.
 /// </summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.special.SpecialModelRenderer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/special/SpecialModelRenderer.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
+[Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-SPECIAL-MODELS", "T-631e", Note = "Only trident, shield, head and chest/shulker special shapes are ported")]
 public static class SpecialItemModelDefinition
 {
     public const string TridentTexture = "entity/trident/trident";
