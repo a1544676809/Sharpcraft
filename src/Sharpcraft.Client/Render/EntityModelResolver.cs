@@ -97,10 +97,11 @@ public static class EntityModelResolver
     public static bool ResolveEquipmentFoil(EntityRenderState state, int slot) =>
         state.EquipmentGlintOverrideAt(slot) ?? state.EquipmentHasEnchantmentsAt(slot) ?? false;
 
-    /// <summary>Resolves the main-hand item's first item-atlas texture path, or null when unknown.</summary>
-    public static string? ResolveHeldItemTexture(EntityRenderState state)
+    /// <summary>Resolves one hand's first item-atlas texture path, or null when unknown.</summary>
+    public static string? ResolveHeldItemTexture(EntityRenderState state, bool offhand = false)
     {
-        if (ItemModels is null || Items?.ById(state.MainHandItemId) is not { } item)
+        var itemId = offhand ? state.OffHandItemId : state.MainHandItemId;
+        if (ItemModels is null || Items?.ById(itemId) is not { } item)
         {
             return null;
         }
@@ -580,13 +581,23 @@ public static class EntityModelResolver
             var existing = renderLayers ?? definition.RenderLayers;
             var heldLayers = new List<EntityRenderLayerDefinition>(existing);
             heldLayers.Add(new EntityRenderLayerDefinition(
-                "held_item",
+                "held_item_right",
                 EntityGeometryLayerKind.Cutout,
                 50,
                 HeldItemModelDefinition.Definition,
                 TexturePath: null,
-                TextureSelector: ResolveHeldItemTexture,
-                VisibleWhen: state => ResolveHeldItemTexture(state) is not null,
+                TextureSelector: state => ResolveHeldItemTexture(state, offhand: false),
+                VisibleWhen: state => ResolveHeldItemTexture(state, offhand: false) is not null,
+                AllCubes: true,
+                UsesItemAtlas: true));
+            heldLayers.Add(new EntityRenderLayerDefinition(
+                "held_item_left",
+                EntityGeometryLayerKind.Cutout,
+                51,
+                HeldItemModelDefinition.LeftDefinition,
+                TexturePath: null,
+                TextureSelector: state => ResolveHeldItemTexture(state, offhand: true),
+                VisibleWhen: state => ResolveHeldItemTexture(state, offhand: true) is not null,
                 AllCubes: true,
                 UsesItemAtlas: true));
             renderLayers = heldLayers;

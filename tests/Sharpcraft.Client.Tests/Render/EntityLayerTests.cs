@@ -277,7 +277,9 @@ public sealed class EntityLayerTests
     {
         var definition = EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId);
         Assert.Contains(definition.RenderLayers,
-            layer => layer.Name == "held_item" && layer.UsesItemAtlas);
+            layer => layer.Name == "held_item_right" && layer.UsesItemAtlas);
+        Assert.Contains(definition.RenderLayers,
+            layer => layer.Name == "held_item_left" && layer.UsesItemAtlas);
         var part = HeldItemModelDefinition.Definition.Compiled!.Find("held_item");
         Assert.NotNull(part);
         Assert.Equal(0f, part!.Cubes.Single().Depth);

@@ -439,23 +439,29 @@ internal static class WindowCommand
         {
             foreach (var entity in entities)
             {
-                var path = EntityModelResolver.ResolveHeldItemTexture(entity);
-                if (path is null || itemAtlas.Contains(path))
+                foreach (var path in new[]
+                         {
+                             EntityModelResolver.ResolveHeldItemTexture(entity, offhand: false),
+                             EntityModelResolver.ResolveHeldItemTexture(entity, offhand: true)
+                         })
                 {
-                    continue;
-                }
+                    if (path is null || itemAtlas.Contains(path))
+                    {
+                        continue;
+                    }
 
-                var bytes = resources.Read(
-                    Sharpcraft.Assets.ResourceKind.Texture,
-                    new Sharpcraft.Common.Identifiers.Identifier("minecraft", path));
-                if (bytes is null)
-                {
-                    continue;
-                }
+                    var bytes = resources.Read(
+                        Sharpcraft.Assets.ResourceKind.Texture,
+                        new Sharpcraft.Common.Identifiers.Identifier("minecraft", path));
+                    if (bytes is null)
+                    {
+                        continue;
+                    }
 
-                var image = Sharpcraft.Common.Imaging.PngDecoder.Decode(bytes);
-                itemAtlas = itemAtlas.WithTexture(path, new TextureData(image.Width, image.Height, image.Pixels));
-                itemAtlasSource.Update(itemAtlas.Texture);
+                    var image = Sharpcraft.Common.Imaging.PngDecoder.Decode(bytes);
+                    itemAtlas = itemAtlas.WithTexture(path, new TextureData(image.Width, image.Height, image.Pixels));
+                    itemAtlasSource.Update(itemAtlas.Texture);
+                }
             }
         }
 
