@@ -135,8 +135,8 @@ updated: 2026-11-07
 
 > 下一阶段执行清单见 [`docs/analysis/render/next-actions-hard-constraints.md`](analysis/render/next-actions-hard-constraints.md)；下面为原有 backlog。
 
-1. **T-631 held-item/item-model**：先按原则 14 补 `docs/modules/entity-equipment.md` 的原版源码映射表与 ≥5 组 Golden Vectors（`ItemInHandRenderer`/`ItemModelResolver`），再实现 SPEAR/STAB。
-2. **EnderDragon flight history**：已接（T-757）；下一步处理剩余动画长尾（Parrot PARTY / Guardian eye look / Piglin crossbow-hold）。
+1. **T-631 held-item/item-model**：T-631a 已接 `ItemModelResolver` 数据层与 5 组 Golden Vectors；下一刀 T-631b 做 `item/generated`/`item/handheld` quad mesh、item atlas 与 Witch 药水验收，再接 SPEAR/STAB。
+2. **EnderDragon flight history**：已接（T-757）；剩余动画长尾（Bee stinger / Guardian eye look）按 backlog 推进。
 3. **P1.5（`Client/Render/ChunkMesher`）**：用 `OcclusionShape.IsFaceOccludedByState/Self` 替换 `IsSolid` 近似；配 `FluidMesherTests` 真值回归。
 4. **P1.4（T-042）**：提取 26.3 `registry_data` 真值向量，把服务器下发注册表动态装配进 `BlockStateLayout`。
 5. **P0.3（`Framework/Rendering`）**：`OffscreenRenderer` 与 `WindowedRenderer` 收敛为共用世界 Pass 序列。

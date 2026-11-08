@@ -19,7 +19,8 @@ public readonly record struct ItemComponentInfo(
     bool? GlintOverride = null,
     string? TrimMaterialId = null,
     string? TrimPatternId = null,
-    bool HasEnchantments = false)
+    bool HasEnchantments = false,
+    string? ItemModelId = null)
 {
     /// <summary>True when some component payload could not be decoded and the rest of the packet was skipped.</summary>
     public bool HasUnknownComponents => Opaque;
@@ -295,7 +296,13 @@ internal static class ItemComponentPatchReader
 
         if (typeId == ItemModel)
         {
-            return reader.TryReadString(out _) == DecodeStatus.Success;
+            if (reader.TryReadString(out var itemModel) != DecodeStatus.Success)
+            {
+                return false;
+            }
+
+            info = info with { ItemModelId = itemModel };
+            return true;
         }
 
         if (typeId == GlintOverride)

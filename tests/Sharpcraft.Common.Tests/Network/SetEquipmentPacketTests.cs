@@ -235,6 +235,31 @@ public sealed class SetEquipmentPacketTests
     }
 
     [Fact]
+    public void ItemModelComponentCapturesModelId()
+    {
+        var itemModel = DataComponentTypes.GetId("item_model");
+        Assert.True(itemModel >= 0);
+
+        var body = Body(b =>
+        {
+            b.Add(0);
+            b.AddRange(VarInt(1));
+            b.AddRange(VarInt(1));
+            b.AddRange(VarInt(1));       // one added component
+            b.AddRange(VarInt(0));       // no removals
+            b.AddRange(VarInt(itemModel));
+            var model = System.Text.Encoding.UTF8.GetBytes("minecraft:item/test");
+            b.AddRange(VarInt(model.Length));
+            b.AddRange(model);
+        });
+
+        var result = Read(body, out _, out var complete, out var status);
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.Equal("minecraft:item/test", result[0].Components.ItemModelId);
+    }
+
+    [Fact]
     public void EnchantmentsComponentYieldsQuickChargeLevel()
     {
         var enchantments = DataComponentTypes.GetId("enchantments");
