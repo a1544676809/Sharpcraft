@@ -299,15 +299,19 @@ public static class EntityModelResolver
             }
         }
 
+        // Placement measured against the reference chain (truth/HeldAnchorProbe3.java, run on the shipped JOML): in the
+        // reference model frame the item centre sits 1/16 outward, 12+3=15/16 down the arm and 5/16 forward of the arm
+        // pivot. Sharpcraft stores models y-up but mirrored in X, so from the arm pivot the same point is
+        //   (+-1/16, -9/16, -5/16)
+        // and a regression test pins the world position. The reference also rotates the item by XP -90 / YP 180 before
+        // its display transform; that orientation half is still missing and is tracked under T-765.
         var offsetX = baby ? 0f : (offhand ? -1f : 1f);
-        var offsetY = baby ? 1f : 2f;
-        var offsetZ = baby ? -4.5f : -10f;
-        return Matrix4x4.CreateRotationX(-MathF.PI / 2f)
-            * Matrix4x4.CreateRotationY(MathF.PI)
-            * Matrix4x4.CreateTranslation(offsetX / 16f, offsetY / 16f, offsetZ / 16f)
-            * display;
+        var offsetY = baby ? -6f : -9f;
+        var offsetZ = baby ? -3f : -5f;
+        // Row vectors apply the leftmost factor first, so the display transform (which centres and scales the item) comes
+        // first and the hand offset is applied to its result.
+        return display * Matrix4x4.CreateTranslation(offsetX / 16f, offsetY / 16f, offsetZ / 16f);
     }
-
     /// <summary>Resolves the leather/dyed tint for an equipment slot, or white when the item is not dyeable.</summary>
     public static Vector3 ResolveEquipmentTint(EntityRenderState state, EquipmentAssetKind kind, int slot)
     {

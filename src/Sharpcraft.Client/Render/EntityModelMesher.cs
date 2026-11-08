@@ -850,9 +850,10 @@ public sealed partial class EntityModelMesher
             var frame = NodeFrame(node, parentFrame, entity, pose, px);
             if (string.Equals(node.Name, partName, StringComparison.Ordinal))
             {
-                found = node.Parent is null
-                    ? Matrix4x4.CreateTranslation(-new Vector3(node.PivotX * px, node.PivotY * px, node.PivotZ * px)) * frame
-                    : frame;
+                // Return the full frame. The geometry path subtracts a root part's pivot because its cube vertices are
+                // authored relative to that pivot; a caller attaching *other* geometry (the held-item pass) needs the
+                // pivot in world space, and subtracting it here silently collapsed the hand frame to the model origin.
+                found = frame;
                 return;
             }
 
