@@ -213,6 +213,44 @@ dotnet run --project tools/Sharpcraft.ItemRender.Sheet -- --pack <pack.zip> \
 **金标准用 sidecar 而不是像素哈希**：PNG 是原版贴图的衍生物，按原则 3 不得进仓库；sidecar 只含物品 id 与几何计数，可安全提交，且一样能抓几何/解析回归。当前 `sidecar-golden.txt` 覆盖默认 24 物品在 ground 上下文的结果。
 
 已知可见缺口（有意保留，便于对照时一眼看出）：`chest` / `shield` / `trident` 三个格子是空的——它们走 special 渲染器，不在本几何链路内。
+### 3.5.7 模型帧镜像与 `ReferenceFrame`（重要约定）
+
+**我们的模型帧是原版模型帧的镜像**，这不是设计选择，而是把原版渲染期的翻转提前烘焙进几何的结果：
+
+```
+原版 LivingEntityRenderer：poseStack.scale(-1.0F, -1.0F, 1.0F);   // 画的时候才翻
+本仓 VanillaMeshBake.FromVanilla：
+    centreX = mirrorX ? -sourceCentreX : sourceCentreX     // X 取反
+    bottom  = modelHeight - (pivotY + minY + height)       // Y 翻转（yDown → modelHeight − yDown）
+```
+
+于是：`本仓帧 = 原版模型帧 × diag(-1,-1,1)`（外加抬到脚底为 0 的平移）。
+
+**这条因果关系的三个后果**：
+
+1. 任何**不是几何**、但仍写在原版帧里的变换（物品 display、手持锚点、special 模型布局）都必须过一次镜像换算——现在统一走 `src/Sharpcraft.Client/Render/ReferenceFrame.cs`，构造时**按原版原样写**，只在边界转换一次，不再逐处手翻符号。
+2. **方块类 special 模型是错的**（`T-764`）：`ChestRenderer` / `ChestSpecialRenderer` 在原版**不做**这个翻转，但我们的烘焙照样翻了，所以箱子等存储成上下镜像。
+3. 手持锚点反复调不对的根因就在这里：原版数值写在未翻转帧里，直接套进已翻转帧必然错位。
+
+**原版真值（可直接复核，探针源码见 `tools/Sharpcraft.ItemRender.Audit/truth/`）**
+
+```
+ItemInHandLayer.submitArmWithItem：
+    A_ref = Rx(-90°) · Ry(180°) · T_off
+    T_off = (±1, 2, -10)/16 成人；(0, 1, -4.5)/16 幼年（非 armor stand）；左手镜像 X
+
+AnchorAxes.java（A_ref 在原版模型帧的轴像）：
+    ex -> (-1.0000,  0.0000,  0.0000)
+    ey -> ( 0.0000,  0.0000, -1.0000)
+    ez -> ( 0.0000, -1.0000,  0.0000)
+    origin -> (-0.0625, 0.6250, -0.1250)
+
+HeldAnchorProbe3.java（右臂枢轴 (-0.3125, 0.125, 0)，y 向下的模型帧）：
+    物品中心 -> (-0.3750, 0.6875, -0.3125)
+    手臂末端 -> (-0.3125, 0.8750,  0.0000)
+```
+
+**实现现状**：位置部分已按上表定死并有回归测试（`HeldItemAnchorTests` / `PartWorldMatrixTests`）：相对手臂枢轴为 `(±1/16, −9/16, −5/16)`，即外 1/16、沿臂下 15/16、前 5/16，游戏内实测物品确实在手上。**`A_ref` 的旋转部分（`XP -90°` / `YP 180°`）尚未正确复现**，物品目前平躺——`ReferenceFrame.ToSharpcraftFrame` 里镜像应左乘还是右乘尚未定论：`M·A·M` 与 `A·M` 两种形式分别使轴像 `ex` 或 `ey` 相差一个符号，都需要与原版同机位截图再确认一次。该缺口记在 `T-765`。
 ### 3.6 图集归属（已核实，非阻塞）
 
 26.3 把精灵分在两个图集：`atlases/items.json` 只收 `item/` 目录与盔甲纹饰置换，`atlases/blocks.json` 收 `block/` 目录与 conduit/bell/book 特例。因此方块类物品模型引用的 `block/*` 纹理在原版来自 **blocks 图集**。

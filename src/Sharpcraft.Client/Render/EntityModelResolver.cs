@@ -286,6 +286,9 @@ public static class EntityModelResolver
         return AnchorFor(model, offhand, state.IsBaby);
     }
 
+    /// <summary>Model-space mirror: Sharpcraft stores models with X and Y negated relative to the reference frame.</summary>
+    private static Matrix4x4 Mirror => Matrix4x4.CreateScale(-1f, -1f, 1f);
+
     /// <summary>Anchor for an already resolved model, split out so the transform can be tested without a registry.</summary>
     public static Matrix4x4 AnchorFor(ItemModelResolution? model, bool offhand, bool baby)
     {
@@ -320,12 +323,13 @@ public static class EntityModelResolver
         // verbatim: from the arm pivot the same placement is (+-1/16, -9/16, -5/16) — 1/16 outward, 15/16 down the arm,
         // 5/16 forward — and HeldItemAnchorTests pins it. The *orientation* half of A_ref (the XP -90 / YP 180 spin) is
         // not reproduced yet, so held items currently lie flat in the hand; that is tracked under T-765.
+        // The hand chain is written exactly as the reference writes it and converted once by ReferenceFrame, so the
+        // values stay recognisable next to the reference source instead of being hand-flipped per call site.
         var offsetX = baby ? 0f : (offhand ? -1f : 1f);
-        var offsetY = baby ? -6f : -9f;
-        var offsetZ = baby ? -3f : -5f;
-        // Row vectors apply the leftmost factor first, so the display transform (which centres and scales the item) comes
-        // first and the hand offset is applied to its result.
-        return display * Matrix4x4.CreateTranslation(offsetX / 16f, offsetY / 16f, offsetZ / 16f);
+        var offsetY = baby ? 1f : 2f;
+        var offsetZ = baby ? -4.5f : -10f;
+        var reference = ReferenceFrame.HeldItemAnchor(new Vector3(offsetX / 16f, offsetY / 16f, offsetZ / 16f));
+        return display * reference;
     }
     /// <summary>Resolves the leather/dyed tint for an equipment slot, or white when the item is not dyeable.</summary>
     public static Vector3 ResolveEquipmentTint(EntityRenderState state, EquipmentAssetKind kind, int slot)
