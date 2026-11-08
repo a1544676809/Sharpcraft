@@ -14,7 +14,7 @@ namespace Sharpcraft.Common.Network;
 /// <param name="Value">
 /// Decoded integer value for the byte/integer serializers; <see cref="NotAnInteger"/> for every other serializer.
 /// </param>
-public readonly record struct EntityDataItem(int Index, int SerializerId, int Value, long LongValue = long.MinValue, float FloatValue = float.NaN)
+public readonly record struct EntityDataItem(int Index, int SerializerId, int Value, long LongValue = long.MinValue, float FloatValue = float.NaN, int ItemId = -1, int ItemCount = 0)
 {
     /// <summary>Sentinel stored in <see cref="Value"/> when the serializer does not carry an integer.</summary>
     public const int NotAnInteger = int.MinValue;
@@ -102,7 +102,7 @@ public static class EntityDataPackets
                 return status;
             }
 
-            status = TryReadValue(ref reader, serializerId, out var value, out var longValue, out var floatValue, out var unsupported);
+            status = TryReadValue(ref reader, serializerId, out var value, out var longValue, out var floatValue, out var itemId, out var itemCount, out var unsupported);
             if (unsupported)
             {
                 // Everything after this item is unreadable without the codec; stop and let the caller fall back.
@@ -116,7 +116,7 @@ public static class EntityDataPackets
 
             if (count < items.Length)
             {
-                items[count++] = new EntityDataItem(rawIndex, serializerId, value, longValue, floatValue);
+                items[count++] = new EntityDataItem(rawIndex, serializerId, value, longValue, floatValue, itemId, itemCount);
             }
             else
             {
@@ -132,16 +132,48 @@ public static class EntityDataPackets
     /// The ids follow the static registration order in <c>EntityDataSerializers</c>. Only the byte/integer family
     /// returns a value; everything else is skipped so the scan can continue to a later index.
     /// </remarks>
-    private static DecodeStatus TryReadValue(ref PayloadReader reader, int serializerId, out int value, out long longValue, out float floatValue, out bool unsupported)
+    private static DecodeStatus TryReadValue(ref PayloadReader reader, int serializerId, out int value, out long longValue, out float floatValue, out int itemId, out int itemCount, out bool unsupported)
     {
         value = EntityDataItem.NotAnInteger;
         longValue = EntityDataItem.NotALong;
         floatValue = float.NaN;
+        itemId = -1;
+        itemCount = 0;
         unsupported = false;
         DecodeStatus status;
 
         switch (serializerId)
         {
+            case 7: // ITEM_STACK: ItemStack.OPTIONAL_STREAM_CODEC (empty count, then id + component patch)
+                status = reader.TryReadVarInt(out var stackCount);
+                if (status != DecodeStatus.Success)
+                {
+                    return status;
+                }
+
+                if (stackCount <= 0)
+                {
+                    return DecodeStatus.Success;
+                }
+
+                status = reader.TryReadVarInt(out itemId);
+                if (status != DecodeStatus.Success)
+                {
+                    return status;
+                }
+
+                // The patch is decoded to advance the reader; EntityDataItem stays unmanaged so callers can stackalloc
+                // it, which means the component payload itself is not retained here.
+                status = ItemComponentPatchReader.TryRead(ref reader, out _, out _)
+                    ? DecodeStatus.Success
+                    : DecodeStatus.Invalid;
+                if (status == DecodeStatus.Success)
+                {
+                    itemCount = stackCount;
+                }
+
+                return status;
+
             case 0: // BYTE
                 status = reader.TryReadByte(out var b);
                 value = b;
@@ -293,7 +325,7 @@ public static class EntityDataPackets
                 return SkipBytes(ref reader, 16);
 
             default:
-                // ITEM_STACK (7), RESOLVABLE_PROFILE (41) and anything newer: not modelled.
+                // RESOLVABLE_PROFILE (41) and anything newer: not modelled.
                 unsupported = true;
                 return DecodeStatus.Success;
         }

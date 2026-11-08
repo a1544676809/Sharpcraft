@@ -62,6 +62,48 @@ public sealed class EntityDataPacketTests
     }
 
     [Fact]
+    public void ItemStackSerializerDecodesAndTheScanContinues()
+    {
+        // item entity: index 8 is ITEM_STACK(7) = Optional<ItemStack>; a following BOOLEAN must still decode, which is
+        // what "continue past a previously unsupported serializer" buys us.
+        var body = Body(
+            b =>
+            {
+                Item(b, 8, 7);
+                b.AddRange(VarInt(1));    // count 1, not empty
+                b.AddRange(VarInt(7));    // item id
+                b.AddRange(VarInt(0));    // zero added components
+                b.AddRange(VarInt(0));    // zero removed components
+            },
+            b => { Item(b, 9, 8); b.Add(0x01); });
+
+        var items = Read(body, out _, out var complete, out var status);
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.Equal(2, items.Length);
+        Assert.Equal(8, items[0].Index);
+        Assert.Equal(1, items[0].ItemCount);
+        Assert.Equal(7, items[0].ItemId);
+        Assert.Equal(9, items[1].Index);
+        Assert.Equal(1, items[1].Value);
+    }
+
+    [Fact]
+    public void EmptyItemStackConsumesOnlyTheCount()
+    {
+        var body = Body(
+            b => { Item(b, 8, 7); b.AddRange(VarInt(0)); },
+            b => { Item(b, 9, 8); b.Add(0x00); });
+
+        var items = Read(body, out _, out var complete, out var status);
+        Assert.Equal(DecodeStatus.Success, status);
+        Assert.True(complete);
+        Assert.Equal(2, items.Length);
+        Assert.Equal(0, items[0].ItemCount);
+        Assert.Equal(-1, items[0].ItemId);
+    }
+
+    [Fact]
     public void TheVariantIsDecodedAfterTheBaseFieldsAreSkipped()
     {
         var body = Body(
@@ -102,9 +144,11 @@ public sealed class EntityDataPacketTests
     [Fact]
     public void AnUnsupportedSerializerStopsTheScanInsteadOfGuessingALength()
     {
+        // RESOLVABLE_PROFILE (41) is still unmodelled: its codec nests optional profile fields, so guessing a width
+        // would desynchronise everything after it. ITEM_STACK (7) used to sit here and is now decoded.
         var body = Body(
             b => { Item(b, 1, 1); b.AddRange(VarInt(300)); },   // air supply (int)
-            b => { Item(b, 7, 7); b.Add(0x00); },               // item stack: not modelled
+            b => { Item(b, 7, 41); b.AddRange(VarInt(0)); },    // resolvable profile: not modelled
             b => { Item(b, 19, 28); b.AddRange(VarInt(1)); });
 
         var result = Read(body, out _, out var complete, out var status);
