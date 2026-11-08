@@ -72,7 +72,8 @@ public static class HeldItemModelDefinition
                 UvWidth: 16,
                 UvHeight: 16,
                 UsesItemAtlas: true,
-                TintSelector: state => EntityModelResolver.ResolveHeldItemTint(state, offhand: left)));
+                TintSelector: state => EntityModelResolver.ResolveHeldItemTint(state, offhand: left),
+                TransformSelector: state => EntityModelResolver.ResolveHeldItemAnchor(state, offhand: left)));
         return new VanillaMeshDefinition(root);
     }
 }

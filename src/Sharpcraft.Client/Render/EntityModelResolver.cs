@@ -254,6 +254,45 @@ public static class EntityModelResolver
     public static Vector3 TintOf(ItemModelResolution? model, GrassColorMap? grass) =>
         model is null ? Vector3.One : model.TintFor(0, grass);
 
+    /// <summary>
+    /// Held-item anchor from the hand: the reference <c>ItemInHandLayer</c> rotates XP by −90°, YP by 180°, applies the
+    /// per-hand offset ((±1, 2, −10)/16 for adults, (0, 1, −4.5)/16 for babies) and finally the item's own display
+    /// transform. The hand pose itself (root + arm) is already carried by the arm part the quad hangs under.
+    /// </summary>
+    public static Matrix4x4 ResolveHeldItemAnchor(EntityRenderState state, bool offhand = false)
+    {
+        var itemId = offhand ? state.OffHandItemId : state.MainHandItemId;
+        ItemModelResolution? model = null;
+        if (ItemModels is not null && Items?.ById(itemId) is { } item)
+        {
+            model = ItemModels.Resolve(item.Id.ToString());
+        }
+
+        return AnchorFor(model, offhand, state.IsBaby);
+    }
+
+    /// <summary>Anchor for an already resolved model, split out so the transform can be tested without a registry.</summary>
+    public static Matrix4x4 AnchorFor(ItemModelResolution? model, bool offhand, bool baby)
+    {
+        var display = Matrix4x4.Identity;
+        if (model is not null)
+        {
+            var context = offhand ? ItemDisplayContext.ThirdPersonLeftHand : ItemDisplayContext.ThirdPersonRightHand;
+            if (model.Display.TryGetValue(context, out var transform))
+            {
+                display = transform.ToMatrix();
+            }
+        }
+
+        var offsetX = baby ? 0f : (offhand ? -1f : 1f);
+        var offsetY = baby ? 1f : 2f;
+        var offsetZ = baby ? -4.5f : -10f;
+        return Matrix4x4.CreateRotationX(-MathF.PI / 2f)
+            * Matrix4x4.CreateRotationY(MathF.PI)
+            * Matrix4x4.CreateTranslation(offsetX / 16f, offsetY / 16f, offsetZ / 16f)
+            * display;
+    }
+
     /// <summary>Resolves the leather/dyed tint for an equipment slot, or white when the item is not dyeable.</summary>
     public static Vector3 ResolveEquipmentTint(EntityRenderState state, EquipmentAssetKind kind, int slot)
     {

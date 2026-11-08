@@ -100,7 +100,8 @@ public static class VanillaMeshBakery
             children,
             firstCube?.VisibleWhen,
             poseSource: firstCube?.PoseSource,
-            tintSelector: firstCube?.TintSelector);
+            tintSelector: firstCube?.TintSelector,
+            transformSelector: firstCube?.TransformSelector);
     }
 
     private static EntityModelPart BakeCube(
