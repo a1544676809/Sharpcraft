@@ -531,7 +531,8 @@ public readonly record struct EntityRenderState(
     DragonFlightHistory? DragonFlightHistory = null,
     bool DragonIsLandingOrTakingOff = false,
     bool DragonIsSitting = false,
-    double DragonDistanceToEgg = 0)
+    double DragonDistanceToEgg = 0,
+    bool IsHoldingPotion = false)
 {
     /// <summary>Equippable asset id for one equipment slot, when the item supplied one.</summary>
     public string? EquipmentAssetIdAt(int slot) =>
@@ -1528,11 +1529,16 @@ public sealed class EntityTracker
                 DragonFlightHistory: dragon ? entity.DragonFlightHistory : null,
                 DragonIsLandingOrTakingOff: dragon && (entity.DragonPhase is 3 or 4),
                 DragonIsSitting: dragon && (entity.DragonPhase is 5 or 6 or 7),
-                DragonDistanceToEgg: dragon ? DragonDistanceToEgg(entity) : 0));
+                DragonDistanceToEgg: dragon ? DragonDistanceToEgg(entity) : 0,
+                IsHoldingPotion: entity.TypeId == WitchModelDefinition.WitchEntityTypeId && IsPotionItem(entity.EquipmentItemAt(0))));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);
     }
+
+    private static bool IsPotionItem(int itemId) =>
+        EntityModelResolver.Items?.ById(itemId) is { } item &&
+        string.Equals(item.Id.Path, "potion", StringComparison.Ordinal);
 
     /// <summary>
     /// Squared distance from the dragon to the End podium egg at (0, heightmap, 0). The fight origin is currently

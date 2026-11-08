@@ -36,7 +36,7 @@ updated: 2026-11-07
 | Trader Llama 地毯 | 普通 16 色地毯与 trader 专用纹理已接 | 继续做装备槽联动测试 |
 | Zombie Nautilus 珊瑚 | 暖变体 coral 层已接入，`Equipment[6]` 有甲时隐藏 | 继续做 body armor 联动测试 |
 | 人形装备 | 已接入四槽独立护甲层 | 继续补 dye/trim/玩家纹理视觉验收 |
-| Witch 手持物品 | 未接 | 需要物品模型渲染（后置）；`WitchItemLayer`/`CrossedArmsItemLayer` |
+| Witch 手持物品 | 部分接（T-631b）：potion 已用 flat item quad 渲染 | 通用物品模型/完整 `WitchItemLayer`/`CrossedArmsItemLayer` 仍待接 |
 | Elytra | 已接入独立两翼层 | `use_player_texture` 已接（T-752）；glint 独立层已接 |
 
 ## 4. 装备资产与组件

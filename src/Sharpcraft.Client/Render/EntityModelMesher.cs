@@ -646,6 +646,12 @@ public sealed partial class EntityModelMesher
         var emitBase = emissivePass || kindFilter is null || part.Kind == kindFilter;
         var partTint = part.TintSelector?.Invoke(renderState)
             ?? (renderState.Tint == default ? Vector3.One : renderState.Tint);
+
+        if (emitBase && part.Depth == 0f && part.Width > 0f && part.Height > 0f)
+        {
+            AddFlatQuad(part, target, min, max, skin, skinWidth, skinHeight, entityTransform, partMatrix, partTint, ref vertexFloats, ref indexCount);
+            return;
+        }
         var swapBodyDownUp = true;
         var d0u = swapBodyDownUp ? u22 : u2; var d0v = swapBodyDownUp ? v1 : v0;
         var d1u = swapBodyDownUp ? u2 : u1; var d1v = swapBodyDownUp ? v1 : v0;
@@ -824,6 +830,33 @@ public sealed partial class EntityModelMesher
         "right_pants" => state.ShowRightPants,
         _ => true
     };
+
+    /// <summary>Emits a zero-depth part as two-sided flat quads, used by generated item models.</summary>
+    private void AddFlatQuad(
+        EntityModelPart part,
+        DynamicGeometry target,
+        Vector3 min,
+        Vector3 max,
+        SpriteRect skin,
+        int skinWidth,
+        int skinHeight,
+        EntityModelTransform entityTransform,
+        Matrix4x4 partMatrix,
+        Vector3 tint,
+        ref int vertexFloats,
+        ref int indexCount)
+    {
+        var z = min.Z;
+        Vector3 ToWorld(Vector3 point) => entityTransform.Apply(Vector3.Transform(point, partMatrix));
+        var a = ToWorld(new Vector3(min.X, min.Y, z));
+        var b = ToWorld(new Vector3(max.X, min.Y, z));
+        var c = ToWorld(new Vector3(max.X, max.Y, z));
+        var d = ToWorld(new Vector3(min.X, max.Y, z));
+        var w = part.UvWidth > 0 ? part.UvWidth : part.Width;
+        var h = part.UvHeight > 0 ? part.UvHeight : part.Height;
+        AddFace(a, b, c, d, 0f, 0f, w, 0f, w, h, 0f, h, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, FaceUvTransform.Identity, tint, target);
+        AddFace(d, c, b, a, 0f, 0f, w, 0f, w, h, 0f, h, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, FaceUvTransform.Identity, tint, target);
+    }
 
     private void AddFace(
         Vector3 a, Vector3 b, Vector3 c, Vector3 d,

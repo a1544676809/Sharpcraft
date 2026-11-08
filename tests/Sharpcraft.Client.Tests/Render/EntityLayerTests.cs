@@ -245,6 +245,23 @@ public sealed class EntityLayerTests
     }
 
     [Fact]
+    public void WitchHeldPotionUsesTheFlatItemQuadAndVisibilityFlag()
+    {
+        var holding = Entity(WitchModelDefinition.WitchEntityTypeId) with { IsHoldingPotion = true };
+        var idle = holding with { IsHoldingPotion = false };
+        var definition = EntityModelResolver.Resolve(WitchModelDefinition.WitchEntityTypeId);
+        var part = definition.Compiled!.Find("held_potion");
+
+        Assert.NotNull(part);
+        Assert.True(part!.VisibleWhen!(holding));
+        Assert.False(part.VisibleWhen!(idle));
+        Assert.Contains(WitchModelDefinition.PotionTexture, WitchModelDefinition.Definition.AdditionalTexturePaths);
+        var geometry = new EntityModelMesher().Build(
+            [holding], new SpriteRect(0, 0, 16, 16, 1), 16, 16);
+        Assert.True(geometry.VertexFloats >= 8 * 4);
+    }
+
+    [Fact]
     public void HappyGhastRopesRequireLeashAndHarness()
     {
         var harness = EntityModelResolver.Items!.GetId(Identifier.Parse("minecraft:white_harness"));

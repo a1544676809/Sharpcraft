@@ -90,7 +90,7 @@ public sealed class VillagerIllagerModelDefinitionTests
         Assert.Equal(128, WitchModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/witch/witch", WitchModelDefinition.Definition.TexturePath);
         Assert.Equal(0.9375f, WitchModelDefinition.Definition.Scale);
-        Assert.Equal(14, WitchModelDefinition.Definition.Parts.Count);
+        Assert.Equal(15, WitchModelDefinition.Definition.Parts.Count);
 
         // Illager: 4 shared-geometry definitions.
         foreach (var (definition, name) in new[]
@@ -152,8 +152,8 @@ public sealed class VillagerIllagerModelDefinitionTests
             ["head", "hat", "hat_rim", "nose", "body", "jacket", "arms", "arms_left", "arms_right", "arms_middle", "right_leg", "left_leg"],
             [null, "head", "hat", "head", null, "body", null, "arms", "arms", "arms", null, null]);
         AssertNamesAndParents(WitchModelDefinition.Definition.Parts,
-            ["head", "nose", "mole", "hat", "hat2", "hat3", "hat4", "body", "jacket", "arms", "arms_left", "arms_right", "right_leg", "left_leg"],
-            [null, "head", "nose", "head", "hat", "hat2", "hat3", null, "body", null, "arms", "arms", null, null]);
+            ["head", "nose", "mole", "held_potion", "hat", "hat2", "hat3", "hat4", "body", "jacket", "arms", "arms_left", "arms_right", "right_leg", "left_leg"],
+            [null, "head", "nose", "nose", "head", "hat", "hat2", "hat3", null, "body", null, "arms", "arms", null, null]);
     }
 
     private static EntityModelPart[] ExpectedVillagerParts() =>
@@ -191,6 +191,13 @@ public sealed class VillagerIllagerModelDefinitionTests
         LegacyModelPartFactory.FromVanilla("head", 0f, 0f, 0f, -4f, -10f, -4f, 8f, 10f, 8f, 0, 0, mirrorX: false),
         LegacyModelPartFactory.FromVanillaChild("nose", "head", 0f, -2f, 0f, -1f, -1f, -6f, 2f, 4f, 2f, 24, 0),
         LegacyModelPartFactory.FromVanillaChild("mole", "nose", 0f, -2f, 0f, 0f, 3f, -6.75f, 1f, 1f, 1f, 0, 0, grow: -0.25f),
+        LegacyModelPartFactory.FromVanillaChild("held_potion", "nose", 0f, 0f, -8f, -4f, -4f, 0f, 8f, 8f, 0f, 0, 0,
+            texturePath: "item/potion") with
+        {
+            TextureWidth = 16,
+            TextureHeight = 16,
+            VisibleWhen = static state => state.IsHoldingPotion
+        },
         LegacyModelPartFactory.FromVanillaChild("hat", "head", -5f, -10.03125f, -5f, 0f, 0f, 0f, 10f, 2f, 10f, 0, 64),
         LegacyModelPartFactory.FromVanillaChild("hat2", "hat", 1.75f, -4f, 2f, 0f, 0f, 0f, 7f, 4f, 7f, 0, 76,
             rotationX: -0.05235988f, rotationZ: 0.02617994f),

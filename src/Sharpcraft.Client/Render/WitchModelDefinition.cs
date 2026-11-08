@@ -8,8 +8,9 @@ namespace Sharpcraft.Client.Render;
 /// and a mole on the nose.
 /// </summary>
 /// <remarks>
-/// Bind pose only. The reference starts from <c>VillagerModel.createBodyModel()</c> and replaces only the head/nose;
-/// the jacket is a 0.5-grown outer layer of the body. Held-item and nose-wiggle animations are not ported. Parts are
+/// Bind pose. The reference starts from <c>VillagerModel.createBodyModel()</c> and replaces only the head/nose;
+/// the jacket is a 0.5-grown outer layer of the body. T-631b adds the held-potion flat item quad attached to the nose
+/// (visible through `IsHoldingPotion`); other hand items and the full crossed-arms layer are still pending. Parts are
 /// declared with the <c>VanillaMeshDefinition</c> DSL and baked via <c>VanillaMeshBake.Bake</c> (T-683) with per-cube
 /// <c>MirrorX: false</c> on the head/body/arms roots; the Pi-based hat rotation and scale are unchanged.
 /// </remarks>
@@ -23,6 +24,8 @@ public static class WitchModelDefinition
     /// <summary>Declarative DSL tree for the fourteen witch parts (T-683).</summary>
     private static readonly VanillaMeshDefinition WitchMesh = BuildWitchMesh();
 
+    public const string PotionTexture = "item/potion";
+
     public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "witch",
         64,
@@ -30,7 +33,8 @@ public static class WitchModelDefinition
         WitchMesh,
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/witch/witch",
-        0.9375f);
+        0.9375f,
+        additionalTexturePaths: [PotionTexture]);
 
     private static VanillaMeshDefinition BuildWitchMesh()
     {
@@ -41,6 +45,23 @@ public static class WitchModelDefinition
             new VanillaCubeDefinition("nose", 24, 0, -1f, -1f, -6f, 2f, 4f, 2f));
         nose.AddOrReplaceChild("mole", VanillaPartPose.Offset(0f, -2f, 0f),
             new VanillaCubeDefinition("mole", 0, 0, 0f, 3f, -6.75f, 1f, 1f, 1f, Grow: -0.25f));
+        nose.AddOrReplaceChild("held_potion", VanillaPartPose.Offset(0f, 0f, -8f),
+            new VanillaCubeDefinition(
+                "held_potion",
+                0,
+                0,
+                -4f,
+                -4f,
+                0f,
+                8f,
+                8f,
+                0f,
+                TexturePath: PotionTexture,
+                TextureWidth: 16,
+                TextureHeight: 16,
+                UvWidth: 16,
+                UvHeight: 16,
+                VisibleWhen: static state => state.IsHoldingPotion));
         var hat = head.AddOrReplaceChild("hat", VanillaPartPose.Offset(-5f, -10.03125f, -5f),
             new VanillaCubeDefinition("hat", 0, 64, 0f, 0f, 0f, 10f, 2f, 10f));
         var hat2 = hat.AddOrReplaceChild("hat2", VanillaPartPose.OffsetAndRotation(1.75f, -4f, 2f, -0.05235988f, 0f, 0.02617994f),
