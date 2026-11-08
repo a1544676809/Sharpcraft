@@ -111,6 +111,49 @@ public sealed class ItemModelExtentsTests
     }
 
     [Fact]
+    public void SpecialModelsReportTheirAuthoredVerticalExtent()
+    {
+        // Truth vector from the reference authoring convention. Block-entity and special models are authored Y-up and
+        // are submitted without any flip (ChestRenderer adds only a facing rotation; ChestSpecialRenderer adds nothing):
+        //   bottom addBox(1,0,1, 14,10,14)              -> y 0..10
+        //   lid    addBox(0,0,0, 14,5,14) at offset 9   -> y 9..14
+        //   lock   addBox(7,-2,14, 2,4,1) at offset 9   -> y 7..11
+        // so the authored box is y 0..14 px = 0..0.875 blocks, resting on zero.
+        var chest = ItemModelExtents.FromModel(SpecialItemModelDefinition.Chest);
+        Assert.Equal(0f, chest.Min.Y, 4);
+        Assert.Equal(14f / 16f, chest.Max.Y, 4);
+
+        // Living-entity models are the other convention: authored Y-down, flipped by the living renderer, which is why
+        // a skull box addBox(-4,-8,-4, 8,8,8) sits at y -8..0 in its authored space.
+        var skull = ItemModelExtents.FromModel(SpecialItemModelDefinition.Skull);
+        Assert.Equal(-0.5f, skull.Min.Y, 4);
+        Assert.Equal(0f, skull.Max.Y, 4);
+    }
+
+    [Fact]
+    public void SpecialModelsAreBakedWithTheLivingEntityFlipped()
+    {
+        // The bakery applies the *living entity* convention (negate Y, then shift by the 24 px model height), while
+        // block-style special models are authored Y-up. So the stored cubes of the chest are the authored box mirrored:
+        //   authored bottom y 0..10  -> stored 14..24
+        //   authored lid    y 9..14  -> stored 10..15
+        // Any renderer that draws the stored cubes as they are (the held-item path does) therefore shows the model
+        // upside down; only a conversion back — y_authored = 24 - y_stored — restores the reference orientation.
+        var compiled = SpecialItemModelDefinition.Chest.Compiled;
+        Assert.NotNull(compiled);
+        var bottom = Assert.Single(compiled!.Cubes, cube => cube.Name == "bottom");
+        var lid = Assert.Single(compiled.Cubes, cube => cube.Name == "lid");
+
+        Assert.Equal(14f, bottom.Bottom, 4);
+        Assert.Equal(10f, bottom.Height, 4);
+        Assert.Equal(10f, lid.Bottom, 4);
+        Assert.Equal(5f, lid.Height, 4);
+
+        // Storage is therefore upside down relative to the authored layout: the lid sits below the body.
+        Assert.True(lid.Bottom < bottom.Bottom);
+    }
+
+    [Fact]
     public void AThreeDimensionalModelIsDeeperThanAFlatItem()
     {
         var chest = ItemModelExtents.FromModel(SpecialItemModelDefinition.Chest);
