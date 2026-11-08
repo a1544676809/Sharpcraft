@@ -119,6 +119,38 @@ public sealed class ItemModelResolverTests
     }
 
     [Fact]
+    public void ItemTintsAreParsedFromTheItemDefinition()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "sharpcraft-item-model-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Write(root, "assets/minecraft/items/test_leaves.json",
+                """{"model":{"type":"minecraft:model","model":"minecraft:block/test_leaves","tints":[{"type":"minecraft:constant","value":-12012264}]}}""");
+            Write(root, "assets/minecraft/models/block/test_leaves.json",
+                """{"parent":"minecraft:block/test_cube_all","textures":{"all":"minecraft:block/test_leaves_tex"}}""");
+
+            using var stack = new AssetStack { Policy = MissingResourcePolicy.Warn, Warn = _ => { } }
+                .Add(new DirectoryAssetSource(root, "item-test"));
+            using var resources = new ResourceManager(stack, 1);
+            var model = new ItemModelResolver(resources).Resolve("minecraft:test_leaves");
+
+            Assert.NotNull(model);
+            var tint = Assert.Single(model!.TintSources);
+            Assert.Equal(ItemTintKind.Constant, tint.Kind);
+            // A face with tintindex 0 gets the constant colour; a face without one stays white.
+            Assert.NotEqual(System.Numerics.Vector3.One, model.TintFor(0, grass: null));
+            Assert.Equal(System.Numerics.Vector3.One, model.TintFor(-1, grass: null));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void DisplayTranslationIsScaledThenClampedToFiveBlocks()
     {
         // Reference ItemTransform.Deserializer multiplies by 0.0625 and only then clamps to +/-5 blocks, so an oversized

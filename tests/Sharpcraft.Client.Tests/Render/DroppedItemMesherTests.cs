@@ -173,6 +173,70 @@ public sealed class DroppedItemMesherTests
         Assert.Empty(sideFaces);
     }
 
+    [Fact]
+    public void ConstantTintDecodesArgbToUnitRgb()
+    {
+        // oak_leaves declares tints [{ type: minecraft:constant, value: -12012264 }].
+        var tint = ItemTintSource.Parse(System.Text.Json.JsonDocument.Parse(
+            """{"type":"minecraft:constant","value":-12012264}""").RootElement);
+
+        Assert.NotNull(tint);
+        Assert.Equal(ItemTintKind.Constant, tint!.Value.Kind);
+        var color = tint.Value.Evaluate(grass: null);
+        Assert.Equal((( -12012264 >> 16) & 0xFF) / 255f, color.X, 6);
+        Assert.Equal(((-12012264 >> 8) & 0xFF) / 255f, color.Y, 6);
+        Assert.Equal((-12012264 & 0xFF) / 255f, color.Z, 6);
+    }
+
+    [Fact]
+    public void GrassTintSamplesTheColormapWithTheReferenceFormula()
+    {
+        // Fill a 256x256 map with a per-index colour, then check the reference index maths: x = (1-temp)*255,
+        // y = (1-temp*rain)*255, index = y<<8 | x.
+        var rgba = new byte[256 * 256 * 4];
+        for (var i = 0; i < 256 * 256; i++)
+        {
+            rgba[(i * 4) + 0] = (byte)(i & 0xFF);
+            rgba[(i * 4) + 1] = (byte)((i >> 8) & 0xFF);
+            rgba[(i * 4) + 2] = 0x40;
+            rgba[(i * 4) + 3] = 0xFF;
+        }
+
+        var map = new GrassColorMap(rgba);
+        // temp 0.5, downfall 1.0 -> rain 0.5, x = 127, y = 127 -> index 0x7F7F. The probe texture stores the index as
+        // low byte in red and high byte in green, so reassemble it from the sampled colour.
+        var expectedIndex = (127 << 8) | 127;
+        var sampled = map.Get(0.5d, 1d);
+        Assert.Equal(expectedIndex, (((sampled >> 8) & 0xFF) << 8) | ((sampled >> 16) & 0xFF));
+        Assert.Equal(sampled, map.DefaultGrassColor);
+
+        var grassTint = ItemTintSource.Parse(System.Text.Json.JsonDocument.Parse(
+            """{"type":"minecraft:grass","temperature":0.5,"downfall":1.0}""").RootElement);
+        Assert.NotNull(grassTint);
+        Assert.Equal(ItemTintKind.Grass, grassTint!.Value.Kind);
+        var color = grassTint.Value.Evaluate(map);
+        Assert.Equal(0x7F / 255f, color.X, 6);
+        Assert.Equal(0x7F / 255f, color.Y, 6);
+        Assert.Equal(0x40 / 255f, color.Z, 6);
+        // Without a colormap the reference default pink is used rather than an invented colour.
+        Assert.Equal(GrassColorMap.DefaultColor, unchecked((int)0xFFFF00FF));
+    }
+
+    [Fact]
+    public void FacesWithoutATintIndexStayWhite()
+    {
+        var resolution = new ItemModelResolution(
+            "minecraft:item/plain",
+            new Dictionary<string, string>(),
+            new Dictionary<ItemDisplayContext, ItemDisplayTransform>(),
+            Tints: [new ItemTintSource(ItemTintKind.Constant, unchecked((int)0xFF00FF00), 0d, 0d)]);
+
+        Assert.Equal(System.Numerics.Vector3.One, resolution.TintFor(-1, grass: null));
+        Assert.Equal(System.Numerics.Vector3.One, resolution.TintFor(9, grass: null));
+        Assert.Equal(0f, resolution.TintFor(0, grass: null).X, 6);
+        Assert.Equal(1f, resolution.TintFor(0, grass: null).Y, 6);
+    }
+
     [Theory]
     [InlineData(0, 1)]
     [InlineData(1, 1)]

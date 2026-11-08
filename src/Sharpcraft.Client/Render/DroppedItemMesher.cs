@@ -86,6 +86,7 @@ public sealed class DroppedItemMesher
                 continue;
             }
 
+            var grass = models.GrassColormap;
             var extents = ItemModelExtents.ForDisplay(resolution, ItemDisplayContext.Ground);
             var ground = resolution.Display.TryGetValue(ItemDisplayContext.Ground, out var display)
                 ? display.ToMatrix()
@@ -123,7 +124,7 @@ public sealed class DroppedItemMesher
                         continue;
                     }
 
-                    AppendQuad(quad, world, sprite, ref vertexFloats, ref indexCount);
+                    AppendQuad(quad, world, sprite, resolution.TintFor(quad.TintIndex, grass), ref vertexFloats, ref indexCount);
                 }
             }
         }
@@ -273,6 +274,7 @@ public sealed class DroppedItemMesher
         in ItemModelQuad quad,
         in Matrix4x4 world,
         SpriteRect sprite,
+        Vector3 tint,
         ref int vertexFloats,
         ref int indexCount)
     {
@@ -284,7 +286,7 @@ public sealed class DroppedItemMesher
         var first = (uint)(vertexFloats / VertexStride);
         for (var corner = 0; corner < 4; corner++)
         {
-            WriteVertex(_geometry.Vertices, ref vertexFloats, Vector3.Transform(quad.Corner(corner), world), quad.Uv(corner), sprite);
+            WriteVertex(_geometry.Vertices, ref vertexFloats, Vector3.Transform(quad.Corner(corner), world), quad.Uv(corner), sprite, tint);
         }
 
         _geometry.Indices[indexCount++] = first;
@@ -312,14 +314,14 @@ public sealed class DroppedItemMesher
         }
     }
 
-    private static void WriteVertex(float[] destination, ref int offset, Vector3 position, Vector2 uv, SpriteRect sprite)
+    private static void WriteVertex(float[] destination, ref int offset, Vector3 position, Vector2 uv, SpriteRect sprite, Vector3 tint)
     {
         destination[offset++] = position.X;
         destination[offset++] = position.Y;
         destination[offset++] = position.Z;
-        destination[offset++] = 1f;
-        destination[offset++] = 1f;
-        destination[offset++] = 1f;
+        destination[offset++] = tint.X;
+        destination[offset++] = tint.Y;
+        destination[offset++] = tint.Z;
         destination[offset++] = uv.X;
         destination[offset++] = uv.Y;
         destination[offset++] = sprite.U0;

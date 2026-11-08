@@ -5,6 +5,7 @@ using System.Numerics;
 using System.Text.Json;
 using Sharpcraft.Assets;
 using Sharpcraft.Common.Identifiers;
+using Sharpcraft.Common.Imaging;
 
 namespace Sharpcraft.Client.Render;
 
@@ -83,10 +84,26 @@ public sealed record ItemModelResolution(
     IReadOnlyDictionary<ItemDisplayContext, ItemDisplayTransform> Display,
     string? SpecialRendererType = null,
     IReadOnlyDictionary<string, string>? SpecialProperties = null,
-    IReadOnlyList<ItemModelElement>? Elements = null)
+    IReadOnlyList<ItemModelElement>? Elements = null,
+    IReadOnlyList<ItemTintSource>? Tints = null)
 {
     /// <summary>Resolved cuboids of the model, empty when the model has no <c>elements</c>.</summary>
     public IReadOnlyList<ItemModelElement> Cuboids => Elements ?? [];
+
+    /// <summary>Tint sources declared by the item definition, indexed by a face's <c>tintindex</c>.</summary>
+    public IReadOnlyList<ItemTintSource> TintSources => Tints ?? [];
+
+    /// <summary>
+    /// Colour multiplier for a face with the given <c>tintindex</c>: white when it is −1 or out of range, otherwise the
+    /// evaluated tint source.
+    /// </summary>
+    public Vector3 TintFor(int tintIndex, GrassColorMap? grass)
+    {
+        var sources = TintSources;
+        return tintIndex >= 0 && tintIndex < sources.Count
+            ? sources[tintIndex].Evaluate(grass)
+            : Vector3.One;
+    }
 }
 
 /// <summary>
@@ -121,6 +138,37 @@ public sealed class ItemModelResolver
     {
         _resources = resources ?? throw new ArgumentNullException(nameof(resources));
     }
+
+    /// <summary>
+    /// Grass colormap used by <c>minecraft:grass</c> tints, loaded from <c>textures/colormap/grass.png</c> on first use.
+    /// Null when the pack does not carry it, in which case grass tints fall back to the reference default colour.
+    /// </summary>
+    public GrassColorMap? GrassColormap
+    {
+        get
+        {
+            if (_colormapLoaded)
+            {
+                return _colormap;
+            }
+
+            _colormapLoaded = true;
+            var bytes = _resources.Read(ResourceKind.Texture, new Identifier("minecraft", "colormap/grass"));
+            if (bytes is not null)
+            {
+                var image = PngDecoder.Decode(bytes);
+                if (image.Width == 256 && image.Height == 256)
+                {
+                    _colormap = new GrassColorMap(image.Pixels);
+                }
+            }
+
+            return _colormap;
+        }
+    }
+
+    private GrassColorMap? _colormap;
+    private bool _colormapLoaded;
 
     /// <summary>Resolves one item id, or null when the item/model has no drawable model.</summary>
     public ItemModelResolution? Resolve(string itemId)
@@ -179,11 +227,15 @@ public sealed class ItemModelResolver
             case "minecraft:empty":
                 return null;
             case "minecraft:model":
-                return model.TryGetProperty("model", out var modelIdElement) &&
-                       modelIdElement.ValueKind == JsonValueKind.String &&
-                       Identifier.TryParse(modelIdElement.GetString()!, out var modelId)
-                    ? ResolveModel(modelId.ToString())
-                    : null;
+                if (!model.TryGetProperty("model", out var modelIdElement) ||
+                    modelIdElement.ValueKind != JsonValueKind.String ||
+                    !Identifier.TryParse(modelIdElement.GetString()!, out var modelId) ||
+                    ResolveModel(modelId.ToString()) is not { } resolvedModel)
+                {
+                    return null;
+                }
+
+                return resolvedModel with { Tints = ParseTints(model) };
             case "minecraft:select":
                 return TryResolveNested(model, "fallback", depth) ??
                        (model.TryGetProperty("cases", out var cases) && cases.ValueKind == JsonValueKind.Array
@@ -236,8 +288,27 @@ public sealed class ItemModelResolver
         }
     }
 
-    private ItemModelResolution? TryResolveNested(JsonElement model, string property, int depth) =>
-        model.TryGetProperty(property, out var nested) && nested.ValueKind == JsonValueKind.Object
+    /// <summary>Parses the item definition's <c>tints</c> array; unknown sources are skipped, as the reference does.</summary>
+    private static IReadOnlyList<ItemTintSource> ParseTints(JsonElement model)
+    {
+        if (!model.TryGetProperty("tints", out var tints) || tints.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var parsed = new List<ItemTintSource>(tints.GetArrayLength());
+        foreach (var entry in tints.EnumerateArray())
+        {
+            if (ItemTintSource.Parse(entry) is { } tint)
+            {
+                parsed.Add(tint);
+            }
+        }
+
+        return parsed;
+    }
+
+    private ItemModelResolution? TryResolveNested(JsonElement model, string property, int depth) =>        model.TryGetProperty(property, out var nested) && nested.ValueKind == JsonValueKind.Object
             ? ResolveElement(nested, depth + 1)
             : null;
 
