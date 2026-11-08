@@ -54,6 +54,12 @@ public sealed class TrackedEntity
     /// <summary>Client-side presentation state (walk/flap/tentacle/ground), advanced once per tick; never authoritative.</summary>
     public EntityPresentationState Presentation { get; }
 
+    /// <summary>Per-tick Ender Dragon flight history; empty for every other entity type.</summary>
+    public DragonFlightHistory DragonFlightHistory { get; } = new();
+
+    /// <summary>Raw Ender Dragon phase id (0..10), used only by the renderer.</summary>
+    public int DragonPhase { get; internal set; } = 10;
+
     /// <summary>Feet position, current tick.</summary>
     public double X { get; internal set; }
 
@@ -521,7 +527,11 @@ public readonly record struct EntityRenderState(
     string? PlayerElytraTexture = null,
     bool ShowCape = true,
     bool Slim = false,
-    Guid Uuid = default)
+    Guid Uuid = default,
+    DragonFlightHistory? DragonFlightHistory = null,
+    bool DragonIsLandingOrTakingOff = false,
+    bool DragonIsSitting = false,
+    double DragonDistanceToEgg = 0)
 {
     /// <summary>Equippable asset id for one equipment slot, when the item supplied one.</summary>
     public string? EquipmentAssetIdAt(int slot) =>
@@ -1137,6 +1147,11 @@ public sealed class EntityTracker
 
             entity.StepInterpolation();
 
+            if (entity.TypeId == EnderDragonModelDefinition.EnderDragonEntityTypeId)
+            {
+                entity.DragonFlightHistory.Record(entity.Y, entity.Yaw);
+            }
+
             // Horizontal distance actually travelled this tick drives the walk animation, mirroring the reference
             // calculateEntityAnimation (uses the movement delta, not the commanded velocity).
             var dx = (float)(entity.X - entity.PreviousX);
@@ -1388,6 +1403,7 @@ public sealed class EntityTracker
             // also decides the arm width. Keep the Slim flag and the body texture on the same default.
             var hasCustomBody = playerSkin?.Body is not null;
             var slim = hasCustomBody ? playerSkin!.Value.Slim : DefaultPlayerSkin.Get(entity.Uuid).Slim;
+            var dragon = entity.TypeId == EnderDragonModelDefinition.EnderDragonEntityTypeId;
 
             _renderStates.Add(new EntityRenderState(
                 entity.Id,
@@ -1500,7 +1516,11 @@ public sealed class EntityTracker
                 PlayerCapeTexture: playerSkin?.Cape?.Path,
                 PlayerElytraTexture: playerSkin?.Elytra?.Path,
                 Slim: slim,
-                Uuid: entity.Uuid));
+                Uuid: entity.Uuid,
+                DragonFlightHistory: dragon ? entity.DragonFlightHistory : null,
+                DragonIsLandingOrTakingOff: dragon && (entity.DragonPhase is 3 or 4),
+                DragonIsSitting: dragon && (entity.DragonPhase is 5 or 6 or 7),
+                DragonDistanceToEgg: 0));
         }
 
         return CollectionsMarshal.AsSpan(_renderStates);
@@ -1595,6 +1615,14 @@ public sealed class EntityTracker
             if (entity.TypeId == 97 && item.Index == 19 && item.SerializerId == 1)
             {
                 entity.Presentation.IsEating = item.Value > 0;
+                applied = true;
+            }
+
+            // Ender Dragon phase id (DATA_PHASE, index 15, int serializer 1).
+            if (entity.TypeId == EnderDragonModelDefinition.EnderDragonEntityTypeId &&
+                item.Index == 15 && item.SerializerId == 1)
+            {
+                entity.DragonPhase = item.Value;
                 applied = true;
             }
 

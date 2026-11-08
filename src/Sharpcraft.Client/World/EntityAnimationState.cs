@@ -88,7 +88,11 @@ public readonly record struct EntityAnimationFrame(
     bool IsSprinting = false,
     float LieDownAmount = 0f,
     float LieDownAmountTail = 0f,
-    float RelaxStateOneAmount = 0f)
+    float RelaxStateOneAmount = 0f,
+    DragonFlightHistory? DragonHistory = null,
+    bool DragonIsLandingOrTakingOff = false,
+    bool DragonIsSitting = false,
+    double DragonDistanceToEgg = 0)
 {
     /// <summary>Projects the generic render state onto the frame. The mesher calls this once per entity per frame.</summary>
     public static EntityAnimationFrame From(in EntityRenderState state) => new(
@@ -166,7 +170,11 @@ public readonly record struct EntityAnimationFrame(
         state.IsSprinting,
         state.LieDownAmount,
         state.LieDownAmountTail,
-        state.RelaxStateOneAmount);
+        state.RelaxStateOneAmount,
+        state.DragonFlightHistory,
+        state.DragonIsLandingOrTakingOff,
+        state.DragonIsSitting,
+        state.DragonDistanceToEgg);
 }
 
 /// <summary>

@@ -5,8 +5,9 @@ namespace Sharpcraft.Client.Render;
 
 /// <summary>
 /// EnderDragonModel: head/jaw, five neck segments, twelve tail segments, body with scales, two two-segment wings and
-/// four three-segment legs. Bind pose corresponds to the model definition; flight animation is not ported. Parts are
-/// declared with the <c>VanillaMeshDefinition</c> DSL and baked via <c>VanillaMeshBake</c> (T-691).
+/// four three-segment legs. Bind pose corresponds to the model definition; the flap/history animation is supplied by
+/// <see cref="EnderDragonAnimationProvider"/>. Parts are declared with the <c>VanillaMeshDefinition</c> DSL and baked
+/// via <c>VanillaMeshBake</c> (T-691).
 /// </summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.dragon.EnderDragonModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/dragon/EnderDragonModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class EnderDragonModelDefinition

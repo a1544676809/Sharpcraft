@@ -7,9 +7,9 @@ using Sharpcraft.Client.World;
 namespace Sharpcraft.Client.Render;
 
 /// <summary>
-/// Reference <c>EnderDragonModel.setupAnim</c>. Only the flap-clock-driven, rotation-only sections can be derived from
-/// the animation inputs available today: the jaw, both two-segment wings (with their skin membranes) and the six leg
-/// chains. Every remaining section is left at the bind pose and recorded as blocked below — deliberately not faked.
+/// Reference <c>EnderDragonModel.setupAnim</c>: the flap-clock sections (jaw, both two-segment wings with skin
+/// membranes, six leg chains) plus the history-driven neck/head/body/tail chains are derived here. The model root
+/// group and the non-flight flap branches remain blocked below.
 /// </summary>
 /// <remarks>
 /// Derivable now:
@@ -25,20 +25,14 @@ namespace Sharpcraft.Client.Render;
 /// <c>flapSpeed = 0.2 / (horizontalDistance·10 + 1) · 2^verticalDistance</c> — using the per-tick displacement from
 /// <see cref="EntityAnimationTickContext"/> (the Ender Dragon is <c>noPhysics</c>, so its position delta equals its
 /// velocity), and interpolates with the partial tick.
-/// <para>Blocked (not approximated; these parts stay at the bind pose):</para>
+/// <para>Blocked (not approximated):</para>
 /// <list type="bullet">
-/// <item>All five <c>neck0..4</c> rotations and positions, the <c>head</c> rotation/position, <c>body.zRot</c> and all
-/// twelve <c>tail0..11</c> rotations and positions. Every one reads
-/// <c>EnderDragonRenderState.getHistoricalPos(delay)</c> from a 64-sample <c>DragonFlightHistory</c> of per-tick
-/// <c>(y, yRot)</c> samples (delays 0..23), and the neck x-rotation additionally reads
-/// <c>getHeadPartYOffset(i, start, point)</c>, which branches on <c>isLandingOrTakingOff</c>, <c>isSitting</c> (the
-/// dragon phase) and <c>distanceToEgg</c>. None of that history or phase data exists on
-/// <see cref="EntityAnimationFrame"/> or the tick context, so porting them would require synthesising a flight path.</item>
 /// <item><c>root.y</c> / <c>root.z</c> / <c>root.xRot</c>: the reference transforms a model root group, but
 /// <see cref="EnderDragonModelDefinition"/> has no <c>root</c> part (head/neck/tail/body are top-level), so the group
 /// transform cannot be reproduced per part.</item>
 /// <item>The <c>flapTime</c> sitting (<c>+0.1</c>/tick), <c>inWall</c> (<c>×0.5</c>) and dying (frozen) branches: they
-/// need the dragon phase / inWall / death flags, which the frame and tick context do not carry.</item>
+/// need the dragon phase / inWall / death flags; phase-derived sitting/landing flags and history are available, but the
+/// remaining collision/death inputs are not carried.</item>
 /// </list>
 /// </remarks>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.monster.dragon.EnderDragonModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/dragon/EnderDragonModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
@@ -57,6 +51,10 @@ public sealed class EnderDragonAnimationProvider(int typeId) : IEntityAnimationP
         var clocks = state as State;
         var flapTime = clocks is null ? 0f : clocks.FlapTimeAt(frame.PartialTick);
         ApplyFlapPose(flapTime, pose);
+        if (frame.DragonHistory is { } history)
+        {
+            ApplyFlightPose(history, frame, flapTime, pose);
+        }
     }
 
     public void ApplyClip(IEntityAnimationState state, in EntityAnimationFrame frame, string clip, float seconds, EntityPose pose)
@@ -109,6 +107,114 @@ public sealed class EnderDragonAnimationProvider(int typeId) : IEntityAnimationP
         AddRotation(pose, "right_hind_leg_tip", legDelta, 0f, 0f);
         AddRotation(pose, "right_hind_foot", legDelta, 0f, 0f);
     }
+
+    private static void ApplyFlightPose(
+        DragonFlightHistory history,
+        in EntityAnimationFrame frame,
+        float flapTime,
+        EntityPose pose)
+    {
+        var start = history.Get(6, frame.PartialTick);
+        var rot2 = WrapDegrees(history.Get(5, frame.PartialTick).YRot - history.Get(10, frame.PartialTick).YRot);
+        var rot = WrapDegrees(history.Get(5, frame.PartialTick).YRot + (rot2 * 0.5f));
+
+        // Neck chain: reference writes absolute x/y/z after each segment; our pose is additive over the bind pivot
+        // in y-up storage, so Y is negated and Z keeps the reference sign.
+        var xx = 0f;
+        var yy = 20f;
+        var zz = -12f;
+        for (var i = 0; i < 5; i++)
+        {
+            var point = history.Get(5 - i, frame.PartialTick);
+            var neckXRot = MathF.Cos((i * 0.45f) + flapTime) * 0.15f;
+            var yRot = WrapDegrees(point.YRot - start.YRot) * Degrees * 1.5f;
+            var xRot = neckXRot + (HeadPartYOffset(i, start, point, frame) * Degrees * 1.5f * 5f);
+            var zRot = -WrapDegrees(point.YRot - rot) * Degrees * 1.5f;
+
+            xx -= MathF.Sin(yRot) * MathF.Cos(xRot) * 10f;
+            yy += MathF.Sin(xRot) * 10f;
+            zz -= MathF.Cos(yRot) * MathF.Cos(xRot) * 10f;
+
+            pose.Add("neck" + i, new PoseOffset(
+                new Vector3(xx, -(yy - 20f), zz + 12f),
+                new Vector3(xRot, yRot, zRot),
+                Vector3.Zero));
+        }
+
+        var current = history.Get(0, frame.PartialTick);
+        pose.Add("head", new PoseOffset(
+            new Vector3(xx, -(yy - 20f), zz + 62f),
+            new Vector3(
+                WrapDegrees(HeadPartYOffset(6, start, current, frame)) * Degrees * 1.5f * 5f,
+                WrapDegrees(current.YRot - start.YRot) * Degrees,
+                -WrapDegrees(current.YRot - rot) * Degrees),
+            Vector3.Zero));
+
+        pose.Add("body", new PoseOffset(
+            Vector3.Zero,
+            new Vector3(0f, 0f, -rot2 * 1.5f * Degrees),
+            Vector3.Zero));
+
+        // Tail chain: bind tail0 is (0, 10, 60); the reference updates positions after assigning each segment.
+        var tailStart = history.Get(11, frame.PartialTick);
+        xx = 0f;
+        yy = 10f;
+        zz = 60f;
+        var tailXRot = 0f;
+        for (var i = 0; i < 12; i++)
+        {
+            var point = history.Get(12 + i, frame.PartialTick);
+            tailXRot += MathF.Sin((i * 0.45f) + flapTime) * 0.05f;
+            var yRot = (WrapDegrees(point.YRot - tailStart.YRot) * 1.5f + 180f) * Degrees;
+            var xRot = tailXRot + ((float)(point.Y - tailStart.Y) * Degrees * 1.5f * 5f);
+            var zRot = WrapDegrees(point.YRot - rot) * Degrees * 1.5f;
+
+            pose.Add("tail" + i, new PoseOffset(
+                new Vector3(xx, -(yy - 10f), zz - 60f),
+                new Vector3(xRot, yRot, zRot),
+                Vector3.Zero));
+
+            yy += MathF.Sin(xRot) * 10f;
+            zz -= MathF.Cos(yRot) * MathF.Cos(xRot) * 10f;
+            xx -= MathF.Sin(yRot) * MathF.Cos(xRot) * 10f;
+        }
+    }
+
+    private static float HeadPartYOffset(
+        int part,
+        DragonFlightHistory.Sample start,
+        DragonFlightHistory.Sample point,
+        in EntityAnimationFrame frame)
+    {
+        if (frame.DragonIsLandingOrTakingOff)
+        {
+            return part / MathF.Max((float)frame.DragonDistanceToEgg / 4f, 1f);
+        }
+
+        if (frame.DragonIsSitting)
+        {
+            return part;
+        }
+
+        return part == 6 ? 0f : (float)(point.Y - start.Y);
+    }
+
+    private static float WrapDegrees(float degrees)
+    {
+        var wrapped = degrees % 360f;
+        if (wrapped >= 180f)
+        {
+            wrapped -= 360f;
+        }
+        else if (wrapped < -180f)
+        {
+            wrapped += 360f;
+        }
+
+        return wrapped;
+    }
+
+    private const float Degrees = MathF.PI / 180f;
 
     private static void AddRotation(EntityPose pose, string part, float x, float y, float z) =>
         pose.Add(part, new PoseOffset(Vector3.Zero, new Vector3(x, y, z), Vector3.Zero));

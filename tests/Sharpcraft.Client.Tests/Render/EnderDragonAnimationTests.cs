@@ -9,16 +9,20 @@ using Xunit;
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>
-/// Ender Dragon <c>setupAnim</c> feasibility. The flap-clock-driven, rotation-only sections (jaw, both wings with their
-/// skin membranes and the six leg chains) are derived and pinned here. The neck/head/body/tail sections depend on
-/// <c>DragonFlightHistory</c> and the dragon phase/distance data, which the animation frame does not carry; they are
-/// intentionally left at the bind pose and asserted to stay there (not faked).
+/// Ender Dragon <c>setupAnim</c>. The flap-clock sections (jaw, both wings with skin membranes, six leg chains) and
+/// the <c>DragonFlightHistory</c>-driven neck/head/body/tail chains are pinned here; without a history the history
+/// parts stay at the bind pose.
 /// </summary>
 public sealed class EnderDragonAnimationTests
 {
     private static readonly int TypeId = EnderDragonModelDefinition.EnderDragonEntityTypeId;
 
-    private static EntityAnimationFrame Frame(float partialTick = 0f) => new(
+    private static EntityAnimationFrame Frame(
+        float partialTick = 0f,
+        DragonFlightHistory? history = null,
+        bool landingOrTakingOff = false,
+        bool sitting = false,
+        double distanceToEgg = 0) => new(
         TypeId: TypeId,
         AgeInTicks: 0f,
         WalkAnimationPos: 0f,
@@ -31,7 +35,11 @@ public sealed class EnderDragonAnimationTests
         IsResting: false,
         IsBaby: false,
         IsHidingInShell: false,
-        PartialTick: partialTick);
+        PartialTick: partialTick,
+        DragonHistory: history,
+        DragonIsLandingOrTakingOff: landingOrTakingOff,
+        DragonIsSitting: sitting,
+        DragonDistanceToEgg: distanceToEgg);
 
     private static EnderDragonAnimationProvider NewProvider() => new(TypeId);
 
@@ -136,7 +144,43 @@ public sealed class EnderDragonAnimationTests
     }
 
     [Fact]
-    public void HistoryDependentPartsRemainAtTheBindPose()
+    public void DragonFlightHistoryKeepsSixtyFourSamplesAndInterpolates()
+    {
+        var history = new DragonFlightHistory();
+        for (var i = 0; i < 64; i++)
+        {
+            history.Record(i, i * 10f);
+        }
+
+        Assert.Equal(63d, history.Get(0).Y);
+        Assert.Equal(0d, history.Get(63).Y);
+        var interpolated = history.Get(0, 0.5f);
+        Assert.Equal(62.5d, interpolated.Y);
+        Assert.Equal(625f, interpolated.YRot, 3);
+    }
+
+    [Fact]
+    public void FlightHistoryDrivesNeckHeadBodyAndTail()
+    {
+        var history = new DragonFlightHistory();
+        for (var i = 0; i < 48; i++)
+        {
+            history.Record(y: i * 0.5, yRot: i * 3f);
+        }
+
+        var provider = NewProvider();
+        var pose = Apply(provider, provider.CreateState(), Frame(partialTick: 1f, history: history));
+
+        Assert.NotEqual(Vector3.Zero, pose.Get("neck0").Rotation);
+        Assert.NotEqual(Vector3.Zero, pose.Get("neck4").Position);
+        Assert.NotEqual(Vector3.Zero, pose.Get("head").Rotation);
+        Assert.NotEqual(0f, pose.Get("body").Rotation.Z);
+        Assert.NotEqual(Vector3.Zero, pose.Get("tail0").Rotation);
+        Assert.NotEqual(Vector3.Zero, pose.Get("tail11").Position);
+    }
+
+    [Fact]
+    public void WithoutFlightHistoryTheHistoryDependentPartsRemainAtTheBindPose()
     {
         var provider = NewProvider();
         var state = (EnderDragonAnimationProvider.State)provider.CreateState();

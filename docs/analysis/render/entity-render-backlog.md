@@ -23,7 +23,7 @@ updated: 2026-11-07
 **状态：provider 基础已大量落地，真实场景多帧验收仍未完成。**
 
 - 已存在大量 `*AnimationProvider`（Humanoid、Quadruped、Feline、Equine、Axolotl、Nautilus、Warden、Creaking、Breeze、Sniffer 等）；动画通道/关键帧/姿态覆盖已有基础实现。
-- 仍未完成的是：真实服务端场景下的多帧姿态对比、动画与装备层的统一变换验收，以及 EnderDragon flight history 等长尾状态。
+- 仍未完成的是：真实服务端场景下的多帧姿态对比、动画与装备层的统一变换验收；EnderDragon flight history 已接（T-757），root/phase 长尾仍见 §10.3。
 - 验收不能只看静态截图：需要固定场景下多帧姿态对比，或按参考动画的关键帧数值验证。
 - 动画完成后，装备层必须跟随同一套变换。
 

@@ -14,7 +14,7 @@ updated: 2026-11-03
 
 当前所有实体模型都按 `createBodyLayer()` 的 **bind pose** 发射几何；没有 `setupAnim`、动画状态、关键帧或每帧姿态覆盖。模型与装备层（`EntityModelPart`、`EntityModelLayerHelpers.WithEquipment`）都使用静态部件变换。
 
-因此走路、尾巴、耳朵、翅膀、触手、Armadillo 翻滚、Warden/Creaking/EnderDragon 等可见运动全部缺失。静态 bind pose 的模型移植本身已完成，动画是下一个独立能力。
+因此走路、尾巴、耳朵、翅膀、触手、Armadillo 翻滚、Warden/Creaking/EnderDragon 等可见运动曾在初版全部缺失；静态 bind pose 的模型移植本身已完成。EnderDragon 的 flap/neck/head/body/tail 已在 T-757 接入，root/非飞行分支仍记录为限制。
 
 ## 2. 原版动画模型
 
