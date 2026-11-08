@@ -5,7 +5,8 @@ namespace Sharpcraft.Client.Render;
 
 /// <summary>
 /// HappyGhastModel (adult): one 16x16x16 body with nine tentacles hanging from its underside, scaled 4x.
-/// Bind pose only; harness/ropes layers and baby model are not ported. Parts are declared with the
+/// Also bakes the adult/baby rope overlays: the same tree inflated by 0.2 model pixels and drawn only while the
+/// ghast is a leash holder wearing a harness (RopesLayer). Parts are declared with the
 /// <c>VanillaMeshDefinition</c> DSL and baked via <c>VanillaMeshBake.Bake</c> (T-681); the Tentacles table and scale
 /// are unchanged.
 /// </summary>
@@ -13,6 +14,7 @@ namespace Sharpcraft.Client.Render;
 public static class HappyGhastModelDefinition
 {
     public const int HappyGhastEntityTypeId = 59;
+    public const string RopesTexture = "entity/ghast/happy_ghast_ropes";
 
     private static readonly (float X, float Y, float Z, float Length)[] Tentacles =
     [
@@ -57,5 +59,58 @@ public static class HappyGhastModelDefinition
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/ghast/happy_ghast",
         4f,
+        additionalTexturePaths: [RopesTexture],
         compiled: HappyGhastCompiled);
+
+    private static readonly VanillaMeshDefinition AdultRopesMesh = BuildRopesMesh(baby: false);
+    private static readonly VanillaMeshDefinition BabyRopesMesh = BuildRopesMesh(baby: true);
+    private static readonly CompiledEntityModel AdultRopesCompiled =
+        VanillaMeshBakery.Build(AdultRopesMesh, 64, 64);
+    private static readonly CompiledEntityModel BabyRopesCompiled =
+        VanillaMeshBakery.Build(BabyRopesMesh, 64, 64);
+
+    /// <summary>Adult rope pass: the HappyGhast body/tentacles inflated by 0.2 model pixels.</summary>
+    public static readonly EntityModelDefinition RopesDefinition = new(
+        "happy_ghast_ropes",
+        64,
+        64,
+        [.. VanillaMeshBake.Bake(AdultRopesMesh, 0, 0)],
+        PlayerModelDefinition.DefaultFaceTransforms,
+        RopesTexture,
+        4f,
+        additionalTexturePaths: [RopesTexture],
+        compiled: AdultRopesCompiled);
+
+    /// <summary>Baby rope pass: the baby body/tentacles inflated by 0.2 model pixels, 0.2375×4 scale.</summary>
+    public static readonly EntityModelDefinition RopesBabyDefinition = new(
+        "happy_ghast_baby_ropes",
+        64,
+        64,
+        [.. VanillaMeshBake.Bake(BabyRopesMesh, 0, 0)],
+        PlayerModelDefinition.DefaultFaceTransforms,
+        RopesTexture,
+        0.95f,
+        additionalTexturePaths: [RopesTexture],
+        compiled: BabyRopesCompiled);
+
+    private static VanillaMeshDefinition BuildRopesMesh(bool baby)
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        var body = root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 16f, 0f),
+            new VanillaCubeDefinition("body", 0, 0, -8f, -8f, -8f, 16f, 16f, 16f, Grow: 0.2f));
+        if (baby)
+        {
+            body.AddOrReplaceChild("inner_body", VanillaPartPose.Offset(0f, 8f, 0f),
+                new VanillaCubeDefinition("inner_body", 0, 32, -8f, -16f, -8f, 16f, 16f, 16f, Grow: -0.3f));
+        }
+
+        for (var i = 0; i < Tentacles.Length; i++)
+        {
+            var (x, y, z, length) = Tentacles[i];
+            body.AddOrReplaceChild("tentacle" + i, VanillaPartPose.Offset(x, y, z),
+                new VanillaCubeDefinition("tentacle" + i, 0, 0, -1f, 0f, -1f, 2f, length, 2f, Grow: 0.2f));
+        }
+
+        return new VanillaMeshDefinition(root);
+    }
 }

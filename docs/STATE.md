@@ -30,7 +30,7 @@ updated: 2026-11-07
 
 | 任务 | 状态 / 关键点 |
 | --- | --- |
-| **实体模型与动画主线** | 真实部件模型 + 逐实体动画 provider 已大量落地（humanoid/baby/quadruped/aquatic/nether 等）；非人形装备层已树化（T-723）；成人/幼年 humanoid 四槽护甲与 Elytra 已树化（T-724/T-725）；Piglin 护甲树已接入（T-726）；剩余：T-631 held-item/item-model（解锁 SPEAR/STAB）、Happy Ghast ropes、EnderDragon flight history、Parrot PARTY / Bee stinger / Guardian eye look / Piglin crossbow-hold |
+| **实体模型与动画主线** | 真实部件模型 + 逐实体动画 provider 已大量落地（humanoid/baby/quadruped/aquatic/nether 等）；非人形装备层已树化（T-723）；成人/幼年 humanoid 四槽护甲与 Elytra 已树化（T-724/T-725）；Piglin 护甲树已接入（T-726）；剩余：T-631 held-item/item-model（解锁 SPEAR/STAB）、EnderDragon flight history、Parrot PARTY / Bee stinger / Guardian eye look / Piglin crossbow-hold（Happy Ghast ropes 已由 T-755 接入） |
 | **架构：原则 14 / Phase 0 / Phase 1** | 已从 main 合入 T-654..T-661（原则 14、STATE 门禁、`PlaySession.TryHandleTransport`、`MeshingContext`、方块实体 NBT/类型注册表、`OcclusionShape`）。剩余：P0.3 帧 Pass 单轨化、P1.4 `registry_data` 动态装配、P1.5 `OcclusionShape` 完整接入 `ChunkMesher` 替换 `IsSolid` |
 
 ## 未提交改动
@@ -136,7 +136,7 @@ updated: 2026-11-07
 > 下一阶段执行清单见 [`docs/analysis/render/next-actions-hard-constraints.md`](analysis/render/next-actions-hard-constraints.md)；下面为原有 backlog。
 
 1. **T-631 held-item/item-model**：先按原则 14 补 `docs/modules/entity-equipment.md` 的原版源码映射表与 ≥5 组 Golden Vectors（`ItemInHandRenderer`/`ItemModelResolver`），再实现 SPEAR/STAB。
-2. **Happy Ghast ropes / EnderDragon flight history**：按实体渲染 backlog 顺序推进。
+2. **EnderDragon flight history**：Happy Ghast ropes 已接（T-755），按实体渲染 backlog 顺序推进。
 3. **P1.5（`Client/Render/ChunkMesher`）**：用 `OcclusionShape.IsFaceOccludedByState/Self` 替换 `IsSolid` 近似；配 `FluidMesherTests` 真值回归。
 4. **P1.4（T-042）**：提取 26.3 `registry_data` 真值向量，把服务器下发注册表动态装配进 `BlockStateLayout`。
 5. **P0.3（`Framework/Rendering`）**：`OffscreenRenderer` 与 `WindowedRenderer` 收敛为共用世界 Pass 序列。

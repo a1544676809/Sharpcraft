@@ -244,6 +244,34 @@ public sealed class EntityLayerTests
     }
 
     [Fact]
+    public void HappyGhastRopesRequireLeashAndHarness()
+    {
+        var harness = EntityModelResolver.Items!.GetId(Identifier.Parse("minecraft:white_harness"));
+        Assert.True(harness >= 0, "white_harness item id missing from embedded registry");
+        var leashed = Entity(HappyGhastModelDefinition.HappyGhastEntityTypeId) with
+        {
+            IsLeashed = true,
+            Equipment = new EntityEquipment(-1, -1, -1, -1, -1, -1, harness, -1)
+        };
+
+        var adult = EntityModelResolver.Resolve(HappyGhastModelDefinition.HappyGhastEntityTypeId);
+        var ropes = adult.RenderLayers.Single(layer => layer.Name == "happy_ghast_ropes");
+        Assert.True(ropes.VisibleWhen!(leashed));
+        Assert.False(ropes.VisibleWhen!(leashed with { IsLeashed = false }));
+        Assert.False(ropes.VisibleWhen!(leashed with { Equipment = default }));
+
+        var baby = EntityModelResolver.Resolve(HappyGhastModelDefinition.HappyGhastEntityTypeId, baby: true);
+        Assert.Contains(baby.RenderLayers, layer => layer.Name == "happy_ghast_ropes");
+        Assert.Contains(HappyGhastModelDefinition.RopesDefinition.Compiled!.Cubes,
+            cube => cube.Name == "body" && MathF.Abs(cube.Grow - 0.2f) < 1e-6f);
+        Assert.Contains(HappyGhastModelDefinition.RopesBabyDefinition.Compiled!.Cubes,
+            cube => cube.Name == "inner_body" && MathF.Abs(cube.Grow - -0.3f) < 1e-6f);
+        var layers = new EntityModelMesher().BuildLayers(
+            [leashed], new SpriteRect(0, 0, 64, 64, 1), 64, 64, variants: EntityVariantTable.Builtin);
+        Assert.Contains(layers, layer => layer.Name == "happy_ghast_ropes");
+    }
+
+    [Fact]
     public void EnchantmentPresenceEnablesTheArmorGlintLayer()
     {
         var enchanted = new bool?[8];

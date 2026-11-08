@@ -219,7 +219,9 @@ public static class EntityModelResolver
     private static readonly Dictionary<(int TypeId, string Key), EntityModelDefinition> VariantModels = new();
 
     public static IReadOnlyCollection<EntityModelDefinition> Definitions =>
-        Models.Values.Concat(VariantModels.Values).Concat(BabyModels.Values).Concat(BabyVariantModels.Values).Distinct().ToArray();
+        Models.Values.Concat(VariantModels.Values).Concat(BabyModels.Values).Concat(BabyVariantModels.Values)
+            .Concat([HappyGhastModelDefinition.RopesDefinition, HappyGhastModelDefinition.RopesBabyDefinition])
+            .Distinct().ToArray();
 
     /// <summary>Every registered entity type id, used by registry-wide model gates.</summary>
     public static IReadOnlyCollection<int> RegisteredTypeIds =>
@@ -528,6 +530,25 @@ public static class EntityModelResolver
             renderLayers = customLayers;
         }
 
+        if (typeId == HappyGhastModelDefinition.HappyGhastEntityTypeId)
+        {
+            var ropeModel = baby
+                ? HappyGhastModelDefinition.RopesBabyDefinition
+                : HappyGhastModelDefinition.RopesDefinition;
+            var existing = renderLayers ?? definition.RenderLayers;
+            var ropeLayers = new List<EntityRenderLayerDefinition>(existing);
+            ropeLayers.Add(new EntityRenderLayerDefinition(
+                "happy_ghast_ropes",
+                EntityGeometryLayerKind.Elytra,
+                20,
+                ropeModel,
+                HappyGhastModelDefinition.RopesTexture,
+                _ => HappyGhastModelDefinition.RopesTexture,
+                state => state.IsLeashed && IsHarnessItem(state.Equipment.Body),
+                AllCubes: true));
+            renderLayers = ropeLayers;
+        }
+
         var compiled = definition.Compiled;
         if (compiled is not null)
         {
@@ -590,6 +611,9 @@ public static class EntityModelResolver
         EquippedModels[key] = decorated;
         return decorated;
     }
+
+    private static bool IsHarnessItem(int itemId) =>
+        Items?.ById(itemId) is { } item && item.Id.Path.EndsWith("_harness", StringComparison.Ordinal);
 
     private static readonly int[] HumanoidArmorSlots = [5, 4, 3, 2];
 

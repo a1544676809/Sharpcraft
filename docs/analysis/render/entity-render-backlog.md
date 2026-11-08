@@ -31,7 +31,7 @@ updated: 2026-11-07
 
 | 项 | 现状 | 依赖 / 验收 |
 | --- | --- | --- |
-| Happy Ghast `RopesLayer` | 挽具/眼罩已通过；绳索层未做 | 需要 `isLeashHolder` 状态；按 `HappyGhastRopes` 层渲染并验证 |
+| Happy Ghast `RopesLayer` | 已接（T-755）：`IsLeashed` + body harness 判定、adult/baby 0.2 外扩绳索模型 | 真机视觉验收 |
 | Wolf armor 裂纹 | 已接入独立 crackiness 层 | 继续做损伤状态真机验证 |
 | Trader Llama 地毯 | 普通 16 色地毯与 trader 专用纹理已接 | 继续做装备槽联动测试 |
 | Zombie Nautilus 珊瑚 | 暖变体 coral 层已接入，`Equipment[6]` 有甲时隐藏 | 继续做 body armor 联动测试 |
@@ -64,7 +64,7 @@ updated: 2026-11-07
 ## 7. 建议顺序
 
 1. **动画系统真实场景验收**：provider 已大量存在，优先做固定场景多帧姿态对比。
-2. 装备特例：Happy Ghast ropes 是当前剩余的主体；其余已接入的 crackiness/trader carpet/zombie coral 只差联动验收。
+2. 装备特例：Happy Ghast ropes 已接（T-755）；crackiness/trader carpet/zombie coral 只差联动验收。
 3. Witch 手持物品（依赖物品模型，后置）。
 4. 装备资产收尾：trim texture/palette、palette/texture override 与完整 GLINT pass 已接（T-754），剩余视觉验收与自定义 trim entry NBT 解析。
 

@@ -320,3 +320,32 @@
 - `trim_overrides` 的 **palette** 与 **texture** 替换已按 equipment asset 接入（例如 iron/gold 的 `*_darker` 变体；texture override key 带 `/tex/<path>` 后缀）。
 - Glint 层已按原版 `glint.fsh` / `TextureTransform.ARMOR_ENTITY_GLINT_TEXTURING` 实现：0.16 scale、10° 旋转、110000/30000 时间偏移、`SRC_COLOR/ONE` 颜色混合、`EQUAL` 深度、fog fade 与 `glintStrength=0.75`；trim/no-trim 共用同一个等效 GLINT pass。
 - 动态 `registry_data` 的 trim material/pattern holder 顺序已由 `TrimRegistryTable.Configure` 按当前连接装配；26.3 bootstrap 仍是缺省回退。自定义 entry 的 `palette_id`/`asset_id` NBT 尚未解析，未知自定义材质/图案会回退为不绘制。
+
+## 16. Happy Ghast 绳索层（RopesLayer）
+
+### 16.1 原版 26.3 源码映射表
+
+| 本模块概念 / 方法 | 原版类与方法路径（`ref://...`） | 精确常量 / 公式 / 结构 | 位序 / 正负号 / 色彩空间约定 | 缺省 / 越界回退值 |
+| --- | --- | --- | --- | --- |
+| 可见条件 | `RopesLayer.submit` | `state.isLeashHolder && state.bodyItem.is(ItemTags.HARNESSES)` | 任一为 false 不绘制 | 无 |
+| 模型 | `HappyGhastModel` + `ModelLayers.HAPPY_GHAST_ROPES` | `createBodyLayer(isBaby, CubeDeformation(0.2F))`；adult `scaling(4.0)`，baby `BABY_TRANSFORMER=scaling(0.2375)`（总 scale 0.95） | 所有 body/tentacle 立方体四边各外扩 0.2；baby `inner_body` 的 grow = `-0.5 + 0.2 = -0.3` | 无纹理/模型时不绘制 |
+| 纹理 | `HappyGhastRenderer.GHAST_ROPES` | `textures/entity/ghast/happy_ghast_ropes.png` | 资源路径 `entity/ghast/happy_ghast_ropes` | 无 |
+| 层顺序 | `HappyGhastRenderer` layers | harness/equipment 层之后追加 `RopesLayer` | — | — |
+| 身体物品判定 | `ItemTags.HARNESSES` | 16 个 `<color>_harness` 物品 | item tag 含 harness 才可见 | 非 harness 不绘制 |
+
+### 16.2 真值向量（Golden Vectors）
+
+采样来源：`RopesLayer.java` / `HappyGhastModel.java` / `LayerDefinitions.java` / `HappyGhastRenderer.java`；测试落点：`tests/Sharpcraft.Client.Tests/Render/EntityLayerTests.cs`。
+
+1. **可见性**：`isLeashed=true` 且 body slot 为 `minecraft:white_harness` → `happy_ghast_ropes` 层 visible；`isLeashed=false` 或 body 为空 → invisible。
+2. **adult 几何**：body cube 原 `-8..8`，grow 0.2 → `-8.2..8.2`；tentacle 原 2×L×2 → 2.4×(L+0.4)×2.4。
+3. **baby 几何**：baby rope 使用 `createBodyLayer(true, 0.2)`，`inner_body` grow `-0.3`，总 scale 0.95。
+4. **纹理**：rope 层使用 `entity/ghast/happy_ghast_ropes`，与主模型 `happy_ghast` 纹理分离。
+5. **层位置**：harness（槽 6）装备层之后，绳索层 order 20；仅 leash holder 可见。
+
+### 16.3 当前实现与已知限制
+
+- `HappyGhastModelDefinition` 新增 `RopesDefinition`/`RopesBabyDefinition`，以 0.2 外扩和 4×/0.95× scale 烘焙独立几何。
+- `EntityRenderState.IsLeashed` 由 `set_entity_link` 的 presentation 状态传入；body 槽 harness 由 `ItemRegistry` 的 `<color>_harness` 路径判定。
+- `EntityModelResolver.Decorate` 为 type 59 追加 `happy_ghast_ropes` 层；baby 使用 `RopesBabyDefinition`。
+- 未实现：RopesLayer 的独立 `RenderLayer` 类型/顺序扩展（当前由固定 layer name 和 order 20 表达）；真机视觉验收待做。
