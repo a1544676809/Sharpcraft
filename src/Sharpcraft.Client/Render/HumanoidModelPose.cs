@@ -44,7 +44,7 @@ internal enum HumanoidVariant
 /// <remarks>
 /// Model transforms are accumulated in local part state and emitted as absolute pose offsets, because the reference
 /// assigns (not offsets) model-part fields. Rotations are transcribed in radians; positions are converted from the
-/// reference y-down, mirrored model space into the y-up storage used by the mesher. The SPEAR arm pose and the STAB
+/// reference y-down, mirrored model space into the y-up storage used by the mesher. The SPEAR arm pose now comes from `SpearAnimations.thirdPersonHandUse` and the STAB
 /// swing animation depend on <c>SpearAnimations</c> (item-model geometry) and are deliberately left as no-ops and
 /// recorded as blocked; the CROSSBOW_* arm poses are unreachable for these renderers (only player/illager/piglin).
 /// </remarks>
@@ -179,6 +179,54 @@ internal static class HumanoidModelPose
         pose.Set("left_leg", leftLeg.ToOffset());
     }
 
+    /// <summary>
+    /// Reference <c>SpearAnimations.thirdPersonHandUse</c>: the arm angle a spear forces on its holder, plus the sway that
+    /// runs while the spear is being used.
+    /// </summary>
+    /// <remarks>
+    /// The reference sets the arm rotations outright (not additively) from the head rotation, clamps them to
+    /// (&#8722;60&#176;, 60&#176;) in yaw and (&#8722;120&#176;, 30&#176;) in pitch, and then while the holder is using the spear adds
+    /// the kinetic-weapon sway. Left and right differ only through <c>invert</c>.
+    /// </remarks>
+    private static void SpearHandUse(ref PartState arm, in PartState head, bool right, in EntityAnimationFrame frame)
+    {
+        const float RadToDeg = 180f / Pi;
+        var invert = right ? 1 : -1;
+
+        arm.RotY = (-0.1f * invert) + head.RotY;
+        arm.RotX = (-Pi / 2f) + head.RotX + 0.8f;
+        if (frame.IsFallFlying || frame.SwimAmount > 0f)
+        {
+            arm.RotX -= 0.9599311f;
+        }
+
+        arm.RotY = Math.Clamp(arm.RotY * RadToDeg, -60f, 60f) * DegToRad;
+        arm.RotX = Math.Clamp(arm.RotX * RadToDeg, -120f, 30f) * DegToRad;
+
+        // Reference ticksUsingItem(arm): zero unless the holder is using an item in this very arm.
+        var usingThisArm = frame.IsUsingItem && AsArm(frame.UseItemHand, frame.IsLeftHanded) == (right ? Arm.Right : Arm.Left);
+        if (!usingThisArm || frame.TicksUsingItem <= 0f)
+        {
+            return;
+        }
+
+        var itemId = right ? frame.MainHandItemId : frame.OffHandItemId;
+        if (itemId <= 0 || EntityModelResolver.Items?.ById(itemId) is not { } item ||
+            KineticWeapons.ForItem(item.Id.Path) is not { } weapon)
+        {
+            return;
+        }
+
+        var parameters = SpearAnimations.UseParams.FromKineticWeapon(weapon, frame.TicksUsingItem);
+        arm.RotY += -invert * parameters.SwayScaleFast * DegToRad * parameters.SwayIntensity;
+        arm.RotZ += -invert * parameters.SwayScaleSlow * DegToRad * parameters.SwayIntensity * 0.5f;
+        arm.RotX += DegToRad * ((-40f * parameters.RaiseProgressStart)
+            + (30f * parameters.RaiseProgressMiddle)
+            - (20f * parameters.RaiseProgressEnd)
+            + (20f * parameters.LowerProgress)
+            + (10f * parameters.RaiseBackProgress)
+            + (0.6f * parameters.SwayScaleSlow * parameters.SwayIntensity));
+    }
     private static void PoseRightArm(ref PartState arm, ref PartState other, in PartState head, HumanoidArmPose pose, in EntityAnimationFrame frame)
     {
         switch (pose)
@@ -217,8 +265,10 @@ internal static class HumanoidModelPose
                 break;
             case HumanoidArmPose.CrossbowCharge:
             case HumanoidArmPose.CrossbowHold:
+                // Crossbow poses are unreachable for the humanoid mobs (only player/illager/piglin produce them).
+                break;
             case HumanoidArmPose.Spear:
-                // Crossbow poses are unreachable for the humanoid mobs; SPEAR/STAB need SpearAnimations (blocked).
+                SpearHandUse(ref arm, head, right: true, frame);
                 break;
         }
     }
@@ -261,7 +311,9 @@ internal static class HumanoidModelPose
                 break;
             case HumanoidArmPose.CrossbowCharge:
             case HumanoidArmPose.CrossbowHold:
+                break;
             case HumanoidArmPose.Spear:
+                SpearHandUse(ref arm, head, right: false, frame);
                 break;
         }
     }
