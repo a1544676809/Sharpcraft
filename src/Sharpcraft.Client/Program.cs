@@ -12,6 +12,39 @@ namespace Sharpcraft.Client;
 /// </summary>
 internal static class Program
 {
+    /// <summary>
+    /// Starts the debug control channel when the developer asks for it and the Debug-only assembly is present.
+    /// </summary>
+    /// <remarks>
+    /// The assembly is not built for Release (docs/specs/debug-control.md 7.1), so the file check keeps this a no-op
+    /// there: no conditional compilation, no environment variable, no global switch in game code (principle 13).
+    /// </remarks>
+    internal static void StartDebugChannelIfRequested(string[] arguments)
+    {
+        if (!arguments.Contains("--debugControl", StringComparer.Ordinal))
+        {
+            return;
+        }
+
+        var assemblyPath = Path.Combine(AppContext.BaseDirectory, "Sharpcraft.Client.Diagnostics.dll");
+        if (!File.Exists(assemblyPath))
+        {
+            Console.WriteLine("[mcp] --debugControl requested but the diagnostics assembly is not present");
+            return;
+        }
+
+        try
+        {
+            var assembly = System.Reflection.Assembly.LoadFrom(assemblyPath);
+            var channel = assembly.GetType("Sharpcraft.Client.Diagnostics.DebugChannel", throwOnError: true)!;
+            channel.GetMethod("Start")!.Invoke(null, [() => $"{{ \"pid\": {Environment.ProcessId} }}"]);
+        }
+        catch (Exception error)
+        {
+            Console.WriteLine($"[mcp] debug channel failed to start: {error.GetType().Name}: {error.Message}");
+        }
+    }
+
     /// <summary>Exit code for arguments that cannot be parsed.</summary>
     private const int ExitBadArguments = 2;
 
@@ -43,6 +76,7 @@ internal static class Program
 
         // The client reads no environment (principle 13): every debug switch comes from the host explicitly.
         GameOptions.Configure(parsed.BuildDebugValues());
+        StartDebugChannelIfRequested(args);
 
     // Apply host-provided diagnostics (explicit options only; the game reads no environment — principle 13).
     Sharpcraft.Client.Assets.PackWatcher.IsEnabled =

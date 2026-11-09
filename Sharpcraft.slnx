@@ -27,6 +27,7 @@
     <Project Path="src/Sharpcraft.Auth/Sharpcraft.Auth.csproj" />
     <Project Path="src/Sharpcraft.AuthLib/Sharpcraft.AuthLib.csproj" />
     <Project Path="src/Sharpcraft.Client/Sharpcraft.Client.csproj" />
+    <Project Path="src/Sharpcraft.Client.Diagnostics/Sharpcraft.Client.Diagnostics.csproj" />
     <Project Path="src/Sharpcraft.Common/Sharpcraft.Common.csproj" />
     <Project Path="src/Sharpcraft.Framework/Sharpcraft.Framework.csproj" />
     <Project Path="src/Sharpcraft.Launcher/Sharpcraft.Launcher.csproj" />

@@ -26,4 +26,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Debug-only control channel (docs/specs/debug-control.md, T-782): never built into a Release output. -->
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+    <ProjectReference Include="..\Sharpcraft.Client.Diagnostics\Sharpcraft.Client.Diagnostics.csproj" />
+  </ItemGroup>
+
 </Project>
