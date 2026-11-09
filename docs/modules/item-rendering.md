@@ -449,6 +449,28 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
 
 - 物品图集含非 16×16 与多帧贴图：`Stitch` 已支持任意尺寸与帧数（方块图集同源路径）。
 - 图集尺寸会从 128×192 变为 2 的幂方形，纹理坐标随之变化，所有 rect 必须来自新实例（不得跨实例混用）。
+### 3.5.14 T-773 结论更正：竖条不在物品链路（已更正）
+
+用户实测：**世界中的方块玻璃（染色玻璃方块）同样显示竖条纹**。由此更正 3.5.12 的结论：
+
+| 原假设 | 现状 |
+| --- | --- |
+| 物品图集 sprite rect 跨版本错用 | **已排除**：T-774 统一装配器后（2 的幂 + padding 2 + 不可变对象 + 真实尺寸）条纹不变 |
+| 与 OIT 无关（关 OIT 后仍出现） | **不成立**：那次实验观察到的很可能是世界里的玻璃**方块**（一直走 OIT），不是物品 |
+| 物品独有缺陷 | **不成立**：方块玻璃同样出现 |
+
+共同点：方块玻璃走地形参考 OIT，物品玻璃走物品参考 OIT。两者都经过 OIT 合成，因此竖条指向**参考 OIT 的重建误差**，而非图集或 rect。
+
+已逐项核对**一致**的部分（CPU 参考 `OitWavelet`、WGSL、原版 GLSL 三者算法一致）：
+
+- bin 数 8、小波阶 2、`toAbsorbance/toTransmittance`、`OIT_FULLY_OPAQUE_TOTAL_TRANSMITTANCE = 0.02`
+- `normalizeDepth` 分段（含 high-precision 阈值 10）
+- encode/sample 的二叉树索引、`select` 语义、`lerpAlpha`
+
+**下一实验（待执行）**：把世界玻璃方块作为唯一变量逐层隔离
+1. 临时让半透明地形走主 pass 普通混合（绕过 OIT），观察方块玻璃是否仍竖条 ⇒ 判定是否 OIT；
+2. 若确认 OIT：分别把 bounds / 系数图 / accumulate 的目标以调试色输出，定位是 encode 还是 decode；
+3. 用 `OitWavelet` 构造"单层平面前向"的解析用例（单层应完全精确），与 GPU 中间结果比对。
 ## 7. 风险与限制
 
 #### 3.5.9 掉落物布局：第一件不偏移
@@ -588,6 +610,28 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
 
 - 物品图集含非 16×16 与多帧贴图：`Stitch` 已支持任意尺寸与帧数（方块图集同源路径）。
 - 图集尺寸会从 128×192 变为 2 的幂方形，纹理坐标随之变化，所有 rect 必须来自新实例（不得跨实例混用）。
+### 3.5.14 T-773 结论更正：竖条不在物品链路（已更正）
+
+用户实测：**世界中的方块玻璃（染色玻璃方块）同样显示竖条纹**。由此更正 3.5.12 的结论：
+
+| 原假设 | 现状 |
+| --- | --- |
+| 物品图集 sprite rect 跨版本错用 | **已排除**：T-774 统一装配器后（2 的幂 + padding 2 + 不可变对象 + 真实尺寸）条纹不变 |
+| 与 OIT 无关（关 OIT 后仍出现） | **不成立**：那次实验观察到的很可能是世界里的玻璃**方块**（一直走 OIT），不是物品 |
+| 物品独有缺陷 | **不成立**：方块玻璃同样出现 |
+
+共同点：方块玻璃走地形参考 OIT，物品玻璃走物品参考 OIT。两者都经过 OIT 合成，因此竖条指向**参考 OIT 的重建误差**，而非图集或 rect。
+
+已逐项核对**一致**的部分（CPU 参考 `OitWavelet`、WGSL、原版 GLSL 三者算法一致）：
+
+- bin 数 8、小波阶 2、`toAbsorbance/toTransmittance`、`OIT_FULLY_OPAQUE_TOTAL_TRANSMITTANCE = 0.02`
+- `normalizeDepth` 分段（含 high-precision 阈值 10）
+- encode/sample 的二叉树索引、`select` 语义、`lerpAlpha`
+
+**下一实验（待执行）**：把世界玻璃方块作为唯一变量逐层隔离
+1. 临时让半透明地形走主 pass 普通混合（绕过 OIT），观察方块玻璃是否仍竖条 ⇒ 判定是否 OIT；
+2. 若确认 OIT：分别把 bounds / 系数图 / accumulate 的目标以调试色输出，定位是 encode 还是 decode；
+3. 用 `OitWavelet` 构造"单层平面前向"的解析用例（单层应完全精确），与 GPU 中间结果比对。
 ## 7.1 已知刻意的简化（必须后续解决）
 
 对照对象为 26.3 原版（`ref://mc-26.3-analysis/src/...`）。逐项登记：原版行为 → 当前实现 → 差异 → 状态。
@@ -750,6 +794,28 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
 
 - 物品图集含非 16×16 与多帧贴图：`Stitch` 已支持任意尺寸与帧数（方块图集同源路径）。
 - 图集尺寸会从 128×192 变为 2 的幂方形，纹理坐标随之变化，所有 rect 必须来自新实例（不得跨实例混用）。
+### 3.5.14 T-773 结论更正：竖条不在物品链路（已更正）
+
+用户实测：**世界中的方块玻璃（染色玻璃方块）同样显示竖条纹**。由此更正 3.5.12 的结论：
+
+| 原假设 | 现状 |
+| --- | --- |
+| 物品图集 sprite rect 跨版本错用 | **已排除**：T-774 统一装配器后（2 的幂 + padding 2 + 不可变对象 + 真实尺寸）条纹不变 |
+| 与 OIT 无关（关 OIT 后仍出现） | **不成立**：那次实验观察到的很可能是世界里的玻璃**方块**（一直走 OIT），不是物品 |
+| 物品独有缺陷 | **不成立**：方块玻璃同样出现 |
+
+共同点：方块玻璃走地形参考 OIT，物品玻璃走物品参考 OIT。两者都经过 OIT 合成，因此竖条指向**参考 OIT 的重建误差**，而非图集或 rect。
+
+已逐项核对**一致**的部分（CPU 参考 `OitWavelet`、WGSL、原版 GLSL 三者算法一致）：
+
+- bin 数 8、小波阶 2、`toAbsorbance/toTransmittance`、`OIT_FULLY_OPAQUE_TOTAL_TRANSMITTANCE = 0.02`
+- `normalizeDepth` 分段（含 high-precision 阈值 10）
+- encode/sample 的二叉树索引、`select` 语义、`lerpAlpha`
+
+**下一实验（待执行）**：把世界玻璃方块作为唯一变量逐层隔离
+1. 临时让半透明地形走主 pass 普通混合（绕过 OIT），观察方块玻璃是否仍竖条 ⇒ 判定是否 OIT；
+2. 若确认 OIT：分别把 bounds / 系数图 / accumulate 的目标以调试色输出，定位是 encode 还是 decode；
+3. 用 `OitWavelet` 构造"单层平面前向"的解析用例（单层应完全精确），与 GPU 中间结果比对。
 ## 7.2 其他限制
 
 - 26.3 的 `items/*.json` 与旧版 `models/item` 结构不同；必须按 26.3 的 item model 类型分发，不能只读旧 parent 字段。
