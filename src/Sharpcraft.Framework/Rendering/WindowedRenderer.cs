@@ -313,6 +313,7 @@ public static class WindowedRenderer
             BindGroupLayoutEntry.Texture(0, ShaderStage.Fragment, WGPUTextureSampleType.Depth, WGPUTextureViewDimension._2D, false),
             BindGroupLayoutEntry.Sampler(1, ShaderStage.Fragment, WGPUSamplerBindingType.Filtering)
         ]);
+        using var presentation = FramePresentation.Create(device, format);
         using var blitDepthPipelineLayout = device.CreatePipelineLayout([blitDepthLayout]);
         using var blitDepthPipeline = CreateBlitDepthPipeline(device, blitDepthPipelineLayout);
         using var blitDepthSampler = device.CreateSampler(new SamplerDescriptor
@@ -1183,7 +1184,9 @@ public static class WindowedRenderer
                 break;
             }
 
-            using var view = acquired.Texture.CreateView();
+            using var surfaceView = acquired.Texture.CreateView();
+            // Every world and interface pass targets the frame target; RecordPresent copies it onto the surface.
+            var view = presentation.Ensure(frameWidth, frameHeight);
             // The camera is sampled once per frame, before the encoder, because the cull pass needs the view projection
             // and a render pass cannot be interrupted to record compute.
             var cameraStarted = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -1724,6 +1727,8 @@ public static class WindowedRenderer
             }
 
             uiPass.End();
+
+            presentation.RecordPresent(encoder, surfaceView, new DepthStencilAttachment { View = depthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store });
 
             var commands = encoder.Finish();
             device.Queue.Submit(commands);
