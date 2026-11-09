@@ -247,7 +247,9 @@ public static class EntityModelResolver
             return null;
         }
 
-        var model = ItemModels.Resolve(item.Id.ToString());
+        // The holder's using-item state selects between the model's condition branches (the shield switches to its
+        // blocking model while in use).
+        var model = ItemModels.Resolve(item.Id.ToString(), state.IsUsingItem);
         return model is null || model.SpecialRendererType is not null ? null : model;
     }
     /// <summary>Resolves one hand's item tint (tint index 0), or white when the item has no tint source.</summary>

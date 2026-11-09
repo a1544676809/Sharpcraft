@@ -140,6 +140,8 @@ public sealed class ItemModelResolver
         };
 
     private readonly ResourceManager _resources;
+    private readonly Dictionary<string, ItemModelResolution?> _usingItemCache = new(StringComparer.Ordinal);
+
     private readonly Dictionary<string, ItemModelResolution?> _cache = new(StringComparer.Ordinal);
 
     public ItemModelResolver(ResourceManager resources)
@@ -179,15 +181,23 @@ public sealed class ItemModelResolver
     private bool _colormapLoaded;
 
     /// <summary>Resolves one item id, or null when the item/model has no drawable model.</summary>
-    public ItemModelResolution? Resolve(string itemId)
+    public ItemModelResolution? Resolve(string itemId) => Resolve(itemId, usingItem: false);
+
+    /// <summary>
+    /// Resolves one item id, evaluating the state-dependent item model properties this build supports. Only
+    /// <c>minecraft:using_item</c> is evaluated today (the shield switches to its blocking model while in use); every
+    /// other property still takes the static <c>on_false</c>/fallback branch.
+    /// </summary>
+    public ItemModelResolution? Resolve(string itemId, bool usingItem)
     {
-        if (_cache.TryGetValue(itemId, out var cached))
+        var cache = usingItem ? _usingItemCache : _cache;
+        if (cache.TryGetValue(itemId, out var cached))
         {
             return cached;
         }
 
-        var resolved = ResolveCore(itemId);
-        _cache[itemId] = resolved;
+        var resolved = ResolveCore(itemId, usingItem);
+        cache[itemId] = resolved;
         return resolved;
     }
 
@@ -195,7 +205,7 @@ public sealed class ItemModelResolver
     public ItemModelResolution? Resolve(string itemId, string? itemModelId) =>
         string.IsNullOrEmpty(itemModelId) ? Resolve(itemId) : ResolveModel(itemModelId);
 
-    private ItemModelResolution? ResolveCore(string itemId)
+    private ItemModelResolution? ResolveCore(string itemId, bool usingItem)
     {
         if (!Identifier.TryParse(itemId, out var id))
         {
@@ -217,10 +227,10 @@ public sealed class ItemModelResolver
             return null;
         }
 
-        return ResolveElement(modelElement, depth: 0);
+        return ResolveElement(modelElement, depth: 0, usingItem);
     }
 
-    private ItemModelResolution? ResolveElement(JsonElement model, int depth)
+    private ItemModelResolution? ResolveElement(JsonElement model, int depth, bool usingItem)
     {
         if (depth > 8 ||
             !model.TryGetProperty("type", out var typeElement) ||
@@ -245,21 +255,30 @@ public sealed class ItemModelResolver
 
                 return resolvedModel with { Tints = ParseTints(model) };
             case "minecraft:select":
-                return TryResolveNested(model, "fallback", depth) ??
+                return TryResolveNested(model, "fallback", depth, usingItem) ??
                        (model.TryGetProperty("cases", out var cases) && cases.ValueKind == JsonValueKind.Array
-                           ? ResolveFirstCase(cases, depth)
+                           ? ResolveFirstCase(cases, depth, usingItem)
                            : null);
             case "minecraft:condition":
-                return TryResolveNested(model, "on_false", depth) ??
-                       TryResolveNested(model, "on_true", depth);
+            {
+                // Reference ItemModelUtils.conditional: the shield picks its "blocking" model while the holder uses it.
+                var usingItemProperty = model.TryGetProperty("property", out var propertyElement) &&
+                                        propertyElement.ValueKind == JsonValueKind.String &&
+                                        propertyElement.GetString() == "minecraft:using_item";
+                return usingItemProperty && usingItem
+                    ? TryResolveNested(model, "on_true", depth, usingItem) ??
+                      TryResolveNested(model, "on_false", depth, usingItem)
+                    : TryResolveNested(model, "on_false", depth, usingItem) ??
+                      TryResolveNested(model, "on_true", depth, usingItem);
+            }
             case "minecraft:range_dispatch":
-                return TryResolveNested(model, "fallback", depth) ??
+                return TryResolveNested(model, "fallback", depth, usingItem) ??
                        (model.TryGetProperty("entries", out var entries) && entries.ValueKind == JsonValueKind.Array
-                           ? ResolveFirstCase(entries, depth)
+                           ? ResolveFirstCase(entries, depth, usingItem)
                            : null);
             case "minecraft:composite":
                 return model.TryGetProperty("models", out var models) && models.ValueKind == JsonValueKind.Array
-                    ? ResolveFirstCase(models, depth)
+                    ? ResolveFirstCase(models, depth, usingItem)
                     : null;
             case "minecraft:special":
                 if (!model.TryGetProperty("base", out var baseElement) ||
@@ -316,11 +335,12 @@ public sealed class ItemModelResolver
         return parsed;
     }
 
-    private ItemModelResolution? TryResolveNested(JsonElement model, string property, int depth) =>        model.TryGetProperty(property, out var nested) && nested.ValueKind == JsonValueKind.Object
-            ? ResolveElement(nested, depth + 1)
+    private ItemModelResolution? TryResolveNested(JsonElement model, string property, int depth, bool usingItem) =>
+        model.TryGetProperty(property, out var nested) && nested.ValueKind == JsonValueKind.Object
+            ? ResolveElement(nested, depth + 1, usingItem)
             : null;
 
-    private ItemModelResolution? ResolveFirstCase(JsonElement array, int depth)
+    private ItemModelResolution? ResolveFirstCase(JsonElement array, int depth, bool usingItem)
     {
         foreach (var entry in array.EnumerateArray())
         {
@@ -332,13 +352,13 @@ public sealed class ItemModelResolver
             // Entries come in two shapes: a full model definition (composite children carry their own "type") and the
             // selector form where "model" holds a nested definition object.
             if (entry.TryGetProperty("type", out _) && entry.TryGetProperty("model", out var inner) &&
-                inner.ValueKind == JsonValueKind.String && ResolveElement(entry, depth + 1) is { } direct)
+                inner.ValueKind == JsonValueKind.String && ResolveElement(entry, depth + 1, usingItem) is { } direct)
             {
                 return direct;
             }
 
             if (entry.TryGetProperty("model", out var nested) && nested.ValueKind == JsonValueKind.Object &&
-                ResolveElement(nested, depth + 1) is { } resolved)
+                ResolveElement(nested, depth + 1, usingItem) is { } resolved)
             {
                 return resolved;
             }
