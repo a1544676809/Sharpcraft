@@ -71,10 +71,15 @@ public sealed class HeldItemMesher
 
                 var armName = offhand ? "left_arm" : "right_arm";
                 var handFrame = EntityModelMesher.PartWorldMatrix(model, entity, armName, pose);
-                // Reference order with row vectors: the item's display transform applies to the model first, then the
-                // hand anchor (XP -90, YP 180, per-hand offset), then the posed hand and the entity transform.
-                var anchor = EntityModelResolver.AnchorFor(resolution, offhand, entity.IsBaby);
-                var world = anchor * handFrame * entityMatrix;
+                // Reference order with row vectors: the item's display transform applies first, then the STAB swing
+                // offset, then the hand anchor (XP -90, YP 180, per-hand offset), then the posed hand and the entity
+                // transform.
+                var display = EntityModelResolver.DisplayFor(resolution, offhand);
+                var stab = IsStabSwingOnHand(entity, offhand)
+                    ? SpearAnimations.ThirdPersonAttackItemMatrix(entity.SwingAnimation, jetForward: 0f)
+                    : System.Numerics.Matrix4x4.Identity;
+                var anchor = EntityModelResolver.AnchorCoreFor(offhand, entity.IsBaby);
+                var world = display * stab * anchor * handFrame * entityMatrix;
                 DroppedItemMesher.EmitQuads(
                     _geometry,
                     _quads,
@@ -95,5 +100,21 @@ public sealed class HeldItemMesher
         _geometry.VertexFloats = vertexFloats;
         _geometry.IndexCount = indexCount;
         return new EntityGeometryLayer(LayerName, EntityGeometryLayerKind.Cutout, 890, _geometry, usesItemAtlas: true);
+    }
+
+    /// <summary>
+    /// Reference condition for the STAB offset: the current swing's animation must be STAB and its hand must be the arm
+    /// holding this item.
+    /// </summary>
+    private static bool IsStabSwingOnHand(in EntityRenderState entity, bool offhand)
+    {
+        if (entity.SwingType != SpearAnimations.StabSwingType)
+        {
+            return false;
+        }
+
+        // The swing hand is MAIN_HAND (0) or OFF_HAND (1); it maps onto an arm through the entity's main arm, which this
+        // baseline treats as the right arm.
+        return (entity.SwingHand == 1) == offhand;
     }
 }

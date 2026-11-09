@@ -18,6 +18,30 @@ public static class SpearAnimations
     /// <summary>Reference pivot the STAB rotation is applied around, in hand space.</summary>
     public static readonly System.Numerics.Vector3 AttackPivot = new(0f, -0.125f, 0.125f);
 
+    /// <summary>
+    /// Reference <c>thirdPersonAttackItem</c> as a row-vector matrix: a rotation of <c>-degrees</c> about X around
+    /// <see cref="AttackPivot"/>, followed by the weapon jet translation.
+    /// </summary>
+    /// <remarks>
+    /// Solved against <c>StabProbe.java</c>: at <c>swingAnimation = 0.5</c> the reference world matrix yields
+    /// <c>Rx(-69.655°)</c> with translation <c>(0, -0.19874, -0.03566)</c>, which is <c>pivot - pivot·R</c> for that
+    /// rotation — exactly what the rotate-around-pivot product below produces.
+    /// </remarks>
+    public static System.Numerics.Matrix4x4 ThirdPersonAttackItemMatrix(float swingAnimation, float jetForward)
+    {
+        var (rotationDegrees, yTranslation) = ThirdPersonAttackItem(swingAnimation, jetForward);
+        if (rotationDegrees == 0f && yTranslation == 0f)
+        {
+            return System.Numerics.Matrix4x4.Identity;
+        }
+
+        var pivot = AttackPivot;
+        return System.Numerics.Matrix4x4.CreateTranslation(-pivot)
+            * System.Numerics.Matrix4x4.CreateRotationX(-rotationDegrees * (MathF.PI / 180f))
+            * System.Numerics.Matrix4x4.CreateTranslation(pivot)
+            * System.Numerics.Matrix4x4.CreateTranslation(0f, yTranslation, 0f);
+    }
+
     /// <summary>Reference <c>progress</c>: inverse lerp clamped to 0..1.</summary>
     public static float Progress(float time, float start, float end) =>
         Math.Clamp((time - start) / (end - start), 0f, 1f);

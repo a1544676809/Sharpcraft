@@ -289,6 +289,18 @@ public static class EntityModelResolver
     /// <summary>Model-space mirror: Sharpcraft stores models with X and Y negated relative to the reference frame.</summary>
     private static Matrix4x4 Mirror => Matrix4x4.CreateScale(-1f, -1f, 1f);
 
+    /// <summary>Item display transform for a hand context, or identity when the model has none.</summary>
+    public static Matrix4x4 DisplayFor(ItemModelResolution? model, bool offhand)
+    {
+        if (model is null)
+        {
+            return Matrix4x4.Identity;
+        }
+
+        var context = offhand ? ItemDisplayContext.ThirdPersonLeftHand : ItemDisplayContext.ThirdPersonRightHand;
+        return model.Display.TryGetValue(context, out var transform) ? transform.ToMatrix() : Matrix4x4.Identity;
+    }
+
     /// <summary>Anchor for an already resolved model, split out so the transform can be tested without a registry.</summary>
     public static Matrix4x4 AnchorFor(ItemModelResolution? model, bool offhand, bool baby)
     {
@@ -307,12 +319,20 @@ public static class EntityModelResolver
         //   T_off = (±1, 2, -10)/16 adult, (0, 1, -4.5)/16 baby (not armor stand), left hand mirrors X
         // The anchor is solved from reference world matrices for two poses and two display transforms; all four agree,
         // so it is pose- and item-independent. See ReferenceFrame.HeldItemAnchor.
+        return display * AnchorCoreFor(offhand, baby);
+    }
+
+    /// <summary>
+    /// The anchor without the item display transform, so callers that need to insert something between the display and
+    /// the anchor — the STAB swing offset — can do so in the reference order <c>D · STAB · anchor · H</c>.
+    /// </summary>
+    public static Matrix4x4 AnchorCoreFor(bool offhand, bool baby)
+    {
         var modelScale = baby ? 0.5f : 0.9f;
         var offset = baby ? ReferenceFrame.BabyOffset : ReferenceFrame.AdultOffset;
-        var anchor = ReferenceFrame.HeldItemAnchor(
+        return ReferenceFrame.HeldItemAnchor(
             new Vector3(offhand ? -offset.X : offset.X, offset.Y, offset.Z),
             modelScale);
-        return display * anchor;
     }
     /// <summary>Resolves the leather/dyed tint for an equipment slot, or white when the item is not dyeable.</summary>
     public static Vector3 ResolveEquipmentTint(EntityRenderState state, EquipmentAssetKind kind, int slot)
