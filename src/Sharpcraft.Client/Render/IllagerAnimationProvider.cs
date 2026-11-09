@@ -221,7 +221,7 @@ public sealed class IllagerAnimationProvider(int typeId) : IEntityAnimationProvi
                 // AnimationUtils.animateCrossbowCharge(rightArm, leftArm, maxCharge, ticksUsingItem, holdingInRightArm: main is right).
                 // progress = min((ticksUsingItem + partialTick) / maxCharge, 1); quick_charge shortens maxCharge by 5 ticks per level.
                 var maxCharge = MathF.Max(1f, MaxCrossbowChargeTicks - (5f * frame.MainHandQuickChargeLevel));
-                var charge = Math.Clamp((frame.TicksUsingItem + frame.PartialTick) / maxCharge, 0f, 1f);
+                var charge = Math.Clamp(frame.TicksUsingItem / maxCharge, 0f, 1f);
                 if (!frame.IsLeftHanded)
                 {
                     rY = -0.8f;

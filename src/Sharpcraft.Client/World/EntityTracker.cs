@@ -502,7 +502,7 @@ public readonly record struct EntityRenderState(
     int MainHandItemId = -1,
     int ArmPose = 0,
     bool IsUsingItem = false,
-    int TicksUsingItem = 0,
+    float TicksUsingItem = 0f,
     int OffHandItemId = -1,
     bool MainHandChargedCrossbow = false,
     int MainHandQuickChargeLevel = 0,
@@ -1529,7 +1529,9 @@ public sealed class EntityTracker
                 MainHandItemId: entity.EquipmentItemAt(0),
                 ArmPose: entity.Animation is IEntityArmPoseAnimationState armPose ? armPose.ArmPose : 0,
                 IsUsingItem: entity.Presentation.IsUsingItem,
-                TicksUsingItem: entity.Presentation.UseItemTicks,
+                // Reference LivingEntity.getTicksUsingItem(partialTicks): integer ticks plus the partial tick, so the
+                // spear and crossbow animations advance smoothly instead of stepping once per tick.
+                TicksUsingItem: entity.Presentation.IsUsingItem ? entity.Presentation.UseItemTicks + t : 0f,
                 OffHandItemId: entity.EquipmentItemAt(1),
                 MainHandChargedCrossbow: entity.EquipmentComponentsAt(0).HasChargedProjectiles,
                 MainHandQuickChargeLevel: entity.EquipmentComponentsAt(0).QuickChargeLevel,

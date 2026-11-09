@@ -43,7 +43,7 @@ public readonly record struct EntityAnimationFrame(
     bool IsAggressive = false,
     int MainHandItemId = -1,
     bool IsUsingItem = false,
-    int TicksUsingItem = 0,
+    float TicksUsingItem = 0f,
     int OffHandItemId = -1,
     bool MainHandChargedCrossbow = false,
     int MainHandQuickChargeLevel = 0,

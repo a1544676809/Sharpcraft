@@ -183,7 +183,7 @@ public sealed class PiglinAnimationProvider(int typeId) : IEntityAnimationProvid
             {
                 // AnimationUtils.animateCrossbowCharge(right, left, maxCharge, ticksUsingItem, holdingInRightArm=true).
                 var maxCharge = MathF.Max(1f, MaxCrossbowChargeTicks - (5f * frame.MainHandQuickChargeLevel));
-                var charge = Math.Clamp((frame.TicksUsingItem + frame.PartialTick) / maxCharge, 0f, 1f);
+                var charge = Math.Clamp(frame.TicksUsingItem / maxCharge, 0f, 1f);
                 if (!frame.IsLeftHanded)
                 {
                     rY = -0.8f;
