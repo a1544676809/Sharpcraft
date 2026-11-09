@@ -39,4 +39,4 @@ updated: 2026-11-09
 | 编号 | 简化 | 影响 | 状态 |
 | --- | --- | --- | --- |
 | SIM-MCP-HTTP | 手写最小 HTTP/1.1 请求解析（仅 `Content-Length` + 单请求单连接），不使用 ASP.NET Core | 只服务本地代理；不支持分块传输、keep-alive 多请求 | 保持（复查条件：需要 SSE 流或浏览器直连时改用 `HttpListener`/Kestrel） |
-| SIM-MCP-TOOLS | 目前只挂 `ping`/`state` | 截图、实体查询、相机控制待 A2 | 待实现（T-782 A2） |
+| SIM-MCP-TOOLS | 目前挂 `ping`/`state`/`screenshot`；实体查询与相机控制待后续 | 无法通过 MCP 摆相机或查实体 | 待实现（T-782 A2 余项） |

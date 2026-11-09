@@ -808,7 +808,7 @@ internal static class WindowCommand
             presentMode: presentMode,
             screenshotRequest: window => window.Input.JustPressed(Sharpcraft.Framework.Platform.InputKey.F2)
                 ? ScreenshotPaths.Next(gameDirectory ?? GamePaths.DefaultGameDirectory())
-                : null,
+                : ScreenshotBridge.Take(),
             screenshotCaptured: (path, pixels, width, height) =>
             {
                 try

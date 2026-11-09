@@ -20,13 +20,24 @@ public static class DebugChannel
     /// Callback the <c>state</c> tool forwards to; the client formats its own snapshot so this assembly stays free of
     /// game knowledge.
     /// </param>
-    public static int Start(Func<string> describeState)
+    public static int Start(Func<string> describeState, Func<string, bool> requestScreenshot)
     {
         ArgumentNullException.ThrowIfNull(describeState);
+        ArgumentNullException.ThrowIfNull(requestScreenshot);
 
         var server = McpServer.Start();
         server.AddTool("ping", "Returns pong when the client is alive.", _ => JsonValue.Create("pong"));
         server.AddTool("state", "Returns the client's current state snapshot as JSON text.", _ => JsonValue.Create(describeState()));
+        server.AddTool("screenshot", "Queues a screenshot; the PNG is written on the next frame.", arguments =>
+        {
+            var path = arguments?["path"]?.GetValue<string>();
+            if (path is null)
+            {
+                return JsonValue.Create("path argument is required");
+            }
+
+            return JsonValue.Create(requestScreenshot(path) ? $"queued {path}" : "a screenshot is already queued");
+        });
 
         // The server owns a background thread; the process exit is what tears it down in practice.
         Console.WriteLine($"[mcp] debug channel listening on http://127.0.0.1:{server.Port}/mcp");

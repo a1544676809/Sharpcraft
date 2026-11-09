@@ -37,7 +37,7 @@ internal static class Program
         {
             var assembly = System.Reflection.Assembly.LoadFrom(assemblyPath);
             var channel = assembly.GetType("Sharpcraft.Client.Diagnostics.DebugChannel", throwOnError: true)!;
-            channel.GetMethod("Start")!.Invoke(null, [() => $"{{ \"pid\": {Environment.ProcessId} }}"]);
+            channel.GetMethod("Start")!.Invoke(null, [() => $"{{ \"pid\": {Environment.ProcessId} }}", (Func<string, bool>)Sharpcraft.Client.Game.ScreenshotBridge.Request]);
         }
         catch (Exception error)
         {
