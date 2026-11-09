@@ -228,6 +228,32 @@ fn fs_entity_translucent(input : VertexOutput) -> @location(0) vec4<f32> {
     return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogged), sampled.a);
 }
 
+// Item model cutout pass: the reference item_cutout pipeline alpha tests at 0.1 (ALPHA_CUTOUT), unlike the entity
+// cutout pass which uses 0.5. Glass is the visible difference: its frame survives either way, but textures whose texels
+// sit between the two thresholds vanish under 0.5 (docs/modules/item-rendering.md 3.5.10).
+@fragment
+fn fs_item_cutout(input : VertexOutput) -> @location(0) vec4<f32> {
+    let rectMin = input.spriteRect.xy;
+    let rectMax = input.spriteRect.zw;
+    let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
+    let gradientScale = rectMax - rectMin;
+    let sampled = textureSampleGrad(
+        atlasTexture,
+        atlasSampler,
+        atlasUv,
+        dpdx(input.uv) * gradientScale,
+        dpdy(input.uv) * gradientScale);
+
+    if (sampled.a < 0.1) {
+        discard;
+    }
+
+    let light = input.colour * lightmapColour(input.light.x, input.light.y);
+    let base = vec4<f32>(litColour(sampled.rgb, light), 1.0);
+    let span = max(fog.range.y - fog.range.x, 0.001);
+    let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
+    return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogged), 1.0);
+}
 // Entity cutout pass: the base model and clothing. Alpha tested at 0.5 like the reference entityCutout, no blending,
 // so the result is opaque wherever the texel survives (docs/decisions/0021).
 @fragment

@@ -352,9 +352,9 @@ itemRenderType = transparency.hasTranslucent()
 
 已实现：`ItemAtlas` 记录每个 sprite 的半透明标记（`HasTranslucentPixel` ↔ `computeTransparency`），掉落与手持各拆 cutout / translucent 两层。
 
-**未完成**：
-1. 半透明层复用了实体用的 `EntityGeometryLayerKind.Translucent`（关闭深度写入、可能不剔除），因此冰会露出背面；原版 item 半透明用 `DepthStencilState.DEFAULT`（深度写入开）+ `ALPHA_CUTOUT 0.1`，需要专门的 item-translucent 图层状态。
-2. `block/glass`（cutout）与 `block/black_stained_glass`（translucent）实测仍不显示，原因待定位（疑 sprite 未进图集或图层未提交）。
+**已完成**：①物品 cutout 用独立 `EntityGeometryLayerKind.ItemCutout` + `fs_item_cutout`，alpha 测试 0.1（原版 `RenderPipelines.ITEM_CUTOUT` 的 `ALPHA_CUTOUT`），实体本体仍 0.5；②半透明层沿用 `Translucent`，其状态（混合 + 深度写入开 + 不剔除 + alpha 0.1）与原版 `ITEM_TRANSLUCENT` 一致。
+
+**未完成**：半透明物品的**合成顺序**。原版 `RenderTypes.ITEM_TRANSLUCENT` 挂了 `setOitPipelines(RenderPipelines.OIT_ITEM)` 且 `sortOnUpload()`，即半透明物品走 **OIT**（与方块/流体同一套参考 OIT）；我们直接在主 pass 用普通 alpha 混合，立方体多个面互相叠加 ⇒ 出现「有的面比其他面更不透明」。修法：把物品半透明图层接入现有参考 OIT pass（`oit_reference.wgsl` + `OitDepthBounds`），而不是主 pass 混合。
 ## 7. 风险与限制
 
 #### 3.5.9 掉落物布局：第一件不偏移
@@ -397,9 +397,9 @@ itemRenderType = transparency.hasTranslucent()
 
 已实现：`ItemAtlas` 记录每个 sprite 的半透明标记（`HasTranslucentPixel` ↔ `computeTransparency`），掉落与手持各拆 cutout / translucent 两层。
 
-**未完成**：
-1. 半透明层复用了实体用的 `EntityGeometryLayerKind.Translucent`（关闭深度写入、可能不剔除），因此冰会露出背面；原版 item 半透明用 `DepthStencilState.DEFAULT`（深度写入开）+ `ALPHA_CUTOUT 0.1`，需要专门的 item-translucent 图层状态。
-2. `block/glass`（cutout）与 `block/black_stained_glass`（translucent）实测仍不显示，原因待定位（疑 sprite 未进图集或图层未提交）。
+**已完成**：①物品 cutout 用独立 `EntityGeometryLayerKind.ItemCutout` + `fs_item_cutout`，alpha 测试 0.1（原版 `RenderPipelines.ITEM_CUTOUT` 的 `ALPHA_CUTOUT`），实体本体仍 0.5；②半透明层沿用 `Translucent`，其状态（混合 + 深度写入开 + 不剔除 + alpha 0.1）与原版 `ITEM_TRANSLUCENT` 一致。
+
+**未完成**：半透明物品的**合成顺序**。原版 `RenderTypes.ITEM_TRANSLUCENT` 挂了 `setOitPipelines(RenderPipelines.OIT_ITEM)` 且 `sortOnUpload()`，即半透明物品走 **OIT**（与方块/流体同一套参考 OIT）；我们直接在主 pass 用普通 alpha 混合，立方体多个面互相叠加 ⇒ 出现「有的面比其他面更不透明」。修法：把物品半透明图层接入现有参考 OIT pass（`oit_reference.wgsl` + `OitDepthBounds`），而不是主 pass 混合。
 ## 7.1 已知刻意的简化（必须后续解决）
 
 对照对象为 26.3 原版（`ref://mc-26.3-analysis/src/...`）。逐项登记：原版行为 → 当前实现 → 差异 → 状态。
@@ -465,9 +465,9 @@ itemRenderType = transparency.hasTranslucent()
 
 已实现：`ItemAtlas` 记录每个 sprite 的半透明标记（`HasTranslucentPixel` ↔ `computeTransparency`），掉落与手持各拆 cutout / translucent 两层。
 
-**未完成**：
-1. 半透明层复用了实体用的 `EntityGeometryLayerKind.Translucent`（关闭深度写入、可能不剔除），因此冰会露出背面；原版 item 半透明用 `DepthStencilState.DEFAULT`（深度写入开）+ `ALPHA_CUTOUT 0.1`，需要专门的 item-translucent 图层状态。
-2. `block/glass`（cutout）与 `block/black_stained_glass`（translucent）实测仍不显示，原因待定位（疑 sprite 未进图集或图层未提交）。
+**已完成**：①物品 cutout 用独立 `EntityGeometryLayerKind.ItemCutout` + `fs_item_cutout`，alpha 测试 0.1（原版 `RenderPipelines.ITEM_CUTOUT` 的 `ALPHA_CUTOUT`），实体本体仍 0.5；②半透明层沿用 `Translucent`，其状态（混合 + 深度写入开 + 不剔除 + alpha 0.1）与原版 `ITEM_TRANSLUCENT` 一致。
+
+**未完成**：半透明物品的**合成顺序**。原版 `RenderTypes.ITEM_TRANSLUCENT` 挂了 `setOitPipelines(RenderPipelines.OIT_ITEM)` 且 `sortOnUpload()`，即半透明物品走 **OIT**（与方块/流体同一套参考 OIT）；我们直接在主 pass 用普通 alpha 混合，立方体多个面互相叠加 ⇒ 出现「有的面比其他面更不透明」。修法：把物品半透明图层接入现有参考 OIT pass（`oit_reference.wgsl` + `OitDepthBounds`），而不是主 pass 混合。
 ## 7.2 其他限制
 
 - 26.3 的 `items/*.json` 与旧版 `models/item` 结构不同；必须按 26.3 的 item model 类型分发，不能只读旧 parent 字段。

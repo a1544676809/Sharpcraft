@@ -123,7 +123,7 @@ public sealed class HeldItemMesher
         {
             _cutoutGeometry.VertexFloats = cutoutFloats;
             _cutoutGeometry.IndexCount = cutoutIndices;
-            layers.Add(new EntityGeometryLayer(LayerName, EntityGeometryLayerKind.Cutout, 890, _cutoutGeometry, usesItemAtlas: true));
+            layers.Add(new EntityGeometryLayer(LayerName, EntityGeometryLayerKind.ItemCutout, 890, _cutoutGeometry, usesItemAtlas: true));
         }
 
         if (translucentIndices > 0)

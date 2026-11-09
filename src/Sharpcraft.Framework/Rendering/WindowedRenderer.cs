@@ -253,6 +253,7 @@ public static class WindowedRenderer
         using var cutoutPipeline = CreateCutoutPipeline(device, format, pipelineLayout);
         using var entityPipeline = CreateEntityPipeline(device, format, pipelineLayout);
         using var entityCutoutPipeline = CreateEntityCutoutPipeline(device, format, pipelineLayout);
+    using var itemCutoutPipeline = CreateItemCutoutPipeline(device, format, pipelineLayout);
         using var entityElytraPipeline = CreateEntityElytraPipeline(device, format, pipelineLayout);
         using var entityEmissivePipeline = CreateEntityEmissivePipeline(device, format, pipelineLayout);
         using var entityGlintPipeline = CreateEntityGlintPipeline(device, format, pipelineLayout);
@@ -1377,6 +1378,7 @@ public static class WindowedRenderer
 
                             pass.SetPipeline(entityLayerKind[layerIndex] switch
                             {
+                                EntityGeometryLayerKind.ItemCutout => itemCutoutPipeline,
                                 EntityGeometryLayerKind.Translucent => entityPipeline,
                                 EntityGeometryLayerKind.Emissive => entityEmissivePipeline,
                                 EntityGeometryLayerKind.Glint => entityGlintPipeline,
@@ -2234,6 +2236,31 @@ public static class WindowedRenderer
     /// <summary>
     /// Entity base/clothing layer: reference entityCutout semantics, alpha tested at 0.5 and opaque (docs/decisions/0021).
     /// </summary>
+    /// <summary>
+    /// Item model layer: the reference <c>item_cutout</c> pipeline, which alpha tests at 0.1 (ALPHA_CUTOUT) instead of the
+    /// 0.5 the entity cutout pass uses. No blending, depth writes on, no culling (ITEM_SNIPPET leaves cullMode at none).
+    /// </summary>
+    private static RenderPipeline CreateItemCutoutPipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
+    {
+        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
+        {
+            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText))
+        });
+
+        return device.CreateRenderPipeline(
+            shader,
+            "vs_main"u8,
+            shader,
+            "fs_item_cutout"u8,
+            [new ColorTargetState(format)],
+            layout: layout,
+            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
+            multisample: MultisampleState.Default,
+            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: true),
+            vertexStride: (ulong)VertexLayout.Stride,
+            vertexStepMode: WGPUVertexStepMode.Vertex,
+            vertexAttributes: VertexLayout.Attributes());
+    }
     private static RenderPipeline CreateEntityCutoutPipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
     {        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
         {

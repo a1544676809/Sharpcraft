@@ -184,7 +184,7 @@ public sealed class DroppedItemMesher
         {
             _cutoutGeometry.VertexFloats = cutoutFloats;
             _cutoutGeometry.IndexCount = cutoutIndices;
-            layers.Add(new EntityGeometryLayer(LayerName, EntityGeometryLayerKind.Cutout, 900, _cutoutGeometry, usesItemAtlas: true));
+            layers.Add(new EntityGeometryLayer(LayerName, EntityGeometryLayerKind.ItemCutout, 900, _cutoutGeometry, usesItemAtlas: true));
         }
 
         if (translucentIndices > 0)

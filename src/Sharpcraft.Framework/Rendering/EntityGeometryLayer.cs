@@ -9,6 +9,9 @@ public enum EntityGeometryLayerKind
     /// <summary>Alpha tested, no blending, depth writes on (base model, clothing).</summary>
     Cutout,
 
+    /// <summary>Item model geometry: alpha tested at 0.1 like the reference item_cutout pipeline, no blending, depth writes on.</summary>
+    ItemCutout,
+
     /// <summary>Equipment layer (armor/elytra): alpha tested, no blending, submitted as its own draw after the base model.</summary>
     Elytra,
 
