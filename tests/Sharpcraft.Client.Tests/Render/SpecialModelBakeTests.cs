@@ -92,7 +92,8 @@ public sealed class SpecialModelBakeTests
             SpecialModelDefinitions.ChestTextureHeight,
             SpecialModelDefinitions.ChestTexture);
 
-        Assert.Equal(18, quads.Count);
+        // Each of the eighteen faces is emitted twice (both windings) because the item pipelines cull back faces.
+        Assert.Equal(36, quads.Count);
         Assert.All(quads, quad => Assert.Equal(SpecialModelDefinitions.ChestTexture, quad.Texture));
         Assert.All(quads, quad => Assert.Equal(0, quad.TintIndex));
 
@@ -101,7 +102,7 @@ public sealed class SpecialModelBakeTests
         SpecialModelBake.Bake(SpecialModelDefinitions.Chest(), 64, 64, baked.Add);
         Assert.Equal(baked[0].P0, quads[0].Corner0);
         Assert.Equal(baked[0].Uv0, quads[0].Uv0);
-        Assert.Equal(baked[17].Uv3, quads[17].Uv3);
+        Assert.Equal(baked[0].P3, quads[1].Corner0);
     }
     [Fact]
     public void TheLidRotatesAroundItsPivot()

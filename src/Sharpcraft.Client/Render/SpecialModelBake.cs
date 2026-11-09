@@ -88,18 +88,14 @@ internal static class SpecialModelBake
     public static void AppendQuads(List<ItemModelQuad> output, SpecialPart root, int textureWidth, int textureHeight, string texture)
     {
         ArgumentNullException.ThrowIfNull(output);
-        Bake(root, textureWidth, textureHeight, quad => output.Add(new ItemModelQuad(
-            texture,
-            quad.P0,
-            quad.P1,
-            quad.P2,
-            quad.P3,
-            quad.Uv0,
-            quad.Uv1,
-            quad.Uv2,
-            quad.Uv3,
-            TintIndex: 0,
-            ModelFaceDirection.North)));
+        // The reference renders entity models with culling disabled, so a face shows whichever way its corner ring winds.
+        // The item pipelines cull back faces, so each face is emitted in both windings instead: the same visible result
+        // without relaxing culling for every item (docs/modules/item-rendering.md 3.5.18).
+        Bake(root, textureWidth, textureHeight, quad =>
+        {
+            output.Add(new ItemModelQuad(texture, quad.P0, quad.P1, quad.P2, quad.P3, quad.Uv0, quad.Uv1, quad.Uv2, quad.Uv3, TintIndex: 0, ModelFaceDirection.North));
+            output.Add(new ItemModelQuad(texture, quad.P3, quad.P2, quad.P1, quad.P0, quad.Uv3, quad.Uv2, quad.Uv1, quad.Uv0, TintIndex: 0, ModelFaceDirection.North));
+        });
     }
     /// <summary>Total quads a bake of <paramref name="root"/> produces (six per box).</summary>
     public static int QuadCount(SpecialPart root)
