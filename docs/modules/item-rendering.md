@@ -326,7 +326,17 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
 ⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `ItemEntityLayoutTests`（5 项）。
-#### 3.5.19 special 模型等效性逐行核对表（T-764，进行中）
+##### 3.5.20 结构性简化：不支持 special 模型的 UV 越界环绕（SIM-SPECIAL-UV-REPEAT）
+
+| 项 | 内容 |
+| --- | --- |
+| 简化了什么 | special 模型烘焙**不做 UV 越界处理**（无环绕、无接缝切分）。立方体 UV 条带按原版 `ModelPart.Cube` 公式计算，越界即按越界坐标写出 |
+| 为什么 | ① 原版把越界交给采样器的 GL **REPEAT**（分段行为）；本仓图集把 sprite 局部 UV 用 `mix` **线性**映射进矩形，几何层无法用"切分"正确复现，此前 `aa8d10a` 的切分尝试已被证伪并移除；② 26.3 现有 special 模型在正确公式下 UV 均在贴图范围内（箱子 `u4 = 56 < 64`） |
+| 对等效性的影响 | 若出现 UV 越界的 special 模型，其越界部分会被采到 sprite 矩形外（相邻图集内容），与原版 REPEAT 结果不同 |
+| 当前状态 | 保持（受控偏差） |
+| 复查条件 | ① 架构门禁 `SpecialAndEntityModelGateTests` 若发现某模型 UV 越界；② 新增 special 类型时先核对 UV 是否越界；③ 需要时改为"该 sprite 单独成纹理 + 采样器 REPEAT"，而不是在烘焙层切分 |
+| 证据入口 | `SpecialModelBakeTests`（六面精确 UV 区间 + 严禁采样 56..64 透明留边）、`SpecialAndEntityModelGateTests` |
+### 3.5.19 special 模型等效性逐行核对表（T-764，进行中）
 
 方法：**每一层先读原版，再读本仓实现，逐项填表**；任一行为空即视为该层未验证，不得凭截图判定正确。
 
@@ -647,7 +657,17 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
 ⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `ItemEntityLayoutTests`（5 项）。
-#### 3.5.19 special 模型等效性逐行核对表（T-764，进行中）
+##### 3.5.20 结构性简化：不支持 special 模型的 UV 越界环绕（SIM-SPECIAL-UV-REPEAT）
+
+| 项 | 内容 |
+| --- | --- |
+| 简化了什么 | special 模型烘焙**不做 UV 越界处理**（无环绕、无接缝切分）。立方体 UV 条带按原版 `ModelPart.Cube` 公式计算，越界即按越界坐标写出 |
+| 为什么 | ① 原版把越界交给采样器的 GL **REPEAT**（分段行为）；本仓图集把 sprite 局部 UV 用 `mix` **线性**映射进矩形，几何层无法用"切分"正确复现，此前 `aa8d10a` 的切分尝试已被证伪并移除；② 26.3 现有 special 模型在正确公式下 UV 均在贴图范围内（箱子 `u4 = 56 < 64`） |
+| 对等效性的影响 | 若出现 UV 越界的 special 模型，其越界部分会被采到 sprite 矩形外（相邻图集内容），与原版 REPEAT 结果不同 |
+| 当前状态 | 保持（受控偏差） |
+| 复查条件 | ① 架构门禁 `SpecialAndEntityModelGateTests` 若发现某模型 UV 越界；② 新增 special 类型时先核对 UV 是否越界；③ 需要时改为"该 sprite 单独成纹理 + 采样器 REPEAT"，而不是在烘焙层切分 |
+| 证据入口 | `SpecialModelBakeTests`（六面精确 UV 区间 + 严禁采样 56..64 透明留边）、`SpecialAndEntityModelGateTests` |
+### 3.5.19 special 模型等效性逐行核对表（T-764，进行中）
 
 方法：**每一层先读原版，再读本仓实现，逐项填表**；任一行为空即视为该层未验证，不得凭截图判定正确。
 
@@ -991,7 +1011,17 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
 ⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `ItemEntityLayoutTests`（5 项）。
-#### 3.5.19 special 模型等效性逐行核对表（T-764，进行中）
+##### 3.5.20 结构性简化：不支持 special 模型的 UV 越界环绕（SIM-SPECIAL-UV-REPEAT）
+
+| 项 | 内容 |
+| --- | --- |
+| 简化了什么 | special 模型烘焙**不做 UV 越界处理**（无环绕、无接缝切分）。立方体 UV 条带按原版 `ModelPart.Cube` 公式计算，越界即按越界坐标写出 |
+| 为什么 | ① 原版把越界交给采样器的 GL **REPEAT**（分段行为）；本仓图集把 sprite 局部 UV 用 `mix` **线性**映射进矩形，几何层无法用"切分"正确复现，此前 `aa8d10a` 的切分尝试已被证伪并移除；② 26.3 现有 special 模型在正确公式下 UV 均在贴图范围内（箱子 `u4 = 56 < 64`） |
+| 对等效性的影响 | 若出现 UV 越界的 special 模型，其越界部分会被采到 sprite 矩形外（相邻图集内容），与原版 REPEAT 结果不同 |
+| 当前状态 | 保持（受控偏差） |
+| 复查条件 | ① 架构门禁 `SpecialAndEntityModelGateTests` 若发现某模型 UV 越界；② 新增 special 类型时先核对 UV 是否越界；③ 需要时改为"该 sprite 单独成纹理 + 采样器 REPEAT"，而不是在烘焙层切分 |
+| 证据入口 | `SpecialModelBakeTests`（六面精确 UV 区间 + 严禁采样 56..64 透明留边）、`SpecialAndEntityModelGateTests` |
+### 3.5.19 special 模型等效性逐行核对表（T-764，进行中）
 
 方法：**每一层先读原版，再读本仓实现，逐项填表**；任一行为空即视为该层未验证，不得凭截图判定正确。
 
