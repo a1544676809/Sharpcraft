@@ -18,6 +18,7 @@
 | --- | --- | --- | --- |
 | [`overview.md`](overview.md) | 本轮目标只有一个：搞清楚 Minecraft 到底是个什么架构，不涉及任何实现决策。 | 草稿 | 2026-10-28 |
 | [`package-map.md`](package-map.md) | 包级计数地图与各子树职责、归属倾向 | 草稿 | 2026-10-28 |
+| [`texture-sampler-pipeline-design.md`](texture-sampler-pipeline-design.md) | 按原版 AbstractTexture / ReloadableTexture / SamplerCache / PipelineCache 的结构与命名落地，解决 UV 越界、图集渗色与管线重复编译 | 已评审 | 2026-11-09 |
 | [`vanilla-patterns-gap.md`](vanilla-patterns-gap.md) | 逐条比对 26.3 中被反复使用、而我们尚未采纳的 10 个结构性约定，给出 ref 证据行号、本仓对照与最小落地路径。 | 草稿 | 2026-11-09 |
 
 <!-- END GENERATED: docs/analysis/architecture -->
