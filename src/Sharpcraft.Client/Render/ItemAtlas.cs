@@ -10,11 +10,12 @@ using Sharpcraft.Framework.Rendering;
 namespace Sharpcraft.Client.Render;
 
 /// <summary>
-/// A compact item-texture atlas. Item textures are sampled by the same sprite-rect vertex format as entity skins, but
-/// kept out of the entity atlas so item model resolution and item loading can grow independently.
+/// The item/model sprite atlas. A facade over <see cref="SpriteAtlasBuilder"/>, so items share the single stitching
+/// path the block atlas uses (padding around every sprite, real sprite sizes instead of a uniform grid, immutable
+/// atlas objects). The reference does the same: one <c>SpriteLoader</c> and <c>Stitcher</c> feed every atlas, and the
+/// sprite objects it produces carry the texture coordinates of the atlas they were stitched into
+/// (docs/modules/item-rendering.md 3.5.13).
 /// </summary>
-[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.resources.model.sprite.ItemAtlas", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/texture/ItemTextureAtlas.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Sharpcraft item atlas; no direct reference counterpart")]
-[Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-ATLAS-VALIDATION", "T-631e", Note = "Synthetic packing tests only; real resource-pack UV validation is pending")]
 public sealed class ItemAtlas : ISpriteAtlas
 {
     private readonly Dictionary<string, SpriteRect> _sprites;
@@ -33,6 +34,7 @@ public sealed class ItemAtlas : ISpriteAtlas
         _sprites = sprites;
         _images = images;
         _translucent = translucent;
+
         CellWidth = cellWidth;
         CellHeight = cellHeight;
     }
@@ -40,24 +42,27 @@ public sealed class ItemAtlas : ISpriteAtlas
     /// <summary>The packed RGBA atlas texture.</summary>
     public TextureData Texture { get; }
 
-    /// <summary>Cell width in pixels; every item sprite is packed into a cell of this size.</summary>
+    /// <summary>
+    /// Widest packed sprite in pixels. Informational only: sprites are packed at their own size with padding, so this
+    /// is not a cell pitch any more.
+    /// </summary>
     public int CellWidth { get; }
 
-    /// <summary>Cell height in pixels.</summary>
+    /// <summary>Tallest packed sprite in pixels; informational, as <see cref="CellWidth"/>.</summary>
     public int CellHeight { get; }
 
     /// <summary>
     /// True when this sprite contains any pixel with partial alpha (0 &lt; a &lt; 255), i.e. the reference
-    /// <c>Transparency.hasTranslucent()</c> that decides between the cutout and the translucent item render type.
+    /// <c>NativeImage.computeTransparency</c> test that selects the translucent item sheet.
     /// </summary>
     public bool IsTranslucent(string? texturePath) =>
         texturePath is not null && _translucent.TryGetValue(texturePath, out var translucent) && translucent;
 
-    /// <summary>Sprite rect for an item texture path, or null when it was not loaded.</summary>
+    /// <summary>Where one packed texture lives, or null when the atlas does not hold it.</summary>
     public SpriteRect? Get(string? texturePath) =>
-        texturePath is not null && _sprites.TryGetValue(texturePath, out var rect) ? rect : null;
+        texturePath is not null && _sprites.TryGetValue(texturePath, out var sprite) ? sprite : null;
 
-    /// <summary>Builds an atlas from already decoded item textures.</summary>
+    /// <summary>Builds the atlas from the given textures, stitching them through the shared sprite builder.</summary>
     public static ItemAtlas FromTextures(IReadOnlyDictionary<string, TextureData> images)
     {
         ArgumentNullException.ThrowIfNull(images);
@@ -66,49 +71,43 @@ public sealed class ItemAtlas : ISpriteAtlas
             return Missing();
         }
 
-        var cellWidth = Math.Max(16, images.Values.Max(image => image.Width));
-        var cellHeight = Math.Max(16, images.Values.Max(image => image.Height));
-        var columns = ChooseColumns(images.Count, cellWidth, cellHeight);
-        var rows = (images.Count + columns - 1) / columns;
-        var width = columns * cellWidth;
-        var height = rows * cellHeight;
-        var pixels = new byte[width * height * 4];
-        var sprites = new Dictionary<string, SpriteRect>(StringComparer.Ordinal);
-        var index = 0;
+        var entries = new List<(Identifier Location, RgbaImage Image, int Frames)>(images.Count + 1);
         foreach (var pair in images)
         {
-            var image = pair.Value;
-            var x = (index % columns) * cellWidth;
-            var y = (index / columns) * cellHeight;
-            for (var row = 0; row < image.Height; row++)
-            {
-                Buffer.BlockCopy(
-                    image.Rgba,
-                    row * image.Width * 4,
-                    pixels,
-                    (((y + row) * width) + x) * 4,
-                    image.Width * 4);
-            }
-
-            sprites[pair.Key] = new SpriteRect(x, y, image.Width, image.Height, 1)
-            {
-                U0 = (float)x / width,
-                V0 = (float)y / height,
-                U1 = (float)(x + image.Width) / width,
-                V1 = (float)(y + image.Height) / height
-            };
-            index++;
+            entries.Add((
+                new Identifier("minecraft", pair.Key),
+                new RgbaImage(pair.Value.Width, pair.Value.Height, pair.Value.Rgba),
+                1));
         }
 
+        // Stitch expects the missing sprite in the list, exactly as the block atlas builder supplies it.
+        var fallback = PngDecoder.Decode(new BuiltInFallbackSource().Checkerboard);
+        entries.Add((SpriteAtlas.MissingSprite, new RgbaImage(fallback.Width, fallback.Height, fallback.Pixels), 1));
+
+        var atlas = SpriteAtlasBuilder.Stitch(entries);
+
+        var sprites = new Dictionary<string, SpriteRect>(images.Count, StringComparer.Ordinal);
         var imageCopy = new Dictionary<string, TextureData>(images.Count, StringComparer.Ordinal);
         var translucent = new Dictionary<string, bool>(images.Count, StringComparer.Ordinal);
+        var cellWidth = 0;
+        var cellHeight = 0;
         foreach (var pair in images)
         {
+            var rect = atlas.Get(new Identifier("minecraft", pair.Key));
+            sprites[pair.Key] = rect;
             imageCopy[pair.Key] = pair.Value;
             translucent[pair.Key] = HasTranslucentPixel(pair.Value);
+            cellWidth = Math.Max(cellWidth, rect.Width);
+            cellHeight = Math.Max(cellHeight, rect.Height);
         }
 
-        return new ItemAtlas(new TextureData(width, height, pixels), sprites, imageCopy, translucent, cellWidth, cellHeight);
+        return new ItemAtlas(
+            new TextureData(atlas.Width, atlas.Height, atlas.Pixels),
+            sprites,
+            imageCopy,
+            translucent,
+            cellWidth,
+            cellHeight);
     }
 
     /// <summary>Loads the requested item texture paths through the resource manager.</summary>
@@ -142,7 +141,11 @@ public sealed class ItemAtlas : ISpriteAtlas
     public TextureData? GetTexture(string? texturePath) =>
         texturePath is not null && _images.TryGetValue(texturePath, out var image) ? image : null;
 
-    /// <summary>Returns a new atlas with one additional texture, or this atlas when it already exists.</summary>
+    /// <summary>
+    /// Returns a new atlas with one additional texture, or this atlas when it already exists. A rebuild produces a new
+    /// atlas object, so anything holding sprite coordinates from the previous one must re-resolve them; that is the
+    /// reference's reload behaviour (new sprites, models re-baked) expressed as an immutable value.
+    /// </summary>
     public ItemAtlas WithTexture(string texturePath, TextureData image)
     {
         ArgumentException.ThrowIfNullOrEmpty(texturePath);
@@ -179,45 +182,27 @@ public sealed class ItemAtlas : ISpriteAtlas
     {
         const int size = 16;
         var pixels = new byte[size * size * 4];
-        for (var y = 0; y < size; y++)
+        for (var i = 0; i < pixels.Length; i += 4)
         {
-            for (var x = 0; x < size; x++)
-            {
-                var offset = ((y * size) + x) * 4;
-                var checker = ((x / 8) + (y / 8)) % 2 == 0;
-                pixels[offset] = checker ? (byte)255 : (byte)64;
-                pixels[offset + 1] = checker ? (byte)0 : (byte)64;
-                pixels[offset + 2] = checker ? (byte)255 : (byte)64;
-                pixels[offset + 3] = 255;
-            }
+            pixels[i] = 0xF0;
+            pixels[i + 1] = 0x00;
+            pixels[i + 2] = 0xF0;
+            pixels[i + 3] = 0xFF;
         }
 
+        var rect = new SpriteRect(0, 0, size, size, 1)
+        {
+            U0 = 0f,
+            V0 = 0f,
+            U1 = 1f,
+            V1 = 1f
+        };
         return new ItemAtlas(
             new TextureData(size, size, pixels),
             new Dictionary<string, SpriteRect>(StringComparer.Ordinal),
             new Dictionary<string, TextureData>(StringComparer.Ordinal),
             new Dictionary<string, bool>(StringComparer.Ordinal),
-            size,
-            size);
-    }
-
-    private static int ChooseColumns(int count, int cellWidth, int cellHeight)
-    {
-        var best = 1;
-        var bestMax = long.MaxValue;
-        for (var columns = 1; columns <= count; columns++)
-        {
-            var rows = (count + columns - 1) / columns;
-            var width = (long)columns * cellWidth;
-            var height = (long)rows * cellHeight;
-            var currentMax = Math.Max(width, height);
-            if (currentMax < bestMax)
-            {
-                bestMax = currentMax;
-                best = columns;
-            }
-        }
-
-        return best;
+            rect.Width,
+            rect.Height);
     }
 }

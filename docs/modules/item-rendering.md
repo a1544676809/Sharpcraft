@@ -418,7 +418,7 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
 1. `ItemAtlas` 的 sprite rect 一律使用**贴图实际宽高**；`cellWidth/cellHeight` 只用于布局，不得进入 `SpriteRect`。
 2. 图集重建（新增纹理、尺寸变化）时，失效所有派生的形状/布局缓存。
 3. 回归测试：构造高度不一的贴图集合，断言每个 rect 的 `Height == image.Height` 且 `V1 <= (row+1)*cellHeight/atlasHeight`。
-### 3.5.13 物品图集并入统一装配器（T-774，设计已就绪）
+### 3.5.13 物品图集并入统一装配器（T-774，已实现）
 
 **动机**
 
@@ -437,7 +437,7 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
 - 拼接留白：`ref://mc-26.3-analysis/src/net/minecraft/client/renderer/texture/Stitcher.java:28` `padding = 1 << mipLevel << clamp(anisotropy-1,0,4)`。
 - 图集变化 ⇒ 全新 sprite 实例 + 模型重新烘焙，旧 UV 副本随之消失。
 
-**迁移设计（不改调用点，用门面收敛）**
+**迁移结果（已实现）**：`ItemAtlas` 内部改为 `SpriteAtlasBuilder.Stitch` 门面，公开 API 未变（调用点零改动）；图集从 128×192 均匀网格变为 2 的幂、每 sprite 带 padding、不可变对象。**注意**：迁移后染色玻璃竖条**仍存在**，说明该缺陷另有根因（rect 已确认正确），继续跟踪于 T-773。
 
 1. `ItemAtlas` 内部改为持有 `SpriteAtlas`（由 `SpriteAtlasBuilder.Stitch` 产出）；公开 API `Get / GetTexture / IsTranslucent / Texture / WithTexture` 保持不变，调用点零改动。
 2. 键映射：物品贴图路径（`block/glass`、`item/...`）→ `Identifier`；`SpriteRect` 与物品链路已是同一类型，无需转换。
@@ -557,7 +557,7 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
 1. `ItemAtlas` 的 sprite rect 一律使用**贴图实际宽高**；`cellWidth/cellHeight` 只用于布局，不得进入 `SpriteRect`。
 2. 图集重建（新增纹理、尺寸变化）时，失效所有派生的形状/布局缓存。
 3. 回归测试：构造高度不一的贴图集合，断言每个 rect 的 `Height == image.Height` 且 `V1 <= (row+1)*cellHeight/atlasHeight`。
-### 3.5.13 物品图集并入统一装配器（T-774，设计已就绪）
+### 3.5.13 物品图集并入统一装配器（T-774，已实现）
 
 **动机**
 
@@ -576,7 +576,7 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
 - 拼接留白：`ref://mc-26.3-analysis/src/net/minecraft/client/renderer/texture/Stitcher.java:28` `padding = 1 << mipLevel << clamp(anisotropy-1,0,4)`。
 - 图集变化 ⇒ 全新 sprite 实例 + 模型重新烘焙，旧 UV 副本随之消失。
 
-**迁移设计（不改调用点，用门面收敛）**
+**迁移结果（已实现）**：`ItemAtlas` 内部改为 `SpriteAtlasBuilder.Stitch` 门面，公开 API 未变（调用点零改动）；图集从 128×192 均匀网格变为 2 的幂、每 sprite 带 padding、不可变对象。**注意**：迁移后染色玻璃竖条**仍存在**，说明该缺陷另有根因（rect 已确认正确），继续跟踪于 T-773。
 
 1. `ItemAtlas` 内部改为持有 `SpriteAtlas`（由 `SpriteAtlasBuilder.Stitch` 产出）；公开 API `Get / GetTexture / IsTranslucent / Texture / WithTexture` 保持不变，调用点零改动。
 2. 键映射：物品贴图路径（`block/glass`、`item/...`）→ `Identifier`；`SpriteRect` 与物品链路已是同一类型，无需转换。
@@ -719,7 +719,7 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
 1. `ItemAtlas` 的 sprite rect 一律使用**贴图实际宽高**；`cellWidth/cellHeight` 只用于布局，不得进入 `SpriteRect`。
 2. 图集重建（新增纹理、尺寸变化）时，失效所有派生的形状/布局缓存。
 3. 回归测试：构造高度不一的贴图集合，断言每个 rect 的 `Height == image.Height` 且 `V1 <= (row+1)*cellHeight/atlasHeight`。
-### 3.5.13 物品图集并入统一装配器（T-774，设计已就绪）
+### 3.5.13 物品图集并入统一装配器（T-774，已实现）
 
 **动机**
 
@@ -738,7 +738,7 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
 - 拼接留白：`ref://mc-26.3-analysis/src/net/minecraft/client/renderer/texture/Stitcher.java:28` `padding = 1 << mipLevel << clamp(anisotropy-1,0,4)`。
 - 图集变化 ⇒ 全新 sprite 实例 + 模型重新烘焙，旧 UV 副本随之消失。
 
-**迁移设计（不改调用点，用门面收敛）**
+**迁移结果（已实现）**：`ItemAtlas` 内部改为 `SpriteAtlasBuilder.Stitch` 门面，公开 API 未变（调用点零改动）；图集从 128×192 均匀网格变为 2 的幂、每 sprite 带 padding、不可变对象。**注意**：迁移后染色玻璃竖条**仍存在**，说明该缺陷另有根因（rect 已确认正确），继续跟踪于 T-773。
 
 1. `ItemAtlas` 内部改为持有 `SpriteAtlas`（由 `SpriteAtlasBuilder.Stitch` 产出）；公开 API `Get / GetTexture / IsTranslucent / Texture / WithTexture` 保持不变，调用点零改动。
 2. 键映射：物品贴图路径（`block/glass`、`item/...`）→ `Identifier`；`SpriteRect` 与物品链路已是同一类型，无需转换。
