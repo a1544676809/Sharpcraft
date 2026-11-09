@@ -20,7 +20,11 @@ public sealed class SpecialModelBakeTests
     [Fact]
     public void TheChestBakesThreeBoxes()
     {
-        Assert.Equal(18, SpecialModelBake.QuadCount(SpecialModelDefinitions.Chest()));
+        // Three boxes, six faces each, plus the two faces whose U runs past the 64-wide sheet (the SOUTH face of
+        // bottom and of lid), which the bake splits at the seam to reproduce GL REPEAT.
+        var quads = new List<SpecialQuad>();
+        SpecialModelBake.Bake(SpecialModelDefinitions.Chest(), SpecialModelDefinitions.ChestTextureWidth, SpecialModelDefinitions.ChestTextureHeight, quads.Add);
+        Assert.Equal(20, quads.Count);
     }
 
     [Fact]
@@ -29,7 +33,7 @@ public sealed class SpecialModelBakeTests
         var quads = new List<SpecialQuad>();
         SpecialModelBake.Bake(SpecialModelDefinitions.Chest(), SpecialModelDefinitions.ChestTextureWidth, SpecialModelDefinitions.ChestTextureHeight, quads.Add);
 
-        Assert.Equal(18, quads.Count);
+        Assert.Equal(20, quads.Count);
         foreach (var quad in quads)
         {
             foreach (var corner in new[] { quad.P0, quad.P1, quad.P2, quad.P3 })
@@ -92,8 +96,8 @@ public sealed class SpecialModelBakeTests
             SpecialModelDefinitions.ChestTextureHeight,
             SpecialModelDefinitions.ChestTexture);
 
-        // Each of the eighteen faces is emitted twice (both windings) because the item pipelines cull back faces.
-        Assert.Equal(36, quads.Count);
+        // Each of the twenty faces (eighteen plus two split halves) is emitted twice for the two windings.
+        Assert.Equal(40, quads.Count);
         Assert.All(quads, quad => Assert.Equal(SpecialModelDefinitions.ChestTexture, quad.Texture));
         Assert.All(quads, quad => Assert.Equal(0, quad.TintIndex));
 

@@ -337,7 +337,7 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 | 3 | 顶点缩放 | `ModelPart.Vertex.worldX/Y/Z = x/16` | `PixelsPerUnit = 16` | ✅ |
 | 4 | 枢轴语义 | `translateAndRotate`：`translate(pivot/16)` 后旋转 | `Pivot()` = `T(pivot/16)·R` | ✅ |
 | 5 | **烘焙 → 四边形映射** | 无直接对应（原版直接提交 `ModelPart`） | `AppendQuads` 角点顺序 | ⚠️ 旋转一位属中性改动，**未证明必要** |
-| 6 | **UV → 采样** | 原版直接以模型 UV（按 `xTexSize/yTexSize` 归一化）采样**整张贴图**，GL REPEAT | `WriteVertex` 写 sprite 局部 UV + `SpriteRect`，着色器 `mix(U0,U1,uv)` | ❌ **未核对**（UV>1 时会越出 sprite 矩形） |
+| 6 | **UV → 采样** | 原版以模型 UV 采样整张贴图，GL **REPEAT（分段）** | `WriteVertex` 写 sprite 局部 UV + 矩形，着色器 `mix`（线性）⇒ 烘焙时**在接缝处拆面**，使每个四边形内 U 单调、与 REPEAT 等价 | ✅ 已实现（箱子 18→20 面，其中 2 个跨接缝） |
 | 7 | 面剔除 | 原版实体渲染类型**不剔除** | 本仓 `CullMode.Back` + 双面发射 | ✅ 已用双面发射等价 |
 | 8 | 图层（cutout/translucent） | 原版按 sprite alpha 选 render type | `IsTranslucent` | ⚠️ 未针对 special 模型核对 |
 
@@ -658,7 +658,7 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 | 3 | 顶点缩放 | `ModelPart.Vertex.worldX/Y/Z = x/16` | `PixelsPerUnit = 16` | ✅ |
 | 4 | 枢轴语义 | `translateAndRotate`：`translate(pivot/16)` 后旋转 | `Pivot()` = `T(pivot/16)·R` | ✅ |
 | 5 | **烘焙 → 四边形映射** | 无直接对应（原版直接提交 `ModelPart`） | `AppendQuads` 角点顺序 | ⚠️ 旋转一位属中性改动，**未证明必要** |
-| 6 | **UV → 采样** | 原版直接以模型 UV（按 `xTexSize/yTexSize` 归一化）采样**整张贴图**，GL REPEAT | `WriteVertex` 写 sprite 局部 UV + `SpriteRect`，着色器 `mix(U0,U1,uv)` | ❌ **未核对**（UV>1 时会越出 sprite 矩形） |
+| 6 | **UV → 采样** | 原版以模型 UV 采样整张贴图，GL **REPEAT（分段）** | `WriteVertex` 写 sprite 局部 UV + 矩形，着色器 `mix`（线性）⇒ 烘焙时**在接缝处拆面**，使每个四边形内 U 单调、与 REPEAT 等价 | ✅ 已实现（箱子 18→20 面，其中 2 个跨接缝） |
 | 7 | 面剔除 | 原版实体渲染类型**不剔除** | 本仓 `CullMode.Back` + 双面发射 | ✅ 已用双面发射等价 |
 | 8 | 图层（cutout/translucent） | 原版按 sprite alpha 选 render type | `IsTranslucent` | ⚠️ 未针对 special 模型核对 |
 
@@ -1002,7 +1002,7 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 | 3 | 顶点缩放 | `ModelPart.Vertex.worldX/Y/Z = x/16` | `PixelsPerUnit = 16` | ✅ |
 | 4 | 枢轴语义 | `translateAndRotate`：`translate(pivot/16)` 后旋转 | `Pivot()` = `T(pivot/16)·R` | ✅ |
 | 5 | **烘焙 → 四边形映射** | 无直接对应（原版直接提交 `ModelPart`） | `AppendQuads` 角点顺序 | ⚠️ 旋转一位属中性改动，**未证明必要** |
-| 6 | **UV → 采样** | 原版直接以模型 UV（按 `xTexSize/yTexSize` 归一化）采样**整张贴图**，GL REPEAT | `WriteVertex` 写 sprite 局部 UV + `SpriteRect`，着色器 `mix(U0,U1,uv)` | ❌ **未核对**（UV>1 时会越出 sprite 矩形） |
+| 6 | **UV → 采样** | 原版以模型 UV 采样整张贴图，GL **REPEAT（分段）** | `WriteVertex` 写 sprite 局部 UV + 矩形，着色器 `mix`（线性）⇒ 烘焙时**在接缝处拆面**，使每个四边形内 U 单调、与 REPEAT 等价 | ✅ 已实现（箱子 18→20 面，其中 2 个跨接缝） |
 | 7 | 面剔除 | 原版实体渲染类型**不剔除** | 本仓 `CullMode.Back` + 双面发射 | ✅ 已用双面发射等价 |
 | 8 | 图层（cutout/translucent） | 原版按 sprite alpha 选 render type | `IsTranslucent` | ⚠️ 未针对 special 模型核对 |
 

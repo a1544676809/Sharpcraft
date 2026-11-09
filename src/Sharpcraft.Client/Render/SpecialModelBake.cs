@@ -194,37 +194,65 @@ internal static class SpecialModelBake
         int textureHeight,
         Action<SpecialQuad> emit)
     {
-        Span<Vector3> baked = stackalloc Vector3[4];
-        for (var index = 0; index < 4; index++)
-        {
-            baked[index] = Vector3.Transform(corners[index] / PixelsPerUnit, transform);
-        }
+        // Reference Polygon corner order: 0 = (right, top), 1 = (left, top), 2 = (left, bottom), 3 = (right, bottom).
+        var corner0 = Vector3.Transform(corners[0] / PixelsPerUnit, transform);
+        var corner1 = Vector3.Transform(corners[1] / PixelsPerUnit, transform);
+        var corner2 = Vector3.Transform(corners[2] / PixelsPerUnit, transform);
+        var corner3 = Vector3.Transform(corners[3] / PixelsPerUnit, transform);
 
-        // Reference Polygon: corner 0 is (right, top), then (left, top), (left, bottom), (right, bottom).
-        // The reference samples entity textures with REPEAT and model authors rely on it: the chest bottom box reaches
-        // U = 70 on a 64-wide sheet and expects the overflow to wrap to the left edge. Our atlas addresses one sprite
-        // with a [0,1] rectangle, so sampling outside it reads the neighbouring atlas cell instead - which showed up as a
-        // hole in the chest front. The wrap is applied here to match REPEAT.
-        var uLeftNormalized = uLeft / textureWidth;
-        var uRightNormalized = uRight / textureWidth;
         var vTopNormalized = vTop / textureHeight;
         var vBottomNormalized = vBottom / textureHeight;
+
+        if (uRight <= textureWidth)
+        {
+            var uLeftNormalized = uLeft / textureWidth;
+            var uRightNormalized = uRight / textureWidth;
+            EmitQuad(corner0, corner1, corner2, corner3, uRightNormalized, uLeftNormalized, vTopNormalized, vBottomNormalized, cube.Mirror, emit);
+            return;
+        }
+
+        // The reference samples with GL REPEAT, which is piecewise: a U past the sheet edge continues from the left
+        // edge. Our atlas maps a sprite-local U with a linear mix, so the face is split at the seam and each half keeps
+        // a monotonic U inside the sheet - the piecewise equivalent of REPEAT.
+        var span = uRight - uLeft;
+        var seam = (textureWidth - uLeft) / span;
+
+        var seamTop = Vector3.Lerp(corner1, corner0, seam);
+        var seamBottom = Vector3.Lerp(corner2, corner3, seam);
+
+        EmitQuad(seamTop, corner1, corner2, seamBottom, 1f, uLeft / textureWidth, vTopNormalized, vBottomNormalized, cube.Mirror, emit);
+        EmitQuad(corner0, seamTop, seamBottom, corner3, (uRight - textureWidth) / textureWidth, 0f, vTopNormalized, vBottomNormalized, cube.Mirror, emit);
+    }
+
+    private static void EmitQuad(
+        Vector3 corner0,
+        Vector3 corner1,
+        Vector3 corner2,
+        Vector3 corner3,
+        float uRight,
+        float uLeft,
+        float vTop,
+        float vBottom,
+        bool mirror,
+        Action<SpecialQuad> emit)
+    {
+        Span<Vector3> positions = [corner0, corner1, corner2, corner3];
         Span<Vector2> uvs =
         [
-            new Vector2(uRightNormalized, vTopNormalized),
-            new Vector2(uLeftNormalized, vTopNormalized),
-            new Vector2(uLeftNormalized, vBottomNormalized),
-            new Vector2(uRightNormalized, vBottomNormalized)
+            new Vector2(uRight, vTop),
+            new Vector2(uLeft, vTop),
+            new Vector2(uLeft, vBottom),
+            new Vector2(uRight, vBottom)
         ];
 
-        if (cube.Mirror)
+        if (mirror)
         {
-            (baked[0], baked[3]) = (baked[3], baked[0]);
-            (baked[1], baked[2]) = (baked[2], baked[1]);
+            (positions[0], positions[3]) = (positions[3], positions[0]);
+            (positions[1], positions[2]) = (positions[2], positions[1]);
             (uvs[0], uvs[3]) = (uvs[3], uvs[0]);
             (uvs[1], uvs[2]) = (uvs[2], uvs[1]);
         }
 
-        emit(new SpecialQuad(baked[0], baked[1], baked[2], baked[3], uvs[0], uvs[1], uvs[2], uvs[3]));
+        emit(new SpecialQuad(positions[0], positions[1], positions[2], positions[3], uvs[0], uvs[1], uvs[2], uvs[3]));
     }
 }
