@@ -309,26 +309,16 @@ public static class EntityModelResolver
         //       M_ref = T_hand · Rx(-90°) · Ry(180°) · T_off · D
         //       T_off = (±1, 2, -10)/16 adult, (0, 1, -4.5)/16 baby (not armor stand); left hand mirrors X
         //
-        //   AnchorAxes.java, images of A_ref = Rx(-90°)·Ry(180°)·T_off in the reference model frame:
-        //       ex -> (-1.0000,  0.0000,  0.0000)
-        //       ey -> ( 0.0000,  0.0000, -1.0000)
-        //       ez -> ( 0.0000, -1.0000,  0.0000)
-        //       origin -> (-0.0625, 0.6250, -0.1250)
+        //   MatrixDump.java, full world matrix for the probe item (adult right hand, identity arm pose):
+        //       linear rows (-0.55, 0, 0) / (0, 0, -0.55) / (0, -0.55, 0), translation (-0.1, 0.9625, -0.0375)
         //
-        //   HeldAnchorProbe3.java, arm pivot at (-0.3125, 0.125, 0) (right hand, y-down model frame):
-        //       item centre -> (-0.3750, 0.6875, -0.3125)
-        //       hand end    -> (-0.3125, 0.8750,  0.0000)
-        //
-        // Sharpcraft stores models y-up and mirrored in X and mutates row vectors, so the reference vector cannot be used
-        // verbatim: from the arm pivot the same placement is (+-1/16, -9/16, -5/16) — 1/16 outward, 15/16 down the arm,
-        // 5/16 forward — and HeldItemAnchorTests pins it. The *orientation* half of A_ref (the XP -90 / YP 180 spin) is
-        // not reproduced yet, so held items currently lie flat in the hand; that is tracked under T-765.
-        // The hand chain is written exactly as the reference writes it and converted once by ReferenceFrame, so the
-        // values stay recognisable next to the reference source instead of being hand-flipped per call site.
-        var offsetX = baby ? 0f : (offhand ? -1f : 1f);
+        // Sharpcraft's frame is that frame mirrored in X/Y, scaled by the model scale and lifted so the feet sit at zero.
+        // Solving D · anchor · hand = W after that conversion gives the closed form used by ReferenceFrame.HeldItemAnchor,
+        // and HeldItemPlacementComparisonTests pins the resulting world points against the captured reference values.        var offsetX = baby ? 0f : (offhand ? -1f : 1f);
         var offsetY = baby ? 1f : 2f;
         var offsetZ = baby ? -4.5f : -10f;
-        var reference = ReferenceFrame.HeldItemAnchor(new Vector3(offsetX / 16f, offsetY / 16f, offsetZ / 16f));
+        var modelScale = baby ? 0.5f : 0.9f;
+        var reference = ReferenceFrame.HeldItemAnchor(modelScale);
         return display * reference;
     }
     /// <summary>Resolves the leather/dyed tint for an equipment slot, or white when the item is not dyeable.</summary>

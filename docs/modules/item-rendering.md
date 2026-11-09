@@ -250,7 +250,27 @@ HeldAnchorProbe3.java（右臂枢轴 (-0.3125, 0.125, 0)，y 向下的模型帧�
     手臂末端 -> (-0.3125, 0.8750,  0.0000)
 ```
 
-**实现现状**：位置部分已按上表定死并有回归测试（`HeldItemAnchorTests` / `PartWorldMatrixTests`）：相对手臂枢轴为 `(±1/16, −9/16, −5/16)`，即外 1/16、沿臂下 15/16、前 5/16，游戏内实测物品确实在手上。**`A_ref` 的旋转部分（`XP -90°` / `YP 180°`）尚未正确复现**，物品目前平躺——`ReferenceFrame.ToSharpcraftFrame` 里镜像应左乘还是右乘尚未定论：`M·A·M` 与 `A·M` 两种形式分别使轴像 `ex` 或 `ey` 相差一个符号，都需要与原版同机位截图再确认一次。该缺口记在 `T-765`。
+### 3.5.8 手持锚点的求解结果（T-765 已收口）
+
+**帧换算**（`ReferenceFrame`）：我们的帧 = 原版帧经 `M(镜像) → S(模型比例) → T(0, 24/16·s, 0)`。实测校验：原版右臂枢轴 `(-0.3125, 0.125, 0)` 换算后为 `(0.281, 1.237, 0)`，与 `PartWorldMatrix("right_arm")` 完全一致（`HeldItemPlacementComparisonTests.TheHandFrameMatchesTheReferencePivotAfterConversion`）。
+
+**锚点求解**：把 `MatrixDump.java` 打出的原版世界矩阵换算进我们的帧，再解 `D · anchor · H = W`，得到闭式解：
+
+```
+anchor = S(s) · Rx(-90°) · T((1, -10, -2)/16 · s)        s = 模型比例（成人 0.9，幼年 0.45）
+s = 0.9 时：旋转 0.9·Rx(-90°)，平移 (0.05625, -0.56250, -0.11250)
+```
+
+`HeldItemPlacementComparisonTests.TheHeldItemLandsWhereTheReferencePutsIt` 用 `MatrixDump` 打出的真值逐点校验：
+
+```
+原版（未翻转模型帧）：物品中心 (-0.375000, 0.687500, -0.312500)，角点 (-0.650000, 0.962500, -0.037500)
+我们（换算后帧）：    物品中心 ( 0.337500, 0.731250, -0.281250)，角点 ( 0.585000, 0.483750, -0.033750)  ✅
+```
+
+游戏内验证：四只僵尸分别手持铁剑、弓、苹果、矮草，位置在手上、朝向与原版一致（剑竖直、弓面竖直）。
+
+**仍未覆盖**（继续留在 `T-765`）：`SpearAnimations.thirdPersonAttackItem` 的攻击位移、`animateUseItem`（拉弓/举盾/进食）姿态位移，以及副手/幼年比例的实机对照。
 ### 3.6 图集归属（已核实，非阻塞）
 
 26.3 把精灵分在两个图集：`atlases/items.json` 只收 `item/` 目录与盔甲纹饰置换，`atlases/blocks.json` 收 `block/` 目录与 conduit/bell/book 特例。因此方块类物品模型引用的 `block/*` 纹理在原版来自 **blocks 图集**。
