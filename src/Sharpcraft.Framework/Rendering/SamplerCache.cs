@@ -60,8 +60,9 @@ public sealed class SamplerCache : IDisposable
             MinFilter = ToWgpu(minFilter),
             MipmapFilter = useMipmaps ? WGPUMipmapFilterMode.Linear : WGPUMipmapFilterMode.Nearest,
             LodMinClamp = 0f,
-            // The reference passes OptionalDouble.of(0.0) when mipmaps are off, but the samplers this replaced used 1; matching them keeps distant terrain on the same mip levels it had before (T-784 S1b).
-            LodMaxClamp = useMipmaps ? 32f : 1f,
+            // The reference passes maxLod = OptionalDouble.empty() when mipmaps are allowed and 0.0 when they are not;
+            // wgpu needs a number, so the unbounded case becomes 32 (its own default cap) and the off case stays 0.
+            LodMaxClamp = useMipmaps ? 32f : 0f,
             MaxAnisotropy = 1
         }));
     }
@@ -102,6 +103,15 @@ public sealed class SamplerCache : IDisposable
     /// <summary>Returns a clamping sampler with an explicit mipmap choice.</summary>
     public Sampler GetClampToEdge(FilterMode minMag, bool mipmaps) =>
         GetSampler(AddressMode.ClampToEdge, AddressMode.ClampToEdge, minMag, minMag, mipmaps);
+
+    /// <summary>
+    /// Returns a sampler for a texture that carries a mip chain, mirroring the reference <c>MipmappedTexture</c>:
+    /// minification is always linear and the LOD clamp is unbounded, while magnification follows the caller.
+    /// </summary>
+    /// <param name="addressMode">Address mode for both axes.</param>
+    /// <param name="magFilter">Magnification filter.</param>
+    public Sampler GetMipmapped(AddressMode addressMode, FilterMode magFilter) =>
+        GetSampler(addressMode, addressMode, FilterMode.Linear, magFilter, useMipmaps: true);
 
     /// <summary>Returns a repeating sampler with the same filter for minification and magnification.</summary>
     public Sampler GetRepeat(FilterMode minMag) => GetRepeat(minMag, mipmaps: false);

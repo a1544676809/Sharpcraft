@@ -163,7 +163,9 @@ public static class WindowedRenderer
         // a state always resolves to the same sampler instead of a fresh device object.
         using var samplers = new SamplerCache();
         samplers.Initialize(device);
-        var atlasSampler = samplers.GetClampToEdge(FilterMode.Nearest);
+        // The block atlas carries a mip chain, so it samples like the reference MipmappedTexture: linear minification
+        // with an unbounded LOD clamp. Clamping to the sprite edge is kept because the atlas relies on padding.
+        var atlasSampler = samplers.GetMipmapped(AddressMode.ClampToEdge, FilterMode.Nearest);
 
         Shaders.ShaderPipelines.EnsureValid();
 
