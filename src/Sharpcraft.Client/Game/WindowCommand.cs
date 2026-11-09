@@ -819,11 +819,11 @@ internal static class WindowCommand
                     }
 
                     System.IO.File.WriteAllBytes(path, Sharpcraft.Common.Imaging.PngEncoder.EncodeRgba((int)width, (int)height, pixels));
-                    session.ChatLog.Add(LocalizeScreenshot("screenshot.success", System.IO.Path.GetFileName(path)), 0);
+                    session.ChatLog.Add(LocalizeScreenshot("screenshot.success", System.IO.Path.GetFileName(path)), session.ChatTicks, Sharpcraft.Client.Ui.ChatLog.MessageTag.System);
                 }
                 catch (Exception error)
                 {
-                    session.ChatLog.Add(LocalizeScreenshot("screenshot.failure", error.Message), 0);
+                    session.ChatLog.Add(LocalizeScreenshot("screenshot.failure", error.Message), session.ChatTicks, Sharpcraft.Client.Ui.ChatLog.MessageTag.System);
                 }
             },
             skyDiscVanilla: skyDiscVanilla,

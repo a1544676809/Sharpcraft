@@ -20,7 +20,7 @@
 | 目录 | `Screenshot#SCREENSHOT_DIR` | `<gameDir>/screenshots`，不存在则创建。**`gameDir` 来自客户端 `--gameDir`**（原版同参数），未提供时用 `<roaming appdata>/.sharpcraft`（对应原版 `%APPDATA%\.minecraft` 的位置），**不是** `%LOCALAPPDATA%` |
 | 文件名 | `Screenshot#getFile(File)` | `Util.getFilenameFormattedDateTime()`；已存在则追加 `_2`、`_3`…；扩展名 `.png` |
 | 写盘 | `Screenshot#grab(...)` | 在 IO 线程池执行；`NativeImage.writeToFile` |
-| 成功提示 | 同上 | 聊天消息 **`screenshot.success`（走语言表 `LanguageTable.Format`）**，参数为文件名，样式带下划线 + 点击打开文件事件 |
+| 成功提示 | 同上 | 聊天消息 **`screenshot.success`（走语言表 `LanguageTable.Format`）**，参数为文件名，样式带下划线 + 点击打开文件事件；消息类型为 **system**（原版 `showDebugChat` → `ChatComponent.addMessage`，因此走系统消息通道、在聊天浮层直接可见） |
 | 失败提示 | 同上 | **`screenshot.failure`（同样走语言表）**，参数为异常消息；同时 `LOGGER.warn("Couldn't save screenshot")` |
 | 全景图 | `Screenshot#grab(File, "panorama_N.png", target, 4, …)` | 由 `grabPanoramixScreenshot` 走 6 次旋转；**本仓暂不实现**（登记为简化） |
 
