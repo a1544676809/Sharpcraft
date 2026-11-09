@@ -346,9 +346,18 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 
 special 模型 MUST 按**物品模型坐标系**烘焙（与普通 `elements` 同一空间），**不走实体烘焙链**（不使用 `modelHeight = 24` 与 Y 翻转）。理由：原版 special 渲染器在物品管线内、对 pose 不做任何额外变换。
 
-#### 待验证的开放问题（实现第一步必须先确认）
+#### 1/16 缩放层级（S1，已确认）
 
-`submitModel(model, …)` 把像素坐标的 `ModelPart` 几何送入物品空间时，**1/16 缩放在哪一层施加**（`submitModel` 内部、还是 display 变换已含）。未确认前不得开始写烘焙代码（原则 14）。确认方式：读 `OrderedSubmitNodeCollector.submitModel` 的默认实现与其模型渲染路径，或用探针输出一个已知 special 模型（箱子）的 GUI 世界矩阵真值。
+**逐顶点除以 16**，不在渲染器层：
+
+| 位置 | 事实 |
+| --- | --- |
+| `ModelPart.Vertex`（L377-395） | `SCALE_FACTOR = 16.0F`，`worldX/Y/Z() = x/y/z / 16.0F` —— 顶点在编译时换算成方块单位 |
+| `ModelPart.translateAndRotate`（L164） | 枢轴同样 `/16`，与顶点一致 |
+| `ModelPart.Cube` 构造 | 存**像素**原值（无缩放） |
+| `PartDefinition.bake` / `OrderedSubmitNodeCollector.submitModel` / `ModelFeatureRenderer` | 均**不缩放** |
+
+⇒ 结论：special 模型的像素坐标 **÷16 即方块单位**，与 `VanillaMeshBake` 的 `px = 1/16` 同源；差异只在**坐标系**（物品空间，无实体翻转与 `modelHeight` 偏移）。
 
 #### 切片计划
 
@@ -630,9 +639,18 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 
 special 模型 MUST 按**物品模型坐标系**烘焙（与普通 `elements` 同一空间），**不走实体烘焙链**（不使用 `modelHeight = 24` 与 Y 翻转）。理由：原版 special 渲染器在物品管线内、对 pose 不做任何额外变换。
 
-#### 待验证的开放问题（实现第一步必须先确认）
+#### 1/16 缩放层级（S1，已确认）
 
-`submitModel(model, …)` 把像素坐标的 `ModelPart` 几何送入物品空间时，**1/16 缩放在哪一层施加**（`submitModel` 内部、还是 display 变换已含）。未确认前不得开始写烘焙代码（原则 14）。确认方式：读 `OrderedSubmitNodeCollector.submitModel` 的默认实现与其模型渲染路径，或用探针输出一个已知 special 模型（箱子）的 GUI 世界矩阵真值。
+**逐顶点除以 16**，不在渲染器层：
+
+| 位置 | 事实 |
+| --- | --- |
+| `ModelPart.Vertex`（L377-395） | `SCALE_FACTOR = 16.0F`，`worldX/Y/Z() = x/y/z / 16.0F` —— 顶点在编译时换算成方块单位 |
+| `ModelPart.translateAndRotate`（L164） | 枢轴同样 `/16`，与顶点一致 |
+| `ModelPart.Cube` 构造 | 存**像素**原值（无缩放） |
+| `PartDefinition.bake` / `OrderedSubmitNodeCollector.submitModel` / `ModelFeatureRenderer` | 均**不缩放** |
+
+⇒ 结论：special 模型的像素坐标 **÷16 即方块单位**，与 `VanillaMeshBake` 的 `px = 1/16` 同源；差异只在**坐标系**（物品空间，无实体翻转与 `modelHeight` 偏移）。
 
 #### 切片计划
 
@@ -937,9 +955,18 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 
 special 模型 MUST 按**物品模型坐标系**烘焙（与普通 `elements` 同一空间），**不走实体烘焙链**（不使用 `modelHeight = 24` 与 Y 翻转）。理由：原版 special 渲染器在物品管线内、对 pose 不做任何额外变换。
 
-#### 待验证的开放问题（实现第一步必须先确认）
+#### 1/16 缩放层级（S1，已确认）
 
-`submitModel(model, …)` 把像素坐标的 `ModelPart` 几何送入物品空间时，**1/16 缩放在哪一层施加**（`submitModel` 内部、还是 display 变换已含）。未确认前不得开始写烘焙代码（原则 14）。确认方式：读 `OrderedSubmitNodeCollector.submitModel` 的默认实现与其模型渲染路径，或用探针输出一个已知 special 模型（箱子）的 GUI 世界矩阵真值。
+**逐顶点除以 16**，不在渲染器层：
+
+| 位置 | 事实 |
+| --- | --- |
+| `ModelPart.Vertex`（L377-395） | `SCALE_FACTOR = 16.0F`，`worldX/Y/Z() = x/y/z / 16.0F` —— 顶点在编译时换算成方块单位 |
+| `ModelPart.translateAndRotate`（L164） | 枢轴同样 `/16`，与顶点一致 |
+| `ModelPart.Cube` 构造 | 存**像素**原值（无缩放） |
+| `PartDefinition.bake` / `OrderedSubmitNodeCollector.submitModel` / `ModelFeatureRenderer` | 均**不缩放** |
+
+⇒ 结论：special 模型的像素坐标 **÷16 即方块单位**，与 `VanillaMeshBake` 的 `px = 1/16` 同源；差异只在**坐标系**（物品空间，无实体翻转与 `modelHeight` 偏移）。
 
 #### 切片计划
 
