@@ -364,7 +364,7 @@ special 模型 MUST 按**物品模型坐标系**烘焙（与普通 `elements` �
 | 切片 | 内容 |
 | --- | --- |
 | S1 | 确认 1/16 缩放层级（真值探针：箱子 GUI/ground 世界矩阵） |
-| S2 | 通用 `SpecialModelBake`：把 `ModelPart` 树（像素坐标）烘焙成物品空间四边形，含 `openness` 等参数化的 `setupAnim` |
+| S2 | ✅ **已完成**：`SpecialModelBake`（像素 ÷16、枢轴为"平移到枢轴后旋转"、六面 UV 表按原版 `ModelPart.Cube` 的 t*/l* 角点顺序与 (right,top)/(left,top)/(left,bottom)/(right,bottom) 映射、mirror 时顶点与 UV 同时反序）+ `SpecialModelDefinitions.Chest`（`bottom`/`lid`/`lock`，含 `lidRotationDegrees`）。测试 `SpecialModelBakeTests` 5 项：箱体 18 个四边形、包围盒落在单位立方体内、`bottom` 精确落在 1/16..15/16、UV 归一化（注意原版箱子 `bottom` 的 U 会到 70/64，属原版越界写法，采样器 wrap） |
 | S3 | Chest（含 ender/trapped/copper 纹理变体、`chest_type` 左右） |
 | S4 | ShulkerBox / DecoratedPot / Bell / Conduit |
 | S5 | Banner / Shield / Skull / PlayerHead / Trident（各自有额外变换或图层） |
@@ -657,7 +657,7 @@ special 模型 MUST 按**物品模型坐标系**烘焙（与普通 `elements` �
 | 切片 | 内容 |
 | --- | --- |
 | S1 | 确认 1/16 缩放层级（真值探针：箱子 GUI/ground 世界矩阵） |
-| S2 | 通用 `SpecialModelBake`：把 `ModelPart` 树（像素坐标）烘焙成物品空间四边形，含 `openness` 等参数化的 `setupAnim` |
+| S2 | ✅ **已完成**：`SpecialModelBake`（像素 ÷16、枢轴为"平移到枢轴后旋转"、六面 UV 表按原版 `ModelPart.Cube` 的 t*/l* 角点顺序与 (right,top)/(left,top)/(left,bottom)/(right,bottom) 映射、mirror 时顶点与 UV 同时反序）+ `SpecialModelDefinitions.Chest`（`bottom`/`lid`/`lock`，含 `lidRotationDegrees`）。测试 `SpecialModelBakeTests` 5 项：箱体 18 个四边形、包围盒落在单位立方体内、`bottom` 精确落在 1/16..15/16、UV 归一化（注意原版箱子 `bottom` 的 U 会到 70/64，属原版越界写法，采样器 wrap） |
 | S3 | Chest（含 ender/trapped/copper 纹理变体、`chest_type` 左右） |
 | S4 | ShulkerBox / DecoratedPot / Bell / Conduit |
 | S5 | Banner / Shield / Skull / PlayerHead / Trident（各自有额外变换或图层） |
@@ -973,7 +973,7 @@ special 模型 MUST 按**物品模型坐标系**烘焙（与普通 `elements` �
 | 切片 | 内容 |
 | --- | --- |
 | S1 | 确认 1/16 缩放层级（真值探针：箱子 GUI/ground 世界矩阵） |
-| S2 | 通用 `SpecialModelBake`：把 `ModelPart` 树（像素坐标）烘焙成物品空间四边形，含 `openness` 等参数化的 `setupAnim` |
+| S2 | ✅ **已完成**：`SpecialModelBake`（像素 ÷16、枢轴为"平移到枢轴后旋转"、六面 UV 表按原版 `ModelPart.Cube` 的 t*/l* 角点顺序与 (right,top)/(left,top)/(left,bottom)/(right,bottom) 映射、mirror 时顶点与 UV 同时反序）+ `SpecialModelDefinitions.Chest`（`bottom`/`lid`/`lock`，含 `lidRotationDegrees`）。测试 `SpecialModelBakeTests` 5 项：箱体 18 个四边形、包围盒落在单位立方体内、`bottom` 精确落在 1/16..15/16、UV 归一化（注意原版箱子 `bottom` 的 U 会到 70/64，属原版越界写法，采样器 wrap） |
 | S3 | Chest（含 ender/trapped/copper 纹理变体、`chest_type` 左右） |
 | S4 | ShulkerBox / DecoratedPot / Bell / Conduit |
 | S5 | Banner / Shield / Skull / PlayerHead / Trident（各自有额外变换或图层） |
