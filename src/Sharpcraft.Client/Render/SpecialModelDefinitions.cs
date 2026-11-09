@@ -14,6 +14,9 @@ namespace Sharpcraft.Client.Render;
 /// </remarks>
 internal static class SpecialModelDefinitions
 {
+    /// <summary>Atlas key of the reference single-chest texture (<c>textures/entity/chest/normal.png</c>).</summary>
+    public const string ChestTexture = "entity/chest/normal";
+
     /// <summary>Reference <c>ChestModel</c> texture size.</summary>
     public const int ChestTextureWidth = 64;
 

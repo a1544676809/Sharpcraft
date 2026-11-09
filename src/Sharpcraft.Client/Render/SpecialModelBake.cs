@@ -77,6 +77,30 @@ internal static class SpecialModelBake
         Walk(root, Matrix4x4.Identity, textureWidth, textureHeight, emit);
     }
 
+    /// <summary>
+    /// Bakes <paramref name="root"/> straight into item model quads for one atlas texture.
+    /// </summary>
+    /// <param name="output">Quad list to append to.</param>
+    /// <param name="root">Model tree to bake.</param>
+    /// <param name="textureWidth">Model texture width in pixels.</param>
+    /// <param name="textureHeight">Model texture height in pixels.</param>
+    /// <param name="texture">Atlas key the model samples.</param>
+    public static void AppendQuads(List<ItemModelQuad> output, SpecialPart root, int textureWidth, int textureHeight, string texture)
+    {
+        ArgumentNullException.ThrowIfNull(output);
+        Bake(root, textureWidth, textureHeight, quad => output.Add(new ItemModelQuad(
+            texture,
+            quad.P0,
+            quad.P1,
+            quad.P2,
+            quad.P3,
+            quad.Uv0,
+            quad.Uv1,
+            quad.Uv2,
+            quad.Uv3,
+            TintIndex: 0,
+            ModelFaceDirection.North)));
+    }
     /// <summary>Total quads a bake of <paramref name="root"/> produces (six per box).</summary>
     public static int QuadCount(SpecialPart root)
     {

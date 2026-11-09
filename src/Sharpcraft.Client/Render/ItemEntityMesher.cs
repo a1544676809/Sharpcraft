@@ -110,6 +110,26 @@ public sealed class ItemEntityMesher
 
             _quads.Clear();
             _sections.Clear();
+
+            // A special model (the reference SpecialModelRenderer family) is not an element model: it bakes a ModelPart
+            // tree in item space instead. Dropped chests are the first one wired up (T-764 S3).
+            var special = placements.Count > 0 ? placements[0].Model.SpecialRendererType : null;
+            if (special == "minecraft:chest")
+            {
+                var start = _quads.Count;
+                SpecialModelBake.AppendQuads(
+                    _quads,
+                    SpecialModelDefinitions.Chest(),
+                    SpecialModelDefinitions.ChestTextureWidth,
+                    SpecialModelDefinitions.ChestTextureHeight,
+                    SpecialModelDefinitions.ChestTexture);
+
+                if (_quads.Count > start)
+                {
+                    _sections.Add(new QuadSection(start, _quads.Count, Matrix4x4.Identity, placements[0].Model));
+                }
+            }
+
             foreach (var placement in placements)
             {
                 var start = _quads.Count;

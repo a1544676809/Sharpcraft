@@ -82,6 +82,28 @@ public sealed class SpecialModelBakeTests
     }
 
     [Fact]
+    public void TheChestBakesIntoItemModelQuadsForOneTexture()
+    {
+        var quads = new List<ItemModelQuad>();
+        SpecialModelBake.AppendQuads(
+            quads,
+            SpecialModelDefinitions.Chest(),
+            SpecialModelDefinitions.ChestTextureWidth,
+            SpecialModelDefinitions.ChestTextureHeight,
+            SpecialModelDefinitions.ChestTexture);
+
+        Assert.Equal(18, quads.Count);
+        Assert.All(quads, quad => Assert.Equal(SpecialModelDefinitions.ChestTexture, quad.Texture));
+        Assert.All(quads, quad => Assert.Equal(0, quad.TintIndex));
+
+        // The mapped quads must carry the same corners and UVs the bake produced.
+        var baked = new List<SpecialQuad>();
+        SpecialModelBake.Bake(SpecialModelDefinitions.Chest(), 64, 64, baked.Add);
+        Assert.Equal(baked[0].P0, quads[0].Corner0);
+        Assert.Equal(baked[0].Uv0, quads[0].Uv0);
+        Assert.Equal(baked[17].Uv3, quads[17].Uv3);
+    }
+    [Fact]
     public void TheLidRotatesAroundItsPivot()
     {
         var closed = new List<SpecialQuad>();
