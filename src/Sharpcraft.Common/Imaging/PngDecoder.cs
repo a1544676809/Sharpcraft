@@ -318,8 +318,8 @@ public static class PngDecoder
                         break;
 
                     case 4:
-                        var value = ReadSample(data, rowStart, x, bitDepth, samplesPerByte);
-                        var alpha = ReadSample(data, rowStart, x, bitDepth, samplesPerByte, secondChannel: true);
+                        var value = ReadSample(data, rowStart, x, bitDepth, samplesPerByte, channelsPerPixel: 2);
+                        var alpha = ReadSample(data, rowStart, x, bitDepth, samplesPerByte, secondChannel: true, channelsPerPixel: 2);
                         var grayAlpha = ScaleToByte(value, bitDepth);
                         pixels[target] = grayAlpha;
                         pixels[target + 1] = grayAlpha;
@@ -346,9 +346,19 @@ public static class PngDecoder
     }
 
     /// <summary>Reads one sample at a bit depth of 1, 2, 4, 8 or 16.</summary>
-    private static int ReadSample(byte[] data, int rowStart, int x, int bitDepth, int samplesPerByte, bool secondChannel = false)
+    private static int ReadSample(
+        byte[] data,
+        int rowStart,
+        int x,
+        int bitDepth,
+        int samplesPerByte,
+        bool secondChannel = false,
+        int channelsPerPixel = 1)
     {
-        var index = secondChannel ? (x * 2) + 1 : x;
+        // Index within the row in samples, not bytes: a grey+alpha image stores two samples per pixel, so the grey
+        // channel of pixel x sits at sample x*2. Reading it at sample x (the old behaviour) mixed in the neighbouring
+        // alpha, which is what made stained glass decode as a striped pattern (T-773).
+        var index = (x * channelsPerPixel) + (secondChannel ? 1 : 0);
 
         if (bitDepth == 8)
         {

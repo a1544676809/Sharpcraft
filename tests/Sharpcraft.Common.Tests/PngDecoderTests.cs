@@ -68,6 +68,23 @@ public sealed class PngDecoderTests
     }
 
     [Fact]
+    public void GrayAlphaKeepsTheGrayOfItsOwnPixel()
+    {
+        // Colour type 4 stores two samples per pixel: gray then alpha. Reading the gray at sample x instead of x*2
+        // mixed the neighbouring alpha into the colour, which turned every stained-glass sprite into a striped
+        // pattern in the atlas (T-773). The pack stores the near-neutral stained glass this way, so the failure only
+        // showed on white/light_gray/gray/black.
+        var raw = new byte[] { 25, 163, 25, 102, 25, 102, 25, 163 };
+        var png = BuildPng(4, 1, colorType: 4, raw, filter: 0);
+
+        var image = PngDecoder.Decode(png);
+
+        Assert.Equal((25, 25, 25, 163), image.PixelAt(0, 0));
+        Assert.Equal((25, 25, 25, 102), image.PixelAt(1, 0));
+        Assert.Equal((25, 25, 25, 102), image.PixelAt(2, 0));
+        Assert.Equal((25, 25, 25, 163), image.PixelAt(3, 0));
+    }
+    [Fact]
     public void IndexedWithTransparencyUsesThePalette()
     {
         var png = BuildIndexedPng();

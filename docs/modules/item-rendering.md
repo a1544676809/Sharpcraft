@@ -496,6 +496,42 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
 **下一步（定案实验）**：导出方块顶点缓冲里的 `uv` 与 `spriteRect`（与物品链路同一手法）：
 - `uv` 落在 0..1 且 rect 正常 ⇒ 平铺发生在着色器 UV 展开
 - `uv` 落在 0..16 等像素空间 ⇒ 方块网格器 UV 生成错误
+### 3.5.16 T-773 根因与修复：PNG 灰度+alpha 解码错位（已解决）
+
+**根因**
+
+26.3 资源包把**接近无彩色的染色玻璃**存成 PNG **colour type 4（灰度+alpha，每像素 2 字节）**，其余贴图是灰度(0)、调色板(3) 或真彩(6)：
+
+| 贴图 | PNG colour type | 现象 |
+| --- | --- | --- |
+| white / light_gray / gray / black `_stained_glass` | **4（灰度+alpha）** | 竖条纹 |
+| `glass` | 6（RGBA） | 正常 |
+| `ice` | 3（调色板） | 正常 |
+| `stone` | 0（灰度） | 正常 |
+
+`PngDecoder.ReadSample` 计算样本序号时，第一通道用了 `x` 而不是 `x * channelsPerPixel`：
+
+```
+index = secondChannel ? (x * 2) + 1 : x        // 修复前
+index = (x * channelsPerPixel) + (second ? 1 : 0)   // 修复后
+```
+
+于是灰度值隔一半取到了**相邻像素的 alpha**，图集里该 sprite 变成 RGB 与 alpha 交错的条纹。实测证据（图集原始数据，行 8）：
+
+```
+修复前: (25,25,25,163) (163,163,163,102) (25,25,25,102) (102,102,102,102) ...
+修复后: (25,25,25,163) (25,25,25,102) ×14 (25,25,25,163)
+```
+
+**为什么只有这四种**：只有它们被资源包以灰度+alpha 存储；红/蓝等彩色玻璃是调色板或真彩，解码路径正确。冰与普通玻璃同理不受影响。方块与物品共用同一图集来源，所以两者同时出现竖条。
+
+**修复与回归**
+
+- `PngDecoder.ReadSample` 增加 `channelsPerPixel`，灰度+alpha 两通道都按 `x * 2` 取样。
+- 回归测试 `PngDecoderTests.GrayAlphaKeepsTheGrayOfItsOwnPixel`：合成 4×1 灰度+alpha PNG，断言 `(25,25,25,163)(25,25,25,102)(25,25,25,102)(25,25,25,163)`。
+- 实机验证：黑/白/红染色玻璃方块与物品均为均匀半透明，无竖条。
+
+**排查过程中被排除的方向**（保留以免重复走弯路）：物品图集 rect 跨版本缓存、图集 padding/mip 串色、参考 OIT 重建误差、子通道重复绘制、greedy 合并平铺。它们各自与本缺陷无关，但 T-774（图集统一）与 T-771/T-772（物品 OIT）本身仍是正确改进。
 ## 7. 风险与限制
 
 #### 3.5.9 掉落物布局：第一件不偏移
@@ -682,6 +718,42 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
 **下一步（定案实验）**：导出方块顶点缓冲里的 `uv` 与 `spriteRect`（与物品链路同一手法）：
 - `uv` 落在 0..1 且 rect 正常 ⇒ 平铺发生在着色器 UV 展开
 - `uv` 落在 0..16 等像素空间 ⇒ 方块网格器 UV 生成错误
+### 3.5.16 T-773 根因与修复：PNG 灰度+alpha 解码错位（已解决）
+
+**根因**
+
+26.3 资源包把**接近无彩色的染色玻璃**存成 PNG **colour type 4（灰度+alpha，每像素 2 字节）**，其余贴图是灰度(0)、调色板(3) 或真彩(6)：
+
+| 贴图 | PNG colour type | 现象 |
+| --- | --- | --- |
+| white / light_gray / gray / black `_stained_glass` | **4（灰度+alpha）** | 竖条纹 |
+| `glass` | 6（RGBA） | 正常 |
+| `ice` | 3（调色板） | 正常 |
+| `stone` | 0（灰度） | 正常 |
+
+`PngDecoder.ReadSample` 计算样本序号时，第一通道用了 `x` 而不是 `x * channelsPerPixel`：
+
+```
+index = secondChannel ? (x * 2) + 1 : x        // 修复前
+index = (x * channelsPerPixel) + (second ? 1 : 0)   // 修复后
+```
+
+于是灰度值隔一半取到了**相邻像素的 alpha**，图集里该 sprite 变成 RGB 与 alpha 交错的条纹。实测证据（图集原始数据，行 8）：
+
+```
+修复前: (25,25,25,163) (163,163,163,102) (25,25,25,102) (102,102,102,102) ...
+修复后: (25,25,25,163) (25,25,25,102) ×14 (25,25,25,163)
+```
+
+**为什么只有这四种**：只有它们被资源包以灰度+alpha 存储；红/蓝等彩色玻璃是调色板或真彩，解码路径正确。冰与普通玻璃同理不受影响。方块与物品共用同一图集来源，所以两者同时出现竖条。
+
+**修复与回归**
+
+- `PngDecoder.ReadSample` 增加 `channelsPerPixel`，灰度+alpha 两通道都按 `x * 2` 取样。
+- 回归测试 `PngDecoderTests.GrayAlphaKeepsTheGrayOfItsOwnPixel`：合成 4×1 灰度+alpha PNG，断言 `(25,25,25,163)(25,25,25,102)(25,25,25,102)(25,25,25,163)`。
+- 实机验证：黑/白/红染色玻璃方块与物品均为均匀半透明，无竖条。
+
+**排查过程中被排除的方向**（保留以免重复走弯路）：物品图集 rect 跨版本缓存、图集 padding/mip 串色、参考 OIT 重建误差、子通道重复绘制、greedy 合并平铺。它们各自与本缺陷无关，但 T-774（图集统一）与 T-771/T-772（物品 OIT）本身仍是正确改进。
 ## 7.1 已知刻意的简化（必须后续解决）
 
 对照对象为 26.3 原版（`ref://mc-26.3-analysis/src/...`）。逐项登记：原版行为 → 当前实现 → 差异 → 状态。
@@ -891,6 +963,42 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
 **下一步（定案实验）**：导出方块顶点缓冲里的 `uv` 与 `spriteRect`（与物品链路同一手法）：
 - `uv` 落在 0..1 且 rect 正常 ⇒ 平铺发生在着色器 UV 展开
 - `uv` 落在 0..16 等像素空间 ⇒ 方块网格器 UV 生成错误
+### 3.5.16 T-773 根因与修复：PNG 灰度+alpha 解码错位（已解决）
+
+**根因**
+
+26.3 资源包把**接近无彩色的染色玻璃**存成 PNG **colour type 4（灰度+alpha，每像素 2 字节）**，其余贴图是灰度(0)、调色板(3) 或真彩(6)：
+
+| 贴图 | PNG colour type | 现象 |
+| --- | --- | --- |
+| white / light_gray / gray / black `_stained_glass` | **4（灰度+alpha）** | 竖条纹 |
+| `glass` | 6（RGBA） | 正常 |
+| `ice` | 3（调色板） | 正常 |
+| `stone` | 0（灰度） | 正常 |
+
+`PngDecoder.ReadSample` 计算样本序号时，第一通道用了 `x` 而不是 `x * channelsPerPixel`：
+
+```
+index = secondChannel ? (x * 2) + 1 : x        // 修复前
+index = (x * channelsPerPixel) + (second ? 1 : 0)   // 修复后
+```
+
+于是灰度值隔一半取到了**相邻像素的 alpha**，图集里该 sprite 变成 RGB 与 alpha 交错的条纹。实测证据（图集原始数据，行 8）：
+
+```
+修复前: (25,25,25,163) (163,163,163,102) (25,25,25,102) (102,102,102,102) ...
+修复后: (25,25,25,163) (25,25,25,102) ×14 (25,25,25,163)
+```
+
+**为什么只有这四种**：只有它们被资源包以灰度+alpha 存储；红/蓝等彩色玻璃是调色板或真彩，解码路径正确。冰与普通玻璃同理不受影响。方块与物品共用同一图集来源，所以两者同时出现竖条。
+
+**修复与回归**
+
+- `PngDecoder.ReadSample` 增加 `channelsPerPixel`，灰度+alpha 两通道都按 `x * 2` 取样。
+- 回归测试 `PngDecoderTests.GrayAlphaKeepsTheGrayOfItsOwnPixel`：合成 4×1 灰度+alpha PNG，断言 `(25,25,25,163)(25,25,25,102)(25,25,25,102)(25,25,25,163)`。
+- 实机验证：黑/白/红染色玻璃方块与物品均为均匀半透明，无竖条。
+
+**排查过程中被排除的方向**（保留以免重复走弯路）：物品图集 rect 跨版本缓存、图集 padding/mip 串色、参考 OIT 重建误差、子通道重复绘制、greedy 合并平铺。它们各自与本缺陷无关，但 T-774（图集统一）与 T-771/T-772（物品 OIT）本身仍是正确改进。
 ## 7.2 其他限制
 
 - 26.3 的 `items/*.json` 与旧版 `models/item` 结构不同；必须按 26.3 的 item model 类型分发，不能只读旧 parent 字段。
