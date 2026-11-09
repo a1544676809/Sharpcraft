@@ -14,11 +14,17 @@
 ## 2. 形态（推荐方案 A）
 
 ```
-┌────────────────┐   stdio (MCP)   ┌──────────────────┐   localhost TCP   ┌─────────────────────┐
-│ 代理 / MCP 客户端 │ ─────────────► │ Sharpcraft.DevMcp │ ────────────────► │ 客户端（--debugControl）│
-└────────────────┘                 │ （宿主层工具）      │                   │ Diagnostics 程序集     │
-                                   └──────────────────┘                   └─────────────────────┘
+┌────────────────┐   MCP / Streamable HTTP (JSON-RPC 2.0)   ┌──────────────────────────┐
+│ 代理 / MCP 客户端 │ ────────────────────────────────────► │ 客户端（--debugControl）    │
+└────────────────┘   POST http://127.0.0.1:<port>/mcp      │ Diagnostics 程序集         │
+                                                          └──────────────────────────┘
 ```
+
+**协议选型（现代 MCP）**：客户端自身作为 **MCP server**，走 **Streamable HTTP** 传输——单端点 `/mcp`、JSON-RPC 2.0 请求/响应、直接 JSON 回复（不强制 SSE）。这样**不需要额外的桥接进程**，代理直接连上即可，少一个活动部件，也少一处易分离性负担。
+
+已废弃的旧方案：早期草案的"stdio MCP 桥 + 自定义 JSON 行 TCP"被替换——自定义行协议没有生态支持，且桥接进程本身又是一份需要维护的调试代码。
+
+需要实现的 MCP 方法（最小集）：`initialize`（协议版本与能力协商）、`tools/list`、`tools/call`；通知类（`notifications/initialized`）按规范接受并忽略。
 
 - **客户端侧**：新增独立程序集 `Sharpcraft.Client.Diagnostics`，内含一个仅回环监听的 JSON-over-TCP 服务。`Sharpcraft.Client` 主程序集**不引用**它；只有传入 `--debugControl` 时由入口按名加载（反射或 `Assembly.Load`），未传入时零存在感。
 - **桥接侧**：新增工具 `tools/Sharpcraft.DevMcp`，实现 MCP server（stdio），把 MCP 工具调用转成上图的 TCP 请求。它属于宿主层，游戏程序集不引用。
@@ -81,7 +87,7 @@ RCON 是**服务端**通道：它能摆场景，但拿不到客户端的帧、�
 
 | 切片 | 内容 |
 | --- | --- |
-| A1 | `Sharpcraft.Client.Diagnostics` 程序集骨架：回环 TCP 监听、JSON 行协议、`ping`/`state` 两个只读方法；入口按 `--debugControl` 反射加载 |
+| A1 | `Sharpcraft.Client.Diagnostics` 骨架：**MCP Streamable HTTP**（`/mcp`，JSON-RPC 2.0）实现 `initialize`/`tools/list`/`tools/call`，先只挂 `ping`/`state` 两个工具；入口按 `--debugControl` 反射加载 |
 | A2 | `screenshot` 方法（复用 `FrameCapture` 与现有命名规则）+ `entities`/`items` 只读查询 |
-| A3 | `tools/Sharpcraft.DevMcp`：MCP server（stdio），把上述方法映射成 MCP 工具 |
+| A3 | ~~MCP 桥~~ **取消**：客户端即 MCP server，无需桥接进程 |
 | A4 | 易分离性验收：删除试验 + 架构测试（程序集引用图 + 环境变量计数） |

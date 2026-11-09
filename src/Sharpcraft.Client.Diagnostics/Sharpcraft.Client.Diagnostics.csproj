@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Debug-only control channel (docs/specs/debug-control.md, T-782). This project is referenced by
+    Sharpcraft.Client only for the Debug configuration, has no project references of its own, and is loaded by name
+    from the client entry point, so deleting it leaves the game assemblies untouched (AGENTS.md principle 13).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>
