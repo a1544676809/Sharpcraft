@@ -54,7 +54,9 @@ public sealed class PiglinAnimationTests
         MainHandItemId: mainHandItemId,
         HasMainHandItem: hasMainHand,
         IsPassenger: passenger,
-        TicksUsingItem: ticksUsingItem,
+        // The reference exposes ticksUsingItem(partialTicks) = ticks + partialTicks, so the render state already
+        // carries the partial tick; providers must not add it again.
+        TicksUsingItem: ticksUsingItem + partialTick,
         OffHandItemId: offHandItemId,
         MainHandChargedCrossbow: chargedCrossbow,
         MainHandQuickChargeLevel: quickChargeLevel,

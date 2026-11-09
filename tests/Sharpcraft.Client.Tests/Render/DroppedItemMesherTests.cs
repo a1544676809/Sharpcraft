@@ -29,8 +29,8 @@ public sealed class DroppedItemMesherTests
     public void ANonItemEntityProducesNoLayer()
     {
         var mesher = new DroppedItemMesher();
-        var layer = mesher.Build([Drop(1, itemId: -1)], new FakeAtlas());
-        Assert.Null(layer);
+        var layers = mesher.Build([Drop(1, itemId: -1)], new FakeAtlas());
+        Assert.Empty(layers);
     }
 
     [Fact]

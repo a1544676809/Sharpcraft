@@ -51,7 +51,8 @@ public sealed class IllagerAnimationTests
         HasMainHandItem: hasMainHand,
         IsPassenger: passenger,
         IsUsingItem: isUsingItem,
-        TicksUsingItem: ticksUsingItem);
+        // The reference exposes ticksUsingItem(partialTicks) = ticks + partialTicks; the render state carries it.
+        TicksUsingItem: ticksUsingItem + partialTick);
 
     private static EntityPose Apply(IllagerAnimationProvider provider, IEntityAnimationState state, in EntityAnimationFrame frame)
     {

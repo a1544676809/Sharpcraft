@@ -318,14 +318,17 @@ public sealed class EntityAnimationInfrastructureTests
             tracker.Tick();
         }
 
-        var usingState = tracker.Interpolate(1f)[0];
+        // TicksUsingItem is the reference's ticksUsingItem(partialTicks) = ticks + partialTicks, so the count is read
+        // at a zero partial tick; a partial tick of one would report one tick ahead of the simulation.
+        var usingState = tracker.Interpolate(0f)[0];
         Assert.True(usingState.IsUsingItem);
         Assert.Equal(5, usingState.TicksUsingItem);
+        Assert.Equal(5.5f, tracker.Interpolate(0.5f)[0].TicksUsingItem);
 
         tracker.ApplyEntityData(15, [new EntityDataItem(8, 0, 0)]);
         tracker.Tick();
-        Assert.False(tracker.Interpolate(1f)[0].IsUsingItem);
-        Assert.Equal(0, tracker.Interpolate(1f)[0].TicksUsingItem);
+        Assert.False(tracker.Interpolate(0f)[0].IsUsingItem);
+        Assert.Equal(0, tracker.Interpolate(0f)[0].TicksUsingItem);
     }
 
     [Fact]
