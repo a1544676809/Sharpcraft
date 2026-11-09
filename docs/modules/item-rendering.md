@@ -169,7 +169,7 @@ dotnet run --project tools/Sharpcraft.ItemRender.Audit -- --pack <pack.zip> --ch
 
 审计当时发现的真实缺陷：**17 张床全部解析失败**。原因是 `composite` 的子项是"完整模型定义"（`{"type":"minecraft:model","model":"block/white_bed_head"}`），而 `ResolveFirstCase` 只接受"`model` 是对象"的选择器形态，于是整串被跳过。修复后未解析从 17 降到 0。
 
-**已解决（掉落路径，`T-766`）**：`ItemModelResolver.ResolveAll` 解析全部子模型，每个带自己的 `transformation`（行向量 `local · display`，与原版 `LayerRenderState.applyTransform` 的 `Display · Local` 列向量语义一致），掉落渲染按子模型分段提交并用子模型 extents 的并集定位；实机掉落的红床为完整小床（白枕 + 红床面 + 木腿）。**图集预热也必须覆盖全部子模型**：`DroppedItemMesher.ResolveTextures` 原先只按第一个子模型产出贴图路径，导致床脚那一半的 `red_bed_foot_*` 从未进入 item atlas，`itemAtlas.Get` 返回 null 后这些面被整片跳过——表现就是"后半截只剩底面（`bed_down`）"。已改为遍历 `ResolveAll`，实机掉落床恢复为完整小床（白枕 + 红床面 + 木腿）。**手持路径同样已覆盖**：`EntityModelResolver.ResolveHeldItemPlacements` 让 `HeldItemMesher` 逐子模型提交（`placement.Transform · display · useItem · stab · anchor · handFrame · entityMatrix`），实机手持红床为完整小床。**顺带修复**：手持物品的贴图此前从未被预热进 item atlas（只有掉落路径预热），导致手持模型在场景内无同类掉落时整块不显示；新增 `HeldItemMesher.ResolveTextures` 并接入预热点。**仍存在的简化**：GUI/展示框路径未渲染（`SIM-ITEM-DROP-DISPLAY-GUI`）。
+**已解决（掉落路径，`T-766`）**：`ItemModelResolver.ResolveAll` 解析全部子模型，每个带自己的 `transformation`（行向量 `local · display`，与原版 `LayerRenderState.applyTransform` 的 `Display · Local` 列向量语义一致），掉落渲染按子模型分段提交并用子模型 extents 的并集定位；实机掉落的红床为完整小床（白枕 + 红床面 + 木腿）。**图集预热也必须覆盖全部子模型**：`ItemEntityMesher.ResolveTextures` 原先只按第一个子模型产出贴图路径，导致床脚那一半的 `red_bed_foot_*` 从未进入 item atlas，`itemAtlas.Get` 返回 null 后这些面被整片跳过——表现就是"后半截只剩底面（`bed_down`）"。已改为遍历 `ResolveAll`，实机掉落床恢复为完整小床（白枕 + 红床面 + 木腿）。**手持路径同样已覆盖**：`EntityModelResolver.ResolveHeldItemPlacements` 让 `ItemInHandMesher` 逐子模型提交（`placement.Transform · display · useItem · stab · anchor · handFrame · entityMatrix`），实机手持红床为完整小床。**顺带修复**：手持物品的贴图此前从未被预热进 item atlas（只有掉落路径预热），导致手持模型在场景内无同类掉落时整块不显示；新增 `ItemInHandMesher.ResolveTextures` 并接入预热点。**仍存在的简化**：GUI/展示框路径未渲染（`SIM-ITEM-DROP-DISPLAY-GUI`）。
 
 缺失 display 的分布同样说明问题不在解析：`thirdperson_righthand` 只缺 `minecraft:air`（空物品，正常），`head` 缺 706（原版多数物品本来就没有 head 变换），真正需要关注的是 `firstperson_righthand` 缺 10 个（`spyglass`、`heavy_core`、各类头颅），它们走 special 渲染器。
 ### 3.5.5 display 变换真值（L3，含一次真实 bug 修复）
@@ -199,7 +199,7 @@ R  = CreateFromQuaternion(qx * qy * qz)
 其余随附测试：四个上下文的缩放（gui 0.625 / ground 0.25 / fixed 0.5 / 第三人称 0.375）、中心点映射到 translation、线性部分缩放、`NO_TRANSFORM` 只居中、左手修复语义。
 ### 3.5.6 接触表渲染（L4）
 
-`tools/Sharpcraft.ItemRender.Sheet` 把一批物品按**固定机位 + 固定光照**渲进一张 PNG，用的就是共享物品几何链路（`ItemModelResolver` → `DroppedItemMesher.CollectQuads` → display 变换），因此图和游戏里看到的等价，只是排成网格便于比对。
+`tools/Sharpcraft.ItemRender.Sheet` 把一批物品按**固定机位 + 固定光照**渲进一张 PNG，用的就是共享物品几何链路（`ItemModelResolver` → `ItemEntityMesher.CollectQuads` → display 变换），因此图和游戏里看到的等价，只是排成网格便于比对。
 
 ```
 dotnet run --project tools/Sharpcraft.ItemRender.Sheet -- --pack <pack.zip> \
@@ -252,7 +252,7 @@ HeldAnchorProbe3.java（右臂枢轴 (-0.3125, 0.125, 0)，y 向下的模型帧�
 
 ### 3.5.8 手持锚点的求解结果（T-765 已收口）
 
-**帧换算**（`ReferenceFrame`）：我们的帧 = 原版帧经 `M(镜像) → S(模型比例) → T(0, 24/16·s, 0)`。实测校验：原版右臂枢轴 `(-0.3125, 0.125, 0)` 换算后为 `(0.281, 1.237, 0)`，与 `PartWorldMatrix("right_arm")` 完全一致（`HeldItemPlacementComparisonTests.TheHandFrameMatchesTheReferencePivotAfterConversion`）。
+**帧换算**（`ReferenceFrame`）：我们的帧 = 原版帧经 `M(镜像) → S(模型比例) → T(0, 24/16·s, 0)`。实测校验：原版右臂枢轴 `(-0.3125, 0.125, 0)` 换算后为 `(0.281, 1.237, 0)`，与 `PartWorldMatrix("right_arm")` 完全一致（`ItemInHandPlacementComparisonTests.TheHandFrameMatchesTheReferencePivotAfterConversion`）。
 
 **锚点求解**：把 `MatrixDump.java` 打出的原版世界矩阵换算进我们的帧，再解 `D · anchor · H = W`，得到闭式解：
 
@@ -261,7 +261,7 @@ anchor = S(s) · Rx(-90°) · T((1, -10, -2)/16 · s)        s = 模型比例（
 s = 0.9 时：旋转 0.9·Rx(-90°)，平移 (0.05625, -0.56250, -0.11250)
 ```
 
-`HeldItemPlacementComparisonTests.TheHeldItemLandsWhereTheReferencePutsIt` 用 `MatrixDump` 打出的真值逐点校验：
+`ItemInHandPlacementComparisonTests.TheHeldItemLandsWhereTheReferencePutsIt` 用 `MatrixDump` 打出的真值逐点校验：
 
 ```
 原版（未翻转模型帧）：物品中心 (-0.375000, 0.687500, -0.312500)，角点 (-0.650000, 0.962500, -0.037500)
@@ -325,14 +325,14 @@ s = 0.9 时：旋转 0.9·Rx(-90°)，平移 (0.05625, -0.56250, -0.11250)
 world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
-⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `DroppedItemLayoutTests`（5 项）。
+⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `ItemEntityLayoutTests`（5 项）。
 ### 3.5.17 掉落物不走实体模型路径（T-763）
 
 原版 `ItemEntityRenderer extends EntityRenderer<ItemEntity, ItemEntityRenderState>`：`submit` 里只做 `translate(0, bob + minOffsetY, 0)`、按 `ItemEntity.getSpin` 自旋、再 `submitMultipleFromCount` 提交**物品模型**（与手持/GUI 同一套模型管线，display 上下文为 `ground`）。它不烘焙任何 `ModelPart` 模型，因此**不存在占位盒回退**。
 
 本仓曾把 item entity 当作普通实体交给 `EntityModelMesher`，模型解析失败后落到 `EntityModelResolver.Placeholder`（14³ 盒子，按 64×64 皮肤 UV 采样实体皮肤图集），于是每个掉落物外面都出现一个"皮肤图集碎片拼贴"的立方体——即用户报告的悬浮彩色碎片。
 
-修法：`EntityModelMesher.BuildInto` 对 `EntityTracker.ItemEntityTypeId` 直接跳过，掉落物几何只由 `DroppedItemMesher` 产出。回归：`ItemEntityModelTests`。
+修法：`EntityModelMesher.BuildInto` 对 `EntityTracker.ItemEntityTypeId` 直接跳过，掉落物几何只由 `ItemEntityMesher` 产出。回归：`ItemEntityModelTests`。
 
 ### 3.5.9a 手持锚点：拟合解与审计结论（T-777）
 
@@ -416,7 +416,7 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
    - alpha 测试 0.1（与 `ITEM_TRANSLUCENT` 一致）。
 2. **绑定组**：`group0` = 物品图集（texture+sampler）+ camera + fog + lightmap（与实体物品图层相同）；`group1` = OIT 目标（与 `ref*` 一致）。参考 `CreateDepthBoundsPipeline/TransmittancePipeline/AccumulatePipeline` 的布局参数，新增物品变体。
 3. **图层标记**：`EntityGeometryLayerKind` 增加 `ItemTranslucent`，主 pass 的绘制 switch 跳过它；OIT pass 新增一个 draw set（depth bounds → transmittance → accumulate），复用 `DynamicGeometry` 上传路径。
-4. **Mesher**：`DroppedItemMesher` / `HeldItemMesher` 的半透明图层改用 `ItemTranslucent`（当前是 `Translucent`）。
+4. **Mesher**：`ItemEntityMesher` / `ItemInHandMesher` 的半透明图层改用 `ItemTranslucent`（当前是 `Translucent`）。
 5. **排序**：原版 `sortOnUpload()`；参考 OIT 对顺序不敏感（depth bounds + 透射率），可先不排序，实测若仍有差异再补。
 
 **验收**：冰 / 黑玻璃 / 染色玻璃在掉落与手持下与正版同机位截图一致（面与面之间无叠加加深）。
@@ -575,14 +575,14 @@ index = (x * channelsPerPixel) + (second ? 1 : 0)   // 修复后
 world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
-⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `DroppedItemLayoutTests`（5 项）。
+⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `ItemEntityLayoutTests`（5 项）。
 ### 3.5.17 掉落物不走实体模型路径（T-763）
 
 原版 `ItemEntityRenderer extends EntityRenderer<ItemEntity, ItemEntityRenderState>`：`submit` 里只做 `translate(0, bob + minOffsetY, 0)`、按 `ItemEntity.getSpin` 自旋、再 `submitMultipleFromCount` 提交**物品模型**（与手持/GUI 同一套模型管线，display 上下文为 `ground`）。它不烘焙任何 `ModelPart` 模型，因此**不存在占位盒回退**。
 
 本仓曾把 item entity 当作普通实体交给 `EntityModelMesher`，模型解析失败后落到 `EntityModelResolver.Placeholder`（14³ 盒子，按 64×64 皮肤 UV 采样实体皮肤图集），于是每个掉落物外面都出现一个"皮肤图集碎片拼贴"的立方体——即用户报告的悬浮彩色碎片。
 
-修法：`EntityModelMesher.BuildInto` 对 `EntityTracker.ItemEntityTypeId` 直接跳过，掉落物几何只由 `DroppedItemMesher` 产出。回归：`ItemEntityModelTests`。
+修法：`EntityModelMesher.BuildInto` 对 `EntityTracker.ItemEntityTypeId` 直接跳过，掉落物几何只由 `ItemEntityMesher` 产出。回归：`ItemEntityModelTests`。
 
 ### 3.5.9a 手持锚点：拟合解与审计结论（T-777）
 
@@ -666,7 +666,7 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
    - alpha 测试 0.1（与 `ITEM_TRANSLUCENT` 一致）。
 2. **绑定组**：`group0` = 物品图集（texture+sampler）+ camera + fog + lightmap（与实体物品图层相同）；`group1` = OIT 目标（与 `ref*` 一致）。参考 `CreateDepthBoundsPipeline/TransmittancePipeline/AccumulatePipeline` 的布局参数，新增物品变体。
 3. **图层标记**：`EntityGeometryLayerKind` 增加 `ItemTranslucent`，主 pass 的绘制 switch 跳过它；OIT pass 新增一个 draw set（depth bounds → transmittance → accumulate），复用 `DynamicGeometry` 上传路径。
-4. **Mesher**：`DroppedItemMesher` / `HeldItemMesher` 的半透明图层改用 `ItemTranslucent`（当前是 `Translucent`）。
+4. **Mesher**：`ItemEntityMesher` / `ItemInHandMesher` 的半透明图层改用 `ItemTranslucent`（当前是 `Translucent`）。
 5. **排序**：原版 `sortOnUpload()`；参考 OIT 对顺序不敏感（depth bounds + 透射率），可先不排序，实测若仍有差异再补。
 
 **验收**：冰 / 黑玻璃 / 染色玻璃在掉落与手持下与正版同机位截图一致（面与面之间无叠加加深）。
@@ -818,11 +818,11 @@ index = (x * channelsPerPixel) + (second ? 1 : 0)   // 修复后
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | SIM-ITEM-MODEL-STATIC-FALLBACK | item model 分支求值 | `src/net/minecraft/client/renderer/item/ItemModelResolver.java`、`.../item/` 下 `select`/`condition`/`range_dispatch` 各 `ItemModel` 实现 | 每个 item model 按当前 `ItemStack`/组件/实体/关卡状态**求值**分支，光这条路径就分 `list`/`select`/`condition`/`range_dispatch`/`composite`/`special` 多级 | `ItemModelResolver.ResolveElement` 只做**静态**分支：优先 `fallback`、否则首个 `cases`/`entries` 子模型 | `minecraft:using_item`、`use_duration`、`charge_type`、`crossbow/pull`、`local_time`（`MM-dd`）、`has_component`、`display_context`、`block_state` 等 property 全部未求值；弓/弩/时钟/指南针/蜂巢等持有状态永远渲染默认姿态。**举盾（部分已解决）**：`condition(minecraft:using_item)` 现已求值——`ItemModelResolver.Resolve(itemId, usingItem)` 按状态选 `on_true`/`on_false`，`EntityRenderState.IsUsingItem` 已由 `Presentation.IsUsingItem`（metadata index 8 bit 0）提供，`ResolveHeldItemModel` 会传入；测试 `ItemModelUsingItemConditionTests` 覆盖（含"其他 property 仍走 false 分支"的守卫）。**举盾已接入**：special 盾牌图层的常量变换改为按状态解析（`EntityModelDefinition.LocalTransformSelector`），用 `using_item` 选择 `shield` / `shield_blocking` 的 display 变换，再叠加 `scale(1,-1,-1)` 与锚点；`BLOCK` 手臂姿态本就已实现，因此持有者进入使用状态时盾会随姿态盖到身前 | 规格已就绪 | `T-631e` |
 | SIM-ITEM-RENDER-STATE | item 渲染状态 | `src/net/minecraft/client/renderer/item/ItemStackRenderState.java` | 持有 `displayContext`、`LayerRenderState[]`（每层含 quads / itemTransform / foilType / tintLayers / specialRenderer / extents / usesBlockLight / particleMaterial）、`animated`、`oversizedInGui`、模型包围盒 | 仅有 `ItemModelResolution(ModelId, Textures, Display, SpecialRendererType, SpecialProperties)` 描述符 | 没有层列表、`FoilType`（NONE/STANDARD/SPECIAL）、染色层、粒子材质、`visitExtents`/`getModelBoundingBox`、`oversizedInGui`；无法表达双层物品（如 potion 的 `layer0` + `potion_overlay`）与 glint | 规格已就绪 | `T-631e` |
-| SIM-ITEM-HELD-GEOMETRY | 手持物品锚点与几何 | `src/net/minecraft/client/renderer/entity/layers/ItemInHandLayer.java`、`.../model/effects/SpearAnimations.java` | `translateToHand(state, arm)` → `rotateDegrees(XP, -90)` → `rotateDegrees(YP, 180)` → 平移 `(±1, 2, -10)/16`（成人）或 `(0, 1, -4.5)/16`（baby 且非 armor stand）；STAB 挥击再叠加 `thirdPersonAttackItem` | `HeldItemMesher` 复用**与掉落物同一套**物品几何（`ItemModelResolver` 解析 → `DroppedItemMesher.CollectQuads` → `EmitQuads`），世界矩阵 = `anchor × PartWorldMatrix(arm) × EntityModelTransform`；每只手的 `thirdperson_righthand` / `thirdperson_lefthand` display 变换由模型 JSON 提供（箱子实测 scale 0.375）。原先的固定 8×8 quad 与 `HeldItemModelDefinition` 已删除 | ①**已解决**：STAB 的 `thirdPersonAttackItem` 偏移已按原版顺序 `D · STAB · anchor · H` 接入（`SpearAnimations.ThirdPersonAttackItemMatrix`，真值见 `StabProbe.java`、测试 `SpearStabOffsetTests`）；②`animateUseItem` 经核对**只有 SPEAR 姿态重写**（其余为空实现，拉弓/举盾/进食由 arm pose 完成），故仅长矛使用姿态待补；③special 模型（trident/shield/chest…）仍走各自的手持图层，与本路径分离；④**已解决**：锚点现由原版世界矩阵反解为 `T(T_off)·S(s)·Rx(−90°)` 的等价形式（`ReferenceFrame.HeldItemAnchor`），并用**两姿态 × 两 display** 共四组真值验证同一锚点全部命中（`HeldItemPlacementComparisonTests`），不再依赖具体 display | 进行中 | `T-765` |
+| SIM-ITEM-HELD-GEOMETRY | 手持物品锚点与几何 | `src/net/minecraft/client/renderer/entity/layers/ItemInHandLayer.java`、`.../model/effects/SpearAnimations.java` | `translateToHand(state, arm)` → `rotateDegrees(XP, -90)` → `rotateDegrees(YP, 180)` → 平移 `(±1, 2, -10)/16`（成人）或 `(0, 1, -4.5)/16`（baby 且非 armor stand）；STAB 挥击再叠加 `thirdPersonAttackItem` | `ItemInHandMesher` 复用**与掉落物同一套**物品几何（`ItemModelResolver` 解析 → `ItemEntityMesher.CollectQuads` → `EmitQuads`），世界矩阵 = `anchor × PartWorldMatrix(arm) × EntityModelTransform`；每只手的 `thirdperson_righthand` / `thirdperson_lefthand` display 变换由模型 JSON 提供（箱子实测 scale 0.375）。原先的固定 8×8 quad 与 `HeldItemModelDefinition` 已删除 | ①**已解决**：STAB 的 `thirdPersonAttackItem` 偏移已按原版顺序 `D · STAB · anchor · H` 接入（`SpearAnimations.ThirdPersonAttackItemMatrix`，真值见 `StabProbe.java`、测试 `SpearStabOffsetTests`）；②`animateUseItem` 经核对**只有 SPEAR 姿态重写**（其余为空实现，拉弓/举盾/进食由 arm pose 完成），故仅长矛使用姿态待补；③special 模型（trident/shield/chest…）仍走各自的手持图层，与本路径分离；④**已解决**：锚点现由原版世界矩阵反解为 `T(T_off)·S(s)·Rx(−90°)` 的等价形式（`ReferenceFrame.HeldItemAnchor`），并用**两姿态 × 两 display** 共四组真值验证同一锚点全部命中（`ItemInHandPlacementComparisonTests`），不再依赖具体 display | 进行中 | `T-765` |
 | SIM-ITEM-SPECIAL-MODELS | special 模型覆盖 | `src/net/minecraft/client/renderer/special/SpecialModelRenderers.java`（注册 13 种：bell/banner/book/conduit/chest/copper_golem_statue/head/player_head/shulker_box/shield/trident/decorated_pot/end_cube） | 13 种 `SpecialModelRenderer` 各自烘焙模型并提交几何 | 已移植 10 种：trident/shield/head/player_head/chest/shulker_box/banner（本体+旗面）/decorated_pot（base+sides）/conduit/end_cube | 缺 `bell`/`book`/`copper_golem_statue` 三种；`banner` 未做 `attachment`（ground/wall）与摆动相位，`decorated_pot` 未读 `POT_DECORATIONS` 选 side 图案，`end_cube` 用 `entity/end_portal/end_portal` 贴图近似原版 `endPortal`/`endGateway` shader | 规格已就绪 | `T-631e` |
 | SIM-ITEM-SPECIAL-STATE | special 参数与组合 | `.../special/ChestSpecialRenderer.java`、`.../special/ShulkerBoxSpecialRenderer.java`、`.../special/ShieldSpecialRenderer.java`、`.../blockentity/BannerRenderer.java` | `ChestSpecialRenderer.Unbaked(texture, openness, chestType)` 按 `chest_type` 烘焙单体/左/右模型并 `setupAnim(openness)`；`ShulkerBoxSpecialRenderer` 用 `openness` 抬升 lid；`ShieldSpecialRenderer` 依 `BannerPatternLayers`+`BASE_COLOR` 选基准 sprite，`BannerRenderer.submitPatterns` 逐层以 `bannerPattern` 渲染类型 + dye 色再提交同一模型 | `banner_patterns`/`base_color` 已解码并透传到 `EntityRenderState`；盾牌按 `hasPatterns` 选 sprite；**图案叠加层已实现**：banner 旗面/shield 各烘焙 6 份共面副本，逐层用 `entity/banner/<asset>`、`entity/shield/<asset>` sprite + `DyeColors` tint，按层索引 `VisibleWhen` 裁剪；`GreaterEqual` 深度模式已验证支持共面 | **已核实（仅限物品形态）**：26.3 全部 `assets/minecraft/items/*.json` 中 `openness` / `attachment` / `chest_type` 出现次数均为 **0**（对 `items/*.json` 逐文件 grep），因此**物品 special 渲染器**恒取缺省 `0.0F` / `ground` / `single`，当前静态烘焙对物品形态等效。**世界内的箱子/潜影盒是另一条路径**：`ChestRenderer` 用 `ChestBlock.opennessCombiner(blockEntity).get(partialTicks)`、`ShulkerBoxRenderer` 用 `blockEntity.getProgress(partialTicks)` 在运行时取开合度，本仓方块实体目前只有 `BlockEntityPlaceholderMesher` 占位盒（T-241），**没有任何真实箱子/潜影盒几何与开盖动画**，属于独立的方块实体建模任务（T-759）而非 `openness` 细节；届时还需为网格 DSL 补 `visibleFaces` 逐面隐藏能力（原版双箱 `allOfEnumExcept(EAST/WEST)`、饰纹陶罐侧面 `EnumSet.of(NORTH)` 依赖它，见 T-760） | 规格已就绪 | `T-631e` |
 | SIM-ITEM-ATLAS-VALIDATION | item atlas 验收 | `src/net/minecraft/client/renderer/texture/ItemTextureAtlas.java`（原版 item 纹理走独立 atlas 与 sprite 系统） | 原版 item sprite 由 atlas 打包 + sprite 元数据决定 UV | 自研 `ItemAtlas` 网格打包，按可见实体主/副手纹理**按需增量**加入 | 无真实资源包下的 UV/尺寸/missing sprite 回归；`WithTexture` 每次重建整张图，未做与原版 atlas 的逐 sprite 对照 | 规格已就绪 | `T-631e` |
-| SIM-ITEM-DROP-DISPLAY-GUI | 掉落物 / 展示框 / GUI | `.../item/ItemDisplayContext.java`（10 个上下文）、`.../entity/item/ItemEntityRenderer.java`、`.../item/ItemEntityRenderState.java`、`.../resources/model/cuboid/ItemModelGenerator.java`、`.../entity/ItemFrameRenderer.java` | 同一套 item model 在 10 个 display context 下复用；掉落物用 `getRenderedAmount(count)`（1/2/3/4/5 分桶）、`bob = sin(age/10 + bobOffs)·0.1 + 0.1`、`minOffsetY = -bbox.minY + 0.0625`、`getSpin = age/20 + bobOffs`、厚薄两种堆叠布局；`bobOffs` 是 `random.nextFloat()·2π`（本地随机、不同步）；生成型物品两面均 `addUnculledFace` 且背面 UV 反向，另有 `bakeSideFaces` 按 sprite 边缘挤出侧面 | **掉落物已接**：`DroppedItemMesher` 解析模型 → `ItemModelGeometry` 出 quad → `ItemModelExtents.ForDisplay` 取包围盒 → `ItemEntityRenderer` 的出 Bob/Spin/接地/堆叠 → `ItemDisplayTransform.ToMatrix()` 消费 `ground` 变换，作为 `dropped_item` 图层追加。`getRenderedAmount` 分桶与生成型物品的前后两面 UV 已逐项对上，**真实服务器截图确认**自转与单剑外观正确 | ① **special 模型（trident/shield/chest 等）在掉落物路径不绘制**，只画 `elements` 与生成型精灵；② 元素 `rotation` 未施加；③ `tintindex` 染色**仅掉落物路径**生效，且只支持 `minecraft:constant` 与 `minecraft:grass`（`dye`/`potion`/`leaves` 等来源未实现）；手持路径已接 tint（`HeldItemModelDefinition` 的手持立方体带 `TintSelector`，按主/副手解析 `tintindex 0`）；④ 抖动随机数用「实体 id 派生」的稳定值（原版用渲染器 `random`，逐次可能不同）——分布一致但取值不同；⑤ 展示框与 GUI 仍未实现；⑥ `bakeSideFaces` 侧面已实现，但只扫描静态首帧（原版遍历 `getUniqueFrames`，动画 sprite 的其余帧未挤出面） | 规格已就绪 | `T-761` |
+| SIM-ITEM-DROP-DISPLAY-GUI | 掉落物 / 展示框 / GUI | `.../item/ItemDisplayContext.java`（10 个上下文）、`.../entity/item/ItemEntityRenderer.java`、`.../item/ItemEntityRenderState.java`、`.../resources/model/cuboid/ItemModelGenerator.java`、`.../entity/ItemFrameRenderer.java` | 同一套 item model 在 10 个 display context 下复用；掉落物用 `getRenderedAmount(count)`（1/2/3/4/5 分桶）、`bob = sin(age/10 + bobOffs)·0.1 + 0.1`、`minOffsetY = -bbox.minY + 0.0625`、`getSpin = age/20 + bobOffs`、厚薄两种堆叠布局；`bobOffs` 是 `random.nextFloat()·2π`（本地随机、不同步）；生成型物品两面均 `addUnculledFace` 且背面 UV 反向，另有 `bakeSideFaces` 按 sprite 边缘挤出侧面 | **掉落物已接**：`ItemEntityMesher` 解析模型 → `ItemModelGeometry` 出 quad → `ItemModelExtents.ForDisplay` 取包围盒 → `ItemEntityRenderer` 的出 Bob/Spin/接地/堆叠 → `ItemDisplayTransform.ToMatrix()` 消费 `ground` 变换，作为 `dropped_item` 图层追加。`getRenderedAmount` 分桶与生成型物品的前后两面 UV 已逐项对上，**真实服务器截图确认**自转与单剑外观正确 | ① **special 模型（trident/shield/chest 等）在掉落物路径不绘制**，只画 `elements` 与生成型精灵；② 元素 `rotation` 未施加；③ `tintindex` 染色**仅掉落物路径**生效，且只支持 `minecraft:constant` 与 `minecraft:grass`（`dye`/`potion`/`leaves` 等来源未实现）；手持路径已接 tint（`HeldItemModelDefinition` 的手持立方体带 `TintSelector`，按主/副手解析 `tintindex 0`）；④ 抖动随机数用「实体 id 派生」的稳定值（原版用渲染器 `random`，逐次可能不同）——分布一致但取值不同；⑤ 展示框与 GUI 仍未实现；⑥ `bakeSideFaces` 侧面已实现，但只扫描静态首帧（原版遍历 `getUniqueFrames`，动画 sprite 的其余帧未挤出面） | 规格已就绪 | `T-761` |
 
 <!-- simplification:SIM-ITEM-MODEL-STATIC-FALLBACK task:T-631e -->
 <!-- simplification:SIM-ITEM-RENDER-STATE task:T-631e -->
@@ -848,14 +848,14 @@ index = (x * channelsPerPixel) + (second ? 1 : 0)   // 修复后
 world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
-⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `DroppedItemLayoutTests`（5 项）。
+⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `ItemEntityLayoutTests`（5 项）。
 ### 3.5.17 掉落物不走实体模型路径（T-763）
 
 原版 `ItemEntityRenderer extends EntityRenderer<ItemEntity, ItemEntityRenderState>`：`submit` 里只做 `translate(0, bob + minOffsetY, 0)`、按 `ItemEntity.getSpin` 自旋、再 `submitMultipleFromCount` 提交**物品模型**（与手持/GUI 同一套模型管线，display 上下文为 `ground`）。它不烘焙任何 `ModelPart` 模型，因此**不存在占位盒回退**。
 
 本仓曾把 item entity 当作普通实体交给 `EntityModelMesher`，模型解析失败后落到 `EntityModelResolver.Placeholder`（14³ 盒子，按 64×64 皮肤 UV 采样实体皮肤图集），于是每个掉落物外面都出现一个"皮肤图集碎片拼贴"的立方体——即用户报告的悬浮彩色碎片。
 
-修法：`EntityModelMesher.BuildInto` 对 `EntityTracker.ItemEntityTypeId` 直接跳过，掉落物几何只由 `DroppedItemMesher` 产出。回归：`ItemEntityModelTests`。
+修法：`EntityModelMesher.BuildInto` 对 `EntityTracker.ItemEntityTypeId` 直接跳过，掉落物几何只由 `ItemEntityMesher` 产出。回归：`ItemEntityModelTests`。
 
 ### 3.5.9a 手持锚点：拟合解与审计结论（T-777）
 
@@ -939,7 +939,7 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
    - alpha 测试 0.1（与 `ITEM_TRANSLUCENT` 一致）。
 2. **绑定组**：`group0` = 物品图集（texture+sampler）+ camera + fog + lightmap（与实体物品图层相同）；`group1` = OIT 目标（与 `ref*` 一致）。参考 `CreateDepthBoundsPipeline/TransmittancePipeline/AccumulatePipeline` 的布局参数，新增物品变体。
 3. **图层标记**：`EntityGeometryLayerKind` 增加 `ItemTranslucent`，主 pass 的绘制 switch 跳过它；OIT pass 新增一个 draw set（depth bounds → transmittance → accumulate），复用 `DynamicGeometry` 上传路径。
-4. **Mesher**：`DroppedItemMesher` / `HeldItemMesher` 的半透明图层改用 `ItemTranslucent`（当前是 `Translucent`）。
+4. **Mesher**：`ItemEntityMesher` / `ItemInHandMesher` 的半透明图层改用 `ItemTranslucent`（当前是 `Translucent`）。
 5. **排序**：原版 `sortOnUpload()`；参考 OIT 对顺序不敏感（depth bounds + 透射率），可先不排序，实测若仍有差异再补。
 
 **验收**：冰 / 黑玻璃 / 染色玻璃在掉落与手持下与正版同机位截图一致（面与面之间无叠加加深）。

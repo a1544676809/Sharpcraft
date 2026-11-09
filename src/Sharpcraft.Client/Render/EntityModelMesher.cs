@@ -403,7 +403,7 @@ public sealed partial class EntityModelMesher
             // Grouped batches carry their own pose list indexed by the compact span; otherwise use the per-batch
             // prepared poses (indexed by the original entity order) or one explicit pose for the whole span.
             var entityPose = poses is not null ? poses[entityIndex] : usePreparedPoses ? _animationPoses[entityIndex] : pose;
-            // Item entities are drawn by DroppedItemMesher and have no entity model in the reference, so they must not
+            // Item entities are drawn by ItemEntityMesher and have no entity model in the reference, so they must not
             // fall back to the placeholder box: that box samples the entity skin at 64x64 UVs and showed up as a mosaic
             // cube wrapped around every dropped item (T-763).
             if (entity.TypeId == Sharpcraft.Client.World.EntityTracker.ItemEntityTypeId)

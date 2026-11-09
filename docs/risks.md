@@ -137,5 +137,5 @@ tick 速率实测 19.4–19.8/s，原因是 Windows `Task.Delay` 的 ~15.6 ms �
 - 缓解：单列子任务，读 `SpearAnimations` 与长矛模型层后按参考实现，附数值测试；在此之前状态保持 `进行中`，不声称该分支等效。
 - 复查条件：SPEAR/STAB 移植并测试通过后关闭。
 
-| R-HELD-DISPLAY | 手持锚点依赖物品 display 变换（已关闭） | 低 / 低 | 已用两姿态 × 两 display 四组真值解出与 display 无关的锚点，`HeldItemPlacementComparisonTests` 全部通过；游戏内剑/弓/苹果/矮草/火把位置与朝向正确 | 若后续新增 display 变体，按 `PoseVariantProbe.java` 追加一组真值即可复查 | 
+| R-HELD-DISPLAY | 手持锚点依赖物品 display 变换（已关闭） | 低 / 低 | 已用两姿态 × 两 display 四组真值解出与 display 无关的锚点，`ItemInHandPlacementComparisonTests` 全部通过；游戏内剑/弓/苹果/矮草/火把位置与朝向正确 | 若后续新增 display 变体，按 `PoseVariantProbe.java` 追加一组真值即可复查 | 
 

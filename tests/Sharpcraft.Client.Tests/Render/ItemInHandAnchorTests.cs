@@ -12,11 +12,11 @@ namespace Sharpcraft.Client.Tests.Render;
 /// <para>
 /// The anchor is independent of the item's display transform: the display is a separate factor of the reference composite
 /// (<c>H · XP(-90°) · YP(180°) · T_off · D</c>) and is applied by the caller. It depends only on the hand's <c>T_off</c>
-/// and on the holder's model scale. <see cref="HeldItemPlacementComparisonTests"/> pins the resulting world points
+/// and on the holder's model scale. <see cref="ItemInHandPlacementComparisonTests"/> pins the resulting world points
 /// against reference matrices for two poses and two display transforms.
 /// </para>
 /// </summary>
-public sealed class HeldItemAnchorTests
+public sealed class ItemInHandAnchorTests
 {
     [Fact]
     public void TheAdultAnchorMatchesTheSolvedMatrix()

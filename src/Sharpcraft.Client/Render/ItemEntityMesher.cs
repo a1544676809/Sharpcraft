@@ -19,7 +19,7 @@ namespace Sharpcraft.Client.Render;
 /// </remarks>
 [Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-DROP-DISPLAY-GUI", "T-761")]
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.entity.ItemEntityRenderer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/ItemEntityRenderer.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "model cuboids and flat sprites only; special renderers are not drawn here")]
-public sealed class DroppedItemMesher
+public sealed class ItemEntityMesher
 {
     /// <summary>Floats per vertex, matching <see cref="EntityModelMesher"/>'s layout.</summary>
     public const int VertexStride = 14;
@@ -41,7 +41,7 @@ public sealed class DroppedItemMesher
     public const int MaxDrawnCount = 5;
 
     /// <summary>Layer name reported back to the renderer.</summary>
-    public const string LayerName = "dropped_item";
+    public const string LayerName = "item_entity";
 
     private readonly DynamicGeometry _cutoutGeometry = new();
     private readonly DynamicGeometry _translucentGeometry = new();

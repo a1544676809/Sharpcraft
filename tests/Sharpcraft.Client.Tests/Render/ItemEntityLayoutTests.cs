@@ -17,7 +17,7 @@ namespace Sharpcraft.Client.Tests.Render;
 /// because the offset comes from the entity id hash.
 /// </para>
 /// </summary>
-public sealed class DroppedItemLayoutTests
+public sealed class ItemEntityLayoutTests
 {
     private static readonly ItemModelExtents ThickModel = new(new Vector3(0f, 0f, 0f), new Vector3(0.5f, 0.14f, 0.3f));
     private static readonly ItemModelExtents ThinModel = new(new Vector3(0f, 0f, 0.484375f), new Vector3(0.5f, 0.5f, 0.515625f));

@@ -17,7 +17,7 @@ namespace Sharpcraft.Client.Tests.Render;
 /// fitted to one display transform (or one pose) fails here even though it looks right for that case alone.
 /// </para>
 /// </summary>
-public sealed class HeldItemPlacementComparisonTests
+public sealed class ItemInHandPlacementComparisonTests
 {
     private static readonly ItemDisplayTransform GeneratedDisplay =
         new(Vector3.Zero, new Vector3(0f, 3f / 16f, 1f / 16f), new Vector3(0.55f));

@@ -124,4 +124,4 @@ updated: 2026-11-09
 - `7b68fe3` feat(render): finish the baby elytra variant (ELYTRA_BABY) (T-662)
 - `b1b65df` merge: main (principle 14 guardrails, Phase 0/1 foundation)
 - `b4d32e2` docs: reconcile the equivalence matrix with the branch state
-**物品渲染等效性检查层（L1–L4，2026-11-08）**：新增 `tools/Sharpcraft.ItemRender.Audit`（1658 物品解析审计 + 棘轮基线；未解析 17→0，修 `composite` 子项解析 T-766）、`HeldItemMesher` 让手持物品复用共享物品几何并删除假 8×8 quad（T-765）、display 变换改四元数构建并引入 JOML 金标准 6×6 点（修所有带旋转上下文的朝向，T-767）、`tools/Sharpcraft.ItemRender.Sheet` 接触表（CPU 软光栅 + asset-free sidecar 金标准，T-768）。**下一步**：special 模型掉落物（T-764）、手持锚点 STAB/使用中姿态（T-765）、`composite` 多子模型（T-766）
+**物品渲染等效性检查层（L1–L4，2026-11-08）**：新增 `tools/Sharpcraft.ItemRender.Audit`（1658 物品解析审计 + 棘轮基线；未解析 17→0，修 `composite` 子项解析 T-766）、`ItemInHandMesher` 让手持物品复用共享物品几何并删除假 8×8 quad（T-765）、display 变换改四元数构建并引入 JOML 金标准 6×6 点（修所有带旋转上下文的朝向，T-767）、`tools/Sharpcraft.ItemRender.Sheet` 接触表（CPU 软光栅 + asset-free sidecar 金标准，T-768）。**下一步**：special 模型掉落物（T-764）、手持锚点 STAB/使用中姿态（T-765）、`composite` 多子模型（T-766）

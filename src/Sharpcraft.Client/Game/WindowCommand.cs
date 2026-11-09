@@ -438,8 +438,8 @@ internal static class WindowCommand
             localProfileId: localProfileId);
         session.PlayerSkinLookup = playerSkins.TryGet;
         var modelMesher = new Sharpcraft.Client.Render.EntityModelMesher();
-        var droppedItemMesher = new Sharpcraft.Client.Render.DroppedItemMesher();
-        var heldItemMesher = new Sharpcraft.Client.Render.HeldItemMesher();
+        var droppedItemMesher = new Sharpcraft.Client.Render.ItemEntityMesher();
+        var heldItemMesher = new Sharpcraft.Client.Render.ItemInHandMesher();
         var variantTable = Sharpcraft.Client.Render.EntityVariantTable.FromRegistries(live?.Registries);
 
         /// <summary>
@@ -492,8 +492,8 @@ internal static class WindowCommand
                 AddIfPresent(paths, EntityModelResolver.ResolveHeldItemTexture(entity, offhand: true));
                 AddIfPresent(paths, EntityModelResolver.ResolveHeldItemSpecialTexture(entity, offhand: false));
                 AddIfPresent(paths, EntityModelResolver.ResolveHeldItemSpecialTexture(entity, offhand: true));
-                paths.AddRange(Sharpcraft.Client.Render.DroppedItemMesher.ResolveTextures(entity));
-                paths.AddRange(Sharpcraft.Client.Render.HeldItemMesher.ResolveTextures(entity));
+                paths.AddRange(Sharpcraft.Client.Render.ItemEntityMesher.ResolveTextures(entity));
+                paths.AddRange(Sharpcraft.Client.Render.ItemInHandMesher.ResolveTextures(entity));
                 AddIfPresent(paths, EntityModelResolver.ResolveHeldItemPotSideTexture(entity, offhand: false));
                 AddIfPresent(paths, EntityModelResolver.ResolveHeldItemPotSideTexture(entity, offhand: true));
                 paths.AddRange(EntityModelResolver.ResolveHeldItemPatternSprites(entity, offhand: false));

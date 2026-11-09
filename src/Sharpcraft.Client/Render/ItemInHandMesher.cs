@@ -9,16 +9,16 @@ namespace Sharpcraft.Client.Render;
 
 /// <summary>
 /// Draws held items with the same geometry the rest of the item path uses: the model resolved by
-/// <see cref="ItemModelResolver"/>, emitted through <see cref="DroppedItemMesher.EmitQuads"/>, and placed by the posed
+/// <see cref="ItemModelResolver"/>, emitted through <see cref="ItemEntityMesher.EmitQuads"/>, and placed by the posed
 /// hand frame times the item's own display transform. It replaces the previous fixed 8x8 quad, which drew every item as
 /// the same box wearing a different sprite.
 /// </summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.entity.layers.ItemInHandLayer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/layers/ItemInHandLayer.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Item geometry reuses the item-model path; special renderers keep their own hand layers")]
 [Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-HELD-GEOMETRY", "T-765", Note = "Held items use the shared geometry and display transform with the STAB offset and the spear use-item animation applied; kinetic weapon values come from the reference spear table, and the hit-feedback term is always zero because the client does not track ticksSinceKineticHitFeedback")]
-public sealed class HeldItemMesher
+public sealed class ItemInHandMesher
 {
     /// <summary>Layer name reported back to the renderer.</summary>
-    public const string LayerName = "held_item";
+    public const string LayerName = "item_in_hand";
 
     private readonly DynamicGeometry _cutoutGeometry = new();
     private readonly DynamicGeometry _translucentGeometry = new();
@@ -81,7 +81,7 @@ public sealed class HeldItemMesher
                 foreach (var placement in placements)
                 {
                     _quads.Clear();
-                    DroppedItemMesher.CollectQuads(_quads, placement.Model, itemAtlas as ItemAtlas);
+                    ItemEntityMesher.CollectQuads(_quads, placement.Model, itemAtlas as ItemAtlas);
                     if (_quads.Count == 0)
                     {
                         continue;
@@ -89,10 +89,10 @@ public sealed class HeldItemMesher
 
                     var display = EntityModelResolver.DisplayFor(placement.Model, offhand);
                     var world = placement.Transform * display * useItem * stab * anchor * handFrame * entityMatrix;
-                    var translucent = DroppedItemMesher.IsTranslucent(placement.Model, itemAtlas as ItemAtlas);
+                    var translucent = ItemEntityMesher.IsTranslucent(placement.Model, itemAtlas as ItemAtlas);
                     if (translucent)
                     {
-                        DroppedItemMesher.EmitQuads(
+                        ItemEntityMesher.EmitQuads(
                             _translucentGeometry,
                             _quads,
                             world,
@@ -104,7 +104,7 @@ public sealed class HeldItemMesher
                     }
                     else
                     {
-                        DroppedItemMesher.EmitQuads(
+                        ItemEntityMesher.EmitQuads(
                             _cutoutGeometry,
                             _quads,
                             world,
@@ -146,7 +146,7 @@ public sealed class HeldItemMesher
         {
             foreach (var placement in EntityModelResolver.ResolveHeldItemPlacements(entity, offhand))
             {
-                foreach (var texture in DroppedItemMesher.ResolutionTextures(placement.Model))
+                foreach (var texture in ItemEntityMesher.ResolutionTextures(placement.Model))
                 {
                     yield return texture;
                 }

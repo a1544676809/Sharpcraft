@@ -289,13 +289,13 @@ public sealed class EntityLayerTests
     [Fact]
     public void TheFakeHeldItemQuadLayersAreGone()
     {
-        // Held items used to be drawn as a fixed 8x8 box wearing the item sprite. They now come from HeldItemMesher, which
+        // Held items used to be drawn as a fixed 8x8 box wearing the item sprite. They now come from ItemInHandMesher, which
         // reuses the shared item geometry, so the humanoid must not register those layers any more while the special
         // hand layers (trident/shield) stay.
         var definition = EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId);
         Assert.DoesNotContain(definition.RenderLayers, layer => layer.Name == "held_item_right");
         Assert.DoesNotContain(definition.RenderLayers, layer => layer.Name == "held_item_left");
-        Assert.Contains(definition.RenderLayers, layer => layer.Name == HeldItemMesher.LayerName || layer.Name.StartsWith("held_special", StringComparison.Ordinal));
+        Assert.Contains(definition.RenderLayers, layer => layer.Name == ItemInHandMesher.LayerName || layer.Name.StartsWith("held_special", StringComparison.Ordinal));
     }
     [Fact]
     public void HappyGhastRopesRequireLeashAndHarness()

@@ -108,7 +108,7 @@ for (var index = 0; index < resolved.Count; index++)
     }
 
     quads.Clear();
-    DroppedItemMesher.CollectQuads(quads, model, atlas);
+    ItemEntityMesher.CollectQuads(quads, model, atlas);
     if (quads.Count == 0)
     {
         report.Add($"{id}\tno-quads");
@@ -289,7 +289,7 @@ string? Argument(string name)
 static List<ItemModelQuad> CollectQuads(ItemModelResolution model, ItemAtlas? atlas)
 {
     var list = new List<ItemModelQuad>();
-    DroppedItemMesher.CollectQuads(list, model, atlas);
+    ItemEntityMesher.CollectQuads(list, model, atlas);
     return list;
 }
 

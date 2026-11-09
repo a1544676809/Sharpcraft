@@ -13,7 +13,7 @@ namespace Sharpcraft.Client.Tests.Render;
 /// Dropped-item geometry end to end: an item entity's stack must turn into quads placed above the ground with the
 /// reference layout rules applied.
 /// </summary>
-public sealed class DroppedItemMesherTests
+public sealed class ItemEntityMesherTests
 {
     private sealed class FakeAtlas : ISpriteAtlas
     {
@@ -28,7 +28,7 @@ public sealed class DroppedItemMesherTests
     [Fact]
     public void ANonItemEntityProducesNoLayer()
     {
-        var mesher = new DroppedItemMesher();
+        var mesher = new ItemEntityMesher();
         var layers = mesher.Build([Drop(1, itemId: -1)], new FakeAtlas());
         Assert.Empty(layers);
     }
@@ -42,7 +42,7 @@ public sealed class DroppedItemMesherTests
             new Dictionary<string, string> { ["layer0"] = "minecraft:item/apple" },
             new Dictionary<ItemDisplayContext, ItemDisplayTransform>());
         var quads = new List<ItemModelQuad>();
-        DroppedItemMesher.CollectQuads(quads, resolution);
+        ItemEntityMesher.CollectQuads(quads, resolution);
 
         Assert.Equal(2, quads.Count);
         Assert.All(quads, quad => Assert.Equal("item/apple", quad.Texture));
@@ -77,17 +77,17 @@ public sealed class DroppedItemMesherTests
             Elements: [new ItemModelElement(Vector3.Zero, new Vector3(16f, 16f, 16f), faces)]);
 
         var quads = new List<ItemModelQuad>();
-        DroppedItemMesher.CollectQuads(quads, resolution);
+        ItemEntityMesher.CollectQuads(quads, resolution);
         Assert.Equal(6, quads.Count);
     }
 
     [Fact]
     public void ThePhaseIsStablePerEntityAndInsideOneTurn()
     {
-        var first = DroppedItemMesher.PhaseOf(42);
-        Assert.Equal(first, DroppedItemMesher.PhaseOf(42));
+        var first = ItemEntityMesher.PhaseOf(42);
+        Assert.Equal(first, ItemEntityMesher.PhaseOf(42));
         Assert.InRange(first, 0f, MathF.PI * 2f);
-        Assert.NotEqual(first, DroppedItemMesher.PhaseOf(43));
+        Assert.NotEqual(first, ItemEntityMesher.PhaseOf(43));
     }
 
     [Fact]
@@ -99,13 +99,13 @@ public sealed class DroppedItemMesherTests
         Assert.Empty(geometry.Vertices);
         Assert.Empty(geometry.Indices);
 
-        DroppedItemMesher.EnsureCapacity(geometry, vertexFloats: 0, indexCount: 0);
-        Assert.True(geometry.Vertices.Length >= 4 * DroppedItemMesher.VertexStride);
+        ItemEntityMesher.EnsureCapacity(geometry, vertexFloats: 0, indexCount: 0);
+        Assert.True(geometry.Vertices.Length >= 4 * ItemEntityMesher.VertexStride);
         Assert.True(geometry.Indices.Length >= 6);
 
         // A second call that already fits must not shrink anything.
         var vertexLength = geometry.Vertices.Length;
-        DroppedItemMesher.EnsureCapacity(geometry, vertexFloats: 0, indexCount: 0);
+        ItemEntityMesher.EnsureCapacity(geometry, vertexFloats: 0, indexCount: 0);
         Assert.Equal(vertexLength, geometry.Vertices.Length);
     }
 
@@ -253,6 +253,6 @@ public sealed class DroppedItemMesherTests
     [InlineData(64, 5)]
     public void RenderedAmountFollowsTheReferenceBuckets(int stackCount, int expected)
     {
-        Assert.Equal(expected, DroppedItemMesher.RenderedAmount(stackCount));
+        Assert.Equal(expected, ItemEntityMesher.RenderedAmount(stackCount));
     }
 }
