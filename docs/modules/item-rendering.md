@@ -392,6 +392,32 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
 5. **排序**：原版 `sortOnUpload()`；参考 OIT 对顺序不敏感（depth bounds + 透射率），可先不排序，实测若仍有差异再补。
 
 **验收**：冰 / 黑玻璃 / 染色玻璃在掉落与手持下与正版同机位截图一致（面与面之间无叠加加深）。
+### 3.5.12 染色玻璃竖条：sprite rect 高度错用 cell 高度（T-773，已定位待修）
+
+**现象**：物品级染色玻璃近距离出现细竖条，且只有白 / 淡灰 / 灰 / 黑四种明显。
+
+**证据链**
+
+1. 源贴图与图集内容正确：`black_stained_glass` 源图与图集区域逐像素一致（`163,102×14,163`）。
+2. 六面 UV 均在 [0,1]，无平铺。
+3. 关掉 OIT（按 cutout 主通道绘制）后条纹**原样存在** ⇒ 与透明合成无关。
+4. 顶点导出（`DynamicGeometry.Vertices`，14 float/顶点）：
+   ```
+   sprite = (0.5000, 0.5000, 0.6250, 0.6250)   → 128×192 图集内 (x=64, y=96, w=16, h=24)
+   实时查表 itemAtlas.Get("block/black_stained_glass") = (0, 128, 16, 16)
+   ```
+
+**结论**
+
+- 图集高 192 = 8 行 × **24** ⇒ cell 高被更高的贴图撑到 24；该 sprite 的 rect **高度取了 cell 高度（24）**，而宽度取了贴图宽度（16）。多出的 8 行采样窗口探进下一行 sprite，把邻居贴图串进来。
+- 16 张染色玻璃贴图形状相同、仅颜色不同（`textures/block/*_stained_glass.png` 共 16 个，物品模型 `items/<色>_stained_glass.json` 直接指向 `block/<色>_stained_glass`）。因此串色后：彩色玻璃会串成杂色（显眼但不像"条纹"），无彩色四种串成等亮度竖条 ⇒ 只有它们看起来是竖纹。
+- 另一处不一致：绘制时使用的 rect 与实时查表结果不同（`(64,96)` vs `(0,128)`），说明形状布局存在**版本不同步**（图集扩容后旧 layout 未失效）。
+
+**修复清单**
+
+1. `ItemAtlas` 的 sprite rect 一律使用**贴图实际宽高**；`cellWidth/cellHeight` 只用于布局，不得进入 `SpriteRect`。
+2. 图集重建（新增纹理、尺寸变化）时，失效所有派生的形状/布局缓存。
+3. 回归测试：构造高度不一的贴图集合，断言每个 rect 的 `Height == image.Height` 且 `V1 <= (row+1)*cellHeight/atlasHeight`。
 ## 7. 风险与限制
 
 #### 3.5.9 掉落物布局：第一件不偏移
@@ -474,6 +500,32 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
 5. **排序**：原版 `sortOnUpload()`；参考 OIT 对顺序不敏感（depth bounds + 透射率），可先不排序，实测若仍有差异再补。
 
 **验收**：冰 / 黑玻璃 / 染色玻璃在掉落与手持下与正版同机位截图一致（面与面之间无叠加加深）。
+### 3.5.12 染色玻璃竖条：sprite rect 高度错用 cell 高度（T-773，已定位待修）
+
+**现象**：物品级染色玻璃近距离出现细竖条，且只有白 / 淡灰 / 灰 / 黑四种明显。
+
+**证据链**
+
+1. 源贴图与图集内容正确：`black_stained_glass` 源图与图集区域逐像素一致（`163,102×14,163`）。
+2. 六面 UV 均在 [0,1]，无平铺。
+3. 关掉 OIT（按 cutout 主通道绘制）后条纹**原样存在** ⇒ 与透明合成无关。
+4. 顶点导出（`DynamicGeometry.Vertices`，14 float/顶点）：
+   ```
+   sprite = (0.5000, 0.5000, 0.6250, 0.6250)   → 128×192 图集内 (x=64, y=96, w=16, h=24)
+   实时查表 itemAtlas.Get("block/black_stained_glass") = (0, 128, 16, 16)
+   ```
+
+**结论**
+
+- 图集高 192 = 8 行 × **24** ⇒ cell 高被更高的贴图撑到 24；该 sprite 的 rect **高度取了 cell 高度（24）**，而宽度取了贴图宽度（16）。多出的 8 行采样窗口探进下一行 sprite，把邻居贴图串进来。
+- 16 张染色玻璃贴图形状相同、仅颜色不同（`textures/block/*_stained_glass.png` 共 16 个，物品模型 `items/<色>_stained_glass.json` 直接指向 `block/<色>_stained_glass`）。因此串色后：彩色玻璃会串成杂色（显眼但不像"条纹"），无彩色四种串成等亮度竖条 ⇒ 只有它们看起来是竖纹。
+- 另一处不一致：绘制时使用的 rect 与实时查表结果不同（`(64,96)` vs `(0,128)`），说明形状布局存在**版本不同步**（图集扩容后旧 layout 未失效）。
+
+**修复清单**
+
+1. `ItemAtlas` 的 sprite rect 一律使用**贴图实际宽高**；`cellWidth/cellHeight` 只用于布局，不得进入 `SpriteRect`。
+2. 图集重建（新增纹理、尺寸变化）时，失效所有派生的形状/布局缓存。
+3. 回归测试：构造高度不一的贴图集合，断言每个 rect 的 `Height == image.Height` 且 `V1 <= (row+1)*cellHeight/atlasHeight`。
 ## 7.1 已知刻意的简化（必须后续解决）
 
 对照对象为 26.3 原版（`ref://mc-26.3-analysis/src/...`）。逐项登记：原版行为 → 当前实现 → 差异 → 状态。
@@ -579,6 +631,32 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
 5. **排序**：原版 `sortOnUpload()`；参考 OIT 对顺序不敏感（depth bounds + 透射率），可先不排序，实测若仍有差异再补。
 
 **验收**：冰 / 黑玻璃 / 染色玻璃在掉落与手持下与正版同机位截图一致（面与面之间无叠加加深）。
+### 3.5.12 染色玻璃竖条：sprite rect 高度错用 cell 高度（T-773，已定位待修）
+
+**现象**：物品级染色玻璃近距离出现细竖条，且只有白 / 淡灰 / 灰 / 黑四种明显。
+
+**证据链**
+
+1. 源贴图与图集内容正确：`black_stained_glass` 源图与图集区域逐像素一致（`163,102×14,163`）。
+2. 六面 UV 均在 [0,1]，无平铺。
+3. 关掉 OIT（按 cutout 主通道绘制）后条纹**原样存在** ⇒ 与透明合成无关。
+4. 顶点导出（`DynamicGeometry.Vertices`，14 float/顶点）：
+   ```
+   sprite = (0.5000, 0.5000, 0.6250, 0.6250)   → 128×192 图集内 (x=64, y=96, w=16, h=24)
+   实时查表 itemAtlas.Get("block/black_stained_glass") = (0, 128, 16, 16)
+   ```
+
+**结论**
+
+- 图集高 192 = 8 行 × **24** ⇒ cell 高被更高的贴图撑到 24；该 sprite 的 rect **高度取了 cell 高度（24）**，而宽度取了贴图宽度（16）。多出的 8 行采样窗口探进下一行 sprite，把邻居贴图串进来。
+- 16 张染色玻璃贴图形状相同、仅颜色不同（`textures/block/*_stained_glass.png` 共 16 个，物品模型 `items/<色>_stained_glass.json` 直接指向 `block/<色>_stained_glass`）。因此串色后：彩色玻璃会串成杂色（显眼但不像"条纹"），无彩色四种串成等亮度竖条 ⇒ 只有它们看起来是竖纹。
+- 另一处不一致：绘制时使用的 rect 与实时查表结果不同（`(64,96)` vs `(0,128)`），说明形状布局存在**版本不同步**（图集扩容后旧 layout 未失效）。
+
+**修复清单**
+
+1. `ItemAtlas` 的 sprite rect 一律使用**贴图实际宽高**；`cellWidth/cellHeight` 只用于布局，不得进入 `SpriteRect`。
+2. 图集重建（新增纹理、尺寸变化）时，失效所有派生的形状/布局缓存。
+3. 回归测试：构造高度不一的贴图集合，断言每个 rect 的 `Height == image.Height` 且 `V1 <= (row+1)*cellHeight/atlasHeight`。
 ## 7.2 其他限制
 
 - 26.3 的 `items/*.json` 与旧版 `models/item` 结构不同；必须按 26.3 的 item model 类型分发，不能只读旧 parent 字段。
