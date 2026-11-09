@@ -326,6 +326,40 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
 ⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `ItemEntityLayoutTests`（5 项）。
+### 3.5.18 special 模型物品（T-764 规格）
+
+#### 原版事实（已核实）
+
+| 事实 | 证据 |
+| --- | --- |
+| special 物品由 `SpecialModelRenderer` 家族绘制，注册于 `SpecialModelRenderers` | `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/special/SpecialModelRenderers.java` |
+| 掉落物的入口是 `ItemEntityRenderer`：它提交**物品模型管线**（`ItemStackRenderState` + `ground` display），从不烘焙实体 `ModelPart` 链 | `.../entity/ItemEntityRenderer.java` L41-52 |
+| `ChestSpecialRenderer.submit(...)` **不修改 pose**，直接 `submitNodeCollector.submitModel(model, openness, poseStack, …)` | `.../special/ChestSpecialRenderer.java` L50-59 |
+| special 模型是 `ModelPart` 树，坐标以**模型像素**（0..16）书写，例如箱子 `bottom` = `addBox(1,0,1, 14,10,14)`、`lid` = `addBox(1,0,0, 14,5,14)` 且 `PartPose.offset(0,9,1)` | `.../model/object/chest/ChestModel.java` L31-33 |
+| 已知 special 类型清单（26.3）：Banner、Bell、Book、Chest、Conduit、CopperGolemStatue、DecoratedPot、EndCube、PlayerHead、Shield、ShulkerBox、Skull、Trident | 同上目录 |
+
+#### 本仓现状
+
+`ItemModelResolver` 已解析 `SpecialRendererType` 与 `SpecialProperties`（`minecraft:special` 分支），但绘制侧**回退为静态模型**（`SIM-ITEM-MODEL-STATIC-FALLBACK`），因此箱子/旗帜/盾牌/头颅/床/告示牌/钟/潮涌核心/饰纹陶罐等物品的掉落物、手持与 GUI 外观不正确。
+
+#### 烘焙约定（T-764 的阻塞点，现已确定）
+
+special 模型 MUST 按**物品模型坐标系**烘焙（与普通 `elements` 同一空间），**不走实体烘焙链**（不使用 `modelHeight = 24` 与 Y 翻转）。理由：原版 special 渲染器在物品管线内、对 pose 不做任何额外变换。
+
+#### 待验证的开放问题（实现第一步必须先确认）
+
+`submitModel(model, …)` 把像素坐标的 `ModelPart` 几何送入物品空间时，**1/16 缩放在哪一层施加**（`submitModel` 内部、还是 display 变换已含）。未确认前不得开始写烘焙代码（原则 14）。确认方式：读 `OrderedSubmitNodeCollector.submitModel` 的默认实现与其模型渲染路径，或用探针输出一个已知 special 模型（箱子）的 GUI 世界矩阵真值。
+
+#### 切片计划
+
+| 切片 | 内容 |
+| --- | --- |
+| S1 | 确认 1/16 缩放层级（真值探针：箱子 GUI/ground 世界矩阵） |
+| S2 | 通用 `SpecialModelBake`：把 `ModelPart` 树（像素坐标）烘焙成物品空间四边形，含 `openness` 等参数化的 `setupAnim` |
+| S3 | Chest（含 ender/trapped/copper 纹理变体、`chest_type` 左右） |
+| S4 | ShulkerBox / DecoratedPot / Bell / Conduit |
+| S5 | Banner / Shield / Skull / PlayerHead / Trident（各自有额外变换或图层） |
+
 ### 3.5.17 掉落物不走实体模型路径（T-763）
 
 原版 `ItemEntityRenderer extends EntityRenderer<ItemEntity, ItemEntityRenderState>`：`submit` 里只做 `translate(0, bob + minOffsetY, 0)`、按 `ItemEntity.getSpin` 自旋、再 `submitMultipleFromCount` 提交**物品模型**（与手持/GUI 同一套模型管线，display 上下文为 `ground`）。它不烘焙任何 `ModelPart` 模型，因此**不存在占位盒回退**。
@@ -576,6 +610,40 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
 ⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `ItemEntityLayoutTests`（5 项）。
+### 3.5.18 special 模型物品（T-764 规格）
+
+#### 原版事实（已核实）
+
+| 事实 | 证据 |
+| --- | --- |
+| special 物品由 `SpecialModelRenderer` 家族绘制，注册于 `SpecialModelRenderers` | `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/special/SpecialModelRenderers.java` |
+| 掉落物的入口是 `ItemEntityRenderer`：它提交**物品模型管线**（`ItemStackRenderState` + `ground` display），从不烘焙实体 `ModelPart` 链 | `.../entity/ItemEntityRenderer.java` L41-52 |
+| `ChestSpecialRenderer.submit(...)` **不修改 pose**，直接 `submitNodeCollector.submitModel(model, openness, poseStack, …)` | `.../special/ChestSpecialRenderer.java` L50-59 |
+| special 模型是 `ModelPart` 树，坐标以**模型像素**（0..16）书写，例如箱子 `bottom` = `addBox(1,0,1, 14,10,14)`、`lid` = `addBox(1,0,0, 14,5,14)` 且 `PartPose.offset(0,9,1)` | `.../model/object/chest/ChestModel.java` L31-33 |
+| 已知 special 类型清单（26.3）：Banner、Bell、Book、Chest、Conduit、CopperGolemStatue、DecoratedPot、EndCube、PlayerHead、Shield、ShulkerBox、Skull、Trident | 同上目录 |
+
+#### 本仓现状
+
+`ItemModelResolver` 已解析 `SpecialRendererType` 与 `SpecialProperties`（`minecraft:special` 分支），但绘制侧**回退为静态模型**（`SIM-ITEM-MODEL-STATIC-FALLBACK`），因此箱子/旗帜/盾牌/头颅/床/告示牌/钟/潮涌核心/饰纹陶罐等物品的掉落物、手持与 GUI 外观不正确。
+
+#### 烘焙约定（T-764 的阻塞点，现已确定）
+
+special 模型 MUST 按**物品模型坐标系**烘焙（与普通 `elements` 同一空间），**不走实体烘焙链**（不使用 `modelHeight = 24` 与 Y 翻转）。理由：原版 special 渲染器在物品管线内、对 pose 不做任何额外变换。
+
+#### 待验证的开放问题（实现第一步必须先确认）
+
+`submitModel(model, …)` 把像素坐标的 `ModelPart` 几何送入物品空间时，**1/16 缩放在哪一层施加**（`submitModel` 内部、还是 display 变换已含）。未确认前不得开始写烘焙代码（原则 14）。确认方式：读 `OrderedSubmitNodeCollector.submitModel` 的默认实现与其模型渲染路径，或用探针输出一个已知 special 模型（箱子）的 GUI 世界矩阵真值。
+
+#### 切片计划
+
+| 切片 | 内容 |
+| --- | --- |
+| S1 | 确认 1/16 缩放层级（真值探针：箱子 GUI/ground 世界矩阵） |
+| S2 | 通用 `SpecialModelBake`：把 `ModelPart` 树（像素坐标）烘焙成物品空间四边形，含 `openness` 等参数化的 `setupAnim` |
+| S3 | Chest（含 ender/trapped/copper 纹理变体、`chest_type` 左右） |
+| S4 | ShulkerBox / DecoratedPot / Bell / Conduit |
+| S5 | Banner / Shield / Skull / PlayerHead / Trident（各自有额外变换或图层） |
+
 ### 3.5.17 掉落物不走实体模型路径（T-763）
 
 原版 `ItemEntityRenderer extends EntityRenderer<ItemEntity, ItemEntityRenderState>`：`submit` 里只做 `translate(0, bob + minOffsetY, 0)`、按 `ItemEntity.getSpin` 自旋、再 `submitMultipleFromCount` 提交**物品模型**（与手持/GUI 同一套模型管线，display 上下文为 `ground`）。它不烘焙任何 `ModelPart` 模型，因此**不存在占位盒回退**。
@@ -849,6 +917,40 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
 ⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `ItemEntityLayoutTests`（5 项）。
+### 3.5.18 special 模型物品（T-764 规格）
+
+#### 原版事实（已核实）
+
+| 事实 | 证据 |
+| --- | --- |
+| special 物品由 `SpecialModelRenderer` 家族绘制，注册于 `SpecialModelRenderers` | `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/special/SpecialModelRenderers.java` |
+| 掉落物的入口是 `ItemEntityRenderer`：它提交**物品模型管线**（`ItemStackRenderState` + `ground` display），从不烘焙实体 `ModelPart` 链 | `.../entity/ItemEntityRenderer.java` L41-52 |
+| `ChestSpecialRenderer.submit(...)` **不修改 pose**，直接 `submitNodeCollector.submitModel(model, openness, poseStack, …)` | `.../special/ChestSpecialRenderer.java` L50-59 |
+| special 模型是 `ModelPart` 树，坐标以**模型像素**（0..16）书写，例如箱子 `bottom` = `addBox(1,0,1, 14,10,14)`、`lid` = `addBox(1,0,0, 14,5,14)` 且 `PartPose.offset(0,9,1)` | `.../model/object/chest/ChestModel.java` L31-33 |
+| 已知 special 类型清单（26.3）：Banner、Bell、Book、Chest、Conduit、CopperGolemStatue、DecoratedPot、EndCube、PlayerHead、Shield、ShulkerBox、Skull、Trident | 同上目录 |
+
+#### 本仓现状
+
+`ItemModelResolver` 已解析 `SpecialRendererType` 与 `SpecialProperties`（`minecraft:special` 分支），但绘制侧**回退为静态模型**（`SIM-ITEM-MODEL-STATIC-FALLBACK`），因此箱子/旗帜/盾牌/头颅/床/告示牌/钟/潮涌核心/饰纹陶罐等物品的掉落物、手持与 GUI 外观不正确。
+
+#### 烘焙约定（T-764 的阻塞点，现已确定）
+
+special 模型 MUST 按**物品模型坐标系**烘焙（与普通 `elements` 同一空间），**不走实体烘焙链**（不使用 `modelHeight = 24` 与 Y 翻转）。理由：原版 special 渲染器在物品管线内、对 pose 不做任何额外变换。
+
+#### 待验证的开放问题（实现第一步必须先确认）
+
+`submitModel(model, …)` 把像素坐标的 `ModelPart` 几何送入物品空间时，**1/16 缩放在哪一层施加**（`submitModel` 内部、还是 display 变换已含）。未确认前不得开始写烘焙代码（原则 14）。确认方式：读 `OrderedSubmitNodeCollector.submitModel` 的默认实现与其模型渲染路径，或用探针输出一个已知 special 模型（箱子）的 GUI 世界矩阵真值。
+
+#### 切片计划
+
+| 切片 | 内容 |
+| --- | --- |
+| S1 | 确认 1/16 缩放层级（真值探针：箱子 GUI/ground 世界矩阵） |
+| S2 | 通用 `SpecialModelBake`：把 `ModelPart` 树（像素坐标）烘焙成物品空间四边形，含 `openness` 等参数化的 `setupAnim` |
+| S3 | Chest（含 ender/trapped/copper 纹理变体、`chest_type` 左右） |
+| S4 | ShulkerBox / DecoratedPot / Bell / Conduit |
+| S5 | Banner / Shield / Skull / PlayerHead / Trident（各自有额外变换或图层） |
+
 ### 3.5.17 掉落物不走实体模型路径（T-763）
 
 原版 `ItemEntityRenderer extends EntityRenderer<ItemEntity, ItemEntityRenderState>`：`submit` 里只做 `translate(0, bob + minOffsetY, 0)`、按 `ItemEntity.getSpin` 自旋、再 `submitMultipleFromCount` 提交**物品模型**（与手持/GUI 同一套模型管线，display 上下文为 `ground`）。它不烘焙任何 `ModelPart` 模型，因此**不存在占位盒回退**。
