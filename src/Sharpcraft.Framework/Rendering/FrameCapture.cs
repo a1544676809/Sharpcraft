@@ -20,11 +20,11 @@ internal static class FrameCapture
     public const int BytesPerPixel = 4;
 
     /// <summary>Copies the frame target back, or returns null when the readback failed.</summary>
-    public static byte[]? Capture(Instance instance, Device device, Texture target, uint width, uint height)
+    public static byte[]? Capture(Instance instance, Device device, Texture target, uint width, uint height, WGPUTextureFormat format)
     {
         try
         {
-            return Read(instance, device, device.Queue, target, width, height, out _);
+            return Read(instance, device, device.Queue, target, width, height, format, out _);
         }
         catch (Exception error)
         {
@@ -40,7 +40,7 @@ internal static class FrameCapture
     /// <param name="width">Target width in texels.</param>
     /// <param name="height">Target height in texels.</param>
     /// <param name="bytesPerRow">Padded row pitch the copy uses; must be a multiple of 256.</param>
-    public static byte[] Read(Instance instance, Device device, Queue queue, Texture target, uint width, uint height, out uint bytesPerRow)
+    public static byte[] Read(Instance instance, Device device, Queue queue, Texture target, uint width, uint height, WGPUTextureFormat format, out uint bytesPerRow)
     {
         bytesPerRow = AlignRowPitch(width * BytesPerPixel);
         var size = (ulong)bytesPerRow * height;
@@ -80,10 +80,19 @@ internal static class FrameCapture
                 var destination = pixels.AsSpan((int)(y * width * BytesPerPixel));
                 sourceRow.CopyTo(destination);
 
-                // The reference forces an opaque alpha; the surface format's alpha is not meaningful here.
+                // The reference forces an opaque alpha; the surface format's alpha is not meaningful here. A Bgra target
+                // hands the channels back as B,G,R,A, so the red and blue bytes are swapped on the way out (the window's
+                // swapchain format is Bgra8Unorm).
+                var swapRedBlue = format == WGPUTextureFormat.BGRA8Unorm;
                 for (var x = 0; x < width; x++)
                 {
-                    destination[(x * BytesPerPixel) + 3] = 0xFF;
+                    var offset = x * BytesPerPixel;
+                    if (swapRedBlue)
+                    {
+                        (destination[offset], destination[offset + 2]) = (destination[offset + 2], destination[offset]);
+                    }
+
+                    destination[offset + 3] = 0xFF;
                 }
             }
 

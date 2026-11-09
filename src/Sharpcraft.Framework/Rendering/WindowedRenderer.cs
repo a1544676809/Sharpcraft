@@ -1738,7 +1738,7 @@ public static class WindowedRenderer
             // Screenshot (reference Screenshot.grab): only when the host asks, and only after the frame was submitted, so
             // the frame target still holds the presented image (docs/specs/render/screenshot.md 2.2).
             if (screenshotRequest?.Invoke(window) is { Length: > 0 } screenshotPath &&
-                FrameCapture.Capture(instance, device, presentation.Target, frameWidth, frameHeight) is { } screenshotPixels)
+                FrameCapture.Capture(instance, device, presentation.Target, frameWidth, frameHeight, format) is { } screenshotPixels)
             {
                 screenshotCaptured?.Invoke(screenshotPath, screenshotPixels, frameWidth, frameHeight);
             }
