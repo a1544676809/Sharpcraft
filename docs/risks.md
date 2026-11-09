@@ -136,3 +136,6 @@ tick 速率实测 19.4–19.8/s，原因是 Windows `Task.Delay` 的 ~15.6 ms �
 - 事实：`HumanoidModel.poseRightArm(SPEAR)` 与 `setupAttackAnimation(STAB)` 依赖 `SpearAnimations.thirdPersonHandUse/AttackHand`（长矛第三人称模型几何与物品栈细节），本次未移植，代码中显式 no-op 并记录。
 - 缓解：单列子任务，读 `SpearAnimations` 与长矛模型层后按参考实现，附数值测试；在此之前状态保持 `进行中`，不声称该分支等效。
 - 复查条件：SPEAR/STAB 移植并测试通过后关闭。
+
+| R-HELD-DISPLAY | 手持锚点依赖物品 display 变换 | 中 / 中 | 锚点反解时吸收了探测物品的 display 平移，仅 `item/generated` 类等效；盾牌等大角度 display 物品朝向错误（T-765） | 以两种 display 同时命中真值定案后改为各自共轭；届时同步复查剑/弓/盾/火把 | 
+
