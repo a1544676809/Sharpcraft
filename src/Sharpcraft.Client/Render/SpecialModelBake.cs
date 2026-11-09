@@ -91,10 +91,13 @@ internal static class SpecialModelBake
         // The reference renders entity models with culling disabled, so a face shows whichever way its corner ring winds.
         // The item pipelines cull back faces, so each face is emitted in both windings instead: the same visible result
         // without relaxing culling for every item (docs/modules/item-rendering.md 3.5.18).
+        // The reference polygon order is (maxU,minV), (minU,minV), (minU,maxV), (maxU,maxV); ItemModelQuad expects
+        // (minU,minV), (minU,maxV), (maxU,maxV), (maxU,minV). Both wind the same way round the face, so the mapping is a
+        // single rotation. Dropping it rotated every face texture by one corner, which is what the chest showed.
         Bake(root, textureWidth, textureHeight, quad =>
         {
-            output.Add(new ItemModelQuad(texture, quad.P0, quad.P1, quad.P2, quad.P3, quad.Uv0, quad.Uv1, quad.Uv2, quad.Uv3, TintIndex: 0, ModelFaceDirection.North));
-            output.Add(new ItemModelQuad(texture, quad.P3, quad.P2, quad.P1, quad.P0, quad.Uv3, quad.Uv2, quad.Uv1, quad.Uv0, TintIndex: 0, ModelFaceDirection.North));
+            output.Add(new ItemModelQuad(texture, quad.P1, quad.P2, quad.P3, quad.P0, quad.Uv1, quad.Uv2, quad.Uv3, quad.Uv0, TintIndex: 0, ModelFaceDirection.North));
+            output.Add(new ItemModelQuad(texture, quad.P0, quad.P3, quad.P2, quad.P1, quad.Uv0, quad.Uv3, quad.Uv2, quad.Uv1, TintIndex: 0, ModelFaceDirection.North));
         });
     }
     /// <summary>Total quads a bake of <paramref name="root"/> produces (six per box).</summary>

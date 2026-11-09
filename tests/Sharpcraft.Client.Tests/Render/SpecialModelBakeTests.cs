@@ -100,9 +100,10 @@ public sealed class SpecialModelBakeTests
         // The mapped quads must carry the same corners and UVs the bake produced.
         var baked = new List<SpecialQuad>();
         SpecialModelBake.Bake(SpecialModelDefinitions.Chest(), 64, 64, baked.Add);
-        Assert.Equal(baked[0].P0, quads[0].Corner0);
-        Assert.Equal(baked[0].Uv0, quads[0].Uv0);
-        Assert.Equal(baked[0].P3, quads[1].Corner0);
+        // ItemModelQuad expects its first corner at (minU,minV), so the reference ring is rotated by one.
+        Assert.Equal(baked[0].P1, quads[0].Corner0);
+        Assert.Equal(baked[0].Uv1, quads[0].Uv0);
+        Assert.Equal(baked[0].P0, quads[1].Corner0);
     }
     [Fact]
     public void TheLidRotatesAroundItsPivot()
