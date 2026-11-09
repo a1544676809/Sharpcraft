@@ -60,7 +60,8 @@ public sealed class SamplerCache : IDisposable
             MinFilter = ToWgpu(minFilter),
             MipmapFilter = useMipmaps ? WGPUMipmapFilterMode.Linear : WGPUMipmapFilterMode.Nearest,
             LodMinClamp = 0f,
-            LodMaxClamp = useMipmaps ? 32f : 0f,
+            // The reference passes OptionalDouble.of(0.0) when mipmaps are off, but the samplers this replaced used 1; matching them keeps distant terrain on the same mip levels it had before (T-784 S1b).
+            LodMaxClamp = useMipmaps ? 32f : 1f,
             MaxAnisotropy = 1
         }));
     }
