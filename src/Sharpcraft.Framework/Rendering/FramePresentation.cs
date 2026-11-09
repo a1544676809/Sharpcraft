@@ -20,6 +20,7 @@ internal sealed class FramePresentation : IDisposable
     private readonly WGPUTextureFormat _format;
     private readonly BindGroupLayout _layout;
     private readonly RenderPipeline _pipeline;
+    // Owned by the shared SamplerCache, so this type must never dispose it (T-784 S1b).
     private readonly Sampler _sampler;
 
     private Texture? _target;
@@ -28,32 +29,23 @@ internal sealed class FramePresentation : IDisposable
     private uint _width;
     private uint _height;
 
-    private FramePresentation(Device device, WGPUTextureFormat format)
+    private FramePresentation(Device device, WGPUTextureFormat format, Sampler sampler)
     {
         _device = device;
         _format = format;
+        _sampler = sampler;
         _layout = device.CreateBindGroupLayout(
         [
             BindGroupLayoutEntry.Texture(0, ShaderStage.Fragment, WGPUTextureSampleType.Float, WGPUTextureViewDimension._2D, false),
             BindGroupLayoutEntry.Sampler(1, ShaderStage.Fragment, WGPUSamplerBindingType.Filtering)
         ]);
-        _sampler = device.CreateSampler(new SamplerDescriptor
-        {
-            AddressModeU = WGPUAddressMode.ClampToEdge,
-            AddressModeV = WGPUAddressMode.ClampToEdge,
-            AddressModeW = WGPUAddressMode.ClampToEdge,
-            MagFilter = WGPUFilterMode.Nearest,
-            MinFilter = WGPUFilterMode.Nearest,
-            MipmapFilter = WGPUMipmapFilterMode.Nearest,
-            LodMinClamp = 0f,
-            LodMaxClamp = 1f,
-            MaxAnisotropy = 1
-        });
+
         _pipeline = CreatePipeline(device, device.CreatePipelineLayout([_layout]), format);
     }
 
     /// <summary>Creates the presentation resources for the given surface format.</summary>
-    public static FramePresentation Create(Device device, WGPUTextureFormat format) => new(device, format);
+    /// <param name="sampler">Sampler the presentation blit uses; owned by the caller's cache.</param>
+    public static FramePresentation Create(Device device, WGPUTextureFormat format, Sampler sampler) => new(device, format, sampler);
 
     /// <summary>The colour texture every pass renders into; recreated when the size changes.</summary>
     public Texture Target => _target ?? throw new InvalidOperationException("the frame target was not created");
@@ -115,7 +107,6 @@ internal sealed class FramePresentation : IDisposable
         _targetView?.Dispose();
         _target?.Dispose();
         _pipeline.Dispose();
-        _sampler.Dispose();
         _layout.Dispose();
     }
 

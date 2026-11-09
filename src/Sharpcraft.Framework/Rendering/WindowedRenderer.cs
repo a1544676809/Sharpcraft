@@ -308,7 +308,7 @@ public static class WindowedRenderer
             BindGroupLayoutEntry.Texture(0, ShaderStage.Fragment, WGPUTextureSampleType.Depth, WGPUTextureViewDimension._2D, false),
             BindGroupLayoutEntry.Sampler(1, ShaderStage.Fragment, WGPUSamplerBindingType.Filtering)
         ]);
-        using var presentation = FramePresentation.Create(device, format);
+        using var presentation = FramePresentation.Create(device, format, samplers.GetClampToEdge(FilterMode.Nearest));
         using var blitDepthPipelineLayout = device.CreatePipelineLayout([blitDepthLayout]);
         using var blitDepthPipeline = CreateBlitDepthPipeline(device, blitDepthPipelineLayout);
         var blitDepthSampler = samplers.GetClampToEdge(FilterMode.Nearest);
