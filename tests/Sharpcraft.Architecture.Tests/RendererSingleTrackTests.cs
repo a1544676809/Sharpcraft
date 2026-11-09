@@ -58,10 +58,10 @@ public sealed class RendererSingleTrackTests
         var windowedLines = File.ReadAllLines(Path.Combine(root, "src", "Sharpcraft.Framework", "Rendering", "WindowedRenderer.cs")).Length;
         var offscreenLines = File.ReadAllLines(Path.Combine(root, "src", "Sharpcraft.Framework", "Rendering", "OffscreenRenderer.cs")).Length;
 
-        // The bound moved 2400 -> 2500 when translucent items gained their own reference OIT set: that set lives in
-        // ItemOitSet.cs (an extracted pass), and the remaining growth is the inline reference-transparency sequence,
-        // whose extraction is tracked as T-776. Do not raise this again for new inline passes; extract instead.
-        Assert.True(windowedLines <= 2500, $"WindowedRenderer.cs grew to {windowedLines} lines; extract passes instead of adding a parallel shell.");
+        // The reference transparency sequence and the translucent item set both live in their own files
+        // (ReferenceOitPasses, ItemOitSet), so the shell is back under the original ratchet. Extract passes rather than
+        // adding inline code; do not raise this bound again.
+        Assert.True(windowedLines <= 2400, $"WindowedRenderer.cs grew to {windowedLines} lines; extract passes instead of adding a parallel shell.");
         Assert.True(offscreenLines <= 1700, $"OffscreenRenderer.cs grew to {offscreenLines} lines; extract passes instead of adding a parallel shell.");
     }
 
