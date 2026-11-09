@@ -305,30 +305,41 @@ public sealed class DroppedItemMesher
         // atlas has to be primed from ResolveAll; asking only the first model leaves the other halves untextured.
         foreach (var placement in models.ResolveAll(item.Id.ToString()))
         {
-            var resolution = placement.Model;
-            var cuboids = resolution.Cuboids;
-            if (cuboids.Count > 0)
+            foreach (var texture in ResolutionTextures(placement.Model))
             {
-                foreach (var element in cuboids)
+                yield return texture;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Texture paths one resolved model needs: every face texture for a cuboid model, or the sprite layers of a
+    /// generated one. Shared with the held-item pre-pass so both paths prime the same atlas entries.
+    /// </summary>
+    public static IEnumerable<string> ResolutionTextures(ItemModelResolution resolution)
+    {
+        var cuboids = resolution.Cuboids;
+        if (cuboids.Count > 0)
+        {
+            foreach (var element in cuboids)
+            {
+                foreach (var face in element.Faces.Values)
                 {
-                    foreach (var face in element.Faces.Values)
+                    if (face.Texture is { } texture)
                     {
-                        if (face.Texture is { } texture)
-                        {
-                            yield return texture;
-                        }
+                        yield return texture;
                     }
                 }
-
-                continue;
             }
 
-            foreach (var slot in new[] { "layer0", "layer1" })
+            yield break;
+        }
+
+        foreach (var slot in new[] { "layer0", "layer1" })
+        {
+            if (resolution.Textures.TryGetValue(slot, out var value) && IdentifierPath(value) is { } path)
             {
-                if (resolution.Textures.TryGetValue(slot, out var value) && IdentifierPath(value) is { } path)
-                {
-                    yield return path;
-                }
+                yield return path;
             }
         }
     }

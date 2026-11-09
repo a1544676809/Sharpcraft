@@ -57,41 +57,44 @@ public sealed class HeldItemMesher
             for (var hand = 0; hand < 2; hand++)
             {
                 var offhand = hand == 1;
-                if (EntityModelResolver.ResolveHeldItemModel(entity, offhand) is not { } resolution)
-                {
-                    continue;
-                }
-
-                _quads.Clear();
-                DroppedItemMesher.CollectQuads(_quads, resolution, itemAtlas as ItemAtlas);
-                if (_quads.Count == 0)
+                var placements = EntityModelResolver.ResolveHeldItemPlacements(entity, offhand);
+                if (placements.Count == 0)
                 {
                     continue;
                 }
 
                 var armName = offhand ? "left_arm" : "right_arm";
                 var handFrame = EntityModelMesher.PartWorldMatrix(model, entity, armName, pose);
-                // Reference order with row vectors: the item's display transform applies first, then the STAB swing
-                // offset, then the hand anchor (XP -90, YP 180, per-hand offset), then the posed hand and the entity
-                // transform.
-                var display = EntityModelResolver.DisplayFor(resolution, offhand);
                 var stab = IsStabSwingOnHand(entity, offhand)
                     ? SpearAnimations.ThirdPersonAttackItemMatrix(entity.SwingAnimation, jetForward: 0f)
                     : System.Numerics.Matrix4x4.Identity;
                 var useItem = SpearUseItemFor(entity, offhand);
                 var anchor = EntityModelResolver.AnchorCoreFor(offhand, entity.IsBaby);
-                // Reference order inside the pose stack: anchor offsets, STAB offset, use-item animation, then the item
-                // display transform, which is why the row-vector product reads display → use → STAB → anchor.
-                var world = display * useItem * stab * anchor * handFrame * entityMatrix;
-                DroppedItemMesher.EmitQuads(
-                    _geometry,
-                    _quads,
-                    world,
-                    itemAtlas,
-                    resolution,
-                    grass,
-                    ref vertexFloats,
-                    ref indexCount);
+
+                // A composite item submits every member, each under its own item-model transformation. Reference order
+                // with row vectors: the member transform applies first, then the item display transform, the use-item
+                // animation, the STAB swing offset, the hand anchor, then the posed hand and the entity transform.
+                foreach (var placement in placements)
+                {
+                    _quads.Clear();
+                    DroppedItemMesher.CollectQuads(_quads, placement.Model, itemAtlas as ItemAtlas);
+                    if (_quads.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    var display = EntityModelResolver.DisplayFor(placement.Model, offhand);
+                    var world = placement.Transform * display * useItem * stab * anchor * handFrame * entityMatrix;
+                    DroppedItemMesher.EmitQuads(
+                        _geometry,
+                        _quads,
+                        world,
+                        itemAtlas,
+                        placement.Model,
+                        grass,
+                        ref vertexFloats,
+                        ref indexCount);
+                }
             }
         }
 
@@ -105,6 +108,23 @@ public sealed class HeldItemMesher
         return new EntityGeometryLayer(LayerName, EntityGeometryLayerKind.Cutout, 890, _geometry, usesItemAtlas: true);
     }
 
+    /// <summary>
+    /// Texture paths a held item needs, for both hands. The atlas pre-pass has to prime these exactly like the drop
+    /// path, otherwise a held model whose sprites were never added renders nothing.
+    /// </summary>
+    public static IEnumerable<string> ResolveTextures(EntityRenderState entity)
+    {
+        foreach (var offhand in new[] { false, true })
+        {
+            foreach (var placement in EntityModelResolver.ResolveHeldItemPlacements(entity, offhand))
+            {
+                foreach (var texture in DroppedItemMesher.ResolutionTextures(placement.Model))
+                {
+                    yield return texture;
+                }
+            }
+        }
+    }
     /// <summary>
     /// Reference <c>ArmPose.animateUseItem</c> for the spear: only the SPEAR pose overrides it, so this contributes
     /// nothing unless the holder is mid-use with a kinetic weapon in the using hand.

@@ -241,16 +241,34 @@ public static class EntityModelResolver
     /// </summary>
     public static ItemModelResolution? ResolveHeldItemModel(EntityRenderState state, bool offhand = false)
     {
+        var placements = ResolveHeldItemPlacements(state, offhand);
+        return placements.Count > 0 ? placements[0].Model : null;
+    }
+
+    /// <summary>
+    /// Every sub-model a held item submits. A composite item (a bed in hand is the visible case) draws all of its
+    /// members, each under its own item-model transformation; models that carry a special renderer are left to the
+    /// special hand layers.
+    /// </summary>
+    /// <param name="state">Render state of the holder.</param>
+    /// <param name="offhand">True for the off hand.</param>
+    public static IReadOnlyList<ItemModelPlacement> ResolveHeldItemPlacements(EntityRenderState state, bool offhand = false)
+    {
         var itemId = offhand ? state.OffHandItemId : state.MainHandItemId;
         if (ItemModels is null || Items?.ById(itemId) is not { } item)
         {
-            return null;
+            return [];
         }
 
         // The holder's using-item state selects between the model's condition branches (the shield switches to its
         // blocking model while in use).
-        var model = ItemModels.Resolve(item.Id.ToString(), state.IsUsingItem);
-        return model is null || model.SpecialRendererType is not null ? null : model;
+        var placements = ItemModels.ResolveAll(item.Id.ToString(), state.IsUsingItem);
+        if (placements.Count == 0 || placements[0].Model.SpecialRendererType is not null)
+        {
+            return [];
+        }
+
+        return placements;
     }
     /// <summary>Resolves one hand's item tint (tint index 0), or white when the item has no tint source.</summary>
     public static Vector3 ResolveHeldItemTint(EntityRenderState state, bool offhand = false)
