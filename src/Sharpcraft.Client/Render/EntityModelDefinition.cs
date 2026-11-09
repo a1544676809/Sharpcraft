@@ -61,6 +61,13 @@ public sealed class EntityModelDefinition
     public float Scale { get; }
 
     /// <summary>
+    /// Constant transform applied to this model's geometry inside its part frames. Used by layers whose geometry must
+    /// pass through an item display transform and hand anchor (the reference applies them inside the pose stack), which
+    /// the mesh DSL itself cannot express. Identity by default.
+    /// </summary>
+    public System.Numerics.Matrix4x4 LocalTransform { get; init; } = System.Numerics.Matrix4x4.Identity;
+
+    /// <summary>
     /// Eyes texture drawn over the same geometry with the reference eyes render type (emissive, depth &gt;=, no writes),
     /// or null when the model has no eyes layer (docs/decisions/0021).
     /// </summary>

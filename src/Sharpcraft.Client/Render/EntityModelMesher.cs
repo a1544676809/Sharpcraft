@@ -461,7 +461,8 @@ public sealed partial class EntityModelMesher
                     emissivePass,
                     model.ApplyRootPose,
                     ref vertexFloats,
-                    ref indexCount);
+                    ref indexCount,
+                    model.LocalTransform);
                 continue;
             }
 
@@ -1050,7 +1051,8 @@ public sealed partial class EntityModelMesher
         bool emissivePass,
         bool applyRootPose,
         ref int vertexFloats,
-        ref int indexCount)
+        ref int indexCount,
+        System.Numerics.Matrix4x4 localTransform = default)
     {
         var vertexFloatsLocal = vertexFloats;
         var indexCountLocal = indexCount;
@@ -1069,6 +1071,11 @@ public sealed partial class EntityModelMesher
             var partMatrix = node.Parent is null
                 ? Matrix4x4.CreateTranslation(-basePivot) * frame
                 : frame;
+            if (localTransform != default)
+            {
+                // The layer's constant transform acts in the geometry's own space, before the part frame.
+                partMatrix = localTransform * partMatrix;
+            }
 
             foreach (var cube in node.Cubes)
             {
