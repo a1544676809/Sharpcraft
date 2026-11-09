@@ -5,7 +5,7 @@
 title: STATE —— 跨会话进度锚点
 summary: 当前里程碑、进行中、未提交改动、阻塞、下一步、总体行动大纲
 status: 活文档
-updated: 2026-11-08
+updated: 2026-11-09
 -->
 
 # STATE —— 跨会话进度锚点
@@ -13,7 +13,7 @@ updated: 2026-11-08
 > 本文件只记录**易变状态**，且受原则 14 与架构测试硬约束：**严格控制在 150 行以内**（历史排障记录由 Git 历史保存，禁止在此写流水账）。
 > 设计结论见 `docs/modules/`，里程碑定义见 `docs/milestones/roadmap.md`，已知缺口见 `docs/specs/render/known-gaps.md`，验收矩阵见 `docs/specs/quality/vanilla-equivalence-matrix.md`。
 
-最后更新：2026-11-08
+最后更新：2026-11-09
 
 ## 当前里程碑
 
@@ -32,7 +32,7 @@ updated: 2026-11-08
 | --- | --- |
 | **实体模型与动画主线** | 真实部件模型 + 逐实体动画 provider 已大量落地（humanoid/baby/quadruped/aquatic/nether 等）；非人形装备层已树化（T-723）；成人/幼年 humanoid 四槽护甲与 Elytra 已树化（T-724/T-725）；Piglin 护甲树已接入（T-726）；剩余：T-631 held-item/item-model（解锁 SPEAR/STAB）、Parrot PARTY / Bee stinger / Guardian eye look / Piglin crossbow-hold（Happy Ghast ropes 已由 T-755、EnderDragon flight history 已由 T-757 接入） |
 | **架构：原则 14 / Phase 0 / Phase 1** | 已从 main 合入 T-654..T-661（原则 14、STATE 门禁、`PlaySession.TryHandleTransport`、`MeshingContext`、方块实体 NBT/类型注册表、`OcclusionShape`）。剩余：P0.3 帧 Pass 单轨化、P1.4 `registry_data` 动态装配、P1.5 `OcclusionShape` 完整接入 `ChunkMesher` 替换 `IsSolid` |
-| **物品渲染等效性层（L1–L4 已建）** | 审计工具 T-768/L1（1658 物品，未解析 0）、手持共享几何 T-765/L2、display 真值与旋转修正 T-767/L3、接触表 T-768/L4；剩余：special 模型掉落物（T-764，烘焙约定待评审）、手持 STAB/使用中姿态、`composite` 多子模型（T-766） |
+| **物品渲染等效性层（L1–L4 已建）** | 审计工具 T-768/L1（1658 物品，未解析 0）、手持共享几何 T-765/L2、display 真值与旋转修正 T-767/L3、接触表 T-768/L4；**T-765 手持链路已收口**（锚点、STAB、副手左手修正、special 盾牌图层 `display·anchor`+`scale(1,-1,-1)`、盾牌正面朝外、`using_item` 条件求值、长矛使用姿态与手臂姿态、`ticksUsingItem` 部分刻插值）；剩余：`composite` 多子模型（T-766，床只画一半）、special 模型掉落物（T-764，烘焙约定待评审）、`tintindex` 染色、元素 `rotation` |
 
 ## 未提交改动
 
@@ -103,13 +103,20 @@ updated: 2026-11-08
 
 > 下一阶段执行清单见 [`docs/analysis/render/next-actions-hard-constraints.md`](analysis/render/next-actions-hard-constraints.md)；下面为原有 backlog。
 
-51. **T-631 held-item/item-model**：T-631a 数据层 + T-631b Witch 药水 + T-631c `ItemAtlas`/独立 item bind group/held_item + T-631d special 描述符与 **10/13** special 模型已接。T-631e 已落地：pattern/base color 解码、盾牌 sprite 选择、逐立方体 `TextureSelector`/`TintSelector`、`DyeColors` 真值表、banner/shield 图案叠加层（6 层共面）、`SpearAnimations`（STAB 施加到 `held_item`）。**T-761 掉落物渲染已在真实服务器验收**（正版 online-mode 与会话链路已单独验证；offline 复测走 RCON summon）：自转、单剑外观、扁平物品侧面厚度均与原版一致，尺寸经真值确认（生成型 0.5×0.5×0.03125 格）。**剩余（按影响排序）**：① `tintindex` 染色（树叶/草类颜色）；② special 模型掉落物（trident/shield/chest 等）；③ 元素 `rotation`；④ 侧面只扫静态首帧；⑤ 展示框与 GUI。另：**T-759** 方块实体真实几何、**T-760** 网格 DSL `visibleFaces` 已独立登记待做。
+51. **T-631 held-item/item-model**：T-631a 数据层 + T-631b Witch 药水 + T-631c `ItemAtlas`/独立 item bind group/held_item + T-631d special 描述符与 **10/13** special 模型已接。T-631e 已落地：pattern/base color 解码、盾牌 sprite 选择、逐立方体 `TextureSelector`/`TintSelector`、`DyeColors` 真值表、banner/shield 图案叠加层（6 层共面）、`SpearAnimations`（STAB 施加到 `held_item`）。**T-761 掉落物渲染已在真实服务器验收**（正版 online-mode 与会话链路已单独验证；offline 复测走 RCON summon）：自转、单剑外观、扁平物品侧面厚度均与原版一致，尺寸经真值确认（生成型 0.5×0.5×0.03125 格）。**剩余（按影响排序）**：① special 模型掉落物（T-764）；② `composite` 多子模型（T-766，床只画一半）；③ `tintindex` 染色（树叶/草类颜色）；④ 元素 `rotation`；⑤ 侧面只扫静态首帧；⑥ 展示框与 GUI。另：**T-759** 方块实体真实几何、**T-760** 网格 DSL `visibleFaces` 已独立登记待做。
 52. **EnderDragon flight history**：已接（T-757）；剩余动画长尾（Bee stinger / Guardian eye look）按 backlog 推进。
 53. **P1.5（`Client/Render/ChunkMesher`）**：用 `OcclusionShape.IsFaceOccludedByState/Self` 替换 `IsSolid` 近似；配 `FluidMesherTests` 真值回归。
 54. **P1.4（T-042）**：提取 26.3 `registry_data` 真值向量，把服务器下发注册表动态装配进 `BlockStateLayout`。
 55. **P0.3（`Framework/Rendering`）**：`OffscreenRenderer` 与 `WindowedRenderer` 收敛为共用世界 Pass 序列。
 
 ## 最近提交
+
+- `4db8cec` fix(render): interpolate ticksUsingItem with the partial tick (T-765)
+- `3600aa1` feat(render): apply the spear arm pose from SpearAnimations (T-765)
+- `065027c` feat(render): apply the spear use-item animation from kinetic weapon values (T-765)
+- `587d738` feat(render): resolve the shield hand transform per using-item state (T-631e)
+- `8464111` fix(render): apply the reference shield model flip so the face points outward (T-769)
+- `de725b1` feat(render): bake the display and anchor chain into the shield hand layers (T-769)
 
 - `bd424b3` fix(render): decouple baby elytra UVs and preserve stepped move deltas (T-663/T-664)
 - `5a5a9c9` docs: record the latest commits in STATE
