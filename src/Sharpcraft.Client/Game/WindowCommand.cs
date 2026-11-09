@@ -416,7 +416,8 @@ internal static class WindowCommand
         [
             Sharpcraft.Client.Render.WitchModelDefinition.PotionTexture,
             Sharpcraft.Client.Render.SpecialItemModelDefinition.TridentTexture,
-            Sharpcraft.Client.Render.SpecialItemModelDefinition.ShieldTexture
+            Sharpcraft.Client.Render.SpecialItemModelDefinition.ShieldTexture,
+            Sharpcraft.Client.Render.SpecialModelDefinitions.ChestTexture
         ]);
         var itemAtlasSource = new Sharpcraft.Framework.Rendering.AtlasTextureSource();
         itemAtlasSource.Update(itemAtlas.Texture);
