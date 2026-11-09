@@ -68,6 +68,12 @@ public sealed class EntityModelDefinition
     public System.Numerics.Matrix4x4 LocalTransform { get; set; } = System.Numerics.Matrix4x4.Identity;
 
     /// <summary>
+    /// Per-state override for <see cref="LocalTransform"/>. Used where the constant differs by render state — the shield
+    /// submits a different item model (and therefore a different display transform) while its holder is using it.
+    /// </summary>
+    public Func<Sharpcraft.Client.World.EntityRenderState, System.Numerics.Matrix4x4>? LocalTransformSelector { get; set; }
+
+    /// <summary>
     /// Eyes texture drawn over the same geometry with the reference eyes render type (emissive, depth &gt;=, no writes),
     /// or null when the model has no eyes layer (docs/decisions/0021).
     /// </summary>

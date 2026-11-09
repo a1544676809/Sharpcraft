@@ -462,7 +462,7 @@ public sealed partial class EntityModelMesher
                     model.ApplyRootPose,
                     ref vertexFloats,
                     ref indexCount,
-                    model.LocalTransform);
+                    model.LocalTransformSelector?.Invoke(entity) ?? model.LocalTransform);
                 continue;
             }
 

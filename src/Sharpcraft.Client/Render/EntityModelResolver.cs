@@ -916,13 +916,18 @@ public static class EntityModelResolver
                      (SpecialItemModelDefinition.HeldShieldLeft, true)
                  })
         {
-            var display = DisplayFor(ItemModels.Resolve("minecraft:shield"), offhand);
-            var anchor = AnchorCoreFor(offhand, baby: false);
-            // ItemModelGenerators.generateShield wraps the special shield model in
-            // ShieldSpecialRenderer.DEFAULT_TRANSFORMATION = scale(1, -1, -1); it is part of the model, so it is applied
-            // before the display transform. Without it the shield is inside out: the handle ends up outside and the
-            // plate meets the hand.
-            model.LocalTransform = Matrix4x4.CreateScale(1f, -1f, -1f) * display * anchor;
+            // The reference wraps the shield in ShieldSpecialRenderer.DEFAULT_TRANSFORMATION = scale(1, -1, -1) and picks
+            // between the plain and the "_blocking" item model with a using_item condition, so the display transform
+            // changes while the holder blocks. Both are pose-independent, so the matrix is resolved per render state.
+            var capturedOffhand = offhand;
+            model.LocalTransformSelector = state =>
+            {
+                var resolution = ItemModels.Resolve("minecraft:shield", state.IsUsingItem);
+                var display = DisplayFor(resolution, capturedOffhand);
+                var anchor = AnchorCoreFor(capturedOffhand, baby: false);
+                return Matrix4x4.CreateScale(1f, -1f, -1f) * display * anchor;
+            };
+            model.LocalTransform = model.LocalTransformSelector( default(Sharpcraft.Client.World.EntityRenderState));
         }
 
         _shieldHeldTransformsApplied = true;
