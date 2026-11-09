@@ -65,6 +65,17 @@ RCON 是**服务端**通道：它能摆场景，但拿不到客户端的帧、�
 | 游戏程序集（`Common`/`Client`/`Framework`/`Server`）中环境变量读取数 = 0 | 现有 `tools/verify/check-diagnostics-separation.ps1` 与架构测试 |
 | 删除 `Sharpcraft.Client.Diagnostics` 与 `tools/Sharpcraft.DevMcp` 后：构建通过、全量测试通过、同机位截图逐像素一致 | 删除后跑一遍门禁 + 对比截图 |
 | 诊断通道不得成为启动前提（原则 8） | 任意第三方启动器按原版参数启动仍正常 |
+| **Release 构建不包含诊断代码** | `Sharpcraft.Client.Diagnostics` 的 `ProjectReference` 只在 `$(Configuration) == 'Debug'` 下存在；Release 输出目录无该 DLL、无可执行入口 |
+
+### 7.1 Release 排除机制（不用 `#if` 改游戏行为）
+
+| 层 | 机制 |
+| --- | --- |
+| 构建 | `Sharpcraft.Client.csproj` 对诊断工程的 `ProjectReference` 加 `Condition="'$(Configuration)' == 'Debug'"`；Release 既不编译也不复制该程序集 |
+| 加载 | 入口用**按名反射加载**，加载前先 `File.Exists(AppContext.BaseDirectory + "Sharpcraft.Client.Diagnostics.dll")`；Release 中文件不存在 ⇒ 直接跳过，无 `#if`、无环境变量、无全局开关 |
+| 工具 | `tools/Sharpcraft.DevMcp` 只在本地开发使用，不属于任何发布产物 |
+
+这样满足"编译不进 Release"，同时不违反原则 13 关于游戏程序集不得用条件编译改变运行时行为的约束——游戏程序集里没有任何 `#if DEBUG` 分支。
 
 ## 8. 实现切片
 
