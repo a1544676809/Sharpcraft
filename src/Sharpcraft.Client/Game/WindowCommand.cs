@@ -583,6 +583,7 @@ internal static class WindowCommand
             request,
             frames,
             visibleFor,
+
             (index, window) =>
         {
             var nowMs = frameClock.Elapsed.TotalMilliseconds;
@@ -797,6 +798,27 @@ internal static class WindowCommand
             oitLowPrecision: oitLowPrecision,
             cloudDepthEnabled: cloudDepth,
             presentMode: presentMode,
+            screenshotRequest: window => window.Input.JustPressed(Sharpcraft.Framework.Platform.InputKey.F2)
+                ? ScreenshotPaths.Next(GamePaths.DefaultUiDirectory())
+                : null,
+            screenshotCaptured: (path, pixels, width, height) =>
+            {
+                try
+                {
+                    var directory = System.IO.Path.GetDirectoryName(path);
+                    if (directory is { Length: > 0 })
+                    {
+                        System.IO.Directory.CreateDirectory(directory);
+                    }
+
+                    System.IO.File.WriteAllBytes(path, Sharpcraft.Common.Imaging.PngEncoder.EncodeRgba((int)width, (int)height, pixels));
+                    session.ChatLog.Add($"Saved screenshot as {System.IO.Path.GetFileName(path)}", 0);
+                }
+                catch (Exception error)
+                {
+                    session.ChatLog.Add($"Screenshot failed: {error.Message}", 0);
+                }
+            },
             skyDiscVanilla: skyDiscVanilla,
             skyDiscPerFrame: () =>
             {

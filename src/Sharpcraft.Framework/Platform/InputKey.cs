@@ -36,6 +36,9 @@ public enum InputKey
     /// <summary>Tab — hold to show the player list.</summary>
     Tab,
 
+    /// <summary>F2 — take a screenshot (reference <c>Options.keyScreenshot</c>).</summary>
+    F2,
+
     /// <summary>T — open the chat prompt.</summary>
     T,
 

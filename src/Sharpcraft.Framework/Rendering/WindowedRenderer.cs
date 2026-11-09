@@ -70,7 +70,9 @@ public static class WindowedRenderer
     bool cloudDepthEnabled = false,
     bool skyDiscVanilla = true,
     Func<(Vector3 Sky, Vector3 Fog, float SkyFogEnd, Vector3 Eye)>? skyDiscPerFrame = null,
-    WGPUPresentMode presentMode = WGPUPresentMode.Fifo)
+    WGPUPresentMode presentMode = WGPUPresentMode.Fifo,
+    Func<WindowHost, string?>? screenshotRequest = null,
+    Action<string, byte[], uint, uint>? screenshotCaptured = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -1732,6 +1734,14 @@ public static class WindowedRenderer
 
             var commands = encoder.Finish();
             device.Queue.Submit(commands);
+
+            // Screenshot (reference Screenshot.grab): only when the host asks, and only after the frame was submitted, so
+            // the frame target still holds the presented image (docs/specs/render/screenshot.md 2.2).
+            if (screenshotRequest?.Invoke(window) is { Length: > 0 } screenshotPath &&
+                FrameCapture.Capture(instance, device, presentation.Target, frameWidth, frameHeight) is { } screenshotPixels)
+            {
+                screenshotCaptured?.Invoke(screenshotPath, screenshotPixels, frameWidth, frameHeight);
+            }
             surface.Present();
             commands.Dispose();
             encoder.Dispose();

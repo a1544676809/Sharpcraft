@@ -153,6 +153,7 @@ public sealed class WindowInputState
         InputKey.LeftControl => (int)Keys.ControlLeft,
         InputKey.Escape => (int)Keys.Escape,
         InputKey.Tab => (int)Keys.Tab,
+        InputKey.F2 => (int)Keys.F2,
         InputKey.T => (int)Keys.T,
         InputKey.Enter => (int)Keys.Enter,
         InputKey.Slash => (int)Keys.Slash,

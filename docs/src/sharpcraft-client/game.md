@@ -62,6 +62,7 @@
 
 | Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
 | --- | --- | --- | --- | --- | --- | --- |
+| Sharpcraft.Client | Sharpcraft.Client.Game.ScreenshotPaths | Mirror | Partial | net.minecraft.client.Screenshot | ref://mc-26.3-analysis/src/net/minecraft/client/Screenshot.java | screenshots directory, timestamped file name and the _N collision suffix |
 | Sharpcraft.Client | Sharpcraft.Client.Game.SpeedOverlay | New | Full | sharpcraft.SpeedOverlay | ref://mc-26.3-analysis/src | Sharpcraft host/infra; no reference counterpart |
 | Sharpcraft.Client | Sharpcraft.Client.Game.TickLoop | Mirror | Full | net.minecraft.client.Timer | ref://mc-26.3-analysis/src/net/minecraft/client/Timer.java | Fixed-timestep accumulator + partialTick (alpha) |
 
