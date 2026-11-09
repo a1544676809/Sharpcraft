@@ -159,18 +159,11 @@ public static class WindowedRenderer
 
         var atlasView = atlasTexture.CreateView();
 
-        using var atlasSampler = device.CreateSampler(new SamplerDescriptor
-        {
-            AddressModeU = WGPUAddressMode.ClampToEdge,
-            AddressModeV = WGPUAddressMode.ClampToEdge,
-            AddressModeW = WGPUAddressMode.ClampToEdge,
-            MagFilter = WGPUFilterMode.Nearest,
-            MinFilter = WGPUFilterMode.Nearest,
-            MipmapFilter = WGPUMipmapFilterMode.Nearest,
-            LodMinClamp = 0f,
-            LodMaxClamp = 1f,
-            MaxAnisotropy = 1
-        });
+        // One sampler per address/filter state for the whole renderer (T-784 S1b): the reference keeps a SamplerCache so
+        // a state always resolves to the same sampler instead of a fresh device object.
+        using var samplers = new SamplerCache();
+        samplers.Initialize(device);
+        var atlasSampler = samplers.GetClampToEdge(FilterMode.Nearest);
 
         Shaders.ShaderPipelines.EnsureValid();
 
@@ -318,18 +311,7 @@ public static class WindowedRenderer
         using var presentation = FramePresentation.Create(device, format);
         using var blitDepthPipelineLayout = device.CreatePipelineLayout([blitDepthLayout]);
         using var blitDepthPipeline = CreateBlitDepthPipeline(device, blitDepthPipelineLayout);
-        using var blitDepthSampler = device.CreateSampler(new SamplerDescriptor
-        {
-            AddressModeU = WGPUAddressMode.ClampToEdge,
-            AddressModeV = WGPUAddressMode.ClampToEdge,
-            AddressModeW = WGPUAddressMode.ClampToEdge,
-            MagFilter = WGPUFilterMode.Nearest,
-            MinFilter = WGPUFilterMode.Nearest,
-            MipmapFilter = WGPUMipmapFilterMode.Nearest,
-            LodMinClamp = 0f,
-            LodMaxClamp = 1f,
-            MaxAnisotropy = 1
-        });
+        var blitDepthSampler = samplers.GetClampToEdge(FilterMode.Nearest);
 
         // The interface layer needs its own transform: one uniform buffer cannot hold both the world camera and
         // the orthographic projection while a single pass reads from it.
