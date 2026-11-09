@@ -326,6 +326,14 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
 ⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `DroppedItemLayoutTests`（5 项）。
+### 3.5.17 掉落物不走实体模型路径（T-763）
+
+原版 `ItemEntityRenderer extends EntityRenderer<ItemEntity, ItemEntityRenderState>`：`submit` 里只做 `translate(0, bob + minOffsetY, 0)`、按 `ItemEntity.getSpin` 自旋、再 `submitMultipleFromCount` 提交**物品模型**（与手持/GUI 同一套模型管线，display 上下文为 `ground`）。它不烘焙任何 `ModelPart` 模型，因此**不存在占位盒回退**。
+
+本仓曾把 item entity 当作普通实体交给 `EntityModelMesher`，模型解析失败后落到 `EntityModelResolver.Placeholder`（14³ 盒子，按 64×64 皮肤 UV 采样实体皮肤图集），于是每个掉落物外面都出现一个"皮肤图集碎片拼贴"的立方体——即用户报告的悬浮彩色碎片。
+
+修法：`EntityModelMesher.BuildInto` 对 `EntityTracker.ItemEntityTypeId` 直接跳过，掉落物几何只由 `DroppedItemMesher` 产出。回归：`ItemEntityModelTests`。
+
 ### 3.5.9a 手持锚点：拟合解与审计结论（T-777）
 
 `ReferenceFrame.HeldItemAnchor` 不是逐因子推导，而是**从参考捕获求解**出来的矩阵（两组姿态 × 两种 display 共四组一致）：
@@ -568,6 +576,14 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
 ⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `DroppedItemLayoutTests`（5 项）。
+### 3.5.17 掉落物不走实体模型路径（T-763）
+
+原版 `ItemEntityRenderer extends EntityRenderer<ItemEntity, ItemEntityRenderState>`：`submit` 里只做 `translate(0, bob + minOffsetY, 0)`、按 `ItemEntity.getSpin` 自旋、再 `submitMultipleFromCount` 提交**物品模型**（与手持/GUI 同一套模型管线，display 上下文为 `ground`）。它不烘焙任何 `ModelPart` 模型，因此**不存在占位盒回退**。
+
+本仓曾把 item entity 当作普通实体交给 `EntityModelMesher`，模型解析失败后落到 `EntityModelResolver.Placeholder`（14³ 盒子，按 64×64 皮肤 UV 采样实体皮肤图集），于是每个掉落物外面都出现一个"皮肤图集碎片拼贴"的立方体——即用户报告的悬浮彩色碎片。
+
+修法：`EntityModelMesher.BuildInto` 对 `EntityTracker.ItemEntityTypeId` 直接跳过，掉落物几何只由 `DroppedItemMesher` 产出。回归：`ItemEntityModelTests`。
+
 ### 3.5.9a 手持锚点：拟合解与审计结论（T-777）
 
 `ReferenceFrame.HeldItemAnchor` 不是逐因子推导，而是**从参考捕获求解**出来的矩阵（两组姿态 × 两种 display 共四组一致）：
@@ -833,6 +849,14 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
 ⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `DroppedItemLayoutTests`（5 项）。
+### 3.5.17 掉落物不走实体模型路径（T-763）
+
+原版 `ItemEntityRenderer extends EntityRenderer<ItemEntity, ItemEntityRenderState>`：`submit` 里只做 `translate(0, bob + minOffsetY, 0)`、按 `ItemEntity.getSpin` 自旋、再 `submitMultipleFromCount` 提交**物品模型**（与手持/GUI 同一套模型管线，display 上下文为 `ground`）。它不烘焙任何 `ModelPart` 模型，因此**不存在占位盒回退**。
+
+本仓曾把 item entity 当作普通实体交给 `EntityModelMesher`，模型解析失败后落到 `EntityModelResolver.Placeholder`（14³ 盒子，按 64×64 皮肤 UV 采样实体皮肤图集），于是每个掉落物外面都出现一个"皮肤图集碎片拼贴"的立方体——即用户报告的悬浮彩色碎片。
+
+修法：`EntityModelMesher.BuildInto` 对 `EntityTracker.ItemEntityTypeId` 直接跳过，掉落物几何只由 `DroppedItemMesher` 产出。回归：`ItemEntityModelTests`。
+
 ### 3.5.9a 手持锚点：拟合解与审计结论（T-777）
 
 `ReferenceFrame.HeldItemAnchor` 不是逐因子推导，而是**从参考捕获求解**出来的矩阵（两组姿态 × 两种 display 共四组一致）：

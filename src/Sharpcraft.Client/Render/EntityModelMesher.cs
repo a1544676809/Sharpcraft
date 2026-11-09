@@ -403,11 +403,20 @@ public sealed partial class EntityModelMesher
             // Grouped batches carry their own pose list indexed by the compact span; otherwise use the per-batch
             // prepared poses (indexed by the original entity order) or one explicit pose for the whole span.
             var entityPose = poses is not null ? poses[entityIndex] : usePreparedPoses ? _animationPoses[entityIndex] : pose;
+            // Item entities are drawn by DroppedItemMesher and have no entity model in the reference, so they must not
+            // fall back to the placeholder box: that box samples the entity skin at 64x64 UVs and showed up as a mosaic
+            // cube wrapped around every dropped item (T-763).
+            if (entity.TypeId == Sharpcraft.Client.World.EntityTracker.ItemEntityTypeId)
+            {
+                continue;
+            }
+
             var model = modelOverride ?? ResolveEntityModel(entity, variants);
             if (model is null)
             {
                 continue;
             }
+
 
             if (emissivePass && !HasEmissive(model))
             {
@@ -545,6 +554,7 @@ public sealed partial class EntityModelMesher
 
     public static EntityModelDefinition ResolveEntityModel(EntityRenderState entity, EntityVariantTable? variants)
     {
+
         // The player profile's slim flag selects the 3px-arm model before any registry-variant lookup; all other
         // entities (and wide players) keep the existing resolution path unchanged.
         if (entity.Slim && entity.TypeId == EntityPlaceholderMesher.PlayerEntityTypeId)
