@@ -549,6 +549,22 @@ public static class WindowedRenderer
         var cloudDepthTargetsCreated = false;
         var refTargetsCreated = false;
 
+        // Translucent item geometry gets its own reference OIT set: the reference binds OIT_ITEM to
+        // RenderTypes.ITEM_TRANSLUCENT, so item depth bounds never widen the terrain bins (sharing them bands thin
+        // items across a whole terrain depth range).
+        Texture itemDepthBoundsTexture = default;
+        TextureView itemDepthBoundsView = default;
+        Texture itemTransmittance0Texture = default;
+        TextureView itemTransmittance0View = default;
+        Texture itemTransmittance1Texture = default;
+        TextureView itemTransmittance1View = default;
+        Texture itemAccumulateTexture = default;
+        TextureView itemAccumulateView = default;
+        BindGroup itemTransmittanceBindGroup = default;
+        BindGroup itemAccumulateBindGroup = default;
+        BindGroup itemCompositeBindGroup = default;
+        var itemTargetsCreated = false;
+
         void CreateReferenceTargets()
         {
             if (refTargetsCreated)
@@ -572,6 +588,22 @@ public static class WindowedRenderer
                     cloudDepthView.Dispose();
                     cloudDepthTexture.Dispose();
                     cloudDepthTargetsCreated = false;
+                }
+
+                if (itemTargetsCreated)
+                {
+                    itemTransmittanceBindGroup.Dispose();
+                    itemAccumulateBindGroup.Dispose();
+                    itemCompositeBindGroup.Dispose();
+                    itemDepthBoundsView.Dispose();
+                    itemDepthBoundsTexture.Dispose();
+                    itemTransmittance0View.Dispose();
+                    itemTransmittance0Texture.Dispose();
+                    itemTransmittance1View.Dispose();
+                    itemTransmittance1Texture.Dispose();
+                    itemAccumulateView.Dispose();
+                    itemAccumulateTexture.Dispose();
+                    itemTargetsCreated = false;
                 }
             }
 
@@ -606,6 +638,31 @@ public static class WindowedRenderer
                     // this depth write, exactly as the reference excludes them.
                     BindGroupEntry.TextureView(3, refDepthBoundsView)
                 ]);
+            itemDepthBoundsTexture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
+            itemDepthBoundsView = itemDepthBoundsTexture.CreateView();
+            itemTransmittance0Texture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
+            itemTransmittance0View = itemTransmittance0Texture.CreateView();
+            itemTransmittance1Texture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
+            itemTransmittance1View = itemTransmittance1Texture.CreateView();
+            itemAccumulateTexture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
+            itemAccumulateView = itemAccumulateTexture.CreateView();
+            itemTransmittanceBindGroup = device.CreateBindGroup(refTransmittanceLayout, [BindGroupEntry.TextureView(0, itemDepthBoundsView)]);
+            itemAccumulateBindGroup = device.CreateBindGroup(
+                refAccumulateLayout,
+                [
+                    BindGroupEntry.TextureView(0, itemDepthBoundsView),
+                    BindGroupEntry.TextureView(1, itemTransmittance0View),
+                    BindGroupEntry.TextureView(2, itemTransmittance1View)
+                ]);
+            itemCompositeBindGroup = device.CreateBindGroup(
+                refCompositeLayout,
+                [
+                    BindGroupEntry.TextureView(0, itemAccumulateView),
+                    BindGroupEntry.TextureView(1, itemTransmittance0View),
+                    BindGroupEntry.TextureView(2, itemTransmittance1View),
+                    BindGroupEntry.TextureView(3, itemDepthBoundsView)
+                ]);
+            itemTargetsCreated = true;
             // Clouds always get an independent depth target so the cloud depth-bounds write never pollutes the main
             // depth the terrain transparency passes test against (otherwise glass/water behind a cloud are culled).
             if (cloudOit is not null)
@@ -1571,7 +1628,6 @@ public static class WindowedRenderer
                 boundsPass.SetPipeline(refDepthBoundsPipeline);
                 boundsPass.SetBindGroup(0, bindGroup);
                 DrawReferenceGeometry(boundsPass);
-                DrawItemOitGeometry(boundsPass);
                 boundsPass.End();
 
                 // Stage 1b: clip the furthest bound to the nearest opaque surface.
@@ -1628,8 +1684,6 @@ public static class WindowedRenderer
                 transmittancePass.SetBindGroup(0, bindGroup);
                 transmittancePass.SetBindGroup(1, refTransmittanceBindGroup);
                 DrawReferenceGeometry(transmittancePass);
-                transmittancePass.SetBindGroup(1, refTransmittanceBindGroup);
-                DrawItemOitGeometry(transmittancePass);
                 transmittancePass.End();
 
                 if (cloudOit is not null)
@@ -1663,8 +1717,6 @@ public static class WindowedRenderer
                 accumulatePass.SetBindGroup(0, bindGroup);
                 accumulatePass.SetBindGroup(1, refAccumulateBindGroup);
                 DrawReferenceGeometry(accumulatePass);
-                accumulatePass.SetBindGroup(1, refAccumulateBindGroup);
-                DrawItemOitGeometry(accumulatePass);
                 accumulatePass.End();
 
                 if (cloudOit is not null)
@@ -1690,6 +1742,64 @@ public static class WindowedRenderer
                 compositePass.Draw(3);
                 compositePass.End();
 
+                // Translucent items composite through their own reference OIT set (the reference binds OIT_ITEM to
+                // RenderTypes.ITEM_TRANSLUCENT). Sharing the terrain set would stretch the eight depth bins across the
+                // whole scene, which bands thin items such as a dropped pane of glass.
+                if (itemTargetsCreated)
+                {
+                    var itemBoundsPass = encoder.BeginRenderPass(
+                        [
+                            new ColorAttachment
+                            {
+                                View = itemDepthBoundsView,
+                                LoadOp = WGPULoadOp.Clear,
+                                StoreOp = WGPUStoreOp.Store,
+                                ClearValue = new WGPUColor { r = -65504f, g = -65504f, b = -65504f, a = -65504f }
+                            }
+                        ],
+                        depthLoadStore);
+                    itemBoundsPass.SetPipeline(refDepthBoundsPipeline);
+                    itemBoundsPass.SetBindGroup(0, bindGroup);
+                    DrawItemOitGeometry(itemBoundsPass);
+                    itemBoundsPass.End();
+
+                    var itemTransmittancePass = encoder.BeginRenderPass(
+                        [
+                            new ColorAttachment { View = itemTransmittance0View, LoadOp = WGPULoadOp.Clear, StoreOp = WGPUStoreOp.Store, ClearValue = new WGPUColor { r = 0f, g = 0f, b = 0f, a = 0f } },
+                            new ColorAttachment { View = itemTransmittance1View, LoadOp = WGPULoadOp.Clear, StoreOp = WGPUStoreOp.Store, ClearValue = new WGPUColor { r = 0f, g = 0f, b = 0f, a = 0f } }
+                        ],
+                        depthLoadStore);
+                    itemTransmittancePass.SetPipeline(refTransmittancePipeline);
+                    itemTransmittancePass.SetBindGroup(0, bindGroup);
+                    itemTransmittancePass.SetBindGroup(1, itemTransmittanceBindGroup);
+                    DrawItemOitGeometry(itemTransmittancePass);
+                    itemTransmittancePass.End();
+
+                    var itemAccumulatePass = encoder.BeginRenderPass(
+                        [
+                            new ColorAttachment
+                            {
+                                View = itemAccumulateView,
+                                LoadOp = WGPULoadOp.Clear,
+                                StoreOp = WGPUStoreOp.Store,
+                                ClearValue = new WGPUColor { r = 0f, g = 0f, b = 0f, a = 0f }
+                            }
+                        ],
+                        depthLoadStore);
+                    itemAccumulatePass.SetPipeline(refAccumulatePipeline);
+                    itemAccumulatePass.SetBindGroup(0, bindGroup);
+                    itemAccumulatePass.SetBindGroup(1, itemAccumulateBindGroup);
+                    DrawItemOitGeometry(itemAccumulatePass);
+                    itemAccumulatePass.End();
+
+                    var itemCompositePass = encoder.BeginRenderPass(
+                        [new ColorAttachment { View = view, LoadOp = WGPULoadOp.Load, StoreOp = WGPUStoreOp.Store }],
+                        new DepthStencilAttachment { View = depthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store });
+                    itemCompositePass.SetPipeline(refCompositePipeline);
+                    itemCompositePass.SetBindGroup(0, itemCompositeBindGroup);
+                    itemCompositePass.Draw(3);
+                    itemCompositePass.End();
+                }
                 if (hasRefStatic)
                 {
                     refStaticVertexBuffer.Dispose();
