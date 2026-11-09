@@ -25,6 +25,11 @@ public enum ItemDisplayContext : byte
     OnShelf = 9
 }
 
+/// <summary>One submitted sub-model of an item: the resolved model plus the item-model transformation above it.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.item.ItemStackRenderState.LayerRenderState", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/item/ItemStackRenderState.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "one layer: resolved model plus its local transform, matching CompositeModel child submission")]
+/// <param name="Model">Resolved model, including its own display and element data.</param>
+/// <param name="Transform">Row-vector matrix applied to the geometry before the display transform.</param>
+public readonly record struct ItemModelPlacement(ItemModelResolution Model, Matrix4x4 Transform);
 /// <summary>One resolved item display transform. Translation is already in model-space blocks.</summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.resources.model.cuboid.ItemTransform", "ref://mc-26.3-analysis/src/net/minecraft/client/resources/model/cuboid/ItemTransform.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full)]
 public readonly record struct ItemDisplayTransform(
@@ -201,6 +206,119 @@ public sealed class ItemModelResolver
         return resolved;
     }
 
+    private readonly Dictionary<(string ItemId, bool UsingItem), IReadOnlyList<ItemModelPlacement>> _placementCache = [];
+
+    /// <summary>
+    /// Resolves every sub-model an item submits. A plain item yields one placement with an identity transform; a
+    /// <c>minecraft:composite</c> yields one per member, each carrying the item-model transformation above it (beds and
+    /// their foot part are the common case). Results are cached because the drop mesher asks once per item per frame.
+    /// </summary>
+    public IReadOnlyList<ItemModelPlacement> ResolveAll(string itemId) => ResolveAll(itemId, usingItem: false);
+
+    /// <inheritdoc cref="ResolveAll(string)"/>
+    public IReadOnlyList<ItemModelPlacement> ResolveAll(string itemId, bool usingItem)
+    {
+        if (_placementCache.TryGetValue((itemId, usingItem), out var cached))
+        {
+            return cached;
+        }
+
+        var placements = ResolveAllCore(itemId, usingItem);
+        _placementCache[(itemId, usingItem)] = placements;
+        return placements;
+    }
+
+    private IReadOnlyList<ItemModelPlacement> ResolveAllCore(string itemId, bool usingItem)
+    {
+        if (!Identifier.TryParse(itemId, out var id) || _resources.Read(ResourceKind.Item, id) is not { } bytes)
+        {
+            return [];
+        }
+
+        using var document = JsonDocument.Parse(bytes);
+        if (!document.RootElement.TryGetProperty("model", out var modelElement) || modelElement.ValueKind != JsonValueKind.Object)
+        {
+            return [];
+        }
+
+        var output = new List<ItemModelPlacement>(1);
+        ExpandElement(modelElement, depth: 0, usingItem, Matrix4x4.Identity, output);
+        return output;
+    }
+
+    private void ExpandElement(
+        JsonElement model,
+        int depth,
+        bool usingItem,
+        Matrix4x4 parent,
+        List<ItemModelPlacement> output)
+    {
+        if (depth > 8 || model.ValueKind != JsonValueKind.Object)
+        {
+            return;
+        }
+
+        // The matrix of a sub-model applies to its geometry before the enclosing one.
+        var transform = TransformationOf(model) * parent;
+        if (model.TryGetProperty("type", out var typeElement) &&
+            typeElement.ValueKind == JsonValueKind.String &&
+            typeElement.GetString() == "minecraft:composite" &&
+            model.TryGetProperty("models", out var members) &&
+            members.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var member in members.EnumerateArray())
+            {
+                ExpandElement(member, depth + 1, usingItem, transform, output);
+            }
+
+            return;
+        }
+
+        if (ResolveElement(model, depth, usingItem) is { } resolved)
+        {
+            output.Add(new ItemModelPlacement(resolved, transform));
+        }
+    }
+
+    /// <summary>
+    /// The optional <c>transformation</c> block of a model element. The reference <c>Transformation.getMatrix</c> is
+    /// column-vector <c>T·L·S·R</c>, so a row-vector product applies the right rotation first and the translation last.
+    /// </summary>
+    private static Matrix4x4 TransformationOf(JsonElement model)
+    {
+        if (!model.TryGetProperty("transformation", out var element) || element.ValueKind != JsonValueKind.Object)
+        {
+            return Matrix4x4.Identity;
+        }
+
+        var translation = ReadVector(element, "translation", Vector3.Zero);
+        var scale = ReadVector(element, "scale", Vector3.One);
+        return Matrix4x4.CreateFromQuaternion(ReadQuaternion(element, "right_rotation"))
+            * Matrix4x4.CreateScale(scale)
+            * Matrix4x4.CreateFromQuaternion(ReadQuaternion(element, "left_rotation"))
+            * Matrix4x4.CreateTranslation(translation);
+    }
+
+    private static Vector3 ReadVector(JsonElement element, string name, Vector3 fallback)
+    {
+        if (!element.TryGetProperty(name, out var array) || array.ValueKind != JsonValueKind.Array || array.GetArrayLength() < 3)
+        {
+            return fallback;
+        }
+
+        return new Vector3(array[0].GetSingle(), array[1].GetSingle(), array[2].GetSingle());
+    }
+
+    private static Quaternion ReadQuaternion(JsonElement element, string name)
+    {
+        if (!element.TryGetProperty(name, out var array) || array.ValueKind != JsonValueKind.Array || array.GetArrayLength() < 4)
+        {
+            return Quaternion.Identity;
+        }
+
+        var quaternion = new Quaternion(array[0].GetSingle(), array[1].GetSingle(), array[2].GetSingle(), array[3].GetSingle());
+        return quaternion.LengthSquared() > 0f ? Quaternion.Normalize(quaternion) : Quaternion.Identity;
+    }
     /// <summary>Resolves the item selected by an <c>item_model</c> component, falling back to the item id.</summary>
     public ItemModelResolution? Resolve(string itemId, string? itemModelId) =>
         string.IsNullOrEmpty(itemModelId) ? Resolve(itemId) : ResolveModel(itemModelId);

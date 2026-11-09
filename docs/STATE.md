@@ -32,7 +32,7 @@ updated: 2026-11-09
 | --- | --- |
 | **实体模型与动画主线** | 真实部件模型 + 逐实体动画 provider 已大量落地（humanoid/baby/quadruped/aquatic/nether 等）；非人形装备层已树化（T-723）；成人/幼年 humanoid 四槽护甲与 Elytra 已树化（T-724/T-725）；Piglin 护甲树已接入（T-726）；剩余：T-631 held-item/item-model（解锁 SPEAR/STAB）、Parrot PARTY / Bee stinger / Guardian eye look / Piglin crossbow-hold（Happy Ghast ropes 已由 T-755、EnderDragon flight history 已由 T-757 接入） |
 | **架构：原则 14 / Phase 0 / Phase 1** | 已从 main 合入 T-654..T-661（原则 14、STATE 门禁、`PlaySession.TryHandleTransport`、`MeshingContext`、方块实体 NBT/类型注册表、`OcclusionShape`）。剩余：P0.3 帧 Pass 单轨化、P1.4 `registry_data` 动态装配、P1.5 `OcclusionShape` 完整接入 `ChunkMesher` 替换 `IsSolid` |
-| **物品渲染等效性层（L1–L4 已建）** | 审计工具 T-768/L1（1658 物品，未解析 0）、手持共享几何 T-765/L2、display 真值与旋转修正 T-767/L3、接触表 T-768/L4；**T-765 手持链路已收口**（锚点、STAB、副手左手修正、special 盾牌图层 `display·anchor`+`scale(1,-1,-1)`、盾牌正面朝外、`using_item` 条件求值、长矛使用姿态与手臂姿态、`ticksUsingItem` 部分刻插值）；剩余：`composite` 多子模型（T-766，床只画一半）、special 模型掉落物（T-764，烘焙约定待评审）、`tintindex` 染色、元素 `rotation` |
+| **物品渲染等效性层（L1–L4 已建）** | 审计工具 T-768/L1（1658 物品，未解析 0）、手持共享几何 T-765/L2、display 真值与旋转修正 T-767/L3、接触表 T-768/L4；**T-765 手持链路已收口**（锚点、STAB、副手左手修正、special 盾牌图层 `display·anchor`+`scale(1,-1,-1)`、盾牌正面朝外、`using_item` 条件求值、长矛使用姿态与手臂姿态、`ticksUsingItem` 部分刻插值）；剩余：special 模型掉落物（T-764，烘焙约定待评审）、`composite` 手持/GUI 路径（T-766 掉落已解决）、`tintindex` 染色、元素 `rotation` |
 
 ## 未提交改动
 

@@ -45,6 +45,25 @@ public sealed class DroppedItemMesher
 
     private readonly DynamicGeometry _geometry = new();
     private readonly List<ItemModelQuad> _quads = [];
+    private readonly List<QuadSection> _sections = [];
+
+    /// <summary>One sub-model's slice of <see cref="_quads"/>, with the transformation that places it.</summary>
+    private readonly record struct QuadSection(int Start, int End, Matrix4x4 Transform, ItemModelResolution Model);
+
+    /// <summary>Bounding box of every sub-model after its transformation, which is what the drop layout centres on.</summary>
+    private static ItemModelExtents UnionExtents(IReadOnlyList<ItemModelPlacement> placements)
+    {
+        var min = new Vector3(float.MaxValue);
+        var max = new Vector3(float.MinValue);
+        foreach (var placement in placements)
+        {
+            var extents = ItemModelExtents.ForDisplay(placement.Model, ItemDisplayContext.Ground).Transformed(placement.Transform);
+            min = Vector3.Min(min, extents.Min);
+            max = Vector3.Max(max, extents.Max);
+        }
+
+        return new ItemModelExtents(min, max);
+    }
 
     /// <summary>
     /// Builds one geometry layer for every dropped item in <paramref name="entities"/>, or null when there is nothing to
@@ -74,23 +93,33 @@ public sealed class DroppedItemMesher
                 continue;
             }
 
-            if (models.Resolve(item.Id.ToString()) is not { } resolution)
+            // A composite item model submits several sub-models (a bed is head + foot), each under its own item-model
+            // transformation; the reference draws every one of them.
+            var placements = models.ResolveAll(item.Id.ToString());
+            if (placements.Count == 0)
             {
                 continue;
             }
 
             _quads.Clear();
-            CollectQuads(_quads, resolution, itemAtlas as ItemAtlas);
-            if (_quads.Count == 0)
+            _sections.Clear();
+            foreach (var placement in placements)
+            {
+                var start = _quads.Count;
+                CollectQuads(_quads, placement.Model, itemAtlas as ItemAtlas);
+                if (_quads.Count > start)
+                {
+                    _sections.Add(new QuadSection(start, _quads.Count, placement.Transform, placement.Model));
+                }
+            }
+
+            if (_sections.Count == 0)
             {
                 continue;
             }
 
             var grass = models.GrassColormap;
-            var extents = ItemModelExtents.ForDisplay(resolution, ItemDisplayContext.Ground);
-            var ground = resolution.Display.TryGetValue(ItemDisplayContext.Ground, out var display)
-                ? display.ToMatrix()
-                : ItemDisplayTransform.None.ToMatrix();
+            var extents = UnionExtents(placements);
             var scattered = ItemEntityRenderer.UsesScatteredLayout(extents);
             var count = RenderedAmount(entity.ItemEntityCount);
 
@@ -108,23 +137,30 @@ public sealed class DroppedItemMesher
                         RandomUnit(entity.Id, itemIndex, 0),
                         RandomUnit(entity.Id, itemIndex, 1));
 
-                var world = ItemEntityRenderer.Placement(
-                    ground,
-                    extents,
-                    entity.AgeInTicks,
-                    PhaseOf(entity.Id),
-                    offset,
-                    new Vector3(entity.X, entity.Y, entity.Z));
-
-                foreach (var quad in _quads)
+                foreach (var section in _sections)
                 {
-                    var sprite = itemAtlas.Get(quad.Texture);
-                    if (sprite is null)
-                    {
-                        continue;
-                    }
+                    var ground = section.Model.Display.TryGetValue(ItemDisplayContext.Ground, out var display)
+                        ? display.ToMatrix()
+                        : ItemDisplayTransform.None.ToMatrix();
+                    var world = section.Transform * ItemEntityRenderer.Placement(
+                        ground,
+                        extents,
+                        entity.AgeInTicks,
+                        PhaseOf(entity.Id),
+                        offset,
+                        new Vector3(entity.X, entity.Y, entity.Z));
 
-                    AppendQuad(quad, world, sprite, resolution.TintFor(quad.TintIndex, grass), ref vertexFloats, ref indexCount);
+                    for (var quadIndex = section.Start; quadIndex < section.End; quadIndex++)
+                    {
+                        var quad = _quads[quadIndex];
+                        var sprite = itemAtlas.Get(quad.Texture);
+                        if (sprite is null)
+                        {
+                            continue;
+                        }
+
+                        AppendQuad(quad, world, sprite, section.Model.TintFor(quad.TintIndex, grass), ref vertexFloats, ref indexCount);
+                    }
                 }
             }
         }
