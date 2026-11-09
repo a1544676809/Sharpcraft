@@ -9,10 +9,12 @@
 // JSONL file plus a summary, so a build with a regression (an item that stops resolving, a lost display transform, a
 // bounding box that leaves the unit cube) shows up as a number instead of a screenshot.
 
+using System.Buffers.Binary;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Sharpcraft.Client.Render;
+using Sharpcraft.Common.Imaging;
 using Sharpcraft.Common.Registries;
 
 var packPath = Argument("--pack");
@@ -36,6 +38,10 @@ using var stack = new AssetStack { Policy = MissingResourcePolicy.Warn, Warn = _
     .Add(new ZipAssetSource(packPath, "base-pack"));
 using var resources = new ResourceManager(stack, 1);
 
+if (Argument("--textures") is not null)
+{
+    return TextureAudit(stack, outPath);
+}
 var models = new ItemModelResolver(resources);
 var registry = ItemRegistry.LoadEmbedded();
 
@@ -236,6 +242,85 @@ static string Classify(ItemModelResolution? resolution) => resolution switch
 static bool FitsUnitCube(ItemModelExtents box) =>
     box.Min.X >= -0.51f && box.Min.Y >= -0.51f && box.Min.Z >= -0.51f &&
     box.Max.X <= 1.51f && box.Max.Y <= 1.51f && box.Max.Z <= 1.51f;
+
+/// <summary>
+/// Audits every texture in the pack: the colour-type / bit-depth distribution the decoder has to support, and a
+/// decode round trip per file. A decoder that mis-indexes one layout (grey+alpha, T-773) shows up here as a per-file
+/// failure instead of as a rendering bug days later.
+/// </summary>
+static int TextureAudit(AssetStack stack, string outPath)
+{
+    var byFormat = new Dictionary<(int ColourType, int BitDepth), int>();
+    var failures = new List<string>();
+    var total = 0;
+
+    using var writer = new StreamWriter(outPath, append: false, Encoding.UTF8);
+    foreach (var location in stack.ListAll("assets/minecraft/textures/").OrderBy(id => id.ToString(), StringComparer.Ordinal))
+    {
+        var bytes = stack.Read(ResourceKind.Texture, location);
+        if (bytes is null)
+        {
+            continue;
+        }
+
+        total++;
+        if (bytes.Length < 26)
+        {
+            failures.Add($"{location}: truncated ({bytes.Length} bytes)");
+            continue;
+        }
+
+        var bitDepth = (int)bytes[24];
+        var colourType = (int)bytes[25];
+        var key = (colourType, bitDepth);
+        byFormat[key] = byFormat.GetValueOrDefault(key) + 1;
+
+        try
+        {
+            var image = PngDecoder.Decode(bytes);
+            var width = BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(16, 4));
+            var height = BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(20, 4));
+            if (image.Width != width || image.Height != height || image.Pixels.Length != width * height * 4)
+            {
+                failures.Add($"{location}: decoded {image.Width}x{image.Height} ({image.Pixels.Length} bytes) for a header of {width}x{height}");
+                continue;
+            }
+
+            writer.WriteLine(JsonSerializer.Serialize(new
+            {
+                texture = location.ToString(),
+                colourType,
+                bitDepth,
+                width,
+                height
+            }));
+        }
+        catch (Exception error)
+        {
+            failures.Add($"{location}: {error.GetType().Name}: {error.Message}");
+        }
+    }
+
+    Console.WriteLine($"textures: {total} PNGs, {byFormat.Count} distinct colour-type/bit-depth combinations");
+    foreach (var pair in byFormat.OrderByDescending(entry => entry.Value))
+    {
+        Console.WriteLine($"  colourType {pair.Key.ColourType} bitDepth {pair.Key.BitDepth}: {pair.Value}");
+    }
+
+    if (failures.Count > 0)
+    {
+        Console.WriteLine($"FAILED: {failures.Count} textures did not decode cleanly:");
+        foreach (var failure in failures.Take(20))
+        {
+            Console.WriteLine($"  {failure}");
+        }
+
+        return 1;
+    }
+
+    Console.WriteLine("ok: every texture decoded with matching dimensions");
+    return 0;
+}
 
 internal sealed class Counters
 {

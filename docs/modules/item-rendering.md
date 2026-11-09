@@ -545,7 +545,7 @@ index = (x * channelsPerPixel) + (second ? 1 : 0)   // 修复后
 
 **为什么只有这四种**：只有它们被资源包以灰度+alpha 存储；红/蓝等彩色玻璃是调色板或真彩，解码路径正确。冰与普通玻璃同理不受影响。方块与物品共用同一图集来源，所以两者同时出现竖条。
 
-**修复与回归**
+**修复与回归**（并新增资源格式审计：`Sharpcraft.ItemRender.Audit --textures` 统计包内 3964 张 PNG 的 11 种 colourType×bitDepth 组合并逐文件校验解码，其中 type 4 共 **401 张**，即此前全部解码错）
 
 - `PngDecoder.ReadSample` 增加 `channelsPerPixel`，灰度+alpha 两通道都按 `x * 2` 取样。
 - 回归测试 `PngDecoderTests.GrayAlphaKeepsTheGrayOfItsOwnPixel`：合成 4×1 灰度+alpha PNG，断言 `(25,25,25,163)(25,25,25,102)(25,25,25,102)(25,25,25,163)`。
@@ -787,7 +787,7 @@ index = (x * channelsPerPixel) + (second ? 1 : 0)   // 修复后
 
 **为什么只有这四种**：只有它们被资源包以灰度+alpha 存储；红/蓝等彩色玻璃是调色板或真彩，解码路径正确。冰与普通玻璃同理不受影响。方块与物品共用同一图集来源，所以两者同时出现竖条。
 
-**修复与回归**
+**修复与回归**（并新增资源格式审计：`Sharpcraft.ItemRender.Audit --textures` 统计包内 3964 张 PNG 的 11 种 colourType×bitDepth 组合并逐文件校验解码，其中 type 4 共 **401 张**，即此前全部解码错）
 
 - `PngDecoder.ReadSample` 增加 `channelsPerPixel`，灰度+alpha 两通道都按 `x * 2` 取样。
 - 回归测试 `PngDecoderTests.GrayAlphaKeepsTheGrayOfItsOwnPixel`：合成 4×1 灰度+alpha PNG，断言 `(25,25,25,163)(25,25,25,102)(25,25,25,102)(25,25,25,163)`。
@@ -1052,7 +1052,7 @@ index = (x * channelsPerPixel) + (second ? 1 : 0)   // 修复后
 
 **为什么只有这四种**：只有它们被资源包以灰度+alpha 存储；红/蓝等彩色玻璃是调色板或真彩，解码路径正确。冰与普通玻璃同理不受影响。方块与物品共用同一图集来源，所以两者同时出现竖条。
 
-**修复与回归**
+**修复与回归**（并新增资源格式审计：`Sharpcraft.ItemRender.Audit --textures` 统计包内 3964 张 PNG 的 11 种 colourType×bitDepth 组合并逐文件校验解码，其中 type 4 共 **401 张**，即此前全部解码错）
 
 - `PngDecoder.ReadSample` 增加 `channelsPerPixel`，灰度+alpha 两通道都按 `x * 2` 取样。
 - 回归测试 `PngDecoderTests.GrayAlphaKeepsTheGrayOfItsOwnPixel`：合成 4×1 灰度+alpha PNG，断言 `(25,25,25,163)(25,25,25,102)(25,25,25,102)(25,25,25,163)`。

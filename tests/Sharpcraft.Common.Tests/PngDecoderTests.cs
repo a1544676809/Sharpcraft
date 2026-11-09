@@ -145,6 +145,47 @@ public sealed class PngDecoderTests
         Assert.Equal((0x12, 0x56, 0x9A, 0xDE), image.PixelAt(0, 0));
     }
 
+    [Theory]
+    [InlineData(0, new byte[] { 10, 20 })]
+    [InlineData(2, new byte[] { 10, 11, 12, 20, 21, 22 })]
+    [InlineData(4, new byte[] { 10, 11, 20, 21 })]
+    [InlineData(6, new byte[] { 10, 11, 12, 13, 20, 21, 22, 23 })]
+    public void EveryChannelLayoutReadsItsOwnSample(int colorType, byte[] raw)
+    {
+        // One row, two pixels, distinct sample values in every channel. A decoder that computes a channel's sample
+        // index from the pixel index instead of pixel * channels reads the neighbouring channel: that is exactly the
+        // grey+alpha bug that turned stained glass into stripes (T-773), and this theory covers every layout so the
+        // next such slip fails here instead of in game.
+        var png = BuildPng(width: 2, height: 1, colorType: colorType, raw, filter: 0);
+
+        var image = PngDecoder.Decode(png);
+
+        var expected = colorType switch
+        {
+            0 => ((10, 10, 10, 255), (20, 20, 20, 255)),
+            2 => ((10, 11, 12, 255), (20, 21, 22, 255)),
+            4 => ((10, 10, 10, 11), (20, 20, 20, 21)),
+            _ => ((10, 11, 12, 13), (20, 21, 22, 23))
+        };
+        Assert.Equal(expected.Item1, image.PixelAt(0, 0));
+        Assert.Equal(expected.Item2, image.PixelAt(1, 0));
+    }
+
+    [Fact]
+    public void GrayAlphaSixteenBitKeepsTheGrayOfItsOwnPixel()
+    {
+        // Same layout at 16 bits: gray 0x1234 / alpha 0x5678, then gray 0x9ABC / alpha 0xDEF0. The 16-bit path doubles
+        // the sample index again, so it needs its own case.
+        byte[] samples = [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0];
+
+        var png = Assemble(width: 2, height: 1, bitDepth: 16, colorType: 4, interlace: 0,
+            filtered: [0, .. samples], palette: null, transparency: null);
+
+        var image = PngDecoder.Decode(png);
+
+        Assert.Equal((0x12, 0x12, 0x12, 0x56), image.PixelAt(0, 0));
+        Assert.Equal((0x9A, 0x9A, 0x9A, 0xDE), image.PixelAt(1, 0));
+    }
     [Fact]
     public void UndefinedFilterValueIsRejected()
     {
