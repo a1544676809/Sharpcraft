@@ -14,7 +14,7 @@ namespace Sharpcraft.Client.Render;
 /// the same box wearing a different sprite.
 /// </summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.entity.layers.ItemInHandLayer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/layers/ItemInHandLayer.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Item geometry reuses the item-model path; special renderers keep their own hand layers")]
-[Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-HELD-GEOMETRY", "T-765", Note = "Held items now use the shared item geometry and display transform, but SpearAnimations' STAB offset and the use-item arm pose offsets are not applied")]
+[Sharpcraft.Common.Diagnostics.Simplification("SIM-ITEM-HELD-GEOMETRY", "T-765", Note = "Held items use the shared geometry and display transform with the STAB offset and the spear use-item animation applied; kinetic weapon values come from the reference spear table, and the hit-feedback term is always zero because the client does not track ticksSinceKineticHitFeedback")]
 public sealed class HeldItemMesher
 {
     /// <summary>Layer name reported back to the renderer.</summary>
@@ -78,8 +78,11 @@ public sealed class HeldItemMesher
                 var stab = IsStabSwingOnHand(entity, offhand)
                     ? SpearAnimations.ThirdPersonAttackItemMatrix(entity.SwingAnimation, jetForward: 0f)
                     : System.Numerics.Matrix4x4.Identity;
+                var useItem = SpearUseItemFor(entity, offhand);
                 var anchor = EntityModelResolver.AnchorCoreFor(offhand, entity.IsBaby);
-                var world = display * stab * anchor * handFrame * entityMatrix;
+                // Reference order inside the pose stack: anchor offsets, STAB offset, use-item animation, then the item
+                // display transform, which is why the row-vector product reads display → use → STAB → anchor.
+                var world = display * useItem * stab * anchor * handFrame * entityMatrix;
                 DroppedItemMesher.EmitQuads(
                     _geometry,
                     _quads,
@@ -102,6 +105,31 @@ public sealed class HeldItemMesher
         return new EntityGeometryLayer(LayerName, EntityGeometryLayerKind.Cutout, 890, _geometry, usesItemAtlas: true);
     }
 
+    /// <summary>
+    /// Reference <c>ArmPose.animateUseItem</c> for the spear: only the SPEAR pose overrides it, so this contributes
+    /// nothing unless the holder is mid-use with a kinetic weapon in the using hand.
+    /// </summary>
+    private static System.Numerics.Matrix4x4 SpearUseItemFor(in EntityRenderState entity, bool offhand)
+    {
+        if (entity.TicksUsingItem == 0 || (entity.UseItemHand == 1) != offhand)
+        {
+            return System.Numerics.Matrix4x4.Identity;
+        }
+
+        var itemId = offhand ? entity.OffHandItemId : entity.MainHandItemId;
+        if (itemId <= 0 || EntityModelResolver.Items?.ById(itemId) is not { } item)
+        {
+            return System.Numerics.Matrix4x4.Identity;
+        }
+
+        if (KineticWeapons.ForItem(item.Id.Path) is not { } weapon)
+        {
+            return System.Numerics.Matrix4x4.Identity;
+        }
+
+        var parameters = SpearAnimations.UseParams.FromKineticWeapon(weapon, entity.TicksUsingItem);
+        return SpearAnimations.ThirdPersonUseItemMatrix(parameters, weapon, entity.SwingAnimation, invert: offhand ? -1 : 1);
+    }
     /// <summary>
     /// Reference condition for the STAB offset: the current swing's animation must be STAB and its hand must be the arm
     /// holding this item.

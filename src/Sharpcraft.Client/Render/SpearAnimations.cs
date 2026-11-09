@@ -71,6 +71,127 @@ public static class SpearAnimations
         return (70f * (attack - retract), jetForward * (attack - retract));
     }
 
+    /// <summary>Reference <c>Ease.inOutSine</c>.</summary>
+    public static float InOutSine(float x) => -(MathF.Cos(MathF.PI * x) - 1f) / 2f;
+
+    /// <summary>Reference <c>Ease.outBack</c>.</summary>
+    public static float OutBack(float x) =>
+        1f + (2.70158f * Cube(x - 1f)) + (1.70158f * (x - 1f) * (x - 1f));
+
+    /// <summary>Reference <c>Ease.outCubic</c>.</summary>
+    public static float OutCubic(float x) => 1f - Cube(1f - x);
+
+    /// <summary>Reference <c>Ease.outCirc</c>.</summary>
+    public static float OutCirc(float x) => MathF.Sqrt(MathF.Max(0f, 1f - ((x - 1f) * (x - 1f))));
+
+    /// <summary>Reference <c>Ease.inOutElastic</c>.</summary>
+    public static float InOutElastic(float x)
+    {
+        if (x == 0f)
+        {
+            return 0f;
+        }
+
+        if (x == 1f)
+        {
+            return 1f;
+        }
+
+        var sin = MathF.Sin((20f * x - 11.125f) * MathF.PI * 4f / 9f);
+        return x < 0.5f
+            ? (float)(-(Math.Pow(2d, (20d * x) - 10d) * sin) / 2d)
+            : (float)((Math.Pow(2d, (-20d * x) + 10d) * sin / 2d) + 1d);
+    }
+
+    private static float Cube(float x) => x * x * x;
+
+    /// <summary>
+    /// Reference <c>SpearAnimations.UseParams</c>: the ten progress values the spear use animation reads.
+    /// </summary>
+    [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.effects.SpearAnimations", "ref://mc-26.3-analysis/src/net/minecraft/client/model/effects/SpearAnimations.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Full, Note = "SpearAnimations.UseParams progress values")]
+    public readonly record struct UseParams(
+        float RaiseProgress,
+        float RaiseProgressStart,
+        float RaiseProgressMiddle,
+        float RaiseProgressEnd,
+        float SwayProgress,
+        float LowerProgress,
+        float RaiseBackProgress,
+        float SwayIntensity,
+        float SwayScaleSlow,
+        float SwayScaleFast)
+    {
+        /// <summary>Reference <c>UseParams.fromKineticWeapon(kineticWeapon, time)</c>.</summary>
+        public static UseParams FromKineticWeapon(in KineticWeapon weapon, float time)
+        {
+            var finishRaisingTick = weapon.DelayTicks;
+            var finishSwayingTick = weapon.DismountMaxTicks + finishRaisingTick;
+            var startSwayingTick = finishSwayingTick - 20;
+            var finishLoweringTick = weapon.KnockbackMaxTicks + finishRaisingTick;
+            var startLoweringTick = finishLoweringTick - 40;
+            var finishRaisingBackTick = weapon.DamageMaxTicks + finishRaisingTick;
+
+            var raiseProgress = Progress(time, 0f, finishRaisingTick);
+            var swayProgress = Progress(time, startSwayingTick, finishSwayingTick);
+            var lowerProgress = OutCubic(InOutElastic(Progress(time - 20f, startLoweringTick, finishLoweringTick)));
+            var raiseBackProgress = Progress(time, finishRaisingBackTick - 5, finishRaisingBackTick);
+            var swayIntensity = (2f * OutCirc(swayProgress)) - (2f * OutCirc(raiseBackProgress));
+
+            return new UseParams(
+                raiseProgress,
+                Progress(raiseProgress, 0f, 0.5f),
+                Progress(raiseProgress, 0.5f, 0.8f),
+                Progress(raiseProgress, 0.8f, 1f),
+                swayProgress,
+                lowerProgress,
+                raiseBackProgress,
+                swayIntensity,
+                MathF.Sin(time * 19f * (MathF.PI / 180f)) * swayIntensity,
+                MathF.Sin(time * 30f * (MathF.PI / 180f)) * swayIntensity);
+        }
+    }
+    /// <summary>
+    /// Reference <c>SpearAnimations.thirdPersonUseItem</c> as a row-vector matrix: a translate, then a rotation about -X
+    /// around <c>(0, -0.03125, 0.125)</c>, then a rotation about +Y around <c>(0, 0, 0.125)</c>. <paramref name="invert"/>
+    /// is +1 for the right arm and -1 for the left, matching the reference's <c>invert</c>.
+    /// </summary>
+    public static System.Numerics.Matrix4x4 ThirdPersonUseItemMatrix(
+        in UseParams parameters,
+        in KineticWeapon weapon,
+        float swingAnimation,
+        int invert)
+    {
+        var attack = InQuad(Progress(swingAnimation, 0.05f, 0.2f));
+        var retract = InOutExpo(Progress(swingAnimation, 0.4f, 1f));
+        var raiseProgressModified = 1f - OutBack(1f - parameters.RaiseProgress);
+
+        var translate = System.Numerics.Matrix4x4.CreateTranslation(
+            0f,
+            0f,
+            -weapon.ForwardMovement * (raiseProgressModified - parameters.RaiseBackProgress));
+
+        var rotationXDegrees = (70f * (parameters.RaiseProgress - parameters.RaiseBackProgress))
+            - (40f * (attack - retract));
+        var rotationYDegrees = invert * 90f
+            * (parameters.RaiseProgress - parameters.SwayProgress + (3f * retract) + attack);
+
+        var rotateX = AroundPivot(
+            System.Numerics.Matrix4x4.CreateRotationX(-rotationXDegrees * (MathF.PI / 180f)),
+            new System.Numerics.Vector3(0f, -0.03125f, 0.125f));
+        var rotateY = AroundPivot(
+            System.Numerics.Matrix4x4.CreateRotationY(rotationYDegrees * (MathF.PI / 180f)),
+            new System.Numerics.Vector3(0f, 0f, 0.125f));
+
+        // Reference order: translate, then the X rotation, then the Y rotation.
+        return rotateY * rotateX * translate;
+    }
+
+    private static System.Numerics.Matrix4x4 AroundPivot(
+        in System.Numerics.Matrix4x4 rotation,
+        System.Numerics.Vector3 pivot) =>
+        System.Numerics.Matrix4x4.CreateTranslation(-pivot)
+        * rotation
+        * System.Numerics.Matrix4x4.CreateTranslation(pivot);
     /// <summary>Reference <c>SwingAnimationType.STAB</c> id.</summary>
     public const int StabSwingType = 2;
 
