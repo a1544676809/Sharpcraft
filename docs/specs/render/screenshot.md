@@ -17,11 +17,11 @@
 | 抓取 | `Screenshot#takeScreenshot(RenderTarget, int downscaleFactor, Consumer<NativeImage>)` | 主目标颜色纹理 `copyTextureToBuffer` → map；逐像素读取 |
 | 像素约定 | 同上 | 行序**垂直翻转**（目标第 y 行写入图像第 `height - y - 1` 行）；alpha 强制 `0xFF` |
 | 降采样 | 同上 | `downscaleFactor > 1` 时按块平均 RGB；宽高不能被整除则抛 `IllegalArgumentException` |
-| 目录 | `Screenshot#SCREENSHOT_DIR` | `<gameDir>/screenshots`，不存在则创建 |
+| 目录 | `Screenshot#SCREENSHOT_DIR` | `<gameDir>/screenshots`，不存在则创建。**`gameDir` 来自客户端 `--gameDir`**（原版同参数），未提供时用 `<roaming appdata>/.sharpcraft`（对应原版 `%APPDATA%\.minecraft` 的位置），**不是** `%LOCALAPPDATA%` |
 | 文件名 | `Screenshot#getFile(File)` | `Util.getFilenameFormattedDateTime()`；已存在则追加 `_2`、`_3`…；扩展名 `.png` |
 | 写盘 | `Screenshot#grab(...)` | 在 IO 线程池执行；`NativeImage.writeToFile` |
-| 成功提示 | 同上 | 聊天消息 `screenshot.success`，参数为文件名，样式带下划线 + 点击打开文件事件 |
-| 失败提示 | 同上 | `screenshot.failure`，参数为异常消息；同时 `LOGGER.warn("Couldn't save screenshot")` |
+| 成功提示 | 同上 | 聊天消息 **`screenshot.success`（走语言表 `LanguageTable.Format`）**，参数为文件名，样式带下划线 + 点击打开文件事件 |
+| 失败提示 | 同上 | **`screenshot.failure`（同样走语言表）**，参数为异常消息；同时 `LOGGER.warn("Couldn't save screenshot")` |
 | 全景图 | `Screenshot#grab(File, "panorama_N.png", target, 4, …)` | 由 `grabPanoramixScreenshot` 走 6 次旋转；**本仓暂不实现**（登记为简化） |
 
 ## 2. 本仓设计

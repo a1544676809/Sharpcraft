@@ -143,6 +143,7 @@ internal static class Program
             frames,
             visibleFor,
             identity,
+            parsed.GameDirectory,
             cancellationToken).ConfigureAwait(false);
 
         Console.WriteLine($"frame written to {path}");
@@ -190,6 +191,7 @@ internal static class Program
             frames,
             visibleFor,
             identity,
+            parsed.GameDirectory,
             cancellationToken).ConfigureAwait(false);
 
         Console.WriteLine($"frame written to {path}");

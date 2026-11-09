@@ -57,6 +57,7 @@ internal static class WindowCommand
         int frames,
         TimeSpan? visibleFor,
         GameIdentity identity,
+        string? gameDirectory,
         CancellationToken cancellationToken)
     {
         ClientWorld world;
@@ -520,6 +521,12 @@ internal static class WindowCommand
             }
         }
 
+        string LocalizeScreenshot(string key, string argument)
+        {
+            // The reference posts Component.translatable("screenshot.success"/"screenshot.failure", ...), so the text
+            // comes from the loaded language table rather than a literal (docs/specs/render/screenshot.md 2.2).
+            return session.Language.Format(key, [argument]);
+        }
         var entitySource = entitySprite is { } sprite
             ? new Func<IReadOnlyList<Sharpcraft.Framework.Rendering.EntityGeometryLayer>?>(() =>
             {
@@ -799,7 +806,7 @@ internal static class WindowCommand
             cloudDepthEnabled: cloudDepth,
             presentMode: presentMode,
             screenshotRequest: window => window.Input.JustPressed(Sharpcraft.Framework.Platform.InputKey.F2)
-                ? ScreenshotPaths.Next(GamePaths.DefaultUiDirectory())
+                ? ScreenshotPaths.Next(gameDirectory ?? GamePaths.DefaultGameDirectory())
                 : null,
             screenshotCaptured: (path, pixels, width, height) =>
             {
@@ -812,11 +819,11 @@ internal static class WindowCommand
                     }
 
                     System.IO.File.WriteAllBytes(path, Sharpcraft.Common.Imaging.PngEncoder.EncodeRgba((int)width, (int)height, pixels));
-                    session.ChatLog.Add($"Saved screenshot as {System.IO.Path.GetFileName(path)}", 0);
+                    session.ChatLog.Add(LocalizeScreenshot("screenshot.success", System.IO.Path.GetFileName(path)), 0);
                 }
                 catch (Exception error)
                 {
-                    session.ChatLog.Add($"Screenshot failed: {error.Message}", 0);
+                    session.ChatLog.Add(LocalizeScreenshot("screenshot.failure", error.Message), 0);
                 }
             },
             skyDiscVanilla: skyDiscVanilla,
