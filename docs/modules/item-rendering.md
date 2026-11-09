@@ -355,6 +355,41 @@ itemRenderType = transparency.hasTranslucent()
 **已完成**：①物品 cutout 用独立 `EntityGeometryLayerKind.ItemCutout` + `fs_item_cutout`，alpha 测试 0.1（原版 `RenderPipelines.ITEM_CUTOUT` 的 `ALPHA_CUTOUT`），实体本体仍 0.5；②半透明层沿用 `Translucent`，其状态（混合 + 深度写入开 + 不剔除 + alpha 0.1）与原版 `ITEM_TRANSLUCENT` 一致。
 
 **未完成**：半透明物品的**合成顺序**。原版 `RenderTypes.ITEM_TRANSLUCENT` 挂了 `setOitPipelines(RenderPipelines.OIT_ITEM)` 且 `sortOnUpload()`，即半透明物品走 **OIT**（与方块/流体同一套参考 OIT）；我们直接在主 pass 用普通 alpha 混合，立方体多个面互相叠加 ⇒ 出现「有的面比其他面更不透明」。修法：把物品半透明图层接入现有参考 OIT pass（`oit_reference.wgsl` + `OitDepthBounds`），而不是主 pass 混合。
+### 3.5.11 半透明物品接入参考 OIT（设计，待实现 T-771）
+
+**原版依据**
+
+```java
+// RenderTypes.ITEM_TRANSLUCENT（Sheets.translucentBlockItemSheet / translucentItemSheet 的底层）
+RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
+    .setOitPipelines(RenderPipelines.OIT_ITEM)
+    .withTexture("Sampler0", texture).useLightmap().useOverlay()
+    .sortOnUpload()
+    .createRenderSetup();
+
+// RenderPipelines.ITEM_TRANSLUCENT
+.withShaderDefine("ALPHA_CUTOUT", 0.1F)
+.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+```
+
+即：半透明物品**走参考 OIT**（与方块/流体同一套 depth-bounds + 透射率 + 累积），并在上传前按视距排序。我们目前在主 pass 里直接 alpha 混合，立方体多面重叠会叠加，表现为"有的面更不透明"。
+
+**目标**
+
+物品半透明几何与方块/流体共用同一条 OIT 主路径（原则 14 单轨），不再主 pass 混合。
+
+**改造点（草案）**
+
+1. **着色器**：新增 `oit_item.wgsl`（或复用 `terrain.wgsl` 的实体采样 + `oit_reference.wgsl` 的三阶段）：
+   - 顶点输入沿用实体/物品 56 字节布局（`VertexLayout.Attributes()`，含 `spriteRect`）；
+   - `fs_item_depth_bounds` / `fs_item_transmittance` / `fs_item_accumulate` 的出参与 `oit_reference.wgsl` 一致，仅把采样换成物品图集 + `spriteRect` → 图集 UV（同 `fs_entity_translucent`）；
+   - alpha 测试 0.1（与 `ITEM_TRANSLUCENT` 一致）。
+2. **绑定组**：`group0` = 物品图集（texture+sampler）+ camera + fog + lightmap（与实体物品图层相同）；`group1` = OIT 目标（与 `ref*` 一致）。参考 `CreateDepthBoundsPipeline/TransmittancePipeline/AccumulatePipeline` 的布局参数，新增物品变体。
+3. **图层标记**：`EntityGeometryLayerKind` 增加 `ItemTranslucent`，主 pass 的绘制 switch 跳过它；OIT pass 新增一个 draw set（depth bounds → transmittance → accumulate），复用 `DynamicGeometry` 上传路径。
+4. **Mesher**：`DroppedItemMesher` / `HeldItemMesher` 的半透明图层改用 `ItemTranslucent`（当前是 `Translucent`）。
+5. **排序**：原版 `sortOnUpload()`；参考 OIT 对顺序不敏感（depth bounds + 透射率），可先不排序，实测若仍有差异再补。
+
+**验收**：冰 / 黑玻璃 / 染色玻璃在掉落与手持下与正版同机位截图一致（面与面之间无叠加加深）。
 ## 7. 风险与限制
 
 #### 3.5.9 掉落物布局：第一件不偏移
@@ -400,6 +435,41 @@ itemRenderType = transparency.hasTranslucent()
 **已完成**：①物品 cutout 用独立 `EntityGeometryLayerKind.ItemCutout` + `fs_item_cutout`，alpha 测试 0.1（原版 `RenderPipelines.ITEM_CUTOUT` 的 `ALPHA_CUTOUT`），实体本体仍 0.5；②半透明层沿用 `Translucent`，其状态（混合 + 深度写入开 + 不剔除 + alpha 0.1）与原版 `ITEM_TRANSLUCENT` 一致。
 
 **未完成**：半透明物品的**合成顺序**。原版 `RenderTypes.ITEM_TRANSLUCENT` 挂了 `setOitPipelines(RenderPipelines.OIT_ITEM)` 且 `sortOnUpload()`，即半透明物品走 **OIT**（与方块/流体同一套参考 OIT）；我们直接在主 pass 用普通 alpha 混合，立方体多个面互相叠加 ⇒ 出现「有的面比其他面更不透明」。修法：把物品半透明图层接入现有参考 OIT pass（`oit_reference.wgsl` + `OitDepthBounds`），而不是主 pass 混合。
+### 3.5.11 半透明物品接入参考 OIT（设计，待实现 T-771）
+
+**原版依据**
+
+```java
+// RenderTypes.ITEM_TRANSLUCENT（Sheets.translucentBlockItemSheet / translucentItemSheet 的底层）
+RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
+    .setOitPipelines(RenderPipelines.OIT_ITEM)
+    .withTexture("Sampler0", texture).useLightmap().useOverlay()
+    .sortOnUpload()
+    .createRenderSetup();
+
+// RenderPipelines.ITEM_TRANSLUCENT
+.withShaderDefine("ALPHA_CUTOUT", 0.1F)
+.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+```
+
+即：半透明物品**走参考 OIT**（与方块/流体同一套 depth-bounds + 透射率 + 累积），并在上传前按视距排序。我们目前在主 pass 里直接 alpha 混合，立方体多面重叠会叠加，表现为"有的面更不透明"。
+
+**目标**
+
+物品半透明几何与方块/流体共用同一条 OIT 主路径（原则 14 单轨），不再主 pass 混合。
+
+**改造点（草案）**
+
+1. **着色器**：新增 `oit_item.wgsl`（或复用 `terrain.wgsl` 的实体采样 + `oit_reference.wgsl` 的三阶段）：
+   - 顶点输入沿用实体/物品 56 字节布局（`VertexLayout.Attributes()`，含 `spriteRect`）；
+   - `fs_item_depth_bounds` / `fs_item_transmittance` / `fs_item_accumulate` 的出参与 `oit_reference.wgsl` 一致，仅把采样换成物品图集 + `spriteRect` → 图集 UV（同 `fs_entity_translucent`）；
+   - alpha 测试 0.1（与 `ITEM_TRANSLUCENT` 一致）。
+2. **绑定组**：`group0` = 物品图集（texture+sampler）+ camera + fog + lightmap（与实体物品图层相同）；`group1` = OIT 目标（与 `ref*` 一致）。参考 `CreateDepthBoundsPipeline/TransmittancePipeline/AccumulatePipeline` 的布局参数，新增物品变体。
+3. **图层标记**：`EntityGeometryLayerKind` 增加 `ItemTranslucent`，主 pass 的绘制 switch 跳过它；OIT pass 新增一个 draw set（depth bounds → transmittance → accumulate），复用 `DynamicGeometry` 上传路径。
+4. **Mesher**：`DroppedItemMesher` / `HeldItemMesher` 的半透明图层改用 `ItemTranslucent`（当前是 `Translucent`）。
+5. **排序**：原版 `sortOnUpload()`；参考 OIT 对顺序不敏感（depth bounds + 透射率），可先不排序，实测若仍有差异再补。
+
+**验收**：冰 / 黑玻璃 / 染色玻璃在掉落与手持下与正版同机位截图一致（面与面之间无叠加加深）。
 ## 7.1 已知刻意的简化（必须后续解决）
 
 对照对象为 26.3 原版（`ref://mc-26.3-analysis/src/...`）。逐项登记：原版行为 → 当前实现 → 差异 → 状态。
@@ -468,6 +538,41 @@ itemRenderType = transparency.hasTranslucent()
 **已完成**：①物品 cutout 用独立 `EntityGeometryLayerKind.ItemCutout` + `fs_item_cutout`，alpha 测试 0.1（原版 `RenderPipelines.ITEM_CUTOUT` 的 `ALPHA_CUTOUT`），实体本体仍 0.5；②半透明层沿用 `Translucent`，其状态（混合 + 深度写入开 + 不剔除 + alpha 0.1）与原版 `ITEM_TRANSLUCENT` 一致。
 
 **未完成**：半透明物品的**合成顺序**。原版 `RenderTypes.ITEM_TRANSLUCENT` 挂了 `setOitPipelines(RenderPipelines.OIT_ITEM)` 且 `sortOnUpload()`，即半透明物品走 **OIT**（与方块/流体同一套参考 OIT）；我们直接在主 pass 用普通 alpha 混合，立方体多个面互相叠加 ⇒ 出现「有的面比其他面更不透明」。修法：把物品半透明图层接入现有参考 OIT pass（`oit_reference.wgsl` + `OitDepthBounds`），而不是主 pass 混合。
+### 3.5.11 半透明物品接入参考 OIT（设计，待实现 T-771）
+
+**原版依据**
+
+```java
+// RenderTypes.ITEM_TRANSLUCENT（Sheets.translucentBlockItemSheet / translucentItemSheet 的底层）
+RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
+    .setOitPipelines(RenderPipelines.OIT_ITEM)
+    .withTexture("Sampler0", texture).useLightmap().useOverlay()
+    .sortOnUpload()
+    .createRenderSetup();
+
+// RenderPipelines.ITEM_TRANSLUCENT
+.withShaderDefine("ALPHA_CUTOUT", 0.1F)
+.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+```
+
+即：半透明物品**走参考 OIT**（与方块/流体同一套 depth-bounds + 透射率 + 累积），并在上传前按视距排序。我们目前在主 pass 里直接 alpha 混合，立方体多面重叠会叠加，表现为"有的面更不透明"。
+
+**目标**
+
+物品半透明几何与方块/流体共用同一条 OIT 主路径（原则 14 单轨），不再主 pass 混合。
+
+**改造点（草案）**
+
+1. **着色器**：新增 `oit_item.wgsl`（或复用 `terrain.wgsl` 的实体采样 + `oit_reference.wgsl` 的三阶段）：
+   - 顶点输入沿用实体/物品 56 字节布局（`VertexLayout.Attributes()`，含 `spriteRect`）；
+   - `fs_item_depth_bounds` / `fs_item_transmittance` / `fs_item_accumulate` 的出参与 `oit_reference.wgsl` 一致，仅把采样换成物品图集 + `spriteRect` → 图集 UV（同 `fs_entity_translucent`）；
+   - alpha 测试 0.1（与 `ITEM_TRANSLUCENT` 一致）。
+2. **绑定组**：`group0` = 物品图集（texture+sampler）+ camera + fog + lightmap（与实体物品图层相同）；`group1` = OIT 目标（与 `ref*` 一致）。参考 `CreateDepthBoundsPipeline/TransmittancePipeline/AccumulatePipeline` 的布局参数，新增物品变体。
+3. **图层标记**：`EntityGeometryLayerKind` 增加 `ItemTranslucent`，主 pass 的绘制 switch 跳过它；OIT pass 新增一个 draw set（depth bounds → transmittance → accumulate），复用 `DynamicGeometry` 上传路径。
+4. **Mesher**：`DroppedItemMesher` / `HeldItemMesher` 的半透明图层改用 `ItemTranslucent`（当前是 `Translucent`）。
+5. **排序**：原版 `sortOnUpload()`；参考 OIT 对顺序不敏感（depth bounds + 透射率），可先不排序，实测若仍有差异再补。
+
+**验收**：冰 / 黑玻璃 / 染色玻璃在掉落与手持下与正版同机位截图一致（面与面之间无叠加加深）。
 ## 7.2 其他限制
 
 - 26.3 的 `items/*.json` 与旧版 `models/item` 结构不同；必须按 26.3 的 item model 类型分发，不能只读旧 parent 字段。
