@@ -326,6 +326,23 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
 ⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `ItemEntityLayoutTests`（5 项）。
+#### 3.5.19 special 模型等效性逐行核对表（T-764，进行中）
+
+方法：**每一层先读原版，再读本仓实现，逐项填表**；任一行为空即视为该层未验证，不得凭截图判定正确。
+
+| # | 层 | 原版事实来源 | 本仓实现 | 状态 |
+| --- | --- | --- | --- | --- |
+| 1 | 模型定义（箱体/枢轴） | `ChestModel.java` L31-33 `addBox` + `PartPose.offset` | `SpecialModelDefinitions.Chest` | ✅ 已逐值核对（探针一致） |
+| 2 | 立方体面与 UV 表 | `ModelPart.Cube` L278-368（t*/l* 角点、六面 rect、mirror 反序） | `SpecialModelBake.EmitCube/EmitFace` | ✅ 已逐值核对（`bottom` DOWN 面四角点+UV 完全一致） |
+| 3 | 顶点缩放 | `ModelPart.Vertex.worldX/Y/Z = x/16` | `PixelsPerUnit = 16` | ✅ |
+| 4 | 枢轴语义 | `translateAndRotate`：`translate(pivot/16)` 后旋转 | `Pivot()` = `T(pivot/16)·R` | ✅ |
+| 5 | **烘焙 → 四边形映射** | 无直接对应（原版直接提交 `ModelPart`） | `AppendQuads` 角点顺序 | ⚠️ 旋转一位属中性改动，**未证明必要** |
+| 6 | **UV → 采样** | 原版直接以模型 UV（按 `xTexSize/yTexSize` 归一化）采样**整张贴图**，GL REPEAT | `WriteVertex` 写 sprite 局部 UV + `SpriteRect`，着色器 `mix(U0,U1,uv)` | ❌ **未核对**（UV>1 时会越出 sprite 矩形） |
+| 7 | 面剔除 | 原版实体渲染类型**不剔除** | 本仓 `CullMode.Back` + 双面发射 | ✅ 已用双面发射等价 |
+| 8 | 图层（cutout/translucent） | 原版按 sprite alpha 选 render type | `IsTranslucent` | ⚠️ 未针对 special 模型核对 |
+
+**下一步必须做的第 6 层核对**：读原版如何把 `ModelPart.Vertex` 的 `u/v`（已按纹理尺寸归一化）送进采样，与本仓 `SpriteRect` 映射逐项比较；同时打印 `entity/chest/normal` 在 `ItemAtlas` 里的实际 `U0/V0/U1/V1`（是否等于整张 64×64、有无 padding 内缩）。
+
 ### 3.5.18 special 模型物品（T-764 规格）
 
 #### 原版事实（已核实）
@@ -619,6 +636,23 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
 ⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `ItemEntityLayoutTests`（5 项）。
+#### 3.5.19 special 模型等效性逐行核对表（T-764，进行中）
+
+方法：**每一层先读原版，再读本仓实现，逐项填表**；任一行为空即视为该层未验证，不得凭截图判定正确。
+
+| # | 层 | 原版事实来源 | 本仓实现 | 状态 |
+| --- | --- | --- | --- | --- |
+| 1 | 模型定义（箱体/枢轴） | `ChestModel.java` L31-33 `addBox` + `PartPose.offset` | `SpecialModelDefinitions.Chest` | ✅ 已逐值核对（探针一致） |
+| 2 | 立方体面与 UV 表 | `ModelPart.Cube` L278-368（t*/l* 角点、六面 rect、mirror 反序） | `SpecialModelBake.EmitCube/EmitFace` | ✅ 已逐值核对（`bottom` DOWN 面四角点+UV 完全一致） |
+| 3 | 顶点缩放 | `ModelPart.Vertex.worldX/Y/Z = x/16` | `PixelsPerUnit = 16` | ✅ |
+| 4 | 枢轴语义 | `translateAndRotate`：`translate(pivot/16)` 后旋转 | `Pivot()` = `T(pivot/16)·R` | ✅ |
+| 5 | **烘焙 → 四边形映射** | 无直接对应（原版直接提交 `ModelPart`） | `AppendQuads` 角点顺序 | ⚠️ 旋转一位属中性改动，**未证明必要** |
+| 6 | **UV → 采样** | 原版直接以模型 UV（按 `xTexSize/yTexSize` 归一化）采样**整张贴图**，GL REPEAT | `WriteVertex` 写 sprite 局部 UV + `SpriteRect`，着色器 `mix(U0,U1,uv)` | ❌ **未核对**（UV>1 时会越出 sprite 矩形） |
+| 7 | 面剔除 | 原版实体渲染类型**不剔除** | 本仓 `CullMode.Back` + 双面发射 | ✅ 已用双面发射等价 |
+| 8 | 图层（cutout/translucent） | 原版按 sprite alpha 选 render type | `IsTranslucent` | ⚠️ 未针对 special 模型核对 |
+
+**下一步必须做的第 6 层核对**：读原版如何把 `ModelPart.Vertex` 的 `u/v`（已按纹理尺寸归一化）送进采样，与本仓 `SpriteRect` 映射逐项比较；同时打印 `entity/chest/normal` 在 `ItemAtlas` 里的实际 `U0/V0/U1/V1`（是否等于整张 64×64、有无 padding 内缩）。
+
 ### 3.5.18 special 模型物品（T-764 规格）
 
 #### 原版事实（已核实）
@@ -935,6 +969,23 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
 ⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `ItemEntityLayoutTests`（5 项）。
+#### 3.5.19 special 模型等效性逐行核对表（T-764，进行中）
+
+方法：**每一层先读原版，再读本仓实现，逐项填表**；任一行为空即视为该层未验证，不得凭截图判定正确。
+
+| # | 层 | 原版事实来源 | 本仓实现 | 状态 |
+| --- | --- | --- | --- | --- |
+| 1 | 模型定义（箱体/枢轴） | `ChestModel.java` L31-33 `addBox` + `PartPose.offset` | `SpecialModelDefinitions.Chest` | ✅ 已逐值核对（探针一致） |
+| 2 | 立方体面与 UV 表 | `ModelPart.Cube` L278-368（t*/l* 角点、六面 rect、mirror 反序） | `SpecialModelBake.EmitCube/EmitFace` | ✅ 已逐值核对（`bottom` DOWN 面四角点+UV 完全一致） |
+| 3 | 顶点缩放 | `ModelPart.Vertex.worldX/Y/Z = x/16` | `PixelsPerUnit = 16` | ✅ |
+| 4 | 枢轴语义 | `translateAndRotate`：`translate(pivot/16)` 后旋转 | `Pivot()` = `T(pivot/16)·R` | ✅ |
+| 5 | **烘焙 → 四边形映射** | 无直接对应（原版直接提交 `ModelPart`） | `AppendQuads` 角点顺序 | ⚠️ 旋转一位属中性改动，**未证明必要** |
+| 6 | **UV → 采样** | 原版直接以模型 UV（按 `xTexSize/yTexSize` 归一化）采样**整张贴图**，GL REPEAT | `WriteVertex` 写 sprite 局部 UV + `SpriteRect`，着色器 `mix(U0,U1,uv)` | ❌ **未核对**（UV>1 时会越出 sprite 矩形） |
+| 7 | 面剔除 | 原版实体渲染类型**不剔除** | 本仓 `CullMode.Back` + 双面发射 | ✅ 已用双面发射等价 |
+| 8 | 图层（cutout/translucent） | 原版按 sprite alpha 选 render type | `IsTranslucent` | ⚠️ 未针对 special 模型核对 |
+
+**下一步必须做的第 6 层核对**：读原版如何把 `ModelPart.Vertex` 的 `u/v`（已按纹理尺寸归一化）送进采样，与本仓 `SpriteRect` 映射逐项比较；同时打印 `entity/chest/normal` 在 `ItemAtlas` 里的实际 `U0/V0/U1/V1`（是否等于整张 64×64、有无 padding 内缩）。
+
 ### 3.5.18 special 模型物品（T-764 规格）
 
 #### 原版事实（已核实）
