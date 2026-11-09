@@ -302,24 +302,17 @@ public static class EntityModelResolver
             }
         }
 
-        // Reference data, captured from the shipped JOML build so it stays checkable later (probes live in
-        // tools/Sharpcraft.ItemRender.Audit/truth/):
-        //
-        //   ItemInHandLayer.submitArmWithItem, column form (each call post-multiplies):
-        //       M_ref = T_hand · Rx(-90°) · Ry(180°) · T_off · D
-        //       T_off = (±1, 2, -10)/16 adult, (0, 1, -4.5)/16 baby (not armor stand); left hand mirrors X
-        //
-        //   MatrixDump.java, full world matrix for the probe item (adult right hand, identity arm pose):
-        //       linear rows (-0.55, 0, 0) / (0, 0, -0.55) / (0, -0.55, 0), translation (-0.1, 0.9625, -0.0375)
-        //
-        // Sharpcraft's frame is that frame mirrored in X/Y, scaled by the model scale and lifted so the feet sit at zero.
-        // Solving D · anchor · hand = W after that conversion gives the closed form used by ReferenceFrame.HeldItemAnchor,
-        // and HeldItemPlacementComparisonTests pins the resulting world points against the captured reference values.        var offsetX = baby ? 0f : (offhand ? -1f : 1f);
-        var offsetY = baby ? 1f : 2f;
-        var offsetZ = baby ? -4.5f : -10f;
+        // Reference data (probes in tools/Sharpcraft.ItemRender.Audit/truth/):
+        //   ItemInHandLayer.submitArmWithItem: translateToHand → XP(-90°) → YP(180°) → T_off → item display
+        //   T_off = (±1, 2, -10)/16 adult, (0, 1, -4.5)/16 baby (not armor stand), left hand mirrors X
+        // The anchor is solved from reference world matrices for two poses and two display transforms; all four agree,
+        // so it is pose- and item-independent. See ReferenceFrame.HeldItemAnchor.
         var modelScale = baby ? 0.5f : 0.9f;
-        var reference = ReferenceFrame.HeldItemAnchor(modelScale);
-        return display * reference;
+        var offset = baby ? ReferenceFrame.BabyOffset : ReferenceFrame.AdultOffset;
+        var anchor = ReferenceFrame.HeldItemAnchor(
+            new Vector3(offhand ? -offset.X : offset.X, offset.Y, offset.Z),
+            modelScale);
+        return display * anchor;
     }
     /// <summary>Resolves the leather/dyed tint for an equipment slot, or white when the item is not dyeable.</summary>
     public static Vector3 ResolveEquipmentTint(EntityRenderState state, EquipmentAssetKind kind, int slot)

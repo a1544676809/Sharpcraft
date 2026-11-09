@@ -3,82 +3,70 @@
 
 using System.Numerics;
 using Sharpcraft.Client.Render;
-using Sharpcraft.Client.World;
 using Xunit;
 
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>
-/// The held-item anchor used to be a fixed part offset with no rotation, so a held chest rendered a full block tall and
-/// unrotated. The reference <c>ItemInHandLayer</c> instead rotates XP by -90, YP by 180, offsets by (±1, 2, -10)/16 and
-/// then applies the item model's own display transform (chest thirdperson_righthand scale is 0.375).
+/// Contract of the solved held-item anchor.
+/// <para>
+/// The anchor is independent of the item's display transform: the display is a separate factor of the reference composite
+/// (<c>H · XP(-90°) · YP(180°) · T_off · D</c>) and is applied by the caller. It depends only on the hand's <c>T_off</c>
+/// and on the holder's model scale. <see cref="HeldItemPlacementComparisonTests"/> pins the resulting world points
+/// against reference matrices for two poses and two display transforms.
+/// </para>
 /// </summary>
 public sealed class HeldItemAnchorTests
 {
-    private static readonly ItemDisplayTransform ChestThirdPerson = new(
-        new Vector3(75f, 315f, 0f),
-        new Vector3(0f, 2.5f, 0f),
-        new Vector3(0.375f, 0.375f, 0.375f));
-
     [Fact]
-    public void TheAnchorAppliesTheDisplayScale()
+    public void TheAdultAnchorMatchesTheSolvedMatrix()
     {
-        var resolution = Resolution(ChestThirdPerson);
-        var anchor = Anchor(resolution);
-        Assert.Equal(0.375f, UniformScale(anchor), 4);
+        var anchor = ReferenceFrame.HeldItemAnchor(ReferenceFrame.AdultOffset, modelScale: 0.9f);
+
+        // Solved linear part: 0.9 · Rx(-90°).
+        Assert.Equal(0.9f, anchor.M11, 5);
+        Assert.Equal(-0.9f, anchor.M23, 5);
+        Assert.Equal(0.9f, anchor.M32, 5);
+        Assert.Equal(0f, anchor.M22, 5);
+        Assert.Equal(0f, anchor.M33, 5);
+
+        // Solved translation: 0.9 · (1, -10, -2)/16.
+        Assert.Equal(0.05625f, anchor.Translation.X, 5);
+        Assert.Equal(-0.5625f, anchor.Translation.Y, 5);
+        Assert.Equal(-0.1125f, anchor.Translation.Z, 5);
     }
 
     [Fact]
-    public void WithoutADisplayTransformTheAnchorKeepsUnitScale()
+    public void TheAnchorScalesWithTheModel()
     {
-        var anchor = Anchor(Resolution(transform: null));
-        Assert.Equal(1f, UniformScale(anchor), 4);
-    }
+        var adult = ReferenceFrame.HeldItemAnchor(ReferenceFrame.AdultOffset, 0.9f);
+        var baby = ReferenceFrame.HeldItemAnchor(ReferenceFrame.BabyOffset, 0.5f);
 
-    [Fact]
-    public void TheOffHandAnchorDiffersFromTheMainHandOne()
-    {
-        // The reference offsets the hand by (±1, 2, -10)/16 and the rotations in front of it re-orient that offset, so
-        // the composed translations are not a plain mirror; the anchors must simply not coincide, with equal scale.
-        var resolution = Resolution(ChestThirdPerson);
-        var main = EntityModelResolver.AnchorFor(resolution, offhand: false, baby: false);
-        var off = EntityModelResolver.AnchorFor(resolution, offhand: true, baby: false);
-
-        Assert.NotEqual(main, off);
-        Assert.Equal(UniformScale(main), UniformScale(off), 5);
-    }
-
-    [Fact]
-    public void BabiesUseTheSmallerOffset()
-    {
-        var resolution = Resolution(ChestThirdPerson);
-        var adult = EntityModelResolver.AnchorFor(resolution, offhand: false, baby: false);
-        var baby = EntityModelResolver.AnchorFor(resolution, offhand: false, baby: true);
         Assert.NotEqual(adult.Translation, baby.Translation);
+        Assert.True(UniformScale(baby) < UniformScale(adult));
     }
 
-    private static ItemModelResolution Resolution(ItemDisplayTransform? transform)
+    [Fact]
+    public void TheLeftHandMirrorsTheOffset()
     {
-        var display = new Dictionary<ItemDisplayContext, ItemDisplayTransform>();
-        if (transform is not null)
-        {
-            display[ItemDisplayContext.ThirdPersonRightHand] = transform.Value;
-            display[ItemDisplayContext.ThirdPersonLeftHand] = transform.Value;
-        }
+        var right = ReferenceFrame.HeldItemAnchor(ReferenceFrame.AdultOffset, 0.9f);
+        var left = ReferenceFrame.HeldItemAnchor(
+            new Vector3(-ReferenceFrame.AdultOffset.X, ReferenceFrame.AdultOffset.Y, ReferenceFrame.AdultOffset.Z),
+            0.9f);
 
-        return new ItemModelResolution("minecraft:item/chest", new Dictionary<string, string>(), display);
+        Assert.Equal(-right.Translation.X, left.Translation.X, 5);
+        Assert.Equal(right.Translation.Y, left.Translation.Y, 5);
+        Assert.Equal(right.Translation.Z, left.Translation.Z, 5);
     }
 
-    private static Matrix4x4 Anchor(ItemModelResolution resolution) =>
-        EntityModelResolver.AnchorFor(resolution, offhand: false, baby: false);
-
-    private static float UniformScale(Matrix4x4 matrix)
+    [Fact]
+    public void TheAnchorDoesNotCarryTheDisplayTransform()
     {
-        var x = Vector3.TransformNormal(Vector3.UnitX, matrix).Length();
-        var y = Vector3.TransformNormal(Vector3.UnitY, matrix).Length();
-        var z = Vector3.TransformNormal(Vector3.UnitZ, matrix).Length();
-        Assert.Equal(x, y, 4);
-        Assert.Equal(x, z, 4);
-        return x;
+        // The same anchor serves a generated item and a shield: the display transform is applied outside it.
+        var anchor = ReferenceFrame.HeldItemAnchor(ReferenceFrame.AdultOffset, 0.9f);
+        Assert.Equal(0.9f, UniformScale(anchor), 5);
     }
+
+    private static float UniformScale(in Matrix4x4 matrix) =>
+        new Vector3(matrix.M11, matrix.M12, matrix.M13).Length();
 }
