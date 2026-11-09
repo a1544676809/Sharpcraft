@@ -270,6 +270,8 @@ s = 0.9 时：旋转 0.9·Rx(-90°)，平移 (0.05625, -0.56250, -0.11250)
 
 游戏内验证：四只僵尸分别手持铁剑、弓、苹果、矮草，位置在手上、朝向与原版一致（剑竖直、弓面竖直）。
 
+**副手（左手）**：原版 `LayerRenderState.applyTransform` 调用 `itemTransform.apply(displayContext.leftHand(), pose)`，其中 `ItemTransform.apply` 在左手时**额外**把 `translation.x` 与 `rotation.y/z` 取反（叠加在 `thirdperson_lefthand` JSON 条目之上）。本仓 `DisplayFor` 现已传入 `applyLeftHandFix`，真值见 `BowLeftProbe.java`、测试 `LeftHandDisplayFixTests`；实机验证副手弓竖直、与主手一致。
+
 ### 3.6 图集归属（已核实，非阻塞）
 
 26.3 把精灵分在两个图集：`atlases/items.json` 只收 `item/` 目录与盔甲纹饰置换，`atlases/blocks.json` 收 `block/` 目录与 conduit/bell/book 特例。因此方块类物品模型引用的 `block/*` 纹理在原版来自 **blocks 图集**。

@@ -298,7 +298,12 @@ public static class EntityModelResolver
         }
 
         var context = offhand ? ItemDisplayContext.ThirdPersonLeftHand : ItemDisplayContext.ThirdPersonRightHand;
-        return model.Display.TryGetValue(context, out var transform) ? transform.ToMatrix() : Matrix4x4.Identity;
+        // Reference LayerRenderState.applyTransform passes displayContext.leftHand() into ItemTransform.apply, which
+        // negates translation.x and rotation.y/z on top of the per-context JSON entry. Omitting that fix renders offhand
+        // items unmirrored — a bow lies flat instead of upright.
+        return model.Display.TryGetValue(context, out var transform)
+            ? transform.ToMatrix(applyLeftHandFix: offhand)
+            : Matrix4x4.Identity;
     }
 
     /// <summary>Anchor for an already resolved model, split out so the transform can be tested without a registry.</summary>
@@ -310,7 +315,7 @@ public static class EntityModelResolver
             var context = offhand ? ItemDisplayContext.ThirdPersonLeftHand : ItemDisplayContext.ThirdPersonRightHand;
             if (model.Display.TryGetValue(context, out var transform))
             {
-                display = transform.ToMatrix();
+                display = transform.ToMatrix(applyLeftHandFix: offhand);
             }
         }
 
