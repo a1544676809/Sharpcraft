@@ -18,6 +18,13 @@ public enum EntityGeometryLayerKind
     /// <summary>Blended, depth writes off (player overlays, drowned outer, slime outer).</summary>
     Translucent,
 
+    /// <summary>
+    /// Translucent item model geometry. The reference routes these through the reference OIT
+    /// (<c>RenderTypes.ITEM_TRANSLUCENT</c> sets <c>OIT_ITEM</c>), so the main pass skips them and the OIT stage draws
+    /// them with the item atlas bound.
+    /// </summary>
+    ItemTranslucent,
+
     /// <summary>Emissive eyes: additive, depth test greater-or-equal, no writes (not used yet).</summary>
     Emissive,
 

@@ -130,7 +130,7 @@ public sealed class HeldItemMesher
         {
             _translucentGeometry.VertexFloats = translucentFloats;
             _translucentGeometry.IndexCount = translucentIndices;
-            layers.Add(new EntityGeometryLayer($"{LayerName}_translucent", EntityGeometryLayerKind.Translucent, 895, _translucentGeometry, usesItemAtlas: true));
+            layers.Add(new EntityGeometryLayer($"{LayerName}_translucent", EntityGeometryLayerKind.ItemTranslucent, 895, _translucentGeometry, usesItemAtlas: true));
         }
 
         return layers;

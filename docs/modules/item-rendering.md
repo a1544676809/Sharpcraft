@@ -354,7 +354,9 @@ itemRenderType = transparency.hasTranslucent()
 
 **已完成**：①物品 cutout 用独立 `EntityGeometryLayerKind.ItemCutout` + `fs_item_cutout`，alpha 测试 0.1（原版 `RenderPipelines.ITEM_CUTOUT` 的 `ALPHA_CUTOUT`），实体本体仍 0.5；②半透明层沿用 `Translucent`，其状态（混合 + 深度写入开 + 不剔除 + alpha 0.1）与原版 `ITEM_TRANSLUCENT` 一致。
 
-**未完成**：半透明物品的**合成顺序**。原版 `RenderTypes.ITEM_TRANSLUCENT` 挂了 `setOitPipelines(RenderPipelines.OIT_ITEM)` 且 `sortOnUpload()`，即半透明物品走 **OIT**（与方块/流体同一套参考 OIT）；我们直接在主 pass 用普通 alpha 混合，立方体多个面互相叠加 ⇒ 出现「有的面比其他面更不透明」。修法：把物品半透明图层接入现有参考 OIT pass（`oit_reference.wgsl` + `OitDepthBounds`），而不是主 pass 混合。
+**已实现**：①半透明物品接入**参考 OIT**——`EntityGeometryLayerKind.ItemTranslucent` 图层在主 pass 跳过，改由 OIT 三阶段（depth bounds / transmittance / accumulate）以 `DrawItemOitGeometry` 绘制，复用 `ref*` 管线（其顶点布局即实体 56 字节布局）与物品图集绑定组；②**对象式贴图项**：`{"sprite": "...", "force_translucent": true}` 现在被解析（对应原版 `Material(sprite, forceTranslucent)`），此前只认字符串导致 `#all` 无法解析、玻璃六面贴图全为 null 而完全不显示；③`force_translucent` 直接决定 translucent 归类（原版 `FaceBakery` 据此打 `FLAG_TRANSLUCENT`）。实机：冰（OIT 后无叠加加深）、玻璃、黑玻璃、手持玻璃均正常。
+
+**遗留**：原版 `RenderTypes.ITEM_TRANSLUCENT` 挂了 `setOitPipelines(RenderPipelines.OIT_ITEM)` 且 `sortOnUpload()`，即半透明物品走 **OIT**（与方块/流体同一套参考 OIT）；我们直接在主 pass 用普通 alpha 混合，立方体多个面互相叠加 ⇒ 出现「有的面比其他面更不透明」。修法：把物品半透明图层接入现有参考 OIT pass（`oit_reference.wgsl` + `OitDepthBounds`），而不是主 pass 混合。
 ### 3.5.11 半透明物品接入参考 OIT（设计，待实现 T-771）
 
 **原版依据**
@@ -434,7 +436,9 @@ itemRenderType = transparency.hasTranslucent()
 
 **已完成**：①物品 cutout 用独立 `EntityGeometryLayerKind.ItemCutout` + `fs_item_cutout`，alpha 测试 0.1（原版 `RenderPipelines.ITEM_CUTOUT` 的 `ALPHA_CUTOUT`），实体本体仍 0.5；②半透明层沿用 `Translucent`，其状态（混合 + 深度写入开 + 不剔除 + alpha 0.1）与原版 `ITEM_TRANSLUCENT` 一致。
 
-**未完成**：半透明物品的**合成顺序**。原版 `RenderTypes.ITEM_TRANSLUCENT` 挂了 `setOitPipelines(RenderPipelines.OIT_ITEM)` 且 `sortOnUpload()`，即半透明物品走 **OIT**（与方块/流体同一套参考 OIT）；我们直接在主 pass 用普通 alpha 混合，立方体多个面互相叠加 ⇒ 出现「有的面比其他面更不透明」。修法：把物品半透明图层接入现有参考 OIT pass（`oit_reference.wgsl` + `OitDepthBounds`），而不是主 pass 混合。
+**已实现**：①半透明物品接入**参考 OIT**——`EntityGeometryLayerKind.ItemTranslucent` 图层在主 pass 跳过，改由 OIT 三阶段（depth bounds / transmittance / accumulate）以 `DrawItemOitGeometry` 绘制，复用 `ref*` 管线（其顶点布局即实体 56 字节布局）与物品图集绑定组；②**对象式贴图项**：`{"sprite": "...", "force_translucent": true}` 现在被解析（对应原版 `Material(sprite, forceTranslucent)`），此前只认字符串导致 `#all` 无法解析、玻璃六面贴图全为 null 而完全不显示；③`force_translucent` 直接决定 translucent 归类（原版 `FaceBakery` 据此打 `FLAG_TRANSLUCENT`）。实机：冰（OIT 后无叠加加深）、玻璃、黑玻璃、手持玻璃均正常。
+
+**遗留**：原版 `RenderTypes.ITEM_TRANSLUCENT` 挂了 `setOitPipelines(RenderPipelines.OIT_ITEM)` 且 `sortOnUpload()`，即半透明物品走 **OIT**（与方块/流体同一套参考 OIT）；我们直接在主 pass 用普通 alpha 混合，立方体多个面互相叠加 ⇒ 出现「有的面比其他面更不透明」。修法：把物品半透明图层接入现有参考 OIT pass（`oit_reference.wgsl` + `OitDepthBounds`），而不是主 pass 混合。
 ### 3.5.11 半透明物品接入参考 OIT（设计，待实现 T-771）
 
 **原版依据**
@@ -537,7 +541,9 @@ itemRenderType = transparency.hasTranslucent()
 
 **已完成**：①物品 cutout 用独立 `EntityGeometryLayerKind.ItemCutout` + `fs_item_cutout`，alpha 测试 0.1（原版 `RenderPipelines.ITEM_CUTOUT` 的 `ALPHA_CUTOUT`），实体本体仍 0.5；②半透明层沿用 `Translucent`，其状态（混合 + 深度写入开 + 不剔除 + alpha 0.1）与原版 `ITEM_TRANSLUCENT` 一致。
 
-**未完成**：半透明物品的**合成顺序**。原版 `RenderTypes.ITEM_TRANSLUCENT` 挂了 `setOitPipelines(RenderPipelines.OIT_ITEM)` 且 `sortOnUpload()`，即半透明物品走 **OIT**（与方块/流体同一套参考 OIT）；我们直接在主 pass 用普通 alpha 混合，立方体多个面互相叠加 ⇒ 出现「有的面比其他面更不透明」。修法：把物品半透明图层接入现有参考 OIT pass（`oit_reference.wgsl` + `OitDepthBounds`），而不是主 pass 混合。
+**已实现**：①半透明物品接入**参考 OIT**——`EntityGeometryLayerKind.ItemTranslucent` 图层在主 pass 跳过，改由 OIT 三阶段（depth bounds / transmittance / accumulate）以 `DrawItemOitGeometry` 绘制，复用 `ref*` 管线（其顶点布局即实体 56 字节布局）与物品图集绑定组；②**对象式贴图项**：`{"sprite": "...", "force_translucent": true}` 现在被解析（对应原版 `Material(sprite, forceTranslucent)`），此前只认字符串导致 `#all` 无法解析、玻璃六面贴图全为 null 而完全不显示；③`force_translucent` 直接决定 translucent 归类（原版 `FaceBakery` 据此打 `FLAG_TRANSLUCENT`）。实机：冰（OIT 后无叠加加深）、玻璃、黑玻璃、手持玻璃均正常。
+
+**遗留**：原版 `RenderTypes.ITEM_TRANSLUCENT` 挂了 `setOitPipelines(RenderPipelines.OIT_ITEM)` 且 `sortOnUpload()`，即半透明物品走 **OIT**（与方块/流体同一套参考 OIT）；我们直接在主 pass 用普通 alpha 混合，立方体多个面互相叠加 ⇒ 出现「有的面比其他面更不透明」。修法：把物品半透明图层接入现有参考 OIT pass（`oit_reference.wgsl` + `OitDepthBounds`），而不是主 pass 混合。
 ### 3.5.11 半透明物品接入参考 OIT（设计，待实现 T-771）
 
 **原版依据**

@@ -191,7 +191,7 @@ public sealed class DroppedItemMesher
         {
             _translucentGeometry.VertexFloats = translucentFloats;
             _translucentGeometry.IndexCount = translucentIndices;
-            layers.Add(new EntityGeometryLayer($"{LayerName}_translucent", EntityGeometryLayerKind.Translucent, 910, _translucentGeometry, usesItemAtlas: true));
+            layers.Add(new EntityGeometryLayer($"{LayerName}_translucent", EntityGeometryLayerKind.ItemTranslucent, 910, _translucentGeometry, usesItemAtlas: true));
         }
 
         return layers;
@@ -203,6 +203,13 @@ public sealed class DroppedItemMesher
     /// </summary>
     public static bool IsTranslucent(ItemModelResolution resolution, ItemAtlas? atlas)
     {
+        if (resolution.ForcesTranslucency)
+        {
+            // Reference Material.force_translucent: the quad material flag selects the translucent sheet regardless of
+            // the sprite alpha (stained glass relies on it).
+            return true;
+        }
+
         if (atlas is null)
         {
             return false;

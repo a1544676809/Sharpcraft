@@ -97,7 +97,8 @@ public sealed record ItemModelResolution(
     string? SpecialRendererType = null,
     IReadOnlyDictionary<string, string>? SpecialProperties = null,
     IReadOnlyList<ItemModelElement>? Elements = null,
-    IReadOnlyList<ItemTintSource>? Tints = null)
+    IReadOnlyList<ItemTintSource>? Tints = null,
+    bool ForcesTranslucency = false)
 {
     /// <summary>Resolved cuboids of the model, empty when the model has no <c>elements</c>.</summary>
     public IReadOnlyList<ItemModelElement> Cuboids => Elements ?? [];
@@ -516,7 +517,8 @@ public sealed class ItemModelResolver
             modelId,
             new Dictionary<string, string>(merged.Textures, StringComparer.Ordinal),
             new Dictionary<ItemDisplayContext, ItemDisplayTransform>(merged.Display),
-            Elements: ResolveElementTextures(merged.Elements, merged.Textures));
+            Elements: ResolveElementTextures(merged.Elements, merged.Textures),
+            ForcesTranslucency: merged.ForceTranslucent);
     }
 
     /// <summary>
@@ -580,6 +582,21 @@ public sealed class ItemModelResolver
                 if (texture.Value.ValueKind == JsonValueKind.String)
                 {
                     target.Textures[texture.Name] = texture.Value.GetString()!;
+                }
+                else if (texture.Value.ValueKind == JsonValueKind.Object &&
+                         texture.Value.TryGetProperty("sprite", out var spriteElement) &&
+                         spriteElement.ValueKind == JsonValueKind.String)
+                {
+                    // 26.3 allows a texture slot to be an object: {"sprite": "...", "force_translucent": true}. The
+                    // reference Material carries both fields, and FaceBakery turns force_translucent into the quad
+                    // material flag that selects the translucent item sheet.
+                    var sprite = spriteElement.GetString()!;
+                    target.Textures[texture.Name] = sprite;
+                    if (texture.Value.TryGetProperty("force_translucent", out var forceElement) &&
+                        forceElement.ValueKind == JsonValueKind.True)
+                    {
+                        target.ForceTranslucent = true;
+                    }
                 }
             }
         }
@@ -749,5 +766,8 @@ public sealed class ItemModelResolver
         public Dictionary<string, string> Textures { get; } = new(StringComparer.Ordinal);
         public Dictionary<ItemDisplayContext, ItemDisplayTransform> Display { get; } = [];
         public List<ItemModelElement> Elements { get; set; } = [];
+
+        /// <summary>True when any merged texture slot carried <c>force_translucent</c>.</summary>
+        public bool ForceTranslucent { get; set; }
     }
 }

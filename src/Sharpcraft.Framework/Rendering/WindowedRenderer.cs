@@ -1376,6 +1376,13 @@ public static class WindowedRenderer
                                 continue;
                             }
 
+                            if (entityLayerKind[layerIndex] == EntityGeometryLayerKind.ItemTranslucent)
+                            {
+                                // Composed by the reference OIT stages below, exactly as RenderTypes.ITEM_TRANSLUCENT
+                                // binds OIT_ITEM in the reference.
+                                continue;
+                            }
+
                             pass.SetPipeline(entityLayerKind[layerIndex] switch
                             {
                                 EntityGeometryLayerKind.ItemCutout => itemCutoutPipeline,
@@ -1504,6 +1511,36 @@ public static class WindowedRenderer
                     }
                 }
 
+                // Translucent item geometry joins the same reference OIT stages (the reference binds OIT_ITEM to
+                // RenderTypes.ITEM_TRANSLUCENT). The OIT pipelines already declare the entity vertex layout and the shared
+                // pipeline layout, so only the atlas bind group differs from the terrain draw.
+                void DrawItemOitGeometry(Brew.Wgpu.RenderPassEncoder p)
+                {
+                    var atlasBound = false;
+                    for (var itemLayer = 0; itemLayer < entityLayerDrawn; itemLayer++)
+                    {
+                        if (entityLayerKind[itemLayer] != EntityGeometryLayerKind.ItemTranslucent ||
+                            entityLayerIndexCount[itemLayer] == 0)
+                        {
+                            continue;
+                        }
+
+                        if (!atlasBound)
+                        {
+                            p.SetBindGroup(0, itemAtlasGpu.BindGroup);
+                            atlasBound = true;
+                        }
+
+                        p.SetVertexBuffer(0, entityLayerVertex[itemLayer], 0, entityLayerVertexCapacity[itemLayer]);
+                        p.SetIndexBuffer(
+                            entityLayerIndex[itemLayer],
+                            WGPUIndexFormat.Uint32,
+                            0,
+                            (ulong)entityLayerIndexCount[itemLayer] * sizeof(uint));
+                        p.DrawIndexed(entityLayerIndexCount[itemLayer], 1, 0, 0, 1);
+                    }
+                }
+
                 // Terrain transparency (glass/water) tests depth against the opaque main depth only; cloud depth writes
                 // go to a separate target below so they cannot cull translucent terrain behind a cloud.
                 var depthLoadStore = new DepthStencilAttachment
@@ -1534,6 +1571,7 @@ public static class WindowedRenderer
                 boundsPass.SetPipeline(refDepthBoundsPipeline);
                 boundsPass.SetBindGroup(0, bindGroup);
                 DrawReferenceGeometry(boundsPass);
+                DrawItemOitGeometry(boundsPass);
                 boundsPass.End();
 
                 // Stage 1b: clip the furthest bound to the nearest opaque surface.
@@ -1590,6 +1628,8 @@ public static class WindowedRenderer
                 transmittancePass.SetBindGroup(0, bindGroup);
                 transmittancePass.SetBindGroup(1, refTransmittanceBindGroup);
                 DrawReferenceGeometry(transmittancePass);
+                transmittancePass.SetBindGroup(1, refTransmittanceBindGroup);
+                DrawItemOitGeometry(transmittancePass);
                 transmittancePass.End();
 
                 if (cloudOit is not null)
@@ -1623,6 +1663,8 @@ public static class WindowedRenderer
                 accumulatePass.SetBindGroup(0, bindGroup);
                 accumulatePass.SetBindGroup(1, refAccumulateBindGroup);
                 DrawReferenceGeometry(accumulatePass);
+                accumulatePass.SetBindGroup(1, refAccumulateBindGroup);
+                DrawItemOitGeometry(accumulatePass);
                 accumulatePass.End();
 
                 if (cloudOit is not null)
