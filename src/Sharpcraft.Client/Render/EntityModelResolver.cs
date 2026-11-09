@@ -916,7 +916,11 @@ public static class EntityModelResolver
         {
             var display = DisplayFor(ItemModels.Resolve("minecraft:shield"), offhand);
             var anchor = AnchorCoreFor(offhand, baby: false);
-            model.LocalTransform = display * anchor;
+            // ItemModelGenerators.generateShield wraps the special shield model in
+            // ShieldSpecialRenderer.DEFAULT_TRANSFORMATION = scale(1, -1, -1); it is part of the model, so it is applied
+            // before the display transform. Without it the shield is inside out: the handle ends up outside and the
+            // plate meets the hand.
+            model.LocalTransform = Matrix4x4.CreateScale(1f, -1f, -1f) * display * anchor;
         }
 
         _shieldHeldTransformsApplied = true;
