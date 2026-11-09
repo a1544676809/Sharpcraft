@@ -20,7 +20,8 @@ public sealed class HeldItemMesher
     /// <summary>Layer name reported back to the renderer.</summary>
     public const string LayerName = "held_item";
 
-    private readonly DynamicGeometry _geometry = new();
+    private readonly DynamicGeometry _cutoutGeometry = new();
+    private readonly DynamicGeometry _translucentGeometry = new();
     private readonly List<ItemModelQuad> _quads = [];
 
     /// <summary>
@@ -28,7 +29,7 @@ public sealed class HeldItemMesher
     /// drawable item. <paramref name="poses"/> must be the poses the entity layers were built with, indexed like
     /// <paramref name="entities"/>.
     /// </summary>
-    public EntityGeometryLayer? Build(
+    public IReadOnlyList<EntityGeometryLayer> Build(
         IReadOnlyList<EntityRenderState> entities,
         IReadOnlyList<EntityPose> poses,
         EntityVariantTable? variants,
@@ -39,12 +40,15 @@ public sealed class HeldItemMesher
         ArgumentNullException.ThrowIfNull(itemAtlas);
         if (EntityModelResolver.ItemModels is not { } models)
         {
-            return null;
+            return [];
         }
 
-        _geometry.Clear();
-        var vertexFloats = 0;
-        var indexCount = 0;
+        _cutoutGeometry.Clear();
+        _translucentGeometry.Clear();
+        var cutoutFloats = 0;
+        var cutoutIndices = 0;
+        var translucentFloats = 0;
+        var translucentIndices = 0;
         var grass = models.GrassColormap;
 
         for (var index = 0; index < entities.Count; index++)
@@ -85,27 +89,51 @@ public sealed class HeldItemMesher
 
                     var display = EntityModelResolver.DisplayFor(placement.Model, offhand);
                     var world = placement.Transform * display * useItem * stab * anchor * handFrame * entityMatrix;
-                    DroppedItemMesher.EmitQuads(
-                        _geometry,
-                        _quads,
-                        world,
-                        itemAtlas,
-                        placement.Model,
-                        grass,
-                        ref vertexFloats,
-                        ref indexCount);
+                    var translucent = DroppedItemMesher.IsTranslucent(placement.Model, itemAtlas as ItemAtlas);
+                    if (translucent)
+                    {
+                        DroppedItemMesher.EmitQuads(
+                            _translucentGeometry,
+                            _quads,
+                            world,
+                            itemAtlas,
+                            placement.Model,
+                            grass,
+                            ref translucentFloats,
+                            ref translucentIndices);
+                    }
+                    else
+                    {
+                        DroppedItemMesher.EmitQuads(
+                            _cutoutGeometry,
+                            _quads,
+                            world,
+                            itemAtlas,
+                            placement.Model,
+                            grass,
+                            ref cutoutFloats,
+                            ref cutoutIndices);
+                    }
                 }
             }
         }
 
-        if (indexCount == 0)
+        var layers = new List<EntityGeometryLayer>(2);
+        if (cutoutIndices > 0)
         {
-            return null;
+            _cutoutGeometry.VertexFloats = cutoutFloats;
+            _cutoutGeometry.IndexCount = cutoutIndices;
+            layers.Add(new EntityGeometryLayer(LayerName, EntityGeometryLayerKind.Cutout, 890, _cutoutGeometry, usesItemAtlas: true));
         }
 
-        _geometry.VertexFloats = vertexFloats;
-        _geometry.IndexCount = indexCount;
-        return new EntityGeometryLayer(LayerName, EntityGeometryLayerKind.Cutout, 890, _geometry, usesItemAtlas: true);
+        if (translucentIndices > 0)
+        {
+            _translucentGeometry.VertexFloats = translucentFloats;
+            _translucentGeometry.IndexCount = translucentIndices;
+            layers.Add(new EntityGeometryLayer($"{LayerName}_translucent", EntityGeometryLayerKind.Translucent, 895, _translucentGeometry, usesItemAtlas: true));
+        }
+
+        return layers;
     }
 
     /// <summary>

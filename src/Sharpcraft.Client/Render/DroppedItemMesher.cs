@@ -43,7 +43,8 @@ public sealed class DroppedItemMesher
     /// <summary>Layer name reported back to the renderer.</summary>
     public const string LayerName = "dropped_item";
 
-    private readonly DynamicGeometry _geometry = new();
+    private readonly DynamicGeometry _cutoutGeometry = new();
+    private readonly DynamicGeometry _translucentGeometry = new();
     private readonly List<ItemModelQuad> _quads = [];
     private readonly List<QuadSection> _sections = [];
 
@@ -66,20 +67,26 @@ public sealed class DroppedItemMesher
     }
 
     /// <summary>
-    /// Builds one geometry layer for every dropped item in <paramref name="entities"/>, or null when there is nothing to
-    /// draw. UVs are sprite-local in 0..1, which is what the item atlas shader expects.
+    /// Builds the geometry for every dropped item in <paramref name="entities"/>. At most two layers come back, the
+    /// cutout one and the blended one, because the reference picks a single render type per item from its sprite alpha
+    /// (<c>Transparency.hasTranslucent()</c> selects the translucent sheet). UVs are sprite-local in 0..1, which is what
+    /// the item atlas shader expects.
     /// </summary>
-    public EntityGeometryLayer? Build(IReadOnlyList<EntityRenderState> entities, ISpriteAtlas itemAtlas)
+    public IReadOnlyList<EntityGeometryLayer> Build(IReadOnlyList<EntityRenderState> entities, ISpriteAtlas itemAtlas)
     {
         ArgumentNullException.ThrowIfNull(itemAtlas);
         if (EntityModelResolver.ItemModels is not { } models || EntityModelResolver.Items is not { } items)
         {
-            return null;
+            return [];
         }
 
-        _geometry.Clear();
-        var vertexFloats = 0;
-        var indexCount = 0;
+        _cutoutGeometry.Clear();
+        _translucentGeometry.Clear();
+        var cutoutFloats = 0;
+        var cutoutIndices = 0;
+        var translucentFloats = 0;
+        var translucentIndices = 0;
+        var atlas = itemAtlas as ItemAtlas;
 
         foreach (var entity in entities)
         {
@@ -147,6 +154,9 @@ public sealed class DroppedItemMesher
                         offset,
                         new Vector3(entity.X, entity.Y, entity.Z));
 
+                    // The reference chooses one render type for the whole item: a sprite with partial alpha makes it
+                    // translucent, everything else stays on the alpha-tested cutout sheet.
+                    var translucent = IsTranslucent(section.Model, atlas);
                     for (var quadIndex = section.Start; quadIndex < section.End; quadIndex++)
                     {
                         var quad = _quads[quadIndex];
@@ -156,20 +166,57 @@ public sealed class DroppedItemMesher
                             continue;
                         }
 
-                        AppendQuad(quad, world, sprite, section.Model.TintFor(quad.TintIndex, grass), ref vertexFloats, ref indexCount);
+                        if (translucent)
+                        {
+                            AppendQuad(_translucentGeometry, quad, world, sprite, section.Model.TintFor(quad.TintIndex, grass), ref translucentFloats, ref translucentIndices);
+                        }
+                        else
+                        {
+                            AppendQuad(_cutoutGeometry, quad, world, sprite, section.Model.TintFor(quad.TintIndex, grass), ref cutoutFloats, ref cutoutIndices);
+                        }
                     }
                 }
             }
         }
 
-        if (indexCount == 0)
+        var layers = new List<EntityGeometryLayer>(2);
+        if (cutoutIndices > 0)
         {
-            return null;
+            _cutoutGeometry.VertexFloats = cutoutFloats;
+            _cutoutGeometry.IndexCount = cutoutIndices;
+            layers.Add(new EntityGeometryLayer(LayerName, EntityGeometryLayerKind.Cutout, 900, _cutoutGeometry, usesItemAtlas: true));
         }
 
-        _geometry.VertexFloats = vertexFloats;
-        _geometry.IndexCount = indexCount;
-        return new EntityGeometryLayer(LayerName, EntityGeometryLayerKind.Cutout, 900, _geometry, usesItemAtlas: true);
+        if (translucentIndices > 0)
+        {
+            _translucentGeometry.VertexFloats = translucentFloats;
+            _translucentGeometry.IndexCount = translucentIndices;
+            layers.Add(new EntityGeometryLayer($"{LayerName}_translucent", EntityGeometryLayerKind.Translucent, 910, _translucentGeometry, usesItemAtlas: true));
+        }
+
+        return layers;
+    }
+
+    /// <summary>
+    /// True when any sprite this model uses has partial alpha, i.e. the reference
+    /// <c>Transparency.hasTranslucent()</c> that switches the item to the translucent sheet.
+    /// </summary>
+    public static bool IsTranslucent(ItemModelResolution resolution, ItemAtlas? atlas)
+    {
+        if (atlas is null)
+        {
+            return false;
+        }
+
+        foreach (var texture in ResolutionTextures(resolution))
+        {
+            if (atlas.IsTranslucent(texture))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Fills <paramref name="output"/> with the model's quads, falling back to the generated sprite box.</summary>
@@ -374,7 +421,8 @@ public sealed class DroppedItemMesher
         return (hash & 0xFFFFFF) / (float)0x1000000;
     }
 
-    private void AppendQuad(
+    private static void AppendQuad(
+        DynamicGeometry geometry,
         in ItemModelQuad quad,
         in Matrix4x4 world,
         SpriteRect sprite,
@@ -385,20 +433,20 @@ public sealed class DroppedItemMesher
         // The buffers are owned by this instance and reused, so the capacity has to be grown before writing: a fresh
         // DynamicGeometry starts with empty arrays, and the first dropped item in a session would otherwise write out of
         // bounds. Reserve doubles, so after the first frames this settles to no allocations.
-        EnsureCapacity(_geometry, vertexFloats, indexCount);
+        EnsureCapacity(geometry, vertexFloats, indexCount);
 
         var first = (uint)(vertexFloats / VertexStride);
         for (var corner = 0; corner < 4; corner++)
         {
-            WriteVertex(_geometry.Vertices, ref vertexFloats, Vector3.Transform(quad.Corner(corner), world), quad.Uv(corner), sprite, tint);
+            WriteVertex(geometry.Vertices, ref vertexFloats, Vector3.Transform(quad.Corner(corner), world), quad.Uv(corner), sprite, tint);
         }
 
-        _geometry.Indices[indexCount++] = first;
-        _geometry.Indices[indexCount++] = first + 1;
-        _geometry.Indices[indexCount++] = first + 2;
-        _geometry.Indices[indexCount++] = first;
-        _geometry.Indices[indexCount++] = first + 2;
-        _geometry.Indices[indexCount++] = first + 3;
+        geometry.Indices[indexCount++] = first;
+        geometry.Indices[indexCount++] = first + 1;
+        geometry.Indices[indexCount++] = first + 2;
+        geometry.Indices[indexCount++] = first;
+        geometry.Indices[indexCount++] = first + 2;
+        geometry.Indices[indexCount++] = first + 3;
     }
 
     /// <summary>

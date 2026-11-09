@@ -326,6 +326,35 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
 ⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `DroppedItemLayoutTests`（5 项）。
+### 3.5.10 物品渲染类型：按贴图 alpha 判定（进行中）
+
+原版判据（已核实）：
+
+```java
+// NativeImage.computeTransparency：逐像素分类
+alpha == 0        -> hasTransparent
+0 < alpha < 255   -> hasTranslucent
+
+// BakedQuad：整件物品选一个渲染类型
+itemRenderType = transparency.hasTranslucent()
+    ? Sheets.translucentBlockItemSheet()   // RenderTypes.itemTranslucent: 混合 + ALPHA_CUTOUT 0.1 + DepthStencilState.DEFAULT
+    : Sheets.cutoutBlockItemSheet();       // RenderTypes.itemCutout:    ALPHA_CUTOUT 0.1，不混合
+```
+
+26.3 资源包实测 alpha 分布（决定归类）：
+
+| 贴图 | alpha 0 | 半透明 | 不透明 | 原版归类 |
+| --- | --- | --- | --- | --- |
+| `block/glass` | 191 | 0 | 65 | cutout |
+| `block/black_stained_glass` | 0 | 256 | 0 | translucent |
+| `block/ice` | 0 | 256 | 0 | translucent |
+| `block/blue_ice` | 0 | 0 | 256 | 不透明（cutout 等价） |
+
+已实现：`ItemAtlas` 记录每个 sprite 的半透明标记（`HasTranslucentPixel` ↔ `computeTransparency`），掉落与手持各拆 cutout / translucent 两层。
+
+**未完成**：
+1. 半透明层复用了实体用的 `EntityGeometryLayerKind.Translucent`（关闭深度写入、可能不剔除），因此冰会露出背面；原版 item 半透明用 `DepthStencilState.DEFAULT`（深度写入开）+ `ALPHA_CUTOUT 0.1`，需要专门的 item-translucent 图层状态。
+2. `block/glass`（cutout）与 `block/black_stained_glass`（translucent）实测仍不显示，原因待定位（疑 sprite 未进图集或图层未提交）。
 ## 7. 风险与限制
 
 #### 3.5.9 掉落物布局：第一件不偏移
@@ -342,6 +371,35 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
 ⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `DroppedItemLayoutTests`（5 项）。
+### 3.5.10 物品渲染类型：按贴图 alpha 判定（进行中）
+
+原版判据（已核实）：
+
+```java
+// NativeImage.computeTransparency：逐像素分类
+alpha == 0        -> hasTransparent
+0 < alpha < 255   -> hasTranslucent
+
+// BakedQuad：整件物品选一个渲染类型
+itemRenderType = transparency.hasTranslucent()
+    ? Sheets.translucentBlockItemSheet()   // RenderTypes.itemTranslucent: 混合 + ALPHA_CUTOUT 0.1 + DepthStencilState.DEFAULT
+    : Sheets.cutoutBlockItemSheet();       // RenderTypes.itemCutout:    ALPHA_CUTOUT 0.1，不混合
+```
+
+26.3 资源包实测 alpha 分布（决定归类）：
+
+| 贴图 | alpha 0 | 半透明 | 不透明 | 原版归类 |
+| --- | --- | --- | --- | --- |
+| `block/glass` | 191 | 0 | 65 | cutout |
+| `block/black_stained_glass` | 0 | 256 | 0 | translucent |
+| `block/ice` | 0 | 256 | 0 | translucent |
+| `block/blue_ice` | 0 | 0 | 256 | 不透明（cutout 等价） |
+
+已实现：`ItemAtlas` 记录每个 sprite 的半透明标记（`HasTranslucentPixel` ↔ `computeTransparency`），掉落与手持各拆 cutout / translucent 两层。
+
+**未完成**：
+1. 半透明层复用了实体用的 `EntityGeometryLayerKind.Translucent`（关闭深度写入、可能不剔除），因此冰会露出背面；原版 item 半透明用 `DepthStencilState.DEFAULT`（深度写入开）+ `ALPHA_CUTOUT 0.1`，需要专门的 item-translucent 图层状态。
+2. `block/glass`（cutout）与 `block/black_stained_glass`（translucent）实测仍不显示，原因待定位（疑 sprite 未进图集或图层未提交）。
 ## 7.1 已知刻意的简化（必须后续解决）
 
 对照对象为 26.3 原版（`ref://mc-26.3-analysis/src/...`）。逐项登记：原版行为 → 当前实现 → 差异 → 状态。
@@ -381,6 +439,35 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
 ⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `DroppedItemLayoutTests`（5 项）。
+### 3.5.10 物品渲染类型：按贴图 alpha 判定（进行中）
+
+原版判据（已核实）：
+
+```java
+// NativeImage.computeTransparency：逐像素分类
+alpha == 0        -> hasTransparent
+0 < alpha < 255   -> hasTranslucent
+
+// BakedQuad：整件物品选一个渲染类型
+itemRenderType = transparency.hasTranslucent()
+    ? Sheets.translucentBlockItemSheet()   // RenderTypes.itemTranslucent: 混合 + ALPHA_CUTOUT 0.1 + DepthStencilState.DEFAULT
+    : Sheets.cutoutBlockItemSheet();       // RenderTypes.itemCutout:    ALPHA_CUTOUT 0.1，不混合
+```
+
+26.3 资源包实测 alpha 分布（决定归类）：
+
+| 贴图 | alpha 0 | 半透明 | 不透明 | 原版归类 |
+| --- | --- | --- | --- | --- |
+| `block/glass` | 191 | 0 | 65 | cutout |
+| `block/black_stained_glass` | 0 | 256 | 0 | translucent |
+| `block/ice` | 0 | 256 | 0 | translucent |
+| `block/blue_ice` | 0 | 0 | 256 | 不透明（cutout 等价） |
+
+已实现：`ItemAtlas` 记录每个 sprite 的半透明标记（`HasTranslucentPixel` ↔ `computeTransparency`），掉落与手持各拆 cutout / translucent 两层。
+
+**未完成**：
+1. 半透明层复用了实体用的 `EntityGeometryLayerKind.Translucent`（关闭深度写入、可能不剔除），因此冰会露出背面；原版 item 半透明用 `DepthStencilState.DEFAULT`（深度写入开）+ `ALPHA_CUTOUT 0.1`，需要专门的 item-translucent 图层状态。
+2. `block/glass`（cutout）与 `block/black_stained_glass`（translucent）实测仍不显示，原因待定位（疑 sprite 未进图集或图层未提交）。
 ## 7.2 其他限制
 
 - 26.3 的 `items/*.json` 与旧版 `models/item` 结构不同；必须按 26.3 的 item model 类型分发，不能只读旧 parent 字段。

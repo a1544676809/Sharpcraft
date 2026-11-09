@@ -453,12 +453,12 @@ internal static class WindowCommand
             // Drops and held items both consume the shared item geometry; held items additionally need the poses the
             // entity layers were just built with, so this runs after BuildLayers.
             var extra = new List<Sharpcraft.Framework.Rendering.EntityGeometryLayer>(2);
-            if (droppedItemMesher.Build(entities, itemAtlas) is { } dropLayer)
+            foreach (var dropLayer in droppedItemMesher.Build(entities, itemAtlas))
             {
                 extra.Add(dropLayer);
             }
 
-            if (heldItemMesher.Build(entities, modelMesher.PreparedPoses, variantTable, itemAtlas) is { } heldLayer)
+            foreach (var heldLayer in heldItemMesher.Build(entities, modelMesher.PreparedPoses, variantTable, itemAtlas))
             {
                 extra.Add(heldLayer);
             }

@@ -19,17 +19,20 @@ public sealed class ItemAtlas : ISpriteAtlas
 {
     private readonly Dictionary<string, SpriteRect> _sprites;
     private readonly Dictionary<string, TextureData> _images;
+    private readonly Dictionary<string, bool> _translucent;
 
     private ItemAtlas(
         TextureData texture,
         Dictionary<string, SpriteRect> sprites,
         Dictionary<string, TextureData> images,
+        Dictionary<string, bool> translucent,
         int cellWidth,
         int cellHeight)
     {
         Texture = texture;
         _sprites = sprites;
         _images = images;
+        _translucent = translucent;
         CellWidth = cellWidth;
         CellHeight = cellHeight;
     }
@@ -42,6 +45,13 @@ public sealed class ItemAtlas : ISpriteAtlas
 
     /// <summary>Cell height in pixels.</summary>
     public int CellHeight { get; }
+
+    /// <summary>
+    /// True when this sprite contains any pixel with partial alpha (0 &lt; a &lt; 255), i.e. the reference
+    /// <c>Transparency.hasTranslucent()</c> that decides between the cutout and the translucent item render type.
+    /// </summary>
+    public bool IsTranslucent(string? texturePath) =>
+        texturePath is not null && _translucent.TryGetValue(texturePath, out var translucent) && translucent;
 
     /// <summary>Sprite rect for an item texture path, or null when it was not loaded.</summary>
     public SpriteRect? Get(string? texturePath) =>
@@ -91,12 +101,14 @@ public sealed class ItemAtlas : ISpriteAtlas
         }
 
         var imageCopy = new Dictionary<string, TextureData>(images.Count, StringComparer.Ordinal);
+        var translucent = new Dictionary<string, bool>(images.Count, StringComparer.Ordinal);
         foreach (var pair in images)
         {
             imageCopy[pair.Key] = pair.Value;
+            translucent[pair.Key] = HasTranslucentPixel(pair.Value);
         }
 
-        return new ItemAtlas(new TextureData(width, height, pixels), sprites, imageCopy, cellWidth, cellHeight);
+        return new ItemAtlas(new TextureData(width, height, pixels), sprites, imageCopy, translucent, cellWidth, cellHeight);
     }
 
     /// <summary>Loads the requested item texture paths through the resource manager.</summary>
@@ -147,6 +159,22 @@ public sealed class ItemAtlas : ISpriteAtlas
         return FromTextures(images);
     }
 
+    /// <summary>Reference <c>NativeImage.computeTransparency</c>: any 0 &lt; alpha &lt; 255 pixel is translucent.</summary>
+    private static bool HasTranslucentPixel(TextureData image)
+    {
+        var rgba = image.Rgba;
+        for (var i = 3; i < rgba.Length; i += 4)
+        {
+            var alpha = rgba[i];
+            if (alpha is > 0 and < 255)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static ItemAtlas Missing()
     {
         const int size = 16;
@@ -168,6 +196,7 @@ public sealed class ItemAtlas : ISpriteAtlas
             new TextureData(size, size, pixels),
             new Dictionary<string, SpriteRect>(StringComparer.Ordinal),
             new Dictionary<string, TextureData>(StringComparer.Ordinal),
+            new Dictionary<string, bool>(StringComparer.Ordinal),
             size,
             size);
     }
