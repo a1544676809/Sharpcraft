@@ -331,7 +331,7 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 | 项 | 内容 |
 | --- | --- |
 | 简化了什么 | special 模型烘焙**不做 UV 越界处理**（无环绕、无接缝切分）。立方体 UV 条带按原版 `ModelPart.Cube` 公式计算，越界即按越界坐标写出 |
-| 为什么 | ① 原版把越界交给采样器的 GL **REPEAT**（分段行为）；本仓图集把 sprite 局部 UV 用 `mix` **线性**映射进矩形，几何层无法用"切分"正确复现，此前 `aa8d10a` 的切分尝试已被证伪并移除；② 26.3 现有 special 模型在正确公式下 UV 均在贴图范围内（箱子 `u4 = 56 < 64`） |
+| 为什么 | ① 原版把越界交给采样器：`AbstractTexture.java` L14-15 的默认采样器是 `AddressMode.REPEAT`，纹理可经元数据改为 `CLAMP_TO_EDGE`（`ReloadableTexture.java` L33、`MipmappedTexture.java` L30），且 `entity/chest/normal.png` **无 `.mcmeta`** ⇒ 走 REPEAT；本仓图集把 sprite 局部 UV 用 `mix` **线性**映射进矩形，几何层无法用"切分"正确复现分段行为，`aa8d10a` 的切分尝试已证伪并移除；② 26.3 现有 special 模型在正确公式下 UV 均在贴图范围内（箱子 `u4 = 56 < 64`），REPEAT 实际不会被触发 |
 | 对等效性的影响 | 若出现 UV 越界的 special 模型，其越界部分会被采到 sprite 矩形外（相邻图集内容），与原版 REPEAT 结果不同 |
 | 当前状态 | 保持（受控偏差） |
 | 复查条件 | ① 架构门禁 `SpecialAndEntityModelGateTests` 若发现某模型 UV 越界；② 新增 special 类型时先核对 UV 是否越界；③ 需要时改为"该 sprite 单独成纹理 + 采样器 REPEAT"，而不是在烘焙层切分 |
@@ -662,7 +662,7 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 | 项 | 内容 |
 | --- | --- |
 | 简化了什么 | special 模型烘焙**不做 UV 越界处理**（无环绕、无接缝切分）。立方体 UV 条带按原版 `ModelPart.Cube` 公式计算，越界即按越界坐标写出 |
-| 为什么 | ① 原版把越界交给采样器的 GL **REPEAT**（分段行为）；本仓图集把 sprite 局部 UV 用 `mix` **线性**映射进矩形，几何层无法用"切分"正确复现，此前 `aa8d10a` 的切分尝试已被证伪并移除；② 26.3 现有 special 模型在正确公式下 UV 均在贴图范围内（箱子 `u4 = 56 < 64`） |
+| 为什么 | ① 原版把越界交给采样器：`AbstractTexture.java` L14-15 的默认采样器是 `AddressMode.REPEAT`，纹理可经元数据改为 `CLAMP_TO_EDGE`（`ReloadableTexture.java` L33、`MipmappedTexture.java` L30），且 `entity/chest/normal.png` **无 `.mcmeta`** ⇒ 走 REPEAT；本仓图集把 sprite 局部 UV 用 `mix` **线性**映射进矩形，几何层无法用"切分"正确复现分段行为，`aa8d10a` 的切分尝试已证伪并移除；② 26.3 现有 special 模型在正确公式下 UV 均在贴图范围内（箱子 `u4 = 56 < 64`），REPEAT 实际不会被触发 |
 | 对等效性的影响 | 若出现 UV 越界的 special 模型，其越界部分会被采到 sprite 矩形外（相邻图集内容），与原版 REPEAT 结果不同 |
 | 当前状态 | 保持（受控偏差） |
 | 复查条件 | ① 架构门禁 `SpecialAndEntityModelGateTests` 若发现某模型 UV 越界；② 新增 special 类型时先核对 UV 是否越界；③ 需要时改为"该 sprite 单独成纹理 + 采样器 REPEAT"，而不是在烘焙层切分 |
@@ -1016,7 +1016,7 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 | 项 | 内容 |
 | --- | --- |
 | 简化了什么 | special 模型烘焙**不做 UV 越界处理**（无环绕、无接缝切分）。立方体 UV 条带按原版 `ModelPart.Cube` 公式计算，越界即按越界坐标写出 |
-| 为什么 | ① 原版把越界交给采样器的 GL **REPEAT**（分段行为）；本仓图集把 sprite 局部 UV 用 `mix` **线性**映射进矩形，几何层无法用"切分"正确复现，此前 `aa8d10a` 的切分尝试已被证伪并移除；② 26.3 现有 special 模型在正确公式下 UV 均在贴图范围内（箱子 `u4 = 56 < 64`） |
+| 为什么 | ① 原版把越界交给采样器：`AbstractTexture.java` L14-15 的默认采样器是 `AddressMode.REPEAT`，纹理可经元数据改为 `CLAMP_TO_EDGE`（`ReloadableTexture.java` L33、`MipmappedTexture.java` L30），且 `entity/chest/normal.png` **无 `.mcmeta`** ⇒ 走 REPEAT；本仓图集把 sprite 局部 UV 用 `mix` **线性**映射进矩形，几何层无法用"切分"正确复现分段行为，`aa8d10a` 的切分尝试已证伪并移除；② 26.3 现有 special 模型在正确公式下 UV 均在贴图范围内（箱子 `u4 = 56 < 64`），REPEAT 实际不会被触发 |
 | 对等效性的影响 | 若出现 UV 越界的 special 模型，其越界部分会被采到 sprite 矩形外（相邻图集内容），与原版 REPEAT 结果不同 |
 | 当前状态 | 保持（受控偏差） |
 | 复查条件 | ① 架构门禁 `SpecialAndEntityModelGateTests` 若发现某模型 UV 越界；② 新增 special 类型时先核对 UV 是否越界；③ 需要时改为"该 sprite 单独成纹理 + 采样器 REPEAT"，而不是在烘焙层切分 |
