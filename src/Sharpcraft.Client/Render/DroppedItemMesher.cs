@@ -125,17 +125,14 @@ public sealed class DroppedItemMesher
 
             for (var itemIndex = 0; itemIndex < count; itemIndex++)
             {
-                var offset = scattered
-                    ? ItemEntityRenderer.ThickItemOffset(
-                        RandomUnit(entity.Id, itemIndex, 0),
-                        RandomUnit(entity.Id, itemIndex, 1),
-                        RandomUnit(entity.Id, itemIndex, 2))
-                    : ItemEntityRenderer.ThinItemOffset(
-                        extents,
-                        itemIndex,
-                        count,
-                        RandomUnit(entity.Id, itemIndex, 0),
-                        RandomUnit(entity.Id, itemIndex, 1));
+                var offset = ItemEntityRenderer.ItemOffset(
+                    itemIndex,
+                    scattered,
+                    extents,
+                    count,
+                    RandomUnit(entity.Id, itemIndex, 0),
+                    RandomUnit(entity.Id, itemIndex, 1),
+                    RandomUnit(entity.Id, itemIndex, 2));
 
                 foreach (var section in _sections)
                 {

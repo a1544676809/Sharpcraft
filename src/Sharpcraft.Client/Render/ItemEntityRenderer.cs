@@ -93,6 +93,24 @@ public static class ItemEntityRenderer
     /// Offset of one item inside a thin stack: the column starts at <see cref="BulkStartZ"/> and advances by
     /// <see cref="BulkZStep"/> per item, with the reference's half-amplitude jitter on X and Y.
     /// </summary>
+    /// <summary>
+    /// Offset applied to one drawn item of a drop. The reference submits the first item at the entity origin and offsets
+    /// only the ones after it (scatter for thick models, stacked Z with half-amplitude scatter for thin ones); an offset
+    /// on the first item sits before the spin and sweeps a circle instead of spinning in place.
+    /// </summary>
+    public static System.Numerics.Vector3 ItemOffset(
+        int index,
+        bool scattered,
+        ItemModelExtents extents,
+        int count,
+        float randomX,
+        float randomY,
+        float randomZ) =>
+        index == 0
+            ? System.Numerics.Vector3.Zero
+            : scattered
+                ? ThickItemOffset(randomX, randomY, randomZ)
+                : ThinItemOffset(extents, index, count, randomX, randomY);
     public static System.Numerics.Vector3 ThinItemOffset(
         ItemModelExtents extents,
         int index,
@@ -100,12 +118,11 @@ public static class ItemEntityRenderer
         float randomX,
         float randomY)
     {
+        // Reference thin layout: items march along Z, with the half-amplitude X/Y scatter. Only items after the first
+        // are submitted with an offset at all, so the caller passes index &gt;= 1 here.
         var z = BulkStartZ(extents, count) + (BulkZStep(extents) * index);
         var jitter = ScatterSpread * 0.5f;
-        return new System.Numerics.Vector3(
-            ScatterOffset(randomX, jitter),
-            ScatterOffset(randomY, jitter),
-            z);
+        return new System.Numerics.Vector3(ScatterOffset(randomX, jitter), ScatterOffset(randomY, jitter), z);
     }
 
     /// <summary>Offset of one item inside a thick stack: every item after the first is scattered in all three axes.</summary>

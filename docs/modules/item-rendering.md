@@ -312,9 +312,37 @@ s = 0.9 时：旋转 0.9·Rx(-90°)，平移 (0.05625, -0.56250, -0.11250)
 - **T-631c**：其他 item model 类型（select/condition/composite/special）与掉落物/展示框/GUI 复用。**进行中**：`ItemAtlas` 数据层、WindowedRenderer 独立 item bind group、`EntityGeometryLayer.UsesItemAtlas`、Witch layer 与成人/幼年 humanoid `held_item_right`/`held_item_left` 层已完成；`ItemModelResolver` 已支持 `select`/`condition`/`range_dispatch`/`composite` 的静态 fallback 模型，`layer0/layer1` 已由 WindowCommand 按可见实体按需装入 item atlas。`special` 模型、动态 property 与 drop/display/GUI 复用仍待补。
 - **T-631d**：`minecraft:special` 描述符解析已接（base 模型 + `model.type` + 字符串属性），不把 special 物品误当 flat quad；当前已移植 trident/shield、head/player_head skull、chest、shulker_box、banner、decorated_pot、conduit 与 end_cube 的 special 模型与成人主/副手 held 层，bell/book/copper_golem_statue 仍待实现。
 
+### 3.5.9 掉落物布局：第一件不偏移
+
+原版 `ItemEntityRenderer.submitMultipleFromCount` 对**第一件**绘制物品不加任何偏移：
+
+- 厚模型（`modelDepth > 0.0625`，床/方块属于此类）：`item.submit(...)` 直接提交；只有第 2 件起才 `translate(xo, yo, zo)`，量级 `±0.15`
+- 薄模型：先 `translate(0, 0, -(offsetZ * (count-1) / 2))` 沿 Z 起排，第一件同样无 X/Y 偏移；第 2 件起叠加 `±0.15*0.5` 的 X/Y 抖动
+
+我们此前对**第一件**也套用了偏移。该偏移在行向量链中位于 `Ry(spin)` 之前：
+
+```
+world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
+```
+
+⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `DroppedItemLayoutTests`（5 项）。
 ## 7. 风险与限制
 
-### 7.1 已知刻意的简化（必须后续解决）
+#### 3.5.9 掉落物布局：第一件不偏移
+
+原版 `ItemEntityRenderer.submitMultipleFromCount` 对**第一件**绘制物品不加任何偏移：
+
+- 厚模型（`modelDepth > 0.0625`，床/方块属于此类）：`item.submit(...)` 直接提交；只有第 2 件起才 `translate(xo, yo, zo)`，量级 `±0.15`
+- 薄模型：先 `translate(0, 0, -(offsetZ * (count-1) / 2))` 沿 Z 起排，第一件同样无 X/Y 偏移；第 2 件起叠加 `±0.15*0.5` 的 X/Y 抖动
+
+我们此前对**第一件**也套用了偏移。该偏移在行向量链中位于 `Ry(spin)` 之前：
+
+```
+world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
+```
+
+⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `DroppedItemLayoutTests`（5 项）。
+## 7.1 已知刻意的简化（必须后续解决）
 
 对照对象为 26.3 原版（`ref://mc-26.3-analysis/src/...`）。逐项登记：原版行为 → 当前实现 → 差异 → 状态。
 
@@ -339,7 +367,21 @@ s = 0.9 时：旋转 0.9·Rx(-90°)，平移 (0.05625, -0.56250, -0.11250)
 
 这些简化不得以“已完成”收口；在视觉/真值验收前对应进度保持 `进行中`。解决后从代码移除 `[Simplification]` 标记，但本节的记录与上面的机器标记 MUST 保留。
 
-### 7.2 其他限制
+#### 3.5.9 掉落物布局：第一件不偏移
+
+原版 `ItemEntityRenderer.submitMultipleFromCount` 对**第一件**绘制物品不加任何偏移：
+
+- 厚模型（`modelDepth > 0.0625`，床/方块属于此类）：`item.submit(...)` 直接提交；只有第 2 件起才 `translate(xo, yo, zo)`，量级 `±0.15`
+- 薄模型：先 `translate(0, 0, -(offsetZ * (count-1) / 2))` 沿 Z 起排，第一件同样无 X/Y 偏移；第 2 件起叠加 `±0.15*0.5` 的 X/Y 抖动
+
+我们此前对**第一件**也套用了偏移。该偏移在行向量链中位于 `Ry(spin)` 之前：
+
+```
+world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
+```
+
+⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `DroppedItemLayoutTests`（5 项）。
+## 7.2 其他限制
 
 - 26.3 的 `items/*.json` 与旧版 `models/item` 结构不同；必须按 26.3 的 item model 类型分发，不能只读旧 parent 字段。
 - `ItemStackRenderState` 的层/foil/tint 结构未在仓库实现；T-631a 只建立解析数据，不提前造渲染状态。
