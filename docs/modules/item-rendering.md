@@ -326,6 +326,26 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
 ⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `DroppedItemLayoutTests`（5 项）。
+### 3.5.9a 手持锚点：拟合解与审计结论（T-777）
+
+`ReferenceFrame.HeldItemAnchor` 不是逐因子推导，而是**从参考捕获求解**出来的矩阵（两组姿态 × 两种 display 共四组一致）：
+
+```
+anchor = T(T_off) · S(modelScale) · Rx(+90°)
+成人：线性 0.9·Rx(+90°)，平移 (0.05625, -0.56250, -0.11250)
+```
+
+`tools/Sharpcraft.ItemRender.Audit/truth/AnchorAxes.java` 给出参考侧旋转链的基向量像：
+
+```
+A_ref = RotX(-90°) · RotY(180°) · T(1/16, 2/16, -10/16)
+ex → (-1,0,0)   ey → (0,0,-1)   ez → (0,-1,0)   origin → (-0.0625, 0.6250, -0.1250)
+```
+
+**审计结论（保持）**：曾尝试把参考链共轭到烘焙系（`Frame·A_row·Frame⁻¹`）以独立复现该锚点，结果与拟合形不一致（共轭形无缩放且 X 镜像），说明共轭路径不等价于引擎实际的链接方式。完整推导需要端到端捕获参考链（含 `H` 手部矩阵与 display 的完整乘积），成本高于收益。
+
+因此保留现锚点，依据是四组捕获一致 + 实机床/盾牌/长矛验证；`PartWorldMatrixTests` 断言的是**求解值回归钉**，不承担等效性证明。复查条件：出现持物位置偏差报告，或审计工具能输出整链矩阵时重做。
+
 ### 3.5.10 物品渲染类型：按贴图 alpha 判定（进行中）
 
 原版判据（已核实）：
@@ -548,6 +568,26 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
 ⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `DroppedItemLayoutTests`（5 项）。
+### 3.5.9a 手持锚点：拟合解与审计结论（T-777）
+
+`ReferenceFrame.HeldItemAnchor` 不是逐因子推导，而是**从参考捕获求解**出来的矩阵（两组姿态 × 两种 display 共四组一致）：
+
+```
+anchor = T(T_off) · S(modelScale) · Rx(+90°)
+成人：线性 0.9·Rx(+90°)，平移 (0.05625, -0.56250, -0.11250)
+```
+
+`tools/Sharpcraft.ItemRender.Audit/truth/AnchorAxes.java` 给出参考侧旋转链的基向量像：
+
+```
+A_ref = RotX(-90°) · RotY(180°) · T(1/16, 2/16, -10/16)
+ex → (-1,0,0)   ey → (0,0,-1)   ez → (0,-1,0)   origin → (-0.0625, 0.6250, -0.1250)
+```
+
+**审计结论（保持）**：曾尝试把参考链共轭到烘焙系（`Frame·A_row·Frame⁻¹`）以独立复现该锚点，结果与拟合形不一致（共轭形无缩放且 X 镜像），说明共轭路径不等价于引擎实际的链接方式。完整推导需要端到端捕获参考链（含 `H` 手部矩阵与 display 的完整乘积），成本高于收益。
+
+因此保留现锚点，依据是四组捕获一致 + 实机床/盾牌/长矛验证；`PartWorldMatrixTests` 断言的是**求解值回归钉**，不承担等效性证明。复查条件：出现持物位置偏差报告，或审计工具能输出整链矩阵时重做。
+
 ### 3.5.10 物品渲染类型：按贴图 alpha 判定（进行中）
 
 原版判据（已核实）：
@@ -793,6 +833,26 @@ world = display · T_offset · Ry(spin) · T(0, bob+minY, 0) · T(entityPos)
 ```
 
 ⇒ 被旋转扫成圆周，物品看起来"绕长边公转"而非自转；偏移量取 `RandomUnit(entityId, index, axis)` 哈希，因此**每次召唤随机出现**。修复为 `ItemEntityRenderer.ItemOffset(...)`：`index == 0` 时恒返回零向量，回归见 `DroppedItemLayoutTests`（5 项）。
+### 3.5.9a 手持锚点：拟合解与审计结论（T-777）
+
+`ReferenceFrame.HeldItemAnchor` 不是逐因子推导，而是**从参考捕获求解**出来的矩阵（两组姿态 × 两种 display 共四组一致）：
+
+```
+anchor = T(T_off) · S(modelScale) · Rx(+90°)
+成人：线性 0.9·Rx(+90°)，平移 (0.05625, -0.56250, -0.11250)
+```
+
+`tools/Sharpcraft.ItemRender.Audit/truth/AnchorAxes.java` 给出参考侧旋转链的基向量像：
+
+```
+A_ref = RotX(-90°) · RotY(180°) · T(1/16, 2/16, -10/16)
+ex → (-1,0,0)   ey → (0,0,-1)   ez → (0,-1,0)   origin → (-0.0625, 0.6250, -0.1250)
+```
+
+**审计结论（保持）**：曾尝试把参考链共轭到烘焙系（`Frame·A_row·Frame⁻¹`）以独立复现该锚点，结果与拟合形不一致（共轭形无缩放且 X 镜像），说明共轭路径不等价于引擎实际的链接方式。完整推导需要端到端捕获参考链（含 `H` 手部矩阵与 display 的完整乘积），成本高于收益。
+
+因此保留现锚点，依据是四组捕获一致 + 实机床/盾牌/长矛验证；`PartWorldMatrixTests` 断言的是**求解值回归钉**，不承担等效性证明。复查条件：出现持物位置偏差报告，或审计工具能输出整链矩阵时重做。
+
 ### 3.5.10 物品渲染类型：按贴图 alpha 判定（进行中）
 
 原版判据（已核实）：

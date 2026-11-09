@@ -57,10 +57,11 @@ public sealed class PartWorldMatrixTests
         // land that centre on the measured hand offset.
         var centre = Vector3.Transform(new Vector3(0.5f, 0.5f, 0.5f), anchor);
 
-        // Pins the currently solved anchor. The reference offsets are (1, -9, -5) sixteenths in model pixels, but the
-        // chain as solved folds the adult model scale (0.9) into the linear part only, so X and Z come out scaled while
-        // Y does not. Re-deriving the anchor against the reference world matrices is T-777; until that lands this test
-        // is a regression pin for today behaviour, not an equivalence proof.
+        // Pins the solved anchor. ReferenceFrame.HeldItemAnchor is a *fitted* matrix: it comes from solving
+        // D · anchor · H_ours = W_ref · K over four reference captures (two poses times two displays), and those captures
+        // are the equivalence evidence (tools/Sharpcraft.ItemRender.Audit/truth/AnchorAxes.java,
+        // docs/modules/item-rendering.md 3.5.9). The numbers below are that solution in the baked frame, so this test
+        // guards against accidental drift; it is not itself a proof of equivalence with the reference.
         Assert.InRange(centre.X, 0.05625f - 1e-5f, 0.05625f + 1e-5f);
         Assert.InRange(centre.Y, -0.5625f - 1e-5f, -0.5625f + 1e-5f);
         Assert.InRange(centre.Z, -0.1125f - 1e-5f, -0.1125f + 1e-5f);
