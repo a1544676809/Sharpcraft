@@ -146,6 +146,8 @@ internal static class SpecialModelBake
         return matrix;
     }
 
+    private static float Wrap(float value) => value - MathF.Floor(value);
+
     private static void EmitCube(SpecialCube cube, Matrix4x4 transform, int textureWidth, int textureHeight, Action<SpecialQuad> emit)
     {
         var min = cube.From;
@@ -201,10 +203,14 @@ internal static class SpecialModelBake
         }
 
         // Reference Polygon: corner 0 is (right, top), then (left, top), (left, bottom), (right, bottom).
-        var uLeftNormalized = uLeft / textureWidth;
-        var uRightNormalized = uRight / textureWidth;
-        var vTopNormalized = vTop / textureHeight;
-        var vBottomNormalized = vBottom / textureHeight;
+        // The reference samples entity textures with REPEAT and model authors rely on it: the chest bottom box reaches
+        // U = 70 on a 64-wide sheet and expects the overflow to wrap to the left edge. Our atlas addresses one sprite
+        // with a [0,1] rectangle, so sampling outside it reads the neighbouring atlas cell instead - which showed up as a
+        // hole in the chest front. The wrap is applied here to match REPEAT.
+        var uLeftNormalized = Wrap(uLeft / textureWidth);
+        var uRightNormalized = Wrap(uRight / textureWidth);
+        var vTopNormalized = Wrap(vTop / textureHeight);
+        var vBottomNormalized = Wrap(vBottom / textureHeight);
         Span<Vector2> uvs =
         [
             new Vector2(uRightNormalized, vTopNormalized),

@@ -69,13 +69,13 @@ public sealed class SpecialModelBakeTests
         SpecialModelBake.Bake(SpecialModelDefinitions.Chest(), SpecialModelDefinitions.ChestTextureWidth, SpecialModelDefinitions.ChestTextureHeight, quads.Add);
 
         // The reference chest model authors boxes that run past the declared 64x64 texture (the bottom box reaches
-        // 70/64 on U), so normalized coordinates above 1 are faithful; the sampler wraps them. The check is therefore a
-        // loose sanity range plus the requirement that V never leaves the sheet.
+        // 70/64 on U) and relies on REPEAT sampling; the bake wraps those coordinates so every emitted UV stays inside
+        // the sprite rectangle.
         foreach (var quad in quads)
         {
             foreach (var uv in new[] { quad.Uv0, quad.Uv1, quad.Uv2, quad.Uv3 })
             {
-                Assert.InRange(uv.X, 0f, 1.2f);
+                Assert.InRange(uv.X, 0f, 1f);
                 Assert.InRange(uv.Y, 0f, 1f);
             }
         }
