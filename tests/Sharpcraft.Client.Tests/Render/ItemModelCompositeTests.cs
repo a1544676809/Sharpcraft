@@ -46,6 +46,10 @@ public sealed class ItemModelCompositeTests : IDisposable
 
         // Row-vector: the foot moves one block along +Z before any display transform.
         Assert.Equal(new Vector3(0f, 0f, 1f), Vector3.Transform(Vector3.Zero, placements[1].Transform));
+
+        // Each member owns its texture family; the atlas pre-pass must see both, otherwise the second half renders with
+        // every sprite missing and collapses to its remaining faces (the bed foot lost its mattress and legs this way).
+        Assert.NotEqual(placements[0].Model.Textures["all"], placements[1].Model.Textures["all"]);
     }
 
     [Fact]
@@ -99,9 +103,9 @@ public sealed class ItemModelCompositeTests : IDisposable
                 { "model": { "type": "minecraft:model", "model": "minecraft:item/probe_plain" } }
                 """);
             Write(zip, "assets/minecraft/models/block/probe_head.json",
-                """{ "elements": [ { "from": [0, 0, 0], "to": [16, 8, 16] } ] }""");
+                """{ "textures": { "all": "block/probe_head_tex" }, "elements": [ { "from": [0, 0, 0], "to": [16, 8, 16] } ] }""");
             Write(zip, "assets/minecraft/models/block/probe_foot.json",
-                """{ "elements": [ { "from": [0, 0, 0], "to": [16, 8, 16] } ] }""");
+                """{ "textures": { "all": "block/probe_foot_tex" }, "elements": [ { "from": [0, 0, 0], "to": [16, 8, 16] } ] }""");
             Write(zip, "assets/minecraft/models/item/probe_plain.json",
                 """{ "textures": { "layer0": "item/probe_plain" } }""");
         }

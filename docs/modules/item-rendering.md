@@ -169,7 +169,7 @@ dotnet run --project tools/Sharpcraft.ItemRender.Audit -- --pack <pack.zip> --ch
 
 审计当时发现的真实缺陷：**17 张床全部解析失败**。原因是 `composite` 的子项是"完整模型定义"（`{"type":"minecraft:model","model":"block/white_bed_head"}`），而 `ResolveFirstCase` 只接受"`model` 是对象"的选择器形态，于是整串被跳过。修复后未解析从 17 降到 0。
 
-**已解决（掉落路径，`T-766`）**：`ItemModelResolver.ResolveAll` 解析全部子模型，每个带自己的 `transformation`（行向量 `local · display`，与原版 `LayerRenderState.applyTransform` 的 `Display · Local` 列向量语义一致），掉落渲染按子模型分段提交并用子模型 extents 的并集定位；实机掉落的红床为完整小床（白枕 + 红床面 + 木腿）。**仍存在的简化**（`SIM-ITEM-COMPOSITE-FIRST`）：`ResolveHeldItemModel` 与 GUI 路径仍只取第一个子模型，因此手持床只显示床头一半。
+**已解决（掉落路径，`T-766`）**：`ItemModelResolver.ResolveAll` 解析全部子模型，每个带自己的 `transformation`（行向量 `local · display`，与原版 `LayerRenderState.applyTransform` 的 `Display · Local` 列向量语义一致），掉落渲染按子模型分段提交并用子模型 extents 的并集定位；实机掉落的红床为完整小床（白枕 + 红床面 + 木腿）。**图集预热也必须覆盖全部子模型**：`DroppedItemMesher.ResolveTextures` 原先只按第一个子模型产出贴图路径，导致床脚那一半的 `red_bed_foot_*` 从未进入 item atlas，`itemAtlas.Get` 返回 null 后这些面被整片跳过——表现就是"后半截只剩底面（`bed_down`）"。已改为遍历 `ResolveAll`，实机掉落床恢复为完整小床（白枕 + 红床面 + 木腿）。**仍存在的简化**（`SIM-ITEM-COMPOSITE-FIRST`）：`ResolveHeldItemModel` 与 GUI 路径仍只取第一个子模型，因此**手持床仍只显示床头一半**。
 
 缺失 display 的分布同样说明问题不在解析：`thirdperson_righthand` 只缺 `minecraft:air`（空物品，正常），`head` 缺 706（原版多数物品本来就没有 head 变换），真正需要关注的是 `firstperson_righthand` 缺 10 个（`spyglass`、`heavy_core`、各类头颅），它们走 special 渲染器。
 ### 3.5.5 display 变换真值（L3，含一次真实 bug 修复）

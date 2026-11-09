@@ -299,35 +299,39 @@ public sealed class DroppedItemMesher
             yield break;
         }
 
-        if (EntityModelResolver.ItemModels is not { } models ||
-            EntityModelResolver.Items?.ById(entity.ItemEntityItemId) is not { } item ||
-            models.Resolve(item.Id.ToString()) is not { } resolution)
+        if (EntityModelResolver.ItemModels is not { } models || EntityModelResolver.Items?.ById(entity.ItemEntityItemId) is not { } item)
         {
             yield break;
         }
 
-        var cuboids = resolution.Cuboids;
-        if (cuboids.Count > 0)
+        // Every sub-model of a composite item contributes sprites (a bed's foot half has its own texture family), so the
+        // atlas has to be primed from ResolveAll; asking only the first model leaves the other halves untextured.
+        foreach (var placement in models.ResolveAll(item.Id.ToString()))
         {
-            foreach (var element in cuboids)
+            var resolution = placement.Model;
+            var cuboids = resolution.Cuboids;
+            if (cuboids.Count > 0)
             {
-                foreach (var face in element.Faces.Values)
+                foreach (var element in cuboids)
                 {
-                    if (face.Texture is { } texture)
+                    foreach (var face in element.Faces.Values)
                     {
-                        yield return texture;
+                        if (face.Texture is { } texture)
+                        {
+                            yield return texture;
+                        }
                     }
                 }
+
+                continue;
             }
 
-            yield break;
-        }
-
-        foreach (var slot in new[] { "layer0", "layer1" })
-        {
-            if (resolution.Textures.TryGetValue(slot, out var value) && IdentifierPath(value) is { } path)
+            foreach (var slot in new[] { "layer0", "layer1" })
             {
-                yield return path;
+                if (resolution.Textures.TryGetValue(slot, out var value) && IdentifierPath(value) is { } path)
+                {
+                    yield return path;
+                }
             }
         }
     }
