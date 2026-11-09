@@ -418,6 +418,37 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
 1. `ItemAtlas` 的 sprite rect 一律使用**贴图实际宽高**；`cellWidth/cellHeight` 只用于布局，不得进入 `SpriteRect`。
 2. 图集重建（新增纹理、尺寸变化）时，失效所有派生的形状/布局缓存。
 3. 回归测试：构造高度不一的贴图集合，断言每个 rect 的 `Height == image.Height` 且 `V1 <= (row+1)*cellHeight/atlasHeight`。
+### 3.5.13 物品图集并入统一装配器（T-774，设计已就绪）
+
+**动机**
+
+当前存在两套图集装配器，违反原则 14 单轨：
+
+| 图集 | 装配器 | padding | mip | 可变性 |
+| --- | --- | --- | --- | --- |
+| 方块 | `SpriteAtlasBuilder` + `SpriteAtlas` + `AtlasMipChain` | 2 texel | 有 | 不可变对象 |
+| 物品 | `ItemAtlas`（自造） | 0 | 无 | 可变（`WithTexture` 原地扩容） |
+
+物品那套的零 padding 与原地扩容直接导致 T-773（染色玻璃竖条）：几何按旧图集算 rect、旧 rect 用于新图集，且线性过滤采到相邻 sprite。
+
+**原版依据**
+
+- sprite 是不可变对象，UV 在创建时按该图集尺寸算死：`ref://mc-26.3-analysis/src/net/minecraft/client/renderer/texture/TextureAtlasSprite.java:24-36`（`(x+padding)/atlasWidth`，用 `contents.width()` 而非 cell）。
+- 拼接留白：`ref://mc-26.3-analysis/src/net/minecraft/client/renderer/texture/Stitcher.java:28` `padding = 1 << mipLevel << clamp(anisotropy-1,0,4)`。
+- 图集变化 ⇒ 全新 sprite 实例 + 模型重新烘焙，旧 UV 副本随之消失。
+
+**迁移设计（不改调用点，用门面收敛）**
+
+1. `ItemAtlas` 内部改为持有 `SpriteAtlas`（由 `SpriteAtlasBuilder.Stitch` 产出）；公开 API `Get / GetTexture / IsTranslucent / Texture / WithTexture` 保持不变，调用点零改动。
+2. 键映射：物品贴图路径（`block/glass`、`item/...`）→ `Identifier`；`SpriteRect` 与物品链路已是同一类型，无需转换。
+3. `WithTexture` 改为**返回新实例**（重新 `Stitch`），不再原地扩容；客户端按实例/版本失效几何（等价原版重新烘焙）。
+4. `force_translucent` 与 alpha 半透明标记在门面层保留（`IsTranslucent`），底层像素不变。
+5. 回归：`T-768` 物品审计工具（1658 物品）全绿 + 掉落/手持代表性截图（床、盾牌、composite、染色玻璃、冰、玻璃）。
+
+**风险**
+
+- 物品图集含非 16×16 与多帧贴图：`Stitch` 已支持任意尺寸与帧数（方块图集同源路径）。
+- 图集尺寸会从 128×192 变为 2 的幂方形，纹理坐标随之变化，所有 rect 必须来自新实例（不得跨实例混用）。
 ## 7. 风险与限制
 
 #### 3.5.9 掉落物布局：第一件不偏移
@@ -526,6 +557,37 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
 1. `ItemAtlas` 的 sprite rect 一律使用**贴图实际宽高**；`cellWidth/cellHeight` 只用于布局，不得进入 `SpriteRect`。
 2. 图集重建（新增纹理、尺寸变化）时，失效所有派生的形状/布局缓存。
 3. 回归测试：构造高度不一的贴图集合，断言每个 rect 的 `Height == image.Height` 且 `V1 <= (row+1)*cellHeight/atlasHeight`。
+### 3.5.13 物品图集并入统一装配器（T-774，设计已就绪）
+
+**动机**
+
+当前存在两套图集装配器，违反原则 14 单轨：
+
+| 图集 | 装配器 | padding | mip | 可变性 |
+| --- | --- | --- | --- | --- |
+| 方块 | `SpriteAtlasBuilder` + `SpriteAtlas` + `AtlasMipChain` | 2 texel | 有 | 不可变对象 |
+| 物品 | `ItemAtlas`（自造） | 0 | 无 | 可变（`WithTexture` 原地扩容） |
+
+物品那套的零 padding 与原地扩容直接导致 T-773（染色玻璃竖条）：几何按旧图集算 rect、旧 rect 用于新图集，且线性过滤采到相邻 sprite。
+
+**原版依据**
+
+- sprite 是不可变对象，UV 在创建时按该图集尺寸算死：`ref://mc-26.3-analysis/src/net/minecraft/client/renderer/texture/TextureAtlasSprite.java:24-36`（`(x+padding)/atlasWidth`，用 `contents.width()` 而非 cell）。
+- 拼接留白：`ref://mc-26.3-analysis/src/net/minecraft/client/renderer/texture/Stitcher.java:28` `padding = 1 << mipLevel << clamp(anisotropy-1,0,4)`。
+- 图集变化 ⇒ 全新 sprite 实例 + 模型重新烘焙，旧 UV 副本随之消失。
+
+**迁移设计（不改调用点，用门面收敛）**
+
+1. `ItemAtlas` 内部改为持有 `SpriteAtlas`（由 `SpriteAtlasBuilder.Stitch` 产出）；公开 API `Get / GetTexture / IsTranslucent / Texture / WithTexture` 保持不变，调用点零改动。
+2. 键映射：物品贴图路径（`block/glass`、`item/...`）→ `Identifier`；`SpriteRect` 与物品链路已是同一类型，无需转换。
+3. `WithTexture` 改为**返回新实例**（重新 `Stitch`），不再原地扩容；客户端按实例/版本失效几何（等价原版重新烘焙）。
+4. `force_translucent` 与 alpha 半透明标记在门面层保留（`IsTranslucent`），底层像素不变。
+5. 回归：`T-768` 物品审计工具（1658 物品）全绿 + 掉落/手持代表性截图（床、盾牌、composite、染色玻璃、冰、玻璃）。
+
+**风险**
+
+- 物品图集含非 16×16 与多帧贴图：`Stitch` 已支持任意尺寸与帧数（方块图集同源路径）。
+- 图集尺寸会从 128×192 变为 2 的幂方形，纹理坐标随之变化，所有 rect 必须来自新实例（不得跨实例混用）。
 ## 7.1 已知刻意的简化（必须后续解决）
 
 对照对象为 26.3 原版（`ref://mc-26.3-analysis/src/...`）。逐项登记：原版行为 → 当前实现 → 差异 → 状态。
@@ -657,6 +719,37 @@ RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
 1. `ItemAtlas` 的 sprite rect 一律使用**贴图实际宽高**；`cellWidth/cellHeight` 只用于布局，不得进入 `SpriteRect`。
 2. 图集重建（新增纹理、尺寸变化）时，失效所有派生的形状/布局缓存。
 3. 回归测试：构造高度不一的贴图集合，断言每个 rect 的 `Height == image.Height` 且 `V1 <= (row+1)*cellHeight/atlasHeight`。
+### 3.5.13 物品图集并入统一装配器（T-774，设计已就绪）
+
+**动机**
+
+当前存在两套图集装配器，违反原则 14 单轨：
+
+| 图集 | 装配器 | padding | mip | 可变性 |
+| --- | --- | --- | --- | --- |
+| 方块 | `SpriteAtlasBuilder` + `SpriteAtlas` + `AtlasMipChain` | 2 texel | 有 | 不可变对象 |
+| 物品 | `ItemAtlas`（自造） | 0 | 无 | 可变（`WithTexture` 原地扩容） |
+
+物品那套的零 padding 与原地扩容直接导致 T-773（染色玻璃竖条）：几何按旧图集算 rect、旧 rect 用于新图集，且线性过滤采到相邻 sprite。
+
+**原版依据**
+
+- sprite 是不可变对象，UV 在创建时按该图集尺寸算死：`ref://mc-26.3-analysis/src/net/minecraft/client/renderer/texture/TextureAtlasSprite.java:24-36`（`(x+padding)/atlasWidth`，用 `contents.width()` 而非 cell）。
+- 拼接留白：`ref://mc-26.3-analysis/src/net/minecraft/client/renderer/texture/Stitcher.java:28` `padding = 1 << mipLevel << clamp(anisotropy-1,0,4)`。
+- 图集变化 ⇒ 全新 sprite 实例 + 模型重新烘焙，旧 UV 副本随之消失。
+
+**迁移设计（不改调用点，用门面收敛）**
+
+1. `ItemAtlas` 内部改为持有 `SpriteAtlas`（由 `SpriteAtlasBuilder.Stitch` 产出）；公开 API `Get / GetTexture / IsTranslucent / Texture / WithTexture` 保持不变，调用点零改动。
+2. 键映射：物品贴图路径（`block/glass`、`item/...`）→ `Identifier`；`SpriteRect` 与物品链路已是同一类型，无需转换。
+3. `WithTexture` 改为**返回新实例**（重新 `Stitch`），不再原地扩容；客户端按实例/版本失效几何（等价原版重新烘焙）。
+4. `force_translucent` 与 alpha 半透明标记在门面层保留（`IsTranslucent`），底层像素不变。
+5. 回归：`T-768` 物品审计工具（1658 物品）全绿 + 掉落/手持代表性截图（床、盾牌、composite、染色玻璃、冰、玻璃）。
+
+**风险**
+
+- 物品图集含非 16×16 与多帧贴图：`Stitch` 已支持任意尺寸与帧数（方块图集同源路径）。
+- 图集尺寸会从 128×192 变为 2 的幂方形，纹理坐标随之变化，所有 rect 必须来自新实例（不得跨实例混用）。
 ## 7.2 其他限制
 
 - 26.3 的 `items/*.json` 与旧版 `models/item` 结构不同；必须按 26.3 的 item model 类型分发，不能只读旧 parent 字段。
