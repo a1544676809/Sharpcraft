@@ -46,61 +46,98 @@ internal readonly record struct SpecialQuad(
     Vector2 Uv3);
 
 /// <summary>
+/// Canonical UV strip coordinates for a single reference <c>ModelPart.Cube</c> (net.minecraft.client.model.geom.ModelPart).
+/// Centralised here so entity models, block entities and special item models never hand-roll <c>u0..u4 / v0..v2</c>.
+/// </summary>
+internal readonly record struct ReferenceCubeUvStrip(
+    float U0,
+    float U1,
+    float U2,
+    float U22,
+    float U3,
+    float U4,
+    float V0,
+    float V1,
+    float V2)
+{
+    /// <summary>
+    /// Computes the exact UV strip boundaries defined by <c>ModelPart.Cube</c> in Minecraft 26.3:
+    /// <list type="bullet">
+    /// <item><description>Top row (<c>V0..V1</c>): <c>[empty: U0..U1] | [DOWN: U1..U2] | [UP: U2..U22]</c></description></item>
+    /// <item><description>Side row (<c>V1..V2</c>): <c>[WEST: U0..U1] | [NORTH: U1..U2] | [EAST: U2..U3] | [SOUTH: U3..U4]</c></description></item>
+    /// </list>
+    /// Note that <c>U3 = U2 + depth</c> (f8 = xTexOffs + d + w + d), NOT <c>U22 + depth</c>.
+    /// </summary>
+    public static ReferenceCubeUvStrip Compute(int texU, int texV, float width, float height, float depth)
+    {
+        var u0 = (float)texU;
+        var u1 = u0 + depth;
+        var u2 = u1 + width;
+        var u22 = u2 + width;
+        var u3 = u2 + depth;
+        var u4 = u3 + width;
+
+        var v0 = (float)texV;
+        var v1 = v0 + depth;
+        var v2 = v1 + height;
+
+        return new ReferenceCubeUvStrip(u0, u1, u2, u22, u3, u4, v0, v1, v2);
+    }
+}
+
+/// <summary>
 /// Bakes a special model (the reference <c>ModelPart</c> tree behind <c>SpecialModelRenderer</c>) into item model space.
 /// </summary>
-/// <remarks>
-/// The reference renders these models inside the item pipeline without touching the pose
-/// (<c>ChestSpecialRenderer.submit</c>), and its geometry is pixel space divided per vertex by 16
-/// (<c>ModelPart.Vertex.worldX</c>). So baking here means: walk the tree, apply pivot and pose rotation, and divide by
-/// 16 — no entity flip and no model-height offset (docs/modules/item-rendering.md 3.5.18).
-/// <para>
-/// Face order, corner order and UV assignment follow the reference <c>ModelPart.Cube</c> table: the six faces take their
-/// corner lists from the t0..t3 (near) and l0..l3 (far) corners, and each face maps its (right, top), (left, top),
-/// (left, bottom), (right, bottom) rectangle corners onto the four corners in that order, reversing both when the box is
-/// mirrored.
-/// </para>
-/// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass(
+    "net.minecraft.client.model.geom.ModelPart",
+    "ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/ModelPart.java",
+    Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror,
+    Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial,
+    Note = "SpecialModelRenderer ModelPart cube compiler in item space")]
 internal static class SpecialModelBake
 {
-    /// <summary>Model pixels per unit; the reference divides every vertex by this.</summary>
     public const float PixelsPerUnit = 16f;
 
-    /// <summary>Bakes <paramref name="root"/> and reports each quad to <paramref name="emit"/>.</summary>
-    /// <param name="root">Model tree to bake.</param>
-    /// <param name="textureWidth">Model texture width in pixels, used to normalize U.</param>
-    /// <param name="textureHeight">Model texture height in pixels, used to normalize V.</param>
-    /// <param name="emit">Receives every quad, in item model space.</param>
+    /// <summary>Bakes <paramref name="root"/> into item-space quads (<c>16</c> model pixels = <c>1</c> unit).</summary>
     public static void Bake(SpecialPart root, int textureWidth, int textureHeight, Action<SpecialQuad> emit)
     {
         ArgumentNullException.ThrowIfNull(root);
         ArgumentNullException.ThrowIfNull(emit);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(textureWidth);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(textureHeight);
+
         Walk(root, Matrix4x4.Identity, textureWidth, textureHeight, emit);
     }
 
-    /// <summary>
-    /// Bakes <paramref name="root"/> straight into item model quads for one atlas texture.
-    /// </summary>
-    /// <param name="output">Quad list to append to.</param>
-    /// <param name="root">Model tree to bake.</param>
-    /// <param name="textureWidth">Model texture width in pixels.</param>
-    /// <param name="textureHeight">Model texture height in pixels.</param>
-    /// <param name="texture">Atlas key the model samples.</param>
-    public static void AppendQuads(List<ItemModelQuad> output, SpecialPart root, int textureWidth, int textureHeight, string texture)
+    /// <summary>Bakes <paramref name="root"/> and appends its quads to an <see cref="ItemModelQuad"/> list.</summary>
+    public static void AppendQuads(
+        List<ItemModelQuad> output,
+        SpecialPart root,
+        int textureWidth,
+        int textureHeight,
+        string texture)
     {
         ArgumentNullException.ThrowIfNull(output);
-        // The reference renders entity models with culling disabled, so a face shows whichever way its corner ring winds.
-        // The item pipelines cull back faces, so each face is emitted in both windings instead: the same visible result
-        // without relaxing culling for every item (docs/modules/item-rendering.md 3.5.18).
-        // The reference polygon order is (maxU,minV), (minU,minV), (minU,maxV), (maxU,maxV); ItemModelQuad expects
-        // (minU,minV), (minU,maxV), (maxU,maxV), (maxU,minV). Both wind the same way round the face, so the mapping is a
-        // single rotation. Dropping it rotated every face texture by one corner, which is what the chest showed.
+
         Bake(root, textureWidth, textureHeight, quad =>
         {
-            output.Add(new ItemModelQuad(texture, quad.P1, quad.P2, quad.P3, quad.P0, quad.Uv1, quad.Uv2, quad.Uv3, quad.Uv0, TintIndex: 0, ModelFaceDirection.North));
-            output.Add(new ItemModelQuad(texture, quad.P0, quad.P3, quad.P2, quad.P1, quad.Uv0, quad.Uv3, quad.Uv2, quad.Uv1, TintIndex: 0, ModelFaceDirection.North));
+            // Rotate corners once into the item quad convention while preserving outward CCW winding.
+            output.Add(new ItemModelQuad(
+                texture,
+                quad.P1,
+                quad.P2,
+                quad.P3,
+                quad.P0,
+                quad.Uv1,
+                quad.Uv2,
+                quad.Uv3,
+                quad.Uv0,
+                TintIndex: -1,
+                ModelFaceDirection.North));
         });
     }
-    /// <summary>Total quads a bake of <paramref name="root"/> produces (six per box).</summary>
+
+    /// <summary>Returns the exact number of quads (<c>6</c> per cube) in <paramref name="root"/>.</summary>
     public static int QuadCount(SpecialPart root)
     {
         ArgumentNullException.ThrowIfNull(root);
@@ -113,115 +150,83 @@ internal static class SpecialModelBake
         return count;
     }
 
-    private static void Walk(SpecialPart part, Matrix4x4 parent, int textureWidth, int textureHeight, Action<SpecialQuad> emit)
+    private static void Walk(
+        SpecialPart part,
+        Matrix4x4 parent,
+        int textureWidth,
+        int textureHeight,
+        Action<SpecialQuad> emit)
     {
-        var local = Pivot(part) * parent;
+        var current = Pivot(part) * parent;
+
         foreach (var cube in part.Cubes)
         {
-            EmitCube(cube, local, textureWidth, textureHeight, emit);
+            EmitCube(cube, current, textureWidth, textureHeight, emit);
         }
 
         foreach (var child in part.Children)
         {
-            Walk(child, local, textureWidth, textureHeight, emit);
+            Walk(child, current, textureWidth, textureHeight, emit);
         }
     }
 
     private static Matrix4x4 Pivot(SpecialPart part)
     {
         var pivot = part.Pivot / PixelsPerUnit;
-        var matrix = Matrix4x4.CreateTranslation(pivot);
-        if (part.RotationDegrees != Vector3.Zero)
-        {
-            const float toRadians = MathF.PI / 180f;
-            // The reference composes rotationZYX(z, y, x); in row-vector order that applies Z, then Y, then X.
-            matrix *=
-                Matrix4x4.CreateRotationZ(part.RotationDegrees.Z * toRadians)
-                * Matrix4x4.CreateRotationY(part.RotationDegrees.Y * toRadians)
-                * Matrix4x4.CreateRotationX(part.RotationDegrees.X * toRadians);
-        }
+        var radX = MathF.PI / 180f * part.RotationDegrees.X;
+        var radY = MathF.PI / 180f * part.RotationDegrees.Y;
+        var radZ = MathF.PI / 180f * part.RotationDegrees.Z;
 
-        // The reference PartPose.offset translates to the pivot and rotates there; box origins are already relative
-        // to that pivot, so the inverse translation must NOT be applied.
-        return matrix;
+        // Row-vector convention matching PoseStack.translate(pivot) * rotationZYX(z, y, x):
+        // a local point is rotated X -> Y -> Z and then translated by +pivot.
+        return Matrix4x4.CreateRotationX(radX)
+            * Matrix4x4.CreateRotationY(radY)
+            * Matrix4x4.CreateRotationZ(radZ)
+            * Matrix4x4.CreateTranslation(pivot);
     }
 
-    private static void EmitCube(SpecialCube cube, Matrix4x4 transform, int textureWidth, int textureHeight, Action<SpecialQuad> emit)
-    {
-        var min = cube.From;
-        var max = cube.From + cube.Size;
-        if (cube.Mirror)
-        {
-            (min.X, max.X) = (max.X, min.X);
-        }
-
-        var t0 = new Vector3(min.X, min.Y, min.Z);
-        var t1 = new Vector3(max.X, min.Y, min.Z);
-        var t2 = new Vector3(max.X, max.Y, min.Z);
-        var t3 = new Vector3(min.X, max.Y, min.Z);
-        var l0 = new Vector3(min.X, min.Y, max.Z);
-        var l1 = new Vector3(max.X, min.Y, max.Z);
-        var l2 = new Vector3(max.X, max.Y, max.Z);
-        var l3 = new Vector3(min.X, max.Y, max.Z);
-
-        var u0 = cube.TextureU;
-        var u1 = u0 + cube.Size.Z;
-        var u2 = u1 + cube.Size.X;
-        var u22 = u2 + cube.Size.X;
-        var u3 = u22 + cube.Size.Z;
-        var u4 = u3 + cube.Size.X;
-        var v0 = cube.TextureV;
-        var v1 = v0 + cube.Size.Z;
-        var v2 = v1 + cube.Size.Y;
-
-        EmitFace([l1, l0, t0, t1], u1, v0, u2, v1, cube, transform, textureWidth, textureHeight, emit);
-        EmitFace([t2, t3, l3, l2], u2, v1, u22, v0, cube, transform, textureWidth, textureHeight, emit);
-        EmitFace([t0, l0, l3, t3], u0, v1, u1, v2, cube, transform, textureWidth, textureHeight, emit);
-        EmitFace([t1, t0, t3, t2], u1, v1, u2, v2, cube, transform, textureWidth, textureHeight, emit);
-        EmitFace([l1, t1, t2, l2], u2, v1, u3, v2, cube, transform, textureWidth, textureHeight, emit);
-        EmitFace([l0, l1, l2, l3], u3, v1, u4, v2, cube, transform, textureWidth, textureHeight, emit);
-    }
-
-    private static void EmitFace(
-        ReadOnlySpan<Vector3> corners,
-        float uLeft,
-        float vTop,
-        float uRight,
-        float vBottom,
+    private static void EmitCube(
         SpecialCube cube,
         Matrix4x4 transform,
         int textureWidth,
         int textureHeight,
         Action<SpecialQuad> emit)
     {
-        // Reference Polygon corner order: 0 = (right, top), 1 = (left, top), 2 = (left, bottom), 3 = (right, bottom).
-        var corner0 = Vector3.Transform(corners[0] / PixelsPerUnit, transform);
-        var corner1 = Vector3.Transform(corners[1] / PixelsPerUnit, transform);
-        var corner2 = Vector3.Transform(corners[2] / PixelsPerUnit, transform);
-        var corner3 = Vector3.Transform(corners[3] / PixelsPerUnit, transform);
+        var min = cube.From / PixelsPerUnit;
+        var max = (cube.From + cube.Size) / PixelsPerUnit;
 
-        var vTopNormalized = vTop / textureHeight;
-        var vBottomNormalized = vBottom / textureHeight;
-
-        if (uRight <= textureWidth)
+        if (cube.Mirror)
         {
-            var uLeftNormalized = uLeft / textureWidth;
-            var uRightNormalized = uRight / textureWidth;
-            EmitQuad(corner0, corner1, corner2, corner3, uRightNormalized, uLeftNormalized, vTopNormalized, vBottomNormalized, cube.Mirror, emit);
-            return;
+            (min.X, max.X) = (max.X, min.X);
         }
 
-        // The reference samples with GL REPEAT, which is piecewise: a U past the sheet edge continues from the left
-        // edge. Our atlas maps a sprite-local U with a linear mix, so the face is split at the seam and each half keeps
-        // a monotonic U inside the sheet - the piecewise equivalent of REPEAT.
-        var span = uRight - uLeft;
-        var seam = (textureWidth - uLeft) / span;
+        var x0 = min.X;
+        var y0 = min.Y;
+        var z0 = min.Z;
+        var x1 = max.X;
+        var y1 = max.Y;
+        var z1 = max.Z;
 
-        var seamTop = Vector3.Lerp(corner1, corner0, seam);
-        var seamBottom = Vector3.Lerp(corner2, corner3, seam);
+        var t0 = Vector3.Transform(new Vector3(x0, y0, z0), transform);
+        var t1 = Vector3.Transform(new Vector3(x1, y0, z0), transform);
+        var t2 = Vector3.Transform(new Vector3(x1, y1, z0), transform);
+        var t3 = Vector3.Transform(new Vector3(x0, y1, z0), transform);
+        var l0 = Vector3.Transform(new Vector3(x0, y0, z1), transform);
+        var l1 = Vector3.Transform(new Vector3(x1, y0, z1), transform);
+        var l2 = Vector3.Transform(new Vector3(x1, y1, z1), transform);
+        var l3 = Vector3.Transform(new Vector3(x0, y1, z1), transform);
 
-        EmitQuad(seamTop, corner1, corner2, seamBottom, 1f, uLeft / textureWidth, vTopNormalized, vBottomNormalized, cube.Mirror, emit);
-        EmitQuad(corner0, seamTop, seamBottom, corner3, (uRight - textureWidth) / textureWidth, 0f, vTopNormalized, vBottomNormalized, cube.Mirror, emit);
+        var uv = ReferenceCubeUvStrip.Compute(cube.TextureU, cube.TextureV, cube.Size.X, cube.Size.Y, cube.Size.Z);
+        var invW = 1f / textureWidth;
+        var invH = 1f / textureHeight;
+
+        // 6 faces in exact ModelPart.Cube order: DOWN, UP, WEST (-X), NORTH (-Z), EAST (+X), SOUTH (+Z).
+        EmitQuad(l1, l0, t0, t1, uv.U2 * invW, uv.U1 * invW, uv.V0 * invH, uv.V1 * invH, cube.Mirror, emit); // DOWN
+        EmitQuad(t2, t3, l3, l2, uv.U22 * invW, uv.U2 * invW, uv.V1 * invH, uv.V0 * invH, cube.Mirror, emit); // UP
+        EmitQuad(t0, l0, l3, t3, uv.U1 * invW, uv.U0 * invW, uv.V1 * invH, uv.V2 * invH, cube.Mirror, emit); // WEST (-X)
+        EmitQuad(t1, t0, t3, t2, uv.U2 * invW, uv.U1 * invW, uv.V1 * invH, uv.V2 * invH, cube.Mirror, emit); // NORTH (-Z)
+        EmitQuad(l1, t1, t2, l2, uv.U3 * invW, uv.U2 * invW, uv.V1 * invH, uv.V2 * invH, cube.Mirror, emit); // EAST (+X)
+        EmitQuad(l0, l1, l2, l3, uv.U4 * invW, uv.U3 * invW, uv.V1 * invH, uv.V2 * invH, cube.Mirror, emit); // SOUTH (+Z)
     }
 
     private static void EmitQuad(
@@ -253,6 +258,14 @@ internal static class SpecialModelBake
             (uvs[1], uvs[2]) = (uvs[2], uvs[1]);
         }
 
-        emit(new SpecialQuad(positions[0], positions[1], positions[2], positions[3], uvs[0], uvs[1], uvs[2], uvs[3]));
+        emit(new SpecialQuad(
+            positions[0],
+            positions[1],
+            positions[2],
+            positions[3],
+            uvs[0],
+            uvs[1],
+            uvs[2],
+            uvs[3]));
     }
 }
