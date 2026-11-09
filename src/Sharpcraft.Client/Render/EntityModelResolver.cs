@@ -798,6 +798,7 @@ public static class EntityModelResolver
             var heldLayers = new List<EntityRenderLayerDefinition>(existing);
             AddSpecialHandLayers(heldLayers, "trident", "minecraft:trident", SpecialItemModelDefinition.HeldTridentRight, SpecialItemModelDefinition.HeldTridentLeft, SpecialItemModelDefinition.TridentTexture,
                 static (_, _) => SpecialItemModelDefinition.TridentTexture);
+            ApplyShieldHeldTransforms();
             AddSpecialHandLayers(heldLayers, "shield", "minecraft:shield", SpecialItemModelDefinition.HeldShieldRight, SpecialItemModelDefinition.HeldShieldLeft, SpecialItemModelDefinition.ShieldTexture,
                 ResolveHeldItemSpecialTexture);
             AddSpecialHeadLayers(heldLayers);
@@ -889,6 +890,39 @@ public static class EntityModelResolver
         return decorated;
     }
 
+    /// <summary>
+    /// Bakes the reference held-item chain into the special shield meshes.
+    /// </summary>
+    /// <remarks>
+    /// The reference submits the shield model inside the entity pose stack, so its world matrix is
+    /// <c>H · A_ref · D</c> — the same chain regular items use. Our shield mesh is authored directly at the arm pivot with
+    /// no transform, so the constant factor <c>D · AnchorCore</c> is applied to its geometry instead. Both factors are
+    /// pose-independent, which is why this can be baked once; without it the shield renders as a flat plate lying on the
+    /// shoulder. <c>EntityModelGenerators</c> also wraps the shield item model in <c>scale(1,-1,-1)</c>; that is part of
+    /// the model resolution rather than this chain.
+    /// </remarks>
+    private static void ApplyShieldHeldTransforms()
+    {
+        if (_shieldHeldTransformsApplied || ItemModels is null)
+        {
+            return;
+        }
+
+        foreach (var (model, offhand) in new[]
+                 {
+                     (SpecialItemModelDefinition.HeldShieldRight, false),
+                     (SpecialItemModelDefinition.HeldShieldLeft, true)
+                 })
+        {
+            var display = DisplayFor(ItemModels.Resolve("minecraft:shield"), offhand);
+            var anchor = AnchorCoreFor(offhand, baby: false);
+            model.LocalTransform = display * anchor;
+        }
+
+        _shieldHeldTransformsApplied = true;
+    }
+
+    private static bool _shieldHeldTransformsApplied;
     private static void AddSpecialHandLayers(
         List<EntityRenderLayerDefinition> layers,
         string name,

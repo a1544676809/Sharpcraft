@@ -65,7 +65,7 @@ public sealed class EntityModelDefinition
     /// pass through an item display transform and hand anchor (the reference applies them inside the pose stack), which
     /// the mesh DSL itself cannot express. Identity by default.
     /// </summary>
-    public System.Numerics.Matrix4x4 LocalTransform { get; init; } = System.Numerics.Matrix4x4.Identity;
+    public System.Numerics.Matrix4x4 LocalTransform { get; set; } = System.Numerics.Matrix4x4.Identity;
 
     /// <summary>
     /// Eyes texture drawn over the same geometry with the reference eyes render type (emissive, depth &gt;=, no writes),
