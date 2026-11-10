@@ -189,6 +189,30 @@ public interface IRenderBackend
     /// <summary>Creates a sampler from the state the caller asked for.</summary>
     SamplerHandle CreateSampler(AddressMode addressMode, FilterMode minFilter, FilterMode magFilter, bool useMipmaps);
 
+    /// <summary>Begins a render pass on the encoder.</summary>
+    RenderPassHandle BeginRenderPass(CommandEncoderHandle encoder, ReadOnlySpan<ColorAttachmentDesc> colours, in DepthAttachmentDesc? depth);
+
+    /// <summary>Ends a render pass. The handle is dead afterwards.</summary>
+    void EndRenderPass(RenderPassHandle pass);
+
+    /// <summary>Selects the pipeline subsequent draws use.</summary>
+    void SetPipeline(RenderPassHandle pass, PipelineHandle pipeline);
+
+    /// <summary>Binds a bind group at a slot.</summary>
+    void SetBindGroup(RenderPassHandle pass, uint index, BindGroupHandle group);
+
+    /// <summary>Binds a vertex buffer at a slot.</summary>
+    void SetVertexBuffer(RenderPassHandle pass, uint slot, BufferHandle buffer);
+
+    /// <summary>Binds the index buffer.</summary>
+    void SetIndexBuffer(RenderPassHandle pass, BufferHandle buffer, IndexFormat format);
+
+    /// <summary>Draws vertices without an index buffer.</summary>
+    void Draw(RenderPassHandle pass, uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance);
+
+    /// <summary>Draws indexed vertices.</summary>
+    void DrawIndexed(RenderPassHandle pass, uint indexCount, uint instanceCount, uint firstIndex, int baseVertex, uint firstInstance);
+
     /// <summary>Creates a command encoder for one frame's recording.</summary>
     CommandEncoderHandle CreateCommandEncoder();
 
@@ -368,6 +392,86 @@ public sealed class WgpuRenderBackend : IRenderBackend
     /// <inheritdoc/>
     public SamplerHandle CreateSampler(AddressMode addressMode, FilterMode minFilter, FilterMode magFilter, bool useMipmaps) =>
         new(SamplerCache.Create(_device, addressMode, minFilter, magFilter, useMipmaps));
+
+    /// <inheritdoc/>
+    public RenderPassHandle BeginRenderPass(
+        CommandEncoderHandle encoder,
+        ReadOnlySpan<ColorAttachmentDesc> colours,
+        in DepthAttachmentDesc? depth)
+    {
+        var native = RequireValid<CommandEncoder>(encoder.Value is not null, encoder.Value);
+
+        var attachments = new ColorAttachment[colours.Length];
+        for (var index = 0; index < colours.Length; index++)
+        {
+            var colour = colours[index];
+            attachments[index] = new ColorAttachment
+            {
+                View = RequireValid<TextureView>(colour.View.Value is not null, colour.View.Value),
+                LoadOp = colour.Load == LoadOp.Clear ? WGPULoadOp.Clear : WGPULoadOp.Load,
+                StoreOp = colour.Store == StoreOp.Store ? WGPUStoreOp.Store : WGPUStoreOp.Discard,
+                ClearValue = new WGPUColor
+                {
+                    r = colour.ClearColour.X,
+                    g = colour.ClearColour.Y,
+                    b = colour.ClearColour.Z,
+                    a = colour.ClearColour.W
+                }
+            };
+        }
+
+        var depthView = depth is { } state
+            ? RequireValid<TextureView>(state.View.Value is not null, state.View.Value)
+            : default;
+
+        var pass = depth is { } descriptor
+            ? native.BeginRenderPass(attachments, new DepthStencilAttachment
+            {
+                View = depthView,
+                DepthLoadOp = descriptor.Load == LoadOp.Clear ? WGPULoadOp.Clear : WGPULoadOp.Load,
+                DepthStoreOp = descriptor.Store == StoreOp.Store ? WGPUStoreOp.Store : WGPUStoreOp.Discard,
+                DepthClearValue = descriptor.ClearDepth
+            })
+            : native.BeginRenderPass(attachments, default);
+
+        return new RenderPassHandle(pass);
+    }
+
+    /// <inheritdoc/>
+    public void EndRenderPass(RenderPassHandle pass) =>
+        RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value).End();
+
+    /// <inheritdoc/>
+    public void SetPipeline(RenderPassHandle pass, PipelineHandle pipeline) =>
+        RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
+            .SetPipeline(RequireValid<RenderPipeline>(pipeline.Value is not null, pipeline.Value));
+
+    /// <inheritdoc/>
+    public void SetBindGroup(RenderPassHandle pass, uint index, BindGroupHandle group) =>
+        RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
+            .SetBindGroup(index, RequireValid<BindGroup>(group.Value is not null, group.Value));
+
+    /// <inheritdoc/>
+    public void SetVertexBuffer(RenderPassHandle pass, uint slot, BufferHandle buffer) =>
+        RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
+            .SetVertexBuffer(slot, RequireValid<Brew.Wgpu.Buffer>(buffer.Value is not null, buffer.Value));
+
+    /// <inheritdoc/>
+    public void SetIndexBuffer(RenderPassHandle pass, BufferHandle buffer, IndexFormat format) =>
+        RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
+            .SetIndexBuffer(
+                RequireValid<Brew.Wgpu.Buffer>(buffer.Value is not null, buffer.Value),
+                format == IndexFormat.Uint16 ? WGPUIndexFormat.Uint16 : WGPUIndexFormat.Uint32);
+
+    /// <inheritdoc/>
+    public void Draw(RenderPassHandle pass, uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance) =>
+        RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
+            .Draw(vertexCount, instanceCount, firstVertex, firstInstance);
+
+    /// <inheritdoc/>
+    public void DrawIndexed(RenderPassHandle pass, uint indexCount, uint instanceCount, uint firstIndex, int baseVertex, uint firstInstance) =>
+        RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
+            .DrawIndexed(indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
 
     /// <inheritdoc/>
     public CommandEncoderHandle CreateCommandEncoder() => new(_device.CreateCommandEncoder());
