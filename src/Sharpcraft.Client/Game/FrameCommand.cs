@@ -920,9 +920,9 @@ internal static class FrameCommand
                 var before = buffer.IndexCount;
                 var translucentBefore = translucent?.IndexCount ?? 0;
 
-                blocks += Sharpcraft.Client.Render.ChunkMesher.MeshChunk(
-                    world, chunk, airState: 0, buffer, maxBlocks: 2_000_000 - blocks, sprites: sprites, translucent: translucent, layout: layout, cutout: cutout, tint: tint,
-                    merge: GameOptions.Get("MC_MESH_NOMERGE") != "1", lighting: lighting);
+                blocks += Sharpcraft.Client.Render.ChunkMeshCache.MeshChunkOnce(
+                    world, chunk, buffer, sprites, translucent, layout, cutout, tint, lighting,
+                    GameOptions.Get("MC_MESH_NOMERGE") != "1", maxBlocks: 2_000_000 - blocks);
 
                 ranges.Add((before, buffer.IndexCount - before));
 
@@ -1010,37 +1010,16 @@ internal static class FrameCommand
                 : cache.Snapshot();
             drawRanges = null;
 
-            if (layout is not null && sprites is not null)
+            // The cache is the only mesher (T-793): while it meshes a chunk it also forwards the blended faces into its
+            // layer sinks, so the startup frame reads that aggregate instead of meshing the world a second time. Cutout
+            // faces are not split out of the solid mesh by design (they are alpha tested inside it), which is why only
+            // the translucent layer is taken from here.
+            if (cache.Layers?.Translucent is { IndexCount: > 0 } translucentLayer)
             {
-                // The cache builds one merged mesh, so the translucent layer is meshed separately here. It costs a second
-                // pass over the chunks, which is acceptable for the presented view and keeps the cached path untouched.
-                using var opaqueSink = new Sharpcraft.Client.Render.MeshBuffer(4096);
-                using var translucentBuffer = new Sharpcraft.Client.Render.MeshBuffer(4096);
-                using var cutoutBuffer = new Sharpcraft.Client.Render.MeshBuffer(4096);
-
-                foreach (var chunk in world.GetChunks())
-                {
-                    Sharpcraft.Client.Render.ChunkMesher.MeshChunk(
-                        world, chunk, airState: 0, opaqueSink, maxBlocks: 2_000_000, sprites: sprites, translucent: translucentBuffer, layout: layout, cutout: cutoutBuffer, tint: tint,
-                        merge: GameOptions.Get("MC_MESH_NOMERGE") != "1", lighting: lighting);
-                }
-
-                if (translucentBuffer.IndexCount > 0)
-                {
-                    var split = translucentBuffer.ToMeshData(0);
-                    translucentVertices = split.Vertices;
-                    translucentIndices = split.Indices;
-                }
-
-                if (cutoutBuffer.IndexCount > 0)
-                {
-                    var split = cutoutBuffer.ToMeshData(0);
-                    cutoutVertices = split.Vertices;
-                    cutoutIndices = split.Indices;
-                }
-
-                Console.WriteLine(
-                    $"layers: cutout {(cutoutIndices?.Length ?? 0) / 3} tri, translucent {(translucentIndices?.Length ?? 0) / 3} tri");
+                var split = translucentLayer.ToMeshData(0);
+                translucentVertices = split.Vertices;
+                translucentIndices = split.Indices;
+                Console.WriteLine($"layers: translucent {(translucentIndices?.Length ?? 0) / 3} tri (from the cache)");
             }
         }
 
@@ -1098,7 +1077,7 @@ internal static class FrameCommand
             eye,
             target)
         {
-        Diagnostics = GameOptions.ForFrame(),
+            Diagnostics = GameOptions.ForFrame(),
             Lightmap = ToLightmapUniform(lighting),
             FogColour = EffectiveFogColour(world),
             Atlas = atlas,
@@ -2174,8 +2153,8 @@ internal static class FrameCommand
                 Console.WriteLine($"  demo block (0,{y},0) state {world.GetBlockState(0, y, 0)}");
             }
         }
-        var mesh = ChunkMesher.Mesh(world, airState: 0, maxBlocks: 2_000_000, sprites: prepared?.Map,
-            merge: GameOptions.Get("MC_MESH_NOMERGE") != "1", lighting: EffectiveLighting(world));
+        var mesh = Sharpcraft.Client.Render.ChunkMeshCache.MeshWorldOnce(
+            world, prepared?.Map, EffectiveLighting(world), GameOptions.Get("MC_MESH_NOMERGE") != "1");
         Console.WriteLine($"local demo: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
         var bounds = (Min: new Vector3(0, -16, 0), Max: new Vector3(16, 16, 16));

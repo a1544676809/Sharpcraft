@@ -184,3 +184,22 @@ CPU 变贵的直接原因是每格要查两次世界（方块 + 光照）并且�
 - **成因类别**：热路径缺少每 pass 预计算表，导致每区块重复解析状态；既不是 O(n²)（每区块耗时均匀、总量线性），也不是同步等待（`cache.Snapshot()` 只用 6 ms，`pending=8` 表明后台工作池还在排队，这 45 s 是主线程纯 CPU）。
 - **修复方向**：窗口路径复用同一张 `StateCullTable`/`StateVisualCache`，或让 `BuildRequest` 直接消费 `ChunkMeshCache.Layers` 已产生的分图层结果；顺带消掉"缓存已网格化、这里又网格化一遍"的重复劳动（`MC_START_CHUNKS=1` 时同一区块被网格化两次，白费 6.3 s）。
 - **待查（本轮未测）**：即使有表，单区块冷启动仍需约 1 s，而本文档 §10 的池化基准是单区块 2.6 ms——差两个量级，可能来自冷 JIT、未池化缓冲与单线程。修完表后应重测一次基线再决定是否值得继续优化。
+### 11.5 根治：请求只消费缓存，网格化只有一个入口（2026-11-10 已实施）
+
+按 §11.3 的结论，窗口首帧请求**不再网格化任何区块**：`BuildRequest` 的 `cache is not null` 分支删除了那趟二次遍历，改为读缓存自己的产出——实心几何仍取自 `ChunkMeshCache.Snapshot()`（合并已缓存结果），半透明层取自缓存在网格化时顺手写入的 `LayerSinks.Translucent`；cutout 面按设计留在实心网格里，因此不再单独产出（旧代码那趟遍历额外生成的 cutout 层属于重复几何）。网格化入口经 `ChunkMeshCache.MeshChunkOnce` / `MeshWorldOnce` 收敛到 `Render/` 与后台工作池两处。
+
+| 指标 | 修改前 | 修改后 |
+| --- | --- | --- |
+| 启动到首帧（同一台机器、`MC_VIEW_DISTANCE=32`） | **57.6 s** | **15.3 / 15.6 / 10.7 s**（三次，随机器负载波动） |
+| `BuildRequest` 自身耗时 | ~44.6 s（9 区块二次网格化） | **17–26 ms**（`Snapshot` + 读图层 + `BoundsOf` + 雾色） |
+| `mesh:`（首帧实心几何） | `1 blocks, 8606 triangles` | **完全一致** |
+| `frame #0` 上传量 | `+7435 KiB` | **完全一致** |
+| 首帧 `cull:` | `chunks=6 cutout=6 translucent=6` | **完全一致** |
+| 几何来源 | 实心来自缓存 + 图层来自第二趟遍历 | 两者都来自缓存；稳态几何仍由工作池逐区块写入 arena（未被改动） |
+
+首帧仍约 10–15 s，**未达到 5 s 目标**：分段探针显示 `BuildRequest` 内部每段合计仅 17–26 ms，剩余时间在请求构建之外——资源与连接约 1.5 s、网格预热约 0.6 s、另有约 7 s 稳定地出现在请求对象构造之后（已排除记录构造本身、`GameSettings`/光照/雾色/包围盒各段），渲染器启动到首帧约 3 s。这部分属独立任务，不应计入 T-793。
+
+守门（防止复发）：
+
+- `tests/Sharpcraft.Client.Tests/Render/FrameRequestDoesNotMeshTests.cs`：从缓存构建请求时 `ChunkMeshCache.TotalChunksMeshed` 不得增长，且返回的实心几何必须与 `Snapshot()` 逐项相等——直接锁住"请求不得网格化"。
+- `tests/Sharpcraft.Architecture.Tests/SingleMeshingHomeTests.cs`：`MeshChunk(` / `ChunkMesher.Mesh(` 只允许出现在 `Render/ChunkMeshCache.cs` 与 `World/ChunkWorkerPool.cs`，第三个调用者即失败。

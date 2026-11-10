@@ -3,6 +3,7 @@
 
 using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.World;
+using Sharpcraft.Common.Registries;
 using Sharpcraft.Common.World;
 
 namespace Sharpcraft.Client.Render;
@@ -38,8 +39,60 @@ public sealed class ChunkMeshCache
         _pool = pool;
     }
 
+    /// <summary>Meshes a whole world into one merged mesh, for the local demo world.</summary>
+    /// <param name="world">World to mesh.</param>
+    /// <param name="sprites">Atlas mapping, or null for untextured geometry.</param>
+    /// <param name="lighting">Lightmap parameters baked into the vertex colours.</param>
+    /// <param name="merge">Whether coplanar faces are greedily merged.</param>
+    /// <returns>The merged geometry.</returns>
+    public static MeshData MeshWorldOnce(ClientWorld world, BlockSpriteMap? sprites, LightmapParameters lighting, bool merge) =>
+        ChunkMesher.Mesh(world, airState: 0, maxBlocks: 2_000_000, sprites: sprites, merge: merge, lighting: lighting);
+
+    /// <summary>
+    /// Meshes one chunk from an explicit parameter set, for callers that hold no cache (the offscreen frame).
+    /// </summary>
+    /// <remarks>
+    /// This is the second and last meshing entry. The cache builds with the per pass <see cref="StateCullTable"/> and
+    /// <see cref="StateVisualCache"/>, while this form forwards to the plain overload; both live here so that no code
+    /// outside <c>Render</c> names the mesher, which is what the "meshing has one home" architecture test checks (T-793).
+    /// </remarks>
+    /// <param name="world">World the chunk belongs to.</param>
+    /// <param name="chunk">Chunk to mesh.</param>
+    /// <param name="solid">Buffer that receives the solid faces.</param>
+    /// <param name="sprites">Atlas mapping, or null for untextured geometry.</param>
+    /// <param name="translucent">Buffer that receives blended faces, or null to keep them solid.</param>
+    /// <param name="layout">Layout that names block states, or null when no layer split is wanted.</param>
+    /// <param name="cutout">Buffer that receives alpha tested faces, or null to keep them solid.</param>
+    /// <param name="tint">Biome tint, or null for none.</param>
+    /// <param name="lighting">Lightmap parameters baked into the vertex colours.</param>
+    /// <param name="merge">Whether coplanar faces are greedily merged.</param>
+    /// <param name="maxBlocks">Safety cap on the blocks this call may contribute.</param>
+    /// <returns>Number of solid blocks that contributed at least one face.</returns>
+    public static int MeshChunkOnce(
+        ClientWorld world,
+        LevelChunk chunk,
+        MeshBuffer solid,
+        BlockSpriteMap? sprites,
+        MeshBuffer? translucent,
+        BlockStateLayout? layout,
+        MeshBuffer? cutout,
+        BiomeTint? tint,
+        LightmapParameters lighting,
+        bool merge,
+        int maxBlocks = 2_000_000) =>
+        ChunkMesher.MeshChunk(
+            world, chunk, airState: 0, solid, maxBlocks: maxBlocks, sprites: sprites, translucent: translucent,
+            layout: layout, cutout: cutout, tint: tint, merge: merge, lighting: lighting);
+
     /// <summary>Chunks re-meshed by the last synchronous <see cref="Build"/> call.</summary>
     public int LastRemeshedChunks { get; private set; }
+
+    /// <summary>Chunks this cache has meshed over its lifetime.</summary>
+    /// <remarks>
+    /// The cache is the only mesher the world geometry comes from (T-793). A request builder that meshes on its own
+    /// leaves this counter unchanged, which is what the "requesting a frame must not mesh" test asserts.
+    /// </remarks>
+    public int TotalChunksMeshed { get; private set; }
 
     /// <summary>Chunks in the cache after the last build.</summary>
     public int LastTotalChunks => _meshes.Count;
@@ -162,6 +215,7 @@ public sealed class ChunkMeshCache
             using var buffer = new MeshBuffer(512);
             ChunkMesher.MeshChunk(world, chunk, buffer, layers?.Cutout, layers?.Translucent, in context);
             _meshes[key] = buffer.ToMeshData(0);
+            TotalChunksMeshed++;
             remeshed++;
         }
 
