@@ -2,7 +2,6 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Numerics;
-using Brew.Wgpu;
 
 namespace Sharpcraft.Framework.Rendering;
 
@@ -100,18 +99,13 @@ internal sealed class ItemOitSet : IDisposable
         PipelineHandle accumulatePipeline,
         PipelineHandle compositePipeline,
         BindGroupHandle atlas,
-        Action<RenderPassEncoder> drawGeometry)
+        Action<RenderPassHandle> drawGeometry)
     {
         ArgumentNullException.ThrowIfNull(drawGeometry);
         if (!Created)
         {
             return;
         }
-
-        // The passes are recorded through the seam; only the geometry callback still speaks the native pass, because the
-        // arena draw helpers have not moved behind the seam yet.
-        var wgpu = backend as WgpuRenderBackend
-            ?? throw new InvalidOperationException("the seam implementation must adopt its own handles");
 
         var boundsPass = backend.BeginRenderPass(
             encoder,
@@ -121,7 +115,7 @@ internal sealed class ItemOitSet : IDisposable
         {
             backend.SetPipeline(boundsPass, boundsPipeline);
             backend.SetBindGroup(boundsPass, 0, atlas);
-            drawGeometry(wgpu.AsRenderPass(boundsPass));
+            drawGeometry(boundsPass);
         }
         finally
         {
@@ -140,7 +134,7 @@ internal sealed class ItemOitSet : IDisposable
             backend.SetPipeline(transmittancePass, transmittancePipeline);
             backend.SetBindGroup(transmittancePass, 0, atlas);
             backend.SetBindGroup(transmittancePass, 1, TransmittanceBindGroup);
-            drawGeometry(wgpu.AsRenderPass(transmittancePass));
+            drawGeometry(transmittancePass);
         }
         finally
         {
@@ -156,7 +150,7 @@ internal sealed class ItemOitSet : IDisposable
             backend.SetPipeline(accumulatePass, accumulatePipeline);
             backend.SetBindGroup(accumulatePass, 0, atlas);
             backend.SetBindGroup(accumulatePass, 1, AccumulateBindGroup);
-            drawGeometry(wgpu.AsRenderPass(accumulatePass));
+            drawGeometry(accumulatePass);
         }
         finally
         {

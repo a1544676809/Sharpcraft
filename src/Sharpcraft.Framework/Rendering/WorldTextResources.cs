@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using System.Runtime.InteropServices;
 using Brew.Wgpu;
-using Brew.Wgpu.Native;
 
 namespace Sharpcraft.Framework.Rendering;
 
@@ -10,77 +10,81 @@ namespace Sharpcraft.Framework.Rendering;
 /// World-space text pass: glyph quads sample the font sheet and are blended over the resolved world with depth testing.
 /// Background quads use uv.x &lt; 0 to take the solid-colour path.
 /// </summary>
+/// <remarks>
+/// Every resource is a seam handle, so the pass records itself through the backend and the renderer hands it the same
+/// handle it began the pass with.
+/// </remarks>
 internal sealed class WorldTextResources : IDisposable
 {
-    private readonly Device _device;
-    private readonly BindGroupLayout _layout;
-    private readonly PipelineLayout _pipelineLayout;
-    private readonly RenderPipeline _pipeline;
-    private readonly Texture _texture;
-    private readonly TextureView _view;
+    private readonly IRenderBackend _backend;
+    private readonly BindGroupLayoutHandle _layout;
+    private readonly PipelineLayoutHandle _pipelineLayout;
+    private readonly PipelineHandle _pipeline;
+    private readonly TextureHandle _texture;
+    private readonly TextureViewHandle _view;
     private readonly SamplerCache _samplers;
     private readonly Sampler _sampler;
-    private readonly BindGroup _bindGroup;
-    private Brew.Wgpu.Buffer _vertex = default;
-    private Brew.Wgpu.Buffer _index = default;
+    private readonly SamplerHandle _samplerHandle;
+    private readonly BindGroupHandle _bindGroup;
+    private BufferHandle _vertex = default;
+    private BufferHandle _index = default;
     private uint _indexCount;
 
     public WorldTextResources(
-        WgpuRenderBackend backend,
+        IRenderBackend backend,
         Device device,
         TextureData glyphSheet,
-        Brew.Wgpu.Buffer cameraBuffer,
+        BufferHandle cameraBuffer,
         ulong cameraSize,
         TextureFormat format)
     {
-        _device = device;
-        _texture = device.CreateTexture(new TextureDescriptor
-        {
-            Size = new WGPUExtent3D { width = (uint)glyphSheet.Width, height = (uint)glyphSheet.Height, depthOrArrayLayers = 1 },
-            MipLevelCount = 1,
-            SampleCount = 1,
-            Dimension = WGPUTextureDimension._2D,
-            Format = WGPUTextureFormat.RGBA8Unorm,
-            Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
-        });
-        device.Queue.WriteTexture(
+        _backend = backend;
+        _texture = backend.CreateTexture(new TextureDesc(
+            (uint)glyphSheet.Width,
+            (uint)glyphSheet.Height,
+            TextureFormat.Rgba8Unorm,
+            1,
+            TextureUsages.TextureBinding | TextureUsages.CopyDst));
+        backend.WriteTexture(
             _texture,
             glyphSheet.Rgba,
             (uint)(glyphSheet.Width * 4),
+            (uint)glyphSheet.Width,
             (uint)glyphSheet.Height,
-            new WGPUExtent3D { width = (uint)glyphSheet.Width, height = (uint)glyphSheet.Height, depthOrArrayLayers = 1 },
-            0,
-            new WGPUOrigin3D { x = 0, y = 0, z = 0 });
-        _view = _texture.CreateView();
+            0);
+        _view = backend.CreateTextureView(_texture);
         // One sampler per state for this resource; the sampler itself is owned by the cache (T-784 S1b), so Dispose
         // releases the cache rather than the sampler.
         _samplers = new SamplerCache();
         _samplers.Initialize(device);
         _sampler = _samplers.GetClampToEdge(FilterMode.Nearest);
+        _samplerHandle = backend is WgpuRenderBackend wgpu
+            ? wgpu.AdoptSampler(_sampler)
+            : throw new InvalidOperationException("the seam implementation must adopt its own handles");
 
-        _layout = device.CreateBindGroupLayout(
+        _layout = backend.CreateBindGroupLayout(
         [
-            BindGroupLayoutEntry.Buffer(0, ShaderStage.Vertex, WGPUBufferBindingType.Uniform, false, cameraSize),
-            BindGroupLayoutEntry.Texture(1, ShaderStage.Fragment, WGPUTextureSampleType.Float, WGPUTextureViewDimension._2D, false),
-            BindGroupLayoutEntry.Sampler(2, ShaderStage.Fragment, WGPUSamplerBindingType.Filtering)
+            BindGroupLayoutEntryDesc.UniformBuffer(0, ShaderStages.Vertex) with { MinBindingSize = cameraSize },
+            BindGroupLayoutEntryDesc.Texture(1, ShaderStages.Fragment),
+            BindGroupLayoutEntryDesc.Sampler(2, ShaderStages.Fragment)
         ]);
-        _pipelineLayout = device.CreatePipelineLayout([_layout]);
-        _bindGroup = device.CreateBindGroup(
+        _pipelineLayout = backend.CreatePipelineLayout([_layout]);
+        _bindGroup = backend.CreateBindGroup(
             _layout,
             [
-                BindGroupEntry.Buffer(0, cameraBuffer, 0, cameraSize),
-                BindGroupEntry.TextureView(1, _view),
-                BindGroupEntry.Sampler(2, _sampler)
+                BindGroupEntryDesc.Uniform(0, cameraBuffer, 0, cameraSize),
+                BindGroupEntryDesc.Texture(1, _view),
+                BindGroupEntryDesc.Sampler(2, _samplerHandle)
             ]);
 
         // Described to the backend rather than built here, matching how the frame records its passes.
         var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("world_text"));
-        _pipeline = backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+        _pipeline = backend.CreateRenderPipeline(new PipelineDesc(
             source,
             "vs_main",
             source,
             "fs_main",
-            backend.AdoptPipelineLayout(_pipelineLayout),
+            _pipelineLayout,
             [new ColorTargetDesc(
                 format,
                 new BlendStateDesc(
@@ -91,7 +95,7 @@ internal sealed class WorldTextResources : IDisposable
             FrontFace.Ccw,
             (ulong)VertexLayout.WorldTextStride,
             VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.WorldTextAttributes()))));
+            LayoutAttributes.From(VertexLayout.WorldTextAttributes())));
     }
 
     public void SetDraws(IReadOnlyList<WorldTextDraw> draws)
@@ -114,39 +118,56 @@ internal sealed class WorldTextResources : IDisposable
             }
         }
 
-        _vertex.Dispose();
-        _index.Dispose();
-        _vertex = _device.CreateBufferInit(
-            new BufferInitDescriptor { Usage = BufferUsage.Vertex }, vertices.ToArray().AsSpan());
-        _index = _device.CreateBufferInit(
-            new BufferInitDescriptor { Usage = BufferUsage.Index }, indices.ToArray().AsSpan());
+        DestroyGeometry();
+        var vertexArray = vertices.ToArray();
+        var indexArray = indices.ToArray();
+        _vertex = _backend.CreateBufferInit(
+            new BufferDesc((ulong)vertexArray.Length * sizeof(float), BufferUsages.Vertex),
+            MemoryMarshal.AsBytes(vertexArray.AsSpan()));
+        _index = _backend.CreateBufferInit(
+            new BufferDesc((ulong)indexArray.Length * sizeof(uint), BufferUsages.Index),
+            MemoryMarshal.AsBytes(indexArray.AsSpan()));
         _indexCount = (uint)indices.Count;
     }
 
-    public void Draw(RenderPassEncoder pass)
+    public void Draw(IRenderBackend backend, RenderPassHandle pass)
     {
         if (_indexCount == 0)
         {
             return;
         }
 
-        pass.SetPipeline(_pipeline);
-        pass.SetBindGroup(0, _bindGroup, []);
-        pass.SetVertexBuffer(0, _vertex);
-        pass.SetIndexBuffer(_index, WGPUIndexFormat.Uint32);
-        pass.DrawIndexed(_indexCount);
+        backend.SetPipeline(pass, _pipeline);
+        backend.SetBindGroup(pass, 0, _bindGroup);
+        backend.SetVertexBuffer(pass, 0, _vertex);
+        backend.SetIndexBuffer(pass, _index, IndexFormat.Uint32);
+        backend.DrawIndexed(pass, _indexCount, 1, 0, 0, 0);
     }
 
     public void Dispose()
     {
-        _vertex.Dispose();
-        _index.Dispose();
-        _bindGroup.Dispose();
-        _pipeline.Dispose();
-        _pipelineLayout.Dispose();
-        _layout.Dispose();
+        DestroyGeometry();
+        _backend.Destroy(_bindGroup);
+        _backend.Destroy(_pipeline);
+        _backend.Destroy(_pipelineLayout);
+        _backend.Destroy(_layout);
         _samplers.Dispose();
-        _view.Dispose();
-        _texture.Dispose();
+        _backend.Destroy(_view);
+        _backend.Destroy(_texture);
+    }
+
+    private void DestroyGeometry()
+    {
+        if (_vertex.IsValid)
+        {
+            _backend.Destroy(_vertex);
+            _vertex = default;
+        }
+
+        if (_index.IsValid)
+        {
+            _backend.Destroy(_index);
+            _index = default;
+        }
     }
 }

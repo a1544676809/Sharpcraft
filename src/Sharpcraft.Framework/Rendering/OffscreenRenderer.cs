@@ -283,61 +283,61 @@ public static class OffscreenRenderer
         Console.WriteLine($"pyramid: {readbacks.Count} levels, total mismatches {totalMismatches}, worst delta {worst:F6}; " + string.Join(", ", lines));
     }
 
-    private static RenderPipeline CreateSkyPipeline(WgpuRenderBackend backend, TextureFormat format)
+    private static PipelineHandle CreateSkyPipeline(WgpuRenderBackend backend, TextureFormat format)
     {
         var skySource = System.Text.Encoding.UTF8.GetBytes(SkyShaderSourceText);
-        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+        return backend.CreateRenderPipeline(new PipelineDesc(
             skySource, "vs_sky", skySource, "fs_sky", null,
             [new ColorTargetDesc(format)],
             new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.Always, false),
             CullMode.None, FrontFace.Ccw,
             0, VertexStepMode.Vertex,
-            [])));
+            []));
     }
 
-    private static RenderPipeline CreatePipeline(WgpuRenderBackend backend, PipelineLayout layout)
+    private static PipelineHandle CreatePipeline(WgpuRenderBackend backend, PipelineLayoutHandle layout)
     {
         var source = System.Text.Encoding.UTF8.GetBytes(ShaderSourceText);
-        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_main", source, "fs_main", backend.AdoptPipelineLayout(layout),
+        return backend.CreateRenderPipeline(new PipelineDesc(
+            source, "vs_main", source, "fs_main", layout,
             [new ColorTargetDesc(TextureFormat.Rgba8Unorm)],
             new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, true),
             CullMode.Back, FrontFace.Ccw,
             (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes()))));
+            LayoutAttributes.From(VertexLayout.Attributes())));
     }
 
     /// <summary>
     /// The translucent pipeline: the same shader and layout as terrain, but blending on and depth writes off so layers
     /// behind still show through and the order of the draw calls matters.
     /// </summary>
-    private static RenderPipeline CreateTranslucentPipeline(WgpuRenderBackend backend, PipelineLayout layout, bool alphaOne)
+    private static PipelineHandle CreateTranslucentPipeline(WgpuRenderBackend backend, PipelineLayoutHandle layout, bool alphaOne)
     {
         var source = System.Text.Encoding.UTF8.GetBytes(ShaderSourceText);
-        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_main", source, alphaOne ? "fs_main" : "fs_translucent", backend.AdoptPipelineLayout(layout),
+        return backend.CreateRenderPipeline(new PipelineDesc(
+            source, "vs_main", source, alphaOne ? "fs_main" : "fs_translucent", layout,
             [new ColorTargetDesc(TextureFormat.Rgba8Unorm, new BlendStateDesc(
                 new BlendComponentDesc(BlendOperation.Add, BlendFactor.SrcAlpha, BlendFactor.OneMinusSrcAlpha),
                 new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.OneMinusSrcAlpha)))],
             new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, false),
             CullMode.Back, FrontFace.Ccw,
             (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes()))));
+            LayoutAttributes.From(VertexLayout.Attributes())));
     }
 
     /// <summary>
     /// The cutout pipeline: same shader family with alpha testing instead of blending, depth writes on.
     /// </summary>
-    private static RenderPipeline CreateCutoutPipeline(WgpuRenderBackend backend, PipelineLayout layout)
+    private static PipelineHandle CreateCutoutPipeline(WgpuRenderBackend backend, PipelineLayoutHandle layout)
     {
         var source = System.Text.Encoding.UTF8.GetBytes(ShaderSourceText);
-        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_main", source, "fs_cutout", backend.AdoptPipelineLayout(layout),
+        return backend.CreateRenderPipeline(new PipelineDesc(
+            source, "vs_main", source, "fs_cutout", layout,
             [new ColorTargetDesc(TextureFormat.Rgba8Unorm)],
             new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, true),
             CullMode.Back, FrontFace.Ccw,
             (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes()))));
+            LayoutAttributes.From(VertexLayout.Attributes())));
     }
 
     private static uint[] BuildIndexBytes(FrameRequest request) => request.Indices;
@@ -498,40 +498,29 @@ public static class OffscreenRenderer
             var atlasFilter = request.NearestTextureFilter ? FilterMode.Nearest : FilterMode.Linear;
             using var atlasSampler = SamplerCache.Create(device, AddressMode.ClampToEdge, atlasFilter, atlasFilter, useMipmaps: true);
 
-            using var bindGroupLayout = device.CreateBindGroupLayout(
+            // The atlas texture and sampler stay native (the upload path and the sampler cache own them), so their views
+            // are adopted once for the bind group the scene draws with.
+            var backend = new WgpuRenderBackend(device);
+            var atlasViewHandle = backend.AdoptTextureView(atlasView);
+            var atlasSamplerHandle = backend.AdoptSampler(atlasSampler);
+
+            var bindGroupLayout = backend.CreateBindGroupLayout(
             [
-                BindGroupLayoutEntry.Texture(
-                    0,
-                    ShaderStage.Fragment,
-                    WGPUTextureSampleType.Float,
-                    WGPUTextureViewDimension._2D,
-                    false),
-                BindGroupLayoutEntry.Sampler(1, ShaderStage.Fragment, WGPUSamplerBindingType.Filtering),
-                BindGroupLayoutEntry.Buffer(
-                    VertexLayout.CameraBinding,
-                    ShaderStage.Vertex,
-                    WGPUBufferBindingType.Uniform,
-                    false,
-                    VertexLayout.CameraUniformSize),
-                BindGroupLayoutEntry.Buffer(
-                    3,
-                    ShaderStage.Vertex | ShaderStage.Fragment,
-                    WGPUBufferBindingType.Uniform,
-                    false,
-                    32),
-                BindGroupLayoutEntry.Buffer(
-                    Shaders.ShaderBindings.Lightmap,
-                    ShaderStage.Fragment,
-                    WGPUBufferBindingType.Uniform,
-                    false,
-                    Shaders.ShaderBindings.LightmapBytes)
+                BindGroupLayoutEntryDesc.Texture(0, ShaderStages.Fragment),
+                BindGroupLayoutEntryDesc.Sampler(1, ShaderStages.Fragment),
+                BindGroupLayoutEntryDesc.UniformBuffer(VertexLayout.CameraBinding, ShaderStages.Vertex)
+                    with { MinBindingSize = VertexLayout.CameraUniformSize },
+                BindGroupLayoutEntryDesc.UniformBuffer(3, ShaderStages.Vertex | ShaderStages.Fragment)
+                    with { MinBindingSize = 32 },
+                BindGroupLayoutEntryDesc.UniformBuffer(Shaders.ShaderBindings.Lightmap, ShaderStages.Fragment)
+                    with { MinBindingSize = Shaders.ShaderBindings.LightmapBytes }
             ]);
 
-            using var pipelineLayout = device.CreatePipelineLayout([bindGroupLayout]);
+            var pipelineLayout = backend.CreatePipelineLayout([bindGroupLayout]);
 
             // Camera uniform: one 4×4 matrix, rewritten per frame.
-            using var cameraBuffer = device.CreateBufferInit(
-                new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
+            var cameraBuffer = backend.CreateBufferInit(
+                new BufferDesc(VertexLayout.CameraUniformSize, BufferUsages.Uniform | BufferUsages.CopyDst),
                 new byte[VertexLayout.CameraUniformSize].AsSpan());
 
             // Fog: colour plus start and end distance in blocks.
@@ -544,18 +533,18 @@ public static class OffscreenRenderer
             fogValues[4] = request.Diagnostics?.FogStart ?? 64f;
             fogValues[5] = request.Diagnostics?.FogEnd ?? 160f;
             System.Runtime.InteropServices.MemoryMarshal.AsBytes(fogValues.AsSpan()).CopyTo(fogBytes);
-            using var fogBuffer = device.CreateBufferInit(
-                new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
+            var fogBuffer = backend.CreateBufferInit(
+                new BufferDesc(32, BufferUsages.Uniform | BufferUsages.CopyDst),
                 fogBytes.AsSpan());
-            device.Queue.WriteBuffer(fogBuffer, 0, fogBytes.AsSpan());
+            backend.WriteBuffer(fogBuffer, fogBytes, 0);
 
             // Lightmap parameters (sky/block factors and colours); rewritten per frame so day/night needs no re-mesh.
             var lightmapBytes = new byte[Shaders.ShaderBindings.LightmapBytes];
             LightmapUniformCodec.Write(request.Lightmap with { Padding = request.GlintTime }, lightmapBytes);
-            using var lightmapBuffer = device.CreateBufferInit(
-                new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
+            var lightmapBuffer = backend.CreateBufferInit(
+                new BufferDesc(Shaders.ShaderBindings.LightmapBytes, BufferUsages.Uniform | BufferUsages.CopyDst),
                 lightmapBytes.AsSpan());
-            device.Queue.WriteBuffer(lightmapBuffer, 0, lightmapBytes.AsSpan());
+            backend.WriteBuffer(lightmapBuffer, lightmapBytes, 0);
 
             Span<float> cameraBlock = stackalloc float[16];
             CameraUniform.Write(cameraBlock, request.CameraPosition, request.CameraTarget, request.FieldOfViewDegrees, (int)width, (int)height);
@@ -565,29 +554,31 @@ public static class OffscreenRenderer
                 BitConverter.TryWriteBytes(cameraBytes.AsSpan(index * sizeof(float)), cameraBlock[index]);
             }
 
-            device.Queue.WriteBuffer(cameraBuffer, 0, cameraBytes.AsSpan());
+            backend.WriteBuffer(cameraBuffer, cameraBytes, 0);
 
-            var backend = new WgpuRenderBackend(device);
+            // The celestial sets still build their own bind groups on the device, so they take the uniform buffer natively
+            // until their draw collections move behind the seam as well (render-backend-seam.md 9.10).
+            var cameraBufferNative = backend.AsBuffer(cameraBuffer);
 
             // Celestial bodies (sun/moon): textured quads that sit in the sky backdrop. Built here so their buffers live
             // until the command buffer is submitted; drawn right after the sky gradient.
             using var celestial = request.CelestialDraws is { Length: > 0 } && request.CelestialTextures is { Length: > 0 }
-                ? new CelestialResources(device, request, cameraBuffer, VertexLayout.CameraUniformSize)
+                ? new CelestialResources(device, request, cameraBufferNative, VertexLayout.CameraUniformSize)
                 : null;
 
             // Position-colour bodies (sunrise fan, stars): no texture, per-vertex colour times a tint.
             using var celestialColour = request.CelestialColorDraws is { Length: > 0 }
-                ? new CelestialColorResources(backend, device, request, cameraBuffer, VertexLayout.CameraUniformSize)
+                ? new CelestialColorResources(backend, device, request, cameraBufferNative, VertexLayout.CameraUniformSize)
                 : null;
 
-            using var bindGroup = device.CreateBindGroup(
+            var bindGroup = backend.CreateBindGroup(
                 bindGroupLayout,
                 [
-                    BindGroupEntry.TextureView(0, atlasView),
-                    BindGroupEntry.Sampler(1, atlasSampler),
-                    BindGroupEntry.Buffer(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize),
-                BindGroupEntry.Buffer(3, fogBuffer, 0, 32),
-                BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
+                    BindGroupEntryDesc.Texture(0, atlasViewHandle),
+                    BindGroupEntryDesc.Sampler(1, atlasSamplerHandle),
+                    BindGroupEntryDesc.Uniform(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize),
+                    BindGroupEntryDesc.Uniform(3, fogBuffer, 0, 32),
+                    BindGroupEntryDesc.Uniform(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
                 ]);
 
             // Readback rows must be padded to 256 bytes.
@@ -616,12 +607,16 @@ public static class OffscreenRenderer
             var vertexBytes = hasGeometry ? request.Vertices : [];
             var indexBytes = hasGeometry ? BuildIndexBytes(request) : [];
 
-            using var pipeline = hasGeometry ? CreatePipeline(backend, pipelineLayout) : default;
-            using var vertexBuffer = hasGeometry
-                ? device.CreateBufferInit(new BufferInitDescriptor { Usage = BufferUsage.Vertex }, vertexBytes.AsSpan())
+            var pipeline = hasGeometry ? CreatePipeline(backend, pipelineLayout) : default;
+            var vertexBuffer = hasGeometry
+                ? backend.CreateBufferInit(
+                    new BufferDesc((ulong)vertexBytes.Length * sizeof(float), BufferUsages.Vertex),
+                    System.Runtime.InteropServices.MemoryMarshal.AsBytes(vertexBytes.AsSpan()))
                 : default;
-            using var indexBuffer = hasGeometry
-                ? device.CreateBufferInit(new BufferInitDescriptor { Usage = BufferUsage.Index }, indexBytes.AsSpan())
+            var indexBuffer = hasGeometry
+                ? backend.CreateBufferInit(
+                    new BufferDesc((ulong)indexBytes.Length * sizeof(uint), BufferUsages.Index),
+                    System.Runtime.InteropServices.MemoryMarshal.AsBytes(indexBytes.AsSpan()))
                 : default;
 
             var encoder = device.CreateCommandEncoder();
@@ -643,9 +638,10 @@ public static class OffscreenRenderer
                         // supplies a sky disc backdrop instead (SkipGradientSky).
                         if (!request.SkipGradientSky)
                         {
-                            using var skyPipeline = CreateSkyPipeline(backend, TextureFormat.Rgba8Unorm);
-                            backend.SetPipeline(pass, backend.AdoptPipeline(skyPipeline));
+                            var skyPipeline = CreateSkyPipeline(backend, TextureFormat.Rgba8Unorm);
+                            backend.SetPipeline(pass, skyPipeline);
                             backend.Draw(pass, 3, 1, 0, 0);
+                            backend.Destroy(skyPipeline);
                         }
 
                         // Sun and moon sit in the sky backdrop, before terrain, so world geometry covers them.
@@ -663,10 +659,10 @@ public static class OffscreenRenderer
                             break;
                         }
 
-                        backend.SetPipeline(pass, backend.AdoptPipeline(pipeline));
-                        backend.SetBindGroup(pass, 0, backend.AdoptBindGroup(bindGroup));
-                        backend.SetVertexBuffer(pass, 0, backend.AdoptBuffer(vertexBuffer));
-                        backend.SetIndexBuffer(pass, backend.AdoptBuffer(indexBuffer), IndexFormat.Uint32);
+                        backend.SetPipeline(pass, pipeline);
+                        backend.SetBindGroup(pass, 0, bindGroup);
+                        backend.SetVertexBuffer(pass, 0, vertexBuffer);
+                        backend.SetIndexBuffer(pass, indexBuffer, IndexFormat.Uint32);
 
                         if (request.DrawRanges is { Length: > 0 } ranges)
                         {
@@ -694,19 +690,22 @@ public static class OffscreenRenderer
                             break;
                         }
 
-                        using var cutoutPipeline = CreateCutoutPipeline(backend, pipelineLayout);
-                        using var cutoutVertexBuffer = device.CreateBufferInit(
-                            new BufferInitDescriptor { Usage = BufferUsage.Vertex },
-                            cutoutVertices.AsSpan());
-                        using var cutoutIndexBuffer = device.CreateBufferInit(
-                            new BufferInitDescriptor { Usage = BufferUsage.Index },
-                            cutoutIndices.AsSpan());
+                        var cutoutPipeline = CreateCutoutPipeline(backend, pipelineLayout);
+                        var cutoutVertexBuffer = backend.CreateBufferInit(
+                            new BufferDesc((ulong)cutoutVertices.Length * sizeof(float), BufferUsages.Vertex),
+                            System.Runtime.InteropServices.MemoryMarshal.AsBytes(cutoutVertices.AsSpan()));
+                        var cutoutIndexBuffer = backend.CreateBufferInit(
+                            new BufferDesc((ulong)cutoutIndices.Length * sizeof(uint), BufferUsages.Index),
+                            System.Runtime.InteropServices.MemoryMarshal.AsBytes(cutoutIndices.AsSpan()));
 
-                        backend.SetPipeline(pass, backend.AdoptPipeline(cutoutPipeline));
-                        backend.SetBindGroup(pass, 0, backend.AdoptBindGroup(bindGroup));
-                        backend.SetVertexBuffer(pass, 0, backend.AdoptBuffer(cutoutVertexBuffer));
-                        backend.SetIndexBuffer(pass, backend.AdoptBuffer(cutoutIndexBuffer), IndexFormat.Uint32);
+                        backend.SetPipeline(pass, cutoutPipeline);
+                        backend.SetBindGroup(pass, 0, bindGroup);
+                        backend.SetVertexBuffer(pass, 0, cutoutVertexBuffer);
+                        backend.SetIndexBuffer(pass, cutoutIndexBuffer, IndexFormat.Uint32);
                         backend.DrawIndexed(pass, (uint)cutoutIndices.Length, 1, 0, 0, 1);
+                        backend.Destroy(cutoutIndexBuffer);
+                        backend.Destroy(cutoutVertexBuffer);
+                        backend.Destroy(cutoutPipeline);
                         break;
                     }
 
@@ -719,18 +718,18 @@ public static class OffscreenRenderer
                         }
 
                         // Blended, no depth writes, drawn last: the order of these calls is what makes overlapping water read right.
-                        using var translucentPipeline = CreateTranslucentPipeline(backend, pipelineLayout, request.Diagnostics?.AlphaOne == true);
-                        using var translucentVertexBuffer = device.CreateBufferInit(
-                            new BufferInitDescriptor { Usage = BufferUsage.Vertex },
-                            translucentVertices.AsSpan());
-                        using var translucentIndexBuffer = device.CreateBufferInit(
-                            new BufferInitDescriptor { Usage = BufferUsage.Index },
-                            translucentIndices.AsSpan());
+                        var translucentPipeline = CreateTranslucentPipeline(backend, pipelineLayout, request.Diagnostics?.AlphaOne == true);
+                        var translucentVertexBuffer = backend.CreateBufferInit(
+                            new BufferDesc((ulong)translucentVertices.Length * sizeof(float), BufferUsages.Vertex),
+                            System.Runtime.InteropServices.MemoryMarshal.AsBytes(translucentVertices.AsSpan()));
+                        var translucentIndexBuffer = backend.CreateBufferInit(
+                            new BufferDesc((ulong)translucentIndices.Length * sizeof(uint), BufferUsages.Index),
+                            System.Runtime.InteropServices.MemoryMarshal.AsBytes(translucentIndices.AsSpan()));
 
-                        backend.SetPipeline(pass, backend.AdoptPipeline(translucentPipeline));
-                        backend.SetBindGroup(pass, 0, backend.AdoptBindGroup(bindGroup));
-                        backend.SetVertexBuffer(pass, 0, backend.AdoptBuffer(translucentVertexBuffer));
-                        backend.SetIndexBuffer(pass, backend.AdoptBuffer(translucentIndexBuffer), IndexFormat.Uint32);
+                        backend.SetPipeline(pass, translucentPipeline);
+                        backend.SetBindGroup(pass, 0, bindGroup);
+                        backend.SetVertexBuffer(pass, 0, translucentVertexBuffer);
+                        backend.SetIndexBuffer(pass, translucentIndexBuffer, IndexFormat.Uint32);
 
                         if (request.TranslucentRanges is { Length: > 0 } translucentRanges)
                         {
@@ -747,6 +746,10 @@ public static class OffscreenRenderer
                         {
                             backend.DrawIndexed(pass, (uint)translucentIndices.Length, 1, 0, 0, 1);
                         }
+
+                        backend.Destroy(translucentIndexBuffer);
+                        backend.Destroy(translucentVertexBuffer);
+                        backend.Destroy(translucentPipeline);
                         break;
                     }
                 }
@@ -1007,6 +1010,29 @@ public static class OffscreenRenderer
             encoder.Dispose();
             depthTexture.Dispose();
             texture.Dispose();
+
+            // The scene resources are seam handles now, so they are released by hand once the frame is read back.
+            if (indexBuffer.IsValid)
+            {
+                backend.Destroy(indexBuffer);
+            }
+
+            if (vertexBuffer.IsValid)
+            {
+                backend.Destroy(vertexBuffer);
+            }
+
+            if (pipeline.IsValid)
+            {
+                backend.Destroy(pipeline);
+            }
+
+            backend.Destroy(bindGroup);
+            backend.Destroy(lightmapBuffer);
+            backend.Destroy(fogBuffer);
+            backend.Destroy(cameraBuffer);
+            backend.Destroy(pipelineLayout);
+            backend.Destroy(bindGroupLayout);
 
             return new FrameResult(request.Width, request.Height, pixels, viewProjection, adapterName, depthPixels);
         }

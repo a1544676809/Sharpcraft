@@ -276,7 +276,7 @@ public static class WindowedRenderer
             ? new OffscreenRenderer.CelestialColorResources(backend, device, request with { CelestialColorDraws = request.SkyDiscDraws }, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         using var skyDiscVanillaResources = skyDiscVanilla && skyDiscPerFrame is not null
-            ? new SkyDiscResources(backend, device, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
+            ? new SkyDiscResources(backend, cameraBufferHandle, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         // Clouds change every frame (scroll/camera), so their position-colour draw set is updated per frame.
         using var cloudColour = cloudsPerFrame is null
@@ -351,7 +351,7 @@ public static class WindowedRenderer
         // mixing them would make text blurry at small sizes.
         var glyphData = glyphTexture ?? TextureData.White;
         using var worldText = worldTextPerFrame is not null
-            ? new WorldTextResources(backend, device, glyphData, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
+            ? new WorldTextResources(backend, device, glyphData, cameraBufferHandle, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         var glyphSheet = device.CreateTexture(new TextureDescriptor
         {
@@ -499,9 +499,10 @@ public static class WindowedRenderer
         var dynamicIndexCapacity = MinimumBufferBytes;
 
         // Entity layers (docs/decisions/0021): persistent buffers grow with the layer plan instead of a fixed cap, so
-        // an explicit per-layer definition can add a new pass without truncation.
-        var entityLayerVertex = new List<WgpuBuffer>();
-        var entityLayerIndex = new List<WgpuBuffer>();
+        // an explicit per-layer definition can add a new pass without truncation. The buffers are seam handles, so both
+        // the layer pass and the item OIT callback can bind them without unwrapping.
+        var entityLayerVertex = new List<BufferHandle>();
+        var entityLayerIndex = new List<BufferHandle>();
         var entityLayerVertexCapacity = new List<ulong>();
         var entityLayerIndexCapacity = new List<ulong>();
         var entityLayerIndexCount = new List<uint>();
@@ -513,8 +514,8 @@ public static class WindowedRenderer
         {
             while (entityLayerVertex.Count < count)
             {
-                entityLayerVertex.Add(CreateGeometryBuffer(device, MinimumBufferBytes, BufferUsage.Vertex | BufferUsage.CopyDst));
-                entityLayerIndex.Add(CreateGeometryBuffer(device, MinimumBufferBytes, BufferUsage.Index | BufferUsage.CopyDst));
+                entityLayerVertex.Add(backend.CreateBuffer(new BufferDesc(MinimumBufferBytes, BufferUsages.Vertex | BufferUsages.CopyDst)));
+                entityLayerIndex.Add(backend.CreateBuffer(new BufferDesc(MinimumBufferBytes, BufferUsages.Index | BufferUsages.CopyDst)));
                 entityLayerVertexCapacity.Add(MinimumBufferBytes);
                 entityLayerIndexCapacity.Add(MinimumBufferBytes);
                 entityLayerIndexCount.Add(0);
@@ -1050,22 +1051,28 @@ public static class WindowedRenderer
 
                     if (neededVertex > entityLayerVertexCapacity[layerIndex])
                     {
-                        entityLayerVertex[layerIndex].Dispose();
+                        backend.Destroy(entityLayerVertex[layerIndex]);
                         entityLayerVertexCapacity[layerIndex] = Math.Max(neededVertex * 2, MinimumBufferBytes);
-                        entityLayerVertex[layerIndex] = CreateGeometryBuffer(
-                            device, entityLayerVertexCapacity[layerIndex], BufferUsage.Vertex | BufferUsage.CopyDst);
+                        entityLayerVertex[layerIndex] = backend.CreateBuffer(
+                            new BufferDesc(entityLayerVertexCapacity[layerIndex], BufferUsages.Vertex | BufferUsages.CopyDst));
                     }
 
                     if (neededIndex > entityLayerIndexCapacity[layerIndex])
                     {
-                        entityLayerIndex[layerIndex].Dispose();
+                        backend.Destroy(entityLayerIndex[layerIndex]);
                         entityLayerIndexCapacity[layerIndex] = Math.Max(neededIndex * 2, MinimumBufferBytes);
-                        entityLayerIndex[layerIndex] = CreateGeometryBuffer(
-                            device, entityLayerIndexCapacity[layerIndex], BufferUsage.Index | BufferUsage.CopyDst);
+                        entityLayerIndex[layerIndex] = backend.CreateBuffer(
+                            new BufferDesc(entityLayerIndexCapacity[layerIndex], BufferUsages.Index | BufferUsages.CopyDst));
                     }
 
-                    device.Queue.WriteBuffer(entityLayerVertex[layerIndex], 0, geometry.Vertices.AsSpan(0, geometry.VertexFloats));
-                    device.Queue.WriteBuffer(entityLayerIndex[layerIndex], 0, geometry.Indices.AsSpan(0, geometry.IndexCount));
+                    backend.WriteBuffer(
+                        entityLayerVertex[layerIndex],
+                        System.Runtime.InteropServices.MemoryMarshal.AsBytes(geometry.Vertices.AsSpan(0, geometry.VertexFloats)),
+                        0);
+                    backend.WriteBuffer(
+                        entityLayerIndex[layerIndex],
+                        System.Runtime.InteropServices.MemoryMarshal.AsBytes(geometry.Indices.AsSpan(0, geometry.IndexCount)),
+                        0);
                     entityLayerIndexCount[layerIndex] = (uint)geometry.IndexCount;
                 }
 
@@ -1424,10 +1431,10 @@ public static class WindowedRenderer
                                 EntityGeometryLayerKind.Elytra => entityElytraPipeline,
                                 _ => entityCutoutPipeline
                             });
-                            backend.SetVertexBuffer(pass, 0, wgpu.AdoptBuffer(entityLayerVertex[layerIndex]), 0, entityLayerVertexCapacity[layerIndex]);
+                            backend.SetVertexBuffer(pass, 0, entityLayerVertex[layerIndex], 0, entityLayerVertexCapacity[layerIndex]);
                             backend.SetIndexBuffer(
                                 pass,
-                                wgpu.AdoptBuffer(entityLayerIndex[layerIndex]),
+                                entityLayerIndex[layerIndex],
                                 IndexFormat.Uint32,
                                 0,
                                 (ulong)layerIndexCount * sizeof(uint));
@@ -1560,7 +1567,7 @@ public static class WindowedRenderer
                 // Translucent item geometry joins the same reference OIT stages (the reference binds OIT_ITEM to
                 // RenderTypes.ITEM_TRANSLUCENT). The OIT pipelines already declare the entity vertex layout and the shared
                 // pipeline layout, so only the atlas bind group differs from the terrain draw.
-                void DrawItemOitGeometry(Brew.Wgpu.RenderPassEncoder p)
+                void DrawItemOitGeometry(RenderPassHandle p)
                 {
                     var atlasBound = false;
                     for (var itemLayer = 0; itemLayer < entityLayerDrawn; itemLayer++)
@@ -1573,17 +1580,18 @@ public static class WindowedRenderer
 
                         if (!atlasBound)
                         {
-                            p.SetBindGroup(0, wgpu.AsBindGroup(itemAtlasGpu.BindGroup));
+                            backend.SetBindGroup(p, 0, itemAtlasGpu.BindGroup);
                             atlasBound = true;
                         }
 
-                        p.SetVertexBuffer(0, entityLayerVertex[itemLayer], 0, entityLayerVertexCapacity[itemLayer]);
-                        p.SetIndexBuffer(
+                        backend.SetVertexBuffer(p, 0, entityLayerVertex[itemLayer], 0, entityLayerVertexCapacity[itemLayer]);
+                        backend.SetIndexBuffer(
+                            p,
                             entityLayerIndex[itemLayer],
-                            WGPUIndexFormat.Uint32,
+                            IndexFormat.Uint32,
                             0,
                             (ulong)entityLayerIndexCount[itemLayer] * sizeof(uint));
-                        p.DrawIndexed(entityLayerIndexCount[itemLayer], 1, 0, 0, 1);
+                        backend.DrawIndexed(p, entityLayerIndexCount[itemLayer], 1, 0, 0, 1);
                     }
                 }
 
@@ -1655,7 +1663,7 @@ public static class WindowedRenderer
                     DepthAttachmentDesc.Keep(wgpu.AdoptTextureView(depthView)));
                 try
                 {
-                    worldText.Draw(wgpu.AsRenderPass(worldTextPass));
+                    worldText.Draw(backend, worldTextPass);
                 }
                 finally
                 {
@@ -1860,8 +1868,8 @@ public static class WindowedRenderer
         dynamicIndex.Dispose();
         for (var layerIndex = 0; layerIndex < entityLayerVertex.Count; layerIndex++)
         {
-            entityLayerVertex[layerIndex].Dispose();
-            entityLayerIndex[layerIndex].Dispose();
+            backend.Destroy(entityLayerVertex[layerIndex]);
+            backend.Destroy(entityLayerIndex[layerIndex]);
         }
 
         uiVertex.Dispose();

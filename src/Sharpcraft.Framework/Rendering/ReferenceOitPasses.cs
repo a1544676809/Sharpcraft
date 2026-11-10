@@ -102,7 +102,7 @@ internal static class ReferenceOitPasses
         public Action<RenderPassHandle> DrawTerrain { get; init; }
 
         /// <summary>Records the translucent item geometry.</summary>
-        public Action<RenderPassEncoder> DrawItems { get; init; }
+        public Action<RenderPassHandle> DrawItems { get; init; }
     }
 
     /// <summary>Records every reference transparency pass for the frame.</summary>
