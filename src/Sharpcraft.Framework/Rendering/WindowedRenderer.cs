@@ -306,7 +306,7 @@ public static class WindowedRenderer
             BindGroupLayoutEntryDesc.Texture(0, ShaderStages.Fragment) with { SampleType = TextureSampleType.Depth, ViewDimension = TextureViewDimension.D2 },
             BindGroupLayoutEntryDesc.Sampler(1, ShaderStages.Fragment)
         ]);
-        using var presentation = FramePresentation.Create(backend, device, BackendConvert.FromWgpu(format), samplers.GetClampToEdge(FilterMode.Nearest));
+        using var presentation = FramePresentation.Create(backend, BackendConvert.FromWgpu(format), samplers.GetClampToEdge(FilterMode.Nearest));
 
         var blitDepthPipelineLayout = backend.CreatePipelineLayout([blitDepthLayout]);
         var blitDepthPipeline = CreateBlitDepthPipeline(backend, blitDepthPipelineLayout);
@@ -1663,7 +1663,7 @@ public static class WindowedRenderer
             // Screenshot (reference Screenshot.grab): only when the host asks, and only after the frame was submitted, so
             // the frame target still holds the presented image (docs/specs/render/screenshot.md 2.2).
             if (screenshotRequest?.Invoke(window) is { Length: > 0 } screenshotPath &&
-                FrameCapture.Capture(instance, device, presentation.Target, frameWidth, frameHeight, BackendConvert.FromWgpu(format)) is { } screenshotPixels)
+                FrameCapture.Capture(backend, instance, presentation.TargetHandle, frameWidth, frameHeight, BackendConvert.FromWgpu(format)) is { } screenshotPixels)
             {
                 screenshotCaptured?.Invoke(screenshotPath, screenshotPixels, frameWidth, frameHeight);
             }

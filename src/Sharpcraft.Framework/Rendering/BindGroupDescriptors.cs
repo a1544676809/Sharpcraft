@@ -196,6 +196,22 @@ public readonly record struct BindGroupEntryDesc
     public static BindGroupEntryDesc Uniform(uint binding, BufferHandle buffer, ulong offset, ulong size) =>
         new(binding, BindingKind.UniformBuffer, buffer, default, default, offset, size);
 
+    /// <summary>A writable storage buffer bound to a slot.</summary>
+    /// <param name="binding">Binding slot.</param>
+    /// <param name="buffer">Buffer bound.</param>
+    /// <param name="offset">First byte visible to the shader.</param>
+    /// <param name="size">Bytes visible to the shader; zero means the rest of the buffer.</param>
+    public static BindGroupEntryDesc Storage(uint binding, BufferHandle buffer, ulong offset, ulong size) =>
+        new(binding, BindingKind.StorageBuffer, buffer, default, default, offset, size);
+
+    /// <summary>A storage buffer bound to a slot that the shader only reads.</summary>
+    /// <param name="binding">Binding slot.</param>
+    /// <param name="buffer">Buffer bound.</param>
+    /// <param name="offset">First byte visible to the shader.</param>
+    /// <param name="size">Bytes visible to the shader; zero means the rest of the buffer.</param>
+    public static BindGroupEntryDesc ReadOnlyStorage(uint binding, BufferHandle buffer, ulong offset, ulong size) =>
+        new(binding, BindingKind.ReadOnlyStorageBuffer, buffer, default, default, offset, size);
+
     /// <summary>A texture view bound to a slot.</summary>
     /// <param name="binding">Binding slot.</param>
     /// <param name="view">View to bind.</param>

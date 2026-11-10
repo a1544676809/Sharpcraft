@@ -11,38 +11,34 @@ namespace Sharpcraft.Framework.Rendering;
 /// The windowed path's frame target and its presentation onto the swapchain.
 /// </summary>
 /// <remarks>
-/// Every world and interface pass renders into <see cref="Target"/> instead of the surface, and one full-screen triangle
-/// copies it onto the swapchain. Two reasons (docs/specs/render/screenshot.md 2.1): swapchain textures are not guaranteed
-/// copyable, so a screenshot needs a target it owns, and the presented image is then the same pixels an F2 capture reads.
+/// Every world and interface pass renders into <see cref="Ensure"/>'s view instead of the surface, and one full-screen
+/// triangle copies it onto the swapchain. Two reasons (docs/specs/render/screenshot.md 2.1): swapchain textures are not
+/// guaranteed copyable, so a screenshot needs a target it owns, and the presented image is then the same pixels an F2
+/// capture reads.
 /// <para>
-/// The layout, bind group and pipeline are seam handles, and the target's view is handed out as one. The target texture
-/// itself stays native because the capture path copies from it with a native copy.
+/// The layout, bind group, pipeline and the target itself are all seam handles: the capture path copies from the target
+/// through <see cref="IRenderBackend.CopyTextureToBuffer"/>, so nothing here needs the native texture.
 /// </para>
 /// </remarks>
 internal sealed class FramePresentation : IDisposable
 {
     private readonly IRenderBackend _backend;
-    private readonly WgpuRenderBackend _wgpu;
-    private readonly Device _device;
     private readonly TextureFormat _format;
     private readonly BindGroupLayoutHandle _layout;
     private readonly PipelineLayoutHandle _pipelineLayout;
     private readonly PipelineHandle _pipeline;
     private readonly SamplerHandle _samplerHandle;
 
-    private Texture? _target;
-    private TextureView? _targetView;
+    private TextureHandle _target;
     private TextureViewHandle _targetViewHandle;
     private BindGroupHandle _bindGroup;
     private uint _width;
     private uint _height;
 
     // The sampler is owned by the caller's cache, so only a handle to it is kept and it is never disposed here (T-784 S1b).
-    private FramePresentation(WgpuRenderBackend backend, Device device, TextureFormat format, SamplerHandle sampler)
+    private FramePresentation(WgpuRenderBackend backend, TextureFormat format, SamplerHandle sampler)
     {
         _backend = backend;
-        _wgpu = backend;
-        _device = device;
         _format = format;
         _samplerHandle = sampler;
         _layout = backend.CreateBindGroupLayout(
@@ -58,15 +54,15 @@ internal sealed class FramePresentation : IDisposable
     /// <summary>Creates the presentation resources for the given surface format.</summary>
     /// <param name="sampler">Sampling state handle the presentation blit uses; owned by the caller's cache.</param>
     /// <returns>The presentation resources; dispose them with the frame.</returns>
-    public static FramePresentation Create(WgpuRenderBackend backend, Device device, TextureFormat format, SamplerHandle sampler) => new(backend, device, format, sampler);
+    public static FramePresentation Create(WgpuRenderBackend backend, TextureFormat format, SamplerHandle sampler) => new(backend, format, sampler);
 
-    /// <summary>The colour texture every pass renders into; recreated when the size changes.</summary>
-    public Texture Target => _target ?? throw new InvalidOperationException("the frame target was not created");
+    /// <summary>The colour texture every pass renders into, as the capture path copies from it.</summary>
+    public TextureHandle TargetHandle => _target;
 
     /// <summary>Returns the frame target's view, recreating the target when the frame size changed.</summary>
     public TextureViewHandle Ensure(uint width, uint height)
     {
-        if (_target is not null && _width == width && _height == height)
+        if (_target.IsValid && _width == width && _height == height)
         {
             return _targetViewHandle;
         }
@@ -77,22 +73,19 @@ internal sealed class FramePresentation : IDisposable
             _bindGroup = default;
         }
 
-        _targetView?.Dispose();
-        _target?.Dispose();
-
-        var created = _device.CreateTexture(new TextureDescriptor
+        if (_targetViewHandle.IsValid)
         {
-            Size = new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 },
-            Format = BackendConvert.ToWgpu(_format),
-            Usage = TextureUsage.RenderAttachment | TextureUsage.TextureBinding | TextureUsage.CopySrc,
-            Dimension = WGPUTextureDimension._2D,
-            MipLevelCount = 1,
-            SampleCount = 1
-        });
-        var createdView = created.CreateView();
-        _target = created;
-        _targetView = createdView;
-        _targetViewHandle = _wgpu.AdoptTextureView(createdView);
+            _backend.Destroy(_targetViewHandle);
+            _backend.Destroy(_target);
+        }
+
+        _target = _backend.CreateTexture(new TextureDesc(
+            width,
+            height,
+            _format,
+            1,
+            TextureUsages.RenderAttachment | TextureUsages.TextureBinding | TextureUsages.CopySrc));
+        _targetViewHandle = _backend.CreateTextureView(_target);
         _bindGroup = _backend.CreateBindGroup(
             _layout,
             [
@@ -133,8 +126,12 @@ internal sealed class FramePresentation : IDisposable
             _backend.Destroy(_bindGroup);
         }
 
-        _targetView?.Dispose();
-        _target?.Dispose();
+        if (_targetViewHandle.IsValid)
+        {
+            _backend.Destroy(_targetViewHandle);
+            _backend.Destroy(_target);
+        }
+
         _backend.Destroy(_pipeline);
         _backend.Destroy(_pipelineLayout);
         _backend.Destroy(_layout);
