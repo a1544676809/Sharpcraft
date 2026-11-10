@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using System.Numerics;
 using Brew.Wgpu;
 using Brew.Wgpu.Native;
 
@@ -88,6 +89,7 @@ internal sealed class ItemOitSet : IDisposable
     /// </summary>
     /// <param name="drawGeometry">Draws the item geometry with the item atlas already bound.</param>
     public void Record(
+        IRenderBackend backend,
         CommandEncoder encoder,
         ColorAttachment frame,
         DepthStencilAttachment depth,
@@ -104,50 +106,85 @@ internal sealed class ItemOitSet : IDisposable
             return;
         }
 
-        var boundsPass = encoder.BeginRenderPass(
-            [
-                new ColorAttachment
-                {
-                    View = _boundsView,
-                    LoadOp = WGPULoadOp.Clear,
-                    StoreOp = WGPUStoreOp.Store,
-                    ClearValue = new WGPUColor { r = -65504f, g = -65504f, b = -65504f, a = -65504f }
-                }
-            ],
-            depth);
-        boundsPass.SetPipeline(boundsPipeline);
-        boundsPass.SetBindGroup(0, atlas);
-        drawGeometry(boundsPass);
-        boundsPass.End();
+        // The passes are recorded through the seam; the native objects arrive as parameters and are adopted for the
+        // call, which transfers no ownership back to this class.
+        var wgpu = backend as WgpuRenderBackend
+            ?? throw new InvalidOperationException("the seam implementation must adopt its own handles");
+        var encoderHandle = wgpu.AdoptCommandEncoder(encoder);
+        // The incoming attachments carry their own load and store choices; mapping them rather than assuming keeps the
+        // callers that load an existing frame working.
+        var depthHandle = depth.DepthLoadOp == WGPULoadOp.Clear
+            ? DepthAttachmentDesc.Clear(wgpu.AdoptTextureView(depth.View), depth.DepthClearValue)
+            : DepthAttachmentDesc.Keep(wgpu.AdoptTextureView(depth.View));
+        var frameAttachment = frame.LoadOp == WGPULoadOp.Clear
+            ? ColorAttachmentDesc.Clear(
+                wgpu.AdoptTextureView(frame.View),
+                new Vector4((float)frame.ClearValue.r, (float)frame.ClearValue.g, (float)frame.ClearValue.b, (float)frame.ClearValue.a))
+            : ColorAttachmentDesc.Keep(wgpu.AdoptTextureView(frame.View));
+        var boundsPass = backend.BeginRenderPass(
+            encoderHandle,
+            [ColorAttachmentDesc.Clear(wgpu.AdoptTextureView(_boundsView), new Vector4(-65504f, -65504f, -65504f, -65504f))],
+            depthHandle);
+        try
+        {
+            backend.SetPipeline(boundsPass, wgpu.AdoptPipeline(boundsPipeline));
+            backend.SetBindGroup(boundsPass, 0, wgpu.AdoptBindGroup(atlas));
+            drawGeometry(wgpu.AsRenderPass(boundsPass));
+        }
+        finally
+        {
+            backend.EndRenderPass(boundsPass);
+        }
 
-        var transmittancePass = encoder.BeginRenderPass(
+        var transmittancePass = backend.BeginRenderPass(
+            encoderHandle,
             [
-                new ColorAttachment { View = _coeff0View, LoadOp = WGPULoadOp.Clear, StoreOp = WGPUStoreOp.Store, ClearValue = new WGPUColor { r = 0f, g = 0f, b = 0f, a = 0f } },
-                new ColorAttachment { View = _coeff1View, LoadOp = WGPULoadOp.Clear, StoreOp = WGPUStoreOp.Store, ClearValue = new WGPUColor { r = 0f, g = 0f, b = 0f, a = 0f } }
+                ColorAttachmentDesc.Clear(wgpu.AdoptTextureView(_coeff0View), Vector4.Zero),
+                ColorAttachmentDesc.Clear(wgpu.AdoptTextureView(_coeff1View), Vector4.Zero)
             ],
-            depth);
-        transmittancePass.SetPipeline(transmittancePipeline);
-        transmittancePass.SetBindGroup(0, atlas);
-        transmittancePass.SetBindGroup(1, TransmittanceBindGroup);
-        drawGeometry(transmittancePass);
-        transmittancePass.End();
+            depthHandle);
+        try
+        {
+            backend.SetPipeline(transmittancePass, wgpu.AdoptPipeline(transmittancePipeline));
+            backend.SetBindGroup(transmittancePass, 0, wgpu.AdoptBindGroup(atlas));
+            backend.SetBindGroup(transmittancePass, 1, wgpu.AdoptBindGroup(TransmittanceBindGroup));
+            drawGeometry(wgpu.AsRenderPass(transmittancePass));
+        }
+        finally
+        {
+            backend.EndRenderPass(transmittancePass);
+        }
 
-        var accumulatePass = encoder.BeginRenderPass(
-            [
-                new ColorAttachment { View = _accumulateView, LoadOp = WGPULoadOp.Clear, StoreOp = WGPUStoreOp.Store, ClearValue = new WGPUColor { r = 0f, g = 0f, b = 0f, a = 0f } }
-            ],
-            depth);
-        accumulatePass.SetPipeline(accumulatePipeline);
-        accumulatePass.SetBindGroup(0, atlas);
-        accumulatePass.SetBindGroup(1, AccumulateBindGroup);
-        drawGeometry(accumulatePass);
-        accumulatePass.End();
+        var accumulatePass = backend.BeginRenderPass(
+            encoderHandle,
+            [ColorAttachmentDesc.Clear(wgpu.AdoptTextureView(_accumulateView), Vector4.Zero)],
+            depthHandle);
+        try
+        {
+            backend.SetPipeline(accumulatePass, wgpu.AdoptPipeline(accumulatePipeline));
+            backend.SetBindGroup(accumulatePass, 0, wgpu.AdoptBindGroup(atlas));
+            backend.SetBindGroup(accumulatePass, 1, wgpu.AdoptBindGroup(AccumulateBindGroup));
+            drawGeometry(wgpu.AsRenderPass(accumulatePass));
+        }
+        finally
+        {
+            backend.EndRenderPass(accumulatePass);
+        }
 
-        var compositePass = encoder.BeginRenderPass([frame], depth);
-        compositePass.SetPipeline(compositePipeline);
-        compositePass.SetBindGroup(0, CompositeBindGroup);
-        compositePass.Draw(3);
-        compositePass.End();
+        var compositePass = backend.BeginRenderPass(
+            encoderHandle,
+            [frameAttachment],
+            depthHandle);
+        try
+        {
+            backend.SetPipeline(compositePass, wgpu.AdoptPipeline(compositePipeline));
+            backend.SetBindGroup(compositePass, 0, wgpu.AdoptBindGroup(CompositeBindGroup));
+            backend.Draw(compositePass, 3, 1, 0, 0);
+        }
+        finally
+        {
+            backend.EndRenderPass(compositePass);
+        }
     }
 
     /// <inheritdoc />

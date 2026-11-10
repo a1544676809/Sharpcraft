@@ -1561,7 +1561,8 @@ public static class WindowedRenderer
 
                 ReferenceOitPasses.Record(new ReferenceOitPasses.Parameters
                 {
-                    Encoder = encoder,
+                    Backend = backend,
+            Encoder = encoder,
                     Frame = view,
                     Depth = depthLoadStore,
                     CloudDepth = cloudOitDepth,

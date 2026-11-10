@@ -21,7 +21,11 @@ internal static class ReferenceOitPasses
     internal readonly struct Parameters
     {
         /// <summary>Encoder the passes are recorded into.</summary>
-        public CommandEncoder Encoder { get; init; }
+        /// <summary>The seam the passes are recorded through.</summary>
+    public required IRenderBackend Backend { get; init; }
+
+    /// <summary>The encoder this frame records into.</summary>
+    public CommandEncoder Encoder { get; init; }
 
         /// <summary>Frame colour target the final composite writes over.</summary>
         public TextureView Frame { get; init; }
@@ -237,6 +241,7 @@ internal static class ReferenceOitPasses
         // Translucent items composite through their own set (the reference binds OitPipelineSet("item") to
         // RenderTypes.ITEM_TRANSLUCENT); sharing the terrain bins would band thin items.
         p.Items.Record(
+            p.Backend,
             encoder,
             new ColorAttachment { View = p.Frame, LoadOp = WGPULoadOp.Load, StoreOp = WGPUStoreOp.Store },
             new DepthStencilAttachment { View = p.Depth.View, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store },
