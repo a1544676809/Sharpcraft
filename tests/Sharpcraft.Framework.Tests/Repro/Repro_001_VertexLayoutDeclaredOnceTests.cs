@@ -25,11 +25,14 @@ public sealed class Repro_001_VertexLayoutDeclaredOnceTests
             .Select(file => Path.GetRelativePath(root, file).Replace(Path.DirectorySeparatorChar, '/'))
             .ToArray();
 
-        // The seam's PipelineDesc carries attributes through to the backend; it names the concept but does not declare a
-        // layout, so it is allowed here. Any other file appearing in this list means a second layout was written down.
+        // VertexLayout.cs declares the layout; PipelineDescriptors.cs describes it for the seam and RenderBackend.cs
+        // translates that description. None of the three writes a second attribute list, which is what this guard is
+        // about: the original defect was a renderer carrying its own copy, and that would still show up here as a new
+        // file (WindowedRenderer.cs or OffscreenRenderer.cs) appearing in this list.
         Assert.Equal(
             [
                 "src/Sharpcraft.Framework/Rendering/PipelineDescriptors.cs",
+                "src/Sharpcraft.Framework/Rendering/RenderBackend.cs",
                 "src/Sharpcraft.Framework/Rendering/VertexLayout.cs"
             ],
             declarations);
