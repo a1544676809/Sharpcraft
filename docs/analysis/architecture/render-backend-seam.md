@@ -205,3 +205,11 @@ W5 依赖 **W4（pipeline）**：`SetPipeline` 需要 `PipelineHandle`，而目�
 此外 `CopyTextureToBuffer` / `CopyBufferToBuffer` 仍为原生，原因同上：它们不在"渲染 pass 录制"的语义内，属于独立能力。
 
 这三类都不影响"渲染后端可替换"这一主目标：一个原生 Vulkan 后端只要实现 `IRenderBackend` 的现有方法，全部渲染路径即可迁移；只有 compute 与回读需要额外实现。
+### 9.1 离屏路径的正确调用形式（验证用）
+
+```powershell
+Sharpcraft.Client.exe --version 26.3 --gameDir <dir> --pack <pack.zip> --offlineDeveloperMode `
+  --frame --quickPlayMultiplayer 127.0.0.1:25565 --width 1280 --height 720
+```
+
+`--frame` 是诊断模式，地址取自 `--quickPlayMultiplayer`（不接受位置参数，也没有 `--output`：帧写到 `%TEMP%\sharpcraft-frame.png`）。stdout 出现 `frame written to <path>` 即成功。这条路径会跑 compute（深度金字塔与运动向量），是验证 compute 切片的手段。
