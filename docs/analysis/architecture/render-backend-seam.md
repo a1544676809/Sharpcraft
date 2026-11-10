@@ -199,7 +199,7 @@ W5 依赖 **W4（pipeline）**：`SetPipeline` 需要 `PipelineHandle`，而目�
 
 | 项 | 位置 | 阻塞在哪 | 解除条件 |
 | --- | --- | --- | --- |
-| 3 处 `cloudOit` 管线布局 | `WindowedRenderer` `Run` | **不是 API 表达力问题**：`backend.CreatePipelineLayout` 已能表达，阻塞在**句柄的释放方式**。现有代码是 `using var x = cloudOit is null ? default : device.CreatePipelineLayout([...])`，而 `PipelineLayoutHandle` 是 `readonly struct`，没有 `Dispose`，无法放进 `using` | 先定句子柄的生命周期答案：要么给句柄加一个绑定后端的 `Dispose`，要么把这些调用改成显式 `Destroy` + `finally`。前者会影响所有句柄的语义，需单独评审 |
+| 3 处 `cloudOit` 管线布局 | `WindowedRenderer` `Run` | **不是 API 表达力问题**：`backend.CreatePipelineLayout` 已能表达，阻塞在**句柄的释放方式**。现有代码是 `using var x = cloudOit is null ? default : device.CreatePipelineLayout([...])`，而 `PipelineLayoutHandle` 是 `readonly struct`，没有 `Dispose`，无法放进 `using` | **已裁决（2026-11-10，项目所有者）**：保持显式 `Destroy`，把 `using` 改写为 `try/finally`。**不改句柄语义**——句柄仍是纯标识，不持有后端引用。实施步骤：①三处改为 `var x = cloudOit is null ? default : backend.CreatePipelineLayout([wgpu.AdoptBindGroupLayout(...)])` ②`Create*Pipeline` helper 的 `PipelineLayout` 形参改为 `PipelineLayoutHandle`（这些 helper 内部已有 `AdoptPipelineLayout`，改后直接透传）③在 `Run` 的相应作用域末尾 `finally { if (x.IsValid) backend.Destroy(x); }` |
 | 2 个 compute 管线 | `OffscreenRenderer` 的深度金字塔与运动向量 | **API 表达力问题**：接缝没有 `CreateComputePipeline` / `BeginComputePass` / `DispatchWorkgroups` | 新增 compute 切片（见 §8 之后的 W6） |
 
 此外 `CopyTextureToBuffer` / `CopyBufferToBuffer` 仍为原生，原因同上：它们不在"渲染 pass 录制"的语义内，属于独立能力。
