@@ -100,7 +100,7 @@ public interface IRenderBackend
     TextureHandle CreateTexture(in TextureDesc desc);
 
     /// <summary>Uploads pixels into one mip level.</summary>
-    void WriteTexture(TextureHandle texture, ReadOnlySpan<byte> pixels, uint bytesPerRow, uint height, uint mipLevel);
+    void WriteTexture(TextureHandle texture, ReadOnlySpan<byte> pixels, uint bytesPerRow, uint width, uint height, uint mipLevel);
 
     /// <summary>Creates a view over the whole texture.</summary>
     TextureViewHandle CreateTextureView(TextureHandle texture);
@@ -156,23 +156,29 @@ public sealed class WgpuRenderBackend : IRenderBackend
         }));
 
     /// <inheritdoc/>
-    public void WriteTexture(TextureHandle texture, ReadOnlySpan<byte> pixels, uint bytesPerRow, uint height, uint mipLevel)
+    public void WriteTexture(TextureHandle texture, ReadOnlySpan<byte> pixels, uint bytesPerRow, uint width, uint height, uint mipLevel)
     {
         var target = (Texture)texture.Value;
+
+        // The extent is stated by the caller rather than derived from the row pitch: four bytes per texel only holds for
+        // the 8-bit RGBA formats, and deriving it would write a quarter of a half-float texture.
         _device.Queue.WriteTexture(
             target,
             pixels.ToArray(),
             bytesPerRow,
             height,
-            new WGPUExtent3D
-            {
-                width = (uint)Math.Max(1, bytesPerRow / 4),
-                height = height,
-                depthOrArrayLayers = 1
-            },
-            0,
-            new WGPUOrigin3D { x = 0, y = 0, z = mipLevel });
+            new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 },
+            mipLevel,
+            new WGPUOrigin3D { x = 0, y = 0, z = 0 });
     }
+
+    /// <summary>Unwraps a view handle for code that has not moved behind the seam yet.</summary>
+    /// <remarks>
+    /// The seam forbids backend types in its own signatures, so this lives on the implementation and disappears with the
+    /// device escape hatch once every consumer is wired.
+    /// </remarks>
+    /// <param name="view">Handle from this backend.</param>
+    internal TextureView AsTextureView(TextureViewHandle view) => (TextureView)view.Value;
 
     /// <inheritdoc/>
     public TextureViewHandle CreateTextureView(TextureHandle texture) => new(((Texture)texture.Value).CreateView());

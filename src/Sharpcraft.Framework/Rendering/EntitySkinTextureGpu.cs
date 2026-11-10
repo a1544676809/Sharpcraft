@@ -14,8 +14,9 @@ namespace Sharpcraft.Framework.Rendering;
 /// </summary>
 internal sealed class EntitySkinTextureGpu : IDisposable
 {
-    private Texture _texture = default;
-    private TextureView _view = default;
+    private IRenderBackend? _backend;
+    private TextureHandle _texture = default;
+    private TextureViewHandle _view = default;
 
     public BindGroup BindGroup { get; private set; } = default;
 
@@ -23,6 +24,7 @@ internal sealed class EntitySkinTextureGpu : IDisposable
 
     /// <summary>Uploads a texture, replacing the previous GPU objects when one was already created.</summary>
     public void Upload(
+        IRenderBackend backend,
         Device device,
         BindGroupLayout layout,
         TextureData data,
@@ -34,33 +36,22 @@ internal sealed class EntitySkinTextureGpu : IDisposable
         ArgumentNullException.ThrowIfNull(data);
         DisposeUpload();
 
-        _texture = device.CreateTexture(new TextureDescriptor
-        {
-            Size = new WGPUExtent3D
-            {
-                width = (uint)data.Width,
-                height = (uint)data.Height,
-                depthOrArrayLayers = 1
-            },
-            MipLevelCount = 1,
-            SampleCount = 1,
-            Dimension = WGPUTextureDimension._2D,
-            Format = WGPUTextureFormat.RGBA8Unorm,
-            Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
-        });
-        device.Queue.WriteTexture(
-            _texture,
-            data.Rgba,
-            (uint)(data.Width * 4),
+        _backend = backend;
+        _texture = backend.CreateTexture(new TextureDesc(
+            (uint)data.Width,
             (uint)data.Height,
-            new WGPUExtent3D { width = (uint)data.Width, height = (uint)data.Height, depthOrArrayLayers = 1 },
-            0,
-            new WGPUOrigin3D { x = 0, y = 0, z = 0 });
-        _view = _texture.CreateView();
+            TextureFormat.Rgba8Unorm,
+            1,
+            TextureUsages.TextureBinding | TextureUsages.CopyDst));
+        backend.WriteTexture(_texture, data.Rgba, (uint)(data.Width * 4), (uint)data.Width, (uint)data.Height, 0);
+        _view = backend.CreateTextureView(_texture);
+
+        // Bind group creation has not moved behind the seam yet, so unwrap the native view for it (W1).
+        var nativeView = backend is WgpuRenderBackend wgpu ? wgpu.AsTextureView(_view) : throw new InvalidOperationException("the seam implementation must unwrap its own handles");
         BindGroup = device.CreateBindGroup(
             layout,
             [
-                BindGroupEntry.TextureView(0, _view),
+                BindGroupEntry.TextureView(0, nativeView),
                 BindGroupEntry.Sampler(1, sampler),
                 BindGroupEntry.Buffer(VertexLayout.CameraBinding, camera, 0, VertexLayout.CameraUniformSize),
                 BindGroupEntry.Buffer(3, fog, 0, 32),
@@ -86,8 +77,8 @@ internal sealed class EntitySkinTextureGpu : IDisposable
         }
 
         BindGroup.Dispose();
-        _view.Dispose();
-        _texture.Dispose();
+        _backend?.Destroy(_view);
+        _backend?.Destroy(_texture);
         Created = false;
     }
 }

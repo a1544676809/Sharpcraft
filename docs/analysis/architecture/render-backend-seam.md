@@ -47,11 +47,11 @@ public readonly struct PipelineHandle   { internal readonly object Value; }
 | --- | --- | --- |
 | `Name` | `string` | 后端标识（`"wgpu"`、`"vulkan"`），用于日志与诊断 |
 | `CreateTexture` | `(TextureDesc) -> TextureHandle` | 描述含尺寸、格式、用途、mip 层数 |
-| `WriteTexture` | `(TextureHandle, ReadOnlySpan<byte>, uint bytesPerRow, uint height, uint mipLevel)` | 上传像素 |
+| `WriteTexture` | `(TextureHandle, ReadOnlySpan<byte>, uint bytesPerRow, uint width, uint height, uint mipLevel)` | 上传像素；**extent 由调用方声明**，不从行跨度反推（4 字节/像素只对 8 位 RGBA 成立） |
 | `CreateTextureView` | `(TextureHandle) -> TextureViewHandle` | |
 | `CreateBuffer` | `(BufferDesc) -> BufferHandle` | |
 | `WriteBuffer` | `(BufferHandle, ReadOnlySpan<byte>, ulong offset)` | |
-| `CreateSampler` | `(AddressMode, AddressMode, FilterMode, FilterMode, bool mipmaps) -> SamplerHandle` | 与 `SamplerCache` 的语义对齐 |
+| `CreateSampler` | `(AddressMode, FilterMode, FilterMode, bool mipmaps) -> SamplerHandle` | 与 `SamplerCache` 的语义对齐；单值 address mode（两轴同值） |
 | `CreateRenderPipeline` | `(PipelineDesc) -> PipelineHandle` | 描述含着色器源码、顶点布局、格式、深度设置 |
 | `CreateSurface` / `Present` | 由窗口层调用 | 窗口与离屏共用同一提交路径（原则 14） |
 | `Destroy*` | 每类句柄一个 | 后端拥有生命周期 |

@@ -163,6 +163,10 @@ public static class WindowedRenderer
         // a state always resolves to the same sampler instead of a fresh device object.
         using var samplers = new SamplerCache();
         samplers.Initialize(device);
+
+        // The backend seam (T-786 W1). Only texture and view creation go through it so far; the bind group below still
+        // builds on the device, which the escape hatch on WgpuRenderBackend exposes.
+        var backend = new WgpuRenderBackend(device);
         // The block atlas carries a mip chain, so it samples like the reference MipmappedTexture: linear minification
         // with an unbounded LOD clamp. Clamping to the sprite edge is kept because the atlas relies on padding.
         // Magnification stays nearest: with a linear magnifier every block face reads visibly soft even at close range,
@@ -243,12 +247,12 @@ public static class WindowedRenderer
         using var entitySkin = new EntitySkinTextureGpu();
         if (entitySkinSource?.Atlas is { } skinData)
         {
-            entitySkin.Upload(device, bindGroupLayout, skinData, cameraBuffer, fogBuffer, lightmapBuffer, atlasSampler);
+            entitySkin.Upload(backend, device, bindGroupLayout, skinData, cameraBuffer, fogBuffer, lightmapBuffer, atlasSampler);
         }
 
         using var itemAtlasGpu = new EntitySkinTextureGpu();
         if (itemAtlasSource?.Atlas is { } itemData)
-            itemAtlasGpu.Upload(device, bindGroupLayout, itemData, cameraBuffer, fogBuffer, lightmapBuffer, atlasSampler);
+            itemAtlasGpu.Upload(backend, device, bindGroupLayout, itemData, cameraBuffer, fogBuffer, lightmapBuffer, atlasSampler);
         using var pipeline = CreatePipeline(device, format, pipelineLayout);
         using var cutoutPipeline = CreateCutoutPipeline(device, format, pipelineLayout);
         using var entityPipeline = CreateEntityPipeline(device, format, pipelineLayout);
@@ -756,7 +760,7 @@ public static class WindowedRenderer
                 // texture and its bind group sufficient.
                 if (entitySkinSource.Atlas is { } refreshedSkin)
                 {
-                    entitySkin.Upload(device, bindGroupLayout, refreshedSkin, cameraBuffer, fogBuffer, lightmapBuffer, atlasSampler);
+                    entitySkin.Upload(backend, device, bindGroupLayout, refreshedSkin, cameraBuffer, fogBuffer, lightmapBuffer, atlasSampler);
                 }
                 else
                 {
@@ -769,7 +773,7 @@ public static class WindowedRenderer
                 appliedItemAtlasVersion = itemAtlasSource.Version;
                 if (itemAtlasSource.Atlas is { } refreshedItems)
                 {
-                    itemAtlasGpu.Upload(device, bindGroupLayout, refreshedItems, cameraBuffer, fogBuffer, lightmapBuffer, atlasSampler);
+                    itemAtlasGpu.Upload(backend, device, bindGroupLayout, refreshedItems, cameraBuffer, fogBuffer, lightmapBuffer, atlasSampler);
                 }
                 else
                 {
