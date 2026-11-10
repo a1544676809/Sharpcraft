@@ -367,3 +367,31 @@ finally
 `N` 是天体颜色绘制数（日出扇形与星星，通常个位数但非 1），因此**仍然净增**。
 
 **结论**：这类"数组化的绘制集合"必须先整体改为 `BindGroupHandle[]` / `BufferHandle[]`，否则任何部分转换都是净增。这与 §9.9 的规律一致——切片边界由**数据结构的整体性**决定，不由文件边界决定。
+### 9.11 一次成功的整片：管线布局句柄化（217 → 184）
+
+按 §9.9 的规则做成的一片，可作为后续切片的标准范例：
+
+| 改动 | 消除 | 新增 |
+| --- | --- | --- |
+| 15 个 `Create*Pipeline` 形参 `PipelineLayout` → `PipelineLayoutHandle` | `AdoptPipelineLayout` ×14 | 0 |
+| 其中 10 个返回值 `RenderPipeline` → `PipelineHandle`（消费者全是 `SetPipeline`） | `AdoptPipeline` ×8 | 0 |
+| `pipelineLayout` / `blitDepthLayout` / 5 个 ref layout / 3 个 cloud layout 改句柄 | `AsBindGroupLayout` ×4 | 0 |
+| 帧循环退出处补 17 个 `backend.Destroy` | — | 生命周期显式化 |
+
+**为什么这次能降而单方法转换不能**：这一片里创建者、持有者、消费者**同时**换了类型，因此没有任何一处需要 `As*` 把句柄换回原生。
+
+**仍然留在原生侧的**（都有明确原因，不是遗漏）：
+- 5 个 OIT helper（`CreateDepthBounds`/`Transmittance`/`Accumulate`/`Cull`/`Composite`）返回值仍是 `RenderPipeline`：消费者是 `ReferenceOitPasses.Parameters` 的原生字段，改句柄会新增 8 处 `AsPipeline`。**下一片要把 `Parameters` 一起改。**
+- 4 个 OIT 纹理布局：见 §9.12。
+
+### 9.12 `TextureSampleType` 缺 `UnfilterableFloat`（已修）
+
+`oitTargetFormat` 默认是 `Rgba32Float`，这类纹理**可采样但不可过滤**。接缝原先只有 `Float`（filterable），于是：
+
+- 用 `Float` 描述 OIT 布局 → 创建 bind group 时 wgpu 直接校验失败：
+  `Texture binding 0 expects sample type Float { filterable: true }, but was given a view with format Rgba32Float (sample type Float { filterable: false })`
+- 这不是"近似"，是**必然的运行期错误**
+
+已补 `TextureSampleType.UnfilterableFloat` 及映射。这条也解释了为什么有些布局此前只能留在原生侧——**不是懒，是接缝表达不了**。
+
+**教训**：接缝的枚举必须覆盖它要替换的原生枚举中所有实际用到的值，否则迁移会在运行期而非编译期失败。
