@@ -30,7 +30,7 @@ internal sealed class FramePresentation : IDisposable
     private uint _width;
     private uint _height;
 
-    private FramePresentation(Device device, TextureFormat format, Sampler sampler)
+    private FramePresentation(WgpuRenderBackend backend, Device device, TextureFormat format, Sampler sampler)
     {
         _device = device;
         _format = format;
@@ -41,12 +41,12 @@ internal sealed class FramePresentation : IDisposable
             BindGroupLayoutEntry.Sampler(1, ShaderStage.Fragment, WGPUSamplerBindingType.Filtering)
         ]);
 
-        _pipeline = CreatePipeline(device, device.CreatePipelineLayout([_layout]), format);
+        _pipeline = CreatePipeline(backend, device, device.CreatePipelineLayout([_layout]), format);
     }
 
     /// <summary>Creates the presentation resources for the given surface format.</summary>
     /// <param name="sampler">Sampler the presentation blit uses; owned by the caller's cache.</param>
-    public static FramePresentation Create(Device device, TextureFormat format, Sampler sampler) => new(device, format, sampler);
+    public static FramePresentation Create(WgpuRenderBackend backend, Device device, TextureFormat format, Sampler sampler) => new(backend, device, format, sampler);
 
     /// <summary>The colour texture every pass renders into; recreated when the size changes.</summary>
     public Texture Target => _target ?? throw new InvalidOperationException("the frame target was not created");
@@ -117,10 +117,9 @@ internal sealed class FramePresentation : IDisposable
         _layout.Dispose();
     }
 
-    private static RenderPipeline CreatePipeline(Device device, PipelineLayout layout, TextureFormat format)
+    private static RenderPipeline CreatePipeline(WgpuRenderBackend backend, Device device, PipelineLayout layout, TextureFormat format)
     {
         // Described to the backend rather than built here, so presentation joins the same path as every other pass.
-        var backend = new WgpuRenderBackend(device);
         var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("blit_color"));
         return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
             source,

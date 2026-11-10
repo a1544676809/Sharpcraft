@@ -255,10 +255,10 @@ public static class WindowedRenderer
             ? new OffscreenRenderer.CelestialResources(device, request, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         using var celestialColour = request.CelestialColorDraws is { Length: > 0 } || celestialPerFrame is not null
-            ? new OffscreenRenderer.CelestialColorResources(device, request, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
+            ? new OffscreenRenderer.CelestialColorResources(backend, device, request, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         using var skyDiscColour = !skyDiscVanilla && request.SkyDiscDraws is { Length: > 0 }
-            ? new OffscreenRenderer.CelestialColorResources(device, request with { CelestialColorDraws = request.SkyDiscDraws }, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
+            ? new OffscreenRenderer.CelestialColorResources(backend, device, request with { CelestialColorDraws = request.SkyDiscDraws }, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         using var skyDiscVanillaResources = skyDiscVanilla && skyDiscPerFrame is not null
             ? new SkyDiscResources(backend, device, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
@@ -266,7 +266,7 @@ public static class WindowedRenderer
         // Clouds change every frame (scroll/camera), so their position-colour draw set is updated per frame.
         using var cloudColour = cloudsPerFrame is null
             ? null
-            : new OffscreenRenderer.CelestialColorResources(device, request with { CelestialColorDraws = [] }, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format), WGPUCompareFunction.GreaterEqual);
+            : new OffscreenRenderer.CelestialColorResources(backend, device, request with { CelestialColorDraws = [] }, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format), WGPUCompareFunction.GreaterEqual);
         using var cloudOit = cloudOitEnabled && cloudColour is not null
             ? new CloudOitResources(device, cameraBuffer, VertexLayout.CameraUniformSize)
             : null;
@@ -320,7 +320,7 @@ public static class WindowedRenderer
             BindGroupLayoutEntryDesc.Texture(0, ShaderStages.Fragment) with { SampleType = TextureSampleType.Depth, ViewDimension = TextureViewDimension.D2 },
             BindGroupLayoutEntryDesc.Sampler(1, ShaderStages.Fragment)
         ]));
-        using var presentation = FramePresentation.Create(device, BackendConvert.FromWgpu(format), samplers.GetClampToEdge(FilterMode.Nearest));
+        using var presentation = FramePresentation.Create(backend, device, BackendConvert.FromWgpu(format), samplers.GetClampToEdge(FilterMode.Nearest));
         using var blitDepthPipelineLayout = device.CreatePipelineLayout([blitDepthLayout]);
         using var blitDepthPipeline = CreateBlitDepthPipeline(backend, blitDepthPipelineLayout);
         var blitDepthSampler = samplers.GetClampToEdge(FilterMode.Nearest);

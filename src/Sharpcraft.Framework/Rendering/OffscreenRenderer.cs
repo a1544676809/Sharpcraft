@@ -567,6 +567,8 @@ public static class OffscreenRenderer
 
             device.Queue.WriteBuffer(cameraBuffer, 0, cameraBytes.AsSpan());
 
+            var backend = new WgpuRenderBackend(device);
+
             // Celestial bodies (sun/moon): textured quads that sit in the sky backdrop. Built here so their buffers live
             // until the command buffer is submitted; drawn right after the sky gradient.
             using var celestial = request.CelestialDraws is { Length: > 0 } && request.CelestialTextures is { Length: > 0 }
@@ -575,7 +577,7 @@ public static class OffscreenRenderer
 
             // Position-colour bodies (sunrise fan, stars): no texture, per-vertex colour times a tint.
             using var celestialColour = request.CelestialColorDraws is { Length: > 0 }
-                ? new CelestialColorResources(device, request, cameraBuffer, VertexLayout.CameraUniformSize)
+                ? new CelestialColorResources(backend, device, request, cameraBuffer, VertexLayout.CameraUniformSize)
                 : null;
 
             using var bindGroup = device.CreateBindGroup(
@@ -608,7 +610,6 @@ public static class OffscreenRenderer
                 Usage = BufferUsage.MapRead | BufferUsage.CopyDst
             });
 
-            var backend = new WgpuRenderBackend(device);
             var hasGeometry = request.Indices.Length > 0 && request.Vertices.Length > 0;
             // World-space vertices: the shader applies the camera, so the buffer only changes when the
             // geometry changes.
@@ -1316,7 +1317,7 @@ public static class OffscreenRenderer
         private float[][] _sourceVertices = [];
         private uint[][] _sourceIndices = [];
 
-        public CelestialColorResources(Device device, FrameRequest request, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, TextureFormat format = TextureFormat.Rgba8Unorm, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always)
+        public CelestialColorResources(WgpuRenderBackend backend, Device device, FrameRequest request, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, TextureFormat format = TextureFormat.Rgba8Unorm, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always)
         {
             var draws = request.CelestialColorDraws ?? [];
             _device = device;
@@ -1332,7 +1333,6 @@ public static class OffscreenRenderer
 
             // The seam takes the source rather than a module, so this builds the pipeline in one place like every other.
             var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("position_color"));
-            var backend = new WgpuRenderBackend(device);
             _translucentPipeline = CreatePositionColorPipeline(backend, source, _pipelineLayout, overlay: false, format, depthCompare);
             _overlayPipeline = CreatePositionColorPipeline(backend, source, _pipelineLayout, overlay: true, format, depthCompare);
             _opaquePipeline = CreatePositionColorPipeline(backend, source, _pipelineLayout, overlay: false, format, depthCompare, opaque: true);
