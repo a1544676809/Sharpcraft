@@ -57,6 +57,17 @@ public sealed class AtlasMipPolicyTests
     }
 
     [Fact]
+    public void HolderExtentsRoundUpToTheMipStep()
+    {
+        // The reference reserves ceil(size / 2^level) * 2^level per sprite, so a holder always divides evenly down to
+        // the coarsest level.
+        Assert.Equal(32, AtlasMipPolicy.ResolveHolderExtent(20, mipLevels: 4));
+        Assert.Equal(20, AtlasMipPolicy.ResolveHolderExtent(20, mipLevels: 0));
+        Assert.Equal(32, AtlasMipPolicy.ResolveHolderExtent(32, mipLevels: 4));
+        Assert.Equal(18, AtlasMipPolicy.ResolveHolderExtent(18, mipLevels: 1));
+    }
+
+    [Fact]
     public void AnisotropyOffIgnoresItsExponent()
     {
         // The reference passes zero rather than one when filtering is not anisotropic, and the formula then shifts by

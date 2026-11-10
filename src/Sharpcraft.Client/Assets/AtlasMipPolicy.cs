@@ -87,6 +87,28 @@ public static class AtlasMipPolicy
     /// <summary>Padding that keeps a bilinear sample at the sprite edge inside its own ring.</summary>
     public const int MinimumPadding = 2;
 
+    /// <summary>
+    /// Rounds a holder extent up to a multiple of the mip step.
+    /// </summary>
+    /// <remarks>
+    /// The reference stitcher reserves <c>ceil(size / 2^level) * 2^level</c> for each sprite, so every holder divides
+    /// evenly down to the coarsest level. A holder that is not a multiple of the step loses a texel of its edge padding
+    /// once the level halves it, which lets the neighbour reach in.
+    /// </remarks>
+    /// <param name="size">Sprite extent including its padding.</param>
+    /// <param name="mipLevels">Level count from <see cref="ResolveLevels"/>.</param>
+    /// <returns>The extent rounded up to the step.</returns>
+    public static int ResolveHolderExtent(int size, int mipLevels)
+    {
+        if (mipLevels <= 0 || size <= 0)
+        {
+            return Math.Max(0, size);
+        }
+
+        var step = 1 << Math.Min(mipLevels, 16);
+        return ((size + step - 1) / step) * step;
+    }
+
     private static int LowestOneBit(int value) => value & -value;
 
     private static int Log2(int value)

@@ -116,6 +116,9 @@ public static class SpriteAtlasBuilder
     /// </remarks>
     private static int Padding { get; set; } = AtlasMipPolicy.MinimumPadding;
 
+    /// <summary>Mip level count resolved for the current build; holders are rounded up to its step.</summary>
+    private static int MipLevels { get; set; }
+
     /// <summary>Animated textures are vertical frame strips; only the first frame enters the atlas.</summary>
     public const string BlockTexturePrefix = "assets/minecraft/textures/block/";
 
@@ -223,8 +226,8 @@ public static class SpriteAtlasBuilder
             spriteSizes[index] = (ordered[index].Image.Width, ordered[index].Image.Height);
         }
 
-        var mipLevels = AtlasMipPolicy.ResolveLevels(spriteSizes, AtlasMipPolicy.DefaultMaxLevels);
-        Padding = AtlasMipPolicy.ResolvePadding(mipLevels, AtlasMipPolicy.NoAnisotropy);
+        MipLevels = AtlasMipPolicy.ResolveLevels(spriteSizes, AtlasMipPolicy.DefaultMaxLevels);
+        Padding = AtlasMipPolicy.ResolvePadding(MipLevels, AtlasMipPolicy.NoAnisotropy);
 
         while (true)
         {
@@ -262,8 +265,10 @@ public static class SpriteAtlasBuilder
             // One texel of padding on every side, filled by repeating the sprite's edge. Linear filtering and mip levels
             // read a texel outside the sprite rectangle at its border; without the padding that neighbour is an unrelated
             // sprite, which showed up as black seams along block edges.
-            var width = sprite.Image.Width + (Padding * 2);
-            var height = sprite.Image.Height + (Padding * 2);
+            // Holders are rounded up to the mip step so every one divides evenly down to the coarsest level; without
+            // that the edge padding is halved away and the neighbour reaches into the sample.
+            var width = AtlasMipPolicy.ResolveHolderExtent(sprite.Image.Width + (Padding * 2), MipLevels);
+            var height = AtlasMipPolicy.ResolveHolderExtent(sprite.Image.Height + (Padding * 2), MipLevels);
 
             if (width > size || height > size)
             {
