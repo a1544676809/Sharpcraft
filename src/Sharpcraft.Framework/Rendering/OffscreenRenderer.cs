@@ -346,7 +346,7 @@ public static class OffscreenRenderer
     /// Position-colour pipeline: vertex colour times the per-draw tint, with the given reference blend mode. Sunrise uses
     /// Translucent; stars use Overlay (both match the reference pipelines' ColorTargetState).
     /// </summary>
-    private static RenderPipeline CreatePositionColorPipeline(Device device, ShaderModule shader, PipelineLayout layout, bool overlay, TextureFormat format = TextureFormat.Rgba8Unorm, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always, bool opaque = false)
+    private static RenderPipeline CreatePositionColorPipeline(WgpuRenderBackend backend, byte[] source, PipelineLayout layout, bool overlay, TextureFormat format = TextureFormat.Rgba8Unorm, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always, bool opaque = false)
     {
         var blend = overlay
             ? new WGPUBlendState
@@ -360,28 +360,27 @@ public static class OffscreenRenderer
                 alpha = new WGPUBlendComponent { operation = WGPUBlendOperation.Add, srcFactor = WGPUBlendFactor.One, dstFactor = WGPUBlendFactor.OneMinusSrcAlpha }
             };
 
-        return device.CreateRenderPipeline(
-            shader,
-            "vs_position_color"u8,
-            shader,
-            "fs_position_color"u8,
+        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+            source,
+            "vs_position_color",
+            source,
+            "fs_position_color",
+            backend.AdoptPipelineLayout(layout),
             [
-                new ColorTargetState
-                {
-                    Format = BackendConvert.ToWgpu(format),
-                    WriteMask = ColorWriteMask.All,
-                    Blend = opaque ? null : blend
-                }
+                new ColorTargetDesc(
+                    format,
+                    opaque ? null : new BlendStateDesc(
+                        new BlendComponentDesc(BlendOperation.Add, BlendFactor.SrcAlpha, overlay ? BlendFactor.One : BlendFactor.OneMinusSrcAlpha),
+                        new BlendComponentDesc(BlendOperation.Add, overlay ? BlendFactor.Zero : BlendFactor.OneMinusSrcAlpha, BlendFactor.Zero)))
             ],
-            layout: layout,
-            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
-            multisample: MultisampleState.Default,
             // Part of the backdrop by default: depth always passes and nothing is written, so terrain covers it. Clouds pass
             // GreaterEqual instead so terrain and other clouds occlude them (drawn after the world).
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, depthCompare, write: false),
-            vertexStride: (ulong)VertexLayout.PositionColorStride,
-            vertexStepMode: WGPUVertexStepMode.Vertex,
-            vertexAttributes: VertexLayout.PositionColorAttributes());
+            new DepthStateDesc(TextureFormat.Depth32Float, BackendConvert.FromWgpu(depthCompare), false),
+            CullMode.None,
+            FrontFace.Ccw,
+            (ulong)VertexLayout.PositionColorStride,
+            VertexStepMode.Vertex,
+            LayoutAttributes.From(VertexLayout.PositionColorAttributes()))));
     }
 
     /// <summary>Renders a frame and returns its pixels.</summary>
@@ -1325,14 +1324,12 @@ public static class OffscreenRenderer
 
             _pipelineLayout = device.CreatePipelineLayout([_layout]);
 
-            using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
-            {
-                Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("position_color")))
-            });
-
-            _translucentPipeline = CreatePositionColorPipeline(device, shader, _pipelineLayout, overlay: false, format, depthCompare);
-            _overlayPipeline = CreatePositionColorPipeline(device, shader, _pipelineLayout, overlay: true, format, depthCompare);
-            _opaquePipeline = CreatePositionColorPipeline(device, shader, _pipelineLayout, overlay: false, format, depthCompare, opaque: true);
+            // The seam takes the source rather than a module, so this builds the pipeline in one place like every other.
+            var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("position_color"));
+            var backend = new WgpuRenderBackend(device);
+            _translucentPipeline = CreatePositionColorPipeline(backend, source, _pipelineLayout, overlay: false, format, depthCompare);
+            _overlayPipeline = CreatePositionColorPipeline(backend, source, _pipelineLayout, overlay: true, format, depthCompare);
+            _opaquePipeline = CreatePositionColorPipeline(backend, source, _pipelineLayout, overlay: false, format, depthCompare, opaque: true);
 
             SetDraws(draws);
         }
