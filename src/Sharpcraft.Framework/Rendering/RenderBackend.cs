@@ -635,7 +635,11 @@ public sealed class WgpuRenderBackend : IRenderBackend
         var native = RequireValid<CommandEncoder>(encoder.Value is not null, encoder.Value);
         using (native)
         {
-            _device.Queue.Submit([native.Finish()]);
+            var commands = native.Finish();
+            using (commands)
+            {
+                _device.Queue.Submit([commands]);
+            }
         }
     }
 

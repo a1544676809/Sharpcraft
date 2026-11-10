@@ -90,7 +90,7 @@ internal sealed class ItemOitSet : IDisposable
     /// <param name="drawGeometry">Draws the item geometry with the item atlas already bound.</param>
     public void Record(
         IRenderBackend backend,
-        CommandEncoder encoder,
+        CommandEncoderHandle encoder,
         ColorAttachment frame,
         DepthStencilAttachment depth,
         RenderPipeline boundsPipeline,
@@ -110,7 +110,7 @@ internal sealed class ItemOitSet : IDisposable
         // call, which transfers no ownership back to this class.
         var wgpu = backend as WgpuRenderBackend
             ?? throw new InvalidOperationException("the seam implementation must adopt its own handles");
-        var encoderHandle = wgpu.AdoptCommandEncoder(encoder);
+        var encoderHandle = encoder;
         // The incoming attachments carry their own load and store choices; mapping them rather than assuming keeps the
         // callers that load an existing frame working.
         var depthHandle = depth.DepthLoadOp == WGPULoadOp.Clear

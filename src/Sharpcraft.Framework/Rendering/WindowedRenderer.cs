@@ -1201,10 +1201,10 @@ public static class WindowedRenderer
                 cloudOit.Update(cloudForOit.Vertices, cloudForOit.Indices, cloudForOit.Model, cloudForOit.Tint);
             }
 
-            var encoder = device.CreateCommandEncoder();
+            var encoder = backend.CreateCommandEncoder();
             var frameColour = clearColourPerFrame?.Invoke() ?? colour;
             var pass = backend.BeginRenderPass(
-                wgpu.AdoptCommandEncoder(encoder),
+                encoder,
                 [ColorAttachmentDesc.Clear(wgpu.AdoptTextureView(view), frameColour)],
                 DepthAttachmentDesc.Clear(wgpu.AdoptTextureView(depthView), 0f));
 
@@ -1468,7 +1468,7 @@ public static class WindowedRenderer
                 // The first pass recorded through the seam: it needs no helper that still takes a native pass, so it
                 // proves the whole path - encoder adoption, attachments, bindings and the single end - on its own.
                 var blitPass = backend.BeginRenderPass(
-                    wgpu.AdoptCommandEncoder(encoder),
+                    encoder,
                     [],
                     DepthAttachmentDesc.Keep(wgpu.AdoptTextureView(cloudDepthView)));
                 try
@@ -1629,7 +1629,7 @@ public static class WindowedRenderer
                 // The helper still takes a native pass, so the handle is unwrapped for that call only; the pass itself
                 // is begun and ended through the seam.
                 var worldTextPass = backend.BeginRenderPass(
-                    wgpu.AdoptCommandEncoder(encoder),
+                    encoder,
                     [ColorAttachmentDesc.Keep(wgpu.AdoptTextureView(view))],
                     DepthAttachmentDesc.Keep(wgpu.AdoptTextureView(depthView)));
                 try
@@ -1646,7 +1646,7 @@ public static class WindowedRenderer
             if (cloudColour is not null && cloudOit is null)
             {
                 var cloudPass = backend.BeginRenderPass(
-                    wgpu.AdoptCommandEncoder(encoder),
+                    encoder,
                     [ColorAttachmentDesc.Keep(wgpu.AdoptTextureView(view))],
                     DepthAttachmentDesc.Keep(wgpu.AdoptTextureView(depthView)));
                 try
@@ -1667,7 +1667,7 @@ public static class WindowedRenderer
             // Pass 4: the interface draws last, over the resolved frame, in its own pass so it never participates in the
             // world depth test or the transparency resolve.
             var uiPass = backend.BeginRenderPass(
-                wgpu.AdoptCommandEncoder(encoder),
+                encoder,
                 [ColorAttachmentDesc.Keep(wgpu.AdoptTextureView(view))],
                 DepthAttachmentDesc.Keep(wgpu.AdoptTextureView(depthView)));
             try
@@ -1739,10 +1739,9 @@ public static class WindowedRenderer
                 backend.EndRenderPass(uiPass);
             }
 
-            presentation.RecordPresent(backend, wgpu.AdoptCommandEncoder(encoder), wgpu.AdoptTextureView(surfaceView), DepthAttachmentDesc.Keep(wgpu.AdoptTextureView(depthView)));
+            presentation.RecordPresent(backend, encoder, wgpu.AdoptTextureView(surfaceView), DepthAttachmentDesc.Keep(wgpu.AdoptTextureView(depthView)));
 
-            var commands = encoder.Finish();
-            device.Queue.Submit(commands);
+            backend.Submit(encoder);
 
             // Screenshot (reference Screenshot.grab): only when the host asks, and only after the frame was submitted, so
             // the frame target still holds the presented image (docs/specs/render/screenshot.md 2.2).
@@ -1752,8 +1751,6 @@ public static class WindowedRenderer
                 screenshotCaptured?.Invoke(screenshotPath, screenshotPixels, frameWidth, frameHeight);
             }
             surface.Present();
-            commands.Dispose();
-            encoder.Dispose();
 
             // The acquired texture must be released each frame; leaving it alive makes the next acquire fail
             // when the swapchain reuses its semaphore.

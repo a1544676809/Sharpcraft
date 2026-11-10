@@ -26,7 +26,7 @@ internal static class ReferenceOitPasses
     public required IRenderBackend Backend { get; init; }
 
     /// <summary>The encoder this frame records into.</summary>
-    public CommandEncoder Encoder { get; init; }
+    public CommandEncoderHandle Encoder { get; init; }
 
         /// <summary>Frame colour target the final composite writes over.</summary>
         public TextureView Frame { get; init; }
@@ -115,7 +115,7 @@ internal static class ReferenceOitPasses
         var backend = p.Backend;
         var wgpu = backend as WgpuRenderBackend
             ?? throw new InvalidOperationException("the seam implementation must adopt its own handles");
-        var encoder = wgpu.AdoptCommandEncoder(p.Encoder);
+        var encoder = p.Encoder;
         var clouds = p.Clouds;
         var zero = Vector4.Zero;
 
