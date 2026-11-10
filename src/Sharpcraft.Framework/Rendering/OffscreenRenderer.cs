@@ -628,18 +628,12 @@ public static class OffscreenRenderer
                 : default;
 
             var encoder = device.CreateCommandEncoder();
+            var backend = new WgpuRenderBackend(device);
             var colour = request.ClearColour;
-            var pass = encoder.BeginRenderPass(
-            [
-                new ColorAttachment
-                {
-                    View = view,
-                    LoadOp = WGPULoadOp.Clear,
-                    StoreOp = WGPUStoreOp.Store,
-                    ClearValue = new WGPUColor { r = colour.X, g = colour.Y, b = colour.Z, a = colour.W }
-                }
-            ],
-            DepthStencilAttachment.DepthClear(depthView, 0f));
+            var pass = backend.BeginRenderPass(
+                backend.AdoptCommandEncoder(encoder),
+                [ColorAttachmentDesc.Clear(backend.AdoptTextureView(view), colour)],
+                DepthAttachmentDesc.Clear(backend.AdoptTextureView(depthView), 0f));
 
             // The scene pass order comes from WorldRenderPipeline; each kind is a no-op when this request has no such
             // geometry. The GPU state and buffer lifetimes stay local to this shell.
@@ -654,15 +648,15 @@ public static class OffscreenRenderer
                         if (!request.SkipGradientSky)
                         {
                             using var skyPipeline = CreateSkyPipeline(device, TextureFormat.Rgba8Unorm);
-                            pass.SetPipeline(skyPipeline);
-                            pass.Draw(3);
+                            backend.SetPipeline(pass, backend.AdoptPipeline(skyPipeline));
+                            backend.Draw(pass, 3, 1, 0, 0);
                         }
 
                         // Sun and moon sit in the sky backdrop, before terrain, so world geometry covers them.
-                        celestial?.Draw(pass);
+                        celestial?.Draw(backend.AsRenderPass(pass));
 
                         // Sunrise band and stars, drawn on top of the bodies but still behind world geometry.
-                        celestialColour?.Draw(pass);
+                        celestialColour?.Draw(backend.AsRenderPass(pass));
                         break;
                     }
 
@@ -673,10 +667,10 @@ public static class OffscreenRenderer
                             break;
                         }
 
-                        pass.SetPipeline(pipeline);
-                        pass.SetBindGroup(0, bindGroup, []);
-                        pass.SetVertexBuffer(0, vertexBuffer);
-                        pass.SetIndexBuffer(indexBuffer, WGPUIndexFormat.Uint32);
+                        backend.SetPipeline(pass, backend.AdoptPipeline(pipeline));
+                        backend.SetBindGroup(pass, 0, backend.AdoptBindGroup(bindGroup));
+                        backend.SetVertexBuffer(pass, 0, backend.AdoptBuffer(vertexBuffer));
+                        backend.SetIndexBuffer(pass, backend.AdoptBuffer(indexBuffer), IndexFormat.Uint32);
 
                         if (request.DrawRanges is { Length: > 0 } ranges)
                         {
@@ -685,13 +679,13 @@ public static class OffscreenRenderer
                             {
                                 if (indexCount > 0)
                                 {
-                                    pass.DrawIndexed((uint)indexCount, 1, (uint)firstIndex, 0, 0);
+                                    backend.DrawIndexed(pass, (uint)indexCount, 1, (uint)firstIndex, 0, 0);
                                 }
                             }
                         }
                         else
                         {
-                            pass.DrawIndexed((uint)request.Indices.Length);
+                            backend.DrawIndexed(pass, (uint)request.Indices.Length, 1, 0, 0, 1);
                         }
                         break;
                     }
@@ -712,11 +706,11 @@ public static class OffscreenRenderer
                             new BufferInitDescriptor { Usage = BufferUsage.Index },
                             cutoutIndices.AsSpan());
 
-                        pass.SetPipeline(cutoutPipeline);
-                        pass.SetBindGroup(0, bindGroup, []);
-                        pass.SetVertexBuffer(0, cutoutVertexBuffer);
-                        pass.SetIndexBuffer(cutoutIndexBuffer, WGPUIndexFormat.Uint32);
-                        pass.DrawIndexed((uint)cutoutIndices.Length);
+                        backend.SetPipeline(pass, backend.AdoptPipeline(cutoutPipeline));
+                        backend.SetBindGroup(pass, 0, backend.AdoptBindGroup(bindGroup));
+                        backend.SetVertexBuffer(pass, 0, backend.AdoptBuffer(cutoutVertexBuffer));
+                        backend.SetIndexBuffer(pass, backend.AdoptBuffer(cutoutIndexBuffer), IndexFormat.Uint32);
+                        backend.DrawIndexed(pass, (uint)cutoutIndices.Length, 1, 0, 0, 1);
                         break;
                     }
 
@@ -737,10 +731,10 @@ public static class OffscreenRenderer
                             new BufferInitDescriptor { Usage = BufferUsage.Index },
                             translucentIndices.AsSpan());
 
-                        pass.SetPipeline(translucentPipeline);
-                        pass.SetBindGroup(0, bindGroup, []);
-                        pass.SetVertexBuffer(0, translucentVertexBuffer);
-                        pass.SetIndexBuffer(translucentIndexBuffer, WGPUIndexFormat.Uint32);
+                        backend.SetPipeline(pass, backend.AdoptPipeline(translucentPipeline));
+                        backend.SetBindGroup(pass, 0, backend.AdoptBindGroup(bindGroup));
+                        backend.SetVertexBuffer(pass, 0, backend.AdoptBuffer(translucentVertexBuffer));
+                        backend.SetIndexBuffer(pass, backend.AdoptBuffer(translucentIndexBuffer), IndexFormat.Uint32);
 
                         if (request.TranslucentRanges is { Length: > 0 } translucentRanges)
                         {
@@ -749,13 +743,13 @@ public static class OffscreenRenderer
                             {
                                 if (indexCount > 0)
                                 {
-                                    pass.DrawIndexed((uint)indexCount, 1, (uint)firstIndex, 0, 0);
+                                    backend.DrawIndexed(pass, (uint)indexCount, 1, (uint)firstIndex, 0, 0);
                                 }
                             }
                         }
                         else
                         {
-                            pass.DrawIndexed((uint)translucentIndices.Length);
+                            backend.DrawIndexed(pass, (uint)translucentIndices.Length, 1, 0, 0, 1);
                         }
                         break;
                     }
@@ -763,7 +757,7 @@ public static class OffscreenRenderer
             }
 
             WorldRenderPipeline.RecordScenePasses(DrawScenePass);
-            pass.End();
+            backend.EndRenderPass(pass);
 
             encoder.CopyTextureToBuffer(
                 texture,
