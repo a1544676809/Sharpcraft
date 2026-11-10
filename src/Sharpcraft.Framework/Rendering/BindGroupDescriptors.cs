@@ -49,6 +49,9 @@ public enum TextureSampleType
     /// <summary>Filtered floating point.</summary>
     Float,
 
+    /// <summary>Floating point that cannot be filtered, as a high precision target returns.</summary>
+    UnfilterableFloat,
+
     /// <summary>Depth comparison.</summary>
     Depth,
 

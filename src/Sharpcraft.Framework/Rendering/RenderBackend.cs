@@ -856,6 +856,7 @@ public sealed class WgpuRenderBackend : IRenderBackend
     private static WGPUTextureSampleType ToWgpu(TextureSampleType type) => type switch
     {
         TextureSampleType.Float => WGPUTextureSampleType.Float,
+        TextureSampleType.UnfilterableFloat => WGPUTextureSampleType.UnfilterableFloat,
         TextureSampleType.Depth => WGPUTextureSampleType.Depth,
         TextureSampleType.Sint => WGPUTextureSampleType.Sint,
         TextureSampleType.Uint => WGPUTextureSampleType.Uint,
