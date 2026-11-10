@@ -151,12 +151,12 @@ public enum VertexFormat
 /// <param name="Format">Format of the attribute.</param>
 public readonly record struct VertexAttributeDesc(uint ShaderLocation, uint Offset, VertexFormat Format);
 
-/// <summary>Converts a declared vertex layout into the attributes a pipeline needs.</summary>
+/// <summary>Converts a declared layout into the attributes a pipeline needs.</summary>
 /// <remarks>
 /// The conversion lives beside the descriptor so that the single-layout rule keeps holding: a renderer passes what
 /// <c>VertexLayout</c> declares and never names the attribute type itself.
 /// </remarks>
-public static class VertexAttributes
+public static class LayoutAttributes
 {
     /// <summary>Converts the shared layout's attributes.</summary>
     /// <param name="attributes">Attributes as the shared layout declares them.</param>
@@ -219,7 +219,7 @@ public sealed record PipelineDesc(
     FrontFace Front,
     ulong VertexStride,
     VertexStepMode StepMode,
-    IReadOnlyList<VertexAttributeDesc> VertexAttributes);
+    IReadOnlyList<VertexAttributeDesc> Attributes);
 
 /// <summary>An opaque pipeline layout owned by a render backend.</summary>
 public readonly struct PipelineLayoutHandle

@@ -528,10 +528,10 @@ public sealed class WgpuRenderBackend : IRenderBackend
                 : new ColorTargetState(BackendConvert.ToWgpu(target.Format));
         }
 
-        var attributes = new VertexAttribute[desc.VertexAttributes.Count];
+        var attributes = new VertexAttribute[desc.Attributes.Count];
         for (var index = 0; index < attributes.Length; index++)
         {
-            var attribute = desc.VertexAttributes[index];
+            var attribute = desc.Attributes[index];
             attributes[index] = new VertexAttribute
             {
                 ShaderLocation = attribute.ShaderLocation,
