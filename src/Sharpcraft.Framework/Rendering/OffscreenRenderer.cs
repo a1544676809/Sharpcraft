@@ -283,9 +283,8 @@ public static class OffscreenRenderer
         Console.WriteLine($"pyramid: {readbacks.Count} levels, total mismatches {totalMismatches}, worst delta {worst:F6}; " + string.Join(", ", lines));
     }
 
-    private static RenderPipeline CreateSkyPipeline(Device device, TextureFormat format)
+    private static RenderPipeline CreateSkyPipeline(WgpuRenderBackend backend, TextureFormat format)
     {
-        var backend = new WgpuRenderBackend(device);
         var skySource = System.Text.Encoding.UTF8.GetBytes(SkyShaderSourceText);
         return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
             skySource, "vs_sky", skySource, "fs_sky", null,
@@ -296,9 +295,8 @@ public static class OffscreenRenderer
             [])));
     }
 
-    private static RenderPipeline CreatePipeline(Device device, PipelineLayout layout)
+    private static RenderPipeline CreatePipeline(WgpuRenderBackend backend, PipelineLayout layout)
     {
-        var backend = new WgpuRenderBackend(device);
         var source = System.Text.Encoding.UTF8.GetBytes(ShaderSourceText);
         return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
             source, "vs_main", source, "fs_main", backend.AdoptPipelineLayout(layout),
@@ -313,9 +311,8 @@ public static class OffscreenRenderer
     /// The translucent pipeline: the same shader and layout as terrain, but blending on and depth writes off so layers
     /// behind still show through and the order of the draw calls matters.
     /// </summary>
-    private static RenderPipeline CreateTranslucentPipeline(Device device, PipelineLayout layout, bool alphaOne)
+    private static RenderPipeline CreateTranslucentPipeline(WgpuRenderBackend backend, PipelineLayout layout, bool alphaOne)
     {
-        var backend = new WgpuRenderBackend(device);
         var source = System.Text.Encoding.UTF8.GetBytes(ShaderSourceText);
         return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
             source, "vs_main", source, alphaOne ? "fs_main" : "fs_translucent", backend.AdoptPipelineLayout(layout),
@@ -331,9 +328,8 @@ public static class OffscreenRenderer
     /// <summary>
     /// The cutout pipeline: same shader family with alpha testing instead of blending, depth writes on.
     /// </summary>
-    private static RenderPipeline CreateCutoutPipeline(Device device, PipelineLayout layout)
+    private static RenderPipeline CreateCutoutPipeline(WgpuRenderBackend backend, PipelineLayout layout)
     {
-        var backend = new WgpuRenderBackend(device);
         var source = System.Text.Encoding.UTF8.GetBytes(ShaderSourceText);
         return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
             source, "vs_main", source, "fs_cutout", backend.AdoptPipelineLayout(layout),
@@ -613,13 +609,14 @@ public static class OffscreenRenderer
                 Usage = BufferUsage.MapRead | BufferUsage.CopyDst
             });
 
+            var backend = new WgpuRenderBackend(device);
             var hasGeometry = request.Indices.Length > 0 && request.Vertices.Length > 0;
             // World-space vertices: the shader applies the camera, so the buffer only changes when the
             // geometry changes.
             var vertexBytes = hasGeometry ? request.Vertices : [];
             var indexBytes = hasGeometry ? BuildIndexBytes(request) : [];
 
-            using var pipeline = hasGeometry ? CreatePipeline(device, pipelineLayout) : default;
+            using var pipeline = hasGeometry ? CreatePipeline(backend, pipelineLayout) : default;
             using var vertexBuffer = hasGeometry
                 ? device.CreateBufferInit(new BufferInitDescriptor { Usage = BufferUsage.Vertex }, vertexBytes.AsSpan())
                 : default;
@@ -628,7 +625,6 @@ public static class OffscreenRenderer
                 : default;
 
             var encoder = device.CreateCommandEncoder();
-            var backend = new WgpuRenderBackend(device);
             var colour = request.ClearColour;
             var pass = backend.BeginRenderPass(
                 backend.AdoptCommandEncoder(encoder),
@@ -647,7 +643,7 @@ public static class OffscreenRenderer
                         // supplies a sky disc backdrop instead (SkipGradientSky).
                         if (!request.SkipGradientSky)
                         {
-                            using var skyPipeline = CreateSkyPipeline(device, TextureFormat.Rgba8Unorm);
+                            using var skyPipeline = CreateSkyPipeline(backend, TextureFormat.Rgba8Unorm);
                             backend.SetPipeline(pass, backend.AdoptPipeline(skyPipeline));
                             backend.Draw(pass, 3, 1, 0, 0);
                         }
@@ -698,7 +694,7 @@ public static class OffscreenRenderer
                             break;
                         }
 
-                        using var cutoutPipeline = CreateCutoutPipeline(device, pipelineLayout);
+                        using var cutoutPipeline = CreateCutoutPipeline(backend, pipelineLayout);
                         using var cutoutVertexBuffer = device.CreateBufferInit(
                             new BufferInitDescriptor { Usage = BufferUsage.Vertex },
                             cutoutVertices.AsSpan());
@@ -723,7 +719,7 @@ public static class OffscreenRenderer
                         }
 
                         // Blended, no depth writes, drawn last: the order of these calls is what makes overlapping water read right.
-                        using var translucentPipeline = CreateTranslucentPipeline(device, pipelineLayout, request.Diagnostics?.AlphaOne == true);
+                        using var translucentPipeline = CreateTranslucentPipeline(backend, pipelineLayout, request.Diagnostics?.AlphaOne == true);
                         using var translucentVertexBuffer = device.CreateBufferInit(
                             new BufferInitDescriptor { Usage = BufferUsage.Vertex },
                             translucentVertices.AsSpan());
