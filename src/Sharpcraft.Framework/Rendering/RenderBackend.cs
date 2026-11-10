@@ -62,6 +62,40 @@ public readonly struct PipelineHandle
 /// <param name="Usage">What the texture may be used for.</param>
 public readonly record struct TextureDesc(uint Width, uint Height, TextureFormat Format, uint MipLevelCount, TextureUsages Usage);
 
+/// <summary>How a buffer is created.</summary>
+/// <param name="Size">Size in bytes.</param>
+/// <param name="Usage">What the buffer may be used for.</param>
+public readonly record struct BufferDesc(ulong Size, BufferUsages Usage);
+
+/// <summary>What a buffer may be used for.</summary>
+[Flags]
+public enum BufferUsages
+{
+    /// <summary>Nothing yet; a buffer must declare at least one use.</summary>
+    None = 0,
+
+    /// <summary>Read as vertex data.</summary>
+    Vertex = 1,
+
+    /// <summary>Read as index data.</summary>
+    Index = 2,
+
+    /// <summary>Read as a uniform block.</summary>
+    Uniform = 4,
+
+    /// <summary>Read as storage.</summary>
+    Storage = 8,
+
+    /// <summary>Source of a copy.</summary>
+    CopySrc = 16,
+
+    /// <summary>Destination of a copy or upload.</summary>
+    CopyDst = 32,
+
+    /// <summary>Readable from the host.</summary>
+    MapRead = 64
+}
+
 /// <summary>What a texture may be used for.</summary>
 [Flags]
 public enum TextureUsages
@@ -108,7 +142,17 @@ public interface IRenderBackend
     /// <summary>Creates a sampler from the state the caller asked for.</summary>
     SamplerHandle CreateSampler(AddressMode addressMode, FilterMode minFilter, FilterMode magFilter, bool useMipmaps);
 
+    /// <summary>Creates a buffer.</summary>
+    BufferHandle CreateBuffer(in BufferDesc desc);
+
+    /// <summary>Writes bytes into a buffer at an offset.</summary>
+    void WriteBuffer(BufferHandle buffer, ReadOnlySpan<byte> data, ulong offset);
+
+    /// <summary>Destroys a buffer.</summary>
+    void Destroy(BufferHandle buffer);
+
     /// <summary>Destroys a texture.</summary>
+
     void Destroy(TextureHandle texture);
 
     /// <summary>Destroys a texture view.</summary>
@@ -180,12 +224,39 @@ public sealed class WgpuRenderBackend : IRenderBackend
     /// <param name="view">Handle from this backend.</param>
     internal TextureView AsTextureView(TextureViewHandle view) => (TextureView)view.Value;
 
+    /// <summary>Unwraps a texture handle for code that has not moved behind the seam yet.</summary>
+    /// <param name="texture">Handle from this backend.</param>
+    internal Texture AsTexture(TextureHandle texture) => (Texture)texture.Value;
+
+    /// <summary>Unwraps a buffer handle for code that has not moved behind the seam yet.</summary>
+    /// <param name="buffer">Handle from this backend.</param>
+    internal Brew.Wgpu.Buffer AsBuffer(BufferHandle buffer) => (Brew.Wgpu.Buffer)buffer.Value;
+
+    /// <summary>Unwraps a sampler handle for code that has not moved behind the seam yet.</summary>
+    /// <param name="sampler">Handle from this backend.</param>
+    internal Sampler AsSampler(SamplerHandle sampler) => (Sampler)sampler.Value;
+
     /// <inheritdoc/>
     public TextureViewHandle CreateTextureView(TextureHandle texture) => new(((Texture)texture.Value).CreateView());
 
     /// <inheritdoc/>
     public SamplerHandle CreateSampler(AddressMode addressMode, FilterMode minFilter, FilterMode magFilter, bool useMipmaps) =>
         new(SamplerCache.Create(_device, addressMode, minFilter, magFilter, useMipmaps));
+
+    /// <inheritdoc/>
+    public BufferHandle CreateBuffer(in BufferDesc desc) =>
+        new(_device.CreateBuffer(new BufferDescriptor
+        {
+            Size = desc.Size,
+            Usage = ToWgpu(desc.Usage)
+        }));
+
+    /// <inheritdoc/>
+    public void WriteBuffer(BufferHandle buffer, ReadOnlySpan<byte> data, ulong offset) =>
+        _device.Queue.WriteBuffer<byte>((Brew.Wgpu.Buffer)buffer.Value, offset, data);
+
+    /// <inheritdoc/>
+    public void Destroy(BufferHandle buffer) => ((Brew.Wgpu.Buffer)buffer.Value).Dispose();
 
     /// <inheritdoc/>
     public void Destroy(TextureHandle texture) => ((Texture)texture.Value).Dispose();
@@ -195,6 +266,47 @@ public sealed class WgpuRenderBackend : IRenderBackend
 
     /// <inheritdoc/>
     public void Destroy(SamplerHandle sampler) => ((Sampler)sampler.Value).Dispose();
+
+    private static Brew.Wgpu.BufferUsage ToWgpu(BufferUsages usage)
+    {
+        var result = (Brew.Wgpu.BufferUsage)0;
+        if (usage.HasFlag(BufferUsages.Vertex))
+        {
+            result |= Brew.Wgpu.BufferUsage.Vertex;
+        }
+
+        if (usage.HasFlag(BufferUsages.Index))
+        {
+            result |= Brew.Wgpu.BufferUsage.Index;
+        }
+
+        if (usage.HasFlag(BufferUsages.Uniform))
+        {
+            result |= Brew.Wgpu.BufferUsage.Uniform;
+        }
+
+        if (usage.HasFlag(BufferUsages.Storage))
+        {
+            result |= Brew.Wgpu.BufferUsage.Storage;
+        }
+
+        if (usage.HasFlag(BufferUsages.CopySrc))
+        {
+            result |= Brew.Wgpu.BufferUsage.CopySrc;
+        }
+
+        if (usage.HasFlag(BufferUsages.CopyDst))
+        {
+            result |= Brew.Wgpu.BufferUsage.CopyDst;
+        }
+
+        if (usage.HasFlag(BufferUsages.MapRead))
+        {
+            result |= Brew.Wgpu.BufferUsage.MapRead;
+        }
+
+        return result;
+    }
 
     private static Brew.Wgpu.TextureUsage ToWgpu(TextureUsages usage)
     {
