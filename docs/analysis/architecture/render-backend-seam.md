@@ -496,7 +496,7 @@ finally
 
 `FrameCapture` 现在**零原生对象**；深度金字塔与运动向量走 `BeginComputePass/SetPipeline/SetBindGroup/DispatchWorkgroups/EndComputePass`。
 
-**最终唯一保留项**：`WindowedRenderer` 的 `AdoptTextureView(surfaceView)` —— 交换链视图。换成 `AdoptTexture` + `CreateTextureView` 仍是 1 换 1（净 0）。**消除条件**：把 surface 获取本身入缝（`IRenderBackend` 增 `AcquireSurfaceImage()` / `ConfigureSurface(...)`），需同时改 `RenderBackend.cs` 与窗口层 surface 契约（`Sharpcraft.Framework.Platform`）。这是**跨层设计变更**，不是调用点搬运，故保留并登记为受控偏差 `SIM-SURFACE-NOT-IN-SEAM`。
+**最终唯一保留项**：`WindowedRenderer` 的 `AdoptTextureView(surfaceView)` —— 交换链视图。换成 `AdoptTexture` + `CreateTextureView` 仍是 1 换 1（净 0）。**消除条件**：把 surface 获取本身入缝（`IRenderBackend` 增 `AcquireSurfaceImage()` / `ConfigureSurface(...)`），需同时改 `RenderBackend.cs` 与窗口层 surface 契约（`Sharpcraft.Framework.Platform`）。这是**跨层设计变更**，不是调用点搬运。**审计结论（2026-11-10，项目所有者裁决）：保持**，登记为受控偏差 `SIM-SURFACE-NOT-IN-SEAM`（T-788）。理由：这一处的存在恰好标记出"呈现层不属于渲染后端"这条边界，为凑数字抹掉它反而丢失信息；且它不改变任何可观测行为，而 surface 入缝会让 `IRenderBackend` 同时承担渲染与呈现两种职责，并使这块改动无法被离屏路径或截图覆盖。复查条件：需要第二个渲染后端时。
 
 **累计**：225 → 217 → 184 → 137 → 98 → 70 → 61 → 16 → 7 → **1**（−224，−99.6%）。
 
