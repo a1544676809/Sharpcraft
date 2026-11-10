@@ -205,6 +205,9 @@ public readonly struct BindGroupLayoutHandle
 {
     internal BindGroupLayoutHandle(object value) => Value = value;
 
+    /// <summary>Whether this handle refers to a resource the backend created.</summary>
+    public bool IsValid => Value is not null;
+
     internal object Value { get; }
 }
 
@@ -212,6 +215,9 @@ public readonly struct BindGroupLayoutHandle
 public readonly struct BindGroupHandle
 {
     internal BindGroupHandle(object value) => Value = value;
+
+    /// <summary>Whether this handle refers to a resource the backend created.</summary>
+    public bool IsValid => Value is not null;
 
     internal object Value { get; }
 }

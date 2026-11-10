@@ -299,11 +299,10 @@ public static class WindowedRenderer
         using var refCullPipeline = CreateCullPipeline(device, refCullPipelineLayout, BackendConvert.ToWgpu(oitTargetFormat));
         using var refCompositePipeline = CreateCompositePipeline(device, format, refCompositePipelineLayout);
         using var cloudCompositePipeline = CreateCompositePipeline(device, format, refCompositePipelineLayout, WGPUCompareFunction.GreaterEqual);
-        using var blitDepthLayout = device.CreateBindGroupLayout(
-        [
-            BindGroupLayoutEntry.Texture(0, ShaderStage.Fragment, WGPUTextureSampleType.Depth, WGPUTextureViewDimension._2D, false),
-            BindGroupLayoutEntry.Sampler(1, ShaderStage.Fragment, WGPUSamplerBindingType.Filtering)
-        ]);
+        using var blitDepthLayout = wgpu.AsBindGroupLayout(backend.CreateBindGroupLayout([
+            BindGroupLayoutEntryDesc.Texture(0, ShaderStages.Fragment) with { SampleType = TextureSampleType.Depth, ViewDimension = TextureViewDimension.D2 },
+            BindGroupLayoutEntryDesc.Sampler(1, ShaderStages.Fragment)
+        ]));
         using var presentation = FramePresentation.Create(device, BackendConvert.FromWgpu(format), samplers.GetClampToEdge(FilterMode.Nearest));
         using var blitDepthPipelineLayout = device.CreatePipelineLayout([blitDepthLayout]);
         using var blitDepthPipeline = CreateBlitDepthPipeline(device, blitDepthPipelineLayout);

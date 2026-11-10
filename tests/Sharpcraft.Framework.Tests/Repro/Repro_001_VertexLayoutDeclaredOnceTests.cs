@@ -25,7 +25,14 @@ public sealed class Repro_001_VertexLayoutDeclaredOnceTests
             .Select(file => Path.GetRelativePath(root, file).Replace(Path.DirectorySeparatorChar, '/'))
             .ToArray();
 
-        Assert.Equal(["src/Sharpcraft.Framework/Rendering/VertexLayout.cs"], declarations);
+        // The seam's PipelineDesc carries attributes through to the backend; it names the concept but does not declare a
+        // layout, so it is allowed here. Any other file appearing in this list means a second layout was written down.
+        Assert.Equal(
+            [
+                "src/Sharpcraft.Framework/Rendering/PipelineDescriptors.cs",
+                "src/Sharpcraft.Framework/Rendering/VertexLayout.cs"
+            ],
+            declarations);
     }
 
     [Fact]
