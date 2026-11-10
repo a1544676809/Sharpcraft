@@ -30,16 +30,31 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 - `docs/STATE.md` 在 `2e60e42` 之后与 `DocumentationDriftTests` 不一致（缺 SPDX 头、缺 `## 已完成`/`## 进行中`/`## 阻塞项`/`## 下一步具体动作` 与 `最后更新：`、含绝对路径），已在 T-796 中按测试要求补齐。
 
 ## 下一步具体动作
-**渲染帧时间归因**：把 6.0 ms 拆成 CPU 与 GPU 两部分，找出大头。
 
-已知对照（固定机位 `-74.098 / 121 / 37.303` 朝北、放大化世界、视距 32、`MC_PRESENT_MODE=immediate`）：
+**GPU 选择（用户明确指示，优先做）**：默认选最高性能 GPU，并预留设置可指定具体 GPU。
 
-| | 帧率 | 帧时间 |
-| --- | --- | --- |
-| 原版 26.3 | 650 fps（1280×720）/ 630 fps（854×480） | ≈ 1.5 ms |
-| 本实现 | ≈ 165 fps（1280×720） | ≈ 6.0 ms |
+现状与依据：
+- 绑定层 `Brew.Wgpu` 29.0.0.5 的 `Instance` **只有** `RequestAdapterBlocking(Surface)`，无 options 重载、无适配器枚举
+- 但 `Native` 命名空间**存在** `WGPUPowerPreference`(`Undefined, LowPower, HighPerformance, Force32`) 与 `WGPURequestAdapterOptions`；原生库全平台齐备（`wgpu_native.dll` / `libwgpu_native.so` / `libwgpu_native.dylib`）
+- 因此需自写 P/Invoke 垫片调 `wgpu_instance_request_adapter`（带 `powerPreference`）与 `wgpu_instance_enumerate_adapters`
+- 按原则 12 需新增 ADR（绕开托管绑定属跨模块决定，须写明删除条件）
+- 设置建议 `MC_GPU`：`high`(默认) / `low` / `list` / 其他文本按适配器名称子串匹配，匹配失败回退 high 并警告
+- **必须启动时打印选中的适配器名称**——今天排查花时间正是因为原来只打印了驱动版本号
 
-即**慢约 4 倍**，这是性能工作的正确入口。
+**之后的性能工作**：参考 OIT 的半透明重画占 50–56% 帧时间是已测得的结论（`MC_SKIP_OIT` / `MC_SKIP_TRANSLUCENT` 各能省 56.4% / 50.6%）；但用户指示**暂停测量**，因笔记本断电降频导致数值不可比，待环境稳定后重测。
+
+**（更正）此前记录的"比原版慢约 4 倍"是错的**，由两个口径错误叠加造成：分辨率不同（1280×720 vs 854×480，2.25×）与**视距不同**（当时我强制设 32，而原版与我们的默认都是 **12**，区块数差约 6.8×）。
+
+按同一口径重测（视距 12 = 双方默认、854×480、固定机位 `-74.098 / 121 / 37.303` 朝北、`MC_PRESENT_MODE=immediate`）：
+
+| | 帧率 | 帧时间 | 区块 |
+| --- | --- | --- | --- |
+| 原版 26.3（核显） | 80 – 110 fps | 9 – 12.5 ms | — |
+| 本实现（核显） | **≈ 84 fps** | ≈ 11.9 ms | 236 |
+
+**即落在原版波动区间内偏下，不是慢 4 倍。**
+
+**但两者都跑在核显上。** 日志 `window: surface ready on 101.7088` 中该字符串为 Intel 驱动版本（`32.0.101.7088`），即 **Iris Xe**；本机另有一块 **RTX 3060 Laptop** 未使用。原因是适配器请求用了无 options 重载（`RequestAdapterBlocking(surface)`），wgpu 自选时挑了核显。
 
 **首要怀疑**：参考 OIT 序列每帧全跑 9 个 pass（bounds → cull → cloud bounds → transmittance → cloud transmittance → accumulate → cloud accumulate → composite），很可能是大头。先测其占比，不要凭猜测优化（原则 9）。
 
