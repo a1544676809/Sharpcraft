@@ -70,3 +70,44 @@ public readonly struct PipelineHandle   { internal readonly object Value; }
 - 不为了"抽象"而复制 WGPU 的整套模型（描述符、绑定组布局等）——接口只覆盖当前真正用到的能力
 - 不引入第二个后端实现；本切片只建立接缝
 - 不改变现有 Pass 划分与帧流程（原则 14 单轨）
+
+## 7. 接线连锁评估（2026-11-10）
+
+S2 完成后签名层已中立化，但**接线**会立刻撞上接口尚未覆盖的依赖链。实测计数（`src/Sharpcraft.Framework/Rendering` public 签名中的 WGPU 类型，S2 后）：
+
+| 类型 | 剩余出现 | 是否已被 `IRenderBackend` 覆盖 |
+| --- | --- | --- |
+| `Device` | 17 | 部分（`WgpuRenderBackend.Device` 逃生口） |
+| `RenderPipeline` | 12 | ❌ 接口无 `CreateRenderPipeline` |
+| `BindGroup` | 12 | ❌ |
+| `RenderPassEncoder` | 11 | ❌ 录制阶段完全未抽象 |
+| `Sampler` | 9 | ✅ `CreateSampler` |
+| `TextureView` | 8 | ✅ `CreateTextureView` |
+| `Buffer` | 7 | ❌ 接口定义了 `BufferHandle` 但无创建方法 |
+| `VertexAttribute` | 7 | ❌ 顶点布局 |
+| `CommandEncoder` | 4 | ❌ |
+| `Texture` | 4 | ✅ `CreateTexture` |
+
+### 7.1 结论：不能一刀切接线
+
+渲染资源是**成链**的：纹理 → 视图 → bind group（需 layout）→ pipeline（需 layout）→ encoder 录制 → pass。只接前两级时，下游仍全部依赖原生 `Device`，等于在同一个类里混用两套路径——违反原则 14 的单轨要求。
+
+### 7.2 推荐顺序（每一刀都可独立回滚、行为零变化）
+
+| 刀 | 内容 | 连锁范围 |
+| --- | --- | --- |
+| **W1** | 纹理 / 视图 / 采样器接线（`EntitySkinTextureGpu` 等） | 仅本级；bind group 走 `WgpuRenderBackend.Device` 逃生口 |
+| W2 | 补 `BufferHandle` 创建/写入，接线 buffer | 本级 |
+| W3 | 补 `CreateBindGroupLayout` / `CreateBindGroup` | 需先定中立描述符形状（绑定槽位 + 类型） |
+| W4 | 补 `CreateRenderPipeline` | 需中立 `PipelineDesc`（着色器、顶点布局、目标格式、深度状态） |
+| W5 | 补 `CommandEncoder` / `RenderPass` 录制 | 最大一刀，届时才是真正"可换后端" |
+
+**停止条件**：W3 之前不要动 pipeline 相关代码——否则会同时改描述符形状与调用点，无法逐像素验证。
+
+### 7.3 逃生口的纪律
+
+`WgpuRenderBackend.Device` 是**临时**逃生口，用于尚未迁移的下游（bind group 等）。规则：
+
+- 只允许 `WgpuRenderBackend` 与尚未迁移的渲染资源使用
+- 每完成一刀，其逃生口使用点必须归零
+- W5 完成后该属性删除，并由门禁测试断言其不存在
