@@ -298,24 +298,15 @@ public static class OffscreenRenderer
 
     private static RenderPipeline CreatePipeline(Device device, PipelineLayout layout)
     {
-        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
-        {
-            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(ShaderSourceText))
-        });
-
-        return device.CreateRenderPipeline(
-            shader,
-            "vs_main"u8,
-            shader,
-            "fs_main"u8,
-            [new ColorTargetState(WGPUTextureFormat.RGBA8Unorm)],
-            layout: layout,
-            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
-            multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: true),
-            vertexStride: (ulong)VertexLayout.Stride,
-            vertexStepMode: WGPUVertexStepMode.Vertex,
-            vertexAttributes: VertexLayout.Attributes());
+        var backend = new WgpuRenderBackend(device);
+        var source = System.Text.Encoding.UTF8.GetBytes(ShaderSourceText);
+        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+            source, "vs_main", source, "fs_main", backend.AdoptPipelineLayout(layout),
+            [new ColorTargetDesc(TextureFormat.Rgba8Unorm)],
+            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, true),
+            CullMode.Back, FrontFace.Ccw,
+            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
+            LayoutAttributes.From(VertexLayout.Attributes()))));
     }
 
     /// <summary>
@@ -324,45 +315,17 @@ public static class OffscreenRenderer
     /// </summary>
     private static RenderPipeline CreateTranslucentPipeline(Device device, PipelineLayout layout, bool alphaOne)
     {
-        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
-        {
-            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(ShaderSourceText))
-        });
-
-        return device.CreateRenderPipeline(
-            shader,
-            "vs_main"u8,
-            shader,
-            alphaOne ? "fs_main"u8 : "fs_translucent"u8,
-            [
-                new ColorTargetState
-                {
-                    Format = WGPUTextureFormat.RGBA8Unorm,
-                    WriteMask = ColorWriteMask.All,
-                    Blend = new WGPUBlendState
-                    {
-                        color = new WGPUBlendComponent
-                        {
-                            operation = WGPUBlendOperation.Add,
-                            srcFactor = WGPUBlendFactor.SrcAlpha,
-                            dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
-                        },
-                        alpha = new WGPUBlendComponent
-                        {
-                            operation = WGPUBlendOperation.Add,
-                            srcFactor = WGPUBlendFactor.One,
-                            dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
-                        }
-                    }
-                }
-            ],
-            layout: layout,
-            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
-            multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: false),
-            vertexStride: (ulong)VertexLayout.Stride,
-            vertexStepMode: WGPUVertexStepMode.Vertex,
-            vertexAttributes: VertexLayout.Attributes());
+        var backend = new WgpuRenderBackend(device);
+        var source = System.Text.Encoding.UTF8.GetBytes(ShaderSourceText);
+        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+            source, "vs_main", source, alphaOne ? "fs_main" : "fs_translucent", backend.AdoptPipelineLayout(layout),
+            [new ColorTargetDesc(TextureFormat.Rgba8Unorm, new BlendStateDesc(
+                new BlendComponentDesc(BlendOperation.Add, BlendFactor.SrcAlpha, BlendFactor.OneMinusSrcAlpha),
+                new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.OneMinusSrcAlpha)))],
+            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, false),
+            CullMode.Back, FrontFace.Ccw,
+            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
+            LayoutAttributes.From(VertexLayout.Attributes()))));
     }
 
     /// <summary>
@@ -370,24 +333,15 @@ public static class OffscreenRenderer
     /// </summary>
     private static RenderPipeline CreateCutoutPipeline(Device device, PipelineLayout layout)
     {
-        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
-        {
-            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(ShaderSourceText))
-        });
-
-        return device.CreateRenderPipeline(
-            shader,
-            "vs_main"u8,
-            shader,
-            "fs_cutout"u8,
-            [new ColorTargetState(WGPUTextureFormat.RGBA8Unorm)],
-            layout: layout,
-            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.Back, FrontFace = WGPUFrontFace.CCW },
-            multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: true),
-            vertexStride: (ulong)VertexLayout.Stride,
-            vertexStepMode: WGPUVertexStepMode.Vertex,
-            vertexAttributes: VertexLayout.Attributes());
+        var backend = new WgpuRenderBackend(device);
+        var source = System.Text.Encoding.UTF8.GetBytes(ShaderSourceText);
+        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+            source, "vs_main", source, "fs_cutout", backend.AdoptPipelineLayout(layout),
+            [new ColorTargetDesc(TextureFormat.Rgba8Unorm)],
+            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, true),
+            CullMode.Back, FrontFace.Ccw,
+            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
+            LayoutAttributes.From(VertexLayout.Attributes()))));
     }
 
     private static uint[] BuildIndexBytes(FrameRequest request) => request.Indices;

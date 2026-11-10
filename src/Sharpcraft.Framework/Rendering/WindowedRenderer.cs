@@ -2008,80 +2008,44 @@ public static class WindowedRenderer
     /// <summary>Reference transparency: clip the far depth bound to the nearest opaque surface.</summary>
     private static RenderPipeline CreateCullPipeline(Device device, PipelineLayout layout, WGPUTextureFormat format = WGPUTextureFormat.RGBA16Float)
     {
-        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
-        {
-            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("oit_depth_bounds_cull")))
-        });
-
-        return device.CreateRenderPipeline(
-            shader,
-            "vs_fullscreen"u8,
-            shader,
-            "fs_cull"u8,
-            [new ColorTargetState(format)],
-            layout: layout,
-            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
-            multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.Always, write: false),
-            vertexStride: 0,
-            vertexStepMode: WGPUVertexStepMode.Vertex,
-            vertexAttributes: []);
+        var backend = new WgpuRenderBackend(device);
+        var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("oit_depth_bounds_cull"));
+        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+            source, "vs_fullscreen", source, "fs_cull", backend.AdoptPipelineLayout(layout),
+            [new ColorTargetDesc(BackendConvert.FromWgpu(format))],
+            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.Always, false),
+            CullMode.None, FrontFace.Ccw,
+            0, VertexStepMode.Vertex,
+            [])));
     }
 
     /// <summary>Reference transparency composite: premultiplied over the frame, writing the nearest translucent depth.</summary>
     private static RenderPipeline CreateBlitDepthPipeline(Device device, PipelineLayout layout)
     {
-        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
-        {
-            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("blit_depth")))
-        });
-
-        return device.CreateRenderPipeline(
-            shader,
-            "vs_fullscreen"u8,
-            shader,
-            "fs_blit"u8,
+        var backend = new WgpuRenderBackend(device);
+        var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("blit_depth"));
+        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+            source, "vs_fullscreen", source, "fs_blit", backend.AdoptPipelineLayout(layout),
             [],
-            layout: layout,
-            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
-            multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.Always, write: true),
-            vertexStride: 0,
-            vertexStepMode: WGPUVertexStepMode.Vertex,
-            vertexAttributes: []);
+            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.Always, true),
+            CullMode.None, FrontFace.Ccw,
+            0, VertexStepMode.Vertex,
+            [])));
     }
 
     private static RenderPipeline CreateCompositePipeline(Device device, WGPUTextureFormat format, PipelineLayout layout, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always)
     {
-        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
-        {
-            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("oit_composite")))
-        });
-
-        return device.CreateRenderPipeline(
-            shader,
-            "vs_fullscreen"u8,
-            shader,
-            "fs_composite"u8,
-            [
-                new ColorTargetState
-                {
-                    Format = format,
-                    WriteMask = ColorWriteMask.All,
-                    Blend = new WGPUBlendState
-                    {
-                        color = new WGPUBlendComponent { operation = WGPUBlendOperation.Add, srcFactor = WGPUBlendFactor.One, dstFactor = WGPUBlendFactor.OneMinusSrcAlpha },
-                        alpha = new WGPUBlendComponent { operation = WGPUBlendOperation.Add, srcFactor = WGPUBlendFactor.One, dstFactor = WGPUBlendFactor.OneMinusSrcAlpha }
-                    }
-                }
-            ],
-            layout: layout,
-            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
-            multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, depthCompare, write: true),
-            vertexStride: 0,
-            vertexStepMode: WGPUVertexStepMode.Vertex,
-            vertexAttributes: []);
+        var backend = new WgpuRenderBackend(device);
+        var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("oit_composite"));
+        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+            source, "vs_fullscreen", source, "fs_composite", backend.AdoptPipelineLayout(layout),
+            [new ColorTargetDesc(BackendConvert.FromWgpu(format), new BlendStateDesc(
+                new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.OneMinusSrcAlpha),
+                new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.OneMinusSrcAlpha)))],
+            new DepthStateDesc(TextureFormat.Depth32Float, BackendConvert.FromWgpu(depthCompare), true),
+            CullMode.None, FrontFace.Ccw,
+            0, VertexStepMode.Vertex,
+            [])));
     }
 
     /// <summary>Builds the sky pipeline: a full-screen triangle with no vertex buffer and no depth writes.</summary>

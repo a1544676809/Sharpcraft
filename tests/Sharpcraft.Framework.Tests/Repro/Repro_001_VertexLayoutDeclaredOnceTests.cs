@@ -47,7 +47,10 @@ public sealed class Repro_001_VertexLayoutDeclaredOnceTests
         {
             var text = File.ReadAllText(Path.Combine(rendering, renderer));
             Assert.Contains("VertexLayout.Attributes()", text, StringComparison.Ordinal);
-            Assert.Contains("vertexStride: (ulong)VertexLayout.Stride", text, StringComparison.Ordinal);
+            // The invariant is that the stride comes from the shared layout rather than a literal. Which named argument
+            // carries it changed when pipeline creation moved behind the seam, so the check follows the source of the
+            // value and not the spelling of the parameter in front of it.
+            Assert.Contains("VertexLayout.Stride", text, StringComparison.Ordinal);
         }
     }
 
