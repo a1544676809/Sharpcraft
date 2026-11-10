@@ -167,7 +167,7 @@ public static class WindowedRenderer
         // The backend seam (T-786 W1). Only texture and view creation go through it so far; the bind group below still
         // builds on the device, which the escape hatch on WgpuRenderBackend exposes.
         var backend = new WgpuRenderBackend(device);
-        var wgpu = (WgpuRenderBackend)backend;
+        var wgpu = backend;
         // The block atlas carries a mip chain, so it samples like the reference MipmappedTexture: linear minification
         // with an unbounded LOD clamp. Clamping to the sprite edge is kept because the atlas relies on padding.
         // Magnification stays nearest: with a linear magnifier every block face reads visibly soft even at close range,
@@ -248,7 +248,7 @@ public static class WindowedRenderer
         using var entityElytraPipeline = CreateEntityElytraPipeline(backend, format, pipelineLayout);
         using var entityEmissivePipeline = CreateEntityEmissivePipeline(backend, format, pipelineLayout);
         using var entityGlintPipeline = CreateEntityGlintPipeline(backend, format, pipelineLayout);
-        using var skyPipeline = CreateSkyPipeline(device, format);
+        using var skyPipeline = CreateSkyPipeline(backend, format);
         // Celestial bodies and stars: the same backdrop draws the offscreen path uses, so the window and the exported
         // frame agree (docs/modules/clouds.md 6).
         using var celestial = request.CelestialDraws is { Length: > 0 } && request.CelestialTextures is { Length: > 0 }
@@ -296,16 +296,16 @@ public static class WindowedRenderer
         using var refDepthBoundsPipeline = CreateDepthBoundsPipeline(backend, pipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
         using var refTransmittancePipeline = CreateTransmittancePipeline(backend, refTransmittancePipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
         using var refAccumulatePipeline = CreateAccumulatePipeline(backend, refAccumulatePipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
-        using var refCullPipeline = CreateCullPipeline(device, refCullPipelineLayout, BackendConvert.ToWgpu(oitTargetFormat));
-        using var refCompositePipeline = CreateCompositePipeline(device, format, refCompositePipelineLayout);
-        using var cloudCompositePipeline = CreateCompositePipeline(device, format, refCompositePipelineLayout, WGPUCompareFunction.GreaterEqual);
+        using var refCullPipeline = CreateCullPipeline(backend, refCullPipelineLayout, BackendConvert.ToWgpu(oitTargetFormat));
+        using var refCompositePipeline = CreateCompositePipeline(backend, format, refCompositePipelineLayout);
+        using var cloudCompositePipeline = CreateCompositePipeline(backend, format, refCompositePipelineLayout, WGPUCompareFunction.GreaterEqual);
         using var blitDepthLayout = wgpu.AsBindGroupLayout(backend.CreateBindGroupLayout([
             BindGroupLayoutEntryDesc.Texture(0, ShaderStages.Fragment) with { SampleType = TextureSampleType.Depth, ViewDimension = TextureViewDimension.D2 },
             BindGroupLayoutEntryDesc.Sampler(1, ShaderStages.Fragment)
         ]));
         using var presentation = FramePresentation.Create(device, BackendConvert.FromWgpu(format), samplers.GetClampToEdge(FilterMode.Nearest));
         using var blitDepthPipelineLayout = device.CreatePipelineLayout([blitDepthLayout]);
-        using var blitDepthPipeline = CreateBlitDepthPipeline(device, blitDepthPipelineLayout);
+        using var blitDepthPipeline = CreateBlitDepthPipeline(backend, blitDepthPipelineLayout);
         var blitDepthSampler = samplers.GetClampToEdge(FilterMode.Nearest);
 
         // The interface layer needs its own transform: one uniform buffer cannot hold both the world camera and
@@ -1965,9 +1965,8 @@ public static class WindowedRenderer
     }
 
     /// <summary>Reference transparency: clip the far depth bound to the nearest opaque surface.</summary>
-    private static RenderPipeline CreateCullPipeline(Device device, PipelineLayout layout, WGPUTextureFormat format = WGPUTextureFormat.RGBA16Float)
+    private static RenderPipeline CreateCullPipeline(WgpuRenderBackend backend, PipelineLayout layout, WGPUTextureFormat format = WGPUTextureFormat.RGBA16Float)
     {
-        var backend = new WgpuRenderBackend(device);
         var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("oit_depth_bounds_cull"));
         return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
             source, "vs_fullscreen", source, "fs_cull", backend.AdoptPipelineLayout(layout),
@@ -1979,9 +1978,8 @@ public static class WindowedRenderer
     }
 
     /// <summary>Reference transparency composite: premultiplied over the frame, writing the nearest translucent depth.</summary>
-    private static RenderPipeline CreateBlitDepthPipeline(Device device, PipelineLayout layout)
+    private static RenderPipeline CreateBlitDepthPipeline(WgpuRenderBackend backend, PipelineLayout layout)
     {
-        var backend = new WgpuRenderBackend(device);
         var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("blit_depth"));
         return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
             source, "vs_fullscreen", source, "fs_blit", backend.AdoptPipelineLayout(layout),
@@ -1992,9 +1990,8 @@ public static class WindowedRenderer
             [])));
     }
 
-    private static RenderPipeline CreateCompositePipeline(Device device, WGPUTextureFormat format, PipelineLayout layout, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always)
+    private static RenderPipeline CreateCompositePipeline(WgpuRenderBackend backend, WGPUTextureFormat format, PipelineLayout layout, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always)
     {
-        var backend = new WgpuRenderBackend(device);
         var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("oit_composite"));
         return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
             source, "vs_fullscreen", source, "fs_composite", backend.AdoptPipelineLayout(layout),
@@ -2010,9 +2007,8 @@ public static class WindowedRenderer
     /// <summary>Builds the sky pipeline: a full-screen triangle with no vertex buffer and no depth writes.</summary>
     /// <param name="device">Device.</param>
     /// <param name="format">Colour target format.</param>
-    private static RenderPipeline CreateSkyPipeline(Device device, WGPUTextureFormat format)
+    private static RenderPipeline CreateSkyPipeline(WgpuRenderBackend backend, WGPUTextureFormat format)
     {
-        var backend = new WgpuRenderBackend(device);
         var skySource = System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.SkyShaderSourceText);
         return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
             skySource, "vs_sky", skySource, "fs_sky", null,
