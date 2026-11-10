@@ -565,3 +565,22 @@ stderr 中 `Validation` / `panic` / `uncaptured` 全为 0。画面核对（项�
 **因此这条缺口关闭**：参考 OIT 序列（bounds → cull → cloud bounds → transmittance → cloud transmittance → accumulate → cloud accumulate → composite）已被实际绘制到半透明几何并且输出正确。
 
 **注意**：这次覆盖是"看起来正确"的目视确认，不是像素级与原版比对。原版真值仍缺（见 §9.22 与 T-786 的剩余缺口）。
+### 9.24 缺口 ① 复核：原版没有这两条 compute 链（结案）
+
+先前把"compute 的 `mismatches 0` 是对本项目自写 CPU 参考、非原版真值"列为待补缺口，**这个框定本身是错的**。核查 26.3 jar 的着色器资产：
+
+| 核查项 | 结果 |
+| --- | --- |
+| `shaders/**/*.comp`（compute shader） | **0 个** |
+| 文件名匹配 `motion` / `velocity` 的着色器 | **无** |
+| `integrate_depth.fsh` | 仅 297 字符：`texelFetch` 取深度、`depth == 0.0` 时 `discard`、否则写 `gl_FragDepth`。**不是金字塔**，是一次深度搬运 |
+| 全仓 `DepthPyramid` 的消费者 | `FrameCommand`（宿主侧诊断）+ `OffscreenRenderer`（对照用的 CPU 参考） |
+| GPU 计算链的运行条件 | `request.Diagnostics?.BuildPyramid == true` / `MotionVectors == true` —— **只在诊断开关下运行** |
+
+**结论**：`depth_pyramid` 与 `motion_vectors` 是**本项目自有的诊断/预研特性**，原版 26.3 没有对应物，因此**不存在可提取的原版真值向量**。它们不在生产渲染路径上（诊断开关关闭时不运行），也就不参与"与原版等效"这件事。
+
+它们的正确性判据是：GPU 路径复现一个**独立的 CPU 实现对同一条规则的实现**——`mismatches 0`（9 级金字塔 + 运动样本）已证明这一点。
+
+**局限（如实记录）**：本次核查覆盖的是**着色器资产**（jar 内 `shaders/` 目录）。我没有追查 Java 侧是否用多次片段着色器 pass 组合出等价的金字塔——`integrate_depth.fsh` 的存在暗示可能有逐级搬运的做法。若将来这两条链要进生产路径，需要先做那次追查。
+
+**缺口 ① 关闭（不适用）。**
