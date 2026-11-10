@@ -1332,3 +1332,28 @@ index = (x * channelsPerPixel) + (second ? 1 : 0)   // 修复后
 - `ItemStackRenderState` 的层/foil/tint 结构未在仓库实现；T-631a 只建立解析数据，不提前造渲染状态。
 - 物品 atlas 与 block atlas 分离；不能复用 block atlas 的 sprite 假设。
 - 完整物品模型、特殊模型（弓、盾、三叉戟、地图等）不在 T-631a 范围。
+
+## 6. 外部对照：Horizon（MIT，Rust 重写 26.3）
+
+参考实现 [horizon-rust/horizon](https://github.com/horizon-rust/horizon)（MIT，8380 stars）在同一基线版本上做了独立选择，可作为我们判断的外部证据。**只引用其公开文档与行为结论，不复制其代码**。
+
+### 6.1 各向异性过滤：他们也放弃了
+
+`docs/graphics.md` 原文：
+
+> Not implemented: anisotropic filtering (wgpu needs linear magnification for it, which blurs close blocks)
+
+这与我们实测到的 wgpu 校验错误（`all filter modes must be linear`）完全一致，且他们的取舍与我们相同：**保留最近邻放大，放弃各向异性**。他们用 TAA/FXAA、LOD 远景地形与 mipmap 级数来改善远处观感，而不是各向异性。
+
+⇒ 我们的受控偏差 `SIM-CHUNK-SAMPLER-MAG` 得到独立验证，不是我们的实现缺陷，而是 WebGPU 规范的约束。
+
+### 6.2 padding 公式：逐字一致
+
+其 `pack_atlas/stitch.rs`：`padding = (1 << mip_level) << anisotropy_bit.saturating_sub(1).min(4)`，与 `AtlasMipPolicy.ResolvePadding` 相同。
+
+### 6.3 两处我们尚未对齐的差异
+
+| 差异 | Horizon / 原版 | 本仓现状 | 影响 |
+| --- | --- | --- | --- |
+| 精灵尺寸对齐 | `fit(size, mip_level) = ceil(size / 2^mip) * 2^mip`，精灵尺寸向上取整到 mip 粒度的倍数 | 未对齐 | 非 2 的幂尺寸精灵在粗 mip 下取样边界不准 |
+| 零级 padding | 公式给出 `1 << 0 = 1` | `MinimumPadding = 2` | 我们多占 1 texel；当初是因为 uv 恰好止于 sprite 边界、双线性会读到下一 texel 才加的下界，需复核是否真有必要 |
