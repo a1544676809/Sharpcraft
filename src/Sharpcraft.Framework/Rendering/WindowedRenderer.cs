@@ -1853,9 +1853,6 @@ public static class WindowedRenderer
     /// <summary>Smallest geometry buffer, so tiny meshes do not force a reallocation on the next change.</summary>
     private const ulong MinimumBufferBytes = 1 << 20;
 
-    private static WgpuBuffer CreateGeometryBuffer(Device device, ulong sizeBytes, BufferUsage usage) =>
-        device.CreateBuffer(new BufferDescriptor { Size = sizeBytes, Usage = usage });
-
     private static TextureHandle CreateDepthTexture(IRenderBackend backend, uint width, uint height) =>
         backend.CreateTexture(new TextureDesc(
             width,
