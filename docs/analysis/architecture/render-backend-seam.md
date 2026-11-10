@@ -395,3 +395,18 @@ finally
 已补 `TextureSampleType.UnfilterableFloat` 及映射。这条也解释了为什么有些布局此前只能留在原生侧——**不是懒，是接缝表达不了**。
 
 **教训**：接缝的枚举必须覆盖它要替换的原生枚举中所有实际用到的值，否则迁移会在运行期而非编译期失败。
+### 9.13 第二个成功整片：OIT 目标与绑定（184 → 137）
+
+同一形状再次验证有效——**持有者连同创建者与消费者一起换类型**：
+
+| 改动 | 消除 |
+| --- | --- |
+| `ItemOitSet` 完全改为接缝持有者（4 张目标纹理 + 视图 + 3 个 bind group 全走句柄；`Create` 不再需要 `Device`） | `AdoptBindGroup` ×6、`AdoptTextureView` ×8、`AdoptPipeline` ×4 |
+| `ReferenceOitPasses.Parameters` 的视图/深度/管线/自有绑定全部句柄化 | `AdoptTextureView` ×12、`AdoptPipeline` ×8、`AdoptBindGroup` ×6、`AdoptBindGroupLayout` ×6 |
+| 4 个 OIT 纹理布局经接缝创建（用新增的 `UnfilterableFloat`） | `AdoptBindGroupLayout` ×4（但 WindowedRenderer 侧新增 9 处 peek） |
+
+**净 −47**。
+
+**剩下的 6 处 `AdoptBindGroup` 全部指向两个仍原生创建的对象**：主图集 bind group（在 `Run` 里 `device.CreateBindGroup`）与 `clouds.BindGroup`（`CloudOitResources` 持有）。9 处 `AsRenderPass` 则指向 `GeometryArena.Draw*` 与 `CloudOitResources.DrawGeometry` 仍收原生 pass。这两组就是下一片的全部内容。
+
+**累计轨迹**：225 → 217（encoder 整片）→ 184（管线布局整片）→ **137**（OIT 整片）。每次下降都对应一次"创建者+持有者+消费者同时换类型"，无例外。
