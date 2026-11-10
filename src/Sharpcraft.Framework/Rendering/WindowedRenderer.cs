@@ -1721,7 +1721,7 @@ public static class WindowedRenderer
                 backend.EndRenderPass(uiPass);
             }
 
-            presentation.RecordPresent(encoder, surfaceView, new DepthStencilAttachment { View = depthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store });
+            presentation.RecordPresent(backend, wgpu.AdoptCommandEncoder(encoder), wgpu.AdoptTextureView(surfaceView), DepthAttachmentDesc.Keep(wgpu.AdoptTextureView(depthView)));
 
             var commands = encoder.Finish();
             device.Queue.Submit(commands);

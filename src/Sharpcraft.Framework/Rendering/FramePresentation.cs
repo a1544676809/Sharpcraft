@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using System.Numerics;
 using Brew.Wgpu;
 using Brew.Wgpu.Native;
 
@@ -81,23 +82,29 @@ internal sealed class FramePresentation : IDisposable
     }
 
     /// <summary>Records the full-screen blit that presents the frame target on the swapchain.</summary>
-    public void RecordPresent(CommandEncoder encoder, TextureView surfaceView, DepthStencilAttachment depth)
+    public void RecordPresent(IRenderBackend backend, CommandEncoderHandle encoder, TextureViewHandle surfaceView, in DepthAttachmentDesc? depth)
     {
-        var pass = encoder.BeginRenderPass(
-        [
-            new ColorAttachment
-            {
-                View = surfaceView,
-                LoadOp = WGPULoadOp.Clear,
-                StoreOp = WGPUStoreOp.Store,
-                ClearValue = new WGPUColor { r = 0f, g = 0f, b = 0f, a = 1f }
-            }
-        ],
-        depth);
-        pass.SetPipeline(_pipeline);
-        pass.SetBindGroup(0, _bindGroup ?? throw new InvalidOperationException("the frame target was not created"));
-        pass.Draw(3);
-        pass.End();
+        ArgumentNullException.ThrowIfNull(backend);
+
+        var pass = backend.BeginRenderPass(
+            encoder,
+            [ColorAttachmentDesc.Clear(surfaceView, new Vector4(0f, 0f, 0f, 1f))],
+            depth);
+        try
+        {
+            backend.SetPipeline(pass, backend is WgpuRenderBackend wgpu ? wgpu.AdoptPipeline(_pipeline) : throw new InvalidOperationException("the seam implementation must adopt its own handles"));
+            backend.SetBindGroup(
+                pass,
+                0,
+                backend is WgpuRenderBackend owner
+                    ? owner.AdoptBindGroup(_bindGroup ?? throw new InvalidOperationException("the frame target was not created"))
+                    : throw new InvalidOperationException("the seam implementation must adopt its own handles"));
+            backend.Draw(pass, 3, 1, 0, 0);
+        }
+        finally
+        {
+            backend.EndRenderPass(pass);
+        }
     }
 
     /// <inheritdoc/>
