@@ -346,26 +346,14 @@ public static class OffscreenRenderer
     /// Position-colour pipeline: vertex colour times the per-draw tint, with the given reference blend mode. Sunrise uses
     /// Translucent; stars use Overlay (both match the reference pipelines' ColorTargetState).
     /// </summary>
-    private static RenderPipeline CreatePositionColorPipeline(WgpuRenderBackend backend, byte[] source, PipelineLayout layout, bool overlay, TextureFormat format = TextureFormat.Rgba8Unorm, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always, bool opaque = false)
+    private static PipelineHandle CreatePositionColorPipeline(IRenderBackend backend, byte[] source, PipelineLayoutHandle layout, bool overlay, TextureFormat format = TextureFormat.Rgba8Unorm, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always, bool opaque = false)
     {
-        var blend = overlay
-            ? new WGPUBlendState
-            {
-                color = new WGPUBlendComponent { operation = WGPUBlendOperation.Add, srcFactor = WGPUBlendFactor.SrcAlpha, dstFactor = WGPUBlendFactor.One },
-                alpha = new WGPUBlendComponent { operation = WGPUBlendOperation.Add, srcFactor = WGPUBlendFactor.One, dstFactor = WGPUBlendFactor.Zero }
-            }
-            : new WGPUBlendState
-            {
-                color = new WGPUBlendComponent { operation = WGPUBlendOperation.Add, srcFactor = WGPUBlendFactor.SrcAlpha, dstFactor = WGPUBlendFactor.OneMinusSrcAlpha },
-                alpha = new WGPUBlendComponent { operation = WGPUBlendOperation.Add, srcFactor = WGPUBlendFactor.One, dstFactor = WGPUBlendFactor.OneMinusSrcAlpha }
-            };
-
-        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+        return backend.CreateRenderPipeline(new PipelineDesc(
             source,
             "vs_position_color",
             source,
             "fs_position_color",
-            backend.AdoptPipelineLayout(layout),
+            layout,
             [
                 new ColorTargetDesc(
                     format,
@@ -380,7 +368,7 @@ public static class OffscreenRenderer
             FrontFace.Ccw,
             (ulong)VertexLayout.PositionColorStride,
             VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.PositionColorAttributes()))));
+            LayoutAttributes.From(VertexLayout.PositionColorAttributes())));
     }
 
     /// <summary>Renders a frame and returns its pixels.</summary>
@@ -556,19 +544,18 @@ public static class OffscreenRenderer
 
             backend.WriteBuffer(cameraBuffer, cameraBytes, 0);
 
-            // The celestial sets still build their own bind groups on the device, so they take the uniform buffer natively
-            // until their draw collections move behind the seam as well (render-backend-seam.md 9.10).
-            var cameraBufferNative = backend.AsBuffer(cameraBuffer);
+            // The seam from here on: the scene body describes its layout, pipeline layout and buffers in handle terms, so
+            // the passes only ever receive handles.
 
             // Celestial bodies (sun/moon): textured quads that sit in the sky backdrop. Built here so their buffers live
             // until the command buffer is submitted; drawn right after the sky gradient.
             using var celestial = request.CelestialDraws is { Length: > 0 } && request.CelestialTextures is { Length: > 0 }
-                ? new CelestialResources(device, request, cameraBufferNative, VertexLayout.CameraUniformSize)
+                ? new CelestialResources(backend, request, cameraBuffer, VertexLayout.CameraUniformSize)
                 : null;
 
             // Position-colour bodies (sunrise fan, stars): no texture, per-vertex colour times a tint.
             using var celestialColour = request.CelestialColorDraws is { Length: > 0 }
-                ? new CelestialColorResources(backend, device, request, cameraBufferNative, VertexLayout.CameraUniformSize)
+                ? new CelestialColorResources(backend, request, cameraBuffer, VertexLayout.CameraUniformSize)
                 : null;
 
             var bindGroup = backend.CreateBindGroup(
@@ -645,10 +632,10 @@ public static class OffscreenRenderer
                         }
 
                         // Sun and moon sit in the sky backdrop, before terrain, so world geometry covers them.
-                        celestial?.Draw(backend.AsRenderPass(pass));
+                        celestial?.Draw(backend, pass);
 
                         // Sunrise band and stars, drawn on top of the bodies but still behind world geometry.
-                        celestialColour?.Draw(backend.AsRenderPass(pass));
+                        celestialColour?.Draw(backend, pass);
                         break;
                     }
 
@@ -1059,115 +1046,91 @@ public static class OffscreenRenderer
         // mat4x4 model (64 bytes) followed by vec4 tint (16 bytes); matches celestial.wgsl CelestialTransform.
         private const ulong TransformUniformSize = 80;
 
-        private readonly Brew.Wgpu.Texture[] _textures;
-        private readonly TextureView[] _views;
-        private readonly Sampler _sampler;
-        private readonly BindGroupLayout _layout;
-        private readonly PipelineLayout _pipelineLayout;
-        private readonly RenderPipeline _pipeline;
-        private Brew.Wgpu.Buffer[] _vertexBuffers = [];
-        private Brew.Wgpu.Buffer[] _indexBuffers = [];
-        private Brew.Wgpu.Buffer[] _transformBuffers = [];
-        private BindGroup[] _bindGroups = [];
+        private readonly IRenderBackend _backend;
+        private readonly TextureHandle[] _textures;
+        private readonly TextureViewHandle[] _views;
+        private readonly SamplerHandle _sampler;
+        private readonly BindGroupLayoutHandle _layout;
+        private readonly PipelineLayoutHandle _pipelineLayout;
+        private readonly PipelineHandle _pipeline;
+        private BufferHandle[] _vertexBuffers = [];
+        private BufferHandle[] _indexBuffers = [];
+        private BufferHandle[] _transformBuffers = [];
+        private BindGroupHandle[] _bindGroups = [];
         private uint[] _indexCounts = [];
         private Matrix4x4[] _baseModels = [];
         private Vector4[] _tints = [];
-        private readonly Device _device;
-        private readonly Brew.Wgpu.Buffer _cameraBuffer;
+        private readonly BufferHandle _cameraBuffer;
         private readonly ulong _cameraSize;
-        private readonly List<(Brew.Wgpu.Buffer Vertex, Brew.Wgpu.Buffer Index, Brew.Wgpu.Buffer Transform, BindGroup BindGroup)> _retired = new();
+        private readonly List<(BufferHandle Vertex, BufferHandle Index, BufferHandle Transform, BindGroupHandle BindGroup)> _retired = new();
 
-        public CelestialResources(Device device, FrameRequest request, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, TextureFormat format = TextureFormat.Rgba8Unorm)
+        public CelestialResources(IRenderBackend backend, FrameRequest request, BufferHandle cameraBuffer, ulong cameraSize, TextureFormat format = TextureFormat.Rgba8Unorm)
         {
             var textures = request.CelestialTextures!;
             var draws = request.CelestialDraws!;
-            _device = device;
+            _backend = backend;
             _cameraBuffer = cameraBuffer;
             _cameraSize = cameraSize;
 
-            _textures = new Brew.Wgpu.Texture[textures.Length];
-            _views = new TextureView[textures.Length];
+            _textures = new TextureHandle[textures.Length];
+            _views = new TextureViewHandle[textures.Length];
 
             for (var index = 0; index < textures.Length; index++)
             {
                 var data = textures[index];
-                _textures[index] = device.CreateTexture(new TextureDescriptor
-                {
-                    Size = new WGPUExtent3D { width = (uint)data.Width, height = (uint)data.Height, depthOrArrayLayers = 1 },
-                    MipLevelCount = 1,
-                    SampleCount = 1,
-                    Dimension = WGPUTextureDimension._2D,
-                    Format = WGPUTextureFormat.RGBA8Unorm,
-                    Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
-                });
-
-                device.Queue.WriteTexture(
+                _textures[index] = backend.CreateTexture(new TextureDesc(
+                    (uint)data.Width,
+                    (uint)data.Height,
+                    TextureFormat.Rgba8Unorm,
+                    1,
+                    TextureUsages.TextureBinding | TextureUsages.CopyDst));
+                backend.WriteTexture(
                     _textures[index],
                     data.Rgba,
                     (uint)(data.Width * 4),
+                    (uint)data.Width,
                     (uint)data.Height,
-                    new WGPUExtent3D { width = (uint)data.Width, height = (uint)data.Height, depthOrArrayLayers = 1 },
-                    0,
-                    new WGPUOrigin3D { x = 0, y = 0, z = 0 });
-
-                _views[index] = _textures[index].CreateView();
+                    0);
+                _views[index] = backend.CreateTextureView(_textures[index]);
             }
 
             // Nearest sampling keeps the crisp pixel-art sun and moon discs from smearing.
-            _sampler = SamplerCache.Create(device, AddressMode.ClampToEdge, FilterMode.Nearest, FilterMode.Nearest, useMipmaps: false);
+            _sampler = backend.CreateSampler(AddressMode.ClampToEdge, FilterMode.Nearest, FilterMode.Nearest, useMipmaps: false);
 
-            _layout = device.CreateBindGroupLayout(
+            _layout = backend.CreateBindGroupLayout(
             [
-                BindGroupLayoutEntry.Buffer(0, ShaderStage.Vertex, WGPUBufferBindingType.Uniform, false, cameraSize),
-                BindGroupLayoutEntry.Buffer(1, ShaderStage.Vertex | ShaderStage.Fragment, WGPUBufferBindingType.Uniform, false, TransformUniformSize),
-                BindGroupLayoutEntry.Texture(2, ShaderStage.Fragment, WGPUTextureSampleType.Float, WGPUTextureViewDimension._2D, false),
-                BindGroupLayoutEntry.Sampler(3, ShaderStage.Fragment, WGPUSamplerBindingType.Filtering)
+                BindGroupLayoutEntryDesc.UniformBuffer(0, ShaderStages.Vertex) with { MinBindingSize = cameraSize },
+                BindGroupLayoutEntryDesc.UniformBuffer(1, ShaderStages.Vertex | ShaderStages.Fragment) with { MinBindingSize = TransformUniformSize },
+                BindGroupLayoutEntryDesc.Texture(2, ShaderStages.Fragment),
+                BindGroupLayoutEntryDesc.Sampler(3, ShaderStages.Fragment)
             ]);
 
-            _pipelineLayout = device.CreatePipelineLayout([_layout]);
+            _pipelineLayout = backend.CreatePipelineLayout([_layout]);
 
-            using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
-            {
-                Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("celestial")))
-            });
-
-            _pipeline = device.CreateRenderPipeline(
-                shader,
-                "vs_celestial"u8,
-                shader,
-                "fs_celestial"u8,
+            // Described to the seam rather than built from a native shader module, so every pipeline is created in one place.
+            var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("celestial"));
+            _pipeline = backend.CreateRenderPipeline(new PipelineDesc(
+                source,
+                "vs_celestial",
+                source,
+                "fs_celestial",
+                _pipelineLayout,
                 [
                     // The reference draws celestial bodies with BlendFunction.OVERLAY: colour SrcAlpha/One, alpha One/Zero.
                     // That adds the body onto the sky and makes black/transparent pixels contribute nothing.
-                    new ColorTargetState
-                    {
-                        Format = BackendConvert.ToWgpu(format),
-                        WriteMask = ColorWriteMask.All,
-                        Blend = new WGPUBlendState
-                        {
-                            color = new WGPUBlendComponent
-                            {
-                                operation = WGPUBlendOperation.Add,
-                                srcFactor = WGPUBlendFactor.SrcAlpha,
-                                dstFactor = WGPUBlendFactor.One
-                            },
-                            alpha = new WGPUBlendComponent
-                            {
-                                operation = WGPUBlendOperation.Add,
-                                srcFactor = WGPUBlendFactor.One,
-                                dstFactor = WGPUBlendFactor.Zero
-                            }
-                        }
-                    }
+                    new ColorTargetDesc(
+                        format,
+                        new BlendStateDesc(
+                            new BlendComponentDesc(BlendOperation.Add, BlendFactor.SrcAlpha, BlendFactor.One),
+                            new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.Zero)))
                 ],
-                layout: _pipelineLayout,
-                primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
-                multisample: MultisampleState.Default,
                 // Bodies are part of the backdrop: depth always passes and nothing is written, so terrain covers them.
-                depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.Always, write: false),
-                vertexStride: (ulong)VertexLayout.CelestialStride,
-                vertexStepMode: WGPUVertexStepMode.Vertex,
-                vertexAttributes: VertexLayout.CelestialAttributes());
+                new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.Always, false),
+                CullMode.None,
+                FrontFace.Ccw,
+                (ulong)VertexLayout.CelestialStride,
+                VertexStepMode.Vertex,
+                LayoutAttributes.From(VertexLayout.CelestialAttributes())));
 
             SetDraws(draws);
         }
@@ -1177,10 +1140,10 @@ public static class OffscreenRenderer
         {
             foreach (var (vertex, index, transform, bindGroup) in _retired)
             {
-                bindGroup.Dispose();
-                transform.Dispose();
-                index.Dispose();
-                vertex.Dispose();
+                _backend.Destroy(bindGroup);
+                _backend.Destroy(transform);
+                _backend.Destroy(index);
+                _backend.Destroy(vertex);
             }
 
             _retired.Clear();
@@ -1189,10 +1152,10 @@ public static class OffscreenRenderer
                 _retired.Add((_vertexBuffers[i], _indexBuffers[i], _transformBuffers[i], _bindGroups[i]));
             }
 
-            _vertexBuffers = new Brew.Wgpu.Buffer[draws.Count];
-            _indexBuffers = new Brew.Wgpu.Buffer[draws.Count];
-            _transformBuffers = new Brew.Wgpu.Buffer[draws.Count];
-            _bindGroups = new BindGroup[draws.Count];
+            _vertexBuffers = new BufferHandle[draws.Count];
+            _indexBuffers = new BufferHandle[draws.Count];
+            _transformBuffers = new BufferHandle[draws.Count];
+            _bindGroups = new BindGroupHandle[draws.Count];
             _indexCounts = new uint[draws.Count];
             _baseModels = new Matrix4x4[draws.Count];
             _tints = new Vector4[draws.Count];
@@ -1202,10 +1165,12 @@ public static class OffscreenRenderer
                 var draw = draws[index];
                 _baseModels[index] = draw.Model;
                 _tints[index] = draw.Tint;
-                _vertexBuffers[index] = _device.CreateBufferInit(
-                    new BufferInitDescriptor { Usage = BufferUsage.Vertex }, draw.Vertices.AsSpan());
-                _indexBuffers[index] = _device.CreateBufferInit(
-                    new BufferInitDescriptor { Usage = BufferUsage.Index }, draw.Indices.AsSpan());
+                _vertexBuffers[index] = _backend.CreateBufferInit(
+                    new BufferDesc((ulong)draw.Vertices.Length * sizeof(float), BufferUsages.Vertex),
+                    System.Runtime.InteropServices.MemoryMarshal.AsBytes(draw.Vertices.AsSpan()));
+                _indexBuffers[index] = _backend.CreateBufferInit(
+                    new BufferDesc((ulong)draw.Indices.Length * sizeof(ushort), BufferUsages.Index),
+                    System.Runtime.InteropServices.MemoryMarshal.AsBytes(draw.Indices.AsSpan()));
 
                 var transformBytes = new byte[TransformUniformSize];
                 var transformFloats = new float[20];
@@ -1215,16 +1180,17 @@ public static class OffscreenRenderer
                 transformFloats[18] = draw.Tint.Z;
                 transformFloats[19] = draw.Tint.W;
                 System.Runtime.InteropServices.MemoryMarshal.AsBytes(transformFloats.AsSpan()).CopyTo(transformBytes);
-                _transformBuffers[index] = _device.CreateBufferInit(
-                    new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst }, transformBytes.AsSpan());
+                _transformBuffers[index] = _backend.CreateBufferInit(
+                    new BufferDesc(TransformUniformSize, BufferUsages.Uniform | BufferUsages.CopyDst),
+                    transformBytes.AsSpan());
 
-                _bindGroups[index] = _device.CreateBindGroup(
+                _bindGroups[index] = _backend.CreateBindGroup(
                     _layout,
                     [
-                        BindGroupEntry.Buffer(0, _cameraBuffer, 0, _cameraSize),
-                        BindGroupEntry.Buffer(1, _transformBuffers[index], 0, TransformUniformSize),
-                        BindGroupEntry.TextureView(2, _views[draw.TextureIndex]),
-                        BindGroupEntry.Sampler(3, _sampler)
+                        BindGroupEntryDesc.Uniform(0, _cameraBuffer, 0, _cameraSize),
+                        BindGroupEntryDesc.Uniform(1, _transformBuffers[index], 0, TransformUniformSize),
+                        BindGroupEntryDesc.Texture(2, _views[draw.TextureIndex]),
+                        BindGroupEntryDesc.Sampler(3, _sampler)
                     ]);
 
                 _indexCounts[index] = (uint)draw.Indices.Length;
@@ -1232,21 +1198,21 @@ public static class OffscreenRenderer
         }
 
         /// <summary>Draws every body with the shared pipeline; each has its own texture, transform and buffers.</summary>
-        public void Draw(RenderPassEncoder pass)
+        public void Draw(IRenderBackend backend, RenderPassHandle pass)
         {
             if (_bindGroups.Length == 0)
             {
                 return;
             }
 
-            pass.SetPipeline(_pipeline);
+            backend.SetPipeline(pass, _pipeline);
 
             for (var index = 0; index < _bindGroups.Length; index++)
             {
-                pass.SetBindGroup(0, _bindGroups[index], []);
-                pass.SetVertexBuffer(0, _vertexBuffers[index]);
-                pass.SetIndexBuffer(_indexBuffers[index], WGPUIndexFormat.Uint16);
-                pass.DrawIndexed(_indexCounts[index]);
+                backend.SetBindGroup(pass, 0, _bindGroups[index]);
+                backend.SetVertexBuffer(pass, 0, _vertexBuffers[index]);
+                backend.SetIndexBuffer(pass, _indexBuffers[index], IndexFormat.Uint16);
+                backend.DrawIndexed(pass, _indexCounts[index], 1, 0, 0, 0);
             }
         }
 
@@ -1269,7 +1235,7 @@ public static class OffscreenRenderer
                 transformFloats[18] = _tints[index].Z;
                 transformFloats[19] = _tints[index].W;
                 System.Runtime.InteropServices.MemoryMarshal.AsBytes(transformFloats.AsSpan()).CopyTo(transformBytes);
-                _device.Queue.WriteBuffer(_transformBuffers[index], 0, transformBytes.AsSpan());
+                _backend.WriteBuffer(_transformBuffers[index], transformBytes, 0);
             }
         }
 
@@ -1277,37 +1243,45 @@ public static class OffscreenRenderer
         {
             foreach (var bindGroup in _bindGroups)
             {
-                bindGroup.Dispose();
+                _backend.Destroy(bindGroup);
             }
 
             foreach (var buffer in _transformBuffers)
             {
-                buffer.Dispose();
+                _backend.Destroy(buffer);
             }
 
             foreach (var buffer in _indexBuffers)
             {
-                buffer.Dispose();
+                _backend.Destroy(buffer);
             }
 
             foreach (var buffer in _vertexBuffers)
             {
-                buffer.Dispose();
+                _backend.Destroy(buffer);
             }
 
-            _pipeline.Dispose();
-            _pipelineLayout.Dispose();
-            _layout.Dispose();
-            _sampler.Dispose();
+            foreach (var (vertex, index, transform, bindGroup) in _retired)
+            {
+                _backend.Destroy(bindGroup);
+                _backend.Destroy(transform);
+                _backend.Destroy(index);
+                _backend.Destroy(vertex);
+            }
+
+            _backend.Destroy(_pipeline);
+            _backend.Destroy(_pipelineLayout);
+            _backend.Destroy(_layout);
+            _backend.Destroy(_sampler);
 
             foreach (var view in _views)
             {
-                view.Dispose();
+                _backend.Destroy(view);
             }
 
             foreach (var texture in _textures)
             {
-                texture.Dispose();
+                _backend.Destroy(texture);
             }
         }
     }
@@ -1320,42 +1294,42 @@ public static class OffscreenRenderer
     {
         private const ulong TransformUniformSize = 80;
 
-        private readonly BindGroupLayout _layout;
-        private readonly PipelineLayout _pipelineLayout;
-        private readonly RenderPipeline _translucentPipeline;
-        private readonly RenderPipeline _overlayPipeline;
-        private readonly RenderPipeline _opaquePipeline;
-        private Brew.Wgpu.Buffer[] _vertexBuffers = [];
-        private Brew.Wgpu.Buffer[] _indexBuffers = [];
-        private Brew.Wgpu.Buffer[] _transformBuffers = [];
-        private BindGroup[] _bindGroups = [];
+        private readonly IRenderBackend _backend;
+        private readonly BindGroupLayoutHandle _layout;
+        private readonly PipelineLayoutHandle _pipelineLayout;
+        private readonly PipelineHandle _translucentPipeline;
+        private readonly PipelineHandle _overlayPipeline;
+        private readonly PipelineHandle _opaquePipeline;
+        private BufferHandle[] _vertexBuffers = [];
+        private BufferHandle[] _indexBuffers = [];
+        private BufferHandle[] _transformBuffers = [];
+        private BindGroupHandle[] _bindGroups = [];
         private uint[] _indexCounts = [];
         private bool[] _overlay = [];
         private bool[] _opaque = [];
         private Matrix4x4[] _baseModels = [];
         private Vector4[] _tints = [];
-        private readonly Device _device;
-        private readonly List<(Brew.Wgpu.Buffer Vertex, Brew.Wgpu.Buffer Index, Brew.Wgpu.Buffer Transform, BindGroup BindGroup)> _retired = new();
-        private readonly Brew.Wgpu.Buffer _cameraBuffer;
+        private readonly List<(BufferHandle Vertex, BufferHandle Index, BufferHandle Transform, BindGroupHandle BindGroup)> _retired = new();
+        private readonly BufferHandle _cameraBuffer;
         private readonly ulong _cameraSize;
         private long[] _vertexCapacity = [];
         private long[] _indexCapacity = [];
         private float[][] _sourceVertices = [];
         private uint[][] _sourceIndices = [];
 
-        public CelestialColorResources(WgpuRenderBackend backend, Device device, FrameRequest request, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, TextureFormat format = TextureFormat.Rgba8Unorm, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always)
+        public CelestialColorResources(IRenderBackend backend, FrameRequest request, BufferHandle cameraBuffer, ulong cameraSize, TextureFormat format = TextureFormat.Rgba8Unorm, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always)
         {
             var draws = request.CelestialColorDraws ?? [];
-            _device = device;
+            _backend = backend;
             _cameraBuffer = cameraBuffer;
             _cameraSize = cameraSize;
-            _layout = device.CreateBindGroupLayout(
+            _layout = backend.CreateBindGroupLayout(
             [
-                BindGroupLayoutEntry.Buffer(0, ShaderStage.Vertex, WGPUBufferBindingType.Uniform, false, cameraSize),
-                BindGroupLayoutEntry.Buffer(1, ShaderStage.Vertex | ShaderStage.Fragment, WGPUBufferBindingType.Uniform, false, TransformUniformSize)
+                BindGroupLayoutEntryDesc.UniformBuffer(0, ShaderStages.Vertex) with { MinBindingSize = cameraSize },
+                BindGroupLayoutEntryDesc.UniformBuffer(1, ShaderStages.Vertex | ShaderStages.Fragment) with { MinBindingSize = TransformUniformSize }
             ]);
 
-            _pipelineLayout = device.CreatePipelineLayout([_layout]);
+            _pipelineLayout = backend.CreatePipelineLayout([_layout]);
 
             // The seam takes the source rather than a module, so this builds the pipeline in one place like every other.
             var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("position_color"));
@@ -1400,10 +1374,10 @@ public static class OffscreenRenderer
             // Capacity/structure changed: recreate buffers (rare - only at start or when the cloud face count grows).
             foreach (var (vertex, index, transform, bindGroup) in _retired)
             {
-                bindGroup.Dispose();
-                transform.Dispose();
-                index.Dispose();
-                vertex.Dispose();
+                _backend.Destroy(bindGroup);
+                _backend.Destroy(transform);
+                _backend.Destroy(index);
+                _backend.Destroy(vertex);
             }
 
             _retired.Clear();
@@ -1412,10 +1386,10 @@ public static class OffscreenRenderer
                 _retired.Add((_vertexBuffers[i], _indexBuffers[i], _transformBuffers[i], _bindGroups[i]));
             }
 
-            _vertexBuffers = new Brew.Wgpu.Buffer[draws.Count];
-            _indexBuffers = new Brew.Wgpu.Buffer[draws.Count];
-            _transformBuffers = new Brew.Wgpu.Buffer[draws.Count];
-            _bindGroups = new BindGroup[draws.Count];
+            _vertexBuffers = new BufferHandle[draws.Count];
+            _indexBuffers = new BufferHandle[draws.Count];
+            _transformBuffers = new BufferHandle[draws.Count];
+            _bindGroups = new BindGroupHandle[draws.Count];
             _indexCounts = new uint[draws.Count];
             _overlay = new bool[draws.Count];
             _opaque = new bool[draws.Count];
@@ -1431,27 +1405,18 @@ public static class OffscreenRenderer
                 var draw = draws[index];
                 _vertexCapacity[index] = Math.Max((long)draw.Vertices.Length * sizeof(float), 4096);
                 _indexCapacity[index] = Math.Max((long)draw.Indices.Length * sizeof(uint), 4096);
-                _vertexBuffers[index] = _device.CreateBuffer(new BufferDescriptor
-                {
-                    Size = (ulong)_vertexCapacity[index],
-                    Usage = BufferUsage.Vertex | BufferUsage.CopyDst
-                });
-                _indexBuffers[index] = _device.CreateBuffer(new BufferDescriptor
-                {
-                    Size = (ulong)_indexCapacity[index],
-                    Usage = BufferUsage.Index | BufferUsage.CopyDst
-                });
-                _transformBuffers[index] = _device.CreateBuffer(new BufferDescriptor
-                {
-                    Size = TransformUniformSize,
-                    Usage = BufferUsage.Uniform | BufferUsage.CopyDst
-                });
+                _vertexBuffers[index] = _backend.CreateBuffer(
+                    new BufferDesc((ulong)_vertexCapacity[index], BufferUsages.Vertex | BufferUsages.CopyDst));
+                _indexBuffers[index] = _backend.CreateBuffer(
+                    new BufferDesc((ulong)_indexCapacity[index], BufferUsages.Index | BufferUsages.CopyDst));
+                _transformBuffers[index] = _backend.CreateBuffer(
+                    new BufferDesc(TransformUniformSize, BufferUsages.Uniform | BufferUsages.CopyDst));
 
-                _bindGroups[index] = _device.CreateBindGroup(
+                _bindGroups[index] = _backend.CreateBindGroup(
                     _layout,
                     [
-                        BindGroupEntry.Buffer(0, _cameraBuffer, 0, _cameraSize),
-                        BindGroupEntry.Buffer(1, _transformBuffers[index], 0, TransformUniformSize)
+                        BindGroupEntryDesc.Uniform(0, _cameraBuffer, 0, _cameraSize),
+                        BindGroupEntryDesc.Uniform(1, _transformBuffers[index], 0, TransformUniformSize)
                     ]);
 
                 WriteDraw(index, draw);
@@ -1473,8 +1438,14 @@ public static class OffscreenRenderer
                 && ReferenceEquals(_sourceIndices[index], draw.Indices);
             if (!unchanged)
             {
-                _device.Queue.WriteBuffer(_vertexBuffers[index], 0, System.Runtime.InteropServices.MemoryMarshal.AsBytes(draw.Vertices.AsSpan()));
-                _device.Queue.WriteBuffer(_indexBuffers[index], 0, System.Runtime.InteropServices.MemoryMarshal.AsBytes(draw.Indices.AsSpan()));
+                _backend.WriteBuffer(
+                    _vertexBuffers[index],
+                    System.Runtime.InteropServices.MemoryMarshal.AsBytes(draw.Vertices.AsSpan()),
+                    0);
+                _backend.WriteBuffer(
+                    _indexBuffers[index],
+                    System.Runtime.InteropServices.MemoryMarshal.AsBytes(draw.Indices.AsSpan()),
+                    0);
                 _sourceVertices[index] = draw.Vertices;
                 _sourceIndices[index] = draw.Indices;
             }
@@ -1487,11 +1458,11 @@ public static class OffscreenRenderer
             transformFloats[18] = draw.Tint.Z;
             transformFloats[19] = draw.Tint.W;
             System.Runtime.InteropServices.MemoryMarshal.AsBytes(transformFloats.AsSpan()).CopyTo(transformBytes);
-            _device.Queue.WriteBuffer(_transformBuffers[index], 0, transformBytes.AsSpan());
+            _backend.WriteBuffer(_transformBuffers[index], transformBytes, 0);
         }
 
         /// <summary>Draws every colour body, picking the pipeline that matches its blend mode.</summary>
-        public void Draw(RenderPassEncoder pass)
+        public void Draw(IRenderBackend backend, RenderPassHandle pass)
         {
             if (_bindGroups.Length == 0)
             {
@@ -1500,11 +1471,11 @@ public static class OffscreenRenderer
 
             for (var index = 0; index < _bindGroups.Length; index++)
             {
-                pass.SetPipeline(_opaque[index] ? _opaquePipeline : (_overlay[index] ? _overlayPipeline : _translucentPipeline));
-                pass.SetBindGroup(0, _bindGroups[index], []);
-                pass.SetVertexBuffer(0, _vertexBuffers[index]);
-                pass.SetIndexBuffer(_indexBuffers[index], WGPUIndexFormat.Uint32);
-                pass.DrawIndexed(_indexCounts[index]);
+                backend.SetPipeline(pass, _opaque[index] ? _opaquePipeline : (_overlay[index] ? _overlayPipeline : _translucentPipeline));
+                backend.SetBindGroup(pass, 0, _bindGroups[index]);
+                backend.SetVertexBuffer(pass, 0, _vertexBuffers[index]);
+                backend.SetIndexBuffer(pass, _indexBuffers[index], IndexFormat.Uint32);
+                backend.DrawIndexed(pass, _indexCounts[index], 1, 0, 0, 0);
             }
         }
 
@@ -1527,7 +1498,7 @@ public static class OffscreenRenderer
                 transformFloats[18] = _tints[index].Z;
                 transformFloats[19] = _tints[index].W;
                 System.Runtime.InteropServices.MemoryMarshal.AsBytes(transformFloats.AsSpan()).CopyTo(transformBytes);
-                _device.Queue.WriteBuffer(_transformBuffers[index], 0, transformBytes.AsSpan());
+                _backend.WriteBuffer(_transformBuffers[index], transformBytes, 0);
             }
         }
 
@@ -1535,29 +1506,37 @@ public static class OffscreenRenderer
         {
             foreach (var bindGroup in _bindGroups)
             {
-                bindGroup.Dispose();
+                _backend.Destroy(bindGroup);
             }
 
             foreach (var buffer in _transformBuffers)
             {
-                buffer.Dispose();
+                _backend.Destroy(buffer);
             }
 
             foreach (var buffer in _indexBuffers)
             {
-                buffer.Dispose();
+                _backend.Destroy(buffer);
             }
 
             foreach (var buffer in _vertexBuffers)
             {
-                buffer.Dispose();
+                _backend.Destroy(buffer);
             }
 
-            _translucentPipeline.Dispose();
-            _overlayPipeline.Dispose();
-            _opaquePipeline.Dispose();
-            _pipelineLayout.Dispose();
-            _layout.Dispose();
+            foreach (var (vertex, index, transform, bindGroup) in _retired)
+            {
+                _backend.Destroy(bindGroup);
+                _backend.Destroy(transform);
+                _backend.Destroy(index);
+                _backend.Destroy(vertex);
+            }
+
+            _backend.Destroy(_translucentPipeline);
+            _backend.Destroy(_overlayPipeline);
+            _backend.Destroy(_opaquePipeline);
+            _backend.Destroy(_pipelineLayout);
+            _backend.Destroy(_layout);
         }
     }
 }

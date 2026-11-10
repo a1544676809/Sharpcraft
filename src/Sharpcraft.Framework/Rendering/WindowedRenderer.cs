@@ -267,13 +267,13 @@ public static class WindowedRenderer
         // Celestial bodies and stars: the same backdrop draws the offscreen path uses, so the window and the exported
         // frame agree (docs/modules/clouds.md 6).
         using var celestial = request.CelestialDraws is { Length: > 0 } && request.CelestialTextures is { Length: > 0 }
-            ? new OffscreenRenderer.CelestialResources(device, request, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
+            ? new OffscreenRenderer.CelestialResources(backend, request, cameraBufferHandle, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         using var celestialColour = request.CelestialColorDraws is { Length: > 0 } || celestialPerFrame is not null
-            ? new OffscreenRenderer.CelestialColorResources(backend, device, request, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
+            ? new OffscreenRenderer.CelestialColorResources(backend, request, cameraBufferHandle, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         using var skyDiscColour = !skyDiscVanilla && request.SkyDiscDraws is { Length: > 0 }
-            ? new OffscreenRenderer.CelestialColorResources(backend, device, request with { CelestialColorDraws = request.SkyDiscDraws }, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
+            ? new OffscreenRenderer.CelestialColorResources(backend, request with { CelestialColorDraws = request.SkyDiscDraws }, cameraBufferHandle, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         using var skyDiscVanillaResources = skyDiscVanilla && skyDiscPerFrame is not null
             ? new SkyDiscResources(backend, cameraBufferHandle, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
@@ -281,7 +281,7 @@ public static class WindowedRenderer
         // Clouds change every frame (scroll/camera), so their position-colour draw set is updated per frame.
         using var cloudColour = cloudsPerFrame is null
             ? null
-            : new OffscreenRenderer.CelestialColorResources(backend, device, request with { CelestialColorDraws = [] }, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format), WGPUCompareFunction.GreaterEqual);
+            : new OffscreenRenderer.CelestialColorResources(backend, request with { CelestialColorDraws = [] }, cameraBufferHandle, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format), WGPUCompareFunction.GreaterEqual);
         using var cloudOit = cloudOitEnabled && cloudColour is not null
             ? new CloudOitResources(backend, cameraBufferHandle, VertexLayout.CameraUniformSize)
             : null;
@@ -1340,9 +1340,9 @@ public static class WindowedRenderer
                             skyDiscVanillaResources.Draw(backend, pass);
                         }
 
-                        skyDiscColour?.Draw(wgpu.AsRenderPass(pass));
-                        celestial?.Draw(wgpu.AsRenderPass(pass));
-                        celestialColour?.Draw(wgpu.AsRenderPass(pass));
+                        skyDiscColour?.Draw(backend, pass);
+                        celestial?.Draw(backend, pass);
+                        celestialColour?.Draw(backend, pass);
                         break;
                     }
 
@@ -1685,7 +1685,7 @@ public static class WindowedRenderer
                         cloudColour.SetDraws([cloudDraw]);
                     }
 
-                    cloudColour.Draw(wgpu.AsRenderPass(cloudPass));
+                    cloudColour.Draw(backend, cloudPass);
                 }
                 finally
                 {
