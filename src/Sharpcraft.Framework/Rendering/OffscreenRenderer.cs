@@ -283,7 +283,7 @@ public static class OffscreenRenderer
         Console.WriteLine($"pyramid: {readbacks.Count} levels, total mismatches {totalMismatches}, worst delta {worst:F6}; " + string.Join(", ", lines));
     }
 
-    private static RenderPipeline CreateSkyPipeline(Device device, WGPUTextureFormat format)
+    private static RenderPipeline CreateSkyPipeline(Device device, TextureFormat format)
     {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
         {
@@ -295,7 +295,7 @@ public static class OffscreenRenderer
             "vs_sky"u8,
             shader,
             "fs_sky"u8,
-            [new ColorTargetState(format)],
+            [new ColorTargetState(BackendConvert.ToWgpu(format))],
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
             multisample: MultisampleState.Default,
             // Depth test always passes and writes nothing: the sky is a backdrop, not geometry.
@@ -708,7 +708,7 @@ public static class OffscreenRenderer
                         // supplies a sky disc backdrop instead (SkipGradientSky).
                         if (!request.SkipGradientSky)
                         {
-                            using var skyPipeline = CreateSkyPipeline(device, WGPUTextureFormat.RGBA8Unorm);
+                            using var skyPipeline = CreateSkyPipeline(device, TextureFormat.Rgba8Unorm);
                             pass.SetPipeline(skyPipeline);
                             pass.Draw(3);
                         }

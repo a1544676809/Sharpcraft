@@ -35,7 +35,7 @@ public static class UiRenderer
     /// <param name="device">Device to create it on.</param>
     /// <param name="format">Colour target format.</param>
     /// <param name="layout">Pipeline layout; expects the glyph sheet, a sampler and the transform.</param>
-    public static RenderPipeline CreateTextPipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
+    public static RenderPipeline CreateTextPipeline(Device device, TextureFormat format, PipelineLayout layout)
     {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
         {
@@ -65,7 +65,7 @@ public static class UiRenderer
             "vs_main"u8,
             shader,
             "fs_main"u8,
-            [new ColorTargetState(format) { Blend = blend }],
+            [new ColorTargetState(BackendConvert.ToWgpu(format)) { Blend = blend }],
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None, FrontFace = WGPUFrontFace.CCW },
             multisample: MultisampleState.Default,
@@ -81,7 +81,7 @@ public static class UiRenderer
     /// <param name="device">Device to create it on.</param>
     /// <param name="format">Colour target format.</param>
     /// <param name="layout">Pipeline layout; expects a sprite texture, a sampler and the transform.</param>
-    public static RenderPipeline CreateSpritePipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
+    public static RenderPipeline CreateSpritePipeline(Device device, TextureFormat format, PipelineLayout layout)
     {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
         {
@@ -111,7 +111,7 @@ public static class UiRenderer
             "vs_main"u8,
             shader,
             "fs_main"u8,
-            [new ColorTargetState(format) { Blend = blend }],
+            [new ColorTargetState(BackendConvert.ToWgpu(format)) { Blend = blend }],
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None, FrontFace = WGPUFrontFace.CCW },
             multisample: MultisampleState.Default,
@@ -125,7 +125,7 @@ public static class UiRenderer
     /// <param name="device">Device to create it on.</param>
     /// <param name="format">Colour target format, which must match the surface.</param>
     /// <param name="layout">Pipeline layout; only the transform uniform is read.</param>
-    public static RenderPipeline CreatePipeline(Device device, WGPUTextureFormat format, PipelineLayout layout)
+    public static RenderPipeline CreatePipeline(Device device, TextureFormat format, PipelineLayout layout)
     {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
         {
@@ -148,7 +148,7 @@ public static class UiRenderer
             }
         };
 
-        var target = new ColorTargetState(format) { Blend = blend };
+        var target = new ColorTargetState(BackendConvert.ToWgpu(format)) { Blend = blend };
 
         // Depth still has to be declared because the pass carries a depth attachment, but this layer never tests
         // or writes it: always passing and never writing is the cheapest way to say "no depth".

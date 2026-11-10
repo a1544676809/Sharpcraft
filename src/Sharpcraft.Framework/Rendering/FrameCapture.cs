@@ -83,7 +83,7 @@ internal static class FrameCapture
                 // The reference forces an opaque alpha; the surface format's alpha is not meaningful here. A Bgra target
                 // hands the channels back as B,G,R,A, so the red and blue bytes are swapped on the way out (the window's
                 // swapchain format is Bgra8Unorm).
-                var swapRedBlue = BackendConvert.ToWgpu(format) == WGPUTextureFormat.BGRA8Unorm;
+                var swapRedBlue = format == TextureFormat.Bgra8Unorm;
                 for (var x = 0; x < width; x++)
                 {
                     var offset = x * BytesPerPixel;

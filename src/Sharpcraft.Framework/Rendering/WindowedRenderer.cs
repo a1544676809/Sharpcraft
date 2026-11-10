@@ -279,8 +279,8 @@ public static class WindowedRenderer
         using var cloudOit = cloudOitEnabled && cloudColour is not null
             ? new CloudOitResources(device, cameraBuffer, VertexLayout.CameraUniformSize)
             : null;
-        using var uiPipeline = UiRenderer.CreatePipeline(device, format, pipelineLayout);
-        using var uiTextPipeline = UiRenderer.CreateTextPipeline(device, format, pipelineLayout);
+        using var uiPipeline = UiRenderer.CreatePipeline(device, BackendConvert.FromWgpu(format), pipelineLayout);
+        using var uiTextPipeline = UiRenderer.CreateTextPipeline(device, BackendConvert.FromWgpu(format), pipelineLayout);
 
         // Transparency is the reference depth-bounds + wavelet-transmittance OIT (docs/specs/render/oit-reference.md).
         // The earlier weighted-blended OIT looked markedly worse in play and is shelved, not compiled; git history keeps
@@ -370,7 +370,7 @@ public static class WindowedRenderer
                 BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
             ]);
 
-        using var uiSpritePipeline = UiRenderer.CreateSpritePipeline(device, format, pipelineLayout);
+        using var uiSpritePipeline = UiRenderer.CreateSpritePipeline(device, BackendConvert.FromWgpu(format), pipelineLayout);
 
         // GUI sprites (tooltip background and frame) each need their own texture and binding, because one draw call can
         // only bind one texture (docs/decisions/0014-gui-sprite-atlas-and-nine-slice.md).
