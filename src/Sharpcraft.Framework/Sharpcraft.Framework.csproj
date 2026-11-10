@@ -3,6 +3,8 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Sharpcraft.Framework.Tests" />
     <InternalsVisibleTo Include="Sharpcraft.Client.Tests" />
+    <!-- S2 render-backend seam: WindowCommand calls the internal BackendConvert.ToWgpu at the Run boundary. -->
+    <InternalsVisibleTo Include="Sharpcraft.Client" />
   </ItemGroup>
 
   <PropertyGroup>

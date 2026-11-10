@@ -306,9 +306,9 @@ internal static class WindowCommand
         var cloudDepth = GameOptions.Get("MC_CLOUD_DEPTH") == "1";
         var presentMode = GameOptions.Get("MC_PRESENT_MODE")?.ToLowerInvariant() switch
         {
-            "immediate" => Brew.Wgpu.Native.WGPUPresentMode.Immediate,
-            "mailbox" => Brew.Wgpu.Native.WGPUPresentMode.Mailbox,
-            _ => Brew.Wgpu.Native.WGPUPresentMode.Fifo
+            "immediate" => PresentMode.Immediate,
+            "mailbox" => PresentMode.Mailbox,
+            _ => PresentMode.Fifo
         };
         var skyDiscMode = (GameOptions.Get("MC_SKY_DISC_MODE") ?? "vanilla").ToLowerInvariant();
         var skyDiscVanilla = skyDiscMode != "fast" && skyDiscMode != "optimized";
@@ -805,7 +805,7 @@ internal static class WindowCommand
             cloudOitEnabled: session.CloudUseOit,
             oitLowPrecision: oitLowPrecision,
             cloudDepthEnabled: cloudDepth,
-            presentMode: presentMode,
+            presentMode: BackendConvert.ToWgpu(presentMode),
             screenshotRequest: window => window.Input.JustPressed(Sharpcraft.Framework.Platform.InputKey.F2)
                 ? ScreenshotPaths.Next(gameDirectory ?? GamePaths.DefaultGameDirectory())
                 : ScreenshotBridge.Take(),
