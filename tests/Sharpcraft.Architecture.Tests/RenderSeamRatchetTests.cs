@@ -15,7 +15,7 @@ namespace Sharpcraft.Architecture.Tests;
 /// </remarks>
 public sealed class RenderSeamRatchetTests
 {
-    private const int BackendCreations = 6;
+    private const int BackendCreations = 4;
 
     private const int EscapeHatchCalls = 217;
 

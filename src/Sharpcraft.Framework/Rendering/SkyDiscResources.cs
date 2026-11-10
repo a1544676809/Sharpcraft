@@ -27,10 +27,10 @@ internal sealed class SkyDiscResources : IDisposable
     private readonly Brew.Wgpu.Buffer _index;
     private readonly uint _indexCount;
 
-    public SkyDiscResources(Device device, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, TextureFormat format)
+    public SkyDiscResources(WgpuRenderBackend backend, Device device, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, TextureFormat format)
     {
         _device = device;
-        _backend = new WgpuRenderBackend(device);
+        _backend = backend;
         _layout = _backend.CreateBindGroupLayout(
         [
             new BindGroupLayoutEntryDesc(0, ShaderStages.Vertex, BindingKind.UniformBuffer) { MinBindingSize = cameraSize },

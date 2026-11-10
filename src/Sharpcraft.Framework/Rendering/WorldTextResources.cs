@@ -26,6 +26,7 @@ internal sealed class WorldTextResources : IDisposable
     private uint _indexCount;
 
     public WorldTextResources(
+        WgpuRenderBackend backend,
         Device device,
         TextureData glyphSheet,
         Brew.Wgpu.Buffer cameraBuffer,
@@ -73,7 +74,6 @@ internal sealed class WorldTextResources : IDisposable
             ]);
 
         // Described to the backend rather than built here, matching how the frame records its passes.
-        var backend = new WgpuRenderBackend(device);
         var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("world_text"));
         _pipeline = backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
             source,

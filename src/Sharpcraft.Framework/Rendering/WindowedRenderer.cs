@@ -261,7 +261,7 @@ public static class WindowedRenderer
             ? new OffscreenRenderer.CelestialColorResources(device, request with { CelestialColorDraws = request.SkyDiscDraws }, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         using var skyDiscVanillaResources = skyDiscVanilla && skyDiscPerFrame is not null
-            ? new SkyDiscResources(device, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
+            ? new SkyDiscResources(backend, device, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         // Clouds change every frame (scroll/camera), so their position-colour draw set is updated per frame.
         using var cloudColour = cloudsPerFrame is null
@@ -333,7 +333,7 @@ public static class WindowedRenderer
         // mixing them would make text blurry at small sizes.
         var glyphData = glyphTexture ?? TextureData.White;
         using var worldText = worldTextPerFrame is not null
-            ? new WorldTextResources(device, glyphData, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
+            ? new WorldTextResources(backend, device, glyphData, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         var glyphSheet = device.CreateTexture(new TextureDescriptor
         {
