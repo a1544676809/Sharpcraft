@@ -467,3 +467,20 @@ finally
 **验证**：离屏帧与基线 `sha256 fcc9f831…` / 99256 B **逐字节一致**，证明这一轮所有 UI/纹理/缓冲/深度的句柄化零像素退化。
 
 **累计**：225 → 217 → 184 → 137 → 98 → 70 → 61 → **16**（−209，−93%）。
+### 9.18 最终边界：剩余 7 处与它们指向的 3 个缺失能力（16 → 7）
+
+`UiRenderer` 三条管线走 `PipelineDesc`、`SamplerCache` 改发句柄（句柄指向缓存仍持有的对象，缓存继续负责释放）。窗口 HUD 区域（560×128，覆盖面板与文字两条管线）与改造前**逐像素相同（0/71680，最大通道差 0）**。
+
+| # | 位置 | 为什么净 0 | 消除条件 |
+| --- | --- | --- | --- |
+| 1 | `WindowedRenderer` 交换链视图 | 换句柄需 `AdoptTexture` + `CreateTextureView`：+1 −1 = 0 | surface 获取入缝 |
+| 2 | `FramePresentation` 呈现目标视图 | 纹理必须原生给 `FrameCapture.Capture` 回读 | 接缝提供 `CopyTextureToBuffer` |
+| 3 | `OffscreenRenderer` encoder | 同帧末尾还有原生 `CopyTextureToBuffer` ×2 与 `CopyBufferToBuffer` | 同上 |
+| 4/5 | `OffscreenRenderer` 彩色/深度目标视图 | 纹理是帧回读的拷贝源 | 同上 |
+| 6/7 | `OffscreenRenderer` 两处 compute 布局 | compute 链全原生；只入布局需反向 `AsBindGroupLayout`（+1），连 bind group 一并入缝则每级 3 个 `AdoptBuffer`（净增） | 接缝提供 compute pass + storage/map-read 缓冲形状 |
+
+**这 7 处不是"还没轮到"，而是接缝本身缺三块能力**：① 纹理↔缓冲的拷贝/回读 API（消掉 #2–#5）；② surface 获取入缝（#1）；③ compute pass 与 storage/map-read 缓冲形状（#6/#7）。
+
+**继续下去的正确做法是扩 `IRenderBackend`，而不是继续搬调用点。**
+
+**累计轨迹**：225 → 217（encoder）→ 184（管线布局）→ 137（OIT）→ 98（云/图集/几何/呈现）→ 70（实体/小组/离屏）→ 61（天体）→ 16（窗口外壳）→ **7**（UI/采样器/离屏 atlas）。**−218，−97%**，全程离屏帧哈希不变。
