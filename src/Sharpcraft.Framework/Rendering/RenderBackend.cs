@@ -195,6 +195,9 @@ public interface IRenderBackend
     /// <summary>Ends a render pass. The handle is dead afterwards.</summary>
     void EndRenderPass(RenderPassHandle pass);
 
+    /// <summary>Restricts subsequent draws to a rectangle.</summary>
+    void SetScissorRect(RenderPassHandle pass, uint x, uint y, uint width, uint height);
+
     /// <summary>Selects the pipeline subsequent draws use.</summary>
     void SetPipeline(RenderPassHandle pass, PipelineHandle pipeline);
 
@@ -381,6 +384,20 @@ public sealed class WgpuRenderBackend : IRenderBackend
     internal PipelineLayout AsPipelineLayout(PipelineLayoutHandle layout) =>
         RequireValid<PipelineLayout>(layout.Value is not null, layout.Value);
 
+    /// <summary>Wraps a command encoder the caller already owns.</summary>
+    /// <param name="encoder">Encoder the caller owns.</param>
+    internal CommandEncoderHandle AdoptCommandEncoder(CommandEncoder encoder) => new(encoder);
+
+    /// <summary>Unwraps a command encoder for code that has not moved behind the seam yet.</summary>
+    /// <param name="encoder">Handle from this backend.</param>
+    internal CommandEncoder AsCommandEncoder(CommandEncoderHandle encoder) =>
+        RequireValid<CommandEncoder>(encoder.Value is not null, encoder.Value);
+
+    /// <summary>Unwraps a render pass for code that has not moved behind the seam yet.</summary>
+    /// <param name="pass">Handle from this backend.</param>
+    internal RenderPassEncoder AsRenderPass(RenderPassHandle pass) =>
+        RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value);
+
     /// <summary>Wraps a texture view the caller already owns.</summary>
     /// <param name="view">View the caller owns.</param>
     internal TextureViewHandle AdoptTextureView(TextureView view) => new(view);
@@ -456,6 +473,10 @@ public sealed class WgpuRenderBackend : IRenderBackend
     /// <inheritdoc/>
     public void EndRenderPass(RenderPassHandle pass) =>
         RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value).End();
+
+    /// <inheritdoc/>
+    public void SetScissorRect(RenderPassHandle pass, uint x, uint y, uint width, uint height) =>
+        RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value).SetScissorRect(x, y, width, height);
 
     /// <inheritdoc/>
     public void SetPipeline(RenderPassHandle pass, PipelineHandle pipeline) =>

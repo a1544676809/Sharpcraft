@@ -37,6 +37,11 @@ public readonly record struct ColorAttachmentDesc(TextureViewHandle View, LoadOp
     /// <param name="clear">Colour written before the pass.</param>
     public static ColorAttachmentDesc Clear(TextureViewHandle view, Vector4 clear) =>
         new(view, LoadOp.Clear, StoreOp.Store, clear);
+
+    /// <summary>A colour attachment that keeps its existing contents.</summary>
+    /// <param name="view">View rendered into.</param>
+    public static ColorAttachmentDesc Keep(TextureViewHandle view) =>
+        new(view, LoadOp.Load, StoreOp.Store, default);
 }
 
 /// <summary>The depth attachment of a pass.</summary>
@@ -51,6 +56,11 @@ public readonly record struct DepthAttachmentDesc(TextureViewHandle View, LoadOp
     /// <param name="clear">Depth written before the pass.</param>
     public static DepthAttachmentDesc Clear(TextureViewHandle view, float clear) =>
         new(view, LoadOp.Clear, StoreOp.Store, clear);
+
+    /// <summary>A depth attachment that keeps its existing contents.</summary>
+    /// <param name="view">Depth view rendered into.</param>
+    public static DepthAttachmentDesc Keep(TextureViewHandle view) =>
+        new(view, LoadOp.Load, StoreOp.Store, 0f);
 }
 
 /// <summary>Format of an index buffer.</summary>
