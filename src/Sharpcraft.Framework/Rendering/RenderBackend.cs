@@ -207,8 +207,14 @@ public interface IRenderBackend
     /// <summary>Binds a vertex buffer at a slot.</summary>
     void SetVertexBuffer(RenderPassHandle pass, uint slot, BufferHandle buffer);
 
+    /// <summary>Binds a byte range of a vertex buffer at a slot.</summary>
+    void SetVertexBuffer(RenderPassHandle pass, uint slot, BufferHandle buffer, ulong offset, ulong size);
+
     /// <summary>Binds the index buffer.</summary>
     void SetIndexBuffer(RenderPassHandle pass, BufferHandle buffer, IndexFormat format);
+
+    /// <summary>Binds a byte range of the index buffer.</summary>
+    void SetIndexBuffer(RenderPassHandle pass, BufferHandle buffer, IndexFormat format, ulong offset, ulong size);
 
     /// <summary>Draws vertices without an index buffer.</summary>
     void Draw(RenderPassHandle pass, uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance);
@@ -487,6 +493,20 @@ public sealed class WgpuRenderBackend : IRenderBackend
     public void SetBindGroup(RenderPassHandle pass, uint index, BindGroupHandle group) =>
         RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
             .SetBindGroup(index, RequireValid<BindGroup>(group.Value is not null, group.Value));
+
+    /// <inheritdoc/>
+    public void SetVertexBuffer(RenderPassHandle pass, uint slot, BufferHandle buffer, ulong offset, ulong size) =>
+        RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
+            .SetVertexBuffer(slot, RequireValid<Brew.Wgpu.Buffer>(buffer.Value is not null, buffer.Value), offset, size);
+
+    /// <inheritdoc/>
+    public void SetIndexBuffer(RenderPassHandle pass, BufferHandle buffer, IndexFormat format, ulong offset, ulong size) =>
+        RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
+            .SetIndexBuffer(
+                RequireValid<Brew.Wgpu.Buffer>(buffer.Value is not null, buffer.Value),
+                format == IndexFormat.Uint16 ? WGPUIndexFormat.Uint16 : WGPUIndexFormat.Uint32,
+                offset,
+                size);
 
     /// <inheritdoc/>
     public void SetVertexBuffer(RenderPassHandle pass, uint slot, BufferHandle buffer) =>
