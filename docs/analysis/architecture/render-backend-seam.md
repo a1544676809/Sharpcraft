@@ -213,3 +213,19 @@ Sharpcraft.Client.exe --version 26.3 --gameDir <dir> --pack <pack.zip> --offline
 ```
 
 `--frame` 是诊断模式，地址取自 `--quickPlayMultiplayer`（不接受位置参数，也没有 `--output`：帧写到 `%TEMP%\sharpcraft-frame.png`）。stdout 出现 `frame written to <path>` 即成功。这条路径会跑 compute（深度金字塔与运动向量），是验证 compute 切片的手段。
+### 9.2 尚未迁移的文件（2026-11-10 核查）
+
+此前"全部渲染管线走接缝"的结论只覆盖了 `WindowedRenderer` 与 `OffscreenRenderer` 两个文件（那是执行代理的白名单）。按目录全量核查后，仍有以下文件直接在设备上创建管线：
+
+| 文件 | 原生创建 | 内容 |
+| --- | --- | --- |
+| `UiRenderer.cs` | 3 个 render pipeline | 界面三套材质管线 |
+| `SkyDiscResources.cs` | 1 个 render pipeline | 天体圆盘 |
+| `WorldTextResources.cs` | 1 个 render pipeline | 世界文本 |
+| `FramePresentation.cs` | 1 个 render pipeline | 呈现 blit |
+| `OffscreenRenderer.cs`（`CelestialResources` 嵌套类） | 1 个 render pipeline | 天体颜色 |
+| `ChunkCuller.cs` | 1 个 compute pipeline | 剔除 |
+
+另有 15 处 `device.CreatePipelineLayout` 分布在这些文件中。
+
+**教训**：迁移范围的结论必须来自**目录级全量核查**，而不是"我改过的两个文件"。这条已作为下一步的输入：把上述 6 个文件纳入范围后，才能说"所有管线都走接缝"。
