@@ -37,12 +37,90 @@ public enum BindingKind
     Sampler
 }
 
+/// <summary>What kind of value a sampled texture returns.</summary>
+public enum TextureSampleType
+{
+    /// <summary>Filtered floating point.</summary>
+    Float,
+
+    /// <summary>Depth comparison.</summary>
+    Depth,
+
+    /// <summary>Signed integer, unfilterable.</summary>
+    Sint,
+
+    /// <summary>Unsigned integer, unfilterable.</summary>
+    Uint
+}
+
+/// <summary>Shape of the view a texture binding expects.</summary>
+public enum TextureViewDimension
+{
+    /// <summary>A 2D texture.</summary>
+    D2,
+
+    /// <summary>An array of 2D textures.</summary>
+    D2Array,
+
+    /// <summary>A cube map.</summary>
+    Cube,
+
+    /// <summary>An array of cube maps.</summary>
+    CubeArray,
+
+    /// <summary>A 3D texture.</summary>
+    D3
+}
+
+/// <summary>How a sampler binding is used.</summary>
+public enum SamplerBindingType
+{
+    /// <summary>Filtering sampler.</summary>
+    Filtering,
+
+    /// <summary>Non-filtering sampler.</summary>
+    NonFiltering,
+
+    /// <summary>Comparison sampler, used for shadow lookups.</summary>
+    Comparison
+}
+
+/// <summary>How a buffer binding is used.</summary>
+public enum BufferBindingType
+{
+    /// <summary>Uniform block.</summary>
+    Uniform,
+
+    /// <summary>Read-only storage.</summary>
+    ReadOnlyStorage,
+
+    /// <summary>Read-write storage.</summary>
+    Storage
+}
+
 /// <summary>One entry of a bind group layout.</summary>
 /// <param name="Binding">Binding slot the shader declares.</param>
 /// <param name="Visibility">Stages that may read the binding.</param>
 /// <param name="Kind">Kind of resource the slot expects.</param>
 public readonly record struct BindGroupLayoutEntryDesc(uint Binding, ShaderStages Visibility, BindingKind Kind)
 {
+    /// <summary>Smallest binding size the shader requires, or zero for no requirement.</summary>
+    public ulong MinBindingSize { get; init; }
+
+    /// <summary>Value a sampled texture returns; ignored for other kinds.</summary>
+    public TextureSampleType SampleType { get; init; }
+
+    /// <summary>Shape of the view a texture binding expects; ignored for other kinds.</summary>
+    public TextureViewDimension ViewDimension { get; init; }
+
+    /// <summary>Whether the texture binding is multisampled; ignored for other kinds.</summary>
+    public bool Multisampled { get; init; }
+
+    /// <summary>How a sampler binding is used; ignored for other kinds.</summary>
+    public SamplerBindingType SamplerType { get; init; }
+
+    /// <summary>How a buffer binding is used; ignored for other kinds.</summary>
+    public BufferBindingType BufferType { get; init; }
     /// <summary>A uniform block visible to the given stages.</summary>
     /// <param name="binding">Binding slot.</param>
     /// <param name="visibility">Stages that may read it.</param>

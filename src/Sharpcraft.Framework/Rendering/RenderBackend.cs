@@ -293,9 +293,19 @@ public sealed class WgpuRenderBackend : IRenderBackend
             var stage = ToWgpu(entry.Visibility);
             native[index] = entry.Kind switch
             {
-                BindingKind.UniformBuffer => BindGroupLayoutEntry.Buffer(entry.Binding, stage, WGPUBufferBindingType.Uniform, false, 0),
-                BindingKind.Texture => BindGroupLayoutEntry.Texture(entry.Binding, stage, WGPUTextureSampleType.Float, WGPUTextureViewDimension._2D, false),
-                BindingKind.Sampler => BindGroupLayoutEntry.Sampler(entry.Binding, stage, WGPUSamplerBindingType.Filtering),
+                BindingKind.UniformBuffer => BindGroupLayoutEntry.Buffer(
+                    entry.Binding,
+                    stage,
+                    ToWgpu(entry.BufferType),
+                    false,
+                    entry.MinBindingSize),
+                BindingKind.Texture => BindGroupLayoutEntry.Texture(
+                    entry.Binding,
+                    stage,
+                    ToWgpu(entry.SampleType),
+                    ToWgpu(entry.ViewDimension),
+                    entry.Multisampled),
+                BindingKind.Sampler => BindGroupLayoutEntry.Sampler(entry.Binding, stage, ToWgpu(entry.SamplerType)),
                 _ => throw new ArgumentOutOfRangeException(nameof(entries), entry.Kind, "no layout counterpart")
             };
         }
@@ -357,6 +367,41 @@ public sealed class WgpuRenderBackend : IRenderBackend
 
     /// <inheritdoc/>
     public void Destroy(SamplerHandle sampler) => ((Sampler)sampler.Value).Dispose();
+
+    private static WGPUBufferBindingType ToWgpu(BufferBindingType type) => type switch
+    {
+        BufferBindingType.Uniform => WGPUBufferBindingType.Uniform,
+        BufferBindingType.ReadOnlyStorage => WGPUBufferBindingType.ReadOnlyStorage,
+        BufferBindingType.Storage => WGPUBufferBindingType.Storage,
+        _ => throw new ArgumentOutOfRangeException(nameof(type), type, "no binding counterpart")
+    };
+
+    private static WGPUTextureSampleType ToWgpu(TextureSampleType type) => type switch
+    {
+        TextureSampleType.Float => WGPUTextureSampleType.Float,
+        TextureSampleType.Depth => WGPUTextureSampleType.Depth,
+        TextureSampleType.Sint => WGPUTextureSampleType.Sint,
+        TextureSampleType.Uint => WGPUTextureSampleType.Uint,
+        _ => throw new ArgumentOutOfRangeException(nameof(type), type, "no sample counterpart")
+    };
+
+    private static WGPUTextureViewDimension ToWgpu(TextureViewDimension dimension) => dimension switch
+    {
+        TextureViewDimension.D2 => WGPUTextureViewDimension._2D,
+        TextureViewDimension.D2Array => WGPUTextureViewDimension._2DArray,
+        TextureViewDimension.Cube => WGPUTextureViewDimension.Cube,
+        TextureViewDimension.CubeArray => WGPUTextureViewDimension.CubeArray,
+        TextureViewDimension.D3 => WGPUTextureViewDimension._3D,
+        _ => throw new ArgumentOutOfRangeException(nameof(dimension), dimension, "no dimension counterpart")
+    };
+
+    private static WGPUSamplerBindingType ToWgpu(SamplerBindingType type) => type switch
+    {
+        SamplerBindingType.Filtering => WGPUSamplerBindingType.Filtering,
+        SamplerBindingType.NonFiltering => WGPUSamplerBindingType.NonFiltering,
+        SamplerBindingType.Comparison => WGPUSamplerBindingType.Comparison,
+        _ => throw new ArgumentOutOfRangeException(nameof(type), type, "no sampler counterpart")
+    };
 
     private static ShaderStage ToWgpu(ShaderStages stages)
     {
