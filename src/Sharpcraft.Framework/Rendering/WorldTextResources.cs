@@ -22,8 +22,6 @@ internal sealed class WorldTextResources : IDisposable
     private readonly PipelineHandle _pipeline;
     private readonly TextureHandle _texture;
     private readonly TextureViewHandle _view;
-    private readonly SamplerCache _samplers;
-    private readonly Sampler _sampler;
     private readonly SamplerHandle _samplerHandle;
     private readonly BindGroupHandle _bindGroup;
     private BufferHandle _vertex = default;
@@ -53,14 +51,9 @@ internal sealed class WorldTextResources : IDisposable
             (uint)glyphSheet.Height,
             0);
         _view = backend.CreateTextureView(_texture);
-        // One sampler per state for this resource; the sampler itself is owned by the cache (T-784 S1b), so Dispose
-        // releases the cache rather than the sampler.
-        _samplers = new SamplerCache();
-        _samplers.Initialize(device);
-        _sampler = _samplers.GetClampToEdge(FilterMode.Nearest);
-        _samplerHandle = backend is WgpuRenderBackend wgpu
-            ? wgpu.AdoptSampler(_sampler)
-            : throw new InvalidOperationException("the seam implementation must adopt its own handles");
+        // Nearest clamp sampling: the seam creates the sampler itself (the same descriptor the shared cache would use),
+        // so this resource owns it and releases it with the rest.
+        _samplerHandle = backend.CreateSampler(AddressMode.ClampToEdge, FilterMode.Nearest, FilterMode.Nearest, useMipmaps: false);
 
         _layout = backend.CreateBindGroupLayout(
         [
@@ -151,7 +144,7 @@ internal sealed class WorldTextResources : IDisposable
         _backend.Destroy(_pipeline);
         _backend.Destroy(_pipelineLayout);
         _backend.Destroy(_layout);
-        _samplers.Dispose();
+        _backend.Destroy(_samplerHandle);
         _backend.Destroy(_view);
         _backend.Destroy(_texture);
     }

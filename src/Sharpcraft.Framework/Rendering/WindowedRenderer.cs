@@ -106,37 +106,25 @@ public static class WindowedRenderer
 
         // Atlas resources: the fragment shader samples it, so the pipeline layout and the bind group
         // have to exist before anything is drawn (docs/modules/render.md 6.1).
+        var backend = new WgpuRenderBackend(device);
+        var wgpu = backend;
         var atlasData = request.Atlas ?? TextureData.White;
 
         var atlasMips = atlasData.Mips ?? [];
-        var atlasTexture = device.CreateTexture(new TextureDescriptor
-        {
-            Size = new WGPUExtent3D
-            {
-                width = (uint)atlasData.Width,
-                height = (uint)atlasData.Height,
-                depthOrArrayLayers = 1
-            },
-            MipLevelCount = 1 + (uint)atlasMips.Length,
-            SampleCount = 1,
-            Dimension = WGPUTextureDimension._2D,
-            Format = WGPUTextureFormat.RGBA8Unorm,
-            Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
-        });
+        var atlasTexture = backend.CreateTexture(new TextureDesc(
+            (uint)atlasData.Width,
+            (uint)atlasData.Height,
+            TextureFormat.Rgba8Unorm,
+            1 + (uint)atlasMips.Length,
+            TextureUsages.TextureBinding | TextureUsages.CopyDst));
 
-        device.Queue.WriteTexture(
+        backend.WriteTexture(
             atlasTexture,
             atlasData.Rgba,
             (uint)(atlasData.Width * 4),
+            (uint)atlasData.Width,
             (uint)atlasData.Height,
-            new WGPUExtent3D
-            {
-                width = (uint)atlasData.Width,
-                height = (uint)atlasData.Height,
-                depthOrArrayLayers = 1
-            },
-            0,
-            new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+            0);
 
         var mipWidth = atlasData.Width;
         var mipHeight = atlasData.Height;
@@ -146,28 +134,22 @@ public static class WindowedRenderer
             mipWidth = Math.Max(1, mipWidth / 2);
             mipHeight = Math.Max(1, mipHeight / 2);
 
-            device.Queue.WriteTexture(
+            backend.WriteTexture(
                 atlasTexture,
                 atlasMips[level],
                 (uint)(mipWidth * 4),
+                (uint)mipWidth,
                 (uint)mipHeight,
-                new WGPUExtent3D { width = (uint)mipWidth, height = (uint)mipHeight, depthOrArrayLayers = 1 },
-                (uint)(level + 1),
-                new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+                (uint)(level + 1));
         }
 
-
-        var atlasView = atlasTexture.CreateView();
+        var atlasView = backend.CreateTextureView(atlasTexture);
 
         // One sampler per address/filter state for the whole renderer (T-784 S1b): the reference keeps a SamplerCache so
         // a state always resolves to the same sampler instead of a fresh device object.
         using var samplers = new SamplerCache();
         samplers.Initialize(device);
 
-        // The backend seam (T-786 W1). Only texture and view creation go through it so far; the bind group below still
-        // builds on the device, which the escape hatch on WgpuRenderBackend exposes.
-        var backend = new WgpuRenderBackend(device);
-        var wgpu = backend;
         // The block atlas carries a mip chain, so it samples like the reference MipmappedTexture: linear minification
         // with an unbounded LOD clamp. Clamping to the sprite edge is kept because the atlas relies on padding.
         // Magnification stays nearest: with a linear magnifier every block face reads visibly soft even at close range,
@@ -196,8 +178,8 @@ public static class WindowedRenderer
         // by those calls; UiRenderer is the next slice (docs/analysis/architecture/render-backend-seam.md 9.9).
         var uiPipelineLayout = wgpu.AsPipelineLayout(pipelineLayout);
 
-        using var cameraBuffer = device.CreateBufferInit(
-            new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
+        var cameraBuffer = backend.CreateBufferInit(
+            new BufferDesc(VertexLayout.CameraUniformSize, BufferUsages.Uniform | BufferUsages.CopyDst),
             new byte[VertexLayout.CameraUniformSize].AsSpan());
 
         // Fog: colour plus start and end distance in blocks, shared by the terrain shader.
@@ -210,49 +192,42 @@ public static class WindowedRenderer
         fogValues[4] = diagnostics?.FogStart ?? 64f;
         fogValues[5] = diagnostics?.FogEnd ?? 160f;
         System.Runtime.InteropServices.MemoryMarshal.AsBytes(fogValues.AsSpan()).CopyTo(fogBytes);
-        using var fogBuffer = device.CreateBufferInit(
-            new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
+        var fogBuffer = backend.CreateBufferInit(
+            new BufferDesc(32, BufferUsages.Uniform | BufferUsages.CopyDst),
             fogBytes.AsSpan());
-        device.Queue.WriteBuffer(fogBuffer, 0, fogBytes.AsSpan());
+        backend.WriteBuffer(fogBuffer, fogBytes, 0);
 
         // Lightmap parameters (sky/block factors and colours), rewritten per frame so day/night needs no re-mesh.
         var lightmapBytes = new byte[Shaders.ShaderBindings.LightmapBytes];
         LightmapUniformCodec.Write(LightmapUniform.Day, lightmapBytes);
-        using var lightmapBuffer = device.CreateBufferInit(
-            new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
+        var lightmapBuffer = backend.CreateBufferInit(
+            new BufferDesc(Shaders.ShaderBindings.LightmapBytes, BufferUsages.Uniform | BufferUsages.CopyDst),
             lightmapBytes.AsSpan());
-        device.Queue.WriteBuffer(lightmapBuffer, 0, lightmapBytes.AsSpan());
+        backend.WriteBuffer(lightmapBuffer, lightmapBytes, 0);
 
-        // The frame uniforms and the atlas sampler are shared by several bind groups, so their handles are adopted once
-        // and reused: a seam handle is a plain value, and unwrapping the same buffer twice only duplicates the hatch.
-        var cameraBufferHandle = wgpu.AdoptBuffer(cameraBuffer);
-        var fogBufferHandle = wgpu.AdoptBuffer(fogBuffer);
-        var lightmapBufferHandle = wgpu.AdoptBuffer(lightmapBuffer);
         var atlasSamplerHandle = wgpu.AdoptSampler(atlasSampler);
-        // The atlas view is replaced on every atlas upload, so its handle is reassigned alongside it.
-        var atlasViewHandle = wgpu.AdoptTextureView(atlasView);
 
         // The world bind group is the one every textured pass binds first; it is described in seam terms so the passes
         // receive a handle instead of unwrapping it at each draw.
         var bindGroup = backend.CreateBindGroup(
             bindGroupLayout,
             [
-                BindGroupEntryDesc.Texture(0, atlasViewHandle),
+                BindGroupEntryDesc.Texture(0, atlasView),
                 BindGroupEntryDesc.Sampler(1, atlasSamplerHandle),
-                BindGroupEntryDesc.Uniform(VertexLayout.CameraBinding, cameraBufferHandle, 0, VertexLayout.CameraUniformSize),
-                BindGroupEntryDesc.Uniform(3, fogBufferHandle, 0, 32),
-                BindGroupEntryDesc.Uniform(Shaders.ShaderBindings.Lightmap, lightmapBufferHandle, 0, Shaders.ShaderBindings.LightmapBytes)
+                BindGroupEntryDesc.Uniform(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize),
+                BindGroupEntryDesc.Uniform(3, fogBuffer, 0, 32),
+                BindGroupEntryDesc.Uniform(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
             ]);
 
         using var entitySkin = new EntitySkinTextureGpu();
         if (entitySkinSource?.Atlas is { } skinData)
         {
-            entitySkin.Upload(backend, bindGroupLayout, skinData, cameraBufferHandle, fogBufferHandle, lightmapBufferHandle, atlasSamplerHandle);
+            entitySkin.Upload(backend, bindGroupLayout, skinData, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle);
         }
 
         using var itemAtlasGpu = new EntitySkinTextureGpu();
         if (itemAtlasSource?.Atlas is { } itemData)
-            itemAtlasGpu.Upload(backend, bindGroupLayout, itemData, cameraBufferHandle, fogBufferHandle, lightmapBufferHandle, atlasSamplerHandle);
+            itemAtlasGpu.Upload(backend, bindGroupLayout, itemData, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle);
         // The frame pipelines are seam handles now, so they are released by hand where the using declarations used to
         // stand (see the cleanup at the end of this method).
         var pipeline = CreatePipeline(backend, format, pipelineLayout);
@@ -267,23 +242,23 @@ public static class WindowedRenderer
         // Celestial bodies and stars: the same backdrop draws the offscreen path uses, so the window and the exported
         // frame agree (docs/modules/clouds.md 6).
         using var celestial = request.CelestialDraws is { Length: > 0 } && request.CelestialTextures is { Length: > 0 }
-            ? new OffscreenRenderer.CelestialResources(backend, request, cameraBufferHandle, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
+            ? new OffscreenRenderer.CelestialResources(backend, request, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         using var celestialColour = request.CelestialColorDraws is { Length: > 0 } || celestialPerFrame is not null
-            ? new OffscreenRenderer.CelestialColorResources(backend, request, cameraBufferHandle, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
+            ? new OffscreenRenderer.CelestialColorResources(backend, request, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         using var skyDiscColour = !skyDiscVanilla && request.SkyDiscDraws is { Length: > 0 }
-            ? new OffscreenRenderer.CelestialColorResources(backend, request with { CelestialColorDraws = request.SkyDiscDraws }, cameraBufferHandle, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
+            ? new OffscreenRenderer.CelestialColorResources(backend, request with { CelestialColorDraws = request.SkyDiscDraws }, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         using var skyDiscVanillaResources = skyDiscVanilla && skyDiscPerFrame is not null
-            ? new SkyDiscResources(backend, cameraBufferHandle, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
+            ? new SkyDiscResources(backend, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         // Clouds change every frame (scroll/camera), so their position-colour draw set is updated per frame.
         using var cloudColour = cloudsPerFrame is null
             ? null
-            : new OffscreenRenderer.CelestialColorResources(backend, request with { CelestialColorDraws = [] }, cameraBufferHandle, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format), WGPUCompareFunction.GreaterEqual);
+            : new OffscreenRenderer.CelestialColorResources(backend, request with { CelestialColorDraws = [] }, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format), WGPUCompareFunction.GreaterEqual);
         using var cloudOit = cloudOitEnabled && cloudColour is not null
-            ? new CloudOitResources(backend, cameraBufferHandle, VertexLayout.CameraUniformSize)
+            ? new CloudOitResources(backend, cameraBuffer, VertexLayout.CameraUniformSize)
             : null;
         using var uiPipeline = UiRenderer.CreatePipeline(device, BackendConvert.FromWgpu(format), uiPipelineLayout);
         using var uiTextPipeline = UiRenderer.CreateTextPipeline(device, BackendConvert.FromWgpu(format), uiPipelineLayout);
@@ -336,130 +311,91 @@ public static class WindowedRenderer
             BindGroupLayoutEntryDesc.Texture(0, ShaderStages.Fragment) with { SampleType = TextureSampleType.Depth, ViewDimension = TextureViewDimension.D2 },
             BindGroupLayoutEntryDesc.Sampler(1, ShaderStages.Fragment)
         ]);
-        // The blit still builds its bind group on the device, so the handle is peeked once for that call.
-        var blitDepthNativeLayout = wgpu.AsBindGroupLayout(blitDepthLayout);
         using var presentation = FramePresentation.Create(backend, device, BackendConvert.FromWgpu(format), samplers.GetClampToEdge(FilterMode.Nearest));
+
         var blitDepthPipelineLayout = backend.CreatePipelineLayout([blitDepthLayout]);
         var blitDepthPipeline = CreateBlitDepthPipeline(backend, blitDepthPipelineLayout);
         var blitDepthSampler = samplers.GetClampToEdge(FilterMode.Nearest);
+        var blitDepthSamplerHandle = wgpu.AdoptSampler(blitDepthSampler);
 
         // The interface layer needs its own transform: one uniform buffer cannot hold both the world camera and
         // the orthographic projection while a single pass reads from it.
-        var uiTransformBuffer = CreateGeometryBuffer(device, VertexLayout.CameraUniformSize, BufferUsage.Uniform | BufferUsage.CopyDst);
+        var uiTransformBuffer = backend.CreateBuffer(
+            new BufferDesc(VertexLayout.CameraUniformSize, BufferUsages.Uniform | BufferUsages.CopyDst));
 
         // Glyphs live in their own sheet rather than the block atlas: the two have different sampling needs and
         // mixing them would make text blurry at small sizes.
         var glyphData = glyphTexture ?? TextureData.White;
         using var worldText = worldTextPerFrame is not null
-            ? new WorldTextResources(backend, device, glyphData, cameraBufferHandle, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
+            ? new WorldTextResources(backend, device, glyphData, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
-        var glyphSheet = device.CreateTexture(new TextureDescriptor
-        {
-            Size = new WGPUExtent3D
-            {
-                width = (uint)glyphData.Width,
-                height = (uint)glyphData.Height,
-                depthOrArrayLayers = 1
-            },
-            MipLevelCount = 1,
-            SampleCount = 1,
-            Dimension = WGPUTextureDimension._2D,
-            Format = WGPUTextureFormat.RGBA8Unorm,
-            Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
-        });
+        var glyphSheet = backend.CreateTexture(new TextureDesc(
+            (uint)glyphData.Width,
+            (uint)glyphData.Height,
+            TextureFormat.Rgba8Unorm,
+            1,
+            TextureUsages.TextureBinding | TextureUsages.CopyDst));
 
-        device.Queue.WriteTexture(
+        backend.WriteTexture(
             glyphSheet,
             glyphData.Rgba,
             (uint)(glyphData.Width * 4),
+            (uint)glyphData.Width,
             (uint)glyphData.Height,
-            new WGPUExtent3D
-            {
-                width = (uint)glyphData.Width,
-                height = (uint)glyphData.Height,
-                depthOrArrayLayers = 1
-            },
-            0,
-            new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+            0);
 
-        var glyphView = glyphSheet.CreateView();
-        var uiBindGroup = device.CreateBindGroup(
-            wgpu.AsBindGroupLayout(bindGroupLayout),
+        var glyphView = backend.CreateTextureView(glyphSheet);
+        // The interface bind groups differ only in the texture they bind, so they are described in one shape and built
+        // with the seam's own factories.
+        BindGroupHandle CreateUiBindGroup(TextureViewHandle view) => backend.CreateBindGroup(
+            bindGroupLayout,
             [
-                BindGroupEntry.TextureView(0, atlasView),
-                BindGroupEntry.Sampler(1, atlasSampler),
-                BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize),
+                BindGroupEntryDesc.Texture(0, view),
+                BindGroupEntryDesc.Sampler(1, atlasSamplerHandle),
+                BindGroupEntryDesc.Uniform(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize),
                 // The layout declares the fog buffer for the world shader; the interface shader ignores it, but a bind
                 // group must still supply every binding the layout declares.
-                BindGroupEntry.Buffer(3, fogBuffer, 0, 32),
-                BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
+                BindGroupEntryDesc.Uniform(3, fogBuffer, 0, 32),
+                BindGroupEntryDesc.Uniform(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
             ]);
+
+        var uiBindGroup = CreateUiBindGroup(atlasView);
 
         using var uiSpritePipeline = UiRenderer.CreateSpritePipeline(device, BackendConvert.FromWgpu(format), uiPipelineLayout);
 
         // GUI sprites (tooltip background and frame) each need their own texture and binding, because one draw call can
         // only bind one texture (docs/decisions/0014-gui-sprite-atlas-and-nine-slice.md).
         var spriteDataList = spriteTextures ?? [];
-        var spriteSheets = new List<Texture>(spriteDataList.Count);
-        var spriteViews = new List<TextureView>(spriteDataList.Count);
-        var spriteBindGroups = new List<BindGroup>(spriteDataList.Count);
+        var spriteSheets = new List<TextureHandle>(spriteDataList.Count);
+        var spriteViews = new List<TextureViewHandle>(spriteDataList.Count);
+        var spriteBindGroups = new List<BindGroupHandle>(spriteDataList.Count);
 
         foreach (var spriteData in spriteDataList)
         {
-            var sheet = device.CreateTexture(new TextureDescriptor
-            {
-                Size = new WGPUExtent3D
-                {
-                    width = (uint)spriteData.Width,
-                    height = (uint)spriteData.Height,
-                    depthOrArrayLayers = 1
-                },
-                MipLevelCount = 1,
-                SampleCount = 1,
-                Dimension = WGPUTextureDimension._2D,
-                Format = WGPUTextureFormat.RGBA8Unorm,
-                Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
-            });
+            var sheet = backend.CreateTexture(new TextureDesc(
+                (uint)spriteData.Width,
+                (uint)spriteData.Height,
+                TextureFormat.Rgba8Unorm,
+                1,
+                TextureUsages.TextureBinding | TextureUsages.CopyDst));
 
-            device.Queue.WriteTexture(
+            backend.WriteTexture(
                 sheet,
                 spriteData.Rgba,
                 (uint)(spriteData.Width * 4),
+                (uint)spriteData.Width,
                 (uint)spriteData.Height,
-                new WGPUExtent3D
-                {
-                    width = (uint)spriteData.Width,
-                    height = (uint)spriteData.Height,
-                    depthOrArrayLayers = 1
-                },
-                0,
-                new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+                0);
 
-            var view = sheet.CreateView();
+            var view = backend.CreateTextureView(sheet);
 
-            spriteBindGroups.Add(device.CreateBindGroup(
-                wgpu.AsBindGroupLayout(bindGroupLayout),
-                [
-                    BindGroupEntry.TextureView(0, view),
-                    BindGroupEntry.Sampler(1, atlasSampler),
-                    BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize),
-                    BindGroupEntry.Buffer(3, fogBuffer, 0, 32),
-                BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
-                ]));
+            spriteBindGroups.Add(CreateUiBindGroup(view));
 
             spriteSheets.Add(sheet);
             spriteViews.Add(view);
         }
 
-        var uiTextBindGroup = device.CreateBindGroup(
-            wgpu.AsBindGroupLayout(bindGroupLayout),
-            [
-                BindGroupEntry.TextureView(0, glyphView),
-                BindGroupEntry.Sampler(1, atlasSampler),
-                BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize),
-                BindGroupEntry.Buffer(3, fogBuffer, 0, 32),
-                BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
-            ]);
+        var uiTextBindGroup = CreateUiBindGroup(glyphView);
 
         // The source starts at the textures just uploaded, so the first frame does not re-upload them.
         textureSource?.Update(glyphTexture, spriteTextures ?? []);
@@ -485,11 +421,11 @@ public static class WindowedRenderer
 
         // Geometry that is rebuilt every frame, such as placeholder entity boxes. It gets its own small pair of
         // buffers so a per frame rewrite never touches the world arena.
-        var dynamicVertex = CreateGeometryBuffer(device, MinimumBufferBytes, BufferUsage.Vertex | BufferUsage.CopyDst);
-        var dynamicIndex = CreateGeometryBuffer(device, MinimumBufferBytes, BufferUsage.Index | BufferUsage.CopyDst);
+        var dynamicVertex = backend.CreateBuffer(new BufferDesc(MinimumBufferBytes, BufferUsages.Vertex | BufferUsages.CopyDst));
+        var dynamicIndex = backend.CreateBuffer(new BufferDesc(MinimumBufferBytes, BufferUsages.Index | BufferUsages.CopyDst));
 
-        var uiVertex = CreateGeometryBuffer(device, MinimumBufferBytes, BufferUsage.Vertex | BufferUsage.CopyDst);
-        var uiIndex = CreateGeometryBuffer(device, MinimumBufferBytes, BufferUsage.Index | BufferUsage.CopyDst);
+        var uiVertex = backend.CreateBuffer(new BufferDesc(MinimumBufferBytes, BufferUsages.Vertex | BufferUsages.CopyDst));
+        var uiIndex = backend.CreateBuffer(new BufferDesc(MinimumBufferBytes, BufferUsages.Index | BufferUsages.CopyDst));
         var uiVertexCapacity = MinimumBufferBytes;
         var uiIndexCapacity = MinimumBufferBytes;
         var uiIndexCount = 0u;
@@ -531,42 +467,40 @@ public static class WindowedRenderer
         // instead of two allocations plus a GPU sync. They only grow, and the grown-out buffers are released
         // when the window closes (a rebuild that needs more room is rare)
         // (docs/specs/network/play-movement.md 7.23).
-        var retiredVertex = new List<WgpuBuffer>();
-        var retiredIndex = new List<WgpuBuffer>();
+        var retiredVertex = new List<BufferHandle>();
+        var retiredIndex = new List<BufferHandle>();
 
         var vertexCapacity = Math.Max((ulong)currentRequest.Vertices.Length * sizeof(float), MinimumBufferBytes);
         var indexCapacity = Math.Max((ulong)currentRequest.Indices.Length * sizeof(uint), MinimumBufferBytes);
 
-        var vertexBuffer = CreateGeometryBuffer(device, vertexCapacity, BufferUsage.Vertex | BufferUsage.CopyDst);
-        var indexBuffer = CreateGeometryBuffer(device, indexCapacity, BufferUsage.Index | BufferUsage.CopyDst);
-        device.Queue.WriteBuffer(vertexBuffer, 0, currentRequest.Vertices.AsSpan());
-        device.Queue.WriteBuffer(indexBuffer, 0, currentRequest.Indices.AsSpan());
-        var depthTexture = CreateDepthTexture(device, frameWidth, frameHeight);
-        var depthView = depthTexture.CreateView();
-        // The reference OIT passes take depth as a seam descriptor, so the view is adopted once here and refreshed on
-        // resize with the texture it belongs to.
-        var depthViewHandle = wgpu.AdoptTextureView(depthView);
+        var vertexBuffer = backend.CreateBuffer(new BufferDesc(vertexCapacity, BufferUsages.Vertex | BufferUsages.CopyDst));
+        var indexBuffer = backend.CreateBuffer(new BufferDesc(indexCapacity, BufferUsages.Index | BufferUsages.CopyDst));
+        backend.WriteBuffer(vertexBuffer, System.Runtime.InteropServices.MemoryMarshal.AsBytes(currentRequest.Vertices.AsSpan()), 0);
+        backend.WriteBuffer(indexBuffer, System.Runtime.InteropServices.MemoryMarshal.AsBytes(currentRequest.Indices.AsSpan()), 0);
+        var depthTexture = CreateDepthTexture(backend, frameWidth, frameHeight);
+        // The reference OIT passes take depth as a seam descriptor, so the view comes from the seam as well and is
+        // refreshed with the texture it belongs to on resize.
+        var depthViewHandle = backend.CreateTextureView(depthTexture);
 
-        // Reference transparency targets and bind groups. The targets stay native because they are rebuilt on resize; the
-        // views wrapping them are seam handles, so the bind groups and every pass downstream take handles as well
-        // (docs/analysis/architecture/render-backend-seam.md 9.9). Handles are structs, so they are held as defaults and
-        // rebuilt by CreateReferenceTargets.
-        Texture refDepthBoundsTexture = default;
+        // Reference transparency targets and bind groups. Every target is a seam handle, so the bind groups and every
+        // pass downstream take handles too (docs/analysis/architecture/render-backend-seam.md 9.9). Handles are structs,
+        // so they are held as defaults and rebuilt by CreateReferenceTargets.
+        TextureHandle refDepthBoundsTexture = default;
         TextureViewHandle refDepthBoundsView = default;
-        Texture refDepthBoundsCulledTexture = default;
+        TextureHandle refDepthBoundsCulledTexture = default;
         TextureViewHandle refDepthBoundsCulledView = default;
-        Texture refTransmittance0Texture = default;
+        TextureHandle refTransmittance0Texture = default;
         TextureViewHandle refTransmittance0View = default;
-        Texture refTransmittance1Texture = default;
+        TextureHandle refTransmittance1Texture = default;
         TextureViewHandle refTransmittance1View = default;
-        Texture refAccumulateTexture = default;
+        TextureHandle refAccumulateTexture = default;
         TextureViewHandle refAccumulateView = default;
         BindGroupHandle refCullBindGroup = default;
         BindGroupHandle refTransmittanceBindGroup = default;
         BindGroupHandle refAccumulateBindGroup = default;
         BindGroupHandle refCompositeBindGroup = default;
-        Texture cloudDepthTexture = default;
-        TextureView cloudDepthView = default;
+        TextureHandle cloudDepthTexture = default;
+        TextureViewHandle cloudDepthViewHandle = default;
         var cloudDepthTargetsCreated = false;
         var refTargetsCreated = false;
 
@@ -583,19 +517,19 @@ public static class WindowedRenderer
                 backend.Destroy(refAccumulateBindGroup);
                 backend.Destroy(refCompositeBindGroup);
                 backend.Destroy(refDepthBoundsView);
-                refDepthBoundsTexture.Dispose();
+                backend.Destroy(refDepthBoundsTexture);
                 backend.Destroy(refDepthBoundsCulledView);
-                refDepthBoundsCulledTexture.Dispose();
+                backend.Destroy(refDepthBoundsCulledTexture);
                 backend.Destroy(refTransmittance0View);
-                refTransmittance0Texture.Dispose();
+                backend.Destroy(refTransmittance0Texture);
                 backend.Destroy(refTransmittance1View);
-                refTransmittance1Texture.Dispose();
+                backend.Destroy(refTransmittance1Texture);
                 backend.Destroy(refAccumulateView);
-                refAccumulateTexture.Dispose();
+                backend.Destroy(refAccumulateTexture);
                 if (cloudDepthTargetsCreated)
                 {
-                    cloudDepthView.Dispose();
-                    cloudDepthTexture.Dispose();
+                    backend.Destroy(cloudDepthViewHandle);
+                    backend.Destroy(cloudDepthTexture);
                     cloudDepthTargetsCreated = false;
                 }
 
@@ -603,16 +537,16 @@ public static class WindowedRenderer
 
             }
 
-            refDepthBoundsTexture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
-            refDepthBoundsView = wgpu.AdoptTextureView(refDepthBoundsTexture.CreateView());
-            refDepthBoundsCulledTexture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
-            refDepthBoundsCulledView = wgpu.AdoptTextureView(refDepthBoundsCulledTexture.CreateView());
-            refTransmittance0Texture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
-            refTransmittance0View = wgpu.AdoptTextureView(refTransmittance0Texture.CreateView());
-            refTransmittance1Texture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
-            refTransmittance1View = wgpu.AdoptTextureView(refTransmittance1Texture.CreateView());
-            refAccumulateTexture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
-            refAccumulateView = wgpu.AdoptTextureView(refAccumulateTexture.CreateView());
+            refDepthBoundsTexture = CreateOitTarget(backend, frameWidth, frameHeight, oitTargetFormat);
+            refDepthBoundsView = backend.CreateTextureView(refDepthBoundsTexture);
+            refDepthBoundsCulledTexture = CreateOitTarget(backend, frameWidth, frameHeight, oitTargetFormat);
+            refDepthBoundsCulledView = backend.CreateTextureView(refDepthBoundsCulledTexture);
+            refTransmittance0Texture = CreateOitTarget(backend, frameWidth, frameHeight, oitTargetFormat);
+            refTransmittance0View = backend.CreateTextureView(refTransmittance0Texture);
+            refTransmittance1Texture = CreateOitTarget(backend, frameWidth, frameHeight, oitTargetFormat);
+            refTransmittance1View = backend.CreateTextureView(refTransmittance1Texture);
+            refAccumulateTexture = CreateOitTarget(backend, frameWidth, frameHeight, oitTargetFormat);
+            refAccumulateView = backend.CreateTextureView(refAccumulateTexture);
 
             refCullBindGroup = backend.CreateBindGroup(refCullLayout, [BindGroupEntryDesc.Texture(0, refDepthBoundsView)]);
             refTransmittanceBindGroup = backend.CreateBindGroup(refTransmittanceLayout, [BindGroupEntryDesc.Texture(0, refDepthBoundsCulledView)]);
@@ -646,8 +580,8 @@ public static class WindowedRenderer
             // depth the terrain transparency passes test against (otherwise glass/water behind a cloud are culled).
             if (cloudOit is not null)
             {
-                cloudDepthTexture = CreateDepthTexture(device, frameWidth, frameHeight);
-                cloudDepthView = cloudDepthTexture.CreateView();
+                cloudDepthTexture = CreateDepthTexture(backend, frameWidth, frameHeight);
+                cloudDepthViewHandle = backend.CreateTextureView(cloudDepthTexture);
                 cloudDepthTargetsCreated = true;
             }
 
@@ -719,61 +653,38 @@ public static class WindowedRenderer
                 var refreshedAtlas = atlasSource.Atlas ?? TextureData.White;
 
                 backend.Destroy(bindGroup);
-                uiBindGroup.Dispose();
-                atlasView.Dispose();
-                atlasTexture.Dispose();
+                backend.Destroy(uiBindGroup);
+                backend.Destroy(atlasView);
+                backend.Destroy(atlasTexture);
 
-                atlasTexture = device.CreateTexture(new TextureDescriptor
-                {
-                    Size = new WGPUExtent3D
-                    {
-                        width = (uint)refreshedAtlas.Width,
-                        height = (uint)refreshedAtlas.Height,
-                        depthOrArrayLayers = 1
-                    },
-                    MipLevelCount = 1,
-                    SampleCount = 1,
-                    Dimension = WGPUTextureDimension._2D,
-                    Format = WGPUTextureFormat.RGBA8Unorm,
-                    Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
-                });
+                atlasTexture = backend.CreateTexture(new TextureDesc(
+                    (uint)refreshedAtlas.Width,
+                    (uint)refreshedAtlas.Height,
+                    TextureFormat.Rgba8Unorm,
+                    1,
+                    TextureUsages.TextureBinding | TextureUsages.CopyDst));
 
-                device.Queue.WriteTexture(
+                backend.WriteTexture(
                     atlasTexture,
                     refreshedAtlas.Rgba,
                     (uint)(refreshedAtlas.Width * 4),
+                    (uint)refreshedAtlas.Width,
                     (uint)refreshedAtlas.Height,
-                    new WGPUExtent3D
-                    {
-                        width = (uint)refreshedAtlas.Width,
-                        height = (uint)refreshedAtlas.Height,
-                        depthOrArrayLayers = 1
-                    },
-                    0,
-                    new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+                    0);
 
-                atlasView = atlasTexture.CreateView();
-                atlasViewHandle = wgpu.AdoptTextureView(atlasView);
+                atlasView = backend.CreateTextureView(atlasTexture);
 
                 bindGroup = backend.CreateBindGroup(
                     bindGroupLayout,
                     [
-                        BindGroupEntryDesc.Texture(0, atlasViewHandle),
+                        BindGroupEntryDesc.Texture(0, atlasView),
                         BindGroupEntryDesc.Sampler(1, atlasSamplerHandle),
-                        BindGroupEntryDesc.Uniform(VertexLayout.CameraBinding, cameraBufferHandle, 0, VertexLayout.CameraUniformSize),
-                        BindGroupEntryDesc.Uniform(3, fogBufferHandle, 0, 32),
-                        BindGroupEntryDesc.Uniform(Shaders.ShaderBindings.Lightmap, lightmapBufferHandle, 0, Shaders.ShaderBindings.LightmapBytes)
+                        BindGroupEntryDesc.Uniform(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize),
+                        BindGroupEntryDesc.Uniform(3, fogBuffer, 0, 32),
+                        BindGroupEntryDesc.Uniform(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
                     ]);
 
-                uiBindGroup = device.CreateBindGroup(
-                    wgpu.AsBindGroupLayout(bindGroupLayout),
-                    [
-                        BindGroupEntry.TextureView(0, atlasView),
-                        BindGroupEntry.Sampler(1, atlasSampler),
-                        BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize),
-                        BindGroupEntry.Buffer(3, fogBuffer, 0, 32),
-                BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
-                    ]);
+                uiBindGroup = CreateUiBindGroup(atlasView);
 
                 Console.WriteLine($"ui: atlas re-uploaded (version {appliedAtlasVersion}, {refreshedAtlas.Width}x{refreshedAtlas.Height})");
             }
@@ -787,7 +698,7 @@ public static class WindowedRenderer
                 // texture and its bind group sufficient.
                 if (entitySkinSource.Atlas is { } refreshedSkin)
                 {
-                    entitySkin.Upload(backend, bindGroupLayout, refreshedSkin, wgpu.AdoptBuffer(cameraBuffer), wgpu.AdoptBuffer(fogBuffer), wgpu.AdoptBuffer(lightmapBuffer), wgpu.AdoptSampler(atlasSampler));
+                    entitySkin.Upload(backend, bindGroupLayout, refreshedSkin, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle);
                 }
                 else
                 {
@@ -800,7 +711,7 @@ public static class WindowedRenderer
                 appliedItemAtlasVersion = itemAtlasSource.Version;
                 if (itemAtlasSource.Atlas is { } refreshedItems)
                 {
-                    itemAtlasGpu.Upload(backend, bindGroupLayout, refreshedItems, wgpu.AdoptBuffer(cameraBuffer), wgpu.AdoptBuffer(fogBuffer), wgpu.AdoptBuffer(lightmapBuffer), wgpu.AdoptSampler(atlasSampler));
+                    itemAtlasGpu.Upload(backend, bindGroupLayout, refreshedItems, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle);
                 }
                 else
                 {
@@ -813,58 +724,46 @@ public static class WindowedRenderer
                 appliedTextureVersion = textureSource.Version;
 
                 // A reload replaced the images, so the old GPU copies are stale; drop them and upload the new ones.
-                uiTextBindGroup.Dispose();
-                glyphView.Dispose();
-                glyphSheet.Dispose();
+                backend.Destroy(uiTextBindGroup);
+                backend.Destroy(glyphView);
+                backend.Destroy(glyphSheet);
 
                 var refreshedGlyph = textureSource.Glyph;
 
                 // Without a glyph atlas text cannot be drawn, so a 1x1 transparent sheet stands in rather than a stale one.
                 refreshedGlyph ??= new TextureData(1, 1, new byte[4]);
 
-                glyphSheet = device.CreateTexture(new TextureDescriptor
-                {
-                    Size = new WGPUExtent3D { width = (uint)refreshedGlyph.Width, height = (uint)refreshedGlyph.Height, depthOrArrayLayers = 1 },
-                    MipLevelCount = 1,
-                    SampleCount = 1,
-                    Dimension = WGPUTextureDimension._2D,
-                    Format = WGPUTextureFormat.RGBA8Unorm,
-                    Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
-                });
+                glyphSheet = backend.CreateTexture(new TextureDesc(
+                    (uint)refreshedGlyph.Width,
+                    (uint)refreshedGlyph.Height,
+                    TextureFormat.Rgba8Unorm,
+                    1,
+                    TextureUsages.TextureBinding | TextureUsages.CopyDst));
 
-                device.Queue.WriteTexture(
+                backend.WriteTexture(
                     glyphSheet,
                     refreshedGlyph.Rgba,
                     (uint)(refreshedGlyph.Width * 4),
+                    (uint)refreshedGlyph.Width,
                     (uint)refreshedGlyph.Height,
-                    new WGPUExtent3D { width = (uint)refreshedGlyph.Width, height = (uint)refreshedGlyph.Height, depthOrArrayLayers = 1 },
-                    0,
-                    new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+                    0);
 
-                glyphView = glyphSheet.CreateView();
-                uiTextBindGroup = device.CreateBindGroup(
-                    wgpu.AsBindGroupLayout(bindGroupLayout),
-                    [
-                        BindGroupEntry.TextureView(0, glyphView),
-                        BindGroupEntry.Sampler(1, atlasSampler),
-                        BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize),
-                        BindGroupEntry.Buffer(3, fogBuffer, 0, 32),
-                BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
-                    ]);
+                glyphView = backend.CreateTextureView(glyphSheet);
+                uiTextBindGroup = CreateUiBindGroup(glyphView);
 
                 foreach (var staleBindGroup in spriteBindGroups)
                 {
-                    staleBindGroup.Dispose();
+                    backend.Destroy(staleBindGroup);
                 }
 
                 foreach (var staleView in spriteViews)
                 {
-                    staleView.Dispose();
+                    backend.Destroy(staleView);
                 }
 
                 foreach (var staleSheet in spriteSheets)
                 {
-                    staleSheet.Dispose();
+                    backend.Destroy(staleSheet);
                 }
 
                 spriteBindGroups.Clear();
@@ -873,36 +772,24 @@ public static class WindowedRenderer
 
                 foreach (var spriteData in textureSource.Sprites)
                 {
-                    var refreshedSheet = device.CreateTexture(new TextureDescriptor
-                    {
-                        Size = new WGPUExtent3D { width = (uint)spriteData.Width, height = (uint)spriteData.Height, depthOrArrayLayers = 1 },
-                        MipLevelCount = 1,
-                        SampleCount = 1,
-                        Dimension = WGPUTextureDimension._2D,
-                        Format = WGPUTextureFormat.RGBA8Unorm,
-                        Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
-                    });
+                    var refreshedSheet = backend.CreateTexture(new TextureDesc(
+                        (uint)spriteData.Width,
+                        (uint)spriteData.Height,
+                        TextureFormat.Rgba8Unorm,
+                        1,
+                        TextureUsages.TextureBinding | TextureUsages.CopyDst));
 
-                    device.Queue.WriteTexture(
+                    backend.WriteTexture(
                         refreshedSheet,
                         spriteData.Rgba,
                         (uint)(spriteData.Width * 4),
+                        (uint)spriteData.Width,
                         (uint)spriteData.Height,
-                        new WGPUExtent3D { width = (uint)spriteData.Width, height = (uint)spriteData.Height, depthOrArrayLayers = 1 },
-                        0,
-                        new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+                        0);
 
-                    var refreshedView = refreshedSheet.CreateView();
+                    var refreshedView = backend.CreateTextureView(refreshedSheet);
 
-                    spriteBindGroups.Add(device.CreateBindGroup(
-                        wgpu.AsBindGroupLayout(bindGroupLayout),
-                        [
-                            BindGroupEntry.TextureView(0, refreshedView),
-                            BindGroupEntry.Sampler(1, atlasSampler),
-                            BindGroupEntry.Buffer(VertexLayout.CameraBinding, uiTransformBuffer, 0, VertexLayout.CameraUniformSize),
-                            BindGroupEntry.Buffer(3, fogBuffer, 0, 32),
-                BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
-                        ]));
+                    spriteBindGroups.Add(CreateUiBindGroup(refreshedView));
 
                     spriteSheets.Add(refreshedSheet);
                     spriteViews.Add(refreshedView);
@@ -940,11 +827,10 @@ public static class WindowedRenderer
                 // uses the current index count, and a vertex buffer from an older mesh would make those
                 // indices point past it, drawing stray triangles that look like overlapping texture.
                 surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight, presentMode, WGPUCompositeAlphaMode.Auto);
-                depthView.Dispose();
-                depthTexture.Dispose();
-                depthTexture = CreateDepthTexture(device, frameWidth, frameHeight);
-                depthView = depthTexture.CreateView();
-                depthViewHandle = wgpu.AdoptTextureView(depthView);
+                backend.Destroy(depthViewHandle);
+                backend.Destroy(depthTexture);
+                depthTexture = CreateDepthTexture(backend, frameWidth, frameHeight);
+                depthViewHandle = backend.CreateTextureView(depthTexture);
 
                 if (refTargetsCreated)
                 {
@@ -967,20 +853,20 @@ public static class WindowedRenderer
 
                 if (neededVertex > uiVertexCapacity)
                 {
-                    uiVertex.Dispose();
+                    backend.Destroy(uiVertex);
                     uiVertexCapacity = Math.Max(neededVertex * 2, MinimumBufferBytes);
-                    uiVertex = CreateGeometryBuffer(device, uiVertexCapacity, BufferUsage.Vertex | BufferUsage.CopyDst);
+                    uiVertex = backend.CreateBuffer(new BufferDesc(uiVertexCapacity, BufferUsages.Vertex | BufferUsages.CopyDst));
                 }
 
                 if (neededIndex > uiIndexCapacity)
                 {
-                    uiIndex.Dispose();
+                    backend.Destroy(uiIndex);
                     uiIndexCapacity = Math.Max(neededIndex * 2, MinimumBufferBytes);
-                    uiIndex = CreateGeometryBuffer(device, uiIndexCapacity, BufferUsage.Index | BufferUsage.CopyDst);
+                    uiIndex = backend.CreateBuffer(new BufferDesc(uiIndexCapacity, BufferUsages.Index | BufferUsages.CopyDst));
                 }
 
-                device.Queue.WriteBuffer(uiVertex, 0, ui.Vertices);
-                device.Queue.WriteBuffer(uiIndex, 0, ui.Indices);
+                backend.WriteBuffer(uiVertex, System.Runtime.InteropServices.MemoryMarshal.AsBytes(ui.Vertices), 0);
+                backend.WriteBuffer(uiIndex, System.Runtime.InteropServices.MemoryMarshal.AsBytes(ui.Indices), 0);
 
                 // The layout is expressed in interface pixels, and the canvas is the framebuffer divided by the
                 // interface scale (docs/modules/ui.md 9.1). One factor converts both the projection and the
@@ -1000,7 +886,7 @@ public static class WindowedRenderer
                     BitConverter.TryWriteBytes(transformBytes.AsSpan(element * sizeof(float)), matrix[element]);
                 }
 
-                device.Queue.WriteBuffer(uiTransformBuffer, 0, transformBytes);
+                backend.WriteBuffer(uiTransformBuffer, transformBytes, 0);
                 uiIndexCount = (uint)ui.Indices.Length;
                 uiRanges = ui.Ranges.ToArray();
             }
@@ -1012,20 +898,26 @@ public static class WindowedRenderer
 
                 if (neededVertex > dynamicVertexCapacity)
                 {
-                    dynamicVertex.Dispose();
+                    backend.Destroy(dynamicVertex);
                     dynamicVertexCapacity = Math.Max(neededVertex * 2, MinimumBufferBytes);
-                    dynamicVertex = CreateGeometryBuffer(device, dynamicVertexCapacity, BufferUsage.Vertex | BufferUsage.CopyDst);
+                    dynamicVertex = backend.CreateBuffer(new BufferDesc(dynamicVertexCapacity, BufferUsages.Vertex | BufferUsages.CopyDst));
                 }
 
                 if (neededIndex > dynamicIndexCapacity)
                 {
-                    dynamicIndex.Dispose();
+                    backend.Destroy(dynamicIndex);
                     dynamicIndexCapacity = Math.Max(neededIndex * 2, MinimumBufferBytes);
-                    dynamicIndex = CreateGeometryBuffer(device, dynamicIndexCapacity, BufferUsage.Index | BufferUsage.CopyDst);
+                    dynamicIndex = backend.CreateBuffer(new BufferDesc(dynamicIndexCapacity, BufferUsages.Index | BufferUsages.CopyDst));
                 }
 
-                device.Queue.WriteBuffer(dynamicVertex, 0, dynamic.Vertices.AsSpan(0, dynamic.VertexFloats));
-                device.Queue.WriteBuffer(dynamicIndex, 0, dynamic.Indices.AsSpan(0, dynamic.IndexCount));
+                backend.WriteBuffer(
+                    dynamicVertex,
+                    System.Runtime.InteropServices.MemoryMarshal.AsBytes(dynamic.Vertices.AsSpan(0, dynamic.VertexFloats)),
+                    0);
+                backend.WriteBuffer(
+                    dynamicIndex,
+                    System.Runtime.InteropServices.MemoryMarshal.AsBytes(dynamic.Indices.AsSpan(0, dynamic.IndexCount)),
+                    0);
                 dynamicIndexCount = (uint)dynamic.IndexCount;
             }
 
@@ -1131,18 +1023,18 @@ public static class WindowedRenderer
                 {
                     retiredVertex.Add(vertexBuffer);
                     vertexCapacity = Math.Max(neededVertex * 2, MinimumBufferBytes);
-                    vertexBuffer = CreateGeometryBuffer(device, vertexCapacity, BufferUsage.Vertex | BufferUsage.CopyDst);
+                    vertexBuffer = backend.CreateBuffer(new BufferDesc(vertexCapacity, BufferUsages.Vertex | BufferUsages.CopyDst));
                 }
 
                 if (neededIndex > indexCapacity)
                 {
                     retiredIndex.Add(indexBuffer);
                     indexCapacity = Math.Max(neededIndex * 2, MinimumBufferBytes);
-                    indexBuffer = CreateGeometryBuffer(device, indexCapacity, BufferUsage.Index | BufferUsage.CopyDst);
+                    indexBuffer = backend.CreateBuffer(new BufferDesc(indexCapacity, BufferUsages.Index | BufferUsages.CopyDst));
                 }
 
-                device.Queue.WriteBuffer(vertexBuffer, 0, rebuilt.Vertices.AsSpan());
-                device.Queue.WriteBuffer(indexBuffer, 0, rebuilt.Indices.AsSpan());
+                backend.WriteBuffer(vertexBuffer, System.Runtime.InteropServices.MemoryMarshal.AsBytes(rebuilt.Vertices.AsSpan()), 0);
+                backend.WriteBuffer(indexBuffer, System.Runtime.InteropServices.MemoryMarshal.AsBytes(rebuilt.Indices.AsSpan()), 0);
 
                 uploadBytes += (long)rebuilt.Vertices.Length * sizeof(float);
                 uploadBytes += (long)rebuilt.Indices.Length * sizeof(uint);
@@ -1237,7 +1129,7 @@ public static class WindowedRenderer
             var pass = backend.BeginRenderPass(
                 encoder,
                 [ColorAttachmentDesc.Clear(frameView, frameColour)],
-                DepthAttachmentDesc.Clear(wgpu.AdoptTextureView(depthView), 0f));
+                DepthAttachmentDesc.Clear(depthViewHandle, 0f));
 
             // Camera/light/fog uniforms are frame setup, not pass ordering. The scene pass sequence itself comes from
             // WorldRenderPipeline so the windowed path and the offscreen path share one execution order.
@@ -1261,7 +1153,7 @@ public static class WindowedRenderer
                 BitConverter.TryWriteBytes(cameraBytes.AsSpan(index * sizeof(float)), cameraBlock[index]);
             }
 
-            device.Queue.WriteBuffer(cameraBuffer, 0, cameraBytes.AsSpan());
+            backend.WriteBuffer(cameraBuffer, cameraBytes, 0);
 
             // Per-frame lightmap parameters: day/night changes only this block, never the mesh.
             var frameLightmapBytes = new byte[Shaders.ShaderBindings.LightmapBytes];
@@ -1270,7 +1162,7 @@ public static class WindowedRenderer
                 ? currentRequest.GlintTime
                 : (float)(System.Diagnostics.Stopwatch.GetTimestamp() / (double)System.Diagnostics.Stopwatch.Frequency);
             LightmapUniformCodec.Write(frameLightmap with { Padding = glintTime }, frameLightmapBytes);
-            device.Queue.WriteBuffer(lightmapBuffer, 0, frameLightmapBytes.AsSpan());
+            backend.WriteBuffer(lightmapBuffer, frameLightmapBytes, 0);
 
             // Per-frame fog colour (time/weather driven); the range stays as configured.
             var frameFogColour = fogPerFrame?.Invoke() ?? currentRequest.FogColour;
@@ -1283,7 +1175,7 @@ public static class WindowedRenderer
             frameFogValues[5] = currentRequest.Diagnostics?.FogEnd ?? 160f;
             var frameFogBytes = new byte[Shaders.ShaderBindings.FogBytes];
             System.Runtime.InteropServices.MemoryMarshal.AsBytes(frameFogValues.AsSpan()).CopyTo(frameFogBytes);
-            device.Queue.WriteBuffer(fogBuffer, 0, frameFogBytes.AsSpan());
+            backend.WriteBuffer(fogBuffer, frameFogBytes, 0);
 
             backend.SetBindGroup(pass, 0, bindGroup);
 
@@ -1391,8 +1283,8 @@ public static class WindowedRenderer
                         if (dynamicIndexCount > 0)
                         {
                             backend.SetPipeline(pass, entityPipeline);
-                            backend.SetVertexBuffer(pass, 0, wgpu.AdoptBuffer(dynamicVertex), 0, dynamicVertexCapacity);
-                            backend.SetIndexBuffer(pass, wgpu.AdoptBuffer(dynamicIndex), IndexFormat.Uint32, 0, (ulong)dynamicIndexCount * sizeof(uint));
+                            backend.SetVertexBuffer(pass, 0, dynamicVertex, 0, dynamicVertexCapacity);
+                            backend.SetIndexBuffer(pass, dynamicIndex, IndexFormat.Uint32, 0, (ulong)dynamicIndexCount * sizeof(uint));
                             if (entitySkin.Created)
                             {
                                 backend.SetBindGroup(pass, 0, entitySkin.BindGroup);
@@ -1456,8 +1348,8 @@ public static class WindowedRenderer
                         }
                         else if (useStaticWorld)
                         {
-                            backend.SetVertexBuffer(pass, 0, wgpu.AdoptBuffer(vertexBuffer));
-                            backend.SetIndexBuffer(pass, wgpu.AdoptBuffer(indexBuffer), IndexFormat.Uint32);
+                            backend.SetVertexBuffer(pass, 0, vertexBuffer);
+                            backend.SetIndexBuffer(pass, indexBuffer, IndexFormat.Uint32);
                             backend.DrawIndexed(pass, (uint)currentRequest.Indices.Length, 1, 0, 0, 1);
                         }
 
@@ -1466,18 +1358,20 @@ public static class WindowedRenderer
                         if (useStaticWorld && currentRequest.CutoutVertices is { Length: > 0 } windowCutoutVertices &&
                             currentRequest.CutoutIndices is { Length: > 0 } windowCutoutIndices)
                         {
-                            using var windowCutoutVertexBuffer = device.CreateBufferInit(
-                                new BufferInitDescriptor { Usage = BufferUsage.Vertex },
-                                windowCutoutVertices.AsSpan());
-                            using var windowCutoutIndexBuffer = device.CreateBufferInit(
-                                new BufferInitDescriptor { Usage = BufferUsage.Index },
-                                windowCutoutIndices.AsSpan());
+                            var windowCutoutVertexBuffer = backend.CreateBufferInit(
+                                new BufferDesc((ulong)windowCutoutVertices.Length * sizeof(float), BufferUsages.Vertex),
+                                System.Runtime.InteropServices.MemoryMarshal.AsBytes(windowCutoutVertices.AsSpan()));
+                            var windowCutoutIndexBuffer = backend.CreateBufferInit(
+                                new BufferDesc((ulong)windowCutoutIndices.Length * sizeof(uint), BufferUsages.Index),
+                                System.Runtime.InteropServices.MemoryMarshal.AsBytes(windowCutoutIndices.AsSpan()));
 
                             backend.SetPipeline(pass, cutoutPipeline);
                             backend.SetBindGroup(pass, 0, bindGroup);
-                            backend.SetVertexBuffer(pass, 0, wgpu.AdoptBuffer(windowCutoutVertexBuffer));
-                            backend.SetIndexBuffer(pass, wgpu.AdoptBuffer(windowCutoutIndexBuffer), IndexFormat.Uint32);
+                            backend.SetVertexBuffer(pass, 0, windowCutoutVertexBuffer);
+                            backend.SetIndexBuffer(pass, windowCutoutIndexBuffer, IndexFormat.Uint32);
                             backend.DrawIndexed(pass, (uint)windowCutoutIndices.Length, 1, 0, 0, 1);
+                            backend.Destroy(windowCutoutIndexBuffer);
+                            backend.Destroy(windowCutoutVertexBuffer);
                         }
                         break;
                     }
@@ -1501,13 +1395,13 @@ public static class WindowedRenderer
                 var blitPass = backend.BeginRenderPass(
                     encoder,
                     [],
-                    DepthAttachmentDesc.Keep(wgpu.AdoptTextureView(cloudDepthView)));
+                    DepthAttachmentDesc.Keep(cloudDepthViewHandle));
                 try
                 {
                     backend.SetPipeline(blitPass, blitDepthPipeline);
-                    backend.SetBindGroup(blitPass, 0, wgpu.AdoptBindGroup(device.CreateBindGroup(
-                        blitDepthNativeLayout,
-                        [BindGroupEntry.TextureView(0, depthView), BindGroupEntry.Sampler(1, blitDepthSampler)])));
+                    backend.SetBindGroup(blitPass, 0, backend.CreateBindGroup(
+                        blitDepthLayout,
+                        [BindGroupEntryDesc.Texture(0, depthViewHandle), BindGroupEntryDesc.Sampler(1, blitDepthSamplerHandle)]));
                     backend.Draw(blitPass, 3, 1, 0, 0);
                 }
                 finally
@@ -1602,7 +1496,7 @@ public static class WindowedRenderer
                 // Cloud OIT stages use the independent cloud depth target (blitted from the opaque depth above), so the
                 // cloud depth-bounds write culls only the cloud's own interior faces without hiding terrain behind it.
                 var cloudOitDepth = cloudDepthTargetsCreated
-                    ? DepthAttachmentDesc.Keep(wgpu.AdoptTextureView(cloudDepthView))
+                    ? DepthAttachmentDesc.Keep(cloudDepthViewHandle)
                     : depthLoadStore;
 
                 ReferenceOitPasses.Record(new ReferenceOitPasses.Parameters
@@ -1660,7 +1554,7 @@ public static class WindowedRenderer
                 var worldTextPass = backend.BeginRenderPass(
                     encoder,
                     [ColorAttachmentDesc.Keep(frameView)],
-                    DepthAttachmentDesc.Keep(wgpu.AdoptTextureView(depthView)));
+                    DepthAttachmentDesc.Keep(depthViewHandle));
                 try
                 {
                     worldText.Draw(backend, worldTextPass);
@@ -1677,7 +1571,7 @@ public static class WindowedRenderer
                 var cloudPass = backend.BeginRenderPass(
                     encoder,
                     [ColorAttachmentDesc.Keep(frameView)],
-                    DepthAttachmentDesc.Keep(wgpu.AdoptTextureView(depthView)));
+                    DepthAttachmentDesc.Keep(depthViewHandle));
                 try
                 {
                     if (cloudDrawFrame is { } cloudDraw)
@@ -1698,14 +1592,14 @@ public static class WindowedRenderer
             var uiPass = backend.BeginRenderPass(
                 encoder,
                 [ColorAttachmentDesc.Keep(frameView)],
-                DepthAttachmentDesc.Keep(wgpu.AdoptTextureView(depthView)));
+                DepthAttachmentDesc.Keep(depthViewHandle));
             try
             {
 
             if (uiIndexCount > 0 && uiRanges.Length > 0)
             {
-                backend.SetVertexBuffer(uiPass, 0, wgpu.AdoptBuffer(uiVertex), 0, uiVertexCapacity);
-                backend.SetIndexBuffer(uiPass, wgpu.AdoptBuffer(uiIndex), IndexFormat.Uint32, 0, (ulong)uiIndexCount * sizeof(uint));
+                backend.SetVertexBuffer(uiPass, 0, uiVertex, 0, uiVertexCapacity);
+                backend.SetIndexBuffer(uiPass, uiIndex, IndexFormat.Uint32, 0, (ulong)uiIndexCount * sizeof(uint));
 
                 var boundMaterial = (UiMaterial?)null;
 
@@ -1725,19 +1619,19 @@ public static class WindowedRenderer
                         if (range.Material == UiMaterial.Text)
                         {
                             backend.SetPipeline(uiPass, wgpu.AdoptPipeline(uiTextPipeline));
-                            backend.SetBindGroup(uiPass, 0, wgpu.AdoptBindGroup(uiTextBindGroup));
+                            backend.SetBindGroup(uiPass, 0, uiTextBindGroup);
                         }
                         else if (range.Material == UiMaterial.Sprite &&
                                  range.SpriteIndex >= 0 &&
                                  range.SpriteIndex < spriteBindGroups.Count)
                         {
                             backend.SetPipeline(uiPass, wgpu.AdoptPipeline(uiSpritePipeline));
-                            backend.SetBindGroup(uiPass, 0, wgpu.AdoptBindGroup(spriteBindGroups[range.SpriteIndex]));
+                            backend.SetBindGroup(uiPass, 0, spriteBindGroups[range.SpriteIndex]);
                         }
                         else
                         {
                             backend.SetPipeline(uiPass, wgpu.AdoptPipeline(uiPipeline));
-                            backend.SetBindGroup(uiPass, 0, wgpu.AdoptBindGroup(uiBindGroup));
+                            backend.SetBindGroup(uiPass, 0, uiBindGroup);
                         }
                     }
 
@@ -1802,12 +1696,12 @@ public static class WindowedRenderer
 
         foreach (var buffer in retiredVertex)
         {
-            buffer.Dispose();
+            backend.Destroy(buffer);
         }
 
         foreach (var buffer in retiredIndex)
         {
-            buffer.Dispose();
+            backend.Destroy(buffer);
         }
 
         Console.WriteLine(
@@ -1864,21 +1758,21 @@ public static class WindowedRenderer
             + $"worst {worstRebuildMs:F1} ms, uploaded {uploadBytes / (1024d * 1024d):F1} MB; "
             + $"camera avg {(presented == 0 ? 0 : cameraTotalMs / presented):F1} ms, worst {worstCameraMs:F1} ms");
 
-        dynamicVertex.Dispose();
-        dynamicIndex.Dispose();
+        backend.Destroy(dynamicVertex);
+        backend.Destroy(dynamicIndex);
         for (var layerIndex = 0; layerIndex < entityLayerVertex.Count; layerIndex++)
         {
             backend.Destroy(entityLayerVertex[layerIndex]);
             backend.Destroy(entityLayerIndex[layerIndex]);
         }
 
-        uiVertex.Dispose();
-        uiIndex.Dispose();
-        uiTransformBuffer.Dispose();
+        backend.Destroy(uiVertex);
+        backend.Destroy(uiIndex);
+        backend.Destroy(uiTransformBuffer);
 
-        vertexBuffer.Dispose();
-        depthView.Dispose();
-        depthTexture.Dispose();
+        backend.Destroy(vertexBuffer);
+        backend.Destroy(depthViewHandle);
+        backend.Destroy(depthTexture);
         // The reference OIT targets only exist once a frame has needed transparency, so their handles are guarded: a
         // handle that was never created has nothing to release, and Destroy rejects a default handle.
         if (refTargetsCreated)
@@ -1888,18 +1782,23 @@ public static class WindowedRenderer
             backend.Destroy(refAccumulateBindGroup);
             backend.Destroy(refCompositeBindGroup);
             backend.Destroy(refDepthBoundsView);
-            refDepthBoundsTexture.Dispose();
+            backend.Destroy(refDepthBoundsTexture);
             backend.Destroy(refDepthBoundsCulledView);
-            refDepthBoundsCulledTexture.Dispose();
+            backend.Destroy(refDepthBoundsCulledTexture);
             backend.Destroy(refTransmittance0View);
-            refTransmittance0Texture.Dispose();
+            backend.Destroy(refTransmittance0Texture);
             backend.Destroy(refTransmittance1View);
-            refTransmittance1Texture.Dispose();
+            backend.Destroy(refTransmittance1Texture);
             backend.Destroy(refAccumulateView);
-            refAccumulateTexture.Dispose();
+            backend.Destroy(refAccumulateTexture);
+            if (cloudDepthTargetsCreated)
+            {
+                backend.Destroy(cloudDepthViewHandle);
+                backend.Destroy(cloudDepthTexture);
+            }
         }
 
-        indexBuffer.Dispose();
+        backend.Destroy(indexBuffer);
 
         // The frame pipelines and pipeline layouts are seam handles, so the frame loop's exit releases them by hand: a
         // handle is pure identity and cannot carry a Dispose (render-backend-seam.md 9).
@@ -1960,28 +1859,22 @@ public static class WindowedRenderer
     private static WgpuBuffer CreateGeometryBuffer(Device device, ulong sizeBytes, BufferUsage usage) =>
         device.CreateBuffer(new BufferDescriptor { Size = sizeBytes, Usage = usage });
 
-    private static Texture CreateDepthTexture(Device device, uint width, uint height) =>
-        device.CreateTexture(new TextureDescriptor
-        {
-            Size = new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 },
-            MipLevelCount = 1,
-            SampleCount = 1,
-            Dimension = WGPUTextureDimension._2D,
-            Format = WGPUTextureFormat.Depth32Float,
-            Usage = TextureUsage.RenderAttachment | TextureUsage.CopySrc | TextureUsage.CopyDst | TextureUsage.TextureBinding
-        });
+    private static TextureHandle CreateDepthTexture(IRenderBackend backend, uint width, uint height) =>
+        backend.CreateTexture(new TextureDesc(
+            width,
+            height,
+            TextureFormat.Depth32Float,
+            1,
+            TextureUsages.RenderAttachment | TextureUsages.CopySrc | TextureUsages.CopyDst | TextureUsages.TextureBinding));
 
     /// <summary>Creates one order independent transparency target: renderable and sampleable, at frame size.</summary>
-    private static Texture CreateOitTarget(Device device, uint width, uint height, TextureFormat format) =>
-        device.CreateTexture(new TextureDescriptor
-        {
-            Size = new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 },
-            MipLevelCount = 1,
-            SampleCount = 1,
-            Dimension = WGPUTextureDimension._2D,
-            Format = BackendConvert.ToWgpu(format),
-            Usage = TextureUsage.RenderAttachment | TextureUsage.TextureBinding
-        });
+    private static TextureHandle CreateOitTarget(IRenderBackend backend, uint width, uint height, TextureFormat format) =>
+        backend.CreateTexture(new TextureDesc(
+            width,
+            height,
+            format,
+            1,
+            TextureUsages.RenderAttachment | TextureUsages.TextureBinding));
 
     private static SurfaceSource ToSurfaceSource(NativeSurfaceSource source) => source.Tag switch
     {
