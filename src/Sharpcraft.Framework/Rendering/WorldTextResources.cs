@@ -18,6 +18,7 @@ internal sealed class WorldTextResources : IDisposable
     private readonly RenderPipeline _pipeline;
     private readonly Texture _texture;
     private readonly TextureView _view;
+    private readonly SamplerCache _samplers;
     private readonly Sampler _sampler;
     private readonly BindGroup _bindGroup;
     private Brew.Wgpu.Buffer _vertex = default;
@@ -50,18 +51,11 @@ internal sealed class WorldTextResources : IDisposable
             0,
             new WGPUOrigin3D { x = 0, y = 0, z = 0 });
         _view = _texture.CreateView();
-        _sampler = device.CreateSampler(new SamplerDescriptor
-        {
-            AddressModeU = WGPUAddressMode.ClampToEdge,
-            AddressModeV = WGPUAddressMode.ClampToEdge,
-            AddressModeW = WGPUAddressMode.ClampToEdge,
-            MagFilter = WGPUFilterMode.Nearest,
-            MinFilter = WGPUFilterMode.Nearest,
-            MipmapFilter = WGPUMipmapFilterMode.Nearest,
-            LodMinClamp = 0f,
-            LodMaxClamp = 1f,
-            MaxAnisotropy = 1
-        });
+        // One sampler per state for this resource; the sampler itself is owned by the cache (T-784 S1b), so Dispose
+        // releases the cache rather than the sampler.
+        _samplers = new SamplerCache();
+        _samplers.Initialize(device);
+        _sampler = _samplers.GetClampToEdge(FilterMode.Nearest);
 
         _layout = device.CreateBindGroupLayout(
         [
@@ -170,7 +164,7 @@ internal sealed class WorldTextResources : IDisposable
         _pipeline.Dispose();
         _pipelineLayout.Dispose();
         _layout.Dispose();
-        _sampler.Dispose();
+        _samplers.Dispose();
         _view.Dispose();
         _texture.Dispose();
     }
