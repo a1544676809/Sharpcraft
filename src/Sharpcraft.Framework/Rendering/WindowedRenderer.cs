@@ -165,6 +165,9 @@ public static class WindowedRenderer
         samplers.Initialize(device);
         // The block atlas carries a mip chain, so it samples like the reference MipmappedTexture: linear minification
         // with an unbounded LOD clamp. Clamping to the sprite edge is kept because the atlas relies on padding.
+        // Magnification stays nearest: with a linear magnifier every block face reads visibly soft even at close range,
+        // because a 16 texel sprite is stretched over a whole face. Minification is linear and the LOD clamp is
+        // unbounded, so the derived mip chain still resolves distant ground.
         var atlasSampler = samplers.GetMipmapped(AddressMode.ClampToEdge, FilterMode.Nearest);
 
         Shaders.ShaderPipelines.EnsureValid();

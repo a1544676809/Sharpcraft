@@ -15,8 +15,12 @@ namespace Sharpcraft.Client.Assets;
 /// </remarks>
 public static class AtlasMipChain
 {
-    /// <summary>Levels generated below level zero.</summary>
-    public const int Levels = 4;
+    /// <summary>Upper bound on the levels generated below level zero.</summary>
+    /// <remarks>
+    /// The reference exposes this as the mipmap level option, whose upper bound is four; the actual count is reduced from
+    /// here by <see cref="AtlasMipPolicy.ResolveLevels"/> according to the smallest sprite.
+    /// </remarks>
+    public const int LevelLimit = AtlasMipPolicy.DefaultMaxLevels;
 
     /// <summary>
     /// Builds the levels below level zero.
@@ -31,12 +35,22 @@ public static class AtlasMipChain
         ArgumentNullException.ThrowIfNull(sprites);
 
         var owner = BuildOwnerMap(width, height, sprites);
-        var levels = new List<byte[]>(Levels);
+
+        // The level count is a property of the sprites, not a constant: the reference reduces it until the smallest
+        // sprite can survive its own halving, so a 4x4 sprite caps the atlas well below the option's upper bound.
+        var sizes = new (int Width, int Height)[sprites.Count];
+        for (var index = 0; index < sprites.Count; index++)
+        {
+            sizes[index] = (sprites[index].Width, sprites[index].Height);
+        }
+
+        var levelCount = AtlasMipPolicy.ResolveLevels(sizes, LevelLimit);
+        var levels = new List<byte[]>(levelCount);
         var previous = rgba;
         var previousWidth = width;
         var previousHeight = height;
 
-        for (var level = 0; level < Levels; level++)
+        for (var level = 0; level < levelCount; level++)
         {
             if (previousWidth == 1 && previousHeight == 1)
             {

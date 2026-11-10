@@ -106,14 +106,15 @@ public sealed class SpriteAtlas
 public static class SpriteAtlasBuilder
 {
     /// <summary>
-    /// Texels of edge padding around every sprite.
+    /// Texels of edge padding around every sprite, derived from the atlas mip level at build time.
     /// </summary>
     /// <remarks>
-    /// Two, not one: the uv range ends exactly on the sprite boundary, so a bilinear sample there reads the padding texel
-    /// and the texel after it. With a single texel of padding that second texel belongs to the next sprite, which showed as
-    /// a dark one pixel line on every block edge.
+    /// The reference derives this the same way: one shifted by the mip level, shifted again by the anisotropy exponent.
+    /// A coarse mip samples a wider footprint, so a padding that does not grow with the level lets the neighbouring
+    /// sprite into the sample. Two texels remains the floor even at level zero, because the uv range ends exactly on the
+    /// sprite boundary and a bilinear sample there reads the texel after it.
     /// </remarks>
-    private const int Padding = 2;
+    private static int Padding { get; set; } = AtlasMipPolicy.MinimumPadding;
 
     /// <summary>Animated textures are vertical frame strips; only the first frame enters the atlas.</summary>
     public const string BlockTexturePrefix = "assets/minecraft/textures/block/";
@@ -213,6 +214,17 @@ public static class SpriteAtlasBuilder
             .ToList();
 
         var size = NextPowerOfTwo(ordered.Max(sprite => Math.Max(sprite.Image.Width, sprite.Image.Height)));
+
+        // Padding follows the mip level, and the mip level follows the smallest sprite, so both are resolved before the
+        // shelves are laid out. A fixed padding is what let neighbouring sprites blend into each other at distance.
+        var spriteSizes = new (int Width, int Height)[ordered.Count];
+        for (var index = 0; index < ordered.Count; index++)
+        {
+            spriteSizes[index] = (ordered[index].Image.Width, ordered[index].Image.Height);
+        }
+
+        var mipLevels = AtlasMipPolicy.ResolveLevels(spriteSizes, AtlasMipPolicy.DefaultMaxLevels);
+        Padding = AtlasMipPolicy.ResolvePadding(mipLevels, AtlasMipPolicy.NoAnisotropy);
 
         while (true)
         {
