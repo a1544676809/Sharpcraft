@@ -248,6 +248,24 @@ public interface IRenderBackend
     /// <summary>Draws indexed vertices.</summary>
     void DrawIndexed(RenderPassHandle pass, uint indexCount, uint instanceCount, uint firstIndex, int baseVertex, uint firstInstance);
 
+    /// <summary>Copies a texture region into a buffer, for readback.</summary>
+    /// <param name="encoder">Encoder recording the frame.</param>
+    /// <param name="texture">Texture to read.</param>
+    /// <param name="buffer">Destination buffer, which must be usable as a copy destination.</param>
+    /// <param name="bytesPerRow">Padded row length the destination expects.</param>
+    /// <param name="width">Region width in texels.</param>
+    /// <param name="height">Region height in texels.</param>
+    void CopyTextureToBuffer(CommandEncoderHandle encoder, TextureHandle texture, BufferHandle buffer, uint bytesPerRow, uint width, uint height);
+
+    /// <summary>Copies a byte range between buffers.</summary>
+    /// <param name="encoder">Encoder recording the frame.</param>
+    /// <param name="source">Buffer to read.</param>
+    /// <param name="sourceOffset">First byte read.</param>
+    /// <param name="destination">Buffer to write.</param>
+    /// <param name="destinationOffset">First byte written.</param>
+    /// <param name="size">Bytes to copy.</param>
+    void CopyBufferToBuffer(CommandEncoderHandle encoder, BufferHandle source, ulong sourceOffset, BufferHandle destination, ulong destinationOffset, ulong size);
+
     /// <summary>Begins a compute pass on the encoder.</summary>
     ComputePassHandle BeginComputePass(CommandEncoderHandle encoder);
 
@@ -581,6 +599,24 @@ public sealed class WgpuRenderBackend : IRenderBackend
     public void DrawIndexed(RenderPassHandle pass, uint indexCount, uint instanceCount, uint firstIndex, int baseVertex, uint firstInstance) =>
         RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
             .DrawIndexed(indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
+
+    /// <inheritdoc/>
+    public void CopyTextureToBuffer(CommandEncoderHandle encoder, TextureHandle texture, BufferHandle buffer, uint bytesPerRow, uint width, uint height) =>
+        RequireValid<CommandEncoder>(encoder.Value is not null, encoder.Value).CopyTextureToBuffer(
+            RequireValid<Texture>(texture.Value is not null, texture.Value),
+            RequireValid<Brew.Wgpu.Buffer>(buffer.Value is not null, buffer.Value),
+            bytesPerRow,
+            height,
+            new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 });
+
+    /// <inheritdoc/>
+    public void CopyBufferToBuffer(CommandEncoderHandle encoder, BufferHandle source, ulong sourceOffset, BufferHandle destination, ulong destinationOffset, ulong size) =>
+        RequireValid<CommandEncoder>(encoder.Value is not null, encoder.Value).CopyBufferToBuffer(
+            RequireValid<Brew.Wgpu.Buffer>(source.Value is not null, source.Value),
+            sourceOffset,
+            RequireValid<Brew.Wgpu.Buffer>(destination.Value is not null, destination.Value),
+            destinationOffset,
+            size);
 
     /// <inheritdoc/>
     public ComputePassHandle BeginComputePass(CommandEncoderHandle encoder) =>
