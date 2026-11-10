@@ -98,4 +98,30 @@ internal static class BackendConvert
         PresentMode.Immediate => WGPUPresentMode.Immediate,
         _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "unknown present mode")
     };
+
+    /// <summary>Maps a native compare function back to the neutral one.</summary>
+    /// <param name="compare">Native compare function.</param>
+    internal static CompareFunction FromWgpu(WGPUCompareFunction compare) => compare switch
+    {
+        WGPUCompareFunction.Never => CompareFunction.Never,
+        WGPUCompareFunction.Less => CompareFunction.Less,
+        WGPUCompareFunction.Equal => CompareFunction.Equal,
+        WGPUCompareFunction.LessEqual => CompareFunction.LessEqual,
+        WGPUCompareFunction.Greater => CompareFunction.Greater,
+        WGPUCompareFunction.NotEqual => CompareFunction.NotEqual,
+        WGPUCompareFunction.GreaterEqual => CompareFunction.GreaterEqual,
+        WGPUCompareFunction.Always => CompareFunction.Always,
+        _ => throw new ArgumentOutOfRangeException(nameof(compare), compare, "no neutral counterpart")
+    };
+
+    /// <summary>Maps a native vertex format back to the neutral one.</summary>
+    /// <param name="format">Native vertex format.</param>
+    internal static VertexFormat FromWgpu(WGPUVertexFormat format) => format switch
+    {
+        WGPUVertexFormat.Float32x2 => VertexFormat.Float32x2,
+        WGPUVertexFormat.Float32x3 => VertexFormat.Float32x3,
+        WGPUVertexFormat.Float32x4 => VertexFormat.Float32x4,
+        WGPUVertexFormat.Unorm8x4 => VertexFormat.Unorm8x4,
+        _ => throw new ArgumentOutOfRangeException(nameof(format), format, "no neutral counterpart")
+    };
 }
