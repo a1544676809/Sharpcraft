@@ -231,3 +231,12 @@ public readonly struct PipelineLayoutHandle
 
     internal object Value { get; }
 }
+
+/// <summary>A compute pipeline described independently of the backend.</summary>
+/// <param name="Shader">Shader source the backend compiles.</param>
+/// <param name="EntryPoint">Name of the entry point to run.</param>
+/// <param name="Layout">Pipeline layout the dispatch must match.</param>
+public sealed record ComputePipelineDesc(
+    ReadOnlyMemory<byte> Shader,
+    string EntryPoint,
+    PipelineLayoutHandle Layout);

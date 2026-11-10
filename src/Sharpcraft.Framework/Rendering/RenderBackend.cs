@@ -149,6 +149,17 @@ public readonly struct CommandEncoderHandle
     internal object Value { get; }
 }
 
+/// <summary>An opaque compute pipeline owned by a render backend.</summary>
+public readonly struct ComputePipelineHandle
+{
+    internal ComputePipelineHandle(object value) => Value = value;
+
+    /// <summary>Whether this handle wraps a resource that was actually created.</summary>
+    public bool IsValid => Value is not null;
+
+    internal object Value { get; }
+}
+
 /// <summary>An opaque render pass owned by a render backend.</summary>
 /// <remarks>
 /// A pass is borrowed from its encoder and must end before the encoder is submitted; there is no destroy call, only
@@ -221,6 +232,12 @@ public interface IRenderBackend
 
     /// <summary>Draws indexed vertices.</summary>
     void DrawIndexed(RenderPassHandle pass, uint indexCount, uint instanceCount, uint firstIndex, int baseVertex, uint firstInstance);
+
+    /// <summary>Compiles a compute pipeline from its description.</summary>
+    ComputePipelineHandle CreateComputePipeline(in ComputePipelineDesc desc);
+
+    /// <summary>Releases a compute pipeline.</summary>
+    void Destroy(ComputePipelineHandle pipeline);
 
     /// <summary>Creates a command encoder for one frame's recording.</summary>
     CommandEncoderHandle CreateCommandEncoder();
@@ -390,6 +407,11 @@ public sealed class WgpuRenderBackend : IRenderBackend
     internal PipelineLayout AsPipelineLayout(PipelineLayoutHandle layout) =>
         RequireValid<PipelineLayout>(layout.Value is not null, layout.Value);
 
+    /// <summary>Unwraps a compute pipeline handle for code that has not moved behind the seam yet.</summary>
+    /// <param name="pipeline">Handle from this backend.</param>
+    internal ComputePipeline AsComputePipeline(ComputePipelineHandle pipeline) =>
+        RequireValid<ComputePipeline>(pipeline.Value is not null, pipeline.Value);
+
     /// <summary>Wraps a command encoder the caller already owns.</summary>
     /// <param name="encoder">Encoder the caller owns.</param>
     internal CommandEncoderHandle AdoptCommandEncoder(CommandEncoder encoder) => new(encoder);
@@ -529,6 +551,28 @@ public sealed class WgpuRenderBackend : IRenderBackend
     public void DrawIndexed(RenderPassHandle pass, uint indexCount, uint instanceCount, uint firstIndex, int baseVertex, uint firstInstance) =>
         RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
             .DrawIndexed(indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
+
+    /// <inheritdoc/>
+    public ComputePipelineHandle CreateComputePipeline(in ComputePipelineDesc desc)
+    {
+        var layout = RequireValid<PipelineLayout>(desc.Layout.Value is not null, desc.Layout.Value);
+
+        // The native call wants a compiled module, so the seam is where that module is made and released; a caller
+        // states its shader as source, exactly as it does for a render pipeline.
+        using var module = _device.CreateShaderModule(new ShaderModuleDescriptor
+        {
+            Source = ShaderSource.FromWgsl(desc.Shader.ToArray())
+        });
+
+        return new ComputePipelineHandle(_device.CreateComputePipeline(
+            module,
+            System.Text.Encoding.UTF8.GetBytes(desc.EntryPoint),
+            layout));
+    }
+
+    /// <inheritdoc/>
+    public void Destroy(ComputePipelineHandle pipeline) =>
+        RequireValid<ComputePipeline>(pipeline.Value is not null, pipeline.Value).Dispose();
 
     /// <inheritdoc/>
     public CommandEncoderHandle CreateCommandEncoder() => new(_device.CreateCommandEncoder());

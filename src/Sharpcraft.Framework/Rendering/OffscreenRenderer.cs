@@ -804,7 +804,10 @@ public static class OffscreenRenderer
                 {
                     Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("depth_pyramid")))
                 });
-                using var computePipeline = device.CreateComputePipeline(shader, "cs_downsample"u8, computePipelineLayout);
+                var computePipelineHandle = backend.CreateComputePipeline(new ComputePipelineDesc(
+                    System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("depth_pyramid")),
+                    "cs_downsample",
+                    backend.AdoptPipelineLayout(computePipelineLayout)));
 
                 var levelWidth = (int)width;
                 var levelHeight = (int)height;
@@ -849,7 +852,7 @@ public static class OffscreenRenderer
                         ]);
 
                     using var computePass = encoder.BeginComputePass();
-                    computePass.SetPipeline(computePipeline);
+                    computePass.SetPipeline(backend.AsComputePipeline(computePipelineHandle));
                     computePass.SetBindGroup(0, levelBindGroup, []);
                     computePass.DispatchWorkgroups(
                         (uint)Math.Max(1, (nextWidth + 7) / 8),
@@ -941,7 +944,10 @@ public static class OffscreenRenderer
                 {
                     Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("motion_vectors")))
                 });
-                using var motionPipeline = device.CreateComputePipeline(motionShader, "cs_motion"u8, motionPipelineLayout);
+                var motionPipelineHandle = backend.CreateComputePipeline(new ComputePipelineDesc(
+                    System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("motion_vectors")),
+                    "cs_motion",
+                    backend.AdoptPipelineLayout(motionPipelineLayout)));
                 using var motionBindGroup = device.CreateBindGroup(
                     motionLayout,
                     [
@@ -952,7 +958,7 @@ public static class OffscreenRenderer
                     ]);
 
                 using var motionPass = encoder.BeginComputePass();
-                motionPass.SetPipeline(motionPipeline);
+                motionPass.SetPipeline(backend.AsComputePipeline(motionPipelineHandle));
                 motionPass.SetBindGroup(0, motionBindGroup, []);
                 motionPass.DispatchWorkgroups((uint)Math.Max(1, ((int)width + 7) / 8), (uint)Math.Max(1, ((int)height + 7) / 8));
                 motionPass.End();
