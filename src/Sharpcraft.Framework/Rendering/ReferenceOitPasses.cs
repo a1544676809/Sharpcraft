@@ -66,8 +66,7 @@ internal static class ReferenceOitPasses
         public PipelineHandle CompositePipeline { get; init; }
 
         /// <summary>The main atlas bind group the terrain stages sample.</summary>
-        /// <remarks>The shared atlas bind group is still created on the device by its owner, so it stays native here.</remarks>
-        public BindGroup TerrainAtlas { get; init; }
+        public BindGroupHandle TerrainAtlas { get; init; }
 
         /// <summary>Group 0 of the cull pass: the terrain bounds.</summary>
         public BindGroupHandle Cull { get; init; }
@@ -100,7 +99,7 @@ internal static class ReferenceOitPasses
         public BindGroupHandle ItemAtlas { get; init; }
 
         /// <summary>Records the translucent terrain geometry.</summary>
-        public Action<RenderPassEncoder> DrawTerrain { get; init; }
+        public Action<RenderPassHandle> DrawTerrain { get; init; }
 
         /// <summary>Records the translucent item geometry.</summary>
         public Action<RenderPassEncoder> DrawItems { get; init; }
@@ -109,11 +108,9 @@ internal static class ReferenceOitPasses
     /// <summary>Records every reference transparency pass for the frame.</summary>
     public static void Record(in Parameters p)
     {
-        // Every pass is recorded through the seam. The only native objects left are the shared atlas bind group and the
-        // geometry callbacks, which still take the native pass.
+        // Every pass is recorded through the seam. Only the item geometry callback still takes the native pass, because
+        // the per-layer entity buffers it binds have not moved behind the seam yet.
         var backend = p.Backend;
-        var wgpu = backend as WgpuRenderBackend
-            ?? throw new InvalidOperationException("the seam implementation must adopt its own handles");
         var encoder = p.Encoder;
         var clouds = p.Clouds;
         var zero = Vector4.Zero;
@@ -126,8 +123,8 @@ internal static class ReferenceOitPasses
         try
         {
             backend.SetPipeline(boundsPass, p.BoundsPipeline);
-            backend.SetBindGroup(boundsPass, 0, wgpu.AdoptBindGroup(p.TerrainAtlas));
-            p.DrawTerrain(wgpu.AsRenderPass(boundsPass));
+            backend.SetBindGroup(boundsPass, 0, p.TerrainAtlas);
+            p.DrawTerrain(boundsPass);
         }
         finally
         {
@@ -161,8 +158,8 @@ internal static class ReferenceOitPasses
             try
             {
                 backend.SetPipeline(cloudBoundsPass, p.CloudBoundsPipeline);
-                backend.SetBindGroup(cloudBoundsPass, 0, wgpu.AdoptBindGroup(clouds.BindGroup));
-                clouds.DrawGeometry(wgpu.AsRenderPass(cloudBoundsPass));
+                backend.SetBindGroup(cloudBoundsPass, 0, clouds.BindGroup);
+                clouds.DrawGeometry(backend, cloudBoundsPass);
             }
             finally
             {
@@ -181,9 +178,9 @@ internal static class ReferenceOitPasses
         try
         {
             backend.SetPipeline(transmittancePass, p.TransmittancePipeline);
-            backend.SetBindGroup(transmittancePass, 0, wgpu.AdoptBindGroup(p.TerrainAtlas));
+            backend.SetBindGroup(transmittancePass, 0, p.TerrainAtlas);
             backend.SetBindGroup(transmittancePass, 1, p.TransmittanceGroup);
-            p.DrawTerrain(wgpu.AsRenderPass(transmittancePass));
+            p.DrawTerrain(transmittancePass);
         }
         finally
         {
@@ -202,9 +199,9 @@ internal static class ReferenceOitPasses
             try
             {
                 backend.SetPipeline(cloudTransPass, p.CloudTransmittancePipeline);
-                backend.SetBindGroup(cloudTransPass, 0, wgpu.AdoptBindGroup(clouds.BindGroup));
+                backend.SetBindGroup(cloudTransPass, 0, clouds.BindGroup);
                 backend.SetBindGroup(cloudTransPass, 1, p.TransmittanceGroup);
-                clouds.DrawGeometry(wgpu.AsRenderPass(cloudTransPass));
+                clouds.DrawGeometry(backend, cloudTransPass);
             }
             finally
             {
@@ -220,9 +217,9 @@ internal static class ReferenceOitPasses
         try
         {
             backend.SetPipeline(accumulatePass, p.AccumulatePipeline);
-            backend.SetBindGroup(accumulatePass, 0, wgpu.AdoptBindGroup(p.TerrainAtlas));
+            backend.SetBindGroup(accumulatePass, 0, p.TerrainAtlas);
             backend.SetBindGroup(accumulatePass, 1, p.AccumulateGroup);
-            p.DrawTerrain(wgpu.AsRenderPass(accumulatePass));
+            p.DrawTerrain(accumulatePass);
         }
         finally
         {
@@ -238,9 +235,9 @@ internal static class ReferenceOitPasses
             try
             {
                 backend.SetPipeline(cloudAccumPass, p.CloudAccumulatePipeline);
-                backend.SetBindGroup(cloudAccumPass, 0, wgpu.AdoptBindGroup(clouds.BindGroup));
+                backend.SetBindGroup(cloudAccumPass, 0, clouds.BindGroup);
                 backend.SetBindGroup(cloudAccumPass, 1, p.AccumulateGroup);
-                clouds.DrawGeometry(wgpu.AsRenderPass(cloudAccumPass));
+                clouds.DrawGeometry(backend, cloudAccumPass);
             }
             finally
             {

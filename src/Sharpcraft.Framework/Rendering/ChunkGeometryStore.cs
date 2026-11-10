@@ -117,7 +117,7 @@ public sealed class ChunkGeometryStore : IDisposable
     }
 
     /// <summary>Draws the resident chunks, skipping any whose bounds fall outside the frustum.</summary>
-    public void Draw(RenderPassEncoder pass, ReadOnlySpan<Vector4> planes)
+    public void Draw(RenderPassHandle pass, ReadOnlySpan<Vector4> planes)
     {
         CulledLastFrame = 0;
 
@@ -134,10 +134,10 @@ public sealed class ChunkGeometryStore : IDisposable
     }
 
     /// <summary>Draws all resident chunks (no culling).</summary>
-    public void Draw(RenderPassEncoder pass) => Draw(pass, default);
+    public void Draw(RenderPassHandle pass) => Draw(pass, default);
 
     /// <summary>Draws the resident chunks farthest first, which is the order blending needs.</summary>
-    public void DrawFarthestFirst(RenderPassEncoder pass, Vector3 eye)
+    public void DrawFarthestFirst(RenderPassHandle pass, Vector3 eye)
     {
         _sortKeys.Clear();
         foreach (var (key, entry) in _entries)
@@ -159,16 +159,12 @@ public sealed class ChunkGeometryStore : IDisposable
         }
     }
 
-    private void DrawEntry(RenderPassEncoder pass, Entry entry)
+    private void DrawEntry(RenderPassHandle pass, Entry entry)
     {
         DrawCallsTotal++;
-        // Pass recording has not moved behind the seam yet, so unwrap the native buffers for it (W2).
-        var wgpu = _backend is WgpuRenderBackend native
-            ? native
-            : throw new InvalidOperationException("the seam implementation must unwrap its own handles");
-        pass.SetVertexBuffer(0, wgpu.AsBuffer(entry.Vertex));
-        pass.SetIndexBuffer(wgpu.AsBuffer(entry.Index), WGPUIndexFormat.Uint32);
-        pass.DrawIndexed(entry.IndexCount);
+        _backend.SetVertexBuffer(pass, 0, entry.Vertex);
+        _backend.SetIndexBuffer(pass, entry.Index, IndexFormat.Uint32);
+        _backend.DrawIndexed(pass, entry.IndexCount, 1, 0, 0, 0);
     }
 
     private (Vector3 Minimum, Vector3 Maximum) BoundsOf(GeometryData mesh)

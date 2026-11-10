@@ -3,8 +3,6 @@
 
 using System.Numerics;
 using System.Runtime.InteropServices;
-using Brew.Wgpu;
-using Brew.Wgpu.Native;
 
 namespace Sharpcraft.Framework.Rendering;
 
@@ -13,49 +11,49 @@ namespace Sharpcraft.Framework.Rendering;
 /// produces new arrays; every frame writes just the 80-byte transform (model + tint), matching the reference CloudInfo
 /// uniform pattern instead of re-expanding the whole mesh.
 /// </summary>
+/// <remarks>
+/// Every resource is a seam handle: the layout, the bind group, the buffers and the draw all go through the backend, so
+/// this type holds nothing the ring could not re-create on a different implementation.
+/// </remarks>
 internal sealed class CloudOitResources : IDisposable
 {
     private const ulong TransformUniformSize = 80;
 
-    private readonly Device _device;
-    private readonly Brew.Wgpu.Buffer _transform;
+    private readonly IRenderBackend _backend;
+    private readonly BufferHandle _transform;
     private const float MinCapacity = 4096;
-    private Brew.Wgpu.Buffer _vertex;
-    private Brew.Wgpu.Buffer _index;
+    private BufferHandle _vertex;
+    private BufferHandle _index;
     private ulong _vertexCapacity = (ulong)MinCapacity;
     private ulong _indexCapacity = (ulong)MinCapacity;
     private uint _indexCount;
     private float[]? _sourceVertices;
     private uint[]? _sourceIndices;
 
-    public CloudOitResources(Device device, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize)
+    public CloudOitResources(IRenderBackend backend, BufferHandle cameraBuffer, ulong cameraSize)
     {
-        _device = device;
-        Layout = device.CreateBindGroupLayout(
+        _backend = backend;
+        Layout = backend.CreateBindGroupLayout(
         [
-            BindGroupLayoutEntry.Buffer(0, ShaderStage.Vertex, WGPUBufferBindingType.Uniform, false, cameraSize),
-            BindGroupLayoutEntry.Buffer(1, ShaderStage.Vertex | ShaderStage.Fragment, WGPUBufferBindingType.Uniform, false, TransformUniformSize)
+            BindGroupLayoutEntryDesc.UniformBuffer(0, ShaderStages.Vertex) with { MinBindingSize = cameraSize },
+            BindGroupLayoutEntryDesc.UniformBuffer(1, ShaderStages.Vertex | ShaderStages.Fragment) with { MinBindingSize = TransformUniformSize }
         ]);
 
-        _transform = device.CreateBuffer(new BufferDescriptor
-        {
-            Size = TransformUniformSize,
-            Usage = BufferUsage.Uniform | BufferUsage.CopyDst
-        });
-        BindGroup = device.CreateBindGroup(
+        _transform = backend.CreateBuffer(new BufferDesc(TransformUniformSize, BufferUsages.Uniform | BufferUsages.CopyDst));
+        BindGroup = backend.CreateBindGroup(
             Layout,
             [
-                BindGroupEntry.Buffer(0, cameraBuffer, 0, cameraSize),
-                BindGroupEntry.Buffer(1, _transform, 0, TransformUniformSize)
+                BindGroupEntryDesc.Uniform(0, cameraBuffer, 0, cameraSize),
+                BindGroupEntryDesc.Uniform(1, _transform, 0, TransformUniformSize)
             ]);
 
-        _vertex = device.CreateBuffer(new BufferDescriptor { Size = _vertexCapacity, Usage = BufferUsage.Vertex | BufferUsage.CopyDst });
-        _index = device.CreateBuffer(new BufferDescriptor { Size = _indexCapacity, Usage = BufferUsage.Index | BufferUsage.CopyDst });
+        _vertex = backend.CreateBuffer(new BufferDesc(_vertexCapacity, BufferUsages.Vertex | BufferUsages.CopyDst));
+        _index = backend.CreateBuffer(new BufferDesc(_indexCapacity, BufferUsages.Index | BufferUsages.CopyDst));
     }
 
-    public BindGroupLayout Layout { get; }
+    public BindGroupLayoutHandle Layout { get; }
 
-    public BindGroup BindGroup { get; }
+    public BindGroupHandle BindGroup { get; }
 
     /// <summary>Uploads geometry only when the cache arrays change; always refreshes the transform uniform.</summary>
     public void Update(float[] vertices, uint[] indices, Matrix4x4 model, Vector4 tint)
@@ -75,7 +73,7 @@ internal sealed class CloudOitResources : IDisposable
         floats[18] = tint.Z;
         floats[19] = tint.W;
         MemoryMarshal.AsBytes(floats.AsSpan()).CopyTo(transformBytes);
-        _device.Queue.WriteBuffer(_transform, 0, transformBytes.AsSpan());
+        _backend.WriteBuffer(_transform, transformBytes, 0);
     }
 
     private void UploadGeometry(float[] vertices, uint[] indices)
@@ -107,49 +105,52 @@ internal sealed class CloudOitResources : IDisposable
         var vertexBytes = (ulong)(packed.Length * sizeof(float));
         if (vertexBytes > _vertexCapacity)
         {
-            _vertex.Dispose();
+            _backend.Destroy(_vertex);
             _vertexCapacity = Math.Max(vertexBytes * 2, (ulong)MinCapacity);
-            _vertex = _device.CreateBuffer(new BufferDescriptor { Size = _vertexCapacity, Usage = BufferUsage.Vertex | BufferUsage.CopyDst });
+            _vertex = _backend.CreateBuffer(new BufferDesc(_vertexCapacity, BufferUsages.Vertex | BufferUsages.CopyDst));
         }
 
         var indexBytes = (ulong)(indices.Length * sizeof(uint));
         if (indexBytes > _indexCapacity)
         {
-            _index.Dispose();
+            _backend.Destroy(_index);
             _indexCapacity = Math.Max(indexBytes * 2, (ulong)MinCapacity);
-            _index = _device.CreateBuffer(new BufferDescriptor { Size = _indexCapacity, Usage = BufferUsage.Index | BufferUsage.CopyDst });
+            _index = _backend.CreateBuffer(new BufferDesc(_indexCapacity, BufferUsages.Index | BufferUsages.CopyDst));
         }
 
         if (packed.Length > 0)
         {
-            _device.Queue.WriteBuffer(_vertex, 0, MemoryMarshal.AsBytes(packed.AsSpan()));
+            _backend.WriteBuffer(_vertex, MemoryMarshal.AsBytes(packed.AsSpan()), 0);
         }
 
         if (indices.Length > 0)
         {
-            _device.Queue.WriteBuffer(_index, 0, MemoryMarshal.AsBytes(indices.AsSpan()));
+            _backend.WriteBuffer(_index, MemoryMarshal.AsBytes(indices.AsSpan()), 0);
         }
 
         _indexCount = (uint)indices.Length;
     }
 
-    public void DrawGeometry(RenderPassEncoder pass)
+    /// <summary>Records the cloud mesh into a pass that the caller has already bound the pipeline and atlas for.</summary>
+    public void DrawGeometry(IRenderBackend backend, RenderPassHandle pass)
     {
         if (_indexCount == 0)
         {
             return;
         }
 
-        pass.SetVertexBuffer(0, _vertex);
-        pass.SetIndexBuffer(_index, WGPUIndexFormat.Uint32);
-        pass.DrawIndexed(_indexCount);
+        backend.SetVertexBuffer(pass, 0, _vertex);
+        backend.SetIndexBuffer(pass, _index, IndexFormat.Uint32);
+        backend.DrawIndexed(pass, _indexCount, 1, 0, 0, 0);
     }
 
     public void Dispose()
     {
-        _vertex.Dispose();
-        _index.Dispose();
-        _transform.Dispose();
+        _backend.Destroy(_vertex);
+        _backend.Destroy(_index);
+        _backend.Destroy(_transform);
+        _backend.Destroy(BindGroup);
+        _backend.Destroy(Layout);
     }
 
     private static void WriteMatrix(Matrix4x4 matrix, float[] destination, int offset)
