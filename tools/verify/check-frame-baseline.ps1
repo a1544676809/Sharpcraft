@@ -18,6 +18,12 @@
 
     This is a verification tool, not a unit test: each run loads worlds and meshes chunks, so it takes tens of seconds.
 
+    Intermittent by nature: the frame command collects world data from a running server for about eight seconds, and
+    the server keeps ticking between runs. Pinning the clock is not enough to make the image bit-stable, so a
+    difference can mean either a rendering change or world drift and has to be looked at. Measured runs went
+    identical, different by fourteen bytes, identical. Treat this as a signal rather than a hard gate until the world
+    source is isolated.
+
 .PARAMETER Client
     Path to Sharpcraft.Client.exe. Defaults to the debug build in this repository.
 
