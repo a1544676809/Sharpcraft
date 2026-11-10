@@ -14,9 +14,9 @@ namespace Sharpcraft.Framework.Rendering;
 /// per texel, writes the rows bottom-up and forces the alpha channel opaque; this does the same. The copy only happens
 /// when a screenshot is requested, so a steady frame pays nothing (docs/specs/render/screenshot.md 2.2).
 /// <para>
-/// The copy runs on the seam: the target and the readback buffer are handles and the copy is issued through
-/// <see cref="IRenderBackend.CopyTextureToBuffer"/>. Mapping is the one step the seam does not expose, so the readback
-/// buffer is unwrapped once for it; that single peek is the whole reason the copy is seam-shaped rather than the buffer.
+/// The whole path runs on the seam: the target and the readback buffer are handles, the copy is issued through
+/// <see cref="IRenderBackend.CopyTextureToBuffer"/> and the mapping through <see cref="IRenderBackend.ReadBuffer"/>, so
+/// the capture code never touches a native object.
 /// </para>
 /// </remarks>
 internal static class FrameCapture
@@ -56,51 +56,37 @@ internal static class FrameCapture
         backend.CopyTextureToBuffer(encoder, target, buffer, bytesPerRow, width, height);
         backend.Submit(encoder);
 
-        // The seam has no mapping step, so the buffer is unwrapped once here: MapBlocking, GetMappedRange and Unmap are
-        // buffer methods on the native type (docs/analysis/architecture/render-backend-seam.md 9.11).
-        var native = backend.AsBuffer(buffer);
         try
         {
-            if (native.MapBlocking(instance, MapMode.Read, 0, (nuint)size) != WGPUMapAsyncStatus.Success)
-            {
-                throw new InvalidOperationException("the screenshot readback buffer could not be mapped");
-            }
+            // The seam maps, copies and unmaps the row block, so the caller only ever sees plain bytes.
+            var mapped = backend.ReadBuffer(instance, buffer, 0, (nuint)size);
+            var pixels = new byte[width * height * BytesPerPixel];
 
-            try
+            // The reference flips because its GL readback is bottom-up; wgpu hands the rows back top-down, which is what
+            // the PNG wants, so rows are copied in order (deviation registered in docs/specs/render/screenshot.md 2.3).
+            for (var y = 0; y < height; y++)
             {
-                var mapped = native.GetMappedRange<byte>(0, (nuint)size);
-                var pixels = new byte[width * height * BytesPerPixel];
+                var sourceRow = mapped.AsSpan((int)(y * bytesPerRow), (int)(width * BytesPerPixel));
+                var destination = pixels.AsSpan((int)(y * width * BytesPerPixel));
+                sourceRow.CopyTo(destination);
 
-                // The reference flips because its GL readback is bottom-up; wgpu hands the rows back top-down, which is what
-                // the PNG wants, so rows are copied in order (deviation registered in docs/specs/render/screenshot.md 2.3).
-                for (var y = 0; y < height; y++)
+                // The reference forces an opaque alpha; the surface format's alpha is not meaningful here. A Bgra target
+                // hands the channels back as B,G,R,A, so the red and blue bytes are swapped on the way out (the window's
+                // swapchain format is Bgra8Unorm).
+                var swapRedBlue = format == TextureFormat.Bgra8Unorm;
+                for (var x = 0; x < width; x++)
                 {
-                    var sourceRow = mapped.Slice((int)(y * bytesPerRow), (int)(width * BytesPerPixel));
-                    var destination = pixels.AsSpan((int)(y * width * BytesPerPixel));
-                    sourceRow.CopyTo(destination);
-
-                    // The reference forces an opaque alpha; the surface format's alpha is not meaningful here. A Bgra target
-                    // hands the channels back as B,G,R,A, so the red and blue bytes are swapped on the way out (the window's
-                    // swapchain format is Bgra8Unorm).
-                    var swapRedBlue = format == TextureFormat.Bgra8Unorm;
-                    for (var x = 0; x < width; x++)
+                    var offset = x * BytesPerPixel;
+                    if (swapRedBlue)
                     {
-                        var offset = x * BytesPerPixel;
-                        if (swapRedBlue)
-                        {
-                            (destination[offset], destination[offset + 2]) = (destination[offset + 2], destination[offset]);
-                        }
-
-                        destination[offset + 3] = 0xFF;
+                        (destination[offset], destination[offset + 2]) = (destination[offset + 2], destination[offset]);
                     }
-                }
 
-                return pixels;
+                    destination[offset + 3] = 0xFF;
+                }
             }
-            finally
-            {
-                native.Unmap();
-            }
+
+            return pixels;
         }
         finally
         {

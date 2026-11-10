@@ -55,11 +55,12 @@ public static class OffscreenRenderer
     /// Compares sampled motion vectors against the same computation done here, pixel by pixel.
     /// </summary>
     private static void CompareMotion(
+        WgpuRenderBackend backend,
         Instance instance,
-        Brew.Wgpu.Buffer depthReadback,
+        BufferHandle depthReadback,
         ulong depthSize,
         int depthPadded,
-        Brew.Wgpu.Buffer motionReadback,
+        BufferHandle motionReadback,
         System.Numerics.Matrix4x4 viewProjection,
         FrameRequest request,
         int width,
@@ -76,15 +77,9 @@ public static class OffscreenRenderer
 
         var motionBytes = (ulong)(width * height * 8);
 
-        if (depthReadback.MapBlocking(instance, MapMode.Read, 0, (nuint)depthSize) != WGPUMapAsyncStatus.Success ||
-            motionReadback.MapBlocking(instance, MapMode.Read, 0, (nuint)motionBytes) != WGPUMapAsyncStatus.Success)
-        {
-            Console.WriteLine("motion: map failed");
-            return;
-        }
-
-        var depthMapped = depthReadback.GetMappedRange<byte>(0, (nuint)depthSize);
-        var motionMapped = motionReadback.GetMappedRange<byte>(0, (nuint)motionBytes);
+        // Both blocks come back through the seam: it maps, copies and unmaps, so the comparison only sees bytes.
+        var depthMapped = backend.ReadBuffer(instance, depthReadback, 0, (nuint)depthSize);
+        var motionMapped = backend.ReadBuffer(instance, motionReadback, 0, (nuint)motionBytes);
         var samples = 0;
         var mismatches = 0;
         var worst = 0f;
@@ -93,7 +88,7 @@ public static class OffscreenRenderer
         {
             for (var x = 16; x < width; x += 31)
             {
-                var window = BitConverter.ToSingle(depthMapped.Slice((y * depthPadded) + (x * 4), 4));
+                var window = BitConverter.ToSingle(depthMapped.AsSpan((y * depthPadded) + (x * 4), 4));
 
                 // Reversed-Z: the sky / far plane is depth 0 (depth 1 is the near plane).
                 if (window <= 0f)
@@ -119,8 +114,8 @@ public static class OffscreenRenderer
                 var expectedY = (previousV - v) * height;
 
                 var offset = ((y * width) + x) * 8;
-                var gpuX = BitConverter.ToSingle(motionMapped.Slice(offset, 4));
-                var gpuY = BitConverter.ToSingle(motionMapped.Slice(offset + 4, 4));
+                var gpuX = BitConverter.ToSingle(motionMapped.AsSpan(offset, 4));
+                var gpuY = BitConverter.ToSingle(motionMapped.AsSpan(offset + 4, 4));
 
                 samples++;
                 var delta = MathF.Max(MathF.Abs(gpuX - expectedX), MathF.Abs(gpuY - expectedY));
@@ -133,8 +128,6 @@ public static class OffscreenRenderer
             }
         }
 
-        depthReadback.Unmap();
-        motionReadback.Unmap();
         Console.WriteLine($"motion: {samples} samples, mismatches {mismatches}, worst delta {worst:F4} px");
     }
 
@@ -161,29 +154,31 @@ public static class OffscreenRenderer
     }
 
     /// <summary>Reads the depth buffer back and prints its range, proving depth is available for the occlusion pass.</summary>
-    private static float[]? ReportDepth(Instance instance, Brew.Wgpu.Buffer depthReadback, ulong depthSize, int depthPadded, int width, int height)
+    private static float[]? ReportDepth(WgpuRenderBackend backend, Instance instance, BufferHandle depthReadback, ulong depthSize, int depthPadded, int width, int height)
     {
-        var status = depthReadback.MapBlocking(instance, MapMode.Read, 0, (nuint)depthSize);
-
-        if (status != WGPUMapAsyncStatus.Success)
+        byte[] mapped;
+        try
         {
-            Console.WriteLine($"depth: readback failed ({status})");
+            mapped = backend.ReadBuffer(instance, depthReadback, 0, (nuint)depthSize);
+        }
+        catch (InvalidOperationException)
+        {
+            Console.WriteLine("depth: readback failed");
             return null;
         }
 
-        var mapped = depthReadback.GetMappedRange<byte>(0, (nuint)depthSize);
         var depths = new float[width * height];
         // Reversed-Z: depth 1 is the near plane and 0 the far plane, so the physically nearest pixel carries the LARGEST
         // raw depth. Track both ends of the raw range and convert each to a distance for the report.
         var minRaw = float.MaxValue;
         var maxRaw = 0f;
-        var centre = BitConverter.ToSingle(mapped.Slice(((height / 2) * depthPadded) + ((width / 2) * 4), 4));
+        var centre = BitConverter.ToSingle(mapped.AsSpan(((height / 2) * depthPadded) + ((width / 2) * 4), 4));
 
         for (var y = 0; y < height; y++)
         {
             for (var x = 0; x < width; x++)
             {
-                var value = BitConverter.ToSingle(mapped.Slice((y * depthPadded) + (x * 4), 4));
+                var value = BitConverter.ToSingle(mapped.AsSpan((y * depthPadded) + (x * 4), 4));
                 depths[(y * width) + x] = value;
 
                 if (value < minRaw)
@@ -198,7 +193,6 @@ public static class OffscreenRenderer
             }
         }
 
-        depthReadback.Unmap();
         var near = 0.1f;
         var far = 2000f;
         Console.WriteLine(
@@ -213,22 +207,27 @@ public static class OffscreenRenderer
     /// Compares every pyramid level against the CPU reference, level by level, and prints the totals.
     /// </summary>
     private static void ComparePyramidChain(
+        WgpuRenderBackend backend,
         Instance instance,
-        Brew.Wgpu.Buffer depthReadback,
+        BufferHandle depthReadback,
         ulong depthSize,
         int depthPadded,
-        IReadOnlyList<Brew.Wgpu.Buffer> readbacks,
+        IReadOnlyList<BufferHandle> readbacks,
         IReadOnlyList<(int Width, int Height)> sizes,
         int width,
         int height)
     {
-        if (depthReadback.MapBlocking(instance, MapMode.Read, 0, (nuint)depthSize) != WGPUMapAsyncStatus.Success)
+        byte[] depthMapped;
+        try
+        {
+            depthMapped = backend.ReadBuffer(instance, depthReadback, 0, (nuint)depthSize);
+        }
+        catch (InvalidOperationException)
         {
             Console.WriteLine("pyramid: depth map failed");
             return;
         }
 
-        var depthMapped = depthReadback.GetMappedRange<byte>(0, (nuint)depthSize);
         var depth = new float[width * height];
 
         for (var y = 0; y < height; y++)
@@ -236,13 +235,11 @@ public static class OffscreenRenderer
             for (var x = 0; x < width; x++)
             {
                 depth[(y * width) + x] = DepthLinearisation.ToDistance(
-                    BitConverter.ToSingle(depthMapped.Slice((y * depthPadded) + (x * 4), 4)),
+                    BitConverter.ToSingle(depthMapped.AsSpan((y * depthPadded) + (x * 4), 4)),
                     0.1f,
                     2000f);
             }
         }
-
-        depthReadback.Unmap();
 
         var reference = DepthPyramid.Build(depth, width, height);
         var totalMismatches = 0;
@@ -254,19 +251,23 @@ public static class OffscreenRenderer
             var (levelWidth, levelHeight) = sizes[level];
             var bytes = (ulong)(levelWidth * levelHeight * 4);
 
-            if (readbacks[level].MapBlocking(instance, MapMode.Read, 0, (nuint)bytes) != WGPUMapAsyncStatus.Success)
+            byte[] mapped;
+            try
+            {
+                mapped = backend.ReadBuffer(instance, readbacks[level], 0, (nuint)bytes);
+            }
+            catch (InvalidOperationException)
             {
                 Console.WriteLine($"pyramid: level {level + 1} map failed");
                 return;
             }
 
-            var mapped = readbacks[level].GetMappedRange<byte>(0, (nuint)bytes);
             var expected = reference[level + 1];
             var mismatches = 0;
 
             for (var index = 0; index < levelWidth * levelHeight; index++)
             {
-                var delta = MathF.Abs(BitConverter.ToSingle(mapped.Slice(index * 4, 4)) - expected[index]);
+                var delta = MathF.Abs(BitConverter.ToSingle(mapped.AsSpan(index * 4, 4)) - expected[index]);
 
                 if (delta > 0.05f)
                 {
@@ -275,7 +276,6 @@ public static class OffscreenRenderer
                 }
             }
 
-            readbacks[level].Unmap();
             totalMismatches += mismatches;
             lines.Add($"{level + 1}:{levelWidth}x{levelHeight} mismatches {mismatches}");
         }
@@ -400,38 +400,33 @@ public static class OffscreenRenderer
 
             var width = (uint)request.Width;
             var height = (uint)request.Height;
+            var backend = new WgpuRenderBackend(device);
 
-            var texture = device.CreateTexture(new TextureDescriptor
-            {
-                Size = new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 },
-                MipLevelCount = 1,
-                SampleCount = 1,
-                Dimension = WGPUTextureDimension._2D,
-                Format = WGPUTextureFormat.RGBA8Unorm,
-                Usage = TextureUsage.RenderAttachment | TextureUsage.CopySrc
-            });
+            // Both targets are copy sources: the colour one feeds the screenshot, the depth one feeds the occlusion
+            // pyramid, so the seam owns them and the copies below run through it as well.
+            var texture = backend.CreateTexture(new TextureDesc(
+                width,
+                height,
+                TextureFormat.Rgba8Unorm,
+                1,
+                TextureUsages.RenderAttachment | TextureUsages.CopySrc));
 
-            using var view = texture.CreateView();
+            var view = backend.CreateTextureView(texture);
 
-            var depthTexture = device.CreateTexture(new TextureDescriptor
-            {
-                Size = new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 },
-                MipLevelCount = 1,
-                SampleCount = 1,
-                Dimension = WGPUTextureDimension._2D,
-                Format = WGPUTextureFormat.Depth32Float,
-                // CopySrc so the depth can be read back: it is the input the occlusion pyramid is built from.
-                Usage = TextureUsage.RenderAttachment | TextureUsage.CopySrc
-            });
+            var depthTexture = backend.CreateTexture(new TextureDesc(
+                width,
+                height,
+                TextureFormat.Depth32Float,
+                1,
+                TextureUsages.RenderAttachment | TextureUsages.CopySrc));
 
-            using var depthView = depthTexture.CreateView();
+            var depthView = backend.CreateTextureView(depthTexture);
 
             // Atlas upload: nearest sampling with no mipmaps keeps pixel art crisp and stops the
             // half-texel inset from blending across sprite borders.
             var atlasData = request.Atlas ?? TextureData.White;
 
             var atlasMips = atlasData.Mips ?? [];
-            var backend = new WgpuRenderBackend(device);
             var atlasTexture = backend.CreateTexture(new TextureDesc(
                 (uint)atlasData.Width,
                 (uint)atlasData.Height,
@@ -554,20 +549,12 @@ public static class OffscreenRenderer
             var padded = (unpadded + 255) / 256 * 256;
             var size = (ulong)padded * height;
 
-            var readback = device.CreateBuffer(new BufferDescriptor
-            {
-                Size = size,
-                Usage = BufferUsage.MapRead | BufferUsage.CopyDst
-            });
+            var readback = backend.CreateBuffer(new BufferDesc(size, BufferUsages.MapRead | BufferUsages.CopyDst));
 
             // Depth rows are 4 bytes per pixel and padded the same way as colour.
             var depthPadded = (((int)width * 4) + 255) / 256 * 256;
             var depthSize = (ulong)depthPadded * height;
-            var depthReadback = device.CreateBuffer(new BufferDescriptor
-            {
-                Size = depthSize,
-                Usage = BufferUsage.MapRead | BufferUsage.CopyDst
-            });
+            var depthReadback = backend.CreateBuffer(new BufferDesc(depthSize, BufferUsages.MapRead | BufferUsages.CopyDst));
 
             var hasGeometry = request.Indices.Length > 0 && request.Vertices.Length > 0;
             // World-space vertices: the shader applies the camera, so the buffer only changes when the
@@ -587,12 +574,12 @@ public static class OffscreenRenderer
                     System.Runtime.InteropServices.MemoryMarshal.AsBytes(indexBytes.AsSpan()))
                 : default;
 
-            var encoder = device.CreateCommandEncoder();
+            var encoder = backend.CreateCommandEncoder();
             var colour = request.ClearColour;
             var pass = backend.BeginRenderPass(
-                backend.AdoptCommandEncoder(encoder),
-                [ColorAttachmentDesc.Clear(backend.AdoptTextureView(view), colour)],
-                DepthAttachmentDesc.Clear(backend.AdoptTextureView(depthView), 0f));
+                encoder,
+                [ColorAttachmentDesc.Clear(view, colour)],
+                DepthAttachmentDesc.Clear(depthView, 0f));
 
             // The scene pass order comes from WorldRenderPipeline; each kind is a no-op when this request has no such
             // geometry. The GPU state and buffer lifetimes stay local to this shell.
@@ -726,24 +713,14 @@ public static class OffscreenRenderer
             WorldRenderPipeline.RecordScenePasses(DrawScenePass);
             backend.EndRenderPass(pass);
 
-            encoder.CopyTextureToBuffer(
-                texture,
-                readback,
-                (uint)padded,
-                height,
-                new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 });
+            backend.CopyTextureToBuffer(encoder, texture, readback, (uint)padded, width, height);
 
-            encoder.CopyTextureToBuffer(
-                depthTexture,
-                depthReadback,
-                (uint)depthPadded,
-                height,
-                new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 });
+            backend.CopyTextureToBuffer(encoder, depthTexture, depthReadback, (uint)depthPadded, width, height);
 
             float[]? depthPixels = null;
-            var pyramidLevels = new List<Brew.Wgpu.Buffer>();
-            var pyramidReadbacks = new List<Brew.Wgpu.Buffer>();
-            var pyramidParameters = new List<Brew.Wgpu.Buffer>();
+            var pyramidLevels = new List<BufferHandle>();
+            var pyramidReadbacks = new List<BufferHandle>();
+            var pyramidParameters = new List<BufferHandle>();
             var pyramidSizes = new List<(int Width, int Height)>();
             var hasPyramid = request.Diagnostics?.BuildPyramid == true;
 
@@ -751,40 +728,31 @@ public static class OffscreenRenderer
             {
                 // Source level zero: the depth pixels, copied a second time because a map-read buffer cannot be a copy source.
                 var sourceBytes = (ulong)depthPadded * height;
-                var source = device.CreateBuffer(new BufferDescriptor
-                {
-                    Size = sourceBytes,
-                    Usage = BufferUsage.Storage | BufferUsage.CopyDst
-                });
+                var source = backend.CreateBuffer(new BufferDesc(sourceBytes, BufferUsages.Storage | BufferUsages.CopyDst));
 
-                encoder.CopyTextureToBuffer(
-                    depthTexture,
-                    source,
-                    (uint)depthPadded,
-                    height,
-                    new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 });
+                backend.CopyTextureToBuffer(encoder, depthTexture, source, (uint)depthPadded, width, height);
 
-                using var computeLayout = device.CreateBindGroupLayout(
+                // The compute chain speaks the seam too, so the pass, its layout and every buffer are handles: the
+                // pyramid is diagnosable without a single native object crossing the boundary.
+                var computeLayout = backend.CreateBindGroupLayout(
                 [
-                    BindGroupLayoutEntry.Buffer(4, ShaderStage.Compute, WGPUBufferBindingType.ReadOnlyStorage, false, 0),
-                    BindGroupLayoutEntry.Buffer(5, ShaderStage.Compute, WGPUBufferBindingType.Storage, false, 0),
-                    BindGroupLayoutEntry.Buffer(6, ShaderStage.Compute, WGPUBufferBindingType.Uniform, false, 32)
+                    new BindGroupLayoutEntryDesc(4, ShaderStages.Compute, BindingKind.ReadOnlyStorageBuffer),
+                    new BindGroupLayoutEntryDesc(5, ShaderStages.Compute, BindingKind.StorageBuffer),
+                    new BindGroupLayoutEntryDesc(6, ShaderStages.Compute, BindingKind.UniformBuffer) with { MinBindingSize = 32 }
                 ]);
 
-                using var computePipelineLayout = device.CreatePipelineLayout([computeLayout]);
-                using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
-                {
-                    Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("depth_pyramid")))
-                });
+                var computePipelineLayout = backend.CreatePipelineLayout([computeLayout]);
                 var computePipelineHandle = backend.CreateComputePipeline(new ComputePipelineDesc(
                     System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("depth_pyramid")),
                     "cs_downsample",
-                    backend.AdoptPipelineLayout(computePipelineLayout)));
+                    computePipelineLayout));
 
                 var levelWidth = (int)width;
                 var levelHeight = (int)height;
                 var levelStride = depthPadded / 4;
                 var levelSource = source;
+                // The shader needs to know whether it is reading the padded depth copy (first level) or an earlier level.
+                var sourceIsLevelZero = true;
 
                 while (levelWidth > 1 || levelHeight > 1)
                 {
@@ -792,46 +760,40 @@ public static class OffscreenRenderer
                     var nextHeight = Math.Max(1, levelHeight / 2);
                     var nextBytes = (ulong)(nextWidth * nextHeight * 4);
 
-                    var destination = device.CreateBuffer(new BufferDescriptor
-                    {
-                        Size = nextBytes,
-                        Usage = BufferUsage.Storage | BufferUsage.CopySrc
-                    });
+                    var destination = backend.CreateBuffer(new BufferDesc(nextBytes, BufferUsages.Storage | BufferUsages.CopySrc));
 
-                    var levelReadback = device.CreateBuffer(new BufferDescriptor
-                    {
-                        Size = nextBytes,
-                        Usage = BufferUsage.MapRead | BufferUsage.CopyDst
-                    });
+                    var levelReadback = backend.CreateBuffer(new BufferDesc(nextBytes, BufferUsages.MapRead | BufferUsages.CopyDst));
 
                     var parameters = new uint[]
                     {
-                        (uint)levelWidth, (uint)levelHeight, (uint)levelStride, levelSource == source ? 1u : 0u,
+                        (uint)levelWidth, (uint)levelHeight, (uint)levelStride, sourceIsLevelZero ? 1u : 0u,
                         0x3DCCCCCDu, 0x44FA0000u, 0, 0
                     };
                     var parameterBytes = new byte[32];
                     System.Runtime.InteropServices.MemoryMarshal.AsBytes(parameters.AsSpan()).CopyTo(parameterBytes);
-                    var parameterBuffer = device.CreateBufferInit(
-                        new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
+                    var parameterBuffer = backend.CreateBufferInit(
+                        new BufferDesc(32, BufferUsages.Uniform | BufferUsages.CopyDst),
                         parameterBytes.AsSpan());
 
-                    var levelBindGroup = device.CreateBindGroup(
+                    var levelBindGroup = backend.CreateBindGroup(
                         computeLayout,
                         [
-                            BindGroupEntry.Buffer(4, levelSource, 0, (ulong)levelStride * 4 * (ulong)levelHeight),
-                            BindGroupEntry.Buffer(5, destination, 0, nextBytes),
-                            BindGroupEntry.Buffer(6, parameterBuffer, 0, 32)
+                            BindGroupEntryDesc.ReadOnlyStorage(4, levelSource, 0, (ulong)levelStride * 4 * (ulong)levelHeight),
+                            BindGroupEntryDesc.Storage(5, destination, 0, nextBytes),
+                            BindGroupEntryDesc.Uniform(6, parameterBuffer, 0, 32)
                         ]);
 
-                    using var computePass = encoder.BeginComputePass();
-                    computePass.SetPipeline(backend.AsComputePipeline(computePipelineHandle));
-                    computePass.SetBindGroup(0, levelBindGroup, []);
-                    computePass.DispatchWorkgroups(
+                    var computePass = backend.BeginComputePass(encoder);
+                    backend.SetPipeline(computePass, computePipelineHandle);
+                    backend.SetBindGroup(computePass, 0, levelBindGroup);
+                    backend.DispatchWorkgroups(
+                        computePass,
                         (uint)Math.Max(1, (nextWidth + 7) / 8),
-                        (uint)Math.Max(1, (nextHeight + 7) / 8));
-                    computePass.End();
+                        (uint)Math.Max(1, (nextHeight + 7) / 8),
+                        1);
+                    backend.EndComputePass(computePass);
 
-                    encoder.CopyBufferToBuffer(destination, 0, levelReadback, 0, nextBytes);
+                    backend.CopyBufferToBuffer(encoder, destination, 0, levelReadback, 0, nextBytes);
 
                     pyramidLevels.Add(destination);
                     pyramidReadbacks.Add(levelReadback);
@@ -839,49 +801,40 @@ public static class OffscreenRenderer
                     pyramidSizes.Add((nextWidth, nextHeight));
 
                     levelSource = destination;
+                    sourceIsLevelZero = false;
                     levelWidth = nextWidth;
                     levelHeight = nextHeight;
                     levelStride = nextWidth;
                 }
+
+                // Recorded commands keep their own references, so the per-chain objects are released as soon as the last
+                // level is recorded (the same lifetime rule the scene pipelines follow).
+                backend.Destroy(computePipelineHandle);
+                backend.Destroy(computePipelineLayout);
+                backend.Destroy(computeLayout);
+                backend.Destroy(source);
             }
 
-            Brew.Wgpu.Buffer motionOutput = default;
-            Brew.Wgpu.Buffer motionReadback = default;
+            BufferHandle motionOutput = default;
+            BufferHandle motionReadback = default;
             var hasMotion = request.Diagnostics?.MotionVectors == true;
 
             if (hasMotion)
             {
                 var sourceBytes = (ulong)depthPadded * height;
-                var depthForMotion = device.CreateBuffer(new BufferDescriptor
-                {
-                    Size = sourceBytes,
-                    Usage = BufferUsage.Storage | BufferUsage.CopyDst
-                });
+                var depthForMotion = backend.CreateBuffer(new BufferDesc(sourceBytes, BufferUsages.Storage | BufferUsages.CopyDst));
 
-                encoder.CopyTextureToBuffer(
-                    depthTexture,
-                    depthForMotion,
-                    (uint)depthPadded,
-                    height,
-                    new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 });
+                backend.CopyTextureToBuffer(encoder, depthTexture, depthForMotion, (uint)depthPadded, width, height);
 
                 var motionBytes = (ulong)((int)width * (int)height * 8);
-                motionOutput = device.CreateBuffer(new BufferDescriptor
-                {
-                    Size = motionBytes,
-                    Usage = BufferUsage.Storage | BufferUsage.CopySrc
-                });
-                motionReadback = device.CreateBuffer(new BufferDescriptor
-                {
-                    Size = motionBytes,
-                    Usage = BufferUsage.MapRead | BufferUsage.CopyDst
-                });
+                motionOutput = backend.CreateBuffer(new BufferDesc(motionBytes, BufferUsages.Storage | BufferUsages.CopySrc));
+                motionReadback = backend.CreateBuffer(new BufferDesc(motionBytes, BufferUsages.MapRead | BufferUsages.CopyDst));
 
                 var motionParameters = new uint[] { width, height, (uint)(depthPadded / 4), 0 };
                 var motionParameterBytes = new byte[16];
                 System.Runtime.InteropServices.MemoryMarshal.AsBytes(motionParameters.AsSpan()).CopyTo(motionParameterBytes);
-                using var motionParameterBuffer = device.CreateBufferInit(
-                    new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
+                var motionParameterBuffer = backend.CreateBufferInit(
+                    new BufferDesc(16, BufferUsages.Uniform | BufferUsages.CopyDst),
                     motionParameterBytes.AsSpan());
 
                 // Previous camera: the same view shifted along X, so the motion has a known sign and magnitude.
@@ -899,85 +852,104 @@ public static class OffscreenRenderer
                 WriteMatrix(inverseViewProjection, matrixFloats, 0);
                 WriteMatrix(previousViewProjection, matrixFloats, 16);
                 System.Runtime.InteropServices.MemoryMarshal.AsBytes(matrixFloats.AsSpan()).CopyTo(matrixBytes);
-                using var motionMatrixBuffer = device.CreateBufferInit(
-                    new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
+                var motionMatrixBuffer = backend.CreateBufferInit(
+                    new BufferDesc(128, BufferUsages.Uniform | BufferUsages.CopyDst),
                     matrixBytes.AsSpan());
 
-                using var motionLayout = device.CreateBindGroupLayout(
+                var motionLayout = backend.CreateBindGroupLayout(
                 [
-                    BindGroupLayoutEntry.Buffer(4, ShaderStage.Compute, WGPUBufferBindingType.ReadOnlyStorage, false, 0),
-                    BindGroupLayoutEntry.Buffer(5, ShaderStage.Compute, WGPUBufferBindingType.Storage, false, 0),
-                    BindGroupLayoutEntry.Buffer(6, ShaderStage.Compute, WGPUBufferBindingType.Uniform, false, 16),
-                    BindGroupLayoutEntry.Buffer(7, ShaderStage.Compute, WGPUBufferBindingType.Uniform, false, 128)
+                    new BindGroupLayoutEntryDesc(4, ShaderStages.Compute, BindingKind.ReadOnlyStorageBuffer),
+                    new BindGroupLayoutEntryDesc(5, ShaderStages.Compute, BindingKind.StorageBuffer),
+                    new BindGroupLayoutEntryDesc(6, ShaderStages.Compute, BindingKind.UniformBuffer) with { MinBindingSize = 16 },
+                    new BindGroupLayoutEntryDesc(7, ShaderStages.Compute, BindingKind.UniformBuffer) with { MinBindingSize = 128 }
                 ]);
 
-                using var motionPipelineLayout = device.CreatePipelineLayout([motionLayout]);
-                using var motionShader = device.CreateShaderModule(new ShaderModuleDescriptor
-                {
-                    Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("motion_vectors")))
-                });
                 var motionPipelineHandle = backend.CreateComputePipeline(new ComputePipelineDesc(
                     System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("motion_vectors")),
                     "cs_motion",
-                    backend.AdoptPipelineLayout(motionPipelineLayout)));
-                using var motionBindGroup = device.CreateBindGroup(
+                    backend.CreatePipelineLayout([motionLayout])));
+
+                var motionBindGroup = backend.CreateBindGroup(
                     motionLayout,
                     [
-                        BindGroupEntry.Buffer(4, depthForMotion, 0, sourceBytes),
-                        BindGroupEntry.Buffer(5, motionOutput, 0, motionBytes),
-                        BindGroupEntry.Buffer(6, motionParameterBuffer, 0, 16),
-                        BindGroupEntry.Buffer(7, motionMatrixBuffer, 0, 128)
+                        BindGroupEntryDesc.ReadOnlyStorage(4, depthForMotion, 0, sourceBytes),
+                        BindGroupEntryDesc.Storage(5, motionOutput, 0, motionBytes),
+                        BindGroupEntryDesc.Uniform(6, motionParameterBuffer, 0, 16),
+                        BindGroupEntryDesc.Uniform(7, motionMatrixBuffer, 0, 128)
                     ]);
 
-                using var motionPass = encoder.BeginComputePass();
-                motionPass.SetPipeline(backend.AsComputePipeline(motionPipelineHandle));
-                motionPass.SetBindGroup(0, motionBindGroup, []);
-                motionPass.DispatchWorkgroups((uint)Math.Max(1, ((int)width + 7) / 8), (uint)Math.Max(1, ((int)height + 7) / 8));
-                motionPass.End();
+                var motionPass = backend.BeginComputePass(encoder);
+                backend.SetPipeline(motionPass, motionPipelineHandle);
+                backend.SetBindGroup(motionPass, 0, motionBindGroup);
+                backend.DispatchWorkgroups(
+                    motionPass,
+                    (uint)Math.Max(1, ((int)width + 7) / 8),
+                    (uint)Math.Max(1, ((int)height + 7) / 8),
+                    1);
+                backend.EndComputePass(motionPass);
 
-                encoder.CopyBufferToBuffer(motionOutput, 0, motionReadback, 0, motionBytes);
-                depthForMotion.Dispose();
+                backend.CopyBufferToBuffer(encoder, motionOutput, 0, motionReadback, 0, motionBytes);
+                backend.Destroy(depthForMotion);
+                backend.Destroy(motionBindGroup);
+                backend.Destroy(motionPipelineHandle);
+                backend.Destroy(motionLayout);
+                backend.Destroy(motionParameterBuffer);
+                backend.Destroy(motionMatrixBuffer);
+                backend.Destroy(motionOutput);
             }
 
-            var commands = encoder.Finish();
-            device.Queue.Submit(commands);
+            backend.Submit(encoder);
 
-            var status = readback.MapBlocking(instance, MapMode.Read, 0, (nuint)size);
-            if (status != WGPUMapAsyncStatus.Success)
-            {
-                throw new RenderingUnavailableException($"readback mapping failed: {status}");
-            }
-
-            var mapped = readback.GetMappedRange<byte>(0, (nuint)size);
+            // The readback itself is seam-shaped: it maps, copies and unmaps, so the rows arrive as plain bytes.
+            var rowBlock = backend.ReadBuffer(instance, readback, 0, (nuint)size);
             var pixels = new byte[unpadded * (int)height];
             for (var y = 0; y < (int)height; y++)
             {
-                mapped.Slice(y * padded, unpadded).CopyTo(pixels.AsSpan(y * unpadded, unpadded));
+                rowBlock.AsSpan(y * padded, unpadded).CopyTo(pixels.AsSpan(y * unpadded, unpadded));
             }
 
-            readback.Unmap();
-            readback.Dispose();
+            backend.Destroy(readback);
 
             if (request.Diagnostics?.ReadDepth == true)
             {
-                depthPixels = ReportDepth(instance, depthReadback, depthSize, depthPadded, (int)width, (int)height);
+                depthPixels = ReportDepth(backend, instance, depthReadback, depthSize, depthPadded, (int)width, (int)height);
             }
 
             if (hasPyramid)
             {
-                ComparePyramidChain(instance, depthReadback, depthSize, depthPadded, pyramidReadbacks, pyramidSizes, (int)width, (int)height);
+                ComparePyramidChain(backend, instance, depthReadback, depthSize, depthPadded, pyramidReadbacks, pyramidSizes, (int)width, (int)height);
             }
 
             if (hasMotion)
             {
-                CompareMotion(instance, depthReadback, depthSize, depthPadded, motionReadback, viewProjection, request, (int)width, (int)height);
+                CompareMotion(backend, instance, depthReadback, depthSize, depthPadded, motionReadback, viewProjection, request, (int)width, (int)height);
             }
 
-            depthReadback.Dispose();
-            commands.Dispose();
-            encoder.Dispose();
-            depthTexture.Dispose();
-            texture.Dispose();
+            backend.Destroy(depthReadback);
+            foreach (var handle in pyramidLevels)
+            {
+                backend.Destroy(handle);
+            }
+
+            foreach (var handle in pyramidReadbacks)
+            {
+                backend.Destroy(handle);
+            }
+
+            foreach (var handle in pyramidParameters)
+            {
+                backend.Destroy(handle);
+            }
+
+            if (motionReadback.IsValid)
+            {
+                backend.Destroy(motionReadback);
+            }
+
+            backend.Destroy(depthView);
+            backend.Destroy(depthTexture);
+            backend.Destroy(view);
+            backend.Destroy(texture);
 
             // The scene resources are seam handles now, so they are released by hand once the frame is read back.
             if (indexBuffer.IsValid)
