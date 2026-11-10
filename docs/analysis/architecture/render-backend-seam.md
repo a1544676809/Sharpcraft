@@ -229,3 +229,17 @@ Sharpcraft.Client.exe --version 26.3 --gameDir <dir> --pack <pack.zip> --offline
 另有 15 处 `device.CreatePipelineLayout` 分布在这些文件中。
 
 **教训**：迁移范围的结论必须来自**目录级全量核查**，而不是"我改过的两个文件"。这条已作为下一步的输入：把上述 6 个文件纳入范围后，才能说"所有管线都走接缝"。
+### 9.3 降低逃生口的正确做法（已验证）
+
+迁移"创建点"**不会**降低逃生口：只要资源字段仍是原生类型，调用点就要 `Adopt*`/`As*`，数字反而上升。
+
+真正降低的做法是**把资源持有者的字段改成句柄**：
+
+| 做法 | 逃生口 |
+| --- | --- |
+| 只迁创建（R13/R14） | 上升 219 → 225 |
+| 字段改句柄（`SkyDiscResources`，R15） | 调用点的 `AdoptPipeline` / `AdoptPipelineLayout` / `AdoptBindGroupLayout` 消失 |
+
+**已完成的样板**：`SkyDiscResources`（持有 `BindGroupLayoutHandle` / `PipelineLayoutHandle` / `PipelineHandle`，`Draw(backend, pass)` 直接传句柄，`Dispose` 改 `backend.Destroy`）。
+
+**已知级联**：`WorldTextResources` 的字段相互依赖（texture → view → sampler → bind group → layout → pipeline layout → pipeline），一次全改会出现 5 处以上级联错误。**应分两步**：先把 `_pipeline` / `_bindGroup` 改句柄（Draw 侧即减 2 个 adopt），再把 buffer 与纹理链改掉。
