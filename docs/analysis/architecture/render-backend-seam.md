@@ -144,7 +144,17 @@ public readonly record struct DepthStencilAttachmentDesc(
     LoadOp StencilLoad, StoreOp StencilStore, uint ClearStencil);
 ```
 
-`RenderPassHandle` 与其它句柄不同：**没有 `Destroy`**，只有 `EndRenderPass`；复用或未结束属于调用方错误，后端在 `EndRenderPass` 后把内部引用置空并在重复使用时抛异常（fail-fast，而不是静默 no-op）。
+`RenderPassHandle` 与其它句柄不同：**没有 `Destroy`**，只有 `EndRenderPass`；未结束就提交属于调用方错误。
+
+**实现约束（2026-11-10 修正）**：本仓的句柄是 `readonly struct`，无法在 `EndRenderPass` 里把内部引用置空，因此**做不到**"结束后重复使用自动抛异常"的 fail-fast。当前的实际保障是：
+
+| 保障 | 手段 |
+| --- | --- |
+| 每条路径只结束一次 | 调用方用 `try/finally`（原生 `using` 的 RAII 由它替代） |
+| 结束后不误用 | 代码评审 + 每个 pass 迁移后实机截图 |
+| 未结束就提交 | wgpu 自身会校验并报错，不是静默失败 |
+
+这比原设计弱一档，已登记为受控偏差 `SIM-PASS-NO-FAILFAST`（见 `docs/traceability.md` T-786）。
 
 ### 8.3 接口面
 
