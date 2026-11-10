@@ -1186,21 +1186,14 @@ public static class WindowedRenderer
 
             var encoder = device.CreateCommandEncoder();
             var frameColour = clearColourPerFrame?.Invoke() ?? colour;
-            var pass = encoder.BeginRenderPass(
-            [
-                new ColorAttachment
-                {
-                    View = view,
-                    LoadOp = WGPULoadOp.Clear,
-                    StoreOp = WGPUStoreOp.Store,
-                    ClearValue = new WGPUColor { r = frameColour.X, g = frameColour.Y, b = frameColour.Z, a = frameColour.W }
-                }
-            ],
-            DepthStencilAttachment.DepthClear(depthView, 0f));
+            var pass = backend.BeginRenderPass(
+                wgpu.AdoptCommandEncoder(encoder),
+                [ColorAttachmentDesc.Clear(wgpu.AdoptTextureView(view), frameColour)],
+                DepthAttachmentDesc.Clear(wgpu.AdoptTextureView(depthView), 0f));
 
             // Camera/light/fog uniforms are frame setup, not pass ordering. The scene pass sequence itself comes from
             // WorldRenderPipeline so the windowed path and the offscreen path share one execution order.
-            pass.SetPipeline(pipeline);
+            backend.SetPipeline(pass, wgpu.AdoptPipeline(pipeline));
             // Rewriting 64 bytes is the whole cost of moving the camera; the staging buffers are reused.
             var cameraMs = (System.Diagnostics.Stopwatch.GetTimestamp() - cameraStarted) * 1000d
                 / System.Diagnostics.Stopwatch.Frequency;
@@ -1244,7 +1237,7 @@ public static class WindowedRenderer
             System.Runtime.InteropServices.MemoryMarshal.AsBytes(frameFogValues.AsSpan()).CopyTo(frameFogBytes);
             device.Queue.WriteBuffer(fogBuffer, 0, frameFogBytes.AsSpan());
 
-            pass.SetBindGroup(0, bindGroup);
+            backend.SetBindGroup(pass, 0, wgpu.AdoptBindGroup(bindGroup));
 
             var drawsWorld = arena is { ChunkCount: > 0 } || arenaCutout is { ChunkCount: > 0 };
             if (drawsWorld && !disableCulling)
@@ -1273,8 +1266,8 @@ public static class WindowedRenderer
                         // supplies a flat SKY_COLOR through the clear colour, the gradient sky is skipped.
                         if (!currentRequest.SkipGradientSky)
                         {
-                            pass.SetPipeline(skyPipeline);
-                            pass.Draw(3);
+                            backend.SetPipeline(pass, wgpu.AdoptPipeline(skyPipeline));
+                            backend.Draw(pass, 3, 1, 0, 0);
                         }
 
                         // Sun/moon (textured) then sunrise/stars (position-colour), still before terrain so world
@@ -1296,28 +1289,28 @@ public static class WindowedRenderer
                         if (skyDiscVanillaResources is not null && skyDiscPerFrame?.Invoke() is { } skyDiscState)
                         {
                             skyDiscVanillaResources.Update(skyDiscState.Sky, skyDiscState.Fog, skyDiscState.SkyFogEnd, skyDiscState.Eye);
-                            skyDiscVanillaResources.Draw(pass);
+                            skyDiscVanillaResources.Draw(wgpu.AsRenderPass(pass));
                         }
 
-                        skyDiscColour?.Draw(pass);
-                        celestial?.Draw(pass);
-                        celestialColour?.Draw(pass);
+                        skyDiscColour?.Draw(wgpu.AsRenderPass(pass));
+                        celestial?.Draw(wgpu.AsRenderPass(pass));
+                        celestialColour?.Draw(wgpu.AsRenderPass(pass));
                         break;
                     }
 
                     case WorldRenderPassKind.TerrainOpaque:
                     {
-                        pass.SetPipeline(pipeline);
-                        pass.SetBindGroup(0, bindGroup);
+                        backend.SetPipeline(pass, wgpu.AdoptPipeline(pipeline));
+                        backend.SetBindGroup(pass, 0, wgpu.AdoptBindGroup(bindGroup));
                         if (arena is { ChunkCount: > 0 })
                         {
                             if (disableCulling)
                             {
-                                arena.Draw(pass);
+                                arena.Draw(wgpu.AsRenderPass(pass));
                             }
                             else
                             {
-                                arena.Draw(pass, frustumPlanes);
+                                arena.Draw(wgpu.AsRenderPass(pass), frustumPlanes);
                             }
                         }
 
@@ -1332,15 +1325,15 @@ public static class WindowedRenderer
                             break;
                         }
 
-                        pass.SetPipeline(cutoutPipeline);
-                        pass.SetBindGroup(0, bindGroup);
+                        backend.SetPipeline(pass, wgpu.AdoptPipeline(cutoutPipeline));
+                        backend.SetBindGroup(pass, 0, wgpu.AdoptBindGroup(bindGroup));
                         if (disableCulling)
                         {
-                            arenaCutout.Draw(pass);
+                            arenaCutout.Draw(wgpu.AsRenderPass(pass));
                         }
                         else
                         {
-                            arenaCutout.Draw(pass, frustumPlanes);
+                            arenaCutout.Draw(wgpu.AsRenderPass(pass), frustumPlanes);
                         }
                         break;
                     }
@@ -1349,18 +1342,18 @@ public static class WindowedRenderer
                     {
                         if (dynamicIndexCount > 0)
                         {
-                            pass.SetPipeline(entityPipeline);
-                            pass.SetVertexBuffer(0, dynamicVertex, 0, dynamicVertexCapacity);
-                            pass.SetIndexBuffer(dynamicIndex, WGPUIndexFormat.Uint32, 0, (ulong)dynamicIndexCount * sizeof(uint));
+                            backend.SetPipeline(pass, wgpu.AdoptPipeline(entityPipeline));
+                            backend.SetVertexBuffer(pass, 0, wgpu.AdoptBuffer(dynamicVertex), 0, dynamicVertexCapacity);
+                            backend.SetIndexBuffer(pass, wgpu.AdoptBuffer(dynamicIndex), IndexFormat.Uint32, 0, (ulong)dynamicIndexCount * sizeof(uint));
                             if (entitySkin.Created)
                             {
-                                pass.SetBindGroup(0, wgpu.AsBindGroup(entitySkin.BindGroup));
+                                backend.SetBindGroup(pass, 0, entitySkin.BindGroup);
                             }
 
-                            pass.DrawIndexed(dynamicIndexCount, 1, 0, 0, 1);
+                            backend.DrawIndexed(pass, dynamicIndexCount, 1, 0, 0, 1);
                             if (entitySkin.Created)
                             {
-                                pass.SetBindGroup(0, bindGroup);
+                                backend.SetBindGroup(pass, 0, wgpu.AdoptBindGroup(bindGroup));
                             }
                         }
 
@@ -1381,7 +1374,7 @@ public static class WindowedRenderer
                                 continue;
                             }
 
-                            pass.SetPipeline(entityLayerKind[layerIndex] switch
+                            backend.SetPipeline(pass, wgpu.AdoptPipeline(entityLayerKind[layerIndex] switch
                             {
                                 EntityGeometryLayerKind.ItemCutout => itemCutoutPipeline,
                                 EntityGeometryLayerKind.Translucent => entityPipeline,
@@ -1389,34 +1382,35 @@ public static class WindowedRenderer
                                 EntityGeometryLayerKind.Glint => entityGlintPipeline,
                                 EntityGeometryLayerKind.Elytra => entityElytraPipeline,
                                 _ => entityCutoutPipeline
-                            });
-                            pass.SetVertexBuffer(0, entityLayerVertex[layerIndex], 0, entityLayerVertexCapacity[layerIndex]);
-                            pass.SetIndexBuffer(
-                                entityLayerIndex[layerIndex],
-                                WGPUIndexFormat.Uint32,
+                            }));
+                            backend.SetVertexBuffer(pass, 0, wgpu.AdoptBuffer(entityLayerVertex[layerIndex]), 0, entityLayerVertexCapacity[layerIndex]);
+                            backend.SetIndexBuffer(
+                                pass,
+                                wgpu.AdoptBuffer(entityLayerIndex[layerIndex]),
+                                IndexFormat.Uint32,
                                 0,
                                 (ulong)layerIndexCount * sizeof(uint));
                             if (entityLayerUsesItemAtlas[layerIndex] && itemAtlasGpu.Created)
                             {
-                                pass.SetBindGroup(0, wgpu.AsBindGroup(itemAtlasGpu.BindGroup));
+                                backend.SetBindGroup(pass, 0, itemAtlasGpu.BindGroup);
                             }
                             else if (entitySkin.Created)
                             {
-                                pass.SetBindGroup(0, wgpu.AsBindGroup(entitySkin.BindGroup));
+                                backend.SetBindGroup(pass, 0, entitySkin.BindGroup);
                             }
 
-                            pass.DrawIndexed(layerIndexCount, 1, 0, 0, 1);
+                            backend.DrawIndexed(pass, layerIndexCount, 1, 0, 0, 1);
                         }
 
                         if (entityLayerDrawn > 0 && (entitySkin.Created || itemAtlasGpu.Created))
                         {
-                            pass.SetBindGroup(0, bindGroup);
+                            backend.SetBindGroup(pass, 0, wgpu.AdoptBindGroup(bindGroup));
                         }
                         else if (useStaticWorld)
                         {
-                            pass.SetVertexBuffer(0, vertexBuffer);
-                            pass.SetIndexBuffer(indexBuffer, WGPUIndexFormat.Uint32);
-                            pass.DrawIndexed((uint)currentRequest.Indices.Length);
+                            backend.SetVertexBuffer(pass, 0, wgpu.AdoptBuffer(vertexBuffer));
+                            backend.SetIndexBuffer(pass, wgpu.AdoptBuffer(indexBuffer), IndexFormat.Uint32);
+                            backend.DrawIndexed(pass, (uint)currentRequest.Indices.Length, 1, 0, 0, 1);
                         }
 
                         // The static fallback keeps its original post-entity order. Translucent terrain is not drawn
@@ -1431,11 +1425,11 @@ public static class WindowedRenderer
                                 new BufferInitDescriptor { Usage = BufferUsage.Index },
                                 windowCutoutIndices.AsSpan());
 
-                            pass.SetPipeline(cutoutPipeline);
-                            pass.SetBindGroup(0, bindGroup);
-                            pass.SetVertexBuffer(0, windowCutoutVertexBuffer);
-                            pass.SetIndexBuffer(windowCutoutIndexBuffer, WGPUIndexFormat.Uint32);
-                            pass.DrawIndexed((uint)windowCutoutIndices.Length);
+                            backend.SetPipeline(pass, wgpu.AdoptPipeline(cutoutPipeline));
+                            backend.SetBindGroup(pass, 0, wgpu.AdoptBindGroup(bindGroup));
+                            backend.SetVertexBuffer(pass, 0, wgpu.AdoptBuffer(windowCutoutVertexBuffer));
+                            backend.SetIndexBuffer(pass, wgpu.AdoptBuffer(windowCutoutIndexBuffer), IndexFormat.Uint32);
+                            backend.DrawIndexed(pass, (uint)windowCutoutIndices.Length, 1, 0, 0, 1);
                         }
                         break;
                     }
@@ -1447,7 +1441,9 @@ public static class WindowedRenderer
             // The main pass ends here: sky, opaque terrain and the cutout layer (which shares the opaque depth) have all
             // been drawn. Translucent terrain and the interface each get their own pass so the order independent resolve
             // can run between them.
-            pass.End();
+            // The scene pass declares locals the rest of the frame uses, so it cannot sit inside a try block; the
+            // body between begin and end has no return and no throw, which is what keeps the single end safe.
+            backend.EndRenderPass(pass);
 
             if (cloudDepthTargetsCreated)
             {
