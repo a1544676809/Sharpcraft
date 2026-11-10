@@ -172,7 +172,7 @@ public enum VertexStepMode
 /// <param name="VertexEntry">Vertex entry point name.</param>
 /// <param name="FragmentShader">Fragment shader source.</param>
 /// <param name="FragmentEntry">Fragment entry point name.</param>
-/// <param name="Layout">Pipeline layout the draw must match.</param>
+/// <param name="Layout">Pipeline layout the draw must match, or null to let the backend derive one.</param>
 /// <param name="ColourTargets">Colour targets, in attachment order.</param>
 /// <param name="Depth">Depth state, or null when the pipeline has no depth attachment.</param>
 /// <param name="Cull">Which faces to discard.</param>
@@ -185,7 +185,7 @@ public sealed record PipelineDesc(
     string VertexEntry,
     ReadOnlyMemory<byte> FragmentShader,
     string FragmentEntry,
-    PipelineLayoutHandle Layout,
+    PipelineLayoutHandle? Layout,
     IReadOnlyList<ColorTargetDesc> ColourTargets,
     DepthStateDesc? Depth,
     CullMode Cull,

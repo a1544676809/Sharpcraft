@@ -429,19 +429,39 @@ public sealed class WgpuRenderBackend : IRenderBackend
                 write: state.Write)
             : default;
 
-        return new PipelineHandle(_device.CreateRenderPipeline(
-            vertexShader,
-            System.Text.Encoding.UTF8.GetBytes(desc.VertexEntry),
-            fragmentShader,
-            System.Text.Encoding.UTF8.GetBytes(desc.FragmentEntry),
-            targets,
-            layout: RequireValid<PipelineLayout>(desc.Layout.Value is not null, desc.Layout.Value),
-            primitive: PrimitiveState.Default with { CullMode = ToWgpu(desc.Cull), FrontFace = ToWgpu(desc.Front) },
-            multisample: MultisampleState.Default,
-            depthStencil: depth,
-            vertexStride: desc.VertexStride,
-            vertexStepMode: desc.StepMode == VertexStepMode.Instance ? WGPUVertexStepMode.Instance : WGPUVertexStepMode.Vertex,
-            vertexAttributes: attributes));
+        var vertexEntry = System.Text.Encoding.UTF8.GetBytes(desc.VertexEntry);
+        var fragmentEntry = System.Text.Encoding.UTF8.GetBytes(desc.FragmentEntry);
+        var primitive = PrimitiveState.Default with { CullMode = ToWgpu(desc.Cull), FrontFace = ToWgpu(desc.Front) };
+        var stepMode = desc.StepMode == VertexStepMode.Instance ? WGPUVertexStepMode.Instance : WGPUVertexStepMode.Vertex;
+
+        // A pipeline without a layout lets the backend derive one from the shaders, which is what the reference does for
+        // its sky passes; building an empty explicit layout instead would change what the pipeline accepts.
+        return desc.Layout is { } layout
+            ? new PipelineHandle(_device.CreateRenderPipeline(
+                vertexShader,
+                vertexEntry,
+                fragmentShader,
+                fragmentEntry,
+                targets,
+                layout: RequireValid<PipelineLayout>(layout.Value is not null, layout.Value),
+                primitive: primitive,
+                multisample: MultisampleState.Default,
+                depthStencil: depth,
+                vertexStride: desc.VertexStride,
+                vertexStepMode: stepMode,
+                vertexAttributes: attributes))
+            : new PipelineHandle(_device.CreateRenderPipeline(
+                vertexShader,
+                vertexEntry,
+                fragmentShader,
+                fragmentEntry,
+                targets,
+                primitive: primitive,
+                multisample: MultisampleState.Default,
+                depthStencil: depth,
+                vertexStride: desc.VertexStride,
+                vertexStepMode: stepMode,
+                vertexAttributes: attributes));
     }
 
     /// <inheritdoc/>
