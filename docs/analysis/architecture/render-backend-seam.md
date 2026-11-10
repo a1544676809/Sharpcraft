@@ -287,3 +287,24 @@ finally
 ```
 
 **注意**：`WriteBuffer` 是泛型方法，调用形式为 `backend.WriteBuffer<byte>(buffer, offset, data)`，参数顺序与原生 `queue.WriteBuffer(buffer, offset, data)` 一致但类型是句柄。
+### 9.6 真正的根阻塞：帧的 encoder 仍是原生
+
+把 §9.5 的配方代入 `ChunkCuller` 逐条核算后，得到一个反直觉的结论：**转换完成后逃生口是 +1 而不是 -5**。
+
+原因是最后剩下的那一处：`ChunkCuller.Dispatch` 需要拿一个 `CommandEncoderHandle` 才能开始 compute pass，而帧的 encoder 是 `device.CreateCommandEncoder()` 出来的原生对象，必须 `AdoptCommandEncoder` —— **+1**。
+
+于是所有"资源持有者句柄化"的努力都会在这一点上打平或倒退。
+
+**根阻塞因此是**：帧的 encoder 不在接缝里。要让它在接缝里，必须回答三个问题（此前都被刻意推后）：
+
+| 问题 | 现状 | 为什么难 |
+| --- | --- | --- |
+| `Finish` 与 `Submit` 的所有权 | 渲染器 `encoder.Finish()` + `Queue.Submit(commands)` + 显式 `Dispose` | 接缝的 `Submit` 内部 Finish + Dispose（G25），两者语义冲突 |
+| `CommandBuffer` 的释放 | 渲染器显式 `commands.Dispose()` | 接缝的 `Submit` 不返回也不释放它 |
+| copy / compute 之外的 encoder 操作 | `CopyTextureToBuffer`、`CopyBufferToBuffer` | 接缝没有这些方法 |
+
+**结论**：`W5d` 的"逃生口归零"不能靠继续转换资源持有者达成，必须先做**encoder 生命周期切片**（W5e）。在此之前，725→0 这个数字是不可达的；能达成的只是把 adopt 从 N 处集中到少数几处。
+
+因此 `T-786` 应拆成两个可独立收口的任务：
+- `T-786a`：渲染 pass 录制进接缝（**已完成**）
+- `T-786b`：encoder 生命周期与 compute/copy 记录进接缝，之后逃生口归零
