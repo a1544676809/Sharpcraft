@@ -1452,15 +1452,24 @@ public static class WindowedRenderer
             if (cloudDepthTargetsCreated)
             {
                 // Blit the opaque main depth into the cloud depth attachment (reference BLIT_DEPTH_DURING_DEPTH_BOUNDS).
-                var blitPass = encoder.BeginRenderPass(
+                // The first pass recorded through the seam: it needs no helper that still takes a native pass, so it
+                // proves the whole path - encoder adoption, attachments, bindings and the single end - on its own.
+                var blitPass = backend.BeginRenderPass(
+                    wgpu.AdoptCommandEncoder(encoder),
                     [],
-                    new DepthStencilAttachment { View = cloudDepthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store });
-                blitPass.SetPipeline(blitDepthPipeline);
-                blitPass.SetBindGroup(0, device.CreateBindGroup(
-                    blitDepthLayout,
-                    [BindGroupEntry.TextureView(0, depthView), BindGroupEntry.Sampler(1, blitDepthSampler)]));
-                blitPass.Draw(3);
-                blitPass.End();
+                    DepthAttachmentDesc.Keep(wgpu.AdoptTextureView(cloudDepthView)));
+                try
+                {
+                    backend.SetPipeline(blitPass, wgpu.AdoptPipeline(blitDepthPipeline));
+                    backend.SetBindGroup(blitPass, 0, wgpu.AdoptBindGroup(device.CreateBindGroup(
+                        blitDepthLayout,
+                        [BindGroupEntry.TextureView(0, depthView), BindGroupEntry.Sampler(1, blitDepthSampler)])));
+                    backend.Draw(blitPass, 3, 1, 0, 0);
+                }
+                finally
+                {
+                    backend.EndRenderPass(blitPass);
+                }
             }
 
             // Reference transparency (docs/specs/render/oit-reference.md): depth bounds, a culling pass, wavelet
