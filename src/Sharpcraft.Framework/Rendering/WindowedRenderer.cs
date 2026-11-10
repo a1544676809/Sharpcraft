@@ -286,12 +286,29 @@ public static class WindowedRenderer
         using var refCullPipelineLayout = device.CreatePipelineLayout([refCullLayout]);
         using var refCompositePipelineLayout = device.CreatePipelineLayout([refCompositeLayout]);
 
-        using var cloudDbPipelineLayout = cloudOit is null ? default : device.CreatePipelineLayout([cloudOit.Layout]);
-        using var cloudTransPipelineLayout = cloudOit is null ? default : device.CreatePipelineLayout([cloudOit.Layout, refTransmittanceLayout]);
-        using var cloudAccumPipelineLayout = cloudOit is null ? default : device.CreatePipelineLayout([cloudOit.Layout, refAccumulateLayout]);
-        using var cloudDepthBoundsPipeline = cloudOit is null ? default : CreateDepthBoundsPipeline(backend, cloudDbPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat), depthWrite: true);
-        using var cloudTransmittancePipeline = cloudOit is null ? default : CreateTransmittancePipeline(backend, cloudTransPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat));
-        using var cloudAccumulatePipeline = cloudOit is null ? default : CreateAccumulatePipeline(backend, cloudAccumPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat));
+        // The cloud layouts are created through the seam and released as soon as their pipelines exist: a pipeline
+        // keeps what it needs from its layout, so nothing outlives this block. Destroying rather than waiting for the
+        // method to end is what lets these stay handles instead of needing a Dispose on the handle itself.
+        var cloudDbPipelineLayout = cloudOit is null ? default : backend.CreatePipelineLayout([wgpu.AdoptBindGroupLayout(cloudOit.Layout)]);
+        using var cloudDepthBoundsPipeline = cloudOit is null ? default : CreateDepthBoundsPipeline(backend, wgpu.AsPipelineLayout(cloudDbPipelineLayout), "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat), depthWrite: true);
+        if (cloudDbPipelineLayout.IsValid)
+        {
+            backend.Destroy(cloudDbPipelineLayout);
+        }
+
+        var cloudTransPipelineLayout = cloudOit is null ? default : backend.CreatePipelineLayout([wgpu.AdoptBindGroupLayout(cloudOit.Layout), wgpu.AdoptBindGroupLayout(refTransmittanceLayout)]);
+        using var cloudTransmittancePipeline = cloudOit is null ? default : CreateTransmittancePipeline(backend, wgpu.AsPipelineLayout(cloudTransPipelineLayout), "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat));
+        if (cloudTransPipelineLayout.IsValid)
+        {
+            backend.Destroy(cloudTransPipelineLayout);
+        }
+
+        var cloudAccumPipelineLayout = cloudOit is null ? default : backend.CreatePipelineLayout([wgpu.AdoptBindGroupLayout(cloudOit.Layout), wgpu.AdoptBindGroupLayout(refAccumulateLayout)]);
+        using var cloudAccumulatePipeline = cloudOit is null ? default : CreateAccumulatePipeline(backend, wgpu.AsPipelineLayout(cloudAccumPipelineLayout), "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat));
+        if (cloudAccumPipelineLayout.IsValid)
+        {
+            backend.Destroy(cloudAccumPipelineLayout);
+        }
 
         using var refDepthBoundsPipeline = CreateDepthBoundsPipeline(backend, pipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
         using var refTransmittancePipeline = CreateTransmittancePipeline(backend, refTransmittancePipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
