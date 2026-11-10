@@ -15,9 +15,12 @@ namespace Sharpcraft.Framework.Rendering;
 internal sealed class SkyDiscResources : IDisposable
 {
     private readonly Device _device;
-    private readonly BindGroupLayout _layout;
-    private readonly PipelineLayout _pipelineLayout;
-    private readonly RenderPipeline _pipeline;
+    // Held as seam handles rather than native objects: the draw site passes them straight back, so nothing has to be
+    // adopted at the point of use and a second backend only has to implement the seam.
+    private readonly WgpuRenderBackend _backend;
+    private readonly BindGroupLayoutHandle _layout;
+    private readonly PipelineLayoutHandle _pipelineLayout;
+    private readonly PipelineHandle _pipeline;
     private readonly BindGroup _bindGroup;
     private readonly Brew.Wgpu.Buffer _skyUniform;
     private readonly Brew.Wgpu.Buffer _vertex;
@@ -27,34 +30,34 @@ internal sealed class SkyDiscResources : IDisposable
     public SkyDiscResources(Device device, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, TextureFormat format)
     {
         _device = device;
-        _layout = device.CreateBindGroupLayout(
+        _backend = new WgpuRenderBackend(device);
+        _layout = _backend.CreateBindGroupLayout(
         [
-            BindGroupLayoutEntry.Buffer(0, ShaderStage.Vertex, WGPUBufferBindingType.Uniform, false, cameraSize),
-            BindGroupLayoutEntry.Buffer(1, ShaderStage.Vertex | ShaderStage.Fragment, WGPUBufferBindingType.Uniform, false, 48)
+            new BindGroupLayoutEntryDesc(0, ShaderStages.Vertex, BindingKind.UniformBuffer) { MinBindingSize = cameraSize },
+            new BindGroupLayoutEntryDesc(1, ShaderStages.Vertex | ShaderStages.Fragment, BindingKind.UniformBuffer) { MinBindingSize = 48 }
         ]);
-        _pipelineLayout = device.CreatePipelineLayout([_layout]);
+        _pipelineLayout = _backend.CreatePipelineLayout([_layout]);
         _skyUniform = device.CreateBuffer(new BufferDescriptor { Size = 48, Usage = BufferUsage.Uniform | BufferUsage.CopyDst });
 
         // The pipeline is described to the backend rather than built here, so this resource speaks the same language as
         // the frame that draws it.
-        var backend = new WgpuRenderBackend(device);
         var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("sky_disc"));
-        _pipeline = backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+        _pipeline = _backend.CreateRenderPipeline(new PipelineDesc(
             source,
             "vs_main",
             source,
             "fs_main",
-            backend.AdoptPipelineLayout(_pipelineLayout),
+            _pipelineLayout,
             [new ColorTargetDesc(format)],
             new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.Always, false),
             CullMode.None,
             FrontFace.Ccw,
             (ulong)VertexLayout.SkyDiscStride,
             VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.SkyDiscAttributes()))));
+            LayoutAttributes.From(VertexLayout.SkyDiscAttributes())));
 
         _bindGroup = device.CreateBindGroup(
-            _layout,
+            (BindGroupLayout)_layout.Value,
             [BindGroupEntry.Buffer(0, cameraBuffer, 0, cameraSize), BindGroupEntry.Buffer(1, _skyUniform, 0, 48)]);
 
         const int segments = 9;
@@ -101,13 +104,13 @@ internal sealed class SkyDiscResources : IDisposable
         _device.Queue.WriteBuffer(_skyUniform, 0, bytes.AsSpan());
     }
 
-    public void Draw(RenderPassEncoder pass)
+    public void Draw(IRenderBackend backend, RenderPassHandle pass)
     {
-        pass.SetPipeline(_pipeline);
-        pass.SetBindGroup(0, _bindGroup, []);
-        pass.SetVertexBuffer(0, _vertex);
-        pass.SetIndexBuffer(_index, WGPUIndexFormat.Uint32);
-        pass.DrawIndexed(_indexCount);
+        backend.SetPipeline(pass, _pipeline);
+        backend.SetBindGroup(pass, 0, backend is WgpuRenderBackend owner ? owner.AdoptBindGroup(_bindGroup) : throw new InvalidOperationException("the seam implementation must adopt its own handles"));
+        backend.SetVertexBuffer(pass, 0, backend is WgpuRenderBackend vertexOwner ? vertexOwner.AdoptBuffer(_vertex) : throw new InvalidOperationException("the seam implementation must adopt its own handles"));
+        backend.SetIndexBuffer(pass, backend is WgpuRenderBackend indexOwner ? indexOwner.AdoptBuffer(_index) : throw new InvalidOperationException("the seam implementation must adopt its own handles"), IndexFormat.Uint32);
+        backend.DrawIndexed(pass, _indexCount, 1, 0, 0, 1);
     }
 
     public void Dispose()
@@ -116,8 +119,8 @@ internal sealed class SkyDiscResources : IDisposable
         _index.Dispose();
         _skyUniform.Dispose();
         _bindGroup.Dispose();
-        _pipeline.Dispose();
-        _pipelineLayout.Dispose();
-        _layout.Dispose();
+        _backend.Destroy(_pipeline);
+        _backend.Destroy(_pipelineLayout);
+        _backend.Destroy(_layout);
     }
 }

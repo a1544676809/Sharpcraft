@@ -1306,7 +1306,7 @@ public static class WindowedRenderer
                         if (skyDiscVanillaResources is not null && skyDiscPerFrame?.Invoke() is { } skyDiscState)
                         {
                             skyDiscVanillaResources.Update(skyDiscState.Sky, skyDiscState.Fog, skyDiscState.SkyFogEnd, skyDiscState.Eye);
-                            skyDiscVanillaResources.Draw(wgpu.AsRenderPass(pass));
+                            skyDiscVanillaResources.Draw(backend, pass);
                         }
 
                         skyDiscColour?.Draw(wgpu.AsRenderPass(pass));
