@@ -243,3 +243,10 @@ Sharpcraft.Client.exe --version 26.3 --gameDir <dir> --pack <pack.zip> --offline
 **已完成的样板**：`SkyDiscResources`（持有 `BindGroupLayoutHandle` / `PipelineLayoutHandle` / `PipelineHandle`，`Draw(backend, pass)` 直接传句柄，`Dispose` 改 `backend.Destroy`）。
 
 **已知级联**：`WorldTextResources` 的字段相互依赖（texture → view → sampler → bind group → layout → pipeline layout → pipeline），一次全改会出现 5 处以上级联错误。**应分两步**：先把 `_pipeline` / `_bindGroup` 改句柄（Draw 侧即减 2 个 adopt），再把 buffer 与纹理链改掉。
+### 9.4 compute 管线的迁移没有收益（除非先补 pass 录制）
+
+接缝已有 `CreateComputePipeline`（`ChunkCuller` 与离屏的深度金字塔/运动向量都已走它），但**compute pass 的录制仍是原生**（`encoder.BeginComputePass` / `ComputePass.SetPipeline` / `DispatchWorkgroups`）。
+
+后果：把 `ChunkCuller._pipeline` 从 `ComputePipeline?` 改成句柄，pass 处就必须 `backend.AsComputePipeline(...)` 才能用——**逃生口反而 +1**。
+
+所以 compute 剩余的迁移顺序必须是：**先补 `BeginComputePass` / `SetPipeline` / `DispatchWorkgroups` / `EndComputePass` 到接缝，再改字段类型**。单独改字段没有意义。
