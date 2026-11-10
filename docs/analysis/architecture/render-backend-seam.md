@@ -111,3 +111,74 @@ S2 完成后签名层已中立化，但**接线**会立刻撞上接口尚未覆�
 - 只允许 `WgpuRenderBackend` 与尚未迁移的渲染资源使用
 - 每完成一刀，其逃生口使用点必须归零
 - W5 完成后该属性删除，并由门禁测试断言其不存在
+
+## 8. W5 设计：pass 录制（G8）
+
+这是接缝里最大的一刀，也是最后一块原生残留。设计要点与风险如下。
+
+### 8.1 为什么它比前几刀难
+
+前四刀迁移的是**资源**（有创建/销毁，可 `Adopt*` 桥接）。录制阶段迁移的是**状态机**：
+
+| 差异 | 资源 | 录制 |
+| --- | --- | --- |
+| 生命周期 | 显式创建与销毁 | 借用：`BeginRenderPass` 后必须在同一次提交内 `End` |
+| 错误后果 | 句柄无效 ⇒ 单次绘制错 | pass 未结束 / 结束两次 ⇒ 整帧丢失或校验失败 |
+| 状态耦合 | 无 | `SetPipeline` 决定后续 `SetVertexBuffer` 的槽位合法性 |
+
+所以 W5 不能只做类型替换，必须同时把**使用顺序约束**表达出来，否则把"运行期校验"换成"编译期自由"，反而更难诊断。
+
+### 8.2 中立类型
+
+```csharp
+public enum LoadOp  { Load, Clear }
+public enum StoreOp { Store, Discard }
+public enum IndexFormat { Uint16, Uint32 }
+
+public readonly record struct ColorAttachmentDesc(
+    TextureViewHandle View, LoadOp Load, StoreOp Store, Vector4 ClearColour);
+
+public readonly record struct DepthStencilAttachmentDesc(
+    TextureViewHandle View,
+    LoadOp DepthLoad, StoreOp DepthStore, float ClearDepth,
+    LoadOp StencilLoad, StoreOp StencilStore, uint ClearStencil);
+```
+
+`RenderPassHandle` 与其它句柄不同：**没有 `Destroy`**，只有 `EndRenderPass`；复用或未结束属于调用方错误，后端在 `EndRenderPass` 后把内部引用置空并在重复使用时抛异常（fail-fast，而不是静默 no-op）。
+
+### 8.3 接口面
+
+```csharp
+CommandEncoderHandle CreateCommandEncoder();
+RenderPassHandle BeginRenderPass(CommandEncoderHandle encoder, ReadOnlySpan<ColorAttachmentDesc> colours, in DepthStencilAttachmentDesc? depth);
+void SetPipeline(RenderPassHandle pass, PipelineHandle pipeline);
+void SetBindGroup(RenderPassHandle pass, uint index, BindGroupHandle group);
+void SetVertexBuffer(RenderPassHandle pass, uint slot, BufferHandle buffer);
+void SetIndexBuffer(RenderPassHandle pass, BufferHandle buffer, IndexFormat format);
+void Draw(RenderPassHandle pass, uint vertexCount, uint instanceCount = 1, uint firstVertex = 0, uint firstInstance = 0);
+void DrawIndexed(RenderPassHandle pass, uint indexCount, uint instanceCount = 1, uint firstIndex = 0, int baseVertex = 0, uint firstInstance = 0);
+void EndRenderPass(RenderPassHandle pass);
+void Submit(CommandEncoderHandle encoder);
+```
+
+### 8.4 前置依赖
+
+W5 依赖 **W4（pipeline）**：`SetPipeline` 需要 `PipelineHandle`，而目前 pipeline 只能用原生方式创建。顺序上必须 W4 → W5，或 W5 先只覆盖"不带 pipeline 的 pass"（本仓没有这种 pass，所以实际是 W4 先行）。
+
+### 8.5 分步落地（每步可独立验证）
+
+| 步 | 内容 | 验收 |
+| --- | --- | --- |
+| W5a | `CreateCommandEncoder` / `Submit` / `EndRenderPass`：只做 encoder 生命周期 | 帧仍正常，录制代码仍用原生 pass |
+| W5b | `BeginRenderPass` + 附件描述 | 一帧的颜色/深度清除行为不变（对比截图） |
+| W5c | `SetPipeline`/`SetBindGroup`/`SetVertexBuffer`/`SetIndexBuffer`/`Draw*` 逐组迁移 | 每迁移一组跑一次截图 |
+| W5d | 删除 `RenderBackendInterop`、`Device` 逃生口与全部 `As*`，加门禁断言其不存在 | 架构测试：`Framework/Rendering` 之外零 `Brew.Wgpu`，且层内 `As*` 数为 0 |
+
+### 8.6 已知风险
+
+| 风险 | 缓解 |
+| --- | --- |
+| pass 未结束导致整帧丢失 | `EndRenderPass` 后置空内部引用；重复使用抛异常；每步迁移后实机截图 |
+| 状态顺序错误（pipeline 与 vertex layout 不匹配） | 逐组迁移（W5c），每次只改一类调用 |
+| 性能回退（每次绘制多一层间接） | 迁移后用 `FrameDiagnostics` 对比帧时间，超过 5% 回退则重新评估 |
+| 大量调用点（`RenderPassEncoder` 11 处 public + 更多内部） | 按文件分批，每批一个提交，可独立回滚 |
