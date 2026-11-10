@@ -73,3 +73,32 @@ updated: 2026-11-10
 - 或所有者要求跨平台目标变更（例如放弃 macOS）
 
 满足任一条时，本文件升级为 ADR 草案并提交裁决。
+
+## 7. 抽象层审计（2026-11-10）
+
+原则 6 要求"所有 WGPU 调用收敛在一个渲染抽象层内"，其目的就是**可替换后端**。审计当前状态：
+
+| 层 | 直接暴露 WGPU 的位置 | 评价 |
+| --- | --- | --- |
+| `Sharpcraft.Client`（游戏逻辑） | 3 行：`WindowCommand.cs:309-311` 把 `MC_PRESENT_MODE` 映射到 `WGPUPresentMode` | 几乎干净，包一层枚举即可归零 |
+| `Sharpcraft.Framework/Rendering`（抽象层） | 54 个 public 成员带 WGPU 类型：`Device` 14、`BindGroup` 13、`WGPUTextureFormat` 12、`RenderPipeline` 11、`Sampler` 8、`TextureView` 8、`Buffer` 6、`PipelineLayout` 3、`Texture` 3、`Instance` 2 | **这是缺口所在** |
+| 后端中立接口 | **0 个** | 没有可替换的接缝 |
+
+### 7.1 结论修正
+
+此前把"改用 Vulkan"判为"违反原则 6"，表述不准确。准确表述是：
+
+- **原则 6 不禁止换后端**，它禁止的是把后端调用散布到业务代码里
+- 当前 `Framework/Rendering` 是 **WGPU 门面**，不是后端契约；所以"随时切换后端"的能力**尚未真正具备**
+- 换后端的前置条件是先补出这条接缝，而不是先写 Vulkan
+
+### 7.2 最小接缝设计（建议，未实施）
+
+| 步骤 | 内容 | 验收 |
+| --- | --- | --- |
+| S1 | 定义 `IRenderBackend`：创建设备、创建纹理/缓冲/采样器/管线（句柄用不透明类型）、提交命令、呈现 | 接口内**零** WGPU 类型 |
+| S2 | 自有枚举替换 `WGPUTextureFormat` 等（`TextureFormat`、`PresentMode`、`AddressMode`…，后者已具备） | 抽象层 public 面 WGPU 类型计数下降 |
+| S3 | `WgpuBackend : IRenderBackend` 承接现有实现 | 行为零变化，测试全绿 |
+| S4 | 架构测试：`Framework/Rendering` 之外的程序集不得出现 `Brew.Wgpu` | 自动门禁 |
+
+完成 S1–S4 后，"退路"才真正可用：新增 Vulkan 后端只需实现 `IRenderBackend`，调用方不动。
