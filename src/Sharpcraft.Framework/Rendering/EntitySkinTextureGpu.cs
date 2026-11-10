@@ -47,7 +47,7 @@ internal sealed class EntitySkinTextureGpu : IDisposable
         _view = backend.CreateTextureView(_texture);
 
         // Bind group creation has not moved behind the seam yet, so unwrap the native view for it (W1).
-        var nativeView = backend is WgpuRenderBackend wgpu ? wgpu.AsTextureView(_view) : throw new InvalidOperationException("the seam implementation must unwrap its own handles");
+        var nativeView = RenderBackendInterop.Unwrap(backend).AsTextureView(_view);
         BindGroup = device.CreateBindGroup(
             layout,
             [

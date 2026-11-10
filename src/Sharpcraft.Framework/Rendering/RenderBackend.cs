@@ -334,3 +334,20 @@ public sealed class WgpuRenderBackend : IRenderBackend
         return result;
     }
 }
+
+/// <summary>
+/// Reaches the native objects a handle wraps, for code that has not moved behind the seam yet.
+/// </summary>
+/// <remarks>
+/// The seam forbids backend types in its own signatures, so the unwrapping lives here rather than on the interface. One
+/// helper instead of a type test at every call site means a second backend fails in one place with one message, and the
+/// whole file disappears when pass recording moves behind the seam.
+/// </remarks>
+internal static class RenderBackendInterop
+{
+    /// <summary>Returns the wgpu backend behind a seam reference.</summary>
+    /// <param name="backend">Backend handed to the resource.</param>
+    internal static WgpuRenderBackend Unwrap(IRenderBackend backend) =>
+        backend as WgpuRenderBackend
+        ?? throw new InvalidOperationException("the seam implementation must unwrap its own handles");
+}

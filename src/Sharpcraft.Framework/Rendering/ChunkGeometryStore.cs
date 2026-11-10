@@ -16,27 +16,26 @@ public sealed class ChunkGeometryStore : IDisposable
 {
     private sealed class Entry
     {
-        public required Brew.Wgpu.Buffer Vertex;
-        public required Brew.Wgpu.Buffer Index;
+        public required BufferHandle Vertex;
+        public required BufferHandle Index;
         public required uint IndexCount;
         public required Vector3 Minimum;
         public required Vector3 Maximum;
         public required long Bytes;
     }
 
-    private readonly Device _device;
-    private readonly Queue _queue;
+    private readonly IRenderBackend _backend;
     private readonly int _bytesPerVertex;
     private readonly Dictionary<long, Entry> _entries = [];
     private readonly List<(long Key, float Distance)> _sortKeys = [];
 
     /// <summary>Creates an empty store.</summary>
-    public ChunkGeometryStore(Device device, int bytesPerVertex = VertexLayout.Stride)
+    public ChunkGeometryStore(IRenderBackend backend, Device device, int bytesPerVertex = VertexLayout.Stride)
     {
+        ArgumentNullException.ThrowIfNull(backend);
         ArgumentNullException.ThrowIfNull(device);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(bytesPerVertex);
-        _device = device;
-        _queue = device.Queue;
+        _backend = backend;
         _bytesPerVertex = bytesPerVertex;
     }
 
@@ -77,26 +76,18 @@ public sealed class ChunkGeometryStore : IDisposable
             && existing.IndexCount == (uint)mesh.Indices.Length && existing.Bytes == vertexBytes + indexBytes)
         {
             // Same shape: rewrite in place, the common case for a block edit.
-            _queue.WriteBuffer(existing.Vertex, 0, System.Runtime.InteropServices.MemoryMarshal.AsBytes(mesh.Vertices.AsSpan()));
-            _queue.WriteBuffer(existing.Index, 0, System.Runtime.InteropServices.MemoryMarshal.AsBytes(mesh.Indices.AsSpan()));
+            _backend.WriteBuffer(existing.Vertex, System.Runtime.InteropServices.MemoryMarshal.AsBytes(mesh.Vertices.AsSpan()), 0);
+            _backend.WriteBuffer(existing.Index, System.Runtime.InteropServices.MemoryMarshal.AsBytes(mesh.Indices.AsSpan()), 0);
             UploadedBytes += vertexBytes + indexBytes;
             return;
         }
 
         Remove(chunkKey);
 
-        var vertexBuffer = _device.CreateBuffer(new BufferDescriptor
-        {
-            Size = (ulong)vertexBytes,
-            Usage = BufferUsage.Vertex | BufferUsage.CopyDst
-        });
-        var indexBuffer = _device.CreateBuffer(new BufferDescriptor
-        {
-            Size = (ulong)indexBytes,
-            Usage = BufferUsage.Index | BufferUsage.CopyDst
-        });
-        _queue.WriteBuffer(vertexBuffer, 0, System.Runtime.InteropServices.MemoryMarshal.AsBytes(mesh.Vertices.AsSpan()));
-        _queue.WriteBuffer(indexBuffer, 0, System.Runtime.InteropServices.MemoryMarshal.AsBytes(mesh.Indices.AsSpan()));
+        var vertexBuffer = _backend.CreateBuffer(new BufferDesc((ulong)vertexBytes, BufferUsages.Vertex | BufferUsages.CopyDst));
+        var indexBuffer = _backend.CreateBuffer(new BufferDesc((ulong)indexBytes, BufferUsages.Index | BufferUsages.CopyDst));
+        _backend.WriteBuffer(vertexBuffer, System.Runtime.InteropServices.MemoryMarshal.AsBytes(mesh.Vertices.AsSpan()), 0);
+        _backend.WriteBuffer(indexBuffer, System.Runtime.InteropServices.MemoryMarshal.AsBytes(mesh.Indices.AsSpan()), 0);
 
         var (minimum, maximum) = BoundsOf(mesh);
         _entries[chunkKey] = new Entry
@@ -121,8 +112,8 @@ public sealed class ChunkGeometryStore : IDisposable
         }
 
         MemoryBytes -= gone.Bytes;
-        gone.Vertex.Dispose();
-        gone.Index.Dispose();
+        _backend.Destroy(gone.Vertex);
+        _backend.Destroy(gone.Index);
     }
 
     /// <summary>Draws the resident chunks, skipping any whose bounds fall outside the frustum.</summary>
@@ -171,8 +162,12 @@ public sealed class ChunkGeometryStore : IDisposable
     private void DrawEntry(RenderPassEncoder pass, Entry entry)
     {
         DrawCallsTotal++;
-        pass.SetVertexBuffer(0, entry.Vertex);
-        pass.SetIndexBuffer(entry.Index, WGPUIndexFormat.Uint32);
+        // Pass recording has not moved behind the seam yet, so unwrap the native buffers for it (W2).
+        var wgpu = _backend is WgpuRenderBackend native
+            ? native
+            : throw new InvalidOperationException("the seam implementation must unwrap its own handles");
+        pass.SetVertexBuffer(0, wgpu.AsBuffer(entry.Vertex));
+        pass.SetIndexBuffer(wgpu.AsBuffer(entry.Index), WGPUIndexFormat.Uint32);
         pass.DrawIndexed(entry.IndexCount);
     }
 
@@ -196,8 +191,8 @@ public sealed class ChunkGeometryStore : IDisposable
     {
         foreach (var entry in _entries.Values)
         {
-            entry.Vertex.Dispose();
-            entry.Index.Dispose();
+            _backend.Destroy(entry.Vertex);
+            _backend.Destroy(entry.Index);
         }
 
         _entries.Clear();

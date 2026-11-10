@@ -458,9 +458,9 @@ public static class WindowedRenderer
         // One store per layer: every chunk keeps its own vertex/index buffer, drawn with CPU frustum culling. Memory
         // follows the resident meshes, so view distances 12-32 need no single-buffer ceiling and never drop far chunks
         // (ADR-0020).
-        var arena = geometryUpdates is null ? null : new ChunkGeometryStore(device);
-        var arenaCutout = geometryUpdates is null ? null : new ChunkGeometryStore(device);
-        var arenaTranslucent = geometryUpdates is null ? null : new ChunkGeometryStore(device);
+        var arena = geometryUpdates is null ? null : new ChunkGeometryStore(backend, device);
+        var arenaCutout = geometryUpdates is null ? null : new ChunkGeometryStore(backend, device);
+        var arenaTranslucent = geometryUpdates is null ? null : new ChunkGeometryStore(backend, device);
 
         // Geometry that is rebuilt every frame, such as placeholder entity boxes. It gets its own small pair of
         // buffers so a per frame rewrite never touches the world arena.
@@ -673,13 +673,13 @@ public static class WindowedRenderer
                 // dropped here and the caller replays every mesh in the same frame, which is what keeps a resolution
                 // change all or nothing (docs/decisions/0017-reload-invalidation-by-layout.md).
                 arena?.Dispose();
-                arena = new ChunkGeometryStore(device);
+                arena = new ChunkGeometryStore(backend, device);
 
                 arenaCutout?.Dispose();
-                arenaCutout = new ChunkGeometryStore(device);
+                arenaCutout = new ChunkGeometryStore(backend, device);
 
                 arenaTranslucent?.Dispose();
-                arenaTranslucent = new ChunkGeometryStore(device);
+                arenaTranslucent = new ChunkGeometryStore(backend, device);
                 Console.WriteLine("ui: world geometry reset");
             }
 
