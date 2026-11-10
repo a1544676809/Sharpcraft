@@ -248,6 +248,18 @@ public interface IRenderBackend
     /// <summary>Draws indexed vertices.</summary>
     void DrawIndexed(RenderPassHandle pass, uint indexCount, uint instanceCount, uint firstIndex, int baseVertex, uint firstInstance);
 
+    /// <summary>Reads a buffer range into memory, mapping and unmapping around the copy.</summary>
+    /// <remarks>
+    /// Reading back is the one operation that cannot stay asynchronous: the caller needs the bytes before it can go on,
+    /// so the seam maps, copies out and unmaps in one call rather than exposing a mapped view whose lifetime the caller
+    /// would have to manage.
+    /// </remarks>
+    /// <param name="instance">Instance the buffer belongs to.</param>
+    /// <param name="buffer">Buffer to read; it must be usable as a map-read destination.</param>
+    /// <param name="offset">First byte read.</param>
+    /// <param name="size">Bytes to read.</param>
+    byte[] ReadBuffer(Brew.Wgpu.Instance instance, BufferHandle buffer, ulong offset, nuint size);
+
     /// <summary>Copies a texture region into a buffer, for readback.</summary>
     /// <param name="encoder">Encoder recording the frame.</param>
     /// <param name="texture">Texture to read.</param>
@@ -599,6 +611,27 @@ public sealed class WgpuRenderBackend : IRenderBackend
     public void DrawIndexed(RenderPassHandle pass, uint indexCount, uint instanceCount, uint firstIndex, int baseVertex, uint firstInstance) =>
         RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
             .DrawIndexed(indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
+
+    /// <inheritdoc/>
+    public byte[] ReadBuffer(Brew.Wgpu.Instance instance, BufferHandle buffer, ulong offset, nuint size)
+    {
+        var native = RequireValid<Brew.Wgpu.Buffer>(buffer.Value is not null, buffer.Value);
+
+        if (native.MapBlocking(instance, MapMode.Read, offset, size) != WGPUMapAsyncStatus.Success)
+        {
+            throw new InvalidOperationException("the buffer could not be mapped for reading");
+        }
+
+        try
+        {
+            var mapped = native.GetMappedRange<byte>(offset, size);
+            return mapped.ToArray();
+        }
+        finally
+        {
+            native.Unmap();
+        }
+    }
 
     /// <inheritdoc/>
     public void CopyTextureToBuffer(CommandEncoderHandle encoder, TextureHandle texture, BufferHandle buffer, uint bytesPerRow, uint width, uint height) =>
