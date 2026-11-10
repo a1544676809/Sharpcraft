@@ -60,6 +60,22 @@ internal static class WindowCommand
         string? gameDirectory,
         CancellationToken cancellationToken)
     {
+        // The windowed path uses the same atlas and block layout as the offscreen path, otherwise the
+        // window would show colour-only faces while the saved PNG is textured (docs/modules/render.md 6.1).
+        // One resource manager for the session, created before anything reads resources so the atlas, models and
+        // blockstates see the same packs as the font and the language table.
+        using var resources = FrameCommand.CreateResourceManager();
+
+        (SpriteAtlas Atlas, BlockSpriteMap Map)? prepared = FrameCommand.PrepareSprites(
+            GameOptions.Get("MC_FRAME_LOCAL") is { Length: > 0 }
+                ? FrameCommand.DemoLayout()
+                : VanillaBlockRegistry.Layout,
+            resources);
+
+        // Order follows the reference: resources finish loading, then the world is joined (Minecraft.java: resource
+        // reload callback -> initial screens -> QuickPlay.connect). Joining first parks the socket for the seconds
+        // resource loading takes, with nothing answering the server's keep-alives, so the server drops the session
+        // before the window opens and not one chunk streams in after the preload (T-792).
         ClientWorld world;
         LivePlaySession? joinedEarly = null;
 
@@ -91,17 +107,6 @@ internal static class WindowCommand
             Console.WriteLine("window: no server address; showing a local world");
         }
 
-        // The windowed path uses the same atlas and block layout as the offscreen path, otherwise the
-        // window would show colour-only faces while the saved PNG is textured (docs/modules/render.md 6.1).
-        // One resource manager for the session, created before anything reads resources so the atlas, models and
-        // blockstates see the same packs as the font and the language table.
-        using var resources = FrameCommand.CreateResourceManager();
-
-        (SpriteAtlas Atlas, BlockSpriteMap Map)? prepared = FrameCommand.PrepareSprites(
-            GameOptions.Get("MC_FRAME_LOCAL") is { Length: > 0 }
-                ? FrameCommand.DemoLayout()
-                : VanillaBlockRegistry.Layout,
-            resources);
 
         // One pool serves both decoding and meshing, sized from the machine
         // (docs/specs/network/play-movement.md 7.24).

@@ -599,10 +599,10 @@ stderr 中 `Validation` / `panic` / `uncaptured` 全为 0。画面核对（项�
 | `MC_START_CHUNKS=400` | `chunks: 400 ok, 0 failed` —— **网络流式收区块完全正常** |
 | 同上，继续观察 | 卡在 `chunk workers: 8` 之后 **300 秒未出现窗口** —— 一次性预载 400 个会被网格化阻塞 |
 
-**根因**：`WindowCommand.ServerWorldAsync` 的预载在 9 个处有意停止，注释写明"其余由 live session 流式进来"；但实时会话没有把到达的区块送入世界并网格化（会话内 `pool: parsed 0 ok`）。所以"流式进来"这一步并不存在。
+**根因（修复时实测更正）**：`InteractiveSession` 的增量收区块链路一直是通的，**它从来没被触发过——因为连接在预载结束后就死了**。证据：①Fabric 服务器日志里每次 `logged in` 之后**恰好 30 秒**出现 `lost connection: Timed out`；②客户端 socket 处于 `CloseWait`（服务器先关）。原因是预载到 9 个返回后，`ChunkWorkerPool` 创建 + 网格预热 + `BuildRequest` 合计 **~29 秒没有一帧在跑**，没人 `DrainIncoming`、没人回 keep-alive 与 `ChunkBatchReceived`，服务器 30 秒判死。连接一死，`cull: chunks` 永远 7、`pool: parsed` 永远 0。**另更正本节的另一个推测**：资源加载其实只有 ~0.4 秒（`sprites: 2048x2048 atlas ... 106 ms`），不是"数秒"。
 
 **原版规格**（`ref://mc-26.3-analysis/src/net/minecraft/client/`）：资源重载成功回调 → `onResourceLoadFinished` → `onGameLoadFinished` → `Gui.buildInitialScreens` 链尾的 `QuickPlay.connect` → `ConnectScreen.startConnecting`。即**先加载完资源，再连接**；连接后由 `ClientChunkCache` 持续接收并按批次确认（`ChunkBatchReceived`）。我们的顺序相反：先连接预载，再花数秒加载资源，期间既不上报批次确认也不消费区块包。
 
 **这同时解释了之前观察到的服务器日志 `Timed out`**：连接建立后客户端长时间阻塞在资源加载，不响应服务器。
 
-**修复方向**：①连接移到资源加载之后（对齐原版顺序）；②实时会话增量解析并上传到达的区块。这两条必须一起做——只改顺序不改流式，仍然停在 9 个。
+**修复（已完成）**：①世界选择链移到资源/精灵之后、`ChunkWorkerPool` 之前（对齐原版顺序）；②`LivePlaySession` 的收发泵用**共享的** `PlaySession.TryHandleTransport` 就地应答 keep-alive / ping / `ChunkBatchFinished` 并丢弃（这三类只回包、不含游戏状态），区块包仍只经 `InteractiveSession` 在游戏线程进世界——**没有第二套分发**（原则 14）；③连接写入加锁，泵线程与游戏线程都会写流。**实测**：`cull: chunks` 7 → 200（45 s）→ 366（150 s），`loaded=637` 与离屏路径一致；帧时间 2.0–5.6 ms；服务器结束原因变为 `Disconnected`，不再 `Timed out`；截图已是完整地形（树、花、裸岩坡、远山）。

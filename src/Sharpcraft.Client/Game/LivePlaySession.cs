@@ -16,6 +16,7 @@ internal sealed class LivePlaySession : IDisposable
 {
     private readonly MinecraftConnection _connection;
     private readonly BoundedReceiveQueue _incoming = new();
+    private readonly object _sendLock = new();
     private readonly CancellationTokenSource _stop = new();
     private Task _pump = Task.CompletedTask;
     private volatile string _failure = string.Empty;
@@ -131,7 +132,13 @@ internal sealed class LivePlaySession : IDisposable
 
         try
         {
-            _connection.Send(packet);
+            // The receive pump answers transport packets on its own thread, so every write to the stream is serialized:
+            // an interleaved frame would desynchronise the protocol, not merely arrive late.
+            lock (_sendLock)
+            {
+                _connection.Send(packet);
+            }
+
             return true;
         }
         catch (Exception exception) when (exception is IOException or SocketException or ObjectDisposedException)
@@ -172,6 +179,48 @@ internal sealed class LivePlaySession : IDisposable
         return false;
     }
 
+    /// <summary>
+    /// Answers the transport-level packets (keep-alive, ping, chunk batch finished) on the pump thread and drops them.
+    /// </summary>
+    /// <remarks>
+    /// A server drops a client that leaves its keep-alives unanswered for thirty seconds, and the client only drains its
+    /// queue once a frame runs: startup (meshing, the first frame request, the window appearing) can outlast that, which
+    /// killed the session before it ever streamed a chunk (T-792). These three packets only need a reply, never game
+    /// state, and the reply encoding is the same shared implementation the preload and the game thread call, so this is
+    /// not a second dispatcher: chunks still reach the world through <see cref="InteractiveSession"/>, on the game thread.
+    /// </remarks>
+    private bool TryAnswerTransport(byte[] body)
+    {
+        var reader = new PayloadReader(body);
+        if (reader.TryReadVarInt(out var packetId) != DecodeStatus.Success)
+        {
+            return false;
+        }
+
+        var keepAlives = 0;
+        var pings = 0;
+        var batches = 0;
+        try
+        {
+            return PlaySession.TryHandleTransport(packetId, ref reader, SendFromPump, ref keepAlives, ref pings, ref batches);
+        }
+        catch (Exception exception) when (exception is IOException or SocketException or ObjectDisposedException)
+        {
+            _failure = exception.Message;
+            _stop.Cancel();
+            return true;
+        }
+    }
+
+    /// <summary>Sends a transport reply from the pump thread, keeping the stream writes serialized.</summary>
+    private void SendFromPump(byte[] packet)
+    {
+        lock (_sendLock)
+        {
+            _connection.Send(packet);
+        }
+    }
+
     /// <summary>Formats a receive-pump fault so protocol/decode failures are surfaced instead of silently faulting the task.</summary>
     internal static string DescribePumpFailure(Exception exception) =>
         $"receive pump failed: {exception.GetType().Name}: {exception.Message}";
@@ -183,6 +232,14 @@ internal sealed class LivePlaySession : IDisposable
             while (!cancellationToken.IsCancellationRequested)
             {
                 var body = await _connection.ReceiveAsync(cancellationToken).ConfigureAwait(false);
+
+                // Keep-alives, pings and chunk-batch acknowledgements are answered right here so the session survives
+                // even when no frame is pumping the queue yet; everything else is queued for the game thread.
+                if (TryAnswerTransport(body))
+                {
+                    continue;
+                }
+
                 if (!TryEnqueueReceived(body))
                 {
                     return;
