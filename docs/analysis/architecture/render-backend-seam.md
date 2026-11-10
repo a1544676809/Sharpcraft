@@ -250,3 +250,40 @@ Sharpcraft.Client.exe --version 26.3 --gameDir <dir> --pack <pack.zip> --offline
 后果：把 `ChunkCuller._pipeline` 从 `ComputePipeline?` 改成句柄，pass 处就必须 `backend.AsComputePipeline(...)` 才能用——**逃生口反而 +1**。
 
 所以 compute 剩余的迁移顺序必须是：**先补 `BeginComputePass` / `SetPipeline` / `DispatchWorkgroups` / `EndComputePass` 到接缝，再改字段类型**。单独改字段没有意义。
+### 9.5 compute 侧整体转换配方（`ChunkCuller` 为例）
+
+compute 录制能力已就绪（§"compute pass 录制"），接缝也已具备 bind group 的 buffer 入口：
+
+```csharp
+BindGroupEntryDesc.Uniform(uint binding, BufferHandle buffer, ulong offset, ulong size)
+```
+
+因此 `ChunkCuller` 可以整体转换，字段对应关系：
+
+| 原字段 | 改为 | 创建方式 |
+| --- | --- | --- |
+| `BindGroupLayout? _layout` | `BindGroupLayoutHandle?` | `backend.CreateBindGroupLayout([BindGroupLayoutEntryDesc(...)])` |
+| `PipelineLayout? _pipelineLayout` | `PipelineLayoutHandle?` | `backend.CreatePipelineLayout([_layout.Value])` |
+| `ShaderModule? _shader` | **删除** | 接缝从源码编译，不再需要显式模块 |
+| `ComputePipeline? _pipeline` | `ComputePipelineHandle?` | `backend.CreateComputePipeline(new ComputePipelineDesc(source, "cs_main", _pipelineLayout.Value))` |
+| `BindGroup? _bindGroup` | `BindGroupHandle?` | `backend.CreateBindGroup(_layout.Value, [BindGroupEntryDesc.Uniform(0, bounds, 0, size), ...])` |
+| `WgpuBuffer? _bounds` 等 4 个 | `BufferHandle?` | `backend.CreateBuffer(...)`；每帧更新用 `backend.WriteBuffer(...)` |
+| — | 新增 `_backend` | 构造时传入，而不是 `new WgpuRenderBackend(device)` |
+
+`Record` 方法签名改为 `Record(IRenderBackend backend, CommandEncoder encoder, ...)`（或直接收 `CommandEncoderHandle`），dispatch 改：
+
+```csharp
+var pass = backend.BeginComputePass(encoder);
+try
+{
+    backend.SetPipeline(pass, _pipeline.Value);
+    backend.SetBindGroup(pass, 0, _bindGroup.Value);
+    backend.DispatchWorkgroups(pass, (uint)((slotCount + 63) / 64), 1, 1);
+}
+finally
+{
+    backend.EndComputePass(pass);
+}
+```
+
+**注意**：`WriteBuffer` 是泛型方法，调用形式为 `backend.WriteBuffer<byte>(buffer, offset, data)`，参数顺序与原生 `queue.WriteBuffer(buffer, offset, data)` 一致但类型是句柄。
