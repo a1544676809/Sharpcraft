@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using Sharpcraft.Common.Reference;
+
 namespace Sharpcraft.Client.Assets;
 
 /// <summary>
@@ -16,6 +18,7 @@ namespace Sharpcraft.Client.Assets;
 /// Getting this wrong is visible: a fixed level on a small atlas over-blurs distant ground into flat patches, and a
 /// padding that does not follow the level lets neighbouring sprites bleed into each other at distance.
 /// </remarks>
+[ReferenceClass("net.minecraft.client.renderer.texture.SpriteLoader", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/texture/SpriteLoader.java", Kind = ReferenceKind.Mirror, Status = ReferenceStatus.Partial, Note = "level and padding derivation from stitch(); layout itself is independent")]
 public static class AtlasMipPolicy
 {
     /// <summary>The level count used when the caller has no option value of its own.</summary>

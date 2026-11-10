@@ -90,6 +90,7 @@
 
 | Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
 | --- | --- | --- | --- | --- | --- | --- |
+| Sharpcraft.Client | Sharpcraft.Client.Assets.AtlasMipPolicy | Mirror | Partial | net.minecraft.client.renderer.texture.SpriteLoader | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/texture/SpriteLoader.java | level and padding derivation from stitch(); layout itself is independent |
 | Sharpcraft.Client | Sharpcraft.Client.Assets.BlockModelResolver | Mirror | Partial | net.minecraft.client.renderer.block.BlockModelResolver | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/BlockModelResolver.java | auto-resolved by name; verify |
 | Sharpcraft.Client | Sharpcraft.Client.Assets.Transparency | Mirror | Partial | com.mojang.blaze3d.platform.Transparency | ref://mc-26.3-analysis/src/com/mojang/blaze3d/platform/Transparency.java | auto-resolved by name; verify |
 

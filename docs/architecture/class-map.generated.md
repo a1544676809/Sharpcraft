@@ -32,6 +32,7 @@
 | Sharpcraft.Auth | Sharpcraft.Auth.XboxLiveAuthenticator | New | Full | sharpcraft.XboxLiveAuthenticator | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
 | Sharpcraft.Auth | Sharpcraft.Auth.XboxUserToken | New | Full | sharpcraft.XboxUserToken | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
 | Sharpcraft.Auth | Sharpcraft.Auth.XstsToken | New | Full | sharpcraft.XstsToken | ref://mc-26.3-analysis/src | Authentication library; no reference counterpart |
+| Sharpcraft.Client | Sharpcraft.Client.Assets.AtlasMipPolicy | Mirror | Partial | net.minecraft.client.renderer.texture.SpriteLoader | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/texture/SpriteLoader.java | level and padding derivation from stitch(); layout itself is independent |
 | Sharpcraft.Client | Sharpcraft.Client.Assets.BlockModelResolver | Mirror | Partial | net.minecraft.client.renderer.block.BlockModelResolver | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/BlockModelResolver.java | auto-resolved by name; verify |
 | Sharpcraft.Client | Sharpcraft.Client.Assets.Transparency | Mirror | Partial | com.mojang.blaze3d.platform.Transparency | ref://mc-26.3-analysis/src/com/mojang/blaze3d/platform/Transparency.java | auto-resolved by name; verify |
 | Sharpcraft.Client | Sharpcraft.Client.Game.ScreenshotPaths | Mirror | Partial | net.minecraft.client.Screenshot | ref://mc-26.3-analysis/src/net/minecraft/client/Screenshot.java | screenshots directory, timestamped file name and the _N collision suffix |
