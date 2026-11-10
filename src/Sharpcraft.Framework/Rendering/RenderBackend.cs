@@ -149,6 +149,21 @@ public readonly struct CommandEncoderHandle
     internal object Value { get; }
 }
 
+/// <summary>An opaque compute pass owned by a render backend.</summary>
+/// <remarks>
+/// Like a render pass this is borrowed from its encoder and ended exactly once; it is a sequence, not a resource, so
+/// there is no destroy call.
+/// </remarks>
+public readonly struct ComputePassHandle
+{
+    internal ComputePassHandle(object value) => Value = value;
+
+    /// <summary>Whether this handle refers to a pass the backend began.</summary>
+    public bool IsValid => Value is not null;
+
+    internal object Value { get; }
+}
+
 /// <summary>An opaque compute pipeline owned by a render backend.</summary>
 public readonly struct ComputePipelineHandle
 {
@@ -232,6 +247,21 @@ public interface IRenderBackend
 
     /// <summary>Draws indexed vertices.</summary>
     void DrawIndexed(RenderPassHandle pass, uint indexCount, uint instanceCount, uint firstIndex, int baseVertex, uint firstInstance);
+
+    /// <summary>Begins a compute pass on the encoder.</summary>
+    ComputePassHandle BeginComputePass(CommandEncoderHandle encoder);
+
+    /// <summary>Ends a compute pass. The handle is dead afterwards.</summary>
+    void EndComputePass(ComputePassHandle pass);
+
+    /// <summary>Selects the compute pipeline the dispatch uses.</summary>
+    void SetPipeline(ComputePassHandle pass, ComputePipelineHandle pipeline);
+
+    /// <summary>Binds a bind group at a slot for the dispatch.</summary>
+    void SetBindGroup(ComputePassHandle pass, uint index, BindGroupHandle group);
+
+    /// <summary>Runs the dispatch grid.</summary>
+    void DispatchWorkgroups(ComputePassHandle pass, uint x, uint y, uint z);
 
     /// <summary>Compiles a compute pipeline from its description.</summary>
     ComputePipelineHandle CreateComputePipeline(in ComputePipelineDesc desc);
@@ -551,6 +581,28 @@ public sealed class WgpuRenderBackend : IRenderBackend
     public void DrawIndexed(RenderPassHandle pass, uint indexCount, uint instanceCount, uint firstIndex, int baseVertex, uint firstInstance) =>
         RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
             .DrawIndexed(indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
+
+    /// <inheritdoc/>
+    public ComputePassHandle BeginComputePass(CommandEncoderHandle encoder) =>
+        new(RequireValid<CommandEncoder>(encoder.Value is not null, encoder.Value).BeginComputePass());
+
+    /// <inheritdoc/>
+    public void EndComputePass(ComputePassHandle pass) =>
+        RequireValid<ComputePassEncoder>(pass.Value is not null, pass.Value).End();
+
+    /// <inheritdoc/>
+    public void SetPipeline(ComputePassHandle pass, ComputePipelineHandle pipeline) =>
+        RequireValid<ComputePassEncoder>(pass.Value is not null, pass.Value)
+            .SetPipeline(RequireValid<ComputePipeline>(pipeline.Value is not null, pipeline.Value));
+
+    /// <inheritdoc/>
+    public void SetBindGroup(ComputePassHandle pass, uint index, BindGroupHandle group) =>
+        RequireValid<ComputePassEncoder>(pass.Value is not null, pass.Value)
+            .SetBindGroup(index, RequireValid<BindGroup>(group.Value is not null, group.Value));
+
+    /// <inheritdoc/>
+    public void DispatchWorkgroups(ComputePassHandle pass, uint x, uint y, uint z) =>
+        RequireValid<ComputePassEncoder>(pass.Value is not null, pass.Value).DispatchWorkgroups(x, y, z);
 
     /// <inheritdoc/>
     public ComputePipelineHandle CreateComputePipeline(in ComputePipelineDesc desc)
