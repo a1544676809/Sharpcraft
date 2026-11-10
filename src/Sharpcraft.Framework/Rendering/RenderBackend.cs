@@ -142,6 +142,18 @@ public interface IRenderBackend
     /// <summary>Creates a sampler from the state the caller asked for.</summary>
     SamplerHandle CreateSampler(AddressMode addressMode, FilterMode minFilter, FilterMode magFilter, bool useMipmaps);
 
+    /// <summary>Creates a bind group layout.</summary>
+    BindGroupLayoutHandle CreateBindGroupLayout(ReadOnlySpan<BindGroupLayoutEntryDesc> entries);
+
+    /// <summary>Creates a bind group from a layout and its entries.</summary>
+    BindGroupHandle CreateBindGroup(BindGroupLayoutHandle layout, ReadOnlySpan<BindGroupEntryDesc> entries);
+
+    /// <summary>Destroys a bind group.</summary>
+    void Destroy(BindGroupHandle group);
+
+    /// <summary>Destroys a bind group layout.</summary>
+    void Destroy(BindGroupLayoutHandle layout);
+
     /// <summary>Creates a buffer.</summary>
     BufferHandle CreateBuffer(in BufferDesc desc);
 
@@ -244,6 +256,51 @@ public sealed class WgpuRenderBackend : IRenderBackend
         new(SamplerCache.Create(_device, addressMode, minFilter, magFilter, useMipmaps));
 
     /// <inheritdoc/>
+    public BindGroupLayoutHandle CreateBindGroupLayout(ReadOnlySpan<BindGroupLayoutEntryDesc> entries)
+    {
+        var native = new BindGroupLayoutEntry[entries.Length];
+        for (var index = 0; index < entries.Length; index++)
+        {
+            var entry = entries[index];
+            var stage = ToWgpu(entry.Visibility);
+            native[index] = entry.Kind switch
+            {
+                BindingKind.UniformBuffer => BindGroupLayoutEntry.Buffer(entry.Binding, stage, WGPUBufferBindingType.Uniform, false, 0),
+                BindingKind.Texture => BindGroupLayoutEntry.Texture(entry.Binding, stage, WGPUTextureSampleType.Float, WGPUTextureViewDimension._2D, false),
+                BindingKind.Sampler => BindGroupLayoutEntry.Sampler(entry.Binding, stage, WGPUSamplerBindingType.Filtering),
+                _ => throw new ArgumentOutOfRangeException(nameof(entries), entry.Kind, "no layout counterpart")
+            };
+        }
+
+        return new BindGroupLayoutHandle(_device.CreateBindGroupLayout(native));
+    }
+
+    /// <inheritdoc/>
+    public BindGroupHandle CreateBindGroup(BindGroupLayoutHandle layout, ReadOnlySpan<BindGroupEntryDesc> entries)
+    {
+        var native = new BindGroupEntry[entries.Length];
+        for (var index = 0; index < entries.Length; index++)
+        {
+            var entry = entries[index];
+            native[index] = entry.Kind switch
+            {
+                BindingKind.UniformBuffer => BindGroupEntry.Buffer(entry.Binding, (Brew.Wgpu.Buffer)entry.BoundBuffer.Value, entry.Offset, entry.Size),
+                BindingKind.Texture => BindGroupEntry.TextureView(entry.Binding, (TextureView)entry.BoundView.Value),
+                BindingKind.Sampler => BindGroupEntry.Sampler(entry.Binding, (Sampler)entry.BoundSampler.Value),
+                _ => throw new ArgumentOutOfRangeException(nameof(entries), entry.Kind, "no entry counterpart")
+            };
+        }
+
+        return new BindGroupHandle(_device.CreateBindGroup((BindGroupLayout)layout.Value, native));
+    }
+
+    /// <inheritdoc/>
+    public void Destroy(BindGroupHandle group) => ((BindGroup)group.Value).Dispose();
+
+    /// <inheritdoc/>
+    public void Destroy(BindGroupLayoutHandle layout) => ((BindGroupLayout)layout.Value).Dispose();
+
+    /// <inheritdoc/>
     public BufferHandle CreateBuffer(in BufferDesc desc) =>
         new(_device.CreateBuffer(new BufferDescriptor
         {
@@ -266,6 +323,27 @@ public sealed class WgpuRenderBackend : IRenderBackend
 
     /// <inheritdoc/>
     public void Destroy(SamplerHandle sampler) => ((Sampler)sampler.Value).Dispose();
+
+    private static ShaderStage ToWgpu(ShaderStages stages)
+    {
+        var result = (ShaderStage)0;
+        if (stages.HasFlag(ShaderStages.Vertex))
+        {
+            result |= ShaderStage.Vertex;
+        }
+
+        if (stages.HasFlag(ShaderStages.Fragment))
+        {
+            result |= ShaderStage.Fragment;
+        }
+
+        if (stages.HasFlag(ShaderStages.Compute))
+        {
+            result |= ShaderStage.Compute;
+        }
+
+        return result;
+    }
 
     private static Brew.Wgpu.BufferUsage ToWgpu(BufferUsages usage)
     {
