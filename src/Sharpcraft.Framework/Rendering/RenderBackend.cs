@@ -868,7 +868,10 @@ public sealed class WgpuRenderBackend : IRenderBackend
             var entry = entries[index];
             native[index] = entry.Kind switch
             {
-                BindingKind.UniformBuffer => BindGroupEntry.Buffer(entry.Binding, RequireValid<Brew.Wgpu.Buffer>(entry.BoundBuffer.IsValid, entry.BoundBuffer.Value), entry.Offset, entry.Size),
+                // A storage binding uses the same entry shape as a uniform one; the layout is what tells the backend
+                // whether the shader may write, so the entry does not repeat it.
+                BindingKind.UniformBuffer or BindingKind.StorageBuffer or BindingKind.ReadOnlyStorageBuffer =>
+                    BindGroupEntry.Buffer(entry.Binding, RequireValid<Brew.Wgpu.Buffer>(entry.BoundBuffer.IsValid, entry.BoundBuffer.Value), entry.Offset, entry.Size),
                 BindingKind.Texture => BindGroupEntry.TextureView(entry.Binding, RequireValid<TextureView>(entry.BoundView.IsValid, entry.BoundView.Value)),
                 BindingKind.Sampler => BindGroupEntry.Sampler(entry.Binding, RequireValid<Sampler>(entry.BoundSampler.IsValid, entry.BoundSampler.Value)),
                 _ => throw new ArgumentOutOfRangeException(nameof(entries), entry.Kind, "no entry counterpart")
