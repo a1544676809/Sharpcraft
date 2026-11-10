@@ -504,3 +504,29 @@ finally
 
 1. **`--frame` 输出不是比特稳定的**。同一构建连跑两次可得到不同哈希；两个不同只在于一小片云的取样（537 px，44×29 区域，R/B/A 通道差、G 不变）。根因：云网格取样跟随**实时世界时钟**，`MC_FORCE_DAYTIME` / `MC_FORCE_PARTIAL` 覆盖不到它。**影响**：任何把 `--frame` 哈希当作回归门禁的做法都会随机失败。**建议**：要么让云取样接受强制时间，要么在 `--frame` 里固定世界时钟，之后该哈希才可作为门禁。当前正确的比较方式是"同世界状态下新旧构建输出对比"。
 2. **`MC_FRAME_DEPTH` / `MC_FRAME_PYRAMID` / `MC_FRAME_MOTION` 诊断开关未传到渲染器**。设置后没有任何 `depth:` / `pyramid:` / `motion:` 输出。**影响**：深度金字塔与运动向量换算后**无法获得运行时真值证据**，目前只有编译通过 + 逐项语义等价。应单开任务修复 host→GameOptions 的 flag 通道，届时 `mismatches` 计数才能作为等价性证据。
+### 9.21 compute 链的运行时真值（2026-11-10）
+
+**此前认为"`MC_FRAME_*` 诊断开关未传到渲染器"是缺陷，实为用法误解**。按原则 13，游戏代码只读宿主传入的快照（`--debugOptionsFile` 的 JSON），故意不读环境变量；用 env 设置因此静默无效。
+
+正确用法：
+
+```powershell
+'{"MC_FRAME_PYRAMID":"1","MC_FRAME_MOTION":"1","MC_FRAME_DEPTH":"1","MC_FRAME_MOTION_DX":"1.5"}' |
+  Set-Content $env:TEMP\diag.json -Encoding UTF8
+
+Sharpcraft.Client.exe ... --frame --quickPlayMultiplayer 127.0.0.1:25565 --debugOptionsFile $env:TEMP\diag.json
+```
+
+输出（实跑）：
+
+```
+depth:   640x360 nearest 410.8 blocks (raw 0.0002) farthest 2000.0 blocks centre 554.7 blocks
+pyramid: 9 levels, total mismatches 0, worst delta 0.000000; 1:320x180 mismatches 0, ... 9 levels
+motion:  2 samples, mismatches 0, worst delta 0.0000 px
+```
+
+**意义**：这两条 compute 链是接缝化改造的对象，`mismatches 0` 说明接缝版本与 CPU 参考**逐级一致**。这是它们第一次获得运行时等效性证据——此前只有编译通过与逐项语义等价。
+
+**顺带发现并修复一个真 bug**：存储绑定在**布局** switch 里加了，但 **bind group entry** 的 switch 漏了，导致首次创建 compute 绑定组时抛 `no entry counterpart: ReadOnlyStorageBuffer`。这个错误编译期与单测都发现不了（没有任何单测创建 compute 绑定组），**只有实际跑一次 compute 才会暴露**——这正是缺诊断时被掩盖的那类问题。
+
+**教训**：`As*`/`Adopt*` 一类的 switch 分支扩充必须成对检查（layout ↔ entry），且必须有一次运行期覆盖，否则是"编译通过但会抛"的形态。
