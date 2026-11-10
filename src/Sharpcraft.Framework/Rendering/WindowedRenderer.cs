@@ -177,36 +177,22 @@ public static class WindowedRenderer
 
         Shaders.ShaderPipelines.EnsureValid();
 
-        using var bindGroupLayout = device.CreateBindGroupLayout(
+        // The layout is described once, in the seam's terms, with the minimum binding sizes the shaders declare; the
+        // backend turns it into its own structure. Creating the pipeline layout still needs the native object, so it is
+        // unwrapped here until pipeline creation moves behind the seam too.
+        var bindGroupLayout = backend.CreateBindGroupLayout(
         [
-            BindGroupLayoutEntry.Texture(
-                0,
-                ShaderStage.Fragment,
-                WGPUTextureSampleType.Float,
-                WGPUTextureViewDimension._2D,
-                false),
-            BindGroupLayoutEntry.Sampler(1, ShaderStage.Fragment, WGPUSamplerBindingType.Filtering),
-            BindGroupLayoutEntry.Buffer(
-                VertexLayout.CameraBinding,
-                ShaderStage.Vertex,
-                WGPUBufferBindingType.Uniform,
-                false,
-                VertexLayout.CameraUniformSize),
-            BindGroupLayoutEntry.Buffer(
-                3,
-                ShaderStage.Vertex | ShaderStage.Fragment,
-                WGPUBufferBindingType.Uniform,
-                false,
-                32),
-            BindGroupLayoutEntry.Buffer(
-                Shaders.ShaderBindings.Lightmap,
-                ShaderStage.Fragment,
-                WGPUBufferBindingType.Uniform,
-                false,
-                Shaders.ShaderBindings.LightmapBytes)
+            BindGroupLayoutEntryDesc.Texture(0, ShaderStages.Fragment),
+            BindGroupLayoutEntryDesc.Sampler(1, ShaderStages.Fragment),
+            BindGroupLayoutEntryDesc.UniformBuffer(VertexLayout.CameraBinding, ShaderStages.Vertex)
+                with { MinBindingSize = VertexLayout.CameraUniformSize },
+            BindGroupLayoutEntryDesc.UniformBuffer(3, ShaderStages.Vertex | ShaderStages.Fragment)
+                with { MinBindingSize = 32 },
+            BindGroupLayoutEntryDesc.UniformBuffer(Shaders.ShaderBindings.Lightmap, ShaderStages.Fragment)
+                with { MinBindingSize = Shaders.ShaderBindings.LightmapBytes }
         ]);
 
-        using var pipelineLayout = device.CreatePipelineLayout([bindGroupLayout]);
+        using var pipelineLayout = device.CreatePipelineLayout([wgpu.AsBindGroupLayout(bindGroupLayout)]);
 
         using var cameraBuffer = device.CreateBufferInit(
             new BufferInitDescriptor { Usage = BufferUsage.Uniform | BufferUsage.CopyDst },
@@ -236,7 +222,7 @@ public static class WindowedRenderer
         device.Queue.WriteBuffer(lightmapBuffer, 0, lightmapBytes.AsSpan());
 
         var bindGroup = device.CreateBindGroup(
-            bindGroupLayout,
+            wgpu.AsBindGroupLayout(bindGroupLayout),
             [
                 BindGroupEntry.TextureView(0, atlasView),
                 BindGroupEntry.Sampler(1, atlasSampler),
@@ -248,12 +234,12 @@ public static class WindowedRenderer
         using var entitySkin = new EntitySkinTextureGpu();
         if (entitySkinSource?.Atlas is { } skinData)
         {
-            entitySkin.Upload(backend, wgpu.AdoptBindGroupLayout(bindGroupLayout), skinData, wgpu.AdoptBuffer(cameraBuffer), wgpu.AdoptBuffer(fogBuffer), wgpu.AdoptBuffer(lightmapBuffer), wgpu.AdoptSampler(atlasSampler));
+            entitySkin.Upload(backend, bindGroupLayout, skinData, wgpu.AdoptBuffer(cameraBuffer), wgpu.AdoptBuffer(fogBuffer), wgpu.AdoptBuffer(lightmapBuffer), wgpu.AdoptSampler(atlasSampler));
         }
 
         using var itemAtlasGpu = new EntitySkinTextureGpu();
         if (itemAtlasSource?.Atlas is { } itemData)
-            itemAtlasGpu.Upload(backend, wgpu.AdoptBindGroupLayout(bindGroupLayout), itemData, wgpu.AdoptBuffer(cameraBuffer), wgpu.AdoptBuffer(fogBuffer), wgpu.AdoptBuffer(lightmapBuffer), wgpu.AdoptSampler(atlasSampler));
+            itemAtlasGpu.Upload(backend, bindGroupLayout, itemData, wgpu.AdoptBuffer(cameraBuffer), wgpu.AdoptBuffer(fogBuffer), wgpu.AdoptBuffer(lightmapBuffer), wgpu.AdoptSampler(atlasSampler));
         using var pipeline = CreatePipeline(device, format, pipelineLayout);
         using var cutoutPipeline = CreateCutoutPipeline(device, format, pipelineLayout);
         using var entityPipeline = CreateEntityPipeline(device, format, pipelineLayout);
@@ -295,8 +281,8 @@ public static class WindowedRenderer
         using var refAccumulateLayout = CreateOitTextureLayout(device, 3);
         using var refCullLayout = CreateOitTextureLayout(device, 1);
         using var refCompositeLayout = CreateOitTextureLayout(device, 4);
-        using var refTransmittancePipelineLayout = device.CreatePipelineLayout([bindGroupLayout, refTransmittanceLayout]);
-        using var refAccumulatePipelineLayout = device.CreatePipelineLayout([bindGroupLayout, refAccumulateLayout]);
+        using var refTransmittancePipelineLayout = device.CreatePipelineLayout([wgpu.AsBindGroupLayout(bindGroupLayout), refTransmittanceLayout]);
+        using var refAccumulatePipelineLayout = device.CreatePipelineLayout([wgpu.AsBindGroupLayout(bindGroupLayout), refAccumulateLayout]);
         using var refCullPipelineLayout = device.CreatePipelineLayout([refCullLayout]);
         using var refCompositePipelineLayout = device.CreatePipelineLayout([refCompositeLayout]);
 
@@ -364,7 +350,7 @@ public static class WindowedRenderer
 
         var glyphView = glyphSheet.CreateView();
         var uiBindGroup = device.CreateBindGroup(
-            bindGroupLayout,
+            wgpu.AsBindGroupLayout(bindGroupLayout),
             [
                 BindGroupEntry.TextureView(0, atlasView),
                 BindGroupEntry.Sampler(1, atlasSampler),
@@ -418,7 +404,7 @@ public static class WindowedRenderer
             var view = sheet.CreateView();
 
             spriteBindGroups.Add(device.CreateBindGroup(
-                bindGroupLayout,
+                wgpu.AsBindGroupLayout(bindGroupLayout),
                 [
                     BindGroupEntry.TextureView(0, view),
                     BindGroupEntry.Sampler(1, atlasSampler),
@@ -432,7 +418,7 @@ public static class WindowedRenderer
         }
 
         var uiTextBindGroup = device.CreateBindGroup(
-            bindGroupLayout,
+            wgpu.AsBindGroupLayout(bindGroupLayout),
             [
                 BindGroupEntry.TextureView(0, glyphView),
                 BindGroupEntry.Sampler(1, atlasSampler),
@@ -730,7 +716,7 @@ public static class WindowedRenderer
                 atlasView = atlasTexture.CreateView();
 
                 bindGroup = device.CreateBindGroup(
-                    bindGroupLayout,
+                    wgpu.AsBindGroupLayout(bindGroupLayout),
                     [
                         BindGroupEntry.TextureView(0, atlasView),
                         BindGroupEntry.Sampler(1, atlasSampler),
@@ -740,7 +726,7 @@ public static class WindowedRenderer
                     ]);
 
                 uiBindGroup = device.CreateBindGroup(
-                    bindGroupLayout,
+                    wgpu.AsBindGroupLayout(bindGroupLayout),
                     [
                         BindGroupEntry.TextureView(0, atlasView),
                         BindGroupEntry.Sampler(1, atlasSampler),
@@ -761,7 +747,7 @@ public static class WindowedRenderer
                 // texture and its bind group sufficient.
                 if (entitySkinSource.Atlas is { } refreshedSkin)
                 {
-                    entitySkin.Upload(backend, wgpu.AdoptBindGroupLayout(bindGroupLayout), refreshedSkin, wgpu.AdoptBuffer(cameraBuffer), wgpu.AdoptBuffer(fogBuffer), wgpu.AdoptBuffer(lightmapBuffer), wgpu.AdoptSampler(atlasSampler));
+                    entitySkin.Upload(backend, bindGroupLayout, refreshedSkin, wgpu.AdoptBuffer(cameraBuffer), wgpu.AdoptBuffer(fogBuffer), wgpu.AdoptBuffer(lightmapBuffer), wgpu.AdoptSampler(atlasSampler));
                 }
                 else
                 {
@@ -774,7 +760,7 @@ public static class WindowedRenderer
                 appliedItemAtlasVersion = itemAtlasSource.Version;
                 if (itemAtlasSource.Atlas is { } refreshedItems)
                 {
-                    itemAtlasGpu.Upload(backend, wgpu.AdoptBindGroupLayout(bindGroupLayout), refreshedItems, wgpu.AdoptBuffer(cameraBuffer), wgpu.AdoptBuffer(fogBuffer), wgpu.AdoptBuffer(lightmapBuffer), wgpu.AdoptSampler(atlasSampler));
+                    itemAtlasGpu.Upload(backend, bindGroupLayout, refreshedItems, wgpu.AdoptBuffer(cameraBuffer), wgpu.AdoptBuffer(fogBuffer), wgpu.AdoptBuffer(lightmapBuffer), wgpu.AdoptSampler(atlasSampler));
                 }
                 else
                 {
@@ -817,7 +803,7 @@ public static class WindowedRenderer
 
                 glyphView = glyphSheet.CreateView();
                 uiTextBindGroup = device.CreateBindGroup(
-                    bindGroupLayout,
+                    wgpu.AsBindGroupLayout(bindGroupLayout),
                     [
                         BindGroupEntry.TextureView(0, glyphView),
                         BindGroupEntry.Sampler(1, atlasSampler),
@@ -869,7 +855,7 @@ public static class WindowedRenderer
                     var refreshedView = refreshedSheet.CreateView();
 
                     spriteBindGroups.Add(device.CreateBindGroup(
-                        bindGroupLayout,
+                        wgpu.AsBindGroupLayout(bindGroupLayout),
                         [
                             BindGroupEntry.TextureView(0, refreshedView),
                             BindGroupEntry.Sampler(1, atlasSampler),
