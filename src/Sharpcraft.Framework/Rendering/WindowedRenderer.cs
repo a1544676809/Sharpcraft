@@ -1612,29 +1612,42 @@ public static class WindowedRenderer
             if (worldText is not null)
             {
                 worldText.SetDraws(worldTextPerFrame?.Invoke() ?? []);
-                var worldTextPass = encoder.BeginRenderPass(
-                    [new ColorAttachment { View = view, LoadOp = WGPULoadOp.Load, StoreOp = WGPUStoreOp.Store }],
-                    new DepthStencilAttachment { View = depthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store });
-                worldText.Draw(worldTextPass);
-                worldTextPass.End();
+                // The helper still takes a native pass, so the handle is unwrapped for that call only; the pass itself
+                // is begun and ended through the seam.
+                var worldTextPass = backend.BeginRenderPass(
+                    wgpu.AdoptCommandEncoder(encoder),
+                    [ColorAttachmentDesc.Keep(wgpu.AdoptTextureView(view))],
+                    DepthAttachmentDesc.Keep(wgpu.AdoptTextureView(depthView)));
+                try
+                {
+                    worldText.Draw(wgpu.AsRenderPass(worldTextPass));
+                }
+                finally
+                {
+                    backend.EndRenderPass(worldTextPass);
+                }
             }
             // Clouds come after the opaque and transparent terrain, with depth testing so terrain and the cloud layer
             // occlude each other correctly (the reference draws them in executeClassicTransparency).
             if (cloudColour is not null && cloudOit is null)
             {
-                var cloudPass = encoder.BeginRenderPass(
-                [
-                    new ColorAttachment { View = view, LoadOp = WGPULoadOp.Load, StoreOp = WGPUStoreOp.Store }
-                ],
-                new DepthStencilAttachment { View = depthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store });
-
-                if (cloudDrawFrame is { } cloudDraw)
+                var cloudPass = backend.BeginRenderPass(
+                    wgpu.AdoptCommandEncoder(encoder),
+                    [ColorAttachmentDesc.Keep(wgpu.AdoptTextureView(view))],
+                    DepthAttachmentDesc.Keep(wgpu.AdoptTextureView(depthView)));
+                try
                 {
-                    cloudColour.SetDraws([cloudDraw]);
-                }
+                    if (cloudDrawFrame is { } cloudDraw)
+                    {
+                        cloudColour.SetDraws([cloudDraw]);
+                    }
 
-                cloudColour.Draw(cloudPass);
-                cloudPass.End();
+                    cloudColour.Draw(wgpu.AsRenderPass(cloudPass));
+                }
+                finally
+                {
+                    backend.EndRenderPass(cloudPass);
+                }
             }
 
             // Pass 4: the interface draws last, over the resolved frame, in its own pass so it never participates in the
