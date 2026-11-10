@@ -352,3 +352,18 @@ finally
 
 **已证实的整片**：`WindowedRenderer.Run` 的 encoder（R21，−8）。
 **按此规律的下一片**：`UiRenderer` 三方法 + `WindowedRenderer` 里持有它们返回值的字段 + `Run` 里的 layout，一次性改为句柄。单独改 `UiRenderer` 已验证会 +2。
+### 9.10 为何 `CelestialColorResources` 也不是有界切片（2026-11-10 实测）
+
+它看起来像 `SkyDiscResources`（同一类持有 + 使用），但 `Draw` 内部循环使用三类**数组**：`_bindGroups[]`、`_vertexBuffers[]`、`_indexBuffers[]`。
+
+只把 3 个管线改句柄的话：
+
+| 变化 | 逃生口 |
+| --- | --- |
+| `CreatePositionColorPipeline` 去掉 3 个 `AsPipeline` | −3 |
+| 两个调用点去掉 `AsRenderPass` | −2 |
+| `Draw` 里 `SetBindGroup` / `SetVertexBuffer` / `SetIndexBuffer` 需要 `Adopt*`（每个元素各一次，元素数 = 天体颜色绘制数） | **+3N** |
+
+`N` 是天体颜色绘制数（日出扇形与星星，通常个位数但非 1），因此**仍然净增**。
+
+**结论**：这类"数组化的绘制集合"必须先整体改为 `BindGroupHandle[]` / `BufferHandle[]`，否则任何部分转换都是净增。这与 §9.9 的规律一致——切片边界由**数据结构的整体性**决定，不由文件边界决定。
