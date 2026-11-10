@@ -530,3 +530,23 @@ motion:  2 samples, mismatches 0, worst delta 0.0000 px
 **顺带发现并修复一个真 bug**：存储绑定在**布局** switch 里加了，但 **bind group entry** 的 switch 漏了，导致首次创建 compute 绑定组时抛 `no entry counterpart: ReadOnlyStorageBuffer`。这个错误编译期与单测都发现不了（没有任何单测创建 compute 绑定组），**只有实际跑一次 compute 才会暴露**——这正是缺诊断时被掩盖的那类问题。
 
 **教训**：`As*`/`Adopt*` 一类的 switch 分支扩充必须成对检查（layout ↔ entry），且必须有一次运行期覆盖，否则是"编译通过但会抛"的形态。
+### 9.22 `--frame` 可以作为像素回归门禁（前提：钉住世界状态）
+
+同一结论：`MC_FORCE_DAYTIME` / `MC_FORCE_PARTIAL` **有效**，但必须经 `--debugOptionsFile` 传入。实测：
+
+```json
+{"MC_FORCE_DAYTIME":"6000","MC_FORCE_PARTIAL":"0.5"}
+```
+
+两次连续 `--frame`（640×360）输出 **`sha256 963467906ED32C82` / 35579 B，逐字节相同**。
+
+**因此可行的回归门禁**（目前未自动化，属建议）：
+
+```powershell
+# 固定世界状态后连跑两次，必须逐字节相同；改动前后也必须相同
+--frame --quickPlayMultiplayer <addr> --debugOptionsFile <pinned.json>
+```
+
+**注意**：两次 `--frame` 之间若不钉时间，云取样会随实时世界时钟变化，差异表现为一小片云（数百像素），足以让朴素哈希门禁随机失败。先前把这个当成缺陷是误判——**根因是环境变量无效，不是输出不稳定**。
+
+**这一对发现的意义**：项目此前只有"窗口截图目视"这一种渲染验证手段；现在有了可重复、可逐字节比较的离屏基准，且深度金字塔与运动向量已有 `mismatches 0` 的运行时真值。
