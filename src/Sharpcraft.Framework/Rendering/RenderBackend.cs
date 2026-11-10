@@ -20,6 +20,9 @@ public readonly struct TextureHandle
     internal TextureHandle(object value) => Value = value;
 
     internal object Value { get; }
+
+    /// <summary>Whether this handle wraps a resource that was actually created.</summary>
+    public bool IsValid => Value is not null;
 }
 
 /// <summary>An opaque texture view owned by a render backend.</summary>
@@ -28,6 +31,9 @@ public readonly struct TextureViewHandle
     internal TextureViewHandle(object value) => Value = value;
 
     internal object Value { get; }
+
+    /// <summary>Whether this handle wraps a resource that was actually created.</summary>
+    public bool IsValid => Value is not null;
 }
 
 /// <summary>An opaque buffer owned by a render backend.</summary>
@@ -36,6 +42,9 @@ public readonly struct BufferHandle
     internal BufferHandle(object value) => Value = value;
 
     internal object Value { get; }
+
+    /// <summary>Whether this handle wraps a resource that was actually created.</summary>
+    public bool IsValid => Value is not null;
 }
 
 /// <summary>An opaque sampler owned by a render backend.</summary>
@@ -44,6 +53,9 @@ public readonly struct SamplerHandle
     internal SamplerHandle(object value) => Value = value;
 
     internal object Value { get; }
+
+    /// <summary>Whether this handle wraps a resource that was actually created.</summary>
+    public bool IsValid => Value is not null;
 }
 
 /// <summary>An opaque render pipeline owned by a render backend.</summary>
@@ -52,6 +64,9 @@ public readonly struct PipelineHandle
     internal PipelineHandle(object value) => Value = value;
 
     internal object Value { get; }
+
+    /// <summary>Whether this handle wraps a resource that was actually created.</summary>
+    public bool IsValid => Value is not null;
 }
 
 /// <summary>How a texture is created.</summary>
@@ -93,7 +108,10 @@ public enum BufferUsages
     CopyDst = 32,
 
     /// <summary>Readable from the host.</summary>
-    MapRead = 64
+    MapRead = 64,
+
+    /// <summary>Source of indirect draw or dispatch arguments.</summary>
+    Indirect = 128
 }
 
 /// <summary>What a texture may be used for.</summary>
@@ -202,6 +220,12 @@ public sealed class WgpuRenderBackend : IRenderBackend
     /// <summary>The wrapped device, for the code that has not moved behind the seam yet.</summary>
     public Device Device => _device;
 
+    /// <summary>Unwraps a handle, rejecting one that was never created (for example <c>default</c>).</summary>
+    private static T RequireValid<T>(bool isValid, object? value) =>
+        isValid && value is not null
+            ? (T)value
+            : throw new InvalidOperationException("the handle was never created");
+
     /// <inheritdoc/>
     public TextureHandle CreateTexture(in TextureDesc desc) =>
         new(_device.CreateTexture(new TextureDescriptor
@@ -217,7 +241,7 @@ public sealed class WgpuRenderBackend : IRenderBackend
     /// <inheritdoc/>
     public void WriteTexture(TextureHandle texture, ReadOnlySpan<byte> pixels, uint bytesPerRow, uint width, uint height, uint mipLevel)
     {
-        var target = (Texture)texture.Value;
+        var target = RequireValid<Texture>(texture.IsValid, texture.Value);
 
         // The extent is stated by the caller rather than derived from the row pitch: four bytes per texel only holds for
         // the 8-bit RGBA formats, and deriving it would write a quarter of a half-float texture.
@@ -237,19 +261,19 @@ public sealed class WgpuRenderBackend : IRenderBackend
     /// device escape hatch once every consumer is wired.
     /// </remarks>
     /// <param name="view">Handle from this backend.</param>
-    internal TextureView AsTextureView(TextureViewHandle view) => (TextureView)view.Value;
+    internal TextureView AsTextureView(TextureViewHandle view) => RequireValid<TextureView>(view.IsValid, view.Value);
 
     /// <summary>Unwraps a texture handle for code that has not moved behind the seam yet.</summary>
     /// <param name="texture">Handle from this backend.</param>
-    internal Texture AsTexture(TextureHandle texture) => (Texture)texture.Value;
+    internal Texture AsTexture(TextureHandle texture) => RequireValid<Texture>(texture.IsValid, texture.Value);
 
     /// <summary>Unwraps a buffer handle for code that has not moved behind the seam yet.</summary>
     /// <param name="buffer">Handle from this backend.</param>
-    internal Brew.Wgpu.Buffer AsBuffer(BufferHandle buffer) => (Brew.Wgpu.Buffer)buffer.Value;
+    internal Brew.Wgpu.Buffer AsBuffer(BufferHandle buffer) => RequireValid<Brew.Wgpu.Buffer>(buffer.IsValid, buffer.Value);
 
     /// <summary>Unwraps a sampler handle for code that has not moved behind the seam yet.</summary>
     /// <param name="sampler">Handle from this backend.</param>
-    internal Sampler AsSampler(SamplerHandle sampler) => (Sampler)sampler.Value;
+    internal Sampler AsSampler(SamplerHandle sampler) => RequireValid<Sampler>(sampler.IsValid, sampler.Value);
 
     /// <summary>Wraps a native object that the caller already owns, so it can be passed as a handle.</summary>
     /// <remarks>
@@ -270,14 +294,15 @@ public sealed class WgpuRenderBackend : IRenderBackend
 
     /// <summary>Unwraps a bind group handle for code that has not moved behind the seam yet.</summary>
     /// <param name="group">Handle from this backend.</param>
-    internal BindGroup AsBindGroup(BindGroupHandle group) => (BindGroup)group.Value;
+    internal BindGroup AsBindGroup(BindGroupHandle group) => RequireValid<BindGroup>(group.Value is not null, group.Value);
 
     /// <summary>Unwraps a bind group layout handle for code that has not moved behind the seam yet.</summary>
     /// <param name="layout">Handle from this backend.</param>
-    internal BindGroupLayout AsBindGroupLayout(BindGroupLayoutHandle layout) => (BindGroupLayout)layout.Value;
+    internal BindGroupLayout AsBindGroupLayout(BindGroupLayoutHandle layout) => RequireValid<BindGroupLayout>(layout.Value is not null, layout.Value);
 
     /// <inheritdoc/>
-    public TextureViewHandle CreateTextureView(TextureHandle texture) => new(((Texture)texture.Value).CreateView());
+    public TextureViewHandle CreateTextureView(TextureHandle texture) =>
+        new(RequireValid<Texture>(texture.IsValid, texture.Value).CreateView());
 
     /// <inheritdoc/>
     public SamplerHandle CreateSampler(AddressMode addressMode, FilterMode minFilter, FilterMode magFilter, bool useMipmaps) =>
@@ -316,27 +341,28 @@ public sealed class WgpuRenderBackend : IRenderBackend
     /// <inheritdoc/>
     public BindGroupHandle CreateBindGroup(BindGroupLayoutHandle layout, ReadOnlySpan<BindGroupEntryDesc> entries)
     {
+        var nativeLayout = RequireValid<BindGroupLayout>(layout.Value is not null, layout.Value);
         var native = new BindGroupEntry[entries.Length];
         for (var index = 0; index < entries.Length; index++)
         {
             var entry = entries[index];
             native[index] = entry.Kind switch
             {
-                BindingKind.UniformBuffer => BindGroupEntry.Buffer(entry.Binding, (Brew.Wgpu.Buffer)entry.BoundBuffer.Value, entry.Offset, entry.Size),
-                BindingKind.Texture => BindGroupEntry.TextureView(entry.Binding, (TextureView)entry.BoundView.Value),
-                BindingKind.Sampler => BindGroupEntry.Sampler(entry.Binding, (Sampler)entry.BoundSampler.Value),
+                BindingKind.UniformBuffer => BindGroupEntry.Buffer(entry.Binding, RequireValid<Brew.Wgpu.Buffer>(entry.BoundBuffer.IsValid, entry.BoundBuffer.Value), entry.Offset, entry.Size),
+                BindingKind.Texture => BindGroupEntry.TextureView(entry.Binding, RequireValid<TextureView>(entry.BoundView.IsValid, entry.BoundView.Value)),
+                BindingKind.Sampler => BindGroupEntry.Sampler(entry.Binding, RequireValid<Sampler>(entry.BoundSampler.IsValid, entry.BoundSampler.Value)),
                 _ => throw new ArgumentOutOfRangeException(nameof(entries), entry.Kind, "no entry counterpart")
             };
         }
 
-        return new BindGroupHandle(_device.CreateBindGroup((BindGroupLayout)layout.Value, native));
+        return new BindGroupHandle(_device.CreateBindGroup(nativeLayout, native));
     }
 
     /// <inheritdoc/>
-    public void Destroy(BindGroupHandle group) => ((BindGroup)group.Value).Dispose();
+    public void Destroy(BindGroupHandle group) => RequireValid<BindGroup>(group.Value is not null, group.Value).Dispose();
 
     /// <inheritdoc/>
-    public void Destroy(BindGroupLayoutHandle layout) => ((BindGroupLayout)layout.Value).Dispose();
+    public void Destroy(BindGroupLayoutHandle layout) => RequireValid<BindGroupLayout>(layout.Value is not null, layout.Value).Dispose();
 
     /// <inheritdoc/>
     public BufferHandle CreateBufferInit(in BufferDesc desc, ReadOnlySpan<byte> data) =>
@@ -354,19 +380,19 @@ public sealed class WgpuRenderBackend : IRenderBackend
 
     /// <inheritdoc/>
     public void WriteBuffer(BufferHandle buffer, ReadOnlySpan<byte> data, ulong offset) =>
-        _device.Queue.WriteBuffer<byte>((Brew.Wgpu.Buffer)buffer.Value, offset, data);
+        _device.Queue.WriteBuffer<byte>(RequireValid<Brew.Wgpu.Buffer>(buffer.IsValid, buffer.Value), offset, data);
 
     /// <inheritdoc/>
-    public void Destroy(BufferHandle buffer) => ((Brew.Wgpu.Buffer)buffer.Value).Dispose();
+    public void Destroy(BufferHandle buffer) => RequireValid<Brew.Wgpu.Buffer>(buffer.IsValid, buffer.Value).Dispose();
 
     /// <inheritdoc/>
-    public void Destroy(TextureHandle texture) => ((Texture)texture.Value).Dispose();
+    public void Destroy(TextureHandle texture) => RequireValid<Texture>(texture.IsValid, texture.Value).Dispose();
 
     /// <inheritdoc/>
-    public void Destroy(TextureViewHandle view) => ((TextureView)view.Value).Dispose();
+    public void Destroy(TextureViewHandle view) => RequireValid<TextureView>(view.IsValid, view.Value).Dispose();
 
     /// <inheritdoc/>
-    public void Destroy(SamplerHandle sampler) => ((Sampler)sampler.Value).Dispose();
+    public void Destroy(SamplerHandle sampler) => RequireValid<Sampler>(sampler.IsValid, sampler.Value).Dispose();
 
     private static WGPUBufferBindingType ToWgpu(BufferBindingType type) => type switch
     {
@@ -460,6 +486,11 @@ public sealed class WgpuRenderBackend : IRenderBackend
         if (usage.HasFlag(BufferUsages.MapRead))
         {
             result |= Brew.Wgpu.BufferUsage.MapRead;
+        }
+
+        if (usage.HasFlag(BufferUsages.Indirect))
+        {
+            result |= Brew.Wgpu.BufferUsage.Indirect;
         }
 
         return result;
