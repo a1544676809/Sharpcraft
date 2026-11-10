@@ -308,3 +308,15 @@ finally
 因此 `T-786` 应拆成两个可独立收口的任务：
 - `T-786a`：渲染 pass 录制进接缝（**已完成**）
 - `T-786b`：encoder 生命周期与 compute/copy 记录进接缝，之后逃生口归零
+### 9.7 `ChunkCuller` 转换的两个新缺口（2026-11-10 实测）
+
+按 §9.5 配方执行时遇到两个 §9.5 未覆盖的问题，均已确认是**接缝能力缺口**而非笔误：
+
+| 缺口 | 现象 | 影响 | 解除方式 |
+| --- | --- | --- | --- |
+| `BindingKind` 只有 `UniformBuffer` / `Texture` / `Sampler` | 剔除的 bind group 需要 `ReadOnlyStorageBuffer`(0,1) 与 `StorageBuffer`(2) | 无法用 `BindGroupLayoutEntryDesc` 表达，编译报 CS0117 | 扩充 `BindingKind`（加 `StorageBuffer` / `ReadOnlyStorageBuffer`），并在 `ToWgpu(BindingKind)` 与 `BindGroupEntry` 的 switch 里补分支 |
+| `ChunkCuller.Args` 是公开属性、类型为 `WgpuBuffer?` | 渲染器用它做间接绘制的参数缓冲 | 内部 `_args` 改 `BufferHandle` 会破坏公开签名（CS0029） | 先把 `Args` 改为 `BufferHandle`，同步改调用点（需接缝支持间接绘制绑定） |
+
+**结论**：`ChunkCuller` 的转换要先做这两项接缝扩展，不是纯替换。顺序：`BindingKind` 扩充 → `Args` 签名 → §9.5 配方。
+
+本轮已回退该文件，工作区保持干净；§9.5 的配方仍然有效，只是缺这两项前置。
