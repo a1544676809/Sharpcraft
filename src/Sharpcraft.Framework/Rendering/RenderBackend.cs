@@ -381,6 +381,22 @@ public sealed class WgpuRenderBackend : IRenderBackend
     internal PipelineLayout AsPipelineLayout(PipelineLayoutHandle layout) =>
         RequireValid<PipelineLayout>(layout.Value is not null, layout.Value);
 
+    /// <summary>Wraps a texture view the caller already owns.</summary>
+    /// <param name="view">View the caller owns.</param>
+    internal TextureViewHandle AdoptTextureView(TextureView view) => new(view);
+
+    /// <summary>Wraps a texture the caller already owns.</summary>
+    /// <param name="texture">Texture the caller owns.</param>
+    internal TextureHandle AdoptTexture(Texture texture) => new(texture);
+
+    /// <summary>Wraps a bind group the caller already owns.</summary>
+    /// <param name="group">Group the caller owns.</param>
+    internal BindGroupHandle AdoptBindGroup(BindGroup group) => new(group);
+
+    /// <summary>Wraps a pipeline the caller already owns.</summary>
+    /// <param name="pipeline">Pipeline the caller owns.</param>
+    internal PipelineHandle AdoptPipeline(RenderPipeline pipeline) => new(pipeline);
+
     /// <summary>Wraps a pipeline layout the caller already owns.</summary>
     /// <param name="layout">Layout the caller owns.</param>
     internal PipelineLayoutHandle AdoptPipelineLayout(PipelineLayout layout) => new(layout);
