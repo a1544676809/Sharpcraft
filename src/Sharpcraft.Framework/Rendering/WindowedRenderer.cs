@@ -593,6 +593,11 @@ public static class WindowedRenderer
         var frustumPlanes = new System.Numerics.Vector4[6];
         var gapSamples = new double[1 << 17];
         var gapCount = 0;
+
+        // Rolling mean over the frames since the last statistics line, so a steady-state number can be read while
+        // chunks are still arriving: the whole-run summary includes loading and says nothing about the settled frame.
+        var windowFrameMs = 0d;
+        var windowFrameCount = 0;
         var worstFrameMs = 0d;
         var worstFrameIndex = 0;
         var framesOver33 = 0;
@@ -1055,6 +1060,9 @@ public static class WindowedRenderer
             {
                 gapSamples[gapCount++] = gapMs;
             }
+
+            windowFrameMs += gapMs;
+            windowFrameCount++;
             var uploadedNow = arena?.UploadedBytes ?? 0;
             var uploadedDelta = uploadedNow - lastUploadedAt;
             lastUploadedAt = uploadedNow;
@@ -1532,9 +1540,14 @@ public static class WindowedRenderer
 
                 if (cullStatistics && (presented % 60) == 0)
                 {
+                    // The mean over this window is the settled frame cost; the chunk counts say what was in it.
+                    var windowMeanMs = windowFrameCount == 0 ? 0d : windowFrameMs / windowFrameCount;
                     Console.WriteLine(
                         $"cull: chunks={arena?.ChunkCount ?? 0} culled={arena?.CulledLastFrame ?? 0} "
-                        + $"cutout={arenaCutout?.ChunkCount ?? 0} translucent={arenaTranslucent?.ChunkCount ?? 0} (reference oit)");
+                        + $"cutout={arenaCutout?.ChunkCount ?? 0} translucent={arenaTranslucent?.ChunkCount ?? 0} "
+                        + $"frames={windowFrameCount} meanMs={windowMeanMs:F3} (reference oit)");
+                    windowFrameMs = 0d;
+                    windowFrameCount = 0;
                 }
             }
             // (The weighted-blended OIT path that used to live here was shelved for its visual quality and is no longer

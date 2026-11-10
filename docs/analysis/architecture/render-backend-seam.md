@@ -585,3 +585,24 @@ stderr 中 `Validation` / `panic` / `uncaptured` 全为 0。画面核对（项�
 
 **缺口 ① 关闭（不适用）。**
 **裁决（2026-11-10，项目所有者）**：**停放，不接线**（T-791）。理由见 T-791：无帧时间数据证明 CPU 剔除是热点、量级估算可忽略、接线会引入无法自证的可见集合变化、且原版无 compute 着色器使本项纯属性能实验。**不删除**，因为它是已下令特性的一部分，接线所需的顺序已记录（测量 → `DrawIndexedIndirect` → 对照门禁 → 接线）。
+### 9.25 窗口路径只渲染 7–9 个区块（T-792，2026-11-10 实测）
+
+排查 GPU 剔除基准时发现的**功能性缺陷**，比剔除优化本身重要得多。
+
+**现象**：窗口模式 `cull: chunks=7`，80 秒不增长；同一服务器离屏路径可加载 637 个。
+
+**决定性实验**：
+
+| 运行 | 结果 |
+| --- | --- |
+| 默认（`MC_START_CHUNKS=9`） | `chunks: 9 ok, 0 failed`，之后一直是 7 个在场景里 |
+| `MC_START_CHUNKS=400` | `chunks: 400 ok, 0 failed` —— **网络流式收区块完全正常** |
+| 同上，继续观察 | 卡在 `chunk workers: 8` 之后 **300 秒未出现窗口** —— 一次性预载 400 个会被网格化阻塞 |
+
+**根因**：`WindowCommand.ServerWorldAsync` 的预载在 9 个处有意停止，注释写明"其余由 live session 流式进来"；但实时会话没有把到达的区块送入世界并网格化（会话内 `pool: parsed 0 ok`）。所以"流式进来"这一步并不存在。
+
+**原版规格**（`ref://mc-26.3-analysis/src/net/minecraft/client/`）：资源重载成功回调 → `onResourceLoadFinished` → `onGameLoadFinished` → `Gui.buildInitialScreens` 链尾的 `QuickPlay.connect` → `ConnectScreen.startConnecting`。即**先加载完资源，再连接**；连接后由 `ClientChunkCache` 持续接收并按批次确认（`ChunkBatchReceived`）。我们的顺序相反：先连接预载，再花数秒加载资源，期间既不上报批次确认也不消费区块包。
+
+**这同时解释了之前观察到的服务器日志 `Timed out`**：连接建立后客户端长时间阻塞在资源加载，不响应服务器。
+
+**修复方向**：①连接移到资源加载之后（对齐原版顺序）；②实时会话增量解析并上传到达的区块。这两条必须一起做——只改顺序不改流式，仍然停在 9 个。
