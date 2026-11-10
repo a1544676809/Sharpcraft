@@ -134,9 +134,38 @@ public enum TextureUsages
     CopyDst = 8
 }
 
+/// <summary>An opaque command encoder owned by a render backend.</summary>
+/// <remarks>
+/// Recording is a sequence, not a resource: an encoder is created, filled with passes, submitted once, and then dead. It
+/// has no destroy call for that reason, which is the first place this seam departs from the resource handles.
+/// </remarks>
+public readonly struct CommandEncoderHandle
+{
+    internal CommandEncoderHandle(object value) => Value = value;
+
+    /// <summary>Whether this handle refers to an encoder the backend created.</summary>
+    public bool IsValid => Value is not null;
+
+    internal object Value { get; }
+}
+
+/// <summary>An opaque render pass owned by a render backend.</summary>
+/// <remarks>
+/// A pass is borrowed from its encoder and must end before the encoder is submitted; there is no destroy call, only
+/// <c>EndRenderPass</c>, and reusing one after it ends is an error rather than a no-op.
+/// </remarks>
+public readonly struct RenderPassHandle
+{
+    internal RenderPassHandle(object value) => Value = value;
+
+    /// <summary>Whether this handle refers to a pass the backend began.</summary>
+    public bool IsValid => Value is not null;
+
+    internal object Value { get; }
+}
+
 /// <summary>
-/// The seam a rendering backend implements.
-/// </summary>
+/// The seam a rendering backend implements./// </summary>
 /// <remarks>
 /// Principle 6 asks for every graphics call to converge in one abstraction layer so the backend can be replaced; this is
 /// that layer's contract (docs/analysis/architecture/render-backend-seam.md). The interface deliberately covers only what
@@ -159,6 +188,12 @@ public interface IRenderBackend
 
     /// <summary>Creates a sampler from the state the caller asked for.</summary>
     SamplerHandle CreateSampler(AddressMode addressMode, FilterMode minFilter, FilterMode magFilter, bool useMipmaps);
+
+    /// <summary>Creates a command encoder for one frame's recording.</summary>
+    CommandEncoderHandle CreateCommandEncoder();
+
+    /// <summary>Submits the encoder's recorded commands and releases it.</summary>
+    void Submit(CommandEncoderHandle encoder);
 
     /// <summary>Creates a pipeline layout from the bind group layouts a draw will set.</summary>
     PipelineLayoutHandle CreatePipelineLayout(ReadOnlySpan<BindGroupLayoutHandle> layouts);
@@ -319,6 +354,19 @@ public sealed class WgpuRenderBackend : IRenderBackend
     /// <inheritdoc/>
     public SamplerHandle CreateSampler(AddressMode addressMode, FilterMode minFilter, FilterMode magFilter, bool useMipmaps) =>
         new(SamplerCache.Create(_device, addressMode, minFilter, magFilter, useMipmaps));
+
+    /// <inheritdoc/>
+    public CommandEncoderHandle CreateCommandEncoder() => new(_device.CreateCommandEncoder());
+
+    /// <inheritdoc/>
+    public void Submit(CommandEncoderHandle encoder)
+    {
+        var native = RequireValid<CommandEncoder>(encoder.Value is not null, encoder.Value);
+        using (native)
+        {
+            _device.Queue.Submit([native.Finish()]);
+        }
+    }
 
     /// <inheritdoc/>
     public PipelineLayoutHandle CreatePipelineLayout(ReadOnlySpan<BindGroupLayoutHandle> layouts)
