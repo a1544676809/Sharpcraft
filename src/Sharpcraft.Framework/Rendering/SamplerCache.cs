@@ -105,6 +105,37 @@ public sealed class SamplerCache : IDisposable
         GetSampler(AddressMode.ClampToEdge, AddressMode.ClampToEdge, minMag, minMag, mipmaps);
 
     /// <summary>
+    /// Creates one sampler outside the table, for callers whose lifetime is a single command recording.
+    /// </summary>
+    /// <remarks>
+    /// The table holds a fixed set of states so a texture switch is a lookup; a caller that needs a sampler for one
+    /// recording session and disposes it afterwards uses this instead, sharing the descriptor construction so both paths
+    /// map address and filter modes the same way.
+    /// </remarks>
+    /// <param name="device">Device that owns the sampler.</param>
+    /// <param name="addressMode">Address mode for both axes.</param>
+    /// <param name="minFilter">Minification filter.</param>
+    /// <param name="magFilter">Magnification filter.</param>
+    /// <param name="useMipmaps">Whether the mip chain may be sampled.</param>
+    public static Sampler Create(Device device, AddressMode addressMode, FilterMode minFilter, FilterMode magFilter, bool useMipmaps)
+    {
+        ArgumentNullException.ThrowIfNull(device);
+
+        return device.CreateSampler(new SamplerDescriptor
+        {
+            AddressModeU = ToWgpu(addressMode),
+            AddressModeV = ToWgpu(addressMode),
+            AddressModeW = ToWgpu(addressMode),
+            MagFilter = ToWgpu(magFilter),
+            MinFilter = ToWgpu(minFilter),
+            MipmapFilter = useMipmaps ? WGPUMipmapFilterMode.Linear : WGPUMipmapFilterMode.Nearest,
+            LodMinClamp = 0f,
+            LodMaxClamp = useMipmaps ? 32f : 0f,
+            MaxAnisotropy = 1
+        });
+    }
+
+    /// <summary>
     /// Returns a sampler for a texture that carries a mip chain, mirroring the reference <c>MipmappedTexture</c>:
     /// minification is always linear and the LOD clamp is unbounded, while magnification follows the caller.
     /// </summary>

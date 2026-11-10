@@ -553,18 +553,10 @@ public static class OffscreenRenderer
 
             using var atlasView = atlasTexture.CreateView();
 
-            using var atlasSampler = device.CreateSampler(new SamplerDescriptor
-            {
-                AddressModeU = WGPUAddressMode.ClampToEdge,
-                AddressModeV = WGPUAddressMode.ClampToEdge,
-                AddressModeW = WGPUAddressMode.ClampToEdge,
-                MagFilter = request.NearestTextureFilter ? WGPUFilterMode.Nearest : WGPUFilterMode.Linear,
-                MinFilter = request.NearestTextureFilter ? WGPUFilterMode.Nearest : WGPUFilterMode.Linear,
-                MipmapFilter = request.NearestTextureFilter ? WGPUMipmapFilterMode.Nearest : WGPUMipmapFilterMode.Linear,
-                LodMinClamp = 0f,
-                LodMaxClamp = Math.Max(1, atlasMips.Length),
-                MaxAnisotropy = 1
-            });
+            // Same sampler construction as the windowed path, with the request's filter choice preserved so a nearest
+            // screenshot request still produces nearest pixels (single track).
+            var atlasFilter = request.NearestTextureFilter ? FilterMode.Nearest : FilterMode.Linear;
+            using var atlasSampler = SamplerCache.Create(device, AddressMode.ClampToEdge, atlasFilter, atlasFilter, useMipmaps: true);
 
             using var bindGroupLayout = device.CreateBindGroupLayout(
             [
@@ -1155,18 +1147,7 @@ public static class OffscreenRenderer
             }
 
             // Nearest sampling keeps the crisp pixel-art sun and moon discs from smearing.
-            _sampler = device.CreateSampler(new SamplerDescriptor
-            {
-                AddressModeU = WGPUAddressMode.ClampToEdge,
-                AddressModeV = WGPUAddressMode.ClampToEdge,
-                AddressModeW = WGPUAddressMode.ClampToEdge,
-                MagFilter = WGPUFilterMode.Nearest,
-                MinFilter = WGPUFilterMode.Nearest,
-                MipmapFilter = WGPUMipmapFilterMode.Nearest,
-                LodMinClamp = 0f,
-                LodMaxClamp = 1f,
-                MaxAnisotropy = 1
-            });
+            _sampler = SamplerCache.Create(device, AddressMode.ClampToEdge, FilterMode.Nearest, FilterMode.Nearest, useMipmaps: false);
 
             _layout = device.CreateBindGroupLayout(
             [
