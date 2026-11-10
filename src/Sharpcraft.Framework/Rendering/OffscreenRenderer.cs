@@ -405,7 +405,7 @@ public static class OffscreenRenderer
     /// Position-colour pipeline: vertex colour times the per-draw tint, with the given reference blend mode. Sunrise uses
     /// Translucent; stars use Overlay (both match the reference pipelines' ColorTargetState).
     /// </summary>
-    private static RenderPipeline CreatePositionColorPipeline(Device device, ShaderModule shader, PipelineLayout layout, bool overlay, WGPUTextureFormat format = WGPUTextureFormat.RGBA8Unorm, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always, bool opaque = false)
+    private static RenderPipeline CreatePositionColorPipeline(Device device, ShaderModule shader, PipelineLayout layout, bool overlay, TextureFormat format = TextureFormat.Rgba8Unorm, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always, bool opaque = false)
     {
         var blend = overlay
             ? new WGPUBlendState
@@ -427,7 +427,7 @@ public static class OffscreenRenderer
             [
                 new ColorTargetState
                 {
-                    Format = format,
+                    Format = BackendConvert.ToWgpu(format),
                     WriteMask = ColorWriteMask.All,
                     Blend = opaque ? null : blend
                 }
@@ -1110,7 +1110,7 @@ public static class OffscreenRenderer
         private readonly ulong _cameraSize;
         private readonly List<(Brew.Wgpu.Buffer Vertex, Brew.Wgpu.Buffer Index, Brew.Wgpu.Buffer Transform, BindGroup BindGroup)> _retired = new();
 
-        public CelestialResources(Device device, FrameRequest request, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, WGPUTextureFormat format = WGPUTextureFormat.RGBA8Unorm)
+        public CelestialResources(Device device, FrameRequest request, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, TextureFormat format = TextureFormat.Rgba8Unorm)
         {
             var textures = request.CelestialTextures!;
             var draws = request.CelestialDraws!;
@@ -1174,7 +1174,7 @@ public static class OffscreenRenderer
                     // That adds the body onto the sky and makes black/transparent pixels contribute nothing.
                     new ColorTargetState
                     {
-                        Format = format,
+                        Format = BackendConvert.ToWgpu(format),
                         WriteMask = ColorWriteMask.All,
                         Blend = new WGPUBlendState
                         {
@@ -1376,7 +1376,7 @@ public static class OffscreenRenderer
         private float[][] _sourceVertices = [];
         private uint[][] _sourceIndices = [];
 
-        public CelestialColorResources(Device device, FrameRequest request, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, WGPUTextureFormat format = WGPUTextureFormat.RGBA8Unorm, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always)
+        public CelestialColorResources(Device device, FrameRequest request, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, TextureFormat format = TextureFormat.Rgba8Unorm, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always)
         {
             var draws = request.CelestialColorDraws ?? [];
             _device = device;

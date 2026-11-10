@@ -43,11 +43,11 @@ internal sealed class ItemOitSet : IDisposable
         Device device,
         uint width,
         uint height,
-        WGPUTextureFormat format,
+        TextureFormat format,
         BindGroupLayout transmittanceLayout,
         BindGroupLayout accumulateLayout,
         BindGroupLayout compositeLayout,
-        Func<Device, uint, uint, WGPUTextureFormat, Texture> createTarget)
+        Func<Device, uint, uint, TextureFormat, Texture> createTarget)
     {
         ArgumentNullException.ThrowIfNull(device);
         ArgumentNullException.ThrowIfNull(createTarget);

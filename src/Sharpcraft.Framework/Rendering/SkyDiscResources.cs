@@ -24,7 +24,7 @@ internal sealed class SkyDiscResources : IDisposable
     private readonly Brew.Wgpu.Buffer _index;
     private readonly uint _indexCount;
 
-    public SkyDiscResources(Device device, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, WGPUTextureFormat format)
+    public SkyDiscResources(Device device, Brew.Wgpu.Buffer cameraBuffer, ulong cameraSize, TextureFormat format)
     {
         _device = device;
         _layout = device.CreateBindGroupLayout(
@@ -45,7 +45,7 @@ internal sealed class SkyDiscResources : IDisposable
             "vs_main"u8,
             shader,
             "fs_main"u8,
-            [new ColorTargetState { Format = format, WriteMask = ColorWriteMask.All, Blend = null }],
+            [new ColorTargetState { Format = BackendConvert.ToWgpu(format), WriteMask = ColorWriteMask.All, Blend = null }],
             layout: _pipelineLayout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
             multisample: MultisampleState.Default,

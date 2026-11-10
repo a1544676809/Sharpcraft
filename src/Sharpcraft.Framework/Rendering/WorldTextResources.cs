@@ -30,7 +30,7 @@ internal sealed class WorldTextResources : IDisposable
         TextureData glyphSheet,
         Brew.Wgpu.Buffer cameraBuffer,
         ulong cameraSize,
-        WGPUTextureFormat format)
+        TextureFormat format)
     {
         _device = device;
         _texture = device.CreateTexture(new TextureDescriptor
@@ -85,7 +85,7 @@ internal sealed class WorldTextResources : IDisposable
             [
                 new ColorTargetState
                 {
-                    Format = format,
+                    Format = BackendConvert.ToWgpu(format),
                     WriteMask = ColorWriteMask.All,
                     Blend = new WGPUBlendState
                     {

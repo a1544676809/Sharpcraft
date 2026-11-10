@@ -32,7 +32,13 @@ public enum TextureFormat
     Depth32Float,
 
     /// <summary>Single-channel 32-bit float.</summary>
-    R32Float
+    R32Float,
+
+    /// <summary>Four-channel 16-bit float.</summary>
+    Rgba16Float,
+
+    /// <summary>Four-channel 32-bit float.</summary>
+    Rgba32Float
 }
 
 /// <summary>
@@ -57,6 +63,20 @@ public enum PresentMode
 internal static class BackendConvert
 {
     /// <summary>Maps a neutral texture format onto the matching WGPU native format.</summary>
+    /// <summary>Maps a native format back to the neutral one, for call sites that still receive one from the surface.</summary>
+    /// <param name="format">Native format.</param>
+    internal static TextureFormat FromWgpu(WGPUTextureFormat format) => format switch
+    {
+        WGPUTextureFormat.RGBA8Unorm => TextureFormat.Rgba8Unorm,
+        WGPUTextureFormat.RGBA8UnormSrgb => TextureFormat.Rgba8UnormSrgb,
+        WGPUTextureFormat.BGRA8Unorm => TextureFormat.Bgra8Unorm,
+        WGPUTextureFormat.BGRA8UnormSrgb => TextureFormat.Bgra8UnormSrgb,
+        WGPUTextureFormat.Depth32Float => TextureFormat.Depth32Float,
+        WGPUTextureFormat.R32Float => TextureFormat.R32Float,
+        WGPUTextureFormat.RGBA16Float => TextureFormat.Rgba16Float,
+        WGPUTextureFormat.RGBA32Float => TextureFormat.Rgba32Float,
+        _ => throw new ArgumentOutOfRangeException(nameof(format), format, "no neutral counterpart")
+    };
     internal static WGPUTextureFormat ToWgpu(TextureFormat format) => format switch
     {
         TextureFormat.Rgba8Unorm => WGPUTextureFormat.RGBA8Unorm,
@@ -65,6 +85,8 @@ internal static class BackendConvert
         TextureFormat.Bgra8UnormSrgb => WGPUTextureFormat.BGRA8UnormSrgb,
         TextureFormat.Depth32Float => WGPUTextureFormat.Depth32Float,
         TextureFormat.R32Float => WGPUTextureFormat.R32Float,
+        TextureFormat.Rgba16Float => WGPUTextureFormat.RGBA16Float,
+        TextureFormat.Rgba32Float => WGPUTextureFormat.RGBA32Float,
         _ => throw new ArgumentOutOfRangeException(nameof(format), format, "unknown texture format")
     };
 

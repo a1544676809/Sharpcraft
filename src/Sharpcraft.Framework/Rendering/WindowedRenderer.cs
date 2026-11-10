@@ -261,21 +261,21 @@ public static class WindowedRenderer
         // Celestial bodies and stars: the same backdrop draws the offscreen path uses, so the window and the exported
         // frame agree (docs/modules/clouds.md 6).
         using var celestial = request.CelestialDraws is { Length: > 0 } && request.CelestialTextures is { Length: > 0 }
-            ? new OffscreenRenderer.CelestialResources(device, request, cameraBuffer, VertexLayout.CameraUniformSize, format)
+            ? new OffscreenRenderer.CelestialResources(device, request, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         using var celestialColour = request.CelestialColorDraws is { Length: > 0 } || celestialPerFrame is not null
-            ? new OffscreenRenderer.CelestialColorResources(device, request, cameraBuffer, VertexLayout.CameraUniformSize, format)
+            ? new OffscreenRenderer.CelestialColorResources(device, request, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         using var skyDiscColour = !skyDiscVanilla && request.SkyDiscDraws is { Length: > 0 }
-            ? new OffscreenRenderer.CelestialColorResources(device, request with { CelestialColorDraws = request.SkyDiscDraws }, cameraBuffer, VertexLayout.CameraUniformSize, format)
+            ? new OffscreenRenderer.CelestialColorResources(device, request with { CelestialColorDraws = request.SkyDiscDraws }, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         using var skyDiscVanillaResources = skyDiscVanilla && skyDiscPerFrame is not null
-            ? new SkyDiscResources(device, cameraBuffer, VertexLayout.CameraUniformSize, format)
+            ? new SkyDiscResources(device, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         // Clouds change every frame (scroll/camera), so their position-colour draw set is updated per frame.
         using var cloudColour = cloudsPerFrame is null
             ? null
-            : new OffscreenRenderer.CelestialColorResources(device, request with { CelestialColorDraws = [] }, cameraBuffer, VertexLayout.CameraUniformSize, format, WGPUCompareFunction.GreaterEqual);
+            : new OffscreenRenderer.CelestialColorResources(device, request with { CelestialColorDraws = [] }, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format), WGPUCompareFunction.GreaterEqual);
         using var cloudOit = cloudOitEnabled && cloudColour is not null
             ? new CloudOitResources(device, cameraBuffer, VertexLayout.CameraUniformSize)
             : null;
@@ -285,7 +285,7 @@ public static class WindowedRenderer
         // Transparency is the reference depth-bounds + wavelet-transmittance OIT (docs/specs/render/oit-reference.md).
         // The earlier weighted-blended OIT looked markedly worse in play and is shelved, not compiled; git history keeps
         // it if it is ever wanted again.
-        var oitTargetFormat = oitLowPrecision ? WGPUTextureFormat.RGBA8Unorm : (supportsFloat32Blendable ? WGPUTextureFormat.RGBA32Float : WGPUTextureFormat.RGBA16Float);
+        var oitTargetFormat = oitLowPrecision ? TextureFormat.Rgba8Unorm : (supportsFloat32Blendable ? TextureFormat.Rgba32Float : TextureFormat.Rgba16Float);
         using var refTransmittanceLayout = CreateOitTextureLayout(device, 1);
         using var refAccumulateLayout = CreateOitTextureLayout(device, 3);
         using var refCullLayout = CreateOitTextureLayout(device, 1);
@@ -298,14 +298,14 @@ public static class WindowedRenderer
         using var cloudDbPipelineLayout = cloudOit is null ? default : device.CreatePipelineLayout([cloudOit.Layout]);
         using var cloudTransPipelineLayout = cloudOit is null ? default : device.CreatePipelineLayout([cloudOit.Layout, refTransmittanceLayout]);
         using var cloudAccumPipelineLayout = cloudOit is null ? default : device.CreatePipelineLayout([cloudOit.Layout, refAccumulateLayout]);
-        using var cloudDepthBoundsPipeline = cloudOit is null ? default : CreateDepthBoundsPipeline(device, cloudDbPipelineLayout, "cloud_oit", positionColor: true, format: oitTargetFormat, depthWrite: true);
-        using var cloudTransmittancePipeline = cloudOit is null ? default : CreateTransmittancePipeline(device, cloudTransPipelineLayout, "cloud_oit", positionColor: true, format: oitTargetFormat);
-        using var cloudAccumulatePipeline = cloudOit is null ? default : CreateAccumulatePipeline(device, cloudAccumPipelineLayout, "cloud_oit", positionColor: true, format: oitTargetFormat);
+        using var cloudDepthBoundsPipeline = cloudOit is null ? default : CreateDepthBoundsPipeline(device, cloudDbPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat), depthWrite: true);
+        using var cloudTransmittancePipeline = cloudOit is null ? default : CreateTransmittancePipeline(device, cloudTransPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat));
+        using var cloudAccumulatePipeline = cloudOit is null ? default : CreateAccumulatePipeline(device, cloudAccumPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat));
 
-        using var refDepthBoundsPipeline = CreateDepthBoundsPipeline(device, pipelineLayout, format: oitTargetFormat);
-        using var refTransmittancePipeline = CreateTransmittancePipeline(device, refTransmittancePipelineLayout, format: oitTargetFormat);
-        using var refAccumulatePipeline = CreateAccumulatePipeline(device, refAccumulatePipelineLayout, format: oitTargetFormat);
-        using var refCullPipeline = CreateCullPipeline(device, refCullPipelineLayout, oitTargetFormat);
+        using var refDepthBoundsPipeline = CreateDepthBoundsPipeline(device, pipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
+        using var refTransmittancePipeline = CreateTransmittancePipeline(device, refTransmittancePipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
+        using var refAccumulatePipeline = CreateAccumulatePipeline(device, refAccumulatePipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
+        using var refCullPipeline = CreateCullPipeline(device, refCullPipelineLayout, BackendConvert.ToWgpu(oitTargetFormat));
         using var refCompositePipeline = CreateCompositePipeline(device, format, refCompositePipelineLayout);
         using var cloudCompositePipeline = CreateCompositePipeline(device, format, refCompositePipelineLayout, WGPUCompareFunction.GreaterEqual);
         using var blitDepthLayout = device.CreateBindGroupLayout(
@@ -313,7 +313,7 @@ public static class WindowedRenderer
             BindGroupLayoutEntry.Texture(0, ShaderStage.Fragment, WGPUTextureSampleType.Depth, WGPUTextureViewDimension._2D, false),
             BindGroupLayoutEntry.Sampler(1, ShaderStage.Fragment, WGPUSamplerBindingType.Filtering)
         ]);
-        using var presentation = FramePresentation.Create(device, format, samplers.GetClampToEdge(FilterMode.Nearest));
+        using var presentation = FramePresentation.Create(device, BackendConvert.FromWgpu(format), samplers.GetClampToEdge(FilterMode.Nearest));
         using var blitDepthPipelineLayout = device.CreatePipelineLayout([blitDepthLayout]);
         using var blitDepthPipeline = CreateBlitDepthPipeline(device, blitDepthPipelineLayout);
         var blitDepthSampler = samplers.GetClampToEdge(FilterMode.Nearest);
@@ -326,7 +326,7 @@ public static class WindowedRenderer
         // mixing them would make text blurry at small sizes.
         var glyphData = glyphTexture ?? TextureData.White;
         using var worldText = worldTextPerFrame is not null
-            ? new WorldTextResources(device, glyphData, cameraBuffer, VertexLayout.CameraUniformSize, format)
+            ? new WorldTextResources(device, glyphData, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
         var glyphSheet = device.CreateTexture(new TextureDescriptor
         {
@@ -1725,7 +1725,7 @@ public static class WindowedRenderer
             // Screenshot (reference Screenshot.grab): only when the host asks, and only after the frame was submitted, so
             // the frame target still holds the presented image (docs/specs/render/screenshot.md 2.2).
             if (screenshotRequest?.Invoke(window) is { Length: > 0 } screenshotPath &&
-                FrameCapture.Capture(instance, device, presentation.Target, frameWidth, frameHeight, format) is { } screenshotPixels)
+                FrameCapture.Capture(instance, device, presentation.Target, frameWidth, frameHeight, BackendConvert.FromWgpu(format)) is { } screenshotPixels)
             {
                 screenshotCaptured?.Invoke(screenshotPath, screenshotPixels, frameWidth, frameHeight);
             }
@@ -1872,14 +1872,14 @@ public static class WindowedRenderer
         });
 
     /// <summary>Creates one order independent transparency target: renderable and sampleable, at frame size.</summary>
-    private static Texture CreateOitTarget(Device device, uint width, uint height, WGPUTextureFormat format) =>
+    private static Texture CreateOitTarget(Device device, uint width, uint height, TextureFormat format) =>
         device.CreateTexture(new TextureDescriptor
         {
             Size = new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 },
             MipLevelCount = 1,
             SampleCount = 1,
             Dimension = WGPUTextureDimension._2D,
-            Format = format,
+            Format = BackendConvert.ToWgpu(format),
             Usage = TextureUsage.RenderAttachment | TextureUsage.TextureBinding
         });
 

@@ -17,7 +17,7 @@ namespace Sharpcraft.Framework.Rendering;
 internal sealed class FramePresentation : IDisposable
 {
     private readonly Device _device;
-    private readonly WGPUTextureFormat _format;
+    private readonly TextureFormat _format;
     private readonly BindGroupLayout _layout;
     private readonly RenderPipeline _pipeline;
     // Owned by the shared SamplerCache, so this type must never dispose it (T-784 S1b).
@@ -29,7 +29,7 @@ internal sealed class FramePresentation : IDisposable
     private uint _width;
     private uint _height;
 
-    private FramePresentation(Device device, WGPUTextureFormat format, Sampler sampler)
+    private FramePresentation(Device device, TextureFormat format, Sampler sampler)
     {
         _device = device;
         _format = format;
@@ -45,7 +45,7 @@ internal sealed class FramePresentation : IDisposable
 
     /// <summary>Creates the presentation resources for the given surface format.</summary>
     /// <param name="sampler">Sampler the presentation blit uses; owned by the caller's cache.</param>
-    public static FramePresentation Create(Device device, WGPUTextureFormat format, Sampler sampler) => new(device, format, sampler);
+    public static FramePresentation Create(Device device, TextureFormat format, Sampler sampler) => new(device, format, sampler);
 
     /// <summary>The colour texture every pass renders into; recreated when the size changes.</summary>
     public Texture Target => _target ?? throw new InvalidOperationException("the frame target was not created");
@@ -65,7 +65,7 @@ internal sealed class FramePresentation : IDisposable
         var created = _device.CreateTexture(new TextureDescriptor
         {
             Size = new WGPUExtent3D { width = width, height = height, depthOrArrayLayers = 1 },
-            Format = _format,
+            Format = BackendConvert.ToWgpu(_format),
             Usage = TextureUsage.RenderAttachment | TextureUsage.TextureBinding | TextureUsage.CopySrc,
             Dimension = WGPUTextureDimension._2D,
             MipLevelCount = 1,
@@ -110,7 +110,7 @@ internal sealed class FramePresentation : IDisposable
         _layout.Dispose();
     }
 
-    private static RenderPipeline CreatePipeline(Device device, PipelineLayout layout, WGPUTextureFormat format)
+    private static RenderPipeline CreatePipeline(Device device, PipelineLayout layout, TextureFormat format)
     {
         using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
         {
@@ -122,7 +122,7 @@ internal sealed class FramePresentation : IDisposable
             "vs_fullscreen"u8,
             shader,
             "fs_blit"u8,
-            [new ColorTargetState { Format = format, WriteMask = ColorWriteMask.All }],
+            [new ColorTargetState { Format = BackendConvert.ToWgpu(format), WriteMask = ColorWriteMask.All }],
             layout: layout,
             primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
             multisample: MultisampleState.Default,
