@@ -67,7 +67,11 @@ internal sealed class GameOptions
             InputTrace = Flag("MC_INPUT_TRACE"),
             PerformanceSummary = Flag("MC_PERF_SUMMARY"),
             CullStatistics = Flag("MC_CULL_STATS"),
-            DisableCulling = Flag("MC_CULL_DISABLE")
+            DisableCulling = Flag("MC_CULL_DISABLE"),
+            FrameCpuTiming = Flag("MC_FRAME_CPU"),
+            SkipOit = Flag("MC_SKIP_OIT"),
+            SkipClouds = Flag("MC_SKIP_CLOUDS"),
+            SkipTranslucent = Flag("MC_SKIP_TRANSLUCENT")
         };
     }
 }

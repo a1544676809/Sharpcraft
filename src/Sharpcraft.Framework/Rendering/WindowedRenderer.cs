@@ -590,6 +590,12 @@ public static class WindowedRenderer
         var performanceSummary = false;
         var cullStatistics = false;
         var disableCulling = false;
+        var cpuTiming = false;
+        var skipOit = false;
+        var skipClouds = false;
+        var skipTranslucent = false;
+        // Cheap enough to accumulate every frame (a dozen counter reads), printed only when the host asks for it.
+        var cpuTimings = new FrameCpuTimings();
         var frustumPlanes = new System.Numerics.Vector4[6];
         var gapSamples = new double[1 << 17];
         var gapCount = 0;
@@ -624,6 +630,18 @@ public static class WindowedRenderer
 
         while (true)
         {
+            // Per frame CPU attribution (diagnostic): every stage below closes with a Cpu call so the report can say where
+            // the frame went without a profiler. Removing these calls plus FrameCpuTimings leaves the renderer unchanged.
+            var cpuFrameStarted = System.Diagnostics.Stopwatch.GetTimestamp();
+            var cpuLast = cpuFrameStarted;
+
+            void Cpu(int stage)
+            {
+                var now = System.Diagnostics.Stopwatch.GetTimestamp();
+                cpuTimings.Add(stage, now - cpuLast);
+                cpuLast = now;
+            }
+
             if (geometryEpoch is not null && geometryEpoch() != appliedGeometryEpoch)
             {
                 appliedGeometryEpoch = geometryEpoch();
@@ -1050,10 +1068,15 @@ public static class WindowedRenderer
 
             // Frame pacing: the worst gap is what a dropped frame feels like, and it is the number that
             // regressed when meshing moved between threads.
+            Cpu(FrameCpuTimings.UpdatesStage);
             var nowMs = frameClock.Elapsed.TotalMilliseconds;
             performanceSummary = currentRequest.Diagnostics?.PerformanceSummary == true;
             cullStatistics = currentRequest.Diagnostics?.CullStatistics == true;
             disableCulling = currentRequest.Diagnostics?.DisableCulling == true;
+            cpuTiming = currentRequest.Diagnostics?.FrameCpuTiming == true;
+            skipOit = currentRequest.Diagnostics?.SkipOit == true;
+            skipClouds = currentRequest.Diagnostics?.SkipClouds == true;
+            skipTranslucent = currentRequest.Diagnostics?.SkipTranslucent == true;
             var gapMs = nowMs - lastFrameAt;
 
             if (gapCount < gapSamples.Length)
@@ -1087,6 +1110,7 @@ public static class WindowedRenderer
             lastFrameAt = nowMs;
 
             var acquired = surface.GetCurrentTexture();
+            Cpu(FrameCpuTimings.AcquireStage);
 
             // Brew's NeedsReconfigure wraps around on the uint enum (SuccessOptimal reports as
             // needing a reconfigure), so the statuses are compared explicitly instead.
@@ -1114,17 +1138,20 @@ public static class WindowedRenderer
             var (eye, target) = cameraPerFrame is null
                 ? (request.CameraPosition, request.CameraTarget)
                 : cameraPerFrame(window);
+            Cpu(FrameCpuTimings.CameraStage);
 
             // Sun/moon/stars are built relative to the initial camera; keep them centred as the player moves.
             var celestialDelta = eye - request.CameraPosition;
 
             // Sample the cloud draw once: the OIT stages need its vertices before the main transparency passes, and the
             // non-OIT path reuses the same draw later.
-            var cloudDrawFrame = cloudsPerFrame?.Invoke();
+            var cloudDrawFrame = skipClouds ? null : cloudsPerFrame?.Invoke();
             if (cloudOit is not null && cloudDrawFrame is { } cloudForOit)
             {
                 cloudOit.Update(cloudForOit.Vertices, cloudForOit.Indices, cloudForOit.Model, cloudForOit.Tint);
             }
+
+            Cpu(FrameCpuTimings.CloudsStage);
 
             var encoder = backend.CreateCommandEncoder();
             var frameColour = clearColourPerFrame?.Invoke() ?? colour;
@@ -1388,6 +1415,7 @@ public static class WindowedRenderer
             // The scene pass declares locals the rest of the frame uses, so it cannot sit inside a try block; the
             // body between begin and end has no return and no throw, which is what keeps the single end safe.
             backend.EndRenderPass(pass);
+            Cpu(FrameCpuTimings.SceneStage);
 
             if (cloudDepthTargetsCreated)
             {
@@ -1423,7 +1451,7 @@ public static class WindowedRenderer
                 CreateReferenceTargets();
             }
 
-            if (refTargetsCreated && needsOit)
+            if (refTargetsCreated && needsOit && !skipOit)
             {
                 var hasRefStatic = useStaticWorld
                     && currentRequest.TranslucentVertices is { Length: > 0 }
@@ -1447,6 +1475,12 @@ public static class WindowedRenderer
 
                 void DrawReferenceGeometry(RenderPassHandle p)
                 {
+                    if (skipTranslucent)
+                    {
+                        // Measurement only (MC_SKIP_TRANSLUCENT): the layers keep uploading, only the draw is dropped.
+                        return;
+                    }
+
                     if (arenaTranslucent is not null && arenaTranslucent.ChunkCount > 0)
                     {
                         arenaTranslucent.DrawFarthestFirst(p, eye);
@@ -1523,7 +1557,7 @@ public static class WindowedRenderer
                     TransmittanceGroup = refTransmittanceBindGroup,
                     AccumulateGroup = refAccumulateBindGroup,
                     CompositeGroup = refCompositeBindGroup,
-                    Clouds = cloudOit,
+                    Clouds = skipClouds ? null : cloudOit,
                     CloudBoundsPipeline = cloudDepthBoundsPipeline,
                     CloudTransmittancePipeline = cloudTransmittancePipeline,
                     CloudAccumulatePipeline = cloudAccumulatePipeline,
@@ -1537,19 +1571,9 @@ public static class WindowedRenderer
                     backend.Destroy(refStaticVertexBuffer);
                     backend.Destroy(refStaticIndexBuffer);
                 }
-
-                if (cullStatistics && (presented % 60) == 0)
-                {
-                    // The mean over this window is the settled frame cost; the chunk counts say what was in it.
-                    var windowMeanMs = windowFrameCount == 0 ? 0d : windowFrameMs / windowFrameCount;
-                    Console.WriteLine(
-                        $"cull: chunks={arena?.ChunkCount ?? 0} culled={arena?.CulledLastFrame ?? 0} "
-                        + $"cutout={arenaCutout?.ChunkCount ?? 0} translucent={arenaTranslucent?.ChunkCount ?? 0} "
-                        + $"frames={windowFrameCount} meanMs={windowMeanMs:F3} (reference oit)");
-                    windowFrameMs = 0d;
-                    windowFrameCount = 0;
-                }
             }
+
+            Cpu(FrameCpuTimings.OitStage);
             // (The weighted-blended OIT path that used to live here was shelved for its visual quality and is no longer
             // compiled; the reference OIT above is the only transparency path.)
 
@@ -1570,10 +1594,12 @@ public static class WindowedRenderer
                 {
                     backend.EndRenderPass(worldTextPass);
                 }
+
+                Cpu(FrameCpuTimings.TextStage);
             }
             // Clouds come after the opaque and transparent terrain, with depth testing so terrain and the cloud layer
             // occlude each other correctly (the reference draws them in executeClassicTransparency).
-            if (cloudColour is not null && cloudOit is null)
+            if (cloudColour is not null && cloudOit is null && !skipClouds)
             {
                 var cloudPass = backend.BeginRenderPass(
                     encoder,
@@ -1593,6 +1619,8 @@ public static class WindowedRenderer
                     backend.EndRenderPass(cloudPass);
                 }
             }
+
+            Cpu(FrameCpuTimings.CloudsStage);
 
             // Pass 4: the interface draws last, over the resolved frame, in its own pass so it never participates in the
             // world depth test or the transparency resolve.
@@ -1669,7 +1697,11 @@ public static class WindowedRenderer
                 backend.EndRenderPass(uiPass);
             }
 
+            Cpu(FrameCpuTimings.UiStage);
+
             presentation.RecordPresent(backend, encoder, wgpu.AdoptTextureView(surfaceView), DepthAttachmentDesc.Keep(depthViewHandle));
+
+            Cpu(FrameCpuTimings.PresentRecordStage);
 
             backend.Submit(encoder);
 
@@ -1680,6 +1712,9 @@ public static class WindowedRenderer
             {
                 screenshotCaptured?.Invoke(screenshotPath, screenshotPixels, frameWidth, frameHeight);
             }
+
+            Cpu(FrameCpuTimings.SubmitStage);
+
             surface.Present();
 
             // The acquired texture must be released each frame; leaving it alive makes the next acquire fail
@@ -1687,6 +1722,37 @@ public static class WindowedRenderer
             acquired.Texture.Dispose();
 
             onFrame?.Invoke(presented, window);
+
+            Cpu(FrameCpuTimings.PresentStage);
+            cpuTimings.Add(FrameCpuTimings.FrameStage, System.Diagnostics.Stopwatch.GetTimestamp() - cpuFrameStarted);
+            cpuTimings.EndFrame();
+
+            // Same cadence and same shape as before the attribution existed: the first line is frame zero.
+            if ((presented % 60) == 0)
+            {
+                if (cullStatistics)
+                {
+                    // The mean over this window is the settled frame cost; the chunk counts say what was in it.
+                    var windowMeanMs = windowFrameCount == 0 ? 0d : windowFrameMs / windowFrameCount;
+                    Console.WriteLine(
+                        $"cull: chunks={arena?.ChunkCount ?? 0} culled={arena?.CulledLastFrame ?? 0} "
+                        + $"cutout={arenaCutout?.ChunkCount ?? 0} translucent={arenaTranslucent?.ChunkCount ?? 0} "
+                        + $"frames={windowFrameCount} meanMs={windowMeanMs:F3} (reference oit)");
+                    windowFrameMs = 0d;
+                    windowFrameCount = 0;
+                }
+
+                if (cpuTiming)
+                {
+                    // Which passes the host asked to skip travels with the numbers, so an A/B row is self describing.
+                    var skipped = (skipOit ? "oit" : string.Empty) + (skipOit && (skipClouds || skipTranslucent) ? "+" : string.Empty)
+                        + (skipClouds ? "clouds" : string.Empty)
+                        + (skipClouds && skipTranslucent ? "+" : string.Empty)
+                        + (skipTranslucent ? "translucent" : string.Empty);
+                    cpuTimings.WriteLine($"skip={(skipped.Length == 0 ? "none" : skipped)}");
+                }
+            }
+
             presented++;
 
             if (frames > 0 && presented >= frames)
@@ -1764,6 +1830,11 @@ public static class WindowedRenderer
             $"window: rebuild {rebuildCount} frames, avg {(rebuildCount == 0 ? 0 : rebuildTotalMs / rebuildCount):F1} ms, "
             + $"worst {worstRebuildMs:F1} ms, uploaded {uploadBytes / (1024d * 1024d):F1} MB; "
             + $"camera avg {(presented == 0 ? 0 : cameraTotalMs / presented):F1} ms, worst {worstCameraMs:F1} ms");
+
+        if (cpuTiming)
+        {
+            cpuTimings.WriteSummary();
+        }
 
         backend.Destroy(dynamicVertex);
         backend.Destroy(dynamicIndex);

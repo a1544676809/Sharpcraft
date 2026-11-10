@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
+
 # 状态
 
 > 跨会话的唯一进度真相源。只记录易变状态：当前里程碑、进行中的模块、阻塞项、下一步具体动作、未提交改动与后台任务。
@@ -7,7 +10,7 @@
 
 M5.3 渲染管线。当前焦点：**渲染性能**。
 
-## 刚完成（2026-11-10）
+## 已完成
 
 | 任务 | 内容 | 结果 |
 | --- | --- | --- |
@@ -17,8 +20,16 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 | T-794 | 首帧 6.8 s 空白 | 未复现——是 T-793 那 1.09 GB 分配风暴引发的一次性 GC，随修复消失。生产代码零改动 |
 | T-791 | GPU 区块剔除 | **实测否决**：剔除总收益 0.4–2.7 ms，CPU 循环 <0.05 ms（<1% 帧时间）；搬 GPU 省 <0.01 ms 却要新增 `DrawIndexedIndirect` + 一致性门禁。`ChunkCuller` 保留停放 |
 
-## 下一步（具体动作）
+## 进行中
 
+**T-796 渲染帧时间归因的测量装置**：分段 CPU 计时（`MC_FRAME_CPU`）、三个 A/B pass 开关（`MC_SKIP_OIT` / `MC_SKIP_CLOUDS` / `MC_SKIP_TRANSLUCENT`）、脚本 `tools/verify/measure-frame.ps1`。装置已落地并跑出对照表，结论见 `specs/performance-baseline.md` §12。
+
+## 阻塞项
+
+- 本会话期间本地 Fabric 服务器曾自行退出（`Can't keep up` 后进程消失，仓库外目录），已按 `run.bat` 的同款命令行重启；重启耗时约 14 s。后续测量需确认服务器存活。
+- `docs/STATE.md` 在 `2e60e42` 之后与 `DocumentationDriftTests` 不一致（缺 SPDX 头、缺 `## 已完成`/`## 进行中`/`## 阻塞项`/`## 下一步具体动作` 与 `最后更新：`、含绝对路径），已在 T-796 中按测试要求补齐。
+
+## 下一步具体动作
 **渲染帧时间归因**：把 6.0 ms 拆成 CPU 与 GPU 两部分，找出大头。
 
 已知对照（固定机位 `-74.098 / 121 / 37.303` 朝北、放大化世界、视距 32、`MC_PRESENT_MODE=immediate`）：
@@ -42,7 +53,9 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 
 ## 未提交改动
 
-无。工作区干净，HEAD `67baaab`。
+T-796 未提交：`src/Sharpcraft.Framework/Rendering/WindowedRenderer.cs`（分段计时 + 三个 pass 跳过）、`src/Sharpcraft.Framework/Rendering/FrameCpuTimings.cs`（新增）、`src/Sharpcraft.Framework/Rendering/FrameDiagnostics.cs`（4 个显式选项）、`src/Sharpcraft.Client/Game/GameOptions.cs`（宿主开关映射）、`tools/verify/measure-frame.ps1`（新增）、`docs/specs/performance-baseline.md` §12、`docs/traceability.md`、本文件。
+
+最后更新：2026-11-10 23:20
 
 ## 待办（已登记，按优先级）
 
@@ -69,7 +82,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File tools/verify/check-simplifications
 
 ```powershell
 Get-Process -Name 'Sharpcraft.Client' -ErrorAction SilentlyContinue | Stop-Process -Force
-$pack=(Get-ChildItem 'C:\Users\14947\AppData\Local\Sharpcraft\packs' -Filter 'minecraft-26.3-*.pack.zip' | Select-Object -First 1).FullName
+$pack=(Get-ChildItem "$env:LOCALAPPDATA\Sharpcraft\packs" -Filter 'minecraft-26.3-*.pack.zip' | Select-Object -First 1).FullName
 $dbg="$env:TEMP\dbg.json"
 '{"MC_CULL_STATS":"1","MC_VIEW_DISTANCE":"32","MC_PRESENT_MODE":"immediate","MC_PERF_SUMMARY":"1"}' | Set-Content $dbg -Encoding UTF8
 src/Sharpcraft.Client/bin/Debug/net10.0/Sharpcraft.Client.exe --version 26.3 --gameDir "$env:APPDATA\.sharpcraft" --pack $pack --offlineDeveloperMode --username Test --quickPlayMultiplayer 127.0.0.1:25565 --width 1280 --height 720 --debugControl --debugOptionsFile $dbg

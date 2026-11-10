@@ -45,6 +45,26 @@ public sealed record FrameDiagnostics
     /// <summary>Print how many chunks the frustum test skipped, once a second.</summary>
     public bool CullStatistics { get; init; }
 
+    /// <summary>Print the CPU cost of each recorded frame stage, once a second.</summary>
+    /// <remarks>
+    /// The stages are the ones the windowed loop can name on its own: geometry updates, surface acquire, camera sample,
+    /// scene recording, the reference OIT stages, world text, clouds, interface and the submit/present tail. GPU time is
+    /// not included, which is why the pass skips below exist: their frame time differences are the GPU attribution.
+    /// </remarks>
+    public bool FrameCpuTiming { get; init; }
+
+    /// <summary>Skip the reference OIT stages, leaving the opaque and cutout passes for the measurement.</summary>
+    /// <remarks>Measurement only: without the transparency resolve the picture is visibly wrong.</remarks>
+    public bool SkipOit { get; init; }
+
+    /// <summary>Skip the cloud draws, for measuring what the cloud passes cost.</summary>
+    /// <remarks>Measurement only: clouds disappear from the picture.</remarks>
+    public bool SkipClouds { get; init; }
+
+    /// <summary>Skip translucent terrain geometry, for measuring what the transparency layers cost.</summary>
+    /// <remarks>Measurement only: water and glass disappear from the picture.</remarks>
+    public bool SkipTranslucent { get; init; }
+
     /// <summary>Draw every chunk without the frustum test, the fallback when GPU culling is unavailable.</summary>
     public bool DisableCulling { get; init; }
 }
