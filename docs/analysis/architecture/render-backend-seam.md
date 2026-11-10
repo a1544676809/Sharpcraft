@@ -484,3 +484,23 @@ finally
 **继续下去的正确做法是扩 `IRenderBackend`，而不是继续搬调用点。**
 
 **累计轨迹**：225 → 217（encoder）→ 184（管线布局）→ 137（OIT）→ 98（云/图集/几何/呈现）→ 70（实体/小组/离屏）→ 61（天体）→ 16（窗口外壳）→ **7**（UI/采样器/离屏 atlas）。**−218，−97%**，全程离屏帧哈希不变。
+### 9.19 收口：7 → 1，以及最终唯一保留项（2026-11-10）
+
+补上三块缺失能力后，离屏 compute 与回读整片入缝：
+
+| 新增能力 | 消除 |
+| --- | --- |
+| `BindGroupEntryDesc.Storage` / `ReadOnlyStorage` | compute 绑定可表达，两处 compute 链解锁 |
+| `byte[] ReadBuffer(Instance, BufferHandle, ulong, nuint)` | 截图回读与 compute 读回不再需要原生缓冲 |
+| `CopyTextureToBuffer` / `CopyBufferToBuffer` | 帧回读与级间拷贝入缝 |
+
+`FrameCapture` 现在**零原生对象**；深度金字塔与运动向量走 `BeginComputePass/SetPipeline/SetBindGroup/DispatchWorkgroups/EndComputePass`。
+
+**最终唯一保留项**：`WindowedRenderer` 的 `AdoptTextureView(surfaceView)` —— 交换链视图。换成 `AdoptTexture` + `CreateTextureView` 仍是 1 换 1（净 0）。**消除条件**：把 surface 获取本身入缝（`IRenderBackend` 增 `AcquireSurfaceImage()` / `ConfigureSurface(...)`），需同时改 `RenderBackend.cs` 与窗口层 surface 契约（`Sharpcraft.Framework.Platform`）。这是**跨层设计变更**，不是调用点搬运，故保留并登记为受控偏差 `SIM-SURFACE-NOT-IN-SEAM`。
+
+**累计**：225 → 217 → 184 → 137 → 98 → 70 → 61 → 16 → 7 → **1**（−224，−99.6%）。
+
+### 9.20 本轮发现的两个既有缺陷（与本目标无关，但需登记）
+
+1. **`--frame` 输出不是比特稳定的**。同一构建连跑两次可得到不同哈希；两个不同只在于一小片云的取样（537 px，44×29 区域，R/B/A 通道差、G 不变）。根因：云网格取样跟随**实时世界时钟**，`MC_FORCE_DAYTIME` / `MC_FORCE_PARTIAL` 覆盖不到它。**影响**：任何把 `--frame` 哈希当作回归门禁的做法都会随机失败。**建议**：要么让云取样接受强制时间，要么在 `--frame` 里固定世界时钟，之后该哈希才可作为门禁。当前正确的比较方式是"同世界状态下新旧构建输出对比"。
+2. **`MC_FRAME_DEPTH` / `MC_FRAME_PYRAMID` / `MC_FRAME_MOTION` 诊断开关未传到渲染器**。设置后没有任何 `depth:` / `pyramid:` / `motion:` 输出。**影响**：深度金字塔与运动向量换算后**无法获得运行时真值证据**，目前只有编译通过 + 逐项语义等价。应单开任务修复 host→GameOptions 的 flag 通道，届时 `mismatches` 计数才能作为等价性证据。
