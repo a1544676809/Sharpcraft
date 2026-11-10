@@ -63,10 +63,10 @@ public readonly struct PipelineHandle
 {
     internal PipelineHandle(object value) => Value = value;
 
-    internal object Value { get; }
-
     /// <summary>Whether this handle wraps a resource that was actually created.</summary>
     public bool IsValid => Value is not null;
+
+    internal object Value { get; }
 }
 
 /// <summary>How a texture is created.</summary>
@@ -346,6 +346,20 @@ public sealed class WgpuRenderBackend : IRenderBackend
     /// <summary>Unwraps a bind group layout handle for code that has not moved behind the seam yet.</summary>
     /// <param name="layout">Handle from this backend.</param>
     internal BindGroupLayout AsBindGroupLayout(BindGroupLayoutHandle layout) => RequireValid<BindGroupLayout>(layout.Value is not null, layout.Value);
+
+    /// <summary>Unwraps a pipeline handle for code that has not moved behind the seam yet.</summary>
+    /// <param name="pipeline">Handle from this backend.</param>
+    internal RenderPipeline AsPipeline(PipelineHandle pipeline) =>
+        RequireValid<RenderPipeline>(pipeline.Value is not null, pipeline.Value);
+
+    /// <summary>Unwraps a pipeline layout handle for code that has not moved behind the seam yet.</summary>
+    /// <param name="layout">Handle from this backend.</param>
+    internal PipelineLayout AsPipelineLayout(PipelineLayoutHandle layout) =>
+        RequireValid<PipelineLayout>(layout.Value is not null, layout.Value);
+
+    /// <summary>Wraps a pipeline layout the caller already owns.</summary>
+    /// <param name="layout">Layout the caller owns.</param>
+    internal PipelineLayoutHandle AdoptPipelineLayout(PipelineLayout layout) => new(layout);
 
     /// <inheritdoc/>
     public TextureViewHandle CreateTextureView(TextureHandle texture) =>

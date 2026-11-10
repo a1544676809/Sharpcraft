@@ -199,5 +199,8 @@ public readonly struct PipelineLayoutHandle
 {
     internal PipelineLayoutHandle(object value) => Value = value;
 
+    /// <summary>Whether this handle refers to a resource the backend created.</summary>
+    public bool IsValid => Value is not null;
+
     internal object Value { get; }
 }
