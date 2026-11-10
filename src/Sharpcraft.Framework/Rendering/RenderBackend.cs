@@ -768,6 +768,20 @@ public sealed class WgpuRenderBackend : IRenderBackend
                     ToWgpu(entry.ViewDimension),
                     entry.Multisampled),
                 BindingKind.Sampler => BindGroupLayoutEntry.Sampler(entry.Binding, stage, ToWgpu(entry.SamplerType)),
+            // Storage bindings share the buffer entry shape; only the binding type differs, which is what tells the
+            // backend the shader may write. MinBindingSize of zero means the shader declares its own.
+            BindingKind.StorageBuffer => BindGroupLayoutEntry.Buffer(
+                entry.Binding,
+                stage,
+                WGPUBufferBindingType.Storage,
+                false,
+                entry.MinBindingSize),
+            BindingKind.ReadOnlyStorageBuffer => BindGroupLayoutEntry.Buffer(
+                entry.Binding,
+                stage,
+                WGPUBufferBindingType.ReadOnlyStorage,
+                false,
+                entry.MinBindingSize),
                 _ => throw new ArgumentOutOfRangeException(nameof(entries), entry.Kind, "no layout counterpart")
             };
         }

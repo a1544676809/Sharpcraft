@@ -34,7 +34,13 @@ public enum BindingKind
     Texture,
 
     /// <summary>A sampler.</summary>
-    Sampler
+    Sampler,
+
+    /// <summary>A writable storage buffer, as compute workgroups read and write.</summary>
+    StorageBuffer,
+
+    /// <summary>A storage buffer that is only read.</summary>
+    ReadOnlyStorageBuffer
 }
 
 /// <summary>What kind of value a sampled texture returns.</summary>
