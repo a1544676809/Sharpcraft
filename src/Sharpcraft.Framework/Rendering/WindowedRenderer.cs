@@ -1652,26 +1652,17 @@ public static class WindowedRenderer
 
             // Pass 4: the interface draws last, over the resolved frame, in its own pass so it never participates in the
             // world depth test or the transparency resolve.
-            var uiPass = encoder.BeginRenderPass(
-            [
-                new ColorAttachment
-                {
-                    View = view,
-                    LoadOp = WGPULoadOp.Load,
-                    StoreOp = WGPUStoreOp.Store
-                }
-            ],
-            new DepthStencilAttachment
+            var uiPass = backend.BeginRenderPass(
+                wgpu.AdoptCommandEncoder(encoder),
+                [ColorAttachmentDesc.Keep(wgpu.AdoptTextureView(view))],
+                DepthAttachmentDesc.Keep(wgpu.AdoptTextureView(depthView)));
+            try
             {
-                View = depthView,
-                DepthLoadOp = WGPULoadOp.Load,
-                DepthStoreOp = WGPUStoreOp.Store
-            });
 
             if (uiIndexCount > 0 && uiRanges.Length > 0)
             {
-                uiPass.SetVertexBuffer(0, uiVertex, 0, uiVertexCapacity);
-                uiPass.SetIndexBuffer(uiIndex, WGPUIndexFormat.Uint32, 0, (ulong)uiIndexCount * sizeof(uint));
+                backend.SetVertexBuffer(uiPass, 0, wgpu.AdoptBuffer(uiVertex), 0, uiVertexCapacity);
+                backend.SetIndexBuffer(uiPass, wgpu.AdoptBuffer(uiIndex), IndexFormat.Uint32, 0, (ulong)uiIndexCount * sizeof(uint));
 
                 var boundMaterial = (UiMaterial?)null;
 
@@ -1690,20 +1681,20 @@ public static class WindowedRenderer
 
                         if (range.Material == UiMaterial.Text)
                         {
-                            uiPass.SetPipeline(uiTextPipeline);
-                            uiPass.SetBindGroup(0, uiTextBindGroup);
+                            backend.SetPipeline(uiPass, wgpu.AdoptPipeline(uiTextPipeline));
+                            backend.SetBindGroup(uiPass, 0, wgpu.AdoptBindGroup(uiTextBindGroup));
                         }
                         else if (range.Material == UiMaterial.Sprite &&
                                  range.SpriteIndex >= 0 &&
                                  range.SpriteIndex < spriteBindGroups.Count)
                         {
-                            uiPass.SetPipeline(uiSpritePipeline);
-                            uiPass.SetBindGroup(0, spriteBindGroups[range.SpriteIndex]);
+                            backend.SetPipeline(uiPass, wgpu.AdoptPipeline(uiSpritePipeline));
+                            backend.SetBindGroup(uiPass, 0, wgpu.AdoptBindGroup(spriteBindGroups[range.SpriteIndex]));
                         }
                         else
                         {
-                            uiPass.SetPipeline(uiPipeline);
-                            uiPass.SetBindGroup(0, uiBindGroup);
+                            backend.SetPipeline(uiPass, wgpu.AdoptPipeline(uiPipeline));
+                            backend.SetBindGroup(uiPass, 0, wgpu.AdoptBindGroup(uiBindGroup));
                         }
                     }
 
@@ -1717,17 +1708,22 @@ public static class WindowedRenderer
                         continue;
                     }
 
-                    uiPass.SetScissorRect(
+                    backend.SetScissorRect(
+                        uiPass,
                         (uint)left,
                         (uint)top,
                         (uint)(right - left),
                         (uint)(bottom - top));
 
-                    uiPass.DrawIndexed((uint)range.IndexCount, 1, (uint)range.FirstIndex, 0, 1);
+                    backend.DrawIndexed(uiPass, (uint)range.IndexCount, 1, (uint)range.FirstIndex, 0, 1);
                 }
             }
 
-            uiPass.End();
+            }
+            finally
+            {
+                backend.EndRenderPass(uiPass);
+            }
 
             presentation.RecordPresent(encoder, surfaceView, new DepthStencilAttachment { View = depthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store });
 
