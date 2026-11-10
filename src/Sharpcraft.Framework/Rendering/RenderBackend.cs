@@ -154,6 +154,9 @@ public interface IRenderBackend
     /// <summary>Destroys a bind group layout.</summary>
     void Destroy(BindGroupLayoutHandle layout);
 
+    /// <summary>Creates a buffer and fills it in one step.</summary>
+    BufferHandle CreateBufferInit(in BufferDesc desc, ReadOnlySpan<byte> data);
+
     /// <summary>Creates a buffer.</summary>
     BufferHandle CreateBuffer(in BufferDesc desc);
 
@@ -248,6 +251,14 @@ public sealed class WgpuRenderBackend : IRenderBackend
     /// <param name="sampler">Handle from this backend.</param>
     internal Sampler AsSampler(SamplerHandle sampler) => (Sampler)sampler.Value;
 
+    /// <summary>Unwraps a bind group handle for code that has not moved behind the seam yet.</summary>
+    /// <param name="group">Handle from this backend.</param>
+    internal BindGroup AsBindGroup(BindGroupHandle group) => (BindGroup)group.Value;
+
+    /// <summary>Unwraps a bind group layout handle for code that has not moved behind the seam yet.</summary>
+    /// <param name="layout">Handle from this backend.</param>
+    internal BindGroupLayout AsBindGroupLayout(BindGroupLayoutHandle layout) => (BindGroupLayout)layout.Value;
+
     /// <inheritdoc/>
     public TextureViewHandle CreateTextureView(TextureHandle texture) => new(((Texture)texture.Value).CreateView());
 
@@ -299,6 +310,12 @@ public sealed class WgpuRenderBackend : IRenderBackend
 
     /// <inheritdoc/>
     public void Destroy(BindGroupLayoutHandle layout) => ((BindGroupLayout)layout.Value).Dispose();
+
+    /// <inheritdoc/>
+    public BufferHandle CreateBufferInit(in BufferDesc desc, ReadOnlySpan<byte> data) =>
+        new(_device.CreateBufferInit(
+            new BufferInitDescriptor { Usage = ToWgpu(desc.Usage) },
+            data.ToArray()));
 
     /// <inheritdoc/>
     public BufferHandle CreateBuffer(in BufferDesc desc) =>
