@@ -251,6 +251,23 @@ public sealed class WgpuRenderBackend : IRenderBackend
     /// <param name="sampler">Handle from this backend.</param>
     internal Sampler AsSampler(SamplerHandle sampler) => (Sampler)sampler.Value;
 
+    /// <summary>Wraps a native object that the caller already owns, so it can be passed as a handle.</summary>
+    /// <remarks>
+    /// Adopting transfers no ownership: whoever created the object still destroys it, and the adopter must never hand the
+    /// handle to <c>Destroy</c>. This exists so a call site can keep its current lifetime while its callee speaks handles,
+    /// which is what keeps a migration pixel-identical; the adoption points disappear as creation moves into the seam.
+    /// </remarks>
+    /// <param name="buffer">Buffer the caller owns.</param>
+    internal BufferHandle AdoptBuffer(Brew.Wgpu.Buffer buffer) => new(buffer);
+
+    /// <summary>Wraps a sampler the caller owns.</summary>
+    /// <param name="sampler">Sampler the caller owns.</param>
+    internal SamplerHandle AdoptSampler(Sampler sampler) => new(sampler);
+
+    /// <summary>Wraps a bind group layout the caller owns.</summary>
+    /// <param name="layout">Layout the caller owns.</param>
+    internal BindGroupLayoutHandle AdoptBindGroupLayout(BindGroupLayout layout) => new(layout);
+
     /// <summary>Unwraps a bind group handle for code that has not moved behind the seam yet.</summary>
     /// <param name="group">Handle from this backend.</param>
     internal BindGroup AsBindGroup(BindGroupHandle group) => (BindGroup)group.Value;

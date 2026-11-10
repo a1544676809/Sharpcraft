@@ -18,20 +18,19 @@ internal sealed class EntitySkinTextureGpu : IDisposable
     private TextureHandle _texture = default;
     private TextureViewHandle _view = default;
 
-    public BindGroup BindGroup { get; private set; } = default;
+    public BindGroupHandle BindGroup { get; private set; } = default;
 
     public bool Created { get; private set; }
 
     /// <summary>Uploads a texture, replacing the previous GPU objects when one was already created.</summary>
     public void Upload(
         IRenderBackend backend,
-        Device device,
-        BindGroupLayout layout,
+        BindGroupLayoutHandle layout,
         TextureData data,
-        WgpuBuffer camera,
-        WgpuBuffer fog,
-        WgpuBuffer lightmap,
-        Sampler sampler)
+        BufferHandle camera,
+        BufferHandle fog,
+        BufferHandle lightmap,
+        SamplerHandle sampler)
     {
         ArgumentNullException.ThrowIfNull(data);
         DisposeUpload();
@@ -45,17 +44,14 @@ internal sealed class EntitySkinTextureGpu : IDisposable
             TextureUsages.TextureBinding | TextureUsages.CopyDst));
         backend.WriteTexture(_texture, data.Rgba, (uint)(data.Width * 4), (uint)data.Width, (uint)data.Height, 0);
         _view = backend.CreateTextureView(_texture);
-
-        // Bind group creation has not moved behind the seam yet, so unwrap the native view for it (W1).
-        var nativeView = RenderBackendInterop.Unwrap(backend).AsTextureView(_view);
-        BindGroup = device.CreateBindGroup(
+        BindGroup = backend.CreateBindGroup(
             layout,
             [
-                BindGroupEntry.TextureView(0, nativeView),
-                BindGroupEntry.Sampler(1, sampler),
-                BindGroupEntry.Buffer(VertexLayout.CameraBinding, camera, 0, VertexLayout.CameraUniformSize),
-                BindGroupEntry.Buffer(3, fog, 0, 32),
-                BindGroupEntry.Buffer(Shaders.ShaderBindings.Lightmap, lightmap, 0, Shaders.ShaderBindings.LightmapBytes)
+                BindGroupEntryDesc.Texture(0, _view),
+                BindGroupEntryDesc.Sampler(1, sampler),
+                BindGroupEntryDesc.Uniform(VertexLayout.CameraBinding, camera, 0, VertexLayout.CameraUniformSize),
+                BindGroupEntryDesc.Uniform(3, fog, 0, 32),
+                BindGroupEntryDesc.Uniform(Shaders.ShaderBindings.Lightmap, lightmap, 0, Shaders.ShaderBindings.LightmapBytes)
             ]);
         Created = true;
     }
@@ -76,7 +72,7 @@ internal sealed class EntitySkinTextureGpu : IDisposable
             return;
         }
 
-        BindGroup.Dispose();
+        _backend?.Destroy(BindGroup);
         _backend?.Destroy(_view);
         _backend?.Destroy(_texture);
         Created = false;
