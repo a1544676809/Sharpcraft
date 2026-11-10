@@ -431,34 +431,21 @@ public static class OffscreenRenderer
             var atlasData = request.Atlas ?? TextureData.White;
 
             var atlasMips = atlasData.Mips ?? [];
-            using var atlasTexture = device.CreateTexture(new TextureDescriptor
-            {
-                Size = new WGPUExtent3D
-                {
-                    width = (uint)atlasData.Width,
-                    height = (uint)atlasData.Height,
-                    depthOrArrayLayers = 1
-                },
-                MipLevelCount = 1 + (uint)atlasMips.Length,
-                SampleCount = 1,
-                Dimension = WGPUTextureDimension._2D,
-                Format = WGPUTextureFormat.RGBA8Unorm,
-                Usage = TextureUsage.TextureBinding | TextureUsage.CopyDst
-            });
+            var backend = new WgpuRenderBackend(device);
+            var atlasTexture = backend.CreateTexture(new TextureDesc(
+                (uint)atlasData.Width,
+                (uint)atlasData.Height,
+                TextureFormat.Rgba8Unorm,
+                1 + (uint)atlasMips.Length,
+                TextureUsages.TextureBinding | TextureUsages.CopyDst));
 
-            device.Queue.WriteTexture(
+            backend.WriteTexture(
                 atlasTexture,
                 atlasData.Rgba,
                 (uint)(atlasData.Width * 4),
+                (uint)atlasData.Width,
                 (uint)atlasData.Height,
-                new WGPUExtent3D
-                {
-                    width = (uint)atlasData.Width,
-                    height = (uint)atlasData.Height,
-                    depthOrArrayLayers = 1
-                },
-                0,
-                new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+                0);
 
             // Mip levels one and up, each half the previous size.
             var mipWidth = atlasData.Width;
@@ -469,28 +456,22 @@ public static class OffscreenRenderer
                 mipWidth = Math.Max(1, mipWidth / 2);
                 mipHeight = Math.Max(1, mipHeight / 2);
 
-                device.Queue.WriteTexture(
+                backend.WriteTexture(
                     atlasTexture,
                     atlasMips[level],
                     (uint)(mipWidth * 4),
+                    (uint)mipWidth,
                     (uint)mipHeight,
-                    new WGPUExtent3D { width = (uint)mipWidth, height = (uint)mipHeight, depthOrArrayLayers = 1 },
-                    (uint)(level + 1),
-                    new WGPUOrigin3D { x = 0, y = 0, z = 0 });
+                    (uint)(level + 1));
             }
 
-            using var atlasView = atlasTexture.CreateView();
+            var atlasViewHandle = backend.CreateTextureView(atlasTexture);
 
             // Same sampler construction as the windowed path, with the request's filter choice preserved so a nearest
             // screenshot request still produces nearest pixels (single track).
             var atlasFilter = request.NearestTextureFilter ? FilterMode.Nearest : FilterMode.Linear;
-            using var atlasSampler = SamplerCache.Create(device, AddressMode.ClampToEdge, atlasFilter, atlasFilter, useMipmaps: true);
 
-            // The atlas texture and sampler stay native (the upload path and the sampler cache own them), so their views
-            // are adopted once for the bind group the scene draws with.
-            var backend = new WgpuRenderBackend(device);
-            var atlasViewHandle = backend.AdoptTextureView(atlasView);
-            var atlasSamplerHandle = backend.AdoptSampler(atlasSampler);
+            var atlasSamplerHandle = backend.CreateSampler(AddressMode.ClampToEdge, atlasFilter, atlasFilter, useMipmaps: true);
 
             var bindGroupLayout = backend.CreateBindGroupLayout(
             [
@@ -1015,6 +996,9 @@ public static class OffscreenRenderer
             }
 
             backend.Destroy(bindGroup);
+            backend.Destroy(atlasSamplerHandle);
+            backend.Destroy(atlasViewHandle);
+            backend.Destroy(atlasTexture);
             backend.Destroy(lightmapBuffer);
             backend.Destroy(fogBuffer);
             backend.Destroy(cameraBuffer);

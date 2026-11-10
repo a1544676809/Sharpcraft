@@ -155,7 +155,7 @@ public static class WindowedRenderer
         // Magnification stays nearest: with a linear magnifier every block face reads visibly soft even at close range,
         // because a 16 texel sprite is stretched over a whole face. Minification is linear and the LOD clamp is
         // unbounded, so the derived mip chain still resolves distant ground.
-        var atlasSampler = samplers.GetMipmapped(AddressMode.ClampToEdge, FilterMode.Nearest);
+        var atlasSamplerHandle = samplers.GetMipmapped(AddressMode.ClampToEdge, FilterMode.Nearest);
 
         Shaders.ShaderPipelines.EnsureValid();
 
@@ -174,9 +174,6 @@ public static class WindowedRenderer
         ]);
 
         var pipelineLayout = backend.CreatePipelineLayout([bindGroupLayout]);
-        // The interface still creates its three pipelines from a native layout, so the handle is peeked once and shared
-        // by those calls; UiRenderer is the next slice (docs/analysis/architecture/render-backend-seam.md 9.9).
-        var uiPipelineLayout = wgpu.AsPipelineLayout(pipelineLayout);
 
         var cameraBuffer = backend.CreateBufferInit(
             new BufferDesc(VertexLayout.CameraUniformSize, BufferUsages.Uniform | BufferUsages.CopyDst),
@@ -204,8 +201,6 @@ public static class WindowedRenderer
             new BufferDesc(Shaders.ShaderBindings.LightmapBytes, BufferUsages.Uniform | BufferUsages.CopyDst),
             lightmapBytes.AsSpan());
         backend.WriteBuffer(lightmapBuffer, lightmapBytes, 0);
-
-        var atlasSamplerHandle = wgpu.AdoptSampler(atlasSampler);
 
         // The world bind group is the one every textured pass binds first; it is described in seam terms so the passes
         // receive a handle instead of unwrapping it at each draw.
@@ -260,8 +255,8 @@ public static class WindowedRenderer
         using var cloudOit = cloudOitEnabled && cloudColour is not null
             ? new CloudOitResources(backend, cameraBuffer, VertexLayout.CameraUniformSize)
             : null;
-        using var uiPipeline = UiRenderer.CreatePipeline(device, BackendConvert.FromWgpu(format), uiPipelineLayout);
-        using var uiTextPipeline = UiRenderer.CreateTextPipeline(device, BackendConvert.FromWgpu(format), uiPipelineLayout);
+        var uiPipeline = UiRenderer.CreatePipeline(backend, BackendConvert.FromWgpu(format), pipelineLayout);
+        var uiTextPipeline = UiRenderer.CreateTextPipeline(backend, BackendConvert.FromWgpu(format), pipelineLayout);
 
         // Transparency is the reference depth-bounds + wavelet-transmittance OIT (docs/specs/render/oit-reference.md).
         // The earlier weighted-blended OIT looked markedly worse in play and is shelved, not compiled; git history keeps
@@ -315,8 +310,7 @@ public static class WindowedRenderer
 
         var blitDepthPipelineLayout = backend.CreatePipelineLayout([blitDepthLayout]);
         var blitDepthPipeline = CreateBlitDepthPipeline(backend, blitDepthPipelineLayout);
-        var blitDepthSampler = samplers.GetClampToEdge(FilterMode.Nearest);
-        var blitDepthSamplerHandle = wgpu.AdoptSampler(blitDepthSampler);
+        var blitDepthSamplerHandle = samplers.GetClampToEdge(FilterMode.Nearest);
 
         // The interface layer needs its own transform: one uniform buffer cannot hold both the world camera and
         // the orthographic projection while a single pass reads from it.
@@ -361,7 +355,7 @@ public static class WindowedRenderer
 
         var uiBindGroup = CreateUiBindGroup(atlasView);
 
-        using var uiSpritePipeline = UiRenderer.CreateSpritePipeline(device, BackendConvert.FromWgpu(format), uiPipelineLayout);
+        var uiSpritePipeline = UiRenderer.CreateSpritePipeline(backend, BackendConvert.FromWgpu(format), pipelineLayout);
 
         // GUI sprites (tooltip background and frame) each need their own texture and binding, because one draw call can
         // only bind one texture (docs/decisions/0014-gui-sprite-atlas-and-nine-slice.md).
@@ -1618,19 +1612,19 @@ public static class WindowedRenderer
 
                         if (range.Material == UiMaterial.Text)
                         {
-                            backend.SetPipeline(uiPass, wgpu.AdoptPipeline(uiTextPipeline));
+                            backend.SetPipeline(uiPass, uiTextPipeline);
                             backend.SetBindGroup(uiPass, 0, uiTextBindGroup);
                         }
                         else if (range.Material == UiMaterial.Sprite &&
                                  range.SpriteIndex >= 0 &&
                                  range.SpriteIndex < spriteBindGroups.Count)
                         {
-                            backend.SetPipeline(uiPass, wgpu.AdoptPipeline(uiSpritePipeline));
+                            backend.SetPipeline(uiPass, uiSpritePipeline);
                             backend.SetBindGroup(uiPass, 0, spriteBindGroups[range.SpriteIndex]);
                         }
                         else
                         {
-                            backend.SetPipeline(uiPass, wgpu.AdoptPipeline(uiPipeline));
+                            backend.SetPipeline(uiPass, uiPipeline);
                             backend.SetBindGroup(uiPass, 0, uiBindGroup);
                         }
                     }
@@ -1802,6 +1796,9 @@ public static class WindowedRenderer
 
         // The frame pipelines and pipeline layouts are seam handles, so the frame loop's exit releases them by hand: a
         // handle is pure identity and cannot carry a Dispose (render-backend-seam.md 9).
+        backend.Destroy(uiSpritePipeline);
+        backend.Destroy(uiTextPipeline);
+        backend.Destroy(uiPipeline);
         backend.Destroy(cloudCompositePipeline);
         backend.Destroy(refCompositePipeline);
         backend.Destroy(refCullPipeline);

@@ -38,13 +38,13 @@ internal sealed class FramePresentation : IDisposable
     private uint _height;
 
     // The sampler is owned by the caller's cache, so only a handle to it is kept and it is never disposed here (T-784 S1b).
-    private FramePresentation(WgpuRenderBackend backend, Device device, TextureFormat format, Sampler sampler)
+    private FramePresentation(WgpuRenderBackend backend, Device device, TextureFormat format, SamplerHandle sampler)
     {
         _backend = backend;
         _wgpu = backend;
         _device = device;
         _format = format;
-        _samplerHandle = backend.AdoptSampler(sampler);
+        _samplerHandle = sampler;
         _layout = backend.CreateBindGroupLayout(
         [
             BindGroupLayoutEntryDesc.Texture(0, ShaderStages.Fragment),
@@ -56,9 +56,9 @@ internal sealed class FramePresentation : IDisposable
     }
 
     /// <summary>Creates the presentation resources for the given surface format.</summary>
-    /// <param name="sampler">Sampler the presentation blit uses; owned by the caller's cache.</param>
+    /// <param name="sampler">Sampling state handle the presentation blit uses; owned by the caller's cache.</param>
     /// <returns>The presentation resources; dispose them with the frame.</returns>
-    public static FramePresentation Create(WgpuRenderBackend backend, Device device, TextureFormat format, Sampler sampler) => new(backend, device, format, sampler);
+    public static FramePresentation Create(WgpuRenderBackend backend, Device device, TextureFormat format, SamplerHandle sampler) => new(backend, device, format, sampler);
 
     /// <summary>The colour texture every pass renders into; recreated when the size changes.</summary>
     public Texture Target => _target ?? throw new InvalidOperationException("the frame target was not created");

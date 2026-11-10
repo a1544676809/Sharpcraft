@@ -93,15 +93,20 @@ public sealed class SamplerCache : IDisposable
     }
 
     /// <summary>Returns the sampler for the given state.</summary>
-    public Sampler GetSampler(AddressMode addressModeU, AddressMode addressModeV, FilterMode minFilter, FilterMode magFilter, bool useMipmaps) =>
-        _samplers[Encode(addressModeU, addressModeV, minFilter, magFilter, useMipmaps)]
-        ?? throw new InvalidOperationException("SamplerCache.Initialize must be called before sampling");
+    /// <remarks>
+    /// The handle is a plain identifier onto the sampler this cache owns: the cache still creates, keeps and disposes the
+    /// native objects, and callers only ever pass the handle to the seam. That keeps "one state resolves to one sampler"
+    /// true while letting every bind group be described without unwrapping.
+    /// </remarks>
+    public SamplerHandle GetSampler(AddressMode addressModeU, AddressMode addressModeV, FilterMode minFilter, FilterMode magFilter, bool useMipmaps) =>
+        new(_samplers[Encode(addressModeU, addressModeV, minFilter, magFilter, useMipmaps)]
+            ?? throw new InvalidOperationException("SamplerCache.Initialize must be called before sampling"));
 
     /// <summary>Returns a clamping sampler with the same filter for minification and magnification.</summary>
-    public Sampler GetClampToEdge(FilterMode minMag) => GetClampToEdge(minMag, mipmaps: false);
+    public SamplerHandle GetClampToEdge(FilterMode minMag) => GetClampToEdge(minMag, mipmaps: false);
 
     /// <summary>Returns a clamping sampler with an explicit mipmap choice.</summary>
-    public Sampler GetClampToEdge(FilterMode minMag, bool mipmaps) =>
+    public SamplerHandle GetClampToEdge(FilterMode minMag, bool mipmaps) =>
         GetSampler(AddressMode.ClampToEdge, AddressMode.ClampToEdge, minMag, minMag, mipmaps);
 
     /// <summary>
@@ -141,14 +146,14 @@ public sealed class SamplerCache : IDisposable
     /// </summary>
     /// <param name="addressMode">Address mode for both axes.</param>
     /// <param name="magFilter">Magnification filter.</param>
-    public Sampler GetMipmapped(AddressMode addressMode, FilterMode magFilter) =>
+    public SamplerHandle GetMipmapped(AddressMode addressMode, FilterMode magFilter) =>
         GetSampler(addressMode, addressMode, FilterMode.Linear, magFilter, useMipmaps: true);
 
     /// <summary>Returns a repeating sampler with the same filter for minification and magnification.</summary>
-    public Sampler GetRepeat(FilterMode minMag) => GetRepeat(minMag, mipmaps: false);
+    public SamplerHandle GetRepeat(FilterMode minMag) => GetRepeat(minMag, mipmaps: false);
 
     /// <summary>Returns a repeating sampler with an explicit mipmap choice.</summary>
-    public Sampler GetRepeat(FilterMode minMag, bool mipmaps) =>
+    public SamplerHandle GetRepeat(FilterMode minMag, bool mipmaps) =>
         GetSampler(AddressMode.Repeat, AddressMode.Repeat, minMag, minMag, mipmaps);
 
     /// <summary>Encodes one state into the cache slot, matching the reference's five-part key.</summary>

@@ -17,7 +17,7 @@ public sealed class RenderSeamRatchetTests
 {
     private const int BackendCreations = 2;
 
-    private const int EscapeHatchCalls = 16;
+    private const int EscapeHatchCalls = 7;
 
     [Fact]
     public void BackendIsNotInstantiatedMoreOftenThanRecorded()
