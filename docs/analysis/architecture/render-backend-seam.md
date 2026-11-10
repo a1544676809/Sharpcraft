@@ -410,3 +410,15 @@ finally
 **剩下的 6 处 `AdoptBindGroup` 全部指向两个仍原生创建的对象**：主图集 bind group（在 `Run` 里 `device.CreateBindGroup`）与 `clouds.BindGroup`（`CloudOitResources` 持有）。9 处 `AsRenderPass` 则指向 `GeometryArena.Draw*` 与 `CloudOitResources.DrawGeometry` 仍收原生 pass。这两组就是下一片的全部内容。
 
 **累计轨迹**：225 → 217（encoder 整片）→ 184（管线布局整片）→ **137**（OIT 整片）。每次下降都对应一次"创建者+持有者+消费者同时换类型"，无例外。
+### 9.14 第三片：云集合、图集绑定、几何入口与呈现（137 → 98）
+
+| 步 | 改成接缝的东西 | 消除 |
+| --- | --- | --- |
+| 1 | `CloudOitResources` 的布局/绑定/缓冲整体句柄化，`DrawGeometry` 收 `(IRenderBackend, RenderPassHandle)` | 13 |
+| 2 | 主图集 bind group 经接缝创建，消费者直传句柄（含 `ReferenceOitPasses.TerrainAtlas`） | 9 |
+| 3 | `ChunkGeometryStore` 的 `Draw*` 收 `RenderPassHandle`，`DrawEntry` 走接缝 | 9 |
+| 4 | `FramePresentation` 全句柄化，`Ensure` 返回 `TextureViewHandle` | 8 |
+
+**四步互为前提**：不做步 1 的缓冲句柄化，步 2 的绑定就仍需 adopt；不做步 4 的 `Ensure`，帧目标的每个 pass 就各要一次 `AdoptTextureView`。这是"依赖图整片迁移"的又一例。
+
+**累计**：225 → 217 → 184 → 137 → **98**（−127，−56%）。
