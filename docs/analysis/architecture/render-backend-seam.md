@@ -192,3 +192,16 @@ W5 依赖 **W4（pipeline）**：`SetPipeline` 需要 `PipelineHandle`，而目�
 | 状态顺序错误（pipeline 与 vertex layout 不匹配） | 逐组迁移（W5c），每次只改一类调用 |
 | 性能回退（每次绘制多一层间接） | 迁移后用 `FrameDiagnostics` 对比帧时间，超过 5% 回退则重新评估 |
 | 大量调用点（`RenderPassEncoder` 11 处 public + 更多内部） | 按文件分批，每批一个提交，可独立回滚 |
+
+## 9. 收口时的两项阻塞（2026-11-10 记录）
+
+接缝已覆盖全部 19 个渲染 pass 与全部渲染管线的创建。仍不在接缝内的有两类，各自原因不同：
+
+| 项 | 位置 | 阻塞在哪 | 解除条件 |
+| --- | --- | --- | --- |
+| 3 处 `cloudOit` 管线布局 | `WindowedRenderer` `Run` | **不是 API 表达力问题**：`backend.CreatePipelineLayout` 已能表达，阻塞在**句柄的释放方式**。现有代码是 `using var x = cloudOit is null ? default : device.CreatePipelineLayout([...])`，而 `PipelineLayoutHandle` 是 `readonly struct`，没有 `Dispose`，无法放进 `using` | 先定句子柄的生命周期答案：要么给句柄加一个绑定后端的 `Dispose`，要么把这些调用改成显式 `Destroy` + `finally`。前者会影响所有句柄的语义，需单独评审 |
+| 2 个 compute 管线 | `OffscreenRenderer` 的深度金字塔与运动向量 | **API 表达力问题**：接缝没有 `CreateComputePipeline` / `BeginComputePass` / `DispatchWorkgroups` | 新增 compute 切片（见 §8 之后的 W6） |
+
+此外 `CopyTextureToBuffer` / `CopyBufferToBuffer` 仍为原生，原因同上：它们不在"渲染 pass 录制"的语义内，属于独立能力。
+
+这三类都不影响"渲染后端可替换"这一主目标：一个原生 Vulkan 后端只要实现 `IRenderBackend` 的现有方法，全部渲染路径即可迁移；只有 compute 与回读需要额外实现。
