@@ -15,9 +15,9 @@ namespace Sharpcraft.Architecture.Tests;
 /// </remarks>
 public sealed class RenderSeamRatchetTests
 {
-    private const int BackendCreations = 3;
+    private const int BackendCreations = 5;
 
-    private const int EscapeHatchCalls = 219;
+    private const int EscapeHatchCalls = 223;
 
     [Fact]
     public void BackendIsNotInstantiatedMoreOftenThanRecorded()

@@ -35,24 +35,23 @@ internal sealed class SkyDiscResources : IDisposable
         _pipelineLayout = device.CreatePipelineLayout([_layout]);
         _skyUniform = device.CreateBuffer(new BufferDescriptor { Size = 48, Usage = BufferUsage.Uniform | BufferUsage.CopyDst });
 
-        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
-        {
-            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("sky_disc")))
-        });
-
-        _pipeline = device.CreateRenderPipeline(
-            shader,
-            "vs_main"u8,
-            shader,
-            "fs_main"u8,
-            [new ColorTargetState { Format = BackendConvert.ToWgpu(format), WriteMask = ColorWriteMask.All, Blend = null }],
-            layout: _pipelineLayout,
-            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
-            multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.Always, write: false),
-            vertexStride: VertexLayout.SkyDiscStride,
-            vertexStepMode: WGPUVertexStepMode.Vertex,
-            vertexAttributes: VertexLayout.SkyDiscAttributes());
+        // The pipeline is described to the backend rather than built here, so this resource speaks the same language as
+        // the frame that draws it.
+        var backend = new WgpuRenderBackend(device);
+        var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("sky_disc"));
+        _pipeline = backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+            source,
+            "vs_main",
+            source,
+            "fs_main",
+            backend.AdoptPipelineLayout(_pipelineLayout),
+            [new ColorTargetDesc(format)],
+            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.Always, false),
+            CullMode.None,
+            FrontFace.Ccw,
+            (ulong)VertexLayout.SkyDiscStride,
+            VertexStepMode.Vertex,
+            LayoutAttributes.From(VertexLayout.SkyDiscAttributes()))));
 
         _bindGroup = device.CreateBindGroup(
             _layout,

@@ -220,8 +220,8 @@ Sharpcraft.Client.exe --version 26.3 --gameDir <dir> --pack <pack.zip> --offline
 | 文件 | 原生创建 | 内容 |
 | --- | --- | --- |
 | `UiRenderer.cs` | 3 个 render pipeline | 界面三套材质管线 |
-| `SkyDiscResources.cs` | 1 个 render pipeline | 天体圆盘 |
-| `WorldTextResources.cs` | 1 个 render pipeline | 世界文本 |
+| ~~`SkyDiscResources.cs`~~ | ~~1 个~~ **已迁（2026-11-10）** | 天体圆盘 |
+| ~~`WorldTextResources.cs`~~ | ~~1 个~~ **已迁（2026-11-10）** | 世界文本 |
 | `FramePresentation.cs` | 1 个 render pipeline | 呈现 blit |
 | `OffscreenRenderer.cs`（`CelestialResources` 嵌套类） | 1 个 render pipeline | 天体颜色 |
 | `ChunkCuller.cs` | 1 个 compute pipeline | 剔除 |

@@ -72,45 +72,26 @@ internal sealed class WorldTextResources : IDisposable
                 BindGroupEntry.Sampler(2, _sampler)
             ]);
 
-        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
-        {
-            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("world_text")))
-        });
-
-        _pipeline = device.CreateRenderPipeline(
-            shader,
-            "vs_main"u8,
-            shader,
-            "fs_main"u8,
-            [
-                new ColorTargetState
-                {
-                    Format = BackendConvert.ToWgpu(format),
-                    WriteMask = ColorWriteMask.All,
-                    Blend = new WGPUBlendState
-                    {
-                        color = new WGPUBlendComponent
-                        {
-                            operation = WGPUBlendOperation.Add,
-                            srcFactor = WGPUBlendFactor.SrcAlpha,
-                            dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
-                        },
-                        alpha = new WGPUBlendComponent
-                        {
-                            operation = WGPUBlendOperation.Add,
-                            srcFactor = WGPUBlendFactor.One,
-                            dstFactor = WGPUBlendFactor.OneMinusSrcAlpha
-                        }
-                    }
-                }
-            ],
-            layout: _pipelineLayout,
-            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
-            multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.GreaterEqual, write: false),
-            vertexStride: (ulong)VertexLayout.WorldTextStride,
-            vertexStepMode: WGPUVertexStepMode.Vertex,
-            vertexAttributes: VertexLayout.WorldTextAttributes());
+        // Described to the backend rather than built here, matching how the frame records its passes.
+        var backend = new WgpuRenderBackend(device);
+        var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("world_text"));
+        _pipeline = backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+            source,
+            "vs_main",
+            source,
+            "fs_main",
+            backend.AdoptPipelineLayout(_pipelineLayout),
+            [new ColorTargetDesc(
+                format,
+                new BlendStateDesc(
+                    new BlendComponentDesc(BlendOperation.Add, BlendFactor.SrcAlpha, BlendFactor.OneMinusSrcAlpha),
+                    new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.OneMinusSrcAlpha)))],
+            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, false),
+            CullMode.None,
+            FrontFace.Ccw,
+            (ulong)VertexLayout.WorldTextStride,
+            VertexStepMode.Vertex,
+            LayoutAttributes.From(VertexLayout.WorldTextAttributes()))));
     }
 
     public void SetDraws(IReadOnlyList<WorldTextDraw> draws)
