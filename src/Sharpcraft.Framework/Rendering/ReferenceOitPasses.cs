@@ -3,7 +3,6 @@
 
 using System.Numerics;
 using Brew.Wgpu;
-using Brew.Wgpu.Native;
 
 namespace Sharpcraft.Framework.Rendering;
 
@@ -13,7 +12,7 @@ namespace Sharpcraft.Framework.Rendering;
 /// </summary>
 /// <remarks>
 /// Extracted from <see cref="WindowedRenderer"/> so the renderer keeps to the "one pass, one place" rule
-/// (docs/specs/render/pipeline.md 15, T-776). Every view, pipeline and bind group is supplied by the caller: this type
+/// (docs/specs/render/pipeline.md 15, T-776). Every pipeline, view and bind group is supplied by the caller: this type
 /// owns no resources and only records the passes in the order the reference uses.
 /// </remarks>
 internal static class ReferenceOitPasses
@@ -21,84 +20,84 @@ internal static class ReferenceOitPasses
     /// <summary>Everything the sequence draws with, supplied by the windowed renderer for this frame.</summary>
     internal readonly struct Parameters
     {
-        /// <summary>Encoder the passes are recorded into.</summary>
         /// <summary>The seam the passes are recorded through.</summary>
-    public required IRenderBackend Backend { get; init; }
+        public required IRenderBackend Backend { get; init; }
 
-    /// <summary>The encoder this frame records into.</summary>
-    public CommandEncoderHandle Encoder { get; init; }
+        /// <summary>The encoder this frame records into.</summary>
+        public CommandEncoderHandle Encoder { get; init; }
 
         /// <summary>Frame colour target the final composite writes over.</summary>
-        public TextureView Frame { get; init; }
+        public TextureViewHandle Frame { get; init; }
 
         /// <summary>Main depth used by the terrain stages.</summary>
-        public DepthStencilAttachment Depth { get; init; }
+        public DepthAttachmentDesc Depth { get; init; }
 
         /// <summary>Independent cloud depth, or <see cref="Depth"/> when clouds do not use OIT.</summary>
-        public DepthStencilAttachment CloudDepth { get; init; }
+        public DepthAttachmentDesc CloudDepth { get; init; }
 
         /// <summary>Terrain depth bounds (MAX blended).</summary>
-        public TextureView Bounds { get; init; }
+        public TextureViewHandle Bounds { get; init; }
 
         /// <summary>Terrain depth bounds after the opaque-depth cull; the coefficient stages read this one.</summary>
-        public TextureView BoundsCulled { get; init; }
+        public TextureViewHandle BoundsCulled { get; init; }
 
         /// <summary>First wavelet coefficient target.</summary>
-        public TextureView Transmittance0 { get; init; }
+        public TextureViewHandle Transmittance0 { get; init; }
 
         /// <summary>Second wavelet coefficient target.</summary>
-        public TextureView Transmittance1 { get; init; }
+        public TextureViewHandle Transmittance1 { get; init; }
 
         /// <summary>Weighted colour accumulation target.</summary>
-        public TextureView Accumulate { get; init; }
+        public TextureViewHandle Accumulate { get; init; }
 
         /// <summary>Depth-bounds pipeline for the terrain geometry.</summary>
-        public RenderPipeline BoundsPipeline { get; init; }
+        public PipelineHandle BoundsPipeline { get; init; }
 
         /// <summary>Full-screen cull pipeline that clips the furthest bound to the nearest opaque surface.</summary>
-        public RenderPipeline CullPipeline { get; init; }
+        public PipelineHandle CullPipeline { get; init; }
 
         /// <summary>Wavelet transmittance pipeline.</summary>
-        public RenderPipeline TransmittancePipeline { get; init; }
+        public PipelineHandle TransmittancePipeline { get; init; }
 
         /// <summary>Accumulate pipeline.</summary>
-        public RenderPipeline AccumulatePipeline { get; init; }
+        public PipelineHandle AccumulatePipeline { get; init; }
 
         /// <summary>Composite pipeline.</summary>
-        public RenderPipeline CompositePipeline { get; init; }
+        public PipelineHandle CompositePipeline { get; init; }
 
         /// <summary>The main atlas bind group the terrain stages sample.</summary>
+        /// <remarks>The shared atlas bind group is still created on the device by its owner, so it stays native here.</remarks>
         public BindGroup TerrainAtlas { get; init; }
 
         /// <summary>Group 0 of the cull pass: the terrain bounds.</summary>
-        public BindGroup Cull { get; init; }
+        public BindGroupHandle Cull { get; init; }
 
         /// <summary>Group 1 of the transmittance stage.</summary>
-        public BindGroup TransmittanceGroup { get; init; }
+        public BindGroupHandle TransmittanceGroup { get; init; }
 
         /// <summary>Group 1 of the accumulate stage.</summary>
-        public BindGroup AccumulateGroup { get; init; }
+        public BindGroupHandle AccumulateGroup { get; init; }
 
         /// <summary>Group 0 of the composite.</summary>
-        public BindGroup CompositeGroup { get; init; }
+        public BindGroupHandle CompositeGroup { get; init; }
 
         /// <summary>Cloud OIT geometry and atlas, or null when clouds do not use OIT this frame.</summary>
         public CloudOitResources? Clouds { get; init; }
 
         /// <summary>Cloud depth-bounds pipeline; unused when <see cref="Clouds"/> is null.</summary>
-        public RenderPipeline CloudBoundsPipeline { get; init; }
+        public PipelineHandle CloudBoundsPipeline { get; init; }
 
         /// <summary>Cloud transmittance pipeline; unused when <see cref="Clouds"/> is null.</summary>
-        public RenderPipeline CloudTransmittancePipeline { get; init; }
+        public PipelineHandle CloudTransmittancePipeline { get; init; }
 
         /// <summary>Cloud accumulate pipeline; unused when <see cref="Clouds"/> is null.</summary>
-        public RenderPipeline CloudAccumulatePipeline { get; init; }
+        public PipelineHandle CloudAccumulatePipeline { get; init; }
 
         /// <summary>The translucent item set, recorded after the terrain composite.</summary>
         public ItemOitSet Items { get; init; }
 
         /// <summary>Item atlas bind group the item stages sample.</summary>
-        public BindGroup ItemAtlas { get; init; }
+        public BindGroupHandle ItemAtlas { get; init; }
 
         /// <summary>Records the translucent terrain geometry.</summary>
         public Action<RenderPassEncoder> DrawTerrain { get; init; }
@@ -110,8 +109,8 @@ internal static class ReferenceOitPasses
     /// <summary>Records every reference transparency pass for the frame.</summary>
     public static void Record(in Parameters p)
     {
-        // Every pass is recorded through the seam. The native attachments arrive in the parameter object and are
-        // adopted for the call, so this class owns nothing it did not create.
+        // Every pass is recorded through the seam. The only native objects left are the shared atlas bind group and the
+        // geometry callbacks, which still take the native pass.
         var backend = p.Backend;
         var wgpu = backend as WgpuRenderBackend
             ?? throw new InvalidOperationException("the seam implementation must adopt its own handles");
@@ -119,19 +118,14 @@ internal static class ReferenceOitPasses
         var clouds = p.Clouds;
         var zero = Vector4.Zero;
 
-        static DepthAttachmentDesc DepthOf(WgpuRenderBackend w, DepthStencilAttachment depth) =>
-            depth.DepthLoadOp == WGPULoadOp.Clear
-                ? DepthAttachmentDesc.Clear(w.AdoptTextureView(depth.View), depth.DepthClearValue)
-                : DepthAttachmentDesc.Keep(w.AdoptTextureView(depth.View));
-
         // Stage 1: depth bounds. Cleared very negative so MAX blending keeps the closest and furthest.
         var boundsPass = backend.BeginRenderPass(
             encoder,
-            [new ColorAttachmentDesc(wgpu.AdoptTextureView(p.Bounds), LoadOp.Clear, StoreOp.Store, new Vector4(-65504f, -65504f, -65504f, -65504f))],
-            DepthOf(wgpu, p.Depth));
+            [new ColorAttachmentDesc(p.Bounds, LoadOp.Clear, StoreOp.Store, new Vector4(-65504f, -65504f, -65504f, -65504f))],
+            p.Depth);
         try
         {
-            backend.SetPipeline(boundsPass, wgpu.AdoptPipeline(p.BoundsPipeline));
+            backend.SetPipeline(boundsPass, p.BoundsPipeline);
             backend.SetBindGroup(boundsPass, 0, wgpu.AdoptBindGroup(p.TerrainAtlas));
             p.DrawTerrain(wgpu.AsRenderPass(boundsPass));
         }
@@ -143,12 +137,12 @@ internal static class ReferenceOitPasses
         // Stage 1b: clip the furthest bound to the nearest opaque surface.
         var cullPass = backend.BeginRenderPass(
             encoder,
-            [new ColorAttachmentDesc(wgpu.AdoptTextureView(p.BoundsCulled), LoadOp.Clear, StoreOp.Store, zero)],
-            DepthOf(wgpu, p.Depth));
+            [new ColorAttachmentDesc(p.BoundsCulled, LoadOp.Clear, StoreOp.Store, zero)],
+            p.Depth);
         try
         {
-            backend.SetPipeline(cullPass, wgpu.AdoptPipeline(p.CullPipeline));
-            backend.SetBindGroup(cullPass, 0, wgpu.AdoptBindGroup(p.Cull));
+            backend.SetPipeline(cullPass, p.CullPipeline);
+            backend.SetBindGroup(cullPass, 0, p.Cull);
             backend.Draw(cullPass, 3, 1, 0, 0);
         }
         finally
@@ -162,11 +156,11 @@ internal static class ReferenceOitPasses
         {
             var cloudBoundsPass = backend.BeginRenderPass(
                 encoder,
-                [ColorAttachmentDesc.Keep(wgpu.AdoptTextureView(p.BoundsCulled))],
-                DepthOf(wgpu, p.CloudDepth));
+                [ColorAttachmentDesc.Keep(p.BoundsCulled)],
+                p.CloudDepth);
             try
             {
-                backend.SetPipeline(cloudBoundsPass, wgpu.AdoptPipeline(p.CloudBoundsPipeline));
+                backend.SetPipeline(cloudBoundsPass, p.CloudBoundsPipeline);
                 backend.SetBindGroup(cloudBoundsPass, 0, wgpu.AdoptBindGroup(clouds.BindGroup));
                 clouds.DrawGeometry(wgpu.AsRenderPass(cloudBoundsPass));
             }
@@ -180,15 +174,15 @@ internal static class ReferenceOitPasses
         var transmittancePass = backend.BeginRenderPass(
             encoder,
             [
-                new ColorAttachmentDesc(wgpu.AdoptTextureView(p.Transmittance0), LoadOp.Clear, StoreOp.Store, zero),
-                new ColorAttachmentDesc(wgpu.AdoptTextureView(p.Transmittance1), LoadOp.Clear, StoreOp.Store, zero)
+                new ColorAttachmentDesc(p.Transmittance0, LoadOp.Clear, StoreOp.Store, zero),
+                new ColorAttachmentDesc(p.Transmittance1, LoadOp.Clear, StoreOp.Store, zero)
             ],
-            DepthOf(wgpu, p.Depth));
+            p.Depth);
         try
         {
-            backend.SetPipeline(transmittancePass, wgpu.AdoptPipeline(p.TransmittancePipeline));
+            backend.SetPipeline(transmittancePass, p.TransmittancePipeline);
             backend.SetBindGroup(transmittancePass, 0, wgpu.AdoptBindGroup(p.TerrainAtlas));
-            backend.SetBindGroup(transmittancePass, 1, wgpu.AdoptBindGroup(p.TransmittanceGroup));
+            backend.SetBindGroup(transmittancePass, 1, p.TransmittanceGroup);
             p.DrawTerrain(wgpu.AsRenderPass(transmittancePass));
         }
         finally
@@ -201,15 +195,15 @@ internal static class ReferenceOitPasses
             var cloudTransPass = backend.BeginRenderPass(
                 encoder,
                 [
-                    ColorAttachmentDesc.Keep(wgpu.AdoptTextureView(p.Transmittance0)),
-                    ColorAttachmentDesc.Keep(wgpu.AdoptTextureView(p.Transmittance1))
+                    ColorAttachmentDesc.Keep(p.Transmittance0),
+                    ColorAttachmentDesc.Keep(p.Transmittance1)
                 ],
-                DepthOf(wgpu, p.CloudDepth));
+                p.CloudDepth);
             try
             {
-                backend.SetPipeline(cloudTransPass, wgpu.AdoptPipeline(p.CloudTransmittancePipeline));
+                backend.SetPipeline(cloudTransPass, p.CloudTransmittancePipeline);
                 backend.SetBindGroup(cloudTransPass, 0, wgpu.AdoptBindGroup(clouds.BindGroup));
-                backend.SetBindGroup(cloudTransPass, 1, wgpu.AdoptBindGroup(p.TransmittanceGroup));
+                backend.SetBindGroup(cloudTransPass, 1, p.TransmittanceGroup);
                 clouds.DrawGeometry(wgpu.AsRenderPass(cloudTransPass));
             }
             finally
@@ -221,13 +215,13 @@ internal static class ReferenceOitPasses
         // Stage 3: accumulate colour weighted by the transmittance in front of each fragment.
         var accumulatePass = backend.BeginRenderPass(
             encoder,
-            [new ColorAttachmentDesc(wgpu.AdoptTextureView(p.Accumulate), LoadOp.Clear, StoreOp.Store, zero)],
-            DepthOf(wgpu, p.Depth));
+            [new ColorAttachmentDesc(p.Accumulate, LoadOp.Clear, StoreOp.Store, zero)],
+            p.Depth);
         try
         {
-            backend.SetPipeline(accumulatePass, wgpu.AdoptPipeline(p.AccumulatePipeline));
+            backend.SetPipeline(accumulatePass, p.AccumulatePipeline);
             backend.SetBindGroup(accumulatePass, 0, wgpu.AdoptBindGroup(p.TerrainAtlas));
-            backend.SetBindGroup(accumulatePass, 1, wgpu.AdoptBindGroup(p.AccumulateGroup));
+            backend.SetBindGroup(accumulatePass, 1, p.AccumulateGroup);
             p.DrawTerrain(wgpu.AsRenderPass(accumulatePass));
         }
         finally
@@ -239,13 +233,13 @@ internal static class ReferenceOitPasses
         {
             var cloudAccumPass = backend.BeginRenderPass(
                 encoder,
-                [ColorAttachmentDesc.Keep(wgpu.AdoptTextureView(p.Accumulate))],
-                DepthOf(wgpu, p.CloudDepth));
+                [ColorAttachmentDesc.Keep(p.Accumulate)],
+                p.CloudDepth);
             try
             {
-                backend.SetPipeline(cloudAccumPass, wgpu.AdoptPipeline(p.CloudAccumulatePipeline));
+                backend.SetPipeline(cloudAccumPass, p.CloudAccumulatePipeline);
                 backend.SetBindGroup(cloudAccumPass, 0, wgpu.AdoptBindGroup(clouds.BindGroup));
-                backend.SetBindGroup(cloudAccumPass, 1, wgpu.AdoptBindGroup(p.AccumulateGroup));
+                backend.SetBindGroup(cloudAccumPass, 1, p.AccumulateGroup);
                 clouds.DrawGeometry(wgpu.AsRenderPass(cloudAccumPass));
             }
             finally
@@ -257,12 +251,12 @@ internal static class ReferenceOitPasses
         // Composite over the frame, writing the nearest translucent depth.
         var compositePass = backend.BeginRenderPass(
             encoder,
-            [ColorAttachmentDesc.Keep(wgpu.AdoptTextureView(p.Frame))],
-            DepthOf(wgpu, p.Depth));
+            [ColorAttachmentDesc.Keep(p.Frame)],
+            p.Depth);
         try
         {
-            backend.SetPipeline(compositePass, wgpu.AdoptPipeline(p.CompositePipeline));
-            backend.SetBindGroup(compositePass, 0, wgpu.AdoptBindGroup(p.CompositeGroup));
+            backend.SetPipeline(compositePass, p.CompositePipeline);
+            backend.SetBindGroup(compositePass, 0, p.CompositeGroup);
             backend.Draw(compositePass, 3, 1, 0, 0);
         }
         finally
@@ -275,8 +269,8 @@ internal static class ReferenceOitPasses
         p.Items.Record(
             p.Backend,
             p.Encoder,
-            new ColorAttachment { View = p.Frame, LoadOp = WGPULoadOp.Load, StoreOp = WGPUStoreOp.Store },
-            new DepthStencilAttachment { View = p.Depth.View, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store },
+            ColorAttachmentDesc.Keep(p.Frame),
+            p.Depth,
             p.BoundsPipeline,
             p.TransmittancePipeline,
             p.AccumulatePipeline,

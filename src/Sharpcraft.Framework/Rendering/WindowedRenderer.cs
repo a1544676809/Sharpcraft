@@ -281,48 +281,46 @@ public static class WindowedRenderer
         // The earlier weighted-blended OIT looked markedly worse in play and is shelved, not compiled; git history keeps
         // it if it is ever wanted again.
         var oitTargetFormat = oitLowPrecision ? TextureFormat.Rgba8Unorm : (supportsFloat32Blendable ? TextureFormat.Rgba32Float : TextureFormat.Rgba16Float);
-        using var refTransmittanceLayout = CreateOitTextureLayout(device, 1);
-        using var refAccumulateLayout = CreateOitTextureLayout(device, 3);
-        using var refCullLayout = CreateOitTextureLayout(device, 1);
-        using var refCompositeLayout = CreateOitTextureLayout(device, 4);
-        // The four texture layouts stay native for now: the seam can only declare a filterable float sample type, and
-        // the OIT targets are Rgba32Float, whose sample type is unfilterable, so a seam-created layout would fail bind
-        // group validation. Their pipeline layouts are still built through the seam, so each layout is adopted once.
-        var refTransmittancePipelineLayout = backend.CreatePipelineLayout([bindGroupLayout, wgpu.AdoptBindGroupLayout(refTransmittanceLayout)]);
-        var refAccumulatePipelineLayout = backend.CreatePipelineLayout([bindGroupLayout, wgpu.AdoptBindGroupLayout(refAccumulateLayout)]);
-        var refCullPipelineLayout = backend.CreatePipelineLayout([wgpu.AdoptBindGroupLayout(refCullLayout)]);
-        var refCompositePipelineLayout = backend.CreatePipelineLayout([wgpu.AdoptBindGroupLayout(refCompositeLayout)]);
+        var refTransmittanceLayout = CreateOitTextureLayout(backend, 1);
+        var refAccumulateLayout = CreateOitTextureLayout(backend, 3);
+        var refCullLayout = CreateOitTextureLayout(backend, 1);
+        var refCompositeLayout = CreateOitTextureLayout(backend, 4);
+        // The four layouts are released by hand when the frame loop exits: a handle is pure identity, not a disposable.
+        var refTransmittancePipelineLayout = backend.CreatePipelineLayout([bindGroupLayout, refTransmittanceLayout]);
+        var refAccumulatePipelineLayout = backend.CreatePipelineLayout([bindGroupLayout, refAccumulateLayout]);
+        var refCullPipelineLayout = backend.CreatePipelineLayout([refCullLayout]);
+        var refCompositePipelineLayout = backend.CreatePipelineLayout([refCompositeLayout]);
 
         // The cloud layouts are created through the seam and released as soon as their pipelines exist: a pipeline
         // keeps what it needs from its layout, so nothing outlives this block. Destroying rather than waiting for the
         // method to end is what lets these stay handles instead of needing a Dispose on the handle itself.
         var cloudDbPipelineLayout = cloudOit is null ? default : backend.CreatePipelineLayout([wgpu.AdoptBindGroupLayout(cloudOit.Layout)]);
-        using var cloudDepthBoundsPipeline = cloudOit is null ? default : CreateDepthBoundsPipeline(backend, cloudDbPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat), depthWrite: true);
+        var cloudDepthBoundsPipeline = cloudOit is null ? default : CreateDepthBoundsPipeline(backend, cloudDbPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat), depthWrite: true);
         if (cloudDbPipelineLayout.IsValid)
         {
             backend.Destroy(cloudDbPipelineLayout);
         }
 
-        var cloudTransPipelineLayout = cloudOit is null ? default : backend.CreatePipelineLayout([wgpu.AdoptBindGroupLayout(cloudOit.Layout), wgpu.AdoptBindGroupLayout(refTransmittanceLayout)]);
-        using var cloudTransmittancePipeline = cloudOit is null ? default : CreateTransmittancePipeline(backend, cloudTransPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat));
+        var cloudTransPipelineLayout = cloudOit is null ? default : backend.CreatePipelineLayout([wgpu.AdoptBindGroupLayout(cloudOit.Layout), refTransmittanceLayout]);
+        var cloudTransmittancePipeline = cloudOit is null ? default : CreateTransmittancePipeline(backend, cloudTransPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat));
         if (cloudTransPipelineLayout.IsValid)
         {
             backend.Destroy(cloudTransPipelineLayout);
         }
 
-        var cloudAccumPipelineLayout = cloudOit is null ? default : backend.CreatePipelineLayout([wgpu.AdoptBindGroupLayout(cloudOit.Layout), wgpu.AdoptBindGroupLayout(refAccumulateLayout)]);
-        using var cloudAccumulatePipeline = cloudOit is null ? default : CreateAccumulatePipeline(backend, cloudAccumPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat));
+        var cloudAccumPipelineLayout = cloudOit is null ? default : backend.CreatePipelineLayout([wgpu.AdoptBindGroupLayout(cloudOit.Layout), refAccumulateLayout]);
+        var cloudAccumulatePipeline = cloudOit is null ? default : CreateAccumulatePipeline(backend, cloudAccumPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat));
         if (cloudAccumPipelineLayout.IsValid)
         {
             backend.Destroy(cloudAccumPipelineLayout);
         }
 
-        using var refDepthBoundsPipeline = CreateDepthBoundsPipeline(backend, pipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
-        using var refTransmittancePipeline = CreateTransmittancePipeline(backend, refTransmittancePipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
-        using var refAccumulatePipeline = CreateAccumulatePipeline(backend, refAccumulatePipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
-        using var refCullPipeline = CreateCullPipeline(backend, refCullPipelineLayout, BackendConvert.ToWgpu(oitTargetFormat));
-        using var refCompositePipeline = CreateCompositePipeline(backend, format, refCompositePipelineLayout);
-        using var cloudCompositePipeline = CreateCompositePipeline(backend, format, refCompositePipelineLayout, WGPUCompareFunction.GreaterEqual);
+        var refDepthBoundsPipeline = CreateDepthBoundsPipeline(backend, pipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
+        var refTransmittancePipeline = CreateTransmittancePipeline(backend, refTransmittancePipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
+        var refAccumulatePipeline = CreateAccumulatePipeline(backend, refAccumulatePipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
+        var refCullPipeline = CreateCullPipeline(backend, refCullPipelineLayout, BackendConvert.ToWgpu(oitTargetFormat));
+        var refCompositePipeline = CreateCompositePipeline(backend, format, refCompositePipelineLayout);
+        var cloudCompositePipeline = CreateCompositePipeline(backend, format, refCompositePipelineLayout, WGPUCompareFunction.GreaterEqual);
         var blitDepthLayout = backend.CreateBindGroupLayout([
             BindGroupLayoutEntryDesc.Texture(0, ShaderStages.Fragment) with { SampleType = TextureSampleType.Depth, ViewDimension = TextureViewDimension.D2 },
             BindGroupLayoutEntryDesc.Sampler(1, ShaderStages.Fragment)
@@ -533,23 +531,28 @@ public static class WindowedRenderer
         device.Queue.WriteBuffer(indexBuffer, 0, currentRequest.Indices.AsSpan());
         var depthTexture = CreateDepthTexture(device, frameWidth, frameHeight);
         var depthView = depthTexture.CreateView();
+        // The reference OIT passes take depth as a seam descriptor, so the view is adopted once here and refreshed on
+        // resize with the texture it belongs to.
+        var depthViewHandle = wgpu.AdoptTextureView(depthView);
 
-        // Reference transparency targets and bind groups. Brew handles are structs, so they are held as non-nullable
-        // defaults and rebuilt by CreateReferenceTargets on resize.
+        // Reference transparency targets and bind groups. The targets stay native because they are rebuilt on resize; the
+        // views wrapping them are seam handles, so the bind groups and every pass downstream take handles as well
+        // (docs/analysis/architecture/render-backend-seam.md 9.9). Handles are structs, so they are held as defaults and
+        // rebuilt by CreateReferenceTargets.
         Texture refDepthBoundsTexture = default;
-        TextureView refDepthBoundsView = default;
+        TextureViewHandle refDepthBoundsView = default;
         Texture refDepthBoundsCulledTexture = default;
-        TextureView refDepthBoundsCulledView = default;
+        TextureViewHandle refDepthBoundsCulledView = default;
         Texture refTransmittance0Texture = default;
-        TextureView refTransmittance0View = default;
+        TextureViewHandle refTransmittance0View = default;
         Texture refTransmittance1Texture = default;
-        TextureView refTransmittance1View = default;
+        TextureViewHandle refTransmittance1View = default;
         Texture refAccumulateTexture = default;
-        TextureView refAccumulateView = default;
-        BindGroup refCullBindGroup = default;
-        BindGroup refTransmittanceBindGroup = default;
-        BindGroup refAccumulateBindGroup = default;
-        BindGroup refCompositeBindGroup = default;
+        TextureViewHandle refAccumulateView = default;
+        BindGroupHandle refCullBindGroup = default;
+        BindGroupHandle refTransmittanceBindGroup = default;
+        BindGroupHandle refAccumulateBindGroup = default;
+        BindGroupHandle refCompositeBindGroup = default;
         Texture cloudDepthTexture = default;
         TextureView cloudDepthView = default;
         var cloudDepthTargetsCreated = false;
@@ -563,19 +566,19 @@ public static class WindowedRenderer
         {
             if (refTargetsCreated)
             {
-                refCullBindGroup.Dispose();
-                refTransmittanceBindGroup.Dispose();
-                refAccumulateBindGroup.Dispose();
-                refCompositeBindGroup.Dispose();
-                refDepthBoundsView.Dispose();
+                backend.Destroy(refCullBindGroup);
+                backend.Destroy(refTransmittanceBindGroup);
+                backend.Destroy(refAccumulateBindGroup);
+                backend.Destroy(refCompositeBindGroup);
+                backend.Destroy(refDepthBoundsView);
                 refDepthBoundsTexture.Dispose();
-                refDepthBoundsCulledView.Dispose();
+                backend.Destroy(refDepthBoundsCulledView);
                 refDepthBoundsCulledTexture.Dispose();
-                refTransmittance0View.Dispose();
+                backend.Destroy(refTransmittance0View);
                 refTransmittance0Texture.Dispose();
-                refTransmittance1View.Dispose();
+                backend.Destroy(refTransmittance1View);
                 refTransmittance1Texture.Dispose();
-                refAccumulateView.Dispose();
+                backend.Destroy(refAccumulateView);
                 refAccumulateTexture.Dispose();
                 if (cloudDepthTargetsCreated)
                 {
@@ -589,45 +592,44 @@ public static class WindowedRenderer
             }
 
             refDepthBoundsTexture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
-            refDepthBoundsView = refDepthBoundsTexture.CreateView();
+            refDepthBoundsView = wgpu.AdoptTextureView(refDepthBoundsTexture.CreateView());
             refDepthBoundsCulledTexture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
-            refDepthBoundsCulledView = refDepthBoundsCulledTexture.CreateView();
+            refDepthBoundsCulledView = wgpu.AdoptTextureView(refDepthBoundsCulledTexture.CreateView());
             refTransmittance0Texture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
-            refTransmittance0View = refTransmittance0Texture.CreateView();
+            refTransmittance0View = wgpu.AdoptTextureView(refTransmittance0Texture.CreateView());
             refTransmittance1Texture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
-            refTransmittance1View = refTransmittance1Texture.CreateView();
+            refTransmittance1View = wgpu.AdoptTextureView(refTransmittance1Texture.CreateView());
             refAccumulateTexture = CreateOitTarget(device, frameWidth, frameHeight, oitTargetFormat);
-            refAccumulateView = refAccumulateTexture.CreateView();
+            refAccumulateView = wgpu.AdoptTextureView(refAccumulateTexture.CreateView());
 
-            refCullBindGroup = device.CreateBindGroup(refCullLayout, [BindGroupEntry.TextureView(0, refDepthBoundsView)]);
-            refTransmittanceBindGroup = device.CreateBindGroup(refTransmittanceLayout, [BindGroupEntry.TextureView(0, refDepthBoundsCulledView)]);
-            refAccumulateBindGroup = device.CreateBindGroup(
+            refCullBindGroup = backend.CreateBindGroup(refCullLayout, [BindGroupEntryDesc.Texture(0, refDepthBoundsView)]);
+            refTransmittanceBindGroup = backend.CreateBindGroup(refTransmittanceLayout, [BindGroupEntryDesc.Texture(0, refDepthBoundsCulledView)]);
+            refAccumulateBindGroup = backend.CreateBindGroup(
                 refAccumulateLayout,
                 [
-                    BindGroupEntry.TextureView(0, refDepthBoundsCulledView),
-                    BindGroupEntry.TextureView(1, refTransmittance0View),
-                    BindGroupEntry.TextureView(2, refTransmittance1View)
+                    BindGroupEntryDesc.Texture(0, refDepthBoundsCulledView),
+                    BindGroupEntryDesc.Texture(1, refTransmittance0View),
+                    BindGroupEntryDesc.Texture(2, refTransmittance1View)
                 ]);
-            refCompositeBindGroup = device.CreateBindGroup(
+            refCompositeBindGroup = backend.CreateBindGroup(
                 refCompositeLayout,
                 [
-                    BindGroupEntry.TextureView(0, refAccumulateView),
-                    BindGroupEntry.TextureView(1, refTransmittance0View),
-                    BindGroupEntry.TextureView(2, refTransmittance1View),
+                    BindGroupEntryDesc.Texture(0, refAccumulateView),
+                    BindGroupEntryDesc.Texture(1, refTransmittance0View),
+                    BindGroupEntryDesc.Texture(2, refTransmittance1View),
                     // The composite writes the closest translucent device depth from the original terrain depth bounds,
                     // matching the reference composite (which samples the un-culled target); clouds are excluded from
                     // this depth write, exactly as the reference excludes them.
-                    BindGroupEntry.TextureView(3, refDepthBoundsView)
+                    BindGroupEntryDesc.Texture(3, refDepthBoundsView)
                 ]);
             itemOit.Create(
-                device,
+                backend,
                 frameWidth,
                 frameHeight,
                 oitTargetFormat,
                 refTransmittanceLayout,
                 refAccumulateLayout,
-                refCompositeLayout,
-                CreateOitTarget);
+                refCompositeLayout);
             // Clouds always get an independent depth target so the cloud depth-bounds write never pollutes the main
             // depth the terrain transparency passes test against (otherwise glass/water behind a cloud are culled).
             if (cloudOit is not null)
@@ -929,6 +931,7 @@ public static class WindowedRenderer
                 depthTexture.Dispose();
                 depthTexture = CreateDepthTexture(device, frameWidth, frameHeight);
                 depthView = depthTexture.CreateView();
+                depthViewHandle = wgpu.AdoptTextureView(depthView);
 
                 if (refTargetsCreated)
                 {
@@ -1192,6 +1195,8 @@ public static class WindowedRenderer
             using var surfaceView = acquired.Texture.CreateView();
             // Every world and interface pass targets the frame target; RecordPresent copies it onto the surface.
             var view = presentation.Ensure(frameWidth, frameHeight);
+            // The reference OIT sequence takes its colour target as a handle, so the frame target is adopted once.
+            var frameHandle = wgpu.AdoptTextureView(view);
             // The camera is sampled once per frame, before the encoder, because the cull pass needs the view projection
             // and a render pass cannot be interrupted to record compute.
             var cameraStarted = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -1572,24 +1577,19 @@ public static class WindowedRenderer
 
                 // Terrain transparency (glass/water) tests depth against the opaque main depth only; cloud depth writes
                 // go to a separate target below so they cannot cull translucent terrain behind a cloud.
-                var depthLoadStore = new DepthStencilAttachment
-                {
-                    View = depthView,
-                    DepthLoadOp = WGPULoadOp.Load,
-                    DepthStoreOp = WGPUStoreOp.Store
-                };
+                var depthLoadStore = DepthAttachmentDesc.Keep(depthViewHandle);
 
                 // Cloud OIT stages use the independent cloud depth target (blitted from the opaque depth above), so the
                 // cloud depth-bounds write culls only the cloud's own interior faces without hiding terrain behind it.
                 var cloudOitDepth = cloudDepthTargetsCreated
-                    ? new DepthStencilAttachment { View = cloudDepthView, DepthLoadOp = WGPULoadOp.Load, DepthStoreOp = WGPUStoreOp.Store }
+                    ? DepthAttachmentDesc.Keep(wgpu.AdoptTextureView(cloudDepthView))
                     : depthLoadStore;
 
                 ReferenceOitPasses.Record(new ReferenceOitPasses.Parameters
                 {
                     Backend = backend,
-            Encoder = encoder,
-                    Frame = view,
+                    Encoder = encoder,
+                    Frame = frameHandle,
                     Depth = depthLoadStore,
                     CloudDepth = cloudOitDepth,
                     Bounds = refDepthBoundsView,
@@ -1612,7 +1612,7 @@ public static class WindowedRenderer
                     CloudTransmittancePipeline = cloudTransmittancePipeline,
                     CloudAccumulatePipeline = cloudAccumulatePipeline,
                     Items = itemOit,
-                    ItemAtlas = wgpu.AsBindGroup(itemAtlasGpu.BindGroup),
+                    ItemAtlas = itemAtlasGpu.BindGroup,
                     DrawTerrain = DrawReferenceGeometry,
                     DrawItems = DrawItemOitGeometry
                 });
@@ -1859,24 +1859,51 @@ public static class WindowedRenderer
         vertexBuffer.Dispose();
         depthView.Dispose();
         depthTexture.Dispose();
-        refCullBindGroup.Dispose();
-        refTransmittanceBindGroup.Dispose();
-        refAccumulateBindGroup.Dispose();
-        refCompositeBindGroup.Dispose();
-        refDepthBoundsView.Dispose();
-        refDepthBoundsTexture.Dispose();
-        refDepthBoundsCulledView.Dispose();
-        refDepthBoundsCulledTexture.Dispose();
-        refTransmittance0View.Dispose();
-        refTransmittance0Texture.Dispose();
-        refTransmittance1View.Dispose();
-        refTransmittance1Texture.Dispose();
-        refAccumulateView.Dispose();
-        refAccumulateTexture.Dispose();
+        // The reference OIT targets only exist once a frame has needed transparency, so their handles are guarded: a
+        // handle that was never created has nothing to release, and Destroy rejects a default handle.
+        if (refTargetsCreated)
+        {
+            backend.Destroy(refCullBindGroup);
+            backend.Destroy(refTransmittanceBindGroup);
+            backend.Destroy(refAccumulateBindGroup);
+            backend.Destroy(refCompositeBindGroup);
+            backend.Destroy(refDepthBoundsView);
+            refDepthBoundsTexture.Dispose();
+            backend.Destroy(refDepthBoundsCulledView);
+            refDepthBoundsCulledTexture.Dispose();
+            backend.Destroy(refTransmittance0View);
+            refTransmittance0Texture.Dispose();
+            backend.Destroy(refTransmittance1View);
+            refTransmittance1Texture.Dispose();
+            backend.Destroy(refAccumulateView);
+            refAccumulateTexture.Dispose();
+        }
+
         indexBuffer.Dispose();
 
         // The frame pipelines and pipeline layouts are seam handles, so the frame loop's exit releases them by hand: a
         // handle is pure identity and cannot carry a Dispose (render-backend-seam.md 9).
+        backend.Destroy(cloudCompositePipeline);
+        backend.Destroy(refCompositePipeline);
+        backend.Destroy(refCullPipeline);
+        backend.Destroy(refAccumulatePipeline);
+        backend.Destroy(refTransmittancePipeline);
+        backend.Destroy(refDepthBoundsPipeline);
+        if (cloudAccumulatePipeline.IsValid)
+        {
+            backend.Destroy(cloudAccumulatePipeline);
+        }
+
+        if (cloudTransmittancePipeline.IsValid)
+        {
+            backend.Destroy(cloudTransmittancePipeline);
+        }
+
+        if (cloudDepthBoundsPipeline.IsValid)
+        {
+            backend.Destroy(cloudDepthBoundsPipeline);
+        }
+
         backend.Destroy(blitDepthPipeline);
         backend.Destroy(skyPipeline);
         backend.Destroy(entityGlintPipeline);
@@ -1894,6 +1921,10 @@ public static class WindowedRenderer
         backend.Destroy(refAccumulatePipelineLayout);
         backend.Destroy(refTransmittancePipelineLayout);
         backend.Destroy(pipelineLayout);
+        backend.Destroy(refCompositeLayout);
+        backend.Destroy(refCullLayout);
+        backend.Destroy(refAccumulateLayout);
+        backend.Destroy(refTransmittanceLayout);
 
         return format;
     }
@@ -1941,31 +1972,29 @@ public static class WindowedRenderer
     };
 
     /// <summary>Layout for a bind group of <paramref name="textureCount"/> sampled textures, fetched with texelFetch.</summary>
-    private static BindGroupLayout CreateOitTextureLayout(Device device, int textureCount)
+    /// <remarks>The targets are Rgba32Float by default, which is sampleable but not filterable, so the entries declare an
+    /// unfilterable float binding.</remarks>
+    private static BindGroupLayoutHandle CreateOitTextureLayout(WgpuRenderBackend backend, int textureCount)
     {
-        var entries = new BindGroupLayoutEntry[textureCount];
+        var entries = new BindGroupLayoutEntryDesc[textureCount];
 
         for (var index = 0; index < textureCount; index++)
         {
-            entries[index] = BindGroupLayoutEntry.Texture(
-                (uint)index,
-                ShaderStage.Fragment,
-                WGPUTextureSampleType.UnfilterableFloat,
-                WGPUTextureViewDimension._2D,
-                false);
+            entries[index] = BindGroupLayoutEntryDesc.Texture((uint)index, ShaderStages.Fragment)
+                with { SampleType = TextureSampleType.UnfilterableFloat };
         }
 
-        return device.CreateBindGroupLayout(entries);
+        return backend.CreateBindGroupLayout(entries);
     }
 
     /// <summary>
     /// Reference transparency stage 1: record the per-pixel depth range of the translucent layer. RGBA32F with a MAX
     /// blend, so the closest and furthest bounds survive in different channels.
     /// </summary>
-    private static RenderPipeline CreateDepthBoundsPipeline(WgpuRenderBackend backend, PipelineLayoutHandle layout, string shaderName = "oit_reference", bool positionColor = false, WGPUTextureFormat format = WGPUTextureFormat.RGBA16Float, bool depthWrite = false)
+    private static PipelineHandle CreateDepthBoundsPipeline(WgpuRenderBackend backend, PipelineLayoutHandle layout, string shaderName = "oit_reference", bool positionColor = false, WGPUTextureFormat format = WGPUTextureFormat.RGBA16Float, bool depthWrite = false)
     {
         var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load(shaderName));
-        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+        return backend.CreateRenderPipeline(new PipelineDesc(
             source, "vs_main", source, "fs_depth_bounds", layout,
             [new ColorTargetDesc(BackendConvert.FromWgpu(format), new BlendStateDesc(
                 new BlendComponentDesc(BlendOperation.Max, BlendFactor.One, BlendFactor.One),
@@ -1973,31 +2002,31 @@ public static class WindowedRenderer
             new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, depthWrite),
             CullMode.Back, FrontFace.Ccw,
             (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes()))));
+            LayoutAttributes.From(VertexLayout.Attributes())));
     }
 
     /// <summary>Reference transparency stage 2: wavelet-transmittance coefficients, additively blended into two targets.</summary>
-    private static RenderPipeline CreateTransmittancePipeline(WgpuRenderBackend backend, PipelineLayoutHandle layout, string shaderName = "oit_reference", bool positionColor = false, WGPUTextureFormat format = WGPUTextureFormat.RGBA16Float, bool depthWrite = false)
+    private static PipelineHandle CreateTransmittancePipeline(WgpuRenderBackend backend, PipelineLayoutHandle layout, string shaderName = "oit_reference", bool positionColor = false, WGPUTextureFormat format = WGPUTextureFormat.RGBA16Float, bool depthWrite = false)
     {
         var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load(shaderName));
         static ColorTargetDesc Additive(WGPUTextureFormat format) => new(
             BackendConvert.FromWgpu(format), new BlendStateDesc(
                 new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.One),
                 new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.One)));
-        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+        return backend.CreateRenderPipeline(new PipelineDesc(
             source, "vs_main", source, "fs_transmittance", layout,
             [Additive(format), Additive(format)],
             new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, depthWrite),
             CullMode.Back, FrontFace.Ccw,
             (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes()))));
+            LayoutAttributes.From(VertexLayout.Attributes())));
     }
 
     /// <summary>Reference transparency stage 3: colour weighted by the transmittance in front of each fragment.</summary>
-    private static RenderPipeline CreateAccumulatePipeline(WgpuRenderBackend backend, PipelineLayoutHandle layout, string shaderName = "oit_reference", bool positionColor = false, WGPUTextureFormat format = WGPUTextureFormat.RGBA16Float, bool depthWrite = false)
+    private static PipelineHandle CreateAccumulatePipeline(WgpuRenderBackend backend, PipelineLayoutHandle layout, string shaderName = "oit_reference", bool positionColor = false, WGPUTextureFormat format = WGPUTextureFormat.RGBA16Float, bool depthWrite = false)
     {
         var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load(shaderName));
-        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+        return backend.CreateRenderPipeline(new PipelineDesc(
             source, "vs_main", source, "fs_accumulate", layout,
             [new ColorTargetDesc(BackendConvert.FromWgpu(format), new BlendStateDesc(
                 new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.One),
@@ -2005,20 +2034,20 @@ public static class WindowedRenderer
             new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, depthWrite),
             CullMode.Back, FrontFace.Ccw,
             (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes()))));
+            LayoutAttributes.From(VertexLayout.Attributes())));
     }
 
     /// <summary>Reference transparency: clip the far depth bound to the nearest opaque surface.</summary>
-    private static RenderPipeline CreateCullPipeline(WgpuRenderBackend backend, PipelineLayoutHandle layout, WGPUTextureFormat format = WGPUTextureFormat.RGBA16Float)
+    private static PipelineHandle CreateCullPipeline(WgpuRenderBackend backend, PipelineLayoutHandle layout, WGPUTextureFormat format = WGPUTextureFormat.RGBA16Float)
     {
         var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("oit_depth_bounds_cull"));
-        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+        return backend.CreateRenderPipeline(new PipelineDesc(
             source, "vs_fullscreen", source, "fs_cull", layout,
             [new ColorTargetDesc(BackendConvert.FromWgpu(format))],
             new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.Always, false),
             CullMode.None, FrontFace.Ccw,
             0, VertexStepMode.Vertex,
-            [])));
+            []));
     }
 
     /// <summary>Reference transparency composite: premultiplied over the frame, writing the nearest translucent depth.</summary>
@@ -2034,10 +2063,10 @@ public static class WindowedRenderer
             []));
     }
 
-    private static RenderPipeline CreateCompositePipeline(WgpuRenderBackend backend, WGPUTextureFormat format, PipelineLayoutHandle layout, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always)
+    private static PipelineHandle CreateCompositePipeline(WgpuRenderBackend backend, WGPUTextureFormat format, PipelineLayoutHandle layout, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always)
     {
         var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("oit_composite"));
-        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+        return backend.CreateRenderPipeline(new PipelineDesc(
             source, "vs_fullscreen", source, "fs_composite", layout,
             [new ColorTargetDesc(BackendConvert.FromWgpu(format), new BlendStateDesc(
                 new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.OneMinusSrcAlpha),
@@ -2045,7 +2074,7 @@ public static class WindowedRenderer
             new DepthStateDesc(TextureFormat.Depth32Float, BackendConvert.FromWgpu(depthCompare), true),
             CullMode.None, FrontFace.Ccw,
             0, VertexStepMode.Vertex,
-            [])));
+            []));
     }
 
     /// <summary>Builds the sky pipeline: a full-screen triangle with no vertex buffer and no depth writes.</summary>
