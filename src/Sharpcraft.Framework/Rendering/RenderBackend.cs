@@ -160,6 +160,18 @@ public interface IRenderBackend
     /// <summary>Creates a sampler from the state the caller asked for.</summary>
     SamplerHandle CreateSampler(AddressMode addressMode, FilterMode minFilter, FilterMode magFilter, bool useMipmaps);
 
+    /// <summary>Creates a pipeline layout from the bind group layouts a draw will set.</summary>
+    PipelineLayoutHandle CreatePipelineLayout(ReadOnlySpan<BindGroupLayoutHandle> layouts);
+
+    /// <summary>Creates a render pipeline from a neutral description.</summary>
+    PipelineHandle CreateRenderPipeline(in PipelineDesc desc);
+
+    /// <summary>Destroys a pipeline.</summary>
+    void Destroy(PipelineHandle pipeline);
+
+    /// <summary>Destroys a pipeline layout.</summary>
+    void Destroy(PipelineLayoutHandle layout);
+
     /// <summary>Creates a bind group layout.</summary>
     BindGroupLayoutHandle CreateBindGroupLayout(ReadOnlySpan<BindGroupLayoutEntryDesc> entries);
 
@@ -309,6 +321,88 @@ public sealed class WgpuRenderBackend : IRenderBackend
         new(SamplerCache.Create(_device, addressMode, minFilter, magFilter, useMipmaps));
 
     /// <inheritdoc/>
+    public PipelineLayoutHandle CreatePipelineLayout(ReadOnlySpan<BindGroupLayoutHandle> layouts)
+    {
+        var native = new BindGroupLayout[layouts.Length];
+        for (var index = 0; index < layouts.Length; index++)
+        {
+            native[index] = RequireValid<BindGroupLayout>(layouts[index].Value is not null, layouts[index].Value);
+        }
+
+        return new PipelineLayoutHandle(_device.CreatePipelineLayout(native));
+    }
+
+    /// <inheritdoc/>
+    public PipelineHandle CreateRenderPipeline(in PipelineDesc desc)
+    {
+        using var vertexShader = _device.CreateShaderModule(new ShaderModuleDescriptor
+        {
+            Source = ShaderSource.FromWgsl(desc.VertexShader.ToArray())
+        });
+        using var fragmentShader = _device.CreateShaderModule(new ShaderModuleDescriptor
+        {
+            Source = ShaderSource.FromWgsl(desc.FragmentShader.ToArray())
+        });
+
+        var targets = new ColorTargetState[desc.ColourTargets.Count];
+        for (var index = 0; index < targets.Length; index++)
+        {
+            var target = desc.ColourTargets[index];
+            targets[index] = target.Blend is { } blend
+                ? new ColorTargetState
+                {
+                    Format = BackendConvert.ToWgpu(target.Format),
+                    WriteMask = ColorWriteMask.All,
+                    Blend = new WGPUBlendState
+                    {
+                        color = ToWgpu(blend.Colour),
+                        alpha = ToWgpu(blend.Alpha)
+                    }
+                }
+                : new ColorTargetState(BackendConvert.ToWgpu(target.Format));
+        }
+
+        var attributes = new VertexAttribute[desc.VertexAttributes.Count];
+        for (var index = 0; index < attributes.Length; index++)
+        {
+            var attribute = desc.VertexAttributes[index];
+            attributes[index] = new VertexAttribute
+            {
+                ShaderLocation = attribute.ShaderLocation,
+                Offset = (ulong)attribute.Offset,
+                Format = ToWgpu(attribute.Format)
+            };
+        }
+
+        var depth = desc.Depth is { } state
+            ? DepthStencilState.Depth(
+                BackendConvert.ToWgpu(state.Format),
+                ToWgpu(state.Compare),
+                write: state.Write)
+            : default;
+
+        return new PipelineHandle(_device.CreateRenderPipeline(
+            vertexShader,
+            System.Text.Encoding.UTF8.GetBytes(desc.VertexEntry),
+            fragmentShader,
+            System.Text.Encoding.UTF8.GetBytes(desc.FragmentEntry),
+            targets,
+            layout: RequireValid<PipelineLayout>(desc.Layout.Value is not null, desc.Layout.Value),
+            primitive: PrimitiveState.Default with { CullMode = ToWgpu(desc.Cull), FrontFace = ToWgpu(desc.Front) },
+            multisample: MultisampleState.Default,
+            depthStencil: depth,
+            vertexStride: desc.VertexStride,
+            vertexStepMode: desc.StepMode == VertexStepMode.Instance ? WGPUVertexStepMode.Instance : WGPUVertexStepMode.Vertex,
+            vertexAttributes: attributes));
+    }
+
+    /// <inheritdoc/>
+    public void Destroy(PipelineHandle pipeline) => RequireValid<RenderPipeline>(pipeline.Value is not null, pipeline.Value).Dispose();
+
+    /// <inheritdoc/>
+    public void Destroy(PipelineLayoutHandle layout) => RequireValid<PipelineLayout>(layout.Value is not null, layout.Value).Dispose();
+
+    /// <inheritdoc/>
     public BindGroupLayoutHandle CreateBindGroupLayout(ReadOnlySpan<BindGroupLayoutEntryDesc> entries)
     {
         var native = new BindGroupLayoutEntry[entries.Length];
@@ -427,6 +521,75 @@ public sealed class WgpuRenderBackend : IRenderBackend
         SamplerBindingType.NonFiltering => WGPUSamplerBindingType.NonFiltering,
         SamplerBindingType.Comparison => WGPUSamplerBindingType.Comparison,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "no sampler counterpart")
+    };
+
+    private static WGPUBlendComponent ToWgpu(BlendComponentDesc component) => new()
+    {
+        operation = ToWgpu(component.Operation),
+        srcFactor = ToWgpu(component.SrcFactor),
+        dstFactor = ToWgpu(component.DstFactor)
+    };
+
+    private static WGPUBlendOperation ToWgpu(BlendOperation operation) => operation switch
+    {
+        BlendOperation.Add => WGPUBlendOperation.Add,
+        BlendOperation.Subtract => WGPUBlendOperation.Subtract,
+        BlendOperation.ReverseSubtract => WGPUBlendOperation.ReverseSubtract,
+        BlendOperation.Min => WGPUBlendOperation.Min,
+        BlendOperation.Max => WGPUBlendOperation.Max,
+        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "no blend operation counterpart")
+    };
+
+    private static WGPUBlendFactor ToWgpu(BlendFactor factor) => factor switch
+    {
+        BlendFactor.Zero => WGPUBlendFactor.Zero,
+        BlendFactor.One => WGPUBlendFactor.One,
+        BlendFactor.Src => WGPUBlendFactor.Src,
+        BlendFactor.OneMinusSrc => WGPUBlendFactor.OneMinusSrc,
+        BlendFactor.SrcAlpha => WGPUBlendFactor.SrcAlpha,
+        BlendFactor.OneMinusSrcAlpha => WGPUBlendFactor.OneMinusSrcAlpha,
+        BlendFactor.Dst => WGPUBlendFactor.Dst,
+        BlendFactor.OneMinusDst => WGPUBlendFactor.OneMinusDst,
+        BlendFactor.DstAlpha => WGPUBlendFactor.DstAlpha,
+        BlendFactor.OneMinusDstAlpha => WGPUBlendFactor.OneMinusDstAlpha,
+        _ => throw new ArgumentOutOfRangeException(nameof(factor), factor, "no blend factor counterpart")
+    };
+
+    private static WGPUVertexFormat ToWgpu(VertexFormat format) => format switch
+    {
+        VertexFormat.Float32x2 => WGPUVertexFormat.Float32x2,
+        VertexFormat.Float32x3 => WGPUVertexFormat.Float32x3,
+        VertexFormat.Float32x4 => WGPUVertexFormat.Float32x4,
+        VertexFormat.Unorm8x4 => WGPUVertexFormat.Unorm8x4,
+        _ => throw new ArgumentOutOfRangeException(nameof(format), format, "no vertex format counterpart")
+    };
+
+    private static WGPUCompareFunction ToWgpu(CompareFunction compare) => compare switch
+    {
+        CompareFunction.Never => WGPUCompareFunction.Never,
+        CompareFunction.Less => WGPUCompareFunction.Less,
+        CompareFunction.Equal => WGPUCompareFunction.Equal,
+        CompareFunction.LessEqual => WGPUCompareFunction.LessEqual,
+        CompareFunction.Greater => WGPUCompareFunction.Greater,
+        CompareFunction.NotEqual => WGPUCompareFunction.NotEqual,
+        CompareFunction.GreaterEqual => WGPUCompareFunction.GreaterEqual,
+        CompareFunction.Always => WGPUCompareFunction.Always,
+        _ => throw new ArgumentOutOfRangeException(nameof(compare), compare, "no compare counterpart")
+    };
+
+    private static WGPUCullMode ToWgpu(CullMode mode) => mode switch
+    {
+        CullMode.None => WGPUCullMode.None,
+        CullMode.Front => WGPUCullMode.Front,
+        CullMode.Back => WGPUCullMode.Back,
+        _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "no cull counterpart")
+    };
+
+    private static WGPUFrontFace ToWgpu(FrontFace face) => face switch
+    {
+        FrontFace.Ccw => WGPUFrontFace.CCW,
+        FrontFace.Cw => WGPUFrontFace.CW,
+        _ => throw new ArgumentOutOfRangeException(nameof(face), face, "no front face counterpart")
     };
 
     private static ShaderStage ToWgpu(ShaderStages stages)
