@@ -119,23 +119,21 @@ internal sealed class FramePresentation : IDisposable
 
     private static RenderPipeline CreatePipeline(Device device, PipelineLayout layout, TextureFormat format)
     {
-        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
-        {
-            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("blit_color")))
-        });
-
-        return device.CreateRenderPipeline(
-            shader,
-            "vs_fullscreen"u8,
-            shader,
-            "fs_blit"u8,
-            [new ColorTargetState { Format = BackendConvert.ToWgpu(format), WriteMask = ColorWriteMask.All }],
-            layout: layout,
-            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
-            multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.Always, write: false),
-            vertexStride: 0,
-            vertexStepMode: WGPUVertexStepMode.Vertex,
-            vertexAttributes: []);
+        // Described to the backend rather than built here, so presentation joins the same path as every other pass.
+        var backend = new WgpuRenderBackend(device);
+        var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("blit_color"));
+        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+            source,
+            "vs_fullscreen",
+            source,
+            "fs_blit",
+            backend.AdoptPipelineLayout(layout),
+            [new ColorTargetDesc(format)],
+            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.Always, false),
+            CullMode.None,
+            FrontFace.Ccw,
+            0,
+            VertexStepMode.Vertex,
+            [])));
     }
 }
