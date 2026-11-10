@@ -124,4 +124,5 @@ internal static class BackendConvert
         WGPUVertexFormat.Unorm8x4 => VertexFormat.Unorm8x4,
         _ => throw new ArgumentOutOfRangeException(nameof(format), format, "no neutral counterpart")
     };
+
 }

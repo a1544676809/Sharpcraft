@@ -285,24 +285,15 @@ public static class OffscreenRenderer
 
     private static RenderPipeline CreateSkyPipeline(Device device, TextureFormat format)
     {
-        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
-        {
-            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(SkyShaderSourceText))
-        });
-
-        return device.CreateRenderPipeline(
-            shader,
-            "vs_sky"u8,
-            shader,
-            "fs_sky"u8,
-            [new ColorTargetState(BackendConvert.ToWgpu(format))],
-            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
-            multisample: MultisampleState.Default,
-            // Depth test always passes and writes nothing: the sky is a backdrop, not geometry.
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.Always, write: false),
-            vertexStride: 0,
-            vertexStepMode: WGPUVertexStepMode.Vertex,
-            vertexAttributes: []);
+        var backend = new WgpuRenderBackend(device);
+        var skySource = System.Text.Encoding.UTF8.GetBytes(SkyShaderSourceText);
+        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+            skySource, "vs_sky", skySource, "fs_sky", null,
+            [new ColorTargetDesc(format)],
+            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.Always, false),
+            CullMode.None, FrontFace.Ccw,
+            0, VertexStepMode.Vertex,
+            [])));
     }
 
     private static RenderPipeline CreatePipeline(Device device, PipelineLayout layout)

@@ -151,6 +151,33 @@ public enum VertexFormat
 /// <param name="Format">Format of the attribute.</param>
 public readonly record struct VertexAttributeDesc(uint ShaderLocation, uint Offset, VertexFormat Format);
 
+/// <summary>Converts a declared vertex layout into the attributes a pipeline needs.</summary>
+/// <remarks>
+/// The conversion lives beside the descriptor so that the single-layout rule keeps holding: a renderer passes what
+/// <c>VertexLayout</c> declares and never names the attribute type itself.
+/// </remarks>
+public static class VertexAttributes
+{
+    /// <summary>Converts the shared layout's attributes.</summary>
+    /// <param name="attributes">Attributes as the shared layout declares them.</param>
+    public static VertexAttributeDesc[] From(Brew.Wgpu.VertexAttribute[] attributes)
+    {
+        ArgumentNullException.ThrowIfNull(attributes);
+
+        var result = new VertexAttributeDesc[attributes.Length];
+        for (var index = 0; index < attributes.Length; index++)
+        {
+            var attribute = attributes[index];
+            result[index] = new VertexAttributeDesc(
+                attribute.ShaderLocation,
+                (uint)attribute.Offset,
+                BackendConvert.FromWgpu(attribute.Format));
+        }
+
+        return result;
+    }
+}
+
 /// <summary>How often a vertex buffer advances.</summary>
 public enum VertexStepMode
 {

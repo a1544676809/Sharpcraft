@@ -2089,23 +2089,15 @@ public static class WindowedRenderer
     /// <param name="format">Colour target format.</param>
     private static RenderPipeline CreateSkyPipeline(Device device, WGPUTextureFormat format)
     {
-        using var shader = device.CreateShaderModule(new ShaderModuleDescriptor
-        {
-            Source = ShaderSource.FromWgsl(System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.SkyShaderSourceText))
-        });
-
-        return device.CreateRenderPipeline(
-            shader,
-            "vs_sky"u8,
-            shader,
-            "fs_sky"u8,
-            [new ColorTargetState(format)],
-            primitive: PrimitiveState.Default with { CullMode = WGPUCullMode.None },
-            multisample: MultisampleState.Default,
-            depthStencil: DepthStencilState.Depth(WGPUTextureFormat.Depth32Float, WGPUCompareFunction.Always, write: false),
-            vertexStride: 0,
-            vertexStepMode: WGPUVertexStepMode.Vertex,
-            vertexAttributes: []);
+        var backend = new WgpuRenderBackend(device);
+        var skySource = System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.SkyShaderSourceText);
+        return backend.AsPipeline(backend.CreateRenderPipeline(new PipelineDesc(
+            skySource, "vs_sky", skySource, "fs_sky", null,
+            [new ColorTargetDesc(BackendConvert.FromWgpu(format))],
+            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.Always, false),
+            CullMode.None, FrontFace.Ccw,
+            0, VertexStepMode.Vertex,
+            [])));
     }
 
     /// <summary>
