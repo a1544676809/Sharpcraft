@@ -121,11 +121,11 @@ src/Sharpcraft.Client/bin/Debug/net10.0/Sharpcraft.Client.exe --version 26.3 --g
 | 片 | 内容 | 状态 |
 | --- | --- | --- |
 | S1 | 面表构建器 `CloudFaceTable.Build`（每面 3 词：单元 X/Z + 方向与标志位） | **已完成**，17 项单测，`CloudFaceTableTests` |
-| S2 | 接缝加只读存储缓冲 + 无顶点缓冲的 `Draw(vertexCount)` | 待做 |
+| S2 | ~~接缝能力~~ **无需改动**：两样能力已存在且为真实实现（见规格 §8） | **已完成（核查）** |
 | S3 | `cloud_procedural.wgsl` 主着色路径，与现有云**逐像素比对** | 待做（S2 之后） |
 | S4 | OIT 三阶段接到新顶点上 | 待做 |
 | S5 | 删除 `CloudGeometryBuilder` / `CloudDrawCache` 的顶点路径 | 待做 |
 
-下一步具体动作：**做 S2**——在 `RenderBackend` 接缝上加"只读存储缓冲绑定 + 不带顶点缓冲的绘制"，先写一个能创建/销毁句柄、且无顶点缓冲绘制不触发验证错误的测试。
+下一步具体动作：**做 S3**——写 `cloud_procedural.wgsl`（顶点阶段从只读存储缓冲读面表，按 `vertex_index` 算出角点，不绑顶点缓冲），先只接主着色路径，与现有云做逐像素比对。建管线时顺带确认"只读存储能否绑在顶点阶段"这一残留点。
 
 注：云的损坏是**既存缺陷**（OIT 管线复用地形顶点布局，而数据是 7 float/28 字节，每 4 个顶点只有第 1 个落对），不是顶点打包引入的；顶点打包那笔改动已回退，等 S5 删掉旧路径后再单独重做。

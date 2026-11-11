@@ -82,7 +82,7 @@
 | 片 | 内容 | 验收 |
 | --- | --- | --- |
 | **S1** | 面表构建器：从 `CloudMeshBuilder` 的四元组输出 3 个整数/面（含位域拼接） | 单测：给定四个四元组，面表内容的位域可逐项断言；面数 = 4 |
-| **S2** | 接缝加只读存储缓冲 + 无顶点缓冲的 `Draw(vertexCount)` | 单测：句柄创建与销毁；无顶点缓冲的绘制不报验证错 |
+| **S2** | ~~接缝加只读存储缓冲 + 无顶点缓冲的绘制~~ **无需改动**：`Draw(pass, vertexCount, instanceCount, firstVertex, firstInstance)` 与 `BindingKind.ReadOnlyStorageBuffer` 均已存在且为真实实现，前者有 3 处无顶点缓冲的调用点，后者已用于 compute 阶段 | 已核查（见 §8）；残留待确认点：现有只读存储绑定都在 Compute 阶段，云的顶点阶段读取按 WebGPU 规范允许（仅可写存储禁止进顶点），留待 S3 实测 |
 | **S3** | 新的 `cloud_procedural.wgsl`，先只做**主着色**路径（非 OIT），与现有云做像素对比 | 同机位逐像素 0 差异（用 T-824 的 `MC_PIXEL_COMPARE`），且面表数据量与预期一致 |
 | **S4** | 把 OIT 三阶段（bounds / transmittance / accumulate）接到新生成的顶点上 | 三阶段的 `draw` 计数不变，像素 0 差异 |
 | **S5** | 删除 `CloudGeometryBuilder` / `CloudDrawCache` 的顶点路径与相关测试 | 构建通过、测试全绿、无死代码 |
@@ -96,3 +96,16 @@
 | **`useTopColor` 标志恒为 0** | 本项目现有云的亮度只按方向取（`FaceBrightness[Direction]`），没有"侧面改用顶面色"这一档；S1 要保住现有画面，设上它会立刻改变外观 | 云侧面在顶部相邻格为空时不会变亮，与原版存在可见差异 | 随 T-827 的 S3（与原版像素比对）一并处理，不在 S1 内 |
 
 另外，S1 只处理**面表**本身；当前实现每顶点由 CPU 烘入的雾强度，在程序化版本里会改成着色器按 `fog_spherical_distance` 计算——两者对雾的取值方式不同（逐顶点线性插值 vs 逐片元），这是 S3 像素比对要暴露的已知差异来源。
+
+## 8. S2 的核查结论（无需实现）
+
+S2 原本计划"给接缝加两样能力"，核查后发现两样都已存在且不是桩：
+
+| 能力 | 位置 | 证据 |
+| --- | --- | --- |
+| 无顶点缓冲的绘制 | `RenderBackend.cs` 的 `Draw(pass, vertexCount, instanceCount, firstVertex, firstInstance)` | 直接转发 wgpu，已有 3 处调用点，均为无顶点缓冲的全屏三角形 |
+| 只读存储缓冲绑定 | 同文件 `BindingKind.ReadOnlyStorageBuffer` | 映射到 `WGPUBufferBindingType.ReadOnlyStorage`；`BindGroupDescriptors` 已有按此类型建组的辅助方法 |
+
+**残留待实测的点**：现有只读存储绑定全部声明在 **Compute** 阶段。云需要在**顶点**阶段读取，WebGPU 只禁止可写存储进入顶点/片元以外的阶段（顶点阶段允许 `read-only-storage`）。此点在 S3 建管线时用实际编译结果确认，不预先假设。
+
+结论：S2 关闭，S3 直接建管线。
