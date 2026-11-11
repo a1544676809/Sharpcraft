@@ -1483,7 +1483,9 @@ public static class WindowedRenderer
 
                     if (arenaTranslucent is not null && arenaTranslucent.ChunkCount > 0)
                     {
-                        arenaTranslucent.DrawFarthestFirst(p, eye);
+                        // Order independent by construction (docs/specs/render/oit-reference.md 6: additive accumulation
+                        // and transmittance are commutative), so the paged arena draws page major and binds once per page.
+                        arenaTranslucent.Draw(p);
                     }
 
                     if (hasRefStatic && refStaticIndexCount > 0)
@@ -1804,6 +1806,10 @@ public static class WindowedRenderer
                 + $"p99={At(sorted, 0.99):F2} max={sorted[^1]:F2} over33={framesOver33} "
                 + $"rebuildAvgMs={(rebuildCount == 0 ? 0 : rebuildTotalMs / rebuildCount):F1}");
         }
+        // Page bookkeeping is read before the stores free their buffers, so the binding summary can describe the layout.
+        var solidPages = arena?.PageCount ?? 0;
+        var solidMemoryBytes = arena?.MemoryBytes ?? 0;
+        var solidLiveBytes = arena?.LiveBytes ?? 0;
         if (arena is not null)
         {
             Console.WriteLine(
@@ -1825,6 +1831,18 @@ public static class WindowedRenderer
             + (arenaCutout?.DrawCallsTotal ?? 0)
             + (arenaTranslucent?.DrawCallsTotal ?? 0);
         Console.WriteLine($"window: draws/frame {(totalDrawCalls / (double)Math.Max(presented, 1)):F0} (solid/cutout/translucent stores)");
+
+        // Bindings are the cost the paged arena removes (ADR-0029): they follow the page count, not the chunk count.
+        var totalBinds = (arena?.BindCallsTotal ?? 0)
+            + (arenaCutout?.BindCallsTotal ?? 0)
+            + (arenaTranslucent?.BindCallsTotal ?? 0);
+        var totalPages = solidPages + (arenaCutout?.PageCount ?? 0) + (arenaTranslucent?.PageCount ?? 0);
+        var liveBytes = solidLiveBytes + (arenaCutout?.LiveBytes ?? 0) + (arenaTranslucent?.LiveBytes ?? 0);
+        var pageBytes = solidMemoryBytes + (arenaCutout?.MemoryBytes ?? 0) + (arenaTranslucent?.MemoryBytes ?? 0);
+        Console.WriteLine(
+            $"window: binds/frame {(totalBinds / (double)Math.Max(presented, 1)):F1} (vertex+index), "
+            + $"pages {solidPages}/{arenaCutout?.PageCount ?? 0}/{arenaTranslucent?.PageCount ?? 0} (solid/cutout/translucent), "
+            + $"live {liveBytes / (1024d * 1024d):F1} MB of {pageBytes / (1024d * 1024d):F1} MB in {totalPages} pages");
 
         Console.WriteLine(
             $"window: rebuild {rebuildCount} frames, avg {(rebuildCount == 0 ? 0 : rebuildTotalMs / rebuildCount):F1} ms, "

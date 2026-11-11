@@ -33,7 +33,7 @@ AGENTS.md 原则 12：不可逆或跨模块的决策必须在此留档，**只�
 | [`0017-reload-invalidation-by-layout.md`](0017-reload-invalidation-by-layout.md) | 原版重载成功后直接 levelExtractor.allChanged()（全部区块几何重建，Minecraft.reloadResourcePacks 成功分支）。 | **已接受**（所有者 2026-10-30 确认：允许略微卡顿，采用分层失效） | - |
 | [`0018-native-vulkan-backend.md`](0018-native-vulkan-backend.md) | 为获得几何/细分/Mesh Shader/硬件光追/VRS 等 Vulkan 独有能力而新增原生后端的成本、收益与门槛 | 提议 | - |
 | [`0019-vertex-lightmap-contract.md`](0019-vertex-lightmap-contract.md) | 光照乘子（lightmap）目前在网格构建时按 (sky, block) 烘焙进顶点色，见 VanillaLightmap。 | 已接受（所有者 2026-11-01 “可以修改” 授权） | - |
-| [`0020-per-chunk-geometry-buffers.md`](0020-per-chunk-geometry-buffers.md) | 相关：ADR-0011（bulk upload spike）、docs/specs/network/play-movement.md 7.27、docs/modules/clouds.md | 已接受（2026-11-01） | - |
+| [`0020-per-chunk-geometry-buffers.md`](0020-per-chunk-geometry-buffers.md) | 相关：ADR-0011（bulk upload spike）、docs/specs/network/play-movement.md 7.27、docs/modules/clouds.md | **已被 ADR-0029 取代**（2026-11-11）——每区块缓冲改为分页共享 arena；本 ADR 的动机（内存随驻留网格增长、不受单一缓冲上限约束）仍成立，见 0029 | - |
 | [`0021-entity-render-layers.md`](0021-entity-render-layers.md) | 相关：docs/analysis/render/entity-render-layers.md、docs/modules/entity-render.md §9、ADR-0020 | 已接受（2026-11-03；第一步分层、第二步分层绘制与 Emissive eyes 均已落地） | - |
 | [`0022-client-entity-presentation-state.md`](0022-client-entity-presentation-state.md) | 为何要建客户端实体表现状态层、明确排除权威 AI，以及影响面与复查条件 | 已采纳 | - |
 | [`0023-client-armed-presentation-state.md`](0023-client-armed-presentation-state.md) | 剩余 Illager/Piglin 等武装生物动画所需的手部姿态数据来源、分期与边界 | 已采纳 | - |
@@ -42,6 +42,7 @@ AGENTS.md 原则 12：不可逆或跨模块的决策必须在此留档，**只�
 | [`0026-launcher-client-decoupling.md`](0026-launcher-client-decoupling.md) | 在本次变更之前，全部游戏运行时都住在 Sharpcraft.Launcher：WindowCommand（开窗 + 游戏循环）、 InteractiveSession（输入、相机、UI、聊天、实体表现）、LivePlaySession… | 已接受（2026-11-06，所有者批准范围 A） | - |
 | [`0027-asset-layering.md`](0027-asset-layering.md) | 参考原版的资产分层（内置 jar 包 + 外部索引只读叠加 + 用户资源包），并把底层 pack/格式/IO 类型下沉为独立库 Sharpcraft.Assets | 已接受 | 2026-11-06 |
 | [`0028-native-gpu-selection.md`](0028-native-gpu-selection.md) | 绑定缺少带 powerPreference 的适配器请求重载，故在 Framework 内直连 C 接口；记录范围、跨平台依据与删除条件 | 已采纳 | - |
+| [`0029-paged-shared-geometry-arena.md`](0029-paged-shared-geometry-arena.md) | 每区块独立缓冲让每帧产生数百次绑定与数百条命令；改为每层少量固定大小页并按下标/顶点偏移绘制 | 已采纳 | - |
 
 <!-- END GENERATED: docs/decisions -->
 
