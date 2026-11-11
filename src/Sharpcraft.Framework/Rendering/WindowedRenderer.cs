@@ -596,6 +596,7 @@ public static class WindowedRenderer
         var skipTranslucent = false;
         // Cheap enough to accumulate every frame (a dozen counter reads), printed only when the host asks for it.
         var cpuTimings = new FrameCpuTimings();
+        var itemOitFrames = 0;
         var frustumPlanes = new System.Numerics.Vector4[6];
         var gapSamples = new double[1 << 17];
         var gapCount = 0;
@@ -1537,6 +1538,19 @@ public static class WindowedRenderer
                     ? DepthAttachmentDesc.Keep(cloudDepthViewHandle)
                     : depthLoadStore;
 
+                // The item transparency set has its own four full resolution targets; with no translucent item geometry every
+                // one of its passes would only clear and then discard, so the whole set is skipped instead (T-799).
+                var itemOitGeometryPresent = false;
+                for (var itemLayer = 0; itemLayer < entityLayerDrawn; itemLayer++)
+                {
+                    if (entityLayerKind[itemLayer] == EntityGeometryLayerKind.ItemTranslucent &&
+                        entityLayerIndexCount[itemLayer] > 0)
+                    {
+                        itemOitGeometryPresent = true;
+                        break;
+                    }
+                }
+
                 ReferenceOitPasses.Record(new ReferenceOitPasses.Parameters
                 {
                     Backend = backend,
@@ -1566,8 +1580,16 @@ public static class WindowedRenderer
                     Items = itemOit,
                     ItemAtlas = itemAtlasGpu.BindGroup,
                     DrawTerrain = DrawReferenceGeometry,
-                    DrawItems = DrawItemOitGeometry
+                    DrawItems = DrawItemOitGeometry,
+                    MaxStages = currentRequest.Diagnostics?.OitStages ?? 0,
+                    ItemsHasGeometry = itemOitGeometryPresent
                 });
+
+                if (itemOitGeometryPresent)
+                {
+                    itemOitFrames++;
+                }
+
                 if (hasRefStatic)
                 {
                     backend.Destroy(refStaticVertexBuffer);
@@ -1831,6 +1853,7 @@ public static class WindowedRenderer
             + (arenaCutout?.DrawCallsTotal ?? 0)
             + (arenaTranslucent?.DrawCallsTotal ?? 0);
         Console.WriteLine($"window: draws/frame {(totalDrawCalls / (double)Math.Max(presented, 1)):F0} (solid/cutout/translucent stores)");
+        Console.WriteLine($"window: item oit set ran on {itemOitFrames}/{presented} frames (skipped when no translucent items)");
 
         // Bindings are the cost the paged arena removes (ADR-0029): they follow the page count, not the chunk count.
         var totalBinds = (arena?.BindCallsTotal ?? 0)

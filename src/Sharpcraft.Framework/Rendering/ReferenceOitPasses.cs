@@ -103,6 +103,18 @@ internal static class ReferenceOitPasses
 
         /// <summary>Records the translucent item geometry.</summary>
         public Action<RenderPassHandle> DrawItems { get; init; }
+
+        /// <summary>Records only the first N stages, for attributing GPU cost to each one (T-799); zero means all.</summary>
+        public int MaxStages { get; init; }
+
+        /// <summary>
+        /// True when the frame has translucent item geometry, so the item set is worth its four full resolution passes.
+        /// </summary>
+        /// <remarks>
+        /// The item composite discards every pixel without coverage or additive light, so with nothing to draw the whole
+        /// set is a pure bandwidth cost. Skipping it is pixel identical (T-799).
+        /// </remarks>
+        public bool ItemsHasGeometry { get; init; }
     }
 
     /// <summary>Records every reference transparency pass for the frame.</summary>
@@ -114,6 +126,13 @@ internal static class ReferenceOitPasses
         var encoder = p.Encoder;
         var clouds = p.Clouds;
         var zero = Vector4.Zero;
+        // A host can stop the sequence after N stages so the remainder can be attributed by difference (MC_OIT_STAGES).
+        var stages = p.MaxStages <= 0 ? int.MaxValue : p.MaxStages;
+
+        if (stages < 1)
+        {
+            return;
+        }
 
         // Stage 1: depth bounds. Cleared very negative so MAX blending keeps the closest and furthest.
         var boundsPass = backend.BeginRenderPass(
@@ -129,6 +148,11 @@ internal static class ReferenceOitPasses
         finally
         {
             backend.EndRenderPass(boundsPass);
+        }
+
+        if (stages < 2)
+        {
+            return;
         }
 
         // Stage 1b: clip the furthest bound to the nearest opaque surface.
@@ -165,6 +189,11 @@ internal static class ReferenceOitPasses
             {
                 backend.EndRenderPass(cloudBoundsPass);
             }
+        }
+
+        if (stages < 3)
+        {
+            return;
         }
 
         // Stage 2: wavelet transmittance, additively blended into two RGBA16F targets.
@@ -209,6 +238,11 @@ internal static class ReferenceOitPasses
             }
         }
 
+        if (stages < 4)
+        {
+            return;
+        }
+
         // Stage 3: accumulate colour weighted by the transmittance in front of each fragment.
         var accumulatePass = backend.BeginRenderPass(
             encoder,
@@ -245,6 +279,11 @@ internal static class ReferenceOitPasses
             }
         }
 
+        if (stages < 5)
+        {
+            return;
+        }
+
         // Composite over the frame, writing the nearest translucent depth.
         var compositePass = backend.BeginRenderPass(
             encoder,
@@ -263,16 +302,19 @@ internal static class ReferenceOitPasses
 
         // Translucent items composite through their own set (the reference binds OitPipelineSet("item") to
         // RenderTypes.ITEM_TRANSLUCENT); sharing the terrain bins would band thin items.
-        p.Items.Record(
-            p.Backend,
-            p.Encoder,
-            ColorAttachmentDesc.Keep(p.Frame),
-            p.Depth,
-            p.BoundsPipeline,
-            p.TransmittancePipeline,
-            p.AccumulatePipeline,
-            p.CompositePipeline,
-            p.ItemAtlas,
-            p.DrawItems);
+        if (p.ItemsHasGeometry)
+        {
+            p.Items.Record(
+                p.Backend,
+                p.Encoder,
+                ColorAttachmentDesc.Keep(p.Frame),
+                p.Depth,
+                p.BoundsPipeline,
+                p.TransmittancePipeline,
+                p.AccumulatePipeline,
+                p.CompositePipeline,
+                p.ItemAtlas,
+                p.DrawItems);
+        }
     }
 }

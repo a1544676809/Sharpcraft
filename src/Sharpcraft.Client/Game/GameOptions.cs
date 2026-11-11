@@ -72,7 +72,8 @@ internal sealed class GameOptions
             SkipOit = Flag("MC_SKIP_OIT"),
             SkipClouds = Flag("MC_SKIP_CLOUDS"),
             SkipTranslucent = Flag("MC_SKIP_TRANSLUCENT"),
-            Gpu = Get("MC_GPU")
+            Gpu = Get("MC_GPU"),
+            OitStages = (int)Number("MC_OIT_STAGES", 0f)
         };
     }
 }

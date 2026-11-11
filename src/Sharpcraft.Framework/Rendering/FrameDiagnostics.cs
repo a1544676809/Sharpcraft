@@ -78,4 +78,14 @@ public sealed record FrameDiagnostics
     /// binding's default request, so a single GPU machine is unaffected.
     /// </remarks>
     public string? Gpu { get; init; }
+
+    /// <summary>
+    /// Records only the first N reference transparency stages, for measuring what each one costs.
+    /// </summary>
+    /// <remarks>
+    /// Zero means "no limit" and records the whole sequence, so the default frame is unchanged. Stages in order: 1 depth
+    /// bounds, 2 opaque-depth cull, 3 transmittance, 4 accumulate, 5 composite. Stages that do not run leave the picture
+    /// without transparency, which is expected: this is a measurement switch, not a rendering mode.
+    /// </remarks>
+    public int OitStages { get; init; }
 }
