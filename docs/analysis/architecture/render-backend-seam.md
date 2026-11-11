@@ -818,3 +818,23 @@ DrawIndexed(pass, indexCount, 1, firstIndex, baseVertex, 0)
 | 3. `bounds` 与 `boundsCulled` 合并为一张目标（剔除 pass 原地读改写） | 少一张全分辨率目标的清与读（约 16–32 B/px） | 需同目标读写（wgpu 允许不同 pass 内同一纹理读写，但单 pass 内不允许 aliasing）；改动小、视觉无影响 | 推荐先做 |
 | 4. 物品集空跑消除（**已实施**） | 4 个全屏 pass + 4 次清 | 逐像素等价；本机位无物品几何 | 已完成 |
 | 5. GPU timestamp query 接缝 | 得到可信的分阶段 GPU 时间 | 需新增接缝方法（须先批准） | 建议下一步先批准这一项，否则后续优化都在噪声里做决定 |
+
+### 9.31 GPU 时间戳：尝试过，此绑定不可用，代码已回退
+
+**结论（2026-11-11）**：`wgpuCommandEncoderWriteTimestamp` 除设备级 `TIMESTAMP_QUERY` 外，还要求**实例级** `TIMESTAMP_QUERY_INSIDE_ENCODERS`；`Brew.Wgpu 29.0.0.5` 的 `WGPUInstanceFeatureName` 枚举不含该值，托管 `InstanceDescriptor` 也无特性字段，故无法请求。缺失时该调用产生 uncaptured error 并 abort 进程（不可捕获）。
+
+已实现的接缝扩展（`QuerySetHandle` / `CreateTimestampQuerySet` / `WriteTimestamp` / `ResolveQuerySet` / `BufferUsages.QueryResolve`）、开关、11 个时间标记与读回逻辑在验证通过后**整体回退**，理由：一份"永远返回 unavailable"的诊断比没有更容易误导后来者，且接缝多 5 个无人调用的方法。重新加回的成本约 20 分钟。
+
+**改用**：同进程交替 A/B（每 60 帧切换配置，分别累加均值，噪声可降到 ±0.05 ms 量级）与分辨率缩放实验（像素数腰斩看 OIT 成本是否同步腰斩，用于判定"几何光栅化主导"还是"目标带宽主导"）。两者都不碰接缝。
+
+**顺带得出的一条可复用推算**（同机位同会话）：
+
+| 配置 | 帧时间差 |
+| --- | --- |
+| 关 OIT（连几何带 5 个 pass 全省） | −1.32 ms |
+| 关半透明（只省几何，pass 照跑） | −0.94 ms |
+| **diff** | **0.38 ms = pass 本身的开销；0.94 ms（≈70%）= 半透明几何的三次光栅化** |
+
+该推算与按目标格式算出的流量估算（≈330 B/px ≈150 MB/帧 → 约 0.3–0.4 ms @ 40–60 GB/s）**互相印证**，因此"OIT 的大头在几何侧而非目标带宽侧"有两条独立证据。
+
+**已否决**：`Rgba32Float` → `Rgba16Float`（用户裁决 2026-11-11：不做，后续提案不得再提）。
