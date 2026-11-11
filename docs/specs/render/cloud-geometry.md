@@ -150,3 +150,58 @@ S2 原本计划"给接缝加两样能力"，核查后发现两样都已存在且
 7. **待实测**：第 1 步把只读存储绑到 `ShaderStages.Vertex` 时，WebGPU 规范允许（只禁止可写存储进顶点阶段），但项目里现有只读存储绑定全在 Compute 阶段，**这一步要用实际建管线的结果确认，不要假设**。
 
 **注意 Vec3 对齐**：WGSL 里 `vec3<f32>` 按 16 字节对齐，`offset` 后面直接跟 `cellSize` 会出现 4 字节空洞。写 C# 侧时用 `Vector4` 或手工按 16 字节偏移填，不要按 12 字节紧凑排列——这是这类 uniform 最常见的错位来源。
+
+## 11. 接线前的实地核查：三处更正与修正后的方案
+
+### 更正一：云的损坏不是既存缺陷（本文件 §5 的判断是错的）
+
+本文件 §5 与 §1 的对照表曾断定"云的 OIT 管线复用地形顶点布局而数据是 7 float，是既存缺陷"。**这个判断是错的。**
+
+`CloudOitResources.UploadGeometry` 明确把缓存的 7 float 云顶点**逐顶点展开成 14 float 的地形 OIT 格式**（位置 3 + 亮度 3 + 雾进 uv.x + 其余填充），所以在顶点打包改动之前，布局与数据是自洽的，云没有错位问题。
+
+损坏的真实原因就是那次顶点打包改动本身：`Stride` 从 56 改成 44、颜色改成 `unorm8x4`，而展开代码仍按旧的 14 float 写。该改动已回退。
+
+**教训**：只看了 `CloudGeometryBuilder`（产出 7 float）与管线布局（声明地形布局），就断定中间没有转换——但中间恰恰有一步展开。判断"数据格式不匹配"之前必须先确认数据到达 GPU 前的最后一站。
+
+### 更正二：存在一条经典回退路径
+
+`cloudOit is null` 时云走 `cloudColour` 经典路径（`WindowedRenderer` 的 `cloudColour is not null && cloudOit is null`）。也就是说云本来就有两条绘制路径：OIT 三阶段与经典单遍回退，二者都消费同一个 `CelestialColorDraw` 的顶点数组。
+
+**因此改成程序化生成必须同时覆盖这两条**，否则会新增第三条路径——这正是原则 14 禁止的双轨。
+
+### 更正三：摆放参数不需要新的 uniform
+
+`transform.model` 目前是纯平移。可以把**缩放烘进模型矩阵**：
+
+```
+model = Translation(origin) * Scale(cellSize.x, thickness, cellSize.z)
+```
+
+着色器里就只需格子单位坐标：
+
+```
+顶点 = 角点 + vec3(cellX, 0, cellZ)      // 单位是"格"
+世界 = model * vec4(顶点, 1)
+```
+
+这样 `offset` 与 `cellSize`、`thickness` 都不必进 uniform。
+
+### 仍需要的 uniform：`fogEnd`
+
+`VertexOutput.alpha` 是**云自身的距离淡出**（`fs_accumulate` 里 `fragmentAlpha = cloudAlpha * alpha`），不是场景雾。当前由 CPU 算 `clamp(1 - 距离/fogEnd, 0, 1)` 后烘进 uv.x。程序化后没有 CPU 顶点，必须在着色器里算，因此 `fogEnd` 仍需要一个来源。
+
+可选：把 `CelestialColorDraw` 增加可选字段承载（`Tint` 的 80 字节 transform uniform 无空位）。**注意**：`fogEnd` 若改用 `clip.w` 代替欧氏距离，屏幕边缘会有可见差异——这是已知差异，需在像素比对时确认量级后再决定是否接受。
+
+### 修正后的执行顺序
+
+| 步 | 内容 | 为什么在这个位置 |
+| --- | --- | --- |
+| 1 | `CelestialColorDraw` 增加可选的面表与摆放字段（默认 `null`） | 数据从 `FrameCommand` 到渲染器的通道 |
+| 2 | `FrameCommand` 走 OIT 时产面表而非顶点；经典回退同样改 | 两条路径必须同步，否则是第三条路径 |
+| 3 | `CloudOitResources` 增加 binding 2（`fogEnd` 等标量）与 binding 3（面表只读存储） | §10 已写明 |
+| 4 | `cloud_oit.wgsl` 的 `vs_main` 换成程序化版本（**保持 `VertexOutput` 六个字段不变**） | 三个片元阶段无需改动 |
+| 5 | 三条云管线改为不声明顶点缓冲 | 建管线成功即语法检查 |
+| 6 | 经典回退管线的顶点来源同步 | 避免双轨 |
+| 7 | 像素比对 | 与改动前的截图逐像素 |
+
+**上一轮我犯的另一处错误**：曾新建 `cloud_procedural.wgsl` 打算作为独立着色器，那是双轨——正确做法是直接改 `cloud_oit.wgsl` 的顶点阶段，三个片元阶段原样保留。该文件已删除。

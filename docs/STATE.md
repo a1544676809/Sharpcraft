@@ -122,7 +122,7 @@ src/Sharpcraft.Client/bin/Debug/net10.0/Sharpcraft.Client.exe --version 26.3 --g
 | --- | --- | --- |
 | S1 | 面表构建器 `CloudFaceTable.Build`（每面 3 词：单元 X/Z + 方向与标志位） | **已完成**，17 项单测，`CloudFaceTableTests` |
 | S2 | ~~接缝能力~~ **无需改动**：两样能力已存在且为真实实现（见规格 §8） | **已完成（核查）** |
-| S3 | 几何侧已证明；`cloud_procedural.wgsl` 已写（**未接线、未验证**） | **进行中** |
+| S3 | 几何侧已证明；独立着色器的设想已撤销（双轨），改为直接改 `cloud_oit.wgsl` 顶点阶段 | **进行中（方案已修正，见规格 §11）** |
 | S4 | OIT 三阶段接到新顶点上 | 待做 |
 | S5 | 删除 `CloudGeometryBuilder` / `CloudDrawCache` 的顶点路径 | 待做 |
 
