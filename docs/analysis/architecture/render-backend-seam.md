@@ -1393,3 +1393,52 @@ cull: chunks=637 culled=451 drawn=186 cutout=635/drawn=172 translucent=630 trans
 第二行证明**底噪会淹没弱信号**——`MC_SKIP_TRANSLUCENT` 在那个机位每次切换只差约 487 像素，与噪声底同量级。**这不是工具失败，而是该机位几乎看不到半透明几何**：用它验证透明相关改动时必须先选一个能看到水面/玻璃的机位，否则结论无意义（这正是「数字变了要有机制解释」的又一例）。
 
 **开关**：`MC_PIXEL_COMPARE=1`（宿主经 `FrameDiagnostics.PixelCompare` 传入，不读环境变量，原则 13）。默认关闭时**不进回读分支、不分配缓冲、不打印**。开启时每帧一次全帧回读，开销落在帧准备桶，**因此开启期间不得同时采信帧时间数据**——这一点写在记录属性的注释里。
+
+### 9.48 `BlockAt` 的线性扫描：网格化慢 11 倍的真因（T-825）
+
+**现象**：视距 12 的世界加载需要约 **134 秒**才达到 637 列，而同视距原版是几秒量级。
+
+**归因顺序**（每一步都排除了一个候选）：
+
+| 候选 | 证据 | 结论 |
+| --- | --- | --- |
+| 网络/收包 | `arrived=898` 在 **14 秒**内全部到齐（≈65 块/秒） | ❌ 排除 |
+| worker 未跑满 | 加载期恒定 **8.9 核满载**（8 线程线程池） | ❌ 排除 |
+| 空 section 未跳过 | `ChunkMesher.cs:150` 有 `section.IsEmpty` 跳过 | ❌ 排除 |
+| `MeshBuffer` 每块重分配 | 走 `ArrayPool` 池化 | ❌ 排除 |
+| 网格队列背压 | `_signal.Release()` 在网格化入队时确实触发 | ❌ 排除 |
+| **网格化内部** | 8.9 核 × 134 s ≈ 1190 CPU·秒 ÷ 570 列 ≈ **2 CPU·秒/列** | ✅ 就是它 |
+
+**VS CPU 采样给出的热路径**（[报告20261111-2107.diagsession]）：
+
+| 函数 | CPU 总计 | 自 CPU |
+| --- | --- | --- |
+| `List<...>.get_Current()` | 25.62 % | 25.62 % |
+| `BlockStateLayout.BlockAt(int)` 的调用树 | **74.78 %** | 22.41 % |
+| `List<...>.MoveNext()` | 14.62 % | 14.62 % |
+| `Entry.get_BaseId()` | 8.54 % | 8.54 % |
+| `Entry.get_StateCount()` | 3.37 % | 3.37 % |
+
+这五项**全部来自同一个方法**：
+
+```
+BlockStateLayout.BlockAt(int stateId)
+   foreach (var entry in _blocks)          ← get_Current + MoveNext = 40 %
+       if (stateId >= entry.BaseId && ...) ← BaseId + StateCount = 12 %
+```
+
+**它是一段线性扫描，而注释断言"只在加载期用、不在每帧用"。** 实际上 `ChunkMesher` 有 **15 处**调用它（逐面、逐邻居探测、光照采样），于是每个方块面都要线性扫过全部已注册方块。
+
+**修法**：构造时建一张按 state id 直查的数组，`BlockAt` 变成一次数组索引。状态总数只有几千，内存可忽略。语义逐项保持：范围内返回该方块、范围外返回 null、负数返回 null（用无符号比较一次判掉）。
+
+**实测**（同视距 12、同机位）：
+
+| 指标 | 修前 | 修后 |
+| --- | --- | --- |
+| 达到 637 列 | **约 134 s** | **约 12 s** |
+| 网格队列 | 峰值 1007，长期积压 | `meshPending=0` |
+| 提升 | — | **约 11 倍** |
+
+**测试**：`tests/Sharpcraft.Common.Tests/Registries/BlockStateLayoutTests.cs` 锁住逐状态解析、区间两端、越界与负 id、空布局——因为这是"每面一次"的热路径，语义一旦漂移就会静默改变渲染结果。
+
+**教训（与今天其余几次同源）**：`/// A linear scan is fine: this is used for classification at load time, not per frame.` 这句注释描述的是**意图**，不是**运行时事实**。它的错误假设让一个 O(方块数) 的查找躺在了 O(方块) 的循环里。**注释里的性能断言必须被测量验证，否则就是负债。**
