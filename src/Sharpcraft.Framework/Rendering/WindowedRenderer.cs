@@ -1970,6 +1970,13 @@ public static class WindowedRenderer
         Console.WriteLine($"window: draws/frame {(totalDrawCalls / (double)Math.Max(presented, 1)):F0} (solid/cutout/translucent stores)");
         Console.WriteLine($"window: item oit set ran on {itemOitFrames}/{presented} frames (skipped when no translucent items)");
         Console.WriteLine($"window: cloud depth blit bind group rebuilt {blitDepthRebuilds} times (once per depth target)");
+        var oitCounts = ReferenceOitPasses.LastCounts;
+        Console.WriteLine(
+            $"window: oit commands per frame bounds={DescribeCounts(oitCounts.Bounds)} "
+            + $"trans={DescribeCounts(oitCounts.Transmittance)} accum={DescribeCounts(oitCounts.Accumulate)} "
+            + $"cloudBounds={DescribeCounts(oitCounts.CloudBounds)} cloudTrans={DescribeCounts(oitCounts.CloudTransmittance)} "
+            + $"cloudAccum={DescribeCounts(oitCounts.CloudAccumulate)} terrainDraws={oitCounts.TerrainDraws} "
+            + $"cloudDraws={oitCounts.CloudDraws}");
         Console.WriteLine(
             $"window: celestial colour tint uploads written {celestialColour?.TintWrites ?? 0}, "
             + $"skipped {celestialColour?.TintSkips ?? 0}/{cloudColour?.TintWrites ?? 0}+{cloudColour?.TintSkips ?? 0} (colour/cloud)");
@@ -2106,6 +2113,12 @@ public static class WindowedRenderer
     /// </summary>
     /// <summary>Smallest geometry buffer, so tiny meshes do not force a reallocation on the next change.</summary>
     private const ulong MinimumBufferBytes = 1 << 20;
+
+    /// <summary>Formats one recorded command count as draws/binds/pipelines (T-820).</summary>
+    /// <param name="counts">Counts to format.</param>
+    /// <returns>Compact text.</returns>
+    private static string DescribeCounts(CommandCounts counts) =>
+        $"{counts.Draws}d/{counts.BindGroupSets}b/{counts.PipelineSets}p";
 
     private static TextureHandle CreateDepthTexture(IRenderBackend backend, uint width, uint height) =>
         backend.CreateTexture(new TextureDesc(

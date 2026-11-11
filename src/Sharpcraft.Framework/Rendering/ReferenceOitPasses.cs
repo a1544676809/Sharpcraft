@@ -123,6 +123,7 @@ internal static class ReferenceOitPasses
         // Every pass is recorded through the seam. Only the item geometry callback still takes the native pass, because
         // the per-layer entity buffers it binds have not moved behind the seam yet.
         var backend = p.Backend;
+        var counts = default(OitStageCounts);
         var encoder = p.Encoder;
         var clouds = p.Clouds;
         var zero = Vector4.Zero;
@@ -141,9 +142,11 @@ internal static class ReferenceOitPasses
             p.Depth);
         try
         {
+            backend.TakeRecordedCommands();
             backend.SetPipeline(boundsPass, p.BoundsPipeline);
             backend.SetBindGroup(boundsPass, 0, p.TerrainAtlas);
             p.DrawTerrain(boundsPass);
+            counts = counts with { Bounds = backend.TakeRecordedCommands() };
         }
         finally
         {
@@ -181,9 +184,11 @@ internal static class ReferenceOitPasses
                 p.CloudDepth);
             try
             {
+                backend.TakeRecordedCommands();
                 backend.SetPipeline(cloudBoundsPass, p.CloudBoundsPipeline);
                 backend.SetBindGroup(cloudBoundsPass, 0, clouds.BindGroup);
                 clouds.DrawGeometry(backend, cloudBoundsPass);
+                counts = counts with { CloudBounds = backend.TakeRecordedCommands() };
             }
             finally
             {
@@ -206,10 +211,12 @@ internal static class ReferenceOitPasses
             p.Depth);
         try
         {
+            backend.TakeRecordedCommands();
             backend.SetPipeline(transmittancePass, p.TransmittancePipeline);
             backend.SetBindGroup(transmittancePass, 0, p.TerrainAtlas);
             backend.SetBindGroup(transmittancePass, 1, p.TransmittanceGroup);
             p.DrawTerrain(transmittancePass);
+            counts = counts with { Transmittance = backend.TakeRecordedCommands() };
         }
         finally
         {
@@ -227,10 +234,12 @@ internal static class ReferenceOitPasses
                 p.CloudDepth);
             try
             {
+                backend.TakeRecordedCommands();
                 backend.SetPipeline(cloudTransPass, p.CloudTransmittancePipeline);
                 backend.SetBindGroup(cloudTransPass, 0, clouds.BindGroup);
                 backend.SetBindGroup(cloudTransPass, 1, p.TransmittanceGroup);
                 clouds.DrawGeometry(backend, cloudTransPass);
+                counts = counts with { CloudTransmittance = backend.TakeRecordedCommands() };
             }
             finally
             {
@@ -250,10 +259,12 @@ internal static class ReferenceOitPasses
             p.Depth);
         try
         {
+            backend.TakeRecordedCommands();
             backend.SetPipeline(accumulatePass, p.AccumulatePipeline);
             backend.SetBindGroup(accumulatePass, 0, p.TerrainAtlas);
             backend.SetBindGroup(accumulatePass, 1, p.AccumulateGroup);
             p.DrawTerrain(accumulatePass);
+            counts = counts with { Accumulate = backend.TakeRecordedCommands() };
         }
         finally
         {
@@ -268,10 +279,12 @@ internal static class ReferenceOitPasses
                 p.CloudDepth);
             try
             {
+                backend.TakeRecordedCommands();
                 backend.SetPipeline(cloudAccumPass, p.CloudAccumulatePipeline);
                 backend.SetBindGroup(cloudAccumPass, 0, clouds.BindGroup);
                 backend.SetBindGroup(cloudAccumPass, 1, p.AccumulateGroup);
                 clouds.DrawGeometry(backend, cloudAccumPass);
+                counts = counts with { CloudAccumulate = backend.TakeRecordedCommands() };
             }
             finally
             {
@@ -316,5 +329,35 @@ internal static class ReferenceOitPasses
                 p.ItemAtlas,
                 p.DrawItems);
         }
+
+        LastCounts = counts;
     }
+
+    /// <summary>
+    /// Commands each transparency stage recorded last frame, so the reviewer can see where the OIT cost is recorded
+    /// (T-820). Diagnostic only: nothing reads it outside the windowed report.
+    /// </summary>
+    public static OitStageCounts LastCounts { get; private set; }
+}
+
+/// <summary>Recorded command counts per transparency stage (T-820).</summary>
+/// <param name="Bounds">Depth-bounds stage.</param>
+/// <param name="Transmittance">Terrain transmittance stage.</param>
+/// <param name="Accumulate">Terrain accumulate stage.</param>
+/// <param name="CloudBounds">Cloud depth-bounds stage.</param>
+/// <param name="CloudTransmittance">Cloud transmittance stage.</param>
+/// <param name="CloudAccumulate">Cloud accumulate stage.</param>
+public readonly record struct OitStageCounts(
+    CommandCounts Bounds,
+    CommandCounts Transmittance,
+    CommandCounts Accumulate,
+    CommandCounts CloudBounds,
+    CommandCounts CloudTransmittance,
+    CommandCounts CloudAccumulate)
+{
+    /// <summary>Terrain columns recorded across the three terrain stages.</summary>
+    public int TerrainDraws => Bounds.Draws + Transmittance.Draws + Accumulate.Draws;
+
+    /// <summary>Cloud geometry recorded across the three cloud stages.</summary>
+    public int CloudDraws => CloudBounds.Draws + CloudTransmittance.Draws + CloudAccumulate.Draws;
 }
