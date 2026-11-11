@@ -1038,3 +1038,45 @@ T-799 的教训是"跨进程 A/B 的噪声（±0.5 ms，实测可达 1.2 ms）�
 
 - 14 → 12 只省 **0.043 ms**（约 1.3 % 的帧时间）；剩余可合并的组合要么被 barrier/采样阻挡，要么要改渲染结果。
 - 真正的 CPU 大头是**逐 draw 录制**（`scene` 0.59–0.67 ms / 186 draw ≈ 3 µs/draw；OIT 三阶段另算）与 `submit` 里与 draw/pass 数成正比的部分。**下一步应减少 draw 数量或降低每次 draw 的录制成本，而不是减少 pass。**
+### 9.37 每次 draw 的 3 µs 是谁的开销（T-805，2026-11-11）
+
+#### 9.37.1 方法：真实设备、真实 render pass 内的接缝微基准
+
+新增 `benchmarks/Sharpcraft.Benchmarks/SeamDrawBenchmarks.cs`：自建 instance → adapter → device → 64×64 离屏目标 + 最小 WGSL 管线 + 索引缓冲，**在一个真实的 render pass 内**记录 100 000 次调用（200 轮 × 500 次），Report 用中位数，单位为 **ns/次**。之所以必须在 pass 内测：pass 外 `DrawIndexed` 无效，量不出帧里的真实成本。
+
+为隔离纯 C# 部分，另加了一个**形状相同但不落 wgpu 调用**的对照组（`NoInlining` 边界 + 同样的句柄拆箱与参数检查）。
+
+#### 9.37.2 实测（Release，RTX 3060 / Vulkan）
+
+| 测量项 | ns/次（中位数） | 最小值 |
+| --- | --- | --- |
+| `SetIndexBuffer` | 354.6 | 182.0 |
+| **`DrawIndexed`**（索引已绑定） | **195.4** | 164.4 |
+| `DrawIndexed` + 每次重绑索引 | 305.6 | 276.6 |
+| **对照组：只有封装、无 wgpu 调用** | **88.4** | 61.0 |
+
+⇒ 一次真实 draw 的接缝成本约 **0.195 µs**，其中**我们的封装 ≈0.044 µs（约 22 %）**、**wgpu-native ≈0.15 µs（约 78 %）**。
+
+#### 9.37.3 关键更正：帧里的"3 µs/draw"不是接缝成本，是我除错了分母
+
+`scene` 阶段 0.59–0.67 ms 并不只含 186 次不透明 draw。用 `MC_SKIP_TERRAIN=1 + MC_SKIP_ENTITIES=1` 实测同一机位：
+
+| 场景 | `scene` 阶段 | 说明 |
+| --- | --- | --- |
+| 完整 | 0.59–0.67 ms | 天空 + 天体 + 不透明 + 切边 + 实体 |
+| 跳过地形与实体 | **0.231–0.255 ms** | 只剩 pass 开启、uniform 写入、天空与天体绘制 |
+
+⇒ **每帧固定开销 0.23–0.25 ms（约 40 %）根本与 draw 数无关**；几何录制约占 0.36–0.42 ms。按 arena 实际 draw 数（不透明 + 切边各约 186 次，另加实体层）折算约 **1.0 µs/draw**，其中接缝只占 **0.2 µs（约 20 %)」，其余 **≈0.8 µs 是我们自己的逐 draw 记账**（`Dictionary.TryGetValue` + 6 平面视锥测试 + 分页循环 + 计数累加）。
+
+#### 9.37.4 结论
+
+1. **不能把成本推给 wgpu-native**：接缝调用总共约 0.2 µs/draw，就算按每帧 2 000 次 draw 算也只有 0.4 ms 里的 0.15 部分，且其中 78 % 属于不可优化的原生记录。
+2. **可优化的部分在我们代码里**：
+   - **每帧 scene 固定开销 0.23–0.25 ms**（天空/天体/管线与绑定设置、per-frame uniform 与 bind group 创建）——单项最大，且与 draw 数无关；
+   - **逐 draw 记账 ≈0.8 µs**（字典查找 + 视锥测试 + 分页循环）。
+3. **下一刀建议**：把 `scene` 阶段再拆四个子标记（uniform 上传 / bind group 创建 / 天空与天体 / arena 与实体 draw），因为"0.23 ms 的固定开销"内部还不知道谁最大；这一步只需加诊断标记，风险极低。
+
+#### 9.37.5 附带说明
+
+- 原版同样有 `GpuDevice.createCommandEncoder()` / `RenderPass.drawIndexed(...)` 这一层 WebGPU 语义（分析工作区已确认），所以"抽象层差异"不成立；差别只在后端：GL 的编码是立即调用，Vulkan 要真的建命令流。本节的 0.15 µs 就是那笔"真的建命令流"的钱。
+- 为让基准能驱动真实后端，`Sharpcraft.Framework` 增加了一条 `InternalsVisibleTo("Sharpcraft.Benchmarks")`（仅测试期可见性，不改变任何运行时行为，`check-diagnostics-separation` 仍为 0 违规）。

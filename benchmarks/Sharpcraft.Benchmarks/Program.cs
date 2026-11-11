@@ -58,6 +58,10 @@ internal static class Program
         using var meshBuffer = new MeshBuffer(expectedBlocks: 400_000);
         var transformDestination = new float[ClipSpaceTransform.RequiredFloats(frame)];
 
+        // T-805: the seam micro benchmark needs a device, so it runs before the data pipeline measurements and is
+        // skipped on machines without one.
+        SeamDrawBenchmarks.TryRun(repetitions: 200, callsPerPass: 500);
+
         var results = new List<Measurement>
         {
             Measure("B-1 chunk packet parse", _iterations, _warmup, () =>

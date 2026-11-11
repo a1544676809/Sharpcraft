@@ -5,6 +5,8 @@
     <InternalsVisibleTo Include="Sharpcraft.Client.Tests" />
     <!-- S2 render-backend seam: WindowCommand calls the internal BackendConvert.ToWgpu at the Run boundary. -->
     <InternalsVisibleTo Include="Sharpcraft.Client" />
+    <!-- T-805: the seam micro benchmark drives the real backend, which needs the internal adapter helper. -->
+    <InternalsVisibleTo Include="Sharpcraft.Benchmarks" />
   </ItemGroup>
 
   <PropertyGroup>
