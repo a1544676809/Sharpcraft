@@ -644,6 +644,7 @@ public static class WindowedRenderer
         var abACount = 0;
         var abBMs = 0d;
         var abBCount = 0;
+        var pixelCompare = new PixelFrameCompare();
         var worstFrameMs = 0d;
         var worstFrameIndex = 0;
         var framesOver33 = 0;
@@ -1857,6 +1858,7 @@ public static class WindowedRenderer
             frameNumber++;
 
             Cpu(FrameCpuTimings.OnFrameStage);
+            pixelCompare.Observe(backend, instance, presentation.TargetHandle, frameWidth, frameHeight, BackendConvert.FromWgpu(format), abGroup, currentRequest.Diagnostics);
             cpuTimings.Add(FrameCpuTimings.FrameStage, System.Diagnostics.Stopwatch.GetTimestamp() - cpuFrameStarted);
             cpuTimings.EndFrame();
 
@@ -1922,7 +1924,7 @@ public static class WindowedRenderer
 
         Console.WriteLine(
             $"window: {presented} frames in {frameClock.Elapsed.TotalSeconds:F1}s, worst frame {worstFrameMs:F1} ms at #{worstFrameIndex}, {framesOver33} frames over 33 ms");
-
+        pixelCompare.WriteReport(frameWidth, frameHeight);
         // Percentiles are what a player feels, so they are printed on request: the median says what a normal frame costs
         // and the ninety ninth says what the occasional hitch costs.
         if (performanceSummary && gapCount > 0)

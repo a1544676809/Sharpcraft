@@ -45,6 +45,24 @@ public sealed record FrameDiagnostics
     /// <summary>Print how many chunks the frustum test skipped, once a second.</summary>
     public bool CullStatistics { get; init; }
 
+    /// <summary>Compare consecutive frames pixel by pixel and report how far apart they are at exit.</summary>
+    /// <remarks>
+    /// Exists because a change to what the renderer records can be argued equal but rarely shown equal: the offscreen
+    /// paths build one merged mesh and never touch the paged arena, and two separate runs of the windowed client differ
+    /// in what the server has streamed, so neither can answer "did this change a pixel".
+    /// <para>
+    /// It reports two numbers. When the A/B group changed between the two frames, the difference is the change under
+    /// test. When it did not, the same comparison measures the floor set by clouds, particles and everything else that
+    /// keeps moving, which is the only thing a difference can be judged against. Both are taken from neighbouring
+    /// frames of the same run, so scene motion affects each by the same amount.
+    /// </para>
+    /// <para>
+    /// Off by default and free when off. On, it costs a full frame readback per frame, so a run with it enabled must not
+    /// also be used for the frame timings; the readback lands in the frame preparation bucket and will inflate it.
+    /// </para>
+    /// </remarks>
+    public bool PixelCompare { get; init; }
+
     /// <summary>Print the CPU cost of each recorded frame stage, once a second.</summary>
     /// <remarks>
     /// The stages are the ones the windowed loop can name on its own: geometry updates, surface acquire, camera sample,
