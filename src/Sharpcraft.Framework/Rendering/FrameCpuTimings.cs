@@ -28,14 +28,15 @@ internal sealed class FrameCpuTimings
         Ui,
         PresentRecord,
         Submit,
-        Present,
+        Swap,
+        OnFrame,
         Count
     }
 
     private static readonly string[] Names =
     [
         "frame", "updates", "acquire", "camera", "scene", "oit", "text", "clouds", "ui", "present-rec", "submit",
-        "present"
+        "swap", "onframe"
     ];
 
     private readonly long[] _windowTicks = new long[(int)Stage.Count];
@@ -140,8 +141,11 @@ internal sealed class FrameCpuTimings
     /// <summary>Stage number for the command submission.</summary>
     public static int SubmitStage => (int)Stage.Submit;
 
-    /// <summary>Stage number for the swapchain present call.</summary>
-    public static int PresentStage => (int)Stage.Present;
+    /// <summary>Surface present plus the acquired image release: the wait the swapchain imposes (T-803).</summary>
+    public static int SwapStage => (int)Stage.Swap;
+
+    /// <summary>The host's per-frame callback, which used to sit inside the present bucket (T-803).</summary>
+    public static int OnFrameStage => (int)Stage.OnFrame;
 
     /// <summary>Converts stopwatch ticks to milliseconds.</summary>
     /// <param name="ticks">Stopwatch ticks.</param>

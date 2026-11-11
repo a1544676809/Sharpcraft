@@ -1803,10 +1803,13 @@ public static class WindowedRenderer
             // when the swapchain reuses its semaphore.
             acquired.Texture.Dispose();
 
+            // Split from the host callback: this is the swapchain wait itself, which is what T-803 asks about.
+            Cpu(FrameCpuTimings.SwapStage);
+
             onFrame?.Invoke(presented, window);
             frameNumber++;
 
-            Cpu(FrameCpuTimings.PresentStage);
+            Cpu(FrameCpuTimings.OnFrameStage);
             cpuTimings.Add(FrameCpuTimings.FrameStage, System.Diagnostics.Stopwatch.GetTimestamp() - cpuFrameStarted);
             cpuTimings.EndFrame();
 
