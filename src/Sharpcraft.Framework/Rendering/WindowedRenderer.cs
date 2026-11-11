@@ -1837,6 +1837,11 @@ public static class WindowedRenderer
 
             Cpu(FrameCpuTimings.SubmitStage);
 
+            // The submit bucket above also holds the (usually absent) screenshot branch; these two are the backend's own
+            // split of the call, so finish-plus-queue should account for almost all of it (T-819).
+            cpuTimings.Add(FrameCpuTimings.SubmitFinishStage, backend.SubmitFinishTicks);
+            cpuTimings.Add(FrameCpuTimings.SubmitQueueStage, backend.SubmitQueueTicks);
+
             surface.Present();
 
             // The acquired texture must be released each frame; leaving it alive makes the next acquire fail

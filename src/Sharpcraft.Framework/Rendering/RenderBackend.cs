@@ -305,6 +305,12 @@ public interface IRenderBackend
     /// <summary>Submits the encoder's recorded commands and releases it.</summary>
     void Submit(CommandEncoderHandle encoder);
 
+    /// <summary>Stopwatch ticks the last <see cref="Submit"/> spent inside the encoder finish, or 0 (T-819).</summary>
+    long SubmitFinishTicks => 0;
+
+    /// <summary>Stopwatch ticks the last <see cref="Submit"/> spent handing the buffer to the queue, or 0 (T-819).</summary>
+    long SubmitQueueTicks => 0;
+
     /// <summary>Creates a pipeline layout from the bind group layouts a draw will set.</summary>
     PipelineLayoutHandle CreatePipelineLayout(ReadOnlySpan<BindGroupLayoutHandle> layouts);
 
@@ -702,13 +708,27 @@ public sealed class WgpuRenderBackend : IRenderBackend
         var native = RequireValid<CommandEncoder>(encoder.Value is not null, encoder.Value);
         using (native)
         {
+            // Split for the diagnostic: finishing validates and encodes the passes, submitting hands the buffer to the
+            // queue, and the two have very different fixes if either dominates (T-819).
+            var started = System.Diagnostics.Stopwatch.GetTimestamp();
             var commands = native.Finish();
+            var finished = System.Diagnostics.Stopwatch.GetTimestamp();
             using (commands)
             {
                 _device.Queue.Submit([commands]);
             }
+
+            var submitted = System.Diagnostics.Stopwatch.GetTimestamp();
+            SubmitFinishTicks = finished - started;
+            SubmitQueueTicks = submitted - finished;
         }
     }
+
+    /// <inheritdoc/>
+    public long SubmitFinishTicks { get; private set; }
+
+    /// <inheritdoc/>
+    public long SubmitQueueTicks { get; private set; }
 
     /// <inheritdoc/>
     public PipelineLayoutHandle CreatePipelineLayout(ReadOnlySpan<BindGroupLayoutHandle> layouts)

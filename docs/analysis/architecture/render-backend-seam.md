@@ -1040,6 +1040,8 @@ T-799 的教训是"跨进程 A/B 的噪声（±0.5 ms，实测可达 1.2 ms）�
 - 真正的 CPU 大头是**逐 draw 录制**（`scene` 0.59–0.67 ms / 186 draw ≈ 3 µs/draw；OIT 三阶段另算）与 `submit` 里与 draw/pass 数成正比的部分。**下一步应减少 draw 数量或降低每次 draw 的录制成本，而不是减少 pass。**
 ### 9.37 每次 draw 的 3 µs 是谁的开销（T-805，2026-11-11）
 
+> ⚠️ 本节引用的 `cel-camera` / `cel-build` / `cel-disc` / `scene-terrain` / `scene-entities` 数值**标签有误**（`FrameCpuTimings` 的 `Names` 与枚举错位），对照表见 §9.42；引用前先换算。
+
 #### 9.37.1 方法：真实设备、真实 render pass 内的接缝微基准
 
 新增 `benchmarks/Sharpcraft.Benchmarks/SeamDrawBenchmarks.cs`：自建 instance → adapter → device → 64×64 离屏目标 + 最小 WGSL 管线 + 索引缓冲，**在一个真实的 render pass 内**记录 100 000 次调用（200 轮 × 500 次），Report 用中位数，单位为 **ns/次**。之所以必须在 pass 内测：pass 外 `DrawIndexed` 无效，量不出帧里的真实成本。
@@ -1081,6 +1083,8 @@ T-799 的教训是"跨进程 A/B 的噪声（±0.5 ms，实测可达 1.2 ms）�
 - 原版同样有 `GpuDevice.createCommandEncoder()` / `RenderPass.drawIndexed(...)` 这一层 WebGPU 语义（分析工作区已确认），所以"抽象层差异"不成立；差别只在后端：GL 的编码是立即调用，Vulkan 要真的建命令流。本节的 0.15 µs 就是那笔"真的建命令流"的钱。
 - 为让基准能驱动真实后端，`Sharpcraft.Framework` 增加了一条 `InternalsVisibleTo("Sharpcraft.Benchmarks")`（仅测试期可见性，不改变任何运行时行为，`check-diagnostics-separation` 仍为 0 违规）。
 ### 9.38 每帧新建 bind group 的修复 + `scene` 0.23 ms 的细粒度拆解（T-806，2026-11-11）
+
+> ⚠️ 本节引用的 `cel-camera` / `cel-build` / `cel-disc` / `scene-terrain` / `scene-entities` 数值**标签有误**（`FrameCpuTimings` 的 `Names` 与枚举错位），对照表见 §9.42；引用前先换算。
 
 #### 9.38.1 P0：云深度 blit 的 bind group 改为随深度目标缓存
 
@@ -1124,6 +1128,8 @@ T-799 的教训是"跨进程 A/B 的噪声（±0.5 ms，实测可达 1.2 ms）�
 4. 天空本身几乎免费（0.002 ms），**不需要**为它做任何优化；这与 T-802 里"跳过天空几何省 0.166 ms"的差异说明：`MC_SKIP_SKY` 跳的是**整个 Sky 分支（含天体）**，而天体才是那 0.166 ms 的主体。
 ### 9.39 天体那 0.14–0.17 ms：**上传主导，且原版根本没有这次上传**（T-807，2026-11-11）
 
+> ⚠️ 本节引用的 `cel-camera` / `cel-build` / `cel-disc` / `scene-terrain` / `scene-entities` 数值**标签有误**（`FrameCpuTimings` 的 `Names` 与枚举错位），对照表见 §9.42；引用前先换算。
+
 #### 9.39.1 两段拆分（CPU 时间，`MC_FRAME_CPU=1`，858×527）
 
 新增三个子标记（`cel-build` / `cel-camera` / `cel-disc`），与既有 `scene-celestial`（绘制调用本身）一起覆盖天体块：
@@ -1166,6 +1172,8 @@ T-799 的教训是"跨进程 A/B 的噪声（±0.5 ms，实测可达 1.2 ms）�
 
 ### 9.40 T-809 已回退：天体位姿回归（2026-11-11）
 
+> ⚠️ 本节引用的 `cel-camera` / `cel-build` / `cel-disc` / `scene-terrain` / `scene-entities` 数值**标签有误**（`FrameCpuTimings` 的 `Names` 与枚举错位），对照表见 §9.42；引用前先换算。
+
 **改动**（`b7d6818`，已由 `c4f54b5` 回退）：给相机加 `skyViewProjection`（eye 置原点），把 `CelestialResources` 的 `baseModel` 烘焙进顶点，删掉 per-body transform uniform 与 binding 1。
 
 **结果：两项都不成立。**
@@ -1184,6 +1192,8 @@ T-799 的教训是"跨进程 A/B 的噪声（±0.5 ms，实测可达 1.2 ms）�
 **重做的前置条件**：先写单元测试——给定相同的 `position`/`target`/`baseModel`，**旧公式与新公式算出的顶点坐标必须逐位相同**——测试通过后再重做。这比截图可靠，且能长期守住该不变量。
 
 ### 9.41 T-816：`updates` 其实不是"客户端更新"，是**帧准备**；顺带拿掉 0.9 ms 的真实白干（2026-11-11）
+
+> ⚠️ 本节引用的 `cel-camera` / `cel-build` / `cel-disc` / `scene-terrain` / `scene-entities` 数值**标签有误**（`FrameCpuTimings` 的 `Names` 与枚举错位），对照表见 §9.42；引用前先换算。
 
 **口径更正（本轮最重要的结论）**：`Cpu(stage)` 记的是"距上一个 `Cpu` 调用"的时间，所以每段的真实跨度取决于相邻标记之间有什么。实测核对：
 
@@ -1251,3 +1261,32 @@ T-799 的教训是"跨进程 A/B 的噪声（±0.5 ms，实测可达 1.2 ms）�
 
 **结论**：那 0.89 ms 不是跨进程漂移，而是**每帧 `SetWindowText` 的开销分摊在两处** —— 一部分在 `onframe`（0.28–0.40），主体在紧接着的**上传段 `prep-entities`（0.93）**。拆开之前它们都塞在 `updates` 里，所以看起来是"`updates` 掉了 7 倍"。
 **机制说明的边界**：可以证明的是"该开销随每帧标题写入消失而消失，且两处各自复现"；至于操作系统层面的确切原因（同步 `WM_SETTEXT` 往返、或窗口 DC 失效导致下一次上传付出额外代价）是**假设，未验证**。
+
+### 9.43 T-819：`submit` 的 0.85 ms 里，`Finish()` 占 0.64–0.75（2026-11-11）
+
+`IRenderBackend.Submit` 内部是 `encoder.Finish()` + `queue.Submit`，此前只有一个 `submit` 桶。新增两个诊断段（`sub-finish` / `sub-queue`）：接缝新增 `SubmitFinishTicks` / `SubmitQueueTicks`（接口默认实现返回 0，只有 wgpu 后端填），窗口循环在 `Cpu(SubmitStage)` 之后把两者计入窗口。
+
+实测（同机位、VD12、637 chunks / 186 drawn / 1227928 tri，两个窗口）：
+
+| 段 | 实测 | 占 `submit` |
+| --- | --- | --- |
+| `submit`（总） | 0.834–0.946 ms | 100 % |
+| **`sub-finish`**（`encoder.Finish()`） | **0.644–0.747 ms** | **≈77–79 %** |
+| `sub-queue`（`queue.Submit`） | 0.187–0.195 ms | ≈21 % |
+
+`finish + queue` 与 `submit` 相差 ≤0.02 ms，即截图分支（平时不启用）几乎不占时间。
+
+**与 T-804 的 0.02 ms/pass 不符**：14 pass × 0.02 = 0.28 ms，而实测 `Finish()` 是 0.64–0.75 ms。⇒ `Finish()` 的代价**不只与 pass 数相关**，更可能与**已记录的命令数**（draw / set_bind_group / set_vertex_buffer）相关。本节只报数字，不对机制下结论；下一步用现有 `MC_SKIP_*` 开关做归因（记录命令越少，`sub-finish` 应越低）。
+
+**首轮归因（用现有 `MC_SKIP_OIT` + `MC_SKIP_ENTITIES`，同机位）**：
+
+| 段 | 全开 | 跳过 OIT（+实体） | 差 |
+| --- | --- | --- | --- |
+| `submit` | 0.834–0.946 | 0.264–0.273 | **−0.60** |
+| `sub-finish` | 0.644–0.747 | 0.166–0.169 | **−0.48…−0.58** |
+| `sub-queue` | 0.187–0.195 | 0.096–0.102 | −0.09 |
+| `frame` | 3.11–3.30 | 1.145–1.214 | −2.0 |
+
+⇒ `Finish()` 的 0.64–0.75 ms 里，**OIT 那一串 pass 记录的指令贡献了 0.48–0.58 ms（约 75 %）**；其余（地形/天空/文字/UI/云）只剩约 0.17 ms。这说明 `Finish()` 的成本主要随**已记录命令数**增长，而不是随 pass 数线性增长（T-804 的 0.02 ms/pass 口径不足以解释）。
+
+**由此得到的新图景**：OIT 的每帧成本不只是它自己的 `oit` 桶（0.33–0.40 ms），还要加上它在 `Finish()` 里带来的 0.48–0.58 ms，合计 **约 0.85–0.98 ms/帧**，是目前最大的单一功能块。下一刀应针对 OIT 的**记录命令数**，而不是 `submit` 本身。

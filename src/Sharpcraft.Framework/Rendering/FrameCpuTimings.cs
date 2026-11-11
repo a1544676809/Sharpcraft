@@ -39,6 +39,8 @@ internal sealed class FrameCpuTimings
         Ui,
         PresentRecord,
         Submit,
+        SubmitFinish,
+        SubmitQueue,
         Swap,
         OnFrame,
         Count
@@ -51,7 +53,7 @@ internal sealed class FrameCpuTimings
         // so every quoted cel-* figure before this change names the wrong stage.
         "frame", "updates", "prep-pump", "prep-ui", "prep-entities", "acquire", "camera", "scene", "scene-open",
         "scene-sky", "scene-celestial", "cel-build", "cel-camera", "cel-disc", "scene-terrain", "scene-entities",
-        "oit", "text", "clouds", "ui", "present-rec", "submit", "swap", "onframe"
+        "oit", "text", "clouds", "ui", "present-rec", "submit", "sub-finish", "sub-queue", "swap", "onframe"
     ];
 
     private readonly long[] _windowTicks = new long[(int)Stage.Count];
@@ -128,6 +130,12 @@ internal sealed class FrameCpuTimings
 
     /// <summary>Stage number for the geometry update block.</summary>
     public static int UpdatesStage => (int)Stage.Updates;
+
+    /// <summary>Stage number for the encoder finish inside the submit (T-819).</summary>
+    public static int SubmitFinishStage => (int)Stage.SubmitFinish;
+
+    /// <summary>Stage number for the queue submit inside the submit (T-819).</summary>
+    public static int SubmitQueueStage => (int)Stage.SubmitQueue;
 
     /// <summary>Stage number for the diagnostic report, the window pump and the loop head (T-817).</summary>
     public static int PrepPumpStage => (int)Stage.PrepPump;
