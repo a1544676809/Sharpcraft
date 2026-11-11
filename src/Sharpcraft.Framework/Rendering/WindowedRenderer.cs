@@ -594,6 +594,9 @@ public static class WindowedRenderer
         var abGroup = 0;
         var abToggleFrames = 0;
         var skipTerrain = false;
+        var skipSky = false;
+        var skipClear = false;
+        var skipPresentCopy = false;
         var skipEntities = false;
         var skipInterface = false;
         var cpuTiming = false;
@@ -1093,11 +1096,14 @@ public static class WindowedRenderer
             var wantsSkipInterface = currentRequest.Diagnostics?.SkipInterface == true;
             var skipGroup = abToggleFrames > 0 && abGroup == 1;
             skipTerrain = wantsSkipTerrain && (abToggleFrames == 0 || skipGroup);
+            skipSky = currentRequest.Diagnostics?.SkipSky == true && (abToggleFrames == 0 || skipGroup);
+            skipClear = currentRequest.Diagnostics?.SkipClear == true && (abToggleFrames == 0 || skipGroup);
+            skipPresentCopy = currentRequest.Diagnostics?.SkipPresentCopy == true && (abToggleFrames == 0 || skipGroup);
             skipEntities = wantsSkipEntities && (abToggleFrames == 0 || skipGroup);
             skipInterface = wantsSkipInterface && (abToggleFrames == 0 || skipGroup);
             cpuTiming = currentRequest.Diagnostics?.FrameCpuTiming == true;
-            skipOit = currentRequest.Diagnostics?.SkipOit == true;
-            skipClouds = currentRequest.Diagnostics?.SkipClouds == true;
+            skipOit = currentRequest.Diagnostics?.SkipOit == true && (abToggleFrames == 0 || skipGroup);
+            skipClouds = currentRequest.Diagnostics?.SkipClouds == true && (abToggleFrames == 0 || skipGroup);
             skipTranslucent = currentRequest.Diagnostics?.SkipTranslucent == true;
             var gapMs = nowMs - lastFrameAt;
 
@@ -1189,10 +1195,13 @@ public static class WindowedRenderer
 
             var encoder = backend.CreateCommandEncoder();
             var frameColour = clearColourPerFrame?.Invoke() ?? colour;
-            var pass = backend.BeginRenderPass(
-                encoder,
-                [ColorAttachmentDesc.Clear(frameView, frameColour)],
-                DepthAttachmentDesc.Clear(depthViewHandle, 0f));
+            var frameAttachment = skipClear
+                ? ColorAttachmentDesc.Keep(frameView)
+                : ColorAttachmentDesc.Clear(frameView, frameColour);
+            var depthAttachment = skipClear
+                ? DepthAttachmentDesc.Keep(depthViewHandle)
+                : DepthAttachmentDesc.Clear(depthViewHandle, 0f);
+            var pass = backend.BeginRenderPass(encoder, [frameAttachment], depthAttachment);
 
             // Camera/light/fog uniforms are frame setup, not pass ordering. The scene pass sequence itself comes from
             // WorldRenderPipeline so the windowed path and the offscreen path share one execution order.
@@ -1265,6 +1274,11 @@ public static class WindowedRenderer
                 {
                     case WorldRenderPassKind.Sky:
                     {
+                        if (skipSky)
+                        {
+                            break;
+                        }
+
                         // Sky first, over the cleared target; world geometry then draws on top of it. When the caller
                         // supplies a flat SKY_COLOR through the clear colour, the gradient sky is skipped.
                         if (!currentRequest.SkipGradientSky)
@@ -1764,7 +1778,10 @@ public static class WindowedRenderer
 
             Cpu(FrameCpuTimings.UiStage);
 
-            presentation.RecordPresent(backend, encoder, wgpu.AdoptTextureView(surfaceView), DepthAttachmentDesc.Keep(depthViewHandle));
+            if (!skipPresentCopy)
+            {
+                presentation.RecordPresent(backend, encoder, wgpu.AdoptTextureView(surfaceView), DepthAttachmentDesc.Keep(depthViewHandle));
+            }
 
             Cpu(FrameCpuTimings.PresentRecordStage);
 
