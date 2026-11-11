@@ -1453,15 +1453,17 @@ internal static class FrameCommand
 
         var draw = new CelestialQuadDraw(0, vertices, indices, Matrix4x4.Identity, Vector4.One);
 
-        // The body lies in the horizontal plane y=100 around the origin; look at its centre from below and in front.
+        // Celestial geometry is built on a dome around the origin and drawn with a translation free camera matrix, so the
+        // eye sits at the origin (docs: render-backend-seam.md 9.39). The target is the body's centre with a token tilt,
+        // because a look-at straight up the Y axis is degenerate; the centre pixel stays on the body either way.
         var request = new FrameRequest(
             width,
             height,
             [],
             [],
             new Vector4(0f, 0f, 0f, 1f),
-            new Vector3(0f, 70f, 30f),
-            new Vector3(0f, 100f, 0f),
+            Vector3.Zero,
+            new Vector3(0f, 100f, 0.5f),
             60f)
         {
             CelestialTextures = [bodyTexture],
