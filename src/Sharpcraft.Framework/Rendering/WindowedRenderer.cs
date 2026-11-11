@@ -590,6 +590,12 @@ public static class WindowedRenderer
         var performanceSummary = false;
         var cullStatistics = false;
         var disableCulling = false;
+        var frameNumber = 0u;
+        var abGroup = 0;
+        var abToggleFrames = 0;
+        var skipTerrain = false;
+        var skipEntities = false;
+        var skipInterface = false;
         var cpuTiming = false;
         var skipOit = false;
         var skipClouds = false;
@@ -605,6 +611,10 @@ public static class WindowedRenderer
         // chunks are still arriving: the whole-run summary includes loading and says nothing about the settled frame.
         var windowFrameMs = 0d;
         var windowFrameCount = 0;
+        var abAMs = 0d;
+        var abACount = 0;
+        var abBMs = 0d;
+        var abBCount = 0;
         var worstFrameMs = 0d;
         var worstFrameIndex = 0;
         var framesOver33 = 0;
@@ -1074,6 +1084,17 @@ public static class WindowedRenderer
             performanceSummary = currentRequest.Diagnostics?.PerformanceSummary == true;
             cullStatistics = currentRequest.Diagnostics?.CullStatistics == true;
             disableCulling = currentRequest.Diagnostics?.DisableCulling == true;
+            // An interleaved A/B flips the same switches every N frames instead, so both groups live in one process.
+            abToggleFrames = currentRequest.Diagnostics?.AbToggleFrames ?? 0;
+            abGroup = abToggleFrames > 0 ? (int)((frameNumber / (uint)abToggleFrames) & 1) : 0;
+            // Group B skips exactly what the host asked for, so one run attributes one item.
+            var wantsSkipTerrain = currentRequest.Diagnostics?.SkipTerrain == true;
+            var wantsSkipEntities = currentRequest.Diagnostics?.SkipEntities == true;
+            var wantsSkipInterface = currentRequest.Diagnostics?.SkipInterface == true;
+            var skipGroup = abToggleFrames > 0 && abGroup == 1;
+            skipTerrain = wantsSkipTerrain && (abToggleFrames == 0 || skipGroup);
+            skipEntities = wantsSkipEntities && (abToggleFrames == 0 || skipGroup);
+            skipInterface = wantsSkipInterface && (abToggleFrames == 0 || skipGroup);
             cpuTiming = currentRequest.Diagnostics?.FrameCpuTiming == true;
             skipOit = currentRequest.Diagnostics?.SkipOit == true;
             skipClouds = currentRequest.Diagnostics?.SkipClouds == true;
@@ -1087,6 +1108,18 @@ public static class WindowedRenderer
 
             windowFrameMs += gapMs;
             windowFrameCount++;
+
+            // Interleaved A/B: both groups accumulate inside the same window, so drift cancels.
+            if (abGroup == 1)
+            {
+                abBMs += gapMs;
+                abBCount++;
+            }
+            else
+            {
+                abAMs += gapMs;
+                abACount++;
+            }
             var uploadedNow = arena?.UploadedBytes ?? 0;
             var uploadedDelta = uploadedNow - lastUploadedAt;
             lastUploadedAt = uploadedNow;
@@ -1270,6 +1303,11 @@ public static class WindowedRenderer
 
                     case WorldRenderPassKind.TerrainOpaque:
                     {
+                        if (skipTerrain)
+                        {
+                            break;
+                        }
+
                         backend.SetPipeline(pass, pipeline);
                         backend.SetBindGroup(pass, 0, bindGroup);
                         if (arena is { ChunkCount: > 0 })
@@ -1290,7 +1328,7 @@ public static class WindowedRenderer
 
                     case WorldRenderPassKind.TerrainCutout:
                     {
-                        if (arenaCutout is not { ChunkCount: > 0 })
+                        if (skipTerrain || arenaCutout is not { ChunkCount: > 0 })
                         {
                             break;
                         }
@@ -1310,7 +1348,7 @@ public static class WindowedRenderer
 
                     case WorldRenderPassKind.Entities:
                     {
-                        if (dynamicIndexCount > 0)
+                        if (!skipEntities && dynamicIndexCount > 0)
                         {
                             backend.SetPipeline(pass, entityPipeline);
                             backend.SetVertexBuffer(pass, 0, dynamicVertex, 0, dynamicVertexCapacity);
@@ -1648,6 +1686,8 @@ public static class WindowedRenderer
 
             // Pass 4: the interface draws last, over the resolved frame, in its own pass so it never participates in the
             // world depth test or the transparency resolve.
+            if (!skipInterface)
+            {
             var uiPass = backend.BeginRenderPass(
                 encoder,
                 [ColorAttachmentDesc.Keep(frameView)],
@@ -1720,6 +1760,7 @@ public static class WindowedRenderer
             {
                 backend.EndRenderPass(uiPass);
             }
+            }
 
             Cpu(FrameCpuTimings.UiStage);
 
@@ -1746,6 +1787,7 @@ public static class WindowedRenderer
             acquired.Texture.Dispose();
 
             onFrame?.Invoke(presented, window);
+            frameNumber++;
 
             Cpu(FrameCpuTimings.PresentStage);
             cpuTimings.Add(FrameCpuTimings.FrameStage, System.Diagnostics.Stopwatch.GetTimestamp() - cpuFrameStarted);
@@ -1761,9 +1803,17 @@ public static class WindowedRenderer
                     Console.WriteLine(
                         $"cull: chunks={arena?.ChunkCount ?? 0} culled={arena?.CulledLastFrame ?? 0} "
                         + $"cutout={arenaCutout?.ChunkCount ?? 0} translucent={arenaTranslucent?.ChunkCount ?? 0} "
+                        + $"drawn={arena?.DrawnLastDraw ?? 0} tri={arena?.TrianglesLastDraw ?? 0} "
+                        + (abToggleFrames > 0
+                            ? $"abA={(abACount == 0 ? 0d : abAMs / abACount):F3}/{abACount} abB={(abBCount == 0 ? 0d : abBMs / abBCount):F3}/{abBCount} "
+                            : string.Empty)
                         + $"frames={windowFrameCount} meanMs={windowMeanMs:F3} (reference oit)");
                     windowFrameMs = 0d;
                     windowFrameCount = 0;
+                    abAMs = 0d;
+                    abACount = 0;
+                    abBMs = 0d;
+                    abBCount = 0;
                 }
 
                 if (cpuTiming)

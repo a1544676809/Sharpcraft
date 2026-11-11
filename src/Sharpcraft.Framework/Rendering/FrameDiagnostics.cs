@@ -65,6 +65,40 @@ public sealed record FrameDiagnostics
     /// <remarks>Measurement only: water and glass disappear from the picture.</remarks>
     public bool SkipTranslucent { get; init; }
 
+    /// <summary>Skip the opaque and cutout terrain draws, for measuring what the terrain costs (T-801).</summary>
+    /// <remarks>Measurement only: the world disappears and the sky remains.</remarks>
+    public bool SkipTerrain { get; init; }
+
+    /// <summary>Skip the entity draws, for measuring what they cost (T-801).</summary>
+    /// <remarks>Measurement only: entities and their layers disappear.</remarks>
+    public bool SkipEntities { get; init; }
+
+    /// <summary>Skip the interface pass, for measuring what the UI costs (T-801).</summary>
+    /// <remarks>Measurement only: the interface disappears.</remarks>
+    public bool SkipInterface { get; init; }
+
+    /// <summary>Skip the sky geometry (gradient sky, celestial bodies, stars), for measuring what it costs (T-801).</summary>
+    /// <remarks>Measurement only: the frame shows the flat clear colour instead.</remarks>
+    public bool SkipSky { get; init; }
+
+    /// <summary>Load the colour and depth targets instead of clearing them (T-801).</summary>
+    /// <remarks>Measurement only: the frame accumulates on top of the previous one, which is what the timing asks for.</remarks>
+    public bool SkipClear { get; init; }
+
+    /// <summary>Skip the copy of the finished frame into the swapchain image (T-801).</summary>
+    /// <remarks>Measurement only: the window keeps showing the previous image.</remarks>
+    public bool SkipPresentCopy { get; init; }
+
+    /// <summary>
+    /// Flips both A/B groups every N frames and labels each report line with its group, so a comparison happens inside one
+    /// process and machine drift cancels out (T-801).
+    /// </summary>
+    /// <remarks>
+    /// Zero disables it. Group A draws everything, group B skips what the skip switches ask for, so the difference between
+    /// the two averages is the cost of the skipped work even when the machine slows down or speeds up mid-run.
+    /// </remarks>
+    public int AbToggleFrames { get; init; }
+
     /// <summary>Draw every chunk without the frustum test, the fallback when GPU culling is unavailable.</summary>
     public bool DisableCulling { get; init; }
 

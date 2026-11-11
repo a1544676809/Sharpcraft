@@ -106,6 +106,12 @@ public sealed class ChunkGeometryStore : IDisposable
     /// <summary>Buffer bindings issued by the last draw call (diagnostic).</summary>
     public int BindCallsLastDraw { get; private set; }
 
+    /// <summary>Chunks the last draw actually issued a draw for (diagnostic).</summary>
+    public int DrawnLastDraw { get; private set; }
+
+    /// <summary>Triangles the last draw submitted, which is the geometry the GPU had to process (diagnostic).</summary>
+    public long TrianglesLastDraw { get; private set; }
+
     /// <summary>Pages never presized: pages are created on demand (diagnostic).</summary>
     public bool Presized => false;
 
@@ -189,6 +195,8 @@ public sealed class ChunkGeometryStore : IDisposable
     {
         CulledLastFrame = 0;
         BindCallsLastDraw = 0;
+        DrawnLastDraw = 0;
+        TrianglesLastDraw = 0;
 
         // Page major: every chunk of a page is drawn while that page is bound, so bindings follow the page count.
         foreach (var page in _pages)
@@ -215,6 +223,8 @@ public sealed class ChunkGeometryStore : IDisposable
 
                 _backend.DrawIndexed(pass, entry.IndexCount, 1, (uint)entry.IndexOffset, (int)(entry.VertexOffset / _bytesPerVertex), 0);
                 DrawCallsTotal++;
+                DrawnLastDraw++;
+                TrianglesLastDraw += entry.IndexCount / 3;
             }
         }
     }
