@@ -113,3 +113,19 @@ src/Sharpcraft.Client/bin/Debug/net10.0/Sharpcraft.Client.exe --version 26.3 --g
 ```
 
 **配置传递规则（原则 13）**：游戏代码只读宿主传入的 `--debugOptionsFile` 快照，**不读环境变量**。用 env 设置 `MC_*` 会静默无效。
+
+## 下一步动作（云改程序化生成，T-827）
+
+规格已就绪：`docs/specs/render/cloud-geometry.md`（原版行为逐条写明，含位域与坐标位打包）。
+
+| 片 | 内容 | 状态 |
+| --- | --- | --- |
+| S1 | 面表构建器 `CloudFaceTable.Build`（每面 3 词：单元 X/Z + 方向与标志位） | **已完成**，17 项单测，`CloudFaceTableTests` |
+| S2 | 接缝加只读存储缓冲 + 无顶点缓冲的 `Draw(vertexCount)` | 待做 |
+| S3 | `cloud_procedural.wgsl` 主着色路径，与现有云**逐像素比对** | 待做（S2 之后） |
+| S4 | OIT 三阶段接到新顶点上 | 待做 |
+| S5 | 删除 `CloudGeometryBuilder` / `CloudDrawCache` 的顶点路径 | 待做 |
+
+下一步具体动作：**做 S2**——在 `RenderBackend` 接缝上加"只读存储缓冲绑定 + 不带顶点缓冲的绘制"，先写一个能创建/销毁句柄、且无顶点缓冲绘制不触发验证错误的测试。
+
+注：云的损坏是**既存缺陷**（OIT 管线复用地形顶点布局，而数据是 7 float/28 字节，每 4 个顶点只有第 1 个落对），不是顶点打包引入的；顶点打包那笔改动已回退，等 S5 删掉旧路径后再单独重做。
