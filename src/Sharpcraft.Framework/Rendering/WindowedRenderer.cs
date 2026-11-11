@@ -495,12 +495,37 @@ public static class WindowedRenderer
         BindGroupHandle refCompositeBindGroup = default;
         TextureHandle cloudDepthTexture = default;
         TextureViewHandle cloudDepthViewHandle = default;
+        BindGroupHandle blitDepthBindGroup = default;
+        TextureViewHandle blitDepthBoundFor = default;
+        var blitDepthRebuilds = 0;
         var cloudDepthTargetsCreated = false;
         var refTargetsCreated = false;
 
         // Translucent item geometry composites through its own reference OIT set, as the reference does with
         // OitPipelineSet("item") bound to RenderTypes.ITEM_TRANSLUCENT (ItemOitSet).
         var itemOit = new ItemOitSet();
+
+        // The cloud depth blit samples the main depth, so its bind group belongs to that view: it is rebuilt only when the
+        // depth target is recreated (a resize), never per frame (T-806).
+        BindGroupHandle BlitDepthGroup()
+        {
+            if (blitDepthBindGroup.IsValid && blitDepthBoundFor.Equals(depthViewHandle))
+            {
+                return blitDepthBindGroup;
+            }
+
+            if (blitDepthBindGroup.IsValid)
+            {
+                backend.Destroy(blitDepthBindGroup);
+            }
+
+            blitDepthBindGroup = backend.CreateBindGroup(
+                blitDepthLayout,
+                [BindGroupEntryDesc.Texture(0, depthViewHandle), BindGroupEntryDesc.Sampler(1, blitDepthSamplerHandle)]);
+            blitDepthBoundFor = depthViewHandle;
+            blitDepthRebuilds++;
+            return blitDepthBindGroup;
+        }
 
         void CreateReferenceTargets()
         {
@@ -858,6 +883,14 @@ public static class WindowedRenderer
                 // uses the current index count, and a vertex buffer from an older mesh would make those
                 // indices point past it, drawing stray triangles that look like overlapping texture.
                 surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight, presentMode, WGPUCompositeAlphaMode.Auto);
+                if (blitDepthBindGroup.IsValid)
+                {
+                    // The group samples the depth view, so it must go first.
+                    backend.Destroy(blitDepthBindGroup);
+                    blitDepthBindGroup = default;
+                    blitDepthBoundFor = default;
+                }
+
                 backend.Destroy(depthViewHandle);
                 backend.Destroy(depthTexture);
                 depthTexture = CreateDepthTexture(backend, frameWidth, frameHeight);
@@ -1267,6 +1300,7 @@ public static class WindowedRenderer
             // world. Drawing the preloaded combined mesh next to the arena kept the first few chunks on a second path with
             // its own colour, so the static copy is used only until the arena holds anything.
             var useStaticWorld = arena is null || arena.ChunkCount == 0;
+            Cpu(FrameCpuTimings.SceneOpenStage);
 
             void DrawScenePass(WorldRenderPassKind kind)
             {
@@ -1286,6 +1320,8 @@ public static class WindowedRenderer
                             backend.SetPipeline(pass, skyPipeline);
                             backend.Draw(pass, 3, 1, 0, 0);
                         }
+
+                        Cpu(FrameCpuTimings.SceneSkyStage);
 
                         // Sun/moon (textured) then sunrise/stars (position-colour), still before terrain so world
                         // geometry covers them.
@@ -1312,6 +1348,8 @@ public static class WindowedRenderer
                         skyDiscColour?.Draw(backend, pass);
                         celestial?.Draw(backend, pass);
                         celestialColour?.Draw(backend, pass);
+
+                        Cpu(FrameCpuTimings.SceneCelestialStage);
                         break;
                     }
 
@@ -1334,6 +1372,8 @@ public static class WindowedRenderer
                             {
                                 arena.Draw(pass, frustumPlanes);
                             }
+
+                            Cpu(FrameCpuTimings.SceneTerrainStage);
                         }
 
                         // Clouds are drawn after the transparent terrain (below), matching the reference order.
@@ -1362,6 +1402,7 @@ public static class WindowedRenderer
 
                     case WorldRenderPassKind.Entities:
                     {
+                        Cpu(FrameCpuTimings.SceneEntitiesStage);
                         if (!skipEntities && dynamicIndexCount > 0)
                         {
                             backend.SetPipeline(pass, entityPipeline);
@@ -1482,9 +1523,7 @@ public static class WindowedRenderer
                 try
                 {
                     backend.SetPipeline(blitPass, blitDepthPipeline);
-                    backend.SetBindGroup(blitPass, 0, backend.CreateBindGroup(
-                        blitDepthLayout,
-                        [BindGroupEntryDesc.Texture(0, depthViewHandle), BindGroupEntryDesc.Sampler(1, blitDepthSamplerHandle)]));
+                    backend.SetBindGroup(blitPass, 0, BlitDepthGroup());
                     backend.Draw(blitPass, 3, 1, 0, 0);
                 }
                 finally
@@ -1903,6 +1942,7 @@ public static class WindowedRenderer
             + (arenaTranslucent?.DrawCallsTotal ?? 0);
         Console.WriteLine($"window: draws/frame {(totalDrawCalls / (double)Math.Max(presented, 1)):F0} (solid/cutout/translucent stores)");
         Console.WriteLine($"window: item oit set ran on {itemOitFrames}/{presented} frames (skipped when no translucent items)");
+        Console.WriteLine($"window: cloud depth blit bind group rebuilt {blitDepthRebuilds} times (once per depth target)");
 
         // Bindings are the cost the paged arena removes (ADR-0029): they follow the page count, not the chunk count.
         var totalBinds = (arena?.BindCallsTotal ?? 0)
@@ -1939,6 +1979,11 @@ public static class WindowedRenderer
         backend.Destroy(uiTransformBuffer);
 
         backend.Destroy(vertexBuffer);
+        if (blitDepthBindGroup.IsValid)
+        {
+            backend.Destroy(blitDepthBindGroup);
+        }
+
         backend.Destroy(depthViewHandle);
         backend.Destroy(depthTexture);
         // The reference OIT targets only exist once a frame has needed transparency, so their handles are guarded: a

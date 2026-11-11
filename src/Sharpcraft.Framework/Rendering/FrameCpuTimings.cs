@@ -22,6 +22,11 @@ internal sealed class FrameCpuTimings
         Acquire,
         Camera,
         Scene,
+        SceneOpen,
+        SceneSky,
+        SceneCelestial,
+        SceneTerrain,
+        SceneEntities,
         Oit,
         Text,
         Clouds,
@@ -35,8 +40,8 @@ internal sealed class FrameCpuTimings
 
     private static readonly string[] Names =
     [
-        "frame", "updates", "acquire", "camera", "scene", "oit", "text", "clouds", "ui", "present-rec", "submit",
-        "swap", "onframe"
+        "frame", "updates", "acquire", "camera", "scene", "scene-open", "scene-sky", "scene-celestial", "scene-terrain",
+        "scene-entities", "oit", "text", "clouds", "ui", "present-rec", "submit", "swap", "onframe"
     ];
 
     private readonly long[] _windowTicks = new long[(int)Stage.Count];
@@ -122,6 +127,21 @@ internal sealed class FrameCpuTimings
 
     /// <summary>Stage number for the scene pass recording.</summary>
     public static int SceneStage => (int)Stage.Scene;
+
+    /// <summary>Opening the scene pass, writing the frame uniforms and setting up the frustum (T-806).</summary>
+    public static int SceneOpenStage => (int)Stage.SceneOpen;
+
+    /// <summary>The gradient sky draw (T-806).</summary>
+    public static int SceneSkyStage => (int)Stage.SceneSky;
+
+    /// <summary>The sun, moon and stars (T-806).</summary>
+    public static int SceneCelestialStage => (int)Stage.SceneCelestial;
+
+    /// <summary>The opaque and cutout terrain draws (T-806).</summary>
+    public static int SceneTerrainStage => (int)Stage.SceneTerrain;
+
+    /// <summary>The entity layer draws (T-806).</summary>
+    public static int SceneEntitiesStage => (int)Stage.SceneEntities;
 
     /// <summary>Stage number for the reference OIT recording.</summary>
     public static int OitStage => (int)Stage.Oit;

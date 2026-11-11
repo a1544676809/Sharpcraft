@@ -1080,3 +1080,45 @@ T-799 的教训是"跨进程 A/B 的噪声（±0.5 ms，实测可达 1.2 ms）�
 
 - 原版同样有 `GpuDevice.createCommandEncoder()` / `RenderPass.drawIndexed(...)` 这一层 WebGPU 语义（分析工作区已确认），所以"抽象层差异"不成立；差别只在后端：GL 的编码是立即调用，Vulkan 要真的建命令流。本节的 0.15 µs 就是那笔"真的建命令流"的钱。
 - 为让基准能驱动真实后端，`Sharpcraft.Framework` 增加了一条 `InternalsVisibleTo("Sharpcraft.Benchmarks")`（仅测试期可见性，不改变任何运行时行为，`check-diagnostics-separation` 仍为 0 违规）。
+### 9.38 每帧新建 bind group 的修复 + `scene` 0.23 ms 的细粒度拆解（T-806，2026-11-11）
+
+#### 9.38.1 P0：云深度 blit 的 bind group 改为随深度目标缓存
+
+**问题**：`WindowedRenderer` 在每帧的云深度 blit 里调用 `backend.CreateBindGroup(...)` 并直接塞进 `SetBindGroup`，**从不销毁** —— 每帧泄漏一个 GPU 绑定对象，同时是固定的每帧开销。
+
+**修法**：新增 `BlitDepthGroup()`，以 `depthViewHandle` 作为失效键缓存（深度目标只在窗口尺寸变化时重建，所以绑定也只在此时重建），并在**销毁深度视图之前**与退出路径上显式 `Destroy`。
+
+**验证**：
+
+| 指标 | 修复前 | 修复后 |
+| --- | --- | --- |
+| 该 bind group 的创建次数 | 每帧 1 次（该次运行约 3 万帧 ⇒ 约 3 万次） | **1 次**（退出诊断 `window: cloud depth blit bind group rebuilt 1 times`） |
+| 画面 | — | 同机位、637 列、钉死白天/partial：**地形带（y≥350）逐像素 0 差异**，差异仅在云带（云在动） |
+| Validation 错误 | — | 0 |
+
+**同类模式扫描**（帧循环内的资源创建）：除该处外**没有**其它每帧创建 bind group / buffer / texture / pipeline / shader module 的地方（帧循环里剩下的创建都在辅助函数内，只在目标重建时调用）。帧内仍有两处小分配值得记录但未处理：每帧 `new byte[LightmapBytes]` 与 `new byte[FogBytes]`（共约 100 字节，可改为复用字段，收益 <0.005 ms）。
+
+#### 9.38.2 `scene` 阶段拆成五个子标记（默认关闭时零开销）
+
+`FrameCpuTimings` 新增 `scene-open` / `scene-sky` / `scene-celestial` / `scene-terrain` / `scene-entities`，仍由同一个 `MC_FRAME_CPU` 开关输出到同一行 `frame-cpu:`。
+
+**实测（858×527、637 列、第 3 个稳定窗口，ms/帧）**
+
+| 子阶段 | 覆盖内容 | 耗时 | 占比 |
+| --- | --- | --- | --- |
+| **scene-terrain** | 不透明 + 切边 arena 的 draw | **0.242** | 38 % |
+| **scene-entities** | 实体层 draw | **0.154** | 24 % |
+| **scene-celestial** | 太阳 / 月亮 / 星星 / 天空盘 | **0.140** | 22 % |
+| **scene-open** | pass 开启 + 相机/光照/雾 uniform 写入 + bind group 设置 + 视锥计算 | **0.097** | 15 % |
+| scene-sky | 渐变天空全屏三角 | 0.002 | <1 % |
+| 残差 | — | 0.004 | — |
+| **合计** | | **0.639** | 与 `scene` 0.59–0.67 ms 吻合 |
+
+**交叉验证**：T-805 里"跳过地形与实体"后 `scene` 仍剩 0.231–0.255 ms，正是 `scene-open 0.097 + scene-sky 0.002 + scene-celestial 0.140 ≈ 0.239` ✓ 两个独立方法一致。
+
+#### 9.38.3 结论与下一步
+
+1. **那 0.23 ms 的"固定开销"由两项构成**：天体绘制 **0.140 ms（61 %）** 与开 pass/写 uniform **0.097 ms（39 %）**。
+2. **天体 0.140 ms 是意外的大项**：太阳/月亮/星星只有个位数 draw call，耗时说明它**每帧重建并上传几何/绑定**（`celestialPerFrame` → `SetDraws` → `UpdateCamera` → `skyDiscPerFrame` → `skyDiscVanillaResources.Update`）。下一刀应先量化这条链路：把重建与上传拆开测，再决定是"缓存到角度变化超阈值才重建"还是"改成一次动态 draw"。
+3. `scene-terrain` 0.242 ms 的逐 draw 记账（≈0.8 µs/draw）仍是 T-805 指出的 P1；`scene-entities` 0.154 ms 的构成（层数 × 每层 draw + 绑定）也需要同样拆一次。
+4. 天空本身几乎免费（0.002 ms），**不需要**为它做任何优化；这与 T-802 里"跳过天空几何省 0.166 ms"的差异说明：`MC_SKIP_SKY` 跳的是**整个 Sky 分支（含天体）**，而天体才是那 0.166 ms 的主体。
