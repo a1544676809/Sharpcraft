@@ -90,24 +90,11 @@ public static class WindowedRenderer
         // amplified view needs more than that for one geometry buffer, and the adapter's own figure is the honest ceiling.
         var deviceLimits = adapter.GetLimits();
         var supportsFloat32Blendable = adapter.HasFeature(WGPUFeatureName.Float32Blendable);
-        // The timestamp feature is only requested when the host asked for GPU timings, so the default device is unchanged.
-        var wantsGpuTimings = request.Diagnostics?.GpuTimings == true;
-        var supportsTimestamps = wantsGpuTimings && adapter.HasFeature(WGPUFeatureName.TimestampQuery);
-        var requiredFeatures = new List<WGPUFeatureName>(2);
-        if (supportsFloat32Blendable)
-        {
-            requiredFeatures.Add(WGPUFeatureName.Float32Blendable);
-        }
-
-        if (supportsTimestamps)
-        {
-            requiredFeatures.Add(WGPUFeatureName.TimestampQuery);
-        }
-
+        WGPUFeatureName[] requiredFeatures = supportsFloat32Blendable ? [WGPUFeatureName.Float32Blendable] : [];
         var deviceDescriptor = new DeviceDescriptor
         {
             RequiredLimits = deviceLimits,
-            RequiredFeatures = [.. requiredFeatures]
+            RequiredFeatures = requiredFeatures
         };
         var device = adapter.RequestDeviceBlocking(in deviceDescriptor);
 
@@ -120,8 +107,6 @@ public static class WindowedRenderer
         // Atlas resources: the fragment shader samples it, so the pipeline layout and the bind group
         // have to exist before anything is drawn (docs/modules/render.md 6.1).
         var backend = new WgpuRenderBackend(device);
-        // Null unless the host asked for GPU timings and the adapter can write them (T-800, diagnostic only).
-        using var gpuTimings = GpuTimingsRecorder.TryCreate(backend, instance, adapter, wantsGpuTimings);
         var wgpu = backend;
         var atlasData = request.Atlas ?? TextureData.White;
 
@@ -1170,7 +1155,6 @@ public static class WindowedRenderer
             Cpu(FrameCpuTimings.CloudsStage);
 
             var encoder = backend.CreateCommandEncoder();
-            gpuTimings?.Mark(encoder, GpuTimingSlot.FrameBegin);
             var frameColour = clearColourPerFrame?.Invoke() ?? colour;
             var pass = backend.BeginRenderPass(
                 encoder,
@@ -1432,7 +1416,6 @@ public static class WindowedRenderer
             // The scene pass declares locals the rest of the frame uses, so it cannot sit inside a try block; the
             // body between begin and end has no return and no throw, which is what keeps the single end safe.
             backend.EndRenderPass(pass);
-            gpuTimings?.Mark(encoder, GpuTimingSlot.Scene);
             Cpu(FrameCpuTimings.SceneStage);
 
             if (cloudDepthTargetsCreated)
@@ -1599,7 +1582,6 @@ public static class WindowedRenderer
                     DrawTerrain = DrawReferenceGeometry,
                     DrawItems = DrawItemOitGeometry,
                     MaxStages = currentRequest.Diagnostics?.OitStages ?? 0,
-                    Timings = gpuTimings,
                     ItemsHasGeometry = itemOitGeometryPresent
                 });
 
@@ -1661,8 +1643,6 @@ public static class WindowedRenderer
                     backend.EndRenderPass(cloudPass);
                 }
             }
-
-            gpuTimings?.Mark(encoder, GpuTimingSlot.Clouds);
 
             Cpu(FrameCpuTimings.CloudsStage);
 
@@ -1741,23 +1721,13 @@ public static class WindowedRenderer
                 backend.EndRenderPass(uiPass);
             }
 
-            gpuTimings?.Mark(encoder, GpuTimingSlot.Ui);
             Cpu(FrameCpuTimings.UiStage);
 
             presentation.RecordPresent(backend, encoder, wgpu.AdoptTextureView(surfaceView), DepthAttachmentDesc.Keep(depthViewHandle));
 
-            gpuTimings?.Mark(encoder, GpuTimingSlot.PresentCopy);
-
             Cpu(FrameCpuTimings.PresentRecordStage);
 
-            gpuTimings?.Mark(encoder, GpuTimingSlot.FrameEnd);
-
             backend.Submit(encoder);
-
-            if (gpuTimings is not null && presented > 0 && (presented % 60) == 0)
-            {
-                gpuTimings.Report(60);
-            }
 
             // Screenshot (reference Screenshot.grab): only when the host asks, and only after the frame was submitted, so
             // the frame target still holds the presented image (docs/specs/render/screenshot.md 2.2).
@@ -1906,8 +1876,6 @@ public static class WindowedRenderer
         {
             cpuTimings.WriteSummary();
         }
-
-        gpuTimings?.WriteSummary();
 
         backend.Destroy(dynamicVertex);
         backend.Destroy(dynamicIndex);

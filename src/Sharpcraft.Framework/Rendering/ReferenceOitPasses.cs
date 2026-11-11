@@ -107,9 +107,6 @@ internal static class ReferenceOitPasses
         /// <summary>Records only the first N stages, for attributing GPU cost to each one (T-799); zero means all.</summary>
         public int MaxStages { get; init; }
 
-        /// <summary>GPU timestamp markers, or null when the host did not ask for timings (T-800).</summary>
-        public IGpuTimingMarkers? Timings { get; init; }
-
         /// <summary>
         /// True when the frame has translucent item geometry, so the item set is worth its four full resolution passes.
         /// </summary>
@@ -151,8 +148,6 @@ internal static class ReferenceOitPasses
         finally
         {
             backend.EndRenderPass(boundsPass);
-
-            p.Timings?.Mark(encoder, GpuTimingSlot.OitBounds);
         }
 
         if (stages < 2)
@@ -174,8 +169,6 @@ internal static class ReferenceOitPasses
         finally
         {
             backend.EndRenderPass(cullPass);
-
-        p.Timings?.Mark(encoder, GpuTimingSlot.OitCull);
         }
 
         // Stage 1c: clouds add their own depth bounds into the culled target, after the cull, so cloud bounds never
@@ -242,8 +235,6 @@ internal static class ReferenceOitPasses
             finally
             {
                 backend.EndRenderPass(cloudTransPass);
-
-        p.Timings?.Mark(encoder, GpuTimingSlot.OitTransmit);
             }
         }
 
@@ -285,8 +276,6 @@ internal static class ReferenceOitPasses
             finally
             {
                 backend.EndRenderPass(cloudAccumPass);
-
-        p.Timings?.Mark(encoder, GpuTimingSlot.OitAccumulate);
             }
         }
 
@@ -309,8 +298,6 @@ internal static class ReferenceOitPasses
         finally
         {
             backend.EndRenderPass(compositePass);
-
-        p.Timings?.Mark(encoder, GpuTimingSlot.OitComposite);
         }
 
         // Translucent items composite through their own set (the reference binds OitPipelineSet("item") to
