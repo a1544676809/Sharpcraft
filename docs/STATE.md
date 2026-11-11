@@ -129,3 +129,5 @@ src/Sharpcraft.Client/bin/Debug/net10.0/Sharpcraft.Client.exe --version 26.3 --g
 下一步具体动作：**接线 `cloud_procedural.wgsl`**。着色器已写好但没有任何管线用它，且 WGSL 构建期不编译，所以它**完全未经验证**。接线步骤：①`CloudOitResources` 与两处 `CreatePipelineLayout` 增加 group 0 的 binding 2（CloudInfo uniform）与 binding 3（面表只读存储）；②上传面表并建 bind group；③建管线——**管线创建成功是第一道也是唯一的语法检查**；④确认只读存储能否绑在顶点阶段；⑤接主着色路径后与现有云逐像素比对。
 
 注：云的损坏是**既存缺陷**（OIT 管线复用地形顶点布局，而数据是 7 float/28 字节，每 4 个顶点只有第 1 个落对），不是顶点打包引入的；顶点打包那笔改动已回退，等 S5 删掉旧路径后再单独重做。
+
+接线方案已展开为逐条步骤，见 docs/specs/render/cloud-geometry.md §10（含 CloudInfo 的 48 字节布局与 vec3 对齐陷阱、绑定序号、绘制顶点数、以及只读存储能否绑顶点阶段的待实测点）。CloudOitResources.cs 的 CreateBindGroupLayout 与 CreateBindGroup 是两处主要改动位置。

@@ -124,3 +124,29 @@ S2 原本计划"给接缝加两样能力"，核查后发现两样都已存在且
 **这意味着**：程序化着色器剩下的风险只在着色（亮度、雾）一侧，几何不再是未知量。剩下要做的 S3 部分是把已验证的解码搬进 WGSL，并接线。
 
 **注意**：着色器文件在首次被管线编译之前不会得到任何校验（构建期不编译 WGSL，`ShaderLibraryTests` 只验证文件可加载），所以接线时若有语法错误只会在运行时暴露——这一点在接入时需以管线创建成功作为第一道检查。
+
+## 10. 接线方案（S3 剩余部分，逐条可直接执行）
+
+已核对的现状：
+
+| 项 | 位置 | 现状 |
+| --- | --- | --- |
+| 云资源与绑定布局 | `src/Sharpcraft.Framework/Rendering/CloudOitResources.cs` | `CreateBindGroupLayout` 只有两个条目：binding 0（camera，Vertex 阶段）、binding 1（transform，Vertex\|Fragment） |
+| transform 缓冲 | 同文件 | 80 字节（`TransformUniformSize`） |
+| 顶点/索引缓冲 | 同文件 | 按需扩容（`MinCapacity` 起、逐次放大） |
+| 顶点管线 | `WindowedRenderer.cs` 的 `CreateDepthBoundsPipeline` 等 | 写死 `VertexLayout.Stride` + `VertexLayout.Attributes()` |
+| 接缝能力 | `RenderBackend.cs` | 无顶点缓冲的 `Draw` 与 `ReadOnlyStorageBuffer` 均已存在 |
+
+**执行步骤**：
+
+1. **布局**：在 `CloudOitResources` 的 `CreateBindGroupLayout` 条目列表末尾追加两条：
+   - binding 2：`UniformBuffer(2, ShaderStages.Vertex)` —— CloudInfo
+   - binding 3：只读存储缓冲，`ShaderStages.Vertex` —— 面表
+2. **CloudInfo 缓冲**：大小 **48 字节**（`colour` vec4 16 + `offset` vec3 12→补齐 16 + `cellSize` vec2 8 + `thickness` f32 4，末项补齐到 16 的倍数）。字段顺序必须与着色器里的结构体一致。
+3. **面表缓冲**：仿照现有顶点缓冲的做法按需扩容；上传 `CloudFaceTable.Build(quads)` 得到的 `int[]`，`BufferUsages.Storage | CopyDst`。
+4. **绑定组条目**：把上述两个缓冲加进 `CreateBindGroup` 的条目列表，顺序与布局一致。
+5. **管线**：新建一个用 `cloud_procedural.wgsl`、**不声明顶点缓冲**（`null` 或空的 buffer layout）的管线。**建管线成功是这份着色器唯一的语法检查。**
+6. **绘制**：`backend.Draw(pass, vertexCount: faceCount * 4, instanceCount: 1, firstVertex: 0, firstInstance: 0)`；**恰好 4 个顶点一个面**，不要用索引缓冲。
+7. **待实测**：第 1 步把只读存储绑到 `ShaderStages.Vertex` 时，WebGPU 规范允许（只禁止可写存储进顶点阶段），但项目里现有只读存储绑定全在 Compute 阶段，**这一步要用实际建管线的结果确认，不要假设**。
+
+**注意 Vec3 对齐**：WGSL 里 `vec3<f32>` 按 16 字节对齐，`offset` 后面直接跟 `cellSize` 会出现 4 字节空洞。写 C# 侧时用 `Vector4` 或手工按 16 字节偏移填，不要按 12 字节紧凑排列——这是这类 uniform 最常见的错位来源。
