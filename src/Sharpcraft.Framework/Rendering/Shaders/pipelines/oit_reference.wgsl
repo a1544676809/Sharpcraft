@@ -83,10 +83,10 @@ struct VertexOutput {
 @vertex
 fn vs_main(
     @location(0) position : vec3<f32>,
-    @location(1) colour : vec4<f32>,
+    @location(1) colour : vec3<f32>,
     @location(2) uv : vec2<f32>,
     @location(3) spriteRect : vec4<f32>,
-    @location(4) light : vec4<f32>,
+    @location(4) light : vec2<f32>,
 ) -> VertexOutput {
     var output : VertexOutput;
     let clip = camera.viewProjection * vec4<f32>(position, 1.0);
@@ -95,10 +95,10 @@ fn vs_main(
     // is the normalized device depth in [0, 1]. Both are interpolated: depth is affine in screen space, so this is exact.
     output.fogDistance = clip.w;
     output.deviceDepth = clip.z / max(clip.w, 0.00001);
-    output.colour = colour.rgb;
+    output.colour = colour;
     output.uv = uv;
     output.spriteRect = spriteRect;
-    output.light = light.rg;
+    output.light = light;
     return output;
 }
 

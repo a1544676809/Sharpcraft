@@ -32,12 +32,14 @@ public sealed class TexturedMesherTests
         var vertices = mesh.Vertices;
         Assert.NotEmpty(vertices);
 
-        for (var vertex = 0; vertex < vertices.Length / FloatsPerVertex; vertex++)
+        for (var i = 0; i < vertices.Length; i += FloatsPerVertex)
         {
-            var (red, green, blue) = VertexFieldReader.Colour(vertices, vertex);
+            var red = vertices[i + 3];
+            var green = vertices[i + 4];
+            var blue = vertices[i + 5];
 
-            Assert.Equal(red, green, 2);
-            Assert.Equal(green, blue, 2);
+            Assert.Equal(red, green, 5);
+            Assert.Equal(green, blue, 5);
         }
     }
 
@@ -48,16 +50,17 @@ public sealed class TexturedMesherTests
 
         var mesh = ChunkMesher.Mesh(world, airState: 0, maxBlocks: 1000);
 
-        var (red, green, blue) = VertexFieldReader.Colour(mesh.Vertices, 0);
+        var red = mesh.Vertices[3];
+        var green = mesh.Vertices[4];
+        var blue = mesh.Vertices[5];
 
         // A vertex on a chunk-edge side face has no neighbour light (the reference is black there too), so scan vertices
         // for any tinted one rather than trusting the first.
         var tinted = red != green || green != blue;
 
-        for (var vertex = 1; !tinted && vertex < mesh.Vertices.Length / FloatsPerVertex; vertex++)
+        for (var i = 0; !tinted && i + 5 < mesh.Vertices.Length; i += FloatsPerVertex)
         {
-            var (r, g, b) = VertexFieldReader.Colour(mesh.Vertices, vertex);
-            tinted = r != g || g != b;
+            tinted = mesh.Vertices[i + 3] != mesh.Vertices[i + 4] || mesh.Vertices[i + 4] != mesh.Vertices[i + 5];
         }
 
         Assert.True(tinted, "without sprites the state colour should stay tinted");
@@ -73,10 +76,9 @@ public sealed class TexturedMesherTests
 
         // Every quad of the flat plane spans four blocks, so its UVs must reach 4 in one axis.
         var maxUv = 0f;
-        for (var vertex = 0; vertex < mesh.Vertices.Length / FloatsPerVertex; vertex++)
+        for (var i = 0; i < mesh.Vertices.Length; i += FloatsPerVertex)
         {
-            var (u, v) = VertexFieldReader.Uv(mesh.Vertices, vertex);
-            maxUv = MathF.Max(maxUv, MathF.Max(u, v));
+            maxUv = MathF.Max(maxUv, MathF.Max(mesh.Vertices[i + 6], mesh.Vertices[i + 7]));
         }
 
         Assert.Equal(4f, maxUv, 3);
@@ -91,11 +93,11 @@ public sealed class TexturedMesherTests
         var mesh = ChunkMesher.Mesh(world, airState: 0, maxBlocks: 1000, sprites: sprites);
 
         var expected = sprites.ForState(1);
-        var (u0, v0, u1, v1) = VertexFieldReader.Rect(mesh.Vertices, 0);
-        Assert.Equal(expected.U0, u0, 5);
-        Assert.Equal(expected.V0, v0, 5);
-        Assert.Equal(expected.U1, u1, 5);
-        Assert.Equal(expected.V1, v1, 5);
+        var offset = 8;
+        Assert.Equal(expected.U0, mesh.Vertices[offset], 5);
+        Assert.Equal(expected.V0, mesh.Vertices[offset + 1], 5);
+        Assert.Equal(expected.U1, mesh.Vertices[offset + 2], 5);
+        Assert.Equal(expected.V1, mesh.Vertices[offset + 3], 5);
     }
 
     private static ClientWorld FlatWorld(int state)

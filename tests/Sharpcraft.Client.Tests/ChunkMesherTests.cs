@@ -125,14 +125,11 @@ public sealed class ChunkMesherTests
         // Colour is the state colour scaled by the light and facing shade, so the hue must survive
         // while the magnitude may differ from the raw state colour.
         var (red, green, blue) = ChunkMesher.ColourOf(2);
-        var (litRed, litGreen, litBlue) = VertexFieldReader.Colour(mesh.Vertices, 0);
-        var scale = litRed / red;
+        var scale = mesh.Vertices[3] / red;
 
         Assert.InRange(scale, 0f, 1f);
-
-        // Eight bits per channel means each channel can land one step off the exact product (T-826).
-        Assert.True(MathF.Abs((green * scale) - litGreen) < 0.01f, $"green {litGreen} against {green * scale}");
-        Assert.True(MathF.Abs((blue * scale) - litBlue) < 0.01f, $"blue {litBlue} against {blue * scale}");
+        Assert.Equal(green * scale, mesh.Vertices[4], 4);
+        Assert.Equal(blue * scale, mesh.Vertices[5], 4);
     }
 
     [Fact]
@@ -144,9 +141,9 @@ public sealed class ChunkMesherTests
         var mesh = ChunkMesher.Mesh(world);
 
         // Quad order is -X, +X, -Y, +Y, -Z, +Z; the first vertex of each quad carries its colour.
-        var topColour = VertexFieldReader.Colour(mesh.Vertices, 3 * ChunkMesher.VerticesPerQuad).R;
-        var bottomColour = VertexFieldReader.Colour(mesh.Vertices, 2 * ChunkMesher.VerticesPerQuad).R;
-        var sideColour = VertexFieldReader.Colour(mesh.Vertices, 0).R;
+        var topColour = mesh.Vertices[(3 * ChunkMesher.VerticesPerQuad * ChunkMesher.FloatsPerVertex) + 3];
+        var bottomColour = mesh.Vertices[(2 * ChunkMesher.VerticesPerQuad * ChunkMesher.FloatsPerVertex) + 3];
+        var sideColour = mesh.Vertices[3];
 
         Assert.True(topColour > sideColour, $"top {topColour} should be brighter than side {sideColour}");
         Assert.True(sideColour > bottomColour, $"side {sideColour} should be brighter than bottom {bottomColour}");
@@ -159,16 +156,14 @@ public sealed class ChunkMesherTests
         var lit = SingleBlockWorld(2);
         lit.GetChunk(0, 0)!.Light.FillSkyLight(15);
 
-        // The lightmap is applied in the shader now, so the light levels ride in the vertex light attribute
-        // (sky level 0..1) rather than being baked into the colour.
-        var darkSky = VertexFieldReader.Light(ChunkMesher.Mesh(dark).Vertices, 0).Sky;
-        var litSky = VertexFieldReader.Light(ChunkMesher.Mesh(lit).Vertices, 0).Sky;
+        // The lightmap is applied in the shader now, so the light levels ride in the vertex light attribute (offset 12 =
+        // sky level 0..1) rather than being baked into the colour.
+        var darkSky = ChunkMesher.Mesh(dark).Vertices[12];
+        var litSky = ChunkMesher.Mesh(lit).Vertices[12];
 
         Assert.True(litSky > darkSky, $"lit sky {litSky} should exceed dark sky {darkSky}");
-
-        // Packed to eight bits, so the ends are exact and the middle is not asserted.
-        Assert.Equal(1f, litSky, 2);
-        Assert.Equal(0f, darkSky, 2);
+        Assert.Equal(1f, litSky, 3);
+        Assert.Equal(0f, darkSky, 5);
     }
 
     [Fact]
