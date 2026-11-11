@@ -1122,3 +1122,44 @@ T-799 的教训是"跨进程 A/B 的噪声（±0.5 ms，实测可达 1.2 ms）�
 2. **天体 0.140 ms 是意外的大项**：太阳/月亮/星星只有个位数 draw call，耗时说明它**每帧重建并上传几何/绑定**（`celestialPerFrame` → `SetDraws` → `UpdateCamera` → `skyDiscPerFrame` → `skyDiscVanillaResources.Update`）。下一刀应先量化这条链路：把重建与上传拆开测，再决定是"缓存到角度变化超阈值才重建"还是"改成一次动态 draw"。
 3. `scene-terrain` 0.242 ms 的逐 draw 记账（≈0.8 µs/draw）仍是 T-805 指出的 P1；`scene-entities` 0.154 ms 的构成（层数 × 每层 draw + 绑定）也需要同样拆一次。
 4. 天空本身几乎免费（0.002 ms），**不需要**为它做任何优化；这与 T-802 里"跳过天空几何省 0.166 ms"的差异说明：`MC_SKIP_SKY` 跳的是**整个 Sky 分支（含天体）**，而天体才是那 0.166 ms 的主体。
+### 9.39 天体那 0.14–0.17 ms：**上传主导，且原版根本没有这次上传**（T-807，2026-11-11）
+
+#### 9.39.1 两段拆分（CPU 时间，`MC_FRAME_CPU=1`，858×527）
+
+新增三个子标记（`cel-build` / `cel-camera` / `cel-disc`），与既有 `scene-celestial`（绘制调用本身）一起覆盖天体块：
+
+| 段 | 覆盖 | CPU 耗时 |
+| --- | --- | --- |
+| **cel-build**（重建） | `celestialPerFrame` 回调 + 3× `SetDraws` | **0.050–0.057 ms** |
+| **cel-camera**（上传） | 3× `UpdateCamera` → 每 draw 一次 `WriteBuffer` | **0.197–0.240 ms** |
+| **cel-disc**（上传） | `skyDiscPerFrame` + `SkyDiscResources.Update` | **0.124–0.155 ms** |
+| scene-celestial | 4 次天体绘制 | 0.004 ms |
+| **合计（CPU）** | | **≈0.38–0.45 ms** |
+
+#### 9.39.2 但**墙钟成本只有 0.169 ms**
+
+用同进程交替 A/B（`MC_AB_TOGGLE=10` + 新增 `MC_SKIP_CELESTIAL`，196 个窗口）：**A=3.112 ms、B=2.943 ms ⇒ 天体真实成本 0.169 ms**。
+
+⇒ 上面 0.38–0.45 ms 的 CPU 时间里，**约 0.22 ms 被 `present` 等待掩盖**（与 T-803 的结论一致：每帧有 0.3–0.4 ms 的呈现等待可与 CPU 工作重叠）。**结论：天体是"上传主导"，但当前只有 0.169 ms 暴露在帧时间里；一旦其他开销被压下去，这 0.22 ms 会露出来。**
+
+#### 9.39.3 阈值缓存行不通（本轮实测否决）
+
+按"角度变化超阈值才重建"的思路加了 1 mm 累积阈值（1 mm 在天空穹距离上约 2 角秒，是太阳角径的千分之一）+ 复用临时缓冲。结果：退出诊断 **`celestial camera updates applied 38498/38498, skipped 0/0`** —— 相机每帧位移都超过 1 mm，**阈值一次也没触发**，缓存对当前场景完全无效。
+
+保留该实现（正确的守卫 + 每 draw 少两次分配），但**它不是解法**，并已在文档中记为"当前无效"。
+
+#### 9.39.4 原版对照：它没有任何逐 draw 上传
+
+`stars.vsh`（以及 `sky.vsh`）只做 `gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0)`，`stars.fsh` 只输出 `ColorModulator`；星的几何是**预先算好的顶点**，相机相对位移由**共享的 `ModelViewMat`** 承担。
+
+⇒ 原版天体**每帧零上传**：没有 per-body uniform 写入。我们的实现把每个天体的基模型放在各自的 uniform 里，因此每帧对每个天体调用一次 `wgpuQueueWriteBuffer`（本场景约十余次），这就是 cel-camera + cel-disc 的来源。
+
+#### 9.39.5 修法与结论
+
+**结论：不值得用缓存解决（阈值实测无效），但值得按原版的方式消除上传。** 修法（结构性，本轮只出方案）：
+
+1. 把每个天体的旋转/缩放**烘焙进顶点数据**（像原版那样），绘制时只依赖共享的相机 uniform → 每帧 0 次 `WriteBuffer`；
+2. `SkyDiscResources.Update` 同样改为"状态未变则不重写"，或把 `Sky`/`Fog` 参数并入共享 uniform；
+3. 若第 1 条不可行，退而求其次：把十余个 per-body uniform 合成**一个大 uniform 缓冲 + dynamic offset**，每帧一次 `WriteBuffer`。
+
+预期收益：CPU 侧去掉 0.32 ms（cel-camera + cel-disc 中除 `skyDiscPerFrame` 计算外的部分），墙钟侧预计 **0.05–0.10 ms**（其余被呈现等待掩盖）；风险中等（要改顶点生成与绑定布局），需同机位像素对比验收。

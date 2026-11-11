@@ -89,6 +89,10 @@ public sealed record FrameDiagnostics
     /// <remarks>Measurement only: the window keeps showing the previous image.</remarks>
     public bool SkipPresentCopy { get; init; }
 
+    /// <summary>Skip the celestial bodies (sun, moon, stars, sky discs), for measuring what they cost (T-807).</summary>
+    /// <remarks>Measurement only: the gradient sky still draws.</remarks>
+    public bool SkipCelestial { get; init; }
+
     /// <summary>
     /// Flips both A/B groups every N frames and labels each report line with its group, so a comparison happens inside one
     /// process and machine drift cancels out (T-801).

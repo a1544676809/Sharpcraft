@@ -78,6 +78,7 @@ internal sealed class GameOptions
             SkipSky = Flag("MC_SKIP_SKY"),
             SkipClear = Flag("MC_SKIP_CLEAR"),
             SkipPresentCopy = Flag("MC_SKIP_PRESENT"),
+            SkipCelestial = Flag("MC_SKIP_CELESTIAL"),
             AbToggleFrames = (int)Number("MC_AB_TOGGLE", 0f),
             Gpu = Get("MC_GPU"),
             OitStages = (int)Number("MC_OIT_STAGES", 0f)

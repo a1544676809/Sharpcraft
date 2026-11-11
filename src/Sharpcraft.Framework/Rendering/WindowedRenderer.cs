@@ -622,6 +622,7 @@ public static class WindowedRenderer
         var skipSky = false;
         var skipClear = false;
         var skipPresentCopy = false;
+        var skipCelestial = false;
         var skipEntities = false;
         var skipInterface = false;
         var cpuTiming = false;
@@ -1132,6 +1133,7 @@ public static class WindowedRenderer
             skipSky = currentRequest.Diagnostics?.SkipSky == true && (abToggleFrames == 0 || skipGroup);
             skipClear = currentRequest.Diagnostics?.SkipClear == true && (abToggleFrames == 0 || skipGroup);
             skipPresentCopy = currentRequest.Diagnostics?.SkipPresentCopy == true && (abToggleFrames == 0 || skipGroup);
+            skipCelestial = currentRequest.Diagnostics?.SkipCelestial == true && (abToggleFrames == 0 || skipGroup);
             skipEntities = wantsSkipEntities && (abToggleFrames == 0 || skipGroup);
             skipInterface = wantsSkipInterface && (abToggleFrames == 0 || skipGroup);
             cpuTiming = currentRequest.Diagnostics?.FrameCpuTiming == true;
@@ -1323,6 +1325,12 @@ public static class WindowedRenderer
 
                         Cpu(FrameCpuTimings.SceneSkyStage);
 
+                        if (skipCelestial)
+                        {
+                            Cpu(FrameCpuTimings.SceneCelestialStage);
+                            break;
+                        }
+
                         // Sun/moon (textured) then sunrise/stars (position-colour), still before terrain so world
                         // geometry covers them.
                         if (celestialPerFrame?.Invoke() is { } celestialUpdate)
@@ -1332,6 +1340,8 @@ public static class WindowedRenderer
                             skyDiscColour?.SetDraws(celestialUpdate.SkyDiscs);
                         }
 
+                        Cpu(FrameCpuTimings.CelestialBuildStage);
+
                         // Apply the camera delta AFTER any per-frame draw rebuild: a freshly built draw uses the base
                         // (initial) camera model, so translating first would be overwritten and the bodies would stay
                         // anchored in the world.
@@ -1339,9 +1349,13 @@ public static class WindowedRenderer
                         celestialColour?.UpdateCamera(celestialDelta);
                         skyDiscColour?.UpdateCamera(celestialDelta);
 
+                        Cpu(FrameCpuTimings.CelestialCameraStage);
+
                         if (skyDiscVanillaResources is not null && skyDiscPerFrame?.Invoke() is { } skyDiscState)
                         {
                             skyDiscVanillaResources.Update(skyDiscState.Sky, skyDiscState.Fog, skyDiscState.SkyFogEnd, skyDiscState.Eye);
+
+                            Cpu(FrameCpuTimings.CelestialDiscStage);
                             skyDiscVanillaResources.Draw(backend, pass);
                         }
 
@@ -1943,6 +1957,11 @@ public static class WindowedRenderer
         Console.WriteLine($"window: draws/frame {(totalDrawCalls / (double)Math.Max(presented, 1)):F0} (solid/cutout/translucent stores)");
         Console.WriteLine($"window: item oit set ran on {itemOitFrames}/{presented} frames (skipped when no translucent items)");
         Console.WriteLine($"window: cloud depth blit bind group rebuilt {blitDepthRebuilds} times (once per depth target)");
+        Console.WriteLine(
+            $"window: celestial camera updates applied {celestial?.AppliedCameraUpdates ?? 0}/"
+            + $"{celestialColour?.AppliedCameraUpdates ?? 0}/{skyDiscColour?.AppliedCameraUpdates ?? 0}, skipped "
+            + $"{celestial?.SkippedCameraUpdates ?? 0}/{celestialColour?.SkippedCameraUpdates ?? 0}/"
+            + $"{skyDiscColour?.SkippedCameraUpdates ?? 0}");
 
         // Bindings are the cost the paged arena removes (ADR-0029): they follow the page count, not the chunk count.
         var totalBinds = (arena?.BindCallsTotal ?? 0)

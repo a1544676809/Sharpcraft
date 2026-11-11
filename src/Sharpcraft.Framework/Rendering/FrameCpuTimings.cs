@@ -25,6 +25,9 @@ internal sealed class FrameCpuTimings
         SceneOpen,
         SceneSky,
         SceneCelestial,
+        CelBuild,
+        CelCamera,
+        CelDisc,
         SceneTerrain,
         SceneEntities,
         Oit,
@@ -41,7 +44,7 @@ internal sealed class FrameCpuTimings
     private static readonly string[] Names =
     [
         "frame", "updates", "acquire", "camera", "scene", "scene-open", "scene-sky", "scene-celestial", "scene-terrain",
-        "scene-entities", "oit", "text", "clouds", "ui", "present-rec", "submit", "swap", "onframe"
+        "scene-entities", "cel-build", "cel-camera", "cel-disc", "oit", "text", "clouds", "ui", "present-rec", "submit", "swap", "onframe"
     ];
 
     private readonly long[] _windowTicks = new long[(int)Stage.Count];
@@ -142,6 +145,15 @@ internal sealed class FrameCpuTimings
 
     /// <summary>The entity layer draws (T-806).</summary>
     public static int SceneEntitiesStage => (int)Stage.SceneEntities;
+
+    /// <summary>Building the celestial draw lists for this frame (T-807).</summary>
+    public static int CelestialBuildStage => (int)Stage.CelBuild;
+
+    /// <summary>Moving the celestial draw lists with the camera delta (T-807).</summary>
+    public static int CelestialCameraStage => (int)Stage.CelCamera;
+
+    /// <summary>The vanilla sky disc state update, which rewrites its uniforms (T-807).</summary>
+    public static int CelestialDiscStage => (int)Stage.CelDisc;
 
     /// <summary>Stage number for the reference OIT recording.</summary>
     public static int OitStage => (int)Stage.Oit;

@@ -1012,6 +1012,13 @@ public static class OffscreenRenderer
         private BufferHandle[] _vertexBuffers = [];
         private BufferHandle[] _indexBuffers = [];
         private BufferHandle[] _transformBuffers = [];
+
+        /// <summary>One millimetre, squared: the lag below which a camera move is invisible on the celestial dome.</summary>
+        private const float MinimumCameraDeltaSquared = 1e-6f;
+
+        private readonly byte[] _transformScratch = new byte[TransformUniformSize];
+        private readonly float[] _transformScratchFloats = new float[20];
+        private Vector3 _pendingDelta;
         private BindGroupHandle[] _bindGroups = [];
         private uint[] _indexCounts = [];
         private Matrix4x4[] _baseModels = [];
@@ -1175,16 +1182,23 @@ public static class OffscreenRenderer
         /// <summary>Re-centres the bodies on the camera by translating each base model by <paramref name="eyeDelta"/>.</summary>
         public void UpdateCamera(Vector3 eyeDelta)
         {
-            if (eyeDelta == Vector3.Zero)
+            // The bodies are pinned to the camera, so a sub millimetre lag is invisible: at the dome distance it subtends
+            // about two arc seconds, a thousandth of the sun's angular size. Updates are therefore batched until the
+            // camera really moved, which keeps a standing player from rewriting every transform buffer each frame (T-807).
+            _pendingDelta += eyeDelta;
+            if (_pendingDelta.LengthSquared() < MinimumCameraDeltaSquared)
             {
+                SkippedCameraUpdates++;
                 return;
             }
 
-            var translation = Matrix4x4.CreateTranslation(eyeDelta);
+            AppliedCameraUpdates++;
+            var translation = Matrix4x4.CreateTranslation(_pendingDelta);
+            _pendingDelta = Vector3.Zero;
+            var transformBytes = _transformScratch;
+            var transformFloats = _transformScratchFloats;
             for (var index = 0; index < _transformBuffers.Length; index++)
             {
-                var transformBytes = new byte[TransformUniformSize];
-                var transformFloats = new float[20];
                 WriteMatrix(translation * _baseModels[index], transformFloats, 0);
                 transformFloats[16] = _tints[index].X;
                 transformFloats[17] = _tints[index].Y;
@@ -1194,6 +1208,12 @@ public static class OffscreenRenderer
                 _backend.WriteBuffer(_transformBuffers[index], transformBytes, 0);
             }
         }
+
+        /// <summary>Camera updates applied to the transforms (diagnostic for T-807).</summary>
+        public long AppliedCameraUpdates { get; private set; }
+
+        /// <summary>Camera updates skipped because the accumulated move was below the visible threshold (T-807).</summary>
+        public long SkippedCameraUpdates { get; private set; }
 
         public void Dispose()
         {
@@ -1259,6 +1279,13 @@ public static class OffscreenRenderer
         private BufferHandle[] _vertexBuffers = [];
         private BufferHandle[] _indexBuffers = [];
         private BufferHandle[] _transformBuffers = [];
+
+        /// <summary>One millimetre, squared: the lag below which a camera move is invisible on the celestial dome.</summary>
+        private const float MinimumCameraDeltaSquared = 1e-6f;
+
+        private readonly byte[] _transformScratch = new byte[TransformUniformSize];
+        private readonly float[] _transformScratchFloats = new float[20];
+        private Vector3 _pendingDelta;
         private BindGroupHandle[] _bindGroups = [];
         private uint[] _indexCounts = [];
         private bool[] _overlay = [];
@@ -1438,16 +1465,23 @@ public static class OffscreenRenderer
         /// <summary>Re-centres the colour bodies on the camera by translating each base model by <paramref name="eyeDelta"/>.</summary>
         public void UpdateCamera(Vector3 eyeDelta)
         {
-            if (eyeDelta == Vector3.Zero)
+            // The bodies are pinned to the camera, so a sub millimetre lag is invisible: at the dome distance it subtends
+            // about two arc seconds, a thousandth of the sun's angular size. Updates are therefore batched until the
+            // camera really moved, which keeps a standing player from rewriting every transform buffer each frame (T-807).
+            _pendingDelta += eyeDelta;
+            if (_pendingDelta.LengthSquared() < MinimumCameraDeltaSquared)
             {
+                SkippedCameraUpdates++;
                 return;
             }
 
-            var translation = Matrix4x4.CreateTranslation(eyeDelta);
+            AppliedCameraUpdates++;
+            var translation = Matrix4x4.CreateTranslation(_pendingDelta);
+            _pendingDelta = Vector3.Zero;
+            var transformBytes = _transformScratch;
+            var transformFloats = _transformScratchFloats;
             for (var index = 0; index < _transformBuffers.Length; index++)
             {
-                var transformBytes = new byte[TransformUniformSize];
-                var transformFloats = new float[20];
                 WriteMatrix(translation * _baseModels[index], transformFloats, 0);
                 transformFloats[16] = _tints[index].X;
                 transformFloats[17] = _tints[index].Y;
@@ -1457,6 +1491,12 @@ public static class OffscreenRenderer
                 _backend.WriteBuffer(_transformBuffers[index], transformBytes, 0);
             }
         }
+
+        /// <summary>Camera updates applied to the transforms (diagnostic for T-807).</summary>
+        public long AppliedCameraUpdates { get; private set; }
+
+        /// <summary>Camera updates skipped because the accumulated move was below the visible threshold (T-807).</summary>
+        public long SkippedCameraUpdates { get; private set; }
 
         public void Dispose()
         {
