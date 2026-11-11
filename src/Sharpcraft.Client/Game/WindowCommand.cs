@@ -588,6 +588,7 @@ internal static class WindowCommand
         var lightProbe = GameOptions.Get("MC_LIGHT_PROBE") == "1";
         var frameClock = System.Diagnostics.Stopwatch.StartNew();
         var previousFrameMs = 0.0;
+        var lastSkinRosterVersion = -1;
         var removedChunks = new List<long>();
         long celestialCacheKey = long.MinValue;
         FrameRequest? celestialCached = null;
@@ -623,8 +624,14 @@ internal static class WindowCommand
             session.CaptureMouse(window, index == 0);
 
             // Apply skin arrivals between frames: the renderer checks the texture version before it builds the next
-            // frame's entity geometry, so the atlas and its sprite rects change together.
-            playerSkins.Sync(session.PlayerList.Entries);
+            // frame's entity geometry, so the atlas and its sprite rects change together. The scan only runs when the
+            // roster changed, because nothing else can introduce a new texture property (T-816).
+            if (session.PlayerList.Version != lastSkinRosterVersion)
+            {
+                lastSkinRosterVersion = session.PlayerList.Version;
+                playerSkins.Sync(session.PlayerList.Entries);
+            }
+
             if (playerSkins.Pump() > 0)
             {
                 entitySkinTextureSource.Update(entitySkinLibrary.Atlas?.Texture);

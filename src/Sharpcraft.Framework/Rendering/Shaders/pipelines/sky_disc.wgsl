@@ -3,6 +3,9 @@
 
 struct Camera {
     viewProjection : mat4x4<f32>,
+    // The same view with the camera at the origin: the disc geometry lives on a dome around the origin, so the camera
+    // offset it used to add by hand is exactly what this matrix drops (T-816).
+    skyViewProjection : mat4x4<f32>,
 };
 struct Sky {
     skyColor : vec4<f32>,
@@ -21,7 +24,7 @@ struct VertexOutput {
 @vertex
 fn vs_main(@location(0) position : vec3<f32>) -> VertexOutput {
     var output : VertexOutput;
-    output.position = camera.viewProjection * vec4<f32>(position + vec3<f32>(sky.params.y, sky.params.z, sky.params.w), 1.0);
+    output.position = camera.skyViewProjection * vec4<f32>(position, 1.0);
     output.sphericalDistance = length(position);
     output.cylindricalDistance = max(length(position.xz), abs(position.y));
     return output;
