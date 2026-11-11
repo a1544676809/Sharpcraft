@@ -14,8 +14,16 @@ namespace Sharpcraft.Framework.Rendering;
 /// </summary>
 public static class VertexLayout
 {
-    /// <summary>Bytes per vertex: 3 + 3 + 2 + 4 + 2 floats (position, base colour, uv, sprite rect, light).</summary>
-    public const int Stride = 56;
+    /// <summary>Bytes per vertex: position, packed colour, light, uv and the sprite rect (T-826).</summary>
+    /// <remarks>
+    /// Colour and light carry far less information than a float each, and vertex fetch was measured as the cost the
+    /// scene pass is bound by: the pass takes eighteen hundred microseconds to draw two million triangles, which is
+    /// one point seven billion triangles a second, roughly ten times under what the card does when it is fed. A colour
+    /// is eight bits per channel in the atlas and a light level is one of sixteen values, so both are stored packed;
+    /// the reference stores its light as a pair of sixteen bit integers for a range of zero to two hundred and forty,
+    /// which leaves eight bits of that channel unused.
+    /// </remarks>
+    public const int Stride = 44;
 
     /// <summary>Size of the camera uniform block in bytes: one 4×4 matrix.</summary>
     public const ulong CameraUniformSize = 128;
@@ -60,10 +68,10 @@ public static class VertexLayout
     public static VertexAttribute[] Attributes() =>
     [
         new(WGPUVertexFormat.Float32x3, 0, 0),
-        new(WGPUVertexFormat.Float32x3, 12, 1),
-        new(WGPUVertexFormat.Float32x2, 24, 2),
-        new(WGPUVertexFormat.Float32x4, 32, 3),
-        new(WGPUVertexFormat.Float32x2, 48, 4)
+        new(WGPUVertexFormat.Unorm8x4, 12, 1),
+        new(WGPUVertexFormat.Float32x2, 16, 2),
+        new(WGPUVertexFormat.Float32x4, 24, 3),
+        new(WGPUVertexFormat.Unorm8x4, 40, 4)
     ];
 
     /// <summary>Bytes per celestial vertex: position (3) + uv (2) + the tint copied per vertex (4) floats.</summary>

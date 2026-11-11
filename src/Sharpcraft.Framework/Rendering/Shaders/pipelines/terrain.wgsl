@@ -73,10 +73,10 @@ struct VertexOutput {
 @vertex
 fn vs_main(
     @location(0) position : vec3<f32>,
-    @location(1) colour : vec3<f32>,
+    @location(1) colour : vec4<f32>,
     @location(2) uv : vec2<f32>,
     @location(3) spriteRect : vec4<f32>,
-    @location(4) light : vec2<f32>,
+    @location(4) light : vec4<f32>,
 ) -> VertexOutput {
     var output : VertexOutput;
 
@@ -85,10 +85,10 @@ fn vs_main(
     let clip = camera.viewProjection * vec4<f32>(position, 1.0);
     output.clipPosition = clip;
     output.fogDistance = clip.w;
-    output.colour = colour;
+    output.colour = colour.rgb;
     output.uv = uv;
     output.spriteRect = spriteRect;
-    output.light = light;
+    output.light = light.rg;
     return output;
 }
 
