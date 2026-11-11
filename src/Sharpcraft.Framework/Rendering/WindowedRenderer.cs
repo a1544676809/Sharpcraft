@@ -1599,7 +1599,9 @@ public static class WindowedRenderer
                     {
                         // Order independent by construction (docs/specs/render/oit-reference.md 6: additive accumulation
                         // and transmittance are commutative), so the paged arena draws page major and binds once per page.
-                        arenaTranslucent.Draw(p);
+                        // Culled like the other two layers: the box test treats a box that merely intersects the frustum
+                        // as visible, so a column straddling the edge is still drawn (T-822).
+                        arenaTranslucent.Draw(p, frustumPlanes);
                     }
 
                     if (hasRefStatic && refStaticIndexCount > 0)
