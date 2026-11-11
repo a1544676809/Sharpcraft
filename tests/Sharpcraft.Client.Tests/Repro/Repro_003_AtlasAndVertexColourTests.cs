@@ -82,10 +82,12 @@ public sealed class Repro_004_TexturedVertexColourIsLightOnlyTests
 
         var mesh = ChunkMesher.Mesh(world, airState: 0, maxBlocks: 1000, sprites: new BlockSpriteMap(atlas, layout));
 
-        for (var i = 0; i < mesh.Vertices.Length; i += ChunkMesher.FloatsPerVertex)
+        for (var vertex = 0; vertex < mesh.Vertices.Length / ChunkMesher.FloatsPerVertex; vertex++)
         {
-            Assert.Equal(mesh.Vertices[i + 3], mesh.Vertices[i + 4], 5);
-            Assert.Equal(mesh.Vertices[i + 4], mesh.Vertices[i + 5], 5);
+            var (red, green, blue) = VertexFieldReader.Colour(mesh.Vertices, vertex);
+
+            Assert.Equal(red, green, 5);
+            Assert.Equal(green, blue, 5);
         }
     }
 
