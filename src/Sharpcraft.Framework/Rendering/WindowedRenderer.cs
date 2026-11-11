@@ -1958,6 +1958,9 @@ public static class WindowedRenderer
         Console.WriteLine($"window: item oit set ran on {itemOitFrames}/{presented} frames (skipped when no translucent items)");
         Console.WriteLine($"window: cloud depth blit bind group rebuilt {blitDepthRebuilds} times (once per depth target)");
         Console.WriteLine(
+            $"window: celestial colour tint uploads written {celestialColour?.TintWrites ?? 0}, "
+            + $"skipped {celestialColour?.TintSkips ?? 0}/{cloudColour?.TintWrites ?? 0}+{cloudColour?.TintSkips ?? 0} (colour/cloud)");
+        Console.WriteLine(
             $"window: celestial camera updates applied {celestial?.AppliedCameraUpdates ?? 0}/"
             + $"{celestialColour?.AppliedCameraUpdates ?? 0}/{skyDiscColour?.AppliedCameraUpdates ?? 0}, skipped "
             + $"{celestial?.SkippedCameraUpdates ?? 0}/{celestialColour?.SkippedCameraUpdates ?? 0}/"

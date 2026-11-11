@@ -1951,7 +1951,9 @@ internal static class FrameCommand
         var (fanVertices, fanIndices) = PackColor(fan, fanColours, fanTriangles);
         var (starVertices, starIndices) = PackColor(starRotated, starColours, starTriangles);
 
-        var eye = new Vector3(0f, 150f, 300f);
+        // Colour bodies are dome geometry too, drawn with a translation free camera, so the eye sits at the origin. The
+        // token tilt keeps the look-at off the degenerate straight-up axis (T-810).
+        var eye = Vector3.Zero;
         var withBodies = new FrameRequest(
             width,
             height,
@@ -1959,7 +1961,7 @@ internal static class FrameCommand
             [],
             new Vector4(0f, 0f, 0f, 1f),
             eye,
-            Vector3.Zero)
+            new Vector3(0f, 100f, 0.5f))
         {
             CelestialColorDraws =
             [

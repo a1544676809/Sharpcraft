@@ -1250,7 +1250,7 @@ public static class OffscreenRenderer
     /// </summary>
     internal sealed class CelestialColorResources : IDisposable
     {
-        private const ulong TransformUniformSize = 80;
+        private const ulong TransformUniformSize = 16;
 
         private readonly IRenderBackend _backend;
         private readonly BindGroupLayoutHandle _layout;
@@ -1262,18 +1262,13 @@ public static class OffscreenRenderer
         private BufferHandle[] _indexBuffers = [];
         private BufferHandle[] _transformBuffers = [];
 
-        /// <summary>One millimetre, squared: the lag below which a camera move is invisible on the celestial dome.</summary>
-        private const float MinimumCameraDeltaSquared = 1e-6f;
-
-        private readonly byte[] _transformScratch = new byte[TransformUniformSize];
-        private readonly float[] _transformScratchFloats = new float[20];
-        private Vector3 _pendingDelta;
+        private readonly byte[] _tintScratch = new byte[TransformUniformSize];
         private BindGroupHandle[] _bindGroups = [];
         private uint[] _indexCounts = [];
         private bool[] _overlay = [];
         private bool[] _opaque = [];
-        private Matrix4x4[] _baseModels = [];
         private Vector4[] _tints = [];
+        private Vector4[] _writtenTints = [];
         private readonly List<(BufferHandle Vertex, BufferHandle Index, BufferHandle Transform, BindGroupHandle BindGroup)> _retired = new();
         private readonly BufferHandle _cameraBuffer;
         private readonly ulong _cameraSize;
@@ -1358,8 +1353,9 @@ public static class OffscreenRenderer
             _indexCounts = new uint[draws.Count];
             _overlay = new bool[draws.Count];
             _opaque = new bool[draws.Count];
-            _baseModels = new Matrix4x4[draws.Count];
             _tints = new Vector4[draws.Count];
+            _writtenTints = new Vector4[draws.Count];
+            Array.Fill(_writtenTints, new Vector4(float.NaN, float.NaN, float.NaN, float.NaN));
             _vertexCapacity = new long[draws.Count];
             _indexCapacity = new long[draws.Count];
             _sourceVertices = new float[draws.Count][];
@@ -1390,7 +1386,6 @@ public static class OffscreenRenderer
 
         private void WriteDraw(int index, CelestialColorDraw draw)
         {
-            _baseModels[index] = draw.Model;
             _tints[index] = draw.Tint;
             _indexCounts[index] = (uint)draw.Indices.Length;
             _overlay[index] = draw.Blend == CelestialColorBlend.Overlay;
@@ -1415,15 +1410,23 @@ public static class OffscreenRenderer
                 _sourceIndices[index] = draw.Indices;
             }
 
-            var transformBytes = new byte[TransformUniformSize];
-            var transformFloats = new float[20];
-            WriteMatrix(draw.Model, transformFloats, 0);
-            transformFloats[16] = draw.Tint.X;
-            transformFloats[17] = draw.Tint.Y;
-            transformFloats[18] = draw.Tint.Z;
-            transformFloats[19] = draw.Tint.W;
-            System.Runtime.InteropServices.MemoryMarshal.AsBytes(transformFloats.AsSpan()).CopyTo(transformBytes);
-            _backend.WriteBuffer(_transformBuffers[index], transformBytes, 0);
+            // The model matrix is deliberately not applied: it only carried the camera translation, which the sky matrix
+            // now supplies by not being applied at all (T-811). Only the tint remains per draw, so the uniform is written
+            // when the tint changes instead of every frame (T-810).
+            if (index < _writtenTints.Length && _writtenTints[index] == draw.Tint)
+            {
+                TintSkips++;
+                return;
+            }
+
+            _tintScratch[0] = (byte)(draw.Tint.X * 255f);
+            BitConverter.TryWriteBytes(_tintScratch.AsSpan(0), draw.Tint.X);
+            BitConverter.TryWriteBytes(_tintScratch.AsSpan(4), draw.Tint.Y);
+            BitConverter.TryWriteBytes(_tintScratch.AsSpan(8), draw.Tint.Z);
+            BitConverter.TryWriteBytes(_tintScratch.AsSpan(12), draw.Tint.W);
+            _backend.WriteBuffer(_transformBuffers[index], _tintScratch, 0);
+            _writtenTints[index] = draw.Tint;
+            TintWrites++;
         }
 
         /// <summary>Draws every colour body, picking the pipeline that matches its blend mode.</summary>
@@ -1444,41 +1447,30 @@ public static class OffscreenRenderer
             }
         }
 
-        /// <summary>Re-centres the colour bodies on the camera by translating each base model by <paramref name="eyeDelta"/>.</summary>
+        /// <summary>
+        /// Kept for the call sites: the dome is re-centred by the shared sky matrix, so a camera move uploads nothing.
+        /// </summary>
+        /// <param name="eyeDelta">Unused; the bodies follow the camera through the camera uniform (T-810).</param>
         public void UpdateCamera(Vector3 eyeDelta)
         {
-            // The bodies are pinned to the camera, so a sub millimetre lag is invisible: at the dome distance it subtends
-            // about two arc seconds, a thousandth of the sun's angular size. Updates are therefore batched until the
-            // camera really moved, which keeps a standing player from rewriting every transform buffer each frame (T-807).
-            _pendingDelta += eyeDelta;
-            if (_pendingDelta.LengthSquared() < MinimumCameraDeltaSquared)
-            {
-                SkippedCameraUpdates++;
-                return;
-            }
-
-            AppliedCameraUpdates++;
-            var translation = Matrix4x4.CreateTranslation(_pendingDelta);
-            _pendingDelta = Vector3.Zero;
-            var transformBytes = _transformScratch;
-            var transformFloats = _transformScratchFloats;
-            for (var index = 0; index < _transformBuffers.Length; index++)
-            {
-                WriteMatrix(translation * _baseModels[index], transformFloats, 0);
-                transformFloats[16] = _tints[index].X;
-                transformFloats[17] = _tints[index].Y;
-                transformFloats[18] = _tints[index].Z;
-                transformFloats[19] = _tints[index].W;
-                System.Runtime.InteropServices.MemoryMarshal.AsBytes(transformFloats.AsSpan()).CopyTo(transformBytes);
-                _backend.WriteBuffer(_transformBuffers[index], transformBytes, 0);
-            }
+            _ = eyeDelta;
+            NoOpCameraUpdates++;
         }
 
-        /// <summary>Camera updates applied to the transforms (diagnostic for T-807).</summary>
+        /// <summary>Camera updates that still touched a buffer; zero now that the sky matrix carries the camera (T-810).</summary>
         public long AppliedCameraUpdates { get; private set; }
 
-        /// <summary>Camera updates skipped because the accumulated move was below the visible threshold (T-807).</summary>
-        public long SkippedCameraUpdates { get; private set; }
+        /// <summary>Camera updates skipped by the old threshold; kept so the existing diagnostics still compile.</summary>
+        public long SkippedCameraUpdates => 0;
+
+        /// <summary>How often the call site asked the bodies to follow the camera; every one is a no-op now.</summary>
+        public long NoOpCameraUpdates { get; private set; }
+
+        /// <summary>Per-draw tint uploads actually issued (diagnostic for T-810).</summary>
+        public long TintWrites { get; private set; }
+
+        /// <summary>Frames where the tint was unchanged, so the upload was skipped (diagnostic for T-810).</summary>
+        public long TintSkips { get; private set; }
 
         public void Dispose()
         {

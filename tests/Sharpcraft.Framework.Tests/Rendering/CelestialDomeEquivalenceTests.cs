@@ -52,6 +52,47 @@ public sealed class CelestialDomeEquivalenceTests
         new(100f, 0f, 100f)
     ];
 
+    /// <summary>
+    /// The position-colour path (sunrise band, stars, clouds) follows the same chain, so it gets the same proof: the old
+    /// draw applied a camera translation in its model matrix and viewed with the same translation, the new one drops both
+    /// (T-810).
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Eyes))]
+    public void TheColourBodyPathMatchesToo(float eyeX, float eyeY, float eyeZ)
+    {
+        var eye = new Vector3(eyeX, eyeY, eyeZ);
+        var model = Matrix4x4.CreateTranslation(eye);
+        var colourVertices = new[]
+        {
+            new Vector3(0f, 100f, 0f), new Vector3(120f, 0f, -40f), new Vector3(-120f, 0f, -40f),
+            new Vector3(0f, 100f, 120f), new Vector3(0f, -100f, 0f)
+        };
+
+        foreach (var target in Orientations(eye))
+        {
+            var oldViewProjection = CameraMath.BuildViewProjection(eye, target, FieldOfViewDegrees, Width, Height);
+            var newViewProjection = CameraMath.BuildViewProjection(
+                Vector3.Zero, target - eye, FieldOfViewDegrees, Width, Height);
+            var tolerance = (2f / Width) / 10f;
+
+            foreach (var vertex in colourVertices)
+            {
+                var oldNdc = ToNdc(Vector3.Transform(vertex, model), oldViewProjection);
+                var newNdc = ToNdc(vertex, newViewProjection);
+                if (oldNdc is null || newNdc is null)
+                {
+                    continue;
+                }
+
+                var difference = Vector3.Abs(oldNdc.Value - newNdc.Value);
+                Assert.True(
+                    difference.X <= tolerance && difference.Y <= tolerance && difference.Z <= tolerance,
+                    $"colour path eye={eye} target={target} vertex={vertex}: difference={difference} exceeds {tolerance}");
+            }
+        }
+    }
+
     /// <summary>Cameras to test: at the origin, and far away (the far one is the case T-809 got wrong).</summary>
     public static TheoryData<float, float, float> Eyes => new()
     {
