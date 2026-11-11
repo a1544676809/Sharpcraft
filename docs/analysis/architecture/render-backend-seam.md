@@ -1206,3 +1206,48 @@ T-799 的教训是"跨进程 A/B 的噪声（±0.5 ms，实测可达 1.2 ms）�
 **整帧效果**：`meanMs` **3.204 → 2.264（−0.94 ms，−29%）**。注意 `acquire` 从 0.04 涨到 0.52–0.60 ms——CPU 变快后等待交换链图像的等待**浮出来了**，这是 fifo 下把等待挪到 `acquire` 的正常形态（T-803 已证），不是回归。
 
 **天空盘迁移（`sky_disc.wgsl`）**：`params.yzw` 就是相机位置（`SkyDiscResources.Update(..., eye)` 写入 `floats[9..11]`），因此 `viewProjection(eye) * (p + eye) == skyViewProjection(0) * p` 恒等。改成 `camera.skyViewProjection * vec4(position, 1.0)`，`params.x`（`FogSkyEnd`）保留。像素对比（`MC_SKY_DISC_TEST=1`）：**0 / 452 166 像素不同，最大通道差 0**，中心像素 `(123,164,255)` 两侧一致，自检自身断言 `expect argb 0xFF7BA4FF` 通过。**局限**：该自检渲染的是铺满整帧的纯色盘（全帧只有 1 种颜色），所以它证明颜色与覆盖范围一致，但**没有可见边缘**来证明几何偏移；几何部分的证据是上述代数恒等 + T-811 那族等价性测试。
+
+### 9.42 T-817：诊断标签一直错位；`updates` 的 7 倍下降**是真的**，钱在 `prep-entities`（2026-11-11）
+
+#### （一）先修口径：`frame-cpu` 的五个标签和桶错位了
+`FrameCpuTimings` 的 `Stage` 枚举顺序与 `Names` 数组顺序不一致（`CelBuild, CelCamera, CelDisc, SceneTerrain, SceneEntities` vs `scene-terrain, scene-entities, cel-build, cel-camera, cel-disc`），而报告是**按下标打印**的。已核实该错位在 `d71e037`（T-807）时即存在，不是本轮引入。实际对应关系：
+
+| 打印出来的标签 | 统计的其实是 |
+| --- | --- |
+| `scene-terrain` | `CelBuild` |
+| `scene-entities` | `CelCamera` |
+| `cel-build` | `CelDisc` |
+| `cel-camera` | **`SceneTerrain`** |
+| `cel-disc` | `SceneEntities` |
+
+**影响**：§9.37 / §9.38 / §9.39 / §9.40 / §9.41 以及 T-805…T-816 里引用的 `cel-camera` / `cel-build` / `cel-disc` / `scene-terrain` / `scene-entities` 数字**都指错了桶**，不可再引用。特别是"`cel-camera` 没降"这个结论（T-809/T-810/T-812）——那一行其实是**地形 CPU**，所以它当然不随天体改动而变。**修正后实测 `cel-camera = 0.000 ms`，天体相机阶段确实已经归零。**
+
+已修：`Names` 顺序改为与枚举一致，并在数组上写了注释说明"顺序必须与枚举一致（此前错位，所有历史 cel-* 数字都指错桶）"。
+
+#### （二）帧准备（原 `updates`）四段拆分（T-817）
+新增三个标记把原来的 `updates` 拆成四段，实测（同机位、VD12、637 chunks / 186 drawn / 1227928 tri，两次运行复现误差 ≤2 %）：
+
+| 段 | 覆盖内容 | 实测 |
+| --- | --- | --- |
+| `prep-pump` | 诊断打印（每 60 帧）+ `presented++` + `window.Pump()` + 循环头 + 尺寸检查 | **0.009–0.012 ms** |
+| `prep-ui` | UI 顶点/索引上传 + 正交矩阵 + `uiRanges = ui.Ranges.ToArray()` | **0.075 ms** |
+| `prep-entities` | 动态几何 + 实体分层上传 + `geometryUpdates`/`geometryRemovals`（含 `arena.Apply`） | **0.068–0.076 ms** |
+| `updates`（剩余） | `rebuildRequest` 重建与重传（服务端路径为 null） | **0.000 ms** |
+
+⇒ 帧准备合计 **0.15–0.16 ms**，四段相加与原 `updates` 吻合。最大项是 `prep-ui` 与 `prep-entities`，两者各约 0.07 ms；`prep-ui` 里有一个**每帧分配**（`ui.Ranges.ToArray()`），是明确的可动点，但本轮只报数字、未改。
+
+#### （三）T-816 那个"7 倍下降"是真的，位置也找到了
+用 `git checkout eb281e0~1 -- <三个文件>` 把 P1/P2 退回，**保留同一套拆分标记**，同机位重测：
+
+| 桶 | 退回 P1/P2（= 改前） | 当前（P1/P2 生效） |
+| --- | --- | --- |
+| `onframe` | 0.280–0.397 | 0.004–0.025 |
+| **`prep-entities`** | **0.927–0.970** | **0.068–0.076** |
+| `prep-pump` | 0.132–0.176 | 0.009–0.012 |
+| `prep-ui` | 0.080–0.081 | 0.075 |
+| `acquire` | 0.046–0.049 | 0.238–0.325 |
+| `frame` | 3.63–3.71 | 2.58–2.59 |
+| `meanMs` | 3.677 | 2.600 |
+
+**结论**：那 0.89 ms 不是跨进程漂移，而是**每帧 `SetWindowText` 的开销分摊在两处** —— 一部分在 `onframe`（0.28–0.40），主体在紧接着的**上传段 `prep-entities`（0.93）**。拆开之前它们都塞在 `updates` 里，所以看起来是"`updates` 掉了 7 倍"。
+**机制说明的边界**：可以证明的是"该开销随每帧标题写入消失而消失，且两处各自复现"；至于操作系统层面的确切原因（同步 `WM_SETTEXT` 往返、或窗口 DC 失效导致下一次上传付出额外代价）是**假设，未验证**。

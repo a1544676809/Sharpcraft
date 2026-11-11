@@ -19,6 +19,9 @@ internal sealed class FrameCpuTimings
     {
         Frame,
         Updates,
+        PrepPump,
+        PrepUi,
+        PrepEntities,
         Acquire,
         Camera,
         Scene,
@@ -43,8 +46,12 @@ internal sealed class FrameCpuTimings
 
     private static readonly string[] Names =
     [
-        "frame", "updates", "acquire", "camera", "scene", "scene-open", "scene-sky", "scene-celestial", "scene-terrain",
-        "scene-entities", "cel-build", "cel-camera", "cel-disc", "oit", "text", "clouds", "ui", "present-rec", "submit", "swap", "onframe"
+        // The order MUST match the Stage enum, because the report prints by index. It did not before T-817: the labels
+        // scene-terrain, scene-entities, cel-build, cel-camera and cel-disc were rotated by three against their buckets,
+        // so every quoted cel-* figure before this change names the wrong stage.
+        "frame", "updates", "prep-pump", "prep-ui", "prep-entities", "acquire", "camera", "scene", "scene-open",
+        "scene-sky", "scene-celestial", "cel-build", "cel-camera", "cel-disc", "scene-terrain", "scene-entities",
+        "oit", "text", "clouds", "ui", "present-rec", "submit", "swap", "onframe"
     ];
 
     private readonly long[] _windowTicks = new long[(int)Stage.Count];
@@ -121,6 +128,15 @@ internal sealed class FrameCpuTimings
 
     /// <summary>Stage number for the geometry update block.</summary>
     public static int UpdatesStage => (int)Stage.Updates;
+
+    /// <summary>Stage number for the diagnostic report, the window pump and the loop head (T-817).</summary>
+    public static int PrepPumpStage => (int)Stage.PrepPump;
+
+    /// <summary>Stage number for the interface upload and its orthographic matrix (T-817).</summary>
+    public static int PrepUiStage => (int)Stage.PrepUi;
+
+    /// <summary>Stage number for the dynamic and entity geometry uploads (T-817).</summary>
+    public static int PrepEntitiesStage => (int)Stage.PrepEntities;
 
     /// <summary>Stage number for the surface acquire and frame pacing block.</summary>
     public static int AcquireStage => (int)Stage.Acquire;

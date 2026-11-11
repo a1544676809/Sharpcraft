@@ -906,6 +906,10 @@ public static class WindowedRenderer
                 // re-upload at all.
             }
 
+            // Split of the frame preparation, so the diagnostic can name where the budget goes (T-817). This mark closes
+            // the diagnostics report, the window pump and the loop head.
+            Cpu(FrameCpuTimings.PrepPumpStage);
+
             // Rewriting the persistent buffers costs one upload; nothing is allocated or freed in the
             // steady state, so streaming new terrain does not hitch.
             var dynamicIndexCount = 0u;
@@ -955,6 +959,8 @@ public static class WindowedRenderer
                 uiIndexCount = (uint)ui.Indices.Length;
                 uiRanges = ui.Ranges.ToArray();
             }
+
+            Cpu(FrameCpuTimings.PrepUiStage);
 
             if (dynamicGeometry is not null && dynamicGeometry() is { IndexCount: > 0 } dynamic)
             {
@@ -1072,6 +1078,8 @@ public static class WindowedRenderer
                     arenaTranslucent?.Remove(key);
                 }
             }
+
+            Cpu(FrameCpuTimings.PrepEntitiesStage);
 
             var rebuildStarted = System.Diagnostics.Stopwatch.GetTimestamp();
             var rebuiltFrame = rebuildRequest?.Invoke();
