@@ -1163,3 +1163,22 @@ T-799 的教训是"跨进程 A/B 的噪声（±0.5 ms，实测可达 1.2 ms）�
 3. 若第 1 条不可行，退而求其次：把十余个 per-body uniform 合成**一个大 uniform 缓冲 + dynamic offset**，每帧一次 `WriteBuffer`。
 
 预期收益：CPU 侧去掉 0.32 ms（cel-camera + cel-disc 中除 `skyDiscPerFrame` 计算外的部分），墙钟侧预计 **0.05–0.10 ms**（其余被呈现等待掩盖）；风险中等（要改顶点生成与绑定布局），需同机位像素对比验收。
+
+### 9.40 T-809 已回退：天体位姿回归（2026-11-11）
+
+**改动**（`b7d6818`，已由 `c4f54b5` 回退）：给相机加 `skyViewProjection`（eye 置原点），把 `CelestialResources` 的 `baseModel` 烘焙进顶点，删掉 per-body transform uniform 与 binding 1。
+
+**结果：两项都不成立。**
+
+| 项 | 期望 | 实测 |
+| --- | --- | --- |
+| `cel-camera` | ≈ 0 | **0.172–0.184 ms**（改前 0.197–0.240，几乎没动） |
+| 太阳位置 | 不变 | **回归**——太阳离玩家过远、高度不对（用户目视发现） |
+
+**已核实为"正确"的部分**：`BakeCelestialVertices` 用 `Vector3.Transform(v, model)`（行向量 `v * M`）与着色器 `VP * model * pos` 的列主序语义一致；`skyViewProjection = BuildViewProjection(0, target − position, …)` 与旧 `BuildViewProjection(position, target, …)` 的朝向相同，只差 `T(−position)`。
+
+**未能核实的关键点**：旧 `model` 的相乘顺序是 `T(position) * baseModel` 还是 `baseModel * T(position)`。行向量约定下两者语义完全不同，只有前者能让 `T(−position)` 与之抵消。该组合代码已随改动删除，无法直接核对——**这是回退的直接原因**。
+
+**教训**：验收只做了"冒烟 + 门禁 + 单元测试"，而**像素对比能发现这个回归**。T-809 的验收清单里本来写了"天空带 y<350 逐像素"，但被"看起来正确就没问题"放过了。**涉及相机/投影矩阵的改动，必须用逐像素对比，不能只靠目视。**
+
+**重做的前置条件**：先写单元测试——给定相同的 `position`/`target`/`baseModel`，**旧公式与新公式算出的顶点坐标必须逐位相同**——测试通过后再重做。这比截图可靠，且能长期守住该不变量。
