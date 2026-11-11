@@ -813,8 +813,51 @@ DrawIndexed(pass, indexCount, 1, firstIndex, baseVertex, 0)
 
 | 建议 | 预期收益 | 风险与影响面 | 结论 |
 | --- | --- | --- | --- |
-| 1. OIT 五个目标从 `Rgba32Float` 降到 `Rgba16Float` | OIT 带宽减半（约 0.5 ms 量级） | 深度边界里的设备深度精度下降（半精度在 1.0 附近约 1e-3），可能出现深度分箱的阶梯/条带；需同机位像素 A/B | 先做 A/B 再定 |
+| 1. OIT 五个目标从 `Rgba32Float` 降到 `Rgba16Float` | ~~带宽减半~~ | **用户裁决：不做（2026-11-11）**，后续提案不得再提 | 否决 |
 | 2. 系数 / 累积目标改半分辨率 | 带宽降到 1/4 | 半透明边缘变软、薄面断层；与原版视觉可能有可见差异 | 需像素对照，暂不动 |
 | 3. `bounds` 与 `boundsCulled` 合并为一张目标（剔除 pass 原地读改写） | 少一张全分辨率目标的清与读（约 16–32 B/px） | 需同目标读写（wgpu 允许不同 pass 内同一纹理读写，但单 pass 内不允许 aliasing）；改动小、视觉无影响 | 推荐先做 |
 | 4. 物品集空跑消除（**已实施**） | 4 个全屏 pass + 4 次清 | 逐像素等价；本机位无物品几何 | 已完成 |
 | 5. GPU timestamp query 接缝 | 得到可信的分阶段 GPU 时间 | 需新增接缝方法（须先批准） | 建议下一步先批准这一项，否则后续优化都在噪声里做决定 |
+### 9.31 GPU 时间戳诊断（T-800，2026-11-11）
+
+9.30.5 的结论是"阶段前缀 A/B 的单 pass 差值小于跨进程噪声"，因此需要可信的分阶段 GPU 时间。本轮按用户裁决（**仅 debug 模式、默认关闭**）把时间戳查询接到接缝上。
+
+**开关与输出**：宿主选项 `MC_GPU_TIMINGS=1` → `FrameDiagnostics.GpuTimings` → `WindowedRenderer` 每 60 帧打印一行：
+
+```
+gpu-timings: n=60 total=3.412 opaque-scene=1.305 oit-bounds=0.104 oit-cull=0.071 oit-transmit=0.212 oit-accumulate=0.688 oit-composite=0.352 clouds=0.401 ui=0.012 present-copy=0.268
+```
+
+- 覆盖：不透明场景（主 pass：天空 + 不透明 + 切边 + 实体）、OIT 五个阶段、云、UI、上屏拷贝；`total` 是帧首到尾标记之差。
+- 语义：每段 = 相邻两个时间戳之差，即该段在 GPU 上**从上一个标记执行完到本标记执行完**的耗时。
+- 关闭时：不创建 query set、不写时间戳、日志零 `gpu-timings:` 行（实测计数 0）。
+
+**设备特性**：`TIMESTAMP_QUERY` **只在开关打开时才请求**（默认 device 的 `RequiredFeatures` 与改动前完全一致）；适配器不支持时打印
+`gpu-timings: unavailable on this adapter (no timestamp query feature); continuing without it` 并继续正常运行。
+
+**接缝扩展（最小面，诊断专用）**：`QuerySetHandle` + `CreateTimestampQuerySet` / `WriteTimestamp` / `ResolveQuerySet` / `Destroy(QuerySetHandle)`，
+以及 `BufferUsages.QueryResolve`。读回沿用既有 `ReadBuffer`。绑定层没有托管 QuerySet 类型，因此这三处调用直接走其已生成的 C 原型（与 T-797 的 GPU 选择垫片同一处理方式）。
+
+**可整体删除**：全部代码集中在 `NativeGpuTimestamps.cs`（含 `GpuTimingsRecorder`、`NativeQuerySet`、`IGpuTimingMarkers`），加上 `FrameDiagnostics.GpuTimings`、`MC_GPU_TIMINGS` 映射与 8 处 `Mark`/`Report` 调用；删除后构建通过、行为不变（原则 13）。
+
+**已知代价**：每次报告要 `ResolveQuerySet` + 一次阻塞读回（`ReadBuffer` 会 `MapBlocking`），因此报告帧本身可能被拖慢；报告的数据来自该帧之前的时间戳，不受影响。
+**实测结果（2026-11-11，本机 RTX 3060 / Vulkan）：接缝与开关就绪，但本绑定层无法启用该能力，已按设计优雅降级。**
+
+| 检查 | 结果 |
+| --- | --- |
+| 默认路径（无 `MC_GPU_TIMINGS`） | `mesh: 1 blocks, 13568 triangles`、`frame #0 … +7068 KiB`、首帧 `cull: chunks=7 culled=5 cutout=7 translucent=7` —— 与 `67b211e` 逐项一致；日志 `gpu-timings:` 行数 **0** |
+| 打开 `MC_GPU_TIMINGS=1` | 打印一行 `gpu-timings: unavailable with this binding (needs the TIMESTAMP_QUERY_INSIDE_ENCODERS instance feature, which Brew.Wgpu 29.0.0.5 cannot request); continuing without GPU timings`，**不崩溃、无 Validation**，其余指标与默认路径相同 |
+| 不构造 query set 时 | 设备特性与改动前一致（`RequiredFeatures` 仅在开关打开时才考虑 `TimestampQuery`） |
+
+**卡点（事实，不是猜测）**：设备级 `TIMESTAMP_QUERY` 我们已能在开关打开时请求（query set 创建成功、日志 `gpu-timings: enabled, 11 timestamps per frame`），但 `wgpuCommandEncoderWriteTimestamp` 还需要**实例级**特性 `TIMESTAMP_QUERY_INSIDE_ENCODERS`；缺失时 wgpu 报
+`Features(…TIMESTAMP_QUERY_INSIDE_ENCODERS…) are required but not enabled on the device` 并以 uncaptured error **abort 进程**（本轮实测两次）。而 `Brew.Wgpu 29.0.0.5`：
+
+- `WGPUFeatureName` 只到 `TimestampQuery`（无 inside-encoders）；`WGPUInstanceFeatureName` 只有 `TimedWaitAny` / `ShaderSourceSPIRV` / `MultipleDevicesPerAdapter`，**没有该值**；
+- `Instance.Create(InstanceDescriptor&)` 的托管 `InstanceDescriptor` 没有 `nextInChain` 也没有特性列表，因此**无法通过托管 API 请求实例特性**。
+
+**两条可选路径（下一轮二选一，均由用户/Lead 决定）**：
+
+1. **扩展原生垫片到实例创建**：仿照 ADR-0028 的做法，在诊断开关打开时用自建 `WGPUInstanceDescriptor` + `WGPUInstanceExtras`（含 `requiredFeatureCount/requiredFeatures`）调用 `wgpuCreateInstance`，再把实例句柄包装回托管 `Instance`。范围约一个文件，但**触及实例创建**——整个渲染器的入口，风险高于前几次垫片。
+2. **等绑定升级**：绑定暴露实例特性后按现有代码启用（`EncoderTimestampsAvailable` 改为真实探测即可）。届时本轮的接缝方法、开关、标记点、读回逻辑都可直接复用。
+
+**为什么现在必须"拒绝"而不是"试试看"**：没有该特性时写时间戳会在 `Finish` 时 panic 整个进程，不是可捕获异常，所以只能在创建任何资源之前判断并关闭（`NativeGpuTimestamps.EncoderTimestampsAvailable`，注释里写了它成立的条件）。

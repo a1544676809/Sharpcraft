@@ -88,4 +88,13 @@ public sealed record FrameDiagnostics
     /// without transparency, which is expected: this is a measurement switch, not a rendering mode.
     /// </remarks>
     public int OitStages { get; init; }
+
+    /// <summary>
+    /// Write GPU timestamps around every frame stage and print them once a second.
+    /// </summary>
+    /// <remarks>
+    /// Diagnostic only (T-800): with the switch off no query set exists and nothing is written. The device requests the
+    /// timestamp query feature only when this is set, and an adapter without that feature logs one line and continues.
+    /// </remarks>
+    public bool GpuTimings { get; init; }
 }

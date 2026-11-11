@@ -58,6 +58,17 @@ public readonly struct SamplerHandle
     public bool IsValid => Value is not null;
 }
 
+/// <summary>An opaque set of GPU timestamp queries. Diagnostic only (T-800).</summary>
+public readonly struct QuerySetHandle
+{
+    internal QuerySetHandle(object value) => Value = value;
+
+    internal object Value { get; }
+
+    /// <summary>Whether this handle wraps a resource that was actually created.</summary>
+    public bool IsValid => Value is not null;
+}
+
 /// <summary>An opaque render pipeline owned by a render backend.</summary>
 public readonly struct PipelineHandle
 {
@@ -111,7 +122,10 @@ public enum BufferUsages
     MapRead = 64,
 
     /// <summary>Source of indirect draw or dispatch arguments.</summary>
-    Indirect = 128
+    Indirect = 128,
+
+    /// <summary>Destination of a timestamp query resolve. Diagnostic only (T-800).</summary>
+    QueryResolve = 256
 }
 
 /// <summary>What a texture may be used for.</summary>
@@ -260,6 +274,29 @@ public interface IRenderBackend
     /// <param name="size">Bytes to read.</param>
     byte[] ReadBuffer(Brew.Wgpu.Instance instance, BufferHandle buffer, ulong offset, nuint size);
 
+    /// <summary>Creates a timestamp query set, for the GPU timing diagnostic only.</summary>
+    /// <param name="count">Number of timestamps the set holds.</param>
+    /// <returns>The query set, to be released with <see cref="Destroy(QuerySetHandle)"/>.</returns>
+    /// <remarks>Diagnostic only: nothing calls this unless the host asks for GPU timings (principle 13).</remarks>
+    QuerySetHandle CreateTimestampQuerySet(uint count);
+
+    /// <summary>Writes one timestamp, which must be recorded outside a render pass.</summary>
+    /// <param name="encoder">Encoder recording the frame.</param>
+    /// <param name="querySet">Set to write into.</param>
+    /// <param name="index">Slot index.</param>
+    /// <remarks>Diagnostic only, as <see cref="CreateTimestampQuerySet(uint)"/>.</remarks>
+    void WriteTimestamp(CommandEncoderHandle encoder, QuerySetHandle querySet, uint index);
+
+    /// <summary>Resolves a range of timestamps into a buffer.</summary>
+    /// <param name="encoder">Encoder recording the frame.</param>
+    /// <param name="querySet">Set to resolve.</param>
+    /// <param name="first">First slot.</param>
+    /// <param name="count">Slot count.</param>
+    /// <param name="destination">Destination buffer, created with the query resolve usage.</param>
+    /// <param name="offset">Destination byte offset.</param>
+    /// <remarks>Diagnostic only, as <see cref="CreateTimestampQuerySet(uint)"/>.</remarks>
+    void ResolveQuerySet(CommandEncoderHandle encoder, QuerySetHandle querySet, uint first, uint count, BufferHandle destination, ulong offset);
+
     /// <summary>Copies a texture region into a buffer, for readback.</summary>
     /// <param name="encoder">Encoder recording the frame.</param>
     /// <param name="texture">Texture to read.</param>
@@ -298,6 +335,10 @@ public interface IRenderBackend
 
     /// <summary>Releases a compute pipeline.</summary>
     void Destroy(ComputePipelineHandle pipeline);
+
+    /// <summary>Releases a timestamp query set. Diagnostic only (T-800).</summary>
+    /// <param name="querySet">Set to release.</param>
+    void Destroy(QuerySetHandle querySet);
 
     /// <summary>Creates a command encoder for one frame's recording.</summary>
     CommandEncoderHandle CreateCommandEncoder();
@@ -630,6 +671,29 @@ public sealed class WgpuRenderBackend : IRenderBackend
             native.Unmap();
         }
     }
+
+    /// <inheritdoc/>
+    public QuerySetHandle CreateTimestampQuerySet(uint count) => new(new NativeQuerySet(_device, count));
+
+    /// <inheritdoc/>
+    public void WriteTimestamp(CommandEncoderHandle encoder, QuerySetHandle querySet, uint index) =>
+        NativeGpuTimestamps.Write(
+            RequireValid<CommandEncoder>(encoder.Value is not null, encoder.Value),
+            RequireValid<NativeQuerySet>(querySet.Value is not null, querySet.Value),
+            index);
+
+    /// <inheritdoc/>
+    public void ResolveQuerySet(CommandEncoderHandle encoder, QuerySetHandle querySet, uint first, uint count, BufferHandle destination, ulong offset) =>
+        NativeGpuTimestamps.Resolve(
+            RequireValid<CommandEncoder>(encoder.Value is not null, encoder.Value),
+            RequireValid<NativeQuerySet>(querySet.Value is not null, querySet.Value),
+            first,
+            count,
+            RequireValid<Brew.Wgpu.Buffer>(destination.Value is not null, destination.Value),
+            offset);
+
+    /// <inheritdoc/>
+    public void Destroy(QuerySetHandle querySet) => RequireValid<NativeQuerySet>(querySet.Value is not null, querySet.Value).Dispose();
 
     /// <inheritdoc/>
     public void CopyTextureToBuffer(CommandEncoderHandle encoder, TextureHandle texture, BufferHandle buffer, uint bytesPerRow, uint width, uint height) =>
@@ -1082,6 +1146,11 @@ public sealed class WgpuRenderBackend : IRenderBackend
         if (usage.HasFlag(BufferUsages.Indirect))
         {
             result |= Brew.Wgpu.BufferUsage.Indirect;
+        }
+
+        if (usage.HasFlag(BufferUsages.QueryResolve))
+        {
+            result |= Brew.Wgpu.BufferUsage.QueryResolve;
         }
 
         return result;
