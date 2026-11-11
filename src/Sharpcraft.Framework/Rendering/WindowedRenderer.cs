@@ -1653,23 +1653,19 @@ public static class WindowedRenderer
             // (The weighted-blended OIT path that used to live here was shelved for its visual quality and is no longer
             // compiled; the reference OIT above is the only transparency path.)
 
+            // Text, clouds and the interface share one pass: same colour target, same depth attachment, same drawing
+            // order. What costs is the pass object itself (encoder validation and driver setup), not the draws inside it
+            // (T-804).
+            var uiPass = backend.BeginRenderPass(
+                encoder,
+                [ColorAttachmentDesc.Keep(frameView)],
+                DepthAttachmentDesc.Keep(depthViewHandle));
+            try
+            {
             if (worldText is not null)
             {
                 worldText.SetDraws(worldTextPerFrame?.Invoke() ?? []);
-                // The helper still takes a native pass, so the handle is unwrapped for that call only; the pass itself
-                // is begun and ended through the seam.
-                var worldTextPass = backend.BeginRenderPass(
-                    encoder,
-                    [ColorAttachmentDesc.Keep(frameView)],
-                    DepthAttachmentDesc.Keep(depthViewHandle));
-                try
-                {
-                    worldText.Draw(backend, worldTextPass);
-                }
-                finally
-                {
-                    backend.EndRenderPass(worldTextPass);
-                }
+                worldText.Draw(backend, uiPass);
 
                 Cpu(FrameCpuTimings.TextStage);
             }
@@ -1677,23 +1673,12 @@ public static class WindowedRenderer
             // occlude each other correctly (the reference draws them in executeClassicTransparency).
             if (cloudColour is not null && cloudOit is null && !skipClouds)
             {
-                var cloudPass = backend.BeginRenderPass(
-                    encoder,
-                    [ColorAttachmentDesc.Keep(frameView)],
-                    DepthAttachmentDesc.Keep(depthViewHandle));
-                try
+                if (cloudDrawFrame is { } cloudDraw)
                 {
-                    if (cloudDrawFrame is { } cloudDraw)
-                    {
-                        cloudColour.SetDraws([cloudDraw]);
-                    }
+                    cloudColour.SetDraws([cloudDraw]);
+                }
 
-                    cloudColour.Draw(backend, cloudPass);
-                }
-                finally
-                {
-                    backend.EndRenderPass(cloudPass);
-                }
+                cloudColour.Draw(backend, uiPass);
             }
 
             Cpu(FrameCpuTimings.CloudsStage);
@@ -1701,12 +1686,6 @@ public static class WindowedRenderer
             // Pass 4: the interface draws last, over the resolved frame, in its own pass so it never participates in the
             // world depth test or the transparency resolve.
             if (!skipInterface)
-            {
-            var uiPass = backend.BeginRenderPass(
-                encoder,
-                [ColorAttachmentDesc.Keep(frameView)],
-                DepthAttachmentDesc.Keep(depthViewHandle));
-            try
             {
 
             if (uiIndexCount > 0 && uiRanges.Length > 0)
@@ -1770,10 +1749,10 @@ public static class WindowedRenderer
             }
 
             }
+            }
             finally
             {
                 backend.EndRenderPass(uiPass);
-            }
             }
 
             Cpu(FrameCpuTimings.UiStage);
