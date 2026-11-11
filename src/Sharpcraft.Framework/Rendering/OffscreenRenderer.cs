@@ -1011,11 +1011,21 @@ public static class OffscreenRenderer
         private readonly PipelineHandle _pipeline;
         private BufferHandle[] _vertexBuffers = [];
         private BufferHandle[] _indexBuffers = [];
+        private BufferHandle[] _transformBuffers = [];
+
+        /// <summary>One millimetre, squared: the lag below which a camera move is invisible on the celestial dome.</summary>
+        private const float MinimumCameraDeltaSquared = 1e-6f;
+
+        private readonly byte[] _transformScratch = new byte[TransformUniformSize];
+        private readonly float[] _transformScratchFloats = new float[20];
+        private Vector3 _pendingDelta;
         private BindGroupHandle[] _bindGroups = [];
         private uint[] _indexCounts = [];
+        private Matrix4x4[] _baseModels = [];
+        private Vector4[] _tints = [];
         private readonly BufferHandle _cameraBuffer;
         private readonly ulong _cameraSize;
-        private readonly List<(BufferHandle Vertex, BufferHandle Index, BindGroupHandle BindGroup)> _retired = new();
+        private readonly List<(BufferHandle Vertex, BufferHandle Index, BufferHandle Transform, BindGroupHandle BindGroup)> _retired = new();
 
         public CelestialResources(IRenderBackend backend, FrameRequest request, BufferHandle cameraBuffer, ulong cameraSize, TextureFormat format = TextureFormat.Rgba8Unorm)
         {
@@ -1053,8 +1063,9 @@ public static class OffscreenRenderer
             _layout = backend.CreateBindGroupLayout(
             [
                 BindGroupLayoutEntryDesc.UniformBuffer(0, ShaderStages.Vertex) with { MinBindingSize = cameraSize },
-                BindGroupLayoutEntryDesc.Texture(1, ShaderStages.Fragment),
-                BindGroupLayoutEntryDesc.Sampler(2, ShaderStages.Fragment)
+                BindGroupLayoutEntryDesc.UniformBuffer(1, ShaderStages.Vertex | ShaderStages.Fragment) with { MinBindingSize = TransformUniformSize },
+                BindGroupLayoutEntryDesc.Texture(2, ShaderStages.Fragment),
+                BindGroupLayoutEntryDesc.Sampler(3, ShaderStages.Fragment)
             ]);
 
             _pipelineLayout = backend.CreatePipelineLayout([_layout]);
@@ -1090,9 +1101,10 @@ public static class OffscreenRenderer
         /// <summary>Replaces the sun/moon draws while keeping the loaded textures and pipeline (per-frame angles).</summary>
         public void SetDraws(IReadOnlyList<CelestialQuadDraw> draws)
         {
-            foreach (var (vertex, index, bindGroup) in _retired)
+            foreach (var (vertex, index, transform, bindGroup) in _retired)
             {
                 _backend.Destroy(bindGroup);
+                _backend.Destroy(transform);
                 _backend.Destroy(index);
                 _backend.Destroy(vertex);
             }
@@ -1100,33 +1112,48 @@ public static class OffscreenRenderer
             _retired.Clear();
             for (var i = 0; i < _bindGroups.Length; i++)
             {
-                _retired.Add((_vertexBuffers[i], _indexBuffers[i], _bindGroups[i]));
+                _retired.Add((_vertexBuffers[i], _indexBuffers[i], _transformBuffers[i], _bindGroups[i]));
             }
 
             _vertexBuffers = new BufferHandle[draws.Count];
             _indexBuffers = new BufferHandle[draws.Count];
+            _transformBuffers = new BufferHandle[draws.Count];
             _bindGroups = new BindGroupHandle[draws.Count];
             _indexCounts = new uint[draws.Count];
+            _baseModels = new Matrix4x4[draws.Count];
+            _tints = new Vector4[draws.Count];
 
             for (var index = 0; index < draws.Count; index++)
             {
                 var draw = draws[index];
-                // Model and tint are baked into the vertices, so the shader only needs the shared sky matrix and a body
-                // costs nothing per frame once it is uploaded (T-808).
-                var baked = BakeCelestialVertices(draw.Vertices, draw.Model, draw.Tint);
+                _baseModels[index] = draw.Model;
+                _tints[index] = draw.Tint;
                 _vertexBuffers[index] = _backend.CreateBufferInit(
-                    new BufferDesc((ulong)baked.Length * sizeof(float), BufferUsages.Vertex),
-                    System.Runtime.InteropServices.MemoryMarshal.AsBytes(baked.AsSpan()));
+                    new BufferDesc((ulong)draw.Vertices.Length * sizeof(float), BufferUsages.Vertex),
+                    System.Runtime.InteropServices.MemoryMarshal.AsBytes(draw.Vertices.AsSpan()));
                 _indexBuffers[index] = _backend.CreateBufferInit(
                     new BufferDesc((ulong)draw.Indices.Length * sizeof(ushort), BufferUsages.Index),
                     System.Runtime.InteropServices.MemoryMarshal.AsBytes(draw.Indices.AsSpan()));
+
+                var transformBytes = new byte[TransformUniformSize];
+                var transformFloats = new float[20];
+                WriteMatrix(draw.Model, transformFloats, 0);
+                transformFloats[16] = draw.Tint.X;
+                transformFloats[17] = draw.Tint.Y;
+                transformFloats[18] = draw.Tint.Z;
+                transformFloats[19] = draw.Tint.W;
+                System.Runtime.InteropServices.MemoryMarshal.AsBytes(transformFloats.AsSpan()).CopyTo(transformBytes);
+                _transformBuffers[index] = _backend.CreateBufferInit(
+                    new BufferDesc(TransformUniformSize, BufferUsages.Uniform | BufferUsages.CopyDst),
+                    transformBytes.AsSpan());
 
                 _bindGroups[index] = _backend.CreateBindGroup(
                     _layout,
                     [
                         BindGroupEntryDesc.Uniform(0, _cameraBuffer, 0, _cameraSize),
-                        BindGroupEntryDesc.Texture(1, _views[draw.TextureIndex]),
-                        BindGroupEntryDesc.Sampler(2, _sampler)
+                        BindGroupEntryDesc.Uniform(1, _transformBuffers[index], 0, TransformUniformSize),
+                        BindGroupEntryDesc.Texture(2, _views[draw.TextureIndex]),
+                        BindGroupEntryDesc.Sampler(3, _sampler)
                     ]);
 
                 _indexCounts[index] = (uint)draw.Indices.Length;
@@ -1152,58 +1179,41 @@ public static class OffscreenRenderer
             }
         }
 
-        /// <summary>
-        /// Kept for the call sites: the dome is re-centred by the shared sky matrix, so a camera move uploads nothing.
-        /// </summary>
-        /// <param name="eyeDelta">Unused; the bodies follow the camera through the camera uniform (T-808).</param>
+        /// <summary>Re-centres the bodies on the camera by translating each base model by <paramref name="eyeDelta"/>.</summary>
         public void UpdateCamera(Vector3 eyeDelta)
         {
-            _ = eyeDelta;
-            NoOpCameraUpdates++;
-        }
-
-        /// <summary>Camera updates that still touched a buffer; zero now that the sky matrix carries the camera (T-808).</summary>
-        public long AppliedCameraUpdates { get; private set; }
-
-        /// <summary>Camera updates skipped by the old threshold; kept so existing diagnostics still compile (T-807).</summary>
-        public long SkippedCameraUpdates => 0;
-
-        /// <summary>How often the call site asked the bodies to follow the camera; every one is a no-op now.</summary>
-        public long NoOpCameraUpdates { get; private set; }
-
-        /// <summary>
-        /// Bakes a body's model matrix and tint into its vertices, so the shader needs no per-draw uniform (T-808).
-        /// </summary>
-        /// <param name="vertices">Source vertices: position (3) then uv (2) floats per vertex.</param>
-        /// <param name="model">Body transform applied to the position.</param>
-        /// <param name="tint">Tint copied onto every vertex.</param>
-        /// <returns>The baked vertex array: position (3), uv (2), tint (4).</returns>
-        private static float[] BakeCelestialVertices(float[] vertices, Matrix4x4 model, Vector4 tint)
-        {
-            const int sourceStride = 5;
-            const int bakedStride = 9;
-            var count = vertices.Length / sourceStride;
-            var baked = new float[count * bakedStride];
-            for (var vertex = 0; vertex < count; vertex++)
+            // The bodies are pinned to the camera, so a sub millimetre lag is invisible: at the dome distance it subtends
+            // about two arc seconds, a thousandth of the sun's angular size. Updates are therefore batched until the
+            // camera really moved, which keeps a standing player from rewriting every transform buffer each frame (T-807).
+            _pendingDelta += eyeDelta;
+            if (_pendingDelta.LengthSquared() < MinimumCameraDeltaSquared)
             {
-                var source = vertex * sourceStride;
-                var target = vertex * bakedStride;
-                var position = Vector3.Transform(
-                    new Vector3(vertices[source], vertices[source + 1], vertices[source + 2]),
-                    model);
-                baked[target] = position.X;
-                baked[target + 1] = position.Y;
-                baked[target + 2] = position.Z;
-                baked[target + 3] = vertices[source + 3];
-                baked[target + 4] = vertices[source + 4];
-                baked[target + 5] = tint.X;
-                baked[target + 6] = tint.Y;
-                baked[target + 7] = tint.Z;
-                baked[target + 8] = tint.W;
+                SkippedCameraUpdates++;
+                return;
             }
 
-            return baked;
+            AppliedCameraUpdates++;
+            var translation = Matrix4x4.CreateTranslation(_pendingDelta);
+            _pendingDelta = Vector3.Zero;
+            var transformBytes = _transformScratch;
+            var transformFloats = _transformScratchFloats;
+            for (var index = 0; index < _transformBuffers.Length; index++)
+            {
+                WriteMatrix(translation * _baseModels[index], transformFloats, 0);
+                transformFloats[16] = _tints[index].X;
+                transformFloats[17] = _tints[index].Y;
+                transformFloats[18] = _tints[index].Z;
+                transformFloats[19] = _tints[index].W;
+                System.Runtime.InteropServices.MemoryMarshal.AsBytes(transformFloats.AsSpan()).CopyTo(transformBytes);
+                _backend.WriteBuffer(_transformBuffers[index], transformBytes, 0);
+            }
         }
+
+        /// <summary>Camera updates applied to the transforms (diagnostic for T-807).</summary>
+        public long AppliedCameraUpdates { get; private set; }
+
+        /// <summary>Camera updates skipped because the accumulated move was below the visible threshold (T-807).</summary>
+        public long SkippedCameraUpdates { get; private set; }
 
         public void Dispose()
         {
@@ -1212,6 +1222,10 @@ public static class OffscreenRenderer
                 _backend.Destroy(bindGroup);
             }
 
+            foreach (var buffer in _transformBuffers)
+            {
+                _backend.Destroy(buffer);
+            }
 
             foreach (var buffer in _indexBuffers)
             {
@@ -1223,9 +1237,10 @@ public static class OffscreenRenderer
                 _backend.Destroy(buffer);
             }
 
-            foreach (var (vertex, index, bindGroup) in _retired)
+            foreach (var (vertex, index, transform, bindGroup) in _retired)
             {
                 _backend.Destroy(bindGroup);
+                _backend.Destroy(transform);
                 _backend.Destroy(index);
                 _backend.Destroy(vertex);
             }

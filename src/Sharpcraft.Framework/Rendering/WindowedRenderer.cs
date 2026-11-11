@@ -607,7 +607,7 @@ public static class WindowedRenderer
             refTargetsCreated = true;
         }
 
-        Span<float> cameraBlock = stackalloc float[32];
+        Span<float> cameraBlock = stackalloc float[16];
         var cameraBytes = new byte[VertexLayout.CameraUniformSize];
 
         var colour = request.ClearColour;
@@ -1255,7 +1255,7 @@ public static class WindowedRenderer
                 (int)frameWidth,
                 (int)frameHeight);
 
-            for (var index = 0; index < 32; index++)
+            for (var index = 0; index < 16; index++)
             {
                 BitConverter.TryWriteBytes(cameraBytes.AsSpan(index * sizeof(float)), cameraBlock[index]);
             }
