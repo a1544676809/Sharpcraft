@@ -39,7 +39,7 @@ public static class OffscreenRenderer
         try
         {
             var instance = Instance.Create();
-            using var adapter = instance.RequestAdapterBlocking();
+            using var adapter = NativeAdapterSelection.Resolve(instance, spec: null);
             return adapter.GetInfo().Description;
         }
         catch (AdapterRequestException exception)
@@ -390,7 +390,7 @@ public static class OffscreenRenderer
         try
         {
             var instance = Instance.Create();
-            using var adapter = instance.RequestAdapterBlocking();
+            using var adapter = NativeAdapterSelection.Resolve(instance, request.Diagnostics?.Gpu);
             var adapterName = adapter.GetInfo().Description;
             // Ask for the limits this adapter actually offers rather than the defaults, whose maxBufferSize is 256 MiB. A full
         // amplified view needs more than that for one geometry buffer, and the adapter's own figure is the honest ceiling.

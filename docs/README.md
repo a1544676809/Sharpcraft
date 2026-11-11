@@ -96,7 +96,7 @@
 
 | 文档 | 摘要 | 状态 | 最后更新 |
 | --- | --- | --- | --- |
-| [`STATE.md`](STATE.md) | M5.3 渲染管线。 | 未标注 | 2026-11-10 23:20 |
+| [`STATE.md`](STATE.md) | M5.3 渲染管线。 | 未标注 | 2026-11-11 09:20 |
 | [`risks.md`](risks.md) | 未解决的不确定性：概率 / 影响 / 缓解 / 复查条件 | 活文档 | - |
 | [`traceability.md`](traceability.md) | 规格章节 ↔ 测试 ↔ 代码目录，一行一个任务 | 活文档 | - |
 
@@ -106,7 +106,7 @@
 | --- | --- |
 | [`analysis/`](analysis/README.md) | 48 |
 | [`architecture/`](architecture/README.md) | 4 |
-| [`decisions/`](decisions/README.md) | 30 |
+| [`decisions/`](decisions/README.md) | 31 |
 | [`milestones/`](milestones/README.md) | 2 |
 | [`modules/`](modules/README.md) | 31 |
 | [`repro/`](repro/README.md) | 0 |

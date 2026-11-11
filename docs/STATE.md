@@ -18,11 +18,11 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 | T-792 | 窗口只渲染 7–9 个区块 | 根因：预载后 29 秒无帧运行，无人应答 keep-alive，服务器 30 秒判死连接。修复后区块 **7 → 496**，服务器不再 `Timed out` |
 | T-793 | 首帧请求 44.6 s | 根因：`BuildRequest` 二次网格化且未传 `StateCullTable`/`StateVisualCache`。根治：删除第二遍，改为消费 `ChunkMeshCache` 已有产出。**44.6 s → 26 ms**，几何逐项等价，分配 1.09 GB → 0 |
 | T-794 | 首帧 6.8 s 空白 | 未复现——是 T-793 那 1.09 GB 分配风暴引发的一次性 GC，随修复消失。生产代码零改动 |
-| T-791 | GPU 区块剔除 | **实测否决**：剔除总收益 0.4–2.7 ms，CPU 循环 <0.05 ms（<1% 帧时间）；搬 GPU 省 <0.01 ms 却要新增 `DrawIndexedIndirect` + 一致性门禁。`ChunkCuller` 保留停放 |
+| T-797 | 默认选高性能 GPU + 可指定 | 新增原生垫片（复用绑定的 C 原型 + `[UnsafeAccessor]`），默认 `HighPerformance`；启动打印 `gpu: selected NVIDIA GeForce RTX 3060 Laptop GPU (DiscreteGPU, Vulkan) preference=high`。`MC_GPU` 支持 `high`/`low`/`list`/名称子串，失败回退并警告。ADR-0028 |`n| T-791 | GPU 区块剔除 | **实测否决**：剔除总收益 0.4–2.7 ms，CPU 循环 <0.05 ms（<1% 帧时间）；搬 GPU 省 <0.01 ms 却要新增 `DrawIndexedIndirect` + 一致性门禁。`ChunkCuller` 保留停放 |
 
 ## 进行中
 
-**T-796 渲染帧时间归因的测量装置**：分段 CPU 计时（`MC_FRAME_CPU`）、三个 A/B pass 开关（`MC_SKIP_OIT` / `MC_SKIP_CLOUDS` / `MC_SKIP_TRANSLUCENT`）、脚本 `tools/verify/measure-frame.ps1`。装置已落地并跑出对照表，结论见 `specs/performance-baseline.md` §12。
+**渲染帧时间归因（续）**：T-796 的装置已就绪（`MC_FRAME_CPU` + 三个 skip 开关 + `tools/verify/measure-frame.ps1`），结论见 `specs/performance-baseline.md` §12；用户要求暂停基准、等环境稳定，下一轮先重采基线（**注意：现在默认跑在 RTX 3060 上，旧基线是核显数据，不可直接比**）。`n`n**T-796 渲染帧时间归因的测量装置**：分段 CPU 计时（`MC_FRAME_CPU`）、三个 A/B pass 开关（`MC_SKIP_OIT` / `MC_SKIP_CLOUDS` / `MC_SKIP_TRANSLUCENT`）、脚本 `tools/verify/measure-frame.ps1`。装置已落地并跑出对照表，结论见 `specs/performance-baseline.md` §12。
 
 ## 阻塞项
 
@@ -70,7 +70,7 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 
 T-796 未提交：`src/Sharpcraft.Framework/Rendering/WindowedRenderer.cs`（分段计时 + 三个 pass 跳过）、`src/Sharpcraft.Framework/Rendering/FrameCpuTimings.cs`（新增）、`src/Sharpcraft.Framework/Rendering/FrameDiagnostics.cs`（4 个显式选项）、`src/Sharpcraft.Client/Game/GameOptions.cs`（宿主开关映射）、`tools/verify/measure-frame.ps1`（新增）、`docs/specs/performance-baseline.md` §12、`docs/traceability.md`、本文件。
 
-最后更新：2026-11-10 23:20
+最后更新：2026-11-11 09:20
 
 ## 待办（已登记，按优先级）
 

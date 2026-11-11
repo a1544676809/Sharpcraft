@@ -67,4 +67,15 @@ public sealed record FrameDiagnostics
 
     /// <summary>Draw every chunk without the frustum test, the fallback when GPU culling is unavailable.</summary>
     public bool DisableCulling { get; init; }
+
+    /// <summary>
+    /// Which GPU to render on: null or <c>high</c> for the most powerful adapter, <c>low</c> for the power saving one,
+    /// <c>list</c> to print every adapter, or a case insensitive substring of an adapter name.
+    /// </summary>
+    /// <remarks>
+    /// The renderers resolve this once, before the device is created, and print the adapter they picked. A value that
+    /// matches no adapter falls back to <c>high</c> with a warning, and an unavailable preference falls back to the
+    /// binding's default request, so a single GPU machine is unaffected.
+    /// </remarks>
+    public string? Gpu { get; init; }
 }

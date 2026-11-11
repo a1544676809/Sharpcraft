@@ -85,7 +85,7 @@ public static class WindowedRenderer
         // a SwapchainAcquireSemaphore that is still in use"). The process is exiting anyway, so the driver reclaims these
         // when it goes; leaking them on the way out is cheaper than an abort on the way out.
         var surface = instance.CreateSurface(ToSurfaceSource(source));
-        var adapter = instance.RequestAdapterBlocking(surface);
+        var adapter = NativeAdapterSelection.Resolve(instance, surface, request.Diagnostics?.Gpu);
         // Ask for the limits this adapter actually offers rather than the defaults, whose maxBufferSize is 256 MiB. A full
         // amplified view needs more than that for one geometry buffer, and the adapter's own figure is the honest ceiling.
         var deviceLimits = adapter.GetLimits();

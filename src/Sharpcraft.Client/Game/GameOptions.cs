@@ -71,7 +71,8 @@ internal sealed class GameOptions
             FrameCpuTiming = Flag("MC_FRAME_CPU"),
             SkipOit = Flag("MC_SKIP_OIT"),
             SkipClouds = Flag("MC_SKIP_CLOUDS"),
-            SkipTranslucent = Flag("MC_SKIP_TRANSLUCENT")
+            SkipTranslucent = Flag("MC_SKIP_TRANSLUCENT"),
+            Gpu = Get("MC_GPU")
         };
     }
 }
