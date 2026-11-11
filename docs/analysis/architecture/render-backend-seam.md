@@ -623,3 +623,35 @@ stderr 中 `Validation` / `panic` / `uncaptured` 全为 0。画面核对（项�
 **裁决：否决 GPU 剔除方案。** 把它搬到 GPU 最多省下这 < 0.05 ms，却要新增 `DrawIndexedIndirect`、间接参数缓冲、GPU/CPU 可见集合一致性门禁。收益比代价低两个量级。`ChunkCuller` 保留为停放代码（T-791 行已记录复查条件）。
 
 **顺带测得的关键对照**：同一机位下**原版 652 fps（约 1.5 ms），本实现约 165 fps（6.0 ms）——慢约 4 倍**。这才是性能工作的正确入口，且它可归因、可测量；把剔除搬到 GPU 属于在 1% 的量级上做优化。
+
+### 9.27 帧时间归因结论：每区块独立缓冲导致的提交量爆炸（T-798）
+
+**测量方法**：VS「CPU 使用率」性能探查器（附加进程，符号正常解析），固定机位、858×527、视距 12、RTX 3060、`MC_PRESENT_MODE=immediate`。
+
+**自 CPU 排名（真正烧 CPU 的函数）**：
+
+| 函数 | 自 CPU |
+| --- | --- |
+| `Brew.Wgpu.CommandEncoder.Finish()` | **34.37%** |
+| `Brew.Wgpu.RenderPassEncoder.SetVertexBuffer(...)` | **7.45%** |
+| `Brew.Wgpu.RenderPassEncoder.SetIndexBuffer(...)` | **5.59%** |
+| `Brew.Wgpu.Queue.Submit(...)` | 5.43% |
+| `Brew.Wgpu.Surface.Present()` | 5.22% |
+| `ChunkGeometryStore.DrawFarthestFirst` | 1.76% |
+| `ChunkGeometryStore.Draw` | 1.19% |
+
+**根因**：`ChunkGeometryStore.DrawEntry` 对**每个区块**做：
+
+```csharp
+_backend.SetVertexBuffer(pass, 0, entry.Vertex);      // 每区块独立缓冲
+_backend.SetIndexBuffer(pass, entry.Index, ...);      // 每区块独立缓冲
+_backend.DrawIndexed(pass, entry.IndexCount, 1, 0, 0, 0);   // 永远从偏移 0 画
+```
+
+每个区块持有**独立的顶点与索引缓冲**（不是共享 arena），于是每帧产生数百次缓冲绑定 + 数百次绘制。`SetVertexBuffer` + `SetIndexBuffer` 合计 **13% 自 CPU** 是直接的绑定开销，而 `CommandEncoder.Finish()` 的 **34.37%** 是它的下游后果——命令条目越多，最终化时逐条序列化的成本越高。
+
+**优化方向**：把区块几何合并进**少量共享大缓冲**，绘制时用 `firstIndex` / `baseVertex` 偏移区分。收益是双重的：直接消除数百次缓冲绑定（13%），并大幅削减 `Finish()` 的序列化量（34%）。
+
+**这与已停放的 `ChunkCuller`（T-791）直接相关**：该特性的设计前提正是"共享 arena + 每槽位一条间接绘制记录"。当前每区块独立缓冲的结构让间接绘制无法落地。因此**合并缓冲是启用 GPU 剔除的前置条件**，不再是两件独立的事。
+
+**测量方法教训（重要）**：初期的"CPU 占用 44%、9 个线程满载"是**区块加载期**的读数，不是稳态——性能探查器的 CPU 曲线显示前高后低，加载完成后其余线程即空闲。**任何 CPU 测量必须先确认处于稳态**，否则会把正常工作误判为缺陷。本轮曾据此连续误判三类根因（网格化空转、present 驱动自旋、收包循环空转），全部被后续证据否证。
