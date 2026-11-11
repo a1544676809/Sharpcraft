@@ -3,7 +3,7 @@
 
 # ADR-0020：每区块几何缓冲 + CPU 视锥剔除（替代单一大 arena）
 
-状态：已接受（2026-11-01）
+状态：**已被 ADR-0029 取代**（2026-11-11）——每区块缓冲改为分页共享 arena；本 ADR 的动机（内存随驻留网格增长、不受单一缓冲上限约束）仍成立，见 0029
 相关：ADR-0011（bulk upload spike）、`docs/specs/network/play-movement.md 7.27`、`docs/modules/clouds.md`
 
 ## 背景
