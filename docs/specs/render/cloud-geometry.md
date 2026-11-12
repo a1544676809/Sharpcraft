@@ -887,3 +887,35 @@ for (Polygon polygon : polygons)
 ### 工具
 
 `tools/verify/rdoc-event-detail.py`：按着色器对聚合 GPU 时长、列出最贵事件及其管线详情。环境变量 `MC_RDOC_CAPTURE` / `MC_RDOC_OUTPUT` / `MC_RDOC_TOP`。
+
+### 渲染器自报的每帧数字（Release，VD12，退出汇总）
+
+```
+window: 44930 frames in 85.0s, worst frame 452.4 ms at #1, 2 frames over 33 ms
+window: arena 637 chunks, presized=False, memory 405.0 MB, uploaded 453.1 MB, 0 full rebuilds
+window: cutout 635 chunks, memory 130.5 MB
+window: translucent 627 chunks, memory 63.0 MB
+window: draws/frame 1037 (solid/cutout/translucent stores)
+window: binds/frame 311.2 (vertex+index), pages 90/29/14, live 543.8 MB of 598.5 MB in 133 pages
+window: cpu per frame over 44930 frames: frame=1.883 ... prep-entities=0.207 ...
+```
+
+| 指标 | 值 |
+| --- | --- |
+| **draws/frame** | **1037** |
+| 区块 | solid 637 / cutout 635 / translucent 627 |
+| binds/frame | 311.2 |
+| 页 | 90 / 29 / 14（133 页，543.8 MB） |
+| 帧时长 | **1.883 ms（约 528 fps）** |
+
+### 这是 GPU 成本的来源
+
+1037 次绘制 / 帧，按捕获的 1.52 ms GPU 分摊约 **1.5 微秒/绘制**。**几何量不是瓶颈，绘制次数是。**
+
+`ChunkGeometryStore` 的设计是"多区块共享少数页、绑定页一次、每区块一个区间发一次绘制"——页绑定已经省掉了，但**绘制次数仍等于可见区块数**。相邻区块若在同一页且索引连续，理论上可以合并成一次 `DrawIndexed`（不透明几何与顺序无关，合并安全）；代价是失去逐区块视锥剔除粒度。
+
+**这是目前最明确的 GPU 侧优化方向：把页内相邻区间合并成更少的绘制。**
+
+### 与"304 万三角形"的关系
+
+捕获里 304 万三角形 vs 网格统计的 34 万，两者**不是同一时刻的镜头**（捕获时区块数与本次不同，捕获那次 501 次绘制、本次 1037 次）。**不能据此断言重复绘制。** 要确认需在同一帧上同时取两个数——目前做不到，因为三角形统计只在退出时打印一次。
