@@ -1052,7 +1052,7 @@ public record OitPipelineSet(RenderPipeline depthBoundsPipeline, RenderPipeline 
 
 ## 23. 原版抓帧对照：绘制次数我们更少，三角形我们多 2.3 倍
 
-对照捕获：`C:\Users\14947\AppData\Local\Temp\RenderDoc\苦力怕启动器_2026.11.11_13.46.36_frame7336.rdc`（原版 Java，OpenGL）。
+对照捕获：用户提供的原版 Java/OpenGL 抓帧（文件名 `苦力怕启动器_2026.11.11_13.46.36_frame7336.rdc`，位于 RenderDoc 的默认捕获目录）。
 
 用同一套 `tools/verify/rdoc-*.py` 读取：
 
@@ -1184,3 +1184,37 @@ GPU 时长计数器在两次重放间波动剧烈（同一个 55k 索引的绘�
 - **索引/绘制/实例数是确定性计数，可采信**（同一捕获重复读取结果一致）
 - **GPU 时长仍不可采信**：原版总计 94943 µs 中三个事件占 87 ms，是管线停顿；我们的 1563 µs 与另一轮 2518 µs 也相差 60%
 - 两次捕获的**场景与可视距离不同**，所以 1.88 倍是量级参考
+
+## 26. 按 section 剔除：第一步已落地（mesher 记录区间）
+
+### 已实现
+
+`MeshBuffer` 现在记录每一段的起始索引：
+
+| 成员 | 作用 |
+| --- | --- |
+| `ReserveSections(int)` | 网格化前按 section 数一次性预留，避免热路径分配 |
+| `MarkSection()` | 记录当前索引数作为该 section 的起点 |
+| `ToMeshData` | 末尾补上总索引数，得到 `starts[i]..starts[i+1]` 的区间 |
+| `MeshData.SectionStarts` | 随网格返回，可空 |
+
+`ChunkMesher.MeshChunk` 在 section 循环**每次迭代开头**调用 `MarkSection()`，在跳过空 section **之前**——这样下标与 section 索引严格对齐，空 section 自然得到一个零长度区间。
+
+测试 `ChunkMeshSectionRangesTests`（4 项）：区间数为 `sectionCount + 1`、单调不减、首元素为 0、空 section 产生零长度区间、有几何的 section 区间非空。
+
+### 踩到的两个门禁（都已修正，值得记下）
+
+1. **`MeshingIntoAWarmBufferDoesNotAllocate` 失败**：最初用 `List<int>` 记录边界，在热路径分配。改成预分配数组后又用了 `ArrayPool<int>.Shared.Rent`，**该测试时过时不过**——池空时 Rent 仍会分配。最终改为 `ReserveSections(count)` 显式预留，连续三轮稳定通过。
+2. **`DocumentsContainNoAbsoluteWorkspacePaths` 失败**：本文档里写了 RenderDoc 捕获的绝对路径。改为文件名形式。
+
+**这两个门禁的存在价值正在于此**：它们把"看起来能跑"的改动挡了下来。
+
+### 未完成（下一步）
+
+第二片尚未实现，回退后未提交：
+
+1. `GeometryData` 增加 `SectionStarts` 与 `SectionMinY`（后者必要，因为 `BoundsOf` 给的是几何实际包围盒，不等于 section 边界）
+2. `WindowCommand` 在构造 `GeometryData` 时透传 `entry.Opaque.SectionStarts` 与 `chunk.MinSectionY * 16`（`MeshedChunk` 上没有 `MinSectionY`，需要从 `ClientWorld` 取）
+3. `ChunkGeometryStore.Entry` 保存区间，`Draw` 对每个 section 单独做视锥测试，并把相邻可见区间**合并**成一次绘制以控制绘制次数
+
+第 3 步的绘制方式是安全的：同一列内各 section 的索引都相对该列的顶点基址，因此只需把区间起点加到索引偏移上，`baseVertex` 不变。
