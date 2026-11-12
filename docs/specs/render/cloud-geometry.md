@@ -1361,3 +1361,46 @@ _entries / SectionStarts: starts[i]..starts[i+1] 是 section i，末尾是总索
 ### 已知风险
 
 FP16 的 transmittance 可能带来色带。本次实测画面未见异常（水域、雾、天空均正常），但**未做逐像素与 32 位版本的比对**。若要作为严格等效性证据，应补一次像素对比。
+
+## 30. 雾必须影响透射率，而不只是颜色
+
+### 症状
+
+半精度 OIT 改动后画面与原版基本一致，唯一差异是：**浓雾里能透过水看到后面的东西**，而原版看不到。
+
+### 原因
+
+`oit_reference.wgsl` 里雾只做了颜色混合：
+
+```wgsl
+let fogged = clamp((fogDistance - fog.range.x) / span, 0.0, 1.0);
+let colour = mix(base, fog.colour.rgb, fogged);
+```
+
+但片段自身的透射率仍然只取 `1 - alpha`（水体纹理 alpha），**与雾无关**。于是水再浓的雾里仍保持原来的透明度，背后的地形就透出来了。
+
+### 原版的机制
+
+`oit_add_transmittance.glsl` 的 `addTransmittance(absorbance)` 把**透射率**编码进小波系数，`oit_composite.fsh` 里 `coverage = 1 - sampledTransmittance`——**覆盖度完全由透射率决定**。也就是说，雾如果要遮住背后的东西，就必须体现在透射率上。
+
+### 修正
+
+新增 `fogAmount(distance)` 辅助函数，并在**两个 pass 里使用同一份 coverage**：
+
+```wgsl
+let coverage = mix(alpha, 1.0, fogAmount(input.fogDistance));
+```
+
+- `fs_transmittance`：`absorbance = toAbsorbance(1.0 - coverage)`
+- `fs_accumulate`：`sampleTransmittance(..., 1.0 - coverage)` 与 `accum = vec4(colour * coverage, coverage) * sampledTransmittance`
+
+物理含义：雾是**表面之前的介质**，不是表面上的颜色。表面被雾淹没后，它自身的透明度不再重要——挡住背后几何的是雾而不是水。
+
+### 踩到的坑
+
+1. 把辅助函数插在 `@fragment` 属性与 `fn fs_depth_bounds` 之间，导致 `@fragment` 落到了辅助函数头上、入口点消失。**项目自带的 `ShaderPipelines.EnsureValid()` 在启动时立刻报错**（`entry point 'fs_depth_bounds' is missing`），没有变成运行时黑屏。
+2. 修好源码后单元测试仍失败，因为 `--no-build` 用的是输出目录里**过期的着色器副本**。重建即通过——**改资产文件后不能只跑 `--no-build` 的测试**。
+
+### 未验证
+
+未与修正前的画面做逐像素比对，也未与原版同视角做数值比较；本次是目视确认（远处水体被雾覆盖，不再透出背后地形）。

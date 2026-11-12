@@ -257,6 +257,14 @@ struct DepthBoundsOutput {
     @location(0) bounds : vec4<f32>,
 };
 
+// How much of the surface is buried in fog, zero when clear and one at the far edge of the fog range. Fog is a medium
+// in front of the surface rather than a tint on it, so both the colour and the coverage of a translucent fragment follow
+// this: a wall of fog hides what is behind whether or not the surface itself is transparent.
+fn fogAmount(distance : f32) -> f32 {
+    let span = max(fog.range.y - fog.range.x, 0.001);
+    return clamp((distance - fog.range.x) / span, 0.0, 1.0);
+}
+
 @fragment
 fn fs_depth_bounds(input : VertexOutput) -> DepthBoundsOutput {
     let alpha = sampleAlpha(input);
@@ -293,7 +301,9 @@ fn fs_transmittance(input : VertexOutput) -> TransmittanceOutput {
     let furthestLinear = bounds.g;
     let normalizedDepth = normalizeDepth(input.fogDistance, closestLinear, furthestLinear);
 
-    let absorbance = toAbsorbance(1.0 - alpha);
+    // The same coverage the accumulate pass uses, so the encoded transmittance agrees with the colour it weights.
+    let coverage = mix(alpha, 1.0, fogAmount(input.fogDistance));
+    let absorbance = toAbsorbance(1.0 - coverage);
     let coefficients = encodeTransmittance(absorbance, normalizedDepth);
 
     var output : TransmittanceOutput;
@@ -328,9 +338,13 @@ fn fs_accumulate(input : VertexOutput) -> AccumulateOutput {
 
     let light = input.colour * lightmapColour(input.light.x, input.light.y);
     let base = litColour(sampled.rgb, light);
-    let span = max(fog.range.y - fog.range.x, 0.001);
-    let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
+    let fogged = fogAmount(input.fogDistance);
     let colour = mix(base, fog.colour.rgb, fogged);
+
+    // Fog is not a tint on the surface, it is the medium in front of it: once the surface is buried in fog its own
+    // transparency stops mattering, because what hides the geometry behind it is the fog rather than the water. Keeping
+    // the surface's own alpha would let the scene behind show through a wall of fog.
+    let coverage = mix(alpha, 1.0, fogged);
 
     let pixel = vec2<i32>(input.clipPosition.xy);
     let bounds = textureLoad(depthBoundsTexture, pixel, 0);
@@ -339,9 +353,9 @@ fn fs_accumulate(input : VertexOutput) -> AccumulateOutput {
     let normalizedDepth = normalizeDepth(input.fogDistance, closestLinear, furthestLinear);
 
     let coefficients = loadCoefficients(pixel);
-    let sampledTransmittance = sampleTransmittance(coefficients, normalizedDepth, 1.0 - alpha);
+    let sampledTransmittance = sampleTransmittance(coefficients, normalizedDepth, 1.0 - coverage);
 
     var output : AccumulateOutput;
-    output.accum = vec4<f32>(colour * alpha, alpha) * sampledTransmittance;
+    output.accum = vec4<f32>(colour * coverage, coverage) * sampledTransmittance;
     return output;
 }
