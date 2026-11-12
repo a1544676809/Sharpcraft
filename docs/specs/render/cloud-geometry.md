@@ -1007,3 +1007,45 @@ window: oit commands per frame bounds=186d/1b/1p trans=186d/2b/1p accum=186d/2b/
 `tri=1664176` 是 252 次 solid 绘制合计，平均**每区块 6600 个三角形**；而 16³ 区块理论最多约 3072。差 2 倍多。
 
 网格器确实做了邻块面剔除与贪心合并（`Neighbourhood` / `Occludes` / `MergeSectionFaces`），所以这不像"漏剔除"，更可能是**区块尺寸大于 16³**或当前镜头下的区块普遍很密。**未核实，仅登记为线索。**
+
+### 【更正】OIT 三遍不是冗余，那就是原版的算法
+
+上一节把"透明层被画三次"当成可优化的绘制膨胀，**这是错的**。
+
+对照原版 `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/oit/OitPipelineSet.java`：
+
+```java
+public record OitPipelineSet(RenderPipeline depthBoundsPipeline, RenderPipeline transmittancePipeline,
+                             RenderPipeline accumulatePipeline, ...)
+    case DEPTH_BOUNDS  -> depthBoundsPipeline
+    case TRANSMITTANCE -> transmittancePipeline
+    case ACCUMULATE    -> accumulatePipeline
+```
+
+**原版的 OIT 就是三个阶段**：深度边界 → 透射率 → 累积，外加合成。
+
+我们的实现（`ReferenceOitPasses` 的类注释）：
+
+> depth bounds, the opaque-depth cull, the cloud sub-passes, wavelet transmittance, accumulate, and the composite
+
+**逐阶段一一对应。** 运行期统计也吻合：`bounds=186d` / `trans=186d` / `accum=186d`。
+
+**所以那 558 次绘制不是浪费，是算法固有成本，原版同样付出。** 类名里的 "reference" 指的是"参考实现（原版）的 pass 序列"，不是"参考用的临时实现"——这是我上一轮读错的词。
+
+### 连带更正
+
+- ❌ "1037 次绘制里超过一半是 OIT 浪费" → ✅ 是原版同款三阶段
+- ❌ "先做 OIT 单遍化，能省 372 次绘制" → ✅ 单遍化会**改变渲染结果**，不再等效，属于原则 9 的"性能驱动的行为偏差"
+- ✅ 视锥剔除正常（solid 637 剔除 385）
+
+### 目前的真实位置
+
+| 项 | 我们 | 原版 |
+| --- | --- | --- |
+| OIT | 三阶段 + 合成 + wavelet | 三阶段 + 合成 |
+| 区块绘制 | 每可见区块每层一次 | 同 |
+| 视锥剔除 | 有 | 有 |
+| 遮挡剔除 | **主窗口路径无** | 有（`SectionOcclusionGraph`） |
+| 帧时长（858×527, VD12） | 1.88 ms | ~1.6 ms |
+
+**唯一确认的结构性差距仍然是遮挡剔除**，不是 OIT。剩下约 0.3 ms 的差距，量级上也与"被遮挡的区块仍在绘制"相符。
