@@ -997,7 +997,7 @@ public static class WindowedRenderer
             // measured difference is the upload alone (T-828).
             var skipUpload = currentRequest.Diagnostics?.SkipGeometryUploadOnAbGroup == true && abGroup == 1;
             var uploadStart = System.Diagnostics.Stopwatch.GetTimestamp();
-            if (entityLayers is not null && entityLayers() is { Count: > 0 } layers)
+            if (!skipUpload && entityLayers is not null && entityLayers() is { Count: > 0 } layers)
             {
                 var used = layers.Count;
                 EnsureEntityLayerCapacity(used);
@@ -1051,7 +1051,7 @@ public static class WindowedRenderer
                 var updates = geometryUpdates!();
                 updatesThisFrame = updates?.Count ?? 0;
 
-                if (updates is { Count: > 0 })
+                if (!skipUpload && updates is { Count: > 0 })
                 {
                     foreach (var (key, mesh) in updates)
                     {
