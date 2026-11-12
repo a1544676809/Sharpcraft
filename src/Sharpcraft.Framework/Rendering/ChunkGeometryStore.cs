@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Numerics;
+using System.Runtime.InteropServices;
 using Brew.Wgpu;
 using Brew.Wgpu.Native;
 
@@ -63,6 +64,14 @@ public sealed class ChunkGeometryStore : IDisposable
     private readonly long _pageBytes;
     private readonly long _indexPageBytes;
     private readonly Dictionary<long, Entry> _entries = [];
+    /// <summary>Size of one indexed draw argument record: index count, instance count, first index, base vertex, first instance.</summary>
+    private const int IndirectArgumentBytes = 20;
+
+    private readonly List<(Page Page, int First, int Count)> _segments = [];
+    private BufferHandle _argsBuffer;
+    private int _argsCapacity;
+    private uint[] _args = [];
+    private int _argsCount;
     private readonly List<Page> _pages = [];
 
 
@@ -198,18 +207,21 @@ public sealed class ChunkGeometryStore : IDisposable
 
     /// <summary>Draws the resident chunks, skipping any whose bounds fall outside the frustum.</summary>
     /// <param name="pass">Pass to record into.</param>
-    /// <param name="planes">Six frustum planes, or an empty span to draw everything.</param>
     public void Draw(RenderPassHandle pass, ReadOnlySpan<Vector4> planes)
     {
         CulledLastFrame = 0;
         BindCallsLastDraw = 0;
         DrawnLastDraw = 0;
         TrianglesLastDraw = 0;
+        _argsCount = 0;
+        _segments.Clear();
 
-        // Page major: every chunk of a page is drawn while that page is bound, so bindings follow the page count.
+        // Collect before issuing: every chunk of a page draws out of that page's buffers, so the whole page's argument
+        // records go into one upload and become one multi draw. Record order is draw order, which keeps the translucent
+        // layer's back to front sequence whatever the batching does.
         foreach (var page in _pages)
         {
-            var bound = false;
+            var first = _argsCount;
             foreach (var key in page.Chunks)
             {
                 if (!_entries.TryGetValue(key, out var entry))
@@ -223,25 +235,65 @@ public sealed class ChunkGeometryStore : IDisposable
                     continue;
                 }
 
-                if (!bound)
-                {
-                    BindPage(pass, page);
-                    bound = true;
-                }
-
-
                 if (entry.SectionStarts is { Length: > 1 } starts)
                 {
                     DrawSections(pass, entry, starts, planes);
                     continue;
                 }
 
-                _backend.DrawIndexed(pass, entry.IndexCount, 1, (uint)entry.IndexOffset, (int)(entry.VertexOffset / _bytesPerVertex), 0);
-                DrawCallsTotal++;
+                AppendDraw(entry.IndexCount, (uint)entry.IndexOffset, (int)(entry.VertexOffset / _bytesPerVertex));
                 DrawnLastDraw++;
                 TrianglesLastDraw += entry.IndexCount / 3;
             }
+
+            if (_argsCount > first)
+            {
+                _segments.Add((page, first, _argsCount - first));
+            }
         }
+
+        if (_segments.Count == 0)
+        {
+            return;
+        }
+
+        _backend.WriteBuffer(_argsBuffer, MemoryMarshal.AsBytes(_args.AsSpan(0, _argsCount * 5)), 0);
+        foreach (var segment in _segments)
+        {
+            BindPage(pass, segment.Page);
+            _backend.MultiDrawIndexedIndirect(pass, _argsBuffer, (ulong)segment.First * IndirectArgumentBytes, (uint)segment.Count);
+            DrawCallsTotal += segment.Count;
+        }
+    }
+
+    /// <summary>Appends one indexed draw argument record, growing the upload buffer only when it no longer fits.</summary>
+    private void AppendDraw(uint indexCount, uint firstIndex, int baseVertex)
+    {
+        if (_args.Length < (_argsCount + 1) * 5)
+        {
+            Array.Resize(ref _args, Math.Max((_argsCount + 1) * 5, _args.Length * 2));
+        }
+
+        if (_argsCapacity < _argsCount + 1)
+        {
+            var capacity = Math.Max(_argsCount + 1, _argsCapacity * 2);
+            if (_argsBuffer.Value is not null)
+            {
+                _backend.Destroy(_argsBuffer);
+            }
+
+            _argsBuffer = _backend.CreateBuffer(
+                new BufferDesc((ulong)capacity * IndirectArgumentBytes, BufferUsages.Indirect | BufferUsages.CopyDst));
+            _argsCapacity = capacity;
+        }
+
+        var at = _argsCount * 5;
+        _args[at] = indexCount;
+        _args[at + 1] = 1;
+        _args[at + 2] = firstIndex;
+        _args[at + 3] = (uint)baseVertex;
+        _args[at + 4] = 0;
+        _argsCount++;
     }
 
     /// <summary>Draws all resident chunks (no culling).</summary>
@@ -329,8 +381,7 @@ public sealed class ChunkGeometryStore : IDisposable
             return;
         }
 
-        _backend.DrawIndexed(pass, (uint)(to - from), 1, (uint)(entry.IndexOffset + from), baseVertex, 0);
-        DrawCallsTotal++;
+        AppendDraw((uint)(to - from), (uint)(entry.IndexOffset + from), baseVertex);
         DrawnLastDraw++;
         TrianglesLastDraw += (to - from) / 3;
     }
