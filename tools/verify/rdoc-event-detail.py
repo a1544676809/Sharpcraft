@@ -102,17 +102,28 @@ def main():
                 reflection = state.GetShaderReflection(stage)
                 pair.append(str(reflection.resourceId) if reflection is not None else "-")
             key = " | ".join(pair)
-            entry = groups.setdefault(key, [0.0, 0, 0])
+            entry = groups.setdefault(key, [0.0, 0, 0, 0, 0])
             entry[0] += microseconds
             entry[1] += 1
             entry[2] = max(entry[2], action.numIndices)
+            # Counts are deterministic where the gpu duration counter is not, so they are worth carrying alongside it.
+            # For indexed draws the number of vertices fetched is the index count: one vertex per index.
+            entry[3] += action.numIndices
+            entry[4] += action.numInstances
 
         total = sum(value[0] for value in groups.values())
         log("")
         log("=== gpu time by shader pair (total %.1f us) ===" % total)
-        for key, (microseconds, count, biggest) in sorted(groups.items(), key=lambda item: -item[1][0])[:16]:
-            log("  %8.2f us  %4.1f%%  %3d draws  maxidx=%-8s  %s" % (
-                microseconds, 100.0 * microseconds / total, count, biggest, key))
+        log("  %-9s %-6s %-5s %-12s %-9s %s" % ("time", "share", "draws", "indices", "instances", "shaders"))
+        for key, entry in sorted(groups.items(), key=lambda item: -item[1][0])[:16]:
+            microseconds, count, biggest, indices, instances = entry
+            log("  %8.2f us %5.1f%% %5d %12d %9d  %s" % (
+                microseconds, 100.0 * microseconds / total, count, indices, instances, key))
+
+        all_indices = sum(value[3] for value in groups.values())
+        all_draws = sum(value[1] for value in groups.values())
+        log("")
+        log("total draws=%d indices=%d triangles=%d" % (all_draws, all_indices, all_indices // 3))
 
         # Name the passes: the entry points are all called main, but the original source is kept in the capture when
         # the module was compiled with debug info, and its first lines distinguish the pipelines.
