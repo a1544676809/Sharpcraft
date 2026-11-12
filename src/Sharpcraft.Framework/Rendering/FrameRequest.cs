@@ -178,6 +178,9 @@ public sealed record CelestialColorDraw(
     /// </summary>
     public int CloudFaceCount { get; init; }
 
+    /// <summary>Eye position in world space, so the procedural passes can fade by true distance as the CPU did.</summary>
+    public Vector3 CloudEye { get; init; }
+
     /// <summary>Where the cloud grid's corner sits in world space, read only when <see cref="CloudFaces"/> is set.</summary>
     /// <remarks>
     /// Kept separate from <see cref="Model"/> because that matrix still positions the explicit vertices the classic

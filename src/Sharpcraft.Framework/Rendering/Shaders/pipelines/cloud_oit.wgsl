@@ -94,10 +94,9 @@ fn vs_main(@builtin(vertex_index) vertexIndex : u32) -> VertexOutput {
     let world = transform.model * vec4<f32>(position, 1.0);
     let clip = camera.viewProjection * world;
 
-    // The fade used to be baked per vertex on the CPU from the straight line distance to the eye. The camera uniform
-    // carries only the view projection, so this takes the view depth; away from the centre of the screen the two
-    // differ, which is registered as a known difference in the spec rather than papered over.
-    let fog = clamp(1.0 - (clip.w / max(cloudInfo.x, 0.0001)), 0.0, 1.0);
+    // Same fade the CPU used to bake per vertex: straight line distance in world space against the eye, which rides
+    // in the rest of the cloud info uniform because the camera uniform carries only the view projection.
+    let fog = clamp(1.0 - (length(world.xyz - cloudInfo.yzw) / max(cloudInfo.x, 0.0001)), 0.0, 1.0);
 
     var output : VertexOutput;
     output.clipPosition = clip;

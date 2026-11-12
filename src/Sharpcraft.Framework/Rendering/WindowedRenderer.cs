@@ -1231,7 +1231,7 @@ public static class WindowedRenderer
             var cloudDrawFrame = skipClouds ? null : cloudsPerFrame?.Invoke();
             if (cloudOit is not null && cloudDrawFrame is { } cloudForOit && cloudForOit.CloudFaces is { } cloudFaces)
             {
-                cloudOit.Update(cloudFaces, cloudForOit.CloudFaceCount, cloudForOit.CloudOrigin, cloudForOit.Tint, cloudForOit.CloudFogEnd);
+                cloudOit.Update(cloudFaces, cloudForOit.CloudFaceCount, cloudForOit.CloudOrigin, cloudForOit.Tint, cloudForOit.CloudFogEnd, cloudForOit.CloudEye);
             }
 
             Cpu(FrameCpuTimings.CloudsStage);

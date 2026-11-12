@@ -1664,7 +1664,8 @@ internal static class FrameCommand
             CloudFaces = faces,
             CloudFaceCount = faces.Length / Sharpcraft.Client.Render.CloudFaceTable.WordsPerFace,
             CloudFogEnd = Sharpcraft.Client.Render.CloudGeometryBuilder.DefaultFogEnd,
-            CloudOrigin = cloudOrigin
+            CloudOrigin = cloudOrigin,
+            CloudEye = eye
         };
     }
 

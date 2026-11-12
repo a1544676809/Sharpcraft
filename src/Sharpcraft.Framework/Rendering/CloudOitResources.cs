@@ -89,7 +89,8 @@ internal sealed class CloudOitResources : IDisposable
     /// <param name="origin">World position of the cloud grid's corner.</param>
     /// <param name="tint">Colour and alpha modulation, as before.</param>
     /// <param name="fogEnd">Distance at which a cloud fades out.</param>
-    public void Update(int[] faces, int faceCount, Vector3 origin, Vector4 tint, float fogEnd)
+    /// <param name="eye">World eye position, so the fade uses true distance as the CPU-baked version did.</param>
+    public void Update(int[] faces, int faceCount, Vector3 origin, Vector4 tint, float fogEnd, Vector3 eye)
     {
         ArgumentNullException.ThrowIfNull(faces);
 
@@ -113,8 +114,12 @@ internal sealed class CloudOitResources : IDisposable
         MemoryMarshal.AsBytes(floats.AsSpan()).CopyTo(transformBytes);
         _backend.WriteBuffer(_transform, transformBytes, 0);
 
+        // x is the fade distance and yzw the eye, which the vertex stage needs to fade by true distance.
         var info = new float[4];
         info[0] = fogEnd;
+        info[1] = eye.X;
+        info[2] = eye.Y;
+        info[3] = eye.Z;
         _backend.WriteBuffer(_cloudInfo, MemoryMarshal.AsBytes(info.AsSpan()), 0);
     }
 
