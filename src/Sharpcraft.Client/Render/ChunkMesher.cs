@@ -773,6 +773,35 @@ public static class ChunkMesher
 
         var nb = neighbourhood;
 
+        // A fluid column's height at one cell, in the units the reference getHeight uses. Coordinates are explicit so the
+        // merge prepass below can ask about cells other than the one currently being emitted.
+        float CellHeight(int cbx, int cby, int cbz, string cfluid, int ddx, int ddz)
+        {
+            var sample = nb.GetBlockState(cbx + ddx, cby, cbz + ddz, 0);
+            if (layout.BlockAt(sample) is { } sampleBlock)
+            {
+                if (sampleBlock.Path == cfluid)
+                {
+                    // The reference getHeight returns 1.0 when the same fluid is directly above, so a flowing
+                    // block next to a continuous column must use 1.0 here for its corner to rise and meet it.
+                    if (layout.BlockAt(nb.GetBlockState(cbx + ddx, cby + 1, cbz + ddz, 0)) is { } aboveRef && aboveRef.Path == cfluid)
+                    {
+                        return 1f;
+                    }
+
+                    var neighbour = Sharpcraft.Common.World.FluidStateCodec.FromBlockState(sample, layout);
+                    return neighbour.IsEmpty ? 0f : neighbour.OwnHeight;
+                }
+
+                if (sampleBlock.Path != "air")
+                {
+                    return -1f;
+                }
+            }
+
+            return 0f;
+        }
+
         for (var y = 0; y < 16; y++)
         {
             for (var z = 0; z < 16; z++)
@@ -902,41 +931,14 @@ public static class ChunkMesher
                         return !transparency.HasTransparent && !transparency.HasTranslucent;
                     }
 
-                    float CellHeight(int ddx, int ddz)
-                    {
-                        var sample = nb.GetBlockState(bx + ddx, by, bz + ddz, 0);
-                        if (layout.BlockAt(sample) is { } sampleBlock)
-                        {
-                            if (sampleBlock.Path == fluidPath)
-                            {
-                                // The reference getHeight returns 1.0 when the same fluid is directly above, so a flowing
-                                // block next to a continuous column must use 1.0 here for its corner to rise and meet it.
-                                if (layout.BlockAt(nb.GetBlockState(bx + ddx, by + 1, bz + ddz, 0)) is { } aboveRef && aboveRef.Path == fluidPath)
-                                {
-                                    return 1f;
-                                }
-
-                                var neighbour = Sharpcraft.Common.World.FluidStateCodec.FromBlockState(sample, layout);
-                                return neighbour.IsEmpty ? 0f : neighbour.OwnHeight;
-                            }
-
-                            if (sampleBlock.Path != "air")
-                            {
-                                return -1f;
-                            }
-                        }
-
-                        return 0f;
-                    }
-
-                    var north = CellHeight(0, -1);
-                    var south = CellHeight(0, 1);
-                    var west = CellHeight(-1, 0);
-                    var east = CellHeight(1, 0);
-                    var northWest = CellHeight(-1, -1);
-                    var northEast = CellHeight(1, -1);
-                    var southWest = CellHeight(-1, 1);
-                    var southEast = CellHeight(1, 1);
+                    var north = CellHeight(bx, by, bz, fluidPath, 0, -1);
+                    var south = CellHeight(bx, by, bz, fluidPath, 0, 1);
+                    var west = CellHeight(bx, by, bz, fluidPath, -1, 0);
+                    var east = CellHeight(bx, by, bz, fluidPath, 1, 0);
+                    var northWest = CellHeight(bx, by, bz, fluidPath, -1, -1);
+                    var northEast = CellHeight(bx, by, bz, fluidPath, 1, -1);
+                    var southWest = CellHeight(bx, by, bz, fluidPath, -1, 1);
+                    var southEast = CellHeight(bx, by, bz, fluidPath, 1, 1);
 
                     float Corner(int cx, int cz)
                     {
