@@ -349,6 +349,9 @@ public interface IRenderBackend
     /// <summary>Textures created since startup (T-831).</summary>
     long TexturesCreated => 0;
 
+    /// <summary>Bytes held by buffers that are still alive (T-831).</summary>
+    long BufferBytesLive => 0;
+
     /// <summary>Approximate bytes of every texture created since startup (T-831).</summary>
     long TextureBytesCreated => 0;
 
@@ -1040,6 +1043,12 @@ public sealed class WgpuRenderBackend : IRenderBackend
     public void Destroy(BufferHandle buffer)
     {
         _buffersDestroyed++;
+
+        if (_bufferSizes.Remove(buffer, out var size))
+        {
+            _bufferBytesLive -= size;
+        }
+
         RequireValid<Brew.Wgpu.Buffer>(buffer.IsValid, buffer.Value).Dispose();
     }
 
@@ -1048,6 +1057,8 @@ public sealed class WgpuRenderBackend : IRenderBackend
     {
         _buffersCreated++;
         _bufferBytesCreated += bytes;
+        _bufferBytesLive += bytes;
+        _bufferSizes[handle] = bytes;
         return handle;
     }
 
@@ -1060,9 +1071,16 @@ public sealed class WgpuRenderBackend : IRenderBackend
     /// <inheritdoc/>
     public long BufferBytesCreated => _bufferBytesCreated;
 
+    /// <inheritdoc/>
+    public long BufferBytesLive => _bufferBytesLive;
+
     private long _buffersCreated;
     private long _buffersDestroyed;
     private long _bufferBytesCreated;
+    private long _bufferBytesLive;
+
+    /// <summary>Size of every live buffer. The backend cannot ask the native buffer for it, so it is remembered here.</summary>
+    private readonly Dictionary<BufferHandle, long> _bufferSizes = [];
 
     /// <inheritdoc/>
     public void Destroy(TextureHandle texture) => RequireValid<Texture>(texture.IsValid, texture.Value).Dispose();
