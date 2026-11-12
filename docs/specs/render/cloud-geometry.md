@@ -586,3 +586,30 @@ entity-build: path=model(idx=648,vf=6048,parts=3) entities=1 layers=1 pose=0.011
 - `EntityModelMesher` 与 `WindowCommand` 恢复原状，全仓 grep 无残留
 - 删除后构建通过、8 个程序集测试全绿、四项门禁通过——即原则 13 要求的"全量移除后行为不变"
 - 结论只保留在文档里，不留在代码里
+
+### 发射路径逐项排除后，仍差最后一层
+
+继续沿 `BuildCompiledEntity`（`model.Compiled` 的快速路径）逐项检查，全部**读代码排除**：
+
+| 项 | 结论 |
+| --- | --- |
+| `BuildInto` 的前置计数循环 | 只数立方体给 `Reserve` 用，几十次迭代 |
+| `Reserve` / 数组扩容 | 已按需预留，不逐次扩容 |
+| `skinAtlas.Get(path)`（每立方体 2 次） | `Dictionary.TryGetValue`，~50 ns，216 次约 11 µs |
+| `new EntityModelPart(...)`（每立方体 1 次） | **`readonly record struct`**，无堆分配 |
+| `ResolveEntityModel` | 静态查表，计划段实测仅 15 µs |
+| `PrepareAnimationPoses` | 实测 11 µs |
+| `WriteVertex` / `TransformUv` | 纯赋值与算术 |
+| `entityTransform.Apply` | **确实每次新建旋转矩阵**，是真实低效点，但 432 次只有十几微秒 |
+
+**300 µs 仍未被归因。** 上述每一项单独都只值几微秒到十几微秒，加起来远不到 300。这说明要么成本分散在尚未检查的调用里，要么存在一处我没读到的热点。
+
+### 已确认可以独立优化的点（与瓶颈归因无关）
+
+`EntityModelTransform.Apply` 每次调用都执行 `Matrix4x4.CreateRotationY(X)`——**旋转矩阵对同一个实体是常量**，应提到每次实体构建之外只算一次。虽然只值十几微秒，但改动极小、无风险。
+
+### 下一步（明确、可执行）
+
+在 `BuildCompiledEntity` 内部加计数器：`Emit` 被调用次数、`node.Cubes` 总数、以及 `foreach (var cube in node.Cubes)` 循环内的累计耗时。**打点查完即删**，与本次同一处理方式。
+
+现在的状态是：链路已确认到函数（`BuildCompiledEntity`），函数内 300 µs 的去向未知。
