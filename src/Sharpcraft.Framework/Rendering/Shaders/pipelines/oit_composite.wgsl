@@ -128,6 +128,14 @@ fn vs_fullscreen(@builtin(vertex_index) index : u32) -> FullscreenOutput {
 fn fs_composite(input : FullscreenOutput) -> CompositeOutput {
     let pixel = vec2<i32>(input.position.xy);
     let accumulated = textureLoad(accumulateTexture, pixel, 0);
+
+    // Nothing translucent wrote here, so there is nothing to composite: the coverage would come out zero anyway.
+    // Leaving before the coefficient reads and the wavelet walk skips both for the opaque majority of the screen.
+    // The rgb term has to stay in the test, because additive blending can produce light without any coverage.
+    if (accumulated.a < 0.00001 && (accumulated.r + accumulated.g + accumulated.b) < 0.00001) {
+        discard;
+    }
+
     let coefficients = loadCoefficients(pixel);
 
     // Total transmittance of the whole layer, sampled at the far end of the range.
