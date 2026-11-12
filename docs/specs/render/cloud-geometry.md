@@ -613,3 +613,41 @@ entity-build: path=model(idx=648,vf=6048,parts=3) entities=1 layers=1 pose=0.011
 在 `BuildCompiledEntity` 内部加计数器：`Emit` 被调用次数、`node.Cubes` 总数、以及 `foreach (var cube in node.Cubes)` 循环内的累计耗时。**打点查完即删**，与本次同一处理方式。
 
 现在的状态是：链路已确认到函数（`BuildCompiledEntity`），函数内 300 µs 的去向未知。
+
+## 19. VS/ETW 采样定位：是 CPU 侧，且成本在 `Emit` 的函数体内
+
+### 先回答"CPU 还是 GPU"
+
+用 `dotnet-trace`（`Microsoft-DotNETCore-SampleProfiler`，15 秒）采样，转 Speedscope 后按线程拆分（`tools/verify/speedscope-threads.py`）：
+
+**GPU 侧不是问题**：`DrawIndexed` 0.81%、`CommandEncoder.Finish()` 0.75%、`Queue.WriteBuffer` 0.28%、`Surface.Present()` 0.43%。
+
+**CPU 侧是问题**，且混线程视图被误导过：直接 `topN` 的头部全是 `SemaphoreSlim.WaitCore`(46%)、`IOCompletionPoller.Poll`(12%)、`Winsock.accept`(6%)——那是 8 个区块工作线程与 MCP 线程的空等，不是渲染。必须按线程拆分才看得见。
+
+### 实体网格构建的独占时间
+
+| 函数 | 独占 | 含子调用 |
+| --- | --- | --- |
+| **`Emit`**（`BuildCompiledEntity` 内的局部函数） | **3146 ms** | 17575 ms |
+| `BuildLayers` | 2486 ms | 22782 ms |
+| `BuildModelBackedLayers` | 2484 ms | 20282 ms |
+| `BuildInto` | 1785 ms | 13801 ms |
+| `BuildCompiledEntity` | 1720 ms | 11735 ms |
+| `ResolveEntityModel` | 415 ms | 2896 ms |
+| `AppendGeometry` | 204 ms | 816 ms |
+| `AddPart` / `AddFace` / `WriteVertex` / `TransformUv` | 21 / 12 / 4 / 4 ms | — |
+
+**`Emit` 的自身代码独占时间最大**，超过它所有子调用的总和。这说明成本不在被调用的函数里，而在 `Emit` **函数体内联展开的那段代码**：每个立方体构造一次 30 字段的 `EntityModelPart` 结构体、计算 `min`/`max`、做两次图集查找、调用一次 `TextureSelector` 委托。
+
+这与之前"逐个排除子函数都只有几微秒"的观察**完全吻合**——真正的时间在**每立方体重复构建静态数据**上，而 `EntityModelPart` 是结构体，构造被内联，所以独占时间全落在 `Emit` 名下。
+
+### 优化方向（明确）
+
+`EntityModelPart` 的**绝大多数字段来自模型静态数据**（名称、纹理坐标、尺寸、父节点、Uv 尺寸等），每帧不变的只有 `Bottom + yOffset` 与姿态矩阵。
+
+**应当在模型解析时把每个 (node, cube) 的 `EntityModelPart` 预先算好并缓存**，每帧只更新随帧变化的少数字段，而不是把 30 个字段从头拷一遍。
+
+### 工具
+
+- `tools/verify/speedscope-threads.py`：按线程汇总 Speedscope profile 的独占/含子时间
+- 采样命令：`dotnet-trace collect -p <pid> --providers Microsoft-DotNETCore-SampleProfiler --duration 00:00:15`，再 `dotnet-trace convert --format Speedscope`
