@@ -919,3 +919,57 @@ window: cpu per frame over 44930 frames: frame=1.883 ... prep-entities=0.207 ...
 ### 与"304 万三角形"的关系
 
 捕获里 304 万三角形 vs 网格统计的 34 万，两者**不是同一时刻的镜头**（捕获时区块数与本次不同，捕获那次 501 次绘制、本次 1037 次）。**不能据此断言重复绘制。** 要确认需在同一帧上同时取两个数——目前做不到，因为三角形统计只在退出时打印一次。
+
+## 22. 原版怎么解决"区块绘制太多"：遮挡剔除，不是合批
+
+读 `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/SectionOcclusionGraph.java`（500 行）。
+
+### 原版的机制
+
+**每个区块节点记录 6 个方向的可见性位掩码**：
+
+| 字段 | 含义 |
+| --- | --- |
+| `sourceDirections` | 该节点被哪些方向"看到"（进入可见集的方向） |
+| `directions` | 从该节点能继续传播出去的方向 |
+| `step` | BFS 距离（用于排序/预算） |
+
+**传播规则**（`runUpdates` 内的 BFS 队列）：
+
+```
+对当前节点，遍历 6 个方向：
+  取该方向的相邻区块
+  若邻居存在，且（不启用 smartCull 或 该方向未被标记为遮挡）：
+      若节点有来源方向：
+          对每个来源方向 i：
+              若 sectionMesh.facesCanSeeEachother(来源方向的反面, 目标方向)
+                  则邻居可见
+```
+
+`facesCanSeeEachother` 来自区块网格自身记录的"哪些面之间是通透的"。因此**可见性是沿"能看穿的面"洪泛传播的**，不是逐区块独立判断。
+
+配套：
+
+- `emptySections`：空区块把可见性**原样透传**，不打断传播链
+- 高级剔除的启用距离：`MINIMUM_ADVANCED_CULLING_SECTION_DISTANCE = blockToSectionCoord(60)`（60 格以内不做）
+- `CEILED_SECTION_DIAGONAL = ceil(sqrt(3) × 16)`（对角线长度，用于保守距离判断）
+
+**所以原版不是把多次绘制合并成一次，而是让大量区块根本不可见、连绘制都不发。** 它同样保持"每可见区块每层一次绘制"的结构。
+
+### 我们的现状：主渲染路径只有视锥剔除
+
+| 项 | 原版 | 我们 |
+| --- | --- | --- |
+| 视锥剔除 | 有 | ✅ 有（`ChunkGeometryStore.Draw(pass, frustumPlanes)`） |
+| **遮挡剔除（主窗口路径）** | **有（可见性图洪泛）** | ❌ **无** |
+| 遮挡剔除（离屏帧路径） | — | 有（`OcclusionCulling`，仅 `FrameCommand` 使用） |
+
+`ChunkGeometryStore` 第 212 行只有 `FrustumPlanes.IsVisible(...)`；`OcclusionCulling.TryProjectBox / IsOccluded`（89 行，CPU 侧投影 + 深度比较）**只在 `FrameCommand.cs` 的确定性帧路径里被调用 4 次**，主窗口渲染完全没用。
+
+**这意味着：被墙挡住、被地形遮住的区块，我们现在照样逐个发绘制。** 这正是 1037 次绘制/帧的来源之一。
+
+### 下一步（与原版等效）
+
+把已有的 `OcclusionCulling` 接入主渲染路径，或按原版思路做可见性传播。两条路都算等效——原则 11 允许"等价或更优的管线组织"，可观测结果（哪些区块被画出来）一致即可。
+
+优先做侵入最小的那条：**在 `ChunkGeometryStore.Draw` 的视锥剔除之后加一层遮挡判断**，用上一帧的深度做遮挡源（原版也是基于渲染结果反馈的）。
