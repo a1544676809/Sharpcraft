@@ -205,3 +205,35 @@ model = Translation(origin) * Scale(cellSize.x, thickness, cellSize.z)
 | 7 | 像素比对 | 与改动前的截图逐像素 |
 
 **上一轮我犯的另一处错误**：曾新建 `cloud_procedural.wgsl` 打算作为独立着色器，那是双轨——正确做法是直接改 `cloud_oit.wgsl` 的顶点阶段，三个片元阶段原样保留。该文件已删除。
+
+## 12. 接线落地记录（S3 完成）
+
+### 与规格的一处重要偏差：每面 6 个顶点，不是 4 个
+
+规格 §2 按原版写的是"顶点数 = 面数 × 4"。**本项目不能照搬这个数**：原版四个顶点能成一个四边形，说明它用的是三角形带（或扇）；本项目管线用 `PrimitiveState.Default`，即**三角形列表（TriangleList）**。
+
+按 4 顶点 + 三角形列表走的第一版直接渲染成满天乱网——因为 4 个顶点只能出一个三角形，第 4 个被丢弃，且顶点跨面边界被重新分组。改为**每面 6 个顶点**（角序号 0,1,2 / 0,2,3，与 `CloudGeometryBuilder` 的索引缓冲顺序一致）后正常。
+
+这是"结构对齐、拓扑不同"的典型陷阱：**对齐原版的数据结构之前，必须先确认自己的管线拓扑与它一致**。
+
+### 落地内容
+
+| 项 | 位置 | 内容 |
+| --- | --- | --- |
+| 数据通道 | `FrameRequest.cs` 的 `CelestialColorDraw` | 新增 `CloudFaces` / `CloudFaceCount` / `CloudFogEnd` / `CloudOrigin`（均可选，天体绘制不设置） |
+| 面表生产 | `FrameCommand` | 两条分支都产面表；`CloudOrigin` 与顶点路径的摆放保持一致 |
+| 面表缓存 | `CloudDrawCache` | 与顶点/索引同生命周期缓存，避免每帧重建四元组 |
+| 资源 | `CloudOitResources` | 加 binding 2（`vec4`：淡出距离）、binding 3（面表只读存储）；无顶点缓冲绘制 `Draw(faceCount * 6)` |
+| 着色器 | `cloud_oit.wgsl` | `vs_main` 改为程序化；**`VertexOutput` 六字段与三个片元阶段完全未改** |
+| 管线 | `WindowedRenderer` 三个云辅助函数 | `positionColor` 参数此前**声明了却从未使用**（顶点布局写死为 `VertexLayout`），现在真正生效：为真时步长 0、无顶点属性 |
+
+### 已验证
+
+- 构建通过；8 个程序集测试全绿（含 `CloudFaceTableTests` 17 项、`CloudProceduralGeometryTests` 2 项）
+- 管线创建成功（`stderr` 无验证错误）——**只读存储缓冲可以绑在顶点阶段**，这是 §10 里的待实测点，现已确认
+- 画面：云恢复为平坦云层，无损坏
+
+### 尚未验证（下一步）
+
+- **与改动前的逐像素比对未做**。已知差异来源有两处：①淡出距离由欧氏距离改为视深度 `clip.w`；②`useTopColor` 仍未接管。做比对时应先单独量化这两项，再看剩余差异。
+- 经典回退路径（`session.CloudUseOit` 关闭时）仍在用显式顶点，未改为程序化。

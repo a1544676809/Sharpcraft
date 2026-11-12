@@ -456,7 +456,6 @@ public static class WindowedRenderer
         EnsureEntityLayerCapacity(4);
         // The helper is defined further down; the buffers above are created eagerly so no nullable state leaks.
 
-
         // Geometry lives in persistent buffers that are rewritten in place, so a rebuild costs one upload
         // instead of two allocations plus a GPU sync. They only grow, and the grown-out buffers are released
         // when the window closes (a rebuild that needs more room is rare)
@@ -1230,9 +1229,9 @@ public static class WindowedRenderer
             // Sample the cloud draw once: the OIT stages need its vertices before the main transparency passes, and the
             // non-OIT path reuses the same draw later.
             var cloudDrawFrame = skipClouds ? null : cloudsPerFrame?.Invoke();
-            if (cloudOit is not null && cloudDrawFrame is { } cloudForOit)
+            if (cloudOit is not null && cloudDrawFrame is { } cloudForOit && cloudForOit.CloudFaces is { } cloudFaces)
             {
-                cloudOit.Update(cloudForOit.Vertices, cloudForOit.Indices, cloudForOit.Model, cloudForOit.Tint);
+                cloudOit.Update(cloudFaces, cloudForOit.CloudFaceCount, cloudForOit.CloudOrigin, cloudForOit.Tint, cloudForOit.CloudFogEnd);
             }
 
             Cpu(FrameCpuTimings.CloudsStage);
@@ -2182,8 +2181,8 @@ public static class WindowedRenderer
                 new BlendComponentDesc(BlendOperation.Max, BlendFactor.One, BlendFactor.One)))],
             new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, depthWrite),
             CullMode.Back, FrontFace.Ccw,
-            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes())));
+            positionColor ? 0UL : (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
+            positionColor ? [] : LayoutAttributes.From(VertexLayout.Attributes())));
     }
 
     /// <summary>Reference transparency stage 2: wavelet-transmittance coefficients, additively blended into two targets.</summary>
@@ -2199,8 +2198,8 @@ public static class WindowedRenderer
             [Additive(format), Additive(format)],
             new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, depthWrite),
             CullMode.Back, FrontFace.Ccw,
-            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes())));
+            positionColor ? 0UL : (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
+            positionColor ? [] : LayoutAttributes.From(VertexLayout.Attributes())));
     }
 
     /// <summary>Reference transparency stage 3: colour weighted by the transmittance in front of each fragment.</summary>
@@ -2214,8 +2213,8 @@ public static class WindowedRenderer
                 new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.One)))],
             new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, depthWrite),
             CullMode.Back, FrontFace.Ccw,
-            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes())));
+            positionColor ? 0UL : (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
+            positionColor ? [] : LayoutAttributes.From(VertexLayout.Attributes())));
     }
 
     /// <summary>Reference transparency: clip the far depth bound to the nearest opaque surface.</summary>

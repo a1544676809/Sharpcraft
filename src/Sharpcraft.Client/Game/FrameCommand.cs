@@ -1608,6 +1608,8 @@ internal static class FrameCommand
         var radiusCells = (int)MathF.Ceiling(rangeChunks * 16f / 12f);
         float[] vertices;
         uint[] indices;
+        int[] faces;
+        Vector3 cloudOrigin;
         Matrix4x4 model;
 
         if (cache is null || !fancy)
@@ -1625,12 +1627,14 @@ internal static class FrameCommand
             // Absolute-vertex path (offscreen one-shot): origin is the eye shifted by the in-cell remainder.
             var origin = Sharpcraft.Client.Render.CloudGeometryBuilder.OriginFromEye(eye, xInCell, zInCell, bottomY);
             (vertices, indices) = Sharpcraft.Client.Render.CloudGeometryBuilder.Build(quads, eye, origin);
+            faces = Sharpcraft.Client.Render.CloudFaceTable.Build(quads);
+            cloudOrigin = origin;
             model = Matrix4x4.Identity;
         }
         else
         {
             // Cached camera-relative mesh: vertices already carry the vertical offset; move it with the eye each frame.
-            (vertices, indices) = cache.Get(
+            (vertices, indices, faces) = cache.Get(
                 texture.Cells, texture.Width, texture.Height, cellX, cellZ, radiusCells, side);
             if (vertices.Length == 0)
             {
@@ -1639,7 +1643,9 @@ internal static class FrameCommand
 
             // Keep the cloud plane at the fixed absolute bottom height; only horizontal offset follows the eye, so a
             // jump adds no vertical snapping.
-            model = Matrix4x4.CreateTranslation(eye.X - xInCell, bottomY, eye.Z - zInCell);
+            var placed = new Vector3(eye.X - xInCell, bottomY, eye.Z - zInCell);
+            model = Matrix4x4.CreateTranslation(placed.X, placed.Y, placed.Z);
+            cloudOrigin = placed;
         }
 
         var factor = Sharpcraft.Common.World.SkyAttributeTracks.CloudColorFactorAt(EffectiveDayTime(world));
@@ -1651,7 +1657,15 @@ internal static class FrameCommand
             factor.Z * (1f - (0.4f * rain)),
             cloudAlpha);
 
-        return new CelestialColorDraw(vertices, indices, model, tint, CelestialColorBlend.Translucent);
+        return new CelestialColorDraw(vertices, indices, model, tint, CelestialColorBlend.Translucent)
+        {
+            // The transparency passes generate the geometry from this table instead of the vertex array (T-827);
+            // the classic path still uses the vertices, which is why both travel here.
+            CloudFaces = faces,
+            CloudFaceCount = faces.Length / Sharpcraft.Client.Render.CloudFaceTable.WordsPerFace,
+            CloudFogEnd = Sharpcraft.Client.Render.CloudGeometryBuilder.DefaultFogEnd,
+            CloudOrigin = cloudOrigin
+        };
     }
 
     /// <summary>Maps the client lightmap parameters to the framework uniform the terrain shader reads.</summary>

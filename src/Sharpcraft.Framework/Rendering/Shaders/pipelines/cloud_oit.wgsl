@@ -15,6 +15,41 @@ struct Transform {
 @group(0) @binding(0) var<uniform> camera : Camera;
 @group(0) @binding(1) var<uniform> transform : Transform;
 
+// Clouds are generated here rather than uploaded as vertices (T-827). The reference does the same: it sends three
+// integers per face and derives the corners, which is twelve bytes per face against the hundred and twelve an
+// explicit quad costs. Written out in docs/specs/render/cloud-geometry.md; the decoding is the one the geometry test
+// already checks against the explicit builder.
+//
+// x carries the distance at which a cloud fades out; the rest is padding for the 16 byte uniform alignment.
+@group(0) @binding(2) var<uniform> cloudInfo : vec4<f32>;
+
+// Three words per face: cell X halved, cell Z halved, then the direction and its flags.
+@group(0) @binding(3) var<storage, read> faces : array<i32>;
+
+const DIRECTION_MASK : i32 = 7;
+const FLAG_INSIDE_FACE : i32 = 16;
+const FLAG_EXTRA_Z : i32 = 64;
+const FLAG_EXTRA_X : i32 = 128;
+
+// The six faces of a cell, four corners each, ordered down, up, north, south, west, east. The reference packs this
+// list into three constants; it is left readable here because the spec and the test state the list itself.
+const CORNERS = array<vec3<f32>, 24>(
+    vec3<f32>(1.0, 0.0, 0.0), vec3<f32>(1.0, 0.0, 1.0), vec3<f32>(0.0, 0.0, 1.0), vec3<f32>(0.0, 0.0, 0.0),
+    vec3<f32>(0.0, 1.0, 0.0), vec3<f32>(0.0, 1.0, 1.0), vec3<f32>(1.0, 1.0, 1.0), vec3<f32>(1.0, 1.0, 0.0),
+    vec3<f32>(0.0, 0.0, 0.0), vec3<f32>(0.0, 1.0, 0.0), vec3<f32>(1.0, 1.0, 0.0), vec3<f32>(1.0, 0.0, 0.0),
+    vec3<f32>(1.0, 0.0, 1.0), vec3<f32>(1.0, 1.0, 1.0), vec3<f32>(0.0, 1.0, 1.0), vec3<f32>(0.0, 0.0, 1.0),
+    vec3<f32>(0.0, 0.0, 1.0), vec3<f32>(0.0, 1.0, 1.0), vec3<f32>(0.0, 1.0, 0.0), vec3<f32>(0.0, 0.0, 0.0),
+    vec3<f32>(1.0, 0.0, 0.0), vec3<f32>(1.0, 1.0, 0.0), vec3<f32>(1.0, 1.0, 1.0), vec3<f32>(1.0, 0.0, 1.0),
+);
+
+// Brightness per direction. The reference can additionally force a face to the top brightness; that flag is never
+// set yet and is registered as a simplification in the spec.
+const BRIGHTNESS = array<f32, 6>(0.7, 1.0, 0.8, 0.8, 0.9, 0.9);
+
+// A triangle list needs two triangles for a quad, so each face is emitted as six vertices rather than four:
+// corners 0, 1, 2 then 0, 2, 3, which is the same order the explicit geometry fed through its index buffer.
+const QUAD_ORDER = array<i32, 6>(0, 1, 2, 0, 2, 3);
+
 @group(1) @binding(0) var depthBoundsTexture : texture_2d<f32>;
 @group(1) @binding(1) var coeff0Texture : texture_2d<f32>;
 @group(1) @binding(2) var coeff1Texture : texture_2d<f32>;
@@ -35,21 +70,39 @@ struct VertexOutput {
 };
 
 @vertex
-fn vs_main(
-    @location(0) position : vec3<f32>,
-    @location(1) colour : vec3<f32>,
-    @location(2) uv : vec2<f32>,
-    @location(3) spriteRect : vec4<f32>,
-    @location(4) light : vec2<f32>,
-) -> VertexOutput {
-    _ = spriteRect;
-    _ = light;
-    var output : VertexOutput;
+fn vs_main(@builtin(vertex_index) vertexIndex : u32) -> VertexOutput {
+    // Six vertices make one face, so the face is the index over six and the corner comes from the quad order.
+    let cornerInQuad = QUAD_ORDER[i32(vertexIndex % 6u)];
+    let word = i32(vertexIndex / 6u) * 3;
+
+    let flags = faces[word + 2];
+
+    // The cell coordinate was halved when the table was built and its low bit carried in the flags; put it back.
+    let cellX = (faces[word] << 1) | ((flags & FLAG_EXTRA_X) >> 7);
+    let cellZ = (faces[word + 1] << 1) | ((flags & FLAG_EXTRA_Z) >> 6);
+
+    let direction = flags & DIRECTION_MASK;
+    let insideFace = (flags & FLAG_INSIDE_FACE) != 0;
+
+    // Inside faces run the other way round so their winding still faces outward.
+    let cornerOrdinal = select(cornerInQuad, 3 - cornerInQuad, insideFace);
+    let corner = CORNERS[direction * 4 + cornerOrdinal];
+
+    // Whole cells here; the model matrix scales to world units and then places the grid.
+    let position = corner + vec3<f32>(f32(cellX), 0.0, f32(cellZ));
+
     let world = transform.model * vec4<f32>(position, 1.0);
     let clip = camera.viewProjection * world;
+
+    // The fade used to be baked per vertex on the CPU from the straight line distance to the eye. The camera uniform
+    // carries only the view projection, so this takes the view depth; away from the centre of the screen the two
+    // differ, which is registered as a known difference in the spec rather than papered over.
+    let fog = clamp(1.0 - (clip.w / max(cloudInfo.x, 0.0001)), 0.0, 1.0);
+
+    var output : VertexOutput;
     output.clipPosition = clip;
-    output.colour = colour * transform.tint.rgb;
-    output.alpha = uv.x;
+    output.colour = vec3<f32>(BRIGHTNESS[direction]) * transform.tint.rgb;
+    output.alpha = fog;
     output.cloudAlpha = transform.tint.a;
     output.fogDistance = clip.w;
     output.deviceDepth = clip.z / max(clip.w, 0.00001);

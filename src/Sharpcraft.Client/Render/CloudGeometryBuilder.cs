@@ -12,6 +12,9 @@ namespace Sharpcraft.Client.Render;
 /// </summary>
 public static class CloudGeometryBuilder
 {
+    /// <summary>Distance at which a cloud fades out, shared with the procedural passes so both fade alike (T-827).</summary>
+    public const float DefaultFogEnd = 2048f;
+
     // Face vertex offsets in the reference order (CloudRenderer.buildMesh / clouds.vsh vertex table).
     private static readonly Vector3[][] FaceVertices =
     [
@@ -52,7 +55,7 @@ public static class CloudGeometryBuilder
         Vector3 origin,
         float cellSize = 12f,
         float thickness = 4f,
-        float fogEnd = 2048f)
+        float fogEnd = DefaultFogEnd)
     {
         ArgumentNullException.ThrowIfNull(quads);
 
