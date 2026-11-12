@@ -463,3 +463,5 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 **几何证据**：`FluidMesherTests.FullWaterSectionEmitsOnlyItsOuterShell` 现在按结构断言——五个面仍逐格发射、顶面边缘环 60 格无法合并、14×14 内部塌缩为 1 个四边形，总数 1341 而非未合并时的 1536。该测试是合并生效的永久回归保护。
 
 统计行新增 `triTranslucent=`，用于直接观察半透明层的三角形数（此前 `tri=` 只覆盖不透明层）。
+
+**未做到的验证**：想为"斜面不被合并"补一个专门测试时失败——`ChunkMesher.Mesh(world)` 使用默认布局，水方块不被识别为流体（拿不到水面顶点），而 `MeshChunk` 返回的 `MeshBuffer` 只暴露 `IndexCount`、不暴露顶点，无法断言高度。因此斜面的正确性目前只由**代码条件本身**保证：合并键里 `heightOf[probe] != originHeight` 直接排除不同高度的格子，同一矩形内不可能出现两个水面高度。岸边与瀑布机位也未单独做逐像素比对（开阔海面已比对通过）。这两点属未闭环项。
