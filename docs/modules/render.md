@@ -399,3 +399,49 @@ mesh: 31321 blocks, 7354 triangles
 **状态**：视锥接线已完成，全量测试通过。**未完成**：真实实体静态模型、名字牌投影、以及用实际实体场景验证 QA-1.3 的剔除率 ≥60%。
 - **名字牌投影（2026-11-01，T-346）**：`NameplateProjection.TryProject` 将实体脚点 + 高度 + `HeadOffset` 投影到归一化屏幕坐标并返回深度；仅提供投影，UI 文本绘制待接。
 - **名字牌 UI（2026-11-01，T-347）**：`EntityTracker.TryGetUuid` + `InteractiveSession.EntityDisplayName` 从玩家列表解析名字；`WindowCommand` 的 UI 回调把 `NameplateProjection` 结果乘画布尺寸并 `UiScreenLayout.AddText` 绘制玩家名（缩放/裁剪交给 UI）。
+
+### 6.2 流体顶面贪心合并（T-831，待实施）
+
+#### 现状
+
+`ChunkMesher.MergeSectionFaces` 会把不透明面贪心合并成大四边形，但 `EmitSectionFluids` **没有合并**：它是 16×16×16 的三重循环，每个流体方块独立发射面。海面因此每 section 顶面是 256 个 1×1 四边形，而半透明几何每帧要过 `DEPTH_BOUNDS` / `TRANSMITTANCE` / `ACCUMULATE` 三个 pass，全部重复支付顶点变换与小三角形光栅化开销。
+
+实测依据：水域视角 2534×1334 下整帧 3.72 ms，其中 OIT 2.12–2.21 ms；半透明几何合计约 1.1M 索引 / 191 次绘制。
+
+#### 为什么 UV 平铺天然成立
+
+顶点里**不需要 `tile` 属性**（§6.1 描述的那个方案后来没有落地）。着色器统一使用：
+
+```wgsl
+let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
+```
+
+`uv` 在小数部分回绕，因此一个覆盖 W×H 个方块的合并四边形只要把四角 uv 设为 `(0,0)`、`(0,H)`、`(W,H)`、`(W,0)`，在图集单元内的采样结果与 W×H 个独立四边形**逐像素一致**。连续未折返的 `uv` 还让 `dpdx/dpdy` 得到正确的 mipmap 梯度。
+
+#### 可合并判定（全部满足才合并）
+
+1. `!aboveSame`——本格必须真的存在顶面
+2. `!flowing`——`flowSprite is null`，即静止水面。流水有旋转 UV，语义不同
+3. 四角高度全部等于 `selfHeight`——表面水平。任一角被 `FluidSurface.AverageCorner` 拉低/抬高就不可合并，否则会把斜面拍平
+4. `(skyLevel, blockLevel)` 相同——光照是逐顶点烘焙的
+5. 群系水色乘子 `(tr, tg, tb)` 相同
+6. 同一个 `topSprite`（`sprites?.ForState(state, BlockFace.Top)`）
+
+任一条不满足，该格退回现有的逐格发射路径。
+
+#### 实施方式
+
+在每个 y 层内对 16×16 的顶面候选做二维贪心：
+
+1. 先按上述 6 条算出每格的"合并键"，不合格的标为不可合并
+2. 逐格扫描，遇到可合并且未被占用的格作为矩形左上角，先沿 x 扩展，再沿 z 逐行扩展（要求整行键相同且未被占用）
+3. 发射一个四边形，把矩形覆盖的格标记为已占用
+4. 主循环跳过已占用格
+
+已占用标记用每 y 层一个 `bool[256]`（或用 `[InlineArray]` 结构体避免堆分配）；该缓冲区与现有网格构建缓冲一样可复用。
+
+#### 验收
+
+- 视觉：合并前后对同一机位截图，水面区域**逐像素一致**（水域视角、岸边与瀑布附近各一次）
+- 几何：记录半透明索引数与顶点数，海面 section 顶面应从 1024 顶点降到个位数量级
+- 性能：`MC_FRAME_CPU` 同机位对比整帧时间；必须用 `-c Release`
