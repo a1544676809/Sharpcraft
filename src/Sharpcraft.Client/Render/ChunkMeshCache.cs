@@ -23,6 +23,7 @@ public sealed class ChunkMeshCache
 {
     private readonly Dictionary<long, MeshData> _meshes = [];
     private readonly List<MeshedChunk> _updates = [];
+    private readonly List<long> _pruned = [];
     private readonly ChunkWorkerPool? _pool;
     private LightmapParameters _appliedLighting = LightmapParameters.DayOverworld;
 
@@ -271,8 +272,10 @@ public sealed class ChunkMeshCache
     /// Picks up the meshes the pool finished and returns them, so the renderer can upload only those chunks
     /// instead of recomposing the whole world (docs/specs/network/play-movement.md 7.25).
     /// </summary>
-    public IReadOnlyList<MeshedChunk> DrainUpdates()
+    public IReadOnlyList<MeshedChunk> DrainUpdates(ClientWorld world)
     {
+        ArgumentNullException.ThrowIfNull(world);
+
         _updates.Clear();
 
         if (_pool is null)
@@ -282,6 +285,16 @@ public sealed class ChunkMeshCache
 
         while (_pool.TryTakeMesh(out var key, out var mesh, out var cutout, out var translucent))
         {
+            // The chunk can leave the view between the pool's own existence check and this insert. Installing the mesh
+            // then would leave an entry that nothing removes, because the removal path already ran. The reference asks
+            // its cancellation flag once a build finishes and releases the mesh instead of installing it; this is the
+            // same decision with "the chunk is gone" as the signal.
+            var (chunkX, chunkZ) = ClientWorld.Unpack(key);
+            if (world.GetChunk(chunkX, chunkZ) is null)
+            {
+                continue;
+            }
+
             _meshes[key] = mesh;
             _updates.Add(new MeshedChunk(key, mesh, cutout, translucent));
         }
@@ -289,8 +302,42 @@ public sealed class ChunkMeshCache
         return _updates;
     }
 
+    /// <summary>
+    /// Drops every cached mesh whose chunk is no longer loaded, returning the keys it released.
+    /// </summary>
+    /// <param name="world">World whose loaded chunks define what may stay.</param>
+    /// <returns>Keys whose meshes were released, for the caller to release their geometry.</returns>
+    /// <remarks>
+    /// The removal path only reports the chunks it removes itself, so any mesh that finished after its chunk was
+    /// already gone survives it forever. A measured session held 1281 cached meshes against 637 loaded chunks, 613 MB
+    /// of geometry, which is what this sweep reclaims. It is deliberately a reconciliation against the world rather
+    /// than another removal hook, so it also covers paths that forget to report.
+    /// </remarks>
+    public List<long> PruneTo(ClientWorld world)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+
+        _pruned.Clear();
+
+        foreach (var key in _meshes.Keys)
+        {
+            var (chunkX, chunkZ) = ClientWorld.Unpack(key);
+            if (world.GetChunk(chunkX, chunkZ) is null)
+            {
+                _pruned.Add(key);
+            }
+        }
+
+        foreach (var key in _pruned)
+        {
+            _meshes.Remove(key);
+        }
+
+        return _pruned;
+    }
+
     /// <summary>Picks up the meshes the pool finished; true when the cached geometry changed.</summary>
-    public bool Drain() => DrainUpdates().Count > 0;
+    public bool Drain(ClientWorld world) => DrainUpdates(world).Count > 0;
 
     /// <summary>Combines the meshes currently cached; cheap, no meshing.</summary>
     public MeshData Snapshot() => Combine();

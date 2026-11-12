@@ -16,6 +16,7 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 | --- | --- | --- |
 | T-829 | 参考 OIT 颜色目标改半精度 | `transmittance`×2 与 `accumulate` 由 RGBA32F 改为 **RGBA16F**，与原版一致。水域视角 **6.5–6.7 → 2.12–2.21 ms**（OIT 部分），整帧 **≈268 fps vs 原版 245 fps** |
 | T-829 | 雾必须降低透射率 | 原实现只把雾混进颜色，片段透射率仍取 `1-alpha`，浓雾中可透过水看到背后地形。两个 pass 改用同一 `coverage = mix(alpha, 1, fogAmount)` |
+| T-831 | 网格缓存保留已卸载区块的网格 | 传送后缓存 **1281 条 vs 世界 637 个区块**，VS 快照显示该字典保留 **613 MB**、一次传送窗口内涨 **225 MB**。两处修复：`DrainUpdates` 插入前校验区块仍在世界、`PruneTo` 与世界对账。修复后 `meshes=637` 与世界一致，8 次传送工作集 **1179 → 1296 MB（+117 MB）**，修复前同操作 +500～900 MB |
 | T-830 | 区块多绘制间接合批 | 逐页收集 20 字节参数记录、一次上传、每页一次 `MultiDrawIndexedIndirect`。**实测收益为零**（637 区块/约 460 次可见绘制压成约百批次，`sub-queue` 仍 0.17–0.20 ms）。保留为结构对齐原版，文档已注明不得当作优化引用 |
 | T-798 | 区块几何分页共享 arena | 每层若干固定大小页；绘制绑定整页一次、按 `firstIndex`/`baseVertex` 逐区块绘制。稳态 **5.13–5.70 → 2.54–2.76 ms（−51%）**，`binds/frame` 2668 → 278。ADR-0029 |
 | T-797 | 默认选高性能 GPU + 可指定 | 原生垫片 + `[UnsafeAccessor]`，默认 `HighPerformance`。`MC_GPU` 支持 `high`/`low`/`list`/名称子串。ADR-0028 |
@@ -86,6 +87,7 @@ src/Sharpcraft.Client/bin/Release/net10.0/Sharpcraft.Client.exe --version 26.3 -
 | T-781 | Ctrl+F2 全景截图 | 未开始 |
 | T-764 | 剩余 special 类型 | 未开始 |
 | — | `spriteRect` 16 B 移除（44 → 28 B 对齐原版） | 需先做图集 UV 烘焙与动画纹理 |
-| — | `ChunkGeometryStore` 页只增不减，工作集 24 秒内 1296 → 1354 MB | 原因未测 |
+| — | `ChunkGeometryStore` 页只增不减，工作集 24 秒内 1296 → 1354 MB | 属正常驻留，非泄漏，见下条 |
+| T-831 | 移动时的内存增长 | **已定位并修复**（见「已完成」）。方法留档：`dotnet-gcdump`/`dotnet-dump` 两份对比 + VS 探查器差异视图。**教训**：`dotnet-dump` 的 `-min` 过滤只能看大对象，会漏掉整片中小对象；字典类容器的「浅表大小」极小（46 KB）但保留大小可达 613 MB，判断必须看**保留大小**而非浅表 |
 
 最后更新：2026-11-12

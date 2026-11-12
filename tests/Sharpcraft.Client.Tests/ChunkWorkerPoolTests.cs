@@ -86,7 +86,7 @@ public sealed class ChunkWorkerPoolTests
         var deadline = DateTime.UtcNow.AddSeconds(5);
         while (DateTime.UtcNow < deadline)
         {
-            cache.Drain();
+            cache.Drain(world);
             if (cache.Snapshot().Vertices.Length > 0)
             {
                 break;
@@ -114,5 +114,37 @@ public sealed class ChunkWorkerPoolTests
 
         key = 0;
         return null;
+    }
+
+    [Fact]
+    public void PruningReleasesTheMeshesOfChunksThatLeft()
+    {
+        // A measured session held 1281 cached meshes against 637 loaded chunks and the dictionary retained 225 MB
+        // more geometry than before, because a mesh that finishes after its chunk is gone is never reported by the
+        // removal path that already ran.
+        var world = new ClientWorld(minSectionY: 0, sectionCount: 1);
+        var chunk = world.AddChunk(0, 0);
+        chunk.SetSection(new ChunkSection(singleState: 0, sectionY: 0));
+        chunk.SetBlockState(8, 0, 8, state: 1);
+
+        using var pool = new ChunkWorkerPool(world, workerCount: 2);
+        var cache = new ChunkMeshCache(pool);
+        cache.QueueMissing(world);
+
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (DateTime.UtcNow < deadline && cache.LastTotalChunks == 0)
+        {
+            cache.Drain(world);
+            Thread.Sleep(5);
+        }
+
+        Assert.Equal(1, cache.LastTotalChunks);
+
+        // Drop the chunk without telling the cache, which is what a late arrival looks like from here.
+        Assert.NotEmpty(world.RemoveChunksOutside(1000, 1000, radiusChunks: 0));
+
+        Assert.Equal([ClientWorld.Pack(0, 0)], cache.PruneTo(world));
+        Assert.Equal(0, cache.LastTotalChunks);
+        Assert.Empty(cache.PruneTo(world));
     }
 }

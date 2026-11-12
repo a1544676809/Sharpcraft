@@ -680,6 +680,14 @@ internal static class WindowCommand
                     meshCache.Remove(removed);
                 }
 
+                // The removal list above only names the chunks this call removed, so a mesh that finished after its
+                // chunk was already gone survives it and is never reclaimed. Reconciling against the world catches
+                // those too; a measured session held 1281 cached meshes against 637 loaded chunks before this ran.
+                foreach (var pruned in meshCache.PruneTo(world))
+                {
+                    removedChunks.Add(pruned);
+                }
+
                 // Hand fresh work to the pool, then return only the chunks that finished. The renderer keeps a
                 // slice per chunk, so each arrival costs one small upload rather than a recomposition of the
                 // whole world (docs/specs/network/play-movement.md 7.25).
@@ -715,7 +723,7 @@ internal static class WindowCommand
                 }
                 else
                 {
-                    drained = [.. meshCache.DrainUpdates()];
+                    drained = [.. meshCache.DrainUpdates(world)];
                 }
                 drainedTotal += drained.Count;
 
