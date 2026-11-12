@@ -334,3 +334,41 @@ CPU 侧各项都有小幅下降，但**区间仍与基线重叠**——真正的
 **结论**：21% 的顶点数据减少属于带宽侧，只能靠 GPU 计数器确认；用 CPU 帧时间在这个噪声水平上分辨不出来。
 
 **获取 GPU 计数的阻碍**：`renderdoccmd` 没有 python 子命令，计数器只能走 `qrenderdoc --python`，而它会拉起 GUI 并阻塞（本会话此前两次尝试都被卡住）。要拿到这个数字，需要先解决 `qrenderdoc` 的无界面调用方式。
+
+## 15. GPU 计数器的打通与失败结论
+
+### 打通了什么
+
+RenderDoc 的 Python 入口此前一直卡在"`qrenderdoc --python` 会拉起 GUI 并阻塞"。查官方文档后确认**参数名是 `--py`**（`--python` 不存在）：
+
+> `--py` runs the script early in initialisation **before the UI has been created or shown** and can be used for headless execution.
+
+另外两个坑，都记在 `tools/verify/rdoc-gpu-timings.py` 里：
+
+| 坑 | 表现 | 解法 |
+| --- | --- | --- |
+| qrenderdoc 是 GUI 子系统程序 | 脚本 `print` 的内容**看不到**（没有控制台） | 输出写文件，路径走环境变量 |
+| 计数器单位是**秒** | 按微秒打印全是 `0.00` | 乘 1e6 |
+| `rd.ReplayProgress` 不存在 | `AttributeError` | `OpenCapture(rd.ReplayOptions(), None)` |
+| `CounterValue` 是联合体 | `float()` 报类型错 | 按 `d`/`f`/`u64` 依次取分量 |
+
+脚本要显式 `sys.exit()`，否则 qrenderdoc 进程不退出。F12 触发抓帧用桌面工具发送（`keybd_event` 不可靠）。
+
+### 失败结论：这个测量方法的分辨率不够
+
+同一份捕获**重复分析**，整帧 GPU 时间在 **1381–3141 µs** 之间波动（约 2 倍）。两次 A/B 的方向甚至相反：
+
+| 轮次 | 56 字节 | 44 字节 |
+| --- | --- | --- |
+| 第一次（各 3 次） | 中位数 2494 µs | 中位数 1839 µs |
+| 第二次（各 4 次） | 中位数 **1388 µs** | 中位数 **2966 µs** |
+
+两次捕获的几何量已对齐到同一量级（3.05M 三角形），所以差异不是场景不同造成的。
+
+**结论：`EventGPUDuration` 的 RenderDoc 重放值不能用来分辨 20% 量级的差异。** 顶点打包的收益仍然**未被证实**，也未被否证。
+
+### 要真正回答这个问题，需要其中一条
+
+1. **应用内 GPU 时间戳**——最准，但当前 wgpu 绑定没有 `TimestampQuery` 特性（T-800 已确认）
+2. **合成基准**：在一次捕获里把同一批几何重复绘制 N 次，把待测开销放大到噪声之上
+3. **更严的统计**：每边几十次采样取中位数，成本高但可行
