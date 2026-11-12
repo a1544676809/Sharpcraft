@@ -1086,3 +1086,50 @@ public record OitPipelineSet(RenderPipeline depthBoundsPipeline, RenderPipeline 
 `cull:` 统计报 `drawn=252 tri=1664176`，即每"区块"6604 个三角形，而 16³ section 理论最多约 3072。**但 `chunks=637` 的统计口径尚未核实**——637 更接近 VD12 的**区块列数**（625），而不是 section 数。因此这个"每区块 6604"可能是把多个 section 混算，**不能据此断定网格器有问题**。
 
 **下一步应先核实 `ChunkGeometryStore` 的 `ChunkCount` / `TrianglesLastDraw` 究竟按什么单位统计**，再判断三角形数是否需要追。
+
+## 24. 核实结果：剔除粒度是"整根区块列"，原版是"单个 section"
+
+### 统计口径核实
+
+| 事实 | 证据 |
+| --- | --- |
+| 一个 entry = **一整根区块列** | `ChunkWorkerPool` 里 `var (chunkX, chunkZ) = ClientWorld.Unpack(chunkKey);` —— key 只含 x/z，不含 y |
+| `ChunkCount` = entry 数 | `public int ChunkCount => _entries.Count;` |
+| `TrianglesLastDraw` = 被绘制 entry 的 `IndexCount / 3` 之和 | `TrianglesLastDraw += entry.IndexCount / 3;` |
+| 列高 = 24 sections × 16 = **384 格** | `sectionCount: 24, minSectionY: -64`（Y 从 -64 到 320） |
+
+**因此"每区块 6604 三角形"实际是"每根 384 格高的列 6604 三角形"，完全合理。§23 里对网格器的怀疑不成立——网格器没有多生成几何。**
+
+### 真正的问题：剔除粒度差一个数量级
+
+| | 我们 | 原版 |
+| --- | --- | --- |
+| 剔除单位 | **区块列：16×384×16** | **section：16×16×16** |
+| 体积比 | **24 倍** | 1 |
+| 后果 | 列内 24 个 section 只要有**任何一个**进入视锥，**整列 24 个全部绘制** | 只绘制进入视锥的 section |
+
+这直接解释了 §23 的观测：**我们画了原版 2.3 倍的三角形**。相机水平看出去时，整列中位于地表以下、高空、以及视锥垂直范围之外的 section 全都被画了出来。
+
+`ChunkGeometryStore.Draw` 的剔除只有一处：
+
+```csharp
+if (planes.Length >= 6 && !FrustumPlanes.IsVisible(planes, entry.Minimum, entry.Maximum))
+```
+
+而 `entry.Minimum/Maximum` 是**整列的包围盒**。
+
+### 这是等效性问题，不只是性能问题
+
+原版按 section 剔除，所以"哪些几何被画"由 16³ 的可见性决定。我们按列剔除，多画的 section **虽然不影响最终像素（被深度遮挡或不透明）**，但确实改变了提交给 GPU 的几何集合。
+
+按原则 9，减少这部分几何不需要登记为行为偏差——**它是在向原版靠拢**。
+
+### 修复方向
+
+把剔除单位从"列"细化到"section"：
+
+1. 网格仍在列级别构建（合并邻块查询方便），但**记录每个 section 在列网格中的索引区间**
+2. `Entry` 保存这些区间
+3. `Draw` 时对每个 section 做视锥测试，只对通过的区间发绘制（或合并相邻可通过区间以控制绘制次数）
+
+收益预估：三角形数从 304 万降到接近原版的 135 万量级，即 **GPU 侧约可减半**。绘制次数会增加，但原版本来就发 1905 次，不构成问题。
