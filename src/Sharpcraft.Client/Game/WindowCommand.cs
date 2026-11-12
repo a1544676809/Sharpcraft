@@ -446,6 +446,7 @@ internal static class WindowCommand
         session.PlayerSkinLookup = playerSkins.TryGet;
         var modelMesher = new Sharpcraft.Client.Render.EntityModelMesher();
         var droppedItemMesher = new Sharpcraft.Client.Render.ItemEntityMesher();
+        modelMesher.Trace = GameOptions.Get("MC_DIAG") == "1";
         var heldItemMesher = new Sharpcraft.Client.Render.ItemInHandMesher();
         var variantTable = Sharpcraft.Client.Render.EntityVariantTable.FromRegistries(live?.Registries);
 

@@ -533,3 +533,25 @@ transforms.TryGetValue(part.Name + "." + face, out var value)
 4. 每帧 `new List<EntityGeometryLayer>(plan.Count)` 等分配带来的 GC 压力
 
 **这些都是可以用同一套装置逐项否定的**：给每一项加 A/B 跳过开关，看 delta 落在谁身上。
+
+### 二分到函数内部：不是量的问题，是每顶点慢了 30–70 倍
+
+在 `BuildLayers` 里加临时打点（`MC_DIAG=1` 时每 60 帧打印，`Trace` 为假时完全惰性，可整体删除）：
+
+```
+entity-build: path=model(idx=648,vf=6048,parts=3) entities=1 layers=1 pose=0.011 rest=0.29–0.38 total=0.30–0.39
+```
+
+| 项 | 值 | 判定 |
+| --- | --- | --- |
+| `PrepareAnimationPoses` | 0.011 ms | **排除**，可忽略 |
+| `BuildModelBackedLayers` | 0.29–0.38 ms | **全部成本在这里** |
+| 产出规模 | 648 索引 = 108 四边形、3 个部件 | **量很小** |
+| 每四边形成本 | **约 2.8 微秒** | 正常应为几十纳秒 |
+| 每顶点成本 | **约 350–700 纳秒** | 正常应为 5–20 纳秒 |
+
+**结论：慢 30–70 倍，与几何量无关。** 3 个部件、108 个四边形不该花 300 微秒。
+
+已排除的项：`PrepareAnimationPoses`（0.011 ms）、字符串拼接式字典查找（调用方传 `null`，见上文）。文件里其余每顶点操作只有 `new Vector3`（结构体）与 6 项字典查找，都不足以解释这个量级。
+
+**下一步必须是函数内部二分**：把 `BuildModelBackedLayers` 拆成"模型解析 / 分组 / 顶点发射"三段各自计时。现在的打点只到函数边界，再往里没有数据。
