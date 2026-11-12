@@ -71,8 +71,10 @@ public sealed class EntityModelPartNode
         RotationX = rotationX;
         RotationY = rotationY;
         RotationZ = rotationZ;
-        Cubes = cubes;
-        Children = children;
+        CubeArray = cubes as EntityModelCube[] ?? System.Linq.Enumerable.ToArray(cubes);
+        ChildArray = children as EntityModelPartNode[] ?? System.Linq.Enumerable.ToArray(children);
+        Cubes = CubeArray;
+        Children = ChildArray;
         VisibleWhen = visibleWhen;
         RotationSelector = rotationSelector;
         YOffsetSelector = yOffsetSelector;
@@ -89,7 +91,21 @@ public sealed class EntityModelPartNode
     public float RotationY { get; }
     public float RotationZ { get; }
     public IReadOnlyList<EntityModelCube> Cubes { get; }
+
     public IReadOnlyList<EntityModelPartNode> Children { get; }
+
+    /// <summary>
+    /// Same data as <see cref="Cubes"/> but typed as an array, for the per frame loops.
+    /// </summary>
+    /// <remarks>
+    /// Iterating an <c>IReadOnlyList</c> through the interface boxes its enumerator, once per node per frame, which is
+    /// pure garbage on a path that already costs hundreds of microseconds (T-829). Keeping the interface property means
+    /// no call site has to change; the hot loop just reaches for this one instead.
+    /// </remarks>
+    public EntityModelCube[] CubeArray { get; }
+
+    /// <summary>Same data as <see cref="Children"/> but typed as an array, for the per frame loops.</summary>
+    public EntityModelPartNode[] ChildArray { get; }
     public Func<Sharpcraft.Client.World.EntityRenderState, bool>? VisibleWhen { get; }
     public Func<Sharpcraft.Client.World.EntityRenderState, Vector3>? RotationSelector { get; }
     public Func<Sharpcraft.Client.World.EntityRenderState, float>? YOffsetSelector { get; }

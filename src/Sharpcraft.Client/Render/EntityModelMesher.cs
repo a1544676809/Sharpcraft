@@ -872,13 +872,13 @@ public sealed partial class EntityModelMesher
                 return;
             }
 
-            foreach (var child in node.Children)
+            foreach (var child in node.ChildArray)
             {
                 Walk(child, frame);
             }
         }
 
-        foreach (var child in compiled.Root.Children)
+        foreach (var child in compiled.Root.ChildArray)
         {
             Walk(child, rootFrame);
         }
@@ -1093,10 +1093,10 @@ public sealed partial class EntityModelMesher
                 partMatrix = localTransform * partMatrix;
             }
 
-            var cachedParts = node.PartsFor(node.Cubes.Count);
-            for (var cubeIndex = 0; cubeIndex < node.Cubes.Count; cubeIndex++)
+            var cachedParts = node.PartsFor(node.CubeArray.Length);
+            for (var cubeIndex = 0; cubeIndex < node.CubeArray.Length; cubeIndex++)
             {
-                var cube = node.Cubes[cubeIndex];
+                var cube = node.CubeArray[cubeIndex];
                 if (cube.Width == 0f && cube.Height == 0f && cube.Depth == 0f)
                 {
                     continue;
@@ -1226,7 +1226,7 @@ public sealed partial class EntityModelMesher
                     ref indexCountLocal);
             }
 
-            foreach (var child in node.Children)
+            foreach (var child in node.ChildArray)
             {
                 Emit(child, frame);
             }
@@ -1242,7 +1242,7 @@ public sealed partial class EntityModelMesher
             * RotationZyx(-rootPose.Rotation.X, -rootPose.Rotation.Y, rootPose.Rotation.Z)
             * Matrix4x4.CreateTranslation(rootPose.Position * px);
 
-        foreach (var child in compiled.Root.Children)
+        foreach (var child in compiled.Root.ChildArray)
         {
             Emit(child, rootFrame);
         }

@@ -728,3 +728,18 @@ for (Polygon polygon : polygons)
 全文件还有 **11 处**同类 `foreach`（`model.Parts`、`node.Children`、`compiled.Cubes`、`model.RenderLayers` 等）。改为具体数组类型（`EntityModelCube[]` / `EntityModelPartNode[]`）后 `foreach` 走数组快路径、零分配，且行为不变——属于"比原版更激进但等效"的许可范围。
 
 **这是下一步最明确、最省力的改动**：把上述集合的声明类型从 `IReadOnlyList<T>` 换成 `T[]`。
+
+### 枚举器装箱：改了，但收益不可测
+
+做法：`EntityModelPartNode` 保留 `IReadOnlyList<T>` 属性不变（避免波及 25 处调用点），另加 `CubeArray` / `ChildArray` 两个数组类型属性指向同一份数据；热循环改用数组属性，`foreach` 走数组快路径、不再装箱枚举器。
+
+**实测：无差异。** 1 个可见实体时 `prep-entities` 为 0.48–0.53 ms，与改动前基线 0.47–0.53 ms 重叠。
+
+**结论**：每帧十几个小对象的装箱不足以在毫秒级指标上体现。改动保留是因为零风险且消除了稳态垃圾，但**不把它算作性能收益**。
+
+### 至此，`Emit` 内 300 µs 的归因状态
+
+已消除：结构体重建（−9%）、枚举器装箱（约 0）。
+仍未知：其余约 90%，在 `Emit` 体内剩下的代码里（`min`/`max` 向量运算、两次图集查找、`AddPart` 调用链）。
+
+**下一步唯一可靠的办法**是在 `Emit` 体内**逐行分段计时**（不是按函数），例如把 `min`/`max` 计算段与精灵解析段各自包起来。这需要一个能开关的细粒度探针，用完即删。
