@@ -780,3 +780,33 @@ for (Polygon polygon : polygons)
 **性能测量必须先确认构建配置。** 这次错误让整条排查链的方向偏了两轮：所谓"每实体 390 微秒"在 Release 下是约 150 微秒/帧（含多实体），量级完全不同。
 
 今后所有性能数字 MUST 标注构建配置，且对比原版时 MUST 用 Release。
+
+### Release 下的真实分布：帧是等 GPU 的
+
+同一 Release 进程的完整阶段表（`frame=2.233` 的样本；典型 `frame≈1.80`）：
+
+| 阶段 | ms | 性质 |
+| --- | --- | --- |
+| **`submit`** | **0.821** | |
+| ├ `sub-finish` | **0.601** | **等待 GPU 完成** |
+| └ `sub-queue` | 0.218 | CPU 提交 |
+| **`swap`** | **0.396** | 呈现 / 等待 |
+| `oit` | 0.190 | CPU 记录 |
+| `prep-entities` | 0.172 | CPU 构建 |
+| `scene-terrain` | 0.137 | CPU 记录 |
+| `scene-entities` | 0.083 | CPU 记录 |
+| `prep-pump` / `prep-ui` / `cel-build` / `acquire` / `camera` | 0.05–0.08 | CPU |
+
+**`sub-finish` + `swap` ≈ 1.0 ms，占整帧约 55%，都是"等 GPU"。**
+
+也就是说：
+
+- 整帧 **不是 CPU 受限**，而是**GPU / 呈现受限**
+- 全部 CPU 准备工作加起来约 0.5–0.6 ms
+- 我花了大半轮追的 `entityLayers()` 是 **0.17 ms，约 8%**
+
+### 这对后续方向的意义
+
+此前把"GPU 计数器太吵、放弃 RenderDoc"当作结论是**在 Debug 构建上做的判断**，而那时 CPU 侧被放大、GPU 等待被掩盖。**Release 下 GPU 才是主项，应重新用 RenderDoc 看 GPU 侧各 pass 的耗时分布。**
+
+下一步：在 Release 构建上做 RenderDoc 捕获，看哪一类 pass（地形 / OIT / 天空 / UI）吃掉那 ~1.2 ms 的 GPU 时间。
