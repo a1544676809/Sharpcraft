@@ -651,3 +651,48 @@ entity-build: path=model(idx=648,vf=6048,parts=3) entities=1 layers=1 pose=0.011
 
 - `tools/verify/speedscope-threads.py`：按线程汇总 Speedscope profile 的独占/含子时间
 - 采样命令：`dotnet-trace collect -p <pid> --providers Microsoft-DotNETCore-SampleProfiler --duration 00:00:15`，再 `dotnet-trace convert --format Speedscope`
+
+### 原版的做法（为了等效，不是为了复刻）
+
+读 `ModelPart.java`（`ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/ModelPart.java`）确认的数据结构：
+
+| 结构 | 性质 |
+| --- | --- |
+| `ModelPart.cubes` | `final List<Cube>`，**构造时建好** |
+| `Cube.polygons` | `final Polygon[]`，**构造时建好** |
+| `Polygon` | `record (Vertex[] vertices, Vector3fc normal)`，**构造时建好** |
+| `Vertex` | `record (x, y, z, u, v)`，存**模型空间坐标与 UV**，**构造时建好** |
+
+每帧 `Cube.compile` 的全部工作：
+
+```
+for (Polygon polygon : polygons)
+    normal = pose.transformNormal(polygon.normal)
+    for (Vertex vertex : polygon.vertices)
+        pos = matrix.transformPosition(vertex.x, vertex.y, vertex.z)
+        builder.addVertex(pos, color, vertex.u, vertex.v, ...)
+```
+
+**即：每帧只做"用姿态矩阵变换预建顶点并发射"，不重建任何数据。**
+
+### 对照我们的实现，差异在三点
+
+| 项 | 原版 | 我们 |
+| --- | --- | --- |
+| 立方体描述 | 构造时建好、持有 | **每帧每立方体重建 30 字段结构体** |
+| 纹理选择 | 每实体解析一次（在渲染器层） | **每立方体调用一次 `TextureSelector`**，其中装备层转发到 `ResolveEquipmentTexture`（注册表查找 + 资源路径解析） |
+| 每帧工作 | 变换 + 发射 | 变换 + 发射 **+ 上述重建** |
+
+### 所以优化方向是"把静态数据搬出每帧循环"，与等效一致
+
+这不是为了更快而改变行为——**原版本来就是这么组织的**。改成：
+
+1. 每实体每帧解析一次上下文（纹理、色调、yOffset、姿态矩阵）
+2. 每 (node, cube) 的静态描述**缓存**，模型解析时建一次
+3. 每帧只更新随帧变化的少数字段并变换发射
+
+三项差异会同时被消掉：结构体重建、重复图集查找、重复选择器调用。**这正是 `Emit` 独占 3146 ms 覆盖的那段代码。**
+
+### 待办
+
+实现上述缓存重构。改动集中在 `EntityModelMesher.BuildCompiledEntity` 与其缓存结构；验收用既有的同进程 A/B（`MC_AB_TOGGLE` + `AddAbSample`）对比 `prep-entities`，并保证画面逐像素不变。
