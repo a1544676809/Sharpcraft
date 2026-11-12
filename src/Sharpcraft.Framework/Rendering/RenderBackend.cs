@@ -337,6 +337,15 @@ public interface IRenderBackend
     /// <summary>Commands recorded since the last reset, or zero when the backend does not count them (T-820).</summary>
     CommandCounts RecordedCommands => default;
 
+    /// <summary>Buffers created since startup, for finding per-frame resource churn (T-831).</summary>
+    long BuffersCreated => 0;
+
+    /// <summary>Buffers destroyed since startup (T-831).</summary>
+    long BuffersDestroyed => 0;
+
+    /// <summary>Total bytes of every buffer created since startup (T-831).</summary>
+    long BufferBytesCreated => 0;
+
     /// <summary>Reads the recorded command counts and starts a new window (T-820).</summary>
     /// <returns>Counts recorded since the previous reset.</returns>
     CommandCounts TakeRecordedCommands() => default;
@@ -983,24 +992,53 @@ public sealed class WgpuRenderBackend : IRenderBackend
 
     /// <inheritdoc/>
     public BufferHandle CreateBufferInit(in BufferDesc desc, ReadOnlySpan<byte> data) =>
-        new(_device.CreateBufferInit(
-            new BufferInitDescriptor { Usage = ToWgpu(desc.Usage) },
-            data.ToArray()));
+        Count(
+            new(_device.CreateBufferInit(
+                new BufferInitDescriptor { Usage = ToWgpu(desc.Usage) },
+                data.ToArray())),
+            data.Length);
 
     /// <inheritdoc/>
     public BufferHandle CreateBuffer(in BufferDesc desc) =>
-        new(_device.CreateBuffer(new BufferDescriptor
-        {
-            Size = desc.Size,
-            Usage = ToWgpu(desc.Usage)
-        }));
+        Count(
+            new(_device.CreateBuffer(new BufferDescriptor
+            {
+                Size = desc.Size,
+                Usage = ToWgpu(desc.Usage)
+            })),
+            (long)desc.Size);
 
     /// <inheritdoc/>
     public void WriteBuffer(BufferHandle buffer, ReadOnlySpan<byte> data, ulong offset) =>
         _device.Queue.WriteBuffer<byte>(RequireValid<Brew.Wgpu.Buffer>(buffer.IsValid, buffer.Value), offset, data);
 
     /// <inheritdoc/>
-    public void Destroy(BufferHandle buffer) => RequireValid<Brew.Wgpu.Buffer>(buffer.IsValid, buffer.Value).Dispose();
+    public void Destroy(BufferHandle buffer)
+    {
+        _buffersDestroyed++;
+        RequireValid<Brew.Wgpu.Buffer>(buffer.IsValid, buffer.Value).Dispose();
+    }
+
+    /// <summary>Counts one buffer creation and hands the handle back unchanged (T-831).</summary>
+    private BufferHandle Count(BufferHandle handle, long bytes)
+    {
+        _buffersCreated++;
+        _bufferBytesCreated += bytes;
+        return handle;
+    }
+
+    /// <inheritdoc/>
+    public long BuffersCreated => _buffersCreated;
+
+    /// <inheritdoc/>
+    public long BuffersDestroyed => _buffersDestroyed;
+
+    /// <inheritdoc/>
+    public long BufferBytesCreated => _bufferBytesCreated;
+
+    private long _buffersCreated;
+    private long _buffersDestroyed;
+    private long _bufferBytesCreated;
 
     /// <inheritdoc/>
     public void Destroy(TextureHandle texture) => RequireValid<Texture>(texture.IsValid, texture.Value).Dispose();
