@@ -1093,8 +1093,10 @@ public sealed partial class EntityModelMesher
                 partMatrix = localTransform * partMatrix;
             }
 
-            foreach (var cube in node.Cubes)
+            var cachedParts = node.PartsFor(node.Cubes.Count);
+            for (var cubeIndex = 0; cubeIndex < node.Cubes.Count; cubeIndex++)
             {
+                var cube = node.Cubes[cubeIndex];
                 if (cube.Width == 0f && cube.Height == 0f && cube.Depth == 0f)
                 {
                     continue;
@@ -1127,10 +1129,15 @@ public sealed partial class EntityModelMesher
                     continue;
                 }
 
-                var part = new EntityModelPart(
-                    Name: cube.Name,
-                    CentreX: cube.CentreX,
-                    Bottom: cube.Bottom + yOffset,
+                // The descriptor is rebuilt only when it does not exist yet, or when this entity shifts the part
+                // vertically; every other field comes from the node and its cube, which never change (T-829).
+                var part = cachedParts[cubeIndex];
+                if (part.Name is null || yOffset != 0f)
+                {
+                    part = new EntityModelPart(
+                        Name: cube.Name,
+                        CentreX: cube.CentreX,
+                        Bottom: cube.Bottom + yOffset,
                     Width: cube.Width,
                     Height: cube.Height,
                     Depth: cube.Depth,
@@ -1160,6 +1167,12 @@ public sealed partial class EntityModelMesher
                     UvWidth: cube.UvWidth,
                     UvHeight: cube.UvHeight,
                     UvDepth: cube.UvDepth);
+
+                    if (yOffset == 0f)
+                    {
+                        cachedParts[cubeIndex] = part;
+                    }
+                }
 
                 var centreX = cube.CentreX * px;
                 var centreZ = cube.CentreZ * px;

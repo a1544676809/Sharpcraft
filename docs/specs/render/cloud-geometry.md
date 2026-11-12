@@ -696,3 +696,35 @@ for (Polygon polygon : polygons)
 ### 待办
 
 实现上述缓存重构。改动集中在 `EntityModelMesher.BuildCompiledEntity` 与其缓存结构；验收用既有的同进程 A/B（`MC_AB_TOGGLE` + `AddAbSample`）对比 `prep-entities`，并保证画面逐像素不变。
+
+## 20. 缓存实现与实测：9% 的改善，以及一个新线索
+
+### 实现
+
+`EntityModelPartNode` 增加惰性缓存 `PartsFor(count)`，`Emit` 的立方体循环改为：
+
+- `foreach` → 索引 `for`（顺带消除接口枚举器）
+- `EntityModelPart` 命中缓存则复用，只在未建过或 `yOffset != 0` 时重建
+
+等效性依据：`EntityModelPart` 的全部字段来自不可变的节点与立方体，唯一逐实体变化的是 `yOffset`，因此 `yOffset == 0` 时缓存值恒等于重新构造的值；非零时走原构造路径。
+
+### 实测（跨运行，按可见实体数归一化）
+
+| 配置 | 可见实体 | `prep-entities` | **每实体** |
+| --- | --- | --- | --- |
+| 有缓存 | 2 | 0.706–0.783 ms | **0.368 ms** |
+| 无缓存 | 3 | 1.163–1.252 ms | **0.404 ms** |
+
+**约 9% 改善。** 注意对比必须按实体数归一化——最初"缓存后 0.71 比改动前 0.47 更差"的表象，其实是那一次场景里有 2 个可见实体而非 1 个。
+
+### 这否定了什么
+
+结构体构造只占那 300 µs 的九分之一。**即便缓存后，每实体仍需 0.37 ms**，成本在 `Emit` 体内的其他地方。
+
+### 新线索：接口枚举器装箱
+
+`Emit` 的立方体循环原本是 `foreach (var cube in node.Cubes)`，而 `Cubes` 声明为 `IReadOnlyList<EntityModelCube>`——**通过接口 foreach 会装箱枚举器**，每节点每帧一次堆分配。
+
+全文件还有 **11 处**同类 `foreach`（`model.Parts`、`node.Children`、`compiled.Cubes`、`model.RenderLayers` 等）。改为具体数组类型（`EntityModelCube[]` / `EntityModelPartNode[]`）后 `foreach` 走数组快路径、零分配，且行为不变——属于"比原版更激进但等效"的许可范围。
+
+**这是下一步最明确、最省力的改动**：把上述集合的声明类型从 `IReadOnlyList<T>` 换成 `T[]`。
