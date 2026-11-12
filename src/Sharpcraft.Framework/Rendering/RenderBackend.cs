@@ -346,6 +346,12 @@ public interface IRenderBackend
     /// <summary>Total bytes of every buffer created since startup (T-831).</summary>
     long BufferBytesCreated => 0;
 
+    /// <summary>Textures created since startup (T-831).</summary>
+    long TexturesCreated => 0;
+
+    /// <summary>Approximate bytes of every texture created since startup (T-831).</summary>
+    long TextureBytesCreated => 0;
+
     /// <summary>Reads the recorded command counts and starts a new window (T-820).</summary>
     /// <returns>Counts recorded since the previous reset.</returns>
     CommandCounts TakeRecordedCommands() => default;
@@ -427,8 +433,16 @@ public sealed class WgpuRenderBackend : IRenderBackend
             : throw new InvalidOperationException("the handle was never created");
 
     /// <inheritdoc/>
-    public TextureHandle CreateTexture(in TextureDesc desc) =>
-        new(_device.CreateTexture(new TextureDescriptor
+    public TextureHandle CreateTexture(in TextureDesc desc)
+    {
+        _texturesCreated++;
+
+        // Approximate: four bytes per texel ignores the format's real size and the mip chain, which is enough to tell
+        // whether textures are behind the working set growth at all.
+        var bytes = (long)desc.Width * desc.Height * 4;
+        _textureBytesCreated += bytes;
+
+        return new(_device.CreateTexture(new TextureDescriptor
         {
             Size = new WGPUExtent3D { width = desc.Width, height = desc.Height, depthOrArrayLayers = 1 },
             MipLevelCount = desc.MipLevelCount,
@@ -437,6 +451,16 @@ public sealed class WgpuRenderBackend : IRenderBackend
             Format = BackendConvert.ToWgpu(desc.Format),
             Usage = ToWgpu(desc.Usage)
         }));
+    }
+
+    /// <inheritdoc/>
+    public long TexturesCreated => _texturesCreated;
+
+    /// <inheritdoc/>
+    public long TextureBytesCreated => _textureBytesCreated;
+
+    private long _texturesCreated;
+    private long _textureBytesCreated;
 
     /// <inheritdoc/>
     public void WriteTexture(TextureHandle texture, ReadOnlySpan<byte> pixels, uint bytesPerRow, uint width, uint height, uint mipLevel)

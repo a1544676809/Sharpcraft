@@ -1878,7 +1878,7 @@ public static class WindowedRenderer
                         + (abToggleFrames > 0
                             ? $"abA={(abACount == 0 ? 0d : abAMs / abACount):F3}/{abACount} abB={(abBCount == 0 ? 0d : abBMs / abBCount):F3}/{abBCount} "
                             : string.Empty)
-                        + $"bufs={backend.BuffersCreated}/{backend.BuffersDestroyed} bufMB={(backend.BufferBytesCreated / (1024d * 1024d)):F1} frames={windowFrameCount} meanMs={windowMeanMs:F3} (reference oit)");
+                        + $"bufs={backend.BuffersCreated}/{backend.BuffersDestroyed} bufMB={(backend.BufferBytesCreated / (1024d * 1024d)):F1} tex={backend.TexturesCreated} texMB={(backend.TextureBytesCreated / (1024d * 1024d)):F1} frames={windowFrameCount} meanMs={windowMeanMs:F3} (reference oit)");
                     windowFrameMs = 0d;
                     windowFrameCount = 0;
                     abAMs = 0d;
