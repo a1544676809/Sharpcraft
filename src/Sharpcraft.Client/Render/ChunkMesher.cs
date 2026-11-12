@@ -802,6 +802,32 @@ public static class ChunkMesher
             return 0f;
         }
 
+        // The four surface heights of one fluid cell. Coordinates are explicit for the same reason CellHeight takes
+        // them: the merge prepass has to ask about cells it is not currently emitting, and sharing this mapping is
+        // what keeps the prepass and the emit loop from drifting apart.
+        (float K00, float K01, float K10, float K11) CellCorners(int cbx, int cby, int cbz, string cfluid, bool above, float self)
+        {
+            if (above)
+            {
+                return (1f, 1f, 1f, 1f);
+            }
+
+            var north = CellHeight(cbx, cby, cbz, cfluid, 0, -1);
+            var south = CellHeight(cbx, cby, cbz, cfluid, 0, 1);
+            var west = CellHeight(cbx, cby, cbz, cfluid, -1, 0);
+            var east = CellHeight(cbx, cby, cbz, cfluid, 1, 0);
+            var northWest = CellHeight(cbx, cby, cbz, cfluid, -1, -1);
+            var northEast = CellHeight(cbx, cby, cbz, cfluid, 1, -1);
+            var southWest = CellHeight(cbx, cby, cbz, cfluid, -1, 1);
+            var southEast = CellHeight(cbx, cby, cbz, cfluid, 1, 1);
+
+            return (
+                FluidSurface.AverageCorner(self, west, north, northWest),
+                FluidSurface.AverageCorner(self, west, south, southWest),
+                FluidSurface.AverageCorner(self, east, north, northEast),
+                FluidSurface.AverageCorner(self, east, south, southEast));
+        }
+
         for (var y = 0; y < 16; y++)
         {
             for (var z = 0; z < 16; z++)
@@ -930,31 +956,7 @@ public static class ChunkMesher
 
                         return !transparency.HasTransparent && !transparency.HasTranslucent;
                     }
-
-                    var north = CellHeight(bx, by, bz, fluidPath, 0, -1);
-                    var south = CellHeight(bx, by, bz, fluidPath, 0, 1);
-                    var west = CellHeight(bx, by, bz, fluidPath, -1, 0);
-                    var east = CellHeight(bx, by, bz, fluidPath, 1, 0);
-                    var northWest = CellHeight(bx, by, bz, fluidPath, -1, -1);
-                    var northEast = CellHeight(bx, by, bz, fluidPath, 1, -1);
-                    var southWest = CellHeight(bx, by, bz, fluidPath, -1, 1);
-                    var southEast = CellHeight(bx, by, bz, fluidPath, 1, 1);
-
-                    float Corner(int cx, int cz)
-                    {
-                        // With the same fluid directly above, the column is continuous, so the block reaches the full block
-                        // top (reference getHeight = hasSameAbove ? 1.0 : ownHeight). Without this the corner average dipped
-                        // the rim below the block above and left a seam at water drops / terraces.
-                        if (aboveSame)
-                        {
-                            return 1f;
-                        }
-
-                        var n1 = cx == 0 ? west : east;
-                        var n2 = cz == 0 ? north : south;
-                        var diagonal = cx == 0 ? (cz == 0 ? northWest : southWest) : (cz == 0 ? northEast : southEast);
-                        return FluidSurface.AverageCorner(selfHeight, n1, n2, diagonal);
-                    }
+                    var (k00, k01, k10, k11) = CellCorners(bx, by, bz, fluidPath, aboveSame, selfHeight);
 
                     const float epsilon = 0.001f;
 
@@ -970,10 +972,10 @@ public static class ChunkMesher
                             var s = MathF.Sin(angle) * 0.25f;
                             var c = MathF.Cos(angle) * 0.25f;
                             Emit(
-                                (fx, lowY + Corner(0, 0) - epsilon, fz),
-                                (fx, lowY + Corner(0, 1) - epsilon, fz + 1f),
-                                (fx + 1f, lowY + Corner(1, 1) - epsilon, fz + 1f),
-                                (fx + 1f, lowY + Corner(1, 0) - epsilon, fz),
+                                (fx, lowY + k00 - epsilon, fz),
+                                (fx, lowY + k01 - epsilon, fz + 1f),
+                                (fx + 1f, lowY + k11 - epsilon, fz + 1f),
+                                (fx + 1f, lowY + k10 - epsilon, fz),
                                 colour, colour, colour, colour,
                                 (0.5f + (-c - s), 0.5f + (-c + s)),
                                 (0.5f + (-c + s), 0.5f + (c + s)),
@@ -984,10 +986,10 @@ public static class ChunkMesher
                         else
                         {
                             Emit(
-                                (fx, lowY + Corner(0, 0) - epsilon, fz),
-                                (fx, lowY + Corner(0, 1) - epsilon, fz + 1f),
-                                (fx + 1f, lowY + Corner(1, 1) - epsilon, fz + 1f),
-                                (fx + 1f, lowY + Corner(1, 0) - epsilon, fz),
+                                (fx, lowY + k00 - epsilon, fz),
+                                (fx, lowY + k01 - epsilon, fz + 1f),
+                                (fx + 1f, lowY + k11 - epsilon, fz + 1f),
+                                (fx + 1f, lowY + k10 - epsilon, fz),
                                 colour, colour, colour, colour,
                                 (0f, 0f), (0f, 1f), (1f, 1f), (1f, 0f),
                                 topSprite);
@@ -1009,10 +1011,10 @@ public static class ChunkMesher
                     // Side faces use the same corner heights as the top face so the rim is continuous, and (as in the
                     // reference FluidRenderer) sample the flowing sprite with V mapped to the exposed height so the texture
                     // reads as water falling down the drop. Corner assignment and the +/-0.001 inset follow the reference.
-                    var c00 = lowY + Corner(0, 0);
-                    var c01 = lowY + Corner(0, 1);
-                    var c10 = lowY + Corner(1, 0);
-                    var c11 = lowY + Corner(1, 1);
+                    var c00 = lowY + k00;
+                    var c01 = lowY + k01;
+                    var c10 = lowY + k10;
+                    var c11 = lowY + k11;
                     var nz = fz + epsilon;
                     var sz = fz + 1f - epsilon;
                     var wx = fx + epsilon;
@@ -1026,8 +1028,8 @@ public static class ChunkMesher
                         Emit(
                             (fx, c00, nz), (fx + 1f, c10, nz), (fx + 1f, lowY, nz), (fx, lowY, nz),
                             colour, colour, colour, colour,
-                            (0f, (1f - Corner(0, 0)) * 0.5f),
-                            (0.5f, (1f - Corner(1, 0)) * 0.5f),
+                            (0f, (1f - k00) * 0.5f),
+                            (0.5f, (1f - k10) * 0.5f),
                             (0.5f, 0.5f),
                             (0f, 0.5f),
                             sideFlowSprite);
@@ -1040,8 +1042,8 @@ public static class ChunkMesher
                         Emit(
                             (fx + 1f, c11, sz), (fx, c01, sz), (fx, lowY, sz), (fx + 1f, lowY, sz),
                             colour, colour, colour, colour,
-                            (0f, (1f - Corner(1, 1)) * 0.5f),
-                            (0.5f, (1f - Corner(0, 1)) * 0.5f),
+                            (0f, (1f - k11) * 0.5f),
+                            (0.5f, (1f - k01) * 0.5f),
                             (0.5f, 0.5f),
                             (0f, 0.5f),
                             sideFlowSprite);
@@ -1054,8 +1056,8 @@ public static class ChunkMesher
                         Emit(
                             (wx, c01, fz + 1f), (wx, c00, fz), (wx, lowY, fz), (wx, lowY, fz + 1f),
                             colour, colour, colour, colour,
-                            (0f, (1f - Corner(0, 1)) * 0.5f),
-                            (0.5f, (1f - Corner(0, 0)) * 0.5f),
+                            (0f, (1f - k01) * 0.5f),
+                            (0.5f, (1f - k00) * 0.5f),
                             (0.5f, 0.5f),
                             (0f, 0.5f),
                             sideFlowSprite);
@@ -1068,8 +1070,8 @@ public static class ChunkMesher
                         Emit(
                             (ex, c10, fz), (ex, c11, fz + 1f), (ex, lowY, fz + 1f), (ex, lowY, fz),
                             colour, colour, colour, colour,
-                            (0f, (1f - Corner(1, 0)) * 0.5f),
-                            (0.5f, (1f - Corner(1, 1)) * 0.5f),
+                            (0f, (1f - k10) * 0.5f),
+                            (0.5f, (1f - k11) * 0.5f),
                             (0.5f, 0.5f),
                             (0f, 0.5f),
                             sideFlowSprite);
