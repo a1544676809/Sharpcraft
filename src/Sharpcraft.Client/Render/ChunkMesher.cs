@@ -833,6 +833,11 @@ public static class ChunkMesher
         // individual ones would; what it saves is the 256 separate top quads a section used to pay for in each of the
         // three reference transparency geometry passes. Only the rectangle is decided here: the emit stays in the main
         // loop so a merged quad goes through the same light, tint, sprite and lava handling as a single one.
+        // Corner heights come out of an average over the four neighbours, so a perfectly level surface does not
+        // reproduce its own height bit for bit; comparing exactly rejected every ocean cell and the merge never ran.
+        // One thousandth of a block is the same magnitude as the depth inset used when emitting, and far below
+        // anything a pixel can resolve, so a surface flatter than that is flat for every purpose the merge cares about.
+        const float LevelTolerance = 0.001f;
         void MergeWaterTops(int layer, Span<bool> consumed, Span<byte> spanWidth, Span<byte> spanDepth)
         {
             Span<bool> eligible = stackalloc bool[256];
@@ -875,7 +880,8 @@ public static class ChunkMesher
 
                     // Level surfaces only: averaging a slope into one flat quad would flatten a visible slope.
                     var (k00, k01, k10, k11) = CellCorners(bx, by, bz, "water", false, self);
-                    if (k00 != self || k01 != self || k10 != self || k11 != self)
+                    if (MathF.Abs(k00 - self) > LevelTolerance || MathF.Abs(k01 - self) > LevelTolerance ||
+                        MathF.Abs(k10 - self) > LevelTolerance || MathF.Abs(k11 - self) > LevelTolerance)
                     {
                         continue;
                     }

@@ -1874,7 +1874,7 @@ public static class WindowedRenderer
                         + $"cutout={arenaCutout?.ChunkCount ?? 0}/drawn={arenaCutout?.DrawnLastDraw ?? 0} "
                         // Columns are shown as total plus drawn so a column count cannot be read as a draw count again (T-821).
                         + $"translucent={arenaTranslucent?.ChunkCount ?? 0} translucentDrawn={arenaTranslucent?.DrawnLastDraw ?? 0} translucentCulled={arenaTranslucent?.CulledLastFrame ?? 0} "
-                        + $"drawn={arena?.DrawnLastDraw ?? 0} tri={arena?.TrianglesLastDraw ?? 0} "
+                        + $"drawn={arena?.DrawnLastDraw ?? 0} tri={arena?.TrianglesLastDraw ?? 0} triTranslucent={arenaTranslucent?.TrianglesLastDraw ?? 0} "
                         + (abToggleFrames > 0
                             ? $"abA={(abACount == 0 ? 0d : abAMs / abACount):F3}/{abACount} abB={(abBCount == 0 ? 0d : abBMs / abBCount):F3}/{abBCount} "
                             : string.Empty)
