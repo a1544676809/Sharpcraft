@@ -1305,3 +1305,59 @@ _entries / SectionStarts: starts[i]..starts[i+1] 是 section i，末尾是总索
 ### 已知未验证
 
 两组使用不同剔除算法时，像素对比报告差异 **0.0723%**；两组使用相同算法（对照组）时差异 **0.0478%**。**差值在流式加载噪声量级内，既未证明正确也未证明有误。** 若要作为等效性证据，需要在静止场景（无区块加载）下重跑像素对比。
+
+## 29. OIT 目标格式：32 位浮点改 16 位，水域场景反超原版
+
+### 定位过程
+
+用户报告：看向大面积水域、窗口最大化时，原版约 245 fps，我们不到 165 fps。
+
+用 `MC_SKIP_OIT` + `MC_AB_TOGGLE` 做同进程 A/B（2534×1334）：
+
+| 组 | 帧时 |
+| --- | --- |
+| A（有 OIT） | 6.53–6.73 ms ≈ 150 fps |
+| B（跳过 OIT） | 1.93–2.35 ms ≈ 450 fps |
+
+**OIT 占整帧 4.2–4.8 ms**，而 `frame-cpu` 里 `oit=0.103` 只是 CPU 记录成本——那 4.7 ms 全是 **GPU 填充**。
+
+### 根因：目标格式比原版宽一倍
+
+读 `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/LevelRenderer.java` 的目标创建：
+
+| 目标 | 原版格式 |
+| --- | --- |
+| `depth_bounds_culled` | RGBA32_FLOAT |
+| `transmittance` × 2 | **RGBA16_FLOAT** |
+| `accumulate` | **RGBA16_FLOAT** |
+
+我们的 `oitTargetFormat` 是**一个格式用于全部目标**，在支持 FP32 混合的设备上是 `Rgba32Float`——于是 transmittance 与 accumulate 每条像素写 16 字节而非 8 字节。**这两个正是每个片段都要写的最重 pass。**
+
+### 改动
+
+新增 `oitColorFormat`（`Rgba16Float`，低精度模式仍为 `Rgba8Unorm`），只用于：
+
+- transmittance 管线（参考 + 云端）
+- accumulate 管线（参考 + 云端）
+- `refTransmittance0/1Texture`、`refAccumulateTexture`
+
+`depthBounds` 与 `depthBoundsCulled` 保持 `oitTargetFormat`（FP32），与原版一致。
+
+着色器读取侧用 `texture_2d<f32>`，**与格式无关**，无需改动。
+
+### 实测
+
+| 场景 | 改前 | 改后 |
+| --- | --- | --- |
+| 2534×1334，水边场景 | 6.53–6.73 ms | **2.06–2.10 ms** |
+| 2534×1334，水域视角 | — | **3.685–3.791 ms ≈ 268 fps** |
+
+**水域视角：原版 245 fps，我们约 268 fps。**
+
+### 这是一处等效修正，不是性能偏差
+
+目标格式是**内部实现细节**，不改变可观测结果（混合结果在 FP16 精度内，原版本来就用 FP16）。按原则 9，这不属于"性能驱动的行为偏差"，而是向原版对齐。
+
+### 已知风险
+
+FP16 的 transmittance 可能带来色带。本次实测画面未见异常（水域、雾、天空均正常），但**未做逐像素与 32 位版本的比对**。若要作为严格等效性证据，应补一次像素对比。

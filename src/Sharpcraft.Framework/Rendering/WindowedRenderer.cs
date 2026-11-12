@@ -261,7 +261,7 @@ public static class WindowedRenderer
         // Transparency is the reference depth-bounds + wavelet-transmittance OIT (docs/specs/render/oit-reference.md).
         // The earlier weighted-blended OIT looked markedly worse in play and is shelved, not compiled; git history keeps
         // it if it is ever wanted again.
-        var oitTargetFormat = oitLowPrecision ? TextureFormat.Rgba8Unorm : (supportsFloat32Blendable ? TextureFormat.Rgba32Float : TextureFormat.Rgba16Float);
+        var oitTargetFormat = oitLowPrecision ? TextureFormat.Rgba8Unorm : (supportsFloat32Blendable ? TextureFormat.Rgba32Float : TextureFormat.Rgba16Float); var oitColorFormat = oitLowPrecision ? TextureFormat.Rgba8Unorm : TextureFormat.Rgba16Float; // half floats for transmittance and accumulate, as the reference does
         var refTransmittanceLayout = CreateOitTextureLayout(backend, 1);
         var refAccumulateLayout = CreateOitTextureLayout(backend, 3);
         var refCullLayout = CreateOitTextureLayout(backend, 1);
@@ -283,22 +283,22 @@ public static class WindowedRenderer
         }
 
         var cloudTransPipelineLayout = cloudOit is null ? default : backend.CreatePipelineLayout([cloudOit.Layout, refTransmittanceLayout]);
-        var cloudTransmittancePipeline = cloudOit is null ? default : CreateTransmittancePipeline(backend, cloudTransPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat));
+        var cloudTransmittancePipeline = cloudOit is null ? default : CreateTransmittancePipeline(backend, cloudTransPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitColorFormat));
         if (cloudTransPipelineLayout.IsValid)
         {
             backend.Destroy(cloudTransPipelineLayout);
         }
 
         var cloudAccumPipelineLayout = cloudOit is null ? default : backend.CreatePipelineLayout([cloudOit.Layout, refAccumulateLayout]);
-        var cloudAccumulatePipeline = cloudOit is null ? default : CreateAccumulatePipeline(backend, cloudAccumPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat));
+        var cloudAccumulatePipeline = cloudOit is null ? default : CreateAccumulatePipeline(backend, cloudAccumPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitColorFormat));
         if (cloudAccumPipelineLayout.IsValid)
         {
             backend.Destroy(cloudAccumPipelineLayout);
         }
 
         var refDepthBoundsPipeline = CreateDepthBoundsPipeline(backend, pipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
-        var refTransmittancePipeline = CreateTransmittancePipeline(backend, refTransmittancePipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
-        var refAccumulatePipeline = CreateAccumulatePipeline(backend, refAccumulatePipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
+        var refTransmittancePipeline = CreateTransmittancePipeline(backend, refTransmittancePipelineLayout, format: BackendConvert.ToWgpu(oitColorFormat));
+        var refAccumulatePipeline = CreateAccumulatePipeline(backend, refAccumulatePipelineLayout, format: BackendConvert.ToWgpu(oitColorFormat));
         var refCullPipeline = CreateCullPipeline(backend, refCullPipelineLayout, BackendConvert.ToWgpu(oitTargetFormat));
         var refCompositePipeline = CreateCompositePipeline(backend, format, refCompositePipelineLayout);
         var cloudCompositePipeline = CreateCompositePipeline(backend, format, refCompositePipelineLayout, WGPUCompareFunction.GreaterEqual);
@@ -559,11 +559,11 @@ public static class WindowedRenderer
             refDepthBoundsView = backend.CreateTextureView(refDepthBoundsTexture);
             refDepthBoundsCulledTexture = CreateOitTarget(backend, frameWidth, frameHeight, oitTargetFormat);
             refDepthBoundsCulledView = backend.CreateTextureView(refDepthBoundsCulledTexture);
-            refTransmittance0Texture = CreateOitTarget(backend, frameWidth, frameHeight, oitTargetFormat);
+            refTransmittance0Texture = CreateOitTarget(backend, frameWidth, frameHeight, oitColorFormat);
             refTransmittance0View = backend.CreateTextureView(refTransmittance0Texture);
-            refTransmittance1Texture = CreateOitTarget(backend, frameWidth, frameHeight, oitTargetFormat);
+            refTransmittance1Texture = CreateOitTarget(backend, frameWidth, frameHeight, oitColorFormat);
             refTransmittance1View = backend.CreateTextureView(refTransmittance1Texture);
-            refAccumulateTexture = CreateOitTarget(backend, frameWidth, frameHeight, oitTargetFormat);
+            refAccumulateTexture = CreateOitTarget(backend, frameWidth, frameHeight, oitColorFormat);
             refAccumulateView = backend.CreateTextureView(refAccumulateTexture);
 
             refCullBindGroup = backend.CreateBindGroup(refCullLayout, [BindGroupEntryDesc.Texture(0, refDepthBoundsView)]);
