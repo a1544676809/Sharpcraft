@@ -81,6 +81,7 @@ internal sealed class GameOptions
             SkipPresentCopy = Flag("MC_SKIP_PRESENT"),
             SkipCelestial = Flag("MC_SKIP_CELESTIAL"),
             AbToggleFrames = (int)Number("MC_AB_TOGGLE", 0f),
+        SkipGeometryUploadOnAbGroup = Flag("MC_AB_SKIP_UPLOAD"),
             Gpu = Get("MC_GPU"),
             OitStages = (int)Number("MC_OIT_STAGES", 0f)
         };

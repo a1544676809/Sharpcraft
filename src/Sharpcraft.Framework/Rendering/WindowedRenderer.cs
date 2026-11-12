@@ -993,6 +993,10 @@ public static class WindowedRenderer
             }
 
             entityLayerDrawn = 0;
+            // A/B: skip only the buffer writes on the toggled group, so both halves draw the same geometry and the
+            // measured difference is the upload alone (T-828).
+            var skipUpload = currentRequest.Diagnostics?.SkipGeometryUploadOnAbGroup == true && abGroup == 1;
+            var uploadStart = System.Diagnostics.Stopwatch.GetTimestamp();
             if (entityLayers is not null && entityLayers() is { Count: > 0 } layers)
             {
                 var used = layers.Count;
@@ -1008,10 +1012,8 @@ public static class WindowedRenderer
                     {
                         continue;
                     }
-
                     var neededVertex = (ulong)geometry.VertexFloats * sizeof(float);
                     var neededIndex = (ulong)geometry.IndexCount * sizeof(uint);
-
                     if (neededVertex > entityLayerVertexCapacity[layerIndex])
                     {
                         backend.Destroy(entityLayerVertex[layerIndex]);
@@ -1027,7 +1029,8 @@ public static class WindowedRenderer
                         entityLayerIndex[layerIndex] = backend.CreateBuffer(
                             new BufferDesc(entityLayerIndexCapacity[layerIndex], BufferUsages.Index | BufferUsages.CopyDst));
                     }
-
+                    if (!skipUpload)
+                    {
                     backend.WriteBuffer(
                         entityLayerVertex[layerIndex],
                         System.Runtime.InteropServices.MemoryMarshal.AsBytes(geometry.Vertices.AsSpan(0, geometry.VertexFloats)),
@@ -1036,12 +1039,11 @@ public static class WindowedRenderer
                         entityLayerIndex[layerIndex],
                         System.Runtime.InteropServices.MemoryMarshal.AsBytes(geometry.Indices.AsSpan(0, geometry.IndexCount)),
                         0);
+                    }
                     entityLayerIndexCount[layerIndex] = (uint)geometry.IndexCount;
                 }
-
                 entityLayerDrawn = used;
             }
-
             var updatesThisFrame = 0;
 
             if (arena is not null)
@@ -1070,16 +1072,15 @@ public static class WindowedRenderer
             }
 
             if (geometryRemovals?.Invoke() is { Count: > 0 } removals)
+            foreach (var key in geometryRemovals?.Invoke() ?? [])
             {
-                foreach (var key in removals)
-                {
-                    arena?.Remove(key);
-                    arenaCutout?.Remove(key);
-                    arenaTranslucent?.Remove(key);
-                }
+                arena?.Remove(key);
+                arenaCutout?.Remove(key);
+                arenaTranslucent?.Remove(key);
             }
 
             Cpu(FrameCpuTimings.PrepEntitiesStage);
+            cpuTimings.AddAbSample(abGroup, System.Diagnostics.Stopwatch.GetTimestamp() - uploadStart);
 
             var rebuildStarted = System.Diagnostics.Stopwatch.GetTimestamp();
             var rebuiltFrame = rebuildRequest?.Invoke();

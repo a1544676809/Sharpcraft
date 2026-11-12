@@ -70,6 +70,45 @@ internal sealed class FrameCpuTimings
         _totalTicks[stage] += ticks;
     }
 
+    private readonly long[] _abTicks = new long[2];
+    private readonly int[] _abFrames = new int[2];
+
+    /// <summary>
+    /// Records one A/B sample of a span, tagged with the group the frame belonged to.
+    /// </summary>
+    /// <param name="group">A/B group: 0 for the normal behaviour, 1 for the toggled one.</param>
+    /// <param name="ticks">Elapsed ticks for the span being compared.</param>
+    /// <remarks>
+    /// Comparing two runs has produced a misleading answer three times in this work, because the world differs
+    /// between runs by more than the effect being measured. Alternating inside one process keeps the scene fixed
+    /// for both halves, which is the only way the delta means anything (T-828).
+    /// </remarks>
+    public void AddAbSample(int group, long ticks)
+    {
+        if ((uint)group >= 2u)
+        {
+            return;
+        }
+
+        _abTicks[group] += ticks;
+        _abFrames[group]++;
+    }
+
+    private void WriteAbSamples()
+    {
+        if (_abFrames[0] == 0 || _abFrames[1] == 0)
+        {
+            return;
+        }
+
+        var normal = Milliseconds(_abTicks[0] / _abFrames[0]);
+        var toggled = Milliseconds(_abTicks[1] / _abFrames[1]);
+        Console.WriteLine(
+            $"ab-cpu: n={_abFrames[0]}/{_abFrames[1]} normal={normal:F3} toggled={toggled:F3} delta={(toggled - normal):F3}");
+        Array.Clear(_abTicks);
+        Array.Clear(_abFrames);
+    }
+
     /// <summary>Counts one frame into the window.</summary>
     public void EndFrame()
     {
@@ -101,6 +140,7 @@ internal sealed class FrameCpuTimings
         }
 
         Console.WriteLine(builder.ToString());
+        WriteAbSamples();
         Array.Clear(_windowTicks);
         _windowFrames = 0;
         return true;

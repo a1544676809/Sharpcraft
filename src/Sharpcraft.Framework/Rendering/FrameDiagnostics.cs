@@ -121,6 +121,17 @@ public sealed record FrameDiagnostics
     /// </remarks>
     public int AbToggleFrames { get; init; }
 
+    /// <summary>
+    /// Skips the per-frame geometry upload on alternate A/B groups, so the cost of that upload can be measured in a
+    /// single session rather than by editing code and running again (T-828).
+    /// </summary>
+    /// <remarks>
+    /// Comparing two runs has misled this work three times: the scene is different every run, so the frame moves more
+    /// than the effect being measured. This flag exists so the comparison happens inside one process, where the world
+    /// does not change between the two halves.
+    /// </remarks>
+    public bool SkipGeometryUploadOnAbGroup { get; init; }
+
     /// <summary>Draw every chunk without the frustum test, the fallback when GPU culling is unavailable.</summary>
     public bool DisableCulling { get; init; }
 
