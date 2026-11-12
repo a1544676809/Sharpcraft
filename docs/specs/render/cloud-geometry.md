@@ -372,3 +372,39 @@ RenderDoc 的 Python 入口此前一直卡在"`qrenderdoc --python` 会拉起 GU
 1. **应用内 GPU 时间戳**——最准，但当前 wgpu 绑定没有 `TimestampQuery` 特性（T-800 已确认）
 2. **合成基准**：在一次捕获里把同一批几何重复绘制 N 次，把待测开销放大到噪声之上
 3. **更严的统计**：每边几十次采样取中位数，成本高但可行
+
+## 16. 稳定态下的新发现：`prep-entities` 是几何上传，占整帧 18%
+
+世界加载完成、静置 100 秒后连测三帧（immediate、视距 12）：
+
+| 阶段 | 耗时 |
+| --- | --- |
+| **`prep-entities`** | **0.437–0.466 ms** |
+| `submit` | 0.525–0.558 ms |
+| `oit` | 0.342–0.355 ms |
+| `swap` | 0.243–0.268 ms |
+| `scene-terrain` | 0.212–0.228 ms |
+| `frame` | 2.330–2.531 ms |
+
+### 两个问题
+
+**一、名字又是错的。** 这个区间（`WindowedRenderer` 中 `Cpu(FrameCpuTimings.PrepEntitiesStage)` 之前那段）实际做的是：
+
+1. `dynamic` 几何的 `WriteBuffer`（顶点 + 索引）
+2. **每个实体图层**的 `WriteBuffer`（顶点 + 索引）
+3. 区块几何的 `arena.Apply` / `Remove`
+
+**都是几何上传，没有一件是"实体准备"。** 这已是本项目第 6 次出现"标签与实测内容不符"，前 5 次记录在会话历史中。
+
+**二、上传是无条件的。** 两条路径每帧都执行 `WriteBuffer`，整个 `WindowedRenderer` 里**一处 `ReferenceEquals` 都没有**。稳定态下几何基本不变，这些上传是白做的。
+
+### 为什么不能简单加"引用没变就跳过"
+
+`DynamicGeometry` 采用**原地复用**（`Clear()` / `Reserve()` 后复用同一数组），实体图层的 `Geometry` 也是每帧往同一数组里重填。所以：
+
+- `ReferenceEquals` 恒为真 → 会**错误地跳过**已经变化的几何
+- 多帧不更新时画面会冻结
+
+**正确的做法**是给 `DynamicGeometry` 增加一个变更版本号（在 `Clear`/`Reserve` 时递增），上传端比较版本号。这需要先确认实体几何的填充路径**每帧都调用** `Clear`/`Reserve`——若如此则版本号每帧都变、优化无效；若不是才有收益。
+
+**这个确认尚未做。** 在确认之前不动这段代码，避免"优化了一个本来就不产生开销的路径"。
