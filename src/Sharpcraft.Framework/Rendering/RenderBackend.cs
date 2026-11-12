@@ -263,6 +263,14 @@ public interface IRenderBackend
     /// <summary>Draws indexed vertices.</summary>
     void DrawIndexed(RenderPassHandle pass, uint indexCount, uint instanceCount, uint firstIndex, int baseVertex, uint firstInstance);
 
+    /// <summary>Draws indexed vertices once, with the draw arguments read from an indirect buffer.</summary>
+    /// <remarks>The buffer holds one 20 byte record: index count, instance count, first index, base vertex, first
+    /// instance. Multi draw indirect is core in this wgpu version, so neither form needs a device feature.</remarks>
+    void DrawIndexedIndirect(RenderPassHandle pass, BufferHandle arguments, ulong offset);
+
+    /// <summary>Issues a batch of indexed draws whose arguments are read, in order, from an indirect buffer.</summary>
+    void MultiDrawIndexedIndirect(RenderPassHandle pass, BufferHandle arguments, ulong offset, uint count);
+
     /// <summary>Reads a buffer range into memory, mapping and unmapping around the copy.</summary>
     /// <remarks>
     /// Reading back is the one operation that cannot stay asynchronous: the caller needs the bytes before it can go on,
@@ -649,6 +657,23 @@ public sealed class WgpuRenderBackend : IRenderBackend
         RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
             .DrawIndexed(indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
     }
+
+    /// <inheritdoc/>
+    public void DrawIndexedIndirect(RenderPassHandle pass, BufferHandle arguments, ulong offset)
+    {
+        _draws++;
+        RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
+            .DrawIndexedIndirect(RequireValid<Brew.Wgpu.Buffer>(arguments.Value is not null, arguments.Value), offset);
+    }
+
+    /// <inheritdoc/>
+    public void MultiDrawIndexedIndirect(RenderPassHandle pass, BufferHandle arguments, ulong offset, uint count)
+    {
+        _draws += (int)count;
+        RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
+            .MultiDrawIndexedIndirect(RequireValid<Brew.Wgpu.Buffer>(arguments.Value is not null, arguments.Value), offset, count);
+    }
+
 
     /// <inheritdoc/>
     public byte[] ReadBuffer(Brew.Wgpu.Instance instance, BufferHandle buffer, ulong offset, nuint size)
