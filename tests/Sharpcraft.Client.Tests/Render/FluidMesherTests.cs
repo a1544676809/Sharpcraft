@@ -43,8 +43,12 @@ public sealed class FluidMesherTests
 
         ChunkMesher.MeshChunk(world, chunk, airState: 0, opaque, maxBlocks: 1_000_000, sprites: null, translucent, Layout());
 
-        // 6 faces of a 16x16 shell; internal water/water faces are culled.
-        Assert.Equal(6 * 16 * 16, translucent.IndexCount / ChunkMesher.IndicesPerQuad);
+        // Bottom plus the four sides still emit one quad per cell. The top merges: its border ring cannot, because
+        // the column heights next to open air differ there, so 60 cells stay solo quads while the 14x14 interior
+        // collapses into one.
+        const int facesOtherThanTop = 5 * 16 * 16;
+        const int topBorderCells = (16 * 16) - (14 * 14);
+        Assert.Equal(facesOtherThanTop + topBorderCells + 1, translucent.IndexCount / ChunkMesher.IndicesPerQuad);
         Assert.Equal(0, opaque.IndexCount);
     }
 

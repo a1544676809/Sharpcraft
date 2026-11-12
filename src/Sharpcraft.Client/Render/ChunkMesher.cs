@@ -773,8 +773,230 @@ public static class ChunkMesher
 
         var nb = neighbourhood;
 
+        // A fluid column's height at one cell, in the units the reference getHeight uses. Coordinates are explicit so the
+        // merge prepass below can ask about cells other than the one currently being emitted.
+        float CellHeight(int cbx, int cby, int cbz, string cfluid, int ddx, int ddz)
+        {
+            var sample = nb.GetBlockState(cbx + ddx, cby, cbz + ddz, 0);
+            if (layout.BlockAt(sample) is { } sampleBlock)
+            {
+                if (sampleBlock.Path == cfluid)
+                {
+                    // The reference getHeight returns 1.0 when the same fluid is directly above, so a flowing
+                    // block next to a continuous column must use 1.0 here for its corner to rise and meet it.
+                    if (layout.BlockAt(nb.GetBlockState(cbx + ddx, cby + 1, cbz + ddz, 0)) is { } aboveRef && aboveRef.Path == cfluid)
+                    {
+                        return 1f;
+                    }
+
+                    var neighbour = Sharpcraft.Common.World.FluidStateCodec.FromBlockState(sample, layout);
+                    return neighbour.IsEmpty ? 0f : neighbour.OwnHeight;
+                }
+
+                if (sampleBlock.Path != "air")
+                {
+                    return -1f;
+                }
+            }
+
+            return 0f;
+        }
+
+        // The four surface heights of one fluid cell. Coordinates are explicit for the same reason CellHeight takes
+        // them: the merge prepass has to ask about cells it is not currently emitting, and sharing this mapping is
+        // what keeps the prepass and the emit loop from drifting apart.
+        (float K00, float K01, float K10, float K11) CellCorners(int cbx, int cby, int cbz, string cfluid, bool above, float self)
+        {
+            if (above)
+            {
+                return (1f, 1f, 1f, 1f);
+            }
+
+            var north = CellHeight(cbx, cby, cbz, cfluid, 0, -1);
+            var south = CellHeight(cbx, cby, cbz, cfluid, 0, 1);
+            var west = CellHeight(cbx, cby, cbz, cfluid, -1, 0);
+            var east = CellHeight(cbx, cby, cbz, cfluid, 1, 0);
+            var northWest = CellHeight(cbx, cby, cbz, cfluid, -1, -1);
+            var northEast = CellHeight(cbx, cby, cbz, cfluid, 1, -1);
+            var southWest = CellHeight(cbx, cby, cbz, cfluid, -1, 1);
+            var southEast = CellHeight(cbx, cby, cbz, cfluid, 1, 1);
+
+            return (
+                FluidSurface.AverageCorner(self, west, north, northWest),
+                FluidSurface.AverageCorner(self, west, south, southWest),
+                FluidSurface.AverageCorner(self, east, north, northEast),
+                FluidSurface.AverageCorner(self, east, south, southEast));
+        }
+
+        // Flat, still water tops that agree on block state, light and biome tint collapse into one quad per rectangle.
+        // The shader tiles the sprite through the fractional part of uv, so a merged quad samples exactly what the
+        // individual ones would; what it saves is the 256 separate top quads a section used to pay for in each of the
+        // three reference transparency geometry passes. Only the rectangle is decided here: the emit stays in the main
+        // loop so a merged quad goes through the same light, tint, sprite and lava handling as a single one.
+        // Corner heights come out of an average over the four neighbours, so a perfectly level surface does not
+        // reproduce its own height bit for bit; comparing exactly rejected every ocean cell and the merge never ran.
+        // One thousandth of a block is the same magnitude as the depth inset used when emitting, and far below
+        // anything a pixel can resolve, so a surface flatter than that is flat for every purpose the merge cares about.
+        const float LevelTolerance = 0.001f;
+        void MergeWaterTops(int layer, Span<bool> consumed, Span<byte> spanWidth, Span<byte> spanDepth)
+        {
+            Span<bool> eligible = stackalloc bool[256];
+            Span<float> heightOf = stackalloc float[256];
+            Span<float> skyOf = stackalloc float[256];
+            Span<float> blockOf = stackalloc float[256];
+            Span<float> redOf = stackalloc float[256];
+            Span<float> greenOf = stackalloc float[256];
+            Span<float> blueOf = stackalloc float[256];
+
+            var by = baseY + layer;
+
+            for (var z = 0; z < 16; z++)
+            {
+                for (var x = 0; x < 16; x++)
+                {
+                    var cell = (z * 16) + x;
+                    var state = section.Get(x, layer, z);
+                    if (layout.BlockAt(state) is not { Path: "water" })
+                    {
+                        continue;
+                    }
+
+                    var fluid = Sharpcraft.Common.World.FluidStateCodec.FromBlockState(state, layout);
+                    if (fluid.IsEmpty)
+                    {
+                        continue;
+                    }
+
+                    var bx = baseX + x;
+                    var bz = baseZ + z;
+
+                    // A cell with the same fluid directly above has no top face to merge.
+                    if (layout.BlockAt(nb.GetBlockState(bx, by + 1, bz, 0)) is { Path: "water" })
+                    {
+                        continue;
+                    }
+
+                    var self = fluid.OwnHeight;
+
+                    // Level surfaces only: averaging a slope into one flat quad would flatten a visible slope.
+                    var (k00, k01, k10, k11) = CellCorners(bx, by, bz, "water", false, self);
+                    if (MathF.Abs(k00 - self) > LevelTolerance || MathF.Abs(k01 - self) > LevelTolerance ||
+                        MathF.Abs(k10 - self) > LevelTolerance || MathF.Abs(k11 - self) > LevelTolerance)
+                    {
+                        continue;
+                    }
+
+                    // Flowing water rotates its uv toward the downhill direction, which a merged quad cannot express.
+                    if (CellHeight(bx, by, bz, "water", 1, 0) != self || CellHeight(bx, by, bz, "water", -1, 0) != self ||
+                        CellHeight(bx, by, bz, "water", 0, 1) != self || CellHeight(bx, by, bz, "water", 0, -1) != self)
+                    {
+                        continue;
+                    }
+
+                    nb.TryGetLight(bx, by, bz, out var s0, out var b0);
+                    nb.TryGetLight(bx, by + 1, bz, out var s1, out var b1);
+
+                    var tr = 1f;
+                    var tg = 1f;
+                    var tb = 1f;
+                    if (tint is not null)
+                    {
+                        var (cr, cg, cb) = BiomeTint.ToMultiplier(tint.ColourAt(BlockTintKind.Water, bx, by, bz));
+                        tr = cr;
+                        tg = cg;
+                        tb = cb;
+                    }
+
+                    eligible[cell] = true;
+                    heightOf[cell] = self;
+                    skyOf[cell] = Math.Max(s0, s1) / 15f;
+                    blockOf[cell] = Math.Max(b0, b1) / 15f;
+                    redOf[cell] = tr;
+                    greenOf[cell] = tg;
+                    blueOf[cell] = tb;
+                }
+            }
+
+            for (var z = 0; z < 16; z++)
+            {
+                for (var x = 0; x < 16; x++)
+                {
+                    var origin = (z * 16) + x;
+                    if (!eligible[origin] || consumed[origin])
+                    {
+                        continue;
+                    }
+
+                    var originHeight = heightOf[origin];
+                    var originSky = skyOf[origin];
+                    var originBlock = blockOf[origin];
+                    var originRed = redOf[origin];
+                    var originGreen = greenOf[origin];
+                    var originBlue = blueOf[origin];
+
+                    var w = 1;
+                    while (x + w < 16)
+                    {
+                        var probe = origin + w;
+                        if (!eligible[probe] || consumed[probe] || heightOf[probe] != originHeight ||
+                            skyOf[probe] != originSky || blockOf[probe] != originBlock ||
+                            redOf[probe] != originRed || greenOf[probe] != originGreen || blueOf[probe] != originBlue)
+                        {
+                            break;
+                        }
+
+                        w++;
+                    }
+
+                    var d = 1;
+                    while (z + d < 16)
+                    {
+                        var rowFits = true;
+                        for (var k = 0; k < w; k++)
+                        {
+                            var probe = ((z + d) * 16) + x + k;
+                            if (!eligible[probe] || consumed[probe] || heightOf[probe] != originHeight ||
+                                skyOf[probe] != originSky || blockOf[probe] != originBlock ||
+                                redOf[probe] != originRed || greenOf[probe] != originGreen || blueOf[probe] != originBlue)
+                            {
+                                rowFits = false;
+                                break;
+                            }
+                        }
+
+                        if (!rowFits)
+                        {
+                            break;
+                        }
+
+                        d++;
+                    }
+
+                    for (var dz = 0; dz < d; dz++)
+                    {
+                        for (var dx = 0; dx < w; dx++)
+                        {
+                            consumed[((z + dz) * 16) + x + dx] = true;
+                        }
+                    }
+
+                    spanWidth[origin] = (byte)w;
+                    spanDepth[origin] = (byte)d;
+                }
+            }
+        }
+
+        Span<bool> mergedTop = stackalloc bool[256];
+        Span<byte> mergedWidth = stackalloc byte[256];
+        Span<byte> mergedDepth = stackalloc byte[256];
+
         for (var y = 0; y < 16; y++)
         {
+            mergedTop.Clear();
+            mergedWidth.Clear();
+            mergedDepth.Clear();
+            MergeWaterTops(y, mergedTop, mergedWidth, mergedDepth);
+
             for (var z = 0; z < 16; z++)
             {
                 for (var x = 0; x < 16; x++)
@@ -901,66 +1123,35 @@ public static class ChunkMesher
 
                         return !transparency.HasTransparent && !transparency.HasTranslucent;
                     }
-
-                    float CellHeight(int ddx, int ddz)
-                    {
-                        var sample = nb.GetBlockState(bx + ddx, by, bz + ddz, 0);
-                        if (layout.BlockAt(sample) is { } sampleBlock)
-                        {
-                            if (sampleBlock.Path == fluidPath)
-                            {
-                                // The reference getHeight returns 1.0 when the same fluid is directly above, so a flowing
-                                // block next to a continuous column must use 1.0 here for its corner to rise and meet it.
-                                if (layout.BlockAt(nb.GetBlockState(bx + ddx, by + 1, bz + ddz, 0)) is { } aboveRef && aboveRef.Path == fluidPath)
-                                {
-                                    return 1f;
-                                }
-
-                                var neighbour = Sharpcraft.Common.World.FluidStateCodec.FromBlockState(sample, layout);
-                                return neighbour.IsEmpty ? 0f : neighbour.OwnHeight;
-                            }
-
-                            if (sampleBlock.Path != "air")
-                            {
-                                return -1f;
-                            }
-                        }
-
-                        return 0f;
-                    }
-
-                    var north = CellHeight(0, -1);
-                    var south = CellHeight(0, 1);
-                    var west = CellHeight(-1, 0);
-                    var east = CellHeight(1, 0);
-                    var northWest = CellHeight(-1, -1);
-                    var northEast = CellHeight(1, -1);
-                    var southWest = CellHeight(-1, 1);
-                    var southEast = CellHeight(1, 1);
-
-                    float Corner(int cx, int cz)
-                    {
-                        // With the same fluid directly above, the column is continuous, so the block reaches the full block
-                        // top (reference getHeight = hasSameAbove ? 1.0 : ownHeight). Without this the corner average dipped
-                        // the rim below the block above and left a seam at water drops / terraces.
-                        if (aboveSame)
-                        {
-                            return 1f;
-                        }
-
-                        var n1 = cx == 0 ? west : east;
-                        var n2 = cz == 0 ? north : south;
-                        var diagonal = cx == 0 ? (cz == 0 ? northWest : southWest) : (cz == 0 ? northEast : southEast);
-                        return FluidSurface.AverageCorner(selfHeight, n1, n2, diagonal);
-                    }
+                    var (k00, k01, k10, k11) = CellCorners(bx, by, bz, fluidPath, aboveSame, selfHeight);
 
                     const float epsilon = 0.001f;
 
                     // Top: only when no water directly above. Corner heights so the surface follows neighbours.
-                    if (!aboveSame)
+                    var mergeCell = (z * 16) + x;
+                    var meetWidth = mergedWidth[mergeCell];
+                    var meetDepth = mergedDepth[mergeCell];
+
+                    // A covered cell emits nothing here unless it is the rectangle origin, which is the one place the
+                    // merged quad is written.
+                    if (!aboveSame && (meetWidth > 0 || !mergedTop[mergeCell]))
                     {
                         var colour = Face(1.0f);
-                        if (flowSprite is { } moving)
+                        if (meetWidth > 0)
+                        {
+                            // Every corner of every covered cell equals the surface height, so the rectangle is flat and
+                            // one quad whose uv runs to the rectangle bounds tiles the sprite exactly as the individual
+                            // quads did.
+                            Emit(
+                                (fx, lowY + k00 - epsilon, fz),
+                                (fx, lowY + k00 - epsilon, fz + meetDepth),
+                                (fx + meetWidth, lowY + k00 - epsilon, fz + meetDepth),
+                                (fx + meetWidth, lowY + k00 - epsilon, fz),
+                                colour, colour, colour, colour,
+                                (0f, 0f), (0f, meetDepth), (meetWidth, meetDepth), (meetWidth, 0f),
+                                topSprite);
+                        }
+                        else if (flowSprite is { } moving)
                         {
                             // Flow UV rotated toward the downhill direction (reference: angle atan2(z,x) - pi/2, radius
                             // 0.25 around the sprite centre).
@@ -968,10 +1159,10 @@ public static class ChunkMesher
                             var s = MathF.Sin(angle) * 0.25f;
                             var c = MathF.Cos(angle) * 0.25f;
                             Emit(
-                                (fx, lowY + Corner(0, 0) - epsilon, fz),
-                                (fx, lowY + Corner(0, 1) - epsilon, fz + 1f),
-                                (fx + 1f, lowY + Corner(1, 1) - epsilon, fz + 1f),
-                                (fx + 1f, lowY + Corner(1, 0) - epsilon, fz),
+                                (fx, lowY + k00 - epsilon, fz),
+                                (fx, lowY + k01 - epsilon, fz + 1f),
+                                (fx + 1f, lowY + k11 - epsilon, fz + 1f),
+                                (fx + 1f, lowY + k10 - epsilon, fz),
                                 colour, colour, colour, colour,
                                 (0.5f + (-c - s), 0.5f + (-c + s)),
                                 (0.5f + (-c + s), 0.5f + (c + s)),
@@ -982,10 +1173,10 @@ public static class ChunkMesher
                         else
                         {
                             Emit(
-                                (fx, lowY + Corner(0, 0) - epsilon, fz),
-                                (fx, lowY + Corner(0, 1) - epsilon, fz + 1f),
-                                (fx + 1f, lowY + Corner(1, 1) - epsilon, fz + 1f),
-                                (fx + 1f, lowY + Corner(1, 0) - epsilon, fz),
+                                (fx, lowY + k00 - epsilon, fz),
+                                (fx, lowY + k01 - epsilon, fz + 1f),
+                                (fx + 1f, lowY + k11 - epsilon, fz + 1f),
+                                (fx + 1f, lowY + k10 - epsilon, fz),
                                 colour, colour, colour, colour,
                                 (0f, 0f), (0f, 1f), (1f, 1f), (1f, 0f),
                                 topSprite);
@@ -1007,10 +1198,10 @@ public static class ChunkMesher
                     // Side faces use the same corner heights as the top face so the rim is continuous, and (as in the
                     // reference FluidRenderer) sample the flowing sprite with V mapped to the exposed height so the texture
                     // reads as water falling down the drop. Corner assignment and the +/-0.001 inset follow the reference.
-                    var c00 = lowY + Corner(0, 0);
-                    var c01 = lowY + Corner(0, 1);
-                    var c10 = lowY + Corner(1, 0);
-                    var c11 = lowY + Corner(1, 1);
+                    var c00 = lowY + k00;
+                    var c01 = lowY + k01;
+                    var c10 = lowY + k10;
+                    var c11 = lowY + k11;
                     var nz = fz + epsilon;
                     var sz = fz + 1f - epsilon;
                     var wx = fx + epsilon;
@@ -1024,8 +1215,8 @@ public static class ChunkMesher
                         Emit(
                             (fx, c00, nz), (fx + 1f, c10, nz), (fx + 1f, lowY, nz), (fx, lowY, nz),
                             colour, colour, colour, colour,
-                            (0f, (1f - Corner(0, 0)) * 0.5f),
-                            (0.5f, (1f - Corner(1, 0)) * 0.5f),
+                            (0f, (1f - k00) * 0.5f),
+                            (0.5f, (1f - k10) * 0.5f),
                             (0.5f, 0.5f),
                             (0f, 0.5f),
                             sideFlowSprite);
@@ -1038,8 +1229,8 @@ public static class ChunkMesher
                         Emit(
                             (fx + 1f, c11, sz), (fx, c01, sz), (fx, lowY, sz), (fx + 1f, lowY, sz),
                             colour, colour, colour, colour,
-                            (0f, (1f - Corner(1, 1)) * 0.5f),
-                            (0.5f, (1f - Corner(0, 1)) * 0.5f),
+                            (0f, (1f - k11) * 0.5f),
+                            (0.5f, (1f - k01) * 0.5f),
                             (0.5f, 0.5f),
                             (0f, 0.5f),
                             sideFlowSprite);
@@ -1052,8 +1243,8 @@ public static class ChunkMesher
                         Emit(
                             (wx, c01, fz + 1f), (wx, c00, fz), (wx, lowY, fz), (wx, lowY, fz + 1f),
                             colour, colour, colour, colour,
-                            (0f, (1f - Corner(0, 1)) * 0.5f),
-                            (0.5f, (1f - Corner(0, 0)) * 0.5f),
+                            (0f, (1f - k01) * 0.5f),
+                            (0.5f, (1f - k00) * 0.5f),
                             (0.5f, 0.5f),
                             (0f, 0.5f),
                             sideFlowSprite);
@@ -1066,8 +1257,8 @@ public static class ChunkMesher
                         Emit(
                             (ex, c10, fz), (ex, c11, fz + 1f), (ex, lowY, fz + 1f), (ex, lowY, fz),
                             colour, colour, colour, colour,
-                            (0f, (1f - Corner(1, 0)) * 0.5f),
-                            (0.5f, (1f - Corner(1, 1)) * 0.5f),
+                            (0f, (1f - k10) * 0.5f),
+                            (0.5f, (1f - k11) * 0.5f),
                             (0.5f, 0.5f),
                             (0f, 0.5f),
                             sideFlowSprite);
