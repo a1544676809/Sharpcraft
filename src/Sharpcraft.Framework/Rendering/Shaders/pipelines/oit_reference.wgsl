@@ -102,18 +102,21 @@ fn vs_main(
     return output;
 }
 
-fn sampleAlpha(input : VertexOutput) -> f32 {
+fn sampleTexel(input : VertexOutput) -> vec4<f32> {
     let rectMin = input.spriteRect.xy;
     let rectMax = input.spriteRect.zw;
     let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
     let gradientScale = rectMax - rectMin;
-    let sampled = textureSampleGrad(
+    return textureSampleGrad(
         atlasTexture,
         atlasSampler,
         atlasUv,
         dpdx(input.uv) * gradientScale,
         dpdy(input.uv) * gradientScale);
-    return sampled.a;
+}
+
+fn sampleAlpha(input : VertexOutput) -> f32 {
+    return sampleTexel(input).a;
 }
 
 fn toAbsorbance(transmittance : f32) -> f32 {
@@ -319,22 +322,14 @@ struct AccumulateOutput {
 
 @fragment
 fn fs_accumulate(input : VertexOutput) -> AccumulateOutput {
-    let alpha = sampleAlpha(input);
+    // One atlas fetch feeds both the cutout test and the shading below; the previous form sampled the same texels twice
+    // with identical coordinates and derivatives, which only cost bandwidth.
+    let sampled = sampleTexel(input);
+    let alpha = sampled.a;
 
     if (alpha < 0.1) {
         discard;
     }
-
-    let rectMin = input.spriteRect.xy;
-    let rectMax = input.spriteRect.zw;
-    let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
-    let gradientScale = rectMax - rectMin;
-    let sampled = textureSampleGrad(
-        atlasTexture,
-        atlasSampler,
-        atlasUv,
-        dpdx(input.uv) * gradientScale,
-        dpdy(input.uv) * gradientScale);
 
     let light = input.colour * lightmapColour(input.light.x, input.light.y);
     let base = litColour(sampled.rgb, light);
