@@ -185,12 +185,15 @@ public sealed class VanillaMeshBakeTests
         var elytra = Assert.Single(layers, layer => layer.Kind == EntityGeometryLayerKind.Elytra);
         var geometry = elytra.Geometry;
 
-        var count = geometry.VertexFloats / 14;
+        var count = geometry.VertexFloats / ChunkMesher.FloatsPerVertex;
         var result = new Vector2[count];
         for (var v = 0; v < count; v++)
         {
-            var offset = v * 14;
-            result[v] = new Vector2(geometry.Vertices[offset + 6] * 64f, geometry.Vertices[offset + 7] * 32f);
+            var offset = v * ChunkMesher.FloatsPerVertex;
+            var packedUv = BitConverter.SingleToUInt32Bits(geometry.Vertices[offset + 4]);
+            result[v] = new Vector2(
+                (float)BitConverter.UInt16BitsToHalf((ushort)(packedUv & 0xFFFF)) * 64f,
+                (float)BitConverter.UInt16BitsToHalf((ushort)(packedUv >> 16)) * 32f);
         }
 
         return result;

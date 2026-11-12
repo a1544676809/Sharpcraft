@@ -70,7 +70,7 @@ public sealed partial class EntityModelMesher
             Array.Copy(geometry.Vertices, 0, _geometry.Vertices, vertexBase, geometry.VertexFloats);
             for (var i = 0; i < geometry.IndexCount; i++)
             {
-                _geometry.Indices[indexOffset + i] = (uint)(geometry.Indices[i] + (vertexBase / 14));
+                _geometry.Indices[indexOffset + i] = (uint)(geometry.Indices[i] + (vertexBase / ChunkMesher.FloatsPerVertex));
             }
 
             vertexBase += geometry.VertexFloats;
@@ -324,7 +324,7 @@ public sealed partial class EntityModelMesher
             target.Indices = indices;
         }
 
-        var vertexBase = (uint)(target.VertexFloats / 14);
+        var vertexBase = (uint)(target.VertexFloats / ChunkMesher.FloatsPerVertex);
         Array.Copy(source.Vertices, 0, target.Vertices, target.VertexFloats, source.VertexFloats);
         for (var i = 0; i < source.IndexCount; i++)
         {
@@ -392,7 +392,7 @@ public sealed partial class EntityModelMesher
             }
         }
 
-        target.Reserve((cubeCount + entities.Length * 2) * 24 * 14, (cubeCount + entities.Length * 2) * 36);
+        target.Reserve((cubeCount + entities.Length * 2) * 24 * ChunkMesher.FloatsPerVertex, (cubeCount + entities.Length * 2) * 36);
         var vertexFloats = 0;
         var indexCount = 0;
 
@@ -993,7 +993,7 @@ public sealed partial class EntityModelMesher
         (bu, bv) = TransformUv(bu, bv, uMin, uMax, vMin, vMax, transform);
         (cu, cv) = TransformUv(cu, cv, uMin, uMax, vMin, vMax, transform);
         (du, dv) = TransformUv(du, dv, uMin, uMax, vMin, vMax, transform);
-        var first = (uint)(vertexFloats / 14);
+        var first = (uint)(vertexFloats / ChunkMesher.FloatsPerVertex);
         WriteVertex(target.Vertices, ref vertexFloats, a, au / skinWidth, av / skinHeight, skin, tint);
         WriteVertex(target.Vertices, ref vertexFloats, b, bu / skinWidth, bv / skinHeight, skin, tint);
         WriteVertex(target.Vertices, ref vertexFloats, c, cu / skinWidth, cv / skinHeight, skin, tint);
@@ -1025,20 +1025,20 @@ public sealed partial class EntityModelMesher
 
     private static void WriteVertex(float[] destination, ref int offset, Vector3 world, float u, float v, SpriteRect skin, Vector3 tint)
     {
-        destination[offset++] = world.X;
-        destination[offset++] = world.Y;
-        destination[offset++] = world.Z;
-        destination[offset++] = tint.X;
-        destination[offset++] = tint.Y;
-        destination[offset++] = tint.Z;
-        destination[offset++] = u;
-        destination[offset++] = v;
-        destination[offset++] = skin.U0;
-        destination[offset++] = skin.V0;
-        destination[offset++] = skin.U1;
-        destination[offset++] = skin.V1;
-        destination[offset++] = 1f;
-        destination[offset++] = 0f;
+        TerrainVertexWriter.Write(
+            destination,
+            ref offset,
+            world.X,
+            world.Y,
+            world.Z,
+            tint.X,
+            tint.Y,
+            tint.Z,
+            u,
+            v,
+            skin,
+            sky: 1f,
+            block: 0f);
     }
 
     /// <summary>

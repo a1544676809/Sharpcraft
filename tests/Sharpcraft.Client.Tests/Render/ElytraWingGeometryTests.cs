@@ -49,14 +49,20 @@ public sealed class ElytraWingGeometryTests
         var elytra = Assert.Single(layers, layer => layer.Kind == EntityGeometryLayerKind.Elytra);
         var geometry = elytra.Geometry;
 
-        var count = geometry.VertexFloats / 14;
+        var count = geometry.VertexFloats / ChunkMesher.FloatsPerVertex;
         var result = new (Vector3, Vector2)[count];
         for (var v = 0; v < count; v++)
         {
-            var o = v * 14;
+            var o = v * ChunkMesher.FloatsPerVertex;
+
+            // The tile coordinate is two halves packed into one word since T-832, so it cannot be read as a float.
+            var packedUv = BitConverter.SingleToUInt32Bits(geometry.Vertices[o + 4]);
+            var u = (float)BitConverter.UInt16BitsToHalf((ushort)(packedUv & 0xFFFF));
+            var w = (float)BitConverter.UInt16BitsToHalf((ushort)(packedUv >> 16));
+
             result[v] = (
                 new Vector3(geometry.Vertices[o], geometry.Vertices[o + 1], geometry.Vertices[o + 2]),
-                new Vector2(geometry.Vertices[o + 6] * 64f, geometry.Vertices[o + 7] * 32f));
+                new Vector2(u * 64f, w * 32f));
         }
 
         return result;
@@ -179,7 +185,7 @@ public sealed class ElytraWingGeometryTests
             [state], new SpriteRect(0, 0, 64, 64, 1), 64, 64, variants: EntityVariantTable.Builtin);
         var elytra = Assert.Single(layers, layer => layer.Kind == EntityGeometryLayerKind.Elytra);
         Assert.True(elytra.Geometry.VertexFloats > 0, "baby elytra wings must produce geometry");
-        Assert.Equal(48, elytra.Geometry.VertexFloats / 14); // 2 wings x 6 faces x 4 corners
+        Assert.Equal(48, elytra.Geometry.VertexFloats / ChunkMesher.FloatsPerVertex); // 2 wings x 6 faces x 4 corners
 
         // Golden bounds from MeshTransformer.scaling(0.5): scale then +12.008 y-down => y-up box 1.992..11.992, plus
         // the 0.5 grow on every side => 1.492..12.492 model px. Yaw does not change Y.
@@ -187,7 +193,7 @@ public sealed class ElytraWingGeometryTests
         var maxY = float.MinValue;
         for (var v = 0; v < 48; v++)
         {
-            var y = elytra.Geometry.Vertices[v * 14 + 1];
+            var y = elytra.Geometry.Vertices[v * ChunkMesher.FloatsPerVertex + 1];
             minY = MathF.Min(minY, y);
             maxY = MathF.Max(maxY, y);
         }
@@ -258,7 +264,7 @@ public sealed class ElytraWingGeometryTests
         // Face 3 is NORTH (the 10x20 wing texture face). 24 vertices per wing (6 faces x 4).
         Vector3 VertexPos(int wing, int face, int corner)
         {
-            var o = ((wing * 6 + face) * 4 + corner) * 14;
+            var o = ((wing * 6 + face) * 4 + corner) * ChunkMesher.FloatsPerVertex;
             return new Vector3(geometry.Vertices[o], geometry.Vertices[o + 1], geometry.Vertices[o + 2]);
         }
 

@@ -495,19 +495,19 @@ public sealed class ItemEntityMesher
 
     private static void WriteVertex(float[] destination, ref int offset, Vector3 position, Vector2 uv, SpriteRect sprite, Vector3 tint)
     {
-        destination[offset++] = position.X;
-        destination[offset++] = position.Y;
-        destination[offset++] = position.Z;
-        destination[offset++] = tint.X;
-        destination[offset++] = tint.Y;
-        destination[offset++] = tint.Z;
-        destination[offset++] = uv.X;
-        destination[offset++] = uv.Y;
-        destination[offset++] = sprite.U0;
-        destination[offset++] = sprite.V0;
-        destination[offset++] = sprite.U1;
-        destination[offset++] = sprite.V1;
-        destination[offset++] = 1f;
-        destination[offset++] = 0f;
+        TerrainVertexWriter.Write(
+            destination,
+            ref offset,
+            position.X,
+            position.Y,
+            position.Z,
+            tint.X,
+            tint.Y,
+            tint.Z,
+            uv.X,
+            uv.Y,
+            sprite,
+            sky: 1f,
+            block: 0f);
     }
 }

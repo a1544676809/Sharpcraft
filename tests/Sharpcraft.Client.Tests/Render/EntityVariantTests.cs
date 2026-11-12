@@ -169,7 +169,7 @@ public sealed class EntityVariantTests
 
         var min = new System.Numerics.Vector3(float.MaxValue);
         var max = new System.Numerics.Vector3(float.MinValue);
-        for (var offset = 0; offset < geometry.VertexFloats; offset += 14)
+        for (var offset = 0; offset < geometry.VertexFloats; offset += ChunkMesher.FloatsPerVertex)
         {
             var point = new System.Numerics.Vector3(
                 geometry.Vertices[offset], geometry.Vertices[offset + 1], geometry.Vertices[offset + 2]);

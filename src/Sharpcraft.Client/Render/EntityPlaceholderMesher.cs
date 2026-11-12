@@ -55,7 +55,7 @@ public sealed class EntityPlaceholderMesher
         const int verticesPerBox = 24;
         const int indicesPerBox = 36;
         // A player is drawn as six parts, so reserve for the worst case.
-        _geometry.Reserve(entities.Length * PlayerPartCount * verticesPerBox * 14, entities.Length * PlayerPartCount * indicesPerBox);
+        _geometry.Reserve(entities.Length * PlayerPartCount * verticesPerBox * ChunkMesher.FloatsPerVertex, entities.Length * PlayerPartCount * indicesPerBox);
 
         var vertexFloats = 0;
         var indexCount = 0;
@@ -172,7 +172,7 @@ public sealed class EntityPlaceholderMesher
         ref int indexCount,
         EntityModelTransform transform)
     {
-        var first = (uint)(vertexFloats / 14);
+        var first = (uint)(vertexFloats / ChunkMesher.FloatsPerVertex);
 
         WriteVertex(geometry.Vertices, ref vertexFloats, a, red, green, blue, 0f, 0f, sprite, transform);
         WriteVertex(geometry.Vertices, ref vertexFloats, b, red, green, blue, 1f, 0f, sprite, transform);
@@ -200,20 +200,21 @@ public sealed class EntityPlaceholderMesher
         EntityModelTransform transform)
     {
         var world = transform.Apply(position);
-        destination[offset++] = world.X;
-        destination[offset++] = world.Y;
-        destination[offset++] = world.Z;
-        destination[offset++] = red;
-        destination[offset++] = green;
-        destination[offset++] = blue;
-        destination[offset++] = u;
-        destination[offset++] = v;
-        destination[offset++] = sprite.U0;
-        destination[offset++] = sprite.V0;
-        destination[offset++] = sprite.U1;
-        destination[offset++] = sprite.V1;
+
         // Placeholder boxes are lit as full sky (day-lit) rather than sampled light.
-        destination[offset++] = 1f;
-        destination[offset++] = 0f;
+        TerrainVertexWriter.Write(
+            destination,
+            ref offset,
+            world.X,
+            world.Y,
+            world.Z,
+            red,
+            green,
+            blue,
+            u,
+            v,
+            sprite,
+            sky: 1f,
+            block: 0f);
     }
 }

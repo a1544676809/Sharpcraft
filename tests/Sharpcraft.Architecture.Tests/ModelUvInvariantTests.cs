@@ -320,14 +320,14 @@ public sealed class ModelUvInvariantTests
         var elytra = Assert.Single(layers, layer => layer.Kind == EntityGeometryLayerKind.Elytra);
         var geometry = elytra.Geometry;
 
-        var count = geometry.VertexFloats / 14;
+        var count = geometry.VertexFloats / ChunkMesher.FloatsPerVertex;
         var result = new Vector2[count];
         for (var v = 0; v < count; v++)
         {
-            var offset = v * 14;
+            var offset = v * ChunkMesher.FloatsPerVertex;
             result[v] = new Vector2(
-                geometry.Vertices[offset + 6] * ElytraWingTextureWidth,
-                geometry.Vertices[offset + 7] * ElytraWingTextureHeight);
+                (float)BitConverter.UInt16BitsToHalf((ushort)(BitConverter.SingleToUInt32Bits(geometry.Vertices[offset + 4]) & 0xFFFF)) * ElytraWingTextureWidth,
+                (float)BitConverter.UInt16BitsToHalf((ushort)(BitConverter.SingleToUInt32Bits(geometry.Vertices[offset + 4]) >> 16)) * ElytraWingTextureHeight);
         }
 
         return result;
