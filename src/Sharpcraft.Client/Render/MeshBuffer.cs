@@ -280,15 +280,13 @@ public sealed class MeshBuffer : IDisposable
             | ((uint)Math.Clamp((int)MathF.Round(green * 255f), 0, 255) << 8)
             | ((uint)Math.Clamp((int)MathF.Round(blue * 255f), 0, 255) << 16)
             | (255u << 24));
-        _vertices[offset + 4] = uv.U;
-        _vertices[offset + 5] = uv.V;
-        _vertices[offset + 6] = sprite.U0;
-        _vertices[offset + 7] = sprite.V0;
-        _vertices[offset + 8] = sprite.U1;
-        _vertices[offset + 9] = sprite.V1;
-        _vertices[offset + 10] = BitConverter.UInt32BitsToSingle(
-            (uint)Math.Clamp((int)MathF.Round(light.Sky * 255f), 0, 255)
-            | ((uint)Math.Clamp((int)MathF.Round(light.Block * 255f), 0, 255) << 8));
+        _vertices[offset + 4] = BitConverter.UInt32BitsToSingle(
+            (uint)BitConverter.HalfToUInt16Bits((Half)uv.U)
+            | ((uint)BitConverter.HalfToUInt16Bits((Half)uv.V) << 16));
+        _vertices[offset + 5] = BitConverter.UInt32BitsToSingle(
+            (uint)(sprite.RectId & 0xFFFF)
+            | ((uint)Math.Clamp((int)MathF.Round(light.Sky * 255f), 0, 255) << 16)
+            | ((uint)Math.Clamp((int)MathF.Round(light.Block * 255f), 0, 255) << 24));
 
         _vertexFloats = offset + ChunkMesher.FloatsPerVertex;
     }
@@ -311,15 +309,13 @@ public sealed class MeshBuffer : IDisposable
             | ((uint)Math.Clamp((int)MathF.Round(green * 255f), 0, 255) << 8)
             | ((uint)Math.Clamp((int)MathF.Round(blue * 255f), 0, 255) << 16)
             | (255u << 24));
-        _vertices[offset + 4] = uv.U;
-        _vertices[offset + 5] = uv.V;
-        _vertices[offset + 6] = sprite.U0;
-        _vertices[offset + 7] = sprite.V0;
-        _vertices[offset + 8] = sprite.U1;
-        _vertices[offset + 9] = sprite.V1;
-        _vertices[offset + 10] = BitConverter.UInt32BitsToSingle(
-            (uint)Math.Clamp((int)MathF.Round(light.Sky * 255f), 0, 255)
-            | ((uint)Math.Clamp((int)MathF.Round(light.Block * 255f), 0, 255) << 8));
+        _vertices[offset + 4] = BitConverter.UInt32BitsToSingle(
+            (uint)BitConverter.HalfToUInt16Bits((Half)uv.U)
+            | ((uint)BitConverter.HalfToUInt16Bits((Half)uv.V) << 16));
+        _vertices[offset + 5] = BitConverter.UInt32BitsToSingle(
+            (uint)(sprite.RectId & 0xFFFF)
+            | ((uint)Math.Clamp((int)MathF.Round(light.Sky * 255f), 0, 255) << 16)
+            | ((uint)Math.Clamp((int)MathF.Round(light.Block * 255f), 0, 255) << 24));
 
         _vertexFloats = offset + ChunkMesher.FloatsPerVertex;
     }

@@ -214,7 +214,7 @@ internal static class WindowCommand
                 Console.WriteLine($"resource reload: atlas refreshed in {atlasClock.Elapsed.TotalMilliseconds:F1} ms (models kept)");
             }
 
-            atlasSource.Update(new TextureData(candidate.Width, candidate.Height, candidate.Pixels) { Mips = Sharpcraft.Client.Assets.AtlasMipChain.Build(candidate.Pixels, candidate.Width, candidate.Height, [.. candidate.Sprites.Values]) });
+            atlasSource.Update(new TextureData(candidate.Width, candidate.Height, candidate.Pixels) { Mips = Sharpcraft.Client.Assets.AtlasMipChain.Build(candidate.Pixels, candidate.Width, candidate.Height, [.. candidate.Sprites.Values]) }, candidate.RectTable);
         });
 
         // A short synchronous warm-up gives the first frame something to show.
@@ -233,7 +233,8 @@ internal static class WindowCommand
                 : FrameCommand.WithMips(prepared.Value.Atlas),
             tint: biomeTint,
             cache: meshCache,
-            meshSynchronously: false);
+            meshSynchronously: false,
+            spriteRects: prepared?.Atlas.RectTable);
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
         var selfResize = ParseSelfResize();

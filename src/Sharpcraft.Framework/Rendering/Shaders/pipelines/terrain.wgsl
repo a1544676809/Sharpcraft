@@ -70,13 +70,17 @@ struct VertexOutput {
     @location(4) light : vec2<f32>,
 };
 
+// Atlas bounds per sprite, indexed by the sixteen bit id the vertex carries. One quad's corners always agree on the
+// rectangle, so storing it once here instead of four times per vertex costs a single table read and saves fourteen
+// bytes of every vertex (T-832).
+@group(0) @binding(5) var<storage, read> spriteRects : array<vec4<f32>>;
+
 @vertex
 fn vs_main(
     @location(0) position : vec3<f32>,
     @location(1) colour : vec4<f32>,
     @location(2) uv : vec2<f32>,
-    @location(3) spriteRect : vec4<f32>,
-    @location(4) light : vec4<f32>,
+    @location(3) packed : u32,
 ) -> VertexOutput {
     var output : VertexOutput;
 
@@ -87,8 +91,13 @@ fn vs_main(
     output.fogDistance = clip.w;
     output.colour = colour.rgb;
     output.uv = uv;
-    output.spriteRect = spriteRect;
-    output.light = light.rg;
+    output.spriteRect = spriteRects[packed & 0xFFFFu];
+
+    // Bits 16..23 and 24..31 hold the sky and block light levels; the reference stores them as a pair of sixteen bit
+    // integers for a range of two hundred and forty, so eight bits each is generous.
+    output.light = vec2<f32>(
+        f32((packed >> 16u) & 0xFFu) / 255.0,
+        f32((packed >> 24u) & 0xFFu) / 255.0);
     return output;
 }
 

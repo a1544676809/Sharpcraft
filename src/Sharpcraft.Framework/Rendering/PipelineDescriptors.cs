@@ -142,7 +142,13 @@ public enum VertexFormat
     Float32x4,
 
     /// <summary>Four unsigned 8-bit values normalised to [0, 1].</summary>
-    Unorm8x4
+    Unorm8x4,
+
+    /// <summary>Two 16-bit floats, the half-precision tile coordinate the terrain vertex carries (T-832).</summary>
+    Float16x2,
+
+    /// <summary>One unsigned 32-bit integer, read whole rather than normalised.</summary>
+    Uint32
 }
 
 /// <summary>One vertex attribute of a pipeline.</summary>

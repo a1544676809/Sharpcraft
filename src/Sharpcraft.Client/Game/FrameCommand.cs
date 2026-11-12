@@ -884,7 +884,8 @@ internal static class FrameCommand
         ChunkMeshCache? cache = null,
         bool meshSynchronously = true,
         BlockStateLayout? layout = null,
-        BiomeTint? tint = null)
+        BiomeTint? tint = null,
+        float[]? spriteRects = null)
     {
         // With a cache only the chunks whose blocks changed are re-meshed; without one the whole world is
         // scanned, which is what the offscreen paths still do (docs/specs/network/play-movement.md 7.19).
@@ -1081,6 +1082,7 @@ internal static class FrameCommand
             Lightmap = ToLightmapUniform(lighting),
             FogColour = EffectiveFogColour(world),
             Atlas = atlas,
+            SpriteRects = spriteRects ?? [],
             DrawRanges = drawRanges,
             TranslucentVertices = translucentVertices,
             TranslucentIndices = translucentIndices,
@@ -1168,7 +1170,8 @@ internal static class FrameCommand
             out var drawRanges,
             prepared?.Map,
             prepared is null ? null : WithMips(prepared.Value.Atlas),
-            layout: layout);
+            layout: layout,
+            spriteRects: prepared?.Atlas.RectTable);
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
         Console.WriteLine($"layers: translucent triangles {(request.TranslucentIndices?.Length ?? 0) / 3}, layout {(layout is null ? "null" : "set")}, water->{(layout is null ? "-" : layout.BlockAt(1)?.ToString() ?? "none")}");
 

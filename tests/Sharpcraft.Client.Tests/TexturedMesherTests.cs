@@ -91,7 +91,8 @@ public sealed class TexturedMesherTests
         var mesh = ChunkMesher.Mesh(world, airState: 0, maxBlocks: 1000, sprites: sprites);
 
         var expected = sprites.ForState(1);
-        var (u0, v0, u1, v1) = VertexFieldReader.Rect(mesh.Vertices, 0);
+        var spriteId = VertexFieldReader.SpriteId(mesh.Vertices, 0);
+        var (u0, v0, u1, v1) = VertexFieldReader.RectIn(sprites.RectTable, spriteId);
         Assert.Equal(expected.U0, u0, 5);
         Assert.Equal(expected.V0, v0, 5);
         Assert.Equal(expected.U1, u1, 5);

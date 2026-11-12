@@ -30,8 +30,8 @@ namespace Sharpcraft.Client.Render;
 public static class ChunkMesher
 {
     /// <summary>Floats per vertex: position (3), packed colour (1), uv (2), sprite rect (4), packed light (1).</summary>
-    /// <remarks>Eleven floats, forty four bytes, matching <c>VertexLayout.Stride</c> (T-826).</remarks>
-    public const int FloatsPerVertex = 11;
+    /// <remarks>Six float slots, twenty four bytes, matching <c>VertexLayout.Stride</c> (T-832). The two packed words are stored as their bit patterns, so the buffer stays a float array and vertex counts keep dividing cleanly.</remarks>
+    public const int FloatsPerVertex = 6;
 
     /// <summary>Vertices per quad.</summary>
     public const int VerticesPerQuad = 4;

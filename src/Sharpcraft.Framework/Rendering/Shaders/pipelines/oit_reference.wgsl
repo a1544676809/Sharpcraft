@@ -80,13 +80,16 @@ struct VertexOutput {
     @location(5) light : vec2<f32>,
 };
 
+// Atlas bounds per sprite, indexed by the sixteen bit id the vertex carries (T-832). Same table the terrain shader
+// reads; both passes draw the identical vertex layout.
+@group(0) @binding(5) var<storage, read> spriteRects : array<vec4<f32>>;
+
 @vertex
 fn vs_main(
     @location(0) position : vec3<f32>,
     @location(1) colour : vec4<f32>,
     @location(2) uv : vec2<f32>,
-    @location(3) spriteRect : vec4<f32>,
-    @location(4) light : vec4<f32>,
+    @location(3) packed : u32,
 ) -> VertexOutput {
     var output : VertexOutput;
     let clip = camera.viewProjection * vec4<f32>(position, 1.0);
@@ -97,8 +100,10 @@ fn vs_main(
     output.deviceDepth = clip.z / max(clip.w, 0.00001);
     output.colour = colour.rgb;
     output.uv = uv;
-    output.spriteRect = spriteRect;
-    output.light = light.rg;
+    output.spriteRect = spriteRects[packed & 0xFFFFu];
+    output.light = vec2<f32>(
+        f32((packed >> 16u) & 0xFFu) / 255.0,
+        f32((packed >> 24u) & 0xFFu) / 255.0);
     return output;
 }
 

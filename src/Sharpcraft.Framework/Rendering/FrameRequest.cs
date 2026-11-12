@@ -54,6 +54,13 @@ public sealed record FrameRequest(
     /// </summary>
     public TextureData? Atlas { get; init; }
 
+    /// <summary>Atlas bounds as four floats per sprite, indexed by the id a vertex carries (T-832).</summary>
+    /// <remarks>
+    /// Travels with <see cref="Atlas"/> because the two are numbered together: a rebuilt atlas renumbers its sprites,
+    /// so a table from the previous atlas would point at the wrong ones.
+    /// </remarks>
+    public float[] SpriteRects { get; init; } = [];
+
     /// <summary>Host supplied diagnostic options, or null for the plain frame.</summary>
     public FrameDiagnostics? Diagnostics { get; init; }
 

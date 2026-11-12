@@ -122,6 +122,8 @@ internal static class BackendConvert
         WGPUVertexFormat.Float32x3 => VertexFormat.Float32x3,
         WGPUVertexFormat.Float32x4 => VertexFormat.Float32x4,
         WGPUVertexFormat.Unorm8x4 => VertexFormat.Unorm8x4,
+        WGPUVertexFormat.Float16x2 => VertexFormat.Float16x2,
+        WGPUVertexFormat.Uint32 => VertexFormat.Uint32,
         _ => throw new ArgumentOutOfRangeException(nameof(format), format, "no neutral counterpart")
     };
 

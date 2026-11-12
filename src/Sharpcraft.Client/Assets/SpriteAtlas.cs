@@ -16,6 +16,13 @@ namespace Sharpcraft.Client.Assets;
 /// <param name="FrameCount">Frames in the source image; 1 for a still texture.</param>
 public sealed record SpriteRect(int X, int Y, int Width, int Height, int FrameCount)
 {
+    /// <summary>Dense index of this sprite in the atlas rectangle table the terrain shader reads (T-832).</summary>
+    /// <remarks>
+    /// Vertices carry this instead of the four atlas bounds, which saves fourteen bytes each. It is assigned while the
+    /// atlas is composed and stays valid for as long as that atlas does; a rebuilt atlas renumbers.
+    /// </remarks>
+    public int RectId { get; init; }
+
     /// <summary>Left texture coordinate.</summary>
     public float U0 { get; init; }
 
@@ -54,6 +61,29 @@ public sealed class SpriteAtlas
         Height = height;
         Pixels = pixels;
         _sprites = sprites;
+
+        // One vec4 of atlas bounds per sprite, indexed by SpriteRect.RectId. The terrain vertex carries the index
+        // instead of the bounds, so this table is what turns it back into the rectangle the fragment shader needs
+        // (T-832). A few thousand entries is a few tens of kilobytes and stays resident in cache.
+        // Entry zero covers the whole texture, so a mesh that has no atlas entry still samples something defined.
+        var table = new float[(sprites.Count + 1) * 4];
+        table[2] = 1f;
+        table[3] = 1f;
+        foreach (var sprite in sprites.Values)
+        {
+            var at = sprite.RectId * 4;
+            if (sprite.RectId < 0 || at + 3 >= table.Length)
+            {
+                continue;
+            }
+
+            table[at] = sprite.U0;
+            table[at + 1] = sprite.V0;
+            table[at + 2] = sprite.U1;
+            table[at + 3] = sprite.V1;
+        }
+
+        RectTable = table;
     }
 
     /// <summary>Atlas width in pixels; a power of two, as vanilla's stitcher produces.</summary>
@@ -67,6 +97,9 @@ public sealed class SpriteAtlas
 
     /// <summary>Every sprite in the atlas.</summary>
     public IReadOnlyDictionary<Identifier, SpriteRect> Sprites => _sprites;
+
+    /// <summary>Atlas bounds as four floats per sprite, indexed by <see cref="SpriteRect.RectId"/> (T-832).</summary>
+    public float[] RectTable { get; } = [];
 
     /// <summary>The sprite used for anything missing; always present.</summary>
     public static Identifier MissingSprite { get; } = new("minecraft", "missingno");
@@ -355,7 +388,8 @@ public static class SpriteAtlasBuilder
                 U0 = (float)x / size,
                 U1 = (float)(x + image.Width) / size,
                 V0 = (float)y / size,
-                V1 = (float)(y + image.Height) / size
+                V1 = (float)(y + image.Height) / size,
+                RectId = i + 1
             };
         }
 

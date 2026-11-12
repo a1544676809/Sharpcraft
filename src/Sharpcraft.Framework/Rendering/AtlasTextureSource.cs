@@ -16,6 +16,7 @@ public sealed class AtlasTextureSource
 {
     private readonly Lock _gate = new();
     private TextureData? _atlas;
+    private float[] _spriteRects = [];
     private int _version;
 
     /// <summary>Current atlas image, or null when there is none.</summary>
@@ -44,12 +45,36 @@ public sealed class AtlasTextureSource
 
     /// <summary>Replaces the atlas image and bumps the version.</summary>
     /// <param name="atlas">New atlas image.</param>
-    public void Update(TextureData? atlas)
+    public void Update(TextureData? atlas) => Update(atlas, []);
+
+    /// <summary>Replaces the atlas image and its sprite rectangle table, bumping the version.</summary>
+    /// <param name="atlas">New atlas image.</param>
+    /// <param name="spriteRects">Atlas bounds as four floats per sprite, indexed by the id a vertex carries (T-832).</param>
+    /// <remarks>
+    /// The table travels with the image because both are renumbered together: a rebuilt atlas assigns new ids, so a
+    /// table from the previous one would point at the wrong sprites.
+    /// </remarks>
+    public void Update(TextureData? atlas, float[] spriteRects)
     {
+        ArgumentNullException.ThrowIfNull(spriteRects);
+
         lock (_gate)
         {
             _atlas = atlas;
+            _spriteRects = spriteRects;
             _version++;
+        }
+    }
+
+    /// <summary>Current sprite rectangle table, empty when there is no atlas.</summary>
+    public float[] SpriteRects
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _spriteRects;
+            }
         }
     }
 }
