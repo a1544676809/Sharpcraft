@@ -1045,6 +1045,8 @@ public sealed partial class EntityModelMesher
     /// Tree-path renderer: walks the structural model, computes one matrix per node, emits each node's cube range and
     /// inherits each node's visible predicate to its whole subtree.
     /// </summary>
+
+
     private void BuildCompiledEntity(
         CompiledEntityModel compiled,
         DynamicGeometry target,
