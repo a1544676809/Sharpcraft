@@ -19,4 +19,6 @@ public readonly record struct GeometryData(
     float[]? CutoutVertices = null,
     uint[]? CutoutIndices = null,
     float[]? TranslucentVertices = null,
-    uint[]? TranslucentIndices = null);
+    uint[]? TranslucentIndices = null,
+    int[]? SectionStarts = null,
+    int SectionMinY = 0);

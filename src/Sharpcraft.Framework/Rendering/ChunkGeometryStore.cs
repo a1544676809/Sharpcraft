@@ -50,6 +50,12 @@ public sealed class ChunkGeometryStore : IDisposable
         public required uint IndexCount;
         public required Vector3 Minimum;
         public required Vector3 Maximum;
+
+        // Per section index ranges when the mesher recorded them: starts[i]..starts[i + 1] is section i and the
+        // last entry is the total index count. Null keeps the whole column behaviour.
+        public int[]? SectionStarts;
+
+        public int SectionMinY;
     }
 
     private readonly IRenderBackend _backend;
@@ -159,7 +165,9 @@ public sealed class ChunkGeometryStore : IDisposable
             IndexOffset = indexOffset,
             IndexCount = (uint)indexCount,
             Minimum = minimum,
-            Maximum = maximum
+            Maximum = maximum,
+            SectionStarts = mesh.SectionStarts,
+            SectionMinY = mesh.SectionMinY
         };
         page.Chunks.Add(chunkKey);
         LiveBytes += vertexBytes + indexBytes;
@@ -221,6 +229,13 @@ public sealed class ChunkGeometryStore : IDisposable
                     bound = true;
                 }
 
+
+                if (entry.SectionStarts is { Length: > 1 } starts)
+                {
+                    DrawSections(pass, entry, starts, planes);
+                    continue;
+                }
+
                 _backend.DrawIndexed(pass, entry.IndexCount, 1, (uint)entry.IndexOffset, (int)(entry.VertexOffset / _bytesPerVertex), 0);
                 DrawCallsTotal++;
                 DrawnLastDraw++;
@@ -236,6 +251,67 @@ public sealed class ChunkGeometryStore : IDisposable
     /// <summary>Binds a page's vertex and index buffer for drawing.</summary>
     /// <param name="pass">Pass to record into.</param>
     /// <param name="page">Page to bind.</param>
+    /// <summary>Submits the sections of one column that are inside the frustum.</summary>
+    /// <param name="pass">Pass to record into.</param>
+    /// <param name="entry">The column being drawn.</param>
+    /// <param name="starts">Per section index starts, with the total index count last.</param>
+    /// <param name="planes">Frustum planes, or an empty span to draw everything.</param>
+    /// <remarks>
+    /// A column spans the whole world height, so testing its box lets twenty four sections through whenever any part
+    /// of the column is in view. Testing each section on its own and then merging the runs that survive keeps the
+    /// draw count close to what it was while submitting far less geometry.
+    /// </remarks>
+    private void DrawSections(RenderPassHandle pass, Entry entry, int[] starts, ReadOnlySpan<Vector4> planes)
+    {
+        var baseVertex = (int)(entry.VertexOffset / _bytesPerVertex);
+        var runStart = -1;
+        for (var section = 0; section + 1 < starts.Length; section++)
+        {
+            var visible = starts[section + 1] > starts[section];
+            if (visible && planes.Length >= 6)
+            {
+                var bottom = entry.SectionMinY + (section * 16f);
+                var minimum = new Vector3(entry.Minimum.X, bottom, entry.Minimum.Z);
+                var maximum = new Vector3(entry.Maximum.X, bottom + 16f, entry.Maximum.Z);
+                visible = FrustumPlanes.IsVisible(planes, minimum, maximum);
+            }
+
+            if (visible)
+            {
+                if (runStart < 0)
+                {
+                    runStart = section;
+                }
+            }
+            else if (runStart >= 0)
+            {
+                DrawSectionRun(pass, entry, starts, runStart, section, baseVertex);
+                runStart = -1;
+            }
+        }
+
+        if (runStart >= 0)
+        {
+            DrawSectionRun(pass, entry, starts, runStart, starts.Length - 1, baseVertex);
+        }
+    }
+
+    /// <summary>Submits one contiguous run of visible sections as a single draw.</summary>
+    private void DrawSectionRun(RenderPassHandle pass, Entry entry, int[] starts, int firstSection, int endSection, int baseVertex)
+    {
+        var from = starts[firstSection];
+        var to = starts[endSection];
+        if (to <= from)
+        {
+            return;
+        }
+
+        _backend.DrawIndexed(pass, (uint)(to - from), 1, (uint)(entry.IndexOffset + from), baseVertex, 0);
+        DrawCallsTotal++;
+        DrawnLastDraw++;
+        TrianglesLastDraw += (to - from) / 3;
+    }
+
     private void BindPage(RenderPassHandle pass, Page page)
     {
         _backend.SetVertexBuffer(pass, 0, page.Vertex);

@@ -794,7 +794,9 @@ internal static class WindowCommand
                         entry.Cutout?.Vertices,
                         entry.Cutout?.Indices,
                         entry.Translucent?.Vertices,
-                        entry.Translucent?.Indices)));
+                        entry.Translucent?.Indices,
+                        entry.Opaque.SectionStarts,
+                        world.MinSectionY * 16)));
                 }
 
                 return updates;
