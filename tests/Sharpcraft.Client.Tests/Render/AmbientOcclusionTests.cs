@@ -73,9 +73,10 @@ public sealed class AmbientOcclusionTests
         var mesh = buffer.ToMeshData(0);
 
         var brightest = 0f;
-        for (var i = 3; i < mesh.Vertices.Length; i += FloatsPerVertex)
+        for (var vertex = 0; vertex < mesh.Vertices.Length / FloatsPerVertex; vertex++)
         {
-            brightest = MathF.Max(brightest, MathF.Max(mesh.Vertices[i], MathF.Max(mesh.Vertices[i + 1], mesh.Vertices[i + 2])));
+            var (red, green, blue) = VertexFieldReader.Colour(mesh.Vertices, vertex);
+            brightest = MathF.Max(brightest, MathF.Max(red, MathF.Max(green, blue)));
         }
 
         Assert.True(brightest > 0.99f, $"open top face should be fully lit but brightest channel was {brightest}");

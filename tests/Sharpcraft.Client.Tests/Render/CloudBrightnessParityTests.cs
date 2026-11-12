@@ -47,6 +47,21 @@ public sealed partial class CloudBrightnessParityTests
         Assert.Matches(@"vertexIndex / 6u", source);
     }
 
+    [Fact]
+    public void TheCloudVertexStageConsumesNoVertexAttributes()
+    {
+        var source = ReadShader();
+        var vertexEntry = VertexEntryPattern().Match(source);
+        Assert.True(vertexEntry.Success, "the cloud shader no longer declares a vertex entry point");
+
+        // Clouds generate their own corners, so the vertex stage must take nothing but the vertex index. This is what
+        // lets the terrain vertex layout change without touching clouds; it broke once when the layout moved and the
+        // cloud path still expanded seven float vertices into the old fourteen float one (T-826, T-827).
+        var parameters = vertexEntry.Groups[1].Value;
+        Assert.DoesNotContain("@location(", parameters);
+        Assert.Contains("@builtin(vertex_index)", parameters);
+    }
+
     private static string ReadShader()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -87,4 +102,7 @@ public sealed partial class CloudBrightnessParityTests
 
     [GeneratedRegex(@"const QUAD_ORDER = array<i32, \d+>\(([^)]*)\)")]
     private static partial Regex QuadOrderPattern();
+
+    [GeneratedRegex(@"fn vs_main\((.*?)\)\s*->", RegexOptions.Singleline)]
+    private static partial Regex VertexEntryPattern();
 }

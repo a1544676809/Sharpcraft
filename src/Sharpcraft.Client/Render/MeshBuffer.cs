@@ -227,17 +227,20 @@ public sealed class MeshBuffer : IDisposable
         _vertices[offset] = position.X;
         _vertices[offset + 1] = position.Y;
         _vertices[offset + 2] = position.Z;
-        _vertices[offset + 3] = red;
-        _vertices[offset + 4] = green;
-        _vertices[offset + 5] = blue;
-        _vertices[offset + 6] = uv.U;
-        _vertices[offset + 7] = uv.V;
-        _vertices[offset + 8] = sprite.U0;
-        _vertices[offset + 9] = sprite.V0;
-        _vertices[offset + 10] = sprite.U1;
-        _vertices[offset + 11] = sprite.V1;
-        _vertices[offset + 12] = light.Sky;
-        _vertices[offset + 13] = light.Block;
+        _vertices[offset + 3] = BitConverter.UInt32BitsToSingle(
+            (uint)Math.Clamp((int)MathF.Round(red * 255f), 0, 255)
+            | ((uint)Math.Clamp((int)MathF.Round(green * 255f), 0, 255) << 8)
+            | ((uint)Math.Clamp((int)MathF.Round(blue * 255f), 0, 255) << 16)
+            | (255u << 24));
+        _vertices[offset + 4] = uv.U;
+        _vertices[offset + 5] = uv.V;
+        _vertices[offset + 6] = sprite.U0;
+        _vertices[offset + 7] = sprite.V0;
+        _vertices[offset + 8] = sprite.U1;
+        _vertices[offset + 9] = sprite.V1;
+        _vertices[offset + 10] = BitConverter.UInt32BitsToSingle(
+            (uint)Math.Clamp((int)MathF.Round(light.Sky * 255f), 0, 255)
+            | ((uint)Math.Clamp((int)MathF.Round(light.Block * 255f), 0, 255) << 8));
 
         _vertexFloats = offset + ChunkMesher.FloatsPerVertex;
     }
@@ -255,19 +258,20 @@ public sealed class MeshBuffer : IDisposable
         _vertices[offset] = position.X;
         _vertices[offset + 1] = position.Y;
         _vertices[offset + 2] = position.Z;
-        _vertices[offset + 3] = red;
-        _vertices[offset + 4] = green;
-        _vertices[offset + 5] = blue;
-
-        // Local UV in sprite repeats, plus where the sprite sits inside the atlas.
-        _vertices[offset + 6] = uv.U;
-        _vertices[offset + 7] = uv.V;
-        _vertices[offset + 8] = sprite.U0;
-        _vertices[offset + 9] = sprite.V0;
-        _vertices[offset + 10] = sprite.U1;
-        _vertices[offset + 11] = sprite.V1;
-        _vertices[offset + 12] = light.Sky;
-        _vertices[offset + 13] = light.Block;
+        _vertices[offset + 3] = BitConverter.UInt32BitsToSingle(
+            (uint)Math.Clamp((int)MathF.Round(red * 255f), 0, 255)
+            | ((uint)Math.Clamp((int)MathF.Round(green * 255f), 0, 255) << 8)
+            | ((uint)Math.Clamp((int)MathF.Round(blue * 255f), 0, 255) << 16)
+            | (255u << 24));
+        _vertices[offset + 4] = uv.U;
+        _vertices[offset + 5] = uv.V;
+        _vertices[offset + 6] = sprite.U0;
+        _vertices[offset + 7] = sprite.V0;
+        _vertices[offset + 8] = sprite.U1;
+        _vertices[offset + 9] = sprite.V1;
+        _vertices[offset + 10] = BitConverter.UInt32BitsToSingle(
+            (uint)Math.Clamp((int)MathF.Round(light.Sky * 255f), 0, 255)
+            | ((uint)Math.Clamp((int)MathF.Round(light.Block * 255f), 0, 255) << 8));
 
         _vertexFloats = offset + ChunkMesher.FloatsPerVertex;
     }

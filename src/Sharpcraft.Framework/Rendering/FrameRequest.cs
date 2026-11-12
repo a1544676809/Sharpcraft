@@ -27,8 +27,8 @@ public sealed record FrameRequest(
     Vector3 CameraTarget,
     float FieldOfViewDegrees = 70f)
 {
-    /// <summary>Floats per vertex: position (3) + base colour (3) + uv (2) + sprite rect (4) + light (2).</summary>
-    public const int FloatsPerVertex = 14;
+    /// <summary>Floats per vertex: position (3), packed colour (1), uv (2), sprite rect (4), packed light (1).</summary>
+    public const int FloatsPerVertex = 11;
 
     /// <summary>Vertex count.</summary>
     public int VertexCount => Vertices.Length / FloatsPerVertex;

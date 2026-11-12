@@ -29,8 +29,9 @@ namespace Sharpcraft.Client.Render;
 /// </remarks>
 public static class ChunkMesher
 {
-    /// <summary>Floats per vertex: position (3) plus colour (3).</summary>
-    public const int FloatsPerVertex = 14;
+    /// <summary>Floats per vertex: position (3), packed colour (1), uv (2), sprite rect (4), packed light (1).</summary>
+    /// <remarks>Eleven floats, forty four bytes, matching <c>VertexLayout.Stride</c> (T-826).</remarks>
+    public const int FloatsPerVertex = 11;
 
     /// <summary>Vertices per quad.</summary>
     public const int VerticesPerQuad = 4;
