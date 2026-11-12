@@ -1251,13 +1251,36 @@ internal sealed class InteractiveSession
             window.SetMouseCaptured(true);
         }
 
+        // The title carries the live position and key count, but rebuilding that string and pushing it through
+        // SetWindowText every single frame is measurable work for something nobody can read at 300 Hz. It is throttled
+        // to 10 Hz, or immediately when the player moved more than 10 cm or left the ground (T-816).
         var position = _player.Position;
+        var now = System.Diagnostics.Stopwatch.GetTimestamp();
+        var elapsedMs = (now - _titleUpdatedAt) * 1000d / System.Diagnostics.Stopwatch.Frequency;
+        var moved = Vector3.DistanceSquared(position, _titlePosition) > 0.01f;
+        var stateChanged = _player.OnGround != _titleOnGround;
+        if (_titleUpdatedAt != 0 && !moved && !stateChanged && elapsedMs < TitleUpdateIntervalMs)
+        {
+            return;
+        }
+
+        _titleUpdatedAt = now;
+        _titlePosition = position;
+        _titleOnGround = _player.OnGround;
+
         // The process id is in the title so that, when several copies are running, it is obvious which
         // window is which.
         window.Title =
             $"Sharpcraft #{Environment.ProcessId} | {position.X:F1} {position.Y:F1} {position.Z:F1} | " +
             $"{(_player.OnGround ? "ground" : "air")} | {window.Input.PressedKeys.Count} keys";
     }
+
+    /// <summary>How often the window title is refreshed at most, in milliseconds (T-816).</summary>
+    private const double TitleUpdateIntervalMs = 100d;
+
+    private long _titleUpdatedAt;
+    private Vector3 _titlePosition;
+    private bool _titleOnGround;
 
     private static Vector3 FindSpawn(ClientWorld world, FrameRequest request)
     {

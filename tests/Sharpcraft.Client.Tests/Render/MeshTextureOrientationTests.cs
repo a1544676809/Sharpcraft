@@ -112,9 +112,12 @@ public sealed class MeshTextureOrientationTests
         {
             var offset = firstVertex + (corner * FloatsPerVertex);
             var position = new Vector3(vertices[offset], vertices[offset + 1], vertices[offset + 2]);
-            var lowU = vertices[offset + 6] < 0.001f;
-            var highU = vertices[offset + 6] > 0.999f;
-            var lowV = vertices[offset + 7] < 0.001f;
+            // Tile coordinates, which moved to offset four when colour and light were packed (T-826).
+            var u = vertices[offset + 4];
+            var v = vertices[offset + 5];
+            var lowU = u < 0.001f;
+            var highU = u > 0.999f;
+            var lowV = v < 0.001f;
 
             // Two corners share each u value and two share each v value, so the pair is what identifies a corner.
             if (lowU && lowV)

@@ -45,6 +45,24 @@ public sealed record FrameDiagnostics
     /// <summary>Print how many chunks the frustum test skipped, once a second.</summary>
     public bool CullStatistics { get; init; }
 
+    /// <summary>Compare consecutive frames pixel by pixel and report how far apart they are at exit.</summary>
+    /// <remarks>
+    /// Exists because a change to what the renderer records can be argued equal but rarely shown equal: the offscreen
+    /// paths build one merged mesh and never touch the paged arena, and two separate runs of the windowed client differ
+    /// in what the server has streamed, so neither can answer "did this change a pixel".
+    /// <para>
+    /// It reports two numbers. When the A/B group changed between the two frames, the difference is the change under
+    /// test. When it did not, the same comparison measures the floor set by clouds, particles and everything else that
+    /// keeps moving, which is the only thing a difference can be judged against. Both are taken from neighbouring
+    /// frames of the same run, so scene motion affects each by the same amount.
+    /// </para>
+    /// <para>
+    /// Off by default and free when off. On, it costs a full frame readback per frame, so a run with it enabled must not
+    /// also be used for the frame timings; the readback lands in the frame preparation bucket and will inflate it.
+    /// </para>
+    /// </remarks>
+    public bool PixelCompare { get; init; }
+
     /// <summary>Print the CPU cost of each recorded frame stage, once a second.</summary>
     /// <remarks>
     /// The stages are the ones the windowed loop can name on its own: geometry updates, surface acquire, camera sample,
@@ -65,6 +83,55 @@ public sealed record FrameDiagnostics
     /// <remarks>Measurement only: water and glass disappear from the picture.</remarks>
     public bool SkipTranslucent { get; init; }
 
+    /// <summary>Skip the opaque and cutout terrain draws, for measuring what the terrain costs (T-801).</summary>
+    /// <remarks>Measurement only: the world disappears and the sky remains.</remarks>
+    public bool SkipTerrain { get; init; }
+
+    /// <summary>Skip the entity draws, for measuring what they cost (T-801).</summary>
+    /// <remarks>Measurement only: entities and their layers disappear.</remarks>
+    public bool SkipEntities { get; init; }
+
+    /// <summary>Skip the interface pass, for measuring what the UI costs (T-801).</summary>
+    /// <remarks>Measurement only: the interface disappears.</remarks>
+    public bool SkipInterface { get; init; }
+
+    /// <summary>Skip the sky geometry (gradient sky, celestial bodies, stars), for measuring what it costs (T-801).</summary>
+    /// <remarks>Measurement only: the frame shows the flat clear colour instead.</remarks>
+    public bool SkipSky { get; init; }
+
+    /// <summary>Load the colour and depth targets instead of clearing them (T-801).</summary>
+    /// <remarks>Measurement only: the frame accumulates on top of the previous one, which is what the timing asks for.</remarks>
+    public bool SkipClear { get; init; }
+
+    /// <summary>Skip the copy of the finished frame into the swapchain image (T-801).</summary>
+    /// <remarks>Measurement only: the window keeps showing the previous image.</remarks>
+    public bool SkipPresentCopy { get; init; }
+
+    /// <summary>Skip the celestial bodies (sun, moon, stars, sky discs), for measuring what they cost (T-807).</summary>
+    /// <remarks>Measurement only: the gradient sky still draws.</remarks>
+    public bool SkipCelestial { get; init; }
+
+    /// <summary>
+    /// Flips both A/B groups every N frames and labels each report line with its group, so a comparison happens inside one
+    /// process and machine drift cancels out (T-801).
+    /// </summary>
+    /// <remarks>
+    /// Zero disables it. Group A draws everything, group B skips what the skip switches ask for, so the difference between
+    /// the two averages is the cost of the skipped work even when the machine slows down or speeds up mid-run.
+    /// </remarks>
+    public int AbToggleFrames { get; init; }
+
+    /// <summary>
+    /// Skips the per-frame geometry upload on alternate A/B groups, so the cost of that upload can be measured in a
+    /// single session rather than by editing code and running again (T-828).
+    /// </summary>
+    /// <remarks>
+    /// Comparing two runs has misled this work three times: the scene is different every run, so the frame moves more
+    /// than the effect being measured. This flag exists so the comparison happens inside one process, where the world
+    /// does not change between the two halves.
+    /// </remarks>
+    public bool SkipGeometryUploadOnAbGroup { get; init; }
+
     /// <summary>Draw every chunk without the frustum test, the fallback when GPU culling is unavailable.</summary>
     public bool DisableCulling { get; init; }
 
@@ -78,4 +145,14 @@ public sealed record FrameDiagnostics
     /// binding's default request, so a single GPU machine is unaffected.
     /// </remarks>
     public string? Gpu { get; init; }
+
+    /// <summary>
+    /// Records only the first N reference transparency stages, for measuring what each one costs.
+    /// </summary>
+    /// <remarks>
+    /// Zero means "no limit" and records the whole sequence, so the default frame is unchanged. Stages in order: 1 depth
+    /// bounds, 2 opaque-depth cull, 3 transmittance, 4 accumulate, 5 composite. Stages that do not run leave the picture
+    /// without transparency, which is expected: this is a measurement switch, not a rendering mode.
+    /// </remarks>
+    public int OitStages { get; init; }
 }

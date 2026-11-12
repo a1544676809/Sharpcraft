@@ -14,11 +14,22 @@ namespace Sharpcraft.Framework.Rendering;
 /// </summary>
 public static class VertexLayout
 {
-    /// <summary>Bytes per vertex: 3 + 3 + 2 + 4 + 2 floats (position, base colour, uv, sprite rect, light).</summary>
-    public const int Stride = 56;
+    /// <summary>Bytes per vertex: position, packed colour, uv, sprite rect and packed light (T-826).</summary>
+    /// <remarks>
+    /// Colour and light carry far less information than a float each, and vertex fetch is what the scene pass is bound
+    /// by: two million triangles take twelve hundred microseconds, far under what the card manages when it is fed. The
+    /// atlas stores eight bits a channel and a light level is one of sixteen values, so both are packed; the reference
+    /// keeps its light in a pair of sixteen bit integers for a range of two hundred and forty, leaving eight of those
+    /// bits unused.
+    /// <para>
+    /// This layout is terrain only. Clouds generate their own geometry in the vertex shader and consume no vertex
+    /// attributes at all, which a test asserts, so this can move without touching them (T-827).
+    /// </para>
+    /// </remarks>
+    public const int Stride = 44;
 
     /// <summary>Size of the camera uniform block in bytes: one 4×4 matrix.</summary>
-    public const ulong CameraUniformSize = 64;
+    public const ulong CameraUniformSize = 128;
 
     /// <summary>Binding index of the camera uniform inside the shared bind group.</summary>
     public const uint CameraBinding = 2;
@@ -60,20 +71,21 @@ public static class VertexLayout
     public static VertexAttribute[] Attributes() =>
     [
         new(WGPUVertexFormat.Float32x3, 0, 0),
-        new(WGPUVertexFormat.Float32x3, 12, 1),
-        new(WGPUVertexFormat.Float32x2, 24, 2),
-        new(WGPUVertexFormat.Float32x4, 32, 3),
-        new(WGPUVertexFormat.Float32x2, 48, 4)
+        new(WGPUVertexFormat.Unorm8x4, 12, 1),
+        new(WGPUVertexFormat.Float32x2, 16, 2),
+        new(WGPUVertexFormat.Float32x4, 24, 3),
+        new(WGPUVertexFormat.Unorm8x4, 40, 4)
     ];
 
-    /// <summary>Bytes per celestial vertex: position (3) + uv (2) floats.</summary>
-    public const int CelestialStride = 20;
+    /// <summary>Bytes per celestial vertex: position (3) + uv (2) + the tint copied per vertex (4) floats.</summary>
+    public const int CelestialStride = 36;
 
-    /// <summary>Celestial body vertex attributes: position at location 0, uv at location 1.</summary>
+    /// <summary>Celestial body vertex attributes: position, uv, and the per-body tint (T-812).</summary>
     public static VertexAttribute[] CelestialAttributes() =>
     [
         new(WGPUVertexFormat.Float32x3, 0, 0),
-        new(WGPUVertexFormat.Float32x2, 12, 1)
+        new(WGPUVertexFormat.Float32x2, 12, 1),
+        new(WGPUVertexFormat.Float32x4, 20, 2)
     ];
 
     /// <summary>Bytes per position-colour vertex: position (3) + colour (4) floats.</summary>

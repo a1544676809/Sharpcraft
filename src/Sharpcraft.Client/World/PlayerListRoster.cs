@@ -41,6 +41,11 @@ public sealed class PlayerListRoster
     /// <summary>How many players the roster knows about, listed or not.</summary>
     public int Count => _count;
 
+    /// <summary>
+    /// Bumped by every change, so per-frame consumers can skip their scan when nothing changed (T-816).
+    /// </summary>
+    public int Version { get; private set; }
+
     /// <summary>The rows, ready to draw. Not sorted.</summary>
     public ReadOnlySpan<PlayerListEntry> Entries => _entries.AsSpan(0, _count);
 
@@ -48,6 +53,7 @@ public sealed class PlayerListRoster
     /// <param name="updates">Entries from the packet.</param>
     public void Apply(ReadOnlySpan<PlayerInfoUpdate> updates)
     {
+        Version++;
         for (var index = 0; index < updates.Length; index++)
         {
             var update = updates[index];
@@ -90,6 +96,7 @@ public sealed class PlayerListRoster
     /// <param name="ids">Profile ids to remove.</param>
     public void Remove(ReadOnlySpan<Guid> ids)
     {
+        Version++;
         for (var index = 0; index < ids.Length; index++)
         {
             if (!_indexById.TryGetValue(ids[index], out var slot))
@@ -114,6 +121,7 @@ public sealed class PlayerListRoster
     /// <summary>Forgets everyone, used when leaving a world.</summary>
     public void Clear()
     {
+        Version++;
         _indexById.Clear();
         _count = 0;
     }

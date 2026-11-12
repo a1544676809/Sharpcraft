@@ -198,6 +198,21 @@ public readonly struct RenderPassHandle
 /// this renderer actually uses: copying wgpu's whole model would make a second backend write a wrapper rather than an
 /// implementation. Nothing here may name a backend type.
 /// </remarks>
+/// <summary>
+/// How many commands a stretch of recording issued, so a stage can be charged for what it actually records (T-820).
+/// </summary>
+/// <param name="Draws">Draw calls recorded.</param>
+/// <param name="BindGroupSets">Bind group assignments recorded.</param>
+/// <param name="PipelineSets">Pipeline assignments recorded.</param>
+public readonly record struct CommandCounts(int Draws, int BindGroupSets, int PipelineSets)
+{
+    /// <summary>Adds two counts, for accumulating stages.</summary>
+    /// <param name="other">Counts to add.</param>
+    /// <returns>The sum.</returns>
+    public CommandCounts Plus(CommandCounts other) =>
+        new(Draws + other.Draws, BindGroupSets + other.BindGroupSets, PipelineSets + other.PipelineSets);
+}
+
 public interface IRenderBackend
 {
     /// <summary>Backend identifier, used in diagnostics.</summary>
@@ -304,6 +319,19 @@ public interface IRenderBackend
 
     /// <summary>Submits the encoder's recorded commands and releases it.</summary>
     void Submit(CommandEncoderHandle encoder);
+
+    /// <summary>Stopwatch ticks the last <see cref="Submit"/> spent inside the encoder finish, or 0 (T-819).</summary>
+    long SubmitFinishTicks => 0;
+
+    /// <summary>Stopwatch ticks the last <see cref="Submit"/> spent handing the buffer to the queue, or 0 (T-819).</summary>
+    long SubmitQueueTicks => 0;
+
+    /// <summary>Commands recorded since the last reset, or zero when the backend does not count them (T-820).</summary>
+    CommandCounts RecordedCommands => default;
+
+    /// <summary>Reads the recorded command counts and starts a new window (T-820).</summary>
+    /// <returns>Counts recorded since the previous reset.</returns>
+    CommandCounts TakeRecordedCommands() => default;
 
     /// <summary>Creates a pipeline layout from the bind group layouts a draw will set.</summary>
     PipelineLayoutHandle CreatePipelineLayout(ReadOnlySpan<BindGroupLayoutHandle> layouts);
@@ -565,14 +593,20 @@ public sealed class WgpuRenderBackend : IRenderBackend
         RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value).SetScissorRect(x, y, width, height);
 
     /// <inheritdoc/>
-    public void SetPipeline(RenderPassHandle pass, PipelineHandle pipeline) =>
+    public void SetPipeline(RenderPassHandle pass, PipelineHandle pipeline)
+    {
+        _pipelineSets++;
         RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
             .SetPipeline(RequireValid<RenderPipeline>(pipeline.Value is not null, pipeline.Value));
+    }
 
     /// <inheritdoc/>
-    public void SetBindGroup(RenderPassHandle pass, uint index, BindGroupHandle group) =>
+    public void SetBindGroup(RenderPassHandle pass, uint index, BindGroupHandle group)
+    {
+        _bindGroupSets++;
         RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
             .SetBindGroup(index, RequireValid<BindGroup>(group.Value is not null, group.Value));
+    }
 
     /// <inheritdoc/>
     public void SetVertexBuffer(RenderPassHandle pass, uint slot, BufferHandle buffer, ulong offset, ulong size) =>
@@ -601,14 +635,20 @@ public sealed class WgpuRenderBackend : IRenderBackend
                 format == IndexFormat.Uint16 ? WGPUIndexFormat.Uint16 : WGPUIndexFormat.Uint32);
 
     /// <inheritdoc/>
-    public void Draw(RenderPassHandle pass, uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance) =>
+    public void Draw(RenderPassHandle pass, uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance)
+    {
+        _draws++;
         RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
             .Draw(vertexCount, instanceCount, firstVertex, firstInstance);
+    }
 
     /// <inheritdoc/>
-    public void DrawIndexed(RenderPassHandle pass, uint indexCount, uint instanceCount, uint firstIndex, int baseVertex, uint firstInstance) =>
+    public void DrawIndexed(RenderPassHandle pass, uint indexCount, uint instanceCount, uint firstIndex, int baseVertex, uint firstInstance)
+    {
+        _draws++;
         RequireValid<RenderPassEncoder>(pass.Value is not null, pass.Value)
             .DrawIndexed(indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
+    }
 
     /// <inheritdoc/>
     public byte[] ReadBuffer(Brew.Wgpu.Instance instance, BufferHandle buffer, ulong offset, nuint size)
@@ -702,13 +742,44 @@ public sealed class WgpuRenderBackend : IRenderBackend
         var native = RequireValid<CommandEncoder>(encoder.Value is not null, encoder.Value);
         using (native)
         {
+            // Split for the diagnostic: finishing validates and encodes the passes, submitting hands the buffer to the
+            // queue, and the two have very different fixes if either dominates (T-819).
+            var started = System.Diagnostics.Stopwatch.GetTimestamp();
             var commands = native.Finish();
+            var finished = System.Diagnostics.Stopwatch.GetTimestamp();
             using (commands)
             {
                 _device.Queue.Submit([commands]);
             }
+
+            var submitted = System.Diagnostics.Stopwatch.GetTimestamp();
+            SubmitFinishTicks = finished - started;
+            SubmitQueueTicks = submitted - finished;
         }
     }
+
+    private int _draws;
+    private int _bindGroupSets;
+    private int _pipelineSets;
+
+    /// <inheritdoc/>
+    public CommandCounts RecordedCommands => new(_draws, _bindGroupSets, _pipelineSets);
+
+    /// <inheritdoc/>
+    public CommandCounts TakeRecordedCommands()
+    {
+        var counts = RecordedCommands;
+        _draws = 0;
+        _bindGroupSets = 0;
+        _pipelineSets = 0;
+        return counts;
+    }
+
+    /// <inheritdoc/>
+    public long SubmitFinishTicks { get; private set; }
+
+    /// <inheritdoc/>
+    public long SubmitQueueTicks { get; private set; }
 
     /// <inheritdoc/>
     public PipelineLayoutHandle CreatePipelineLayout(ReadOnlySpan<BindGroupLayoutHandle> layouts)

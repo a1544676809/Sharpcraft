@@ -50,6 +50,12 @@ public sealed class ChunkGeometryStore : IDisposable
         public required uint IndexCount;
         public required Vector3 Minimum;
         public required Vector3 Maximum;
+
+        // Per section index ranges when the mesher recorded them: starts[i]..starts[i + 1] is section i and the
+        // last entry is the total index count. Null keeps the whole column behaviour.
+        public int[]? SectionStarts;
+
+        public int SectionMinY;
     }
 
     private readonly IRenderBackend _backend;
@@ -106,6 +112,12 @@ public sealed class ChunkGeometryStore : IDisposable
     /// <summary>Buffer bindings issued by the last draw call (diagnostic).</summary>
     public int BindCallsLastDraw { get; private set; }
 
+    /// <summary>Chunks the last draw actually issued a draw for (diagnostic).</summary>
+    public int DrawnLastDraw { get; private set; }
+
+    /// <summary>Triangles the last draw submitted, which is the geometry the GPU had to process (diagnostic).</summary>
+    public long TrianglesLastDraw { get; private set; }
+
     /// <summary>Pages never presized: pages are created on demand (diagnostic).</summary>
     public bool Presized => false;
 
@@ -153,7 +165,9 @@ public sealed class ChunkGeometryStore : IDisposable
             IndexOffset = indexOffset,
             IndexCount = (uint)indexCount,
             Minimum = minimum,
-            Maximum = maximum
+            Maximum = maximum,
+            SectionStarts = mesh.SectionStarts,
+            SectionMinY = mesh.SectionMinY
         };
         page.Chunks.Add(chunkKey);
         LiveBytes += vertexBytes + indexBytes;
@@ -189,6 +203,8 @@ public sealed class ChunkGeometryStore : IDisposable
     {
         CulledLastFrame = 0;
         BindCallsLastDraw = 0;
+        DrawnLastDraw = 0;
+        TrianglesLastDraw = 0;
 
         // Page major: every chunk of a page is drawn while that page is bound, so bindings follow the page count.
         foreach (var page in _pages)
@@ -213,8 +229,17 @@ public sealed class ChunkGeometryStore : IDisposable
                     bound = true;
                 }
 
+
+                if (entry.SectionStarts is { Length: > 1 } starts)
+                {
+                    DrawSections(pass, entry, starts, planes);
+                    continue;
+                }
+
                 _backend.DrawIndexed(pass, entry.IndexCount, 1, (uint)entry.IndexOffset, (int)(entry.VertexOffset / _bytesPerVertex), 0);
                 DrawCallsTotal++;
+                DrawnLastDraw++;
+                TrianglesLastDraw += entry.IndexCount / 3;
             }
         }
     }
@@ -226,6 +251,90 @@ public sealed class ChunkGeometryStore : IDisposable
     /// <summary>Binds a page's vertex and index buffer for drawing.</summary>
     /// <param name="pass">Pass to record into.</param>
     /// <param name="page">Page to bind.</param>
+    /// <summary>Submits the sections of one column that are inside the frustum.</summary>
+    /// <param name="pass">Pass to record into.</param>
+    /// <param name="entry">The column being drawn.</param>
+    /// <param name="starts">Per section index starts, with the total index count last.</param>
+    /// <param name="planes">Frustum planes, or an empty span to draw everything.</param>
+    /// <remarks>
+    /// A column spans the whole world height, so testing its box lets twenty four sections through whenever any part
+    /// of the column is in view. Testing each section on its own and then merging the runs that survive keeps the
+    /// draw count close to what it was while submitting far less geometry.
+    /// </remarks>
+    private void DrawSections(RenderPassHandle pass, Entry entry, int[] starts, ReadOnlySpan<Vector4> planes)
+    {
+        var baseVertex = (int)(entry.VertexOffset / _bytesPerVertex);
+        var sectionCount = starts.Length - 1;
+
+        if (planes.Length < 6)
+        {
+            DrawSectionRun(pass, entry, starts, 0, sectionCount, baseVertex);
+            return;
+        }
+
+        // The frustum cuts the column's tall band down to a single interval: every plane whose normal has a vertical
+        // component bounds the bottom or the top, and planes with no vertical component either keep the whole band or
+        // rule the column out. So the sections that survive are always contiguous and the column still costs one draw,
+        // which is what makes this cheaper than testing twenty four boxes per column.
+        var low = (float)entry.SectionMinY;
+        var high = entry.SectionMinY + (sectionCount * 16f);
+        for (var index = 0; index < 6; index++)
+        {
+            var plane = planes[index];
+            var horizontal = (plane.X >= 0f ? plane.X * entry.Maximum.X : plane.X * entry.Minimum.X)
+                + (plane.Z >= 0f ? plane.Z * entry.Maximum.Z : plane.Z * entry.Minimum.Z)
+                + plane.W;
+
+            if (plane.Y > 1e-6f)
+            {
+                // The top corner is the furthest along this normal, so a section below this height cannot reach it.
+                low = MathF.Max(low, -horizontal / plane.Y);
+            }
+            else if (plane.Y < -1e-6f)
+            {
+                // The bottom corner decides, so a section above this height cannot reach it either.
+                high = MathF.Min(high, -horizontal / plane.Y);
+            }
+            else if (horizontal < 0f)
+            {
+                return;
+            }
+        }
+
+        if (low >= high)
+        {
+            return;
+        }
+
+        // One section of slack on each side: an off by one here would drop geometry, and a section that is drawn but
+        // empty costs nothing.
+        var first = (int)MathF.Floor((low - entry.SectionMinY) / 16f) - 1;
+        var last = (int)MathF.Floor((high - entry.SectionMinY) / 16f) + 1;
+        first = Math.Max(0, first);
+        last = Math.Min(sectionCount - 1, last);
+
+        if (last >= first)
+        {
+            DrawSectionRun(pass, entry, starts, first, last + 1, baseVertex);
+        }
+    }
+
+    /// <summary>Submits one contiguous run of visible sections as a single draw.</summary>
+    private void DrawSectionRun(RenderPassHandle pass, Entry entry, int[] starts, int firstSection, int endSection, int baseVertex)
+    {
+        var from = starts[firstSection];
+        var to = starts[endSection];
+        if (to <= from)
+        {
+            return;
+        }
+
+        _backend.DrawIndexed(pass, (uint)(to - from), 1, (uint)(entry.IndexOffset + from), baseVertex, 0);
+        DrawCallsTotal++;
+        DrawnLastDraw++;
+        TrianglesLastDraw += (to - from) / 3;
+    }
+
     private void BindPage(RenderPassHandle pass, Page page)
     {
         _backend.SetVertexBuffer(pass, 0, page.Vertex);

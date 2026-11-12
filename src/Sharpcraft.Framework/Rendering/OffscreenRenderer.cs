@@ -510,10 +510,10 @@ public static class OffscreenRenderer
                 lightmapBytes.AsSpan());
             backend.WriteBuffer(lightmapBuffer, lightmapBytes, 0);
 
-            Span<float> cameraBlock = stackalloc float[16];
+            Span<float> cameraBlock = stackalloc float[32];
             CameraUniform.Write(cameraBlock, request.CameraPosition, request.CameraTarget, request.FieldOfViewDegrees, (int)width, (int)height);
             var cameraBytes = new byte[VertexLayout.CameraUniformSize];
-            for (var index = 0; index < 16; index++)
+            for (var index = 0; index < 32; index++)
             {
                 BitConverter.TryWriteBytes(cameraBytes.AsSpan(index * sizeof(float)), cameraBlock[index]);
             }
@@ -1011,14 +1011,11 @@ public static class OffscreenRenderer
         private readonly PipelineHandle _pipeline;
         private BufferHandle[] _vertexBuffers = [];
         private BufferHandle[] _indexBuffers = [];
-        private BufferHandle[] _transformBuffers = [];
         private BindGroupHandle[] _bindGroups = [];
         private uint[] _indexCounts = [];
-        private Matrix4x4[] _baseModels = [];
-        private Vector4[] _tints = [];
         private readonly BufferHandle _cameraBuffer;
         private readonly ulong _cameraSize;
-        private readonly List<(BufferHandle Vertex, BufferHandle Index, BufferHandle Transform, BindGroupHandle BindGroup)> _retired = new();
+        private readonly List<(BufferHandle Vertex, BufferHandle Index, BindGroupHandle BindGroup)> _retired = new();
 
         public CelestialResources(IRenderBackend backend, FrameRequest request, BufferHandle cameraBuffer, ulong cameraSize, TextureFormat format = TextureFormat.Rgba8Unorm)
         {
@@ -1056,9 +1053,8 @@ public static class OffscreenRenderer
             _layout = backend.CreateBindGroupLayout(
             [
                 BindGroupLayoutEntryDesc.UniformBuffer(0, ShaderStages.Vertex) with { MinBindingSize = cameraSize },
-                BindGroupLayoutEntryDesc.UniformBuffer(1, ShaderStages.Vertex | ShaderStages.Fragment) with { MinBindingSize = TransformUniformSize },
-                BindGroupLayoutEntryDesc.Texture(2, ShaderStages.Fragment),
-                BindGroupLayoutEntryDesc.Sampler(3, ShaderStages.Fragment)
+                BindGroupLayoutEntryDesc.Texture(1, ShaderStages.Fragment),
+                BindGroupLayoutEntryDesc.Sampler(2, ShaderStages.Fragment)
             ]);
 
             _pipelineLayout = backend.CreatePipelineLayout([_layout]);
@@ -1094,10 +1090,9 @@ public static class OffscreenRenderer
         /// <summary>Replaces the sun/moon draws while keeping the loaded textures and pipeline (per-frame angles).</summary>
         public void SetDraws(IReadOnlyList<CelestialQuadDraw> draws)
         {
-            foreach (var (vertex, index, transform, bindGroup) in _retired)
+            foreach (var (vertex, index, bindGroup) in _retired)
             {
                 _backend.Destroy(bindGroup);
-                _backend.Destroy(transform);
                 _backend.Destroy(index);
                 _backend.Destroy(vertex);
             }
@@ -1105,48 +1100,34 @@ public static class OffscreenRenderer
             _retired.Clear();
             for (var i = 0; i < _bindGroups.Length; i++)
             {
-                _retired.Add((_vertexBuffers[i], _indexBuffers[i], _transformBuffers[i], _bindGroups[i]));
+                _retired.Add((_vertexBuffers[i], _indexBuffers[i], _bindGroups[i]));
             }
 
             _vertexBuffers = new BufferHandle[draws.Count];
             _indexBuffers = new BufferHandle[draws.Count];
-            _transformBuffers = new BufferHandle[draws.Count];
             _bindGroups = new BindGroupHandle[draws.Count];
             _indexCounts = new uint[draws.Count];
-            _baseModels = new Matrix4x4[draws.Count];
-            _tints = new Vector4[draws.Count];
 
             for (var index = 0; index < draws.Count; index++)
             {
                 var draw = draws[index];
-                _baseModels[index] = draw.Model;
-                _tints[index] = draw.Tint;
+                // The model matrix is deliberately NOT applied: it only carries the camera translation, which the sky
+                // matrix in the camera uniform now provides by not being applied at all (T-811, T-812). The vertices stay
+                // exactly as CelestialGeometry produced them, on a dome around the origin.
+                var vertices = CopyTint(draw.Vertices, draw.Tint);
                 _vertexBuffers[index] = _backend.CreateBufferInit(
-                    new BufferDesc((ulong)draw.Vertices.Length * sizeof(float), BufferUsages.Vertex),
-                    System.Runtime.InteropServices.MemoryMarshal.AsBytes(draw.Vertices.AsSpan()));
+                    new BufferDesc((ulong)vertices.Length * sizeof(float), BufferUsages.Vertex),
+                    System.Runtime.InteropServices.MemoryMarshal.AsBytes(vertices.AsSpan()));
                 _indexBuffers[index] = _backend.CreateBufferInit(
                     new BufferDesc((ulong)draw.Indices.Length * sizeof(ushort), BufferUsages.Index),
                     System.Runtime.InteropServices.MemoryMarshal.AsBytes(draw.Indices.AsSpan()));
-
-                var transformBytes = new byte[TransformUniformSize];
-                var transformFloats = new float[20];
-                WriteMatrix(draw.Model, transformFloats, 0);
-                transformFloats[16] = draw.Tint.X;
-                transformFloats[17] = draw.Tint.Y;
-                transformFloats[18] = draw.Tint.Z;
-                transformFloats[19] = draw.Tint.W;
-                System.Runtime.InteropServices.MemoryMarshal.AsBytes(transformFloats.AsSpan()).CopyTo(transformBytes);
-                _transformBuffers[index] = _backend.CreateBufferInit(
-                    new BufferDesc(TransformUniformSize, BufferUsages.Uniform | BufferUsages.CopyDst),
-                    transformBytes.AsSpan());
 
                 _bindGroups[index] = _backend.CreateBindGroup(
                     _layout,
                     [
                         BindGroupEntryDesc.Uniform(0, _cameraBuffer, 0, _cameraSize),
-                        BindGroupEntryDesc.Uniform(1, _transformBuffers[index], 0, TransformUniformSize),
-                        BindGroupEntryDesc.Texture(2, _views[draw.TextureIndex]),
-                        BindGroupEntryDesc.Sampler(3, _sampler)
+                        BindGroupEntryDesc.Texture(1, _views[draw.TextureIndex]),
+                        BindGroupEntryDesc.Sampler(2, _sampler)
                     ]);
 
                 _indexCounts[index] = (uint)draw.Indices.Length;
@@ -1172,27 +1153,53 @@ public static class OffscreenRenderer
             }
         }
 
-        /// <summary>Re-centres the bodies on the camera by translating each base model by <paramref name="eyeDelta"/>.</summary>
+        /// <summary>
+        /// Kept for the call sites: the dome is re-centred by the shared sky matrix, so a camera move uploads nothing.
+        /// </summary>
+        /// <param name="eyeDelta">Unused; the bodies follow the camera through the camera uniform (T-812).</param>
         public void UpdateCamera(Vector3 eyeDelta)
         {
-            if (eyeDelta == Vector3.Zero)
+            _ = eyeDelta;
+            NoOpCameraUpdates++;
+        }
+
+        /// <summary>Camera updates that still touched a buffer; zero now that the sky matrix carries the camera (T-812).</summary>
+        public long AppliedCameraUpdates { get; private set; }
+
+        /// <summary>Camera updates skipped by the old threshold; kept so the existing diagnostics still compile.</summary>
+        public long SkippedCameraUpdates => 0;
+
+        /// <summary>How often the call site asked the bodies to follow the camera; every one is a no-op now.</summary>
+        public long NoOpCameraUpdates { get; private set; }
+
+        /// <summary>
+        /// Copies the per-body tint onto every vertex, so the shader needs no per-draw uniform (T-812).
+        /// </summary>
+        /// <param name="vertices">Source vertices: position (3) then uv (2) floats per vertex.</param>
+        /// <param name="tint">Tint copied onto every vertex.</param>
+        /// <returns>The vertex array with the tint appended: position (3), uv (2), tint (4).</returns>
+        private static float[] CopyTint(float[] vertices, Vector4 tint)
+        {
+            const int sourceStride = 5;
+            const int bakedStride = 9;
+            var count = vertices.Length / sourceStride;
+            var result = new float[count * bakedStride];
+            for (var vertex = 0; vertex < count; vertex++)
             {
-                return;
+                var source = vertex * sourceStride;
+                var target = vertex * bakedStride;
+                result[target] = vertices[source];
+                result[target + 1] = vertices[source + 1];
+                result[target + 2] = vertices[source + 2];
+                result[target + 3] = vertices[source + 3];
+                result[target + 4] = vertices[source + 4];
+                result[target + 5] = tint.X;
+                result[target + 6] = tint.Y;
+                result[target + 7] = tint.Z;
+                result[target + 8] = tint.W;
             }
 
-            var translation = Matrix4x4.CreateTranslation(eyeDelta);
-            for (var index = 0; index < _transformBuffers.Length; index++)
-            {
-                var transformBytes = new byte[TransformUniformSize];
-                var transformFloats = new float[20];
-                WriteMatrix(translation * _baseModels[index], transformFloats, 0);
-                transformFloats[16] = _tints[index].X;
-                transformFloats[17] = _tints[index].Y;
-                transformFloats[18] = _tints[index].Z;
-                transformFloats[19] = _tints[index].W;
-                System.Runtime.InteropServices.MemoryMarshal.AsBytes(transformFloats.AsSpan()).CopyTo(transformBytes);
-                _backend.WriteBuffer(_transformBuffers[index], transformBytes, 0);
-            }
+            return result;
         }
 
         public void Dispose()
@@ -1202,10 +1209,6 @@ public static class OffscreenRenderer
                 _backend.Destroy(bindGroup);
             }
 
-            foreach (var buffer in _transformBuffers)
-            {
-                _backend.Destroy(buffer);
-            }
 
             foreach (var buffer in _indexBuffers)
             {
@@ -1217,10 +1220,9 @@ public static class OffscreenRenderer
                 _backend.Destroy(buffer);
             }
 
-            foreach (var (vertex, index, transform, bindGroup) in _retired)
+            foreach (var (vertex, index, bindGroup) in _retired)
             {
                 _backend.Destroy(bindGroup);
-                _backend.Destroy(transform);
                 _backend.Destroy(index);
                 _backend.Destroy(vertex);
             }
@@ -1248,7 +1250,7 @@ public static class OffscreenRenderer
     /// </summary>
     internal sealed class CelestialColorResources : IDisposable
     {
-        private const ulong TransformUniformSize = 80;
+        private const ulong TransformUniformSize = 16;
 
         private readonly IRenderBackend _backend;
         private readonly BindGroupLayoutHandle _layout;
@@ -1259,12 +1261,14 @@ public static class OffscreenRenderer
         private BufferHandle[] _vertexBuffers = [];
         private BufferHandle[] _indexBuffers = [];
         private BufferHandle[] _transformBuffers = [];
+
+        private readonly byte[] _tintScratch = new byte[TransformUniformSize];
         private BindGroupHandle[] _bindGroups = [];
         private uint[] _indexCounts = [];
         private bool[] _overlay = [];
         private bool[] _opaque = [];
-        private Matrix4x4[] _baseModels = [];
         private Vector4[] _tints = [];
+        private Vector4[] _writtenTints = [];
         private readonly List<(BufferHandle Vertex, BufferHandle Index, BufferHandle Transform, BindGroupHandle BindGroup)> _retired = new();
         private readonly BufferHandle _cameraBuffer;
         private readonly ulong _cameraSize;
@@ -1349,8 +1353,9 @@ public static class OffscreenRenderer
             _indexCounts = new uint[draws.Count];
             _overlay = new bool[draws.Count];
             _opaque = new bool[draws.Count];
-            _baseModels = new Matrix4x4[draws.Count];
             _tints = new Vector4[draws.Count];
+            _writtenTints = new Vector4[draws.Count];
+            Array.Fill(_writtenTints, new Vector4(float.NaN, float.NaN, float.NaN, float.NaN));
             _vertexCapacity = new long[draws.Count];
             _indexCapacity = new long[draws.Count];
             _sourceVertices = new float[draws.Count][];
@@ -1381,7 +1386,6 @@ public static class OffscreenRenderer
 
         private void WriteDraw(int index, CelestialColorDraw draw)
         {
-            _baseModels[index] = draw.Model;
             _tints[index] = draw.Tint;
             _indexCounts[index] = (uint)draw.Indices.Length;
             _overlay[index] = draw.Blend == CelestialColorBlend.Overlay;
@@ -1406,15 +1410,23 @@ public static class OffscreenRenderer
                 _sourceIndices[index] = draw.Indices;
             }
 
-            var transformBytes = new byte[TransformUniformSize];
-            var transformFloats = new float[20];
-            WriteMatrix(draw.Model, transformFloats, 0);
-            transformFloats[16] = draw.Tint.X;
-            transformFloats[17] = draw.Tint.Y;
-            transformFloats[18] = draw.Tint.Z;
-            transformFloats[19] = draw.Tint.W;
-            System.Runtime.InteropServices.MemoryMarshal.AsBytes(transformFloats.AsSpan()).CopyTo(transformBytes);
-            _backend.WriteBuffer(_transformBuffers[index], transformBytes, 0);
+            // The model matrix is deliberately not applied: it only carried the camera translation, which the sky matrix
+            // now supplies by not being applied at all (T-811). Only the tint remains per draw, so the uniform is written
+            // when the tint changes instead of every frame (T-810).
+            if (index < _writtenTints.Length && _writtenTints[index] == draw.Tint)
+            {
+                TintSkips++;
+                return;
+            }
+
+            _tintScratch[0] = (byte)(draw.Tint.X * 255f);
+            BitConverter.TryWriteBytes(_tintScratch.AsSpan(0), draw.Tint.X);
+            BitConverter.TryWriteBytes(_tintScratch.AsSpan(4), draw.Tint.Y);
+            BitConverter.TryWriteBytes(_tintScratch.AsSpan(8), draw.Tint.Z);
+            BitConverter.TryWriteBytes(_tintScratch.AsSpan(12), draw.Tint.W);
+            _backend.WriteBuffer(_transformBuffers[index], _tintScratch, 0);
+            _writtenTints[index] = draw.Tint;
+            TintWrites++;
         }
 
         /// <summary>Draws every colour body, picking the pipeline that matches its blend mode.</summary>
@@ -1435,28 +1447,30 @@ public static class OffscreenRenderer
             }
         }
 
-        /// <summary>Re-centres the colour bodies on the camera by translating each base model by <paramref name="eyeDelta"/>.</summary>
+        /// <summary>
+        /// Kept for the call sites: the dome is re-centred by the shared sky matrix, so a camera move uploads nothing.
+        /// </summary>
+        /// <param name="eyeDelta">Unused; the bodies follow the camera through the camera uniform (T-810).</param>
         public void UpdateCamera(Vector3 eyeDelta)
         {
-            if (eyeDelta == Vector3.Zero)
-            {
-                return;
-            }
-
-            var translation = Matrix4x4.CreateTranslation(eyeDelta);
-            for (var index = 0; index < _transformBuffers.Length; index++)
-            {
-                var transformBytes = new byte[TransformUniformSize];
-                var transformFloats = new float[20];
-                WriteMatrix(translation * _baseModels[index], transformFloats, 0);
-                transformFloats[16] = _tints[index].X;
-                transformFloats[17] = _tints[index].Y;
-                transformFloats[18] = _tints[index].Z;
-                transformFloats[19] = _tints[index].W;
-                System.Runtime.InteropServices.MemoryMarshal.AsBytes(transformFloats.AsSpan()).CopyTo(transformBytes);
-                _backend.WriteBuffer(_transformBuffers[index], transformBytes, 0);
-            }
+            _ = eyeDelta;
+            NoOpCameraUpdates++;
         }
+
+        /// <summary>Camera updates that still touched a buffer; zero now that the sky matrix carries the camera (T-810).</summary>
+        public long AppliedCameraUpdates { get; private set; }
+
+        /// <summary>Camera updates skipped by the old threshold; kept so the existing diagnostics still compile.</summary>
+        public long SkippedCameraUpdates => 0;
+
+        /// <summary>How often the call site asked the bodies to follow the camera; every one is a no-op now.</summary>
+        public long NoOpCameraUpdates { get; private set; }
+
+        /// <summary>Per-draw tint uploads actually issued (diagnostic for T-810).</summary>
+        public long TintWrites { get; private set; }
+
+        /// <summary>Frames where the tint was unchanged, so the upload was skipped (diagnostic for T-810).</summary>
+        public long TintSkips { get; private set; }
 
         public void Dispose()
         {

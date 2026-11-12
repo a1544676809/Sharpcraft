@@ -27,8 +27,8 @@ public sealed record FrameRequest(
     Vector3 CameraTarget,
     float FieldOfViewDegrees = 70f)
 {
-    /// <summary>Floats per vertex: position (3) + base colour (3) + uv (2) + sprite rect (4) + light (2).</summary>
-    public const int FloatsPerVertex = 14;
+    /// <summary>Floats per vertex: position (3), packed colour (1), uv (2), sprite rect (4), packed light (1).</summary>
+    public const int FloatsPerVertex = 11;
 
     /// <summary>Vertex count.</summary>
     public int VertexCount => Vertices.Length / FloatsPerVertex;
@@ -157,7 +157,38 @@ public sealed record CelestialColorDraw(
     uint[] Indices,
     Matrix4x4 Model,
     Vector4 Tint,
-    CelestialColorBlend Blend);
+    CelestialColorBlend Blend)
+{
+    /// <summary>
+    /// Cloud face table for procedural generation, or null for a draw that carries explicit vertices (T-827).
+    /// </summary>
+    /// <remarks>
+    /// Three words per face: cell X halved, cell Z halved, then a direction and its flags. When this is set the cloud
+    /// transparency passes draw four vertices per face straight from the table and <see cref="Vertices"/> is unused;
+    /// the model matrix carries the cell scaling so no per-frame uniform has to describe the grid. Written out in
+    /// docs/specs/render/cloud-geometry.md.
+    /// </remarks>
+    public int[]? CloudFaces { get; init; }
+
+    /// <summary>Distance at which clouds fade out, read only when <see cref="CloudFaces"/> is set.</summary>
+    public float CloudFogEnd { get; init; }
+
+    /// <summary>
+    /// How many faces <see cref="CloudFaces"/> describes, so this layer needs no opinion on how many words a face is.
+    /// </summary>
+    public int CloudFaceCount { get; init; }
+
+    /// <summary>Eye position in world space, so the procedural passes can fade by true distance as the CPU did.</summary>
+    public Vector3 CloudEye { get; init; }
+
+    /// <summary>Where the cloud grid's corner sits in world space, read only when <see cref="CloudFaces"/> is set.</summary>
+    /// <remarks>
+    /// Kept separate from <see cref="Model"/> because that matrix still positions the explicit vertices the classic
+    /// cloud path uses, which are already in world units. The procedural passes build their own matrix from this
+    /// origin and the cell size instead.
+    /// </remarks>
+    public Vector3 CloudOrigin { get; init; }
+}
 
 /// <summary>
 /// Per-frame lightmap parameters for the terrain shader's per-fragment lightmap (docs/decisions/0019,

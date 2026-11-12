@@ -261,7 +261,7 @@ public static class WindowedRenderer
         // Transparency is the reference depth-bounds + wavelet-transmittance OIT (docs/specs/render/oit-reference.md).
         // The earlier weighted-blended OIT looked markedly worse in play and is shelved, not compiled; git history keeps
         // it if it is ever wanted again.
-        var oitTargetFormat = oitLowPrecision ? TextureFormat.Rgba8Unorm : (supportsFloat32Blendable ? TextureFormat.Rgba32Float : TextureFormat.Rgba16Float);
+        var oitTargetFormat = oitLowPrecision ? TextureFormat.Rgba8Unorm : (supportsFloat32Blendable ? TextureFormat.Rgba32Float : TextureFormat.Rgba16Float); var oitColorFormat = oitLowPrecision ? TextureFormat.Rgba8Unorm : TextureFormat.Rgba16Float; // half floats for transmittance and accumulate, as the reference does
         var refTransmittanceLayout = CreateOitTextureLayout(backend, 1);
         var refAccumulateLayout = CreateOitTextureLayout(backend, 3);
         var refCullLayout = CreateOitTextureLayout(backend, 1);
@@ -283,22 +283,22 @@ public static class WindowedRenderer
         }
 
         var cloudTransPipelineLayout = cloudOit is null ? default : backend.CreatePipelineLayout([cloudOit.Layout, refTransmittanceLayout]);
-        var cloudTransmittancePipeline = cloudOit is null ? default : CreateTransmittancePipeline(backend, cloudTransPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat));
+        var cloudTransmittancePipeline = cloudOit is null ? default : CreateTransmittancePipeline(backend, cloudTransPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitColorFormat));
         if (cloudTransPipelineLayout.IsValid)
         {
             backend.Destroy(cloudTransPipelineLayout);
         }
 
         var cloudAccumPipelineLayout = cloudOit is null ? default : backend.CreatePipelineLayout([cloudOit.Layout, refAccumulateLayout]);
-        var cloudAccumulatePipeline = cloudOit is null ? default : CreateAccumulatePipeline(backend, cloudAccumPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat));
+        var cloudAccumulatePipeline = cloudOit is null ? default : CreateAccumulatePipeline(backend, cloudAccumPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitColorFormat));
         if (cloudAccumPipelineLayout.IsValid)
         {
             backend.Destroy(cloudAccumPipelineLayout);
         }
 
         var refDepthBoundsPipeline = CreateDepthBoundsPipeline(backend, pipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
-        var refTransmittancePipeline = CreateTransmittancePipeline(backend, refTransmittancePipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
-        var refAccumulatePipeline = CreateAccumulatePipeline(backend, refAccumulatePipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
+        var refTransmittancePipeline = CreateTransmittancePipeline(backend, refTransmittancePipelineLayout, format: BackendConvert.ToWgpu(oitColorFormat));
+        var refAccumulatePipeline = CreateAccumulatePipeline(backend, refAccumulatePipelineLayout, format: BackendConvert.ToWgpu(oitColorFormat));
         var refCullPipeline = CreateCullPipeline(backend, refCullPipelineLayout, BackendConvert.ToWgpu(oitTargetFormat));
         var refCompositePipeline = CreateCompositePipeline(backend, format, refCompositePipelineLayout);
         var cloudCompositePipeline = CreateCompositePipeline(backend, format, refCompositePipelineLayout, WGPUCompareFunction.GreaterEqual);
@@ -456,7 +456,6 @@ public static class WindowedRenderer
         EnsureEntityLayerCapacity(4);
         // The helper is defined further down; the buffers above are created eagerly so no nullable state leaks.
 
-
         // Geometry lives in persistent buffers that are rewritten in place, so a rebuild costs one upload
         // instead of two allocations plus a GPU sync. They only grow, and the grown-out buffers are released
         // when the window closes (a rebuild that needs more room is rare)
@@ -495,12 +494,37 @@ public static class WindowedRenderer
         BindGroupHandle refCompositeBindGroup = default;
         TextureHandle cloudDepthTexture = default;
         TextureViewHandle cloudDepthViewHandle = default;
+        BindGroupHandle blitDepthBindGroup = default;
+        TextureViewHandle blitDepthBoundFor = default;
+        var blitDepthRebuilds = 0;
         var cloudDepthTargetsCreated = false;
         var refTargetsCreated = false;
 
         // Translucent item geometry composites through its own reference OIT set, as the reference does with
         // OitPipelineSet("item") bound to RenderTypes.ITEM_TRANSLUCENT (ItemOitSet).
         var itemOit = new ItemOitSet();
+
+        // The cloud depth blit samples the main depth, so its bind group belongs to that view: it is rebuilt only when the
+        // depth target is recreated (a resize), never per frame (T-806).
+        BindGroupHandle BlitDepthGroup()
+        {
+            if (blitDepthBindGroup.IsValid && blitDepthBoundFor.Equals(depthViewHandle))
+            {
+                return blitDepthBindGroup;
+            }
+
+            if (blitDepthBindGroup.IsValid)
+            {
+                backend.Destroy(blitDepthBindGroup);
+            }
+
+            blitDepthBindGroup = backend.CreateBindGroup(
+                blitDepthLayout,
+                [BindGroupEntryDesc.Texture(0, depthViewHandle), BindGroupEntryDesc.Sampler(1, blitDepthSamplerHandle)]);
+            blitDepthBoundFor = depthViewHandle;
+            blitDepthRebuilds++;
+            return blitDepthBindGroup;
+        }
 
         void CreateReferenceTargets()
         {
@@ -535,11 +559,11 @@ public static class WindowedRenderer
             refDepthBoundsView = backend.CreateTextureView(refDepthBoundsTexture);
             refDepthBoundsCulledTexture = CreateOitTarget(backend, frameWidth, frameHeight, oitTargetFormat);
             refDepthBoundsCulledView = backend.CreateTextureView(refDepthBoundsCulledTexture);
-            refTransmittance0Texture = CreateOitTarget(backend, frameWidth, frameHeight, oitTargetFormat);
+            refTransmittance0Texture = CreateOitTarget(backend, frameWidth, frameHeight, oitColorFormat);
             refTransmittance0View = backend.CreateTextureView(refTransmittance0Texture);
-            refTransmittance1Texture = CreateOitTarget(backend, frameWidth, frameHeight, oitTargetFormat);
+            refTransmittance1Texture = CreateOitTarget(backend, frameWidth, frameHeight, oitColorFormat);
             refTransmittance1View = backend.CreateTextureView(refTransmittance1Texture);
-            refAccumulateTexture = CreateOitTarget(backend, frameWidth, frameHeight, oitTargetFormat);
+            refAccumulateTexture = CreateOitTarget(backend, frameWidth, frameHeight, oitColorFormat);
             refAccumulateView = backend.CreateTextureView(refAccumulateTexture);
 
             refCullBindGroup = backend.CreateBindGroup(refCullLayout, [BindGroupEntryDesc.Texture(0, refDepthBoundsView)]);
@@ -582,7 +606,7 @@ public static class WindowedRenderer
             refTargetsCreated = true;
         }
 
-        Span<float> cameraBlock = stackalloc float[16];
+        Span<float> cameraBlock = stackalloc float[32];
         var cameraBytes = new byte[VertexLayout.CameraUniformSize];
 
         var colour = request.ClearColour;
@@ -590,12 +614,23 @@ public static class WindowedRenderer
         var performanceSummary = false;
         var cullStatistics = false;
         var disableCulling = false;
+        var frameNumber = 0u;
+        var abGroup = 0;
+        var abToggleFrames = 0;
+        var skipTerrain = false;
+        var skipSky = false;
+        var skipClear = false;
+        var skipPresentCopy = false;
+        var skipCelestial = false;
+        var skipEntities = false;
+        var skipInterface = false;
         var cpuTiming = false;
         var skipOit = false;
         var skipClouds = false;
         var skipTranslucent = false;
         // Cheap enough to accumulate every frame (a dozen counter reads), printed only when the host asks for it.
         var cpuTimings = new FrameCpuTimings();
+        var itemOitFrames = 0;
         var frustumPlanes = new System.Numerics.Vector4[6];
         var gapSamples = new double[1 << 17];
         var gapCount = 0;
@@ -604,6 +639,11 @@ public static class WindowedRenderer
         // chunks are still arriving: the whole-run summary includes loading and says nothing about the settled frame.
         var windowFrameMs = 0d;
         var windowFrameCount = 0;
+        var abAMs = 0d;
+        var abACount = 0;
+        var abBMs = 0d;
+        var abBCount = 0;
+        var pixelCompare = new PixelFrameCompare();
         var worstFrameMs = 0d;
         var worstFrameIndex = 0;
         var framesOver33 = 0;
@@ -844,6 +884,14 @@ public static class WindowedRenderer
                 // uses the current index count, and a vertex buffer from an older mesh would make those
                 // indices point past it, drawing stray triangles that look like overlapping texture.
                 surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight, presentMode, WGPUCompositeAlphaMode.Auto);
+                if (blitDepthBindGroup.IsValid)
+                {
+                    // The group samples the depth view, so it must go first.
+                    backend.Destroy(blitDepthBindGroup);
+                    blitDepthBindGroup = default;
+                    blitDepthBoundFor = default;
+                }
+
                 backend.Destroy(depthViewHandle);
                 backend.Destroy(depthTexture);
                 depthTexture = CreateDepthTexture(backend, frameWidth, frameHeight);
@@ -857,6 +905,10 @@ public static class WindowedRenderer
                 // The geometry is world-space and the camera travels in a uniform, so a resize needs no
                 // re-upload at all.
             }
+
+            // Split of the frame preparation, so the diagnostic can name where the budget goes (T-817). This mark closes
+            // the diagnostics report, the window pump and the loop head.
+            Cpu(FrameCpuTimings.PrepPumpStage);
 
             // Rewriting the persistent buffers costs one upload; nothing is allocated or freed in the
             // steady state, so streaming new terrain does not hitch.
@@ -908,6 +960,8 @@ public static class WindowedRenderer
                 uiRanges = ui.Ranges.ToArray();
             }
 
+            Cpu(FrameCpuTimings.PrepUiStage);
+
             if (dynamicGeometry is not null && dynamicGeometry() is { IndexCount: > 0 } dynamic)
             {
                 var neededVertex = (ulong)dynamic.VertexFloats * sizeof(float);
@@ -939,7 +993,11 @@ public static class WindowedRenderer
             }
 
             entityLayerDrawn = 0;
-            if (entityLayers is not null && entityLayers() is { Count: > 0 } layers)
+            // A/B: skip only the buffer writes on the toggled group, so both halves draw the same geometry and the
+            // measured difference is the upload alone (T-828).
+            var skipUpload = currentRequest.Diagnostics?.SkipGeometryUploadOnAbGroup == true && abGroup == 1;
+            var uploadStart = System.Diagnostics.Stopwatch.GetTimestamp();
+            if (!skipUpload && entityLayers is not null && entityLayers() is { Count: > 0 } layers)
             {
                 var used = layers.Count;
                 EnsureEntityLayerCapacity(used);
@@ -954,10 +1012,8 @@ public static class WindowedRenderer
                     {
                         continue;
                     }
-
                     var neededVertex = (ulong)geometry.VertexFloats * sizeof(float);
                     var neededIndex = (ulong)geometry.IndexCount * sizeof(uint);
-
                     if (neededVertex > entityLayerVertexCapacity[layerIndex])
                     {
                         backend.Destroy(entityLayerVertex[layerIndex]);
@@ -973,7 +1029,8 @@ public static class WindowedRenderer
                         entityLayerIndex[layerIndex] = backend.CreateBuffer(
                             new BufferDesc(entityLayerIndexCapacity[layerIndex], BufferUsages.Index | BufferUsages.CopyDst));
                     }
-
+                    if (!skipUpload)
+                    {
                     backend.WriteBuffer(
                         entityLayerVertex[layerIndex],
                         System.Runtime.InteropServices.MemoryMarshal.AsBytes(geometry.Vertices.AsSpan(0, geometry.VertexFloats)),
@@ -982,12 +1039,11 @@ public static class WindowedRenderer
                         entityLayerIndex[layerIndex],
                         System.Runtime.InteropServices.MemoryMarshal.AsBytes(geometry.Indices.AsSpan(0, geometry.IndexCount)),
                         0);
+                    }
                     entityLayerIndexCount[layerIndex] = (uint)geometry.IndexCount;
                 }
-
                 entityLayerDrawn = used;
             }
-
             var updatesThisFrame = 0;
 
             if (arena is not null)
@@ -995,7 +1051,7 @@ public static class WindowedRenderer
                 var updates = geometryUpdates!();
                 updatesThisFrame = updates?.Count ?? 0;
 
-                if (updates is { Count: > 0 })
+                if (!skipUpload && updates is { Count: > 0 })
                 {
                     foreach (var (key, mesh) in updates)
                     {
@@ -1016,14 +1072,15 @@ public static class WindowedRenderer
             }
 
             if (geometryRemovals?.Invoke() is { Count: > 0 } removals)
+            foreach (var key in geometryRemovals?.Invoke() ?? [])
             {
-                foreach (var key in removals)
-                {
-                    arena?.Remove(key);
-                    arenaCutout?.Remove(key);
-                    arenaTranslucent?.Remove(key);
-                }
+                arena?.Remove(key);
+                arenaCutout?.Remove(key);
+                arenaTranslucent?.Remove(key);
             }
+
+            Cpu(FrameCpuTimings.PrepEntitiesStage);
+            cpuTimings.AddAbSample(abGroup, System.Diagnostics.Stopwatch.GetTimestamp() - uploadStart);
 
             var rebuildStarted = System.Diagnostics.Stopwatch.GetTimestamp();
             var rebuiltFrame = rebuildRequest?.Invoke();
@@ -1073,9 +1130,24 @@ public static class WindowedRenderer
             performanceSummary = currentRequest.Diagnostics?.PerformanceSummary == true;
             cullStatistics = currentRequest.Diagnostics?.CullStatistics == true;
             disableCulling = currentRequest.Diagnostics?.DisableCulling == true;
+            // An interleaved A/B flips the same switches every N frames instead, so both groups live in one process.
+            abToggleFrames = currentRequest.Diagnostics?.AbToggleFrames ?? 0;
+            abGroup = abToggleFrames > 0 ? (int)((frameNumber / (uint)abToggleFrames) & 1) : 0;
+            // Group B skips exactly what the host asked for, so one run attributes one item.
+            var wantsSkipTerrain = currentRequest.Diagnostics?.SkipTerrain == true;
+            var wantsSkipEntities = currentRequest.Diagnostics?.SkipEntities == true;
+            var wantsSkipInterface = currentRequest.Diagnostics?.SkipInterface == true;
+            var skipGroup = abToggleFrames > 0 && abGroup == 1;
+            skipTerrain = wantsSkipTerrain && (abToggleFrames == 0 || skipGroup);
+            skipSky = currentRequest.Diagnostics?.SkipSky == true && (abToggleFrames == 0 || skipGroup);
+            skipClear = currentRequest.Diagnostics?.SkipClear == true && (abToggleFrames == 0 || skipGroup);
+            skipPresentCopy = currentRequest.Diagnostics?.SkipPresentCopy == true && (abToggleFrames == 0 || skipGroup);
+            skipCelestial = currentRequest.Diagnostics?.SkipCelestial == true && (abToggleFrames == 0 || skipGroup);
+            skipEntities = wantsSkipEntities && (abToggleFrames == 0 || skipGroup);
+            skipInterface = wantsSkipInterface && (abToggleFrames == 0 || skipGroup);
             cpuTiming = currentRequest.Diagnostics?.FrameCpuTiming == true;
-            skipOit = currentRequest.Diagnostics?.SkipOit == true;
-            skipClouds = currentRequest.Diagnostics?.SkipClouds == true;
+            skipOit = currentRequest.Diagnostics?.SkipOit == true && (abToggleFrames == 0 || skipGroup);
+            skipClouds = currentRequest.Diagnostics?.SkipClouds == true && (abToggleFrames == 0 || skipGroup);
             skipTranslucent = currentRequest.Diagnostics?.SkipTranslucent == true;
             var gapMs = nowMs - lastFrameAt;
 
@@ -1086,6 +1158,18 @@ public static class WindowedRenderer
 
             windowFrameMs += gapMs;
             windowFrameCount++;
+
+            // Interleaved A/B: both groups accumulate inside the same window, so drift cancels.
+            if (abGroup == 1)
+            {
+                abBMs += gapMs;
+                abBCount++;
+            }
+            else
+            {
+                abAMs += gapMs;
+                abACount++;
+            }
             var uploadedNow = arena?.UploadedBytes ?? 0;
             var uploadedDelta = uploadedNow - lastUploadedAt;
             lastUploadedAt = uploadedNow;
@@ -1146,19 +1230,22 @@ public static class WindowedRenderer
             // Sample the cloud draw once: the OIT stages need its vertices before the main transparency passes, and the
             // non-OIT path reuses the same draw later.
             var cloudDrawFrame = skipClouds ? null : cloudsPerFrame?.Invoke();
-            if (cloudOit is not null && cloudDrawFrame is { } cloudForOit)
+            if (cloudOit is not null && cloudDrawFrame is { } cloudForOit && cloudForOit.CloudFaces is { } cloudFaces)
             {
-                cloudOit.Update(cloudForOit.Vertices, cloudForOit.Indices, cloudForOit.Model, cloudForOit.Tint);
+                cloudOit.Update(cloudFaces, cloudForOit.CloudFaceCount, cloudForOit.CloudOrigin, cloudForOit.Tint, cloudForOit.CloudFogEnd, cloudForOit.CloudEye);
             }
 
             Cpu(FrameCpuTimings.CloudsStage);
 
             var encoder = backend.CreateCommandEncoder();
             var frameColour = clearColourPerFrame?.Invoke() ?? colour;
-            var pass = backend.BeginRenderPass(
-                encoder,
-                [ColorAttachmentDesc.Clear(frameView, frameColour)],
-                DepthAttachmentDesc.Clear(depthViewHandle, 0f));
+            var frameAttachment = skipClear
+                ? ColorAttachmentDesc.Keep(frameView)
+                : ColorAttachmentDesc.Clear(frameView, frameColour);
+            var depthAttachment = skipClear
+                ? DepthAttachmentDesc.Keep(depthViewHandle)
+                : DepthAttachmentDesc.Clear(depthViewHandle, 0f);
+            var pass = backend.BeginRenderPass(encoder, [frameAttachment], depthAttachment);
 
             // Camera/light/fog uniforms are frame setup, not pass ordering. The scene pass sequence itself comes from
             // WorldRenderPipeline so the windowed path and the offscreen path share one execution order.
@@ -1177,7 +1264,7 @@ public static class WindowedRenderer
                 (int)frameWidth,
                 (int)frameHeight);
 
-            for (var index = 0; index < 16; index++)
+            for (var index = 0; index < 32; index++)
             {
                 BitConverter.TryWriteBytes(cameraBytes.AsSpan(index * sizeof(float)), cameraBlock[index]);
             }
@@ -1224,6 +1311,7 @@ public static class WindowedRenderer
             // world. Drawing the preloaded combined mesh next to the arena kept the first few chunks on a second path with
             // its own colour, so the static copy is used only until the arena holds anything.
             var useStaticWorld = arena is null || arena.ChunkCount == 0;
+            Cpu(FrameCpuTimings.SceneOpenStage);
 
             void DrawScenePass(WorldRenderPassKind kind)
             {
@@ -1231,12 +1319,25 @@ public static class WindowedRenderer
                 {
                     case WorldRenderPassKind.Sky:
                     {
+                        if (skipSky)
+                        {
+                            break;
+                        }
+
                         // Sky first, over the cleared target; world geometry then draws on top of it. When the caller
                         // supplies a flat SKY_COLOR through the clear colour, the gradient sky is skipped.
                         if (!currentRequest.SkipGradientSky)
                         {
                             backend.SetPipeline(pass, skyPipeline);
                             backend.Draw(pass, 3, 1, 0, 0);
+                        }
+
+                        Cpu(FrameCpuTimings.SceneSkyStage);
+
+                        if (skipCelestial)
+                        {
+                            Cpu(FrameCpuTimings.SceneCelestialStage);
+                            break;
                         }
 
                         // Sun/moon (textured) then sunrise/stars (position-colour), still before terrain so world
@@ -1248,6 +1349,8 @@ public static class WindowedRenderer
                             skyDiscColour?.SetDraws(celestialUpdate.SkyDiscs);
                         }
 
+                        Cpu(FrameCpuTimings.CelestialBuildStage);
+
                         // Apply the camera delta AFTER any per-frame draw rebuild: a freshly built draw uses the base
                         // (initial) camera model, so translating first would be overwritten and the bodies would stay
                         // anchored in the world.
@@ -1255,20 +1358,31 @@ public static class WindowedRenderer
                         celestialColour?.UpdateCamera(celestialDelta);
                         skyDiscColour?.UpdateCamera(celestialDelta);
 
+                        Cpu(FrameCpuTimings.CelestialCameraStage);
+
                         if (skyDiscVanillaResources is not null && skyDiscPerFrame?.Invoke() is { } skyDiscState)
                         {
                             skyDiscVanillaResources.Update(skyDiscState.Sky, skyDiscState.Fog, skyDiscState.SkyFogEnd, skyDiscState.Eye);
+
+                            Cpu(FrameCpuTimings.CelestialDiscStage);
                             skyDiscVanillaResources.Draw(backend, pass);
                         }
 
                         skyDiscColour?.Draw(backend, pass);
                         celestial?.Draw(backend, pass);
                         celestialColour?.Draw(backend, pass);
+
+                        Cpu(FrameCpuTimings.SceneCelestialStage);
                         break;
                     }
 
                     case WorldRenderPassKind.TerrainOpaque:
                     {
+                        if (skipTerrain)
+                        {
+                            break;
+                        }
+
                         backend.SetPipeline(pass, pipeline);
                         backend.SetBindGroup(pass, 0, bindGroup);
                         if (arena is { ChunkCount: > 0 })
@@ -1281,6 +1395,8 @@ public static class WindowedRenderer
                             {
                                 arena.Draw(pass, frustumPlanes);
                             }
+
+                            Cpu(FrameCpuTimings.SceneTerrainStage);
                         }
 
                         // Clouds are drawn after the transparent terrain (below), matching the reference order.
@@ -1289,7 +1405,7 @@ public static class WindowedRenderer
 
                     case WorldRenderPassKind.TerrainCutout:
                     {
-                        if (arenaCutout is not { ChunkCount: > 0 })
+                        if (skipTerrain || arenaCutout is not { ChunkCount: > 0 })
                         {
                             break;
                         }
@@ -1309,7 +1425,8 @@ public static class WindowedRenderer
 
                     case WorldRenderPassKind.Entities:
                     {
-                        if (dynamicIndexCount > 0)
+                        Cpu(FrameCpuTimings.SceneEntitiesStage);
+                        if (!skipEntities && dynamicIndexCount > 0)
                         {
                             backend.SetPipeline(pass, entityPipeline);
                             backend.SetVertexBuffer(pass, 0, dynamicVertex, 0, dynamicVertexCapacity);
@@ -1429,9 +1546,7 @@ public static class WindowedRenderer
                 try
                 {
                     backend.SetPipeline(blitPass, blitDepthPipeline);
-                    backend.SetBindGroup(blitPass, 0, backend.CreateBindGroup(
-                        blitDepthLayout,
-                        [BindGroupEntryDesc.Texture(0, depthViewHandle), BindGroupEntryDesc.Sampler(1, blitDepthSamplerHandle)]));
+                    backend.SetBindGroup(blitPass, 0, BlitDepthGroup());
                     backend.Draw(blitPass, 3, 1, 0, 0);
                 }
                 finally
@@ -1485,7 +1600,9 @@ public static class WindowedRenderer
                     {
                         // Order independent by construction (docs/specs/render/oit-reference.md 6: additive accumulation
                         // and transmittance are commutative), so the paged arena draws page major and binds once per page.
-                        arenaTranslucent.Draw(p);
+                        // Culled like the other two layers: the box test treats a box that merely intersects the frustum
+                        // as visible, so a column straddling the edge is still drawn (T-822).
+                        arenaTranslucent.Draw(p, frustumPlanes);
                     }
 
                     if (hasRefStatic && refStaticIndexCount > 0)
@@ -1537,6 +1654,19 @@ public static class WindowedRenderer
                     ? DepthAttachmentDesc.Keep(cloudDepthViewHandle)
                     : depthLoadStore;
 
+                // The item transparency set has its own four full resolution targets; with no translucent item geometry every
+                // one of its passes would only clear and then discard, so the whole set is skipped instead (T-799).
+                var itemOitGeometryPresent = false;
+                for (var itemLayer = 0; itemLayer < entityLayerDrawn; itemLayer++)
+                {
+                    if (entityLayerKind[itemLayer] == EntityGeometryLayerKind.ItemTranslucent &&
+                        entityLayerIndexCount[itemLayer] > 0)
+                    {
+                        itemOitGeometryPresent = true;
+                        break;
+                    }
+                }
+
                 ReferenceOitPasses.Record(new ReferenceOitPasses.Parameters
                 {
                     Backend = backend,
@@ -1566,8 +1696,16 @@ public static class WindowedRenderer
                     Items = itemOit,
                     ItemAtlas = itemAtlasGpu.BindGroup,
                     DrawTerrain = DrawReferenceGeometry,
-                    DrawItems = DrawItemOitGeometry
+                    DrawItems = DrawItemOitGeometry,
+                    MaxStages = currentRequest.Diagnostics?.OitStages ?? 0,
+                    ItemsHasGeometry = itemOitGeometryPresent
                 });
+
+                if (itemOitGeometryPresent)
+                {
+                    itemOitFrames++;
+                }
+
                 if (hasRefStatic)
                 {
                     backend.Destroy(refStaticVertexBuffer);
@@ -1579,23 +1717,19 @@ public static class WindowedRenderer
             // (The weighted-blended OIT path that used to live here was shelved for its visual quality and is no longer
             // compiled; the reference OIT above is the only transparency path.)
 
+            // Text, clouds and the interface share one pass: same colour target, same depth attachment, same drawing
+            // order. What costs is the pass object itself (encoder validation and driver setup), not the draws inside it
+            // (T-804).
+            var uiPass = backend.BeginRenderPass(
+                encoder,
+                [ColorAttachmentDesc.Keep(frameView)],
+                DepthAttachmentDesc.Keep(depthViewHandle));
+            try
+            {
             if (worldText is not null)
             {
                 worldText.SetDraws(worldTextPerFrame?.Invoke() ?? []);
-                // The helper still takes a native pass, so the handle is unwrapped for that call only; the pass itself
-                // is begun and ended through the seam.
-                var worldTextPass = backend.BeginRenderPass(
-                    encoder,
-                    [ColorAttachmentDesc.Keep(frameView)],
-                    DepthAttachmentDesc.Keep(depthViewHandle));
-                try
-                {
-                    worldText.Draw(backend, worldTextPass);
-                }
-                finally
-                {
-                    backend.EndRenderPass(worldTextPass);
-                }
+                worldText.Draw(backend, uiPass);
 
                 Cpu(FrameCpuTimings.TextStage);
             }
@@ -1603,34 +1737,19 @@ public static class WindowedRenderer
             // occlude each other correctly (the reference draws them in executeClassicTransparency).
             if (cloudColour is not null && cloudOit is null && !skipClouds)
             {
-                var cloudPass = backend.BeginRenderPass(
-                    encoder,
-                    [ColorAttachmentDesc.Keep(frameView)],
-                    DepthAttachmentDesc.Keep(depthViewHandle));
-                try
+                if (cloudDrawFrame is { } cloudDraw)
                 {
-                    if (cloudDrawFrame is { } cloudDraw)
-                    {
-                        cloudColour.SetDraws([cloudDraw]);
-                    }
+                    cloudColour.SetDraws([cloudDraw]);
+                }
 
-                    cloudColour.Draw(backend, cloudPass);
-                }
-                finally
-                {
-                    backend.EndRenderPass(cloudPass);
-                }
+                cloudColour.Draw(backend, uiPass);
             }
 
             Cpu(FrameCpuTimings.CloudsStage);
 
             // Pass 4: the interface draws last, over the resolved frame, in its own pass so it never participates in the
             // world depth test or the transparency resolve.
-            var uiPass = backend.BeginRenderPass(
-                encoder,
-                [ColorAttachmentDesc.Keep(frameView)],
-                DepthAttachmentDesc.Keep(depthViewHandle));
-            try
+            if (!skipInterface)
             {
 
             if (uiIndexCount > 0 && uiRanges.Length > 0)
@@ -1694,6 +1813,7 @@ public static class WindowedRenderer
             }
 
             }
+            }
             finally
             {
                 backend.EndRenderPass(uiPass);
@@ -1701,7 +1821,10 @@ public static class WindowedRenderer
 
             Cpu(FrameCpuTimings.UiStage);
 
-            presentation.RecordPresent(backend, encoder, wgpu.AdoptTextureView(surfaceView), DepthAttachmentDesc.Keep(depthViewHandle));
+            if (!skipPresentCopy)
+            {
+                presentation.RecordPresent(backend, encoder, wgpu.AdoptTextureView(surfaceView), DepthAttachmentDesc.Keep(depthViewHandle));
+            }
 
             Cpu(FrameCpuTimings.PresentRecordStage);
 
@@ -1717,15 +1840,25 @@ public static class WindowedRenderer
 
             Cpu(FrameCpuTimings.SubmitStage);
 
+            // The submit bucket above also holds the (usually absent) screenshot branch; these two are the backend's own
+            // split of the call, so finish-plus-queue should account for almost all of it (T-819).
+            cpuTimings.Add(FrameCpuTimings.SubmitFinishStage, backend.SubmitFinishTicks);
+            cpuTimings.Add(FrameCpuTimings.SubmitQueueStage, backend.SubmitQueueTicks);
+
             surface.Present();
 
             // The acquired texture must be released each frame; leaving it alive makes the next acquire fail
             // when the swapchain reuses its semaphore.
             acquired.Texture.Dispose();
 
-            onFrame?.Invoke(presented, window);
+            // Split from the host callback: this is the swapchain wait itself, which is what T-803 asks about.
+            Cpu(FrameCpuTimings.SwapStage);
 
-            Cpu(FrameCpuTimings.PresentStage);
+            onFrame?.Invoke(presented, window);
+            frameNumber++;
+
+            Cpu(FrameCpuTimings.OnFrameStage);
+            pixelCompare.Observe(backend, instance, presentation.TargetHandle, frameWidth, frameHeight, BackendConvert.FromWgpu(format), abGroup, currentRequest.Diagnostics);
             cpuTimings.Add(FrameCpuTimings.FrameStage, System.Diagnostics.Stopwatch.GetTimestamp() - cpuFrameStarted);
             cpuTimings.EndFrame();
 
@@ -1738,10 +1871,20 @@ public static class WindowedRenderer
                     var windowMeanMs = windowFrameCount == 0 ? 0d : windowFrameMs / windowFrameCount;
                     Console.WriteLine(
                         $"cull: chunks={arena?.ChunkCount ?? 0} culled={arena?.CulledLastFrame ?? 0} "
-                        + $"cutout={arenaCutout?.ChunkCount ?? 0} translucent={arenaTranslucent?.ChunkCount ?? 0} "
+                        + $"cutout={arenaCutout?.ChunkCount ?? 0}/drawn={arenaCutout?.DrawnLastDraw ?? 0} "
+                        // Columns are shown as total plus drawn so a column count cannot be read as a draw count again (T-821).
+                        + $"translucent={arenaTranslucent?.ChunkCount ?? 0} translucentDrawn={arenaTranslucent?.DrawnLastDraw ?? 0} translucentCulled={arenaTranslucent?.CulledLastFrame ?? 0} "
+                        + $"drawn={arena?.DrawnLastDraw ?? 0} tri={arena?.TrianglesLastDraw ?? 0} "
+                        + (abToggleFrames > 0
+                            ? $"abA={(abACount == 0 ? 0d : abAMs / abACount):F3}/{abACount} abB={(abBCount == 0 ? 0d : abBMs / abBCount):F3}/{abBCount} "
+                            : string.Empty)
                         + $"frames={windowFrameCount} meanMs={windowMeanMs:F3} (reference oit)");
                     windowFrameMs = 0d;
                     windowFrameCount = 0;
+                    abAMs = 0d;
+                    abACount = 0;
+                    abBMs = 0d;
+                    abBCount = 0;
                 }
 
                 if (cpuTiming)
@@ -1781,7 +1924,7 @@ public static class WindowedRenderer
 
         Console.WriteLine(
             $"window: {presented} frames in {frameClock.Elapsed.TotalSeconds:F1}s, worst frame {worstFrameMs:F1} ms at #{worstFrameIndex}, {framesOver33} frames over 33 ms");
-
+        pixelCompare.WriteReport(frameWidth, frameHeight);
         // Percentiles are what a player feels, so they are printed on request: the median says what a normal frame costs
         // and the ninety ninth says what the occasional hitch costs.
         if (performanceSummary && gapCount > 0)
@@ -1831,6 +1974,23 @@ public static class WindowedRenderer
             + (arenaCutout?.DrawCallsTotal ?? 0)
             + (arenaTranslucent?.DrawCallsTotal ?? 0);
         Console.WriteLine($"window: draws/frame {(totalDrawCalls / (double)Math.Max(presented, 1)):F0} (solid/cutout/translucent stores)");
+        Console.WriteLine($"window: item oit set ran on {itemOitFrames}/{presented} frames (skipped when no translucent items)");
+        Console.WriteLine($"window: cloud depth blit bind group rebuilt {blitDepthRebuilds} times (once per depth target)");
+        var oitCounts = ReferenceOitPasses.LastCounts;
+        Console.WriteLine(
+            $"window: oit commands per frame bounds={DescribeCounts(oitCounts.Bounds)} "
+            + $"trans={DescribeCounts(oitCounts.Transmittance)} accum={DescribeCounts(oitCounts.Accumulate)} "
+            + $"cloudBounds={DescribeCounts(oitCounts.CloudBounds)} cloudTrans={DescribeCounts(oitCounts.CloudTransmittance)} "
+            + $"cloudAccum={DescribeCounts(oitCounts.CloudAccumulate)} terrainDraws={oitCounts.TerrainDraws} "
+            + $"cloudDraws={oitCounts.CloudDraws}");
+        Console.WriteLine(
+            $"window: celestial colour tint uploads written {celestialColour?.TintWrites ?? 0}, "
+            + $"skipped {celestialColour?.TintSkips ?? 0}/{cloudColour?.TintWrites ?? 0}+{cloudColour?.TintSkips ?? 0} (colour/cloud)");
+        Console.WriteLine(
+            $"window: celestial camera updates applied {celestial?.AppliedCameraUpdates ?? 0}/"
+            + $"{celestialColour?.AppliedCameraUpdates ?? 0}/{skyDiscColour?.AppliedCameraUpdates ?? 0}, skipped "
+            + $"{celestial?.SkippedCameraUpdates ?? 0}/{celestialColour?.SkippedCameraUpdates ?? 0}/"
+            + $"{skyDiscColour?.SkippedCameraUpdates ?? 0}");
 
         // Bindings are the cost the paged arena removes (ADR-0029): they follow the page count, not the chunk count.
         var totalBinds = (arena?.BindCallsTotal ?? 0)
@@ -1867,6 +2027,11 @@ public static class WindowedRenderer
         backend.Destroy(uiTransformBuffer);
 
         backend.Destroy(vertexBuffer);
+        if (blitDepthBindGroup.IsValid)
+        {
+            backend.Destroy(blitDepthBindGroup);
+        }
+
         backend.Destroy(depthViewHandle);
         backend.Destroy(depthTexture);
         // The reference OIT targets only exist once a frame has needed transparency, so their handles are guarded: a
@@ -1955,6 +2120,12 @@ public static class WindowedRenderer
     /// <summary>Smallest geometry buffer, so tiny meshes do not force a reallocation on the next change.</summary>
     private const ulong MinimumBufferBytes = 1 << 20;
 
+    /// <summary>Formats one recorded command count as draws/binds/pipelines (T-820).</summary>
+    /// <param name="counts">Counts to format.</param>
+    /// <returns>Compact text.</returns>
+    private static string DescribeCounts(CommandCounts counts) =>
+        $"{counts.Draws}d/{counts.BindGroupSets}b/{counts.PipelineSets}p";
+
     private static TextureHandle CreateDepthTexture(IRenderBackend backend, uint width, uint height) =>
         backend.CreateTexture(new TextureDesc(
             width,
@@ -2011,8 +2182,8 @@ public static class WindowedRenderer
                 new BlendComponentDesc(BlendOperation.Max, BlendFactor.One, BlendFactor.One)))],
             new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, depthWrite),
             CullMode.Back, FrontFace.Ccw,
-            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes())));
+            positionColor ? 0UL : (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
+            positionColor ? [] : LayoutAttributes.From(VertexLayout.Attributes())));
     }
 
     /// <summary>Reference transparency stage 2: wavelet-transmittance coefficients, additively blended into two targets.</summary>
@@ -2028,8 +2199,8 @@ public static class WindowedRenderer
             [Additive(format), Additive(format)],
             new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, depthWrite),
             CullMode.Back, FrontFace.Ccw,
-            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes())));
+            positionColor ? 0UL : (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
+            positionColor ? [] : LayoutAttributes.From(VertexLayout.Attributes())));
     }
 
     /// <summary>Reference transparency stage 3: colour weighted by the transmittance in front of each fragment.</summary>
@@ -2043,8 +2214,8 @@ public static class WindowedRenderer
                 new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.One)))],
             new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, depthWrite),
             CullMode.Back, FrontFace.Ccw,
-            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes())));
+            positionColor ? 0UL : (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
+            positionColor ? [] : LayoutAttributes.From(VertexLayout.Attributes())));
     }
 
     /// <summary>Reference transparency: clip the far depth bound to the nearest opaque surface.</summary>

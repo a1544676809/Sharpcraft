@@ -72,7 +72,18 @@ internal sealed class GameOptions
             SkipOit = Flag("MC_SKIP_OIT"),
             SkipClouds = Flag("MC_SKIP_CLOUDS"),
             SkipTranslucent = Flag("MC_SKIP_TRANSLUCENT"),
-            Gpu = Get("MC_GPU")
+            SkipTerrain = Flag("MC_SKIP_TERRAIN"),
+            PixelCompare = Flag("MC_PIXEL_COMPARE"),
+            SkipEntities = Flag("MC_SKIP_ENTITIES"),
+            SkipInterface = Flag("MC_SKIP_UI"),
+            SkipSky = Flag("MC_SKIP_SKY"),
+            SkipClear = Flag("MC_SKIP_CLEAR"),
+            SkipPresentCopy = Flag("MC_SKIP_PRESENT"),
+            SkipCelestial = Flag("MC_SKIP_CELESTIAL"),
+            AbToggleFrames = (int)Number("MC_AB_TOGGLE", 0f),
+        SkipGeometryUploadOnAbGroup = Flag("MC_AB_SKIP_UPLOAD"),
+            Gpu = Get("MC_GPU"),
+            OitStages = (int)Number("MC_OIT_STAGES", 0f)
         };
     }
 }

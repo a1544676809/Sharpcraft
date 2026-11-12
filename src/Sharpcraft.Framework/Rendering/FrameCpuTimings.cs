@@ -19,23 +19,41 @@ internal sealed class FrameCpuTimings
     {
         Frame,
         Updates,
+        PrepPump,
+        PrepUi,
+        PrepEntities,
         Acquire,
         Camera,
         Scene,
+        SceneOpen,
+        SceneSky,
+        SceneCelestial,
+        CelBuild,
+        CelCamera,
+        CelDisc,
+        SceneTerrain,
+        SceneEntities,
         Oit,
         Text,
         Clouds,
         Ui,
         PresentRecord,
         Submit,
-        Present,
+        SubmitFinish,
+        SubmitQueue,
+        Swap,
+        OnFrame,
         Count
     }
 
     private static readonly string[] Names =
     [
-        "frame", "updates", "acquire", "camera", "scene", "oit", "text", "clouds", "ui", "present-rec", "submit",
-        "present"
+        // The order MUST match the Stage enum, because the report prints by index. It did not before T-817: the labels
+        // scene-terrain, scene-entities, cel-build, cel-camera and cel-disc were rotated by three against their buckets,
+        // so every quoted cel-* figure before this change names the wrong stage.
+        "frame", "updates", "prep-pump", "prep-ui", "prep-entities", "acquire", "camera", "scene", "scene-open",
+        "scene-sky", "scene-celestial", "cel-build", "cel-camera", "cel-disc", "scene-terrain", "scene-entities",
+        "oit", "text", "clouds", "ui", "present-rec", "submit", "sub-finish", "sub-queue", "swap", "onframe"
     ];
 
     private readonly long[] _windowTicks = new long[(int)Stage.Count];
@@ -50,6 +68,45 @@ internal sealed class FrameCpuTimings
     {
         _windowTicks[stage] += ticks;
         _totalTicks[stage] += ticks;
+    }
+
+    private readonly long[] _abTicks = new long[2];
+    private readonly int[] _abFrames = new int[2];
+
+    /// <summary>
+    /// Records one A/B sample of a span, tagged with the group the frame belonged to.
+    /// </summary>
+    /// <param name="group">A/B group: 0 for the normal behaviour, 1 for the toggled one.</param>
+    /// <param name="ticks">Elapsed ticks for the span being compared.</param>
+    /// <remarks>
+    /// Comparing two runs has produced a misleading answer three times in this work, because the world differs
+    /// between runs by more than the effect being measured. Alternating inside one process keeps the scene fixed
+    /// for both halves, which is the only way the delta means anything (T-828).
+    /// </remarks>
+    public void AddAbSample(int group, long ticks)
+    {
+        if ((uint)group >= 2u)
+        {
+            return;
+        }
+
+        _abTicks[group] += ticks;
+        _abFrames[group]++;
+    }
+
+    private void WriteAbSamples()
+    {
+        if (_abFrames[0] == 0 || _abFrames[1] == 0)
+        {
+            return;
+        }
+
+        var normal = Milliseconds(_abTicks[0] / _abFrames[0]);
+        var toggled = Milliseconds(_abTicks[1] / _abFrames[1]);
+        Console.WriteLine(
+            $"ab-cpu: n={_abFrames[0]}/{_abFrames[1]} normal={normal:F3} toggled={toggled:F3} delta={(toggled - normal):F3}");
+        Array.Clear(_abTicks);
+        Array.Clear(_abFrames);
     }
 
     /// <summary>Counts one frame into the window.</summary>
@@ -83,6 +140,7 @@ internal sealed class FrameCpuTimings
         }
 
         Console.WriteLine(builder.ToString());
+        WriteAbSamples();
         Array.Clear(_windowTicks);
         _windowFrames = 0;
         return true;
@@ -113,6 +171,21 @@ internal sealed class FrameCpuTimings
     /// <summary>Stage number for the geometry update block.</summary>
     public static int UpdatesStage => (int)Stage.Updates;
 
+    /// <summary>Stage number for the encoder finish inside the submit (T-819).</summary>
+    public static int SubmitFinishStage => (int)Stage.SubmitFinish;
+
+    /// <summary>Stage number for the queue submit inside the submit (T-819).</summary>
+    public static int SubmitQueueStage => (int)Stage.SubmitQueue;
+
+    /// <summary>Stage number for the diagnostic report, the window pump and the loop head (T-817).</summary>
+    public static int PrepPumpStage => (int)Stage.PrepPump;
+
+    /// <summary>Stage number for the interface upload and its orthographic matrix (T-817).</summary>
+    public static int PrepUiStage => (int)Stage.PrepUi;
+
+    /// <summary>Stage number for the dynamic and entity geometry uploads (T-817).</summary>
+    public static int PrepEntitiesStage => (int)Stage.PrepEntities;
+
     /// <summary>Stage number for the surface acquire and frame pacing block.</summary>
     public static int AcquireStage => (int)Stage.Acquire;
 
@@ -121,6 +194,30 @@ internal sealed class FrameCpuTimings
 
     /// <summary>Stage number for the scene pass recording.</summary>
     public static int SceneStage => (int)Stage.Scene;
+
+    /// <summary>Opening the scene pass, writing the frame uniforms and setting up the frustum (T-806).</summary>
+    public static int SceneOpenStage => (int)Stage.SceneOpen;
+
+    /// <summary>The gradient sky draw (T-806).</summary>
+    public static int SceneSkyStage => (int)Stage.SceneSky;
+
+    /// <summary>The sun, moon and stars (T-806).</summary>
+    public static int SceneCelestialStage => (int)Stage.SceneCelestial;
+
+    /// <summary>The opaque and cutout terrain draws (T-806).</summary>
+    public static int SceneTerrainStage => (int)Stage.SceneTerrain;
+
+    /// <summary>The entity layer draws (T-806).</summary>
+    public static int SceneEntitiesStage => (int)Stage.SceneEntities;
+
+    /// <summary>Building the celestial draw lists for this frame (T-807).</summary>
+    public static int CelestialBuildStage => (int)Stage.CelBuild;
+
+    /// <summary>Moving the celestial draw lists with the camera delta (T-807).</summary>
+    public static int CelestialCameraStage => (int)Stage.CelCamera;
+
+    /// <summary>The vanilla sky disc state update, which rewrites its uniforms (T-807).</summary>
+    public static int CelestialDiscStage => (int)Stage.CelDisc;
 
     /// <summary>Stage number for the reference OIT recording.</summary>
     public static int OitStage => (int)Stage.Oit;
@@ -140,8 +237,11 @@ internal sealed class FrameCpuTimings
     /// <summary>Stage number for the command submission.</summary>
     public static int SubmitStage => (int)Stage.Submit;
 
-    /// <summary>Stage number for the swapchain present call.</summary>
-    public static int PresentStage => (int)Stage.Present;
+    /// <summary>Surface present plus the acquired image release: the wait the swapchain imposes (T-803).</summary>
+    public static int SwapStage => (int)Stage.Swap;
+
+    /// <summary>The host's per-frame callback, which used to sit inside the present bucket (T-803).</summary>
+    public static int OnFrameStage => (int)Stage.OnFrame;
 
     /// <summary>Converts stopwatch ticks to milliseconds.</summary>
     /// <param name="ticks">Stopwatch ticks.</param>

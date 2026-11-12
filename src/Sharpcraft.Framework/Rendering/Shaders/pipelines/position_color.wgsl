@@ -1,10 +1,14 @@
 struct Camera {
     viewProjection : mat4x4<f32>,
+    // The same view with the camera at the origin: these bodies are built on a dome around the origin, so they need the
+    // rotation only — the reference sky shaders do the same with a translation free ModelViewMat (T-810).
+    skyViewProjection : mat4x4<f32>,
 };
 @group(0) @binding(0) var<uniform> camera : Camera;
 
+// Only the tint remains per draw; the model matrix is gone, so this uniform is written when the tint changes rather
+// than every frame.
 struct Transform {
-    model : mat4x4<f32>,
     tint : vec4<f32>,
 };
 @group(0) @binding(1) var<uniform> transform : Transform;
@@ -19,7 +23,7 @@ struct VertexOutput {
 @vertex
 fn vs_position_color(@location(0) position : vec3<f32>, @location(1) colour : vec4<f32>) -> VertexOutput {
     var output : VertexOutput;
-    output.clipPosition = camera.viewProjection * transform.model * vec4<f32>(position, 1.0);
+    output.clipPosition = camera.skyViewProjection * vec4<f32>(position, 1.0);
     output.colour = colour;
     return output;
 }

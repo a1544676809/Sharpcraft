@@ -19,6 +19,12 @@ public sealed class BlockStateLayout
     private readonly List<Entry> _blocks = [];
     private readonly Dictionary<Identifier, int> _baseIds = [];
 
+    // Every state id maps to exactly one block, so the answer to BlockAt is a lookup rather than a search. It used to
+    // be a linear scan here, justified by a note saying it ran at load time and not per frame; meshing then turned out
+    // to call it once per face and once per neighbour probe, and a profile put the scan and the two accessors it reads
+    // at over half of all sampled CPU (T-825). Filled in the constructor and never written afterwards.
+    private readonly Identifier?[] _byState;
+
     /// <summary>One block's contiguous id range.</summary>
     public readonly record struct Entry(Identifier Id, int BaseId, int StateCount);
 
@@ -47,6 +53,11 @@ public sealed class BlockStateLayout
         }
 
         TotalStates = nextBase;
+        _byState = new Identifier?[nextBase];
+        foreach (var entry in _blocks)
+        {
+            _byState.AsSpan(entry.BaseId, entry.StateCount).Fill(entry.Id);
+        }
     }
 
     /// <summary>Blocks in registration order, with their id ranges.</summary>
@@ -62,20 +73,10 @@ public sealed class BlockStateLayout
     /// </summary>
     /// <param name="stateId">Global block state id.</param>
     /// <remarks>
-    /// A linear scan is fine: this is used for classification at load time, not per frame.
+    /// A lookup, not a scan: this is on the meshing path, once per face and once per neighbour probe (T-825).
     /// </remarks>
-    public Identifier? BlockAt(int stateId)
-    {
-        foreach (var entry in _blocks)
-        {
-            if (stateId >= entry.BaseId && stateId < entry.BaseId + entry.StateCount)
-            {
-                return entry.Id;
-            }
-        }
-
-        return null;
-    }
+    public Identifier? BlockAt(int stateId) =>
+        (uint)stateId < (uint)_byState.Length ? _byState[stateId] : null;
 
     public int GetBaseId(Identifier blockId) =>
         _baseIds.TryGetValue(blockId, out var baseId) ? baseId : throw new KeyNotFoundException($"unknown block '{blockId}'");

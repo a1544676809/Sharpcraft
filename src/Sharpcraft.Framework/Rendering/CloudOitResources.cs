@@ -7,63 +7,102 @@ using System.Runtime.InteropServices;
 namespace Sharpcraft.Framework.Rendering;
 
 /// <summary>
-/// Owns the persistent cloud OIT geometry and its transform uniform. The mesh is uploaded only when the cloud cache
-/// produces new arrays; every frame writes just the 80-byte transform (model + tint), matching the reference CloudInfo
-/// uniform pattern instead of re-expanding the whole mesh.
+/// Owns the cloud transparency resources: the transform uniform, the per-frame scalars the procedural vertex stage
+/// needs, and the face table it reads (T-827).
 /// </summary>
 /// <remarks>
+/// Clouds are no longer uploaded as vertices. The reference sends three integers per face and generates the corners in
+/// the vertex shader, which is twelve bytes per face against the hundred and twelve an explicit quad costs; the
+/// behaviour is written out in docs/specs/render/cloud-geometry.md. The grid scaling rides in the model matrix, so the
+/// only scalar the shader cannot derive is the fade distance.
+/// <para>
 /// Every resource is a seam handle: the layout, the bind group, the buffers and the draw all go through the backend, so
 /// this type holds nothing the ring could not re-create on a different implementation.
+/// </para>
 /// </remarks>
 internal sealed class CloudOitResources : IDisposable
 {
     private const ulong TransformUniformSize = 80;
 
+    /// <summary>One vec4: the fade distance in x, the rest padding for the 16 byte uniform alignment.</summary>
+    private const ulong CloudInfoSize = 16;
+
+    /// <summary>Size of one cloud cell across, matching CloudGeometryBuilder's default.</summary>
+    private const float CellSize = 12f;
+
+    /// <summary>Thickness of the cloud slab, matching CloudGeometryBuilder's default.</summary>
+    private const float CloudThickness = 4f;
+
+    private const ulong MinFaceCapacity = 4096;
+
     private readonly IRenderBackend _backend;
+    private readonly BufferHandle _camera;
+    private readonly ulong _cameraSize;
     private readonly BufferHandle _transform;
-    private const float MinCapacity = 4096;
-    private BufferHandle _vertex;
-    private BufferHandle _index;
-    private ulong _vertexCapacity = (ulong)MinCapacity;
-    private ulong _indexCapacity = (ulong)MinCapacity;
-    private uint _indexCount;
-    private float[]? _sourceVertices;
-    private uint[]? _sourceIndices;
+    private readonly BufferHandle _cloudInfo;
+    private BufferHandle _faces;
+    private ulong _faceCapacity = MinFaceCapacity;
+    private uint _faceCount;
+    private int[]? _sourceFaces;
 
     public CloudOitResources(IRenderBackend backend, BufferHandle cameraBuffer, ulong cameraSize)
     {
         _backend = backend;
+        _camera = cameraBuffer;
+        _cameraSize = cameraSize;
         Layout = backend.CreateBindGroupLayout(
         [
             BindGroupLayoutEntryDesc.UniformBuffer(0, ShaderStages.Vertex) with { MinBindingSize = cameraSize },
-            BindGroupLayoutEntryDesc.UniformBuffer(1, ShaderStages.Vertex | ShaderStages.Fragment) with { MinBindingSize = TransformUniformSize }
+            BindGroupLayoutEntryDesc.UniformBuffer(1, ShaderStages.Vertex | ShaderStages.Fragment) with { MinBindingSize = TransformUniformSize },
+            BindGroupLayoutEntryDesc.UniformBuffer(2, ShaderStages.Vertex) with { MinBindingSize = CloudInfoSize },
+            // Read only storage is allowed in the vertex stage; only writable storage is not. The rest of the project
+            // binds storage in compute, so this is the first vertex stage use and the pipeline build is what proves it.
+            new BindGroupLayoutEntryDesc(3, ShaderStages.Vertex, BindingKind.ReadOnlyStorageBuffer)
         ]);
 
         _transform = backend.CreateBuffer(new BufferDesc(TransformUniformSize, BufferUsages.Uniform | BufferUsages.CopyDst));
-        BindGroup = backend.CreateBindGroup(
+        _cloudInfo = backend.CreateBuffer(new BufferDesc(CloudInfoSize, BufferUsages.Uniform | BufferUsages.CopyDst));
+        _faces = backend.CreateBuffer(new BufferDesc(_faceCapacity, BufferUsages.Storage | BufferUsages.CopyDst));
+
+        BindGroup = CreateBindGroup();
+    }
+
+    private BindGroupHandle CreateBindGroup() =>
+        _backend.CreateBindGroup(
             Layout,
             [
-                BindGroupEntryDesc.Uniform(0, cameraBuffer, 0, cameraSize),
-                BindGroupEntryDesc.Uniform(1, _transform, 0, TransformUniformSize)
+                BindGroupEntryDesc.Uniform(0, _camera, 0, _cameraSize),
+                BindGroupEntryDesc.Uniform(1, _transform, 0, TransformUniformSize),
+                BindGroupEntryDesc.Uniform(2, _cloudInfo, 0, CloudInfoSize),
+                BindGroupEntryDesc.ReadOnlyStorage(3, _faces, 0, _faceCapacity)
             ]);
-
-        _vertex = backend.CreateBuffer(new BufferDesc(_vertexCapacity, BufferUsages.Vertex | BufferUsages.CopyDst));
-        _index = backend.CreateBuffer(new BufferDesc(_indexCapacity, BufferUsages.Index | BufferUsages.CopyDst));
-    }
 
     public BindGroupLayoutHandle Layout { get; }
 
-    public BindGroupHandle BindGroup { get; }
+    public BindGroupHandle BindGroup { get; private set; }
 
-    /// <summary>Uploads geometry only when the cache arrays change; always refreshes the transform uniform.</summary>
-    public void Update(float[] vertices, uint[] indices, Matrix4x4 model, Vector4 tint)
+    /// <summary>
+    /// Uploads the face table when it changes and always refreshes the uniforms the vertex stage reads.
+    /// </summary>
+    /// <param name="faces">The face table, three words per face.</param>
+    /// <param name="faceCount">How many faces it describes, so this layer needs no opinion on the word count.</param>
+    /// <param name="origin">World position of the cloud grid's corner.</param>
+    /// <param name="tint">Colour and alpha modulation, as before.</param>
+    /// <param name="fogEnd">Distance at which a cloud fades out.</param>
+    /// <param name="eye">World eye position, so the fade uses true distance as the CPU-baked version did.</param>
+    public void Update(int[] faces, int faceCount, Vector3 origin, Vector4 tint, float fogEnd, Vector3 eye)
     {
-        if (!ReferenceEquals(_sourceVertices, vertices) || !ReferenceEquals(_sourceIndices, indices))
+        ArgumentNullException.ThrowIfNull(faces);
+
+        if (!ReferenceEquals(_sourceFaces, faces))
         {
-            UploadGeometry(vertices, indices);
-            _sourceVertices = vertices;
-            _sourceIndices = indices;
+            UploadFaces(faces, faceCount);
+            _sourceFaces = faces;
         }
+
+        // Scale the cell grid first, then move it into place; the shader works in whole cells.
+        var model = Matrix4x4.CreateScale(CellSize, CloudThickness, CellSize)
+            * Matrix4x4.CreateTranslation(origin);
 
         var transformBytes = new byte[TransformUniformSize];
         var floats = new float[20];
@@ -74,80 +113,57 @@ internal sealed class CloudOitResources : IDisposable
         floats[19] = tint.W;
         MemoryMarshal.AsBytes(floats.AsSpan()).CopyTo(transformBytes);
         _backend.WriteBuffer(_transform, transformBytes, 0);
+
+        // x is the fade distance and yzw the eye, which the vertex stage needs to fade by true distance.
+        var info = new float[4];
+        info[0] = fogEnd;
+        info[1] = eye.X;
+        info[2] = eye.Y;
+        info[3] = eye.Z;
+        _backend.WriteBuffer(_cloudInfo, MemoryMarshal.AsBytes(info.AsSpan()), 0);
     }
 
-    private void UploadGeometry(float[] vertices, uint[] indices)
+    private void UploadFaces(int[] faces, int faceCount)
     {
-        // Expand the cached 7-float cloud vertices into the terrain OIT vertex format once per geometry change: the vertex
-        // colour stays brightness, uv.x carries the cloud alpha, and the transform uniform applies model + CLOUD_COLOR.
-        var count = vertices.Length / 7;
-        var packed = new float[count * 14];
-        for (var i = 0; i < count; i++)
+        var bytes = (ulong)(faces.Length * sizeof(int));
+        if (bytes > _faceCapacity)
         {
-            var s = i * 7;
-            var d = i * 14;
-            packed[d] = vertices[s];
-            packed[d + 1] = vertices[s + 1];
-            packed[d + 2] = vertices[s + 2];
-            packed[d + 3] = vertices[s + 3];
-            packed[d + 4] = vertices[s + 4];
-            packed[d + 5] = vertices[s + 5];
-            packed[d + 6] = Math.Clamp(vertices[s + 6], 0f, 1f); // alpha in uv.x
-            packed[d + 7] = 0f;
-            packed[d + 8] = 0f;
-            packed[d + 9] = 0f;
-            packed[d + 10] = 1f;
-            packed[d + 11] = 1f;
-            packed[d + 12] = 1f;
-            packed[d + 13] = 1f;
+            _backend.Destroy(_faces);
+            _faceCapacity = Math.Max(bytes * 2, MinFaceCapacity);
+            _faces = _backend.CreateBuffer(new BufferDesc(_faceCapacity, BufferUsages.Storage | BufferUsages.CopyDst));
+
+            // The bind group points at the old buffer, so it has to be rebuilt against the new one.
+            _backend.Destroy(BindGroup);
+            BindGroup = CreateBindGroup();
         }
 
-        var vertexBytes = (ulong)(packed.Length * sizeof(float));
-        if (vertexBytes > _vertexCapacity)
+        if (faces.Length > 0)
         {
-            _backend.Destroy(_vertex);
-            _vertexCapacity = Math.Max(vertexBytes * 2, (ulong)MinCapacity);
-            _vertex = _backend.CreateBuffer(new BufferDesc(_vertexCapacity, BufferUsages.Vertex | BufferUsages.CopyDst));
+            _backend.WriteBuffer(_faces, MemoryMarshal.AsBytes(faces.AsSpan()), 0);
         }
 
-        var indexBytes = (ulong)(indices.Length * sizeof(uint));
-        if (indexBytes > _indexCapacity)
-        {
-            _backend.Destroy(_index);
-            _indexCapacity = Math.Max(indexBytes * 2, (ulong)MinCapacity);
-            _index = _backend.CreateBuffer(new BufferDesc(_indexCapacity, BufferUsages.Index | BufferUsages.CopyDst));
-        }
-
-        if (packed.Length > 0)
-        {
-            _backend.WriteBuffer(_vertex, MemoryMarshal.AsBytes(packed.AsSpan()), 0);
-        }
-
-        if (indices.Length > 0)
-        {
-            _backend.WriteBuffer(_index, MemoryMarshal.AsBytes(indices.AsSpan()), 0);
-        }
-
-        _indexCount = (uint)indices.Length;
+        _faceCount = (uint)faceCount;
     }
 
-    /// <summary>Records the cloud mesh into a pass that the caller has already bound the pipeline and atlas for.</summary>
+    /// <summary>Records the cloud faces into a pass the caller has already bound the pipeline for.</summary>
+    /// <remarks>
+    /// Six vertices per face and no vertex buffer: a triangle list needs two triangles a quad, and the vertex shader
+    /// derives the corner from the index it is given.
+    /// </remarks>
     public void DrawGeometry(IRenderBackend backend, RenderPassHandle pass)
     {
-        if (_indexCount == 0)
+        if (_faceCount == 0)
         {
             return;
         }
 
-        backend.SetVertexBuffer(pass, 0, _vertex);
-        backend.SetIndexBuffer(pass, _index, IndexFormat.Uint32);
-        backend.DrawIndexed(pass, _indexCount, 1, 0, 0, 0);
+        backend.Draw(pass, _faceCount * 6, 1, 0, 0);
     }
 
     public void Dispose()
     {
-        _backend.Destroy(_vertex);
-        _backend.Destroy(_index);
+        _backend.Destroy(_faces);
+        _backend.Destroy(_cloudInfo);
         _backend.Destroy(_transform);
         _backend.Destroy(BindGroup);
         _backend.Destroy(Layout);

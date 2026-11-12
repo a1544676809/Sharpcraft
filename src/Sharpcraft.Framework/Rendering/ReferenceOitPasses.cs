@@ -103,6 +103,18 @@ internal static class ReferenceOitPasses
 
         /// <summary>Records the translucent item geometry.</summary>
         public Action<RenderPassHandle> DrawItems { get; init; }
+
+        /// <summary>Records only the first N stages, for attributing GPU cost to each one (T-799); zero means all.</summary>
+        public int MaxStages { get; init; }
+
+        /// <summary>
+        /// True when the frame has translucent item geometry, so the item set is worth its four full resolution passes.
+        /// </summary>
+        /// <remarks>
+        /// The item composite discards every pixel without coverage or additive light, so with nothing to draw the whole
+        /// set is a pure bandwidth cost. Skipping it is pixel identical (T-799).
+        /// </remarks>
+        public bool ItemsHasGeometry { get; init; }
     }
 
     /// <summary>Records every reference transparency pass for the frame.</summary>
@@ -111,9 +123,17 @@ internal static class ReferenceOitPasses
         // Every pass is recorded through the seam. Only the item geometry callback still takes the native pass, because
         // the per-layer entity buffers it binds have not moved behind the seam yet.
         var backend = p.Backend;
+        var counts = default(OitStageCounts);
         var encoder = p.Encoder;
         var clouds = p.Clouds;
         var zero = Vector4.Zero;
+        // A host can stop the sequence after N stages so the remainder can be attributed by difference (MC_OIT_STAGES).
+        var stages = p.MaxStages <= 0 ? int.MaxValue : p.MaxStages;
+
+        if (stages < 1)
+        {
+            return;
+        }
 
         // Stage 1: depth bounds. Cleared very negative so MAX blending keeps the closest and furthest.
         var boundsPass = backend.BeginRenderPass(
@@ -122,13 +142,20 @@ internal static class ReferenceOitPasses
             p.Depth);
         try
         {
+            backend.TakeRecordedCommands();
             backend.SetPipeline(boundsPass, p.BoundsPipeline);
             backend.SetBindGroup(boundsPass, 0, p.TerrainAtlas);
             p.DrawTerrain(boundsPass);
+            counts = counts with { Bounds = backend.TakeRecordedCommands() };
         }
         finally
         {
             backend.EndRenderPass(boundsPass);
+        }
+
+        if (stages < 2)
+        {
+            return;
         }
 
         // Stage 1b: clip the furthest bound to the nearest opaque surface.
@@ -157,14 +184,21 @@ internal static class ReferenceOitPasses
                 p.CloudDepth);
             try
             {
+                backend.TakeRecordedCommands();
                 backend.SetPipeline(cloudBoundsPass, p.CloudBoundsPipeline);
                 backend.SetBindGroup(cloudBoundsPass, 0, clouds.BindGroup);
                 clouds.DrawGeometry(backend, cloudBoundsPass);
+                counts = counts with { CloudBounds = backend.TakeRecordedCommands() };
             }
             finally
             {
                 backend.EndRenderPass(cloudBoundsPass);
             }
+        }
+
+        if (stages < 3)
+        {
+            return;
         }
 
         // Stage 2: wavelet transmittance, additively blended into two RGBA16F targets.
@@ -177,10 +211,12 @@ internal static class ReferenceOitPasses
             p.Depth);
         try
         {
+            backend.TakeRecordedCommands();
             backend.SetPipeline(transmittancePass, p.TransmittancePipeline);
             backend.SetBindGroup(transmittancePass, 0, p.TerrainAtlas);
             backend.SetBindGroup(transmittancePass, 1, p.TransmittanceGroup);
             p.DrawTerrain(transmittancePass);
+            counts = counts with { Transmittance = backend.TakeRecordedCommands() };
         }
         finally
         {
@@ -198,15 +234,22 @@ internal static class ReferenceOitPasses
                 p.CloudDepth);
             try
             {
+                backend.TakeRecordedCommands();
                 backend.SetPipeline(cloudTransPass, p.CloudTransmittancePipeline);
                 backend.SetBindGroup(cloudTransPass, 0, clouds.BindGroup);
                 backend.SetBindGroup(cloudTransPass, 1, p.TransmittanceGroup);
                 clouds.DrawGeometry(backend, cloudTransPass);
+                counts = counts with { CloudTransmittance = backend.TakeRecordedCommands() };
             }
             finally
             {
                 backend.EndRenderPass(cloudTransPass);
             }
+        }
+
+        if (stages < 4)
+        {
+            return;
         }
 
         // Stage 3: accumulate colour weighted by the transmittance in front of each fragment.
@@ -216,10 +259,12 @@ internal static class ReferenceOitPasses
             p.Depth);
         try
         {
+            backend.TakeRecordedCommands();
             backend.SetPipeline(accumulatePass, p.AccumulatePipeline);
             backend.SetBindGroup(accumulatePass, 0, p.TerrainAtlas);
             backend.SetBindGroup(accumulatePass, 1, p.AccumulateGroup);
             p.DrawTerrain(accumulatePass);
+            counts = counts with { Accumulate = backend.TakeRecordedCommands() };
         }
         finally
         {
@@ -234,15 +279,22 @@ internal static class ReferenceOitPasses
                 p.CloudDepth);
             try
             {
+                backend.TakeRecordedCommands();
                 backend.SetPipeline(cloudAccumPass, p.CloudAccumulatePipeline);
                 backend.SetBindGroup(cloudAccumPass, 0, clouds.BindGroup);
                 backend.SetBindGroup(cloudAccumPass, 1, p.AccumulateGroup);
                 clouds.DrawGeometry(backend, cloudAccumPass);
+                counts = counts with { CloudAccumulate = backend.TakeRecordedCommands() };
             }
             finally
             {
                 backend.EndRenderPass(cloudAccumPass);
             }
+        }
+
+        if (stages < 5)
+        {
+            return;
         }
 
         // Composite over the frame, writing the nearest translucent depth.
@@ -263,16 +315,49 @@ internal static class ReferenceOitPasses
 
         // Translucent items composite through their own set (the reference binds OitPipelineSet("item") to
         // RenderTypes.ITEM_TRANSLUCENT); sharing the terrain bins would band thin items.
-        p.Items.Record(
-            p.Backend,
-            p.Encoder,
-            ColorAttachmentDesc.Keep(p.Frame),
-            p.Depth,
-            p.BoundsPipeline,
-            p.TransmittancePipeline,
-            p.AccumulatePipeline,
-            p.CompositePipeline,
-            p.ItemAtlas,
-            p.DrawItems);
+        if (p.ItemsHasGeometry)
+        {
+            p.Items.Record(
+                p.Backend,
+                p.Encoder,
+                ColorAttachmentDesc.Keep(p.Frame),
+                p.Depth,
+                p.BoundsPipeline,
+                p.TransmittancePipeline,
+                p.AccumulatePipeline,
+                p.CompositePipeline,
+                p.ItemAtlas,
+                p.DrawItems);
+        }
+
+        LastCounts = counts;
     }
+
+    /// <summary>
+    /// Commands each transparency stage recorded last frame, so the reviewer can see where the OIT cost is recorded
+    /// (T-820). Diagnostic only: nothing reads it outside the windowed report.
+    /// </summary>
+    public static OitStageCounts LastCounts { get; private set; }
+}
+
+/// <summary>Recorded command counts per transparency stage (T-820).</summary>
+/// <param name="Bounds">Depth-bounds stage.</param>
+/// <param name="Transmittance">Terrain transmittance stage.</param>
+/// <param name="Accumulate">Terrain accumulate stage.</param>
+/// <param name="CloudBounds">Cloud depth-bounds stage.</param>
+/// <param name="CloudTransmittance">Cloud transmittance stage.</param>
+/// <param name="CloudAccumulate">Cloud accumulate stage.</param>
+public readonly record struct OitStageCounts(
+    CommandCounts Bounds,
+    CommandCounts Transmittance,
+    CommandCounts Accumulate,
+    CommandCounts CloudBounds,
+    CommandCounts CloudTransmittance,
+    CommandCounts CloudAccumulate)
+{
+    /// <summary>Terrain columns recorded across the three terrain stages.</summary>
+    public int TerrainDraws => Bounds.Draws + Transmittance.Draws + Accumulate.Draws;
+
+    /// <summary>Cloud geometry recorded across the three cloud stages.</summary>
+    public int CloudDraws => CloudBounds.Draws + CloudTransmittance.Draws + CloudAccumulate.Draws;
 }

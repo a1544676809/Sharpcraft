@@ -159,8 +159,7 @@ public sealed class ChunkMesherMergeLightingTests
 
     private static (float R, float G, float B) Colour(float[] vertices, int vertex)
     {
-        var offset = vertex * FloatsPerVertex;
-        return (vertices[offset + 3], vertices[offset + 4], vertices[offset + 5]);
+        return VertexFieldReader.Colour(vertices, vertex);
     }
 
     private static float QuadArea(float[] vertices, int baseVertex)

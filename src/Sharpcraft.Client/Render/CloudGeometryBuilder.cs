@@ -12,6 +12,9 @@ namespace Sharpcraft.Client.Render;
 /// </summary>
 public static class CloudGeometryBuilder
 {
+    /// <summary>Distance at which a cloud fades out, shared with the procedural passes so both fade alike (T-827).</summary>
+    public const float DefaultFogEnd = 2048f;
+
     // Face vertex offsets in the reference order (CloudRenderer.buildMesh / clouds.vsh vertex table).
     private static readonly Vector3[][] FaceVertices =
     [
@@ -30,7 +33,14 @@ public static class CloudGeometryBuilder
     ];
 
     // Face brightness from clouds.vsh faceColors (bottom 0.7, top 1.0, north/south 0.8, west/east 0.9).
-    private static readonly float[] FaceBrightness = [0.7f, 1.0f, 0.8f, 0.8f, 0.9f, 0.9f];
+    /// <summary>
+    /// Brightness per face direction, shared with the procedural shader so the two cannot drift apart (T-827).
+    /// </summary>
+    /// <remarks>
+    /// The cloud vertex shader carries the same six numbers because WGSL cannot read this table. A test reads the
+    /// shader source and compares, so a change to either side fails rather than quietly changing how clouds look.
+    /// </remarks>
+    public static readonly float[] FaceBrightness = [0.7f, 1.0f, 0.8f, 0.8f, 0.9f, 0.9f];
 
     /// <summary>
     /// Origin for a camera-relative cloud mesh: the reference shader places faces at relativeCell*CellSize + CloudOffset
@@ -52,7 +62,7 @@ public static class CloudGeometryBuilder
         Vector3 origin,
         float cellSize = 12f,
         float thickness = 4f,
-        float fogEnd = 2048f)
+        float fogEnd = DefaultFogEnd)
     {
         ArgumentNullException.ThrowIfNull(quads);
 

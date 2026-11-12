@@ -29,8 +29,9 @@ namespace Sharpcraft.Client.Render;
 /// </remarks>
 public static class ChunkMesher
 {
-    /// <summary>Floats per vertex: position (3) plus colour (3).</summary>
-    public const int FloatsPerVertex = 14;
+    /// <summary>Floats per vertex: position (3), packed colour (1), uv (2), sprite rect (4), packed light (1).</summary>
+    /// <remarks>Eleven floats, forty four bytes, matching <c>VertexLayout.Stride</c> (T-826).</remarks>
+    public const int FloatsPerVertex = 11;
 
     /// <summary>Vertices per quad.</summary>
     public const int VerticesPerQuad = 4;
@@ -144,8 +145,12 @@ public static class ChunkMesher
 
             var neighbourhood = new Neighbourhood(world, chunk);
 
+        buffer.ReserveSections(chunk.SectionCount);
         for (var sectionIndex = 0; sectionIndex < chunk.SectionCount; sectionIndex++)
         {
+            // Marked before the skip so the ranges stay aligned with the section index: an empty section simply
+            // contributes a zero length run (T-829).
+            buffer.MarkSection();
             var section = chunk.GetSection(chunk.MinSectionY + sectionIndex);
             if (section is null || section.IsEmpty)
             {
@@ -1385,7 +1390,7 @@ public static class ChunkMesher
 /// <param name="Indices">Triangle indices.</param>
 /// <param name="BlockCount">Number of solid blocks that contributed faces.</param>
 [Sharpcraft.Common.Reference.ReferenceClass("com.mojang.blaze3d.vertex.MeshData", "ref://mc-26.3-analysis/src/com/mojang/blaze3d/vertex/MeshData.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
-public sealed record MeshData(float[] Vertices, uint[] Indices, int BlockCount)
+public sealed record MeshData(float[] Vertices, uint[] Indices, int BlockCount, int[]? SectionStarts = null)
 {
     /// <summary>Vertex count.</summary>
     public int VertexCount => Vertices.Length / ChunkMesher.FloatsPerVertex;

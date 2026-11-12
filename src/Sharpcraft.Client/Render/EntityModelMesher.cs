@@ -97,7 +97,11 @@ public sealed partial class EntityModelMesher
 
         if (HasModelBackedLayers(entities, variants))
         {
-            return BuildModelBackedLayers(entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants, pose, usePreparedPoses, itemAtlas);
+            var built = BuildModelBackedLayers(entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants, pose, usePreparedPoses, itemAtlas);
+            {
+            }
+
+            return built;
         }
 
         var plan = BuildLayerPlan(entities, variants);
@@ -868,13 +872,13 @@ public sealed partial class EntityModelMesher
                 return;
             }
 
-            foreach (var child in node.Children)
+            foreach (var child in node.ChildArray)
             {
                 Walk(child, frame);
             }
         }
 
-        foreach (var child in compiled.Root.Children)
+        foreach (var child in compiled.Root.ChildArray)
         {
             Walk(child, rootFrame);
         }
@@ -1041,6 +1045,8 @@ public sealed partial class EntityModelMesher
     /// Tree-path renderer: walks the structural model, computes one matrix per node, emits each node's cube range and
     /// inherits each node's visible predicate to its whole subtree.
     /// </summary>
+
+
     private void BuildCompiledEntity(
         CompiledEntityModel compiled,
         DynamicGeometry target,
@@ -1087,8 +1093,10 @@ public sealed partial class EntityModelMesher
                 partMatrix = localTransform * partMatrix;
             }
 
-            foreach (var cube in node.Cubes)
+            var cachedParts = node.PartsFor(node.CubeArray.Length);
+            for (var cubeIndex = 0; cubeIndex < node.CubeArray.Length; cubeIndex++)
             {
+                var cube = node.CubeArray[cubeIndex];
                 if (cube.Width == 0f && cube.Height == 0f && cube.Depth == 0f)
                 {
                     continue;
@@ -1121,10 +1129,15 @@ public sealed partial class EntityModelMesher
                     continue;
                 }
 
-                var part = new EntityModelPart(
-                    Name: cube.Name,
-                    CentreX: cube.CentreX,
-                    Bottom: cube.Bottom + yOffset,
+                // The descriptor is rebuilt only when it does not exist yet, or when this entity shifts the part
+                // vertically; every other field comes from the node and its cube, which never change (T-829).
+                var part = cachedParts[cubeIndex];
+                if (part.Name is null || yOffset != 0f)
+                {
+                    part = new EntityModelPart(
+                        Name: cube.Name,
+                        CentreX: cube.CentreX,
+                        Bottom: cube.Bottom + yOffset,
                     Width: cube.Width,
                     Height: cube.Height,
                     Depth: cube.Depth,
@@ -1154,6 +1167,12 @@ public sealed partial class EntityModelMesher
                     UvWidth: cube.UvWidth,
                     UvHeight: cube.UvHeight,
                     UvDepth: cube.UvDepth);
+
+                    if (yOffset == 0f)
+                    {
+                        cachedParts[cubeIndex] = part;
+                    }
+                }
 
                 var centreX = cube.CentreX * px;
                 var centreZ = cube.CentreZ * px;
@@ -1207,7 +1226,7 @@ public sealed partial class EntityModelMesher
                     ref indexCountLocal);
             }
 
-            foreach (var child in node.Children)
+            foreach (var child in node.ChildArray)
             {
                 Emit(child, frame);
             }
@@ -1223,7 +1242,7 @@ public sealed partial class EntityModelMesher
             * RotationZyx(-rootPose.Rotation.X, -rootPose.Rotation.Y, rootPose.Rotation.Z)
             * Matrix4x4.CreateTranslation(rootPose.Position * px);
 
-        foreach (var child in compiled.Root.Children)
+        foreach (var child in compiled.Root.ChildArray)
         {
             Emit(child, rootFrame);
         }

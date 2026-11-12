@@ -26,8 +26,17 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 
 ## 阻塞项
 
+- **T-801 结论**：地形+UI+实体合计仅 0.45–0.57 ms，OIT 1.32 ms、云 0.65 ms，剩余 **0.8–0.9 ms 为全帧固定成本**（清屏/天空/上屏拷贝/Submit/驱动）——下一轮用它自己的方式归因，未做之前不要再砍几何（收益被封顶在 0.45 ms）。
+
+- **T-807 结论**：天体真实墙钟成本 **0.169 ms**（同进程交替 A/B，196 窗口），其中 CPU 侧约 0.39 ms（重建 0.05 + 逐 draw `WriteBuffer` 0.20 + sky disc 0.13），**约 0.22 ms 被 present 等待掩盖**。**阈值缓存实测无效**：1 mm 累积阈值下 `applied 38498/38498, skipped 0/0`（每帧位移都超阈值），实现保留为守卫但记为"当前无效"。**原版 `stars.vsh`/`sky.vsh` 只用 `ProjMat*ModelViewMat`，每帧零上传**；我们的实现每天体每帧一次 `wgpuQueueWriteBuffer`，这才是差异。**修法（未实施）**：天体基模型烘焙进顶点 + 复用共享相机 uniform；预计墙钟省 0.05–0.10 ms、CPU 省 0.32 ms。
+- **T-806 结论**：P0 已修 —— 云深度 blit 的 bind group 改为随 `depthViewHandle` 缓存，创建次数 **每帧 1 次 → 全程 1 次**，地形带逐像素 0 差异；帧循环内再无其它每帧资源创建（只剩两处约 100 字节的 `new byte[]`）。`scene` 五子标记实测：**terrain 0.242 / entities 0.154 / celestial 0.140 / open 0.097 / sky 0.002**（合计 0.639），即那 0.23 ms 固定开销 = 天体 0.140 + 开 pass 0.097。**天体只有个位数 draw 却要 0.140 ms，疑为每帧重建/上传，是下一刀首选。**
+- **T-804 结论**：实际是 **14 个 pass**（不是 12）。只有「世界文本 + 云 + 界面」可合并（同颜色/深度附件、顺序不变），**已实施：14 → 12**；`submit` 0.829 → 0.786 ms（**-0.043 ms**），地形带（含底部 UI 区域）**逐像素 0 差异**。由此测得**每个 pass 对象仅约 0.02 ms**，推翻"8 个 OIT pass = 0.5 ms"的旧推断（那 0.5 ms 是 pass 内容里约 1890 次 draw）。**结论：不值得继续砍 pass**；下一步应针对 draw 数量与每次 draw 的录制成本（`scene` 0.59-0.67 ms / 186 draw ≈ 3 µs/draw）。
+- **T-803 结论**：原 `present` 0.87-1.02 ms 是**计时口径问题**（把宿主每帧回调也算了进去）。拆成 `swap` / `onframe` 后实测：真实交换链等待 **0.32-0.44 ms**，宿主回调 0.31-0.46 ms；三档 present 模式下 `swap` 几乎相同（0.32-0.44）⇒ 不是垂直同步，而是 `vkQueuePresentKHR` 的固定代价；fifo 的额外等待出现在 `acquire`（1.42-1.71），验证拆分正确。`desiredMaximumFrameLatency` / 图像数在 `Brew.Wgpu` 未暴露，无法做在飞帧数 A/B。**下一目标改为录制/提交路径**：`submit` 0.71-0.87（含 `encoder.Finish()` 对 12 个 pass 的校验）+ `scene` 0.57-0.67（186 draw）。
+- **T-802 结论（重要）**：全部跳过后的**空帧 = 1.56 ms 且与分辨率无关**（858x527 与 429x263 差 0.001 ms）；CPU 分阶段显示 `present` 0.7-1.0 + `updates` 0.7 + `submit` 0.25。原版整帧 1.6 ms，而我们空帧就 1.56 ms。**下一步必须先做**：把 `updates` 与渲染帧解耦（tick / 60 Hz 步进）+ 查清 `present` 阻塞，否则继续优化渲染内容没有意义。
 - 本会话期间本地 Fabric 服务器曾自行退出（`Can't keep up` 后进程消失，仓库外目录），已按 `run.bat` 的同款命令行重启；重启耗时约 14 s。后续测量需确认服务器存活。
-- `docs/STATE.md` 在 `2e60e42` 之后与 `DocumentationDriftTests` 不一致（缺 SPDX 头、缺 `## 已完成`/`## 进行中`/`## 阻塞项`/`## 下一步具体动作` 与 `最后更新：`、含绝对路径），已在 T-796 中按测试要求补齐。
+- `docs/STATE.md` 在 `2e60e42` 之后与 `DocumentationDriftTests` 不一致（缺 SPDX 头、缺 `## 已完成`/`## 进行中`/`## 阻塞项
+
+- **T-801 结论**：地形+UI+实体合计仅 0.45–0.57 ms，OIT 1.32 ms、云 0.65 ms，剩余 **0.8–0.9 ms 为全帧固定成本**（清屏/天空/上屏拷贝/Submit/驱动）——下一轮用它自己的方式归因，未做之前不要再砍几何（收益被封顶在 0.45 ms）。`/`## 下一步具体动作` 与 `最后更新：`、含绝对路径），已在 T-796 中按测试要求补齐。
 
 ## 下一步具体动作
 
@@ -104,3 +113,21 @@ src/Sharpcraft.Client/bin/Debug/net10.0/Sharpcraft.Client.exe --version 26.3 --g
 ```
 
 **配置传递规则（原则 13）**：游戏代码只读宿主传入的 `--debugOptionsFile` 快照，**不读环境变量**。用 env 设置 `MC_*` 会静默无效。
+
+## 下一步动作（云改程序化生成，T-827）
+
+规格已就绪：`docs/specs/render/cloud-geometry.md`（原版行为逐条写明，含位域与坐标位打包）。
+
+| 片 | 内容 | 状态 |
+| --- | --- | --- |
+| S1 | 面表构建器 `CloudFaceTable.Build`（每面 3 词：单元 X/Z + 方向与标志位） | **已完成**，17 项单测，`CloudFaceTableTests` |
+| S2 | ~~接缝能力~~ **无需改动**：两样能力已存在且为真实实现（见规格 §8） | **已完成（核查）** |
+| S3 | 接线完成并实测（**immediate 模式**，非垂直同步）：**无性能收益**，云阶段 0.010 vs 0.014 ms 属噪声；整帧 2.2–2.6 ms。价值在结构对齐与消除脆弱路径。A/B 截图无回归 | **已完成（无收益，见规格 §13）** |
+| S4 | OIT 三阶段接到新顶点上 | 待做 |
+| S5 | 删除 `CloudGeometryBuilder` / `CloudDrawCache` 的顶点路径 | 待做 |
+
+下一步具体动作：**接线 `cloud_procedural.wgsl`**。着色器已写好但没有任何管线用它，且 WGSL 构建期不编译，所以它**完全未经验证**。接线步骤：①`CloudOitResources` 与两处 `CreatePipelineLayout` 增加 group 0 的 binding 2（CloudInfo uniform）与 binding 3（面表只读存储）；②上传面表并建 bind group；③建管线——**管线创建成功是第一道也是唯一的语法检查**；④确认只读存储能否绑在顶点阶段；⑤接主着色路径后与现有云逐像素比对。
+
+注：云的损坏是**既存缺陷**（OIT 管线复用地形顶点布局，而数据是 7 float/28 字节，每 4 个顶点只有第 1 个落对），不是顶点打包引入的；顶点打包那笔改动已回退，等 S5 删掉旧路径后再单独重做。
+
+接线方案已展开为逐条步骤，见 docs/specs/render/cloud-geometry.md §10（含 CloudInfo 的 48 字节布局与 vec3 对齐陷阱、绑定序号、绘制顶点数、以及只读存储能否绑顶点阶段的待实测点）。CloudOitResources.cs 的 CreateBindGroupLayout 与 CreateBindGroup 是两处主要改动位置。

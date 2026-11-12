@@ -71,8 +71,10 @@ public sealed class EntityModelPartNode
         RotationX = rotationX;
         RotationY = rotationY;
         RotationZ = rotationZ;
-        Cubes = cubes;
-        Children = children;
+        CubeArray = cubes as EntityModelCube[] ?? System.Linq.Enumerable.ToArray(cubes);
+        ChildArray = children as EntityModelPartNode[] ?? System.Linq.Enumerable.ToArray(children);
+        Cubes = CubeArray;
+        Children = ChildArray;
         VisibleWhen = visibleWhen;
         RotationSelector = rotationSelector;
         YOffsetSelector = yOffsetSelector;
@@ -89,11 +91,42 @@ public sealed class EntityModelPartNode
     public float RotationY { get; }
     public float RotationZ { get; }
     public IReadOnlyList<EntityModelCube> Cubes { get; }
+
     public IReadOnlyList<EntityModelPartNode> Children { get; }
+
+    /// <summary>
+    /// Same data as <see cref="Cubes"/> but typed as an array, for the per frame loops.
+    /// </summary>
+    /// <remarks>
+    /// Iterating an <c>IReadOnlyList</c> through the interface boxes its enumerator, once per node per frame, which is
+    /// pure garbage on a path that already costs hundreds of microseconds (T-829). Keeping the interface property means
+    /// no call site has to change; the hot loop just reaches for this one instead.
+    /// </remarks>
+    public EntityModelCube[] CubeArray { get; }
+
+    /// <summary>Same data as <see cref="Children"/> but typed as an array, for the per frame loops.</summary>
+    public EntityModelPartNode[] ChildArray { get; }
     public Func<Sharpcraft.Client.World.EntityRenderState, bool>? VisibleWhen { get; }
     public Func<Sharpcraft.Client.World.EntityRenderState, Vector3>? RotationSelector { get; }
     public Func<Sharpcraft.Client.World.EntityRenderState, float>? YOffsetSelector { get; }
     public string? PoseSource { get; }
+
+    /// <summary>
+    /// Per-cube descriptors built once and reused every frame (T-829).
+    /// </summary>
+    /// <remarks>
+    /// Every field of <see cref="EntityModelPart"/> comes from this node and its cubes, which never change, except for
+    /// the vertical offset an entity supplies. The reference holds its cube, polygon and vertex data as final fields
+    /// built at model construction and only transforms them per frame; caching the descriptor is the same idea. An
+    /// entry whose <c>Name</c> is null has not been built yet.
+    /// </remarks>
+
+    /// <summary>Lazily sized cache handed out to the mesher.</summary>
+    /// <param name="count">Number of cubes this node owns.</param>
+    internal EntityModelPart[] PartsFor(int count) =>
+        _parts is { } existing && existing.Length == count ? existing : _parts = new EntityModelPart[count];
+
+    private EntityModelPart[]? _parts;
     public Func<Sharpcraft.Client.World.EntityRenderState, Vector3>? TintSelector { get; }
 }
 
