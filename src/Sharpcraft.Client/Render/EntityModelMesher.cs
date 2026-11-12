@@ -87,8 +87,6 @@ public sealed partial class EntityModelMesher
     /// </summary>
     public IReadOnlyList<EntityGeometryLayer> BuildLayers(ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, ISpriteAtlas? skinAtlas = null, EntityVariantTable? variants = null, EntityPose? pose = null, ISpriteAtlas? itemAtlas = null)
     {
-        // TEMP diagnostic (T-829): splits the entity build cost. Removable with the Trace flag below.
-        var traceStart = System.Diagnostics.Stopwatch.GetTimestamp();
         // Called once per frame. Without an explicit (sandbox) pose, build one pose per entity here, before the three
         // layer passes, so provider state updates run once per entity rather than once per layer.
         var usePreparedPoses = pose is null;
@@ -97,23 +95,15 @@ public sealed partial class EntityModelMesher
             PrepareAnimationPoses(entities);
         }
 
-        var tracePose = System.Diagnostics.Stopwatch.GetTimestamp();
         if (HasModelBackedLayers(entities, variants))
         {
             var built = BuildModelBackedLayers(entities, skin, skinWidth, skinHeight, transforms, onlyPart, excludedPart, skinAtlas, variants, pose, usePreparedPoses, itemAtlas);
-            var builtIndices = 0;
-            var builtVertices = 0;
-            foreach (var l in built)
             {
-                builtIndices += l.Geometry.IndexCount;
-                builtVertices += l.Geometry.VertexFloats;
             }
 
-            TraceEntityBuild($"model(idx={builtIndices},vf={builtVertices},parts={built.Count})", entities.Length, 1, traceStart, tracePose, System.Diagnostics.Stopwatch.GetTimestamp());
             return built;
         }
 
-        var tracePlan = System.Diagnostics.Stopwatch.GetTimestamp();
         var plan = BuildLayerPlan(entities, variants);
         while (_layerGeometries.Count < plan.Count)
         {
@@ -135,31 +125,7 @@ public sealed partial class EntityModelMesher
             }
         }
 
-        TraceEntityBuild("flat", entities.Length, plan.Count, traceStart, tracePose, System.Diagnostics.Stopwatch.GetTimestamp());
         return layers;
-    }
-
-    /// <summary>Bench hook for the split probe; inert unless <see cref="Trace"/> is on.</summary>
-    public bool Trace { get; set; }
-
-    private int _traceFrames;
-
-    private void TraceEntityBuild(string path, int entities, int layers, long start, long afterPose, long end)
-    {
-        if (!Trace)
-        {
-            return;
-        }
-
-        if (++_traceFrames % 60 != 0)
-        {
-            return;
-        }
-
-        var pose = (afterPose - start) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
-        var total = (end - start) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
-        Console.WriteLine(
-            $"entity-build: path={path} entities={entities} layers={layers} pose={pose:F3} rest={total - pose:F3} total={total:F3}");
     }
 
     /// <summary>

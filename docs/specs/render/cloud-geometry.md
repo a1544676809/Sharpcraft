@@ -555,3 +555,34 @@ entity-build: path=model(idx=648,vf=6048,parts=3) entities=1 layers=1 pose=0.011
 已排除的项：`PrepareAnimationPoses`（0.011 ms）、字符串拼接式字典查找（调用方传 `null`，见上文）。文件里其余每顶点操作只有 `new Vector3`（结构体）与 6 项字典查找，都不足以解释这个量级。
 
 **下一步必须是函数内部二分**：把 `BuildModelBackedLayers` 拆成"模型解析 / 分组 / 顶点发射"三段各自计时。现在的打点只到函数边界，再往里没有数据。
+
+### 再往下一层：发射阶段吃掉全部，且是每顶点开销
+
+在 `BuildModelBackedLayers` 内加三段计时（临时打点，已删除）：
+
+| 段 | 耗时 |
+| --- | --- |
+| 计划构建（含 `ResolveEntityModel`） | 0.012–0.020 ms |
+| 分组（含逐层 `ResolveEntityModel`） | 0.035–0.055 ms |
+| **顶点发射**（`BuildInto` + `AppendGeometry`） | **0.24–0.38 ms** |
+
+1 个实体、108 个四边形、432 个顶点、3 个层——**发射阶段 0.3 ms ≈ 每顶点 700 纳秒**。
+
+逐个排除了发射路径上的每顶点函数：
+
+| 函数 | 结论 |
+| --- | --- |
+| `WriteVertex` | 14 次数组赋值，廉价 |
+| `TransformUv` | 纯算术，廉价 |
+| `DynamicGeometry` 扩容 | `BuildInto` 里已有 `Reserve`，不会逐次扩容 |
+| `entityTransform.Apply` | **确实每次新建旋转矩阵**（`CreateRotationY`/`CreateRotationX`），是真低效，但按 432 次算只有十几微秒，**不足以解释 300 µs** |
+
+**所以 300 µs 仍未被归因到具体某行。** 链路的下一层需要更细的打点（例如 `AddFace` 调用计数与累计耗时），本次未做完。
+
+### 诊断代码的处理（原则 13）
+
+本次所有打点（`Trace` 开关、`TraceEntityBuild`、三段计时、`entity-split` 打印）都是**临时**的，已**全部删除**：
+
+- `EntityModelMesher` 与 `WindowCommand` 恢复原状，全仓 grep 无残留
+- 删除后构建通过、8 个程序集测试全绿、四项门禁通过——即原则 13 要求的"全量移除后行为不变"
+- 结论只保留在文档里，不留在代码里
