@@ -122,7 +122,7 @@ src/Sharpcraft.Client/bin/Debug/net10.0/Sharpcraft.Client.exe --version 26.3 --g
 | --- | --- | --- |
 | S1 | 面表构建器 `CloudFaceTable.Build`（每面 3 词：单元 X/Z + 方向与标志位） | **已完成**，17 项单测，`CloudFaceTableTests` |
 | S2 | ~~接缝能力~~ **无需改动**：两样能力已存在且为真实实现（见规格 §8） | **已完成（核查）** |
-| S3 | 接线完成：面表数据通道、资源与绑定、程序化 `vs_main`、三条管线去顶点缓冲。管线创建成功（只读存储可用于顶点阶段已确认），画面正常 | **已完成（像素比对待做）** |
+| S3 | 接线完成并实测：**无性能收益**（clouds 0.037→0.036 ms，缓存命中时两条路径都不重建几何）。价值在结构对齐与消除脆弱路径。A/B 截图无回归 | **已完成（无收益，见规格 §13）** |
 | S4 | OIT 三阶段接到新顶点上 | 待做 |
 | S5 | 删除 `CloudGeometryBuilder` / `CloudDrawCache` 的顶点路径 | 待做 |
 
