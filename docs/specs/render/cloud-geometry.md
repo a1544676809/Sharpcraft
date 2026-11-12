@@ -508,3 +508,28 @@ prep-entities = 0.778–0.789 ms
 - **约占整帧 28–32%**
 
 **这是本次会话找到的最大一处开销，而且买一个明确的下一步**：查 `BuildLayers` 是否每帧重建了本可缓存的部分。
+
+### 与原版的对照，以及一个被自己否定的假设
+
+**架构一致**：原版 `ModelPart.render` 同样是 push pose → 应用该部件的平移/旋转 → 逐立方体把顶点写进 `VertexConsumer`（`compile`）。也就是说"每帧逐立方体写顶点"本身就是原版的做法，我们的 0.78 ms **不是架构选错**，是实现效率问题。
+
+**假设一（已否定）**：`EntityModelMesher` 里有一处每面调用的局部函数
+
+```csharp
+transforms.TryGetValue(part.Name + "." + face, out var value)
+```
+
+看起来很像"热路径里做字符串拼接 + 复合键查找"——本项目以前就栽过一次类似的每顶点字典探查。但追到调用方发现：`BuildLayers` 的两处调用**根本没有传 `transforms`**，参数是 `null`，`transforms is not null` 直接短路，那段代码**不会执行**。
+
+**记录在这里是为了防止下一个人重走这条路。** 每次怀疑都要回到调用点确认参数，不能只读函数体。
+
+### 尚未排除的方向
+
+按每实体约 390 微秒的量级，剩余嫌疑：
+
+1. `PrepareAnimationPoses(entities)` —— 每实体计算骨骼矩阵
+2. `HasModelBackedLayers` / `BuildLayerPlan` —— 每帧建计划与分配
+3. 每部件 `partTint`、精灵/UV 解析
+4. 每帧 `new List<EntityGeometryLayer>(plan.Count)` 等分配带来的 GC 压力
+
+**这些都是可以用同一套装置逐项否定的**：给每一项加 A/B 跳过开关，看 delta 落在谁身上。
