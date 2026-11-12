@@ -264,35 +264,58 @@ public sealed class ChunkGeometryStore : IDisposable
     private void DrawSections(RenderPassHandle pass, Entry entry, int[] starts, ReadOnlySpan<Vector4> planes)
     {
         var baseVertex = (int)(entry.VertexOffset / _bytesPerVertex);
-        var runStart = -1;
-        for (var section = 0; section + 1 < starts.Length; section++)
-        {
-            var visible = starts[section + 1] > starts[section];
-            if (visible && planes.Length >= 6)
-            {
-                var bottom = entry.SectionMinY + (section * 16f);
-                var minimum = new Vector3(entry.Minimum.X, bottom, entry.Minimum.Z);
-                var maximum = new Vector3(entry.Maximum.X, bottom + 16f, entry.Maximum.Z);
-                visible = FrustumPlanes.IsVisible(planes, minimum, maximum);
-            }
+        var sectionCount = starts.Length - 1;
 
-            if (visible)
+        if (planes.Length < 6)
+        {
+            DrawSectionRun(pass, entry, starts, 0, sectionCount, baseVertex);
+            return;
+        }
+
+        // The frustum cuts the column's tall band down to a single interval: every plane whose normal has a vertical
+        // component bounds the bottom or the top, and planes with no vertical component either keep the whole band or
+        // rule the column out. So the sections that survive are always contiguous and the column still costs one draw,
+        // which is what makes this cheaper than testing twenty four boxes per column.
+        var low = (float)entry.SectionMinY;
+        var high = entry.SectionMinY + (sectionCount * 16f);
+        for (var index = 0; index < 6; index++)
+        {
+            var plane = planes[index];
+            var horizontal = (plane.X >= 0f ? plane.X * entry.Maximum.X : plane.X * entry.Minimum.X)
+                + (plane.Z >= 0f ? plane.Z * entry.Maximum.Z : plane.Z * entry.Minimum.Z)
+                + plane.W;
+
+            if (plane.Y > 1e-6f)
             {
-                if (runStart < 0)
-                {
-                    runStart = section;
-                }
+                // The top corner is the furthest along this normal, so a section below this height cannot reach it.
+                low = MathF.Max(low, -horizontal / plane.Y);
             }
-            else if (runStart >= 0)
+            else if (plane.Y < -1e-6f)
             {
-                DrawSectionRun(pass, entry, starts, runStart, section, baseVertex);
-                runStart = -1;
+                // The bottom corner decides, so a section above this height cannot reach it either.
+                high = MathF.Min(high, -horizontal / plane.Y);
+            }
+            else if (horizontal < 0f)
+            {
+                return;
             }
         }
 
-        if (runStart >= 0)
+        if (low >= high)
         {
-            DrawSectionRun(pass, entry, starts, runStart, starts.Length - 1, baseVertex);
+            return;
+        }
+
+        // One section of slack on each side: an off by one here would drop geometry, and a section that is drawn but
+        // empty costs nothing.
+        var first = (int)MathF.Floor((low - entry.SectionMinY) / 16f) - 1;
+        var last = (int)MathF.Floor((high - entry.SectionMinY) / 16f) + 1;
+        first = Math.Max(0, first);
+        last = Math.Min(sectionCount - 1, last);
+
+        if (last >= first)
+        {
+            DrawSectionRun(pass, entry, starts, first, last + 1, baseVertex);
         }
     }
 
