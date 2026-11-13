@@ -857,7 +857,7 @@ internal static class WindowCommand
             cloudDepthEnabled: cloudDepth,
             presentMode: BackendConvert.ToWgpu(presentMode),
             // Off by default until the over-culling is understood; MC_OCCLUSION=1 turns it on for the experiment.
-            isSectionVisible: GameOptions.Get("MC_OCCLUSION") == "1" ? occlusion.IsVisible : null,
+            visibleSections: GameOptions.Get("MC_OCCLUSION") == "1" ? occlusion.ChunkMask : null,
             screenshotRequest: window => window.Input.JustPressed(Sharpcraft.Framework.Platform.InputKey.F2)
                 ? ScreenshotPaths.Next(gameDirectory ?? GamePaths.DefaultGameDirectory())
                 : ScreenshotBridge.Take(),

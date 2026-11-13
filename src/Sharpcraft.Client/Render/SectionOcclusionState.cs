@@ -38,6 +38,9 @@ public sealed class SectionOcclusionState
     private readonly Func<long, MeshData?> _meshSource;
     private readonly Func<SectionCoord, bool> _alwaysInFrustum = _ => true;
     private readonly Func<SectionCoord> _camera;
+    private readonly MeshData?[] _columnMesh;
+    private readonly byte[] _columnState;
+    private SectionCoord _walkCamera;
     private readonly Func<int> _worldVersion;
     private SectionCoord? _lastCameraSection;
     private int _lastWorldVersion = -1;
@@ -72,6 +75,9 @@ public sealed class SectionOcclusionState
         _worldVersion = worldVersion;
 
         var volume = SectionOcclusionTraversal.Volume(radius, minimumY, maximumY);
+        var side = (2 * radius) + 1;
+        _columnMesh = new MeshData?[side * side];
+        _columnState = new byte[side * side];
         _queue = new SectionOcclusionTraversal.TraversalNode[volume * SectionOcclusionTraversal.EntriesPerSection];
         _visited = new byte[volume];
         _output = new SectionCoord[volume];
@@ -79,10 +85,17 @@ public sealed class SectionOcclusionState
         // Query only. Rebuilding here would run the walk once per section per frame, which is thousands of walks
         // while chunks are still streaming in and cost more than the drawing it saves.
         IsVisible = Test;
+
+        // One lookup per chunk for the draw path, which asks per section otherwise: four dozen sections of a column
+        // would repeat the same lookup forty eight times a frame.
+        ChunkMask = key => _visible.TryGetValue(key, out var mask) ? mask : 0UL;
     }
 
     /// <summary>Predicate the renderer calls per section; held in a field so passing it costs nothing.</summary>
     public Func<long, int, bool> IsVisible { get; }
+
+    /// <summary>Visible sections of one chunk column as a bit mask; zero when the walk kept none.</summary>
+    public Func<long, ulong> ChunkMask { get; }
 
     /// <summary>Current camera section, so the caller can refresh once per frame rather than per query.</summary>
     public SectionCoord CameraSection => _camera();
@@ -122,6 +135,9 @@ public sealed class SectionOcclusionState
 
         _lastCameraSection = cameraSection;
         _lastWorldVersion = version;
+        _walkCamera = cameraSection;
+        Array.Clear(_columnMesh);
+        Array.Clear(_columnState);
         _visible.Clear();
 
         SectionOcclusionTraversal.Traverse(
@@ -129,7 +145,7 @@ public sealed class SectionOcclusionState
             _radius,
             _minimumY,
             _maximumY,
-            _isLoaded,
+            IsLoadedColumn,
             VisibilityOf,
             _alwaysInFrustum,
             _queue,
@@ -156,9 +172,50 @@ public sealed class SectionOcclusionState
         return true;
     }
 
+    /// <summary>Resolves a chunk column once per walk, not once per section that happens to sit in it.</summary>
+    /// <remarks>
+    /// The walk asks about sections, and a column holds two dozen of them, so asking the world and the mesh cache per
+    /// section meant tens of thousands of hashed lookups every frame to answer six hundred and twenty five distinct
+    /// questions. Answering each column once is what turns the walk from the largest part of the frame into noise.
+    /// </remarks>
+    private bool TryColumn(SectionCoord coord, out MeshData? mesh, out bool loaded)
+    {
+        var side = (2 * _radius) + 1;
+        var x = coord.X - _walkCamera.X + _radius;
+        var z = coord.Z - _walkCamera.Z + _radius;
+
+        if ((uint)x >= (uint)side || (uint)z >= (uint)side)
+        {
+            mesh = null;
+            loaded = false;
+            return false;
+        }
+
+        var at = (z * side) + x;
+
+        if (_columnState[at] == 0)
+        {
+            var worldX = _walkCamera.X - _radius + x;
+            var worldZ = _walkCamera.Z - _radius + z;
+            _columnMesh[at] = _meshSource(ClientWorld.Pack(worldX, worldZ));
+            _columnState[at] = (byte)(_isLoaded(new SectionCoord(worldX, coord.Y, worldZ)) ? 1 : 2);
+        }
+
+        loaded = _columnState[at] == 1;
+        mesh = _columnMesh[at];
+        return true;
+    }
+
+    private bool IsLoadedColumn(SectionCoord coord) => TryColumn(coord, out _, out var loaded) && loaded;
+
     private SectionVisibility VisibilityOf(SectionCoord coord)
     {
-        if (_meshSource(ClientWorld.Pack(coord.X, coord.Z)) is not { SectionVisibility: { } matrices } mesh)
+        if (!TryColumn(coord, out var mesh, out _))
+        {
+            return SectionVisibility.AllVisible;
+        }
+
+        if (mesh is not { SectionVisibility: { } matrices })
         {
             // No geometry means nothing to occlude, which must not stop the walk.
             return SectionVisibility.AllVisible;
