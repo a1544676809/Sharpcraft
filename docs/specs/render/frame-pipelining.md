@@ -108,3 +108,30 @@ MUST 提供单线程路径并作为默认，双线程由宿主层显式开启（
 5. 同进程 A/B 测收益；若 `pipeline-wait` 不显著小于录制时长，回滚
 
 **每片都必须保持离线 `--frame` 哈希不变。**
+
+## 10. 切片 1 的状态清点（实测，2026-11-13）
+
+录制区是 `WindowedRenderer.cs` 的 **L1223–L1829**（camera → present-rec，约 600 行）。用脚本对"区外声明、区内引用"的局部量做清点，得到 **105 个**，分三类：
+
+| 类别 | 数量 | 处置 |
+| --- | --- | --- |
+| 诊断类（`skip*`、`cameraStarted`、`cameraTotalMs`、`worstCameraMs`） | 13 | 按原则 13 可整体删除，不进状态对象 |
+| **每帧重写的 CPU 数组** | **10** | **必须双缓冲（§4 的准确清单）** |
+| GPU 资源 / 管线 / 标量 | 82 | 状态对象持有即可，无并发问题 |
+
+### 10.1 必须双缓冲的 10 个数组（修正 §4）
+
+| 数组 | 用途 |
+| --- | --- |
+| `cameraBytes` | 每帧相机 uniform 字节 |
+| `lightmapBytes` | 每帧光照贴图字节 |
+| `fogBytes` | 每帧雾参数字节 |
+| `uiVertex` / `uiIndex` / `uiRanges` | 界面几何与绘制区间 |
+| `entityLayerVertex` / `entityLayerIndex` | 实体层几何 |
+| `dynamicVertex` / `dynamicIndex` | 动态几何 |
+
+**§4 原先只列了 4 类，遗漏了 `uiIndex`、`uiRanges`、`entityLayerIndex`、`dynamicIndex`。** 这四个同样是每帧重写，漏掉会造成界面或实体几何在两帧之间被覆盖。
+
+### 10.2 结论
+
+状态对象需承载 82 个稳定引用 + 10 组双缓冲数组。这是约 300 行的重构，**超出微切片范围**，需作为独立任务实施；实施顺序仍按 §9 的切片 1（先单线程抽出、离线帧哈希不变）。
