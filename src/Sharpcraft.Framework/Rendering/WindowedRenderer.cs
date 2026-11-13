@@ -1556,7 +1556,9 @@ public static class WindowedRenderer
             // Reference transparency (docs/specs/render/oit-reference.md): depth bounds, a culling pass, wavelet
             // transmittance, accumulation and a composite that writes depth. The three stages redraw the same
             // translucent geometry, so no sort is needed at all.
-            var needsOit = arenaTranslucent?.ChunkCount > 0
+            // Resident is not the same as drawn: asking the arena how much translucent geometry it holds keeps
+            // the whole group alive while the camera is somewhere none of it can be seen (T-833).
+            var needsOit = (arenaTranslucent is not null && arenaTranslucent.AnyVisible(frustumPlanes, visibleSections))
                 || currentRequest.TranslucentIndices is { Length: > 0 }
                 || cloudOit is not null;
             if (needsOit && !refTargetsCreated)

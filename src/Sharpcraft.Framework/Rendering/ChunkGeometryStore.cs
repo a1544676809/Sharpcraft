@@ -97,6 +97,42 @@ public sealed class ChunkGeometryStore : IDisposable
     /// <summary>Chunks currently resident.</summary>
     public int ChunkCount => _entries.Count;
 
+    /// <summary>Whether any resident chunk would be drawn, without recording anything.</summary>
+    /// <remarks>
+    /// Lets the caller decide whether a whole group of passes is worth recording at all. Asking the arena how many
+    /// chunks it holds answers a different question: a world with water somewhere keeps its translucent geometry
+    /// resident even when the camera is deep underground and none of it is in view.
+    /// </remarks>
+    /// <param name="planes">Six inward facing frustum planes, or empty to skip the test.</param>
+    /// <param name="visibleSections">Section masks per chunk, or null to ignore occlusion.</param>
+    public bool AnyVisible(ReadOnlySpan<Vector4> planes, Func<long, ulong>? visibleSections)
+    {
+        foreach (var page in _pages)
+        {
+            foreach (var key in page.Chunks)
+            {
+                if (!_entries.TryGetValue(key, out var entry))
+                {
+                    continue;
+                }
+
+                if (planes.Length >= 6 && !FrustumPlanes.IsVisible(planes, entry.Minimum, entry.Maximum))
+                {
+                    continue;
+                }
+
+                if (visibleSections is not null && visibleSections(key) == 0UL)
+                {
+                    continue;
+                }
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>Bytes uploaded since creation (diagnostic).</summary>
     public long UploadedBytes { get; private set; }
 
