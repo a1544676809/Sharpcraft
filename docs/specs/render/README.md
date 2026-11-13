@@ -20,6 +20,7 @@
 | [`occlusion-culling.md`](occlusion-culling.md) | Hi-Z 两阶段方案、分期、预算与验收；不依赖硬件遮挡查询 | 草稿 | - |
 | [`oit-reference.md`](oit-reference.md) | 26.3 的 OIT 三阶段行为规格，作为窗口唯一采用的透明管线 | 已实现（反向 Z 适配，2026-11-05） | 2026-11-05 |
 | [`optimization-plan.md`](optimization-plan.md) | 云 OIT/云几何、OIT 目标、天体与绘制路径的分阶段优化与验收标准 | 已评审 | 2026-11-01 |
+| [`pass-reduction.md`](pass-reduction.md) | 状态：[已评审] 任务：T-834 依据：frame-baseline.md §5 | 未标注 | - |
 | [`pipeline.md`](pipeline.md) | 阶段划分、几何与缓冲区策略、实体与方块实体、2D 合成、预算与分期 | 已评审 | 2026-10-29 |
 | [`screenshot.md`](screenshot.md) | 交换链纹理不保证可 COPY_SRC（见 ADR-0003），直接拷贝会失败。 | 未标注 | - |
 | [`section-occlusion.md`](section-occlusion.md) | 状态：[进行中] 任务：T-833 | 未标注 | - |
