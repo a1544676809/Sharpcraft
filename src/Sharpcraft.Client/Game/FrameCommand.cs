@@ -2198,7 +2198,12 @@ internal static class FrameCommand
             Lightmap = ToLightmapUniform(EffectiveLighting(world)),
             Atlas = prepared is null
                 ? null
-                : WithMips(prepared.Value.Atlas)
+                : WithMips(prepared.Value.Atlas),
+
+            // The local scene has no weather of its own, so it takes the forced values. Without these the
+            // sandbox always renders clear weather and cannot show what rain does to the fog (T-842).
+            RainLevel = EffectiveRainLevel(world, 1f),
+            FogColour = EffectiveFogColour(world)
         };
         request = AttachCelestial(request, world, resources);
 
