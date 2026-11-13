@@ -62,6 +62,12 @@ FrameExecutor.Record(target, request)   →  command encoder
 
    **结论：离线 `--frame` 与沙盒画面里从来没有过实体和 UI。** 这不只是"帧里地形少"，而是整层缺失——任何依赖离线帧验证实体或 UI 的尝试都无效。
 2. **逐项补齐**：每项一个提交，沙盒对拍确认该特性出现且只影响预期区域。
+
+   **进展与障碍（2026-11-13）**：
+
+   - 实体管线工厂已抽为共享的 `FramePipelines`（`WindowedRenderer` 1975 行）。`EntityPassRecorder` 本就按参数接收管线，可直接复用。
+   - **真正障碍**：`FrameRequest` **不含任何实体数据**——实体在窗口路径由 `entityLayers` 回调提供，而 `OffscreenRenderer.Render(FrameRequest)` 是请求的纯函数。
+   - 因此下一步是**扩展 `FrameRequest` 承载实体层与皮肤/物品图集**，再由 `FrameCommand` 填充、`OffscreenRenderer` 消费。这是契约变更，应单独提交并在 `docs/specs/render/` 记录新字段。
 3. **抽取执行器**：此时两条路径画的东西相同，抽公共录制单元，判据是两侧像素**都不变**。
 4. **切换离屏目标**：`OffscreenRenderer` 变为"建纹理 → 调执行器 → 回读"。
 5. 删除 `OffscreenRenderer` 中重复的管线创建与录制代码。
