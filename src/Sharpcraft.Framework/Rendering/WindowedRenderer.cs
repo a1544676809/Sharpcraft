@@ -72,7 +72,8 @@ public static class WindowedRenderer
     Func<(Vector3 Sky, Vector3 Fog, float SkyFogEnd, Vector3 Eye)>? skyDiscPerFrame = null,
     WGPUPresentMode presentMode = WGPUPresentMode.Fifo,
     Func<WindowHost, string?>? screenshotRequest = null,
-    Action<string, byte[], uint, uint>? screenshotCaptured = null)
+    Action<string, byte[], uint, uint>? screenshotCaptured = null,
+    Func<long, int, bool>? isSectionVisible = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -1386,7 +1387,7 @@ public static class WindowedRenderer
                             }
                             else
                             {
-                                arena.Draw(pass, frustumPlanes);
+                                arena.Draw(pass, frustumPlanes, isSectionVisible);
                             }
 
                             Cpu(FrameCpuTimings.SceneTerrainStage);
@@ -1411,7 +1412,7 @@ public static class WindowedRenderer
                         }
                         else
                         {
-                            arenaCutout.Draw(pass, frustumPlanes);
+                            arenaCutout.Draw(pass, frustumPlanes, isSectionVisible);
                         }
                         break;
                     }

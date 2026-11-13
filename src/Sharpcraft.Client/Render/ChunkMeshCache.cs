@@ -215,7 +215,7 @@ public sealed class ChunkMeshCache
 
             using var buffer = new MeshBuffer(512);
             ChunkMesher.MeshChunk(world, chunk, buffer, layers?.Cutout, layers?.Translucent, in context);
-            _meshes[key] = buffer.ToMeshData(0);
+            _meshes[key] = buffer.ToMeshData(0, chunk.MinSectionY);
             TotalChunksMeshed++;
             remeshed++;
         }
@@ -341,6 +341,11 @@ public sealed class ChunkMeshCache
 
     /// <summary>Combines the meshes currently cached; cheap, no meshing.</summary>
     public MeshData Snapshot() => Combine();
+
+    /// <summary>Looks up the mesh of one chunk, for the occlusion walk (T-833).</summary>
+    /// <param name="chunkKey">Packed chunk key.</param>
+    /// <param name="mesh">Mesh of that chunk when present.</param>
+    public bool TryGetMesh(long chunkKey, out MeshData mesh) => _meshes.TryGetValue(chunkKey, out mesh!);
 
     private MeshData Combine()
     {

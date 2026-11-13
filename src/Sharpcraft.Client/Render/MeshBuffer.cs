@@ -219,7 +219,7 @@ public sealed class MeshBuffer : IDisposable
     }
 
     /// <summary>Copies the written geometry into exactly sized arrays.</summary>
-    public MeshData ToMeshData(int blockCount)
+    public MeshData ToMeshData(int blockCount, int sectionMinY = 0)
     {
         // The final start doubles as the end of the last section, so the ranges are starts[i]..starts[i + 1].
         int[]? starts = null;
@@ -237,7 +237,7 @@ public sealed class MeshBuffer : IDisposable
             _sectionVisibility.AsSpan(0, _sectionCount).CopyTo(visibility);
         }
 
-        return new MeshData(Vertices.ToArray(), Indices.ToArray(), blockCount, starts, visibility);
+        return new MeshData(Vertices.ToArray(), Indices.ToArray(), blockCount, starts, visibility, sectionMinY);
     }
 
     /// <inheritdoc />

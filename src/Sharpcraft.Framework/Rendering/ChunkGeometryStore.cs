@@ -207,7 +207,7 @@ public sealed class ChunkGeometryStore : IDisposable
 
     /// <summary>Draws the resident chunks, skipping any whose bounds fall outside the frustum.</summary>
     /// <param name="pass">Pass to record into.</param>
-    public void Draw(RenderPassHandle pass, ReadOnlySpan<Vector4> planes)
+    public void Draw(RenderPassHandle pass, ReadOnlySpan<Vector4> planes, Func<long, int, bool>? isSectionVisible = null)
     {
         CulledLastFrame = 0;
         BindCallsLastDraw = 0;
@@ -237,7 +237,7 @@ public sealed class ChunkGeometryStore : IDisposable
 
                 if (entry.SectionStarts is { Length: > 1 } starts)
                 {
-                    DrawSections(pass, entry, starts, planes);
+                    DrawSections(pass, entry, starts, planes, key, isSectionVisible);
                     continue;
                 }
 
@@ -313,7 +313,7 @@ public sealed class ChunkGeometryStore : IDisposable
     /// of the column is in view. Testing each section on its own and then merging the runs that survive keeps the
     /// draw count close to what it was while submitting far less geometry.
     /// </remarks>
-    private void DrawSections(RenderPassHandle pass, Entry entry, int[] starts, ReadOnlySpan<Vector4> planes)
+    private void DrawSections(RenderPassHandle pass, Entry entry, int[] starts, ReadOnlySpan<Vector4> planes, long key, Func<long, int, bool>? isSectionVisible)
     {
         var baseVertex = (int)(entry.VertexOffset / _bytesPerVertex);
         var sectionCount = starts.Length - 1;
@@ -365,9 +365,42 @@ public sealed class ChunkGeometryStore : IDisposable
         first = Math.Max(0, first);
         last = Math.Min(sectionCount - 1, last);
 
-        if (last >= first)
+        if (last < first)
+        {
+            return;
+        }
+
+        if (isSectionVisible is null)
         {
             DrawSectionRun(pass, entry, starts, first, last + 1, baseVertex);
+            return;
+        }
+
+        // Occlusion does not respect the band's contiguity: a cave under a solid floor can be reachable while the rock
+        // between it and the camera is not, so the band is split into runs of sections the traversal kept (T-833).
+        var runStart = -1;
+        for (var section = first; section <= last; section++)
+        {
+            if (isSectionVisible(key, section))
+            {
+                if (runStart < 0)
+                {
+                    runStart = section;
+                }
+
+                continue;
+            }
+
+            if (runStart >= 0)
+            {
+                DrawSectionRun(pass, entry, starts, runStart, section, baseVertex);
+                runStart = -1;
+            }
+        }
+
+        if (runStart >= 0)
+        {
+            DrawSectionRun(pass, entry, starts, runStart, last + 1, baseVertex);
         }
     }
 

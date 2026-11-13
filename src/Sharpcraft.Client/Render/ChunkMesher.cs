@@ -75,7 +75,7 @@ public static class ChunkMesher
         // Merging cuts the quad count by an order of magnitude, so a smaller guess is enough.
         using var buffer = new MeshBuffer(Math.Min(maxBlocks, world.LoadedChunkCount * 512));
         var blocks = Mesh(world, buffer, airState, maxBlocks, sprites, merge, ambientOcclusion, lighting);
-        return buffer.ToMeshData(blocks);
+        return buffer.ToMeshData(blocks, world.MinSectionY);
     }
 
     /// <summary>
@@ -741,7 +741,7 @@ public static class ChunkMesher
         Span<ulong> visited,
         Span<ushort> queue)
     {
-        if (sprites is null)
+        if (sprites is null || layout is null)
         {
             return SectionVisibility.AllVisible;
         }
@@ -1637,7 +1637,7 @@ public static class ChunkMesher
 /// <param name="Indices">Triangle indices.</param>
 /// <param name="BlockCount">Number of solid blocks that contributed faces.</param>
 [Sharpcraft.Common.Reference.ReferenceClass("com.mojang.blaze3d.vertex.MeshData", "ref://mc-26.3-analysis/src/com/mojang/blaze3d/vertex/MeshData.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
-public sealed record MeshData(float[] Vertices, uint[] Indices, int BlockCount, int[]? SectionStarts = null, SectionVisibility[]? SectionVisibility = null)
+public sealed record MeshData(float[] Vertices, uint[] Indices, int BlockCount, int[]? SectionStarts = null, SectionVisibility[]? SectionVisibility = null, int SectionMinY = 0)
 {
     /// <summary>Vertex count.</summary>
     public int VertexCount => Vertices.Length / ChunkMesher.FloatsPerVertex;

@@ -594,6 +594,26 @@ internal static class WindowCommand
         long celestialCacheKey = long.MinValue;
         FrameRequest? celestialCached = null;
 
+        // Occlusion (T-833): the walk is rebuilt only when the camera changes section, and the predicate handed to
+        // the renderer is answered from that set.
+        var occlusionMaxY = world.MinSectionY + 24;
+        var occlusion = new Sharpcraft.Client.Render.SectionOcclusionState(
+            InteractiveSession.ViewDistanceChunks,
+            world.MinSectionY,
+            occlusionMaxY,
+            coord => world.GetChunk(coord.X, coord.Z) is not null,
+            CameraSection,
+            meshCache);
+
+        Sharpcraft.Client.Render.SectionCoord CameraSection()
+        {
+            var eye = session.Player.Position;
+            return new Sharpcraft.Client.Render.SectionCoord(
+                (int)MathF.Floor(eye.X / 16f),
+                (int)MathF.Floor(eye.Y / 16f),
+                (int)MathF.Floor(eye.Z / 16f));
+        }
+
         var format = WindowedRenderer.Run(
             request,
             frames,
@@ -829,6 +849,8 @@ internal static class WindowCommand
             oitLowPrecision: oitLowPrecision,
             cloudDepthEnabled: cloudDepth,
             presentMode: BackendConvert.ToWgpu(presentMode),
+            // Off by default until the over-culling is understood; MC_OCCLUSION=1 turns it on for the experiment.
+            isSectionVisible: GameOptions.Get("MC_OCCLUSION") == "1" ? occlusion.IsVisible : null,
             screenshotRequest: window => window.Input.JustPressed(Sharpcraft.Framework.Platform.InputKey.F2)
                 ? ScreenshotPaths.Next(gameDirectory ?? GamePaths.DefaultGameDirectory())
                 : ScreenshotBridge.Take(),
