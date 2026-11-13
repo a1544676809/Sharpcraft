@@ -21,6 +21,7 @@
 | [`optimization-plan.md`](optimization-plan.md) | 云 OIT/云几何、OIT 目标、天体与绘制路径的分阶段优化与验收标准 | 已评审 | 2026-11-01 |
 | [`pipeline.md`](pipeline.md) | 阶段划分、几何与缓冲区策略、实体与方块实体、2D 合成、预算与分期 | 已评审 | 2026-10-29 |
 | [`screenshot.md`](screenshot.md) | 交换链纹理不保证可 COPY_SRC（见 ADR-0003），直接拷贝会失败。 | 未标注 | - |
+| [`section-occlusion.md`](section-occlusion.md) | 状态：[进行中] 任务：T-833 | 未标注 | - |
 | [`shader-organisation.md`](shader-organisation.md) | 文件布局、命名、include、绑定单一来源、启动期自检、与测试门禁；WGSL 语境下的严谨约定 | 草稿 | - |
 | [`shader-pack-compatibility.md`](shader-pack-compatibility.md) | 我们能吃什么、不能吃什么，以及不支持特性如何改写；面向包作者 | 草稿 | - |
 | [`shader-packs.md`](shader-packs.md) | 渲染目标、阶段、顺序、采样与 uniform 的声明模型，以及失败回退规则 | 已评审 | - |
