@@ -18,9 +18,9 @@ internal sealed class FrameGeometryUploader
     private readonly IGeometryBackend _backend;
     private readonly GrowableGeometryBuffers _dynamic;
     private readonly EntityLayerPool _layers;
-    private readonly ChunkGeometryStore? _arena;
-    private readonly ChunkGeometryStore? _arenaCutout;
-    private readonly ChunkGeometryStore? _arenaTranslucent;
+    private readonly IChunkGeometrySink? _arena;
+    private readonly IChunkGeometrySink? _arenaCutout;
+    private readonly IChunkGeometrySink? _arenaTranslucent;
 
     /// <summary>Captures the buffers and arenas the upload writes into.</summary>
     /// <param name="backend">Backend to upload through.</param>
@@ -33,9 +33,9 @@ internal sealed class FrameGeometryUploader
         IGeometryBackend backend,
         GrowableGeometryBuffers dynamic,
         EntityLayerPool layers,
-        ChunkGeometryStore? arena,
-        ChunkGeometryStore? arenaCutout,
-        ChunkGeometryStore? arenaTranslucent)
+        IChunkGeometrySink? arena,
+        IChunkGeometrySink? arenaCutout,
+        IChunkGeometrySink? arenaTranslucent)
     {
         _backend = backend ?? throw new ArgumentNullException(nameof(backend));
         _dynamic = dynamic ?? throw new ArgumentNullException(nameof(dynamic));

@@ -25,7 +25,7 @@ namespace Sharpcraft.Framework.Rendering;
 /// that leaves the view only returns its intervals (coalescing with neighbours) rather than triggering a rebuild.
 /// </para>
 /// </remarks>
-public sealed class ChunkGeometryStore : IDisposable
+public sealed class ChunkGeometryStore : IChunkGeometrySink, IDisposable
 {
     private sealed class Page
     {
