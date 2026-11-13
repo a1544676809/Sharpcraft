@@ -174,8 +174,9 @@ GPU 缓冲池按 L443 的循环持久增长，每帧只重置计数（`entityLay
 | `TerrainPassRecorder` | −25 |
 | `SkyPassRecorder` | −52 |
 | `FrameGeometryUploader` | −86 |
+| `FrameUniformWriter` | −9 |
 
-累计 **−291 行**，`WindowedRenderer.cs` 由 2400 降至 **2109**。scene 主 pass 的 `switch` 现只剩四段各约 6 行的调用，共约 36 行（原约 180 行）。
+累计 **−300 行**，`WindowedRenderer.cs` 由 2400 降至 **2100**。scene 主 pass 的 `switch` 现只剩四段各约 6 行的调用，共约 36 行（原约 180 行）。
 
 ### 11.2 关键发现：单个 pass 不需要大状态对象
 

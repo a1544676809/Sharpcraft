@@ -446,6 +446,7 @@ public static class WindowedRenderer
 
         var geometryUploader = new FrameGeometryUploader(
             backend, dynamicBuffers, layerPool, arena, arenaCutout, arenaTranslucent);
+
         var terrainRecorder = new TerrainPassRecorder(
             backend, pipeline, cutoutPipeline, bindGroup, arena, arenaCutout);
         var entityRecorder = new EntityPassRecorder(
@@ -604,6 +605,9 @@ public static class WindowedRenderer
 
         // Two copies each, alternating per frame: one is written while the other is still being read (T-837).
         var uniforms = new FrameUniformStaging();
+
+        var uniformWriter = new FrameUniformWriter(
+            backend, cameraBuffer, lightmapBuffer, fogBuffer, uniforms);
 
         var colour = request.ClearColour;
         var presented = 0;
@@ -1139,39 +1143,26 @@ public static class WindowedRenderer
             cameraTotalMs += cameraMs;
             worstCameraMs = Math.Max(worstCameraMs, cameraMs);
 
-            CameraUniform.Write(
-                cameraBlock,
-                eye,
-                target,
-                request.FieldOfViewDegrees,
-                (int)frameWidth,
-                (int)frameHeight);
-
-            for (var index = 0; index < 36; index++)
-            {
-                BitConverter.TryWriteBytes(uniforms.Camera.AsSpan(index * sizeof(float)), cameraBlock[index]);
-            }
-
-            backend.WriteBuffer(cameraBuffer, uniforms.Camera, 0);
-
             // Per-frame lightmap parameters: day/night changes only this block, never the mesh.
             var frameLightmap = lightmapPerFrame?.Invoke() ?? currentRequest.Lightmap;
             var glintTime = currentRequest.GlintTime != 0f
                 ? currentRequest.GlintTime
                 : (float)(System.Diagnostics.Stopwatch.GetTimestamp() / (double)System.Diagnostics.Stopwatch.Frequency);
-            LightmapUniformCodec.Write(frameLightmap with { Padding = glintTime }, uniforms.Lightmap);
-            backend.WriteBuffer(lightmapBuffer, uniforms.Lightmap, 0);
 
             // Per-frame fog colour (time/weather driven); the range stays as configured.
             var frameFogColour = fogPerFrame?.Invoke() ?? currentRequest.FogColour;
-            uniforms.FogValues[0] = frameFogColour.X;
-            uniforms.FogValues[1] = frameFogColour.Y;
-            uniforms.FogValues[2] = frameFogColour.Z;
-            uniforms.FogValues[3] = frameFogColour.W;
-            uniforms.FogValues[4] = currentRequest.Diagnostics?.FogStart ?? 64f;
-            uniforms.FogValues[5] = currentRequest.Diagnostics?.FogEnd ?? 160f;
-            System.Runtime.InteropServices.MemoryMarshal.AsBytes(uniforms.FogValues.AsSpan()).CopyTo(uniforms.Fog);
-            backend.WriteBuffer(fogBuffer, uniforms.Fog, 0);
+
+            uniformWriter.Write(
+                cameraBlock,
+                eye,
+                target,
+                request.FieldOfViewDegrees,
+                (int)frameWidth,
+                (int)frameHeight,
+                frameLightmap with { Padding = glintTime },
+                frameFogColour,
+                currentRequest.Diagnostics?.FogStart ?? 64f,
+                currentRequest.Diagnostics?.FogEnd ?? 160f);
 
             backend.SetBindGroup(pass, 0, bindGroup);
 
