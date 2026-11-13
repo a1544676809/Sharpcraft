@@ -443,6 +443,9 @@ public static class WindowedRenderer
 
 
 
+
+        var geometryUploader = new FrameGeometryUploader(
+            backend, dynamicBuffers, layerPool, arena, arenaCutout, arenaTranslucent);
         var terrainRecorder = new TerrainPassRecorder(
             backend, pipeline, cutoutPipeline, bindGroup, arena, arenaCutout);
         var entityRecorder = new EntityPassRecorder(
@@ -945,108 +948,19 @@ public static class WindowedRenderer
 
             Cpu(FrameCpuTimings.PrepUiStage);
 
-            if (dynamicGeometry is not null && dynamicGeometry() is { IndexCount: > 0 } dynamic)
-            {
-                var neededVertex = (ulong)dynamic.VertexFloats * sizeof(float);
-                var neededIndex = (ulong)dynamic.IndexCount * sizeof(uint);
-
-                dynamicBuffers.EnsureVertexCapacity(neededVertex);
-
-                dynamicBuffers.EnsureIndexCapacity(neededIndex);
-
-                backend.WriteBuffer(
-                    dynamicBuffers.Vertex,
-                    System.Runtime.InteropServices.MemoryMarshal.AsBytes(dynamic.Vertices.AsSpan(0, dynamic.VertexFloats)),
-                    0);
-                backend.WriteBuffer(
-                    dynamicBuffers.Index,
-                    System.Runtime.InteropServices.MemoryMarshal.AsBytes(dynamic.Indices.AsSpan(0, dynamic.IndexCount)),
-                    0);
-                dynamicIndexCount = (uint)dynamic.IndexCount;
-            }
-
-            entityLayerDrawn = 0;
-            // A/B: skip only the buffer writes on the toggled group, so both halves draw the same geometry and the
-            // measured difference is the upload alone (T-828).
+            // A/B: skip only the buffer writes on the toggled group, so both halves draw the same geometry
+            // and the measured difference is the upload alone (T-828).
             var skipUpload = currentRequest.Diagnostics?.SkipGeometryUploadOnAbGroup == true && abGroup == 1;
             var uploadStart = System.Diagnostics.Stopwatch.GetTimestamp();
-            if (!skipUpload && entityLayers is not null && entityLayers() is { Count: > 0 } layers)
-            {
-                var used = layers.Count;
-                layerPool.EnsureCapacity(used);
-                for (var layerIndex = 0; layerIndex < used; layerIndex++)
-                {
-                    var layer = layers[layerIndex];
-                    var geometry = layer.Geometry;
-                    layerPool.SetIndexCount(layerIndex, 0);
-                    layerPool.SetKind(layerIndex, layer.Kind);
-                    layerPool.SetUsesItemAtlas(layerIndex, layer.UsesItemAtlas);
-                    if (geometry.IndexCount <= 0)
-                    {
-                        continue;
-                    }
-                    var neededVertex = (ulong)geometry.VertexFloats * sizeof(float);
-                    var neededIndex = (ulong)geometry.IndexCount * sizeof(uint);
-                    if (neededVertex > layerPool.VertexCapacity(layerIndex))
-                    {
-                        layerPool.GrowVertex(layerIndex, neededVertex);
-                    }
-
-                    if (neededIndex > layerPool.IndexCapacity(layerIndex))
-                    {
-                        layerPool.GrowIndex(layerIndex, neededIndex);
-                    }
-                    if (!skipUpload)
-                    {
-                    backend.WriteBuffer(
-                        layerPool.Vertex(layerIndex),
-                        System.Runtime.InteropServices.MemoryMarshal.AsBytes(geometry.Vertices.AsSpan(0, geometry.VertexFloats)),
-                        0);
-                    backend.WriteBuffer(
-                        layerPool.Index(layerIndex),
-                        System.Runtime.InteropServices.MemoryMarshal.AsBytes(geometry.Indices.AsSpan(0, geometry.IndexCount)),
-                        0);
-                    }
-                    layerPool.SetIndexCount(layerIndex, (uint)geometry.IndexCount);
-                }
-                entityLayerDrawn = used;
-            }
-            var updatesThisFrame = 0;
-
-            if (arena is not null)
-            {
-                var updates = geometryUpdates!();
-                updatesThisFrame = updates?.Count ?? 0;
-
-                if (!skipUpload && updates is { Count: > 0 })
-                {
-                    foreach (var (key, mesh) in updates)
-                    {
-                        arena.Apply(key, mesh);
-
-                        // The per chunk layers travel with the opaque geometry; a chunk with none just skips its arena.
-                        if (mesh.CutoutVertices is { Length: > 0 } cutoutVertices && arenaCutout is not null)
-                        {
-                            arenaCutout.Apply(key, new GeometryData(cutoutVertices, mesh.CutoutIndices ?? []));
-                        }
-
-                        if (mesh.TranslucentVertices is { Length: > 0 } translucentVertices && arenaTranslucent is not null)
-                        {
-                            arenaTranslucent.Apply(key, new GeometryData(translucentVertices, mesh.TranslucentIndices ?? []));
-                        }
-                    }
-                }
-            }
-
-            if (geometryRemovals?.Invoke() is { Count: > 0 } removals)
-            {
-                foreach (var key in removals)
-                {
-                    arena?.Remove(key);
-                    arenaCutout?.Remove(key);
-                    arenaTranslucent?.Remove(key);
-                }
-            }
+            var uploaded = geometryUploader.Upload(
+                dynamicGeometry?.Invoke(),
+                entityLayers?.Invoke(),
+                geometryUpdates?.Invoke(),
+                geometryRemovals?.Invoke(),
+                skipUpload);
+            dynamicIndexCount = uploaded.DynamicIndexCount;
+            entityLayerDrawn = uploaded.LayersDrawn;
+            var updatesThisFrame = uploaded.Updates;
 
             Cpu(FrameCpuTimings.PrepEntitiesStage);
             cpuTimings.AddAbSample(abGroup, System.Diagnostics.Stopwatch.GetTimestamp() - uploadStart);

@@ -87,11 +87,16 @@ internal sealed class EntityLayerPool(
         }
     }
 
-    /// <summary>Replaces one layer's vertex buffer with one twice the size asked for.</summary>
+    /// <summary>Replaces one layer's vertex buffer, if it is too small for what the frame needs.</summary>
     /// <param name="layer">Layer to grow.</param>
     /// <param name="neededBytes">Bytes the frame needs.</param>
     public void GrowVertex(int layer, ulong neededBytes)
     {
+        if (neededBytes <= _vertexCapacity[layer])
+        {
+            return;
+        }
+
         _deferred.Release(_vertex[layer]);
         var capacity = Math.Max(neededBytes * 2, _minimumBytes);
         _vertex[layer] = _backend.CreateBuffer(
@@ -99,11 +104,16 @@ internal sealed class EntityLayerPool(
         _vertexCapacity[layer] = capacity;
     }
 
-    /// <summary>Replaces one layer's index buffer with one twice the size asked for.</summary>
+    /// <summary>Replaces one layer's index buffer, if it is too small for what the frame needs.</summary>
     /// <param name="layer">Layer to grow.</param>
     /// <param name="neededBytes">Bytes the frame needs.</param>
     public void GrowIndex(int layer, ulong neededBytes)
     {
+        if (neededBytes <= _indexCapacity[layer])
+        {
+            return;
+        }
+
         _deferred.Release(_index[layer]);
         var capacity = Math.Max(neededBytes * 2, _minimumBytes);
         _index[layer] = _backend.CreateBuffer(

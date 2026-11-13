@@ -52,7 +52,7 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 
 ## 下一步具体动作
 
-**分支**：`frame-pipeline`，领先 `origin/main` **55 个提交未推送**。scene 主 pass 的四个 case 已全部抽成组件（`SkyPassRecorder`、`TerrainPassRecorder`、`EntityPassRecorder`），`WindowedRenderer.cs` 由 2400 降至 **2193**。`main` 本身也在 `234aed1` 未推送。推送需项目所有者明确授权。
+**分支**：`frame-pipeline`，领先 `origin/main` **55 个提交未推送**。scene 主 pass 的四个 case 已全部抽成组件（`SkyPassRecorder`、`TerrainPassRecorder`、`EntityPassRecorder`），`WindowedRenderer.cs` 由 2400 降至 **2109**（`FrameGeometryUploader` 也已完成）。`main` 本身也在 `234aed1` 未推送。推送需项目所有者明确授权。
 
 **当前任务 T-837（帧间流水线）**：规格 `docs/specs/render/frame-pipelining.md` 已就绪，切片 2 与切片 3 的前置设施已完成。
 
