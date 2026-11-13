@@ -62,6 +62,22 @@ public sealed class SectionVisibilityTests
     }
 
     [Fact]
+    public void AStandardSurfaceSectionConnectsEverythingButDown()
+    {
+        // The shape of a real surface section: the bottom half is ground and the top half is open sky. The open space
+        // reaches all four sides and the top, so those five faces must all see each other; the down face is covered by
+        // the ground and can see nothing. If this fails, the flood fill is wrong and no amount of traversal work will
+        // make the occlusion walk trustworthy (T-833).
+        var visibility = Compute(cell => (cell >> 8) < 8);
+
+        Assert.True(visibility.CanSee(Up, West), "up cannot see west");
+        Assert.True(visibility.CanSee(West, East), "west cannot see east");
+        Assert.True(visibility.CanSee(North, South), "north cannot see south");
+        Assert.True(visibility.CanSee(Up, North), "up cannot see north");
+        Assert.False(visibility.CanSee(Down, Up), "down should be covered");
+        Assert.False(visibility.CanSee(Down, West), "down should be covered");
+    }
+    [Fact]
     public void TheMatrixIsSymmetric()
     {
         var visibility = Compute(cell => (cell >> 8) == 0);
