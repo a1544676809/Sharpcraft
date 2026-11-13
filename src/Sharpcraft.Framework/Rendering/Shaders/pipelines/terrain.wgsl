@@ -3,6 +3,8 @@
 
 struct Camera {
     viewProjection : mat4x4<f32>,
+    // Declared so the eye lands at byte 128 where the uniform writes it; the terrain stages do not read it.
+    skyViewProjection : mat4x4<f32>,
     eye : vec4<f32>,
 };
 @group(0) @binding(2) var<uniform> camera : Camera;
