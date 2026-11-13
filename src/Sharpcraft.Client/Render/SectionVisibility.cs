@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Numerics;
+using Sharpcraft.Common.Reference;
 
 namespace Sharpcraft.Client.Render;
 
@@ -14,6 +15,7 @@ namespace Sharpcraft.Client.Render;
 /// everything buried underneath. Face order is west, east, down, up, north, south
 /// (docs/specs/render/section-occlusion.md).
 /// </remarks>
+[ReferenceClass("net.minecraft.client.renderer.chunk.VisibilitySet", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/chunk/VisibilitySet.java", Kind = ReferenceKind.Mirror, Status = ReferenceStatus.Full)]
 public readonly record struct SectionVisibility(ulong Bits)
 {
     /// <summary>Every face sees every other face; what an almost empty section resolves to.</summary>
@@ -38,6 +40,7 @@ public readonly record struct SectionVisibility(ulong Bits)
 /// resolves immediately. Nothing is allocated here; the scratch buffers come from the caller because this runs on the
 /// meshing path.
 /// </remarks>
+[ReferenceClass("net.minecraft.client.renderer.chunk.VisGraph", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/chunk/VisGraph.java", Kind = ReferenceKind.Mirror, Status = ReferenceStatus.Full)]
 public static class SectionVisibilityCompute
 {
     /// <summary>Cells that must block before any face pair can be separated.</summary>
