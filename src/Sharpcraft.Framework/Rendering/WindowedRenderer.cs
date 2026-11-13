@@ -62,6 +62,7 @@ public static class WindowedRenderer
     FrameDiagnostics? diagnostics = null,
     Func<LightmapUniform>? lightmapPerFrame = null,
     Func<Vector4>? fogPerFrame = null,
+    Func<(float Start, float End)>? fogRangePerFrame = null,
     Func<Vector4>? clearColourPerFrame = null,
     Func<CelestialColorDraw?>? cloudsPerFrame = null,
     Func<(CelestialQuadDraw[] Draws, CelestialColorDraw[] Colors, CelestialColorDraw[] SkyDiscs)?>? celestialPerFrame = null,
@@ -1125,6 +1126,7 @@ public static class WindowedRenderer
 
             // Per-frame fog colour (time/weather driven); the range stays as configured.
             var frameFogColour = fogPerFrame?.Invoke() ?? currentRequest.FogColour;
+            var frameFogRange = fogRangePerFrame?.Invoke() ?? AtmosphericFog.Range(currentRequest.RainLevel);
 
             uniformWriter.Write(
                 cameraBlock,
@@ -1137,9 +1139,9 @@ public static class WindowedRenderer
                 frameFogColour,
                 currentRequest.Diagnostics?.FogStart ?? 64f,
                 currentRequest.Diagnostics?.FogEnd ?? 160f,
-                // The atmospheric shell is always on; a thousand and twenty four is the reference default.
-                0f,
-                1024f);
+                // Always on; the host pulls it in as rain rises, so rain closes the view rather than only tinting.
+                frameFogRange.Start,
+                frameFogRange.End);
 
             backend.SetBindGroup(pass, 0, bindGroup);
 

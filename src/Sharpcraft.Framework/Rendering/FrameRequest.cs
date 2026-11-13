@@ -43,6 +43,12 @@ public sealed record FrameRequest(
     public float GlintTime { get; init; }
 
     /// <summary>
+    /// Rain from nothing to full. The atmospheric fog shell narrows as it rises, so rain closes the view
+    /// in rather than only tinting it; the shell itself is computed by <see cref="AtmosphericFog"/>.
+    /// </summary>
+    public float RainLevel { get; init; }
+
+    /// <summary>
     /// Fog colour (RGB 0..1) for this frame. The reference multiplies a base fog colour by the time/weather fog
     /// timeline; the host recomputes this per frame (docs/modules/weather-and-sky-color.md 6.3).
     /// </summary>

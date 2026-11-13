@@ -845,6 +845,7 @@ internal static class WindowCommand
             diagnostics: GameOptions.ForFrame(),
             lightmapPerFrame: () => session.CurrentLightmap(),
             fogPerFrame: () => session.CurrentFogColour(),
+    fogRangePerFrame: () => session.CurrentFogEnvironmentalRange(),
             clearColourPerFrame: () => session.CurrentFogColour(),
             cloudsPerFrame: () =>
             {
