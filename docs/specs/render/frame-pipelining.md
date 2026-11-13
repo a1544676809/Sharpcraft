@@ -170,8 +170,9 @@ GPU 缓冲池按 L443 的循环持久增长，每帧只重置计数（`entityLay
 | `FrameUniformStaging` | −5 |
 | `EntityLayerPool` | −28 |
 | `GrowableGeometryBuffers`（界面与动态各一实例） | −23 |
+| `EntityPassRecorder` | −74 |
 
-累计 **−56 行**，`WindowedRenderer.cs` 由 2400 降至 **2344**。
+累计 **−130 行**，`WindowedRenderer.cs` 由 2400 降至 **2270**。
 
 ### 11.2 关键发现：单个 pass 不需要大状态对象
 
@@ -180,7 +181,7 @@ GPU 缓冲池按 L443 的循环持久增长，每帧只重置计数（`entityLay
 大状态对象只在最后把整个录制序列整体搬走时才需要。因此建议顺序：
 
 1. ~~`clouds` 绘制块~~ **已证实无内容可抽**（13 行中 2 行是组件调用；那 73 行是云的**建立**，属几何构建）
-2. **`scene-entities`（107 行）** ← 下一个真实目标，`EntityLayerPool` 已提供所需句柄
+2. ~~`scene-entities`~~ **已完成**（`EntityPassRecorder`，98 行 → 7 行调用）。140 → 7 行
 3. `scene`（183 行）→ 最后做，因为它是最多句柄的交汇处
 
 每步判据相同：**离线 `--frame` 哈希不变 + 全量测试通过**。

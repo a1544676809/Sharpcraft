@@ -440,6 +440,23 @@ public static class WindowedRenderer
         var indexBuffer = backend.CreateBuffer(new BufferDesc(indexCapacity, BufferUsages.Index | BufferUsages.CopyDst));
         backend.WriteBuffer(vertexBuffer, System.Runtime.InteropServices.MemoryMarshal.AsBytes(currentRequest.Vertices.AsSpan()), 0);
         backend.WriteBuffer(indexBuffer, System.Runtime.InteropServices.MemoryMarshal.AsBytes(currentRequest.Indices.AsSpan()), 0);
+
+        var entityRecorder = new EntityPassRecorder(
+            backend,
+            entityPipeline,
+            cutoutPipeline,
+            entityCutoutPipeline,
+            itemCutoutPipeline,
+            entityElytraPipeline,
+            entityEmissivePipeline,
+            entityGlintPipeline,
+            entitySkin,
+            itemAtlasGpu,
+            layerPool,
+            dynamicBuffers,
+            bindGroup,
+            vertexBuffer,
+            indexBuffer);
         var depthTexture = CreateDepthTexture(backend, frameWidth, frameHeight);
         // The reference OIT passes take depth as a seam descriptor, so the view comes from the seam as well and is
         // refreshed with the texture it belongs to on resize.
@@ -1370,99 +1387,8 @@ public static class WindowedRenderer
                     case WorldRenderPassKind.Entities:
                     {
                         Cpu(FrameCpuTimings.SceneEntitiesStage);
-                        if (!skipEntities && dynamicIndexCount > 0)
-                        {
-                            backend.SetPipeline(pass, entityPipeline);
-                            backend.SetVertexBuffer(pass, 0, dynamicBuffers.Vertex, 0, dynamicBuffers.VertexCapacity);
-                            backend.SetIndexBuffer(pass, dynamicBuffers.Index, IndexFormat.Uint32, 0, (ulong)dynamicIndexCount * sizeof(uint));
-                            if (entitySkin.Created)
-                            {
-                                backend.SetBindGroup(pass, 0, entitySkin.BindGroup);
-                            }
-
-                            backend.DrawIndexed(pass, dynamicIndexCount, 1, 0, 0, 1);
-                            if (entitySkin.Created)
-                            {
-                                backend.SetBindGroup(pass, 0, bindGroup);
-                            }
-                        }
-
-                        // Entity layers (docs/decisions/0021): cutout layers share the opaque depth (writes on);
-                        // translucent layers blend with depth writes off, which the pipeline state already encodes.
-                        for (var layerIndex = 0; layerIndex < entityLayerDrawn; layerIndex++)
-                        {
-                            var layerIndexCount = layerPool.IndexCount(layerIndex);
-                            if (layerIndexCount == 0)
-                            {
-                                continue;
-                            }
-
-                            if (layerPool.Kind(layerIndex) == EntityGeometryLayerKind.ItemTranslucent)
-                            {
-                                // Composed by the reference OIT stages below, exactly as RenderTypes.ITEM_TRANSLUCENT
-                                // binds OIT_ITEM in the reference.
-                                continue;
-                            }
-
-                            backend.SetPipeline(pass, layerPool.Kind(layerIndex) switch
-                            {
-                                EntityGeometryLayerKind.ItemCutout => itemCutoutPipeline,
-                                EntityGeometryLayerKind.Translucent => entityPipeline,
-                                EntityGeometryLayerKind.Emissive => entityEmissivePipeline,
-                                EntityGeometryLayerKind.Glint => entityGlintPipeline,
-                                EntityGeometryLayerKind.Elytra => entityElytraPipeline,
-                                _ => entityCutoutPipeline
-                            });
-                            backend.SetVertexBuffer(pass, 0, layerPool.Vertex(layerIndex), 0, layerPool.VertexCapacity(layerIndex));
-                            backend.SetIndexBuffer(
-                                pass,
-                                layerPool.Index(layerIndex),
-                                IndexFormat.Uint32,
-                                0,
-                                (ulong)layerIndexCount * sizeof(uint));
-                            if (layerPool.UsesItemAtlas(layerIndex) && itemAtlasGpu.Created)
-                            {
-                                backend.SetBindGroup(pass, 0, itemAtlasGpu.BindGroup);
-                            }
-                            else if (entitySkin.Created)
-                            {
-                                backend.SetBindGroup(pass, 0, entitySkin.BindGroup);
-                            }
-
-                            backend.DrawIndexed(pass, layerIndexCount, 1, 0, 0, 1);
-                        }
-
-                        if (entityLayerDrawn > 0 && (entitySkin.Created || itemAtlasGpu.Created))
-                        {
-                            backend.SetBindGroup(pass, 0, bindGroup);
-                        }
-                        else if (useStaticWorld)
-                        {
-                            backend.SetVertexBuffer(pass, 0, vertexBuffer);
-                            backend.SetIndexBuffer(pass, indexBuffer, IndexFormat.Uint32);
-                            backend.DrawIndexed(pass, (uint)currentRequest.Indices.Length, 1, 0, 0, 1);
-                        }
-
-                        // The static fallback keeps its original post-entity order. Translucent terrain is not drawn
-                        // here: it writes the order independent targets in the next pass (docs/specs/render/pipeline.md 15).
-                        if (useStaticWorld && currentRequest.CutoutVertices is { Length: > 0 } windowCutoutVertices &&
-                            currentRequest.CutoutIndices is { Length: > 0 } windowCutoutIndices)
-                        {
-                            var windowCutoutVertexBuffer = backend.CreateBufferInit(
-                                new BufferDesc((ulong)windowCutoutVertices.Length * sizeof(float), BufferUsages.Vertex),
-                                System.Runtime.InteropServices.MemoryMarshal.AsBytes(windowCutoutVertices.AsSpan()));
-                            var windowCutoutIndexBuffer = backend.CreateBufferInit(
-                                new BufferDesc((ulong)windowCutoutIndices.Length * sizeof(uint), BufferUsages.Index),
-                                System.Runtime.InteropServices.MemoryMarshal.AsBytes(windowCutoutIndices.AsSpan()));
-
-                            backend.SetPipeline(pass, cutoutPipeline);
-                            backend.SetBindGroup(pass, 0, bindGroup);
-                            backend.SetVertexBuffer(pass, 0, windowCutoutVertexBuffer);
-                            backend.SetIndexBuffer(pass, windowCutoutIndexBuffer, IndexFormat.Uint32);
-                            backend.DrawIndexed(pass, (uint)windowCutoutIndices.Length, 1, 0, 0, 1);
-                            backend.Destroy(windowCutoutIndexBuffer);
-                            backend.Destroy(windowCutoutVertexBuffer);
-                        }
+                        entityRecorder.Record(
+                            pass, dynamicIndexCount, entityLayerDrawn, skipEntities, useStaticWorld, currentRequest);
                         break;
                     }
                 }
