@@ -29,18 +29,23 @@ public readonly record struct SectionCoord(int X, int Y, int Z)
 /// Walks the sections around the camera and keeps only those reachable through open space.
 /// </summary>
 /// <remarks>
-/// A section that is entirely rock reports that its faces cannot see each other, which stops the walk there instead of
-/// descending into everything buried below it. The walk is deliberately monotone: once a direction has been taken, the
-/// opposite is refused, so sight lines cannot double back through an S-bend and claim a cave behind the camera is
-/// visible.
+/// A section whose face matrix says the entry and exit faces are separated by rock cannot be crossed, which stops the
+/// walk at solid ground instead of descending into everything buried below it.
 /// <para>
-/// Sections are visited once. Two different paths reaching the same section therefore only contribute the first one's
-/// exit directions, which can in principle leave a section beyond it out; that is the same approximation the reference
-/// makes, and it errs towards drawing less rather than more (docs/specs/render/section-occlusion.md).
+/// Each path carries the directions it has already taken and refuses their opposites, so a sight line cannot leave the
+/// camera, turn, and come back to claim something behind it. That mask travels with the node and is never shared
+/// between paths: sharing it is what once cut six hundred columns down to seventeen.
+/// </para>
+/// <para>
+/// A section may be entered more than once, but only through a different face each time. One flag per section is not
+/// enough: a hillside reached first through its solid west wall would burn its only mark and lock out the open path
+/// down from the sky above it, which fragments the surface. Six bits per section record which faces have been used,
+/// and a seventh remembers whether the section has been reported. The queue is sized for the worst case of three
+/// entries per section.
 /// </para>
 /// <para>
 /// Nothing is allocated: the queue, the visited marks and the output all belong to the caller. The three delegates are
-/// called once per section per frame, so the caller must hold them in fields rather than create them per frame.
+/// called once per section per walk, so the caller must hold them in fields rather than create them per frame.
 /// </para>
 /// </remarks>
 [ReferenceClass("net.minecraft.client.renderer.SectionOcclusionGraph", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/SectionOcclusionGraph.java", Kind = ReferenceKind.Mirror, Status = ReferenceStatus.Partial, Note = "traversal semantics only; the reference organises sections in a tree and we walk a flat grid")]
@@ -52,6 +57,12 @@ public static class SectionOcclusionTraversal
     /// <summary>No face recorded yet; the camera section is entered from nowhere.</summary>
     public const byte NoEntryFace = 0xFF;
 
+    /// <summary>Visited bit that means the section has already been written to the output.</summary>
+    public const byte Reported = 0x80;
+
+    /// <summary>How many times one section may be entered: once per axis, so one per face of a hemisphere.</summary>
+    public const int EntriesPerSection = 3;
+
     /// <summary>Walks from the camera section, appending reachable sections to the output.</summary>
     /// <param name="cameraSection">Section the camera occupies.</param>
     /// <param name="radius">Reach in sections along X and Z.</param>
@@ -60,7 +71,7 @@ public static class SectionOcclusionTraversal
     /// <param name="isLoaded">Whether a section has geometry to consider.</param>
     /// <param name="visibility">Face matrix of a section, or <see cref="SectionVisibility.AllVisible"/> if unknown.</param>
     /// <param name="isInFrustum">Whether a section's box intersects the view frustum.</param>
-    /// <param name="queue">Scratch queue, at least the size of the searched volume.</param>
+    /// <param name="queue">Scratch queue, at least <see cref="EntriesPerSection"/> times the searched volume.</param>
     /// <param name="visited">Scratch marks, at least the size of the searched volume; cleared here.</param>
     /// <param name="output">Receives the reachable sections.</param>
     /// <param name="outputCount">Number written to <paramref name="output"/>.</param>
@@ -91,7 +102,7 @@ public static class SectionOcclusionTraversal
 
         var volume = Volume(radius, minimumY, maximumY);
 
-        if (visited.Length < volume || queue.Length < volume || output.Length < volume)
+        if (visited.Length < volume || queue.Length < volume * EntriesPerSection || output.Length < volume)
         {
             throw new ArgumentException("scratch buffers are too small for the searched volume");
         }
@@ -99,8 +110,9 @@ public static class SectionOcclusionTraversal
         var head = 0;
         var tail = 0;
 
+        var startSlot = Index(cameraSection, cameraSection, minimumY, radius);
+        visited[startSlot] = Reported;
         queue[tail++] = new TraversalNode(cameraSection, NoEntryFace, 0);
-        visited[Index(cameraSection, cameraSection, minimumY, radius)] = 1;
         output[outputCount++] = cameraSection;
 
         while (head < tail)
@@ -110,15 +122,15 @@ public static class SectionOcclusionTraversal
 
             for (var face = 0; face < 6; face++)
             {
-                // Only refuse to step straight back through the face we came in by. Accumulating every direction the
-                // path has ever taken looks safer but chokes the walk: after a few steps most directions are refused,
-                // and only seventeen of six hundred columns survive (T-833).
-                if (current.EntryFace != NoEntryFace && face == current.EntryFace)
+                var enteredBy = face ^ 1;
+
+                // This path has already gone this way and back once; a sight line cannot bend back over itself.
+                if ((current.DirectionsTaken & (1 << enteredBy)) != 0)
                 {
                     continue;
                 }
 
-                // Entering through one face and leaving through another needs open space between them.
+                // Cross a section only where its own open space connects the face we enter by to the face we leave by.
                 if (current.EntryFace != NoEntryFace && !matrix.CanSee(current.EntryFace, face))
                 {
                     continue;
@@ -136,28 +148,37 @@ public static class SectionOcclusionTraversal
                     continue;
                 }
 
-                var slot = Index(next, cameraSection, minimumY, radius);
-                if (visited[slot] != 0)
-                {
-                    continue;
-                }
-
-                visited[slot] = 1;
-
                 if (!isLoaded(next) || !isInFrustum(next))
                 {
                     continue;
                 }
 
-                if (outputCount < output.Length)
+                var slot = Index(next, cameraSection, minimumY, radius);
+                var entryBit = (byte)(1 << enteredBy);
+
+                // Each face may deliver a section once, so a solid approach cannot burn the mark an open one needs.
+                if ((visited[slot] & entryBit) != 0)
                 {
-                    output[outputCount++] = next;
+                    continue;
                 }
 
-                queue[tail++] = new TraversalNode(next, (byte)(face ^ 1), (byte)(current.DirectionsTaken | (1 << face)));
+                if ((visited[slot] & Reported) == 0)
+                {
+                    visited[slot] |= Reported;
+
+                    if (outputCount < output.Length)
+                    {
+                        output[outputCount++] = next;
+                    }
+                }
+
+                visited[slot] |= entryBit;
+                queue[tail++] = new TraversalNode(
+                    next,
+                    (byte)enteredBy,
+                    (byte)(current.DirectionsTaken | (1 << face)));
             }
         }
-
     }
 
     /// <summary>Number of sections in the searched box.</summary>
@@ -182,7 +203,7 @@ public static class SectionOcclusionTraversal
     /// <summary>One section waiting to be expanded, with the direction it was entered from.</summary>
     /// <param name="Coord">Section.</param>
     /// <param name="EntryFace">Face it was entered through, or <see cref="NoEntryFace"/>.</param>
-    /// <param name="DirectionsTaken">Directions already used along this path.</param>
+    /// <param name="DirectionsTaken">Directions used along this path.</param>
     [ReferenceClass("net.minecraft.client.renderer.SectionOcclusionGraph", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/SectionOcclusionGraph.java", Kind = ReferenceKind.Mirror, Status = ReferenceStatus.Partial, Note = "the reference node also carries a step count; behaviour here needs only the direction state")]
     public readonly record struct TraversalNode(SectionCoord Coord, byte EntryFace, byte DirectionsTaken);
 }

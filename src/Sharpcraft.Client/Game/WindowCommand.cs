@@ -596,14 +596,16 @@ internal static class WindowCommand
 
         // Occlusion (T-833): the walk is rebuilt only when the camera changes section, and the predicate handed to
         // the renderer is answered from that set.
-        var occlusionMaxY = world.MinSectionY + 24;
+        // Highest section index, not the count: the world starts at MinSectionY and has SectionCount sections.
+        var occlusionMaxY = world.MinSectionY + world.SectionCount - 1;
         var occlusion = new Sharpcraft.Client.Render.SectionOcclusionState(
             InteractiveSession.ViewDistanceChunks,
             world.MinSectionY,
             occlusionMaxY,
             coord => world.GetChunk(coord.X, coord.Z) is not null,
             key => meshCache.TryGetMesh(key, out var mesh) ? mesh : null,
-            CameraSection);
+            CameraSection,
+            () => (world.LoadedChunkCount * 1_000_003) + meshCache.TotalChunksMeshed);
 
         Sharpcraft.Client.Render.SectionCoord CameraSection()
         {
@@ -844,7 +846,12 @@ internal static class WindowCommand
             lightmapPerFrame: () => session.CurrentLightmap(),
             fogPerFrame: () => session.CurrentFogColour(),
             clearColourPerFrame: () => session.CurrentFogColour(),
-            cloudsPerFrame: () => session.CurrentCloudDraw(),
+            cloudsPerFrame: () =>
+            {
+                // Once per frame, never per query: the walk is cheap here and ruinous when repeated per section.
+                occlusion.Refresh(occlusion.CameraSection);
+                return session.CurrentCloudDraw();
+            },
             cloudOitEnabled: session.CloudUseOit,
             oitLowPrecision: oitLowPrecision,
             cloudDepthEnabled: cloudDepth,

@@ -37,7 +37,10 @@ public sealed class SectionOcclusionState
     private readonly Func<SectionCoord, bool> _isLoaded;
     private readonly Func<long, MeshData?> _meshSource;
     private readonly Func<SectionCoord, bool> _alwaysInFrustum = _ => true;
+    private readonly Func<SectionCoord> _camera;
+    private readonly Func<int> _worldVersion;
     private SectionCoord? _lastCameraSection;
+    private int _lastWorldVersion = -1;
 
     /// <summary>Creates the state for a world of the given vertical extent.</summary>
     /// <param name="radius">Reach in sections along X and Z.</param>
@@ -52,32 +55,37 @@ public sealed class SectionOcclusionState
         int maximumY,
         Func<SectionCoord, bool> isLoaded,
         Func<long, MeshData?> meshSource,
-        Func<SectionCoord> camera)
+        Func<SectionCoord> camera,
+        Func<int> worldVersion)
     {
         ArgumentNullException.ThrowIfNull(isLoaded);
         ArgumentNullException.ThrowIfNull(meshSource);
         ArgumentNullException.ThrowIfNull(camera);
+        ArgumentNullException.ThrowIfNull(worldVersion);
 
         _radius = radius;
         _minimumY = minimumY;
         _maximumY = maximumY;
         _isLoaded = isLoaded;
         _meshSource = meshSource;
+        _camera = camera;
+        _worldVersion = worldVersion;
 
         var volume = SectionOcclusionTraversal.Volume(radius, minimumY, maximumY);
-        _queue = new SectionOcclusionTraversal.TraversalNode[volume];
+        _queue = new SectionOcclusionTraversal.TraversalNode[volume * SectionOcclusionTraversal.EntriesPerSection];
         _visited = new byte[volume];
         _output = new SectionCoord[volume];
 
-        IsVisible = (key, sectionIndex) =>
-        {
-            Refresh(camera());
-            return Test(key, sectionIndex);
-        };
+        // Query only. Rebuilding here would run the walk once per section per frame, which is thousands of walks
+        // while chunks are still streaming in and cost more than the drawing it saves.
+        IsVisible = Test;
     }
 
     /// <summary>Predicate the renderer calls per section; held in a field so passing it costs nothing.</summary>
     public Func<long, int, bool> IsVisible { get; }
+
+    /// <summary>Current camera section, so the caller can refresh once per frame rather than per query.</summary>
+    public SectionCoord CameraSection => _camera();
 
     /// <summary>Whether the walk kept the given section.</summary>
     /// <param name="chunkKey">Packed chunk key.</param>
@@ -103,12 +111,17 @@ public sealed class SectionOcclusionState
     /// <returns>True when the set was rebuilt.</returns>
     public bool Refresh(SectionCoord cameraSection)
     {
-        if (_lastCameraSection == cameraSection)
+        // The camera moving is only one reason what is reachable can change: chunks stream in and their meshes
+        // arrive over the first seconds of a session. Rebuilding only on camera movement froze the very first
+        // walk, taken while a few dozen chunks existed, and kept drawing against it for the rest of the session.
+        var version = _worldVersion();
+        if (_lastCameraSection == cameraSection && _lastWorldVersion == version)
         {
             return false;
         }
 
         _lastCameraSection = cameraSection;
+        _lastWorldVersion = version;
         _visible.Clear();
 
         SectionOcclusionTraversal.Traverse(

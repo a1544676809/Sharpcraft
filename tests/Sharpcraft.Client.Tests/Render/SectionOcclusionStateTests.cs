@@ -79,7 +79,8 @@ public sealed class SectionOcclusionStateTests
             MaximumY,
             _ => true,
             _ => null,
-            () => new SectionCoord(0, 5, 0));
+            () => new SectionCoord(0, 5, 0),
+            () => 0);
 
         state.Refresh(new SectionCoord(0, 5, 0));
 
@@ -103,7 +104,8 @@ public sealed class SectionOcclusionStateTests
         MaximumY,
         _ => true,
         _ => mesh,
-        () => new SectionCoord(0, 5, 0));
+        () => new SectionCoord(0, 5, 0),
+        () => 0);
 
     private static MeshData Mesh(SectionVisibility sight, int messMinY)
     {

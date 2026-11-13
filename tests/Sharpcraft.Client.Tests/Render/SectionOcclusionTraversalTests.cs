@@ -73,7 +73,7 @@ public sealed class SectionOcclusionTraversalTests
     [Fact]
     public void TheWalkDoesNotAllocate()
     {
-        var queue = new SectionOcclusionTraversal.TraversalNode[Volume()];
+        var queue = new SectionOcclusionTraversal.TraversalNode[Volume() * SectionOcclusionTraversal.EntriesPerSection];
         var visited = new byte[Volume()];
         var output = new SectionCoord[Volume()];
 
@@ -102,7 +102,7 @@ public sealed class SectionOcclusionTraversalTests
 
     private static SectionCoord[] Run(Func<SectionCoord, SectionVisibility> visibility, out int count)
     {
-        var queue = new SectionOcclusionTraversal.TraversalNode[Volume()];
+        var queue = new SectionOcclusionTraversal.TraversalNode[Volume() * SectionOcclusionTraversal.EntriesPerSection];
         var visited = new byte[Volume()];
         var output = new SectionCoord[Volume()];
 
