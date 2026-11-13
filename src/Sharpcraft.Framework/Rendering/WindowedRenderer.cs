@@ -413,15 +413,12 @@ public static class WindowedRenderer
 
         // Geometry that is rebuilt every frame, such as placeholder entity boxes. It gets its own small pair of
         // buffers so a per frame rewrite never touches the world arena.
-        var dynamicVertex = backend.CreateBuffer(new BufferDesc(MinimumBufferBytes, BufferUsages.Vertex | BufferUsages.CopyDst));
-        var dynamicIndex = backend.CreateBuffer(new BufferDesc(MinimumBufferBytes, BufferUsages.Index | BufferUsages.CopyDst));
 
         var deferredRelease = new DeferredBufferRelease(backend.Destroy);
-        var uiBuffers = new UiGeometryBuffers(backend, deferredRelease, MinimumBufferBytes);
+        var uiBuffers = new GrowableGeometryBuffers(backend, deferredRelease, MinimumBufferBytes);
+        var dynamicBuffers = new GrowableGeometryBuffers(backend, deferredRelease, MinimumBufferBytes);
         var uiRanges = new List<UiGeometry.Range>();
         var uiScale = 1f;
-        var dynamicVertexCapacity = MinimumBufferBytes;
-        var dynamicIndexCapacity = MinimumBufferBytes;
 
         // Entity layers (docs/decisions/0021): persistent buffers grow with the layer plan instead of a fixed
         // cap, so an explicit per-layer definition can add a new pass without truncation.
@@ -888,7 +885,7 @@ public static class WindowedRenderer
 
             // Rewriting the persistent buffers costs one upload; nothing is allocated or freed in the
             // steady state, so streaming new terrain does not hitch.
-            var dynamicIndexCount = 0u;
+        var dynamicIndexCount = 0u;
             uiBuffers.SetIndexCount(0);
 
             if (uiGeometry is not null && uiGeometry(new UiFrame(window.Input, window.Gui.Width, window.Gui.Height)) is { Ranges.Length: > 0 } ui)
@@ -933,26 +930,16 @@ public static class WindowedRenderer
                 var neededVertex = (ulong)dynamic.VertexFloats * sizeof(float);
                 var neededIndex = (ulong)dynamic.IndexCount * sizeof(uint);
 
-                if (neededVertex > dynamicVertexCapacity)
-                {
-                    deferredRelease.Release(dynamicVertex);
-                    dynamicVertexCapacity = Math.Max(neededVertex * 2, MinimumBufferBytes);
-                    dynamicVertex = backend.CreateBuffer(new BufferDesc(dynamicVertexCapacity, BufferUsages.Vertex | BufferUsages.CopyDst));
-                }
+            dynamicBuffers.EnsureVertexCapacity(neededVertex);
 
-                if (neededIndex > dynamicIndexCapacity)
-                {
-                    deferredRelease.Release(dynamicIndex);
-                    dynamicIndexCapacity = Math.Max(neededIndex * 2, MinimumBufferBytes);
-                    dynamicIndex = backend.CreateBuffer(new BufferDesc(dynamicIndexCapacity, BufferUsages.Index | BufferUsages.CopyDst));
-                }
+            dynamicBuffers.EnsureIndexCapacity(neededIndex);
 
                 backend.WriteBuffer(
-                    dynamicVertex,
+                dynamicBuffers.Vertex,
                     System.Runtime.InteropServices.MemoryMarshal.AsBytes(dynamic.Vertices.AsSpan(0, dynamic.VertexFloats)),
                     0);
                 backend.WriteBuffer(
-                    dynamicIndex,
+                dynamicBuffers.Index,
                     System.Runtime.InteropServices.MemoryMarshal.AsBytes(dynamic.Indices.AsSpan(0, dynamic.IndexCount)),
                     0);
                 dynamicIndexCount = (uint)dynamic.IndexCount;
@@ -1386,8 +1373,8 @@ public static class WindowedRenderer
                         if (!skipEntities && dynamicIndexCount > 0)
                         {
                             backend.SetPipeline(pass, entityPipeline);
-                            backend.SetVertexBuffer(pass, 0, dynamicVertex, 0, dynamicVertexCapacity);
-                            backend.SetIndexBuffer(pass, dynamicIndex, IndexFormat.Uint32, 0, (ulong)dynamicIndexCount * sizeof(uint));
+                            backend.SetVertexBuffer(pass, 0, dynamicBuffers.Vertex, 0, dynamicBuffers.VertexCapacity);
+                            backend.SetIndexBuffer(pass, dynamicBuffers.Index, IndexFormat.Uint32, 0, (ulong)dynamicIndexCount * sizeof(uint));
                             if (entitySkin.Created)
                             {
                                 backend.SetBindGroup(pass, 0, entitySkin.BindGroup);
@@ -1972,8 +1959,7 @@ public static class WindowedRenderer
             cpuTimings.WriteSummary();
         }
 
-        deferredRelease.Release(dynamicVertex);
-        deferredRelease.Release(dynamicIndex);
+            dynamicBuffers.Destroy();
         for (var layerIndex = 0; layerIndex < layerPool.Count; layerIndex++)
         {
             deferredRelease.Release(layerPool.Vertex(layerIndex));
@@ -2355,3 +2341,4 @@ public static class WindowedRenderer
             LayoutAttributes.From(VertexLayout.Attributes())));
     }
 }
+

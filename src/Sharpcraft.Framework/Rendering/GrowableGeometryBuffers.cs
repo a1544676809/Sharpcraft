@@ -4,7 +4,7 @@
 namespace Sharpcraft.Framework.Rendering;
 
 /// <summary>
-/// The interface pass's vertex and index buffers, grown to fit the geometry a frame uploads.
+/// A pair of vertex and index buffers that persist across frames and grow to fit what a frame uploads.
 /// </summary>
 /// <remarks>
 /// Same shape as <see cref="EntityLayerPool"/>: the buffers persist across frames and only grow, and a
@@ -12,7 +12,7 @@ namespace Sharpcraft.Framework.Rendering;
 /// reading it. Pulling the five related locals out of the windowed loop gives them one owner and one
 /// invariant — capacity always describes the buffer beside it (T-837).
 /// </remarks>
-internal sealed class UiGeometryBuffers
+internal sealed class GrowableGeometryBuffers
 {
     private readonly IRenderBackend _backend;
     private readonly DeferredBufferRelease _deferred;
@@ -28,7 +28,7 @@ internal sealed class UiGeometryBuffers
     /// <param name="backend">Backend to create buffers through.</param>
     /// <param name="deferred">Queue that disposes a buffer once no frame can be reading it.</param>
     /// <param name="minimumBytes">Smallest a buffer is allowed to be.</param>
-    public UiGeometryBuffers(IRenderBackend backend, DeferredBufferRelease deferred, ulong minimumBytes)
+    public GrowableGeometryBuffers(IRenderBackend backend, DeferredBufferRelease deferred, ulong minimumBytes)
     {
         _backend = backend ?? throw new ArgumentNullException(nameof(backend));
         _deferred = deferred ?? throw new ArgumentNullException(nameof(deferred));
