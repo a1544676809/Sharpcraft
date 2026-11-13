@@ -28,6 +28,7 @@
 | [`shader-organisation.md`](shader-organisation.md) | 文件布局、命名、include、绑定单一来源、启动期自检、与测试门禁；WGSL 语境下的严谨约定 | 草稿 | - |
 | [`shader-pack-compatibility.md`](shader-pack-compatibility.md) | 我们能吃什么、不能吃什么，以及不支持特性如何改写；面向包作者 | 草稿 | - |
 | [`shader-packs.md`](shader-packs.md) | 渲染目标、阶段、顺序、采样与 uniform 的声明模型，以及失败回退规则 | 已评审 | - |
+| [`single-track-executor.md`](single-track-executor.md) | 原则 14 要求"离屏与窗口渲染 MUST 共用同一套帧 Pass 执行器（窗口仅作最终上屏呈现）"。 | 未标注 | - |
 | [`sky-celestial.md`](sky-celestial.md) | 原版 SkyRenderer 的天空盘、日月星几何/变换/贴图与环境属性依赖 | 待评审 | - |
 
 <!-- END GENERATED: docs/specs/render -->
