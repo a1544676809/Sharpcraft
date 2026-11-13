@@ -91,7 +91,10 @@ fn vs_main(
     // never forces the mesh to be re-transformed and re-uploaded.
     let clip = camera.viewProjection * vec4<f32>(position, 1.0);
     output.clipPosition = clip;
-    output.fogDistance = length(position.xyz - camera.eye.xyz);
+    // fog_cylindrical_distance: the render distance fade is a cylinder, so going up or down does not add
+    // distance and the fade looks the same in every direction (T-835).
+    let relativeToEye = position.xyz - camera.eye.xyz;
+    output.fogDistance = max(length(relativeToEye.xz), abs(relativeToEye.y));
     output.colour = colour.rgb;
     output.uv = uv;
     output.spriteRect = spriteRects[packed & 0xFFFFu];

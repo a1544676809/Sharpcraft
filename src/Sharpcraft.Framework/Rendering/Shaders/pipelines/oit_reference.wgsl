@@ -99,7 +99,8 @@ fn vs_main(
     output.clipPosition = clip;
     // clip.w is the view-space distance (the projection is set up so), i.e. the linear depth in blocks; clip.z / clip.w
     // is the normalized device depth in [0, 1]. Both are interpolated: depth is affine in screen space, so this is exact.
-    output.fogDistance = length(position.xyz - camera.eye.xyz);
+    let relativeToEye = position.xyz - camera.eye.xyz;
+    output.fogDistance = max(length(relativeToEye.xz), abs(relativeToEye.y));
     output.deviceDepth = clip.z / max(clip.w, 0.00001);
     output.colour = colour.rgb;
     output.uv = uv;

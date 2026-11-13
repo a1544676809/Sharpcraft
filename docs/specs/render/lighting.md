@@ -169,3 +169,40 @@ if (lookingAtTheSunFactor > 0) fogColor = srgbLerp(lookingAtTheSunFactor * alpha
 1. 固定时间到日落，用 `MC_AB_TOGGLE` 或强制部分区块重建，观察接缝是否随重建变化 → 判定是否与网格生命周期有关
 2. 关掉 `_meshes.Clear()`（临时），同机位对比 → 若接缝消失，问题即在此
 3. 若上述都不是，检查雾色是否随视线方向变化 → 对照原版补方向性
+## 11. 雾的距离：双壳算法（T-835）
+
+原版 `shaders/include/fog.glsl`：
+
+```glsl
+float linear_fog_value(float d, float start, float end) {
+    if (d <= start) return 0.0;
+    if (d >= end)   return 1.0;
+    return (d - start) / (end - start);
+}
+
+float total_fog_value(spherical, cylindrical, envStart, envEnd, rdStart, rdEnd) {
+    return max(linear_fog_value(spherical,   envStart, envEnd),
+               linear_fog_value(cylindrical, rdStart,  rdEnd));
+}
+```
+
+两个距离**同时**从顶点传出：
+
+| 壳 | 距离 | 形状 | 用哪组范围 |
+| --- | --- | --- | --- |
+| 球形 | `length(pos)` | 球 | `environmentalStart/End`（`FOG_START/END_DISTANCE`，默认 1024 格） |
+| 柱形 | `max(length(pos.xz), abs(pos.y))` | 柱 | `renderDistanceStart/End` |
+
+柱形的意义：**垂直方向不增加距离**，抬头/低头与水平看时渐隐位置一致。
+
+范围推导（`FogRenderer.setupFog`）：
+
+```java
+float span = Mth.clamp(renderDistanceBlocks / 10.0F, 4.0F, 64.0F);
+fog.renderDistanceStart = renderDistanceBlocks - span;
+fog.renderDistanceEnd   = renderDistanceBlocks;
+```
+
+视距 12 → `172.8 .. 192`。
+
+**本仓实现状态**：柱形壳已实现；球形大气壳未接，见 `known-gaps.md`。`pos` 为相机相对坐标（`position - camera.eye`），因此 `Camera` uniform 必须在 `viewProjection` 之后**声明 `skyViewProjection` 占位**，否则 `eye` 落在字节 64 读到天空矩阵。

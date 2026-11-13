@@ -106,7 +106,8 @@ fn vs_main(@builtin(vertex_index) vertexIndex : u32) -> VertexOutput {
     output.colour = vec3<f32>(BRIGHTNESS[direction]) * transform.tint.rgb;
     output.alpha = fog;
     output.cloudAlpha = transform.tint.a;
-    output.fogDistance = length(world.xyz - camera.eye.xyz);
+    let relativeToEye = world.xyz - camera.eye.xyz;
+    output.fogDistance = max(length(relativeToEye.xz), abs(relativeToEye.y));
     output.deviceDepth = clip.z / max(clip.w, 0.00001);
     return output;
 }
