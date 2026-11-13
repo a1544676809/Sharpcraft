@@ -602,8 +602,8 @@ internal static class WindowCommand
             world.MinSectionY,
             occlusionMaxY,
             coord => world.GetChunk(coord.X, coord.Z) is not null,
-            CameraSection,
-            meshCache);
+            key => meshCache.TryGetMesh(key, out var mesh) ? mesh : null,
+            CameraSection);
 
         Sharpcraft.Client.Render.SectionCoord CameraSection()
         {

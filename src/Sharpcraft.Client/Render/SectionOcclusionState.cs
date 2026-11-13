@@ -17,6 +17,12 @@ namespace Sharpcraft.Client.Render;
 /// A chunk column is one section wide, so a section coordinate and its chunk share X and Z; the visible sections of one
 /// chunk therefore fit in a single sixty four bit mask, which is what the dictionary stores.
 /// </para>
+/// <para>
+/// Two different bases are in play and mixing them up silently misaligns every bit, so each is used for exactly one
+/// job. A bit position is measured from the world's lowest section, because that is what the renderer counts from when
+/// it names a section of a chunk. A mesh's own matrix array is measured from that chunk's lowest section, because that
+/// is how the mesher filled it.
+/// </para>
 /// </remarks>
 [ReferenceClass("net.minecraft.client.renderer.SectionOcclusionGraph", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/SectionOcclusionGraph.java", Kind = ReferenceKind.Mirror, Status = ReferenceStatus.Partial, Note = "holds the walk result; the reference keeps a tree and rebuilds asynchronously")]
 public sealed class SectionOcclusionState
@@ -29,6 +35,7 @@ public sealed class SectionOcclusionState
     private readonly int _minimumY;
     private readonly int _maximumY;
     private readonly Func<SectionCoord, bool> _isLoaded;
+    private readonly Func<long, MeshData?> _meshSource;
     private readonly Func<SectionCoord, bool> _alwaysInFrustum = _ => true;
     private SectionCoord? _lastCameraSection;
 
@@ -37,24 +44,34 @@ public sealed class SectionOcclusionState
     /// <param name="minimumY">Lowest section Y in the world.</param>
     /// <param name="maximumY">Highest section Y in the world.</param>
     /// <param name="isLoaded">Whether a section has a chunk behind it.</param>
-    public SectionOcclusionState(int radius, int minimumY, int maximumY, Func<SectionCoord, bool> isLoaded, Func<SectionCoord> camera, ChunkMeshCache cache)
+    /// <param name="meshSource">Supplies a chunk's mesh, or null when it has none yet.</param>
+    /// <param name="camera">Current camera section, read when the predicate runs.</param>
+    public SectionOcclusionState(
+        int radius,
+        int minimumY,
+        int maximumY,
+        Func<SectionCoord, bool> isLoaded,
+        Func<long, MeshData?> meshSource,
+        Func<SectionCoord> camera)
     {
         ArgumentNullException.ThrowIfNull(isLoaded);
+        ArgumentNullException.ThrowIfNull(meshSource);
         ArgumentNullException.ThrowIfNull(camera);
-        ArgumentNullException.ThrowIfNull(cache);
 
         _radius = radius;
         _minimumY = minimumY;
         _maximumY = maximumY;
         _isLoaded = isLoaded;
+        _meshSource = meshSource;
 
         var volume = SectionOcclusionTraversal.Volume(radius, minimumY, maximumY);
         _queue = new SectionOcclusionTraversal.TraversalNode[volume];
         _visited = new byte[volume];
         _output = new SectionCoord[volume];
+
         IsVisible = (key, sectionIndex) =>
         {
-            Refresh(camera(), cache);
+            Refresh(camera());
             return Test(key, sectionIndex);
         };
     }
@@ -62,14 +79,30 @@ public sealed class SectionOcclusionState
     /// <summary>Predicate the renderer calls per section; held in a field so passing it costs nothing.</summary>
     public Func<long, int, bool> IsVisible { get; }
 
+    /// <summary>Whether the walk kept the given section.</summary>
+    /// <param name="chunkKey">Packed chunk key.</param>
+    /// <param name="sectionIndex">Section index counted from the world's lowest section.</param>
+    public bool Test(long chunkKey, int sectionIndex)
+    {
+        if (!_visible.TryGetValue(chunkKey, out var mask))
+        {
+            return false;
+        }
+
+        // Outside the mask the walk has nothing to say, so err towards drawing.
+        if ((uint)sectionIndex >= 64u)
+        {
+            return true;
+        }
+
+        return (mask & (1UL << sectionIndex)) != 0;
+    }
+
     /// <summary>Redoes the walk when the camera has moved to a different section.</summary>
     /// <param name="cameraSection">Section the camera occupies.</param>
-    /// <param name="cache">Source of the per section sight matrices.</param>
-    /// <returns>True when the set changed.</returns>
-    public bool Refresh(SectionCoord cameraSection, ChunkMeshCache cache)
+    /// <returns>True when the set was rebuilt.</returns>
+    public bool Refresh(SectionCoord cameraSection)
     {
-        ArgumentNullException.ThrowIfNull(cache);
-
         if (_lastCameraSection == cameraSection)
         {
             return false;
@@ -84,7 +117,7 @@ public sealed class SectionOcclusionState
             _minimumY,
             _maximumY,
             _isLoaded,
-            visible => VisibilityOf(visible, cache),
+            VisibilityOf,
             _alwaysInFrustum,
             _queue,
             _visited,
@@ -95,6 +128,8 @@ public sealed class SectionOcclusionState
         {
             var coord = _output[index];
             var key = ClientWorld.Pack(coord.X, coord.Z);
+
+            // Counted from the world's lowest section, matching how the renderer names a section.
             var bit = coord.Y - _minimumY;
 
             if ((uint)bit >= 64u)
@@ -108,39 +143,16 @@ public sealed class SectionOcclusionState
         return true;
     }
 
-    private SectionVisibility VisibilityOf(SectionCoord coord, ChunkMeshCache cache)
+    private SectionVisibility VisibilityOf(SectionCoord coord)
     {
-        var key = ClientWorld.Pack(coord.X, coord.Z);
-
-        if (!cache.TryGetMesh(key, out var mesh) || mesh.SectionVisibility is null)
+        if (_meshSource(ClientWorld.Pack(coord.X, coord.Z)) is not { SectionVisibility: { } matrices } mesh)
         {
             // No geometry means nothing to occlude, which must not stop the walk.
             return SectionVisibility.AllVisible;
         }
 
+        // This chunk's array is counted from its own lowest section, not the world's.
         var index = coord.Y - mesh.SectionMinY;
-        return (uint)index < (uint)mesh.SectionVisibility.Length
-            ? mesh.SectionVisibility[index]
-            : SectionVisibility.AllVisible;
-    }
-
-    /// <summary>Whether the walk kept the given section.</summary>
-    /// <param name="chunkKey">Packed chunk key.</param>
-    /// <param name="sectionIndex">Section index within the column.</param>
-    public bool Test(long chunkKey, int sectionIndex)
-    {
-        if (!_visible.TryGetValue(chunkKey, out var mask))
-        {
-            return false;
-        }
-
-        var bit = sectionIndex;
-
-        if ((uint)bit >= 64u)
-        {
-            return true;
-        }
-
-        return (mask & (1UL << bit)) != 0;
+        return (uint)index < (uint)matrices.Length ? matrices[index] : SectionVisibility.AllVisible;
     }
 }
