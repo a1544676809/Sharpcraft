@@ -40,18 +40,22 @@ public sealed class SectionOcclusionTraversalTests
     }
 
     [Fact]
-    public void ASolidSectionStopsTheWalkBehindIt()
+    public void ASolidSectionStopsTheStraightPathIntoIt()
     {
-        // The section directly above the camera cannot be crossed, so nothing above it is reported.
+        // The face matrix of that one section says its faces cannot see each other, so the walk cannot pass through it.
+        // It can still go around: a rock you can see past is not a wall, and the earlier rule that forbade every
+        // direction already taken made exactly that mistake, keeping only seventeen of six hundred columns in game.
         var visible = Run(
             coord => coord == new SectionCoord(0, 1, 0) ? SectionVisibility.NoneVisible : SectionVisibility.AllVisible,
             out var count);
 
         var reported = visible[..count].ToArray();
 
-        Assert.DoesNotContain(new SectionCoord(0, 2, 0), reported);
-        Assert.DoesNotContain(new SectionCoord(0, 3, 0), reported);
+        // Reached on arrival, before the walk asks whether it may pass.
         Assert.Contains(new SectionCoord(0, 1, 0), reported);
+
+        // Nothing may be entered through it, but going around the column is allowed.
+        Assert.Contains(new SectionCoord(1, 2, 0), reported);
     }
 
     [Fact]

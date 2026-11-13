@@ -110,8 +110,10 @@ public static class SectionOcclusionTraversal
 
             for (var face = 0; face < 6; face++)
             {
-                // Refuse to travel back the way we came along this path.
-                if ((current.DirectionsTaken & (1 << (face ^ 1))) != 0)
+                // Only refuse to step straight back through the face we came in by. Accumulating every direction the
+                // path has ever taken looks safer but chokes the walk: after a few steps most directions are refused,
+                // and only seventeen of six hundred columns survive (T-833).
+                if (current.EntryFace != NoEntryFace && face == current.EntryFace)
                 {
                     continue;
                 }
@@ -155,6 +157,7 @@ public static class SectionOcclusionTraversal
                 queue[tail++] = new TraversalNode(next, (byte)(face ^ 1), (byte)(current.DirectionsTaken | (1 << face)));
             }
         }
+
     }
 
     /// <summary>Number of sections in the searched box.</summary>
