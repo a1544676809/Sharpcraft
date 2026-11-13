@@ -442,7 +442,7 @@ public sealed class ChunkWorkerPool : IDisposable
             MaxBlocks: 2_000_000);
 
         ChunkMesher.MeshChunk(_world, chunk, buffer, cutoutScratch, translucentScratch, in context);
-        var mesh = buffer.ToMeshData(0);
+        var mesh = buffer.ToMeshData(0, chunk.MinSectionY);
 
         MeshesBuilt++;
         if (mesh.Vertices.Length == 0)
