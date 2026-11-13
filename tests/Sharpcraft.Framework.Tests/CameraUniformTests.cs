@@ -23,7 +23,7 @@ public sealed class CameraUniformTests
         var cpu = Matrix4x4.CreateLookAt(eye, target, Vector3.UnitY)
                   * CameraMath.BuildProjection(60f, 16f / 9f, 0.1f, 2000f);
 
-        var block = new float[32];
+        var block = new float[36];
         CameraUniform.Write(block, eye, target, 60f, 1600, 900);
 
         foreach (var point in new[]

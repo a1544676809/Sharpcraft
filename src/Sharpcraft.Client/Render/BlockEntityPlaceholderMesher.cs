@@ -62,7 +62,7 @@ public sealed class BlockEntityPlaceholderMesher
 
         const int verticesPerBox = 24;
         const int indicesPerBox = 36;
-        _geometry.Reserve(entities.Length * verticesPerBox * 14, entities.Length * indicesPerBox);
+        _geometry.Reserve(entities.Length * verticesPerBox * ChunkMesher.FloatsPerVertex, entities.Length * indicesPerBox);
 
         var vertexFloats = 0;
         var indexCount = 0;

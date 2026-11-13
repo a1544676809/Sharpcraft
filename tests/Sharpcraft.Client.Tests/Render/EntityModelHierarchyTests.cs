@@ -22,10 +22,10 @@ public sealed class EntityModelHierarchyTests
         var entity = new EntityRenderState(1, typeId, 0f, 0f, 0f, 180f, 0f);
         var sprite = new Sharpcraft.Client.Assets.SpriteRect(0, 0, 64, 64, 1);
         var geometry = mesher.Build([entity], sprite, 64, 64, onlyPart: onlyPart, variants: EntityVariantTable.Builtin);
-        var points = new Vector3[geometry.VertexFloats / 14];
+        var points = new Vector3[geometry.VertexFloats / ChunkMesher.FloatsPerVertex];
         for (var i = 0; i < points.Length; i++)
         {
-            var o = i * 14;
+            var o = i * ChunkMesher.FloatsPerVertex;
             points[i] = new Vector3(geometry.Vertices[o], geometry.Vertices[o + 1], geometry.Vertices[o + 2]);
         }
 

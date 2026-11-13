@@ -30,7 +30,8 @@ internal sealed class EntitySkinTextureGpu : IDisposable
         BufferHandle camera,
         BufferHandle fog,
         BufferHandle lightmap,
-        SamplerHandle sampler)
+        SamplerHandle sampler,
+        SpriteRectTable spriteRects)
     {
         ArgumentNullException.ThrowIfNull(data);
         DisposeUpload();
@@ -51,7 +52,10 @@ internal sealed class EntitySkinTextureGpu : IDisposable
                 BindGroupEntryDesc.Sampler(1, sampler),
                 BindGroupEntryDesc.Uniform(VertexLayout.CameraBinding, camera, 0, VertexLayout.CameraUniformSize),
                 BindGroupEntryDesc.Uniform(3, fog, 0, 32),
-                BindGroupEntryDesc.Uniform(Shaders.ShaderBindings.Lightmap, lightmap, 0, Shaders.ShaderBindings.LightmapBytes)
+                BindGroupEntryDesc.Uniform(Shaders.ShaderBindings.Lightmap, lightmap, 0, Shaders.ShaderBindings.LightmapBytes),
+                // The entity pass shares the terrain layout, which declares the sprite rectangle table; the entity
+                // shader never reads it, but a bind group has to supply every binding its layout declares.
+                BindGroupEntryDesc.ReadOnlyStorage(VertexLayout.SpriteBinding, spriteRects.Buffer, 0, spriteRects.Bytes)
             ]);
         Created = true;
     }

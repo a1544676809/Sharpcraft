@@ -9,6 +9,8 @@ using Sharpcraft.Common.Identifiers;
 using Sharpcraft.Common.Imaging;
 using Sharpcraft.Common.Registries;
 using Sharpcraft.Common.World;
+using Sharpcraft.Client.Tests;
+
 using Xunit;
 
 namespace Sharpcraft.Client.Tests.Render;
@@ -112,9 +114,10 @@ public sealed class MeshTextureOrientationTests
         {
             var offset = firstVertex + (corner * FloatsPerVertex);
             var position = new Vector3(vertices[offset], vertices[offset + 1], vertices[offset + 2]);
-            // Tile coordinates, which moved to offset four when colour and light were packed (T-826).
-            var u = vertices[offset + 4];
-            var v = vertices[offset + 5];
+
+            // Tile coordinates are two halves packed into one word since T-832, so read them by name rather than by slot.
+            // firstVertex is a float offset, and the reader wants a vertex index.
+            var (u, v) = VertexFieldReader.Uv(vertices, (firstVertex / FloatsPerVertex) + corner);
             var lowU = u < 0.001f;
             var highU = u > 0.999f;
             var lowV = v < 0.001f;

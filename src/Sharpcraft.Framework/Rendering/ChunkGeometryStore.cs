@@ -97,6 +97,42 @@ public sealed class ChunkGeometryStore : IDisposable
     /// <summary>Chunks currently resident.</summary>
     public int ChunkCount => _entries.Count;
 
+    /// <summary>Whether any resident chunk would be drawn, without recording anything.</summary>
+    /// <remarks>
+    /// Lets the caller decide whether a whole group of passes is worth recording at all. Asking the arena how many
+    /// chunks it holds answers a different question: a world with water somewhere keeps its translucent geometry
+    /// resident even when the camera is deep underground and none of it is in view.
+    /// </remarks>
+    /// <param name="planes">Six inward facing frustum planes, or empty to skip the test.</param>
+    /// <param name="visibleSections">Section masks per chunk, or null to ignore occlusion.</param>
+    public bool AnyVisible(ReadOnlySpan<Vector4> planes, Func<long, ulong>? visibleSections)
+    {
+        foreach (var page in _pages)
+        {
+            foreach (var key in page.Chunks)
+            {
+                if (!_entries.TryGetValue(key, out var entry))
+                {
+                    continue;
+                }
+
+                if (planes.Length >= 6 && !FrustumPlanes.IsVisible(planes, entry.Minimum, entry.Maximum))
+                {
+                    continue;
+                }
+
+                if (visibleSections is not null && visibleSections(key) == 0UL)
+                {
+                    continue;
+                }
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>Bytes uploaded since creation (diagnostic).</summary>
     public long UploadedBytes { get; private set; }
 
@@ -207,7 +243,7 @@ public sealed class ChunkGeometryStore : IDisposable
 
     /// <summary>Draws the resident chunks, skipping any whose bounds fall outside the frustum.</summary>
     /// <param name="pass">Pass to record into.</param>
-    public void Draw(RenderPassHandle pass, ReadOnlySpan<Vector4> planes)
+    public void Draw(RenderPassHandle pass, ReadOnlySpan<Vector4> planes, Func<long, ulong>? visibleSections = null)
     {
         CulledLastFrame = 0;
         BindCallsLastDraw = 0;
@@ -237,7 +273,7 @@ public sealed class ChunkGeometryStore : IDisposable
 
                 if (entry.SectionStarts is { Length: > 1 } starts)
                 {
-                    DrawSections(pass, entry, starts, planes);
+                    DrawSections(pass, entry, starts, planes, key, visibleSections);
                     continue;
                 }
 
@@ -313,7 +349,7 @@ public sealed class ChunkGeometryStore : IDisposable
     /// of the column is in view. Testing each section on its own and then merging the runs that survive keeps the
     /// draw count close to what it was while submitting far less geometry.
     /// </remarks>
-    private void DrawSections(RenderPassHandle pass, Entry entry, int[] starts, ReadOnlySpan<Vector4> planes)
+    private void DrawSections(RenderPassHandle pass, Entry entry, int[] starts, ReadOnlySpan<Vector4> planes, long key, Func<long, ulong>? visibleSections)
     {
         var baseVertex = (int)(entry.VertexOffset / _bytesPerVertex);
         var sectionCount = starts.Length - 1;
@@ -365,9 +401,50 @@ public sealed class ChunkGeometryStore : IDisposable
         first = Math.Max(0, first);
         last = Math.Min(sectionCount - 1, last);
 
-        if (last >= first)
+        if (last < first)
+        {
+            return;
+        }
+
+        if (visibleSections is null)
         {
             DrawSectionRun(pass, entry, starts, first, last + 1, baseVertex);
+            return;
+        }
+
+        // One lookup per chunk rather than one per section: the mask already says which sections the walk kept.
+        var mask = visibleSections(key);
+        if (mask == 0UL)
+        {
+            CulledLastFrame++;
+            return;
+        }
+
+        // Occlusion does not respect the band's contiguity: a cave under a solid floor can be reachable while the rock
+        // between it and the camera is not, so the band is split into runs of sections the traversal kept (T-833).
+        var runStart = -1;
+        for (var section = first; section <= last; section++)
+        {
+            if ((mask & (1UL << section)) != 0)
+            {
+                if (runStart < 0)
+                {
+                    runStart = section;
+                }
+
+                continue;
+            }
+
+            if (runStart >= 0)
+            {
+                DrawSectionRun(pass, entry, starts, runStart, section, baseVertex);
+                runStart = -1;
+            }
+        }
+
+        if (runStart >= 0)
+        {
+            DrawSectionRun(pass, entry, starts, runStart, last + 1, baseVertex);
         }
     }
 

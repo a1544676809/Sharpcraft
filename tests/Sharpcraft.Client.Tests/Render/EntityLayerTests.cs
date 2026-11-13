@@ -23,7 +23,7 @@ public sealed class EntityLayerTests
     {
         var min = new Vector3(float.MaxValue);
         var max = new Vector3(float.MinValue);
-        for (var i = 0; i < geometry.VertexFloats; i += 14)
+        for (var i = 0; i < geometry.VertexFloats; i += ChunkMesher.FloatsPerVertex)
         {
             var point = new Vector3(geometry.Vertices[i], geometry.Vertices[i + 1], geometry.Vertices[i + 2]);
             min = Vector3.Min(min, point);
@@ -81,9 +81,11 @@ public sealed class EntityLayerTests
         var sprite = new SpriteRect(0, 0, 128, 64, 1);
         var geometry = new EntityModelMesher().Build([Entity(GhastModelDefinition.GhastEntityTypeId)], sprite, 128, 64);
         var maxU = 0f;
-        for (var i = 6; i < geometry.VertexFloats; i += 14)
+        for (var i = 0; i < geometry.VertexFloats; i += ChunkMesher.FloatsPerVertex)
         {
-            maxU = MathF.Max(maxU, geometry.Vertices[i]);
+            // Tile coordinates are two halves packed into one word since T-832.
+            var packedUv = BitConverter.SingleToUInt32Bits(geometry.Vertices[i + 4]);
+            maxU = MathF.Max(maxU, (float)BitConverter.UInt16BitsToHalf((ushort)(packedUv & 0xFFFF)));
         }
 
         Assert.True(maxU > 0.9f, $"expected U near 1, got {maxU}");
@@ -385,7 +387,10 @@ public sealed class EntityLayerTests
             var mismatches = 0;
             for (var i = 0; i < layer.Geometry.VertexFloats && i < expected.Count; i++)
             {
-                if (actual[i] != expected[i])
+                // Compare bit patterns, not floats: the colour and sprite words are packed integers stored in float
+                // slots, and a fully blue colour lands on 0xFF.. which reads back as NaN, where != is always true even
+                // when both sides are identical (T-832).
+                if (BitConverter.SingleToUInt32Bits(actual[i]) != BitConverter.SingleToUInt32Bits(expected[i]))
                 {
                     mismatches++;
                 }

@@ -28,6 +28,7 @@ public sealed class MeshBuffer : IDisposable
     // columns (T-829). A plain array that only grows, because marking a section happens once per section inside the
     // meshing hot path, which must not allocate.
     private int[] _sectionStarts = [];
+    private SectionVisibility[] _sectionVisibility = [];
     private int _sectionCount;
     private bool _disposed;
 
@@ -198,21 +199,27 @@ public sealed class MeshBuffer : IDisposable
         {
             _sectionStarts = new int[sectionCount];
         }
+
+        if (_sectionVisibility.Length < sectionCount)
+        {
+            _sectionVisibility = new SectionVisibility[sectionCount];
+        }
     }
 
     /// <summary>Records the current index count as the start of a chunk section.</summary>
-    public void MarkSection()
+    public void MarkSection(SectionVisibility visibility = default)
     {
         if (_sectionCount < _sectionStarts.Length)
         {
             _sectionStarts[_sectionCount] = _indexCount;
+            _sectionVisibility[_sectionCount] = visibility;
         }
 
         _sectionCount++;
     }
 
     /// <summary>Copies the written geometry into exactly sized arrays.</summary>
-    public MeshData ToMeshData(int blockCount)
+    public MeshData ToMeshData(int blockCount, int sectionMinY = 0)
     {
         // The final start doubles as the end of the last section, so the ranges are starts[i]..starts[i + 1].
         int[]? starts = null;
@@ -223,7 +230,14 @@ public sealed class MeshBuffer : IDisposable
             starts[^1] = _indexCount;
         }
 
-        return new MeshData(Vertices.ToArray(), Indices.ToArray(), blockCount, starts);
+        SectionVisibility[]? visibility = null;
+        if (_sectionCount > 0)
+        {
+            visibility = new SectionVisibility[_sectionCount];
+            _sectionVisibility.AsSpan(0, _sectionCount).CopyTo(visibility);
+        }
+
+        return new MeshData(Vertices.ToArray(), Indices.ToArray(), blockCount, starts, visibility, sectionMinY);
     }
 
     /// <inheritdoc />
@@ -280,15 +294,13 @@ public sealed class MeshBuffer : IDisposable
             | ((uint)Math.Clamp((int)MathF.Round(green * 255f), 0, 255) << 8)
             | ((uint)Math.Clamp((int)MathF.Round(blue * 255f), 0, 255) << 16)
             | (255u << 24));
-        _vertices[offset + 4] = uv.U;
-        _vertices[offset + 5] = uv.V;
-        _vertices[offset + 6] = sprite.U0;
-        _vertices[offset + 7] = sprite.V0;
-        _vertices[offset + 8] = sprite.U1;
-        _vertices[offset + 9] = sprite.V1;
-        _vertices[offset + 10] = BitConverter.UInt32BitsToSingle(
-            (uint)Math.Clamp((int)MathF.Round(light.Sky * 255f), 0, 255)
-            | ((uint)Math.Clamp((int)MathF.Round(light.Block * 255f), 0, 255) << 8));
+        _vertices[offset + 4] = BitConverter.UInt32BitsToSingle(
+            (uint)BitConverter.HalfToUInt16Bits((Half)uv.U)
+            | ((uint)BitConverter.HalfToUInt16Bits((Half)uv.V) << 16));
+        _vertices[offset + 5] = BitConverter.UInt32BitsToSingle(
+            (uint)(sprite.RectId & 0xFFFF)
+            | ((uint)Math.Clamp((int)MathF.Round(light.Sky * 255f), 0, 255) << 16)
+            | ((uint)Math.Clamp((int)MathF.Round(light.Block * 255f), 0, 255) << 24));
 
         _vertexFloats = offset + ChunkMesher.FloatsPerVertex;
     }
@@ -311,15 +323,13 @@ public sealed class MeshBuffer : IDisposable
             | ((uint)Math.Clamp((int)MathF.Round(green * 255f), 0, 255) << 8)
             | ((uint)Math.Clamp((int)MathF.Round(blue * 255f), 0, 255) << 16)
             | (255u << 24));
-        _vertices[offset + 4] = uv.U;
-        _vertices[offset + 5] = uv.V;
-        _vertices[offset + 6] = sprite.U0;
-        _vertices[offset + 7] = sprite.V0;
-        _vertices[offset + 8] = sprite.U1;
-        _vertices[offset + 9] = sprite.V1;
-        _vertices[offset + 10] = BitConverter.UInt32BitsToSingle(
-            (uint)Math.Clamp((int)MathF.Round(light.Sky * 255f), 0, 255)
-            | ((uint)Math.Clamp((int)MathF.Round(light.Block * 255f), 0, 255) << 8));
+        _vertices[offset + 4] = BitConverter.UInt32BitsToSingle(
+            (uint)BitConverter.HalfToUInt16Bits((Half)uv.U)
+            | ((uint)BitConverter.HalfToUInt16Bits((Half)uv.V) << 16));
+        _vertices[offset + 5] = BitConverter.UInt32BitsToSingle(
+            (uint)(sprite.RectId & 0xFFFF)
+            | ((uint)Math.Clamp((int)MathF.Round(light.Sky * 255f), 0, 255) << 16)
+            | ((uint)Math.Clamp((int)MathF.Round(light.Block * 255f), 0, 255) << 24));
 
         _vertexFloats = offset + ChunkMesher.FloatsPerVertex;
     }

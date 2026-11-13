@@ -14,7 +14,7 @@ namespace Sharpcraft.Framework.Rendering;
 /// </summary>
 public static class VertexLayout
 {
-    /// <summary>Bytes per vertex: position, packed colour, uv, sprite rect and packed light (T-826).</summary>
+    /// <summary>Bytes per vertex: position, packed colour, half uv, and a packed sprite index plus light (T-832).</summary>
     /// <remarks>
     /// Colour and light carry far less information than a float each, and vertex fetch is what the scene pass is bound
     /// by: two million triangles take twelve hundred microseconds, far under what the card manages when it is fed. The
@@ -22,14 +22,25 @@ public static class VertexLayout
     /// keeps its light in a pair of sixteen bit integers for a range of two hundred and forty, leaving eight of those
     /// bits unused.
     /// <para>
+    /// The sprite rectangle used to be sixteen bytes on every vertex even though a quad's four corners always carry
+    /// the same one. It now travels as a sixteen bit index into <see cref="SpriteBinding"/>, which is lossless: the
+    /// vertex shader still hands the fragment the identical <c>vec4</c> (T-832).
+    /// </para>
+    /// <para>
     /// This layout is terrain only. Clouds generate their own geometry in the vertex shader and consume no vertex
     /// attributes at all, which a test asserts, so this can move without touching them (T-827).
     /// </para>
     /// </remarks>
-    public const int Stride = 44;
+    public const int Stride = 24;
+
+    /// <summary>Binding index of the sprite rectangle table inside the shared bind group.</summary>
+    public const uint SpriteBinding = 5;
+
+    /// <summary>Bytes of the sprite rectangle table entry: one <c>vec4</c> of atlas bounds per sprite.</summary>
+    public const ulong SpriteEntrySize = 16;
 
     /// <summary>Size of the camera uniform block in bytes: one 4×4 matrix.</summary>
-    public const ulong CameraUniformSize = 128;
+    public const ulong CameraUniformSize = 144;
 
     /// <summary>Binding index of the camera uniform inside the shared bind group.</summary>
     public const uint CameraBinding = 2;
@@ -72,9 +83,8 @@ public static class VertexLayout
     [
         new(WGPUVertexFormat.Float32x3, 0, 0),
         new(WGPUVertexFormat.Unorm8x4, 12, 1),
-        new(WGPUVertexFormat.Float32x2, 16, 2),
-        new(WGPUVertexFormat.Float32x4, 24, 3),
-        new(WGPUVertexFormat.Unorm8x4, 40, 4)
+        new(WGPUVertexFormat.Float16x2, 16, 2),
+        new(WGPUVertexFormat.Uint32, 20, 3)
     ];
 
     /// <summary>Bytes per celestial vertex: position (3) + uv (2) + the tint copied per vertex (4) floats.</summary>

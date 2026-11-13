@@ -7,6 +7,9 @@
 
 struct Camera {
     viewProjection : mat4x4<f32>,
+    // Declared so the eye lands at byte 128 where the uniform writes it; the terrain stages do not read it.
+    skyViewProjection : mat4x4<f32>,
+    eye : vec4<f32>,
 };
 struct Transform {
     model : mat4x4<f32>,
@@ -103,7 +106,8 @@ fn vs_main(@builtin(vertex_index) vertexIndex : u32) -> VertexOutput {
     output.colour = vec3<f32>(BRIGHTNESS[direction]) * transform.tint.rgb;
     output.alpha = fog;
     output.cloudAlpha = transform.tint.a;
-    output.fogDistance = clip.w;
+    let relativeToEye = world.xyz - camera.eye.xyz;
+    output.fogDistance = max(length(relativeToEye.xz), abs(relativeToEye.y));
     output.deviceDepth = clip.z / max(clip.w, 0.00001);
     return output;
 }

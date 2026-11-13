@@ -214,7 +214,7 @@ internal static class WindowCommand
                 Console.WriteLine($"resource reload: atlas refreshed in {atlasClock.Elapsed.TotalMilliseconds:F1} ms (models kept)");
             }
 
-            atlasSource.Update(new TextureData(candidate.Width, candidate.Height, candidate.Pixels) { Mips = Sharpcraft.Client.Assets.AtlasMipChain.Build(candidate.Pixels, candidate.Width, candidate.Height, [.. candidate.Sprites.Values]) });
+            atlasSource.Update(new TextureData(candidate.Width, candidate.Height, candidate.Pixels) { Mips = Sharpcraft.Client.Assets.AtlasMipChain.Build(candidate.Pixels, candidate.Width, candidate.Height, [.. candidate.Sprites.Values]) }, candidate.RectTable);
         });
 
         // A short synchronous warm-up gives the first frame something to show.
@@ -233,7 +233,8 @@ internal static class WindowCommand
                 : FrameCommand.WithMips(prepared.Value.Atlas),
             tint: biomeTint,
             cache: meshCache,
-            meshSynchronously: false);
+            meshSynchronously: false,
+            spriteRects: prepared?.Atlas.RectTable);
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
         var selfResize = ParseSelfResize();
@@ -593,6 +594,28 @@ internal static class WindowCommand
         long celestialCacheKey = long.MinValue;
         FrameRequest? celestialCached = null;
 
+        // Occlusion (T-833): the walk is rebuilt only when the camera changes section, and the predicate handed to
+        // the renderer is answered from that set.
+        // Highest section index, not the count: the world starts at MinSectionY and has SectionCount sections.
+        var occlusionMaxY = world.MinSectionY + world.SectionCount - 1;
+        var occlusion = new Sharpcraft.Client.Render.SectionOcclusionState(
+            InteractiveSession.ViewDistanceChunks,
+            world.MinSectionY,
+            occlusionMaxY,
+            coord => world.GetChunk(coord.X, coord.Z) is not null,
+            key => meshCache.TryGetMesh(key, out var mesh) ? mesh : null,
+            CameraSection,
+            () => (world.LoadedChunkCount * 1_000_003) + meshCache.TotalChunksMeshed);
+
+        Sharpcraft.Client.Render.SectionCoord CameraSection()
+        {
+            var eye = session.Player.Position;
+            return new Sharpcraft.Client.Render.SectionCoord(
+                (int)MathF.Floor(eye.X / 16f),
+                (int)MathF.Floor(eye.Y / 16f),
+                (int)MathF.Floor(eye.Z / 16f));
+        }
+
         var format = WindowedRenderer.Run(
             request,
             frames,
@@ -823,11 +846,19 @@ internal static class WindowCommand
             lightmapPerFrame: () => session.CurrentLightmap(),
             fogPerFrame: () => session.CurrentFogColour(),
             clearColourPerFrame: () => session.CurrentFogColour(),
-            cloudsPerFrame: () => session.CurrentCloudDraw(),
+            cloudsPerFrame: () =>
+            {
+                // Once per frame, never per query: the walk is cheap here and ruinous when repeated per section.
+                occlusion.Refresh(occlusion.CameraSection);
+                return session.CurrentCloudDraw();
+            },
             cloudOitEnabled: session.CloudUseOit,
             oitLowPrecision: oitLowPrecision,
             cloudDepthEnabled: cloudDepth,
             presentMode: BackendConvert.ToWgpu(presentMode),
+            // On by default: it cuts triangles by more than three quarters and pays for itself. MC_OCCLUSION=0
+            // keeps the old path for A/B measurement.
+            visibleSections: GameOptions.Get("MC_OCCLUSION") == "0" ? null : occlusion.ChunkMask,
             screenshotRequest: window => window.Input.JustPressed(Sharpcraft.Framework.Platform.InputKey.F2)
                 ? ScreenshotPaths.Next(gameDirectory ?? GamePaths.DefaultGameDirectory())
                 : ScreenshotBridge.Take(),

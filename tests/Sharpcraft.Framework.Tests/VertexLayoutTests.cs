@@ -1,32 +1,24 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
-using Brew.Wgpu;
 using Brew.Wgpu.Native;
 using Sharpcraft.Framework.Rendering;
 using Xunit;
 
 namespace Sharpcraft.Framework.Tests;
 
-/// <summary>
-/// The vertex layout is shared by the offscreen and windowed pipelines. Both once declared their own
-/// copies, and when texture coordinates were added only one copy was updated: windowed rendering then
-/// failed pipeline validation because the shader consumed a location nothing provided
-/// (docs/modules/render.md 6.1).
-/// </summary>
 public sealed class VertexLayoutTests
 {
     [Fact]
     public void TheLayoutMatchesTheVertexStride()
     {
-        Assert.Equal(44, VertexLayout.Stride);
+        Assert.Equal(24, VertexLayout.Stride);
+
+        // Six 32-bit slots: world position (3), packed colour (1), half uv (1), sprite index and light (1).
+        Assert.Equal(6, VertexLayout.Stride / sizeof(float));
 
         var attributes = VertexLayout.Attributes();
-
-        // World position (3 floats), packed colour (1), tile uv (2), sprite rect (4), packed light (1): the camera
-        // arrives as a uniform, so no clip-space w is baked in. Colour and light were a triple and a pair until T-826.
-        Assert.Equal(3 + 1 + 2 + 4 + 1, VertexLayout.Stride / sizeof(float));
-        Assert.Equal(5, attributes.Length);
+        Assert.Equal(4, attributes.Length);
     }
 
     [Fact]
@@ -46,15 +38,17 @@ public sealed class VertexLayoutTests
     }
 
     [Fact]
-    public void TheShaderConsumesPositionColourUvAndTheSpriteRect()
+    public void TheShaderConsumesPositionColourUvAndThePackedWord()
     {
         var attributes = VertexLayout.Attributes();
 
         Assert.Equal(WGPUVertexFormat.Float32x3, attributes[0].Format);
         Assert.Equal(WGPUVertexFormat.Unorm8x4, attributes[1].Format);
-        Assert.Equal(WGPUVertexFormat.Float32x2, attributes[2].Format);
-        Assert.Equal(WGPUVertexFormat.Float32x4, attributes[3].Format);
-        Assert.Equal(WGPUVertexFormat.Unorm8x4, attributes[4].Format);
+
+        // The atlas rectangle is no longer per vertex: it moves to a table the vertex stage indexes with the id packed
+        // into this word, which is where the fourteen bytes of saving come from (T-832).
+        Assert.Equal(WGPUVertexFormat.Float16x2, attributes[2].Format);
+        Assert.Equal(WGPUVertexFormat.Uint32, attributes[3].Format);
     }
 
     private static ulong SizeOf(WGPUVertexFormat format) => format switch
@@ -62,6 +56,8 @@ public sealed class VertexLayoutTests
         WGPUVertexFormat.Float32x3 => 12,
         WGPUVertexFormat.Float32x2 => 8,
         WGPUVertexFormat.Float32x4 => 16,
+        WGPUVertexFormat.Float16x2 => 4,
+        WGPUVertexFormat.Uint32 => 4,
         WGPUVertexFormat.Unorm8x4 => 4,
         _ => throw new ArgumentOutOfRangeException(nameof(format), format, "unexpected format")
     };

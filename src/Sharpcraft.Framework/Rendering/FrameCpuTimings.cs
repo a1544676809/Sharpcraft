@@ -43,6 +43,7 @@ internal sealed class FrameCpuTimings
         SubmitQueue,
         Swap,
         OnFrame,
+        FrameGap,
         Count
     }
 
@@ -53,7 +54,7 @@ internal sealed class FrameCpuTimings
         // so every quoted cel-* figure before this change names the wrong stage.
         "frame", "updates", "prep-pump", "prep-ui", "prep-entities", "acquire", "camera", "scene", "scene-open",
         "scene-sky", "scene-celestial", "cel-build", "cel-camera", "cel-disc", "scene-terrain", "scene-entities",
-        "oit", "text", "clouds", "ui", "present-rec", "submit", "sub-finish", "sub-queue", "swap", "onframe"
+        "oit", "text", "clouds", "ui", "present-rec", "submit", "sub-finish", "sub-queue", "swap", "onframe", "frame-gap"
     ];
 
     private readonly long[] _windowTicks = new long[(int)Stage.Count];
@@ -179,6 +180,9 @@ internal sealed class FrameCpuTimings
 
     /// <summary>Stage number for the diagnostic report, the window pump and the loop head (T-817).</summary>
     public static int PrepPumpStage => (int)Stage.PrepPump;
+
+    /// <summary>Time from the end of the previous frame to just before the window pump.</summary>
+    public static int FrameGapStage => (int)Stage.FrameGap;
 
     /// <summary>Stage number for the interface upload and its orthographic matrix (T-817).</summary>
     public static int PrepUiStage => (int)Stage.PrepUi;

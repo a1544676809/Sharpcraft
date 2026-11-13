@@ -18,6 +18,8 @@ namespace Sharpcraft.Framework.Rendering;
 /// </remarks>
 public static class OffscreenRenderer
 {
+    /// <summary>Stand-in sprite table entry covering the whole texture, used when no atlas is bound (T-832).</summary>
+    private static readonly float[] WholeAtlasRect = [0f, 0f, 1f, 1f];
     /// <summary>Shared canonical pass plan; the offscreen shell must keep this order when extracting the pipeline.</summary>
     public static IReadOnlyList<WorldRenderPass> PassPlan => WorldRenderPipeline.DefaultPasses;
 
@@ -477,10 +479,21 @@ public static class OffscreenRenderer
                 BindGroupLayoutEntryDesc.UniformBuffer(3, ShaderStages.Vertex | ShaderStages.Fragment)
                     with { MinBindingSize = 32 },
                 BindGroupLayoutEntryDesc.UniformBuffer(Shaders.ShaderBindings.Lightmap, ShaderStages.Fragment)
-                    with { MinBindingSize = Shaders.ShaderBindings.LightmapBytes }
+                    with { MinBindingSize = Shaders.ShaderBindings.LightmapBytes },
+                new BindGroupLayoutEntryDesc(VertexLayout.SpriteBinding, ShaderStages.Vertex, BindingKind.ReadOnlyStorageBuffer)
             ]);
 
             var pipelineLayout = backend.CreatePipelineLayout([bindGroupLayout]);
+
+            // Sprite rectangle table: four floats per sprite, read once per vertex by both terrain passes. The vertex
+            // carries only an index, so this is where the atlas bounds come back from (T-832). An empty table still
+            // needs one entry so the binding is always valid.
+            var spriteRectData = request.SpriteRects.Length > 0 ? request.SpriteRects : WholeAtlasRect;
+            var spriteRectBytes = new byte[spriteRectData.Length * sizeof(float)];
+            System.Runtime.InteropServices.MemoryMarshal.AsBytes(spriteRectData.AsSpan()).CopyTo(spriteRectBytes);
+            var spriteRectBuffer = backend.CreateBufferInit(
+                new BufferDesc((ulong)spriteRectBytes.Length, BufferUsages.Storage | BufferUsages.CopyDst),
+                spriteRectBytes.AsSpan());
 
             // Camera uniform: one 4×4 matrix, rewritten per frame.
             var cameraBuffer = backend.CreateBufferInit(
@@ -510,10 +523,10 @@ public static class OffscreenRenderer
                 lightmapBytes.AsSpan());
             backend.WriteBuffer(lightmapBuffer, lightmapBytes, 0);
 
-            Span<float> cameraBlock = stackalloc float[32];
+            Span<float> cameraBlock = stackalloc float[36];
             CameraUniform.Write(cameraBlock, request.CameraPosition, request.CameraTarget, request.FieldOfViewDegrees, (int)width, (int)height);
             var cameraBytes = new byte[VertexLayout.CameraUniformSize];
-            for (var index = 0; index < 32; index++)
+            for (var index = 0; index < 36; index++)
             {
                 BitConverter.TryWriteBytes(cameraBytes.AsSpan(index * sizeof(float)), cameraBlock[index]);
             }
@@ -541,7 +554,8 @@ public static class OffscreenRenderer
                     BindGroupEntryDesc.Sampler(1, atlasSamplerHandle),
                     BindGroupEntryDesc.Uniform(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize),
                     BindGroupEntryDesc.Uniform(3, fogBuffer, 0, 32),
-                    BindGroupEntryDesc.Uniform(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
+                    BindGroupEntryDesc.Uniform(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes),
+                    BindGroupEntryDesc.ReadOnlyStorage(VertexLayout.SpriteBinding, spriteRectBuffer, 0, (ulong)spriteRectBytes.Length)
                 ]);
 
             // Readback rows must be padded to 256 bytes.

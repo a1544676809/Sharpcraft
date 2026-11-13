@@ -158,42 +158,34 @@ internal static class ReferenceOitPasses
             return;
         }
 
-        // Stage 1b: clip the furthest bound to the nearest opaque surface.
+        // Stage 1b and 1c share one pass. The cull pipeline compares depth with Always and writes none, and its
+        // fragment stage only loads the bounds texture, so it neither reads nor writes the depth attachment it is
+        // given; binding the cloud depth instead changes nothing it can observe and lets the cloud bounds draw
+        // follow in the same pass. One pass boundary is about twenty three microseconds of finalisation (T-834).
         var cullPass = backend.BeginRenderPass(
             encoder,
             [new ColorAttachmentDesc(p.BoundsCulled, LoadOp.Clear, StoreOp.Store, zero)],
-            p.Depth);
+            clouds is not null ? p.CloudDepth : p.Depth);
         try
         {
             backend.SetPipeline(cullPass, p.CullPipeline);
             backend.SetBindGroup(cullPass, 0, p.Cull);
             backend.Draw(cullPass, 3, 1, 0, 0);
+
+            // Stage 1c: clouds add their own depth bounds into the culled target after the cull, so cloud bounds
+            // widen the cull applied to the terrain translucent layer and never leak into the composite depth.
+            if (clouds is not null)
+            {
+                backend.TakeRecordedCommands();
+                backend.SetPipeline(cullPass, p.CloudBoundsPipeline);
+                backend.SetBindGroup(cullPass, 0, clouds.BindGroup);
+                clouds.DrawGeometry(backend, cullPass);
+                counts = counts with { CloudBounds = backend.TakeRecordedCommands() };
+            }
         }
         finally
         {
             backend.EndRenderPass(cullPass);
-        }
-
-        // Stage 1c: clouds add their own depth bounds into the culled target, after the cull, so cloud bounds never
-        // widen the cull applied to the terrain translucent layer and never leak into the composite's depth write.
-        if (clouds is not null)
-        {
-            var cloudBoundsPass = backend.BeginRenderPass(
-                encoder,
-                [ColorAttachmentDesc.Keep(p.BoundsCulled)],
-                p.CloudDepth);
-            try
-            {
-                backend.TakeRecordedCommands();
-                backend.SetPipeline(cloudBoundsPass, p.CloudBoundsPipeline);
-                backend.SetBindGroup(cloudBoundsPass, 0, clouds.BindGroup);
-                clouds.DrawGeometry(backend, cloudBoundsPass);
-                counts = counts with { CloudBounds = backend.TakeRecordedCommands() };
-            }
-            finally
-            {
-                backend.EndRenderPass(cloudBoundsPass);
-            }
         }
 
         if (stages < 3)

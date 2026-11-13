@@ -1165,6 +1165,8 @@ public sealed class WgpuRenderBackend : IRenderBackend
         VertexFormat.Float32x3 => WGPUVertexFormat.Float32x3,
         VertexFormat.Float32x4 => WGPUVertexFormat.Float32x4,
         VertexFormat.Unorm8x4 => WGPUVertexFormat.Unorm8x4,
+        VertexFormat.Float16x2 => WGPUVertexFormat.Float16x2,
+        VertexFormat.Uint32 => WGPUVertexFormat.Uint32,
         _ => throw new ArgumentOutOfRangeException(nameof(format), format, "no vertex format counterpart")
     };
 

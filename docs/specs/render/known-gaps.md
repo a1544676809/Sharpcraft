@@ -26,6 +26,8 @@ updated: 2026-11-01
 | --- | --- | --- | --- |
 | 天空盘/地平线渐变 | 尚未绘制原版 sky disc；当前为平色 SKY_COLOR | 缺少地平线亮带/圆盘边界 | 实现半径 512、上盘 y=+16/下盘 y=-16 的天空盘；上盘 SKY_COLOR |
 | 水下天空暗盘 | 水下渲染/水下视效尚未实现 | 无法验证 `shouldRenderDarkDisc` 与水下天空/雾 | **延后**到水下渲染切片，暂不实现 |
+| `LightmapParameters` 传入网格器但从未被读 | 原版顶点只带光照等级，光照来自逐帧纹理；本仓 `ChunkMesher` 接收 `LightingParameters` 后**未使用**，该参数仍经 `ChunkMeshCache` → `LayerSinks` → `ChunkWorkerPool` → `ChunkMesher` 四层传递 | 无行为影响（死管线） | **待删**，独立任务（约 6 文件，超出微切片）；复查条件：下次触碰网格构建路径时一并清理 |
+| 雾的双壳只实现了一层 | 原版 `total_fog_value = max(linear(spherical, environmentalStart, environmentalEnd), linear(cylindrical, renderDistanceStart, renderDistanceEnd))`：球形壳走大气雾（`FOG_START_DISTANCE`，默认 1024 格），柱形壳走视距渐隐。**当前只实现柱形壳**，大气壳未接（正常视距 192 格下它贡献≈0，但**下雨雾**与**Boss 雾**依赖它把 `environmentalStart/End` 压到 10/96） | 雨天与 Boss 战时的雾浓度会不正确 | **延后**至天气系统；复查条件：实现降水时一并接 `environmentalStart/End` |
 | 雾基色近似 | 目前雾色= `SKY_COLOR`（近似）；原版是 `FOG_COLOR`(默认黑) 与 `SKY_COLOR` 按 `skyFogEnd` 混合，含日出日落 lerp、雨雾 | 特定角度/天气下雾色偏差 | 按 `AtmosphericFogEnvironment.getBaseColor` 完整实现 |
 | 夜间亮度 | 已修正色彩空间/原样通道，仍与参考观感"差一点" | 夜间略暗/对比不同 | 用同机位参考帧定标 gamma/ambient；必要时调 `BrightnessFactor` |
 

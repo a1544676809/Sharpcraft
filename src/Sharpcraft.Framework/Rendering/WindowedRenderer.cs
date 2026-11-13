@@ -72,7 +72,8 @@ public static class WindowedRenderer
     Func<(Vector3 Sky, Vector3 Fog, float SkyFogEnd, Vector3 Eye)>? skyDiscPerFrame = null,
     WGPUPresentMode presentMode = WGPUPresentMode.Fifo,
     Func<WindowHost, string?>? screenshotRequest = null,
-    Action<string, byte[], uint, uint>? screenshotCaptured = null)
+    Action<string, byte[], uint, uint>? screenshotCaptured = null,
+    Func<long, ulong>? visibleSections = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -170,10 +171,14 @@ public static class WindowedRenderer
             BindGroupLayoutEntryDesc.UniformBuffer(3, ShaderStages.Vertex | ShaderStages.Fragment)
                 with { MinBindingSize = 32 },
             BindGroupLayoutEntryDesc.UniformBuffer(Shaders.ShaderBindings.Lightmap, ShaderStages.Fragment)
-                with { MinBindingSize = Shaders.ShaderBindings.LightmapBytes }
+                with { MinBindingSize = Shaders.ShaderBindings.LightmapBytes },
+            new BindGroupLayoutEntryDesc(VertexLayout.SpriteBinding, ShaderStages.Vertex, BindingKind.ReadOnlyStorageBuffer)
         ]);
 
         var pipelineLayout = backend.CreatePipelineLayout([bindGroupLayout]);
+
+        var spriteRects = new SpriteRectTable(backend);
+        spriteRects.Rebuild(request.SpriteRects);
 
         var cameraBuffer = backend.CreateBufferInit(
             new BufferDesc(VertexLayout.CameraUniformSize, BufferUsages.Uniform | BufferUsages.CopyDst),
@@ -204,25 +209,17 @@ public static class WindowedRenderer
 
         // The world bind group is the one every textured pass binds first; it is described in seam terms so the passes
         // receive a handle instead of unwrapping it at each draw.
-        var bindGroup = backend.CreateBindGroup(
-            bindGroupLayout,
-            [
-                BindGroupEntryDesc.Texture(0, atlasView),
-                BindGroupEntryDesc.Sampler(1, atlasSamplerHandle),
-                BindGroupEntryDesc.Uniform(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize),
-                BindGroupEntryDesc.Uniform(3, fogBuffer, 0, 32),
-                BindGroupEntryDesc.Uniform(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
-            ]);
+        var bindGroup = TerrainBindGroup.Create(backend, bindGroupLayout, atlasView, atlasSamplerHandle, cameraBuffer, fogBuffer, lightmapBuffer, spriteRects);
 
         using var entitySkin = new EntitySkinTextureGpu();
         if (entitySkinSource?.Atlas is { } skinData)
         {
-            entitySkin.Upload(backend, bindGroupLayout, skinData, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle);
+            entitySkin.Upload(backend, bindGroupLayout, skinData, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle, spriteRects);
         }
 
         using var itemAtlasGpu = new EntitySkinTextureGpu();
         if (itemAtlasSource?.Atlas is { } itemData)
-            itemAtlasGpu.Upload(backend, bindGroupLayout, itemData, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle);
+            itemAtlasGpu.Upload(backend, bindGroupLayout, itemData, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle, spriteRects);
         // The frame pipelines are seam handles now, so they are released by hand where the using declarations used to
         // stand (see the cleanup at the end of this method).
         var pipeline = CreatePipeline(backend, format, pipelineLayout);
@@ -350,7 +347,8 @@ public static class WindowedRenderer
                 // The layout declares the fog buffer for the world shader; the interface shader ignores it, but a bind
                 // group must still supply every binding the layout declares.
                 BindGroupEntryDesc.Uniform(3, fogBuffer, 0, 32),
-                BindGroupEntryDesc.Uniform(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
+                BindGroupEntryDesc.Uniform(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes),
+                BindGroupEntryDesc.ReadOnlyStorage(VertexLayout.SpriteBinding, spriteRects.Buffer, 0, spriteRects.Bytes)
             ]);
 
         var uiBindGroup = CreateUiBindGroup(atlasView);
@@ -606,7 +604,7 @@ public static class WindowedRenderer
             refTargetsCreated = true;
         }
 
-        Span<float> cameraBlock = stackalloc float[32];
+        Span<float> cameraBlock = stackalloc float[36];
         var cameraBytes = new byte[VertexLayout.CameraUniformSize];
 
         var colour = request.ClearColour;
@@ -731,15 +729,11 @@ public static class WindowedRenderer
 
                 atlasView = backend.CreateTextureView(atlasTexture);
 
-                bindGroup = backend.CreateBindGroup(
-                    bindGroupLayout,
-                    [
-                        BindGroupEntryDesc.Texture(0, atlasView),
-                        BindGroupEntryDesc.Sampler(1, atlasSamplerHandle),
-                        BindGroupEntryDesc.Uniform(VertexLayout.CameraBinding, cameraBuffer, 0, VertexLayout.CameraUniformSize),
-                        BindGroupEntryDesc.Uniform(3, fogBuffer, 0, 32),
-                        BindGroupEntryDesc.Uniform(Shaders.ShaderBindings.Lightmap, lightmapBuffer, 0, Shaders.ShaderBindings.LightmapBytes)
-                    ]);
+                // The atlas renumbers its sprites when it is rebuilt, so the table has to be replaced with it or the
+                // indices already burned into the cached meshes would point at the wrong sprites (T-832).
+                spriteRects.Rebuild(atlasSource.SpriteRects);
+
+                bindGroup = TerrainBindGroup.Create(backend, bindGroupLayout, atlasView, atlasSamplerHandle, cameraBuffer, fogBuffer, lightmapBuffer, spriteRects);
 
                 uiBindGroup = CreateUiBindGroup(atlasView);
 
@@ -755,7 +749,7 @@ public static class WindowedRenderer
                 // texture and its bind group sufficient.
                 if (entitySkinSource.Atlas is { } refreshedSkin)
                 {
-                    entitySkin.Upload(backend, bindGroupLayout, refreshedSkin, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle);
+                    entitySkin.Upload(backend, bindGroupLayout, refreshedSkin, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle, spriteRects);
                 }
                 else
                 {
@@ -768,7 +762,7 @@ public static class WindowedRenderer
                 appliedItemAtlasVersion = itemAtlasSource.Version;
                 if (itemAtlasSource.Atlas is { } refreshedItems)
                 {
-                    itemAtlasGpu.Upload(backend, bindGroupLayout, refreshedItems, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle);
+                    itemAtlasGpu.Upload(backend, bindGroupLayout, refreshedItems, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle, spriteRects);
                 }
                 else
                 {
@@ -856,6 +850,10 @@ public static class WindowedRenderer
                     $"ui: textures re-uploaded (version {appliedTextureVersion}, {spriteBindGroups.Count} sprites, " +
                     $"glyph {refreshedGlyph.Width}x{refreshedGlyph.Height})");
             }
+
+            // Everything before the pump is waiting: the previous frame is still being presented and nothing here can
+            // shorten it. Splitting it out is what says whether the largest stage is work or a stall (T-833).
+            Cpu(FrameCpuTimings.FrameGapStage);
 
             if (!window.Pump() || Environment.TickCount64 > deadline)
             {
@@ -1264,7 +1262,7 @@ public static class WindowedRenderer
                 (int)frameWidth,
                 (int)frameHeight);
 
-            for (var index = 0; index < 32; index++)
+            for (var index = 0; index < 36; index++)
             {
                 BitConverter.TryWriteBytes(cameraBytes.AsSpan(index * sizeof(float)), cameraBlock[index]);
             }
@@ -1393,7 +1391,7 @@ public static class WindowedRenderer
                             }
                             else
                             {
-                                arena.Draw(pass, frustumPlanes);
+                                arena.Draw(pass, frustumPlanes, visibleSections);
                             }
 
                             Cpu(FrameCpuTimings.SceneTerrainStage);
@@ -1418,7 +1416,7 @@ public static class WindowedRenderer
                         }
                         else
                         {
-                            arenaCutout.Draw(pass, frustumPlanes);
+                            arenaCutout.Draw(pass, frustumPlanes, visibleSections);
                         }
                         break;
                     }
@@ -1558,7 +1556,9 @@ public static class WindowedRenderer
             // Reference transparency (docs/specs/render/oit-reference.md): depth bounds, a culling pass, wavelet
             // transmittance, accumulation and a composite that writes depth. The three stages redraw the same
             // translucent geometry, so no sort is needed at all.
-            var needsOit = arenaTranslucent?.ChunkCount > 0
+            // Resident is not the same as drawn: asking the arena how much translucent geometry it holds keeps
+            // the whole group alive while the camera is somewhere none of it can be seen (T-833).
+            var needsOit = (arenaTranslucent is not null && arenaTranslucent.AnyVisible(frustumPlanes, visibleSections))
                 || currentRequest.TranslucentIndices is { Length: > 0 }
                 || cloudOit is not null;
             if (needsOit && !refTargetsCreated)

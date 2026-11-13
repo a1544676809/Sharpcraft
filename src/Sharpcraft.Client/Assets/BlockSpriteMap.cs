@@ -121,6 +121,9 @@ public sealed class BlockSpriteMap
     /// The reference decides the layer per material, that is per quad, not per block: a block whose top texture is opaque and
     /// whose side texture has holes must split its faces across layers.
     /// </remarks>
+    /// <summary>Atlas rectangle table, so a caller holding a vertex sprite index can resolve the bounds (T-832).</summary>
+    public float[] RectTable => _atlas.RectTable;
+
     public Transparency TransparencyOfSprite(SpriteRect sprite) => _atlas.ComputeTransparency(sprite);
 
     /// <summary>Resolves by texture path, for callers that already know the exact texture.</summary>

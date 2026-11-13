@@ -43,6 +43,7 @@ AGENTS.md 原则 12：不可逆或跨模块的决策必须在此留档，**只�
 | [`0027-asset-layering.md`](0027-asset-layering.md) | 参考原版的资产分层（内置 jar 包 + 外部索引只读叠加 + 用户资源包），并把底层 pack/格式/IO 类型下沉为独立库 Sharpcraft.Assets | 已接受 | 2026-11-06 |
 | [`0028-native-gpu-selection.md`](0028-native-gpu-selection.md) | 绑定缺少带 powerPreference 的适配器请求重载，故在 Framework 内直连 C 接口；记录范围、跨平台依据与删除条件 | 已采纳 | - |
 | [`0029-paged-shared-geometry-arena.md`](0029-paged-shared-geometry-arena.md) | 每区块独立缓冲让每帧产生数百次绑定与数百条命令；改为每层少量固定大小页并按下标/顶点偏移绘制 | 已采纳 | - |
+| [`0030-packed-vertex-byte-buffer.md`](0030-packed-vertex-byte-buffer.md) | 世界顶点当前 44 字节，存在 MeshBuffer 的 float[] 里，每个顶点占 11 个 float 槽。 | 未标注 | - |
 
 <!-- END GENERATED: docs/decisions -->
 

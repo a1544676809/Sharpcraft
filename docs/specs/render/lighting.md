@@ -108,3 +108,101 @@
 - `src/Sharpcraft.Client/Render/VanillaLightmap.cs`：§3 的纯函数 + `LightmapParameters`。
 - `src/Sharpcraft.Client/Render/ChunkMesher.cs`：`CornerShade` 用 `VanillaLightmap` 替换旧线性 `Brightness`。
 - `src/Sharpcraft.Framework/Rendering/Shaders/pipelines/terrain.wgsl` 与 `oit_reference.wgsl`：§5 的 `litColour`。
+
+## 10. 未解缺陷：日出日落时可见区块接缝（T-835）
+
+**现象**：日出/日落时段，远近地形与水面出现矩形明暗边界，正好沿区块边界；**正午与午夜看不见**。原版无此现象（用户实测确认）。
+
+**为什么只有日出日落可见**：正午 `SkyFactor` 饱和为 1、午夜为 0，所有区块取到同一个值；只有中间段该值连续变化，区块之间才可能不一致。所以缺陷一定与「随时间变化的量」按区块冻结有关。
+
+**已核查并排除**：
+
+| 检查 | 结果 |
+| --- | --- |
+| `ChunkMesher` 是否烘焙时间因子 | **否**。`parameters` 在 L101/L139 赋值后从未被使用；顶点只写 `sky`/`block` 原始等级 |
+| 顶点契约 | `TerrainVertexWriter` 写 8 位 `sky`、`block`，与规格 §6 一致 |
+| 时间因子传递 | 经 uniform（`ToLightmapUniform`）逐帧传入着色器，与几何无关 |
+
+### 10.1 根因（已定位，用户截图对照确认）
+
+雾的等距面用**视空间深度**而非**径向距离**：
+
+```wgsl
+// oit_reference.wgsl / cloud_oit.wgsl
+output.fogDistance = clip.w;   // 沿视线方向的深度
+```
+
+`clip.w` 的等距面是**垂直于视线的平面**，因此：
+
+- 低头看水面时，雾边界是一条**水平直线**（原版是**圆的**）
+- 转动视角时，边界跟着转（原版锚定世界空间，不转）
+
+原版用 `length(worldPos - cameraPos)`，等距面是球面。
+
+**这也解释了 T-835 的日落接缝**：雾色本身正确，是等距面几何错了，区块边界因此在错误的等距面上交替显形；正午/午夜因为整片雾色饱和而看不见。
+
+**修法**：顶点着色器用世界位置与相机位置的欧氏距离，替代 `clip.w`。`cloud_oit.wgsl` 同样处理。需注意 OIT 的 `deviceDepth` 仍应使用 `clip.z / clip.w`（深度语义不变），只有 `fogDistance` 改为径向。
+
+**残留可疑点（未验证）**：`ChunkMeshCache` 在光照变化时清空整个缓存：
+
+```csharp
+if (Lighting != _appliedLighting)
+{
+    _meshes.Clear();
+    _appliedLighting = Lighting;
+}
+```
+
+既然顶点不依赖 `LightmapParameters`，这次清空**在语义上是不必要的**。但它是否与接缝有关尚未确认：清空后重建的网格内容应当完全相同，不该产生视觉差异。需要用「同一时刻、部分区块重建、部分不重建」的对照帧来判定。
+
+**原版对照**（`AtmosphericFogEnvironment.getBaseColor`）：雾色在日落时按**视线方向**叠加 `SUNRISE_SUNSET_COLOR`——
+
+```java
+float lookingAtTheSunFactor = forwardVector.dot(sunX, 0, 0);   // 朝太阳才 > 0
+if (lookingAtTheSunFactor > 0) fogColor = srgbLerp(lookingAtTheSunFactor * alpha, fogColor, color);
+```
+
+最后再与天空色 `srgbLerp(skyColorMixFactor, ...)` 混合。**这条方向性我们尚未实现**，需确认是否就是接缝的来源（若雾色不随视线变，则任何区块边界处的雾/天过渡都会显形）。
+
+**下一步具体动作**（按顺序，每步都能单独判定）：
+
+1. 固定时间到日落，用 `MC_AB_TOGGLE` 或强制部分区块重建，观察接缝是否随重建变化 → 判定是否与网格生命周期有关
+2. 关掉 `_meshes.Clear()`（临时），同机位对比 → 若接缝消失，问题即在此
+3. 若上述都不是，检查雾色是否随视线方向变化 → 对照原版补方向性
+## 11. 雾的距离：双壳算法（T-835）
+
+原版 `shaders/include/fog.glsl`：
+
+```glsl
+float linear_fog_value(float d, float start, float end) {
+    if (d <= start) return 0.0;
+    if (d >= end)   return 1.0;
+    return (d - start) / (end - start);
+}
+
+float total_fog_value(spherical, cylindrical, envStart, envEnd, rdStart, rdEnd) {
+    return max(linear_fog_value(spherical,   envStart, envEnd),
+               linear_fog_value(cylindrical, rdStart,  rdEnd));
+}
+```
+
+两个距离**同时**从顶点传出：
+
+| 壳 | 距离 | 形状 | 用哪组范围 |
+| --- | --- | --- | --- |
+| 球形 | `length(pos)` | 球 | `environmentalStart/End`（`FOG_START/END_DISTANCE`，默认 1024 格） |
+| 柱形 | `max(length(pos.xz), abs(pos.y))` | 柱 | `renderDistanceStart/End` |
+
+柱形的意义：**垂直方向不增加距离**，抬头/低头与水平看时渐隐位置一致。
+
+范围推导（`FogRenderer.setupFog`）：
+
+```java
+float span = Mth.clamp(renderDistanceBlocks / 10.0F, 4.0F, 64.0F);
+fog.renderDistanceStart = renderDistanceBlocks - span;
+fog.renderDistanceEnd   = renderDistanceBlocks;
+```
+
+视距 12 → `172.8 .. 192`。
+
+**本仓实现状态**：柱形壳已实现；球形大气壳未接，见 `known-gaps.md`。`pos` 为相机相对坐标（`position - camera.eye`），因此 `Camera` uniform 必须在 `viewProjection` 之后**声明 `skyViewProjection` 占位**，否则 `eye` 落在字节 64 读到天空矩阵。
