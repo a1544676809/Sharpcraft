@@ -607,6 +607,9 @@ public static class WindowedRenderer
         Span<float> cameraBlock = stackalloc float[36];
         var cameraBytes = new byte[VertexLayout.CameraUniformSize];
 
+        // Allocated once rather than three times a frame; the frame pipeline gives these two copies (T-837).
+        var uniforms = new FrameUniformStaging();
+
         var colour = request.ClearColour;
         var presented = 0;
         var performanceSummary = false;
@@ -1270,26 +1273,23 @@ public static class WindowedRenderer
             backend.WriteBuffer(cameraBuffer, cameraBytes, 0);
 
             // Per-frame lightmap parameters: day/night changes only this block, never the mesh.
-            var frameLightmapBytes = new byte[Shaders.ShaderBindings.LightmapBytes];
             var frameLightmap = lightmapPerFrame?.Invoke() ?? currentRequest.Lightmap;
             var glintTime = currentRequest.GlintTime != 0f
                 ? currentRequest.GlintTime
                 : (float)(System.Diagnostics.Stopwatch.GetTimestamp() / (double)System.Diagnostics.Stopwatch.Frequency);
-            LightmapUniformCodec.Write(frameLightmap with { Padding = glintTime }, frameLightmapBytes);
-            backend.WriteBuffer(lightmapBuffer, frameLightmapBytes, 0);
+            LightmapUniformCodec.Write(frameLightmap with { Padding = glintTime }, uniforms.Lightmap);
+            backend.WriteBuffer(lightmapBuffer, uniforms.Lightmap, 0);
 
             // Per-frame fog colour (time/weather driven); the range stays as configured.
             var frameFogColour = fogPerFrame?.Invoke() ?? currentRequest.FogColour;
-            var frameFogValues = new float[8];
-            frameFogValues[0] = frameFogColour.X;
-            frameFogValues[1] = frameFogColour.Y;
-            frameFogValues[2] = frameFogColour.Z;
-            frameFogValues[3] = frameFogColour.W;
-            frameFogValues[4] = currentRequest.Diagnostics?.FogStart ?? 64f;
-            frameFogValues[5] = currentRequest.Diagnostics?.FogEnd ?? 160f;
-            var frameFogBytes = new byte[Shaders.ShaderBindings.FogBytes];
-            System.Runtime.InteropServices.MemoryMarshal.AsBytes(frameFogValues.AsSpan()).CopyTo(frameFogBytes);
-            backend.WriteBuffer(fogBuffer, frameFogBytes, 0);
+            uniforms.FogValues[0] = frameFogColour.X;
+            uniforms.FogValues[1] = frameFogColour.Y;
+            uniforms.FogValues[2] = frameFogColour.Z;
+            uniforms.FogValues[3] = frameFogColour.W;
+            uniforms.FogValues[4] = currentRequest.Diagnostics?.FogStart ?? 64f;
+            uniforms.FogValues[5] = currentRequest.Diagnostics?.FogEnd ?? 160f;
+            System.Runtime.InteropServices.MemoryMarshal.AsBytes(uniforms.FogValues.AsSpan()).CopyTo(uniforms.Fog);
+            backend.WriteBuffer(fogBuffer, uniforms.Fog, 0);
 
             backend.SetBindGroup(pass, 0, bindGroup);
 
