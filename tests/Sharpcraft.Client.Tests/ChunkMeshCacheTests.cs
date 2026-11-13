@@ -98,13 +98,7 @@ public sealed class ChunkMeshCacheTests
         cache.Build(world, maxChunksPerBuild: 64, maxMillisecondsPerBuild: double.MaxValue);
         Assert.Equal(2, cache.LastRemeshedChunks);
 
-        // Same day/night state: the lightmap is unchanged, so nothing is re-meshed.
-        cache.Build(world, maxChunksPerBuild: 64, maxMillisecondsPerBuild: double.MaxValue);
-        Assert.Equal(0, cache.LastRemeshedChunks);
-
-        // Night changes the lightmap, but the lightmap is a texture the shader samples and the vertex holds
-        // only the light levels, so the meshes stay valid and nothing rebuilds (T-836).
-        cache.Lighting = LightmapParameters.OverworldAt(18000);
+        // Nothing changed, so nothing is re-meshed.
         cache.Build(world, maxChunksPerBuild: 64, maxMillisecondsPerBuild: double.MaxValue);
         Assert.Equal(0, cache.LastRemeshedChunks);
     }

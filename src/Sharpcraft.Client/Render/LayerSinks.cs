@@ -30,7 +30,6 @@ public readonly record struct MeshingContext(
     BiomeTint? Tint = null,
     StateCullTable? Cull = null,
     StateVisualCache? Visuals = null,
-    LightmapParameters? Lighting = null,
     bool MergeFaces = true,
     bool AmbientOcclusion = true,
     int AirState = 0,

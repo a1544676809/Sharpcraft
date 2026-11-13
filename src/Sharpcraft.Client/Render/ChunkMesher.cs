@@ -67,14 +67,13 @@ public static class ChunkMesher
         int maxBlocks = 2_000_000,
         BlockSpriteMap? sprites = null,
         bool merge = true,
-        bool ambientOcclusion = true,
-        LightmapParameters? lighting = null)
+        bool ambientOcclusion = true)
     {
         ArgumentNullException.ThrowIfNull(world);
 
         // Merging cuts the quad count by an order of magnitude, so a smaller guess is enough.
         using var buffer = new MeshBuffer(Math.Min(maxBlocks, world.LoadedChunkCount * 512));
-        var blocks = Mesh(world, buffer, airState, maxBlocks, sprites, merge, ambientOcclusion, lighting);
+        var blocks = Mesh(world, buffer, airState, maxBlocks, sprites, merge, ambientOcclusion);
         return buffer.ToMeshData(blocks, world.MinSectionY);
     }
 
@@ -90,15 +89,13 @@ public static class ChunkMesher
         int maxBlocks = 2_000_000,
         BlockSpriteMap? sprites = null,
         bool merge = true,
-        bool ambientOcclusion = true,
-        LightmapParameters? lighting = null)
+        bool ambientOcclusion = true)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(buffer);
 
         buffer.Clear();
         var blocks = 0;
-        var parameters = lighting ?? LightmapParameters.DayOverworld;
 
         foreach (var chunk in world.GetChunks())
         {
@@ -107,7 +104,7 @@ public static class ChunkMesher
                 break;
             }
 
-            blocks += MeshChunk(world, chunk, airState, buffer, maxBlocks - blocks, sprites, merge: merge, ambientOcclusion: ambientOcclusion, lighting: parameters);
+            blocks += MeshChunk(world, chunk, airState, buffer, maxBlocks - blocks, sprites, merge: merge, ambientOcclusion: ambientOcclusion);
         }
 
         return blocks;
@@ -129,14 +126,12 @@ public static class ChunkMesher
         StateCullTable? cull = null,
         StateVisualCache? visuals = null,
         bool merge = true,
-        bool ambientOcclusion = true,
-        LightmapParameters? lighting = null)
+        bool ambientOcclusion = true)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(chunk);
         ArgumentNullException.ThrowIfNull(buffer);
 
-        var parameters = lighting ?? LightmapParameters.DayOverworld;
         var baseX = chunk.ChunkX * 16;
         var baseZ = chunk.ChunkZ * 16;
         var solidBlocks = 0;
@@ -180,12 +175,12 @@ public static class ChunkMesher
             for (var direction = 0; direction < 6; direction++)
             {
                 consumed.Clear();
-                MergeSectionFaces(neighbourhood, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout, tint, cull, visuals, merge, ambientOcclusion, parameters);
+                MergeSectionFaces(neighbourhood, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout, tint, cull, visuals, merge, ambientOcclusion);
             }
 
             if (translucent is not null)
             {
-                EmitSectionFluids(neighbourhood, section, baseX, baseY, baseZ, buffer, translucent, sprites, layout, tint, parameters);
+                EmitSectionFluids(neighbourhood, section, baseX, baseY, baseZ, buffer, translucent, sprites, layout, tint);
             }
         }
 
@@ -214,8 +209,8 @@ public static class ChunkMesher
             cull: context.Cull,
             visuals: context.Visuals,
             merge: context.MergeFaces,
-            ambientOcclusion: context.AmbientOcclusion,
-            lighting: context.Lighting);
+            ambientOcclusion: context.AmbientOcclusion
+            );
 
     /// <summary>Merges the faces of one direction inside one section into as few quads as possible.</summary>
     private static void MergeSectionFaces(
@@ -236,8 +231,7 @@ public static class ChunkMesher
         StateCullTable? cull = null,
         StateVisualCache? visuals = null,
         bool merge = true,
-        bool ambientOcclusion = true,
-        LightmapParameters lighting = default)
+        bool ambientOcclusion = true)
     {
         var (uAxis, vAxis) = InPlaneAxes(direction);
 
@@ -340,7 +334,7 @@ public static class ChunkMesher
                         }
                     }
 
-                    EmitMergedQuad(neighbourhood, buffer, direction, slice, u, v, width, height, baseX, baseY, baseZ, key.State, sprites, translucent, layout, cutout, tint, cull, visuals, ambientOcclusion, lighting);
+                    EmitMergedQuad(neighbourhood, buffer, direction, slice, u, v, width, height, baseX, baseY, baseZ, key.State, sprites, translucent, layout, cutout, tint, cull, visuals, ambientOcclusion);
                 }
             }
         }
@@ -633,8 +627,7 @@ public static class ChunkMesher
         float blue,
         BlockSpriteMap? sprites,
         Sharpcraft.Common.Registries.BlockStateLayout? layout,
-        bool ambientOcclusion = true,
-        LightmapParameters lighting = default)
+        bool ambientOcclusion = true)
     {
         var (nx, ny, nz) = NeighbourOffset(direction);
         Span<int> u = stackalloc int[3];
@@ -819,8 +812,7 @@ public static class ChunkMesher
         MeshBuffer translucent,
         BlockSpriteMap? sprites,
         BlockStateLayout? layout,
-        BiomeTint? tint,
-        LightmapParameters lighting = default)
+        BiomeTint? tint)
     {
         if (layout is null)
         {
@@ -1371,8 +1363,7 @@ public static class ChunkMesher
         BiomeTint? tint = null,
         StateCullTable? cull = null,
         StateVisualCache? visuals = null,
-        bool ambientOcclusion = true,
-        LightmapParameters lighting = default)
+        bool ambientOcclusion = true)
     {
         // Fluids are meshed by EmitSectionFluids into the translucent buffer; the block path must not also emit them.
         if (translucent is not null && IsFluidState(state, layout))
@@ -1547,10 +1538,10 @@ public static class ChunkMesher
             }
         }
 
-        var cornerOrigin = CornerShade(neighbourhood, direction, origin, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion, lighting);
-        var cornerA = CornerShade(neighbourhood, direction, a, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion, lighting);
-        var cornerB = CornerShade(neighbourhood, direction, b, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion, lighting);
-        var cornerC = CornerShade(neighbourhood, direction, c, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion, lighting);
+        var cornerOrigin = CornerShade(neighbourhood, direction, origin, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion);
+        var cornerA = CornerShade(neighbourhood, direction, a, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion);
+        var cornerB = CornerShade(neighbourhood, direction, b, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion);
+        var cornerC = CornerShade(neighbourhood, direction, c, uAxis, vAxis, shadeFactor, red, green, blue, sprites, layout, ambientOcclusion);
 
         // Still water and lava sit at fourteen sixteenths of a block, not at the block top. Without this the water surface
         // is exactly coplanar with an ice block's top face and the two fight for the same depth, which is what showed as

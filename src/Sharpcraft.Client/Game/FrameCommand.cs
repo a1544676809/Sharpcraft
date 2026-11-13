@@ -922,7 +922,7 @@ internal static class FrameCommand
                 var translucentBefore = translucent?.IndexCount ?? 0;
 
                 blocks += Sharpcraft.Client.Render.ChunkMeshCache.MeshChunkOnce(
-                    world, chunk, buffer, sprites, translucent, layout, cutout, tint, lighting,
+                    world, chunk, buffer, sprites, translucent, layout, cutout, tint,
                     GameOptions.Get("MC_MESH_NOMERGE") != "1", maxBlocks: 2_000_000 - blocks);
 
                 ranges.Add((before, buffer.IndexCount - before));
@@ -2176,7 +2176,7 @@ internal static class FrameCommand
             }
         }
         var mesh = Sharpcraft.Client.Render.ChunkMeshCache.MeshWorldOnce(
-            world, prepared?.Map, EffectiveLighting(world), GameOptions.Get("MC_MESH_NOMERGE") != "1");
+            world, prepared?.Map, GameOptions.Get("MC_MESH_NOMERGE") != "1");
         Console.WriteLine($"local demo: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
         var bounds = (Min: new Vector3(0, -16, 0), Max: new Vector3(16, 16, 16));
