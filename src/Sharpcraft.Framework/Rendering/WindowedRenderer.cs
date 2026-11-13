@@ -950,16 +950,16 @@ public static class WindowedRenderer
                 var neededVertex = (ulong)dynamic.VertexFloats * sizeof(float);
                 var neededIndex = (ulong)dynamic.IndexCount * sizeof(uint);
 
-            dynamicBuffers.EnsureVertexCapacity(neededVertex);
+                dynamicBuffers.EnsureVertexCapacity(neededVertex);
 
-            dynamicBuffers.EnsureIndexCapacity(neededIndex);
+                dynamicBuffers.EnsureIndexCapacity(neededIndex);
 
                 backend.WriteBuffer(
-                dynamicBuffers.Vertex,
+                    dynamicBuffers.Vertex,
                     System.Runtime.InteropServices.MemoryMarshal.AsBytes(dynamic.Vertices.AsSpan(0, dynamic.VertexFloats)),
                     0);
                 backend.WriteBuffer(
-                dynamicBuffers.Index,
+                    dynamicBuffers.Index,
                     System.Runtime.InteropServices.MemoryMarshal.AsBytes(dynamic.Indices.AsSpan(0, dynamic.IndexCount)),
                     0);
                 dynamicIndexCount = (uint)dynamic.IndexCount;
@@ -1039,11 +1039,13 @@ public static class WindowedRenderer
             }
 
             if (geometryRemovals?.Invoke() is { Count: > 0 } removals)
-            foreach (var key in geometryRemovals?.Invoke() ?? [])
             {
-                arena?.Remove(key);
-                arenaCutout?.Remove(key);
-                arenaTranslucent?.Remove(key);
+                foreach (var key in removals)
+                {
+                    arena?.Remove(key);
+                    arenaCutout?.Remove(key);
+                    arenaTranslucent?.Remove(key);
+                }
             }
 
             Cpu(FrameCpuTimings.PrepEntitiesStage);
