@@ -15,7 +15,7 @@ namespace Sharpcraft.Framework.Rendering;
 /// </remarks>
 internal sealed class FrameGeometryUploader
 {
-    private readonly IRenderBackend _backend;
+    private readonly IGeometryBackend _backend;
     private readonly GrowableGeometryBuffers _dynamic;
     private readonly EntityLayerPool _layers;
     private readonly ChunkGeometryStore? _arena;
@@ -30,7 +30,7 @@ internal sealed class FrameGeometryUploader
     /// <param name="arenaCutout">Cutout chunk arena, or null when the host supplies static geometry.</param>
     /// <param name="arenaTranslucent">Translucent chunk arena, or null when there is none.</param>
     public FrameGeometryUploader(
-        IRenderBackend backend,
+        IGeometryBackend backend,
         GrowableGeometryBuffers dynamic,
         EntityLayerPool layers,
         ChunkGeometryStore? arena,

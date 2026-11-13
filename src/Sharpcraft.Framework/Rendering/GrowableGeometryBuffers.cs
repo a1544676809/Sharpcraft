@@ -14,7 +14,7 @@ namespace Sharpcraft.Framework.Rendering;
 /// </remarks>
 internal sealed class GrowableGeometryBuffers
 {
-    private readonly IRenderBackend _backend;
+    private readonly IGeometryBackend _backend;
     private readonly DeferredBufferRelease _deferred;
     private readonly ulong _minimumBytes;
 
@@ -28,7 +28,7 @@ internal sealed class GrowableGeometryBuffers
     /// <param name="backend">Backend to create buffers through.</param>
     /// <param name="deferred">Queue that disposes a buffer once no frame can be reading it.</param>
     /// <param name="minimumBytes">Smallest a buffer is allowed to be.</param>
-    public GrowableGeometryBuffers(IRenderBackend backend, DeferredBufferRelease deferred, ulong minimumBytes)
+    public GrowableGeometryBuffers(IGeometryBackend backend, DeferredBufferRelease deferred, ulong minimumBytes)
     {
         _backend = backend ?? throw new ArgumentNullException(nameof(backend));
         _deferred = deferred ?? throw new ArgumentNullException(nameof(deferred));

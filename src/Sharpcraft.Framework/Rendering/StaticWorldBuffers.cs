@@ -14,7 +14,7 @@ namespace Sharpcraft.Framework.Rendering;
 /// </remarks>
 internal sealed class StaticWorldBuffers
 {
-    private readonly IRenderBackend _backend;
+    private readonly IGeometryBackend _backend;
     private readonly ulong _minimumBytes;
     private readonly List<BufferHandle> _retiredVertex;
     private readonly List<BufferHandle> _retiredIndex;
@@ -29,7 +29,7 @@ internal sealed class StaticWorldBuffers
     /// <param name="retiredVertex">Receives vertex buffers replaced by a rebuild.</param>
     /// <param name="retiredIndex">Receives index buffers replaced by a rebuild.</param>
     public StaticWorldBuffers(
-        IRenderBackend backend,
+        IGeometryBackend backend,
         FrameRequest request,
         ulong minimumBytes,
         List<BufferHandle> retiredVertex,

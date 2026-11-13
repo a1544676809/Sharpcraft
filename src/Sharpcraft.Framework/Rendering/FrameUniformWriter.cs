@@ -15,7 +15,7 @@ namespace Sharpcraft.Framework.Rendering;
 /// </remarks>
 internal sealed class FrameUniformWriter
 {
-    private readonly IRenderBackend _backend;
+    private readonly IGeometryBackend _backend;
     private readonly BufferHandle _cameraBuffer;
     private readonly BufferHandle _lightmapBuffer;
     private readonly BufferHandle _fogBuffer;
@@ -28,7 +28,7 @@ internal sealed class FrameUniformWriter
     /// <param name="fogBuffer">Destination of the fog block.</param>
     /// <param name="staging">Double buffered staging bytes.</param>
     public FrameUniformWriter(
-        IRenderBackend backend,
+        IGeometryBackend backend,
         BufferHandle cameraBuffer,
         BufferHandle lightmapBuffer,
         BufferHandle fogBuffer,

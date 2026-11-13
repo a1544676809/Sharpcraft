@@ -20,11 +20,11 @@ namespace Sharpcraft.Framework.Rendering;
 /// <param name="deferred">Queue that disposes a buffer once no frame can be reading it.</param>
 /// <param name="minimumBytes">Smallest a buffer is allowed to be.</param>
 internal sealed class EntityLayerPool(
-    IRenderBackend backend,
+    IGeometryBackend backend,
     DeferredBufferRelease deferred,
     ulong minimumBytes)
 {
-    private readonly IRenderBackend _backend = backend ?? throw new ArgumentNullException(nameof(backend));
+    private readonly IGeometryBackend _backend = backend ?? throw new ArgumentNullException(nameof(backend));
     private readonly DeferredBufferRelease _deferred = deferred ?? throw new ArgumentNullException(nameof(deferred));
     private readonly ulong _minimumBytes = minimumBytes;
 
