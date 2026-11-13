@@ -43,7 +43,7 @@
 | 1b 剔除 | `BoundsCulled` | `Clear` | `Depth` |
 | 1c 云边界 | `BoundsCulled` | `Keep` | **`CloudDepth`** |
 
-目标相同、但**深度附件不同**（云用独立深度，注释明确要求云边界不得泄入合成的深度判断）。一个 render pass 只能绑定一个深度附件，因此这两个**不可合并**。
+目标看起来相同、深度附件也确实不同（云用独立深度）。但**可以合并**，因为剔除 pass 根本不使用深度：`CreateCullPipeline` 声明的是 `CompareFunction.Always` 加不写深度，其片元阶段只 `textureLoad` 边界纹理。它被绑 `p.Depth` 纯属创建管线时的顺手声明。\n\n**已实施**：合并后该 pass 绑 `p.CloudDepth`，先画剔除全屏三角，再切管线画云边界，两者深度语义均不受影响。省 1 个 pass（≈0.023 ms）。
 
 ## 4. 结论
 
