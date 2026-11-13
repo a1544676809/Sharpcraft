@@ -171,8 +171,9 @@ GPU 缓冲池按 L443 的循环持久增长，每帧只重置计数（`entityLay
 | `EntityLayerPool` | −28 |
 | `GrowableGeometryBuffers`（界面与动态各一实例） | −23 |
 | `EntityPassRecorder` | −74 |
+| `TerrainPassRecorder` | −25 |
 
-累计 **−130 行**，`WindowedRenderer.cs` 由 2400 降至 **2270**。
+累计 **−155 行**，`WindowedRenderer.cs` 由 2400 降至 **2245**。
 
 ### 11.2 关键发现：单个 pass 不需要大状态对象
 

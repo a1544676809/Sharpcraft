@@ -441,6 +441,9 @@ public static class WindowedRenderer
         backend.WriteBuffer(vertexBuffer, System.Runtime.InteropServices.MemoryMarshal.AsBytes(currentRequest.Vertices.AsSpan()), 0);
         backend.WriteBuffer(indexBuffer, System.Runtime.InteropServices.MemoryMarshal.AsBytes(currentRequest.Indices.AsSpan()), 0);
 
+
+        var terrainRecorder = new TerrainPassRecorder(
+            backend, pipeline, cutoutPipeline, bindGroup, arena, arenaCutout);
         var entityRecorder = new EntityPassRecorder(
             backend,
             entityPipeline,
@@ -1339,48 +1342,20 @@ public static class WindowedRenderer
 
                     case WorldRenderPassKind.TerrainOpaque:
                     {
-                        if (skipTerrain)
+                        if (terrainRecorder.RecordOpaque(
+                            pass, skipTerrain, disableCulling, frustumPlanes, visibleSections))
                         {
-                            break;
-                        }
-
-                        backend.SetPipeline(pass, pipeline);
-                        backend.SetBindGroup(pass, 0, bindGroup);
-                        if (arena is { ChunkCount: > 0 })
-                        {
-                            if (disableCulling)
-                            {
-                                arena.Draw(pass);
-                            }
-                            else
-                            {
-                                arena.Draw(pass, frustumPlanes, visibleSections);
-                            }
-
                             Cpu(FrameCpuTimings.SceneTerrainStage);
                         }
 
-                        // Clouds are drawn after the transparent terrain (below), matching the reference order.
+                        // Clouds are drawn after the transparent terrain (below), matching the reference.
                         break;
                     }
 
                     case WorldRenderPassKind.TerrainCutout:
                     {
-                        if (skipTerrain || arenaCutout is not { ChunkCount: > 0 })
-                        {
-                            break;
-                        }
-
-                        backend.SetPipeline(pass, cutoutPipeline);
-                        backend.SetBindGroup(pass, 0, bindGroup);
-                        if (disableCulling)
-                        {
-                            arenaCutout.Draw(pass);
-                        }
-                        else
-                        {
-                            arenaCutout.Draw(pass, frustumPlanes, visibleSections);
-                        }
+                        terrainRecorder.RecordCutout(
+                            pass, skipTerrain, disableCulling, frustumPlanes, visibleSections);
                         break;
                     }
 
