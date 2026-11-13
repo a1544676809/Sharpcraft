@@ -421,7 +421,7 @@ public static class WindowedRenderer
         var uiVertexCapacity = MinimumBufferBytes;
         var uiIndexCapacity = MinimumBufferBytes;
         var uiIndexCount = 0u;
-        var uiRanges = Array.Empty<UiGeometry.Range>();
+        var uiRanges = new List<UiGeometry.Range>();
         var uiScale = 1f;
         var dynamicVertexCapacity = MinimumBufferBytes;
         var dynamicIndexCapacity = MinimumBufferBytes;
@@ -958,7 +958,7 @@ public static class WindowedRenderer
 
                 backend.WriteBuffer(uiTransformBuffer, transformBytes, 0);
                 uiIndexCount = (uint)ui.Indices.Length;
-                uiRanges = ui.Ranges.ToArray();
+                uiRanges.Clear(); uiRanges.AddRange(ui.Ranges);
             }
 
             Cpu(FrameCpuTimings.PrepUiStage);
@@ -1752,7 +1752,7 @@ public static class WindowedRenderer
             if (!skipInterface)
             {
 
-            if (uiIndexCount > 0 && uiRanges.Length > 0)
+            if (uiIndexCount > 0 && uiRanges.Count > 0)
             {
                 backend.SetVertexBuffer(uiPass, 0, uiVertex, 0, uiVertexCapacity);
                 backend.SetIndexBuffer(uiPass, uiIndex, IndexFormat.Uint32, 0, (ulong)uiIndexCount * sizeof(uint));

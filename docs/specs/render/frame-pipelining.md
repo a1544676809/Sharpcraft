@@ -119,19 +119,27 @@ MUST 提供单线程路径并作为默认，双线程由宿主层显式开启（
 | **每帧重写的 CPU 数组** | **10** | **必须双缓冲（§4 的准确清单）** |
 | GPU 资源 / 管线 / 标量 | 82 | 状态对象持有即可，无并发问题 |
 
-### 10.1 必须双缓冲的 10 个数组（修正 §4）
+### 10.1 更正：不是 10 个"数组"，而是三类不同问题
 
-| 数组 | 用途 |
-| --- | --- |
-| `cameraBytes` | 每帧相机 uniform 字节 |
-| `lightmapBytes` | 每帧光照贴图字节 |
-| `fogBytes` | 每帧雾参数字节 |
-| `uiVertex` / `uiIndex` / `uiRanges` | 界面几何与绘制区间 |
-| `entityLayerVertex` / `entityLayerIndex` | 实体层几何 |
-| `dynamicVertex` / `dynamicIndex` | 动态几何 |
+初版把脚本找出的 10 个名字一律当成"每帧重写的 CPU 数组"，**这是错的**。逐个核对声明后分三类：
 
-**§4 原先只列了 4 类，遗漏了 `uiIndex`、`uiRanges`、`entityLayerIndex`、`dynamicIndex`。** 这四个同样是每帧重写，漏掉会造成界面或实体几何在两帧之间被覆盖。
+| 类别 | 名字 | 需要的机制 |
+| --- | --- | --- |
+| **CPU 暂存缓冲**（每帧完整重写） | `cameraBytes`、`frameLightmapBytes`、`frameFogValues`、`frameFogBytes` | **真正的双缓冲** |
+| **CPU 列表**（每帧重填） | `uiRanges`（原 `ui.Ranges.ToArray()`） | 复用容器，无需双缓冲 |
+| **GPU 缓冲池**（持久、按需扩容） | `entityLayerVertex`、`entityLayerIndex`、`dynamicVertex`、`dynamicIndex`、`uiVertex`、`uiIndex` | **在飞保护**，不是 CPU 双缓冲 |
+| 容量/计数标量 | `entityLayerVertexCapacity`、`entityLayerIndexCount`、`dynamicVertexCapacity`、`dynamicIndexCapacity`、`uiVertexCapacity`、`uiIndexCount` | 无（单线程写入） |
 
+GPU 缓冲池按 L443 的循环持久增长，每帧只重置计数（`entityLayerIndexCount[i] = 0`），句柄本身跨帧存活。它们**不能**靠 CPU 双缓冲解决——需要的是"提交后延迟销毁/延迟复用"，与 §5 的帧号释放队列是同一套机制。
+
+### 10.1.1 已顺带修掉的两处每帧分配
+
+| 位置 | 问题 | 处理 |
+| --- | --- | --- |
+| 帧循环内 | `frameLightmapBytes`、`frameFogValues`、`frameFogBytes` 每帧新建 | 抽成 `FrameUniformStaging`，一次分配 |
+| `uiRanges` | `ui.Ranges.ToArray()` 每帧分配新数组 | 改为 `List` + `Clear()`/`AddRange()` |
+
+600 FPS 下这两处合计每秒约 2400 次分配，全部是完整覆写前的无谓分配。
 ### 10.2 结论
 
 状态对象需承载 82 个稳定引用 + 10 组双缓冲数组。这是约 300 行的重构，**超出微切片范围**，需作为独立任务实施；实施顺序仍按 §9 的切片 1（先单线程抽出、离线帧哈希不变）。
