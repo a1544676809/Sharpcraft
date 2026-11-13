@@ -52,22 +52,32 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 
 ## 下一步具体动作
 
-**分支**：`frame-pipeline` @ `d249f04`，领先 `origin/main` **62 个提交未推送**（`main` 在 `234aed1` 也未推送）。**项目所有者已明确：暂时不推送。**
+**分支**：`frame-pipeline` @ `ec8479e`，领先 `origin/main` **67 个提交未推送**。项目所有者已明确：**暂时不推送。**
 
-**T-837 录制区抽取已完成**：9 个组件（`FrameUniformStaging`、`EntityLayerPool`、`GrowableGeometryBuffers`×2、`EntityPassRecorder`、`TerrainPassRecorder`、`SkyPassRecorder`、`FrameGeometryUploader`、`FrameUniformWriter`、`StaticWorldBuffers`），`WindowedRenderer.cs` **2400 → 2065**。运行时冒烟 1.920 ms（抽取前 1.919），无回归。
+### 沙盒验证法（本轮建立，所有画面改动都用它）
 
-**T-838 / T-839 已补测试并收口为已完成**（18 个新测试，2718 全绿）。为此建立了两个窄接缝：`IGeometryBackend`（3 方法，替代 55 成员的 `IRenderBackend`）与 `IChunkGeometrySink`（2 方法，替代需要 `Device` 的 `ChunkGeometryStore`）。
+```
+MC_FRAME_LOCAL=1 + --frame  →  RenderLocal → BuildDemoWorld
+```
 
-**离线帧哈希的正确用法**：它只对**当前世界状态**有效。判据是改动前后各渲一次必须相同；隔了较长时间要用 `git stash` 回到改动前重渲确认基线，不要拿历史值比对（本会话 `5821CCAD` → `4D5A24C0` 就是世界演化所致）。
+不连服务器、**两次哈希完全相同**。改动前后对拍可量化：像素差比例 / 最大通道差 / 差异区域。T-841 就是这样确认的（7.82% 像素、最大差 10/255、区域恰为岛屿几何）。
 
-**候选的下一步（按我的推荐排序）**：
+**连服务器的离线帧不能用来验证画面细节**：该帧几乎全是天空，地形着色器覆盖像素极少，连"把大气雾终点压到 32"这种极端值都测不出变化。本轮因此浪费了两轮。
 
-1. **删除死的 `LightmapParameters` 管线**（`known-gaps` 已登记）。它经 `ChunkMeshCache` → `LayerSinks` → `ChunkWorkerPool` → `ChunkMesher` 四层传递但**从未被读取**。约 6 文件，纯删除，风险低；现在有 `IGeometryBackend` 这类接缝可作验证依据。
-2. **天气系统**：接上雾的大气壳（`environmentalStart/End`，雨天压到 10/96、Boss 战同理），关闭 `known-gaps` 里的"双壳只实现一层"。同时解锁降水视觉。
-3. **T-837 切片 3（真正换线程）**：收益上限约 −27%（1.92 → 1.39 ms），但要动主循环且需 `prep-*` 阶段一并重叠，风险最高。规格已写清线程划分与双缓冲清单。
-4. 其余已登记项：T-827 云 S4/S5、T-781 Ctrl+F2 全景、T-764 剩余 special renderer、夜间亮度定标。
+单独覆盖项：`MC_FORCE_RAIN` / `MC_FORCE_THUNDER` 可强制雨量与雷暴，便于验证天气相关画面。
 
-**不建议继续抽的**：`PrepPump`（42 行）与 resize 块耦合 `surface`/`depthTexture`/`blitDepthBindGroup` 等大量 by-ref 状态，风险明显高于收益。
+### 已完成（本轮）
+
+T-837 录制区抽取（9 组件，`WindowedRenderer.cs` 2400 → 2065）；T-838/T-839 两个潜在缺陷修复并补回归测试；T-840 删除死 `LightmapParameters` 管线；T-841 大气雾壳（含量化验证）。测试 2718 全绿。
+
+### 下一步候选
+
+1. **雨雾**。规格与全部常量已写入 `docs/specs/render/lighting.md` §11.1（`rainFogMultiplier` 逐刻插值 + `environmentalStart/End` 计算）。实现需改 `fogPerFrame` 回调契约（当前只回颜色，需加环境范围），约 5 文件。**验证钩子已就绪**：`MC_FORCE_RAIN=1` + 沙盒对拍。
+2. **T-837 切片 3（真正换线程）**。上限约 −27%（1.92 → 1.39 ms）。规格在 `docs/specs/render/frame-pipelining.md`，双缓冲与延迟释放已就位。
+3. 雾基色的 `FOG_COLOR` 混合。**注意**：`skyColorMixFactor` 在视距 12 时为 0，故该项在当前默认配置下**不产生差异**，仅在低视距时才有意义——优先级低。
+4. 其余：T-827 云 S4/S5、T-781 Ctrl+F2 全景、T-764 剩余 special renderer、夜间亮度定标。
+
+**不要做**：继续抽 `PrepPump`（42 行）与 resize 块——耦合 `surface`/`depthTexture`/`blitDepthBindGroup` 等大量 by-ref 状态，风险高于收益。
 
 ## 常用命令
 
