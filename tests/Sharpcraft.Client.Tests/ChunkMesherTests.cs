@@ -24,6 +24,20 @@ public sealed class ChunkMesherTests
     }
 
     [Fact]
+    public void EverySectionCarriesASightMatrix()
+    {
+        // Without an atlas the occlusion predicate cannot answer, so the safe reading is "everything visible"; what
+        // this pins is that the mesh carries one matrix per section, aligned with the section index (T-833).
+        var world = SingleBlockWorld(1);
+
+        var mesh = ChunkMesher.Mesh(world);
+
+        Assert.NotNull(mesh.SectionVisibility);
+        Assert.Equal(mesh.SectionStarts!.Length - 1, mesh.SectionVisibility!.Length);
+        Assert.All(mesh.SectionVisibility!, sight => Assert.Equal(SectionVisibility.AllVisible, sight));
+    }
+
+    [Fact]
     public void IsolatedBlockProducesSixFaces()
     {
         var world = SingleBlockWorld(1);

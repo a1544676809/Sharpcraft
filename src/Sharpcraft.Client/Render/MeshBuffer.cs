@@ -28,6 +28,7 @@ public sealed class MeshBuffer : IDisposable
     // columns (T-829). A plain array that only grows, because marking a section happens once per section inside the
     // meshing hot path, which must not allocate.
     private int[] _sectionStarts = [];
+    private SectionVisibility[] _sectionVisibility = [];
     private int _sectionCount;
     private bool _disposed;
 
@@ -198,14 +199,20 @@ public sealed class MeshBuffer : IDisposable
         {
             _sectionStarts = new int[sectionCount];
         }
+
+        if (_sectionVisibility.Length < sectionCount)
+        {
+            _sectionVisibility = new SectionVisibility[sectionCount];
+        }
     }
 
     /// <summary>Records the current index count as the start of a chunk section.</summary>
-    public void MarkSection()
+    public void MarkSection(SectionVisibility visibility = default)
     {
         if (_sectionCount < _sectionStarts.Length)
         {
             _sectionStarts[_sectionCount] = _indexCount;
+            _sectionVisibility[_sectionCount] = visibility;
         }
 
         _sectionCount++;
@@ -223,7 +230,14 @@ public sealed class MeshBuffer : IDisposable
             starts[^1] = _indexCount;
         }
 
-        return new MeshData(Vertices.ToArray(), Indices.ToArray(), blockCount, starts);
+        SectionVisibility[]? visibility = null;
+        if (_sectionCount > 0)
+        {
+            visibility = new SectionVisibility[_sectionCount];
+            _sectionVisibility.AsSpan(0, _sectionCount).CopyTo(visibility);
+        }
+
+        return new MeshData(Vertices.ToArray(), Indices.ToArray(), blockCount, starts, visibility);
     }
 
     /// <inheritdoc />

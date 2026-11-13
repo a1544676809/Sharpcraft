@@ -146,12 +146,24 @@ public static class ChunkMesher
             var neighbourhood = new Neighbourhood(world, chunk);
 
         buffer.ReserveSections(chunk.SectionCount);
+
+        // Scratch for the per section sight test, hoisted so the loop allocates nothing (T-833).
+        Span<ulong> blocking = stackalloc ulong[SectionVisibilityCompute.CellWordCount];
+        Span<ulong> sightVisited = stackalloc ulong[SectionVisibilityCompute.CellWordCount];
+        Span<ushort> sightQueue = stackalloc ushort[SectionVisibilityCompute.CellCount];
+
         for (var sectionIndex = 0; sectionIndex < chunk.SectionCount; sectionIndex++)
         {
             // Marked before the skip so the ranges stay aligned with the section index: an empty section simply
             // contributes a zero length run (T-829).
-            buffer.MarkSection();
             var section = chunk.GetSection(chunk.MinSectionY + sectionIndex);
+            var sectionBaseY = (chunk.MinSectionY + sectionIndex) * 16;
+            var sight = section is null || section.IsEmpty
+                ? SectionVisibility.AllVisible
+                : ResolveSectionVisibility(
+                    neighbourhood, baseX, sectionBaseY, baseZ, sprites, layout, blocking, sightVisited, sightQueue);
+            buffer.MarkSection(sight);
+
             if (section is null || section.IsEmpty)
             {
                 continue;
@@ -162,7 +174,7 @@ public static class ChunkMesher
                 return solidBlocks;
             }
 
-            var baseY = (chunk.MinSectionY + sectionIndex) * 16;
+            var baseY = sectionBaseY;
             solidBlocks += section.NonAirCount;
 
             for (var direction = 0; direction < 6; direction++)
@@ -710,6 +722,50 @@ public static class ChunkMesher
     {
         var corner = sideA && sideB ? sideA : diagonal;
         return ((center ? 0.2f : 1f) + (sideA ? 0.2f : 1f) + (sideB ? 0.2f : 1f) + (corner ? 0.2f : 1f)) * 0.25f;
+    }
+
+    /// <summary>Resolves which faces of one 16³ section can see each other (T-833).</summary>
+    /// <remarks>
+    /// Without an atlas <see cref="Occludes"/> answers "solid" for everything, so a section of ordinary blocks would
+    /// look like solid rock and the traversal would cull the whole world. Reporting everything visible is the safe
+    /// answer when the information is missing.
+    /// </remarks>
+    private static SectionVisibility ResolveSectionVisibility(
+        in Neighbourhood neighbourhood,
+        int baseX,
+        int baseY,
+        int baseZ,
+        BlockSpriteMap? sprites,
+        BlockStateLayout? layout,
+        Span<ulong> blocking,
+        Span<ulong> visited,
+        Span<ushort> queue)
+    {
+        if (sprites is null)
+        {
+            return SectionVisibility.AllVisible;
+        }
+
+        blocking.Clear();
+
+        for (var y = 0; y < 16; y++)
+        {
+            for (var z = 0; z < 16; z++)
+            {
+                for (var x = 0; x < 16; x++)
+                {
+                    if (!Occludes(neighbourhood.GetBlockState(baseX + x, baseY + y, baseZ + z, 0), sprites, layout))
+                    {
+                        continue;
+                    }
+
+                    var cell = x | (z << 4) | (y << 8);
+                    blocking[cell >> 6] |= 1UL << (cell & 63);
+                }
+            }
+        }
+
+        return SectionVisibilityCompute.Compute(blocking, visited, queue);
     }
 
     private static bool Occludes(int state, BlockSpriteMap? sprites, BlockStateLayout? layout)
@@ -1581,7 +1637,7 @@ public static class ChunkMesher
 /// <param name="Indices">Triangle indices.</param>
 /// <param name="BlockCount">Number of solid blocks that contributed faces.</param>
 [Sharpcraft.Common.Reference.ReferenceClass("com.mojang.blaze3d.vertex.MeshData", "ref://mc-26.3-analysis/src/com/mojang/blaze3d/vertex/MeshData.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "auto-resolved by name; verify")]
-public sealed record MeshData(float[] Vertices, uint[] Indices, int BlockCount, int[]? SectionStarts = null)
+public sealed record MeshData(float[] Vertices, uint[] Indices, int BlockCount, int[]? SectionStarts = null, SectionVisibility[]? SectionVisibility = null)
 {
     /// <summary>Vertex count.</summary>
     public int VertexCount => Vertices.Length / ChunkMesher.FloatsPerVertex;
