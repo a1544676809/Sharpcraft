@@ -54,10 +54,17 @@ internal sealed class GameOptions
         static float Number(string name, float fallback) =>
             float.TryParse(Get(name), NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ? value : fallback;
 
+        // FogRenderer.setupFog derives the fade from how far the world is drawn: a span of a tenth of that,
+        // clamped to four..sixty four blocks, ending exactly at the render distance. Hard coding sixty four to
+        // one hundred and sixty put the fade twice as far in as the reference and stopped it short of the edge,
+        // so the whole distance turned to haze (T-835).
+        var renderDistanceBlocks = InteractiveSession.ViewDistanceChunks * 16f;
+        var fogSpan = Math.Clamp(renderDistanceBlocks / 10f, 4f, 64f);
+
         return new FrameDiagnostics
         {
-            FogStart = Number("MC_FOG_START", 64f),
-            FogEnd = Number("MC_FOG_END", 160f),
+            FogStart = Number("MC_FOG_START", renderDistanceBlocks - fogSpan),
+            FogEnd = Number("MC_FOG_END", renderDistanceBlocks),
             ReadDepth = Flag("MC_FRAME_DEPTH"),
             BuildPyramid = Flag("MC_FRAME_PYRAMID"),
             MotionVectors = Flag("MC_FRAME_MOTION"),
