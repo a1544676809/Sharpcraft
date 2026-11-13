@@ -25,7 +25,6 @@ public sealed class ChunkMeshCache
     private readonly List<MeshedChunk> _updates = [];
     private readonly List<long> _pruned = [];
     private readonly ChunkWorkerPool? _pool;
-    private LightmapParameters _appliedLighting = LightmapParameters.DayOverworld;
 
     /// <summary>Creates a standalone cache that meshes on the calling thread.</summary>
     public ChunkMeshCache()
@@ -161,13 +160,9 @@ public sealed class ChunkMeshCache
         var started = System.Diagnostics.Stopwatch.GetTimestamp();
         var remeshed = 0;
 
-        if (Lighting != _appliedLighting)
-        {
-            // Lightmap is per-vertex, so a changed day/night state invalidates every mesh, not just dirty chunks.
-            _meshes.Clear();
-            _appliedLighting = Lighting;
-        }
-
+        // Nothing here reacts to the day/night state. The reference samples a lightmap texture rebuilt each
+        // frame and keeps only the light levels on the vertex, so a mesh does not depend on the time of day
+        // and changing it must not rebuild anything (T-836).
         foreach (var key in world.TakeDirtyChunks())
         {
             _meshes.Remove(key);

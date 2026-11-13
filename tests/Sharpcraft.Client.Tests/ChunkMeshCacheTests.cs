@@ -102,9 +102,10 @@ public sealed class ChunkMeshCacheTests
         cache.Build(world, maxChunksPerBuild: 64, maxMillisecondsPerBuild: double.MaxValue);
         Assert.Equal(0, cache.LastRemeshedChunks);
 
-        // Night changes the lightmap, which is baked per vertex, so every chunk must rebuild.
+        // Night changes the lightmap, but the lightmap is a texture the shader samples and the vertex holds
+        // only the light levels, so the meshes stay valid and nothing rebuilds (T-836).
         cache.Lighting = LightmapParameters.OverworldAt(18000);
         cache.Build(world, maxChunksPerBuild: 64, maxMillisecondsPerBuild: double.MaxValue);
-        Assert.Equal(2, cache.LastRemeshedChunks);
+        Assert.Equal(0, cache.LastRemeshedChunks);
     }
 }
