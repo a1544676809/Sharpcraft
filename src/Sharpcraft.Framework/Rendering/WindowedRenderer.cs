@@ -426,33 +426,12 @@ public static class WindowedRenderer
         var dynamicVertexCapacity = MinimumBufferBytes;
         var dynamicIndexCapacity = MinimumBufferBytes;
 
-        // Entity layers (docs/decisions/0021): persistent buffers grow with the layer plan instead of a fixed cap, so
-        // an explicit per-layer definition can add a new pass without truncation. The buffers are seam handles, so both
-        // the layer pass and the item OIT callback can bind them without unwrapping.
-        var entityLayerVertex = new List<BufferHandle>();
-        var entityLayerIndex = new List<BufferHandle>();
-        var entityLayerVertexCapacity = new List<ulong>();
-        var entityLayerIndexCapacity = new List<ulong>();
-        var entityLayerIndexCount = new List<uint>();
-        var entityLayerKind = new List<EntityGeometryLayerKind>();
-        var entityLayerUsesItemAtlas = new List<bool>();
+        var deferredRelease = new DeferredBufferRelease(backend.Destroy);
+        // Entity layers (docs/decisions/0021): persistent buffers grow with the layer plan instead of a fixed
+        // cap, so an explicit per-layer definition can add a new pass without truncation.
+        var layerPool = new EntityLayerPool(backend, deferredRelease, MinimumBufferBytes);
         var entityLayerDrawn = 0;
-
-        void EnsureEntityLayerCapacity(int count)
-        {
-            while (entityLayerVertex.Count < count)
-            {
-                entityLayerVertex.Add(backend.CreateBuffer(new BufferDesc(MinimumBufferBytes, BufferUsages.Vertex | BufferUsages.CopyDst)));
-                entityLayerIndex.Add(backend.CreateBuffer(new BufferDesc(MinimumBufferBytes, BufferUsages.Index | BufferUsages.CopyDst)));
-                entityLayerVertexCapacity.Add(MinimumBufferBytes);
-                entityLayerIndexCapacity.Add(MinimumBufferBytes);
-                entityLayerIndexCount.Add(0);
-                entityLayerKind.Add(default);
-                entityLayerUsesItemAtlas.Add(false);
-            }
-        }
-        EnsureEntityLayerCapacity(4);
-        // The helper is defined further down; the buffers above are created eagerly so no nullable state leaks.
+        layerPool.EnsureCapacity(4);
 
         // Geometry lives in persistent buffers that are rewritten in place, so a rebuild costs one upload
         // instead of two allocations plus a GPU sync. They only grow, and the grown-out buffers are released
@@ -608,7 +587,6 @@ public static class WindowedRenderer
 
         // Two copies each, alternating per frame: one is written while the other is still being read (T-837).
         var uniforms = new FrameUniformStaging();
-        var deferredRelease = new DeferredBufferRelease(backend.Destroy);
 
         var colour = request.ClearColour;
         var presented = 0;
@@ -1002,47 +980,41 @@ public static class WindowedRenderer
             if (!skipUpload && entityLayers is not null && entityLayers() is { Count: > 0 } layers)
             {
                 var used = layers.Count;
-                EnsureEntityLayerCapacity(used);
+                layerPool.EnsureCapacity(used);
                 for (var layerIndex = 0; layerIndex < used; layerIndex++)
                 {
                     var layer = layers[layerIndex];
                     var geometry = layer.Geometry;
-                    entityLayerIndexCount[layerIndex] = 0;
-                    entityLayerKind[layerIndex] = layer.Kind;
-                    entityLayerUsesItemAtlas[layerIndex] = layer.UsesItemAtlas;
+                    layerPool.SetIndexCount(layerIndex, 0);
+                    layerPool.SetKind(layerIndex, layer.Kind);
+                    layerPool.SetUsesItemAtlas(layerIndex, layer.UsesItemAtlas);
                     if (geometry.IndexCount <= 0)
                     {
                         continue;
                     }
                     var neededVertex = (ulong)geometry.VertexFloats * sizeof(float);
                     var neededIndex = (ulong)geometry.IndexCount * sizeof(uint);
-                    if (neededVertex > entityLayerVertexCapacity[layerIndex])
+                    if (neededVertex > layerPool.VertexCapacity(layerIndex))
                     {
-                        deferredRelease.Release(entityLayerVertex[layerIndex]);
-                        entityLayerVertexCapacity[layerIndex] = Math.Max(neededVertex * 2, MinimumBufferBytes);
-                        entityLayerVertex[layerIndex] = backend.CreateBuffer(
-                            new BufferDesc(entityLayerVertexCapacity[layerIndex], BufferUsages.Vertex | BufferUsages.CopyDst));
+                        layerPool.GrowVertex(layerIndex, neededVertex);
                     }
 
-                    if (neededIndex > entityLayerIndexCapacity[layerIndex])
+                    if (neededIndex > layerPool.IndexCapacity(layerIndex))
                     {
-                        deferredRelease.Release(entityLayerIndex[layerIndex]);
-                        entityLayerIndexCapacity[layerIndex] = Math.Max(neededIndex * 2, MinimumBufferBytes);
-                        entityLayerIndex[layerIndex] = backend.CreateBuffer(
-                            new BufferDesc(entityLayerIndexCapacity[layerIndex], BufferUsages.Index | BufferUsages.CopyDst));
+                        layerPool.GrowIndex(layerIndex, neededIndex);
                     }
                     if (!skipUpload)
                     {
                     backend.WriteBuffer(
-                        entityLayerVertex[layerIndex],
+                        layerPool.Vertex(layerIndex),
                         System.Runtime.InteropServices.MemoryMarshal.AsBytes(geometry.Vertices.AsSpan(0, geometry.VertexFloats)),
                         0);
                     backend.WriteBuffer(
-                        entityLayerIndex[layerIndex],
+                        layerPool.Index(layerIndex),
                         System.Runtime.InteropServices.MemoryMarshal.AsBytes(geometry.Indices.AsSpan(0, geometry.IndexCount)),
                         0);
                     }
-                    entityLayerIndexCount[layerIndex] = (uint)geometry.IndexCount;
+                    layerPool.SetIndexCount(layerIndex, (uint)geometry.IndexCount);
                 }
                 entityLayerDrawn = used;
             }
@@ -1446,20 +1418,20 @@ public static class WindowedRenderer
                         // translucent layers blend with depth writes off, which the pipeline state already encodes.
                         for (var layerIndex = 0; layerIndex < entityLayerDrawn; layerIndex++)
                         {
-                            var layerIndexCount = entityLayerIndexCount[layerIndex];
+                            var layerIndexCount = layerPool.IndexCount(layerIndex);
                             if (layerIndexCount == 0)
                             {
                                 continue;
                             }
 
-                            if (entityLayerKind[layerIndex] == EntityGeometryLayerKind.ItemTranslucent)
+                            if (layerPool.Kind(layerIndex) == EntityGeometryLayerKind.ItemTranslucent)
                             {
                                 // Composed by the reference OIT stages below, exactly as RenderTypes.ITEM_TRANSLUCENT
                                 // binds OIT_ITEM in the reference.
                                 continue;
                             }
 
-                            backend.SetPipeline(pass, entityLayerKind[layerIndex] switch
+                            backend.SetPipeline(pass, layerPool.Kind(layerIndex) switch
                             {
                                 EntityGeometryLayerKind.ItemCutout => itemCutoutPipeline,
                                 EntityGeometryLayerKind.Translucent => entityPipeline,
@@ -1468,14 +1440,14 @@ public static class WindowedRenderer
                                 EntityGeometryLayerKind.Elytra => entityElytraPipeline,
                                 _ => entityCutoutPipeline
                             });
-                            backend.SetVertexBuffer(pass, 0, entityLayerVertex[layerIndex], 0, entityLayerVertexCapacity[layerIndex]);
+                            backend.SetVertexBuffer(pass, 0, layerPool.Vertex(layerIndex), 0, layerPool.VertexCapacity(layerIndex));
                             backend.SetIndexBuffer(
                                 pass,
-                                entityLayerIndex[layerIndex],
+                                layerPool.Index(layerIndex),
                                 IndexFormat.Uint32,
                                 0,
                                 (ulong)layerIndexCount * sizeof(uint));
-                            if (entityLayerUsesItemAtlas[layerIndex] && itemAtlasGpu.Created)
+                            if (layerPool.UsesItemAtlas(layerIndex) && itemAtlasGpu.Created)
                             {
                                 backend.SetBindGroup(pass, 0, itemAtlasGpu.BindGroup);
                             }
@@ -1622,8 +1594,8 @@ public static class WindowedRenderer
                     var atlasBound = false;
                     for (var itemLayer = 0; itemLayer < entityLayerDrawn; itemLayer++)
                     {
-                        if (entityLayerKind[itemLayer] != EntityGeometryLayerKind.ItemTranslucent ||
-                            entityLayerIndexCount[itemLayer] == 0)
+                        if (layerPool.Kind(itemLayer) != EntityGeometryLayerKind.ItemTranslucent ||
+                            layerPool.IndexCount(itemLayer) == 0)
                         {
                             continue;
                         }
@@ -1634,14 +1606,14 @@ public static class WindowedRenderer
                             atlasBound = true;
                         }
 
-                        backend.SetVertexBuffer(p, 0, entityLayerVertex[itemLayer], 0, entityLayerVertexCapacity[itemLayer]);
+                        backend.SetVertexBuffer(p, 0, layerPool.Vertex(itemLayer), 0, layerPool.VertexCapacity(itemLayer));
                         backend.SetIndexBuffer(
                             p,
-                            entityLayerIndex[itemLayer],
+                            layerPool.Index(itemLayer),
                             IndexFormat.Uint32,
                             0,
-                            (ulong)entityLayerIndexCount[itemLayer] * sizeof(uint));
-                        backend.DrawIndexed(p, entityLayerIndexCount[itemLayer], 1, 0, 0, 1);
+                            (ulong)layerPool.IndexCount(itemLayer) * sizeof(uint));
+                        backend.DrawIndexed(p, layerPool.IndexCount(itemLayer), 1, 0, 0, 1);
                     }
                 }
 
@@ -1660,8 +1632,8 @@ public static class WindowedRenderer
                 var itemOitGeometryPresent = false;
                 for (var itemLayer = 0; itemLayer < entityLayerDrawn; itemLayer++)
                 {
-                    if (entityLayerKind[itemLayer] == EntityGeometryLayerKind.ItemTranslucent &&
-                        entityLayerIndexCount[itemLayer] > 0)
+                    if (layerPool.Kind(itemLayer) == EntityGeometryLayerKind.ItemTranslucent &&
+                        layerPool.IndexCount(itemLayer) > 0)
                     {
                         itemOitGeometryPresent = true;
                         break;
@@ -2016,10 +1988,10 @@ public static class WindowedRenderer
 
         deferredRelease.Release(dynamicVertex);
         deferredRelease.Release(dynamicIndex);
-        for (var layerIndex = 0; layerIndex < entityLayerVertex.Count; layerIndex++)
+        for (var layerIndex = 0; layerIndex < layerPool.Count; layerIndex++)
         {
-            deferredRelease.Release(entityLayerVertex[layerIndex]);
-            deferredRelease.Release(entityLayerIndex[layerIndex]);
+            deferredRelease.Release(layerPool.Vertex(layerIndex));
+            deferredRelease.Release(layerPool.Index(layerIndex));
         }
 
         deferredRelease.Release(uiVertex);
