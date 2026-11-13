@@ -90,6 +90,33 @@ FrameExecutor.Record(target, request)   →  command encoder
 
 切片 3 之前，两侧输出必须已经一致；否则该切片无法用"像素不变"验收。
 
+### 切片 1（§4 第 1 步）完成时的接缝形态与第 2 步清理清单（2026-11-13）
+
+**已完成**：`WindowedRenderer.Run` 的整帧录制（原 L1089–L1503）原样搬入
+`src/Sharpcraft.Framework/Rendering/FrameExecutor.cs` 的 `FrameExecutor.Record`；渲染目标由新增的
+`FrameTarget(Colour, Depth, Width, Height)` 传入，窗口侧只保留目标获取（`FramePresentation.Ensure`）、
+`RecordPresent`、`Submit` 与截图。相机采样（含 `cameraPerFrame(window)`）、`WindowHost` 与 surface 仍在窗口侧。
+`WindowedRenderer.cs` **1975 → 1663 行**，新增 `FrameExecutor.cs` **787 行**，`OffscreenRenderer.cs` 未动（1533 行）。
+
+**接缝形态不是干净的"目标 + 请求"**：`Record` 除 `FrameTarget` 外，还通过 `FrameExecutor.Resources` 的
+**4 个委托**读取仍属于 `WindowedRenderer` 的可变局部量（闭包式耦合）。这是为了本次抽取行为不变的**过渡形态**，
+不是抽象边界；第 2 步（`OffscreenRenderer` 改用同一执行器）开始前必须把它们换成执行器自己拥有的状态。
+
+| 委托 | 读 / 改的窗口侧状态 | 用途 |
+| --- | --- | --- |
+| `ReferenceTargetsReady` | `refTargetsCreated`（bool） | 判断尺寸相关的 OIT 目标是否已建 |
+| `CreateReferenceTargets` | 局部函数 `CreateReferenceTargets()`：按 `frameWidth/frameHeight` 建 `refDepthBounds*`、`refTransmittance0/1`、`refAccumulate` 及其绑定组、`cloudDepthTexture/View`，调 `itemOit.Create(...)`，并置 `refTargetsCreated` 与 `cloudDepthTargetsCreated` | 首个需要透明的帧或 resize 时重建目标 |
+| `BlitDepthGroup` | 局部函数 `BlitDepthGroup()`：`depthViewHandle`、`blitDepthBindGroup`、`blitDepthBoundFor`、`blitDepthRebuilds` | 深度视图变化时惰性重建 blit-depth 绑定组 |
+| `GetReferenceTargets` | 快照 `refDepthBoundsView`、`refDepthBoundsCulledView`、`refTransmittance0/1View`、`refAccumulateView`、`refCullBindGroup`、`refTransmittanceBindGroup`、`refAccumulateBindGroup`、`refCompositeBindGroup`、`cloudDepthViewHandle`、`cloudDepthTargetsCreated` | 录制中读当前 OIT 句柄；必须在 `CreateReferenceTargets` 之后取，故用委托而非一次性快照 |
+
+**第 2 步清理清单**：① 把上述目标与绑定组移进执行器自有对象，尺寸变化由执行器自己重建，删除 4 个委托；
+② 相机与 `eye/target` 改由请求提供，不再经窗口回调；③ 之后 `OffscreenRenderer` 才能只做"建纹理 → 调
+`Record` → 回读"。在此之前，执行器的真实依赖面大于 `FrameTarget(Colour, Depth, Width, Height)`。
+
+**判据**：离线 `--frame` 哈希对 `WindowedRenderer` 的改动不敏感（只走 `OffscreenRenderer`），本次以
+"构建 0 警告 + 2718 测试全绿 + ClassMap/Docs 全绿 + Release 运行时冒烟（cull / frame-cpu 正常、无崩溃）"验收，
+不用帧哈希。
+
 ## 6. 与其它任务的关系
 
 - **T-837 切片 3（录制线程）依赖本项**：线程化改的是 `WindowedRenderer`，而该路径缺乏像素级判据。先收敛，才有一条能被像素验证的主路径。

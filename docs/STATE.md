@@ -75,6 +75,7 @@ MC_FRAME_LOCAL=1 + --frame  →  RenderLocal → BuildDemoWorld
 ### 已完成（本轮）
 
 T-837 录制区抽取（9 组件，`WindowedRenderer.cs` 2400 → 2065）；T-838/T-839 两个潜在缺陷修复并补回归测试；T-840 删除死 `LightmapParameters` 管线；T-841 大气雾壳（含量化验证）。测试 2718 全绿。
+**T-843 第 1 步（本轮完成）**：整帧录制原样搬入 `FrameExecutor.Record`，目标由 `FrameTarget` 参数化；`WindowedRenderer.cs` **1975→1663** 行、新增 `FrameExecutor.cs` **787** 行、`OffscreenRenderer.cs` 未动（1533）。构建 0 警告、2718 测试全绿、ClassMap/Docs 全绿；Release 冒烟 30 s / 14897 帧正常退出，稳态 `frame=1.540`（基线 1.582，无劣化），`cull: chunks=637 culled=449 … drawn=183`。接缝仍含 **4 个委托**读窗口可变局部量（规格 §5 清理清单）；**下一步：第 2 步先把它们换成执行器自有状态，再切离屏目标**（不用离线帧哈希当判据）。
 
 ### 下一步候选
 
