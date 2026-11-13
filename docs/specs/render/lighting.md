@@ -123,6 +123,26 @@
 | 顶点契约 | `TerrainVertexWriter` 写 8 位 `sky`、`block`，与规格 §6 一致 |
 | 时间因子传递 | 经 uniform（`ToLightmapUniform`）逐帧传入着色器，与几何无关 |
 
+### 10.1 根因（已定位，用户截图对照确认）
+
+雾的等距面用**视空间深度**而非**径向距离**：
+
+```wgsl
+// oit_reference.wgsl / cloud_oit.wgsl
+output.fogDistance = clip.w;   // 沿视线方向的深度
+```
+
+`clip.w` 的等距面是**垂直于视线的平面**，因此：
+
+- 低头看水面时，雾边界是一条**水平直线**（原版是**圆的**）
+- 转动视角时，边界跟着转（原版锚定世界空间，不转）
+
+原版用 `length(worldPos - cameraPos)`，等距面是球面。
+
+**这也解释了 T-835 的日落接缝**：雾色本身正确，是等距面几何错了，区块边界因此在错误的等距面上交替显形；正午/午夜因为整片雾色饱和而看不见。
+
+**修法**：顶点着色器用世界位置与相机位置的欧氏距离，替代 `clip.w`。`cloud_oit.wgsl` 同样处理。需注意 OIT 的 `deviceDepth` 仍应使用 `clip.z / clip.w`（深度语义不变），只有 `fogDistance` 改为径向。
+
 **残留可疑点（未验证）**：`ChunkMeshCache` 在光照变化时清空整个缓存：
 
 ```csharp
