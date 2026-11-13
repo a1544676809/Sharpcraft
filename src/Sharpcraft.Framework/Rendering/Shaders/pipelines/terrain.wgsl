@@ -3,6 +3,7 @@
 
 struct Camera {
     viewProjection : mat4x4<f32>,
+    eye : vec4<f32>,
 };
 @group(0) @binding(2) var<uniform> camera : Camera;
 
@@ -88,7 +89,7 @@ fn vs_main(
     // never forces the mesh to be re-transformed and re-uploaded.
     let clip = camera.viewProjection * vec4<f32>(position, 1.0);
     output.clipPosition = clip;
-    output.fogDistance = clip.w;
+    output.fogDistance = length(position.xyz - camera.eye.xyz);
     output.colour = colour.rgb;
     output.uv = uv;
     output.spriteRect = spriteRects[packed & 0xFFFFu];

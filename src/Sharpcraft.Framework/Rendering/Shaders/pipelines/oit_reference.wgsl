@@ -9,6 +9,7 @@
 
 struct Camera {
     viewProjection : mat4x4<f32>,
+    eye : vec4<f32>,
 };
 @group(0) @binding(0) var atlasTexture : texture_2d<f32>;
 @group(0) @binding(1) var atlasSampler : sampler;
@@ -96,7 +97,7 @@ fn vs_main(
     output.clipPosition = clip;
     // clip.w is the view-space distance (the projection is set up so), i.e. the linear depth in blocks; clip.z / clip.w
     // is the normalized device depth in [0, 1]. Both are interpolated: depth is affine in screen space, so this is exact.
-    output.fogDistance = clip.w;
+    output.fogDistance = length(position.xyz - camera.eye.xyz);
     output.deviceDepth = clip.z / max(clip.w, 0.00001);
     output.colour = colour.rgb;
     output.uv = uv;

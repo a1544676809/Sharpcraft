@@ -40,7 +40,7 @@ public static class VertexLayout
     public const ulong SpriteEntrySize = 16;
 
     /// <summary>Size of the camera uniform block in bytes: one 4×4 matrix.</summary>
-    public const ulong CameraUniformSize = 128;
+    public const ulong CameraUniformSize = 144;
 
     /// <summary>Binding index of the camera uniform inside the shared bind group.</summary>
     public const uint CameraBinding = 2;

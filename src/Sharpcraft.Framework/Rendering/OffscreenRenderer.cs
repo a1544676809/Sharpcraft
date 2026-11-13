@@ -523,10 +523,10 @@ public static class OffscreenRenderer
                 lightmapBytes.AsSpan());
             backend.WriteBuffer(lightmapBuffer, lightmapBytes, 0);
 
-            Span<float> cameraBlock = stackalloc float[32];
+            Span<float> cameraBlock = stackalloc float[36];
             CameraUniform.Write(cameraBlock, request.CameraPosition, request.CameraTarget, request.FieldOfViewDegrees, (int)width, (int)height);
             var cameraBytes = new byte[VertexLayout.CameraUniformSize];
-            for (var index = 0; index < 32; index++)
+            for (var index = 0; index < 36; index++)
             {
                 BitConverter.TryWriteBytes(cameraBytes.AsSpan(index * sizeof(float)), cameraBlock[index]);
             }

@@ -7,6 +7,7 @@
 
 struct Camera {
     viewProjection : mat4x4<f32>,
+    eye : vec4<f32>,
 };
 struct Transform {
     model : mat4x4<f32>,
@@ -103,7 +104,7 @@ fn vs_main(@builtin(vertex_index) vertexIndex : u32) -> VertexOutput {
     output.colour = vec3<f32>(BRIGHTNESS[direction]) * transform.tint.rgb;
     output.alpha = fog;
     output.cloudAlpha = transform.tint.a;
-    output.fogDistance = clip.w;
+    output.fogDistance = length(world.xyz - camera.eye.xyz);
     output.deviceDepth = clip.z / max(clip.w, 0.00001);
     return output;
 }

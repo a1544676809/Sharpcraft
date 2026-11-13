@@ -26,9 +26,9 @@ public static class CameraUniform
         int width,
         int height)
     {
-        if (destination.Length < 32)
+        if (destination.Length < 36)
         {
-            throw new ArgumentException("camera uniform needs 32 floats", nameof(destination));
+            throw new ArgumentException("camera uniform needs 36 floats", nameof(destination));
         }
 
         // System.Numerics composes for row vectors (v × M) while WGSL multiplies a column vector (M × v).
@@ -38,6 +38,13 @@ public static class CameraUniform
 
         // The sky matrix drops the camera translation: celestial geometry already sits on a dome around the origin, so a
         // rotation-only view is all it needs — the same shape as the reference sky shaders' ModelViewMat (T-811, T-812).
+        // The fog shell is a sphere around the eye, so the shaders need the eye in world space; the depth along the
+        // view axis is a plane and shows as a straight horizon when looking down (T-835).
+        destination[32] = position.X;
+        destination[33] = position.Y;
+        destination[34] = position.Z;
+        destination[35] = 1f;
+
         WriteMatrix(destination, CameraMath.BuildViewProjection(Vector3.Zero, target - position, fieldOfViewDegrees, width, height), 16);
     }
 
