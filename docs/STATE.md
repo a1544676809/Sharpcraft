@@ -52,23 +52,22 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 
 ## 下一步具体动作
 
-**分支**：`frame-pipeline`，领先 `origin/main` **58 个提交未推送**。`WindowedRenderer.cs` 由 2400 降至 **2065**（−14%）。已抽成组件的：`FrameUniformStaging`、`EntityLayerPool`、`GrowableGeometryBuffers`（×2）、`EntityPassRecorder`、`TerrainPassRecorder`、`SkyPassRecorder`、`FrameGeometryUploader`、`FrameUniformWriter`、`StaticWorldBuffers`。scene 主 pass 的 switch 只剩四段各约 6 行。**运行时冒烟通过**：同机位帧时间 1.920 ms（重构前 1.919 ms），遮挡剔除正常 `culled=412 drawn=256`。`main` 本身也在 `234aed1` 未推送。推送需项目所有者明确授权。
+**分支**：`frame-pipeline` @ `d249f04`，领先 `origin/main` **62 个提交未推送**（`main` 在 `234aed1` 也未推送）。**项目所有者已明确：暂时不推送。**
 
-**当前任务 T-837（帧间流水线）**：规格 `docs/specs/render/frame-pipelining.md` 已就绪，切片 2 与切片 3 的前置设施已完成。
+**T-837 录制区抽取已完成**：9 个组件（`FrameUniformStaging`、`EntityLayerPool`、`GrowableGeometryBuffers`×2、`EntityPassRecorder`、`TerrainPassRecorder`、`SkyPassRecorder`、`FrameGeometryUploader`、`FrameUniformWriter`、`StaticWorldBuffers`），`WindowedRenderer.cs` **2400 → 2065**。运行时冒烟 1.920 ms（抽取前 1.919），无回归。
 
-1. **下一刀：抽 `scene-entities`（107 行）**。它是 `switch (WorldRenderPassKind)` 里的 `case Entities`，需要约 12 个参数：`backend`、`pass`、`skipEntities`、`dynamicIndexCount`、`entityPipeline`、`dynamicBuffers`、`entitySkin`、`bindGroup`、`entityLayerDrawn`、`layerPool`、五个 layer pipeline、`itemCutoutPipeline`。目标形态是静态方法 `RecordEntities(backend, pass, ...)`，放新文件。
-2. **再下一刀：`scene`（183 行）**。句柄交汇最多，最后做。每个 case 同样抽成 `RecordXxx`。
-3. **判据（每步都必须过）**：离线 `--frame` 哈希 **必须仍为 `5821CCAD1343B5DBC8543607DD3EB94D`** + 全量测试通过 + 行数棘轮 2400。前 50 个提交全部守住了这一条。
-4. **不要做的**：`clouds` 绘制块没有可抽的东西（73 行是云几何**建立**，绘制只有 2 行组件调用，已核实）。
-5. **已知缺口**：`EntityLayerPool` 与 `GrowableGeometryBuffers` 都没有单元测试——它们在构造函数里收 `IRenderBackend`（48 个成员），测试里造不出假实现。应改成收创建委托 `Func<BufferDesc, BufferHandle>`，`DeferredBufferRelease` 已是这个模式。
+**T-838 / T-839 已补测试并收口为已完成**（18 个新测试，2718 全绿）。为此建立了两个窄接缝：`IGeometryBackend`（3 方法，替代 55 成员的 `IRenderBackend`）与 `IChunkGeometrySink`（2 方法，替代需要 `Device` 的 `ChunkGeometryStore`）。
 
-**抽取中发现的两个缺陷（T-838、T-839）——都是潜在缺陷，当前路径不触发**：
-1. 几何移除回调被调用两次。宿主传的是 `() => removedChunks`（每次返回同一列表），所以未造成实际失效；但宿主若改成 draining 语义就会静默丢移除。已修。
-2. `EntityPassRecorder` 快照了会被重建替换的静态世界句柄。`WindowCommand` 从未传 `rebuildRequest`（出现 0 次），重建块在窗口路径不执行。已修为共享持有者。
-**两者都无法被离线帧或现有测试覆盖**。要写运行时用例，前提是**先有办法触发这两条路径**（当前没有任何入口），属于要新增宿主侧诊断钩子的独立任务。
-**IRenderBackend 有约 55 个成员**，测试里造完整假实现代价大；`ChunkGeometryStore` 还需要 wgpu `Device`。这是"给组件补单测"的共同阻碍，需要先做一处窄接缝（例如只暴露 `WriteBuffer`/`CreateBuffer`/`Destroy` 的接口）。
+**离线帧哈希的正确用法**：它只对**当前世界状态**有效。判据是改动前后各渲一次必须相同；隔了较长时间要用 `git stash` 回到改动前重渲确认基线，不要拿历史值比对（本会话 `5821CCAD` → `4D5A24C0` 就是世界演化所致）。
 
-**已消除的每帧分配**（与流水线无关，本身是原则 9 违规）：三个 uniform 缓冲 + `uiRanges.ToArray()`，600 FPS 下合计约每秒 2400 次。
+**候选的下一步（按我的推荐排序）**：
+
+1. **删除死的 `LightmapParameters` 管线**（`known-gaps` 已登记）。它经 `ChunkMeshCache` → `LayerSinks` → `ChunkWorkerPool` → `ChunkMesher` 四层传递但**从未被读取**。约 6 文件，纯删除，风险低；现在有 `IGeometryBackend` 这类接缝可作验证依据。
+2. **天气系统**：接上雾的大气壳（`environmentalStart/End`，雨天压到 10/96、Boss 战同理），关闭 `known-gaps` 里的"双壳只实现一层"。同时解锁降水视觉。
+3. **T-837 切片 3（真正换线程）**：收益上限约 −27%（1.92 → 1.39 ms），但要动主循环且需 `prep-*` 阶段一并重叠，风险最高。规格已写清线程划分与双缓冲清单。
+4. 其余已登记项：T-827 云 S4/S5、T-781 Ctrl+F2 全景、T-764 剩余 special renderer、夜间亮度定标。
+
+**不建议继续抽的**：`PrepPump`（42 行）与 resize 块耦合 `surface`/`depthTexture`/`blitDepthBindGroup` 等大量 by-ref 状态，风险明显高于收益。
 
 ## 常用命令
 
