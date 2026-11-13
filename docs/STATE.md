@@ -62,7 +62,11 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 4. **不要做的**：`clouds` 绘制块没有可抽的东西（73 行是云几何**建立**，绘制只有 2 行组件调用，已核实）。
 5. **已知缺口**：`EntityLayerPool` 与 `GrowableGeometryBuffers` 都没有单元测试——它们在构造函数里收 `IRenderBackend`（48 个成员），测试里造不出假实现。应改成收创建委托 `Func<BufferDesc, BufferHandle>`，`DeferredBufferRelease` 已是这个模式。
 
-**抽取中发现的两个真实缺陷（T-838、T-839）**：几何移除回调被调用两次（draining 队列会静默失效）；`EntityPassRecorder` 快照了会被重建替换的静态世界句柄（重建后画的是已退役乃至已销毁的缓冲）。两者都已修，但都**无法被离线帧或现有测试覆盖**——需要能触发相应路径的运行时用例。
+**抽取中发现的两个缺陷（T-838、T-839）——都是潜在缺陷，当前路径不触发**：
+1. 几何移除回调被调用两次。宿主传的是 `() => removedChunks`（每次返回同一列表），所以未造成实际失效；但宿主若改成 draining 语义就会静默丢移除。已修。
+2. `EntityPassRecorder` 快照了会被重建替换的静态世界句柄。`WindowCommand` 从未传 `rebuildRequest`（出现 0 次），重建块在窗口路径不执行。已修为共享持有者。
+**两者都无法被离线帧或现有测试覆盖**。要写运行时用例，前提是**先有办法触发这两条路径**（当前没有任何入口），属于要新增宿主侧诊断钩子的独立任务。
+**IRenderBackend 有约 55 个成员**，测试里造完整假实现代价大；`ChunkGeometryStore` 还需要 wgpu `Device`。这是"给组件补单测"的共同阻碍，需要先做一处窄接缝（例如只暴露 `WriteBuffer`/`CreateBuffer`/`Destroy` 的接口）。
 
 **已消除的每帧分配**（与流水线无关，本身是原则 9 违规）：三个 uniform 缓冲 + `uiRanges.ToArray()`，600 FPS 下合计约每秒 2400 次。
 
