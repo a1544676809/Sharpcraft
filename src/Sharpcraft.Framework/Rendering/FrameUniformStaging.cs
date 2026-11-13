@@ -4,26 +4,58 @@
 namespace Sharpcraft.Framework.Rendering;
 
 /// <summary>
-/// The uniform bytes a frame rewrites before it submits: the lightmap block, the fog block and the floats
-/// that make up the fog block.
+/// The uniform bytes a frame rewrites before it submits: the camera block, the lightmap block, the fog
+/// block and the floats that make up the fog block.
 /// </summary>
 /// <remarks>
-/// These were created inside the frame loop and thrown away each time — three allocations per frame, for
-/// buffers that are fully overwritten before they are read. Holding them here allocates once instead.
+/// These were created inside the frame loop and thrown away each time — allocations per frame, for buffers
+/// that are fully overwritten before they are read. Holding them here allocates once instead.
 /// <para>
-/// They are also the arrays the frame pipeline has to give two copies of: recording the next frame while the
-/// previous one is still in flight would overwrite a block the GPU has not read yet. Keeping them in one
-/// type is what makes that change a local one (T-837).
+/// Each one has two copies and <see cref="Advance"/> alternates between them. That is what makes recording
+/// a frame while the previous one is still in flight safe: without it, the second frame's writes would land
+/// in a block the GPU has not read yet. Nothing records from a second thread yet, so alternating currently
+/// changes nothing observable — but it is the change that has to be in place before anything does, and doing
+/// it here keeps it out of a two thousand line method (T-837).
 /// </para>
 /// </remarks>
 internal sealed class FrameUniformStaging
 {
+    private const int Slots = 2;
+
+    private readonly byte[][] _camera = new byte[Slots][];
+    private readonly byte[][] _lightmap = new byte[Slots][];
+    private readonly byte[][] _fog = new byte[Slots][];
+    private readonly float[][] _fogValues = new float[Slots][];
+
+    private int _slot;
+
+    /// <summary>Allocates both copies of every block.</summary>
+    public FrameUniformStaging()
+    {
+        for (var slot = 0; slot < Slots; slot++)
+        {
+            _camera[slot] = new byte[VertexLayout.CameraUniformSize];
+            _lightmap[slot] = new byte[Shaders.ShaderBindings.LightmapBytes];
+            _fog[slot] = new byte[Shaders.ShaderBindings.FogBytes];
+            _fogValues[slot] = new float[8];
+        }
+    }
+
+    /// <summary>The copy the current frame writes into.</summary>
+    public int Slot => _slot;
+
+    /// <summary>Camera uniform bytes, rewritten every frame from the eye and the projection.</summary>
+    public byte[] Camera => _camera[_slot];
+
     /// <summary>Lightmap uniform bytes, rewritten every frame from the day/night state.</summary>
-    public byte[] Lightmap { get; } = new byte[Shaders.ShaderBindings.LightmapBytes];
+    public byte[] Lightmap => _lightmap[_slot];
 
     /// <summary>Fog uniform bytes, rewritten every frame from the fog colour and range.</summary>
-    public byte[] Fog { get; } = new byte[Shaders.ShaderBindings.FogBytes];
+    public byte[] Fog => _fog[_slot];
 
     /// <summary>The eight floats that <see cref="Fog"/> is a view of.</summary>
-    public float[] FogValues { get; } = new float[8];
+    public float[] FogValues => _fogValues[_slot];
+
+    /// <summary>Moves to the other copy. Call once per frame, before anything writes.</summary>
+    public void Advance() => _slot ^= 1;
 }

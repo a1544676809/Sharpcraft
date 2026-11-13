@@ -605,9 +605,8 @@ public static class WindowedRenderer
         }
 
         Span<float> cameraBlock = stackalloc float[36];
-        var cameraBytes = new byte[VertexLayout.CameraUniformSize];
 
-        // Allocated once rather than three times a frame; the frame pipeline gives these two copies (T-837).
+        // Two copies each, alternating per frame: one is written while the other is still being read (T-837).
         var uniforms = new FrameUniformStaging();
 
         var colour = request.ClearColour;
@@ -673,6 +672,7 @@ public static class WindowedRenderer
         {
             // Per frame CPU attribution (diagnostic): every stage below closes with a Cpu call so the report can say where
             // the frame went without a profiler. Removing these calls plus FrameCpuTimings leaves the renderer unchanged.
+            uniforms.Advance();
             var cpuFrameStarted = System.Diagnostics.Stopwatch.GetTimestamp();
             var cpuLast = cpuFrameStarted;
 
@@ -1267,10 +1267,10 @@ public static class WindowedRenderer
 
             for (var index = 0; index < 36; index++)
             {
-                BitConverter.TryWriteBytes(cameraBytes.AsSpan(index * sizeof(float)), cameraBlock[index]);
+                BitConverter.TryWriteBytes(uniforms.Camera.AsSpan(index * sizeof(float)), cameraBlock[index]);
             }
 
-            backend.WriteBuffer(cameraBuffer, cameraBytes, 0);
+            backend.WriteBuffer(cameraBuffer, uniforms.Camera, 0);
 
             // Per-frame lightmap parameters: day/night changes only this block, never the mesh.
             var frameLightmap = lightmapPerFrame?.Invoke() ?? currentRequest.Lightmap;
