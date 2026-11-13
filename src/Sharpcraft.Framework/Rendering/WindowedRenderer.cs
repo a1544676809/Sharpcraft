@@ -1136,7 +1136,10 @@ public static class WindowedRenderer
                 frameLightmap with { Padding = glintTime },
                 frameFogColour,
                 currentRequest.Diagnostics?.FogStart ?? 64f,
-                currentRequest.Diagnostics?.FogEnd ?? 160f);
+                currentRequest.Diagnostics?.FogEnd ?? 160f,
+                // The atmospheric shell is always on; a thousand and twenty four is the reference default.
+                0f,
+                1024f);
 
             backend.SetBindGroup(pass, 0, bindGroup);
 

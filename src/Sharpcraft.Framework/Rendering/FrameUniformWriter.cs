@@ -51,7 +51,9 @@ internal sealed class FrameUniformWriter
     /// <param name="lightmap">Day/night state the fragment shader samples.</param>
     /// <param name="fog">Fog colour, alpha included.</param>
     /// <param name="fogStart">Distance the fade begins at.</param>
-    /// <param name="fogEnd">Distance it reaches full strength at.</param>
+    /// <param name="fogEnd">Distance the render-distance fade reaches full strength at.</param>
+    /// <param name="fogEnvironmentalStart">Where the always-on atmospheric shell begins.</param>
+    /// <param name="fogEnvironmentalEnd">Where the atmospheric shell reaches full strength.</param>
     public void Write(
         Span<float> cameraBlock,
         Vector3 eye,
@@ -62,7 +64,9 @@ internal sealed class FrameUniformWriter
         LightmapUniform lightmap,
         Vector4 fog,
         float fogStart,
-        float fogEnd)
+        float fogEnd,
+        float fogEnvironmentalStart,
+        float fogEnvironmentalEnd)
     {
         CameraUniform.Write(cameraBlock, eye, target, fieldOfViewDegrees, width, height);
         var cameraBytes = _staging.Camera;
@@ -83,6 +87,10 @@ internal sealed class FrameUniformWriter
         fogValues[3] = fog.W;
         fogValues[4] = fogStart;
         fogValues[5] = fogEnd;
+        // The atmospheric shell: start and end before rain pulls them in. A thousand and twenty four is
+        // the reference default, and it is what gives the fog its constant slope through mid distances.
+        fogValues[6] = fogEnvironmentalStart;
+        fogValues[7] = fogEnvironmentalEnd;
         System.Runtime.InteropServices.MemoryMarshal
             .AsBytes(fogValues.AsSpan())
             .CopyTo(_staging.Fog);

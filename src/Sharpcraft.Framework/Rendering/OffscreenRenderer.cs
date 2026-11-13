@@ -509,6 +509,9 @@ public static class OffscreenRenderer
             fogValues[3] = request.FogColour.W;
             fogValues[4] = request.Diagnostics?.FogStart ?? 64f;
             fogValues[5] = request.Diagnostics?.FogEnd ?? 160f;
+            // The atmospheric shell is always on; a thousand and twenty four is the reference default.
+            fogValues[6] = 0f;
+            fogValues[7] = 1024f;
             System.Runtime.InteropServices.MemoryMarshal.AsBytes(fogValues.AsSpan()).CopyTo(fogBytes);
             var fogBuffer = backend.CreateBufferInit(
                 new BufferDesc(32, BufferUsages.Uniform | BufferUsages.CopyDst),
