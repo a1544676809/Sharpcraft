@@ -92,6 +92,8 @@ FrameExecutor.Record(target, request)   →  command encoder
 
 ### 切片 1（§4 第 1 步）完成时的接缝形态与第 2 步清理清单（2026-11-13）
 
+> 本节记录的是切片 1 当时的过渡形态；其中 4 个委托已在 2A 消除，见下节。
+
 **已完成**：`WindowedRenderer.Run` 的整帧录制（原 L1089–L1503）原样搬入
 `src/Sharpcraft.Framework/Rendering/FrameExecutor.cs` 的 `FrameExecutor.Record`；渲染目标由新增的
 `FrameTarget(Colour, Depth, Width, Height)` 传入，窗口侧只保留目标获取（`FramePresentation.Ensure`）、
@@ -116,6 +118,38 @@ FrameExecutor.Record(target, request)   →  command encoder
 **判据**：离线 `--frame` 哈希对 `WindowedRenderer` 的改动不敏感（只走 `OffscreenRenderer`），本次以
 "构建 0 警告 + 2718 测试全绿 + ClassMap/Docs 全绿 + Release 运行时冒烟（cull / frame-cpu 正常、无崩溃）"验收，
 不用帧哈希。
+
+### 2A 完成：4 个委托已消除（2026-11-13）
+
+按上节清理清单①，`ReferenceTargetsReady` / `CreateReferenceTargets` / `BlitDepthGroup` /
+`GetReferenceTargets` 四个委托全部删除。尺寸相关的 OIT 纹理、视图、绑定组、云深度目标、blit-depth
+绑定组缓存与 `blitDepthRebuilds` 计数移入新文件
+`src/Sharpcraft.Framework/Rendering/FrameOitTargets.cs`，经 `FrameExecutor.Resources.OitTargets`
+在构造时注入执行器。窗口侧只保留深度纹理 / 视图的重建，resize 时调 `FrameOitTargets.Resize`；
+`FrameTarget.Depth` 是唯一与深度相关的每帧输入，`BlitDepthGroup(depthView)` 以它为缓存键。
+`WindowedRenderer.cs` **1663 → 1469 行**（另删切片 1 遗留的死 `cameraBlock` stackalloc），
+新增 `FrameOitTargets.cs` **309 行**，`FrameExecutor.cs` **787 → 741 行**，`OffscreenRenderer.cs` 未动（1533 行）。
+
+**判据（窗口路径行为不变）**——按论证顺序记录，避免下一会话误判为"没查清楚"：
+
+1. **主要论据：变慢是"全阶段同倍 ~1.5×"，且集中在 2A 完全没有改动的阶段。** 第 4 次样本里
+   `scene-terrain 0.163→0.239`、`oit 0.187→0.259`、`cel-build 0.063→0.097`、`submit 0.587→0.898`
+   同步 ~1.4–1.5× 变慢，这四个阶段 2A 一行未动；同时 swapchain / GPU 侧没有相应放大：
+   `swap 0.198` 反而低于基线 `0.352`，`acquire 0.169` 仅比基线 `0.034` 高 0.13 ms（相比第 3 次
+   争用尖峰的 `8.786 ms` 低 50 倍）。**纯状态归属搬移不可能让四个互不相关的 CPU 阶段同步慢 1.5 倍、
+   却恰好让 swap 变快**——这个分布只能说明慢在整台机器（采样时 DeepSeek Harness / msedge / QQ
+   持续占核、CPU 保持 2300 MHz 基频无睿频），不在任何一段代码里。
+2. 静态验证全绿：build 0 警告 0 错误、2718 测试全绿、ClassMap / Docs / 两 verify 全绿。
+   四次 Release 冒烟（1400×754、视距 12、30 s）的 `cull: chunks=637 culled=449 … drawn=183`、
+   `blit bind group rebuilt 1 times`、EXIT=0、无 stderr 异常**逐项一致**；overall frame 依次
+   **1.921 / 2.027 / 15.873 / 2.704 ms**（第 3 次是 `acquire=8.786` 的 swapchain 争用尖峰，
+   第 4 次中位数 2.409 ms）。
+3. 稳态判据（丢弃前 20 个 n=60 窗口后中位数 ≤2.2 ms）第 1 次通过（1.680），第 4 次未通过（2.409）。
+   按裁决**不重复试错、接受并如实记录**：第 2、3、4 次代码完全相同，差异只可能来自环境；
+   结合第 1 条判定纯搬移未改变行为。异常数据一并进入提交信息，未隐藏、未放行。
+
+**剩余**：清理清单②（相机 `eye/target` 仍由窗口回调采样后传入，未改由请求提供）与
+③（`OffscreenRenderer` 切到同一执行器）属 2B 范围。2A 提交后暂停，2B 需要干净基线。
 
 ## 6. 与其它任务的关系
 

@@ -461,143 +461,27 @@ public static class WindowedRenderer
             bindGroup,
             staticWorld);
 
-        var depthTexture = CreateDepthTexture(backend, frameWidth, frameHeight);
+        var depthTexture = FrameOitTargets.CreateDepthTexture(backend, frameWidth, frameHeight);
         // The reference OIT passes take depth as a seam descriptor, so the view comes from the seam as well and is
         // refreshed with the texture it belongs to on resize.
         var depthViewHandle = backend.CreateTextureView(depthTexture);
 
-        // Reference transparency targets and bind groups. Every target is a seam handle, so the bind groups and every
-        // pass downstream take handles too (docs/analysis/architecture/render-backend-seam.md 9.9). Handles are structs,
-        // so they are held as defaults and rebuilt by CreateReferenceTargets.
-        TextureHandle refDepthBoundsTexture = default;
-        TextureViewHandle refDepthBoundsView = default;
-        TextureHandle refDepthBoundsCulledTexture = default;
-        TextureViewHandle refDepthBoundsCulledView = default;
-        TextureHandle refTransmittance0Texture = default;
-        TextureViewHandle refTransmittance0View = default;
-        TextureHandle refTransmittance1Texture = default;
-        TextureViewHandle refTransmittance1View = default;
-        TextureHandle refAccumulateTexture = default;
-        TextureViewHandle refAccumulateView = default;
-        BindGroupHandle refCullBindGroup = default;
-        BindGroupHandle refTransmittanceBindGroup = default;
-        BindGroupHandle refAccumulateBindGroup = default;
-        BindGroupHandle refCompositeBindGroup = default;
-        TextureHandle cloudDepthTexture = default;
-        TextureViewHandle cloudDepthViewHandle = default;
-        BindGroupHandle blitDepthBindGroup = default;
-        TextureViewHandle blitDepthBoundFor = default;
-        var blitDepthRebuilds = 0;
-        var cloudDepthTargetsCreated = false;
-        var refTargetsCreated = false;
-
-        // Translucent item geometry composites through its own reference OIT set, as the reference does with
-        // OitPipelineSet("item") bound to RenderTypes.ITEM_TRANSLUCENT (ItemOitSet).
+        // The size-dependent OIT targets and the cloud depth blit bind group now live in FrameOitTargets, owned by the
+        // frame executor. The window only supplies the depth view each frame (FrameTarget.Depth), so a resize rebuilds
+        // the blit bind group through that view instead of through a closure over window locals.
         var itemOit = new ItemOitSet();
-
-        // The cloud depth blit samples the main depth, so its bind group belongs to that view: it is rebuilt only when the
-        // depth target is recreated (a resize), never per frame (T-806).
-        BindGroupHandle BlitDepthGroup()
-        {
-            if (blitDepthBindGroup.IsValid && blitDepthBoundFor.Equals(depthViewHandle))
-            {
-                return blitDepthBindGroup;
-            }
-
-            if (blitDepthBindGroup.IsValid)
-            {
-                backend.Destroy(blitDepthBindGroup);
-            }
-
-            blitDepthBindGroup = backend.CreateBindGroup(
-                blitDepthLayout,
-                [BindGroupEntryDesc.Texture(0, depthViewHandle), BindGroupEntryDesc.Sampler(1, blitDepthSamplerHandle)]);
-            blitDepthBoundFor = depthViewHandle;
-            blitDepthRebuilds++;
-            return blitDepthBindGroup;
-        }
-
-        void CreateReferenceTargets()
-        {
-            if (refTargetsCreated)
-            {
-                backend.Destroy(refCullBindGroup);
-                backend.Destroy(refTransmittanceBindGroup);
-                backend.Destroy(refAccumulateBindGroup);
-                backend.Destroy(refCompositeBindGroup);
-                backend.Destroy(refDepthBoundsView);
-                backend.Destroy(refDepthBoundsTexture);
-                backend.Destroy(refDepthBoundsCulledView);
-                backend.Destroy(refDepthBoundsCulledTexture);
-                backend.Destroy(refTransmittance0View);
-                backend.Destroy(refTransmittance0Texture);
-                backend.Destroy(refTransmittance1View);
-                backend.Destroy(refTransmittance1Texture);
-                backend.Destroy(refAccumulateView);
-                backend.Destroy(refAccumulateTexture);
-                if (cloudDepthTargetsCreated)
-                {
-                    backend.Destroy(cloudDepthViewHandle);
-                    backend.Destroy(cloudDepthTexture);
-                    cloudDepthTargetsCreated = false;
-                }
-
-                itemOit.Dispose();
-
-            }
-
-            refDepthBoundsTexture = CreateOitTarget(backend, frameWidth, frameHeight, oitTargetFormat);
-            refDepthBoundsView = backend.CreateTextureView(refDepthBoundsTexture);
-            refDepthBoundsCulledTexture = CreateOitTarget(backend, frameWidth, frameHeight, oitTargetFormat);
-            refDepthBoundsCulledView = backend.CreateTextureView(refDepthBoundsCulledTexture);
-            refTransmittance0Texture = CreateOitTarget(backend, frameWidth, frameHeight, oitColorFormat);
-            refTransmittance0View = backend.CreateTextureView(refTransmittance0Texture);
-            refTransmittance1Texture = CreateOitTarget(backend, frameWidth, frameHeight, oitColorFormat);
-            refTransmittance1View = backend.CreateTextureView(refTransmittance1Texture);
-            refAccumulateTexture = CreateOitTarget(backend, frameWidth, frameHeight, oitColorFormat);
-            refAccumulateView = backend.CreateTextureView(refAccumulateTexture);
-
-            refCullBindGroup = backend.CreateBindGroup(refCullLayout, [BindGroupEntryDesc.Texture(0, refDepthBoundsView)]);
-            refTransmittanceBindGroup = backend.CreateBindGroup(refTransmittanceLayout, [BindGroupEntryDesc.Texture(0, refDepthBoundsCulledView)]);
-            refAccumulateBindGroup = backend.CreateBindGroup(
-                refAccumulateLayout,
-                [
-                    BindGroupEntryDesc.Texture(0, refDepthBoundsCulledView),
-                    BindGroupEntryDesc.Texture(1, refTransmittance0View),
-                    BindGroupEntryDesc.Texture(2, refTransmittance1View)
-                ]);
-            refCompositeBindGroup = backend.CreateBindGroup(
-                refCompositeLayout,
-                [
-                    BindGroupEntryDesc.Texture(0, refAccumulateView),
-                    BindGroupEntryDesc.Texture(1, refTransmittance0View),
-                    BindGroupEntryDesc.Texture(2, refTransmittance1View),
-                    // The composite writes the closest translucent device depth from the original terrain depth bounds,
-                    // matching the reference composite (which samples the un-culled target); clouds are excluded from
-                    // this depth write, exactly as the reference excludes them.
-                    BindGroupEntryDesc.Texture(3, refDepthBoundsView)
-                ]);
-            itemOit.Create(
-                backend,
-                frameWidth,
-                frameHeight,
-                oitTargetFormat,
-                refTransmittanceLayout,
-                refAccumulateLayout,
-                refCompositeLayout);
-            // Clouds always get an independent depth target so the cloud depth-bounds write never pollutes the main
-            // depth the terrain transparency passes test against (otherwise glass/water behind a cloud are culled).
-            if (cloudOit is not null)
-            {
-                cloudDepthTexture = CreateDepthTexture(backend, frameWidth, frameHeight);
-                cloudDepthViewHandle = backend.CreateTextureView(cloudDepthTexture);
-                cloudDepthTargetsCreated = true;
-            }
-
-            refTargetsCreated = true;
-        }
-
-        Span<float> cameraBlock = stackalloc float[36];
+        var oitTargets = new FrameOitTargets(
+            backend,
+            oitTargetFormat,
+            oitColorFormat,
+            refTransmittanceLayout,
+            refAccumulateLayout,
+            refCullLayout,
+            refCompositeLayout,
+            blitDepthLayout,
+            blitDepthSamplerHandle,
+            itemOit,
+            cloudOit);
 
         // Two copies each, alternating per frame: one is written while the other is still being read (T-837).
         var uniforms = new FrameUniformStaging();
@@ -668,27 +552,6 @@ public static class WindowedRenderer
         var appliedEntitySkinVersion = entitySkinSource?.Version ?? 0;
         var appliedItemAtlasVersion = itemAtlasSource?.Version ?? 0;
 
-
-        // The executor reads the size-dependent OIT targets through delegates bound to the locals above. They are a
-        // transitional coupling (see FrameExecutor's remarks): step 2 must replace them with executor-owned state.
-        Func<bool> referenceTargetsReady = () => refTargetsCreated;
-        Action createReferenceTargets = CreateReferenceTargets;
-        Func<BindGroupHandle> blitDepthGroup = BlitDepthGroup;
-        Func<FrameExecutor.ReferenceTargets> getReferenceTargets = () => new FrameExecutor.ReferenceTargets
-        {
-            DepthBounds = refDepthBoundsView,
-            DepthBoundsCulled = refDepthBoundsCulledView,
-            Transmittance0 = refTransmittance0View,
-            Transmittance1 = refTransmittance1View,
-            Accumulate = refAccumulateView,
-            CloudDepth = cloudDepthViewHandle,
-            Cull = refCullBindGroup,
-            TransmittanceGroup = refTransmittanceBindGroup,
-            AccumulateGroup = refAccumulateBindGroup,
-            CompositeGroup = refCompositeBindGroup,
-            CloudDepthTargetsCreated = cloudDepthTargetsCreated
-        };
-
         var executorResources = new FrameExecutor.Resources
         {
             Backend = backend,
@@ -729,10 +592,7 @@ public static class WindowedRenderer
             CloudOit = cloudOit,
             ItemOit = itemOit,
             ItemAtlas = itemAtlasGpu,
-            ReferenceTargetsReady = referenceTargetsReady,
-            CreateReferenceTargets = createReferenceTargets,
-            BlitDepthGroup = blitDepthGroup,
-            GetReferenceTargets = getReferenceTargets
+            OitTargets = oitTargets
         };
 
         while (true)
@@ -947,23 +807,13 @@ public static class WindowedRenderer
                 // uses the current index count, and a vertex buffer from an older mesh would make those
                 // indices point past it, drawing stray triangles that look like overlapping texture.
                 surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight, presentMode, WGPUCompositeAlphaMode.Auto);
-                if (blitDepthBindGroup.IsValid)
-                {
-                    // The group samples the depth view, so it must go first.
-                    backend.Destroy(blitDepthBindGroup);
-                    blitDepthBindGroup = default;
-                    blitDepthBoundFor = default;
-                }
-
+                // Executor-owned targets are rebuilt for the new size; the blit bind group is dropped first, before the
+                // depth view it samples is replaced below.
+                oitTargets.Resize(frameWidth, frameHeight);
                 backend.Destroy(depthViewHandle);
                 backend.Destroy(depthTexture);
-                depthTexture = CreateDepthTexture(backend, frameWidth, frameHeight);
+                depthTexture = FrameOitTargets.CreateDepthTexture(backend, frameWidth, frameHeight);
                 depthViewHandle = backend.CreateTextureView(depthTexture);
-
-                if (refTargetsCreated)
-                {
-                    CreateReferenceTargets();
-                }
 
                 // The geometry is world-space and the camera travels in a uniform, so a resize needs no
                 // re-upload at all.
@@ -1335,7 +1185,7 @@ public static class WindowedRenderer
             + (arenaTranslucent?.DrawCallsTotal ?? 0);
         Console.WriteLine($"window: draws/frame {(totalDrawCalls / (double)Math.Max(presented, 1)):F0} (solid/cutout/translucent stores)");
         Console.WriteLine($"window: item oit set ran on {itemOitFrames}/{presented} frames (skipped when no translucent items)");
-        Console.WriteLine($"window: cloud depth blit bind group rebuilt {blitDepthRebuilds} times (once per depth target)");
+        Console.WriteLine($"window: cloud depth blit bind group rebuilt {oitTargets.BlitDepthRebuilds} times (once per depth target)");
         var oitCounts = ReferenceOitPasses.LastCounts;
         Console.WriteLine(
             $"window: oit commands per frame bounds={DescribeCounts(oitCounts.Bounds)} "
@@ -1385,37 +1235,10 @@ public static class WindowedRenderer
         backend.Destroy(uiTransformBuffer);
 
             staticWorld.Destroy();
-        if (blitDepthBindGroup.IsValid)
-        {
-            backend.Destroy(blitDepthBindGroup);
-        }
-
+        // Executor-owned OIT targets and the blit bind group go first: the blit group samples the depth view below.
+        oitTargets.Dispose();
         backend.Destroy(depthViewHandle);
         backend.Destroy(depthTexture);
-        // The reference OIT targets only exist once a frame has needed transparency, so their handles are guarded: a
-        // handle that was never created has nothing to release, and Destroy rejects a default handle.
-        if (refTargetsCreated)
-        {
-            backend.Destroy(refCullBindGroup);
-            backend.Destroy(refTransmittanceBindGroup);
-            backend.Destroy(refAccumulateBindGroup);
-            backend.Destroy(refCompositeBindGroup);
-            backend.Destroy(refDepthBoundsView);
-            backend.Destroy(refDepthBoundsTexture);
-            backend.Destroy(refDepthBoundsCulledView);
-            backend.Destroy(refDepthBoundsCulledTexture);
-            backend.Destroy(refTransmittance0View);
-            backend.Destroy(refTransmittance0Texture);
-            backend.Destroy(refTransmittance1View);
-            backend.Destroy(refTransmittance1Texture);
-            backend.Destroy(refAccumulateView);
-            backend.Destroy(refAccumulateTexture);
-            if (cloudDepthTargetsCreated)
-            {
-                backend.Destroy(cloudDepthViewHandle);
-                backend.Destroy(cloudDepthTexture);
-            }
-        }
 
 
         // The frame pipelines and pipeline layouts are seam handles, so the frame loop's exit releases them by hand: a
@@ -1482,23 +1305,6 @@ public static class WindowedRenderer
     /// <returns>Compact text.</returns>
     private static string DescribeCounts(CommandCounts counts) =>
         $"{counts.Draws}d/{counts.BindGroupSets}b/{counts.PipelineSets}p";
-
-    private static TextureHandle CreateDepthTexture(IRenderBackend backend, uint width, uint height) =>
-        backend.CreateTexture(new TextureDesc(
-            width,
-            height,
-            TextureFormat.Depth32Float,
-            1,
-            TextureUsages.RenderAttachment | TextureUsages.CopySrc | TextureUsages.CopyDst | TextureUsages.TextureBinding));
-
-    /// <summary>Creates one order independent transparency target: renderable and sampleable, at frame size.</summary>
-    private static TextureHandle CreateOitTarget(IRenderBackend backend, uint width, uint height, TextureFormat format) =>
-        backend.CreateTexture(new TextureDesc(
-            width,
-            height,
-            format,
-            1,
-            TextureUsages.RenderAttachment | TextureUsages.TextureBinding));
 
     private static SurfaceSource ToSurfaceSource(NativeSurfaceSource source) => source.Tag switch
     {

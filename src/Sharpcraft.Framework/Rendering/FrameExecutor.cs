@@ -22,10 +22,11 @@ internal readonly record struct FrameTarget(TextureViewHandle Colour, TextureVie
 /// that live for the whole renderer are captured once in <see cref="Resources"/>; values that change per frame arrive
 /// in <see cref="Frame"/>.
 /// <para>
-/// The four delegates in <see cref="Resources"/> are a transitional form, not an abstraction boundary. They read
-/// mutable locals that still belong to <c>WindowedRenderer</c>, so the executor's real dependency set is larger than
-/// <see cref="FrameTarget"/>. Step 2 of the single-track-executor spec MUST replace them with state the executor owns
-/// before <c>OffscreenRenderer</c> can call this recorder. They exist only so this extraction is behaviour-preserving.
+/// Step 2A of that spec removed the four transitional delegates: every size-dependent OIT texture, view, bind group
+/// and the cloud depth blit cache now live in <see cref="FrameOitTargets"/>, owned by the executor through
+/// <see cref="Resources.OitTargets"/>. The only target-dependent value the caller still supplies is
+/// <see cref="FrameTarget.Depth"/>, which keys the blit bind group. The recorder is therefore no longer coupled to
+/// window-side locals and an offscreen caller can use it with its own target set (step 2B).
 /// </para>
 /// </remarks>
 internal static class FrameExecutor
@@ -147,17 +148,8 @@ internal static class FrameExecutor
         /// <summary>Item atlas, whose bind group the item OIT draws bind.</summary>
         public required EntitySkinTextureGpu ItemAtlas { get; init; }
 
-        /// <summary>Transitional coupling: whether the size-dependent OIT targets exist yet.</summary>
-        public required Func<bool> ReferenceTargetsReady { get; init; }
-
-        /// <summary>Transitional coupling: (re)creates the size-dependent OIT targets.</summary>
-        public required Action CreateReferenceTargets { get; init; }
-
-        /// <summary>Transitional coupling: resolves the depth blit bind group for the current depth view.</summary>
-        public required Func<BindGroupHandle> BlitDepthGroup { get; init; }
-
-        /// <summary>Transitional coupling: reads the current OIT target handles after any (re)creation.</summary>
-        public required Func<ReferenceTargets> GetReferenceTargets { get; init; }
+        /// <summary>Executor-owned size-dependent OIT targets and the cloud depth blit bind group cache.</summary>
+        public required FrameOitTargets OitTargets { get; init; }
     }
 
     /// <summary>Per-frame inputs, including the render target the whole frame is recorded into.</summary>
@@ -234,43 +226,6 @@ internal static class FrameExecutor
 
         /// <summary>Host asked to disable frustum culling.</summary>
         public required bool DisableCulling { get; init; }
-    }
-
-    /// <summary>Size-dependent OIT targets, read after any (re)creation.</summary>
-    internal readonly struct ReferenceTargets
-    {
-        /// <summary>Terrain depth bounds.</summary>
-        public required TextureViewHandle DepthBounds { get; init; }
-
-        /// <summary>Culled terrain depth bounds.</summary>
-        public required TextureViewHandle DepthBoundsCulled { get; init; }
-
-        /// <summary>First wavelet coefficient target.</summary>
-        public required TextureViewHandle Transmittance0 { get; init; }
-
-        /// <summary>Second wavelet coefficient target.</summary>
-        public required TextureViewHandle Transmittance1 { get; init; }
-
-        /// <summary>Weighted colour accumulation target.</summary>
-        public required TextureViewHandle Accumulate { get; init; }
-
-        /// <summary>Independent cloud depth view.</summary>
-        public required TextureViewHandle CloudDepth { get; init; }
-
-        /// <summary>Depth-bounds cull bind group.</summary>
-        public required BindGroupHandle Cull { get; init; }
-
-        /// <summary>Transmittance bind group.</summary>
-        public required BindGroupHandle TransmittanceGroup { get; init; }
-
-        /// <summary>Accumulate bind group.</summary>
-        public required BindGroupHandle AccumulateGroup { get; init; }
-
-        /// <summary>Composite bind group.</summary>
-        public required BindGroupHandle CompositeGroup { get; init; }
-
-        /// <summary>Whether the independent cloud depth target exists.</summary>
-        public required bool CloudDepthTargetsCreated { get; init; }
     }
 
     /// <summary>The recorded encoder plus the two counters the caller still accumulates.</summary>
@@ -352,6 +307,7 @@ internal static class FrameExecutor
         var cloudColour = r.CloudColour;
         var cloudOit = r.CloudOit;
         var itemOit = r.ItemOit;
+        var oit = r.OitTargets;
         var itemAtlasGpu = r.ItemAtlas;
         var itemOitRan = false;
 
@@ -480,8 +436,7 @@ internal static class FrameExecutor
             backend.EndRenderPass(pass);
             Cpu(FrameCpuTimings.SceneStage);
 
-            var blitTargets = r.GetReferenceTargets();
-            if (blitTargets.CloudDepthTargetsCreated)
+            if (oit.CloudDepthTargetsCreated)
             {
                 // Blit the opaque main depth into the cloud depth attachment (reference BLIT_DEPTH_DURING_DEPTH_BOUNDS).
                 // The first pass recorded through the seam: it needs no helper that still takes a native pass, so it
@@ -489,11 +444,11 @@ internal static class FrameExecutor
                 var blitPass = backend.BeginRenderPass(
                     encoder,
                     [],
-                    DepthAttachmentDesc.Keep(blitTargets.CloudDepth));
+                    DepthAttachmentDesc.Keep(oit.CloudDepth));
                 try
                 {
                     backend.SetPipeline(blitPass, blitDepthPipeline);
-                    backend.SetBindGroup(blitPass, 0, r.BlitDepthGroup());
+                    backend.SetBindGroup(blitPass, 0, oit.BlitDepthGroup(depthViewHandle));
                     backend.Draw(blitPass, 3, 1, 0, 0);
                 }
                 finally
@@ -510,25 +465,24 @@ internal static class FrameExecutor
             var needsOit = (arenaTranslucent is not null && arenaTranslucent.AnyVisible(frustumPlanes, visibleSections))
                 || currentRequest.TranslucentIndices is { Length: > 0 }
                 || cloudOit is not null;
-            if (needsOit && !r.ReferenceTargetsReady())
+            if (needsOit && !oit.Created)
             {
-                r.CreateReferenceTargets();
+                oit.Create(frameWidth, frameHeight);
             }
 
-            if (r.ReferenceTargetsReady() && needsOit && !skipOit)
+            if (oit.Created && needsOit && !skipOit)
             {
-                var targets = r.GetReferenceTargets();
-                var refDepthBoundsView = targets.DepthBounds;
-                var refDepthBoundsCulledView = targets.DepthBoundsCulled;
-                var refTransmittance0View = targets.Transmittance0;
-                var refTransmittance1View = targets.Transmittance1;
-                var refAccumulateView = targets.Accumulate;
-                var refCullBindGroup = targets.Cull;
-                var refTransmittanceBindGroup = targets.TransmittanceGroup;
-                var refAccumulateBindGroup = targets.AccumulateGroup;
-                var refCompositeBindGroup = targets.CompositeGroup;
-                var cloudDepthViewHandle = targets.CloudDepth;
-                var cloudDepthTargetsCreated = targets.CloudDepthTargetsCreated;
+                var refDepthBoundsView = oit.DepthBounds;
+                var refDepthBoundsCulledView = oit.DepthBoundsCulled;
+                var refTransmittance0View = oit.Transmittance0;
+                var refTransmittance1View = oit.Transmittance1;
+                var refAccumulateView = oit.Accumulate;
+                var refCullBindGroup = oit.Cull;
+                var refTransmittanceBindGroup = oit.TransmittanceGroup;
+                var refAccumulateBindGroup = oit.AccumulateGroup;
+                var refCompositeBindGroup = oit.CompositeGroup;
+                var cloudDepthViewHandle = oit.CloudDepth;
+                var cloudDepthTargetsCreated = oit.CloudDepthTargetsCreated;
                 var hasRefStatic = useStaticWorld
                     && currentRequest.TranslucentVertices is { Length: > 0 }
                     && currentRequest.TranslucentIndices is { Length: > 0 };

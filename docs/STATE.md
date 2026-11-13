@@ -75,7 +75,7 @@ MC_FRAME_LOCAL=1 + --frame  →  RenderLocal → BuildDemoWorld
 ### 已完成（本轮）
 
 T-837 录制区抽取（9 组件，`WindowedRenderer.cs` 2400 → 2065）；T-838/T-839 两个潜在缺陷修复并补回归测试；T-840 删除死 `LightmapParameters` 管线；T-841 大气雾壳（含量化验证）。测试 2718 全绿。
-**T-843 第 1 步（本轮完成）**：整帧录制原样搬入 `FrameExecutor.Record`，目标由 `FrameTarget` 参数化；`WindowedRenderer.cs` **1975→1663** 行、新增 `FrameExecutor.cs` **787** 行、`OffscreenRenderer.cs` 未动（1533）。构建 0 警告、2718 测试全绿、ClassMap/Docs 全绿；Release 冒烟 30 s / 14897 帧正常退出，稳态 `frame=1.540`（基线 1.582，无劣化），`cull: chunks=637 culled=449 … drawn=183`。接缝仍含 **4 个委托**读窗口可变局部量（规格 §5 清理清单）；**下一步：第 2 步先把它们换成执行器自有状态，再切离屏目标**（不用离线帧哈希当判据）。
+**T-843（本轮）**：切片 1 完成（`FrameExecutor.Record` + `FrameTarget` 参数化，窗口 1975→1663、新增 `FrameExecutor.cs` 787）；**2A 已提交**：4 个委托删除，尺寸相关 OIT 状态移入 `FrameOitTargets.cs`（309 行，构造时注入 `Resources.OitTargets`），窗口 1663→**1469**、`FrameExecutor.cs` 787→741。build 0 警告、2718 测试全绿、ClassMap/Docs/两 verify 全绿；四次冒烟 `cull: chunks=637 culled=449 drawn=183`、`blit bind group rebuilt 1 times`、EXIT=0 全一致，overall frame **1.921 / 2.027 / 15.873 / 2.704 ms**。**第 3、4 次是外部争用，稳态判据未达标、按裁决接受并记录而非放行**：主论据是第 4 次 2A 未改动的 `scene-terrain 0.163→0.239`、`oit 0.187→0.259`、`cel-build 0.063→0.097`、`submit 0.587→0.898` **全阶段同倍 ~1.5×** 变慢，而 `swap 0.198` 低于基线 0.352、`acquire 0.169` 仅 +0.13 ms（第 3 次尖峰为 8.786）——纯搬移不可能让互不相关的阶段同步变慢却让 swap 变快，慢在机器（Harness/msedge/QQ 占核、CPU 2300 MHz 基频）。**下一步：2B 暂停**，需干净基线后再让 `OffscreenRenderer` 建纹理→调同一 `Record`→回读，判据是沙盒帧首次出现实体与 UI、`drawn` 接近窗口侧（离线帧哈希对窗口改动不敏感，勿当判据）。
 
 ### 下一步候选
 
