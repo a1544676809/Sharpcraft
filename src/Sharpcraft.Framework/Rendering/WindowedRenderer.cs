@@ -416,17 +416,13 @@ public static class WindowedRenderer
         var dynamicVertex = backend.CreateBuffer(new BufferDesc(MinimumBufferBytes, BufferUsages.Vertex | BufferUsages.CopyDst));
         var dynamicIndex = backend.CreateBuffer(new BufferDesc(MinimumBufferBytes, BufferUsages.Index | BufferUsages.CopyDst));
 
-        var uiVertex = backend.CreateBuffer(new BufferDesc(MinimumBufferBytes, BufferUsages.Vertex | BufferUsages.CopyDst));
-        var uiIndex = backend.CreateBuffer(new BufferDesc(MinimumBufferBytes, BufferUsages.Index | BufferUsages.CopyDst));
-        var uiVertexCapacity = MinimumBufferBytes;
-        var uiIndexCapacity = MinimumBufferBytes;
-        var uiIndexCount = 0u;
+        var deferredRelease = new DeferredBufferRelease(backend.Destroy);
+        var uiBuffers = new UiGeometryBuffers(backend, deferredRelease, MinimumBufferBytes);
         var uiRanges = new List<UiGeometry.Range>();
         var uiScale = 1f;
         var dynamicVertexCapacity = MinimumBufferBytes;
         var dynamicIndexCapacity = MinimumBufferBytes;
 
-        var deferredRelease = new DeferredBufferRelease(backend.Destroy);
         // Entity layers (docs/decisions/0021): persistent buffers grow with the layer plan instead of a fixed
         // cap, so an explicit per-layer definition can add a new pass without truncation.
         var layerPool = new EntityLayerPool(backend, deferredRelease, MinimumBufferBytes);
@@ -893,29 +889,19 @@ public static class WindowedRenderer
             // Rewriting the persistent buffers costs one upload; nothing is allocated or freed in the
             // steady state, so streaming new terrain does not hitch.
             var dynamicIndexCount = 0u;
-            uiIndexCount = 0u;
+            uiBuffers.SetIndexCount(0);
 
             if (uiGeometry is not null && uiGeometry(new UiFrame(window.Input, window.Gui.Width, window.Gui.Height)) is { Ranges.Length: > 0 } ui)
             {
                 var neededVertex = (ulong)ui.Vertices.Length * sizeof(float);
                 var neededIndex = (ulong)ui.Indices.Length * sizeof(uint);
 
-                if (neededVertex > uiVertexCapacity)
-                {
-                    deferredRelease.Release(uiVertex);
-                    uiVertexCapacity = Math.Max(neededVertex * 2, MinimumBufferBytes);
-                    uiVertex = backend.CreateBuffer(new BufferDesc(uiVertexCapacity, BufferUsages.Vertex | BufferUsages.CopyDst));
-                }
+            uiBuffers.EnsureVertexCapacity(neededVertex);
 
-                if (neededIndex > uiIndexCapacity)
-                {
-                    deferredRelease.Release(uiIndex);
-                    uiIndexCapacity = Math.Max(neededIndex * 2, MinimumBufferBytes);
-                    uiIndex = backend.CreateBuffer(new BufferDesc(uiIndexCapacity, BufferUsages.Index | BufferUsages.CopyDst));
-                }
+            uiBuffers.EnsureIndexCapacity(neededIndex);
 
-                backend.WriteBuffer(uiVertex, System.Runtime.InteropServices.MemoryMarshal.AsBytes(ui.Vertices), 0);
-                backend.WriteBuffer(uiIndex, System.Runtime.InteropServices.MemoryMarshal.AsBytes(ui.Indices), 0);
+            backend.WriteBuffer(uiBuffers.Vertex, System.Runtime.InteropServices.MemoryMarshal.AsBytes(ui.Vertices), 0);
+            backend.WriteBuffer(uiBuffers.Index, System.Runtime.InteropServices.MemoryMarshal.AsBytes(ui.Indices), 0);
 
                 // The layout is expressed in interface pixels, and the canvas is the framebuffer divided by the
                 // interface scale (docs/modules/ui.md 9.1). One factor converts both the projection and the
@@ -936,7 +922,7 @@ public static class WindowedRenderer
                 }
 
                 backend.WriteBuffer(uiTransformBuffer, transformBytes, 0);
-                uiIndexCount = (uint)ui.Indices.Length;
+            uiBuffers.SetIndexCount((uint)ui.Indices.Length);
                 uiRanges.Clear(); uiRanges.AddRange(ui.Ranges);
             }
 
@@ -1725,10 +1711,10 @@ public static class WindowedRenderer
             if (!skipInterface)
             {
 
-            if (uiIndexCount > 0 && uiRanges.Count > 0)
+            if (uiBuffers.IndexCount > 0 && uiRanges.Count > 0)
             {
-                backend.SetVertexBuffer(uiPass, 0, uiVertex, 0, uiVertexCapacity);
-                backend.SetIndexBuffer(uiPass, uiIndex, IndexFormat.Uint32, 0, (ulong)uiIndexCount * sizeof(uint));
+                backend.SetVertexBuffer(uiPass, 0, uiBuffers.Vertex, 0, uiBuffers.VertexCapacity);
+                backend.SetIndexBuffer(uiPass, uiBuffers.Index, IndexFormat.Uint32, 0, (ulong)uiBuffers.IndexCount * sizeof(uint));
 
                 var boundMaterial = (UiMaterial?)null;
 
@@ -1994,8 +1980,7 @@ public static class WindowedRenderer
             deferredRelease.Release(layerPool.Index(layerIndex));
         }
 
-        deferredRelease.Release(uiVertex);
-        deferredRelease.Release(uiIndex);
+            uiBuffers.Destroy();
         backend.Destroy(uiTransformBuffer);
 
         backend.Destroy(vertexBuffer);
