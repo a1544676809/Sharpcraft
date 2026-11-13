@@ -52,7 +52,7 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 
 ## 下一步具体动作
 
-**分支**：`frame-pipeline`，领先 `origin/main` **55 个提交未推送**。scene 主 pass 的四个 case 已全部抽成组件（`SkyPassRecorder`、`TerrainPassRecorder`、`EntityPassRecorder`），`WindowedRenderer.cs` 由 2400 降至 **2100**（另有 `FrameGeometryUploader`、`FrameUniformWriter`）。`main` 本身也在 `234aed1` 未推送。推送需项目所有者明确授权。
+**分支**：`frame-pipeline`，领先 `origin/main` **58 个提交未推送**。`WindowedRenderer.cs` 由 2400 降至 **2065**（−14%）。已抽成组件的：`FrameUniformStaging`、`EntityLayerPool`、`GrowableGeometryBuffers`（×2）、`EntityPassRecorder`、`TerrainPassRecorder`、`SkyPassRecorder`、`FrameGeometryUploader`、`FrameUniformWriter`、`StaticWorldBuffers`。scene 主 pass 的 switch 只剩四段各约 6 行。**运行时冒烟通过**：同机位帧时间 1.920 ms（重构前 1.919 ms），遮挡剔除正常 `culled=412 drawn=256`。`main` 本身也在 `234aed1` 未推送。推送需项目所有者明确授权。
 
 **当前任务 T-837（帧间流水线）**：规格 `docs/specs/render/frame-pipelining.md` 已就绪，切片 2 与切片 3 的前置设施已完成。
 
@@ -61,6 +61,8 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 3. **判据（每步都必须过）**：离线 `--frame` 哈希 **必须仍为 `5821CCAD1343B5DBC8543607DD3EB94D`** + 全量测试通过 + 行数棘轮 2400。前 50 个提交全部守住了这一条。
 4. **不要做的**：`clouds` 绘制块没有可抽的东西（73 行是云几何**建立**，绘制只有 2 行组件调用，已核实）。
 5. **已知缺口**：`EntityLayerPool` 与 `GrowableGeometryBuffers` 都没有单元测试——它们在构造函数里收 `IRenderBackend`（48 个成员），测试里造不出假实现。应改成收创建委托 `Func<BufferDesc, BufferHandle>`，`DeferredBufferRelease` 已是这个模式。
+
+**抽取中发现的两个真实缺陷（T-838、T-839）**：几何移除回调被调用两次（draining 队列会静默失效）；`EntityPassRecorder` 快照了会被重建替换的静态世界句柄（重建后画的是已退役乃至已销毁的缓冲）。两者都已修，但都**无法被离线帧或现有测试覆盖**——需要能触发相应路径的运行时用例。
 
 **已消除的每帧分配**（与流水线无关，本身是原则 9 违规）：三个 uniform 缓冲 + `uiRanges.ToArray()`，600 FPS 下合计约每秒 2400 次。
 
