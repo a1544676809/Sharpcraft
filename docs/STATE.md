@@ -52,13 +52,17 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 
 ## 下一步具体动作
 
-**分支**：`vertex-24b`，本地领先 `origin/vertex-24b` **5 个提交未推送**（`1ce1cb4` `a6fa967` `b6b57a2` `f6f5594` `f046793`）。推送需项目所有者明确授权。
+**分支**：`frame-pipeline` @ `5ac787b`，领先 `origin/main` **50 个提交未推送**。`main` 本身也在 `234aed1` 未推送。推送需项目所有者明确授权。
 
-1. ~~查 `ChunkMeshCache` 的光照清空~~ **已完成**（T-836：该分支运行期不可达，已删除，测试改为断言昼夜变化不重建）。原第 1 项：`Lighting != _appliedLighting` 时 `_meshes.Clear()` 清空整个世界网格，但 `ChunkMesher` 接收的 `LightmapParameters parameters` **赋值后从未被使用**——顶点只存原始光照等级，时间因子走逐帧 uniform。因此这次清空语义上没有必要。若 `Lighting` 确实随昼夜变化，则每次昼夜交替会重建全部区块（卡顿源）。判据：确认 `Lighting` 是否被逐帧更新，再决定删除清空还是改为不比较。
-2. **帧间流水线**（收益最大，未立项）：CPU 准备与渲染线程提交重叠，估算 1.76 → 约 1.15 ms（−35%）。需独立规格：间接参数与 UI 顶点数组乒乓双缓冲、缓冲延迟释放。`Queue.WriteBuffer` 内部有暂存环，不会踩坏在飞的 uniform，竞态在 C# 侧数组。**立项需项目所有者决定**。
-3. **天气系统**：接上雾的大气壳（`environmentalStart/End`，雨天压到 10/96、Boss 战同理），见 `known-gaps.md`。
+**当前任务 T-837（帧间流水线）**：规格 `docs/specs/render/frame-pipelining.md` 已就绪，切片 2 与切片 3 的前置设施已完成。
 
-**不要再走的方向**：继续压 OIT（水域已反超，剩余只有降透明层分辨率/降小波阶数这类**会改变画面**的偏差，须按原则 9 由项目所有者裁决）；继续砍 pass 数量（T-804 与 T-834 均已证伪——`Finish()` 只与 pass 数有关，砍三角形不省时间）。
+1. **下一刀：抽 `scene-entities`（107 行）**。它是 `switch (WorldRenderPassKind)` 里的 `case Entities`，需要约 12 个参数：`backend`、`pass`、`skipEntities`、`dynamicIndexCount`、`entityPipeline`、`dynamicBuffers`、`entitySkin`、`bindGroup`、`entityLayerDrawn`、`layerPool`、五个 layer pipeline、`itemCutoutPipeline`。目标形态是静态方法 `RecordEntities(backend, pass, ...)`，放新文件。
+2. **再下一刀：`scene`（183 行）**。句柄交汇最多，最后做。每个 case 同样抽成 `RecordXxx`。
+3. **判据（每步都必须过）**：离线 `--frame` 哈希 **必须仍为 `5821CCAD1343B5DBC8543607DD3EB94D`** + 全量测试通过 + 行数棘轮 2400。前 50 个提交全部守住了这一条。
+4. **不要做的**：`clouds` 绘制块没有可抽的东西（73 行是云几何**建立**，绘制只有 2 行组件调用，已核实）。
+5. **已知缺口**：`EntityLayerPool` 与 `GrowableGeometryBuffers` 都没有单元测试——它们在构造函数里收 `IRenderBackend`（48 个成员），测试里造不出假实现。应改成收创建委托 `Func<BufferDesc, BufferHandle>`，`DeferredBufferRelease` 已是这个模式。
+
+**已消除的每帧分配**（与流水线无关，本身是原则 9 违规）：三个 uniform 缓冲 + `uiRanges.ToArray()`，600 FPS 下合计约每秒 2400 次。
 
 ## 常用命令
 
