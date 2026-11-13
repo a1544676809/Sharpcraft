@@ -155,12 +155,17 @@ internal sealed class InteractiveSession
     {
         if (_world is not null && _biomes is not null)
         {
-            // AtmosphericFogEnvironment.getBaseColor: fog base colour mixed toward the weather-darkened SKY_COLOR with
-            // a factor derived from sky_fog_end_distance / render distance.
+            // AtmosphericFogEnvironment.getBaseColor: fog base colour mixed toward the weather-darkened
+            // SKY_COLOR, by a factor derived from how far the sky reaches against how far the world is drawn.
+            // Distances here are in blocks, the same unit SKY_FOG_END_DISTANCE uses, and clampedLerp takes the
+            // already divided value: at any normal render distance it saturates, so the fog simply becomes the
+            // sky and the horizon has nothing to show a seam against (T-835).
             var fogBase = FrameCommand.EffectiveFogColour(_world);
             var sky = CurrentSkyColour();
-            var skyFogEnd = MathF.Min(512f / 16f, ViewDistanceChunks);
-            var clamped = Math.Clamp(0.25f + (0.75f * (skyFogEnd / 32f)), 0f, 1f);
+            var renderDistanceBlocks = ViewDistanceChunks * 16f;
+            var skyFogEnd = MathF.Min(512f, renderDistanceBlocks);
+            var mixed01 = Math.Clamp(skyFogEnd / 32f, 0f, 1f);
+            var clamped = 0.25f + (0.75f * mixed01);
             var mix = 1f - MathF.Pow(clamped, 0.25f);
             var mixed = Vector3.Lerp(new Vector3(fogBase.X, fogBase.Y, fogBase.Z), sky, mix);
             return new Vector4(mixed, 1f);
