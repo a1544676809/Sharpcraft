@@ -433,13 +433,8 @@ public static class WindowedRenderer
         var retiredVertex = new List<BufferHandle>();
         var retiredIndex = new List<BufferHandle>();
 
-        var vertexCapacity = Math.Max((ulong)currentRequest.Vertices.Length * sizeof(float), MinimumBufferBytes);
-        var indexCapacity = Math.Max((ulong)currentRequest.Indices.Length * sizeof(uint), MinimumBufferBytes);
 
-        var vertexBuffer = backend.CreateBuffer(new BufferDesc(vertexCapacity, BufferUsages.Vertex | BufferUsages.CopyDst));
-        var indexBuffer = backend.CreateBuffer(new BufferDesc(indexCapacity, BufferUsages.Index | BufferUsages.CopyDst));
-        backend.WriteBuffer(vertexBuffer, System.Runtime.InteropServices.MemoryMarshal.AsBytes(currentRequest.Vertices.AsSpan()), 0);
-        backend.WriteBuffer(indexBuffer, System.Runtime.InteropServices.MemoryMarshal.AsBytes(currentRequest.Indices.AsSpan()), 0);
+        var staticWorld = new StaticWorldBuffers(backend, currentRequest, MinimumBufferBytes, retiredVertex, retiredIndex);
 
 
 
@@ -463,8 +458,8 @@ public static class WindowedRenderer
             layerPool,
             dynamicBuffers,
             bindGroup,
-            vertexBuffer,
-            indexBuffer);
+            staticWorld);
+
         var depthTexture = CreateDepthTexture(backend, frameWidth, frameHeight);
         // The reference OIT passes take depth as a seam descriptor, so the view comes from the seam as well and is
         // refreshed with the texture it belongs to on resize.
@@ -977,28 +972,7 @@ public static class WindowedRenderer
                 var rebuilt = rebuiltFrame;
                 currentRequest = rebuilt;
 
-                var neededVertex = (ulong)rebuilt.Vertices.Length * sizeof(float);
-                var neededIndex = (ulong)rebuilt.Indices.Length * sizeof(uint);
-
-                if (neededVertex > vertexCapacity)
-                {
-                    retiredVertex.Add(vertexBuffer);
-                    vertexCapacity = Math.Max(neededVertex * 2, MinimumBufferBytes);
-                    vertexBuffer = backend.CreateBuffer(new BufferDesc(vertexCapacity, BufferUsages.Vertex | BufferUsages.CopyDst));
-                }
-
-                if (neededIndex > indexCapacity)
-                {
-                    retiredIndex.Add(indexBuffer);
-                    indexCapacity = Math.Max(neededIndex * 2, MinimumBufferBytes);
-                    indexBuffer = backend.CreateBuffer(new BufferDesc(indexCapacity, BufferUsages.Index | BufferUsages.CopyDst));
-                }
-
-                backend.WriteBuffer(vertexBuffer, System.Runtime.InteropServices.MemoryMarshal.AsBytes(rebuilt.Vertices.AsSpan()), 0);
-                backend.WriteBuffer(indexBuffer, System.Runtime.InteropServices.MemoryMarshal.AsBytes(rebuilt.Indices.AsSpan()), 0);
-
-                uploadBytes += (long)rebuilt.Vertices.Length * sizeof(float);
-                uploadBytes += (long)rebuilt.Indices.Length * sizeof(uint);
+                uploadBytes += staticWorld.Upload(rebuilt);
             }
 
             if (rebuildRequest is not null)
@@ -1613,15 +1587,7 @@ public static class WindowedRenderer
             device.Queue.OnSubmittedWorkDoneBlocking(instance);
         }
 
-        foreach (var buffer in retiredVertex)
-        {
-            backend.Destroy(buffer);
-        }
 
-        foreach (var buffer in retiredIndex)
-        {
-            backend.Destroy(buffer);
-        }
 
         Console.WriteLine(
             $"window: {presented} frames in {frameClock.Elapsed.TotalSeconds:F1}s, worst frame {worstFrameMs:F1} ms at #{worstFrameIndex}, {framesOver33} frames over 33 ms");
@@ -1725,7 +1691,7 @@ public static class WindowedRenderer
             uiBuffers.Destroy();
         backend.Destroy(uiTransformBuffer);
 
-        backend.Destroy(vertexBuffer);
+            staticWorld.Destroy();
         if (blitDepthBindGroup.IsValid)
         {
             backend.Destroy(blitDepthBindGroup);
@@ -1758,7 +1724,6 @@ public static class WindowedRenderer
             }
         }
 
-        backend.Destroy(indexBuffer);
 
         // The frame pipelines and pipeline layouts are seam handles, so the frame loop's exit releases them by hand: a
         // handle is pure identity and cannot carry a Dispose (render-backend-seam.md 9).

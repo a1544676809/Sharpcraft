@@ -31,8 +31,7 @@ internal sealed class EntityPassRecorder
     private readonly EntityLayerPool _layers;
     private readonly GrowableGeometryBuffers _dynamic;
     private readonly BindGroupHandle _terrainBindGroup;
-    private readonly BufferHandle _staticVertex;
-    private readonly BufferHandle _staticIndex;
+    private readonly StaticWorldBuffers _staticWorld;
 
     /// <summary>Captures the handles an entity draw needs. They do not change between frames.</summary>
     /// <param name="backend">Backend to record through.</param>
@@ -48,8 +47,7 @@ internal sealed class EntityPassRecorder
     /// <param name="layers">Per-layer buffers the layer plan fills.</param>
     /// <param name="dynamic">Dynamic entity geometry for this frame.</param>
     /// <param name="terrainBindGroup">Bind group restored after the entity draw.</param>
-    /// <param name="staticVertex">Vertex buffer used when there is no arena.</param>
-    /// <param name="staticIndex">Index buffer used when there is no arena.</param>
+    /// <param name="staticWorld">Combined geometry used when there is no arena.</param>
     public EntityPassRecorder(
         IRenderBackend backend,
         PipelineHandle entityPipeline,
@@ -64,8 +62,7 @@ internal sealed class EntityPassRecorder
         EntityLayerPool layers,
         GrowableGeometryBuffers dynamic,
         BindGroupHandle terrainBindGroup,
-        BufferHandle staticVertex,
-        BufferHandle staticIndex)
+        StaticWorldBuffers staticWorld)
     {
         _backend = backend ?? throw new ArgumentNullException(nameof(backend));
         _entityPipeline = entityPipeline;
@@ -80,8 +77,7 @@ internal sealed class EntityPassRecorder
         _layers = layers ?? throw new ArgumentNullException(nameof(layers));
         _dynamic = dynamic ?? throw new ArgumentNullException(nameof(dynamic));
         _terrainBindGroup = terrainBindGroup;
-        _staticVertex = staticVertex;
-        _staticIndex = staticIndex;
+        _staticWorld = staticWorld ?? throw new ArgumentNullException(nameof(staticWorld));
     }
 
     /// <summary>Records the entity draws into the scene pass.</summary>
@@ -169,8 +165,8 @@ internal sealed class EntityPassRecorder
         }
         else if (useStaticWorld)
         {
-            _backend.SetVertexBuffer(pass, 0, _staticVertex);
-            _backend.SetIndexBuffer(pass, _staticIndex, IndexFormat.Uint32);
+            _backend.SetVertexBuffer(pass, 0, _staticWorld.Vertex);
+            _backend.SetIndexBuffer(pass, _staticWorld.Index, IndexFormat.Uint32);
             _backend.DrawIndexed(pass, (uint)request.Indices.Length, 1, 0, 0, 1);
         }
 
