@@ -851,6 +851,10 @@ public static class WindowedRenderer
                     $"glyph {refreshedGlyph.Width}x{refreshedGlyph.Height})");
             }
 
+            // Everything before the pump is waiting: the previous frame is still being presented and nothing here can
+            // shorten it. Splitting it out is what says whether the largest stage is work or a stall (T-833).
+            Cpu(FrameCpuTimings.FrameGapStage);
+
             if (!window.Pump() || Environment.TickCount64 > deadline)
             {
                 break;
