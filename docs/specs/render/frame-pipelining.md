@@ -73,6 +73,9 @@ GPU 侧的 uniform 无需处理：`Queue.WriteBuffer` 内部有暂存环，不�
 - 采用**帧编号队列**：释放请求入队时带上当前帧号，提交线程每帧出队所有 `帧号 <= 已提交帧 - 2` 的请求；
 - 不得依赖 GC 或 `using` 作用域的隐式时机。
 
+**已实施**：`DeferredBufferRelease`。`Release(handle)` 以当前帧号入队，`Collect()` 只销毁 `帧号 <= 当前 - 2` 的项。生产侧在构造时绑定 `backend.Destroy`（一次性委托，不是每帧分配），因此无需图形设备即可测试。
+窗口循环中已接管六处"缓冲扩容后销毁旧缓冲"：`uiVertex`、`uiIndex`、`dynamicVertex`、`dynamicIndex`、`entityLayerVertex[i]`、`entityLayerIndex[i]`。关闭路径（进程退出时）仍立即销毁，因为那时没有在飞的帧。
+
 ## 6. 计时
 
 现有 `FrameCpuTimings` 是单线程累加，跨线程会互相污染。要求：

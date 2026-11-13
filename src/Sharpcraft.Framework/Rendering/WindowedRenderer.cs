@@ -608,6 +608,7 @@ public static class WindowedRenderer
 
         // Two copies each, alternating per frame: one is written while the other is still being read (T-837).
         var uniforms = new FrameUniformStaging();
+        var deferredRelease = new DeferredBufferRelease(backend.Destroy);
 
         var colour = request.ClearColour;
         var presented = 0;
@@ -672,7 +673,7 @@ public static class WindowedRenderer
         {
             // Per frame CPU attribution (diagnostic): every stage below closes with a Cpu call so the report can say where
             // the frame went without a profiler. Removing these calls plus FrameCpuTimings leaves the renderer unchanged.
-            uniforms.Advance();
+            uniforms.Advance(); deferredRelease.BeginFrame();
             var cpuFrameStarted = System.Diagnostics.Stopwatch.GetTimestamp();
             var cpuLast = cpuFrameStarted;
 
@@ -923,14 +924,14 @@ public static class WindowedRenderer
 
                 if (neededVertex > uiVertexCapacity)
                 {
-                    backend.Destroy(uiVertex);
+                    deferredRelease.Release(uiVertex);
                     uiVertexCapacity = Math.Max(neededVertex * 2, MinimumBufferBytes);
                     uiVertex = backend.CreateBuffer(new BufferDesc(uiVertexCapacity, BufferUsages.Vertex | BufferUsages.CopyDst));
                 }
 
                 if (neededIndex > uiIndexCapacity)
                 {
-                    backend.Destroy(uiIndex);
+                    deferredRelease.Release(uiIndex);
                     uiIndexCapacity = Math.Max(neededIndex * 2, MinimumBufferBytes);
                     uiIndex = backend.CreateBuffer(new BufferDesc(uiIndexCapacity, BufferUsages.Index | BufferUsages.CopyDst));
                 }
@@ -970,14 +971,14 @@ public static class WindowedRenderer
 
                 if (neededVertex > dynamicVertexCapacity)
                 {
-                    backend.Destroy(dynamicVertex);
+                    deferredRelease.Release(dynamicVertex);
                     dynamicVertexCapacity = Math.Max(neededVertex * 2, MinimumBufferBytes);
                     dynamicVertex = backend.CreateBuffer(new BufferDesc(dynamicVertexCapacity, BufferUsages.Vertex | BufferUsages.CopyDst));
                 }
 
                 if (neededIndex > dynamicIndexCapacity)
                 {
-                    backend.Destroy(dynamicIndex);
+                    deferredRelease.Release(dynamicIndex);
                     dynamicIndexCapacity = Math.Max(neededIndex * 2, MinimumBufferBytes);
                     dynamicIndex = backend.CreateBuffer(new BufferDesc(dynamicIndexCapacity, BufferUsages.Index | BufferUsages.CopyDst));
                 }
@@ -1017,7 +1018,7 @@ public static class WindowedRenderer
                     var neededIndex = (ulong)geometry.IndexCount * sizeof(uint);
                     if (neededVertex > entityLayerVertexCapacity[layerIndex])
                     {
-                        backend.Destroy(entityLayerVertex[layerIndex]);
+                        deferredRelease.Release(entityLayerVertex[layerIndex]);
                         entityLayerVertexCapacity[layerIndex] = Math.Max(neededVertex * 2, MinimumBufferBytes);
                         entityLayerVertex[layerIndex] = backend.CreateBuffer(
                             new BufferDesc(entityLayerVertexCapacity[layerIndex], BufferUsages.Vertex | BufferUsages.CopyDst));
@@ -1025,7 +1026,7 @@ public static class WindowedRenderer
 
                     if (neededIndex > entityLayerIndexCapacity[layerIndex])
                     {
-                        backend.Destroy(entityLayerIndex[layerIndex]);
+                        deferredRelease.Release(entityLayerIndex[layerIndex]);
                         entityLayerIndexCapacity[layerIndex] = Math.Max(neededIndex * 2, MinimumBufferBytes);
                         entityLayerIndex[layerIndex] = backend.CreateBuffer(
                             new BufferDesc(entityLayerIndexCapacity[layerIndex], BufferUsages.Index | BufferUsages.CopyDst));
@@ -1846,10 +1847,9 @@ public static class WindowedRenderer
             cpuTimings.Add(FrameCpuTimings.SubmitQueueStage, backend.SubmitQueueTicks);
 
             surface.Present();
-
-            // The acquired texture must be released each frame; leaving it alive makes the next acquire fail
-            // when the swapchain reuses its semaphore.
+            // The acquired texture must be released each frame, or the next acquire fails on the semaphore.
             acquired.Texture.Dispose();
+            deferredRelease.Collect();
 
             // Split from the host callback: this is the swapchain wait itself, which is what T-803 asks about.
             Cpu(FrameCpuTimings.SwapStage);
@@ -2014,16 +2014,16 @@ public static class WindowedRenderer
             cpuTimings.WriteSummary();
         }
 
-        backend.Destroy(dynamicVertex);
-        backend.Destroy(dynamicIndex);
+        deferredRelease.Release(dynamicVertex);
+        deferredRelease.Release(dynamicIndex);
         for (var layerIndex = 0; layerIndex < entityLayerVertex.Count; layerIndex++)
         {
-            backend.Destroy(entityLayerVertex[layerIndex]);
-            backend.Destroy(entityLayerIndex[layerIndex]);
+            deferredRelease.Release(entityLayerVertex[layerIndex]);
+            deferredRelease.Release(entityLayerIndex[layerIndex]);
         }
 
-        backend.Destroy(uiVertex);
-        backend.Destroy(uiIndex);
+        deferredRelease.Release(uiVertex);
+        deferredRelease.Release(uiIndex);
         backend.Destroy(uiTransformBuffer);
 
         backend.Destroy(vertexBuffer);
