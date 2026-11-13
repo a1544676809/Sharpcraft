@@ -442,6 +442,7 @@ public static class WindowedRenderer
         backend.WriteBuffer(indexBuffer, System.Runtime.InteropServices.MemoryMarshal.AsBytes(currentRequest.Indices.AsSpan()), 0);
 
 
+
         var terrainRecorder = new TerrainPassRecorder(
             backend, pipeline, cutoutPipeline, bindGroup, arena, arenaCutout);
         var entityRecorder = new EntityPassRecorder(
@@ -622,6 +623,10 @@ public static class WindowedRenderer
         var skipTranslucent = false;
         // Cheap enough to accumulate every frame (a dozen counter reads), printed only when the host asks for it.
         var cpuTimings = new FrameCpuTimings();
+
+        var skyRecorder = new SkyPassRecorder(
+            backend, skyPipeline, celestial, celestialColour, skyDiscColour, skyDiscVanillaResources,
+            celestialPerFrame, skyDiscPerFrame, cpuTimings);
         var itemOitFrames = 0;
         var frustumPlanes = new System.Numerics.Vector4[6];
         var gapSamples = new double[1 << 17];
@@ -666,14 +671,9 @@ public static class WindowedRenderer
             // the frame went without a profiler. Removing these calls plus FrameCpuTimings leaves the renderer unchanged.
             uniforms.Advance(); deferredRelease.BeginFrame();
             var cpuFrameStarted = System.Diagnostics.Stopwatch.GetTimestamp();
-            var cpuLast = cpuFrameStarted;
+            cpuTimings.BeginFrameMarks(cpuFrameStarted);
 
-            void Cpu(int stage)
-            {
-                var now = System.Diagnostics.Stopwatch.GetTimestamp();
-                cpuTimings.Add(stage, now - cpuLast);
-                cpuLast = now;
-            }
+            void Cpu(int stage) => cpuTimings.Mark(stage);
 
             if (geometryEpoch is not null && geometryEpoch() != appliedGeometryEpoch)
             {
@@ -1283,60 +1283,8 @@ public static class WindowedRenderer
                 {
                     case WorldRenderPassKind.Sky:
                     {
-                        if (skipSky)
-                        {
-                            break;
-                        }
-
-                        // Sky first, over the cleared target; world geometry then draws on top of it. When the caller
-                        // supplies a flat SKY_COLOR through the clear colour, the gradient sky is skipped.
-                        if (!currentRequest.SkipGradientSky)
-                        {
-                            backend.SetPipeline(pass, skyPipeline);
-                            backend.Draw(pass, 3, 1, 0, 0);
-                        }
-
-                        Cpu(FrameCpuTimings.SceneSkyStage);
-
-                        if (skipCelestial)
-                        {
-                            Cpu(FrameCpuTimings.SceneCelestialStage);
-                            break;
-                        }
-
-                        // Sun/moon (textured) then sunrise/stars (position-colour), still before terrain so world
-                        // geometry covers them.
-                        if (celestialPerFrame?.Invoke() is { } celestialUpdate)
-                        {
-                            celestial?.SetDraws(celestialUpdate.Draws);
-                            celestialColour?.SetDraws(celestialUpdate.Colors);
-                            skyDiscColour?.SetDraws(celestialUpdate.SkyDiscs);
-                        }
-
-                        Cpu(FrameCpuTimings.CelestialBuildStage);
-
-                        // Apply the camera delta AFTER any per-frame draw rebuild: a freshly built draw uses the base
-                        // (initial) camera model, so translating first would be overwritten and the bodies would stay
-                        // anchored in the world.
-                        celestial?.UpdateCamera(celestialDelta);
-                        celestialColour?.UpdateCamera(celestialDelta);
-                        skyDiscColour?.UpdateCamera(celestialDelta);
-
-                        Cpu(FrameCpuTimings.CelestialCameraStage);
-
-                        if (skyDiscVanillaResources is not null && skyDiscPerFrame?.Invoke() is { } skyDiscState)
-                        {
-                            skyDiscVanillaResources.Update(skyDiscState.Sky, skyDiscState.Fog, skyDiscState.SkyFogEnd, skyDiscState.Eye);
-
-                            Cpu(FrameCpuTimings.CelestialDiscStage);
-                            skyDiscVanillaResources.Draw(backend, pass);
-                        }
-
-                        skyDiscColour?.Draw(backend, pass);
-                        celestial?.Draw(backend, pass);
-                        celestialColour?.Draw(backend, pass);
-
-                        Cpu(FrameCpuTimings.SceneCelestialStage);
+                        skyRecorder.Record(
+                            pass, skipSky, skipCelestial, currentRequest.SkipGradientSky, celestialDelta);
                         break;
                     }
 

@@ -172,8 +172,9 @@ GPU 缓冲池按 L443 的循环持久增长，每帧只重置计数（`entityLay
 | `GrowableGeometryBuffers`（界面与动态各一实例） | −23 |
 | `EntityPassRecorder` | −74 |
 | `TerrainPassRecorder` | −25 |
+| `SkyPassRecorder` | −52 |
 
-累计 **−155 行**，`WindowedRenderer.cs` 由 2400 降至 **2245**。
+累计 **−207 行**，`WindowedRenderer.cs` 由 2400 降至 **2193**。scene 主 pass 的 `switch` 现只剩四段各约 6 行的调用，共约 36 行（原约 180 行）。
 
 ### 11.2 关键发现：单个 pass 不需要大状态对象
 
@@ -183,6 +184,6 @@ GPU 缓冲池按 L443 的循环持久增长，每帧只重置计数（`entityLay
 
 1. ~~`clouds` 绘制块~~ **已证实无内容可抽**（13 行中 2 行是组件调用；那 73 行是云的**建立**，属几何构建）
 2. ~~`scene-entities`~~ **已完成**（`EntityPassRecorder`，98 行 → 7 行调用）。140 → 7 行
-3. `scene`（183 行）→ 最后做，因为它是最多句柄的交汇处
+3. ~~`scene`（183 行）~~ **已完成**：四个 case 全部抽成 `SkyPassRecorder` / `TerrainPassRecorder` / `EntityPassRecorder`
 
 每步判据相同：**离线 `--frame` 哈希不变 + 全量测试通过**。

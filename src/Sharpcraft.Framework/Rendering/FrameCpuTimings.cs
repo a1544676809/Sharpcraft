@@ -77,6 +77,29 @@ internal sealed class FrameCpuTimings
 
     private bool _mixedThreads;
 
+    private long _lastMark;
+
+    /// <summary>
+    /// Seeds the marker clock at the start of a frame, so the first <see cref="Mark"/> measures from there.
+    /// </summary>
+    /// <param name="startTicks">Stopwatch ticks the frame started at.</param>
+    public void BeginFrameMarks(long startTicks) => _lastMark = startTicks;
+
+    /// <summary>
+    /// Records the stage that just ended and restarts the clock.
+    /// </summary>
+    /// <remarks>
+    /// The elapsed time between marks used to be a local captured by a closure inside the frame loop, which meant
+    /// anything wanting to mark had to receive that closure as a delegate. Keeping the clock here lets a recorder
+    /// hold the timing object instead, with no delegate to allocate (T-837).
+    /// </remarks>
+    /// <param name="stage">Stage number that just finished.</param>
+    public void Mark(int stage)
+    {
+        var now = System.Diagnostics.Stopwatch.GetTimestamp();
+        Add(stage, now - _lastMark);
+        _lastMark = now;
+    }
     /// <summary>Records one stage of the current frame.</summary>
     /// <param name="stage">Stage number, as used by <see cref="Begin"/> and <see cref="Add"/>.</param>
     /// <param name="ticks">Elapsed stopwatch ticks for that stage.</param>
