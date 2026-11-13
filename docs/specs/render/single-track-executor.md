@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
+
 # 单轨渲染执行器（消除窗口/离屏双轨）
 
 > 状态：`[已评审]`　更新：2026-11-13

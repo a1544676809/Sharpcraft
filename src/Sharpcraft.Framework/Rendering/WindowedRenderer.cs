@@ -225,12 +225,12 @@ public static class WindowedRenderer
         // stand (see the cleanup at the end of this method).
         var pipeline = CreatePipeline(backend, format, pipelineLayout);
         var cutoutPipeline = CreateCutoutPipeline(backend, format, pipelineLayout);
-        var entityPipeline = CreateEntityPipeline(backend, format, pipelineLayout);
-        var entityCutoutPipeline = CreateEntityCutoutPipeline(backend, format, pipelineLayout);
-        var itemCutoutPipeline = CreateItemCutoutPipeline(backend, format, pipelineLayout);
-        var entityElytraPipeline = CreateEntityElytraPipeline(backend, format, pipelineLayout);
-        var entityEmissivePipeline = CreateEntityEmissivePipeline(backend, format, pipelineLayout);
-        var entityGlintPipeline = CreateEntityGlintPipeline(backend, format, pipelineLayout);
+        var entityPipeline = FramePipelines.CreateEntityPipeline(backend, format, pipelineLayout);
+        var entityCutoutPipeline = FramePipelines.CreateEntityCutoutPipeline(backend, format, pipelineLayout);
+        var itemCutoutPipeline = FramePipelines.CreateItemCutoutPipeline(backend, format, pipelineLayout);
+        var entityElytraPipeline = FramePipelines.CreateEntityElytraPipeline(backend, format, pipelineLayout);
+        var entityEmissivePipeline = FramePipelines.CreateEntityEmissivePipeline(backend, format, pipelineLayout);
+        var entityGlintPipeline = FramePipelines.CreateEntityGlintPipeline(backend, format, pipelineLayout);
         var skyPipeline = CreateSkyPipeline(backend, format);
         // Celestial bodies and stars: the same backdrop draws the offscreen path uses, so the window and the exported
         // frame agree (docs/modules/clouds.md 6).
@@ -1960,101 +1960,6 @@ public static class WindowedRenderer
     /// <summary>
     /// Entity models follow the reference entityCutout pipeline: alpha testing and no back-face culling.
     /// </summary>
-    private static PipelineHandle CreateEntityPipeline(WgpuRenderBackend backend, WGPUTextureFormat format, PipelineLayoutHandle layout)
-    {
-        var source = System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText);
-        return backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_main", source, "fs_entity_translucent", layout,
-            [new ColorTargetDesc(BackendConvert.FromWgpu(format), new BlendStateDesc(
-                new BlendComponentDesc(BlendOperation.Add, BlendFactor.SrcAlpha, BlendFactor.OneMinusSrcAlpha),
-                new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.OneMinusSrcAlpha)))],
-            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, true),
-            CullMode.None, FrontFace.Ccw,
-            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes())));
-    }
-
-    /// <summary>
-    /// Entity base/clothing layer: reference entityCutout semantics, alpha tested at 0.5 and opaque (docs/decisions/0021).
-    /// </summary>
-    /// <summary>
-    /// Item model layer: the reference <c>item_cutout</c> pipeline, which alpha tests at 0.1 (ALPHA_CUTOUT) instead of the
-    /// 0.5 the entity cutout pass uses. No blending, depth writes on, no culling (ITEM_SNIPPET leaves cullMode at none).
-    /// </summary>
-    private static PipelineHandle CreateItemCutoutPipeline(WgpuRenderBackend backend, WGPUTextureFormat format, PipelineLayoutHandle layout)
-    {
-        var source = System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText);
-        return backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_main", source, "fs_item_cutout", layout,
-            [new ColorTargetDesc(BackendConvert.FromWgpu(format))],
-            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, true),
-            CullMode.None, FrontFace.Ccw,
-            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes())));
-    }
-    private static PipelineHandle CreateEntityCutoutPipeline(WgpuRenderBackend backend, WGPUTextureFormat format, PipelineLayoutHandle layout)
-    {
-        var source = System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText);
-        return backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_main", source, "fs_entity_cutout", layout,
-            [new ColorTargetDesc(BackendConvert.FromWgpu(format))],
-            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, true),
-            CullMode.None, FrontFace.Ccw,
-            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes())));
-    }
-
-    /// <summary>
-    /// Entity equipment layer (armor/elytra): reference <c>armor_cutout_no_cull</c> pipeline, whose depth state is
-    /// <c>DepthStencilState.DEFAULT = (GREATER_THAN_OR_EQUAL, writeDepth=true, depthBias=0)</c> over the reference's
-    /// reversed-Z buffer. Our buffer is also reversed-Z, so the compare is <c>GREATER_EQUAL</c> with depth write and no
-    /// bias. No culling (armor_cutout_no_cull is <c>withCull(false)</c>). Submitted as its own draw after the base model.
-    /// </summary>
-    private static PipelineHandle CreateEntityElytraPipeline(WgpuRenderBackend backend, WGPUTextureFormat format, PipelineLayoutHandle layout)
-    {
-        var source = System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText);
-        return backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_main", source, "fs_entity_cutout", layout,
-            [new ColorTargetDesc(BackendConvert.FromWgpu(format))],
-            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, true),
-            CullMode.None, FrontFace.Ccw,
-            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes())));
-    }
-
-    /// <summary>
-    /// Entity eyes layer: reference EYES pipeline — emissive colour, translucent blend, depth GREATER_THAN_OR_EQUAL and no
-    /// depth writes (docs/decisions/0021).
-    /// </summary>
-    private static PipelineHandle CreateEntityEmissivePipeline(WgpuRenderBackend backend, WGPUTextureFormat format, PipelineLayoutHandle layout)
-    {
-        var source = System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText);
-        return backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_main", source, "fs_entity_emissive", layout,
-            [new ColorTargetDesc(BackendConvert.FromWgpu(format), new BlendStateDesc(
-                new BlendComponentDesc(BlendOperation.Add, BlendFactor.SrcAlpha, BlendFactor.OneMinusSrcAlpha),
-                new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.OneMinusSrcAlpha)))],
-            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, false),
-            CullMode.None, FrontFace.Ccw,
-            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes())));
-    }
-
-    /// <summary>Enchanted glint overlay: additive, depth test greater-or-equal and no depth writes.</summary>
-    private static PipelineHandle CreateEntityGlintPipeline(WgpuRenderBackend backend, WGPUTextureFormat format, PipelineLayoutHandle layout)
-    {
-        var source = System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText);
-        return backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_main", source, "fs_entity_glint", layout,
-            [new ColorTargetDesc(BackendConvert.FromWgpu(format), new BlendStateDesc(
-                new BlendComponentDesc(BlendOperation.Add, BlendFactor.Src, BlendFactor.One),
-                new BlendComponentDesc(BlendOperation.Add, BlendFactor.Zero, BlendFactor.One)))],
-            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.Equal, false),
-            CullMode.None, FrontFace.Ccw,
-            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes())));
-    }
-
     private static PipelineHandle CreatePipeline(WgpuRenderBackend backend, WGPUTextureFormat format, PipelineLayoutHandle layout)
     {
         var source = System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText);
