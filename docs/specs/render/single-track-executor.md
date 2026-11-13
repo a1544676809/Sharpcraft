@@ -68,6 +68,10 @@ FrameExecutor.Record(target, request)   →  command encoder
    - 实体管线工厂已抽为共享的 `FramePipelines`（`WindowedRenderer` 1975 行）。`EntityPassRecorder` 本就按参数接收管线，可直接复用。
    - **真正障碍**：`FrameRequest` **不含任何实体数据**——实体在窗口路径由 `entityLayers` 回调提供，而 `OffscreenRenderer.Render(FrameRequest)` 是请求的纯函数。
    - 因此下一步是**扩展 `FrameRequest` 承载实体层与皮肤/物品图集**，再由 `FrameCommand` 填充、`OffscreenRenderer` 消费。这是契约变更，应单独提交并在 `docs/specs/render/` 记录新字段。
+
+   **更深一层的障碍（同日核实）**：离线路径**没有实体数据源**。`ClientWorld` 不含实体集合（0 处），`FrameCommand` 里的 28 处 Entity 全部是 `BlockEntityPlaceholderMesher`（方块实体占位，非活动实体）。因此"让离屏画实体"不只是契约问题，还需要**宿主侧为离线路径采集实体**，或改为只在窗口路径验证收敛。
+
+   **对本切片顺序的影响**：实体项的工作量远超估计。可先做**不需要新数据源**的部分（如 OIT：其输入 `TranslucentVertices/Indices` 已在请求中），把实体项后移。
 3. **抽取执行器**：此时两条路径画的东西相同，抽公共录制单元，判据是两侧像素**都不变**。
 4. **切换离屏目标**：`OffscreenRenderer` 变为"建纹理 → 调执行器 → 回读"。
 5. 删除 `OffscreenRenderer` 中重复的管线创建与录制代码。
