@@ -54,7 +54,7 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 
 **分支**：`vertex-24b`，本地领先 `origin/vertex-24b` **5 个提交未推送**（`1ce1cb4` `a6fa967` `b6b57a2` `f6f5594` `f046793`）。推送需项目所有者明确授权。
 
-1. **查 `ChunkMeshCache` 的光照清空**（下一步就做这个）：`Lighting != _appliedLighting` 时 `_meshes.Clear()` 清空整个世界网格，但 `ChunkMesher` 接收的 `LightmapParameters parameters` **赋值后从未被使用**——顶点只存原始光照等级，时间因子走逐帧 uniform。因此这次清空语义上没有必要。若 `Lighting` 确实随昼夜变化，则每次昼夜交替会重建全部区块（卡顿源）。判据：确认 `Lighting` 是否被逐帧更新，再决定删除清空还是改为不比较。
+1. ~~查 `ChunkMeshCache` 的光照清空~~ **已完成**（T-836：该分支运行期不可达，已删除，测试改为断言昼夜变化不重建）。原第 1 项：`Lighting != _appliedLighting` 时 `_meshes.Clear()` 清空整个世界网格，但 `ChunkMesher` 接收的 `LightmapParameters parameters` **赋值后从未被使用**——顶点只存原始光照等级，时间因子走逐帧 uniform。因此这次清空语义上没有必要。若 `Lighting` 确实随昼夜变化，则每次昼夜交替会重建全部区块（卡顿源）。判据：确认 `Lighting` 是否被逐帧更新，再决定删除清空还是改为不比较。
 2. **帧间流水线**（收益最大，未立项）：CPU 准备与渲染线程提交重叠，估算 1.76 → 约 1.15 ms（−35%）。需独立规格：间接参数与 UI 顶点数组乒乓双缓冲、缓冲延迟释放。`Queue.WriteBuffer` 内部有暂存环，不会踩坏在飞的 uniform，竞态在 C# 侧数组。**立项需项目所有者决定**。
 3. **天气系统**：接上雾的大气壳（`environmentalStart/End`，雨天压到 10/96、Boss 战同理），见 `known-gaps.md`。
 
