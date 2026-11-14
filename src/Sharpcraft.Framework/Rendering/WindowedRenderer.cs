@@ -330,18 +330,6 @@ public static class WindowedRenderer
 
         surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight, presentMode, WGPUCompositeAlphaMode.Auto);
 
-        var currentRequest = request;
-
-        // One store per layer: every chunk keeps its own vertex/index buffer, drawn with CPU frustum culling. Memory
-        // follows the resident meshes, so view distances 12-32 need no single-buffer ceiling and never drop far chunks
-        // (ADR-0020).
-        var arena = geometryUpdates is null ? null : new ChunkGeometryStore(backend, device);
-        var arenaCutout = geometryUpdates is null ? null : new ChunkGeometryStore(backend, device);
-        var arenaTranslucent = geometryUpdates is null ? null : new ChunkGeometryStore(backend, device);
-        // FrameResources is the single assembly point for the pipelines, buffers, recorders, OIT targets and the
-        // executor's parameter object (T-843 2B-2a). The loop keeps local aliases so the per-frame code is unchanged.
-        var uiScale = 1f;
-        var entityLayerDrawn = 0;
         // Block entities draw as their own segment with their own atlas, exactly as the offscreen shell does.
         // Without this the chest geometry is built for a live session and then never submitted.
         using var blockEntityAtlas = new EntitySkinTextureGpu();
@@ -364,6 +352,18 @@ public static class WindowedRenderer
             request = request with { BlockEntity = blockEntitySubmission };
         }
 
+        var currentRequest = request;
+
+        // One store per layer: every chunk keeps its own vertex/index buffer, drawn with CPU frustum culling. Memory
+        // follows the resident meshes, so view distances 12-32 need no single-buffer ceiling and never drop far chunks
+        // (ADR-0020).
+        var arena = geometryUpdates is null ? null : new ChunkGeometryStore(backend, device);
+        var arenaCutout = geometryUpdates is null ? null : new ChunkGeometryStore(backend, device);
+        var arenaTranslucent = geometryUpdates is null ? null : new ChunkGeometryStore(backend, device);
+        // FrameResources is the single assembly point for the pipelines, buffers, recorders, OIT targets and the
+        // executor's parameter object (T-843 2B-2a). The loop keeps local aliases so the per-frame code is unchanged.
+        var uiScale = 1f;
+        var entityLayerDrawn = 0;
         var frameResources = new FrameResources(new FrameResources.Options
         {
             Backend = backend,

@@ -521,6 +521,7 @@ internal static partial class FrameCommand
         }
         var chestAtlas = resources is null ? null : Sharpcraft.Client.Render.ChestAtlas.Load(resources);
         Console.WriteLine($"chest atlas: {(chestAtlas is null ? "null" : $"{chestAtlas.Texture.Width}x{chestAtlas.Texture.Height}")}");
+        if (chestAtlas is not null) { File.WriteAllBytes(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "chest-atlas.rgba"), chestAtlas.Texture.Rgba); }
 
         return (atlas, map, modelSet, chestAtlas);
     }
