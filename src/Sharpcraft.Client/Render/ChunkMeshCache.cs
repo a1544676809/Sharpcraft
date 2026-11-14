@@ -151,6 +151,12 @@ public sealed class ChunkMeshCache
     {
         ArgumentNullException.ThrowIfNull(world);
 
+        if (Sharpcraft.Client.Game.GameOptions.Get("MC_DEBUG_MODELS") is { Length: > 0 })
+        {
+            Console.WriteLine($"cache build: models={(models is null ? "null" : "present")} marking={(models?.ElementStateCount ?? 0)} sprites={(sprites is null ? "null" : "present")}");
+        }
+
+
         var started = System.Diagnostics.Stopwatch.GetTimestamp();
         var remeshed = 0;
 
