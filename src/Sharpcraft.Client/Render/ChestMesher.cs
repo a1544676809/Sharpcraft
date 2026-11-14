@@ -90,7 +90,15 @@ public sealed class ChestMesher
             var lightSky = entity.Sky / 15f;
             var lightBlock = entity.Block / 15f;
 
-            // The body does not move.
+            // The reference turns the whole chest about the middle of its bottom face by minus the
+            // facing's yaw. Every facing is a quarter turn, so the axis aligned boxes stay axis
+            // aligned and only their centres and extents swap.
+            var radians = FacingDegrees(entity.Facing) * (MathF.PI / 180f);
+            var cos = MathF.Cos(radians);
+            var sin = MathF.Sin(radians);
+            var quarterTurn = MathF.Abs(cos) < 0.5f;
+
+            // The body does not move: it is square on the horizontal plane and centred.
             EntityPlaceholderMesher.AppendBox(
                 _geometry,
                 origin + new Vector3(8f * Pixel, 0f, 8f * Pixel),
@@ -106,9 +114,12 @@ public sealed class ChestMesher
                 sky: lightSky,
                 block: lightBlock);
 
-            // The lid and the latch swing about the back bottom edge of the lid.
+            // The lid and the latch swing about the back bottom edge of the lid, wherever the facing
+            // has moved that edge to.
             var angle = -OpenAngle(entity.Open);
-            var pivot = origin + new Vector3(0f, PivotY, PivotZ);
+            var hingeXz = Rotate(0f, PivotZ, cos, sin);
+            var pivot = origin + new Vector3(hingeXz.X, PivotY, hingeXz.Y);
+            var hinge = new Vector3(cos, 0f, -sin);
             var swing = new EntityModelTransform(
                 Translation: Vector3.Zero,
                 YawDegrees: 0f,
@@ -117,7 +128,7 @@ public sealed class ChestMesher
                 ScaleXZ: 1f,
                 ScaleY: 1f,
                 HasAttachRotation: true,
-                AttachRotation: Quaternion.CreateFromAxisAngle(Vector3.UnitX, angle),
+                AttachRotation: Quaternion.CreateFromAxisAngle(hinge, angle),
                 AttachPivot: pivot);
 
             EntityPlaceholderMesher.AppendBox(
@@ -136,11 +147,12 @@ public sealed class ChestMesher
                 lightSky,
                 lightBlock);
 
-            // The latch sits on the front face, seven to nine pixels across and seven to eleven up.
+            // The latch sits on the front face; a quarter turn swaps its width and depth.
+            var lockXz = Rotate(8f * Pixel, 15.5f * Pixel, cos, sin);
             EntityPlaceholderMesher.AppendBox(
                 _geometry,
-                origin + new Vector3(8f * Pixel, 7f * Pixel, 15.5f * Pixel),
-                LockWidth,
+                origin + new Vector3(lockXz.X, 7f * Pixel, lockXz.Y),
+                quarterTurn ? LockDepth : LockWidth,
                 LockHeight,
                 1f,
                 1f,
@@ -148,7 +160,7 @@ public sealed class ChestMesher
                 sprite,
                 ref vertexFloats,
                 ref indexCount,
-                LockDepth,
+                quarterTurn ? LockWidth : LockDepth,
                 swing,
                 lightSky,
                 lightBlock);
@@ -170,5 +182,28 @@ public sealed class ChestMesher
     {
         var eased = 1f - open;
         return (1f - (eased * eased * eased)) * (MathF.PI / 2f);
+    }
+
+    /// <summary>
+    /// Yaw the reference applies for a facing: minus that facing's <c>toYRot</c>, in degrees. Face
+    /// indices follow <see cref="SectionCoord.Step"/>: 0 west, 1 east, 4 north, 5 south.
+    /// </summary>
+    /// <param name="facing">Face index.</param>
+    public static float FacingDegrees(byte facing) => facing switch
+    {
+        0 => -90f,
+        1 => 90f,
+        4 => -180f,
+        _ => 0f
+    };
+
+    /// <summary>Turns a model space point about the middle of the block's horizontal plane.</summary>
+    private static Vector2 Rotate(float x, float z, float cos, float sin)
+    {
+        var dx = x - 0.5f;
+        var dz = z - 0.5f;
+        return new Vector2(
+            0.5f + (dx * cos) + (dz * sin),
+            0.5f - (dx * sin) + (dz * cos));
     }
 }

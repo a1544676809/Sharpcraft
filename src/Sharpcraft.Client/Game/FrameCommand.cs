@@ -951,11 +951,14 @@ internal static class FrameCommand
                 {
                     foreach (var record in chunk.BlockEntities)
                     {
+                        var blockX = (chunk.ChunkX * 16) + record.LocalX;
+                        var blockZ = (chunk.ChunkZ * 16) + record.LocalZ;
                         states.Add(new Sharpcraft.Client.Render.BlockEntityRenderState(
-                            (chunk.ChunkX * 16) + record.LocalX,
+                            blockX,
                             record.Y,
-                            (chunk.ChunkZ * 16) + record.LocalZ,
-                            record.TypeId));
+                            blockZ,
+                            record.TypeId,
+                            Facing: FacingOf(world, blockX, record.Y, blockZ)));
                     }
                 }
 
@@ -2249,6 +2252,8 @@ internal static class FrameCommand
             // The demo world is bare, so stand one chest on the platform the camera frames.
             if (world.GetChunk(0, 0) is { } demoChunk)
             {
+                // State 5562 is a single chest facing east, so the facing path is exercised here.
+                demoChunk.GetSection(10 >> 4)?.Set(8, 10 & 15, 8, 5562);
                 demoChunk.AddBlockEntity(new Sharpcraft.Common.World.BlockEntityRecord(8, 10, 8, 1));
             }
             var blockEntityStates = new List<Sharpcraft.Client.Render.BlockEntityRenderState>();
@@ -2256,11 +2261,14 @@ internal static class FrameCommand
             {
                 foreach (var record in chunk.BlockEntities)
                 {
+                    var blockX = (chunk.ChunkX * 16) + record.LocalX;
+                    var blockZ = (chunk.ChunkZ * 16) + record.LocalZ;
                     blockEntityStates.Add(new Sharpcraft.Client.Render.BlockEntityRenderState(
-                        (chunk.ChunkX * 16) + record.LocalX,
+                        blockX,
                         record.Y,
-                        (chunk.ChunkZ * 16) + record.LocalZ,
-                        record.TypeId));
+                        blockZ,
+                        record.TypeId,
+                        Facing: FacingOf(world, blockX, record.Y, blockZ)));
                 }
             }
 
@@ -2366,6 +2374,29 @@ internal static class FrameCommand
             var entry = registries.ById(registryKey, dimensionTypeId);
             var info = DimensionTypeInfo.TryRead(entry?.Data);
             return info is null ? (24, -4) : (info.SectionCount, info.MinSectionY);
+        };
+    }
+
+    /// <summary>
+    /// The facing a block entity's block carries, or south when it has none. Chests take their
+    /// direction from the block state rather than from their block entity data.
+    /// </summary>
+    private static byte FacingOf(ClientWorld world, int x, int y, int z)
+    {
+        if (!Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
+                world.GetBlockState(x, y, z),
+                "facing",
+                out var facing))
+        {
+            return 5;
+        }
+
+        return facing switch
+        {
+            "west" => 0,
+            "east" => 1,
+            "north" => 4,
+            _ => 5
         };
     }
 }

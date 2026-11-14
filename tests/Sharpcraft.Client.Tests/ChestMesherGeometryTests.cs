@@ -102,4 +102,47 @@ public sealed class ChestMesherGeometryTests
         Assert.Equal(11f * Pixel, latch.MaxY, Tolerance);
         Assert.Equal(16f * Pixel, latch.MaxZ, Tolerance);
     }
+
+    private static (float MinX, float MinY, float MinZ, float MaxX, float MaxY, float MaxZ) LatchExtentFor(byte facing)
+    {
+        var mesher = new ChestMesher();
+        BlockEntityRenderState[] entities = [new(0f, 0f, 0f, VanillaBlockEntityTypes.Chest, Facing: facing)];
+        var geometry = mesher.Build(entities, new SpriteRect(0, 0, 16, 16, 1));
+
+        return Extent(geometry.Vertices, 24 * 2, 24);
+    }
+
+    /// <summary>The reference turns a chest by minus the facing yaw, a quarter turn at a time.</summary>
+    [Theory]
+    [InlineData((byte)5, 0f)]
+    [InlineData((byte)0, -90f)]
+    [InlineData((byte)4, -180f)]
+    [InlineData((byte)1, 90f)]
+    public void FacingDegreesMatchTheReferenceYaw(byte facing, float degrees)
+    {
+        Assert.Equal(degrees, ChestMesher.FacingDegrees(facing), Tolerance);
+    }
+
+    /// <summary>The latch moves to whichever face the chest is turned towards.</summary>
+    [Fact]
+    public void TheLatchFollowsTheFacing()
+    {
+        var south = LatchExtentFor(5);
+        var west = LatchExtentFor(0);
+        var north = LatchExtentFor(4);
+        var east = LatchExtentFor(1);
+
+        // South puts it on the far Z face, north on the near one, west near X, east far X.
+        Assert.Equal(15f * Pixel, south.MinZ, Tolerance);
+        Assert.Equal(16f * Pixel, south.MaxZ, Tolerance);
+
+        Assert.Equal(0f, north.MinZ, Tolerance);
+        Assert.Equal(1f * Pixel, north.MaxZ, Tolerance);
+
+        Assert.Equal(0f, west.MinX, Tolerance);
+        Assert.Equal(1f * Pixel, west.MaxX, Tolerance);
+
+        Assert.Equal(15f * Pixel, east.MinX, Tolerance);
+        Assert.Equal(16f * Pixel, east.MaxX, Tolerance);
+    }
 }

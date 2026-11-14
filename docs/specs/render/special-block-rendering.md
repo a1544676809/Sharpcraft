@@ -253,7 +253,7 @@ public byte GetBlockLight(int x, int y, int z)   // 同
 | 简化 | 影响 | 计划 |
 | --- | --- | --- |
 | 箱子一律按**关闭**状态绘制 | 看不到开合动画 | `Open` 字段已预留；需方块实体 NBT/动画数据源 |
-| 无朝向旋转 | 所有箱子朝向一致 | 需方块状态的 `facing`；当前 `BlockEntityRecord` 未携带 |
+| ~~无朝向旋转~~ | **已解决（2026-11-14）**：`BlockStateDefinitions` 解码 `facing`，`ChestMesher` 按原版 `-toYRot` 绕 `(0.5, 0, 0.5)` 旋转；4 个朝向有几何测试，端到端渲染差异已确认 | — |
 | 未接入 `FrameCommand` 绘制路径 | 不影响现有渲染 | 阻塞于上述图集问题 |
 
 ## 11. 绘制段侦察（2026-11-14）
@@ -401,3 +401,13 @@ chestAtlasGpu.Upload(backend, bindGroupLayout, chestAtlas.Texture, cameraBuffer,
 ### 结论
 
 两个都不是"补个字段"能解决的，各自需要独立子系统。**已在 §10 的简化表中登记**，不阻塞其它渲染器的实现——它们可以先按固定朝向、关闭状态渲染，再统一补上。
+
+## 15. 箱子朝向已接通（2026-11-14）
+
+| 环节 | 实现 |
+| --- | --- |
+| 数据 | `BlockStateDefinitions.TryGetProperty(stateId, "facing", out value)`（已与原版 35723 状态比对一致） |
+| 传递 | `BlockEntityRenderState.Facing`（byte，沿用 `SectionCoord.Step` 的面编码：0 西、1 东、4 北、5 南） |
+| 几何 | `ChestMesher.FacingDegrees` 给出原版的 `-toYRot`；锁扣位置绕 `(0.5, 0, 0.5)` 旋转，四分之一圈时宽深互换；箱盖铰链轴随朝向旋转 |
+| 测试 | `FacingDegrees` 四条、`TheLatchFollowsTheFacing` 四个朝向的锁扣范围 |
+| 端到端 | 把演示世界的箱子设为 state 5562（`facing=east`），与默认朝向渲染对比出现像素差异（2 px，锁扣仅 2×4×1 像素且此机位部分被遮挡） |
