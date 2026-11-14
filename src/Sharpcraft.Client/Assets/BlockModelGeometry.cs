@@ -142,12 +142,23 @@ public static class BlockModelGeometry
         ModelRotation? rotation)
     {
         // Corner order maps to the texture rectangle as 0 min/min, 1 min/max, 2 max/max, 3 max/min.
+        // A face rotation turns which corner of the rectangle each vertex reads, so the index is
+        // advanced by a quarter turn before the rectangle corner is chosen.
+        var quarter = ((face.Rotation % 360) + 360) % 360 / 90;
+        Vector2 UvAt(int index)
+        {
+            var cornerIndex = (index + quarter) % 4;
+            var u = cornerIndex is 0 or 1 ? uv[0] : uv[2];
+            var v = cornerIndex is 0 or 3 ? uv[1] : uv[3];
+            return new Vector2(u / PerBlock, v / PerBlock);
+        }
+
         Span<ModelVertex> vertices = stackalloc ModelVertex[4]
         {
-            new(Place(corners.A, rotation), new Vector2(uv[0] / PerBlock, uv[1] / PerBlock)),
-            new(Place(corners.B, rotation), new Vector2(uv[0] / PerBlock, uv[3] / PerBlock)),
-            new(Place(corners.C, rotation), new Vector2(uv[2] / PerBlock, uv[3] / PerBlock)),
-            new(Place(corners.D, rotation), new Vector2(uv[2] / PerBlock, uv[1] / PerBlock))
+            new(Place(corners.A, rotation), UvAt(0)),
+            new(Place(corners.B, rotation), UvAt(1)),
+            new(Place(corners.C, rotation), UvAt(2)),
+            new(Place(corners.D, rotation), UvAt(3))
         };
 
         return new ModelQuad(vertices[0], vertices[1], vertices[2], vertices[3], direction, face.Texture, face.TintIndex, face.CullFace);

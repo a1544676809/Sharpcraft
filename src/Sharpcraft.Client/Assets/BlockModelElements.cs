@@ -22,8 +22,9 @@ public readonly record struct ModelBox(float FromX, float FromY, float FromZ, fl
 /// <param name="Uv">Explicit UV rectangle, or null when the model leaves it to the projection.</param>
 /// <param name="CullFace">Direction whose neighbour hides this face, or null.</param>
 /// <param name="TintIndex">Tint slot, or -1 when the face carries none.</param>
+/// <param name="Rotation">Texture rotation in degrees, one of 0, 90, 180 or 270.</param>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.block.model.BlockModel", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/model/BlockModel.java")]
-public readonly record struct ModelFace(string Texture, float[]? Uv, string? CullFace, int TintIndex);
+public readonly record struct ModelFace(string Texture, float[]? Uv, string? CullFace, int TintIndex, int Rotation = 0);
 
 /// <summary>Optional rotation applied to a box.</summary>
 /// <param name="Angle">Angle in degrees, a multiple of twenty two and a half.</param>
@@ -164,7 +165,12 @@ public sealed class BlockModelElements
                         ? tintElement.GetInt32()
                         : -1;
 
-                    faces[face.Name] = new ModelFace(textureName, uv, cull, tint);
+                    var faceRotation = face.Value.TryGetProperty("rotation", out var faceRotationElement) &&
+                        faceRotationElement.ValueKind == JsonValueKind.Number
+                        ? faceRotationElement.GetInt32()
+                        : 0;
+
+                    faces[face.Name] = new ModelFace(textureName, uv, cull, tint, faceRotation);
                 }
             }
 

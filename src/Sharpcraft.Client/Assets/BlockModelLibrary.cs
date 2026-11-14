@@ -97,8 +97,28 @@ public sealed class BlockModelLibrary
             return false;
         }
 
-        return elements[0].Faces.Count == 6 &&
-               elements[0].Faces.Values.All(face => face.CullFace is not null);
+        // A full-size box is only a plain cube when nothing about it is specialised: an element
+        // rotation, an explicit texture rectangle, a face rotation or a tint slot all mean the cube
+        // path would draw the wrong thing, and the six keys must be exactly the six directions.
+        if (elements[0].Rotation is not null || elements[0].Faces.Count != 6)
+        {
+            return false;
+        }
+
+        string[] directions = ["down", "up", "north", "south", "west", "east"];
+        foreach (var direction in directions)
+        {
+            if (!elements[0].Faces.TryGetValue(direction, out var face) ||
+                face.CullFace is null ||
+                face.Uv is not null ||
+                face.Rotation != 0 ||
+                face.TintIndex != -1)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private TexturedQuad[]? Build(Identifier blockId)
