@@ -157,3 +157,30 @@
 | 简化 | 影响 |
 | --- | --- |
 | 模型按**方块**缓存而非按**方块状态** | 同一方块的所有状态共用一个模型——因为 `BlockModelResolver` 只取 blockstate 的首个变体。台阶的上半/下半、楼梯的朝向都不会改变模型 |
+
+## 12. 切片 3c 实现结果（2026-11-14）
+
+### 接入 `ChunkMesher`
+
+| 机制 | 实现 |
+| --- | --- |
+| 状态查询 | `BlockModelSet`：构建时按方块解析一次，摊平成 `TexturedQuad[]?[TotalStates]`，运行期 `Has(state)` 是**数组下标**，不进热路径字典 |
+| 排除 | `TryDescribe` 遇 element 状态直接返回 false——它不进入立方体面合并网格 |
+| 发射 | 六个方向的合并跑完后，`EmitSectionModels` 逐方块发射，光照取该位置的 sky/block |
+| 开关 | `MeshChunk(..., BlockModelSet? models = null)`；**默认 null，路径关闭** |
+
+### 回归证据
+
+**默认沙盒帧 `9CA9E034…` / 34897 B 逐字节不变**——路径关闭时与原行为完全一致。
+
+### 已登记的简化
+
+| 简化 | 影响 |
+| --- | --- |
+| element 面**无方向着色与 AO** | 所有 element 面用纯白（1,1,1）+ 方块光照，比立方体面更平；原版是按方向乘阴影系数 |
+| element 面**不做 `cullface` 剔除** | 相邻不透明方块不会隐藏 element 面，多画一些三角形但不可见 |
+| `EmitSectionModels` 每区块遍历 4096 格 | 未做加速结构；当前只在路径打开时生效 |
+
+### 尚未接通
+
+`FrameCommand` 还没有构建 `BlockModelSet` 并传给 `MeshChunk`——路径**已就绪但未启用**。这是有意为之：先保证关闭状态下零回归，再单独打开做像素对拍。

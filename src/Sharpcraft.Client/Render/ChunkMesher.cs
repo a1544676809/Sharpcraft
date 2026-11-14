@@ -126,7 +126,8 @@ public static class ChunkMesher
         StateCullTable? cull = null,
         StateVisualCache? visuals = null,
         bool merge = true,
-        bool ambientOcclusion = true)
+        bool ambientOcclusion = true,
+        BlockModelSet? models = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(chunk);
@@ -175,12 +176,17 @@ public static class ChunkMesher
             for (var direction = 0; direction < 6; direction++)
             {
                 consumed.Clear();
-                MergeSectionFaces(neighbourhood, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout, tint, cull, visuals, merge, ambientOcclusion);
+                MergeSectionFaces(neighbourhood, section, direction, baseX, baseY, baseZ, airState, buffer, consumed, sprites, translucent, layout, cutout, tint, cull, visuals, merge, ambientOcclusion, models);
             }
 
             if (translucent is not null)
             {
                 EmitSectionFluids(neighbourhood, section, baseX, baseY, baseZ, buffer, translucent, sprites, layout, tint);
+            }
+
+            if (models is not null && sprites is not null)
+            {
+                EmitSectionModels(neighbourhood, section, baseX, baseY, baseZ, buffer, sprites, models);
             }
         }
 
@@ -231,7 +237,8 @@ public static class ChunkMesher
         StateCullTable? cull = null,
         StateVisualCache? visuals = null,
         bool merge = true,
-        bool ambientOcclusion = true)
+        bool ambientOcclusion = true,
+        BlockModelSet? models = null)
     {
         var (uAxis, vAxis) = InPlaneAxes(direction);
 
@@ -253,7 +260,7 @@ public static class ChunkMesher
                     var cell = (v << 4) | u;
                     present[cell] = TryDescribe(
                         neighbourhood, section, direction, uAxis, vAxis, slice, u, v, baseX, baseY, baseZ,
-                        airState, sprites, layout, cull, out keys[cell]);
+                        airState, sprites, layout, cull, models, out keys[cell]);
                 }
             }
 
@@ -411,6 +418,7 @@ public static class ChunkMesher
         BlockStateLayout? layout,
         StateCullTable? cull,
         MergeKey key,
+        BlockModelSet? models,
         Span<bool> consumed)
     {
         for (var du = 0; du < width; du++)
@@ -420,7 +428,7 @@ public static class ChunkMesher
                 return false;
             }
 
-            if (!TryDescribe(neighbourhood, section, direction, uAxis, vAxis, slice, u + du, v, baseX, baseY, baseZ, airState, sprites, layout, cull, out var candidate) ||
+            if (!TryDescribe(neighbourhood, section, direction, uAxis, vAxis, slice, u + du, v, baseX, baseY, baseZ, airState, sprites, layout, cull, models, out var candidate) ||
                 candidate != key)
             {
                 return false;
@@ -513,12 +521,18 @@ public static class ChunkMesher
         BlockSpriteMap? sprites,
         BlockStateLayout? layout,
         StateCullTable? cull,
+        BlockModelSet? models,
         out MergeKey key)
     {
         key = default;
 
         var (x, y, z) = FaceBlock(uAxis, vAxis, slice, u, v);
         var state = section.Get(x, y, z);
+        if (models is not null && models.Has(state))
+        {
+            return false;
+        }
+
         if (state == airState)
         {
             return false;
@@ -802,6 +816,48 @@ public static class ChunkMesher
     /// (reference FluidRenderer.tesselate): same-fluid face culling, four-corner surface heights, flow UV. Only the target
     /// layer differs - water is translucent, lava is opaque (reference: the fluid model's layer) - plus water's biome tint.
     /// </summary>
+    /// <summary>
+    /// Emits blocks whose model is built from element boxes. They cannot join the cube face merge
+    /// because their faces are not cube faces, so they are written on their own after it.
+    /// </summary>
+    private static void EmitSectionModels(
+        in Neighbourhood neighbourhood,
+        ChunkSection section,
+        int baseX,
+        int baseY,
+        int baseZ,
+        MeshBuffer buffer,
+        BlockSpriteMap sprites,
+        BlockModelSet models)
+    {
+        var nb = neighbourhood;
+
+        for (var y = 0; y < 16; y++)
+        {
+            for (var z = 0; z < 16; z++)
+            {
+                for (var x = 0; x < 16; x++)
+                {
+                    var state = section.Get(x, y, z);
+                    if (models.Quads(state) is not { } quads)
+                    {
+                        continue;
+                    }
+
+                    nb.TryGetLight(baseX + x, baseY + y, baseZ + z, out var sky, out var block);
+                    BlockModelSet.Emit(
+                        buffer,
+                        quads,
+                        baseX + x,
+                        baseY + y,
+                        baseZ + z,
+                        (sky / 15f, block / 15f),
+                        sprites.ForTexture);
+                }
+            }
+        }
+    }
+
     private static void EmitSectionFluids(
         in Neighbourhood neighbourhood,
         ChunkSection section,

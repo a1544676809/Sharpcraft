@@ -110,6 +110,10 @@ public sealed class BlockSpriteMap
     }
 
     /// <summary>Flowing sprite of a fluid block (<c>name_flow</c>), or null when it has none.</summary>
+    /// <summary>Sprite for an explicit texture path, or null when the atlas holds no such cell.</summary>
+    /// <param name="texture">Texture path such as <c>minecraft:block/torch</c>.</param>
+    public SpriteRect? ForTexture(Identifier texture) => Lookup(texture.Path);
+
     public SpriteRect? FluidFlow(Identifier blockId) => Lookup($"{blockId.Path}_flow");
 
     /// <summary>Overlay sprite of a fluid block (<c>name_overlay</c>), or null when it has none.</summary>
