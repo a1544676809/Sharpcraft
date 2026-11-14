@@ -30,5 +30,6 @@
 | [`shader-packs.md`](shader-packs.md) | 渲染目标、阶段、顺序、采样与 uniform 的声明模型，以及失败回退规则 | 已评审 | - |
 | [`single-track-executor.md`](single-track-executor.md) | 原则 14 要求"离屏与窗口渲染 MUST 共用同一套帧 Pass 执行器（窗口仅作最终上屏呈现）"。 | 未标注 | - |
 | [`sky-celestial.md`](sky-celestial.md) | 原版 SkyRenderer 的天空盘、日月星几何/变换/贴图与环境属性依赖 | 待评审 | - |
+| [`special-block-rendering.md`](special-block-rendering.md) | 原版里有一批方块不能用一个立方体模型表示，或需要额外的几何/动画/朝向处理：火把、箱子、活塞、作物，以及告示牌、旗帜、床、潜影盒等。 | 未标注 | - |
 
 <!-- END GENERATED: docs/specs/render -->
