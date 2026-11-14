@@ -43,15 +43,24 @@ public sealed class Repro_001_VertexLayoutDeclaredOnceTests
     {
         var rendering = Path.Combine(RepositoryRoot(), "src", "Sharpcraft.Framework", "Rendering");
 
-        foreach (var renderer in new[] { "OffscreenRenderer.cs", "WindowedRenderer.cs" })
+        // T-843 2B-2b made the offscreen shell use the same FrameResources/FramePipelines as the window. The invariant
+        // is unchanged: the only file that describes a render pipeline derives its vertex layout from VertexLayout,
+        // never declares a second copy. Both shells are checked for going through the shared assembly point.
+        var framePipelines = File.ReadAllText(Path.Combine(rendering, "FramePipelines.cs"));
+        Assert.Contains("VertexLayout.Attributes()", framePipelines, StringComparison.Ordinal);
+        // The invariant is that the stride comes from the shared layout rather than a literal. Which named argument
+        // carries it changed when pipeline creation moved behind the seam, so the check follows the source of the
+        // value and not the spelling of the parameter in front of it.
+        Assert.Contains("VertexLayout.Stride", framePipelines, StringComparison.Ordinal);
+
+        foreach (var shell in new[] { "OffscreenRenderer.cs", "WindowedRenderer.cs" })
         {
-            var text = File.ReadAllText(Path.Combine(rendering, renderer));
-            Assert.Contains("VertexLayout.Attributes()", text, StringComparison.Ordinal);
-            // The invariant is that the stride comes from the shared layout rather than a literal. Which named argument
-            // carries it changed when pipeline creation moved behind the seam, so the check follows the source of the
-            // value and not the spelling of the parameter in front of it.
-            Assert.Contains("VertexLayout.Stride", text, StringComparison.Ordinal);
+            var text = File.ReadAllText(Path.Combine(rendering, shell));
+            Assert.Contains("FrameResources", text, StringComparison.Ordinal);
         }
+
+        var frameResources = File.ReadAllText(Path.Combine(rendering, "FrameResources.cs"));
+        Assert.Contains("FramePipelines.", frameResources, StringComparison.Ordinal);
     }
 
     private static string RepositoryRoot()

@@ -151,6 +151,36 @@ internal sealed class InteractiveSession
     /// The fog colour for the current frame: the base overworld fog multiplied by the FOG_COLOR timeline and weather, so
     /// distant terrain and water darken at night instead of staying day-blue (docs/modules/weather-and-sky-color.md 6.3).
     /// </summary>
+
+    /// <summary>
+    /// The atmospheric fog shell for this frame: where it starts and where it reaches full strength.
+    /// </summary>
+    /// <remarks>
+    /// The reference pulls this shell in as rain rises, by 160 blocks at the start and 256 at the end, so
+    /// rain visibly closes the view in rather than only tinting it. Two factors in the reference are not
+    /// modelled here and are recorded in known-gaps: the sky light at the camera, which suppresses the
+    /// effect underground, and the biome precipitation flag, which halves it in dry biomes.
+    /// </remarks>
+    internal (float Start, float End) CurrentFogEnvironmentalRange()
+    {
+        const float ClearStart = 0f;
+        const float ClearEnd = 1024f;
+
+        if (_world is null)
+        {
+            return (ClearStart, ClearEnd);
+        }
+
+        var partialTick = FrameCommand.EffectiveDayTimePartial(_world);
+        var rain = FrameCommand.EffectiveRainLevel(_world, partialTick);
+        var start = ClearStart - (160f * rain);
+        var end = ClearEnd - (256f * rain);
+
+        // The reference clamps the rainy end so it never collapses below ninety six blocks.
+        var minRainEnd = MathF.Min(96f, ClearEnd);
+        return (start, MathF.Max(minRainEnd, end));
+    }
+
     internal Vector4 CurrentFogColour()
     {
         if (_world is not null && _biomes is not null)

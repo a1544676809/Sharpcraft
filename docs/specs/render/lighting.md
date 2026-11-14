@@ -206,3 +206,32 @@ fog.renderDistanceEnd   = renderDistanceBlocks;
 视距 12 → `172.8 .. 192`。
 
 **本仓实现状态**：柱形壳已实现；球形大气壳未接，见 `known-gaps.md`。`pos` 为相机相对坐标（`position - camera.eye`），因此 `Camera` uniform 必须在 `viewProjection` 之后**声明 `skyViewProjection` 占位**，否则 `eye` 落在字节 64 读到天空矩阵。
+### 11.1 大气壳的常数值与雨雾（原版 26.3，已核实）
+
+| 属性 | 默认值 | 来源 |
+| --- | --- | --- |
+| `FOG_START_DISTANCE` | **0.0** | `EnvironmentAttributes` |
+| `FOG_END_DISTANCE` | **1024.0** | 同上 |
+| `SKY_FOG_END_DISTANCE` | 512.0 | 同上 |
+
+`AtmosphericFogEnvironment.setupFog`：
+
+```text
+environmentalStart = FOG_START_DISTANCE + (-160.0) * rainFogMultiplier
+minRainFogEnd      = min(96.0, environmentalEnd)
+environmentalEnd   = max(minRainFogEnd, environmentalEnd + (-256.0) * rainFogMultiplier)
+```
+
+`updateRainFogState`（`rainFogMultiplier` 逐刻趋近目标）：
+
+```text
+skyLightFactor = clamp((skyLight - 8) / 7, 0, 1)
+target         = rainLevel * skyLightFactor * (biome.hasPrecipitation ? 1.0 : 0.5)
+rainFogMultiplier += (target - rainFogMultiplier) * deltaTicks * 0.2
+```
+
+**重要修正**：即使**不下雨**（`rainFogMultiplier = 0`），大气壳仍是 `0..1024`，在 100 格处贡献 `100/1024 ≈ 0.098`、150 格处 `0.146`。由于 `total_fog_value` 取 `max(球形, 柱形)`，原版**任何天气下都有一层随距离线性增长的常驻雾**，而本仓当前只实现柱形壳，因此中距离**完全无雾**。
+
+该修正使本项从"只影响雨天"变为"影响所有距离的画面等效性"，优先级上升。
+
+**验证方法（已建立）**：`MC_FRAME_LOCAL=1` + `--frame` 渲染 `BuildDemoWorld`，两次哈希相同（确定性）。改动前后对拍得：不同像素 7.82%、最大通道差 10/255、差异区域恰为岛屿几何。**注意：连服务器的离线帧不适合验证雾**——该帧几乎全是天空，地形着色器覆盖像素极少，连极端值都测不出来。

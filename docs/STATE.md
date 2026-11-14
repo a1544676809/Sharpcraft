@@ -18,9 +18,6 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 | T-829 | 雾必须降低透射率 | 原实现只把雾混进颜色，片段透射率仍取 `1-alpha`，浓雾中可透过水看到背后地形。两个 pass 改用同一 `coverage = mix(alpha, 1, fogAmount)` |
 | T-831 | 网格缓存保留已卸载区块的网格 | 传送后缓存 **1281 条 vs 世界 637 个区块**，VS 快照显示该字典保留 **613 MB**、一次传送窗口内涨 **225 MB**。两处修复：`DrainUpdates` 插入前校验区块仍在世界、`PruneTo` 与世界对账。修复后 `meshes=637` 与世界一致，8 次传送工作集 **1179 → 1296 MB（+117 MB）**，修复前同操作 +500～900 MB |
 | T-830 | 区块多绘制间接合批 | 逐页收集 20 字节参数记录、一次上传、每页一次 `MultiDrawIndexedIndirect`。**实测收益为零**（637 区块/约 460 次可见绘制压成约百批次，`sub-queue` 仍 0.17–0.20 ms）。保留为结构对齐原版，文档已注明不得当作优化引用 |
-| T-798 | 区块几何分页共享 arena | 每层若干固定大小页；绘制绑定整页一次、按 `firstIndex`/`baseVertex` 逐区块绘制。稳态 **5.13–5.70 → 2.54–2.76 ms（−51%）**，`binds/frame` 2668 → 278。ADR-0029 |
-| T-797 | 默认选高性能 GPU + 可指定 | 原生垫片 + `[UnsafeAccessor]`，默认 `HighPerformance`。`MC_GPU` 支持 `high`/`low`/`list`/名称子串。ADR-0028 |
-| T-793 | 首帧请求 44.6 s | 根因：`BuildRequest` 二次网格化。删除第二遍改为消费 `ChunkMeshCache`。**44.6 s → 26 ms**，分配 1.09 GB → 0 |
 | T-792 | 窗口只渲染 7–9 个区块 | 根因：预载后 29 秒无帧，服务器 30 秒判死。修复后区块 7 → 496 |
 | T-832 | 地形顶点压缩到 24 字节 | 位置 + Unorm8x4 颜色 + Float16x2 UV + 打包（精灵矩形/天空光/方块光），44 → 24 字节（−45%）。离线 `--frame` 同机位逐像素比对**最大差 0**。**不是帧时间优化**（顶点带宽非瓶颈） |
 | T-834 | OIT pass 削减 | 8 个 OIT pass **不可合并**（有真实依赖链）；剔除与云边界两个 pass 合并成功（剔除管线 `CompareFunction.Always` 且不写深度，深度附件无语义）。省 1 pass ≈0.023 ms，**低于跨运行噪声**。云分支未被离线帧覆盖，已如实记录 |
@@ -52,13 +49,42 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 
 ## 下一步具体动作
 
-**分支**：`vertex-24b`，本地领先 `origin/vertex-24b` **5 个提交未推送**（`1ce1cb4` `a6fa967` `b6b57a2` `f6f5594` `f046793`）。推送需项目所有者明确授权。
+**分支**：`frame-pipeline` @ `ec8479e`，领先 `origin/main` **67 个提交未推送**。项目所有者已明确：**暂时不推送。**
 
-1. **查 `ChunkMeshCache` 的光照清空**（下一步就做这个）：`Lighting != _appliedLighting` 时 `_meshes.Clear()` 清空整个世界网格，但 `ChunkMesher` 接收的 `LightmapParameters parameters` **赋值后从未被使用**——顶点只存原始光照等级，时间因子走逐帧 uniform。因此这次清空语义上没有必要。若 `Lighting` 确实随昼夜变化，则每次昼夜交替会重建全部区块（卡顿源）。判据：确认 `Lighting` 是否被逐帧更新，再决定删除清空还是改为不比较。
-2. **帧间流水线**（收益最大，未立项）：CPU 准备与渲染线程提交重叠，估算 1.76 → 约 1.15 ms（−35%）。需独立规格：间接参数与 UI 顶点数组乒乓双缓冲、缓冲延迟释放。`Queue.WriteBuffer` 内部有暂存环，不会踩坏在飞的 uniform，竞态在 C# 侧数组。**立项需项目所有者决定**。
-3. **天气系统**：接上雾的大气壳（`environmentalStart/End`，雨天压到 10/96、Boss 战同理），见 `known-gaps.md`。
+### 验证手段的覆盖范围（必须记住）
 
-**不要再走的方向**：继续压 OIT（水域已反超，剩余只有降透明层分辨率/降小波阶数这类**会改变画面**的偏差，须按原则 9 由项目所有者裁决）；继续砍 pass 数量（T-804 与 T-834 均已证伪——`Finish()` 只与 pass 数有关，砍三角形不省时间）。
+**离线 `--frame` 与沙盒 `MC_FRAME_LOCAL` 只渲染 `OffscreenRenderer`，完全不经过 `WindowedRenderer`。** 两者是平行实现（原则 14 的单轨尚未落地，见蓝图第四步）。
+
+因此：
+
+离线帧/沙盒对拍对 `OffscreenRenderer` **有效**；对 `WindowedRenderer` 及其组件**无效**（哈希必然不变），只能靠运行时冒烟（帧时间、剔除统计、截图）。本会话给 9 个组件抽取跑的哈希判据因此无效，真正验证它们的是冒烟（1.920 ms、`culled=412 drawn=256`）。
+
+
+### 沙盒验证法（本轮建立，所有画面改动都用它）
+
+```
+MC_FRAME_LOCAL=1 + --frame  →  RenderLocal → BuildDemoWorld
+```
+
+不连服务器、**两次哈希完全相同**。改动前后对拍可量化：像素差比例 / 最大通道差 / 差异区域。T-841 就是这样确认的（7.82% 像素、最大差 10/255、区域恰为岛屿几何）。
+
+**连服务器的离线帧不能用来验证画面细节**：该帧几乎全是天空，地形着色器覆盖像素极少，连"把大气雾终点压到 32"这种极端值都测不出变化。本轮因此浪费了两轮。
+
+单独覆盖项：`MC_FORCE_RAIN` / `MC_FORCE_THUNDER` 可强制雨量与雷暴，便于验证天气相关画面。
+
+### 已完成（本轮）
+
+T-837 录制区抽取（9 组件，`WindowedRenderer.cs` 2400 → 2065）；**3A 完成（本片）**：新增 `MC_FRAME_HASHES=N`（宿主解析进 `FrameDiagnostics.FrameHashes`）+ `FrameHashTrace.cs`，每帧回读颜色目标打印 sha256；钉住配置（`MC_FRAME_LOCAL`/`MC_FORCE_DAYTIME=6000`/`MC_FORCE_PARTIAL=0.5`/`MC_AB_TOGGLE=5`/`MC_SKIP_SKY=1`，见 `frame-pipelining.md` §12）两次运行 20 帧序列**逐一相同**、`digest 2eb9f706…`、`distinct=2`，翻转 `MC_SKIP_SKY` 哈希即变，判据可用；连服务器配置 `distinct=20`、两次 digest 不同（世界状态漂移），已记录不作判据。T-838/T-839 两个潜在缺陷修复并补回归测试；T-840 删除死 `LightmapParameters` 管线；T-841 大气雾壳（含量化验证）。测试 2718 全绿。
+**T-843 完成（本轮）**：切片 1（`FrameExecutor.Record` + `FrameTarget` 参数化，窗口 1975→1663）→ 2A（4 委托删除，OIT 入 `FrameOitTargets.cs`，窗口→1469）→ 2B-1（管线/layout 集中入 `FrameResources.cs`、10 工厂入 `FramePipelines.cs` 264 行，窗口→1254）→ 2B-2a（`FrameResources` 升格唯一装配点：`Options`/`ExecutorResources`/`CreateFrame`/`Resize`，窗口→**1126**）→ **2B-2b（本片）**：`OffscreenRenderer` 删 L577–L732 录制块与 5 个重复管线工厂，改为构造 `FrameResources`→`FrameExecutor.Record`→回读，`OffscreenRenderer.cs` **1533→1346**（−187）；`FrameExecutor.cs`/`FrameRequest` 契约未改；`Repro_001` 断言随代码位置调整、用例保留。全量静态门全绿（build 0 警告、**2718 测试**、ClassMap/Docs/两 verify）；**沙盒帧（仅 `{"MC_FRAME_LOCAL":"1"}`、640×360）`sha256 9CA9E03410A2E745…`/34897 B，与基线逐字节相同**（`identical=True`），未做任何补偿；`GlintTime==0` 的时间戳 padding 只被 `fs_entity_glint` 消费、实测不改像素。服务器 `--frame`（带半透明）`check-frame-baseline.ps1` 跑通（14892 B、EXIT=0、无 Validation），哈希变为 OIT 合成（原单次 blend）+ DrawRanges 合并 + cutout 换 pass，因服务器帧不确定**无法逐项分离**，已在规格 §5 如实记录。Release 冒烟稳态中位数 **1.63 ms ≤2.2**、`cull: chunks=637 culled=449 drawn=183`、EXIT=0、无异常。**架构发现（规格 §5）**：离屏地形走 `EntityPassRecorder` 的 static-world fallback 而非 `TerrainPassRecorder`，两侧不同构。**剩余小项**：`FrameResources` 仍为离屏多建一份未使用的深度纹理（不影响像素）；后续可清。离线帧哈希对窗口改动不敏感，勿当判据。**T-837 3B 经实测否决**（录制仅 ≈0.08–0.13 ms，见规格 §14；`_bufferSizes` 非线程安全，见 risk R-027），未写线程代码。
+
+### 下一步候选
+
+1. **雨雾**。规格与全部常量已写入 `docs/specs/render/lighting.md` §11.1（`rainFogMultiplier` 逐刻插值 + `environmentalStart/End` 计算）。实现需改 `fogPerFrame` 回调契约（当前只回颜色，需加环境范围），约 5 文件。**验证钩子已就绪**：`MC_FORCE_RAIN=1` + 沙盒对拍。
+2. ~~**T-837 切片 3B（真正换线程）**~~ **已实测否决（2026-11-14）**：当前构建 `FrameExecutor.Record` 仅 0.08–0.13 ms（整帧 0.85–1.05 ms），可隐藏上限 ≈0.1 ms（~10%）；且 `WgpuRenderBackend._bufferSizes` / draw 计数非线程安全。不实施、未写线程代码，见 `frame-pipelining.md` §1、§14 与 `risks.md` R-027。复查：record ≥ 整帧 30% 时重开。
+3. 雾基色的 `FOG_COLOR` 混合。**注意**：`skyColorMixFactor` 在视距 12 时为 0，故该项在当前默认配置下**不产生差异**，仅在低视距时才有意义——优先级低。
+4. 其余：T-827 云 S4/S5、T-781 Ctrl+F2 全景、T-764 剩余 special renderer、夜间亮度定标。
+
+**不要做**：继续抽 `PrepPump`（42 行）与 resize 块——耦合 `surface`/`depthTexture`/`blitDepthBindGroup` 等大量 by-ref 状态，风险高于收益。
 
 ## 常用命令
 
@@ -121,4 +147,4 @@ src/Sharpcraft.Client/bin/Release/net10.0/Sharpcraft.Client.exe --version 26.3 -
 | — | `ChunkGeometryStore` 页只增不减，工作集 24 秒内 1296 → 1354 MB | 属正常驻留，非泄漏，见下条 |
 | T-831 | 移动时的内存增长 | **已定位并修复**（见「已完成」）。方法留档：`dotnet-gcdump`/`dotnet-dump` 两份对比 + VS 探查器差异视图。**教训**：`dotnet-dump` 的 `-min` 过滤只能看大对象，会漏掉整片中小对象；字典类容器的「浅表大小」极小（46 KB）但保留大小可达 613 MB，判断必须看**保留大小**而非浅表 |
 
-最后更新：2026-11-13
+最后更新：2026-11-14

@@ -922,7 +922,7 @@ internal static class FrameCommand
                 var translucentBefore = translucent?.IndexCount ?? 0;
 
                 blocks += Sharpcraft.Client.Render.ChunkMeshCache.MeshChunkOnce(
-                    world, chunk, buffer, sprites, translucent, layout, cutout, tint, lighting,
+                    world, chunk, buffer, sprites, translucent, layout, cutout, tint,
                     GameOptions.Get("MC_MESH_NOMERGE") != "1", maxBlocks: 2_000_000 - blocks);
 
                 ranges.Add((before, buffer.IndexCount - before));
@@ -1088,7 +1088,9 @@ internal static class FrameCommand
             TranslucentIndices = translucentIndices,
             CutoutVertices = cutoutVertices,
             CutoutIndices = cutoutIndices,
-            TranslucentRanges = translucentOrdered.Length > 0 ? translucentOrdered : null
+            TranslucentRanges = translucentOrdered.Length > 0 ? translucentOrdered : null,
+            // Full rain pulls the atmospheric shell in, so the sandbox can show it closing the view.
+            RainLevel = EffectiveRainLevel(world, 1f)
         };
     }
 
@@ -2176,7 +2178,7 @@ internal static class FrameCommand
             }
         }
         var mesh = Sharpcraft.Client.Render.ChunkMeshCache.MeshWorldOnce(
-            world, prepared?.Map, EffectiveLighting(world), GameOptions.Get("MC_MESH_NOMERGE") != "1");
+            world, prepared?.Map, GameOptions.Get("MC_MESH_NOMERGE") != "1");
         Console.WriteLine($"local demo: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
         var bounds = (Min: new Vector3(0, -16, 0), Max: new Vector3(16, 16, 16));
@@ -2196,7 +2198,12 @@ internal static class FrameCommand
             Lightmap = ToLightmapUniform(EffectiveLighting(world)),
             Atlas = prepared is null
                 ? null
-                : WithMips(prepared.Value.Atlas)
+                : WithMips(prepared.Value.Atlas),
+
+            // The local scene has no weather of its own, so it takes the forced values. Without these the
+            // sandbox always renders clear weather and cannot show what rain does to the fog (T-842).
+            RainLevel = EffectiveRainLevel(world, 1f),
+            FogColour = EffectiveFogColour(world)
         };
         request = AttachCelestial(request, world, resources);
 

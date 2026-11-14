@@ -42,11 +42,10 @@ public sealed class ChunkMeshCache
     /// <summary>Meshes a whole world into one merged mesh, for the local demo world.</summary>
     /// <param name="world">World to mesh.</param>
     /// <param name="sprites">Atlas mapping, or null for untextured geometry.</param>
-    /// <param name="lighting">Lightmap parameters baked into the vertex colours.</param>
     /// <param name="merge">Whether coplanar faces are greedily merged.</param>
     /// <returns>The merged geometry.</returns>
-    public static MeshData MeshWorldOnce(ClientWorld world, BlockSpriteMap? sprites, LightmapParameters lighting, bool merge) =>
-        ChunkMesher.Mesh(world, airState: 0, maxBlocks: 2_000_000, sprites: sprites, merge: merge, lighting: lighting);
+    public static MeshData MeshWorldOnce(ClientWorld world, BlockSpriteMap? sprites, bool merge) =>
+        ChunkMesher.Mesh(world, airState: 0, maxBlocks: 2_000_000, sprites: sprites, merge: merge);
 
     /// <summary>
     /// Meshes one chunk from an explicit parameter set, for callers that hold no cache (the offscreen frame).
@@ -64,7 +63,6 @@ public sealed class ChunkMeshCache
     /// <param name="layout">Layout that names block states, or null when no layer split is wanted.</param>
     /// <param name="cutout">Buffer that receives alpha tested faces, or null to keep them solid.</param>
     /// <param name="tint">Biome tint, or null for none.</param>
-    /// <param name="lighting">Lightmap parameters baked into the vertex colours.</param>
     /// <param name="merge">Whether coplanar faces are greedily merged.</param>
     /// <param name="maxBlocks">Safety cap on the blocks this call may contribute.</param>
     /// <returns>Number of solid blocks that contributed at least one face.</returns>
@@ -77,12 +75,12 @@ public sealed class ChunkMeshCache
         BlockStateLayout? layout,
         MeshBuffer? cutout,
         BiomeTint? tint,
-        LightmapParameters lighting,
+
         bool merge,
         int maxBlocks = 2_000_000) =>
         ChunkMesher.MeshChunk(
             world, chunk, airState: 0, solid, maxBlocks: maxBlocks, sprites: sprites, translucent: translucent,
-            layout: layout, cutout: cutout, tint: tint, merge: merge, lighting: lighting);
+            layout: layout, cutout: cutout, tint: tint, merge: merge);
 
     /// <summary>Chunks re-meshed by the last synchronous <see cref="Build"/> call.</summary>
     public int LastRemeshedChunks { get; private set; }
@@ -134,13 +132,6 @@ public sealed class ChunkMeshCache
     /// </remarks>
     public LayerSinks? Layers { get; set; }
 
-    /// <summary>
-    /// Lightmap parameters used when meshing. Because the lightmap is baked into vertex colours, changing this (day/night)
-    /// invalidates every cached chunk on the next <see cref="Build"/>; a live renderer sets it when the day time drifts far
-    /// enough to matter. Defaults to overworld day, so callers that never touch it keep the previous behaviour
-    /// (docs/specs/render/lighting.md 6).
-    /// </summary>
-    public LightmapParameters Lighting { get; set; } = LightmapParameters.DayOverworld;
 
     /// <summary>Whether greedy face merging is enabled when meshing.</summary>
     public bool MergeFaces { get; set; } = true;
@@ -182,7 +173,6 @@ public sealed class ChunkMeshCache
             Tint: layers?.Tint,
             Cull: cullTable,
             Visuals: visualCache,
-            Lighting: Lighting,
             MergeFaces: MergeFaces,
             AmbientOcclusion: AmbientOcclusion,
             AirState: 0,

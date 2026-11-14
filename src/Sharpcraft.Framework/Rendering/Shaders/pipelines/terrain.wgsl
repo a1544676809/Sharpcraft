@@ -15,6 +15,18 @@ struct Fog {
 };
 @group(0) @binding(3) var<uniform> fog : Fog;
 
+// Total fog from the two shells the reference keeps: a sphere against the atmospheric range, which is
+// always on and reaches a thousand blocks, and a cylinder against the render distance so going up or down
+// does not add distance. The larger of the two wins, which is why a client with only the cylinder has no
+// fog at all through the middle distances (T-841).
+fn total_fog_value(distances: vec2<f32>) -> f32 {
+    let environmentalSpan = max(fog.range.w - fog.range.z, 0.001);
+    let environmental = clamp((distances.x - fog.range.z) / environmentalSpan, 0.0, 1.0);
+    let renderSpan = max(fog.range.y - fog.range.x, 0.001);
+    let rendered = clamp((distances.y - fog.range.x) / renderSpan, 0.0, 1.0);
+    return max(environmental, rendered);
+}
+
 // Per-frame lightmap parameters (docs/decisions/0019, docs/specs/render/lighting.md 6). The vertex carries the sky/block
 // light levels; the shader turns them into the lightmap multiplier per fragment so day/night needs no re-mesh.
 struct Lightmap {
@@ -69,7 +81,7 @@ struct VertexOutput {
     @location(0) colour : vec3<f32>,
     @location(1) uv : vec2<f32>,
     @location(2) spriteRect : vec4<f32>,
-    @location(3) fogDistance : f32,
+    @location(3) fogDistance : vec2<f32>,
     @location(4) light : vec2<f32>,
 };
 
@@ -94,7 +106,9 @@ fn vs_main(
     // fog_cylindrical_distance: the render distance fade is a cylinder, so going up or down does not add
     // distance and the fade looks the same in every direction (T-835).
     let relativeToEye = position.xyz - camera.eye.xyz;
-    output.fogDistance = max(length(relativeToEye.xz), abs(relativeToEye.y));
+    output.fogDistance = vec2<f32>(
+        length(relativeToEye),
+        max(length(relativeToEye.xz), abs(relativeToEye.y)));
     output.colour = colour.rgb;
     output.uv = uv;
     output.spriteRect = spriteRects[packed & 0xFFFFu];
@@ -143,8 +157,7 @@ fn fs_main(input : VertexOutput) -> @location(0) vec4<f32> {
 
     let light = input.colour * lightmapColour(input.light.x, input.light.y);
     let base = vec4<f32>(litColour(sampled.rgb, light), 1.0);
-    let span = max(fog.range.y - fog.range.x, 0.001);
-    let fogFactor = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
+    let fogFactor = total_fog_value(input.fogDistance);
     return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogFactor), base.a);
 }
 
@@ -180,8 +193,7 @@ fn fs_translucent(input : VertexOutput) -> @location(0) vec4<f32> {
 
     let light = input.colour * lightmapColour(input.light.x, input.light.y);
     let base = vec4<f32>(litColour(sampled.rgb, light), sampled.a);
-    let span = max(fog.range.y - fog.range.x, 0.001);
-    let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
+    let fogged = total_fog_value(input.fogDistance);
     return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogged), base.a);
 }
 
@@ -213,8 +225,7 @@ fn fs_cutout(input : VertexOutput) -> @location(0) vec4<f32> {
 
     let light = input.colour * lightmapColour(input.light.x, input.light.y);
     let base = vec4<f32>(litColour(sampled.rgb, light), 1.0);
-    let span = max(fog.range.y - fog.range.x, 0.001);
-    let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
+    let fogged = total_fog_value(input.fogDistance);
     return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogged), 1.0);
 }
 
@@ -238,8 +249,7 @@ fn fs_entity_translucent(input : VertexOutput) -> @location(0) vec4<f32> {
 
     let light = input.colour * lightmapColour(input.light.x, input.light.y);
     let base = vec4<f32>(litColour(sampled.rgb, light), sampled.a);
-    let span = max(fog.range.y - fog.range.x, 0.001);
-    let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
+    let fogged = total_fog_value(input.fogDistance);
     return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogged), sampled.a);
 }
 
@@ -265,8 +275,7 @@ fn fs_item_cutout(input : VertexOutput) -> @location(0) vec4<f32> {
 
     let light = input.colour * lightmapColour(input.light.x, input.light.y);
     let base = vec4<f32>(litColour(sampled.rgb, light), 1.0);
-    let span = max(fog.range.y - fog.range.x, 0.001);
-    let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
+    let fogged = total_fog_value(input.fogDistance);
     return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogged), 1.0);
 }
 // Entity cutout pass: the base model and clothing. Alpha tested at 0.5 like the reference entityCutout, no blending,
@@ -290,8 +299,7 @@ fn fs_entity_cutout(input : VertexOutput) -> @location(0) vec4<f32> {
 
     let light = input.colour * lightmapColour(input.light.x, input.light.y);
     let base = litColour(sampled.rgb, light);
-    let span = max(fog.range.y - fog.range.x, 0.001);
-    let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
+    let fogged = total_fog_value(input.fogDistance);
     return vec4<f32>(mix(base, fog.colour.rgb, fogged), 1.0);
 }
 
@@ -314,8 +322,7 @@ fn fs_entity_emissive(input : VertexOutput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    let span = max(fog.range.y - fog.range.x, 0.001);
-    let fogged = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
+    let fogged = total_fog_value(input.fogDistance);
     return vec4<f32>(mix(sampled.rgb, fog.colour.rgb, fogged), sampled.a);
 }
 
@@ -352,8 +359,7 @@ fn fs_entity_glint(input : VertexOutput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    let span = max(fog.range.y - fog.range.x, 0.001);
-    let fogFactor = clamp((input.fogDistance - fog.range.x) / span, 0.0, 1.0);
+    let fogFactor = total_fog_value(input.fogDistance);
     let fade = (1.0 - fogFactor) * 0.75; // glintStrength default
     return vec4<f32>(sampled.rgb * input.colour * fade, sampled.a);
 }

@@ -44,6 +44,7 @@ internal sealed class FrameCpuTimings
         Swap,
         OnFrame,
         FrameGap,
+        PipelineWait,
         Count
     }
 
@@ -54,7 +55,8 @@ internal sealed class FrameCpuTimings
         // so every quoted cel-* figure before this change names the wrong stage.
         "frame", "updates", "prep-pump", "prep-ui", "prep-entities", "acquire", "camera", "scene", "scene-open",
         "scene-sky", "scene-celestial", "cel-build", "cel-camera", "cel-disc", "scene-terrain", "scene-entities",
-        "oit", "text", "clouds", "ui", "present-rec", "submit", "sub-finish", "sub-queue", "swap", "onframe", "frame-gap"
+        "oit", "text", "clouds", "ui", "present-rec", "submit", "sub-finish", "sub-queue", "swap", "onframe", "frame-gap",
+        "pipeline-wait"
     ];
 
     private readonly long[] _windowTicks = new long[(int)Stage.Count];
@@ -62,11 +64,57 @@ internal sealed class FrameCpuTimings
     private int _windowFrames;
     private int _frames;
 
+    /// <summary>
+    /// The thread that recorded the first stage of the window, and whether any stage since came from another.
+    /// </summary>
+    /// <remarks>
+    /// Once recording moves to its own thread the stages no longer share a clock or a call stack, and a
+    /// figure that silently mixed two threads would read as one thread doing all the work. Nothing records
+    /// from a second thread yet; the flag exists so the moment that changes the report says so instead of
+    /// quietly lying (T-837).
+    /// </remarks>
+    private int _ownerThreadId = -1;
+
+    private bool _mixedThreads;
+
+    private long _lastMark;
+
+    /// <summary>
+    /// Seeds the marker clock at the start of a frame, so the first <see cref="Mark"/> measures from there.
+    /// </summary>
+    /// <param name="startTicks">Stopwatch ticks the frame started at.</param>
+    public void BeginFrameMarks(long startTicks) => _lastMark = startTicks;
+
+    /// <summary>
+    /// Records the stage that just ended and restarts the clock.
+    /// </summary>
+    /// <remarks>
+    /// The elapsed time between marks used to be a local captured by a closure inside the frame loop, which meant
+    /// anything wanting to mark had to receive that closure as a delegate. Keeping the clock here lets a recorder
+    /// hold the timing object instead, with no delegate to allocate (T-837).
+    /// </remarks>
+    /// <param name="stage">Stage number that just finished.</param>
+    public void Mark(int stage)
+    {
+        var now = System.Diagnostics.Stopwatch.GetTimestamp();
+        Add(stage, now - _lastMark);
+        _lastMark = now;
+    }
     /// <summary>Records one stage of the current frame.</summary>
     /// <param name="stage">Stage number, as used by <see cref="Begin"/> and <see cref="Add"/>.</param>
     /// <param name="ticks">Elapsed stopwatch ticks for that stage.</param>
     public void Add(int stage, long ticks)
     {
+        var thread = Environment.CurrentManagedThreadId;
+        if (_ownerThreadId < 0)
+        {
+            _ownerThreadId = thread;
+        }
+        else if (_ownerThreadId != thread)
+        {
+            _mixedThreads = true;
+        }
+
         _windowTicks[stage] += ticks;
         _totalTicks[stage] += ticks;
     }
@@ -140,10 +188,13 @@ internal sealed class FrameCpuTimings
             builder.Append(' ').Append(suffix);
         }
 
+        builder.Append(_mixedThreads ? " threads=mixed" : " threads=one");
+
         Console.WriteLine(builder.ToString());
         WriteAbSamples();
         Array.Clear(_windowTicks);
         _windowFrames = 0;
+        _mixedThreads = false;
         return true;
     }
 
@@ -183,6 +234,16 @@ internal sealed class FrameCpuTimings
 
     /// <summary>Time from the end of the previous frame to just before the window pump.</summary>
     public static int FrameGapStage => (int)Stage.FrameGap;
+
+    /// <summary>
+    /// Time the submitting side spent waiting for the recording side to hand over a frame (T-837).
+    /// </summary>
+    /// <remarks>
+    /// Zero while recording and submitting share a thread, which they still do. It becomes the number that
+    /// decides whether the split earned anything: if it grows to match the recording time, the two sides are
+    /// not overlapping and the pipeline is a failure, not a saving.
+    /// </remarks>
+    public static int PipelineWaitStage => (int)Stage.PipelineWait;
 
     /// <summary>Stage number for the interface upload and its orthographic matrix (T-817).</summary>
     public static int PrepUiStage => (int)Stage.PrepUi;

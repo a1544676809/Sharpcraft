@@ -15,7 +15,7 @@
 | [`cloud-geometry.md`](cloud-geometry.md) | 原版每帧只上传面的描述，不上传顶点。 | 未标注 | - |
 | [`fluid-rendering.md`](fluid-rendering.md) | 水/岩浆的液面高度、面剔除、flow-UV、染色、逐面光、贴图动画与水下雾 | 已评审 | - |
 | [`frame-baseline.md`](frame-baseline.md) | 跨运行比较不可靠：同一场景不同运行可差 10%+，实测中 prep-entities 曾在两次相邻运行间从 0.068 跳到 0.287 ms。 | 未标注 | - |
-| [`frame-pipelining.md`](frame-pipelining.md) | 实测一帧 1.919 ms，frame-gap = 0.002 ms——整帧没有任何空闲等待，每个阶段首尾相接。 | 未标注 | - |
+| [`frame-pipelining.md`](frame-pipelining.md) | 实测一帧 0.85–1.05 ms（frame-gap ≈ 0.001–0.002 ms），整帧没有明显空闲等待，各阶段首尾相接。 | 未标注 | - |
 | [`known-gaps.md`](known-gaps.md) | 当前渲染管线尚未做或仍为受控偏差的事项清单（几何/天空/雾/云/性能） | 草稿 | 2026-11-01 |
 | [`lighting.md`](lighting.md) | 证据指针：ref://mc-26.3-analysis/src/net/minecraft/client/renderer/Lightmap.java、 .../LightmapRenderStateExtractor.java、..… | 草案（待评审）。范围：方块几何的逐顶点光照与 lightmap 乘子。 | - |
 | [`occlusion-culling.md`](occlusion-culling.md) | Hi-Z 两阶段方案、分期、预算与验收；不依赖硬件遮挡查询 | 草稿 | - |
@@ -28,6 +28,7 @@
 | [`shader-organisation.md`](shader-organisation.md) | 文件布局、命名、include、绑定单一来源、启动期自检、与测试门禁；WGSL 语境下的严谨约定 | 草稿 | - |
 | [`shader-pack-compatibility.md`](shader-pack-compatibility.md) | 我们能吃什么、不能吃什么，以及不支持特性如何改写；面向包作者 | 草稿 | - |
 | [`shader-packs.md`](shader-packs.md) | 渲染目标、阶段、顺序、采样与 uniform 的声明模型，以及失败回退规则 | 已评审 | - |
+| [`single-track-executor.md`](single-track-executor.md) | 原则 14 要求"离屏与窗口渲染 MUST 共用同一套帧 Pass 执行器（窗口仅作最终上屏呈现）"。 | 未标注 | - |
 | [`sky-celestial.md`](sky-celestial.md) | 原版 SkyRenderer 的天空盘、日月星几何/变换/贴图与环境属性依赖 | 待评审 | - |
 
 <!-- END GENERATED: docs/specs/render -->

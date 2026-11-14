@@ -213,7 +213,7 @@ public readonly record struct CommandCounts(int Draws, int BindGroupSets, int Pi
         new(Draws + other.Draws, BindGroupSets + other.BindGroupSets, PipelineSets + other.PipelineSets);
 }
 
-public interface IRenderBackend
+public interface IRenderBackend : IGeometryBackend
 {
     /// <summary>Backend identifier, used in diagnostics.</summary>
     string Name { get; }
@@ -385,15 +385,6 @@ public interface IRenderBackend
 
     /// <summary>Creates a buffer and fills it in one step.</summary>
     BufferHandle CreateBufferInit(in BufferDesc desc, ReadOnlySpan<byte> data);
-
-    /// <summary>Creates a buffer.</summary>
-    BufferHandle CreateBuffer(in BufferDesc desc);
-
-    /// <summary>Writes bytes into a buffer at an offset.</summary>
-    void WriteBuffer(BufferHandle buffer, ReadOnlySpan<byte> data, ulong offset);
-
-    /// <summary>Destroys a buffer.</summary>
-    void Destroy(BufferHandle buffer);
 
     /// <summary>Destroys a texture.</summary>
 

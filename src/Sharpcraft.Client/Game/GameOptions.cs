@@ -81,6 +81,7 @@ internal sealed class GameOptions
             SkipTranslucent = Flag("MC_SKIP_TRANSLUCENT"),
             SkipTerrain = Flag("MC_SKIP_TERRAIN"),
             PixelCompare = Flag("MC_PIXEL_COMPARE"),
+            FrameHashes = Math.Clamp((int)Number("MC_FRAME_HASHES", 0f), 0, 4096),
             SkipEntities = Flag("MC_SKIP_ENTITIES"),
             SkipInterface = Flag("MC_SKIP_UI"),
             SkipSky = Flag("MC_SKIP_SKY"),
