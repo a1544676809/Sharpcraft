@@ -423,3 +423,16 @@ chestAtlasGpu.Upload(backend, bindGroupLayout, chestAtlas.Texture, cameraBuffer,
 ### 已登记的简化
 
 原版对双箱会**剔除接合面**（左半隐藏 WEST、右半隐藏 EAST）。本实现仍绘制全部 6 个面——接合面位于合并后的箱体内部，从外部不可见，只是多出 2 个三角形。登记为受控简化，理由是可见结果一致、`AppendBox` 尚无面掩码能力。
+
+## 17. 材质变体（2026-11-14）
+
+| 环节 | 实现 |
+| --- | --- |
+| 数据 | `ChestMaterialOf` 从方块 id 判定材质：`chest`→普通、`trapped_chest`→陷阱、`ender_chest`→末影、四种铜氧化阶段（**含 waxed 变体，外观相同**） |
+| 贴图 | `ChestAtlas.TexturePathFor(material, type)` 拼出 `entity/chest/<stem>[_left|_right]`；**末影箱忽略左右半**（不可双联） |
+| 渲染 | `ChestMesher.Build(span, ItemAtlas)` 逐实体取 sprite，回退到普通箱子 |
+| 测试 | 9 条路径真值 + 1 条「每个材质×半都能在 22 张贴图中找到」 |
+
+### 已登记的简化
+
+**`christmas` 贴图不会被选中**。原版在「延长圣诞期间」用 `christmas` 贴图覆盖普通/陷阱箱；本实现没有日期判定，因此该三张贴图虽已拼入图集，但永不使用。影响仅限一年中几天的外观，登记为受控简化。

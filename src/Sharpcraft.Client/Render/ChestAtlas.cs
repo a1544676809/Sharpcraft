@@ -101,4 +101,70 @@ public static class ChestAtlas
 
         return table;
     }
+
+    /// <summary>Material of a chest, as the reference's chest material enum orders them.</summary>
+    public const byte Normal = 0;
+
+    /// <summary>Trapped chest material.</summary>
+    public const byte Trapped = 1;
+
+    /// <summary>Ender chest material; it has no double halves.</summary>
+    public const byte Ender = 2;
+
+    /// <summary>Copper chest material, unaffected by oxidation.</summary>
+    public const byte Copper = 3;
+
+    /// <summary>Exposed copper chest material.</summary>
+    public const byte CopperExposed = 4;
+
+    /// <summary>Weathered copper chest material.</summary>
+    public const byte CopperWeathered = 5;
+
+    /// <summary>Oxidized copper chest material.</summary>
+    public const byte CopperOxidized = 6;
+
+    /// <summary>
+    /// Texture path of one chest, given its material and which half it is. The ender chest has no
+    /// halves because it cannot be doubled, so the type is ignored for it.
+    /// </summary>
+    /// <param name="material">Chest material constant.</param>
+    /// <param name="type">Zero single, one left half, two right half.</param>
+    public static string TexturePathFor(byte material, byte type)
+    {
+        var stem = material switch
+        {
+            Trapped => "trapped",
+            Ender => "ender",
+            Copper => "copper",
+            CopperExposed => "copper_exposed",
+            CopperWeathered => "copper_weathered",
+            CopperOxidized => "copper_oxidized",
+            _ => "normal"
+        };
+
+        if (material == Ender)
+        {
+            return $"entity/chest/{stem}";
+        }
+
+        return type switch
+        {
+            1 => $"entity/chest/{stem}_left",
+            2 => $"entity/chest/{stem}_right",
+            _ => $"entity/chest/{stem}"
+        };
+    }
+
+    /// <summary>Resolves one chest's sprite, falling back to the plain chest when it is absent.</summary>
+    /// <param name="atlas">Atlas returned by <see cref="Load"/>.</param>
+    /// <param name="material">Chest material constant.</param>
+    /// <param name="type">Zero single, one left half, two right half.</param>
+    public static SpriteRect SpriteFor(ItemAtlas atlas, byte material, byte type)
+    {
+        ArgumentNullException.ThrowIfNull(atlas);
+
+        return atlas.Get(TexturePathFor(material, type))
+            ?? atlas.Get(NormalTexture)
+            ?? throw new InvalidOperationException("the chest atlas has no plain chest sprite");
+    }
 }

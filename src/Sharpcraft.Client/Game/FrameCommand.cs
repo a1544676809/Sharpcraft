@@ -959,7 +959,7 @@ internal static class FrameCommand
                             blockZ,
                             record.TypeId,
                             Facing: FacingOf(world, blockX, record.Y, blockZ),
-                            ChestType: ChestTypeOf(world, blockX, record.Y, blockZ)));
+                            ChestMaterial: ChestMaterialOf(world, blockX, record.Y, blockZ)));
                 }
             }
 
@@ -981,12 +981,12 @@ internal static class FrameCommand
                         }
                     }
 
-                    if (chestStates.Count > 0 && chestAtlas?.Get(Sharpcraft.Client.Render.ChestAtlas.NormalTexture) is { } chestSprite)
+                    if (chestStates.Count > 0 && chestAtlas is not null)
                     {
                         var chestMesher = new Sharpcraft.Client.Render.ChestMesher();
                         blockEntityGeometry = chestMesher.Build(
                             System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates),
-                            chestSprite);
+                            chestAtlas);
                         Console.WriteLine($"block entities: {chestMesher.LastEntityCount} chests, {blockEntityGeometry.IndexCount / 3} triangles");
                     }
 
@@ -2270,16 +2270,16 @@ internal static class FrameCommand
                         blockZ,
                         record.TypeId,
                         Facing: FacingOf(world, blockX, record.Y, blockZ),
-                        ChestType: ChestTypeOf(world, blockX, record.Y, blockZ)));
+                        ChestMaterial: ChestMaterialOf(world, blockX, record.Y, blockZ)));
             }
             }
 
-            if (blockEntityStates.Count > 0 && chestAtlas.Get(Sharpcraft.Client.Render.ChestAtlas.NormalTexture) is { } chestSprite)
+            if (blockEntityStates.Count > 0)
             {
                 var chestMesher = new Sharpcraft.Client.Render.ChestMesher();
                 var geometry = chestMesher.Build(
                     System.Runtime.InteropServices.CollectionsMarshal.AsSpan(blockEntityStates),
-                    chestSprite);
+                    chestAtlas);
                 request = request with
                 {
                     BlockEntityAtlas = chestAtlas.Texture,
@@ -2421,6 +2421,30 @@ internal static class FrameCommand
             "left" => 1,
             "right" => 2,
             _ => 0
+        };
+    }
+
+    /// <summary>
+    /// Material of the chest block at a position, from the block identifier. Waxed copper shares the
+    /// appearance of the unwaxed stage it was made from, so both map to the same material.
+    /// </summary>
+    private static byte ChestMaterialOf(ClientWorld world, int x, int y, int z)
+    {
+        var block = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(world.GetBlockState(x, y, z));
+        if (block is null)
+        {
+            return 0;
+        }
+
+        return block.Value.Path switch
+        {
+            "trapped_chest" => Sharpcraft.Client.Render.ChestAtlas.Trapped,
+            "ender_chest" => Sharpcraft.Client.Render.ChestAtlas.Ender,
+            "copper_chest" or "waxed_copper_chest" => Sharpcraft.Client.Render.ChestAtlas.Copper,
+            "exposed_copper_chest" or "waxed_exposed_copper_chest" => Sharpcraft.Client.Render.ChestAtlas.CopperExposed,
+            "weathered_copper_chest" or "waxed_weathered_copper_chest" => Sharpcraft.Client.Render.ChestAtlas.CopperWeathered,
+            "oxidized_copper_chest" or "waxed_oxidized_copper_chest" => Sharpcraft.Client.Render.ChestAtlas.CopperOxidized,
+            _ => Sharpcraft.Client.Render.ChestAtlas.Normal
         };
     }
 }

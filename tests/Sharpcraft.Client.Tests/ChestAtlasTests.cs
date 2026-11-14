@@ -43,4 +43,34 @@ public sealed class ChestAtlasTests
     {
         Assert.Contains(ChestAtlas.NormalTexture, ChestAtlas.Textures);
     }
+
+    /// <summary>Each material and half resolves to the texture the reference names it by.</summary>
+    [Theory]
+    [InlineData((byte)0, (byte)0, "entity/chest/normal")]
+    [InlineData((byte)1, (byte)1, "entity/chest/trapped_left")]
+    [InlineData((byte)1, (byte)2, "entity/chest/trapped_right")]
+    [InlineData((byte)2, (byte)0, "entity/chest/ender")]
+    [InlineData((byte)2, (byte)2, "entity/chest/ender")]
+    [InlineData((byte)3, (byte)0, "entity/chest/copper")]
+    [InlineData((byte)4, (byte)1, "entity/chest/copper_exposed_left")]
+    [InlineData((byte)5, (byte)2, "entity/chest/copper_weathered_right")]
+    [InlineData((byte)6, (byte)0, "entity/chest/copper_oxidized")]
+    public void TexturePathsMatchTheReferenceNames(byte material, byte type, string expected)
+    {
+        Assert.Equal(expected, ChestAtlas.TexturePathFor(material, type));
+    }
+
+    /// <summary>Every resolved path is one the atlas actually holds.</summary>
+    [Fact]
+    public void EveryMaterialResolvesToAPackedTexture()
+    {
+        for (byte material = 0; material <= 6; material++)
+        {
+            for (byte type = 0; type <= 2; type++)
+            {
+                var path = ChestAtlas.TexturePathFor(material, type);
+                Assert.Contains(path, ChestAtlas.Textures);
+            }
+        }
+    }
 }

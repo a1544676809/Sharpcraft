@@ -59,6 +59,18 @@ public sealed class ChestMesher
     /// <param name="entities">Block entities in world space.</param>
     /// <param name="sprite">Atlas rect used for the faces.</param>
     public DynamicGeometry Build(ReadOnlySpan<BlockEntityRenderState> entities, SpriteRect sprite)
+        => Build(entities, sprite, null);
+
+    /// <summary>Builds chest geometry, choosing each chest's sprite from its material and half.</summary>
+    /// <param name="entities">Block entities in world space.</param>
+    /// <param name="atlas">Chest atlas the sprites come from.</param>
+    public DynamicGeometry Build(ReadOnlySpan<BlockEntityRenderState> entities, ItemAtlas atlas)
+        => Build(entities, default, atlas);
+
+    private DynamicGeometry Build(
+        ReadOnlySpan<BlockEntityRenderState> entities,
+        SpriteRect? fallbackSprite,
+        ItemAtlas? atlas)
     {
         _geometry.Clear();
         LastEntityCount = 0;
@@ -89,6 +101,9 @@ public sealed class ChestMesher
             var origin = new Vector3(entity.X, entity.Y, entity.Z);
             var lightSky = entity.Sky / 15f;
             var lightBlock = entity.Block / 15f;
+            var sprite = atlas is null
+                ? fallbackSprite ?? throw new InvalidOperationException("either a sprite or an atlas is required")
+                : ChestAtlas.SpriteFor(atlas, entity.ChestMaterial, entity.ChestType);
 
             // The reference turns the whole chest about the middle of its bottom face by minus the
             // facing's yaw. Every facing is a quarter turn, so the axis aligned boxes stay axis
