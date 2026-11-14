@@ -377,3 +377,27 @@ chestAtlasGpu.Upload(backend, bindGroupLayout, chestAtlas.Texture, cameraBuffer,
 第 1 步改为：**为方块实体建立独立的顶点/索引提交**（对应原版的 `SubmitNodeCollector` 分批），而不是复用 `ChunkGeometryStore`。
 
 顺带记录一条原版细节：**方块实体变换用相机相对坐标**（`blockPos - cameraPos`），不是世界绝对坐标。我们的 `BlockEntityRenderState` 目前用世界坐标——接入时应改为相机相对，避免远处浮点精度抖动。
+
+## 14. `facing` / `open` 数据源：已确认缺失（2026-11-14）
+
+### `facing`（方块状态属性）
+
+箱子朝向是方块状态的 `facing` 属性，不是方块实体 NBT。要解出它需要：
+
+1. 从区块拿到该位置的 state id（`ClientWorld.GetBlockState` 已有）
+2. 用 `BlockStateLayout.BlockAt(stateId)` 得到方块 id、`GetBaseId` 得到基址
+3. 用该方块的 `BlockStateDefinition.ValuesAt(offset)` 反解属性值
+
+**阻塞**：`BlockStateDefinition` 在仓库里**没有任何构造点**——没有运行时定义注册表，只有构造器本身。`BlockStateDefinition.ValuesAt` 也不存在（只有正向的 `IndexOf`）。
+
+因此 `facing` 需要先建**方块状态定义注册表**（解析 `assets/minecraft/blockstates/*.json` 的属性 schema），是一项独立的中等任务。
+
+### `open`（开合动画）
+
+原版由 `LidBlockEntity.getOpenNess(partialTicks)` 从 `openCount` 插值，而 `openCount` 由**方块事件**驱动（箱子开合会发 block event）。
+
+本仓目前没有方块事件通道，也没有箱子动画状态。需要方块事件包的处理。
+
+### 结论
+
+两个都不是"补个字段"能解决的，各自需要独立子系统。**已在 §10 的简化表中登记**，不阻塞其它渲染器的实现——它们可以先按固定朝向、关闭状态渲染，再统一补上。
