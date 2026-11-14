@@ -137,7 +137,9 @@ public sealed class EntityPlaceholderMesher
         ref int vertexFloats,
         ref int indexCount,
         float? depth = null,
-        EntityModelTransform? entityTransform = null)
+        EntityModelTransform? entityTransform = null,
+        float sky = 1f,
+        float block = 0f)
     {
         var transform = entityTransform ?? new EntityModelTransform(Vector3.Zero, 0f, 0f, 1f);
         var half = width / 2f;
@@ -150,12 +152,12 @@ public sealed class EntityPlaceholderMesher
         var maxZ = feet.Z + halfDepth;
 
         // +X, -X, +Y, -Y, +Z, -Z; each face is two triangles wound consistently.
-        AppendFace(geometry, new Vector3(maxX, minY, minZ), new Vector3(maxX, minY, maxZ), new Vector3(maxX, maxY, maxZ), new Vector3(maxX, maxY, minZ), red, green, blue, sprite, ref vertexFloats, ref indexCount, transform);
-        AppendFace(geometry, new Vector3(minX, minY, maxZ), new Vector3(minX, minY, minZ), new Vector3(minX, maxY, minZ), new Vector3(minX, maxY, maxZ), red, green, blue, sprite, ref vertexFloats, ref indexCount, transform);
-        AppendFace(geometry, new Vector3(minX, maxY, minZ), new Vector3(maxX, maxY, minZ), new Vector3(maxX, maxY, maxZ), new Vector3(minX, maxY, maxZ), red, green, blue, sprite, ref vertexFloats, ref indexCount, transform);
-        AppendFace(geometry, new Vector3(minX, minY, maxZ), new Vector3(maxX, minY, maxZ), new Vector3(maxX, minY, minZ), new Vector3(minX, minY, minZ), red, green, blue, sprite, ref vertexFloats, ref indexCount, transform);
-        AppendFace(geometry, new Vector3(minX, minY, maxZ), new Vector3(maxX, minY, maxZ), new Vector3(maxX, maxY, maxZ), new Vector3(minX, maxY, maxZ), red, green, blue, sprite, ref vertexFloats, ref indexCount, transform);
-        AppendFace(geometry, new Vector3(maxX, minY, minZ), new Vector3(minX, minY, minZ), new Vector3(minX, maxY, minZ), new Vector3(maxX, maxY, minZ), red, green, blue, sprite, ref vertexFloats, ref indexCount, transform);
+        AppendFace(geometry, new Vector3(maxX, minY, minZ), new Vector3(maxX, minY, maxZ), new Vector3(maxX, maxY, maxZ), new Vector3(maxX, maxY, minZ), red, green, blue, sprite, ref vertexFloats, ref indexCount, transform, sky, block);
+        AppendFace(geometry, new Vector3(minX, minY, maxZ), new Vector3(minX, minY, minZ), new Vector3(minX, maxY, minZ), new Vector3(minX, maxY, maxZ), red, green, blue, sprite, ref vertexFloats, ref indexCount, transform, sky, block);
+        AppendFace(geometry, new Vector3(minX, maxY, minZ), new Vector3(maxX, maxY, minZ), new Vector3(maxX, maxY, maxZ), new Vector3(minX, maxY, maxZ), red, green, blue, sprite, ref vertexFloats, ref indexCount, transform, sky, block);
+        AppendFace(geometry, new Vector3(minX, minY, maxZ), new Vector3(maxX, minY, maxZ), new Vector3(maxX, minY, minZ), new Vector3(minX, minY, minZ), red, green, blue, sprite, ref vertexFloats, ref indexCount, transform, sky, block);
+        AppendFace(geometry, new Vector3(minX, minY, maxZ), new Vector3(maxX, minY, maxZ), new Vector3(maxX, maxY, maxZ), new Vector3(minX, maxY, maxZ), red, green, blue, sprite, ref vertexFloats, ref indexCount, transform, sky, block);
+        AppendFace(geometry, new Vector3(maxX, minY, minZ), new Vector3(minX, minY, minZ), new Vector3(minX, maxY, minZ), new Vector3(maxX, maxY, minZ), red, green, blue, sprite, ref vertexFloats, ref indexCount, transform, sky, block);
     }
 
     private static void AppendFace(
@@ -170,14 +172,16 @@ public sealed class EntityPlaceholderMesher
         SpriteRect sprite,
         ref int vertexFloats,
         ref int indexCount,
-        EntityModelTransform transform)
+        EntityModelTransform transform,
+        float sky,
+        float block)
     {
         var first = (uint)(vertexFloats / ChunkMesher.FloatsPerVertex);
 
-        WriteVertex(geometry.Vertices, ref vertexFloats, a, red, green, blue, 0f, 0f, sprite, transform);
-        WriteVertex(geometry.Vertices, ref vertexFloats, b, red, green, blue, 1f, 0f, sprite, transform);
-        WriteVertex(geometry.Vertices, ref vertexFloats, c, red, green, blue, 1f, 1f, sprite, transform);
-        WriteVertex(geometry.Vertices, ref vertexFloats, d, red, green, blue, 0f, 1f, sprite, transform);
+        WriteVertex(geometry.Vertices, ref vertexFloats, a, red, green, blue, 0f, 0f, sprite, transform, sky, block);
+        WriteVertex(geometry.Vertices, ref vertexFloats, b, red, green, blue, 1f, 0f, sprite, transform, sky, block);
+        WriteVertex(geometry.Vertices, ref vertexFloats, c, red, green, blue, 1f, 1f, sprite, transform, sky, block);
+        WriteVertex(geometry.Vertices, ref vertexFloats, d, red, green, blue, 0f, 1f, sprite, transform, sky, block);
 
         geometry.Indices[indexCount++] = first;
         geometry.Indices[indexCount++] = first + 1;
@@ -197,7 +201,9 @@ public sealed class EntityPlaceholderMesher
         float u,
         float v,
         SpriteRect sprite,
-        EntityModelTransform transform)
+        EntityModelTransform transform,
+        float sky,
+        float block)
     {
         var world = transform.Apply(position);
 
@@ -214,7 +220,7 @@ public sealed class EntityPlaceholderMesher
             u,
             v,
             sprite,
-            sky: 1f,
-            block: 0f);
+            sky,
+            block);
     }
 }

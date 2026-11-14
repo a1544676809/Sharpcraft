@@ -203,3 +203,35 @@ public byte GetBlockLight(int x, int y, int z)   // 同
 
 1. `DynamicGeometry` 的容量语义（`Reserve` 参数单位）
 2. `FrameCommand` 里 `BlockEntityPlaceholderMesher` 的调用点如何替换（按 `TypeId` 分派 vs 新建 `BlockEntityMesher` 统一入口）
+
+## 10. 已实现与阻塞（2026-11-14）
+
+### 已实现
+
+- `src/Sharpcraft.Client/Render/ChestMesher.cs`：按 §1 真值向量生成三个盒（箱体 / 箱盖 / 锁扣），箱盖与锁扣通过 `EntityModelTransform.AttachRotation` 绕 `(0, 9, 1)` 枢轴摆动；`OpenAngle` 实现三次方缓出。
+- `EntityPlaceholderMesher.AppendBox` 增加可选 `sky` / `block` 参数（默认 `1f` / `0f`，**现有调用行为不变**）。
+- `BlockEntityRenderState` 增加 `Sky` / `Block` / `Open`（默认 `15` / `0` / `0`）。
+- `tests/Sharpcraft.Client.Tests/ChestMesherGoldenTests.cs`：6 条真值断言（缓出角度、模型常量、盒数、非箱子跳过）。全套 **2724** 测试通过。
+
+### 阻塞：箱子贴图不在方块图集
+
+`SpecialModelDefinitions.ChestTexture = "entity/chest/normal"` 被装入 **`ItemAtlas`**（`WindowCommand` 的 `ItemAtlas.Load([... ChestTexture])`），而方块实体的占位几何是**合并进地形顶点数组**、用**方块图集**绘制的。
+
+因此 `ChestMesher` 的几何虽然正确，但**无法在当前合并路径上用正确贴图绘制**——它需要走**物品/实体图集**的独立绘制段。
+
+### 待决策
+
+两条路径：
+
+1. **方块实体独立绘制段**：为方块实体单独建一段绘制，绑定物品图集。改动集中但需要新的绘制范围与绑定切换。
+2. **把 `entity/chest/normal` 并入方块图集**：改动小，但会让方块图集混入实体贴图，与原版图集划分不符。
+
+**倾向 1**——符合原版的图集划分，也不污染方块图集。
+
+### 已登记的实现简化（原则 15）
+
+| 简化 | 影响 | 计划 |
+| --- | --- | --- |
+| 箱子一律按**关闭**状态绘制 | 看不到开合动画 | `Open` 字段已预留；需方块实体 NBT/动画数据源 |
+| 无朝向旋转 | 所有箱子朝向一致 | 需方块状态的 `facing`；当前 `BlockEntityRecord` 未携带 |
+| 未接入 `FrameCommand` 绘制路径 | 不影响现有渲染 | 阻塞于上述图集问题 |
