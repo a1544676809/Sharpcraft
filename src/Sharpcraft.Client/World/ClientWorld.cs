@@ -286,6 +286,14 @@ public sealed class ClientWorld
     {
         ArgumentNullException.ThrowIfNull(parsed);
         parsed.Chunk.ApplyLight(parsed.Light);
+
+        // The parser hands back the block entities it walked; without this they are dropped at the world
+        // boundary and no chest ever reaches a renderer, however well the rest of the chain works.
+        foreach (var record in parsed.BlockEntities)
+        {
+            parsed.Chunk.AddBlockEntity(record);
+        }
+
         AddChunk(parsed.Chunk);
     }
 

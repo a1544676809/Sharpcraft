@@ -430,7 +430,7 @@ internal static partial class FrameCommand
         };
     }
 
-    internal static (SpriteAtlas Atlas, BlockSpriteMap Map, Sharpcraft.Client.Render.BlockModelSet? Models)? PrepareSprites(
+    internal static (SpriteAtlas Atlas, BlockSpriteMap Map, Sharpcraft.Client.Render.BlockModelSet? Models, Sharpcraft.Client.Render.ItemAtlas? ChestAtlas)? PrepareSprites(
         BlockStateLayout? layout,
         Sharpcraft.Assets.ResourceManager? resources = null)
     {
@@ -519,7 +519,10 @@ internal static partial class FrameCommand
                 $"models: set={(modelSet is null ? "null" : "ok")} marked={modelSet?.ElementStateCount ?? 0} " +
                 $"chestBase={(known ? chestBase : -1)} chestMarked={(known && (modelSet?.Has(chestBase) ?? false))}");
         }
-        return (atlas, map, modelSet);
+        var chestAtlas = resources is null ? null : Sharpcraft.Client.Render.ChestAtlas.Load(resources);
+        Console.WriteLine($"chest atlas: {(chestAtlas is null ? "null" : $"{chestAtlas.Texture.Width}x{chestAtlas.Texture.Height}")}");
+
+        return (atlas, map, modelSet, chestAtlas);
     }
 
     /// <summary>Finds the newest asset pack the launcher produced.</summary>

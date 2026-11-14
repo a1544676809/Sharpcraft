@@ -1199,6 +1199,10 @@ internal static partial class FrameCommand
             return null;
         }
 
+        var allTypes = new List<int>();
+        foreach (var c in world.GetChunks()) { foreach (var r in c.BlockEntities) { allTypes.Add(r.TypeId); } }
+        Console.WriteLine($"block entity records: {allTypes.Count} total, types=[" + string.Join(",", allTypes.Distinct()) + "]");
+
         var chestStates = new List<Sharpcraft.Client.Render.BlockEntityRenderState>();
         foreach (var chunk in world.GetChunks())
         {
@@ -1222,6 +1226,8 @@ internal static partial class FrameCommand
                     Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
             }
         }
+
+        Console.WriteLine($"block entity geometry: {chestStates.Count} chest entities, types=[" + string.Join(",", chestStates.Select(s => s.TypeId)) + "]");
 
         if (chestStates.Count == 0)
         {

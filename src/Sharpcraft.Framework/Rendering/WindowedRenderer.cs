@@ -342,6 +342,27 @@ public static class WindowedRenderer
         // executor's parameter object (T-843 2B-2a). The loop keeps local aliases so the per-frame code is unchanged.
         var uiScale = 1f;
         var entityLayerDrawn = 0;
+        // Block entities draw as their own segment with their own atlas, exactly as the offscreen shell does.
+        // Without this the chest geometry is built for a live session and then never submitted.
+        using var blockEntityAtlas = new EntitySkinTextureGpu();
+        using var blockEntityRects = new SpriteRectTable(backend);
+        using var blockEntitySubmission = new BlockEntitySubmission(backend);
+        if (request.BlockEntityAtlas is { } blockEntityAtlasData && request.BlockEntityGeometry is { } blockEntityGeometry)
+        {
+            blockEntityRects.Rebuild(request.BlockEntitySpriteRects);
+            blockEntityAtlas.Upload(
+                backend,
+                bindGroupLayout,
+                blockEntityAtlasData,
+                cameraBuffer,
+                fogBuffer,
+                lightmapBuffer,
+                atlasSamplerHandle,
+                blockEntityRects);
+            blockEntitySubmission.Upload(blockEntityGeometry, blockEntityAtlas.BindGroup);
+            request = request with { BlockEntity = blockEntitySubmission };
+        }
+
         var frameResources = new FrameResources(new FrameResources.Options
         {
             Backend = backend,
