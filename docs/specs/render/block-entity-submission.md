@@ -119,3 +119,39 @@ if (request.BlockEntityAtlas is { } chestAtlas && request.BlockEntityGeometry is
 1. `<atlasSampler>` 与 `<spriteRects>` 在该作用域的可取来源（`samplers` 提供 sampler；`SpriteRectTable` 可能需在 `OffscreenRenderer` 内新建，注意它本身也是 GPU 缓冲）
 2. `FrameRequest` 需要新增 `BlockEntityAtlas`（`TextureData?`）与 `BlockEntityGeometry`（`DynamicGeometry?`）两个字段，由 `FrameCommand` / `WindowCommand` 填入
 3. 坐标改为相机相对（`FrameCommand` 构造 `BlockEntityRenderState` 时减去相机位置）
+
+## 7. 切片 3 已完成（2026-11-14）
+
+### 落地内容
+
+| 文件 | 改动 |
+| --- | --- |
+| `FrameRequest` | 新增 `BlockEntityAtlas` / `BlockEntitySpriteRects` / `BlockEntityGeometry` |
+| `SpriteRectTable` | 实现 `IDisposable`（原先无释放，每帧新建会漏缓冲） |
+| `OffscreenRenderer` | 在资源构造**之前**上传箱子图集、建立 `BlockEntitySubmission`，并把提交写回 `request` |
+| `ChestAtlas` | 新增 `BuildRectTable(ItemAtlas)` |
+| `FrameCommand` | `BuildRequest` 按 `TypeId` 分流：箱子走 `ChestMesher` 独立段，其余保留占位合并；`RenderLocal` 增加同样的验证分支 |
+
+### 修复的两个崩溃
+
+1. `BlockEntitySubmission.Dispose` 无条件销毁未创建的句柄 → 加 `_xxxCapacityBytes > 0` 守卫
+2. `BlockEntitySubmission.Upload` 首次扩容时销毁未创建的句柄 → 同样加守卫
+
+### 验证
+
+| 项 | 结果 |
+| --- | --- |
+| 默认沙盒帧 | `9CA9E03410A2E745` / 34897 B **逐字节不变** |
+| 箱子路径（`MC_FRAME_BLOCK_ENTITIES=1`） | 1 chest / 36 三角形 / 108 索引，绘制段被调用 |
+| **像素对比** | 正确尺寸（0.875 方块）的箱子渲染出 **42 个差异像素**，包围盒 314..322 × 123..132，颜色 **(82,61,35)** = 箱子木色 |
+| 测试 | **2728 全绿** |
+| 类图 / 文档门禁 | ok |
+
+### 一个排查教训
+
+最初两次测试都是 **0 差异像素**，一度怀疑管线或绑定。实际原因有二：
+
+1. 箱子放在平台内部（y=6）——被地形遮挡；抬高到 y=10 才可见
+2. 放大 4 倍测试确认机制本身正常，才把问题定位到位置而非渲染
+
+**排除法顺序应为"位置 → 尺寸 → 管线"，而不是先怀疑底层。**

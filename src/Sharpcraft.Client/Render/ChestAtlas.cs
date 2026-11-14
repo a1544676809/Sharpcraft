@@ -62,4 +62,43 @@ public static class ChestAtlas
         ArgumentNullException.ThrowIfNull(resources);
         return ItemAtlas.Load(resources, Textures);
     }
+
+    /// <summary>
+    /// Atlas bounds as four floats per sprite, indexed by the vertex sprite id. Entry zero covers the
+    /// whole texture, matching how the block atlas builds its own table.
+    /// </summary>
+    /// <param name="atlas">Atlas returned by <see cref="Load"/>.</param>
+    public static float[] BuildRectTable(ItemAtlas atlas)
+    {
+        ArgumentNullException.ThrowIfNull(atlas);
+
+        var highest = 0;
+        foreach (var path in Textures)
+        {
+            if (atlas.Get(path) is { } rect && rect.RectId >= highest)
+            {
+                highest = rect.RectId + 1;
+            }
+        }
+
+        var table = new float[(highest + 1) * 4];
+        table[2] = 1f;
+        table[3] = 1f;
+
+        foreach (var path in Textures)
+        {
+            if (atlas.Get(path) is not { } rect || rect.RectId < 0 || (rect.RectId * 4) + 3 >= table.Length)
+            {
+                continue;
+            }
+
+            var at = rect.RectId * 4;
+            table[at] = rect.U0;
+            table[at + 1] = rect.V0;
+            table[at + 2] = rect.U1;
+            table[at + 3] = rect.V1;
+        }
+
+        return table;
+    }
 }

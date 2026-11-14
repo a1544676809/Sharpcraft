@@ -60,7 +60,11 @@ public sealed class BlockEntitySubmission : IDisposable
 
         if (vertexBytes > _vertexCapacityBytes)
         {
-            _backend.Destroy(_vertex);
+            if (_vertexCapacityBytes > 0)
+            {
+                _backend.Destroy(_vertex);
+            }
+
             _vertexCapacityBytes = Math.Max(vertexBytes, _vertexCapacityBytes * 2);
             _vertex = _backend.CreateBuffer(
                 new BufferDesc((ulong)_vertexCapacityBytes, BufferUsages.Vertex | BufferUsages.CopyDst));
@@ -68,7 +72,11 @@ public sealed class BlockEntitySubmission : IDisposable
 
         if (indexBytes > _indexCapacityBytes)
         {
-            _backend.Destroy(_index);
+            if (_indexCapacityBytes > 0)
+            {
+                _backend.Destroy(_index);
+            }
+
             _indexCapacityBytes = Math.Max(indexBytes, _indexCapacityBytes * 2);
             _index = _backend.CreateBuffer(
                 new BufferDesc((ulong)_indexCapacityBytes, BufferUsages.Index | BufferUsages.CopyDst));
@@ -114,7 +122,14 @@ public sealed class BlockEntitySubmission : IDisposable
         }
 
         _disposed = true;
-        _backend.Destroy(_index);
-        _backend.Destroy(_vertex);
+        if (_indexCapacityBytes > 0)
+        {
+            _backend.Destroy(_index);
+        }
+
+        if (_vertexCapacityBytes > 0)
+        {
+            _backend.Destroy(_vertex);
+        }
     }
 }

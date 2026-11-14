@@ -522,6 +522,29 @@ public static class OffscreenRenderer
             samplers.Initialize(device);
             using var entitySkin = new EntitySkinTextureGpu();
             using var itemAtlasGpu = new EntitySkinTextureGpu();
+            // Block entities draw as their own segment with their own atlas: the reference submits them
+            // through the node collector rather than the per section meshes. Both objects are scoped to
+            // outlive the recording below, and the request must carry the submission before the resources
+            // capture it.
+            using var blockEntityAtlas = new EntitySkinTextureGpu();
+            using var blockEntityRects = new SpriteRectTable(backend);
+            using var blockEntitySubmission = new BlockEntitySubmission(backend);
+            if (request.BlockEntityAtlas is { } blockEntityAtlasData && request.BlockEntityGeometry is { } blockEntityGeometry)
+            {
+                blockEntityRects.Rebuild(request.BlockEntitySpriteRects);
+                blockEntityAtlas.Upload(
+                    backend,
+                    bindGroupLayout,
+                    blockEntityAtlasData,
+                    cameraBuffer,
+                    fogBuffer,
+                    lightmapBuffer,
+                    atlasSamplerHandle,
+                    blockEntityRects);
+                blockEntitySubmission.Upload(blockEntityGeometry, blockEntityAtlas.BindGroup);
+                request = request with { BlockEntity = blockEntitySubmission };
+            }
+
             var frameResources = new FrameResources(new FrameResources.Options
             {
                 Backend = backend,

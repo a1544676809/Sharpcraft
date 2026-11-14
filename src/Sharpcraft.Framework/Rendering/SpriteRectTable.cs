@@ -14,7 +14,7 @@ namespace Sharpcraft.Framework.Rendering;
 /// when the atlas is rebuilt, because a rebuilt atlas renumbers its sprites and indices already baked into cached meshes
 /// would otherwise point at the wrong ones.
 /// </remarks>
-internal sealed class SpriteRectTable(IRenderBackend backend)
+internal sealed class SpriteRectTable(IRenderBackend backend) : IDisposable
 {
     /// <summary>Entry covering the whole texture, used when no atlas is bound so the binding always has data.</summary>
     private static readonly float[] WholeAtlas = [0f, 0f, 1f, 1f];
@@ -45,5 +45,17 @@ internal sealed class SpriteRectTable(IRenderBackend backend)
             new BufferDesc((ulong)bytes.Length, BufferUsages.Storage | BufferUsages.CopyDst),
             bytes.AsSpan());
         _bytes = (ulong)bytes.Length;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        if (_bytes == 0)
+        {
+            return;
+        }
+
+        backend.Destroy(_buffer);
+        _bytes = 0;
     }
 }

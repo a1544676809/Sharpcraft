@@ -885,7 +885,8 @@ internal static class FrameCommand
         bool meshSynchronously = true,
         BlockStateLayout? layout = null,
         BiomeTint? tint = null,
-        float[]? spriteRects = null)
+        float[]? spriteRects = null,
+        Sharpcraft.Client.Render.ItemAtlas? chestAtlas = null)
     {
         // With a cache only the chunks whose blocks changed are re-meshed; without one the whole world is
         // scanned, which is what the offscreen paths still do (docs/specs/network/play-movement.md 7.19).
@@ -900,6 +901,7 @@ internal static class FrameCommand
         uint[]? translucentIndices = null;
         float[]? cutoutVertices = null;
         uint[]? cutoutIndices = null;
+        DynamicGeometry? blockEntityGeometry = null;
         var translucentRanges = new List<(int FirstIndex, int IndexCount, float CentreX, float CentreZ)>();
 
         if (cache is null)
@@ -959,29 +961,56 @@ internal static class FrameCommand
 
                 if (states.Count > 0)
                 {
-                    var mesher = new Sharpcraft.Client.Render.BlockEntityPlaceholderMesher();
-                    var blockEntityGeometry = mesher.Build(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(states), new SpriteRect(0, 0, 16, 16, 1));
-
-                    // Appended to the same arrays, so the block entity stage shares the opaque pipeline and its depth.
-                    var mergedVertices = new float[mesh.Vertices.Length + blockEntityGeometry.VertexFloats];
-                    mesh.Vertices.CopyTo(mergedVertices, 0);
-                    blockEntityGeometry.Vertices[..blockEntityGeometry.VertexFloats].CopyTo(mergedVertices.AsSpan(mesh.Vertices.Length));
-
-                    var mergedIndices = new uint[mesh.Indices.Length + blockEntityGeometry.IndexCount];
-                    mesh.Indices.CopyTo(mergedIndices, 0);
-                    var vertexOffset = (uint)(mesh.Vertices.Length / Sharpcraft.Client.Render.ChunkMesher.FloatsPerVertex);
-
-                    for (var index = 0; index < blockEntityGeometry.IndexCount; index++)
+                    // Chest-like entities get their real model and draw as their own segment with the chest
+                    // sheet; everything else keeps the placeholder merge until its renderer exists.
+                    var chestStates = new List<Sharpcraft.Client.Render.BlockEntityRenderState>(states.Count);
+                    var otherStates = new List<Sharpcraft.Client.Render.BlockEntityRenderState>(states.Count);
+                    foreach (var state in states)
                     {
-                        mergedIndices[mesh.Indices.Length + index] = blockEntityGeometry.Indices[index] + vertexOffset;
+                        if (Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(state.TypeId))
+                        {
+                            chestStates.Add(state);
+                        }
+                        else
+                        {
+                            otherStates.Add(state);
+                        }
                     }
 
-                    // The block entity indices sit past every chunk range, so they need a range of their own or they are
-                    // never drawn: the draw loop only visits ranges.
-                    var blockEntityFirstIndex = mesh.Indices.Length;
-                    mesh = new Sharpcraft.Client.Render.MeshData(mergedVertices, mergedIndices, mesh.BlockCount);
-                    drawRanges = [.. drawRanges, (blockEntityFirstIndex, blockEntityGeometry.IndexCount)];
-                    Console.WriteLine($"block entities: {states.Count} boxes, {blockEntityGeometry.IndexCount / 3} triangles");
+                    if (chestStates.Count > 0 && chestAtlas?.Get(Sharpcraft.Client.Render.ChestAtlas.NormalTexture) is { } chestSprite)
+                    {
+                        var chestMesher = new Sharpcraft.Client.Render.ChestMesher();
+                        blockEntityGeometry = chestMesher.Build(
+                            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates),
+                            chestSprite);
+                        Console.WriteLine($"block entities: {chestMesher.LastEntityCount} chests, {blockEntityGeometry.IndexCount / 3} triangles");
+                    }
+
+                    if (otherStates.Count > 0)
+                    {
+                        var mesher = new Sharpcraft.Client.Render.BlockEntityPlaceholderMesher();
+                        var placeholderGeometry = mesher.Build(
+                            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(otherStates),
+                            new SpriteRect(0, 0, 16, 16, 1));
+
+                        var mergedVertices = new float[mesh.Vertices.Length + placeholderGeometry.VertexFloats];
+                        mesh.Vertices.CopyTo(mergedVertices, 0);
+                        placeholderGeometry.Vertices[..placeholderGeometry.VertexFloats].CopyTo(mergedVertices.AsSpan(mesh.Vertices.Length));
+
+                        var mergedIndices = new uint[mesh.Indices.Length + placeholderGeometry.IndexCount];
+                        mesh.Indices.CopyTo(mergedIndices, 0);
+                        var vertexOffset = (uint)(mesh.Vertices.Length / Sharpcraft.Client.Render.ChunkMesher.FloatsPerVertex);
+
+                        for (var index = 0; index < placeholderGeometry.IndexCount; index++)
+                        {
+                            mergedIndices[mesh.Indices.Length + index] = placeholderGeometry.Indices[index] + vertexOffset;
+                        }
+
+                        var placeholderFirstIndex = mesh.Indices.Length;
+                        mesh = new Sharpcraft.Client.Render.MeshData(mergedVertices, mergedIndices, mesh.BlockCount);
+                        drawRanges = [.. drawRanges, (placeholderFirstIndex, placeholderGeometry.IndexCount)];
+                        Console.WriteLine($"block entities: {otherStates.Count} placeholder boxes, {placeholderGeometry.IndexCount / 3} triangles");
+                    }
                 }
             }
 
@@ -1090,7 +1119,10 @@ internal static class FrameCommand
             CutoutIndices = cutoutIndices,
             TranslucentRanges = translucentOrdered.Length > 0 ? translucentOrdered : null,
             // Full rain pulls the atmospheric shell in, so the sandbox can show it closing the view.
-            RainLevel = EffectiveRainLevel(world, 1f)
+            RainLevel = EffectiveRainLevel(world, 1f),
+            BlockEntityAtlas = blockEntityGeometry is null ? null : chestAtlas?.Texture,
+            BlockEntitySpriteRects = chestAtlas is null ? [] : Sharpcraft.Client.Render.ChestAtlas.BuildRectTable(chestAtlas),
+            BlockEntityGeometry = blockEntityGeometry
         };
     }
 
@@ -1173,7 +1205,8 @@ internal static class FrameCommand
             prepared?.Map,
             prepared is null ? null : WithMips(prepared.Value.Atlas),
             layout: layout,
-            spriteRects: prepared?.Atlas.RectTable);
+            spriteRects: prepared?.Atlas.RectTable,
+            chestAtlas: Sharpcraft.Client.Render.ChestAtlas.Load(tintResources));
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
         Console.WriteLine($"layers: translucent triangles {(request.TranslucentIndices?.Length ?? 0) / 3}, layout {(layout is null ? "null" : "set")}, water->{(layout is null ? "-" : layout.BlockAt(1)?.ToString() ?? "none")}");
 
@@ -2206,6 +2239,46 @@ internal static class FrameCommand
             FogColour = EffectiveFogColour(world)
         };
         request = AttachCelestial(request, world, resources);
+
+        // Local verification of the block entity segment: the demo world carries a chest, so the same
+        // chest mesher and atlas the server path uses can be exercised here without a running server.
+        if (GameOptions.Get("MC_FRAME_BLOCK_ENTITIES") == "1")
+        {
+            var chestAtlas = Sharpcraft.Client.Render.ChestAtlas.Load(resources);
+
+            // The demo world is bare, so stand one chest on the platform the camera frames.
+            if (world.GetChunk(0, 0) is { } demoChunk)
+            {
+                demoChunk.AddBlockEntity(new Sharpcraft.Common.World.BlockEntityRecord(8, 10, 8, 1));
+            }
+            var blockEntityStates = new List<Sharpcraft.Client.Render.BlockEntityRenderState>();
+            foreach (var chunk in world.GetChunks())
+            {
+                foreach (var record in chunk.BlockEntities)
+                {
+                    blockEntityStates.Add(new Sharpcraft.Client.Render.BlockEntityRenderState(
+                        (chunk.ChunkX * 16) + record.LocalX,
+                        record.Y,
+                        (chunk.ChunkZ * 16) + record.LocalZ,
+                        record.TypeId));
+                }
+            }
+
+            if (blockEntityStates.Count > 0 && chestAtlas.Get(Sharpcraft.Client.Render.ChestAtlas.NormalTexture) is { } chestSprite)
+            {
+                var chestMesher = new Sharpcraft.Client.Render.ChestMesher();
+                var geometry = chestMesher.Build(
+                    System.Runtime.InteropServices.CollectionsMarshal.AsSpan(blockEntityStates),
+                    chestSprite);
+                request = request with
+                {
+                    BlockEntityAtlas = chestAtlas.Texture,
+                    BlockEntitySpriteRects = Sharpcraft.Client.Render.ChestAtlas.BuildRectTable(chestAtlas),
+                    BlockEntityGeometry = geometry
+                };
+                Console.WriteLine($"block entities(local): {chestMesher.LastEntityCount} chests, {geometry.IndexCount / 3} triangles");
+            }
+        }
 
         // Opt-in sky disc for local verification: synthetic temperature, gradient replaced by the SKY_COLOR disc.
         if (GameOptions.Get("MC_SKY_DISC") == "1")
