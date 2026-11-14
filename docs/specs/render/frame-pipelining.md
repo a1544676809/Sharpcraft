@@ -378,3 +378,23 @@ pass 3 与 pass 1 附件一致，之所以分开是因为 **pass 2 必须夹在�
 2. **OIT Composite 与 uiPass 可合并**：两者目标均为 `(view, depthView)` 且均为 Load/Store，之间无采样依赖；把 composite 的全屏三角形作为 uiPass 的第一条指令录制即可。
 
 每合并一个 pass ≈ **0.023 ms**；两个都成则 ≈ **0.046 ms**（视距 12 时约 2%）。验证判据：沙盒帧逐字节不变（`MC_FRAME_LOCAL=1` + `MC_FRAME_HASHES=6`，基线 `b26acc2d…`）。
+
+3. **`blitPass` 可改为 `CopyTextureToTexture`（Hydrogen 指出，我方此前结论有误）**：本项目此前判断"blit 不能消除"——**方向对了一半**：深度隔离确实必需，但**实现方式可以不是 render pass**。主深度与云深度尺寸/格式（`Depth32Float`）一致且均带 `CopySrc | CopyDst`，可直接用 `encoder.CopyTextureToTexture(...)` 做 DMA 拷贝，砍掉整个 render pass（再省 ~0.023 ms）并免去 `blitDepthLayout` / BindGroup 维护。
+
+**小结：三个 pass 合并点合计约 0.07 ms**（1b+1c、composite+ui、blit→copy）。相对整帧 1.3–2.2 ms 约 3–5%。
+
+### 15.2 双线程帧间流水线的收益测算（Hydrogen，按本项目实测数据）
+
+把整帧拆为 `T_准备+录制 + T_Finish+Submit+Swap`，用上表实测值：
+
+| 视距 | 整帧 | finish+queue+swap | 剩余 CPU（准备/遍历/录制） | 理论稳态周期 max(A,B) | 预期净收益 |
+| --- | --- | --- | --- | --- | --- |
+| 4 | 1.317 | 0.845 | 0.472 | ~0.95–1.05 | −0.25~0.35 ms（−20~25%） |
+| 8 | 1.623 | 0.952 | 0.671 | ~1.10–1.20 | −0.42~0.52 ms（−26~32%） |
+| 12 | 2.165 | 1.131 | 1.034 | ~1.35–1.48 | −0.68~0.80 ms（−31~37%） |
+
+**与 T-837 切片 3B 的对比**：3B 只把"录制"搬到另一线程（录制仅 0.08–0.13 ms），故上限 ~10%；这里搬的是**准备 + 录制**整段（0.47–1.03 ms），量级差一个数量级。**这两件事不是同一个优化**，此前把 3B 的结论套到流水线上是错的。
+
+**前提与代价**：① `frame-gap ≈ 0.001 ms` 只证明 CPU 未等 GPU，不阻止双线程流水线；② 增加 1 帧输入延迟（600+ FPS 下约 1.4 ms）；③ **线程 A 必须零 wgpu 调用**（避免撞 wgpu-core 的 Device 锁），只产出双缓冲的 C# 数组与待销毁句柄列表；所有 `WriteBuffer`/录制/`Finish`/`Submit`/`Swap`/延迟 `Dispose` 归线程 B。
+
+**状态**：仅为测算，未立项。若采纳，需按 §13 的设计（`FrameUniformStaging` 双槽、`DeferredBufferRelease`）扩展为"准备/提交"两段，而不是 3B 的"只换录制线程"。
