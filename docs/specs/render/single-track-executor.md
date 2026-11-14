@@ -151,6 +151,41 @@ FrameExecutor.Record(target, request)   →  command encoder
 **剩余**：清理清单②（相机 `eye/target` 仍由窗口回调采样后传入，未改由请求提供）与
 ③（`OffscreenRenderer` 切到同一执行器）属 2B 范围。2A 提交后暂停，2B 需要干净基线。
 
+### 2B-1：共享管线工厂与一条数据面差异（2026-11-14）
+
+**已完成（纯搬移，离屏未动）**：新增 `src/Sharpcraft.Framework/Rendering/FrameResources.cs`
+（292 行），把窗口 L226–L311 + L357 的管线 / layout / 云资源创建集中进去；10 个管线工厂方法
+从 `WindowedRenderer` 移入 `FramePipelines`（265 行，`internal static`），窗口改经
+`FrameResources` 取用。`WindowedRenderer.cs` **1469 → 1254**（−215），
+`OffscreenRenderer.cs` 仍 **1533 行**、一行未动。`FrameResources.Dispose()` 沿用窗口原有的
+销毁顺序，并接管 `CloudOit` / `CloudColour` 的释放；`Repro_001_VertexLayoutDeclaredOnceTests`
+随代码位置调整断言（守住的仍是"管线顶点布局只能来自 `VertexLayout`"这一不变量），未删除用例。
+2B-1 不改任何逐帧代码：循环里的资源名只是 `FrameResources` 属性的别名。
+
+**范围说明**：`FrameResources` 目前集中管线 / layout / 云资源；atlas、buffer、bind group、
+celestial / UI 资源、recorder 与 `FrameOitTargets` 的实例构造仍在窗口外壳。这些本身已是可复用
+的类（`TerrainPassRecorder` / `EntityPassRecorder` / `SkyPassRecorder` / `FrameOitTargets` 等），
+2B-2 的离屏只需构造自己的实例，不会复制任何录制代码或管线描述。
+
+**必须记录的架构发现（决定收敛后仍存在数据面差异）**：
+
+> 离屏的地形并非映射到 `TerrainPassRecorder`（它只在 arena 非空时绘制，见
+> `TerrainPassRecorder.cs:69`），而是映射到 `EntityPassRecorder` 的 **static-world fallback**
+> （`useStaticWorld=true` 时画 `StaticWorldBuffers`，见 `EntityPassRecorder.cs:166–177`）。
+> 因此"两侧共用同一执行器"并不等于"调用同一个 recorder"：地形与 cutout 在离屏会走
+> 与窗口不同的 recorder 路径（`RecordStaticCutout`）。
+
+后续会话不要以为两条路径完全同构；2B-2 切换离屏时应据此核对几何是否走对 recorder。
+
+**判据**：build 0 警告、2718 测试全绿、ClassMap / Docs / 两 verify 全绿；运行时冒烟
+`cull: chunks=637 culled=449 … drawn=183`、`blit bind group rebuilt 1 times`、EXIT=0、无异常，
+健康窗口 `frame-cpu: n=60 frame=1.568` 与基线 1.5–1.6 ms 一致。稳态中位数 **2.233 ms**
+略高于 ≤2.2 阈值（1.5%），但分布是**全阶段同倍变慢**：`scene-terrain 0.209`（基线 0.168）、
+`oit 0.230`（0.187）、`cel-build 0.083`（0.063）、`submit 0.763`（0.587）、`swap 0.515`（0.352）——
+这些阶段 2B-1 一行未动（本片只搬移启动期的管线创建），属机器整体负载，不是录制回归。
+另有一次 `Parent device is lost`（`wgpuSurfaceGetCurrentTexture`，未改动代码）由计算机中途休眠
+引起，项目所有者确认按环境忽略。
+
 ## 6. 与其它任务的关系
 
 - **T-837 切片 3（录制线程）依赖本项**：线程化改的是 `WindowedRenderer`，而该路径缺乏像素级判据。先收敛，才有一条能被像素验证的主路径。

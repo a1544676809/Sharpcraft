@@ -223,15 +223,57 @@ public static class WindowedRenderer
             itemAtlasGpu.Upload(backend, bindGroupLayout, itemData, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle, spriteRects);
         // The frame pipelines are seam handles now, so they are released by hand where the using declarations used to
         // stand (see the cleanup at the end of this method).
-        var pipeline = CreatePipeline(backend, format, pipelineLayout);
-        var cutoutPipeline = CreateCutoutPipeline(backend, format, pipelineLayout);
-        var entityPipeline = FramePipelines.CreateEntityPipeline(backend, format, pipelineLayout);
-        var entityCutoutPipeline = FramePipelines.CreateEntityCutoutPipeline(backend, format, pipelineLayout);
-        var itemCutoutPipeline = FramePipelines.CreateItemCutoutPipeline(backend, format, pipelineLayout);
-        var entityElytraPipeline = FramePipelines.CreateEntityElytraPipeline(backend, format, pipelineLayout);
-        var entityEmissivePipeline = FramePipelines.CreateEntityEmissivePipeline(backend, format, pipelineLayout);
-        var entityGlintPipeline = FramePipelines.CreateEntityGlintPipeline(backend, format, pipelineLayout);
-        var skyPipeline = CreateSkyPipeline(backend, format);
+        // Every pipeline description now comes from FramePipelines through FrameResources, so the offscreen shell can
+        // build the same set in 2B-2 without keeping a second copy (T-843 2B-1).
+        var frameResources = new FrameResources(
+            backend,
+            request,
+            format,
+            pipelineLayout,
+            bindGroupLayout,
+            samplers,
+            cameraBuffer,
+            supportsFloat32Blendable,
+            oitLowPrecision,
+            cloudOitEnabled,
+            cloudsPerFrame);
+        var pipeline = frameResources.TerrainPipeline;
+        var cutoutPipeline = frameResources.CutoutPipeline;
+        var entityPipeline = frameResources.EntityPipeline;
+        var entityCutoutPipeline = frameResources.EntityCutoutPipeline;
+        var itemCutoutPipeline = frameResources.ItemCutoutPipeline;
+        var entityElytraPipeline = frameResources.EntityElytraPipeline;
+        var entityEmissivePipeline = frameResources.EntityEmissivePipeline;
+        var entityGlintPipeline = frameResources.EntityGlintPipeline;
+        var skyPipeline = frameResources.SkyPipeline;
+        var uiPipeline = frameResources.UiPipeline;
+        var uiTextPipeline = frameResources.UiTextPipeline;
+        var uiSpritePipeline = frameResources.UiSpritePipeline;
+        var cloudColour = frameResources.CloudColour;
+        var cloudOit = frameResources.CloudOit;
+        var oitTargetFormat = frameResources.OitTargetFormat;
+        var oitColorFormat = frameResources.OitColorFormat;
+        var refTransmittanceLayout = frameResources.RefTransmittanceLayout;
+        var refAccumulateLayout = frameResources.RefAccumulateLayout;
+        var refCullLayout = frameResources.RefCullLayout;
+        var refCompositeLayout = frameResources.RefCompositeLayout;
+        var refTransmittancePipelineLayout = frameResources.RefTransmittancePipelineLayout;
+        var refAccumulatePipelineLayout = frameResources.RefAccumulatePipelineLayout;
+        var refCullPipelineLayout = frameResources.RefCullPipelineLayout;
+        var refCompositePipelineLayout = frameResources.RefCompositePipelineLayout;
+        var cloudDepthBoundsPipeline = frameResources.CloudDepthBoundsPipeline;
+        var cloudTransmittancePipeline = frameResources.CloudTransmittancePipeline;
+        var cloudAccumulatePipeline = frameResources.CloudAccumulatePipeline;
+        var refDepthBoundsPipeline = frameResources.RefDepthBoundsPipeline;
+        var refTransmittancePipeline = frameResources.RefTransmittancePipeline;
+        var refAccumulatePipeline = frameResources.RefAccumulatePipeline;
+        var refCullPipeline = frameResources.RefCullPipeline;
+        var refCompositePipeline = frameResources.RefCompositePipeline;
+        var cloudCompositePipeline = frameResources.CloudCompositePipeline;
+        var blitDepthLayout = frameResources.BlitDepthLayout;
+        var blitDepthPipelineLayout = frameResources.BlitDepthPipelineLayout;
+        var blitDepthPipeline = frameResources.BlitDepthPipeline;
+        var blitDepthSamplerHandle = frameResources.BlitDepthSampler;
         // Celestial bodies and stars: the same backdrop draws the offscreen path uses, so the window and the exported
         // frame agree (docs/modules/clouds.md 6).
         using var celestial = request.CelestialDraws is { Length: > 0 } && request.CelestialTextures is { Length: > 0 }
@@ -246,69 +288,8 @@ public static class WindowedRenderer
         using var skyDiscVanillaResources = skyDiscVanilla && skyDiscPerFrame is not null
             ? new SkyDiscResources(backend, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format))
             : null;
-        // Clouds change every frame (scroll/camera), so their position-colour draw set is updated per frame.
-        using var cloudColour = cloudsPerFrame is null
-            ? null
-            : new OffscreenRenderer.CelestialColorResources(backend, request with { CelestialColorDraws = [] }, cameraBuffer, VertexLayout.CameraUniformSize, BackendConvert.FromWgpu(format), WGPUCompareFunction.GreaterEqual);
-        using var cloudOit = cloudOitEnabled && cloudColour is not null
-            ? new CloudOitResources(backend, cameraBuffer, VertexLayout.CameraUniformSize)
-            : null;
-        var uiPipeline = UiRenderer.CreatePipeline(backend, BackendConvert.FromWgpu(format), pipelineLayout);
-        var uiTextPipeline = UiRenderer.CreateTextPipeline(backend, BackendConvert.FromWgpu(format), pipelineLayout);
-
-        // Transparency is the reference depth-bounds + wavelet-transmittance OIT (docs/specs/render/oit-reference.md).
-        // The earlier weighted-blended OIT looked markedly worse in play and is shelved, not compiled; git history keeps
-        // it if it is ever wanted again.
-        var oitTargetFormat = oitLowPrecision ? TextureFormat.Rgba8Unorm : (supportsFloat32Blendable ? TextureFormat.Rgba32Float : TextureFormat.Rgba16Float); var oitColorFormat = oitLowPrecision ? TextureFormat.Rgba8Unorm : TextureFormat.Rgba16Float; // half floats for transmittance and accumulate, as the reference does
-        var refTransmittanceLayout = CreateOitTextureLayout(backend, 1);
-        var refAccumulateLayout = CreateOitTextureLayout(backend, 3);
-        var refCullLayout = CreateOitTextureLayout(backend, 1);
-        var refCompositeLayout = CreateOitTextureLayout(backend, 4);
-        // The four layouts are released by hand when the frame loop exits: a handle is pure identity, not a disposable.
-        var refTransmittancePipelineLayout = backend.CreatePipelineLayout([bindGroupLayout, refTransmittanceLayout]);
-        var refAccumulatePipelineLayout = backend.CreatePipelineLayout([bindGroupLayout, refAccumulateLayout]);
-        var refCullPipelineLayout = backend.CreatePipelineLayout([refCullLayout]);
-        var refCompositePipelineLayout = backend.CreatePipelineLayout([refCompositeLayout]);
-
-        // The cloud layouts are created through the seam and released as soon as their pipelines exist: a pipeline
-        // keeps what it needs from its layout, so nothing outlives this block. Destroying rather than waiting for the
-        // method to end is what lets these stay handles instead of needing a Dispose on the handle itself.
-        var cloudDbPipelineLayout = cloudOit is null ? default : backend.CreatePipelineLayout([cloudOit.Layout]);
-        var cloudDepthBoundsPipeline = cloudOit is null ? default : CreateDepthBoundsPipeline(backend, cloudDbPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitTargetFormat), depthWrite: true);
-        if (cloudDbPipelineLayout.IsValid)
-        {
-            backend.Destroy(cloudDbPipelineLayout);
-        }
-
-        var cloudTransPipelineLayout = cloudOit is null ? default : backend.CreatePipelineLayout([cloudOit.Layout, refTransmittanceLayout]);
-        var cloudTransmittancePipeline = cloudOit is null ? default : CreateTransmittancePipeline(backend, cloudTransPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitColorFormat));
-        if (cloudTransPipelineLayout.IsValid)
-        {
-            backend.Destroy(cloudTransPipelineLayout);
-        }
-
-        var cloudAccumPipelineLayout = cloudOit is null ? default : backend.CreatePipelineLayout([cloudOit.Layout, refAccumulateLayout]);
-        var cloudAccumulatePipeline = cloudOit is null ? default : CreateAccumulatePipeline(backend, cloudAccumPipelineLayout, "cloud_oit", positionColor: true, format: BackendConvert.ToWgpu(oitColorFormat));
-        if (cloudAccumPipelineLayout.IsValid)
-        {
-            backend.Destroy(cloudAccumPipelineLayout);
-        }
-
-        var refDepthBoundsPipeline = CreateDepthBoundsPipeline(backend, pipelineLayout, format: BackendConvert.ToWgpu(oitTargetFormat));
-        var refTransmittancePipeline = CreateTransmittancePipeline(backend, refTransmittancePipelineLayout, format: BackendConvert.ToWgpu(oitColorFormat));
-        var refAccumulatePipeline = CreateAccumulatePipeline(backend, refAccumulatePipelineLayout, format: BackendConvert.ToWgpu(oitColorFormat));
-        var refCullPipeline = CreateCullPipeline(backend, refCullPipelineLayout, BackendConvert.ToWgpu(oitTargetFormat));
-        var refCompositePipeline = CreateCompositePipeline(backend, format, refCompositePipelineLayout);
-        var cloudCompositePipeline = CreateCompositePipeline(backend, format, refCompositePipelineLayout, WGPUCompareFunction.GreaterEqual);
-        var blitDepthLayout = backend.CreateBindGroupLayout([
-            BindGroupLayoutEntryDesc.Texture(0, ShaderStages.Fragment) with { SampleType = TextureSampleType.Depth, ViewDimension = TextureViewDimension.D2 },
-            BindGroupLayoutEntryDesc.Sampler(1, ShaderStages.Fragment)
-        ]);
         using var presentation = FramePresentation.Create(backend, BackendConvert.FromWgpu(format), samplers.GetClampToEdge(FilterMode.Nearest));
 
-        var blitDepthPipelineLayout = backend.CreatePipelineLayout([blitDepthLayout]);
-        var blitDepthPipeline = CreateBlitDepthPipeline(backend, blitDepthPipelineLayout);
-        var blitDepthSamplerHandle = samplers.GetClampToEdge(FilterMode.Nearest);
 
         // The interface layer needs its own transform: one uniform buffer cannot hold both the world camera and
         // the orthographic projection while a single pass reads from it.
@@ -354,7 +335,6 @@ public static class WindowedRenderer
 
         var uiBindGroup = CreateUiBindGroup(atlasView);
 
-        var uiSpritePipeline = UiRenderer.CreateSpritePipeline(backend, BackendConvert.FromWgpu(format), pipelineLayout);
 
         // GUI sprites (tooltip background and frame) each need their own texture and binding, because one draw call can
         // only bind one texture (docs/decisions/0014-gui-sprite-atlas-and-nine-slice.md).
@@ -1241,53 +1221,9 @@ public static class WindowedRenderer
         backend.Destroy(depthTexture);
 
 
-        // The frame pipelines and pipeline layouts are seam handles, so the frame loop's exit releases them by hand: a
-        // handle is pure identity and cannot carry a Dispose (render-backend-seam.md 9).
-        backend.Destroy(uiSpritePipeline);
-        backend.Destroy(uiTextPipeline);
-        backend.Destroy(uiPipeline);
-        backend.Destroy(cloudCompositePipeline);
-        backend.Destroy(refCompositePipeline);
-        backend.Destroy(refCullPipeline);
-        backend.Destroy(refAccumulatePipeline);
-        backend.Destroy(refTransmittancePipeline);
-        backend.Destroy(refDepthBoundsPipeline);
-        if (cloudAccumulatePipeline.IsValid)
-        {
-            backend.Destroy(cloudAccumulatePipeline);
-        }
-
-        if (cloudTransmittancePipeline.IsValid)
-        {
-            backend.Destroy(cloudTransmittancePipeline);
-        }
-
-        if (cloudDepthBoundsPipeline.IsValid)
-        {
-            backend.Destroy(cloudDepthBoundsPipeline);
-        }
-
-        backend.Destroy(blitDepthPipeline);
-        backend.Destroy(skyPipeline);
-        backend.Destroy(entityGlintPipeline);
-        backend.Destroy(entityEmissivePipeline);
-        backend.Destroy(entityElytraPipeline);
-        backend.Destroy(itemCutoutPipeline);
-        backend.Destroy(entityCutoutPipeline);
-        backend.Destroy(entityPipeline);
-        backend.Destroy(cutoutPipeline);
-        backend.Destroy(pipeline);
-        backend.Destroy(blitDepthLayout);
-        backend.Destroy(blitDepthPipelineLayout);
-        backend.Destroy(refCompositePipelineLayout);
-        backend.Destroy(refCullPipelineLayout);
-        backend.Destroy(refAccumulatePipelineLayout);
-        backend.Destroy(refTransmittancePipelineLayout);
+        // FrameResources owns the pipelines and layouts; the shared world layout and bind group are owned here.
+        frameResources.Dispose();
         backend.Destroy(pipelineLayout);
-        backend.Destroy(refCompositeLayout);
-        backend.Destroy(refCullLayout);
-        backend.Destroy(refAccumulateLayout);
-        backend.Destroy(refTransmittanceLayout);
         backend.Destroy(bindGroup);
 
         return format;
@@ -1315,155 +1251,4 @@ public static class WindowedRenderer
         _ => throw new PlatformNotSupportedException($"no surface source for {source.Tag}")
     };
 
-    /// <summary>Layout for a bind group of <paramref name="textureCount"/> sampled textures, fetched with texelFetch.</summary>
-    /// <remarks>The targets are Rgba32Float by default, which is sampleable but not filterable, so the entries declare an
-    /// unfilterable float binding.</remarks>
-    private static BindGroupLayoutHandle CreateOitTextureLayout(WgpuRenderBackend backend, int textureCount)
-    {
-        var entries = new BindGroupLayoutEntryDesc[textureCount];
-
-        for (var index = 0; index < textureCount; index++)
-        {
-            entries[index] = BindGroupLayoutEntryDesc.Texture((uint)index, ShaderStages.Fragment)
-                with { SampleType = TextureSampleType.UnfilterableFloat };
-        }
-
-        return backend.CreateBindGroupLayout(entries);
-    }
-
-    /// <summary>
-    /// Reference transparency stage 1: record the per-pixel depth range of the translucent layer. RGBA32F with a MAX
-    /// blend, so the closest and furthest bounds survive in different channels.
-    /// </summary>
-    private static PipelineHandle CreateDepthBoundsPipeline(WgpuRenderBackend backend, PipelineLayoutHandle layout, string shaderName = "oit_reference", bool positionColor = false, WGPUTextureFormat format = WGPUTextureFormat.RGBA16Float, bool depthWrite = false)
-    {
-        var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load(shaderName));
-        return backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_main", source, "fs_depth_bounds", layout,
-            [new ColorTargetDesc(BackendConvert.FromWgpu(format), new BlendStateDesc(
-                new BlendComponentDesc(BlendOperation.Max, BlendFactor.One, BlendFactor.One),
-                new BlendComponentDesc(BlendOperation.Max, BlendFactor.One, BlendFactor.One)))],
-            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, depthWrite),
-            CullMode.Back, FrontFace.Ccw,
-            positionColor ? 0UL : (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            positionColor ? [] : LayoutAttributes.From(VertexLayout.Attributes())));
-    }
-
-    /// <summary>Reference transparency stage 2: wavelet-transmittance coefficients, additively blended into two targets.</summary>
-    private static PipelineHandle CreateTransmittancePipeline(WgpuRenderBackend backend, PipelineLayoutHandle layout, string shaderName = "oit_reference", bool positionColor = false, WGPUTextureFormat format = WGPUTextureFormat.RGBA16Float, bool depthWrite = false)
-    {
-        var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load(shaderName));
-        static ColorTargetDesc Additive(WGPUTextureFormat format) => new(
-            BackendConvert.FromWgpu(format), new BlendStateDesc(
-                new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.One),
-                new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.One)));
-        return backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_main", source, "fs_transmittance", layout,
-            [Additive(format), Additive(format)],
-            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, depthWrite),
-            CullMode.Back, FrontFace.Ccw,
-            positionColor ? 0UL : (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            positionColor ? [] : LayoutAttributes.From(VertexLayout.Attributes())));
-    }
-
-    /// <summary>Reference transparency stage 3: colour weighted by the transmittance in front of each fragment.</summary>
-    private static PipelineHandle CreateAccumulatePipeline(WgpuRenderBackend backend, PipelineLayoutHandle layout, string shaderName = "oit_reference", bool positionColor = false, WGPUTextureFormat format = WGPUTextureFormat.RGBA16Float, bool depthWrite = false)
-    {
-        var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load(shaderName));
-        return backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_main", source, "fs_accumulate", layout,
-            [new ColorTargetDesc(BackendConvert.FromWgpu(format), new BlendStateDesc(
-                new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.One),
-                new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.One)))],
-            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, depthWrite),
-            CullMode.Back, FrontFace.Ccw,
-            positionColor ? 0UL : (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            positionColor ? [] : LayoutAttributes.From(VertexLayout.Attributes())));
-    }
-
-    /// <summary>Reference transparency: clip the far depth bound to the nearest opaque surface.</summary>
-    private static PipelineHandle CreateCullPipeline(WgpuRenderBackend backend, PipelineLayoutHandle layout, WGPUTextureFormat format = WGPUTextureFormat.RGBA16Float)
-    {
-        var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("oit_depth_bounds_cull"));
-        return backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_fullscreen", source, "fs_cull", layout,
-            [new ColorTargetDesc(BackendConvert.FromWgpu(format))],
-            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.Always, false),
-            CullMode.None, FrontFace.Ccw,
-            0, VertexStepMode.Vertex,
-            []));
-    }
-
-    /// <summary>Reference transparency composite: premultiplied over the frame, writing the nearest translucent depth.</summary>
-    private static PipelineHandle CreateBlitDepthPipeline(WgpuRenderBackend backend, PipelineLayoutHandle layout)
-    {
-        var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("blit_depth"));
-        return backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_fullscreen", source, "fs_blit", layout,
-            [],
-            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.Always, true),
-            CullMode.None, FrontFace.Ccw,
-            0, VertexStepMode.Vertex,
-            []));
-    }
-
-    private static PipelineHandle CreateCompositePipeline(WgpuRenderBackend backend, WGPUTextureFormat format, PipelineLayoutHandle layout, WGPUCompareFunction depthCompare = WGPUCompareFunction.Always)
-    {
-        var source = System.Text.Encoding.UTF8.GetBytes(Shaders.ShaderLibrary.Load("oit_composite"));
-        return backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_fullscreen", source, "fs_composite", layout,
-            [new ColorTargetDesc(BackendConvert.FromWgpu(format), new BlendStateDesc(
-                new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.OneMinusSrcAlpha),
-                new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.OneMinusSrcAlpha)))],
-            new DepthStateDesc(TextureFormat.Depth32Float, BackendConvert.FromWgpu(depthCompare), true),
-            CullMode.None, FrontFace.Ccw,
-            0, VertexStepMode.Vertex,
-            []));
-    }
-
-    /// <summary>Builds the sky pipeline: a full-screen triangle with no vertex buffer and no depth writes.</summary>
-    /// <param name="device">Device.</param>
-    /// <param name="format">Colour target format.</param>
-    private static PipelineHandle CreateSkyPipeline(WgpuRenderBackend backend, WGPUTextureFormat format)
-    {
-        var skySource = System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.SkyShaderSourceText);
-        return backend.CreateRenderPipeline(new PipelineDesc(
-            skySource, "vs_sky", skySource, "fs_sky", null,
-            [new ColorTargetDesc(BackendConvert.FromWgpu(format))],
-            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.Always, false),
-            CullMode.None, FrontFace.Ccw,
-            0, VertexStepMode.Vertex,
-            []));
-    }
-
-    /// <summary>
-    /// The cutout pipeline: alpha testing instead of blending, depth writes on.
-    /// </summary>
-    private static PipelineHandle CreateCutoutPipeline(WgpuRenderBackend backend, WGPUTextureFormat format, PipelineLayoutHandle layout)
-    {
-        var source = System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText);
-        return backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_main", source, "fs_cutout", layout,
-            [new ColorTargetDesc(BackendConvert.FromWgpu(format))],
-            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, true),
-            CullMode.Back, FrontFace.Ccw,
-            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes())));
-    }
-
-    /// <summary>
-    /// Entity models follow the reference entityCutout pipeline: alpha testing and no back-face culling.
-    /// </summary>
-    private static PipelineHandle CreatePipeline(WgpuRenderBackend backend, WGPUTextureFormat format, PipelineLayoutHandle layout)
-    {
-        var source = System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText);
-        return backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_main", source, "fs_main", layout,
-            [new ColorTargetDesc(BackendConvert.FromWgpu(format))],
-            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, true),
-            CullMode.Back, FrontFace.Ccw,
-            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes())));
-    }
 }
-

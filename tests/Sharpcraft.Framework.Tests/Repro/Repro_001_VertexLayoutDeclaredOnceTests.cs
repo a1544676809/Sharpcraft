@@ -43,15 +43,25 @@ public sealed class Repro_001_VertexLayoutDeclaredOnceTests
     {
         var rendering = Path.Combine(RepositoryRoot(), "src", "Sharpcraft.Framework", "Rendering");
 
-        foreach (var renderer in new[] { "OffscreenRenderer.cs", "WindowedRenderer.cs" })
+        // T-843 2B-1 moved the windowed shell's pipeline descriptions into FramePipelines so the offscreen shell can
+        // build the same pipelines. The invariant is unchanged: whichever file describes a render pipeline must derive
+        // its vertex layout from VertexLayout, never declare a second copy. The windowed shell is checked separately
+        // for going through the shared factory.
+        foreach (var source in new[] { "OffscreenRenderer.cs", "FramePipelines.cs" })
         {
-            var text = File.ReadAllText(Path.Combine(rendering, renderer));
+            var text = File.ReadAllText(Path.Combine(rendering, source));
             Assert.Contains("VertexLayout.Attributes()", text, StringComparison.Ordinal);
             // The invariant is that the stride comes from the shared layout rather than a literal. Which named argument
             // carries it changed when pipeline creation moved behind the seam, so the check follows the source of the
             // value and not the spelling of the parameter in front of it.
             Assert.Contains("VertexLayout.Stride", text, StringComparison.Ordinal);
         }
+
+        // The windowed shell obtains its pipelines from FrameResources, whose descriptions come from FramePipelines.
+        var windowed = File.ReadAllText(Path.Combine(rendering, "WindowedRenderer.cs"));
+        Assert.Contains("FrameResources", windowed, StringComparison.Ordinal);
+        var frameResources = File.ReadAllText(Path.Combine(rendering, "FrameResources.cs"));
+        Assert.Contains("FramePipelines.", frameResources, StringComparison.Ordinal);
     }
 
     private static string RepositoryRoot()
