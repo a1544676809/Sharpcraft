@@ -32,4 +32,10 @@
 | [`sky-celestial.md`](sky-celestial.md) | 原版 SkyRenderer 的天空盘、日月星几何/变换/贴图与环境属性依赖 | 待评审 | - |
 | [`special-block-rendering.md`](special-block-rendering.md) | 原版里有一批方块不能用一个立方体模型表示，或需要额外的几何/动画/朝向处理：火把、箱子、活塞、作物，以及告示牌、旗帜、床、潜影盒等。 | 未标注 | - |
 
+子目录：
+
+| 目录 | 文档数 |
+| --- | --- |
+| [`golden-vectors/`](golden-vectors/README.md) | 1 |
+
 <!-- END GENERATED: docs/specs/render -->
