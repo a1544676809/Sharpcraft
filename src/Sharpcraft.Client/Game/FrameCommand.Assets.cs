@@ -510,6 +510,15 @@ internal static partial class FrameCommand
             models.ResolveTexture);
         var modelSet = Sharpcraft.Client.Render.BlockModelSet.Build(modelLibrary, layout!);
 
+
+        if (GameOptions.Get("MC_DEBUG_MODELS") is { Length: > 0 })
+        {
+            var chest = Sharpcraft.Common.Identifiers.Identifier.Parse("minecraft:chest");
+            var known = layout!.TryGetBaseId(chest, out var chestBase);
+            Console.WriteLine(
+                $"models: set={(modelSet is null ? "null" : "ok")} marked={modelSet?.ElementStateCount ?? 0} " +
+                $"chestBase={(known ? chestBase : -1)} chestMarked={(known && (modelSet?.Has(chestBase) ?? false))}");
+        }
         return (atlas, map, modelSet);
     }
 
