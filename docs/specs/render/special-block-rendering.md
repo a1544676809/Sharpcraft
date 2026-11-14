@@ -316,3 +316,39 @@ chestAtlasGpu.Upload(backend, bindGroupLayout, chestAtlas.Texture, cameraBuffer,
 
 - 沙盒帧 `9CA9E034…` / 34897 B 逐字节不变（无方块实体时不受影响）
 - 窗口冒烟帧率正常
+
+## 12. 绘制段：实测超出微切片，需拆三步（2026-11-14）
+
+尝试直接实现后确认：**不是 3–4 个文件的小改动**。实际障碍是**几何的归属**。
+
+### 障碍
+
+`TerrainPassRecorder.RecordOpaque` 通过 `_arena.Draw(pass, …)` 绘制，而 `_arena` 是 `ChunkGeometryStore`——**它自己拥有顶点/索引缓冲与绘制范围**。
+
+而方块实体几何目前是**合并进静态世界网格**（`FrameCommand` 的 `mesh`），走 `StaticWorldBuffers`，**不在 arena 里**。因此「在 opaque pass 里切绑定再画方块实体范围」缺少一个前提：**那段几何没有自己的缓冲与绘制入口**。
+
+### 必须拆成三步（原则 14：≤3 文件 / ≤150 行）
+
+**第 1 步：几何独立**
+- `FrameCommand` 不再把方块实体顶点并入地形 `mesh`
+- 改为写入 `ChunkGeometryStore`（新建一个方块实体 arena）或独立缓冲
+- 改动：`FrameCommand` + `ChunkGeometryStore`（或新增一个轻量缓冲类）
+
+**第 2 步：绘制入口**
+- `TerrainPassRecorder` 增加「用指定 bind group 绘制方块实体段」的方法
+- `FrameExecutor` 在 opaque pass 末尾调用
+- 改动：`TerrainPassRecorder` + `FrameExecutor`
+
+**第 3 步：图集与分派**
+- `WindowCommand` / `FrameCommand` 用 `EntitySkinTextureGpu` 上传 `ChestAtlas`
+- `FrameResources.Options.BlockEntityBindGroup` 传入
+- 按 `TypeId` 分派 `ChestMesher`
+- 改动：`WindowCommand` + `FrameCommand` + `FrameResources`
+
+### 本次尝试的处理
+
+已加的两处字段（`FrameRequest.BlockEntityVertices/Indices/Atlas`、`FrameResources.Options.BlockEntityBindGroup`）**已回退**——没有消费方的字段属于债务，不应留在树里。
+
+### 建议
+
+第 1 步是关键决策点（方块实体几何放 arena 还是独立缓冲），建议单独评审后再动手。前两步可并行评审，第 3 步依赖前两步。
