@@ -12,6 +12,19 @@
 
 流体已由 `_still` 回退覆盖，**不在本项范围内**。
 
+## 1.1 已核实的事实（2026-11-14，`ref://mc-26.3-analysis`）
+
+| 事实 | 数值 | 证据 |
+| --- | --- | --- |
+| `RenderShape != MODEL` 的方块 | **9 个，全部是 `INVISIBLE`** | `src/net/minecraft/world/level/block/**` 中 `return RenderShape.INVISIBLE` 的重写：air、barrier、bubble_column、end_gateway、end_portal、light 等 |
+| `ENTITYBLOCK_ANIMATED` | **0 处** | 全 `src/net` 搜索无命中——26.3 已不再用这个分类 |
+| 方块实体渲染器实现 | **27 个** | `src/net/minecraft/client/renderer/blockentity/*Renderer.java` |
+| 方块模型 JSON | **2883 个** | `src/assets/minecraft/models/block/` |
+
+**结论：「265 个特殊渲染方块」不指 `RenderShape`。** 9 个 INVISIBLE 方块无需建模（只需不绘制），真正的"特殊渲染"来源是 **27 个方块实体渲染器** + 若干非立方体模型。后者绝大多数由**通用模型管线**处理（台阶、楼梯、栅栏、墙、火把、作物都是模型 JSON），不属于"特殊渲染器"。
+
+因此 265 这个数字最可能是"模型非完整立方体的方块数"，其中需要**专门渲染器**的只有 27 类。真实工作量应按 27 类方块实体渲染器估算，而不是 265。
+
 ## 2. 清单必须来自原版，不得凭印象
 
 任务描述里的"265 个"目前**没有可追溯来源**。规格第一步是把它变成可核查的清单：
