@@ -81,7 +81,6 @@ src/Sharpcraft.Client/Render/CloudMeshBuilder.cs :: Sharpcraft.Client.Render.Clo
 src/Sharpcraft.Client/Render/CloudMeshBuilder.cs :: Sharpcraft.Client.Render.CloudMeshBuilder
 src/Sharpcraft.Client/Render/CloudMeshBuilder.cs :: Sharpcraft.Client.Render.CloudQuad
 src/Sharpcraft.Client/Render/CloudRangePolicy.cs :: Sharpcraft.Client.Render.CloudRangePolicy
-src/Sharpcraft.Client/Render/EnderDragonAnimationProvider.cs :: Sharpcraft.Client.Render.State
 src/Sharpcraft.Client/Render/EntityAnimation.cs :: Sharpcraft.Client.Render.AnimationInterpolation
 src/Sharpcraft.Client/Render/EntityAnimation.cs :: Sharpcraft.Client.Render.AnimationKeyframe
 src/Sharpcraft.Client/Render/EntityAnimation.cs :: Sharpcraft.Client.Render.AnimationTarget
@@ -309,7 +308,6 @@ src/Sharpcraft.Common/Reference/ReferenceClassAttribute.cs :: Sharpcraft.Common.
 src/Sharpcraft.Common/Reference/ReferenceClassAttribute.cs :: Sharpcraft.Common.Reference.ReferenceStatus
 src/Sharpcraft.Common/Registries/BlockStateDefinition.cs :: Sharpcraft.Common.Registries.BlockStateDefinition
 src/Sharpcraft.Common/Registries/BlockStateLayout.cs :: Sharpcraft.Common.Registries.BlockStateLayout
-src/Sharpcraft.Common/Registries/BlockStateLayout.cs :: Sharpcraft.Common.Registries.Entry
 src/Sharpcraft.Common/Registries/BlockStateProperty.cs :: Sharpcraft.Common.Registries.BlockStateProperty
 src/Sharpcraft.Common/Registries/EnchantmentTypes.cs :: Sharpcraft.Common.Registries.EnchantmentTypes
 src/Sharpcraft.Common/Registries/EntityDimensionsRegistry.cs :: Sharpcraft.Common.Registries.EntityDimensionsInfo
