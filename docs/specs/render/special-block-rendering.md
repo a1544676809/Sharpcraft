@@ -120,3 +120,20 @@
 ### 建议顺序
 
 第一档 1–6 优先：出现频率最高、玩家最容易注意到差异；且箱子/告示牌/潜影盒共享"轴对齐盒 + 纹理"的实现骨架，可复用。
+
+## 8. 当前集成点（2026-11-14 核实）
+
+仓库里方块实体渲染的现状：
+
+| 环节 | 位置 | 说明 |
+| --- | --- | --- |
+| 数据 | `Sharpcraft.Common.World.BlockEntityRecord`（`LocalX/Y/LocalZ/TypeId`） | 由 `ChunkPacketParser` 解析 |
+| 渲染状态 | `Sharpcraft.Client.Render.BlockEntityRenderState`（世界坐标 + `TypeId`） | `FrameCommand` 组装 |
+| **几何** | **`BlockEntityPlaceholderMesher`** | **占位实现——当前所有方块实体都画成占位几何** |
+| 合并 | `FrameCommand` 把方块实体顶点追加到地形顶点数组 | 共用不透明 stage |
+
+**因此 T-041 的实现路径是：新增 `ChestMesher`（按 §1 的真值向量），在 `FrameCommand` 按 `TypeId` 分派，替代 `BlockEntityPlaceholderMesher` 对箱子的处理。**
+
+已有可复用素材：`SpecialModelDefinitions.ChestTexture = "entity/chest/normal"`、`ChestTextureWidth/Height = 64/64`。
+
+**尚未确认**：`BlockEntityPlaceholderMesher` 的顶点布局（必须与地形同一 `VertexLayout`），以及 `TypeId` 到方块类型的映射表在哪定义。这两项是动手前的最后侦察。
