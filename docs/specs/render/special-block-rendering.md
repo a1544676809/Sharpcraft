@@ -176,8 +176,30 @@
 
 **结论：箱子渲染不需要新增注册表**，直接按 `TypeId` 分派即可。
 
-### 9.5 剩余待确认
+### 9.5 光照（已查清原版做法，可行）
+
+**原版**：`BlockEntityRenderState.extractBase` 调 `LightCoordsUtil.getLightCoords(level, pos, state)`：
+
+- `state.emissiveRendering()` 为真 → `FULL_BRIGHT = 15728880`
+- 否则取 `pack(blockLight, skyLight)`，其中 `pack(block, sky) = block << 4 | sky << 20`，两者各为 **0..15**
+- 再加自发光下限：`block < state.getLightEmission()` 时抬到该值
+
+**本仓现状**：`ClientWorld` 已提供逐方块光照查询：
+
+```
+public byte GetSkyLight(int x, int y, int z)     // 0..15，未加载区块返回 0
+public byte GetBlockLight(int x, int y, int z)   // 同
+```
+
+**结论：不需要新的世界 API，也不需要扩展协议解析。** 做法：
+
+1. `BlockEntityRenderState` 增加两个字段 `Sky` / `Block`（byte，0..15）
+2. `FrameCommand` 构造状态时用 `world.GetSkyLight(...)` / `GetBlockLight(...)` 填充（位置取方块实体所在方块）
+3. mesher 传给 `TerrainVertexWriter.Write` 时归一化：`sky = Sky / 15f`、`block = Block / 15f`
+
+箱子自发光为 0，`emissiveRendering()` 为假，因此不需要自发光分支。
+
+### 9.6 剩余待确认
 
 1. `DynamicGeometry` 的容量语义（`Reserve` 参数单位）
-2. 方块实体的光照采样：占位固定全亮，真实实现应从 `BlockEntityRenderState` 所在方块位置取光照——**当前 `BlockEntityRenderState` 不含光照字段**，需要扩展或按坐标查询
-3. `FrameCommand` 里 `BlockEntityPlaceholderMesher` 的调用点如何替换（按 `TypeId` 分派 vs 新建 `BlockEntityMesher` 统一入口）
+2. `FrameCommand` 里 `BlockEntityPlaceholderMesher` 的调用点如何替换（按 `TypeId` 分派 vs 新建 `BlockEntityMesher` 统一入口）
