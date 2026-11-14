@@ -219,14 +219,34 @@ public byte GetBlockLight(int x, int y, int z)   // 同
 
 因此 `ChestMesher` 的几何虽然正确，但**无法在当前合并路径上用正确贴图绘制**——它需要走**物品/实体图集**的独立绘制段。
 
-### 待决策
+### 已按原版确认（2026-11-14）
 
-两条路径：
+查 `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/Sheets.java`：**原版为每类方块实体建专属图集**，既不是方块图集也不是物品图集。
 
-1. **方块实体独立绘制段**：为方块实体单独建一段绘制，绑定物品图集。改动集中但需要新的绘制范围与绑定切换。
-2. **把 `entity/chest/normal` 并入方块图集**：改动小，但会让方块图集混入实体贴图，与原版图集划分不符。
+| 常量 | 图集路径 |
+| --- | --- |
+| `CHEST_SHEET` | `textures/atlas/chest.png` |
+| `SHULKER_SHEET` | `textures/atlas/shulker_boxes.png` |
+| `BANNER_SHEET` | `textures/atlas/banner_patterns.png` |
+| `SHIELD_SHEET` | `textures/atlas/shield_patterns.png` |
+| `DECORATED_POT_SHEET` | `textures/atlas/decorated_pot.png` |
 
-**倾向 1**——符合原版的图集划分，也不污染方块图集。
+箱子图集由 **22 张**贴图拼接而成（`textures/entity/chest/`）：`normal` / `normal_left` / `normal_right`、`trapped*`、`ender`、`copper*`（4 个氧化阶段 × 单/左/右）、`christmas*`。
+
+**结论：我先前提的两个方案都不符合原版。**
+
+- 方案 1（绑定物品图集）——原版不这样
+- 方案 2（并入方块图集）——原版也不这样
+
+**正确做法**：方块实体走**独立绘制段**，并为每类方块实体建**专属图集**（`textures/atlas/<family>.png`），用与本仓 `ItemAtlas.Load(resources, [路径...])` 相同的拼接机制从 `textures/entity/chest/*.png` 生成箱子图集。
+
+本仓现状偏差：`SpecialModelDefinitions.ChestTexture = "entity/chest/normal"` 被放进 `ItemAtlas`——那只适用于**物品**形态的箱子模型；方块实体渲染应改用专属图集。
+
+### 实现顺序（按原版）
+
+1. `ChestAtlas`：拼接 22 张箱子贴图（复用 `ItemAtlas.Load` 机制）
+2. 方块实体独立绘制段：绑定该图集、独立绘制范围
+3. `FrameCommand` 按 `TypeId` 分派到 `ChestMesher`
 
 ### 已登记的实现简化（原则 15）
 
