@@ -137,3 +137,47 @@
 已有可复用素材：`SpecialModelDefinitions.ChestTexture = "entity/chest/normal"`、`ChestTextureWidth/Height = 64/64`。
 
 **尚未确认**：`BlockEntityPlaceholderMesher` 的顶点布局（必须与地形同一 `VertexLayout`），以及 `TypeId` 到方块类型的映射表在哪定义。这两项是动手前的最后侦察。
+
+## 9. 实现草案（侦察完成，可直接编码）
+
+### 9.1 顶点与几何 API
+
+| 项 | 事实 |
+| --- | --- |
+| 顶点写入 | `TerrainVertexWriter.Write(dest, ref offset, x, y, z, r, g, b, u, v, sprite, sky, block)` ——**与地形同一布局**（`ChunkMesher.FloatsPerVertex = 6` 个 32 位槽 / 24 字节） |
+| 盒构建 | `EntityPlaceholderMesher.AppendBox(geometry, feet, width, height, red, green, blue, sprite, ref vertexFloats, ref indexCount, depth?, entityTransform?)` |
+| `feet` 语义 | **底面中心点**（`minY = feet.Y`，X/Z 以 `feet` 为中心展开） |
+| 光照 | 占位实现固定 `sky: 1f, block: 0f`（白天全亮）——真实实现需按方块位置采样光照 |
+| 动态几何 | `DynamicGeometry`（`Clear/Reserve/Vertices/Indices/VertexFloats/IndexCount`） |
+
+### 9.2 变换 API
+
+`EntityModelTransform(Translation, YawDegrees, PitchDegrees, Scale, ScaleXZ, ScaleY, HasAttachRotation, AttachRotation, AttachPivot)`
+
+`Apply` 的顺序：缩放 → Y 旋转 → X 旋转 → **绕 `AttachPivot` 的 `AttachRotation`** → 平移。
+
+**关键**：`AttachRotation` + `AttachPivot` 就是一个通用的"绕任意枢轴旋转"，正好可用于箱盖开合——不需要新增变换类型。
+
+### 9.3 箱子的绝对坐标（由 §1 真值向量换算，单位 = 方块）
+
+| 部件 | 底面中心 `feet` | width | height | depth | 绕枢轴旋转 |
+| --- | --- | --- | --- | --- | --- |
+| `bottom` | `(8, 0, 8) / 16` | `14/16` | `10/16` | `14/16` | 无 |
+| `lid` | `(8, 9, 8) / 16` | `14/16` | `5/16` | `14/16` | 绕 `(0, 9, 1)/16`，X 轴，`-(open' × π/2)` |
+| `lock` | `(8, 9, 15.5) / 16` | `2/16` | `4/16` | `1/16` | 同 `lid` |
+
+`lock` 的 `feet`：盒绝对范围 `x=7..9`（中心 8）、`y=7..11`（底面 7，高 4）、`z=15..16`（中心 15.5）。
+
+### 9.4 类型注册表
+
+`Sharpcraft.Common.World.VanillaBlockEntityTypes`（49 项，id 0..48）已提供：
+- `Chest = 1`、`TrappedChest = 2`、`EnderChest = 3`、`ShulkerBox = 24`
+- `PathOf(int)` / `IdOf(string)` / `IsChestLike(int)`
+
+**结论：箱子渲染不需要新增注册表**，直接按 `TypeId` 分派即可。
+
+### 9.5 剩余待确认
+
+1. `DynamicGeometry` 的容量语义（`Reserve` 参数单位）
+2. 方块实体的光照采样：占位固定全亮，真实实现应从 `BlockEntityRenderState` 所在方块位置取光照——**当前 `BlockEntityRenderState` 不含光照字段**，需要扩展或按坐标查询
+3. `FrameCommand` 里 `BlockEntityPlaceholderMesher` 的调用点如何替换（按 `TypeId` 分派 vs 新建 `BlockEntityMesher` 统一入口）
