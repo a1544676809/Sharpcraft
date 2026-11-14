@@ -74,3 +74,48 @@ SetBindGroup(pass, 0, worldBindGroup)       // 若其后仍有地形绘制则还
 
 - 不引入第二个渲染循环（原则 14 单轨）
 - 不为方块实体做剔除（原版按 section 剔除，我们当前规模不需要，登记为简化）
+
+## 6. 切片 3 的确切接入点（2026-11-14 侦察）
+
+`OffscreenRenderer` 在 L520–548 构造资源并录制帧：
+
+```csharp
+using var samplers = new SamplerCache();          // L520
+using var entitySkin = new EntitySkinTextureGpu(); // L522
+using var itemAtlasGpu = new EntitySkinTextureGpu(); // L523
+var frameResources = new FrameResources(new Options { Request = request, … }); // L524
+var recordedFrame = FrameExecutor.Record(...);      // L546
+```
+
+`EntitySkinTextureGpu.Upload` 签名（L25–33）：
+
+```
+Upload(IRenderBackend backend, BindGroupLayoutHandle layout, TextureData data,
+       BufferHandle camera, BufferHandle fog, BufferHandle lightmap,
+       SamplerHandle sampler, SpriteRectTable spriteRects)
+```
+
+### 接入形状
+
+在 **L524 之前**：
+
+```csharp
+using var chestAtlasGpu = new EntitySkinTextureGpu();
+using var blockEntity = new BlockEntitySubmission(backend);
+
+if (request.BlockEntityAtlas is { } chestAtlas && request.BlockEntityGeometry is { } geometry)
+{
+    chestAtlasGpu.Upload(backend, bindGroupLayout, chestAtlas,
+        cameraBuffer, fogBuffer, lightmapBuffer, <atlasSampler>, <spriteRects>);
+    blockEntity.Upload(geometry, chestAtlasGpu.BindGroup);
+    request = request with { BlockEntity = blockEntity };
+}
+```
+
+**生命周期**：`chestAtlasGpu` 与 `blockEntity` 都是 `using`，作用域覆盖 `FrameExecutor.Record`（L546），因此纹理与缓冲在录制期间有效。顺序要求：**必须在 `new FrameResources(...)` 之前改 `request`**，否则 `Request` 捕获的是旧值。
+
+### 仍需确认
+
+1. `<atlasSampler>` 与 `<spriteRects>` 在该作用域的可取来源（`samplers` 提供 sampler；`SpriteRectTable` 可能需在 `OffscreenRenderer` 内新建，注意它本身也是 GPU 缓冲）
+2. `FrameRequest` 需要新增 `BlockEntityAtlas`（`TextureData?`）与 `BlockEntityGeometry`（`DynamicGeometry?`）两个字段，由 `FrameCommand` / `WindowCommand` 填入
+3. 坐标改为相机相对（`FrameCommand` 构造 `BlockEntityRenderState` 时减去相机位置）
