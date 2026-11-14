@@ -285,64 +285,6 @@ public static class OffscreenRenderer
         Console.WriteLine($"pyramid: {readbacks.Count} levels, total mismatches {totalMismatches}, worst delta {worst:F6}; " + string.Join(", ", lines));
     }
 
-    private static PipelineHandle CreateSkyPipeline(WgpuRenderBackend backend, TextureFormat format)
-    {
-        var skySource = System.Text.Encoding.UTF8.GetBytes(SkyShaderSourceText);
-        return backend.CreateRenderPipeline(new PipelineDesc(
-            skySource, "vs_sky", skySource, "fs_sky", null,
-            [new ColorTargetDesc(format)],
-            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.Always, false),
-            CullMode.None, FrontFace.Ccw,
-            0, VertexStepMode.Vertex,
-            []));
-    }
-
-    private static PipelineHandle CreatePipeline(WgpuRenderBackend backend, PipelineLayoutHandle layout)
-    {
-        var source = System.Text.Encoding.UTF8.GetBytes(ShaderSourceText);
-        return backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_main", source, "fs_main", layout,
-            [new ColorTargetDesc(TextureFormat.Rgba8Unorm)],
-            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, true),
-            CullMode.Back, FrontFace.Ccw,
-            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes())));
-    }
-
-    /// <summary>
-    /// The translucent pipeline: the same shader and layout as terrain, but blending on and depth writes off so layers
-    /// behind still show through and the order of the draw calls matters.
-    /// </summary>
-    private static PipelineHandle CreateTranslucentPipeline(WgpuRenderBackend backend, PipelineLayoutHandle layout, bool alphaOne)
-    {
-        var source = System.Text.Encoding.UTF8.GetBytes(ShaderSourceText);
-        return backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_main", source, alphaOne ? "fs_main" : "fs_translucent", layout,
-            [new ColorTargetDesc(TextureFormat.Rgba8Unorm, new BlendStateDesc(
-                new BlendComponentDesc(BlendOperation.Add, BlendFactor.SrcAlpha, BlendFactor.OneMinusSrcAlpha),
-                new BlendComponentDesc(BlendOperation.Add, BlendFactor.One, BlendFactor.OneMinusSrcAlpha)))],
-            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, false),
-            CullMode.Back, FrontFace.Ccw,
-            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes())));
-    }
-
-    /// <summary>
-    /// The cutout pipeline: same shader family with alpha testing instead of blending, depth writes on.
-    /// </summary>
-    private static PipelineHandle CreateCutoutPipeline(WgpuRenderBackend backend, PipelineLayoutHandle layout)
-    {
-        var source = System.Text.Encoding.UTF8.GetBytes(ShaderSourceText);
-        return backend.CreateRenderPipeline(new PipelineDesc(
-            source, "vs_main", source, "fs_cutout", layout,
-            [new ColorTargetDesc(TextureFormat.Rgba8Unorm)],
-            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, true),
-            CullMode.Back, FrontFace.Ccw,
-            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
-            LayoutAttributes.From(VertexLayout.Attributes())));
-    }
-
-    private static uint[] BuildIndexBytes(FrameRequest request) => request.Indices;
 
     /// <summary>
     /// Position-colour pipeline: vertex colour times the per-draw tint, with the given reference blend mode. Sunrise uses
@@ -574,162 +516,36 @@ public static class OffscreenRenderer
             var depthSize = (ulong)depthPadded * height;
             var depthReadback = backend.CreateBuffer(new BufferDesc(depthSize, BufferUsages.MapRead | BufferUsages.CopyDst));
 
-            var hasGeometry = request.Indices.Length > 0 && request.Vertices.Length > 0;
-            // World-space vertices: the shader applies the camera, so the buffer only changes when the
-            // geometry changes.
-            var vertexBytes = hasGeometry ? request.Vertices : [];
-            var indexBytes = hasGeometry ? BuildIndexBytes(request) : [];
-
-            var pipeline = hasGeometry ? CreatePipeline(backend, pipelineLayout) : default;
-            var vertexBuffer = hasGeometry
-                ? backend.CreateBufferInit(
-                    new BufferDesc((ulong)vertexBytes.Length * sizeof(float), BufferUsages.Vertex),
-                    System.Runtime.InteropServices.MemoryMarshal.AsBytes(vertexBytes.AsSpan()))
-                : default;
-            var indexBuffer = hasGeometry
-                ? backend.CreateBufferInit(
-                    new BufferDesc((ulong)indexBytes.Length * sizeof(uint), BufferUsages.Index),
-                    System.Runtime.InteropServices.MemoryMarshal.AsBytes(indexBytes.AsSpan()))
-                : default;
-
-            var encoder = backend.CreateCommandEncoder();
-            var colour = request.ClearColour;
-            var pass = backend.BeginRenderPass(
-                encoder,
-                [ColorAttachmentDesc.Clear(view, colour)],
-                DepthAttachmentDesc.Clear(depthView, 0f));
-
-            // The scene pass order comes from WorldRenderPipeline; each kind is a no-op when this request has no such
-            // geometry. The GPU state and buffer lifetimes stay local to this shell.
-            void DrawScenePass(WorldRenderPassKind kind)
+            // The frame is recorded by the shared executor into this shell's own target; the shell only owns the
+            // target, the readback buffers and the compute diagnostics (docs/specs/render/single-track-executor.md).
+            using var samplers = new SamplerCache();
+            samplers.Initialize(device);
+            using var entitySkin = new EntitySkinTextureGpu();
+            using var itemAtlasGpu = new EntitySkinTextureGpu();
+            var frameResources = new FrameResources(new FrameResources.Options
             {
-                switch (kind)
-                {
-                    case WorldRenderPassKind.Sky:
-                    {
-                        // Sky first: it fills the cleared target, then the world draws over it. Skipped when the caller
-                        // supplies a sky disc backdrop instead (SkipGradientSky).
-                        if (!request.SkipGradientSky)
-                        {
-                            var skyPipeline = CreateSkyPipeline(backend, TextureFormat.Rgba8Unorm);
-                            backend.SetPipeline(pass, skyPipeline);
-                            backend.Draw(pass, 3, 1, 0, 0);
-                            backend.Destroy(skyPipeline);
-                        }
-
-                        // Sun and moon sit in the sky backdrop, before terrain, so world geometry covers them.
-                        celestial?.Draw(backend, pass);
-
-                        // Sunrise band and stars, drawn on top of the bodies but still behind world geometry.
-                        celestialColour?.Draw(backend, pass);
-                        break;
-                    }
-
-                    case WorldRenderPassKind.TerrainOpaque:
-                    {
-                        if (!hasGeometry)
-                        {
-                            break;
-                        }
-
-                        backend.SetPipeline(pass, pipeline);
-                        backend.SetBindGroup(pass, 0, bindGroup);
-                        backend.SetVertexBuffer(pass, 0, vertexBuffer);
-                        backend.SetIndexBuffer(pass, indexBuffer, IndexFormat.Uint32);
-
-                        if (request.DrawRanges is { Length: > 0 } ranges)
-                        {
-                            // One call per chunk, so an omitted chunk actually disappears rather than being merged into one draw.
-                            foreach (var (firstIndex, indexCount) in ranges)
-                            {
-                                if (indexCount > 0)
-                                {
-                                    backend.DrawIndexed(pass, (uint)indexCount, 1, (uint)firstIndex, 0, 0);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            backend.DrawIndexed(pass, (uint)request.Indices.Length, 1, 0, 0, 1);
-                        }
-                        break;
-                    }
-
-                    case WorldRenderPassKind.TerrainCutout:
-                    {
-                        if (request.CutoutVertices is not { Length: > 0 } cutoutVertices ||
-                            request.CutoutIndices is not { Length: > 0 } cutoutIndices)
-                        {
-                            break;
-                        }
-
-                        var cutoutPipeline = CreateCutoutPipeline(backend, pipelineLayout);
-                        var cutoutVertexBuffer = backend.CreateBufferInit(
-                            new BufferDesc((ulong)cutoutVertices.Length * sizeof(float), BufferUsages.Vertex),
-                            System.Runtime.InteropServices.MemoryMarshal.AsBytes(cutoutVertices.AsSpan()));
-                        var cutoutIndexBuffer = backend.CreateBufferInit(
-                            new BufferDesc((ulong)cutoutIndices.Length * sizeof(uint), BufferUsages.Index),
-                            System.Runtime.InteropServices.MemoryMarshal.AsBytes(cutoutIndices.AsSpan()));
-
-                        backend.SetPipeline(pass, cutoutPipeline);
-                        backend.SetBindGroup(pass, 0, bindGroup);
-                        backend.SetVertexBuffer(pass, 0, cutoutVertexBuffer);
-                        backend.SetIndexBuffer(pass, cutoutIndexBuffer, IndexFormat.Uint32);
-                        backend.DrawIndexed(pass, (uint)cutoutIndices.Length, 1, 0, 0, 1);
-                        backend.Destroy(cutoutIndexBuffer);
-                        backend.Destroy(cutoutVertexBuffer);
-                        backend.Destroy(cutoutPipeline);
-                        break;
-                    }
-
-                    case WorldRenderPassKind.Translucent:
-                    {
-                        if (request.TranslucentVertices is not { Length: > 0 } translucentVertices ||
-                            request.TranslucentIndices is not { Length: > 0 } translucentIndices)
-                        {
-                            break;
-                        }
-
-                        // Blended, no depth writes, drawn last: the order of these calls is what makes overlapping water read right.
-                        var translucentPipeline = CreateTranslucentPipeline(backend, pipelineLayout, request.Diagnostics?.AlphaOne == true);
-                        var translucentVertexBuffer = backend.CreateBufferInit(
-                            new BufferDesc((ulong)translucentVertices.Length * sizeof(float), BufferUsages.Vertex),
-                            System.Runtime.InteropServices.MemoryMarshal.AsBytes(translucentVertices.AsSpan()));
-                        var translucentIndexBuffer = backend.CreateBufferInit(
-                            new BufferDesc((ulong)translucentIndices.Length * sizeof(uint), BufferUsages.Index),
-                            System.Runtime.InteropServices.MemoryMarshal.AsBytes(translucentIndices.AsSpan()));
-
-                        backend.SetPipeline(pass, translucentPipeline);
-                        backend.SetBindGroup(pass, 0, bindGroup);
-                        backend.SetVertexBuffer(pass, 0, translucentVertexBuffer);
-                        backend.SetIndexBuffer(pass, translucentIndexBuffer, IndexFormat.Uint32);
-
-                        if (request.TranslucentRanges is { Length: > 0 } translucentRanges)
-                        {
-                            // Drawn in the order the caller sorted them, which is far to near.
-                            foreach (var (firstIndex, indexCount) in translucentRanges)
-                            {
-                                if (indexCount > 0)
-                                {
-                                    backend.DrawIndexed(pass, (uint)indexCount, 1, (uint)firstIndex, 0, 0);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            backend.DrawIndexed(pass, (uint)translucentIndices.Length, 1, 0, 0, 1);
-                        }
-
-                        backend.Destroy(translucentIndexBuffer);
-                        backend.Destroy(translucentVertexBuffer);
-                        backend.Destroy(translucentPipeline);
-                        break;
-                    }
-                }
-            }
-
-            WorldRenderPipeline.RecordScenePasses(DrawScenePass);
-            backend.EndRenderPass(pass);
+                Backend = backend,
+                Request = request,
+                Format = WGPUTextureFormat.RGBA8Unorm,
+                PipelineLayout = pipelineLayout,
+                BindGroupLayout = bindGroupLayout,
+                Samplers = samplers,
+                CameraBuffer = cameraBuffer,
+                FogBuffer = fogBuffer,
+                LightmapBuffer = lightmapBuffer,
+                BindGroup = bindGroup,
+                EntitySkin = entitySkin,
+                ItemAtlasGpu = itemAtlasGpu,
+                SpriteBindGroups = [],
+                Celestial = celestial,
+                CelestialColour = celestialColour,
+                Width = width,
+                Height = height
+            });
+            var recordedFrame = FrameExecutor.Record(
+                frameResources.ExecutorResources,
+                frameResources.CreateFrame(new FrameTarget(view, depthView, width, height)));
+            var encoder = recordedFrame.Encoder;
 
             backend.CopyTextureToBuffer(encoder, texture, readback, (uint)padded, width, height);
 
@@ -969,21 +785,18 @@ public static class OffscreenRenderer
             backend.Destroy(view);
             backend.Destroy(texture);
 
-            // The scene resources are seam handles now, so they are released by hand once the frame is read back.
-            if (indexBuffer.IsValid)
+            // FrameResources owns the pipelines, layouts, OIT targets and geometry buffers; this shell only owns
+            // its target, atlas and readback resources.
+            frameResources.DynamicBuffers.Destroy();
+            for (var layerIndex = 0; layerIndex < frameResources.LayerPool.Count; layerIndex++)
             {
-                backend.Destroy(indexBuffer);
+                frameResources.DeferredRelease.Release(frameResources.LayerPool.Vertex(layerIndex));
+                frameResources.DeferredRelease.Release(frameResources.LayerPool.Index(layerIndex));
             }
 
-            if (vertexBuffer.IsValid)
-            {
-                backend.Destroy(vertexBuffer);
-            }
-
-            if (pipeline.IsValid)
-            {
-                backend.Destroy(pipeline);
-            }
+            frameResources.UiBuffers.Destroy();
+            frameResources.StaticWorld.Destroy();
+            frameResources.Dispose();
 
             backend.Destroy(bindGroup);
             backend.Destroy(atlasSamplerHandle);

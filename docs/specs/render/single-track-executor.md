@@ -205,6 +205,43 @@ recorder / buffer / staticWorld / oitTargets / uniform / cpu / skyRecorder 构�
 `submit 0.782`、`scene-terrain 0.233` 同倍变慢且均为本次未触碰阶段）。沙盒帧哈希仍为
 `9CA9E03410A2E745…` / 34897 B，与基线**逐字节相同**（离屏未动）。
 
+### 2B-2b：切离屏目标，单轨落地（2026-11-14）
+
+**已完成**：`OffscreenRenderer.Render` 删除自身录制块（原 L577–L732）与 5 个重复的管线
+工厂（`CreateSkyPipeline` / `CreatePipeline` / `CreateTranslucentPipeline` /
+`CreateCutoutPipeline` / `BuildIndexBytes`），改为构造 `FrameResources`（`Options` 约 30 行）
+→ `FrameExecutor.Record(...)` → 沿用原有 `CopyTextureToBuffer` / 深度金字塔 / 运动向量 /
+回读链。`OffscreenRenderer.cs` **1533 → 1346**（−187），`FrameExecutor.cs` 与
+`FrameRequest` 契约未改；`Repro_001` 断言随代码位置调整（守住"只有 `FramePipelines`
+描述顶点布局、两个外壳都经 `FrameResources`"），用例保留。离屏走的是
+`EntityPassRecorder` 的 static-world fallback，与 2B-1 记录的架构发现一致。
+
+**核心判据（配置写死，仅 `{"MC_FRAME_LOCAL":"1"}`、640×360、`--frame`）**：
+
+```
+实际   sha256 9CA9E03410A2E745…  / 34897 B
+基线   sha256 9CA9E03410A2E745…  / 34897 B
+```
+
+**逐字节相同**（`identical=True`），未做任何 uniform「对齐」或补偿。`GlintTime==0` 时
+`FrameExecutor` 用 Stopwatch 时间戳写 lightmap padding，但沙盒无 glint 几何、
+`lightmap.padding` 只被 `fs_entity_glint` 消费，故像素不变——**这是实测结论，不是
+"理论上应该不变"的推断**；未因该推断预先抹平。
+
+**服务器 `--frame`（有半透明数据）**：`check-frame-baseline.ps1` 跑通（14892 B、非黑帧、
+EXIT=0、无 Validation / panic），哈希 `582A47E288CA33D0…` 与切换前不同。变化来源：半透明
+几何由单次 blend（`CreateTranslucentPipeline`）改为与窗口同源的 `ReferenceOitPasses`
+OIT 合成；同时 `DrawRanges` 逐段绘制合并为一次 `DrawIndexed`、cutout 改在 Entities pass
+的 `RecordStaticCutout` 画。因服务器帧世界状态本就不确定（`render-backend-seam.md` §9.22），
+**无法把 OIT 与后两项逐项分离**，如实记录。未改 `FrameRequest`、未塞假数据、未为凑哈希
+做任何补偿。
+
+**判据**：build 0 警告、2718 测试全绿、ClassMap / Docs / 两 verify 全绿；Release 冒烟稳态
+中位数 **1.63 ms ≤ 2.2**，`cull: chunks=637 culled=449 drawn=183`、EXIT=0、无异常。
+
+**剩余小项**：`FrameResources` 仍会为离屏多建一份自有的深度纹理（未使用，随 `Dispose` 释放）；
+不影响像素，留待后续清理。
+
 ## 6. 与其它任务的关系
 
 - **T-837 切片 3（录制线程）依赖本项**：线程化改的是 `WindowedRenderer`，而该路径缺乏像素级判据。先收敛，才有一条能被像素验证的主路径。
