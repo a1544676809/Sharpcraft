@@ -115,11 +115,11 @@ public sealed class ChestMesher
 
             // A double chest half is fifteen pixels wide and shifted away from the joining edge; a
             // single chest is fourteen and centred. The latch narrows to one pixel on a double.
-            var (bodyCentre, bodyWidth, lockCentre, lockWidth) = entity.ChestType switch
+            var (bodyCentre, bodyWidth, bodyWidthPx, lockCentre, lockWidth, lockWidthPx) = entity.ChestType switch
             {
-                1 => (7.5f * Pixel, 15f * Pixel, 0.5f * Pixel, 1f * Pixel),
-                2 => (8.5f * Pixel, 15f * Pixel, 15.5f * Pixel, 1f * Pixel),
-                _ => (8f * Pixel, 14f * Pixel, 8f * Pixel, 2f * Pixel)
+                1 => (7.5f * Pixel, 15f * Pixel, 15, 0.5f * Pixel, 1f * Pixel, 1),
+                2 => (8.5f * Pixel, 15f * Pixel, 15, 15.5f * Pixel, 1f * Pixel, 1),
+                _ => (8f * Pixel, 14f * Pixel, 14, 8f * Pixel, 2f * Pixel, 2)
             };
 
             const float bodyDepth = 14f * Pixel;
@@ -140,7 +140,12 @@ public sealed class ChestMesher
                 ref indexCount,
                 extentZ,
                 sky: lightSky,
-                block: lightBlock);
+                block: lightBlock,
+                texU: 0,
+                texV: 19,
+                texDx: bodyWidthPx,
+                texDy: 10,
+                texDz: 14);
 
             // The lid and the latch swing about the back bottom edge of the lid, wherever the facing
             // has moved that edge to.
@@ -174,7 +179,12 @@ public sealed class ChestMesher
                 extentZ,
                 swing,
                 lightSky,
-                lightBlock);
+                lightBlock,
+                texU: 0,
+                texV: 0,
+                texDx: bodyWidthPx,
+                texDy: 5,
+                texDz: 14);
 
             // The latch sits on the front face; a quarter turn swaps its width and depth.
             var lockXz = Rotate(lockCentre, 15.5f * Pixel, cos, sin);
@@ -192,7 +202,12 @@ public sealed class ChestMesher
                 quarterTurn ? lockWidth : LockDepth,
                 swing,
                 lightSky,
-                lightBlock);
+                lightBlock,
+                texU: 0,
+                texV: 0,
+                texDx: lockWidthPx,
+                texDy: 4,
+                texDz: 1);
 
             LastEntityCount++;
         }
