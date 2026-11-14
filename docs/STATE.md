@@ -23,6 +23,9 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 | T-834 | OIT pass 削减 | 8 个 OIT pass **不可合并**（有真实依赖链）；剔除与云边界两个 pass 合并成功（剔除管线 `CompareFunction.Always` 且不写深度，深度附件无语义）。省 1 pass ≈0.023 ms，**低于跨运行噪声**。云分支未被离线帧覆盖，已如实记录 |
 | T-835 | 雾的等距面与距离 | 四个缺陷：① 雾距离取 `clip.w`（视空间平面）而非径向 → 低头看水面是**直线**、随视角转；② 雾色向天空收敛的单位错（`skyFogEnd` 应为方块数，`clampedLerp` 输入已除过 32）→ 雾像独立雾幕；③ 三个着色器的 `Camera` 结构体**漏声明 `skyViewProjection`**，`eye` 落到字节 64 读到天空矩阵 → 整片糊白（根因）；④ 起止距离硬编码 64/160 而非按视距推导。现为 `[172.8, 192]` 柱形壳，与原版 `fog_cylindrical_distance` 一致。大气壳未接，见 `known-gaps.md` |
 
+### 本会话完成（2026-11-14）
+T-844 离屏多余深度纹理已删；T-846 传送崩溃按原版整层种子修复（地面 4 连 tp + 高空 Y=400 均 0 异常）；T-847 缓冲抖动实测良性、已废弃（复用尝试 500→5 fps 已 revert）；T-159 删死代码 `ToLinear`；T-076 固化"必须多组轮转（≥3 组）"。
+
 ## 进行中
 
 **渲染帧时间归因（续）**：装置已就绪（`MC_FRAME_CPU` 分段计时、`MC_SKIP_OIT` / `MC_SKIP_CLOUDS` / `MC_SKIP_TRANSLUCENT` 三个 A/B 开关、`MC_AB_TOGGLE` 同进程交替、`MC_OIT_STAGES` 逐阶段截断、`tools/verify/measure-frame.ps1`）。
@@ -49,7 +52,7 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 
 ## 下一步具体动作
 
-**分支**：`main` @ `4176035`（`frame-pipeline` 已合并并推送；`main` 与远端同步）。
+**分支**：`main` @ `0377e34`，**本地领先 11 个提交、未推送**（只在明确下令时推送）。
 
 ### 验证手段的覆盖范围（T-843 后已更新）
 
@@ -136,7 +139,6 @@ src/Sharpcraft.Client/bin/Release/net10.0/Sharpcraft.Client.exe --version 26.3 -
 
 **当时的症状**：遍历只保住 419 个 section，纵向走满、横向仅 ±2。根因是 `Refresh` 只在相机跨段时重算，第一次算时世界只有几十个区块。
 ## 其它已登记待办
-
 | 任务 | 内容 | 状态 |
 | --- | --- | --- |
 | T-827 | 云改程序化生成 S4/S5（OIT 三阶段接新顶点、删旧顶点路径） | S1–S3 完成；S4/S5 待做，见 `specs/render/cloud-geometry.md` §10 |
@@ -145,5 +147,4 @@ src/Sharpcraft.Client/bin/Release/net10.0/Sharpcraft.Client.exe --version 26.3 -
 | — | `spriteRect` 16 B 移除（44 → 28 B 对齐原版） | 需先做图集 UV 烘焙与动画纹理 |
 | — | `ChunkGeometryStore` 页只增不减，工作集 24 秒内 1296 → 1354 MB | 属正常驻留，非泄漏，见下条 |
 | T-831 | 移动时的内存增长 | **已定位并修复**（见「已完成」）。方法留档：`dotnet-gcdump`/`dotnet-dump` 两份对比 + VS 探查器差异视图。**教训**：`dotnet-dump` 的 `-min` 过滤只能看大对象，会漏掉整片中小对象；字典类容器的「浅表大小」极小（46 KB）但保留大小可达 613 MB，判断必须看**保留大小**而非浅表 |
-
 最后更新：2026-11-14
