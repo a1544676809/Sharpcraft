@@ -39,7 +39,6 @@ public sealed class UiGeometry
     /// authored the way they should look, so they have to be decoded first or every colour comes out washed out: a
     /// pale blue of 192 arrives on screen as 225, which is exactly what the encoding does to it.
     /// </remarks>
-    private static readonly byte[] SrgbToLinear = BuildSrgbToLinear();
 
     /// <summary>Floats per vertex: x, y, u, v and the packed colour.</summary>
     public const int FloatsPerVertex = 5;
@@ -265,32 +264,6 @@ public sealed class UiGeometry
         | (argb & 0x0000FF00u)
         | ((argb & 0x000000FFu) << 16);
 
-    /// <summary>
-    /// Decodes a packed sRGB colour into the linear values the sRGB swap chain expects.
-    /// </summary>
-    /// <param name="colour">Packed colour, red in the low byte.</param>
-    public static uint ToLinear(uint colour)
-    {
-        var red = SrgbToLinear[colour & 0xFF];
-        var green = SrgbToLinear[(colour >> 8) & 0xFF];
-        var blue = SrgbToLinear[(colour >> 16) & 0xFF];
-        return red | ((uint)green << 8) | ((uint)blue << 16) | (colour & 0xFF000000u);
-    }
-
-    private static byte[] BuildSrgbToLinear()
-    {
-        var table = new byte[256];
-
-        for (var value = 0; value < table.Length; value++)
-        {
-            var channel = value / 255.0;
-
-            table[value] = (byte)Math.Round(
-                255.0 * (channel <= 0.04045 ? channel / 12.92 : Math.Pow((channel + 0.055) / 1.055, 2.4)));
-        }
-
-        return table;
-    }
 
     private void AppendQuad(
         float left,
