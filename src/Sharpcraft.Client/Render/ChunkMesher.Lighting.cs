@@ -52,6 +52,16 @@ public static partial class ChunkMesher
                 return false;
             }
 
+            // A merged rectangle samples one cell outside its own bounds, which at the top or bottom of
+            // the world leaves the vertical range: asking for light there used to index past the
+            // section array and abort the whole chunk mesh.
+            if (y < chunk.MinSectionY * 16 || y > (chunk.MaxSectionY * 16) + 15)
+            {
+                sky = 0;
+                block = 0;
+                return false;
+            }
+
             sky = chunk.GetSkyLight(x & 15, y, z & 15);
             block = chunk.GetBlockLight(x & 15, y, z & 15);
             return true;
