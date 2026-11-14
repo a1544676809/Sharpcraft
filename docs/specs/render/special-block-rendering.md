@@ -255,3 +255,48 @@ public byte GetBlockLight(int x, int y, int z)   // 同
 | 箱子一律按**关闭**状态绘制 | 看不到开合动画 | `Open` 字段已预留；需方块实体 NBT/动画数据源 |
 | 无朝向旋转 | 所有箱子朝向一致 | 需方块状态的 `facing`；当前 `BlockEntityRecord` 未携带 |
 | 未接入 `FrameCommand` 绘制路径 | 不影响现有渲染 | 阻塞于上述图集问题 |
+
+## 11. 绘制段侦察（2026-11-14）
+
+### 现状
+
+`FrameExecutor.Record` 的不透明场景 pass 中：
+
+- L368：`backend.SetBindGroup(pass, 0, bindGroup)` —— **整帧只有一个 group 0 绑定**（方块图集）
+- `DrawScenePass(WorldRenderPassKind kind)` 按 pass 类型分派（Sky / TerrainOpaque / …）
+
+地形顶点与当前占位方块实体几何**合并在同一组顶点数组**里，因此共用同一个绑定。
+
+### 结论：可以在同一 pass 内切换绑定
+
+现有结构支持在 opaque pass 内：
+
+```
+SetBindGroup(pass, 0, terrainBindGroup)
+  → 绘制地形范围
+SetBindGroup(pass, 0, chestBindGroup)      // 切到箱子专属图集
+  → 绘制方块实体范围
+SetBindGroup(pass, 0, terrainBindGroup)    // 还原（若后续还有地形绘制）
+```
+
+前提：箱子 bind group 与地形**共用同一 `BindGroupLayout`**（uniform + texture + sampler）。若布局一致，**可复用现有地形管线**，不需要新管线。
+
+### 改动清单（预估 3–4 个文件）
+
+| 文件 | 改动 |
+| --- | --- |
+| `FrameResources.cs` | `Options` 增加可选 `BlockEntityBindGroup` |
+| `FrameExecutor.cs` | opaque pass 末尾按范围切换绑定并绘制方块实体段 |
+| `FrameCommand.cs` | 建 `ChestAtlas` + bind group，独立索引范围（不再合并进地形数组） |
+| `FramePipelines.cs` | 仅当绑定布局不一致时才需要新增管线变体 |
+
+### 待确认（动手前最后一项）
+
+`ChestAtlas` 的 `TextureData` 要变成 GPU 纹理并建 bind group——需要确认现有的 `AtlasTextureSource`（`WindowCommand` 用它上传 `ItemAtlas`）能否直接复用，以及 `FrameRequest` 是否需要携带该纹理。
+
+### 风险
+
+`FrameExecutor` 是**窗口与离屏共用**的单一执行路径（原则 14 单轨要求）。改动它会影响两条路径，必须同时验证：
+
+- 沙盒帧 `9CA9E034…` / 34897 B 逐字节不变（无方块实体时不受影响）
+- 窗口冒烟帧率正常
