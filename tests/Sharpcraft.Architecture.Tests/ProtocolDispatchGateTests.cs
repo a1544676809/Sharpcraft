@@ -111,13 +111,29 @@ public sealed class ProtocolDispatchGateTests
     {
         var root = RepositoryLocator.Root;
         var playSession = File.ReadAllText(Path.Combine(root, "src", "Sharpcraft.Common", "Network", "PlaySession.cs"));
-        var interactive = File.ReadAllText(Path.Combine(root, "src", "Sharpcraft.Client", "Game", "InteractiveSession.cs"));
-        var live = File.ReadAllText(Path.Combine(root, "src", "Sharpcraft.Client", "Game", "LivePlaySession.cs"));
+        var interactive = ReadAllPartials(root, "src", "Sharpcraft.Client", "Game", "InteractiveSession*.cs");
+        var live = ReadAllPartials(root, "src", "Sharpcraft.Client", "Game", "LivePlaySession*.cs");
 
         return new SourceSnapshot(
             CollectReferences(playSession),
             CollectReferences(interactive),
             CollectReferences(live));
+    }
+
+    /// <summary>
+    /// Reads every partial of a class in one directory. The dispatch gate used to name one file, so
+    /// splitting a class into partials silently moved the packet references out of its sight.
+    /// </summary>
+    private static string ReadAllPartials(string root, params string[] parts)
+    {
+        var directory = root;
+        for (var index = 0; index < parts.Length - 1; index++)
+        {
+            directory = Path.Combine(directory, parts[index]);
+        }
+        var files = Directory.GetFiles(directory, parts[^1], SearchOption.TopDirectoryOnly);
+        Array.Sort(files, StringComparer.Ordinal);
+        return string.Join("\n", files.Select(File.ReadAllText));
     }
 
     /// <summary>Collects every <c>PlayClientbound.NAME</c> reference in one source file (comments included).</summary>
