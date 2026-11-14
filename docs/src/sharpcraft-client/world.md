@@ -53,6 +53,7 @@
 | Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
 | --- | --- | --- | --- | --- | --- | --- |
 | Sharpcraft.Client | Sharpcraft.Client.World.BlockEntityAnimations | Mirror | Full | net.minecraft.world.level.block.entity.ChestLidController | ref://mc-26.3-analysis/src/net/minecraft/world/level/block/entity/ChestLidController.java |  |
+| Sharpcraft.Client | Sharpcraft.Client.World.BlockEntityData | Mirror | Full | net.minecraft.world.level.block.entity.SignBlockEntity | ref://mc-26.3-analysis/src/net/minecraft/world/level/block/entity/SignBlockEntity.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.World.DragonFlightHistory | Mirror | Full | net.minecraft.world.entity.boss.enderdragon.DragonFlightHistory | ref://mc-26.3-analysis/src/net/minecraft/world/entity/boss/enderdragon/DragonFlightHistory.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.World.ElytraAnimationState | Mirror | Full | net.minecraft.world.entity.ElytraAnimationState | ref://mc-26.3-analysis/src/net/minecraft/world/entity/ElytraAnimationState.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.World.EntityAnimationFrame | Adapter | Partial | net.minecraft.client.renderer.entity.state.LivingEntityRenderState | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/state/LivingEntityRenderState.java | Snapshot fed to animation providers |
@@ -61,6 +62,8 @@
 | Sharpcraft.Client | Sharpcraft.Client.World.EntityRenderState | Mirror | Partial | net.minecraft.client.renderer.entity.state.EntityRenderState | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/state/EntityRenderState.java | auto-resolved by name; verify |
 | Sharpcraft.Client | Sharpcraft.Client.World.EntityTracker | Merged | Partial | net.minecraft.client.multiplayer.ClientLevel | ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/ClientLevel.java | Merges ClientLevel/Entity/SteppedInterpolationHandler responsibilities; position sync per T-639/T-640 |
 | Sharpcraft.Client | Sharpcraft.Client.World.Sample | Mirror | Full | net.minecraft.world.entity.boss.enderdragon.DragonFlightHistory.Sample | ref://mc-26.3-analysis/src/net/minecraft/world/entity/boss/enderdragon/DragonFlightHistory.java |  |
+| Sharpcraft.Client | Sharpcraft.Client.World.SignData | Mirror | Full | net.minecraft.world.level.block.entity.SignBlockEntity | ref://mc-26.3-analysis/src/net/minecraft/world/level/block/entity/SignBlockEntity.java |  |
+| Sharpcraft.Client | Sharpcraft.Client.World.SignTextData | Mirror | Full | net.minecraft.world.level.block.entity.SignText | ref://mc-26.3-analysis/src/net/minecraft/world/level/block/entity/SignText.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.World.SwingAnimationState | Merged | Partial | net.minecraft.world.entity.LivingEntity | ref://mc-26.3-analysis/src/net/minecraft/world/entity/LivingEntity.java | swingDuration/swingTime/swinging fields |
 | Sharpcraft.Client | Sharpcraft.Client.World.WalkAnimationState | Mirror | Partial | net.minecraft.world.entity.WalkAnimationState | ref://mc-26.3-analysis/src/net/minecraft/world/entity/WalkAnimationState.java | auto-resolved by name; verify |
 
