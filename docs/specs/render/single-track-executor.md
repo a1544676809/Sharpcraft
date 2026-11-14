@@ -186,6 +186,25 @@ celestial / UI 资源、recorder 与 `FrameOitTargets` 的实例构造仍在窗�
 另有一次 `Parent device is lost`（`wgpuSurfaceGetCurrentTexture`，未改动代码）由计算机中途休眠
 引起，项目所有者确认按环境忽略。
 
+### 2B-2a：`FrameResources` 升格为唯一装配点（2026-11-14）
+
+**已完成（纯搬移，离屏仍 1533 行未动）**：`FrameResources.cs` 新增 `Options` 装配入口，暴露
+`ExecutorResources`、`CreateFrame(FrameTarget)` 与 `Resize`；窗口 L398–L498 的
+recorder / buffer / staticWorld / oitTargets / uniform / cpu / skyRecorder 构造与 L535–L576 的
+`executorResources` 初始化器整体搬入。`WindowedRenderer.cs` **1254 → 1126**（−128），循环里的
+资源名只是 `FrameResources` 属性的别名，逐帧代码、渲染顺序、语义均未变；
+`FrameResources.Dispose()` 接管 OIT 目标、深度纹理与管线的销毁，沿用原顺序。
+2B-2b 的离屏届时只需构造同一个对象并调 `Record`，不再需要逐字段抄写参数对象。
+
+**范围**：atlas、buffer、bind group、celestial / UI 数据资源仍在窗口外壳创建，经 `Options` 注入；
+`FrameExecutor.cs` 的契约与 `FrameRequest` 均未改。
+
+**判据**：build 0 警告、2718 测试全绿、ClassMap / Docs / 两 verify 全绿；Release 冒烟
+`cull: chunks=637 culled=449 … drawn=183`、`blit bind group rebuilt 1 times`、EXIT=0、无异常，
+稳态中位数 **1.991 ms ≤ 2.2**（一次重试；首次 2.316 ms 属机器负载：`swap 0.500`、
+`submit 0.782`、`scene-terrain 0.233` 同倍变慢且均为本次未触碰阶段）。沙盒帧哈希仍为
+`9CA9E03410A2E745…` / 34897 B，与基线**逐字节相同**（离屏未动）。
+
 ## 6. 与其它任务的关系
 
 - **T-837 切片 3（录制线程）依赖本项**：线程化改的是 `WindowedRenderer`，而该路径缺乏像素级判据。先收敛，才有一条能被像素验证的主路径。

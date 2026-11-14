@@ -221,59 +221,6 @@ public static class WindowedRenderer
         using var itemAtlasGpu = new EntitySkinTextureGpu();
         if (itemAtlasSource?.Atlas is { } itemData)
             itemAtlasGpu.Upload(backend, bindGroupLayout, itemData, cameraBuffer, fogBuffer, lightmapBuffer, atlasSamplerHandle, spriteRects);
-        // The frame pipelines are seam handles now, so they are released by hand where the using declarations used to
-        // stand (see the cleanup at the end of this method).
-        // Every pipeline description now comes from FramePipelines through FrameResources, so the offscreen shell can
-        // build the same set in 2B-2 without keeping a second copy (T-843 2B-1).
-        var frameResources = new FrameResources(
-            backend,
-            request,
-            format,
-            pipelineLayout,
-            bindGroupLayout,
-            samplers,
-            cameraBuffer,
-            supportsFloat32Blendable,
-            oitLowPrecision,
-            cloudOitEnabled,
-            cloudsPerFrame);
-        var pipeline = frameResources.TerrainPipeline;
-        var cutoutPipeline = frameResources.CutoutPipeline;
-        var entityPipeline = frameResources.EntityPipeline;
-        var entityCutoutPipeline = frameResources.EntityCutoutPipeline;
-        var itemCutoutPipeline = frameResources.ItemCutoutPipeline;
-        var entityElytraPipeline = frameResources.EntityElytraPipeline;
-        var entityEmissivePipeline = frameResources.EntityEmissivePipeline;
-        var entityGlintPipeline = frameResources.EntityGlintPipeline;
-        var skyPipeline = frameResources.SkyPipeline;
-        var uiPipeline = frameResources.UiPipeline;
-        var uiTextPipeline = frameResources.UiTextPipeline;
-        var uiSpritePipeline = frameResources.UiSpritePipeline;
-        var cloudColour = frameResources.CloudColour;
-        var cloudOit = frameResources.CloudOit;
-        var oitTargetFormat = frameResources.OitTargetFormat;
-        var oitColorFormat = frameResources.OitColorFormat;
-        var refTransmittanceLayout = frameResources.RefTransmittanceLayout;
-        var refAccumulateLayout = frameResources.RefAccumulateLayout;
-        var refCullLayout = frameResources.RefCullLayout;
-        var refCompositeLayout = frameResources.RefCompositeLayout;
-        var refTransmittancePipelineLayout = frameResources.RefTransmittancePipelineLayout;
-        var refAccumulatePipelineLayout = frameResources.RefAccumulatePipelineLayout;
-        var refCullPipelineLayout = frameResources.RefCullPipelineLayout;
-        var refCompositePipelineLayout = frameResources.RefCompositePipelineLayout;
-        var cloudDepthBoundsPipeline = frameResources.CloudDepthBoundsPipeline;
-        var cloudTransmittancePipeline = frameResources.CloudTransmittancePipeline;
-        var cloudAccumulatePipeline = frameResources.CloudAccumulatePipeline;
-        var refDepthBoundsPipeline = frameResources.RefDepthBoundsPipeline;
-        var refTransmittancePipeline = frameResources.RefTransmittancePipeline;
-        var refAccumulatePipeline = frameResources.RefAccumulatePipeline;
-        var refCullPipeline = frameResources.RefCullPipeline;
-        var refCompositePipeline = frameResources.RefCompositePipeline;
-        var cloudCompositePipeline = frameResources.CloudCompositePipeline;
-        var blitDepthLayout = frameResources.BlitDepthLayout;
-        var blitDepthPipelineLayout = frameResources.BlitDepthPipelineLayout;
-        var blitDepthPipeline = frameResources.BlitDepthPipeline;
-        var blitDepthSamplerHandle = frameResources.BlitDepthSampler;
         // Celestial bodies and stars: the same backdrop draws the offscreen path uses, so the window and the exported
         // frame agree (docs/modules/clouds.md 6).
         using var celestial = request.CelestialDraws is { Length: > 0 } && request.CelestialTextures is { Length: > 0 }
@@ -391,85 +338,61 @@ public static class WindowedRenderer
         var arena = geometryUpdates is null ? null : new ChunkGeometryStore(backend, device);
         var arenaCutout = geometryUpdates is null ? null : new ChunkGeometryStore(backend, device);
         var arenaTranslucent = geometryUpdates is null ? null : new ChunkGeometryStore(backend, device);
-
-        // Geometry that is rebuilt every frame, such as placeholder entity boxes. It gets its own small pair of
-        // buffers so a per frame rewrite never touches the world arena.
-
-        var deferredRelease = new DeferredBufferRelease(backend.Destroy);
-        var uiBuffers = new GrowableGeometryBuffers(backend, deferredRelease, MinimumBufferBytes);
-        var dynamicBuffers = new GrowableGeometryBuffers(backend, deferredRelease, MinimumBufferBytes);
-        var uiRanges = new List<UiGeometry.Range>();
+        // FrameResources is the single assembly point for the pipelines, buffers, recorders, OIT targets and the
+        // executor's parameter object (T-843 2B-2a). The loop keeps local aliases so the per-frame code is unchanged.
         var uiScale = 1f;
-
-        // Entity layers (docs/decisions/0021): persistent buffers grow with the layer plan instead of a fixed
-        // cap, so an explicit per-layer definition can add a new pass without truncation.
-        var layerPool = new EntityLayerPool(backend, deferredRelease, MinimumBufferBytes);
         var entityLayerDrawn = 0;
-        layerPool.EnsureCapacity(4);
-
-        // Geometry lives in persistent buffers that are rewritten in place, so a rebuild costs one upload
-        // instead of two allocations plus a GPU sync. They only grow, and the grown-out buffers are released
-        // when the window closes (a rebuild that needs more room is rare)
-        // (docs/specs/network/play-movement.md 7.23).
-        var retiredVertex = new List<BufferHandle>();
-        var retiredIndex = new List<BufferHandle>();
-
-
-        var staticWorld = new StaticWorldBuffers(backend, currentRequest, MinimumBufferBytes, retiredVertex, retiredIndex);
-
-
-
-
-        var geometryUploader = new FrameGeometryUploader(
-            backend, dynamicBuffers, layerPool, arena, arenaCutout, arenaTranslucent);
-
-        var terrainRecorder = new TerrainPassRecorder(
-            backend, pipeline, cutoutPipeline, bindGroup, arena, arenaCutout);
-        var entityRecorder = new EntityPassRecorder(
-            backend,
-            entityPipeline,
-            cutoutPipeline,
-            entityCutoutPipeline,
-            itemCutoutPipeline,
-            entityElytraPipeline,
-            entityEmissivePipeline,
-            entityGlintPipeline,
-            entitySkin,
-            itemAtlasGpu,
-            layerPool,
-            dynamicBuffers,
-            bindGroup,
-            staticWorld);
-
-        var depthTexture = FrameOitTargets.CreateDepthTexture(backend, frameWidth, frameHeight);
-        // The reference OIT passes take depth as a seam descriptor, so the view comes from the seam as well and is
-        // refreshed with the texture it belongs to on resize.
-        var depthViewHandle = backend.CreateTextureView(depthTexture);
-
-        // The size-dependent OIT targets and the cloud depth blit bind group now live in FrameOitTargets, owned by the
-        // frame executor. The window only supplies the depth view each frame (FrameTarget.Depth), so a resize rebuilds
-        // the blit bind group through that view instead of through a closure over window locals.
-        var itemOit = new ItemOitSet();
-        var oitTargets = new FrameOitTargets(
-            backend,
-            oitTargetFormat,
-            oitColorFormat,
-            refTransmittanceLayout,
-            refAccumulateLayout,
-            refCullLayout,
-            refCompositeLayout,
-            blitDepthLayout,
-            blitDepthSamplerHandle,
-            itemOit,
-            cloudOit);
-
-        // Two copies each, alternating per frame: one is written while the other is still being read (T-837).
-        var uniforms = new FrameUniformStaging();
-
-        var uniformWriter = new FrameUniformWriter(
-            backend, cameraBuffer, lightmapBuffer, fogBuffer, uniforms);
-
-        var colour = request.ClearColour;
+        var frameResources = new FrameResources(new FrameResources.Options
+        {
+            Backend = backend,
+            Request = request,
+            Format = format,
+            PipelineLayout = pipelineLayout,
+            BindGroupLayout = bindGroupLayout,
+            Samplers = samplers,
+            CameraBuffer = cameraBuffer,
+            FogBuffer = fogBuffer,
+            LightmapBuffer = lightmapBuffer,
+            BindGroup = bindGroup,
+            EntitySkin = entitySkin,
+            ItemAtlasGpu = itemAtlasGpu,
+            SpriteBindGroups = spriteBindGroups,
+            WorldText = worldText,
+            Celestial = celestial,
+            CelestialColour = celestialColour,
+            SkyDiscColour = skyDiscColour,
+            SkyDiscVanilla = skyDiscVanillaResources,
+            Arena = arena,
+            ArenaCutout = arenaCutout,
+            ArenaTranslucent = arenaTranslucent,
+            Width = frameWidth,
+            Height = frameHeight,
+            SupportsFloat32Blendable = supportsFloat32Blendable,
+            OitLowPrecision = oitLowPrecision,
+            CloudOitEnabled = cloudOitEnabled,
+            CloudsPerFrame = cloudsPerFrame,
+            ClearColourPerFrame = clearColourPerFrame,
+            LightmapPerFrame = lightmapPerFrame,
+            FogPerFrame = fogPerFrame,
+            FogRangePerFrame = fogRangePerFrame,
+            WorldTextPerFrame = worldTextPerFrame,
+            VisibleSections = visibleSections,
+            CelestialPerFrame = celestialPerFrame,
+            SkyDiscPerFrame = skyDiscPerFrame
+        });
+        var deferredRelease = frameResources.DeferredRelease;
+        var uiBuffers = frameResources.UiBuffers;
+        var dynamicBuffers = frameResources.DynamicBuffers;
+        var uiRanges = frameResources.UiRanges;
+        var layerPool = frameResources.LayerPool;
+        var retiredVertex = frameResources.RetiredVertex;
+        var retiredIndex = frameResources.RetiredIndex;
+        var staticWorld = frameResources.StaticWorld;
+        var geometryUploader = frameResources.GeometryUploader;
+        var depthViewHandle = frameResources.DepthView;
+        var oitTargets = frameResources.OitTargets;
+        var uniforms = frameResources.Uniforms;
+        var cloudColour = frameResources.CloudColour;
         var presented = 0;
         var performanceSummary = false;
         var cullStatistics = false;
@@ -489,13 +412,9 @@ public static class WindowedRenderer
         var skipClouds = false;
         var skipTranslucent = false;
         // Cheap enough to accumulate every frame (a dozen counter reads), printed only when the host asks for it.
-        var cpuTimings = new FrameCpuTimings();
+        var cpuTimings = frameResources.Cpu;
 
-        var skyRecorder = new SkyPassRecorder(
-            backend, skyPipeline, celestial, celestialColour, skyDiscColour, skyDiscVanillaResources,
-            celestialPerFrame, skyDiscPerFrame, cpuTimings);
         var itemOitFrames = 0;
-        var frustumPlanes = new System.Numerics.Vector4[6];
         var gapSamples = new double[1 << 17];
         var gapCount = 0;
 
@@ -532,48 +451,7 @@ public static class WindowedRenderer
         var appliedEntitySkinVersion = entitySkinSource?.Version ?? 0;
         var appliedItemAtlasVersion = itemAtlasSource?.Version ?? 0;
 
-        var executorResources = new FrameExecutor.Resources
-        {
-            Backend = backend,
-            Request = request,
-            ClearColour = colour,
-            ClearColourPerFrame = clearColourPerFrame,
-            LightmapPerFrame = lightmapPerFrame,
-            FogPerFrame = fogPerFrame,
-            FogRangePerFrame = fogRangePerFrame,
-            WorldTextPerFrame = worldTextPerFrame,
-            CloudsPerFrame = cloudsPerFrame,
-            VisibleSections = visibleSections,
-            Cpu = cpuTimings,
-            TerrainPipeline = pipeline,
-            UiPipeline = uiPipeline,
-            UiTextPipeline = uiTextPipeline,
-            UiSpritePipeline = uiSpritePipeline,
-            BlitDepthPipeline = blitDepthPipeline,
-            RefDepthBoundsPipeline = refDepthBoundsPipeline,
-            RefCullPipeline = refCullPipeline,
-            RefTransmittancePipeline = refTransmittancePipeline,
-            RefAccumulatePipeline = refAccumulatePipeline,
-            RefCompositePipeline = refCompositePipeline,
-            CloudDepthBoundsPipeline = cloudDepthBoundsPipeline,
-            CloudTransmittancePipeline = cloudTransmittancePipeline,
-            CloudAccumulatePipeline = cloudAccumulatePipeline,
-            TerrainRecorder = terrainRecorder,
-            EntityRecorder = entityRecorder,
-            SkyRecorder = skyRecorder,
-            UniformWriter = uniformWriter,
-            UiBuffers = uiBuffers,
-            LayerPool = layerPool,
-            SpriteBindGroups = spriteBindGroups,
-            UiRanges = uiRanges,
-            FrustumPlanes = frustumPlanes,
-            WorldText = worldText,
-            CloudColour = cloudColour,
-            CloudOit = cloudOit,
-            ItemOit = itemOit,
-            ItemAtlas = itemAtlasGpu,
-            OitTargets = oitTargets
-        };
+        var executorResources = frameResources.ExecutorResources;
 
         while (true)
         {
@@ -787,13 +665,10 @@ public static class WindowedRenderer
                 // uses the current index count, and a vertex buffer from an older mesh would make those
                 // indices point past it, drawing stray triangles that look like overlapping texture.
                 surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight, presentMode, WGPUCompositeAlphaMode.Auto);
-                // Executor-owned targets are rebuilt for the new size; the blit bind group is dropped first, before the
-                // depth view it samples is replaced below.
-                oitTargets.Resize(frameWidth, frameHeight);
-                backend.Destroy(depthViewHandle);
-                backend.Destroy(depthTexture);
-                depthTexture = FrameOitTargets.CreateDepthTexture(backend, frameWidth, frameHeight);
-                depthViewHandle = backend.CreateTextureView(depthTexture);
+                // FrameResources rebuilds the OIT targets and the depth texture for the new size; the blit bind group
+                // is dropped first, before the depth view it samples is replaced.
+                frameResources.Resize(frameWidth, frameHeight);
+                depthViewHandle = frameResources.DepthView;
 
                 // The geometry is world-space and the camera travels in a uniform, so a resize needs no
                 // re-upload at all.
@@ -1104,7 +979,7 @@ public static class WindowedRenderer
             }
         }
 
-        if (retiredVertex.Count > 0 || retiredIndex.Count > 0)
+        if (frameResources.RetiredVertex.Count > 0 || frameResources.RetiredIndex.Count > 0)
         {
             // Retired buffers may still be referenced by the last submissions; wait before freeing.
             device.Queue.OnSubmittedWorkDoneBlocking(instance);
@@ -1165,7 +1040,7 @@ public static class WindowedRenderer
             + (arenaTranslucent?.DrawCallsTotal ?? 0);
         Console.WriteLine($"window: draws/frame {(totalDrawCalls / (double)Math.Max(presented, 1)):F0} (solid/cutout/translucent stores)");
         Console.WriteLine($"window: item oit set ran on {itemOitFrames}/{presented} frames (skipped when no translucent items)");
-        Console.WriteLine($"window: cloud depth blit bind group rebuilt {oitTargets.BlitDepthRebuilds} times (once per depth target)");
+        Console.WriteLine($"window: cloud depth blit bind group rebuilt {frameResources.OitTargets.BlitDepthRebuilds} times (once per depth target)");
         var oitCounts = ReferenceOitPasses.LastCounts;
         Console.WriteLine(
             $"window: oit commands per frame bounds={DescribeCounts(oitCounts.Bounds)} "
@@ -1175,7 +1050,7 @@ public static class WindowedRenderer
             + $"cloudDraws={oitCounts.CloudDraws}");
         Console.WriteLine(
             $"window: celestial colour tint uploads written {celestialColour?.TintWrites ?? 0}, "
-            + $"skipped {celestialColour?.TintSkips ?? 0}/{cloudColour?.TintWrites ?? 0}+{cloudColour?.TintSkips ?? 0} (colour/cloud)");
+            + $"skipped {celestialColour?.TintSkips ?? 0}/{frameResources.CloudColour?.TintWrites ?? 0}+{frameResources.CloudColour?.TintSkips ?? 0} (colour/cloud)");
         Console.WriteLine(
             $"window: celestial camera updates applied {celestial?.AppliedCameraUpdates ?? 0}/"
             + $"{celestialColour?.AppliedCameraUpdates ?? 0}/{skyDiscColour?.AppliedCameraUpdates ?? 0}, skipped "
@@ -1204,21 +1079,18 @@ public static class WindowedRenderer
             cpuTimings.WriteSummary();
         }
 
-            dynamicBuffers.Destroy();
-        for (var layerIndex = 0; layerIndex < layerPool.Count; layerIndex++)
+            frameResources.DynamicBuffers.Destroy();
+        for (var layerIndex = 0; layerIndex < frameResources.LayerPool.Count; layerIndex++)
         {
-            deferredRelease.Release(layerPool.Vertex(layerIndex));
-            deferredRelease.Release(layerPool.Index(layerIndex));
+            frameResources.DeferredRelease.Release(frameResources.LayerPool.Vertex(layerIndex));
+            frameResources.DeferredRelease.Release(frameResources.LayerPool.Index(layerIndex));
         }
 
-            uiBuffers.Destroy();
+            frameResources.UiBuffers.Destroy();
         backend.Destroy(uiTransformBuffer);
 
-            staticWorld.Destroy();
-        // Executor-owned OIT targets and the blit bind group go first: the blit group samples the depth view below.
-        oitTargets.Dispose();
-        backend.Destroy(depthViewHandle);
-        backend.Destroy(depthTexture);
+            frameResources.StaticWorld.Destroy();
+        // OIT targets, the blit bind group, the depth texture and every pipeline/layout are owned by FrameResources.
 
 
         // FrameResources owns the pipelines and layouts; the shared world layout and bind group are owned here.
