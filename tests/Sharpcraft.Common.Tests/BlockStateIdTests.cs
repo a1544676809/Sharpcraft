@@ -161,4 +161,79 @@ public sealed class BlockStateIdTests
         var values = text[(separator + 1)..].Split(',');
         return new BlockStateProperty(name, values);
     }
+
+    /// <summary>Values at offset zero are the first value of every property.</summary>
+    [Fact]
+    public void ValuesAtZeroTakesTheFirstValueOfEachProperty()
+    {
+        var definition = new BlockStateDefinition(
+            Identifier.Parse("minecraft:test"),
+            [
+                new BlockStateProperty("a", ["0", "1", "2"]),
+                new BlockStateProperty("b", ["x", "y"])
+            ]);
+
+        Assert.Equal(["0", "x"], definition.ValuesAt(0));
+    }
+
+    /// <summary>The last offset takes the last value of every property.</summary>
+    [Fact]
+    public void ValuesAtTheLastOffsetTakesTheLastValueOfEachProperty()
+    {
+        var definition = new BlockStateDefinition(
+            Identifier.Parse("minecraft:test"),
+            [
+                new BlockStateProperty("a", ["0", "1", "2"]),
+                new BlockStateProperty("b", ["x", "y"])
+            ]);
+
+        Assert.Equal(["2", "y"], definition.ValuesAt(definition.StateCount - 1));
+    }
+
+    /// <summary>Decoding then encoding must return the same offset for every state.</summary>
+    [Fact]
+    public void ValuesAtIsTheInverseOfIndexOf()
+    {
+        var definition = new BlockStateDefinition(
+            Identifier.Parse("minecraft:chest"),
+            [
+                new BlockStateProperty("facing", ["north", "south", "west", "east"]),
+                new BlockStateProperty("type", ["single", "left", "right"]),
+                new BlockStateProperty("waterlogged", ["true", "false"])
+            ]);
+
+        Assert.Equal(24, definition.StateCount);
+        for (var offset = 0; offset < definition.StateCount; offset++)
+        {
+            Assert.Equal(offset, definition.IndexOf(definition.ValuesAt(offset)));
+        }
+    }
+
+    /// <summary>A chest state six offsets in has advanced one step along the slowest property.</summary>
+    [Fact]
+    public void TheSlowestPropertyAdvancesOnceEveryFullTurnOfTheRest()
+    {
+        var definition = new BlockStateDefinition(
+            Identifier.Parse("minecraft:chest"),
+            [
+                new BlockStateProperty("facing", ["north", "south", "west", "east"]),
+                new BlockStateProperty("type", ["single", "left", "right"]),
+                new BlockStateProperty("waterlogged", ["true", "false"])
+            ]);
+
+        Assert.Equal(["south", "single", "true"], definition.ValuesAt(6));
+        Assert.Equal(["east", "right", "false"], definition.ValuesAt(23));
+    }
+
+    /// <summary>An offset outside the block is rejected rather than wrapped.</summary>
+    [Fact]
+    public void ValuesAtRejectsOffsetsOutsideTheBlock()
+    {
+        var definition = new BlockStateDefinition(
+            Identifier.Parse("minecraft:test"),
+            [new BlockStateProperty("a", ["0", "1"])]);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => definition.ValuesAt(2));
+        Assert.Throws<ArgumentOutOfRangeException>(() => definition.ValuesAt(-1));
+    }
 }
