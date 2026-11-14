@@ -459,3 +459,25 @@ Hydrogen 建议在拍板前把"剩余 CPU"拆成三段独立计时：
 | `t_record` | `FrameExecutor.Record` 全程（不含 `Finish`） | `scene-*` 各阶段之和 |
 
 判据：若 `t_prep_cpu` 在目标视距下只有 0.15–0.20 ms，则双线程不值得；若达 0.5 ms+（高视距或实体多），才值得建 `FramePacket` 双缓冲 + 延迟销毁 + 1 帧延迟。
+
+#### 15.2.4 Hydrogen 读码后的修正（2026-11-14，基于 `ac916ae` 真实代码）
+
+**关键架构事实**：`SectionOcclusionTraversal`、视锥裁剪、`MultiDrawIndexedIndirect` 的 `_args` 切片，**目前都在 `FrameExecutor.Record`（提交段）内部**，不在 prep 段。
+
+这解释了为什么 prep 看起来很轻：`prep-pump` + `prep-ui` + `prep-entities` 只有 ~0.13 ms（VD=4），因为**重活（裁剪与参数切片）挂在 Record 里**。
+
+**因此双线程的正确切法不是"把 prep 拆出去"，而是：**
+
+1. 把 `Record` 内部的 **CPU 视锥/遮挡裁剪 + `arena.CollectDraws(...)` 的 `_args` 收集**前移到准备线程（Thread A）。
+2. Thread A 只产出 `FramePacket[frameIndex & 1]`：UI/实体字节数组、区块网格上传/卸载队列、本帧可见的 `DrawIndexedIndirectArgs` 切片。
+3. Thread B 独占 `IRenderBackend`：`WriteBuffer` → `Record`（退化为纯 `SetPipeline` / `MultiDrawIndexedIndirect`）→ `Finish` → `Submit` → `Swap` → 延迟 `Dispose`。
+
+**决策判据（修正）**：先埋点量出 **`t_prep_cpu + t_cull`** 之和。只有当它在目标视距下稳定 **> 0.45–0.50 ms** 时，双线程流水线才划算；否则收益 ≤15%，不值得引入 `FramePacket` 双缓冲 + 1 帧延迟。
+
+**ItemOitSet 核实**：前 3 个 pass 存在逐级 `textureLoad` 依赖，不可合并；只有第 4 个 composite 可与 `uiPass` 合并，且只在屏幕上有半透明手持/掉落物时才有收益（~0.023 ms）。
+
+**`CopyTextureToTexture` 接缝签名（修正）**：需带 `CommandEncoderHandle`；且 `FrameExecutor` 的 blit pass 目前拿的是 `TextureViewHandle`，需改为传底层 `TextureHandle`。
+
+```csharp
+void CopyTextureToTexture(CommandEncoderHandle encoder, TextureHandle source, TextureHandle destination, uint width, uint height);
+```
