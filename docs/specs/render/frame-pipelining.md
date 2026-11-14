@@ -335,9 +335,20 @@ b26acc2d0088decf97255c2b3b5af285e152cf2a5a353  (× 两次运行 × 6 帧全部�
 
 `sub-finish` 三点拟合极好：**`≈ 0.278 ms + 1.25 µs × drawn`**。
 
-**推论**：`Finish()` 的固定成本约 **0.278 ms**（3 个 pass，约 0.093 ms/pass），与绘制数量无关；每 draw 约 1.25 µs。视距 4 时固定部分占 `sub-finish` 的 89%。
+**推论**：`Finish()` 的固定成本约 **0.278 ms**，与绘制数量无关；每 draw 约 1.25 µs。视距 4 时固定部分占 `sub-finish` 的 89%。
 
-**这推翻了旧的"每 pass 约 0.023 ms"记录**——那是不同条件下测的，实际高约 4 倍。
+**⚠️ 更正（2026-11-14，初版结论有误）**：初版写"3 个 pass，约 0.093 ms/pass，推翻旧的 0.023 ms/pass 记录"——**这是错的**。当时只数了 `FrameExecutor` 的 3 个 `BeginRenderPass`，漏掉了其余文件：
+
+| 文件 | `BeginRenderPass` 数 |
+| --- | --- |
+| `FrameExecutor.cs` | 3 |
+| `ReferenceOitPasses.cs` | **7** |
+| `ItemOitSet.cs` | **4** |
+| `FramePresentation.cs` | 1 |
+
+实际每帧约 **8–15 个 pass**（视有无半透明/物品透明而定）。0.278 / ~12 ≈ **0.023 ms/pass**——**旧的 0.023 ms/pass 记录是对的**，初版把它当"错 4 倍"是我数错了 pass。
+
+**因此"pass 结构不可合并"的结论也作废**：减少 pass 数才是固定成本的主要杠杆，每省 1 个 pass ≈ 0.023 ms。
 
 ### 15.1 三个 pass 与可合并性
 
@@ -359,4 +370,11 @@ pass 3 与 pass 1 附件一致，之所以分开是因为 **pass 2 必须夹在�
 2. ❌ **语义上必须有独立云深度目标**。`FrameExecutor.cs` L561–569 的注释说明：地形半透明（玻璃/水）要用不透明主深度做深度测试，而**云 OIT 的 depth-bounds 会写深度**；若共用同一目标，云的写入会破坏地形半透明的深度判断（会遮挡本应可见的半透明地形）。因此 `oit.CloudDepth` 不是"拷贝的便利"，而是**必需的隔离**。
 3. ❌ 云 pass 需要"初始值等于不透明深度、且可写"的深度目标——这恰好只能由一次拷贝得到。去掉 blit 就得改成纯采样读深度，但那样 depth-bounds 的内部面剔除（依赖写深度）会失效，等于改变与参考一致的云 OIT 算法。
 
-**结论：pass 2 无法消除，pass 3 因此无法并入 pass 1；0.278 ms 的固定提交成本是结构性的，本项目内没有低风险的下调路径。** 若要下调，前提是改变云的深度隔离方案（属于渲染算法改动，需单独立项并重新做画面等效性验证）。
+**关于 `FrameExecutor` 内这 3 个 pass 的结论**：pass 2 无法消除，pass 3 因此无法并入 pass 1。**但这不意味着固定成本不可降**——大部分 pass 在 `ReferenceOitPasses`（7 个）与 `ItemOitSet`（4 个）里，合并空间在那里。
+
+**外部评审（Gemini Hydrogen，2026-11-14）指出的两个可合并点**，待验证：
+
+1. **OIT 1b（cull）与 1c（cloud bounds）可合并**：`fs_cull` 只用 `textureLoad(depthBoundsTexture)`，**既不读也不写深度附件**；绑定 `p.Depth` 只是管线创建时顺手声明的 `DepthStencilState`。改为绑定 `p.CloudDepth`，同一 pass 内先画全屏三角形写 BoundsCulled，再切管线写云边界，数学与深度结果应逐比特一致。
+2. **OIT Composite 与 uiPass 可合并**：两者目标均为 `(view, depthView)` 且均为 Load/Store，之间无采样依赖；把 composite 的全屏三角形作为 uiPass 的第一条指令录制即可。
+
+每合并一个 pass ≈ **0.023 ms**；两个都成则 ≈ **0.046 ms**（视距 12 时约 2%）。验证判据：沙盒帧逐字节不变（`MC_FRAME_LOCAL=1` + `MC_FRAME_HASHES=6`，基线 `b26acc2d…`）。
