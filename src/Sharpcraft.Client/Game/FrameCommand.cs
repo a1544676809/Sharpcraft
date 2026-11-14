@@ -763,7 +763,8 @@ internal static class FrameCommand
         (new Identifier("minecraft", "stone"), 1),
         (new Identifier("minecraft", "dirt"), 1),
         (new Identifier("minecraft", "cobblestone"), 1),
-        (new Identifier("minecraft", "torch"), 1)
+        (new Identifier("minecraft", "torch"), 1),
+        (new Identifier("minecraft", "flower_pot"), 1)
     ]);
     /// <summary>Builds the frame request (mesh plus camera) for a world.</summary>
     /// <summary>
@@ -2213,9 +2214,10 @@ internal static class FrameCommand
         // would exercise is used here as well.
         // Local verification of the element model path: the demo world carries a torch, whose model
         // is a thin post rather than a cube, so the same resolver the server path uses runs here.
-        if (GameOptions.Get("MC_FRAME_MODELS") == "1" && world.GetChunk(0, 0) is { } modelChunk)
+        if (GameOptions.Get("MC_FRAME_MODELS") is "1" or "2" && world.GetChunk(0, 0) is { } modelChunk)
         {
-            modelChunk.GetSection(10 >> 4)?.Set(8, 10 & 15, 8, 4);
+            var modelState = GameOptions.Get("MC_FRAME_MODELS") == "2" ? 5 : 4;
+            modelChunk.GetSection(10 >> 4)?.Set(8, 10 & 15, 8, modelState);
         }
 
         var prepared = PrepareSprites(DemoLayout());
