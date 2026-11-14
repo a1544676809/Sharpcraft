@@ -967,6 +967,8 @@ internal static class FrameCommand
                             blockZ,
                             record.TypeId,
                             Facing: FacingOf(world, blockX, record.Y, blockZ),
+                            ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
+                            ChestMaterial: ChestMaterialOf(world, blockX, record.Y, blockZ),
                             Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
                 }
             }
@@ -2287,6 +2289,8 @@ internal static class FrameCommand
                         blockZ,
                         record.TypeId,
                         Facing: FacingOf(world, blockX, record.Y, blockZ),
+                        ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
+                        ChestMaterial: ChestMaterialOf(world, blockX, record.Y, blockZ),
                         Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
             }
             }
