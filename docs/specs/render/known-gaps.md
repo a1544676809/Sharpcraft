@@ -54,6 +54,3 @@ updated: 2026-11-01
 | 视距 24 | 12 与 32 已验证，24 未单独测 | — | 合并到下一次压测 |
 | 名字牌高度与实体模型 | 当前玩家/生物仍是占位盒体，名字牌锚点只能按占位高度计算，无法与完整实体模型高度逐像素对齐 | 名字牌整体位置可能偏高/偏低 | **延后**到完整实体模型与碰撞高度切片，届时用原版实体 `nameTagAttachment` 重算锚点 |
 
-
-
-| **遮挡遍历起点：相机在世界高度之外** | 临时把起点 section 的 Y 钳位到 `[minSectionY, maxSectionY]`，只种子一个节点。**原版不是这样**：`SectionOcclusionGraph.initializeQueueForFullUpdate` 在 `getRenderSection(cameraSection) == null` 时，会取 `minSectionY`（相机在下方）或 `maxSectionY`（在上方），然后**把该 Y 层整个 XZ 范围内的所有 section 都种子进队列**，每个节点预置"从上/从下进入"的方向位以及相对相机方向的 EAST/WEST/SOUTH/NORTH 位，最后按到相机的距离排序入队 | 相机在世界高度之外时（高空飞行、传送瞬间、虚空），可见集合与原版不同：原版能立刻铺满整层并从边界向内漫水，当前实现只从单点向外扩，且缺少方向位会改变 `CanSee` 判定 | **待补**：按原版实现整层种子 + 方向位 + 距离排序 | `SectionOcclusionTraversal.cs`；`SectionOcclusionState.cs` |

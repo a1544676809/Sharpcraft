@@ -110,18 +110,79 @@ public static class SectionOcclusionTraversal
         var head = 0;
         var tail = 0;
 
-        // The camera can sit outside the world's vertical range - high altitude, or the moment a
-        // teleport lands - and Index would then compute a slot outside the scratch buffers. Only the
-        // start's Y is clamped: the XZ centre stays the camera's, so looking down from above still
-        // floods from the nearest real layer instead of culling everything away.
-        var startCoord = new SectionCoord(
-            cameraSection.X,
-            Math.Clamp(cameraSection.Y, minimumY, maximumY),
-            cameraSection.Z);
-        var startSlot = Index(startCoord, cameraSection, minimumY, radius);
-        visited[startSlot] = Reported;
-        queue[tail++] = new TraversalNode(startCoord, NoEntryFace, 0);
-        output[outputCount++] = startCoord;
+        // A camera outside the world's vertical range cannot be the traversal start: Index would compute
+        // a slot outside the scratch buffers. The reference does not clamp to a single node either - it
+        // seeds the whole horizontal layer at the nearest world edge, each seed already carrying the
+        // direction it was entered from, because from above or below that entire layer is visible at once.
+        if (cameraSection.Y < minimumY || cameraSection.Y > maximumY)
+        {
+            var belowWorld = cameraSection.Y < minimumY;
+            var layerY = belowWorld ? minimumY : maximumY;
+            var verticalFace = belowWorld ? (byte)3 : (byte)2;
+
+            // Filled straight into the queue and ordered in place: this runs on the hot path and must not allocate.
+            var firstSeed = tail;
+            for (var offsetX = -radius; offsetX <= radius; offsetX++)
+            {
+                for (var offsetZ = -radius; offsetZ <= radius; offsetZ++)
+                {
+                    var seed = new SectionCoord(cameraSection.X + offsetX, layerY, cameraSection.Z + offsetZ);
+                    if (!isLoaded(seed))
+                    {
+                        continue;
+                    }
+
+                    var directions = (byte)(1 << verticalFace);
+                    if (offsetX > 0)
+                    {
+                        directions |= 1 << 1;
+                    }
+                    else if (offsetX < 0)
+                    {
+                        directions |= 1 << 0;
+                    }
+
+                    if (offsetZ > 0)
+                    {
+                        directions |= 1 << 5;
+                    }
+                    else if (offsetZ < 0)
+                    {
+                        directions |= 1 << 4;
+                    }
+
+                    queue[tail++] = new TraversalNode(seed, NoEntryFace, directions);
+                }
+            }
+
+            // Nearest first, so the flood keeps the reference order.
+            for (var index = firstSeed + 1; index < tail; index++)
+            {
+                var item = queue[index];
+                var scan = index - 1;
+                while (scan >= firstSeed && SquaredDistance(queue[scan].Coord, cameraSection) > SquaredDistance(item.Coord, cameraSection))
+                {
+                    queue[scan + 1] = queue[scan];
+                    scan--;
+                }
+
+                queue[scan + 1] = item;
+            }
+
+            for (var index = firstSeed; index < tail; index++)
+            {
+                var seeded = queue[index].Coord;
+                visited[Index(seeded, cameraSection, minimumY, radius)] = Reported;
+                output[outputCount++] = seeded;
+            }
+        }
+        else
+        {
+            var startSlot = Index(cameraSection, cameraSection, minimumY, radius);
+            visited[startSlot] = Reported;
+            queue[tail++] = new TraversalNode(cameraSection, NoEntryFace, 0);
+            output[outputCount++] = cameraSection;
+        }
 
         while (head < tail)
         {
@@ -193,6 +254,15 @@ public static class SectionOcclusionTraversal
     /// <param name="radius">Reach along X and Z.</param>
     /// <param name="minimumY">Lowest section Y.</param>
     /// <param name="maximumY">Highest section Y.</param>
+    /// <summary>Squared distance between two sections, for ordering the seeds by how near they are.</summary>
+    private static long SquaredDistance(SectionCoord left, SectionCoord right)
+    {
+        long x = left.X - right.X;
+        long y = left.Y - right.Y;
+        long z = left.Z - right.Z;
+        return (x * x) + (y * y) + (z * z);
+    }
+
     public static int Volume(int radius, int minimumY, int maximumY)
     {
         var span = (2 * radius) + 1;
