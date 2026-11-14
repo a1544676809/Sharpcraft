@@ -22,6 +22,7 @@
 | [`entity-render-layers.md`](entity-render-layers.md) | 合并 part 的简化实现与原版独立 RenderLayer 的差异、影响和修复契约 | 已评审 | 2026-11-02 |
 | [`entity-special-layers.md`](entity-special-layers.md) | 不属于普通 base/overlay cube 的实体渲染层清单，以及后续补充顺序 | 已评审 | 2026-11-02 |
 | [`entity-variants.md`](entity-variants.md) | 26.3 变体的三条来源、实体数据访问器索引表、注册表驱动解析、几何变体差异与首批范围 | 分析已定稿（依据 26.3 源码） | 2026-11-03 |
+| [`equivalence-harness-v2.md`](equivalence-harness-v2.md) | 原版 26.3（OpenGL）与 Sharpcraft（wgpu / Reversed-Z / 小波 OIT）在光栅化亚像素、雾效 LUT 与 Gamma 路径上存在合法的底层差异，整屏逐像素相等在跨引擎对拍中必然产生大量误报。 | 未标注 | - |
 | [`lighting-color-space.md`](lighting-color-space.md) | 26.3 block 着色器全程 sRGB 域直接相乘；据此修正我们误加的 gamma 解码/编码 | 草稿 | 2026-11-01 |
 | [`model-geometry-invariant-policy.md`](model-geometry-invariant-policy.md) | 为什么先做 UV/面积全量扫描，而把 Z-fighting 与装备 clearance 留到诊断稳定之后 | 已评审（排期策略） | 2026-11-07 |
 | [`next-actions-hard-constraints.md`](next-actions-hard-constraints.md) | 根据外部硬约束蓝图、全量审查稿与当前树/装备层进度整理的下一步执行清单 | 已评审（排期文档） | 2026-11-07 |
