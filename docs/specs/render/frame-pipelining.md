@@ -420,3 +420,42 @@ pass 3 与 pass 1 附件一致，之所以分开是因为 **pass 2 必须夹在�
 **前提与代价**：① `frame-gap ≈ 0.001 ms` 只证明 CPU 未等 GPU，不阻止双线程流水线；② 增加 1 帧输入延迟（600+ FPS 下约 1.4 ms）；③ **线程 A 必须零 wgpu 调用**（避免撞 wgpu-core 的 Device 锁），只产出双缓冲的 C# 数组与待销毁句柄列表；所有 `WriteBuffer`/录制/`Finish`/`Submit`/`Swap`/延迟 `Dispose` 归线程 B。
 
 **状态**：仅为测算，未立项。若采纳，需按 §13 的设计（`FrameUniformStaging` 双槽、`DeferredBufferRelease`）扩展为"准备/提交"两段，而不是 3B 的"只换录制线程"。
+
+#### 15.2.1 关键风险：`Queue.WriteBuffer` 的 PendingWrites 会跨帧串台（Hydrogen 指出）
+
+`Queue::write_buffer` 并不立即执行拷贝，而是先写入队列内部的 **PendingWrites** 暂存区；真正刷入 GPU 队列发生在下一次 `Queue::submit`。因此：
+
+> 若准备线程为第 **N+1** 帧调用 `WriteBuffer`，而提交线程此时正准备为第 **N** 帧 `Submit`，则第 N 帧的 Submit 会把刚写入的 **N+1 帧数据**一起刷进去 —— 第 N 帧会画成第 N+1 帧的 UI/实体位置，甚至因 `uiRanges` 长度不匹配而越界。
+
+**结论：`WriteBuffer` 与 `Queue.Submit` 不能在没有同步屏障的情况下跨帧并发调用。**
+
+这直接否定了"准备线程可以自己调 `WriteBuffer`"的简化做法。可行的形态只有一种：**准备线程零 wgpu 调用**，只产出双缓冲的 C# 数组与待销毁句柄列表；**所有** `CreateBuffer` / `WriteBuffer` / 录制 / `Finish` / `Submit` / `Swap` / 延迟 `Dispose` 全部归提交线程。
+
+#### 15.2.2 `CopyTextureToTexture` 对 `Depth32Float` 的规则（Hydrogen）
+
+合法，但有硬性约束：
+
+1. 源带 `CopySrc`、目标带 `CopyDst`（本项目两者均已具备）。
+2. 格式、维度、`SampleCount` 必须完全一致。
+3. **深度纹理必须整张拷贝**：`origin=(0,0,0)`、`mipLevel=0`、`copySize=(width,height,1)`，不能只拷子矩形。
+4. 必须录在**同一个命令编码器**上，紧接主不透明 pass 之后、云 OIT pass 之前。
+
+建议接缝签名（与 `CopyTextureToBuffer` 同级，接收当前编码器）：
+
+```csharp
+void CopyTextureToTexture(TextureHandle source, TextureHandle destination, uint width, uint height);
+```
+
+Hydrogen 亦认为：为省 1 个 pass（~0.023 ms）扩接口**性价比偏低，应排在所有优化的最后**。
+
+#### 15.2.3 决策前提：先量三段耗时
+
+Hydrogen 建议在拍板前把"剩余 CPU"拆成三段独立计时：
+
+| 计时 | 内容 | 现有对应 |
+| --- | --- | --- |
+| `t_prep_cpu` | 纯 C#：泵消息、遮挡遍历、视锥裁剪、UI/实体顶点生成 | `prep-pump` + `prep-ui` + `prep-entities`（部分含上传） |
+| `t_upload` | `FrameGeometryUploader.WriteBuffer`、`StaticWorldBuffers` 建/传 | 目前混在 `prep-entities` 内，**需拆出** |
+| `t_record` | `FrameExecutor.Record` 全程（不含 `Finish`） | `scene-*` 各阶段之和 |
+
+判据：若 `t_prep_cpu` 在目标视距下只有 0.15–0.20 ms，则双线程不值得；若达 0.5 ms+（高视距或实体多），才值得建 `FramePacket` 双缓冲 + 延迟销毁 + 1 帧延迟。
