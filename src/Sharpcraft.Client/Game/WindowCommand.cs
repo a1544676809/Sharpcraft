@@ -92,7 +92,7 @@ internal static class WindowCommand
         }
 
 
-        (SpriteAtlas Atlas, BlockSpriteMap Map)? prepared = FrameCommand.PrepareSprites(
+        (SpriteAtlas Atlas, BlockSpriteMap Map, Sharpcraft.Client.Render.BlockModelSet? Models)? prepared = FrameCommand.PrepareSprites(
             GameOptions.Get("MC_FRAME_LOCAL") is { Length: > 0 }
                 ? FrameCommand.DemoLayout()
                 : VanillaBlockRegistry.Layout,
@@ -209,7 +209,7 @@ internal static class WindowCommand
                 ? FrameCommand.PrepareMap(candidate, CurrentLayout(), manager)
                 : prepared?.Map;
 
-            prepared = (candidate, nextMap!);
+            prepared = (candidate, nextMap!, prepared?.Models);
             workerPool.SetSprites(nextMap);
 
             if (layoutChanged)

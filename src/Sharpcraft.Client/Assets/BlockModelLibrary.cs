@@ -78,13 +78,36 @@ public sealed class BlockModelLibrary
         return resolved;
     }
 
+    /// <summary>
+    /// Whether a model is nothing but one full cube with all six faces culled. The reference defines
+    /// <c>block/cube</c> that way, so almost every block has element geometry on paper; treating it as
+    /// an element model would route the whole world around the face merge for no visual gain.
+    /// </summary>
+    private static bool IsPlainCube(IReadOnlyList<ModelElement> elements)
+    {
+        if (elements.Count != 1)
+        {
+            return false;
+        }
+
+        var box = elements[0].Box;
+        if (box.FromX != 0f || box.FromY != 0f || box.FromZ != 0f ||
+            box.ToX != 16f || box.ToY != 16f || box.ToZ != 16f)
+        {
+            return false;
+        }
+
+        return elements[0].Faces.Count == 6 &&
+               elements[0].Faces.Values.All(face => face.CullFace is not null);
+    }
+
     private TexturedQuad[]? Build(Identifier blockId)
     {
         // The element reader walks the parent chain itself; the texture lookup needs the block so it
         // can apply the same first variant rule the rest of the pipeline uses.
         var modelId = _modelLookup(blockId);
         var elements = modelId is { } model ? _elements.Resolve(model) : null;
-        if (elements is null || elements.Count == 0)
+        if (elements is null || elements.Count == 0 || IsPlainCube(elements))
         {
             return null;
         }

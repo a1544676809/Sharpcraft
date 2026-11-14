@@ -612,7 +612,7 @@ internal static class FrameCommand
         };
     }
 
-    internal static (SpriteAtlas Atlas, BlockSpriteMap Map)? PrepareSprites(
+    internal static (SpriteAtlas Atlas, BlockSpriteMap Map, Sharpcraft.Client.Render.BlockModelSet? Models)? PrepareSprites(
         BlockStateLayout? layout,
         Sharpcraft.Assets.ResourceManager? resources = null)
     {
@@ -686,7 +686,13 @@ internal static class FrameCommand
             $"sprites: {atlas.Width}x{atlas.Height} atlas, {atlas.Sprites.Count} sprites, " +
             $"layout {(map.HasLayout ? "present" : "missing")}, {timer.Elapsed.TotalMilliseconds:F0} ms");
 
-        return (atlas, map);
+        var modelLibrary = new Sharpcraft.Client.Assets.BlockModelLibrary(
+            models.ResolveModel,
+            Sharpcraft.Client.Assets.BlockModelElements.FromStack(stack),
+            models.ResolveTexture);
+        var modelSet = Sharpcraft.Client.Render.BlockModelSet.Build(modelLibrary, layout!);
+
+        return (atlas, map, modelSet);
     }
 
     /// <summary>Finds the newest asset pack the launcher produced.</summary>
@@ -756,9 +762,9 @@ internal static class FrameCommand
         (new Identifier("minecraft", "air"), 1),
         (new Identifier("minecraft", "stone"), 1),
         (new Identifier("minecraft", "dirt"), 1),
-        (new Identifier("minecraft", "cobblestone"), 1)
+        (new Identifier("minecraft", "cobblestone"), 1),
+        (new Identifier("minecraft", "torch"), 1)
     ]);
-
     /// <summary>Builds the frame request (mesh plus camera) for a world.</summary>
     /// <summary>
     /// Builds a deterministic scene for the translucent test: stone with a layer of water on top.
@@ -2205,6 +2211,13 @@ internal static class FrameCommand
 
         // The demo world's states are laid out explicitly, so the same sprite path a real server
         // would exercise is used here as well.
+        // Local verification of the element model path: the demo world carries a torch, whose model
+        // is a thin post rather than a cube, so the same resolver the server path uses runs here.
+        if (GameOptions.Get("MC_FRAME_MODELS") == "1" && world.GetChunk(0, 0) is { } modelChunk)
+        {
+            modelChunk.GetSection(10 >> 4)?.Set(8, 10 & 15, 8, 4);
+        }
+
         var prepared = PrepareSprites(DemoLayout());
 
         if (GameOptions.Get("MC_DEBUG_SPRITES") is "1")
@@ -2215,7 +2228,7 @@ internal static class FrameCommand
             }
         }
         var mesh = Sharpcraft.Client.Render.ChunkMeshCache.MeshWorldOnce(
-            world, prepared?.Map, GameOptions.Get("MC_MESH_NOMERGE") != "1");
+            world, prepared?.Map, GameOptions.Get("MC_MESH_NOMERGE") != "1", prepared?.Models);
         Console.WriteLine($"local demo: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
         var bounds = (Min: new Vector3(0, -16, 0), Max: new Vector3(16, 16, 16));

@@ -67,13 +67,14 @@ public static class ChunkMesher
         int maxBlocks = 2_000_000,
         BlockSpriteMap? sprites = null,
         bool merge = true,
-        bool ambientOcclusion = true)
+        bool ambientOcclusion = true,
+        BlockModelSet? models = null)
     {
         ArgumentNullException.ThrowIfNull(world);
 
         // Merging cuts the quad count by an order of magnitude, so a smaller guess is enough.
         using var buffer = new MeshBuffer(Math.Min(maxBlocks, world.LoadedChunkCount * 512));
-        var blocks = Mesh(world, buffer, airState, maxBlocks, sprites, merge, ambientOcclusion);
+        var blocks = Mesh(world, buffer, airState, maxBlocks, sprites, merge, ambientOcclusion, models);
         return buffer.ToMeshData(blocks, world.MinSectionY);
     }
 
@@ -89,7 +90,8 @@ public static class ChunkMesher
         int maxBlocks = 2_000_000,
         BlockSpriteMap? sprites = null,
         bool merge = true,
-        bool ambientOcclusion = true)
+        bool ambientOcclusion = true,
+        BlockModelSet? models = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(buffer);
@@ -104,7 +106,7 @@ public static class ChunkMesher
                 break;
             }
 
-            blocks += MeshChunk(world, chunk, airState, buffer, maxBlocks - blocks, sprites, merge: merge, ambientOcclusion: ambientOcclusion);
+            blocks += MeshChunk(world, chunk, airState, buffer, maxBlocks - blocks, sprites, merge: merge, ambientOcclusion: ambientOcclusion, models: models);
         }
 
         return blocks;
@@ -215,8 +217,8 @@ public static class ChunkMesher
             cull: context.Cull,
             visuals: context.Visuals,
             merge: context.MergeFaces,
-            ambientOcclusion: context.AmbientOcclusion
-            );
+            ambientOcclusion: context.AmbientOcclusion,
+            models: context.Models);
 
     /// <summary>Merges the faces of one direction inside one section into as few quads as possible.</summary>
     private static void MergeSectionFaces(
