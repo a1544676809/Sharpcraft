@@ -74,13 +74,13 @@ MC_FRAME_LOCAL=1 + --frame  →  RenderLocal → BuildDemoWorld
 
 ### 已完成（本轮）
 
-T-837 录制区抽取（9 组件，`WindowedRenderer.cs` 2400 → 2065）；T-838/T-839 两个潜在缺陷修复并补回归测试；T-840 删除死 `LightmapParameters` 管线；T-841 大气雾壳（含量化验证）。测试 2718 全绿。
+T-837 录制区抽取（9 组件，`WindowedRenderer.cs` 2400 → 2065）；**3A 完成（本片）**：新增 `MC_FRAME_HASHES=N`（宿主解析进 `FrameDiagnostics.FrameHashes`）+ `FrameHashTrace.cs`，每帧回读颜色目标打印 sha256；钉住配置（`MC_FRAME_LOCAL`/`MC_FORCE_DAYTIME=6000`/`MC_FORCE_PARTIAL=0.5`/`MC_AB_TOGGLE=5`/`MC_SKIP_SKY=1`，见 `frame-pipelining.md` §12）两次运行 20 帧序列**逐一相同**、`digest 2eb9f706…`、`distinct=2`，翻转 `MC_SKIP_SKY` 哈希即变，判据可用；连服务器配置 `distinct=20`、两次 digest 不同（世界状态漂移），已记录不作判据。T-838/T-839 两个潜在缺陷修复并补回归测试；T-840 删除死 `LightmapParameters` 管线；T-841 大气雾壳（含量化验证）。测试 2718 全绿。
 **T-843 完成（本轮）**：切片 1（`FrameExecutor.Record` + `FrameTarget` 参数化，窗口 1975→1663）→ 2A（4 委托删除，OIT 入 `FrameOitTargets.cs`，窗口→1469）→ 2B-1（管线/layout 集中入 `FrameResources.cs`、10 工厂入 `FramePipelines.cs` 264 行，窗口→1254）→ 2B-2a（`FrameResources` 升格唯一装配点：`Options`/`ExecutorResources`/`CreateFrame`/`Resize`，窗口→**1126**）→ **2B-2b（本片）**：`OffscreenRenderer` 删 L577–L732 录制块与 5 个重复管线工厂，改为构造 `FrameResources`→`FrameExecutor.Record`→回读，`OffscreenRenderer.cs` **1533→1346**（−187）；`FrameExecutor.cs`/`FrameRequest` 契约未改；`Repro_001` 断言随代码位置调整、用例保留。全量静态门全绿（build 0 警告、**2718 测试**、ClassMap/Docs/两 verify）；**沙盒帧（仅 `{"MC_FRAME_LOCAL":"1"}`、640×360）`sha256 9CA9E03410A2E745…`/34897 B，与基线逐字节相同**（`identical=True`），未做任何补偿；`GlintTime==0` 的时间戳 padding 只被 `fs_entity_glint` 消费、实测不改像素。服务器 `--frame`（带半透明）`check-frame-baseline.ps1` 跑通（14892 B、EXIT=0、无 Validation），哈希变为 OIT 合成（原单次 blend）+ DrawRanges 合并 + cutout 换 pass，因服务器帧不确定**无法逐项分离**，已在规格 §5 如实记录。Release 冒烟稳态中位数 **1.63 ms ≤2.2**、`cull: chunks=637 culled=449 drawn=183`、EXIT=0、无异常。**架构发现（规格 §5）**：离屏地形走 `EntityPassRecorder` 的 static-world fallback 而非 `TerrainPassRecorder`，两侧不同构。**剩余小项**：`FrameResources` 仍为离屏多建一份未使用的深度纹理（不影响像素）；后续可清。离线帧哈希对窗口改动不敏感，勿当判据。
 
 ### 下一步候选
 
 1. **雨雾**。规格与全部常量已写入 `docs/specs/render/lighting.md` §11.1（`rainFogMultiplier` 逐刻插值 + `environmentalStart/End` 计算）。实现需改 `fogPerFrame` 回调契约（当前只回颜色，需加环境范围），约 5 文件。**验证钩子已就绪**：`MC_FORCE_RAIN=1` + 沙盒对拍。
-2. **T-837 切片 3（真正换线程）**。上限约 −27%（1.92 → 1.39 ms）。规格在 `docs/specs/render/frame-pipelining.md`，双缓冲与延迟释放已就位。
+2. **T-837 切片 3B（真正换线程）**：3A 判据已建（`frame-pipelining.md` §12），3B 待做；上限约 −27%（1.92 → 1.39 ms），双缓冲与延迟释放已就位。必须用 §12 钉住配置验哈希序列逐一相同，再做同进程 A/B 看 `pipeline-wait`；若无实质收益按 §9 回滚。上限注意：`MC_FRAME_LOCAL` 判据不覆盖 arena 参数页双缓冲。
 3. 雾基色的 `FOG_COLOR` 混合。**注意**：`skyColorMixFactor` 在视距 12 时为 0，故该项在当前默认配置下**不产生差异**，仅在低视距时才有意义——优先级低。
 4. 其余：T-827 云 S4/S5、T-781 Ctrl+F2 全景、T-764 剩余 special renderer、夜间亮度定标。
 

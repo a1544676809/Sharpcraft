@@ -201,3 +201,53 @@ GPU 缓冲池按 L443 的循环持久增长，每帧只重置计数（`entityLay
 3. ~~`scene`（183 行）~~ **已完成**：四个 case 全部抽成 `SkyPassRecorder` / `TerrainPassRecorder` / `EntityPassRecorder`
 
 每步判据相同：**离线 `--frame` 哈希不变 + 全量测试通过**。
+
+## 12. 切片 3A：多帧哈希判据（2026-11-14，已建立）
+
+**为什么需要新判据**：切片 3 改的是 `WindowedRenderer` 的**循环 / 线程编排**，而
+`OffscreenRenderer` 只调一次 `Record`、没有帧循环。沙盒帧（即使 2B-2b 后共用执行器）
+验证的是"录制输出不变"，验证不了"线程编排正确"。切片 3 的判据必须来自窗口路径的
+多帧输出。
+
+**实现（只加诊断，不改渲染语义）**：新增 `MC_FRAME_HASHES=N`，由宿主经
+`GameOptions.ForFrame()` 解析进 `FrameDiagnostics.FrameHashes`（游戏程序集零环境变量读取）。
+`FrameHashTrace.cs` 每帧渲完后用现成的 `FrameCapture.Capture` 回读颜色目标，打印
+`frame-hash: #i <sha256>`，收尾打印 `frame-hashes: count/distinct/digest`。单文件 +
+窗口循环三处调用，可整体删除；N 帧后停止，稳态零开销（启用时每帧一次 readback +
+一次额外 submit，故不可同时用于帧时间测量）。
+
+**判据命令（写死，勿变选项）**：`--quickPlayMultiplayer 127.0.0.1:25565 --width 1400
+--height 754 --debugOptionsFile <pinned.json>`，JSON：
+
+```json
+{"MC_FRAME_LOCAL":"1","MC_FRAME_HASHES":"20","MC_PRESENT_MODE":"immediate",
+ "MC_VIEW_DISTANCE":"12","MC_FORCE_DAYTIME":"6000","MC_FORCE_PARTIAL":"0.5",
+ "MC_WINDOW_SECONDS":"8","MC_AB_TOGGLE":"5","MC_SKIP_SKY":"1"}
+```
+
+`MC_FRAME_LOCAL` 给静止世界与固定机位，`MC_FORCE_DAYTIME/PARTIAL` 钉住昼夜与云，
+`MC_AB_TOGGLE=5 + MC_SKIP_SKY=1` 让画面按 5 帧一组在"有天空 / 无天空"间**确定性变化**，
+避免"20 帧全同"这种对帧间状态不敏感的弱序列。
+
+**两次运行实测（同一二进制、同一配置）**：
+
+```
+frame-hashes: count=20 distinct=2 digest=2eb9f70612dae232ea8ca3af53ea4a1833f48ce49d8198dbbe8f7618db9713b4
+序列（前 8 位）: 478e065e×5, 3f71957c×5, 478e065e×5, 3f71957c×5
+```
+
+两次**逐一相同**、digest 相同。**敏感性**：单独加 `MC_SKIP_SKY=1`（不设 AB）时 #0 由
+`478e065e…` 变 `3f71957c…`，证明哈希对录制内容敏感、不是空白帧的常数。
+
+**对照（为什么必须钉住配置）**：同一诊断放在连服务器配置（`MC_FRAME_HASHES=20`、
+`MC_WINDOW_SECONDS=12`、`MC_FORCE_DAYTIME=1`、`MC_CULL_STATS=1`、`MC_FRAME_CPU=1`）时，
+两次运行 `distinct=20`、digest 分别 `9a4d26d5…` / `161e92ad…`、#0 也不同。不稳定来源：
+区块流式到达顺序与上传量（260.9 vs 245.7 MB）、云/粒子随实时时钟、GUI 动画、服务器
+tick、`GlintTime==0` 时的 Stopwatch 时间戳 padding。世界状态跨运行不同，故不能当判据。
+
+**已知局限（3B 前须知）**：`MC_FRAME_LOCAL` 的窗口路径 `arena 0 chunks`，走
+`EntityPassRecorder` 的 static-world fallback，因此判据**不覆盖分页 arena 参数页的双缓冲**
+（§4 第一项）；它覆盖的是"同一执行器录出的帧是否逐像素一致"以及帧间 A/B 状态切换。
+3B 除跑本判据外仍须用连服务器冒烟确认不崩、统计对齐，但**不得**用后者做哈希相等判据。
+
+**状态**：3A 单独提交完毕，判据可用；3B 待做。

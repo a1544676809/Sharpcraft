@@ -45,6 +45,15 @@ public sealed record FrameDiagnostics
     /// <summary>Print how many chunks the frustum test skipped, once a second.</summary>
     public bool CullStatistics { get; init; }
 
+    /// <summary>Print the SHA-256 of the colour target for each of the first N presented frames (T-837 3A).</summary>
+    /// <remarks>
+    /// Exists so a change to who records the frame (for example moving recording to another thread) can be shown
+    /// pixel-identical frame by frame, instead of relying on a single still image or on frame timings. Zero disables
+    /// it and costs nothing. On, it costs one readback per traced frame, so a run with it enabled must not be used
+    /// for frame timings. The host parses <c>MC_FRAME_HASHES</c>; the renderer never reads the environment.
+    /// </remarks>
+    public int FrameHashes { get; init; }
+
     /// <summary>Compare consecutive frames pixel by pixel and report how far apart they are at exit.</summary>
     /// <remarks>
     /// Exists because a change to what the renderer records can be argued equal but rarely shown equal: the offscreen
