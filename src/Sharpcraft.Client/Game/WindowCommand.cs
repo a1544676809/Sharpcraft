@@ -211,6 +211,7 @@ internal static class WindowCommand
 
             prepared = (candidate, nextMap!, prepared?.Models);
             workerPool.SetSprites(nextMap);
+            workerPool.SetModels(prepared?.Models);
 
             if (layoutChanged)
             {

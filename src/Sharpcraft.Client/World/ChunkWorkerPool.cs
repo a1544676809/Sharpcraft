@@ -54,6 +54,7 @@ public sealed class ChunkWorkerPool : IDisposable
     private readonly int _maxQueuedMeshes;
 
     private volatile BlockSpriteMap? _sprites;
+    private volatile Sharpcraft.Client.Render.BlockModelSet? _models;
 
     // Answers about a state (opaque, leaves, same block) computed once per atlas instead of once per face cell.
     private volatile Sharpcraft.Client.Render.StateCullTable? _cullTable;
@@ -166,6 +167,10 @@ public sealed class ChunkWorkerPool : IDisposable
         _cullTable = null;
         _visualCache = null;
     }
+
+    /// <summary>Sets the element model lookup the workers mesh with, or null for cube geometry only.</summary>
+    /// <param name="models">Lookup built for the current atlas and layout.</param>
+    public void SetModels(Sharpcraft.Client.Render.BlockModelSet? models) => _models = models;
 
     /// <summary>Queues a chunk packet body for decoding.</summary>
     /// <param name="body">Packet body, including the packet id; the pool takes ownership.</param>
@@ -431,7 +436,8 @@ public sealed class ChunkWorkerPool : IDisposable
             MergeFaces: _mergeFaces,
             AmbientOcclusion: _ambientOcclusion,
             AirState: 0,
-            MaxBlocks: 2_000_000);
+            MaxBlocks: 2_000_000,
+            Models: _models);
 
         ChunkMesher.MeshChunk(_world, chunk, buffer, cutoutScratch, translucentScratch, in context);
         var mesh = buffer.ToMeshData(0, chunk.MinSectionY);
