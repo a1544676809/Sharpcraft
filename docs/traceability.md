@@ -56,7 +56,7 @@ AGENTS.md 原则 12：**每个小任务在这里有且仅有一行**，串联"�
 | T-082 | 关闭/最小化窗口时不再以零尺寸配置 swapchain | `docs/specs/network/play-movement.md` §7.26 | 实测：关窗与定时退出均干净退出（退出码 0，无 panic）| `Framework/Rendering/WindowedRenderer`、`Platform/WindowHost` | 已完成 |
 | T-081 | 按 view distance 预分配竞技场容量，消掉倍增尖峰 | `docs/specs/network/play-movement.md` §7.27 | `ArenaSizingTests`（5 项：无提示时倍增、按投影预分配、只预分配一次、样本不足、超大地形不被截断）+ 实测重建 7→2、上传 1278→588 MB | `Framework/Rendering/ArenaSizing`、`ChunkGeometryArena` | 已完成 |
 | T-079 | 区块定位由线性扫描改为字典查找 | `docs/specs/network/play-movement.md` §7.24 | `ChunkWorkerPoolTests.MeshingRunsOffTheCallingThreadAndComesBack`（按打包键定位）| `Client/World/ChunkWorkerPool` | 已完成 |
-| T-076 | 用常驻缓冲 + `Queue.WriteBuffer` 更新几何，避免每次重建分配 | `docs/specs/network/play-movement.md` §7.23 | 待补 | 进行中 | 进行中 |
+| T-076 | 用常驻缓冲 + `Queue.WriteBuffer` 更新几何，避免每次重建分配。**实测约束（T-847，2026-11-14）**：单组缓冲复用会与在飞帧写读冲突——实测帧率从 ~500 fps 崩至 **~5 fps**；必须用**多组轮转**（≥3 组，对应 `FramesInFlight=2`），写入永不指向可能仍在被读取的那一组 | `docs/specs/network/play-movement.md` §7.23 | 待补 | 进行中 | 进行中 |
 | T-073 | 疾跑锁存与冲刺跳跃加成 | `docs/specs/network/play-movement.md` §7.21 | `SprintBehaviourTests`（4 项：锁存、松前进取消、潜行取消、连跳均速 >0.26） | `Common/Entities/LivingEntity`、`PlayerEntity` | 已完成 |
 | T-071 | 按 section 细分重网格化并降低单区块耗时 | `docs/specs/network/play-movement.md` §7.19 | 待补 | 进行中 | 进行中 |
 | T-067 | 冲刺与潜行的等效（含潜行碰撞盒与眼高） | `docs/specs/network/play-movement.md` §7.16 | `VerticalMovementTests`（潜行 0.0648/tick + 蹲伏盒 0.6×1.5/眼高 1.27、冲刺 0.2807/tick）+ 官方实测潜行 1.296、冲刺 5.623 | `Common/Entities/PlayerEntity`、`EntityDimensions`、`Client/Input` | 已完成 |
