@@ -352,3 +352,28 @@ chestAtlasGpu.Upload(backend, bindGroupLayout, chestAtlas.Texture, cameraBuffer,
 ### 建议
 
 第 1 步是关键决策点（方块实体几何放 arena 还是独立缓冲），建议单独评审后再动手。前两步可并行评审，第 3 步依赖前两步。
+
+## 13. 原版的几何归属（2026-11-14 确认）
+
+### 事实
+
+| 环节 | 原版做法 | 证据 |
+| --- | --- | --- |
+| 地形 | `SectionRenderDispatcher` → 每个 section 独立编译的网格 | — |
+| **方块实体** | **`submitBlockEntities` → `SubmitNodeCollector`** | `LevelRenderer.java` L326–330、L1008–1021 |
+| 收集 | `SubmitNodeCollector` 按 **render type** 收集绘制提交，稍后分批成 GPU 缓冲 | `SubmitNodeCollector.java`、`SubmitNodeStorage` |
+| 坐标 | `poseStack.translate(blockPos - cameraPos)`——**相机相对坐标** | `LevelRenderer.java` L1017 |
+
+### 结论
+
+**原版把方块实体从地形几何中完全剥离**：走 `SubmitNodeCollector` 的独立提交路径，按 render type 分批，每批自带图集与管线。
+
+因此我前面列的方案 A（放进 `ChunkGeometryStore` 的 arena）**不符合原版**——arena 是区块地形的编译产物，方块实体从不进入它。
+
+**正确做法 = 方案 B 的强化版**：方块实体有自己的提交与缓冲，独立于地形 arena。
+
+### 对三步拆分的影响
+
+第 1 步改为：**为方块实体建立独立的顶点/索引提交**（对应原版的 `SubmitNodeCollector` 分批），而不是复用 `ChunkGeometryStore`。
+
+顺带记录一条原版细节：**方块实体变换用相机相对坐标**（`blockPos - cameraPos`），不是世界绝对坐标。我们的 `BlockEntityRenderState` 目前用世界坐标——接入时应改为相机相对，避免远处浮点精度抖动。
