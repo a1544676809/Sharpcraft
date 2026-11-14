@@ -70,3 +70,53 @@
 1. 完成 §2 的导出与筛清单（这是本项的第一件实事）
 2. 按清单修正 §3 的分组
 3. 每组写独立子任务，各自带验证判据
+
+## 7. 子任务切分（22 个具体渲染器）
+
+27 个 `*Renderer.java` 中，`BlockEntityRenderer`、`AbstractEndPortalRenderer`、`AbstractSignRenderer`、`BlockEntityWithBoundingBoxRenderer` 是基类，`TestInstanceRenderer` 仅测试用——**实际要实现的 22 个**，按可见度分三档：
+
+### 第一档（高频可见，建议先做）
+
+| # | 渲染器 | 对应方块 |
+| --- | --- | --- |
+| 1 | `ChestRenderer` | 箱子、陷阱箱、末影箱 |
+| 2 | `StandingSignRenderer` + `HangingSignRenderer` | 告示牌、悬挂告示牌 |
+| 3 | `ShulkerBoxRenderer` | 潜影盒（16 色） |
+| 4 | `SkullBlockRenderer` | 头颅（骷髅/凋灵/玩家/生物头） |
+| 5 | `BannerRenderer` | 旗帜（16 色 + 图案层） |
+| 6 | `DecoratedPotRenderer` | 饰纹陶罐 |
+
+### 第二档（功能性方块）
+
+| # | 渲染器 | 对应方块 |
+| --- | --- | --- |
+| 7 | `BeaconRenderer` | 信标光柱 |
+| 8 | `BellRenderer` | 钟 |
+| 9 | `EnchantTableRenderer` | 附魔台（书页动画） |
+| 10 | `LecternRenderer` | 讲台（书） |
+| 11 | `CampfireRenderer` | 营火（食物 + 火焰） |
+| 12 | `PistonHeadRenderer` | 活塞头 |
+| 13 | `SpawnerRenderer` | 刷怪笼（旋转实体） |
+| 14 | `TrialSpawnerRenderer` | 试炼刷怪笼 |
+| 15 | `VaultRenderer` | 宝库 |
+| 16 | `ConduitRenderer` | 潮涌核心 |
+
+### 第三档（低频）
+
+| # | 渲染器 | 对应方块 |
+| --- | --- | --- |
+| 17 | `BrushableBlockRenderer` | 可疑的沙/砾石 |
+| 18 | `ShelfRenderer` | 书架 |
+| 19 | `CopperGolemStatueBlockRenderer` | 铜傀儡雕像 |
+| 20 | `TheEndGatewayRenderer` | 末地折跃门 |
+| 21 | `TheEndPortalRenderer` | 末地传送门 |
+
+### 每档的验收方式
+
+- **真值向量**：从分析工作区提取该方块的原始几何参数（枢轴、偏移、缩放、UV）落盘为测试基准（原则 14）
+- **单方块沙盒**：用 `MC_DEMO_STATE` 强制方块状态，渲一帧与参考截图逐像素对比
+- **不得**用自写期望值当等效性证据
+
+### 建议顺序
+
+第一档 1–6 优先：出现频率最高、玩家最容易注意到差异；且箱子/告示牌/潜影盒共享"轴对齐盒 + 纹理"的实现骨架，可复用。
