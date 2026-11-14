@@ -66,21 +66,34 @@ public static class BlockEntityData
         {
             for (var i = 0; i < messages.Length && i < list.Items.Count; i++)
             {
-                messages[i] = list.Items[i] switch
-                {
-                    NbtString plain => plain.Value,
-                    _ => Unsupported()
-                };
+                messages[i] = Flatten(list.Items[i]);
             }
         }
 
         data = new SignTextData(messages, text.GetString("color") ?? "black", text.GetBool("has_glowing_text"));
         return true;
     }
-
-    private static string Unsupported()
+    /// <summary>Flattens one component to its plain characters through the shared component reader.</summary>
+    private static string Flatten(NbtTag tag)
     {
-        UnsupportedComponentCount++;
-        return string.Empty;
+        var runs = Sharpcraft.Common.Network.ComponentRuns.Flatten(tag);
+        if (runs.Length == 0)
+        {
+            UnsupportedComponentCount++;
+            return string.Empty;
+        }
+
+        if (runs.Length == 1)
+        {
+            return runs[0].Text;
+        }
+
+        var text = new System.Text.StringBuilder();
+        foreach (var run in runs)
+        {
+            text.Append(run.Text);
+        }
+
+        return text.ToString();
     }
 }

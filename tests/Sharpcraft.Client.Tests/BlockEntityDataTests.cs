@@ -91,11 +91,10 @@ public sealed class BlockEntityDataTests
         Assert.Equal(string.Empty, data.Front.Messages[3]);
     }
 
-    /// <summary>A component richer than plain text is reported blank and counted, not thrown.</summary>
+    /// <summary>A component richer than a plain string goes through the shared component reader.</summary>
     [Fact]
-    public void RichComponentsAreCountedRatherThanThrowing()
+    public void RichComponentsAreFlattenedThroughTheSharedReader()
     {
-        var before = BlockEntityData.UnsupportedComponentCount;
         var front = new NbtCompound()
             .Set("messages", new NbtList(NbtTagType.Compound, new List<NbtTag>
             {
@@ -104,7 +103,6 @@ public sealed class BlockEntityDataTests
         var tag = new NbtCompound().Set("front_text", front);
 
         Assert.True(BlockEntityData.TryReadSign(Record(tag), out var data));
-        Assert.Equal(string.Empty, data.Front.Messages[0]);
-        Assert.True(BlockEntityData.UnsupportedComponentCount > before);
+        Assert.Equal("rich", data.Front.Messages[0]);
     }
 }

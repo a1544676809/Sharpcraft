@@ -89,3 +89,15 @@ public static bool TryReadSign(BlockEntityRecord record, out SignData data);
 | 测试 | 5 条：四行顺序、背面空行不位移、无 front 非告示牌、缺省默认值、富文本计数 |
 
 **这一层没有新增解析代码**——传输与通用 NBT 读取早已具备，本次补的是"知道每种方块实体读哪些字段"。
+
+## 7. 组件读取复用现有实现（2026-11-14）
+
+补写时发现**组件模型已经存在**：`Sharpcraft.Common.Network.ComponentRuns.Flatten(NbtTag?, LanguageTable?)` 已能把 NBT 组件树摊平成带样式与颜色的 `TextRun[]`（聊天路径在用）。
+
+因此告示牌读取器**不自己实现组件解析**，而是调用它并把各 run 的文本拼接起来：
+
+- 纯字符串组件 → 得到原文
+- 富文本组件（`{text: ...}`、带样式、带翻译键） → 同样得到文本
+- 只有 `Flatten` 返回空 run 时才计入 `UnsupportedComponentCount`
+
+这条改动把"富文本读成空串"变成了"富文本也能读出文字"，测试也从「断言为空」改为「断言读到 `rich`」。
