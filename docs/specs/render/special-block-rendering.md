@@ -411,3 +411,15 @@ chestAtlasGpu.Upload(backend, bindGroupLayout, chestAtlas.Texture, cameraBuffer,
 | 几何 | `ChestMesher.FacingDegrees` 给出原版的 `-toYRot`；锁扣位置绕 `(0.5, 0, 0.5)` 旋转，四分之一圈时宽深互换；箱盖铰链轴随朝向旋转 |
 | 测试 | `FacingDegrees` 四条、`TheLatchFollowsTheFacing` 四个朝向的锁扣范围 |
 | 端到端 | 把演示世界的箱子设为 state 5562（`facing=east`），与默认朝向渲染对比出现像素差异（2 px，锁扣仅 2×4×1 像素且此机位部分被遮挡） |
+
+## 16. 双箱左右半（2026-11-14）
+
+| 环节 | 实现 |
+| --- | --- |
+| 数据 | `BlockStateDefinitions.TryGetProperty(stateId, "type", out value)` → `BlockEntityRenderState.ChestType`（0 单 / 1 左 / 2 右） |
+| 几何 | 左半：box x `0..15`、锁扣 x `0..1`；右半：box x `1..16`、锁扣 x `15..16`；宽度均为 15 像素 |
+| 测试 | `ADoubleChestHalfIsFifteenWideAndShiftedAwayFromTheJoin`、`TheLatchSitsAtTheOuterEdgeOfADoubleChestHalf` |
+
+### 已登记的简化
+
+原版对双箱会**剔除接合面**（左半隐藏 WEST、右半隐藏 EAST）。本实现仍绘制全部 6 个面——接合面位于合并后的箱体内部，从外部不可见，只是多出 2 个三角形。登记为受控简化，理由是可见结果一致、`AppendBox` 尚无面掩码能力。

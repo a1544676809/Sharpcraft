@@ -958,9 +958,10 @@ internal static class FrameCommand
                             record.Y,
                             blockZ,
                             record.TypeId,
-                            Facing: FacingOf(world, blockX, record.Y, blockZ)));
-                    }
+                            Facing: FacingOf(world, blockX, record.Y, blockZ),
+                            ChestType: ChestTypeOf(world, blockX, record.Y, blockZ)));
                 }
+            }
 
                 if (states.Count > 0)
                 {
@@ -2268,8 +2269,9 @@ internal static class FrameCommand
                         record.Y,
                         blockZ,
                         record.TypeId,
-                        Facing: FacingOf(world, blockX, record.Y, blockZ)));
-                }
+                        Facing: FacingOf(world, blockX, record.Y, blockZ),
+                        ChestType: ChestTypeOf(world, blockX, record.Y, blockZ)));
+            }
             }
 
             if (blockEntityStates.Count > 0 && chestAtlas.Get(Sharpcraft.Client.Render.ChestAtlas.NormalTexture) is { } chestSprite)
@@ -2397,6 +2399,28 @@ internal static class FrameCommand
             "east" => 1,
             "north" => 4,
             _ => 5
+        };
+    }
+
+    /// <summary>
+    /// Which half of a double chest the block is, or single. Values follow the reference's
+    /// <c>ChestType</c> ordinal: single zero, left one, right two.
+    /// </summary>
+    private static byte ChestTypeOf(ClientWorld world, int x, int y, int z)
+    {
+        if (!Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
+                world.GetBlockState(x, y, z),
+                "type",
+                out var type))
+        {
+            return 0;
+        }
+
+        return type switch
+        {
+            "left" => 1,
+            "right" => 2,
+            _ => 0
         };
     }
 }

@@ -98,11 +98,24 @@ public sealed class ChestMesher
             var sin = MathF.Sin(radians);
             var quarterTurn = MathF.Abs(cos) < 0.5f;
 
-            // The body does not move: it is square on the horizontal plane and centred.
+            // A double chest half is fifteen pixels wide and shifted away from the joining edge; a
+            // single chest is fourteen and centred. The latch narrows to one pixel on a double.
+            var (bodyCentre, bodyWidth, lockCentre, lockWidth) = entity.ChestType switch
+            {
+                1 => (7.5f * Pixel, 15f * Pixel, 0.5f * Pixel, 1f * Pixel),
+                2 => (8.5f * Pixel, 15f * Pixel, 15.5f * Pixel, 1f * Pixel),
+                _ => (8f * Pixel, 14f * Pixel, 8f * Pixel, 2f * Pixel)
+            };
+
+            const float bodyDepth = 14f * Pixel;
+            var extentX = quarterTurn ? bodyDepth : bodyWidth;
+            var extentZ = quarterTurn ? bodyWidth : bodyDepth;
+
+            var bodyXz = Rotate(bodyCentre, 8f * Pixel, cos, sin);
             EntityPlaceholderMesher.AppendBox(
                 _geometry,
-                origin + new Vector3(8f * Pixel, 0f, 8f * Pixel),
-                BodyWidth,
+                origin + new Vector3(bodyXz.X, 0f, bodyXz.Y),
+                extentX,
                 BodyHeight,
                 1f,
                 1f,
@@ -110,7 +123,7 @@ public sealed class ChestMesher
                 sprite,
                 ref vertexFloats,
                 ref indexCount,
-                BodyWidth,
+                extentZ,
                 sky: lightSky,
                 block: lightBlock);
 
@@ -131,10 +144,11 @@ public sealed class ChestMesher
                 AttachRotation: Quaternion.CreateFromAxisAngle(hinge, angle),
                 AttachPivot: pivot);
 
+            var lidXz = Rotate(bodyCentre, 8f * Pixel, cos, sin);
             EntityPlaceholderMesher.AppendBox(
                 _geometry,
-                origin + new Vector3(8f * Pixel, PivotY, 8f * Pixel),
-                LidWidth,
+                origin + new Vector3(lidXz.X, PivotY, lidXz.Y),
+                extentX,
                 LidHeight,
                 1f,
                 1f,
@@ -142,17 +156,17 @@ public sealed class ChestMesher
                 sprite,
                 ref vertexFloats,
                 ref indexCount,
-                LidWidth,
+                extentZ,
                 swing,
                 lightSky,
                 lightBlock);
 
             // The latch sits on the front face; a quarter turn swaps its width and depth.
-            var lockXz = Rotate(8f * Pixel, 15.5f * Pixel, cos, sin);
+            var lockXz = Rotate(lockCentre, 15.5f * Pixel, cos, sin);
             EntityPlaceholderMesher.AppendBox(
                 _geometry,
                 origin + new Vector3(lockXz.X, 7f * Pixel, lockXz.Y),
-                quarterTurn ? LockDepth : LockWidth,
+                quarterTurn ? LockDepth : lockWidth,
                 LockHeight,
                 1f,
                 1f,
@@ -160,7 +174,7 @@ public sealed class ChestMesher
                 sprite,
                 ref vertexFloats,
                 ref indexCount,
-                quarterTurn ? LockWidth : LockDepth,
+                quarterTurn ? lockWidth : LockDepth,
                 swing,
                 lightSky,
                 lightBlock);

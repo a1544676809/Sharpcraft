@@ -145,4 +145,44 @@ public sealed class ChestMesherGeometryTests
         Assert.Equal(15f * Pixel, east.MinX, Tolerance);
         Assert.Equal(16f * Pixel, east.MaxX, Tolerance);
     }
+
+    private static (float MinX, float MinY, float MinZ, float MaxX, float MaxY, float MaxZ) ExtentOfPart(byte chestType, int part)
+    {
+        var mesher = new ChestMesher();
+        BlockEntityRenderState[] entities = [new(0f, 0f, 0f, VanillaBlockEntityTypes.Chest, ChestType: chestType)];
+        var geometry = mesher.Build(entities, new SpriteRect(0, 0, 16, 16, 1));
+
+        return Extent(geometry.Vertices, 24 * part, 24);
+    }
+
+    /// <summary>
+    /// A double chest half is fifteen pixels wide: the left half starts at the near edge, the right
+    /// half ends at the far one, and each is shifted away from the joining face.
+    /// </summary>
+    [Fact]
+    public void ADoubleChestHalfIsFifteenWideAndShiftedAwayFromTheJoin()
+    {
+        var left = ExtentOfPart(1, 0);
+        var right = ExtentOfPart(2, 0);
+
+        Assert.Equal(0f, left.MinX, Tolerance);
+        Assert.Equal(15f * Pixel, left.MaxX, Tolerance);
+
+        Assert.Equal(1f * Pixel, right.MinX, Tolerance);
+        Assert.Equal(16f * Pixel, right.MaxX, Tolerance);
+    }
+
+    /// <summary>The latch of a double chest half sits at that half's outer edge.</summary>
+    [Fact]
+    public void TheLatchSitsAtTheOuterEdgeOfADoubleChestHalf()
+    {
+        var left = ExtentOfPart(1, 2);
+        var right = ExtentOfPart(2, 2);
+
+        Assert.Equal(0f, left.MinX, Tolerance);
+        Assert.Equal(1f * Pixel, left.MaxX, Tolerance);
+
+        Assert.Equal(15f * Pixel, right.MinX, Tolerance);
+        Assert.Equal(16f * Pixel, right.MaxX, Tolerance);
+    }
 }
