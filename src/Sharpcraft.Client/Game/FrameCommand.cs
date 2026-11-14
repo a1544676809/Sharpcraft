@@ -487,6 +487,10 @@ internal static partial class FrameCommand
                 : cache.Snapshot();
             drawRanges = null;
 
+
+            // The sandbox branch above builds block entity geometry inline; the cached path used by a real
+            // session has to build it here, or a chest in a live world has no geometry at all.
+            blockEntityGeometry = BuildBlockEntityGeometry(world, chestAtlas);
             // The cache is the only mesher (T-793): while it meshes a chunk it also forwards the blended faces into its
             // layer sinks, so the startup frame reads that aggregate instead of meshing the world a second time. Cutout
             // faces are not split out of the solid mesh by design (they are alpha tested inside it), which is why only
@@ -1185,5 +1189,47 @@ internal static partial class FrameCommand
             "oxidized_copper_chest" or "waxed_oxidized_copper_chest" => Sharpcraft.Client.Render.ChestAtlas.CopperOxidized,
             _ => Sharpcraft.Client.Render.ChestAtlas.Normal
         };
+    }
+
+    /// <summary>Builds the chest segment for a live session from the block entities in the loaded chunks.</summary>
+    private static DynamicGeometry? BuildBlockEntityGeometry(ClientWorld world, Sharpcraft.Client.Render.ItemAtlas? chestAtlas)
+    {
+        if (chestAtlas is null)
+        {
+            return null;
+        }
+
+        var chestStates = new List<Sharpcraft.Client.Render.BlockEntityRenderState>();
+        foreach (var chunk in world.GetChunks())
+        {
+            foreach (var record in chunk.BlockEntities)
+            {
+                if (!Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(record.TypeId))
+                {
+                    continue;
+                }
+
+                var blockX = (chunk.ChunkX * 16) + record.LocalX;
+                var blockZ = (chunk.ChunkZ * 16) + record.LocalZ;
+                chestStates.Add(new Sharpcraft.Client.Render.BlockEntityRenderState(
+                    blockX,
+                    record.Y,
+                    blockZ,
+                    record.TypeId,
+                    Facing: FacingOf(world, blockX, record.Y, blockZ),
+                    ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
+                    ChestMaterial: ChestMaterialOf(world, blockX, record.Y, blockZ),
+                    Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
+            }
+        }
+
+        if (chestStates.Count == 0)
+        {
+            return null;
+        }
+
+        return new Sharpcraft.Client.Render.ChestMesher().Build(
+            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates),
+            chestAtlas);
     }
 }
