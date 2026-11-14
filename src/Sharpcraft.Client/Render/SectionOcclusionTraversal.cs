@@ -110,10 +110,18 @@ public static class SectionOcclusionTraversal
         var head = 0;
         var tail = 0;
 
-        var startSlot = Index(cameraSection, cameraSection, minimumY, radius);
+        // The camera can sit outside the world's vertical range - high altitude, or the moment a
+        // teleport lands - and Index would then compute a slot outside the scratch buffers. Only the
+        // start's Y is clamped: the XZ centre stays the camera's, so looking down from above still
+        // floods from the nearest real layer instead of culling everything away.
+        var startCoord = new SectionCoord(
+            cameraSection.X,
+            Math.Clamp(cameraSection.Y, minimumY, maximumY),
+            cameraSection.Z);
+        var startSlot = Index(startCoord, cameraSection, minimumY, radius);
         visited[startSlot] = Reported;
-        queue[tail++] = new TraversalNode(cameraSection, NoEntryFace, 0);
-        output[outputCount++] = cameraSection;
+        queue[tail++] = new TraversalNode(startCoord, NoEntryFace, 0);
+        output[outputCount++] = startCoord;
 
         while (head < tail)
         {
