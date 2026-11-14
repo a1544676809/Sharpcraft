@@ -65,6 +65,32 @@ internal static class WindowCommand
         // One resource manager for the session, created before anything reads resources so the atlas, models and
         // blockstates see the same packs as the font and the language table.
         using var resources = FrameCommand.CreateResourceManager();
+        // Diagnostic: group buffer creations by the calling site, so a churn that shows up only as a
+        // rising counter can be attributed. Removable as a unit - the renderer exposes one nullable
+        // observer and knows nothing else about this (principle 13).
+        if (GameOptions.Get("MC_BUFFER_CHURN") == "1")
+        {
+            var churnCounts = new Dictionary<string, int>();
+            var churnTotal = 0;
+            WgpuRenderBackend.BufferCreatedObserver = () =>
+            {
+                var frame = new System.Diagnostics.StackTrace(2, false).GetFrame(0);
+                var method = frame?.GetMethod();
+                var key = method is null ? "?" : $"{method.DeclaringType?.Name}.{method.Name}";
+                churnCounts[key] = churnCounts.GetValueOrDefault(key) + 1;
+                churnTotal++;
+                if (churnTotal % 480 == 0)
+                {
+                    foreach (var entry in churnCounts.OrderByDescending(pair => pair.Value).Take(6))
+                    {
+                        Console.WriteLine($"buffer-churn: {entry.Key} {entry.Value}");
+                    }
+
+                    churnCounts.Clear();
+                }
+            };
+        }
+
 
         (SpriteAtlas Atlas, BlockSpriteMap Map)? prepared = FrameCommand.PrepareSprites(
             GameOptions.Get("MC_FRAME_LOCAL") is { Length: > 0 }
