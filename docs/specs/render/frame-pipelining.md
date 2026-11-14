@@ -393,7 +393,17 @@ pass 3 与 pass 1 附件一致，之所以分开是因为 **pass 2 必须夹在�
 
 **因此 Hydrogen 的"10 行顺手捡"只对前两项成立。** blit→copy 需要新增后端方法（`IRenderBackend` + `WgpuRenderBackend` + 接缝文档），并先确认两件事：① `Brew.Wgpu` 的 `CommandEncoder` 是否暴露该方法；② WebGPU 是否允许 `Depth32Float` 的纹理到纹理拷贝（深度格式的拷贝受 aspect/格式匹配约束）。
 
-**建议顺序**：先做前两项（低风险、API 现成、沙盒判据现成），把 blit→copy 作为独立的接缝任务评估。
+**逐条核实结果（2026-11-14，读到代码后）**：
+
+| Hydrogen 的建议 | 核实结论 |
+| --- | --- |
+| 1b cull + 1c cloud bounds 合并 | **已经做过了**。`ReferenceOitPasses.cs` L160–167 的注释与代码就是这件事，注释末尾还标了 `(T-834)`，理由与 Hydrogen 给的完全一致（cull 管线 `Compare=Always`、不写深度、片元只 `textureLoad` bounds）。**这条不是新机会。** |
+| composite + uiPass 合并 | 目标确实相同（`Frame` + `Depth`，均 Keep），但**跨文件且跨 API 边界**：`ReferenceOitPasses.Record` 在末尾关闭自己的 pass，`uiPass` 由 `FrameExecutor` 创建。合并需要让 `Record` **交回一个未关闭的 pass**（或接受回调），且仅当 `ItemsHasGeometry == false` 时才成立（否则 `ItemOitSet` 的 4 个 pass 夹在中间）。属于中等改动，不是 10 行。 |
+| blit → `CopyTextureToTexture` | 需要后端新方法（见上表）。 |
+
+**结论：Hydrogen 基于的是较早的快照。它认为可省的 0.046 ms 中，0.023 ms 已在 T-834 拿到，剩下 0.023 ms 需要跨 API 重构且带条件。实际剩余空间小于其估计。**
+
+**建议顺序（修订）**：blit→copy 若确认 API 可行，是三者中最干净的一个（独立、无跨文件重构）；composite+ui 次之（需 API 改动，收益 1–2%）；1b+1c 无需再做。
 
 ### 15.2 双线程帧间流水线的收益测算（Hydrogen，按本项目实测数据）
 
