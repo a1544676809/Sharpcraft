@@ -49,15 +49,14 @@ M5.3 渲染管线。当前焦点：**渲染性能**。
 
 ## 下一步具体动作
 
-**分支**：`frame-pipeline` @ `ec8479e`，领先 `origin/main` **67 个提交未推送**。项目所有者已明确：**暂时不推送。**
+**分支**：`main` @ `4176035`（`frame-pipeline` 已合并并推送；`main` 与远端同步）。
 
-### 验证手段的覆盖范围（必须记住）
+### 验证手段的覆盖范围（T-843 后已更新）
 
-**离线 `--frame` 与沙盒 `MC_FRAME_LOCAL` 只渲染 `OffscreenRenderer`，完全不经过 `WindowedRenderer`。** 两者是平行实现（原则 14 的单轨尚未落地，见蓝图第四步）。
+**T-843 单轨收敛已完成**：`OffscreenRenderer` 与 `WindowedRenderer` 现在共用 `FrameExecutor` 与 `FrameResources`。离线帧/沙盒像素对拍因此**能覆盖共同的录制代码**（Pass 顺序、管线、uniform、几何上传），但**覆盖不到窗口循环**（帧泵、resize、surface 获取、present）——涉及窗口循环的改动仍需运行时冒烟。
 
-因此：
 
-离线帧/沙盒对拍对 `OffscreenRenderer` **有效**；对 `WindowedRenderer` 及其组件**无效**（哈希必然不变），只能靠运行时冒烟（帧时间、剔除统计、截图）。本会话给 9 个组件抽取跑的哈希判据因此无效，真正验证它们的是冒烟（1.920 ms、`culled=412 drawn=256`）。
+判据：录制相关内容用沙盒像素对拍；窗口循环相关内容用运行时冒烟（帧时间、`cull:` 统计、截图）。
 
 
 ### 沙盒验证法（本轮建立，所有画面改动都用它）
