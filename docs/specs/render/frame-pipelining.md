@@ -383,6 +383,18 @@ pass 3 与 pass 1 附件一致，之所以分开是因为 **pass 2 必须夹在�
 
 **小结：三个 pass 合并点合计约 0.07 ms**（1b+1c、composite+ui、blit→copy）。相对整帧 1.3–2.2 ms 约 3–5%。
 
+**可行性分级（2026-11-14 核实）**：
+
+| 合并点 | 需要的 API | 是否已具备 | 工作量 |
+| --- | --- | --- | --- |
+| 1b cull + 1c cloud bounds | `BeginRenderPass` + `SetPipeline` | ✅ 已有 | 小（改绑定与顺序） |
+| composite + uiPass | `BeginRenderPass` + `SetPipeline` | ✅ 已有 | 小 |
+| blit → `CopyTextureToTexture` | **`IRenderBackend.CopyTextureToTexture`** | ❌ **不存在**（全仓仅有 `CopyTextureToBuffer`） | **需扩展后端接缝** |
+
+**因此 Hydrogen 的"10 行顺手捡"只对前两项成立。** blit→copy 需要新增后端方法（`IRenderBackend` + `WgpuRenderBackend` + 接缝文档），并先确认两件事：① `Brew.Wgpu` 的 `CommandEncoder` 是否暴露该方法；② WebGPU 是否允许 `Depth32Float` 的纹理到纹理拷贝（深度格式的拷贝受 aspect/格式匹配约束）。
+
+**建议顺序**：先做前两项（低风险、API 现成、沙盒判据现成），把 blit→copy 作为独立的接缝任务评估。
+
 ### 15.2 双线程帧间流水线的收益测算（Hydrogen，按本项目实测数据）
 
 把整帧拆为 `T_准备+录制 + T_Finish+Submit+Swap`，用上表实测值：
