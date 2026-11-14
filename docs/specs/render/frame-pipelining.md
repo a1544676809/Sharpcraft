@@ -492,6 +492,38 @@ Hydrogen 建议在拍板前把"剩余 CPU"拆成三段独立计时：
 
 **复查条件**：若将来视距提到 24/32、或实体数量显著增加，使上述四项之和超过 **0.45 ms**，按 §15.2.4 的切法重新评估。
 
+#### 15.2.6 归属修正与最终结论（Hydrogen 读码复核，2026-11-14）
+
+**埋点归属修正**：`scene-open` **不含** `arena.Draw` 的裁剪——它只覆盖 `CreateCommandEncoder`、`BeginRenderPass`、uniform 写入与 `FrustumPlanes.Extract`。真正的视锥裁剪分布是：
+
+| 裁剪位置 | 计入的阶段 |
+| --- | --- |
+| `f.VisibleSections`（`SectionOcclusionTraversal`） | 在 `Record` **之前**计算 |
+| `arena.Draw(..., frustumPlanes, visibleSections)` | `scene-terrain` |
+| `arenaCutout.Draw(...)`（无独立埋点） | 被吸收进 `scene-entities` |
+| `arenaTranslucent.AnyVisible/Draw` | `oit` |
+
+**即便补上这部分**（再算 ~0.10–0.15 ms 纯 CPU），VD=12 可并行的纯 CPU 总量也只有 **0.35–0.40 ms**（理论极限 16–18%），VD=4 更低。结论不变：**归档否决**。
+
+#### 15.3 最终结论：CPU 侧架构级优化到头了
+
+按 VD=12（整帧 2.165 ms / 460+ FPS）的账本：
+
+| 部分 | 耗时 | 占比 | 可压缩性 |
+| --- | --- | --- | --- |
+| 固定提交与呈现（`sub-queue` + `swap` + `sub-finish`） | 1.131 ms | 52% | `sub-queue`/`swap` 属驱动与窗口合成器，**用户态无法压榨**；`sub-finish` = 0.278 ms Pass 固定税 + 1.25 µs×draw |
+| 准备与录制 | 1.034 ms | 48% | **均匀分散**，无任何子阶段单独超过整帧的 8% |
+
+**在保持当前 Reference OIT（7 pass）+ wgpu 的前提下，已不存在能再砍 0.2 ms（10%）以上的安全杠杆。**
+
+唯一超过 10% 单项是 **Reference OIT 本身**（`MC_SKIP_OIT` 实测 CPU 0.458 ms，−28%，另加多张全屏 RGBA16Float 目标的 GPU 填充率）——但那是画质与算法取舍，不是工程微优化。
+
+**建议方向**：p50 已 460–760 FPS（240 Hz 预算 4.16 ms 仍余近半），继续抠中位数无体感价值。转向：
+
+1. **功能与视觉对齐**（实体、光照、天气、UI）。
+2. 若看性能，**改盯 p99 / over33 尖刺**，而非 p50——长尾来自流式加载（`StaticWorldBuffers`/`arena.Apply` 集中上传、`rebuiltFrame`）。
+3. 仅在遇到 GPU 带宽或低端核显瓶颈时，才考虑动渲染算法。
+
 **ItemOitSet 核实**：前 3 个 pass 存在逐级 `textureLoad` 依赖，不可合并；只有第 4 个 composite 可与 `uiPass` 合并，且只在屏幕上有半透明手持/掉落物时才有收益（~0.023 ms）。
 
 **`CopyTextureToTexture` 接缝签名（修正）**：需带 `CommandEncoderHandle`；且 `FrameExecutor` 的 blit pass 目前拿的是 `TextureViewHandle`，需改为传底层 `TextureHandle`。
