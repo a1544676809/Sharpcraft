@@ -102,6 +102,9 @@ public sealed record FrameRequest(
     /// </remarks>
     public (int FirstIndex, int IndexCount)[]? TranslucentRanges { get; init; }
 
+    /// <summary>Block entity segment drawn with its own atlas after the scene passes, or null.</summary>
+    public BlockEntitySubmission? BlockEntity { get; init; }
+
     /// <summary>
     /// When true the full-screen gradient sky (sky.wgsl) is not drawn; the caller supplies a sky disc / other backdrop
     /// instead (docs/modules/weather-and-sky-color.md 6.2).
