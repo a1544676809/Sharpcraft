@@ -822,6 +822,30 @@ public static class ChunkMesher
     /// Emits blocks whose model is built from element boxes. They cannot join the cube face merge
     /// because their faces are not cube faces, so they are written on their own after it.
     /// </summary>
+    /// <summary>
+    /// Whether a section's palette names any state that draws from element geometry. A direct palette
+    /// has no small list to consult, so it is treated as possibly containing one.
+    /// </summary>
+    private static bool SectionHasElementModel(ChunkSection section, BlockModelSet models)
+    {
+        var states = section.States;
+        if (states.IsDirect)
+        {
+            return true;
+        }
+
+        var palette = states.Palette;
+        for (var index = 0; index < palette.Count; index++)
+        {
+            if (models.Has(palette[index]))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static void EmitSectionModels(
         in Neighbourhood neighbourhood,
         ChunkSection section,
