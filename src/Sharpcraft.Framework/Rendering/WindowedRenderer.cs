@@ -349,6 +349,7 @@ public static class WindowedRenderer
         using var blockEntitySubmission = new BlockEntitySubmission(backend);
         if (request.BlockEntityAtlas is { } blockEntityAtlasData && request.BlockEntityGeometry is { } blockEntityGeometry)
         {
+            Console.WriteLine($"block entity draw: {request.BlockEntitySpriteRects.Length} sprite rects, {request.BlockEntityGeometry?.IndexCount / 3} triangles");
             blockEntityRects.Rebuild(request.BlockEntitySpriteRects);
             blockEntityAtlas.Upload(
                 backend,
