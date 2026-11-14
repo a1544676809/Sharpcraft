@@ -161,10 +161,10 @@ public sealed class EntityPlaceholderMesher
 
         // +X (East), -X (West), +Y (Up), -Y (Down), +Z (South), -Z (North); winding unchanged (T-849).
         var scale = texDx > 0 && texDy > 0 && texDz > 0 ? SheetSize : 1f;
-        AppendFace(geometry, new Vector3(maxX, minY, minZ), new Vector3(maxX, minY, maxZ), new Vector3(maxX, maxY, maxZ), new Vector3(maxX, maxY, minZ), red, green, blue, sprite, uvs[0], scale, ref vertexFloats, ref indexCount, transform, sky, block);
-        AppendFace(geometry, new Vector3(minX, minY, maxZ), new Vector3(minX, minY, minZ), new Vector3(minX, maxY, minZ), new Vector3(minX, maxY, maxZ), red, green, blue, sprite, uvs[1], scale, ref vertexFloats, ref indexCount, transform, sky, block);
-        AppendFace(geometry, new Vector3(minX, maxY, minZ), new Vector3(maxX, maxY, minZ), new Vector3(maxX, maxY, maxZ), new Vector3(minX, maxY, maxZ), red, green, blue, sprite, uvs[2], scale, ref vertexFloats, ref indexCount, transform, sky, block);
-        AppendFace(geometry, new Vector3(minX, minY, maxZ), new Vector3(maxX, minY, maxZ), new Vector3(maxX, minY, minZ), new Vector3(minX, minY, minZ), red, green, blue, sprite, uvs[3], scale, ref vertexFloats, ref indexCount, transform, sky, block);
+        AppendFace(geometry, new Vector3(maxX, minY, minZ), new Vector3(maxX, minY, maxZ), new Vector3(maxX, maxY, maxZ), new Vector3(maxX, maxY, minZ), red, green, blue, sprite, uvs[0], scale, ref vertexFloats, ref indexCount, transform, sky, block, reverse: true);
+        AppendFace(geometry, new Vector3(minX, minY, maxZ), new Vector3(minX, minY, minZ), new Vector3(minX, maxY, minZ), new Vector3(minX, maxY, maxZ), red, green, blue, sprite, uvs[1], scale, ref vertexFloats, ref indexCount, transform, sky, block, reverse: true);
+        AppendFace(geometry, new Vector3(minX, maxY, minZ), new Vector3(maxX, maxY, minZ), new Vector3(maxX, maxY, maxZ), new Vector3(minX, maxY, maxZ), red, green, blue, sprite, uvs[2], scale, ref vertexFloats, ref indexCount, transform, sky, block, reverse: true);
+        AppendFace(geometry, new Vector3(minX, minY, maxZ), new Vector3(maxX, minY, maxZ), new Vector3(maxX, minY, minZ), new Vector3(minX, minY, minZ), red, green, blue, sprite, uvs[3], scale, ref vertexFloats, ref indexCount, transform, sky, block, reverse: true);
         AppendFace(geometry, new Vector3(minX, minY, maxZ), new Vector3(maxX, minY, maxZ), new Vector3(maxX, maxY, maxZ), new Vector3(minX, maxY, maxZ), red, green, blue, sprite, uvs[4], scale, ref vertexFloats, ref indexCount, transform, sky, block);
         AppendFace(geometry, new Vector3(maxX, minY, minZ), new Vector3(minX, minY, minZ), new Vector3(minX, maxY, minZ), new Vector3(maxX, maxY, minZ), red, green, blue, sprite, uvs[5], scale, ref vertexFloats, ref indexCount, transform, sky, block);
     }
@@ -203,7 +203,8 @@ public sealed class EntityPlaceholderMesher
         ref int indexCount,
         EntityModelTransform transform,
         float sky,
-        float block)
+        float block,
+        bool reverse = false)
     {
         var first = (uint)(vertexFloats / ChunkMesher.FloatsPerVertex);
         float u0 = uv.U0 / uvScale, v0 = uv.V0 / uvScale, u1 = uv.U1 / uvScale, v1 = uv.V1 / uvScale;
@@ -212,13 +213,19 @@ public sealed class EntityPlaceholderMesher
         WriteVertex(geometry.Vertices, ref vertexFloats, c, red, green, blue, u1, v0, sprite, transform, sky, block);
         WriteVertex(geometry.Vertices, ref vertexFloats, d, red, green, blue, u0, v0, sprite, transform, sky, block);
 
+        var second = reverse ? first + 2u : first + 1u;
+        var third = reverse ? first + 1u : first + 2u;
+        var fourthA = reverse ? first + 3u : first + 2u;
+        var fourthB = reverse ? first + 2u : first + 3u;
+
         geometry.Indices[indexCount++] = first;
-        geometry.Indices[indexCount++] = first + 1;
-        geometry.Indices[indexCount++] = first + 2;
+        geometry.Indices[indexCount++] = second;
+        geometry.Indices[indexCount++] = third;
         geometry.Indices[indexCount++] = first;
-        geometry.Indices[indexCount++] = first + 2;
-        geometry.Indices[indexCount++] = first + 3;
+        geometry.Indices[indexCount++] = fourthA;
+        geometry.Indices[indexCount++] = fourthB;
     }
+
 
     private static void WriteVertex(
         float[] destination,
