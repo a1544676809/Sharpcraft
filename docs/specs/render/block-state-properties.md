@@ -96,3 +96,40 @@ minecraft:chest	waterlogged	true,false
 
 - 不实现**方块更新/状态同步**（客户端已在区块包中收到 state id，本项只解码）
 - 不做属性写回（客户端不修改方块状态）
+
+## 9. 验证结果（2026-11-14）
+
+**端到端验证已通过：35723 个方块状态，我方解码与原版逐行一致。**
+
+### 验证方法
+
+```
+tools/Sharpcraft.BlockState.Audit/
+  truth/BlockStateDump.java   读取原版运行时注册表，导出每个 state id 的属性值
+  truth/run.ps1               从版本 json 组装 classpath，编译并运行上面的工具
+  truth/derive-schema.ps1     把 dump 折叠成「每方块每属性」的 schema
+  Program.cs                  用本仓解码器导出同样格式的 dump
+  compare.ps1                 跑两边并逐行比对
+```
+
+**输入相同**：两边的输入都是 **state id**（0..35722）。
+**输出比对**：每行的 `blockId` 与 `property=value` 必须完全一致。
+
+### 实测
+
+| 项 | 结果 |
+| --- | --- |
+| 原版导出 | 35723 状态 |
+| 本仓导出 | 35723 状态 |
+| 差异行 | **0** |
+| 结论 | `OK: every block state decodes identically` |
+
+### 这条验证链的价值
+
+1. **不依赖手抄**：属性名与值序直接来自原版运行时，不是我按印象写的
+2. **可重复**：任何人拿同版本 jar 重跑 `compare.ps1` 就能独立复核
+3. **可扩展**：将来加属性读取，只要再导出一次比对
+
+### schema 覆盖范围
+
+`vanilla-block-properties-26.3.tsv` 只包含**有属性**的 **884** 个方块；其余 402 个（air、stone 这类）没有属性，天然不产生行——由测试 `EveryMultiStateBlockHasADefinition` 保证「多状态方块必有 schema，无 schema 者必为单状态」。
