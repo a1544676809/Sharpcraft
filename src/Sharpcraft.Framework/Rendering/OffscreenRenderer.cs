@@ -919,57 +919,10 @@ public static class OffscreenRenderer
 
             SetDraws(draws);
         }
-        private int[] _vertexLengths = [];
-        private int[] _indexLengths = [];
-        private int[] _textureIndices = [];
-
-        /// <summary>Whether every draw has the same size and texture as the set already built.</summary>
-        private bool SameShape(IReadOnlyList<CelestialQuadDraw> draws)
-        {
-            if (_vertexLengths.Length != draws.Count)
-            {
-                return false;
-            }
-
-            for (var index = 0; index < draws.Count; index++)
-            {
-                if (_vertexLengths[index] != draws[index].Vertices.Length ||
-                    _indexLengths[index] != draws[index].Indices.Length ||
-                    _textureIndices[index] != draws[index].TextureIndex)
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
 
         /// <summary>Replaces the sun/moon draws while keeping the loaded textures and pipeline (per-frame angles).</summary>
         public void SetDraws(IReadOnlyList<CelestialQuadDraw> draws)
         {
-            // The bodies keep their shape between frames; only where they sit on the dome moves. When
-            // the shape and the texture each draw uses are unchanged, write into the buffers already
-            // allocated instead of tearing the whole set down and building it again (T-847).
-            if (draws.Count == _bindGroups.Length && SameShape(draws))
-            {
-                for (var index = 0; index < draws.Count; index++)
-                {
-                    var draw = draws[index];
-                    var vertices = CopyTint(draw.Vertices, draw.Tint);
-                    _backend.WriteBuffer(
-                        _vertexBuffers[index],
-                        System.Runtime.InteropServices.MemoryMarshal.AsBytes(vertices.AsSpan()),
-                        0);
-                    _backend.WriteBuffer(
-                        _indexBuffers[index],
-                        System.Runtime.InteropServices.MemoryMarshal.AsBytes(draw.Indices.AsSpan()),
-                        0);
-                }
-
-                return;
-            }
-
             foreach (var (vertex, index, bindGroup) in _retired)
             {
                 _backend.Destroy(bindGroup);
@@ -987,9 +940,6 @@ public static class OffscreenRenderer
             _indexBuffers = new BufferHandle[draws.Count];
             _bindGroups = new BindGroupHandle[draws.Count];
             _indexCounts = new uint[draws.Count];
-            _vertexLengths = new int[draws.Count];
-            _indexLengths = new int[draws.Count];
-            _textureIndices = new int[draws.Count];
 
             for (var index = 0; index < draws.Count; index++)
             {
@@ -1014,9 +964,6 @@ public static class OffscreenRenderer
                     ]);
 
                 _indexCounts[index] = (uint)draw.Indices.Length;
-                _vertexLengths[index] = draw.Vertices.Length;
-                _indexLengths[index] = draw.Indices.Length;
-                _textureIndices[index] = draw.TextureIndex;
             }
         }
 
