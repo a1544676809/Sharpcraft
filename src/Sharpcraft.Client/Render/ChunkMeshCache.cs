@@ -77,10 +77,11 @@ public sealed class ChunkMeshCache
         BiomeTint? tint,
 
         bool merge,
-        int maxBlocks = 2_000_000) =>
+        int maxBlocks = 2_000_000,
+        BlockModelSet? models = null) =>
         ChunkMesher.MeshChunk(
             world, chunk, airState: 0, solid, maxBlocks: maxBlocks, sprites: sprites, translucent: translucent,
-            layout: layout, cutout: cutout, tint: tint, merge: merge);
+            layout: layout, cutout: cutout, tint: tint, merge: merge, models: models);
 
     /// <summary>Chunks re-meshed by the last synchronous <see cref="Build"/> call.</summary>
     public int LastRemeshedChunks { get; private set; }
@@ -117,13 +118,14 @@ public sealed class ChunkMeshCache
     /// <param name="sprites">Atlas mapping, or null for untextured.</param>
     /// <param name="policy">Batch and time budget.</param>
     /// <param name="maxBlocks">Block ceiling for one call.</param>
-    public MeshData Build(ClientWorld world, BlockSpriteMap? sprites, MeshBuildPolicy policy, int maxBlocks = int.MaxValue) =>
+    public MeshData Build(ClientWorld world, BlockSpriteMap? sprites, MeshBuildPolicy policy, int maxBlocks = int.MaxValue, BlockModelSet? models = null) =>
         Build(
             world,
             sprites,
             maxBlocks: maxBlocks,
             maxChunksPerBuild: policy.MaxChunksPerPass,
-            maxMillisecondsPerBuild: policy.MaxMillisecondsPerPass);
+            maxMillisecondsPerBuild: policy.MaxMillisecondsPerPass,
+            models: models);
 
     /// <summary>Sinks that take the cutout and translucent faces out of the solid mesh while the cache builds.</summary>
     /// <remarks>
@@ -144,7 +146,8 @@ public sealed class ChunkMeshCache
         BlockSpriteMap? sprites = null,
         int maxBlocks = 2_000_000,
         int maxChunksPerBuild = 1,
-        double maxMillisecondsPerBuild = 15d)
+        double maxMillisecondsPerBuild = 15d,
+        BlockModelSet? models = null)
     {
         ArgumentNullException.ThrowIfNull(world);
 
@@ -176,7 +179,8 @@ public sealed class ChunkMeshCache
             MergeFaces: MergeFaces,
             AmbientOcclusion: AmbientOcclusion,
             AirState: 0,
-            MaxBlocks: maxBlocks);
+            MaxBlocks: maxBlocks,
+            Models: models);
 
         foreach (var chunk in world.GetChunks())
         {

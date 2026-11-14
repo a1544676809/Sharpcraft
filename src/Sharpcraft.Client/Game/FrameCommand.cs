@@ -893,7 +893,8 @@ internal static class FrameCommand
         BlockStateLayout? layout = null,
         BiomeTint? tint = null,
         float[]? spriteRects = null,
-        Sharpcraft.Client.Render.ItemAtlas? chestAtlas = null)
+        Sharpcraft.Client.Render.ItemAtlas? chestAtlas = null,
+        Sharpcraft.Client.Render.BlockModelSet? models = null)
     {
         // With a cache only the chunks whose blocks changed are re-meshed; without one the whole world is
         // scanned, which is what the offscreen paths still do (docs/specs/network/play-movement.md 7.19).
@@ -932,7 +933,7 @@ internal static class FrameCommand
 
                 blocks += Sharpcraft.Client.Render.ChunkMeshCache.MeshChunkOnce(
                     world, chunk, buffer, sprites, translucent, layout, cutout, tint,
-                    GameOptions.Get("MC_MESH_NOMERGE") != "1", maxBlocks: 2_000_000 - blocks);
+                    GameOptions.Get("MC_MESH_NOMERGE") != "1", maxBlocks: 2_000_000 - blocks, models: models);
 
                 ranges.Add((before, buffer.IndexCount - before));
 
@@ -1047,7 +1048,7 @@ internal static class FrameCommand
         else
         {
             mesh = meshSynchronously
-                ? cache.Build(world, sprites, maxBlocks: 2_000_000)
+                ? cache.Build(world, sprites, maxBlocks: 2_000_000, models: models)
                 : cache.Snapshot();
             drawRanges = null;
 
@@ -1217,7 +1218,8 @@ internal static class FrameCommand
             prepared is null ? null : WithMips(prepared.Value.Atlas),
             layout: layout,
             spriteRects: prepared?.Atlas.RectTable,
-            chestAtlas: Sharpcraft.Client.Render.ChestAtlas.Load(tintResources));
+            chestAtlas: Sharpcraft.Client.Render.ChestAtlas.Load(tintResources),
+            models: prepared?.Models);
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
         Console.WriteLine($"layers: translucent triangles {(request.TranslucentIndices?.Length ?? 0) / 3}, layout {(layout is null ? "null" : "set")}, water->{(layout is null ? "-" : layout.BlockAt(1)?.ToString() ?? "none")}");
 
