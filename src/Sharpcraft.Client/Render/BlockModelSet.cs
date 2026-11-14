@@ -105,15 +105,16 @@ public sealed class BlockModelSet
             }
 
             var quad = textured.Quad;
+            var shade = Shade(quad.Direction);
             buffer.AppendQuad(
                 (quad.V0.Position.X + x, quad.V0.Position.Y + y, quad.V0.Position.Z + z),
                 (quad.V1.Position.X + x, quad.V1.Position.Y + y, quad.V1.Position.Z + z),
                 (quad.V2.Position.X + x, quad.V2.Position.Y + y, quad.V2.Position.Z + z),
                 (quad.V3.Position.X + x, quad.V3.Position.Y + y, quad.V3.Position.Z + z),
-                (1f, 1f, 1f),
-                (1f, 1f, 1f),
-                (1f, 1f, 1f),
-                (1f, 1f, 1f),
+                (shade, shade, shade),
+                (shade, shade, shade),
+                (shade, shade, shade),
+                (shade, shade, shade),
                 light,
                 light,
                 light,
@@ -129,4 +130,19 @@ public sealed class BlockModelSet
 
         return emitted;
     }
+
+    /// <summary>
+    /// Brightness the reference gives each face direction before light is applied. A box that is not
+    /// a cube would otherwise look flat, because every face would share one brightness.
+    /// </summary>
+    public static float Shade(string direction) => direction switch
+    {
+        "down" => 0.5f,
+        "up" => 1f,
+        "north" => 0.8f,
+        "south" => 0.8f,
+        "west" => 0.6f,
+        "east" => 0.6f,
+        _ => 1f
+    };
 }

@@ -89,4 +89,17 @@ public sealed class BlockModelSetTests
         Assert.Equal(12, buffer.VertexCount);
         Assert.Equal(18, buffer.IndexCount);
     }
+
+    /// <summary>The reference gives each face direction its own brightness.</summary>
+    [Theory]
+    [InlineData("down", 0.5f)]
+    [InlineData("up", 1f)]
+    [InlineData("north", 0.8f)]
+    [InlineData("south", 0.8f)]
+    [InlineData("west", 0.6f)]
+    [InlineData("east", 0.6f)]
+    public void EachDirectionHasTheReferenceShade(string direction, float expected)
+    {
+        Assert.Equal(expected, BlockModelSet.Shade(direction));
+    }
 }
