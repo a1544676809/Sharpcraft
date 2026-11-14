@@ -351,4 +351,12 @@ pass 3 与 pass 1 附件一致，之所以分开是因为 **pass 2 必须夹在�
 
 因此**若消除 pass 2，pass 3 可与 pass 1 合并，3 个 pass 降为 1 个**，预计省 2 × 0.093 ≈ **0.19 ms**（视距 4 时约 14%，视距 12 时约 9%）。
 
-消除 pass 2 的路径：让云 pass **直接采样主深度**，而不是先拷贝到 `oit.CloudDepth`。前提是主深度纹理带 `TextureBinding` 用途，并改造云的 bind group。**未验证可行性**，需先确认主深度是否可采样、以及同一 pass 内深度作为附件的同时能否被采样（若不能，只能保留 blit）。
+消除 pass 2 的路径：让云 pass **直接采样主深度**，而不是先拷贝到 `oit.CloudDepth`。
+
+**可行性结论（2026-11-14 核实）：不可行，3 个 pass 的结构是必需的。**
+
+1. ✅ 主深度**可采样**：`FrameOitTargets.CreateDepthTexture` 的 usage 含 `RenderAttachment | CopySrc | CopyDst | TextureBinding`，注释亦写明"render attachment, a copy source and a sampled …"。
+2. ❌ **语义上必须有独立云深度目标**。`FrameExecutor.cs` L561–569 的注释说明：地形半透明（玻璃/水）要用不透明主深度做深度测试，而**云 OIT 的 depth-bounds 会写深度**；若共用同一目标，云的写入会破坏地形半透明的深度判断（会遮挡本应可见的半透明地形）。因此 `oit.CloudDepth` 不是"拷贝的便利"，而是**必需的隔离**。
+3. ❌ 云 pass 需要"初始值等于不透明深度、且可写"的深度目标——这恰好只能由一次拷贝得到。去掉 blit 就得改成纯采样读深度，但那样 depth-bounds 的内部面剔除（依赖写深度）会失效，等于改变与参考一致的云 OIT 算法。
+
+**结论：pass 2 无法消除，pass 3 因此无法并入 pass 1；0.278 ms 的固定提交成本是结构性的，本项目内没有低风险的下调路径。** 若要下调，前提是改变云的深度隔离方案（属于渲染算法改动，需单独立项并重新做画面等效性验证）。
