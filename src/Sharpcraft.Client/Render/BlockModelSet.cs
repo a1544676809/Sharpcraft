@@ -43,7 +43,11 @@ public sealed class BlockModelSet
 
         foreach (var entry in layout.Blocks)
         {
-            var resolved = library.Resolve(entry.Id);
+            // A block drawn by its own block entity renderer must not also be cubed: its block id usually
+            // has no usable model or texture, so the cube path would paint a missing sprite where the
+            // real geometry goes. Marking it with an empty quad list keeps it out of that path, and the
+            // emitter then contributes nothing for it.
+            var resolved = IsBlockEntityRendered(entry.Id) ? [] : library.Resolve(entry.Id);
             if (resolved is null)
             {
                 continue;
@@ -65,6 +69,19 @@ public sealed class BlockModelSet
 
     /// <summary>Whether this state draws from element geometry.</summary>
     /// <param name="stateId">Block state id.</param>
+    /// <summary>
+    /// Whether a block is drawn by its own block entity renderer, so the cube path must leave it alone.
+    /// </summary>
+    private static bool IsBlockEntityRendered(Identifier blockId) => blockId.Path switch
+    {
+        "chest" or "trapped_chest" or "ender_chest" => true,
+        "copper_chest" or "waxed_copper_chest" => true,
+        "exposed_copper_chest" or "waxed_exposed_copper_chest" => true,
+        "weathered_copper_chest" or "waxed_weathered_copper_chest" => true,
+        "oxidized_copper_chest" or "waxed_oxidized_copper_chest" => true,
+        _ => false
+    };
+
     public bool Has(int stateId) => (uint)stateId < (uint)_quads.Length && _quads[stateId] is not null;
 
     /// <summary>The quads of one state, or null when it is a plain cube.</summary>

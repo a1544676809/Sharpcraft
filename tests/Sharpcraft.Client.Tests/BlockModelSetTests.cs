@@ -102,4 +102,26 @@ public sealed class BlockModelSetTests
     {
         Assert.Equal(expected, BlockModelSet.Shade(direction));
     }
+
+    /// <summary>A block drawn by its own block entity renderer is marked and contributes no quads.</summary>
+    [Fact]
+    public void ABlockEntityBlockIsMarkedAndEmitsNothing()
+    {
+        var layout = new Sharpcraft.Common.Registries.BlockStateLayout(
+        [
+            (Sharpcraft.Common.Identifiers.Identifier.Parse("minecraft:chest"), 4),
+            (Sharpcraft.Common.Identifiers.Identifier.Parse("minecraft:stone"), 1)
+        ]);
+        var library = new BlockModelLibrary(
+            _ => null,
+            new BlockModelElements(_ => null),
+            (_, _) => null);
+
+        var set = BlockModelSet.Build(library, layout);
+
+        Assert.NotNull(set);
+        Assert.True(set!.Has(0));
+        Assert.Empty(set.Quads(0)!);
+        Assert.False(set.Has(4));
+    }
 }
