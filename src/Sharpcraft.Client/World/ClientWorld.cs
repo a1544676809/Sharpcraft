@@ -45,6 +45,9 @@ public sealed class ClientWorld
     /// <summary>Server view distance in chunks.</summary>
     public int ViewDistance { get; private set; }
 
+    /// <summary>Block entity animation state driven by block events, such as chest lids.</summary>
+    public BlockEntityAnimations BlockEntityAnimations { get; } = new();
+
     /// <summary>Dimensions the server offers, as identifiers.</summary>
     public IReadOnlyList<string> Dimensions { get; private set; } = [];
 

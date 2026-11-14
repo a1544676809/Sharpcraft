@@ -1196,6 +1196,7 @@ internal sealed class InteractiveSession
                 // like the reference client tick (LightmapRenderStateExtractor.tick).
                 _world?.AdvanceTick();
                 _blockLightFlicker.Tick();
+        _world?.BlockEntityAnimations.Tick();
 
                 // Verification hook: print the tracked entities so their positions can be compared against the
                 // other client's own report of where it is (docs/specs/network/entity-sync.md 7).
@@ -1979,6 +1980,7 @@ internal sealed class InteractiveSession
                         _lastBlockEventB0 = evB0;
                         _lastBlockEventB1 = evB1;
                         _lastBlockEventBlock = evBlock;
+                        _world?.BlockEntityAnimations.Apply(evX, evY, evZ, evB0, evB1);
                     }
 
                     break;

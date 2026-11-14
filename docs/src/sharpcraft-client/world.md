@@ -52,6 +52,7 @@
 
 | Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
 | --- | --- | --- | --- | --- | --- | --- |
+| Sharpcraft.Client | Sharpcraft.Client.World.BlockEntityAnimations | Mirror | Full | net.minecraft.world.level.block.entity.ChestLidController | ref://mc-26.3-analysis/src/net/minecraft/world/level/block/entity/ChestLidController.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.World.DragonFlightHistory | Mirror | Full | net.minecraft.world.entity.boss.enderdragon.DragonFlightHistory | ref://mc-26.3-analysis/src/net/minecraft/world/entity/boss/enderdragon/DragonFlightHistory.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.World.ElytraAnimationState | Mirror | Full | net.minecraft.world.entity.ElytraAnimationState | ref://mc-26.3-analysis/src/net/minecraft/world/entity/ElytraAnimationState.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.World.EntityAnimationFrame | Adapter | Partial | net.minecraft.client.renderer.entity.state.LivingEntityRenderState | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/entity/state/LivingEntityRenderState.java | Snapshot fed to animation providers |
