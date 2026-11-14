@@ -527,6 +527,8 @@ public static class OffscreenRenderer
                 Backend = backend,
                 Request = request,
                 Format = WGPUTextureFormat.RGBA8Unorm,
+                // The offscreen path supplies its own depth in the per-frame target, so this shell needs none.
+                CreatesDepthTarget = false,
                 PipelineLayout = pipelineLayout,
                 BindGroupLayout = bindGroupLayout,
                 Samplers = samplers,

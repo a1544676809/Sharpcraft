@@ -22,6 +22,7 @@ internal sealed class FrameResources : IDisposable
     private FrameRequest _request = null!;
     private BindGroupHandle _bindGroup;
     private bool _disposed;
+    private readonly bool _createsDepthTarget;
 
     private const ulong MinimumBufferBytes = 1 << 20;
 
@@ -177,8 +178,12 @@ internal sealed class FrameResources : IDisposable
             options.BindGroup,
             StaticWorld);
 
-        DepthTexture = FrameOitTargets.CreateDepthTexture(_backend, options.Width, options.Height);
-        DepthView = _backend.CreateTextureView(DepthTexture);
+        _createsDepthTarget = options.CreatesDepthTarget;
+        if (_createsDepthTarget)
+        {
+            DepthTexture = FrameOitTargets.CreateDepthTexture(_backend, options.Width, options.Height);
+            DepthView = _backend.CreateTextureView(DepthTexture);
+        }
         ItemOit = new ItemOitSet();
         OitTargets = new FrameOitTargets(
             _backend,
@@ -348,8 +353,16 @@ internal sealed class FrameResources : IDisposable
     public void Resize(uint width, uint height)
     {
         OitTargets.Resize(width, height);
-        _backend.Destroy(DepthView);
-        _backend.Destroy(DepthTexture);
+        if (!_createsDepthTarget)
+        {
+            return;
+        }
+
+        if (_createsDepthTarget)
+        {
+            _backend.Destroy(DepthView);
+            _backend.Destroy(DepthTexture);
+        }
         DepthTexture = FrameOitTargets.CreateDepthTexture(_backend, width, height);
         DepthView = _backend.CreateTextureView(DepthTexture);
     }
@@ -359,6 +372,9 @@ internal sealed class FrameResources : IDisposable
     {
         /// <summary>Backend that owns every handle.</summary>
         public required WgpuRenderBackend Backend { get; init; }
+
+        /// <summary>Whether this shell owns a depth texture, or renders into one supplied per frame.</summary>
+        public bool CreatesDepthTarget { get; init; } = true;
 
         /// <summary>Frame being rendered.</summary>
         public required FrameRequest Request { get; init; }
@@ -585,8 +601,11 @@ internal sealed class FrameResources : IDisposable
         _disposed = true;
         // The blit bind group samples the depth view, so the OIT targets and depth go before the pipelines.
         OitTargets.Dispose();
-        _backend.Destroy(DepthView);
-        _backend.Destroy(DepthTexture);
+        if (_createsDepthTarget)
+        {
+            _backend.Destroy(DepthView);
+            _backend.Destroy(DepthTexture);
+        }
         _backend.Destroy(UiSpritePipeline);
         _backend.Destroy(UiTextPipeline);
         _backend.Destroy(UiPipeline);
