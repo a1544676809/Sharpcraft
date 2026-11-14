@@ -12,6 +12,7 @@
 | [`backend-interface.md`](backend-interface.md) | 能力协商、阶段模型、禁止泄漏规则；WGPU 为唯一实现，Vulkan 仅预留 | 草稿 | - |
 | [`block-entity-submission.md`](block-entity-submission.md) | 关键结论：方块实体从不进入地形几何。 | 未标注 | - |
 | [`block-layer-and-tint.md`](block-layer-and-tint.md) | 真实服务器目视验收暴露的两项缺口（树叶黑斑、草色不对）。 | 未标注 | - |
+| [`block-model-geometry.md`](block-model-geometry.md) | BlockModelResolver 只解析面贴图，不解析几何——ChunkMesher 把每个方块都画成完整立方体。 | 未标注 | - |
 | [`block-state-properties.md`](block-state-properties.md) | 方块实体与方块渲染经常需要读方块状态的属性，例如： | 未标注 | - |
 | [`chunk-geometry-arena.md`](chunk-geometry-arena.md) | 为什么要合并、缓冲怎么长、区块卸载怎么回收、每帧怎么画；附实测归因与验收口径 | 未标注 | - |
 | [`cloud-geometry.md`](cloud-geometry.md) | 原版每帧只上传面的描述，不上传顶点。 | 未标注 | - |
