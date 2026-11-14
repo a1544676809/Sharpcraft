@@ -38,6 +38,7 @@ AGENTS.md 原则 12：未解决的不确定性必须在此登记（概率 / 影�
 | R-014 | 资产提取输出目录若被误配到仓库内，会把 Minecraft 资产写进工作区，触碰原则 3 红线 | 低 | 高 | 提取器拒绝仓库内输出路径；`.gitignore` 兜底；提交前自检 `git status` | 每次资产相关提交 | 开放 |
 | R-012 | `Brew.Wgpu` 的 `SurfaceAcquireResult.NeedsReconfigure` 使用有符号比较，`SuccessOptimal` 被误判为需要重建，导致画面永不上屏 | 高 | 中 | 已改为显式比较 `Outdated`/`Lost`；升级该包时复查是否修复 | 升级 `Brew.Wgpu` 时 | 开放 |
 | R-010 | 设备码流程依赖社区通用 OAuth 客户端 ID，微软可能收紧或封禁 | 中 | 高 | 客户端 ID 可配置；被拒时改为自建 Azure 应用或授权码 + 回环流程 | 每次认证链路验收 / 微软公告 | 开放 |
+| R-027 | **`WgpuRenderBackend` 的缓冲记账与命令计数非线程安全**：`_bufferSizes`（`Dictionary<BufferHandle,long>`）在 `CreateBufferInit`/`Destroy` 中被改写，`_draws`/`_bindGroupSets`/`_pipelineSets` 在 `Draw`/`SetPipeline`/`SetBindGroup` 中自增。若录制与提交分属两个线程并发调用，会产生数据竞争（T-837 3B 实测发现） | 低 | 中 | 当前渲染全程单线程录制，未触发；若将来引入并发录制/渲染，须先把缓冲记账与命令计数改为加锁或线程本地，再并行。`MC_FRAME_LOCAL` 的 demo 场景不触发，仅因其无 OIT 静态几何（`hasRefStatic=false`），不可当作安全证据 | `FrameExecutor.Record` 的 CPU 占比回升到整帧 ≥30%、准备重开 threading 时（`frame-pipelining.md` §14） | 开放 |
 | R-024 | **实体属性系统只实现了 SCALE**：`update_attributes` 的其他属性快照被丢弃，没有每实体 AttributeMap/通用 GetAttribute，且 float entity data（health）未解码；导致 Wolf 驯服尾巴角等属性依赖动画仍阻塞 | 高 | 中 | 已按 P3 顺序实现 TrackedAttributeMap、FLOAT health 与 Wolf tailAngle（T-618） | 已关闭（2026-11-04） | 已关闭 |
 
 ## 已关闭
