@@ -290,9 +290,25 @@ SetBindGroup(pass, 0, terrainBindGroup)    // 还原（若后续还有地形绘�
 | `FrameCommand.cs` | 建 `ChestAtlas` + bind group，独立索引范围（不再合并进地形数组） |
 | `FramePipelines.cs` | 仅当绑定布局不一致时才需要新增管线变体 |
 
-### 待确认（动手前最后一项）
+### 待确认项已解决（2026-11-14）
 
-`ChestAtlas` 的 `TextureData` 要变成 GPU 纹理并建 bind group——需要确认现有的 `AtlasTextureSource`（`WindowCommand` 用它上传 `ItemAtlas`）能否直接复用，以及 `FrameRequest` 是否需要携带该纹理。
+**`EntitySkinTextureGpu` 就是现成的"纹理 → 世界布局 bind group"helper。**
+
+| 事实 | 位置 |
+| --- | --- |
+| `public void Upload(backend, bindGroupLayout, TextureData, cameraBuffer, fogBuffer, lightmapBuffer, …)` | `EntitySkinTextureGpu.cs` L26 |
+| `public BindGroupHandle BindGroup { get; private set; }` | 同文件 L21 |
+| 世界 bind group 布局 | `WindowedRenderer.cs` L165–176：Texture(0) + Sampler(1) + Camera(2) + Fog(3) + Lightmap + Sprite storage |
+
+现有 `itemAtlasGpu.Upload(backend, bindGroupLayout, itemData, …)`（L222）走的就是这条路。因此箱子图集**完全复用同一模式**：
+
+```csharp
+using var chestAtlasGpu = new EntitySkinTextureGpu();
+chestAtlasGpu.Upload(backend, bindGroupLayout, chestAtlas.Texture, cameraBuffer, fogBuffer, lightmapBuffer, …);
+// chestAtlasGpu.BindGroup 即为世界布局的绑定
+```
+
+**结论：不需要新的纹理类、不需要新的布局、不需要新的管线。** 箱子绘制段 = `ChestAtlas` + `EntitySkinTextureGpu` + 在 opaque pass 内切换绑定。
 
 ### 风险
 
