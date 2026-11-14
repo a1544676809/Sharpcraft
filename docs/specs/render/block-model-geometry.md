@@ -122,3 +122,38 @@
 | --- | --- | --- |
 | 元素旋转的 `rescale` 未实现 | 303 个含旋转元素中声明 `rescale` 的那些，其 UV 不会按原版缩放 | 待切片 3 后单独处理 |
 | 未做真实 346 模型对拍 | 切片 2 的测试仍是合成 JSON；真实模型对拍在切片 3 随像素验证一并做 | 待切片 3 |
+
+## 11. 切片 3a / 3b 实现结果（2026-11-14）
+
+### 3a：贴图映射暴露
+
+`BlockModelResolver` 新增：
+
+| 方法 | 用途 |
+| --- | --- |
+| `ResolveModel(blockId)` | 方块 → 首个变体模型 id |
+| `ResolveTextures(blockId)` | 方块 → 合并后的完整 `变量名 → 值` 映射 |
+| `ResolveTexture(blockId, variable)` | 变量（带或不带 `#`）→ 最终贴图路径 |
+
+原有 `Resolve` 只给 Top/Side/Bottom 三张，element 模型需要每个 `#变量`，所以这层必须补。测试：`EveryTextureVariableIsExposedForElementModels`。
+
+### 3b：模型库
+
+`BlockModelLibrary.Resolve(blockId)` → `TexturedQuad[]?`：
+
+| 情况 | 结果 |
+| --- | --- |
+| 模型含 `elements` | 四边形数组，每面贴图已解析为路径 |
+| 纯立方体模型 | **null**（留在立方体路径） |
+| 某面贴图解析不出来 | 该面丢弃；全部丢弃则返回 null |
+| 重复调用 | 缓存返回同一数组 |
+
+`ElementModelCount` 统计找到 element 几何的方块数。
+
+5 条测试：element 模型出四边形、纯立方体为 null、blockstate 指向别的模型、贴图不可解析时丢弃、缓存。
+
+### 已登记的简化（新增）
+
+| 简化 | 影响 |
+| --- | --- |
+| 模型按**方块**缓存而非按**方块状态** | 同一方块的所有状态共用一个模型——因为 `BlockModelResolver` 只取 blockstate 的首个变体。台阶的上半/下半、楼梯的朝向都不会改变模型 |
