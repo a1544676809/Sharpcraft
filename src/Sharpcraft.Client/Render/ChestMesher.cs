@@ -122,11 +122,12 @@ public sealed class ChestMesher
                 _ => (8f * Pixel, 14f * Pixel, 14, 8f * Pixel, 2f * Pixel, 2)
             };
 
+            var entityStartFloats = vertexFloats;
             const float bodyDepth = 14f * Pixel;
-            var extentX = quarterTurn ? bodyDepth : bodyWidth;
-            var extentZ = quarterTurn ? bodyWidth : bodyDepth;
+            var extentX = bodyWidth;
+            var extentZ = bodyDepth;
 
-            var bodyXz = Rotate(bodyCentre, 8f * Pixel, cos, sin);
+            var bodyXz = new Vector2(bodyCentre, 8f * Pixel);
             EntityPlaceholderMesher.AppendBox(
                 _geometry,
                 origin + new Vector3(bodyXz.X, 0f, bodyXz.Y),
@@ -150,9 +151,9 @@ public sealed class ChestMesher
             // The lid and the latch swing about the back bottom edge of the lid, wherever the facing
             // has moved that edge to.
             var angle = -OpenAngle(entity.Open);
-            var hingeXz = Rotate(0f, PivotZ, cos, sin);
-            var pivot = origin + new Vector3(hingeXz.X, PivotY, hingeXz.Y);
-            var hinge = new Vector3(cos, 0f, -sin);
+            var hingeXz = new Vector2(0f, PivotZ);
+            var pivot = origin + new Vector3(0.5f, PivotY, PivotZ);
+            var hinge = Vector3.UnitX;
             var swing = new EntityModelTransform(
                 Translation: Vector3.Zero,
                 YawDegrees: 0f,
@@ -164,7 +165,7 @@ public sealed class ChestMesher
                 AttachRotation: Quaternion.CreateFromAxisAngle(hinge, angle),
                 AttachPivot: pivot);
 
-            var lidXz = Rotate(bodyCentre, 8f * Pixel, cos, sin);
+            var lidXz = new Vector2(bodyCentre, 8f * Pixel);
             EntityPlaceholderMesher.AppendBox(
                 _geometry,
                 origin + new Vector3(lidXz.X, PivotY, lidXz.Y),
@@ -187,11 +188,11 @@ public sealed class ChestMesher
                 texDz: 14);
 
             // The latch sits on the front face; a quarter turn swaps its width and depth.
-            var lockXz = Rotate(lockCentre, 15.5f * Pixel, cos, sin);
+            var lockXz = new Vector2(lockCentre, 15.5f * Pixel);
             EntityPlaceholderMesher.AppendBox(
                 _geometry,
                 origin + new Vector3(lockXz.X, 7f * Pixel, lockXz.Y),
-                quarterTurn ? LockDepth : lockWidth,
+                lockWidth,
                 LockHeight,
                 1f,
                 1f,
@@ -199,7 +200,7 @@ public sealed class ChestMesher
                 sprite,
                 ref vertexFloats,
                 ref indexCount,
-                quarterTurn ? lockWidth : LockDepth,
+                LockDepth,
                 swing,
                 lightSky,
                 lightBlock,
@@ -208,6 +209,18 @@ public sealed class ChestMesher
                 texDx: lockWidthPx,
                 texDy: 4,
                 texDz: 1);
+
+
+            // The reference rotates the whole model about the middle of the block's bottom face after
+            // every part pose is applied, so each vertex keeps the texture face it was built with.
+            // Rotating the box centres instead leaves the face textures behind on the wrong side.
+            for (var v = entityStartFloats; v < vertexFloats; v += ChunkMesher.FloatsPerVertex)
+            {
+                var dx = _geometry.Vertices[v] - (origin.X + 0.5f);
+                var dz = _geometry.Vertices[v + 2] - (origin.Z + 0.5f);
+                _geometry.Vertices[v] = origin.X + 0.5f + (dx * cos) + (dz * sin);
+                _geometry.Vertices[v + 2] = origin.Z + 0.5f - (dx * sin) + (dz * cos);
+            }
 
             LastEntityCount++;
         }
