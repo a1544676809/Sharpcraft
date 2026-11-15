@@ -39,7 +39,7 @@ public sealed partial class EntityModelMesher
         }
     }
 
-    private DynamicGeometry BuildInto(DynamicGeometry target, EntityGeometryLayerKind? kindFilter, ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, ISpriteAtlas? skinAtlas = null, EntityVariantTable? variants = null, bool emissivePass = false, EntityPose? pose = null, bool usePreparedPoses = false, EntityModelDefinition? modelOverride = null, Func<EntityRenderState, string?>? layerTextureSelector = null, Func<EntityRenderState, bool>? entityFilter = null, IReadOnlyList<EntityPose?>? poses = null)
+    private DynamicGeometry BuildInto(DynamicGeometry target, EntityGeometryLayerKind? kindFilter, ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, ISpriteAtlas? skinAtlas = null, EntityVariantTable? variants = null, bool emissivePass = false, EntityPose? pose = null, bool usePreparedPoses = false, EntityModelDefinition? modelOverride = null, Func<EntityRenderState, string?>? layerTextureSelector = null, Func<EntityRenderState, bool>? entityFilter = null, IReadOnlyList<EntityPose?>? poses = null, float modelScale = EntityPlaceholderMesher.ModelScale, Func<EntityRenderState, EntityModelTransform>? entityTransformFactory = null, int? textureWidthOverride = null, int? textureHeightOverride = null)
     {
         target.Clear();
         var cubeCount = 0;
@@ -53,16 +53,18 @@ public sealed partial class EntityModelMesher
             var model = modelOverride ?? ResolveEntityModel(entity, variants);
             if (model.Compiled is { } compiled)
             {
-                foreach (var cube in compiled.Cubes)
+                for (var cubeIndex = 0; cubeIndex < compiled.Cubes.Count; cubeIndex++)
                 {
+                    var cube = compiled.Cubes[cubeIndex];
                     cubeCount += 1 + (cube.Overlays?.Count ?? 0);
                 }
 
                 continue;
             }
 
-            foreach (var part in model.Parts)
+            for (var partIndex = 0; partIndex < model.Parts.Count; partIndex++)
             {
+                var part = model.Parts[partIndex];
                 cubeCount += 1 + (part.OverlayLayers?.Count ?? 0);
             }
         }
@@ -85,7 +87,7 @@ public sealed partial class EntityModelMesher
             // Item entities are drawn by ItemEntityMesher and have no entity model in the reference, so they must not
             // fall back to the placeholder box: that box samples the entity skin at 64x64 UVs and showed up as a mosaic
             // cube wrapped around every dropped item (T-763).
-            if (entity.TypeId == Sharpcraft.Client.World.EntityTracker.ItemEntityTypeId)
+            if (modelOverride is null && entity.TypeId == Sharpcraft.Client.World.EntityTracker.ItemEntityTypeId)
             {
                 continue;
             }
@@ -102,14 +104,14 @@ public sealed partial class EntityModelMesher
                 continue;
             }
 
-            var px = (1f / 16f) * EntityPlaceholderMesher.ModelScale * model.Scale;
+            var px = (1f / 16f) * modelScale * model.Scale;
             var feet = Vector3.Zero;
-            var entityTransform = EntityModelTransform.From(entity);
+            var entityTransform = entityTransformFactory?.Invoke(entity) ?? EntityModelTransform.From(entity);
             var sprite = skin;
             // UVs are authored against the model's declared texture size, not the image resolution (e.g. ghast declares
             // 64x32 while its PNG is 128x64). Normalising by the image size would sample the wrong texels.
-            var skinWidthForModel = model.TextureWidth;
-            var skinHeightForModel = model.TextureHeight;
+            var skinWidthForModel = textureWidthOverride ?? model.TextureWidth;
+            var skinHeightForModel = textureHeightOverride ?? model.TextureHeight;
             if (emissivePass)
             {
                 if (model.EmissiveTexturePath is { Length: > 0 } emissivePath)
@@ -184,8 +186,8 @@ public sealed partial class EntityModelMesher
                         PivotY: part.PivotY + yOffset);
                 }
 
-                var partTextureWidth = part.TextureWidth > 0 ? part.TextureWidth : model.TextureWidth;
-                var partTextureHeight = part.TextureHeight > 0 ? part.TextureHeight : model.TextureHeight;
+                var partTextureWidth = part.TextureWidth > 0 ? part.TextureWidth : skinWidthForModel;
+                var partTextureHeight = part.TextureHeight > 0 ? part.TextureHeight : skinHeightForModel;
 
                 var centreX = part.CentreX * px;
                 var centreZ = part.CentreZ * px;
