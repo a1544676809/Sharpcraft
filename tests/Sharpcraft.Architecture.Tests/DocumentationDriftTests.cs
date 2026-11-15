@@ -112,10 +112,9 @@ public sealed partial class DocumentationDriftTests
             (Path.Combine(root, "docs", "README.md"), Path.Combine(root, "docs"))
         })
         {
-            if (!File.Exists(file))
-            {
-                continue;
-            }
+            // A missing entry point is itself a defect: skipping it would let the check pass by
+            // having nothing to check.
+            Assert.True(File.Exists(file), $"entry document is missing: {Path.GetRelativePath(root, file)}");
 
             foreach (Match match in MarkdownLink().Matches(File.ReadAllText(file)))
             {

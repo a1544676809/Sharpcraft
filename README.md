@@ -7,9 +7,9 @@
 
 - 项目宪章（最高约束）：[`AGENTS.md`](AGENTS.md)
 - 文档总索引：[`docs/README.md`](docs/README.md)
-- 当前进度与下一步：[Issue 跟踪器](http://100.68.153.10:28080/a1544676809/Sharpcraft/issues)
-- 里程碑与出口条件：[Milestones](http://100.68.153.10:28080/a1544676809/Sharpcraft/milestones)
-- 追踪矩阵（规格 ↔ 测试 ↔ 代码）：[Issues](http://100.68.153.10:28080/a1544676809/Sharpcraft/issues)
+- 当前进度与下一步：仓库的 Issues 页
+- 里程碑与出口条件：仓库的 Milestones 页
+- 追踪矩阵（规格 ↔ 测试 ↔ 代码）：仓库的 Issues 页
 
 ## 现在能做什么
 
