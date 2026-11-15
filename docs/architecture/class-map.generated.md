@@ -75,6 +75,7 @@
 | Sharpcraft.Client | Sharpcraft.Client.Render.CamelModelDefinition | Mirror | Partial | net.minecraft.client.model.animal.camel.CamelModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/camel/CamelModel.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.Render.ChestAtlas | Mirror | Full | net.minecraft.client.renderer.Sheets | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/Sheets.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.Render.ChestMesher | Mirror | Full | net.minecraft.client.renderer.blockentity.ChestRenderer | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/ChestRenderer.java |  |
+| Sharpcraft.Client | Sharpcraft.Client.Render.ChestPairing | Mirror | Partial | net.minecraft.world.level.block.ChestBlock | ref://mc-26.3-analysis/src/net/minecraft/world/level/block/ChestBlock.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.Render.ChickenAnimationProvider | Mirror | Partial | net.minecraft.client.model.animal.chicken.ChickenModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/chicken/ChickenModel.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.Render.ChickenModelDefinition | Mirror | Partial | net.minecraft.client.model.animal.chicken.ChickenModel | ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/chicken/ChickenModel.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.Render.CloudFaceTable | Mirror | Partial | net.minecraft.client.renderer.CloudRenderer | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/CloudRenderer.java |  |
