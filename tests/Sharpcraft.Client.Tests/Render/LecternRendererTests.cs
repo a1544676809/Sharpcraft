@@ -47,6 +47,28 @@ public sealed class LecternRendererTests
         Assert.Equal(0.9f, state.PageFlip2, 4);
     }
 
+    /// <summary>
+    /// A page vertex from the third emitted part (left_pages) proves the source
+    /// <c>leftPages.x = sin(openness)</c> displacement is positive at openness 1.5.
+    /// </summary>
+    [Fact]
+    public void PagePartVertexUsesPositiveXDisplacement()
+    {
+        var mesher = new LecternRenderer();
+        var geometry = mesher.Build(
+            [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.Lectern, Facing: 2, HasBook: true)],
+            Sprite());
+        var position = VertexFieldReader.Position(geometry.Vertices, 72);
+        var uv = VertexFieldReader.Uv(geometry.Vertices, 72);
+
+        Assert.True(position.X > 0f);
+        Assert.Equal(0.1883f, position.X, 3);
+        Assert.Equal(0.9976f, position.Y, 3);
+        Assert.Equal(0.1210f, position.Z, 3);
+        Assert.Equal(6f / 64f, uv.U, 3);
+        Assert.Equal(10f / 32f, uv.V, 3);
+    }
+
     /// <summary>The static pose mirrors BookModel.setupAnim, including the page-flip rotations.</summary>
     [Fact]
     public void BookPoseUsesTheReferencePartRotations()
@@ -58,7 +80,7 @@ public sealed class LecternRendererTests
         Assert.Equal(1.5f, pose.Get("right_pages").Rotation.Y, 4);
         Assert.Equal(-1.2f, pose.Get("flip_page1").Rotation.Y, 4);
         Assert.Equal(1.2f, pose.Get("flip_page2").Rotation.Y, 4);
-        Assert.Equal(-MathF.Sin(1.5f), pose.Get("left_pages").Position.X, 4);
+        Assert.Equal(MathF.Sin(1.5f), pose.Get("left_pages").Position.X, 4);
     }
 
     /// <summary>

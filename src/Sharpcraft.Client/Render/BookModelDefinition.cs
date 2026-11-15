@@ -65,10 +65,10 @@ public static class BookModelDefinition
         // subtracts them from the base part rotations.
         pose.Set("left_lid", new PoseOffset(Vector3.Zero, new Vector3(0f, -(MathF.PI + openness), 0f), Vector3.Zero));
         pose.Set("right_lid", new PoseOffset(Vector3.Zero, new Vector3(0f, openness, 0f), Vector3.Zero));
-        pose.Set("left_pages", new PoseOffset(new Vector3(-pageX, 0f, 0f), new Vector3(0f, -openness, 0f), Vector3.Zero));
-        pose.Set("right_pages", new PoseOffset(new Vector3(-pageX, 0f, 0f), new Vector3(0f, openness, 0f), Vector3.Zero));
-        pose.Set("flip_page1", new PoseOffset(new Vector3(-pageX, 0f, 0f), new Vector3(0f, -page1, 0f), Vector3.Zero));
-        pose.Set("flip_page2", new PoseOffset(new Vector3(-pageX, 0f, 0f), new Vector3(0f, -page2, 0f), Vector3.Zero));
+        pose.Set("left_pages", new PoseOffset(new Vector3(pageX, 0f, 0f), new Vector3(0f, -openness, 0f), Vector3.Zero));
+        pose.Set("right_pages", new PoseOffset(new Vector3(pageX, 0f, 0f), new Vector3(0f, openness, 0f), Vector3.Zero));
+        pose.Set("flip_page1", new PoseOffset(new Vector3(pageX, 0f, 0f), new Vector3(0f, -page1, 0f), Vector3.Zero));
+        pose.Set("flip_page2", new PoseOffset(new Vector3(pageX, 0f, 0f), new Vector3(0f, -page2, 0f), Vector3.Zero));
         return pose;
     }
 
