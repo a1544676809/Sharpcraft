@@ -25,6 +25,7 @@ public static class BlockEntityRenderers
         new EnchantTableRenderer(),
         new ShelfRenderer(),
         new CampfireRenderer(),
+        new SkullRenderer(),
         new DecoratedPotBlockEntityRenderer(),
         new CopperGolemStatueBlockEntityRenderer()
     ];
