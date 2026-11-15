@@ -420,17 +420,18 @@ internal static partial class FrameCommand
             }
 
                 if (states.Count > 0)
+                if (states.Count > 0)
                 {
-                    // Chest-like entities get their real model and draw as their own segment with the chest
-                    // sheet; everything else keeps the placeholder merge until its renderer exists.
-                    var chestStates = new List<Sharpcraft.Client.Render.BlockEntityRenderState>(states.Count);
+                    // Every block entity a registered renderer claims is drawn through the dispatcher;
+                    // the rest keep the placeholder merge until their renderer exists.
+                    var dispatcher = new Sharpcraft.Client.Render.BlockEntityRenderDispatcher();
+                    var modelStates = new List<Sharpcraft.Client.Render.BlockEntityRenderState>(states.Count);
                     var otherStates = new List<Sharpcraft.Client.Render.BlockEntityRenderState>(states.Count);
                     foreach (var state in states)
                     {
-                        if (Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(state.TypeId)
-                            || Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(state.TypeId))
+                        if (dispatcher.Handles(state.TypeId))
                         {
-                            chestStates.Add(state);
+                            modelStates.Add(state);
                         }
                         else
                         {
@@ -438,26 +439,11 @@ internal static partial class FrameCommand
                         }
                     }
 
-
-                    if (chestStates.Count > 0 && chestAtlas is not null)
+                    if (modelStates.Count > 0 && chestAtlas is not null)
                     {
-                        var chestMesher = new Sharpcraft.Client.Render.ChestMesher();
-                        blockEntityGeometry = chestMesher.Build(
-                            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates),
+                        blockEntityGeometry = dispatcher.Build(
+                            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(modelStates),
                             chestAtlas);
-                        Console.WriteLine($"block entities: {chestMesher.LastEntityCount} chests, {blockEntityGeometry?.IndexCount / 3 ?? 0} tri");
-
-                        var shulkerMesher = new Sharpcraft.Client.Render.ShulkerBoxMesher();
-                        var shulkerGeometry = shulkerMesher.Build(
-                            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates),
-                            chestAtlas);
-                        if (shulkerMesher.LastEntityCount > 0)
-                        {
-                            blockEntityGeometry = blockEntityGeometry is null
-                                ? shulkerGeometry
-                                : Combine(blockEntityGeometry, shulkerGeometry);
-                            Console.WriteLine($"block entities: {shulkerMesher.LastEntityCount} shulker boxes, {shulkerGeometry.IndexCount / 3} tri");
-                        }
                     }
 
                     if (otherStates.Count > 0)
@@ -1306,8 +1292,7 @@ internal static partial class FrameCommand
         {
             foreach (var record in chunk.BlockEntitiesSpan)
             {
-                if (!Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(record.TypeId)
-                    && !Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(record.TypeId))
+                if (!frame.Dispatcher.Handles(record.TypeId))
                 {
                     continue;
                 }
@@ -1323,7 +1308,9 @@ internal static partial class FrameCommand
                     ? ShulkerFacingOf(world, blockX, record.Y, blockZ)
                     : FacingOf(world, blockX, record.Y, blockZ),
                     ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
-                    ChestMaterial: ChestMaterialOf(world, blockX, record.Y, blockZ),
+                    ChestMaterial: Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(record.TypeId)
+                        ? ShulkerColorOf(world, blockX, record.Y, blockZ)
+                        : ChestMaterialOf(world, blockX, record.Y, blockZ),
                     Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ, partialTick)));
             }
         }
@@ -1399,29 +1386,15 @@ internal static partial class FrameCommand
         }
 
         var span = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates);
-        var chestGeometry = frame.Mesher.Build(span, chestAtlas);
-        var shulkerSprite = chestAtlas.Get("entity/shulker/shulker");
+        var geometry = frame.Dispatcher.Build(span, chestAtlas);
         if (Sharpcraft.Client.Game.GameOptions.Get("MC_DEBUG_MODELS") is { Length: > 0 })
         {
-            Console.WriteLine($"shulker atlas: contains={chestAtlas.Contains("entity/shulker/shulker")} chest={chestAtlas.Contains("entity/chest/normal")}");
-        }
-        if (shulkerSprite is null)
-        {
-            return chestGeometry;
+            Console.WriteLine($"block entity geometry: {(geometry is null ? 0 : geometry.IndexCount / 3)} tri");
         }
 
-        var shulkerGeometry = frame.ShulkerMesher.Build(span, shulkerSprite);
-        if (Sharpcraft.Client.Game.GameOptions.Get("MC_DEBUG_MODELS") is { Length: > 0 })
-        {
-            Console.WriteLine($"shulker geometry: {frame.ShulkerMesher.LastEntityCount} boxes, {shulkerGeometry.IndexCount / 3} tri, sprite={(shulkerSprite is null ? "null" : "ok")}");
-        }
-        if (frame.ShulkerMesher.LastEntityCount == 0)
-        {
-            return chestGeometry;
-        }
-
-        return Combine(chestGeometry, shulkerGeometry);
+        return geometry;
     }
+
 
     /// <summary>Concatenates two geometries into one, re-basing the second one's indices.</summary>
     private static DynamicGeometry Combine(DynamicGeometry first, DynamicGeometry second)
