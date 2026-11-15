@@ -1192,6 +1192,10 @@ internal static partial class FrameCommand
     }
 
     /// <summary>Builds the chest segment for a live session from the block entities in the loaded chunks.</summary>
+    /// <summary>Packs a block position the way the reference does.</summary>
+    private static long PositionKey(int x, int y, int z) =>
+        ((long)x & 0x3FFFFFF) << 38 | ((long)z & 0x3FFFFFF) << 12 | ((long)y & 0xFFF);
+
     internal static DynamicGeometry? BuildBlockEntityGeometry(ClientWorld world, Sharpcraft.Client.Render.ItemAtlas? chestAtlas, float partialTick = 0f)
     {
         if (chestAtlas is null)
@@ -1229,14 +1233,15 @@ internal static partial class FrameCommand
 
         Console.WriteLine($"block entity geometry: {chestStates.Count} chest entities, types=[" + string.Join(",", chestStates.Select(s => s.TypeId)) + "]");
 
-        // A double chest opens as far as its more open half, the way ChestBlock.opennessCombiner
-        // takes the larger of the two (issue 27).
+        // A double chest opens as far as its more open half. Only the real partner counts: the
+        // reference walks to the block on the connected side, so the other half must be the same
+        // block, face the same way and carry the complementary type (issues 27 and 28).
         if (chestStates.Any(s => s.ChestType != 0))
         {
-            var openness = new Dictionary<long, float>();
+            var byPosition = new Dictionary<long, Sharpcraft.Client.Render.BlockEntityRenderState>();
             foreach (var state in chestStates)
             {
-                openness[((long)(int)state.X & 0x3FFFFFF) << 38 | ((long)(int)state.Z & 0x3FFFFFF) << 12 | ((long)(int)state.Y & 0xFFF)] = state.Open;
+                byPosition[PositionKey((int)state.X, (int)state.Y, (int)state.Z)] = state;
             }
 
             for (var i = 0; i < chestStates.Count; i++)
@@ -1247,27 +1252,30 @@ internal static partial class FrameCommand
                     continue;
                 }
 
+                // A north or south chest joins along x, an east or west chest along z.
+                var alongX = state.Facing is 4 or 5;
                 var best = state.Open;
-                ReadOnlySpan<(int Dx, int Dz)> neighbours = [(1, 0), (-1, 0), (0, 1), (0, -1)];
-                foreach (var (dx, dz) in neighbours)
+                for (var side = -1; side <= 1; side += 2)
                 {
-                    var key = ((long)((int)state.X + dx) & 0x3FFFFFF) << 38 | ((long)((int)state.Z + dz) & 0x3FFFFFF) << 12 | ((long)(int)state.Y & 0xFFF);
-                    if (openness.TryGetValue(key, out var other) && other > best)
+                    var nx = (int)state.X + (alongX ? side : 0);
+                    var nz = (int)state.Z + (alongX ? 0 : side);
+                    if (!byPosition.TryGetValue(PositionKey(nx, (int)state.Y, nz), out var other))
                     {
-                        best = other;
+                        continue;
+                    }
+
+                    if (other.ChestType == 0 || other.ChestType == state.ChestType || other.Facing != state.Facing)
+                    {
+                        continue;
+                    }
+
+                    if (other.Open > best)
+                    {
+                        best = other.Open;
                     }
                 }
 
                 chestStates[i] = state with { Open = best };
-            }
-        }
-
-        if (Sharpcraft.Client.Game.GameOptions.Get("MC_DEBUG_MODELS") is { Length: > 0 })
-        {
-            foreach (var probe in chestStates)
-            {
-                var probeRect = Sharpcraft.Client.Render.ChestAtlas.SpriteFor(chestAtlas, probe.ChestMaterial, probe.ChestType);
-                Console.WriteLine($"chest sprite: mat={probe.ChestMaterial} type={probe.ChestType} rect=({probeRect.U0},{probeRect.V0},{probeRect.U1},{probeRect.V1}) id={probeRect.RectId}");
             }
         }
 
