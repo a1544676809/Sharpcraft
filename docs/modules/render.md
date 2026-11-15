@@ -493,7 +493,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 - **简化了什么**：整个方块实体段用一条 `CullMode.None` 的 cutout 管线（`FramePipelines.CreateNoCullCutoutPipeline`），而不是像原版那样每个渲染器自选 RenderType。
 - **为什么**：原版大多数模型类方块实体（箱子、潜影盒、告示牌、床、旗帜、头颅）都用 `entityCutout`，它本身就 `.withCull(false)`；统一 no-cull 让这些类型自动正确，不需要每个 mesher 各自处理。
-- **对等效性的影响**：已实现的 Chest / Trapped / Ender / ShulkerBox 与原版完全一致；DecoratedPot 的静态基底与空白侧面几何按原版真值实现（陶片图案见 `SIM-BE-POT-NO-PATTERNS`）；CopperGolemStatue 的站立模型、四档氧化纹理与 facing 按原版真值实现（姿态见 `SIM-BE-COPPER-GOLEM-POSES`）；Lectern 的静态书本使用参考 `BOOK_STATE`（动画见 `SIM-BE-LECTERN-STATE`）。原版用 `entitySolid`（剔除）的 `Conduit` 尚未实现；实现时统一 no-cull 只会多画背面，视觉等价，仅多一点填充成本。
+- **对等效性的影响**：已实现的 Chest / Trapped / Ender / ShulkerBox 与原版完全一致；DecoratedPot 的静态基底与空白侧面几何按原版真值实现（陶片图案见 `SIM-BE-POT-NO-PATTERNS`）；CopperGolemStatue 的站立模型、四档氧化纹理与 facing 按原版真值实现（姿态见 `SIM-BE-COPPER-GOLEM-POSES`）；Lectern 的静态书本使用参考 `BOOK_STATE`（动画见 `SIM-BE-LECTERN-STATE`）；EnchantTable 的静态书本使用固定源默认状态（动画见 `SIM-BE-ENCHANT-BOOK-STATE`）。原版用 `entitySolid`（剔除）的 `Conduit` 尚未实现；实现时统一 no-cull 只会多画背面，视觉等价，仅多一点填充成本。
 - **状态**：受控偏差，跟踪任务见 Issue #45。
 - **验收证据**：潜影盒 144 顶点金值测试（`Repro_042_ShulkerBoxTests`）+ 真机开盖内壁不透明。
 
@@ -548,3 +548,13 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收证据**：`tests/Sharpcraft.Client.Tests/Render/LecternRendererTests.cs` 覆盖静态书页姿态、facing/UV、`HasBook`、`Handles(29)` 与 64×32 纹理；接入动态页后需补页面状态真值与单方块像素对比。
 
 <!-- simplification:SIM-BE-LECTERN-STATE task:T-47 -->
+
+### SIM-BE-ENCHANT-BOOK-STATE：附魔台书本使用固定静止状态
+
+- **简化了什么**：`EnchantTableRenderer` 固定 `time=0`、`flip=0`、`open=0`、`yRot=0`，因此书本不随时间漂浮、不随玩家旋转、也不播放翻页/开合动画；`BOOK_STATE` 为 `BookModel.State.forAnimation(0, 0.1, 0.9, 0)`。
+- **为什么**：首切片先复用 `BookModelDefinition` 落地附魔台静态书本与源 pose；漂浮、旋转和翻页需要 `EnchantingTableBlockEntity` 的逐刻状态通道，后续任务跟进。
+- **对等效性的影响**：书本的静态几何、纹理和源 `translate(0.5,0.75,0.5)` / Y / Z 80° pose 与原版静止默认状态一致；动态漂浮、旋转和翻页缺失。
+- **状态**：受控偏差，计划由 T-47（#47 批次 1）后续附魔台动画切片跟进（Issue #68）。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/EnchantTableRendererTests.cs` 覆盖静态顶点/UV、`Handles(13)` 与 64×32 纹理；接入动态状态后需补时间/flip/open 真值与单方块像素对比。
+
+<!-- simplification:SIM-BE-ENCHANT-BOOK-STATE task:T-47 -->

@@ -25,6 +25,7 @@ public static class VanillaBlockEntityTypes
     public const int Chest = 1;
     public const int TrappedChest = 2;
     public const int EnderChest = 3;
+    public const int EnchantingTable = 13;
     public const int ShulkerBox = 24;
     public const int Lectern = 29;
     public const int Bell = 30;
@@ -95,6 +96,9 @@ public static class VanillaBlockEntityTypes
 
     /// <summary>Lectern block entity type, drawn by the lectern renderer.</summary>
     public static bool IsLectern(int typeId) => typeId == Lectern;
+
+    /// <summary>Enchanting table block entity type, drawn by the enchant table renderer.</summary>
+    public static bool IsEnchantingTable(int typeId) => typeId == EnchantingTable;
 
     /// <summary>Copper golem statue block entity type, drawn by its own model renderer.</summary>
     public static bool IsCopperGolemStatue(int typeId) => typeId == CopperGolemStatue;
