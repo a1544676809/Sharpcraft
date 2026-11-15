@@ -9,9 +9,10 @@ using Sharpcraft.Framework.Rendering;
 namespace Sharpcraft.Client.Render;
 
 /// <summary>
-/// Draws static block/wall skulls for skeleton, wither skeleton, zombie and creeper heads. The head
-/// cube is generated once by <see cref="SkullModelDefinition"/>; this renderer applies only the
-/// outer ground/wall pose from the reference.
+/// Draws static block/wall skulls for all seven supported families: skeleton, wither skeleton, zombie,
+/// creeper, Player (default slim Steve), Piglin and Dragon. Each head model is generated once by
+/// <see cref="SkullModelDefinition"/>; this renderer applies only the outer ground/wall pose from the
+/// reference.
 /// </summary>
 /// <remarks>
 /// Source: <c>ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/SkullBlockRenderer.java</c>
@@ -21,8 +22,9 @@ namespace Sharpcraft.Client.Render;
 /// -facing.getOpposite().toYRot(), scale (-1,-1,1).
 /// </remarks>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.blockentity.SkullBlockRenderer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/SkullBlockRenderer.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
-[Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-SKULL-VARIANTS", "T-47", Note = "Only skeleton, wither skeleton, zombie, creeper, default-player and piglin heads are drawn; dragon and other custom skull models are skipped.")]
+[Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-SKULL-VARIANTS", "T-47", Note = "All known skull head variants (skeleton, wither skeleton, zombie, creeper, player, piglin and dragon) are handled; no variant remains skipped.")]
 [Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-SKULL-PLAYER-SKIN", "T-47", Note = "Player heads use the default slim Steve skin; profile skin cache and custom skins are not wired.")]
+[Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-SKULL-DRAGON-ANIM", "T-47", Note = "Dragon jaw animation (setupAnim jaw xRot) is not applied; the static jaw pose is used.")]
 [Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-SKULL-ZOFFSET", "T-47", Note = "entityCutoutZOffset depth offset is not applied; the dependency is Issue #45.")]
 [Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-SKULL-ANIM", "T-47", Note = "Static head model; skull animationProgress / setupAnim rotations are not wired.")]
 public sealed class SkullRenderer : IBlockEntityRenderer
@@ -40,12 +42,12 @@ public sealed class SkullRenderer : IBlockEntityRenderer
     public DynamicGeometry Build(ReadOnlySpan<BlockEntityRenderState> entities, ItemAtlas atlas)
     {
         _geometry.Clear();
-        // Worst case is the piglin six-box head (144 vertices / 216 indices); Player uses 48/72.
+        // Dragon is the worst case: seven boxes = 168 vertices / 252 indices per entity.
         // Reserve the whole batch before appending: DynamicGeometry.Reserve does not copy existing
         // content, so a mid-loop growth would drop every previously written skull.
         _geometry.Reserve(
-            entities.Length * 144 * ChunkMesher.FloatsPerVertex,
-            entities.Length * 216);
+            entities.Length * 168 * ChunkMesher.FloatsPerVertex,
+            entities.Length * 252);
         LastEntityCount = 0;
 
         for (var index = 0; index < entities.Length; index++)

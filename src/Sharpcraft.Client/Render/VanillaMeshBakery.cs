@@ -22,6 +22,11 @@ public static class VanillaMeshBakery
         string? texturePath = null)
     {
         ArgumentNullException.ThrowIfNull(mesh);
+        if (VanillaMeshBake.HasNonUnitScale(mesh))
+        {
+            throw new NotSupportedException("Non-unit PartPose scale is only supported by VanillaMeshBake.Bake for the static Dragon skull; VanillaMeshBakery.Build requires scale 1.");
+        }
+
         var root = mesh.Root
             ?? throw new InvalidOperationException("VanillaMeshDefinition has no root part; declare one before baking.");
 
