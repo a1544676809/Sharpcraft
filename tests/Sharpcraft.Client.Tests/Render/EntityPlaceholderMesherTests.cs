@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using System.Numerics;
 using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
+using Sharpcraft.Framework.Rendering;
 using Xunit;
 
 namespace Sharpcraft.Client.Tests.Render;
@@ -161,5 +163,150 @@ public sealed class EntityPlaceholderMesherTests
         Assert.Equal(EntityPlaceholderMesher.PlayerHeight, maxY - minY, 3);
         Assert.Equal(0f, minY, 3);
         Assert.InRange(maxX, 0.3f, 0.4f);
+    }
+
+    /// <summary>AppendBox must reject a non-positive source texture size before it divides UVs by it.</summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void AppendBoxRejectsNonPositiveTextureSize(int textureSize)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => AppendSizedBox(textureSize));
+    }
+
+    /// <summary>AppendQuad emits one four-vertex, two-triangle single-sided quad.</summary>
+    [Fact]
+    public void AppendQuadEmitsOneSingleSidedQuad()
+    {
+        var geometry = new DynamicGeometry();
+        geometry.Reserve(4 * ChunkMesher.FloatsPerVertex, 6);
+
+        var (vertexFloats, indexCount) = AppendQuad(
+            geometry,
+            new Vector3(0f, 0f, 0f),
+            new Vector3(1f, 0f, 0f),
+            new Vector3(1f, 0f, 1f),
+            new Vector3(0f, 0f, 1f));
+
+        Assert.Equal(4 * ChunkMesher.FloatsPerVertex, vertexFloats);
+        Assert.Equal(6, indexCount);
+    }
+
+    /// <summary>Degenerate quads are skipped rather than writing zero-area triangles.</summary>
+    [Fact]
+    public void AppendQuadSkipsDegenerateQuads()
+    {
+        var duplicate = AppendQuad(new DynamicGeometry(), Vector3.Zero, Vector3.Zero, Vector3.Zero, Vector3.Zero);
+        Assert.Equal((0, 0), duplicate);
+
+        var collinear = AppendQuad(
+            new DynamicGeometry(),
+            new Vector3(0f, 0f, 0f),
+            new Vector3(1f, 0f, 0f),
+            new Vector3(2f, 0f, 0f),
+            new Vector3(3f, 0f, 0f));
+        Assert.Equal((0, 0), collinear);
+
+        var zeroArea = AppendQuad(
+            new DynamicGeometry(),
+            new Vector3(0f, 0f, 0f),
+            new Vector3(1f, 0f, 0f),
+            new Vector3(1f, 0f, 0f),
+            new Vector3(0f, 0f, 0f));
+        Assert.Equal((0, 0), zeroArea);
+    }
+
+    /// <summary>AppendQuad is allocation free once its backing buffers are warm.</summary>
+    [Fact]
+    public void AppendQuadDoesNotAllocateOnceWarm()
+    {
+        var geometry = new DynamicGeometry();
+        geometry.Reserve(4 * ChunkMesher.FloatsPerVertex, 6);
+        var sprite = Sprite();
+        var vertexFloats = 0;
+        var indexCount = 0;
+
+        void Emit()
+        {
+            vertexFloats = 0;
+            indexCount = 0;
+            EntityPlaceholderMesher.AppendQuad(
+                geometry,
+                new Vector3(0f, 0f, 0f),
+                new Vector3(1f, 0f, 0f),
+                new Vector3(1f, 0f, 1f),
+                new Vector3(0f, 0f, 1f),
+                1f,
+                1f,
+                1f,
+                sprite,
+                ref vertexFloats,
+                ref indexCount,
+                (0f, 0f),
+                (1f, 0f),
+                (1f, 1f),
+                (0f, 1f));
+        }
+
+        Emit();
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var frame = 0; frame < 64; frame++)
+        {
+            Emit();
+        }
+
+        var after = GC.GetAllocatedBytesForCurrentThread();
+        Assert.Equal(before, after);
+    }
+
+    private static void AppendSizedBox(int textureSize)
+    {
+        var geometry = new DynamicGeometry();
+        var vertexFloats = 0;
+        var indexCount = 0;
+        EntityPlaceholderMesher.AppendBox(
+            geometry,
+            Vector3.Zero,
+            1f,
+            1f,
+            1f,
+            1f,
+            1f,
+            Sprite(),
+            ref vertexFloats,
+            ref indexCount,
+            texDx: 1,
+            texDy: 1,
+            texDz: 1,
+            textureSize: textureSize);
+    }
+
+    private static (int VertexFloats, int IndexCount) AppendQuad(
+        DynamicGeometry geometry,
+        Vector3 a,
+        Vector3 b,
+        Vector3 c,
+        Vector3 d)
+    {
+        geometry.Reserve(4 * ChunkMesher.FloatsPerVertex, 6);
+        var vertexFloats = 0;
+        var indexCount = 0;
+        EntityPlaceholderMesher.AppendQuad(
+            geometry,
+            a,
+            b,
+            c,
+            d,
+            1f,
+            1f,
+            1f,
+            Sprite(),
+            ref vertexFloats,
+            ref indexCount,
+            (0f, 0f),
+            (1f, 0f),
+            (1f, 1f),
+            (0f, 1f));
+        return (vertexFloats, indexCount);
     }
 }

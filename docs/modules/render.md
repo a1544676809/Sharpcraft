@@ -518,3 +518,13 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收证据**：`tests/Sharpcraft.Client.Tests/Render/DecoratedPotMesherGoldenTests.cs` 覆盖脖子两盒与 top/bottom 平面 world bounds、四个侧面在四个水平朝向下的位置/法线/UV、6 组 `FacingDegrees` 真值、单 pot 72 顶点 / 108 索引、双 pot 批量偏移、32/16 纹理归一化与注册表 `Handles(41)`；接入图案后需补 sherds 选择真值与单方块像素对比。
 
 <!-- simplification:SIM-BE-POT-NO-PATTERNS task:T-47 -->
+
+### SIM-BE-POT-NO-WOBBLE：饰纹陶罐不播放 wobble 动画
+
+- **简化了什么**：`DecoratedPotMesher` 只输出静态几何；原版 `DecoratedPotRenderer.submit` 根据 `DecoratedPotBlockEntity` 的 `wobbleProgress` 与 `wobbleStyle` 对模型施加 POSITIVE 的 X/Z 小幅倾斜或 NEGATIVE 的 Y 旋转衰减，本实现未接入。
+- **为什么**：wobble 状态来自方块实体逐刻动画（`wobbleProgress` / `wobbleStyle`），当前 `BlockEntityRenderState` 没有对应的动画字段与数据通道。
+- **对等效性的影响**：静止外观一致；被玩家或投掷物击中后的陶罐晃动动画缺失。
+- **状态**：受控偏差，计划由 T-47（#47 批次 1）后续动画切片跟进。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/DecoratedPotMesherGoldenTests.cs` 覆盖静态几何与朝向；接入 wobble 后需补 `wobbleProgress` / `wobbleStyle` 真值向量与单方块像素对比。
+
+<!-- simplification:SIM-BE-POT-NO-WOBBLE task:T-47 -->

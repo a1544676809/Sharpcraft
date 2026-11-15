@@ -156,6 +156,49 @@ public sealed class DecoratedPotMesherGoldenTests
         }
     }
 
+    /// <summary>
+    /// The side planes' four corners are the source pose applied to the reference's 14x16x0 NORTH cube;
+    /// this pins <c>ModelPart.translateAndRotate</c>'s rotationZYX convention independently of the
+    /// helper implementation. Source: <c>ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/ModelPart.java:163-167</c>
+    /// and <c>ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/DecoratedPotRenderer.java:109-118</c>.
+    /// </summary>
+    [Fact]
+    public void TheSidePlanesUseTheReferencePartPoseCorners()
+    {
+        var geometry = BuildOne(facing: 2);
+        var expected = new (int Start, Vector3[] Corners)[]
+        {
+            (56, [new(1f / 16f, 1f, 1f / 16f), new(15f / 16f, 1f, 1f / 16f), new(15f / 16f, 0f, 1f / 16f), new(1f / 16f, 0f, 1f / 16f)]),
+            (60, [new(1f / 16f, 1f, 15f / 16f), new(1f / 16f, 1f, 1f / 16f), new(1f / 16f, 0f, 1f / 16f), new(1f / 16f, 0f, 15f / 16f)]),
+            (64, [new(15f / 16f, 1f, 1f / 16f), new(15f / 16f, 1f, 15f / 16f), new(15f / 16f, 0f, 15f / 16f), new(15f / 16f, 0f, 1f / 16f)]),
+            (68, [new(15f / 16f, 1f, 15f / 16f), new(1f / 16f, 1f, 15f / 16f), new(1f / 16f, 0f, 15f / 16f), new(15f / 16f, 0f, 15f / 16f)])
+        };
+
+        foreach (var (start, corners) in expected)
+        {
+            for (var i = 0; i < corners.Length; i++)
+            {
+                var actual = Position(geometry, start + i);
+                Assert.Equal(corners[i].X, actual.X, Tolerance);
+                Assert.Equal(corners[i].Y, actual.Y, Tolerance);
+                Assert.Equal(corners[i].Z, actual.Z, Tolerance);
+            }
+        }
+    }
+
+    /// <summary>Facing ordinals and their fallbacks live on the block entity type registry, not the frame path.</summary>
+    [Fact]
+    public void TheDirectionOrdinalPredicateIsCentralized()
+    {
+        Assert.True(VanillaBlockEntityTypes.UsesDirectionOrdinalFacing(VanillaBlockEntityTypes.ShulkerBox));
+        Assert.True(VanillaBlockEntityTypes.UsesDirectionOrdinalFacing(VanillaBlockEntityTypes.DecoratedPot));
+        Assert.False(VanillaBlockEntityTypes.UsesDirectionOrdinalFacing(VanillaBlockEntityTypes.Chest));
+        Assert.False(VanillaBlockEntityTypes.UsesDirectionOrdinalFacing(VanillaBlockEntityTypes.Furnace));
+
+        Assert.Equal((byte)2, VanillaBlockEntityTypes.DirectionOrdinalFallback(VanillaBlockEntityTypes.DecoratedPot));
+        Assert.Equal((byte)1, VanillaBlockEntityTypes.DirectionOrdinalFallback(VanillaBlockEntityTypes.ShulkerBox));
+    }
+
     /// <summary>Six facing samples pin the reference's <c>180 - facing.toYRot()</c> table.</summary>
     [Theory]
     [InlineData((byte)0, -90f)]

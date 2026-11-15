@@ -22,10 +22,12 @@ namespace Sharpcraft.Client.Render;
 /// In the model space the base uses 32 by 32 pixels and the sides 16 by 16; the neck's part pose
 /// offsets it by (0, 37, 16) pixels and rotates it by pi about X, which is why its two boxes sit at
 /// the top of the block. The whole model is then rotated about the block centre by the reference
-/// <c>modelTransformation</c>, <c>180 - facing.toYRot()</c> degrees.
+/// <c>modelTransformation</c>, <c>180 - facing.toYRot()</c> degrees. The reference's wobble pose
+/// animation is not wired; see <c>SIM-BE-POT-NO-WOBBLE</c> in <c>docs/modules/render.md</c>.
 /// </remarks>
 [ReferenceClass("net.minecraft.client.renderer.blockentity.DecoratedPotRenderer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/DecoratedPotRenderer.java", Status = ReferenceStatus.Partial, Note = "Base and blank side planes only; pottery patterns from block entity NBT are not parsed.")]
 [Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-POT-NO-PATTERNS", "T-47", Note = "Only the blank decorated_pot_side texture is drawn; the reference selects a pottery pattern per side from the block entity's sherds.")]
+[Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-POT-NO-WOBBLE", "T-47", Note = "Static geometry only; the reference's wobbleProgress / wobbleStyle pose animation is not wired.")]
 public sealed class DecoratedPotMesher
 {
     /// <summary>One sixteenth of a block, the model's unit.</summary>
@@ -323,6 +325,8 @@ public sealed class DecoratedPotMesher
 
     private static Quaternion EulerZyx(float xDegrees, float yDegrees, float zDegrees)
     {
+        // ModelPart.translateAndRotate applies Quaternionf().rotationZYX(zRot, yRot, xRot);
+        // ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/ModelPart.java:163-167.
         var radians = MathF.PI / 180f;
         var matrix = Matrix4x4.CreateRotationX(xDegrees * radians)
             * Matrix4x4.CreateRotationY(yDegrees * radians)
@@ -352,6 +356,8 @@ public sealed class DecoratedPotMesher
     /// the reference's Direction ordinal (down 0, up 1, north 2, south 3, west 4, east 5), which is
     /// what <c>FrameCommand.DirectionOrdinalOf</c> hands the mesher; it is not the chest face-step
     /// encoding.
+    /// Ref: <c>ref://mc-26.3-analysis/src/net/minecraft/core/Direction.java:33-38,66-77,311-312</c>
+    /// and <c>ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/DecoratedPotRenderer.java:187</c>.
     /// </summary>
     /// <param name="facing">Direction ordinal.</param>
     public static float FacingDegrees(byte facing) => facing switch
