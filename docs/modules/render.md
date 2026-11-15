@@ -4,7 +4,7 @@
 状态：[已评审]
 基线：Minecraft 26.3
 证据：ADR-0003（WGPU 绑定与首帧路径）；实测输出 `sharpcraft-frame.png`
-最后更新：2026-10-29
+最后更新：2026-11-16
 
 # 渲染层（Framework / Client.Render）
 
@@ -498,3 +498,13 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收证据**：潜影盒 144 顶点金值测试（`Repro_042_ShulkerBoxTests`）+ 真机开盖内壁不透明。
 
 <!-- simplification:SIM-BE-SINGLE-NOCULL task:T-45 -->
+
+### SIM-BE-BELL-NO-SHAKE：钟只渲染静态外观
+
+- **简化了什么**：`BellMesher` 按原版 `BellModel.createBodyLayer()` 的静态盒定义绘制钟体与钟座；原版 `BellRenderer` 还会用 `BellBlockEntity.ticks` 与 `clickDirection` 驱动 `BellModel.State`，让钟体绕 X/Z 轴摆动，本实现未接入该动画。
+- **为什么**：摆动来自方块实体刻与点击方向，当前客户端还没有钟的动画数据通道；静态几何可以直接按模型真值落地，不必等该子系统。
+- **对等效性的影响**：静止外观（两个盒的尺寸、位置、纹理与 UV）与原版一致；被敲击后的摆动动画缺失，钟保持静止。
+- **状态**：受控偏差，计划由 T-47（#47 批次 1 的钟渲染器）跟进。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/BellMesherGoldenTests.cs` 覆盖两个盒的 world bounds、每钟 48 顶点 / 72 索引、双钟批量偏移、32×32 纹理 UV 与注册表 Handles；接入动画后需补 `STATE.tick` / shake 真值向量与单方块像素对比。
+
+<!-- simplification:SIM-BE-BELL-NO-SHAKE task:T-47 -->

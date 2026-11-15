@@ -76,6 +76,15 @@ public static class ChestAtlas
 
     ];
 
+    /// <summary>Bell texture, stitched into the same block entity sheet as the chest and shulker textures.</summary>
+    public const string BellTexture = "entity/bell/bell_body";
+
+    /// <summary>Textures the bell renderer uses; kept apart from the chest directory list.</summary>
+    private static readonly string[] BellTextures = [BellTexture];
+
+    /// <summary>Everything this block entity atlas stitches, in load order.</summary>
+    private static readonly string[] AllTextures = [.. Textures, .. ShulkerTextures, .. BellTextures];
+
     /// <summary>Texture the model uses when the material is plain wood.</summary>
     public const string NormalTexture = "entity/chest/normal";
 
@@ -95,7 +104,7 @@ public static class ChestAtlas
             }
         }
 
-        return ItemAtlas.Load(resources, [.. Textures, .. ShulkerTextures]);
+        return ItemAtlas.Load(resources, AllTextures);
     }
 
     /// <summary>
@@ -108,7 +117,7 @@ public static class ChestAtlas
         ArgumentNullException.ThrowIfNull(atlas);
 
         var highest = 0;
-        foreach (var path in Textures.Concat(ShulkerTextures))
+        foreach (var path in AllTextures)
         {
             if (atlas.Get(path) is { } rect && rect.RectId >= highest)
             {
@@ -120,7 +129,7 @@ public static class ChestAtlas
         table[2] = 1f;
         table[3] = 1f;
 
-        foreach (var path in Textures.Concat(ShulkerTextures))
+        foreach (var path in AllTextures)
         {
             if (atlas.Get(path) is not { } rect || rect.RectId < 0 || (rect.RectId * 4) + 3 >= table.Length)
             {
@@ -211,5 +220,13 @@ public static class ChestAtlas
         return atlas.Get(TexturePathFor(material, type))
             ?? atlas.Get(NormalTexture)
             ?? throw new InvalidOperationException("the chest atlas has no plain chest sprite");
+    }
+
+    /// <summary>Resolves the bell sprite, or null when this atlas does not hold the bell texture.</summary>
+    /// <param name="atlas">Atlas returned by <see cref="Load"/>.</param>
+    public static SpriteRect? SpriteForBell(ItemAtlas atlas)
+    {
+        ArgumentNullException.ThrowIfNull(atlas);
+        return atlas.Get(BellTexture);
     }
 }
