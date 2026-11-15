@@ -72,7 +72,24 @@ public static partial class ChunkMesher
                         baseY + y,
                         baseZ + z,
                         (sky / 15f, block / 15f),
-                        sprites.ForTexture);
+                        sprites.ForTexture,
+                        isCulled: direction =>
+                        {
+                            // The reference skips a face whose cullface direction is covered by a solid neighbour.
+                            var (dx, dy, dz) = direction switch
+                            {
+                                "down" => (0, -1, 0),
+                                "up" => (0, 1, 0),
+                                "north" => (0, 0, -1),
+                                "south" => (0, 0, 1),
+                                "west" => (-1, 0, 0),
+                                "east" => (1, 0, 0),
+                                _ => (0, 0, 0)
+                            };
+
+                            var neighbour = nb.GetBlockState(baseX + x + dx, baseY + y + dy, baseZ + z + dz, 0);
+                            return neighbour != 0 && ShouldCullFace(state, neighbour, sprites, null);
+                        });
                 }
             }
         }

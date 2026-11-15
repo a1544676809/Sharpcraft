@@ -106,7 +106,8 @@ public sealed class BlockModelSet
         int y,
         int z,
         (float Sky, float Block) light,
-        Func<Identifier, SpriteRect?> spriteFor)
+        Func<Identifier, SpriteRect?> spriteFor,
+        Func<string, bool>? isCulled = null)
     {
         ArgumentNullException.ThrowIfNull(buffer);
         ArgumentNullException.ThrowIfNull(quads);
@@ -122,6 +123,11 @@ public sealed class BlockModelSet
             }
 
             var quad = textured.Quad;
+            if (quad.CullFace is { } cullFace && isCulled is not null && isCulled(cullFace))
+            {
+                continue;
+            }
+
             var shade = Shade(quad.Direction);
             buffer.AppendQuad(
                 (quad.V0.Position.X + x, quad.V0.Position.Y + y, quad.V0.Position.Z + z),
