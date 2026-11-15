@@ -440,13 +440,10 @@ public sealed class ClientWorld
     }
 
     /// <summary>Writes a block state; silently ignored when the chunk is not loaded.</summary>
-    private int _blockEntityVersion;
 
     /// <summary>Increases whenever the set of block entities changes, so cached geometry can be rebuilt.</summary>
-    public int BlockEntityVersion => Volatile.Read(ref _blockEntityVersion);
 
     /// <summary>Marks the cached block entity geometry stale.</summary>
-    public void InvalidateBlockEntities() => Interlocked.Increment(ref _blockEntityVersion);
     public bool SetBlockState(int x, int y, int z, int state, int airState = 0)
     {
         var chunk = GetChunk(BlockCoordinates.ToSectionCoord(x), BlockCoordinates.ToSectionCoord(z));
@@ -462,7 +459,6 @@ public sealed class ClientWorld
             ? Sharpcraft.Common.World.VanillaBlockEntityTypes.IdOf(oldBlockId.Path)
             : -1;
         chunk.SetBlockState(localX, y, localZ, state, airState);
-        InvalidateBlockEntities();
 
         // Vanilla creates a block entity as soon as the new state carries one. Without this a chest placed
         // after its chunk loaded never reaches a renderer, however correct the rest of the chain is.

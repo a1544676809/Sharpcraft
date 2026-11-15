@@ -1208,7 +1208,6 @@ internal static partial class FrameCommand
         var frame = frameState ?? new Sharpcraft.Client.Render.BlockEntityFrameState();
         if (chestAtlas is null)
         {
-            frame.Publish(null);
             return null;
         }
 
@@ -1303,14 +1302,11 @@ internal static partial class FrameCommand
 
         if (chestStates.Count == 0)
         {
-            frame.Publish(null);
             return null;
         }
 
-        var built = frame.Mesher.Build(
+        return frame.Mesher.Build(
             System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates),
             chestAtlas);
-        frame.Publish(built);
-        return built;
     }
 }
