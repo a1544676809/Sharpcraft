@@ -9,7 +9,7 @@
 
 - `RenderPipelines` 的地形管线由 `GENERIC_BLOCKS_SNIPPET` 派生，它只设 `DepthStencilState.DEFAULT`，
   **没有** `withCull(false)`；`RenderPipeline.Builder` 的 `cull` 默认是 `true`
-  （`ref://mc-26.3-analysis/src/net/minecraft/client/renderer/RenderPipeline.java:417`）。
+  （`ref://mc-26.3-analysis/src/com/mojang/renderpearl/api/pipeline/RenderPipeline.java:417`）。
 - 因此 solid / cutout / translucent 三种地形管线**都启用背面剔除**。
 - `withCull(false)` 只出现在线条、调试几何、粒子、云、实体（盔甲/告示牌等）等管线。
 

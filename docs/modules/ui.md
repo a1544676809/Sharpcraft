@@ -281,7 +281,7 @@
 ### 9.1 GUI 画布与整数缩放（2026-10-29）
 
 **原版不在原生分辨率上画界面。** 它先取"每界面像素占几个设备像素"的最大整数，使画布仍不小于 320×240，
-然后把一切画在这个更小的坐标系里。证据：`ref://mc-26.3-analysis/src/net/minecraft/client/Window.java`（`calculateScale`/`setGuiScale`）。
+然后把一切画在这个更小的坐标系里。证据：`ref://mc-26.3-analysis/src/com/mojang/blaze3d/platform/Window.java`（`calculateScale`/`setGuiScale`）。
 
 | 项 | 公式 |
 | --- | --- |

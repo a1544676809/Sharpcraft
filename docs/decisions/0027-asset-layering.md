@@ -16,7 +16,7 @@ updated: 2026-11-06
 
 ## 1. 背景
 
-参考实现在构造资源栈时的分层是固定的（`ref://mc-26.3-analysis/src/net/minecraft/client/main/Minecraft.java`、
+参考实现在构造资源栈时的分层是固定的（`ref://mc-26.3-analysis/src/net/minecraft/client/Minecraft.java`、
 `ref://mc-26.3-analysis/src/net/minecraft/client/gui/screens/...` 与 `GameConfig.getExternalAssetSource`）：
 
 1. **内置 jar 资源包**（底部）：`VanillaPackResourcesBuilder.pushJarResources()` 把客户端 jar 的 `assets/minecraft`

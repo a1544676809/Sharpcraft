@@ -224,6 +224,29 @@ public static class ClassMapTool
         return (entries.Count, injected, unannotated.Count);
     }
 
+    private static readonly Regex DocRefPattern = new(@"ref://mc-26\.3-analysis/([^\s`]+)", RegexOptions.Compiled);
+
+    private static string? NormaliseDocRef(string raw)
+    {
+        var path = raw;
+        var hash = path.IndexOf('#');
+        if (hash >= 0)
+        {
+            path = path[..hash];
+        }
+
+        path = Regex.Replace(path, @":\d+(-\d+)?$", string.Empty);
+        path = path.TrimEnd(')', ']', '"', '\'', '`', ',', ';', '.', ':', '、', '。', '，');
+
+        // Only real Java files are checked: brace shorthand, placeholders, bare workspace paths and
+        // markdown link fragments all end up here otherwise.
+        if (!path.EndsWith(".java", StringComparison.Ordinal) || path.Contains('{') || path.Contains('*') || path.EndsWith("....java", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return path;
+    }
     private static HashSet<string> LoadRefsBaseline(string root)
     {
         var path = Path.Combine(root, RefsBaselinePath.Replace('/', Path.DirectorySeparatorChar));
@@ -405,6 +428,33 @@ public static class ClassMapTool
 
         if (referenceFilesVerified)
         {
+            // Prose in docs/*.md points at analysis sources too; nothing else checks those paths.
+            var docsRoot = Path.Combine(root, "docs");
+            if (Directory.Exists(docsRoot))
+            {
+                foreach (var doc in Directory.EnumerateFiles(docsRoot, "*.md", SearchOption.AllDirectories))
+                {
+                    var relative = Path.GetRelativePath(root, doc);
+                    var lines = File.ReadAllLines(doc);
+                    for (var line = 0; line < lines.Length; line++)
+                    {
+                        foreach (Match match in DocRefPattern.Matches(lines[line]))
+                        {
+                            var rel = NormaliseDocRef(match.Groups[1].Value);
+                            if (rel is null)
+                            {
+                                continue;
+                            }
+
+                            if (!File.Exists(Path.Combine(analysisRoot, rel.Replace('/', Path.DirectorySeparatorChar))))
+                            {
+                                violations.Add($"doc reference not found: {relative}:{line + 1} -> {match.Groups[1].Value}");
+                            }
+                        }
+                    }
+                }
+            }
+
             foreach (var known in refsBaseline)
             {
                 if (!seenMissing.Contains(known))

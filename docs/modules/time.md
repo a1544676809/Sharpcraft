@@ -58,7 +58,7 @@
 
 - `ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundSetTimePacket.java`
 - `ref://mc-26.3-analysis/src/net/minecraft/world/clock/{ClockNetworkState,WorldClock,WorldClocks}.java`
-- `ref://mc-26.3-analysis/src/net/minecraft/Timelines.java`（关键帧/easing）
+- `ref://mc-26.3-analysis/src/net/minecraft/world/timeline/Timelines.java`（关键帧/easing）
 - `ref://mc-26.3-analysis/src/net/minecraft/util/EasingType.java`（缓动）
 - `docs/specs/render/sky-celestial.md`、`docs/specs/render/lighting.md §6`
 
