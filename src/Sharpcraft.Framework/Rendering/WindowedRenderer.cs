@@ -26,6 +26,8 @@ namespace Sharpcraft.Framework.Rendering;
 /// </remarks>
 public static class WindowedRenderer
 {
+    /// <summary>Shared empty geometry used when the block entity pass has nothing to draw.</summary>
+    private static readonly DynamicGeometry EmptyBlockEntityGeometry = new();
     /// <summary>Shared canonical pass plan; the windowed shell must keep this order when extracting the pipeline.</summary>
     public static IReadOnlyList<WorldRenderPass> PassPlan => WorldRenderPipeline.DefaultPasses;
 
@@ -892,7 +894,7 @@ public static class WindowedRenderer
                 // The geometry object is reused between frames, so identity cannot signal a change.
                 // The builder runs every frame and the submission is refreshed from its result; an
                 // empty result still clears the previous geometry (issues 22 and 24).
-                blockEntitySubmission.Upload(blockEntitiesPerFrame() ?? new DynamicGeometry(), blockEntityAtlas.BindGroup);
+                blockEntitySubmission.Upload(blockEntitiesPerFrame() ?? EmptyBlockEntityGeometry, blockEntityAtlas.BindGroup);
             }
 
             // The whole frame is recorded into the parameterised target; this shell only owns the surface, the

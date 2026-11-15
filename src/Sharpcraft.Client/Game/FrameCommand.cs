@@ -1145,16 +1145,16 @@ internal static partial class FrameCommand
         };
     }
 
-    /// <summary>
-    /// Which half of a double chest the block is, or single. Values follow the reference's
-    /// <c>ChestType</c> ordinal: single zero, left one, right two.
-    /// </summary>
     /// <summary>Clockwise neighbour facing: north to east, east to south, south to west, west to north.</summary>
     private static byte Clockwise(byte facing) => facing switch { 4 => 1, 1 => 5, 5 => 0, 0 => 4, _ => facing };
 
     /// <summary>Counter-clockwise neighbour facing, the inverse of <see cref="Clockwise"/>.</summary>
     private static byte CounterClockwise(byte facing) => facing switch { 4 => 0, 0 => 5, 5 => 1, 1 => 4, _ => facing };
 
+    /// <summary>
+    /// Which half of a double chest the block is, or single. Values follow the reference's
+    /// <c>ChestType</c> ordinal: single zero, left one, right two.
+    /// </summary>
     private static byte ChestTypeOf(ClientWorld world, int x, int y, int z)
     {
         if (!Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
@@ -1197,12 +1197,11 @@ internal static partial class FrameCommand
         };
     }
 
-    /// <summary>Builds the chest segment for a live session from the block entities in the loaded chunks.</summary>
     /// <summary>Packs a block position the way the reference does.</summary>
-
     private static long PositionKey(int x, int y, int z) =>
         ((long)x & 0x3FFFFFF) << 38 | ((long)z & 0x3FFFFFF) << 12 | ((long)y & 0xFFF);
 
+    /// <summary>Builds the chest segment for a live session from the block entities in the loaded chunks.</summary>
     internal static DynamicGeometry? BuildBlockEntityGeometry(ClientWorld world, Sharpcraft.Client.Render.ItemAtlas? chestAtlas, float partialTick = 0f, Sharpcraft.Client.Render.BlockEntityFrameState? frameState = null)
     {
         var frame = frameState ?? new Sharpcraft.Client.Render.BlockEntityFrameState();
@@ -1254,7 +1253,17 @@ internal static partial class FrameCommand
         // the clockwise block for a left half, the counter-clockwise one for a right half, and it
         // accepts that neighbour only when it is the same block, carries the complementary type and
         // faces the same way (issues 27 and 28).
-        if (chestStates.Any(s => s.ChestType != 0))
+        var anyDouble = false;
+        for (var scan = 0; scan < chestStates.Count; scan++)
+        {
+            if (chestStates[scan].ChestType != 0)
+            {
+                anyDouble = true;
+                break;
+            }
+        }
+
+        if (anyDouble)
         {
             var byPosition = frame.ByPosition;
             byPosition.Clear();

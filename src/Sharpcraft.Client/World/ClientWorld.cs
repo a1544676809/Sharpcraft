@@ -440,10 +440,6 @@ public sealed class ClientWorld
     }
 
     /// <summary>Writes a block state; silently ignored when the chunk is not loaded.</summary>
-
-    /// <summary>Increases whenever the set of block entities changes, so cached geometry can be rebuilt.</summary>
-
-    /// <summary>Marks the cached block entity geometry stale.</summary>
     public bool SetBlockState(int x, int y, int z, int state, int airState = 0)
     {
         var chunk = GetChunk(BlockCoordinates.ToSectionCoord(x), BlockCoordinates.ToSectionCoord(z));
