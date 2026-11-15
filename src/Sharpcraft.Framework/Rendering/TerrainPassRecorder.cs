@@ -17,6 +17,7 @@ internal sealed class TerrainPassRecorder
     private readonly IRenderBackend _backend;
     private readonly PipelineHandle _opaquePipeline;
     private readonly PipelineHandle _cutoutPipeline;
+    private readonly PipelineHandle _blockEntityPipeline;
     private readonly BindGroupHandle _bindGroup;
     private readonly ChunkGeometryStore? _arena;
     private readonly ChunkGeometryStore? _arenaCutout;
@@ -32,6 +33,7 @@ internal sealed class TerrainPassRecorder
         IRenderBackend backend,
         PipelineHandle opaquePipeline,
         PipelineHandle cutoutPipeline,
+        PipelineHandle blockEntityPipeline,
         BindGroupHandle bindGroup,
         ChunkGeometryStore? arena,
         ChunkGeometryStore? arenaCutout)
@@ -39,6 +41,7 @@ internal sealed class TerrainPassRecorder
         _backend = backend ?? throw new ArgumentNullException(nameof(backend));
         _opaquePipeline = opaquePipeline;
         _cutoutPipeline = cutoutPipeline;
+        _blockEntityPipeline = blockEntityPipeline;
         _bindGroup = bindGroup;
         _arena = arena;
         _arenaCutout = arenaCutout;
@@ -129,6 +132,6 @@ internal sealed class TerrainPassRecorder
             return;
         }
 
-        segment.Draw(_backend, pass, _opaquePipeline);
+        segment.Draw(_backend, pass, _blockEntityPipeline);
     }
 }

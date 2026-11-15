@@ -24,6 +24,6 @@ public sealed class BlockEntityFrameState
     /// <summary>Position lookup used to pair the halves of a double chest; cleared at each build.</summary>
     public Dictionary<long, BlockEntityRenderState> ByPosition { get; } = [];
 
-    /// <summary>Mesher reused across frames; its geometry is cleared at the start of each build.</summary>
-    public ChestMesher Mesher { get; } = new();
+    /// <summary>The one dispatcher used by the frame path; it owns every renderer's buffers.</summary>
+    public BlockEntityRenderDispatcher Dispatcher { get; } = new();
 }

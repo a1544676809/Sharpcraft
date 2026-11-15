@@ -14,8 +14,11 @@ namespace Sharpcraft.Client.Render;
 /// </summary>
 /// <remarks>
 /// Resolution happens once at build time and is stored in flat arrays so the per block test in the
-/// mesher stays an array index. Blocks that are plain cubes, or whose model could not be read, keep
-/// the cube path and are false here.
+/// mesher stays an array index. A state has an entry when its block's model resolves, including the
+/// empty model of a block entity block: the entry is then an empty quad list, so <see cref="Has"/> is
+/// true (the cube path must leave it alone) while <see cref="Quads"/> returns no geometry. States with
+/// no entry keep the cube path: a plain cube, an unreadable model, or a model that resolved to no
+/// drawable quads.
 /// </remarks>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.block.model.BlockModel", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/model/BlockModel.java")]
 public sealed class BlockModelSet
@@ -43,11 +46,9 @@ public sealed class BlockModelSet
 
         foreach (var entry in layout.Blocks)
         {
-            // A block drawn by its own block entity renderer must not also be cubed: its block id usually
-            // has no usable model or texture, so the cube path would paint a missing sprite where the
-            // real geometry goes. Marking it with an empty quad list keeps it out of that path, and the
-            // emitter then contributes nothing for it.
-            var resolved = IsBlockEntityRendered(entry.Id) ? [] : library.Resolve(entry.Id);
+            // A block whose model has no elements contributes nothing here, exactly like the reference;
+            // anything it draws comes from its block entity renderer.
+            var resolved = library.Resolve(entry.Id);
             if (resolved is null)
             {
                 continue;
@@ -67,24 +68,17 @@ public sealed class BlockModelSet
         return count == 0 ? null : new BlockModelSet(quads) { ElementStateCount = count };
     }
 
-    /// <summary>Whether this state draws from element geometry.</summary>
-    /// <param name="stateId">Block state id.</param>
     /// <summary>
-    /// Whether a block is drawn by its own block entity renderer, so the cube path must leave it alone.
+    /// Whether this state has an entry, meaning the cube path must skip it. True both for element
+    /// models and for empty models; check <see cref="Quads"/> for what to draw.
     /// </summary>
-    private static bool IsBlockEntityRendered(Identifier blockId) => blockId.Path switch
-    {
-        "chest" or "trapped_chest" or "ender_chest" => true,
-        "copper_chest" or "waxed_copper_chest" => true,
-        "exposed_copper_chest" or "waxed_exposed_copper_chest" => true,
-        "weathered_copper_chest" or "waxed_weathered_copper_chest" => true,
-        "oxidized_copper_chest" or "waxed_oxidized_copper_chest" => true,
-        _ => false
-    };
-
+    /// <param name="stateId">Block state id.</param>
     public bool Has(int stateId) => (uint)stateId < (uint)_quads.Length && _quads[stateId] is not null;
 
-    /// <summary>The quads of one state, or null when it is a plain cube.</summary>
+    /// <summary>
+    /// The quads of one state: an empty array for an empty model, or null when the state has no entry
+    /// and belongs on the cube path.
+    /// </summary>
     /// <param name="stateId">Block state id.</param>
     public TexturedQuad[]? Quads(int stateId) => (uint)stateId < (uint)_quads.Length ? _quads[stateId] : null;
 

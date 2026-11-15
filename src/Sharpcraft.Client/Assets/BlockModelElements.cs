@@ -50,8 +50,9 @@ public sealed record ModelElement(ModelBox Box, IReadOnlyDictionary<string, Mode
 /// </summary>
 /// <remarks>
 /// Elements are not merged down a parent chain: the first model from the child upwards that declares
-/// <c>elements</c> wins, exactly as the reference model does. A model with no elements anywhere is a
-/// plain cube and resolves to null.
+/// <c>elements</c> wins, exactly as the reference model does. A model that resolves but declares no
+/// elements and no parent is empty: it returns an empty list, not null. Null is reserved for a model
+/// that cannot be read at all.
 /// </remarks>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.block.model.BlockModel", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/model/BlockModel.java")]
 public sealed class BlockModelElements
@@ -77,7 +78,11 @@ public sealed class BlockModelElements
 
     /// <summary>Reads the elements of a model, following parents until one declares them.</summary>
     /// <param name="modelId">Model to start from.</param>
-    /// <returns>The elements, or null when the chain reaches a plain cube.</returns>
+    /// <returns>
+    /// The elements; an empty list when the model resolves but declares no elements anywhere; null
+    /// only when a model in the chain cannot be read. An empty list is an empty model, which draws
+    /// nothing, while null lets the caller fall back to the cube path.
+    /// </returns>
     public IReadOnlyList<ModelElement>? Resolve(Identifier modelId)
     {
         Identifier? current = modelId;
@@ -108,11 +113,17 @@ public sealed class BlockModelElements
                     return ParseElements(elements);
                 }
 
-                current = root.TryGetProperty("parent", out var parent) &&
-                          parent.ValueKind == JsonValueKind.String &&
-                          parent.GetString() is { Length: > 0 } name
-                    ? NormalizeModel(name)
-                    : null;
+                if (root.TryGetProperty("parent", out var parent) &&
+                    parent.ValueKind == JsonValueKind.String &&
+                    parent.GetString() is { Length: > 0 } name)
+                {
+                    current = NormalizeModel(name);
+                    continue;
+                }
+
+                // A real model file that declares neither elements nor a parent draws nothing. Chests
+                // and shulker boxes are exactly this: their block models carry only a particle texture.
+                return [];
             }
         }
 

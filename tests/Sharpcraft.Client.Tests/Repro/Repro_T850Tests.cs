@@ -35,9 +35,12 @@ public sealed class Repro_T850Tests
         chunk.ApplyLight(LightData.FullSky(chunk.Light.LightSectionCount));
         chunk.MarkLoaded();
 
+        // A chest has a model definition with no elements: the reference draws nothing for it and the
+        // block entity renderer takes over. The fake library has to say the same, or the set has
+        // nothing to record and the cube path would paint the chest.
         var library = new BlockModelLibrary(
-            _ => null,
-            new BlockModelElements(_ => null),
+            _ => Identifier.Parse("minecraft:block/chest"),
+            new BlockModelElements(_ => System.Text.Encoding.UTF8.GetBytes("{\"elements\":[]}")),
             (_, _) => null);
 
         var models = BlockModelSet.Build(library, layout);

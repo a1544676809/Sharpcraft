@@ -408,24 +408,29 @@ internal static partial class FrameCommand
                             record.Y,
                             blockZ,
                             record.TypeId,
-                            Facing: FacingOf(world, blockX, record.Y, blockZ),
+                Facing: Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(record.TypeId)
+                    ? ShulkerFacingOf(world, blockX, record.Y, blockZ)
+                    : FacingOf(world, blockX, record.Y, blockZ),
                             ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
-                            ChestMaterial: ChestMaterialOf(world, blockX, record.Y, blockZ),
+                            ChestMaterial: Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(record.TypeId)
+                                ? ShulkerColorOf(world, blockX, record.Y, blockZ)
+                                : ChestMaterialOf(world, blockX, record.Y, blockZ),
                             Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
                 }
             }
 
                 if (states.Count > 0)
                 {
-                    // Chest-like entities get their real model and draw as their own segment with the chest
-                    // sheet; everything else keeps the placeholder merge until its renderer exists.
-                    var chestStates = new List<Sharpcraft.Client.Render.BlockEntityRenderState>(states.Count);
+                    // Every block entity a registered renderer claims is drawn through the dispatcher;
+                    // the rest keep the placeholder merge until their renderer exists.
+                    var dispatcher = new Sharpcraft.Client.Render.BlockEntityRenderDispatcher();
+                    var modelStates = new List<Sharpcraft.Client.Render.BlockEntityRenderState>(states.Count);
                     var otherStates = new List<Sharpcraft.Client.Render.BlockEntityRenderState>(states.Count);
                     foreach (var state in states)
                     {
-                        if (Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(state.TypeId))
+                        if (dispatcher.Handles(state.TypeId))
                         {
-                            chestStates.Add(state);
+                            modelStates.Add(state);
                         }
                         else
                         {
@@ -433,13 +438,11 @@ internal static partial class FrameCommand
                         }
                     }
 
-                    if (chestStates.Count > 0 && chestAtlas is not null)
+                    if (modelStates.Count > 0 && chestAtlas is not null)
                     {
-                        var chestMesher = new Sharpcraft.Client.Render.ChestMesher();
-                        blockEntityGeometry = chestMesher.Build(
-                            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates),
+                        blockEntityGeometry = dispatcher.Build(
+                            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(modelStates),
                             chestAtlas);
-                        Console.WriteLine($"block entities: {chestMesher.LastEntityCount} chests, {blockEntityGeometry.IndexCount / 3} triangles");
                     }
 
                     if (otherStates.Count > 0)
@@ -1019,17 +1022,21 @@ internal static partial class FrameCommand
                         record.Y,
                         blockZ,
                         record.TypeId,
-                        Facing: FacingOf(world, blockX, record.Y, blockZ),
+                Facing: Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(record.TypeId)
+                    ? ShulkerFacingOf(world, blockX, record.Y, blockZ)
+                    : FacingOf(world, blockX, record.Y, blockZ),
                         ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
-                        ChestMaterial: ChestMaterialOf(world, blockX, record.Y, blockZ),
+                        ChestMaterial: Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(record.TypeId)
+                            ? ShulkerColorOf(world, blockX, record.Y, blockZ)
+                            : ChestMaterialOf(world, blockX, record.Y, blockZ),
                         Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
             }
             }
 
             if (blockEntityStates.Count > 0)
             {
-                var chestMesher = new Sharpcraft.Client.Render.ChestMesher();
-                var geometry = chestMesher.Build(
+                var dispatcher = new Sharpcraft.Client.Render.BlockEntityRenderDispatcher();
+                var geometry = dispatcher.Build(
                     System.Runtime.InteropServices.CollectionsMarshal.AsSpan(blockEntityStates),
                     chestAtlas);
                 request = request with
@@ -1038,7 +1045,7 @@ internal static partial class FrameCommand
                     BlockEntitySpriteRects = Sharpcraft.Client.Render.ChestAtlas.BuildRectTable(chestAtlas),
                     BlockEntityGeometry = geometry
                 };
-                Console.WriteLine($"block entities(local): {chestMesher.LastEntityCount} chests, {geometry.IndexCount / 3} triangles");
+                Console.WriteLine($"block entities(local): {geometry?.IndexCount / 3 ?? 0} tri");
             }
         }
 
@@ -1135,6 +1142,32 @@ internal static partial class FrameCommand
     /// The facing a block entity's block carries, or south when it has none. Chests take their
     /// direction from the block state rather than from their block entity data.
     /// </summary>
+    /// <summary>
+    /// The direction a shulker box faces. Unlike a chest it may face up or down, so the six
+    /// direction names map straight onto the reference Direction ids.
+    /// </summary>
+    private static byte ShulkerFacingOf(ClientWorld world, int x, int y, int z)
+    {
+        if (!Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
+                world.GetBlockState(x, y, z),
+                "facing",
+                out var facing))
+        {
+            return 1;
+        }
+
+        return facing switch
+        {
+            "down" => 0,
+            "up" => 1,
+            "north" => 2,
+            "south" => 3,
+            "west" => 4,
+            "east" => 5,
+            _ => 1
+        };
+    }
+
     private static byte FacingOf(ClientWorld world, int x, int y, int z)
     {
         if (!Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
@@ -1201,6 +1234,37 @@ internal static partial class FrameCommand
         };
     }
 
+    /// <summary>Dye index of a shulker box, or 255 for the undyed default. The reference orders the sixteen colours the way its dye enum does.</summary>
+    private static byte ShulkerColorOf(ClientWorld world, int x, int y, int z)
+    {
+        var block = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(world.GetBlockState(x, y, z));
+        if (block is null)
+        {
+            return 255;
+        }
+
+        return block.Value.Path switch
+        {
+            "white_shulker_box" => 0,
+            "orange_shulker_box" => 1,
+            "magenta_shulker_box" => 2,
+            "light_blue_shulker_box" => 3,
+            "yellow_shulker_box" => 4,
+            "lime_shulker_box" => 5,
+            "pink_shulker_box" => 6,
+            "gray_shulker_box" => 7,
+            "light_gray_shulker_box" => 8,
+            "cyan_shulker_box" => 9,
+            "purple_shulker_box" => 10,
+            "blue_shulker_box" => 11,
+            "brown_shulker_box" => 12,
+            "green_shulker_box" => 13,
+            "red_shulker_box" => 14,
+            "black_shulker_box" => 15,
+            _ => 255
+        };
+    }
+
     /// <summary>Packs a block position the way the reference does.</summary>
     private static long PositionKey(int x, int y, int z) =>
         ((long)x & 0x3FFFFFF) << 38 | ((long)z & 0x3FFFFFF) << 12 | ((long)y & 0xFFF);
@@ -1229,7 +1293,7 @@ internal static partial class FrameCommand
         {
             foreach (var record in chunk.BlockEntitiesSpan)
             {
-                if (!Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(record.TypeId))
+                if (!frame.Dispatcher.Handles(record.TypeId))
                 {
                     continue;
                 }
@@ -1241,9 +1305,13 @@ internal static partial class FrameCommand
                     record.Y,
                     blockZ,
                     record.TypeId,
-                    Facing: FacingOf(world, blockX, record.Y, blockZ),
+                Facing: Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(record.TypeId)
+                    ? ShulkerFacingOf(world, blockX, record.Y, blockZ)
+                    : FacingOf(world, blockX, record.Y, blockZ),
                     ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
-                    ChestMaterial: ChestMaterialOf(world, blockX, record.Y, blockZ),
+                    ChestMaterial: Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(record.TypeId)
+                        ? ShulkerColorOf(world, blockX, record.Y, blockZ)
+                        : ChestMaterialOf(world, blockX, record.Y, blockZ),
                     Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ, partialTick)));
             }
         }
@@ -1318,8 +1386,15 @@ internal static partial class FrameCommand
             return null;
         }
 
-        return frame.Mesher.Build(
-            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates),
-            chestAtlas);
+        var span = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates);
+        var geometry = frame.Dispatcher.Build(span, chestAtlas);
+        if (Sharpcraft.Client.Game.GameOptions.Get("MC_DEBUG_MODELS") is { Length: > 0 })
+        {
+            Console.WriteLine($"block entity geometry: {(geometry is null ? 0 : geometry.IndexCount / 3)} tri");
+        }
+
+        return geometry;
     }
+
+
 }

@@ -10,7 +10,7 @@ namespace Sharpcraft.Client.Tests;
 /// <summary>
 /// Covers the block model element reader's shape rules: elements come from the first model in the
 /// parent chain that declares them, faces carry their texture variable, explicit UV and cull face,
-/// and a model with no elements anywhere is a plain cube.
+/// and a model that declares nothing at all is an empty model rather than a missing one.
 /// </summary>
 public sealed class BlockModelElementsTests
 {
@@ -105,11 +105,22 @@ public sealed class BlockModelElementsTests
         Assert.Equal(16f, box.ToY);
     }
 
-    /// <summary>A model chain that never declares elements is a plain cube and resolves to null.</summary>
+    /// <summary>A chain whose parent cannot be read is missing, not empty, and resolves to null.</summary>
     [Fact]
     public void APlainCubeResolvesToNothing()
     {
         Assert.Null(Reader(new() { ["stone"] = CubeAll }).Resolve(Identifier.Parse("minecraft:stone")));
+    }
+
+
+    /// <summary>A model file that parses but declares no elements and no parent is an empty model.</summary>
+    [Fact]
+    public void AModelWithNothingDeclaredIsEmpty()
+    {
+        var elements = Reader(new() { ["empty"] = "{}" }).Resolve(Identifier.Parse("minecraft:empty"));
+
+        Assert.NotNull(elements);
+        Assert.Empty(elements);
     }
 
     /// <summary>Rotation is read when the model carries one.</summary>

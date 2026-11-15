@@ -487,3 +487,14 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 **实测**：陆地视角 1400×754，截断到 4 阶段（不含 composite）1.498–1.635 ms，全阶段 1.549–1.589 ms——**composite 本身就在噪声内，≈0 ms**。加上早退后同视角 1.543–1.772 ms，无可测变化。
 
 **保留理由**：等效、零成本、意图更清晰（先判断能否跳过再干活）。但与 §31 的合批一样，**不得当作性能优化引用**——它没有测出收益，保留是因为不亏。
+## 已知刻意的简化
+
+### SIM-BE-SINGLE-NOCULL：方块实体段统一不剔除背面
+
+- **简化了什么**：整个方块实体段用一条 `CullMode.None` 的 cutout 管线（`FramePipelines.CreateNoCullCutoutPipeline`），而不是像原版那样每个渲染器自选 RenderType。
+- **为什么**：原版大多数模型类方块实体（箱子、潜影盒、告示牌、床、旗帜、头颅）都用 `entityCutout`，它本身就 `.withCull(false)`；统一 no-cull 让这些类型自动正确，不需要每个 mesher 各自处理。
+- **对等效性的影响**：已实现的 Chest / Trapped / Ender / ShulkerBox 与原版完全一致。原版用 `entitySolid`（剔除）的 `Conduit`、`DecoratedPot` 尚未实现；实现时统一 no-cull 只会多画背面，视觉等价，仅多一点填充成本。
+- **状态**：受控偏差，跟踪任务见 Issue #45。
+- **验收证据**：潜影盒 144 顶点金值测试（`Repro_042_ShulkerBoxTests`）+ 真机开盖内壁不透明。
+
+<!-- simplification:SIM-BE-SINGLE-NOCULL task:T-45 -->

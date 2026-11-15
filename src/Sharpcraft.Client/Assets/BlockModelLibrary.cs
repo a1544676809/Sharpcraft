@@ -14,10 +14,14 @@ public sealed record TexturedQuad(ModelQuad Quad, Identifier Texture);
 /// <summary>
 /// Resolves a block's model into ready to draw quads: the boxes from
 /// <see cref="BlockModelElements"/>, with every face's texture variable turned into a path by
-/// <see cref="BlockModelResolver"/>. Blocks whose model is a plain cube resolve to null and stay on
-/// the existing cube path.
+/// <see cref="BlockModelResolver"/>.
 /// </summary>
 /// <remarks>
+/// Four outcomes: a model that cannot be read and a plain cube both resolve to null and stay on the
+/// cube path; a model that resolves but declares no elements resolves to an empty array and draws
+/// nothing at all, which is how chests and shulker boxes leave the visible geometry to their block
+/// entity renderer; anything else resolves to its quads, except that a model whose faces all fail to
+/// resolve a texture also resolves to null because it has nothing drawable.
 /// The result is cached per block, not per block state: the texture resolver only reads the first
 /// variant of a block's blockstate file, so every state of a block currently shares one model. That
 /// is the same limitation the resolver already carries and is registered in the spec.
@@ -59,7 +63,11 @@ public sealed class BlockModelLibrary
     /// <summary>How many blocks were found to have element geometry.</summary>
     public int ElementModelCount { get; private set; }
 
-    /// <summary>Builds a block's quads, or null when its model is a plain cube.</summary>
+    /// <summary>
+    /// Builds a block's quads. Null means "draw nothing here, keep the cube path": the model is
+    /// missing, it is a plain cube, or its faces resolved to no drawable quads. An empty array means
+    /// the model resolves but declares no elements, an empty model.
+    /// </summary>
     /// <param name="blockId">Block to resolve.</param>
     public TexturedQuad[]? Resolve(Identifier blockId)
     {
@@ -69,7 +77,7 @@ public sealed class BlockModelLibrary
         }
 
         var resolved = Build(blockId);
-        if (resolved is not null)
+        if (resolved is { Length: > 0 })
         {
             ElementModelCount++;
         }
@@ -127,7 +135,21 @@ public sealed class BlockModelLibrary
         // can apply the same first variant rule the rest of the pipeline uses.
         var modelId = _modelLookup(blockId);
         var elements = modelId is { } model ? _elements.Resolve(model) : null;
-        if (elements is null || elements.Count == 0 || IsPlainCube(elements))
+        if (elements is null)
+        {
+            // No model definition at all: the block draws as a plain cube.
+            return null;
+        }
+
+        if (elements.Count == 0)
+        {
+            // A definition with no elements draws nothing, exactly like the reference. Chests and
+            // shulker boxes rely on this: their block models carry only a particle texture, and the
+            // visible geometry comes from the block entity renderer instead.
+            return [];
+        }
+
+        if (IsPlainCube(elements))
         {
             return null;
         }
