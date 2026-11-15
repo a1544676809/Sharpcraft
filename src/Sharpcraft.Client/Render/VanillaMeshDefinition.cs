@@ -208,6 +208,7 @@ static partial class VanillaMeshBake
                 throw new NotSupportedException("Non-unit PartPose scale is only supported by the Dragon skull bake with modelHeight 0.");
             }
 
+            ValidateRootGroup(root);
             ValidateScaledSubtree(root);
             return BakeScaledAbsolute(mesh, textureWidth, textureHeight, texturePath);
         }
@@ -247,6 +248,21 @@ static partial class VanillaMeshBake
 
     internal static bool HasNonUnitScale(VanillaMeshDefinition mesh) =>
         mesh.Root is { } root && HasNonUnitScale(root);
+
+    private static void ValidateRootGroup(VanillaPartDefinition root)
+    {
+        if (root.Cubes.Count != 0)
+        {
+            throw new NotSupportedException("Non-unit PartPose scale requires an identity root group with no cuboids.");
+        }
+
+        if (root.Pose.X != 0f || root.Pose.Y != 0f || root.Pose.Z != 0f ||
+            root.Pose.RotationX != 0f || root.Pose.RotationY != 0f || root.Pose.RotationZ != 0f ||
+            root.Pose.ScaleX != 1f || root.Pose.ScaleY != 1f || root.Pose.ScaleZ != 1f)
+        {
+            throw new NotSupportedException("Non-unit PartPose scale requires an identity root group (zero translation/rotation and unit scale).");
+        }
+    }
 
     private static void ValidateScaledSubtree(VanillaPartDefinition part)
     {

@@ -77,6 +77,33 @@ public sealed class VanillaMeshScaledBakeTests
     }
 
     [Fact]
+    public void NonIdentityRootGroupPoseIsRejected()
+    {
+        var translated = Assert.Throws<NotSupportedException>(() => VanillaMeshBake.Bake(RootPoseMesh(VanillaPartPose.Offset(1f, 0f, 0f)), 64, 64, modelHeight: 0f));
+        Assert.Contains("identity root group", translated.Message, StringComparison.Ordinal);
+
+        var rotated = Assert.Throws<NotSupportedException>(() => VanillaMeshBake.Bake(RootPoseMesh(VanillaPartPose.OffsetAndRotation(0f, 0f, 0f, 0.1f, 0f, 0f)), 64, 64, modelHeight: 0f));
+        Assert.Contains("identity root group", rotated.Message, StringComparison.Ordinal);
+
+        var scaled = Assert.Throws<NotSupportedException>(() => VanillaMeshBake.Bake(RootPoseMesh(new VanillaPartPose(0f, 0f, 0f, 0f, 0f, 0f, 0.5f, 0.5f, 0.5f)), 64, 64, modelHeight: 0f));
+        Assert.Contains("identity root group", scaled.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RootGroupCuboidWithScaledChildIsRejected()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddCube(new VanillaCubeDefinition("root_box", 0, 0, -1f, -1f, -1f, 2f, 2f, 2f));
+        root.AddOrReplaceChild(
+            "head",
+            VanillaPartPose.OffsetAndRotation(0f, -7.986666f, 0f, 0f, 0f, 0f).Scaled(0.75f),
+            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f, MirrorX: false));
+
+        var exception = Assert.Throws<NotSupportedException>(() => VanillaMeshBake.Bake(new VanillaMeshDefinition(root), 64, 64, modelHeight: 0f));
+        Assert.Contains("identity root group", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void GrowAndOverlayScaledCuboidsAreRejected()
     {
         var grow = Assert.Throws<NotSupportedException>(() => VanillaMeshBake.Bake(ScaledMesh(grow: 0.25f), 64, 64, modelHeight: 0f));
@@ -110,6 +137,16 @@ public sealed class VanillaMeshScaledBakeTests
         root.AddOrReplaceChild(
             "head",
             VanillaPartPose.Zero.Scaled(0f),
+            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f, MirrorX: false));
+        return new VanillaMeshDefinition(root);
+    }
+
+    private static VanillaMeshDefinition RootPoseMesh(VanillaPartPose rootPose)
+    {
+        var root = new VanillaPartDefinition("root", rootPose);
+        root.AddOrReplaceChild(
+            "head",
+            VanillaPartPose.OffsetAndRotation(0f, -7.986666f, 0f, 0f, 0f, 0f).Scaled(0.75f),
             new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f, MirrorX: false));
         return new VanillaMeshDefinition(root);
     }
