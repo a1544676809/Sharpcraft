@@ -267,8 +267,11 @@ public static partial class OffscreenRenderer
             using var blockEntityAtlas = new EntitySkinTextureGpu();
             using var blockEntityRects = new SpriteRectTable(backend);
             using var blockEntitySubmission = new BlockEntitySubmission(backend);
-            if (request.BlockEntityAtlas is { } blockEntityAtlasData && request.BlockEntityGeometry is { } blockEntityGeometry)
+            // Same rule as the window path: the atlas alone decides whether the segment exists, so a
+            // world captured with no block entity still has a submission to draw into later (issue 22).
+            if (request.BlockEntityAtlas is { } blockEntityAtlasData)
             {
+                var blockEntityGeometry = request.BlockEntityGeometry ?? new DynamicGeometry();
                 blockEntityRects.Rebuild(request.BlockEntitySpriteRects);
                 blockEntityAtlas.Upload(
                     backend,
