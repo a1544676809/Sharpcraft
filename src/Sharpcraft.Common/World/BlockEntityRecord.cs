@@ -27,6 +27,7 @@ public static class VanillaBlockEntityTypes
     public const int EnderChest = 3;
     public const int ShulkerBox = 24;
     public const int Bell = 30;
+    public const int DecoratedPot = 41;
     public const int PotentSulfur = 48;
 
     private static readonly string[] Paths =
@@ -67,4 +68,21 @@ public static class VanillaBlockEntityTypes
 
     /// <summary>Shulker box type, drawn by its own two-box renderer rather than the chest one.</summary>
     public static bool IsShulkerBox(int typeId) => typeId == ShulkerBox;
+
+    /// <summary>
+    /// Whether a block entity's <c>facing</c> property is decoded as a reference
+    /// <c>Direction</c> ordinal. Shulker boxes and decorated pots use this encoding; chests use
+    /// the face-step encoding instead. Sources:
+    /// <c>ref://mc-26.3-analysis/src/net/minecraft/core/Direction.java:33-38,66-77,311-312</c>
+    /// and <c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/entity/DecoratedPotBlockEntity.java:75-76</c>.
+    /// </summary>
+    public static bool UsesDirectionOrdinalFacing(int typeId) => typeId is ShulkerBox or DecoratedPot;
+
+    /// <summary>
+    /// Fallback Direction ordinal when the block state has no <c>facing</c> property:
+    /// decorated pots default to NORTH (ordinal 2, the block's default state at
+    /// <c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/DecoratedPotBlock.java:57</c>),
+    /// shulker boxes keep their existing UP fallback (ordinal 1).
+    /// </summary>
+    public static byte DirectionOrdinalFallback(int typeId) => typeId == DecoratedPot ? (byte)2 : (byte)1;
 }

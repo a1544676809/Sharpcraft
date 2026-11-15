@@ -82,8 +82,17 @@ public static class ChestAtlas
     /// <summary>Textures the bell renderer uses; kept apart from the chest directory list.</summary>
     private static readonly string[] BellTextures = [BellTexture];
 
+    /// <summary>Decorated pot blank base texture, 32 by 32.</summary>
+    public const string DecoratedPotBaseTexture = "entity/decorated_pot/decorated_pot_base";
+
+    /// <summary>Decorated pot blank side texture, 16 by 16.</summary>
+    public const string DecoratedPotSideTexture = "entity/decorated_pot/decorated_pot_side";
+
+    /// <summary>Textures the decorated pot renderer uses; kept apart from the chest directory list.</summary>
+    private static readonly string[] DecoratedPotTextures = [DecoratedPotBaseTexture, DecoratedPotSideTexture];
+
     /// <summary>Everything this block entity atlas stitches, in load order.</summary>
-    private static readonly string[] AllTextures = [.. Textures, .. ShulkerTextures, .. BellTextures];
+    private static readonly string[] AllTextures = [.. Textures, .. ShulkerTextures, .. BellTextures, .. DecoratedPotTextures];
 
     /// <summary>Texture the model uses when the material is plain wood.</summary>
     public const string NormalTexture = "entity/chest/normal";
@@ -228,5 +237,21 @@ public static class ChestAtlas
     {
         ArgumentNullException.ThrowIfNull(atlas);
         return atlas.Get(BellTexture);
+    }
+
+    /// <summary>Resolves the decorated pot base sprite, or null when the atlas does not hold it.</summary>
+    /// <param name="atlas">Atlas returned by <see cref="Load"/>.</param>
+    public static SpriteRect? SpriteForDecoratedPotBase(ItemAtlas atlas)
+    {
+        ArgumentNullException.ThrowIfNull(atlas);
+        return atlas.Get(DecoratedPotBaseTexture);
+    }
+
+    /// <summary>Resolves the decorated pot blank side sprite, or null when the atlas does not hold it.</summary>
+    /// <param name="atlas">Atlas returned by <see cref="Load"/>.</param>
+    public static SpriteRect? SpriteForDecoratedPotSide(ItemAtlas atlas)
+    {
+        ArgumentNullException.ThrowIfNull(atlas);
+        return atlas.Get(DecoratedPotSideTexture);
     }
 }

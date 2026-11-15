@@ -147,6 +147,7 @@ public sealed class EntityPlaceholderMesher
         int texDz = 0,
         int textureSize = (int)SheetSize)
     {
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(textureSize, 0);
         var transform = entityTransform ?? new EntityModelTransform(Vector3.Zero, 0f, 0f, 1f);
         // Six rectangles fit in a stack buffer, so a box no longer allocates one array per build.
         Span<FaceUvRect> uvs = stackalloc FaceUvRect[6];
@@ -183,6 +184,70 @@ public sealed class EntityPlaceholderMesher
     internal const float SheetSize = 64f;
 
     internal readonly record struct FaceUvRect(float U0, float V0, float U1, float V1);
+
+    /// <summary>
+    /// Appends one flat quad from four explicit corners. Zero-thickness model planes (pot lids and sides,
+    /// banners) cannot use <see cref="AppendBox"/> without producing degenerate side faces, so they come
+    /// through here with their UVs already normalised to the source texture size. This is a pure
+    /// geometry helper (Issue #57); it does not change the existing <see cref="AppendBox"/> path.
+    /// </summary>
+    /// <remarks>
+    /// The helper emits exactly one single-sided triangle pair using the caller's winding; it never
+    /// mirrors the quad into a second face. Callers that need both faces must issue a second quad with
+    /// the opposite winding. Degenerate quads (zero area, collinear or repeated corners, or opposite
+    /// winding between the two triangles) are skipped: no vertices or indices are written. The block
+    /// entity pass itself is no-cull, so a single quad is still visible from both sides there.
+    /// </remarks>
+    internal static void AppendQuad(
+        DynamicGeometry geometry,
+        Vector3 a,
+        Vector3 b,
+        Vector3 c,
+        Vector3 d,
+        float red,
+        float green,
+        float blue,
+        SpriteRect sprite,
+        ref int vertexFloats,
+        ref int indexCount,
+        (float U, float V) uvA,
+        (float U, float V) uvB,
+        (float U, float V) uvC,
+        (float U, float V) uvD,
+        EntityModelTransform? entityTransform = null,
+        float sky = 1f,
+        float block = 0f)
+    {
+        // Degenerate quads are rejected before any vertex is written. The tolerance is a floating
+        // point implementation detail, not a vanilla constant: it only keeps near-collinear points
+        // from producing a zero-area triangle.
+        const float DegenerateEpsilon = 1e-10f;
+        var firstNormal = Vector3.Cross(b - a, c - a);
+        if (firstNormal.LengthSquared() <= DegenerateEpsilon)
+        {
+            return;
+        }
+
+        var secondNormal = Vector3.Cross(c - a, d - a);
+        if (secondNormal.LengthSquared() <= DegenerateEpsilon || Vector3.Dot(firstNormal, secondNormal) <= 0f)
+        {
+            return;
+        }
+
+        var transform = entityTransform ?? new EntityModelTransform(Vector3.Zero, 0f, 0f, 1f);
+        var first = (uint)(vertexFloats / ChunkMesher.FloatsPerVertex);
+        WriteVertex(geometry.Vertices, ref vertexFloats, a, red, green, blue, uvA.U, uvA.V, sprite, transform, sky, block);
+        WriteVertex(geometry.Vertices, ref vertexFloats, b, red, green, blue, uvB.U, uvB.V, sprite, transform, sky, block);
+        WriteVertex(geometry.Vertices, ref vertexFloats, c, red, green, blue, uvC.U, uvC.V, sprite, transform, sky, block);
+        WriteVertex(geometry.Vertices, ref vertexFloats, d, red, green, blue, uvD.U, uvD.V, sprite, transform, sky, block);
+
+        geometry.Indices[indexCount++] = first;
+        geometry.Indices[indexCount++] = first + 1u;
+        geometry.Indices[indexCount++] = first + 2u;
+        geometry.Indices[indexCount++] = first;
+        geometry.Indices[indexCount++] = first + 2u;
+        geometry.Indices[indexCount++] = first + 3u;
+    }
 
     private static readonly FaceUvRect[] DefaultFaceUvs =
     [
