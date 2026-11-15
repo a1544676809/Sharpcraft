@@ -34,4 +34,7 @@
     <ProjectReference Include="..\..\src\Sharpcraft.Client\Sharpcraft.Client.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="Repro\Data\*.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
