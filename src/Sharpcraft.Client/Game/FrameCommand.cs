@@ -1149,6 +1149,12 @@ internal static partial class FrameCommand
     /// Which half of a double chest the block is, or single. Values follow the reference's
     /// <c>ChestType</c> ordinal: single zero, left one, right two.
     /// </summary>
+    /// <summary>Clockwise neighbour facing: north to east, east to south, south to west, west to north.</summary>
+    private static byte Clockwise(byte facing) => facing switch { 4 => 1, 1 => 5, 5 => 0, 0 => 4, _ => facing };
+
+    /// <summary>Counter-clockwise neighbour facing, the inverse of <see cref="Clockwise"/>.</summary>
+    private static byte CounterClockwise(byte facing) => facing switch { 4 => 0, 0 => 5, 5 => 1, 1 => 4, _ => facing };
+
     private static byte ChestTypeOf(ClientWorld world, int x, int y, int z)
     {
         if (!Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
@@ -1193,8 +1199,6 @@ internal static partial class FrameCommand
 
     /// <summary>Builds the chest segment for a live session from the block entities in the loaded chunks.</summary>
     /// <summary>Packs a block position the way the reference does.</summary>
-    /// <summary>Reused across frames: the mesher clears its own geometry at the start of every build.</summary>
-    private static readonly Sharpcraft.Client.Render.ChestMesher BlockEntityChestMesher = new();
 
     private static long PositionKey(int x, int y, int z) =>
         ((long)x & 0x3FFFFFF) << 38 | ((long)z & 0x3FFFFFF) << 12 | ((long)y & 0xFFF);
@@ -1247,9 +1251,10 @@ internal static partial class FrameCommand
             Console.WriteLine($"block entity geometry: {chestStates.Count} chest entities");
         }
 
-        // A double chest opens as far as its more open half. Only the real partner counts: the
-        // reference walks to the block on the connected side, so the other half must be the same
-        // block, face the same way and carry the complementary type (issues 27 and 28).
+        // A double chest opens as far as its more open half. The reference walks to one side only:
+        // the clockwise block for a left half, the counter-clockwise one for a right half, and it
+        // accepts that neighbour only when it is the same block, carries the complementary type and
+        // faces the same way (issues 27 and 28).
         if (chestStates.Any(s => s.ChestType != 0))
         {
             var byPosition = frame.ByPosition;
@@ -1267,36 +1272,39 @@ internal static partial class FrameCommand
                     continue;
                 }
 
-                // A north or south chest joins along x, an east or west chest along z.
-                var alongX = state.Facing is 4 or 5;
-                var best = state.Open;
-                for (var side = -1; side <= 1; side += 2)
+                var direction = state.ChestType == 1 ? Clockwise(state.Facing) : CounterClockwise(state.Facing);
+                var nx = (int)state.X + (direction == 0 ? -1 : direction == 1 ? 1 : 0);
+                var nz = (int)state.Z + (direction == 4 ? -1 : direction == 5 ? 1 : 0);
+                if (!byPosition.TryGetValue(PositionKey(nx, (int)state.Y, nz), out var other))
                 {
-                    var nx = (int)state.X + (alongX ? side : 0);
-                    var nz = (int)state.Z + (alongX ? 0 : side);
-                    if (!byPosition.TryGetValue(PositionKey(nx, (int)state.Y, nz), out var other))
-                    {
-                        continue;
-                    }
-
-                    if (other.ChestType == 0 || other.ChestType == state.ChestType || other.Facing != state.Facing)
-                    {
-                        continue;
-                    }
-
-                    if (other.Open > best)
-                    {
-                        best = other.Open;
-                    }
+                    continue;
                 }
 
-                chestStates[i] = state with { Open = best };
+                if (other.ChestType == 0 || other.ChestType == state.ChestType || other.Facing != state.Facing)
+                {
+                    continue;
+                }
+
+                // Same block: a chest must never pair with a trapped or a different copper chest that
+                // merely happens to be adjacent.
+                var selfBlock = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(world.GetBlockState((int)state.X, (int)state.Y, (int)state.Z));
+                var otherBlock = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(world.GetBlockState(nx, (int)state.Y, nz));
+                if (selfBlock?.Path != otherBlock?.Path)
+                {
+                    continue;
+                }
+
+                if (other.Open > state.Open)
+                {
+                    chestStates[i] = state with { Open = other.Open };
+                }
             }
         }
 
         if (chestStates.Count == 0)
         {
             frame.Publish(null);
+            return null;
         }
 
         var built = frame.Mesher.Build(

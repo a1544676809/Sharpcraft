@@ -458,6 +458,9 @@ public sealed class ClientWorld
 
         var localX = BlockCoordinates.SectionRelative(x);
         var localZ = BlockCoordinates.SectionRelative(z);
+        var oldTypeId = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(GetBlockState(x, y, z)) is { } oldBlockId
+            ? Sharpcraft.Common.World.VanillaBlockEntityTypes.IdOf(oldBlockId.Path)
+            : -1;
         chunk.SetBlockState(localX, y, localZ, state, airState);
         InvalidateBlockEntities();
 
@@ -472,8 +475,10 @@ public sealed class ClientWorld
         {
             chunk.AddBlockEntity(new Sharpcraft.Common.World.BlockEntityRecord(localX, y, localZ, newTypeId));
         }
-        else
+        else if (oldTypeId >= 0 && Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(oldTypeId))
         {
+            // Only a block entity this block actually carried is dropped: a block change next to a
+            // furnace or a sign must not remove that block entity (issue 22).
             chunk.RemoveBlockEntity(localX, y, localZ);
         }
 

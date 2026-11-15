@@ -19,7 +19,7 @@ namespace Sharpcraft.Client.Render;
 /// The geometry instance is reused across frames, so identity cannot signal that it changed. The
 /// version does: it advances on every build, including builds that produce nothing.
 /// </remarks>
-[ReferenceClass("net.minecraft.client.renderer.state.LevelRenderState", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/state/LevelRenderState.java")]
+[ReferenceClass("net.minecraft.client.renderer.state.LevelRenderState", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/state/level/LevelRenderState.java", Status = ReferenceStatus.Partial)]
 public sealed class BlockEntityFrameState
 {
     /// <summary>Visible block entity states for this frame; cleared at the start of each build.</summary>
