@@ -74,8 +74,8 @@ public sealed class Repro_T850Tests
 
     /// <summary>
     /// The regression that matters: a pool built without the model set cubes the chest, and one
-    /// built with it emits nothing. Removing the model set from the pool constructor makes the
-    /// first half of this test fail, which is what the fix has to keep true.
+    /// built with it emits nothing. Dropping the constructor argument breaks every call site at
+    /// compile time; passing null where the set belongs is what the second half catches.
     /// </summary>
     [Fact]
     public void ThePoolCubesChestsWithoutAModelSetAndSkipsThemWithOne()

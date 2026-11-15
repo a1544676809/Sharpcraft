@@ -87,6 +87,7 @@ public sealed class ChunkWorkerPool : IDisposable
     /// <summary>Creates a pool sized for this machine.</summary>
     /// <param name="world">World the workers read; never written from here.</param>
     /// <param name="sprites">Atlas mapping used for meshing.</param>
+    /// <param name="models">Model set that keeps block-entity rendered blocks out of the cube path, or null for none.</param>
     /// <param name="workerCount">Worker count, or null for the adaptive default.</param>
     /// <param name="maxQueuedParses">Parse queue cap; beyond it the caller parses inline.</param>
     /// <param name="maxQueuedMeshes">Mesh queue cap; beyond it meshing is deferred.</param>
