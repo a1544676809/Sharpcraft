@@ -508,15 +508,6 @@ public static class WindowedRenderer
                 Console.WriteLine("ui: world geometry reset");
             }
 
-            // The reference extracts the visible block entities every frame, so a block placed after the
-            // world loaded appears on the next frame instead of waiting for a restart.
-            if (request.BlockEntityPerFrame is { } blockEntitiesPerFrame)
-            {
-                // The geometry object is reused between frames, so identity cannot signal a change.
-                // The builder runs every frame and the submission is refreshed from its result; an
-                // empty result still clears the previous geometry (issues 22 and 24).
-                blockEntitySubmission.Upload(blockEntitiesPerFrame() ?? new DynamicGeometry(), blockEntityAtlas.BindGroup);
-            }
 
             if (atlasSource is not null && atlasSource.Version != appliedAtlasVersion)
             {
@@ -894,6 +885,15 @@ public static class WindowedRenderer
                 ? (request.CameraPosition, request.CameraTarget)
                 : cameraPerFrame(window);
             Cpu(FrameCpuTimings.CameraStage);
+            // The reference extracts the visible block entities every frame, so a block placed after the
+            // world loaded appears on the next frame instead of waiting for a restart.
+            if (request.BlockEntityPerFrame is { } blockEntitiesPerFrame)
+            {
+                // The geometry object is reused between frames, so identity cannot signal a change.
+                // The builder runs every frame and the submission is refreshed from its result; an
+                // empty result still clears the previous geometry (issues 22 and 24).
+                blockEntitySubmission.Upload(blockEntitiesPerFrame() ?? new DynamicGeometry(), blockEntityAtlas.BindGroup);
+            }
 
             // The whole frame is recorded into the parameterised target; this shell only owns the surface, the
             // presentation blit and the submit (docs/specs/render/single-track-executor.md, step 1).
