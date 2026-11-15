@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
+
 # 风险登记册
 
 > AGENTS.md 原则 12：未解决的不确定性 MUST 登记进本文件（概率 / 影响 / 缓解 / 复查条件）；关闭后保留记录而非删除。
