@@ -131,28 +131,38 @@ public static class ChestAtlas
     /// <param name="type">Zero single, one left half, two right half.</param>
     public static string TexturePathFor(byte material, byte type)
     {
-        var stem = material switch
-        {
-            Trapped => "trapped",
-            Ender => "ender",
-            Copper => "copper",
-            CopperExposed => "copper_exposed",
-            CopperWeathered => "copper_weathered",
-            CopperOxidized => "copper_oxidized",
-            _ => "normal"
-        };
+        var index = (material * TypeCount) + type;
+        return (uint)index < (uint)TexturePaths.Length ? TexturePaths[index] : TexturePaths[0];
+    }
 
-        if (material == Ender)
+    private const int TypeCount = 3;
+
+    private static readonly string[] MaterialStems =
+    [
+        "normal", "trapped", "ender", "copper", "copper_exposed", "copper_weathered", "copper_oxidized"
+    ];
+
+    /// <summary>
+    /// Every material and half combination, built once. The per-frame path used to interpolate a new
+    /// string for each chest on each frame, which allocated on a steady-state render path.
+    /// </summary>
+    private static readonly string[] TexturePaths = BuildTexturePaths();
+
+    private static string[] BuildTexturePaths()
+    {
+        var paths = new string[MaterialStems.Length * TypeCount];
+        for (var material = 0; material < MaterialStems.Length; material++)
         {
-            return $"entity/chest/{stem}";
+            var stem = MaterialStems[material];
+            var plain = "entity/chest/" + stem;
+            paths[(material * TypeCount) + 0] = plain;
+
+            // The ender chest cannot be doubled, so both halves resolve to the plain texture.
+            paths[(material * TypeCount) + 1] = material == Ender ? plain : plain + "_left";
+            paths[(material * TypeCount) + 2] = material == Ender ? plain : plain + "_right";
         }
 
-        return type switch
-        {
-            1 => $"entity/chest/{stem}_left",
-            2 => $"entity/chest/{stem}_right",
-            _ => $"entity/chest/{stem}"
-        };
+        return paths;
     }
 
     /// <summary>Resolves one chest's sprite, falling back to the plain chest when it is absent.</summary>

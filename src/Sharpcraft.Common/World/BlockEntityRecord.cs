@@ -46,7 +46,19 @@ public static class VanillaBlockEntityTypes
     public static string? PathOf(int typeId) =>
         (uint)typeId < (uint)Paths.Length ? Paths[typeId] : null;
 
-    public static int IdOf(string path) => Array.IndexOf(Paths, path);
+    /// <summary>
+    /// Registry id for a block path. The eight copper chest blocks share the chest block entity
+    /// type: the reference registers CHEST for <c>Blocks.COPPER_CHEST.asList()</c> plus
+    /// <c>Blocks.CHEST</c>, so they are not separate entries in this table.
+    /// </summary>
+    /// <param name="path">Block id path, without the namespace.</param>
+    public static int IdOf(string path) => path switch
+    {
+        "copper_chest" or "exposed_copper_chest" or "weathered_copper_chest" or "oxidized_copper_chest"
+            or "waxed_copper_chest" or "waxed_exposed_copper_chest" or "waxed_weathered_copper_chest"
+            or "waxed_oxidized_copper_chest" => Chest,
+        _ => Array.IndexOf(Paths, path)
+    };
 
     public static bool IsChestLike(int typeId) =>
         typeId is Chest or TrappedChest or EnderChest or ShulkerBox;

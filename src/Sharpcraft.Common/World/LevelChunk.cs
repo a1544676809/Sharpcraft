@@ -74,8 +74,9 @@ public sealed class LevelChunk
 
     private readonly List<BlockEntityRecord> _blockEntities = [];
 
-    /// <summary>Block entities attached to this chunk.</summary>
-    public IReadOnlyList<BlockEntityRecord> BlockEntities => _blockEntities;
+    /// <summary>Block entities attached to this chunk. The concrete list is exposed so iterating it
+    /// does not box the struct enumerator on every frame.</summary>
+    public List<BlockEntityRecord> BlockEntities => _blockEntities;
 
     /// <summary>Attaches a block entity, as decoded from the chunk packet.</summary>
     /// <param name="record">Block entity to attach.</param>
@@ -92,6 +93,23 @@ public sealed class LevelChunk
         }
 
         _blockEntities.Add(record);
+    }
+
+    /// <summary>Detaches the block entity at a position, as a block change to a state without one does.</summary>
+    /// <param name="localX">Section-relative x.</param>
+    /// <param name="y">Block y.</param>
+    /// <param name="localZ">Section-relative z.</param>
+    public void RemoveBlockEntity(int localX, int y, int localZ)
+    {
+        for (var i = 0; i < _blockEntities.Count; i++)
+        {
+            var existing = _blockEntities[i];
+            if (existing.LocalX == localX && existing.Y == y && existing.LocalZ == localZ)
+            {
+                _blockEntities.RemoveAt(i);
+                return;
+            }
+        }
     }
 
     /// <summary>Block state at chunk-local coordinates, or <paramref name="fallbackState"/> when absent.</summary>

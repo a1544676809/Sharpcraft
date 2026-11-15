@@ -451,17 +451,27 @@ public sealed class ClientWorld
 
         var localX = BlockCoordinates.SectionRelative(x);
         var localZ = BlockCoordinates.SectionRelative(z);
+        var oldTypeId = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(GetBlockState(x, y, z)) is { } oldBlockId
+            ? Sharpcraft.Common.World.VanillaBlockEntityTypes.IdOf(oldBlockId.Path)
+            : -1;
         chunk.SetBlockState(localX, y, localZ, state, airState);
 
         // Vanilla creates a block entity as soon as the new state carries one. Without this a chest placed
         // after its chunk loaded never reaches a renderer, however correct the rest of the chain is.
-        if (Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(state) is { } blockId)
+        // Level.setBlock creates the block entity when the new state carries one and drops it when the
+        // state does not, so breaking a chest removes it here as well (issues 22 and 24).
+        var newTypeId = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(state) is { } blockId
+            ? Sharpcraft.Common.World.VanillaBlockEntityTypes.IdOf(blockId.Path)
+            : -1;
+        if (newTypeId >= 0 && Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(newTypeId))
         {
-            var typeId = Sharpcraft.Common.World.VanillaBlockEntityTypes.IdOf(blockId.Path);
-            if (typeId >= 0 && Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(typeId))
-            {
-                chunk.AddBlockEntity(new Sharpcraft.Common.World.BlockEntityRecord(localX, y, localZ, typeId));
-            }
+            chunk.AddBlockEntity(new Sharpcraft.Common.World.BlockEntityRecord(localX, y, localZ, newTypeId));
+        }
+        else if (oldTypeId >= 0 && Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(oldTypeId))
+        {
+            // Only a block entity this block actually carried is dropped: a block change next to a
+            // furnace or a sign must not remove that block entity (issue 22).
+            chunk.RemoveBlockEntity(localX, y, localZ);
         }
 
         // A change on a seam changes which faces the neighbour draws, so both columns go stale.

@@ -147,9 +147,16 @@ public sealed class EntityPlaceholderMesher
         int texDz = 0)
     {
         var transform = entityTransform ?? new EntityModelTransform(Vector3.Zero, 0f, 0f, 1f);
-        var uvs = texDx > 0 && texDy > 0 && texDz > 0
-            ? ComputeBoxFaceUvs(texU, texV, texDx, texDy, texDz)
-            : DefaultFaceUvs;
+        // Six rectangles fit in a stack buffer, so a box no longer allocates one array per build.
+        Span<FaceUvRect> uvs = stackalloc FaceUvRect[6];
+        if (texDx > 0 && texDy > 0 && texDz > 0)
+        {
+            ComputeBoxFaceUvs(texU, texV, texDx, texDy, texDz, uvs);
+        }
+        else
+        {
+            DefaultFaceUvs.AsSpan().CopyTo(uvs);
+        }
         var half = width / 2f;
         var halfDepth = (depth ?? width) / 2f;
         var minX = feet.X - half;
@@ -180,11 +187,16 @@ public sealed class EntityPlaceholderMesher
     ];
 
     /// <summary>Computes the six box-unwrapped face UV rectangles in 64x64 sheet pixels (+X, -X, +Y, -Y, +Z, -Z).</summary>
-    internal static FaceUvRect[] ComputeBoxFaceUvs(int texU, int texV, int dx, int dy, int dz)
+    internal static void ComputeBoxFaceUvs(int texU, int texV, int dx, int dy, int dz, Span<FaceUvRect> faces)
     {
         float u0 = texU, u1 = texU + dz, u2 = u1 + dx, u22 = u2 + dx, u3 = u2 + dz, u4 = u3 + dx;
         float v0 = texV, v1 = texV + dz, v2 = v1 + dy;
-        return [new(u2, v1, u3, v2), new(u0, v1, u1, v2), new(u2, v1, u22, v0), new(u1, v0, u2, v1), new(u3, v1, u4, v2), new(u1, v1, u2, v2)];
+        faces[0] = new(u2, v1, u3, v2);
+        faces[1] = new(u0, v1, u1, v2);
+        faces[2] = new(u2, v1, u22, v0);
+        faces[3] = new(u1, v0, u2, v1);
+        faces[4] = new(u3, v1, u4, v2);
+        faces[5] = new(u1, v1, u2, v2);
     }
 
     private static void AppendFace(

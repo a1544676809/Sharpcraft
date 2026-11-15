@@ -571,7 +571,7 @@ internal static partial class FrameCommand
             TranslucentRanges = translucentOrdered.Length > 0 ? translucentOrdered : null,
             // Full rain pulls the atmospheric shell in, so the sandbox can show it closing the view.
             RainLevel = EffectiveRainLevel(world, 1f),
-            BlockEntityAtlas = blockEntityGeometry is null ? null : chestAtlas?.Texture,
+            BlockEntityAtlas = chestAtlas?.Texture,
             BlockEntitySpriteRects = chestAtlas is null ? [] : Sharpcraft.Client.Render.ChestAtlas.BuildRectTable(chestAtlas),
             BlockEntityGeometry = blockEntityGeometry
         };
@@ -1145,6 +1145,12 @@ internal static partial class FrameCommand
         };
     }
 
+    /// <summary>Clockwise neighbour facing: north to east, east to south, south to west, west to north.</summary>
+    private static byte Clockwise(byte facing) => facing switch { 4 => 1, 1 => 5, 5 => 0, 0 => 4, _ => facing };
+
+    /// <summary>Counter-clockwise neighbour facing, the inverse of <see cref="Clockwise"/>.</summary>
+    private static byte CounterClockwise(byte facing) => facing switch { 4 => 0, 0 => 5, 5 => 1, 1 => 4, _ => facing };
+
     /// <summary>
     /// Which half of a double chest the block is, or single. Values follow the reference's
     /// <c>ChestType</c> ordinal: single zero, left one, right two.
@@ -1191,19 +1197,30 @@ internal static partial class FrameCommand
         };
     }
 
+    /// <summary>Packs a block position the way the reference does.</summary>
+    private static long PositionKey(int x, int y, int z) =>
+        ((long)x & 0x3FFFFFF) << 38 | ((long)z & 0x3FFFFFF) << 12 | ((long)y & 0xFFF);
+
     /// <summary>Builds the chest segment for a live session from the block entities in the loaded chunks.</summary>
-    private static DynamicGeometry? BuildBlockEntityGeometry(ClientWorld world, Sharpcraft.Client.Render.ItemAtlas? chestAtlas)
+    internal static DynamicGeometry? BuildBlockEntityGeometry(ClientWorld world, Sharpcraft.Client.Render.ItemAtlas? chestAtlas, float partialTick = 0f, Sharpcraft.Client.Render.BlockEntityFrameState? frameState = null)
     {
+        var frame = frameState ?? new Sharpcraft.Client.Render.BlockEntityFrameState();
         if (chestAtlas is null)
         {
             return null;
         }
 
-        var allTypes = new List<int>();
-        foreach (var c in world.GetChunks()) { foreach (var r in c.BlockEntities) { allTypes.Add(r.TypeId); } }
-        Console.WriteLine($"block entity records: {allTypes.Count} total, types=[" + string.Join(",", allTypes.Distinct()) + "]");
+        if (Sharpcraft.Client.Game.GameOptions.Get("MC_DEBUG_MODELS") is { Length: > 0 })
+        {
+            var allTypes = new List<int>();
+            foreach (var c in world.GetChunks()) { foreach (var r in c.BlockEntities) { allTypes.Add(r.TypeId); } }
+            Console.WriteLine($"block entity records: {allTypes.Count} total, types=[" + string.Join(",", allTypes) + "]");
+        }
 
-        var chestStates = new List<Sharpcraft.Client.Render.BlockEntityRenderState>();
+
+
+        var chestStates = frame.States;
+        chestStates.Clear();
         foreach (var chunk in world.GetChunks())
         {
             foreach (var record in chunk.BlockEntities)
@@ -1223,18 +1240,72 @@ internal static partial class FrameCommand
                     Facing: FacingOf(world, blockX, record.Y, blockZ),
                     ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
                     ChestMaterial: ChestMaterialOf(world, blockX, record.Y, blockZ),
-                    Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
+                    Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ, partialTick)));
             }
         }
 
-        Console.WriteLine($"block entity geometry: {chestStates.Count} chest entities, types=[" + string.Join(",", chestStates.Select(s => s.TypeId)) + "]");
-
         if (Sharpcraft.Client.Game.GameOptions.Get("MC_DEBUG_MODELS") is { Length: > 0 })
         {
-            foreach (var probe in chestStates)
+            Console.WriteLine($"block entity geometry: {chestStates.Count} chest entities");
+        }
+
+        // A double chest opens as far as its more open half. The reference walks to one side only:
+        // the clockwise block for a left half, the counter-clockwise one for a right half, and it
+        // accepts that neighbour only when it is the same block, carries the complementary type and
+        // faces the same way (issues 27 and 28).
+        var anyDouble = false;
+        for (var scan = 0; scan < chestStates.Count; scan++)
+        {
+            if (chestStates[scan].ChestType != 0)
             {
-                var probeRect = Sharpcraft.Client.Render.ChestAtlas.SpriteFor(chestAtlas, probe.ChestMaterial, probe.ChestType);
-                Console.WriteLine($"chest sprite: mat={probe.ChestMaterial} type={probe.ChestType} rect=({probeRect.U0},{probeRect.V0},{probeRect.U1},{probeRect.V1}) id={probeRect.RectId}");
+                anyDouble = true;
+                break;
+            }
+        }
+
+        if (anyDouble)
+        {
+            var byPosition = frame.ByPosition;
+            byPosition.Clear();
+            foreach (var state in chestStates)
+            {
+                byPosition[PositionKey((int)state.X, (int)state.Y, (int)state.Z)] = state;
+            }
+
+            for (var i = 0; i < chestStates.Count; i++)
+            {
+                var state = chestStates[i];
+                if (state.ChestType == 0)
+                {
+                    continue;
+                }
+
+                var direction = state.ChestType == 1 ? Clockwise(state.Facing) : CounterClockwise(state.Facing);
+                var nx = (int)state.X + (direction == 0 ? -1 : direction == 1 ? 1 : 0);
+                var nz = (int)state.Z + (direction == 4 ? -1 : direction == 5 ? 1 : 0);
+                if (!byPosition.TryGetValue(PositionKey(nx, (int)state.Y, nz), out var other))
+                {
+                    continue;
+                }
+
+                if (other.ChestType == 0 || other.ChestType == state.ChestType || other.Facing != state.Facing)
+                {
+                    continue;
+                }
+
+                // Same block: a chest must never pair with a trapped or a different copper chest that
+                // merely happens to be adjacent.
+                var selfBlock = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(world.GetBlockState((int)state.X, (int)state.Y, (int)state.Z));
+                var otherBlock = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(world.GetBlockState(nx, (int)state.Y, nz));
+                if (selfBlock?.Path != otherBlock?.Path)
+                {
+                    continue;
+                }
+
+                if (other.Open > state.Open)
+                {
+                    chestStates[i] = state with { Open = other.Open };
+                }
             }
         }
 
@@ -1243,7 +1314,7 @@ internal static partial class FrameCommand
             return null;
         }
 
-        return new Sharpcraft.Client.Render.ChestMesher().Build(
+        return frame.Mesher.Build(
             System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates),
             chestAtlas);
     }
