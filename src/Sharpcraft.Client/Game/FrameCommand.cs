@@ -1192,7 +1192,7 @@ internal static partial class FrameCommand
     }
 
     /// <summary>Builds the chest segment for a live session from the block entities in the loaded chunks.</summary>
-    internal static DynamicGeometry? BuildBlockEntityGeometry(ClientWorld world, Sharpcraft.Client.Render.ItemAtlas? chestAtlas)
+    internal static DynamicGeometry? BuildBlockEntityGeometry(ClientWorld world, Sharpcraft.Client.Render.ItemAtlas? chestAtlas, float partialTick = 0f)
     {
         if (chestAtlas is null)
         {
@@ -1223,7 +1223,7 @@ internal static partial class FrameCommand
                     Facing: FacingOf(world, blockX, record.Y, blockZ),
                     ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
                     ChestMaterial: ChestMaterialOf(world, blockX, record.Y, blockZ),
-                    Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
+                    Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ, partialTick)));
             }
         }
 
