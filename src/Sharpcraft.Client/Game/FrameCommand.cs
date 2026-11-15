@@ -405,6 +405,7 @@ internal static partial class FrameCommand
                         var blockX = (chunk.ChunkX * 16) + record.LocalX;
                         var blockZ = (chunk.ChunkZ * 16) + record.LocalZ;
                         var itemSlots = BlockEntityItemsOf(record, out var shelfAlign);
+                        var skullType = SkullTypeOf(world, blockX, record.Y, blockZ, out var skullWall, out var skullFacing, out var skullRotation);
                         states.Add(new Sharpcraft.Client.Render.BlockEntityRenderState(
                             blockX,
                             record.Y,
@@ -418,6 +419,10 @@ internal static partial class FrameCommand
                             HasBook: HasBookOf(world, blockX, record.Y, blockZ),
                             Items: itemSlots,
                             ShelfAlignItemsToBottom: shelfAlign,
+                            SkullType: skullType,
+                            SkullWall: skullWall,
+                            SkullFacing: skullFacing,
+                            SkullRotation: skullRotation,
                             Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
                 }
             }
@@ -1022,6 +1027,7 @@ internal static partial class FrameCommand
                     var blockX = (chunk.ChunkX * 16) + record.LocalX;
                     var blockZ = (chunk.ChunkZ * 16) + record.LocalZ;
                     var itemSlots = BlockEntityItemsOf(record, out var shelfAlign);
+                    var skullType = SkullTypeOf(world, blockX, record.Y, blockZ, out var skullWall, out var skullFacing, out var skullRotation);
                     blockEntityStates.Add(new Sharpcraft.Client.Render.BlockEntityRenderState(
                         blockX,
                         record.Y,
@@ -1035,6 +1041,10 @@ internal static partial class FrameCommand
                         HasBook: HasBookOf(world, blockX, record.Y, blockZ),
                         Items: itemSlots,
                         ShelfAlignItemsToBottom: shelfAlign,
+                        SkullType: skullType,
+                        SkullWall: skullWall,
+                        SkullFacing: skullFacing,
+                        SkullRotation: skullRotation,
                         Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
             }
             }
@@ -1191,6 +1201,44 @@ internal static partial class FrameCommand
 
         Sharpcraft.Client.World.BlockEntityData.TryReadItems(record, registry, out var slots);
         return slots;
+    }
+
+    /// <summary>
+    /// Reads a skull's static block variant and placement. Wall skulls use the block's facing and
+    /// ground skulls use its rotation segment; unsupported skull variants map to None.
+    /// </summary>
+    private static Sharpcraft.Client.Render.SkullType SkullTypeOf(
+        ClientWorld world,
+        int x,
+        int y,
+        int z,
+        out bool wall,
+        out byte facing,
+        out byte rotation)
+    {
+        var block = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(world.GetBlockState(x, y, z));
+        var path = block?.Path;
+        wall = path is not null && path.Contains("wall", StringComparison.Ordinal);
+        var type = Sharpcraft.Client.Render.SkullModelDefinition.TypeOfPath(path);
+        if (wall)
+        {
+            facing = DirectionOrdinalOf(world, x, y, z, fallback: 2);
+            rotation = 0;
+        }
+        else
+        {
+            facing = 5;
+            rotation = 0;
+            if (Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
+                    world.GetBlockState(x, y, z),
+                    "rotation",
+                    out var rotationText))
+            {
+                byte.TryParse(rotationText, out rotation);
+            }
+        }
+
+        return type;
     }
 
     /// <summary>
@@ -1389,6 +1437,7 @@ internal static partial class FrameCommand
                 var blockX = (chunk.ChunkX * 16) + record.LocalX;
                 var blockZ = (chunk.ChunkZ * 16) + record.LocalZ;
                 var itemSlots = BlockEntityItemsOf(record, out var shelfAlign);
+                var skullType = SkullTypeOf(world, blockX, record.Y, blockZ, out var skullWall, out var skullFacing, out var skullRotation);
                 chestStates.Add(new Sharpcraft.Client.Render.BlockEntityRenderState(
                     blockX,
                     record.Y,
@@ -1402,6 +1451,10 @@ internal static partial class FrameCommand
                     HasBook: HasBookOf(world, blockX, record.Y, blockZ),
                     Items: itemSlots,
                     ShelfAlignItemsToBottom: shelfAlign,
+                    SkullType: skullType,
+                    SkullWall: skullWall,
+                    SkullFacing: skullFacing,
+                    SkullRotation: skullRotation,
                     Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ, partialTick)));
             }
         }

@@ -109,8 +109,17 @@ public static class ChestAtlas
     /// <summary>Enchanting table book texture, 64 by 32, reused by lecterns.</summary>
     public const string EnchantingTableBookTexture = "entity/enchantment/enchanting_table_book";
 
+    /// <summary>Static skull textures in <see cref="SkullType"/> order.</summary>
+    public static readonly string[] SkullTextures =
+    [
+        SkullModelDefinition.SkeletonTexture,
+        SkullModelDefinition.WitherSkeletonTexture,
+        SkullModelDefinition.ZombieTexture,
+        SkullModelDefinition.CreeperTexture
+    ];
+
     /// <summary>Everything this block entity atlas stitches, in load order.</summary>
-    private static readonly string[] AllTextures = [.. Textures, .. ShulkerTextures, .. BellTextures, .. DecoratedPotTextures, .. CopperGolemStatueTextures, EnchantingTableBookTexture];
+    private static readonly string[] AllTextures = [.. Textures, .. ShulkerTextures, .. BellTextures, .. DecoratedPotTextures, .. CopperGolemStatueTextures, EnchantingTableBookTexture, .. SkullTextures];
 
     /// <summary>Texture the model uses when the material is plain wood.</summary>
     public const string NormalTexture = "entity/chest/normal";
@@ -288,5 +297,14 @@ public static class ChestAtlas
     {
         ArgumentNullException.ThrowIfNull(atlas);
         return atlas.Get(EnchantingTableBookTexture);
+    }
+
+    /// <summary>Resolves the static skull sprite for a supported skull type, or null.</summary>
+    /// <param name="atlas">Atlas returned by <see cref="Load"/>.</param>
+    /// <param name="type">Supported skull family.</param>
+    public static SpriteRect? SpriteForSkull(ItemAtlas atlas, SkullType type)
+    {
+        ArgumentNullException.ThrowIfNull(atlas);
+        return SkullModelDefinition.TextureFor(type) is { } path ? atlas.Get(path) : null;
     }
 }

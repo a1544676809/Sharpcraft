@@ -578,3 +578,33 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收证据**：`tests/Sharpcraft.Client.Tests/Render/ShelfCampfireRendererTests.cs` 覆盖物品槽位、facing 和最终顶点/UV；接入火焰后补单方块像素对比。
 
 <!-- simplification:SIM-BE-CAMPFIRE-FLAME task:T-47 -->
+
+### SIM-BE-SKULL-VARIANTS：Skull 仅支持四种静态头型
+
+- **简化了什么**：`SkullRenderer` 只绘制 `SKELETON` / `WITHER_SKELETON` / `ZOMBIE` / `CREEPER` 的静态头模型；`PLAYER` / `DRAGON` / `PIGLIN` 及其他特殊头型跳过。
+- **为什么**：本切片只复用 `SkullModel.createMobHeadLayer()` 的静态 8×8×8 头盒；特殊模型需要各自的模型层与皮肤/玩家档案解析，后续任务补齐。
+- **对等效性的影响**：四种支持头型的方块头/墙头静态外观按源模型；其他头型完全不绘制。
+- **状态**：受控偏差，计划由 T-47（#48 批次）后续特殊头型切片跟进（Issue #75）。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/SkullRendererTests.cs` 覆盖四种头型的 ground/wall 最终顶点/UV；接入特殊模型后补单方块像素对比。
+
+<!-- simplification:SIM-BE-SKULL-VARIANTS task:T-47 -->
+
+### SIM-BE-SKULL-ZOFFSET：Skull 不应用 entityCutoutZOffset
+
+- **简化了什么**：Skull 的 `entityCutoutZOffset` 深度偏移未应用。
+- **为什么**：完整 Z-offset 依赖 Issue #45 的渲染层/深度偏移基础；本切片明确为静态、无 Z-offset 首切片。
+- **对等效性的影响**：头像可能的深度顺序/微小深度偏差与参考不同，几何与 UV 不受影响。
+- **状态**：受控偏差，依赖 Issue #45；在 #45 提供偏移前不假装完成。
+- **验收证据**：Issue #75 的静态顶点/UV 测试；Z-offset 接入后补像素/深度对比。
+
+<!-- simplification:SIM-BE-SKULL-ZOFFSET task:T-47 -->
+
+### SIM-BE-SKULL-ANIM：Skull 不播放头部动画
+
+- **简化了什么**：`SkullRenderer` 不读取 `animationProgress`，也不应用 `setupAnim` 的 x/y 头旋转。
+- **为什么**：本切片固定静态头模型；动画需要后续 SkullBlockEntity 状态通道。
+- **对等效性的影响**：静态朝向与位置一致；受到动画驱动时的头部转动缺失。
+- **状态**：受控偏差，计划由 T-47（#48 批次）后续 Skull 动画切片跟进（Issue #75）。
+- **验收证据**：静态 ground/wall 顶点/UV 测试；动画接入后补时间序列真值。
+
+<!-- simplification:SIM-BE-SKULL-ANIM task:T-47 -->

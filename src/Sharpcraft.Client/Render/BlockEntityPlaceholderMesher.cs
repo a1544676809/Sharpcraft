@@ -29,7 +29,11 @@ public readonly record struct BlockEntityRenderState(
     byte ChestMaterial = 0,
     bool HasBook = false,
     Sharpcraft.Client.World.BlockEntityItemSlots Items = default,
-    bool ShelfAlignItemsToBottom = false);
+    bool ShelfAlignItemsToBottom = false,
+    SkullType SkullType = SkullType.None,
+    byte SkullRotation = 0,
+    bool SkullWall = false,
+    byte SkullFacing = 5);
 
 /// <summary>
 /// Placeholder geometry for block entities until real models are available.
