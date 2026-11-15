@@ -1229,6 +1229,39 @@ internal static partial class FrameCommand
 
         Console.WriteLine($"block entity geometry: {chestStates.Count} chest entities, types=[" + string.Join(",", chestStates.Select(s => s.TypeId)) + "]");
 
+        // A double chest opens as far as its more open half, the way ChestBlock.opennessCombiner
+        // takes the larger of the two (issue 27).
+        if (chestStates.Any(s => s.ChestType != 0))
+        {
+            var openness = new Dictionary<long, float>();
+            foreach (var state in chestStates)
+            {
+                openness[((long)(int)state.X & 0x3FFFFFF) << 38 | ((long)(int)state.Z & 0x3FFFFFF) << 12 | ((long)(int)state.Y & 0xFFF)] = state.Open;
+            }
+
+            for (var i = 0; i < chestStates.Count; i++)
+            {
+                var state = chestStates[i];
+                if (state.ChestType == 0)
+                {
+                    continue;
+                }
+
+                var best = state.Open;
+                ReadOnlySpan<(int Dx, int Dz)> neighbours = [(1, 0), (-1, 0), (0, 1), (0, -1)];
+                foreach (var (dx, dz) in neighbours)
+                {
+                    var key = ((long)((int)state.X + dx) & 0x3FFFFFF) << 38 | ((long)((int)state.Z + dz) & 0x3FFFFFF) << 12 | ((long)(int)state.Y & 0xFFF);
+                    if (openness.TryGetValue(key, out var other) && other > best)
+                    {
+                        best = other;
+                    }
+                }
+
+                chestStates[i] = state with { Open = best };
+            }
+        }
+
         if (Sharpcraft.Client.Game.GameOptions.Get("MC_DEBUG_MODELS") is { Length: > 0 })
         {
             foreach (var probe in chestStates)
