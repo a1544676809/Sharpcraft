@@ -75,7 +75,9 @@ public sealed class LevelChunk
     private readonly List<BlockEntityRecord> _blockEntities = [];
 
     /// <summary>Block entities attached to this chunk.</summary>
-    public IReadOnlyList<BlockEntityRecord> BlockEntities => _blockEntities;
+    /// <summary>Block entities attached to this chunk. The concrete list is exposed so iterating it
+    /// does not box the struct enumerator on every frame.</summary>
+    public List<BlockEntityRecord> BlockEntities => _blockEntities;
 
     /// <summary>Attaches a block entity, as decoded from the chunk packet.</summary>
     /// <param name="record">Block entity to attach.</param>

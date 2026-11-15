@@ -16,7 +16,9 @@ public sealed class ChestFaceUvTests
     [Fact]
     public void SingleChestBottomFacesMatchExpectedRectangles()
     {
-        var actual = EntityPlaceholderMesher.ComputeBoxFaceUvs(0, 19, 14, 10, 14);
+        Span<EntityPlaceholderMesher.FaceUvRect> buffer = stackalloc EntityPlaceholderMesher.FaceUvRect[6];
+        EntityPlaceholderMesher.ComputeBoxFaceUvs(0, 19, 14, 10, 14, buffer);
+        var actual = buffer.ToArray();
         EntityPlaceholderMesher.FaceUvRect[] expected =
         [
             new(28f, 33f, 42f, 43f),
@@ -38,7 +40,9 @@ public sealed class ChestFaceUvTests
     [InlineData(0, 0, 1, 4, 1)]
     public void BoxFaceUvsConserveAreaStayInBoundsAndAlignRows(int texU, int texV, int dx, int dy, int dz)
     {
-        var faces = EntityPlaceholderMesher.ComputeBoxFaceUvs(texU, texV, dx, dy, dz);
+        Span<EntityPlaceholderMesher.FaceUvRect> buffer = stackalloc EntityPlaceholderMesher.FaceUvRect[6];
+        EntityPlaceholderMesher.ComputeBoxFaceUvs(texU, texV, dx, dy, dz, buffer);
+        var faces = buffer.ToArray();
         var areaSum = 0f;
         foreach (var f in faces)
         {
