@@ -114,6 +114,11 @@ public sealed record FrameRequest(
     /// <summary>Block entity geometry rebuilt for this frame, or null when there is none.</summary>
     public DynamicGeometry? BlockEntityGeometry { get; init; }
 
+    /// <summary>Builds the block entity geometry for the frame about to be drawn. The reference extracts
+    /// the visible block entities every frame, so a block placed after the world loaded shows up immediately.
+    /// Null falls back to <see cref="BlockEntityGeometry"/>, which keeps the offscreen path unchanged.</summary>
+    public Func<DynamicGeometry?>? BlockEntityPerFrame { get; init; }
+
     /// <summary>
     /// When true the full-screen gradient sky (sky.wgsl) is not drawn; the caller supplies a sky disc / other backdrop
     /// instead (docs/modules/weather-and-sky-color.md 6.2).

@@ -1192,7 +1192,7 @@ internal static partial class FrameCommand
     }
 
     /// <summary>Builds the chest segment for a live session from the block entities in the loaded chunks.</summary>
-    private static DynamicGeometry? BuildBlockEntityGeometry(ClientWorld world, Sharpcraft.Client.Render.ItemAtlas? chestAtlas)
+    internal static DynamicGeometry? BuildBlockEntityGeometry(ClientWorld world, Sharpcraft.Client.Render.ItemAtlas? chestAtlas)
     {
         if (chestAtlas is null)
         {

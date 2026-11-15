@@ -266,6 +266,14 @@ internal static class WindowCommand
             spriteRects: prepared?.Atlas.RectTable,
             models: prepared?.Models,
             chestAtlas: prepared?.ChestAtlas);
+
+        // The reference extracts the visible block entities every frame, so a chest placed after the
+        // world loaded appears on the next frame. Until a per section list exists this walks the
+        // loaded chunks, which is cheap while block entities are few (issue 22).
+        request = request with
+        {
+            BlockEntityPerFrame = () => FrameCommand.BuildBlockEntityGeometry(world, prepared?.ChestAtlas)
+        };
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
         var selfResize = ParseSelfResize();

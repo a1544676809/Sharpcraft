@@ -335,6 +335,7 @@ public static class WindowedRenderer
         using var blockEntityAtlas = new EntitySkinTextureGpu();
         using var blockEntityRects = new SpriteRectTable(backend);
         using var blockEntitySubmission = new BlockEntitySubmission(backend);
+        DynamicGeometry? appliedBlockEntities = null;
         if (request.BlockEntityAtlas is { } blockEntityAtlasData && request.BlockEntityGeometry is { } blockEntityGeometry)
         {
             Console.WriteLine($"block entity draw: {request.BlockEntitySpriteRects.Length} sprite rects, {request.BlockEntityGeometry?.IndexCount / 3} triangles");
@@ -349,6 +350,7 @@ public static class WindowedRenderer
                 atlasSamplerHandle,
                 blockEntityRects);
             blockEntitySubmission.Upload(blockEntityGeometry, blockEntityAtlas.BindGroup);
+            appliedBlockEntities = blockEntityGeometry;
             request = request with { BlockEntity = blockEntitySubmission };
         }
 
@@ -502,6 +504,16 @@ public static class WindowedRenderer
                 arenaTranslucent?.Dispose();
                 arenaTranslucent = new ChunkGeometryStore(backend, device);
                 Console.WriteLine("ui: world geometry reset");
+            }
+
+            // The reference extracts the visible block entities every frame, so a block placed after the
+            // world loaded appears on the next frame instead of waiting for a restart.
+            if (request.BlockEntityPerFrame is { } blockEntitiesPerFrame &&
+                blockEntitiesPerFrame() is { } refreshedBlockEntities &&
+                !ReferenceEquals(refreshedBlockEntities, appliedBlockEntities))
+            {
+                appliedBlockEntities = refreshedBlockEntities;
+                blockEntitySubmission.Upload(refreshedBlockEntities, blockEntityAtlas.BindGroup);
             }
 
             if (atlasSource is not null && atlasSource.Version != appliedAtlasVersion)
