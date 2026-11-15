@@ -368,10 +368,6 @@ public sealed class ClientWorld
     private void RefreshSnapshot() => _snapshot = [.. _chunks.Values];
 
     /// <summary>
-    /// Block state at block coordinates. Negative coordinates rely on the arithmetic-shift
-    /// conversions, not on naive division (docs/analysis/common/coordinates.md).
-    /// </summary>
-    /// <summary>
     /// Sky light (0..15) at world coordinates. Cells outside a loaded chunk read as 0.
     /// </summary>
     public byte GetSkyLight(int x, int y, int z)
@@ -409,6 +405,10 @@ public sealed class ClientWorld
         return true;
     }
 
+    /// <summary>
+    /// Block state at block coordinates. Negative coordinates rely on the arithmetic-shift
+    /// conversions, not on naive division (docs/analysis/common/coordinates.md).
+    /// </summary>
     public int GetBlockState(int x, int y, int z, int fallbackState = 0)
     {
         var chunk = GetChunk(BlockCoordinates.ToSectionCoord(x), BlockCoordinates.ToSectionCoord(z));

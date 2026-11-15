@@ -390,7 +390,7 @@ internal static partial class FrameCommand
 
                 foreach (var chunk in world.GetChunks())
                 {
-                    foreach (var record in chunk.BlockEntities)
+                    foreach (var record in chunk.BlockEntitiesSpan)
                     {
                         var blockX = (chunk.ChunkX * 16) + record.LocalX;
                         var blockZ = (chunk.ChunkZ * 16) + record.LocalZ;
@@ -1001,7 +1001,7 @@ internal static partial class FrameCommand
             var blockEntityStates = new List<Sharpcraft.Client.Render.BlockEntityRenderState>();
             foreach (var chunk in world.GetChunks())
             {
-                foreach (var record in chunk.BlockEntities)
+                foreach (var record in chunk.BlockEntitiesSpan)
                 {
                     var blockX = (chunk.ChunkX * 16) + record.LocalX;
                     var blockZ = (chunk.ChunkZ * 16) + record.LocalZ;
@@ -1223,7 +1223,7 @@ internal static partial class FrameCommand
         chestStates.Clear();
         foreach (var chunk in world.GetChunks())
         {
-            foreach (var record in chunk.BlockEntities)
+            foreach (var record in chunk.BlockEntitiesSpan)
             {
                 if (!Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(record.TypeId))
                 {
