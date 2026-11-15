@@ -136,16 +136,88 @@ public sealed class ShelfCampfireRendererTests : IDisposable
     }
 
     [Fact]
-    public void ShelfFacingChangesTheSlotOrientation()
+    public void RejectsInvalidContainerHelperCountsAndTypes()
+    {
+        var registry = ItemRegistry.LoadEmbedded();
+        var beforeItemErrors = BlockEntityData.UnsupportedItemCount;
+        var beforeSlotErrors = BlockEntityData.UnsupportedItemSlotCount;
+        var items = new NbtList(NbtTagType.Compound,
+        [
+            new NbtCompound()
+                .Set("Slot", new NbtByte(0))
+                .Set("id", new NbtString("minecraft:apple"))
+                .Set("count", new NbtInt(0)),
+            new NbtCompound()
+                .Set("Slot", new NbtByte(1))
+                .Set("id", new NbtString("minecraft:apple"))
+                .Set("count", new NbtInt(100)),
+            new NbtCompound()
+                .Set("Slot", new NbtByte(2))
+                .Set("id", new NbtString("minecraft:apple"))
+                .Set("count", new NbtString("1")),
+            new NbtCompound()
+                .Set("Slot", new NbtString("2"))
+                .Set("id", new NbtString("minecraft:apple"))
+                .Set("count", new NbtInt(1))
+        ]);
+        var record = new BlockEntityRecord(0, 0, 0, VanillaBlockEntityTypes.Shelf, new NbtCompound().Set("Items", items));
+
+        Assert.True(BlockEntityData.TryReadItems(record, registry, out var slots));
+        Assert.True(slots.Slot0.IsEmpty);
+        Assert.True(slots.Slot1.IsEmpty);
+        Assert.True(slots.Slot2.IsEmpty);
+        Assert.True(BlockEntityData.UnsupportedItemCount >= beforeItemErrors + 3);
+        Assert.True(BlockEntityData.UnsupportedItemSlotCount >= beforeSlotErrors + 1);
+    }
+
+    [Fact]
+    public void MissingCountDefaultsToOneAndMissingSlotDefaultsToZero()
+    {
+        var registry = ItemRegistry.LoadEmbedded();
+        var item = new NbtCompound()
+            .Set("id", new NbtString("minecraft:apple"));
+        var record = new BlockEntityRecord(
+            0, 0, 0, VanillaBlockEntityTypes.Shelf,
+            new NbtCompound().Set("Items", new NbtList(NbtTagType.Compound, [item])));
+
+        Assert.True(BlockEntityData.TryReadItems(record, registry, out var slots));
+        Assert.Equal(1, slots.Slot0.Count);
+        Assert.False(slots.Slot0.IsEmpty);
+    }
+
+    [Fact]
+    public void ShelfFacingMapMatchesDirectionToYRot()
+    {
+        Assert.Equal(-180f, ShelfRenderer.FacingYRot(2));
+        Assert.Equal(0f, ShelfRenderer.FacingYRot(3));
+        Assert.Equal(-90f, ShelfRenderer.FacingYRot(4));
+        Assert.Equal(-270f, ShelfRenderer.FacingYRot(5));
+    }
+
+    [Fact]
+    public void CampfireFacingMapMatchesDirection2DData()
+    {
+        Assert.Equal(2, CampfireRenderer.Facing2D(2));
+        Assert.Equal(0, CampfireRenderer.Facing2D(3));
+        Assert.Equal(1, CampfireRenderer.Facing2D(4));
+        Assert.Equal(3, CampfireRenderer.Facing2D(5));
+    }
+
+    [Theory]
+    [InlineData((byte)2, 0.9375f, 0.375f, 0.625f)]
+    [InlineData((byte)3, 0.0625f, 0.375f, 0.375f)]
+    [InlineData((byte)4, 0.625f, 0.375f, 0.0625f)]
+    [InlineData((byte)5, 0.375f, 0.375f, 0.9375f)]
+    public void ShelfFacingChangesTheSlotOrientation(byte facing, float x, float y, float z)
     {
         var (shelf, atlas) = BuildShelf();
         var geometry = shelf.Build(
-            [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.Shelf, Facing: 5, Items: FullShelfSlots())],
+            [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.Shelf, Facing: facing, Items: FullShelfSlots())],
             atlas,
             atlas);
 
         Assert.Equal(72, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
-        AssertVertex(geometry, 0, 0.625f, 0.375f, 0.0625f, 0f, 0f);
+        AssertVertex(geometry, 0, x, y, z, 0f, 0f);
     }
 
     [Fact]
@@ -164,17 +236,21 @@ public sealed class ShelfCampfireRendererTests : IDisposable
         AssertVertex(geometry, 24, 0f, 0.26172f, 1f, 0f, 0f);
     }
 
-    [Fact]
-    public void CampfireFacingChangesTheSlotOrientation()
+    [Theory]
+    [InlineData((byte)2, 1f, 0.26172f, 1f)]
+    [InlineData((byte)3, 0f, 0.26172f, 0f)]
+    [InlineData((byte)4, 1f, 0.26172f, 0f)]
+    [InlineData((byte)5, 0f, 0.26172f, 1f)]
+    public void CampfireFacingChangesTheSlotOrientation(byte facing, float x, float y, float z)
     {
         var (campfire, atlas) = BuildCampfire();
         var geometry = campfire.Build(
-            [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.Campfire, Facing: 5, Items: FullShelfSlots())],
+            [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.Campfire, Facing: facing, Items: FullShelfSlots())],
             atlas,
             atlas);
 
         Assert.Equal(96, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
-        AssertVertex(geometry, 0, 1f, 0.26172f, 0f, 0f, 0f);
+        AssertVertex(geometry, 0, x, y, z, 0f, 0f);
     }
 
     [Fact]

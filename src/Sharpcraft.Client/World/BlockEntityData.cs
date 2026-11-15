@@ -88,9 +88,10 @@ public static class BlockEntityData
     public static int UnsupportedItemSlotCount { get; private set; }
 
     /// <summary>
-    /// Reads a block entity's <c>Items</c> list. Entries with an unknown item id, malformed fields or
-    /// an out-of-range slot are skipped and counted; missing or empty slots stay empty. The method
-    /// never throws for malformed NBT.
+    /// Reads a block entity's <c>Items</c> list. The source ItemStackWithSlot/ItemStack codecs default
+    /// <c>Slot</c> to 0 and <c>count</c> to 1; a present count must be an integer in 1..99. Entries
+    /// with an unknown item id, malformed fields or an out-of-range slot are skipped and counted;
+    /// missing or empty slots stay empty. The method never throws for malformed NBT.
     /// </summary>
     /// <param name="record">Block entity record carrying the optional tag.</param>
     /// <param name="registry">Item registry used to turn the string id into the numeric id.</param>
@@ -114,7 +115,13 @@ public static class BlockEntityData
                 continue;
             }
 
-            var slot = ReadSmallInt(entry.Get("Slot"));
+            var slotTag = entry.Get("Slot");
+            if (!TryReadSmallInt(slotTag, fallback: 0, out var slot))
+            {
+                UnsupportedItemSlotCount++;
+                continue;
+            }
+
             if (slot is < 0 or >= BlockEntityItemSlots.Capacity)
             {
                 UnsupportedItemSlotCount++;
@@ -122,8 +129,14 @@ public static class BlockEntityData
             }
 
             var id = entry.GetString("id");
-            var count = ReadSmallInt(entry.Get("count"), fallback: 1);
-            if (id is null || count <= 0)
+            var countTag = entry.Get("count");
+            if (!TryReadSmallInt(countTag, fallback: 1, out var count) || count is < 1 or > 99)
+            {
+                UnsupportedItemCount++;
+                continue;
+            }
+
+            if (id is null)
             {
                 UnsupportedItemCount++;
                 continue;
@@ -160,13 +173,30 @@ public static class BlockEntityData
         return true;
     }
 
-    private static int ReadSmallInt(NbtTag? tag, int fallback = 0) => tag switch
+    private static bool TryReadSmallInt(NbtTag? tag, int fallback, out int value)
     {
-        NbtByte value => value.Value,
-        NbtShort value => value.Value,
-        NbtInt value => value.Value,
-        _ => fallback
-    };
+        if (tag is null)
+        {
+            value = fallback;
+            return true;
+        }
+
+        switch (tag)
+        {
+            case NbtByte byteTag:
+                value = byteTag.Value;
+                return true;
+            case NbtShort shortTag:
+                value = shortTag.Value;
+                return true;
+            case NbtInt intTag:
+                value = intTag.Value;
+                return true;
+            default:
+                value = fallback;
+                return false;
+        }
+    }
 
     /// <summary>Reads a sign's front and back text.</summary>
     /// <param name="record">Block entity as it arrived with the chunk.</param>

@@ -100,10 +100,10 @@ public sealed class CampfireRenderer : IBlockEntityRenderer
     /// </summary>
     public static int Facing2D(byte facing) => facing switch
     {
-        4 => 0, // west
-        5 => 1, // east
+        3 => 0, // south
+        4 => 1, // west
         2 => 2, // north
-        3 => 3, // south
+        5 => 3, // east
         _ => 2
     };
 }

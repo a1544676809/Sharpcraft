@@ -109,9 +109,9 @@ public sealed class ShelfRenderer : IBlockEntityRenderer
     public static float FacingYRot(byte facing) => facing switch
     {
         2 => -180f, // north
-        3 => -270f, // south
-        4 => 0f,    // west
-        5 => -90f,  // east
+        3 => 0f,    // south
+        4 => -90f,  // west
+        5 => -270f, // east
         _ => 180f
     };
 }
