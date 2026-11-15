@@ -173,19 +173,6 @@ public sealed class ShulkerBoxMesher
 
             LastEntityCount++;
 
-            // The reference draws a shulker box with its cutout pass, which does not cull: the same faces
-            // are visible from inside, which is what makes an open box look solid rather than hollow.
-            // Doubling the indices with the opposite winding gives the same result through a culling pass.
-            var frontIndices = indexCount;
-            _geometry.Reserve(vertexFloats, indexCount * 2);
-            for (var index = 0; index < frontIndices; index += 3)
-            {
-                _geometry.Indices[frontIndices + index] = _geometry.Indices[index];
-                _geometry.Indices[frontIndices + index + 1] = _geometry.Indices[index + 2];
-                _geometry.Indices[frontIndices + index + 2] = _geometry.Indices[index + 1];
-            }
-
-            indexCount = frontIndices * 2;
         }
 
         _geometry.VertexFloats = vertexFloats;
