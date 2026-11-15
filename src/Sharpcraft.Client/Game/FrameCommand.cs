@@ -1145,11 +1145,6 @@ internal static partial class FrameCommand
         };
     }
 
-    /// <summary>Clockwise neighbour facing: north to east, east to south, south to west, west to north.</summary>
-    private static byte Clockwise(byte facing) => facing switch { 4 => 1, 1 => 5, 5 => 0, 0 => 4, _ => facing };
-
-    /// <summary>Counter-clockwise neighbour facing, the inverse of <see cref="Clockwise"/>.</summary>
-    private static byte CounterClockwise(byte facing) => facing switch { 4 => 0, 0 => 5, 5 => 1, 1 => 4, _ => facing };
 
     /// <summary>
     /// Which half of a double chest the block is, or single. Values follow the reference's
@@ -1280,15 +1275,15 @@ internal static partial class FrameCommand
                     continue;
                 }
 
-                var direction = state.ChestType == 1 ? Clockwise(state.Facing) : CounterClockwise(state.Facing);
-                var nx = (int)state.X + (direction == 0 ? -1 : direction == 1 ? 1 : 0);
-                var nz = (int)state.Z + (direction == 4 ? -1 : direction == 5 ? 1 : 0);
+                var (dx, dz) = Sharpcraft.Client.Render.ChestPairing.ConnectedOffset(state.Facing, state.ChestType);
+                var nx = (int)state.X + dx;
+                var nz = (int)state.Z + dz;
                 if (!byPosition.TryGetValue(PositionKey(nx, (int)state.Y, nz), out var other))
                 {
                     continue;
                 }
 
-                if (other.ChestType == 0 || other.ChestType == state.ChestType || other.Facing != state.Facing)
+                if (!Sharpcraft.Client.Render.ChestPairing.IsPartner(state.Facing, state.ChestType, other.Facing, other.ChestType))
                 {
                     continue;
                 }
