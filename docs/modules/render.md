@@ -579,13 +579,13 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 <!-- simplification:SIM-BE-CAMPFIRE-FLAME task:T-47 -->
 
-### SIM-BE-SKULL-VARIANTS：Skull 特殊头型仅缺 DRAGON/PIGLIN
+### SIM-BE-SKULL-VARIANTS：Skull 特殊头型仅缺 DRAGON
 
-- **简化了什么**：`SkullRenderer` 覆盖 `SKELETON` / `WITHER_SKELETON` / `ZOMBIE` / `CREEPER` / `PLAYER` 的静态头模型；`DRAGON` / `PIGLIN` 及其他特殊头型跳过。
-- **为什么**：本切片复用 `SkullModel.createMobHeadLayer()` 与 `createHumanoidHeadLayer()` 的静态头盒；DRAGON/PIGLIN 需要各自独立模型层，后续任务补齐。
-- **对等效性的影响**：五种支持头型的方块头/墙头静态外观按源模型；DRAGON/PIGLIN 头完全不绘制。
-- **状态**：受控偏差，计划由 T-47（#48 批次）后续特殊头型切片跟进（Issue #75、#77）。
-- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/SkullRendererTests.cs` 覆盖五种头型的 ground/wall 与 Player head+hat 最终顶点/UV；接入 DRAGON/PIGLIN 后补单方块像素对比。
+- **简化了什么**：`SkullRenderer` 覆盖 `SKELETON` / `WITHER_SKELETON` / `ZOMBIE` / `CREEPER` / `PLAYER` / `PIGLIN` 的静态头模型；`DRAGON` 及其他特殊头型跳过。
+- **为什么**：本切片复用 `SkullModel.createMobHeadLayer()`、`createHumanoidHeadLayer()` 与 `PiglinModelDefinition` 的 head-only 盒；DRAGON 需要独立模型层，后续任务补齐。
+- **对等效性的影响**：六种支持头型的方块头/墙头静态外观按源模型；DRAGON 头完全不绘制。
+- **状态**：受控偏差，计划由 T-47（#48 批次）后续特殊头型切片跟进（Issue #75、#77、#79）。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/SkullRendererTests.cs` 覆盖六种头型的 ground/wall、Player head+hat 与 Piglin head 最终顶点/UV；接入 DRAGON 后补单方块像素对比。
 
 <!-- simplification:SIM-BE-SKULL-VARIANTS task:T-47 -->
 

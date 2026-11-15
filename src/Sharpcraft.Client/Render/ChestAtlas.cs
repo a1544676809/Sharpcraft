@@ -116,7 +116,8 @@ public static class ChestAtlas
         SkullModelDefinition.WitherSkeletonTexture,
         SkullModelDefinition.ZombieTexture,
         SkullModelDefinition.CreeperTexture,
-        SkullModelDefinition.DefaultPlayerSkinTexture
+        SkullModelDefinition.DefaultPlayerSkinTexture,
+        SkullModelDefinition.PiglinTexture
     ];
 
     /// <summary>Everything this block entity atlas stitches, in load order.</summary>
