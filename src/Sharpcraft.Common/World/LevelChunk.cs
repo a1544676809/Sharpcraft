@@ -74,9 +74,15 @@ public sealed class LevelChunk
 
     private readonly List<BlockEntityRecord> _blockEntities = [];
 
-    /// <summary>Block entities attached to this chunk. The concrete list is exposed so iterating it
-    /// does not box the struct enumerator on every frame.</summary>
-    public List<BlockEntityRecord> BlockEntities => _blockEntities;
+    /// <summary>Block entities attached to this chunk.</summary>
+    public IReadOnlyList<BlockEntityRecord> BlockEntities => _blockEntities;
+
+    /// <summary>
+    /// The same records as a span, for per-frame reads: iterating the interface would box the list
+    /// enumerator, and this view cannot be mutated by the caller.
+    /// </summary>
+    public ReadOnlySpan<BlockEntityRecord> BlockEntitiesSpan =>
+        System.Runtime.InteropServices.CollectionsMarshal.AsSpan(_blockEntities);
 
     /// <summary>Attaches a block entity, as decoded from the chunk packet.</summary>
     /// <param name="record">Block entity to attach.</param>
