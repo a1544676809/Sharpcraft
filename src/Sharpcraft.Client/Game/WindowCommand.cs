@@ -332,9 +332,10 @@ internal static class WindowCommand
 
         // The reference extracts block entities every frame with the partial tick, so the lid animates
         // between the twenty ticks a second the server runs at (issue 27).
+        var blockEntityFrame = new Sharpcraft.Client.Render.BlockEntityFrameState();
         request = request with
         {
-            BlockEntityPerFrame = () => FrameCommand.BuildBlockEntityGeometry(world, prepared?.ChestAtlas, session.PartialTick)
+            BlockEntityPerFrame = () => FrameCommand.BuildBlockEntityGeometry(world, prepared?.ChestAtlas, session.PartialTick, blockEntityFrame)
         };
 
         // Sky/fog use SKY_COLOR (biome sky colour x day/night x weather), so the live session needs the biome registry.

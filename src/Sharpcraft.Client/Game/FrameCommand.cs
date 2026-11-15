@@ -1199,7 +1199,7 @@ internal static partial class FrameCommand
     private static long PositionKey(int x, int y, int z) =>
         ((long)x & 0x3FFFFFF) << 38 | ((long)z & 0x3FFFFFF) << 12 | ((long)y & 0xFFF);
 
-    internal static DynamicGeometry? BuildBlockEntityGeometry(ClientWorld world, Sharpcraft.Client.Render.ItemAtlas? chestAtlas, float partialTick = 0f)
+    internal static DynamicGeometry? BuildBlockEntityGeometry(ClientWorld world, Sharpcraft.Client.Render.ItemAtlas? chestAtlas, float partialTick = 0f, Sharpcraft.Client.Render.BlockEntityFrameState? frameState = null)
     {
         if (chestAtlas is null)
         {
@@ -1215,7 +1215,9 @@ internal static partial class FrameCommand
 
 
 
-        var chestStates = new List<Sharpcraft.Client.Render.BlockEntityRenderState>();
+        var frame = frameState ?? new Sharpcraft.Client.Render.BlockEntityFrameState();
+        var chestStates = frame.States;
+        chestStates.Clear();
         foreach (var chunk in world.GetChunks())
         {
             foreach (var record in chunk.BlockEntities)
@@ -1249,7 +1251,8 @@ internal static partial class FrameCommand
         // block, face the same way and carry the complementary type (issues 27 and 28).
         if (chestStates.Any(s => s.ChestType != 0))
         {
-            var byPosition = new Dictionary<long, Sharpcraft.Client.Render.BlockEntityRenderState>();
+            var byPosition = frame.ByPosition;
+            byPosition.Clear();
             foreach (var state in chestStates)
             {
                 byPosition[PositionKey((int)state.X, (int)state.Y, (int)state.Z)] = state;
@@ -1295,7 +1298,7 @@ internal static partial class FrameCommand
             return null;
         }
 
-        return BlockEntityChestMesher.Build(
+        return frame.Mesher.Build(
             System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates),
             chestAtlas);
     }
