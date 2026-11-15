@@ -298,6 +298,7 @@ internal sealed partial class InteractiveSession
     private readonly PlayerSync? _sync;
     private readonly Sharpcraft.Common.Network.ChatTypeTable? _chatTypes;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
+
     private TimeSpan _last;
 
     private InteractiveSession(
@@ -819,7 +820,7 @@ internal sealed partial class InteractiveSession
                 // other client's own report of where it is (docs/specs/network/entity-sync.md 7).
                 if (GameOptions.Get("MC_ENTITY_LOG") == "1" && _tickCounter % 20 == 0)
                 {
-                    var states = _entities.Interpolate(0f);
+                    var states = _entities.Interpolate(PartialTick);
                     var self = _player.Position;
                     var stamp = Environment.TickCount64;
                     Console.WriteLine(

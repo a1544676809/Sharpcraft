@@ -270,10 +270,7 @@ internal static class WindowCommand
         // The reference extracts the visible block entities every frame, so a chest placed after the
         // world loaded appears on the next frame. Until a per section list exists this walks the
         // loaded chunks, which is cheap while block entities are few (issue 22).
-        request = request with
-        {
-            BlockEntityPerFrame = () => FrameCommand.BuildBlockEntityGeometry(world, prepared?.ChestAtlas)
-        };
+
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
         var selfResize = ParseSelfResize();
@@ -332,6 +329,13 @@ internal static class WindowCommand
         }
 
         var session = InteractiveSession.Create(world, request, live, workerPool, language, chatTypes);
+
+        // The reference extracts block entities every frame with the partial tick, so the lid animates
+        // between the twenty ticks a second the server runs at (issue 27).
+        request = request with
+        {
+            BlockEntityPerFrame = () => FrameCommand.BuildBlockEntityGeometry(world, prepared?.ChestAtlas, session.PartialTick)
+        };
 
         // Sky/fog use SKY_COLOR (biome sky colour x day/night x weather), so the live session needs the biome registry.
         if (live?.Registries is { } biomeRegistries && Sharpcraft.Common.World.BiomeRegistry.From(biomeRegistries) is { } sessionBiomes)
