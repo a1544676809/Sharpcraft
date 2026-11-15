@@ -52,21 +52,26 @@ public sealed class LecternRendererTests
     public void BookPoseUsesTheReferencePartRotations()
     {
         var pose = BookModelDefinition.CreatePose(BookModelDefinition.BookModelState.ForAnimation(0f, 0.1f, 0.9f, 1.2f));
-        Assert.Equal(MathF.PI + 1.5f, pose.Get("left_lid").Rotation.Y, 4);
-        Assert.Equal(-1.5f, pose.Get("right_lid").Rotation.Y, 4);
-        Assert.Equal(1.5f, pose.Get("left_pages").Rotation.Y, 4);
-        Assert.Equal(-1.5f, pose.Get("right_pages").Rotation.Y, 4);
-        Assert.Equal(1.2f, pose.Get("flip_page1").Rotation.Y, 4);
-        Assert.Equal(-1.2f, pose.Get("flip_page2").Rotation.Y, 4);
-        Assert.Equal(MathF.Sin(1.5f), pose.Get("left_pages").Position.X, 4);
+        Assert.Equal(-(MathF.PI + 1.5f), pose.Get("left_lid").Rotation.Y, 4);
+        Assert.Equal(1.5f, pose.Get("right_lid").Rotation.Y, 4);
+        Assert.Equal(-1.5f, pose.Get("left_pages").Rotation.Y, 4);
+        Assert.Equal(1.5f, pose.Get("right_pages").Rotation.Y, 4);
+        Assert.Equal(-1.2f, pose.Get("flip_page1").Rotation.Y, 4);
+        Assert.Equal(1.2f, pose.Get("flip_page2").Rotation.Y, 4);
+        Assert.Equal(-MathF.Sin(1.5f), pose.Get("left_pages").Position.X, 4);
     }
 
+    /// <summary>
+    /// Final vertex/UV truth samples from the corrected block-entity bake: no entity X mirror and
+    /// reference-sign BookModel rotations. Four facings plus a second emitted vertex are checked.
+    /// </summary>
     [Theory]
-    [InlineData((byte)2, 0.0634f, 0.8706f, 0.1060f)]
-    [InlineData((byte)3, 0.9366f, 0.8706f, 0.8940f)]
-    [InlineData((byte)4, 0.1060f, 0.8706f, 0.9366f)]
-    [InlineData((byte)5, 0.8940f, 0.8706f, 0.0634f)]
-    public void LecternBookSamplesFacingPose(byte facing, float x, float y, float z)
+    [InlineData((byte)2, 0, 0.4375f, 0.8951f, 0.0958f, 6f / 64f, 0f)]
+    [InlineData((byte)2, 1, 0.0634f, 0.9196f, 0.0857f, 12f / 64f, 0f)]
+    [InlineData((byte)3, 0, 0.5625f, 0.8951f, 0.9042f, 6f / 64f, 0f)]
+    [InlineData((byte)4, 0, 0.0958f, 0.8951f, 0.5625f, 6f / 64f, 0f)]
+    [InlineData((byte)5, 0, 0.9042f, 0.8951f, 0.4375f, 6f / 64f, 0f)]
+    public void LecternBookSamplesFacingPose(byte facing, int vertex, float x, float y, float z, float u, float v)
     {
         var mesher = new LecternRenderer();
         var geometry = mesher.Build(
@@ -76,12 +81,13 @@ public sealed class LecternRendererTests
         Assert.Equal(1, mesher.LastEntityCount);
         Assert.Equal(7 * 24 * ChunkMesher.FloatsPerVertex, geometry.VertexFloats);
         Assert.Equal(7 * 36, geometry.IndexCount);
-        var position = VertexFieldReader.Position(geometry.Vertices, 0);
+        var position = VertexFieldReader.Position(geometry.Vertices, vertex);
         Assert.Equal(x, position.X, 3);
         Assert.Equal(y, position.Y, 3);
         Assert.Equal(z, position.Z, 3);
-        Assert.Equal(6f / 64f, VertexFieldReader.Uv(geometry.Vertices, 0).U, 3);
-        Assert.Equal(0f, VertexFieldReader.Uv(geometry.Vertices, 0).V, 3);
+        var uv = VertexFieldReader.Uv(geometry.Vertices, vertex);
+        Assert.Equal(u, uv.U, 3);
+        Assert.Equal(v, uv.V, 3);
         Assert.Equal("entity/enchantment/enchanting_table_book", ChestAtlas.EnchantingTableBookTexture);
     }
 

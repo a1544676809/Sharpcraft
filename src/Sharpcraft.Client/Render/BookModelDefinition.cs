@@ -60,14 +60,15 @@ public static class BookModelDefinition
         var pageX = MathF.Sin(openness);
 
         // BookModel.setupAnim: leftLid.yRot = PI + openness; rightLid.yRot = -openness;
-        // leftPages/rightPages yRot = +/-openness. X/Y animation rotations are conjugated by the
-        // model's scale(-1,-1,1), so PoseOffset stores the reference values and PartFrame subtracts them.
-        pose.Set("left_lid", new PoseOffset(Vector3.Zero, new Vector3(0f, MathF.PI + openness, 0f), Vector3.Zero));
-        pose.Set("right_lid", new PoseOffset(Vector3.Zero, new Vector3(0f, -openness, 0f), Vector3.Zero));
-        pose.Set("left_pages", new PoseOffset(new Vector3(pageX, 0f, 0f), new Vector3(0f, openness, 0f), Vector3.Zero));
-        pose.Set("right_pages", new PoseOffset(new Vector3(pageX, 0f, 0f), new Vector3(0f, -openness, 0f), Vector3.Zero));
-        pose.Set("flip_page1", new PoseOffset(new Vector3(pageX, 0f, 0f), new Vector3(0f, page1, 0f), Vector3.Zero));
-        pose.Set("flip_page2", new PoseOffset(new Vector3(pageX, 0f, 0f), new Vector3(0f, page2, 0f), Vector3.Zero));
+        // leftPages/rightPages yRot = +/-openness. This block-entity model has no entity
+        // scale(-1,-1,1), so PoseOffset stores the negated reference X/Y angles; PartFrame
+        // subtracts them from the base part rotations.
+        pose.Set("left_lid", new PoseOffset(Vector3.Zero, new Vector3(0f, -(MathF.PI + openness), 0f), Vector3.Zero));
+        pose.Set("right_lid", new PoseOffset(Vector3.Zero, new Vector3(0f, openness, 0f), Vector3.Zero));
+        pose.Set("left_pages", new PoseOffset(new Vector3(-pageX, 0f, 0f), new Vector3(0f, -openness, 0f), Vector3.Zero));
+        pose.Set("right_pages", new PoseOffset(new Vector3(-pageX, 0f, 0f), new Vector3(0f, openness, 0f), Vector3.Zero));
+        pose.Set("flip_page1", new PoseOffset(new Vector3(-pageX, 0f, 0f), new Vector3(0f, -page1, 0f), Vector3.Zero));
+        pose.Set("flip_page2", new PoseOffset(new Vector3(-pageX, 0f, 0f), new Vector3(0f, -page2, 0f), Vector3.Zero));
         return pose;
     }
 
@@ -88,29 +89,29 @@ public static class BookModelDefinition
 
         // left_lid: texOffs(0,0), box(-6,-5,-0.005,6,10,0.005), PartPose.offset(0,0,-1); ref://mc-26.3-analysis/src/net/minecraft/client/model/object/book/BookModel.java:38-40.
         root.AddOrReplaceChild("left_lid", VanillaPartPose.Offset(0f, 0f, -1f),
-            new VanillaCubeDefinition("left_lid", 0, 0, -6f, -5f, -0.005f, 6f, 10f, 0.005f));
+            new VanillaCubeDefinition("left_lid", 0, 0, -6f, -5f, -0.005f, 6f, 10f, 0.005f, MirrorX: false));
 
         // right_lid: texOffs(16,0), box(0,-5,-0.005,6,10,0.005), PartPose.offset(0,0,1); ref://mc-26.3-analysis/src/net/minecraft/client/model/object/book/BookModel.java:41-43.
         root.AddOrReplaceChild("right_lid", VanillaPartPose.Offset(0f, 0f, 1f),
-            new VanillaCubeDefinition("right_lid", 16, 0, 0f, -5f, -0.005f, 6f, 10f, 0.005f));
+            new VanillaCubeDefinition("right_lid", 16, 0, 0f, -5f, -0.005f, 6f, 10f, 0.005f, MirrorX: false));
 
         // seam: texOffs(12,0), box(-1,-5,0,2,10,0.005), PartPose.rotation(0, PI/2, 0); ref://mc-26.3-analysis/src/net/minecraft/client/model/object/book/BookModel.java:44-46.
         root.AddOrReplaceChild("seam", VanillaPartPose.OffsetAndRotation(0f, 0f, 0f, 0f, MathF.PI / 2f, 0f),
-            new VanillaCubeDefinition("seam", 12, 0, -1f, -5f, 0f, 2f, 10f, 0.005f));
+            new VanillaCubeDefinition("seam", 12, 0, -1f, -5f, 0f, 2f, 10f, 0.005f, MirrorX: false));
 
         // left_pages: texOffs(0,10), box(0,-4,-0.99,5,8,1), PartPose.ZERO; ref://mc-26.3-analysis/src/net/minecraft/client/model/object/book/BookModel.java:47.
         root.AddOrReplaceChild("left_pages", VanillaPartPose.Zero,
-            new VanillaCubeDefinition("left_pages", 0, 10, 0f, -4f, -0.99f, 5f, 8f, 1f));
+            new VanillaCubeDefinition("left_pages", 0, 10, 0f, -4f, -0.99f, 5f, 8f, 1f, MirrorX: false));
 
         // right_pages: texOffs(12,10), box(0,-4,-0.01,5,8,1), PartPose.ZERO; ref://mc-26.3-analysis/src/net/minecraft/client/model/object/book/BookModel.java:48.
         root.AddOrReplaceChild("right_pages", VanillaPartPose.Zero,
-            new VanillaCubeDefinition("right_pages", 12, 10, 0f, -4f, -0.01f, 5f, 8f, 1f));
+            new VanillaCubeDefinition("right_pages", 12, 10, 0f, -4f, -0.01f, 5f, 8f, 1f, MirrorX: false));
 
         // flip_page1 and flip_page2: texOffs(24,10), box(0,-4,0,5,8,0.005), PartPose.ZERO; ref://mc-26.3-analysis/src/net/minecraft/client/model/object/book/BookModel.java:49-51.
         root.AddOrReplaceChild("flip_page1", VanillaPartPose.Zero,
-            new VanillaCubeDefinition("flip_page1", 24, 10, 0f, -4f, 0f, 5f, 8f, 0.005f));
+            new VanillaCubeDefinition("flip_page1", 24, 10, 0f, -4f, 0f, 5f, 8f, 0.005f, MirrorX: false));
         root.AddOrReplaceChild("flip_page2", VanillaPartPose.Zero,
-            new VanillaCubeDefinition("flip_page2", 24, 10, 0f, -4f, 0f, 5f, 8f, 0.005f));
+            new VanillaCubeDefinition("flip_page2", 24, 10, 0f, -4f, 0f, 5f, 8f, 0.005f, MirrorX: false));
 
         return new VanillaMeshDefinition(root);
     }
