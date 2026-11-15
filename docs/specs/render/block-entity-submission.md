@@ -103,14 +103,19 @@ Upload(IRenderBackend backend, BindGroupLayoutHandle layout, TextureData data,
 using var chestAtlasGpu = new EntitySkinTextureGpu();
 using var blockEntity = new BlockEntitySubmission(backend);
 
-if (request.BlockEntityAtlas is { } chestAtlas && request.BlockEntityGeometry is { } geometry)
+if (request.BlockEntityAtlas is { } chestAtlas)
 {
+    // The atlas alone decides whether the segment exists: a world with no block entity still needs
+    // a submission to draw into once one appears.
+    var geometry = request.BlockEntityGeometry ?? new DynamicGeometry();
     chestAtlasGpu.Upload(backend, bindGroupLayout, chestAtlas,
         cameraBuffer, fogBuffer, lightmapBuffer, <atlasSampler>, <spriteRects>);
     blockEntity.Upload(geometry, chestAtlasGpu.BindGroup);
     request = request with { BlockEntity = blockEntity };
 }
 ```
+
+**每帧刷新**：`BlockEntityPerFrame` 每帧重建几何并刷新同一个 submission；与原版 `LevelRenderer.submitBlockEntities` 一致，不做"变化才提交"的判断，空结果会清空上一次的内容。
 
 **生命周期**：`chestAtlasGpu` 与 `blockEntity` 都是 `using`，作用域覆盖 `FrameExecutor.Record`（L546），因此纹理与缓冲在录制期间有效。顺序要求：**必须在 `new FrameResources(...)` 之前改 `request`**，否则 `Request` 捕获的是旧值。
 
