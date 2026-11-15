@@ -106,8 +106,11 @@ public static class ChestAtlas
             ? CopperGolemStatueTextures[oxidation]
             : CopperGolemStatueTextures[0];
 
+    /// <summary>Enchanting table book texture, 64 by 32, reused by lecterns.</summary>
+    public const string EnchantingTableBookTexture = "entity/enchantment/enchanting_table_book";
+
     /// <summary>Everything this block entity atlas stitches, in load order.</summary>
-    private static readonly string[] AllTextures = [.. Textures, .. ShulkerTextures, .. BellTextures, .. DecoratedPotTextures, .. CopperGolemStatueTextures];
+    private static readonly string[] AllTextures = [.. Textures, .. ShulkerTextures, .. BellTextures, .. DecoratedPotTextures, .. CopperGolemStatueTextures, EnchantingTableBookTexture];
 
     /// <summary>Texture the model uses when the material is plain wood.</summary>
     public const string NormalTexture = "entity/chest/normal";
@@ -277,5 +280,13 @@ public static class ChestAtlas
     {
         ArgumentNullException.ThrowIfNull(atlas);
         return atlas.Get(CopperGolemStatueTexture(oxidation));
+    }
+
+    /// <summary>Resolves the enchanting table book sprite, or null when absent.</summary>
+    /// <param name="atlas">Atlas returned by <see cref="Load"/>.</param>
+    public static SpriteRect? SpriteForEnchantingTableBook(ItemAtlas atlas)
+    {
+        ArgumentNullException.ThrowIfNull(atlas);
+        return atlas.Get(EnchantingTableBookTexture);
     }
 }
