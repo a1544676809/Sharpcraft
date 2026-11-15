@@ -108,4 +108,34 @@ public sealed class BlockStateDefinition
 
         return values;
     }
-}
+
+    /// <summary>
+    /// Value of one property for a state offset, without materialising the whole value array.
+    /// </summary>
+    /// <param name="offset">Offset inside the block, zero based.</param>
+    /// <param name="propertyName">Property name to read.</param>
+    /// <param name="value">Value of that property when found.</param>
+    public bool TryGetPropertyValue(int offset, string propertyName, out string value)
+    {
+        value = string.Empty;
+        if ((uint)offset >= (uint)StateCount)
+        {
+            return false;
+        }
+
+        // Walk from the last property, which varies fastest, so the digits come out in place.
+        for (var i = _properties.Length - 1; i >= 0; i--)
+        {
+            var radix = _properties[i].Radix;
+            var position = offset % radix;
+            offset /= radix;
+            if (string.Equals(_properties[i].Name, propertyName, StringComparison.Ordinal))
+            {
+                value = _properties[i].Values[position];
+                return true;
+            }
+        }
+
+        return false;
+    }
+    }

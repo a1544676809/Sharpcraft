@@ -70,18 +70,7 @@ public sealed class BlockStateDefinitions
             return false;
         }
 
-        var values = definition.ValuesAt(offset);
-        var properties = definition.Properties;
-        for (var i = 0; i < properties.Count; i++)
-        {
-            if (string.Equals(properties[i].Name, property, StringComparison.Ordinal))
-            {
-                value = values[i];
-                return true;
-            }
-        }
-
-        return false;
+        return definition.TryGetPropertyValue(offset, property, out value);
     }
 
     /// <summary>Reads the schema out of the assembly's embedded snapshot.</summary>
