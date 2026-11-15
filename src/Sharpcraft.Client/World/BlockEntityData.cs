@@ -192,7 +192,12 @@ public static class BlockEntityData
     public static bool TryReadBrushable(BlockEntityRecord record, ItemRegistry registry, out BrushableData data)
     {
         ArgumentNullException.ThrowIfNull(registry);
-        data = default;
+        data = new BrushableData(BlockEntityItemSlot.Empty, HitDirection.None);
+
+        if (record.TypeId != Sharpcraft.Common.World.VanillaBlockEntityTypes.BrushableBlock)
+        {
+            return false;
+        }
 
         if (record.Tag is not { } tag)
         {
@@ -210,13 +215,17 @@ public static class BlockEntityData
     {
         ArgumentNullException.ThrowIfNull(registry);
         item = BlockEntityItemSlot.Empty;
-        return record.Tag is { } tag && TryReadItem(tag.GetCompound("item"), registry, out item);
+        return record.TypeId == Sharpcraft.Common.World.VanillaBlockEntityTypes.BrushableBlock
+            && record.Tag is { } tag
+            && TryReadItem(tag.GetCompound("item"), registry, out item);
     }
 
     /// <summary>Reads only the brushable block's hit direction; absent or malformed gives None.</summary>
     public static bool TryReadHitDirection(BlockEntityRecord record, out HitDirection direction)
     {
-        direction = record.Tag is { } tag ? ReadHitDirection(tag) : HitDirection.None;
+        direction = record.TypeId == Sharpcraft.Common.World.VanillaBlockEntityTypes.BrushableBlock && record.Tag is { } tag
+            ? ReadHitDirection(tag)
+            : HitDirection.None;
         return direction != HitDirection.None;
     }
 

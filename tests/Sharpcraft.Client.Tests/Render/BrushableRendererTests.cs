@@ -3,6 +3,7 @@
 
 using Sharpcraft.Assets;
 using Sharpcraft.Client.Assets;
+using Sharpcraft.Client.Game;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
 using Sharpcraft.Common.Identifiers;
@@ -89,6 +90,56 @@ public sealed class BrushableRendererTests : IDisposable
         Assert.False(BlockEntityData.TryReadBrushable(record, registry, out var data));
         Assert.Equal(HitDirection.None, data.HitDirection);
         Assert.True(data.Item.IsEmpty);
+    }
+
+    [Fact]
+    public void NonBrushableItemTagIsNotParsedAsBrushable()
+    {
+        var registry = ItemRegistry.LoadEmbedded();
+        var tag = new NbtCompound()
+            .Set("item", new NbtCompound()
+                .Set("id", new NbtString("minecraft:apple"))
+                .Set("count", new NbtInt(1)))
+            .Set("hit_direction", new NbtByte(5));
+        var record = new BlockEntityRecord(0, 0, 0, VanillaBlockEntityTypes.DecoratedPot, tag);
+
+        Assert.False(BlockEntityData.TryReadBrushable(record, registry, out var data));
+        Assert.True(data.Item.IsEmpty);
+        Assert.Equal(HitDirection.None, data.HitDirection);
+        Assert.False(BlockEntityData.TryReadBrushableItem(record, registry, out var item));
+        Assert.True(item.IsEmpty);
+        Assert.False(BlockEntityData.TryReadHitDirection(record, out var direction));
+        Assert.Equal(HitDirection.None, direction);
+    }
+
+    [Fact]
+    public void WindowTextureScanIncludesBrushableItemWithoutManualSpriteInjection()
+    {
+        var registry = ItemRegistry.LoadEmbedded();
+        var tag = new NbtCompound()
+            .Set("item", new NbtCompound()
+                .Set("id", new NbtString("minecraft:apple"))
+                .Set("count", new NbtInt(1)));
+        var world = new ClientWorld(-4, 24);
+        var chunk = world.AddChunk(0, 0);
+        chunk.AddBlockEntity(new BlockEntityRecord(0, 0, 0, VanillaBlockEntityTypes.BrushableBlock, tag));
+
+        var paths = WindowCommand.CollectBlockEntityItemTexturePaths(world, registry, _resolver);
+        Assert.Contains("item/apple", paths);
+
+        var textures = paths
+            .Distinct(StringComparer.Ordinal)
+            .ToDictionary(path => path, path => new TextureData(16, 16, new byte[16 * 16 * 4]), StringComparer.Ordinal);
+        var atlas = ItemAtlas.FromTextures(textures);
+        var renderer = BuildRenderer();
+        var geometry = renderer.Build(
+            [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.BrushableBlock, Items: new BlockEntityItemSlots(Slot0: ItemSlot()), Dusted: 1, HitDirection: HitDirection.East)],
+            atlas,
+            atlas);
+
+        Assert.Equal(1, renderer.LastEntityCount);
+        Assert.True(geometry.VertexFloats > 0);
+        Assert.True(geometry.IndexCount > 0);
     }
 
     [Fact]

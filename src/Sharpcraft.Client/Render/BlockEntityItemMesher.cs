@@ -123,14 +123,15 @@ public sealed class BlockEntityItemMesher
     }
 
     /// <summary>Texture paths one slot needs for the item atlas pre-pass.</summary>
-    public static IEnumerable<string> ResolveTextures(int itemId)
+    public static IEnumerable<string> ResolveTextures(int itemId, ItemModelResolver? models = null)
     {
-        if (itemId < 0 || EntityModelResolver.ItemModels is not { } models || EntityModelResolver.Items?.ById(itemId) is not { } item)
+        models ??= EntityModelResolver.ItemModels;
+        if (itemId < 0 || models is not { } resolvedModels || EntityModelResolver.Items?.ById(itemId) is not { } item)
         {
             yield break;
         }
 
-        foreach (var placement in models.ResolveAll(item.Id.ToString()))
+        foreach (var placement in resolvedModels.ResolveAll(item.Id.ToString()))
         {
             foreach (var texture in ItemEntityMesher.ResolutionTextures(placement.Model))
             {
