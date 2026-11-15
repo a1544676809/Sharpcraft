@@ -412,9 +412,7 @@ internal static partial class FrameCommand
                     ? DirectionOrdinalOf(world, blockX, record.Y, blockZ, Sharpcraft.Common.World.VanillaBlockEntityTypes.DirectionOrdinalFallback(record.TypeId))
                     : FacingOf(world, blockX, record.Y, blockZ),
                             ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
-                            ChestMaterial: Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(record.TypeId)
-                                ? ShulkerColorOf(world, blockX, record.Y, blockZ)
-                                : ChestMaterialOf(world, blockX, record.Y, blockZ),
+                            ChestMaterial: BlockEntityMaterialOf(world, blockX, record.Y, blockZ, record.TypeId),
                             Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
                 }
             }
@@ -1026,9 +1024,7 @@ internal static partial class FrameCommand
                         ? DirectionOrdinalOf(world, blockX, record.Y, blockZ, Sharpcraft.Common.World.VanillaBlockEntityTypes.DirectionOrdinalFallback(record.TypeId))
                         : FacingOf(world, blockX, record.Y, blockZ),
                         ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
-                        ChestMaterial: Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(record.TypeId)
-                            ? ShulkerColorOf(world, blockX, record.Y, blockZ)
-                            : ChestMaterialOf(world, blockX, record.Y, blockZ),
+                        ChestMaterial: BlockEntityMaterialOf(world, blockX, record.Y, blockZ, record.TypeId),
                         Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
             }
             }
@@ -1238,6 +1234,48 @@ internal static partial class FrameCommand
         };
     }
 
+    /// <summary>
+    /// Selects the material-like byte passed to a block entity renderer: shulker dye colour,
+    /// copper golem statue weathering stage, or chest material.
+    /// </summary>
+    private static byte BlockEntityMaterialOf(ClientWorld world, int x, int y, int z, int typeId)
+    {
+        if (Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(typeId))
+        {
+            return ShulkerColorOf(world, x, y, z);
+        }
+
+        if (Sharpcraft.Common.World.VanillaBlockEntityTypes.IsCopperGolemStatue(typeId))
+        {
+            return CopperGolemStatueOxidationOf(world, x, y, z);
+        }
+
+        return ChestMaterialOf(world, x, y, z);
+    }
+
+    /// <summary>
+    /// Weathering stage of a copper golem statue block: unaffected 0, exposed 1, weathered 2,
+    /// oxidized 3. Waxed variants keep the appearance of the unwaxed stage, as in the reference
+    /// <c>CopperGolemOxidationLevels</c> mapping.
+    /// Ref: <c>ref://mc-26.3-analysis/src/net/minecraft/world/entity/animal/golem/CopperGolemOxidationLevels.java</c>.
+    /// </summary>
+    private static byte CopperGolemStatueOxidationOf(ClientWorld world, int x, int y, int z)
+    {
+        var block = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(world.GetBlockState(x, y, z));
+        if (block is null)
+        {
+            return 0;
+        }
+
+        return block.Value.Path switch
+        {
+            "exposed_copper_golem_statue" or "waxed_exposed_copper_golem_statue" => 1,
+            "weathered_copper_golem_statue" or "waxed_weathered_copper_golem_statue" => 2,
+            "oxidized_copper_golem_statue" or "waxed_oxidized_copper_golem_statue" => 3,
+            _ => 0
+        };
+    }
+
     /// <summary>Dye index of a shulker box, or 255 for the undyed default. The reference orders the sixteen colours the way its dye enum does.</summary>
     private static byte ShulkerColorOf(ClientWorld world, int x, int y, int z)
     {
@@ -1313,9 +1351,7 @@ internal static partial class FrameCommand
                     ? DirectionOrdinalOf(world, blockX, record.Y, blockZ, Sharpcraft.Common.World.VanillaBlockEntityTypes.DirectionOrdinalFallback(record.TypeId))
                     : FacingOf(world, blockX, record.Y, blockZ),
                     ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
-                    ChestMaterial: Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(record.TypeId)
-                        ? ShulkerColorOf(world, blockX, record.Y, blockZ)
-                        : ChestMaterialOf(world, blockX, record.Y, blockZ),
+                    ChestMaterial: BlockEntityMaterialOf(world, blockX, record.Y, blockZ, record.TypeId),
                     Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ, partialTick)));
             }
         }

@@ -91,8 +91,23 @@ public static class ChestAtlas
     /// <summary>Textures the decorated pot renderer uses; kept apart from the chest directory list.</summary>
     private static readonly string[] DecoratedPotTextures = [DecoratedPotBaseTexture, DecoratedPotSideTexture];
 
+    /// <summary>Copper golem statue textures in WeatheringCopper stage order, matching the reference oxidation table.</summary>
+    public static readonly string[] CopperGolemStatueTextures =
+    [
+        "entity/copper_golem/copper_golem",
+        "entity/copper_golem/copper_golem_exposed",
+        "entity/copper_golem/copper_golem_weathered",
+        "entity/copper_golem/copper_golem_oxidized"
+    ];
+
+    /// <summary>Texture a copper golem statue uses for a weathering stage, or the unaffected texture.</summary>
+    public static string CopperGolemStatueTexture(int oxidation) =>
+        oxidation >= 0 && oxidation < CopperGolemStatueTextures.Length
+            ? CopperGolemStatueTextures[oxidation]
+            : CopperGolemStatueTextures[0];
+
     /// <summary>Everything this block entity atlas stitches, in load order.</summary>
-    private static readonly string[] AllTextures = [.. Textures, .. ShulkerTextures, .. BellTextures, .. DecoratedPotTextures];
+    private static readonly string[] AllTextures = [.. Textures, .. ShulkerTextures, .. BellTextures, .. DecoratedPotTextures, .. CopperGolemStatueTextures];
 
     /// <summary>Texture the model uses when the material is plain wood.</summary>
     public const string NormalTexture = "entity/chest/normal";
@@ -253,5 +268,14 @@ public static class ChestAtlas
     {
         ArgumentNullException.ThrowIfNull(atlas);
         return atlas.Get(DecoratedPotSideTexture);
+    }
+
+    /// <summary>Resolves the copper golem statue sprite for an oxidation stage, or null when absent.</summary>
+    /// <param name="atlas">Atlas returned by <see cref="Load"/>.</param>
+    /// <param name="oxidation">Weathering stage index 0..3.</param>
+    public static SpriteRect? SpriteForCopperGolemStatue(ItemAtlas atlas, int oxidation)
+    {
+        ArgumentNullException.ThrowIfNull(atlas);
+        return atlas.Get(CopperGolemStatueTexture(oxidation));
     }
 }

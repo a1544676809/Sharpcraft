@@ -21,7 +21,8 @@ public static class BlockEntityRenderers
         new ChestBlockEntityRenderer(),
         new ShulkerBoxBlockEntityRenderer(),
         new BellBlockEntityRenderer(),
-        new DecoratedPotBlockEntityRenderer()
+        new DecoratedPotBlockEntityRenderer(),
+        new CopperGolemStatueBlockEntityRenderer()
     ];
 
     /// <summary>Whether any registered renderer draws this block entity type.</summary>
@@ -83,6 +84,19 @@ public static class BlockEntityRenderers
         private readonly DecoratedPotMesher _mesher = new();
 
         public bool Handles(int typeId) => typeId == VanillaBlockEntityTypes.DecoratedPot;
+
+        public int LastEntityCount => _mesher.LastEntityCount;
+
+        public DynamicGeometry? Build(ReadOnlySpan<BlockEntityRenderState> entities, ItemAtlas atlas) =>
+            _mesher.Build(entities, atlas);
+    }
+
+    /// <summary>Adapts the copper golem statue mesher to the renderer contract.</summary>
+    private sealed class CopperGolemStatueBlockEntityRenderer : IBlockEntityRenderer
+    {
+        private readonly CopperGolemStatueMesher _mesher = new();
+
+        public bool Handles(int typeId) => typeId == VanillaBlockEntityTypes.CopperGolemStatue;
 
         public int LastEntityCount => _mesher.LastEntityCount;
 

@@ -493,7 +493,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 - **简化了什么**：整个方块实体段用一条 `CullMode.None` 的 cutout 管线（`FramePipelines.CreateNoCullCutoutPipeline`），而不是像原版那样每个渲染器自选 RenderType。
 - **为什么**：原版大多数模型类方块实体（箱子、潜影盒、告示牌、床、旗帜、头颅）都用 `entityCutout`，它本身就 `.withCull(false)`；统一 no-cull 让这些类型自动正确，不需要每个 mesher 各自处理。
-- **对等效性的影响**：已实现的 Chest / Trapped / Ender / ShulkerBox 与原版完全一致；DecoratedPot 的静态基底与空白侧面几何按原版真值实现（陶片图案见 `SIM-BE-POT-NO-PATTERNS`）。原版用 `entitySolid`（剔除）的 `Conduit` 尚未实现；实现时统一 no-cull 只会多画背面，视觉等价，仅多一点填充成本。
+- **对等效性的影响**：已实现的 Chest / Trapped / Ender / ShulkerBox 与原版完全一致；DecoratedPot 的静态基底与空白侧面几何按原版真值实现（陶片图案见 `SIM-BE-POT-NO-PATTERNS`）；CopperGolemStatue 的站立模型、四档氧化纹理与 facing 按原版真值实现（姿态见 `SIM-BE-COPPER-GOLEM-POSES`）。原版用 `entitySolid`（剔除）的 `Conduit` 尚未实现；实现时统一 no-cull 只会多画背面，视觉等价，仅多一点填充成本。
 - **状态**：受控偏差，跟踪任务见 Issue #45。
 - **验收证据**：潜影盒 144 顶点金值测试（`Repro_042_ShulkerBoxTests`）+ 真机开盖内壁不透明。
 
@@ -528,3 +528,13 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收证据**：`tests/Sharpcraft.Client.Tests/Render/DecoratedPotMesherGoldenTests.cs` 覆盖静态几何与朝向；接入 wobble 后需补 `wobbleProgress` / `wobbleStyle` 真值向量与单方块像素对比。
 
 <!-- simplification:SIM-BE-POT-NO-WOBBLE task:T-47 -->
+
+### SIM-BE-COPPER-GOLEM-POSES：铜傀儡雕像只渲染站立姿态
+
+- **简化了什么**：`CopperGolemStatueMesher` 只使用 `CopperGolemModelDefinition.Definition`（`ModelLayers.COPPER_GOLEM`）的站立模型；原版 `CopperGolemStatueBlockRenderer` 还根据 `POSE` 选择 `COPPER_GOLEM_SITTING` / `COPPER_GOLEM_RUNNING` / `COPPER_GOLEM_STAR` 三个独立模型层。SITTING / RUNNING / STAR 目前都按站立模型显示。
+- **为什么**：首切片先落地方块状态 facing、四档氧化纹理和通用 `EntityModelMesher.BuildModel` 路径；另外三个姿态的模型层与部件 pose 需要独立真值，后续任务跟进。
+- **对等效性的影响**：站立姿态与四档氧化纹理的静态外观按原版模型真值实现；非站立姿态的轮廓和部件 pose 与原版不同（会显示站立模型）。
+- **状态**：受控偏差，计划由 T-47（#47 批次 1）后续姿态切片跟进（Issue #60）。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/CopperGolemStatueMesherTests.cs` 覆盖站立模型、四档氧化纹理、facing 与注册表；补齐姿态后需按每个 `Pose` 补顶点/UV 真值与单方块像素对比。
+
+<!-- simplification:SIM-BE-COPPER-GOLEM-POSES task:T-47 -->

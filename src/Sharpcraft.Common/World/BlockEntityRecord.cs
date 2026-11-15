@@ -28,6 +28,7 @@ public static class VanillaBlockEntityTypes
     public const int ShulkerBox = 24;
     public const int Bell = 30;
     public const int DecoratedPot = 41;
+    public const int CopperGolemStatue = 47;
     public const int PotentSulfur = 48;
 
     private static readonly string[] Paths =
@@ -71,18 +72,24 @@ public static class VanillaBlockEntityTypes
 
     /// <summary>
     /// Whether a block entity's <c>facing</c> property is decoded as a reference
-    /// <c>Direction</c> ordinal. Shulker boxes and decorated pots use this encoding; chests use
-    /// the face-step encoding instead. Sources:
+    /// <c>Direction</c> ordinal. Shulker boxes, decorated pots and copper golem statues use this
+    /// encoding; chests use the face-step encoding instead. Sources:
     /// <c>ref://mc-26.3-analysis/src/net/minecraft/core/Direction.java:33-38,66-77,311-312</c>
-    /// and <c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/entity/DecoratedPotBlockEntity.java:75-76</c>.
+    /// and <c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/entity/DecoratedPotBlockEntity.java:75-76</c>
+    /// and <c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/CopperGolemStatueBlock.java:43-54</c>.
     /// </summary>
-    public static bool UsesDirectionOrdinalFacing(int typeId) => typeId is ShulkerBox or DecoratedPot;
+    public static bool UsesDirectionOrdinalFacing(int typeId) => typeId is ShulkerBox or DecoratedPot or CopperGolemStatue;
 
     /// <summary>
     /// Fallback Direction ordinal when the block state has no <c>facing</c> property:
     /// decorated pots default to NORTH (ordinal 2, the block's default state at
     /// <c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/DecoratedPotBlock.java:57</c>),
+    /// copper golem statues default to NORTH too
+    /// (<c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/CopperGolemStatueBlock.java:52-54</c>),
     /// shulker boxes keep their existing UP fallback (ordinal 1).
     /// </summary>
-    public static byte DirectionOrdinalFallback(int typeId) => typeId == DecoratedPot ? (byte)2 : (byte)1;
+    public static byte DirectionOrdinalFallback(int typeId) => typeId is DecoratedPot or CopperGolemStatue ? (byte)2 : (byte)1;
+
+    /// <summary>Copper golem statue block entity type, drawn by its own model renderer.</summary>
+    public static bool IsCopperGolemStatue(int typeId) => typeId == CopperGolemStatue;
 }
