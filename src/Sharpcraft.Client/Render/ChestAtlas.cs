@@ -109,13 +109,14 @@ public static class ChestAtlas
     /// <summary>Enchanting table book texture, 64 by 32, reused by lecterns.</summary>
     public const string EnchantingTableBookTexture = "entity/enchantment/enchanting_table_book";
 
-    /// <summary>Static skull textures in <see cref="SkullType"/> order.</summary>
+    /// <summary>Static skull textures in <see cref="SkullType"/> order, including the default player skin.</summary>
     public static readonly string[] SkullTextures =
     [
         SkullModelDefinition.SkeletonTexture,
         SkullModelDefinition.WitherSkeletonTexture,
         SkullModelDefinition.ZombieTexture,
-        SkullModelDefinition.CreeperTexture
+        SkullModelDefinition.CreeperTexture,
+        SkullModelDefinition.DefaultPlayerSkinTexture
     ];
 
     /// <summary>Everything this block entity atlas stitches, in load order.</summary>
