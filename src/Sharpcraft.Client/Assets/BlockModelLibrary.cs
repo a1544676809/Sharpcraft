@@ -17,10 +17,11 @@ public sealed record TexturedQuad(ModelQuad Quad, Identifier Texture);
 /// <see cref="BlockModelResolver"/>.
 /// </summary>
 /// <remarks>
-/// Three outcomes, matching the reference: a model that cannot be read or is a plain cube resolves
-/// to null and stays on the cube path; a model that resolves but declares no elements resolves to an
-/// empty array and draws nothing at all, which is how chests and shulker boxes leave the visible
-/// geometry to their block entity renderer; anything else resolves to its quads.
+/// Four outcomes: a model that cannot be read and a plain cube both resolve to null and stay on the
+/// cube path; a model that resolves but declares no elements resolves to an empty array and draws
+/// nothing at all, which is how chests and shulker boxes leave the visible geometry to their block
+/// entity renderer; anything else resolves to its quads, except that a model whose faces all fail to
+/// resolve a texture also resolves to null because it has nothing drawable.
 /// The result is cached per block, not per block state: the texture resolver only reads the first
 /// variant of a block's blockstate file, so every state of a block currently shares one model. That
 /// is the same limitation the resolver already carries and is registered in the spec.
@@ -63,8 +64,9 @@ public sealed class BlockModelLibrary
     public int ElementModelCount { get; private set; }
 
     /// <summary>
-    /// Builds a block's quads: null when its model is missing or a plain cube, an empty array when the
-    /// model resolves but declares no elements.
+    /// Builds a block's quads. Null means "draw nothing here, keep the cube path": the model is
+    /// missing, it is a plain cube, or its faces resolved to no drawable quads. An empty array means
+    /// the model resolves but declares no elements, an empty model.
     /// </summary>
     /// <param name="blockId">Block to resolve.</param>
     public TexturedQuad[]? Resolve(Identifier blockId)

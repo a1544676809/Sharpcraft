@@ -16,8 +16,9 @@ namespace Sharpcraft.Client.Render;
 /// Resolution happens once at build time and is stored in flat arrays so the per block test in the
 /// mesher stays an array index. A state has an entry when its block's model resolves, including the
 /// empty model of a block entity block: the entry is then an empty quad list, so <see cref="Has"/> is
-/// true (the cube path must leave it alone) while <see cref="Quads"/> returns no geometry. Blocks that
-/// are plain cubes, or whose model could not be read, have no entry and keep the cube path.
+/// true (the cube path must leave it alone) while <see cref="Quads"/> returns no geometry. States with
+/// no entry keep the cube path: a plain cube, an unreadable model, or a model that resolved to no
+/// drawable quads.
 /// </remarks>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.block.model.BlockModel", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/model/BlockModel.java")]
 public sealed class BlockModelSet
