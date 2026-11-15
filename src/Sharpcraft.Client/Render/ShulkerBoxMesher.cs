@@ -71,13 +71,13 @@ public sealed class ShulkerBoxMesher
     /// <param name="entities">Block entities in world space.</param>
     /// <param name="sprite">Atlas rect used for the faces.</param>
     public DynamicGeometry Build(ReadOnlySpan<BlockEntityRenderState> entities, ItemAtlas atlas) =>
-        Build(entities, color => atlas.Get(ChestAtlas.ShulkerTexture(color)));
+        Build(entities, atlas, null);
 
     /// <summary>Builds with one sprite for every box, for callers that have no atlas.</summary>
     public DynamicGeometry Build(ReadOnlySpan<BlockEntityRenderState> entities, SpriteRect sprite) =>
-        Build(entities, _ => sprite);
+        Build(entities, null, sprite);
 
-    private DynamicGeometry Build(ReadOnlySpan<BlockEntityRenderState> entities, Func<int, SpriteRect?> spriteFor)
+    private DynamicGeometry Build(ReadOnlySpan<BlockEntityRenderState> entities, ItemAtlas? atlas, SpriteRect? singleSprite)
     {
         _geometry.Clear();
         LastEntityCount = 0;
@@ -105,7 +105,10 @@ public sealed class ShulkerBoxMesher
             }
 
             var entityStart = vertexFloats;
-            var sprite = spriteFor(entity.ChestMaterial);
+            var entityIndexStart = indexCount;
+            var sprite = atlas is null
+                ? singleSprite
+                : atlas.Get(ChestAtlas.ShulkerTexture(entity.ChestMaterial));
             if (sprite is null)
             {
                 continue;
@@ -136,7 +139,6 @@ public sealed class ShulkerBoxMesher
                 texDz: 16);
 
             // The lid overlaps the base and lifts as the box opens.
-            var baseIndexStart = indexCount;
             var lidBottom = LidBottom - (LidRise * entity.Open);
             var lidStart = vertexFloats;
             var lidIndexStart = indexCount;
@@ -162,7 +164,7 @@ public sealed class ShulkerBoxMesher
 
             // Model space runs the other way up, so the matrix flips handedness and every box comes out
             // wound backwards; reverse both index ranges so the faces survive back face culling.
-            ReverseWinding(_geometry, 0, baseIndexStart);
+            ReverseWinding(_geometry, entityIndexStart, lidIndexStart);
             ReverseWinding(_geometry, lidIndexStart, indexCount);
 
             // The lid turns about the vertical line through the middle of the block, not its own centre.

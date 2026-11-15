@@ -67,18 +67,6 @@ public sealed class BlockModelSet
 
     /// <summary>Whether this state draws from element geometry.</summary>
     /// <param name="stateId">Block state id.</param>
-    /// <summary>
-    /// Whether a block is drawn by its own block entity renderer, so the cube path must leave it alone.
-    /// </summary>
-    private static bool IsBlockEntityRendered(Identifier blockId) => blockId.Path switch
-    {
-        "chest" or "trapped_chest" or "ender_chest" => true,
-        "copper_chest" or "waxed_copper_chest" => true,
-        "exposed_copper_chest" or "waxed_exposed_copper_chest" => true,
-        "weathered_copper_chest" or "waxed_weathered_copper_chest" => true,
-        "oxidized_copper_chest" or "waxed_oxidized_copper_chest" => true,
-        _ => false
-    };
 
     public bool Has(int stateId) => (uint)stateId < (uint)_quads.Length && _quads[stateId] is not null;
 

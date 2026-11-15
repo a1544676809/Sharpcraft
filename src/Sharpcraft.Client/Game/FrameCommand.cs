@@ -420,7 +420,6 @@ internal static partial class FrameCommand
             }
 
                 if (states.Count > 0)
-                if (states.Count > 0)
                 {
                     // Every block entity a registered renderer claims is drawn through the dispatcher;
                     // the rest keep the placeholder merge until their renderer exists.
@@ -1027,15 +1026,17 @@ internal static partial class FrameCommand
                     ? ShulkerFacingOf(world, blockX, record.Y, blockZ)
                     : FacingOf(world, blockX, record.Y, blockZ),
                         ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
-                        ChestMaterial: ChestMaterialOf(world, blockX, record.Y, blockZ),
+                        ChestMaterial: Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(record.TypeId)
+                            ? ShulkerColorOf(world, blockX, record.Y, blockZ)
+                            : ChestMaterialOf(world, blockX, record.Y, blockZ),
                         Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
             }
             }
 
             if (blockEntityStates.Count > 0)
             {
-                var chestMesher = new Sharpcraft.Client.Render.ChestMesher();
-                var geometry = chestMesher.Build(
+                var dispatcher = new Sharpcraft.Client.Render.BlockEntityRenderDispatcher();
+                var geometry = dispatcher.Build(
                     System.Runtime.InteropServices.CollectionsMarshal.AsSpan(blockEntityStates),
                     chestAtlas);
                 request = request with
@@ -1044,7 +1045,7 @@ internal static partial class FrameCommand
                     BlockEntitySpriteRects = Sharpcraft.Client.Render.ChestAtlas.BuildRectTable(chestAtlas),
                     BlockEntityGeometry = geometry
                 };
-                Console.WriteLine($"block entities(local): {chestMesher.LastEntityCount} chests, {geometry.IndexCount / 3} triangles");
+                Console.WriteLine($"block entities(local): {geometry?.IndexCount / 3 ?? 0} tri");
             }
         }
 
@@ -1396,27 +1397,4 @@ internal static partial class FrameCommand
     }
 
 
-    /// <summary>Concatenates two geometries into one, re-basing the second one's indices.</summary>
-    private static DynamicGeometry Combine(DynamicGeometry first, DynamicGeometry second)
-    {
-        var vertices = new float[first.VertexFloats + second.VertexFloats];
-        first.Vertices.AsSpan(0, first.VertexFloats).CopyTo(vertices);
-        second.Vertices.AsSpan(0, second.VertexFloats).CopyTo(vertices.AsSpan(first.VertexFloats));
-
-        var indices = new uint[first.IndexCount + second.IndexCount];
-        first.Indices.AsSpan(0, first.IndexCount).CopyTo(indices);
-        var baseVertex = (uint)(first.VertexFloats / ChunkMesher.FloatsPerVertex);
-        for (var i = 0; i < second.IndexCount; i++)
-        {
-            indices[first.IndexCount + i] = second.Indices[i] + baseVertex;
-        }
-
-        return new DynamicGeometry
-        {
-            Vertices = vertices,
-            VertexFloats = vertices.Length,
-            Indices = indices,
-            IndexCount = indices.Length
-        };
-    }
 }

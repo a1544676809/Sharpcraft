@@ -46,7 +46,6 @@ public sealed class BlockEntityRenderDispatcher
         }
 
         if (count == 0)
-        if (count == 0)
         {
             return null;
         }

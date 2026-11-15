@@ -53,6 +53,20 @@ public sealed class Repro_022_ClientWorldBlockEntityTests
         Assert.Empty(chunk.BlockEntities);
     }
 
+
+    [Fact]
+    public void BreakingAShulkerBoxRemovesItsRecord()
+    {
+        var world = NewWorld(out var chunk);
+        var state = VanillaBlockRegistry.Layout.GetBaseId(Identifier.Parse("minecraft:shulker_box"));
+        world.SetBlockState(3, 8, 5, state);
+        Assert.Single(chunk.BlockEntities);
+
+        world.SetBlockState(3, 8, 5, state: 0);
+
+        Assert.Empty(chunk.BlockEntities);
+    }
+
     [Fact]
     public void AChangeOnANonChestBlockEntityLeavesItsRecordAlone()
     {

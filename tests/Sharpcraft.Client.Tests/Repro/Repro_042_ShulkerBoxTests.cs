@@ -65,12 +65,12 @@ public sealed class Repro_042_ShulkerBoxTests
         Assert.InRange(vertices.Max(v => v.Item3), 0.999f, 1.001f);
     }
 
-    private static DynamicGeometry Build(float progress)
+    private static DynamicGeometry Build(float progress, byte facing = 1)
     {
         var mesher = new ShulkerBoxMesher();
         BlockEntityRenderState[] entities =
         [
-            new(0f, 0f, 0f, VanillaBlockEntityTypes.ShulkerBox, Open: progress, Facing: 1)
+            new(0f, 0f, 0f, VanillaBlockEntityTypes.ShulkerBox, Open: progress, Facing: facing)
         ];
 
         return mesher.Build(entities, new SpriteRect(0, 0, 64, 64, 1));
@@ -138,4 +138,109 @@ public sealed class Repro_042_ShulkerBoxTests
         : a.Z != b.Z ? a.Z.CompareTo(b.Z)
         : a.U != b.U ? a.U.CompareTo(b.U)
         : a.V.CompareTo(b.V);
+
+    /// <summary>Two boxes in one span must not disturb each other's indices.</summary>
+    [Fact]
+    public void TwoBoxesKeepIndependentWinding()
+    {
+        var mesher = new ShulkerBoxMesher();
+        BlockEntityRenderState[] two =
+        [
+            new(0f, 0f, 0f, VanillaBlockEntityTypes.ShulkerBox, Facing: 1),
+            new(4f, 0f, 0f, VanillaBlockEntityTypes.ShulkerBox, Facing: 1)
+        ];
+        var combined = mesher.Build(two, new SpriteRect(0, 0, 64, 64, 1));
+
+        var single = new ShulkerBoxMesher();
+        var one = single.Build([two[0]], new SpriteRect(0, 0, 64, 64, 1));
+
+        Assert.Equal(2 * one.IndexCount, combined.IndexCount);
+        for (var index = 0; index < one.IndexCount; index++)
+        {
+            Assert.Equal(one.Indices[index], combined.Indices[index]);
+        }
+    }
+
+    /// <summary>A steady build must not allocate: the dispatcher calls this every frame.</summary>
+    [Fact]
+    public void BuildingSteadilyAllocatesNothing()
+    {
+        var mesher = new ShulkerBoxMesher();
+        BlockEntityRenderState[] entities =
+        [
+            new(0f, 0f, 0f, VanillaBlockEntityTypes.ShulkerBox, Facing: 1)
+        ];
+        var sprite = new SpriteRect(0, 0, 64, 64, 1);
+
+        // Warm up so the geometry buffers reach their steady size before measuring.
+        for (var i = 0; i < 3; i++)
+        {
+            mesher.Build(entities, sprite);
+        }
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        mesher.Build(entities, sprite);
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.Equal(0, allocated);
+    }
+
+    /// <summary>Direction ids the block state uses, in the reference's Direction order.</summary>
+    private static readonly Dictionary<string, byte> FacingIds = new()
+    {
+        ["down"] = 0,
+        ["up"] = 1,
+        ["north"] = 2,
+        ["south"] = 3,
+        ["west"] = 4,
+        ["east"] = 5
+    };
+
+    [Theory]
+    [InlineData("down")]
+    [InlineData("up")]
+    [InlineData("north")]
+    [InlineData("south")]
+    [InlineData("west")]
+    [InlineData("east")]
+    public void EveryFacingMatchesTheReferenceMatrix(string direction)
+    {
+        var matrix = TransformMatrix(direction);
+        var actual = Vertices(Build(0f, FacingIds[direction]))
+            .Select(vertex => (vertex.Item1, vertex.Item2, vertex.Item3))
+            .OrderBy(vertex => vertex, Comparer<(float, float, float)>.Create(
+                (a, b) => a.Item1 != b.Item1 ? a.Item1.CompareTo(b.Item1)
+                    : a.Item2 != b.Item2 ? a.Item2.CompareTo(b.Item2)
+                    : a.Item3.CompareTo(b.Item3)))
+            .ToArray();
+        var expected = GoldenVertices(0f)
+            .Select(vertex => Round(Transform(matrix, vertex.Position)))
+            .OrderBy(vertex => vertex, Comparer<(float X, float Y, float Z)>.Create(
+                (a, b) => a.X != b.X ? a.X.CompareTo(b.X) : a.Y != b.Y ? a.Y.CompareTo(b.Y) : a.Z.CompareTo(b.Z)))
+            .ToArray();
+
+        Assert.Equal(expected, actual);
+    }
+
+    private static float[] TransformMatrix(string direction)
+    {
+        foreach (var line in File.ReadLines(Path.Combine(AppContext.BaseDirectory, "Repro", "Data", "shulker-box-transforms.golden.txt")))
+        {
+            if (!line.StartsWith("transform|" + direction + "|", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var parts = line.Split('|');
+            var matrix = new float[16];
+            for (var i = 0; i < 16; i++)
+            {
+                matrix[i] = float.Parse(parts[i + 2], CultureInfo.InvariantCulture);
+            }
+
+            return matrix;
+        }
+
+        throw new InvalidOperationException("no transform for " + direction);
+    }
 }

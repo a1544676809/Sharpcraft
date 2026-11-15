@@ -50,8 +50,9 @@ public sealed record ModelElement(ModelBox Box, IReadOnlyDictionary<string, Mode
 /// </summary>
 /// <remarks>
 /// Elements are not merged down a parent chain: the first model from the child upwards that declares
-/// <c>elements</c> wins, exactly as the reference model does. A model with no elements anywhere is a
-/// plain cube and resolves to null.
+/// <c>elements</c> wins, exactly as the reference model does. A model that resolves but declares no
+/// elements and no parent is empty: it returns an empty list, not null. Null is reserved for a model
+/// that cannot be read at all.
 /// </remarks>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.block.model.BlockModel", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/model/BlockModel.java")]
 public sealed class BlockModelElements

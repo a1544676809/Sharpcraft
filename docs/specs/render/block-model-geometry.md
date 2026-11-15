@@ -92,7 +92,7 @@
 | 能力 | 说明 |
 | --- | --- |
 | `elements` 解析 | `from` / `to` / `faces` / `rotation`；缺 `from` 或 `to` 的元素跳过 |
-| `parent` 继承 | 从子往父走，**第一个声明 `elements` 的模型胜出**；走到头仍无则返回 null（纯立方体） |
+| `parent` 继承 | 从子往父走，**第一个声明 `elements` 的模型胜出**；模型文件存在但既无 `elements` 也无 `parent` 时返回**空列表**（空模型，不画），只有模型读取失败才返回 null |
 | 面字段 | `texture`（变量名原样）、`uv`（可空）、`cullface`、`tintindex`（默认 −1） |
 | 可注入读取器 | `Func<Identifier, byte[]?>`，测试无需文件系统 |
 

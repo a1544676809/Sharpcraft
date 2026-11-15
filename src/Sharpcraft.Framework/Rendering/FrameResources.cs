@@ -642,6 +642,7 @@ internal sealed class FrameResources : IDisposable
         _backend.Destroy(ItemCutoutPipeline);
         _backend.Destroy(EntityCutoutPipeline);
         _backend.Destroy(EntityPipeline);
+        _backend.Destroy(BlockEntityPipeline);
         _backend.Destroy(CutoutPipeline);
         _backend.Destroy(TerrainPipeline);
         _backend.Destroy(BlitDepthLayout);

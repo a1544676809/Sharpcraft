@@ -468,7 +468,8 @@ public sealed class ClientWorld
         {
             chunk.AddBlockEntity(new Sharpcraft.Common.World.BlockEntityRecord(localX, y, localZ, newTypeId));
         }
-        else if (oldTypeId >= 0 && Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(oldTypeId))
+        else if (oldTypeId >= 0 && (Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(oldTypeId)
+            || Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(oldTypeId)))
         {
             // Only a block entity this block actually carried is dropped: a block change next to a
             // furnace or a sign must not remove that block entity (issue 22).
