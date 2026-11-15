@@ -333,7 +333,14 @@ public static class ClassMapTool
         }
 
         var analysisRoot = Environment.GetEnvironmentVariable("MC_ANALYSIS_ROOT");
-        if (!string.IsNullOrEmpty(analysisRoot))
+        if (string.IsNullOrEmpty(analysisRoot))
+        {
+            // Fall back to the standard sibling checkout: without this the reference file check is
+            // skipped whenever the variable is unset, which turns the gate green by default.
+            analysisRoot = FindAnalysisRoot(Directory.GetCurrentDirectory());
+        }
+
+        if (Directory.Exists(analysisRoot))
         {
             foreach (var e in entries)
             {
@@ -354,6 +361,10 @@ public static class ClassMapTool
                     violations.Add($"reference file not found under MC_ANALYSIS_ROOT: {e.TypeName} -> {e.ReferencePath}");
                 }
             }
+        }
+        else
+        {
+            violations.Add($"analysis workspace not found: {analysisRoot}");
         }
 
         return violations;
