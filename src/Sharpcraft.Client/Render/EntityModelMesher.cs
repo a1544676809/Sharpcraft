@@ -17,6 +17,7 @@ namespace Sharpcraft.Client.Render;
 public sealed partial class EntityModelMesher
 {
     private readonly DynamicGeometry _geometry = new();
+    private EntityRenderState _singleState;
     private readonly List<DynamicGeometry> _layerGeometries = [new(), new(), new(), new()];
     private readonly List<DynamicGeometry> _layerScratch = [new(), new(), new(), new()];
 
@@ -81,6 +82,92 @@ public sealed partial class EntityModelMesher
         _geometry.IndexCount = totalIndexCount;
         return _geometry;
     }
+
+    /// <summary>
+    /// Builds a single model definition directly, for block entity renderers that already own a
+    /// baked <see cref="EntityModelDefinition"/>. The geometry path is the same <c>BuildInto</c>
+    /// path used by <see cref="Build"/>; no part matrix, UV or face ordering is duplicated.
+    /// </summary>
+    /// <remarks>
+    /// Reference basis: <c>EntityModelSet.bakeLayer</c> and <c>ModelPart</c> in
+    /// <c>ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/EntityModelSet.java</c> /
+    /// <c>ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/ModelPart.java</c>.
+    /// Issue: #59.
+    /// The state's X/Y/Z is the model origin in world coordinates; block entity callers pass the
+    /// block centre (X+0.5, Y, Z+0.5) so the model rotates about the block centre.
+    /// <see cref="EntityRenderState.Yaw"/> follows the existing entity convention (<c>180 - Yaw</c>).
+    /// Existing entity collision and squish scaling are ignored; <paramref name="modelScale"/> is
+    /// the model's own unit scale (the default is the existing entity scale used by <see cref="Build"/>).
+    /// </remarks>
+    /// <param name="model">Baked model definition to draw.</param>
+    /// <param name="state">Block entity position and yaw.</param>
+    /// <param name="sprite">Atlas rect used for the model's faces.</param>
+    /// <param name="textureWidth">Declared model texture width in pixels.</param>
+    /// <param name="textureHeight">Declared model texture height in pixels.</param>
+    /// <param name="pose">Optional static pose overrides; no entity animation is applied.</param>
+    /// <param name="modelScale">Model unit scale; 1 maps model pixels to 1/16 block (defaults to the entity scale used by <see cref="Build"/>).</param>
+    public DynamicGeometry BuildModel(
+        EntityModelDefinition model,
+        EntityRenderState state,
+        SpriteRect sprite,
+        int textureWidth,
+        int textureHeight,
+        EntityPose? pose = null,
+        float modelScale = EntityPlaceholderMesher.ModelScale)
+    {
+        _singleState = state;
+        return BuildModel(model, MemoryMarshal.CreateReadOnlySpan(ref _singleState, 1), sprite, textureWidth, textureHeight, pose, modelScale);
+    }
+
+    /// <summary>Builds a batch of block entity instances from one model definition.</summary>
+    /// <param name="model">Baked model definition to draw.</param>
+    /// <param name="states">Block entity positions and yaws.</param>
+    /// <param name="sprite">Atlas rect used for the model's faces.</param>
+    /// <param name="textureWidth">Declared model texture width in pixels.</param>
+    /// <param name="textureHeight">Declared model texture height in pixels.</param>
+    /// <param name="pose">Optional static pose overrides; no entity animation is applied.</param>
+    /// <param name="modelScale">Model unit scale; 1 maps model pixels to 1/16 block (defaults to the entity scale used by <see cref="Build"/>).</param>
+    public DynamicGeometry BuildModel(
+        EntityModelDefinition model,
+        ReadOnlySpan<EntityRenderState> states,
+        SpriteRect sprite,
+        int textureWidth,
+        int textureHeight,
+        EntityPose? pose = null,
+        float modelScale = EntityPlaceholderMesher.ModelScale)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(textureWidth, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(textureHeight, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(modelScale, 0f);
+
+        return BuildInto(
+            _geometry,
+            kindFilter: null,
+            states,
+            sprite,
+            textureWidth,
+            textureHeight,
+            modelOverride: model,
+            pose: pose,
+            modelScale: modelScale,
+            entityTransformFactory: BlockEntityTransformFactory,
+            textureWidthOverride: textureWidth,
+            textureHeightOverride: textureHeight);
+    }
+
+    private static readonly Func<EntityRenderState, EntityModelTransform> BlockEntityTransformFactory = BlockEntityTransform;
+
+    /// <summary>
+    /// Block entity transform: use the existing entity yaw convention (<c>180 - Yaw</c>) and ignore
+    /// entity collision/squish scaling. The caller places the model origin at the block centre by
+    /// setting X/Z to the block centre; rotation then happens about that centre.
+    /// </summary>
+    private static EntityModelTransform BlockEntityTransform(EntityRenderState state) =>
+        new(
+            Translation: new Vector3(state.X, state.Y, state.Z),
+            YawDegrees: 180f - state.Yaw,
+            PitchDegrees: 0f);
 
     /// <summary>
     /// Builds one geometry per reference render type, in draw order (cutout, translucent, emissive).
