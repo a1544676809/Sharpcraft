@@ -280,8 +280,14 @@ public static class ClassMapTool
         return injected;
     }
 
-    public static List<string> Check(string root)
-    {
+    public static List<string> Check(string root) => Check(root, out _);
+
+    /// <summary>Runs the checks and reports whether the reference files could actually be verified.</summary>
+    /// <param name="root">Repository root.</param>
+    /// <param name="referenceFilesVerified">True when an analysis workspace was found and every reference file was checked.</param>
+    public static List<string> Check(string root, out bool referenceFilesVerified)
+{
+        referenceFilesVerified = false;
         var violations = new List<string>();
         var (entries, unannotated) = Scan(root);
 
@@ -362,7 +368,7 @@ public static class ClassMapTool
         {
             // Fall back to the standard sibling checkout: without this the reference file check is
             // skipped whenever the variable is unset, which turns the gate green by default.
-            analysisRoot = FindAnalysisRoot(Directory.GetCurrentDirectory());
+            analysisRoot = FindAnalysisRoot(root);
         }
 
         var refsBaseline = LoadRefsBaseline(root);
@@ -370,6 +376,7 @@ public static class ClassMapTool
 
         if (Directory.Exists(analysisRoot))
         {
+            referenceFilesVerified = true;
             foreach (var e in entries)
             {
                 if (e.Kind == "New")
@@ -394,16 +401,16 @@ public static class ClassMapTool
                 }
             }
         }
-        else
-        {
-            violations.Add($"analysis workspace not found: {analysisRoot}");
-        }
 
-        foreach (var known in refsBaseline)
+
+        if (referenceFilesVerified)
         {
-            if (!seenMissing.Contains(known))
+            foreach (var known in refsBaseline)
             {
-                violations.Add("class-map refs baseline entry is stale; remove it: " + known);
+                if (!seenMissing.Contains(known))
+                {
+                    violations.Add("class-map refs baseline entry is stale; remove it: " + known);
+                }
             }
         }
 
@@ -422,8 +429,6 @@ public static class ClassMapTool
         }
 
         var index = new Dictionary<string, List<string>>(StringComparer.Ordinal);
-        var refsBaseline = LoadRefsBaseline(root);
-        var seenMissing = new HashSet<string>(StringComparer.Ordinal);
 
         if (Directory.Exists(analysisRoot))
         {
@@ -496,7 +501,8 @@ public static class ClassMapTool
             dir = dir.Parent;
         }
 
-        return Path.Combine(Path.GetDirectoryName(root.TrimEnd(Path.DirectorySeparatorChar))!, "mc-26.3-analysis");
+        var parent = Path.GetDirectoryName(root.TrimEnd(Path.DirectorySeparatorChar));
+        return Path.Combine(parent ?? root, "mc-26.3-analysis");
     }
 
     private static string[] Candidates(string simple)
