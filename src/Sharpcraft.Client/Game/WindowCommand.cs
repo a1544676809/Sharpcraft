@@ -155,6 +155,10 @@ internal static class WindowCommand
             mergeFaces: GameOptions.Get("MC_MESH_NOMERGE") != "1",
             ambientOcclusion: GameOptions.Get("MC_NO_AO") != "1");
         Console.WriteLine($"chunk workers: {workerPool.WorkerCount} (of {Environment.ProcessorCount} logical processors)");
+        // The pool is built with the atlas but not with the model set; without this the background threads
+        // mesh a chest block as a cube until a later atlas change happens to set it.
+        workerPool.SetModels(prepared?.Models);
+
 
         var meshCache = new ChunkMeshCache(workerPool);
 

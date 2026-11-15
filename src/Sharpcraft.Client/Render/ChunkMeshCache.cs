@@ -155,6 +155,22 @@ public sealed class ChunkMeshCache
         {
             Console.WriteLine($"cache build: models={(models is null ? "null" : "present")} marking={(models?.ElementStateCount ?? 0)} sprites={(sprites is null ? "null" : "present")}");
         }
+            // For every block entity in the world, report the block state under it and whether the model set
+            // excludes that state. A chest that still cubes is either a state the set never marked or a set
+            // the mesher never received.
+            foreach (var probeChunk in world.GetChunks())
+            {
+                foreach (var probeRecord in probeChunk.BlockEntities)
+                {
+                    var probeX = (probeChunk.ChunkX * 16) + probeRecord.LocalX;
+                    var probeZ = (probeChunk.ChunkZ * 16) + probeRecord.LocalZ;
+                    var probeState = world.GetBlockState(probeX, probeRecord.Y, probeZ);
+                    var probeBlock = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(probeState);
+                    Console.WriteLine(
+                        $"be probe: ({probeX},{probeRecord.Y},{probeZ}) type={probeRecord.TypeId} " +
+                        $"state={probeState} block={probeBlock?.Path ?? "?"} has={(models?.Has(probeState) ?? false)}");
+                }
+            }
 
 
         var started = System.Diagnostics.Stopwatch.GetTimestamp();

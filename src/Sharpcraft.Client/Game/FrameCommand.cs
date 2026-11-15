@@ -1229,6 +1229,12 @@ internal static partial class FrameCommand
 
         Console.WriteLine($"block entity geometry: {chestStates.Count} chest entities, types=[" + string.Join(",", chestStates.Select(s => s.TypeId)) + "]");
 
+        foreach (var probe in chestStates)
+        {
+            var probeRect = Sharpcraft.Client.Render.ChestAtlas.SpriteFor(chestAtlas, probe.ChestMaterial, probe.ChestType);
+            Console.WriteLine($"chest sprite: mat={probe.ChestMaterial} type={probe.ChestType} rect=({probeRect.U0},{probeRect.V0},{probeRect.U1},{probeRect.V1}) id={probeRect.RectId}");
+        }
+
         if (chestStates.Count == 0)
         {
             return null;
