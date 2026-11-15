@@ -579,6 +579,17 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 <!-- simplification:SIM-BE-CAMPFIRE-FLAME task:T-47 -->
 
+### SIM-BE-BRUSHABLE-FX：Brushable 物品静态快照
+
+- **简化了什么**：`BrushableRenderer` 只绘制 `dusted` 方块状态、`hit_direction` 和 NBT `item` 决定的静态物品；刷子粒子、音效、击中进度动画不接入。
+- **为什么**：本切片先完成源 BrushableBlockRenderer 的静态 item pose 与显示上下文；粒子和进度需要额外方块实体状态通道。
+- **对等效性的影响**：`FIXED` 显示变换、direction translation、Y 75°、east/west 额外 101° 和 scale 0.5 按源实现；动态刷子特效缺失。
+- **状态**：受控偏差，计划由 #50 后续 Brushable 动态切片跟进（Issue #83）。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/BrushableRendererTests.cs` 覆盖 dust/direction 最终顶点/UV、空 item/零 dust/无方向不绘制；接入粒子后补单方块像素对比。
+
+<!-- simplification:SIM-BE-BRUSHABLE-FX task:T-47 -->
+
+
 ### SIM-BE-SKULL-VARIANTS：Skull 头型无剩余变体
 
 - **简化了什么**：`SkullRenderer` 覆盖 `SKELETON` / `WITHER_SKELETON` / `ZOMBIE` / `CREEPER` / `PLAYER` / `PIGLIN` / `DRAGON` 的静态头模型。

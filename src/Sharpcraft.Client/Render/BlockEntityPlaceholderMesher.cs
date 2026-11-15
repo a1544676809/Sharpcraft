@@ -33,7 +33,9 @@ public readonly record struct BlockEntityRenderState(
     SkullType SkullType = SkullType.None,
     byte SkullRotation = 0,
     bool SkullWall = false,
-    byte SkullFacing = 5);
+    byte SkullFacing = 5,
+    byte Dusted = 0,
+    Sharpcraft.Client.World.HitDirection HitDirection = Sharpcraft.Client.World.HitDirection.None);
 
 /// <summary>
 /// Placeholder geometry for block entities until real models are available.

@@ -27,3 +27,4 @@
 | R-017 | Skull 动画未接入（`SIM-BE-SKULL-ANIM`） | 中 | 被动画驱动的头部转动缺失 | 静态朝向与几何已实现；动画待状态通道 | 接入 Skull 动画状态并补时间序列真值时 | 开放 |
 | R-018 | Player 头固定默认 slim Steve 皮肤（`SIM-BE-SKULL-PLAYER-SKIN`），不读取 profile/自定义皮肤 | 高 | 自定义皮肤玩家头显示默认皮肤 | 默认 head+hat 模型与纹理已实现；皮肤缓存待后续通道 | 接入玩家皮肤缓存并完成 profile 真值/像素对比时 | 开放 |
 | R-019 | Dragon 颌部动画未接入（`SIM-BE-SKULL-DRAGON-ANIM`） | 中 | Dragon 头的 jaw 不随动画摆动 | 静态 7-box head/jaw 几何已实现；动画待 animationPos 状态通道 | 接入 Dragon 动画状态并补时间序列真值时 | 开放 |
+| R-020 | Brushable 刷子粒子/音效/进度动画未接入（`SIM-BE-BRUSHABLE-FX`） | 中 | 刷子动态视觉与音效缺失 | 静态 `FIXED` item pose、dusted/hit_direction 已实现；动态特效待状态通道 | 接入 Brushable 粒子/音效/进度状态并完成单方块像素对比时 | 开放 |

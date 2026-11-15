@@ -565,28 +565,7 @@ internal static class WindowCommand
                 return;
             }
 
-            foreach (var chunk in world.GetChunks())
-            {
-                foreach (var record in chunk.BlockEntitiesSpan)
-                {
-                    if (!BlockEntityData.TryReadItems(record, registry, out var slots))
-                    {
-                        continue;
-                    }
-
-                    List<string> paths = [];
-                    for (var slot = 0; slot < BlockEntityItemSlots.Capacity; slot++)
-                    {
-                        var item = slots.Get(slot);
-                        if (!item.IsEmpty)
-                        {
-                            paths.AddRange(BlockEntityItemMesher.ResolveTextures(item.ItemId));
-                        }
-                    }
-
-                    AddItemTexturePaths(paths);
-                }
-            }
+            AddItemTexturePaths(CollectBlockEntityItemTexturePaths(world, registry));
         }
 
         void AddItemTexturePaths(IEnumerable<string> paths)
@@ -1188,6 +1167,51 @@ internal static class WindowCommand
             GameOptions.Get("MC_FRAME_LOCAL") is { Length: > 0 }
                 ? FrameCommand.DemoLayout()
                 : VanillaBlockRegistry.Layout);
+    }
+
+    /// <summary>
+    /// Collects the item textures needed by every item-bearing block entity in the loaded world.
+    /// Brushable blocks store one <c>item</c> instead of an <c>Items</c> list; both paths must be
+    /// pre-scanned or the runtime item atlas silently omits their sprites.
+    /// </summary>
+    internal static IReadOnlyList<string> CollectBlockEntityItemTexturePaths(
+        Sharpcraft.Client.World.ClientWorld world,
+        Sharpcraft.Common.Registries.ItemRegistry registry,
+        Sharpcraft.Client.Render.ItemModelResolver? itemModels = null)
+    {
+        var paths = new List<string>();
+        foreach (var chunk in world.GetChunks())
+        {
+            foreach (var record in chunk.BlockEntitiesSpan)
+            {
+                if (Sharpcraft.Common.World.VanillaBlockEntityTypes.IsBrushable(record.TypeId))
+                {
+                    if (Sharpcraft.Client.World.BlockEntityData.TryReadBrushableItem(record, registry, out var item)
+                        && !item.IsEmpty)
+                    {
+                        paths.AddRange(Sharpcraft.Client.Render.BlockEntityItemMesher.ResolveTextures(item.ItemId, itemModels));
+                    }
+
+                    continue;
+                }
+
+                if (!Sharpcraft.Client.World.BlockEntityData.TryReadItems(record, registry, out var slots))
+                {
+                    continue;
+                }
+
+                for (var slot = 0; slot < Sharpcraft.Client.World.BlockEntityItemSlots.Capacity; slot++)
+                {
+                    var item = slots.Get(slot);
+                    if (!item.IsEmpty)
+                    {
+                        paths.AddRange(Sharpcraft.Client.Render.BlockEntityItemMesher.ResolveTextures(item.ItemId, itemModels));
+                    }
+                }
+            }
+        }
+
+        return paths;
     }
 
     private static (int Width, int Height)? ParseSelfResize()
