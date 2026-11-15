@@ -250,6 +250,9 @@ internal static class WindowCommand
         meshCache.Build(world, prepared?.Map, Sharpcraft.Client.Render.MeshBuildPolicy.Interactive, models: prepared?.Models);
         meshCache.QueueMissing(world);
 
+        Sharpcraft.Client.Render.ItemAtlas? itemAtlas = null;
+        var itemAtlasSource = new Sharpcraft.Framework.Rendering.AtlasTextureSource();
+
         var request = FrameCommand.BuildRequest(
             world,
             width,
@@ -265,7 +268,8 @@ internal static class WindowCommand
             meshSynchronously: false,
             spriteRects: prepared?.Atlas.RectTable,
             models: prepared?.Models,
-            chestAtlas: prepared?.ChestAtlas);
+            chestAtlas: prepared?.ChestAtlas,
+            itemAtlas: itemAtlas);
 
         // The reference extracts the visible block entities every frame, so a chest placed after the
         // world loaded appears on the next frame. Until a per section list exists this walks the
@@ -335,7 +339,7 @@ internal static class WindowCommand
         var blockEntityFrame = new Sharpcraft.Client.Render.BlockEntityFrameState();
         request = request with
         {
-            BlockEntityPerFrame = () => FrameCommand.BuildBlockEntityGeometry(world, prepared?.ChestAtlas, session.PartialTick, blockEntityFrame)
+            BlockEntityPerFrame = () => FrameCommand.BuildBlockEntityGeometry(world, prepared?.ChestAtlas, session.PartialTick, blockEntityFrame, itemAtlas)
         };
 
         // Sky/fog use SKY_COLOR (biome sky colour x day/night x weather), so the live session needs the biome registry.
@@ -462,14 +466,14 @@ internal static class WindowCommand
         entitySkinTextureSource.Update(entitySkinLibrary.Atlas?.Texture ?? playerSkin);
         var itemModelResolver = new Sharpcraft.Client.Render.ItemModelResolver(resources);
         Sharpcraft.Client.Render.EntityModelResolver.ItemModels = itemModelResolver;
-        var itemAtlas = Sharpcraft.Client.Render.ItemAtlas.Load(resources,
+        itemAtlas = Sharpcraft.Client.Render.ItemAtlas.Load(resources,
         [
             Sharpcraft.Client.Render.WitchModelDefinition.PotionTexture,
             Sharpcraft.Client.Render.SpecialItemModelDefinition.TridentTexture,
             Sharpcraft.Client.Render.SpecialItemModelDefinition.ShieldTexture,
             Sharpcraft.Client.Render.SpecialModelDefinitions.ChestTexture
         ]);
-        var itemAtlasSource = new Sharpcraft.Framework.Rendering.AtlasTextureSource();
+        EnsureBlockEntityItemTextures();
         itemAtlasSource.Update(itemAtlas.Texture);
         var entitySkinSprite = playerSkin is { } skin
             ? new Sharpcraft.Client.Assets.SpriteRect(0, 0, skin.Width, skin.Height, 1) { U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f }
@@ -550,25 +554,65 @@ internal static class WindowCommand
                 AddIfPresent(paths, EntityModelResolver.ResolveHeldItemPotSideTexture(entity, offhand: true));
                 paths.AddRange(EntityModelResolver.ResolveHeldItemPatternSprites(entity, offhand: false));
                 paths.AddRange(EntityModelResolver.ResolveHeldItemPatternSprites(entity, offhand: true));
-                foreach (var path in paths)
+                AddItemTexturePaths(paths);
+            }
+        }
+
+        void EnsureBlockEntityItemTextures()
+        {
+            if (itemAtlas is null || EntityModelResolver.Items is not { } registry)
+            {
+                return;
+            }
+
+            foreach (var chunk in world.GetChunks())
+            {
+                foreach (var record in chunk.BlockEntitiesSpan)
                 {
-                    if (path is null || itemAtlas.Contains(path))
+                    if (!BlockEntityData.TryReadItems(record, registry, out var slots))
                     {
                         continue;
                     }
 
-                    var bytes = resources.Read(
-                        Sharpcraft.Assets.ResourceKind.Texture,
-                        new Sharpcraft.Common.Identifiers.Identifier("minecraft", path));
-                    if (bytes is null)
+                    List<string> paths = [];
+                    for (var slot = 0; slot < BlockEntityItemSlots.Capacity; slot++)
                     {
-                        continue;
+                        var item = slots.Get(slot);
+                        if (!item.IsEmpty)
+                        {
+                            paths.AddRange(BlockEntityItemMesher.ResolveTextures(item.ItemId));
+                        }
                     }
 
-                    var image = Sharpcraft.Common.Imaging.PngDecoder.Decode(bytes);
-                    itemAtlas = itemAtlas.WithTexture(path, new TextureData(image.Width, image.Height, image.Pixels));
-                    itemAtlasSource.Update(itemAtlas.Texture);
+                    AddItemTexturePaths(paths);
                 }
+            }
+        }
+
+        void AddItemTexturePaths(IEnumerable<string> paths)
+        {
+            if (itemAtlas is null)
+            {
+                return;
+            }
+
+            foreach (var path in paths)
+            {
+                if (path is null || itemAtlas.Contains(path))
+                {
+                    continue;
+                }
+
+                var bytes = resources.Read(
+                    Sharpcraft.Assets.ResourceKind.Texture,
+                    new Sharpcraft.Common.Identifiers.Identifier("minecraft", path));
+                if (bytes is null)
+                {
+                    continue;
+                }
+
+                var image = Sharpcraft.Common.Imaging.PngDecoder.Decode(bytes);
+                itemAtlas = itemAtlas.WithTexture(path, new TextureData(image.Width, image.Height, image.Pixels));
             }
         }
 
@@ -603,6 +647,7 @@ internal static class WindowCommand
                 }
 
                 EnsureItemTextures(visibleEntities);
+                itemAtlasSource.Update(itemAtlas.Texture);
 
                 if (entitySkinLibrary.Atlas is { } entitySkinAtlas)
                 {

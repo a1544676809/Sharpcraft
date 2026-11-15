@@ -21,4 +21,11 @@ public interface IBlockEntityRenderer
 
     /// <summary>Builds geometry for every entity this renderer handles, or null when there are none.</summary>
     DynamicGeometry? Build(ReadOnlySpan<BlockEntityRenderState> entities, ItemAtlas atlas);
+
+    /// <summary>
+    /// Builds geometry with both the block-entity atlas and the optional shared item atlas. Renderers
+    /// that draw item stacks override this overload; the default keeps block-only renderers unchanged.
+    /// </summary>
+    DynamicGeometry? Build(ReadOnlySpan<BlockEntityRenderState> entities, ItemAtlas atlas, ItemAtlas? itemAtlas) =>
+        Build(entities, atlas);
 }

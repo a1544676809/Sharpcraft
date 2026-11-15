@@ -558,3 +558,23 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收证据**：`tests/Sharpcraft.Client.Tests/Render/EnchantTableRendererTests.cs` 覆盖静态顶点/UV、`Handles(13)` 与 64×32 纹理；接入动态状态后需补时间/flip/open 真值与单方块像素对比。
 
 <!-- simplification:SIM-BE-ENCHANT-BOOK-STATE task:T-47 -->
+
+### SIM-BE-SHELF-ITEMS：Shelf 物品槽静态快照
+
+- **简化了什么**：`ShelfRenderer` 只读取方块实体 NBT 的 `Items` 固定槽位快照并绘制；不接实时容器更新，也不播放 Shelf 的移动/交互动画。
+- **为什么**：`BlockEntityRenderState` 首切片使用固定槽位字段，物品几何复用已有 item-model 管线；容器实时同步需要后续的方块实体数据更新通道。
+- **对等效性的影响**：静态槽位物品的模型、`ON_SHELF` 显示变换、槽位偏移、0.25 缩放、`align_items_to_bottom` 和 facing 按源实现；运行时新增/移除物品和移动动画可能延迟到下一次快照。
+- **状态**：受控偏差，计划由 T-47（#47 批次 1）后续 Shelf 容器同步切片跟进（Issue #70）。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/ShelfCampfireRendererTests.cs` 覆盖 NBT 槽位、facing、空/满槽和最终顶点/UV；接实时容器后补动态真值。
+
+<!-- simplification:SIM-BE-SHELF-ITEMS task:T-47 -->
+
+### SIM-BE-CAMPFIRE-FLAME：Campfire 火焰/火花/烹饪状态未接入
+
+- **简化了什么**：`CampfireRenderer` 只绘制四个固定槽位的物品；火焰、火花、烹饪进度和火焰动画不绘制/不驱动。
+- **为什么**：当前方块实体渲染状态只有物品槽与 facing，没有 Campfire 的火焰/火花/烹饪状态通道；本切片先完成物品管线。
+- **对等效性的影响**：物品模型、`FIXED` 显示变换、四个槽位和 facing 按源实现；火焰与火花等动态视觉缺失，静态火光外形由后续切片补齐。
+- **状态**：受控偏差，计划由 T-47（#47 批次 1）后续 Campfire 火焰切片跟进（Issue #70）。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/ShelfCampfireRendererTests.cs` 覆盖物品槽位、facing 和最终顶点/UV；接入火焰后补单方块像素对比。
+
+<!-- simplification:SIM-BE-CAMPFIRE-FLAME task:T-47 -->

@@ -23,6 +23,8 @@ public static class BlockEntityRenderers
         new BellBlockEntityRenderer(),
         new LecternRenderer(),
         new EnchantTableRenderer(),
+        new ShelfRenderer(),
+        new CampfireRenderer(),
         new DecoratedPotBlockEntityRenderer(),
         new CopperGolemStatueBlockEntityRenderer()
     ];

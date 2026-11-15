@@ -25,7 +25,10 @@ public sealed class BlockEntityRenderDispatcher
     public bool Handles(int typeId) => BlockEntityRenderers.Handles(typeId, _renderers);
 
     /// <summary>Builds the geometry of every entity a renderer claims, or null when none do.</summary>
-    public DynamicGeometry? Build(ReadOnlySpan<BlockEntityRenderState> entities, ItemAtlas atlas)
+    public DynamicGeometry? Build(
+        ReadOnlySpan<BlockEntityRenderState> entities,
+        ItemAtlas atlas,
+        ItemAtlas? itemAtlas = null)
     {
         _geometry.Clear();
 
@@ -34,7 +37,7 @@ public sealed class BlockEntityRenderDispatcher
         var totalIndices = 0;
         foreach (var renderer in _renderers)
         {
-            var part = renderer.Build(entities, atlas);
+            var part = renderer.Build(entities, atlas, itemAtlas);
             if (part is null || renderer.LastEntityCount == 0)
             {
                 continue;
