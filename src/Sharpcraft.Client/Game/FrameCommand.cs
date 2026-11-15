@@ -1201,8 +1201,10 @@ internal static partial class FrameCommand
 
     internal static DynamicGeometry? BuildBlockEntityGeometry(ClientWorld world, Sharpcraft.Client.Render.ItemAtlas? chestAtlas, float partialTick = 0f, Sharpcraft.Client.Render.BlockEntityFrameState? frameState = null)
     {
+        var frame = frameState ?? new Sharpcraft.Client.Render.BlockEntityFrameState();
         if (chestAtlas is null)
         {
+            frame.Publish(null);
             return null;
         }
 
@@ -1215,7 +1217,6 @@ internal static partial class FrameCommand
 
 
 
-        var frame = frameState ?? new Sharpcraft.Client.Render.BlockEntityFrameState();
         var chestStates = frame.States;
         chestStates.Clear();
         foreach (var chunk in world.GetChunks())
@@ -1295,11 +1296,13 @@ internal static partial class FrameCommand
 
         if (chestStates.Count == 0)
         {
-            return null;
+            frame.Publish(null);
         }
 
-        return frame.Mesher.Build(
+        var built = frame.Mesher.Build(
             System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates),
             chestAtlas);
+        frame.Publish(built);
+        return built;
     }
 }

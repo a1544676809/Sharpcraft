@@ -335,7 +335,7 @@ public static class WindowedRenderer
         using var blockEntityAtlas = new EntitySkinTextureGpu();
         using var blockEntityRects = new SpriteRectTable(backend);
         using var blockEntitySubmission = new BlockEntitySubmission(backend);
-        DynamicGeometry? appliedBlockEntities = null;
+
         // The atlas and the submission have to exist even when the world has no block entity yet:
         // otherwise a chest placed later can build geometry that nothing ever draws (issue 22).
         if (request.BlockEntityAtlas is { } blockEntityAtlasData)
@@ -353,7 +353,6 @@ public static class WindowedRenderer
                 atlasSamplerHandle,
                 blockEntityRects);
             blockEntitySubmission.Upload(blockEntityGeometry, blockEntityAtlas.BindGroup);
-            appliedBlockEntities = blockEntityGeometry;
             request = request with { BlockEntity = blockEntitySubmission };
         }
 
@@ -513,14 +512,10 @@ public static class WindowedRenderer
             // world loaded appears on the next frame instead of waiting for a restart.
             if (request.BlockEntityPerFrame is { } blockEntitiesPerFrame)
             {
-                var refreshedBlockEntities = blockEntitiesPerFrame();
-                if (!ReferenceEquals(refreshedBlockEntities, appliedBlockEntities))
-                {
-                    // A null result means the last block entity went away; upload empty geometry so the
-                    // previous one stops drawing instead of staying on screen (issues 22 and 24).
-                    appliedBlockEntities = refreshedBlockEntities;
-                    blockEntitySubmission.Upload(refreshedBlockEntities ?? new DynamicGeometry(), blockEntityAtlas.BindGroup);
-                }
+                // The geometry object is reused between frames, so identity cannot signal a change.
+                // The builder runs every frame and the submission is refreshed from its result; an
+                // empty result still clears the previous geometry (issues 22 and 24).
+                blockEntitySubmission.Upload(blockEntitiesPerFrame() ?? new DynamicGeometry(), blockEntityAtlas.BindGroup);
             }
 
             if (atlasSource is not null && atlasSource.Version != appliedAtlasVersion)
