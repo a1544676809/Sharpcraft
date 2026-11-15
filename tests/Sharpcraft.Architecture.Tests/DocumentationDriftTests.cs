@@ -101,27 +101,39 @@ public sealed partial class DocumentationDriftTests
     [Fact]
     public void IndexLinksPointToExistingFiles()
     {
-        var docsRoot = Path.Combine(RepositoryRoot(), "docs");
-        var index = File.ReadAllText(Path.Combine(docsRoot, "README.md"));
-
+        var root = RepositoryRoot();
         var broken = new List<string>();
-        foreach (Match match in MarkdownLink().Matches(index))
-        {
-            var target = match.Groups[1].Value;
-            if (target.StartsWith("http", StringComparison.OrdinalIgnoreCase) ||
-                target.StartsWith('#'))
-            {
-                continue;
-            }
 
-            var path = Path.Combine(docsRoot, target.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(path) && !Directory.Exists(path))
+        // Both entry points, not just the docs index: the root README is the first file a reader
+        // opens, and it pointed at three files that no longer exist until this covered it.
+        foreach (var (file, baseDir) in new[]
+        {
+            (Path.Combine(root, "README.md"), root),
+            (Path.Combine(root, "docs", "README.md"), Path.Combine(root, "docs"))
+        })
+        {
+            // A missing entry point is itself a defect: skipping it would let the check pass by
+            // having nothing to check.
+            Assert.True(File.Exists(file), $"entry document is missing: {Path.GetRelativePath(root, file)}");
+
+            foreach (Match match in MarkdownLink().Matches(File.ReadAllText(file)))
             {
-                broken.Add(target);
+                var target = match.Groups[1].Value;
+                if (target.StartsWith("http", StringComparison.OrdinalIgnoreCase) ||
+                    target.StartsWith('#'))
+                {
+                    continue;
+                }
+
+                var path = Path.Combine(baseDir, target.Replace('/', Path.DirectorySeparatorChar));
+                if (!File.Exists(path) && !Directory.Exists(path))
+                {
+                    broken.Add($"{Path.GetRelativePath(root, file)}: {target}");
+                }
             }
         }
 
-        Assert.True(broken.Count == 0, "broken links in docs/README.md:\n" + string.Join("\n", broken));
+        Assert.True(broken.Count == 0, "broken links:\n" + string.Join("\n", broken));
     }
 
     [Fact]
