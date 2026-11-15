@@ -29,6 +29,8 @@ public static class VanillaBlockEntityTypes
     public const int ShulkerBox = 24;
     public const int Lectern = 29;
     public const int Bell = 30;
+    public const int Campfire = 32;
+    public const int Shelf = 39;
     public const int DecoratedPot = 41;
     public const int CopperGolemStatue = 47;
     public const int PotentSulfur = 48;
@@ -74,31 +76,38 @@ public static class VanillaBlockEntityTypes
 
     /// <summary>
     /// Whether a block entity's <c>facing</c> property is decoded as a reference
-    /// <c>Direction</c> ordinal. Shulker boxes, lecterns, decorated pots and copper golem statues use
-    /// this encoding; chests use the face-step encoding instead. Sources:
+    /// <c>Direction</c> ordinal. Shulker boxes, lecterns, shelves, campfires, decorated pots and
+    /// copper golem statues use this encoding; chests use the face-step encoding instead. Sources:
     /// <c>ref://mc-26.3-analysis/src/net/minecraft/core/Direction.java:33-38,66-77,311-312</c>
     /// and <c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/entity/DecoratedPotBlockEntity.java:75-76</c>
     /// and <c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/CopperGolemStatueBlock.java:43-54</c>
-    /// and <c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/LecternBlock.java:43-60</c>.
+    /// and <c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/LecternBlock.java:43-60</c>
+    /// and <c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/ShelfBlock.java</c>
+    /// and <c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/CampfireBlock.java</c>.
     /// </summary>
-    public static bool UsesDirectionOrdinalFacing(int typeId) => typeId is ShulkerBox or Lectern or DecoratedPot or CopperGolemStatue;
+    public static bool UsesDirectionOrdinalFacing(int typeId) => typeId is ShulkerBox or Lectern or Campfire or Shelf or DecoratedPot or CopperGolemStatue;
 
     /// <summary>
     /// Fallback Direction ordinal when the block state has no <c>facing</c> property:
-    /// decorated pots default to NORTH (ordinal 2, the block's default state at
-    /// <c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/DecoratedPotBlock.java:57</c>),
-    /// copper golem statues default to NORTH too
-    /// (<c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/CopperGolemStatueBlock.java:52-54</c>),
-    /// lecterns default to NORTH (<c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/LecternBlock.java:60</c>),
+    /// decorated pots default to NORTH, copper golem statues default to NORTH, lecterns default to
+    /// NORTH, shelves default to NORTH and campfires default to NORTH
+    /// (<c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/ShelfBlock.java</c>,
+    /// <c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/CampfireBlock.java</c>);
     /// shulker boxes keep their existing UP fallback (ordinal 1).
     /// </summary>
-    public static byte DirectionOrdinalFallback(int typeId) => typeId is Lectern or DecoratedPot or CopperGolemStatue ? (byte)2 : (byte)1;
+    public static byte DirectionOrdinalFallback(int typeId) => typeId is Lectern or Campfire or Shelf or DecoratedPot or CopperGolemStatue ? (byte)2 : (byte)1;
 
     /// <summary>Lectern block entity type, drawn by the lectern renderer.</summary>
     public static bool IsLectern(int typeId) => typeId == Lectern;
 
     /// <summary>Enchanting table block entity type, drawn by the enchant table renderer.</summary>
     public static bool IsEnchantingTable(int typeId) => typeId == EnchantingTable;
+
+    /// <summary>Shelf block entity type, drawn by the shelf renderer.</summary>
+    public static bool IsShelf(int typeId) => typeId == Shelf;
+
+    /// <summary>Campfire block entity type, drawn by the campfire renderer.</summary>
+    public static bool IsCampfire(int typeId) => typeId == Campfire;
 
     /// <summary>Copper golem statue block entity type, drawn by its own model renderer.</summary>
     public static bool IsCopperGolemStatue(int typeId) => typeId == CopperGolemStatue;

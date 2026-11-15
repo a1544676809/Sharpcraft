@@ -336,7 +336,8 @@ internal static partial class FrameCommand
         BiomeTint? tint = null,
         float[]? spriteRects = null,
         Sharpcraft.Client.Render.ItemAtlas? chestAtlas = null,
-        Sharpcraft.Client.Render.BlockModelSet? models = null)
+        Sharpcraft.Client.Render.BlockModelSet? models = null,
+        Sharpcraft.Client.Render.ItemAtlas? itemAtlas = null)
     {
         // With a cache only the chunks whose blocks changed are re-meshed; without one the whole world is
         // scanned, which is what the offscreen paths still do (docs/specs/network/play-movement.md 7.19).
@@ -403,6 +404,7 @@ internal static partial class FrameCommand
                     {
                         var blockX = (chunk.ChunkX * 16) + record.LocalX;
                         var blockZ = (chunk.ChunkZ * 16) + record.LocalZ;
+                        var itemSlots = BlockEntityItemsOf(record, out var shelfAlign);
                         states.Add(new Sharpcraft.Client.Render.BlockEntityRenderState(
                             blockX,
                             record.Y,
@@ -414,6 +416,8 @@ internal static partial class FrameCommand
                             ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
                             ChestMaterial: BlockEntityMaterialOf(world, blockX, record.Y, blockZ, record.TypeId),
                             HasBook: HasBookOf(world, blockX, record.Y, blockZ),
+                            Items: itemSlots,
+                            ShelfAlignItemsToBottom: shelfAlign,
                             Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
                 }
             }
@@ -441,7 +445,8 @@ internal static partial class FrameCommand
                     {
                         blockEntityGeometry = dispatcher.Build(
                             System.Runtime.InteropServices.CollectionsMarshal.AsSpan(modelStates),
-                            chestAtlas);
+                            chestAtlas,
+                            itemAtlas);
                     }
 
                     if (otherStates.Count > 0)
@@ -501,7 +506,7 @@ internal static partial class FrameCommand
 
             // The sandbox branch above builds block entity geometry inline; the cached path used by a real
             // session has to build it here, or a chest in a live world has no geometry at all.
-            blockEntityGeometry = BuildBlockEntityGeometry(world, chestAtlas);
+            blockEntityGeometry = BuildBlockEntityGeometry(world, chestAtlas, itemAtlas: itemAtlas);
             // The cache is the only mesher (T-793): while it meshes a chunk it also forwards the blended faces into its
             // layer sinks, so the startup frame reads that aggregate instead of meshing the world a second time. Cutout
             // faces are not split out of the solid mesh by design (they are alpha tested inside it), which is why only
@@ -1016,6 +1021,7 @@ internal static partial class FrameCommand
                 {
                     var blockX = (chunk.ChunkX * 16) + record.LocalX;
                     var blockZ = (chunk.ChunkZ * 16) + record.LocalZ;
+                    var itemSlots = BlockEntityItemsOf(record, out var shelfAlign);
                     blockEntityStates.Add(new Sharpcraft.Client.Render.BlockEntityRenderState(
                         blockX,
                         record.Y,
@@ -1027,6 +1033,8 @@ internal static partial class FrameCommand
                         ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
                         ChestMaterial: BlockEntityMaterialOf(world, blockX, record.Y, blockZ, record.TypeId),
                         HasBook: HasBookOf(world, blockX, record.Y, blockZ),
+                        Items: itemSlots,
+                        ShelfAlignItemsToBottom: shelfAlign,
                         Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
             }
             }
@@ -1036,7 +1044,8 @@ internal static partial class FrameCommand
                 var dispatcher = new Sharpcraft.Client.Render.BlockEntityRenderDispatcher();
                 var geometry = dispatcher.Build(
                     System.Runtime.InteropServices.CollectionsMarshal.AsSpan(blockEntityStates),
-                    chestAtlas);
+                    chestAtlas,
+                    itemAtlas: null);
                 request = request with
                 {
                     BlockEntityAtlas = chestAtlas.Texture,
@@ -1164,6 +1173,24 @@ internal static partial class FrameCommand
             "east" => 5,
             _ => fallback
         };
+    }
+
+    /// <summary>
+    /// Reads the fixed item snapshot from a block entity's NBT. Missing or malformed item data falls
+    /// back to empty slots; the shelf bottom-alignment flag is read independently.
+    /// </summary>
+    private static Sharpcraft.Client.World.BlockEntityItemSlots BlockEntityItemsOf(
+        Sharpcraft.Common.World.BlockEntityRecord record,
+        out bool shelfAlignItemsToBottom)
+    {
+        shelfAlignItemsToBottom = Sharpcraft.Client.World.BlockEntityData.TryReadShelfAlign(record, out var align) && align;
+        if (Sharpcraft.Client.Render.EntityModelResolver.Items is not { } registry)
+        {
+            return default;
+        }
+
+        Sharpcraft.Client.World.BlockEntityData.TryReadItems(record, registry, out var slots);
+        return slots;
     }
 
     /// <summary>
@@ -1326,7 +1353,12 @@ internal static partial class FrameCommand
         ((long)x & 0x3FFFFFF) << 38 | ((long)z & 0x3FFFFFF) << 12 | ((long)y & 0xFFF);
 
     /// <summary>Builds the chest segment for a live session from the block entities in the loaded chunks.</summary>
-    internal static DynamicGeometry? BuildBlockEntityGeometry(ClientWorld world, Sharpcraft.Client.Render.ItemAtlas? chestAtlas, float partialTick = 0f, Sharpcraft.Client.Render.BlockEntityFrameState? frameState = null)
+    internal static DynamicGeometry? BuildBlockEntityGeometry(
+        ClientWorld world,
+        Sharpcraft.Client.Render.ItemAtlas? chestAtlas,
+        float partialTick = 0f,
+        Sharpcraft.Client.Render.BlockEntityFrameState? frameState = null,
+        Sharpcraft.Client.Render.ItemAtlas? itemAtlas = null)
     {
         var frame = frameState ?? new Sharpcraft.Client.Render.BlockEntityFrameState();
         if (chestAtlas is null)
@@ -1356,6 +1388,7 @@ internal static partial class FrameCommand
 
                 var blockX = (chunk.ChunkX * 16) + record.LocalX;
                 var blockZ = (chunk.ChunkZ * 16) + record.LocalZ;
+                var itemSlots = BlockEntityItemsOf(record, out var shelfAlign);
                 chestStates.Add(new Sharpcraft.Client.Render.BlockEntityRenderState(
                     blockX,
                     record.Y,
@@ -1367,6 +1400,8 @@ internal static partial class FrameCommand
                     ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
                     ChestMaterial: BlockEntityMaterialOf(world, blockX, record.Y, blockZ, record.TypeId),
                     HasBook: HasBookOf(world, blockX, record.Y, blockZ),
+                    Items: itemSlots,
+                    ShelfAlignItemsToBottom: shelfAlign,
                     Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ, partialTick)));
             }
         }
@@ -1442,7 +1477,7 @@ internal static partial class FrameCommand
         }
 
         var span = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates);
-        var geometry = frame.Dispatcher.Build(span, chestAtlas);
+        var geometry = frame.Dispatcher.Build(span, chestAtlas, itemAtlas);
         if (Sharpcraft.Client.Game.GameOptions.Get("MC_DEBUG_MODELS") is { Length: > 0 })
         {
             Console.WriteLine($"block entity geometry: {(geometry is null ? 0 : geometry.IndexCount / 3)} tri");
