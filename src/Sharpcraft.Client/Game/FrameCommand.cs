@@ -571,7 +571,7 @@ internal static partial class FrameCommand
             TranslucentRanges = translucentOrdered.Length > 0 ? translucentOrdered : null,
             // Full rain pulls the atmospheric shell in, so the sandbox can show it closing the view.
             RainLevel = EffectiveRainLevel(world, 1f),
-            BlockEntityAtlas = blockEntityGeometry is null ? null : chestAtlas?.Texture,
+            BlockEntityAtlas = chestAtlas?.Texture,
             BlockEntitySpriteRects = chestAtlas is null ? [] : Sharpcraft.Client.Render.ChestAtlas.BuildRectTable(chestAtlas),
             BlockEntityGeometry = blockEntityGeometry
         };
