@@ -286,7 +286,7 @@ public static class ClassMapTool
     /// <param name="root">Repository root.</param>
     /// <param name="referenceFilesVerified">True when an analysis workspace was found and every reference file was checked.</param>
     public static List<string> Check(string root, out bool referenceFilesVerified)
-{
+    {
         referenceFilesVerified = false;
         var violations = new List<string>();
         var (entries, unannotated) = Scan(root);
