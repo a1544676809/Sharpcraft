@@ -175,15 +175,6 @@ public static class BlockModelGeometry
         }
 
         var origin = new Vector3(turn.OriginX / PerBlock, turn.OriginY / PerBlock, turn.OriginZ / PerBlock);
-        var radians = turn.Angle * (MathF.PI / 180f);
-
-        var axis = turn.Axis switch
-        {
-            "x" => Vector3.UnitX,
-            "z" => Vector3.UnitZ,
-            _ => Vector3.UnitY
-        };
-
-        return origin + Vector3.Transform(position - origin, Quaternion.CreateFromAxisAngle(axis, radians));
+        return ElementRotation.Apply(position, origin, turn.Axis, turn.Angle, turn.Rescale);
     }
 }

@@ -147,9 +147,11 @@ public sealed class BlockModelGeometryTests
 
         var quad = BlockModelGeometry.Build([rotated]).Single();
 
-        // The corner that started at the origin turns a quarter around the middle of the block.
-        Assert.Equal(0f, quad.V0.Position.X, 1e-4f);
-        Assert.Equal(1f, quad.V0.Position.Z, 1e-4f);
+        // A quarter turn about the middle of the block takes the corner at (0, 16, 0) to (16, 16, 0):
+        // the reference builds its matrix with JOML, whose positive angle turns the other way from
+        // System.Numerics (see Repro_011 for the golden matrices this follows).
+        Assert.Equal(1f, quad.V0.Position.X, 1e-4f);
+        Assert.Equal(0f, quad.V0.Position.Z, 1e-4f);
         Assert.Equal(1f, quad.V0.Position.Y, 1e-4f);
     }
 
