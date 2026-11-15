@@ -5,6 +5,6 @@
 # [ReferenceClass(...)] or sit in docs/src/.classmap-baseline.txt (a shrinking ratchet). This is the same
 # check enforced by tests/Sharpcraft.Architecture.Tests/ClassMapTests.cs.
 $ErrorActionPreference = 'Stop'
-$root = Split-Path -Parent $PSScriptRoot
+$root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 dotnet run --project (Join-Path $root 'tools/Sharpcraft.ClassMap') -- --check
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

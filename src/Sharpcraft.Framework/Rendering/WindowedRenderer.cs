@@ -336,8 +336,11 @@ public static class WindowedRenderer
         using var blockEntityRects = new SpriteRectTable(backend);
         using var blockEntitySubmission = new BlockEntitySubmission(backend);
         DynamicGeometry? appliedBlockEntities = null;
-        if (request.BlockEntityAtlas is { } blockEntityAtlasData && request.BlockEntityGeometry is { } blockEntityGeometry)
+        // The atlas and the submission have to exist even when the world has no block entity yet:
+        // otherwise a chest placed later can build geometry that nothing ever draws (issue 22).
+        if (request.BlockEntityAtlas is { } blockEntityAtlasData)
         {
+            var blockEntityGeometry = request.BlockEntityGeometry ?? new DynamicGeometry();
             Console.WriteLine($"block entity draw: {request.BlockEntitySpriteRects.Length} sprite rects, {request.BlockEntityGeometry?.IndexCount / 3} triangles");
             blockEntityRects.Rebuild(request.BlockEntitySpriteRects);
             blockEntityAtlas.Upload(
