@@ -14,7 +14,8 @@ public enum SkullType : byte
     WitherSkeleton = 2,
     Zombie = 3,
     Creeper = 4,
-    Player = 5
+    Player = 5,
+    Piglin = 6
 }
 
 /// <summary>
@@ -47,6 +48,9 @@ public static class SkullModelDefinition
 
     /// <summary>Creeper texture path.</summary>
     public const string CreeperTexture = "entity/creeper/creeper";
+
+    /// <summary>Piglin head texture path.</summary>
+    public const string PiglinTexture = "entity/piglin/piglin";
 
     /// <summary>Default player skin texture used when no profile skin is available.</summary>
     public static readonly string DefaultPlayerSkinTexture = DefaultPlayerSkin.Default.Path;
@@ -100,8 +104,12 @@ public static class SkullModelDefinition
     };
 
     /// <summary>Selects the baked definition for a skull type.</summary>
-    public static EntityModelDefinition DefinitionFor(SkullType type) =>
-        type == SkullType.Player ? PlayerDefinition : Definition;
+    public static EntityModelDefinition DefinitionFor(SkullType type) => type switch
+    {
+        SkullType.Player => PlayerDefinition,
+        SkullType.Piglin => PiglinModelDefinition.Head,
+        _ => Definition
+    };
 
     /// <summary>Maps a block path to the supported static skull family, or <see cref="SkullType.None"/>.</summary>
     public static SkullType TypeOfPath(string? path) => path switch
@@ -111,6 +119,7 @@ public static class SkullModelDefinition
         "zombie_head" or "zombie_wall_head" => SkullType.Zombie,
         "creeper_head" or "creeper_wall_head" => SkullType.Creeper,
         "player_head" or "player_wall_head" => SkullType.Player,
+        "piglin_head" or "piglin_wall_head" => SkullType.Piglin,
         _ => SkullType.None
     };
 
@@ -122,6 +131,7 @@ public static class SkullModelDefinition
         SkullType.Zombie => ZombieTexture,
         SkullType.Creeper => CreeperTexture,
         SkullType.Player => DefaultPlayerSkinTexture,
+        SkullType.Piglin => PiglinTexture,
         _ => null
     };
 

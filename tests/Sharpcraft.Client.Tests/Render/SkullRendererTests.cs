@@ -22,7 +22,8 @@ public sealed class SkullRendererTests
         SkullType.WitherSkeleton,
         SkullType.Zombie,
         SkullType.Creeper,
-        SkullType.Player
+        SkullType.Player,
+        SkullType.Piglin
     ];
 
     [Fact]
@@ -42,7 +43,46 @@ public sealed class SkullRendererTests
         Assert.Equal(0, head.TextureX);
         Assert.Equal(0, head.TextureY);
         Assert.True(ChestAtlas.Textures.Length == 22);
-        Assert.Equal(5, ChestAtlas.SkullTextures.Length);
+        Assert.Equal(6, ChestAtlas.SkullTextures.Length);
+    }
+
+    [Fact]
+    public void PiglinDefinitionHasSixBoxHead()
+    {
+        Assert.Equal(64, PiglinModelDefinition.Head.TextureWidth);
+        Assert.Equal(64, PiglinModelDefinition.Head.TextureHeight);
+        Assert.Equal("entity/piglin/piglin", PiglinModelDefinition.Head.TexturePath);
+        Assert.Same(PiglinModelDefinition.Head, SkullModelDefinition.DefinitionFor(SkullType.Piglin));
+
+        var mesher = new SkullRenderer();
+        var geometry = mesher.Build(
+            [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.Skull, SkullType: SkullType.Piglin)],
+            PiglinAtlas());
+        Assert.Equal(1, mesher.LastEntityCount);
+        Assert.Equal(144, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
+        Assert.Equal(216, geometry.IndexCount);
+        AssertVertex(geometry, 0, 0.1875f, 0.5f, 0.75f, 0.28125f, 0f);
+        AssertVertex(geometry, 1, 0.8125f, 0.5f, 0.75f, 0.4375f, 0f);
+        AssertVertex(geometry, 2, 0.8125f, 0.5f, 0.25f, 0.4375f, 0.125f);
+        AssertVertex(geometry, 4, 0.1875f, 0f, 0.25f, 0.125f, 0.125f);
+        var bounds = Bounds(geometry);
+        Assert.Equal(-0.2416f, bounds.Min.X, 3);
+        Assert.Equal(0f, bounds.Min.Y, 3);
+        Assert.Equal(0.1875f, bounds.Min.Z, 3);
+        Assert.Equal(1.2416f, bounds.Max.X, 3);
+        Assert.Equal(0.5f, bounds.Max.Y, 3);
+        Assert.Equal(0.75f, bounds.Max.Z, 3);
+    }
+
+    [Fact]
+    public void PiglinTextureMapsToThePiglinSkinAtlas()
+    {
+        var atlas = PiglinAtlas();
+        Assert.Equal("entity/piglin/piglin", SkullModelDefinition.TextureFor(SkullType.Piglin));
+        Assert.Equal("entity/piglin/piglin", ChestAtlas.SkullTextures[5]);
+        var sprite = ChestAtlas.SpriteForSkull(atlas, SkullType.Piglin);
+        Assert.NotNull(sprite);
+        Assert.Equal(atlas.Get("entity/piglin/piglin"), sprite);
     }
 
     [Fact]
@@ -107,8 +147,8 @@ public sealed class SkullRendererTests
         }
 
         Assert.Null(SkullModelDefinition.TextureFor(SkullType.None));
-        Assert.Equal(5, paths.Count);
-        Assert.Equal(5, rects.Count);
+        Assert.Equal(6, paths.Count);
+        Assert.Equal(6, rects.Count);
     }
 
     [Fact]
@@ -122,7 +162,8 @@ public sealed class SkullRendererTests
         Assert.Equal(SkullType.Player, SkullModelDefinition.TypeOfPath("player_head"));
         Assert.Equal(SkullType.Player, SkullModelDefinition.TypeOfPath("player_wall_head"));
         Assert.Equal(SkullType.None, SkullModelDefinition.TypeOfPath("dragon_head"));
-        Assert.Equal(SkullType.None, SkullModelDefinition.TypeOfPath("piglin_head"));
+        Assert.Equal(SkullType.Piglin, SkullModelDefinition.TypeOfPath("piglin_head"));
+        Assert.Equal(SkullType.Piglin, SkullModelDefinition.TypeOfPath("piglin_wall_head"));
         Assert.Equal(SkullType.None, SkullModelDefinition.TypeOfPath(null));
     }
 
@@ -178,6 +219,28 @@ public sealed class SkullRendererTests
         AssertVertex(geometry, 0, 0.25f, 0.5f, 0.75f, 0.25f, 0f);
         AssertVertex(geometry, 48, 1.25f, 0.5f, 0.75f, 0.25f, 0f);
         AssertVertex(geometry, 960, 20.25f, 0.5f, 0.75f, 0.25f, 0f);
+    }
+
+    [Fact]
+    public void FortyPiglinSkullsKeepEveryHeadBoxVertex()
+    {
+        var states = new BlockEntityRenderState[40];
+        for (var i = 0; i < states.Length; i++)
+        {
+            states[i] = new BlockEntityRenderState(
+                i, 0f, 0f, VanillaBlockEntityTypes.Skull,
+                SkullType: SkullType.Piglin);
+        }
+
+        var mesher = new SkullRenderer();
+        var geometry = mesher.Build(states, PiglinAtlas());
+
+        Assert.Equal(40, mesher.LastEntityCount);
+        Assert.Equal(5760, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
+        Assert.Equal(8640, geometry.IndexCount);
+        AssertVertex(geometry, 0, 0.1875f, 0.5f, 0.75f, 0.28125f, 0f);
+        AssertVertex(geometry, 144, 1.1875f, 0.5f, 0.75f, 0.28125f, 0f);
+        AssertVertex(geometry, 2880, 20.1875f, 0.5f, 0.75f, 0.28125f, 0f);
     }
 
     [Theory]
@@ -251,6 +314,15 @@ public sealed class SkullRendererTests
         });
     }
 
+    private static ItemAtlas PiglinAtlas()
+    {
+        var pixels = new byte[64 * 64 * 4];
+        return ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
+        {
+            [SkullModelDefinition.PiglinTexture] = new(64, 64, pixels)
+        });
+    }
+
     private static ItemAtlas Atlas()
     {
         var textures = new Dictionary<string, TextureData>(StringComparer.Ordinal);
@@ -258,7 +330,7 @@ public sealed class SkullRendererTests
         {
             var path = SkullModelDefinition.TextureFor(SupportedTypes[i]);
             Assert.NotNull(path);
-            var height = SupportedTypes[i] == SkullType.Player ? 64 : 32;
+            var height = SupportedTypes[i] is SkullType.Player or SkullType.Piglin ? 64 : 32;
             var pixels = new byte[64 * height * 4];
             pixels[0] = (byte)(i + 1);
             textures[path] = new TextureData(64, height, pixels);

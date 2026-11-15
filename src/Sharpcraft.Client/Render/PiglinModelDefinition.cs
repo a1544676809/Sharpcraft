@@ -23,6 +23,27 @@ public static class PiglinModelDefinition
     /// <summary>Declarative DSL tree for the six-part piglin head (T-682).</summary>
     private static readonly VanillaMeshDefinition PiglinHeadMesh = BuildPiglinHeadMesh();
 
+    private static readonly EntityModelPart[] HeadParts =
+        [.. VanillaMeshBake.Bake(PiglinHeadMesh, 64, 64, modelHeight: 0f)];
+
+    private static readonly CompiledEntityModel HeadCompiled =
+        VanillaMeshBakery.Build(PiglinHeadMesh, 64, 64, modelHeight: 0f, texturePath: "entity/piglin/piglin");
+
+    /// <summary>Head-only piglin skull definition (head, nose, nostrils and ears), shared with the piglin entity model.</summary>
+    public static readonly EntityModelDefinition Head = new(
+        "piglin_head",
+        64,
+        64,
+        HeadParts,
+        PlayerModelDefinition.DefaultFaceTransforms,
+        "entity/piglin/piglin",
+        compiled: HeadCompiled)
+    {
+        // VanillaMeshBake emits y-up geometry; the skull renderer's source pose includes scale(-1,-1,1).
+        // ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/piglin/PiglinModel.java
+        LocalTransform = System.Numerics.Matrix4x4.CreateTranslation(0f, -0.5f, 0f)
+    };
+
     private static EntityModelPart[] BuildParts()
     {
         var parts = new List<EntityModelPart>();

@@ -21,7 +21,7 @@ namespace Sharpcraft.Client.Render;
 /// -facing.getOpposite().toYRot(), scale (-1,-1,1).
 /// </remarks>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.blockentity.SkullBlockRenderer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/SkullBlockRenderer.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
-[Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-SKULL-VARIANTS", "T-47", Note = "Only skeleton, wither skeleton, zombie, creeper and default-player heads are drawn; dragon/piglin and custom skull models are skipped.")]
+[Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-SKULL-VARIANTS", "T-47", Note = "Only skeleton, wither skeleton, zombie, creeper, default-player and piglin heads are drawn; dragon and other custom skull models are skipped.")]
 [Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-SKULL-PLAYER-SKIN", "T-47", Note = "Player heads use the default slim Steve skin; profile skin cache and custom skins are not wired.")]
 [Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-SKULL-ZOFFSET", "T-47", Note = "entityCutoutZOffset depth offset is not applied; the dependency is Issue #45.")]
 [Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-SKULL-ANIM", "T-47", Note = "Static head model; skull animationProgress / setupAnim rotations are not wired.")]
@@ -40,12 +40,12 @@ public sealed class SkullRenderer : IBlockEntityRenderer
     public DynamicGeometry Build(ReadOnlySpan<BlockEntityRenderState> entities, ItemAtlas atlas)
     {
         _geometry.Clear();
-        // One head cube is 24 vertices / 36 indices; Player adds the hat overlay for 48 / 72.
-        // Reserve the worst case before appending: DynamicGeometry.Reserve does not copy existing
+        // Worst case is the piglin six-box head (144 vertices / 216 indices); Player uses 48/72.
+        // Reserve the whole batch before appending: DynamicGeometry.Reserve does not copy existing
         // content, so a mid-loop growth would drop every previously written skull.
         _geometry.Reserve(
-            entities.Length * 48 * ChunkMesher.FloatsPerVertex,
-            entities.Length * 72);
+            entities.Length * 144 * ChunkMesher.FloatsPerVertex,
+            entities.Length * 216);
         LastEntityCount = 0;
 
         for (var index = 0; index < entities.Length; index++)
