@@ -224,6 +224,43 @@ public static class ClassMapTool
         return (entries.Count, injected, unannotated.Count);
     }
 
+    private static readonly Regex DocRefPattern = new(@"ref://mc-26\.3-analysis/([^\s`、，]+)", RegexOptions.Compiled);
+
+    private static IEnumerable<string> ExpandDocRef(string raw)
+    {
+        var path = raw;
+        var hash = path.IndexOf('#');
+        if (hash >= 0)
+        {
+            path = path[..hash];
+        }
+
+        // One entry may carry several line ranges: :98-197,199-268,283-305.
+        path = Regex.Replace(path, @":\d+(-\d+)?(,\d+(-\d+)?)*$", string.Empty);
+        path = path.TrimEnd(')', ']', '"', '\'', '`', ',', ';', '.', ':', '、', '。', '，');
+
+        if (!path.EndsWith(".java", StringComparison.Ordinal) || path.Contains('*') || path.EndsWith("....java", StringComparison.Ordinal))
+        {
+            yield break;
+        }
+
+        // Brace shorthand lists several files that share a prefix and suffix; every alternative has
+        // to be checked, otherwise a wrong one hides behind the valid one.
+        var open = path.IndexOf('{');
+        var close = path.IndexOf('}');
+        if (open < 0 || close < open)
+        {
+            yield return path;
+            yield break;
+        }
+
+        var prefix = path[..open];
+        var suffix = path[(close + 1)..];
+        foreach (var part in path[(open + 1)..close].Split(','))
+        {
+            yield return prefix + part.Trim() + suffix;
+        }
+    }
     private static HashSet<string> LoadRefsBaseline(string root)
     {
         var path = Path.Combine(root, RefsBaselinePath.Replace('/', Path.DirectorySeparatorChar));
@@ -405,6 +442,30 @@ public static class ClassMapTool
 
         if (referenceFilesVerified)
         {
+            // Prose in docs/*.md points at analysis sources too; nothing else checks those paths.
+            var docsRoot = Path.Combine(root, "docs");
+            if (Directory.Exists(docsRoot))
+            {
+                foreach (var doc in Directory.EnumerateFiles(docsRoot, "*.md", SearchOption.AllDirectories))
+                {
+                    var relative = Path.GetRelativePath(root, doc);
+                    var lines = File.ReadAllLines(doc);
+                    for (var line = 0; line < lines.Length; line++)
+                    {
+                        foreach (Match match in DocRefPattern.Matches(lines[line]))
+                        {
+                            foreach (var rel in ExpandDocRef(match.Groups[1].Value))
+                            {
+                                if (!File.Exists(Path.Combine(analysisRoot, rel.Replace('/', Path.DirectorySeparatorChar))))
+                                {
+                                    violations.Add($"doc reference not found: {relative}:{line + 1} -> {rel}");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             foreach (var known in refsBaseline)
             {
                 if (!seenMissing.Contains(known))

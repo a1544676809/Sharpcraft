@@ -3,7 +3,7 @@
 
 状态：[已评审]（所有者 2026-11-01 评审通过）
 基线：Minecraft 26.3
-证据：ref://mc-26.3-analysis/src/net/minecraft/{world/attribute/WeatherAttributes.java, world/attribute/EnvironmentAttributeProbe.java, world/attribute/modifier/{FloatModifier,ColorModifier,FloatWithAlpha}.java, data/worldgen/biome/OverworldBiomes.java, world/level/biome/Biome.java, world/level/{GrassColor,FoliageColor,DryFoliageColor,ColorMapColorUtil}.java, client/renderer/{BiomeColors,ClientLevel}.java, network/protocol/game/ClientboundGameEventPacket.java}
+证据：ref://mc-26.3-analysis/src/net/minecraft/world/attribute/WeatherAttributes.java、ref://mc-26.3-analysis/src/net/minecraft/world/attribute/EnvironmentAttributeProbe.java、ref://mc-26.3-analysis/src/net/minecraft/world/attribute/modifier/FloatModifier.java、ref://mc-26.3-analysis/src/net/minecraft/world/attribute/modifier/ColorModifier.java、ref://mc-26.3-analysis/src/net/minecraft/world/attribute/modifier/FloatWithAlpha.java、ref://mc-26.3-analysis/src/net/minecraft/data/worldgen/biome/OverworldBiomes.java、ref://mc-26.3-analysis/src/net/minecraft/world/level/biome/Biome.java、ref://mc-26.3-analysis/src/net/minecraft/world/level/GrassColor.java、ref://mc-26.3-analysis/src/net/minecraft/world/level/FoliageColor.java、ref://mc-26.3-analysis/src/net/minecraft/world/level/DryFoliageColor.java、ref://mc-26.3-analysis/src/net/minecraft/world/level/ColorMapColorUtil.java、ref://mc-26.3-analysis/src/net/minecraft/client/renderer/BiomeColors.java、ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/ClientLevel.java、ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundGameEventPacket.java
 最后更新：2026-11-01
 
 # 天气与生物群系着色（Biome Colours & Weather）
@@ -121,7 +121,8 @@
 - `ref://mc-26.3-analysis/src/net/minecraft/data/worldgen/biome/OverworldBiomes.java`
 - `ref://mc-26.3-analysis/src/net/minecraft/world/level/biome/Biome.java`
 - `ref://mc-26.3-analysis/src/net/minecraft/world/level/{GrassColor,FoliageColor,DryFoliageColor,ColorMapColorUtil}.java`
-- `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/{BiomeColors,ClientLevel}.java`
+- `ref://mc-26.3-analysis/src/net/minecraft/client/renderer/BiomeColors.java`
+- `ref://mc-26.3-analysis/src/net/minecraft/client/multiplayer/ClientLevel.java`
 - `ref://mc-26.3-analysis/src/net/minecraft/world/timeline/Timelines.java`
 - `ref://mc-26.3-analysis/src/net/minecraft/network/protocol/game/ClientboundGameEventPacket.java`
 - `docs/specs/render/sky-celestial.md`、`docs/specs/render/block-layer-and-tint.md`、`docs/specs/render/lighting.md §6`、`docs/modules/time.md`

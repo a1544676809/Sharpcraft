@@ -17,6 +17,7 @@ AGENTS.md §3.5 硬约束：**每个模块文档必须写明我们的类型对�
   - `--write`：扫描 `src/**` 生成 `docs/architecture/class-map.generated.md`。
   - `--check`：生成页是否最新、是否有**新增未注解的 public 类型**（不在 baseline 内）、引用指针是否形如 `ref://`、引用的文件是否真的存在。分析工作区按 `MC_ANALYSIS_ROOT` 解析，未设置时回退到同级 `../mc-26.3-analysis`；找不到工作区时输出会明确标注"reference files not verified"，不会伪装成已校验。
   - `--update-baseline`：把当前未注解类型写入 `docs/src/.classmap-baseline.txt`（**棘轮，只减不增**）。
+  - **文档引用检查**：`--check` 同时扫描 `docs/**/*.md` 中的 `ref://` 路径。规范化会去掉 `:行号`（含多段 `:1-2,3-4`）、`#anchor` 与 Markdown 标点，并展开 `{A,B}.java` 简写后逐个校验。**受控限制**：含 `*` 的通配、`....java` 占位、以及不以 `.java` 结尾的引用（shader、CSV、目录）不校验——这些是有意跳过的范围，不代表"全部已验证"。
 - **门禁**：`tools/verify/check-classmap.ps1` + `tests/Sharpcraft.Architecture.Tests/ClassMapTests.cs`（CI 与 `dotnet test` 均执行）。
 - **合规**：仓库内**不出现原版源码**，只存类名与 `ref://` 指针；引用解析到本机分析目录 `%MC_ANALYSIS_ROOT%`（默认同级 `../mc-26.3-analysis`）。
 
