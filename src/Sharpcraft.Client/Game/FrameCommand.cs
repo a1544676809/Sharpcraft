@@ -1193,6 +1193,9 @@ internal static partial class FrameCommand
 
     /// <summary>Builds the chest segment for a live session from the block entities in the loaded chunks.</summary>
     /// <summary>Packs a block position the way the reference does.</summary>
+    /// <summary>Reused across frames: the mesher clears its own geometry at the start of every build.</summary>
+    private static readonly Sharpcraft.Client.Render.ChestMesher BlockEntityChestMesher = new();
+
     private static long PositionKey(int x, int y, int z) =>
         ((long)x & 0x3FFFFFF) << 38 | ((long)z & 0x3FFFFFF) << 12 | ((long)y & 0xFFF);
 
@@ -1203,9 +1206,14 @@ internal static partial class FrameCommand
             return null;
         }
 
-        var allTypes = new List<int>();
-        foreach (var c in world.GetChunks()) { foreach (var r in c.BlockEntities) { allTypes.Add(r.TypeId); } }
-        Console.WriteLine($"block entity records: {allTypes.Count} total, types=[" + string.Join(",", allTypes.Distinct()) + "]");
+        if (Sharpcraft.Client.Game.GameOptions.Get("MC_DEBUG_MODELS") is { Length: > 0 })
+        {
+            var allTypes = new List<int>();
+            foreach (var c in world.GetChunks()) { foreach (var r in c.BlockEntities) { allTypes.Add(r.TypeId); } }
+            Console.WriteLine($"block entity records: {allTypes.Count} total, types=[" + string.Join(",", allTypes) + "]");
+        }
+
+
 
         var chestStates = new List<Sharpcraft.Client.Render.BlockEntityRenderState>();
         foreach (var chunk in world.GetChunks())
@@ -1231,7 +1239,10 @@ internal static partial class FrameCommand
             }
         }
 
-        Console.WriteLine($"block entity geometry: {chestStates.Count} chest entities, types=[" + string.Join(",", chestStates.Select(s => s.TypeId)) + "]");
+        if (Sharpcraft.Client.Game.GameOptions.Get("MC_DEBUG_MODELS") is { Length: > 0 })
+        {
+            Console.WriteLine($"block entity geometry: {chestStates.Count} chest entities");
+        }
 
         // A double chest opens as far as its more open half. Only the real partner counts: the
         // reference walks to the block on the connected side, so the other half must be the same
@@ -1284,7 +1295,7 @@ internal static partial class FrameCommand
             return null;
         }
 
-        return new Sharpcraft.Client.Render.ChestMesher().Build(
+        return BlockEntityChestMesher.Build(
             System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates),
             chestAtlas);
     }
