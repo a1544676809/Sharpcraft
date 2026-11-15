@@ -11,6 +11,7 @@ namespace Sharpcraft.Client.Render;
 /// they build into one geometry. This is the single entry point the frame path uses; it never asks
 /// what kind of block entity it is looking at.
 /// </summary>
+[Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-SINGLE-NOCULL", "T-45", Note = "One no-cull pipeline covers the whole block entity segment; the reference picks a render type per renderer and entitySolid (conduit, decorated pot) culls.")]
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/BlockEntityRenderDispatcher.java")]
 public sealed class BlockEntityRenderDispatcher
 {
@@ -45,8 +46,6 @@ public sealed class BlockEntityRenderDispatcher
         }
 
         if (count == 0)
-        Console.WriteLine($"dispatch: {count} renderers, {totalVertices / ChunkMesher.FloatsPerVertex} verts, {totalIndices / 3} tri");
-
         if (count == 0)
         {
             return null;
