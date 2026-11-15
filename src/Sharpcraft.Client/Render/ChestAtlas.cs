@@ -108,7 +108,7 @@ public static class ChestAtlas
         ArgumentNullException.ThrowIfNull(atlas);
 
         var highest = 0;
-        foreach (var path in Textures)
+        foreach (var path in Textures.Concat(ShulkerTextures))
         {
             if (atlas.Get(path) is { } rect && rect.RectId >= highest)
             {
@@ -120,7 +120,7 @@ public static class ChestAtlas
         table[2] = 1f;
         table[3] = 1f;
 
-        foreach (var path in Textures)
+        foreach (var path in Textures.Concat(ShulkerTextures))
         {
             if (atlas.Get(path) is not { } rect || rect.RectId < 0 || (rect.RectId * 4) + 3 >= table.Length)
             {
