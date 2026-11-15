@@ -184,6 +184,47 @@ public sealed class EntityPlaceholderMesher
 
     internal readonly record struct FaceUvRect(float U0, float V0, float U1, float V1);
 
+    /// <summary>
+    /// Appends one flat quad from four explicit corners. Zero-thickness model planes (pot lids and sides,
+    /// banners) cannot use <see cref="AppendBox"/> without producing degenerate side faces, so they come
+    /// through here with their UVs already normalised to the source texture size. This is a pure
+    /// geometry helper (Issue #57); it does not change the existing <see cref="AppendBox"/> path.
+    /// </summary>
+    internal static void AppendQuad(
+        DynamicGeometry geometry,
+        Vector3 a,
+        Vector3 b,
+        Vector3 c,
+        Vector3 d,
+        float red,
+        float green,
+        float blue,
+        SpriteRect sprite,
+        ref int vertexFloats,
+        ref int indexCount,
+        (float U, float V) uvA,
+        (float U, float V) uvB,
+        (float U, float V) uvC,
+        (float U, float V) uvD,
+        EntityModelTransform? entityTransform = null,
+        float sky = 1f,
+        float block = 0f)
+    {
+        var transform = entityTransform ?? new EntityModelTransform(Vector3.Zero, 0f, 0f, 1f);
+        var first = (uint)(vertexFloats / ChunkMesher.FloatsPerVertex);
+        WriteVertex(geometry.Vertices, ref vertexFloats, a, red, green, blue, uvA.U, uvA.V, sprite, transform, sky, block);
+        WriteVertex(geometry.Vertices, ref vertexFloats, b, red, green, blue, uvB.U, uvB.V, sprite, transform, sky, block);
+        WriteVertex(geometry.Vertices, ref vertexFloats, c, red, green, blue, uvC.U, uvC.V, sprite, transform, sky, block);
+        WriteVertex(geometry.Vertices, ref vertexFloats, d, red, green, blue, uvD.U, uvD.V, sprite, transform, sky, block);
+
+        geometry.Indices[indexCount++] = first;
+        geometry.Indices[indexCount++] = first + 1u;
+        geometry.Indices[indexCount++] = first + 2u;
+        geometry.Indices[indexCount++] = first;
+        geometry.Indices[indexCount++] = first + 2u;
+        geometry.Indices[indexCount++] = first + 3u;
+    }
+
     private static readonly FaceUvRect[] DefaultFaceUvs =
     [
         new(0f, 0f, 1f, 1f), new(0f, 0f, 1f, 1f), new(0f, 0f, 1f, 1f),

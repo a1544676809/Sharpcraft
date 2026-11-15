@@ -493,7 +493,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 - **简化了什么**：整个方块实体段用一条 `CullMode.None` 的 cutout 管线（`FramePipelines.CreateNoCullCutoutPipeline`），而不是像原版那样每个渲染器自选 RenderType。
 - **为什么**：原版大多数模型类方块实体（箱子、潜影盒、告示牌、床、旗帜、头颅）都用 `entityCutout`，它本身就 `.withCull(false)`；统一 no-cull 让这些类型自动正确，不需要每个 mesher 各自处理。
-- **对等效性的影响**：已实现的 Chest / Trapped / Ender / ShulkerBox 与原版完全一致。原版用 `entitySolid`（剔除）的 `Conduit`、`DecoratedPot` 尚未实现；实现时统一 no-cull 只会多画背面，视觉等价，仅多一点填充成本。
+- **对等效性的影响**：已实现的 Chest / Trapped / Ender / ShulkerBox 与原版完全一致；DecoratedPot 的静态基底与空白侧面几何按原版真值实现（陶片图案见 `SIM-BE-POT-NO-PATTERNS`）。原版用 `entitySolid`（剔除）的 `Conduit` 尚未实现；实现时统一 no-cull 只会多画背面，视觉等价，仅多一点填充成本。
 - **状态**：受控偏差，跟踪任务见 Issue #45。
 - **验收证据**：潜影盒 144 顶点金值测试（`Repro_042_ShulkerBoxTests`）+ 真机开盖内壁不透明。
 
@@ -508,3 +508,13 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收证据**：`tests/Sharpcraft.Client.Tests/Render/BellMesherGoldenTests.cs` 覆盖两个盒的 world bounds、每钟 48 顶点 / 72 索引、双钟批量偏移、32×32 纹理 UV 与注册表 Handles；接入动画后需补 `STATE.tick` / shake 真值向量与单方块像素对比。
 
 <!-- simplification:SIM-BE-BELL-NO-SHAKE task:T-47 -->
+
+### SIM-BE-POT-NO-PATTERNS：饰纹陶罐只画空白侧面
+
+- **简化了什么**：`DecoratedPotMesher` 始终使用 `entity/decorated_pot/decorated_pot_side` 空白侧面，不读取 `BlockEntityRecord.Tag` 中的 sherds / `PotDecorations` 来选择每面的陶片图案。
+- **为什么**：陶片图案来自方块实体 NBT 的四个 sherd 物品与 26.3 图案资源映射；本切片先落地静态基底与几何，图案选择需要额外的物品组件与图案注册表解析。
+- **对等效性的影响**：任意有图案的陶罐会显示空白侧面；基底、四个侧面平面的位置、法线、朝向与 UV 与原版一致。
+- **状态**：受控偏差，计划由 T-47（#47 批次 1）后续陶片图案切片跟进。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/DecoratedPotMesherGoldenTests.cs` 覆盖脖子两盒与 top/bottom 平面 world bounds、四个侧面在四个水平朝向下的位置/法线/UV、6 组 `FacingDegrees` 真值、单 pot 72 顶点 / 108 索引、双 pot 批量偏移、32/16 纹理归一化与注册表 `Handles(41)`；接入图案后需补 sherds 选择真值与单方块像素对比。
+
+<!-- simplification:SIM-BE-POT-NO-PATTERNS task:T-47 -->

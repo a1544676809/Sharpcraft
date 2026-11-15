@@ -20,7 +20,8 @@ public static class BlockEntityRenderers
     [
         new ChestBlockEntityRenderer(),
         new ShulkerBoxBlockEntityRenderer(),
-        new BellBlockEntityRenderer()
+        new BellBlockEntityRenderer(),
+        new DecoratedPotBlockEntityRenderer()
     ];
 
     /// <summary>Whether any registered renderer draws this block entity type.</summary>
@@ -69,6 +70,19 @@ public static class BlockEntityRenderers
         private readonly BellMesher _mesher = new();
 
         public bool Handles(int typeId) => typeId == VanillaBlockEntityTypes.Bell;
+
+        public int LastEntityCount => _mesher.LastEntityCount;
+
+        public DynamicGeometry? Build(ReadOnlySpan<BlockEntityRenderState> entities, ItemAtlas atlas) =>
+            _mesher.Build(entities, atlas);
+    }
+
+    /// <summary>Adapts the decorated pot mesher to the renderer contract.</summary>
+    private sealed class DecoratedPotBlockEntityRenderer : IBlockEntityRenderer
+    {
+        private readonly DecoratedPotMesher _mesher = new();
+
+        public bool Handles(int typeId) => typeId == VanillaBlockEntityTypes.DecoratedPot;
 
         public int LastEntityCount => _mesher.LastEntityCount;
 
