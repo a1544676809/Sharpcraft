@@ -19,7 +19,6 @@
 | [`fluid-rendering.md`](fluid-rendering.md) | 水/岩浆的液面高度、面剔除、flow-UV、染色、逐面光、贴图动画与水下雾 | 已评审 | - |
 | [`frame-baseline.md`](frame-baseline.md) | 跨运行比较不可靠：同一场景不同运行可差 10%+，实测中 prep-entities 曾在两次相邻运行间从 0.068 跳到 0.287 ms。 | 未标注 | - |
 | [`frame-pipelining.md`](frame-pipelining.md) | 实测一帧 0.85–1.05 ms（frame-gap ≈ 0.001–0.002 ms），整帧没有明显空闲等待，各阶段首尾相接。 | 未标注 | - |
-| [`known-gaps.md`](known-gaps.md) | 当前渲染管线尚未做或仍为受控偏差的事项清单（几何/天空/雾/云/性能） | 草稿 | 2026-11-01 |
 | [`lighting.md`](lighting.md) | 证据指针：ref://mc-26.3-analysis/src/net/minecraft/client/renderer/Lightmap.java、 .../LightmapRenderStateExtractor.java、..… | 草案（待评审）。范围：方块几何的逐顶点光照与 lightmap 乘子。 | - |
 | [`occlusion-culling.md`](occlusion-culling.md) | Hi-Z 两阶段方案、分期、预算与验收；不依赖硬件遮挡查询 | 草稿 | - |
 | [`oit-reference.md`](oit-reference.md) | 26.3 的 OIT 三阶段行为规格，作为窗口唯一采用的透明管线 | 已实现（反向 Z 适配，2026-11-05） | 2026-11-05 |

@@ -5,7 +5,7 @@
 
 本目录是本项目的唯一知识库。**代码之前先有文档**：任何模块在写下第一行代码之前，其设计与分析文档必须已经落盘在这里，并且已经过评审。
 
-本文件只讲"文档怎么组织"；项目级规则以 [AGENTS.md](../AGENTS.md) 为准。新会话的阅读顺序见 AGENTS.md 4.2：`AGENTS.md` → [`STATE.md`](STATE.md) → 目标模块文档，并核对 `git status` / `git log -1`。
+本文件只讲"文档怎么组织"；项目级规则以 [AGENTS.md](../AGENTS.md) 为准。新会话的阅读顺序见 AGENTS.md 4.2：`AGENTS.md` → 当前里程碑的 Issues → 目标模块文档，并核对 `git status` / `git log -1`。
 
 ## 目录结构
 
@@ -16,8 +16,6 @@
 | `specs/` | 对外契约：网络协议、渲染管线、资产格式、启动与认证、命令行参数 | 规格梳理阶段 |
 | `modules/` | 每个待实现模块的设计文档（一份一个模块） | **写该模块代码之前** |
 | `decisions/` | 决策记录 ADR，一条决策一个文件，只追加不修改历史 | 做出决策的当下 |
-| `repro/` | 最小复现用例库的约定（用例本体放在 `tests/<工程>/Repro/`） | 报缺陷与修缺陷时 |
-| `milestones/` | 里程碑范围、验收标准、性能基线数据 | 规划与收尾时 |
 | `_templates/` | 文档模板，新建文档时复制 | 新建文档时 |
 
 守卫规则：
@@ -70,7 +68,7 @@
 - 允许写的是**任何一台机器拉下来都能用的经验**：可复现的命令与参数、可对照的数值（耗时、条目数、哈希）、
   观察到的行为规律（"当地址族不可达时逐地址连接会一路等超时"）、以及由此得出的代码决策。
 - 判断标准一句话：**换一台电脑，这条结论还成立吗？** 不成立的写进本机笔记，不进仓库。
-- 环境相关的阻塞可以出现在 `docs/STATE.md`，但必须表述为"当前进展受限于何种条件"，而不是"我这台机器出了什么事"。
+- 环境相关的阻塞记在对应的 Issue 里，但必须表述为"当前进展受限于何种条件"，而不是"我这台机器出了什么事"。
 - 风险登记册同理：登记**产品风险**（用户网络环境差异、平台差异），不登记某次本地事故的现场记录。
 
 ## 模块文档必须回答的问题
@@ -94,11 +92,7 @@
 
 <!-- BEGIN GENERATED: docs -->
 
-| 文档 | 摘要 | 状态 | 最后更新 |
-| --- | --- | --- | --- |
-| [`STATE.md`](STATE.md) | 方块实体与方块模型几何（T-759 / T-041）。 | 未标注 | 2026-11-14 |
-| [`risks.md`](risks.md) | 未解决的不确定性：概率 / 影响 / 缓解 / 复查条件 | 活文档 | - |
-| [`traceability.md`](traceability.md) | 规格章节 ↔ 测试 ↔ 代码目录，一行一个任务 | 活文档 | - |
+（本目录暂无文档。）
 
 子目录：
 
@@ -107,11 +101,8 @@
 | [`analysis/`](analysis/README.md) | 49 |
 | [`architecture/`](architecture/README.md) | 4 |
 | [`decisions/`](decisions/README.md) | 33 |
-| [`handoff/`](handoff/README.md) | 1 |
-| [`milestones/`](milestones/README.md) | 2 |
 | [`modules/`](modules/README.md) | 31 |
-| [`repro/`](repro/README.md) | 0 |
-| [`specs/`](specs/README.md) | 39 |
+| [`specs/`](specs/README.md) | 38 |
 | [`src/`](src/README.md) | 17 |
 | [`tools/`](tools/README.md) | 1 |
 
