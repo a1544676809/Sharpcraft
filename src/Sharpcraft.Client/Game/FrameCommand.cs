@@ -417,7 +417,9 @@ internal static partial class FrameCommand
                             ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
                             ChestMaterial: BlockEntityMaterialOf(world, blockX, record.Y, blockZ, record.TypeId),
                             HasBook: HasBookOf(world, blockX, record.Y, blockZ),
-                            Items: itemSlots,
+                            Items: BrushableItemsOf(record, itemSlots),
+                            Dusted: DustedOf(world, blockX, record.Y, blockZ),
+                            HitDirection: BrushableHitDirectionOf(record),
                             ShelfAlignItemsToBottom: shelfAlign,
                             SkullType: skullType,
                             SkullWall: skullWall,
@@ -1039,7 +1041,9 @@ internal static partial class FrameCommand
                         ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
                         ChestMaterial: BlockEntityMaterialOf(world, blockX, record.Y, blockZ, record.TypeId),
                         HasBook: HasBookOf(world, blockX, record.Y, blockZ),
-                        Items: itemSlots,
+                        Items: BrushableItemsOf(record, itemSlots),
+                        Dusted: DustedOf(world, blockX, record.Y, blockZ),
+                        HitDirection: BrushableHitDirectionOf(record),
                         ShelfAlignItemsToBottom: shelfAlign,
                         SkullType: skullType,
                         SkullWall: skullWall,
@@ -1201,6 +1205,52 @@ internal static partial class FrameCommand
 
         Sharpcraft.Client.World.BlockEntityData.TryReadItems(record, registry, out var slots);
         return slots;
+    }
+
+    /// <summary>
+    /// Reads a brushable block's single item and maps it into the fixed slot snapshot used by the
+    /// shared item mesher. Non-brushable or malformed records keep the normal shelf/campfire slots.
+    /// </summary>
+    private static Sharpcraft.Client.World.BlockEntityItemSlots BrushableItemsOf(
+        Sharpcraft.Common.World.BlockEntityRecord record,
+        Sharpcraft.Client.World.BlockEntityItemSlots fallback)
+    {
+        if (Sharpcraft.Client.Render.EntityModelResolver.Items is not { } registry)
+        {
+            return fallback;
+        }
+
+        return Sharpcraft.Client.World.BlockEntityData.TryReadBrushable(record, registry, out var data) && !data.Item.IsEmpty
+            ? new Sharpcraft.Client.World.BlockEntityItemSlots(Slot0: data.Item)
+            : fallback;
+    }
+
+    /// <summary>Reads a brushable block's hit direction, or None when absent.</summary>
+    private static Sharpcraft.Client.World.HitDirection BrushableHitDirectionOf(
+        Sharpcraft.Common.World.BlockEntityRecord record)
+    {
+        if (Sharpcraft.Client.Render.EntityModelResolver.Items is not { } registry)
+        {
+            return Sharpcraft.Client.World.HitDirection.None;
+        }
+
+        Sharpcraft.Client.World.BlockEntityData.TryReadBrushable(record, registry, out var data);
+        return data.HitDirection;
+    }
+
+    /// <summary>The brushable block's <c>dusted</c> block-state property, zero when absent or malformed.</summary>
+    private static byte DustedOf(ClientWorld world, int x, int y, int z)
+    {
+        if (!Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
+                world.GetBlockState(x, y, z),
+                "dusted",
+                out var dusted)
+            || !byte.TryParse(dusted, out var value))
+        {
+            return 0;
+        }
+
+        return value;
     }
 
     /// <summary>
@@ -1449,7 +1499,9 @@ internal static partial class FrameCommand
                     ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
                     ChestMaterial: BlockEntityMaterialOf(world, blockX, record.Y, blockZ, record.TypeId),
                     HasBook: HasBookOf(world, blockX, record.Y, blockZ),
-                    Items: itemSlots,
+                    Items: BrushableItemsOf(record, itemSlots),
+                    Dusted: DustedOf(world, blockX, record.Y, blockZ),
+                    HitDirection: BrushableHitDirectionOf(record),
                     ShelfAlignItemsToBottom: shelfAlign,
                     SkullType: skullType,
                     SkullWall: skullWall,
