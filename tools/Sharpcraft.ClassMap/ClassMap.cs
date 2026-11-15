@@ -224,9 +224,9 @@ public static class ClassMapTool
         return (entries.Count, injected, unannotated.Count);
     }
 
-    private static readonly Regex DocRefPattern = new(@"ref://mc-26\.3-analysis/([^\s`]+)", RegexOptions.Compiled);
+    private static readonly Regex DocRefPattern = new(@"ref://mc-26\.3-analysis/([^\s`、，]+)", RegexOptions.Compiled);
 
-    private static string? NormaliseDocRef(string raw)
+    private static IEnumerable<string> ExpandDocRef(string raw)
     {
         var path = raw;
         var hash = path.IndexOf('#');
@@ -235,17 +235,31 @@ public static class ClassMapTool
             path = path[..hash];
         }
 
-        path = Regex.Replace(path, @":\d+(-\d+)?$", string.Empty);
+        // One entry may carry several line ranges: :98-197,199-268,283-305.
+        path = Regex.Replace(path, @":\d+(-\d+)?(,\d+(-\d+)?)*$", string.Empty);
         path = path.TrimEnd(')', ']', '"', '\'', '`', ',', ';', '.', ':', '、', '。', '，');
 
-        // Only real Java files are checked: brace shorthand, placeholders, bare workspace paths and
-        // markdown link fragments all end up here otherwise.
-        if (!path.EndsWith(".java", StringComparison.Ordinal) || path.Contains('{') || path.Contains('*') || path.EndsWith("....java", StringComparison.Ordinal))
+        if (!path.EndsWith(".java", StringComparison.Ordinal) || path.Contains('*') || path.EndsWith("....java", StringComparison.Ordinal))
         {
-            return null;
+            yield break;
         }
 
-        return path;
+        // Brace shorthand lists several files that share a prefix and suffix; every alternative has
+        // to be checked, otherwise a wrong one hides behind the valid one.
+        var open = path.IndexOf('{');
+        var close = path.IndexOf('}');
+        if (open < 0 || close < open)
+        {
+            yield return path;
+            yield break;
+        }
+
+        var prefix = path[..open];
+        var suffix = path[(close + 1)..];
+        foreach (var part in path[(open + 1)..close].Split(','))
+        {
+            yield return prefix + part.Trim() + suffix;
+        }
     }
     private static HashSet<string> LoadRefsBaseline(string root)
     {
@@ -440,15 +454,12 @@ public static class ClassMapTool
                     {
                         foreach (Match match in DocRefPattern.Matches(lines[line]))
                         {
-                            var rel = NormaliseDocRef(match.Groups[1].Value);
-                            if (rel is null)
+                            foreach (var rel in ExpandDocRef(match.Groups[1].Value))
                             {
-                                continue;
-                            }
-
-                            if (!File.Exists(Path.Combine(analysisRoot, rel.Replace('/', Path.DirectorySeparatorChar))))
-                            {
-                                violations.Add($"doc reference not found: {relative}:{line + 1} -> {match.Groups[1].Value}");
+                                if (!File.Exists(Path.Combine(analysisRoot, rel.Replace('/', Path.DirectorySeparatorChar))))
+                                {
+                                    violations.Add($"doc reference not found: {relative}:{line + 1} -> {rel}");
+                                }
                             }
                         }
                     }
