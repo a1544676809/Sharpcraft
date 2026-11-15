@@ -70,7 +70,14 @@ public sealed class ShulkerBoxMesher
     /// <summary>Builds shulker box geometry for every shulker box in the span.</summary>
     /// <param name="entities">Block entities in world space.</param>
     /// <param name="sprite">Atlas rect used for the faces.</param>
-    public DynamicGeometry Build(ReadOnlySpan<BlockEntityRenderState> entities, SpriteRect sprite)
+    public DynamicGeometry Build(ReadOnlySpan<BlockEntityRenderState> entities, ItemAtlas atlas) =>
+        Build(entities, color => atlas.Get(ChestAtlas.ShulkerTexture(color)));
+
+    /// <summary>Builds with one sprite for every box, for callers that have no atlas.</summary>
+    public DynamicGeometry Build(ReadOnlySpan<BlockEntityRenderState> entities, SpriteRect sprite) =>
+        Build(entities, _ => sprite);
+
+    private DynamicGeometry Build(ReadOnlySpan<BlockEntityRenderState> entities, Func<int, SpriteRect?> spriteFor)
     {
         _geometry.Clear();
         LastEntityCount = 0;
@@ -98,6 +105,12 @@ public sealed class ShulkerBoxMesher
             }
 
             var entityStart = vertexFloats;
+            var sprite = spriteFor(entity.ChestMaterial);
+            if (sprite is null)
+            {
+                continue;
+            }
+
             var lightSky = entity.Sky / 15f;
             var lightBlock = entity.Block / 15f;
 
@@ -123,8 +136,10 @@ public sealed class ShulkerBoxMesher
                 texDz: 16);
 
             // The lid overlaps the base and lifts as the box opens.
+            var baseIndexStart = indexCount;
             var lidBottom = LidBottom - (LidRise * entity.Open);
             var lidStart = vertexFloats;
+            var lidIndexStart = indexCount;
             EntityPlaceholderMesher.AppendBox(
                 _geometry,
                 new Vector3(0f, lidBottom, 0f),
@@ -145,6 +160,11 @@ public sealed class ShulkerBoxMesher
                 texDy: 12,
                 texDz: 16);
 
+            // Model space runs the other way up, so the matrix flips handedness and every box comes out
+            // wound backwards; reverse both index ranges so the faces survive back face culling.
+            ReverseWinding(_geometry, 0, baseIndexStart);
+            ReverseWinding(_geometry, lidIndexStart, indexCount);
+
             // The lid turns about the vertical line through the middle of the block, not its own centre.
             RotateAboutY(_geometry, lidStart, vertexFloats, LidTurnDegrees * entity.Open);
 
@@ -158,6 +178,15 @@ public sealed class ShulkerBoxMesher
         _geometry.IndexCount = indexCount;
 
         return _geometry;
+    }
+
+    /// <summary>Swaps the second and third index of every triangle in a range.</summary>
+    private static void ReverseWinding(DynamicGeometry geometry, int start, int end)
+    {
+        for (var i = start; i + 2 < end; i += 3)
+        {
+            (geometry.Indices[i + 1], geometry.Indices[i + 2]) = (geometry.Indices[i + 2], geometry.Indices[i + 1]);
+        }
     }
 
     /// <summary>Turns vertices about the vertical line through x=0 and z=0.</summary>

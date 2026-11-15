@@ -19,6 +19,15 @@ namespace Sharpcraft.Client.Render;
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.Sheets", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/Sheets.java")]
 public static class ChestAtlas
 {
+    /// <summary>Shulker box textures in dye order, with the undyed default first.</summary>
+    public static readonly string[] ShulkerTextures =
+    [
+    ];
+
+    /// <summary>Texture a shulker box uses for a dye index, or the undyed default.</summary>
+    public static string ShulkerTexture(int color) =>
+        color >= 0 && color < 16 ? ShulkerTextures[color + 1] : ShulkerTextures[0];
+
     /// <summary>Symbolic name of the sheet in the reference.</summary>
     public const string SheetPath = "textures/atlas/chest.png";
 
@@ -47,6 +56,7 @@ public static class ChestAtlas
         "entity/chest/christmas",
         "entity/chest/christmas_left",
         "entity/chest/christmas_right",
+
     ];
 
     /// <summary>Texture the model uses when the material is plain wood.</summary>
@@ -60,7 +70,15 @@ public static class ChestAtlas
     public static ItemAtlas Load(ResourceManager resources)
     {
         ArgumentNullException.ThrowIfNull(resources);
-        return ItemAtlas.Load(resources, Textures);
+        foreach (var path in ShulkerTextures)
+        {
+            if (resources.Read(Sharpcraft.Assets.ResourceKind.Texture, new Sharpcraft.Common.Identifiers.Identifier("minecraft", path)) is null)
+            {
+                Console.WriteLine($"shulker texture missing: {path}");
+            }
+        }
+
+        return ItemAtlas.Load(resources, [.. Textures, .. ShulkerTextures]);
     }
 
     /// <summary>

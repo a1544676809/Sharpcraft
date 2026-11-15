@@ -412,7 +412,9 @@ internal static partial class FrameCommand
                     ? ShulkerFacingOf(world, blockX, record.Y, blockZ)
                     : FacingOf(world, blockX, record.Y, blockZ),
                             ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
-                            ChestMaterial: ChestMaterialOf(world, blockX, record.Y, blockZ),
+                            ChestMaterial: Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(record.TypeId)
+                                ? ShulkerColorOf(world, blockX, record.Y, blockZ)
+                                : ChestMaterialOf(world, blockX, record.Y, blockZ),
                             Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
                 }
             }
@@ -425,7 +427,8 @@ internal static partial class FrameCommand
                     var otherStates = new List<Sharpcraft.Client.Render.BlockEntityRenderState>(states.Count);
                     foreach (var state in states)
                     {
-                        if (Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(state.TypeId))
+                        if (Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(state.TypeId)
+                            || Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(state.TypeId))
                         {
                             chestStates.Add(state);
                         }
@@ -435,13 +438,26 @@ internal static partial class FrameCommand
                         }
                     }
 
+
                     if (chestStates.Count > 0 && chestAtlas is not null)
                     {
                         var chestMesher = new Sharpcraft.Client.Render.ChestMesher();
                         blockEntityGeometry = chestMesher.Build(
                             System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates),
                             chestAtlas);
-                        Console.WriteLine($"block entities: {chestMesher.LastEntityCount} chests, {blockEntityGeometry.IndexCount / 3} triangles");
+                        Console.WriteLine($"block entities: {chestMesher.LastEntityCount} chests, {blockEntityGeometry?.IndexCount / 3 ?? 0} tri");
+
+                        var shulkerMesher = new Sharpcraft.Client.Render.ShulkerBoxMesher();
+                        var shulkerGeometry = shulkerMesher.Build(
+                            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates),
+                            chestAtlas);
+                        if (shulkerMesher.LastEntityCount > 0)
+                        {
+                            blockEntityGeometry = blockEntityGeometry is null
+                                ? shulkerGeometry
+                                : Combine(blockEntityGeometry, shulkerGeometry);
+                            Console.WriteLine($"block entities: {shulkerMesher.LastEntityCount} shulker boxes, {shulkerGeometry.IndexCount / 3} tri");
+                        }
                     }
 
                     if (otherStates.Count > 0)
@@ -1231,6 +1247,37 @@ internal static partial class FrameCommand
         };
     }
 
+    /// <summary>Dye index of a shulker box, or 255 for the undyed default. The reference orders the sixteen colours the way its dye enum does.</summary>
+    private static byte ShulkerColorOf(ClientWorld world, int x, int y, int z)
+    {
+        var block = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(world.GetBlockState(x, y, z));
+        if (block is null)
+        {
+            return 255;
+        }
+
+        return block.Value.Path switch
+        {
+            "white_shulker_box" => 0,
+            "orange_shulker_box" => 1,
+            "magenta_shulker_box" => 2,
+            "light_blue_shulker_box" => 3,
+            "yellow_shulker_box" => 4,
+            "lime_shulker_box" => 5,
+            "pink_shulker_box" => 6,
+            "gray_shulker_box" => 7,
+            "light_gray_shulker_box" => 8,
+            "cyan_shulker_box" => 9,
+            "purple_shulker_box" => 10,
+            "blue_shulker_box" => 11,
+            "brown_shulker_box" => 12,
+            "green_shulker_box" => 13,
+            "red_shulker_box" => 14,
+            "black_shulker_box" => 15,
+            _ => 255
+        };
+    }
+
     /// <summary>Packs a block position the way the reference does.</summary>
     private static long PositionKey(int x, int y, int z) =>
         ((long)x & 0x3FFFFFF) << 38 | ((long)z & 0x3FFFFFF) << 12 | ((long)y & 0xFFF);
@@ -1354,12 +1401,20 @@ internal static partial class FrameCommand
         var span = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates);
         var chestGeometry = frame.Mesher.Build(span, chestAtlas);
         var shulkerSprite = chestAtlas.Get("entity/shulker/shulker");
+        if (Sharpcraft.Client.Game.GameOptions.Get("MC_DEBUG_MODELS") is { Length: > 0 })
+        {
+            Console.WriteLine($"shulker atlas: contains={chestAtlas.Contains("entity/shulker/shulker")} chest={chestAtlas.Contains("entity/chest/normal")}");
+        }
         if (shulkerSprite is null)
         {
             return chestGeometry;
         }
 
         var shulkerGeometry = frame.ShulkerMesher.Build(span, shulkerSprite);
+        if (Sharpcraft.Client.Game.GameOptions.Get("MC_DEBUG_MODELS") is { Length: > 0 })
+        {
+            Console.WriteLine($"shulker geometry: {frame.ShulkerMesher.LastEntityCount} boxes, {shulkerGeometry.IndexCount / 3} tri, sprite={(shulkerSprite is null ? "null" : "ok")}");
+        }
         if (frame.ShulkerMesher.LastEntityCount == 0)
         {
             return chestGeometry;

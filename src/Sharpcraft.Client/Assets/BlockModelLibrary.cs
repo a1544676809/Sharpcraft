@@ -69,7 +69,7 @@ public sealed class BlockModelLibrary
         }
 
         var resolved = Build(blockId);
-        if (resolved is not null)
+        if (resolved is { Length: > 0 })
         {
             ElementModelCount++;
         }
@@ -127,7 +127,21 @@ public sealed class BlockModelLibrary
         // can apply the same first variant rule the rest of the pipeline uses.
         var modelId = _modelLookup(blockId);
         var elements = modelId is { } model ? _elements.Resolve(model) : null;
-        if (elements is null || elements.Count == 0 || IsPlainCube(elements))
+        if (elements is null)
+        {
+            // No model definition at all: the block draws as a plain cube.
+            return null;
+        }
+
+        if (elements.Count == 0)
+        {
+            // A definition with no elements draws nothing, exactly like the reference. Chests and
+            // shulker boxes rely on this: their block models carry only a particle texture, and the
+            // visible geometry comes from the block entity renderer instead.
+            return [];
+        }
+
+        if (IsPlainCube(elements))
         {
             return null;
         }

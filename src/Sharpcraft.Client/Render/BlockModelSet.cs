@@ -43,11 +43,9 @@ public sealed class BlockModelSet
 
         foreach (var entry in layout.Blocks)
         {
-            // A block drawn by its own block entity renderer must not also be cubed: its block id usually
-            // has no usable model or texture, so the cube path would paint a missing sprite where the
-            // real geometry goes. Marking it with an empty quad list keeps it out of that path, and the
-            // emitter then contributes nothing for it.
-            var resolved = IsBlockEntityRendered(entry.Id) ? [] : library.Resolve(entry.Id);
+            // A block whose model has no elements contributes nothing here, exactly like the reference;
+            // anything it draws comes from its block entity renderer.
+            var resolved = library.Resolve(entry.Id);
             if (resolved is null)
             {
                 continue;
