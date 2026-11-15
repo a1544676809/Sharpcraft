@@ -7,9 +7,9 @@
 
 - 项目宪章（最高约束）：[`AGENTS.md`](AGENTS.md)
 - 文档总索引：[`docs/README.md`](docs/README.md)
-- 当前进度与下一步：[`docs/STATE.md`](docs/STATE.md)
-- 里程碑与出口条件：[`docs/milestones/roadmap.md`](docs/milestones/roadmap.md)
-- 追踪矩阵（规格 ↔ 测试 ↔ 代码）：[`docs/traceability.md`](docs/traceability.md)
+- 当前进度与下一步：[Issue 跟踪器](http://100.68.153.10:28080/a1544676809/Sharpcraft/issues)
+- 里程碑与出口条件：[Milestones](http://100.68.153.10:28080/a1544676809/Sharpcraft/milestones)
+- 追踪矩阵（规格 ↔ 测试 ↔ 代码）：[Issues](http://100.68.153.10:28080/a1544676809/Sharpcraft/issues)
 
 ## 现在能做什么
 
@@ -22,7 +22,7 @@
 | 方块状态 → 纹理（`blockstates` + `models` 解析） | 1019/1286 方块有纹理（79%） |
 | 多账号与离线登录闸门（原则 7.1） | 已实现，闸门关闭路径已验 |
 
-尚未实现：输入与移动、实体、聊天、流体与特殊方块渲染（详见 `docs/STATE.md`）。
+尚未实现：输入与移动、实体、聊天、流体与特殊方块渲染（详见 Issue 跟踪器）。
 
 ## 环境要求
 
@@ -75,5 +75,5 @@ benchmarks/                 性能基线套件与结果记录
 
 ## 参与贡献
 
-提交前请先读 [`AGENTS.md`](AGENTS.md)：文档先行、规格即矩阵、测试列非空才算完成、热路径零分配、提交内同步 `docs/STATE.md`。
+提交前请先读 [`AGENTS.md`](AGENTS.md)：文档先行、规格即矩阵、测试列非空才算完成、热路径零分配、提交内更新对应 Issue。
 新增文档必须登记进 `docs/README.md`，否则文档漂移检查会让构建失败。
