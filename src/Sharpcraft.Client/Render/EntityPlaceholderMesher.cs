@@ -144,7 +144,8 @@ public sealed class EntityPlaceholderMesher
         int texV = 0,
         int texDx = 0,
         int texDy = 0,
-        int texDz = 0)
+        int texDz = 0,
+        int textureSize = (int)SheetSize)
     {
         var transform = entityTransform ?? new EntityModelTransform(Vector3.Zero, 0f, 0f, 1f);
         // Six rectangles fit in a stack buffer, so a box no longer allocates one array per build.
@@ -167,7 +168,10 @@ public sealed class EntityPlaceholderMesher
         var maxZ = feet.Z + halfDepth;
 
         // +X (East), -X (West), +Y (Up), -Y (Down), +Z (South), -Z (North); winding unchanged (T-849).
-        var scale = texDx > 0 && texDy > 0 && texDz > 0 ? SheetSize : 1f;
+        // Texture pixels are normalised against the source sheet's size; the default keeps the 64x64
+        // behaviour every existing caller relies on (byte for byte), while models on 32x32 sheets
+        // such as the bell pass their own size.
+        var scale = texDx > 0 && texDy > 0 && texDz > 0 ? textureSize : 1f;
         AppendFace(geometry, new Vector3(maxX, minY, maxZ), new Vector3(maxX, minY, minZ), new Vector3(maxX, maxY, minZ), new Vector3(maxX, maxY, maxZ), red, green, blue, sprite, uvs[0], scale, ref vertexFloats, ref indexCount, transform, sky, block);
         AppendFace(geometry, new Vector3(minX, minY, minZ), new Vector3(minX, minY, maxZ), new Vector3(minX, maxY, maxZ), new Vector3(minX, maxY, minZ), red, green, blue, sprite, uvs[1], scale, ref vertexFloats, ref indexCount, transform, sky, block);
         AppendFace(geometry, new Vector3(maxX, maxY, minZ), new Vector3(minX, maxY, minZ), new Vector3(minX, maxY, maxZ), new Vector3(maxX, maxY, maxZ), red, green, blue, sprite, uvs[2], scale, ref vertexFloats, ref indexCount, transform, sky, block);

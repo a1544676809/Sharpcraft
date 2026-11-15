@@ -19,7 +19,8 @@ public static class BlockEntityRenderers
     public static IBlockEntityRenderer[] Create() =>
     [
         new ChestBlockEntityRenderer(),
-        new ShulkerBoxBlockEntityRenderer()
+        new ShulkerBoxBlockEntityRenderer(),
+        new BellBlockEntityRenderer()
     ];
 
     /// <summary>Whether any registered renderer draws this block entity type.</summary>
@@ -55,6 +56,19 @@ public static class BlockEntityRenderers
         private readonly ShulkerBoxMesher _mesher = new();
 
         public bool Handles(int typeId) => VanillaBlockEntityTypes.IsShulkerBox(typeId);
+
+        public int LastEntityCount => _mesher.LastEntityCount;
+
+        public DynamicGeometry? Build(ReadOnlySpan<BlockEntityRenderState> entities, ItemAtlas atlas) =>
+            _mesher.Build(entities, atlas);
+    }
+
+    /// <summary>Adapts the bell mesher to the renderer contract.</summary>
+    private sealed class BellBlockEntityRenderer : IBlockEntityRenderer
+    {
+        private readonly BellMesher _mesher = new();
+
+        public bool Handles(int typeId) => typeId == VanillaBlockEntityTypes.Bell;
 
         public int LastEntityCount => _mesher.LastEntityCount;
 

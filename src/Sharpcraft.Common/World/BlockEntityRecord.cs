@@ -26,6 +26,7 @@ public static class VanillaBlockEntityTypes
     public const int TrappedChest = 2;
     public const int EnderChest = 3;
     public const int ShulkerBox = 24;
+    public const int Bell = 30;
     public const int PotentSulfur = 48;
 
     private static readonly string[] Paths =
