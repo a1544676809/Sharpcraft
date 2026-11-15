@@ -463,13 +463,18 @@ public sealed class ClientWorld
 
         // Vanilla creates a block entity as soon as the new state carries one. Without this a chest placed
         // after its chunk loaded never reaches a renderer, however correct the rest of the chain is.
-        if (Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(state) is { } blockId)
+        // Level.setBlock creates the block entity when the new state carries one and drops it when the
+        // state does not, so breaking a chest removes it here as well (issues 22 and 24).
+        var newTypeId = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(state) is { } blockId
+            ? Sharpcraft.Common.World.VanillaBlockEntityTypes.IdOf(blockId.Path)
+            : -1;
+        if (newTypeId >= 0 && Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(newTypeId))
         {
-            var typeId = Sharpcraft.Common.World.VanillaBlockEntityTypes.IdOf(blockId.Path);
-            if (typeId >= 0 && Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(typeId))
-            {
-                chunk.AddBlockEntity(new Sharpcraft.Common.World.BlockEntityRecord(localX, y, localZ, typeId));
-            }
+            chunk.AddBlockEntity(new Sharpcraft.Common.World.BlockEntityRecord(localX, y, localZ, newTypeId));
+        }
+        else
+        {
+            chunk.RemoveBlockEntity(localX, y, localZ);
         }
 
         // A change on a seam changes which faces the neighbour draws, so both columns go stale.

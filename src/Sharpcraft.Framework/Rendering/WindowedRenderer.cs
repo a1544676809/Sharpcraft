@@ -511,12 +511,16 @@ public static class WindowedRenderer
 
             // The reference extracts the visible block entities every frame, so a block placed after the
             // world loaded appears on the next frame instead of waiting for a restart.
-            if (request.BlockEntityPerFrame is { } blockEntitiesPerFrame &&
-                blockEntitiesPerFrame() is { } refreshedBlockEntities &&
-                !ReferenceEquals(refreshedBlockEntities, appliedBlockEntities))
+            if (request.BlockEntityPerFrame is { } blockEntitiesPerFrame)
             {
-                appliedBlockEntities = refreshedBlockEntities;
-                blockEntitySubmission.Upload(refreshedBlockEntities, blockEntityAtlas.BindGroup);
+                var refreshedBlockEntities = blockEntitiesPerFrame();
+                if (!ReferenceEquals(refreshedBlockEntities, appliedBlockEntities))
+                {
+                    // A null result means the last block entity went away; upload empty geometry so the
+                    // previous one stops drawing instead of staying on screen (issues 22 and 24).
+                    appliedBlockEntities = refreshedBlockEntities;
+                    blockEntitySubmission.Upload(refreshedBlockEntities ?? new DynamicGeometry(), blockEntityAtlas.BindGroup);
+                }
             }
 
             if (atlasSource is not null && atlasSource.Version != appliedAtlasVersion)
