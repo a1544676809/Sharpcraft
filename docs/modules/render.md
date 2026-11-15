@@ -579,13 +579,13 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 <!-- simplification:SIM-BE-CAMPFIRE-FLAME task:T-47 -->
 
-### SIM-BE-SKULL-VARIANTS：Skull 特殊头型仅缺 DRAGON
+### SIM-BE-SKULL-VARIANTS：Skull 头型无剩余变体
 
-- **简化了什么**：`SkullRenderer` 覆盖 `SKELETON` / `WITHER_SKELETON` / `ZOMBIE` / `CREEPER` / `PLAYER` / `PIGLIN` 的静态头模型；`DRAGON` 及其他特殊头型跳过。
-- **为什么**：本切片复用 `SkullModel.createMobHeadLayer()`、`createHumanoidHeadLayer()` 与 `PiglinModelDefinition` 的 head-only 盒；DRAGON 需要独立模型层，后续任务补齐。
-- **对等效性的影响**：六种支持头型的方块头/墙头静态外观按源模型；DRAGON 头完全不绘制。
-- **状态**：受控偏差，计划由 T-47（#48 批次）后续特殊头型切片跟进（Issue #75、#77、#79）。
-- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/SkullRendererTests.cs` 覆盖六种头型的 ground/wall、Player head+hat 与 Piglin head 最终顶点/UV；接入 DRAGON 后补单方块像素对比。
+- **简化了什么**：`SkullRenderer` 覆盖 `SKELETON` / `WITHER_SKELETON` / `ZOMBIE` / `CREEPER` / `PLAYER` / `PIGLIN` / `DRAGON` 的静态头模型。
+- **为什么**：本切片已补齐所有已知的 skull 头型；后续只保留动画/皮肤缓存等独立简化。
+- **对等效性的影响**：七种支持头型的方块头/墙头静态外观按源模型；无剩余因头型缺失导致的不可见分支。
+- **状态**：已验证，无剩余变体（Issue #75、#77、#79、#81）。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/SkullRendererTests.cs` 覆盖七种头型的 ground/wall、Player head+hat、Piglin head 与 Dragon 7-box 最终顶点/UV。
 
 <!-- simplification:SIM-BE-SKULL-VARIANTS task:T-47 -->
 
@@ -598,6 +598,17 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收证据**：`tests/Sharpcraft.Client.Tests/Render/SkullRendererTests.cs` 覆盖 Player head+hat bounds/UV、纹理/rect 映射；接入 skin cache 后补 profile 真值与单方块像素对比。
 
 <!-- simplification:SIM-BE-SKULL-PLAYER-SKIN task:T-47 -->
+
+### SIM-BE-SKULL-DRAGON-ANIM：Dragon 颌部动画未接
+
+- **简化了什么**：`SkullModel.setupAnim` 的龙颌 `jaw.xRot` 摆动未应用；静态模型使用默认 jaw pose。
+- **为什么**：本切片先固定静态 head/jaw 几何；动画需要 SkullBlockEntity 的 animationPos 状态通道。
+- **对等效性的影响**：Dragon 头的静态轮廓/位置一致；被动画驱动时 jaw 不摆动。
+- **状态**：受控偏差，计划由 #48 后续 Dragon 动画切片跟进（Issue #81）。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/SkullRendererTests.cs` 覆盖 Dragon 7 box 静态 bounds/UV；动画接入后补时间序列真值。
+
+<!-- simplification:SIM-BE-SKULL-DRAGON-ANIM task:T-47 -->
+
 
 
 ### SIM-BE-SKULL-ZOFFSET：Skull 不应用 entityCutoutZOffset

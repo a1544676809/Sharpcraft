@@ -23,7 +23,8 @@ public sealed class SkullRendererTests
         SkullType.Zombie,
         SkullType.Creeper,
         SkullType.Player,
-        SkullType.Piglin
+        SkullType.Piglin,
+        SkullType.Dragon
     ];
 
     [Fact]
@@ -42,8 +43,55 @@ public sealed class SkullRendererTests
         Assert.Equal(8f, head.Depth);
         Assert.Equal(0, head.TextureX);
         Assert.Equal(0, head.TextureY);
+        Assert.Equal(1f, head.ScaleX);
+        Assert.Equal(1f, head.ScaleY);
+        Assert.Equal(1f, head.ScaleZ);
         Assert.True(ChestAtlas.Textures.Length == 22);
-        Assert.Equal(6, ChestAtlas.SkullTextures.Length);
+        Assert.Equal(7, ChestAtlas.SkullTextures.Length);
+    }
+
+    [Fact]
+    public void DragonDefinitionHasSevenBoxHeadAndJaw()
+    {
+        Assert.Equal(256, SkullModelDefinition.DragonDefinition.TextureWidth);
+        Assert.Equal(256, SkullModelDefinition.DragonDefinition.TextureHeight);
+        Assert.Equal("entity/enderdragon/dragon", SkullModelDefinition.DragonDefinition.TexturePath);
+        Assert.Equal(7, SkullModelDefinition.DragonDefinition.Parts.Count);
+        Assert.Equal(1f, SkullModelDefinition.DragonDefinition.Parts[0].ScaleX);
+        Assert.Equal(1f, SkullModelDefinition.DragonDefinition.Parts[0].ScaleY);
+        Assert.Equal(1f, SkullModelDefinition.DragonDefinition.Parts[0].ScaleZ);
+        Assert.Same(SkullModelDefinition.DragonDefinition, SkullModelDefinition.DefinitionFor(SkullType.Dragon));
+
+        var mesher = new SkullRenderer();
+        var geometry = mesher.Build(
+            [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.Skull, SkullType: SkullType.Dragon)],
+            DragonAtlas());
+        Assert.Equal(1, mesher.LastEntityCount);
+        Assert.Equal(168, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
+        Assert.Equal(252, geometry.IndexCount);
+        var bounds = Bounds(geometry);
+        Assert.Equal(0.125f, bounds.Min.X, 3);
+        Assert.Equal(-0.0006f, bounds.Min.Y, 3);
+        Assert.Equal(-0.625f, bounds.Min.Z, 3);
+        Assert.Equal(0.875f, bounds.Max.X, 3);
+        Assert.Equal(0.9369f, bounds.Max.Y, 3);
+        Assert.Equal(0.7813f, bounds.Max.Z, 3);
+        AssertVertex(geometry, 0, 0.21875f, 0.42125f, 0.125f, 0.76953f, 0.17188f);
+        AssertVertex(geometry, 1, 0.78125f, 0.42125f, 0.125f, 0.80469f, 0.17188f);
+        AssertVertex(geometry, 2, 0.78125f, 0.42125f, -0.625f, 0.80469f, 0.21875f);
+        AssertVertex(geometry, 4, 0.21875f, 0.18688f, -0.625f, 0.73438f, 0.21875f);
+        AssertVertex(geometry, 8, 0.78125f, 0.42125f, -0.625f, 0.76953f, 0.2334f);
+    }
+
+    [Fact]
+    public void DragonTextureMapsToTheDragonSkinAtlas()
+    {
+        var atlas = DragonAtlas();
+        Assert.Equal("entity/enderdragon/dragon", SkullModelDefinition.TextureFor(SkullType.Dragon));
+        Assert.Equal("entity/enderdragon/dragon", ChestAtlas.SkullTextures[6]);
+        var sprite = ChestAtlas.SpriteForSkull(atlas, SkullType.Dragon);
+        Assert.NotNull(sprite);
+        Assert.Equal(atlas.Get("entity/enderdragon/dragon"), sprite);
     }
 
     [Fact]
@@ -147,8 +195,8 @@ public sealed class SkullRendererTests
         }
 
         Assert.Null(SkullModelDefinition.TextureFor(SkullType.None));
-        Assert.Equal(6, paths.Count);
-        Assert.Equal(6, rects.Count);
+        Assert.Equal(7, paths.Count);
+        Assert.Equal(7, rects.Count);
     }
 
     [Fact]
@@ -161,9 +209,10 @@ public sealed class SkullRendererTests
         Assert.Equal(SkullType.Creeper, SkullModelDefinition.TypeOfPath("creeper_head"));
         Assert.Equal(SkullType.Player, SkullModelDefinition.TypeOfPath("player_head"));
         Assert.Equal(SkullType.Player, SkullModelDefinition.TypeOfPath("player_wall_head"));
-        Assert.Equal(SkullType.None, SkullModelDefinition.TypeOfPath("dragon_head"));
         Assert.Equal(SkullType.Piglin, SkullModelDefinition.TypeOfPath("piglin_head"));
         Assert.Equal(SkullType.Piglin, SkullModelDefinition.TypeOfPath("piglin_wall_head"));
+        Assert.Equal(SkullType.Dragon, SkullModelDefinition.TypeOfPath("dragon_head"));
+        Assert.Equal(SkullType.Dragon, SkullModelDefinition.TypeOfPath("dragon_wall_head"));
         Assert.Equal(SkullType.None, SkullModelDefinition.TypeOfPath(null));
     }
 
@@ -241,6 +290,28 @@ public sealed class SkullRendererTests
         AssertVertex(geometry, 0, 0.1875f, 0.5f, 0.75f, 0.28125f, 0f);
         AssertVertex(geometry, 144, 1.1875f, 0.5f, 0.75f, 0.28125f, 0f);
         AssertVertex(geometry, 2880, 20.1875f, 0.5f, 0.75f, 0.28125f, 0f);
+    }
+
+    [Fact]
+    public void FortyDragonSkullsKeepEveryHeadBoxVertex()
+    {
+        var states = new BlockEntityRenderState[40];
+        for (var i = 0; i < states.Length; i++)
+        {
+            states[i] = new BlockEntityRenderState(
+                i, 0f, 0f, VanillaBlockEntityTypes.Skull,
+                SkullType: SkullType.Dragon);
+        }
+
+        var mesher = new SkullRenderer();
+        var geometry = mesher.Build(states, DragonAtlas());
+
+        Assert.Equal(40, mesher.LastEntityCount);
+        Assert.Equal(6720, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
+        Assert.Equal(10080, geometry.IndexCount);
+        AssertVertex(geometry, 0, 0.21875f, 0.42125f, 0.125f, 0.76953f, 0.17188f);
+        AssertVertex(geometry, 168, 1.21875f, 0.42125f, 0.125f, 0.76953f, 0.17188f);
+        AssertVertex(geometry, 3360, 20.21875f, 0.42125f, 0.125f, 0.76953f, 0.17188f);
     }
 
     [Theory]
@@ -323,6 +394,15 @@ public sealed class SkullRendererTests
         });
     }
 
+    private static ItemAtlas DragonAtlas()
+    {
+        var pixels = new byte[256 * 256 * 4];
+        return ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
+        {
+            [SkullModelDefinition.DragonTexture] = new(256, 256, pixels)
+        });
+    }
+
     private static ItemAtlas Atlas()
     {
         var textures = new Dictionary<string, TextureData>(StringComparer.Ordinal);
@@ -330,7 +410,12 @@ public sealed class SkullRendererTests
         {
             var path = SkullModelDefinition.TextureFor(SupportedTypes[i]);
             Assert.NotNull(path);
-            var height = SupportedTypes[i] is SkullType.Player or SkullType.Piglin ? 64 : 32;
+            var height = SupportedTypes[i] switch
+            {
+                SkullType.Player or SkullType.Piglin => 64,
+                SkullType.Dragon => 256,
+                _ => 32
+            };
             var pixels = new byte[64 * height * 4];
             pixels[0] = (byte)(i + 1);
             textures[path] = new TextureData(64, height, pixels);

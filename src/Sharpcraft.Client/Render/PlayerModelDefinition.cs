@@ -34,6 +34,9 @@ public readonly record struct EntityModelPart
     public float RotationX { get; init; }
     public float RotationY { get; init; }
     public float RotationZ { get; init; }
+    public float ScaleX { get; init; } = 1f;
+    public float ScaleY { get; init; } = 1f;
+    public float ScaleZ { get; init; } = 1f;
     public string? TexturePath { get; init; }
     public float Grow { get; init; }
     public string? Parent { get; init; }
@@ -92,7 +95,10 @@ public readonly record struct EntityModelPart
         int UvHeight = 0,
         int UvDepth = 0,
         Func<EntityRenderState, float>? YOffsetSelector = null,
-        bool UsesItemAtlas = false)
+        bool UsesItemAtlas = false,
+        float ScaleX = 1f,
+        float ScaleY = 1f,
+        float ScaleZ = 1f)
     {
         this.Name = Name;
         this.CentreX = CentreX;
@@ -131,6 +137,9 @@ public readonly record struct EntityModelPart
         this.UvDepth = UvDepth;
         this.YOffsetSelector = YOffsetSelector;
         this.UsesItemAtlas = UsesItemAtlas;
+        this.ScaleX = ScaleX;
+        this.ScaleY = ScaleY;
+        this.ScaleZ = ScaleZ;
     }
 
     /// <summary>Returns a copy with the metadata fields used by model-definition layers overridden.</summary>
@@ -155,7 +164,10 @@ public readonly record struct EntityModelPart
         float? RotationX = null,
         float? RotationY = null,
         float? RotationZ = null,
-        float? PivotY = null)
+        float? PivotY = null,
+        float? ScaleX = null,
+        float? ScaleY = null,
+        float? ScaleZ = null)
     {
         return new EntityModelPart(
             Name ?? this.Name,
@@ -193,7 +205,10 @@ public readonly record struct EntityModelPart
             UvWidth,
             UvHeight,
             UvDepth,
-            YOffsetSelector);
+            YOffsetSelector,
+            ScaleX: ScaleX ?? this.ScaleX,
+            ScaleY: ScaleY ?? this.ScaleY,
+            ScaleZ: ScaleZ ?? this.ScaleZ);
     }
 }
 

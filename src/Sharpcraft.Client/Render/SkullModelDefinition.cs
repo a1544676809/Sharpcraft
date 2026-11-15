@@ -15,7 +15,8 @@ public enum SkullType : byte
     Zombie = 3,
     Creeper = 4,
     Player = 5,
-    Piglin = 6
+    Piglin = 6,
+    Dragon = 7
 }
 
 /// <summary>
@@ -52,11 +53,15 @@ public static class SkullModelDefinition
     /// <summary>Piglin head texture path.</summary>
     public const string PiglinTexture = "entity/piglin/piglin";
 
+    /// <summary>Dragon head texture path.</summary>
+    public const string DragonTexture = "entity/enderdragon/dragon";
+
     /// <summary>Default player skin texture used when no profile skin is available.</summary>
     public static readonly string DefaultPlayerSkinTexture = DefaultPlayerSkin.Default.Path;
 
     private static readonly VanillaMeshDefinition SkullMesh = BuildSkullMesh();
     private static readonly VanillaMeshDefinition PlayerMesh = BuildPlayerSkullMesh();
+    private static readonly VanillaMeshDefinition DragonMesh = BuildDragonSkullMesh();
 
     private static readonly EntityModelPart[] Parts =
         [.. VanillaMeshBake.Bake(SkullMesh, TextureWidth, TextureHeight, modelHeight: 0f)];
@@ -69,6 +74,9 @@ public static class SkullModelDefinition
 
     private static readonly CompiledEntityModel PlayerCompiled =
         VanillaMeshBakery.Build(PlayerMesh, 64, 64, modelHeight: 0f, texturePath: DefaultPlayerSkinTexture);
+
+    private static readonly EntityModelPart[] DragonParts =
+        [.. VanillaMeshBake.Bake(DragonMesh, 256, 256, modelHeight: 0f)];
 
     /// <summary>Baked head definition shared by all supported skull types.</summary>
     public static readonly EntityModelDefinition Definition = new(
@@ -103,11 +111,27 @@ public static class SkullModelDefinition
         LocalTransform = System.Numerics.Matrix4x4.CreateTranslation(0f, -0.5f, 0f)
     };
 
+    /// <summary>Dragon head definition: six head boxes plus the parented jaw.</summary>
+    public static readonly EntityModelDefinition DragonDefinition = new(
+        name: "dragon_skull",
+        textureWidth: 256,
+        textureHeight: 256,
+        parts: DragonParts,
+        faceTransforms: PlayerModelDefinition.DefaultFaceTransforms,
+        texturePath: DragonTexture)
+    {
+        // Source head pose uses PartPose.scaled(0.75); the generic scaled bake emits absolute source-frame
+        // cuboids, so the outer skull pose applies without a renderer-local part matrix.
+        // ref://mc-26.3-analysis/src/net/minecraft/client/model/object/skull/DragonHeadModel.java:14-42
+        // ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/SkullBlockRenderer.java:164-168
+    };
+
     /// <summary>Selects the baked definition for a skull type.</summary>
     public static EntityModelDefinition DefinitionFor(SkullType type) => type switch
     {
         SkullType.Player => PlayerDefinition,
         SkullType.Piglin => PiglinModelDefinition.Head,
+        SkullType.Dragon => DragonDefinition,
         _ => Definition
     };
 
@@ -120,6 +144,7 @@ public static class SkullModelDefinition
         "creeper_head" or "creeper_wall_head" => SkullType.Creeper,
         "player_head" or "player_wall_head" => SkullType.Player,
         "piglin_head" or "piglin_wall_head" => SkullType.Piglin,
+        "dragon_head" or "dragon_wall_head" => SkullType.Dragon,
         _ => SkullType.None
     };
 
@@ -132,6 +157,7 @@ public static class SkullModelDefinition
         SkullType.Creeper => CreeperTexture,
         SkullType.Player => DefaultPlayerSkinTexture,
         SkullType.Piglin => PiglinTexture,
+        SkullType.Dragon => DragonTexture,
         _ => null
     };
 
@@ -154,6 +180,24 @@ public static class SkullModelDefinition
             new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f,
                 MirrorX: false,
                 Overlays: [new("hat", 0.25f, 32, 0)]));
+        return new VanillaMeshDefinition(root);
+    }
+
+    private static VanillaMeshDefinition BuildDragonSkullMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        // DragonHeadModel.createHeadLayer: six head boxes share the scaled head pose; the jaw is a
+        // child with an unscaled local offset. ref://mc-26.3-analysis/src/net/minecraft/client/model/object/skull/DragonHeadModel.java:14-42.
+        var head = root.AddOrReplaceChild("head",
+            VanillaPartPose.Offset(0f, -7.986666f, 0f).Scaled(0.75f),
+            new VanillaCubeDefinition("upper_lip", 176, 44, -6f, -1f, -24f, 12f, 5f, 16f),
+            new VanillaCubeDefinition("upper_head", 112, 30, -8f, -8f, -10f, 16f, 16f, 16f),
+            new VanillaCubeDefinition("scale_left", 0, 0, -5f, -12f, -4f, 2f, 4f, 6f, Mirror: true),
+            new VanillaCubeDefinition("nostril_left", 112, 0, -5f, -3f, -22f, 2f, 2f, 4f, Mirror: true),
+            new VanillaCubeDefinition("scale_right", 0, 0, 3f, -12f, -4f, 2f, 4f, 6f),
+            new VanillaCubeDefinition("nostril_right", 112, 0, 3f, -3f, -22f, 2f, 2f, 4f));
+        head.AddOrReplaceChild("jaw", VanillaPartPose.Offset(0f, 4f, -8f),
+            new VanillaCubeDefinition("jaw", 176, 65, -6f, 0f, -16f, 12f, 4f, 16f));
         return new VanillaMeshDefinition(root);
     }
 }

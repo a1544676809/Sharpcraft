@@ -100,7 +100,10 @@ public static class VanillaMeshBakery
             children,
             firstCube?.VisibleWhen,
             poseSource: firstCube?.PoseSource,
-            tintSelector: firstCube?.TintSelector);
+            tintSelector: firstCube?.TintSelector,
+            scaleX: template.ScaleX,
+            scaleY: template.ScaleY,
+            scaleZ: template.ScaleZ);
     }
 
     private static EntityModelPart BakeCube(
@@ -126,7 +129,10 @@ public static class VanillaMeshBakery
                 rotationZ: part.Pose.RotationZ,
                 texturePath: cube.TexturePath,
                 grow: cube.Grow,
-                kind: cube.Kind);
+                kind: cube.Kind,
+                scaleX: part.Pose.ScaleX,
+                scaleY: part.Pose.ScaleY,
+                scaleZ: part.Pose.ScaleZ);
         }
 
         return VanillaMeshBake.BakeChild(
@@ -143,7 +149,10 @@ public static class VanillaMeshBakery
             rotationZ: part.Pose.RotationZ,
             texturePath: cube.TexturePath,
             grow: cube.Grow,
-            kind: cube.Kind);
+            kind: cube.Kind,
+            scaleX: part.Pose.ScaleX,
+            scaleY: part.Pose.ScaleY,
+            scaleZ: part.Pose.ScaleZ);
     }
 
     private static void Collect(

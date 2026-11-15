@@ -22,7 +22,8 @@
 | R-012 | 附魔台书本状态固定（`SIM-BE-ENCHANT-BOOK-STATE`），不播放漂浮/旋转/翻页动画 | 高 | 附魔台书本动态视觉与原版不同 | 静态书本与源 pose 已按 `BookModelDefinition` 和源默认状态实现；动画待时间/flip/open 状态通道 | 接入附魔台动态状态并完成单方块像素对比时 | 开放 |
 | R-013 | Shelf 物品槽使用 NBT 静态快照（`SIM-BE-SHELF-ITEMS`），不接实时容器更新与移动动画 | 中 | 运行时物品变化可能延迟，移动动画缺失 | 首切片已实现固定槽位、物品模型和源槽位 pose；后续补容器同步 | 接入 Shelf 容器增量同步并完成动态验证时 | 开放 |
 | R-014 | Campfire 火焰/火花/烹饪状态未接入（`SIM-BE-CAMPFIRE-FLAME`） | 高 | 火焰与火花视觉缺失，烹饪状态不可见 | 物品四槽与源 FIXED pose 已实现；火焰待独立状态通道 | 接入 Campfire 火焰/火花状态并完成单方块像素对比时 | 开放 |
-| R-015 | Skull 特殊头型未实现（`SIM-BE-SKULL-VARIANTS`），DRAGON 不绘制 | 中 | DRAGON 头型的方块头/墙头不可见 | 六种静态头型（含默认 Player、Piglin）已实现；DRAGON 特殊模型待独立模型层 | 补齐 DRAGON 特殊头型模型时 | 开放 |
+| R-015 | Skull 特殊头型未实现（`SIM-BE-SKULL-VARIANTS`），无剩余变体 | 中 | 旧切片中曾缺失的头型已全部补入 | 七种静态头型已实现 | 持续回归 | 已解决 |
 | R-016 | Skull 未应用 entityCutoutZOffset（`SIM-BE-SKULL-ZOFFSET`） | 中 | 头像深度顺序/深度偏差与原版不同 | 几何与 UV 已按静态模型实现；偏移依赖 Issue #45 | Issue #45 提供 Z-offset 基础并接入后 | 开放 |
 | R-017 | Skull 动画未接入（`SIM-BE-SKULL-ANIM`） | 中 | 被动画驱动的头部转动缺失 | 静态朝向与几何已实现；动画待状态通道 | 接入 Skull 动画状态并补时间序列真值时 | 开放 |
 | R-018 | Player 头固定默认 slim Steve 皮肤（`SIM-BE-SKULL-PLAYER-SKIN`），不读取 profile/自定义皮肤 | 高 | 自定义皮肤玩家头显示默认皮肤 | 默认 head+hat 模型与纹理已实现；皮肤缓存待后续通道 | 接入玩家皮肤缓存并完成 profile 真值/像素对比时 | 开放 |
+| R-019 | Dragon 颌部动画未接入（`SIM-BE-SKULL-DRAGON-ANIM`） | 中 | Dragon 头的 jaw 不随动画摆动 | 静态 7-box head/jaw 几何已实现；动画待 animationPos 状态通道 | 接入 Dragon 动画状态并补时间序列真值时 | 开放 |

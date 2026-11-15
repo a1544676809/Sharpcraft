@@ -59,9 +59,12 @@ public sealed class EntityModelPartNode
         Func<Sharpcraft.Client.World.EntityRenderState, bool>? visibleWhen = null,
         Func<Sharpcraft.Client.World.EntityRenderState, Vector3>? rotationSelector = null,
         Func<Sharpcraft.Client.World.EntityRenderState, float>? yOffsetSelector = null,
-    Func<Sharpcraft.Client.World.EntityRenderState, System.Numerics.Matrix4x4>? transformSelector = null,
+        Func<Sharpcraft.Client.World.EntityRenderState, System.Numerics.Matrix4x4>? transformSelector = null,
         string? poseSource = null,
-        Func<Sharpcraft.Client.World.EntityRenderState, Vector3>? tintSelector = null)
+        Func<Sharpcraft.Client.World.EntityRenderState, Vector3>? tintSelector = null,
+        float scaleX = 1f,
+        float scaleY = 1f,
+        float scaleZ = 1f)
     {
         Name = name;
         Parent = parent;
@@ -71,6 +74,9 @@ public sealed class EntityModelPartNode
         RotationX = rotationX;
         RotationY = rotationY;
         RotationZ = rotationZ;
+        ScaleX = scaleX;
+        ScaleY = scaleY;
+        ScaleZ = scaleZ;
         CubeArray = cubes as EntityModelCube[] ?? System.Linq.Enumerable.ToArray(cubes);
         ChildArray = children as EntityModelPartNode[] ?? System.Linq.Enumerable.ToArray(children);
         Cubes = CubeArray;
@@ -90,6 +96,9 @@ public sealed class EntityModelPartNode
     public float RotationX { get; }
     public float RotationY { get; }
     public float RotationZ { get; }
+    public float ScaleX { get; }
+    public float ScaleY { get; }
+    public float ScaleZ { get; }
     public IReadOnlyList<EntityModelCube> Cubes { get; }
 
     public IReadOnlyList<EntityModelPartNode> Children { get; }

@@ -100,6 +100,51 @@ public static partial class VanillaMeshBake
 
     private static int RoundDimension(float value) => (int)MathF.Round(value);
 
+    /// <summary>Builds one absolute cuboid for the generic scaled-subtree bake path.</summary>
+    internal static EntityModelPart CreateScaledPart(
+        string name,
+        string? parent,
+        VanillaCubeDefinition cube,
+        float minX,
+        float maxX,
+        float minY,
+        float maxY,
+        float minZ,
+        float maxZ,
+        string? texturePath,
+        int textureWidth,
+        int textureHeight) =>
+        new(
+            name,
+            (minX + maxX) * 0.5f,
+            minY,
+            maxX - minX,
+            maxY - minY,
+            maxZ - minZ,
+            cube.TextureX,
+            cube.TextureY,
+            cube.Mirror,
+            cube.Overlays,
+            CentreZ: (minZ + maxZ) * 0.5f,
+            PivotX: 0f,
+            PivotY: 0f,
+            PivotZ: 0f,
+            TexturePath: texturePath,
+            Grow: cube.Grow,
+            Parent: parent,
+            Kind: cube.Kind,
+            VisibleWhen: cube.VisibleWhen,
+            TextureWidth: textureWidth,
+            TextureHeight: textureHeight,
+            IncludeInEmissive: cube.IncludeInEmissive,
+            EmissiveOnly: cube.EmissiveOnly,
+            GrowXyz: cube.GrowXyz,
+            UvWidth: cube.UvWidth,
+            UvHeight: cube.UvHeight,
+            UvDepth: cube.UvDepth,
+            UsesItemAtlas: cube.UsesItemAtlas,
+            TextureSelector: cube.TextureSelector);
+
     /// <summary>
     /// Bakes a root part from the reference y-down pivot/cube values. This is the exact legacy conversion: the global
     /// X mirror, the y-down to y-up model-height flip, and the pass-through rotations. Root cubes keep an absolute
@@ -127,7 +172,10 @@ public static partial class VanillaMeshBake
         float rotationZ = 0f,
         string? texturePath = null,
         float grow = 0f,
-        EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout)
+        EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout,
+        float scaleX = 1f,
+        float scaleY = 1f,
+        float scaleZ = 1f)
     {
         var sourceCentreX = pivotX + minX + (width * 0.5f);
         var centreX = MathF.Round(mirrorX ? -sourceCentreX : sourceCentreX, 4);
@@ -153,7 +201,10 @@ public static partial class VanillaMeshBake
             RotationZ: rotationZ,
             TexturePath: texturePath,
             Grow: grow,
-            Kind: kind);
+            Kind: kind,
+            ScaleX: scaleX,
+            ScaleY: scaleY,
+            ScaleZ: scaleZ);
     }
 
     /// <summary>
@@ -183,7 +234,10 @@ public static partial class VanillaMeshBake
         float rotationZ = 0f,
         string? texturePath = null,
         float grow = 0f,
-        EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout)
+        EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout,
+        float scaleX = 1f,
+        float scaleY = 1f,
+        float scaleZ = 1f)
     {
         ArgumentException.ThrowIfNullOrEmpty(parent);
         return new EntityModelPart(
@@ -207,6 +261,9 @@ public static partial class VanillaMeshBake
             TexturePath: texturePath,
             Grow: grow,
             Parent: parent,
-            Kind: kind);
+            Kind: kind,
+            ScaleX: scaleX,
+            ScaleY: scaleY,
+            ScaleZ: scaleZ);
     }
 }

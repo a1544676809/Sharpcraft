@@ -12,16 +12,31 @@ namespace Sharpcraft.Client.Render;
 /// <c>PartPose</c>). Conversion to y-up geometry is always delegated to the centralized <c>VanillaMeshBake</c>.
 /// </summary>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.geom.PartPose", "ref://mc-26.3-analysis/src/net/minecraft/client/model/geom/PartPose.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Part pivot/rotation DSL value in the y-down reference frame; converted by VanillaMeshBake")]
-public readonly record struct VanillaPartPose(float X, float Y, float Z, float RotationX = 0f, float RotationY = 0f, float RotationZ = 0f)
+public readonly record struct VanillaPartPose(
+    float X,
+    float Y,
+    float Z,
+    float RotationX = 0f,
+    float RotationY = 0f,
+    float RotationZ = 0f,
+    float ScaleX = 1f,
+    float ScaleY = 1f,
+    float ScaleZ = 1f)
 {
-    /// <summary>Identity pose: pivot at the origin, no rotation.</summary>
-    public static VanillaPartPose Zero => default;
+    /// <summary>Identity pose: pivot at the origin, no rotation and unit scale.</summary>
+    public static VanillaPartPose Zero => new(0f, 0f, 0f, 0f, 0f, 0f, 1f, 1f, 1f);
 
-    /// <summary>A pure translation with no rotation.</summary>
+    /// <summary>A pure translation with no rotation and unit scale.</summary>
     public static VanillaPartPose Offset(float x, float y, float z) => new(x, y, z);
 
-    /// <summary>A translation combined with the three bind-pose rotations.</summary>
+    /// <summary>A translation combined with the three bind-pose rotations and unit scale.</summary>
     public static VanillaPartPose OffsetAndRotation(float x, float y, float z, float rx, float ry, float rz) => new(x, y, z, rx, ry, rz);
+
+    /// <summary>Reference <c>PartPose.scaled(factor)</c>: scales the offset and the three bind scales.</summary>
+    public VanillaPartPose Scaled(float factor) =>
+        factor == 1f
+            ? this
+            : new(X * factor, Y * factor, Z * factor, RotationX, RotationY, RotationZ, ScaleX * factor, ScaleY * factor, ScaleZ * factor);
 }
 
 /// <summary>
@@ -186,6 +201,11 @@ static partial class VanillaMeshBake
         var root = mesh.Root
             ?? throw new InvalidOperationException("VanillaMeshDefinition has no root part; declare one before baking.");
 
+        if (HasNonUnitScale(root))
+        {
+            return BakeScaledAbsolute(mesh, textureWidth, textureHeight, texturePath);
+        }
+
         var parts = new List<EntityModelPart>();
         var producedNames = new HashSet<string>(StringComparer.Ordinal);
 
@@ -197,6 +217,111 @@ static partial class VanillaMeshBake
         }
 
         return parts;
+    }
+
+    private static bool HasNonUnitScale(VanillaPartDefinition part)
+    {
+        if (EffectiveScale(part.Pose.ScaleX) != 1f ||
+            EffectiveScale(part.Pose.ScaleY) != 1f ||
+            EffectiveScale(part.Pose.ScaleZ) != 1f)
+        {
+            return true;
+        }
+
+        foreach (var child in part.Children)
+        {
+            if (HasNonUnitScale(child))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static float EffectiveScale(float value) => value == 0f ? 1f : value;
+
+    /// <summary>
+    /// Bakes a scaled subtree into absolute, pre-project-frame cuboids. The source transform for a scaled
+    /// <c>PartPose</c> is <c>origin + scale * raw</c>; applying it during bake keeps the existing flat
+    /// <see cref="EntityModelPart"/> hierarchy usable without copying the part matrix into a renderer.
+    /// This path is intentionally selected only when a non-unit scale exists; the unit-scale path above is
+    /// byte-for-byte unchanged for every existing model.
+    /// </summary>
+    private static IReadOnlyList<EntityModelPart> BakeScaledAbsolute(
+        VanillaMeshDefinition mesh,
+        int textureWidth,
+        int textureHeight,
+        string? texturePath)
+    {
+        var parts = new List<EntityModelPart>();
+        var root = mesh.Root
+            ?? throw new InvalidOperationException("VanillaMeshDefinition has no root part; declare one before baking.");
+
+        foreach (var child in root.Children)
+        {
+            WalkScaled(parts, child, parentName: null, Vector3.Zero, Vector3.One, textureWidth, textureHeight, texturePath);
+        }
+
+        return parts;
+    }
+
+    private static void WalkScaled(
+        List<EntityModelPart> parts,
+        VanillaPartDefinition part,
+        string? parentName,
+        Vector3 parentOrigin,
+        Vector3 parentScale,
+        int textureWidth,
+        int textureHeight,
+        string? texturePath)
+    {
+        var pose = part.Pose;
+        var localScale = new Vector3(
+            EffectiveScale(pose.ScaleX),
+            EffectiveScale(pose.ScaleY),
+            EffectiveScale(pose.ScaleZ));
+        var origin = parentOrigin + Vector3.Multiply(parentScale, new Vector3(pose.X, pose.Y, pose.Z));
+        var scale = Vector3.Multiply(parentScale, localScale);
+
+        var first = true;
+        foreach (var cube in part.Cubes)
+        {
+            if (cube.Width == 0f && cube.Height == 0f && cube.Depth == 0f)
+            {
+                continue;
+            }
+
+            var minX = origin.X + (scale.X * cube.MinX);
+            var maxX = origin.X + (scale.X * (cube.MinX + cube.Width));
+            var minY = origin.Y + (scale.Y * cube.MinY);
+            var maxY = origin.Y + (scale.Y * (cube.MinY + cube.Height));
+            var minZ = origin.Z + (scale.Z * cube.MinZ);
+            var maxZ = origin.Z + (scale.Z * (cube.MinZ + cube.Depth));
+            var name = cube.Name;
+            var effectiveTexturePath = cube.TexturePath ?? texturePath;
+            var effectiveWidth = cube.TextureWidth > 0 ? cube.TextureWidth : textureWidth;
+            var effectiveHeight = cube.TextureHeight > 0 ? cube.TextureHeight : textureHeight;
+            parts.Add(VanillaMeshBake.CreateScaledPart(
+                name,
+                first ? parentName : part.Name,
+                cube,
+                minX,
+                maxX,
+                minY,
+                maxY,
+                minZ,
+                maxZ,
+                effectiveTexturePath,
+                effectiveWidth,
+                effectiveHeight));
+            first = false;
+        }
+
+        foreach (var child in part.Children)
+        {
+            WalkScaled(parts, child, part.Name, origin, scale, textureWidth, textureHeight, texturePath);
+        }
     }
 
     private static void Walk(
@@ -241,34 +366,35 @@ static partial class VanillaMeshBake
                 throw new InvalidOperationException($"Duplicate part name '{cube.Name}' while baking a VanillaMeshDefinition; part names must be unique.");
             }
 
-            if (part.Cubes.Count > 1 && !string.Equals(part.Cubes[0].Name, part.Name, StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException($"A multi-cube part '{part.Name}' must name its first cube after the part.");
-            }
-
+            // The first cuboid is the node's representative; a part such as DragonHead's "head" uses
+            // "upper_lip" as its first cuboid, so keep the part name as the node identity while the
+            // compiled tree retains each source cuboid name.
             var effectiveTexturePath = cube.TexturePath ?? texturePath;
             EntityModelPart baked;
             if (first)
             {
+                var nodeName = string.Equals(cube.Name, part.Name, StringComparison.Ordinal) ? cube.Name : part.Name;
                 baked = parentName is null
                     ? BakeRoot(
-                        cube.Name,
+                        nodeName,
                         part.Pose.X, part.Pose.Y, part.Pose.Z,
                         cube.MinX, cube.MinY, cube.MinZ,
                         cube.Width, cube.Height, cube.Depth,
                         cube.TextureX, cube.TextureY,
                         mirror: cube.Mirror, mirrorX: cube.MirrorX, overlays: cube.Overlays, modelHeight: modelHeight,
                         rotationX: part.Pose.RotationX, rotationY: part.Pose.RotationY, rotationZ: part.Pose.RotationZ,
-                        texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind)
+                        texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind,
+                        scaleX: part.Pose.ScaleX, scaleY: part.Pose.ScaleY, scaleZ: part.Pose.ScaleZ)
                     : BakeChild(
-                        cube.Name, parentName,
+                        nodeName, parentName,
                         part.Pose.X, part.Pose.Y, part.Pose.Z,
                         cube.MinX, cube.MinY, cube.MinZ,
                         cube.Width, cube.Height, cube.Depth,
                         cube.TextureX, cube.TextureY,
                         mirror: cube.Mirror, overlays: cube.Overlays,
                         rotationX: part.Pose.RotationX, rotationY: part.Pose.RotationY, rotationZ: part.Pose.RotationZ,
-                        texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind);
+                        texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind,
+                        scaleX: part.Pose.ScaleX, scaleY: part.Pose.ScaleY, scaleZ: part.Pose.ScaleZ);
             }
             else
             {
