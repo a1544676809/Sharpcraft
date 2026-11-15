@@ -26,4 +26,7 @@ public sealed class BlockEntityFrameState
 
     /// <summary>Mesher reused across frames; its geometry is cleared at the start of each build.</summary>
     public ChestMesher Mesher { get; } = new();
+
+    /// <summary>Mesher for shulker boxes, which have their own two-box model.</summary>
+    public ShulkerBoxMesher ShulkerMesher { get; } = new();
 }

@@ -463,7 +463,8 @@ public sealed class ClientWorld
         var newTypeId = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(state) is { } blockId
             ? Sharpcraft.Common.World.VanillaBlockEntityTypes.IdOf(blockId.Path)
             : -1;
-        if (newTypeId >= 0 && Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(newTypeId))
+        if (newTypeId >= 0 && (Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(newTypeId)
+            || Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(newTypeId)))
         {
             chunk.AddBlockEntity(new Sharpcraft.Common.World.BlockEntityRecord(localX, y, localZ, newTypeId));
         }

@@ -1229,7 +1229,8 @@ internal static partial class FrameCommand
         {
             foreach (var record in chunk.BlockEntitiesSpan)
             {
-                if (!Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(record.TypeId))
+                if (!Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(record.TypeId)
+                    && !Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(record.TypeId))
                 {
                     continue;
                 }
@@ -1318,8 +1319,44 @@ internal static partial class FrameCommand
             return null;
         }
 
-        return frame.Mesher.Build(
-            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates),
-            chestAtlas);
+        var span = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(chestStates);
+        var chestGeometry = frame.Mesher.Build(span, chestAtlas);
+        var shulkerSprite = chestAtlas.Get("entity/shulker/shulker");
+        if (shulkerSprite is null)
+        {
+            return chestGeometry;
+        }
+
+        var shulkerGeometry = frame.ShulkerMesher.Build(span, shulkerSprite);
+        if (frame.ShulkerMesher.LastEntityCount == 0)
+        {
+            return chestGeometry;
+        }
+
+        return Combine(chestGeometry, shulkerGeometry);
+    }
+
+    /// <summary>Concatenates two geometries into one, re-basing the second one's indices.</summary>
+    private static DynamicGeometry Combine(DynamicGeometry first, DynamicGeometry second)
+    {
+        var vertices = new float[first.VertexFloats + second.VertexFloats];
+        first.Vertices.AsSpan(0, first.VertexFloats).CopyTo(vertices);
+        second.Vertices.AsSpan(0, second.VertexFloats).CopyTo(vertices.AsSpan(first.VertexFloats));
+
+        var indices = new uint[first.IndexCount + second.IndexCount];
+        first.Indices.AsSpan(0, first.IndexCount).CopyTo(indices);
+        var baseVertex = (uint)(first.VertexFloats / ChunkMesher.FloatsPerVertex);
+        for (var i = 0; i < second.IndexCount; i++)
+        {
+            indices[first.IndexCount + i] = second.Indices[i] + baseVertex;
+        }
+
+        return new DynamicGeometry
+        {
+            Vertices = vertices,
+            VertexFloats = vertices.Length,
+            Indices = indices,
+            IndexCount = indices.Length
+        };
     }
 }

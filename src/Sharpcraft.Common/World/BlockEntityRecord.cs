@@ -60,6 +60,10 @@ public static class VanillaBlockEntityTypes
         _ => Array.IndexOf(Paths, path)
     };
 
+    /// <summary>Chest-like types drawn by the chest renderer. Shulker boxes have their own renderer.</summary>
     public static bool IsChestLike(int typeId) =>
-        typeId is Chest or TrappedChest or EnderChest or ShulkerBox;
+        typeId is Chest or TrappedChest or EnderChest;
+
+    /// <summary>Shulker box type, drawn by its own two-box renderer rather than the chest one.</summary>
+    public static bool IsShulkerBox(int typeId) => typeId == ShulkerBox;
 }

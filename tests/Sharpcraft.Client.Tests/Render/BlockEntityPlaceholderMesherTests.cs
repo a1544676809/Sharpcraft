@@ -50,7 +50,7 @@ public sealed class BlockEntityPlaceholderMesherTests
             VanillaBlockEntityTypes.Chest,
             VanillaBlockEntityTypes.TrappedChest,
             VanillaBlockEntityTypes.EnderChest,
-            VanillaBlockEntityTypes.ShulkerBox
+            VanillaBlockEntityTypes.EnderChest
         })
         {
             var (xExtent, zExtent) = Extents(typeId);
@@ -60,7 +60,7 @@ public sealed class BlockEntityPlaceholderMesherTests
 
         foreach (var typeId in new[]
         {
-            VanillaBlockEntityTypes.Furnace,
+            VanillaBlockEntityTypes.ShulkerBox, // has its own renderer now, not the chest one
             7 // sign is registry id 7 in the 26.3 block_entity_type order; no constant is defined for it
         })
         {
