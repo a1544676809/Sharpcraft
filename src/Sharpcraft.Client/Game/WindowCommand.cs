@@ -266,6 +266,7 @@ internal static class WindowCommand
             cache: meshCache,
             meshSynchronously: false,
             spriteRects: prepared?.Atlas.RectTable,
+            models: prepared?.Models,
             chestAtlas: prepared?.ChestAtlas);
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 

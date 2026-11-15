@@ -154,7 +154,6 @@ public sealed class ChunkMeshCache
         if (Sharpcraft.Client.Game.GameOptions.Get("MC_DEBUG_MODELS") is { Length: > 0 })
         {
             Console.WriteLine($"cache build: models={(models is null ? "null" : "present")} marking={(models?.ElementStateCount ?? 0)} sprites={(sprites is null ? "null" : "present")}");
-        }
             // For every block entity in the world, report the block state under it and whether the model set
             // excludes that state. A chest that still cubes is either a state the set never marked or a set
             // the mesher never received.
@@ -171,6 +170,7 @@ public sealed class ChunkMeshCache
                         $"state={probeState} block={probeBlock?.Path ?? "?"} has={(models?.Has(probeState) ?? false)}");
                 }
             }
+        }
 
 
         var started = System.Diagnostics.Stopwatch.GetTimestamp();
