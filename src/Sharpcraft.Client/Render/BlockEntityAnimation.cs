@@ -14,6 +14,7 @@ namespace Sharpcraft.Client.Render;
 /// combines its two halves by taking the larger value. This is the same computation with the
 /// partial tick passed in explicitly.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.block.entity.LidBlockEntity", "ref://mc-26.3-analysis/src/net/minecraft/world/level/block/entity/LidBlockEntity.java")]
 public static class BlockEntityAnimation
 {
     /// <summary>Value at a partial tick: the reference's <c>Mth.lerp(t, previous, current)</c>.</summary>
