@@ -51,6 +51,12 @@ internal static partial class FrameCommand
             return RenderLocal(width, height);
         }
 
+        if (GameOptions.Get("MC_FRAME_OCCLUDER") is { Length: > 0 })
+        {
+            // Deterministic scene for the occlusion test: a solid wall with solid chunks behind it.
+            return RenderWorld(BuildOccluderWorld(), width, height, VanillaBlockRegistry.Layout);
+        }
+
         if (GameOptions.Get("MC_FRAME_REPLAY") is { Length: > 0 } replayPath)
         {
             // Real chunk data uses the baseline block layout so state ids resolve to blocks.
@@ -299,7 +305,10 @@ internal static partial class FrameCommand
 
         // A chest stands on the wall face the camera looks at, so the block entity stage has something visible to draw.
         // In the chunk in front of the wall: inside the wall it would be buried and invisible.
-        world.AddChunk(0, -1).AddBlockEntity(new Sharpcraft.Common.World.BlockEntityRecord(8, 17, 15, 1));
+        var chestChunk = world.AddChunk(0, -1);
+        chestChunk.AddBlockEntity(new Sharpcraft.Common.World.BlockEntityRecord(8, 17, 15, 1));
+        // A chunk that is not marked loaded is skipped by the mesher, which is why the first attempt drew nothing.
+        chestChunk.MarkLoaded();
 
         // Hidden: three wide and four deep behind the wall, so the rate has a meaningful population to work with.
         for (var z = 3; z <= 6; z++)
