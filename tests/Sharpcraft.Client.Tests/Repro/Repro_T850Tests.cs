@@ -71,4 +71,47 @@ public sealed class Repro_T850Tests
             Assert.True(models.Has(state), $"chest state {state} must be excluded from the cube path");
         }
     }
+
+    /// <summary>
+    /// The regression that matters: a pool built without the model set cubes the chest, and one
+    /// built with it emits nothing. Removing the model set from the pool constructor makes the
+    /// first half of this test fail, which is what the fix has to keep true.
+    /// </summary>
+    [Fact]
+    public void ThePoolCubesChestsWithoutAModelSetAndSkipsThemWithOne()
+    {
+        var (world, models) = ChestScene();
+
+        using (var without = new ChunkWorkerPool(world, sprites: null, models: null, workerCount: 1))
+        {
+            Assert.True(without.TryEnqueueMesh(ClientWorld.Pack(0, 0)));
+            var cubed = WaitForMesh(without);
+            Assert.NotNull(cubed);
+            Assert.True(cubed!.TriangleCount > 0, "a pool without a model set must cube the chest");
+        }
+
+        using (var with = new ChunkWorkerPool(world, sprites: null, models: models, workerCount: 1))
+        {
+            Assert.True(with.TryEnqueueMesh(ClientWorld.Pack(0, 0)));
+            var skipped = WaitForMesh(with);
+            Assert.NotNull(skipped);
+            Assert.Equal(0, skipped!.TriangleCount);
+        }
+    }
+
+    private static MeshData? WaitForMesh(ChunkWorkerPool pool, double seconds = 3)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(seconds);
+        while (DateTime.UtcNow < deadline)
+        {
+            if (pool.TryTakeMesh(out _, out var mesh, out _, out _))
+            {
+                return mesh;
+            }
+
+            Thread.Sleep(5);
+        }
+
+        return null;
+    }
 }

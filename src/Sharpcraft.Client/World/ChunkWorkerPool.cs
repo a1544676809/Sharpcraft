@@ -92,7 +92,8 @@ public sealed class ChunkWorkerPool : IDisposable
     /// <param name="maxQueuedMeshes">Mesh queue cap; beyond it meshing is deferred.</param>
     public ChunkWorkerPool(
         ClientWorld world,
-        BlockSpriteMap? sprites = null,
+        BlockSpriteMap? sprites,
+        BlockModelSet? models,
         int? workerCount = null,
         int maxQueuedParses = 64,
         int maxQueuedMeshes = 1024,
@@ -107,6 +108,7 @@ public sealed class ChunkWorkerPool : IDisposable
         _ambientOcclusion = ambientOcclusion;
         _world = world;
         _sprites = sprites;
+        _models = models;
         _maxQueuedParses = maxQueuedParses;
         _maxQueuedMeshes = maxQueuedMeshes;
         WorkerCount = Math.Clamp(workerCount ?? DefaultWorkerCount(), 1, 16);

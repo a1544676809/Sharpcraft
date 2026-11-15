@@ -22,14 +22,14 @@ public sealed class ChunkWorkerPoolTests
 
         Assert.Equal(expected, ChunkWorkerPool.DefaultWorkerCount());
 
-        using var pool = new ChunkWorkerPool(new ClientWorld(minSectionY: 0, sectionCount: 1));
+        using var pool = new ChunkWorkerPool(new ClientWorld(minSectionY: 0, sectionCount: 1), null, null);
         Assert.Equal(expected, pool.WorkerCount);
     }
 
     [Fact]
     public void AnExplicitWorkerCountIsHonoured()
     {
-        using var pool = new ChunkWorkerPool(new ClientWorld(minSectionY: 0, sectionCount: 1), workerCount: 3);
+        using var pool = new ChunkWorkerPool(new ClientWorld(minSectionY: 0, sectionCount: 1), null, null, workerCount: 3);
 
         Assert.Equal(3, pool.WorkerCount);
     }
@@ -49,7 +49,7 @@ public sealed class ChunkWorkerPoolTests
             }
         }
 
-        using var pool = new ChunkWorkerPool(world, workerCount: 2);
+        using var pool = new ChunkWorkerPool(world, null, null, workerCount: 2);
         Assert.True(pool.TryEnqueueMesh(ClientWorld.Pack(0, 0)));
 
         // The result arrives asynchronously, so the test waits for it rather than assuming a timing.
@@ -65,7 +65,7 @@ public sealed class ChunkWorkerPoolTests
     {
         var world = new ClientWorld(minSectionY: 0, sectionCount: 1);
 
-        using var pool = new ChunkWorkerPool(world, workerCount: 1);
+        using var pool = new ChunkWorkerPool(world, null, null, workerCount: 1);
         Assert.True(pool.TryEnqueueMesh(ClientWorld.Pack(5, 5)));
 
         Assert.Null(WaitForMesh(pool, out _));
@@ -79,7 +79,7 @@ public sealed class ChunkWorkerPoolTests
         chunk.SetSection(new ChunkSection(singleState: 0, sectionY: 0));
         chunk.SetBlockState(8, 0, 8, state: 1);
 
-        using var pool = new ChunkWorkerPool(world, workerCount: 2);
+        using var pool = new ChunkWorkerPool(world, null, null, workerCount: 2);
         var cache = new ChunkMeshCache(pool);
         cache.QueueMissing(world);
 
@@ -127,7 +127,7 @@ public sealed class ChunkWorkerPoolTests
         chunk.SetSection(new ChunkSection(singleState: 0, sectionY: 0));
         chunk.SetBlockState(8, 0, 8, state: 1);
 
-        using var pool = new ChunkWorkerPool(world, workerCount: 2);
+        using var pool = new ChunkWorkerPool(world, null, null, workerCount: 2);
         var cache = new ChunkMeshCache(pool);
         cache.QueueMissing(world);
 
