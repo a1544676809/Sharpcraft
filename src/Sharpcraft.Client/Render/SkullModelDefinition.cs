@@ -13,7 +13,8 @@ public enum SkullType : byte
     Skeleton = 1,
     WitherSkeleton = 2,
     Zombie = 3,
-    Creeper = 4
+    Creeper = 4,
+    Player = 5
 }
 
 /// <summary>
@@ -47,13 +48,23 @@ public static class SkullModelDefinition
     /// <summary>Creeper texture path.</summary>
     public const string CreeperTexture = "entity/creeper/creeper";
 
+    /// <summary>Default player skin texture used when no profile skin is available.</summary>
+    public const string DefaultPlayerSkinTexture = "entity/player/slim/steve";
+
     private static readonly VanillaMeshDefinition SkullMesh = BuildSkullMesh();
+    private static readonly VanillaMeshDefinition PlayerMesh = BuildPlayerSkullMesh();
 
     private static readonly EntityModelPart[] Parts =
         [.. VanillaMeshBake.Bake(SkullMesh, TextureWidth, TextureHeight, modelHeight: 0f)];
 
     private static readonly CompiledEntityModel SkullCompiled =
         VanillaMeshBakery.Build(SkullMesh, TextureWidth, TextureHeight, modelHeight: 0f, texturePath: SkeletonTexture);
+
+    private static readonly EntityModelPart[] PlayerParts =
+        [.. VanillaMeshBake.Bake(PlayerMesh, 64, 64, modelHeight: 0f)];
+
+    private static readonly CompiledEntityModel PlayerCompiled =
+        VanillaMeshBakery.Build(PlayerMesh, 64, 64, modelHeight: 0f, texturePath: DefaultPlayerSkinTexture);
 
     /// <summary>Baked head definition shared by all supported skull types.</summary>
     public static readonly EntityModelDefinition Definition = new(
@@ -71,6 +82,23 @@ public static class SkullModelDefinition
         LocalTransform = System.Numerics.Matrix4x4.CreateTranslation(0f, -0.5f, 0f)
     };
 
+    /// <summary>Player head definition with the humanoid head + hat overlay.</summary>
+    public static readonly EntityModelDefinition PlayerDefinition = new(
+        name: "player_skull",
+        textureWidth: 64,
+        textureHeight: 64,
+        parts: PlayerParts,
+        faceTransforms: PlayerModelDefinition.DefaultFaceTransforms,
+        texturePath: DefaultPlayerSkinTexture,
+        compiled: PlayerCompiled)
+    {
+        LocalTransform = System.Numerics.Matrix4x4.CreateTranslation(0f, -0.5f, 0f)
+    };
+
+    /// <summary>Selects the baked definition for a skull type.</summary>
+    public static EntityModelDefinition DefinitionFor(SkullType type) =>
+        type == SkullType.Player ? PlayerDefinition : Definition;
+
     /// <summary>Maps a block path to the supported static skull family, or <see cref="SkullType.None"/>.</summary>
     public static SkullType TypeOfPath(string? path) => path switch
     {
@@ -78,6 +106,7 @@ public static class SkullModelDefinition
         "wither_skeleton_skull" or "wither_skeleton_wall_skull" => SkullType.WitherSkeleton,
         "zombie_head" or "zombie_wall_head" => SkullType.Zombie,
         "creeper_head" or "creeper_wall_head" => SkullType.Creeper,
+        "player_head" or "player_wall_head" => SkullType.Player,
         _ => SkullType.None
     };
 
@@ -88,6 +117,7 @@ public static class SkullModelDefinition
         SkullType.WitherSkeleton => WitherSkeletonTexture,
         SkullType.Zombie => ZombieTexture,
         SkullType.Creeper => CreeperTexture,
+        SkullType.Player => DefaultPlayerSkinTexture,
         _ => null
     };
 
@@ -98,6 +128,18 @@ public static class SkullModelDefinition
         // ref://mc-26.3-analysis/src/net/minecraft/client/model/object/skull/SkullModel.java:19-24,36-39.
         root.AddOrReplaceChild("head", VanillaPartPose.Zero,
             new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f, MirrorX: false));
+        return new VanillaMeshDefinition(root);
+    }
+
+    private static VanillaMeshDefinition BuildPlayerSkullMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        // SkullModel.createHumanoidHeadLayer: head plus a 0.25-grow hat overlay at texOffs(32,0).
+        // ref://mc-26.3-analysis/src/net/minecraft/client/model/object/skull/SkullModel.java:26-34.
+        root.AddOrReplaceChild("head", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f,
+                MirrorX: false,
+                Overlays: [new("hat", 0.25f, 32, 0)]));
         return new VanillaMeshDefinition(root);
     }
 }

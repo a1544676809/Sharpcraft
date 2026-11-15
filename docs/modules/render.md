@@ -579,15 +579,26 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 <!-- simplification:SIM-BE-CAMPFIRE-FLAME task:T-47 -->
 
-### SIM-BE-SKULL-VARIANTS：Skull 仅支持四种静态头型
+### SIM-BE-SKULL-VARIANTS：Skull 特殊头型仅缺 DRAGON/PIGLIN
 
-- **简化了什么**：`SkullRenderer` 只绘制 `SKELETON` / `WITHER_SKELETON` / `ZOMBIE` / `CREEPER` 的静态头模型；`PLAYER` / `DRAGON` / `PIGLIN` 及其他特殊头型跳过。
-- **为什么**：本切片只复用 `SkullModel.createMobHeadLayer()` 的静态 8×8×8 头盒；特殊模型需要各自的模型层与皮肤/玩家档案解析，后续任务补齐。
-- **对等效性的影响**：四种支持头型的方块头/墙头静态外观按源模型；其他头型完全不绘制。
-- **状态**：受控偏差，计划由 T-47（#48 批次）后续特殊头型切片跟进（Issue #75）。
-- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/SkullRendererTests.cs` 覆盖四种头型的 ground/wall 最终顶点/UV；接入特殊模型后补单方块像素对比。
+- **简化了什么**：`SkullRenderer` 覆盖 `SKELETON` / `WITHER_SKELETON` / `ZOMBIE` / `CREEPER` / `PLAYER` 的静态头模型；`DRAGON` / `PIGLIN` 及其他特殊头型跳过。
+- **为什么**：本切片复用 `SkullModel.createMobHeadLayer()` 与 `createHumanoidHeadLayer()` 的静态头盒；DRAGON/PIGLIN 需要各自独立模型层，后续任务补齐。
+- **对等效性的影响**：五种支持头型的方块头/墙头静态外观按源模型；DRAGON/PIGLIN 头完全不绘制。
+- **状态**：受控偏差，计划由 T-47（#48 批次）后续特殊头型切片跟进（Issue #75、#77）。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/SkullRendererTests.cs` 覆盖五种头型的 ground/wall 与 Player head+hat 最终顶点/UV；接入 DRAGON/PIGLIN 后补单方块像素对比。
 
 <!-- simplification:SIM-BE-SKULL-VARIANTS task:T-47 -->
+
+### SIM-BE-SKULL-PLAYER-SKIN：Player 头固定默认皮肤
+
+- **简化了什么**：`SkullType.Player` 始终使用 `entity/player/slim/steve` 默认皮肤和 `createHumanoidHeadLayer` 的 head + hat overlay；不读取 `SkullBlockEntity` 的 profile/皮肤缓存。
+- **为什么**：默认皮肤可以先验证 humanoid head/hat overlay 的模型与 atlas 路径；自定义玩家皮肤需要档案解析与皮肤缓存通道，后续任务跟进。
+- **对等效性的影响**：玩家头的 head+hat 几何、64×64 UV 和默认 SLIM Steve 纹理一致；自定义/profile 皮肤不会显示。
+- **状态**：受控偏差，计划由 #48 后续玩家皮肤切片跟进（Issue #77）。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/SkullRendererTests.cs` 覆盖 Player head+hat bounds/UV、纹理/rect 映射；接入 skin cache 后补 profile 真值与单方块像素对比。
+
+<!-- simplification:SIM-BE-SKULL-PLAYER-SKIN task:T-47 -->
+
 
 ### SIM-BE-SKULL-ZOFFSET：Skull 不应用 entityCutoutZOffset
 

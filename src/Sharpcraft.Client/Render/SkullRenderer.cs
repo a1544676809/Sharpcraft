@@ -21,7 +21,8 @@ namespace Sharpcraft.Client.Render;
 /// -facing.getOpposite().toYRot(), scale (-1,-1,1).
 /// </remarks>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.blockentity.SkullBlockRenderer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/SkullBlockRenderer.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
-[Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-SKULL-VARIANTS", "T-47", Note = "Only skeleton, wither skeleton, zombie and creeper static head models are drawn; player/dragon/piglin and custom skull models are skipped.")]
+[Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-SKULL-VARIANTS", "T-47", Note = "Only skeleton, wither skeleton, zombie, creeper and default-player heads are drawn; dragon/piglin and custom skull models are skipped.")]
+[Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-SKULL-PLAYER-SKIN", "T-47", Note = "Player heads use the default slim Steve skin; profile skin cache and custom skins are not wired.")]
 [Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-SKULL-ZOFFSET", "T-47", Note = "entityCutoutZOffset depth offset is not applied; the dependency is Issue #45.")]
 [Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-SKULL-ANIM", "T-47", Note = "Static head model; skull animationProgress / setupAnim rotations are not wired.")]
 public sealed class SkullRenderer : IBlockEntityRenderer
@@ -69,12 +70,13 @@ public sealed class SkullRenderer : IBlockEntityRenderer
                 Z: 0f,
                 Yaw: 180f,
                 Pitch: 0f);
+            var definition = SkullModelDefinition.DefinitionFor(entity.SkullType);
             var built = _mesher.BuildModel(
-                SkullModelDefinition.Definition,
+                definition,
                 modelState,
                 sprite,
-                SkullModelDefinition.TextureWidth,
-                SkullModelDefinition.TextureHeight,
+                definition.TextureWidth,
+                definition.TextureHeight,
                 modelScale: 1f);
             var start = _geometry.VertexFloats;
             AppendGeometry(_geometry, built);

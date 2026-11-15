@@ -6,6 +6,7 @@ using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
 using Sharpcraft.Common.World;
 using Sharpcraft.Framework.Rendering;
+using System.Numerics;
 
 namespace Sharpcraft.Client.Tests.Render;
 
@@ -20,7 +21,8 @@ public sealed class SkullRendererTests
         SkullType.Skeleton,
         SkullType.WitherSkeleton,
         SkullType.Zombie,
-        SkullType.Creeper
+        SkullType.Creeper,
+        SkullType.Player
     ];
 
     [Fact]
@@ -40,7 +42,51 @@ public sealed class SkullRendererTests
         Assert.Equal(0, head.TextureX);
         Assert.Equal(0, head.TextureY);
         Assert.True(ChestAtlas.Textures.Length == 22);
-        Assert.Equal(4, ChestAtlas.SkullTextures.Length);
+        Assert.Equal(5, ChestAtlas.SkullTextures.Length);
+    }
+
+    [Fact]
+    public void PlayerDefinitionHasHeadAndHatOverlay()
+    {
+        Assert.Equal(64, SkullModelDefinition.PlayerDefinition.TextureWidth);
+        Assert.Equal(64, SkullModelDefinition.PlayerDefinition.TextureHeight);
+        Assert.Equal(SkullModelDefinition.DefaultPlayerSkinTexture, SkullModelDefinition.PlayerDefinition.TexturePath);
+        Assert.Same(SkullModelDefinition.PlayerDefinition, SkullModelDefinition.DefinitionFor(SkullType.Player));
+        Assert.Same(SkullModelDefinition.Definition, SkullModelDefinition.DefinitionFor(SkullType.Skeleton));
+
+        var mesher = new SkullRenderer();
+        var geometry = mesher.Build(
+            [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.Skull, SkullType: SkullType.Player)],
+            PlayerAtlas());
+        Assert.Equal(1, mesher.LastEntityCount);
+        Assert.Equal(48, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
+        Assert.Equal(72, geometry.IndexCount);
+        AssertVertex(geometry, 0, 0.25f, 0.5f, 0.75f, 0.25f, 0f);
+        AssertVertex(geometry, 1, 0.75f, 0.5f, 0.75f, 0.375f, 0f);
+        AssertVertex(geometry, 24, 0.23438f, 0.51563f, 0.76563f, 0.75f, 0f);
+        AssertVertex(geometry, 25, 0.76563f, 0.51563f, 0.76563f, 0.875f, 0f);
+        AssertVertex(geometry, 26, 0.76563f, 0.51563f, 0.23438f, 0.875f, 0.125f);
+        AssertVertex(geometry, 28, 0.23438f, -0.01563f, 0.23438f, 0.625f, 0.125f);
+        Assert.Equal(-0.015625f, geometry.Vertices[28 * ChunkMesher.FloatsPerVertex + 1], 4);
+        Assert.Equal(0.234375f, geometry.Vertices[24 * ChunkMesher.FloatsPerVertex], 4);
+        var bounds = Bounds(geometry);
+        Assert.Equal(0.234375f, bounds.Min.X, 4);
+        Assert.Equal(-0.015625f, bounds.Min.Y, 4);
+        Assert.Equal(0.234375f, bounds.Min.Z, 4);
+        Assert.Equal(0.765625f, bounds.Max.X, 4);
+        Assert.Equal(0.515625f, bounds.Max.Y, 4);
+        Assert.Equal(0.765625f, bounds.Max.Z, 4);
+    }
+
+    [Fact]
+    public void PlayerTextureMapsToTheDefaultSlimSteveSprite()
+    {
+        var atlas = Atlas();
+        Assert.Equal("entity/player/slim/steve", SkullModelDefinition.TextureFor(SkullType.Player));
+        Assert.Equal(SkullModelDefinition.DefaultPlayerSkinTexture, ChestAtlas.SkullTextures[4]);
+        var sprite = ChestAtlas.SpriteForSkull(atlas, SkullType.Player);
+        Assert.NotNull(sprite);
+        Assert.Equal(atlas.Get(SkullModelDefinition.DefaultPlayerSkinTexture), sprite);
     }
 
     [Fact]
@@ -61,8 +107,8 @@ public sealed class SkullRendererTests
         }
 
         Assert.Null(SkullModelDefinition.TextureFor(SkullType.None));
-        Assert.Equal(4, paths.Count);
-        Assert.Equal(4, rects.Count);
+        Assert.Equal(5, paths.Count);
+        Assert.Equal(5, rects.Count);
     }
 
     [Fact]
@@ -73,7 +119,10 @@ public sealed class SkullRendererTests
         Assert.Equal(SkullType.WitherSkeleton, SkullModelDefinition.TypeOfPath("wither_skeleton_skull"));
         Assert.Equal(SkullType.Zombie, SkullModelDefinition.TypeOfPath("zombie_wall_head"));
         Assert.Equal(SkullType.Creeper, SkullModelDefinition.TypeOfPath("creeper_head"));
-        Assert.Equal(SkullType.None, SkullModelDefinition.TypeOfPath("player_head"));
+        Assert.Equal(SkullType.Player, SkullModelDefinition.TypeOfPath("player_head"));
+        Assert.Equal(SkullType.Player, SkullModelDefinition.TypeOfPath("player_wall_head"));
+        Assert.Equal(SkullType.None, SkullModelDefinition.TypeOfPath("dragon_head"));
+        Assert.Equal(SkullType.None, SkullModelDefinition.TypeOfPath("piglin_head"));
         Assert.Equal(SkullType.None, SkullModelDefinition.TypeOfPath(null));
     }
 
@@ -171,6 +220,15 @@ public sealed class SkullRendererTests
         Assert.False(BlockEntityRenderers.Handles(VanillaBlockEntityTypes.Furnace, renderers));
     }
 
+    private static ItemAtlas PlayerAtlas()
+    {
+        var pixels = new byte[64 * 64 * 4];
+        return ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
+        {
+            [SkullModelDefinition.DefaultPlayerSkinTexture] = new(64, 64, pixels)
+        });
+    }
+
     private static ItemAtlas Atlas()
     {
         var textures = new Dictionary<string, TextureData>(StringComparer.Ordinal);
@@ -178,9 +236,10 @@ public sealed class SkullRendererTests
         {
             var path = SkullModelDefinition.TextureFor(SupportedTypes[i]);
             Assert.NotNull(path);
-            var pixels = new byte[64 * 32 * 4];
+            var height = SupportedTypes[i] == SkullType.Player ? 64 : 32;
+            var pixels = new byte[64 * height * 4];
             pixels[0] = (byte)(i + 1);
-            textures[path] = new TextureData(64, 32, pixels);
+            textures[path] = new TextureData(64, height, pixels);
         }
 
         return ItemAtlas.FromTextures(textures);
@@ -195,6 +254,20 @@ public sealed class SkullRendererTests
         Assert.Equal(z, position.Z, 3);
         Assert.Equal(u, uv.U, 3);
         Assert.Equal(v, uv.V, 3);
+    }
+
+    private static (Vector3 Min, Vector3 Max) Bounds(DynamicGeometry geometry)
+    {
+        var min = new Vector3(float.MaxValue);
+        var max = new Vector3(float.MinValue);
+        for (var i = 0; i < geometry.VertexFloats; i += ChunkMesher.FloatsPerVertex)
+        {
+            var position = new Vector3(geometry.Vertices[i], geometry.Vertices[i + 1], geometry.Vertices[i + 2]);
+            min = Vector3.Min(min, position);
+            max = Vector3.Max(max, position);
+        }
+
+        return (min, max);
     }
 }
 
