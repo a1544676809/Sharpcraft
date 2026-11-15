@@ -65,8 +65,34 @@ internal static class WindowCommand
         // One resource manager for the session, created before anything reads resources so the atlas, models and
         // blockstates see the same packs as the font and the language table.
         using var resources = FrameCommand.CreateResourceManager();
+        // Diagnostic: group buffer creations by the calling site, so a churn that shows up only as a
+        // rising counter can be attributed. Removable as a unit - the renderer exposes one nullable
+        // observer and knows nothing else about this (principle 13).
+        if (GameOptions.Get("MC_BUFFER_CHURN") == "1")
+        {
+            var churnCounts = new Dictionary<string, int>();
+            var churnTotal = 0;
+            WgpuRenderBackend.BufferCreatedObserver = () =>
+            {
+                var frame = new System.Diagnostics.StackTrace(2, false).GetFrame(0);
+                var method = frame?.GetMethod();
+                var key = method is null ? "?" : $"{method.DeclaringType?.Name}.{method.Name}";
+                churnCounts[key] = churnCounts.GetValueOrDefault(key) + 1;
+                churnTotal++;
+                if (churnTotal % 480 == 0)
+                {
+                    foreach (var entry in churnCounts.OrderByDescending(pair => pair.Value).Take(6))
+                    {
+                        Console.WriteLine($"buffer-churn: {entry.Key} {entry.Value}");
+                    }
 
-        (SpriteAtlas Atlas, BlockSpriteMap Map)? prepared = FrameCommand.PrepareSprites(
+                    churnCounts.Clear();
+                }
+            };
+        }
+
+
+        (SpriteAtlas Atlas, BlockSpriteMap Map, Sharpcraft.Client.Render.BlockModelSet? Models, Sharpcraft.Client.Render.ItemAtlas? ChestAtlas)? prepared = FrameCommand.PrepareSprites(
             GameOptions.Get("MC_FRAME_LOCAL") is { Length: > 0 }
                 ? FrameCommand.DemoLayout()
                 : VanillaBlockRegistry.Layout,
@@ -183,8 +209,9 @@ internal static class WindowCommand
                 ? FrameCommand.PrepareMap(candidate, CurrentLayout(), manager)
                 : prepared?.Map;
 
-            prepared = (candidate, nextMap!);
+            prepared = (candidate, nextMap!, prepared?.Models, prepared?.ChestAtlas);
             workerPool.SetSprites(nextMap);
+            workerPool.SetModels(prepared?.Models);
 
             if (layoutChanged)
             {
@@ -194,7 +221,7 @@ internal static class WindowCommand
                 while (passes < 64 && (meshCache.LastTotalChunks < world.LoadedChunkCount || meshCache.PendingChunks > 0))
                 {
                     meshCache.QueueMissing(world);
-                    meshCache.Build(world, nextMap!, Sharpcraft.Client.Render.MeshBuildPolicy.CatchUp);
+                    meshCache.Build(world, nextMap!, Sharpcraft.Client.Render.MeshBuildPolicy.CatchUp, models: prepared?.Models);
                     passes++;
 
                     if (meshCache.PendingChunks > 0)
@@ -218,7 +245,7 @@ internal static class WindowCommand
         });
 
         // A short synchronous warm-up gives the first frame something to show.
-        meshCache.Build(world, prepared?.Map, Sharpcraft.Client.Render.MeshBuildPolicy.Interactive);
+        meshCache.Build(world, prepared?.Map, Sharpcraft.Client.Render.MeshBuildPolicy.Interactive, models: prepared?.Models);
         meshCache.QueueMissing(world);
 
         var request = FrameCommand.BuildRequest(
@@ -234,7 +261,8 @@ internal static class WindowCommand
             tint: biomeTint,
             cache: meshCache,
             meshSynchronously: false,
-            spriteRects: prepared?.Atlas.RectTable);
+            spriteRects: prepared?.Atlas.RectTable,
+            chestAtlas: prepared?.ChestAtlas);
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
         var selfResize = ParseSelfResize();

@@ -111,6 +111,15 @@ internal sealed class WorldTextResources : IDisposable
             }
         }
 
+        // A draw with no glyphs leaves both arrays empty, and a zero sized buffer is a validation
+        // error in WebGPU rather than a no-op. Nothing to draw means nothing to allocate.
+        if (vertices.Count == 0 || indices.Count == 0)
+        {
+            DestroyGeometry();
+            _indexCount = 0;
+            return;
+        }
+
         DestroyGeometry();
         var vertexArray = vertices.ToArray();
         var indexArray = indices.ToArray();

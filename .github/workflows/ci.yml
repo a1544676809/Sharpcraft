@@ -41,11 +41,41 @@ jobs:
       - name: Compliance guard (no jars, no assets, no decompiled sources)
         shell: pwsh
         run: |
-          $bad = git ls-files | Where-Object {
-            $_ -match '\.(jar|class|java)$' -or $_ -match '(^|/)assets/' -or $_ -match '(^|/)unpacked/'
+          # AGENTS.md principle 3. Path anchoring is deliberate and the extension
+          # tests are case-sensitive-with-extension-case-ignored: PowerShell's
+          # -match is case-insensitive by default and this guard used to flag
+          # legitimate C# under src/**/Assets/ and docs under docs/analysis/assets/
+          # instead of real payloads.
+          $tracked = @(git ls-files)
+          $bad = @()
+
+          # 1. Binaries that are never allowed, anywhere in the tree.
+          $bad += $tracked | Where-Object { $_ -cmatch '(?i)\.(jar|class)$' }
+
+          # 2. Decompiled Java sources. Hand-written probes under
+          #    tools/<project>/truth/ read the running game to extract golden
+          #    vectors; they are evidence generators, not decompiler output.
+          $bad += $tracked | Where-Object {
+            $_ -cmatch '(?i)\.java$' -and $_ -cnotmatch '^tools/[^/]+/truth/'
           }
-          if ($bad) {
-            Write-Error "forbidden files tracked: $($bad -join ', ')"
+
+          # 3. Extracted-asset and decompile workspaces, anchored at the
+          #    repository root. Mirrors the corresponding .gitignore entries.
+          $bad += $tracked | Where-Object {
+            $_ -cmatch '(?i)^(assets|minecraft|versions|libraries|extracted|extracted-assets|unpacked|decompiled|analysis-workspace)/' -or
+            $_ -cmatch '(?i)^run/assets/'
+          }
+
+          # 4. Payload files inside an asset directory. Asset-pipeline code
+          #    (.cs / .csproj) and documentation (.md) may live under an assets
+          #    directory; the contents themselves may not.
+          $bad += $tracked | Where-Object {
+            $_ -cmatch '(?i)(^|/)assets/.+\.(png|jpe?g|webp|gif|ogg|wav|ttf|otf|nbt|mcmeta|zip|jar)$'
+          }
+
+          $bad = @($bad | Sort-Object -Unique)
+          if ($bad.Count -gt 0) {
+            Write-Error "forbidden files tracked:`n$($bad -join "`n")"
             exit 1
           }
-          Write-Host "compliance guard passed"
+          Write-Host "compliance guard passed ($($tracked.Count) tracked files)"

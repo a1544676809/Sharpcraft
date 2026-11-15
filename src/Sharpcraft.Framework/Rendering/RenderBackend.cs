@@ -406,6 +406,12 @@ public interface IRenderBackend : IGeometryBackend
 /// </remarks>
 public sealed class WgpuRenderBackend : IRenderBackend
 {
+    /// <summary>
+    /// Diagnostic only: invoked once per buffer created, with no arguments. Null disables it and
+    /// costs one null check. Set only by the host when its own switch is on; the renderer never
+    /// reads it.
+    /// </summary>
+    public static Action? BufferCreatedObserver { get; set; }
     private readonly Device _device;
 
     /// <summary>Wraps an existing device.</summary>
@@ -1050,6 +1056,7 @@ public sealed class WgpuRenderBackend : IRenderBackend
         _bufferBytesCreated += bytes;
         _bufferBytesLive += bytes;
         _bufferSizes[handle] = bytes;
+        BufferCreatedObserver?.Invoke();
         return handle;
     }
 

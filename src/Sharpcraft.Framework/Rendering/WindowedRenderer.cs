@@ -330,6 +330,28 @@ public static class WindowedRenderer
 
         surface.Configure(device, format, TextureUsage.RenderAttachment, frameWidth, frameHeight, presentMode, WGPUCompositeAlphaMode.Auto);
 
+        // Block entities draw as their own segment with their own atlas, exactly as the offscreen shell does.
+        // Without this the chest geometry is built for a live session and then never submitted.
+        using var blockEntityAtlas = new EntitySkinTextureGpu();
+        using var blockEntityRects = new SpriteRectTable(backend);
+        using var blockEntitySubmission = new BlockEntitySubmission(backend);
+        if (request.BlockEntityAtlas is { } blockEntityAtlasData && request.BlockEntityGeometry is { } blockEntityGeometry)
+        {
+            Console.WriteLine($"block entity draw: {request.BlockEntitySpriteRects.Length} sprite rects, {request.BlockEntityGeometry?.IndexCount / 3} triangles");
+            blockEntityRects.Rebuild(request.BlockEntitySpriteRects);
+            blockEntityAtlas.Upload(
+                backend,
+                bindGroupLayout,
+                blockEntityAtlasData,
+                cameraBuffer,
+                fogBuffer,
+                lightmapBuffer,
+                atlasSamplerHandle,
+                blockEntityRects);
+            blockEntitySubmission.Upload(blockEntityGeometry, blockEntityAtlas.BindGroup);
+            request = request with { BlockEntity = blockEntitySubmission };
+        }
+
         var currentRequest = request;
 
         // One store per layer: every chunk keeps its own vertex/index buffer, drawn with CPU frustum culling. Memory

@@ -113,4 +113,22 @@ internal sealed class TerrainPassRecorder
             arenaCutout.Draw(pass, frustumPlanes, visibleSections);
         }
     }
+
+    /// <summary>
+    /// Draws a block entity segment at the end of the scene pass, with the terrain pipeline since the
+    /// layouts match and the segment binds its own atlas.
+    /// </summary>
+    /// <param name="pass">Scene pass being recorded.</param>
+    /// <param name="segment">Segment to draw; skipped when it holds nothing.</param>
+    public void DrawSegment(RenderPassHandle pass, BlockEntitySubmission segment)
+    {
+        ArgumentNullException.ThrowIfNull(segment);
+
+        if (segment.IndexCount == 0)
+        {
+            return;
+        }
+
+        segment.Draw(_backend, pass, _opaquePipeline);
+    }
 }

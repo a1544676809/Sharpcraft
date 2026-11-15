@@ -33,4 +33,5 @@ public readonly record struct MeshingContext(
     bool MergeFaces = true,
     bool AmbientOcclusion = true,
     int AirState = 0,
-    int MaxBlocks = 2_000_000);
+    int MaxBlocks = 2_000_000,
+    BlockModelSet? Models = null);

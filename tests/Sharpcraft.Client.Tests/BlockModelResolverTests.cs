@@ -156,6 +156,27 @@ public sealed class BlockModelResolverTests
         Assert.NotEqual(fixture.Atlas.Sprites[new Identifier("minecraft", "block/oak_wood")], sprite);
     }
 
+    /// <summary>Element models name a texture per face, so every variable must be reachable, not just the three cube buckets.</summary>
+    [Fact]
+    public void EveryTextureVariableIsExposedForElementModels()
+    {
+        using var fixture = new ModelFixture();
+        fixture.Add("assets/minecraft/blockstates/torch.json", """
+            {"variants": {"": {"model": "minecraft:block/torch"}}}
+            """);
+        fixture.Add("assets/minecraft/models/block/torch.json", """
+            {"textures": {"torch": "minecraft:block/torch", "particle": "#torch"}}
+            """);
+
+        var block = Identifier.Parse("minecraft:torch");
+        var textures = fixture.Resolver.ResolveTextures(block);
+
+        Assert.NotNull(textures);
+        Assert.Equal("minecraft:block/torch", textures!["torch"]);
+        Assert.Equal(new Identifier("minecraft", "block/torch"), fixture.Resolver.ResolveTexture(block, "#torch"));
+        Assert.Equal(new Identifier("minecraft", "block/torch"), fixture.Resolver.ResolveTexture(block, "particle"));
+    }
+
     private sealed class ModelFixture : IDisposable
     {
         private readonly List<(string Path, byte[] Content)> _entries = [];

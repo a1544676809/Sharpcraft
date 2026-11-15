@@ -28,6 +28,7 @@ public sealed class BlockModelResolver
 {
     private readonly AssetStack _stack;
     private readonly Dictionary<Identifier, BlockFaceTextures?> _cache = new();
+    private readonly Dictionary<Identifier, Dictionary<string, string>?> _textureCache = new();
 
     /// <summary>Creates a resolver over a resource stack.</summary>
     /// <param name="stack">Stack used to read <c>blockstates</c> and <c>models</c>.</param>
@@ -60,6 +61,37 @@ public sealed class BlockModelResolver
         _cache[blockId] = resolved;
         return resolved;
     }
+
+    /// <summary>Every texture variable the block's model chain declares, or null when none resolve.</summary>
+    /// <param name="blockId">Block to look up.</param>
+    public IReadOnlyDictionary<string, string>? ResolveTextures(Identifier blockId)
+    {
+        if (_textureCache.TryGetValue(blockId, out var cached))
+        {
+            return cached;
+        }
+
+        var resolved = FirstVariantModel(blockId) is { } modelId ? ResolveModelTextures(modelId) : null;
+        _textureCache[blockId] = resolved;
+        return resolved;
+    }
+
+    /// <summary>Resolves one face's texture variable, with or without its leading hash, to a path.</summary>
+    /// <param name="blockId">Block whose model declares the variable.</param>
+    /// <param name="variable">Variable name such as <c>#side</c> or <c>side</c>.</param>
+    public Identifier? ResolveTexture(Identifier blockId, string variable)
+    {
+        if (ResolveTextures(blockId) is not { } textures)
+        {
+            return null;
+        }
+
+        return Lookup(textures, variable.StartsWith('#') ? variable[1..] : variable);
+    }
+
+    /// <summary>The model a block's blockstate names first, or null when it names none.</summary>
+    /// <param name="blockId">Block to look up.</param>
+    public Identifier? ResolveModel(Identifier blockId) => FirstVariantModel(blockId);
 
     private BlockFaceTextures? ResolveCore(Identifier blockId)
     {
@@ -266,7 +298,7 @@ public sealed class BlockModelResolver
     }
 
     /// <summary>Resolves a face variable, following <c>#references</c> to a texture path.</summary>
-    private static Identifier? Lookup(Dictionary<string, string> textures, string variable)
+    private static Identifier? Lookup(IReadOnlyDictionary<string, string> textures, string variable)
     {
         var current = variable;
         var guard = 0;

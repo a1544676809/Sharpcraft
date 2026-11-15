@@ -10,7 +10,10 @@
 | 文档 | 摘要 | 状态 | 最后更新 |
 | --- | --- | --- | --- |
 | [`backend-interface.md`](backend-interface.md) | 能力协商、阶段模型、禁止泄漏规则；WGPU 为唯一实现，Vulkan 仅预留 | 草稿 | - |
+| [`block-entity-submission.md`](block-entity-submission.md) | 关键结论：方块实体从不进入地形几何。 | 未标注 | - |
 | [`block-layer-and-tint.md`](block-layer-and-tint.md) | 真实服务器目视验收暴露的两项缺口（树叶黑斑、草色不对）。 | 未标注 | - |
+| [`block-model-geometry.md`](block-model-geometry.md) | BlockModelResolver 只解析面贴图，不解析几何——ChunkMesher 把每个方块都画成完整立方体。 | 未标注 | - |
+| [`block-state-properties.md`](block-state-properties.md) | 方块实体与方块渲染经常需要读方块状态的属性，例如： | 未标注 | - |
 | [`chunk-geometry-arena.md`](chunk-geometry-arena.md) | 为什么要合并、缓冲怎么长、区块卸载怎么回收、每帧怎么画；附实测归因与验收口径 | 未标注 | - |
 | [`cloud-geometry.md`](cloud-geometry.md) | 原版每帧只上传面的描述，不上传顶点。 | 未标注 | - |
 | [`fluid-rendering.md`](fluid-rendering.md) | 水/岩浆的液面高度、面剔除、flow-UV、染色、逐面光、贴图动画与水下雾 | 已评审 | - |
@@ -30,5 +33,12 @@
 | [`shader-packs.md`](shader-packs.md) | 渲染目标、阶段、顺序、采样与 uniform 的声明模型，以及失败回退规则 | 已评审 | - |
 | [`single-track-executor.md`](single-track-executor.md) | 原则 14 要求"离屏与窗口渲染 MUST 共用同一套帧 Pass 执行器（窗口仅作最终上屏呈现）"。 | 未标注 | - |
 | [`sky-celestial.md`](sky-celestial.md) | 原版 SkyRenderer 的天空盘、日月星几何/变换/贴图与环境属性依赖 | 待评审 | - |
+| [`special-block-rendering.md`](special-block-rendering.md) | 原版里有一批方块不能用一个立方体模型表示，或需要额外的几何/动画/朝向处理：火把、箱子、活塞、作物，以及告示牌、旗帜、床、潜影盒等。 | 未标注 | - |
+
+子目录：
+
+| 目录 | 文档数 |
+| --- | --- |
+| [`golden-vectors/`](golden-vectors/README.md) | 1 |
 
 <!-- END GENERATED: docs/specs/render -->

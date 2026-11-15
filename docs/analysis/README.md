@@ -25,7 +25,7 @@
 | [`common/`](common/README.md) | 7 |
 | [`gui/`](gui/README.md) | 1 |
 | [`protocol/`](protocol/README.md) | 1 |
-| [`render/`](render/README.md) | 26 |
+| [`render/`](render/README.md) | 27 |
 
 <!-- END GENERATED: docs/analysis -->
 

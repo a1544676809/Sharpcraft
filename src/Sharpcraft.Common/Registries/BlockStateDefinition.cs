@@ -81,4 +81,31 @@ public sealed class BlockStateDefinition
 
         return index;
     }
+
+    /// <summary>
+    /// The property values a state holds, in <see cref="Properties"/> order, given its offset inside
+    /// the block. This is the inverse of <see cref="IndexOf"/>: the last property varies fastest.
+    /// </summary>
+    /// <param name="offset">Offset inside the block, zero based.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Offset is outside the block's states.</exception>
+    public IReadOnlyList<string> ValuesAt(int offset)
+    {
+        if ((uint)offset >= (uint)StateCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(offset),
+                offset,
+                $"offset must be between 0 and {StateCount - 1}");
+        }
+
+        var values = new string[_properties.Length];
+        for (var i = _properties.Length - 1; i >= 0; i--)
+        {
+            var radix = _properties[i].Radix;
+            values[i] = _properties[i].Values[offset % radix];
+            offset /= radix;
+        }
+
+        return values;
+    }
 }

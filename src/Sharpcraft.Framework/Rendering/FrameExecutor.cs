@@ -428,6 +428,14 @@ internal static class FrameExecutor
 
             WorldRenderPipeline.RecordScenePasses(DrawScenePass);
 
+            // Block entities draw as their own segment with their own atlas: the reference submits them
+            // through the node collector rather than the per section meshes, so they never share terrain
+            // geometry (docs/specs/render/block-entity-submission.md).
+            if (currentRequest.BlockEntity is { } blockEntitySegment)
+            {
+                terrainRecorder.DrawSegment(pass, blockEntitySegment);
+            }
+
             // The main pass ends here: sky, opaque terrain and the cutout layer (which shares the opaque depth) have all
             // been drawn. Translucent terrain and the interface each get their own pass so the order independent resolve
             // can run between them.

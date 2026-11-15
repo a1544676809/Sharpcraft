@@ -115,7 +115,16 @@ public sealed class BlockSpriteMap
     /// <summary>Overlay sprite of a fluid block (<c>name_overlay</c>), or null when it has none.</summary>
     public SpriteRect? FluidOverlay(Identifier blockId) => Lookup($"{blockId.Path}_overlay");
 
-    /// <summary>Alpha content of one face's sprite.</summary>
+    /// <summary>Sprite for an explicit texture path, or null when the atlas holds no such cell.</summary>
+    /// <param name="texture">Texture path such as <c>minecraft:block/torch</c>.</param>
+    public SpriteRect? ForTexture(Identifier texture)
+    {
+        // The atlas keys sprites under block/, so a path that already names it must not repeat it.
+        var path = texture.Path;
+        return Lookup(path.StartsWith(TextureDirectory, StringComparison.Ordinal)
+            ? path[TextureDirectory.Length..]
+            : path);
+    }
     /// <param name="sprite">Sprite rectangle.</param>
     /// <remarks>
     /// The reference decides the layer per material, that is per quad, not per block: a block whose top texture is opaque and

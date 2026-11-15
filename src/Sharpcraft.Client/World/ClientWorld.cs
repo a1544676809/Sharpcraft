@@ -45,6 +45,9 @@ public sealed class ClientWorld
     /// <summary>Server view distance in chunks.</summary>
     public int ViewDistance { get; private set; }
 
+    /// <summary>Block entity animation state driven by block events, such as chest lids.</summary>
+    public BlockEntityAnimations BlockEntityAnimations { get; } = new();
+
     /// <summary>Dimensions the server offers, as identifiers.</summary>
     public IReadOnlyList<string> Dimensions { get; private set; } = [];
 
@@ -283,6 +286,14 @@ public sealed class ClientWorld
     {
         ArgumentNullException.ThrowIfNull(parsed);
         parsed.Chunk.ApplyLight(parsed.Light);
+
+        // The parser hands back the block entities it walked; without this they are dropped at the world
+        // boundary and no chest ever reaches a renderer, however well the rest of the chain works.
+        foreach (var record in parsed.BlockEntities)
+        {
+            parsed.Chunk.AddBlockEntity(record);
+        }
+
         AddChunk(parsed.Chunk);
     }
 
@@ -441,6 +452,17 @@ public sealed class ClientWorld
         var localX = BlockCoordinates.SectionRelative(x);
         var localZ = BlockCoordinates.SectionRelative(z);
         chunk.SetBlockState(localX, y, localZ, state, airState);
+
+        // Vanilla creates a block entity as soon as the new state carries one. Without this a chest placed
+        // after its chunk loaded never reaches a renderer, however correct the rest of the chain is.
+        if (Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(state) is { } blockId)
+        {
+            var typeId = Sharpcraft.Common.World.VanillaBlockEntityTypes.IdOf(blockId.Path);
+            if (typeId >= 0 && Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(typeId))
+            {
+                chunk.AddBlockEntity(new Sharpcraft.Common.World.BlockEntityRecord(localX, y, localZ, typeId));
+            }
+        }
 
         // A change on a seam changes which faces the neighbour draws, so both columns go stale.
         MarkChunkDirty(chunk.ChunkX, chunk.ChunkZ, borderX: localX == 0 || localX == 15, borderZ: localZ == 0 || localZ == 15);

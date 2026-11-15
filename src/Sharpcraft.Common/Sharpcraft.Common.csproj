@@ -16,6 +16,7 @@
       26.3 jar. It is metadata, not assets: no textures, models or code (AGENTS.md principle 3).
     -->
     <EmbeddedResource Include="Registries\Data\vanilla-block-states-26.3.tsv" />
+    <EmbeddedResource Include="Registries\Data\vanilla-block-properties-26.3.tsv" />
     <EmbeddedResource Include="Registries\Data\vanilla-item-order.txt" />
     <EmbeddedResource Include="Registries\Data\vanilla-data-component-order.txt" />
     <EmbeddedResource Include="Registries\Data\vanilla-enchantment-order.txt" />

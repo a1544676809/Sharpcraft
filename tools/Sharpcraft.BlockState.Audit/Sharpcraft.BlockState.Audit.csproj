@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Sharpcraft.BlockState.Audit</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Verification only: this tool dumps this project's decoding of every block state so it can be
+      diffed against the same dump taken from the running game (AGENTS.md principle 3 keeps the
+      game itself out of the repository; only the tool lives here).
+    -->
+    <ProjectReference Include="..\..\src\Sharpcraft.Common\Sharpcraft.Common.csproj" />
+  </ItemGroup>
+
+</Project>

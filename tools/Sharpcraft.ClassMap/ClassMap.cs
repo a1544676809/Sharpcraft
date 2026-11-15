@@ -36,7 +36,8 @@ public static class ClassMapTool
     public static (List<Entry> Entries, List<string> Unannotated) Scan(string root)
     {
         var entries = new List<Entry>();
-        var unannotated = new List<string>();
+        var annotatedTypes = new HashSet<string>(StringComparer.Ordinal);
+        var unannotatedByType = new Dictionary<string, (string Rel, string Line)>(StringComparer.Ordinal);
 
         foreach (var project in ScanProjects)
         {
@@ -97,16 +98,28 @@ public static class ClassMapTool
                     if (pCls is not null)
                     {
                         entries.Add(new Entry(project, subDir, fullName, pCls, pPath!, pKind!, pStatus!, pNote ?? string.Empty));
+                        annotatedTypes.Add(fullName);
                         pCls = null;
                         pPath = null;
                     }
                     else if (mods.Contains("public", StringComparison.Ordinal))
                     {
-                        unannotated.Add(rel + " :: " + fullName);
+                        var candidate = rel + " :: " + fullName;
+                        if (!unannotatedByType.TryGetValue(fullName, out var existing) ||
+                            rel.Length < existing.Rel.Length ||
+                            (rel.Length == existing.Rel.Length && string.CompareOrdinal(rel, existing.Rel) < 0))
+                        {
+                            unannotatedByType[fullName] = (rel, candidate);
+                        }
                     }
                 }
             }
         }
+
+        var unannotated = unannotatedByType
+            .Where(kv => !annotatedTypes.Contains(kv.Key))
+            .Select(kv => kv.Value.Line)
+            .ToList();
 
         entries.Sort((a, b) => string.CompareOrdinal(a.Project + a.ModuleDir + a.TypeName, b.Project + b.ModuleDir + b.TypeName));
         unannotated.Sort(StringComparer.Ordinal);
