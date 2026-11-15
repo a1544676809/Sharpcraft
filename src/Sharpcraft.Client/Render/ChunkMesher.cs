@@ -622,7 +622,7 @@ public static partial class ChunkMesher
         // world axes with a fixed flip per direction. Down is lower on the screen for every side face, and the
         // horizontal axis runs opposite between opposing sides, which is what makes a wrapped texture read the
         // same way round as the original rather than mirrored on half the faces
-        // (docs/analysis/render/face-uv.md, ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/model/FaceBakery.java).
+        // (docs/analysis/render/face-uv.md, ref://mc-26.3-analysis/src/net/minecraft/client/resources/model/cuboid/FaceBakery.java).
         (float U, float V) uvOrigin = Uv(direction, x, y, z, (origin.X - baseX, origin.Y - baseY, origin.Z - baseZ));
         (float U, float V) uvA = Uv(direction, x, y, z, (a.X - baseX, a.Y - baseY, a.Z - baseZ));
         (float U, float V) uvB = Uv(direction, x, y, z, (b.X - baseX, b.Y - baseY, b.Z - baseZ));

@@ -288,7 +288,7 @@ public sealed class DirectoryAssetSource : IAssetSource, IMetadataAssetSource
 /// built-in jar pack so the external index supplies audio and every language while the jar pack still answers the
 /// models, textures and blockstates only the jar carries.
 /// </remarks>
-[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.server.packs.resources.IndexedAssetSource", "ref://mc-26.3-analysis/src/net/minecraft/server/packs/resources/IndexedAssetSource.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "createIndexFs equivalent: index maps logical path -> objects/<h2>/<sha1>; read-only overlay")]
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.resources.IndexedAssetSource", "ref://mc-26.3-analysis/src/net/minecraft/client/resources/IndexedAssetSource.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "createIndexFs equivalent: index maps logical path -> objects/<h2>/<sha1>; read-only overlay")]
 public sealed class IndexedAssetSource : IAssetSource, IMetadataAssetSource
 {
     private readonly Dictionary<string, string> _objects = new(StringComparer.Ordinal);

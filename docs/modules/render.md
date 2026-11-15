@@ -127,7 +127,7 @@
 ### 5.4 每面 UV 约定（2026-10-29 对齐原版）
 
 石头的纹理看不出上下左右，所以这里的约定**靠测量**而不是靠看：网格把每个角点**投影到该面的 uv 轴**上算出
-纹理坐标，轴取自原版模型烘焙器的规则（`ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/model/FaceBakery.java`）。
+纹理坐标，轴取自原版模型烘焙器的规则（`ref://mc-26.3-analysis/src/net/minecraft/client/resources/model/cuboid/FaceBakery.java`）。
 
 | 面 | u 轴 | v=0 所在方向 |
 | --- | --- | --- |

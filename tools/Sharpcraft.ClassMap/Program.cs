@@ -36,10 +36,12 @@ internal static class Program
             case "--check":
             default:
             {
-                var violations = ClassMapTool.Check(root);
+                var violations = ClassMapTool.Check(root, out var referenceFilesVerified);
                 if (violations.Count == 0)
                 {
-                    Console.WriteLine("class-map: ok");
+                    Console.WriteLine(referenceFilesVerified
+                        ? "class-map: ok"
+                        : "class-map: ok (reference files not verified: no analysis workspace found; set MC_ANALYSIS_ROOT)");
                     return 0;
                 }
 

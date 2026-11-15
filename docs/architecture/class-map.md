@@ -15,7 +15,7 @@ AGENTS.md §3.5 硬约束：**每个模块文档必须写明我们的类型对�
   - `Status`：`Full`/`Partial`/`NotStarted`（Partial/NotStarted 必须 Note 差距）。
 - **工具**：`tools/Sharpcraft.ClassMap`
   - `--write`：扫描 `src/**` 生成 `docs/architecture/class-map.generated.md`。
-  - `--check`：生成页是否最新、是否有**新增未注解的 public 类型**（不在 baseline 内）、引用指针是否形如 `ref://`（且当 `MC_ANALYSIS_ROOT` 存在时校验文件存在）。
+  - `--check`：生成页是否最新、是否有**新增未注解的 public 类型**（不在 baseline 内）、引用指针是否形如 `ref://`、引用的文件是否真的存在。分析工作区按 `MC_ANALYSIS_ROOT` 解析，未设置时回退到同级 `../mc-26.3-analysis`；找不到工作区时输出会明确标注"reference files not verified"，不会伪装成已校验。
   - `--update-baseline`：把当前未注解类型写入 `docs/src/.classmap-baseline.txt`（**棘轮，只减不增**）。
 - **门禁**：`tools/verify/check-classmap.ps1` + `tests/Sharpcraft.Architecture.Tests/ClassMapTests.cs`（CI 与 `dotnet test` 均执行）。
 - **合规**：仓库内**不出现原版源码**，只存类名与 `ref://` 指针；引用解析到本机分析目录 `%MC_ANALYSIS_ROOT%`（默认同级 `../mc-26.3-analysis`）。

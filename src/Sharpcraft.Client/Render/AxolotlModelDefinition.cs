@@ -10,7 +10,7 @@ namespace Sharpcraft.Client.Render;
 /// Bind pose only. Variants (lucy/wild/gold/cyan/blue) are a synced integer, not a registry, and only swap the texture.
 /// Parts are declared with the <c>VanillaMeshDefinition</c> DSL and baked via <c>VanillaMeshBake</c> (T-686).
 /// </remarks>
-[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.axolotl.AxolotlModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/axolotl/AxolotlModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.animal.axolotl.AdultAxolotlModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/axolotl/AdultAxolotlModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class AxolotlModelDefinition
 {
     public const int AxolotlEntityTypeId = 7;

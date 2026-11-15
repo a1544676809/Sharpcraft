@@ -213,7 +213,7 @@ public readonly record struct EntityModelLayer(
 /// Static model definitions consumed by the entity mesher. The values follow the reference
 /// `HumanoidModel.createMesh` player parts (docs/modules/entity-render.md).
 /// </summary>
-[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.PlayerModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/PlayerModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Merged, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Helper to build humanoid/player part geometry")]
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.player.PlayerModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/player/PlayerModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Merged, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Helper to build humanoid/player part geometry")]
 public static class PlayerModelDefinition
 {
     /// <summary>Model height in pixels: head top is 32 pixels above the feet.</summary>

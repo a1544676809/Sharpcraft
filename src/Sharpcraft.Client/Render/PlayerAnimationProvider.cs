@@ -10,7 +10,7 @@ namespace Sharpcraft.Client.Render;
 /// unchanged and only adds the overlay parts. Our player model carries those overlays on their base parts (hat on head,
 /// jacket on body, sleeves on arms, pants on legs), so they follow the pose automatically and no copy step is needed.
 /// </summary>
-[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.PlayerModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/PlayerModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.player.PlayerModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/player/PlayerModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public sealed class PlayerAnimationProvider : IEntityAnimationProvider
 {
     /// <summary><c>minecraft:player</c> registry id, from the registration order in <c>EntityTypes.java</c>.</summary>
