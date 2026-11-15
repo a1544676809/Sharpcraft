@@ -151,10 +151,12 @@ internal static class WindowCommand
         var workerPool = new ChunkWorkerPool(
             world,
             prepared?.Map,
+            prepared?.Models,
             fifoMeshOrder: GameOptions.Get("MC_MESH_FIFO") == "1",
             mergeFaces: GameOptions.Get("MC_MESH_NOMERGE") != "1",
             ambientOcclusion: GameOptions.Get("MC_NO_AO") != "1");
         Console.WriteLine($"chunk workers: {workerPool.WorkerCount} (of {Environment.ProcessorCount} logical processors)");
+
 
         var meshCache = new ChunkMeshCache(workerPool);
 
@@ -262,6 +264,7 @@ internal static class WindowCommand
             cache: meshCache,
             meshSynchronously: false,
             spriteRects: prepared?.Atlas.RectTable,
+            models: prepared?.Models,
             chestAtlas: prepared?.ChestAtlas);
         Console.WriteLine($"mesh: {mesh.BlockCount} blocks, {mesh.TriangleCount} triangles");
 
