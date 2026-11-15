@@ -6,7 +6,7 @@ using Sharpcraft.Framework.Rendering;
 namespace Sharpcraft.Client.Render;
 
 /// <summary>Supported vanilla skull model families for the static head slice.</summary>
-[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.block.SkullBlock.Type", "ref://mc-26.3-analysis/src/net/minecraft/world/level/block/SkullBlock.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "static skull families only; player/dragon/piglin are not drawn")]
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.block.SkullBlock.Type", "ref://mc-26.3-analysis/src/net/minecraft/world/level/block/SkullBlock.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "all seven supported static skull families; model-specific animation/skin cache remain separate")]
 public enum SkullType : byte
 {
     None = 0,
@@ -20,14 +20,16 @@ public enum SkullType : byte
 }
 
 /// <summary>
-/// The shared SkullModel head. All four supported skull families use the same 8x8x8 head cube
-/// (<c>createMobHeadLayer</c>) and differ only by texture.
+/// Static skull definitions for the seven supported families: the four mob heads use the shared 8x8x8
+/// <c>SkullModel</c> head, Player adds the humanoid hat overlay, Piglin uses its six-box head and Dragon
+/// uses the seven-box head/jaw model.
 /// </summary>
 /// <remarks>
 /// Source: <c>ref://mc-26.3-analysis/src/net/minecraft/client/model/object/skull/SkullModel.java</c>
-/// (<c>createHeadModel</c> lines 19-24, <c>createMobHeadLayer</c> lines 36-39). The head box is
-/// <c>(-4,-8,-4,8,8,8)</c> at texture offset (0,0), declared texture 64x32. The block entity
-/// renderer applies its outer pose after <see cref="EntityModelMesher.BuildModel"/>.
+/// (<c>createHeadModel</c> lines 19-24, <c>createMobHeadLayer</c> lines 36-39,
+/// <c>createHumanoidHeadLayer</c> lines 26-34), plus the Piglin head and
+/// <c>DragonHeadModel</c> definitions. The block entity renderer applies its outer pose after
+/// <see cref="EntityModelMesher.BuildModel"/>.
 /// </remarks>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.model.object.skull.SkullModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/object/skull/SkullModel.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial)]
 public static class SkullModelDefinition
@@ -190,14 +192,14 @@ public static class SkullModelDefinition
         // child with an unscaled local offset. ref://mc-26.3-analysis/src/net/minecraft/client/model/object/skull/DragonHeadModel.java:14-42.
         var head = root.AddOrReplaceChild("head",
             VanillaPartPose.Offset(0f, -7.986666f, 0f).Scaled(0.75f),
-            new VanillaCubeDefinition("upper_lip", 176, 44, -6f, -1f, -24f, 12f, 5f, 16f),
-            new VanillaCubeDefinition("upper_head", 112, 30, -8f, -8f, -10f, 16f, 16f, 16f),
-            new VanillaCubeDefinition("scale_left", 0, 0, -5f, -12f, -4f, 2f, 4f, 6f, Mirror: true),
-            new VanillaCubeDefinition("nostril_left", 112, 0, -5f, -3f, -22f, 2f, 2f, 4f, Mirror: true),
-            new VanillaCubeDefinition("scale_right", 0, 0, 3f, -12f, -4f, 2f, 4f, 6f),
-            new VanillaCubeDefinition("nostril_right", 112, 0, 3f, -3f, -22f, 2f, 2f, 4f));
+            new VanillaCubeDefinition("upper_lip", 176, 44, -6f, -1f, -24f, 12f, 5f, 16f, MirrorX: false),
+            new VanillaCubeDefinition("upper_head", 112, 30, -8f, -8f, -10f, 16f, 16f, 16f, MirrorX: false),
+            new VanillaCubeDefinition("scale_left", 0, 0, -5f, -12f, -4f, 2f, 4f, 6f, Mirror: true, MirrorX: false),
+            new VanillaCubeDefinition("nostril_left", 112, 0, -5f, -3f, -22f, 2f, 2f, 4f, Mirror: true, MirrorX: false),
+            new VanillaCubeDefinition("scale_right", 0, 0, 3f, -12f, -4f, 2f, 4f, 6f, MirrorX: false),
+            new VanillaCubeDefinition("nostril_right", 112, 0, 3f, -3f, -22f, 2f, 2f, 4f, MirrorX: false));
         head.AddOrReplaceChild("jaw", VanillaPartPose.Offset(0f, 4f, -8f),
-            new VanillaCubeDefinition("jaw", 176, 65, -6f, 0f, -16f, 12f, 4f, 16f));
+            new VanillaCubeDefinition("jaw", 176, 65, -6f, 0f, -16f, 12f, 4f, 16f, MirrorX: false));
         return new VanillaMeshDefinition(root);
     }
 }

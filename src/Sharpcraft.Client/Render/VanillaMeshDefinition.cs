@@ -203,6 +203,12 @@ static partial class VanillaMeshBake
 
         if (HasNonUnitScale(root))
         {
+            if (modelHeight != 0f)
+            {
+                throw new NotSupportedException("Non-unit PartPose scale is only supported by the Dragon skull bake with modelHeight 0.");
+            }
+
+            ValidateScaledSubtree(root);
             return BakeScaledAbsolute(mesh, textureWidth, textureHeight, texturePath);
         }
 
@@ -239,14 +245,38 @@ static partial class VanillaMeshBake
         return false;
     }
 
+    internal static bool HasNonUnitScale(VanillaMeshDefinition mesh) =>
+        mesh.Root is { } root && HasNonUnitScale(root);
+
+    private static void ValidateScaledSubtree(VanillaPartDefinition part)
+    {
+        if (MathF.Abs(part.Pose.RotationX) > 0.0001f ||
+            MathF.Abs(part.Pose.RotationY) > 0.0001f ||
+            MathF.Abs(part.Pose.RotationZ) > 0.0001f)
+        {
+            throw new NotSupportedException("Non-unit PartPose scale does not yet support rotations; only the static Dragon skull is supported.");
+        }
+
+        foreach (var cube in part.Cubes)
+        {
+            if (cube.MirrorX)
+            {
+                throw new NotSupportedException("Non-unit PartPose scale does not yet support root MirrorX; use MirrorX:false.");
+            }
+        }
+
+        foreach (var child in part.Children)
+        {
+            ValidateScaledSubtree(child);
+        }
+    }
+
     private static float EffectiveScale(float value) => value == 0f ? 1f : value;
 
     /// <summary>
-    /// Bakes a scaled subtree into absolute, pre-project-frame cuboids. The source transform for a scaled
-    /// <c>PartPose</c> is <c>origin + scale * raw</c>; applying it during bake keeps the existing flat
-    /// <see cref="EntityModelPart"/> hierarchy usable without copying the part matrix into a renderer.
-    /// This path is intentionally selected only when a non-unit scale exists; the unit-scale path above is
-    /// byte-for-byte unchanged for every existing model.
+    /// Bakes the restricted static scaled subtree used by the Dragon skull into absolute source-frame cuboids.
+    /// The caller has already validated the supported subset: no rotations, root MirrorX false and
+    /// modelHeight zero. This is deliberately not a general PartPose.scaled implementation.
     /// </summary>
     private static IReadOnlyList<EntityModelPart> BakeScaledAbsolute(
         VanillaMeshDefinition mesh,
@@ -298,7 +328,7 @@ static partial class VanillaMeshBake
             var maxY = origin.Y + (scale.Y * (cube.MinY + cube.Height));
             var minZ = origin.Z + (scale.Z * cube.MinZ);
             var maxZ = origin.Z + (scale.Z * (cube.MinZ + cube.Depth));
-            var name = cube.Name;
+            var name = first ? part.Name : cube.Name;
             var effectiveTexturePath = cube.TexturePath ?? texturePath;
             var effectiveWidth = cube.TextureWidth > 0 ? cube.TextureWidth : textureWidth;
             var effectiveHeight = cube.TextureHeight > 0 ? cube.TextureHeight : textureHeight;
@@ -366,35 +396,36 @@ static partial class VanillaMeshBake
                 throw new InvalidOperationException($"Duplicate part name '{cube.Name}' while baking a VanillaMeshDefinition; part names must be unique.");
             }
 
-            // The first cuboid is the node's representative; a part such as DragonHead's "head" uses
-            // "upper_lip" as its first cuboid, so keep the part name as the node identity while the
-            // compiled tree retains each source cuboid name.
+            // The first cuboid is the node's representative; the flat runtime uses a part name as the
+            // parent-link key, so a multi-cube part must name its first cuboid after the part.
+            if (part.Cubes.Count > 1 && !string.Equals(part.Cubes[0].Name, part.Name, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"A multi-cube part '{part.Name}' must name its first cube after the part.");
+            }
+
             var effectiveTexturePath = cube.TexturePath ?? texturePath;
             EntityModelPart baked;
             if (first)
             {
-                var nodeName = string.Equals(cube.Name, part.Name, StringComparison.Ordinal) ? cube.Name : part.Name;
                 baked = parentName is null
                     ? BakeRoot(
-                        nodeName,
+                        cube.Name,
                         part.Pose.X, part.Pose.Y, part.Pose.Z,
                         cube.MinX, cube.MinY, cube.MinZ,
                         cube.Width, cube.Height, cube.Depth,
                         cube.TextureX, cube.TextureY,
                         mirror: cube.Mirror, mirrorX: cube.MirrorX, overlays: cube.Overlays, modelHeight: modelHeight,
                         rotationX: part.Pose.RotationX, rotationY: part.Pose.RotationY, rotationZ: part.Pose.RotationZ,
-                        texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind,
-                        scaleX: part.Pose.ScaleX, scaleY: part.Pose.ScaleY, scaleZ: part.Pose.ScaleZ)
+                        texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind)
                     : BakeChild(
-                        nodeName, parentName,
+                        cube.Name, parentName,
                         part.Pose.X, part.Pose.Y, part.Pose.Z,
                         cube.MinX, cube.MinY, cube.MinZ,
                         cube.Width, cube.Height, cube.Depth,
                         cube.TextureX, cube.TextureY,
                         mirror: cube.Mirror, overlays: cube.Overlays,
                         rotationX: part.Pose.RotationX, rotationY: part.Pose.RotationY, rotationZ: part.Pose.RotationZ,
-                        texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind,
-                        scaleX: part.Pose.ScaleX, scaleY: part.Pose.ScaleY, scaleZ: part.Pose.ScaleZ);
+                        texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind);
             }
             else
             {

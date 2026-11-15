@@ -100,7 +100,7 @@ public static partial class VanillaMeshBake
 
     private static int RoundDimension(float value) => (int)MathF.Round(value);
 
-    /// <summary>Builds one absolute cuboid for the generic scaled-subtree bake path.</summary>
+    /// <summary>Builds one absolute cuboid for the restricted Dragon-style scaled bake path.</summary>
     internal static EntityModelPart CreateScaledPart(
         string name,
         string? parent,
@@ -172,10 +172,7 @@ public static partial class VanillaMeshBake
         float rotationZ = 0f,
         string? texturePath = null,
         float grow = 0f,
-        EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout,
-        float scaleX = 1f,
-        float scaleY = 1f,
-        float scaleZ = 1f)
+        EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout)
     {
         var sourceCentreX = pivotX + minX + (width * 0.5f);
         var centreX = MathF.Round(mirrorX ? -sourceCentreX : sourceCentreX, 4);
@@ -201,10 +198,7 @@ public static partial class VanillaMeshBake
             RotationZ: rotationZ,
             TexturePath: texturePath,
             Grow: grow,
-            Kind: kind,
-            ScaleX: scaleX,
-            ScaleY: scaleY,
-            ScaleZ: scaleZ);
+            Kind: kind);
     }
 
     /// <summary>
@@ -234,10 +228,7 @@ public static partial class VanillaMeshBake
         float rotationZ = 0f,
         string? texturePath = null,
         float grow = 0f,
-        EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout,
-        float scaleX = 1f,
-        float scaleY = 1f,
-        float scaleZ = 1f)
+        EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout)
     {
         ArgumentException.ThrowIfNullOrEmpty(parent);
         return new EntityModelPart(
@@ -261,9 +252,6 @@ public static partial class VanillaMeshBake
             TexturePath: texturePath,
             Grow: grow,
             Parent: parent,
-            Kind: kind,
-            ScaleX: scaleX,
-            ScaleY: scaleY,
-            ScaleZ: scaleZ);
+            Kind: kind);
     }
 }

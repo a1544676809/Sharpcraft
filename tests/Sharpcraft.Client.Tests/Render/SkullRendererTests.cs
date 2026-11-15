@@ -43,9 +43,6 @@ public sealed class SkullRendererTests
         Assert.Equal(8f, head.Depth);
         Assert.Equal(0, head.TextureX);
         Assert.Equal(0, head.TextureY);
-        Assert.Equal(1f, head.ScaleX);
-        Assert.Equal(1f, head.ScaleY);
-        Assert.Equal(1f, head.ScaleZ);
         Assert.True(ChestAtlas.Textures.Length == 22);
         Assert.Equal(7, ChestAtlas.SkullTextures.Length);
     }
@@ -57,9 +54,6 @@ public sealed class SkullRendererTests
         Assert.Equal(256, SkullModelDefinition.DragonDefinition.TextureHeight);
         Assert.Equal("entity/enderdragon/dragon", SkullModelDefinition.DragonDefinition.TexturePath);
         Assert.Equal(7, SkullModelDefinition.DragonDefinition.Parts.Count);
-        Assert.Equal(1f, SkullModelDefinition.DragonDefinition.Parts[0].ScaleX);
-        Assert.Equal(1f, SkullModelDefinition.DragonDefinition.Parts[0].ScaleY);
-        Assert.Equal(1f, SkullModelDefinition.DragonDefinition.Parts[0].ScaleZ);
         Assert.Same(SkullModelDefinition.DragonDefinition, SkullModelDefinition.DefinitionFor(SkullType.Dragon));
 
         var mesher = new SkullRenderer();

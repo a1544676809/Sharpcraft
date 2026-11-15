@@ -1,0 +1,114 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// Copyright (C) 2026 Sharpcraft contributors
+
+using System.Security.Cryptography;
+using System.Text;
+using Sharpcraft.Client.Render;
+using Xunit;
+
+namespace Sharpcraft.Client.Tests.Render;
+
+/// <summary>
+/// Byte-level stability gate for the default Scale=1 model bake. The hashes were captured from the
+/// pre-scale-support revision (main ac6111ec) over every registered model definition: the flat legacy
+/// <see cref="VanillaMeshBake.Bake"/> parts and the structural <see cref="VanillaMeshBakery.Build"/> tree.
+/// </summary>
+public sealed class EntityModelBakeStabilityTests
+{
+    [Fact]
+    public void ScaleOneRegistryBakeAndTreeStayByteIdentical()
+    {
+        var definitions = EntityModelResolver.Definitions
+            .OrderBy(definition => definition.Name, StringComparer.Ordinal)
+            .ThenBy(definition => definition.TexturePath, StringComparer.Ordinal)
+            .ThenBy(definition => definition.Parts.Count)
+            .ToArray();
+
+        // At least the 111 common definitions requested by the review; the registry currently has 294
+        // distinct definitions (base, adult variant and baby variant entries).
+        Assert.True(definitions.Length >= 111, $"expected at least 111 definitions, found {definitions.Length}");
+
+        var flat = new StringBuilder();
+        var tree = new StringBuilder();
+        foreach (var definition in definitions)
+        {
+            flat.Append("D|").Append(definition.Name).Append('|').Append(definition.TexturePath).Append('|')
+                .Append(definition.TextureWidth).Append('|').Append(definition.TextureHeight).Append('|')
+                .Append(definition.Parts.Count).Append('\n');
+            foreach (var part in definition.Parts)
+            {
+                AppendPart(flat, part);
+            }
+
+            if (definition.Compiled is { } compiled)
+            {
+                AppendNode(tree, compiled.Root, 0);
+            }
+        }
+
+        Assert.Equal("c546b3ebdabfff2289ed6cd68943d44958c77a7232377585789c51fe3c5670c6", Hash(flat));
+        Assert.Equal("499fee6b632eb713b44773174b7c19176837b0a09a9047408a7662eaa85036e8", Hash(tree));
+    }
+
+    private static void AppendPart(StringBuilder builder, EntityModelPart part)
+    {
+        builder.Append("P|").Append(part.Name).Append('|').Append(part.Parent).Append('|')
+            .Append(Bits(part.CentreX)).Append('|').Append(Bits(part.Bottom)).Append('|')
+            .Append(Bits(part.Width)).Append('|').Append(Bits(part.Height)).Append('|')
+            .Append(Bits(part.Depth)).Append('|').Append(Bits(part.CentreZ)).Append('|')
+            .Append(Bits(part.PivotX)).Append('|').Append(Bits(part.PivotY)).Append('|')
+            .Append(Bits(part.PivotZ)).Append('|').Append(Bits(part.RotationX)).Append('|')
+            .Append(Bits(part.RotationY)).Append('|').Append(Bits(part.RotationZ)).Append('|')
+            .Append(part.TextureX).Append('|').Append(part.TextureY).Append('|')
+            .Append(part.Mirror).Append('|').Append(part.TexturePath).Append('|')
+            .Append(Bits(part.Grow)).Append('|').Append(part.Kind).Append('|')
+            .Append(part.TextureWidth).Append('|').Append(part.TextureHeight).Append('|')
+            .Append(part.IncludeInEmissive).Append('|').Append(part.EmissiveOnly).Append('|')
+            .Append(part.EmissiveTexturePath).Append('|').Append(part.PoseSource).Append('|')
+            .Append(part.UvWidth).Append('|').Append(part.UvHeight).Append('|')
+            .Append(part.UvDepth).Append('|').Append(part.UsesItemAtlas).Append('\n');
+
+        if (part.OverlayLayers is null)
+        {
+            return;
+        }
+
+        foreach (var layer in part.OverlayLayers)
+        {
+            builder.Append("O|").Append(layer.Name).Append('|').Append(Bits(layer.Grow)).Append('|')
+                .Append(layer.TextureX).Append('|').Append(layer.TextureY).Append('|')
+                .Append(layer.Mirror).Append('|').Append(layer.TexturePath).Append('|')
+                .Append(layer.Kind).Append('\n');
+        }
+    }
+
+    private static void AppendNode(StringBuilder builder, EntityModelPartNode node, int depth)
+    {
+        builder.Append("N|").Append(depth).Append('|').Append(node.Name).Append('|').Append(node.Parent).Append('|')
+            .Append(Bits(node.PivotX)).Append('|').Append(Bits(node.PivotY)).Append('|').Append(Bits(node.PivotZ)).Append('|')
+            .Append(Bits(node.RotationX)).Append('|').Append(Bits(node.RotationY)).Append('|').Append(Bits(node.RotationZ)).Append('|')
+            .Append(node.PoseSource).Append('\n');
+
+        foreach (var cube in node.Cubes)
+        {
+            builder.Append("C|").Append(cube.Name).Append('|').Append(Bits(cube.CentreX)).Append('|')
+                .Append(Bits(cube.Bottom)).Append('|').Append(Bits(cube.CentreZ)).Append('|')
+                .Append(Bits(cube.Width)).Append('|').Append(Bits(cube.Height)).Append('|')
+                .Append(Bits(cube.Depth)).Append('|').Append(cube.TextureX).Append('|')
+                .Append(cube.TextureY).Append('|').Append(cube.Mirror).Append('|').Append(cube.TexturePath).Append('|')
+                .Append(Bits(cube.Grow)).Append('|').Append(cube.Kind).Append('|')
+                .Append(cube.UvWidth).Append('|').Append(cube.UvHeight).Append('|')
+                .Append(cube.UvDepth).Append('|').Append(cube.UsesItemAtlas).Append('\n');
+        }
+
+        foreach (var child in node.Children)
+        {
+            AppendNode(builder, child, depth + 1);
+        }
+    }
+
+    private static int Bits(float value) => BitConverter.SingleToInt32Bits(value);
+
+    private static string Hash(StringBuilder builder) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString()))).ToLowerInvariant();
+}

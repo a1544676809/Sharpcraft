@@ -22,6 +22,11 @@ public static class VanillaMeshBakery
         string? texturePath = null)
     {
         ArgumentNullException.ThrowIfNull(mesh);
+        if (VanillaMeshBake.HasNonUnitScale(mesh))
+        {
+            throw new NotSupportedException("Non-unit PartPose scale is only supported by VanillaMeshBake.Bake for the static Dragon skull; VanillaMeshBakery.Build requires scale 1.");
+        }
+
         var root = mesh.Root
             ?? throw new InvalidOperationException("VanillaMeshDefinition has no root part; declare one before baking.");
 
@@ -100,10 +105,7 @@ public static class VanillaMeshBakery
             children,
             firstCube?.VisibleWhen,
             poseSource: firstCube?.PoseSource,
-            tintSelector: firstCube?.TintSelector,
-            scaleX: template.ScaleX,
-            scaleY: template.ScaleY,
-            scaleZ: template.ScaleZ);
+            tintSelector: firstCube?.TintSelector);
     }
 
     private static EntityModelPart BakeCube(
@@ -129,10 +131,7 @@ public static class VanillaMeshBakery
                 rotationZ: part.Pose.RotationZ,
                 texturePath: cube.TexturePath,
                 grow: cube.Grow,
-                kind: cube.Kind,
-                scaleX: part.Pose.ScaleX,
-                scaleY: part.Pose.ScaleY,
-                scaleZ: part.Pose.ScaleZ);
+                kind: cube.Kind);
         }
 
         return VanillaMeshBake.BakeChild(
@@ -149,10 +148,7 @@ public static class VanillaMeshBakery
             rotationZ: part.Pose.RotationZ,
             texturePath: cube.TexturePath,
             grow: cube.Grow,
-            kind: cube.Kind,
-            scaleX: part.Pose.ScaleX,
-            scaleY: part.Pose.ScaleY,
-            scaleZ: part.Pose.ScaleZ);
+            kind: cube.Kind);
     }
 
     private static void Collect(

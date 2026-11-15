@@ -597,10 +597,7 @@ public sealed partial class EntityModelMesher
                     part.RotationX,
                     part.RotationY,
                     part.RotationZ,
-                    Kind: layer.Kind,
-                    ScaleX: part.ScaleX,
-                    ScaleY: part.ScaleY,
-                    ScaleZ: part.ScaleZ);
+                    Kind: layer.Kind);
                 var overlayMin = new Vector3(min.X - grow, min.Y - grow, min.Z - grow);
                 var overlayMax = new Vector3(max.X + grow, max.Y + grow, max.Z + grow);
                 var overlaySkin = skin;

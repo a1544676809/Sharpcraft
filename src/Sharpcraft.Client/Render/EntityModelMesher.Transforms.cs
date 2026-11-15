@@ -299,9 +299,9 @@ public sealed partial class EntityModelMesher
             (node.PivotY + poseOffset.Position.Y + yOffset) * px,
             (node.PivotZ + poseOffset.Position.Z) * px);
         var local = Matrix4x4.CreateScale(new Vector3(
-                (1f + poseOffset.Scale.X) * node.ScaleX,
-                (1f + poseOffset.Scale.Y) * node.ScaleY,
-                (1f + poseOffset.Scale.Z) * node.ScaleZ))
+                1f + poseOffset.Scale.X,
+                1f + poseOffset.Scale.Y,
+                1f + poseOffset.Scale.Z))
             * RotationZyx(
                 rotation.X - poseOffset.Rotation.X,
                 rotation.Y - poseOffset.Rotation.Y,
@@ -384,12 +384,7 @@ public sealed partial class EntityModelMesher
         // The model vertices are the reference model after scale(-1,-1,1) (see FromVanilla), so an animation rotation
         // transcribed from the reference model space must be conjugated by that flip: X and Y angles are negated, Z is
         // unchanged. Base (bind-pose) rotations are already stored in this space and are left untouched.
-        var local = Matrix4x4.CreateScale(new Vector3(
-                (1f + poseOffset.Scale.X) * part.ScaleX,
-                (1f + poseOffset.Scale.Y) * part.ScaleY,
-                (1f + poseOffset.Scale.Z) * part.ScaleZ))
-            * RotationZyx(part.RotationX - poseOffset.Rotation.X, part.RotationY - poseOffset.Rotation.Y, part.RotationZ + poseOffset.Rotation.Z)
-            * Matrix4x4.CreateTranslation(pivot);
+        var local = Matrix4x4.CreateScale(new Vector3(1f + poseOffset.Scale.X, 1f + poseOffset.Scale.Y, 1f + poseOffset.Scale.Z)) * RotationZyx(part.RotationX - poseOffset.Rotation.X, part.RotationY - poseOffset.Rotation.Y, part.RotationZ + poseOffset.Rotation.Z) * Matrix4x4.CreateTranslation(pivot);
 
         if (part.Parent is not { Length: > 0 } parentName)
         {

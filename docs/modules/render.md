@@ -609,6 +609,14 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 <!-- simplification:SIM-BE-SKULL-DRAGON-ANIM task:T-47 -->
 
+### Scaled PartPose 烘焙范围
+
+- `VanillaPartPose` 的 `ScaleX/Y/Z` 与 `Scaled(factor)` 保留；当前只有 Dragon 静态头使用非单位 scale。
+- `VanillaMeshBake.Bake` 的绝对烘焙路径只接受 **无旋转、无 root `MirrorX`、`modelHeight=0`** 的静态 scaled subtree；其他输入抛 `NotSupportedException`，不会返回近似结果。
+- `VanillaMeshBakery.Build` 对非单位 scale 明确拒绝（需要 tree/compiled 路径时另行实现完整 `scale * translate` 语义）。
+- 默认 scale=1 走原 legacy 路径；`EntityModelBakeStabilityTests` 以 294 个注册定义的 legacy parts/tree 聚合 SHA-256 做字节级回归。
+
+
 
 
 ### SIM-BE-SKULL-ZOFFSET：Skull 不应用 entityCutoutZOffset

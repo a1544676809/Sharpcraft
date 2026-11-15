@@ -9,9 +9,10 @@ using Sharpcraft.Framework.Rendering;
 namespace Sharpcraft.Client.Render;
 
 /// <summary>
-/// Draws static block/wall skulls for skeleton, wither skeleton, zombie and creeper heads. The head
-/// cube is generated once by <see cref="SkullModelDefinition"/>; this renderer applies only the
-/// outer ground/wall pose from the reference.
+/// Draws static block/wall skulls for all seven supported families: skeleton, wither skeleton, zombie,
+/// creeper, Player (default slim Steve), Piglin and Dragon. Each head model is generated once by
+/// <see cref="SkullModelDefinition"/>; this renderer applies only the outer ground/wall pose from the
+/// reference.
 /// </summary>
 /// <remarks>
 /// Source: <c>ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/SkullBlockRenderer.java</c>
