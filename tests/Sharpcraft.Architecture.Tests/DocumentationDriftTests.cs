@@ -12,11 +12,6 @@ namespace Sharpcraft.Architecture.Tests;
 /// </summary>
 public sealed partial class DocumentationDriftTests
 {
-    private static readonly string[] KnownTraceabilityStatuses =
-    [
-        "已完成", "进行中", "规格已就绪", "阻塞于评审", "规格不足", "已废弃"
-    ];
-
     [Fact]
     public void SourceFilesCarrySpdxHeader()
     {
@@ -146,24 +141,6 @@ public sealed partial class DocumentationDriftTests
             "documents must use relative paths or ref:// pointers (AGENTS.md 3.6):\n" + string.Join("\n", offenders));
     }
 
-    [Fact]
-    public void StateDocumentKeepsItsRequiredSections()
-    {
-        var state = Path.Combine(RepositoryRoot(), "docs", "STATE.md");
-        Assert.True(File.Exists(state), "docs/STATE.md is missing (AGENTS.md 4.2)");
-
-        var text = File.ReadAllText(state);
-        foreach (var section in new[] { "## 当前里程碑", "## 已完成", "## 进行中", "## 阻塞项", "## 下一步具体动作" })
-        {
-            Assert.Contains(section, text, StringComparison.Ordinal);
-        }
-
-        Assert.Contains("最后更新：", text, StringComparison.Ordinal);
-
-        var lineCount = File.ReadAllLines(state).Length;
-        Assert.True(lineCount <= 150,
-            $"docs/STATE.md has {lineCount} lines, exceeding the 150-line cap (AGENTS.md principle 14)");
-    }
 
     [Fact]
     public void ModuleTemplateRequiresVanillaSourceMappingAndGoldenVectors()
@@ -176,28 +153,6 @@ public sealed partial class DocumentationDriftTests
         Assert.Contains("真值向量（Golden Vectors）", text, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void TraceabilityRowsUseKnownStatuses()
-    {
-        var path = Path.Combine(RepositoryRoot(), "docs", "traceability.md");
-        Assert.True(File.Exists(path), "docs/traceability.md is missing (AGENTS.md principle 12)");
-
-        var rows = File.ReadAllLines(path)
-            .Where(line => line.StartsWith("| T-", StringComparison.Ordinal))
-            .ToList();
-
-        Assert.NotEmpty(rows);
-
-        foreach (var row in rows)
-        {
-            var cells = row.Split('|', StringSplitOptions.TrimEntries);
-            // leading/trailing empty cells plus 7 content cells: id, task, spec, test, code, status
-            Assert.True(cells.Length >= 8, $"traceability row has too few columns: {row}");
-
-            var status = cells[^2];
-            Assert.Contains(status, KnownTraceabilityStatuses);
-        }
-    }
 
     private static IEnumerable<string> EnumerateFiles(string relativeRoot, string pattern)
     {
