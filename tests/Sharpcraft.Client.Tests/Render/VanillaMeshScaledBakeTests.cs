@@ -53,19 +53,64 @@ public sealed class VanillaMeshScaledBakeTests
     }
 
     [Fact]
+    public void ZeroRootScaleIsRejected()
+    {
+        var exception = Assert.Throws<NotSupportedException>(() => VanillaMeshBake.Bake(ZeroScaleMesh(), 64, 64, modelHeight: 0f));
+        Assert.Contains("Zero PartPose scale", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ZeroNestedChildScaleIsRejected()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        var head = root.AddOrReplaceChild(
+            "head",
+            VanillaPartPose.Zero,
+            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f, MirrorX: false));
+        head.AddOrReplaceChild(
+            "child",
+            VanillaPartPose.Zero.Scaled(0f),
+            new VanillaCubeDefinition("child", 0, 0, -1f, -1f, -1f, 2f, 2f, 2f, MirrorX: false));
+
+        var exception = Assert.Throws<NotSupportedException>(() => VanillaMeshBake.Bake(new VanillaMeshDefinition(root), 64, 64, modelHeight: 0f));
+        Assert.Contains("Zero PartPose scale", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GrowAndOverlayScaledCuboidsAreRejected()
+    {
+        var grow = Assert.Throws<NotSupportedException>(() => VanillaMeshBake.Bake(ScaledMesh(grow: 0.25f), 64, 64, modelHeight: 0f));
+        Assert.Contains("grow/overlay", grow.Message, StringComparison.Ordinal);
+
+        var overlays = new[] { new EntityModelLayer("hat", 0.25f, 0, 0) };
+        var overlay = Assert.Throws<NotSupportedException>(() => VanillaMeshBake.Bake(ScaledMesh(overlays: overlays), 64, 64, modelHeight: 0f));
+        Assert.Contains("grow/overlay", overlay.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void CompiledTreeBakeryRejectsNonUnitScale()
     {
         var exception = Assert.Throws<NotSupportedException>(() => VanillaMeshBakery.Build(ScaledMesh(), 64, 64));
         Assert.Contains("scale 1", exception.Message, StringComparison.Ordinal);
     }
 
-    private static VanillaMeshDefinition ScaledMesh(float rotationX = 0f, bool mirrorX = false)
+    private static VanillaMeshDefinition ScaledMesh(float rotationX = 0f, bool mirrorX = false, float grow = 0f, IReadOnlyList<EntityModelLayer>? overlays = null)
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         root.AddOrReplaceChild(
             "head",
             VanillaPartPose.OffsetAndRotation(0f, -7.986666f, 0f, rotationX, 0f, 0f).Scaled(0.75f),
-            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f, MirrorX: mirrorX));
+            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f, Grow: grow, MirrorX: mirrorX, Overlays: overlays));
+        return new VanillaMeshDefinition(root);
+    }
+
+    private static VanillaMeshDefinition ZeroScaleMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        root.AddOrReplaceChild(
+            "head",
+            VanillaPartPose.Zero.Scaled(0f),
+            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f, MirrorX: false));
         return new VanillaMeshDefinition(root);
     }
 }

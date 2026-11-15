@@ -227,9 +227,9 @@ static partial class VanillaMeshBake
 
     private static bool HasNonUnitScale(VanillaPartDefinition part)
     {
-        if (EffectiveScale(part.Pose.ScaleX) != 1f ||
-            EffectiveScale(part.Pose.ScaleY) != 1f ||
-            EffectiveScale(part.Pose.ScaleZ) != 1f)
+        if (part.Pose.ScaleX != 1f ||
+            part.Pose.ScaleY != 1f ||
+            part.Pose.ScaleZ != 1f)
         {
             return true;
         }
@@ -250,6 +250,11 @@ static partial class VanillaMeshBake
 
     private static void ValidateScaledSubtree(VanillaPartDefinition part)
     {
+        if (part.Pose.ScaleX == 0f || part.Pose.ScaleY == 0f || part.Pose.ScaleZ == 0f)
+        {
+            throw new NotSupportedException("Zero PartPose scale is not supported; a scaled bake must preserve a positive size.");
+        }
+
         if (MathF.Abs(part.Pose.RotationX) > 0.0001f ||
             MathF.Abs(part.Pose.RotationY) > 0.0001f ||
             MathF.Abs(part.Pose.RotationZ) > 0.0001f)
@@ -263,6 +268,11 @@ static partial class VanillaMeshBake
             {
                 throw new NotSupportedException("Non-unit PartPose scale does not yet support root MirrorX; use MirrorX:false.");
             }
+
+            if (cube.Grow != 0f || cube.GrowXyz is not null || cube.Overlays is { Count: > 0 })
+            {
+                throw new NotSupportedException("Non-unit PartPose scale does not support grow/overlay cuboids.");
+            }
         }
 
         foreach (var child in part.Children)
@@ -270,8 +280,6 @@ static partial class VanillaMeshBake
             ValidateScaledSubtree(child);
         }
     }
-
-    private static float EffectiveScale(float value) => value == 0f ? 1f : value;
 
     /// <summary>
     /// Bakes the restricted static scaled subtree used by the Dragon skull into absolute source-frame cuboids.
@@ -307,10 +315,7 @@ static partial class VanillaMeshBake
         string? texturePath)
     {
         var pose = part.Pose;
-        var localScale = new Vector3(
-            EffectiveScale(pose.ScaleX),
-            EffectiveScale(pose.ScaleY),
-            EffectiveScale(pose.ScaleZ));
+        var localScale = new Vector3(pose.ScaleX, pose.ScaleY, pose.ScaleZ);
         var origin = parentOrigin + Vector3.Multiply(parentScale, new Vector3(pose.X, pose.Y, pose.Z));
         var scale = Vector3.Multiply(parentScale, localScale);
 
