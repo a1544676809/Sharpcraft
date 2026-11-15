@@ -14,8 +14,10 @@ namespace Sharpcraft.Client.Render;
 /// </summary>
 /// <remarks>
 /// Resolution happens once at build time and is stored in flat arrays so the per block test in the
-/// mesher stays an array index. Blocks that are plain cubes, or whose model could not be read, keep
-/// the cube path and are false here.
+/// mesher stays an array index. A state has an entry when its block's model resolves, including the
+/// empty model of a block entity block: the entry is then an empty quad list, so <see cref="Has"/> is
+/// true (the cube path must leave it alone) while <see cref="Quads"/> returns no geometry. Blocks that
+/// are plain cubes, or whose model could not be read, have no entry and keep the cube path.
 /// </remarks>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.block.model.BlockModel", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/model/BlockModel.java")]
 public sealed class BlockModelSet
@@ -65,12 +67,17 @@ public sealed class BlockModelSet
         return count == 0 ? null : new BlockModelSet(quads) { ElementStateCount = count };
     }
 
-    /// <summary>Whether this state draws from element geometry.</summary>
+    /// <summary>
+    /// Whether this state has an entry, meaning the cube path must skip it. True both for element
+    /// models and for empty models; check <see cref="Quads"/> for what to draw.
+    /// </summary>
     /// <param name="stateId">Block state id.</param>
-
     public bool Has(int stateId) => (uint)stateId < (uint)_quads.Length && _quads[stateId] is not null;
 
-    /// <summary>The quads of one state, or null when it is a plain cube.</summary>
+    /// <summary>
+    /// The quads of one state: an empty array for an empty model, or null when the state has no entry
+    /// and belongs on the cube path.
+    /// </summary>
     /// <param name="stateId">Block state id.</param>
     public TexturedQuad[]? Quads(int stateId) => (uint)stateId < (uint)_quads.Length ? _quads[stateId] : null;
 

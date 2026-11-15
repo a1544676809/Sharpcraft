@@ -10,7 +10,7 @@ namespace Sharpcraft.Client.Tests;
 /// <summary>
 /// Covers the block model element reader's shape rules: elements come from the first model in the
 /// parent chain that declares them, faces carry their texture variable, explicit UV and cull face,
-/// and a model with no elements anywhere is a plain cube.
+/// and a model that declares nothing at all is an empty model rather than a missing one.
 /// </summary>
 public sealed class BlockModelElementsTests
 {

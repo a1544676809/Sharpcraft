@@ -158,6 +158,9 @@ public sealed class Repro_042_ShulkerBoxTests
         for (var index = 0; index < one.IndexCount; index++)
         {
             Assert.Equal(one.Indices[index], combined.Indices[index]);
+            // The second box is the same model translated, so its indices are the first box's plus
+            // the vertices the first box occupied.
+            Assert.Equal(one.Indices[index] + 48u, combined.Indices[one.IndexCount + index]);
         }
     }
 

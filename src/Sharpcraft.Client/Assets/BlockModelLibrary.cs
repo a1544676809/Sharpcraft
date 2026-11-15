@@ -14,10 +14,13 @@ public sealed record TexturedQuad(ModelQuad Quad, Identifier Texture);
 /// <summary>
 /// Resolves a block's model into ready to draw quads: the boxes from
 /// <see cref="BlockModelElements"/>, with every face's texture variable turned into a path by
-/// <see cref="BlockModelResolver"/>. Blocks whose model is a plain cube resolve to null and stay on
-/// the existing cube path.
+/// <see cref="BlockModelResolver"/>.
 /// </summary>
 /// <remarks>
+/// Three outcomes, matching the reference: a model that cannot be read or is a plain cube resolves
+/// to null and stays on the cube path; a model that resolves but declares no elements resolves to an
+/// empty array and draws nothing at all, which is how chests and shulker boxes leave the visible
+/// geometry to their block entity renderer; anything else resolves to its quads.
 /// The result is cached per block, not per block state: the texture resolver only reads the first
 /// variant of a block's blockstate file, so every state of a block currently shares one model. That
 /// is the same limitation the resolver already carries and is registered in the spec.
@@ -59,7 +62,10 @@ public sealed class BlockModelLibrary
     /// <summary>How many blocks were found to have element geometry.</summary>
     public int ElementModelCount { get; private set; }
 
-    /// <summary>Builds a block's quads, or null when its model is a plain cube.</summary>
+    /// <summary>
+    /// Builds a block's quads: null when its model is missing or a plain cube, an empty array when the
+    /// model resolves but declares no elements.
+    /// </summary>
     /// <param name="blockId">Block to resolve.</param>
     public TexturedQuad[]? Resolve(Identifier blockId)
     {

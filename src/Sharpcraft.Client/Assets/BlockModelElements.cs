@@ -78,7 +78,11 @@ public sealed class BlockModelElements
 
     /// <summary>Reads the elements of a model, following parents until one declares them.</summary>
     /// <param name="modelId">Model to start from.</param>
-    /// <returns>The elements, or null when the chain reaches a plain cube.</returns>
+    /// <returns>
+    /// The elements; an empty list when the model resolves but declares no elements anywhere; null
+    /// only when a model in the chain cannot be read. An empty list is an empty model, which draws
+    /// nothing, while null lets the caller fall back to the cube path.
+    /// </returns>
     public IReadOnlyList<ModelElement>? Resolve(Identifier modelId)
     {
         Identifier? current = modelId;
