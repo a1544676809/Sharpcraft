@@ -16,6 +16,9 @@ public static class ClassMapTool
 {
     private const string AggregatePath = "docs/architecture/class-map.generated.md";
     private const string BaselinePath = "docs/src/.classmap-baseline.txt";
+
+    /// <summary>Known reference paths that do not resolve yet. Shrinking ratchet; new ones fail the check.</summary>
+    private const string RefsBaselinePath = "docs/src/.classmap-refs-baseline.txt";
     private const string RefsDir = "docs/architecture/class-map";
     private const string RefPrefix = "ref://mc-26.3-analysis/";
     private const string BeginMarker = "<!-- BEGIN GENERATED: class-map -->";
@@ -221,6 +224,28 @@ public static class ClassMapTool
         return (entries.Count, injected, unannotated.Count);
     }
 
+    private static HashSet<string> LoadRefsBaseline(string root)
+    {
+        var path = Path.Combine(root, RefsBaselinePath.Replace('/', Path.DirectorySeparatorChar));
+        var entries = new HashSet<string>(StringComparer.Ordinal);
+        if (!File.Exists(path))
+        {
+            return entries;
+        }
+
+        foreach (var line in File.ReadAllLines(path))
+        {
+            var trimmed = line.Trim();
+            if (trimmed.Length == 0 || trimmed.StartsWith('#'))
+            {
+                continue;
+            }
+
+            entries.Add(trimmed);
+        }
+
+        return entries;
+    }
     private static int InjectDocs(string root, List<Entry> entries)
     {
         var injected = 0;
@@ -333,7 +358,17 @@ public static class ClassMapTool
         }
 
         var analysisRoot = Environment.GetEnvironmentVariable("MC_ANALYSIS_ROOT");
-        if (!string.IsNullOrEmpty(analysisRoot))
+        if (string.IsNullOrEmpty(analysisRoot))
+        {
+            // Fall back to the standard sibling checkout: without this the reference file check is
+            // skipped whenever the variable is unset, which turns the gate green by default.
+            analysisRoot = FindAnalysisRoot(Directory.GetCurrentDirectory());
+        }
+
+        var refsBaseline = LoadRefsBaseline(root);
+        var seenMissing = new HashSet<string>(StringComparer.Ordinal);
+
+        if (Directory.Exists(analysisRoot))
         {
             foreach (var e in entries)
             {
@@ -351,8 +386,24 @@ public static class ClassMapTool
                 var rel = e.ReferencePath[RefPrefix.Length..].Replace('/', Path.DirectorySeparatorChar);
                 if (!File.Exists(Path.Combine(analysisRoot, rel)))
                 {
-                    violations.Add($"reference file not found under MC_ANALYSIS_ROOT: {e.TypeName} -> {e.ReferencePath}");
+                    seenMissing.Add(e.TypeName);
+                    if (!refsBaseline.Contains(e.TypeName))
+                    {
+                        violations.Add($"reference file not found under MC_ANALYSIS_ROOT: {e.TypeName} -> {e.ReferencePath}");
+                    }
                 }
+            }
+        }
+        else
+        {
+            violations.Add($"analysis workspace not found: {analysisRoot}");
+        }
+
+        foreach (var known in refsBaseline)
+        {
+            if (!seenMissing.Contains(known))
+            {
+                violations.Add("class-map refs baseline entry is stale; remove it: " + known);
             }
         }
 
@@ -371,6 +422,9 @@ public static class ClassMapTool
         }
 
         var index = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var refsBaseline = LoadRefsBaseline(root);
+        var seenMissing = new HashSet<string>(StringComparer.Ordinal);
+
         if (Directory.Exists(analysisRoot))
         {
             foreach (var jf in Directory.EnumerateFiles(analysisRoot, "*.java", SearchOption.AllDirectories))

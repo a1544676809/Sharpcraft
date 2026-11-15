@@ -43,7 +43,7 @@ public readonly record struct ItemModelFace(
 /// <summary>
 /// One cuboid of an item model's <c>elements</c> array, in model pixels (0-16 per block) exactly as written in the JSON.
 /// </summary>
-[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.resources.model.cuboid.CuboidDefinition", "ref://mc-26.3-analysis/src/net/minecraft/client/resources/model/cuboid/CuboidDefinition.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "from/to plus per-face data; element rotation is not modelled yet")]
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.resources.model.cuboid.CuboidModelElement", "ref://mc-26.3-analysis/src/net/minecraft/client/resources/model/cuboid/CuboidModelElement.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "from/to plus per-face data; element rotation is not modelled yet")]
 public sealed class ItemModelElement
 {
     /// <summary>Creates one element from its JSON bounds and resolved faces.</summary>

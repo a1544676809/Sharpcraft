@@ -1,0 +1,13 @@
+# Known reference paths that do not resolve under the 26.3 analysis workspace.
+#
+# This is a shrinking ratchet, not a permission list: every entry here is a real defect that has to
+# be fixed (wrong path, renamed class, or a class that no longer exists). A new unresolved reference
+# fails the class map check, and an entry that starts resolving is reported as stale so it gets
+# removed. Track the cleanup in the issue that introduced this file.
+#
+# Format: one Sharpcraft type name per line.
+Sharpcraft.AuthLib.MinecraftServicesKeyClient
+Sharpcraft.AuthLib.ProfileProperty
+Sharpcraft.AuthLib.ProfileSignatureKey
+Sharpcraft.AuthLib.ProfileSignatureKeySet
+Sharpcraft.AuthLib.ProfileSignatureState

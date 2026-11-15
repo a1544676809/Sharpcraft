@@ -12,7 +12,7 @@ namespace Sharpcraft.Client.Render;
 /// Corner order follows the reference <c>FaceInfo</c> tables, so corners 0–3 are (minU,minV), (minU,maxV),
 /// (maxU,maxV), (maxU,minV) and triangles are 0-1-2 and 0-2-3.
 /// </remarks>
-[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.block.model.BakedQuad", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/model/BakedQuad.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "four corners plus UVs and tint index; per-vertex lighting and shade flags are not modelled")]
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.resources.model.geometry.BakedQuad", "ref://mc-26.3-analysis/src/net/minecraft/client/resources/model/geometry/BakedQuad.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "four corners plus UVs and tint index; per-vertex lighting and shade flags are not modelled")]
 public readonly record struct ItemModelQuad(    string? Texture,
     Vector3 Corner0,
     Vector3 Corner1,
@@ -48,7 +48,7 @@ public readonly record struct ItemModelQuad(    string? Texture,
 /// Turns cuboid elements into quads. Positions and UVs follow the reference <c>FaceBakery</c>: element pixels are
 /// divided by sixteen, and model UV units are divided by sixteen as well.
 /// </summary>
-[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.renderer.block.model.FaceBakery", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/model/FaceBakery.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "element faces only; element rotation and shade overrides are not modelled")]
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.resources.model.cuboid.FaceBakery", "ref://mc-26.3-analysis/src/net/minecraft/client/resources/model/cuboid/FaceBakery.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "element faces only; element rotation and shade overrides are not modelled")]
 public static class ItemModelGeometry
 {
     /// <summary>Model units per block, used for both positions and UVs.</summary>

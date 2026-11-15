@@ -74,7 +74,7 @@ updated: 2026-11-06
 
 | Project | Sharpcraft type | Kind | Status | Reference class | Reference path | Note |
 | --- | --- | --- | --- | --- | --- | --- |
-| Sharpcraft.Assets | Sharpcraft.Assets.IndexedAssetSource | Mirror | Partial | net.minecraft.server.packs.resources.IndexedAssetSource | ref://mc-26.3-analysis/src/net/minecraft/server/packs/resources/IndexedAssetSource.java | createIndexFs equivalent: index maps logical path -> objects/<h2>/<sha1>; read-only overlay |
+| Sharpcraft.Assets | Sharpcraft.Assets.IndexedAssetSource | Mirror | Partial | net.minecraft.client.resources.IndexedAssetSource | ref://mc-26.3-analysis/src/net/minecraft/client/resources/IndexedAssetSource.java | createIndexFs equivalent: index maps logical path -> objects/<h2>/<sha1>; read-only overlay |
 | Sharpcraft.Assets | Sharpcraft.Assets.ResourceManager | Mirror | Partial | net.minecraft.server.packs.resources.ResourceManager | ref://mc-26.3-analysis/src/net/minecraft/server/packs/resources/ResourceManager.java | auto-resolved by name; verify |
 
 <!-- END GENERATED: class-map -->

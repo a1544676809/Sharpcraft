@@ -98,9 +98,9 @@
 | Sharpcraft.Client | Sharpcraft.Client.Assets.ModelBox | Mirror | Full | net.minecraft.client.renderer.block.model.BlockModel | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/model/BlockModel.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.Assets.ModelElement | Mirror | Full | net.minecraft.client.renderer.block.model.BlockModel | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/model/BlockModel.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.Assets.ModelFace | Mirror | Full | net.minecraft.client.renderer.block.model.BlockModel | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/model/BlockModel.java |  |
-| Sharpcraft.Client | Sharpcraft.Client.Assets.ModelQuad | Mirror | Full | net.minecraft.client.resources.model.cuboid.BakedQuad | ref://mc-26.3-analysis/src/net/minecraft/client/resources/model/cuboid/BakedQuad.java |  |
+| Sharpcraft.Client | Sharpcraft.Client.Assets.ModelQuad | Mirror | Full | net.minecraft.client.resources.model.geometry.BakedQuad | ref://mc-26.3-analysis/src/net/minecraft/client/resources/model/geometry/BakedQuad.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.Assets.ModelRotation | Mirror | Full | net.minecraft.client.renderer.block.model.BlockModel | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/model/BlockModel.java |  |
-| Sharpcraft.Client | Sharpcraft.Client.Assets.ModelVertex | Mirror | Full | net.minecraft.client.resources.model.cuboid.BakedQuad | ref://mc-26.3-analysis/src/net/minecraft/client/resources/model/cuboid/BakedQuad.java |  |
+| Sharpcraft.Client | Sharpcraft.Client.Assets.ModelVertex | Mirror | Full | net.minecraft.client.resources.model.geometry.BakedQuad | ref://mc-26.3-analysis/src/net/minecraft/client/resources/model/geometry/BakedQuad.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.Assets.TexturedQuad | Mirror | Full | net.minecraft.client.renderer.block.model.BlockModel | ref://mc-26.3-analysis/src/net/minecraft/client/renderer/block/model/BlockModel.java |  |
 | Sharpcraft.Client | Sharpcraft.Client.Assets.Transparency | Mirror | Partial | com.mojang.blaze3d.platform.Transparency | ref://mc-26.3-analysis/src/com/mojang/blaze3d/platform/Transparency.java | auto-resolved by name; verify |
 

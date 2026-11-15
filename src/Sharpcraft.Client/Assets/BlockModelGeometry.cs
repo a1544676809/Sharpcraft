@@ -8,7 +8,7 @@ namespace Sharpcraft.Client.Assets;
 /// <summary>One corner of a model quad: position in block units, texture coordinates in sprite units.</summary>
 /// <param name="Position">Corner position, where one is a whole block.</param>
 /// <param name="Uv">Texture coordinate, where one is the whole sprite.</param>
-[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.resources.model.cuboid.BakedQuad", "ref://mc-26.3-analysis/src/net/minecraft/client/resources/model/cuboid/BakedQuad.java")]
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.resources.model.geometry.BakedQuad", "ref://mc-26.3-analysis/src/net/minecraft/client/resources/model/geometry/BakedQuad.java")]
 public readonly record struct ModelVertex(Vector3 Position, Vector2 Uv);
 
 /// <summary>One face of a model box, ready to be drawn.</summary>
@@ -20,7 +20,7 @@ public readonly record struct ModelVertex(Vector3 Position, Vector2 Uv);
 /// <param name="Texture">Texture variable as written, such as <c>#side</c>.</param>
 /// <param name="TintIndex">Tint slot, or -1 when none.</param>
 /// <param name="CullFace">Direction whose neighbour hides this face, or null.</param>
-[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.resources.model.cuboid.BakedQuad", "ref://mc-26.3-analysis/src/net/minecraft/client/resources/model/cuboid/BakedQuad.java")]
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.client.resources.model.geometry.BakedQuad", "ref://mc-26.3-analysis/src/net/minecraft/client/resources/model/geometry/BakedQuad.java")]
 public sealed record ModelQuad(
     ModelVertex V0,
     ModelVertex V1,
