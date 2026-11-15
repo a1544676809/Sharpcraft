@@ -28,6 +28,9 @@ public sealed class ShulkerBoxMesher
     /// <summary>Lid box: sixteen wide, twelve tall, sixteen deep, texture offset (0, 0).</summary>
     private const float LidHeight = 12f * Pixel;
 
+    /// <summary>The lid starts a quarter block above the block floor, overlapping the base.</summary>
+    private const float LidBottom = 4f * Pixel;
+
     /// <summary>How far the lid rises when fully open: half a block.</summary>
     private const float LidRise = 8f * Pixel;
 
@@ -95,7 +98,7 @@ public sealed class ShulkerBoxMesher
                 texDz: 16);
 
             // The lid sits on top of the base and lifts as the box opens.
-            var lidFeet = origin + new Vector3(0f, BaseHeight + (LidRise * entity.Open), 0f);
+            var lidFeet = origin + new Vector3(0f, LidBottom + (LidRise * entity.Open), 0f);
             var lidStart = vertexFloats;
             EntityPlaceholderMesher.AppendBox(
                 _geometry,
