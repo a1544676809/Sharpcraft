@@ -13,7 +13,7 @@ namespace Sharpcraft.Common.World;
 /// <param name="LocalZ">Block Z inside the chunk, zero to fifteen.</param>
 /// <param name="TypeId">Registry id of the block entity type.</param>
 /// <param name="Tag">Optional NBT compound carried with the block entity.</param>
-public readonly record struct BlockEntityRecord(int LocalX, int Y, int LocalZ, int TypeId, NbtCompound? Tag = null);
+public readonly record struct BlockEntityRecord(int LocalX, int Y, int LocalZ, int TypeId, NbtCompound? Tag = null, float PreviousOpen = 0f, float Open = 0f);
 
 /// <summary>
 /// Built-in <c>minecraft:block_entity_type</c> registry order for Minecraft 26.3 (49 entries, ids 0..48).
