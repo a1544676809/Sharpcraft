@@ -40,12 +40,12 @@ public sealed class SkullRenderer : IBlockEntityRenderer
     public DynamicGeometry Build(ReadOnlySpan<BlockEntityRenderState> entities, ItemAtlas atlas)
     {
         _geometry.Clear();
-        // One head cube is 24 vertices / 36 indices. Reserve the whole batch before appending:
-        // DynamicGeometry.Reserve does not copy existing content, so a mid-loop growth would drop
-        // every previously written skull.
+        // One head cube is 24 vertices / 36 indices; Player adds the hat overlay for 48 / 72.
+        // Reserve the worst case before appending: DynamicGeometry.Reserve does not copy existing
+        // content, so a mid-loop growth would drop every previously written skull.
         _geometry.Reserve(
-            entities.Length * 24 * ChunkMesher.FloatsPerVertex,
-            entities.Length * 36);
+            entities.Length * 48 * ChunkMesher.FloatsPerVertex,
+            entities.Length * 72);
         LastEntityCount = 0;
 
         for (var index = 0; index < entities.Length; index++)

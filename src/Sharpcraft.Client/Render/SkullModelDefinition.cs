@@ -49,7 +49,7 @@ public static class SkullModelDefinition
     public const string CreeperTexture = "entity/creeper/creeper";
 
     /// <summary>Default player skin texture used when no profile skin is available.</summary>
-    public const string DefaultPlayerSkinTexture = "entity/player/slim/steve";
+    public static readonly string DefaultPlayerSkinTexture = DefaultPlayerSkin.Default.Path;
 
     private static readonly VanillaMeshDefinition SkullMesh = BuildSkullMesh();
     private static readonly VanillaMeshDefinition PlayerMesh = BuildPlayerSkullMesh();
@@ -79,6 +79,8 @@ public static class SkullModelDefinition
         // VanillaMeshBake converts the reference y-down model to y-up. SkullBlockRenderer's source
         // outer pose includes the model's scale(-1,-1,1), so shift the baked head by its source Y
         // origin before that pose to keep the final head above the block origin.
+        // ref://mc-26.3-analysis/src/net/minecraft/client/model/object/skull/SkullModel.java:19-24
+        // ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/SkullBlockRenderer.java:164-168
         LocalTransform = System.Numerics.Matrix4x4.CreateTranslation(0f, -0.5f, 0f)
     };
 
@@ -92,6 +94,8 @@ public static class SkullModelDefinition
         texturePath: DefaultPlayerSkinTexture,
         compiled: PlayerCompiled)
     {
+        // ref://mc-26.3-analysis/src/net/minecraft/client/model/object/skull/SkullModel.java:26-34
+        // ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/SkullBlockRenderer.java:164-168
         LocalTransform = System.Numerics.Matrix4x4.CreateTranslation(0f, -0.5f, 0f)
     };
 

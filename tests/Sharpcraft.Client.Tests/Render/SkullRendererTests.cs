@@ -82,8 +82,8 @@ public sealed class SkullRendererTests
     public void PlayerTextureMapsToTheDefaultSlimSteveSprite()
     {
         var atlas = Atlas();
-        Assert.Equal("entity/player/slim/steve", SkullModelDefinition.TextureFor(SkullType.Player));
-        Assert.Equal(SkullModelDefinition.DefaultPlayerSkinTexture, ChestAtlas.SkullTextures[4]);
+        Assert.Equal(DefaultPlayerSkin.Default.Path, SkullModelDefinition.TextureFor(SkullType.Player));
+        Assert.Equal(DefaultPlayerSkin.Default.Path, ChestAtlas.SkullTextures[4]);
         var sprite = ChestAtlas.SpriteForSkull(atlas, SkullType.Player);
         Assert.NotNull(sprite);
         Assert.Equal(atlas.Get(SkullModelDefinition.DefaultPlayerSkinTexture), sprite);
@@ -156,6 +156,28 @@ public sealed class SkullRendererTests
             AssertVertex(geometry, 0, 0.25f, 0.5f, 0.75f, 0.25f, 0f);
             AssertVertex(geometry, 1, 0.75f, 0.5f, 0.75f, 0.375f, 0f);
         }
+    }
+
+    [Fact]
+    public void FortyPlayerSkullsKeepHeadAndHatVertices()
+    {
+        var states = new BlockEntityRenderState[40];
+        for (var i = 0; i < states.Length; i++)
+        {
+            states[i] = new BlockEntityRenderState(
+                i, 0f, 0f, VanillaBlockEntityTypes.Skull,
+                SkullType: SkullType.Player);
+        }
+
+        var mesher = new SkullRenderer();
+        var geometry = mesher.Build(states, PlayerAtlas());
+
+        Assert.Equal(40, mesher.LastEntityCount);
+        Assert.Equal(1920, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
+        Assert.Equal(2880, geometry.IndexCount);
+        AssertVertex(geometry, 0, 0.25f, 0.5f, 0.75f, 0.25f, 0f);
+        AssertVertex(geometry, 48, 1.25f, 0.5f, 0.75f, 0.25f, 0f);
+        AssertVertex(geometry, 960, 20.25f, 0.5f, 0.75f, 0.25f, 0f);
     }
 
     [Theory]
