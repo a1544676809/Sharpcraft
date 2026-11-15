@@ -4,6 +4,7 @@
 using System.Numerics;
 using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
+using Sharpcraft.Client.World;
 using Sharpcraft.Common.World;
 using Sharpcraft.Framework.Rendering;
 
@@ -22,14 +23,14 @@ public sealed class CopperGolemStatueMesherTests
     /// the same 64x64 model coordinate for every sprite.
     /// </summary>
     [Theory]
-    [InlineData((byte)2, 0, 0.75f, 0.3125f, 0.6875f)]
-    [InlineData((byte)2, 1, 0.75f, 0.3125f, 0.6875f)]
-    [InlineData((byte)3, 0, 0.25f, 0.3125f, 0.3125f)]
-    [InlineData((byte)3, 1, 0.25f, 0.3125f, 0.3125f)]
-    [InlineData((byte)4, 0, 0.6875f, 0.3125f, 0.25f)]
-    [InlineData((byte)4, 1, 0.6875f, 0.3125f, 0.25f)]
-    [InlineData((byte)5, 0, 0.3125f, 0.3125f, 0.75f)]
-    [InlineData((byte)5, 1, 0.3125f, 0.3125f, 0.75f)]
+    [InlineData((byte)2, 0, 0.25f, 1.1875f, 0.6875f)]
+    [InlineData((byte)2, 1, 0.25f, 1.1875f, 0.6875f)]
+    [InlineData((byte)3, 0, 0.75f, 1.1875f, 0.3125f)]
+    [InlineData((byte)3, 1, 0.75f, 1.1875f, 0.3125f)]
+    [InlineData((byte)4, 0, 0.6875f, 1.1875f, 0.75f)]
+    [InlineData((byte)4, 1, 0.6875f, 1.1875f, 0.75f)]
+    [InlineData((byte)5, 0, 0.3125f, 1.1875f, 0.25f)]
+    [InlineData((byte)5, 1, 0.3125f, 1.1875f, 0.25f)]
     public void StandingStatueSamplesFacingAndOxidation(byte facing, int oxidation, float x, float y, float z)
     {
         var mesher = new CopperGolemStatueMesher();
@@ -40,7 +41,10 @@ public sealed class CopperGolemStatueMesherTests
         Assert.Equal(1, mesher.LastEntityCount);
         Assert.Equal(9 * 24 * ChunkMesher.FloatsPerVertex, geometry.VertexFloats);
         Assert.Equal(9 * 36, geometry.IndexCount);
-        Assert.Equal((x, y, z), VertexFieldReader.Position(geometry.Vertices, 0));
+        var position = VertexFieldReader.Position(geometry.Vertices, 0);
+        Assert.Equal(x, position.X, 4);
+        Assert.Equal(y, position.Y, 4);
+        Assert.Equal(z, position.Z, 4);
         Assert.Equal((14f / 64f, 15f / 64f), VertexFieldReader.Uv(geometry.Vertices, 0));
         Assert.Equal(oxidation + 1, VertexFieldReader.SpriteId(geometry.Vertices, 0));
     }
@@ -56,6 +60,46 @@ public sealed class CopperGolemStatueMesherTests
     public void FacingDegreesMatchTheReferenceTransform(byte facing, float expected)
     {
         Assert.Equal(expected, CopperGolemStatueMesher.FacingDegrees(facing), 3);
+    }
+
+    /// <summary>
+    /// CopperGolemStatueModel.setupAnim applies <c>root.zRot = π</c> to the baked CopperGolem
+    /// layer. The expected bounds below are the standing model after that root pose at facing
+    /// north; they are deliberately different from the unposed entity model bounds.
+    /// </summary>
+    [Fact]
+    public void StandingStatueAppliesTheReferenceRootPose()
+    {
+        var state = new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.CopperGolemStatue, Facing: 2, ChestMaterial: 0);
+        var geometry = new CopperGolemStatueMesher().Build([state], Sprites());
+        var (min, max) = Bounds(geometry);
+
+        Assert.Equal(0.0625f, min.X, 4);
+        Assert.Equal(0.0009375f, min.Y, 4);
+        Assert.Equal(0.125f, min.Z, 4);
+        Assert.Equal(0.9375f, max.X, 4);
+        Assert.Equal(1.5f, max.Y, 4);
+        Assert.Equal(0.81343746f, max.Z, 4);
+    }
+
+    /// <summary>The statue renderer's root pose changes the vertical bounds and first vertex relative to the entity model.</summary>
+    [Fact]
+    public void TheStatueRootPoseDiffersFromTheUnposedEntityModel()
+    {
+        var sprite = new SpriteRect(0, 0, 64, 64, 1) { RectId = 1, U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f };
+        var entityState = new EntityRenderState(1, CopperGolemModelDefinition.CopperGolemEntityTypeId, 0.5f, 0f, 0.5f, 180f, 0f);
+        var unposed = new EntityModelMesher().BuildModel(CopperGolemModelDefinition.Definition, entityState, sprite, 64, 64, modelScale: 1f);
+        var statue = new CopperGolemStatueMesher().Build(
+            [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.CopperGolemStatue, Facing: 2, ChestMaterial: 0)],
+            [sprite, sprite, sprite, sprite]);
+
+        var unposedBounds = Bounds(unposed);
+        var statueBounds = Bounds(statue);
+        Assert.Equal(0f, unposedBounds.Min.Y, 4);
+        Assert.Equal(1.4990625f, unposedBounds.Max.Y, 4);
+        Assert.Equal(0.0009375f, statueBounds.Min.Y, 4);
+        Assert.Equal(1.5f, statueBounds.Max.Y, 4);
+        Assert.NotEqual(unposed.Vertices[1], statue.Vertices[1]);
     }
 
     /// <summary>The four body textures are stitched into the block entity atlas and resolve by stage.</summary>
@@ -149,6 +193,20 @@ public sealed class CopperGolemStatueMesherTests
         }
 
         Assert.Equal(before, GC.GetAllocatedBytesForCurrentThread());
+    }
+
+    private static (Vector3 Min, Vector3 Max) Bounds(DynamicGeometry geometry)
+    {
+        var min = new Vector3(float.MaxValue);
+        var max = new Vector3(float.MinValue);
+        for (var vertex = 0; vertex < geometry.VertexFloats; vertex += ChunkMesher.FloatsPerVertex)
+        {
+            var point = new Vector3(geometry.Vertices[vertex], geometry.Vertices[vertex + 1], geometry.Vertices[vertex + 2]);
+            min = Vector3.Min(min, point);
+            max = Vector3.Max(max, point);
+        }
+
+        return (min, max);
     }
 
     private static SpriteRect[] Sprites()

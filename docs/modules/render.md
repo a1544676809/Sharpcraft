@@ -531,7 +531,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 ### SIM-BE-COPPER-GOLEM-POSES：铜傀儡雕像只渲染站立姿态
 
-- **简化了什么**：`CopperGolemStatueMesher` 只使用 `CopperGolemModelDefinition.Definition`（`ModelLayers.COPPER_GOLEM`）的站立模型；原版 `CopperGolemStatueBlockRenderer` 还根据 `POSE` 选择 `COPPER_GOLEM_SITTING` / `COPPER_GOLEM_RUNNING` / `COPPER_GOLEM_STAR` 三个独立模型层。SITTING / RUNNING / STAR 目前都按站立模型显示。
+- **简化了什么**：`CopperGolemStatueMesher` 只使用 `CopperGolemModelDefinition.Definition`（`ModelLayers.COPPER_GOLEM`）的站立模型，并应用 `CopperGolemStatueModel.setupAnim` 的 root pose（`root.y = 0`、`root.zRot = π`）；原版 `CopperGolemStatueBlockRenderer` 还根据 `POSE` 选择 `COPPER_GOLEM_SITTING` / `COPPER_GOLEM_RUNNING` / `COPPER_GOLEM_STAR` 三个独立模型层。SITTING / RUNNING / STAR 目前都按站立模型显示。
 - **为什么**：首切片先落地方块状态 facing、四档氧化纹理和通用 `EntityModelMesher.BuildModel` 路径；另外三个姿态的模型层与部件 pose 需要独立真值，后续任务跟进。
 - **对等效性的影响**：站立姿态与四档氧化纹理的静态外观按原版模型真值实现；非站立姿态的轮廓和部件 pose 与原版不同（会显示站立模型）。
 - **状态**：受控偏差，计划由 T-47（#47 批次 1）后续姿态切片跟进（Issue #60）。

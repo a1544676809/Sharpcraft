@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Sharpcraft contributors
 
+using System.Numerics;
 using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.World;
 using Sharpcraft.Common.Reference;
@@ -16,9 +17,11 @@ namespace Sharpcraft.Client.Render;
 /// </summary>
 /// <remarks>
 /// Source: <c>ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/CopperGolemStatueBlockRenderer.java</c>
-/// (<c>createModelTransformation</c>, <c>submit</c>) and
+/// (<c>createModelTransformation</c>, <c>submit</c>), <c>CopperGolemStatueModel.setupAnim</c>
+/// (<c>root.y = 0</c>, <c>root.zRot = π</c>) and the standing <c>CopperGolemModel</c> layer in
 /// <c>ref://mc-26.3-analysis/src/net/minecraft/client/model/object/statue/CopperGolemStatueModel.java</c>.
-/// The model is <see cref="CopperGolemModelDefinition.Definition"/> with a 64 by 64 texture. Facing uses
+/// The model is <see cref="CopperGolemModelDefinition.Definition"/> with a 64 by 64 texture and the
+/// statue root pose applied through <see cref="EntityModelDefinition.ApplyRootPose"/>. Facing uses
 /// the reference Direction ordinal encoding (north 2, south 3, west 4, east 5); the model translation
 /// places its origin at the block centre, <c>(0.5, 0, 0.5)</c>, before the Y rotation.
 /// </remarks>
@@ -41,6 +44,14 @@ public sealed class CopperGolemStatueMesher
     private readonly EntityModelMesher _mesher = new();
     private readonly DynamicGeometry _geometry = new();
     private readonly List<EntityRenderState>[] _states = [new(), new(), new(), new()];
+
+    /// <summary>
+    /// CopperGolemStatueModel wraps the CopperGolem layer with a root pose: <c>root.y = 0</c> and
+    /// <c>root.zRot = π</c>. The project definition already stores the y-up part coordinates, so the
+    /// root pose is represented as an <see cref="EntityPose"/> row for the compiled root group.
+    /// </summary>
+    private static readonly EntityModelDefinition StatueModel = CreateStatueModel();
+    private static readonly EntityPose StatuePose = CreateStatuePose();
 
     /// <summary>Entities drawn by the last call.</summary>
     public int LastEntityCount { get; private set; }
@@ -110,17 +121,46 @@ public sealed class CopperGolemStatueMesher
             }
 
             var geometry = _mesher.BuildModel(
-                CopperGolemModelDefinition.Definition,
+                StatueModel,
                 System.Runtime.InteropServices.CollectionsMarshal.AsSpan(_states[stage]),
                 sprite,
                 TextureWidth,
                 TextureHeight,
+                pose: StatuePose,
                 modelScale: 1f);
             AppendGeometry(_geometry, geometry);
             LastEntityCount += _states[stage].Count;
         }
 
         return _geometry;
+    }
+
+    private static EntityModelDefinition CreateStatueModel()
+    {
+        var source = CopperGolemModelDefinition.Definition;
+        return new EntityModelDefinition(
+            name: "copper_golem_statue",
+            textureWidth: source.TextureWidth,
+            textureHeight: source.TextureHeight,
+            parts: source.Parts,
+            faceTransforms: source.FaceTransforms,
+            texturePath: source.TexturePath,
+            scale: source.Scale,
+            emissiveTexturePath: source.EmissiveTexturePath,
+            textureSelector: source.TextureSelector,
+            additionalTexturePaths: source.AdditionalTexturePaths,
+            compiled: source.Compiled,
+            renderLayers: source.RenderLayers,
+            applyRootPose: true);
+    }
+
+    private static EntityPose CreateStatuePose()
+    {
+        var pose = new EntityPose();
+        // The reference layer's root pivot is 24 pixels; CopperGolemStatueModel sets root.y = 0,
+        // which in the y-up baked representation is a +24 pixel root translation before zRot = π.
+        pose.Set("root", new PoseOffset(new Vector3(0f, 24f, 0f), new Vector3(0f, 0f, MathF.PI), Vector3.Zero));
+        return pose;
     }
 
     /// <summary>
