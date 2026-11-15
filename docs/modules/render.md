@@ -493,7 +493,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 - **简化了什么**：整个方块实体段用一条 `CullMode.None` 的 cutout 管线（`FramePipelines.CreateNoCullCutoutPipeline`），而不是像原版那样每个渲染器自选 RenderType。
 - **为什么**：原版大多数模型类方块实体（箱子、潜影盒、告示牌、床、旗帜、头颅）都用 `entityCutout`，它本身就 `.withCull(false)`；统一 no-cull 让这些类型自动正确，不需要每个 mesher 各自处理。
-- **对等效性的影响**：已实现的 Chest / Trapped / Ender / ShulkerBox 与原版完全一致；DecoratedPot 的静态基底与空白侧面几何按原版真值实现（陶片图案见 `SIM-BE-POT-NO-PATTERNS`）；CopperGolemStatue 的站立模型、四档氧化纹理与 facing 按原版真值实现（姿态见 `SIM-BE-COPPER-GOLEM-POSES`）。原版用 `entitySolid`（剔除）的 `Conduit` 尚未实现；实现时统一 no-cull 只会多画背面，视觉等价，仅多一点填充成本。
+- **对等效性的影响**：已实现的 Chest / Trapped / Ender / ShulkerBox 与原版完全一致；DecoratedPot 的静态基底与空白侧面几何按原版真值实现（陶片图案见 `SIM-BE-POT-NO-PATTERNS`）；CopperGolemStatue 的站立模型、四档氧化纹理与 facing 按原版真值实现（姿态见 `SIM-BE-COPPER-GOLEM-POSES`）；Lectern 的静态书本使用参考 `BOOK_STATE`（动画见 `SIM-BE-LECTERN-STATE`）。原版用 `entitySolid`（剔除）的 `Conduit` 尚未实现；实现时统一 no-cull 只会多画背面，视觉等价，仅多一点填充成本。
 - **状态**：受控偏差，跟踪任务见 Issue #45。
 - **验收证据**：潜影盒 144 顶点金值测试（`Repro_042_ShulkerBoxTests`）+ 真机开盖内壁不透明。
 
@@ -538,3 +538,13 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收证据**：`tests/Sharpcraft.Client.Tests/Render/CopperGolemStatueMesherTests.cs` 覆盖站立模型、四档氧化纹理、facing 与注册表；补齐姿态后需按每个 `Pose` 补顶点/UV 真值与单方块像素对比。
 
 <!-- simplification:SIM-BE-COPPER-GOLEM-POSES task:T-47 -->
+
+### SIM-BE-LECTERN-STATE：讲台书页状态固定
+
+- **简化了什么**：`LecternRenderer` 使用参考讲台固定的 `BOOK_STATE = BookModel.State.forAnimation(0, 0.1, 0.9, 1.2)`，不读取 `LecternBlockEntity` 的逐页状态，也不播放书页翻页/打开进度动画。
+- **为什么**：首切片先落地 `BookModelDefinition`、讲台静态生成本体和 `has_book`/facing 变换；讲台书页动画需要 `LecternBlockEntity` 的页面数据与逐刻状态通道，后续任务跟进。
+- **对等效性的影响**：`HAS_BOOK=false` 时不绘制；`HAS_BOOK=true` 时书本使用固定的参考初始页状态，静态外观和姿态与参考一致，但翻页/打开动画缺失。
+- **状态**：受控偏差，计划由 T-47（#47 批次 1）后续讲台动画切片跟进（Issue #63）。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/LecternRendererTests.cs` 覆盖静态书页姿态、facing/UV、`HasBook`、`Handles(29)` 与 64×32 纹理；接入动态页后需补页面状态真值与单方块像素对比。
+
+<!-- simplification:SIM-BE-LECTERN-STATE task:T-47 -->

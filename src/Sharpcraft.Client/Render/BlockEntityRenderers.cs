@@ -21,6 +21,7 @@ public static class BlockEntityRenderers
         new ChestBlockEntityRenderer(),
         new ShulkerBoxBlockEntityRenderer(),
         new BellBlockEntityRenderer(),
+        new LecternRenderer(),
         new DecoratedPotBlockEntityRenderer(),
         new CopperGolemStatueBlockEntityRenderer()
     ];

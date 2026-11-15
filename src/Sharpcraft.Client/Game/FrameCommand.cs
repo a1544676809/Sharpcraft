@@ -413,6 +413,7 @@ internal static partial class FrameCommand
                     : FacingOf(world, blockX, record.Y, blockZ),
                             ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
                             ChestMaterial: BlockEntityMaterialOf(world, blockX, record.Y, blockZ, record.TypeId),
+                            HasBook: HasBookOf(world, blockX, record.Y, blockZ),
                             Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
                 }
             }
@@ -1025,6 +1026,7 @@ internal static partial class FrameCommand
                         : FacingOf(world, blockX, record.Y, blockZ),
                         ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
                         ChestMaterial: BlockEntityMaterialOf(world, blockX, record.Y, blockZ, record.TypeId),
+                        HasBook: HasBookOf(world, blockX, record.Y, blockZ),
                         Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
             }
             }
@@ -1165,11 +1167,23 @@ internal static partial class FrameCommand
     }
 
     /// <summary>
+    /// The lectern block's <c>has_book</c> property, false when the state has no such property.
+    /// Ref: <c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/LecternBlock.java:44-60</c>.
+    /// </summary>
+    private static bool HasBookOf(ClientWorld world, int x, int y, int z)
+    {
+        return Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
+            world.GetBlockState(x, y, z),
+            "has_book",
+            out var hasBook)
+            && hasBook == "true";
+    }
+
+    /// <summary>
     /// The facing a chest's block carries, or south when it has none. Chests take their direction
     /// from the block state rather than from their block entity data.
     /// </summary>
-    private static byte FacingOf(ClientWorld world, int x, int y, int z)
-    {
+    private static byte FacingOf(ClientWorld world, int x, int y, int z)    {
         if (!Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
                 world.GetBlockState(x, y, z),
                 "facing",
@@ -1352,6 +1366,7 @@ internal static partial class FrameCommand
                     : FacingOf(world, blockX, record.Y, blockZ),
                     ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
                     ChestMaterial: BlockEntityMaterialOf(world, blockX, record.Y, blockZ, record.TypeId),
+                    HasBook: HasBookOf(world, blockX, record.Y, blockZ),
                     Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ, partialTick)));
             }
         }
