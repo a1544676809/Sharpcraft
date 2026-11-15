@@ -108,11 +108,17 @@ public sealed class BlockModelElements
                     return ParseElements(elements);
                 }
 
-                current = root.TryGetProperty("parent", out var parent) &&
-                          parent.ValueKind == JsonValueKind.String &&
-                          parent.GetString() is { Length: > 0 } name
-                    ? NormalizeModel(name)
-                    : null;
+                if (root.TryGetProperty("parent", out var parent) &&
+                    parent.ValueKind == JsonValueKind.String &&
+                    parent.GetString() is { Length: > 0 } name)
+                {
+                    current = NormalizeModel(name);
+                    continue;
+                }
+
+                // A real model file that declares neither elements nor a parent draws nothing. Chests
+                // and shulker boxes are exactly this: their block models carry only a particle texture.
+                return [];
             }
         }
 

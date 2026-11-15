@@ -22,6 +22,23 @@ public static class ChestAtlas
     /// <summary>Shulker box textures in dye order, with the undyed default first.</summary>
     public static readonly string[] ShulkerTextures =
     [
+        "entity/shulker/shulker",
+        "entity/shulker/shulker_white",
+        "entity/shulker/shulker_orange",
+        "entity/shulker/shulker_magenta",
+        "entity/shulker/shulker_light_blue",
+        "entity/shulker/shulker_yellow",
+        "entity/shulker/shulker_lime",
+        "entity/shulker/shulker_pink",
+        "entity/shulker/shulker_gray",
+        "entity/shulker/shulker_light_gray",
+        "entity/shulker/shulker_cyan",
+        "entity/shulker/shulker_purple",
+        "entity/shulker/shulker_blue",
+        "entity/shulker/shulker_brown",
+        "entity/shulker/shulker_green",
+        "entity/shulker/shulker_red",
+        "entity/shulker/shulker_black"
     ];
 
     /// <summary>Texture a shulker box uses for a dye index, or the undyed default.</summary>
