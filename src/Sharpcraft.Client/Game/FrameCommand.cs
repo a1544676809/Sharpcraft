@@ -408,7 +408,9 @@ internal static partial class FrameCommand
                             record.Y,
                             blockZ,
                             record.TypeId,
-                            Facing: FacingOf(world, blockX, record.Y, blockZ),
+                Facing: Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(record.TypeId)
+                    ? ShulkerFacingOf(world, blockX, record.Y, blockZ)
+                    : FacingOf(world, blockX, record.Y, blockZ),
                             ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
                             ChestMaterial: ChestMaterialOf(world, blockX, record.Y, blockZ),
                             Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
@@ -1019,7 +1021,9 @@ internal static partial class FrameCommand
                         record.Y,
                         blockZ,
                         record.TypeId,
-                        Facing: FacingOf(world, blockX, record.Y, blockZ),
+                Facing: Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(record.TypeId)
+                    ? ShulkerFacingOf(world, blockX, record.Y, blockZ)
+                    : FacingOf(world, blockX, record.Y, blockZ),
                         ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
                         ChestMaterial: ChestMaterialOf(world, blockX, record.Y, blockZ),
                         Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
@@ -1135,6 +1139,32 @@ internal static partial class FrameCommand
     /// The facing a block entity's block carries, or south when it has none. Chests take their
     /// direction from the block state rather than from their block entity data.
     /// </summary>
+    /// <summary>
+    /// The direction a shulker box faces. Unlike a chest it may face up or down, so the six
+    /// direction names map straight onto the reference Direction ids.
+    /// </summary>
+    private static byte ShulkerFacingOf(ClientWorld world, int x, int y, int z)
+    {
+        if (!Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
+                world.GetBlockState(x, y, z),
+                "facing",
+                out var facing))
+        {
+            return 1;
+        }
+
+        return facing switch
+        {
+            "down" => 0,
+            "up" => 1,
+            "north" => 2,
+            "south" => 3,
+            "west" => 4,
+            "east" => 5,
+            _ => 1
+        };
+    }
+
     private static byte FacingOf(ClientWorld world, int x, int y, int z)
     {
         if (!Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
@@ -1242,7 +1272,9 @@ internal static partial class FrameCommand
                     record.Y,
                     blockZ,
                     record.TypeId,
-                    Facing: FacingOf(world, blockX, record.Y, blockZ),
+                Facing: Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(record.TypeId)
+                    ? ShulkerFacingOf(world, blockX, record.Y, blockZ)
+                    : FacingOf(world, blockX, record.Y, blockZ),
                     ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
                     ChestMaterial: ChestMaterialOf(world, blockX, record.Y, blockZ),
                     Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ, partialTick)));
