@@ -70,7 +70,7 @@ public static class CopperGolemStatueModelDefinition
             CopperGolemModelDefinition.Definition.TexturePath,
             emissiveTexturePath: CopperGolemModelDefinition.Definition.EmissiveTexturePath,
             additionalTexturePaths: CopperGolemModelDefinition.Definition.AdditionalTexturePaths,
-            modelHeight: 0f);
+            baselinePx: 0f);
         return WithRootPose(source, name);
     }
 

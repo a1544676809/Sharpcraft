@@ -70,7 +70,7 @@ public sealed class BoxProbeTests
             VanillaPartPose.Offset(0f, 0f, 0f),
             new VanillaCubeDefinition("box", 0, 0, -2f, -2f, -2f, 4f, 4f, 4f, 0f));
 
-        var definition = EntityModelDefinition.FromTree("box", 64, 64, new VanillaMeshDefinition(root), texturePath: "probe/box", modelHeight: 0f);
+        var definition = EntityModelDefinition.FromTree("box", 64, 64, new VanillaMeshDefinition(root), texturePath: "probe/box", baselinePx: 0f);
         var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
         {
             ["probe/box"] = new TextureData(64, 64, new byte[64 * 64 * 4])
