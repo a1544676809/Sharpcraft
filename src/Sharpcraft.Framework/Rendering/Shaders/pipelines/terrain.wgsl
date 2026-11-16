@@ -197,6 +197,30 @@ fn fs_translucent(input : VertexOutput) -> @location(0) vec4<f32> {
     return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogged), base.a);
 }
 
+// Solid pass: the reference entitySolid render type has no ALPHA_CUTOUT, so unlike fs_cutout this keeps
+// every texel and writes an opaque alpha instead of discarding below 0.5. Used by block entity renderers
+// whose source RenderType is entitySolid (Bell / DecoratedPot / CopperGolemStatue).
+@fragment
+fn fs_solid(input : VertexOutput) -> @location(0) vec4<f32> {
+    let rectMin = input.spriteRect.xy;
+    let rectMax = input.spriteRect.zw;
+
+    // Same atlas/sprite mapping and mip gradient rule as the cutout terrain pass.
+    let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
+    let gradientScale = rectMax - rectMin;
+    let sampled = textureSampleGrad(
+        atlasTexture,
+        atlasSampler,
+        atlasUv,
+        dpdx(input.uv) * gradientScale,
+        dpdy(input.uv) * gradientScale);
+
+    let light = input.colour * lightmapColour(input.light.x, input.light.y);
+    let base = vec4<f32>(litColour(sampled.rgb, light), 1.0);
+    let fogged = total_fog_value(input.fogDistance);
+    return vec4<f32>(mix(base.rgb, fog.colour.rgb, fogged), 1.0);
+}
+
 // Cutout pass: identical colour, but texels below half alpha are discarded instead of blended, which is what leaves and
 // plants need (ref: ChunkSectionLayer.CUTOUT uses alpha testing, not blending).
 @fragment

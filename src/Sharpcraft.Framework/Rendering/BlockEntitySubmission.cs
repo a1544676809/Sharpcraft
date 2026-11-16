@@ -40,6 +40,29 @@ public sealed class BlockEntitySubmission : IDisposable
     /// <summary>Leading indices drawn with the solid pipeline by the last upload.</summary>
     public int SolidIndexCount => _solidIndexCount;
 
+    /// <summary>One contiguous indexed draw range within the submission's index buffer.</summary>
+    internal readonly record struct DrawRange(int FirstIndex, int IndexCount, int BaseVertex);
+
+    /// <summary>Solid and no-cull draw ranges for one submission.</summary>
+    internal readonly record struct DrawPlan(DrawRange Solid, DrawRange NoCull);
+
+    /// <summary>
+    /// Splits a submission's indices into the solid prefix and the no-cull suffix. Both draws use the
+    /// same vertex/index buffers, so their base vertex is zero and the no-cull draw starts exactly at
+    /// the solid index count.
+    /// </summary>
+    internal static DrawPlan CreateDrawPlan(int indexCount, int solidIndexCount)
+    {
+        if ((uint)solidIndexCount > (uint)indexCount)
+        {
+            throw new ArgumentOutOfRangeException(nameof(solidIndexCount));
+        }
+
+        return new DrawPlan(
+            new DrawRange(FirstIndex: 0, solidIndexCount, BaseVertex: 0),
+            new DrawRange(FirstIndex: solidIndexCount, indexCount - solidIndexCount, BaseVertex: 0));
+    }
+
     /// <summary>Binding the segment draws with, as supplied to the last upload.</summary>
     public BindGroupHandle BindGroup => _bindGroup;
 
@@ -125,17 +148,29 @@ public sealed class BlockEntitySubmission : IDisposable
         backend.SetVertexBuffer(pass, 0, _vertex);
         backend.SetIndexBuffer(pass, _index, IndexFormat.Uint32);
 
-        if (_solidIndexCount > 0)
+        var plan = CreateDrawPlan(_indexCount, _solidIndexCount);
+        if (plan.Solid.IndexCount > 0)
         {
             backend.SetPipeline(pass, solidPipeline);
-            backend.DrawIndexed(pass, (uint)_solidIndexCount, 1, 0, 0, 0);
+            backend.DrawIndexed(
+                pass,
+                (uint)plan.Solid.IndexCount,
+                1,
+                (uint)plan.Solid.FirstIndex,
+                plan.Solid.BaseVertex,
+                0);
         }
 
-        var noCullIndexCount = _indexCount - _solidIndexCount;
-        if (noCullIndexCount > 0)
+        if (plan.NoCull.IndexCount > 0)
         {
             backend.SetPipeline(pass, noCullPipeline);
-            backend.DrawIndexed(pass, (uint)noCullIndexCount, 1, (uint)_solidIndexCount, 0, 0);
+            backend.DrawIndexed(
+                pass,
+                (uint)plan.NoCull.IndexCount,
+                1,
+                (uint)plan.NoCull.FirstIndex,
+                plan.NoCull.BaseVertex,
+                0);
         }
     }
 

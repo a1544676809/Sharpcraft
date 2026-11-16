@@ -489,7 +489,9 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 **保留理由**：等效、零成本、意图更清晰（先判断能否跳过再干活）。但与 §31 的合批一样，**不得当作性能优化引用**——它没有测出收益，保留是因为不亏。
 ### 6.4 方块实体 per-renderer cull（Issue #45 cull 部分）
 
-方块实体不再共用一条 no-cull 管线。每个 `IBlockEntityRenderer` 通过 `RenderMode` 声明 `NoCull` 或 `Solid`；dispatcher 仍然只拼接一次几何，但先写 solid 部件、再写 no-cull 部件，并记录 `BlockEntityGeometry.SolidIndexCount`。`BlockEntitySubmission` 在同一组顶点/索引缓冲上先画 `[0, SolidIndexCount)`（`fs_cutout` + `CullMode.Back`），再画 `[SolidIndexCount, IndexCount)`（`fs_cutout` + `CullMode.None`）。
+方块实体不再共用一条 no-cull 管线。每个 `IBlockEntityRenderer` 通过 `RenderMode` 声明 `NoCull` 或 `Solid`；dispatcher 仍然只拼接一次几何，但先写 solid 部件、再写 no-cull 部件，并记录 `BlockEntityGeometry.SolidIndexCount`。`BlockEntitySubmission` 在同一组顶点/索引缓冲上先画 `[0, SolidIndexCount)`（`fs_solid` + `CullMode.Back`），再画 `[SolidIndexCount, IndexCount)`（`fs_cutout` + `CullMode.None`）。
+
+`solid` 的 shader 语义对应源 `entitySolid`：`fs_solid` 采样同一 atlas/sprite/light/fog，但不做 alpha 测试、输出 alpha 1；`no-cull` 继续使用带 0.5 alpha discard 的 `fs_cutout`。二者不是同一条着色器路径。
 
 - Solid：Bell、DecoratedPot、CopperGolemStatue（源 `entitySolid`）。
 - NoCull：Chest / ShulkerBox / Shelf / Campfire / Lectern / EnchantTable / Skull / Brushable。

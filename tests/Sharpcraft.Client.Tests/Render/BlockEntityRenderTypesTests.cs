@@ -31,6 +31,38 @@ public sealed class BlockEntityRenderTypesTests
         Assert.Equal(expected, renderer.RenderMode);
     }
 
+    [Theory]
+    [InlineData(0, 0, 0, 0, 0, 0, 0, 0)]
+    [InlineData(6, 0, 0, 0, 0, 0, 6, 0)]
+    [InlineData(6, 6, 0, 6, 0, 6, 0, 0)]
+    [InlineData(6, 2, 0, 2, 0, 2, 4, 0)]
+    [InlineData(9, 6, 0, 6, 0, 6, 3, 0)]
+    public void DrawPlanSplitsSolidAndNoCullRanges(
+        int indexCount,
+        int solidIndexCount,
+        int solidFirst,
+        int solidCount,
+        int solidBase,
+        int noCullFirst,
+        int noCullCount,
+        int noCullBase)
+    {
+        var plan = BlockEntitySubmission.CreateDrawPlan(indexCount, solidIndexCount);
+
+        Assert.Equal(solidFirst, plan.Solid.FirstIndex);
+        Assert.Equal(solidCount, plan.Solid.IndexCount);
+        Assert.Equal(solidBase, plan.Solid.BaseVertex);
+        Assert.Equal(noCullFirst, plan.NoCull.FirstIndex);
+        Assert.Equal(noCullCount, plan.NoCull.IndexCount);
+        Assert.Equal(noCullBase, plan.NoCull.BaseVertex);
+    }
+
+    [Fact]
+    public void DrawPlanRejectsSolidCountBeyondTotal()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => BlockEntitySubmission.CreateDrawPlan(3, 4));
+    }
+
     [Fact]
     public void SolidGeometryOccupiesTheLeadingRange()
     {
