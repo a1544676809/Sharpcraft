@@ -30,13 +30,14 @@ public enum CopperGolemPose : byte
 /// (standing), <c>:97-145</c> (running), <c>:146-206</c> (sitting), <c>:207-246</c> (star), and
 /// <c>ref://mc-26.3-analysis/src/net/minecraft/client/model/object/statue/CopperGolemStatueModel.java:13-20</c>
 /// (<c>root.y = 0</c>, <c>root.zRot = π</c>).
-/// <para>
-/// The running/sitting/star layers use a zero root translation in the source. This repo's tree
-/// bakery keeps the same y-up baseline as the standing layer (the source standing root is +24), so
-/// their root-level body/leg Y offsets below are the source value plus 24. Child pivots and every
-/// cube min/size/UV stay exactly at the source value; the statue root pose is then applied once by
-/// <c>CopperGolemStatueMesher</c>.
-/// </para>
+    /// <para>
+    /// Part offsets are the source values verbatim, with no model height baked in: the statue asks
+    /// <see cref="EntityModelDefinition"/> for <c>modelHeight: 0</c>. The source applies
+    /// <c>root.zRot = PI</c> and zeroes the root pivot, which nets out to the y-down to y-up flip the
+    /// bakery already performs, so nothing of it is repeated here. Writing it again renders the statue
+    /// upside down, and the mesh pipeline never reads a root rotation from a definition anyway: it
+    /// takes the root frame from the entity pose.
+    /// </para>
 /// </remarks>
 [ReferenceClass("net.minecraft.client.model.animal.golem.CopperGolemModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/golem/CopperGolemModel.java", Kind = ReferenceKind.Adapter, Status = ReferenceStatus.Partial)]
 public static class CopperGolemStatueModelDefinition

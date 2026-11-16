@@ -234,6 +234,26 @@ public static class BlockEntityBlockIndex
     /// <summary>The block paths this index covers, sorted. Read only; used by tests and tools.</summary>
     public static System.Collections.Generic.IReadOnlyList<string> BlockPaths => Paths;
 
+    /// <summary>Block entity type of a block identifier.</summary>
+    /// <param name="block">Block id, namespace included.</param>
+    /// <param name="typeId">Type id when the block carries one.</param>
+    /// <returns>True when the block carries a block entity.</returns>
+    /// <remarks>
+    /// The index only describes <c>minecraft</c> blocks, so anything outside that namespace answers
+    /// false here. Matching on the path alone would hand a modded <c>mymod:chest</c> the record of
+    /// <c>minecraft:chest</c>; a mod's own block entity comes from its own registration instead.
+    /// </remarks>
+    public static bool TryGetType(Sharpcraft.Common.Identifiers.Identifier block, out int typeId)
+    {
+        if (block.Namespace != "minecraft")
+        {
+            typeId = -1;
+            return false;
+        }
+
+        return TryGetType(block.Path, out typeId);
+    }
+
     /// <summary>Block entity type of a block path.</summary>
     /// <param name="blockPath">Block id path, without the namespace.</param>
     /// <param name="typeId">Type id when the block carries one.</param>
