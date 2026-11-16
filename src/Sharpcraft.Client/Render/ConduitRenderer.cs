@@ -11,8 +11,8 @@ using Sharpcraft.Framework.Rendering;
 namespace Sharpcraft.Client.Render;
 
 /// <summary>
-/// Draws the inactive conduit shell from <see cref="ConduitModelDefinition"/>. The active cage,
-/// wind and eye branches are not implemented in this slice.
+/// Draws the inactive conduit shell from <see cref="ConduitModelDefinition"/>. Active conduits keep
+/// the same static shell in this slice; the active cage, wind and eye branches are not implemented.
 /// </summary>
 /// <remarks>
 /// Source: <c>ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/ConduitRenderer.java</c>
@@ -21,7 +21,7 @@ namespace Sharpcraft.Client.Render;
 /// <c>activeRotation</c>, and submits the shell with <c>entitySolid</c>.
 /// </remarks>
 [ReferenceClass("net.minecraft.client.renderer.blockentity.ConduitRenderer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/ConduitRenderer.java", Kind = ReferenceKind.Adapter, Status = ReferenceStatus.Partial)]
-[Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-CONDUIT-ACTIVE", "T-51", Note = "Only the inactive shell is drawn; active cage, wind, eye, isHunting and tickCount are not wired.")]
+[Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-CONDUIT-ACTIVE", "T-51", Note = "Active conduits reuse the static shell; active cage, wind, eye, isHunting, tickCount and activeRotation (fixed zero) are not wired.")]
 public sealed class ConduitRenderer : IBlockEntityRenderer
 {
     private readonly EntityModelMesher _mesher = new();
@@ -46,7 +46,7 @@ public sealed class ConduitRenderer : IBlockEntityRenderer
         for (var index = 0; index < entities.Length; index++)
         {
             var entity = entities[index];
-            if (!Handles(entity.TypeId) || entity.ConduitActive)
+            if (!Handles(entity.TypeId))
             {
                 continue;
             }
@@ -63,7 +63,7 @@ public sealed class ConduitRenderer : IBlockEntityRenderer
                 X: 0f,
                 Y: 0f,
                 Z: 0f,
-                Yaw: 0f,
+                Yaw: 180f,
                 Pitch: 0f);
             var shell = _mesher.BuildModel(
                 ConduitModelDefinition.Shell,

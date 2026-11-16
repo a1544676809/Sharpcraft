@@ -521,7 +521,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 `ConduitModelDefinition.Shell` 声明 `ConduitRenderer.createShellLayer()` 的单个 `(-3,-3,-3,6,6,6)` 立方体；`entity/conduit/base` 为 32×16。`ConduitRenderer`（id 25）复用 `EntityModelMesher.BuildModel`，只实现 inactive 分支：
 
 - 源 `DEFAULT_TRANSFORMATION` 平移 `(0.5,0.5,0.5)`，并沿 Y 旋转 conduit 的 `activeRotation`；本项目根 bake 带 +24px y-up baseline，因此平移 y 折入 `0.5 - 24/16 = -1.0`。
-- 使用 `entitySolid` → `RenderMode.Solid`；首切片 `ConduitRotation` 固定 0、`ConduitActive` 固定 false（active 分支未实现）。
+- 使用 `entitySolid` → `RenderMode.Solid`；本切片 `ConduitRotation` 固定 0（源 activeRotation 动画未接入），active 与 inactive 都绘制同一静态 shell。
 - `BlockEntityRenderState.ConduitRotation/ConduitActive` 由 `FrameCommand` 三路构造；`Handles(25)`。
 - active cage/wind/eye/isHunting/tickCount 不做，登记 `SIM-BE-CONDUIT-ACTIVE`。
 
@@ -627,13 +627,13 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 <!-- simplification:SIM-BE-VAULT-COUNT task:T-52 -->
 
-### SIM-BE-CONDUIT-ACTIVE：Conduit 只画 inactive 外壳
+### SIM-BE-CONDUIT-ACTIVE：Conduit active 分支只复用静态外壳
 
-- **简化了什么**：`ConduitRenderer` 只绘制 inactive shell；active cage/wind/eye、isHunting、tickCount 与 activeRotation 动画均未接入。
-- **为什么**：当前客户端没有 conduit active 状态、tickCount 与 active 模型贴图通道；首切片先落地源 inactive shell 几何、transform、atlas 与 render mode。
-- **对等效性的影响**：未激活 conduit 的外观按源实现；激活 conduit 只显示 inactive 外壳，缺少 cage/wind/eye 与旋转/浮动。
+- **简化了什么**：`ConduitRenderer` 对 active 与 inactive 都绘制同一个 shell；active cage/wind/eye、isHunting、tickCount 与 activeRotation 动画均未接入，`ConduitRotation` 固定 0。
+- **为什么**：当前客户端没有 conduit active 状态、tickCount 与 active 模型贴图通道；首切片先落地源静态 shell 几何、transform、atlas 与 render mode。
+- **对等效性的影响**：未激活 conduit 的外观按源实现；激活 conduit 仍显示静态外壳，缺少 cage/wind/eye 与旋转/浮动。
 - **状态**：受控偏差，由 #51 后续 active 切片跟进（Issue #93）。
-- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/ConduitRendererTests.cs` 覆盖 shell bounds/UV、`Handles(25)` 与 atlas；接入 active 后补状态/动画真值与单方块像素对比。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/ConduitRendererTests.cs` 覆盖 shell bounds/UV、active/inactive 都产出 shell、`Handles(25)` 与 atlas；接入 active 后补状态/动画真值与单方块像素对比。
 
 <!-- simplification:SIM-BE-CONDUIT-ACTIVE task:T-51 -->
 
