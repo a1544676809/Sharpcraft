@@ -13,7 +13,7 @@
 | Conduit | `ConduitRenderer` / `ConduitModelDefinition` | 已 raw（main 基准，本批验证无退化） |
 | Banner | `BannerRenderer` / `BannerModelDefinition` | 已 raw；#111 静止倾角修正 |
 | Skull | `SkullRenderer` / `SkullModelDefinition` | 已 raw（mob 四型 + player head）；Piglin/Dragon 属 entity/scale bake，未改 |
-| Book/Lectern/Enchant | `LecternRenderer` / `EnchantTableRenderer` / `BookModelDefinition` | 见下方迁移记录 |
+| Book/Lectern/Enchant | `LecternRenderer` / `EnchantTableRenderer` / `BookModelDefinition` | 阻塞于基准样本口径（见下）；本批未迁移 |
 | Statue | `CopperGolemStatueMesher` / `CopperGolemStatueModelDefinition` | 与 entity 模型跨族约束，最后处理 |
 | Chest/ShulkerBox/Bell/Pot/Placeholder | 直接网格几何（`EntityPlaceholderMesher.AppendBox` 等） | N/A（不走 entity model bake，见下） |
 | Shelf/Campfire/Brushable/Vault | item mesher（`BlockEntityItemMesher`） | N/A（不走 entity model bake，见下） |
@@ -46,6 +46,11 @@
 | `BannerRenderer.ModelTransform` | `BannerRenderer.createGroundTransformation`/`createWallTransformation` (BannerRenderer.java:243-249) |
 | `BannerRenderer.PhaseRotation` | `BannerFlagModel.setupAnim` (BannerFlagModel.java:32-35) |
 | `BannerSourceFormula`（测试辅助） | 同一源公式的独立实现，仅用于测试期望推导，不调用生产渲染器 |
+
+## 已知刻意的简化与阻塞（续）
+
+- **Book/Lectern/Enchant 阻塞于原版基准样本口径**：书模型带 `setupAnim` 姿态（lid/page 旋转 + page x 位移）与复合外层变换。已写独立 jar 探针 `ref://mc-26.3-analysis/vectors/BookVectorProbe.java`（应用源 setupAnim + Lectern/Enchant 外层 pose），位置与现有内联样本一致（如 lectern facing 2 的 (0.4375,0.8951,0.0958)），但 UV 与内联样本不同（内联 `u=6/64=0.09375`，探针 `u≈0.218828`）——该内联 UV 是 legacy face 校准值，需确认哪个是源字面值后再迁移，不得按实现反推。状态：**阻塞于评审**（Issue #119 / T-102-BOOK-UV）。已尝试路径：BookVectorProbe 采样、位置交叉校验；未提交任何 Book 代码改动。
+- **直接网格 / item mesher 渲染器不适用 raw（N/A）**：`ChestMesher`、`ShulkerBoxMesher`、`BellMesher`、`DecoratedPotMesher`、`BlockEntityPlaceholderMesher` 用 `EntityPlaceholderMesher.AppendBox` 直接构造盒子（`grep AppendBox <file>` 可证）；`ShelfRenderer`、`CampfireRenderer`、`BrushableRenderer`、`VaultRenderer` 用 `BlockEntityItemMesher.AppendSlot` 直接构造物品几何。它们不消费 `EntityModelDefinition`/`BuildModel`，不存在 frame 烘焙补偿，故 raw 迁移不适用（非阻塞）。`ChestAtlas` 仅做纹理装载，不涉及模型帧。
 
 ## 实现说明：Skull raw 迁移
 
