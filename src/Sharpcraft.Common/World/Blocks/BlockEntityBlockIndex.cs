@@ -1,0 +1,265 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// Copyright (C) 2026 Sharpcraft contributors
+
+namespace Sharpcraft.Common.World.Blocks;
+
+/// <summary>
+/// Every block that carries a block entity, and which type it is. Generated from the reference's
+/// block entity type registration data; do not edit by hand. Issue 96.
+/// </summary>
+/// <remarks>
+/// The reference decides this with an interface check (a block implements <c>EntityBlock</c>) because
+/// its blocks are objects. Ours are registry ids, so the same fact is stored as data. One entry per
+/// block, not per type: a type covers many blocks (sixteen banners, sixteen wall banners, every sign,
+/// head and shelf variant). See docs/decisions/0031-block-behaviour-layering.md.
+/// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.block.entity.BlockEntityType", "ref://mc-26.3-analysis/src/net/minecraft/world/level/block/entity/BlockEntityType.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "the valid blocks of every registered type, as data")]
+public static class BlockEntityBlockIndex
+{
+    /// <summary>Block paths, sorted, so a lookup is a binary search.</summary>
+    private static readonly string[] Paths =
+    [
+        "acacia_hanging_sign",
+        "acacia_shelf",
+        "acacia_sign",
+        "acacia_wall_hanging_sign",
+        "acacia_wall_sign",
+        "bamboo_hanging_sign",
+        "bamboo_shelf",
+        "bamboo_sign",
+        "bamboo_wall_hanging_sign",
+        "bamboo_wall_sign",
+        "barrel",
+        "beacon",
+        "bee_nest",
+        "beehive",
+        "bell",
+        "birch_hanging_sign",
+        "birch_shelf",
+        "birch_sign",
+        "birch_wall_hanging_sign",
+        "birch_wall_sign",
+        "black_banner",
+        "black_shulker_box",
+        "black_wall_banner",
+        "blast_furnace",
+        "blue_banner",
+        "blue_shulker_box",
+        "blue_wall_banner",
+        "brewing_stand",
+        "brown_banner",
+        "brown_shulker_box",
+        "brown_wall_banner",
+        "calibrated_sculk_sensor",
+        "campfire",
+        "chain_command_block",
+        "cherry_hanging_sign",
+        "cherry_shelf",
+        "cherry_sign",
+        "cherry_wall_hanging_sign",
+        "cherry_wall_sign",
+        "chest",
+        "chiseled_bookshelf",
+        "command_block",
+        "comparator",
+        "conduit",
+        "copper_chest",
+        "copper_golem_statue",
+        "crafter",
+        "creaking_heart",
+        "creeper_head",
+        "creeper_wall_head",
+        "crimson_hanging_sign",
+        "crimson_shelf",
+        "crimson_sign",
+        "crimson_wall_hanging_sign",
+        "crimson_wall_sign",
+        "cyan_banner",
+        "cyan_shulker_box",
+        "cyan_wall_banner",
+        "dark_oak_hanging_sign",
+        "dark_oak_shelf",
+        "dark_oak_sign",
+        "dark_oak_wall_hanging_sign",
+        "dark_oak_wall_sign",
+        "daylight_detector",
+        "decorated_pot",
+        "dispenser",
+        "dragon_head",
+        "dragon_wall_head",
+        "dropper",
+        "enchanting_table",
+        "end_gateway",
+        "end_portal",
+        "ender_chest",
+        "exposed_copper_chest",
+        "exposed_copper_golem_statue",
+        "furnace",
+        "gray_banner",
+        "gray_shulker_box",
+        "gray_wall_banner",
+        "green_banner",
+        "green_shulker_box",
+        "green_wall_banner",
+        "hopper",
+        "jigsaw",
+        "jukebox",
+        "jungle_hanging_sign",
+        "jungle_shelf",
+        "jungle_sign",
+        "jungle_wall_hanging_sign",
+        "jungle_wall_sign",
+        "lectern",
+        "light_blue_banner",
+        "light_blue_shulker_box",
+        "light_blue_wall_banner",
+        "light_gray_banner",
+        "light_gray_shulker_box",
+        "light_gray_wall_banner",
+        "lime_banner",
+        "lime_shulker_box",
+        "lime_wall_banner",
+        "magenta_banner",
+        "magenta_shulker_box",
+        "magenta_wall_banner",
+        "mangrove_hanging_sign",
+        "mangrove_shelf",
+        "mangrove_sign",
+        "mangrove_wall_hanging_sign",
+        "mangrove_wall_sign",
+        "moving_piston",
+        "oak_hanging_sign",
+        "oak_shelf",
+        "oak_sign",
+        "oak_wall_hanging_sign",
+        "oak_wall_sign",
+        "orange_banner",
+        "orange_shulker_box",
+        "orange_wall_banner",
+        "oxidized_copper_chest",
+        "oxidized_copper_golem_statue",
+        "pale_oak_hanging_sign",
+        "pale_oak_shelf",
+        "pale_oak_sign",
+        "pale_oak_wall_hanging_sign",
+        "pale_oak_wall_sign",
+        "piglin_head",
+        "piglin_wall_head",
+        "pink_banner",
+        "pink_shulker_box",
+        "pink_wall_banner",
+        "player_head",
+        "player_wall_head",
+        "poplar_hanging_sign",
+        "poplar_shelf",
+        "poplar_sign",
+        "poplar_wall_hanging_sign",
+        "poplar_wall_sign",
+        "potent_sulfur",
+        "purple_banner",
+        "purple_shulker_box",
+        "purple_wall_banner",
+        "red_banner",
+        "red_shulker_box",
+        "red_wall_banner",
+        "repeating_command_block",
+        "sculk_catalyst",
+        "sculk_sensor",
+        "sculk_shrieker",
+        "shulker_box",
+        "skeleton_skull",
+        "skeleton_wall_skull",
+        "smoker",
+        "soul_campfire",
+        "spawner",
+        "spruce_hanging_sign",
+        "spruce_shelf",
+        "spruce_sign",
+        "spruce_wall_hanging_sign",
+        "spruce_wall_sign",
+        "structure_block",
+        "suspicious_gravel",
+        "suspicious_sand",
+        "test_block",
+        "test_instance_block",
+        "trapped_chest",
+        "trial_spawner",
+        "vault",
+        "warped_hanging_sign",
+        "warped_shelf",
+        "warped_sign",
+        "warped_wall_hanging_sign",
+        "warped_wall_sign",
+        "waxed_copper_chest",
+        "waxed_copper_golem_statue",
+        "waxed_exposed_copper_chest",
+        "waxed_exposed_copper_golem_statue",
+        "waxed_oxidized_copper_chest",
+        "waxed_oxidized_copper_golem_statue",
+        "waxed_weathered_copper_chest",
+        "waxed_weathered_copper_golem_statue",
+        "weathered_copper_chest",
+        "weathered_copper_golem_statue",
+        "white_banner",
+        "white_shulker_box",
+        "white_wall_banner",
+        "wither_skeleton_skull",
+        "wither_skeleton_wall_skull",
+        "yellow_banner",
+        "yellow_shulker_box",
+        "yellow_wall_banner",
+        "zombie_head",
+        "zombie_wall_head",
+    ];
+
+    /// <summary>Block entity type id of the entry at the same position in <see cref="Paths"/>.</summary>
+    private static readonly byte[] TypeIds =
+    [
+        8, 39, 7, 8, 7, 8, 39, 7, 8, 7, 26, 15, 33, 33, 30, 8, 39, 7, 8, 7, 20, 24, 20, 28, 20, 24,
+        20, 12, 20, 24, 20, 35, 32, 23, 8, 39, 7, 8, 7, 1, 38, 23, 19, 25, 1, 47, 42, 10, 16, 16,
+        8, 39, 7, 8, 7, 20, 24, 20, 8, 39, 7, 8, 7, 17, 41, 5, 16, 16, 6, 13, 22, 14, 3, 1, 47, 0,
+        20, 24, 20, 20, 24, 20, 18, 31, 4, 8, 39, 7, 8, 7, 29, 20, 24, 20, 20, 24, 20, 20, 24, 20,
+        20, 24, 20, 8, 39, 7, 8, 7, 11, 8, 39, 7, 8, 7, 20, 24, 20, 1, 47, 8, 39, 7, 8, 7, 16, 16,
+        20, 24, 20, 16, 16, 8, 39, 7, 8, 7, 48, 20, 24, 20, 20, 24, 20, 23, 36, 34, 37, 24, 16, 16,
+        27, 32, 9, 8, 39, 7, 8, 7, 21, 40, 40, 45, 46, 2, 43, 44, 8, 39, 7, 8, 7, 1, 47, 1, 47, 1,
+        47, 1, 47, 1, 47, 20, 24, 20, 16, 16, 20, 24, 20, 16, 16,
+    ];
+
+    /// <summary>How many blocks carry a block entity.</summary>
+    public static int Count => Paths.Length;
+
+    /// <summary>The block paths this index covers, sorted. Read only; used by tests and tools.</summary>
+    public static System.Collections.Generic.IReadOnlyList<string> BlockPaths => Paths;
+
+    /// <summary>Block entity type of a block path.</summary>
+    /// <param name="blockPath">Block id path, without the namespace.</param>
+    /// <param name="typeId">Type id when the block carries one.</param>
+    /// <returns>True when the block carries a block entity.</returns>
+    public static bool TryGetType(string blockPath, out int typeId)
+    {
+        var low = 0;
+        var high = Paths.Length - 1;
+        while (low <= high)
+        {
+            var middle = (low + high) >> 1;
+            var order = string.CompareOrdinal(Paths[middle], blockPath);
+            if (order == 0)
+            {
+                typeId = TypeIds[middle];
+                return true;
+            }
+
+            if (order < 0)
+            {
+                low = middle + 1;
+            }
+            else
+            {
+                high = middle - 1;
+            }
+        }
+
+        typeId = -1;
+        return false;
+    }
+}

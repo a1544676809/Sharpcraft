@@ -51,10 +51,22 @@ public boolean hasBlockEntity() {
 
 ## 影响面
 
-- 代码：`Sharpcraft.Common/World/Blocks/`（新增注册表与接口）；`ClientWorld.SetBlockState` 改为查表；删除 `IsChestLike` / `IsShulkerBox` 这类判定；`Server` 未来新增行为实现。
-- 测试：新增"每个带实体方块的方块放置后都能查到类型"的表驱动测试；现有 `Repro_022_*` 与箱子相关测试保持通过。
-- 文档：`docs/specs/world/blocks.md`（若有）同步三层划分；`docs/modules/block-state.md` 增加"方块行为在哪里"一节。
+- 代码：
+  - `Sharpcraft.Common/World/Blocks/IBlockBehaviour.cs`：行为接缝，零实现，按方块 id 弱引用登记（模组卸载后自然失效）。
+  - `Sharpcraft.Common/World/Blocks/BlockEntityBlockIndex.cs`：**生成**的"方块 → 方块实体类型"索引，191 行，覆盖 49 个类型。
+  - `ClientWorld.SetBlockState` 改为查该索引，删除 `IsChestLike` / `IsShulkerBox` 清单。
+- 测试：`BlockEntityBlockIndexTests`（正例 30、负例 9、排序与去重）、`BlockBehavioursTests`（默认/注册/替换/回收/注销）、`Repro_022` 新增四个"放置任意方块实体方块即建记录"用例与"普通活塞不建记录"。
+- 文档：本 ADR；`docs/src/sharpcraft-common/world/blocks.md`（模块文档）。`docs/modules/block-state.md` 的"方块行为在哪里"一节**尚未**补，随服务端开工（Issue #97）一并写。
 - 兼容性：不影响协议与存档；模组 API 尚未定稿，但行为接口应在此定稿前稳定。
+
+## 落地状态
+
+| 项 | 状态 |
+| --- | --- |
+| 第 1 层（生成的方块 → 类型索引） | 已落地，Issue #96 关闭条件已满足 |
+| 第 2 层（客户端渲染） | 既有 |
+| 第 3 层（行为实现） | **未实现**，仅接缝，跟踪于 Issue #97 |
+| `BlockTickContext` 是否够用于红石/活塞 | 未验证（无任何实现），见 Issue #97 的开工前置 |
 
 ## 替代方案与为何不选
 

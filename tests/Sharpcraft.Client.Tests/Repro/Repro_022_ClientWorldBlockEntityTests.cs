@@ -90,4 +90,31 @@ public sealed class Repro_022_ClientWorldBlockEntityTests
 
         Assert.Contains(chunk.BlockEntities, r => r.TypeId == 0);
     }
+
+    [Theory]
+    [InlineData("minecraft:oak_sign")]
+    [InlineData("minecraft:white_banner")]
+    [InlineData("minecraft:skeleton_skull")]
+    [InlineData("minecraft:decorated_pot")]
+    public void PlacingAnyBlockEntityBlockCreatesItsRecord(string blockId)
+    {
+        var world = NewWorld(out var chunk);
+        var state = VanillaBlockRegistry.Layout.GetBaseId(Identifier.Parse(blockId));
+
+        Assert.True(world.SetBlockState(3, 8, 5, state));
+
+        var record = Assert.Single(chunk.BlockEntities);
+        Assert.NotEqual(0, record.TypeId);
+    }
+
+    [Fact]
+    public void APlainPistonCarriesNoBlockEntity()
+    {
+        var world = NewWorld(out var chunk);
+        var state = VanillaBlockRegistry.Layout.GetBaseId(Identifier.Parse("minecraft:piston"));
+
+        Assert.True(world.SetBlockState(3, 8, 5, state));
+
+        Assert.Empty(chunk.BlockEntities);
+    }
 }

@@ -456,13 +456,13 @@ public sealed class ClientWorld
             : -1;
         chunk.SetBlockState(localX, y, localZ, state, airState);
 
-        // Vanilla creates a block entity as soon as the new state carries one. Without this a chest placed
-        // after its chunk loaded never reaches a renderer, however correct the rest of the chain is.
-        // Level.setBlock creates the block entity when the new state carries one and drops it when the
-        // state does not, so breaking a chest removes it here as well (issues 22 and 24).
+        // The reference creates a block entity as soon as the new state carries one and drops it when
+        // the state does not, so breaking a chest removes it here as well (issues 22 and 24). Which
+        // blocks carry one at all is the generated index, not a hand written list (ADR 0031, issue 96).
         var newTypeId = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(state) is { } blockId
-            ? Sharpcraft.Common.World.VanillaBlockEntityTypes.IdOf(blockId.Path)
-            : -1;
+            && Sharpcraft.Common.World.Blocks.BlockEntityBlockIndex.TryGetType(blockId.Path, out var blockType)
+                ? blockType
+                : -1;
         if (newTypeId >= 0)
         {
             chunk.AddBlockEntity(new Sharpcraft.Common.World.BlockEntityRecord(localX, y, localZ, newTypeId));
