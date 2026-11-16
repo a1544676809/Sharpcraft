@@ -1593,6 +1593,7 @@ internal static partial class FrameCommand
         Sharpcraft.Client.Render.ItemAtlas? itemAtlas = null)
     {
         var frame = frameState ?? new Sharpcraft.Client.Render.BlockEntityFrameState();
+        frame.Dispatcher.Trace = Sharpcraft.Client.Game.GameOptions.Get("MC_DEBUG_MODELS") is { Length: > 0 };
         if (chestAtlas is null)
         {
             return null;

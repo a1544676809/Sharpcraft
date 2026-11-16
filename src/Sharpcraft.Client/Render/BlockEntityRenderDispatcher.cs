@@ -42,6 +42,9 @@ public sealed class BlockEntityRenderDispatcher
     /// <summary>Whether any registered renderer handles the given type.</summary>
     public bool Handles(int typeId) => BlockEntityRenderers.Handles(typeId, _renderers);
 
+    /// <summary>Prints one line per renderer; the host turns this on for diagnostics only.</summary>
+    public bool Trace { get; set; }
+
     /// <summary>Builds the geometry of every entity a renderer claims, or null when none do.</summary>
     public BlockEntityGeometry? Build(
         ReadOnlySpan<BlockEntityRenderState> entities,
@@ -56,6 +59,12 @@ public sealed class BlockEntityRenderDispatcher
         foreach (var renderer in _renderers)
         {
             var part = renderer.Build(entities, atlas, itemAtlas);
+            if (Trace)
+            {
+                Console.WriteLine(
+                    $"be {renderer.GetType().Name}: entities={renderer.LastEntityCount} index={part?.IndexCount ?? 0}");
+            }
+
             if (part is null || renderer.LastEntityCount == 0)
             {
                 continue;

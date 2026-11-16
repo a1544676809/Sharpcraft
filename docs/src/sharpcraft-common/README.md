@@ -14,4 +14,10 @@
 | [`network.md`](network.md) | 把线上的字节变成有类型的数据。 | 已评审 | 2026-10-29 |
 | [`reference.md`](reference.md) | ReferenceClassAttribute：标注 Sharpcraft 的每个类型对应原版（26.3）哪个类，是 "实现 ↔ 原版类" 映射的唯一真相源（AGENTS.md §3.5）。 | 已评审 | 2026-11-05 |
 
+子目录：
+
+| 目录 | 文档数 |
+| --- | --- |
+| [`world/`](world/README.md) | 1 |
+
 <!-- END GENERATED: docs/src/sharpcraft-common -->

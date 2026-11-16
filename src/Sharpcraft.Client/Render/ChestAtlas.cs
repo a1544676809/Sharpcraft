@@ -146,14 +146,6 @@ public static class ChestAtlas
     public static ItemAtlas Load(ResourceManager resources)
     {
         ArgumentNullException.ThrowIfNull(resources);
-        foreach (var path in ShulkerTextures)
-        {
-            if (resources.Read(Sharpcraft.Assets.ResourceKind.Texture, new Sharpcraft.Common.Identifiers.Identifier("minecraft", path)) is null)
-            {
-                Console.WriteLine($"shulker texture missing: {path}");
-            }
-        }
-
         return ItemAtlas.Load(resources, AllTextures);
     }
 
