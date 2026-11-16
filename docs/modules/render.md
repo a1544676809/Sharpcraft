@@ -487,17 +487,16 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 **实测**：陆地视角 1400×754，截断到 4 阶段（不含 composite）1.498–1.635 ms，全阶段 1.549–1.589 ms——**composite 本身就在噪声内，≈0 ms**。加上早退后同视角 1.543–1.772 ms，无可测变化。
 
 **保留理由**：等效、零成本、意图更清晰（先判断能否跳过再干活）。但与 §31 的合批一样，**不得当作性能优化引用**——它没有测出收益，保留是因为不亏。
+### 6.4 方块实体 per-renderer cull（Issue #45 cull 部分）
+
+方块实体不再共用一条 no-cull 管线。每个 `IBlockEntityRenderer` 通过 `RenderMode` 声明 `NoCull` 或 `Solid`；dispatcher 仍然只拼接一次几何，但先写 solid 部件、再写 no-cull 部件，并记录 `BlockEntityGeometry.SolidIndexCount`。`BlockEntitySubmission` 在同一组顶点/索引缓冲上先画 `[0, SolidIndexCount)`（`fs_cutout` + `CullMode.Back`），再画 `[SolidIndexCount, IndexCount)`（`fs_cutout` + `CullMode.None`）。
+
+- Solid：Bell、DecoratedPot、CopperGolemStatue（源 `entitySolid`）。
+- NoCull：Chest / ShulkerBox / Shelf / Campfire / Lectern / EnchantTable / Skull / Brushable。
+- 测试：`BlockEntityRenderTypesTests` 验证注册表声明、solid/no-cull 索引范围、混合批次索引守恒与顶点重基；真实 Bell/Pot/CopperGolem 几何的 `SolidIndexCount` 大于零，Chest 为零。
+- Z-offset / special pass 不在本切片；Skull 的 `entityCutoutZOffset` 仍由 `SIM-BE-SKULL-ZOFFSET` 跟踪，属于 Issue #45 剩余部分。
+
 ## 已知刻意的简化
-
-### SIM-BE-SINGLE-NOCULL：方块实体段统一不剔除背面
-
-- **简化了什么**：整个方块实体段用一条 `CullMode.None` 的 cutout 管线（`FramePipelines.CreateNoCullCutoutPipeline`），而不是像原版那样每个渲染器自选 RenderType。
-- **为什么**：原版大多数模型类方块实体（箱子、潜影盒、告示牌、床、旗帜、头颅）都用 `entityCutout`，它本身就 `.withCull(false)`；统一 no-cull 让这些类型自动正确，不需要每个 mesher 各自处理。
-- **对等效性的影响**：已实现的 Chest / Trapped / Ender / ShulkerBox 与原版完全一致；DecoratedPot 的静态基底与空白侧面几何按原版真值实现（陶片图案见 `SIM-BE-POT-NO-PATTERNS`）；CopperGolemStatue 的站立模型、四档氧化纹理与 facing 按原版真值实现（姿态见 `SIM-BE-COPPER-GOLEM-POSES`）；Lectern 的静态书本使用参考 `BOOK_STATE`（动画见 `SIM-BE-LECTERN-STATE`）；EnchantTable 的静态书本使用固定源默认状态（动画见 `SIM-BE-ENCHANT-BOOK-STATE`）。原版用 `entitySolid`（剔除）的 `Conduit` 尚未实现；实现时统一 no-cull 只会多画背面，视觉等价，仅多一点填充成本。
-- **状态**：受控偏差，跟踪任务见 Issue #45。
-- **验收证据**：潜影盒 144 顶点金值测试（`Repro_042_ShulkerBoxTests`）+ 真机开盖内壁不透明。
-
-<!-- simplification:SIM-BE-SINGLE-NOCULL task:T-45 -->
 
 ### SIM-BE-BELL-NO-SHAKE：钟只渲染静态外观
 
@@ -635,7 +634,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **简化了什么**：Skull 的 `entityCutoutZOffset` 深度偏移未应用。
 - **为什么**：完整 Z-offset 依赖 Issue #45 的渲染层/深度偏移基础；本切片明确为静态、无 Z-offset 首切片。
 - **对等效性的影响**：头像可能的深度顺序/微小深度偏差与参考不同，几何与 UV 不受影响。
-- **状态**：受控偏差，依赖 Issue #45；在 #45 提供偏移前不假装完成。
+- **状态**：受控偏差；Issue #45 的 cull 部分已按 renderer 区分，Z-offset 仍待偏移基础。
 - **验收证据**：Issue #75 的静态顶点/UV 测试；Z-offset 接入后补像素/深度对比。
 
 <!-- simplification:SIM-BE-SKULL-ZOFFSET task:T-47 -->

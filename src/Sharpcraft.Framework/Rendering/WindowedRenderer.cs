@@ -354,7 +354,7 @@ public static class WindowedRenderer
                 lightmapBuffer,
                 atlasSamplerHandle,
                 blockEntityRects);
-            blockEntitySubmission.Upload(blockEntityGeometry, blockEntityAtlas.BindGroup);
+            blockEntitySubmission.Upload(blockEntityGeometry, blockEntityAtlas.BindGroup, request.BlockEntitySolidIndexCount);
             request = request with { BlockEntity = blockEntitySubmission };
         }
 
@@ -894,7 +894,11 @@ public static class WindowedRenderer
                 // The geometry object is reused between frames, so identity cannot signal a change.
                 // The builder runs every frame and the submission is refreshed from its result; an
                 // empty result still clears the previous geometry (issues 22 and 24).
-                blockEntitySubmission.Upload(blockEntitiesPerFrame() ?? EmptyBlockEntityGeometry, blockEntityAtlas.BindGroup);
+                var frameBlockEntity = blockEntitiesPerFrame();
+                blockEntitySubmission.Upload(
+                    frameBlockEntity.Geometry ?? EmptyBlockEntityGeometry,
+                    blockEntityAtlas.BindGroup,
+                    frameBlockEntity.SolidIndexCount);
             }
 
             // The whole frame is recorded into the parameterised target; this shell only owns the surface, the
