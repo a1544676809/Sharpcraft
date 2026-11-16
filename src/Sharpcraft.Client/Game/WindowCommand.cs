@@ -339,7 +339,11 @@ internal static class WindowCommand
         var blockEntityFrame = new Sharpcraft.Client.Render.BlockEntityFrameState();
         request = request with
         {
-            BlockEntityPerFrame = () => FrameCommand.BuildBlockEntityGeometry(world, prepared?.ChestAtlas, session.PartialTick, blockEntityFrame, itemAtlas)
+            BlockEntityPerFrame = () =>
+            {
+                var geometry = FrameCommand.BuildBlockEntityGeometry(world, prepared?.ChestAtlas, session.PartialTick, blockEntityFrame, itemAtlas);
+                return (geometry?.Geometry, geometry?.SolidIndexCount ?? 0);
+            }
         };
 
         // Sky/fog use SKY_COLOR (biome sky colour x day/night x weather), so the live session needs the biome registry.

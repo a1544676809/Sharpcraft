@@ -78,6 +78,8 @@ public static class BlockEntityRenderers
 
         public bool Handles(int typeId) => typeId == VanillaBlockEntityTypes.Bell;
 
+        public BlockEntityRenderMode RenderMode => BlockEntityRenderMode.Solid;
+
         public int LastEntityCount => _mesher.LastEntityCount;
 
         public DynamicGeometry? Build(ReadOnlySpan<BlockEntityRenderState> entities, ItemAtlas atlas) =>
@@ -91,6 +93,8 @@ public static class BlockEntityRenderers
 
         public bool Handles(int typeId) => typeId == VanillaBlockEntityTypes.DecoratedPot;
 
+        public BlockEntityRenderMode RenderMode => BlockEntityRenderMode.Solid;
+
         public int LastEntityCount => _mesher.LastEntityCount;
 
         public DynamicGeometry? Build(ReadOnlySpan<BlockEntityRenderState> entities, ItemAtlas atlas) =>
@@ -103,6 +107,8 @@ public static class BlockEntityRenderers
         private readonly CopperGolemStatueMesher _mesher = new();
 
         public bool Handles(int typeId) => typeId == VanillaBlockEntityTypes.CopperGolemStatue;
+
+        public BlockEntityRenderMode RenderMode => BlockEntityRenderMode.Solid;
 
         public int LastEntityCount => _mesher.LastEntityCount;
 

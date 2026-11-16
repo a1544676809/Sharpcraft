@@ -64,6 +64,7 @@ internal sealed class FrameResources : IDisposable
         TerrainPipeline = FramePipelines.CreatePipeline(backend, format, pipelineLayout);
         CutoutPipeline = FramePipelines.CreateCutoutPipeline(backend, format, pipelineLayout);
         BlockEntityPipeline = FramePipelines.CreateNoCullCutoutPipeline(backend, format, pipelineLayout);
+        BlockEntitySolidPipeline = FramePipelines.CreateBlockEntitySolidPipeline(backend, format, pipelineLayout);
         EntityPipeline = FramePipelines.CreateEntityPipeline(backend, format, pipelineLayout);
         EntityCutoutPipeline = FramePipelines.CreateEntityCutoutPipeline(backend, format, pipelineLayout);
         ItemCutoutPipeline = FramePipelines.CreateItemCutoutPipeline(backend, format, pipelineLayout);
@@ -162,7 +163,7 @@ internal sealed class FrameResources : IDisposable
         GeometryUploader = new FrameGeometryUploader(
             _backend, DynamicBuffers, LayerPool, options.Arena, options.ArenaCutout, options.ArenaTranslucent);
         TerrainRecorder = new TerrainPassRecorder(
-            _backend, TerrainPipeline, CutoutPipeline, BlockEntityPipeline, options.BindGroup, options.Arena, options.ArenaCutout);
+            _backend, TerrainPipeline, CutoutPipeline, BlockEntityPipeline, BlockEntitySolidPipeline, options.BindGroup, options.Arena, options.ArenaCutout);
         EntityRecorder = new EntityPassRecorder(
             _backend,
             EntityPipeline,
@@ -495,6 +496,9 @@ internal sealed class FrameResources : IDisposable
     /// <summary>Cutout pipeline without back face culling; block entity segments draw with it.</summary>
     public PipelineHandle BlockEntityPipeline { get; }
 
+    /// <summary>Cutout pipeline with back face culling for solid block entity renderers.</summary>
+    public PipelineHandle BlockEntitySolidPipeline { get; }
+
     /// <summary>Opaque and translucent entity pipeline.</summary>
     public PipelineHandle EntityPipeline { get; }
 
@@ -642,6 +646,7 @@ internal sealed class FrameResources : IDisposable
         _backend.Destroy(ItemCutoutPipeline);
         _backend.Destroy(EntityCutoutPipeline);
         _backend.Destroy(EntityPipeline);
+        _backend.Destroy(BlockEntitySolidPipeline);
         _backend.Destroy(BlockEntityPipeline);
         _backend.Destroy(CutoutPipeline);
         _backend.Destroy(TerrainPipeline);

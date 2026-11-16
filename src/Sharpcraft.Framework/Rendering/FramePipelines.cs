@@ -264,6 +264,22 @@ internal static class FramePipelines
     }
 
     /// <summary>
+    /// Reference <c>entitySolid</c> semantics for block entity renderers that keep back-face culling:
+    /// no alpha test (unlike cutout), opaque alpha, with <see cref="CullMode.Back"/>.
+    /// </summary>
+    internal static PipelineHandle CreateBlockEntitySolidPipeline(WgpuRenderBackend backend, WGPUTextureFormat format, PipelineLayoutHandle layout)
+    {
+        var source = System.Text.Encoding.UTF8.GetBytes(OffscreenRenderer.ShaderSourceText);
+        return backend.CreateRenderPipeline(new PipelineDesc(
+            source, "vs_main", source, "fs_solid", layout,
+            [new ColorTargetDesc(BackendConvert.FromWgpu(format))],
+            new DepthStateDesc(TextureFormat.Depth32Float, CompareFunction.GreaterEqual, true),
+            CullMode.Back, FrontFace.Ccw,
+            (ulong)VertexLayout.Stride, VertexStepMode.Vertex,
+            LayoutAttributes.From(VertexLayout.Attributes())));
+    }
+
+    /// <summary>
     /// Entity models follow the reference entityCutout pipeline: alpha testing and no back-face culling.
     /// </summary>
     internal static PipelineHandle CreatePipeline(WgpuRenderBackend backend, WGPUTextureFormat format, PipelineLayoutHandle layout)

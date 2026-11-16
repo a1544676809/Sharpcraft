@@ -282,7 +282,7 @@ public static partial class OffscreenRenderer
                     lightmapBuffer,
                     atlasSamplerHandle,
                     blockEntityRects);
-                blockEntitySubmission.Upload(blockEntityGeometry, blockEntityAtlas.BindGroup);
+                blockEntitySubmission.Upload(blockEntityGeometry, blockEntityAtlas.BindGroup, request.BlockEntitySolidIndexCount);
                 request = request with { BlockEntity = blockEntitySubmission };
             }
 

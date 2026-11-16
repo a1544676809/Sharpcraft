@@ -352,7 +352,7 @@ internal static partial class FrameCommand
         uint[]? translucentIndices = null;
         float[]? cutoutVertices = null;
         uint[]? cutoutIndices = null;
-        DynamicGeometry? blockEntityGeometry = null;
+        Sharpcraft.Client.Render.BlockEntityGeometry? blockEntityGeometry = null;
         var translucentRanges = new List<(int FirstIndex, int IndexCount, float CentreX, float CentreZ)>();
 
         if (cache is null)
@@ -596,7 +596,8 @@ internal static partial class FrameCommand
             RainLevel = EffectiveRainLevel(world, 1f),
             BlockEntityAtlas = chestAtlas?.Texture,
             BlockEntitySpriteRects = chestAtlas is null ? [] : Sharpcraft.Client.Render.ChestAtlas.BuildRectTable(chestAtlas),
-            BlockEntityGeometry = blockEntityGeometry
+            BlockEntityGeometry = blockEntityGeometry?.Geometry,
+            BlockEntitySolidIndexCount = blockEntityGeometry?.SolidIndexCount ?? 0
         };
     }
 
@@ -1064,9 +1065,10 @@ internal static partial class FrameCommand
                 {
                     BlockEntityAtlas = chestAtlas.Texture,
                     BlockEntitySpriteRects = Sharpcraft.Client.Render.ChestAtlas.BuildRectTable(chestAtlas),
-                    BlockEntityGeometry = geometry
+                    BlockEntityGeometry = geometry?.Geometry,
+                    BlockEntitySolidIndexCount = geometry?.SolidIndexCount ?? 0
                 };
-                Console.WriteLine($"block entities(local): {geometry?.IndexCount / 3 ?? 0} tri");
+                Console.WriteLine($"block entities(local): {geometry?.Geometry.IndexCount / 3 ?? 0} tri");
             }
         }
 
@@ -1451,7 +1453,7 @@ internal static partial class FrameCommand
         ((long)x & 0x3FFFFFF) << 38 | ((long)z & 0x3FFFFFF) << 12 | ((long)y & 0xFFF);
 
     /// <summary>Builds the chest segment for a live session from the block entities in the loaded chunks.</summary>
-    internal static DynamicGeometry? BuildBlockEntityGeometry(
+    internal static Sharpcraft.Client.Render.BlockEntityGeometry? BuildBlockEntityGeometry(
         ClientWorld world,
         Sharpcraft.Client.Render.ItemAtlas? chestAtlas,
         float partialTick = 0f,
@@ -1585,7 +1587,7 @@ internal static partial class FrameCommand
         var geometry = frame.Dispatcher.Build(span, chestAtlas, itemAtlas);
         if (Sharpcraft.Client.Game.GameOptions.Get("MC_DEBUG_MODELS") is { Length: > 0 })
         {
-            Console.WriteLine($"block entity geometry: {(geometry is null ? 0 : geometry.IndexCount / 3)} tri");
+            Console.WriteLine($"block entity geometry: {(geometry is null ? 0 : geometry.Geometry.IndexCount / 3)} tri");
         }
 
         return geometry;

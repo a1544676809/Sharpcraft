@@ -24,6 +24,7 @@ public sealed class BlockEntitySubmission : IDisposable
     private int _vertexCapacityBytes;
     private int _indexCapacityBytes;
     private int _indexCount;
+    private int _solidIndexCount;
     private bool _disposed;
 
     /// <summary>Creates an empty submission that owns its buffers.</summary>
@@ -36,19 +37,51 @@ public sealed class BlockEntitySubmission : IDisposable
     /// <summary>Indices the last upload left ready to draw; zero means nothing to draw.</summary>
     public int IndexCount => _indexCount;
 
+    /// <summary>Leading indices drawn with the solid pipeline by the last upload.</summary>
+    public int SolidIndexCount => _solidIndexCount;
+
+    /// <summary>One contiguous indexed draw range within the submission's index buffer.</summary>
+    internal readonly record struct DrawRange(int FirstIndex, int IndexCount, int BaseVertex);
+
+    /// <summary>Solid and no-cull draw ranges for one submission.</summary>
+    internal readonly record struct DrawPlan(DrawRange Solid, DrawRange NoCull);
+
+    /// <summary>
+    /// Splits a submission's indices into the solid prefix and the no-cull suffix. Both draws use the
+    /// same vertex/index buffers, so their base vertex is zero and the no-cull draw starts exactly at
+    /// the solid index count.
+    /// </summary>
+    internal static DrawPlan CreateDrawPlan(int indexCount, int solidIndexCount)
+    {
+        if ((uint)solidIndexCount > (uint)indexCount)
+        {
+            throw new ArgumentOutOfRangeException(nameof(solidIndexCount));
+        }
+
+        return new DrawPlan(
+            new DrawRange(FirstIndex: 0, solidIndexCount, BaseVertex: 0),
+            new DrawRange(FirstIndex: solidIndexCount, indexCount - solidIndexCount, BaseVertex: 0));
+    }
+
     /// <summary>Binding the segment draws with, as supplied to the last upload.</summary>
     public BindGroupHandle BindGroup => _bindGroup;
 
     /// <summary>Uploads this frame's geometry, growing the buffers only when the frame outgrows them.</summary>
     /// <param name="geometry">Geometry rebuilt for this frame.</param>
     /// <param name="bindGroup">Binding of the atlas this geometry samples.</param>
-    public void Upload(DynamicGeometry geometry, BindGroupHandle bindGroup)
+    /// <param name="solidIndexCount">Leading indices that use the solid pipeline.</param>
+    public void Upload(DynamicGeometry geometry, BindGroupHandle bindGroup, int solidIndexCount)
     {
         ArgumentNullException.ThrowIfNull(geometry);
         ObjectDisposedException.ThrowIf(_disposed, this);
+        if ((uint)solidIndexCount > (uint)geometry.IndexCount)
+        {
+            throw new ArgumentOutOfRangeException(nameof(solidIndexCount));
+        }
 
         _bindGroup = bindGroup;
         _indexCount = geometry.IndexCount;
+        _solidIndexCount = solidIndexCount;
 
         if (_indexCount == 0)
         {
@@ -95,8 +128,13 @@ public sealed class BlockEntitySubmission : IDisposable
     /// <summary>Draws the segment, binding its atlas and buffers first.</summary>
     /// <param name="backend">Backend recording the pass.</param>
     /// <param name="pass">Pass the segment belongs to.</param>
-    /// <param name="pipeline">Pipeline to draw with; the terrain pipeline works when the layouts match.</param>
-    public void Draw(IRenderBackend backend, RenderPassHandle pass, PipelineHandle pipeline)
+    /// <param name="noCullPipeline">Pipeline for the trailing no-cull index range.</param>
+    /// <param name="solidPipeline">Pipeline for the leading solid index range.</param>
+    public void Draw(
+        IRenderBackend backend,
+        RenderPassHandle pass,
+        PipelineHandle noCullPipeline,
+        PipelineHandle solidPipeline)
     {
         ArgumentNullException.ThrowIfNull(backend);
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -106,11 +144,34 @@ public sealed class BlockEntitySubmission : IDisposable
             return;
         }
 
-        backend.SetPipeline(pass, pipeline);
         backend.SetBindGroup(pass, 0, _bindGroup);
         backend.SetVertexBuffer(pass, 0, _vertex);
         backend.SetIndexBuffer(pass, _index, IndexFormat.Uint32);
-        backend.DrawIndexed(pass, (uint)_indexCount, 1, 0, 0, 0);
+
+        var plan = CreateDrawPlan(_indexCount, _solidIndexCount);
+        if (plan.Solid.IndexCount > 0)
+        {
+            backend.SetPipeline(pass, solidPipeline);
+            backend.DrawIndexed(
+                pass,
+                (uint)plan.Solid.IndexCount,
+                1,
+                (uint)plan.Solid.FirstIndex,
+                plan.Solid.BaseVertex,
+                0);
+        }
+
+        if (plan.NoCull.IndexCount > 0)
+        {
+            backend.SetPipeline(pass, noCullPipeline);
+            backend.DrawIndexed(
+                pass,
+                (uint)plan.NoCull.IndexCount,
+                1,
+                (uint)plan.NoCull.FirstIndex,
+                plan.NoCull.BaseVertex,
+                0);
+        }
     }
 
     /// <inheritdoc/>
