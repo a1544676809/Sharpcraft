@@ -36,8 +36,9 @@ public sealed class SkullRendererTests
         Assert.Equal("head", SkullModelDefinition.Definition.Parts[0].Name);
         Assert.Equal("entity/skeleton/skeleton", SkullModelDefinition.Definition.TexturePath);
         var head = SkullModelDefinition.Definition.Parts[0];
+        // Raw source frame: the source box addBox(-4,-8,-4,8,8,8) is stored y-down, so the bottom is -8.
         Assert.Equal(0f, head.CentreX);
-        Assert.Equal(0f, head.Bottom);
+        Assert.Equal(-8f, head.Bottom);
         Assert.Equal(8f, head.Width);
         Assert.Equal(8f, head.Height);
         Assert.Equal(8f, head.Depth);
@@ -144,11 +145,13 @@ public sealed class SkullRendererTests
         Assert.Equal(48, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
         Assert.Equal(72, geometry.IndexCount);
         AssertVertex(geometry, 0, 0.25f, 0.5f, 0.75f, 0.25f, 0f);
-        AssertVertex(geometry, 1, 0.75f, 0.5f, 0.75f, 0.375f, 0f);
+        AssertVertex(geometry, 1, 0.75f, 0.5f, 0.75f, 0.125f, 0f);
+        // Hat overlay UVs are the source values from PLAYER_HEAD (BlockEntityModelDump jar probe):
+        // hat DOWN-face corners are u=0.75/0.625, not the legacy face-calibrated 0.875.
         AssertVertex(geometry, 24, 0.23438f, 0.51563f, 0.76563f, 0.75f, 0f);
-        AssertVertex(geometry, 25, 0.76563f, 0.51563f, 0.76563f, 0.875f, 0f);
-        AssertVertex(geometry, 26, 0.76563f, 0.51563f, 0.23438f, 0.875f, 0.125f);
-        AssertVertex(geometry, 28, 0.23438f, -0.01563f, 0.23438f, 0.625f, 0.125f);
+        AssertVertex(geometry, 25, 0.76563f, 0.51563f, 0.76563f, 0.625f, 0f);
+        AssertVertex(geometry, 26, 0.76563f, 0.51563f, 0.23438f, 0.625f, 0.125f);
+        AssertVertex(geometry, 28, 0.23438f, -0.01563f, 0.23438f, 0.875f, 0.125f);
         Assert.Equal(-0.015625f, geometry.Vertices[28 * ChunkMesher.FloatsPerVertex + 1], 4);
         Assert.Equal(0.234375f, geometry.Vertices[24 * ChunkMesher.FloatsPerVertex], 4);
         var bounds = Bounds(geometry);
@@ -230,15 +233,16 @@ public sealed class SkullRendererTests
         Assert.Equal(1, mesher.LastEntityCount);
         Assert.Equal(24, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
         Assert.Equal(36, geometry.IndexCount);
+        // vertex-1 UV is the source DOWN-face corner (0.125,0), confirmed by SkullVectorProbe jar sample.
         if (wall)
         {
             AssertVertex(geometry, 0, 0.25f, 0.75f, 1f, 0.25f, 0f);
-            AssertVertex(geometry, 1, 0.75f, 0.75f, 1f, 0.375f, 0f);
+            AssertVertex(geometry, 1, 0.75f, 0.75f, 1f, 0.125f, 0f);
         }
         else
         {
             AssertVertex(geometry, 0, 0.25f, 0.5f, 0.75f, 0.25f, 0f);
-            AssertVertex(geometry, 1, 0.75f, 0.5f, 0.75f, 0.375f, 0f);
+            AssertVertex(geometry, 1, 0.75f, 0.5f, 0.75f, 0.125f, 0f);
         }
     }
 

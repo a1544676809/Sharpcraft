@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
+<!-- Copyright (C) 2026 Sharpcraft contributors -->
+
 # 方块实体 raw 源帧迁移（task-42 / #102）
 
 > 本文件记录方块实体/静态模型族向 `RawSourceFrame` 路径的迁移。实体模型族见 `docs/modules/render.md`
@@ -9,7 +12,7 @@
 | --- | --- | --- |
 | Conduit | `ConduitRenderer` / `ConduitModelDefinition` | 已 raw（main 基准，本批验证无退化） |
 | Banner | `BannerRenderer` / `BannerModelDefinition` | 已 raw；#111 静止倾角修正 |
-| Skull | `SkullRenderer` / `SkullModelDefinition` | 见下方迁移记录 |
+| Skull | `SkullRenderer` / `SkullModelDefinition` | 已 raw（mob 四型 + player head）；Piglin/Dragon 属 entity/scale bake，未改 |
 | Book/Lectern/Enchant | `LecternRenderer` / `EnchantTableRenderer` / `BookModelDefinition` | 见下方迁移记录 |
 | Statue | `CopperGolemStatueMesher` / `CopperGolemStatueModelDefinition` | 与 entity 模型跨族约束，最后处理 |
 | Chest/ShulkerBox/Bell/Pot/Placeholder | 直接网格几何（`EntityPlaceholderMesher.AppendBox` 等） | N/A（不走 entity model bake，见下） |
@@ -25,7 +28,8 @@
 
 ## 原版基准样本（reference samples）
 
-- `tests/Sharpcraft.Client.Tests/Repro/Data/banner-vectors.golden.txt`：由 `ref://mc-26.3-analysis/vectors/ModelProbe.java` 采样，含 body 与 flag 四组严格位置+UV；flag 组用 `part=flag:X:-0.45`（源字面值）。
+- `tests/Sharpcraft.Client.Tests/Repro/Data/banner-vectors.golden.txt`：由原版取样器采样，含 body 与 flag 四组严格位置+UV；flag 组用 `part=flag:X:-0.45`（源字面值）。
+- `tests/Sharpcraft.Client.Tests/Repro/Data/skull-raw-vectors.golden.txt`：由 `ref://mc-26.3-analysis/vectors/SkullVectorProbe.java` 采样，含 16 ground + 4 wall 共 20 组 skull head 严格位置+UV。
 - 术语统一为“原版基准样本（reference samples）”，不用“金值”。
 
 ## 已知刻意的简化与阻塞
@@ -43,6 +47,14 @@
 | `BannerRenderer.PhaseRotation` | `BannerFlagModel.setupAnim` (BannerFlagModel.java:32-35) |
 | `BannerSourceFormula`（测试辅助） | 同一源公式的独立实现，仅用于测试期望推导，不调用生产渲染器 |
 
+## 实现说明：Skull raw 迁移
+
+- `Definition`（mob 四型共用）与 `PlayerDefinition` 切 `RawSourceFrame: true`、`baselinePx:0`、无 legacy face transforms；删除 renderer-local `translate(0,-0.5,0)` 补偿。源 `SkullBlockRenderer` 的 `scale(-1,-1,1)` 外pose 本身完成 y-up 翻转。
+- 源 `SkullModel.createMobHeadLayer` 的顶点 v1 UV 为 `(0.125,0)`；legacy face 校准表曾把它改成 `0.375`。raw 后与 jar 一致（同 #111 类别的 face 校准伪影）。
+- Piglin head（`PiglinModelDefinition.Head`）与 Dragon head（非单位 scale bake）属 entity 模型族 / 专用 bake，未在本批修改。
+- `SkullRawReferenceTests` 用 jar 探针样本严格比对 16 ground + 4 wall 共 20 组、每组 24 顶点位置+UV。
+
 ## 更新记录
 
 - 2026-11-17：Banner 切 raw；#111 修正；严格 reference sample 替换缺陷钉死测试；全量 3,314 / 三门禁通过。
+- 2026-11-17：Skull（mob 四型 + player）切 raw；新增 jar 探针 skull reference sample；旧内联 face-calibration 顶点期望替换为 jar 值；全量 3,314 / 三门禁通过。
