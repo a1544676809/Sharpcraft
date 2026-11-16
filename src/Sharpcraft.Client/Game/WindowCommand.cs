@@ -1188,6 +1188,17 @@ internal static class WindowCommand
         {
             foreach (var record in chunk.BlockEntitiesSpan)
             {
+                if (Sharpcraft.Common.World.VanillaBlockEntityTypes.IsVault(record.TypeId))
+                {
+                    if (Sharpcraft.Client.World.BlockEntityData.TryReadVaultDisplayItem(record, registry, out var item)
+                        && !item.IsEmpty)
+                    {
+                        paths.AddRange(Sharpcraft.Client.Render.BlockEntityItemMesher.ResolveTextures(item.ItemId, itemModels));
+                    }
+
+                    continue;
+                }
+
                 if (Sharpcraft.Common.World.VanillaBlockEntityTypes.IsBrushable(record.TypeId))
                 {
                     if (Sharpcraft.Client.World.BlockEntityData.TryReadBrushableItem(record, registry, out var item)

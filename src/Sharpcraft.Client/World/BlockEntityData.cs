@@ -229,6 +229,24 @@ public static class BlockEntityData
         return direction != HitDirection.None;
     }
 
+    /// <summary>
+    /// Reads a vault's <c>shared_data.display_item</c>. The source stores the display item with
+    /// <c>ItemStack.CODEC</c>; this slice resolves its id and count and ignores components. Missing,
+    /// empty, malformed or non-vault data leaves an empty slot.
+    /// </summary>
+    /// <param name="record">Block entity record.</param>
+    /// <param name="registry">Item registry used to resolve the item id.</param>
+    /// <param name="item">Decoded display item, or an empty slot.</param>
+    /// <returns>Whether the record carried a readable display item.</returns>
+    public static bool TryReadVaultDisplayItem(BlockEntityRecord record, ItemRegistry registry, out BlockEntityItemSlot item)
+    {
+        ArgumentNullException.ThrowIfNull(registry);
+        item = BlockEntityItemSlot.Empty;
+        return record.TypeId == Sharpcraft.Common.World.VanillaBlockEntityTypes.Vault
+            && record.Tag?.GetCompound("shared_data") is { } sharedData
+            && TryReadItem(sharedData.GetCompound("display_item"), registry, out item);
+    }
+
     private static HitDirection ReadHitDirection(NbtCompound tag) =>
         tag.Get("hit_direction") is NbtByte value && value.Value is >= 0 and <= 5
             ? (HitDirection)value.Value

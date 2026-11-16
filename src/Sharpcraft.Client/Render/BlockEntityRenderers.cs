@@ -28,7 +28,8 @@ public static class BlockEntityRenderers
         new BrushableRenderer(),
         new SkullRenderer(),
         new DecoratedPotBlockEntityRenderer(),
-        new CopperGolemStatueBlockEntityRenderer()
+        new CopperGolemStatueBlockEntityRenderer(),
+        new VaultRenderer()
     ];
 
     /// <summary>Whether any registered renderer draws this block entity type.</summary>
