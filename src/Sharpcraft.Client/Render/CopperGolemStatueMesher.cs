@@ -50,8 +50,8 @@ public sealed class CopperGolemStatueMesher
 
     /// <summary>
     /// CopperGolemStatueModel wraps every CopperGolem layer with a root pose: <c>root.y = 0</c> and
-    /// <c>root.zRot = π</c>. The project definition already stores the y-up baked coordinates, so the
-    /// root pose is represented as an <see cref="EntityPose"/> row for the compiled root group.
+    /// <c>root.zRot = π</c>, which is the y-down to y-up flip the shared bakery already performs. The
+    /// definition therefore stores plain source values and this pose stays zero; adding the rotation
     /// </summary>
     private static readonly EntityPose StatuePose = CreateStatuePose();
 
@@ -152,8 +152,8 @@ public sealed class CopperGolemStatueMesher
     private static EntityPose CreateStatuePose()
     {
         var pose = new EntityPose();
-        // The reference layer's root pivot is 24 pixels; CopperGolemStatueModel sets root.y = 0,
-        // which in the y-up baked representation is a +24 pixel root translation before zRot = π.
+        // The model keeps no pose of its own: the statement below is deliberately all zero. The source
+        // root.zRot = π is the flip the bakery already applied, and the root pivot is already zeroed.
         pose.Set("root", new PoseOffset(new Vector3(0f, 0f, 0f), new Vector3(0f, 0f, 0f), Vector3.Zero));
         return pose;
     }

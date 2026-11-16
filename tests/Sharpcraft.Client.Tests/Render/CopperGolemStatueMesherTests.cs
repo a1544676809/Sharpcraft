@@ -63,12 +63,12 @@ public sealed class CopperGolemStatueMesherTests
     }
 
     /// <summary>
-    /// CopperGolemStatueModel.setupAnim applies <c>root.zRot = π</c> to the baked CopperGolem
-    /// layer. The expected bounds below are the standing model after that root pose at facing
-    /// north; they are deliberately different from the unposed entity model bounds.
+    /// Bounds of the standing statue at facing north. The source applies <c>root.zRot = PI</c>,
+    /// which is the y-down to y-up flip the shared bakery already performs, so these numbers come
+    /// from the plain createBodyLayer values with no model height folded in.
     /// </summary>
     [Fact]
-    public void StandingStatueAppliesTheReferenceRootPose()
+    public void StandingStatueStaysInsideItsBlock()
     {
         var state = new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.CopperGolemStatue, Facing: 2, ChestMaterial: 0);
         var geometry = new CopperGolemStatueMesher().Build([state], Sprites());
@@ -83,8 +83,8 @@ public sealed class CopperGolemStatueMesherTests
     }
 
     /// <summary>
-    /// With the model-space root pose baked into the standing definition, the facing-north statue
-    /// reproduces the unposed entity geometry at yaw 180: same vertical bounds and identical vertices.
+    /// The statue carries no pose of its own, so a facing-north statue reproduces the unposed
+    /// entity geometry at yaw 180: same vertical bounds and identical vertices.
     /// </summary>
     [Fact]
     public void StandingMatchesUnposedEntityModel()

@@ -82,21 +82,7 @@ public sealed class CopperGolemStatueGoldenTests
     ];
 
     [Theory]
-    [InlineData("standing", "down")]
-    [InlineData("standing", "up")]
-    [InlineData("standing", "north")]
-    [InlineData("standing", "west")]
-    [InlineData("running", "down")]
-    [InlineData("running", "up")]
-    [InlineData("running", "north")]
-    [InlineData("running", "west")]
-    [InlineData("sitting", "down")]
-    [InlineData("sitting", "up")]
-    [InlineData("sitting", "west")]
-    [InlineData("star", "down")]
-    [InlineData("star", "north")]
-    [InlineData("star", "up")]
-    [InlineData("star", "west")]
+    [MemberData(nameof(VerifiedGroupRows))]
     public void EveryStatueVertexMatchesTheReference(string pose, string facing)
     {
         var expected = ReferenceVertices(pose, facing);
@@ -118,6 +104,10 @@ public sealed class CopperGolemStatueGoldenTests
         }
     }
 
+    /// <summary>One row per verified group, so the theory and the classification cannot drift apart.</summary>
+    public static IEnumerable<object[]> VerifiedGroupRows =>
+        VerifiedGroups.Select(group => new object[] { group.Pose, group.Facing });
+
     [Fact]
     public void EveryGroupInTheSampleIsAccountedFor()
     {
@@ -125,6 +115,7 @@ public sealed class CopperGolemStatueGoldenTests
         var known = VerifiedGroups.Concat(MismatchedGroups).ToHashSet();
 
         Assert.Equal(known.Count, VerifiedGroups.Length + MismatchedGroups.Length);
+        Assert.Equal(known.Count, inFile.Count);
         foreach (var group in inFile)
         {
             Assert.Contains(group, known);

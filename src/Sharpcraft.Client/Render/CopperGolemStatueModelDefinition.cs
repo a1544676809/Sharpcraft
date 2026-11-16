@@ -45,7 +45,7 @@ public static class CopperGolemStatueModelDefinition
     public const int TextureWidth = 64;
     public const int TextureHeight = 64;
 
-    /// <summary>Standing layer, reusing the existing entity mesh with the statue root-pose switch on.</summary>
+    /// <summary>Standing layer, built from the source createBodyLayer values with no model height.</summary>
     public static readonly EntityModelDefinition Standing = Create("copper_golem_statue_standing", BuildStandingMesh());
 
     public static readonly EntityModelDefinition Sitting = Create("copper_golem_statue_sitting", BuildSittingMesh());
@@ -88,13 +88,15 @@ public static class CopperGolemStatueModelDefinition
             source.AdditionalTexturePaths,
             source.Compiled,
             source.RenderLayers,
+            // Kept for the compiled-root path even though the statue pose is all zeros; the
+            // mesh pipeline reads the root frame from the entity pose, so this changes nothing.
             applyRootPose: true);
 
     /// <summary>
     /// Standing layer. Ref: CopperGolemModel.createBodyLayer lines 53-95, plus the statue pose that
     /// CopperGolemStatueModel.setupAnim applies to the model itself: <c>root.y = 0</c> and
-    /// <c>root.zRot = PI</c>. Both live in model space, so they are written on the root part here and
-    /// the renderer adds no pose of its own.
+    /// <c>root.zRot = PI</c>. That flip is what the shared y-up bakery already performs, so the root
+    /// part below carries no rotation and the renderer adds no pose of its own.
     /// </summary>
     private static VanillaMeshDefinition BuildStandingMesh()
     {
