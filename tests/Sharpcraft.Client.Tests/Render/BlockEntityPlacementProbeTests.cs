@@ -43,6 +43,16 @@ public sealed class BlockEntityPlacementProbeTests
         AssertInsideOneBlock(geometry, "conduit");
     }
 
+        [Fact]
+    public void ACopperGolemStatueSitsInsideItsBlock()
+    {
+        var atlas = Atlas(ChestAtlas.CopperGolemStatueTextures);
+        var geometry = new CopperGolemStatueMesher().Build(
+            [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.CopperGolemStatue)],
+            atlas);
+
+        AssertInsideOneBlock(geometry, "copper golem statue");
+    }
     private static void AssertInsideOneBlock(DynamicGeometry geometry, string label)
     {
         Assert.True(geometry.VertexFloats > 0, $"{label}: no geometry");
