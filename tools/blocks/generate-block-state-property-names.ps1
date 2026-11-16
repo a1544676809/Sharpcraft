@@ -106,7 +106,13 @@ if ($Check) {
         throw "Missing $output; run without -Check to generate it."
     }
 
-    if ((Get-Content $output -Raw) -ne $text) {
+    # Git may check the file out with a byte order mark or with platform line endings, so the
+    # comparison normalises both sides instead of failing on encoding details.
+    function Normalize([string] $value) {
+        return ($value -replace "`r`n", "`n").TrimStart([char]0xFEFF).TrimEnd()
+    }
+
+    if ((Normalize (Get-Content $output -Raw)) -ne (Normalize $text)) {
         throw 'block state property names are stale; run tools/blocks/generate-block-state-property-names.ps1'
     }
 
