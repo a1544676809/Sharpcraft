@@ -172,8 +172,34 @@ public static partial class VanillaMeshBake
         float rotationZ = 0f,
         string? texturePath = null,
         float grow = 0f,
-        EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout)
+        EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout,
+        bool rawSourceFrame = false)
     {
+        if (rawSourceFrame)
+        {
+            return new EntityModelPart(
+                name,
+                MathF.Round(pivotX + minX + (width * 0.5f), 4),
+                MathF.Round(pivotY + minY, 4),
+                width,
+                height,
+                depth,
+                textureX,
+                textureY,
+                mirror,
+                overlays,
+                CentreZ: MathF.Round(pivotZ + minZ + (depth * 0.5f), 4),
+                PivotX: pivotX,
+                PivotY: pivotY,
+                PivotZ: pivotZ,
+                RotationX: rotationX,
+                RotationY: rotationY,
+                RotationZ: rotationZ,
+                TexturePath: texturePath,
+                Grow: grow,
+                Kind: kind);
+        }
+
         var sourceCentreX = pivotX + minX + (width * 0.5f);
         var centreX = MathF.Round(mirrorX ? -sourceCentreX : sourceCentreX, 4);
         var bottom = MathF.Round(modelHeight - (pivotY + minY + height), 4);
@@ -228,9 +254,36 @@ public static partial class VanillaMeshBake
         float rotationZ = 0f,
         string? texturePath = null,
         float grow = 0f,
-        EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout)
+        EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout,
+        bool rawSourceFrame = false)
     {
         ArgumentException.ThrowIfNullOrEmpty(parent);
+        if (rawSourceFrame)
+        {
+            return new EntityModelPart(
+                name,
+                MathF.Round(minX + (width * 0.5f), 4),
+                MathF.Round(minY, 4),
+                width,
+                height,
+                depth,
+                textureX,
+                textureY,
+                mirror,
+                overlays,
+                CentreZ: MathF.Round(minZ + (depth * 0.5f), 4),
+                PivotX: MathF.Round(pivotX, 4),
+                PivotY: MathF.Round(pivotY, 4),
+                PivotZ: pivotZ,
+                RotationX: rotationX,
+                RotationY: rotationY,
+                RotationZ: rotationZ,
+                TexturePath: texturePath,
+                Grow: grow,
+                Parent: parent,
+                Kind: kind);
+        }
+
         return new EntityModelPart(
             name,
             MathF.Round(-(minX + (width * 0.5f)), 4),

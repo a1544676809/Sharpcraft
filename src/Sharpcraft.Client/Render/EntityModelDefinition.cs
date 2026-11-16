@@ -27,7 +27,8 @@ public sealed class EntityModelDefinition
         CompiledEntityModel? compiled = null,
         IReadOnlyList<EntityRenderLayerDefinition>? renderLayers = null,
         bool applyRootPose = false,
-        float baselinePx = 24f)
+        float baselinePx = 24f,
+        bool rawSourceFrame = false)
     {
         Name = name;
         TextureWidth = textureWidth;
@@ -43,6 +44,7 @@ public sealed class EntityModelDefinition
         RenderLayers = renderLayers ?? DefaultRenderLayers;
         ApplyRootPose = applyRootPose;
         BaselinePx = baselinePx;
+        RawSourceFrame = rawSourceFrame;
     }
 
     /// <summary>Default cutout/elytra/translucent/emissive layer order shared by entity models.</summary>
@@ -107,6 +109,12 @@ public sealed class EntityModelDefinition
     public bool ApplyRootPose { get; }
 
     /// <summary>
+    /// Whether this model's parts are in the raw reference y-down frame. The mesher then emits source
+    /// face vertex order/UVs and applies source rotations without the legacy X/Y conjugation.
+    /// </summary>
+    public bool RawSourceFrame { get; }
+
+    /// <summary>
     /// Creates a definition from a declarative mesh: the legacy flat <see cref="Parts"/> remain available for compatibility,
     /// while <see cref="Compiled"/> is produced once by the structural bakery.
     /// </summary>
@@ -122,11 +130,12 @@ public sealed class EntityModelDefinition
         Func<EntityRenderState, string?>? textureSelector = null,
         IReadOnlyList<string>? additionalTexturePaths = null,
         IReadOnlyList<EntityRenderLayerDefinition>? renderLayers = null,
-        float baselinePx = 24f)
+        float baselinePx = 24f,
+        bool rawSourceFrame = false)
     {
         ArgumentNullException.ThrowIfNull(mesh);
-        var parts = VanillaMeshBake.Bake(mesh, 0, 0, baselinePx);
-        var compiled = VanillaMeshBakery.Build(mesh, textureWidth, textureHeight, baselinePx, texturePath: texturePath);
+        var parts = VanillaMeshBake.Bake(mesh, 0, 0, baselinePx, rawSourceFrame: rawSourceFrame);
+        var compiled = VanillaMeshBakery.Build(mesh, textureWidth, textureHeight, baselinePx, texturePath: texturePath, rawSourceFrame: rawSourceFrame);
         return new EntityModelDefinition(
             name,
             textureWidth,
@@ -140,7 +149,8 @@ public sealed class EntityModelDefinition
             additionalTexturePaths,
             compiled,
             renderLayers,
-            baselinePx: baselinePx);
+            baselinePx: baselinePx,
+            rawSourceFrame: rawSourceFrame);
     }
 
     public IEnumerable<string> TexturePaths

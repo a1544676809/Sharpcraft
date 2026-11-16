@@ -476,7 +476,8 @@ public sealed partial class EntityModelMesher
         ISpriteAtlas? skinAtlas,
         float px,
         ref int vertexFloats,
-        ref int indexCount)
+        ref int indexCount,
+        bool rawSourceFrame = false)
     {
         var d = part.UvDepth > 0 ? part.UvDepth : part.Depth;
         var w = part.UvWidth > 0 ? part.UvWidth : part.Width;
@@ -528,7 +529,19 @@ public sealed partial class EntityModelMesher
             AddFlatQuad(part, target, min, max, skin, skinWidth, skinHeight, entityTransform, partMatrix, partTint, ref vertexFloats, ref indexCount);
             return;
         }
-        var swapBodyDownUp = true;
+        if (emitBase && rawSourceFrame)
+        {
+            // Source ModelPart.Cube polygon order and UV intervals. No legacy X-mirror/Y-up swaps.
+            AddFace(l1, l0, t0, t1, u2, v0, u1, v0, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("DOWN"), partTint, target);
+            AddFace(t2, t3, l3, l2, u22, v1, u2, v1, u2, v0, u22, v0, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("UP"), partTint, target);
+            AddFace(t0, l0, l3, t3, u1, v1, u0, v1, u0, v2, u1, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("WEST"), partTint, target);
+            AddFace(t1, t0, t3, t2, u2, v1, u1, v1, u1, v2, u2, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("NORTH"), partTint, target);
+            AddFace(l1, t1, t2, l2, u3, v1, u2, v1, u2, v2, u3, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("EAST"), partTint, target);
+            AddFace(l0, l1, l2, l3, u4, v1, u3, v1, u3, v2, u4, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("SOUTH"), partTint, target);
+        }
+        else if (emitBase)
+        {
+            var swapBodyDownUp = true;
         var d0u = swapBodyDownUp ? u22 : u2; var d0v = swapBodyDownUp ? v1 : v0;
         var d1u = swapBodyDownUp ? u2 : u1; var d1v = swapBodyDownUp ? v1 : v0;
         var d2u = swapBodyDownUp ? u2 : u1; var d2v = swapBodyDownUp ? v0 : v1;
@@ -561,6 +574,7 @@ public sealed partial class EntityModelMesher
         AddFace(t1, t0, t3, t2, u2, v2, u1, v2, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("NORTH"), partTint, target); // NORTH
         AddFace(l1, t1, t2, l2, eastU0, v2, eastU1, v2, eastU2, v1, eastU3, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("EAST"), partTint, target); // EAST
         AddFace(l0, l1, l2, l3, u4, v2, u3, v2, u3, v1, u4, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("SOUTH"), partTint, target); // SOUTH
+        }
         }
 
 
@@ -612,7 +626,7 @@ public sealed partial class EntityModelMesher
                     overlayHeight = skinHeight;
                 }
 
-                AddPart(overlay, target, kindFilter, emissivePass, overlayMin, overlayMax, overlaySkin, overlayWidth, overlayHeight, feet, entityTransform, partMatrix, transforms, defaultTransforms, renderState, skinAtlas, px, ref vertexFloats, ref indexCount);
+                AddPart(overlay, target, kindFilter, emissivePass, overlayMin, overlayMax, overlaySkin, overlayWidth, overlayHeight, feet, entityTransform, partMatrix, transforms, defaultTransforms, renderState, skinAtlas, px, ref vertexFloats, ref indexCount, rawSourceFrame);
             }
         }
     }
@@ -643,7 +657,8 @@ public sealed partial class EntityModelMesher
         bool applyRootPose,
         ref int vertexFloats,
         ref int indexCount,
-        System.Numerics.Matrix4x4 localTransform = default)
+        System.Numerics.Matrix4x4 localTransform = default,
+        bool rawSourceFrame = false)
     {
         var vertexFloatsLocal = vertexFloats;
         var indexCountLocal = indexCount;
@@ -655,7 +670,7 @@ public sealed partial class EntityModelMesher
                 return;
             }
 
-            var frame = NodeFrame(node, parentFrame, entity, entityPose, px);
+            var frame = NodeFrame(node, parentFrame, entity, entityPose, px, rawSourceFrame);
             var yOffset = node.YOffsetSelector?.Invoke(entity) ?? 0f;
 
             var basePivot = new Vector3(node.PivotX * px, (node.PivotY + yOffset) * px, node.PivotZ * px);
@@ -798,7 +813,8 @@ public sealed partial class EntityModelMesher
                     skinAtlas,
                     px,
                     ref vertexFloatsLocal,
-                    ref indexCountLocal);
+                    ref indexCountLocal,
+                    rawSourceFrame: rawSourceFrame);
             }
 
             foreach (var child in node.ChildArray)

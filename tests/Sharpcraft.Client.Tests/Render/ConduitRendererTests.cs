@@ -66,8 +66,8 @@ public sealed class ConduitRendererTests
         Assert.Equal(0.6875f, first.X, 4);
         Assert.Equal(0.3125f, first.Y, 4);
         Assert.Equal(0.6875f, first.Z, 4);
-        Assert.Equal(0.375f, uv.U, 4);
-        Assert.Equal(0f, uv.V, 4);
+        Assert.Equal(0.1875f, uv.U, 4);
+        Assert.Equal(0.375f, uv.V, 4);
         Assert.Equal(1, renderer.LastEntityCount);
     }
 

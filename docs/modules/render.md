@@ -520,9 +520,12 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 `ConduitModelDefinition.Shell` 声明 `ConduitRenderer.createShellLayer()` 的单个 `(-3,-3,-3,6,6,6)` 立方体；`entity/conduit/base` 为 32×16。`ConduitRenderer`（id 25）复用 `EntityModelMesher.BuildModel`，只实现 inactive 分支：
 
-- 源 `DEFAULT_TRANSFORMATION` 平移 `(0.5,0.5,0.5)`，并沿 Y 旋转 conduit 的 `activeRotation`；本项目根 bake 带 +24px y-up baseline，因此平移 y 折入 `0.5 - 24/16 = -1.0`。
+- `ConduitModelDefinition.Shell` 使用 `rawSourceFrame: true`：cube/pivot/rotation 为源 y-down 字面值，`EntityModelMesher` 的 raw 分支按源 `ModelPart.Cube` 六面 vertex order/UV 发射，不做 `swapBodyDownUp`、WEST/EAST 交换或 X/Y 旋转共轭。
+- 源 `DEFAULT_TRANSFORMATION` 平移 `(0.5,0.5,0.5)`，并沿 Y 旋转 conduit 的 `activeRotation`；raw 模型无需 baseline 补偿。Conduit 的 ModelProbe 样本也确认不需要额外的渲染器 X/Y flip，否则首顶点会落到对侧角。
 - 使用 `entitySolid` → `RenderMode.Solid`；本切片 `ConduitRotation` 固定 0（源 activeRotation 动画未接入），active 与 inactive 都绘制同一静态 shell。
+- #112 已由 raw 分支修正：六个面（DOWN/UP/WEST/NORTH/EAST/SOUTH）的 UV 区间与 26.3 样本逐面严格一致；`ConduitGoldenTests` 不再保留已知缺陷映射。
 - `BlockEntityRenderState.ConduitRotation/ConduitActive` 由 `FrameCommand` 三路构造；`Handles(25)`。
+- `BoxProbeTests` 增加 `rawSourceFrame: true` 断言：单盒 24 顶点按源 y-down 值直接匹配 26.3 样本，零 modelHeight/flip 换算；legacy 路径测试保持原样。
 - active cage/wind/eye/isHunting/tickCount 不做，登记 `SIM-BE-CONDUIT-ACTIVE`。
 
 ## 已知刻意的简化

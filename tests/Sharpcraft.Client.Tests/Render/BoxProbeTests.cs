@@ -62,7 +62,25 @@ public sealed class BoxProbeTests
         }
     }
 
-    private static DynamicGeometry BuildBox()
+    [Fact]
+    public void TheRawSourceFrameBoxMatchesTheReferenceVerbatim()
+    {
+        var geometry = BuildBox(rawSourceFrame: true);
+
+        var vertices = new List<(float X, float Y, float Z)>();
+        for (var vertex = 0; vertex + 2 < geometry.VertexFloats; vertex += ChunkMesher.FloatsPerVertex)
+        {
+            vertices.Add((
+                MathF.Round(geometry.Vertices[vertex], 3),
+                MathF.Round(geometry.Vertices[vertex + 1], 3),
+                MathF.Round(geometry.Vertices[vertex + 2], 3)));
+        }
+
+        Assert.Equal(24, vertices.Count);
+        Assert.Equal(Reference.OrderBy(vertex => vertex), vertices.Distinct().OrderBy(vertex => vertex));
+    }
+
+    private static DynamicGeometry BuildBox(bool rawSourceFrame = false)
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         root.AddOrReplaceChild(
@@ -70,7 +88,8 @@ public sealed class BoxProbeTests
             VanillaPartPose.Offset(0f, 0f, 0f),
             new VanillaCubeDefinition("box", 0, 0, -2f, -2f, -2f, 4f, 4f, 4f, 0f));
 
-        var definition = EntityModelDefinition.FromTree("box", 64, 64, new VanillaMeshDefinition(root), texturePath: "probe/box", baselinePx: 0f);
+        var definition = EntityModelDefinition.FromTree(
+            "box", 64, 64, new VanillaMeshDefinition(root), texturePath: "probe/box", baselinePx: 0f, rawSourceFrame: rawSourceFrame);
         var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
         {
             ["probe/box"] = new TextureData(64, 64, new byte[64 * 64 * 4])

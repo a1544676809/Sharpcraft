@@ -53,8 +53,10 @@ public sealed class ConduitRenderer : IBlockEntityRenderer
             }
 
             // The reference inactive branch is translate(0.5,0.5,0.5) then rotateDegrees(YP,
-            // activeRotation). The shell is baked in model space (no +24px baseline), so the
-            // block-centre translation is the same 0.5 on every axis.
+            // activeRotation). The raw model already matches the ModelProbe sample in the source
+            // y-down frame; adding a renderer-side X/Y flip here moves the first shell vertex from
+            // (x=max,y=min,z=max) to the opposite corner, so the sample transform is the literal
+            // source translate/rotation only.
             var transform =
                 Matrix4x4.CreateRotationY(entity.ConduitRotation * (MathF.PI / 180f))
                 * Matrix4x4.CreateTranslation(entity.X + 0.5f, entity.Y + 0.5f, entity.Z + 0.5f);

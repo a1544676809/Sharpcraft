@@ -19,7 +19,8 @@ public static class VanillaMeshBakery
         int textureWidth = 0,
         int textureHeight = 0,
         float modelHeight = 24f,
-        string? texturePath = null)
+        string? texturePath = null,
+        bool rawSourceFrame = false)
     {
         ArgumentNullException.ThrowIfNull(mesh);
         if (VanillaMeshBake.HasNonUnitScale(mesh))
@@ -30,7 +31,7 @@ public static class VanillaMeshBakery
         var root = mesh.Root
             ?? throw new InvalidOperationException("VanillaMeshDefinition has no root part; declare one before baking.");
 
-        var rootNode = BuildNode(root, parentName: null, isRootGroup: true, textureWidth, textureHeight, modelHeight, texturePath);
+        var rootNode = BuildNode(root, parentName: null, isRootGroup: true, textureWidth, textureHeight, modelHeight, texturePath, rawSourceFrame);
         var parts = new List<EntityModelPartNode>();
         var cubes = new List<EntityModelCube>();
         Collect(rootNode, parts, cubes);
@@ -44,7 +45,8 @@ public static class VanillaMeshBakery
         int textureWidth,
         int textureHeight,
         float modelHeight,
-        string? texturePath)
+        string? texturePath,
+        bool rawSourceFrame)
     {
         var cubes = new List<EntityModelCube>(part.Cubes.Count);
         foreach (var cube in part.Cubes)
@@ -56,7 +58,7 @@ public static class VanillaMeshBakery
                 continue;
             }
 
-            var baked = BakeCube(part, cube, parentName, modelHeight);
+            var baked = BakeCube(part, cube, parentName, modelHeight, rawSourceFrame);
             cubes.Add(new EntityModelCube(
                 cube.Name,
                 baked.CentreX,
@@ -87,10 +89,10 @@ public static class VanillaMeshBakery
         var children = new List<EntityModelPartNode>(part.Children.Count);
         foreach (var child in part.Children)
         {
-            children.Add(BuildNode(child, isRootGroup ? null : part.Name, isRootGroup: false, textureWidth, textureHeight, modelHeight, texturePath));
+            children.Add(BuildNode(child, isRootGroup ? null : part.Name, isRootGroup: false, textureWidth, textureHeight, modelHeight, texturePath, rawSourceFrame));
         }
 
-        var template = BakeCube(part, ZeroCube, parentName, modelHeight);
+        var template = BakeCube(part, ZeroCube, parentName, modelHeight, rawSourceFrame);
         var firstCube = part.Cubes.Count > 0 ? part.Cubes[0] : (VanillaCubeDefinition?)null;
         return new EntityModelPartNode(
             part.Name,
@@ -112,7 +114,8 @@ public static class VanillaMeshBakery
         VanillaPartDefinition part,
         VanillaCubeDefinition cube,
         string? parentName,
-        float modelHeight)
+        float modelHeight,
+        bool rawSourceFrame)
     {
         if (parentName is null)
         {
@@ -131,7 +134,8 @@ public static class VanillaMeshBakery
                 rotationZ: part.Pose.RotationZ,
                 texturePath: cube.TexturePath,
                 grow: cube.Grow,
-                kind: cube.Kind);
+                kind: cube.Kind,
+                rawSourceFrame: rawSourceFrame);
         }
 
         return VanillaMeshBake.BakeChild(
