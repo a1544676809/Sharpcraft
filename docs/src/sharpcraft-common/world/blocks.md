@@ -56,7 +56,7 @@ status: [已评审]
 | Sharpcraft.Common | Sharpcraft.Common.World.Blocks.BlockBehaviours | Adapter | Partial | net.minecraft.core.registries.BuiltInRegistries | ref://mc-26.3-analysis/src/net/minecraft/core/registries/BuiltInRegistries.java | lookup of the behaviour half of a block, keyed by block id |
 | Sharpcraft.Common | Sharpcraft.Common.World.Blocks.BlockEntityBlockIndex | Adapter | Partial | net.minecraft.world.level.block.entity.BlockEntityType | ref://mc-26.3-analysis/src/net/minecraft/world/level/block/entity/BlockEntityType.java | the valid blocks of every registered type, as data |
 | Sharpcraft.Common | Sharpcraft.Common.World.Blocks.BlockTickContext | Adapter | Partial | net.minecraft.world.level.Level | ref://mc-26.3-analysis/src/net/minecraft/world/level/Level.java | the position and state a block method receives, without the whole level object |
-| Sharpcraft.Common | Sharpcraft.Common.World.Blocks.IBlockBehaviour | Mirror | Partial | net.minecraft.world.level.block.Block | ref://mc-26.3-analysis/src/net/minecraft/world/level/block/Block.java | behaviour half only; data lives in the block registry |
-| Sharpcraft.Common | Sharpcraft.Common.World.Blocks.IBlockWorldView | Adapter | Partial | net.minecraft.world.level.LevelReader | ref://mc-26.3-analysis/src/net/minecraft/world/level/LevelReader.java | read and write of block states only |
+| Sharpcraft.Common | Sharpcraft.Common.World.Blocks.IBlockBehaviour | Mirror | Partial | net.minecraft.world.level.block.Block | ref://mc-26.3-analysis/src/net/minecraft/world/level/block/Block.java | behaviour half only, and only its simple neighbour and tick callbacks; data lives in the block registry |
+| Sharpcraft.Common | Sharpcraft.Common.World.Blocks.IBlockWorldView | Adapter | Partial | net.minecraft.world.level.LevelReader | ref://mc-26.3-analysis/src/net/minecraft/world/level/LevelReader.java | read and write of block states only; no signal queries yet |
 
 <!-- END GENERATED: class-map -->

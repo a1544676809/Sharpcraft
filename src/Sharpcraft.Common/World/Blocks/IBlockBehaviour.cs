@@ -10,12 +10,21 @@ namespace Sharpcraft.Common.World.Blocks;
 /// cannot be expressed as data.
 /// </summary>
 /// <remarks>
+/// <para>
 /// The reference keeps both halves on one <c>Block</c> object. This project keeps the data in the
 /// registry and reserves the behaviour for the server side, which is out of scope today
 /// (AGENTS.md principle 4). The seam exists so that adding behaviour later does not change any
 /// caller: everything asks <see cref="BlockBehaviours"/>.
+/// </para>
+/// <para>
+/// <b>Provisional.</b> Only what a plain neighbour change needs is modelled. The reference passes an
+/// <c>Orientation</c> and a <c>movedByPiston</c> flag, a <c>RandomSource</c> to the tick callbacks,
+/// and lets a block query neighbour signals; none of that is here yet. A piston cannot be written
+/// against this interface, so it must not be treated as a frozen contract — see Issue #97 before
+/// implementing the first real behaviour.
+/// </para>
 /// </remarks>
-[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.block.Block", "ref://mc-26.3-analysis/src/net/minecraft/world/level/block/Block.java", Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "behaviour half only; data lives in the block registry")]
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.block.Block", "ref://mc-26.3-analysis/src/net/minecraft/world/level/block/Block.java", Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "behaviour half only, and only its simple neighbour and tick callbacks; data lives in the block registry")]
 public interface IBlockBehaviour
 {
     /// <summary>Runs when a random tick selects this block.</summary>
@@ -36,7 +45,8 @@ public interface IBlockBehaviour
     /// Direction of the neighbour that changed, using the reference's direction ids
     /// (<c>0</c> down … <c>5</c> east), or <c>-1</c> when the source is unknown.
     /// </param>
-    void NeighbourChanged(in BlockTickContext context, int direction)
+    /// <param name="movedByPiston">True when a piston moved the neighbour rather than a player or tick.</param>
+    void NeighbourChanged(in BlockTickContext context, int direction, bool movedByPiston)
     {
     }
 
@@ -50,7 +60,8 @@ public interface IBlockBehaviour
     /// <summary>Runs when this block is about to be replaced by another state.</summary>
     /// <param name="context">World access, position and the state being removed.</param>
     /// <param name="newState">State that replaces it, or <c>0</c> for air.</param>
-    void Broken(in BlockTickContext context, int newState)
+    /// <param name="movedByPiston">True when a piston is what removes the block.</param>
+    void Broken(in BlockTickContext context, int newState, bool movedByPiston)
     {
     }
 }
@@ -66,7 +77,7 @@ public readonly record struct BlockTickContext(IBlockWorldView World, int X, int
 
 /// <summary>The small slice of the world a block behaviour may touch.</summary>
 /// <remarks>Kept narrow on purpose: the server side does not exist yet, and this is the seam it will use.</remarks>
-[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.LevelReader", "ref://mc-26.3-analysis/src/net/minecraft/world/level/LevelReader.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "read and write of block states only")]
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.LevelReader", "ref://mc-26.3-analysis/src/net/minecraft/world/level/LevelReader.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "read and write of block states only; no signal queries yet")]
 public interface IBlockWorldView
 {
     /// <summary>Block state id at a position.</summary>
@@ -90,10 +101,12 @@ public interface IBlockWorldView
 /// per block id when it starts (docs/decisions/0031-block-behaviour-layering.md).
 /// </summary>
 /// <remarks>
-/// Entries are held weakly. A behaviour may come from a mod assembly loaded into a collectible
-/// context (AGENTS.md principle 2), and a strong reference from this static table would pin that
-/// context for the life of the process. A registration whose behaviour has been collected simply
-/// stops being found, which is what an unloaded mod should look like.
+/// Two kinds of registration, because the two owners have opposite lifetimes. A mod assembly lives
+/// in a collectible context and must be able to unload (AGENTS.md principle 2), so
+/// <see cref="Register"/> holds its behaviour weakly: once the mod is gone the entry stops being
+/// found, which is exactly what an unloaded mod should look like. The server's own behaviours must
+/// outlive any collection, so <see cref="RegisterStrong"/> holds them strongly; register a server
+/// behaviour weakly and a collection would silently turn it into a no-op.
 /// </remarks>
 [Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.core.registries.BuiltInRegistries", "ref://mc-26.3-analysis/src/net/minecraft/core/registries/BuiltInRegistries.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Adapter, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "lookup of the behaviour half of a block, keyed by block id")]
 public static class BlockBehaviours
@@ -101,18 +114,28 @@ public static class BlockBehaviours
     /// <summary>Behaviour used by every block that does not override anything.</summary>
     public static IBlockBehaviour Default { get; } = new NoopBehaviour();
 
-    private static readonly System.Collections.Generic.Dictionary<int, System.WeakReference<IBlockBehaviour>> Registered = [];
+    private static readonly System.Collections.Generic.Dictionary<int, Entry> Registered = [];
 
-    /// <summary>Registers the behaviour of one block id, replacing any previous entry.</summary>
+    /// <summary>Registers a behaviour that is allowed to disappear when its owner unloads.</summary>
     /// <param name="blockId">Block id from the registry layout.</param>
     /// <param name="behaviour">Behaviour to run for it. Held weakly.</param>
     public static void Register(int blockId, IBlockBehaviour behaviour) =>
-        Registered[blockId] = new System.WeakReference<IBlockBehaviour>(behaviour);
+        Registered[blockId] = Entry.Weak(behaviour);
+
+    /// <summary>Registers a behaviour that must outlive any collection, such as the server's own.</summary>
+    /// <param name="blockId">Block id from the registry layout.</param>
+    /// <param name="behaviour">Behaviour to run for it. Held strongly.</param>
+    public static void RegisterStrong(int blockId, IBlockBehaviour behaviour) =>
+        Registered[blockId] = Entry.Strong(behaviour);
 
     /// <summary>Drops the behaviour of one block id, if any.</summary>
     /// <param name="blockId">Block id from the registry layout.</param>
     /// <returns>True when an entry was removed.</returns>
     public static bool Unregister(int blockId) => Registered.Remove(blockId);
+
+    /// <summary>Whether a block id has a live registration of either kind.</summary>
+    /// <param name="blockId">Block id from the registry layout.</param>
+    public static bool IsRegistered(int blockId) => Registered.TryGetValue(blockId, out var entry) && entry.IsAlive;
 
     /// <summary>Behaviour for a block id, or <see cref="Default"/> when none is registered or it was collected.</summary>
     /// <param name="blockId">Block id from the registry layout.</param>
@@ -121,24 +144,61 @@ public static class BlockBehaviours
             ? behaviour
             : Default;
 
-    /// <summary>How many blocks have behaviour of their own; zero until the server side starts.</summary>
+    /// <summary>How many blocks have a registration; zero until the server side starts.</summary>
     public static int Count => Registered.Count;
 
-    /// <summary>Drops every registration whose behaviour was collected.</summary>
+    /// <summary>Drops every registration whose weak behaviour was collected.</summary>
     /// <returns>How many entries were dropped.</returns>
     public static int RemoveCollected()
     {
+        int[] keys = [.. Registered.Keys];
         var dropped = 0;
-        foreach (var entry in Registered)
+        foreach (var key in keys)
         {
-            if (!entry.Value.TryGetTarget(out _))
+            if (!Registered[key].IsAlive)
             {
-                Registered.Remove(entry.Key);
+                Registered.Remove(key);
                 dropped++;
             }
         }
 
         return dropped;
+    }
+
+    private readonly struct Entry
+    {
+        private readonly System.WeakReference<IBlockBehaviour>? _weak;
+        private readonly IBlockBehaviour? _strong;
+
+        private Entry(System.WeakReference<IBlockBehaviour>? weak, IBlockBehaviour? strong)
+        {
+            _weak = weak;
+            _strong = strong;
+        }
+
+        public static Entry Weak(IBlockBehaviour behaviour) => new(new System.WeakReference<IBlockBehaviour>(behaviour), null);
+
+        public static Entry Strong(IBlockBehaviour behaviour) => new(null, behaviour);
+
+        public bool IsAlive => _strong is not null || (_weak is not null && _weak.TryGetTarget(out _));
+
+        public bool TryGetTarget(out IBlockBehaviour behaviour)
+        {
+            if (_strong is not null)
+            {
+                behaviour = _strong;
+                return true;
+            }
+
+            if (_weak is not null && _weak.TryGetTarget(out var target))
+            {
+                behaviour = target;
+                return true;
+            }
+
+            behaviour = Default;
+            return false;
+        }
     }
 
     private sealed class NoopBehaviour : IBlockBehaviour

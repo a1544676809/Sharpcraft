@@ -52,12 +52,32 @@ public boolean hasBlockEntity() {
 ## 影响面
 
 - 代码：
-  - `Sharpcraft.Common/World/Blocks/IBlockBehaviour.cs`：行为接缝，零实现，按方块 id 弱引用登记（模组卸载后自然失效）。
-  - `Sharpcraft.Common/World/Blocks/BlockEntityBlockIndex.cs`：**生成**的"方块 → 方块实体类型"索引，191 行，覆盖 49 个类型。
+  - `Sharpcraft.Common/World/Blocks/IBlockBehaviour.cs`：行为接缝，零实现。两种注册：`Register`（弱引用，模组用，卸载后自然失效）与 `RegisterStrong`（强引用，服务端自己的行为用）。
+  - `Sharpcraft.Common/World/Blocks/BlockEntityBlockIndex.cs`：**生成**的"方块 → 方块实体类型"索引，191 行，覆盖 49 个类型。生成器在仓库内：`tools/blocks/generate-block-entity-index.ps1`，支持 `-Check` 校验是否过期。
   - `ClientWorld.SetBlockState` 改为查该索引，删除 `IsChestLike` / `IsShulkerBox` 清单。
-- 测试：`BlockEntityBlockIndexTests`（正例 30、负例 9、排序与去重）、`BlockBehavioursTests`（默认/注册/替换/回收/注销）、`Repro_022` 新增四个"放置任意方块实体方块即建记录"用例与"普通活塞不建记录"。
+- 测试：`BlockEntityBlockIndexTests`（正例含 `chiseled_bookshelf`→38、`oak_hanging_sign`→8 边界、负例 10、`Count == 191`、排序去重、49 个类型全覆盖）、`BlockBehavioursTests`（默认/弱注册/强注册 GC 存活/回收清理/注销）、`Repro_022` 新增五个"放置任意方块实体方块即建记录"（含 type 0 的熔炉）与"普通活塞不建记录"。
 - 文档：本 ADR；`docs/src/sharpcraft-common/world/blocks.md`（模块文档）。`docs/modules/block-state.md` 的"方块行为在哪里"一节**尚未**补，随服务端开工（Issue #97）一并写。
-- 兼容性：不影响协议与存档；模组 API 尚未定稿，但行为接口应在此定稿前稳定。
+- 兼容性：不影响协议与存档。**行为接口不是冻结契约**：它只覆盖简单的邻居变化与刻回调。
+
+## 接口范围（明确收窄）
+
+`IBlockBehaviour` 当前只表达：
+
+| 回调 | 参数 |
+| --- | --- |
+| `RandomTick` / `ScheduledTick` | `BlockTickContext` |
+| `NeighbourChanged` | `BlockTickContext`、改变来源方向（0..5 / -1）、`movedByPiston` |
+| `Placed` | `BlockTickContext`、旧状态 |
+| `Broken` | `BlockTickContext`、新状态、`movedByPiston` |
+
+**尚缺**（实现第一个真实行为前必须补，见 Issue #97）：
+
+- 原版 `neighborChanged` 的 `Orientation` 参数（活塞用）
+- `RandomSource`（`RandomTick` / `ScheduledTick` 需要随机源）
+- `IBlockWorldView` 的信号查询（红石读邻居强度）
+- 实体/方块刻调度本身
+
+因此本接口**不得**被描述为"已足够红石/活塞"。
 
 ## 落地状态
 

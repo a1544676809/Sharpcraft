@@ -92,11 +92,12 @@ public sealed class Repro_022_ClientWorldBlockEntityTests
     }
 
     [Theory]
-    [InlineData("minecraft:oak_sign")]
-    [InlineData("minecraft:white_banner")]
-    [InlineData("minecraft:skeleton_skull")]
-    [InlineData("minecraft:decorated_pot")]
-    public void PlacingAnyBlockEntityBlockCreatesItsRecord(string blockId)
+    [InlineData("minecraft:oak_sign", 7)]
+    [InlineData("minecraft:white_banner", 20)]
+    [InlineData("minecraft:skeleton_skull", 16)]
+    [InlineData("minecraft:decorated_pot", 41)]
+    [InlineData("minecraft:furnace", 0)]
+    public void PlacingAnyBlockEntityBlockCreatesItsRecord(string blockId, int expectedType)
     {
         var world = NewWorld(out var chunk);
         var state = VanillaBlockRegistry.Layout.GetBaseId(Identifier.Parse(blockId));
@@ -104,7 +105,7 @@ public sealed class Repro_022_ClientWorldBlockEntityTests
         Assert.True(world.SetBlockState(3, 8, 5, state));
 
         var record = Assert.Single(chunk.BlockEntities);
-        Assert.NotEqual(0, record.TypeId);
+        Assert.Equal(expectedType, record.TypeId);
     }
 
     [Fact]

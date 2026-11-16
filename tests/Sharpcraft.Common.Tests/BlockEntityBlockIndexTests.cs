@@ -39,6 +39,7 @@ public sealed class BlockEntityBlockIndexTests
     [InlineData("acacia_sign", 7)]
     [InlineData("oak_wall_sign", 7)]
     [InlineData("oak_hanging_sign", 8)]
+    [InlineData("chiseled_bookshelf", 38)]
     [InlineData("spawner", 9)]
     [InlineData("moving_piston", 11)]
     [InlineData("beacon", 15)]
@@ -49,6 +50,7 @@ public sealed class BlockEntityBlockIndexTests
     }
 
     [Theory]
+    [InlineData("bookshelf")]
     [InlineData("stone")]
     [InlineData("oak_planks")]
     [InlineData("piston")]
@@ -64,6 +66,7 @@ public sealed class BlockEntityBlockIndexTests
     [Fact]
     public void TheIndexCoversEveryTypeThatHasBlockEntityBearingBlocks()
     {
+        Assert.Equal(191, BlockEntityBlockIndex.Count);
         var seen = new HashSet<int>();
         foreach (var path in BlockEntityBlockIndex.BlockPaths)
         {
@@ -72,7 +75,7 @@ public sealed class BlockEntityBlockIndexTests
         }
 
         // Every registered type except the ones no block carries (none today) must appear.
-        Assert.True(seen.Count >= 30, $"only {seen.Count} distinct types are covered");
+        Assert.Equal(VanillaBlockEntityTypes.Count, seen.Count);
     }
 
     [Fact]
