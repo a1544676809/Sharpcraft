@@ -44,46 +44,10 @@ public sealed class ConduitGoldenTests
     /// <summary>One row per group, so the theories and the coverage guard cannot drift apart.</summary>
     public static IEnumerable<object[]> GroupRows => Groups.Select(group => new object[] { group });
 
-    /// <summary>
-    /// Which reference face carries our UV set for each swapped face. Measured from the sample and our
-    /// engine, in emit order: 0=DOWN, 1=UP, 2=WEST, 3=NORTH, 4=EAST, 5=SOUTH. Faces 3 and 5 are not
-    /// swapped and are asserted strictly by <see cref="UnaffectedFaceUvMatchesTheReference"/>.
-    /// </summary>
-    /// <remarks>
-    /// Measured per face (reference UV set | ours UV set | ours equals reference face):
-    /// <list type="bullet">
-    /// <item>face 0 DOWN: {(0.1875,0), (0.1875,0.375), (0.375,0), (0.375,0.375)} |
-    /// {(0.375,0), (0.375,0.375), (0.5625,0), (0.5625,0.375)} | ref face 1 (UP)</item>
-    /// <item>face 1 UP: {(0.375,0), (0.375,0.375), (0.5625,0), (0.5625,0.375)} |
-    /// {(0.1875,0), (0.1875,0.375), (0.375,0), (0.375,0.375)} | ref face 0 (DOWN)</item>
-    /// <item>face 2 WEST: {(0,0.375), (0,0.75), (0.1875,0.375), (0.1875,0.75)} |
-    /// {(0.375,0.375), (0.375,0.75), (0.5625,0.375), (0.5625,0.75)} | ref face 4 (EAST)</item>
-    /// <item>face 3 NORTH: {(0.1875,0.375), (0.1875,0.75), (0.375,0.375), (0.375,0.75)} |
-    /// identical | ref face 3 (NORTH), strict</item>
-    /// <item>face 4 EAST: {(0.375,0.375), (0.375,0.75), (0.5625,0.375), (0.5625,0.75)} |
-    /// {(0,0.375), (0,0.75), (0.1875,0.375), (0.1875,0.75)} | ref face 2 (WEST)</item>
-    /// <item>face 5 SOUTH: {(0.5625,0.375), (0.5625,0.75), (0.75,0.375), (0.75,0.75)} |
-    /// identical | ref face 5 (SOUTH), strict</item>
-    /// </list>
-    /// The swap is DOWN&lt;-&gt;UP and WEST&lt;-&gt;EAST; it comes from the face UV assignment in
-    /// <c>EntityModelMesher.AddPart</c>, not from the geometry. See issue #112 and docs/modules/render.md.
-    /// </remarks>
-    private static readonly (int Face, int ReferenceFace)[] SwappedFaces =
-    [
-        (0, 1),
-        (1, 0),
-        (2, 4),
-        (4, 2)
-    ];
+    /// <summary>All six shell faces in emit order: 0=DOWN, 1=UP, 2=WEST, 3=NORTH, 4=EAST, 5=SOUTH.</summary>
+    private static readonly int[] UnaffectedFaces = [0, 1, 2, 3, 4, 5];
 
-    /// <summary>One row per swapped face, so the theory and the mapping table cannot drift apart.</summary>
-    public static IEnumerable<object[]> SwappedFaceRows =>
-        SwappedFaces.Select(pair => new object[] { pair.Face, pair.ReferenceFace });
-
-    /// <summary>Faces whose UV assignment already matches the reference; asserted strictly.</summary>
-    private static readonly int[] UnaffectedFaces = [3, 5];
-
-    /// <summary>One row per unaffected face.</summary>
+    /// <summary>One row per face.</summary>
     public static IEnumerable<object[]> UnaffectedFaceRows => UnaffectedFaces.Select(face => new object[] { face });
 
     /// <summary>
@@ -110,31 +74,38 @@ public sealed class ConduitGoldenTests
         }
     }
 
-    /// <summary>
-    /// Locks the KNOWN DEFECT of issue #112: for four of the six shell faces our UV set is the sample's
-    /// UV set of a different face (DOWN&lt;-&gt;UP, WEST&lt;-&gt;EAST). This test pins the defect, not
-    /// correctness. If it fails because the face mapping was corrected, change it to a strict comparison
-    /// and close issue #112.
-    /// </summary>
-    [Theory]
-    [MemberData(nameof(SwappedFaceRows))]
-    public void TheFaceUvMappingIsSwappedUntilIssue112IsFixed(int face, int referenceFace)
-    {
-        var expected = ReferenceFaceUvs("rot0", referenceFace);
-        var actual = OurFaceUvs(face);
-
-        AssertUvSetsEqual(expected, actual, face, referenceFace);
-    }
-
-    /// <summary>The two faces whose UV assignment is not affected by issue #112, asserted strictly.</summary>
+    /// <summary>All six shell faces must use the sample's matching face UV set (#112 fixed).</summary>
     [Theory]
     [MemberData(nameof(UnaffectedFaceRows))]
-    public void UnaffectedFaceUvMatchesTheReference(int face)
+    public void EveryFaceUvMatchesTheReference(int face)
     {
         var expected = ReferenceFaceUvs("rot0", face);
         var actual = OurFaceUvs(face);
 
         AssertUvSetsEqual(expected, actual, face, face);
+    }
+
+    [Theory]
+    [MemberData(nameof(GroupRows))]
+    public void EveryVertexPositionAndUvMatchesTheReference(string group)
+    {
+        var expected = ReferenceVertices(group);
+        var actual = OurVertices();
+        Assert.Equal(expected.Count, actual.Count);
+
+        for (var vertex = 0; vertex < expected.Count; vertex++)
+        {
+            var e = expected[vertex];
+            var a = actual[vertex];
+            Assert.True(
+                MathF.Abs(e.X - a.X) <= Tolerance
+                    && MathF.Abs(e.Y - a.Y) <= Tolerance
+                    && MathF.Abs(e.Z - a.Z) <= Tolerance
+                    && MathF.Abs(e.U - a.U) <= Tolerance
+                    && MathF.Abs(e.V - a.V) <= Tolerance,
+                $"{group}: vertex {vertex} is ({a.X:F4}, {a.Y:F4}, {a.Z:F4}) uv ({a.U:F4}, {a.V:F4})"
+                    + $" but the sample says ({e.X:F4}, {e.Y:F4}, {e.Z:F4}) uv ({e.U:F4}, {e.V:F4})");
+        }
     }
 
     [Fact]
@@ -159,11 +130,8 @@ public sealed class ConduitGoldenTests
     {
         Assert.True(
             expected.Count == actual.Count,
-            $"face {face}: ours carries {actual.Count} UVs but the sample face {referenceFace} has {expected.Count}."
-                + " If the face mapping was corrected, change this test to a strict comparison and close #112.");
+            $"face {face}: ours carries {actual.Count} UVs but the sample face {referenceFace} has {expected.Count}.");
 
-        expected.Sort();
-        actual.Sort();
         for (var corner = 0; corner < expected.Count; corner++)
         {
             var du = MathF.Abs(expected[corner].U - actual[corner].U);
@@ -171,8 +139,7 @@ public sealed class ConduitGoldenTests
             Assert.True(
                 du <= Tolerance && dv <= Tolerance,
                 $"face {face} vertex {corner}: ours is u {actual[corner].U:F4} v {actual[corner].V:F4}"
-                    + $" but sample face {referenceFace} says u {expected[corner].U:F4} v {expected[corner].V:F4}."
-                    + " If the face mapping was corrected, change this test to a strict comparison and close #112.");
+                    + $" but sample face {referenceFace} says u {expected[corner].U:F4} v {expected[corner].V:F4}.");
         }
     }
 

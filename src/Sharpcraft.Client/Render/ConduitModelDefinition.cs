@@ -35,8 +35,9 @@ public static class ConduitModelDefinition
             TextureWidth,
             TextureHeight,
             new VanillaMeshDefinition(root),
-            PlayerModelDefinition.DefaultFaceTransforms,
-            TexturePath,
-            modelHeight: 0f);
+            faceTransforms: null,
+            texturePath: TexturePath,
+            baselinePx: 0f,
+            rawSourceFrame: true);
     }
 }

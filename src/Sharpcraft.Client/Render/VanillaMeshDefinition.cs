@@ -195,7 +195,8 @@ static partial class VanillaMeshBake
         int textureWidth,
         int textureHeight,
         float modelHeight = 24f,
-        string? texturePath = null)
+        string? texturePath = null,
+        bool rawSourceFrame = false)
     {
         ArgumentNullException.ThrowIfNull(mesh);
         var root = mesh.Root
@@ -217,10 +218,10 @@ static partial class VanillaMeshBake
         var producedNames = new HashSet<string>(StringComparer.Ordinal);
 
         // The root group's own cuboids, if any, are root-level boxes.
-        EmitCubes(parts, producedNames, root, parentName: null, modelHeight, texturePath, textureWidth, textureHeight);
+        EmitCubes(parts, producedNames, root, parentName: null, modelHeight, texturePath, textureWidth, textureHeight, rawSourceFrame);
         foreach (var child in root.Children)
         {
-            Walk(parts, producedNames, child, parentName: null, modelHeight, texturePath, textureWidth, textureHeight);
+            Walk(parts, producedNames, child, parentName: null, modelHeight, texturePath, textureWidth, textureHeight, rawSourceFrame);
         }
 
         return parts;
@@ -383,9 +384,10 @@ static partial class VanillaMeshBake
         float modelHeight,
         string? texturePath,
         int textureWidth,
-        int textureHeight)
+        int textureHeight,
+        bool rawSourceFrame)
     {
-        EmitCubes(parts, producedNames, part, parentName, modelHeight, texturePath, textureWidth, textureHeight);
+        EmitCubes(parts, producedNames, part, parentName, modelHeight, texturePath, textureWidth, textureHeight, rawSourceFrame);
 
         var siblingNames = new HashSet<string>(StringComparer.Ordinal);
         foreach (var child in part.Children)
@@ -395,7 +397,7 @@ static partial class VanillaMeshBake
                 throw new InvalidOperationException($"Duplicate child name '{child.Name}' under part '{part.Name}'; part names are parent-link keys and must be unique.");
             }
 
-            Walk(parts, producedNames, child, part.Name, modelHeight, texturePath, textureWidth, textureHeight);
+            Walk(parts, producedNames, child, part.Name, modelHeight, texturePath, textureWidth, textureHeight, rawSourceFrame);
         }
     }
 
@@ -407,7 +409,8 @@ static partial class VanillaMeshBake
         float modelHeight,
         string? texturePath,
         int textureWidth,
-        int textureHeight)
+        int textureHeight,
+        bool rawSourceFrame)
     {
         var first = true;
         foreach (var cube in part.Cubes)
@@ -437,7 +440,8 @@ static partial class VanillaMeshBake
                         cube.TextureX, cube.TextureY,
                         mirror: cube.Mirror, mirrorX: cube.MirrorX, overlays: cube.Overlays, modelHeight: modelHeight,
                         rotationX: part.Pose.RotationX, rotationY: part.Pose.RotationY, rotationZ: part.Pose.RotationZ,
-                        texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind)
+                        texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind,
+                        rawSourceFrame: rawSourceFrame)
                     : BakeChild(
                         cube.Name, parentName,
                         part.Pose.X, part.Pose.Y, part.Pose.Z,
@@ -446,7 +450,8 @@ static partial class VanillaMeshBake
                         cube.TextureX, cube.TextureY,
                         mirror: cube.Mirror, overlays: cube.Overlays,
                         rotationX: part.Pose.RotationX, rotationY: part.Pose.RotationY, rotationZ: part.Pose.RotationZ,
-                        texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind);
+                        texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind,
+                        rawSourceFrame: rawSourceFrame);
             }
             else
             {
@@ -460,7 +465,8 @@ static partial class VanillaMeshBake
                     cube.TextureX, cube.TextureY,
                     mirror: cube.Mirror, overlays: cube.Overlays,
                     rotationX: 0f, rotationY: 0f, rotationZ: 0f,
-                    texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind);
+                    texturePath: effectiveTexturePath, grow: cube.Grow, kind: cube.Kind,
+                    rawSourceFrame: rawSourceFrame);
             }
 
             first = false;

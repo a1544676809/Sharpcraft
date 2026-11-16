@@ -520,9 +520,13 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 `ConduitModelDefinition.Shell` 声明 `ConduitRenderer.createShellLayer()` 的单个 `(-3,-3,-3,6,6,6)` 立方体；`entity/conduit/base` 为 32×16。`ConduitRenderer`（id 25）复用 `EntityModelMesher.BuildModel`，只实现 inactive 分支：
 
-- 源 `DEFAULT_TRANSFORMATION` 平移 `(0.5,0.5,0.5)`，并沿 Y 旋转 conduit 的 `activeRotation`；本项目根 bake 带 +24px y-up baseline，因此平移 y 折入 `0.5 - 24/16 = -1.0`。
+- `ConduitModelDefinition.Shell` 使用 `rawSourceFrame: true`：cube/pivot/rotation 为源 y-down 字面值，`EntityModelMesher` 的 raw 分支按源 `ModelPart.Cube` 六面 vertex order/UV 发射，不做 `swapBodyDownUp`、WEST/EAST 交换或 X/Y 旋转共轭。
+- 源 `DEFAULT_TRANSFORMATION` 平移 `(0.5,0.5,0.5)`，并沿 Y 旋转 conduit 的 `activeRotation`；raw 模型无需 baseline 补偿。Conduit 的 ModelProbe 样本也确认不需要额外的渲染器 X/Y flip，否则首顶点会落到对侧角。
 - 使用 `entitySolid` → `RenderMode.Solid`；本切片 `ConduitRotation` 固定 0（源 activeRotation 动画未接入），active 与 inactive 都绘制同一静态 shell。
+- #112：raw exemplar 的 24/24 顶点位置与 UV 已按样本顺序逐点验证，六个面（DOWN/UP/WEST/NORTH/EAST/SOUTH）的 face vertex order/UV 在 raw 路径成立；legacy 路径尚未切换，不宣称全量修复。
+- raw 暂不支持 non-unit `PartPose` scale：`EntityModelDefinition.FromTree` 对 raw + scaled 模型抛 `NotSupportedException`；legacy 路径保留该能力。
 - `BlockEntityRenderState.ConduitRotation/ConduitActive` 由 `FrameCommand` 三路构造；`Handles(25)`。
+- `BoxProbeTests` 增加 `rawSourceFrame: true` 断言：单盒 24 顶点按源 y-down 值、顶点顺序与 UV 直接匹配 26.3 样本，零 modelHeight/flip 换算；legacy 路径测试保持原样。
 - active cage/wind/eye/isHunting/tickCount 不做，登记 `SIM-BE-CONDUIT-ACTIVE`。
 
 ## 已知刻意的简化
@@ -713,7 +717,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **为什么**：`EntityModelMesher.AddPart` 的 `swapBodyDownUp` 与 WEST/EAST u-range 交换属于面 UV 约定校准，与参考原版 `ModelPart.render` 的面 UV 归属不同；修复需改渲染核心，超出本次纯机械取样范围，Issue #112 单独跟进。
 - **对等效性的影响**：仅影响对称模型的面 UV 归属（面纹理朝向/贴图分区）；几何位置、顶点数、UV 值集合不变。
 - **状态**：`阻塞于评审`，直到 Issue #112 修复；修复渲染核心后须把量化断言改回严格比较并关闭该 Issue。
-- **验收证据**：`tests/Sharpcraft.Client.Tests/Repro/Data/conduit-vectors.golden.txt`（原版真值，inactive shell @ 零旋转）与 `tests/Sharpcraft.Client.Tests/Render/ConduitGoldenTests.cs` 中 `TheFaceUvMappingIsSwappedUntilIssue112IsFixed` 的量化断言（面 0↔1、1↔0、2↔4、4↔2，面 3/5 严格）。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Repro/Data/conduit-vectors.golden.txt`（原版真值，inactive shell @ 零旋转）与 `ConduitGoldenTests` 的 raw 24/24 逐顶点严格断言；legacy 路径仍保留该简化，全面切换后关闭 Issue #112。
 - **范围**：金值只取样 inactive 外壳；active cage/wind/eye 属已登记的 `SIM-BE-CONDUIT-ACTIVE` 简化，其变换依赖 tickCount / animPhase / camera orientation，取样器语法无法忠实表达，本次不取。
 
 ### SIM-BE-BANNER-TILT-SIGN：旗帜静止倾角符号反了（Issue #111）

@@ -152,7 +152,8 @@ public sealed partial class EntityModelMesher
                     model.ApplyRootPose,
                     ref vertexFloats,
                     ref indexCount,
-                    model.LocalTransformSelector?.Invoke(entity) ?? model.LocalTransform);
+                    model.LocalTransformSelector?.Invoke(entity) ?? model.LocalTransform,
+                    model.RawSourceFrame);
                 continue;
             }
 
@@ -224,7 +225,7 @@ public sealed partial class EntityModelMesher
                     partSprite = partAtlas;
                 }
 
-                AddPart(part, target, kindFilter, emissivePass, min, max, partSprite, partSkinWidth, partSkinHeight, feet, entityTransform, PartMatrix(part, model.Parts, px, entityPose), transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount);
+                AddPart(part, target, kindFilter, emissivePass, min, max, partSprite, partSkinWidth, partSkinHeight, feet, entityTransform, PartMatrix(part, model.Parts, px, entityPose, model.RawSourceFrame), transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount, model.RawSourceFrame);
             }
         }
 
@@ -283,7 +284,8 @@ public sealed partial class EntityModelMesher
         Matrix4x4 parentFrame,
         EntityRenderState entity,
         EntityPose? entityPose,
-        float px)
+        float px,
+        bool rawSourceFrame = false)
     {
         var poseName = node.PoseSource ?? node.Name;
         var poseOffset = entityPose?.Get(poseName) ?? PoseOffset.Zero;
@@ -302,10 +304,15 @@ public sealed partial class EntityModelMesher
                 1f + poseOffset.Scale.X,
                 1f + poseOffset.Scale.Y,
                 1f + poseOffset.Scale.Z))
-            * RotationZyx(
-                rotation.X - poseOffset.Rotation.X,
-                rotation.Y - poseOffset.Rotation.Y,
-                rotation.Z + poseOffset.Rotation.Z)
+            * (rawSourceFrame
+                ? RotationZyx(
+                    rotation.X + poseOffset.Rotation.X,
+                    rotation.Y + poseOffset.Rotation.Y,
+                    rotation.Z + poseOffset.Rotation.Z)
+                : RotationZyx(
+                    rotation.X - poseOffset.Rotation.X,
+                    rotation.Y - poseOffset.Rotation.Y,
+                    rotation.Z + poseOffset.Rotation.Z))
             * Matrix4x4.CreateTranslation(pivot);
         return local * parentFrame;
     }
@@ -320,7 +327,8 @@ public sealed partial class EntityModelMesher
         EntityRenderState entity,
         string partName,
         EntityPose? pose = null,
-        bool applyRootPose = true)
+        bool applyRootPose = true,
+        bool rawSourceFrame = false)
     {
         ArgumentNullException.ThrowIfNull(definition);
         var compiled = definition.Compiled;
@@ -335,7 +343,9 @@ public sealed partial class EntityModelMesher
                 1f + rootPose.Scale.X,
                 1f + rootPose.Scale.Y,
                 1f + rootPose.Scale.Z))
-            * RotationZyx(-rootPose.Rotation.X, -rootPose.Rotation.Y, rootPose.Rotation.Z)
+            * (rawSourceFrame
+                ? RotationZyx(rootPose.Rotation.X, rootPose.Rotation.Y, rootPose.Rotation.Z)
+                : RotationZyx(-rootPose.Rotation.X, -rootPose.Rotation.Y, rootPose.Rotation.Z))
             * Matrix4x4.CreateTranslation(rootPose.Position * px);
 
         Matrix4x4? found = null;
@@ -376,15 +386,18 @@ public sealed partial class EntityModelMesher
     /// Matrix that maps a point expressed relative to <paramref name="part"/>'s origin into entity space. This is the
     /// frame other parts' pivots are expressed in, not the frame a part's own cube is stored in.
     /// </summary>
-    private static Matrix4x4 PartFrame(EntityModelPart part, IReadOnlyList<EntityModelPart> parts, float px, EntityPose? pose = null)
+    private static Matrix4x4 PartFrame(EntityModelPart part, IReadOnlyList<EntityModelPart> parts, float px, EntityPose? pose = null, bool rawSourceFrame = false)
     {
         var poseOffset = pose?.Get(PosePartName(part)) ?? PoseOffset.Zero;
         var pivot = new Vector3((part.PivotX + poseOffset.Position.X) * px, (part.PivotY + poseOffset.Position.Y) * px, (part.PivotZ + poseOffset.Position.Z) * px);
         // Row-vector convention: "rotate, then translate" is Rotation * Translation; animation scale is local.
-        // The model vertices are the reference model after scale(-1,-1,1) (see FromVanilla), so an animation rotation
-        // transcribed from the reference model space must be conjugated by that flip: X and Y angles are negated, Z is
-        // unchanged. Base (bind-pose) rotations are already stored in this space and are left untouched.
-        var local = Matrix4x4.CreateScale(new Vector3(1f + poseOffset.Scale.X, 1f + poseOffset.Scale.Y, 1f + poseOffset.Scale.Z)) * RotationZyx(part.RotationX - poseOffset.Rotation.X, part.RotationY - poseOffset.Rotation.Y, part.RotationZ + poseOffset.Rotation.Z) * Matrix4x4.CreateTranslation(pivot);
+        // Legacy vertices are already in the flipped space, so X/Y animation angles are conjugated; raw
+        // source-frame vertices take the reference rotation literals directly.
+        var local = Matrix4x4.CreateScale(new Vector3(1f + poseOffset.Scale.X, 1f + poseOffset.Scale.Y, 1f + poseOffset.Scale.Z))
+            * (rawSourceFrame
+                ? RotationZyx(part.RotationX + poseOffset.Rotation.X, part.RotationY + poseOffset.Rotation.Y, part.RotationZ + poseOffset.Rotation.Z)
+                : RotationZyx(part.RotationX - poseOffset.Rotation.X, part.RotationY - poseOffset.Rotation.Y, part.RotationZ + poseOffset.Rotation.Z))
+            * Matrix4x4.CreateTranslation(pivot);
 
         if (part.Parent is not { Length: > 0 } parentName)
         {
@@ -395,7 +408,7 @@ public sealed partial class EntityModelMesher
         {
             if (string.Equals(candidate.Name, parentName, StringComparison.Ordinal))
             {
-                return local * PartFrame(candidate, parts, px, pose);
+                return local * PartFrame(candidate, parts, px, pose, rawSourceFrame);
             }
         }
 
@@ -410,9 +423,9 @@ public sealed partial class EntityModelMesher
     /// the extra translate back. Child parts keep cubes relative to their own origin (from <c>FromVanillaChild</c>), so
     /// their frame is already the storage transform.
     /// </remarks>
-    private static Matrix4x4 PartMatrix(EntityModelPart part, IReadOnlyList<EntityModelPart> parts, float px, EntityPose? pose = null)
+    private static Matrix4x4 PartMatrix(EntityModelPart part, IReadOnlyList<EntityModelPart> parts, float px, EntityPose? pose = null, bool rawSourceFrame = false)
     {
-        var frame = PartFrame(part, parts, px, pose);
+        var frame = PartFrame(part, parts, px, pose, rawSourceFrame);
         if (part.Parent is { Length: > 0 })
         {
             return frame;

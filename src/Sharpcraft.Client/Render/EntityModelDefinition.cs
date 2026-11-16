@@ -26,8 +26,15 @@ public sealed class EntityModelDefinition
         IReadOnlyList<string>? additionalTexturePaths = null,
         CompiledEntityModel? compiled = null,
         IReadOnlyList<EntityRenderLayerDefinition>? renderLayers = null,
-        bool applyRootPose = false)
+        bool applyRootPose = false,
+        float baselinePx = 24f,
+        bool rawSourceFrame = false)
     {
+        if (rawSourceFrame && baselinePx != 0f)
+        {
+            throw new ArgumentException("A raw source-frame model must not carry a model-height baseline.", nameof(baselinePx));
+        }
+
         Name = name;
         TextureWidth = textureWidth;
         TextureHeight = textureHeight;
@@ -41,6 +48,8 @@ public sealed class EntityModelDefinition
         Compiled = compiled;
         RenderLayers = renderLayers ?? DefaultRenderLayers;
         ApplyRootPose = applyRootPose;
+        BaselinePx = baselinePx;
+        RawSourceFrame = rawSourceFrame;
     }
 
     /// <summary>Default cutout/elytra/translucent/emissive layer order shared by entity models.</summary>
@@ -59,6 +68,13 @@ public sealed class EntityModelDefinition
     public IReadOnlyDictionary<string, FaceUvTransform> FaceTransforms { get; }
     public string? TexturePath { get; }
     public float Scale { get; }
+
+    /// <summary>
+    /// Height of the model in pixels, used to convert the reference's y-down model space into the
+    /// world space this renderer emits. 24 is the reference skeleton height; models that are already
+    /// expressed in their own frame pass 0.
+    /// </summary>
+    public float BaselinePx { get; }
 
     /// <summary>
     /// Constant transform applied to this model's geometry inside its part frames. Used by layers whose geometry must
@@ -98,6 +114,12 @@ public sealed class EntityModelDefinition
     public bool ApplyRootPose { get; }
 
     /// <summary>
+    /// Whether this model's parts are in the raw reference y-down frame. The mesher then emits source
+    /// face vertex order/UVs and applies source rotations without the legacy X/Y conjugation.
+    /// </summary>
+    public bool RawSourceFrame { get; }
+
+    /// <summary>
     /// Creates a definition from a declarative mesh: the legacy flat <see cref="Parts"/> remain available for compatibility,
     /// while <see cref="Compiled"/> is produced once by the structural bakery.
     /// </summary>
@@ -113,11 +135,18 @@ public sealed class EntityModelDefinition
         Func<EntityRenderState, string?>? textureSelector = null,
         IReadOnlyList<string>? additionalTexturePaths = null,
         IReadOnlyList<EntityRenderLayerDefinition>? renderLayers = null,
-        float modelHeight = 24f)
+        float baselinePx = 24f,
+        bool rawSourceFrame = false,
+        bool applyRootPose = false)
     {
         ArgumentNullException.ThrowIfNull(mesh);
-        var parts = VanillaMeshBake.Bake(mesh, 0, 0, modelHeight);
-        var compiled = VanillaMeshBakery.Build(mesh, textureWidth, textureHeight, modelHeight, texturePath: texturePath);
+        if (rawSourceFrame && VanillaMeshBake.HasNonUnitScale(mesh))
+        {
+            throw new NotSupportedException("Raw source-frame models do not support non-unit PartPose scale yet; use the legacy path or migrate the scaled model separately.");
+        }
+
+        var parts = VanillaMeshBake.Bake(mesh, 0, 0, baselinePx, rawSourceFrame: rawSourceFrame);
+        var compiled = VanillaMeshBakery.Build(mesh, textureWidth, textureHeight, baselinePx, texturePath: texturePath, rawSourceFrame: rawSourceFrame);
         return new EntityModelDefinition(
             name,
             textureWidth,
@@ -130,7 +159,10 @@ public sealed class EntityModelDefinition
             textureSelector,
             additionalTexturePaths,
             compiled,
-            renderLayers);
+            renderLayers,
+            baselinePx: baselinePx,
+            rawSourceFrame: rawSourceFrame,
+            applyRootPose: applyRootPose);
     }
 
     public IEnumerable<string> TexturePaths
