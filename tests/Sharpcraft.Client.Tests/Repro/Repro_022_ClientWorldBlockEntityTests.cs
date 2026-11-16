@@ -108,6 +108,28 @@ public sealed class Repro_022_ClientWorldBlockEntityTests
         Assert.Equal(expectedType, record.TypeId);
     }
 
+    /// <summary>
+    /// Every oxidation stage is its own block but shares one block entity type, so removal has to go
+    /// through the generated index as well: matching the type name only dropped the plain statue and
+    /// left a ghost behind for the oxidised ones (issue 103).
+    /// </summary>
+    [Theory]
+    [InlineData("minecraft:copper_golem_statue")]
+    [InlineData("minecraft:exposed_copper_golem_statue")]
+    [InlineData("minecraft:weathered_copper_golem_statue")]
+    [InlineData("minecraft:oxidized_copper_golem_statue")]
+    public void BreakingAnyOxidationStageOfAStatueRemovesItsRecord(string blockId)
+    {
+        var world = NewWorld(out var chunk);
+        var state = VanillaBlockRegistry.Layout.GetBaseId(Identifier.Parse(blockId));
+
+        Assert.True(world.SetBlockState(3, 8, 5, state));
+        Assert.Single(chunk.BlockEntities);
+
+        Assert.True(world.SetBlockState(3, 8, 5, 0));
+        Assert.Empty(chunk.BlockEntities);
+    }
+
     [Fact]
     public void APlainPistonCarriesNoBlockEntity()
     {

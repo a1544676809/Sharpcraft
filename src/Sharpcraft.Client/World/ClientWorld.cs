@@ -452,8 +452,9 @@ public sealed class ClientWorld
         var localX = BlockCoordinates.SectionRelative(x);
         var localZ = BlockCoordinates.SectionRelative(z);
         var oldTypeId = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(GetBlockState(x, y, z)) is { } oldBlockId
-            ? Sharpcraft.Common.World.VanillaBlockEntityTypes.IdOf(oldBlockId.Path)
-            : -1;
+            && Sharpcraft.Common.World.Blocks.BlockEntityBlockIndex.TryGetType(oldBlockId.Path, out var oldBlockType)
+                ? oldBlockType
+                : -1;
         chunk.SetBlockState(localX, y, localZ, state, airState);
 
         // The reference creates a block entity as soon as the new state carries one and drops it when
