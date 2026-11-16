@@ -1,3 +1,15 @@
+# Sharpcraft reference sample
+# source: minecraft 26.3 client (jar sha1 e877b6a07acd633fb3bb475002175cec036e7b87)
+# tool: ref://mc-26.3-analysis/vectors/CopperGolemStatueVectors.java
+# space: the vertices the model emits on its own, before any renderer transform
+# columns: statue|pose|facing|x|y|z|u|v
+# facing --> name|ordinal|data2d|yawDegrees
+# facing|down|0|-1|-270.0
+# facing|up|1|-1|-270.0
+# facing|north|2|2|-0.0
+# facing|south|3|0|-180.0
+# facing|west|4|1|-270.0
+# facing|east|5|3|-90.0
 statue|standing|down|0.625000|0.312500|0.750000|0.375000|0.421875
 statue|standing|down|0.625000|0.312500|0.500000|0.312500|0.421875
 statue|standing|down|0.375000|0.312500|0.500000|0.312500|0.484375

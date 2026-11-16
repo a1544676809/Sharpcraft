@@ -122,11 +122,44 @@ public sealed class CopperGolemStatueGoldenTests
         }
     }
 
+    /// <summary>
+    /// The sample records each direction's ordinal, its two dimensional data value and the yaw the
+    /// reference derives from them. Those numbers are the mapping our renderer has to reproduce, so
+    /// they are checked against it instead of being trusted from a comment.
+    /// </summary>
+    [Theory]
+    [InlineData("down", 0, -1)]
+    [InlineData("up", 1, -1)]
+    [InlineData("north", 2, 2)]
+    [InlineData("south", 3, 0)]
+    [InlineData("west", 4, 1)]
+    [InlineData("east", 5, 3)]
+    public void TheSampleAgreesWithOurDirectionEncoding(string facing, int ordinal, int data2d)
+    {
+        var row = File.ReadLines(SamplePath)
+            .Where(line => line.StartsWith("# facing|" + facing + "|", StringComparison.Ordinal))
+            .Select(line => line.Split('|'))
+            .Single();
+
+        Assert.Equal(ordinal, int.Parse(row[2], CultureInfo.InvariantCulture));
+        Assert.Equal(data2d, int.Parse(row[3], CultureInfo.InvariantCulture));
+        Assert.Equal((byte)ordinal, FacingOf(facing));
+        Assert.Equal(
+            float.Parse(row[4], CultureInfo.InvariantCulture),
+            CopperGolemStatueMesher.FacingDegrees((byte)ordinal),
+            3);
+    }
+
     private static HashSet<(string Pose, string Facing)> ReferenceGroups()
     {
         var groups = new HashSet<(string Pose, string Facing)>();
         foreach (var line in File.ReadLines(SamplePath))
         {
+            if (line.StartsWith("#", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
             var parts = line.Split('|');
             groups.Add((parts[1], parts[2]));
         }
@@ -164,6 +197,11 @@ public sealed class CopperGolemStatueGoldenTests
         foreach (var line in File.ReadLines(SamplePath))
         {
             if (!line.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (line.StartsWith("#", StringComparison.Ordinal))
             {
                 continue;
             }
