@@ -452,15 +452,16 @@ public sealed class ClientWorld
         var localX = BlockCoordinates.SectionRelative(x);
         var localZ = BlockCoordinates.SectionRelative(z);
         var oldTypeId = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(GetBlockState(x, y, z)) is { } oldBlockId
-            ? Sharpcraft.Common.World.VanillaBlockEntityTypes.IdOf(oldBlockId.Path)
-            : -1;
+            && Sharpcraft.Common.World.Blocks.BlockEntityBlockIndex.TryGetType(oldBlockId, out var oldBlockType)
+                ? oldBlockType
+                : -1;
         chunk.SetBlockState(localX, y, localZ, state, airState);
 
         // The reference creates a block entity as soon as the new state carries one and drops it when
         // the state does not, so breaking a chest removes it here as well (issues 22 and 24). Which
         // blocks carry one at all is the generated index, not a hand written list (ADR 0031, issue 96).
         var newTypeId = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(state) is { } blockId
-            && Sharpcraft.Common.World.Blocks.BlockEntityBlockIndex.TryGetType(blockId.Path, out var blockType)
+            && Sharpcraft.Common.World.Blocks.BlockEntityBlockIndex.TryGetType(blockId, out var blockType)
                 ? blockType
                 : -1;
         if (newTypeId >= 0)

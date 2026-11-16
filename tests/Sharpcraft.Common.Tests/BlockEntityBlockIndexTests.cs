@@ -89,4 +89,14 @@ public sealed class BlockEntityBlockIndexTests
                 $"{paths[index - 1]} and {paths[index]} are out of order or duplicated");
         }
     }
+
+    /// <summary>The index describes minecraft blocks only, so a modded path never borrows a record.</summary>
+    [Fact]
+    public void AnIdentifierOutsideTheMinecraftNamespaceDoesNotResolve()
+    {
+        Assert.True(BlockEntityBlockIndex.TryGetType(Sharpcraft.Common.Identifiers.Identifier.Parse("minecraft:chest"), out var vanilla));
+        Assert.False(BlockEntityBlockIndex.TryGetType(Sharpcraft.Common.Identifiers.Identifier.Parse("mymod:chest"), out var modded));
+        Assert.Equal(-1, modded);
+        Assert.True(vanilla >= 0);
+    }
 }

@@ -12,7 +12,7 @@ using Sharpcraft.Common.Reference;
 /// </summary>
 /// <remarks>
 /// Source: <c>ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/ConduitRenderer.java:65-71</c>
-/// (createShellLayer) and the inactive submit branch at lines 140-150.
+/// (createShellLayer) and the inactive submit branch at lines 105-119.
 /// </remarks>
 [ReferenceClass("net.minecraft.client.renderer.blockentity.ConduitRenderer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/ConduitRenderer.java", Kind = ReferenceKind.Adapter, Status = ReferenceStatus.Partial)]
 public static class ConduitModelDefinition
@@ -36,6 +36,7 @@ public static class ConduitModelDefinition
             TextureHeight,
             new VanillaMeshDefinition(root),
             PlayerModelDefinition.DefaultFaceTransforms,
-            TexturePath);
+            TexturePath,
+            modelHeight: 0f);
     }
 }

@@ -30,13 +30,14 @@ public enum CopperGolemPose : byte
 /// (standing), <c>:97-145</c> (running), <c>:146-206</c> (sitting), <c>:207-246</c> (star), and
 /// <c>ref://mc-26.3-analysis/src/net/minecraft/client/model/object/statue/CopperGolemStatueModel.java:13-20</c>
 /// (<c>root.y = 0</c>, <c>root.zRot = π</c>).
-/// <para>
-/// The running/sitting/star layers use a zero root translation in the source. This repo's tree
-/// bakery keeps the same y-up baseline as the standing layer (the source standing root is +24), so
-/// their root-level body/leg Y offsets below are the source value plus 24. Child pivots and every
-/// cube min/size/UV stay exactly at the source value; the statue root pose is then applied once by
-/// <c>CopperGolemStatueMesher</c>.
-/// </para>
+    /// <para>
+    /// Part offsets are the source values verbatim, with no model height baked in: the statue asks
+    /// <see cref="EntityModelDefinition"/> for <c>modelHeight: 0</c>. The source applies
+    /// <c>root.zRot = PI</c> and zeroes the root pivot, which nets out to the y-down to y-up flip the
+    /// bakery already performs, so nothing of it is repeated here. Writing it again renders the statue
+    /// upside down, and the mesh pipeline never reads a root rotation from a definition anyway: it
+    /// takes the root frame from the entity pose.
+    /// </para>
 /// </remarks>
 [ReferenceClass("net.minecraft.client.model.animal.golem.CopperGolemModel", "ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/golem/CopperGolemModel.java", Kind = ReferenceKind.Adapter, Status = ReferenceStatus.Partial)]
 public static class CopperGolemStatueModelDefinition
@@ -44,8 +45,8 @@ public static class CopperGolemStatueModelDefinition
     public const int TextureWidth = 64;
     public const int TextureHeight = 64;
 
-    /// <summary>Standing layer, reusing the existing entity mesh with the statue root-pose switch on.</summary>
-    public static readonly EntityModelDefinition Standing = WithRootPose(CopperGolemModelDefinition.Definition, "copper_golem_statue");
+    /// <summary>Standing layer, built from the source createBodyLayer values with no model height.</summary>
+    public static readonly EntityModelDefinition Standing = Create("copper_golem_statue_standing", BuildStandingMesh());
 
     public static readonly EntityModelDefinition Sitting = Create("copper_golem_statue_sitting", BuildSittingMesh());
     public static readonly EntityModelDefinition Running = Create("copper_golem_statue_running", BuildRunningMesh());
@@ -68,7 +69,8 @@ public static class CopperGolemStatueModelDefinition
             PlayerModelDefinition.DefaultFaceTransforms,
             CopperGolemModelDefinition.Definition.TexturePath,
             emissiveTexturePath: CopperGolemModelDefinition.Definition.EmissiveTexturePath,
-            additionalTexturePaths: CopperGolemModelDefinition.Definition.AdditionalTexturePaths);
+            additionalTexturePaths: CopperGolemModelDefinition.Definition.AdditionalTexturePaths,
+            modelHeight: 0f);
         return WithRootPose(source, name);
     }
 
@@ -86,7 +88,48 @@ public static class CopperGolemStatueModelDefinition
             source.AdditionalTexturePaths,
             source.Compiled,
             source.RenderLayers,
+            // Kept for the compiled-root path even though the statue pose is all zeros; the
+            // mesh pipeline reads the root frame from the entity pose, so this changes nothing.
             applyRootPose: true);
+
+    /// <summary>
+    /// Standing layer. Ref: CopperGolemModel.createBodyLayer lines 53-95, plus the statue pose that
+    /// CopperGolemStatueModel.setupAnim applies to the model itself: <c>root.y = 0</c> and
+    /// <c>root.zRot = PI</c>. That flip is what the shared y-up bakery already performs, so the root
+    /// part below carries no rotation and the renderer adds no pose of its own.
+    /// </summary>
+    private static VanillaMeshDefinition BuildStandingMesh()
+    {
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        var body = root.AddOrReplaceChild(
+            "body",
+            VanillaPartPose.Offset(0f, -5f, 0f),
+            Cube("body", 0, 15, -4f, -6f, -3f, 8f, 6f, 6f));
+        body.AddOrReplaceChild(
+            "head",
+            VanillaPartPose.Offset(0f, -6f, 0f),
+            Cube("head", 0, 0, -4f, -5f, -5f, 8f, 5f, 10f, Grow: 0.015f),
+            Cube("nose", 56, 0, -1f, -2f, -6f, 2f, 3f, 2f),
+            Cube("antenna", 37, 8, -1f, -9f, -1f, 2f, 4f, 2f, Grow: -0.015f),
+            Cube("antenna_tip", 37, 0, -2f, -13f, -2f, 4f, 4f, 4f, Grow: -0.015f));
+        body.AddOrReplaceChild(
+            "right_arm",
+            VanillaPartPose.Offset(-4f, -6f, 0f),
+            Cube("right_arm", 36, 16, -3f, -1f, -2f, 3f, 10f, 4f));
+        body.AddOrReplaceChild(
+            "left_arm",
+            VanillaPartPose.Offset(4f, -6f, 0f),
+            Cube("left_arm", 50, 16, 0f, -1f, -2f, 3f, 10f, 4f));
+        root.AddOrReplaceChild(
+            "right_leg",
+            VanillaPartPose.Offset(0f, -5f, 0f),
+            Cube("right_leg", 0, 27, -4f, 0f, -2f, 4f, 5f, 4f));
+        root.AddOrReplaceChild(
+            "left_leg",
+            VanillaPartPose.Offset(0f, -5f, 0f),
+            Cube("left_leg", 16, 27, 0f, 0f, -2f, 4f, 5f, 4f));
+        return new VanillaMeshDefinition(root);
+    }
 
     /// <summary>
     /// Running layer. Ref: CopperGolemModel.createRunningPoseBodyLayer lines 97-145. Every offset,
@@ -95,7 +138,7 @@ public static class CopperGolemStatueModelDefinition
     private static VanillaMeshDefinition BuildRunningMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        var body = root.AddOrReplaceChild("body", VanillaPartPose.Offset(-1.064f, 19f, 0f));
+        var body = root.AddOrReplaceChild("body", VanillaPartPose.Offset(-1.064f, -5f, 0f));
         body.AddOrReplaceChild(
             "body_r1",
             VanillaPartPose.OffsetAndRotation(1.1f, 0.1f, 0.7f, 0.1204f, -0.0064f, -0.0779f),
@@ -117,12 +160,12 @@ public static class CopperGolemStatueModelDefinition
             "left_arm_r1",
             VanillaPartPose.OffsetAndRotation(0.732f, 0f, 0f, -0.8715f, -0.0535f, -0.0449f),
             Cube("left_arm_r1", 50, 16, 0.032f, -1.1f, -2f, 3f, 10f, 4f));
-        var rightLeg = root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-3.064f, 19f, 0f));
+        var rightLeg = root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-3.064f, -5f, 0f));
         rightLeg.AddOrReplaceChild(
             "right_leg_r1",
             VanillaPartPose.OffsetAndRotation(1.048f, 0f, -0.9f, -0.8727f, 0f, 0f),
             Cube("right_leg_r1", 0, 27, -1.856f, -0.1f, -1.09f, 4f, 5f, 4f));
-        var leftLeg = root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(0.936f, 19f, 0f));
+        var leftLeg = root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(0.936f, -5f, 0f));
         leftLeg.AddOrReplaceChild(
             "left_leg_r1",
             VanillaPartPose.OffsetAndRotation(1f, 0f, 0f, 0.7854f, 0f, 0f),
@@ -138,7 +181,7 @@ public static class CopperGolemStatueModelDefinition
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         var body = root.AddOrReplaceChild(
             "body",
-            VanillaPartPose.Offset(0f, 21f, 2.325f),
+            VanillaPartPose.Offset(0f, -3f, 2.325f),
             Cube("body", 3, 19, -3f, -4f, -4.525f, 6f, 1f, 6f),
             Cube("body_main", 0, 15, -4f, -3f, -3.525f, 8f, 6f, 6f));
         body.AddOrReplaceChild(
@@ -166,12 +209,12 @@ public static class CopperGolemStatueModelDefinition
             "left_arm_r1",
             VanillaPartPose.OffsetAndRotation(0f, -0.0015f, -0.0808f, -1.0472f, 0f, 0f),
             Cube("left_arm_r1", 50, 16, 0.075f, -1.0443f, -1.8997f, 3f, 10f, 4f));
-        var rightLeg = root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-2.1f, 21.9f, -2.075f));
+        var rightLeg = root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-2.1f, -2.1f, -2.075f));
         rightLeg.AddOrReplaceChild(
             "right_leg_r1",
             VanillaPartPose.OffsetAndRotation(0.05f, -1.9f, 1.075f, -1.5708f, 0f, 0f),
             Cube("right_leg_r1", 0, 27, -2f, 0.975f, 0f, 4f, 5f, 4f));
-        var leftLeg = root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(2f, 22f, -2.075f));
+        var leftLeg = root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(2f, -2f, -2.075f));
         leftLeg.AddOrReplaceChild(
             "left_leg_r1",
             VanillaPartPose.OffsetAndRotation(0.05f, -2f, 1.075f, -1.5708f, 0f, 0f),
@@ -187,7 +230,7 @@ public static class CopperGolemStatueModelDefinition
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         var body = root.AddOrReplaceChild(
             "body",
-            VanillaPartPose.Offset(0f, 19f, 0f),
+            VanillaPartPose.Offset(0f, -5f, 0f),
             Cube("body", 0, 15, -4f, -6f, -3f, 8f, 6f, 6f));
         body.AddOrReplaceChild(
             "head",
@@ -207,12 +250,12 @@ public static class CopperGolemStatueModelDefinition
             "left_arm_r1",
             VanillaPartPose.OffsetAndRotation(-1f, 1f, 0f, 0f, 0f, -1.9199f),
             Cube("left_arm_r1", 50, 16, -1.5f, -5f, -2f, 3f, 10f, 4f));
-        var rightLeg = root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-3f, 19f, 0f));
+        var rightLeg = root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-3f, -5f, 0f));
         rightLeg.AddOrReplaceChild(
             "right_leg_r1",
             VanillaPartPose.OffsetAndRotation(0.35f, 2f, 0.01f, 0f, 0f, 0.2618f),
             Cube("right_leg_r1", 0, 27, -2f, -2.5f, -2f, 4f, 5f, 4f));
-        var leftLeg = root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(1f, 19f, 0f));
+        var leftLeg = root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(1f, -5f, 0f));
         leftLeg.AddOrReplaceChild(
             "left_leg_r1",
             VanillaPartPose.OffsetAndRotation(1.65f, 2f, 0f, 0f, 0f, -0.2618f),
