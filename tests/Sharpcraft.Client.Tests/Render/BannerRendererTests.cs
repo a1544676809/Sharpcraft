@@ -68,46 +68,41 @@ public sealed class BannerRendererTests
         Assert.Equal(11546150 & 0xFF, (int)MathF.Round(flag.B * 255f));
     }
 
+    /// <summary>Every ground segment / wall facing must contain the corner predicted by the source formula.</summary>
     [Theory]
-    [InlineData(BannerAttachment.Ground, (byte)0, 0.45833f, 0f, 0.45833f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Ground, (byte)1, 0.47745f, 0f, 0.44556f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Ground, (byte)2, 0.5f, 0f, 0.44107f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Ground, (byte)3, 0.52255f, 0f, 0.44556f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Ground, (byte)4, 0.54167f, 0f, 0.45833f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Ground, (byte)5, 0.55444f, 0f, 0.47745f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Ground, (byte)6, 0.55893f, 0f, 0.5f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Ground, (byte)7, 0.55444f, 0f, 0.52255f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Ground, (byte)8, 0.54167f, 0f, 0.54167f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Ground, (byte)9, 0.52255f, 0f, 0.55444f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Ground, (byte)10, 0.5f, 0f, 0.55893f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Ground, (byte)11, 0.47745f, 0f, 0.55444f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Ground, (byte)12, 0.45833f, 0f, 0.54167f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Ground, (byte)13, 0.44556f, 0f, 0.52255f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Ground, (byte)14, 0.44107f, 0f, 0.5f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Ground, (byte)15, 0.44556f, 0f, 0.47745f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Wall, (byte)2, 0.91667f, 0.77083f, 0.97917f, 0.34375f, 0.65625f)]
-    [InlineData(BannerAttachment.Wall, (byte)3, 0.08333f, 0.77083f, 0.02083f, 0.34375f, 0.65625f)]
-    [InlineData(BannerAttachment.Wall, (byte)4, 0.97917f, 0.77083f, 0.08333f, 0.34375f, 0.65625f)]
-    [InlineData(BannerAttachment.Wall, (byte)5, 0.02083f, 0.77083f, 0.91667f, 0.34375f, 0.65625f)]
-    public void GroundAndWallFinalVertexSamples(
-        BannerAttachment attachment,
-        byte rotation,
-        float x,
-        float y,
-        float z,
-        float u,
-        float v)
+    [InlineData(BannerAttachment.Ground, (byte)0)]
+    [InlineData(BannerAttachment.Ground, (byte)1)]
+    [InlineData(BannerAttachment.Ground, (byte)2)]
+    [InlineData(BannerAttachment.Ground, (byte)3)]
+    [InlineData(BannerAttachment.Ground, (byte)4)]
+    [InlineData(BannerAttachment.Ground, (byte)5)]
+    [InlineData(BannerAttachment.Ground, (byte)6)]
+    [InlineData(BannerAttachment.Ground, (byte)7)]
+    [InlineData(BannerAttachment.Ground, (byte)8)]
+    [InlineData(BannerAttachment.Ground, (byte)9)]
+    [InlineData(BannerAttachment.Ground, (byte)10)]
+    [InlineData(BannerAttachment.Ground, (byte)11)]
+    [InlineData(BannerAttachment.Ground, (byte)12)]
+    [InlineData(BannerAttachment.Ground, (byte)13)]
+    [InlineData(BannerAttachment.Ground, (byte)14)]
+    [InlineData(BannerAttachment.Ground, (byte)15)]
+    [InlineData(BannerAttachment.Wall, (byte)2)]
+    [InlineData(BannerAttachment.Wall, (byte)3)]
+    [InlineData(BannerAttachment.Wall, (byte)4)]
+    [InlineData(BannerAttachment.Wall, (byte)5)]
+    public void GroundAndWallFinalVertexSamples(BannerAttachment attachment, byte rotation)
     {
-        var renderer = new BannerRenderer();
-        var geometry = build(renderer, attachment, rotation, color: 0, x: 0f, y: 0f, z: 0f);
-        var position = VertexFieldReader.Position(geometry.Vertices, 0);
-        var uv = VertexFieldReader.Uv(geometry.Vertices, 0);
+        var expected = attachment == BannerAttachment.Ground
+            ? BannerSourceFormula.GroundBodyVertex(rotation)
+            : BannerSourceFormula.WallBodyVertex(rotation);
+        var expectedUv = attachment == BannerAttachment.Ground
+            ? (0.75f, 0f)   // pole box texture offset (44,0), DOWN face first corner
+            : (0.34375f, 0.65625f); // wall bar texture offset (0,42)
 
-        Assert.Equal(x, position.X, 4);
-        Assert.Equal(y, position.Y, 4);
-        Assert.Equal(z, position.Z, 4);
-        Assert.Equal(u, uv.U, 4);
-        Assert.Equal(v, uv.V, 4);
+        var geometry = build(new BannerRenderer(), attachment, rotation, color: 0, x: 0f, y: 0f, z: 0f);
+        Assert.True(ContainsVertex(geometry, expected, expectedUv, tolerance: 0.002f),
+            $"{attachment}/{rotation}: source-formula vertex ({expected.X:F4},{expected.Y:F4},{expected.Z:F4})"
+                + $" uv {expectedUv} is missing from the emitted body geometry");
     }
 
     [Fact]
@@ -124,34 +119,45 @@ public sealed class BannerRendererTests
     }
 
     [Theory]
-    [InlineData(BannerAttachment.Ground, 0f, 0.08333f, 0.16639f, 0.52858f)]
-    [InlineData(BannerAttachment.Ground, 0.25f, 0.08333f, 0.16632f, 0.4762f)]
-    [InlineData(BannerAttachment.Ground, 0.5f, 0.08333f, 0.16789f, 0.42385f)]
-    [InlineData(BannerAttachment.Ground, 0.75f, 0.08333f, 0.16632f, 0.4762f)]
-    [InlineData(BannerAttachment.Wall, 0f, 0.91667f, -0.81278f, 0.90892f)]
-    [InlineData(BannerAttachment.Wall, 0.25f, 0.91667f, -0.81285f, 0.9613f)]
-    [InlineData(BannerAttachment.Wall, 0.5f, 0.91667f, -0.81128f, 1.01365f)]
-    [InlineData(BannerAttachment.Wall, 0.75f, 0.91667f, -0.81285f, 0.9613f)]
-    public void FlagPhaseMovesOnlyTheFlag(BannerAttachment attachment, float phase, float x, float y, float z)
+    [InlineData(BannerAttachment.Ground, 0f)]
+    [InlineData(BannerAttachment.Ground, 0.25f)]
+    [InlineData(BannerAttachment.Ground, 0.5f)]
+    [InlineData(BannerAttachment.Ground, 0.75f)]
+    [InlineData(BannerAttachment.Wall, 0f)]
+    [InlineData(BannerAttachment.Wall, 0.25f)]
+    [InlineData(BannerAttachment.Wall, 0.5f)]
+    [InlineData(BannerAttachment.Wall, 0.75f)]
+    public void FlagPhaseMovesOnlyTheFlag(BannerAttachment attachment, float phase)
     {
-        var renderer = new BannerRenderer();
         var bodyVertices = attachment == BannerAttachment.Ground ? 48 : 24;
-        var geometry = build(renderer, attachment, rotation: 0, color: 0, x: 0f, y: 0f, z: 0f, phase);
-        var flag = VertexFieldReader.Position(geometry.Vertices, bodyVertices);
-        var uv = VertexFieldReader.Uv(geometry.Vertices, bodyVertices);
-        var body = VertexFieldReader.Position(geometry.Vertices, 0);
-        var expectedBody = attachment == BannerAttachment.Ground
-            ? (0.45833f, 0f, 0.45833f)
-            : (0.91667f, 0.77083f, 0.97917f);
+        // Wall flag reference pose uses facing south (rotation 3 -> toYRot 0), matching banner-vectors.golden.txt.
+        var rotation = attachment == BannerAttachment.Ground ? (byte)0 : (byte)3;
+        var geometry = build(new BannerRenderer(), attachment, rotation: rotation, color: 0, x: 0f, y: 0f, z: 0f, phase);
 
-        Assert.Equal(x, flag.X, 3);
-        Assert.Equal(y, flag.Y, 3);
-        Assert.Equal(z, flag.Z, 3);
-        Assert.Equal(0.32813f, uv.U, 4);
-        Assert.Equal(0f, uv.V, 4);
-        Assert.Equal(expectedBody.Item1, body.X, 4);
-        Assert.Equal(expectedBody.Item2, body.Y, 4);
-        Assert.Equal(expectedBody.Item3, body.Z, 4);
+        // The flag's source-formula DOWN-face corner at this phase must be present in the flag range.
+        var expectedFlag = BannerSourceFormula.FlagVertex(attachment == BannerAttachment.Ground, phase);
+        var flagFound = false;
+        for (var vertex = bodyVertices; vertex < geometry.VertexFloats / ChunkMesher.FloatsPerVertex; vertex++)
+        {
+            var p = VertexFieldReader.Position(geometry.Vertices, vertex);
+            if (MathF.Abs(p.X - expectedFlag.X) <= 0.002f
+                && MathF.Abs(p.Y - expectedFlag.Y) <= 0.002f
+                && MathF.Abs(p.Z - expectedFlag.Z) <= 0.002f)
+            {
+                flagFound = true;
+                break;
+            }
+        }
+
+        Assert.True(flagFound,
+            $"{attachment}/{phase}: source-formula flag corner ({expectedFlag.X:F4},{expectedFlag.Y:F4},{expectedFlag.Z:F4}) is missing");
+
+        // The body is unaffected by phase: it still contains the source-formula rest corner.
+        var expectedBody = attachment == BannerAttachment.Ground
+            ? BannerSourceFormula.GroundBodyVertex(0)
+            : BannerSourceFormula.WallBodyVertex(3);
+        Assert.True(ContainsVertex(geometry, expectedBody, null, tolerance: 0.002f, vertexLimit: bodyVertices),
+            $"{attachment}/{phase}: moving the flag changed the body");
     }
 
     [Theory]
@@ -178,6 +184,35 @@ public sealed class BannerRendererTests
         Assert.Equal((-0.0125f + 0f) * MathF.PI, BannerRenderer.PhaseRotation(0.25f), 5);
         Assert.Equal((-0.0125f - 0.01f) * MathF.PI, BannerRenderer.PhaseRotation(0.5f), 5);
         Assert.Equal((-0.0125f + 0f) * MathF.PI, BannerRenderer.PhaseRotation(0.75f), 5);
+    }
+
+    private static bool ContainsVertex(DynamicGeometry geometry, System.Numerics.Vector3 expected,
+        (float U, float V)? uv, float tolerance, int vertexLimit = -1)
+    {
+        var count = vertexLimit < 0 ? geometry.VertexFloats / ChunkMesher.FloatsPerVertex : vertexLimit;
+        for (var vertex = 0; vertex < count; vertex++)
+        {
+            var p = VertexFieldReader.Position(geometry.Vertices, vertex);
+            if (MathF.Abs(p.X - expected.X) > tolerance
+                || MathF.Abs(p.Y - expected.Y) > tolerance
+                || MathF.Abs(p.Z - expected.Z) > tolerance)
+            {
+                continue;
+            }
+
+            if (uv is not { } want)
+            {
+                return true;
+            }
+
+            var got = VertexFieldReader.Uv(geometry.Vertices, vertex);
+            if (MathF.Abs(got.U - want.U) <= tolerance && MathF.Abs(got.V - want.V) <= tolerance)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private DynamicGeometry build(

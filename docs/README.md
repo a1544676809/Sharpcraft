@@ -103,7 +103,7 @@
 | [`analysis/`](analysis/README.md) | 49 |
 | [`architecture/`](architecture/README.md) | 4 |
 | [`decisions/`](decisions/README.md) | 34 |
-| [`modules/`](modules/README.md) | 31 |
+| [`modules/`](modules/README.md) | 32 |
 | [`specs/`](specs/README.md) | 38 |
 | [`src/`](src/README.md) | 18 |
 | [`tools/`](tools/README.md) | 1 |

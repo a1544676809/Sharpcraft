@@ -32,12 +32,6 @@ public static class BannerModelDefinition
     public const int TextureWidth = 64;
     public const int TextureHeight = 64;
 
-    /// <summary>
-    /// Source <c>BannerFlagModel.setupAnim(0)</c>: <c>(-0.0125 + 0.01 * cos(0)) * π</c>. This is the
-    /// base flag pose; the renderer adds the per-phase delta through <see cref="EntityPose"/>.
-    /// </summary>
-    public const float FlagPhaseZeroRotationX = (-0.0125f + 0.01f) * MathF.PI;
-
     public static readonly EntityModelDefinition StandingBody = CreateBody("banner_standing_body", standing: true);
     public static readonly EntityModelDefinition WallBody = CreateBody("banner_wall_body", standing: false);
     public static readonly EntityModelDefinition StandingFlag = CreateFlag("banner_standing_flag", standing: true);
@@ -63,8 +57,10 @@ public static class BannerModelDefinition
             TextureWidth,
             TextureHeight,
             mesh,
-            PlayerModelDefinition.DefaultFaceTransforms,
-            TexturePath);
+            faceTransforms: null,
+            TexturePath,
+            baselinePx: 0f,
+            rawSourceFrame: true);
 
     /// <summary>
     /// Source <c>BannerModel.createBodyLayer(standing)</c>. Ground adds the pole at (-1,-42,-1) size
@@ -93,21 +89,18 @@ public static class BannerModelDefinition
 
     /// <summary>
     /// Source <c>BannerFlagModel.createFlagLayer(standing)</c>. Flag box is (20,40,1) at UV (0,0);
-    /// its source pose is (0,-44,0) standing or (0,-20.5,10.5) wall, with the phase-zero X rotation
-    /// as the baked base pose.
+    /// its source pose is (0,-44,0) standing or (0,-20.5,10.5) wall. The idle tilt is not baked:
+    /// <c>setupAnim</c> supplies the whole <c>xRot</c> from the phase, applied by the renderer pose.
     /// </summary>
     private static VanillaMeshDefinition BuildFlag(bool standing)
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         root.AddOrReplaceChild(
             "flag",
-            VanillaPartPose.OffsetAndRotation(
+            VanillaPartPose.Offset(
                 0f,
                 standing ? -44f : -20.5f,
-                standing ? 0f : 10.5f,
-                FlagPhaseZeroRotationX,
-                0f,
-                0f),
+                standing ? 0f : 10.5f),
             new VanillaCubeDefinition("flag", 0, 0, -10f, 0f, -2f, 20f, 40f, 1f));
         return new VanillaMeshDefinition(root);
     }

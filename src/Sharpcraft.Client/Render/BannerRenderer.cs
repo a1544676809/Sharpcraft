@@ -92,11 +92,12 @@ public sealed class BannerRenderer : IBlockEntityRenderer
             var bodyIndexCount = body.IndexCount;
             AppendTransformed(body, transform);
 
-            // The baked flag carries the phase-zero pose; the EntityPose adds the delta to the
-            // current source phase. The body never receives this pose.
+            // BannerFlagModel.setupAnim sets the whole flag xRot from the source phase. The raw
+            // model bakes no rotation, so the pose applies that literal source angle; the body never
+            // receives this pose.
             _flagPose.Set("flag", new PoseOffset(
                 Vector3.Zero,
-                new Vector3(BannerModelDefinition.FlagPhaseZeroRotationX - PhaseRotation(entity.BannerPhase), 0f, 0f),
+                new Vector3(PhaseRotation(entity.BannerPhase), 0f, 0f),
                 Vector3.Zero));
             var flag = _mesher.BuildModel(
                 BannerModelDefinition.FlagFor(attachment),
@@ -119,8 +120,10 @@ public sealed class BannerRenderer : IBlockEntityRenderer
     }
 
     /// <summary>
-    /// Source <c>BannerRenderer.modelTransformation</c>: translation (0.5, 0, 0.5), Y rotation
-    /// <c>-degrees</c>, scale (2/3, -2/3, -2/3), followed by the block origin translation.
+    /// Source <c>BannerRenderer.createGroundTransformation</c> / <c>createWallTransformation</c>:
+    /// translation (0.5, 0, 0.5), Y rotation <c>-degrees</c>, scale (2/3, -2/3, -2/3), followed by
+    /// the block origin translation. The model is baked in the raw source y-down frame, so these are
+    /// the literal reference values: no X-mirror, baseline or 24px compensation is folded in.
     /// </summary>
     public static Matrix4x4 ModelTransform(
         BannerAttachment attachment,
@@ -133,13 +136,9 @@ public sealed class BannerRenderer : IBlockEntityRenderer
             ? GroundDegrees(rotation)
             : WallDegrees(rotation);
 
-        // The source MODEL_SCALE is (0.6667, -0.6667, -0.6667) in the reference's y-down model
-        // frame. EntityModelMesher's root bake already applies the global X mirror and the +24px
-        // y-up baseline, so the project-space matrix is scale(-s, +s, -s) with the baseline
-        // translation folded into the y translation: -24 * s / 16 = -1.0 blocks.
-        return Matrix4x4.CreateScale(-ModelScale, ModelScale, -ModelScale)
+        return Matrix4x4.CreateScale(ModelScale, -ModelScale, -ModelScale)
             * Matrix4x4.CreateRotationY(-degrees * (MathF.PI / 180f))
-            * Matrix4x4.CreateTranslation(ModelTranslation, -ModelScale * 1.5f, ModelTranslation)
+            * Matrix4x4.CreateTranslation(ModelTranslation, 0f, ModelTranslation)
             * Matrix4x4.CreateTranslation(blockX, blockY, blockZ);
     }
 

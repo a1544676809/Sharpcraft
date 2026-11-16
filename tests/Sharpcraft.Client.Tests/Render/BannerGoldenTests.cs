@@ -10,8 +10,9 @@ using Sharpcraft.Framework.Rendering;
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>
-/// Banner vertices against the 26.3 reference sample. Body groups are pinned exactly; flag groups are
-/// pinned to a known, quantified defect (issue #111).
+/// Banner vertices against the 26.3 reference sample. Both body and flag groups are pinned exactly;
+/// the former issue #111 flag-tilt defect is fixed by the raw source frame and this test now asserts
+/// strict point-for-point equivalence.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -36,12 +37,6 @@ public sealed class BannerGoldenTests
 {
     /// <summary>Largest disagreement tolerated for a matched position or texture coordinate, in blocks.</summary>
     private const float Tolerance = 0.002f;
-
-    /// <summary>
-    /// Measured per-vertex distance between the reference flag and our inverted flag. Both flag groups
-    /// measure 0.026213; the assertion below locks that magnitude so a change in either direction fails.
-    /// </summary>
-    private const float FlagTiltGap = 0.026213f;
 
     private static readonly string[] BodyGroupNames = ["standing", "wall"];
     private static readonly string[] FlagGroupNames = ["standing_flag", "wall_flag"];
@@ -106,73 +101,59 @@ public sealed class BannerGoldenTests
     }
 
     /// <summary>
-    /// Locks the KNOWN DEFECT of issue #111: the flag idle tilt is inverted by roughly 0.9 degrees.
-    /// This test pins the defect, not correctness. If it fails because the sign was corrected, delete
-    /// this test and close issue #111.
+    /// Flag geometry (standing/wall) must match the reference point for point now that the raw
+    /// source frame applies the source <c>BannerFlagModel.setupAnim</c> X rotation literally.
+    /// This is the strict replacement for the former issue #111 defect-pin assertion: the phase-zero
+    /// idle tilt from the reference sample (<c>part=flag:X:-0.45</c>, i.e. the source radian value)
+    /// is now rendered verbatim, not inverted. Uses the same position-grouped, UV-per-group
+    /// comparison as the body test so a half-float corner rounding cannot measure opposite corners.
     /// </summary>
-    /// <remarks>
-    /// Measured values (name | sample z range | ours z range | mirror sum | max per-vertex distance):
-    /// <list type="bullet">
-    /// <item>standing_flag: [0.541665, 0.596421] | [0.528576, 0.583331] | 1.124996 (= 2*0.5625) | 0.026213</item>
-    /// <item>wall_flag:     [0.104165, 0.158921] | [0.091076, 0.145831] | 0.249996 (= 2*0.125)  | 0.026213</item>
-    /// </list>
-    /// Source truth is part=flag:X:-0.45 (BannerFlagModel.java:34). Our engine renders it as +0.45:
-    /// BakeChild negates RotationX (VanillaMeshBake.cs:249) and the phase pose delta negates it
-    /// again, so the two sign flips do not cancel. Effect limited to X-rotated parts; see issue #111
-    /// and docs/modules/render.md. If this assertion fails because the sign was corrected, delete
-    /// this test and close issue #111.
-    /// </remarks>
     [Theory]
     [MemberData(nameof(FlagGroupRows))]
-    public void TheFlagTiltIsInvertedUntilIssue111IsFixed(string group)
+    public void EveryFlagVertexMatchesTheReference(string group)
     {
-        var expected = ReferencePositions(group);
-        var actual = OurPositions(group);
+        var expected = ReferenceByPosition(group);
+        var actual = OurFlagByPosition(group);
 
-        var expectedMin = expected.Min(p => p.Z);
-        var expectedMax = expected.Max(p => p.Z);
-        var actualMin = actual.Min(p => p.Z);
-        var actualMax = actual.Max(p => p.Z);
+        Assert.Equal(expected.Count, actual.Count);
 
-        // Each group mirrors about its own measured centre. These are two independent per-group
-        // equations, not a shared formula: a change to either the reference or our geometry breaks them.
-        var mirrorSum = group == "standing_flag" ? 1.125f : 0.25f; // 2*0.5625 or 2*0.125
-        Assert.True(
-            MathF.Abs((expectedMin + actualMax) - mirrorSum) <= Tolerance,
-            $"{group}: expectedMin+actualMax={expectedMin + actualMax:F6}, want {mirrorSum:F6}."
-                + " If this fails because the X-rotation sign was corrected, delete this test and close #111.");
-        Assert.True(
-            MathF.Abs((expectedMax + actualMin) - mirrorSum) <= Tolerance,
-            $"{group}: expectedMax+actualMin={expectedMax + actualMin:F6}, want {mirrorSum:F6}."
-                + " If this fails because the X-rotation sign was corrected, delete this test and close #111.");
-
-        // The spans stay equal - the tilt is mirrored, not resized.
-        Assert.True(
-            MathF.Abs((expectedMax - expectedMin) - (actualMax - actualMin)) <= Tolerance,
-            $"{group}: z spans differ - sample {expectedMax - expectedMin:F6}, ours {actualMax - actualMin:F6}."
-                + " If this fails because the X-rotation sign was corrected, delete this test and close #111.");
-
-        // Nearest-vertex distance locks the magnitude. Tolerated on both sides so a correction or a
-        // drift in the reference each turn it red.
-        var maxDistance = 0f;
-        foreach (var expectedPoint in expected)
+        foreach (var (key, expectedUvs) in expected)
         {
-            var nearest = float.MaxValue;
-            foreach (var actualPoint in actual)
+            List<(float U, float V)>? matched = null;
+            foreach (var (otherKey, otherUvs) in actual)
             {
-                var dx = expectedPoint.X - actualPoint.X;
-                var dy = expectedPoint.Y - actualPoint.Y;
-                var dz = expectedPoint.Z - actualPoint.Z;
-                nearest = MathF.Min(nearest, MathF.Sqrt((dx * dx) + (dy * dy) + (dz * dz)));
+                if (MathF.Abs(otherKey.X - key.X) <= Tolerance
+                    && MathF.Abs(otherKey.Y - key.Y) <= Tolerance
+                    && MathF.Abs(otherKey.Z - key.Z) <= Tolerance)
+                {
+                    matched = otherUvs;
+                    break;
+                }
             }
 
-            maxDistance = MathF.Max(maxDistance, nearest);
-        }
+            Assert.True(
+                matched is not null,
+                $"{group}: the sample position ({key.X / 1000f:F3}, {key.Y / 1000f:F3}, {key.Z / 1000f:F3}) is missing");
 
-        Assert.True(
-            MathF.Abs(maxDistance - FlagTiltGap) <= Tolerance,
-            $"{group}: max nearest distance {maxDistance:F6}, want {FlagTiltGap:F6}."
-                + " If this fails because the X-rotation sign was corrected, delete this test and close #111.");
+            var actualUvs = matched!;
+            Assert.True(
+                expectedUvs.Count == actualUvs.Count,
+                $"{group}: position ({key.X}, {key.Y}, {key.Z}) carries"
+                    + $" {actualUvs.Count} vertices but the sample has {expectedUvs.Count}");
+
+            expectedUvs.Sort();
+            actualUvs.Sort();
+            for (var corner = 0; corner < expectedUvs.Count; corner++)
+            {
+                var du = MathF.Abs(expectedUvs[corner].U - actualUvs[corner].U);
+                var dv = MathF.Abs(expectedUvs[corner].V - actualUvs[corner].V);
+                Assert.True(
+                    du <= Tolerance && dv <= Tolerance,
+                    $"{group}: position ({key.X}, {key.Y}, {key.Z}) vertex {corner}"
+                        + $" is u {actualUvs[corner].U:F4} v {actualUvs[corner].V:F4}"
+                        + $" but the sample says u {expectedUvs[corner].U:F4} v {expectedUvs[corner].V:F4}");
+            }
+        }
     }
 
     /// <summary>Every group present in the sample must be asserted by one of the two theories.</summary>
@@ -207,11 +188,6 @@ public sealed class BannerGoldenTests
     private static int BodyVertexCount(string group) =>
         group.StartsWith("standing", StringComparison.Ordinal) ? 48 : 24;
 
-    private static List<(float X, float Y, float Z)> ReferencePositions(string group) =>
-        ReferenceRows(group)
-            .Select(row => (Parse(row[1]), Parse(row[2]), Parse(row[3])))
-            .ToList();
-
     private static Dictionary<(int X, int Y, int Z), List<(float U, float V)>> ReferenceByPosition(string group)
     {
         var result = new Dictionary<(int X, int Y, int Z), List<(float U, float V)>>();
@@ -242,21 +218,27 @@ public sealed class BannerGoldenTests
 
     private static float Parse(string value) => float.Parse(value, CultureInfo.InvariantCulture);
 
-    private static List<(float X, float Y, float Z)> OurPositions(string group)
+    private static Dictionary<(int X, int Y, int Z), List<(float U, float V)>> OurFlagByPosition(string group)
     {
         var geometry = Build(group);
         var body = BodyVertexCount(group);
-        var isFlag = group.EndsWith("_flag", StringComparison.Ordinal);
-        var result = new List<(float X, float Y, float Z)>();
+        var result = new Dictionary<(int X, int Y, int Z), List<(float U, float V)>>();
         for (var vertex = 0; vertex + 4 < geometry.VertexFloats; vertex += ChunkMesher.FloatsPerVertex)
         {
             var index = vertex / ChunkMesher.FloatsPerVertex;
-            if (isFlag ? index < body : index >= body)
+            if (index < body)
             {
                 continue;
             }
 
-            result.Add((geometry.Vertices[vertex], geometry.Vertices[vertex + 1], geometry.Vertices[vertex + 2]));
+            var packed = BitConverter.SingleToUInt32Bits(geometry.Vertices[vertex + 4]);
+            Group(
+                result,
+                geometry.Vertices[vertex],
+                geometry.Vertices[vertex + 1],
+                geometry.Vertices[vertex + 2],
+                (float)BitConverter.UInt16BitsToHalf((ushort)(packed & 0xFFFFu)),
+                (float)BitConverter.UInt16BitsToHalf((ushort)(packed >> 16)));
         }
 
         return result;
