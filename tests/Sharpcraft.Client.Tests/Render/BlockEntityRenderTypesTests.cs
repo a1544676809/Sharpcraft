@@ -17,6 +17,7 @@ public sealed class BlockEntityRenderTypesTests
     [Theory]
     [InlineData(VanillaBlockEntityTypes.Bell, BlockEntityRenderMode.Solid)]
     [InlineData(VanillaBlockEntityTypes.Banner, BlockEntityRenderMode.Solid)]
+    [InlineData(VanillaBlockEntityTypes.Conduit, BlockEntityRenderMode.Solid)]
     [InlineData(VanillaBlockEntityTypes.DecoratedPot, BlockEntityRenderMode.Solid)]
     [InlineData(VanillaBlockEntityTypes.CopperGolemStatue, BlockEntityRenderMode.Solid)]
     [InlineData(VanillaBlockEntityTypes.Chest, BlockEntityRenderMode.NoCull)]

@@ -430,6 +430,8 @@ internal static partial class FrameCommand
                             BannerRotation: BannerRotationOf(world, blockX, record.Y, blockZ),
                             BannerColor: BannerColorOf(world, blockX, record.Y, blockZ),
                             BannerPhase: BannerPhaseOf(world, blockX, record.Y, blockZ, partialTick: 0f),
+                            ConduitRotation: 0f,
+                            ConduitActive: false,
                             Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
                 }
             }
@@ -1060,6 +1062,8 @@ internal static partial class FrameCommand
                         BannerRotation: BannerRotationOf(world, blockX, record.Y, blockZ),
                         BannerColor: BannerColorOf(world, blockX, record.Y, blockZ),
                         BannerPhase: BannerPhaseOf(world, blockX, record.Y, blockZ, partialTick: 0f),
+                        ConduitRotation: 0f,
+                        ConduitActive: false,
                         Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
             }
             }
@@ -1642,6 +1646,8 @@ internal static partial class FrameCommand
                     BannerRotation: BannerRotationOf(world, blockX, record.Y, blockZ),
                     BannerColor: BannerColorOf(world, blockX, record.Y, blockZ),
                     BannerPhase: BannerPhaseOf(world, blockX, record.Y, blockZ, partialTick),
+                    ConduitRotation: 0f,
+                    ConduitActive: false,
                     Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ, partialTick)));
             }
         }

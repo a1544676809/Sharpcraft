@@ -28,6 +28,7 @@ public static class BlockEntityRenderers
         new BrushableRenderer(),
         new SkullRenderer(),
         new BannerRenderer(),
+        new ConduitRenderer(),
         new DecoratedPotBlockEntityRenderer(),
         new CopperGolemStatueBlockEntityRenderer(),
         new VaultRenderer()
