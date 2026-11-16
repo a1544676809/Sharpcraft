@@ -120,12 +120,12 @@ public sealed class BannerRenderer : IBlockEntityRenderer
             : WallDegrees(rotation);
 
         // The source MODEL_SCALE is (0.6667, -0.6667, -0.6667) in the reference's y-down model
-        // frame. EntityModelMesher returns y-up part coordinates, so only the Y sign is converted
-        // back; the source Z sign is kept. That leaves a mirror in Z, and AppendTransformed reverses
-        // winding when the determinant is negative.
-        return Matrix4x4.CreateScale(ModelScale, ModelScale, -ModelScale)
+        // frame. EntityModelMesher's root bake already applies the global X mirror and the +24px
+        // y-up baseline, so the project-space matrix is scale(-s, +s, -s) with the baseline
+        // translation folded into the y translation: -24 * s / 16 = -1.0 blocks.
+        return Matrix4x4.CreateScale(-ModelScale, ModelScale, -ModelScale)
             * Matrix4x4.CreateRotationY(-degrees * (MathF.PI / 180f))
-            * Matrix4x4.CreateTranslation(ModelTranslation, 0f, ModelTranslation)
+            * Matrix4x4.CreateTranslation(ModelTranslation, -ModelScale * 1.5f, ModelTranslation)
             * Matrix4x4.CreateTranslation(blockX, blockY, blockZ);
     }
 
@@ -212,8 +212,8 @@ public sealed class BannerRenderer : IBlockEntityRenderer
             }
         }
 
-        // The source scale's Y sign is converted for y-up; its Z mirror remains, so reverse
-        // winding for the negative determinant.
+        // scale(-s, +s, -s) has positive determinant after the project X mirror/baseline fold,
+        // so winding stays as emitted.
         var mirror = transform.GetDeterminant() < 0f;
         for (var index = 0; index < source.IndexCount; index += 3)
         {

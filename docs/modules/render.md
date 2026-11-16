@@ -510,8 +510,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 `BannerModelDefinition` 声明 `BannerModel.createBodyLayer(standing)` 的 pole/bar 与 `BannerFlagModel.createFlagLayer(standing)` 的 flag；四个模型（ground body/flag、wall body/flag）共用 `entity/banner/banner_base` 64×64 纹理。`BannerRenderer` 复用 `EntityModelMesher.BuildModel`，只做源 `BannerRenderer` 的 ground/wall 模型变换：
 
-- `MODEL_TRANSLATION` `(0.5,0,0.5)`，`MODEL_SCALE` 源为 `(2/3,-2/3,-2/3)`；本项目 mesher 返回 y-up 坐标，因此 Y 符号转为正，Z 保持源负号（产生 Z 镜像，负行列式时反转 winding），x scale 与旋转保持源语义。
-- ground 使用 `RotationSegment.convertToDegrees(rotation)` 再取负；wall 使用 `Direction.toYRot` 再取负。
+- `MODEL_TRANSLATION` 的 block 平移为 `(0.5,0,0.5)`，`MODEL_SCALE` 源为 `(2/3,-2/3,-2/3)`；`EntityModelMesher` 的 root bake 已带 X 镜像与 +24px y-up baseline，因此项目矩阵为 `scale(-s,+s,-s)`，并把 baseline 折入 `translate(0.5,-1.0,0.5)`（`-24*s/16=-1`，s=2/3）。该矩阵行列式为正，winding 不交换；ground 使用 `RotationSegment.convertToDegrees(rotation)` 再取负，wall 使用 `Direction.toYRot` 再取负。
 - 旗帜 phase 固定为 0（`FlagPhaseZeroRotationX`）；`DyeColor.getTextureDiffuseColor()` 的 RGB **只作为 flag 的 tint**，pole/bar body 保持白色（源 `submitModel` 两者 diff=-1，底色 tint 属图案层）。
 - `BlockEntityRenderState.BannerAttachment/BannerRotation/BannerColor` 由 `FrameCommand` 从方块状态读取；`Handles(20)`；banner 使用 solid pipeline。
 - 未实现图案层与 phase 动画，分别由 `SIM-BE-BANNER-PATTERNS` / `SIM-BE-BANNER-PHASE` 跟踪；`ChestAtlas.Textures` 维持 chest-only 22 条，banner 纹理单独加入 block entity sheet。
