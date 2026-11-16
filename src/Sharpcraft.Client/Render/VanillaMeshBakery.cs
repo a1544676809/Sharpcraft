@@ -152,7 +152,8 @@ public static class VanillaMeshBakery
             rotationZ: part.Pose.RotationZ,
             texturePath: cube.TexturePath,
             grow: cube.Grow,
-            kind: cube.Kind);
+            kind: cube.Kind,
+            rawSourceFrame: rawSourceFrame);
     }
 
     private static void Collect(

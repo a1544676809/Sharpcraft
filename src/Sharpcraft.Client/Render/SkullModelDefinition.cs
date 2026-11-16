@@ -66,52 +66,48 @@ public static class SkullModelDefinition
     private static readonly VanillaMeshDefinition DragonMesh = BuildDragonSkullMesh();
 
     private static readonly EntityModelPart[] Parts =
-        [.. VanillaMeshBake.Bake(SkullMesh, TextureWidth, TextureHeight, modelHeight: 0f)];
+        [.. VanillaMeshBake.Bake(SkullMesh, TextureWidth, TextureHeight, modelHeight: 0f, rawSourceFrame: true)];
 
     private static readonly CompiledEntityModel SkullCompiled =
-        VanillaMeshBakery.Build(SkullMesh, TextureWidth, TextureHeight, modelHeight: 0f, texturePath: SkeletonTexture);
+        VanillaMeshBakery.Build(SkullMesh, TextureWidth, TextureHeight, modelHeight: 0f, texturePath: SkeletonTexture, rawSourceFrame: true);
 
     private static readonly EntityModelPart[] PlayerParts =
-        [.. VanillaMeshBake.Bake(PlayerMesh, 64, 64, modelHeight: 0f)];
+        [.. VanillaMeshBake.Bake(PlayerMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true)];
 
     private static readonly CompiledEntityModel PlayerCompiled =
-        VanillaMeshBakery.Build(PlayerMesh, 64, 64, modelHeight: 0f, texturePath: DefaultPlayerSkinTexture);
+        VanillaMeshBakery.Build(PlayerMesh, 64, 64, modelHeight: 0f, texturePath: DefaultPlayerSkinTexture, rawSourceFrame: true);
 
     private static readonly EntityModelPart[] DragonParts =
         [.. VanillaMeshBake.Bake(DragonMesh, 256, 256, modelHeight: 0f)];
 
-    /// <summary>Baked head definition shared by all supported skull types.</summary>
+    /// <summary>
+    /// Baked head definition shared by the four mob skull types, in the raw source y-down frame.
+    /// The renderer's source <c>scale(-1,-1,1)</c> outer pose performs the y-up flip, so no baked
+    /// baseline or renderer-local translation is folded in. ref://mc-26.3-analysis/src/net/minecraft/
+    /// client/model/object/skull/SkullModel.java:19-24 and SkullBlockRenderer.java:164-168.
+    /// </summary>
     public static readonly EntityModelDefinition Definition = new(
         name: "skull",
         textureWidth: TextureWidth,
         textureHeight: TextureHeight,
         parts: Parts,
-        faceTransforms: PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         texturePath: SkeletonTexture,
-        compiled: SkullCompiled)
-    {
-        // VanillaMeshBake converts the reference y-down model to y-up. SkullBlockRenderer's source
-        // outer pose includes the model's scale(-1,-1,1), so shift the baked head by its source Y
-        // origin before that pose to keep the final head above the block origin.
-        // ref://mc-26.3-analysis/src/net/minecraft/client/model/object/skull/SkullModel.java:19-24
-        // ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/SkullBlockRenderer.java:164-168
-        LocalTransform = System.Numerics.Matrix4x4.CreateTranslation(0f, -0.5f, 0f)
-    };
+        compiled: SkullCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
-    /// <summary>Player head definition with the humanoid head + hat overlay.</summary>
+    /// <summary>Player head definition with the humanoid head + hat overlay, in the raw source frame.</summary>
     public static readonly EntityModelDefinition PlayerDefinition = new(
         name: "player_skull",
         textureWidth: 64,
         textureHeight: 64,
         parts: PlayerParts,
-        faceTransforms: PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         texturePath: DefaultPlayerSkinTexture,
-        compiled: PlayerCompiled)
-    {
-        // ref://mc-26.3-analysis/src/net/minecraft/client/model/object/skull/SkullModel.java:26-34
-        // ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/SkullBlockRenderer.java:164-168
-        LocalTransform = System.Numerics.Matrix4x4.CreateTranslation(0f, -0.5f, 0f)
-    };
+        compiled: PlayerCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     /// <summary>Dragon head definition: six head boxes plus the parented jaw.</summary>
     public static readonly EntityModelDefinition DragonDefinition = new(

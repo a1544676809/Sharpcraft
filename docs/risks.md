@@ -31,3 +31,5 @@
 | R-021 | Vault 展示物品不旋转且多 count cluster 未实现（`SIM-BE-VAULT-SPIN` / `SIM-BE-VAULT-COUNT`） | 中 | 动态旋转与 count>1 堆叠视觉与原版不同 | `shared_data.display_item` 的 GROUND 单物品静态显示已实现；spin/count 待状态通道 | 接入 Vault spin/ItemCluster 布局并完成单方块像素对比时 | 开放 |
 | R-022 | Banner 图案层未接入（`SIM-BE-BANNER-PATTERNS`） | 中 | 带图案 banner 缺少图案 | 静态 body/flag、ground/wall transform、phase 动画与底色 tint 已实现；patterns 待数据通道 | 接入 banner patterns 并完成单方块像素对比时 | 开放 |
 | R-023 | Conduit active 分支未接入（`SIM-BE-CONDUIT-ACTIVE`） | 中 | 激活的 conduit 只显示静态外壳，缺少 cage/wind/eye 与旋转/浮动动画；`ConduitRotation` 固定 0 | active/inactive 都绘制静态 shell；active 数据通道未接 | 接入 conduit active 状态、tickCount 与动画后完成单方块像素对比 | 开放 |
+| R-024 | Book/Lectern/Enchant 未切 raw，阻塞于原版基准样本 UV 口径（Issue #119） | 中 | 书模型仍带 legacy face 校准，非 raw 源帧 | 已写 jar 探针 BookVectorProbe，位置一致但 UV 与内联样本分歧；未改生产代码，登记阻塞 | 确认 BookModel 源 UV 字面值与 face 校准表关系、取得原版基准样本后 | 开放 |
+| R-025 | 旧方块实体内联样本含 legacy face 校准伪影（如 Skull vertex1 UV 0.375，jar 真值 0.125） | 中 | 若按旧内联值验收会误判 raw 正确性 | Skull 已按 jar 探针样本修正；Banner #111 同类已修；用严格原版基准样本替代内联值 | 各 raw 族以 jar 探针严格样本验收时 | 处理中 |
