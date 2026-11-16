@@ -463,13 +463,11 @@ public sealed class ClientWorld
         var newTypeId = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(state) is { } blockId
             ? Sharpcraft.Common.World.VanillaBlockEntityTypes.IdOf(blockId.Path)
             : -1;
-        if (newTypeId >= 0 && (Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(newTypeId)
-            || Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(newTypeId)))
+        if (newTypeId >= 0)
         {
             chunk.AddBlockEntity(new Sharpcraft.Common.World.BlockEntityRecord(localX, y, localZ, newTypeId));
         }
-        else if (oldTypeId >= 0 && (Sharpcraft.Common.World.VanillaBlockEntityTypes.IsChestLike(oldTypeId)
-            || Sharpcraft.Common.World.VanillaBlockEntityTypes.IsShulkerBox(oldTypeId)))
+        else if (oldTypeId >= 0)
         {
             // Only a block entity this block actually carried is dropped: a block change next to a
             // furnace or a sign must not remove that block entity (issue 22).
