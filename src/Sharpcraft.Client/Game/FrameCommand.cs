@@ -417,7 +417,7 @@ internal static partial class FrameCommand
                             ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
                             ChestMaterial: BlockEntityMaterialOf(world, blockX, record.Y, blockZ, record.TypeId),
                             HasBook: HasBookOf(world, blockX, record.Y, blockZ),
-                            Items: BrushableItemsOf(record, itemSlots),
+                            Items: VaultItemsOf(record, BrushableItemsOf(record, itemSlots)),
                             Dusted: DustedOf(world, blockX, record.Y, blockZ),
                             HitDirection: BrushableHitDirectionOf(record),
                             ShelfAlignItemsToBottom: shelfAlign,
@@ -1042,7 +1042,7 @@ internal static partial class FrameCommand
                         ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
                         ChestMaterial: BlockEntityMaterialOf(world, blockX, record.Y, blockZ, record.TypeId),
                         HasBook: HasBookOf(world, blockX, record.Y, blockZ),
-                        Items: BrushableItemsOf(record, itemSlots),
+                        Items: VaultItemsOf(record, BrushableItemsOf(record, itemSlots)),
                         Dusted: DustedOf(world, blockX, record.Y, blockZ),
                         HitDirection: BrushableHitDirectionOf(record),
                         ShelfAlignItemsToBottom: shelfAlign,
@@ -1224,6 +1224,22 @@ internal static partial class FrameCommand
 
         return Sharpcraft.Client.World.BlockEntityData.TryReadBrushable(record, registry, out var data) && !data.Item.IsEmpty
             ? new Sharpcraft.Client.World.BlockEntityItemSlots(Slot0: data.Item)
+            : fallback;
+    }
+
+    /// <summary>Reads a vault's single display item into the fixed slot used by the item mesher.</summary>
+    private static Sharpcraft.Client.World.BlockEntityItemSlots VaultItemsOf(
+        Sharpcraft.Common.World.BlockEntityRecord record,
+        Sharpcraft.Client.World.BlockEntityItemSlots fallback)
+    {
+        if (Sharpcraft.Client.Render.EntityModelResolver.Items is not { } registry)
+        {
+            return fallback;
+        }
+
+        return Sharpcraft.Client.World.BlockEntityData.TryReadVaultDisplayItem(record, registry, out var item)
+            && !item.IsEmpty
+            ? new Sharpcraft.Client.World.BlockEntityItemSlots(Slot0: item)
             : fallback;
     }
 
@@ -1501,7 +1517,7 @@ internal static partial class FrameCommand
                     ChestType: ChestTypeOf(world, blockX, record.Y, blockZ),
                     ChestMaterial: BlockEntityMaterialOf(world, blockX, record.Y, blockZ, record.TypeId),
                     HasBook: HasBookOf(world, blockX, record.Y, blockZ),
-                    Items: BrushableItemsOf(record, itemSlots),
+                    Items: VaultItemsOf(record, BrushableItemsOf(record, itemSlots)),
                     Dusted: DustedOf(world, blockX, record.Y, blockZ),
                     HitDirection: BrushableHitDirectionOf(record),
                     ShelfAlignItemsToBottom: shelfAlign,

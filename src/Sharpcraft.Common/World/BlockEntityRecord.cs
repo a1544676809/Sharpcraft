@@ -34,6 +34,7 @@ public static class VanillaBlockEntityTypes
     public const int Shelf = 39;
     public const int BrushableBlock = 40;
     public const int DecoratedPot = 41;
+    public const int Vault = 44;
     public const int CopperGolemStatue = 47;
     public const int PotentSulfur = 48;
 
@@ -113,6 +114,9 @@ public static class VanillaBlockEntityTypes
 
     /// <summary>Brushable block entity type, drawn by the brushable renderer.</summary>
     public static bool IsBrushable(int typeId) => typeId == BrushableBlock;
+
+    /// <summary>Vault block entity type, drawn by the vault renderer.</summary>
+    public static bool IsVault(int typeId) => typeId == Vault;
 
     /// <summary>Skull block entity type, drawn by the skull renderer.</summary>
     public static bool IsSkull(int typeId) => typeId == Skull;

@@ -25,6 +25,7 @@ public sealed class BlockEntityRenderTypesTests
     [InlineData(VanillaBlockEntityTypes.Lectern, BlockEntityRenderMode.NoCull)]
     [InlineData(VanillaBlockEntityTypes.EnchantingTable, BlockEntityRenderMode.NoCull)]
     [InlineData(VanillaBlockEntityTypes.Skull, BlockEntityRenderMode.NoCull)]
+    [InlineData(VanillaBlockEntityTypes.Vault, BlockEntityRenderMode.NoCull)]
     public void RendererDeclaresTheReferenceRenderMode(int typeId, BlockEntityRenderMode expected)
     {
         var renderer = BlockEntityRenderers.Create().First(renderer => renderer.Handles(typeId));

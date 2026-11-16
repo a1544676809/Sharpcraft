@@ -590,6 +590,27 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 <!-- simplification:SIM-BE-BRUSHABLE-FX task:T-47 -->
 
+### SIM-BE-VAULT-SPIN：Vault 展示物品不旋转
+
+- **简化了什么**：`VaultRenderer` 只把 `shared_data.display_item` 画在源位置 `translate(0.5,0.4,0.5)`；`VaultClientData.previousSpin/currentSpin` 的插值旋转固定为 0。
+- **为什么**：spin 来自客户端动画状态，当前 `BlockEntityRenderState` 没有该字段；首切片先验证展示物品的 NBT 读取、`GROUND` 显示变换与 atlas。
+- **对等效性的影响**：静态位置、物品模型和 UV 一致；激活时展示物品不旋转，运动视觉缺失。
+- **状态**：受控偏差，由 #52 后续 Vault 动态切片跟进（Issue #86）。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/VaultRendererTests.cs` 覆盖多组最终顶点/UV、空 item 和 atlas 集成；接入 spin 后补时间序列真值。
+
+<!-- simplification:SIM-BE-VAULT-SPIN task:T-52 -->
+
+### SIM-BE-VAULT-COUNT：Vault 多物品 cluster 未实现
+
+- **简化了什么**：`VaultRenderer` 每个 Vault 只画一个展示物品；源 `ItemClusterRenderState.count` / `seed` 与多个 count 的物品堆叠布局未实现。
+- **为什么**：当前共享 `BlockEntityItemMesher` 只接受单个固定槽位，多物品布局需要 `ItemClusterRenderState` 的计数、随机种子与位置算法。
+- **对等效性的影响**：`count > 1` 时只显示一个物品，堆叠轮廓与源不同；单物品展示一致。
+- **状态**：受控偏差，由 #52 后续 Vault 物品 cluster 切片跟进（Issue #86）。
+- **验收证据**：`VaultRendererTests` 覆盖单物品最终顶点/UV；补 count 真值后更新。
+
+<!-- simplification:SIM-BE-VAULT-COUNT task:T-52 -->
+
+
 
 ### SIM-BE-SKULL-VARIANTS：Skull 头型无剩余变体
 
