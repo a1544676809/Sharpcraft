@@ -48,20 +48,26 @@ public sealed class LivingRawReferenceSampleTests
         var atlas = MakeAtlas(texturePath, width, height);
 
         var checkedVertices = 0;
+        var expectedNonMirrorVertices = 0;
         foreach (var group in rows.GroupBy(r => (r.Part, r.Cube)))
         {
             var (part, cube) = group.Key;
-            if (IsMirrorSourcePart(part))
+            // Mirror exclusion is determined by the REAL baked part's Mirror flag (R-027), never by
+            // name: Creeper left_*_leg and Wither left_head are NOT mirror and must be compared.
+            EntityModelPart[] sourceParts = part == "/ribcage"
+                ? new[] { "ribcage", "rib_1", "rib_2", "rib_3" }.Select(n => definition.Parts.Single(p => p.Name == n)).ToArray()
+                : definition.Parts.Where(p => p.Name == part.TrimStart('/')).ToArray();
+            Assert.NotEmpty(sourceParts);
+            if (sourceParts[0].Mirror)
             {
-                continue; // R-027 mirror blocker
+                continue; // R-027 mirror blocker (actual Mirror flag, not name heuristic)
             }
+            expectedNonMirrorVertices += group.Count();
 
             // The source WitherBoss ribcage is one ModelPart with four cubes; our DSL flattens them to
             // ribcage/rib_1..3. Mesh all four together so the parent frame composes, then compare the
             // per-cube vertex ranges strictly (96 vertices == source cube 0..3, verified).
-            EntityModelPart[] ourParts = part == "/ribcage"
-                ? new[] { "ribcage", "rib_1", "rib_2", "rib_3" }.Select(n => definition.Parts.Single(p => p.Name == n)).ToArray()
-                : definition.Parts.Where(p => p.Name == part.TrimStart('/')).ToArray();
+            EntityModelPart[] ourParts = sourceParts;
             Assert.NotEmpty(ourParts);
             var single = new EntityModelDefinition(definition.Name, width, height, ourParts,
                 texturePath: definition.TexturePath, baselinePx: 0f, rawSourceFrame: true);
@@ -84,6 +90,9 @@ public sealed class LivingRawReferenceSampleTests
                 checkedVertices++;
             }
         }
+        // Full coverage: every non-mirror source vertex must have been strictly compared. No silent
+        // skipping by name; only parts whose real baked Mirror flag is true are excluded (R-027).
+        Assert.Equal(expectedNonMirrorVertices, checkedVertices);
         Assert.True(checkedVertices > 0);
     }
 
@@ -200,11 +209,6 @@ public sealed class LivingRawReferenceSampleTests
         return new EntityModelMesher().BuildInto(new DynamicGeometry(), null, [state], new SpriteRect(0, 0, w, h, 1), w, h,
             skinAtlas: atlas, modelOverride: def);
     }
-
-    private static bool IsMirrorSourcePart(string part) =>
-        part.Contains("_left_", StringComparison.Ordinal) || part.EndsWith("_left", StringComparison.Ordinal)
-        || part is "/left_front_leg" or "/left_hind_leg" or "/left_middle_hind_leg" or "/left_middle_front_leg"
-        or "/left_head" or "/left_arm" or "/left_leg" or "/left_wing" or "/left_ear" or "/left_ear_tip" or "/left_horn";
 
     private static List<Sample> LoadSample(string fileName)
     {
