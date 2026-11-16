@@ -425,6 +425,7 @@ internal static partial class FrameCommand
                             SkullWall: skullWall,
                             SkullFacing: skullFacing,
                             SkullRotation: skullRotation,
+                            Pose: CopperGolemPoseOf(world, blockX, record.Y, blockZ),
                             Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
                 }
             }
@@ -1050,6 +1051,7 @@ internal static partial class FrameCommand
                         SkullWall: skullWall,
                         SkullFacing: skullFacing,
                         SkullRotation: skullRotation,
+                        Pose: CopperGolemPoseOf(world, blockX, record.Y, blockZ),
                         Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
             }
             }
@@ -1411,6 +1413,30 @@ internal static partial class FrameCommand
     }
 
     /// <summary>
+    /// Copper golem statue pose from the block's <c>pose</c> property: standing 0, sitting 1,
+    /// running 2, star 3. Missing or unknown states fall back to standing, matching the block default.
+    /// Ref: <c>ref://mc-26.3-analysis/src/net/minecraft/world/level/block/CopperGolemStatueBlock.java:174-196</c>.
+    /// </summary>
+    private static Sharpcraft.Client.Render.CopperGolemPose CopperGolemPoseOf(ClientWorld world, int x, int y, int z)
+    {
+        if (!Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
+                world.GetBlockState(x, y, z),
+                "pose",
+                out var pose))
+        {
+            return Sharpcraft.Client.Render.CopperGolemPose.Standing;
+        }
+
+        return pose switch
+        {
+            "sitting" => Sharpcraft.Client.Render.CopperGolemPose.Sitting,
+            "running" => Sharpcraft.Client.Render.CopperGolemPose.Running,
+            "star" => Sharpcraft.Client.Render.CopperGolemPose.Star,
+            _ => Sharpcraft.Client.Render.CopperGolemPose.Standing
+        };
+    }
+
+    /// <summary>
     /// Weathering stage of a copper golem statue block: unaffected 0, exposed 1, weathered 2,
     /// oxidized 3. Waxed variants keep the appearance of the unwaxed stage, as in the reference
     /// <c>CopperGolemOxidationLevels</c> mapping.
@@ -1525,6 +1551,7 @@ internal static partial class FrameCommand
                     SkullWall: skullWall,
                     SkullFacing: skullFacing,
                     SkullRotation: skullRotation,
+                    Pose: CopperGolemPoseOf(world, blockX, record.Y, blockZ),
                     Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ, partialTick)));
             }
         }

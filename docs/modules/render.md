@@ -498,6 +498,14 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - 测试：`BlockEntityRenderTypesTests` 验证注册表声明、solid/no-cull 索引范围、混合批次索引守恒与顶点重基；真实 Bell/Pot/CopperGolem 几何的 `SolidIndexCount` 大于零，Chest 为零。
 - Z-offset / special pass 不在本切片；Skull 的 `entityCutoutZOffset` 仍由 `SIM-BE-SKULL-ZOFFSET` 跟踪，属于 Issue #45 剩余部分。
 
+### 6.5 CopperGolemStatue 四种 Pose（Issue #66）
+
+`CopperGolemStatueModelDefinition` 提供四个模型层，按 `CopperGolemStatueBlock.POSE` ordinal 选择：standing（复用现有 `CopperGolemModelDefinition.Definition`）、sitting、running、star。三个新模型层逐项取自 `CopperGolemModel.createSittingPoseBodyLayer` / `createRunningPoseBodyLayer` / `createStarPoseBodyLayer` 的 pivot、rotation、cube UV 与 grow；四个定义都开启 `ApplyRootPose`，由 `CopperGolemStatueMesher` 应用与 `CopperGolemStatueModel.setupAnim` 对应的 `root.y=0`、`root.zRot=π`。
+
+- `BlockEntityRenderState.Pose` 由 `FrameCommand` 从方块状态 `pose` 读取；缺失/未知回退 standing。
+- Mesher 使用 4 pose × 4 oxidation 的固定数组分组，不按帧分配动态字典；`Handles(47)` 不变。
+- 测试：`CopperGolemStatueMesherTests` 覆盖 4 Pose × 2 氧化 × facing 的最终顶点/UV、每 Pose 顶点/索引、无 pose fallback 与既有站立回归。
+
 ## 已知刻意的简化
 
 ### SIM-BE-BELL-NO-SHAKE：钟只渲染静态外观
@@ -529,16 +537,6 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收证据**：`tests/Sharpcraft.Client.Tests/Render/DecoratedPotMesherGoldenTests.cs` 覆盖静态几何与朝向；接入 wobble 后需补 `wobbleProgress` / `wobbleStyle` 真值向量与单方块像素对比。
 
 <!-- simplification:SIM-BE-POT-NO-WOBBLE task:T-47 -->
-
-### SIM-BE-COPPER-GOLEM-POSES：铜傀儡雕像只渲染站立姿态
-
-- **简化了什么**：`CopperGolemStatueMesher` 只使用 `CopperGolemModelDefinition.Definition`（`ModelLayers.COPPER_GOLEM`）的站立模型，并应用 `CopperGolemStatueModel.setupAnim` 的 root pose（`root.y = 0`、`root.zRot = π`）；原版 `CopperGolemStatueBlockRenderer` 还根据 `POSE` 选择 `COPPER_GOLEM_SITTING` / `COPPER_GOLEM_RUNNING` / `COPPER_GOLEM_STAR` 三个独立模型层。SITTING / RUNNING / STAR 目前都按站立模型显示。
-- **为什么**：首切片先落地方块状态 facing、四档氧化纹理和通用 `EntityModelMesher.BuildModel` 路径；另外三个姿态的模型层与部件 pose 需要独立真值，后续任务跟进。
-- **对等效性的影响**：站立姿态与四档氧化纹理的静态外观按原版模型真值实现；非站立姿态的轮廓和部件 pose 与原版不同（会显示站立模型）。
-- **状态**：受控偏差，计划由 T-47（#47 批次 1）后续姿态切片跟进（Issue #60）。
-- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/CopperGolemStatueMesherTests.cs` 覆盖站立模型、四档氧化纹理、facing 与注册表；补齐姿态后需按每个 `Pose` 补顶点/UV 真值与单方块像素对比。
-
-<!-- simplification:SIM-BE-COPPER-GOLEM-POSES task:T-47 -->
 
 ### SIM-BE-LECTERN-STATE：讲台书页状态固定
 
