@@ -51,25 +51,32 @@ public sealed class LivingRawReferenceSampleTests
         foreach (var group in rows.GroupBy(r => (r.Part, r.Cube)))
         {
             var (part, cube) = group.Key;
-            if (IsMirrorSourcePart(part) || (part == "/ribcage" && cube > 0))
+            if (IsMirrorSourcePart(part))
             {
-                // R-027 mirror blocker; ribcage multi-cube flattening is covered by the full-model
-                // world test (RawModelFinalWorldMatchesLegacyTwin) which meshes every part incl. ribs.
-                continue;
+                continue; // R-027 mirror blocker
             }
 
-            EntityModelPart[] ourParts = [.. definition.Parts.Where(p => p.Name == part.TrimStart('/'))];
+            // The source WitherBoss ribcage is one ModelPart with four cubes; our DSL flattens them to
+            // ribcage/rib_1..3. Mesh all four together so the parent frame composes, then compare the
+            // per-cube vertex ranges strictly (96 vertices == source cube 0..3, verified).
+            EntityModelPart[] ourParts = part == "/ribcage"
+                ? new[] { "ribcage", "rib_1", "rib_2", "rib_3" }.Select(n => definition.Parts.Single(p => p.Name == n)).ToArray()
+                : definition.Parts.Where(p => p.Name == part.TrimStart('/')).ToArray();
             Assert.NotEmpty(ourParts);
             var single = new EntityModelDefinition(definition.Name, width, height, ourParts,
                 texturePath: definition.TexturePath, baselinePx: 0f, rawSourceFrame: true);
             var geometry = BuildModelSpace(single, MakeLivingState(180f), width, height, atlas);
             var source = group.OrderBy(r => r.Polygon).ThenBy(r => r.Vertex).ToArray();
-            Assert.Equal(source.Length, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
+            // For the flattened ribcage, our geometry emits 4 cubes (96 verts) in DSL order; each source
+            // cube group maps to its 24-vertex range (cube 0 -> ribcage, cube 1..3 -> rib_1..3).
+            var vertexOffset = part == "/ribcage" ? cube * 24 : 0;
+            Assert.Equal(24, source.Length);
+            Assert.True(geometry.VertexFloats / ChunkMesher.FloatsPerVertex >= vertexOffset + 24);
             for (var i = 0; i < source.Length; i++)
             {
                 var s = source[i];
-                var p = VertexFieldReader.Position(geometry.Vertices, i);
-                var uv = VertexFieldReader.Uv(geometry.Vertices, i);
+                var p = VertexFieldReader.Position(geometry.Vertices, vertexOffset + i);
+                var uv = VertexFieldReader.Uv(geometry.Vertices, vertexOffset + i);
                 Assert.True(MathF.Abs(s.X - p.X) < 0.001f && MathF.Abs(s.Y - p.Y) < 0.001f && MathF.Abs(s.Z - p.Z) < 0.001f,
                     $"part={part} cube={cube} poly={s.Polygon} v={s.Vertex}: src=({s.X},{s.Y},{s.Z}) our=({p.X},{p.Y},{p.Z})");
                 Assert.True(MathF.Abs(s.U - uv.U) < 0.0001f && MathF.Abs(s.V - uv.V) < 0.0001f,
@@ -99,16 +106,47 @@ public sealed class LivingRawReferenceSampleTests
     public void RawModelFinalWorldMatchesLegacyTwin(EntityModelDefinition rawDefinition, EntityModelDefinition legacyTwin, int width, int height, string texturePath, EntityRenderState state)
     {
         var atlas = MakeAtlas(texturePath, width, height);
-        var rawWorld = BuildLivingWorld(rawDefinition, state, width, height, atlas);
-        var legacyWorld = BuildLivingWorld(legacyTwin, state, width, height, atlas);
+        // Full-model final world comparison through the real living path. Raw and legacy emit faces in
+        // different order (raw = source face order), so per-index equality is not expected; the strict
+        // relation is a multiplicity-preserving bijection of world POSITION tuples. UVs are not compared
+        // here because legacy carries a documented face-UV calibration while raw uses source UVs (which
+        // are verified strictly against the jar probe in RawBakeMatchesSourceVertices).
+        AssertFullModelWorldPositions(rawDefinition, legacyTwin, state, width, height, atlas);
+    }
 
-        Assert.Equal(legacyWorld.Length, rawWorld.Length);
-        // Same final world-coordinate set, strict at 1e-3. Order differs (raw uses source face order),
-        // so compare sorted position tuples. This is a position multiset equality, not a source oracle;
-        // source positions/UVs are verified strictly per-key in RawBakeMatchesSourceVertices.
-        var a = rawWorld.Select(p => (MathF.Round(p.X, 3), MathF.Round(p.Y, 3), MathF.Round(p.Z, 3))).OrderBy(p => p).ToArray();
-        var b = legacyWorld.Select(p => (MathF.Round(p.X, 3), MathF.Round(p.Y, 3), MathF.Round(p.Z, 3))).OrderBy(p => p).ToArray();
-        Assert.Equal(a, b);
+    private static void AssertFullModelWorldPositions(EntityModelDefinition raw, EntityModelDefinition legacy, EntityRenderState state,
+        int width, int height, ItemAtlas atlas)
+    {
+        // Full-model strict world POSITION comparison through the real living path. Raw and legacy
+        // emit faces/parts in different order, and rotated/mirrored parts can land in each other's
+        // slots (R-027 mirror convention), so the strict relation is a multiplicity-preserving
+        // bijection of ALL world position tuples - a sorted LIST at 1e-4, not a set and not bounds.
+        // This detects any dropped/duplicated/moved vertex while absorbing only 1-ULP float noise.
+        // Per-vertex UV source equivalence is proven separately, strictly per part/cube/polygon/vertex,
+        // in RawBakeMatchesSourceVertices against the jar probe (legacy UV is a documented deviation).
+        var rawGeo = BuildLivingWorld(raw, state, width, height, atlas);
+        var legacyGeo = BuildLivingWorld(legacy, state, width, height, atlas);
+        Assert.Equal(legacyGeo.VertexFloats / ChunkMesher.FloatsPerVertex,
+                     rawGeo.VertexFloats / ChunkMesher.FloatsPerVertex);
+        Assert.Equal(WorldPositions(legacyGeo), WorldPositions(rawGeo));
+    }
+
+    /// <summary>
+    /// World positions for every emitted vertex as a sorted list keyed at 1e-4 (4 decimals). Sorting a
+    /// LIST (not a set) preserves multiplicity, so a duplicated/dropped/reordered vertex still fails;
+    /// the 1e-4 key only absorbs the 1-ULP float difference between the two mathematically-equal bakes.
+    /// </summary>
+    private static (int, int, int)[] WorldPositions(DynamicGeometry geometry)
+    {
+        var count = geometry.VertexFloats / ChunkMesher.FloatsPerVertex;
+        var result = new (int, int, int)[count];
+        for (var i = 0; i < count; i++)
+        {
+            var p = VertexFieldReader.Position(geometry.Vertices, i);
+            result[i] = ((int)MathF.Round(p.X * 10000f), (int)MathF.Round(p.Y * 10000f), (int)MathF.Round(p.Z * 10000f));
+        }
+        Array.Sort(result);
+        return result;
     }
 
     [Theory]
@@ -128,12 +166,7 @@ public sealed class LivingRawReferenceSampleTests
         var legacy = LegacyEntityTwinFactory.Spider(0.7f, "entity/spider/cave_spider");
         var state = new EntityRenderState(1, CaveSpiderModelDefinition.CaveSpiderEntityTypeId, 0f, 0f, 0f, yaw, 0f);
         var atlas = MakeAtlas("entity/spider/cave_spider", 64, 32);
-        var rawWorld = BuildLivingWorld(raw, state, 64, 32, atlas);
-        var legacyWorld = BuildLivingWorld(legacy, state, 64, 32, atlas);
-        Assert.Equal(legacyWorld.Length, rawWorld.Length);
-        var a = rawWorld.Select(p => (MathF.Round(p.X, 3), MathF.Round(p.Y, 3), MathF.Round(p.Z, 3))).OrderBy(p => p).ToArray();
-        var b = legacyWorld.Select(p => (MathF.Round(p.X, 3), MathF.Round(p.Y, 3), MathF.Round(p.Z, 3))).OrderBy(p => p).ToArray();
-        Assert.Equal(a, b);
+        AssertFullModelWorldPositions(raw, legacy, state, 64, 32, atlas);
     }
 
     /// <summary>
@@ -160,20 +193,12 @@ public sealed class LivingRawReferenceSampleTests
     private static DynamicGeometry BuildModelSpace(EntityModelDefinition def, EntityRenderState state, int w, int h, ItemAtlas atlas) =>
         new EntityModelMesher().BuildModel(def, state, atlas.Get(def.TexturePath)!, w, h, modelScale: 16f);
 
-    private static (float X, float Y, float Z)[] BuildLivingWorld(EntityModelDefinition def, EntityRenderState state, int w, int h, ItemAtlas atlas)
+    private static DynamicGeometry BuildLivingWorld(EntityModelDefinition def, EntityRenderState state, int w, int h, ItemAtlas atlas)
     {
         // The internal BuildInto seam exposes the exact living-entity geometry path with a model override
         // and no block transform factory, so EntityModelTransform.ForRawSourceFrame is exercised on real parts.
-        var target = new DynamicGeometry();
-        var geometry = new EntityModelMesher().BuildInto(target, null, [state], new SpriteRect(0, 0, w, h, 1), w, h,
+        return new EntityModelMesher().BuildInto(new DynamicGeometry(), null, [state], new SpriteRect(0, 0, w, h, 1), w, h,
             skinAtlas: atlas, modelOverride: def);
-        var result = new (float, float, float)[geometry.VertexFloats / ChunkMesher.FloatsPerVertex];
-        for (var i = 0; i < result.Length; i++)
-        {
-            var p = VertexFieldReader.Position(geometry.Vertices, i);
-            result[i] = (p.X, p.Y, p.Z);
-        }
-        return result;
     }
 
     private static bool IsMirrorSourcePart(string part) =>
