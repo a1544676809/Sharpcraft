@@ -1187,7 +1187,7 @@ internal static partial class FrameCommand
     {
         if (!Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
                 world.GetBlockState(x, y, z),
-                "facing",
+                Sharpcraft.Common.Registries.BlockStatePropertyNames.Facing,
                 out var facing))
         {
             return fallback;
@@ -1275,7 +1275,7 @@ internal static partial class FrameCommand
     {
         if (!Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
                 world.GetBlockState(x, y, z),
-                "dusted",
+                Sharpcraft.Common.Registries.BlockStatePropertyNames.Dusted,
                 out var dusted)
             || !byte.TryParse(dusted, out var value))
         {
@@ -1313,7 +1313,7 @@ internal static partial class FrameCommand
             rotation = 0;
             if (Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
                     world.GetBlockState(x, y, z),
-                    "rotation",
+                    Sharpcraft.Common.Registries.BlockStatePropertyNames.Rotation,
                     out var rotationText))
             {
                 byte.TryParse(rotationText, out rotation);
@@ -1331,7 +1331,7 @@ internal static partial class FrameCommand
     {
         return Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
             world.GetBlockState(x, y, z),
-            "has_book",
+            Sharpcraft.Common.Registries.BlockStatePropertyNames.HasBook,
             out var hasBook)
             && hasBook == "true";
     }
@@ -1343,7 +1343,7 @@ internal static partial class FrameCommand
     private static byte FacingOf(ClientWorld world, int x, int y, int z)    {
         if (!Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
                 world.GetBlockState(x, y, z),
-                "facing",
+                Sharpcraft.Common.Registries.BlockStatePropertyNames.Facing,
                 out var facing))
         {
             return 5;
@@ -1367,7 +1367,7 @@ internal static partial class FrameCommand
     {
         if (!Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
                 world.GetBlockState(x, y, z),
-                "type",
+                Sharpcraft.Common.Registries.BlockStatePropertyNames.Type,
                 out var type))
         {
             return 0;
@@ -1433,7 +1433,7 @@ internal static partial class FrameCommand
     {
         if (!Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
                 world.GetBlockState(x, y, z),
-                "pose",
+                Sharpcraft.Common.Registries.BlockStatePropertyNames.CopperGolemPose,
                 out var pose))
         {
             return Sharpcraft.Client.Render.CopperGolemPose.Standing;
