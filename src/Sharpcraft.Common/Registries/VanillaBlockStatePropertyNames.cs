@@ -10,6 +10,7 @@
 namespace Sharpcraft.Common.Registries;
 
 /// <summary>Every block state property name the reference declares.</summary>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.block.state.properties.BlockStateProperties", "ref://mc-26.3-analysis/src/net/minecraft/world/level/block/state/properties/BlockStateProperties.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Block state property names; a mismatch makes lookups miss silently")]
 public static class VanillaBlockStatePropertyNames
 {
     /// <summary>How many names the reference declares.</summary>

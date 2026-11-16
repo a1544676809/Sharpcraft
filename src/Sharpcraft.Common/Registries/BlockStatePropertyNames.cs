@@ -12,6 +12,7 @@ namespace Sharpcraft.Common.Registries;
 /// pose as standing for exactly that reason, so the names live here once and a test checks them
 /// against <see cref="VanillaBlockStatePropertyNames"/>.
 /// </remarks>
+[Sharpcraft.Common.Reference.ReferenceClass("net.minecraft.world.level.block.state.properties.BlockStateProperties", "ref://mc-26.3-analysis/src/net/minecraft/world/level/block/state/properties/BlockStateProperties.java", Kind = Sharpcraft.Common.Reference.ReferenceKind.Mirror, Status = Sharpcraft.Common.Reference.ReferenceStatus.Partial, Note = "Block state property names; a mismatch makes lookups miss silently")]
 public static class BlockStatePropertyNames
 {
     /// <summary>Horizontal facing of a block that points somewhere.</summary>
