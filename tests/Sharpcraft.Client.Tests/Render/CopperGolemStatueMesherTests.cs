@@ -195,6 +195,80 @@ public sealed class CopperGolemStatueMesherTests
         Assert.Equal(before, GC.GetAllocatedBytesForCurrentThread());
     }
 
+    [Theory]
+    [InlineData(CopperGolemPose.Standing, 216, 324)]
+    [InlineData(CopperGolemPose.Sitting, 264, 396)]
+    [InlineData(CopperGolemPose.Running, 216, 324)]
+    [InlineData(CopperGolemPose.Star, 216, 324)]
+    public void EachPoseHasTheSourceCubeCount(CopperGolemPose pose, int vertices, int indices)
+    {
+        var mesher = new CopperGolemStatueMesher();
+        var geometry = mesher.Build(
+            [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.CopperGolemStatue, Facing: 2, ChestMaterial: 0, Pose: pose)],
+            Sprites());
+
+        Assert.Equal(1, mesher.LastEntityCount);
+        Assert.Equal(vertices, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
+        Assert.Equal(indices, geometry.IndexCount);
+    }
+
+    [Theory]
+    [InlineData(CopperGolemPose.Standing, (byte)2, 0, 0.25f, 1.1875f, 0.6875f)]
+    [InlineData(CopperGolemPose.Standing, (byte)2, 1, 0.25f, 1.1875f, 0.6875f)]
+    [InlineData(CopperGolemPose.Standing, (byte)3, 0, 0.75f, 1.1875f, 0.3125f)]
+    [InlineData(CopperGolemPose.Standing, (byte)3, 1, 0.75f, 1.1875f, 0.3125f)]
+    [InlineData(CopperGolemPose.Sitting, (byte)2, 0, 0.3125f, 1.125f, 0.7375f)]
+    [InlineData(CopperGolemPose.Sitting, (byte)2, 1, 0.3125f, 1.125f, 0.7375f)]
+    [InlineData(CopperGolemPose.Sitting, (byte)3, 0, 0.6875f, 1.125f, 0.2625f)]
+    [InlineData(CopperGolemPose.Sitting, (byte)3, 1, 0.6875f, 1.125f, 0.2625f)]
+    [InlineData(CopperGolemPose.Running, (byte)2, 0, 0.24876f, 1.18749f, 0.69639f)]
+    [InlineData(CopperGolemPose.Running, (byte)2, 1, 0.24876f, 1.18749f, 0.69639f)]
+    [InlineData(CopperGolemPose.Running, (byte)3, 0, 0.75124f, 1.18749f, 0.30361f)]
+    [InlineData(CopperGolemPose.Running, (byte)3, 1, 0.75124f, 1.18749f, 0.30361f)]
+    [InlineData(CopperGolemPose.Star, (byte)2, 0, 0.25f, 1.1875f, 0.6875f)]
+    [InlineData(CopperGolemPose.Star, (byte)2, 1, 0.25f, 1.1875f, 0.6875f)]
+    [InlineData(CopperGolemPose.Star, (byte)3, 0, 0.75f, 1.1875f, 0.3125f)]
+    [InlineData(CopperGolemPose.Star, (byte)3, 1, 0.75f, 1.1875f, 0.3125f)]
+    public void EachPoseSamplesFacingAndOxidation(
+        CopperGolemPose pose,
+        byte facing,
+        int oxidation,
+        float x,
+        float y,
+        float z)
+    {
+        var mesher = new CopperGolemStatueMesher();
+        var geometry = mesher.Build(
+            [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.CopperGolemStatue, Facing: facing, ChestMaterial: (byte)oxidation, Pose: pose)],
+            Sprites());
+
+        var position = VertexFieldReader.Position(geometry.Vertices, 0);
+        Assert.Equal(x, position.X, 4);
+        Assert.Equal(y, position.Y, 4);
+        Assert.Equal(z, position.Z, 4);
+        var (u, v) = pose == CopperGolemPose.Sitting ? (15f / 64f, 19f / 64f) : (14f / 64f, 15f / 64f);
+        var uv = VertexFieldReader.Uv(geometry.Vertices, 0);
+        Assert.Equal(u, uv.U, 4);
+        Assert.Equal(v, uv.V, 4);
+        Assert.Equal(oxidation + 1, VertexFieldReader.SpriteId(geometry.Vertices, 0));
+    }
+
+    [Fact]
+    public void InvalidPoseFallsBackToStanding()
+    {
+        var mesher = new CopperGolemStatueMesher();
+        var fallback = mesher.Build(
+            [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.CopperGolemStatue, Facing: 2, Pose: (CopperGolemPose)99)],
+            Sprites());
+        var standing = mesher.Build(
+            [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.CopperGolemStatue, Facing: 2, Pose: CopperGolemPose.Standing)],
+            Sprites());
+
+        Assert.Equal(standing.VertexFloats, fallback.VertexFloats);
+        Assert.Equal(standing.IndexCount, fallback.IndexCount);
+        Assert.Equal(VertexFieldReader.Position(standing.Vertices, 0), VertexFieldReader.Position(fallback.Vertices, 0));
+    }
+
     private static (Vector3 Min, Vector3 Max) Bounds(DynamicGeometry geometry)
     {
         var min = new Vector3(float.MaxValue);

@@ -12,23 +12,26 @@ namespace Sharpcraft.Client.Render;
 
 /// <summary>
 /// Builds copper golem statue geometry through the generic <see cref="EntityModelMesher.BuildModel"/>
-/// block entity path. The standing model is used for every pose in this slice; the reference selects
-/// separate model layers for sitting, running and star poses.
+/// block entity path. One model definition is selected per reference <c>CopperGolemStatueBlock.Pose</c>;
+/// all four share the statue root pose and the four oxidation sprites.
 /// </summary>
 /// <remarks>
 /// Source: <c>ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/CopperGolemStatueBlockRenderer.java</c>
 /// (<c>createModelTransformation</c>, <c>submit</c>), <c>CopperGolemStatueModel.setupAnim</c>
-/// (<c>root.y = 0</c>, <c>root.zRot = π</c>) and the standing <c>CopperGolemModel</c> layer in
-/// <c>ref://mc-26.3-analysis/src/net/minecraft/client/model/object/statue/CopperGolemStatueModel.java</c>.
-/// The model is <see cref="CopperGolemModelDefinition.Definition"/> with a 64 by 64 texture and the
-/// statue root pose applied through <see cref="EntityModelDefinition.ApplyRootPose"/>. Facing uses
-/// the reference Direction ordinal encoding (north 2, south 3, west 4, east 5); the model translation
-/// places its origin at the block centre, <c>(0.5, 0, 0.5)</c>, before the Y rotation.
+/// (<c>root.y = 0</c>, <c>root.zRot = π</c>) and the four <c>CopperGolemModel</c> layers in
+/// <c>ref://mc-26.3-analysis/src/net/minecraft/client/model/animal/golem/CopperGolemModel.java</c>.
+/// Facing uses the reference Direction ordinal encoding (north 2, south 3, west 4, east 5); the
+/// model translation places its origin at the block centre, <c>(0.5, 0, 0.5)</c>, before the Y rotation.
 /// </remarks>
-[ReferenceClass("net.minecraft.client.renderer.blockentity.CopperGolemStatueBlockRenderer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/CopperGolemStatueBlockRenderer.java", Status = ReferenceStatus.Partial, Note = "Standing model only; the other three pose layers are not implemented.")]
-[Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-COPPER-GOLEM-POSES", "T-47", Note = "Only the standing CopperGolem model is used; SITTING/RUNNING/STAR are rendered with the standing model until their model layers are ported.")]
+[ReferenceClass("net.minecraft.client.renderer.blockentity.CopperGolemStatueBlockRenderer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/CopperGolemStatueBlockRenderer.java", Status = ReferenceStatus.Partial, Note = "All four pose layers and four oxidation sprites; breaking overlay not wired.")]
 public sealed class CopperGolemStatueMesher
 {
+    /// <summary>Number of reference statue poses.</summary>
+    public const int PoseCount = 4;
+
+    /// <summary>Number of oxidation stages.</summary>
+    public const int OxidationCount = 4;
+
     /// <summary>Model texture width, in pixels.</summary>
     public const int TextureWidth = 64;
 
@@ -43,15 +46,23 @@ public sealed class CopperGolemStatueMesher
 
     private readonly EntityModelMesher _mesher = new();
     private readonly DynamicGeometry _geometry = new();
-    private readonly List<EntityRenderState>[] _states = [new(), new(), new(), new()];
+    private readonly List<EntityRenderState>[] _states = new List<EntityRenderState>[PoseCount * OxidationCount];
 
     /// <summary>
-    /// CopperGolemStatueModel wraps the CopperGolem layer with a root pose: <c>root.y = 0</c> and
-    /// <c>root.zRot = π</c>. The project definition already stores the y-up part coordinates, so the
+    /// CopperGolemStatueModel wraps every CopperGolem layer with a root pose: <c>root.y = 0</c> and
+    /// <c>root.zRot = π</c>. The project definition already stores the y-up baked coordinates, so the
     /// root pose is represented as an <see cref="EntityPose"/> row for the compiled root group.
     /// </summary>
-    private static readonly EntityModelDefinition StatueModel = CreateStatueModel();
     private static readonly EntityPose StatuePose = CreateStatuePose();
+
+    /// <summary>Creates the fixed pose/oxidation state buckets.</summary>
+    public CopperGolemStatueMesher()
+    {
+        for (var slot = 0; slot < _states.Length; slot++)
+        {
+            _states[slot] = [];
+        }
+    }
 
     /// <summary>Entities drawn by the last call.</summary>
     public int LastEntityCount { get; private set; }
@@ -75,9 +86,9 @@ public sealed class CopperGolemStatueMesher
     {
         _geometry.Clear();
         LastEntityCount = 0;
-        for (var stage = 0; stage < _states.Length; stage++)
+        for (var slot = 0; slot < _states.Length; slot++)
         {
-            _states[stage].Clear();
+            _states[slot].Clear();
         }
 
         for (var index = 0; index < entities.Length; index++)
@@ -88,8 +99,9 @@ public sealed class CopperGolemStatueMesher
                 continue;
             }
 
+            var pose = (uint)entity.Pose < PoseCount ? entity.Pose : CopperGolemPose.Standing;
             var stage = entity.ChestMaterial <= Oxidized ? entity.ChestMaterial : Unaffected;
-            _states[stage].Add(new EntityRenderState(
+            _states[((int)pose * OxidationCount) + stage].Add(new EntityRenderState(
                 Id: index,
                 TypeId: entity.TypeId,
                 X: entity.X + 0.5f,
@@ -105,13 +117,15 @@ public sealed class CopperGolemStatueMesher
             throw new InvalidOperationException("either sprites or an atlas are required");
         }
 
-        for (var stage = 0; stage < _states.Length; stage++)
+        for (var slot = 0; slot < _states.Length; slot++)
         {
-            if (_states[stage].Count == 0)
+            if (_states[slot].Count == 0)
             {
                 continue;
             }
 
+            var pose = slot / OxidationCount;
+            var stage = slot % OxidationCount;
             var sprite = sprites is not null
                 ? sprites[stage]
                 : ChestAtlas.SpriteForCopperGolemStatue(atlas!, stage);
@@ -121,37 +135,18 @@ public sealed class CopperGolemStatueMesher
             }
 
             var geometry = _mesher.BuildModel(
-                StatueModel,
-                System.Runtime.InteropServices.CollectionsMarshal.AsSpan(_states[stage]),
+                CopperGolemStatueModelDefinition.ByPose[pose],
+                System.Runtime.InteropServices.CollectionsMarshal.AsSpan(_states[slot]),
                 sprite,
                 TextureWidth,
                 TextureHeight,
                 pose: StatuePose,
                 modelScale: 1f);
             AppendGeometry(_geometry, geometry);
-            LastEntityCount += _states[stage].Count;
+            LastEntityCount += _states[slot].Count;
         }
 
         return _geometry;
-    }
-
-    private static EntityModelDefinition CreateStatueModel()
-    {
-        var source = CopperGolemModelDefinition.Definition;
-        return new EntityModelDefinition(
-            name: "copper_golem_statue",
-            textureWidth: source.TextureWidth,
-            textureHeight: source.TextureHeight,
-            parts: source.Parts,
-            faceTransforms: source.FaceTransforms,
-            texturePath: source.TexturePath,
-            scale: source.Scale,
-            emissiveTexturePath: source.EmissiveTexturePath,
-            textureSelector: source.TextureSelector,
-            additionalTexturePaths: source.AdditionalTexturePaths,
-            compiled: source.Compiled,
-            renderLayers: source.RenderLayers,
-            applyRootPose: true);
     }
 
     private static EntityPose CreateStatuePose()
