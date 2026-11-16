@@ -14,9 +14,9 @@ namespace Sharpcraft.Client.Tests.Render;
 /// </summary>
 /// <remarks>
 /// The reference emits the box as <c>+-0.125</c> on every axis. Ours matches on x and z and is lifted
-/// by exactly 1.5 blocks on y, which is the <c>24</c> pixel model height the bake maps y-down through
-/// (<c>yUp = 24 - yDown</c>). That lift is what makes a living entity stand on the ground, and it is
-/// why every block entity renderer subtracts 24 by hand. Issue 101 tracks moving it out of the bake
+/// for no model height. The <c>24</c> pixel model height the bake adds by default is the reference renderer'
+/// baseline (<c>scale(-1,-1,1)</c> then <c>translate(0,-1.501,0)</c>), so a block entity asks for zero and
+/// uses the reference numbers as written. Issue 101 tracks the remaining per renderer cleanup.
 /// and into the entity transform, after which this test should expect the reference values verbatim.
 /// </remarks>
 public sealed class BoxProbeTests
@@ -47,7 +47,7 @@ public sealed class BoxProbeTests
         {
             vertices.Add((
                 MathF.Round(geometry.Vertices[vertex], 3),
-                MathF.Round(geometry.Vertices[vertex + 1] - ModelHeightOffset, 3),
+                MathF.Round(geometry.Vertices[vertex + 1], 3),
                 MathF.Round(geometry.Vertices[vertex + 2], 3)));
         }
 
@@ -70,7 +70,7 @@ public sealed class BoxProbeTests
             VanillaPartPose.Offset(0f, 0f, 0f),
             new VanillaCubeDefinition("box", 0, 0, -2f, -2f, -2f, 4f, 4f, 4f, 0f));
 
-        var definition = EntityModelDefinition.FromTree("box", 64, 64, new VanillaMeshDefinition(root), texturePath: "probe/box");
+        var definition = EntityModelDefinition.FromTree("box", 64, 64, new VanillaMeshDefinition(root), texturePath: "probe/box", modelHeight: 0f);
         var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
         {
             ["probe/box"] = new TextureData(64, 64, new byte[64 * 64 * 4])

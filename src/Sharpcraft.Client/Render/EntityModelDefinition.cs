@@ -112,11 +112,12 @@ public sealed class EntityModelDefinition
         string? emissiveTexturePath = null,
         Func<EntityRenderState, string?>? textureSelector = null,
         IReadOnlyList<string>? additionalTexturePaths = null,
-        IReadOnlyList<EntityRenderLayerDefinition>? renderLayers = null)
+        IReadOnlyList<EntityRenderLayerDefinition>? renderLayers = null,
+        float modelHeight = 24f)
     {
         ArgumentNullException.ThrowIfNull(mesh);
-        var parts = VanillaMeshBake.Bake(mesh, 0, 0);
-        var compiled = VanillaMeshBakery.Build(mesh, textureWidth, textureHeight, texturePath: texturePath);
+        var parts = VanillaMeshBake.Bake(mesh, 0, 0, modelHeight);
+        var compiled = VanillaMeshBakery.Build(mesh, textureWidth, textureHeight, modelHeight, texturePath: texturePath);
         return new EntityModelDefinition(
             name,
             textureWidth,
