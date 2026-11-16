@@ -14,13 +14,19 @@ public static class CreeperModelDefinition
 
     private static readonly VanillaMeshDefinition CreeperMesh = BuildCreeperMesh();
 
+    /// <summary>
+    /// Raw source-frame model: cube/pivot values are the reference y-down literals and the entity
+    /// transform owns the frame flip (reference LivingEntityRenderer, issue #102).
+    /// </summary>
     public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "creeper",
         64,
         32,
         CreeperMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/creeper/creeper");
+        faceTransforms: null,
+        texturePath: "entity/creeper/creeper",
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildCreeperMesh()
     {

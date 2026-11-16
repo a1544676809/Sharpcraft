@@ -16,16 +16,22 @@ public static class WitherBossModelDefinition
     private static readonly VanillaMeshDefinition WitherMesh = BuildWitherMesh();
 
     private static readonly CompiledEntityModel WitherCompiled =
-        VanillaMeshBakery.Build(WitherMesh, 64, 64);
+        VanillaMeshBakery.Build(WitherMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
 
+    /// <summary>
+    /// Raw source-frame model: cube/pivot values are the reference y-down literals and the entity
+    /// transform owns the frame flip (reference LivingEntityRenderer, issue #102).
+    /// </summary>
     public static readonly EntityModelDefinition Definition = new(
         "wither",
         64,
         64,
-        [.. VanillaMeshBake.Bake(WitherMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/wither/wither",
-        compiled: WitherCompiled);
+        [.. VanillaMeshBake.Bake(WitherMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
+        faceTransforms: null,
+        texturePath: "entity/wither/wither",
+        compiled: WitherCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildWitherMesh()
     {

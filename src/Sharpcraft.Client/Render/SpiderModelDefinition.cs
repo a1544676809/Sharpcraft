@@ -15,14 +15,20 @@ public static class SpiderModelDefinition
 
     private static readonly VanillaMeshDefinition SpiderMesh = BuildSpiderMesh();
 
+    /// <summary>
+    /// Raw source-frame model: cube/pivot values are the reference y-down literals and the entity
+    /// transform owns the frame flip (reference LivingEntityRenderer, issue #102).
+    /// </summary>
     public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "spider",
         64,
         32,
         SpiderMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/spider/spider",
-        emissiveTexturePath: "entity/spider/spider_eyes");
+        faceTransforms: null,
+        texturePath: "entity/spider/spider",
+        emissiveTexturePath: "entity/spider/spider_eyes",
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildSpiderMesh()
     {

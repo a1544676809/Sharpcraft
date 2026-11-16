@@ -9,9 +9,12 @@ using Xunit;
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>
-/// Byte-level stability gate for the default Scale=1 model bake. The hashes were captured from the
-/// pre-scale-support revision (main ac6111ec) over every registered model definition: the flat legacy
-/// <see cref="VanillaMeshBake.Bake"/> parts and the structural <see cref="VanillaMeshBakery.Build"/> tree.
+/// Byte-level stability gate for the default Scale=1 model bake over every registered model definition:
+/// the flat <see cref="VanillaMeshBake.Bake"/> parts and the structural <see cref="VanillaMeshBakery.Build"/>
+/// tree. This is a change-detector for bake output, NOT equivalence evidence. Raw source-frame models are
+/// verified point-by-point against ModelProbe/vanilla-model-facts source samples in their per-family tests;
+/// this gate only records the current baked values so an unintended bake change is caught. Hashes are
+/// refreshed whenever a model family is deliberately migrated to a different frame.
 /// </summary>
 public sealed class EntityModelBakeStabilityTests
 {
@@ -46,8 +49,8 @@ public sealed class EntityModelBakeStabilityTests
             }
         }
 
-        Assert.Equal("c546b3ebdabfff2289ed6cd68943d44958c77a7232377585789c51fe3c5670c6", Hash(flat));
-        Assert.Equal("499fee6b632eb713b44773174b7c19176837b0a09a9047408a7662eaa85036e8", Hash(tree));
+        Assert.Equal("ab79ddf583120f9dd874758ab86c7adace8aeada12754b228a0feacfd50fb93d", Hash(flat));
+        Assert.Equal("749367caa1058872a54f34417ab9174bfa46a2d15b80a3b3a53f2402dd0e89e0", Hash(tree));
     }
 
     private static void AppendPart(StringBuilder builder, EntityModelPart part)
