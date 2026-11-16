@@ -87,7 +87,7 @@ public sealed class CopperGolemStatueMesherTests
     /// reproduces the unposed entity geometry at yaw 180: same vertical bounds and identical vertices.
     /// </summary>
     [Fact]
-    public void TheStatueStandingGeometryMatchesTheUnposedEntityModel()
+    public void StandingMatchesUnposedEntityModel()
     {
         var sprite = new SpriteRect(0, 0, 64, 64, 1) { RectId = 1, U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f };
         var entityState = new EntityRenderState(1, CopperGolemModelDefinition.CopperGolemEntityTypeId, 0.5f, 0f, 0.5f, 180f, 0f);
@@ -221,23 +221,47 @@ public sealed class CopperGolemStatueMesherTests
         Assert.Equal(indices, geometry.IndexCount);
     }
 
+    /// <summary>
+    /// Reference Y ranges for all four statue poses from <c>CopperGolemStatueModel.setupAnim</c>
+    /// (<c>root.y = 0</c>, <c>root.zRot = PI</c>) applied to the four <c>CopperGolemModel</c> layers.
+    /// This is an independent gate: a reintroduced +24px baseline or a missing root flip must turn
+    /// this red instead of being silently absorbed by re-sampled vertex theories.
+    /// Facing rotates about Y only, so north is representative of every facing.
+    /// </summary>
+    [Theory]
+    [InlineData(CopperGolemPose.Standing, 0f, 1.4991f)]
+    [InlineData(CopperGolemPose.Sitting, 0f, 1.2491f)]
+    [InlineData(CopperGolemPose.Running, -0.0237f, 1.4803f)]
+    [InlineData(CopperGolemPose.Star, 0.0042f, 1.4991f)]
+    public void EachPoseStaysWithinTheReferenceYRange(CopperGolemPose pose, float expectedMinY, float expectedMaxY)
+    {
+        const float tolerance = 0.001f;
+        var geometry = new CopperGolemStatueMesher().Build(
+            [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.CopperGolemStatue, Facing: 2, ChestMaterial: 0, Pose: pose)],
+            Sprites());
+        var (min, max) = Bounds(geometry);
+
+        Assert.InRange(min.Y, expectedMinY - tolerance, expectedMinY + tolerance);
+        Assert.InRange(max.Y, expectedMaxY - tolerance, expectedMaxY + tolerance);
+    }
+
     [Theory]
     [InlineData(CopperGolemPose.Standing, (byte)2, 0, 0.75f, 0.3125f, 0.6875f)]
     [InlineData(CopperGolemPose.Standing, (byte)2, 1, 0.75f, 0.3125f, 0.6875f)]
     [InlineData(CopperGolemPose.Standing, (byte)3, 0, 0.25f, 0.3125f, 0.3125f)]
     [InlineData(CopperGolemPose.Standing, (byte)3, 1, 0.25f, 0.3125f, 0.3125f)]
-    [InlineData(CopperGolemPose.Sitting, (byte)2, 0, 0.6875f, -1.125f, 0.7375f)]
-    [InlineData(CopperGolemPose.Sitting, (byte)2, 1, 0.6875f, -1.125f, 0.7375f)]
-    [InlineData(CopperGolemPose.Sitting, (byte)3, 0, 0.3125f, -1.125f, 0.2625f)]
-    [InlineData(CopperGolemPose.Sitting, (byte)3, 1, 0.3125f, -1.125f, 0.2625f)]
-    [InlineData(CopperGolemPose.Running, (byte)2, 0, 0.75124f, -1.18749f, 0.69639f)]
-    [InlineData(CopperGolemPose.Running, (byte)2, 1, 0.75124f, -1.18749f, 0.69639f)]
-    [InlineData(CopperGolemPose.Running, (byte)3, 0, 0.24876f, -1.18749f, 0.30361f)]
-    [InlineData(CopperGolemPose.Running, (byte)3, 1, 0.24876f, -1.18749f, 0.30361f)]
-    [InlineData(CopperGolemPose.Star, (byte)2, 0, 0.75f, -1.1875f, 0.6875f)]
-    [InlineData(CopperGolemPose.Star, (byte)2, 1, 0.75f, -1.1875f, 0.6875f)]
-    [InlineData(CopperGolemPose.Star, (byte)3, 0, 0.25f, -1.1875f, 0.3125f)]
-    [InlineData(CopperGolemPose.Star, (byte)3, 1, 0.25f, -1.1875f, 0.3125f)]
+    [InlineData(CopperGolemPose.Sitting, (byte)2, 0, 0.6875f, 0.375f, 0.7375f)]
+    [InlineData(CopperGolemPose.Sitting, (byte)2, 1, 0.6875f, 0.375f, 0.7375f)]
+    [InlineData(CopperGolemPose.Sitting, (byte)3, 0, 0.3125f, 0.375f, 0.2625f)]
+    [InlineData(CopperGolemPose.Sitting, (byte)3, 1, 0.3125f, 0.375f, 0.2625f)]
+    [InlineData(CopperGolemPose.Running, (byte)2, 0, 0.75124f, 0.31251f, 0.69639f)]
+    [InlineData(CopperGolemPose.Running, (byte)2, 1, 0.75124f, 0.31251f, 0.69639f)]
+    [InlineData(CopperGolemPose.Running, (byte)3, 0, 0.24876f, 0.31251f, 0.30361f)]
+    [InlineData(CopperGolemPose.Running, (byte)3, 1, 0.24876f, 0.31251f, 0.30361f)]
+    [InlineData(CopperGolemPose.Star, (byte)2, 0, 0.75f, 0.3125f, 0.6875f)]
+    [InlineData(CopperGolemPose.Star, (byte)2, 1, 0.75f, 0.3125f, 0.6875f)]
+    [InlineData(CopperGolemPose.Star, (byte)3, 0, 0.25f, 0.3125f, 0.3125f)]
+    [InlineData(CopperGolemPose.Star, (byte)3, 1, 0.25f, 0.3125f, 0.3125f)]
     public void EachPoseSamplesFacingAndOxidation(
         CopperGolemPose pose,
         byte facing,

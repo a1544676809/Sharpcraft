@@ -134,8 +134,8 @@ public static class CopperGolemStatueModelDefinition
     /// </summary>
     private static VanillaMeshDefinition BuildRunningMesh()
     {
-        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        var body = root.AddOrReplaceChild("body", VanillaPartPose.Offset(-1.064f, 19f, 0f));
+        var root = new VanillaPartDefinition("root", VanillaPartPose.OffsetAndRotation(0f, 0f, 0f, 0f, 0f, MathF.PI));
+        var body = root.AddOrReplaceChild("body", VanillaPartPose.Offset(-1.064f, -5f, 0f));
         body.AddOrReplaceChild(
             "body_r1",
             VanillaPartPose.OffsetAndRotation(1.1f, 0.1f, 0.7f, 0.1204f, -0.0064f, -0.0779f),
@@ -157,12 +157,12 @@ public static class CopperGolemStatueModelDefinition
             "left_arm_r1",
             VanillaPartPose.OffsetAndRotation(0.732f, 0f, 0f, -0.8715f, -0.0535f, -0.0449f),
             Cube("left_arm_r1", 50, 16, 0.032f, -1.1f, -2f, 3f, 10f, 4f));
-        var rightLeg = root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-3.064f, 19f, 0f));
+        var rightLeg = root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-3.064f, -5f, 0f));
         rightLeg.AddOrReplaceChild(
             "right_leg_r1",
             VanillaPartPose.OffsetAndRotation(1.048f, 0f, -0.9f, -0.8727f, 0f, 0f),
             Cube("right_leg_r1", 0, 27, -1.856f, -0.1f, -1.09f, 4f, 5f, 4f));
-        var leftLeg = root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(0.936f, 19f, 0f));
+        var leftLeg = root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(0.936f, -5f, 0f));
         leftLeg.AddOrReplaceChild(
             "left_leg_r1",
             VanillaPartPose.OffsetAndRotation(1f, 0f, 0f, 0.7854f, 0f, 0f),
@@ -175,10 +175,10 @@ public static class CopperGolemStatueModelDefinition
     /// </summary>
     private static VanillaMeshDefinition BuildSittingMesh()
     {
-        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        var root = new VanillaPartDefinition("root", VanillaPartPose.OffsetAndRotation(0f, 0f, 0f, 0f, 0f, MathF.PI));
         var body = root.AddOrReplaceChild(
             "body",
-            VanillaPartPose.Offset(0f, 21f, 2.325f),
+            VanillaPartPose.Offset(0f, -3f, 2.325f),
             Cube("body", 3, 19, -3f, -4f, -4.525f, 6f, 1f, 6f),
             Cube("body_main", 0, 15, -4f, -3f, -3.525f, 8f, 6f, 6f));
         body.AddOrReplaceChild(
@@ -206,12 +206,12 @@ public static class CopperGolemStatueModelDefinition
             "left_arm_r1",
             VanillaPartPose.OffsetAndRotation(0f, -0.0015f, -0.0808f, -1.0472f, 0f, 0f),
             Cube("left_arm_r1", 50, 16, 0.075f, -1.0443f, -1.8997f, 3f, 10f, 4f));
-        var rightLeg = root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-2.1f, 21.9f, -2.075f));
+        var rightLeg = root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-2.1f, -2.1f, -2.075f));
         rightLeg.AddOrReplaceChild(
             "right_leg_r1",
             VanillaPartPose.OffsetAndRotation(0.05f, -1.9f, 1.075f, -1.5708f, 0f, 0f),
             Cube("right_leg_r1", 0, 27, -2f, 0.975f, 0f, 4f, 5f, 4f));
-        var leftLeg = root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(2f, 22f, -2.075f));
+        var leftLeg = root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(2f, -2f, -2.075f));
         leftLeg.AddOrReplaceChild(
             "left_leg_r1",
             VanillaPartPose.OffsetAndRotation(0.05f, -2f, 1.075f, -1.5708f, 0f, 0f),
@@ -224,10 +224,10 @@ public static class CopperGolemStatueModelDefinition
     /// </summary>
     private static VanillaMeshDefinition BuildStarMesh()
     {
-        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
+        var root = new VanillaPartDefinition("root", VanillaPartPose.OffsetAndRotation(0f, 0f, 0f, 0f, 0f, MathF.PI));
         var body = root.AddOrReplaceChild(
             "body",
-            VanillaPartPose.Offset(0f, 19f, 0f),
+            VanillaPartPose.Offset(0f, -5f, 0f),
             Cube("body", 0, 15, -4f, -6f, -3f, 8f, 6f, 6f));
         body.AddOrReplaceChild(
             "head",
@@ -247,12 +247,12 @@ public static class CopperGolemStatueModelDefinition
             "left_arm_r1",
             VanillaPartPose.OffsetAndRotation(-1f, 1f, 0f, 0f, 0f, -1.9199f),
             Cube("left_arm_r1", 50, 16, -1.5f, -5f, -2f, 3f, 10f, 4f));
-        var rightLeg = root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-3f, 19f, 0f));
+        var rightLeg = root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-3f, -5f, 0f));
         rightLeg.AddOrReplaceChild(
             "right_leg_r1",
             VanillaPartPose.OffsetAndRotation(0.35f, 2f, 0.01f, 0f, 0f, 0.2618f),
             Cube("right_leg_r1", 0, 27, -2f, -2.5f, -2f, 4f, 5f, 4f));
-        var leftLeg = root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(1f, 19f, 0f));
+        var leftLeg = root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(1f, -5f, 0f));
         leftLeg.AddOrReplaceChild(
             "left_leg_r1",
             VanillaPartPose.OffsetAndRotation(1.65f, 2f, 0f, 0f, 0f, -0.2618f),
