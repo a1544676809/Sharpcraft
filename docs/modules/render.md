@@ -720,10 +720,10 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收证据**：`tests/Sharpcraft.Client.Tests/Repro/Data/conduit-vectors.golden.txt`（原版真值，inactive shell @ 零旋转）与 `ConduitGoldenTests` 的 raw 24/24 逐顶点严格断言；legacy 路径仍保留该简化，全面切换后关闭 Issue #112。
 - **范围**：金值只取样 inactive 外壳；active cage/wind/eye 属已登记的 `SIM-BE-CONDUIT-ACTIVE` 简化，其变换依赖 tickCount / animPhase / camera orientation，取样器语法无法忠实表达，本次不取。
 
-### SIM-BE-BANNER-TILT-SIGN：旗帜静止倾角符号反了（Issue #111）
+### SIM-BE-BANNER-TILT-SIGN：旗帜静止倾角符号（Issue #111）——已由 raw 源帧修正
 
-- **偏差内容**：旗帜 phase-0 静止倾角本应为 `BannerFlagModel.setupAnim(0)` 的 -0.45°（`BannerFlagModel.java:34` 字面值），本实现渲染成 +0.45°。原版真值样本 `Repro/Data/banner-vectors.golden.txt` 用 `part=flag:X:-0.45` 记录；我们的几何 z 范围与其镜像，最大逐点偏差 0.026213。
-- **影响范围**：所有带 X 轴旋转的部件，不只旗帜。根因在 `VanillaMeshBake.BakeChild` 对 `RotationX` 取负（`VanillaMeshBake.cs:249`），随后 phase 姿态增量又反了一次，两个符号没有抵消；`BannerRenderer` 的相位增量无法单独修。
-- **状态**：`阻塞于评审`，直到 Issue #111 修复；在符号影响所有模型、缺少各部件的逐点真值样本前不得在本次改动里修 `BakeChild`。
-- **验收证据**：`tests/Sharpcraft.Client.Tests/Repro/Data/banner-vectors.golden.txt` 与 `tests/Sharpcraft.Client.Tests/Render/BannerGoldenTests.cs` 中 `TheFlagTiltIsInvertedUntilIssue111IsFixed` 的量化断言（standing_flag / wall_flag 各自的镜像关系与 0.026213 偏差）。符号修正后删除该测试并关闭 #111。
+- **偏差内容（历史）**：legacy 烘焙路径下 `BakeChild` 对 `RotationX` 取负、phase 姿态增量又反一次，导致旗帜 phase-0 倾角渲染成 +0.45° 而非源 `BannerFlagModel.setupAnim(0)` 的 -0.45°；旧真值样本记录的最大逐点偏差 0.026213。
+- **修正**：Banner 定义切 `RawSourceFrame`（不做 X/Y 旋转共轭），flag 不烘焙 idle 旋转，`BannerRenderer` 按源 `setupAnim(phase)` 字面 xRot 施加姿态。修正后 flag z 范围与源样本逐值相同（`standing [0.541665, 0.596421]`、`wall [0.104165, 0.158921]`）。
+- **状态**：`已解决`（`refactor/raw-block-entities` 分支）；Issue #111 已 comment 证据，待项目所有者在 PR 合并后关闭。本文件残留的旧缺陷描述仅为历史记录。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Repro/Data/banner-vectors.golden.txt`（36 组：16 ground + 4 wall + 8 phase×2，4 组 jar 锚点 + 源公式派生）与 `BannerGoldenTests.EveryVertexMatchesTheReference`（逐顶点位置+UV 全元组严格比较）；旧的 `TheFlagTiltIsInvertedUntilIssue111IsFixed` 量化钉死测试已删除。详见 `docs/modules/render-block-entities.md`。
 

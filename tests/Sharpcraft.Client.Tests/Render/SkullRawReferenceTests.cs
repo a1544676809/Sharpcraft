@@ -42,6 +42,15 @@ public sealed class SkullRawReferenceTests
         AssertGroupMatches("wall_" + facing, wall: true, facingOrRotation: (byte)facing);
     }
 
+    /// <summary>Player head (8x8x8 head + 0.25-grow hat overlay) against the jar probe sample.</summary>
+    [Theory]
+    [InlineData("player_ground_0", false, (byte)0)]
+    [InlineData("player_wall_2", true, (byte)2)]
+    public void PlayerHeadMatchesReference(string tag, bool wall, byte facingOrRotation)
+    {
+        AssertGroupMatches(tag, wall, facingOrRotation, SkullType.Player, 48);
+    }
+
     [Fact]
     public void EveryGroupInTheSampleIsAccountedFor()
     {
@@ -56,25 +65,27 @@ public sealed class SkullRawReferenceTests
             groups.Add(line.Split('|')[0]);
         }
 
-        Assert.Equal(20, groups.Count); // 16 ground + 4 wall
+        Assert.Equal(22, groups.Count); // 16 ground + 4 wall + 2 player
     }
 
-    private static void AssertGroupMatches(string tag, bool wall, byte facingOrRotation)
+    private static void AssertGroupMatches(string tag, bool wall, byte facingOrRotation,
+        SkullType skullType = SkullType.Skeleton, int expectedVertexCount = 24)
     {
         var expected = ReferenceVertices(tag);
-        Assert.Equal(24, expected.Count);
+        Assert.Equal(expectedVertexCount, expected.Count);
 
         var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
         {
-            [SkullModelDefinition.SkeletonTexture] = new(64, 32, new byte[64 * 32 * 4])
+            [SkullModelDefinition.SkeletonTexture] = new(64, 32, new byte[64 * 32 * 4]),
+            [SkullModelDefinition.DefaultPlayerSkinTexture] = new(64, 64, new byte[64 * 64 * 4])
         });
         var geometry = new SkullRenderer().Build(
             [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.Skull,
-                SkullType: SkullType.Skeleton, SkullWall: wall,
+                SkullType: skullType, SkullWall: wall,
                 SkullFacing: wall ? facingOrRotation : (byte)0,
                 SkullRotation: wall ? (byte)0 : facingOrRotation)],
             atlas);
-        Assert.Equal(24, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
+        Assert.Equal(expectedVertexCount, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
 
         for (var i = 0; i < expected.Count; i++)
         {

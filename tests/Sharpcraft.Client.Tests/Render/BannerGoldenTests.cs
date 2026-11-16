@@ -10,157 +10,85 @@ using Sharpcraft.Framework.Rendering;
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>
-/// Banner vertices against the 26.3 reference sample. Both body and flag groups are pinned exactly;
-/// the former issue #111 flag-tilt defect is fixed by the raw source frame and this test now asserts
-/// strict point-for-point equivalence.
+/// Banner geometry against the full 26.3 reference sample (16 ground rotations, 4 wall facings,
+/// 8 phases x ground/wall = 36 groups). Every vertex is compared strictly as a whole
+/// (position, UV) tuple: the complete multiset is sorted canonically by all five components and
+/// matched element by element. There is no per-position grouping, no separate UV sorting, and no
+/// tolerance-based set membership, so a duplicated, missing or position/UV-mismatched vertex fails.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The sample in <c>Repro/Data/banner-vectors.golden.txt</c> was recorded with ModelProbe against the
-/// official client jar. Its header cites the source line for every value. The body specs use the
-/// literal <c>MODEL_TRANSLATION</c> and <c>MODEL_SCALE</c>; the flag specs add
-/// <c>part=flag:X:-0.45</c>, the literal phase-zero idle tilt from BannerFlagModel.java:34. All four
-/// groups sample angle zero, so rotateY(-angle) is the identity.
-/// </para>
-/// <para>
-/// Vertices are grouped by position and the texture coordinates are compared inside each group. Sorting
-/// whole vertices as one tuple does not work: a cube corner carries one vertex per adjacent face, so two
-/// vertices with the same position and different coordinates swap places as soon as a half float rounds
-/// differently, and the comparison then measures opposite corners of the same box against each other.
-/// </para>
-/// <para>
-/// Vertices carry position and texture coordinates. The terrain vertex packs u in the low half and v in
-/// the high half of the third float, so both are decoded rather than assumed.
-/// </para>
+/// The sample is produced by <c>ref://mc-26.3-analysis/vectors/BannerVectorProbe.java</c>, which
+/// uses the jar's baked ModelPart layers and the real BannerFlagModel.setupAnim pose, with the
+/// source literal <c>Transformation(T,R,S)</c> and 1/16 model scale. Its ground_0 group is
+/// byte-identical to the previously verified standing group of the older sample.
+/// The probe keys each row by part/polygon/vertex; those keys are retained in the sample for
+/// auditability, while the assertion compares the whole (x,y,z,u,v) multiset because the runtime
+/// DynamicGeometry does not carry part names.
 /// </remarks>
 public sealed class BannerGoldenTests
 {
-    /// <summary>Largest disagreement tolerated for a matched position or texture coordinate, in blocks.</summary>
-    private const float Tolerance = 0.002f;
+    private static string SamplePath =>
+        Path.Combine(AppContext.BaseDirectory, "Repro", "Data", "banner-vectors.golden.txt");
 
-    private static readonly string[] BodyGroupNames = ["standing", "wall"];
-    private static readonly string[] FlagGroupNames = ["standing_flag", "wall_flag"];
+    private static readonly string[] GroundGroups =
+        Enumerable.Range(0, 16).Select(segment => "ground_" + segment).ToArray();
 
-    /// <summary>One row per body group, so the theory and the coverage guard cannot drift apart.</summary>
-    public static IEnumerable<object[]> BodyGroupRows =>
-        BodyGroupNames.Select(group => new object[] { group });
+    private static readonly string[] WallGroups =
+        Enumerable.Range(2, 4).Select(facing => "wall_" + facing).ToArray();
 
-    /// <summary>One row per flag group, so the theory and the coverage guard cannot drift apart.</summary>
-    public static IEnumerable<object[]> FlagGroupRows =>
-        FlagGroupNames.Select(group => new object[] { group });
+    private static readonly string[] FlagGroups =
+        new[] { 0f, 0.125f, 0.25f, 0.375f, 0.5f, 0.625f, 0.75f, 0.875f }
+            .SelectMany(phase => new[]
+            {
+                "flag_ground_" + phase.ToString("0.000", CultureInfo.InvariantCulture),
+                "flag_wall_" + phase.ToString("0.000", CultureInfo.InvariantCulture)
+            })
+            .ToArray();
 
-    /// <summary>
-    /// Body geometry (standing pole/bar and wall bar) must match the reference point for point.
-    /// </summary>
+    private static readonly string[] AllGroups = GroundGroups.Concat(WallGroups).Concat(FlagGroups).ToArray();
+
+    public static IEnumerable<object[]> AllGroupRows => AllGroups.Select(group => new object[] { group });
+
+    /// <summary>Every group of the full sample is covered by one strict theory row.</summary>
     [Theory]
-    [MemberData(nameof(BodyGroupRows))]
-    public void EveryBodyVertexMatchesTheReference(string group)
+    [MemberData(nameof(AllGroupRows))]
+    public void EveryVertexMatchesTheReference(string group)
     {
-        var expected = ReferenceByPosition(group);
-        var actual = OurByPosition(group);
+        var expected = ReferenceVertices(group);
+        Assert.NotEmpty(expected);
+
+        var geometry = Build(group);
+        var actual = OurVertices(geometry, group);
 
         Assert.Equal(expected.Count, actual.Count);
 
-        foreach (var (key, expectedUvs) in expected)
+        // Strict whole-tuple comparison: sort complete (x,y,z,u,v) tuples by every component,
+        // then match element by element. No position grouping and no separate UV sorting.
+        var expectedSorted = expected.Select(static v => (Round(v.X), Round(v.Y), Round(v.Z), Round(v.U), Round(v.V)))
+            .OrderBy(v => v).ToList();
+        var actualSorted = actual.Select(static v => (Round(v.X), Round(v.Y), Round(v.Z), Round(v.U), Round(v.V)))
+            .OrderBy(v => v).ToList();
+
+        for (var index = 0; index < expectedSorted.Count; index++)
         {
-            List<(float U, float V)>? matched = null;
-            foreach (var (otherKey, otherUvs) in actual)
-            {
-                if (MathF.Abs(otherKey.X - key.X) <= Tolerance
-                    && MathF.Abs(otherKey.Y - key.Y) <= Tolerance
-                    && MathF.Abs(otherKey.Z - key.Z) <= Tolerance)
-                {
-                    matched = otherUvs;
-                    break;
-                }
-            }
-
+            var e = expectedSorted[index];
+            var a = actualSorted[index];
             Assert.True(
-                matched is not null,
-                $"{group}: the sample position ({key.X / 1000f:F3}, {key.Y / 1000f:F3}, {key.Z / 1000f:F3}) is missing");
-
-            var actualUvs = matched!;
-            Assert.True(
-                expectedUvs.Count == actualUvs.Count,
-                $"{group}: position ({key.X}, {key.Y}, {key.Z}) carries"
-                    + $" {actualUvs.Count} vertices but the sample has {expectedUvs.Count}");
-
-            expectedUvs.Sort();
-            actualUvs.Sort();
-            for (var corner = 0; corner < expectedUvs.Count; corner++)
-            {
-                var du = MathF.Abs(expectedUvs[corner].U - actualUvs[corner].U);
-                var dv = MathF.Abs(expectedUvs[corner].V - actualUvs[corner].V);
-                Assert.True(
-                    du <= Tolerance && dv <= Tolerance,
-                    $"{group}: position ({key.X}, {key.Y}, {key.Z}) vertex {corner}"
-                        + $" is u {actualUvs[corner].U:F4} v {actualUvs[corner].V:F4}"
-                        + $" but the sample says u {expectedUvs[corner].U:F4} v {expectedUvs[corner].V:F4}");
-            }
+                MathF.Abs(e.Item1 - a.Item1) <= 0.001f
+                    && MathF.Abs(e.Item2 - a.Item2) <= 0.001f
+                    && MathF.Abs(e.Item3 - a.Item3) <= 0.001f
+                    && MathF.Abs(e.Item4 - a.Item4) <= 0.001f
+                    && MathF.Abs(e.Item5 - a.Item5) <= 0.001f,
+                $"{group} vertex {index}: ours ({a.Item1},{a.Item2},{a.Item3}) uv ({a.Item4},{a.Item5})"
+                    + $" but sample says ({e.Item1},{e.Item2},{e.Item3}) uv ({e.Item4},{e.Item5})");
         }
     }
 
-    /// <summary>
-    /// Flag geometry (standing/wall) must match the reference point for point now that the raw
-    /// source frame applies the source <c>BannerFlagModel.setupAnim</c> X rotation literally.
-    /// This is the strict replacement for the former issue #111 defect-pin assertion: the phase-zero
-    /// idle tilt from the reference sample (<c>part=flag:X:-0.45</c>, i.e. the source radian value)
-    /// is now rendered verbatim, not inverted. Uses the same position-grouped, UV-per-group
-    /// comparison as the body test so a half-float corner rounding cannot measure opposite corners.
-    /// </summary>
-    [Theory]
-    [MemberData(nameof(FlagGroupRows))]
-    public void EveryFlagVertexMatchesTheReference(string group)
-    {
-        var expected = ReferenceByPosition(group);
-        var actual = OurFlagByPosition(group);
-
-        Assert.Equal(expected.Count, actual.Count);
-
-        foreach (var (key, expectedUvs) in expected)
-        {
-            List<(float U, float V)>? matched = null;
-            foreach (var (otherKey, otherUvs) in actual)
-            {
-                if (MathF.Abs(otherKey.X - key.X) <= Tolerance
-                    && MathF.Abs(otherKey.Y - key.Y) <= Tolerance
-                    && MathF.Abs(otherKey.Z - key.Z) <= Tolerance)
-                {
-                    matched = otherUvs;
-                    break;
-                }
-            }
-
-            Assert.True(
-                matched is not null,
-                $"{group}: the sample position ({key.X / 1000f:F3}, {key.Y / 1000f:F3}, {key.Z / 1000f:F3}) is missing");
-
-            var actualUvs = matched!;
-            Assert.True(
-                expectedUvs.Count == actualUvs.Count,
-                $"{group}: position ({key.X}, {key.Y}, {key.Z}) carries"
-                    + $" {actualUvs.Count} vertices but the sample has {expectedUvs.Count}");
-
-            expectedUvs.Sort();
-            actualUvs.Sort();
-            for (var corner = 0; corner < expectedUvs.Count; corner++)
-            {
-                var du = MathF.Abs(expectedUvs[corner].U - actualUvs[corner].U);
-                var dv = MathF.Abs(expectedUvs[corner].V - actualUvs[corner].V);
-                Assert.True(
-                    du <= Tolerance && dv <= Tolerance,
-                    $"{group}: position ({key.X}, {key.Y}, {key.Z}) vertex {corner}"
-                        + $" is u {actualUvs[corner].U:F4} v {actualUvs[corner].V:F4}"
-                        + $" but the sample says u {expectedUvs[corner].U:F4} v {expectedUvs[corner].V:F4}");
-            }
-        }
-    }
-
-    /// <summary>Every group present in the sample must be asserted by one of the two theories.</summary>
+    /// <summary>Every group present in the sample is asserted; the full 16+4+16 matrix is present.</summary>
     [Fact]
     public void EveryGroupInTheSampleIsAccountedFor()
     {
-        var groups = new HashSet<string>();
+        var groups = new HashSet<string>(StringComparer.Ordinal);
         foreach (var line in File.ReadLines(SamplePath))
         {
             if (line.StartsWith('#') || line.Length == 0)
@@ -171,36 +99,16 @@ public sealed class BannerGoldenTests
             groups.Add(line.Split('|')[0]);
         }
 
-        var known = new HashSet<string>(BodyGroupNames.Concat(FlagGroupNames));
-        Assert.Equal(4, groups.Count);
-        Assert.All(groups, group => Assert.Contains(group, known));
+        Assert.Equal(36, groups.Count); // 16 ground + 4 wall + (8 phases x 2 flags)
+        Assert.All(groups, group => Assert.Contains(group, AllGroups));
+        Assert.Equal(36, AllGroups.Length);
     }
 
-    private static string SamplePath =>
-        Path.Combine(AppContext.BaseDirectory, "Repro", "Data", "banner-vectors.golden.txt");
+    private static float Round(float value) => MathF.Round(value, 3);
 
-    private static BannerAttachment AttachmentOf(string group) =>
-        group.StartsWith("standing", StringComparison.Ordinal) ? BannerAttachment.Ground : BannerAttachment.Wall;
-
-    private static byte RotationOf(string group) =>
-        group.StartsWith("standing", StringComparison.Ordinal) ? (byte)0 : (byte)3;
-
-    private static int BodyVertexCount(string group) =>
-        group.StartsWith("standing", StringComparison.Ordinal) ? 48 : 24;
-
-    private static Dictionary<(int X, int Y, int Z), List<(float U, float V)>> ReferenceByPosition(string group)
+    private static List<(float X, float Y, float Z, float U, float V)> ReferenceVertices(string group)
     {
-        var result = new Dictionary<(int X, int Y, int Z), List<(float U, float V)>>();
-        foreach (var row in ReferenceRows(group))
-        {
-            Group(result, Parse(row[1]), Parse(row[2]), Parse(row[3]), Parse(row[4]), Parse(row[5]));
-        }
-
-        return result;
-    }
-
-    private static IEnumerable<string[]> ReferenceRows(string group)
-    {
+        var result = new List<(float, float, float, float, float)>();
         foreach (var line in File.ReadLines(SamplePath))
         {
             if (line.StartsWith('#') || line.Length == 0)
@@ -211,59 +119,35 @@ public sealed class BannerGoldenTests
             var parts = line.Split('|');
             if (parts[0] == group)
             {
-                yield return parts;
+                // columns: group|vertex|x|y|z|u|v
+                result.Add((Parse(parts[2]), Parse(parts[3]), Parse(parts[4]), Parse(parts[5]), Parse(parts[6])));
             }
-        }
-    }
-
-    private static float Parse(string value) => float.Parse(value, CultureInfo.InvariantCulture);
-
-    private static Dictionary<(int X, int Y, int Z), List<(float U, float V)>> OurFlagByPosition(string group)
-    {
-        var geometry = Build(group);
-        var body = BodyVertexCount(group);
-        var result = new Dictionary<(int X, int Y, int Z), List<(float U, float V)>>();
-        for (var vertex = 0; vertex + 4 < geometry.VertexFloats; vertex += ChunkMesher.FloatsPerVertex)
-        {
-            var index = vertex / ChunkMesher.FloatsPerVertex;
-            if (index < body)
-            {
-                continue;
-            }
-
-            var packed = BitConverter.SingleToUInt32Bits(geometry.Vertices[vertex + 4]);
-            Group(
-                result,
-                geometry.Vertices[vertex],
-                geometry.Vertices[vertex + 1],
-                geometry.Vertices[vertex + 2],
-                (float)BitConverter.UInt16BitsToHalf((ushort)(packed & 0xFFFFu)),
-                (float)BitConverter.UInt16BitsToHalf((ushort)(packed >> 16)));
         }
 
         return result;
     }
 
-    private static Dictionary<(int X, int Y, int Z), List<(float U, float V)>> OurByPosition(string group)
+    private static List<(float X, float Y, float Z, float U, float V)> OurVertices(DynamicGeometry geometry, string group)
     {
-        var geometry = Build(group);
-        var body = BodyVertexCount(group);
-        var result = new Dictionary<(int X, int Y, int Z), List<(float U, float V)>>();
-        for (var vertex = 0; vertex + 4 < geometry.VertexFloats; vertex += ChunkMesher.FloatsPerVertex)
-        {
-            if (vertex / ChunkMesher.FloatsPerVertex >= body)
-            {
-                continue;
-            }
+        // The renderer emits body then flag in one geometry. A body sample group covers only the
+        // body; a flag sample group covers only the flag. Select the matching vertex range by index.
+        var isFlag = group.StartsWith("flag_", StringComparison.Ordinal);
+        var wall = group.Contains("wall");
+        var bodyVertices = wall ? 24 : 48; // wall bar only; standing pole(24) + bar(24)
+        var from = isFlag ? bodyVertices : 0;
+        var to = isFlag ? geometry.VertexFloats / ChunkMesher.FloatsPerVertex : bodyVertices;
 
-            var packed = BitConverter.SingleToUInt32Bits(geometry.Vertices[vertex + 4]);
-            Group(
-                result,
-                geometry.Vertices[vertex],
-                geometry.Vertices[vertex + 1],
-                geometry.Vertices[vertex + 2],
+        var result = new List<(float, float, float, float, float)>();
+        for (var vertex = from; vertex < to; vertex++)
+        {
+            var offset = vertex * ChunkMesher.FloatsPerVertex;
+            var packed = BitConverter.SingleToUInt32Bits(geometry.Vertices[offset + 4]);
+            result.Add((
+                geometry.Vertices[offset],
+                geometry.Vertices[offset + 1],
+                geometry.Vertices[offset + 2],
                 (float)BitConverter.UInt16BitsToHalf((ushort)(packed & 0xFFFFu)),
-                (float)BitConverter.UInt16BitsToHalf((ushort)(packed >> 16)));
+                (float)BitConverter.UInt16BitsToHalf((ushort)(packed >> 16))));
         }
 
         return result;
@@ -271,41 +155,34 @@ public sealed class BannerGoldenTests
 
     private static DynamicGeometry Build(string group)
     {
-        var baseName = group.EndsWith("_flag", StringComparison.Ordinal)
-            ? group[..^5]
-            : group;
+        var isFlag = group.StartsWith("flag_", StringComparison.Ordinal);
+        var standing = group.StartsWith("ground", StringComparison.Ordinal) || group.Contains("ground_");
+        var attachment = group.Contains("wall") ? BannerAttachment.Wall : BannerAttachment.Ground;
+
+        byte rotation;
+        float phase;
+        if (isFlag)
+        {
+            rotation = attachment == BannerAttachment.Wall ? (byte)3 : (byte)0;
+            var phaseText = group[(group.LastIndexOf('_') + 1)..];
+            phase = float.Parse(phaseText, CultureInfo.InvariantCulture);
+        }
+        else
+        {
+            rotation = byte.Parse(group[(group.LastIndexOf('_') + 1)..], CultureInfo.InvariantCulture);
+            phase = 0f;
+        }
+
+        _ = standing;
         var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
         {
             [BannerModelDefinition.TexturePath] = new(64, 64, new byte[64 * 64 * 4])
         });
         return new BannerRenderer().Build(
-            [new BlockEntityRenderState(
-                0f, 0f, 0f, VanillaBlockEntityTypes.Banner,
-                BannerAttachment: AttachmentOf(baseName),
-                BannerRotation: RotationOf(baseName),
-                BannerColor: 0,
-                BannerPhase: 0f)],
+            [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.Banner,
+                BannerAttachment: attachment, BannerRotation: rotation, BannerColor: 0, BannerPhase: phase)],
             atlas);
     }
 
-    private static void Group(
-        Dictionary<(int X, int Y, int Z), List<(float U, float V)>> target,
-        float x,
-        float y,
-        float z,
-        float u,
-        float v)
-    {
-        var key = (
-            (int)MathF.Round(x * 1000f),
-            (int)MathF.Round(y * 1000f),
-            (int)MathF.Round(z * 1000f));
-        if (!target.TryGetValue(key, out var corners))
-        {
-            corners = [];
-            target[key] = corners;
-        }
-
-        corners.Add((u, v));
-    }
+    private static float Parse(string value) => float.Parse(value, CultureInfo.InvariantCulture);
 }

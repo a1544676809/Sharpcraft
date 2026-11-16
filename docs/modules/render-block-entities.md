@@ -57,9 +57,10 @@
 - `Definition`（mob 四型共用）与 `PlayerDefinition` 切 `RawSourceFrame: true`、`baselinePx:0`、无 legacy face transforms；删除 renderer-local `translate(0,-0.5,0)` 补偿。源 `SkullBlockRenderer` 的 `scale(-1,-1,1)` 外pose 本身完成 y-up 翻转。
 - 源 `SkullModel.createMobHeadLayer` 的顶点 v1 UV 为 `(0.125,0)`；legacy face 校准表曾把它改成 `0.375`。raw 后与 jar 一致（同 #111 类别的 face 校准伪影）。
 - Piglin head（`PiglinModelDefinition.Head`）与 Dragon head（非单位 scale bake）属 entity 模型族 / 专用 bake，未在本批修改。
-- `SkullRawReferenceTests` 用 jar 探针样本严格比对 16 ground + 4 wall 共 20 组、每组 24 顶点位置+UV。
+- `SkullRawReferenceTests` 用 jar 探针样本严格比对 16 ground + 4 wall 共 20 组（每组 24 顶点位置+UV），另有 2 组 player head（`player_ground_0` / `player_wall_2`，各 48 顶点 = 8×8×8 head + 0.25-grow hat overlay）严格比对。四型 mob head 共享 8×8×8 head 几何（`SkullModel.createMobHeadLayer`），由 skeleton 组代表；player head 单独取样覆盖 hat overlay。`SkullRendererTests.cs` 的 player 内联值（含 hat overlay UV）已由该 jar 样本佐证。
 
 ## 更新记录
 
-- 2026-11-17：Banner 切 raw；#111 修正；严格 reference sample 替换缺陷钉死测试；全量 3,314 / 三门禁通过。
-- 2026-11-17：Skull（mob 四型 + player）切 raw；新增 jar 探针 skull reference sample；旧内联 face-calibration 顶点期望替换为 jar 值；全量 3,314 / 三门禁通过。
+- 2026-11-17：Banner 切 raw；#111 修正；严格 reference sample 替换缺陷钉死测试；全量 3,335 / 三门禁通过。
+- 2026-11-17：Skull（mob 四型 + player）切 raw；新增 jar 探针 skull reference sample；旧内联 face-calibration 顶点期望替换为 jar 值；全量 3,335 / 三门禁通过。
+- 2026-11-17（审阅修正 task-46）：Banner 样本扩为 36 组（4 jar 锚点 + 32 源公式派生），`BannerGoldenTests` 改严格逐顶点全元组比较；新增 Skull player head 2 组 jar 样本；`render.md` 的 #111 状态统一为已解决；全量 3,369 / 三门禁通过。
