@@ -16,9 +16,10 @@ namespace Sharpcraft.Client.Render;
 /// </summary>
 /// <remarks>
 /// Source: <c>ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/ConduitRenderer.java</c>
-/// (DEFAULT_TRANSFORMATION line 43, SHELL_TEXTURE line 45, inactive submit lines 140-150). The
+/// (DEFAULT_TRANSFORMATION line 43, SHELL_TEXTURE line 45, inactive submit lines 105-119). The
 /// inactive branch translates by (0.5, 0.5, 0.5), rotates around Y by the conduit's
-/// <c>activeRotation</c>, and submits the shell with <c>entitySolid</c>.
+/// <c>activeRotation</c>, and submits the shell with <c>entitySolid</c>. The shell is baked in
+/// model space so the renderer applies that translation literally, with no baseline offset.
 /// </remarks>
 [ReferenceClass("net.minecraft.client.renderer.blockentity.ConduitRenderer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/ConduitRenderer.java", Kind = ReferenceKind.Adapter, Status = ReferenceStatus.Partial)]
 [Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-CONDUIT-ACTIVE", "T-51", Note = "Active conduits reuse the static shell; active cage, wind, eye, isHunting, tickCount and activeRotation (fixed zero) are not wired.")]
@@ -51,12 +52,12 @@ public sealed class ConduitRenderer : IBlockEntityRenderer
                 continue;
             }
 
-            // The baked model is y-up with a +24px baseline, while the source transform is
-            // translate(0.5,0.5,0.5) in the reference's y-down model frame. Fold the baseline
-            // into the y translation: 0.5 - 24/16 = -1.0.
+            // The reference inactive branch is translate(0.5,0.5,0.5) then rotateDegrees(YP,
+            // activeRotation). The shell is baked in model space (no +24px baseline), so the
+            // block-centre translation is the same 0.5 on every axis.
             var transform =
                 Matrix4x4.CreateRotationY(entity.ConduitRotation * (MathF.PI / 180f))
-                * Matrix4x4.CreateTranslation(entity.X + 0.5f, entity.Y - 1f, entity.Z + 0.5f);
+                * Matrix4x4.CreateTranslation(entity.X + 0.5f, entity.Y + 0.5f, entity.Z + 0.5f);
             var state = new EntityRenderState(
                 Id: index,
                 TypeId: entity.TypeId,

@@ -23,14 +23,14 @@ public sealed class CopperGolemStatueMesherTests
     /// the same 64x64 model coordinate for every sprite.
     /// </summary>
     [Theory]
-    [InlineData((byte)2, 0, 0.25f, 1.1875f, 0.6875f)]
-    [InlineData((byte)2, 1, 0.25f, 1.1875f, 0.6875f)]
-    [InlineData((byte)3, 0, 0.75f, 1.1875f, 0.3125f)]
-    [InlineData((byte)3, 1, 0.75f, 1.1875f, 0.3125f)]
-    [InlineData((byte)4, 0, 0.6875f, 1.1875f, 0.75f)]
-    [InlineData((byte)4, 1, 0.6875f, 1.1875f, 0.75f)]
-    [InlineData((byte)5, 0, 0.3125f, 1.1875f, 0.25f)]
-    [InlineData((byte)5, 1, 0.3125f, 1.1875f, 0.25f)]
+    [InlineData((byte)2, 0, 0.75f, 0.3125f, 0.6875f)]
+    [InlineData((byte)2, 1, 0.75f, 0.3125f, 0.6875f)]
+    [InlineData((byte)3, 0, 0.25f, 0.3125f, 0.3125f)]
+    [InlineData((byte)3, 1, 0.25f, 0.3125f, 0.3125f)]
+    [InlineData((byte)4, 0, 0.6875f, 0.3125f, 0.25f)]
+    [InlineData((byte)4, 1, 0.6875f, 0.3125f, 0.25f)]
+    [InlineData((byte)5, 0, 0.3125f, 0.3125f, 0.75f)]
+    [InlineData((byte)5, 1, 0.3125f, 0.3125f, 0.75f)]
     public void StandingStatueSamplesFacingAndOxidation(byte facing, int oxidation, float x, float y, float z)
     {
         var mesher = new CopperGolemStatueMesher();
@@ -75,16 +75,19 @@ public sealed class CopperGolemStatueMesherTests
         var (min, max) = Bounds(geometry);
 
         Assert.Equal(0.0625f, min.X, 4);
-        Assert.Equal(0.0009375f, min.Y, 4);
+        Assert.Equal(0f, min.Y, 4);
         Assert.Equal(0.125f, min.Z, 4);
         Assert.Equal(0.9375f, max.X, 4);
-        Assert.Equal(1.5f, max.Y, 4);
+        Assert.Equal(1.4990625f, max.Y, 4);
         Assert.Equal(0.81343746f, max.Z, 4);
     }
 
-    /// <summary>The statue renderer's root pose changes the vertical bounds and first vertex relative to the entity model.</summary>
+    /// <summary>
+    /// With the model-space root pose baked into the standing definition, the facing-north statue
+    /// reproduces the unposed entity geometry at yaw 180: same vertical bounds and identical vertices.
+    /// </summary>
     [Fact]
-    public void TheStatueRootPoseDiffersFromTheUnposedEntityModel()
+    public void TheStatueStandingGeometryMatchesTheUnposedEntityModel()
     {
         var sprite = new SpriteRect(0, 0, 64, 64, 1) { RectId = 1, U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f };
         var entityState = new EntityRenderState(1, CopperGolemModelDefinition.CopperGolemEntityTypeId, 0.5f, 0f, 0.5f, 180f, 0f);
@@ -97,9 +100,15 @@ public sealed class CopperGolemStatueMesherTests
         var statueBounds = Bounds(statue);
         Assert.Equal(0f, unposedBounds.Min.Y, 4);
         Assert.Equal(1.4990625f, unposedBounds.Max.Y, 4);
-        Assert.Equal(0.0009375f, statueBounds.Min.Y, 4);
-        Assert.Equal(1.5f, statueBounds.Max.Y, 4);
-        Assert.NotEqual(unposed.Vertices[1], statue.Vertices[1]);
+        Assert.Equal(0f, statueBounds.Min.Y, 4);
+        Assert.Equal(1.4990625f, statueBounds.Max.Y, 4);
+        Assert.Equal(unposed.VertexFloats, statue.VertexFloats);
+        for (var field = 0; field < unposed.VertexFloats; field++)
+        {
+            Assert.Equal(
+                BitConverter.SingleToUInt32Bits(unposed.Vertices[field]),
+                BitConverter.SingleToUInt32Bits(statue.Vertices[field]));
+        }
     }
 
     /// <summary>The four body textures are stitched into the block entity atlas and resolve by stage.</summary>
@@ -213,22 +222,22 @@ public sealed class CopperGolemStatueMesherTests
     }
 
     [Theory]
-    [InlineData(CopperGolemPose.Standing, (byte)2, 0, 0.25f, 1.1875f, 0.6875f)]
-    [InlineData(CopperGolemPose.Standing, (byte)2, 1, 0.25f, 1.1875f, 0.6875f)]
-    [InlineData(CopperGolemPose.Standing, (byte)3, 0, 0.75f, 1.1875f, 0.3125f)]
-    [InlineData(CopperGolemPose.Standing, (byte)3, 1, 0.75f, 1.1875f, 0.3125f)]
-    [InlineData(CopperGolemPose.Sitting, (byte)2, 0, 0.3125f, 1.125f, 0.7375f)]
-    [InlineData(CopperGolemPose.Sitting, (byte)2, 1, 0.3125f, 1.125f, 0.7375f)]
-    [InlineData(CopperGolemPose.Sitting, (byte)3, 0, 0.6875f, 1.125f, 0.2625f)]
-    [InlineData(CopperGolemPose.Sitting, (byte)3, 1, 0.6875f, 1.125f, 0.2625f)]
-    [InlineData(CopperGolemPose.Running, (byte)2, 0, 0.24876f, 1.18749f, 0.69639f)]
-    [InlineData(CopperGolemPose.Running, (byte)2, 1, 0.24876f, 1.18749f, 0.69639f)]
-    [InlineData(CopperGolemPose.Running, (byte)3, 0, 0.75124f, 1.18749f, 0.30361f)]
-    [InlineData(CopperGolemPose.Running, (byte)3, 1, 0.75124f, 1.18749f, 0.30361f)]
-    [InlineData(CopperGolemPose.Star, (byte)2, 0, 0.25f, 1.1875f, 0.6875f)]
-    [InlineData(CopperGolemPose.Star, (byte)2, 1, 0.25f, 1.1875f, 0.6875f)]
-    [InlineData(CopperGolemPose.Star, (byte)3, 0, 0.75f, 1.1875f, 0.3125f)]
-    [InlineData(CopperGolemPose.Star, (byte)3, 1, 0.75f, 1.1875f, 0.3125f)]
+    [InlineData(CopperGolemPose.Standing, (byte)2, 0, 0.75f, 0.3125f, 0.6875f)]
+    [InlineData(CopperGolemPose.Standing, (byte)2, 1, 0.75f, 0.3125f, 0.6875f)]
+    [InlineData(CopperGolemPose.Standing, (byte)3, 0, 0.25f, 0.3125f, 0.3125f)]
+    [InlineData(CopperGolemPose.Standing, (byte)3, 1, 0.25f, 0.3125f, 0.3125f)]
+    [InlineData(CopperGolemPose.Sitting, (byte)2, 0, 0.6875f, -1.125f, 0.7375f)]
+    [InlineData(CopperGolemPose.Sitting, (byte)2, 1, 0.6875f, -1.125f, 0.7375f)]
+    [InlineData(CopperGolemPose.Sitting, (byte)3, 0, 0.3125f, -1.125f, 0.2625f)]
+    [InlineData(CopperGolemPose.Sitting, (byte)3, 1, 0.3125f, -1.125f, 0.2625f)]
+    [InlineData(CopperGolemPose.Running, (byte)2, 0, 0.75124f, -1.18749f, 0.69639f)]
+    [InlineData(CopperGolemPose.Running, (byte)2, 1, 0.75124f, -1.18749f, 0.69639f)]
+    [InlineData(CopperGolemPose.Running, (byte)3, 0, 0.24876f, -1.18749f, 0.30361f)]
+    [InlineData(CopperGolemPose.Running, (byte)3, 1, 0.24876f, -1.18749f, 0.30361f)]
+    [InlineData(CopperGolemPose.Star, (byte)2, 0, 0.75f, -1.1875f, 0.6875f)]
+    [InlineData(CopperGolemPose.Star, (byte)2, 1, 0.75f, -1.1875f, 0.6875f)]
+    [InlineData(CopperGolemPose.Star, (byte)3, 0, 0.25f, -1.1875f, 0.3125f)]
+    [InlineData(CopperGolemPose.Star, (byte)3, 1, 0.25f, -1.1875f, 0.3125f)]
     public void EachPoseSamplesFacingAndOxidation(
         CopperGolemPose pose,
         byte facing,
