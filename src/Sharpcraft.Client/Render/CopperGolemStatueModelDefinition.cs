@@ -97,7 +97,7 @@ public static class CopperGolemStatueModelDefinition
     /// </summary>
     private static VanillaMeshDefinition BuildStandingMesh()
     {
-        var root = new VanillaPartDefinition("root", VanillaPartPose.OffsetAndRotation(0f, 0f, 0f, 0f, 0f, MathF.PI));
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         var body = root.AddOrReplaceChild(
             "body",
             VanillaPartPose.Offset(0f, -5f, 0f),
@@ -134,7 +134,7 @@ public static class CopperGolemStatueModelDefinition
     /// </summary>
     private static VanillaMeshDefinition BuildRunningMesh()
     {
-        var root = new VanillaPartDefinition("root", VanillaPartPose.OffsetAndRotation(0f, 0f, 0f, 0f, 0f, MathF.PI));
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         var body = root.AddOrReplaceChild("body", VanillaPartPose.Offset(-1.064f, -5f, 0f));
         body.AddOrReplaceChild(
             "body_r1",
@@ -175,7 +175,7 @@ public static class CopperGolemStatueModelDefinition
     /// </summary>
     private static VanillaMeshDefinition BuildSittingMesh()
     {
-        var root = new VanillaPartDefinition("root", VanillaPartPose.OffsetAndRotation(0f, 0f, 0f, 0f, 0f, MathF.PI));
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         var body = root.AddOrReplaceChild(
             "body",
             VanillaPartPose.Offset(0f, -3f, 2.325f),
@@ -224,7 +224,7 @@ public static class CopperGolemStatueModelDefinition
     /// </summary>
     private static VanillaMeshDefinition BuildStarMesh()
     {
-        var root = new VanillaPartDefinition("root", VanillaPartPose.OffsetAndRotation(0f, 0f, 0f, 0f, 0f, MathF.PI));
+        var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         var body = root.AddOrReplaceChild(
             "body",
             VanillaPartPose.Offset(0f, -5f, 0f),
