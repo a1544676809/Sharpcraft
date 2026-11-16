@@ -12,19 +12,18 @@ namespace Sharpcraft.Client.Render;
 
 /// <summary>
 /// Draws the static base of a standing or wall banner: the pole/bar body in white and the flag mesh
-/// from <see cref="BannerModelDefinition"/> tinted by the banner's dye colour. Patterns and the flag
-/// phase animation are deliberately outside this slice.
+/// from <see cref="BannerModelDefinition"/> tinted by the banner's dye colour. Patterns are outside
+/// this slice; the flag phase is driven by <see cref="BlockEntityRenderState.BannerPhase"/>.
 /// </summary>
 /// <remarks>
 /// Source: <c>ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/BannerRenderer.java</c>
-/// (<c>MODEL_SCALE</c>/<c>MODEL_TRANSLATION</c> lines 45-47, <c>createGroundTransformation</c> /
-/// <c>createWallTransformation</c> lines 239-249, and submit lines 124-143). The base texture is
-/// <c>entity/banner/banner_base</c> (64 by 64). DyeColor's diffuse values are pinned in
-/// <c>ref://mc-26.3-analysis/src/net/minecraft/world/item/DyeColor.java:32-47</c>.
+/// (<c>MODEL_SCALE</c>/<c>MODEL_TRANSLATION</c> lines 45-47, phase lines 91-93,
+/// <c>createGroundTransformation</c> / <c>createWallTransformation</c> lines 239-249, and submit
+/// lines 124-143). The base texture is <c>entity/banner/banner_base</c> (64 by 64). DyeColor's diffuse
+/// values are pinned in <c>ref://mc-26.3-analysis/src/net/minecraft/world/item/DyeColor.java:32-47</c>.
 /// </remarks>
 [ReferenceClass("net.minecraft.client.renderer.blockentity.BannerRenderer", "ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/BannerRenderer.java", Kind = ReferenceKind.Adapter, Status = ReferenceStatus.Partial)]
 [Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-BANNER-PATTERNS", "T-49", Note = "Only the base banner body/flag is drawn; the pattern overlays and the separate base tint layer are not wired.")]
-[Sharpcraft.Common.Diagnostics.Simplification("SIM-BE-BANNER-PHASE", "T-49", Note = "Banner flag phase is fixed at zero; BannerRenderer's animated phase is not wired.")]
 public sealed class BannerRenderer : IBlockEntityRenderer
 {
     /// <summary>Reference <c>BannerRenderer.SIZE</c> / <c>MODEL_SCALE</c>.</summary>
@@ -35,6 +34,14 @@ public sealed class BannerRenderer : IBlockEntityRenderer
 
     private readonly EntityModelMesher _mesher = new();
     private readonly DynamicGeometry _geometry = new();
+    private readonly EntityPose _flagPose = new();
+
+    /// <summary>
+    /// Source <c>BannerFlagModel.setupAnim(phase)</c> X rotation:
+    /// <c>(-0.0125 + 0.01 * cos(2π * phase)) * π</c>.
+    /// </summary>
+    public static float PhaseRotation(float phase) =>
+        (-0.0125f + (0.01f * MathF.Cos(2f * MathF.PI * phase))) * MathF.PI;
 
     /// <inheritdoc />
     public bool Handles(int typeId) => VanillaBlockEntityTypes.IsBanner(typeId);
@@ -85,12 +92,19 @@ public sealed class BannerRenderer : IBlockEntityRenderer
             var bodyIndexCount = body.IndexCount;
             AppendTransformed(body, transform);
 
+            // The baked flag carries the phase-zero pose; the EntityPose adds the delta to the
+            // current source phase. The body never receives this pose.
+            _flagPose.Set("flag", new PoseOffset(
+                Vector3.Zero,
+                new Vector3(BannerModelDefinition.FlagPhaseZeroRotationX - PhaseRotation(entity.BannerPhase), 0f, 0f),
+                Vector3.Zero));
             var flag = _mesher.BuildModel(
                 BannerModelDefinition.FlagFor(attachment),
                 flagState,
                 atlas.Get(BannerModelDefinition.TexturePath)!,
                 BannerModelDefinition.TextureWidth,
                 BannerModelDefinition.TextureHeight,
+                pose: _flagPose,
                 modelScale: 1f);
             var flagIndexCount = flag.IndexCount;
             AppendTransformed(flag, transform);

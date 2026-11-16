@@ -29,4 +29,4 @@
 | R-019 | Dragon 颌部动画未接入（`SIM-BE-SKULL-DRAGON-ANIM`） | 中 | Dragon 头的 jaw 不随动画摆动 | 静态 7-box head/jaw 几何已实现；动画待 animationPos 状态通道 | 接入 Dragon 动画状态并补时间序列真值时 | 开放 |
 | R-020 | Brushable 刷子粒子/音效/进度动画未接入（`SIM-BE-BRUSHABLE-FX`） | 中 | 刷子动态视觉与音效缺失 | 静态 `FIXED` item pose、dusted/hit_direction 已实现；动态特效待状态通道 | 接入 Brushable 粒子/音效/进度状态并完成单方块像素对比时 | 开放 |
 | R-021 | Vault 展示物品不旋转且多 count cluster 未实现（`SIM-BE-VAULT-SPIN` / `SIM-BE-VAULT-COUNT`） | 中 | 动态旋转与 count>1 堆叠视觉与原版不同 | `shared_data.display_item` 的 GROUND 单物品静态显示已实现；spin/count 待状态通道 | 接入 Vault spin/ItemCluster 布局并完成单方块像素对比时 | 开放 |
-| R-022 | Banner 图案层与旗帜 phase 动画未接入（`SIM-BE-BANNER-PATTERNS` / `SIM-BE-BANNER-PHASE`） | 中 | 带图案 banner 缺少图案，旗帜不摆动 | static body/flag、ground/wall transform 与底色 tint 已实现；patterns/phase 待数据通道 | 接入 banner patterns 与 phase 并完成单方块像素对比时 | 开放 |
+| R-022 | Banner 图案层未接入（`SIM-BE-BANNER-PATTERNS`） | 中 | 带图案 banner 缺少图案 | 静态 body/flag、ground/wall transform、phase 动画与底色 tint 已实现；patterns 待数据通道 | 接入 banner patterns 并完成单方块像素对比时 | 开放 |

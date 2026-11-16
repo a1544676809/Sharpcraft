@@ -3,6 +3,7 @@
 
 using Sharpcraft.Assets;
 using Sharpcraft.Client.Assets;
+using Sharpcraft.Client.Game;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Common.World;
 using Sharpcraft.Framework.Rendering;
@@ -122,6 +123,63 @@ public sealed class BannerRendererTests
         Assert.Equal(VertexFieldReader.Colour(ground.Vertices, 48), VertexFieldReader.Colour(invalidRotation.Vertices, 48));
     }
 
+    [Theory]
+    [InlineData(BannerAttachment.Ground, 0f, 0.08333f, 0.16639f, 0.52858f)]
+    [InlineData(BannerAttachment.Ground, 0.25f, 0.08333f, 0.16632f, 0.4762f)]
+    [InlineData(BannerAttachment.Ground, 0.5f, 0.08333f, 0.16789f, 0.42385f)]
+    [InlineData(BannerAttachment.Ground, 0.75f, 0.08333f, 0.16632f, 0.4762f)]
+    [InlineData(BannerAttachment.Wall, 0f, 0.91667f, -0.81278f, 0.90892f)]
+    [InlineData(BannerAttachment.Wall, 0.25f, 0.91667f, -0.81285f, 0.9613f)]
+    [InlineData(BannerAttachment.Wall, 0.5f, 0.91667f, -0.81128f, 1.01365f)]
+    [InlineData(BannerAttachment.Wall, 0.75f, 0.91667f, -0.81285f, 0.9613f)]
+    public void FlagPhaseMovesOnlyTheFlag(BannerAttachment attachment, float phase, float x, float y, float z)
+    {
+        var renderer = new BannerRenderer();
+        var bodyVertices = attachment == BannerAttachment.Ground ? 48 : 24;
+        var geometry = build(renderer, attachment, rotation: 0, color: 0, x: 0f, y: 0f, z: 0f, phase);
+        var flag = VertexFieldReader.Position(geometry.Vertices, bodyVertices);
+        var uv = VertexFieldReader.Uv(geometry.Vertices, bodyVertices);
+        var body = VertexFieldReader.Position(geometry.Vertices, 0);
+        var expectedBody = attachment == BannerAttachment.Ground
+            ? (0.45833f, 0f, 0.45833f)
+            : (0.91667f, 0.77083f, 0.97917f);
+
+        Assert.Equal(x, flag.X, 3);
+        Assert.Equal(y, flag.Y, 3);
+        Assert.Equal(z, flag.Z, 3);
+        Assert.Equal(0.32813f, uv.U, 4);
+        Assert.Equal(0f, uv.V, 4);
+        Assert.Equal(expectedBody.Item1, body.X, 4);
+        Assert.Equal(expectedBody.Item2, body.Y, 4);
+        Assert.Equal(expectedBody.Item3, body.Z, 4);
+    }
+
+    [Theory]
+    [InlineData(0, 0, 0, 0L, 0f, 0f)]
+    [InlineData(0, 0, 0, 0L, 0.25f, 0.0025f)]
+    [InlineData(1, 2, 3, 7L, 0f, 0.71f)]
+    [InlineData(-1, -2, -3, -100L, 0f, 0.36f)]
+    [InlineData(10, 64, -5, 123L, 0.5f, 0.045f)]
+    public void BannerPhaseUsesTheSourceFloorModFormula(
+        int x,
+        int y,
+        int z,
+        long gameTime,
+        float partialTick,
+        float expected)
+    {
+        Assert.Equal(expected, FrameCommand.BannerPhase(x, y, z, gameTime, partialTick), 5);
+    }
+
+    [Fact]
+    public void PhaseRotationHasTheSourceQuarterWaveValues()
+    {
+        Assert.Equal((-0.0125f + 0.01f) * MathF.PI, BannerRenderer.PhaseRotation(0f), 5);
+        Assert.Equal((-0.0125f + 0f) * MathF.PI, BannerRenderer.PhaseRotation(0.25f), 5);
+        Assert.Equal((-0.0125f - 0.01f) * MathF.PI, BannerRenderer.PhaseRotation(0.5f), 5);
+        Assert.Equal((-0.0125f + 0f) * MathF.PI, BannerRenderer.PhaseRotation(0.75f), 5);
+    }
+
     private DynamicGeometry build(
         BannerRenderer renderer,
         BannerAttachment attachment,
@@ -129,8 +187,9 @@ public sealed class BannerRendererTests
         byte color,
         float x,
         float y,
-        float z) =>
+        float z,
+        float phase = 0f) =>
         renderer.Build(
-            [new BlockEntityRenderState(x, y, z, VanillaBlockEntityTypes.Banner, BannerAttachment: attachment, BannerRotation: rotation, BannerColor: color)],
+            [new BlockEntityRenderState(x, y, z, VanillaBlockEntityTypes.Banner, BannerAttachment: attachment, BannerRotation: rotation, BannerColor: color, BannerPhase: phase)],
             _atlas);
 }

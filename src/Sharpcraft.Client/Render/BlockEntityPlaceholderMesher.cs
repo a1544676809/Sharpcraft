@@ -39,7 +39,8 @@ public readonly record struct BlockEntityRenderState(
     CopperGolemPose Pose = CopperGolemPose.Standing,
     BannerAttachment BannerAttachment = BannerAttachment.Ground,
     byte BannerRotation = 8,
-    byte BannerColor = 0);
+    byte BannerColor = 0,
+    float BannerPhase = 0f);
 
 /// <summary>
 /// Placeholder geometry for block entities until real models are available.
