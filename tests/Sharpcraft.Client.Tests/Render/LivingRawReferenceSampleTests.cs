@@ -33,21 +33,29 @@ public sealed class LivingRawReferenceSampleTests
 {
     private sealed record Sample(string Part, int Cube, int Polygon, int Vertex, float X, float Y, float Z, float U, float V);
 
-    public static TheoryData<string, EntityModelDefinition, int, int, string> Families => new()
+    // Hard-coded expected counts from the jar probe samples (independent of the sample-loaded values):
+    // total sample rows, rows belonging to genuinely-mirrored parts (Mirror=true), and rows that must be
+    // strictly checked. Creeper/Wither have no mirrored parts; Spider has four mirrored left legs (4*24=96).
+    public static TheoryData<string, EntityModelDefinition, int, int, string, int, int, int> Families => new()
     {
-        { "creeper-raw-vectors.reference.txt", CreeperModelDefinition.Definition, 64, 32, "entity/creeper/creeper" },
-        { "spider-raw-vectors.reference.txt", SpiderModelDefinition.Definition, 64, 32, "entity/spider/spider" },
-        { "wither-raw-vectors.reference.txt", WitherBossModelDefinition.Definition, 64, 64, "entity/wither/wither" }
+        { "creeper-raw-vectors.reference.txt", CreeperModelDefinition.Definition, 64, 32, "entity/creeper/creeper", 144, 0, 144 },
+        { "spider-raw-vectors.reference.txt", SpiderModelDefinition.Definition, 64, 32, "entity/spider/spider", 264, 96, 168 },
+        { "wither-raw-vectors.reference.txt", WitherBossModelDefinition.Definition, 64, 64, "entity/wither/wither", 216, 0, 216 }
     };
 
     [Theory]
     [MemberData(nameof(Families))]
-    public void RawBakeMatchesSourceVertices(string sampleFile, EntityModelDefinition definition, int width, int height, string texturePath)
+    public void RawBakeMatchesSourceVertices(string sampleFile, EntityModelDefinition definition, int width, int height,
+        string texturePath, int expectedTotal, int expectedMirror, int expectedChecked)
     {
         var rows = LoadSample(sampleFile);
         var atlas = MakeAtlas(texturePath, width, height);
 
+        // Verify the raw sample file itself against hard-coded expectations, before any comparison.
+        Assert.Equal(expectedTotal, rows.Count);
+
         var checkedVertices = 0;
+        var mirrorVertices = 0;
         var expectedNonMirrorVertices = 0;
         foreach (var group in rows.GroupBy(r => (r.Part, r.Cube)))
         {
@@ -60,6 +68,7 @@ public sealed class LivingRawReferenceSampleTests
             Assert.NotEmpty(sourceParts);
             if (sourceParts[0].Mirror)
             {
+                mirrorVertices += group.Count();
                 continue; // R-027 mirror blocker (actual Mirror flag, not name heuristic)
             }
             expectedNonMirrorVertices += group.Count();
@@ -90,10 +99,13 @@ public sealed class LivingRawReferenceSampleTests
                 checkedVertices++;
             }
         }
-        // Full coverage: every non-mirror source vertex must have been strictly compared. No silent
-        // skipping by name; only parts whose real baked Mirror flag is true are excluded (R-027).
+        // All three counts are pinned against hard-coded jar-probe expectations, not derived from the
+        // same sample that is being checked (no sample self-justification):
+        //   total = mirror + checked, and each equals its explicit constant.
+        Assert.Equal(expectedMirror, mirrorVertices);
+        Assert.Equal(expectedChecked, checkedVertices);
         Assert.Equal(expectedNonMirrorVertices, checkedVertices);
-        Assert.True(checkedVertices > 0);
+        Assert.Equal(expectedTotal, mirrorVertices + checkedVertices);
     }
 
     /// <summary>
