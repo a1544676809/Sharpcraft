@@ -107,6 +107,16 @@ public sealed partial class EntityModelMesher
             var px = (1f / 16f) * modelScale * model.Scale;
             var feet = Vector3.Zero;
             var entityTransform = entityTransformFactory?.Invoke(entity) ?? EntityModelTransform.From(entity);
+            // Raw source-frame models are stored in the reference's y-down pixel frame. The legacy bake
+            // folded the model-height reflection into geometry; for raw models the entity transform owns
+            // that reflection (reference LivingEntityRenderer: scale(-1,-1,1) then translate(0,-1.501,0)).
+            // The baseline is expressed in px already scaled by modelScale, matching the legacy world coords.
+            // Block-entity renderers (a non-null factory) supply their own source transform and must not
+            // receive the living-entity flip; only the LivingEntityRenderer path owns it.
+            if (model.RawSourceFrame && entityTransformFactory is null)
+            {
+                entityTransform = entityTransform.ForRawSourceFrame(model.SourceFrameBaselinePx * px);
+            }
             var sprite = skin;
             // UVs are authored against the model's declared texture size, not the image resolution (e.g. ghast declares
             // 64x32 while its PNG is 128x64). Normalising by the image size would sample the wrong texels.

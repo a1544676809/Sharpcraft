@@ -28,7 +28,8 @@ public sealed class EntityModelDefinition
         IReadOnlyList<EntityRenderLayerDefinition>? renderLayers = null,
         bool applyRootPose = false,
         float baselinePx = 24f,
-        bool rawSourceFrame = false)
+        bool rawSourceFrame = false,
+        float sourceFrameBaselinePx = 24f)
     {
         if (rawSourceFrame && baselinePx != 0f)
         {
@@ -50,6 +51,7 @@ public sealed class EntityModelDefinition
         ApplyRootPose = applyRootPose;
         BaselinePx = baselinePx;
         RawSourceFrame = rawSourceFrame;
+        SourceFrameBaselinePx = rawSourceFrame ? sourceFrameBaselinePx : 0f;
     }
 
     /// <summary>Default cutout/elytra/translucent/emissive layer order shared by entity models.</summary>
@@ -120,6 +122,15 @@ public sealed class EntityModelDefinition
     public bool RawSourceFrame { get; }
 
     /// <summary>
+    /// For raw source-frame models, the model height (in pixels) whose reflection the entity transform
+    /// owns on behalf of the reference renderer. This is the y-down height the legacy bake used to fold
+    /// into geometry (24 for the standard skeleton, 25 for Enderman, 0 for parts authored without a
+    /// baseline). It is carried here only so the transform can place raw vertices at the same final
+    /// world coordinates; the bake itself uses no baseline for raw models.
+    /// </summary>
+    public float SourceFrameBaselinePx { get; }
+
+    /// <summary>
     /// Creates a definition from a declarative mesh: the legacy flat <see cref="Parts"/> remain available for compatibility,
     /// while <see cref="Compiled"/> is produced once by the structural bakery.
     /// </summary>
@@ -137,7 +148,8 @@ public sealed class EntityModelDefinition
         IReadOnlyList<EntityRenderLayerDefinition>? renderLayers = null,
         float baselinePx = 24f,
         bool rawSourceFrame = false,
-        bool applyRootPose = false)
+        bool applyRootPose = false,
+        float sourceFrameBaselinePx = 24f)
     {
         ArgumentNullException.ThrowIfNull(mesh);
         if (rawSourceFrame && VanillaMeshBake.HasNonUnitScale(mesh))
@@ -162,6 +174,7 @@ public sealed class EntityModelDefinition
             renderLayers,
             baselinePx: baselinePx,
             rawSourceFrame: rawSourceFrame,
+            sourceFrameBaselinePx: sourceFrameBaselinePx,
             applyRootPose: applyRootPose);
     }
 
