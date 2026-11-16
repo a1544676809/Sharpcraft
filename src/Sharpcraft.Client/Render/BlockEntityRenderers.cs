@@ -27,6 +27,7 @@ public static class BlockEntityRenderers
         new CampfireRenderer(),
         new BrushableRenderer(),
         new SkullRenderer(),
+        new BannerRenderer(),
         new DecoratedPotBlockEntityRenderer(),
         new CopperGolemStatueBlockEntityRenderer(),
         new VaultRenderer()

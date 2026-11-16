@@ -506,6 +506,15 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - Mesher 使用 4 pose × 4 oxidation 的固定数组分组，不按帧分配动态字典；`Handles(47)` 不变。
 - 测试：`CopperGolemStatueMesherTests` 覆盖 4 Pose × 2 氧化 × facing 的最终顶点/UV、每 Pose 顶点/索引、无 pose fallback 与既有站立回归。
 
+### 6.6 Banner 静态底色旗面（Issue #89）
+
+`BannerModelDefinition` 声明 `BannerModel.createBodyLayer(standing)` 的 pole/bar 与 `BannerFlagModel.createFlagLayer(standing)` 的 flag；四个模型（ground body/flag、wall body/flag）共用 `entity/banner/banner_base` 64×64 纹理。`BannerRenderer` 复用 `EntityModelMesher.BuildModel`，只做源 `BannerRenderer` 的 ground/wall 模型变换：
+
+- `MODEL_TRANSLATION` 的 block 平移为 `(0.5,0,0.5)`，`MODEL_SCALE` 源为 `(2/3,-2/3,-2/3)`；`EntityModelMesher` 的 root bake 已带 X 镜像与 +24px y-up baseline，因此项目矩阵为 `scale(-s,+s,-s)`，并把 baseline 折入 `translate(0.5,-1.0,0.5)`（`-24*s/16=-1`，s=2/3）。该矩阵行列式为正，winding 不交换；ground 使用 `RotationSegment.convertToDegrees(rotation)` 再取负，wall 使用 `Direction.toYRot` 再取负。
+- 旗帜 phase 固定为 0（`FlagPhaseZeroRotationX`）；`DyeColor.getTextureDiffuseColor()` 的 RGB **只作为 flag 的 tint**，pole/bar body 保持白色（源 `submitModel` 两者 diff=-1，底色 tint 属图案层）。
+- `BlockEntityRenderState.BannerAttachment/BannerRotation/BannerColor` 由 `FrameCommand` 从方块状态读取；`Handles(20)`；banner 使用 solid pipeline。
+- 未实现图案层与 phase 动画，分别由 `SIM-BE-BANNER-PATTERNS` / `SIM-BE-BANNER-PHASE` 跟踪；`ChestAtlas.Textures` 维持 chest-only 22 条，banner 纹理单独加入 block entity sheet。
+
 ## 已知刻意的简化
 
 ### SIM-BE-BELL-NO-SHAKE：钟只渲染静态外观
@@ -607,6 +616,27 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收证据**：`VaultRendererTests` 覆盖单物品最终顶点/UV；补 count 真值后更新。
 
 <!-- simplification:SIM-BE-VAULT-COUNT task:T-52 -->
+
+### SIM-BE-BANNER-PATTERNS：Banner 只画底色旗面
+
+- **简化了什么**：`BannerRenderer` 只绘制 `BannerModel` 的 pole/bar 与 `BannerFlagModel` 的旗帜底色；不解析 `patterns` NBT，也不叠加 `BANNER_PATTERN_BASE` 或各图案图层。
+- **为什么**：本切片先落地 standing/wall 静态模型、transform、tint 与 atlas；图案层需要 `BannerBlockEntity` 的 pattern 数据与对应 sprite/颜色叠加通道。
+- **对等效性的影响**：无图案的 banner 底色、杆/横梁与旗帜几何按源实现；带图案的 banner 缺少图案视觉。
+- **状态**：受控偏差，由 #49 后续 pattern 切片跟进（Issue #89）。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/BannerRendererTests.cs` 覆盖 ground/wall 最终顶点/UV、tint 与 atlas；接入 pattern 后补真值与单方块像素对比。
+
+<!-- simplification:SIM-BE-BANNER-PATTERNS task:T-49 -->
+
+### SIM-BE-BANNER-PHASE：Banner 旗帜 phase 固定为 0
+
+- **简化了什么**：旗帜模型使用 `BannerFlagModel.setupAnim(0)` 的固定 X 旋转；不读取 `BannerRenderer` 由世界时间与方块坐标计算的 phase，也没有波动动画。
+- **为什么**：phase 依赖 world game time 与相机 partial tick，当前 `BlockEntityRenderState` 没有该动画字段；首切片先固定静态姿态。
+- **对等效性的影响**：旗帜静态几何与 phase=0 的源姿态一致；没有随时间摆动的动画。
+- **状态**：受控偏差，由 #49 后续动画切片跟进（Issue #89）。
+- **验收证据**：`BannerRendererTests` 覆盖 phase=0 的最终顶点/UV；接入 phase 后补时间序列真值与单方块像素对比。
+
+<!-- simplification:SIM-BE-BANNER-PHASE task:T-49 -->
+
 
 
 

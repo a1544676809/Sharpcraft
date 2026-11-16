@@ -426,6 +426,9 @@ internal static partial class FrameCommand
                             SkullFacing: skullFacing,
                             SkullRotation: skullRotation,
                             Pose: CopperGolemPoseOf(world, blockX, record.Y, blockZ),
+                            BannerAttachment: BannerAttachmentOf(world, blockX, record.Y, blockZ),
+                            BannerRotation: BannerRotationOf(world, blockX, record.Y, blockZ),
+                            BannerColor: BannerColorOf(world, blockX, record.Y, blockZ),
                             Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
                 }
             }
@@ -1052,6 +1055,9 @@ internal static partial class FrameCommand
                         SkullFacing: skullFacing,
                         SkullRotation: skullRotation,
                         Pose: CopperGolemPoseOf(world, blockX, record.Y, blockZ),
+                        BannerAttachment: BannerAttachmentOf(world, blockX, record.Y, blockZ),
+                        BannerRotation: BannerRotationOf(world, blockX, record.Y, blockZ),
+                        BannerColor: BannerColorOf(world, blockX, record.Y, blockZ),
                         Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
             }
             }
@@ -1436,6 +1442,65 @@ internal static partial class FrameCommand
         };
     }
 
+    /// <summary>Banner attachment type: ground for a standing banner, wall for a wall banner.</summary>
+    private static Sharpcraft.Client.Render.BannerAttachment BannerAttachmentOf(ClientWorld world, int x, int y, int z)
+    {
+        var path = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(world.GetBlockState(x, y, z))?.Path;
+        return path is not null && path.Contains("wall_banner", StringComparison.Ordinal)
+            ? Sharpcraft.Client.Render.BannerAttachment.Wall
+            : Sharpcraft.Client.Render.BannerAttachment.Ground;
+    }
+
+    /// <summary>
+    /// Ground banners use their 16-segment <c>rotation</c>; wall banners use their horizontal
+    /// <c>facing</c> Direction ordinal. Unknown/missing states use the block defaults (8 and north).
+    /// </summary>
+    private static byte BannerRotationOf(ClientWorld world, int x, int y, int z)
+    {
+        var path = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(world.GetBlockState(x, y, z))?.Path;
+        if (path is not null && path.Contains("wall_banner", StringComparison.Ordinal))
+        {
+            return DirectionOrdinalOf(world, x, y, z, fallback: 2);
+        }
+
+        if (Sharpcraft.Common.Registries.BlockStateDefinitions.Baseline.TryGetProperty(
+                world.GetBlockState(x, y, z),
+                "rotation",
+                out var rotation)
+            && byte.TryParse(rotation, out var segment))
+        {
+            return segment;
+        }
+
+        return 8;
+    }
+
+    /// <summary>Dye colour index for a banner block path, in DyeColor id order.</summary>
+    private static byte BannerColorOf(ClientWorld world, int x, int y, int z)
+    {
+        var path = Sharpcraft.Common.Registries.VanillaBlockRegistry.Layout.BlockAt(world.GetBlockState(x, y, z))?.Path;
+        return path switch
+        {
+            "white_banner" or "white_wall_banner" => 0,
+            "orange_banner" or "orange_wall_banner" => 1,
+            "magenta_banner" or "magenta_wall_banner" => 2,
+            "light_blue_banner" or "light_blue_wall_banner" => 3,
+            "yellow_banner" or "yellow_wall_banner" => 4,
+            "lime_banner" or "lime_wall_banner" => 5,
+            "pink_banner" or "pink_wall_banner" => 6,
+            "gray_banner" or "gray_wall_banner" => 7,
+            "light_gray_banner" or "light_gray_wall_banner" => 8,
+            "cyan_banner" or "cyan_wall_banner" => 9,
+            "purple_banner" or "purple_wall_banner" => 10,
+            "blue_banner" or "blue_wall_banner" => 11,
+            "brown_banner" or "brown_wall_banner" => 12,
+            "green_banner" or "green_wall_banner" => 13,
+            "red_banner" or "red_wall_banner" => 14,
+            "black_banner" or "black_wall_banner" => 15,
+            _ => 0
+        };
+    }
+
     /// <summary>
     /// Weathering stage of a copper golem statue block: unaffected 0, exposed 1, weathered 2,
     /// oxidized 3. Waxed variants keep the appearance of the unwaxed stage, as in the reference
@@ -1552,6 +1617,9 @@ internal static partial class FrameCommand
                     SkullFacing: skullFacing,
                     SkullRotation: skullRotation,
                     Pose: CopperGolemPoseOf(world, blockX, record.Y, blockZ),
+                    BannerAttachment: BannerAttachmentOf(world, blockX, record.Y, blockZ),
+                    BannerRotation: BannerRotationOf(world, blockX, record.Y, blockZ),
+                    BannerColor: BannerColorOf(world, blockX, record.Y, blockZ),
                     Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ, partialTick)));
             }
         }

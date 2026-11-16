@@ -36,7 +36,10 @@ public readonly record struct BlockEntityRenderState(
     byte SkullFacing = 5,
     byte Dusted = 0,
     Sharpcraft.Client.World.HitDirection HitDirection = Sharpcraft.Client.World.HitDirection.None,
-    CopperGolemPose Pose = CopperGolemPose.Standing);
+    CopperGolemPose Pose = CopperGolemPose.Standing,
+    BannerAttachment BannerAttachment = BannerAttachment.Ground,
+    byte BannerRotation = 8,
+    byte BannerColor = 0);
 
 /// <summary>
 /// Placeholder geometry for block entities until real models are available.
