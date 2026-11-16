@@ -2,7 +2,6 @@
 // Copyright (C) 2026 Sharpcraft contributors
 
 using System.Globalization;
-using System.Numerics;
 using Sharpcraft.Client.Assets;
 using Sharpcraft.Client.Render;
 using Sharpcraft.Client.World;
@@ -12,19 +11,23 @@ using Xunit;
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>
-/// Source-equivalence evidence for living-entity raw source-frame models. Each sample file is produced by
-/// <c>ref://mc-26.3-analysis/vectors/RawModelProbe.java</c> against the 26.3 client jar: every cube vertex in
-/// the reference y-down model-pixel frame. The test compares, STRICTLY and keyed by the sample's
-/// part/cube/polygon/vertex columns, the raw bake + mesher output against the source positions and UVs.
-/// No sorting, no rounding, no set containment. Each source part is isolated into its own definition so
-/// the comparison is not confused by vanilla's hash-map part order or multi-cube parts.
+/// Source-equivalence evidence for living-entity raw source-frame models. Three independent checks:
 ///
-/// The living final-world transform (scale(-1,-1,1)+baseline) is verified separately against a legacy
-/// twin of the same model: raw + ForRawSourceFrame must reproduce the legacy world-coordinate set.
+/// 1) <see cref="RawBakeMatchesSourceVertices"/>: raw bake + mesher model-space output is compared
+///    STRICTLY, keyed by the sample part/cube/polygon/vertex columns, against the ModelProbe source
+///    positions AND UVs (jar e877b6a0). No sorting/rounding/set-containment. Per-part isolation works
+///    around vanilla's hash-map child order. This is the UV/position source oracle.
+/// 2) <see cref="RawModelFinalWorldMatchesLegacyTwin"/>: the real Creeper/Spider/Wither models are
+///    meshed through the actual living-entity geometry path (EntityModelMesher.BuildInto with a model
+///    override and no block factory) in BOTH raw and legacy modes from the same DSL, and their FULL
+///    final world-vertex position multisets are compared strictly. This pins the frame flip+baseline
+///    on real geometry, not hand-written points. UV equivalence is NOT claimed here: raw uses source
+///    face UVs (verified by check 1), legacy uses the legacy face calibration (a documented deviation).
+/// 3) CaveSpider four-facing regression: real geometry vs a legacy spider twin at 0/90/180/270 yaw.
 ///
-/// Blocker (registered in docs/risks R-026): mirrored parts. The reference CubeListBuilder.mirror()
-/// swaps min/max X and reverses polygon vertex order; our raw path only flips U. Mirror part positions
-/// and UVs are therefore NOT compared here and are excluded explicitly, not silently.
+/// Baby: creeper/spider/wither have no distinct baby model - registered in docs/risks and render.md.
+/// Blocker R-027: mirrored parts' min/max-X swap + polygon reversal is not reproduced by raw; those
+/// part groups are explicitly excluded from check 1's source comparison, not silently.
 /// </summary>
 public sealed class LivingRawReferenceSampleTests
 {
@@ -42,117 +45,104 @@ public sealed class LivingRawReferenceSampleTests
     public void RawBakeMatchesSourceVertices(string sampleFile, EntityModelDefinition definition, int width, int height, string texturePath)
     {
         var rows = LoadSample(sampleFile);
-        var atlas = ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal)
-        {
-            [texturePath] = new(width, height, new byte[width * height * 4])
-        });
+        var atlas = MakeAtlas(texturePath, width, height);
 
         var checkedVertices = 0;
-        var skippedMirrorParts = 0;
         foreach (var group in rows.GroupBy(r => (r.Part, r.Cube)))
         {
             var (part, cube) = group.Key;
-            if (IsMirrorSourcePart(part))
+            if (IsMirrorSourcePart(part) || (part == "/ribcage" && cube > 0))
             {
-                skippedMirrorParts++;
-                continue; // registered blocker (docs/risks R-026)
-            }
-            if (part == "/ribcage" && cube > 0)
-            {
-                // The source Wither ribcage is one ModelPart with four cubes; our DSL flattens the
-                // three rib cubes into child nodes whose frame depends on the parent. An isolated
-                // single-part definition cannot reconstruct that parent frame, so these groups are
-                // covered by RawLivingWorldCoordinatesMatchLegacyTwin (full-model world coordinates)
-                // instead of this per-part source comparison.
-                skippedMirrorParts++;
+                // R-027 mirror blocker; ribcage multi-cube flattening is covered by the full-model
+                // world test (RawModelFinalWorldMatchesLegacyTwin) which meshes every part incl. ribs.
                 continue;
             }
 
-            var ourParts = OurPartsForSourcePart(definition, part, cube);
+            EntityModelPart[] ourParts = [.. definition.Parts.Where(p => p.Name == part.TrimStart('/'))];
+            Assert.NotEmpty(ourParts);
             var single = new EntityModelDefinition(definition.Name, width, height, ourParts,
                 texturePath: definition.TexturePath, baselinePx: 0f, rawSourceFrame: true);
-            // modelScale 16 => px = 1 => geometry vertices are in model pixels. Yaw 180 cancels the
-            // block factory's (180 - Yaw), leaving identity and no living flip.
-            var geometry = new EntityModelMesher().BuildModel(single,
-                new EntityRenderState(0, 0, 0, 0, 0, 180f, 0f), atlas.Get(texturePath)!, width, height, modelScale: 16f);
+            var geometry = BuildModelSpace(single, MakeLivingState(180f), width, height, atlas);
             var source = group.OrderBy(r => r.Polygon).ThenBy(r => r.Vertex).ToArray();
-            var count = geometry.VertexFloats / ChunkMesher.FloatsPerVertex;
-            Assert.Equal(source.Length, count);
-
+            Assert.Equal(source.Length, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
             for (var i = 0; i < source.Length; i++)
             {
                 var s = source[i];
                 var p = VertexFieldReader.Position(geometry.Vertices, i);
                 var uv = VertexFieldReader.Uv(geometry.Vertices, i);
                 Assert.True(MathF.Abs(s.X - p.X) < 0.001f && MathF.Abs(s.Y - p.Y) < 0.001f && MathF.Abs(s.Z - p.Z) < 0.001f,
-                    $"part={part} cube={cube} poly={s.Polygon} v={s.Vertex} i={i}: src=({s.X},{s.Y},{s.Z}) our=({p.X},{p.Y},{p.Z})");
+                    $"part={part} cube={cube} poly={s.Polygon} v={s.Vertex}: src=({s.X},{s.Y},{s.Z}) our=({p.X},{p.Y},{p.Z})");
                 Assert.True(MathF.Abs(s.U - uv.U) < 0.0001f && MathF.Abs(s.V - uv.V) < 0.0001f,
                     $"part={part} cube={cube} poly={s.Polygon} v={s.Vertex} UV: src=({s.U},{s.V}) our=({uv.U},{uv.V})");
                 checkedVertices++;
             }
         }
-
         Assert.True(checkedVertices > 0);
-        _ = skippedMirrorParts; // logged via the blocker register; not a pass criterion
     }
 
     /// <summary>
-    /// Maps a source (part,cube) key to our flattened part records. Most parts are 1:1. The reference
-    /// WitherBoss ribcage is one source part with four cubes, which our DSL flattens into ribcage/rib_1..3.
+    /// Real-model final-world equivalence. Both models come from the SAME declarative DSL mesh (read via
+    /// reflection), one baked raw (current production definition), one baked legacy
+    /// (rawSourceFrame:false, baselinePx:24). Both are meshed through the real living path and their
+    /// complete world-vertex POSITION multisets compared strictly. UV is excluded here by design
+    /// (legacy applies a face-UV calibration; raw uses source UVs verified in check 1).
     /// </summary>
-    private static IReadOnlyList<EntityModelPart> OurPartsForSourcePart(EntityModelDefinition definition, string part, int cube)
+    public static TheoryData<EntityModelDefinition, EntityModelDefinition, int, int, string, EntityRenderState> WorldCases => new()
     {
-        var bare = part.TrimStart('/');
-        return [.. definition.Parts.Where(p => p.Name == bare)];
-    }
-
-    public static TheoryData<EntityModelDefinition, EntityRenderState, float> WorldCases => new()
-    {
-        { CreeperModelDefinition.Definition, new EntityRenderState(1, 32, 10f, 2f, -4f, 45f, 0f), 24f },
-        { SpiderModelDefinition.Definition, new EntityRenderState(1, 127, -3f, 1f, 6f, 250f, 0f), 24f },
-        { WitherBossModelDefinition.Definition, new EntityRenderState(1, 149, 0f, 5f, 0f, 90f, 0f), 24f }
+        { CreeperModelDefinition.Definition, LegacyEntityTwinFactory.Creeper(), 64, 32, "entity/creeper/creeper", new EntityRenderState(1, 32, 10f, 2f, -4f, 45f, 0f) },
+        { SpiderModelDefinition.Definition, LegacyEntityTwinFactory.Spider(), 64, 32, "entity/spider/spider", new EntityRenderState(1, 127, -3f, 1f, 6f, 250f, 0f) },
+        { WitherBossModelDefinition.Definition, LegacyEntityTwinFactory.Wither(), 64, 64, "entity/wither/wither", new EntityRenderState(1, 149, 0f, 5f, 0f, 90f, 0f) }
     };
 
-    /// <summary>
-    /// Final-world regression: a raw source-frame model meshed through the living path (which applies
-    /// EntityModelTransform.ForRawSourceFrame) must land on the same world vertices as an equivalent
-    /// legacy-baked twin. This pins the frame flip + baseline at the actual final world-coordinate level.
-    /// Baby coverage: none of these families has a distinct baby model; registered as N/A below.
-    /// </summary>
     [Theory]
     [MemberData(nameof(WorldCases))]
-    public void RawLivingWorldCoordinatesMatchLegacyTwin(EntityModelDefinition definition, EntityRenderState state, float baselinePx)
+    public void RawModelFinalWorldMatchesLegacyTwin(EntityModelDefinition rawDefinition, EntityModelDefinition legacyTwin, int width, int height, string texturePath, EntityRenderState state)
     {
-        // Pure world-transform equivalence proof. A raw source-frame vertex p (already in world-block
-        // units after px) is placed by the living transform with flip+baseline. A legacy-baked twin
-        // stores S(p)+baseline; the plain entity transform places that directly. Both must agree.
-        var baseTransform = EntityModelTransform.From(state);
-        var px = (1f / 16f) * EntityPlaceholderMesher.ModelScale * definition.Scale;
-        var rawTransform = baseTransform.ForRawSourceFrame(baselinePx * px);
-        var sourcePoints = new[]
-        {
-            new Vector3(2f, 3f, 4f), new Vector3(-5f, 8f, -1f), new Vector3(0f, 0f, 0f),
-            new Vector3(7.5f, -2.25f, 3.125f), new Vector3(-3.5f, 16f, 9f)
-        };
-        foreach (var sourcePixel in sourcePoints)
-        {
-            var p = sourcePixel * px;
-            // Raw path: flip + baseline in model space, then the ordinary entity transform.
-            var rawWorld = rawTransform.Apply(p);
-            // Legacy twin: S(p)+baseline baked, then the SAME ordinary entity transform (no extra flip).
-            var legacyBaked = new Vector3(-p.X, baselinePx * px - p.Y, p.Z);
-            var legacyWorld = baseTransform.Apply(legacyBaked);
-            Assert.Equal(legacyWorld.X, rawWorld.X, 4);
-            Assert.Equal(legacyWorld.Y, rawWorld.Y, 4);
-            Assert.Equal(legacyWorld.Z, rawWorld.Z, 4);
-        }
+        var atlas = MakeAtlas(texturePath, width, height);
+        var rawWorld = BuildLivingWorld(rawDefinition, state, width, height, atlas);
+        var legacyWorld = BuildLivingWorld(legacyTwin, state, width, height, atlas);
+
+        Assert.Equal(legacyWorld.Length, rawWorld.Length);
+        // Same final world-coordinate set, strict at 1e-3. Order differs (raw uses source face order),
+        // so compare sorted position tuples. This is a position multiset equality, not a source oracle;
+        // source positions/UVs are verified strictly per-key in RawBakeMatchesSourceVertices.
+        var a = rawWorld.Select(p => (MathF.Round(p.X, 3), MathF.Round(p.Y, 3), MathF.Round(p.Z, 3))).OrderBy(p => p).ToArray();
+        var b = legacyWorld.Select(p => (MathF.Round(p.X, 3), MathF.Round(p.Y, 3), MathF.Round(p.Z, 3))).OrderBy(p => p).ToArray();
+        Assert.Equal(a, b);
     }
 
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(90f)]
+    [InlineData(180f)]
+    [InlineData(270f)]
+    public void CaveSpiderFacingMatchesLegacyTwinPerVertex(float yaw)
+    {
+        // CaveSpider reuses raw spider geometry at scale 0.7. Build a legacy spider twin from the same
+        // DSL and compare final world positions across all four facings, strictly per-vertex set.
+        var raw = CaveSpiderModelDefinition.Definition;
+        Assert.True(raw.RawSourceFrame);
+        Assert.Equal(0f, raw.BaselinePx);
+        Assert.Null(raw.FaceTransforms is { Count: > 0 } ? raw.FaceTransforms : null);
+
+        var legacy = LegacyEntityTwinFactory.Spider(0.7f, "entity/spider/cave_spider");
+        var state = new EntityRenderState(1, CaveSpiderModelDefinition.CaveSpiderEntityTypeId, 0f, 0f, 0f, yaw, 0f);
+        var atlas = MakeAtlas("entity/spider/cave_spider", 64, 32);
+        var rawWorld = BuildLivingWorld(raw, state, 64, 32, atlas);
+        var legacyWorld = BuildLivingWorld(legacy, state, 64, 32, atlas);
+        Assert.Equal(legacyWorld.Length, rawWorld.Length);
+        var a = rawWorld.Select(p => (MathF.Round(p.X, 3), MathF.Round(p.Y, 3), MathF.Round(p.Z, 3))).OrderBy(p => p).ToArray();
+        var b = legacyWorld.Select(p => (MathF.Round(p.X, 3), MathF.Round(p.Y, 3), MathF.Round(p.Z, 3))).OrderBy(p => p).ToArray();
+        Assert.Equal(a, b);
+    }
+
+    /// <summary>
+    /// Creeper/spider/wither have no distinct baby model definitions (baby mammals only). This is an
+    /// explicit N/A registration; the mammal families' baby variants are covered by their own migrations.
+    /// </summary>
     [Fact]
     public void BabyVariantsAreNotApplicableToTheseFamilies()
     {
-        // Creeper, spider and wither have no distinct baby model definition (baby mammals only).
-        // Check the resolver's baby dictionaries rather than object identity of decorated instances.
         foreach (var typeId in new[] { CreeperModelDefinition.CreeperEntityTypeId, SpiderModelDefinition.SpiderEntityTypeId, WitherBossModelDefinition.WitherEntityTypeId })
         {
             var baby = EntityModelResolver.TryResolve(typeId, baby: true);
@@ -161,25 +151,29 @@ public sealed class LivingRawReferenceSampleTests
         }
     }
 
-    [Theory]
-    [InlineData(0f)]
-    [InlineData(90f)]
-    [InlineData(180f)]
-    [InlineData(270f)]
-    public void CaveSpiderFacingKeepsTheRawFlipAndUv(float yaw)
+    private static ItemAtlas MakeAtlas(string tex, int w, int h) =>
+        ItemAtlas.FromTextures(new Dictionary<string, TextureData>(StringComparer.Ordinal) { [tex] = new(w, h, new byte[w * h * 4]) });
+
+    private static EntityRenderState MakeLivingState(float yaw) =>
+        new(1, 0, 0f, 0f, 0f, yaw, 0f);
+
+    private static DynamicGeometry BuildModelSpace(EntityModelDefinition def, EntityRenderState state, int w, int h, ItemAtlas atlas) =>
+        new EntityModelMesher().BuildModel(def, state, atlas.Get(def.TexturePath)!, w, h, modelScale: 16f);
+
+    private static (float X, float Y, float Z)[] BuildLivingWorld(EntityModelDefinition def, EntityRenderState state, int w, int h, ItemAtlas atlas)
     {
-        var sprite = new SpriteRect(0, 0, 64, 32, 1);
-        var state = new EntityRenderState(1, CaveSpiderModelDefinition.CaveSpiderEntityTypeId, 0f, 0f, 0f, yaw, 0f);
-        var caveModel = EntityModelResolver.Resolve(state.TypeId);
-        Assert.True(caveModel.RawSourceFrame, "CaveSpider must carry the raw flags of the reused spider geometry");
-        Assert.Equal(0f, caveModel.BaselinePx);
-        Assert.Null(caveModel.FaceTransforms is { Count: > 0 } ? caveModel.FaceTransforms : null);
-        var geometry = new EntityModelMesher().Build([state], sprite, 64, 32);
-        var count = geometry.VertexFloats / ChunkMesher.FloatsPerVertex;
-        Assert.True(count > 0);
-        var minY = float.MaxValue;
-        for (var i = 0; i < count; i++) minY = MathF.Min(minY, VertexFieldReader.Position(geometry.Vertices, i).Y);
-        Assert.True(minY > -0.01f, $"cave spider at yaw {yaw} dips below its feet (minY={minY}) - raw/legacy mix");
+        // The internal BuildInto seam exposes the exact living-entity geometry path with a model override
+        // and no block transform factory, so EntityModelTransform.ForRawSourceFrame is exercised on real parts.
+        var target = new DynamicGeometry();
+        var geometry = new EntityModelMesher().BuildInto(target, null, [state], new SpriteRect(0, 0, w, h, 1), w, h,
+            skinAtlas: atlas, modelOverride: def);
+        var result = new (float, float, float)[geometry.VertexFloats / ChunkMesher.FloatsPerVertex];
+        for (var i = 0; i < result.Length; i++)
+        {
+            var p = VertexFieldReader.Position(geometry.Vertices, i);
+            result[i] = (p.X, p.Y, p.Z);
+        }
+        return result;
     }
 
     private static bool IsMirrorSourcePart(string part) =>

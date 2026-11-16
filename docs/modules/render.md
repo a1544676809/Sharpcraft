@@ -751,3 +751,9 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **状态**：`进行中`，审计任务见风险 R-028。
 - **验收证据**：待 raw scale 语义实现并有源样本验证后再迁移相关模型。
 <!-- simplification:SIM-ENTITY-RAW-SCALE task:T-41 -->
+
+### 实体 raw 切片的登记口径（docs-only 限制 / baby N/A / ribcage flatten）
+
+- **docs-only 口径**：以上三个 `SIM-ENTITY-RAW-*` 条目是"raw 尚未覆盖的路径"的文档登记，不是代码中的 `[Simplification]` 特性：它们描述的是**未实现的 raw 分支**，没有对应的生产代码可用特性标注；其可审计性由 `docs/risks.md` R-026/R-027/R-028 + `check-simplifications.ps1` 的 `simplification:` marker + 本 Issue #102 的 comment 登记共同提供。这与 active code simplification（有 `[Simplification]` 标记、`active=25` 计数）口径不同，特此说明。独立审计任务统一挂在 task-41 / Issue #102。
+- **baby 变体 N/A**：Creeper（typeId 32）/ Spider（127）/ WitherBoss（149）在原版没有独立的 baby 模型定义（baby 仅存在于猪/牛/鸡等哺乳类族），因此这三族的 reference sample 只有 adult bind pose，baby 覆盖不适用（N/A）。`LivingRawReferenceSampleTests.BabyVariantsAreNotApplicableToTheseFamilies` 显式核查 resolver 无 `baby_` 模型。哺乳类的 baby 覆盖在其各自迁移批次处理。
+- **Wither ribcage flatten 限制**：源 `WitherBossModel` 的 `ribcage` 是**一个 ModelPart 含四个 cube**（body + 三条 rib），本仓 DSL 将其拆为 `ribcage`/`rib_1..3` 独立节点。按 part 隔离的 model-space 源样本比对无法重建父 part 的 bind-pose 旋转，故 `/ribcage` 的 cube>0 组在该比对中排除；这些 cube 由 `RawModelFinalWorldMatchesLegacyTwin`（真实全模型 final world 顶点逐点）覆盖，不属于静默跳过。此限制并入 R-027 的同类"结构差异"审计。

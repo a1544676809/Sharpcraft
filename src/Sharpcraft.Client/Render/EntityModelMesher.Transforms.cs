@@ -39,7 +39,9 @@ public sealed partial class EntityModelMesher
         }
     }
 
-    private DynamicGeometry BuildInto(DynamicGeometry target, EntityGeometryLayerKind? kindFilter, ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, ISpriteAtlas? skinAtlas = null, EntityVariantTable? variants = null, bool emissivePass = false, EntityPose? pose = null, bool usePreparedPoses = false, EntityModelDefinition? modelOverride = null, Func<EntityRenderState, string?>? layerTextureSelector = null, Func<EntityRenderState, bool>? entityFilter = null, IReadOnlyList<EntityPose?>? poses = null, float modelScale = EntityPlaceholderMesher.ModelScale, Func<EntityRenderState, EntityModelTransform>? entityTransformFactory = null, int? textureWidthOverride = null, int? textureHeightOverride = null)
+    // Internal so tests can sample a specific model definition through the exact living-entity
+    // geometry path (modelOverride + null transform factory) for source-equivalence verification.
+    internal DynamicGeometry BuildInto(DynamicGeometry target, EntityGeometryLayerKind? kindFilter, ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, ISpriteAtlas? skinAtlas = null, EntityVariantTable? variants = null, bool emissivePass = false, EntityPose? pose = null, bool usePreparedPoses = false, EntityModelDefinition? modelOverride = null, Func<EntityRenderState, string?>? layerTextureSelector = null, Func<EntityRenderState, bool>? entityFilter = null, IReadOnlyList<EntityPose?>? poses = null, float modelScale = EntityPlaceholderMesher.ModelScale, Func<EntityRenderState, EntityModelTransform>? entityTransformFactory = null, int? textureWidthOverride = null, int? textureHeightOverride = null)
     {
         target.Clear();
         var cubeCount = 0;
