@@ -27,6 +27,7 @@ public static class VanillaBlockEntityTypes
     public const int EnderChest = 3;
     public const int EnchantingTable = 13;
     public const int Skull = 16;
+    public const int Banner = 20;
     public const int ShulkerBox = 24;
     public const int Lectern = 29;
     public const int Bell = 30;
@@ -120,6 +121,9 @@ public static class VanillaBlockEntityTypes
 
     /// <summary>Skull block entity type, drawn by the skull renderer.</summary>
     public static bool IsSkull(int typeId) => typeId == Skull;
+
+    /// <summary>Banner block entity type, drawn by the banner renderer.</summary>
+    public static bool IsBanner(int typeId) => typeId == Banner;
 
     /// <summary>Copper golem statue block entity type, drawn by its own model renderer.</summary>
     public static bool IsCopperGolemStatue(int typeId) => typeId == CopperGolemStatue;
