@@ -64,3 +64,4 @@
 - 2026-11-17：Banner 切 raw；#111 修正；严格 reference sample 替换缺陷钉死测试；全量 3,335 / 三门禁通过。
 - 2026-11-17：Skull（mob 四型 + player）切 raw；新增 jar 探针 skull reference sample；旧内联 face-calibration 顶点期望替换为 jar 值；全量 3,335 / 三门禁通过。
 - 2026-11-17（审阅修正 task-46）：Banner 样本扩为 36 组（4 jar 锚点 + 32 源公式派生），`BannerGoldenTests` 改严格逐顶点全元组比较；新增 Skull player head 2 组 jar 样本；`render.md` 的 #111 状态统一为已解决；全量 3,369 / 三门禁通过。
+- 2026-11-17（审阅修正 task-52）：Banner 样本改为稳定 key + 源声明顶点顺序（pole→bar），`BannerGoldenTests` 去掉排序/舍入集合改按下标逐顶点位置+UV 严格比较；新增 `BannerSourceFormulaConsistencyTests`，从 4 个 jar 锚点用独立源公式重算全部 36 组逐 key 逐值校验（含 wall flag pivot (0,-20.5,10.5)）；header 补锚点映射与双 pivot 公式；全量 3,406 / 三门禁通过。
