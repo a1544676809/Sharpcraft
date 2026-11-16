@@ -15,14 +15,20 @@ public static class SpiderModelDefinition
 
     private static readonly VanillaMeshDefinition SpiderMesh = BuildSpiderMesh();
 
+    /// <summary>
+    /// Raw source-frame model: cube/pivot values are the reference y-down literals and the entity
+    /// transform owns the frame flip (reference LivingEntityRenderer, issue #102).
+    /// </summary>
     public static readonly EntityModelDefinition Definition = EntityModelDefinition.FromTree(
         "spider",
         64,
         32,
         SpiderMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/spider/spider",
-        emissiveTexturePath: "entity/spider/spider_eyes");
+        faceTransforms: null,
+        texturePath: "entity/spider/spider",
+        emissiveTexturePath: "entity/spider/spider_eyes",
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildSpiderMesh()
     {
@@ -46,7 +52,7 @@ public static class SpiderModelDefinition
 
     private static void AddLeg(VanillaPartDefinition root, string name, float pivotX, float pivotZ, bool mirror, float rotationY, float rotationZ) =>
         root.AddOrReplaceChild(name,
-            VanillaPartPose.OffsetAndRotation(pivotX, 15f, pivotZ, 0f, rotationY, -rotationZ),
+            VanillaPartPose.OffsetAndRotation(pivotX, 15f, pivotZ, 0f, rotationY, rotationZ),
             new VanillaCubeDefinition(name, 18, 0, mirror ? -1f : -15f, -1f, -1f, 16f, 2f, 2f,
                 Mirror: mirror, MirrorX: false));
 }

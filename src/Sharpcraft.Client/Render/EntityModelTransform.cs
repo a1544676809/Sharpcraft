@@ -19,8 +19,24 @@ public readonly record struct EntityModelTransform(
     float ScaleY = 1f,
     bool HasAttachRotation = false,
     Quaternion AttachRotation = default,
-    Vector3 AttachPivot = default)
+    Vector3 AttachPivot = default,
+    // Raw source-frame models are authored in the reference's y-down pixel frame. The reference
+    // LivingEntityRenderer applies scale(-1,-1,1) then translate(0,-1.501,0) to place that frame in
+    // the world. We carry the same flip here, plus the equivalent model-height baseline in our world
+    // units (24 px). See docs/analysis/render/entity-coordinate-system.md and issue #102.
+    bool FlipRawSourceFrame = false,
+    float RawBaselineWorld = 0f)
 {
+    /// <summary>
+    /// Returns this transform with the source-frame flip and baseline enabled. The baseline is in the
+    /// same units as the incoming model position (world blocks, with the model's px already applied),
+    /// which keeps the final world coordinates byte-identical to the legacy baked path.
+    /// </summary>
+    public EntityModelTransform ForRawSourceFrame(float baselineWorld) =>
+        this with { FlipRawSourceFrame = true, RawBaselineWorld = baselineWorld };
+
+    /// <summary>The model-height baseline in pixels the reference renderer folds into the frame flip.</summary>
+    public const float RawBaselinePx = 24f;
     public static EntityModelTransform From(Sharpcraft.Client.World.EntityRenderState state)
     {
         var size = state.CubeSize <= 0 ? 1 : state.CubeSize;
@@ -75,7 +91,12 @@ public readonly record struct EntityModelTransform(
     /// </summary>
     public Matrix4x4 ToMatrix()
     {
-        var matrix = Matrix4x4.CreateScale(Scale * ScaleXZ, Scale * ScaleY, Scale * ScaleXZ);
+        // Row-vector convention: the leftmost factor is the first operation applied to the point.
+        // The raw source-frame flip must therefore lead the chain, matching Apply().
+        var matrix = FlipRawSourceFrame
+            ? Matrix4x4.CreateScale(-1f, -1f, 1f) * Matrix4x4.CreateTranslation(0f, RawBaselineWorld, 0f)
+            : Matrix4x4.Identity;
+        matrix *= Matrix4x4.CreateScale(Scale * ScaleXZ, Scale * ScaleY, Scale * ScaleXZ);
         if (YawDegrees != 0f)
         {
             matrix *= Matrix4x4.CreateRotationY(YawDegrees * (MathF.PI / 180f));
@@ -96,6 +117,13 @@ public readonly record struct EntityModelTransform(
     }
     public Vector3 Apply(Vector3 modelPosition)
     {
+        // Raw source-frame flip leads the chain, matching ToMatrix(). A Y rotation leaves Y untouched,
+        // and the legacy baked path applied this same model-space flip before the entity transform.
+        if (FlipRawSourceFrame)
+        {
+            modelPosition = new Vector3(-modelPosition.X, RawBaselineWorld - modelPosition.Y, modelPosition.Z);
+        }
+
         var scaled = new Vector3(
             modelPosition.X * Scale * ScaleXZ,
             modelPosition.Y * Scale * ScaleY,

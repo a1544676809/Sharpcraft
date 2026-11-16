@@ -727,3 +727,33 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **状态**：`已解决`（`refactor/raw-block-entities` 分支）；Issue #111 已 comment 证据，待项目所有者在 PR 合并后关闭。本文件残留的旧缺陷描述仅为历史记录。
 - **验收证据**：`tests/Sharpcraft.Client.Tests/Repro/Data/banner-vectors.golden.txt`（36 组：16 ground + 4 wall + 8 phase×2，4 组 jar 锚点 + 源公式派生）与 `BannerGoldenTests.EveryVertexMatchesTheReference`（逐顶点位置+UV 全元组严格比较）；旧的 `TheFlagTiltIsInvertedUntilIssue111IsFixed` 量化钉死测试已删除。详见 `docs/modules/render-block-entities.md`。
 
+
+### SIM-ENTITY-RAW-HELD-ITEM：持有物/手持挂点未接 raw 帧
+- **简化了什么**：`ItemInHandMesher` 仍用 `EntityModelTransform.From(entity).ToMatrix()`，`PartWorldMatrix(..., rawSourceFrame)` 的 raw 参数未接调用方；raw 生物的手持物挂点仍走 legacy 共轭帧。
+- **为什么**：持有物模型本身尚未切 raw；本切片只迁移生物本体模型。
+- **对可观测行为的影响**：静态手持物与本体共用同一 frame 数学，未观测错位；raw 推广到持物生物时须补源 `ModelPart` 挂点逐点样本并接线 raw 参数。
+- **状态**：`进行中`，审计任务见风险 R-026 与独立 Issue #120。
+- **验收证据**：待持有物模型切 raw 后用源 ModelProbe 手持挂点逐点样本验证。
+<!-- simplification:SIM-ENTITY-RAW-HELD-ITEM task:T-41 -->
+
+### SIM-ENTITY-RAW-MIRROR：raw mirror 部件顶点/面语义不完整
+- **简化了什么**：源 `CubeListBuilder.mirror()` 交换 cube 的 min/max X 并反转 polygon 顶点顺序；当前 raw 路径 `RawFace` 只对 UV 做 U 翻转，未复刻几何镜像与面序反转。
+- **为什么**：镜像模型的源逐顶点/面朝向样本尚在补采；非镜像部件的位置+UV 已按源基准样本严格通过。
+- **对可观测行为的影响**：带 mirror 部件的模型（spider/wolf/pig 左半等）其镜像部件的位置/UV/面朝向可能与原版不同；`LivingRawReferenceSampleTests` 按 part 显式排除镜像部件，不把排除当通过证据。
+- **状态**：`进行中`，审计任务见风险 R-027 与独立 Issue #121。
+- **验收证据**：待补源 mirror 顶点顺序/面朝向样本并让 raw 路径完整复刻后，把镜像部件纳入严格逐点比较。
+<!-- simplification:SIM-ENTITY-RAW-MIRROR task:T-41 -->
+
+### SIM-ENTITY-RAW-SCALE：raw 不支持 non-unit PartPose scale
+- **简化了什么**：`EntityModelDefinition.FromTree` 对 raw + 非单位 scale 抛 `NotSupportedException`；EnderDragon 等带 scale 的模型无法切 raw。
+- **为什么**：raw 烘焙路径尚未实现 `MeshTransformer.scaling` 的 y-down 语义。
+- **对可观测行为的影响**：相关模型继续走 legacy 路径，行为不退化。
+- **状态**：`进行中`，审计任务见风险 R-028 与独立 Issue #122。
+- **验收证据**：待 raw scale 语义实现并有源样本验证后再迁移相关模型。
+<!-- simplification:SIM-ENTITY-RAW-SCALE task:T-41 -->
+
+### 实体 raw 切片的登记口径（docs-only 限制 / baby N/A / ribcage flatten）
+
+- **docs-only 口径**：以上三个 `SIM-ENTITY-RAW-*` 条目是"raw 尚未覆盖的路径"的文档登记，不是代码中的 `[Simplification]` 特性：它们描述的是**未实现的 raw 分支**，没有对应的生产代码可用特性标注；其可审计性由 `docs/risks.md` R-026/R-027/R-028 + `check-simplifications.ps1` 的 `simplification:` marker + 本 Issue #102 的 comment 登记共同提供。这与 active code simplification（有 `[Simplification]` 标记、`active=25` 计数）口径不同，特此说明。独立审计任务统一挂在 task-41 / Issue #102。
+- **baby 变体 N/A**：Creeper（typeId 32）/ Spider（127）/ WitherBoss（149）在原版没有独立的 baby 模型定义（baby 仅存在于猪/牛/鸡等哺乳类族），因此这三族的 reference sample 只有 adult bind pose，baby 覆盖不适用（N/A）。`LivingRawReferenceSampleTests.BabyVariantsAreNotApplicableToTheseFamilies` 显式核查 resolver 无 `baby_` 模型。哺乳类的 baby 覆盖在其各自迁移批次处理。
+- **Wither ribcage flatten 限制**：源 `WitherBossModel` 的 `ribcage` 是**一个 ModelPart 含四个 cube**（body + 三条 rib），本仓 DSL 将其拆为 `ribcage`/`rib_1..3` 独立节点。按 part 隔离的 model-space 源样本比对无法重建父 part 的 bind-pose 旋转，故 `/ribcage` 的 cube>0 组在该比对中排除；这些 cube 由 `RawModelFinalWorldMatchesLegacyTwin`（真实全模型 final world 顶点逐点）覆盖，不属于静默跳过。此限制并入 R-027 的同类"结构差异"审计。

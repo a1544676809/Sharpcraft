@@ -39,7 +39,9 @@ public sealed partial class EntityModelMesher
         }
     }
 
-    private DynamicGeometry BuildInto(DynamicGeometry target, EntityGeometryLayerKind? kindFilter, ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, ISpriteAtlas? skinAtlas = null, EntityVariantTable? variants = null, bool emissivePass = false, EntityPose? pose = null, bool usePreparedPoses = false, EntityModelDefinition? modelOverride = null, Func<EntityRenderState, string?>? layerTextureSelector = null, Func<EntityRenderState, bool>? entityFilter = null, IReadOnlyList<EntityPose?>? poses = null, float modelScale = EntityPlaceholderMesher.ModelScale, Func<EntityRenderState, EntityModelTransform>? entityTransformFactory = null, int? textureWidthOverride = null, int? textureHeightOverride = null)
+    // Internal so tests can sample a specific model definition through the exact living-entity
+    // geometry path (modelOverride + null transform factory) for source-equivalence verification.
+    internal DynamicGeometry BuildInto(DynamicGeometry target, EntityGeometryLayerKind? kindFilter, ReadOnlySpan<EntityRenderState> entities, SpriteRect skin, int skinWidth, int skinHeight, IReadOnlyDictionary<string, FaceUvTransform>? transforms = null, string? onlyPart = null, string? excludedPart = null, ISpriteAtlas? skinAtlas = null, EntityVariantTable? variants = null, bool emissivePass = false, EntityPose? pose = null, bool usePreparedPoses = false, EntityModelDefinition? modelOverride = null, Func<EntityRenderState, string?>? layerTextureSelector = null, Func<EntityRenderState, bool>? entityFilter = null, IReadOnlyList<EntityPose?>? poses = null, float modelScale = EntityPlaceholderMesher.ModelScale, Func<EntityRenderState, EntityModelTransform>? entityTransformFactory = null, int? textureWidthOverride = null, int? textureHeightOverride = null)
     {
         target.Clear();
         var cubeCount = 0;
@@ -107,6 +109,16 @@ public sealed partial class EntityModelMesher
             var px = (1f / 16f) * modelScale * model.Scale;
             var feet = Vector3.Zero;
             var entityTransform = entityTransformFactory?.Invoke(entity) ?? EntityModelTransform.From(entity);
+            // Raw source-frame models are stored in the reference's y-down pixel frame. The legacy bake
+            // folded the model-height reflection into geometry; for raw models the entity transform owns
+            // that reflection (reference LivingEntityRenderer: scale(-1,-1,1) then translate(0,-1.501,0)).
+            // The baseline is expressed in px already scaled by modelScale, matching the legacy world coords.
+            // Block-entity renderers (a non-null factory) supply their own source transform and must not
+            // receive the living-entity flip; only the LivingEntityRenderer path owns it.
+            if (model.RawSourceFrame && entityTransformFactory is null)
+            {
+                entityTransform = entityTransform.ForRawSourceFrame(model.SourceFrameBaselinePx * px);
+            }
             var sprite = skin;
             // UVs are authored against the model's declared texture size, not the image resolution (e.g. ghast declares
             // 64x32 while its PNG is 128x64). Normalising by the image size would sample the wrong texels.

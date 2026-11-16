@@ -240,14 +240,14 @@ public sealed class EntityModelRegistrationTests
     }
 
     [Fact]
-    public void SpiderLegsUseTheBakedRotationSigns()
+    public void SpiderLegsUseTheSourceRotationSigns()
     {
-        // Spider parts are authored without the global X mirror (mirrorX: false), so the baked mapping only flips Y.
-        // For that mapping a reference zRot of -PI/4 stays -PI/4 in storage and the Y rotation is kept unchanged.
+        // Raw source-frame spider legs store the reference literal rotations. SpiderModel source:
+        // right_hind_leg offsetAndRotation(..., 0, +PI/4, -PI/4) (ref SpiderModel.java:56).
         var leg = Assert.Single(EntityModelResolver.Resolve(SpiderModelDefinition.SpiderEntityTypeId).Parts, part => part.Name == "right_hind_leg");
 
         Assert.Equal(MathF.PI / 4f, leg.RotationY, 4);
-        Assert.Equal(MathF.PI / 4f, leg.RotationZ, 4);
+        Assert.Equal(-MathF.PI / 4f, leg.RotationZ, 4);
     }
 
     [Fact]
@@ -418,7 +418,8 @@ public sealed class EntityModelRegistrationTests
         Assert.Equal(9, definition.Parts.Count);
         Assert.Equal(3, definition.Parts.Count(part => part.Name.EndsWith("head", StringComparison.Ordinal)));
         Assert.Equal(3, definition.Parts.Count(part => part.Name.StartsWith("rib_", StringComparison.Ordinal)));
-        Assert.Equal(-0.20420352f, definition.Parts.Single(part => part.Name == "ribcage").RotationX);
+        // Raw source-frame: the reference ribcage X rotation is +0.20420352F (ref WitherBossModel.java:52).
+        Assert.Equal(0.20420352f, definition.Parts.Single(part => part.Name == "ribcage").RotationX);
     }
 
     [Fact]
