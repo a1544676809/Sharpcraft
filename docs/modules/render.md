@@ -752,8 +752,16 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收证据**：待 raw scale 语义实现并有源样本验证后再迁移相关模型。
 <!-- simplification:SIM-ENTITY-RAW-SCALE task:T-41 -->
 
+### SIM-ENTITY-RAW-DEGENERATE：raw 零面积部件退化面未按源探针发射
+- **简化了什么**：chicken-baby 的腿/脚/翼是零面积 cube（depth=0 或 height=0）；`EntityModelMesher` 剔除其退化面，只发 8 顶点，而 jar 的 `ModelPart.Cube` 探针按源 6 面发 24 顶点（1.8 类退化）。
+- **为什么**：退化面剔除是 mesher 既有行为（legacy/raw 一致），非本次 raw 迁移引入；frame 归属迁移切片内不改 mesher 几何行为。
+- **对可观测行为的影响**：退化面面积为 0、屏幕不可见，视觉无差异。但 chicken-baby 参考样本 192 顶点中 **144 个退化顶点**被排除在严格 source UV 比较之外；且 `WorldCases` 无四足/baby world case，这 144 个顶点的**位置也未被独立 oracle 覆盖**——这是显式登记、可审计的覆盖缺口，不是静默通过。余 48 顶点（body/beak 非退化）严格通过。
+- **状态**：`进行中`，审计任务见风险 R-029 与独立 Issue #126。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/LivingRawReferenceSampleTests.cs`（chicken-baby 常量 192/0/48/144 与 R-029 注释）+ `RawModelProbe` 源样本。解决条件：增加四足/baby full-model world 位置测试覆盖该 144 顶点，或让 raw 按源 6 面发射退化面并纳入严格逐点比对。
+<!-- simplification:SIM-ENTITY-RAW-DEGENERATE task:T-41 -->
+
 ### 实体 raw 切片的登记口径（docs-only 限制 / baby N/A / ribcage flatten）
 
-- **docs-only 口径**：以上三个 `SIM-ENTITY-RAW-*` 条目是"raw 尚未覆盖的路径"的文档登记，不是代码中的 `[Simplification]` 特性：它们描述的是**未实现的 raw 分支**，没有对应的生产代码可用特性标注；其可审计性由 `docs/risks.md` R-026/R-027/R-028 + `check-simplifications.ps1` 的 `simplification:` marker + 本 Issue #102 的 comment 登记共同提供。这与 active code simplification（有 `[Simplification]` 标记、`active=25` 计数）口径不同，特此说明。独立审计任务统一挂在 task-41 / Issue #102。
+- **docs-only 口径**：以上四个 `SIM-ENTITY-RAW-*` 条目是"raw 尚未覆盖的路径"的文档登记，不是代码中的 `[Simplification]` 特性：它们描述的是**未实现的 raw 分支**，没有对应的生产代码可用特性标注；其可审计性由 `docs/risks.md` R-026/R-027/R-028/R-029 + `check-simplifications.ps1` 的 `simplification:` marker + 本 Issue #102 的 comment 登记共同提供。这与 active code simplification（有 `[Simplification]` 标记、`active=25` 计数）口径不同，特此说明。独立审计任务统一挂在 task-41 / Issue #102。
 - **baby 变体 N/A**：Creeper（typeId 32）/ Spider（127）/ WitherBoss（149）在原版没有独立的 baby 模型定义（baby 仅存在于猪/牛/鸡等哺乳类族），因此这三族的 reference sample 只有 adult bind pose，baby 覆盖不适用（N/A）。`LivingRawReferenceSampleTests.BabyVariantsAreNotApplicableToTheseFamilies` 显式核查 resolver 无 `baby_` 模型。哺乳类的 baby 覆盖在其各自迁移批次处理。
 - **Wither ribcage flatten 限制**：源 `WitherBossModel` 的 `ribcage` 是**一个 ModelPart 含四个 cube**（body + 三条 rib），本仓 DSL 将其拆为 `ribcage`/`rib_1..3` 独立节点。按 part 隔离的 model-space 源样本比对无法重建父 part 的 bind-pose 旋转，故 `/ribcage` 的 cube>0 组在该比对中排除；这些 cube 由 `RawModelFinalWorldMatchesLegacyTwin`（真实全模型 final world 顶点逐点）覆盖，不属于静默跳过。此限制并入 R-027 的同类"结构差异"审计。

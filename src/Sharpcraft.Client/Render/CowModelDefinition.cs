@@ -22,47 +22,49 @@ public static class CowModelDefinition
     /// <summary>Declarative DSL trees for the temperate/warm/cold cow parts (T-676).</summary>
     private static readonly VanillaMeshDefinition NormalMesh = BuildNormalMesh();
 
-    private static readonly EntityModelPart[] NormalParts = [.. VanillaMeshBake.Bake(NormalMesh, 0, 0)];
+    private static readonly EntityModelPart[] NormalParts = [.. VanillaMeshBake.Bake(NormalMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)];
 
-    private static readonly CompiledEntityModel NormalCompiled = VanillaMeshBakery.Build(NormalMesh, 64, 64);
+    private static readonly CompiledEntityModel NormalCompiled = VanillaMeshBakery.Build(NormalMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
 
     private static readonly VanillaMeshDefinition WarmMesh = BuildWarmMesh();
 
-    private static readonly EntityModelPart[] WarmParts = [.. VanillaMeshBake.Bake(WarmMesh, 0, 0)];
+    private static readonly EntityModelPart[] WarmParts = [.. VanillaMeshBake.Bake(WarmMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)];
 
-    private static readonly CompiledEntityModel WarmCompiled = VanillaMeshBakery.Build(WarmMesh, 64, 64);
+    private static readonly CompiledEntityModel WarmCompiled = VanillaMeshBakery.Build(WarmMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
 
     private static readonly VanillaMeshDefinition ColdMesh = BuildColdMesh();
 
-    private static readonly EntityModelPart[] ColdParts = [.. VanillaMeshBake.Bake(ColdMesh, 0, 0)];
+    private static readonly EntityModelPart[] ColdParts = [.. VanillaMeshBake.Bake(ColdMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)];
 
-    private static readonly CompiledEntityModel ColdCompiled = VanillaMeshBakery.Build(ColdMesh, 64, 64);
+    private static readonly CompiledEntityModel ColdCompiled = VanillaMeshBakery.Build(ColdMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Definition = new(
         "cow",
         64,
         64,
         NormalParts,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/cow/cow_temperate",
-        compiled: NormalCompiled);
+        faceTransforms: null,
+        texturePath: "entity/cow/cow_temperate",
+        compiled: NormalCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Mooshroom = new(
         "mooshroom",
         64,
         64,
         NormalParts,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/cow/mooshroom_red",
-        compiled: NormalCompiled);
+        faceTransforms: null,
+        texturePath: "entity/cow/mooshroom_red",
+        compiled: NormalCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Variant key to definition, keyed by the registry entry name.</summary>
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
         new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)
         {
             ["temperate"] = Definition,
-            ["warm"] = new("cow_warm", 64, 64, WarmParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/cow/cow_warm", compiled: WarmCompiled),
-            ["cold"] = new("cow_cold", 64, 64, ColdParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/cow/cow_cold", compiled: ColdCompiled)
+            ["warm"] = new("cow_warm", 64, 64, WarmParts, faceTransforms: null,
+        texturePath: "entity/cow/cow_warm", compiled: WarmCompiled, baselinePx: 0f, rawSourceFrame: true),
+            ["cold"] = new("cow_cold", 64, 64, ColdParts, faceTransforms: null,
+        texturePath: "entity/cow/cow_cold", compiled: ColdCompiled, baselinePx: 0f, rawSourceFrame: true)
         };
 
     private static VanillaMeshDefinition BuildNormalMesh()
@@ -108,9 +110,9 @@ public static class CowModelDefinition
             new VanillaCubeDefinition("head", 0, 0, -4f, -4f, -6f, 8f, 8f, 6f));
         root.AddOrReplaceChild("snout", VanillaPartPose.Offset(0f, 4f, -8f),
             new VanillaCubeDefinition("snout", 9, 33, -3f, 1f, -7f, 6f, 3f, 1f));
-        root.AddOrReplaceChild("right_horn", VanillaPartPose.OffsetAndRotation(-4.5f, 1.5f, -11.5f, -1.5708f, 0f, 0f),
+        root.AddOrReplaceChild("right_horn", VanillaPartPose.OffsetAndRotation(-4.5f, 1.5f, -11.5f, 1.5708f, 0f, 0f),
             new VanillaCubeDefinition("right_horn", 0, 40, -1.5f, -4.5f, -0.5f, 2f, 6f, 2f));
-        root.AddOrReplaceChild("left_horn", VanillaPartPose.OffsetAndRotation(5.5f, 1.5f, -13f, -1.5708f, 0f, 0f),
+        root.AddOrReplaceChild("left_horn", VanillaPartPose.OffsetAndRotation(5.5f, 1.5f, -13f, 1.5708f, 0f, 0f),
             new VanillaCubeDefinition("left_horn", 0, 32, -1.5f, -3f, -0.5f, 2f, 6f, 2f));
         AddBodyAndUdder(root, [new("cold_cow_layer", 0.5f, 20, 32)]);
         AddLegs(root);
@@ -120,9 +122,9 @@ public static class CowModelDefinition
     /// <summary>Shared rotated body + udder; the cold variant supplies the 0.5-pixel outer body overlay (UV 20,32).</summary>
     private static void AddBodyAndUdder(VanillaPartDefinition root, IReadOnlyList<EntityModelLayer>? bodyOverlays)
     {
-        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 5f, 2f, -MathF.PI / 2f, 0f, 0f),
+        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 5f, 2f, MathF.PI / 2f, 0f, 0f),
             new VanillaCubeDefinition("body", 18, 4, -6f, -10f, -7f, 12f, 18f, 10f, Overlays: bodyOverlays));
-        root.AddOrReplaceChild("udder", VanillaPartPose.OffsetAndRotation(0f, 5f, 2f, -MathF.PI / 2f, 0f, 0f),
+        root.AddOrReplaceChild("udder", VanillaPartPose.OffsetAndRotation(0f, 5f, 2f, MathF.PI / 2f, 0f, 0f),
             new VanillaCubeDefinition("udder", 52, 0, -2f, 2f, -8f, 4f, 6f, 1f));
     }
 
