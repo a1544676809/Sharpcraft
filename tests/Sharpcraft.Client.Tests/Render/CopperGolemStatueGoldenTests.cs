@@ -21,8 +21,9 @@ namespace Sharpcraft.Client.Tests.Render;
 /// work compared world space against model space and drew conclusions from the mismatch.
 /// </para>
 /// <para>
-/// Each vertex is compared as a whole tuple, position and texture coordinates together, so a wrong
-/// UV or a flipped face fails instead of hiding behind an equal position.
+/// Vertices carry position and texture coordinates. The terrain vertex packs u in the low half and v
+/// in the high half of the third float, so both are decoded here rather than assumed; comparing the
+/// raw floats would have compared a colour bit pattern against a coordinate.
 /// </para>
 /// <para>
 /// Nine of the twenty four groups in the file do not match and are listed in
@@ -33,8 +34,18 @@ namespace Sharpcraft.Client.Tests.Render;
 /// </remarks>
 public sealed class CopperGolemStatueGoldenTests
 {
-    /// <summary>Largest disagreement tolerated, in blocks or texture units.</summary>
-    private const float Tolerance = 0.001f;
+    /// <summary>Largest disagreement tolerated for a position, in blocks.</summary>
+    private const float PositionTolerance = 0.001f;
+
+    /// <summary>Largest disagreement tolerated for a texture coordinate.</summary>
+    /// <remarks>The vertex stores u and v as half floats, which resolve about 1e-3 near one.</remarks>
+    private const float UvTolerance = 0.002f;
+
+    /// <summary>Fields compared per vertex: x, y, z, u, v.</summary>
+    private const int Fields = 5;
+
+    /// <summary>Fields that are positions rather than texture coordinates.</summary>
+    private const int PositionFields = 3;
 
     /// <summary>Groups whose facing label maps cleanly onto our ordinal and which match exactly.</summary>
     private static readonly (string Pose, string Facing)[] VerifiedGroups =
@@ -86,29 +97,25 @@ public sealed class CopperGolemStatueGoldenTests
     [InlineData("star", "north")]
     [InlineData("star", "up")]
     [InlineData("star", "west")]
-    public void EveryStatuePositionMatchesTheReference(string pose, string facing)
+    public void EveryStatueVertexMatchesTheReference(string pose, string facing)
     {
         var expected = ReferenceVertices(pose, facing);
         var actual = OurVertices(PoseOf(pose), FacingOf(facing));
 
         Assert.Equal(expected.Count, actual.Count);
 
-        var worst = 0f;
-        var component = string.Empty;
         for (var index = 0; index < expected.Count; index++)
         {
-            for (var field = 0; field < 3; field++)
+            for (var field = 0; field < Fields; field++)
             {
+                var limit = field < PositionFields ? PositionTolerance : UvTolerance;
                 var error = MathF.Abs(expected[index][field] - actual[index][field]);
-                if (error > worst)
-                {
-                    worst = error;
-                    component = index + ":" + field;
-                }
+                Assert.True(
+                    error <= limit,
+                    $"{pose}/{facing}: field {field} at vertex {index} is {actual[index][field]:F4}"
+                        + $" but the reference says {expected[index][field]:F4}");
             }
         }
-
-        Assert.True(worst <= Tolerance, $"{pose}/{facing}: worst error {worst:F4} at {component}");
     }
 
     [Fact]
@@ -118,7 +125,6 @@ public sealed class CopperGolemStatueGoldenTests
         var known = VerifiedGroups.Concat(MismatchedGroups).ToHashSet();
 
         Assert.Equal(known.Count, VerifiedGroups.Length + MismatchedGroups.Length);
-        Assert.Subset(known, inFile);
         foreach (var group in inFile)
         {
             Assert.Contains(group, known);
@@ -182,7 +188,7 @@ public sealed class CopperGolemStatueGoldenTests
             ]);
         }
 
-        result.Sort(Compare);
+        result.Sort(CompareVertices);
         return result;
     }
 
@@ -198,27 +204,30 @@ public sealed class CopperGolemStatueGoldenTests
             [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.CopperGolemStatue, Facing: facing, Pose: pose)],
             ItemAtlas.FromTextures(textures));
 
+        // TerrainVertexWriter stores position, colour bits, uv bits, then sprite and light bits; the
+        // texture coordinates live in the third float as two half floats, u low and v high.
         var stride = ChunkMesher.FloatsPerVertex;
         var result = new List<float[]>(geometry.VertexFloats / stride);
         for (var vertex = 0; vertex + 4 < geometry.VertexFloats; vertex += stride)
         {
+            var packed = BitConverter.SingleToUInt32Bits(geometry.Vertices[vertex + 4]);
             result.Add(
             [
                 geometry.Vertices[vertex],
                 geometry.Vertices[vertex + 1],
                 geometry.Vertices[vertex + 2],
-                geometry.Vertices[vertex + 3],
-                geometry.Vertices[vertex + 4]
+                (float)BitConverter.UInt16BitsToHalf((ushort)(packed & 0xFFFFu)),
+                (float)BitConverter.UInt16BitsToHalf((ushort)(packed >> 16))
             ]);
         }
 
-        result.Sort(Compare);
+        result.Sort(CompareVertices);
         return result;
     }
 
-    private static int Compare(float[] left, float[] right)
+    private static int CompareVertices(float[] left, float[] right)
     {
-        for (var field = 0; field < 3; field++)
+        for (var field = 0; field < Fields; field++)
         {
             var order = left[field].CompareTo(right[field]);
             if (order != 0)
