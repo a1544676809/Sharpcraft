@@ -11,8 +11,8 @@ using Sharpcraft.Framework.Rendering;
 namespace Sharpcraft.Client.Render;
 
 /// <summary>
-/// Draws the static base of a standing or wall banner: the pole/bar body and the flag mesh from
-/// <see cref="BannerModelDefinition"/>, tinted by the banner's dye colour. Patterns and the flag
+/// Draws the static base of a standing or wall banner: the pole/bar body in white and the flag mesh
+/// from <see cref="BannerModelDefinition"/> tinted by the banner's dye colour. Patterns and the flag
 /// phase animation are deliberately outside this slice.
 /// </summary>
 /// <remarks>
@@ -65,19 +65,19 @@ public sealed class BannerRenderer : IBlockEntityRenderer
                 : BannerAttachment.Ground;
             var transform = ModelTransform(attachment, entity.BannerRotation, entity.X, entity.Y, entity.Z);
             var tint = TintFor(entity.BannerColor);
-            var state = new EntityRenderState(
+            var bodyState = new EntityRenderState(
                 Id: index,
                 TypeId: entity.TypeId,
                 X: 0f,
                 Y: 0f,
                 Z: 0f,
                 Yaw: 180f,
-                Pitch: 0f,
-                Tint: tint);
+                Pitch: 0f);
+            var flagState = bodyState with { Tint = tint };
 
             var body = _mesher.BuildModel(
                 BannerModelDefinition.BodyFor(attachment),
-                state,
+                bodyState,
                 atlas.Get(BannerModelDefinition.TexturePath)!,
                 BannerModelDefinition.TextureWidth,
                 BannerModelDefinition.TextureHeight,
@@ -87,7 +87,7 @@ public sealed class BannerRenderer : IBlockEntityRenderer
 
             var flag = _mesher.BuildModel(
                 BannerModelDefinition.FlagFor(attachment),
-                state,
+                flagState,
                 atlas.Get(BannerModelDefinition.TexturePath)!,
                 BannerModelDefinition.TextureWidth,
                 BannerModelDefinition.TextureHeight,
@@ -120,9 +120,10 @@ public sealed class BannerRenderer : IBlockEntityRenderer
             : WallDegrees(rotation);
 
         // The source MODEL_SCALE is (0.6667, -0.6667, -0.6667) in the reference's y-down model
-        // frame. EntityModelMesher returns y-up part coordinates, so the source sign is converted
-        // back to a positive Y scale here; the source translation/rotation and x/z scale are kept.
-        return Matrix4x4.CreateScale(ModelScale)
+        // frame. EntityModelMesher returns y-up part coordinates, so only the Y sign is converted
+        // back; the source Z sign is kept. That leaves a mirror in Z, and AppendTransformed reverses
+        // winding when the determinant is negative.
+        return Matrix4x4.CreateScale(ModelScale, ModelScale, -ModelScale)
             * Matrix4x4.CreateRotationY(-degrees * (MathF.PI / 180f))
             * Matrix4x4.CreateTranslation(ModelTranslation, 0f, ModelTranslation)
             * Matrix4x4.CreateTranslation(blockX, blockY, blockZ);
@@ -211,8 +212,8 @@ public sealed class BannerRenderer : IBlockEntityRenderer
             }
         }
 
-        // The source scale flips Y in its y-down frame; this renderer converts that to a positive
-        // Y scale for the y-up baked model, so winding is not mirrored.
+        // The source scale's Y sign is converted for y-up; its Z mirror remains, so reverse
+        // winding for the negative determinant.
         var mirror = transform.GetDeterminant() < 0f;
         for (var index = 0; index < source.IndexCount; index += 3)
         {

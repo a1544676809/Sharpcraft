@@ -50,23 +50,44 @@ public sealed class BannerRendererTests
     }
 
     [Fact]
-    public void TintUsesTheSourceDyeDiffuseColour()
+    public void TintAppliesToFlagButNotBody()
     {
         var renderer = new BannerRenderer();
         var red = build(renderer, BannerAttachment.Ground, rotation: 0, color: 14, x: 0f, y: 0f, z: 0f);
-        var colour = VertexFieldReader.Colour(red.Vertices, 0);
-        Assert.Equal(11546150 >> 16 & 0xFF, (int)MathF.Round(colour.R * 255f));
-        Assert.Equal(11546150 >> 8 & 0xFF, (int)MathF.Round(colour.G * 255f));
-        Assert.Equal(11546150 & 0xFF, (int)MathF.Round(colour.B * 255f));
+
+        var body = VertexFieldReader.Colour(red.Vertices, 0);
+        Assert.Equal(1f, body.R, 3);
+        Assert.Equal(1f, body.G, 3);
+        Assert.Equal(1f, body.B, 3);
+
+        // Ground body = pole + bar (48 vertices); the flag starts at index 48.
+        var flag = VertexFieldReader.Colour(red.Vertices, 48);
+        Assert.Equal(11546150 >> 16 & 0xFF, (int)MathF.Round(flag.R * 255f));
+        Assert.Equal(11546150 >> 8 & 0xFF, (int)MathF.Round(flag.G * 255f));
+        Assert.Equal(11546150 & 0xFF, (int)MathF.Round(flag.B * 255f));
     }
 
     [Theory]
-    [InlineData(BannerAttachment.Ground, (byte)0, 0.54167f, 1f, 0.54167f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Ground, (byte)4, 0.45833f, 1f, 0.54167f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Ground, (byte)8, 0.45833f, 1f, 0.45833f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Ground, (byte)12, 0.54167f, 1f, 0.45833f, 0.75f, 0f)]
-    [InlineData(BannerAttachment.Wall, (byte)2, 0.08333f, 1.77083f, 0.02083f, 0.34375f, 0.65625f)]
-    [InlineData(BannerAttachment.Wall, (byte)3, 0.91667f, 1.77083f, 0.97917f, 0.34375f, 0.65625f)]
+    [InlineData(BannerAttachment.Ground, (byte)0, 0.54167f, 1f, 0.45833f, 0.75f, 0f)]
+    [InlineData(BannerAttachment.Ground, (byte)1, 0.55444f, 1f, 0.47745f, 0.75f, 0f)]
+    [InlineData(BannerAttachment.Ground, (byte)2, 0.55893f, 1f, 0.5f, 0.75f, 0f)]
+    [InlineData(BannerAttachment.Ground, (byte)3, 0.55444f, 1f, 0.52255f, 0.75f, 0f)]
+    [InlineData(BannerAttachment.Ground, (byte)4, 0.54167f, 1f, 0.54167f, 0.75f, 0f)]
+    [InlineData(BannerAttachment.Ground, (byte)5, 0.52255f, 1f, 0.55444f, 0.75f, 0f)]
+    [InlineData(BannerAttachment.Ground, (byte)6, 0.5f, 1f, 0.55893f, 0.75f, 0f)]
+    [InlineData(BannerAttachment.Ground, (byte)7, 0.47745f, 1f, 0.55444f, 0.75f, 0f)]
+    [InlineData(BannerAttachment.Ground, (byte)8, 0.45833f, 1f, 0.54167f, 0.75f, 0f)]
+    [InlineData(BannerAttachment.Ground, (byte)9, 0.44556f, 1f, 0.52255f, 0.75f, 0f)]
+    [InlineData(BannerAttachment.Ground, (byte)10, 0.44107f, 1f, 0.5f, 0.75f, 0f)]
+    [InlineData(BannerAttachment.Ground, (byte)11, 0.44556f, 1f, 0.47745f, 0.75f, 0f)]
+    [InlineData(BannerAttachment.Ground, (byte)12, 0.45833f, 1f, 0.45833f, 0.75f, 0f)]
+    [InlineData(BannerAttachment.Ground, (byte)13, 0.47745f, 1f, 0.44556f, 0.75f, 0f)]
+    [InlineData(BannerAttachment.Ground, (byte)14, 0.5f, 1f, 0.44107f, 0.75f, 0f)]
+    [InlineData(BannerAttachment.Ground, (byte)15, 0.52255f, 1f, 0.44556f, 0.75f, 0f)]
+    [InlineData(BannerAttachment.Wall, (byte)2, 0.08333f, 1.77083f, 0.97917f, 0.34375f, 0.65625f)]
+    [InlineData(BannerAttachment.Wall, (byte)3, 0.91667f, 1.77083f, 0.02083f, 0.34375f, 0.65625f)]
+    [InlineData(BannerAttachment.Wall, (byte)4, 0.97917f, 1.77083f, 0.91667f, 0.34375f, 0.65625f)]
+    [InlineData(BannerAttachment.Wall, (byte)5, 0.02083f, 1.77083f, 0.08333f, 0.34375f, 0.65625f)]
     public void GroundAndWallFinalVertexSamples(
         BannerAttachment attachment,
         byte rotation,
@@ -86,6 +107,19 @@ public sealed class BannerRendererTests
         Assert.Equal(z, position.Z, 4);
         Assert.Equal(u, uv.U, 4);
         Assert.Equal(v, uv.V, 4);
+    }
+
+    [Fact]
+    public void InvalidBannerFieldsFallBackToBlockDefaults()
+    {
+        var renderer = new BannerRenderer();
+        var ground = build(renderer, BannerAttachment.Ground, rotation: 0, color: 0, x: 0f, y: 0f, z: 0f);
+        var invalidAttachment = build(renderer, (BannerAttachment)99, rotation: 0, color: 0, x: 0f, y: 0f, z: 0f);
+        var invalidRotation = build(renderer, BannerAttachment.Ground, rotation: 16, color: 16, x: 0f, y: 0f, z: 0f);
+
+        Assert.Equal(VertexFieldReader.Position(ground.Vertices, 0), VertexFieldReader.Position(invalidAttachment.Vertices, 0));
+        Assert.Equal(VertexFieldReader.Position(ground.Vertices, 0), VertexFieldReader.Position(invalidRotation.Vertices, 0));
+        Assert.Equal(VertexFieldReader.Colour(ground.Vertices, 48), VertexFieldReader.Colour(invalidRotation.Vertices, 48));
     }
 
     private DynamicGeometry build(
