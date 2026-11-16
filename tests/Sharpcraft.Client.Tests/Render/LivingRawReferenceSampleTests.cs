@@ -46,10 +46,12 @@ public sealed class LivingRawReferenceSampleTests
         { "chicken-raw-vectors.reference.txt", ChickenModelDefinition.Definition, 64, 32, "entity/chicken/chicken_temperate", 192, 24, 168, 0 },
         { "pig-baby-raw-vectors.reference.txt", BabyModelDefinitions.Pig, 32, 32, "entity/pig/pig_temperate_baby", 168, 0, 168, 0 },
         { "cow-baby-raw-vectors.reference.txt", BabyModelDefinitions.Cow, 64, 64, "entity/cow/cow_temperate_baby", 216, 24, 192, 0 },
-        // Chicken-baby left/right legs are zero-depth planes (depth=0); the mesher culls the two
-        // degenerate faces, emitting 8 verts where the source probe emits all 24. That pre-existing
-        // culling difference is registered as a blocker; the 48 leg rows are excluded from strict UV
-        // comparison (non-degenerate parts still fully checked). Positions are covered by the world test.
+        // Chicken-baby left/right legs + feet + wings are zero-area cubes (depth=0 or height=0); the
+        // mesher culls degenerate faces, emitting 8 verts where the source probe emits all 24. This
+        // pre-existing culling difference is registered as R-029 / Issue #126. The 144 degenerate
+        // sample rows are excluded from BOTH strict source UV comparison AND from any world/legacy
+        // twin check (WorldCases has no quadruped/baby cases). Their positions/UVs are therefore NOT
+        // covered by an independent oracle - this is an explicit, audited gap, not a silent pass.
         { "chicken-baby-raw-vectors.reference.txt", BabyModelDefinitions.Chicken, 16, 16, "entity/chicken/chicken_temperate_baby", 192, 0, 48, 144 }
     };
 
