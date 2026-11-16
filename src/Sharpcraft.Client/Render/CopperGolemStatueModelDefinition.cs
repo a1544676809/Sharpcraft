@@ -68,8 +68,7 @@ public static class CopperGolemStatueModelDefinition
             PlayerModelDefinition.DefaultFaceTransforms,
             CopperGolemModelDefinition.Definition.TexturePath,
             emissiveTexturePath: CopperGolemModelDefinition.Definition.EmissiveTexturePath,
-            additionalTexturePaths: CopperGolemModelDefinition.Definition.AdditionalTexturePaths,
-            modelHeight: 0f);
+            additionalTexturePaths: CopperGolemModelDefinition.Definition.AdditionalTexturePaths);
         return WithRootPose(source, name);
     }
 
