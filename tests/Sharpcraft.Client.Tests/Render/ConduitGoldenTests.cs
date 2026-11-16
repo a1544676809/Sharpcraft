@@ -85,6 +85,29 @@ public sealed class ConduitGoldenTests
         AssertUvSetsEqual(expected, actual, face, face);
     }
 
+    [Theory]
+    [MemberData(nameof(GroupRows))]
+    public void EveryVertexPositionAndUvMatchesTheReference(string group)
+    {
+        var expected = ReferenceVertices(group);
+        var actual = OurVertices();
+        Assert.Equal(expected.Count, actual.Count);
+
+        for (var vertex = 0; vertex < expected.Count; vertex++)
+        {
+            var e = expected[vertex];
+            var a = actual[vertex];
+            Assert.True(
+                MathF.Abs(e.X - a.X) <= Tolerance
+                    && MathF.Abs(e.Y - a.Y) <= Tolerance
+                    && MathF.Abs(e.Z - a.Z) <= Tolerance
+                    && MathF.Abs(e.U - a.U) <= Tolerance
+                    && MathF.Abs(e.V - a.V) <= Tolerance,
+                $"{group}: vertex {vertex} is ({a.X:F4}, {a.Y:F4}, {a.Z:F4}) uv ({a.U:F4}, {a.V:F4})"
+                    + $" but the sample says ({e.X:F4}, {e.Y:F4}, {e.Z:F4}) uv ({e.U:F4}, {e.V:F4})");
+        }
+    }
+
     [Fact]
     public void EveryGroupInTheSampleIsAccountedFor()
     {
@@ -107,11 +130,8 @@ public sealed class ConduitGoldenTests
     {
         Assert.True(
             expected.Count == actual.Count,
-            $"face {face}: ours carries {actual.Count} UVs but the sample face {referenceFace} has {expected.Count}."
-                + " If the face mapping was corrected, change this test to a strict comparison and close #112.");
+            $"face {face}: ours carries {actual.Count} UVs but the sample face {referenceFace} has {expected.Count}.");
 
-        expected.Sort();
-        actual.Sort();
         for (var corner = 0; corner < expected.Count; corner++)
         {
             var du = MathF.Abs(expected[corner].U - actual[corner].U);
@@ -119,8 +139,7 @@ public sealed class ConduitGoldenTests
             Assert.True(
                 du <= Tolerance && dv <= Tolerance,
                 $"face {face} vertex {corner}: ours is u {actual[corner].U:F4} v {actual[corner].V:F4}"
-                    + $" but sample face {referenceFace} says u {expected[corner].U:F4} v {expected[corner].V:F4}."
-                    + " If the face mapping was corrected, change this test to a strict comparison and close #112.");
+                    + $" but sample face {referenceFace} says u {expected[corner].U:F4} v {expected[corner].V:F4}.");
         }
     }
 

@@ -531,13 +531,17 @@ public sealed partial class EntityModelMesher
         }
         if (emitBase && rawSourceFrame)
         {
-            // Source ModelPart.Cube polygon order and UV intervals. No legacy X-mirror/Y-up swaps.
-            AddFace(l1, l0, t0, t1, u2, v0, u1, v0, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("DOWN"), partTint, target);
-            AddFace(t2, t3, l3, l2, u22, v1, u2, v1, u2, v0, u22, v0, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("UP"), partTint, target);
-            AddFace(t0, l0, l3, t3, u1, v1, u0, v1, u0, v2, u1, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("WEST"), partTint, target);
-            AddFace(t1, t0, t3, t2, u2, v1, u1, v1, u1, v2, u2, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("NORTH"), partTint, target);
-            AddFace(l1, t1, t2, l2, u3, v1, u2, v1, u2, v2, u3, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("EAST"), partTint, target);
-            AddFace(l0, l1, l2, l3, u4, v1, u3, v1, u3, v2, u4, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, T("SOUTH"), partTint, target);
+            // Raw source faces ignore the legacy face UV calibration tables. The only source
+            // adjustment is CubeListBuilder.mirror, which flips U for every face.
+            FaceUvTransform RawFace() => part.Mirror
+                ? FaceUvTransform.Identity with { FlipH = true }
+                : FaceUvTransform.Identity;
+            AddFace(l1, l0, t0, t1, u2, v0, u1, v0, u1, v1, u2, v1, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, RawFace(), partTint, target);
+            AddFace(t2, t3, l3, l2, u22, v1, u2, v1, u2, v0, u22, v0, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, RawFace(), partTint, target);
+            AddFace(t0, l0, l3, t3, u1, v1, u0, v1, u0, v2, u1, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, RawFace(), partTint, target);
+            AddFace(t1, t0, t3, t2, u2, v1, u1, v1, u1, v2, u2, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, RawFace(), partTint, target);
+            AddFace(l1, t1, t2, l2, u3, v1, u2, v1, u2, v2, u3, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, RawFace(), partTint, target);
+            AddFace(l0, l1, l2, l3, u4, v1, u3, v1, u3, v2, u4, v2, skin, skinWidth, skinHeight, ref vertexFloats, ref indexCount, RawFace(), partTint, target);
         }
         else if (emitBase)
         {
@@ -830,7 +834,9 @@ public sealed partial class EntityModelMesher
                 1f + rootPose.Scale.X,
                 1f + rootPose.Scale.Y,
                 1f + rootPose.Scale.Z))
-            * RotationZyx(-rootPose.Rotation.X, -rootPose.Rotation.Y, rootPose.Rotation.Z)
+            * (rawSourceFrame
+                ? RotationZyx(rootPose.Rotation.X, rootPose.Rotation.Y, rootPose.Rotation.Z)
+                : RotationZyx(-rootPose.Rotation.X, -rootPose.Rotation.Y, rootPose.Rotation.Z))
             * Matrix4x4.CreateTranslation(rootPose.Position * px);
 
         foreach (var child in compiled.Root.ChildArray)

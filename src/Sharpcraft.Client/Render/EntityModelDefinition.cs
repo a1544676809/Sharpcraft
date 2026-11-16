@@ -30,6 +30,11 @@ public sealed class EntityModelDefinition
         float baselinePx = 24f,
         bool rawSourceFrame = false)
     {
+        if (rawSourceFrame && baselinePx != 0f)
+        {
+            throw new ArgumentException("A raw source-frame model must not carry a model-height baseline.", nameof(baselinePx));
+        }
+
         Name = name;
         TextureWidth = textureWidth;
         TextureHeight = textureHeight;
@@ -131,9 +136,15 @@ public sealed class EntityModelDefinition
         IReadOnlyList<string>? additionalTexturePaths = null,
         IReadOnlyList<EntityRenderLayerDefinition>? renderLayers = null,
         float baselinePx = 24f,
-        bool rawSourceFrame = false)
+        bool rawSourceFrame = false,
+        bool applyRootPose = false)
     {
         ArgumentNullException.ThrowIfNull(mesh);
+        if (rawSourceFrame && VanillaMeshBake.HasNonUnitScale(mesh))
+        {
+            throw new NotSupportedException("Raw source-frame models do not support non-unit PartPose scale yet; use the legacy path or migrate the scaled model separately.");
+        }
+
         var parts = VanillaMeshBake.Bake(mesh, 0, 0, baselinePx, rawSourceFrame: rawSourceFrame);
         var compiled = VanillaMeshBakery.Build(mesh, textureWidth, textureHeight, baselinePx, texturePath: texturePath, rawSourceFrame: rawSourceFrame);
         return new EntityModelDefinition(
@@ -150,7 +161,8 @@ public sealed class EntityModelDefinition
             compiled,
             renderLayers,
             baselinePx: baselinePx,
-            rawSourceFrame: rawSourceFrame);
+            rawSourceFrame: rawSourceFrame,
+            applyRootPose: applyRootPose);
     }
 
     public IEnumerable<string> TexturePaths

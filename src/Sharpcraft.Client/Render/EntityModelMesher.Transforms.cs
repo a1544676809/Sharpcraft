@@ -327,7 +327,8 @@ public sealed partial class EntityModelMesher
         EntityRenderState entity,
         string partName,
         EntityPose? pose = null,
-        bool applyRootPose = true)
+        bool applyRootPose = true,
+        bool rawSourceFrame = false)
     {
         ArgumentNullException.ThrowIfNull(definition);
         var compiled = definition.Compiled;
@@ -342,7 +343,9 @@ public sealed partial class EntityModelMesher
                 1f + rootPose.Scale.X,
                 1f + rootPose.Scale.Y,
                 1f + rootPose.Scale.Z))
-            * RotationZyx(-rootPose.Rotation.X, -rootPose.Rotation.Y, rootPose.Rotation.Z)
+            * (rawSourceFrame
+                ? RotationZyx(rootPose.Rotation.X, rootPose.Rotation.Y, rootPose.Rotation.Z)
+                : RotationZyx(-rootPose.Rotation.X, -rootPose.Rotation.Y, rootPose.Rotation.Z))
             * Matrix4x4.CreateTranslation(rootPose.Position * px);
 
         Matrix4x4? found = null;
