@@ -706,3 +706,12 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收证据**：静态 ground/wall 顶点/UV 测试；动画接入后补时间序列真值。
 
 <!-- simplification:SIM-BE-SKULL-ANIM task:T-47 -->
+
+### SIM-BE-CONDUIT-FACE-UV：潮涌核心外壳的面 ↔ UV 归属与参考不一致（Issue #112）
+
+- **偏差内容**：inactive 外壳（`ConduitRenderer` 的 `createShellLayer`）六个面里，四个面的 UV 归属与 26.3 参考不同：DOWN↔UP、WEST↔EAST 互换，NORTH/SOUTH 一致。位置 24/24 逐点相同（最大误差 0），全局 UV 值集合也相同，只有面到 atlas cell 的映射错位。
+- **为什么**：`EntityModelMesher.AddPart` 的 `swapBodyDownUp` 与 WEST/EAST u-range 交换属于面 UV 约定校准，与参考原版 `ModelPart.render` 的面 UV 归属不同；修复需改渲染核心，超出本次纯机械取样范围，Issue #112 单独跟进。
+- **对等效性的影响**：仅影响对称模型的面 UV 归属（面纹理朝向/贴图分区）；几何位置、顶点数、UV 值集合不变。
+- **状态**：`阻塞于评审`，直到 Issue #112 修复；修复渲染核心后须把量化断言改回严格比较并关闭该 Issue。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Repro/Data/conduit-vectors.golden.txt`（原版真值，inactive shell @ 零旋转）与 `tests/Sharpcraft.Client.Tests/Render/ConduitGoldenTests.cs` 中 `TheFaceUvMappingIsSwappedUntilIssue112IsFixed` 的量化断言（面 0↔1、1↔0、2↔4、4↔2，面 3/5 严格）。
+- **范围**：金值只取样 inactive 外壳；active cage/wind/eye 属已登记的 `SIM-BE-CONDUIT-ACTIVE` 简化，其变换依赖 tickCount / animPhase / camera orientation，取样器语法无法忠实表达，本次不取。

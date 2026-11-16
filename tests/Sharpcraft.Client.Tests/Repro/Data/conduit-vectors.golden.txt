@@ -1,0 +1,47 @@
+# Sharpcraft reference sample
+# source: Minecraft 26.3 client (jar sha1 e877b6a07acd633fb3bb475002175cec036e7b87)
+# tool: ref://mc-26.3-analysis/vectors/ModelProbe.java (generic ModelLayers sampler; compiled against the 26.3 client jar)
+# space: y-up, 1 block = 1 unit, block origin (0,0,0); vertices after the inactive shell transform
+# columns: name|angle|x|y|z|u|v
+#
+# source transforms (ref://mc-26.3-analysis/src/net/minecraft/client/renderer/blockentity/ConduitRenderer.java):
+#   createShellLayer lines 72-77: box(-3,-3,-3,6,6,6), PartPose.ZERO, 32x16 texture
+#   submit inactive branch lines 106-119: translate(0.5F,0.5F,0.5F) (line 108), then
+#     rotateDegrees(Axis.YP, activeRotation) (line 109); shell submitted at lines 111-113
+#   DEFAULT_TRANSFORMATION line 34: translation(0.5F,0.5F,0.5F)
+# spec for the rot0 group: layer=CONDUIT_SHELL,name=conduit|rot0,t=0.5:0.5:0.5
+#   No flip: the source inactive branch contains no scale(-1,-1,1).
+#
+# scope: inactive shell at zero rotation only. PR #103 / SIM-BE-CONDUIT-ACTIVE implements only
+#   the inactive shell and fixes activeRotation at zero. The active cage/eye/wind branches
+#   (source lines 120-168) use time-dependent bob, arbitrary-axis rotation, camera orientation
+#   and scale, none of which are implemented here, so no goldens are recorded for them.
+#   Non-zero rotation samples were intentionally excluded: ModelProbe composes transforms as
+#   scale*flip*rotate*translate (vertex sees translate then rotate), whereas the source PoseStack
+#   applies translate then rotateDegrees (vertex sees rotate then translate). At angle zero the two
+#   orders coincide, so the recorded group is exact; encoding rotated groups would require a
+#   compensating inverse translation that is not a literal source value.
+conduit|rot0|0.687500|0.312500|0.687500|0.375000|0.000000
+conduit|rot0|0.312500|0.312500|0.687500|0.187500|0.000000
+conduit|rot0|0.312500|0.312500|0.312500|0.187500|0.375000
+conduit|rot0|0.687500|0.312500|0.312500|0.375000|0.375000
+conduit|rot0|0.687500|0.687500|0.312500|0.562500|0.375000
+conduit|rot0|0.312500|0.687500|0.312500|0.375000|0.375000
+conduit|rot0|0.312500|0.687500|0.687500|0.375000|0.000000
+conduit|rot0|0.687500|0.687500|0.687500|0.562500|0.000000
+conduit|rot0|0.312500|0.312500|0.312500|0.187500|0.375000
+conduit|rot0|0.312500|0.312500|0.687500|0.000000|0.375000
+conduit|rot0|0.312500|0.687500|0.687500|0.000000|0.750000
+conduit|rot0|0.312500|0.687500|0.312500|0.187500|0.750000
+conduit|rot0|0.687500|0.312500|0.312500|0.375000|0.375000
+conduit|rot0|0.312500|0.312500|0.312500|0.187500|0.375000
+conduit|rot0|0.312500|0.687500|0.312500|0.187500|0.750000
+conduit|rot0|0.687500|0.687500|0.312500|0.375000|0.750000
+conduit|rot0|0.687500|0.312500|0.687500|0.562500|0.375000
+conduit|rot0|0.687500|0.312500|0.312500|0.375000|0.375000
+conduit|rot0|0.687500|0.687500|0.312500|0.375000|0.750000
+conduit|rot0|0.687500|0.687500|0.687500|0.562500|0.750000
+conduit|rot0|0.312500|0.312500|0.687500|0.750000|0.375000
+conduit|rot0|0.687500|0.312500|0.687500|0.562500|0.375000
+conduit|rot0|0.687500|0.687500|0.687500|0.562500|0.750000
+conduit|rot0|0.312500|0.687500|0.687500|0.750000|0.750000
