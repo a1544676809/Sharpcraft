@@ -154,7 +154,7 @@ public sealed class CopperGolemStatueMesher
         var pose = new EntityPose();
         // The reference layer's root pivot is 24 pixels; CopperGolemStatueModel sets root.y = 0,
         // which in the y-up baked representation is a +24 pixel root translation before zRot = π.
-        pose.Set("root", new PoseOffset(new Vector3(0f, 0f, 0f), new Vector3(0f, 0f, -MathF.PI), Vector3.Zero));
+        pose.Set("root", new PoseOffset(new Vector3(0f, 24f, 0f), new Vector3(0f, 0f, MathF.PI), Vector3.Zero));
         return pose;
     }
 
