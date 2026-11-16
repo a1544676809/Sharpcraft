@@ -54,11 +54,11 @@ public sealed class CreeperSpiderWitherModelDefinitionTests
         var expected = new[]
         {
             RawModelPartFactory.FromVanilla("shoulders", 0f, 0f, 0f, -10f, 3.9f, -0.5f, 20f, 3f, 3f, 0, 16, mirrorX: false),
-            RawModelPartFactory.FromVanilla("ribcage", -2f, 6.9f, -0.5f, 0f, 0f, 0f, 3f, 10f, 3f, 0, 22, rotationX: -0.20420352f),
+            RawModelPartFactory.FromVanilla("ribcage", -2f, 6.9f, -0.5f, 0f, 0f, 0f, 3f, 10f, 3f, 0, 22, rotationX: 0.20420352f),
             RawModelPartFactory.FromVanillaChild("rib_1", "ribcage", 0f, 0f, 0f, -4f, 1.5f, 0.5f, 11f, 2f, 2f, 24, 22),
             RawModelPartFactory.FromVanillaChild("rib_2", "ribcage", 0f, 0f, 0f, -4f, 4f, 0.5f, 11f, 2f, 2f, 24, 22),
             RawModelPartFactory.FromVanillaChild("rib_3", "ribcage", 0f, 0f, 0f, -4f, 6.5f, 0.5f, 11f, 2f, 2f, 24, 22),
-            RawModelPartFactory.FromVanilla("tail", -2f, 16.692228f, 1.527873f, 0f, 0f, 0f, 3f, 6f, 3f, 12, 22, rotationX: -0.83252203f),
+            RawModelPartFactory.FromVanilla("tail", -2f, 16.692228f, 1.527873f, 0f, 0f, 0f, 3f, 6f, 3f, 12, 22, rotationX: 0.83252203f),
             RawModelPartFactory.FromVanilla("center_head", 0f, 0f, 0f, -4f, -4f, -4f, 8f, 8f, 8f, 0, 0),
             RawModelPartFactory.FromVanilla("right_head", -8f, 4f, 0f, -4f, -4f, -4f, 6f, 6f, 6f, 32, 0),
             RawModelPartFactory.FromVanilla("left_head", 10f, 4f, 0f, -4f, -4f, -4f, 6f, 6f, 6f, 32, 0)
@@ -77,7 +77,7 @@ public sealed class CreeperSpiderWitherModelDefinitionTests
 
     private static EntityModelPart Leg(string name, float pivotX, float pivotZ, bool mirror, float rotationY, float rotationZ) =>
         RawModelPartFactory.FromVanilla(name, pivotX, 15f, pivotZ, mirror ? -1f : -15f, -1f, -1f, 16f, 2f, 2f, 18, 0,
-            mirror: mirror, mirrorX: false, rotationY: rotationY, rotationZ: -rotationZ);
+            mirror: mirror, mirrorX: false, rotationY: rotationY, rotationZ: rotationZ);
 
     private static void AssertNames(IReadOnlyList<EntityModelPart> parts, string[] names)
     {

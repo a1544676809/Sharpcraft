@@ -52,7 +52,7 @@ public static class SpiderModelDefinition
 
     private static void AddLeg(VanillaPartDefinition root, string name, float pivotX, float pivotZ, bool mirror, float rotationY, float rotationZ) =>
         root.AddOrReplaceChild(name,
-            VanillaPartPose.OffsetAndRotation(pivotX, 15f, pivotZ, 0f, rotationY, -rotationZ),
+            VanillaPartPose.OffsetAndRotation(pivotX, 15f, pivotZ, 0f, rotationY, rotationZ),
             new VanillaCubeDefinition(name, 18, 0, mirror ? -1f : -15f, -1f, -1f, 16f, 2f, 2f,
                 Mirror: mirror, MirrorX: false));
 }
