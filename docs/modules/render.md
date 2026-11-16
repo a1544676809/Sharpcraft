@@ -727,3 +727,27 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **状态**：`已解决`（`refactor/raw-block-entities` 分支）；Issue #111 已 comment 证据，待项目所有者在 PR 合并后关闭。本文件残留的旧缺陷描述仅为历史记录。
 - **验收证据**：`tests/Sharpcraft.Client.Tests/Repro/Data/banner-vectors.golden.txt`（36 组：16 ground + 4 wall + 8 phase×2，4 组 jar 锚点 + 源公式派生）与 `BannerGoldenTests.EveryVertexMatchesTheReference`（逐顶点位置+UV 全元组严格比较）；旧的 `TheFlagTiltIsInvertedUntilIssue111IsFixed` 量化钉死测试已删除。详见 `docs/modules/render-block-entities.md`。
 
+
+### SIM-ENTITY-RAW-HELD-ITEM：持有物/手持挂点未接 raw 帧
+- **简化了什么**：`ItemInHandMesher` 仍用 `EntityModelTransform.From(entity).ToMatrix()`，`PartWorldMatrix(..., rawSourceFrame)` 的 raw 参数未接调用方；raw 生物的手持物挂点仍走 legacy 共轭帧。
+- **为什么**：持有物模型本身尚未切 raw；本切片只迁移生物本体模型。
+- **对可观测行为的影响**：静态手持物与本体共用同一 frame 数学，未观测错位；raw 推广到持物生物时须补源 `ModelPart` 挂点逐点样本并接线 raw 参数。
+- **状态**：`进行中`，审计任务见风险 R-026。
+- **验收证据**：待持有物模型切 raw 后用源 ModelProbe 手持挂点逐点样本验证。
+<!-- simplification:SIM-ENTITY-RAW-HELD-ITEM task:T-41 -->
+
+### SIM-ENTITY-RAW-MIRROR：raw mirror 部件顶点/面语义不完整
+- **简化了什么**：源 `CubeListBuilder.mirror()` 交换 cube 的 min/max X 并反转 polygon 顶点顺序；当前 raw 路径 `RawFace` 只对 UV 做 U 翻转，未复刻几何镜像与面序反转。
+- **为什么**：镜像模型的源逐顶点/面朝向样本尚在补采；非镜像部件的位置+UV 已按源基准样本严格通过。
+- **对可观测行为的影响**：带 mirror 部件的模型（spider/wolf/pig 左半等）其镜像部件的位置/UV/面朝向可能与原版不同；`LivingRawReferenceSampleTests` 按 part 显式排除镜像部件，不把排除当通过证据。
+- **状态**：`进行中`，审计任务见风险 R-027。
+- **验收证据**：待补源 mirror 顶点顺序/面朝向样本并让 raw 路径完整复刻后，把镜像部件纳入严格逐点比较。
+<!-- simplification:SIM-ENTITY-RAW-MIRROR task:T-41 -->
+
+### SIM-ENTITY-RAW-SCALE：raw 不支持 non-unit PartPose scale
+- **简化了什么**：`EntityModelDefinition.FromTree` 对 raw + 非单位 scale 抛 `NotSupportedException`；EnderDragon 等带 scale 的模型无法切 raw。
+- **为什么**：raw 烘焙路径尚未实现 `MeshTransformer.scaling` 的 y-down 语义。
+- **对可观测行为的影响**：相关模型继续走 legacy 路径，行为不退化。
+- **状态**：`进行中`，审计任务见风险 R-028。
+- **验收证据**：待 raw scale 语义实现并有源样本验证后再迁移相关模型。
+<!-- simplification:SIM-ENTITY-RAW-SCALE task:T-41 -->

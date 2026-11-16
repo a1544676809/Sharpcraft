@@ -8,14 +8,21 @@ public static class CaveSpiderModelDefinition
 {
     public const int CaveSpiderEntityTypeId = 22;
 
+    /// <summary>
+    /// Cave spider reuses the raw source-frame spider geometry, so it must carry the same raw flags
+    /// (face transforms disabled, no baseline, living flip) or the mesher would treat y-down parts as
+    /// legacy y-up and invert geometry/UVs. Only the scale and textures differ from the spider.
+    /// </summary>
     public static readonly EntityModelDefinition Definition = new(
         "cave_spider",
         64,
         32,
         SpiderModelDefinition.Definition.Parts,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/spider/cave_spider",
-        0.7f,
-        "entity/spider/spider_eyes",
-        compiled: SpiderModelDefinition.Definition.Compiled);
+        faceTransforms: null,
+        texturePath: "entity/spider/cave_spider",
+        scale: 0.7f,
+        emissiveTexturePath: "entity/spider/spider_eyes",
+        compiled: SpiderModelDefinition.Definition.Compiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 }

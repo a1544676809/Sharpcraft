@@ -7,13 +7,14 @@ using Sharpcraft.Framework.Rendering;
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>
-/// Source-derived oracle for raw source-frame models. Unlike <see cref="LegacyModelPartFactory"/>, which
-/// converts reference y-down values into the legacy baked y-up frame, this factory keeps the reference
-/// y-down pivot/cube values verbatim (the raw bake is an identity mapping of the source frame). The
-/// source literals fed to it are taken from the reference model definitions, cross-checked against
-/// <c>vanilla-model-facts.json</c> and the ModelProbe samples under
-/// <c>ref://mc-26.3-analysis/vectors/</c>. This is a structural source oracle, never fed by the
-/// production mesher's output.
+/// Independent source oracle for raw source-frame models. This does NOT call any production bake
+/// (<c>VanillaMeshBake</c>/<c>VanillaMeshBakery</c>); it constructs the expected <see cref="EntityModelPart"/>
+/// directly from the reference y-down DSL literals using formulas written out here. The formulas mirror the
+/// documented raw-frame semantics: a root part's cube centre is the pivot plus the cube min plus half the
+/// size; a child part's cube centre is the cube min plus half the size (local to its parent frame); pivots and
+/// rotations are the source literals verbatim. A bug in the production raw bake therefore cannot silently
+/// change both expected and actual. Values fed here come from the reference model definitions, cross-checked
+/// by the ModelProbe reference samples and <c>vanilla-model-facts.json</c>.
 /// </summary>
 internal static class RawModelPartFactory
 {
@@ -40,29 +41,28 @@ internal static class RawModelPartFactory
         float grow = 0f,
         EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout)
     {
-        return VanillaMeshBake.BakeRoot(
+        // Root raw formula: centre = pivot + min + halfSize, bottom = pivotY + minY.
+        return new EntityModelPart(
             name,
-            pivotX,
-            pivotY,
-            pivotZ,
-            minX,
-            minY,
-            minZ,
+            MathF.Round(pivotX + minX + (width * 0.5f), 4),
+            MathF.Round(pivotY + minY, 4),
             width,
             height,
             depth,
             textureX,
             textureY,
             mirror,
-            mirrorX,
             overlays,
-            rotationX: rotationX,
-            rotationY: rotationY,
-            rotationZ: rotationZ,
-            texturePath: texturePath,
-            grow: grow,
-            kind: kind,
-            rawSourceFrame: true);
+            CentreZ: MathF.Round(pivotZ + minZ + (depth * 0.5f), 4),
+            PivotX: pivotX,
+            PivotY: pivotY,
+            PivotZ: pivotZ,
+            RotationX: rotationX,
+            RotationY: rotationY,
+            RotationZ: rotationZ,
+            TexturePath: texturePath,
+            Grow: grow,
+            Kind: kind);
     }
 
     public static EntityModelPart FromVanillaChild(
@@ -88,15 +88,11 @@ internal static class RawModelPartFactory
         float grow = 0f,
         EntityGeometryLayerKind kind = EntityGeometryLayerKind.Cutout)
     {
-        return VanillaMeshBake.BakeChild(
+        // Child raw formula: centre = min + halfSize (parent-local), bottom = minY. Pivots/rotations literal.
+        return new EntityModelPart(
             name,
-            parent,
-            pivotX,
-            pivotY,
-            pivotZ,
-            minX,
-            minY,
-            minZ,
+            MathF.Round(minX + (width * 0.5f), 4),
+            MathF.Round(minY, 4),
             width,
             height,
             depth,
@@ -104,12 +100,16 @@ internal static class RawModelPartFactory
             textureY,
             mirror,
             overlays,
-            rotationX,
-            rotationY,
-            rotationZ,
-            texturePath,
-            grow,
-            kind,
-            rawSourceFrame: true);
+            CentreZ: MathF.Round(minZ + (depth * 0.5f), 4),
+            PivotX: MathF.Round(pivotX, 4),
+            PivotY: MathF.Round(pivotY, 4),
+            PivotZ: pivotZ,
+            RotationX: rotationX,
+            RotationY: rotationY,
+            RotationZ: rotationZ,
+            TexturePath: texturePath,
+            Grow: grow,
+            Parent: parent,
+            Kind: kind);
     }
 }
