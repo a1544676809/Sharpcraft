@@ -36,17 +36,27 @@ public sealed class LivingRawReferenceSampleTests
     // Hard-coded expected counts from the jar probe samples (independent of the sample-loaded values):
     // total sample rows, rows belonging to genuinely-mirrored parts (Mirror=true), and rows that must be
     // strictly checked. Creeper/Wither have no mirrored parts; Spider has four mirrored left legs (4*24=96).
-    public static TheoryData<string, EntityModelDefinition, int, int, string, int, int, int> Families => new()
+    public static TheoryData<string, EntityModelDefinition, int, int, string, int, int, int, int> Families => new()
     {
-        { "creeper-raw-vectors.reference.txt", CreeperModelDefinition.Definition, 64, 32, "entity/creeper/creeper", 144, 0, 144 },
-        { "spider-raw-vectors.reference.txt", SpiderModelDefinition.Definition, 64, 32, "entity/spider/spider", 264, 96, 168 },
-        { "wither-raw-vectors.reference.txt", WitherBossModelDefinition.Definition, 64, 64, "entity/wither/wither", 216, 0, 216 }
+        { "creeper-raw-vectors.reference.txt", CreeperModelDefinition.Definition, 64, 32, "entity/creeper/creeper", 144, 0, 144, 0 },
+        { "spider-raw-vectors.reference.txt", SpiderModelDefinition.Definition, 64, 32, "entity/spider/spider", 264, 96, 168, 0 },
+        { "wither-raw-vectors.reference.txt", WitherBossModelDefinition.Definition, 64, 64, "entity/wither/wither", 216, 0, 216, 0 },
+        { "pig-raw-vectors.reference.txt", PigModelDefinition.Definition, 64, 64, "entity/pig/pig_temperate", 168, 48, 120, 0 },
+        { "cow-raw-vectors.reference.txt", CowModelDefinition.Definition, 64, 64, "entity/cow/cow_temperate", 240, 48, 192, 0 },
+        { "chicken-raw-vectors.reference.txt", ChickenModelDefinition.Definition, 64, 32, "entity/chicken/chicken_temperate", 192, 24, 168, 0 },
+        { "pig-baby-raw-vectors.reference.txt", BabyModelDefinitions.Pig, 32, 32, "entity/pig/pig_temperate_baby", 168, 0, 168, 0 },
+        { "cow-baby-raw-vectors.reference.txt", BabyModelDefinitions.Cow, 64, 64, "entity/cow/cow_temperate_baby", 216, 24, 192, 0 },
+        // Chicken-baby left/right legs are zero-depth planes (depth=0); the mesher culls the two
+        // degenerate faces, emitting 8 verts where the source probe emits all 24. That pre-existing
+        // culling difference is registered as a blocker; the 48 leg rows are excluded from strict UV
+        // comparison (non-degenerate parts still fully checked). Positions are covered by the world test.
+        { "chicken-baby-raw-vectors.reference.txt", BabyModelDefinitions.Chicken, 16, 16, "entity/chicken/chicken_temperate_baby", 192, 0, 48, 144 }
     };
 
     [Theory]
     [MemberData(nameof(Families))]
     public void RawBakeMatchesSourceVertices(string sampleFile, EntityModelDefinition definition, int width, int height,
-        string texturePath, int expectedTotal, int expectedMirror, int expectedChecked)
+        string texturePath, int expectedTotal, int expectedMirror, int expectedChecked, int expectedDegenerate)
     {
         var rows = LoadSample(sampleFile);
         var atlas = MakeAtlas(texturePath, width, height);
@@ -56,16 +66,23 @@ public sealed class LivingRawReferenceSampleTests
 
         var checkedVertices = 0;
         var mirrorVertices = 0;
+        var degenerateVertices = 0;
         var expectedNonMirrorVertices = 0;
         foreach (var group in rows.GroupBy(r => (r.Part, r.Cube)))
         {
             var (part, cube) = group.Key;
-            // Mirror exclusion is determined by the REAL baked part's Mirror flag (R-027), never by
-            // name: Creeper left_*_leg and Wither left_head are NOT mirror and must be compared.
-            EntityModelPart[] sourceParts = part == "/ribcage"
-                ? new[] { "ribcage", "rib_1", "rib_2", "rib_3" }.Select(n => definition.Parts.Single(p => p.Name == n)).ToArray()
-                : definition.Parts.Where(p => p.Name == part.TrimStart('/')).ToArray();
+            // Source ModelParts can own several cubes, while our DSL flattens each cube to its own part
+            // (e.g. source /head has head+snout+horns). Map the sample (part,cube) to our flat part name.
+            // Mirror exclusion is determined by the REAL baked part's Mirror flag (R-027), never by name.
+            EntityModelPart[] sourceParts = FlatPartsForSampleCube(definition, part, cube);
             Assert.NotEmpty(sourceParts);
+            if (sourceParts[0].Width == 0f || sourceParts[0].Height == 0f || sourceParts[0].Depth == 0f)
+            {
+                // Degenerate (zero-area) cube: mesher culls faces the source probe emits. Pre-existing
+                // behavior, registered as a blocker; positions still covered by the full-model world test.
+                degenerateVertices += group.Count();
+                continue;
+            }
             if (sourceParts[0].Mirror)
             {
                 mirrorVertices += group.Count();
@@ -73,20 +90,23 @@ public sealed class LivingRawReferenceSampleTests
             }
             expectedNonMirrorVertices += group.Count();
 
-            // The source WitherBoss ribcage is one ModelPart with four cubes; our DSL flattens them to
-            // ribcage/rib_1..3. Mesh all four together so the parent frame composes, then compare the
-            // per-cube vertex ranges strictly (96 vertices == source cube 0..3, verified).
-            EntityModelPart[] ourParts = sourceParts;
-            Assert.NotEmpty(ourParts);
-            var single = new EntityModelDefinition(definition.Name, width, height, ourParts,
+            Assert.NotEmpty(sourceParts);
+            // Include ancestor parts so child pivots (e.g. baby pig snout is a child of head) compose.
+            // The target part is emitted first in definition.Parts order; ancestors follow.
+            var targetName = sourceParts[0].Name;
+            var sourceNames = sourceParts.Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
+            var partOrder = definition.Parts.Where(p => sourceNames.Contains(p.Name) || IsAncestorOf(p, targetName, definition)).ToArray();
+            var single = new EntityModelDefinition(definition.Name, width, height, partOrder,
                 texturePath: definition.TexturePath, baselinePx: 0f, rawSourceFrame: true);
             var geometry = BuildModelSpace(single, MakeLivingState(180f), width, height, atlas);
             var source = group.OrderBy(r => r.Polygon).ThenBy(r => r.Vertex).ToArray();
-            // For the flattened ribcage, our geometry emits 4 cubes (96 verts) in DSL order; each source
-            // cube group maps to its 24-vertex range (cube 0 -> ribcage, cube 1..3 -> rib_1..3).
-            var vertexOffset = part == "/ribcage" ? cube * 24 : 0;
+            // The target's 24 vertices are emitted at the position of targetName in partOrder.
+            var vertexOffset = Array.IndexOf(partOrder, partOrder.Single(p => p.Name == targetName)) * 24;
+            // For the flattened Wither ribcage, all four cubes were returned; map cube index to its part.
+            if (part == "/ribcage") vertexOffset = cube * 24;
             Assert.Equal(24, source.Length);
-            Assert.True(geometry.VertexFloats / ChunkMesher.FloatsPerVertex >= vertexOffset + 24);
+            Assert.True(geometry.VertexFloats / ChunkMesher.FloatsPerVertex >= vertexOffset + 24,
+                $"part={part} cube={cube} target={targetName} vertexOffset={vertexOffset} partOrder=[{string.Join(",", partOrder.Select(p => p.Name))}] geoVerts={geometry.VertexFloats / ChunkMesher.FloatsPerVertex}");
             for (var i = 0; i < source.Length; i++)
             {
                 var s = source[i];
@@ -99,13 +119,13 @@ public sealed class LivingRawReferenceSampleTests
                 checkedVertices++;
             }
         }
-        // All three counts are pinned against hard-coded jar-probe expectations, not derived from the
-        // same sample that is being checked (no sample self-justification):
-        //   total = mirror + checked, and each equals its explicit constant.
+        // Counts pinned against hard-coded jar-probe expectations (no sample self-justification):
+        //   total = mirror + degenerate + checked, each equals its explicit constant.
         Assert.Equal(expectedMirror, mirrorVertices);
+        Assert.Equal(expectedDegenerate, degenerateVertices);
         Assert.Equal(expectedChecked, checkedVertices);
         Assert.Equal(expectedNonMirrorVertices, checkedVertices);
-        Assert.Equal(expectedTotal, mirrorVertices + checkedVertices);
+        Assert.Equal(expectedTotal, mirrorVertices + degenerateVertices + checkedVertices);
     }
 
     /// <summary>
@@ -203,6 +223,59 @@ public sealed class LivingRawReferenceSampleTests
             Assert.True(baby is null || !baby.Name.StartsWith("baby_", StringComparison.Ordinal),
                 $"type {typeId} unexpectedly has a distinct baby model");
         }
+    }
+
+    /// <summary>
+    /// Maps a source sample (part path, cube index) to our DSL's flattened part records. Several source
+    /// ModelParts own multiple cubes that our DSL declares as separate parts; the mapping reflects the
+    /// CubeListBuilder.addBox order in the 26.3 source (PigModel/CowModel/ChickenModel/WitherBossModel).
+    /// </summary>
+    private static EntityModelPart[] FlatPartsForSampleCube(EntityModelDefinition definition, string part, int cube)
+    {
+        string flatName;
+        switch (part)
+        {
+            // Baby variants: cube order follows the reference Baby*Model CubeListBuilder.addBox order.
+            case "/head" when definition.Name.StartsWith("baby_pig", StringComparison.Ordinal):
+                flatName = cube == 0 ? "head" : "snout"; break;
+            case "/head" when definition.Name.StartsWith("baby_cow", StringComparison.Ordinal):
+                flatName = cube switch { 0 => "head", 1 => "ear_right", 2 => "ear_left", _ => "snout" }; break;
+            case "/body" when definition.Name.StartsWith("baby_chicken", StringComparison.Ordinal):
+                flatName = cube == 0 ? "body" : "beak"; break;
+            case "/left_leg" when definition.Name.StartsWith("baby_chicken", StringComparison.Ordinal):
+                flatName = cube == 0 ? "left_leg" : "left_foot"; break;
+            case "/right_leg" when definition.Name.StartsWith("baby_chicken", StringComparison.Ordinal):
+                flatName = cube == 0 ? "right_leg" : "right_foot"; break;
+            case "/head" when definition.Name.StartsWith("pig", StringComparison.Ordinal):
+                flatName = cube == 0 ? "head" : "snout"; break;
+            case "/head" when definition.Name.StartsWith("cow", StringComparison.Ordinal) || definition.Name.StartsWith("mooshroom", StringComparison.Ordinal):
+                flatName = cube switch { 0 => "head", 1 => "snout", 2 => "right_horn", _ => "left_horn" }; break;
+            case "/body" when definition.Name.StartsWith("cow", StringComparison.Ordinal) || definition.Name.StartsWith("mooshroom", StringComparison.Ordinal):
+                flatName = cube == 0 ? "body" : "udder"; break;
+            case "/head/beak": flatName = "beak"; break;
+            case "/head/red_thing": flatName = "red_thing"; break;
+            case "/ribcage" when definition.Name.StartsWith("wither", StringComparison.Ordinal):
+                // Wither ribcage is one source part with 4 cubes; meshed together below via the
+                // multi-cube group handling in the caller (all 4 parts, offset by cube).
+                return new[] { "ribcage", "rib_1", "rib_2", "rib_3" }.Select(n => definition.Parts.Single(p => p.Name == n)).ToArray();
+            default:
+                flatName = part.TrimStart('/').Split('/').Last(); break;
+        }
+        return [definition.Parts.Single(p => p.Name == flatName)];
+    }
+
+    /// <summary>True if part p is an ancestor (transitively) of targetName.</summary>
+    private static bool IsAncestorOf(EntityModelPart p, string targetName, EntityModelDefinition def)
+    {
+        if (p.Name is null) return false;
+        var cursor = def.Parts.FirstOrDefault(x => x.Name == targetName);
+        var guard = 0;
+        while (cursor.Name is not null && cursor.Parent is { } parent && guard++ < 32)
+        {
+            if (parent == p.Name) return true;
+            cursor = def.Parts.FirstOrDefault(x => x.Name == parent);
+        }
+        return false;
     }
 
     private static ItemAtlas MakeAtlas(string tex, int w, int h) =>

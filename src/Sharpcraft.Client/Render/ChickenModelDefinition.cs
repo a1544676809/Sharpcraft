@@ -19,39 +19,41 @@ public static class ChickenModelDefinition
     /// <summary>Declarative DSL trees for the temperate/warm and cold chicken parts (T-676).</summary>
     private static readonly VanillaMeshDefinition NormalMesh = BuildNormalMesh();
 
-    private static readonly EntityModelPart[] NormalParts = [.. VanillaMeshBake.Bake(NormalMesh, 0, 0)];
+    private static readonly EntityModelPart[] NormalParts = [.. VanillaMeshBake.Bake(NormalMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)];
 
-    private static readonly CompiledEntityModel NormalCompiled = VanillaMeshBakery.Build(NormalMesh, 64, 32);
+    private static readonly CompiledEntityModel NormalCompiled = VanillaMeshBakery.Build(NormalMesh, 64, 32, modelHeight: 0f, rawSourceFrame: true);
 
     private static readonly VanillaMeshDefinition ColdMesh = BuildColdMesh();
 
-    private static readonly EntityModelPart[] ColdParts = [.. VanillaMeshBake.Bake(ColdMesh, 0, 0)];
+    private static readonly EntityModelPart[] ColdParts = [.. VanillaMeshBake.Bake(ColdMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)];
 
-    private static readonly CompiledEntityModel ColdCompiled = VanillaMeshBakery.Build(ColdMesh, 64, 32);
+    private static readonly CompiledEntityModel ColdCompiled = VanillaMeshBakery.Build(ColdMesh, 64, 32, modelHeight: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Definition = new(
         "chicken",
         64,
         32,
         NormalParts,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/chicken/chicken_temperate",
-        compiled: NormalCompiled);
+        faceTransforms: null,
+        texturePath: "entity/chicken/chicken_temperate",
+        compiled: NormalCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Variant key to definition, keyed by the registry entry name.</summary>
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
         new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)
         {
             ["temperate"] = Definition,
-            ["warm"] = new("chicken_warm", 64, 32, NormalParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/chicken/chicken_warm", compiled: NormalCompiled),
-            ["cold"] = new("chicken_cold", 64, 32, ColdParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/chicken/chicken_cold", compiled: ColdCompiled)
+            ["warm"] = new("chicken_warm", 64, 32, NormalParts, faceTransforms: null,
+        texturePath: "entity/chicken/chicken_warm", compiled: NormalCompiled, baselinePx: 0f, rawSourceFrame: true),
+            ["cold"] = new("chicken_cold", 64, 32, ColdParts, faceTransforms: null,
+        texturePath: "entity/chicken/chicken_cold", compiled: ColdCompiled, baselinePx: 0f, rawSourceFrame: true)
         };
 
     private static VanillaMeshDefinition BuildNormalMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         AddHeadParts(root);
-        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 16f, 0f, -MathF.PI / 2f, 0f, 0f),
+        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 16f, 0f, MathF.PI / 2f, 0f, 0f),
             new VanillaCubeDefinition("body", 0, 9, -3f, -4f, -3f, 6f, 8f, 6f));
         AddLegsAndWings(root);
         return new VanillaMeshDefinition(root);
@@ -63,9 +65,9 @@ public static class ChickenModelDefinition
         AddHeadParts(root);
         root.AddOrReplaceChild("cold_head_layer", VanillaPartPose.Offset(0f, 15f, -4f),
             new VanillaCubeDefinition("cold_head_layer", 44, 0, -3f, -7f, -2.015f, 6f, 3f, 4f));
-        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 16f, 0f, -MathF.PI / 2f, 0f, 0f),
+        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 16f, 0f, MathF.PI / 2f, 0f, 0f),
             new VanillaCubeDefinition("body", 0, 9, -3f, -4f, -3f, 6f, 8f, 6f));
-        root.AddOrReplaceChild("cold_body_fin", VanillaPartPose.OffsetAndRotation(0f, 16f, 0f, -MathF.PI / 2f, 0f, 0f),
+        root.AddOrReplaceChild("cold_body_fin", VanillaPartPose.OffsetAndRotation(0f, 16f, 0f, MathF.PI / 2f, 0f, 0f),
             new VanillaCubeDefinition("cold_body_fin", 38, 9, 0f, 3f, -1f, 0f, 3f, 5f));
         AddLegsAndWings(root);
         return new VanillaMeshDefinition(root);
