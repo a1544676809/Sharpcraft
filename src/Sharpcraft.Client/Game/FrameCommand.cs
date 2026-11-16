@@ -429,6 +429,7 @@ internal static partial class FrameCommand
                             BannerAttachment: BannerAttachmentOf(world, blockX, record.Y, blockZ),
                             BannerRotation: BannerRotationOf(world, blockX, record.Y, blockZ),
                             BannerColor: BannerColorOf(world, blockX, record.Y, blockZ),
+                            BannerPhase: BannerPhaseOf(world, blockX, record.Y, blockZ, partialTick: 0f),
                             Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
                 }
             }
@@ -1058,6 +1059,7 @@ internal static partial class FrameCommand
                         BannerAttachment: BannerAttachmentOf(world, blockX, record.Y, blockZ),
                         BannerRotation: BannerRotationOf(world, blockX, record.Y, blockZ),
                         BannerColor: BannerColorOf(world, blockX, record.Y, blockZ),
+                        BannerPhase: BannerPhaseOf(world, blockX, record.Y, blockZ, partialTick: 0f),
                         Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ)));
             }
             }
@@ -1475,6 +1477,25 @@ internal static partial class FrameCommand
         return 8;
     }
 
+    /// <summary>
+    /// Source banner phase: <c>(floorMod(x*7 + y*9 + z*13 + gameTime, 100) + partialTick) / 100</c>.
+    /// Exposed with an explicit game time so the formula can be tested without a network world.
+    /// </summary>
+    internal static float BannerPhase(int x, int y, int z, long gameTime, float partialTick)
+    {
+        var sum = (x * 7L) + (y * 9L) + (z * 13L) + gameTime;
+        var mod = sum % 100L;
+        if (mod < 0L)
+        {
+            mod += 100L;
+        }
+
+        return (mod + partialTick) / 100f;
+    }
+
+    private static float BannerPhaseOf(ClientWorld world, int x, int y, int z, float partialTick) =>
+        BannerPhase(x, y, z, world.GameTime, partialTick);
+
     /// <summary>Dye colour index for a banner block path, in DyeColor id order.</summary>
     private static byte BannerColorOf(ClientWorld world, int x, int y, int z)
     {
@@ -1620,6 +1641,7 @@ internal static partial class FrameCommand
                     BannerAttachment: BannerAttachmentOf(world, blockX, record.Y, blockZ),
                     BannerRotation: BannerRotationOf(world, blockX, record.Y, blockZ),
                     BannerColor: BannerColorOf(world, blockX, record.Y, blockZ),
+                    BannerPhase: BannerPhaseOf(world, blockX, record.Y, blockZ, partialTick),
                     Open: world.BlockEntityAnimations.GetOpenness(blockX, record.Y, blockZ, partialTick)));
             }
         }

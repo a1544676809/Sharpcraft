@@ -511,9 +511,10 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 `BannerModelDefinition` 声明 `BannerModel.createBodyLayer(standing)` 的 pole/bar 与 `BannerFlagModel.createFlagLayer(standing)` 的 flag；四个模型（ground body/flag、wall body/flag）共用 `entity/banner/banner_base` 64×64 纹理。`BannerRenderer` 复用 `EntityModelMesher.BuildModel`，只做源 `BannerRenderer` 的 ground/wall 模型变换：
 
 - `MODEL_TRANSLATION` 的 block 平移为 `(0.5,0,0.5)`，`MODEL_SCALE` 源为 `(2/3,-2/3,-2/3)`；`EntityModelMesher` 的 root bake 已带 X 镜像与 +24px y-up baseline，因此项目矩阵为 `scale(-s,+s,-s)`，并把 baseline 折入 `translate(0.5,-1.0,0.5)`（`-24*s/16=-1`，s=2/3）。该矩阵行列式为正，winding 不交换；ground 使用 `RotationSegment.convertToDegrees(rotation)` 再取负，wall 使用 `Direction.toYRot` 再取负。
-- 旗帜 phase 固定为 0（`FlagPhaseZeroRotationX`）；`DyeColor.getTextureDiffuseColor()` 的 RGB **只作为 flag 的 tint**，pole/bar body 保持白色（源 `submitModel` 两者 diff=-1，底色 tint 属图案层）。
-- `BlockEntityRenderState.BannerAttachment/BannerRotation/BannerColor` 由 `FrameCommand` 从方块状态读取；`Handles(20)`；banner 使用 solid pipeline。
-- 未实现图案层与 phase 动画，分别由 `SIM-BE-BANNER-PATTERNS` / `SIM-BE-BANNER-PHASE` 跟踪；`ChestAtlas.Textures` 维持 chest-only 22 条，banner 纹理单独加入 block entity sheet。
+- 旗帜 phase 为 `BannerRenderState.phase` 同公式：`(floorMod(x*7 + y*9 + z*13 + gameTime,100)+partialTick)/100`；`BannerRenderer.PhaseRotation` 将 `(-0.0125+0.01*cos(2π*phase))*π` 写入 flag 的 `EntityPose`，body 不受 phase 影响。
+- `DyeColor.getTextureDiffuseColor()` 的 RGB **只作为 flag 的 tint**，pole/bar body 保持白色（源 `submitModel` 两者 diff=-1，底色 tint 属图案层）。
+- `BlockEntityRenderState.BannerAttachment/BannerRotation/BannerColor/BannerPhase` 由 `FrameCommand` 从方块状态与公式读取；`Handles(20)`；banner 使用 solid pipeline。
+- 未实现图案层，由 `SIM-BE-BANNER-PATTERNS` 跟踪；`ChestAtlas.Textures` 维持 chest-only 22 条，banner 纹理单独加入 block entity sheet。
 
 ## 已知刻意的简化
 
@@ -626,19 +627,6 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收证据**：`tests/Sharpcraft.Client.Tests/Render/BannerRendererTests.cs` 覆盖 ground/wall 最终顶点/UV、tint 与 atlas；接入 pattern 后补真值与单方块像素对比。
 
 <!-- simplification:SIM-BE-BANNER-PATTERNS task:T-49 -->
-
-### SIM-BE-BANNER-PHASE：Banner 旗帜 phase 固定为 0
-
-- **简化了什么**：旗帜模型使用 `BannerFlagModel.setupAnim(0)` 的固定 X 旋转；不读取 `BannerRenderer` 由世界时间与方块坐标计算的 phase，也没有波动动画。
-- **为什么**：phase 依赖 world game time 与相机 partial tick，当前 `BlockEntityRenderState` 没有该动画字段；首切片先固定静态姿态。
-- **对等效性的影响**：旗帜静态几何与 phase=0 的源姿态一致；没有随时间摆动的动画。
-- **状态**：受控偏差，由 #49 后续动画切片跟进（Issue #89）。
-- **验收证据**：`BannerRendererTests` 覆盖 phase=0 的最终顶点/UV；接入 phase 后补时间序列真值与单方块像素对比。
-
-<!-- simplification:SIM-BE-BANNER-PHASE task:T-49 -->
-
-
-
 
 ### SIM-BE-SKULL-VARIANTS：Skull 头型无剩余变体
 

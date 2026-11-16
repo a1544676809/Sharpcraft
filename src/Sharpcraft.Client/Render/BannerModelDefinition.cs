@@ -33,8 +33,8 @@ public static class BannerModelDefinition
     public const int TextureHeight = 64;
 
     /// <summary>
-    /// Source <c>BannerFlagModel.setupAnim(0)</c>: <c>(-0.0125 + 0.01 * cos(0)) * π</c>.
-    /// The flag is static in this slice, so this constant is folded into its source part pose.
+    /// Source <c>BannerFlagModel.setupAnim(0)</c>: <c>(-0.0125 + 0.01 * cos(0)) * π</c>. This is the
+    /// base flag pose; the renderer adds the per-phase delta through <see cref="EntityPose"/>.
     /// </summary>
     public const float FlagPhaseZeroRotationX = (-0.0125f + 0.01f) * MathF.PI;
 
@@ -93,7 +93,8 @@ public static class BannerModelDefinition
 
     /// <summary>
     /// Source <c>BannerFlagModel.createFlagLayer(standing)</c>. Flag box is (20,40,1) at UV (0,0);
-    /// its source pose is (0,-44,0) standing or (0,-20.5,10.5) wall, plus the phase-zero X rotation.
+    /// its source pose is (0,-44,0) standing or (0,-20.5,10.5) wall, with the phase-zero X rotation
+    /// as the baked base pose.
     /// </summary>
     private static VanillaMeshDefinition BuildFlag(bool standing)
     {
