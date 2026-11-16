@@ -13,19 +13,19 @@ namespace Sharpcraft.Client.Tests.Render;
 public sealed class CopperGolemCreakingIronGolemSnowGolemModelDefinitionTests
 {
     [Fact]
-    public void CopperGolemPartsMatchLegacyRecords()
+    public void CopperGolemPartsMatchSourceFrameRecords()
     {
         var expected = new[]
         {
-            LegacyModelPartFactory.FromVanilla("body", 0f, 19f, 0f, -4f, -6f, -3f, 8f, 6f, 6f, 0, 15),
-            LegacyModelPartFactory.FromVanillaChild("head", "body", 0f, -6f, 0f, -4f, -5f, -5f, 8f, 5f, 10f, 0, 0, grow: 0.015f),
-            LegacyModelPartFactory.FromVanillaChild("nose", "head", 0f, 0f, 0f, -1f, -2f, -6f, 2f, 3f, 2f, 56, 0),
-            LegacyModelPartFactory.FromVanillaChild("antenna", "head", 0f, 0f, 0f, -1f, -9f, -1f, 2f, 4f, 2f, 37, 8, grow: -0.015f),
-            LegacyModelPartFactory.FromVanillaChild("antenna_tip", "head", 0f, 0f, 0f, -2f, -13f, -2f, 4f, 4f, 4f, 37, 0, grow: -0.015f),
-            LegacyModelPartFactory.FromVanillaChild("right_arm", "body", -4f, -6f, 0f, -3f, -1f, -2f, 3f, 10f, 4f, 36, 16),
-            LegacyModelPartFactory.FromVanillaChild("left_arm", "body", 4f, -6f, 0f, 0f, -1f, -2f, 3f, 10f, 4f, 50, 16),
-            LegacyModelPartFactory.FromVanilla("right_leg", 0f, 19f, 0f, -4f, 0f, -2f, 4f, 5f, 4f, 0, 27),
-            LegacyModelPartFactory.FromVanilla("left_leg", 0f, 19f, 0f, 0f, 0f, -2f, 4f, 5f, 4f, 16, 27)
+            RawModelPartFactory.FromVanilla("body", 0f, 19f, 0f, -4f, -6f, -3f, 8f, 6f, 6f, 0, 15),
+            RawModelPartFactory.FromVanillaChild("head", "body", 0f, -6f, 0f, -4f, -5f, -5f, 8f, 5f, 10f, 0, 0, grow: 0.015f),
+            RawModelPartFactory.FromVanillaChild("nose", "head", 0f, 0f, 0f, -1f, -2f, -6f, 2f, 3f, 2f, 56, 0),
+            RawModelPartFactory.FromVanillaChild("antenna", "head", 0f, 0f, 0f, -1f, -9f, -1f, 2f, 4f, 2f, 37, 8, grow: -0.015f),
+            RawModelPartFactory.FromVanillaChild("antenna_tip", "head", 0f, 0f, 0f, -2f, -13f, -2f, 4f, 4f, 4f, 37, 0, grow: -0.015f),
+            RawModelPartFactory.FromVanillaChild("right_arm", "body", -4f, -6f, 0f, -3f, -1f, -2f, 3f, 10f, 4f, 36, 16),
+            RawModelPartFactory.FromVanillaChild("left_arm", "body", 4f, -6f, 0f, 0f, -1f, -2f, 3f, 10f, 4f, 50, 16),
+            RawModelPartFactory.FromVanilla("right_leg", 0f, 19f, 0f, -4f, 0f, -2f, 4f, 5f, 4f, 0, 27),
+            RawModelPartFactory.FromVanilla("left_leg", 0f, 19f, 0f, 0f, 0f, -2f, 4f, 5f, 4f, 16, 27)
         };
         AssertPartsMatch(expected, CopperGolemModelDefinition.Definition.Parts);
         foreach (var key in CopperGolemModelDefinition.VariantKeys)
