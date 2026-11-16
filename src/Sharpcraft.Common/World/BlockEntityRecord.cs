@@ -29,6 +29,7 @@ public static class VanillaBlockEntityTypes
     public const int Skull = 16;
     public const int Banner = 20;
     public const int ShulkerBox = 24;
+    public const int Conduit = 25;
     public const int Lectern = 29;
     public const int Bell = 30;
     public const int Campfire = 32;
@@ -124,6 +125,9 @@ public static class VanillaBlockEntityTypes
 
     /// <summary>Banner block entity type, drawn by the banner renderer.</summary>
     public static bool IsBanner(int typeId) => typeId == Banner;
+
+    /// <summary>Conduit block entity type, drawn by the conduit shell renderer.</summary>
+    public static bool IsConduit(int typeId) => typeId == Conduit;
 
     /// <summary>Copper golem statue block entity type, drawn by its own model renderer.</summary>
     public static bool IsCopperGolemStatue(int typeId) => typeId == CopperGolemStatue;

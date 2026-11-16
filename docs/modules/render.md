@@ -516,6 +516,15 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - `BlockEntityRenderState.BannerAttachment/BannerRotation/BannerColor/BannerPhase` 由 `FrameCommand` 从方块状态与公式读取；`Handles(20)`；banner 使用 solid pipeline。
 - 未实现图案层，由 `SIM-BE-BANNER-PATTERNS` 跟踪；`ChestAtlas.Textures` 维持 chest-only 22 条，banner 纹理单独加入 block entity sheet。
 
+### 6.7 Conduit 静态外壳（Issue #93）
+
+`ConduitModelDefinition.Shell` 声明 `ConduitRenderer.createShellLayer()` 的单个 `(-3,-3,-3,6,6,6)` 立方体；`entity/conduit/base` 为 32×16。`ConduitRenderer`（id 25）复用 `EntityModelMesher.BuildModel`，只实现 inactive 分支：
+
+- 源 `DEFAULT_TRANSFORMATION` 平移 `(0.5,0.5,0.5)`，并沿 Y 旋转 conduit 的 `activeRotation`；本项目根 bake 带 +24px y-up baseline，因此平移 y 折入 `0.5 - 24/16 = -1.0`。
+- 使用 `entitySolid` → `RenderMode.Solid`；本切片 `ConduitRotation` 固定 0（源 activeRotation 动画未接入），active 与 inactive 都绘制同一静态 shell。
+- `BlockEntityRenderState.ConduitRotation/ConduitActive` 由 `FrameCommand` 三路构造；`Handles(25)`。
+- active cage/wind/eye/isHunting/tickCount 不做，登记 `SIM-BE-CONDUIT-ACTIVE`。
+
 ## 已知刻意的简化
 
 ### SIM-BE-BELL-NO-SHAKE：钟只渲染静态外观
@@ -617,6 +626,16 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收证据**：`VaultRendererTests` 覆盖单物品最终顶点/UV；补 count 真值后更新。
 
 <!-- simplification:SIM-BE-VAULT-COUNT task:T-52 -->
+
+### SIM-BE-CONDUIT-ACTIVE：Conduit active 分支只复用静态外壳
+
+- **简化了什么**：`ConduitRenderer` 对 active 与 inactive 都绘制同一个 shell；active cage/wind/eye、isHunting、tickCount 与 activeRotation 动画均未接入，`ConduitRotation` 固定 0。
+- **为什么**：当前客户端没有 conduit active 状态、tickCount 与 active 模型贴图通道；首切片先落地源静态 shell 几何、transform、atlas 与 render mode。
+- **对等效性的影响**：未激活 conduit 的外观按源实现；激活 conduit 仍显示静态外壳，缺少 cage/wind/eye 与旋转/浮动。
+- **状态**：受控偏差，由 #51 后续 active 切片跟进（Issue #93）。
+- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/ConduitRendererTests.cs` 覆盖 shell bounds/UV、active/inactive 都产出 shell、`Handles(25)` 与 atlas；接入 active 后补状态/动画真值与单方块像素对比。
+
+<!-- simplification:SIM-BE-CONDUIT-ACTIVE task:T-51 -->
 
 ### SIM-BE-BANNER-PATTERNS：Banner 只画底色旗面
 

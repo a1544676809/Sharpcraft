@@ -82,6 +82,11 @@ public static class ChestAtlas
     /// <summary>Banner texture stitched separately from the chest-only 22-entry list.</summary>
     private static readonly string[] BannerTextures = [BannerTexture];
 
+    /// <summary>Conduit inactive shell texture, stitched into the block entity sheet.</summary>
+    public const string ConduitTexture = ConduitModelDefinition.TexturePath;
+
+    private static readonly string[] ConduitTextures = [ConduitTexture];
+
     /// <summary>Bell texture, stitched into the same block entity sheet as the chest and shulker textures.</summary>
     public const string BellTexture = "entity/bell/bell_body";
 
@@ -128,7 +133,7 @@ public static class ChestAtlas
     ];
 
     /// <summary>Everything this block entity atlas stitches, in load order.</summary>
-    private static readonly string[] AllTextures = [.. Textures, .. ShulkerTextures, .. BellTextures, .. DecoratedPotTextures, .. CopperGolemStatueTextures, EnchantingTableBookTexture, .. SkullTextures, .. BannerTextures];
+    private static readonly string[] AllTextures = [.. Textures, .. ShulkerTextures, .. BellTextures, .. DecoratedPotTextures, .. CopperGolemStatueTextures, EnchantingTableBookTexture, .. SkullTextures, .. BannerTextures, .. ConduitTextures];
 
     /// <summary>Texture the model uses when the material is plain wood.</summary>
     public const string NormalTexture = "entity/chest/normal";

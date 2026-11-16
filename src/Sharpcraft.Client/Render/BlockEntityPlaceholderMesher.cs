@@ -40,7 +40,9 @@ public readonly record struct BlockEntityRenderState(
     BannerAttachment BannerAttachment = BannerAttachment.Ground,
     byte BannerRotation = 8,
     byte BannerColor = 0,
-    float BannerPhase = 0f);
+    float BannerPhase = 0f,
+    float ConduitRotation = 0f,
+    bool ConduitActive = false);
 
 /// <summary>
 /// Placeholder geometry for block entities until real models are available.
