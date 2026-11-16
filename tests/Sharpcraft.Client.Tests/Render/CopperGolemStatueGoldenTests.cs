@@ -75,23 +75,10 @@ public sealed class CopperGolemStatueGoldenTests
     ];
 
     /// <summary>
-    /// Groups whose geometry still differs from the sample, tracked by issue 107. They are listed
-    /// rather than dropped so the guard below notices if one of them starts matching, or if the sample
-    /// gains a group nobody classified.
-    /// </summary>
-    private static readonly (string Pose, string Facing)[] MismatchedGroups =
-    [
-        ("running", "south"),
-        ("sitting", "north"),
-        ("sitting", "south"),
-        ("sitting", "east")
-    ];
 
     /// <summary>One row per matching group, so the theory and the coverage guard cannot drift apart.</summary>
     public static IEnumerable<object[]> GroupRows =>
-        Groups
-            .Where(group => !MismatchedGroups.Contains(group))
-            .Select(group => new object[] { group.Pose, group.Facing });
+        Groups.Select(group => new object[] { group.Pose, group.Facing });
 
     [Theory]
     [MemberData(nameof(GroupRows))]
@@ -102,23 +89,34 @@ public sealed class CopperGolemStatueGoldenTests
 
         Assert.Equal(expected.Count, actual.Count);
 
-        var expectedKeys = expected.Keys.Order().ToArray();
-        var actualKeys = actual.Keys.Order().ToArray();
-        for (var index = 0; index < expectedKeys.Length; index++)
+        for (var index = 0; index < expected.Count; index++)
         {
-            var left = expectedKeys[index];
-            var right = actualKeys[index];
-            Assert.True(
-                Math.Abs(left.X - right.X) <= PositionTolerance * 1000f
-                    && Math.Abs(left.Y - right.Y) <= PositionTolerance * 1000f
-                    && Math.Abs(left.Z - right.Z) <= PositionTolerance * 1000f,
-                $"{pose}/{facing}: position ({right.X}, {right.Y}, {right.Z}) is not in the sample");
+        }
 
-            var expectedUvs = expected[left];
-            var actualUvs = actual[right];
+        // Positions come from float maths on both sides, and a rotated part accumulates a few
+        // thousandths, so each sample position is matched against the nearest one we produced
+        // instead of comparing rounded keys.
+        foreach (var (key, expectedUvs) in expected)
+        {
+            List<(float U, float V)>? matched = null;
+            foreach (var (otherKey, otherUvs) in actual)
+            {
+                if (Math.Abs(otherKey.X - key.X) <= PositionTolerance * 1000f
+                    && Math.Abs(otherKey.Y - key.Y) <= PositionTolerance * 1000f
+                    && Math.Abs(otherKey.Z - key.Z) <= PositionTolerance * 1000f)
+                {
+                    matched = otherUvs;
+                    break;
+                }
+            }
+            Assert.True(
+                matched is not null,
+                $"{pose}/{facing}: the sample position ({key.X / 1000f:F3}, {key.Y / 1000f:F3}, {key.Z / 1000f:F3}) is missing");
+
+            var actualUvs = matched!;
             Assert.True(
                 expectedUvs.Count == actualUvs.Count,
-                $"{pose}/{facing}: position ({right.X}, {right.Y}, {right.Z}) carries"
+                $"{pose}/{facing}: position ({key.X}, {key.Y}, {key.Z}) carries"
                     + $" {actualUvs.Count} vertices but the sample has {expectedUvs.Count}");
 
             expectedUvs.Sort();
@@ -129,7 +127,7 @@ public sealed class CopperGolemStatueGoldenTests
                 var dv = MathF.Abs(expectedUvs[corner].V - actualUvs[corner].V);
                 Assert.True(
                     du <= UvTolerance && dv <= UvTolerance,
-                    $"{pose}/{facing}: position ({right.X}, {right.Y}, {right.Z}) vertex {corner}"
+                    $"{pose}/{facing}: position ({key.X}, {key.Y}, {key.Z}) vertex {corner}"
                         + $" is u {actualUvs[corner].U:F4} v {actualUvs[corner].V:F4}"
                         + $" but the sample says u {expectedUvs[corner].U:F4} v {expectedUvs[corner].V:F4}");
             }
