@@ -19,27 +19,31 @@ public static class VillagerModelDefinition
     private static readonly VanillaMeshDefinition VillagerMesh = BuildVillagerMesh();
 
     private static readonly CompiledEntityModel VillagerCompiled =
-        VanillaMeshBakery.Build(VillagerMesh, 64, 64);
+        VanillaMeshBakery.Build(VillagerMesh, 64, 64, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Definition = new(
         "villager",
         64,
         64,
-        [.. VanillaMeshBake.Bake(VillagerMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
+        [.. VanillaMeshBake.Bake(VillagerMesh, 0, 0, rawSourceFrame: true)],
+        faceTransforms: null,
         "entity/villager/villager",
         0.9375f,
-        compiled: VillagerCompiled);
+        compiled: VillagerCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     public static readonly EntityModelDefinition WanderingTrader = new(
         "wandering_trader",
         64,
         64,
         Definition.Parts,
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/wandering_trader/wandering_trader",
         0.9375f,
-        compiled: VillagerCompiled);
+        compiled: VillagerCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     public static readonly IReadOnlyList<string> VariantKeys = ["plains", "desert", "jungle", "savanna", "snow", "swamp", "taiga"];
 
@@ -72,10 +76,12 @@ public static class VillagerModelDefinition
                 64,
                 64,
                 EntityModelLayerHelpers.WithCopy(parts, texturePath, static _ => true, 0.05f),
-                PlayerModelDefinition.DefaultFaceTransforms,
+                faceTransforms: null,
                 baseTexture,
                 scale,
-                compiled: compiled);
+                compiled: compiled,
+                baselinePx: 0f,
+                rawSourceFrame: true);
         }
 
         return variants;
@@ -96,7 +102,8 @@ public static class VillagerModelDefinition
             new VanillaCubeDefinition("body", 16, 20, -4f, 0f, -3f, 8f, 12f, 6f, MirrorX: false));
         body.AddOrReplaceChild("jacket", VanillaPartPose.Zero,
             new VanillaCubeDefinition("jacket", 0, 38, -4f, 0f, -3f, 8f, 20f, 6f, Grow: 0.5f));
-        var arms = root.AddOrReplaceChild("arms", VanillaPartPose.OffsetAndRotation(0f, 3f, -1f, 0.75f, 0f, 0f),
+        // Source VillagerModel: arms PartPose.offsetAndRotation(0,3,-1, -0.75,0,0) - raw literal sign.
+        var arms = root.AddOrReplaceChild("arms", VanillaPartPose.OffsetAndRotation(0f, 3f, -1f, -0.75f, 0f, 0f),
             new VanillaCubeDefinition("arms", 0, 0, 0f, 0f, 0f, 0f, 0f, 0f, MirrorX: false));
         arms.AddOrReplaceChild("arms_left", VanillaPartPose.Zero,
             new VanillaCubeDefinition("arms_left", 44, 22, -8f, -2f, -2f, 4f, 8f, 4f));

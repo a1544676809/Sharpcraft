@@ -782,9 +782,13 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **旋转字面值**：改为源原版字面值（如 Turtle body `+π/2`、Parrot body `+0.4937`、Cod 鳍 `-π/4`、Dolphin `+π/3`）；源 literal 与迁移前 legacy DSL 的共轭关系逐族核对，非一刀切取反（Parrot feather 等保持原值）。
 - **多 cube 拆flat 映射**：源一个 ModelPart 含多 cube、DSL 拆为独立 part 的（Turtle body+belly、frog body/head+layer、axolotl body+body_fin/body_layer、bee-baby bone+antenna_left、allay body+body_inner 等）在 `FlatPartsForSampleCube` 按源 `addBox` 顺序显式映射；源文件 cube 顺序已逐族核对。
 - **blocker**：零面积部件（鱼鳍、蝙蝠翼、蜂脚、Turtle egg_belly 等）的退化面按 R-029 / Issue #126 显式登记——这些顶点未纳入严格 UV 比较，位置也未被独立 oracle 覆盖（显式缺口）；mirror 部件按真实 `Mirror` 标记排除（R-027 / #121）。squid 触手等无退化部件的族全顶点严格通过。
+### task-95 humanoid hat 独立 cube（#134）——部分解阻塞
+
+task-95 已把 **Illager 4 族（vindicator/evoker/pillager/illusioner）+ Villager + WanderingTrader** 切 raw 并 1e-5 严格验收：hat/hat_rim 从单一 `Grow` OverlayLayer 改为源独立子 cube（用现有 `AddOrReplaceChild`/多 cube DSL，无需新增 API）、源字面 arms 旋转（−0.75）、layer scale 0.9375 + `MeshTransformer.scaling` 的 root yOffset（`BuildModel` 路径内 24.016*(1-scale)/16）。`LivingRawReferenceSampleTests` 对每组 288/264 行逐 `part|cube|polygon|vertex` 严格比较（剥离 `VisibleWhen` 以匹配 bind-pose 样本、携带 definition.Scale）。held-item/arm/elytra + RawLayerScaleOffset 回归 37/37 绿。其余 22 族（Player/HumanoidMob 8/Witch/ZombieVillager/Piglin + baby）仍 legacy，待逐族迁移（R-031 更新为进行中）。
+
 ### task-79 humanoid / 村民 / 灾厄 / Piglin 批次：阻塞登记（#102 / #134）
 
-本批 14+ 族（Player/HumanoidMob/Illager/Villager/Witch/ZombieVillager/Piglin + baby）经源真值试迁移后**未合入 raw**，保持 legacy（行为不退化），原因见 Issue #134 / R-031：
+以下原因仍适用于**尚未迁移的 22 族**；Illager/Villager 6 族已按上段解决：
 
 - 源 hat/overlay 是独立 cube（不同尺寸/pivot/deformation，如 illager hat 8×12×8+0.45 vs head 8×10×8+0.45），仓内 DSL 用单一 `Grow` 近似，无法源正确表达；
 - 源 `MeshTransformer.scaling(factor)`（`MeshTransformer.java:7-9`）在 baked root 加 `yOffset=24.016*(1-factor)`；**规格与 living 路径实现已由 #141/R-034 解决**（见下节）。humanoid 仍受独立 hat/overlay DSL 缺口（#134）阻塞；

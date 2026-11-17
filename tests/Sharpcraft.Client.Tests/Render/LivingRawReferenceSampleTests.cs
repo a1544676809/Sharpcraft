@@ -92,6 +92,14 @@ public sealed class LivingRawReferenceSampleTests
         // giant BLOCKED (special DSL/jar geometry gap, task-94)
         // guardian BLOCKED (special DSL/jar geometry gap, task-94)
         // iron-golem BLOCKED (special DSL/jar geometry gap, task-94)
+        // task-95: illager hat as independent cube + layer scale 0.9375 (4 families share one mesh).
+        { "evoker-raw-vectors.reference.txt", IllagerModelDefinition.Evoker, 64, 64, "entity/illager/evoker", 288, 72, 216, 0 },
+        { "vindicator-raw-vectors.reference.txt", IllagerModelDefinition.Vindicator, 64, 64, "entity/illager/vindicator", 288, 72, 216, 0 },
+        { "pillager-raw-vectors.reference.txt", IllagerModelDefinition.Pillager, 64, 64, "entity/illager/pillager", 288, 72, 216, 0 },
+        { "illusioner-raw-vectors.reference.txt", IllagerModelDefinition.Illusioner, 64, 64, "entity/illager/illusioner", 288, 72, 216, 0 },
+        // task-95: villager + wandering trader (hat/hat_rim already independent; raw + scale 0.9375).
+        { "villager-raw-vectors.reference.txt", VillagerModelDefinition.Definition, 64, 64, "entity/villager/villager", 264, 48, 216, 0 },
+        { "wandering-trader-raw-vectors.reference.txt", VillagerModelDefinition.WanderingTrader, 64, 64, "entity/wandering_trader/wandering_trader", 264, 48, 216, 0 }
     };
 
     /// <summary>
@@ -166,8 +174,13 @@ public sealed class LivingRawReferenceSampleTests
             var targetName = sourceParts[0].Name;
             var sourceNames = sourceParts.Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
             var partOrder = definition.Parts.Where(p => sourceNames.Contains(p.Name) || IsAncestorOf(p, targetName, definition)).ToArray();
+            // The jar sample is bind-pose geometry with ALL parts emitted; strip runtime visibility
+            // predicates (e.g. illager crossed-vs-open arms are mutually exclusive at runtime) so the
+            // geometry test compares the stored cubes, not a particular animation state.
+            partOrder = partOrder.Select(p => p with { VisibleWhen = null }).ToArray();
             var single = new EntityModelDefinition(definition.Name, width, height, partOrder,
-                texturePath: texturePath, scale: definition.Scale, baselinePx: 0f, rawSourceFrame: true);
+                texturePath: texturePath, scale: definition.Scale, baselinePx: 0f, rawSourceFrame: true,
+                sourceFrameBaselinePx: definition.SourceFrameBaselinePx);
             var geometry = BuildModelSpace(single, MakeLivingState(180f), width, height, atlas);
             var source = group.OrderBy(r => r.Polygon).ThenBy(r => r.Vertex).ToArray();
             // The target's 24 vertices are emitted after all preceding parts in partOrder; each part
@@ -373,6 +386,17 @@ public sealed class LivingRawReferenceSampleTests
             // antenna_tip), flattened into separate DSL parts in addBox order.
             case "/body/head" when definition.Name.StartsWith("copper_golem", StringComparison.Ordinal):
                 flatName = cube switch { 0 => "head", 1 => "nose", 2 => "antenna", _ => "antenna_tip" }; break;
+            // task-95: illager multi-cube source parts. Source addBox order: /body -> body, body_outer;
+            // /arms -> arms_right, arms_cross. Hat is now an independent child part named "hat".
+            case "/body" when definition.Name is "evoker" or "vindicator" or "pillager" or "illusioner":
+                flatName = cube == 0 ? "body" : "body_outer"; break;
+            case "/arms" when definition.Name is "evoker" or "vindicator" or "pillager" or "illusioner":
+                flatName = cube == 0 ? "arms_right" : "arms_cross"; break;
+            case "/arms/left_shoulder" when definition.Name is "evoker" or "vindicator" or "pillager" or "illusioner":
+                flatName = "arms_left"; break;
+            // task-95: villager source 'arms' part has 3 cubes in addBox order: left, right(mirror), middle.
+            case "/arms" when definition.Name is "villager" or "wandering_trader":
+                flatName = cube switch { 0 => "arms_left", 1 => "arms_right", _ => "arms_middle" }; break;
             case "/head/beak": flatName = "beak"; break;
             case "/head/red_thing": flatName = "red_thing"; break;
             case "/ribcage" when definition.Name.StartsWith("wither", StringComparison.Ordinal):
@@ -388,7 +412,7 @@ public sealed class LivingRawReferenceSampleTests
     /// <summary>Vertex count a single part emits when meshed (depends only on its cube dimensions/visibility).</summary>
     private static int EmittedVertCount(EntityModelPart part, int w, int h, ItemAtlas atlas, string texturePath)
     {
-        var single = new EntityModelDefinition("count", w, h, [part], texturePath: texturePath, baselinePx: 0f, rawSourceFrame: true);
+        var single = new EntityModelDefinition("count", w, h, [part with { VisibleWhen = null }], texturePath: texturePath, baselinePx: 0f, rawSourceFrame: true);
         var geo = BuildModelSpace(single, MakeLivingState(180f), w, h, atlas);
         return geo.VertexFloats / ChunkMesher.FloatsPerVertex;
     }
