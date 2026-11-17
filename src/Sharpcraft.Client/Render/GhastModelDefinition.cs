@@ -20,7 +20,7 @@ public static class GhastModelDefinition
     private static readonly VanillaMeshDefinition GhastMesh = BuildGhastMesh();
 
     private static readonly CompiledEntityModel GhastCompiled =
-        VanillaMeshBakery.Build(GhastMesh, 64, 32);
+        VanillaMeshBakery.Build(GhastMesh, 64, 32, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildGhastMesh()
     {
@@ -30,8 +30,10 @@ public static class GhastModelDefinition
 
         for (var i = 0; i < 9; i++)
         {
-            var xo = ((i % 3 - i / 3 % 2 * 0.5f + 0.25f) - 1f) * 5f;
-            var yo = (i / 3 / 2 * 2 - 1f) * 5f;
+            // Source GhastModel.createBodyLayer: xo/yo use float division (i/3/2.0*2); integer
+            // division here collapsed tentacle rows 3-5 onto the wrong z (task-109, #140).
+            var xo = ((i % 3 - i / 3 % 2 * 0.5f + 0.25f) / 2f * 2f - 1f) * 5f;
+            var yo = (i / 3 / 2f * 2f - 1f) * 5f;
             root.AddOrReplaceChild("tentacle" + i, VanillaPartPose.Offset(xo, 24.6f, yo),
                 new VanillaCubeDefinition("tentacle" + i, 0, 0, -1f, 0f, -1f, 2f, TentacleLengths[i], 2f));
         }
@@ -43,11 +45,13 @@ public static class GhastModelDefinition
         "ghast",
         64,
         32,
-        [.. VanillaMeshBake.Bake(GhastMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
+        [.. VanillaMeshBake.Bake(GhastMesh, 0, 0, rawSourceFrame: true)],
+        faceTransforms: null,
         "entity/ghast/ghast",
         4.5f,
         textureSelector: state => state.IsCharging ? "entity/ghast/ghast_shooting" : "entity/ghast/ghast",
         additionalTexturePaths: ["entity/ghast/ghast_shooting"],
-        compiled: GhastCompiled);
+        compiled: GhastCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 }

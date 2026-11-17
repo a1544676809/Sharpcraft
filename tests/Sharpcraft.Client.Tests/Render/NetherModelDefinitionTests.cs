@@ -34,8 +34,9 @@ public sealed class NetherModelDefinitionTests
     }
 
     [Fact]
-    public void GhastPartsMatchLegacyFromVanillaRecords()
+    public void GhastPartsMatchSourceFrameRecords()
     {
+        // task-109: Ghast migrated to raw source frame; source tentacle pivots use float division.
         AssertPartsMatch(ExpectedGhastParts(), GhastModelDefinition.Definition.Parts);
     }
 
@@ -193,13 +194,14 @@ public sealed class NetherModelDefinitionTests
         var lengths = new[] { 8, 13, 9, 11, 11, 10, 12, 9, 12 };
         var parts = new List<EntityModelPart>
         {
-            LegacyModelPartFactory.FromVanilla("body", 0f, 17.6f, 0f, -8f, -8f, -8f, 16f, 16f, 16f, 0, 0)
+            RawModelPartFactory.FromVanilla("body", 0f, 17.6f, 0f, -8f, -8f, -8f, 16f, 16f, 16f, 0, 0)
         };
         for (var i = 0; i < 9; i++)
         {
-            var xo = ((i % 3 - i / 3 % 2 * 0.5f + 0.25f) - 1f) * 5f;
-            var yo = (i / 3 / 2 * 2 - 1f) * 5f;
-            parts.Add(LegacyModelPartFactory.FromVanilla("tentacle" + i, xo, 24.6f, yo, -1f, 0f, -1f, 2f, lengths[i], 2f, 0, 0));
+            // Source GhastModel.createBodyLayer: float division in tentacle pivot formulas.
+            var xo = ((i % 3 - i / 3 % 2 * 0.5f + 0.25f) / 2f * 2f - 1f) * 5f;
+            var yo = (i / 3 / 2f * 2f - 1f) * 5f;
+            parts.Add(RawModelPartFactory.FromVanilla("tentacle" + i, xo, 24.6f, yo, -1f, 0f, -1f, 2f, lengths[i], 2f, 0, 0));
         }
 
         return [.. parts];

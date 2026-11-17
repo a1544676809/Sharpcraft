@@ -86,11 +86,13 @@ public sealed class LivingRawReferenceSampleTests
         // breeze BLOCKED (special DSL/jar geometry gap, task-94)
         // creaking BLOCKED (special DSL/jar geometry gap, task-94)
         { "endermite-raw-vectors.reference.txt", EndermiteModelDefinition.Definition, 64, 32, "entity/endermite/endermite", 96, 0, 96, 0 },
-        // ghast BLOCKED (special DSL/jar geometry gap, task-94)
+        // task-109: Ghast raw (Scale=4.5 via #141 layer-scale offset).
+        { "ghast-raw-vectors.reference.txt", GhastModelDefinition.Definition, 64, 32, "entity/ghast/ghast", 240, 0, 240, 0 },
         // task-104: HappyGhast (Scale=4) raw, enabled by the layer-scale root offset (#141).
         { "happy-ghast-raw-vectors.reference.txt", HappyGhastModelDefinition.Definition, 64, 64, "entity/ghast/happy_ghast", 240, 0, 240, 0 },
         // giant BLOCKED (special DSL/jar geometry gap, task-94)
-        // guardian BLOCKED (special DSL/jar geometry gap, task-94)
+        // task-109: Guardian raw (multi-cube head; Mirror excluded via real flag).
+        { "guardian-raw-vectors.reference.txt", GuardianModelDefinition.Definition, 64, 64, "entity/guardian/guardian", 528, 24, 504, 0 },
         // iron-golem BLOCKED (special DSL/jar geometry gap, task-94)
         // task-95: illager hat as independent cube + layer scale 0.9375 (4 families share one mesh).
         { "evoker-raw-vectors.reference.txt", IllagerModelDefinition.Evoker, 64, 64, "entity/illager/evoker", 288, 72, 216, 0 },
@@ -397,6 +399,11 @@ public sealed class LivingRawReferenceSampleTests
             // task-95: villager source 'arms' part has 3 cubes in addBox order: left, right(mirror), middle.
             case "/arms" when definition.Name is "villager" or "wandering_trader":
                 flatName = cube switch { 0 => "arms_left", 1 => "arms_right", _ => "arms_middle" }; break;
+            // task-109: guardian source /head has 5 cubes -> DSL flattened head/head_left/head_right/head_top/head_bottom.
+            case "/head" when definition.Name == "guardian":
+                flatName = cube switch { 0 => "head", 1 => "head_left", 2 => "head_right", 3 => "head_top", _ => "head_bottom" }; break;
+            case "/head/tail0/tail1/tail2" when definition.Name == "guardian":
+                flatName = cube == 0 ? "tail2_body" : "tail2_fin"; break;
             case "/head/beak": flatName = "beak"; break;
             case "/head/red_thing": flatName = "red_thing"; break;
             case "/ribcage" when definition.Name.StartsWith("wither", StringComparison.Ordinal):
