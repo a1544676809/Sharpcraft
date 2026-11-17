@@ -469,4 +469,3 @@ public sealed class LivingRawReferenceSampleTests
         return result;
     }
 }
-
