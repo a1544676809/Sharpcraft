@@ -19,13 +19,13 @@ public static class FoxModelDefinition
     internal static VanillaMeshDefinition Mesh => FoxMesh;
 
     private static readonly CompiledEntityModel CompiledModel =
-        VanillaMeshBakery.Build(FoxMesh, 48, 32, texturePath: "entity/fox/fox");
+        VanillaMeshBakery.Build(FoxMesh, 48, 32, texturePath: "entity/fox/fox", rawSourceFrame: true);
 
     private static EntityModelPart[] BuildParts()
     {
         // The reference lists the tail (a child of body) last, after all four legs; Bake emits children depth-first.
         // Reorder the baked parts by name (values untouched) to keep the flat array order identical.
-        var baked = VanillaMeshBake.Bake(FoxMesh, 0, 0);
+        var baked = VanillaMeshBake.Bake(FoxMesh, 0, 0, rawSourceFrame: true);
         var byName = new Dictionary<string, EntityModelPart>(StringComparer.Ordinal);
         foreach (var part in baked)
         {
@@ -45,10 +45,12 @@ public static class FoxModelDefinition
         48,
         32,
         BuildParts(),
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/fox/fox",
         textureSelector: state => state.IsSleeping ? "entity/fox/fox_sleep" : "entity/fox/fox",
-        additionalTexturePaths: ["entity/fox/fox_sleep"], compiled: CompiledModel);
+        additionalTexturePaths: ["entity/fox/fox_sleep"], compiled: CompiledModel,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     /// <summary>Fox type names: RED and SNOW, matching the synced integer type id order.</summary>
     public static readonly IReadOnlyList<string> VariantKeys = ["red", "snow"];
@@ -62,10 +64,12 @@ public static class FoxModelDefinition
                 48,
                 32,
                 Definition.Parts,
-                PlayerModelDefinition.DefaultFaceTransforms,
+                faceTransforms: null,
                 "entity/fox/fox_snow",
                 textureSelector: state => state.IsSleeping ? "entity/fox/fox_snow_sleep" : "entity/fox/fox_snow",
-                additionalTexturePaths: ["entity/fox/fox_snow_sleep"], compiled: CompiledModel)
+                additionalTexturePaths: ["entity/fox/fox_snow_sleep"], compiled: CompiledModel,
+                baselinePx: 0f,
+                rawSourceFrame: true)
         };
 
     private static VanillaMeshDefinition BuildFoxMesh()
@@ -79,7 +83,8 @@ public static class FoxModelDefinition
             new VanillaCubeDefinition("left_ear", 15, 1, 3f, -4f, -4f, 2f, 2f, 1f));
         head.AddOrReplaceChild("nose", VanillaPartPose.Zero,
             new VanillaCubeDefinition("nose", 6, 18, -1f, 2.01f, -8f, 4f, 2f, 3f));
-        var body = root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 16f, -6f, -MathF.PI / 2f, 0f, 0f),
+        // Source AdultFoxModel.createBodyLayer: body xRot = +PI/2 (source literal).
+        var body = root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 16f, -6f, MathF.PI / 2f, 0f, 0f),
             new VanillaCubeDefinition("body", 24, 15, -3f, 3.999f, -3.5f, 6f, 11f, 6f));
         body.AddOrReplaceChild("tail", VanillaPartPose.OffsetAndRotation(-4f, 15f, -1f, -0.05235988f, 0f, 0f),
             new VanillaCubeDefinition("tail", 30, 0, 2f, 0f, -1f, 4f, 9f, 5f));

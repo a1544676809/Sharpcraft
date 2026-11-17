@@ -117,6 +117,8 @@ public sealed class LivingRawReferenceSampleTests
         { "enderman-raw-vectors.reference.txt", HumanoidMobModelDefinition.Enderman, 64, 32, "entity/enderman/enderman", 168, 48, 120, 0 },
         { "zombie-raw-vectors.reference.txt", HumanoidMobModelDefinition.Zombie, 64, 64, "entity/zombie/zombie", 168, 48, 120, 0 },
         // task-108 humanoid batch (total, mirror, checked, degenerate).
+        // task-137: Fox raw (source body xRot +PI/2; tail child of body).
+        { "fox-raw-vectors.reference.txt", FoxModelDefinition.Definition, 48, 32, "entity/fox/fox", 240, 0, 240, 0 },
         // task-135: Sheep raw (source Mirror per createLegs; #156 face order).
         { "sheep-raw-vectors.reference.txt", SheepModelDefinition.Definition, 64, 32, "entity/sheep/sheep", 144, 48, 96, 0 },
         // task-135: PolarBear raw (scale 1.2, multi-cube head/body, #141 offset).
