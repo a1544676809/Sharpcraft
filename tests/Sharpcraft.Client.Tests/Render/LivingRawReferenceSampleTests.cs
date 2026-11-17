@@ -74,7 +74,10 @@ public sealed class LivingRawReferenceSampleTests
         { "bee-raw-vectors.reference.txt", BeeModelDefinition.Definition, 64, 64, "entity/bee/bee", 216, 0, 72, 144 },
         { "bee-baby-raw-vectors.reference.txt", BabyModelDefinitionsAquatic.Bee, 32, 32, "entity/bee/bee_baby", 216, 0, 72, 144 },
         { "parrot-raw-vectors.reference.txt", ParrotModelDefinition.Definition, 32, 32, "entity/parrot/parrot", 264, 0, 240, 24 },
-        { "allay-raw-vectors.reference.txt", AllayModelDefinition.Definition, 32, 32, "entity/allay/allay", 168, 0, 120, 48 }
+        { "allay-raw-vectors.reference.txt", AllayModelDefinition.Definition, 32, 32, "entity/allay/allay", 168, 0, 120, 48 },
+        // task-81: CopperGolem entity raw, nested part paths resolved via full parent chain.
+        // Counts = (total, mirror, checked, degenerate) from jar probe: 216 rows, no mirrors/degenerate.
+        { "copper-golem-raw-vectors.reference.txt", CopperGolemModelDefinition.Definition, 64, 64, "entity/copper_golem/copper_golem", 216, 0, 216, 0 }
     };
 
     [Theory]
@@ -307,6 +310,10 @@ public sealed class LivingRawReferenceSampleTests
                 flatName = cube == 0 ? "body" : "body_inner"; break;
             case "/bone" when definition.Name.StartsWith("baby_bee", StringComparison.Ordinal):
                 flatName = cube == 0 ? "bone" : "antenna_left"; break;
+            // task-81: CopperGolem source head is one ModelPart with 4 cubes (head/nose/antenna/
+            // antenna_tip), flattened into separate DSL parts in addBox order.
+            case "/body/head" when definition.Name.StartsWith("copper_golem", StringComparison.Ordinal):
+                flatName = cube switch { 0 => "head", 1 => "nose", 2 => "antenna", _ => "antenna_tip" }; break;
             case "/head/beak": flatName = "beak"; break;
             case "/head/red_thing": flatName = "red_thing"; break;
             case "/ribcage" when definition.Name.StartsWith("wither", StringComparison.Ordinal):

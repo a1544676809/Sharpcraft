@@ -49,9 +49,9 @@ public sealed class CopperGolemStatueMesher
     private readonly List<EntityRenderState>[] _states = new List<EntityRenderState>[PoseCount * OxidationCount];
 
     /// <summary>
-    /// CopperGolemStatueModel wraps every CopperGolem layer with a root pose: <c>root.y = 0</c> and
-    /// <c>root.zRot = π</c>, which is the y-down to y-up flip the shared bakery already performs. The
-    /// definition therefore stores plain source values and this pose stays zero; adding the rotation
+    /// Source CopperGolemStatueModel.setupAnim applies <c>root.y = 0</c> and <c>root.zRot = π</c>.
+    /// In the raw source frame this rotation is applied verbatim as the compiled root pose (no legacy
+    /// X/Y conjugation), reproducing the source y-down geometry exactly.
     /// </summary>
     private static readonly EntityPose StatuePose = CreateStatuePose();
 
@@ -152,9 +152,9 @@ public sealed class CopperGolemStatueMesher
     private static EntityPose CreateStatuePose()
     {
         var pose = new EntityPose();
-        // The model keeps no pose of its own: the statement below is deliberately all zero. The source
-        // root.zRot = π is the flip the bakery already applied, and the root pivot is already zeroed.
-        pose.Set("root", new PoseOffset(new Vector3(0f, 0f, 0f), new Vector3(0f, 0f, 0f), Vector3.Zero));
+        // Source setupAnim: root.y = 0, root.zRot = PI (CopperGolemStatueModel.java). Raw root frame
+        // applies this literal rotation to the y-down source geometry.
+        pose.Set("root", new PoseOffset(Vector3.Zero, new Vector3(0f, 0f, MathF.PI), Vector3.Zero));
         return pose;
     }
 

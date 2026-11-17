@@ -30,10 +30,12 @@ public static class CopperGolemModelDefinition
         64,
         64,
         CopperGolemMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/copper_golem/" + BodyFiles[index],
+        faceTransforms: null,
+        texturePath: "entity/copper_golem/" + BodyFiles[index],
         emissiveTexturePath: "entity/copper_golem/" + EyeFiles[index],
-        additionalTexturePaths: ["entity/copper_golem/" + EyeFiles[index]]);
+        additionalTexturePaths: ["entity/copper_golem/" + EyeFiles[index]],
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     private static Dictionary<string, EntityModelDefinition> BuildVariants()
     {
