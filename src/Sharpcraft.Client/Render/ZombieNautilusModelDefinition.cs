@@ -27,7 +27,7 @@ public static class ZombieNautilusModelDefinition
 
     private static EntityModelPart[] BuildCoralParts()
     {
-        var baked = VanillaMeshBake.Bake(CoralMesh, 0, 0);
+        var baked = VanillaMeshBake.Bake(CoralMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true);
         var result = new List<EntityModelPart>(baked.Count - 1);
         foreach (var part in baked)
         {
@@ -56,9 +56,9 @@ public static class ZombieNautilusModelDefinition
         128,
         128,
         NautilusModelDefinition.Definition.Parts,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/nautilus/zombie_nautilus",
-        compiled: NautilusModelDefinition.Definition.Compiled);
+        faceTransforms: null,
+        texturePath: "entity/nautilus/zombie_nautilus",
+        compiled: NautilusModelDefinition.Definition.Compiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
         new Dictionary<string, EntityModelDefinition>(StringComparer.Ordinal)
@@ -69,9 +69,9 @@ public static class ZombieNautilusModelDefinition
                 128,
                 128,
                 [.. NautilusModelDefinition.Definition.Parts, .. CoralPartsWhileUnarmored],
-                PlayerModelDefinition.DefaultFaceTransforms,
-                "entity/nautilus/zombie_nautilus_coral",
-                compiled: CoralCompiled)
+                faceTransforms: null,
+                texturePath: "entity/nautilus/zombie_nautilus_coral",
+                compiled: CoralCompiled, baselinePx: 0f, rawSourceFrame: true)
         };
 
     /// <summary>Base nautilus body plus the coral growth subtree attached under the real shell node.</summary>

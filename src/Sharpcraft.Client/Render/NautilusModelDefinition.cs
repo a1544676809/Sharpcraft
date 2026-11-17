@@ -20,8 +20,8 @@ public static class NautilusModelDefinition
         128,
         128,
         NautilusMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/nautilus/nautilus");
+        faceTransforms: null,
+        texturePath: "entity/nautilus/nautilus", baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>
     /// Reference <c>NautilusModel.createBodyMesh</c>. The shell is one three-cube part and the body one two-cube part;

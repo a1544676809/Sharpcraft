@@ -113,6 +113,11 @@ public sealed class LivingRawReferenceSampleTests
         { "silverfish-raw-vectors.reference.txt", SilverfishModelDefinition.Definition, 64, 32, "entity/silverfish/silverfish", 240, 0, 240, 0 },
         { "slime-raw-vectors.reference.txt", SlimeModelDefinition.Definition, 64, 32, "entity/slime/slime", 96, 0, 96, 0 },
         { "magma-cube-raw-vectors.reference.txt", MagmaCubeModelDefinition.Definition, 64, 64, "entity/slime/magmacube", 216, 0, 216, 0 },
+        // task-166 Vex/Nautilus (total, mirror, checked, degenerate).
+        { "vex-raw-vectors.reference.txt", VexModelDefinition.Definition, 32, 32, "entity/illager/vex", 168, 0, 120, 48 },
+        // shell_back/body_back are zero-depth flat parts (source), mesher culls their faces => degenerate, explicitly counted.
+        { "nautilus-raw-vectors.reference.txt", NautilusModelDefinition.Definition, 128, 128, "entity/nautilus/nautilus", 192, 0, 144, 48 },
+        { "zombie-nautilus-raw-vectors.reference.txt", ZombieNautilusModelDefinition.Definition, 128, 128, "entity/nautilus/zombie_nautilus", 192, 0, 144, 48 },
         // task-121 humanoid subset (total, mirror, checked, degenerate).
         { "skeleton-raw-vectors.reference.txt", HumanoidMobModelDefinition.Skeleton, 64, 32, "entity/skeleton/skeleton", 168, 48, 120, 0 },
         { "stray-raw-vectors.reference.txt", HumanoidMobModelDefinition.Stray, 64, 32, "entity/skeleton/stray", 168, 48, 120, 0 },
@@ -450,6 +455,13 @@ public sealed class LivingRawReferenceSampleTests
                 // Source CubeListBuilder order: head_layer (height 0) first, then head (height 3).
                 flatName = cube == 0 ? "head_layer" : "head"; break;
             case "/root/body" when definition.Name.StartsWith("allay", StringComparison.Ordinal):
+                flatName = cube == 0 ? "body" : "body_inner"; break;
+            // task-166: nautilus shell (3 cubes) and body (2 cubes), Vex body (2 cubes) split into flat parts.
+            case "/root/shell" when definition.Name is "nautilus" or "zombie_nautilus":
+                flatName = cube switch { 0 => "shell", 1 => "shell_mid", _ => "shell_back" }; break;
+            case "/root/body" when definition.Name is "nautilus" or "zombie_nautilus":
+                flatName = cube == 0 ? "body" : "body_back"; break;
+            case "/root/body" when definition.Name == "vex":
                 flatName = cube == 0 ? "body" : "body_inner"; break;
             case "/bone" when definition.Name.StartsWith("baby_bee", StringComparison.Ordinal):
                 flatName = cube == 0 ? "bone" : "antenna_left"; break;
