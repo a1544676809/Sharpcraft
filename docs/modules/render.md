@@ -749,7 +749,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 ### SIM-ENTITY-RAW-MIRROR：raw mirror 语义（task-122 / #121 已解决）
 - **结论**：源 `CubeListBuilder.mirror()` 交换 cube min/max X（把几何关于 X 中心反射），使 X 法向的 WEST/EAST 面交换 UV 区间；我们 raw 路径此前只对 UV 做 FlipH，未交换 WEST/EAST 的 UV 区间，导致镜像部件两个面的 UV-位置配对错误（task-122 jar probe 实测 2/24 顶点错配）。
 - **修法（仅 raw 路径，legacy 不动）**：raw 面发射时，mirror 部件的 WEST 面取原 EAST 的 u 区间、EAST 面取原 WEST 的 u 区间（与 legacy 的 westU/eastU 交换同理，但在 raw UV 空间）；其余面仅 FlipH。源几何的 min/max X 交换在本仓用 pivot 表达，位置多重集本就匹配，无需改几何。
-- **验收证据**：`RawMirrorSourceTests` 用 `RawRenderUnitProbe` 源样本（spider 4 个真实 Mirror 左腿）逐 24 顶点全元组（位置+UV，1e-5，UV half 量化）严格比对 4/4 通过；`LivingRawReferenceSampleTests` 仍按真实 `Mirror` 标记排除（保持既有口径，镜像正确性由本测试覆盖）。
+- **验收证据**：`RawMirrorSourceTests` 用 `RawRenderUnitProbe` 源样本（spider 4 个真实 Mirror 左腿）按源 `part|cube|polygon` 身份逐顶点数值比较（位置 <=1e-5、UV half 量化后 <=1e-5，无字符串舍入/排序）4/4 严格通过；`LivingRawReferenceSampleTests` 仍按真实 `Mirror` 标记排除（保持既有口径，镜像正确性由本测试覆盖）。
 - **状态**：`已解决`（风险 R-027、Issue #121）。
 <!-- simplification:SIM-ENTITY-RAW-MIRROR task:T-41 -->
 
