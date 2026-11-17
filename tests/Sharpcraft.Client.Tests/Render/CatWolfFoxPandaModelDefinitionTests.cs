@@ -35,6 +35,20 @@ public sealed class CatWolfFoxPandaModelDefinitionTests
     }
 
     [Fact]
+    public void WolfVariantsCarryRawSourceFrameFlags()
+    {
+        // task-137: every wolf coat variant must render in the raw source frame, not just pale/base.
+        foreach (var key in WolfModelDefinition.VariantKeys)
+        {
+            var def = WolfModelDefinition.Variants[key];
+            Assert.True(def.RawSourceFrame, $"wolf variant {key}: must be rawSourceFrame");
+            Assert.Equal(0f, def.BaselinePx);
+            Assert.Null(def.FaceTransforms is { Count: > 0 } ? def.FaceTransforms : null);
+            Assert.Same(WolfModelDefinition.Definition.Parts, def.Parts);
+        }
+    }
+
+    [Fact]
     public void FoxPartsMatchSourceFrameRecords()
     {
         var expected = ExpectedFoxParts();
@@ -268,6 +282,3 @@ public sealed class CatWolfFoxPandaModelDefinitionTests
         }
     }
 }
-
-
-

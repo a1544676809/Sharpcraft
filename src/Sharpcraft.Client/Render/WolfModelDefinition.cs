@@ -79,11 +79,13 @@ public static class WolfModelDefinition
                 64,
                 32,
                 Definition.Parts,
-                PlayerModelDefinition.DefaultFaceTransforms,
+                faceTransforms: null,
                 captured,
                 textureSelector: state => state.IsTame ? captured + "_tame" : state.IsAngry ? captured + "_angry" : captured,
                 additionalTexturePaths: [tame, angry],
-                compiled: CompiledModel);
+                compiled: CompiledModel,
+                baselinePx: 0f,
+                rawSourceFrame: true);
         }
 
         return variants;
