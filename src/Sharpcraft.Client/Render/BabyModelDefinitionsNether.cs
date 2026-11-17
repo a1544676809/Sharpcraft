@@ -34,28 +34,32 @@ public static class BabyModelDefinitionsNether
 
     private static readonly VanillaMeshDefinition HoglinMesh = BuildHoglinMesh();
 
-    private static readonly EntityModelPart[] HoglinParts = [.. VanillaMeshBake.Bake(HoglinMesh, 0, 0)];
+    private static readonly EntityModelPart[] HoglinParts = [.. VanillaMeshBake.Bake(HoglinMesh, 0, 0, rawSourceFrame: true)];
 
     private static readonly CompiledEntityModel HoglinCompiled =
-        VanillaMeshBakery.Build(HoglinMesh, 64, 64);
+        VanillaMeshBakery.Build(HoglinMesh, 64, 64, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Hoglin = new(
         "baby_hoglin",
         64,
         64,
         HoglinParts,
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/hoglin/hoglin_baby",
-        compiled: HoglinCompiled);
+        compiled: HoglinCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Zoglin = new(
         "baby_zoglin",
         64,
         64,
         HoglinParts,
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/hoglin/zoglin_baby",
-        compiled: HoglinCompiled);
+        compiled: HoglinCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<int, EntityModelDefinition> Models =
         new Dictionary<int, EntityModelDefinition>
@@ -99,7 +103,8 @@ public static class BabyModelDefinitionsNether
     private static VanillaMeshDefinition BuildHoglinMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        var head = root.AddOrReplaceChild("head", VanillaPartPose.OffsetAndRotation(0f, 13f, -7f, -0.8727f, 0f, 0f),
+        // Source BabyHoglinModel: head xRot = +0.8727F (source literal).
+        var head = root.AddOrReplaceChild("head", VanillaPartPose.OffsetAndRotation(0f, 13f, -7f, 0.8727f, 0f, 0f),
             new VanillaCubeDefinition("head", 0, 0, -5f, -2.2605f, -10.547f, 10f, 4f, 12f));
         head.AddOrReplaceChild("head_right", VanillaPartPose.Zero,
             new VanillaCubeDefinition("head_right", 44, 29, -7f, -4.0981f, -8.4879f, 2f, 5f, 2f));

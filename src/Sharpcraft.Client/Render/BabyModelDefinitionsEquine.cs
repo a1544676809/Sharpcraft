@@ -11,7 +11,7 @@ public static class BabyModelDefinitionsEquine
     private static readonly EntityModelPart[] HorseParts = EntityModelLayerHelpers.WithHorseMarkings(
         [.. VanillaMeshBake.Bake(HorseMesh, 0, 0)], "entity/horse/horse_markings_", true);
     private static readonly VanillaMeshDefinition LlamaMesh = BuildLlamaMesh();
-    private static readonly EntityModelPart[] LlamaParts = [.. VanillaMeshBake.Bake(LlamaMesh, 0, 0)];
+    private static readonly EntityModelPart[] LlamaParts = [.. VanillaMeshBake.Bake(LlamaMesh, 0, 0, rawSourceFrame: true)];
     private static readonly VanillaMeshDefinition CamelMesh = BuildCamelMesh();
     private static readonly EntityModelPart[] CamelParts = [.. VanillaMeshBake.Bake(CamelMesh, 0, 0)];
     private static readonly VanillaMeshDefinition DonkeyMesh = BuildDonkeyMesh();
@@ -20,7 +20,7 @@ public static class BabyModelDefinitionsEquine
     private static readonly CompiledEntityModel HorseCompiled = VanillaMeshBakery.Build(HorseMesh, 64, 64);
     private static readonly CompiledEntityModel HorseMarkedCompiled =
         EntityModelLayerHelpers.WithHorseMarkings(HorseCompiled, "entity/horse/horse_markings_", true);
-    private static readonly CompiledEntityModel LlamaCompiled = VanillaMeshBakery.Build(LlamaMesh, 64, 64);
+    private static readonly CompiledEntityModel LlamaCompiled = VanillaMeshBakery.Build(LlamaMesh, 64, 64, rawSourceFrame: true);
     private static readonly CompiledEntityModel CamelCompiled = VanillaMeshBakery.Build(CamelMesh, 64, 64);
     private static readonly CompiledEntityModel DonkeyCompiled = VanillaMeshBakery.Build(DonkeyMesh, 64, 64);
 
@@ -29,8 +29,8 @@ public static class BabyModelDefinitionsEquine
         compiled: HorseMarkedCompiled);
 
     public static readonly EntityModelDefinition Llama = new(
-        "baby_llama", 64, 64, LlamaParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/llama/llama_brown_baby",
-        compiled: LlamaCompiled);
+        "baby_llama", 64, 64, LlamaParts, faceTransforms: null, "entity/llama/llama_brown_baby",
+        compiled: LlamaCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Camel = new(
         "baby_camel", 64, 64, CamelParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/camel/camel_baby",
@@ -81,7 +81,7 @@ public static class BabyModelDefinitionsEquine
         {
             if (key != "brown")
             {
-                variants[(LlamaModelDefinition.LlamaEntityTypeId, key)] = new("baby_llama_" + key, 64, 64, LlamaParts, PlayerModelDefinition.DefaultFaceTransforms, "entity/llama/llama_" + key + "_baby", compiled: LlamaCompiled);
+                variants[(LlamaModelDefinition.LlamaEntityTypeId, key)] = new("baby_llama_" + key, 64, 64, LlamaParts, faceTransforms: null, "entity/llama/llama_" + key + "_baby", compiled: LlamaCompiled, baselinePx: 0f, rawSourceFrame: true);
             }
         }
 
@@ -135,9 +135,10 @@ public static class BabyModelDefinitionsEquine
             new VanillaCubeDefinition("left_front_leg", 12, 34, -1.6f, -0.5f, -1.5f, 3f, 8f, 3f));
         root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 14f, 2.5f),
             new VanillaCubeDefinition("body", 0, 15, -4f, -3f, -8.5f, 8f, 6f, 13f));
-        root.AddOrReplaceChild("right_chest", VanillaPartPose.OffsetAndRotation(-8.5f, 4f, 3f, 0f, -MathF.PI / 2f, 0f),
+        // Source BabyLlamaModel: chest yRot = +PI/2 (source literals).
+        root.AddOrReplaceChild("right_chest", VanillaPartPose.OffsetAndRotation(-8.5f, 4f, 3f, 0f, MathF.PI / 2f, 0f),
             new VanillaCubeDefinition("right_chest", 45, 28, -3f, 0f, 0f, 8f, 8f, 3f));
-        root.AddOrReplaceChild("left_chest", VanillaPartPose.OffsetAndRotation(5.5f, 4f, 3f, 0f, -MathF.PI / 2f, 0f),
+        root.AddOrReplaceChild("left_chest", VanillaPartPose.OffsetAndRotation(5.5f, 4f, 3f, 0f, MathF.PI / 2f, 0f),
             new VanillaCubeDefinition("left_chest", 45, 41, -3f, 0f, 0f, 8f, 8f, 3f));
         return new VanillaMeshDefinition(root);
     }

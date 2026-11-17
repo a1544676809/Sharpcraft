@@ -122,6 +122,12 @@ public sealed class LivingRawReferenceSampleTests
         { "enderman-raw-vectors.reference.txt", HumanoidMobModelDefinition.Enderman, 64, 32, "entity/enderman/enderman", 168, 48, 120, 0 },
         { "zombie-raw-vectors.reference.txt", HumanoidMobModelDefinition.Zombie, 64, 64, "entity/zombie/zombie", 168, 48, 120, 0 },
         // task-108 humanoid batch (total, mirror, checked, degenerate).
+        // task-158: baby_armadillo raw (distinct BabyArmadilloModel geometry, mirror legs, zero-depth ears).
+        { "baby-armadillo-raw-vectors.reference.txt", BabyModelDefinitionsOdd.Armadillo, 64, 64, "entity/armadillo/armadillo_baby", 264, 48, 168, 48 },
+        // task-158: baby_hoglin raw (distinct BabyHoglinModel geometry, head xRot +0.8727, left-ear Mirror).
+        { "baby-hoglin-raw-vectors.reference.txt", BabyModelDefinitionsNether.Hoglin, 64, 64, "entity/hoglin/hoglin_baby", 264, 24, 216, 24 },
+        // task-158: baby_llama raw (distinct BabyLlamaModel geometry, chest yRot +PI/2).
+        { "baby-llama-raw-vectors.reference.txt", BabyModelDefinitionsEquine.Llama, 64, 64, "entity/llama/llama_brown_baby", 264, 0, 216, 48 },
         // task-150: Armadillo raw (multi-cube body/head, rolled cube).
         { "armadillo-raw-vectors.reference.txt", ArmadilloModelDefinition.Definition, 64, 64, "entity/armadillo/armadillo", 264, 0, 216, 48 },
         // task-150: Ravager raw (multi-cube head, source Mirror on right_horn + left legs, body +PI/2).
@@ -484,6 +490,19 @@ public sealed class LivingRawReferenceSampleTests
                 flatName = cube == 0 ? "head" : "head_cube"; break;
             case "/body/head/eyes" when definition.Name == "breeze":
                 flatName = cube == 0 ? "eyes" : "eyes_cube"; break;
+            // task-158: baby_armadillo source /body has 2 cubes (body grow0.3, body_inner); tail cube named right_ear_cube.
+            case "/body" when definition.Name == "baby_armadillo":
+                flatName = cube == 0 ? "body" : "body_inner"; break;
+            case "/body/tail/right_ear_cube" when definition.Name == "baby_armadillo":
+                flatName = "tail_cube"; break;
+            // task-158: baby_hoglin source /head has 3 cubes (head,head_right,head_left), /body has 2 (body,body_mane).
+            case "/head" when definition.Name == "baby_hoglin":
+                flatName = cube switch { 0 => "head", 1 => "head_right", _ => "head_left" }; break;
+            case "/body" when definition.Name == "baby_hoglin":
+                flatName = cube == 0 ? "body" : "body_mane"; break;
+            // task-158: baby_llama source /head has 4 cubes (head,snout,ear_right,ear_left).
+            case "/head" when definition.Name == "baby_llama":
+                flatName = cube switch { 0 => "head", 1 => "snout", 2 => "ear_right", _ => "ear_left" }; break;
             // task-150: armadillo source /body has 2 cubes (body_outer grow0.3, body grow0).
             case "/body" when definition.Name == "armadillo":
                 flatName = cube == 0 ? "body_outer" : "body"; break;
