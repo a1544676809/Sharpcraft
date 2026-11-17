@@ -20,12 +20,12 @@ public static class CatModelDefinition
     /// <summary>Declarative DSL tree for the eleven cat parts (T-684).</summary>
     private static readonly VanillaMeshDefinition CatMesh = BuildCatMesh();
 
-    private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(CatMesh, 0, 0)];
+    private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(CatMesh, 0, 0, rawSourceFrame: true)];
 
     private static readonly EntityModelPart[] CollarParts = EntityModelLayerHelpers.WithCollar(Parts, "entity/cat/cat_collar");
 
     private static readonly CompiledEntityModel BaseCompiled =
-        VanillaMeshBakery.Build(CatMesh, 64, 32, texturePath: "entity/cat/cat_tabby");
+        VanillaMeshBakery.Build(CatMesh, 64, 32, texturePath: "entity/cat/cat_tabby", rawSourceFrame: true);
 
     private static readonly CompiledEntityModel CompiledModel =
         EntityModelLayerHelpers.WithCollar(BaseCompiled, "entity/cat/cat_collar", inflate: 0.01f);
@@ -35,19 +35,23 @@ public static class CatModelDefinition
         64,
         32,
         CollarParts,
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/cat/cat_tabby",
         0.8f,
-        compiled: CompiledModel);
+        compiled: CompiledModel,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Ocelot = new(
         "ocelot",
         64,
         32,
         CollarParts,
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/cat/ocelot",
-        compiled: CompiledModel);
+        compiled: CompiledModel,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     /// <summary>Registry entry names, in the vanilla bootstrap order used when no registry data is available.</summary>
     public static readonly IReadOnlyList<string> VariantKeys =
@@ -78,10 +82,12 @@ public static class CatModelDefinition
                 64,
                 32,
                 CollarParts,
-                PlayerModelDefinition.DefaultFaceTransforms,
+                faceTransforms: null,
                 "entity/cat/cat_" + key,
                 0.8f,
-                compiled: CompiledModel);
+                compiled: CompiledModel,
+                baselinePx: 0f,
+                rawSourceFrame: true);
         }
 
         return variants;
@@ -98,12 +104,14 @@ public static class CatModelDefinition
             new VanillaCubeDefinition("ear1", 0, 10, -2f, -3f, 0f, 1f, 1f, 2f));
         root.AddOrReplaceChild("ear2", VanillaPartPose.Offset(0f, 15f, -9f),
             new VanillaCubeDefinition("ear2", 6, 10, 1f, -3f, 0f, 1f, 1f, 2f));
-        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 12f, -10f, -MathF.PI / 2f, 0f, 0f),
+        // Source AdultFelineModel.createBodyLayer: body xRot +PI/2, tail1 xRot +0.9 (source literals).
+        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 12f, -10f, MathF.PI / 2f, 0f, 0f),
             new VanillaCubeDefinition("body", 20, 0, -2f, 3f, -8f, 4f, 16f, 6f));
-        root.AddOrReplaceChild("tail1", VanillaPartPose.OffsetAndRotation(0f, 15f, 8f, -0.9f, 0f, 0f),
+        root.AddOrReplaceChild("tail1", VanillaPartPose.OffsetAndRotation(0f, 15f, 8f, 0.9f, 0f, 0f),
             new VanillaCubeDefinition("tail1", 0, 15, -0.5f, 0f, 0f, 1f, 8f, 1f));
+        // Source AdultFelineModel: tail2 uses tail_g = CubeDeformation(-0.02F).
         root.AddOrReplaceChild("tail2", VanillaPartPose.Offset(0f, 20f, 14f),
-            new VanillaCubeDefinition("tail2", 4, 15, -0.5f, 0f, 0f, 1f, 8f, 1f));
+            new VanillaCubeDefinition("tail2", 4, 15, -0.5f, 0f, 0f, 1f, 8f, 1f, Grow: -0.02f));
         root.AddOrReplaceChild("left_hind_leg", VanillaPartPose.Offset(1.1f, 18f, 5f),
             new VanillaCubeDefinition("left_hind_leg", 8, 13, -1f, 0f, 1f, 2f, 6f, 2f));
         root.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-1.1f, 18f, 5f),
