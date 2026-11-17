@@ -28,26 +28,30 @@ public static class GuardianModelDefinition
     private static readonly VanillaMeshDefinition GuardianMesh = BuildGuardianMesh();
 
     private static readonly CompiledEntityModel GuardianCompiled =
-        VanillaMeshBakery.Build(GuardianMesh, 64, 64);
+        VanillaMeshBakery.Build(GuardianMesh, 64, 64, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Definition = new(
         "guardian",
         64,
         64,
-        [.. VanillaMeshBake.Bake(GuardianMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
+        [.. VanillaMeshBake.Bake(GuardianMesh, 0, 0, rawSourceFrame: true)],
+        faceTransforms: null,
         "entity/guardian/guardian",
-        compiled: GuardianCompiled);
+        compiled: GuardianCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Elder = new(
         "elder_guardian",
         64,
         64,
-        [.. VanillaMeshBake.Bake(GuardianMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
+        [.. VanillaMeshBake.Bake(GuardianMesh, 0, 0, rawSourceFrame: true)],
+        faceTransforms: null,
         "entity/guardian/guardian_elder",
         2.35f,
-        compiled: GuardianCompiled);
+        compiled: GuardianCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildGuardianMesh()
     {
@@ -64,8 +68,11 @@ public static class GuardianModelDefinition
             new VanillaCubeDefinition("head_bottom", 16, 40, -6f, 22f, -6f, 12f, 2f, 12f));
         for (var i = 0; i < 12; i++)
         {
+            // Source GuardianModel.getSpikeX/Y/Z at ageInTicks=0: offset = 1 + cos(i)*0.01.
+            // The old DSL omitted this breathing factor, shifting spikes by up to ~0.08px.
+            var spikeOffset = 1f + MathF.Cos(i) * 0.01f;
             head.AddOrReplaceChild("spike" + i,
-                VanillaPartPose.OffsetAndRotation(SpikeX[i], 16f + SpikeY[i], SpikeZ[i],
+                VanillaPartPose.OffsetAndRotation(SpikeX[i] * spikeOffset, 16f + SpikeY[i] * spikeOffset, SpikeZ[i] * spikeOffset,
                     MathF.PI * SpikeXRot[i], MathF.PI * SpikeYRot[i], MathF.PI * SpikeZRot[i]),
                 new VanillaCubeDefinition("spike" + i, 0, 0, -1f, -4.5f, -1f, 2f, 9f, 2f));
         }

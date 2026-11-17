@@ -83,15 +83,20 @@ public sealed class LivingRawReferenceSampleTests
         // task-94 special/large first group (total, mirror, checked, degenerate).
         { "shulker-raw-vectors.reference.txt", ShulkerModelDefinition.Definition, 64, 64, "entity/shulker/shulker", 72, 0, 72, 0 },
         { "blaze-raw-vectors.reference.txt", BlazeModelDefinition.Definition, 64, 32, "entity/blaze/blaze", 312, 0, 312, 0 },
-        // breeze BLOCKED (special DSL/jar geometry gap, task-94)
-        // creaking BLOCKED (special DSL/jar geometry gap, task-94)
+        // task-109: Breeze raw (multi-cube head/eyes; sample covers base cutout parts).
+        { "breeze-raw-vectors.reference.txt", BreezeModelDefinition.Definition, 32, 32, "entity/breeze/breeze", 168, 0, 120, 48 },
+        // task-109: Creaking raw (multi-cube head/body/legs; 384 rows incl. zero-depth plates).
+        { "creaking-raw-vectors.reference.txt", CreakingModelDefinition.Definition, 64, 64, "entity/creaking/creaking", 384, 0, 288, 96 },
         { "endermite-raw-vectors.reference.txt", EndermiteModelDefinition.Definition, 64, 32, "entity/endermite/endermite", 96, 0, 96, 0 },
-        // ghast BLOCKED (special DSL/jar geometry gap, task-94)
+        // task-109: Ghast raw (Scale=4.5 via #141 layer-scale offset).
+        { "ghast-raw-vectors.reference.txt", GhastModelDefinition.Definition, 64, 32, "entity/ghast/ghast", 240, 0, 240, 0 },
         // task-104: HappyGhast (Scale=4) raw, enabled by the layer-scale root offset (#141).
         { "happy-ghast-raw-vectors.reference.txt", HappyGhastModelDefinition.Definition, 64, 64, "entity/ghast/happy_ghast", 240, 0, 240, 0 },
         // giant BLOCKED (special DSL/jar geometry gap, task-94)
-        // guardian BLOCKED (special DSL/jar geometry gap, task-94)
-        // iron-golem BLOCKED (special DSL/jar geometry gap, task-94)
+        // task-109: Guardian raw (multi-cube head; Mirror excluded via real flag).
+        { "guardian-raw-vectors.reference.txt", GuardianModelDefinition.Definition, 64, 64, "entity/guardian/guardian", 528, 24, 504, 0 },
+        // task-109: IronGolem raw (multi-cube head/body; Mirror excluded via real flag).
+        { "iron-golem-raw-vectors.reference.txt", IronGolemModelDefinition.Definition, 128, 128, "entity/iron_golem/iron_golem", 192, 48, 144, 0 },
         // task-95: illager hat as independent cube + layer scale 0.9375 (4 families share one mesh).
         { "evoker-raw-vectors.reference.txt", IllagerModelDefinition.Evoker, 64, 64, "entity/illager/evoker", 288, 72, 216, 0 },
         { "vindicator-raw-vectors.reference.txt", IllagerModelDefinition.Vindicator, 64, 64, "entity/illager/vindicator", 288, 72, 216, 0 },
@@ -397,6 +402,34 @@ public sealed class LivingRawReferenceSampleTests
             // task-95: villager source 'arms' part has 3 cubes in addBox order: left, right(mirror), middle.
             case "/arms" when definition.Name is "villager" or "wandering_trader":
                 flatName = cube switch { 0 => "arms_left", 1 => "arms_right", _ => "arms_middle" }; break;
+            // task-109: guardian source /head has 5 cubes -> DSL flattened head/head_left/head_right/head_top/head_bottom.
+            case "/head" when definition.Name == "guardian":
+                flatName = cube switch { 0 => "head", 1 => "head_left", 2 => "head_right", 3 => "head_top", _ => "head_bottom" }; break;
+            case "/head/tail0/tail1/tail2" when definition.Name == "guardian":
+                flatName = cube == 0 ? "tail2_body" : "tail2_fin"; break;
+            // task-109: iron-golem source /head has 2 cubes (head,nose), /body has 2 (body,lower_body).
+            case "/head" when definition.Name == "iron_golem":
+                flatName = cube == 0 ? "head" : "nose"; break;
+            case "/body" when definition.Name == "iron_golem":
+                flatName = cube == 0 ? "body" : "lower_body"; break;
+            // task-109: creaking multi-cube parts (source addBox order).
+            case "/root/upper_body/head" when definition.Name == "creaking":
+                flatName = cube switch { 0 => "head", 1 => "head_top", 2 => "head_plate_right", _ => "head_plate_left" }; break;
+            case "/root/upper_body/body" when definition.Name == "creaking":
+                flatName = cube == 0 ? "body" : "body_front"; break;
+            case "/root/upper_body/right_arm" when definition.Name == "creaking":
+                flatName = cube == 0 ? "right_arm" : "right_hand"; break;
+            case "/root/upper_body/left_arm" when definition.Name == "creaking":
+                flatName = cube switch { 0 => "left_arm", 1 => "left_upper", _ => "left_hand" }; break;
+            case "/root/left_leg" when definition.Name == "creaking":
+                flatName = cube == 0 ? "left_leg" : "left_foot"; break;
+            case "/root/right_leg" when definition.Name == "creaking":
+                flatName = cube switch { 0 => "right_leg", 1 => "right_foot", _ => "right_knee" }; break;
+            // task-109: breeze source head/eyes have 2 cubes each (head,head_cube / eyes,eyes_cube).
+            case "/body/head" when definition.Name == "breeze":
+                flatName = cube == 0 ? "head" : "head_cube"; break;
+            case "/body/head/eyes" when definition.Name == "breeze":
+                flatName = cube == 0 ? "eyes" : "eyes_cube"; break;
             case "/head/beak": flatName = "beak"; break;
             case "/head/red_thing": flatName = "red_thing"; break;
             case "/ribcage" when definition.Name.StartsWith("wither", StringComparison.Ordinal):
