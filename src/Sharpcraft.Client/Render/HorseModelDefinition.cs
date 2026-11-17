@@ -23,28 +23,28 @@ public static class HorseModelDefinition
     internal static VanillaMeshDefinition Mesh => HorseMesh;
 
     private static readonly CompiledEntityModel HorseCompiled =
-        VanillaMeshBakery.Build(HorseMesh, 64, 64);
+        VanillaMeshBakery.Build(HorseMesh, 64, 64, rawSourceFrame: true);
 
     private static readonly CompiledEntityModel HorseMarkedCompiled =
         EntityModelLayerHelpers.WithHorseMarkings(HorseCompiled, "entity/horse/horse_markings_", false);
 
     private static readonly CompiledEntityModel DonkeyCompiled =
-        VanillaMeshBakery.Build(BuildBodyMesh(0f, donkey: true), 64, 64);
+        VanillaMeshBakery.Build(BuildBodyMesh(0f, donkey: true), 64, 64, rawSourceFrame: true);
 
     private static readonly CompiledEntityModel MuleCompiled =
-        VanillaMeshBakery.Build(BuildBodyMesh(0f, donkey: true), 64, 64);
+        VanillaMeshBakery.Build(BuildBodyMesh(0f, donkey: true), 64, 64, rawSourceFrame: true);
 
     private static readonly CompiledEntityModel ZombieHorseCompiled =
-        VanillaMeshBakery.Build(HorseMesh, 64, 64);
+        VanillaMeshBakery.Build(HorseMesh, 64, 64, rawSourceFrame: true);
 
     private static readonly CompiledEntityModel SkeletonHorseCompiled =
-        VanillaMeshBakery.Build(HorseMesh, 64, 64);
+        VanillaMeshBakery.Build(HorseMesh, 64, 64, rawSourceFrame: true);
 
     private static EntityModelPart[] BuildParts()
     {
         // The reference lists all head_parts children before the head's ear grandchildren, and the tail (child of body)
         // last; Bake emits children depth-first. Reorder by name (values untouched) to keep the flat order identical.
-        var baked = VanillaMeshBake.Bake(HorseMesh, 0, 0);
+        var baked = VanillaMeshBake.Bake(HorseMesh, 0, 0, rawSourceFrame: true);
         var byName = new Dictionary<string, EntityModelPart>(StringComparer.Ordinal);
         foreach (var part in baked)
         {
@@ -67,40 +67,50 @@ public static class HorseModelDefinition
             BuildParts(),
             "entity/horse/horse_markings_",
             false),
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/horse/horse_brown",
         1.1f,
-        compiled: HorseMarkedCompiled);
+        compiled: HorseMarkedCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Donkey = new(
         "donkey",
         64,
         64,
         HorseModelDefinition.Definition.Parts,
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/horse/donkey",
         0.87f,
-        compiled: DonkeyCompiled);
+        compiled: DonkeyCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Mule = new(
         "mule",
         64,
         64,
         HorseModelDefinition.Definition.Parts,
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/horse/mule",
         0.92f,
-        compiled: MuleCompiled);
+        compiled: MuleCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     public static readonly EntityModelDefinition ZombieHorse = new(
         "zombie_horse", 64, 64, HorseModelDefinition.Definition.Parts,
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/horse/horse_zombie",
-        compiled: ZombieHorseCompiled);
+        faceTransforms: null, "entity/horse/horse_zombie",
+        compiled: ZombieHorseCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     public static readonly EntityModelDefinition SkeletonHorse = new(
         "skeleton_horse", 64, 64, HorseModelDefinition.Definition.Parts,
-        PlayerModelDefinition.DefaultFaceTransforms, "entity/horse/horse_skeleton",
-        compiled: SkeletonHorseCompiled);
+        faceTransforms: null, "entity/horse/horse_skeleton",
+        compiled: SkeletonHorseCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     /// <summary>Horse coat ids, in the <c>Variant</c> enum order used on the wire.</summary>
     public static readonly IReadOnlyList<string> VariantKeys =
@@ -137,10 +147,12 @@ public static class HorseModelDefinition
                 64,
                 64,
                 Definition.Parts,
-                PlayerModelDefinition.DefaultFaceTransforms,
+                faceTransforms: null,
                 "entity/horse/" + VariantFiles[i],
                 1.1f,
-                compiled: HorseMarkedCompiled);
+                compiled: HorseMarkedCompiled,
+                baselinePx: 0f,
+                rawSourceFrame: true);
         }
 
         return variants;
@@ -167,7 +179,8 @@ public static class HorseModelDefinition
 
         body.AddOrReplaceChild("tail", VanillaPartPose.OffsetAndRotation(0f, -5f, 2f, MathF.PI / 6f, 0f, 0f),
             new VanillaCubeDefinition("tail", 42, 36, -1.5f, 0f, 0f, 3f, 14f, 4f, Grow: addedGrow));
-        var headParts = root.AddOrReplaceChild("head_parts", VanillaPartPose.OffsetAndRotation(0f, 4f, -12f, -MathF.PI / 6f, 0f, 0f),
+        // Source AbstractEquineModel.createBodyLayer: head_parts xRot = +PI/6 (source literal).
+        var headParts = root.AddOrReplaceChild("head_parts", VanillaPartPose.OffsetAndRotation(0f, 4f, -12f, MathF.PI / 6f, 0f, 0f),
             new VanillaCubeDefinition("head_parts", 0, 35, -2.05f, -6f, -2f, 4f, 12f, 7f));
         var head = headParts.AddOrReplaceChild("head", VanillaPartPose.Zero,
             new VanillaCubeDefinition("head", 0, 13, -3f, -11f, -2f, 6f, 5f, 7f, Grow: addedGrow));

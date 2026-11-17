@@ -36,8 +36,9 @@ public sealed class ReferenceModelFactsTests
     [Fact]
     public void AdultFoxMatchesReferenceFacts()
     {
+        // task-137: Fox is migrated to raw source frame; compare with raw-frame oracle (source rotation literals).
         var model = Load("AdultFoxModel");
-        AssertPartsMatch(BuildExpectedParts(model), FoxModelDefinition.Definition.Parts);
+        AssertPartsMatch(BuildExpectedParts(model, raw: true), FoxModelDefinition.Definition.Parts);
     }
 
     [Fact]
@@ -88,7 +89,7 @@ public sealed class ReferenceModelFactsTests
         return document.Models.Single(model => model.Class == className);
     }
 
-    private static EntityModelPart[] BuildExpectedParts(ModelFact model)
+    private static EntityModelPart[] BuildExpectedParts(ModelFact model, bool raw = false)
     {
         var parts = new List<EntityModelPart>();
         foreach (var part in model.Parts)
@@ -100,17 +101,17 @@ public sealed class ReferenceModelFactsTests
 
             if (part.Cubes.Count == 0)
             {
-                parts.Add(BuildPart(part, null));
+                parts.Add(BuildPart(part, null, raw));
                 continue;
             }
 
-            parts.Add(BuildPart(part, part.Cubes[0]));
+            parts.Add(BuildPart(part, part.Cubes[0], raw));
         }
 
         return [.. parts];
     }
 
-    private static EntityModelPart BuildPart(FactPart part, FactCube? cube)
+    private static EntityModelPart BuildPart(FactPart part, FactCube? cube, bool raw = false)
     {
         if (Math.Abs(part.Pose.ScaleX - 1d) > 1e-9
             || Math.Abs(part.Pose.ScaleY - 1d) > 1e-9
@@ -132,19 +133,52 @@ public sealed class ReferenceModelFactsTests
             throw new InvalidOperationException($"part {part.Name} uses non-uniform grow; add DSL GrowXyz support first");
         }
 
-        var rootRotationX = part.Parent is null ? -part.Pose.RotationX : part.Pose.RotationX;
-        var rootRotationY = part.Parent is null ? -part.Pose.RotationY : part.Pose.RotationY;
-        // Current production model definitions store root X/Y rotations already negated relative to the reference.
-        // Child values go through BakeChild, which performs the same conjugation. A future canonicalisation can move
-        // this historical root compensation into BakeRoot and remove the negation here.
+        // Legacy frame negates root X/Y rotations; raw source frame stores them as source literals.
+        var rootRotationX = !raw && part.Parent is null ? -part.Pose.RotationX : part.Pose.RotationX;
+        var rootRotationY = !raw && part.Parent is null ? -part.Pose.RotationY : part.Pose.RotationY;
         var rotationX = (float)rootRotationX;
         var rotationY = (float)rootRotationY;
         var rotationZ = (float)part.Pose.RotationZ;
 
         if (part.Parent is null)
         {
-            return LegacyModelPartFactory.FromVanilla(
+            return raw
+                ? RawModelPartFactory.FromVanilla(
+                    part.Name, (float)part.Pose.X, (float)part.Pose.Y, (float)part.Pose.Z,
+                    (float)minX, (float)minY, (float)minZ, (float)width, (float)height, (float)depth,
+                    cube?.TextureX ?? 0, cube?.TextureY ?? 0, cube?.Mirror ?? false,
+                    rotationX: rotationX, rotationY: rotationY, rotationZ: rotationZ, grow: (float)grow)
+                : LegacyModelPartFactory.FromVanilla(
+                    part.Name,
+                    (float)part.Pose.X,
+                    (float)part.Pose.Y,
+                    (float)part.Pose.Z,
+                    (float)minX,
+                    (float)minY,
+                    (float)minZ,
+                    (float)width,
+                    (float)height,
+                    (float)depth,
+                    cube?.TextureX ?? 0,
+                    cube?.TextureY ?? 0,
+                    cube?.Mirror ?? false,
+                    mirrorX: true,
+                    grow: (float)grow,
+                    rotationX: rotationX,
+                    rotationY: rotationY,
+                    rotationZ: rotationZ);
+        }
+
+        return raw
+            ? RawModelPartFactory.FromVanillaChild(
+                part.Name, part.Parent, (float)part.Pose.X, (float)part.Pose.Y, (float)part.Pose.Z,
+                (float)minX, (float)minY, (float)minZ, (float)width, (float)height, (float)depth,
+                cube?.TextureX ?? 0, cube?.TextureY ?? 0, cube?.Mirror ?? false,
+                rotationX: (float)part.Pose.RotationX, rotationY: (float)part.Pose.RotationY,
+                rotationZ: (float)part.Pose.RotationZ, grow: (float)grow)
+            : LegacyModelPartFactory.FromVanillaChild(
                 part.Name,
+                part.Parent,
                 (float)part.Pose.X,
                 (float)part.Pose.Y,
                 (float)part.Pose.Z,
@@ -157,32 +191,10 @@ public sealed class ReferenceModelFactsTests
                 cube?.TextureX ?? 0,
                 cube?.TextureY ?? 0,
                 cube?.Mirror ?? false,
-                mirrorX: true,
                 grow: (float)grow,
-                rotationX: rotationX,
-                rotationY: rotationY,
-                rotationZ: rotationZ);
-        }
-
-        return LegacyModelPartFactory.FromVanillaChild(
-            part.Name,
-            part.Parent,
-            (float)part.Pose.X,
-            (float)part.Pose.Y,
-            (float)part.Pose.Z,
-            (float)minX,
-            (float)minY,
-            (float)minZ,
-            (float)width,
-            (float)height,
-            (float)depth,
-            cube?.TextureX ?? 0,
-            cube?.TextureY ?? 0,
-            cube?.Mirror ?? false,
-            grow: (float)grow,
-            rotationX: (float)part.Pose.RotationX,
-            rotationY: (float)part.Pose.RotationY,
-            rotationZ: (float)part.Pose.RotationZ);
+                rotationX: (float)part.Pose.RotationX,
+                rotationY: (float)part.Pose.RotationY,
+                rotationZ: (float)part.Pose.RotationZ);
     }
 
     private static void AssertPartsMatch(EntityModelPart[] expected, IReadOnlyList<EntityModelPart> actual)
