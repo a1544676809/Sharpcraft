@@ -524,7 +524,7 @@ public sealed partial class EntityModelMesher
         var partTint = part.TintSelector?.Invoke(renderState)
             ?? (renderState.Tint == default ? Vector3.One : renderState.Tint);
 
-        if (emitBase && part.Depth == 0f && part.Width > 0f && part.Height > 0f)
+        if (emitBase && !rawSourceFrame && part.Depth == 0f && part.Width > 0f && part.Height > 0f)
         {
             AddFlatQuad(part, target, min, max, skin, skinWidth, skinHeight, entityTransform, partMatrix, partTint, ref vertexFloats, ref indexCount);
             return;
