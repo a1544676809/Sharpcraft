@@ -25,8 +25,8 @@ public static class BlazeModelDefinition
         32,
         [.. VanillaMeshBake.Bake(BlazeMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
         faceTransforms: null,
-        "entity/blaze/blaze",
-        compiled: BlazeCompiled);
+        texturePath: "entity/blaze/blaze",
+        compiled: BlazeCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildBlazeMesh()
     {

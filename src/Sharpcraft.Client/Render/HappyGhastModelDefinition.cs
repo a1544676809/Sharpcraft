@@ -33,7 +33,7 @@ public static class HappyGhastModelDefinition
     private static readonly VanillaMeshDefinition HappyGhastMesh = BuildHappyGhastMesh();
 
     private static readonly CompiledEntityModel HappyGhastCompiled =
-        VanillaMeshBakery.Build(HappyGhastMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
+        VanillaMeshBakery.Build(HappyGhastMesh, 64, 64);
 
     private static VanillaMeshDefinition BuildHappyGhastMesh()
     {
@@ -55,8 +55,8 @@ public static class HappyGhastModelDefinition
         "happy_ghast",
         64,
         64,
-        [.. VanillaMeshBake.Bake(HappyGhastMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
-        faceTransforms: null,
+        [.. VanillaMeshBake.Bake(HappyGhastMesh, 0, 0)],
+        PlayerModelDefinition.DefaultFaceTransforms,
         "entity/ghast/happy_ghast",
         4f,
         additionalTexturePaths: [RopesTexture],
@@ -65,17 +65,17 @@ public static class HappyGhastModelDefinition
     private static readonly VanillaMeshDefinition AdultRopesMesh = BuildRopesMesh(baby: false);
     private static readonly VanillaMeshDefinition BabyRopesMesh = BuildRopesMesh(baby: true);
     private static readonly CompiledEntityModel AdultRopesCompiled =
-        VanillaMeshBakery.Build(AdultRopesMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
+        VanillaMeshBakery.Build(AdultRopesMesh, 64, 64);
     private static readonly CompiledEntityModel BabyRopesCompiled =
-        VanillaMeshBakery.Build(BabyRopesMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
+        VanillaMeshBakery.Build(BabyRopesMesh, 64, 64);
 
     /// <summary>Adult rope pass: the HappyGhast body/tentacles inflated by 0.2 model pixels.</summary>
     public static readonly EntityModelDefinition RopesDefinition = new(
         "happy_ghast_ropes",
         64,
         64,
-        [.. VanillaMeshBake.Bake(AdultRopesMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
-        faceTransforms: null,
+        [.. VanillaMeshBake.Bake(AdultRopesMesh, 0, 0)],
+        PlayerModelDefinition.DefaultFaceTransforms,
         RopesTexture,
         4f,
         additionalTexturePaths: [RopesTexture],
@@ -86,8 +86,8 @@ public static class HappyGhastModelDefinition
         "happy_ghast_baby_ropes",
         64,
         64,
-        [.. VanillaMeshBake.Bake(BabyRopesMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
-        faceTransforms: null,
+        [.. VanillaMeshBake.Bake(BabyRopesMesh, 0, 0)],
+        PlayerModelDefinition.DefaultFaceTransforms,
         RopesTexture,
         0.95f,
         additionalTexturePaths: [RopesTexture],

@@ -799,3 +799,8 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 ### task-94 special/large 第一组（#102 / #140）
 
 10 族试迁移结果：4 族（Shulker/Blaze/Endermite/HappyGhast）源正确并切 raw；6 族（Breeze/Creaking/Ghast/Giant/Guardian/IronGolem）因 DSL 几何与 jar 源真值在 1e-5 下系统性不符（multi-cube head、layer-scale pivot、真实 Mirror）保持 legacy，登记 R-033 / Issue #140。10 个 #128 归一化 jar 样本落盘 `Repro/Data/` 作为验收真值；不放宽容差、不拟合、不排除顶点。HappyGhast 的 layer-scale 4.0 root 偏移验证了 #134 同类公式。
+### task-97/98 layer-scale root offset 拆分（#102 / #141）
+
+Blaze production definition 补齐 `rawSourceFrame:true`/`baselinePx:0`（此前只在 bake 调用上有，真实 living 渲染仍走 legacy）；新增测试 `Task94MigratedProductionDefinitionsCarryRawSourceFrameFlags` 防止隔离定义误绿。
+
+HappyGhast（Scale=4）**保持 legacy**：源 `MeshTransformer.scaling` 的 root yOffset `24.016*(1-factor)` 仅 `BuildModel` 路径已补，living 路径（factory=null）缺该偏移且符号/应用点待源真值规格，独立登记 R-034 / Issue #141（Husk/WitherSkeleton/Illager/Villager/Witch/Horse/Cat/PolarBear 等所有 Scale!=1 raw 族同类）。10 个 #128 jar 样本保留作验收真值，不放宽容差。
