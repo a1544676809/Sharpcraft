@@ -48,13 +48,11 @@ public sealed class LivingRawReferenceSampleTests
         { "chicken-raw-vectors.reference.txt", ChickenModelDefinition.Definition, 64, 32, "entity/chicken/chicken_temperate", 192, 24, 168, 0 },
         { "pig-baby-raw-vectors.reference.txt", BabyModelDefinitions.Pig, 32, 32, "entity/pig/pig_temperate_baby", 168, 0, 168, 0 },
         { "cow-baby-raw-vectors.reference.txt", BabyModelDefinitions.Cow, 64, 64, "entity/cow/cow_temperate_baby", 216, 24, 192, 0 },
-        // Chicken-baby left/right legs + feet + wings are zero-area cubes (depth=0 or height=0); the
-        // mesher culls degenerate faces, emitting 8 verts where the source probe emits all 24. This
-        // pre-existing culling difference is registered as R-029 / Issue #126. The 144 degenerate
-        // sample rows are excluded from BOTH strict source UV comparison AND from any world/legacy
-        // twin check (WorldCases has no quadruped/baby cases). Their positions/UVs are therefore NOT
-        // covered by an independent oracle - this is an explicit, audited gap, not a silent pass.
-        { "chicken-baby-raw-vectors.reference.txt", BabyModelDefinitions.Chicken, 16, 16, "entity/chicken/chicken_temperate_baby", 192, 0, 48, 144 },
+        // Chicken-baby left/right legs + feet + wings are zero-area cubes (depth=0 or height=0).
+        // Task-145 makes the raw mesher emit the source ModelPart.Cube six-face/24-vertex set for
+        // this family, so all 192 source rows are strictly checked. Other families' emissive/fully
+        // hidden groups remain explicitly excluded (R-029/#126), not silently passed.
+        { "chicken-baby-raw-vectors.reference.txt", BabyModelDefinitions.Chicken, 16, 16, "entity/chicken/chicken_temperate_baby", 192, 0, 192, 0 },
         // task-62 aquatic/flying batch. Counts = (total, mirror, checked, degenerate) from jar probe.
         { "cod-raw-vectors.reference.txt", CodModelDefinition.Definition, 32, 32, "entity/fish/cod", 168, 0, 72, 96 },
         { "salmon-raw-vectors.reference.txt", SalmonModelDefinition.Definition, 32, 32, "entity/fish/salmon", 192, 0, 72, 120 },
@@ -195,11 +193,14 @@ public sealed class LivingRawReferenceSampleTests
             // Mirror exclusion is determined by the REAL baked part's Mirror flag (R-027), never by name.
             EntityModelPart[] sourceParts = FlatPartsForSampleCube(definition, part, cube);
             Assert.NotEmpty(sourceParts);
-            if (sourceParts[0].Width == 0f || sourceParts[0].Height == 0f || sourceParts[0].Depth == 0f
+            var includeRawDegenerate = definition.Name == "baby_chicken";
+            if ((!includeRawDegenerate && (sourceParts[0].Width == 0f || sourceParts[0].Height == 0f || sourceParts[0].Depth == 0f))
                 || EmittedVertCount(sourceParts[0], width, height, atlas, texturePath) == 0)
             {
                 // Degenerate/hidden cube: mesher culls the faces the source probe emits. Pre-existing
                 // behavior, registered as blocker (R-029/#126). Explicitly excluded, not silently passed.
+                // Chicken-baby is the task-145 acceptance family: its flat legs/feet/wings now emit the
+                // source 24 vertices and are checked strictly below.
                 degenerateVertices += group.Count();
                 continue;
             }

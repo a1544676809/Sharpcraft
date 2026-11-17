@@ -761,12 +761,12 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收证据**：待 raw scale 语义实现并有源样本验证后再迁移相关模型。
 <!-- simplification:SIM-ENTITY-RAW-SCALE task:T-41 -->
 
-### SIM-ENTITY-RAW-DEGENERATE：raw 零面积部件退化面未按源探针发射
-- **简化了什么**：chicken-baby 的腿/脚/翼是零面积 cube（depth=0 或 height=0）；`EntityModelMesher` 剔除其退化面，只发 8 顶点，而 jar 的 `ModelPart.Cube` 探针按源 6 面发 24 顶点（1.8 类退化）。
-- **为什么**：退化面剔除是 mesher 既有行为（legacy/raw 一致），非本次 raw 迁移引入；frame 归属迁移切片内不改 mesher 几何行为。
-- **对可观测行为的影响**：退化面面积为 0、屏幕不可见，视觉无差异。但 chicken-baby 参考样本 192 顶点中 **144 个退化顶点**被排除在严格 source UV 比较之外；且 `WorldCases` 无四足/baby world case，这 144 个顶点的**位置也未被独立 oracle 覆盖**——这是显式登记、可审计的覆盖缺口，不是静默通过。余 48 顶点（body/beak 非退化）严格通过。
-- **状态**：`进行中`，审计任务见风险 R-029 与独立 Issue #126。
-- **验收证据**：`tests/Sharpcraft.Client.Tests/Render/LivingRawReferenceSampleTests.cs`（chicken-baby 常量 192/0/48/144 与 R-029 注释）+ `RawModelProbe` 源样本。解决条件：增加四足/baby full-model world 位置测试覆盖该 144 顶点，或让 raw 按源 6 面发射退化面并纳入严格逐点比对。
+### SIM-ENTITY-RAW-DEGENERATE：raw 零面积部件退化面（task-145 chicken-baby 已解决，余族登记）
+- **修复（task-145 / raw only）**：raw 路径遇到零 depth/height 的 cube 不再走 legacy 的 8 顶点 flat quad，而是按源 `ModelPart.Cube` 六面发射 24 顶点；位置/UV 与源 polygon 顺序一致，legacy 路径不变。
+- **chicken-baby 验收**：源样本 192 顶点现在全部纳入 `LivingRawReferenceSampleTests` 严格逐点比较（位置+UV half 量化 1e-5），即原 144 个退化面顶点不再排除；常量改为 `192/0/192/0`。
+- **余族**：部分族仍包含 emissive/hidden 或负 texOffs 退化组（fish/bees 等），这些组继续按 `EmittedVertCount==0` 显式排除，登记在 R-029/#126，不静默通过。
+- **状态**：`chicken-baby 已解决`；余族保留 R-029 登记。
+- **验收证据**：`LivingRawReferenceSampleTests` chicken-baby 192/0/192/0 + 三门禁。
 <!-- simplification:SIM-ENTITY-RAW-DEGENERATE task:T-41 -->
 
 ### 实体 raw 切片的登记口径（docs-only 限制 / baby N/A / ribcage flatten）
