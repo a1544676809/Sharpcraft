@@ -15,16 +15,16 @@ public static class MagmaCubeModelDefinition
     private static readonly VanillaMeshDefinition MagmaCubeMesh = BuildMagmaCubeMesh();
 
     private static readonly CompiledEntityModel MagmaCubeCompiled =
-        VanillaMeshBakery.Build(MagmaCubeMesh, 64, 64);
+        VanillaMeshBakery.Build(MagmaCubeMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Definition = new(
         "magma_cube",
         64,
         64,
-        [.. VanillaMeshBake.Bake(MagmaCubeMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/slime/magmacube",
-        compiled: MagmaCubeCompiled);
+        [.. VanillaMeshBake.Bake(MagmaCubeMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
+        faceTransforms: null,
+        texturePath: "entity/slime/magmacube",
+        compiled: MagmaCubeCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildMagmaCubeMesh()
     {

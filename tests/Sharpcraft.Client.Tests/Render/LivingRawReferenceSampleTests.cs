@@ -109,6 +109,10 @@ public sealed class LivingRawReferenceSampleTests
         // task-151 Warden/Phantom (total, mirror, checked, degenerate).
         { "warden-raw-vectors.reference.txt", WardenModelDefinition.Definition, 128, 128, "entity/warden/warden", 240, 0, 144, 96 },
         { "phantom-raw-vectors.reference.txt", PhantomModelDefinition.Definition, 64, 64, "entity/phantom/phantom", 192, 48, 144, 0 },
+        // task-159 small special (total, mirror, checked, degenerate).
+        { "silverfish-raw-vectors.reference.txt", SilverfishModelDefinition.Definition, 64, 32, "entity/silverfish/silverfish", 240, 0, 240, 0 },
+        { "slime-raw-vectors.reference.txt", SlimeModelDefinition.Definition, 64, 32, "entity/slime/slime", 96, 0, 96, 0 },
+        { "magma-cube-raw-vectors.reference.txt", MagmaCubeModelDefinition.Definition, 64, 64, "entity/slime/magmacube", 216, 0, 216, 0 },
         // task-121 humanoid subset (total, mirror, checked, degenerate).
         { "skeleton-raw-vectors.reference.txt", HumanoidMobModelDefinition.Skeleton, 64, 32, "entity/skeleton/skeleton", 168, 48, 120, 0 },
         { "stray-raw-vectors.reference.txt", HumanoidMobModelDefinition.Stray, 64, 32, "entity/skeleton/stray", 168, 48, 120, 0 },

@@ -73,20 +73,22 @@ public sealed class PhantomRavagerPolarBearSilverfishModelDefinitionTests
     }
 
     [Fact]
-    public void SilverfishPartsMatchLegacyRecords()
+    public void SilverfishPartsMatchSourceFrameRecords()
     {
+        // task-151/159: Silverfish raw. Source zPlacement accumulates (depth_i+depth_i+1)/2 from -3.5:
+        // seg4=7, seg5=9.5, seg6=11.5; layer1 follows zPlacement[4]=7. Independent source literals.
         var expected = new[]
         {
-            LegacyModelPartFactory.FromVanilla("segment0", 0f, 22f, -3.5f, -1.5f, 0f, -1f, 3f, 2f, 2f, 0, 0),
-            LegacyModelPartFactory.FromVanilla("segment1", 0f, 21f, -1.5f, -2f, 0f, -1f, 4f, 3f, 2f, 0, 4),
-            LegacyModelPartFactory.FromVanilla("segment2", 0f, 20f, 1f, -3f, 0f, -1.5f, 6f, 4f, 3f, 0, 9),
-            LegacyModelPartFactory.FromVanilla("segment3", 0f, 21f, 4f, -1.5f, 0f, -1.5f, 3f, 3f, 3f, 0, 16),
-            LegacyModelPartFactory.FromVanilla("segment4", 0f, 22f, 6.5f, -1f, 0f, -1.5f, 2f, 2f, 3f, 0, 22),
-            LegacyModelPartFactory.FromVanilla("segment5", 0f, 23f, 8.5f, -1f, 0f, -1f, 2f, 1f, 2f, 11, 0),
-            LegacyModelPartFactory.FromVanilla("segment6", 0f, 23f, 10.5f, -0.5f, 0f, -1f, 1f, 1f, 2f, 13, 4),
-            LegacyModelPartFactory.FromVanilla("layer0", 0f, 16f, 1f, -5f, 0f, -1.5f, 10f, 8f, 3f, 20, 0),
-            LegacyModelPartFactory.FromVanilla("layer1", 0f, 20f, 6.5f, -3f, 0f, -1.5f, 6f, 4f, 3f, 20, 11),
-            LegacyModelPartFactory.FromVanilla("layer2", 0f, 19f, -1.5f, -3f, 0f, -1.5f, 6f, 5f, 2f, 20, 18)
+            RawModelPartFactory.FromVanilla("segment0", 0f, 22f, -3.5f, -1.5f, 0f, -1f, 3f, 2f, 2f, 0, 0),
+            RawModelPartFactory.FromVanilla("segment1", 0f, 21f, -1.5f, -2f, 0f, -1f, 4f, 3f, 2f, 0, 4),
+            RawModelPartFactory.FromVanilla("segment2", 0f, 20f, 1f, -3f, 0f, -1.5f, 6f, 4f, 3f, 0, 9),
+            RawModelPartFactory.FromVanilla("segment3", 0f, 21f, 4f, -1.5f, 0f, -1.5f, 3f, 3f, 3f, 0, 16),
+            RawModelPartFactory.FromVanilla("segment4", 0f, 22f, 7f, -1f, 0f, -1.5f, 2f, 2f, 3f, 0, 22),
+            RawModelPartFactory.FromVanilla("segment5", 0f, 23f, 9.5f, -1f, 0f, -1f, 2f, 1f, 2f, 11, 0),
+            RawModelPartFactory.FromVanilla("segment6", 0f, 23f, 11.5f, -0.5f, 0f, -1f, 1f, 1f, 2f, 13, 4),
+            RawModelPartFactory.FromVanilla("layer0", 0f, 16f, 1f, -5f, 0f, -1.5f, 10f, 8f, 3f, 20, 0),
+            RawModelPartFactory.FromVanilla("layer1", 0f, 20f, 7f, -3f, 0f, -1.5f, 6f, 4f, 3f, 20, 11),
+            RawModelPartFactory.FromVanilla("layer2", 0f, 19f, -1.5f, -3f, 0f, -1.5f, 6f, 5f, 2f, 20, 18)
         };
         AssertPartsMatch(expected, SilverfishModelDefinition.Definition.Parts);
     }
