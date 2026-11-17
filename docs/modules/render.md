@@ -790,3 +790,9 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - 源 `MeshTransformer.scaling(factor)`（`MeshTransformer.java:7-9`）在 baked root 加 `yOffset=24.016*(1-factor)`，我们的 `Scale` 只折进 px；补此偏移会让 held-item/attack-arm/elytra 等依赖 humanoid frame 的测试回归（#120 范畴）；
 - 已生成 28 个 #128 归一化 jar 样本（render-unit，1e-5）落盘 `tests/.../Repro/Data/`，作为后续解阻塞的验收真值；不放宽容差、不按样本拟合、不排除顶点。
 - 验收条件：DSL 扩展支持独立 overlay cube 维度/pivot/deformation + 补 layer-scale root 偏移并同步 #120 held-item frame，然后逐族严格 1e-5 通过后再切 raw。
+### task-89 剩余 quadruped 批次：阻塞登记（#102 / #137）
+
+本批 15 族（Sheep/Wolf/Fox/Cat/Horse/Camel/Goat/Panda/PolarBear/Rabbit/Armadillo/Llama/TraderLlama/Hoglin/Ravager + baby）试迁移后**未合入 raw**，保持 legacy（行为不退化），原因见 Issue #137 / R-032：
+
+- 源 jar baked ModelPart 几何与 DSL 声明在 1e-5 下系统性不符（pivot/旋转/多 cube head 拆 flat）；horse/cat/polar-bear 另有 `MeshTransformer.scaling` root 偏移（#134 同类）未建模。
+- 已生成 27 个 #128 归一化 jar 样本（render-unit，1e-5）落盘 `tests/.../Repro/Data/` 作为验收真值；不放宽容差、不按样本拟合、不排除顶点。
