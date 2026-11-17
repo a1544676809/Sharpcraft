@@ -849,3 +849,8 @@ task-144 用 jar `HeadTree` probe 逐族分析 Bogged/Witch/ZombieVillager/Pigli
 两个大型特殊族切 raw，独立 jar probe（`RawRenderUnitProbe`/`HeadTree`）采源几何+UV，落 #128 归一化样本：Warden 240 行（144 checked + 96 degenerate，零深度肋骨/触须面）、Phantom 192 行（48 mirror + 144 checked）。严格 1e-5 位置 + UV half 全通过。
 - **源修复**：Phantom body `PartPose.rotation(-0.1F,0,0)`（DSL 原为 +0.1，符号错误）；Warden 复用 DSL 原几何本即源正确，仅 production 定义补 raw flags。
 - 定义/reference/分层测试改用独立源字面 `RawModelPartFactory` + raw oracle；bake hash 仅变更检测器刷新。无容差放宽、不拟合、不排除顶点。
+### task-159 Silverfish/Slime/MagmaCube raw（#102）
+
+三族切 raw，独立 jar probe（`RawRenderUnitProbe`/`HeadTree`）采源几何+UV，落 #128 归一化样本：Silverfish 240、Slime 96、MagmaCube 216 行。严格 1e-5 位置 + UV half 全通过。
+- **源修复**：Silverfish seg4/5/6 与 layer1 的 zPlacement 按源累积公式 `(depth_i+depth_i+1)/2` 修正（原 6.5/8.5/10.5 → 源 7/9.5/11.5）；Slime/MagmaCube DSL 几何本即源正确，仅补 production raw flags。
+- 定义测试改用独立源字面 `RawModelPartFactory`；bake hash 仅变更检测器刷新。无容差放宽、不拟合、不排除顶点。本批无剩余 blocker。

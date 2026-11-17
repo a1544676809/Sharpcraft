@@ -19,8 +19,8 @@ public static class SilverfishModelDefinition
         64,
         32,
         SilverfishMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/silverfish/silverfish");
+        faceTransforms: null,
+        texturePath: "entity/silverfish/silverfish", baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildSilverfishMesh()
     {
@@ -33,15 +33,17 @@ public static class SilverfishModelDefinition
             new VanillaCubeDefinition("segment2", 0, 9, -3f, 0f, -1.5f, 6f, 4f, 3f));
         root.AddOrReplaceChild("segment3", VanillaPartPose.Offset(0f, 21f, 4f),
             new VanillaCubeDefinition("segment3", 0, 16, -1.5f, 0f, -1.5f, 3f, 3f, 3f));
-        root.AddOrReplaceChild("segment4", VanillaPartPose.Offset(0f, 22f, 6.5f),
+        // Source zPlacement accumulates (depth_i + depth_i+1)/2 from -3.5: seg4=7, seg5=9.5, seg6=11.5.
+        root.AddOrReplaceChild("segment4", VanillaPartPose.Offset(0f, 22f, 7f),
             new VanillaCubeDefinition("segment4", 0, 22, -1f, 0f, -1.5f, 2f, 2f, 3f));
-        root.AddOrReplaceChild("segment5", VanillaPartPose.Offset(0f, 23f, 8.5f),
+        root.AddOrReplaceChild("segment5", VanillaPartPose.Offset(0f, 23f, 9.5f),
             new VanillaCubeDefinition("segment5", 11, 0, -1f, 0f, -1f, 2f, 1f, 2f));
-        root.AddOrReplaceChild("segment6", VanillaPartPose.Offset(0f, 23f, 10.5f),
+        root.AddOrReplaceChild("segment6", VanillaPartPose.Offset(0f, 23f, 11.5f),
             new VanillaCubeDefinition("segment6", 13, 4, -0.5f, 0f, -1f, 1f, 1f, 2f));
         root.AddOrReplaceChild("layer0", VanillaPartPose.Offset(0f, 16f, 1f),
             new VanillaCubeDefinition("layer0", 20, 0, -5f, 0f, -1.5f, 10f, 8f, 3f));
-        root.AddOrReplaceChild("layer1", VanillaPartPose.Offset(0f, 20f, 6.5f),
+        // layer1 follows zPlacement[4] = 7.0 (source).
+        root.AddOrReplaceChild("layer1", VanillaPartPose.Offset(0f, 20f, 7f),
             new VanillaCubeDefinition("layer1", 20, 11, -3f, 0f, -1.5f, 6f, 4f, 3f));
         root.AddOrReplaceChild("layer2", VanillaPartPose.Offset(0f, 19f, -1.5f),
             new VanillaCubeDefinition("layer2", 20, 18, -3f, 0f, -1.5f, 6f, 5f, 2f));
