@@ -17,44 +17,48 @@ public static class SheepModelDefinition
     /// <summary>Declarative DSL tree for the twelve base + wool parts (T-677).</summary>
     private static readonly VanillaMeshDefinition SheepMesh = BuildSheepMesh();
 
-    private static readonly CompiledEntityModel CompiledModel = VanillaMeshBakery.Build(SheepMesh, 64, 32);
+    private static readonly CompiledEntityModel CompiledModel = VanillaMeshBakery.Build(SheepMesh, 64, 32, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Definition = new(
         "sheep",
         64,
         32,
-        [.. VanillaMeshBake.Bake(SheepMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
+        [.. VanillaMeshBake.Bake(SheepMesh, 0, 0, rawSourceFrame: true)],
+        faceTransforms: null,
         "entity/sheep/sheep",
-        compiled: CompiledModel);
+        compiled: CompiledModel,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildSheepMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
         root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 6f, -8f),
             new VanillaCubeDefinition("head", 0, 0, -3f, -4f, -6f, 6f, 6f, 8f));
-        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 5f, 2f, -MathF.PI / 2f, 0f, 0f),
+        // Source SheepModel: createBodyMesh(12, mirrorLeftLeg:false, mirrorRightLeg:true);
+        // body xRot = +PI/2. Right legs carry CubeListBuilder.mirror; left legs do not.
+        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 5f, 2f, MathF.PI / 2f, 0f, 0f),
             new VanillaCubeDefinition("body", 28, 8, -4f, -10f, -7f, 8f, 16f, 6f));
         root.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-3f, 12f, 7f),
-            new VanillaCubeDefinition("right_hind_leg", 0, 16, -2f, 0f, -2f, 4f, 12f, 4f));
+            new VanillaCubeDefinition("right_hind_leg", 0, 16, -2f, 0f, -2f, 4f, 12f, 4f, Mirror: true));
         root.AddOrReplaceChild("left_hind_leg", VanillaPartPose.Offset(3f, 12f, 7f),
-            new VanillaCubeDefinition("left_hind_leg", 0, 16, -2f, 0f, -2f, 4f, 12f, 4f, Mirror: true));
+            new VanillaCubeDefinition("left_hind_leg", 0, 16, -2f, 0f, -2f, 4f, 12f, 4f));
         root.AddOrReplaceChild("right_front_leg", VanillaPartPose.Offset(-3f, 12f, -5f),
-            new VanillaCubeDefinition("right_front_leg", 0, 16, -2f, 0f, -2f, 4f, 12f, 4f));
+            new VanillaCubeDefinition("right_front_leg", 0, 16, -2f, 0f, -2f, 4f, 12f, 4f, Mirror: true));
         root.AddOrReplaceChild("left_front_leg", VanillaPartPose.Offset(3f, 12f, -5f),
-            new VanillaCubeDefinition("left_front_leg", 0, 16, -2f, 0f, -2f, 4f, 12f, 4f, Mirror: true));
+            new VanillaCubeDefinition("left_front_leg", 0, 16, -2f, 0f, -2f, 4f, 12f, 4f));
         root.AddOrReplaceChild("wool_head", VanillaPartPose.Offset(0f, 6f, -8f),
             new VanillaCubeDefinition("wool_head", 0, 0, -3f, -4f, -4f, 6f, 6f, 6f, Grow: 0.6f, TexturePath: WoolTexture));
-        root.AddOrReplaceChild("wool_body", VanillaPartPose.OffsetAndRotation(0f, 5f, 2f, -MathF.PI / 2f, 0f, 0f),
+        root.AddOrReplaceChild("wool_body", VanillaPartPose.OffsetAndRotation(0f, 5f, 2f, MathF.PI / 2f, 0f, 0f),
             new VanillaCubeDefinition("wool_body", 28, 8, -4f, -10f, -7f, 8f, 16f, 6f, Grow: 1.75f, TexturePath: WoolTexture));
         root.AddOrReplaceChild("wool_right_hind_leg", VanillaPartPose.Offset(-3f, 12f, 7f),
-            new VanillaCubeDefinition("wool_right_hind_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f, Grow: 0.5f, TexturePath: WoolTexture));
+            new VanillaCubeDefinition("wool_right_hind_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f, Mirror: true, Grow: 0.5f, TexturePath: WoolTexture));
         root.AddOrReplaceChild("wool_left_hind_leg", VanillaPartPose.Offset(3f, 12f, 7f),
-            new VanillaCubeDefinition("wool_left_hind_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f, Mirror: true, Grow: 0.5f, TexturePath: WoolTexture));
+            new VanillaCubeDefinition("wool_left_hind_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f, Grow: 0.5f, TexturePath: WoolTexture));
         root.AddOrReplaceChild("wool_right_front_leg", VanillaPartPose.Offset(-3f, 12f, -5f),
-            new VanillaCubeDefinition("wool_right_front_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f, Grow: 0.5f, TexturePath: WoolTexture));
+            new VanillaCubeDefinition("wool_right_front_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f, Mirror: true, Grow: 0.5f, TexturePath: WoolTexture));
         root.AddOrReplaceChild("wool_left_front_leg", VanillaPartPose.Offset(3f, 12f, -5f),
-            new VanillaCubeDefinition("wool_left_front_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f, Mirror: true, Grow: 0.5f, TexturePath: WoolTexture));
+            new VanillaCubeDefinition("wool_left_front_leg", 0, 16, -2f, 0f, -2f, 4f, 6f, 4f, Grow: 0.5f, TexturePath: WoolTexture));
         return new VanillaMeshDefinition(root);
     }
 }

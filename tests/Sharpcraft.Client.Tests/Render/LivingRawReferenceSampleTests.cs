@@ -116,6 +116,8 @@ public sealed class LivingRawReferenceSampleTests
         { "enderman-raw-vectors.reference.txt", HumanoidMobModelDefinition.Enderman, 64, 32, "entity/enderman/enderman", 168, 48, 120, 0 },
         { "zombie-raw-vectors.reference.txt", HumanoidMobModelDefinition.Zombie, 64, 64, "entity/zombie/zombie", 168, 48, 120, 0 },
         // task-108 humanoid batch (total, mirror, checked, degenerate).
+        // task-135: Sheep raw (source Mirror per createLegs; #156 face order).
+        { "sheep-raw-vectors.reference.txt", SheepModelDefinition.Definition, 64, 32, "entity/sheep/sheep", 144, 48, 96, 0 },
         // player BLOCKED (Player legacy to avoid Piglin parts-reuse coupling, task-108)
         // player-slim BLOCKED (Player legacy to avoid Piglin parts-reuse coupling, task-108)
         // task-108 blockers (multi-cube head / zero-depth mushroom / overlay parts DSL gaps).
