@@ -87,7 +87,8 @@ public sealed class LivingRawReferenceSampleTests
         // creaking BLOCKED (special DSL/jar geometry gap, task-94)
         { "endermite-raw-vectors.reference.txt", EndermiteModelDefinition.Definition, 64, 32, "entity/endermite/endermite", 96, 0, 96, 0 },
         // ghast BLOCKED (special DSL/jar geometry gap, task-94)
-        // happy-ghast BLOCKED (Scale=4 layer-scale root offset #141; stays legacy)
+        // task-104: HappyGhast (Scale=4) raw, enabled by the layer-scale root offset (#141).
+        { "happy-ghast-raw-vectors.reference.txt", HappyGhastModelDefinition.Definition, 64, 64, "entity/ghast/happy_ghast", 240, 0, 240, 0 },
         // giant BLOCKED (special DSL/jar geometry gap, task-94)
         // guardian BLOCKED (special DSL/jar geometry gap, task-94)
         // iron-golem BLOCKED (special DSL/jar geometry gap, task-94)

@@ -40,7 +40,7 @@ public sealed class NetherModelDefinitionTests
     }
 
     [Fact]
-    public void HappyGhastPartsMatchLegacyFromVanillaRecords()
+    public void HappyGhastPartsMatchSourceFrameRecords()
     {
         AssertPartsMatch(ExpectedHappyGhastParts(), HappyGhastModelDefinition.Definition.Parts);
     }
@@ -221,12 +221,12 @@ public sealed class NetherModelDefinitionTests
         };
         var parts = new List<EntityModelPart>
         {
-            LegacyModelPartFactory.FromVanilla("body", 0f, 16f, 0f, -8f, -8f, -8f, 16f, 16f, 16f, 0, 0)
+            RawModelPartFactory.FromVanilla("body", 0f, 16f, 0f, -8f, -8f, -8f, 16f, 16f, 16f, 0, 0)
         };
         for (var i = 0; i < tentacles.Length; i++)
         {
             var (x, y, z, length) = tentacles[i];
-            parts.Add(LegacyModelPartFactory.FromVanillaChild("tentacle" + i, "body", x, y, z,
+            parts.Add(RawModelPartFactory.FromVanillaChild("tentacle" + i, "body", x, y, z,
                 -1f, 0f, -1f, 2f, length, 2f, 0, 0));
         }
 
