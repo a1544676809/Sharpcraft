@@ -23,7 +23,7 @@ public sealed class VillagerIllagerModelDefinitionTests
     }
 
     [Fact]
-    public void ZombieVillagerPartsMatchLegacyFromVanillaRecords()
+    public void ZombieVillagerPartsMatchSourceFrameRecords()
     {
         AssertPartsMatch(ExpectedZombieVillagerParts(), ZombieVillagerModelDefinition.Definition.Parts);
     }
@@ -75,7 +75,7 @@ public sealed class VillagerIllagerModelDefinitionTests
         Assert.Equal(64, ZombieVillagerModelDefinition.Definition.TextureWidth);
         Assert.Equal(64, ZombieVillagerModelDefinition.Definition.TextureHeight);
         Assert.Equal("entity/zombie_villager/zombie_villager", ZombieVillagerModelDefinition.Definition.TexturePath);
-        Assert.Equal(8, ZombieVillagerModelDefinition.Definition.Parts.Count);
+        Assert.Equal(10, ZombieVillagerModelDefinition.Definition.Parts.Count); // task-173: hat/hat_rim independent
         Assert.Equal(VillagerModelDefinition.VariantKeys.Count, ZombieVillagerModelDefinition.Variants.Count);
         foreach (var key in VillagerModelDefinition.VariantKeys)
         {
@@ -83,7 +83,7 @@ public sealed class VillagerIllagerModelDefinitionTests
             Assert.Equal("zombie_villager_" + key, variant.Name);
             Assert.Equal("entity/zombie_villager/zombie_villager", variant.TexturePath);
             Assert.Equal(1f, variant.Scale);
-            Assert.Equal(16, variant.Parts.Count); // 8 base + 8 copylayer
+            Assert.Equal(20, variant.Parts.Count); // 10 base + 10 copylayer
         }
 
         // Witch.
@@ -181,15 +181,17 @@ public sealed class VillagerIllagerModelDefinitionTests
 
     private static EntityModelPart[] ExpectedZombieVillagerParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("head", 0f, 0f, 0f, -4f, -10f, -4f, 8f, 10f, 8f, 0, 0,
-            overlays: [new("hat", 0.5f, 32, 0)]),
-        LegacyModelPartFactory.FromVanilla("nose", 0f, 0f, 0f, -1f, -3f, -6f, 2f, 4f, 2f, 24, 0),
-        LegacyModelPartFactory.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -3f, 8f, 12f, 6f, 16, 20),
-        LegacyModelPartFactory.FromVanilla("body_outer", 0f, 0f, 0f, -4f, 0f, -3f, 8f, 20f, 6f, 0, 38, grow: 0.05f),
-        LegacyModelPartFactory.FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 44, 22, mirror: true),
-        LegacyModelPartFactory.FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 44, 22),
-        LegacyModelPartFactory.FromVanilla("left_leg", 2f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 22),
-        LegacyModelPartFactory.FromVanilla("right_leg", -2f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 22)
+        // task-173: hat/hat_rim independent parts (Villager pattern); nose root; left_leg Mirror per source.
+        RawModelPartFactory.FromVanilla("head", 0f, 0f, 0f, -4f, -10f, -4f, 8f, 10f, 8f, 0, 0),
+        RawModelPartFactory.FromVanillaChild("hat", "head", 0f, 0f, 0f, -4f, -10f, -4f, 8f, 10f, 8f, 32, 0, grow: 0.5f),
+        RawModelPartFactory.FromVanillaChild("hat_rim", "hat", 0f, 0f, 0f, -8f, -8f, -6f, 16f, 16f, 1f, 30, 47, rotationX: -MathF.PI / 2f),
+        RawModelPartFactory.FromVanilla("nose", 0f, 0f, 0f, -1f, -3f, -6f, 2f, 4f, 2f, 24, 0),
+        RawModelPartFactory.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -3f, 8f, 12f, 6f, 16, 20),
+        RawModelPartFactory.FromVanilla("body_outer", 0f, 0f, 0f, -4f, 0f, -3f, 8f, 20f, 6f, 0, 38, grow: 0.05f),
+        RawModelPartFactory.FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 44, 22, mirror: true),
+        RawModelPartFactory.FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 44, 22),
+        RawModelPartFactory.FromVanilla("left_leg", 2f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 22, mirror: true),
+        RawModelPartFactory.FromVanilla("right_leg", -2f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 22)
     ];
 
     private static EntityModelPart[] ExpectedWitchParts() =>

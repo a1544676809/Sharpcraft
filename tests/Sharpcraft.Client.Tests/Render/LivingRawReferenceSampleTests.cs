@@ -127,6 +127,8 @@ public sealed class LivingRawReferenceSampleTests
         { "enderman-raw-vectors.reference.txt", HumanoidMobModelDefinition.Enderman, 64, 32, "entity/enderman/enderman", 168, 48, 120, 0 },
         { "zombie-raw-vectors.reference.txt", HumanoidMobModelDefinition.Zombie, 64, 64, "entity/zombie/zombie", 168, 48, 120, 0 },
         // task-108 humanoid batch (total, mirror, checked, degenerate).
+        // task-173: ZombieVillager raw (multi-cube head/nose, hat_rim, body outer).
+        { "zombie-villager-raw-vectors.reference.txt", ZombieVillagerModelDefinition.Definition, 64, 64, "entity/zombie_villager/zombie_villager", 240, 48, 192, 0 },
         // task-165: Strider raw (6 zero-height bristles degenerate, 3 right-bristle Mirror).
         { "strider-raw-vectors.reference.txt", StriderModelDefinition.Definition, 64, 128, "entity/strider/strider", 216, 0, 72, 144 },
         // task-165: SnowGolem raw (source right-arm zRot -1, grow -0.5).
@@ -519,6 +521,11 @@ public sealed class LivingRawReferenceSampleTests
                 flatName = cube == 0 ? "head" : "head_cube"; break;
             case "/body/head/eyes" when definition.Name == "breeze":
                 flatName = cube == 0 ? "eyes" : "eyes_cube"; break;
+            // task-173: zombie_villager source /head has 2 cubes (head,nose); /body has 2 (body,body_outer).
+            case "/head" when definition.Name == "zombie_villager":
+                flatName = cube == 0 ? "head" : "nose"; break;
+            case "/body" when definition.Name == "zombie_villager":
+                flatName = cube == 0 ? "body" : "body_outer"; break;
             // task-165: sniffer source /bone/body has 3 cubes (body,body_outer,body_bottom); /head 2 (head,head_flat).
             case "/bone/body" when definition.Name == "sniffer":
                 flatName = cube switch { 0 => "body", 1 => "body_outer", _ => "body_bottom" }; break;
