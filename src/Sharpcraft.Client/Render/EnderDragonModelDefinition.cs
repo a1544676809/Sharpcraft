@@ -17,7 +17,7 @@ public static class EnderDragonModelDefinition
     private static readonly VanillaMeshDefinition DragonMesh = BuildDragonMesh();
 
     private static readonly CompiledEntityModel DragonCompiled =
-        VanillaMeshBakery.Build(DragonMesh, 256, 256);
+        VanillaMeshBakery.Build(DragonMesh, 256, 256, modelHeight: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Definition = new(
         "ender_dragon",
@@ -27,7 +27,9 @@ public static class EnderDragonModelDefinition
         PlayerModelDefinition.DefaultFaceTransforms,
         "entity/enderdragon/dragon",
         compiled: DragonCompiled,
-        applyRootPose: true);
+        applyRootPose: true,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     private static EntityModelPart[] BuildParts()
     {
@@ -80,9 +82,9 @@ public static class EnderDragonModelDefinition
         head.AddOrReplaceChild("nostril_left", VanillaPartPose.Zero,
             new VanillaCubeDefinition("nostril_left", 112, 0, -5f, -3f, -22f, 2f, 2f, 4f, Mirror: true));
         head.AddOrReplaceChild("scale_right", VanillaPartPose.Zero,
-            new VanillaCubeDefinition("scale_right", 0, 0, 3f, -12f, -4f, 2f, 4f, 6f));
+            new VanillaCubeDefinition("scale_right", 0, 0, 3f, -12f, -4f, 2f, 4f, 6f, Mirror: true));
         head.AddOrReplaceChild("nostril_right", VanillaPartPose.Zero,
-            new VanillaCubeDefinition("nostril_right", 112, 0, 3f, -3f, -22f, 2f, 2f, 4f));
+            new VanillaCubeDefinition("nostril_right", 112, 0, 3f, -3f, -22f, 2f, 2f, 4f, Mirror: true));
         head.AddOrReplaceChild("jaw", VanillaPartPose.Offset(0f, 4f, -8f),
             new VanillaCubeDefinition("jaw", 176, 65, -6f, 0f, -16f, 12f, 4f, 16f));
 
@@ -121,10 +123,10 @@ public static class EnderDragonModelDefinition
         rightWing.AddOrReplaceChild("right_wing_tip_skin", VanillaPartPose.Offset(-56f, 0f, 0f),
             new VanillaCubeDefinition("right_wing_tip_skin", -56, 144, -56f, 0f, 2f, 56f, 0f, 56f));
 
-        AddLeg(body, "left_front", 12f, 0f, -6f, -4f, -4f, -4f, 8f, 24f, 8f, 112, 104, -3f, -1f, -3f, 6f, 24f, 6f, 226, 138, 23f, 0f, -4f, 0f, -12f, 8f, 4f, 16f, 144, 104, 1.3f, -0.5f, 0.75f);
-        AddLeg(body, "right_front", -12f, 0f, -6f, -4f, -4f, -4f, 8f, 24f, 8f, 112, 104, -3f, -1f, -3f, 6f, 24f, 6f, 226, 138, 23f, 0f, -4f, 0f, -12f, 8f, 4f, 16f, 144, 104, 1.3f, -0.5f, 0.75f);
-        AddLeg(body, "left_hind", 16f, -4f, 34f, -8f, -4f, -8f, 16f, 32f, 16f, 0, 0, -6f, -2f, 0f, 12f, 32f, 12f, 196, 0, 31f, 4f, -9f, 0f, -20f, 18f, 6f, 24f, 112, 0, 1.0f, 0.5f, 0.75f);
-        AddLeg(body, "right_hind", -16f, -4f, 34f, -8f, -4f, -8f, 16f, 32f, 16f, 0, 0, -6f, -2f, 0f, 12f, 32f, 12f, 196, 0, 31f, 4f, -9f, 0f, -20f, 18f, 6f, 24f, 112, 0, 1.0f, 0.5f, 0.75f);
+        AddLeg(body, "left_front", 12f, 0f, -6f, -4f, -4f, -4f, 8f, 24f, 8f, 112, 104, -3f, -1f, -3f, 6f, 24f, 6f, 226, 138, 20f, -1f, 23f, 0f, -4f, 0f, -12f, 8f, 4f, 16f, 144, 104, 1.3f, -0.5f, 0.75f);
+        AddLeg(body, "right_front", -12f, 0f, -6f, -4f, -4f, -4f, 8f, 24f, 8f, 112, 104, -3f, -1f, -3f, 6f, 24f, 6f, 226, 138, 20f, -1f, 23f, 0f, -4f, 0f, -12f, 8f, 4f, 16f, 144, 104, 1.3f, -0.5f, 0.75f);
+        AddLeg(body, "left_hind", 16f, -4f, 34f, -8f, -4f, -8f, 16f, 32f, 16f, 0, 0, -6f, -2f, 0f, 12f, 32f, 12f, 196, 0, 32f, -4f, 31f, 4f, -9f, 0f, -20f, 18f, 6f, 24f, 112, 0, 1.0f, 0.5f, 0.75f);
+        AddLeg(body, "right_hind", -16f, -4f, 34f, -8f, -4f, -8f, 16f, 32f, 16f, 0, 0, -6f, -2f, 0f, 12f, 32f, 12f, 196, 0, 32f, -4f, 31f, 4f, -9f, 0f, -20f, 18f, 6f, 24f, 112, 0, 1.0f, 0.5f, 0.75f);
         return new VanillaMeshDefinition(root);
     }
 
@@ -158,6 +160,8 @@ public static class EnderDragonModelDefinition
         float tipD,
         int tipU,
         int tipV,
+        float tipPivotY,
+        float tipPivotZ,
         float footPivotY,
         float footPivotZ,
         float footMinX,
@@ -174,7 +178,7 @@ public static class EnderDragonModelDefinition
     {
         var leg = body.AddOrReplaceChild(prefix + "_leg", VanillaPartPose.OffsetAndRotation(pivotX, pivotY, pivotZ, mainRotX, 0f, 0f),
             new VanillaCubeDefinition(prefix + "_leg", mainU, mainV, mainMinX, mainMinY, mainMinZ, mainW, mainH, mainD));
-        var tip = leg.AddOrReplaceChild(prefix + "_leg_tip", VanillaPartPose.OffsetAndRotation(0f, 20f, -1f, tipRotX, 0f, 0f),
+        var tip = leg.AddOrReplaceChild(prefix + "_leg_tip", VanillaPartPose.OffsetAndRotation(0f, tipPivotY, tipPivotZ, tipRotX, 0f, 0f),
             new VanillaCubeDefinition(prefix + "_leg_tip", tipU, tipV, tipMinX, tipMinY, tipMinZ, tipW, tipH, tipD));
         tip.AddOrReplaceChild(prefix + "_foot", VanillaPartPose.OffsetAndRotation(0f, footPivotY, footPivotZ, footRotX, 0f, 0f),
             new VanillaCubeDefinition(prefix + "_foot", footU, footV, footMinX, footMinY, footMinZ, footW, footH, footD));
