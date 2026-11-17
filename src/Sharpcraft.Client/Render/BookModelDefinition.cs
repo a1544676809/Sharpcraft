@@ -31,23 +31,25 @@ public static class BookModelDefinition
 
     private static readonly VanillaMeshDefinition BookMesh = BuildBookMesh();
 
-    // BookModel parts are authored around the book's own origin; modelHeight 0 preserves that
-    // block-entity model space instead of applying the entity feet conversion.
+    // BookModel parts are baked in the raw source y-down frame: modelHeight 0, source face UVs,
+    // no legacy face calibration. The renderer's source submit pose supplies the world transform.
     private static readonly EntityModelPart[] Parts =
-        [.. VanillaMeshBake.Bake(BookMesh, TextureWidth, TextureHeight, modelHeight: 0f)];
+        [.. VanillaMeshBake.Bake(BookMesh, TextureWidth, TextureHeight, modelHeight: 0f, rawSourceFrame: true)];
 
     private static readonly CompiledEntityModel BookCompiled =
-        VanillaMeshBakery.Build(BookMesh, TextureWidth, TextureHeight, modelHeight: 0f, texturePath: TexturePath);
+        VanillaMeshBakery.Build(BookMesh, TextureWidth, TextureHeight, modelHeight: 0f, texturePath: TexturePath, rawSourceFrame: true);
 
-    /// <summary>Baked book definition shared by lecterns and enchanting tables.</summary>
+    /// <summary>Baked book definition shared by lecterns and enchanting tables (raw source frame).</summary>
     public static readonly EntityModelDefinition Definition = new(
         name: "book",
         textureWidth: TextureWidth,
         textureHeight: TextureHeight,
         parts: Parts,
-        faceTransforms: PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         texturePath: TexturePath,
-        compiled: BookCompiled);
+        compiled: BookCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     /// <summary>Builds the static pose for one <see cref="BookModelState"/>.</summary>
     /// <param name="state">Openness and page-flip values.</param>
@@ -59,16 +61,15 @@ public static class BookModelDefinition
         var page2 = openness - (openness * 2f * state.PageFlip2);
         var pageX = MathF.Sin(openness);
 
-        // BookModel.setupAnim: leftLid.yRot = PI + openness; rightLid.yRot = -openness;
-        // leftPages/rightPages yRot = +/-openness. This block-entity model has no entity
-        // scale(-1,-1,1), so PoseOffset stores the negated reference X/Y angles; PartFrame
-        // subtracts them from the base part rotations.
-        pose.Set("left_lid", new PoseOffset(Vector3.Zero, new Vector3(0f, -(MathF.PI + openness), 0f), Vector3.Zero));
-        pose.Set("right_lid", new PoseOffset(Vector3.Zero, new Vector3(0f, openness, 0f), Vector3.Zero));
-        pose.Set("left_pages", new PoseOffset(new Vector3(pageX, 0f, 0f), new Vector3(0f, -openness, 0f), Vector3.Zero));
-        pose.Set("right_pages", new PoseOffset(new Vector3(pageX, 0f, 0f), new Vector3(0f, openness, 0f), Vector3.Zero));
-        pose.Set("flip_page1", new PoseOffset(new Vector3(pageX, 0f, 0f), new Vector3(0f, -page1, 0f), Vector3.Zero));
-        pose.Set("flip_page2", new PoseOffset(new Vector3(pageX, 0f, 0f), new Vector3(0f, -page2, 0f), Vector3.Zero));
+        // BookModel.setupAnim (BookModel.java:58-67), source-literal angles. The raw source frame
+        // applies pose rotations verbatim (no legacy X/Y conjugation), so these are the exact
+        // reference values. setupAnim overrides the base part rotation, so the delta is full angle.
+        pose.Set("left_lid", new PoseOffset(Vector3.Zero, new Vector3(0f, MathF.PI + openness, 0f), Vector3.Zero));
+        pose.Set("right_lid", new PoseOffset(Vector3.Zero, new Vector3(0f, -openness, 0f), Vector3.Zero));
+        pose.Set("left_pages", new PoseOffset(new Vector3(pageX, 0f, 0f), new Vector3(0f, openness, 0f), Vector3.Zero));
+        pose.Set("right_pages", new PoseOffset(new Vector3(pageX, 0f, 0f), new Vector3(0f, -openness, 0f), Vector3.Zero));
+        pose.Set("flip_page1", new PoseOffset(new Vector3(pageX, 0f, 0f), new Vector3(0f, page1, 0f), Vector3.Zero));
+        pose.Set("flip_page2", new PoseOffset(new Vector3(pageX, 0f, 0f), new Vector3(0f, page2, 0f), Vector3.Zero));
         return pose;
     }
 

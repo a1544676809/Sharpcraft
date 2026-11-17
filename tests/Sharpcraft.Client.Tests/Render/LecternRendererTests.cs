@@ -69,27 +69,29 @@ public sealed class LecternRendererTests
         Assert.Equal(10f / 32f, uv.V, 3);
     }
 
-    /// <summary>The static pose mirrors BookModel.setupAnim, including the page-flip rotations.</summary>
+    /// <summary>The static pose mirrors BookModel.setupAnim source-literal angles (BookModel.java:58-67).</summary>
     [Fact]
     public void BookPoseUsesTheReferencePartRotations()
     {
         var pose = BookModelDefinition.CreatePose(BookModelDefinition.BookModelState.ForAnimation(0f, 0.1f, 0.9f, 1.2f));
-        Assert.Equal(-(MathF.PI + 1.5f), pose.Get("left_lid").Rotation.Y, 4);
-        Assert.Equal(1.5f, pose.Get("right_lid").Rotation.Y, 4);
-        Assert.Equal(-1.5f, pose.Get("left_pages").Rotation.Y, 4);
-        Assert.Equal(1.5f, pose.Get("right_pages").Rotation.Y, 4);
-        Assert.Equal(-1.2f, pose.Get("flip_page1").Rotation.Y, 4);
-        Assert.Equal(1.2f, pose.Get("flip_page2").Rotation.Y, 4);
+        Assert.Equal(MathF.PI + 1.5f, pose.Get("left_lid").Rotation.Y, 4);
+        Assert.Equal(-1.5f, pose.Get("right_lid").Rotation.Y, 4);
+        Assert.Equal(1.5f, pose.Get("left_pages").Rotation.Y, 4);
+        Assert.Equal(-1.5f, pose.Get("right_pages").Rotation.Y, 4);
+        Assert.Equal(1.2f, pose.Get("flip_page1").Rotation.Y, 4);
+        Assert.Equal(-1.2f, pose.Get("flip_page2").Rotation.Y, 4);
         Assert.Equal(MathF.Sin(1.5f), pose.Get("left_pages").Position.X, 4);
     }
 
     /// <summary>
-    /// Final vertex/UV truth samples from the corrected block-entity bake: no entity X mirror and
-    /// reference-sign BookModel rotations. Four facings plus a second emitted vertex are checked.
+    /// Final vertex/UV samples against the raw source frame. UVs are source-literal
+    /// (BookVectorProbe / book-raw-vectors.golden.txt): left_lid poly0 vertex 0 u=6/64,
+    /// vertex 1 u≈0 (the 0.005-deep lid, legacy face calibration had given 12/64 here).
+    /// Four facings plus a second emitted vertex are checked.
     /// </summary>
     [Theory]
     [InlineData((byte)2, 0, 0.4375f, 0.8951f, 0.0958f, 6f / 64f, 0f)]
-    [InlineData((byte)2, 1, 0.0634f, 0.9196f, 0.0857f, 12f / 64f, 0f)]
+    [InlineData((byte)2, 1, 0.0634f, 0.9196f, 0.0857f, 0f, 0f)]
     [InlineData((byte)3, 0, 0.5625f, 0.8951f, 0.9042f, 6f / 64f, 0f)]
     [InlineData((byte)4, 0, 0.0958f, 0.8951f, 0.5625f, 6f / 64f, 0f)]
     [InlineData((byte)5, 0, 0.9042f, 0.8951f, 0.4375f, 6f / 64f, 0f)]
