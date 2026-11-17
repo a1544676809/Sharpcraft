@@ -24,8 +24,9 @@ public sealed class ReferenceModelFactsTests
     [Fact]
     public void WardenMatchesReferenceFacts()
     {
+        // task-151: Warden is migrated to raw source frame; compare with raw-frame oracle (source literals).
         var model = Load("WardenModel");
-        var expected = BuildExpectedParts(model);
+        var expected = BuildExpectedParts(model, raw: true);
         Assert.True(expected.Length <= WardenModelDefinition.Definition.Parts.Count);
         for (var i = 0; i < expected.Length; i++)
         {

@@ -95,21 +95,22 @@ public sealed class ArmadilloAxolotlSnifferWardenModelDefinitionTests
     }
 
     [Fact]
-    public void WardenPartsAndEmissiveLayersMatchLegacyRecords()
+    public void WardenPartsAndEmissiveLayersMatchSourceFrameRecords()
     {
+        // task-151: Warden migrated to raw source frame; expected parts are independent source literals.
         var baseParts = new[]
         {
-            LegacyModelPartFactory.FromVanilla("bone", 0f, 24f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("body", "bone", 0f, -21f, 0f, -9f, -13f, -4f, 18f, 21f, 11f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("right_ribcage", "body", -7f, -2f, -4f, -2f, -11f, -0.1f, 9f, 21f, 0f, 90, 11),
-            LegacyModelPartFactory.FromVanillaChild("left_ribcage", "body", 7f, -2f, -4f, -7f, -11f, -0.1f, 9f, 21f, 0f, 90, 11, mirror: true),
-            LegacyModelPartFactory.FromVanillaChild("head", "body", 0f, -13f, 0f, -8f, -16f, -5f, 16f, 16f, 10f, 0, 32),
-            LegacyModelPartFactory.FromVanillaChild("right_tendril", "head", -8f, -12f, 0f, -16f, -13f, 0f, 16f, 16f, 0f, 52, 32),
-            LegacyModelPartFactory.FromVanillaChild("left_tendril", "head", 8f, -12f, 0f, 0f, -13f, 0f, 16f, 16f, 0f, 58, 0),
-            LegacyModelPartFactory.FromVanillaChild("right_arm", "body", -13f, -13f, 1f, -4f, 0f, -4f, 8f, 28f, 8f, 44, 50),
-            LegacyModelPartFactory.FromVanillaChild("left_arm", "body", 13f, -13f, 1f, -4f, 0f, -4f, 8f, 28f, 8f, 0, 58),
-            LegacyModelPartFactory.FromVanillaChild("right_leg", "bone", -5.9f, -13f, 0f, -3.1f, 0f, -3f, 6f, 13f, 6f, 76, 48),
-            LegacyModelPartFactory.FromVanillaChild("left_leg", "bone", 5.9f, -13f, 0f, -2.9f, 0f, -3f, 6f, 13f, 6f, 76, 76)
+            RawModelPartFactory.FromVanilla("bone", 0f, 24f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("body", "bone", 0f, -21f, 0f, -9f, -13f, -4f, 18f, 21f, 11f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("right_ribcage", "body", -7f, -2f, -4f, -2f, -11f, -0.1f, 9f, 21f, 0f, 90, 11),
+            RawModelPartFactory.FromVanillaChild("left_ribcage", "body", 7f, -2f, -4f, -7f, -11f, -0.1f, 9f, 21f, 0f, 90, 11, mirror: true),
+            RawModelPartFactory.FromVanillaChild("head", "body", 0f, -13f, 0f, -8f, -16f, -5f, 16f, 16f, 10f, 0, 32),
+            RawModelPartFactory.FromVanillaChild("right_tendril", "head", -8f, -12f, 0f, -16f, -13f, 0f, 16f, 16f, 0f, 52, 32),
+            RawModelPartFactory.FromVanillaChild("left_tendril", "head", 8f, -12f, 0f, 0f, -13f, 0f, 16f, 16f, 0f, 58, 0),
+            RawModelPartFactory.FromVanillaChild("right_arm", "body", -13f, -13f, 1f, -4f, 0f, -4f, 8f, 28f, 8f, 44, 50),
+            RawModelPartFactory.FromVanillaChild("left_arm", "body", 13f, -13f, 1f, -4f, 0f, -4f, 8f, 28f, 8f, 0, 58),
+            RawModelPartFactory.FromVanillaChild("right_leg", "bone", -5.9f, -13f, 0f, -3.1f, 0f, -3f, 6f, 13f, 6f, 76, 48),
+            RawModelPartFactory.FromVanillaChild("left_leg", "bone", 5.9f, -13f, 0f, -2.9f, 0f, -3f, 6f, 13f, 6f, 76, 76)
         };
         var expected = new List<EntityModelPart>(baseParts);
         AddWardenLayer(expected, baseParts, "bioluminescent", "entity/warden/warden_bioluminescent_layer", "head", "left_arm", "right_arm", "left_leg", "right_leg");
