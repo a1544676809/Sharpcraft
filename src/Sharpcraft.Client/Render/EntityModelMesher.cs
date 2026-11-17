@@ -662,7 +662,8 @@ public sealed partial class EntityModelMesher
         ref int vertexFloats,
         ref int indexCount,
         System.Numerics.Matrix4x4 localTransform = default,
-        bool rawSourceFrame = false)
+        bool rawSourceFrame = false,
+        bool rawPoseConjugation = false)
     {
         var vertexFloatsLocal = vertexFloats;
         var indexCountLocal = indexCount;
@@ -674,7 +675,7 @@ public sealed partial class EntityModelMesher
                 return;
             }
 
-            var frame = NodeFrame(node, parentFrame, entity, entityPose, px, rawSourceFrame);
+            var frame = NodeFrame(node, parentFrame, entity, entityPose, px, rawSourceFrame, rawPoseConjugation);
             var yOffset = node.YOffsetSelector?.Invoke(entity) ?? 0f;
 
             var basePivot = new Vector3(node.PivotX * px, (node.PivotY + yOffset) * px, node.PivotZ * px);

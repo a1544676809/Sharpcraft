@@ -107,6 +107,9 @@ public sealed partial class EntityModelMesher
             }
 
             var px = (1f / 16f) * modelScale * model.Scale;
+            // Only the living-entity raw path (no block-entity transform factory) receives the source
+            // frame pose conjugation; block entities keep their authored source pose literals.
+            var rawPoseConjugation = model.RawSourceFrame && entityTransformFactory is null;
             var feet = Vector3.Zero;
             var entityTransform = entityTransformFactory?.Invoke(entity) ?? EntityModelTransform.From(entity);
             // Raw source-frame models are stored in the reference's y-down pixel frame. The legacy bake
@@ -193,7 +196,8 @@ public sealed partial class EntityModelMesher
                     ref vertexFloats,
                     ref indexCount,
                     model.LocalTransformSelector?.Invoke(entity) ?? model.LocalTransform,
-                    model.RawSourceFrame);
+                    model.RawSourceFrame,
+                    rawPoseConjugation);
                 continue;
             }
 
@@ -265,7 +269,7 @@ public sealed partial class EntityModelMesher
                     partSprite = partAtlas;
                 }
 
-                AddPart(part, target, kindFilter, emissivePass, min, max, partSprite, partSkinWidth, partSkinHeight, feet, entityTransform, PartMatrix(part, model.Parts, px, entityPose, model.RawSourceFrame), transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount, model.RawSourceFrame);
+                AddPart(part, target, kindFilter, emissivePass, min, max, partSprite, partSkinWidth, partSkinHeight, feet, entityTransform, PartMatrix(part, model.Parts, px, entityPose, model.RawSourceFrame, rawPoseConjugation), transforms, model.FaceTransforms, entity, skinAtlas, px, ref vertexFloats, ref indexCount, model.RawSourceFrame);
             }
         }
 
@@ -325,7 +329,8 @@ public sealed partial class EntityModelMesher
         EntityRenderState entity,
         EntityPose? entityPose,
         float px,
-        bool rawSourceFrame = false)
+        bool rawSourceFrame = false,
+        bool rawPoseConjugation = false)
     {
         var poseName = node.PoseSource ?? node.Name;
         var poseOffset = entityPose?.Get(poseName) ?? PoseOffset.Zero;
@@ -346,9 +351,9 @@ public sealed partial class EntityModelMesher
                 1f + poseOffset.Scale.Z))
             * (rawSourceFrame
                 ? RotationZyx(
-                    rotation.X + poseOffset.Rotation.X,
+                    rotation.X + (rawPoseConjugation ? -poseOffset.Rotation.X : poseOffset.Rotation.X),
                     rotation.Y + poseOffset.Rotation.Y,
-                    rotation.Z + poseOffset.Rotation.Z)
+                    rotation.Z + (rawPoseConjugation ? -poseOffset.Rotation.Z : poseOffset.Rotation.Z))
                 : RotationZyx(
                     rotation.X - poseOffset.Rotation.X,
                     rotation.Y - poseOffset.Rotation.Y,
@@ -384,7 +389,7 @@ public sealed partial class EntityModelMesher
                 1f + rootPose.Scale.Y,
                 1f + rootPose.Scale.Z))
             * (rawSourceFrame
-                ? RotationZyx(rootPose.Rotation.X, rootPose.Rotation.Y, rootPose.Rotation.Z)
+                ? RotationZyx(-rootPose.Rotation.X, rootPose.Rotation.Y, -rootPose.Rotation.Z)
                 : RotationZyx(-rootPose.Rotation.X, -rootPose.Rotation.Y, rootPose.Rotation.Z))
             * Matrix4x4.CreateTranslation(rootPose.Position * px);
 
@@ -396,7 +401,7 @@ public sealed partial class EntityModelMesher
                 return;
             }
 
-            var frame = NodeFrame(node, parentFrame, entity, pose, px, rawSourceFrame);
+            var frame = NodeFrame(node, parentFrame, entity, pose, px, rawSourceFrame, rawPoseConjugation: rawSourceFrame);
             if (string.Equals(node.Name, partName, StringComparison.Ordinal))
             {
                 // Return the full frame. The geometry path subtracts a root part's pivot because its cube vertices are
@@ -518,7 +523,7 @@ public sealed partial class EntityModelMesher
     /// Matrix that maps a point expressed relative to <paramref name="part"/>'s origin into entity space. This is the
     /// frame other parts' pivots are expressed in, not the frame a part's own cube is stored in.
     /// </summary>
-    private static Matrix4x4 PartFrame(EntityModelPart part, IReadOnlyList<EntityModelPart> parts, float px, EntityPose? pose = null, bool rawSourceFrame = false)
+    private static Matrix4x4 PartFrame(EntityModelPart part, IReadOnlyList<EntityModelPart> parts, float px, EntityPose? pose = null, bool rawSourceFrame = false, bool rawPoseConjugation = false)
     {
         var poseOffset = pose?.Get(PosePartName(part)) ?? PoseOffset.Zero;
         var pivot = new Vector3((part.PivotX + poseOffset.Position.X) * px, (part.PivotY + poseOffset.Position.Y) * px, (part.PivotZ + poseOffset.Position.Z) * px);
@@ -527,7 +532,10 @@ public sealed partial class EntityModelMesher
         // source-frame vertices take the reference rotation literals directly.
         var local = Matrix4x4.CreateScale(new Vector3(1f + poseOffset.Scale.X, 1f + poseOffset.Scale.Y, 1f + poseOffset.Scale.Z))
             * (rawSourceFrame
-                ? RotationZyx(part.RotationX + poseOffset.Rotation.X, part.RotationY + poseOffset.Rotation.Y, part.RotationZ + poseOffset.Rotation.Z)
+                ? RotationZyx(
+                    part.RotationX + (rawPoseConjugation ? -poseOffset.Rotation.X : poseOffset.Rotation.X),
+                    part.RotationY + poseOffset.Rotation.Y,
+                    part.RotationZ + (rawPoseConjugation ? -poseOffset.Rotation.Z : poseOffset.Rotation.Z))
                 : RotationZyx(part.RotationX - poseOffset.Rotation.X, part.RotationY - poseOffset.Rotation.Y, part.RotationZ + poseOffset.Rotation.Z))
             * Matrix4x4.CreateTranslation(pivot);
 
@@ -540,7 +548,7 @@ public sealed partial class EntityModelMesher
         {
             if (string.Equals(candidate.Name, parentName, StringComparison.Ordinal))
             {
-                return local * PartFrame(candidate, parts, px, pose, rawSourceFrame);
+                return local * PartFrame(candidate, parts, px, pose, rawSourceFrame, rawPoseConjugation);
             }
         }
 
@@ -555,9 +563,9 @@ public sealed partial class EntityModelMesher
     /// the extra translate back. Child parts keep cubes relative to their own origin (from <c>FromVanillaChild</c>), so
     /// their frame is already the storage transform.
     /// </remarks>
-    private static Matrix4x4 PartMatrix(EntityModelPart part, IReadOnlyList<EntityModelPart> parts, float px, EntityPose? pose = null, bool rawSourceFrame = false)
+    private static Matrix4x4 PartMatrix(EntityModelPart part, IReadOnlyList<EntityModelPart> parts, float px, EntityPose? pose = null, bool rawSourceFrame = false, bool rawPoseConjugation = false)
     {
-        var frame = PartFrame(part, parts, px, pose, rawSourceFrame);
+        var frame = PartFrame(part, parts, px, pose, rawSourceFrame, rawPoseConjugation);
         if (part.Parent is { Length: > 0 })
         {
             return frame;
