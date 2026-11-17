@@ -45,11 +45,12 @@ public static class PiglinModelDefinition
     };
 
     /// <summary>
-    /// Standalone legacy-frame body DSL for the piglin family. Mirrors the source AdultPiglinModel body
-    /// parts (derived from PlayerModel.createMesh) with literals, WITHOUT the player's hat/jacket/sleeve/
-    /// pants overlay children: the existing piglin legacy model models only the 5 body parts. This keeps
-    /// piglin independent of the player's DSL/bake so a player raw migration cannot change its frame.
-    /// Source piglin overlays remain a known structural simplification (#150).
+    /// Independent source-frame raw DSL for the piglin body (task-185). Mirrors source AdultPiglinModel body
+    /// parts derived from PlayerModel.createMesh(NONE, false): body/arms/legs plus the full jacket/left_sleeve/
+    /// right_sleeve/left_pants/right_pants overlays (Grow 0.25); hat is cleared by the piglin layer. Declared
+    /// with literals independent of the player's DSL/bake. Together with the 4-cube head + 2 ears the model has
+    /// 16 parts. Source: ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/piglin/AdultPiglinModel.java:17-24,
+    /// ref://.../player/PlayerModel.java:43-87.
     /// </summary>
     private static VanillaMeshDefinition BuildPiglinBodyMesh()
     {
