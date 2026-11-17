@@ -122,6 +122,8 @@ public sealed class LivingRawReferenceSampleTests
         { "skeleton-raw-vectors.reference.txt", HumanoidMobModelDefinition.Skeleton, 64, 32, "entity/skeleton/skeleton", 168, 48, 120, 0 },
         { "stray-raw-vectors.reference.txt", HumanoidMobModelDefinition.Stray, 64, 32, "entity/skeleton/stray", 168, 48, 120, 0 },
         { "wither-skeleton-raw-vectors.reference.txt", HumanoidMobModelDefinition.WitherSkeleton, 64, 32, "entity/skeleton/wither_skeleton", 168, 48, 120, 0 },
+        // task-178 Bogged raw: head mushrooms are six 6x4x0 zero-depth cubes; source emits 24 each.
+        { "bogged-raw-vectors.reference.txt", HumanoidMobModelDefinition.Bogged, 64, 32, "entity/skeleton/bogged", 312, 48, 264, 0 },
         { "husk-raw-vectors.reference.txt", HumanoidMobModelDefinition.Husk, 64, 64, "entity/zombie/husk", 168, 48, 120, 0 },
         { "drowned-raw-vectors.reference.txt", HumanoidMobModelDefinition.Drowned, 64, 64, "entity/zombie/drowned", 168, 0, 168, 0 },
         { "enderman-raw-vectors.reference.txt", HumanoidMobModelDefinition.Enderman, 64, 32, "entity/enderman/enderman", 168, 48, 120, 0 },
@@ -238,6 +240,7 @@ public sealed class LivingRawReferenceSampleTests
                 || sampleFile.StartsWith("pufferfish-", StringComparison.Ordinal)
                 || sampleFile.StartsWith("tadpole-", StringComparison.Ordinal)
                 || sampleFile.StartsWith("bee-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("bogged-", StringComparison.Ordinal)
                 || sampleFile.StartsWith("parrot-", StringComparison.Ordinal)
                 || sampleFile.StartsWith("allay-", StringComparison.Ordinal);
             if ((!includeRawDegenerate && (sourceParts[0].Width == 0f || sourceParts[0].Height == 0f || sourceParts[0].Depth == 0f))
