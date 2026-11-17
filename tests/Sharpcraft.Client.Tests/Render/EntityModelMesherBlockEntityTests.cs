@@ -26,9 +26,17 @@ public sealed class EntityModelMesherBlockEntityTests
     ];
 
     /// <summary>
-    /// BuildModel must equal the existing entity path byte for byte for multiple positions and both
-    /// declared texture sizes (64x64 and 64x32). State yaw 180 makes the entity path's identity
-    /// orientation explicit; BuildModel applies the same zero rotation about the block centre.
+    /// BuildModel produces the single-model geometry in the model's own source coordinate system;
+    /// Build produces the living-entity path, which additionally applies the source flip for raw
+    /// source-frame models (LivingEntityRenderer's scale(-1,-1,1) + model-height baseline). For legacy
+    /// models the two frames are already identical. This test normalises BuildModel into Build's frame
+    /// with the exact source formula before the strict comparison - it is NOT a byte-equality of two
+    /// different coordinate systems.
+    ///
+    /// Source normalisation (raw models only, EntityModelTransform.ToMatrix / ModelPart.java):
+    ///   baselineWorld = SourceFrameBaselinePx * px, px = modelScale/16
+    ///   worldPos = (-modelX, baselineWorld - modelY, modelZ)
+    /// UV and index layout are untouched. Yaw 180 cancels to identity so rotation adds nothing here.
     /// </summary>
     [Theory]
     [InlineData(0, 64, 64, 0f, 0f, 0f)]
@@ -44,18 +52,47 @@ public sealed class EntityModelMesherBlockEntityTests
         var sprite = new SpriteRect(0, 0, textureWidth, textureHeight, 1);
 
         var expected = new EntityModelMesher().Build([state], sprite, textureWidth, textureHeight);
+        // Build uses the entity model scale; mesh BuildModel at the same scale so the two frames match.
         var actual = new EntityModelMesher().BuildModel(
             model,
             state,
             sprite,
             textureWidth,
-            textureHeight);
+            textureHeight,
+            modelScale: EntityModelScale);
 
         Assert.Equal(expected.VertexFloats, actual.VertexFloats);
         Assert.Equal(expected.IndexCount, actual.IndexCount);
-        Assert.Equal(
-            expected.Vertices.AsSpan(0, expected.VertexFloats).ToArray(),
-            actual.Vertices.AsSpan(0, actual.VertexFloats).ToArray());
+        var baselineWorld = model.RawSourceFrame ? model.SourceFrameBaselinePx * (EntityModelScale / 16f) : 0f;
+        var vertexCount = expected.VertexFloats / ChunkMesher.FloatsPerVertex;
+        for (var vertex = 0; vertex < vertexCount; vertex++)
+        {
+            var baseIndex = vertex * ChunkMesher.FloatsPerVertex;
+            for (var field = 0; field < ChunkMesher.FloatsPerVertex; field++)
+            {
+                var value = actual.Vertices[baseIndex + field];
+                // Raw source frame: the living path flips X and Y and lifts by the model-height
+                // baseline (EntityModelTransform.ToMatrix). UV/tint fields are unchanged.
+                // BuildModel already added the block translation; the living flip mirrors about the
+                // block centre, so X becomes 2*state.X - modelX and Y becomes
+                // baseline - modelY + 2*state.Y. Z is unchanged.
+                if (model.RawSourceFrame && field == 0) value = (2f * state.X) - value;
+                else if (model.RawSourceFrame && field == 1) value = baselineWorld - value + (2f * state.Y);
+                var expectedValue = expected.Vertices[baseIndex + field];
+                if (field < 3)
+                {
+                    // Position after the analytic mirror differs by at most a couple of ULP because the
+                    // two paths apply the flip and translation in a different order. Compare at 1e-5.
+                    Assert.True(MathF.Abs(expectedValue - value) <= 1e-5f,
+                        $"model {model.Name} vertex {vertex} field {field}: {expectedValue:F7} vs normalised {value:F7}");
+                }
+                else
+                {
+                    // Colour, UV and sprite fields are frame-independent: require exact bits.
+                    Assert.Equal(BitConverter.SingleToUInt32Bits(expectedValue), BitConverter.SingleToUInt32Bits(value));
+                }
+            }
+        }
         Assert.Equal(
             expected.Indices.AsSpan(0, expected.IndexCount).ToArray(),
             actual.Indices.AsSpan(0, actual.IndexCount).ToArray());

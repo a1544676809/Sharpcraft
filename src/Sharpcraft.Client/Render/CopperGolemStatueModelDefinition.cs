@@ -61,16 +61,19 @@ public static class CopperGolemStatueModelDefinition
 
     private static EntityModelDefinition Create(string name, VanillaMeshDefinition mesh)
     {
+        // Raw source frame: baseline 0, source face UVs, no legacy face calibration. The source
+        // CopperGolemStatueModel.setupAnim root.zRot=PI is applied by StatuePose via applyRootPose.
         var source = EntityModelDefinition.FromTree(
             name,
             TextureWidth,
             TextureHeight,
             mesh,
-            PlayerModelDefinition.DefaultFaceTransforms,
+            faceTransforms: null,
             CopperGolemModelDefinition.Definition.TexturePath,
             emissiveTexturePath: CopperGolemModelDefinition.Definition.EmissiveTexturePath,
             additionalTexturePaths: CopperGolemModelDefinition.Definition.AdditionalTexturePaths,
-            baselinePx: 0f);
+            baselinePx: 0f,
+            rawSourceFrame: true);
         return WithRootPose(source, name);
     }
 
@@ -88,9 +91,11 @@ public static class CopperGolemStatueModelDefinition
             source.AdditionalTexturePaths,
             source.Compiled,
             source.RenderLayers,
-            // Kept for the compiled-root path even though the statue pose is all zeros; the
-            // mesh pipeline reads the root frame from the entity pose, so this changes nothing.
-            applyRootPose: true);
+            // Raw root frame reads root.zRot=PI from StatuePose (source setupAnim), verbatim.
+            applyRootPose: true,
+            baselinePx: 0f,
+            rawSourceFrame: true,
+            sourceFrameBaselinePx: source.SourceFrameBaselinePx);
 
     /// <summary>
     /// Standing layer. Ref: CopperGolemModel.createBodyLayer lines 53-95, plus the statue pose that

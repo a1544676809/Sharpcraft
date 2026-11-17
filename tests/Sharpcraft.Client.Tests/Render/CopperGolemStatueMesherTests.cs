@@ -18,19 +18,21 @@ namespace Sharpcraft.Client.Tests.Render;
 public sealed class CopperGolemStatueMesherTests
 {
     /// <summary>
-    /// Four horizontal facings times two oxidation stages. The first vertex of the first body cube
-    /// is a stable source-derived sample: its world position rotates with facing, while its UV is
-    /// the same 64x64 model coordinate for every sprite.
+    /// Four horizontal facings times two oxidation stages. The emitted first vertex is a stable
+    /// source-derived sample; its world position rotates with facing and is taken verbatim from the
+    /// validated world-space reference sample (ref://mc-26.3-analysis/vectors/CopperGolemStatueVectors.java,
+    /// recorded in Repro/Data/copper-golem-statue-vectors.golden.txt - standing rows, first emitted
+    /// vertex). UV (14/64,15/64) is the source face UV, identical for every sprite.
     /// </summary>
     [Theory]
-    [InlineData((byte)2, 0, 0.75f, 0.3125f, 0.6875f)]
-    [InlineData((byte)2, 1, 0.75f, 0.3125f, 0.6875f)]
-    [InlineData((byte)3, 0, 0.25f, 0.3125f, 0.3125f)]
-    [InlineData((byte)3, 1, 0.25f, 0.3125f, 0.3125f)]
-    [InlineData((byte)4, 0, 0.6875f, 0.3125f, 0.25f)]
-    [InlineData((byte)4, 1, 0.6875f, 0.3125f, 0.25f)]
-    [InlineData((byte)5, 0, 0.3125f, 0.3125f, 0.75f)]
-    [InlineData((byte)5, 1, 0.3125f, 0.3125f, 0.75f)]
+    [InlineData((byte)2, 0, 0.25f, 0.6875f, 0.6875f)]
+    [InlineData((byte)2, 1, 0.25f, 0.6875f, 0.6875f)]
+    [InlineData((byte)3, 0, 0.75f, 0.6875f, 0.3125f)]
+    [InlineData((byte)3, 1, 0.75f, 0.6875f, 0.3125f)]
+    [InlineData((byte)4, 0, 0.6875f, 0.6875f, 0.75f)]
+    [InlineData((byte)4, 1, 0.6875f, 0.6875f, 0.75f)]
+    [InlineData((byte)5, 0, 0.3125f, 0.6875f, 0.25f)]
+    [InlineData((byte)5, 1, 0.3125f, 0.6875f, 0.25f)]
     public void StandingStatueSamplesFacingAndOxidation(byte facing, int oxidation, float x, float y, float z)
     {
         var mesher = new CopperGolemStatueMesher();
@@ -83,32 +85,34 @@ public sealed class CopperGolemStatueMesherTests
     }
 
     /// <summary>
-    /// The statue carries no pose of its own, so a facing-north statue reproduces the unposed
-    /// entity geometry at yaw 180: same vertical bounds and identical vertices.
+    /// Source-pose application check. The old StandingMatchesUnposedEntityModel invariant (a facing-
+    /// north statue byte-equal to an unposed entity) was removed: it is not source-true. The reference
+    /// CopperGolemStatueModel.setupAnim (ref://mc-26.3-analysis/src/net/minecraft/client/model/object/
+    /// statue/CopperGolemStatueModel.java:13-16) overrides root.y=0 and root.zRot=PI and the statue
+    /// layer also carries its own child-pivot overrides, so an unposed entity cannot equal the statue.
+    /// Equivalence is instead proven against the source oracle by CopperGolemStatueModelSpaceTests
+    /// (4 poses x 216 vertices, model space) and CopperGolemStatueGoldenTests (world space).
+    /// This test only asserts the statue applies the exact source root pose literals.
     /// </summary>
     [Fact]
-    public void StandingMatchesUnposedEntityModel()
+    public void StatuePoseAppliesSourceRootOverrides()
     {
-        var sprite = new SpriteRect(0, 0, 64, 64, 1) { RectId = 1, U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f };
-        var entityState = new EntityRenderState(1, CopperGolemModelDefinition.CopperGolemEntityTypeId, 0.5f, 0f, 0.5f, 180f, 0f);
-        var unposed = new EntityModelMesher().BuildModel(CopperGolemModelDefinition.Definition, entityState, sprite, 64, 64, modelScale: 1f);
-        var statue = new CopperGolemStatueMesher().Build(
-            [new BlockEntityRenderState(0f, 0f, 0f, VanillaBlockEntityTypes.CopperGolemStatue, Facing: 2, ChestMaterial: 0)],
-            [sprite, sprite, sprite, sprite]);
-
-        var unposedBounds = Bounds(unposed);
-        var statueBounds = Bounds(statue);
-        Assert.Equal(0f, unposedBounds.Min.Y, 4);
-        Assert.Equal(1.4990625f, unposedBounds.Max.Y, 4);
-        Assert.Equal(0f, statueBounds.Min.Y, 4);
-        Assert.Equal(1.4990625f, statueBounds.Max.Y, 4);
-        Assert.Equal(unposed.VertexFloats, statue.VertexFloats);
-        for (var field = 0; field < unposed.VertexFloats; field++)
-        {
-            Assert.Equal(
-                BitConverter.SingleToUInt32Bits(unposed.Vertices[field]),
-                BitConverter.SingleToUInt32Bits(statue.Vertices[field]));
-        }
+        var field = typeof(CopperGolemStatueMesher).GetField("StatuePose",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        Assert.NotNull(field);
+        var pose = (EntityPose)field!.GetValue(null)!;
+        var root = pose.Get("root");
+        // Source setupAnim: root.y = 0, root.zRot = PI (CopperGolemStatueModel.java:13-16).
+        Assert.Equal(0f, root.Position.X);
+        Assert.Equal(0f, root.Position.Y);
+        Assert.Equal(0f, root.Position.Z);
+        Assert.Equal(0f, root.Rotation.X);
+        Assert.Equal(0f, root.Rotation.Y);
+        Assert.Equal(MathF.PI, root.Rotation.Z, 6);
+        // Scale is a delta added to 1 by the frame builder; zero means no scaling.
+        Assert.Equal(0f, root.Scale.X);
+        Assert.Equal(0f, root.Scale.Y);
+        Assert.Equal(0f, root.Scale.Z);
     }
 
     /// <summary>The four body textures are stitched into the block entity atlas and resolve by stage.</summary>
@@ -245,23 +249,26 @@ public sealed class CopperGolemStatueMesherTests
         Assert.InRange(max.Y, expectedMaxY - tolerance, expectedMaxY + tolerance);
     }
 
+    // Vertex-0 world positions from the validated reference sample
+    // (ref://mc-26.3-analysis/vectors/CopperGolemStatueVectors.java,
+    // Repro/Data/copper-golem-statue-vectors.golden.txt, first emitted vertex per pose/facing).
     [Theory]
-    [InlineData(CopperGolemPose.Standing, (byte)2, 0, 0.75f, 0.3125f, 0.6875f)]
-    [InlineData(CopperGolemPose.Standing, (byte)2, 1, 0.75f, 0.3125f, 0.6875f)]
-    [InlineData(CopperGolemPose.Standing, (byte)3, 0, 0.25f, 0.3125f, 0.3125f)]
-    [InlineData(CopperGolemPose.Standing, (byte)3, 1, 0.25f, 0.3125f, 0.3125f)]
-    [InlineData(CopperGolemPose.Sitting, (byte)2, 0, 0.6875f, 0.375f, 0.7375f)]
-    [InlineData(CopperGolemPose.Sitting, (byte)2, 1, 0.6875f, 0.375f, 0.7375f)]
-    [InlineData(CopperGolemPose.Sitting, (byte)3, 0, 0.3125f, 0.375f, 0.2625f)]
-    [InlineData(CopperGolemPose.Sitting, (byte)3, 1, 0.3125f, 0.375f, 0.2625f)]
-    [InlineData(CopperGolemPose.Running, (byte)2, 0, 0.75124f, 0.31251f, 0.69639f)]
-    [InlineData(CopperGolemPose.Running, (byte)2, 1, 0.75124f, 0.31251f, 0.69639f)]
-    [InlineData(CopperGolemPose.Running, (byte)3, 0, 0.24876f, 0.31251f, 0.30361f)]
-    [InlineData(CopperGolemPose.Running, (byte)3, 1, 0.24876f, 0.31251f, 0.30361f)]
-    [InlineData(CopperGolemPose.Star, (byte)2, 0, 0.75f, 0.3125f, 0.6875f)]
-    [InlineData(CopperGolemPose.Star, (byte)2, 1, 0.75f, 0.3125f, 0.6875f)]
-    [InlineData(CopperGolemPose.Star, (byte)3, 0, 0.25f, 0.3125f, 0.3125f)]
-    [InlineData(CopperGolemPose.Star, (byte)3, 1, 0.25f, 0.3125f, 0.3125f)]
+    [InlineData(CopperGolemPose.Standing, (byte)2, 0, 0.25f, 0.6875f, 0.6875f)]
+    [InlineData(CopperGolemPose.Standing, (byte)2, 1, 0.25f, 0.6875f, 0.6875f)]
+    [InlineData(CopperGolemPose.Standing, (byte)3, 0, 0.75f, 0.6875f, 0.3125f)]
+    [InlineData(CopperGolemPose.Standing, (byte)3, 1, 0.75f, 0.6875f, 0.3125f)]
+    [InlineData(CopperGolemPose.Sitting, (byte)2, 0, 0.3125f, 0.4375f, 0.7375f)]
+    [InlineData(CopperGolemPose.Sitting, (byte)2, 1, 0.3125f, 0.4375f, 0.7375f)]
+    [InlineData(CopperGolemPose.Sitting, (byte)3, 0, 0.6875f, 0.4375f, 0.2625f)]
+    [InlineData(CopperGolemPose.Sitting, (byte)3, 1, 0.6875f, 0.4375f, 0.2625f)]
+    [InlineData(CopperGolemPose.Running, (byte)2, 0, 0.281448f, 0.722595f, 0.654547f)]
+    [InlineData(CopperGolemPose.Running, (byte)2, 1, 0.281448f, 0.722595f, 0.654547f)]
+    [InlineData(CopperGolemPose.Running, (byte)3, 0, 0.718552f, 0.722595f, 0.345453f)]
+    [InlineData(CopperGolemPose.Running, (byte)3, 1, 0.718552f, 0.722595f, 0.345453f)]
+    [InlineData(CopperGolemPose.Star, (byte)2, 0, 0.25f, 0.6875f, 0.6875f)]
+    [InlineData(CopperGolemPose.Star, (byte)2, 1, 0.25f, 0.6875f, 0.6875f)]
+    [InlineData(CopperGolemPose.Star, (byte)3, 0, 0.75f, 0.6875f, 0.3125f)]
+    [InlineData(CopperGolemPose.Star, (byte)3, 1, 0.75f, 0.6875f, 0.3125f)]
     public void EachPoseSamplesFacingAndOxidation(
         CopperGolemPose pose,
         byte facing,
