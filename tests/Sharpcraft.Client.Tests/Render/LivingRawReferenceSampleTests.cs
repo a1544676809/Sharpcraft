@@ -118,6 +118,15 @@ public sealed class LivingRawReferenceSampleTests
         { "enderman-raw-vectors.reference.txt", HumanoidMobModelDefinition.Enderman, 64, 32, "entity/enderman/enderman", 168, 48, 120, 0 },
         { "zombie-raw-vectors.reference.txt", HumanoidMobModelDefinition.Zombie, 64, 64, "entity/zombie/zombie", 168, 48, 120, 0 },
         // task-108 humanoid batch (total, mirror, checked, degenerate).
+        // task-150: Armadillo raw (multi-cube body/head, rolled cube).
+        { "armadillo-raw-vectors.reference.txt", ArmadilloModelDefinition.Definition, 64, 64, "entity/armadillo/armadillo", 264, 0, 216, 48 },
+        // task-150: Ravager raw (multi-cube head, source Mirror on right_horn + left legs, body +PI/2).
+        { "ravager-raw-vectors.reference.txt", RavagerModelDefinition.Definition, 128, 128, "entity/illager/ravager", 288, 72, 216, 0 },
+        // task-150: Hoglin raw (source head xRot +0.8727, zero-width mane degenerate).
+        { "hoglin-raw-vectors.reference.txt", HoglinModelDefinition.Definition, 128, 64, "entity/hoglin/hoglin", 264, 0, 240, 24 },
+        // task-150: Llama + TraderLlama raw (shared geometry, multi-cube head, source rotations).
+        { "llama-raw-vectors.reference.txt", LlamaModelDefinition.Definition, 128, 64, "entity/llama/llama_brown", 264, 0, 216, 48 },
+        { "trader-llama-raw-vectors.reference.txt", TraderLlamaModelDefinition.Definition, 128, 64, "entity/llama/llama_brown", 264, 0, 216, 48 },
         // task-143: Camel raw (multi-cube head, zero-size group marker degenerate).
         { "camel-raw-vectors.reference.txt", CamelModelDefinition.Definition, 128, 128, "entity/camel/camel", 288, 0, 264, 24 },
         // task-143: Goat raw (multi-cube head/body, source nose xRot +0.9599, left-ear Mirror).
@@ -471,6 +480,17 @@ public sealed class LivingRawReferenceSampleTests
                 flatName = cube == 0 ? "head" : "head_cube"; break;
             case "/body/head/eyes" when definition.Name == "breeze":
                 flatName = cube == 0 ? "eyes" : "eyes_cube"; break;
+            // task-150: armadillo source /body has 2 cubes (body_outer grow0.3, body grow0).
+            case "/body" when definition.Name == "armadillo":
+                flatName = cube == 0 ? "body_outer" : "body"; break;
+            // task-150: ravager source /neck/head has 2 cubes (head,head_snout); /body has 2 (body,body_lower).
+            case "/neck/head" when definition.Name == "ravager":
+                flatName = cube == 0 ? "head" : "head_snout"; break;
+            case "/body" when definition.Name == "ravager":
+                flatName = cube == 0 ? "body" : "body_lower"; break;
+            // task-150: llama source /head has 4 cubes (head,neck,left_ear,right_ear).
+            case "/head" when definition.Name == "llama" || definition.Name.StartsWith("trader_llama", StringComparison.Ordinal):
+                flatName = cube switch { 0 => "head", 1 => "neck", 2 => "left_ear", _ => "right_ear" }; break;
             // task-143: camel source /body/head has 3 cubes (head_lower,head_upper,head_snout).
             case "/body/head" when definition.Name == "camel":
                 flatName = cube switch { 0 => "head_lower", 1 => "head_upper", _ => "head_snout" }; break;

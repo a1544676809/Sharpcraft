@@ -15,7 +15,7 @@ namespace Sharpcraft.Client.Tests.Render;
 public sealed class NetherModelDefinitionTests
 {
     [Fact]
-    public void HoglinPartsMatchLegacyFromVanillaRecords()
+    public void HoglinPartsMatchSourceFrameRecords()
     {
         AssertPartsMatch(ExpectedHoglinParts(), HoglinModelDefinition.Definition.Parts);
         AssertPartsMatch(ExpectedHoglinParts(), HoglinModelDefinition.Zoglin.Parts);
@@ -121,20 +121,20 @@ public sealed class NetherModelDefinitionTests
 
     private static EntityModelPart[] ExpectedHoglinParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("body", 0f, 7f, 0f, -8f, -7f, -13f, 16f, 14f, 26f, 1, 1),
-        LegacyModelPartFactory.FromVanillaChild("mane", "body", 0f, -14f, -7f, 0f, 0f, -9f, 0f, 10f, 19f, 90, 33, grow: 0.001f),
-        LegacyModelPartFactory.FromVanilla("head", 0f, 2f, -12f, -7f, -3f, -19f, 14f, 6f, 19f, 61, 1,
-            rotationX: -0.87266463f),
-        LegacyModelPartFactory.FromVanillaChild("right_ear", "head", -6f, -2f, -3f, -6f, -1f, -2f, 6f, 1f, 4f, 1, 1,
+        RawModelPartFactory.FromVanilla("body", 0f, 7f, 0f, -8f, -7f, -13f, 16f, 14f, 26f, 1, 1),
+        RawModelPartFactory.FromVanillaChild("mane", "body", 0f, -14f, -7f, 0f, 0f, -9f, 0f, 10f, 19f, 90, 33, grow: 0.001f),
+        RawModelPartFactory.FromVanilla("head", 0f, 2f, -12f, -7f, -3f, -19f, 14f, 6f, 19f, 61, 1,
+            rotationX: 0.87266463f),
+        RawModelPartFactory.FromVanillaChild("right_ear", "head", -6f, -2f, -3f, -6f, -1f, -2f, 6f, 1f, 4f, 1, 1,
             rotationZ: -MathF.PI * 2f / 9f),
-        LegacyModelPartFactory.FromVanillaChild("left_ear", "head", 6f, -2f, -3f, 0f, -1f, -2f, 6f, 1f, 4f, 1, 6,
+        RawModelPartFactory.FromVanillaChild("left_ear", "head", 6f, -2f, -3f, 0f, -1f, -2f, 6f, 1f, 4f, 1, 6,
             rotationZ: MathF.PI * 2f / 9f),
-        LegacyModelPartFactory.FromVanillaChild("right_horn", "head", -7f, 2f, -12f, -1f, -11f, -1f, 2f, 11f, 2f, 10, 13),
-        LegacyModelPartFactory.FromVanillaChild("left_horn", "head", 7f, 2f, -12f, -1f, -11f, -1f, 2f, 11f, 2f, 1, 13),
-        LegacyModelPartFactory.FromVanilla("right_front_leg", -4f, 10f, -8.5f, -3f, 0f, -3f, 6f, 14f, 6f, 66, 42),
-        LegacyModelPartFactory.FromVanilla("left_front_leg", 4f, 10f, -8.5f, -3f, 0f, -3f, 6f, 14f, 6f, 41, 42),
-        LegacyModelPartFactory.FromVanilla("right_hind_leg", -5f, 13f, 10f, -2.5f, 0f, -2.5f, 5f, 11f, 5f, 21, 45),
-        LegacyModelPartFactory.FromVanilla("left_hind_leg", 5f, 13f, 10f, -2.5f, 0f, -2.5f, 5f, 11f, 5f, 0, 45)
+        RawModelPartFactory.FromVanillaChild("right_horn", "head", -7f, 2f, -12f, -1f, -11f, -1f, 2f, 11f, 2f, 10, 13),
+        RawModelPartFactory.FromVanillaChild("left_horn", "head", 7f, 2f, -12f, -1f, -11f, -1f, 2f, 11f, 2f, 1, 13),
+        RawModelPartFactory.FromVanilla("right_front_leg", -4f, 10f, -8.5f, -3f, 0f, -3f, 6f, 14f, 6f, 66, 42),
+        RawModelPartFactory.FromVanilla("left_front_leg", 4f, 10f, -8.5f, -3f, 0f, -3f, 6f, 14f, 6f, 41, 42),
+        RawModelPartFactory.FromVanilla("right_hind_leg", -5f, 13f, 10f, -2.5f, 0f, -2.5f, 5f, 11f, 5f, 21, 45),
+        RawModelPartFactory.FromVanilla("left_hind_leg", 5f, 13f, 10f, -2.5f, 0f, -2.5f, 5f, 11f, 5f, 0, 45)
     ];
 
     private static EntityModelPart[] ExpectedStriderParts() =>
@@ -256,3 +256,4 @@ public sealed class NetherModelDefinitionTests
         }
     }
 }
+

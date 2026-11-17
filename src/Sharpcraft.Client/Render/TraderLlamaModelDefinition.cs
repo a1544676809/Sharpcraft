@@ -16,7 +16,9 @@ public static class TraderLlamaModelDefinition
         128,
         64,
         LlamaModelDefinition.Definition.Parts,
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/llama/llama_brown",
-        compiled: LlamaModelDefinition.Definition.Compiled);
+        compiled: LlamaModelDefinition.Definition.Compiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 }

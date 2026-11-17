@@ -20,8 +20,10 @@ public static class RavagerModelDefinition
         128,
         128,
         RavagerMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/illager/ravager");
+        faceTransforms: null,
+        "entity/illager/ravager",
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildRavagerMesh()
     {
@@ -32,13 +34,15 @@ public static class RavagerModelDefinition
             new VanillaCubeDefinition("head", 0, 0, -8f, -20f, -14f, 16f, 20f, 16f));
         head.AddOrReplaceChild("head_snout", VanillaPartPose.Zero,
             new VanillaCubeDefinition("head_snout", 0, 0, -2f, -6f, -18f, 4f, 8f, 4f));
+        // Source RavagerModel.createBodyLayer: left_horn carries CubeListBuilder.mirror(), right_horn does not.
         head.AddOrReplaceChild("right_horn", VanillaPartPose.OffsetAndRotation(-10f, -14f, -8f, 1.0995574f, 0f, 0f),
             new VanillaCubeDefinition("right_horn", 74, 55, 0f, -14f, -2f, 2f, 14f, 4f));
         head.AddOrReplaceChild("left_horn", VanillaPartPose.OffsetAndRotation(8f, -14f, -8f, 1.0995574f, 0f, 0f),
             new VanillaCubeDefinition("left_horn", 74, 55, 0f, -14f, -2f, 2f, 14f, 4f, Mirror: true));
         head.AddOrReplaceChild("mouth", VanillaPartPose.Offset(0f, -2f, 2f),
             new VanillaCubeDefinition("mouth", 0, 36, -8f, 0f, -16f, 16f, 3f, 16f));
-        var body = root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 1f, 2f, -MathF.PI / 2f, 0f, 0f),
+        // Source body xRot = +PI/2 (source literal).
+        var body = root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 1f, 2f, MathF.PI / 2f, 0f, 0f),
             new VanillaCubeDefinition("body", 0, 55, -7f, -10f, -7f, 14f, 16f, 20f));
         body.AddOrReplaceChild("body_lower", VanillaPartPose.Zero,
             new VanillaCubeDefinition("body_lower", 0, 91, -6f, 6f, -7f, 12f, 13f, 18f));
