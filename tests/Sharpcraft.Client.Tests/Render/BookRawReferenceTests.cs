@@ -17,7 +17,9 @@ namespace Sharpcraft.Client.Tests.Render;
 /// </summary>
 public sealed class BookRawReferenceTests
 {
-    private const float Tolerance = 0.002f;
+    // Sample stores 6 decimals and all Book UVs are exact 1/64 or 1/32 fractions (exactly
+    // representable as half floats); production float maths matches to ~1e-6. Require 1e-5.
+    private const float Tolerance = 1e-5f;
     private static string SamplePath =>
         Path.Combine(AppContext.BaseDirectory, "Repro", "Data", "book-raw-vectors.golden.txt");
 
@@ -53,10 +55,15 @@ public sealed class BookRawReferenceTests
             var vIndex = partIndex * 24 + row.Polygon * 4 + row.Vertex;
             var p = VertexFieldReader.Position(geometry.Vertices, vIndex);
             var uv = VertexFieldReader.Uv(geometry.Vertices, vIndex);
+            // Production stores UV as half floats; quantize the sample UV to the same representation
+            // so a 1e-5 comparison tests the value, not the storage precision (this is not tolerance
+            // masking: all Book UVs are exact 1/64 or 1/32 fractions).
+            var sampleU = (float)BitConverter.UInt16BitsToHalf(BitConverter.HalfToUInt16Bits((Half)row.U));
+            var sampleV = (float)BitConverter.UInt16BitsToHalf(BitConverter.HalfToUInt16Bits((Half)row.V));
             Assert.True(
                 MathF.Abs(p.X - row.X) <= Tolerance && MathF.Abs(p.Y - row.Y) <= Tolerance
                     && MathF.Abs(p.Z - row.Z) <= Tolerance
-                    && MathF.Abs(uv.U - row.U) <= Tolerance && MathF.Abs(uv.V - row.V) <= Tolerance,
+                    && MathF.Abs(uv.U - sampleU) <= Tolerance && MathF.Abs(uv.V - sampleV) <= Tolerance,
                 $"{group} {row.Part} cube{row.Cube} poly{row.Polygon} v{row.Vertex}:"
                     + $" ours ({p.X:F4},{p.Y:F4},{p.Z:F4}) uv ({uv.U:F4},{uv.V:F4})"
                     + $" but sample says ({row.X:F4},{row.Y:F4},{row.Z:F4}) uv ({row.U:F4},{row.V:F4})");

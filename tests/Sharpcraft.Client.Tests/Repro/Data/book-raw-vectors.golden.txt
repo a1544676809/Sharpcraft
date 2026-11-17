@@ -6,14 +6,6 @@
 # source lines: BookModel.java:35-53,55-73; ModelPart.java:129-138,163-167,384-394; LecternRenderer.java:44-53; EnchantTableRenderer.java:58-70
 # columns: tag|part|cube|polygon|vertex|x|y|z|u|v
 #
-# Sharpcraft raw-frame reference sample - book (lectern/enchant)
-# source: Minecraft 26.3 client (jar sha1 e877b6a07acd633fb3bb475002175cec036e7b87)
-# tool: ref://mc-26.3-analysis/vectors/BookVectorProbe.java (independent; source setupAnim + outer pose; NOT copied game code)
-# sampled: 2026-11-17
-# space: y-up, 1 block = 1 unit; vertex = outerPose * ModelPart.visit(setupAnim pose) * (1/16)
-# source lines: BookModel.java:35-53,55-73; LecternRenderer.java:44-53; EnchantTableRenderer.java:58-70
-# columns: tag|part|cube|polygon|vertex|x|y|z|u|v
-#
 lectern_2|/right_pages|0|0|0|0.816094|0.939992|0.144847|0.281250|0.312500
 lectern_2|/right_pages|0|0|1|0.504377|0.919569|0.153307|0.203125|0.312500
 lectern_2|/right_pages|0|0|2|0.499956|0.977167|0.129449|0.203125|0.343750

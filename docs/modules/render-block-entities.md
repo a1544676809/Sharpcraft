@@ -66,3 +66,4 @@
 - 2026-11-17（审阅修正 task-46）：Banner 样本扩为 36 组（4 jar 锚点 + 32 源公式派生），`BannerGoldenTests` 改严格逐顶点全元组比较；新增 Skull player head 2 组 jar 样本；`render.md` 的 #111 状态统一为已解决；全量 3,369 / 三门禁通过。
 - 2026-11-17（审阅修正 task-52）：Banner 样本改为稳定 key + 源声明顶点顺序（pole→bar），`BannerGoldenTests` 去掉排序/舍入集合改按下标逐顶点位置+UV 严格比较；新增 `BannerSourceFormulaConsistencyTests`，从 4 个 jar 锚点用独立源公式重算全部 36 组逐 key 逐值校验（含 wall flag pivot (0,-20.5,10.5)）；header 补锚点映射与双 pivot 公式；全量 3,406 / 三门禁通过。
 - 2026-11-17（task-63 / #119）：Book/Lectern/Enchant 切 raw（源字面 setupAnim pose，无 legacy 补偿）；UV 口径按 #128 归一化解决；新增 `book-raw-vectors.golden.txt`（5 组×168 keyed 位置+UV 严格）；旧内联 legacy UV / pose 角度按源值更新；全量 3,431 / 三门禁通过。
+- 2026-11-17（审阅修正 task-70 / comment 722）：R-024 更新为已解决（含证据入口）；`book-raw-vectors.golden.txt` 删重复/矛盾的旧混合单位 header，仅保留 #128 归一化口径；`BookRawReferenceTests` 容差从 0.002 收紧到 1e-5（UV 按 half-float 表示量化后比较，非放宽容差）；全量 3,431 / 三门禁通过。
