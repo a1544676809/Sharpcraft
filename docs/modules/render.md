@@ -826,3 +826,6 @@ HappyGhast（Scale=4）在 #141/R-034 规格与 raw living 实现落地后，由
 - **BuildModel（factory != null，无 raw flip）**：entity translation 加 `+offset`（既有行为，不重复）。
 - **living（factory == null）**：offset 先进入 raw model y（等价于 `Translation.Y -= offset * entityScaleY`），再由 `ForRawSourceFrame` 翻转；最终世界贡献是 `-offset`。baseline 的 24px 在 layer scale 之外：`RawBaselineWorld = 24/16 * modelScale`，**不能**再乘 `Scale`（旧实现乘 `px`，CaveSpider 因此差 `0.405` 块）。
 - **验收**：`RawLayerScaleOffsetTests`：HappyGhast factor=4 全 **240/240** 源样本顶点 live world 1e-5；Villager/Pillager `.9375` 首 root 顶点；CaveSpider `.7` 四朝向源样本驱动；`BuildModelDoesNotApplyTheLivingOffsetTwice`。`LivingRawReferenceSampleTests` 的 CaveSpider legacy-twin 已替换为源 sample 驱动（旧 twin 保留错误坐标，不再作为 oracle）。
+### task-108 剩余 humanoid 批次：阻塞登记（#102 / #150）
+
+剩余 humanoid 族（Player/player-slim + Skeleton/Stray/Bogged/WitherSkeleton/Husk/Drowned/Enderman/Zombie + Witch/ZombieVillager/Piglin×3）试迁移后**未合入 raw**，全部保持 legacy。9 族严格 1e-5 样本在迁移后全过，但动画 pose 断言（crouch/swim/head pose 等 11 个）无 jar 源 probe 真值，按决策不改期望；Player raw 还污染 legacy Piglin 的 parts 复用帧。28 个 #128 样本 + core PR #147/#148/#149 保留作验收真值。登记 R-035 / Issue #150，不放宽容差、不拟合、不排除顶点。
