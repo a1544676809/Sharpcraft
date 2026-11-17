@@ -225,7 +225,10 @@ public sealed class EntityAnimationTests
         var pose = new EntityPose();
         ApplyAnimation(frame, pose);
         Assert.Equal(0.5f, pose.Get("body").Rotation.X, 4);
-        Assert.Equal(-4.2f, pose.Get("head").Position.Y, 4);
+        // Source HumanoidModel.setupAnim (26.3): crouch does `this.head.y += 4.2F` in the y-down
+        // model frame. Since PR #153 PoseOffset stores source literals verbatim for raw source-frame
+        // models, the raw head position is +4.2. (Legacy y-up storage negated it to -4.2.)
+        Assert.Equal(4.2f, pose.Get("head").Position.Y, 4);
         Assert.Equal(4f, pose.Get("right_leg").Position.Z, 4);
         Assert.Equal(0.4f, pose.Get("right_arm").Rotation.X, 4);
     }

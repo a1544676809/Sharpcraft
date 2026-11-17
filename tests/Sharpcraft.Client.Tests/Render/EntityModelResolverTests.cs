@@ -49,7 +49,8 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("skeleton", definition.Name);
-        Assert.Equal(6, definition.Parts.Count(p => !p.Name.StartsWith("equipment_")));
+        // Source hat is now an independent child part (6 base + 1 hat).
+        Assert.Equal(7, definition.Parts.Count(p => !p.Name.StartsWith("equipment_")));
     }
 
     [Fact]
@@ -397,7 +398,8 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("enderman", definition.Name);
-        Assert.Equal(30f, definition.Parts[2].Height);
+        // Source hat is now an independent child part (inserted after head); the tall arm is looked up by name.
+        Assert.Equal(30f, definition.Parts.Single(p => p.Name == "left_arm").Height);
     }
 
     [Fact]
@@ -427,7 +429,8 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("zombie", definition.Name);
-        Assert.Equal(6, definition.Parts.Count(p => !p.Name.StartsWith("equipment_")));
+        // Source hat is now an independent child part (6 base + 1 hat).
+        Assert.Equal(7, definition.Parts.Count(p => !p.Name.StartsWith("equipment_")));
     }
 
     [Fact]

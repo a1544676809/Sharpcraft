@@ -26,23 +26,25 @@ public static class HumanoidMobModelDefinition
     private static readonly VanillaMeshDefinition EndermanMesh = BuildEndermanMesh();
 
     private static readonly CompiledEntityModel EndermanCompiled =
-        VanillaMeshBakery.Build(EndermanMesh, 64, 32, modelHeight: 25f);
+        VanillaMeshBakery.Build(EndermanMesh, 64, 32, modelHeight: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Enderman = new(
         "enderman",
         64,
         32,
-        [.. VanillaMeshBake.Bake(EndermanMesh, 0, 0, modelHeight: 25f)],
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/enderman/enderman", 1f, "entity/enderman/enderman_eyes",
-        compiled: EndermanCompiled);
+        [.. VanillaMeshBake.Bake(EndermanMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
+        faceTransforms: null,
+        texturePath: "entity/enderman/enderman", 1f, "entity/enderman/enderman_eyes",
+        compiled: EndermanCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildEndermanMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, -13f, 0f),
-            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f,
-                Overlays: [new("hat", -0.5f, 0, 16)]));
+        var head = root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, -13f, 0f),
+            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f));
+        // Source: hat is an independent inflated child cube of head.
+        head.AddOrReplaceChild("hat", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("hat", 0, 16, -4f, -8f, -4f, 8f, 8f, 8f, Grow: -0.5f));
         root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, -14f, 0f),
             new VanillaCubeDefinition("body", 32, 16, -4f, 0f, -2f, 8f, 12f, 4f));
         root.AddOrReplaceChild("left_arm", VanillaPartPose.Offset(5f, -12f, 0f),
@@ -60,23 +62,26 @@ public static class HumanoidMobModelDefinition
     private static readonly VanillaMeshDefinition DrownedMesh = BuildDrownedMesh();
 
     private static readonly CompiledEntityModel DrownedCompiled =
-        VanillaMeshBakery.Build(DrownedMesh, 64, 64);
+        VanillaMeshBakery.Build(DrownedMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Drowned = new(
         "drowned",
         64,
         64,
-        [.. VanillaMeshBake.Bake(DrownedMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
+        [.. VanillaMeshBake.Bake(DrownedMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
+        faceTransforms: null,
         "entity/zombie/drowned",
-        compiled: DrownedCompiled);
+        compiled: DrownedCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildDrownedMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 0f, 0f),
+        var head = root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 0f, 0f),
             new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f,
-                Overlays: [new("hat", 0.5f, 32, 0), DrownedOuter(0, 0)]));
+                Overlays: [DrownedOuter(0, 0)]));
+        // Source: hat is an independent inflated child cube of head.
+        head.AddOrReplaceChild("hat", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("hat", 32, 0, -4f, -8f, -4f, 8f, 8f, 8f, Grow: 0.5f));
         root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 0f, 0f),
             new VanillaCubeDefinition("body", 16, 16, -4f, 0f, -2f, 8f, 12f, 4f,
                 Overlays: [DrownedOuter(16, 16)]));
@@ -102,24 +107,26 @@ public static class HumanoidMobModelDefinition
     private static readonly VanillaMeshDefinition HuskMesh = BuildHuskMesh();
 
     private static readonly CompiledEntityModel HuskCompiled =
-        VanillaMeshBakery.Build(HuskMesh, 64, 64);
+        VanillaMeshBakery.Build(HuskMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Husk = new(
         "husk",
         64,
         64,
-        [.. VanillaMeshBake.Bake(HuskMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
+        [.. VanillaMeshBake.Bake(HuskMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
+        faceTransforms: null,
         "entity/zombie/husk",
         1.0625f,
-        compiled: HuskCompiled);
+        compiled: HuskCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildHuskMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 0f, 0f),
-            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f,
-                Overlays: [new("hat", 0.5f, 32, 0)]));
+        var head = root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 0f, 0f),
+            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f));
+        // Source: hat is an independent inflated child cube of head.
+        head.AddOrReplaceChild("hat", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("hat", 32, 0, -4f, -8f, -4f, 8f, 8f, 8f, Grow: 0.5f));
         root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 0f, 0f),
             new VanillaCubeDefinition("body", 16, 16, -4f, 0f, -2f, 8f, 12f, 4f));
         root.AddOrReplaceChild("left_arm", VanillaPartPose.Offset(5f, 2f, 0f),
@@ -137,23 +144,25 @@ public static class HumanoidMobModelDefinition
     private static readonly VanillaMeshDefinition SkeletonMesh = BuildSkeletonMesh();
 
     private static readonly CompiledEntityModel SkeletonCompiled =
-        VanillaMeshBakery.Build(SkeletonMesh, 64, 32);
+        VanillaMeshBakery.Build(SkeletonMesh, 64, 32, modelHeight: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Skeleton = new(
         "skeleton",
         64,
         32,
-        [.. VanillaMeshBake.Bake(SkeletonMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
+        [.. VanillaMeshBake.Bake(SkeletonMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
+        faceTransforms: null,
         "entity/skeleton/skeleton",
-        compiled: SkeletonCompiled);
+        compiled: SkeletonCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildSkeletonMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 0f, 0f),
-            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f,
-                Overlays: [new("hat", 0.5f, 32, 0)]));
+        var head = root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 0f, 0f),
+            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f));
+        // Source: hat is an independent inflated child cube of head.
+        head.AddOrReplaceChild("hat", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("hat", 32, 0, -4f, -8f, -4f, 8f, 8f, 8f, Grow: 0.5f));
         root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 0f, 0f),
             new VanillaCubeDefinition("body", 16, 16, -4f, 0f, -2f, 8f, 12f, 4f));
         root.AddOrReplaceChild("left_arm", VanillaPartPose.Offset(5f, 2f, 0f),
@@ -175,8 +184,8 @@ public static class HumanoidMobModelDefinition
     {
         var parts = new List<EntityModelPart>(Skeleton.Parts);
         var clothingMesh = BuildClothingMesh(overlayPath, grow);
-        parts.AddRange(VanillaMeshBake.Bake(clothingMesh, 0, 0));
-        var clothingCompiled = VanillaMeshBakery.Build(clothingMesh, 64, 32);
+        parts.AddRange(VanillaMeshBake.Bake(clothingMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true));
+        var clothingCompiled = VanillaMeshBakery.Build(clothingMesh, 64, 32, modelHeight: 0f, rawSourceFrame: true);
         var compiled = EntityModelLayerHelpers.WithModelLayer(
             SkeletonCompiled,
             clothingCompiled,
@@ -184,8 +193,8 @@ public static class HumanoidMobModelDefinition
             _ => overlayPath,
             fallbackTexture: overlayPath);
         return new EntityModelDefinition(
-            name, 64, 32, parts, PlayerModelDefinition.DefaultFaceTransforms, texturePath,
-            compiled: compiled);
+            name, 64, 32, parts, faceTransforms: null, texturePath,
+            compiled: compiled, baselinePx: 0f, rawSourceFrame: true);
     }
 
     /// <summary>
@@ -219,30 +228,32 @@ public static class HumanoidMobModelDefinition
     }
 
     public static readonly EntityModelDefinition WitherSkeleton = new(
-        "wither_skeleton", 64, 32, Skeleton.Parts, PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/skeleton/wither_skeleton", compiled: SkeletonCompiled);
+        "wither_skeleton", 64, 32, Skeleton.Parts, faceTransforms: null,
+        texturePath: "entity/skeleton/wither_skeleton", 1.2f, compiled: SkeletonCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Declarative DSL tree for the zombie's six parts (T-672).</summary>
     private static readonly VanillaMeshDefinition ZombieMesh = BuildZombieMesh();
 
     private static readonly CompiledEntityModel ZombieCompiled =
-        VanillaMeshBakery.Build(ZombieMesh, 64, 64);
+        VanillaMeshBakery.Build(ZombieMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Zombie = new(
         "zombie",
         64,
         64,
-        [.. VanillaMeshBake.Bake(ZombieMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
+        [.. VanillaMeshBake.Bake(ZombieMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
+        faceTransforms: null,
         "entity/zombie/zombie",
-        compiled: ZombieCompiled);
+        compiled: ZombieCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildZombieMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 0f, 0f),
-            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f,
-                Overlays: [new("hat", 0.5f, 32, 0)]));
+        var head = root.AddOrReplaceChild("head", VanillaPartPose.Offset(0f, 0f, 0f),
+            new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f));
+        // Source: hat is an independent inflated child cube of head.
+        head.AddOrReplaceChild("hat", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("hat", 32, 0, -4f, -8f, -4f, 8f, 8f, 8f, Grow: 0.5f));
         root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 0f, 0f),
             new VanillaCubeDefinition("body", 16, 16, -4f, 0f, -2f, 8f, 12f, 4f));
         root.AddOrReplaceChild("left_arm", VanillaPartPose.Offset(5f, 2f, 0f),

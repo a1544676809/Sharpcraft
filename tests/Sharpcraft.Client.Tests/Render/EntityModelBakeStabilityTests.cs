@@ -53,8 +53,8 @@ public sealed class EntityModelBakeStabilityTests
         // equivalence gate. Refreshed for the humanoid hat raw migration on the current baseline.
         // Refreshed for the humanoid hat raw migration on the b37cfdc0 baseline.
         // Refreshed for the 5-family special raw migration (task-109).
-        Assert.Equal("ad25baf8fe73d56c882478bb9afc44b8c57909011b4c0306dccd61b04c62a293", Hash(flat));
-        Assert.Equal("387023ba7f7256cb02003081182799d7dbb2f6538cc5f934265c8c39aa915b52", Hash(tree));
+        Assert.Equal("4538dd8ffa4d91bab2f23cb2675865f70bfeb50bed602998426035e49c494971", Hash(flat));
+        Assert.Equal("439301bd22e40d1222733732d9921fdd4078dc7a1b3b6101e865b44204f59be9", Hash(tree));
     }
 
     private static void AppendPart(StringBuilder builder, EntityModelPart part)
