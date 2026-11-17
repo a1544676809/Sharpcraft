@@ -1,4 +1,4 @@
-# Sharpcraft 原版基准样本（reference sample）— living entity raw #128 normalized render-unit vertices
+# Sharpcraft 原版基准样本（reference sample） — living entity raw #128 normalized render-unit vertices
 # source: Minecraft 26.3 client (jar sha1 e877b6a07acd633fb3bb475002175cec036e7b87)
 # tool: ref://mc-26.3-analysis/vectors/RawRenderUnitProbe.java (y-down pixel probe /16 -> render units; bind pose, no renderer PoseStack)
 # space: #128 normalized render units (blocks): R*(v_px/16)+T_blocks; y-down, part pivot translation/rotationZYX; equals production modelScale:1 output

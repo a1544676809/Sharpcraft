@@ -31,9 +31,11 @@ public static class WitchModelDefinition
         64,
         128,
         WitchMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/witch/witch",
-        0.9375f);
+        0.9375f,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     /// <summary>
     /// Standalone layer model for the held potion quad. It repeats the head/nose pivots so the layer inherits the same
@@ -87,6 +89,9 @@ public static class WitchModelDefinition
             new VanillaCubeDefinition("mole", 0, 0, 0f, 3f, -6.75f, 1f, 1f, 1f, Grow: -0.25f));
         var hat = head.AddOrReplaceChild("hat", VanillaPartPose.Offset(-5f, -10.03125f, -5f),
             new VanillaCubeDefinition("hat", 0, 64, 0f, 0f, 0f, 10f, 2f, 10f));
+        // The jar Witch layer retains the Villager base hat_rim as a child of hat (RawRenderUnitProbe).
+        hat.AddOrReplaceChild("hat_rim", VanillaPartPose.OffsetAndRotation(0f, 0f, 0f, -MathF.PI / 2f, 0f, 0f),
+            new VanillaCubeDefinition("hat_rim", 30, 47, -8f, -8f, -6f, 16f, 16f, 1f));
         var hat2 = hat.AddOrReplaceChild("hat2", VanillaPartPose.OffsetAndRotation(1.75f, -4f, 2f, -0.05235988f, 0f, 0.02617994f),
             new VanillaCubeDefinition("hat2", 0, 76, 0f, 0f, 0f, 7f, 4f, 7f));
         var hat3 = hat2.AddOrReplaceChild("hat3", VanillaPartPose.OffsetAndRotation(1.75f, -4f, 2f, -0.10471976f, 0f, 0.05235988f),
@@ -97,8 +102,9 @@ public static class WitchModelDefinition
             new VanillaCubeDefinition("body", 16, 20, -4f, 0f, -3f, 8f, 12f, 6f, MirrorX: false));
         body.AddOrReplaceChild("jacket", VanillaPartPose.Zero,
             new VanillaCubeDefinition("jacket", 0, 38, -4f, 0f, -3f, 8f, 20f, 6f, Grow: 0.5f));
-        var arms = root.AddOrReplaceChild("arms", VanillaPartPose.OffsetAndRotation(0f, 3f, -1f, 0.75f, 0f, 0f),
-            new VanillaCubeDefinition("arms", 40, 38, -4f, -2f, -2f, 8f, 4f, 4f, MirrorX: false));
+        // Source VillagerModel.createBodyModel: arms xRot = -0.75F (source literal).
+        var arms = root.AddOrReplaceChild("arms", VanillaPartPose.OffsetAndRotation(0f, 3f, -1f, -0.75f, 0f, 0f),
+            new VanillaCubeDefinition("arms", 40, 38, -4f, 2f, -2f, 8f, 4f, 4f, MirrorX: false));
         arms.AddOrReplaceChild("arms_left", VanillaPartPose.Zero,
             new VanillaCubeDefinition("arms_left", 44, 22, -8f, -2f, -2f, 4f, 8f, 4f));
         arms.AddOrReplaceChild("arms_right", VanillaPartPose.Zero,

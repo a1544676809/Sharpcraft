@@ -256,7 +256,9 @@ public sealed class EntityModelRegistrationTests
         var definition = EntityModelResolver.Resolve(WitchModelDefinition.WitchEntityTypeId);
 
         Assert.Equal("witch", definition.Name);
-        Assert.Equal(14, definition.Parts.Count);
+        // task-178: hat_rim retained from Villager base hat chain (15 parts).
+        Assert.Equal(15, definition.Parts.Count);
+        Assert.Contains(definition.Parts, part => part.Name == "hat_rim" && part.Parent == "hat");
         Assert.Contains(definition.Parts, part => part.Name == "mole" && part.Parent == "nose");
         Assert.Contains(definition.Parts, part => part.Name == "jacket" && part.Parent == "body" && Math.Abs(part.Grow - 0.5f) < 0.001f);
         Assert.Contains(definition.Parts, part => part.Name == "arms_left" && part.Parent == "arms");

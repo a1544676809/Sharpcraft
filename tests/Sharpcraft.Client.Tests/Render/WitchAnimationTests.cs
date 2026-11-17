@@ -127,14 +127,13 @@ public sealed class WitchAnimationTests
         Assert.Equal(free.Get("nose").Rotation.Z, holding.Get("nose").Rotation.Z, 5);
         Assert.Equal(2.5f * ToRad * MathF.Cos(MathF.PI / 4f), holding.Get("nose").Rotation.Z, 4);
 
-        // Reference nose.setPos(0, 1, -1.5) is absolute; the offset is relative to the nose bind pivot. In the
-        // mesher's y-up storage the target pivot is (0, -1, -1.5) (Y negated) and the bind pivot is (0, 2, 0),
-        // so the additive offset is (0, -3, -1.5).
+        // task-178: raw source frame keeps source-literal pivots. Reference nose.setPos(0, 1, -1.5) is absolute;
+        // bind pivot is (0, -2, 0), so the additive offset is (0, 3, -1.5) and the target pivot is (0, 1, -1.5).
         var nosePart = WitchModelDefinition.Definition.Parts.First(part => part.Name == "nose");
         var noseOffset = holding.Get("nose").Position;
-        AssertVec(new Vector3(0f, -3f, -1.5f), noseOffset);
+        AssertVec(new Vector3(0f, 3f, -1.5f), noseOffset);
         Assert.Equal(0f, nosePart.PivotX + noseOffset.X, 5);
-        Assert.Equal(-1f, nosePart.PivotY + noseOffset.Y, 5);
+        Assert.Equal(1f, nosePart.PivotY + noseOffset.Y, 5);
         Assert.Equal(-1.5f, nosePart.PivotZ + noseOffset.Z, 5);
 
         // Not holding leaves the nose at its bind pivot.
@@ -161,7 +160,7 @@ public sealed class WitchAnimationTests
         pose.Clear();
         provider.ApplyClip(state, in frame, "hold_item", 0f, pose);
         Assert.Equal(-0.9f, pose.Get("nose").Rotation.X, 5);
-        AssertVec(new Vector3(0f, -3f, -1.5f), pose.Get("nose").Position);
+        AssertVec(new Vector3(0f, 3f, -1.5f), pose.Get("nose").Position); // task-178: raw source-frame offset
     }
 
     [Fact]

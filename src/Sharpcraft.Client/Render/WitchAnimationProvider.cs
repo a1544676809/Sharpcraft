@@ -34,20 +34,20 @@ public sealed class WitchAnimationProvider(int typeId) : IEntityAnimationProvide
     private const float DegreesToRadians = MathF.PI / 180f;
 
     /// <summary>
-    /// Nose bind pivot Y in the mesher's y-up storage. The reference <c>PartPose.offset(0, -2, 0)</c> is stored as
-    /// <c>-pivotY</c>, i.e. <c>+2</c> (see <see cref="VanillaMeshBake.BakeChild"/>).
+    /// Nose bind pivot Y in the raw source frame. The reference <c>PartPose.offset(0, -2, 0)</c> is stored literally
+    /// as <c>-2</c> (raw source-frame bake keeps source pivot values; task-178 migrated Witch to raw).
     /// </summary>
-    private const float NoseBindStoredY = 2f;
+    private const float NoseBindStoredY = -2f;
 
-    /// <summary>Nose bind pivot Z in the mesher's storage (Z is not flipped).</summary>
+    /// <summary>Nose bind pivot Z in the raw source frame (Z is not flipped).</summary>
     private const float NoseBindStoredZ = 0f;
 
     /// <summary>
-    /// Reference <c>nose.setPos(0, 1, -1.5)</c> translated to an additive pose offset. The target pivot is
-    /// <c>(0, -1, -1.5)</c> in storage (Y negated from the reference y-down <c>1</c>) and the bind pivot is
-    /// <c>(0, 2, 0)</c>, so the mesher-ready offset is <c>(-1 - 2, -1.5 - 0) = (0, -3, -1.5)</c> on Y/Z.
+    /// Reference <c>nose.setPos(0, 1, -1.5)</c> in the raw source frame: the target pivot is <c>(0, 1, -1.5)</c>
+    /// (source y-down value stored literally) and the bind pivot is <c>(0, -2, 0)</c>, so the additive pose offset is
+    /// <c>(0, 1 - (-2), -1.5 - 0) = (0, 3, -1.5)</c> on Y/Z.
     /// </summary>
-    private static readonly Vector3 HoldingNoseOffset = new(0f, -1f - NoseBindStoredY, -1.5f - NoseBindStoredZ);
+    private static readonly Vector3 HoldingNoseOffset = new(0f, 1f - NoseBindStoredY, -1.5f - NoseBindStoredZ);
 
     public int TypeId { get; } = typeId;
 
