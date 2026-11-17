@@ -115,9 +115,25 @@ public sealed partial class EntityModelMesher
             // The baseline is expressed in px already scaled by modelScale, matching the legacy world coords.
             // Block-entity renderers (a non-null factory) supply their own source transform and must not
             // receive the living-entity flip; only the LivingEntityRenderer path owns it.
-            if (model.RawSourceFrame && entityTransformFactory is null)
+            if (model.RawSourceFrame)
             {
-                entityTransform = entityTransform.ForRawSourceFrame(model.SourceFrameBaselinePx * px);
+                // Source layer scaling (MeshTransformer.scaling, ref://.../builders/MeshTransformer.java:7-9)
+                // applies root yOffset = 24.016*(1-scale). Our px folds Scale, so add the offset in the
+                // model-space (BuildModel) path whose samples include it; the living path compares raw vs
+                // legacy twins and must not apply it.
+                if (model.Scale != 1f && entityTransformFactory is not null)
+                {
+                    const float layerScalePivotPx = 24.016f;
+                    var offset = layerScalePivotPx * (1f - model.Scale) / 16f * modelScale;
+                    entityTransform = entityTransform with
+                    {
+                        Translation = entityTransform.Translation + new Vector3(0f, offset, 0f)
+                    };
+                }
+                if (entityTransformFactory is null)
+                {
+                    entityTransform = entityTransform.ForRawSourceFrame(model.SourceFrameBaselinePx * px);
+                }
             }
             var sprite = skin;
             // UVs are authored against the model's declared texture size, not the image resolution (e.g. ghast declares

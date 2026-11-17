@@ -20,14 +20,14 @@ public sealed class EnderDragonEndermiteNautilusModelDefinitionTests
     }
 
     [Fact]
-    public void EndermitePartsMatchLegacyRecords()
+    public void EndermitePartsMatchSourceFrameRecords()
     {
         var expected = new[]
         {
-            LegacyModelPartFactory.FromVanilla("segment0", 0f, 21f, -3.5f, -2f, 0f, -1f, 4f, 3f, 2f, 0, 0),
-            LegacyModelPartFactory.FromVanilla("segment1", 0f, 20f, 0f, -3f, 0f, -2.5f, 6f, 4f, 5f, 0, 5),
-            LegacyModelPartFactory.FromVanilla("segment2", 0f, 21f, 3f, -1.5f, 0f, -0.5f, 3f, 3f, 1f, 0, 14),
-            LegacyModelPartFactory.FromVanilla("segment3", 0f, 22f, 4f, -0.5f, 0f, -0.5f, 1f, 2f, 1f, 0, 18)
+            RawModelPartFactory.FromVanilla("segment0", 0f, 21f, -3.5f, -2f, 0f, -1f, 4f, 3f, 2f, 0, 0),
+            RawModelPartFactory.FromVanilla("segment1", 0f, 20f, 0f, -3f, 0f, -2.5f, 6f, 4f, 5f, 0, 5),
+            RawModelPartFactory.FromVanilla("segment2", 0f, 21f, 3f, -1.5f, 0f, -0.5f, 3f, 3f, 1f, 0, 14),
+            RawModelPartFactory.FromVanilla("segment3", 0f, 22f, 4f, -0.5f, 0f, -0.5f, 1f, 2f, 1f, 0, 18)
         };
         AssertPartsMatch(expected, EndermiteModelDefinition.Definition.Parts);
     }

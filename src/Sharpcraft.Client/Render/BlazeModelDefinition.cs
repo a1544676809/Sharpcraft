@@ -17,16 +17,16 @@ public static class BlazeModelDefinition
     private static readonly VanillaMeshDefinition BlazeMesh = BuildBlazeMesh();
 
     private static readonly CompiledEntityModel BlazeCompiled =
-        VanillaMeshBakery.Build(BlazeMesh, 64, 32);
+        VanillaMeshBakery.Build(BlazeMesh, 64, 32, modelHeight: 0f, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Definition = new(
         "blaze",
         64,
         32,
-        [.. VanillaMeshBake.Bake(BlazeMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/blaze/blaze",
-        compiled: BlazeCompiled);
+        [.. VanillaMeshBake.Bake(BlazeMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
+        faceTransforms: null,
+        texturePath: "entity/blaze/blaze",
+        compiled: BlazeCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildBlazeMesh()
     {

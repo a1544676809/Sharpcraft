@@ -28,7 +28,7 @@ public sealed class NetherModelDefinitionTests
     }
 
     [Fact]
-    public void BlazePartsMatchLegacyFromVanillaRecords()
+    public void BlazePartsMatchSourceFrameRecords()
     {
         AssertPartsMatch(ExpectedBlazeParts(), BlazeModelDefinition.Definition.Parts);
     }
@@ -159,7 +159,7 @@ public sealed class NetherModelDefinitionTests
     {
         var parts = new List<EntityModelPart>
         {
-            LegacyModelPartFactory.FromVanilla("head", 0f, 0f, 0f, -4f, -4f, -4f, 8f, 8f, 8f, 0, 0)
+            RawModelPartFactory.FromVanilla("head", 0f, 0f, 0f, -4f, -4f, -4f, 8f, 8f, 8f, 0, 0)
         };
         var angle = 0f;
         for (var i = 0; i < 4; i++)
@@ -186,7 +186,7 @@ public sealed class NetherModelDefinitionTests
     }
 
     private static void AddRod(List<EntityModelPart> parts, int index, float x, float y, float z) =>
-        parts.Add(LegacyModelPartFactory.FromVanilla($"part{index}", x, y, z, 0f, 0f, 0f, 2f, 8f, 2f, 0, 16));
+        parts.Add(RawModelPartFactory.FromVanilla($"part{index}", x, y, z, 0f, 0f, 0f, 2f, 8f, 2f, 0, 16));
 
     private static EntityModelPart[] ExpectedGhastParts()
     {

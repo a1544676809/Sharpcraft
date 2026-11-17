@@ -77,8 +77,47 @@ public sealed class LivingRawReferenceSampleTests
         { "allay-raw-vectors.reference.txt", AllayModelDefinition.Definition, 32, 32, "entity/allay/allay", 168, 0, 120, 48 },
         // task-81: CopperGolem entity raw, nested part paths resolved via full parent chain.
         // Counts = (total, mirror, checked, degenerate) from jar probe: 216 rows, no mirrors/degenerate.
-        { "copper-golem-raw-vectors.reference.txt", CopperGolemModelDefinition.Definition, 64, 64, "entity/copper_golem/copper_golem", 216, 0, 216, 0 }
+        { "copper-golem-raw-vectors.reference.txt", CopperGolemModelDefinition.Definition, 64, 64, "entity/copper_golem/copper_golem", 216, 0, 216, 0 },
+        // task-94 special/large first group (total, mirror, checked, degenerate).
+        { "shulker-raw-vectors.reference.txt", ShulkerModelDefinition.Definition, 64, 64, "entity/shulker/shulker", 72, 0, 72, 0 },
+        { "blaze-raw-vectors.reference.txt", BlazeModelDefinition.Definition, 64, 32, "entity/blaze/blaze", 312, 0, 312, 0 },
+        // breeze BLOCKED (special DSL/jar geometry gap, task-94)
+        // creaking BLOCKED (special DSL/jar geometry gap, task-94)
+        { "endermite-raw-vectors.reference.txt", EndermiteModelDefinition.Definition, 64, 32, "entity/endermite/endermite", 96, 0, 96, 0 },
+        // ghast BLOCKED (special DSL/jar geometry gap, task-94)
+        // happy-ghast BLOCKED (Scale=4 layer-scale root offset #141; stays legacy)
+        // giant BLOCKED (special DSL/jar geometry gap, task-94)
+        // guardian BLOCKED (special DSL/jar geometry gap, task-94)
+        // iron-golem BLOCKED (special DSL/jar geometry gap, task-94)
     };
+
+    /// <summary>
+    /// Guards against isolated-definition false greens: the production definitions migrated in the
+    /// task-94 special batch must themselves carry the raw source-frame flags. The sample test below
+    /// rebuilds an isolated definition for one part at a time, so a production definition missing these
+    /// flags would still pass the model-space samples while the real living entity renders the legacy way.
+    /// </summary>
+    [Fact]
+    public void Task94MigratedProductionDefinitionsCarryRawSourceFrameFlags()
+    {
+        // Guards isolated-definition false greens: the model-space sample test rebuilds a one-part
+        // definition with raw flags, so a production definition missing them would still pass samples
+        // while the real living entity renders the legacy way (the Blaze regression this fixes).
+        // HappyGhast is Scale != 1 and stays legacy pending the layer-scale root-offset spec (#141).
+        var migrated = new (string Name, EntityModelDefinition Def)[]
+        {
+            ("shulker", ShulkerModelDefinition.Definition),
+            ("blaze", BlazeModelDefinition.Definition),
+            ("endermite", EndermiteModelDefinition.Definition)
+        };
+        foreach (var (name, def) in migrated)
+        {
+            Assert.True(def.RawSourceFrame, $"{name}: production definition must be rawSourceFrame");
+            Assert.Equal(0f, def.BaselinePx);
+            Assert.Equal(24f, def.SourceFrameBaselinePx);
+            Assert.Null(def.FaceTransforms is { Count: > 0 } ? def.FaceTransforms : null);
+        }
+    }
 
     [Theory]
     [MemberData(nameof(Families))]
@@ -125,7 +164,7 @@ public sealed class LivingRawReferenceSampleTests
             var sourceNames = sourceParts.Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
             var partOrder = definition.Parts.Where(p => sourceNames.Contains(p.Name) || IsAncestorOf(p, targetName, definition)).ToArray();
             var single = new EntityModelDefinition(definition.Name, width, height, partOrder,
-                texturePath: texturePath, baselinePx: 0f, rawSourceFrame: true);
+                texturePath: texturePath, scale: definition.Scale, baselinePx: 0f, rawSourceFrame: true);
             var geometry = BuildModelSpace(single, MakeLivingState(180f), width, height, atlas);
             var source = group.OrderBy(r => r.Polygon).ThenBy(r => r.Vertex).ToArray();
             // The target's 24 vertices are emitted after all preceding parts in partOrder; each part

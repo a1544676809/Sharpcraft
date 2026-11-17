@@ -796,3 +796,11 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 
 - 源 jar baked ModelPart 几何与 DSL 声明在 1e-5 下系统性不符（pivot/旋转/多 cube head 拆 flat）；horse/cat/polar-bear 另有 `MeshTransformer.scaling` root 偏移（#134 同类）未建模。
 - 已生成 27 个 #128 归一化 jar 样本（render-unit，1e-5）落盘 `tests/.../Repro/Data/` 作为验收真值；不放宽容差、不按样本拟合、不排除顶点。
+### task-94 special/large 第一组（#102 / #140）
+
+10 族试迁移结果：**Shulker/Blaze/Endermite 3 族源正确并切 raw**；HappyGhast（Scale=4）因 layer-scale root yOffset 的 living 路径缺口归 **#141 / R-034**，保持 legacy；Breeze/Creaking/Ghast/Giant/Guardian/IronGolem 6 族因 DSL 几何与 jar 源真值在 1e-5 下系统性不符（multi-cube head、layer-scale pivot、真实 Mirror）保持 legacy，归 **#140 / R-033**。即 **共 7 族 legacy blocker**（6 族归 #140 + HappyGhast 归 #141）。10 个 #128 归一化 jar 样本落盘 `Repro/Data/` 作为验收真值；不放宽容差、不拟合、不排除顶点。
+### task-97/98 layer-scale root offset 拆分（#102 / #141）
+
+Blaze production definition 补齐 `rawSourceFrame:true`/`baselinePx:0`（此前只在 bake 调用上有，真实 living 渲染仍走 legacy）；新增测试 `Task94MigratedProductionDefinitionsCarryRawSourceFrameFlags` 防止隔离定义误绿。
+
+HappyGhast（Scale=4）**保持 legacy**：源 `MeshTransformer.scaling` 的 root yOffset `24.016*(1-factor)` 仅 `BuildModel` 路径已补，living 路径（factory=null）缺该偏移且符号/应用点待源真值规格，独立登记 R-034 / Issue #141（Husk/WitherSkeleton/Illager/Villager/Witch/Horse/Cat/PolarBear 等所有 Scale!=1 raw 族同类）。10 个 #128 jar 样本保留作验收真值，不放宽容差。
