@@ -68,7 +68,9 @@ public sealed class ItemInHandMesher
                 }
 
                 var armName = offhand ? "left_arm" : "right_arm";
-                var handFrame = EntityModelMesher.PartWorldMatrix(model, entity, armName, pose);
+                var handFrame = model.RawSourceFrame
+                    ? EntityModelMesher.LegacyHandWorldMatrix(model, entity, armName, pose)
+                    : EntityModelMesher.PartWorldMatrix(model, entity, armName, pose);
                 var stab = IsStabSwingOnHand(entity, offhand)
                     ? SpearAnimations.ThirdPersonAttackItemMatrix(entity.SwingAnimation, jetForward: 0f)
                     : System.Numerics.Matrix4x4.Identity;

@@ -419,6 +419,98 @@ public sealed partial class EntityModelMesher
 
         return found ?? Matrix4x4.Identity;
     }
+    /// <summary>
+    /// Held-item-only legacy hand frame for a raw source-frame model. The reference's item-in-hand anchor was
+    /// fitted against the legacy baked hand frame; raw part pivots are source-frame values, so replaying the
+    /// legacy root-pivot conjugation here keeps that anchor valid without changing raw geometry or the generic
+    /// <see cref="PartWorldMatrix"/> semantics.
+    /// </summary>
+    /// <remarks>
+    /// For a root child the legacy bake maps a source pivot <c>(x, y, z)</c> to
+    /// <c>(-x, modelHeight - y, z)</c>; child pivots already use the parent-local frame and fall back to the
+    /// existing <see cref="PartWorldMatrix"/> path (e.g. CopperGolem's arm is a child of body).
+    /// </remarks>
+    public static Matrix4x4 LegacyHandWorldMatrix(
+        EntityModelDefinition definition,
+        EntityRenderState entity,
+        string partName,
+        EntityPose? pose = null,
+        bool applyRootPose = true)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        var compiled = definition.Compiled;
+        if (compiled is null)
+        {
+            return Matrix4x4.Identity;
+        }
+
+        var target = FindNode(compiled.Root, partName);
+        if (target is null)
+        {
+            return Matrix4x4.Identity;
+        }
+
+        if (target.Parent is not null)
+        {
+            return PartWorldMatrix(definition, entity, partName, pose, applyRootPose, rawSourceFrame: false);
+        }
+
+        var px = (1f / 16f) * EntityPlaceholderMesher.ModelScale * definition.Scale;
+        var rootPose = applyRootPose ? pose?.Get(compiled.Root.Name) ?? PoseOffset.Zero : PoseOffset.Zero;
+        var rootFrame = Matrix4x4.CreateScale(new Vector3(
+                1f + rootPose.Scale.X,
+                1f + rootPose.Scale.Y,
+                1f + rootPose.Scale.Z))
+            * RotationZyx(-rootPose.Rotation.X, -rootPose.Rotation.Y, rootPose.Rotation.Z)
+            * Matrix4x4.CreateTranslation(rootPose.Position * px);
+
+        var poseName = target.PoseSource ?? target.Name;
+        var poseOffset = pose?.Get(poseName) ?? PoseOffset.Zero;
+        var rotation = new Vector3(target.RotationX, target.RotationY, target.RotationZ);
+        if (target.RotationSelector is { } rotationSelector)
+        {
+            rotation = rotationSelector(entity);
+        }
+
+        var yOffset = target.YOffsetSelector?.Invoke(entity) ?? 0f;
+        var sourcePivot = new Vector3(
+            target.PivotX + poseOffset.Position.X,
+            target.PivotY + poseOffset.Position.Y + yOffset,
+            target.PivotZ + poseOffset.Position.Z);
+        var legacyPivot = new Vector3(
+            -sourcePivot.X,
+            definition.SourceFrameBaselinePx - sourcePivot.Y,
+            sourcePivot.Z);
+        var local = Matrix4x4.CreateScale(new Vector3(
+                1f + poseOffset.Scale.X,
+                1f + poseOffset.Scale.Y,
+                1f + poseOffset.Scale.Z))
+            * RotationZyx(
+                rotation.X - poseOffset.Rotation.X,
+                rotation.Y - poseOffset.Rotation.Y,
+                rotation.Z + poseOffset.Rotation.Z)
+            * Matrix4x4.CreateTranslation(legacyPivot * px);
+        return local * rootFrame;
+    }
+
+    private static EntityModelPartNode? FindNode(EntityModelPartNode node, string name)
+    {
+        if (string.Equals(node.Name, name, StringComparison.Ordinal))
+        {
+            return node;
+        }
+
+        foreach (var child in node.ChildArray)
+        {
+            if (FindNode(child, name) is { } found)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
     private static Matrix4x4 RotationZyx(float rx, float ry, float rz) =>
         Matrix4x4.CreateRotationX(rx) * Matrix4x4.CreateRotationY(ry) * Matrix4x4.CreateRotationZ(rz);
 

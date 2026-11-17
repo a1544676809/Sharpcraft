@@ -736,12 +736,13 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收证据**：`tests/Sharpcraft.Client.Tests/Repro/Data/banner-vectors.golden.txt`（36 组：16 ground + 4 wall + 8 phase×2，4 组 jar 锚点 + 源公式派生）与 `BannerGoldenTests.EveryVertexMatchesTheReference`（逐顶点位置+UV 全元组严格比较）；旧的 `TheFlagTiltIsInvertedUntilIssue111IsFixed` 量化钉死测试已删除。详见 `docs/modules/render-block-entities.md`。
 
 
-### SIM-ENTITY-RAW-HELD-ITEM：持有物手持挂点帧口径（设计选择，已源验证）
-- **结论（task-91 / Issue #120 关闭）**：`PartWorldMatrix` 的 raw 分支**不需要**接到手持物用途。当前路径（`EntityModelTransform.From(entity).ToMatrix()` + legacy `PartWorldMatrix(hand)` + jar 拟合 `ReferenceFrame.HeldItemAnchor`）已由 jar 原版基准样本证明源正确，故本条从"未接线/进行中"改为"已验证的设计选择"，关闭 Issue #120。
-- **为何 legacy 手帧对 raw 实体已源正确**：jar 探针 `ref://mc-26.3-analysis/vectors/HeldItemHandFrameProbe.java`（真实 `ModelPart.translateAndRotate` 链 root→body→right_arm，归一化 v/16）给出 CopperGolem right_arm 挂点 origin `(-0.25, 0.8125, 0)`；乘 modelScale 0.9 得 `(-0.225, 0.73125, 0)`，与我们的 legacy `PartWorldMatrix(right_arm)` origin 逐值一致。
-- **为何不切 raw**：`HeldItemAnchor` 是由 jar 世界矩阵拟合（`D·anchor·H_ours = W_ref·K`）并绑定当前 legacy 手帧；实测把 hand frame 切 `rawSourceFrame:true` 后，`anchor·hand·entity` 全合成在 4 个探针点偏差 0.86~1.78 块（约 1.07 块），会让手持物整体错位。切 raw 需要重采 jar 全合成矩阵并重拟合 anchor，影响面超出本切片。
-- **对可观测行为的影响**：无——现有手持物位置源正确且 jar 验证通过（14/14：`ItemInHandPlacementComparisonTests` / `ItemInHandAnchorTests` / `PartWorldMatrixTests`）。
-- **状态**：`已解决（设计选择）`，风险 R-026 同步更新，Issue #120 关闭。探针证据保留在分析工作区，现有 ItemInHand 测试不删。
+### SIM-ENTITY-RAW-HELD-ITEM：持有物手持挂点帧口径（raw humanoid helper，已解决）
+
+- **结论（task-110 / #120/#134）**：`PartWorldMatrix` 的 raw 分支仍不接手持物通用语义；新增仅 held-item 使用的 `EntityModelMesher.LegacyHandWorldMatrix`，由 `ItemInHandMesher` 在 raw 模型上调用。raw 本体几何、通用 `PartWorldMatrix` 与 legacy 实体路径不变。
+- **公式**：源 root child pivot `(x,y,z)` 经 legacy bake 共轭为 `(-x, modelHeight-y, z)`；旋转仍按 legacy `X-poseX, Y-poseY, Z+poseZ`。`modelHeight` 取 `definition.SourceFrameBaselinePx`。raw child arm（如 CopperGolem body→right_arm）保持现有 source-pivot 帧，回退到 `PartWorldMatrix(rawSourceFrame:false)`；其 jar probe `HeldItemHandFrameProbe` origin `(-0.25,0.8125,0)×0.9=(-0.225,0.73125,0)` 已验证。
+- **为什么需要**：raw humanoid 的 `right_arm` 是 root child，raw pivot `(-5,2)` 直接用于 legacy 手帧会得到 `(-0.28125,0.1125)`；jar 期望 legacy 共轭 pivot `(5,22)×0.9/16=(0.28125,1.2375)`。helper 只转换 root child pivot，避免破坏已拟合的 `ReferenceFrame.HeldItemAnchor`。
+- **验收**：`LegacyHandFrameTests` 对 raw Zombie/Skeleton/Player 的 rest+raised hand frame 与 legacy bake 矩阵 1e-5；`ItemInHandPlacementComparisonTests` 4 个 pose×display 组合、`TheFrameMap...` 保留原 jar 期望；raw child CopperGolem fallback 保持 `(-0.225,0.73125,0)`。
+- **状态**：`已解决`（Issue #120 维持“设计选择已源验证”；#134 的 raw humanoid 迁移使用该 helper）。
 <!-- simplification:SIM-ENTITY-RAW-HELD-ITEM task:T-41 -->
 
 ### SIM-ENTITY-RAW-MIRROR：raw mirror 部件顶点/面语义不完整

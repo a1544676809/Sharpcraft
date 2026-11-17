@@ -75,8 +75,13 @@ public sealed class ItemInHandPlacementComparisonTests
         return pose;
     }
 
-    private static Matrix4x4 Hand(EntityPose? pose) =>
-        EntityModelMesher.PartWorldMatrix(Definition(), Entity(), "right_arm", pose);
+    private static Matrix4x4 Hand(EntityPose? pose)
+    {
+        var definition = Definition();
+        return definition.RawSourceFrame
+            ? EntityModelMesher.LegacyHandWorldMatrix(definition, Entity(), "right_arm", pose)
+            : EntityModelMesher.PartWorldMatrix(definition, Entity(), "right_arm", pose);
+    }
 
     private static EntityModelDefinition Definition() =>
         EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId);
