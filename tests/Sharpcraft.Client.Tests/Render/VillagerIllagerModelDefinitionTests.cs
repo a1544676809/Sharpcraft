@@ -160,21 +160,23 @@ public sealed class VillagerIllagerModelDefinitionTests
             [null, "head", "nose", "head", "hat", "hat2", "hat3", null, "body", null, "arms", "arms", null, null]);
     }
 
+    // task-95: source-frame records for the migrated villager (raw bake, hat/hat_rim independent).
+    // Source: ref://mc-26.3-analysis/src/net/minecraft/client/model/npc/VillagerModel.java:41-63.
     private static EntityModelPart[] ExpectedVillagerParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("head", 0f, 0f, 0f, -4f, -10f, -4f, 8f, 10f, 8f, 0, 0, mirrorX: false),
-        LegacyModelPartFactory.FromVanillaChild("hat", "head", 0f, 0f, 0f, -4f, -10f, -4f, 8f, 10f, 8f, 32, 0, grow: 0.51f),
-        LegacyModelPartFactory.FromVanillaChild("hat_rim", "hat", 0f, 0f, 0f, -8f, -8f, -6f, 16f, 16f, 1f, 30, 47,
+        RawModelPartFactory.FromVanilla("head", 0f, 0f, 0f, -4f, -10f, -4f, 8f, 10f, 8f, 0, 0),
+        RawModelPartFactory.FromVanillaChild("hat", "head", 0f, 0f, 0f, -4f, -10f, -4f, 8f, 10f, 8f, 32, 0, grow: 0.51f),
+        RawModelPartFactory.FromVanillaChild("hat_rim", "hat", 0f, 0f, 0f, -8f, -8f, -6f, 16f, 16f, 1f, 30, 47,
             rotationX: -MathF.PI / 2f),
-        LegacyModelPartFactory.FromVanillaChild("nose", "head", 0f, -2f, 0f, -1f, -1f, -6f, 2f, 4f, 2f, 24, 0),
-        LegacyModelPartFactory.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -3f, 8f, 12f, 6f, 16, 20, mirrorX: false),
-        LegacyModelPartFactory.FromVanillaChild("jacket", "body", 0f, 0f, 0f, -4f, 0f, -3f, 8f, 20f, 6f, 0, 38, grow: 0.5f),
-        LegacyModelPartFactory.FromVanilla("arms", 0f, 3f, -1f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0, mirrorX: false, rotationX: 0.75f),
-        LegacyModelPartFactory.FromVanillaChild("arms_left", "arms", 0f, 0f, 0f, -8f, -2f, -2f, 4f, 8f, 4f, 44, 22),
-        LegacyModelPartFactory.FromVanillaChild("arms_right", "arms", 0f, 0f, 0f, 4f, -2f, -2f, 4f, 8f, 4f, 44, 22, mirror: true),
-        LegacyModelPartFactory.FromVanillaChild("arms_middle", "arms", 0f, 0f, 0f, -4f, 2f, -2f, 8f, 4f, 4f, 40, 38),
-        LegacyModelPartFactory.FromVanilla("right_leg", -2f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 22),
-        LegacyModelPartFactory.FromVanilla("left_leg", 2f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 22, mirror: true)
+        RawModelPartFactory.FromVanillaChild("nose", "head", 0f, -2f, 0f, -1f, -1f, -6f, 2f, 4f, 2f, 24, 0),
+        RawModelPartFactory.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -3f, 8f, 12f, 6f, 16, 20),
+        RawModelPartFactory.FromVanillaChild("jacket", "body", 0f, 0f, 0f, -4f, 0f, -3f, 8f, 20f, 6f, 0, 38, grow: 0.5f),
+        RawModelPartFactory.FromVanilla("arms", 0f, 3f, -1f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0, rotationX: -0.75f),
+        RawModelPartFactory.FromVanillaChild("arms_left", "arms", 0f, 0f, 0f, -8f, -2f, -2f, 4f, 8f, 4f, 44, 22),
+        RawModelPartFactory.FromVanillaChild("arms_right", "arms", 0f, 0f, 0f, 4f, -2f, -2f, 4f, 8f, 4f, 44, 22, mirror: true),
+        RawModelPartFactory.FromVanillaChild("arms_middle", "arms", 0f, 0f, 0f, -4f, 2f, -2f, 8f, 4f, 4f, 40, 38),
+        RawModelPartFactory.FromVanilla("right_leg", -2f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 22),
+        RawModelPartFactory.FromVanilla("left_leg", 2f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 22, mirror: true)
     ];
 
     private static EntityModelPart[] ExpectedZombieVillagerParts() =>
