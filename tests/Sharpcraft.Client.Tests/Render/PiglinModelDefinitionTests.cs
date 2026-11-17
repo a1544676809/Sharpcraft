@@ -34,20 +34,23 @@ public sealed class PiglinModelDefinitionTests
     [Fact]
     public void HumanoidPrefixEqualsAdultPartsMinusHead()
     {
-        var expected = new List<EntityModelPart>();
-        foreach (var part in PlayerModelDefinition.AdultParts)
+        // Piglin now owns an independent body DSL (source literals), so the expected body parts are
+        // written out here instead of derived from PlayerModelDefinition.AdultParts (which is raw and
+        // carries the independent hat/jacket/sleeve/pants overlays). These are the 5 source body parts
+        // of AdultPiglinModel (PlayerModel.createMesh body/arms/legs with CubeDeformation.NONE).
+        var expected = new[]
         {
-            if (part.Name != "head")
-            {
-                expected.Add(part);
-            }
-        }
+            LegacyModelPartFactory.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16),
+            LegacyModelPartFactory.FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 32, 48),
+            LegacyModelPartFactory.FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16),
+            LegacyModelPartFactory.FromVanilla("left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 16, 48),
+            LegacyModelPartFactory.FromVanilla("right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16)
+        };
 
-        Assert.Equal(5, expected.Count);
         foreach (var definition in Definitions())
         {
             Assert.Equal(11, definition.Parts.Count);
-            for (var i = 0; i < expected.Count; i++)
+            for (var i = 0; i < expected.Length; i++)
             {
                 ModelPartAssertions.AssertEqual(expected[i], definition.Parts[i]);
             }

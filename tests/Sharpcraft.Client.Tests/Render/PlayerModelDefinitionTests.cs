@@ -13,51 +13,60 @@ public sealed class PlayerModelDefinitionTests
     public void TheAdultModelHasTheReferencePartsAndDimensions()
     {
         var parts = PlayerModelDefinition.AdultParts;
-
-        Assert.Equal(6, parts.Length);
-        AssertPart(parts, "head", 0f, 24f, 8f, 8f, 8f);
-        AssertPart(parts, "body", 0f, 12f, 8f, 12f, 4f);
-        AssertPart(parts, "left_arm", -6f, 12f, 4f, 12f, 4f);
-        AssertPart(parts, "right_arm", 6f, 12f, 4f, 12f, 4f);
-        AssertPart(parts, "left_leg", -1.9f, 0f, 4f, 12f, 4f);
-        AssertPart(parts, "right_leg", 1.9f, 0f, 4f, 12f, 4f);
+        // Source-frame bakes emit the 6 base parts plus their 6 independent inflated overlay children.
+        Assert.Equal(12, parts.Length);
+        AssertPart(parts, "head", 0f, -8f, 8f, 8f, 8f);
+        AssertPart(parts, "body", 0f, 0f, 8f, 12f, 4f);
+        AssertPart(parts, "left_arm", 6f, 0f, 4f, 12f, 4f);
+        AssertPart(parts, "right_arm", -6f, 0f, 4f, 12f, 4f);
+        AssertPart(parts, "left_leg", 1.9f, 12f, 4f, 12f, 4f);
+        // Raw bake rounds the 1.9 pivot to 4 decimals; compare with tolerance.
+        var rightLeg = Assert.Single(parts, candidate => candidate.Name == "right_leg");
+        Assert.True(MathF.Abs(rightLeg.CentreX - (-1.9f)) < 1e-5f, $"right_leg CentreX={rightLeg.CentreX}");
+        Assert.Equal(12f, rightLeg.Bottom);
+        Assert.Equal(4f, rightLeg.Width);
+        foreach (var name in new[] { "hat", "jacket", "left_sleeve", "right_sleeve", "left_pants", "right_pants" })
+        {
+            Assert.Contains(parts, candidate => candidate.Name == name);
+        }
     }
 
     [Fact]
     public void TheModelIsThirtyTwoPixelsTall()
     {
-        var head = PlayerModelDefinition.AdultParts[0];
+        // The raw source frame keeps y-down model pixels; the head spans y [-8, 0] around its pivot,
+        // and the model's full height is the declared 32px constant. Legacy y-up had bottom 24.
         Assert.Equal(32f, PlayerModelDefinition.ModelPixels);
-        Assert.Equal(32f, head.Bottom + head.Height);
+        var head = PlayerModelDefinition.AdultParts.Single(p => p.Name == "head");
+        Assert.Equal(-8f, head.Bottom);
+        Assert.Equal(0f, head.Bottom + head.Height);
     }
 
-    /// <summary>
-    /// T-671: proves the DSL-baked AdultParts are identical to the legacy FromVanilla records, as a first real-model
-    /// migration check. Uses the shared value comparer because record equality is not a valid oracle for parts with
-    /// reference-typed overlay lists.
-    /// </summary>
     [Fact]
-    public void AdultPartsMatchTheLegacyFromVanillaRecords()
+    public void AdultPartsMatchTheSourceFrameRecords()
     {
+        // Independent source literals (RawModelPartFactory): 6 base parts with their independent
+        // inflated overlay children, never the C# bake output.
         var expected = new[]
         {
-            LegacyModelPartFactory.FromVanilla("head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0,
-                overlays: [new("hat", 0.5f, 32, 0, Kind: EntityGeometryLayerKind.Translucent)]),
-            LegacyModelPartFactory.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16,
-                overlays: [new("jacket", 0.25f, 16, 32, Kind: EntityGeometryLayerKind.Translucent)]),
-            LegacyModelPartFactory.FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 32, 48,
-                overlays: [new("left_sleeve", 0.25f, 48, 48, Kind: EntityGeometryLayerKind.Translucent)]),
-            LegacyModelPartFactory.FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16,
-                overlays: [new("right_sleeve", 0.25f, 40, 32, Kind: EntityGeometryLayerKind.Translucent)]),
-            LegacyModelPartFactory.FromVanilla("left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 16, 48,
-                overlays: [new("left_pants", 0.25f, 0, 48, Kind: EntityGeometryLayerKind.Translucent)]),
-            LegacyModelPartFactory.FromVanilla("right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16,
-                overlays: [new("right_pants", 0.25f, 0, 32, Kind: EntityGeometryLayerKind.Translucent)])
+            RawModelPartFactory.FromVanilla("head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("hat", "head", 0f, 0f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 32, 0, grow: 0.5f, kind: EntityGeometryLayerKind.Translucent),
+            RawModelPartFactory.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16),
+            RawModelPartFactory.FromVanillaChild("jacket", "body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 32, grow: 0.25f, kind: EntityGeometryLayerKind.Translucent),
+            RawModelPartFactory.FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 32, 48),
+            RawModelPartFactory.FromVanillaChild("left_sleeve", "left_arm", 0f, 0f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 48, 48, grow: 0.25f, kind: EntityGeometryLayerKind.Translucent),
+            RawModelPartFactory.FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16),
+            RawModelPartFactory.FromVanillaChild("right_sleeve", "right_arm", 0f, 0f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 32, grow: 0.25f, kind: EntityGeometryLayerKind.Translucent),
+            RawModelPartFactory.FromVanilla("left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 16, 48),
+            RawModelPartFactory.FromVanillaChild("left_pants", "left_leg", 0f, 0f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 48, grow: 0.25f, kind: EntityGeometryLayerKind.Translucent),
+            RawModelPartFactory.FromVanilla("right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16),
+            RawModelPartFactory.FromVanillaChild("right_pants", "right_arm", 0f, 0f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 32, grow: 0.25f, kind: EntityGeometryLayerKind.Translucent)
         };
+        // Fix right_pants parent (source: child of right_leg).
+        expected[11] = RawModelPartFactory.FromVanillaChild("right_pants", "right_leg", 0f, 0f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 32, grow: 0.25f, kind: EntityGeometryLayerKind.Translucent);
 
         var actual = PlayerModelDefinition.AdultParts;
         Assert.Equal(expected.Length, actual.Length);
-        // Record equality is not a valid migration oracle (OverlayLayers is reference-typed); compare by value.
         for (var i = 0; i < expected.Length; i++)
         {
             ModelPartAssertions.AssertEqual(expected[i], actual[i]);

@@ -789,7 +789,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **公式（task-123 定稿）**：`PoseOffset` 存**源字面值** position `(PosX, PosY, PosZ)` + rotation `(RotX, RotY, RotZ)`；living raw 的 mesher 合成时做 X/Z 共轭：`rotation = (baseX - poseX, baseY + poseY, baseZ - poseZ)`，位置直接 `pivot + pose`。legacy 保持 `(-PosX,-PosY,PosZ)` + `(RotX,RotY,RotZ)`；block raw（Banner/BoxProbe 等）保持作者源字面，不做 animation 共轭。attack 源 delta：`dx = 5 - cos(bodyYRot)*5`、`dz = sin(bodyYRot)*5`（源 pivot -5）。
 - **修复**：`HumanoidModelPose.ToOffset(raw)` 不再取负 X/Z；`NodeFrame`/`PartFrame`/`PartWorldMatrix` 在 living raw 路径合成 `-X/+Y/-Z` pose 共轭，block 路径不变；legacy 分支不变。raw 帧的 attack 源 delta 按 `dx = 5 - cos(bodyYRot)*5` 重建；分支回归用测试内直接构造的 raw Zombie/Skeleton 定义 + `HumanoidModelPose.Apply(..., rawSourceFrame:true)`，不依赖当前 registry 的迁移状态。
 - **验证**：`RawHumanoidAttackArmTests` 2/2（raw Zombie 几何 world X delta ≤0.08；raw Skeleton 源 pivot delta ≤0.08 + 源 absolute position 公式）；legacy `HumanoidAttackArmTests` 2/2 期望未改。held-item/spear/elytra 定向 27/27；全量 3,493 passed / 0 failed（Client 2,530）；三门禁绿。
-- **集成状态**：当前 main 的 HumanoidMob/Player 定义仍 legacy，raw registry 分支的 `HumanoidAttackArmTests` 需在 #108 raw 定义合入后复跑；本 diff 不把“registry raw 2/2”当作已集成证据。Player/Player-slim 严格样本的 `FlatPartsForSampleCube` harness 缺口属 raw-entities 外部 WIP，未混入本 diff。
+- **集成状态（历史记录，已由 task-121/128 取代）**：本 task-116 落地时 HumanoidMob/Player 定义仍 legacy；随后 task-121 迁移 7 个 HumanoidMob 族、task-128 迁移 Player/player-slim 并解耦 Piglin，raw registry 已覆盖这些族。当时 Player/Player-slim 的 `FlatPartsForSampleCube` harness 缺口已在 task-128 用独立 overlay child part 解决。
 
 ### task-95 humanoid hat 独立 cube（#134）——部分解阻塞
 
@@ -830,4 +830,9 @@ HappyGhast（Scale=4）在 #141/R-034 规格与 raw living 实现落地后，由
 task-121 用 jar 源 probe（`HumanoidAnimProbe`，源 `head.xRot=state.xRot*PI/180`、`head.y+=4.2F` 等字面值）配合 core PR #153（PoseOffset 存源字面值、共轭移入 raw mesher）解除动画阻塞。结果：
 
 - **7 族已切 raw 并全绿**：Skeleton/Stray/WitherSkeleton/Husk/Drowned/Enderman/Zombie。严格 1e-5 样本 + 11 个源动画断言（crouch/swim/head pose/attack）全通过；crouch head `+4.2` 断言按源字面值更新（PR #153 后 raw pose 存源值）。定义/resolver/tree 期望按独立源字面 `RawModelPartFactory` + 独立 hat 子 part 更新，bake hash 仅变更检测器刷新。
-- **仍阻塞（保持 legacy）**：Player/player-slim（raw 会污染 legacy Piglin 的 parts 复用帧，Player 保持 legacy）、Bogged（head 蘑菇零深度多 cube）、Witch/ZombieVillager/Piglin×3（ears + 衣服 overlay / 多 cube head DSL 缺口）。28 个 #128 样本保留作验收真值。不放宽容差、不拟合、不排除顶点。R-035 / Issue #150 更新为剩余 blocker。
+- **后续（task-121 当时仍阻塞，已由 task-128 更新）**：Player/player-slim 当时因 parts 复用耦合保持 legacy；task-128 已用 Piglin 独立 legacy 身体 DSL 解耦并迁移 Player/player-slim，当前以 task-128 段为准。task-121 当时其余 blocker：Bogged（头蘑菇零深度多 cube）、Witch/ZombieVillager/Piglin×3（ears + 衣服 overlay / 多 cube head DSL 缺口）。28 个 #128 样本保留作验收真值；不放宽容差、不拟合、不排除顶点。
+### task-128 Player raw + Piglin 解耦（#102 / #150）
+
+Player/player-slim 切 raw：hat/jacket/sleeve/pants 转为独立 inflated child cube（源 `PlayerModel.createMesh` 结构），严格 1e-5 样本 55/55，held/attack/elytra 回归由 core PR #147/#148/#149 覆盖。Piglin 改用独立 legacy 身体 DSL（5 身体 part 源字面，不引用 Player DSL/baked parts），保持现有 11-part legacy 结构与行为不变。
+
+**已知简化**：源 `AdultPiglinModel.createBodyLayer`（jar probe）含 jacket/sleeve/pants overlay 子 part，legacy Piglin 未建模——既有结构简化，登记 R-035 / #150，本次不改（改会破坏 legacy 行为）。Bogged/Witch/ZombieVillager/Piglin×3 仍 legacy blocker，不声称源正确。
