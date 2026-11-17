@@ -736,12 +736,12 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **验收证据**：`tests/Sharpcraft.Client.Tests/Repro/Data/banner-vectors.golden.txt`（36 组：16 ground + 4 wall + 8 phase×2，4 组 jar 锚点 + 源公式派生）与 `BannerGoldenTests.EveryVertexMatchesTheReference`（逐顶点位置+UV 全元组严格比较）；旧的 `TheFlagTiltIsInvertedUntilIssue111IsFixed` 量化钉死测试已删除。详见 `docs/modules/render-block-entities.md`。
 
 
-### SIM-ENTITY-RAW-HELD-ITEM：持有物/手持挂点未接 raw 帧
-- **简化了什么**：`ItemInHandMesher` 仍用 `EntityModelTransform.From(entity).ToMatrix()`，`PartWorldMatrix(..., rawSourceFrame)` 的 raw 参数未接调用方；raw 生物的手持物挂点仍走 legacy 共轭帧。
-- **为什么**：持有物模型本身尚未切 raw；本切片只迁移生物本体模型。
-- **对可观测行为的影响**：静态手持物与本体共用同一 frame 数学，未观测错位；raw 推广到持物生物时须补源 `ModelPart` 挂点逐点样本并接线 raw 参数。
-- **状态**：`进行中`，审计任务见风险 R-026 与独立 Issue #120。
-- **验收证据**：待持有物模型切 raw 后用源 ModelProbe 手持挂点逐点样本验证。
+### SIM-ENTITY-RAW-HELD-ITEM：持有物手持挂点帧口径（设计选择，已源验证）
+- **结论（task-91 / Issue #120 关闭）**：`PartWorldMatrix` 的 raw 分支**不需要**接到手持物用途。当前路径（`EntityModelTransform.From(entity).ToMatrix()` + legacy `PartWorldMatrix(hand)` + jar 拟合 `ReferenceFrame.HeldItemAnchor`）已由 jar 原版基准样本证明源正确，故本条从"未接线/进行中"改为"已验证的设计选择"，关闭 Issue #120。
+- **为何 legacy 手帧对 raw 实体已源正确**：jar 探针 `ref://mc-26.3-analysis/vectors/HeldItemHandFrameProbe.java`（真实 `ModelPart.translateAndRotate` 链 root→body→right_arm，归一化 v/16）给出 CopperGolem right_arm 挂点 origin `(-0.25, 0.8125, 0)`；乘 modelScale 0.9 得 `(-0.225, 0.73125, 0)`，与我们的 legacy `PartWorldMatrix(right_arm)` origin 逐值一致。
+- **为何不切 raw**：`HeldItemAnchor` 是由 jar 世界矩阵拟合（`D·anchor·H_ours = W_ref·K`）并绑定当前 legacy 手帧；实测把 hand frame 切 `rawSourceFrame:true` 后，`anchor·hand·entity` 全合成在 4 个探针点偏差 0.86~1.78 块（约 1.07 块），会让手持物整体错位。切 raw 需要重采 jar 全合成矩阵并重拟合 anchor，影响面超出本切片。
+- **对可观测行为的影响**：无——现有手持物位置源正确且 jar 验证通过（14/14：`ItemInHandPlacementComparisonTests` / `ItemInHandAnchorTests` / `PartWorldMatrixTests`）。
+- **状态**：`已解决（设计选择）`，风险 R-026 同步更新，Issue #120 关闭。探针证据保留在分析工作区，现有 ItemInHand 测试不删。
 <!-- simplification:SIM-ENTITY-RAW-HELD-ITEM task:T-41 -->
 
 ### SIM-ENTITY-RAW-MIRROR：raw mirror 部件顶点/面语义不完整
