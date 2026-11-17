@@ -19,8 +19,10 @@ public static class SnowGolemModelDefinition
         64,
         64,
         SnowGolemMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/snow_golem/snow_golem");
+        faceTransforms: null,
+        "entity/snow_golem/snow_golem",
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildSnowGolemMesh()
     {
@@ -29,7 +31,8 @@ public static class SnowGolemModelDefinition
             new VanillaCubeDefinition("head", 0, 0, -4f, -8f, -4f, 8f, 8f, 8f, Grow: -0.5f));
         root.AddOrReplaceChild("left_arm", VanillaPartPose.OffsetAndRotation(5f, 6f, 1f, 0f, 0f, 1f),
             new VanillaCubeDefinition("left_arm", 32, 0, -1f, 0f, -1f, 12f, 2f, 2f, Grow: -0.5f));
-        root.AddOrReplaceChild("right_arm", VanillaPartPose.OffsetAndRotation(-5f, 6f, -1f, 0f, MathF.PI, 1f),
+        // Source SnowGolemModel.createBodyLayer: right_arm zRot = -1.0F (source literal).
+        root.AddOrReplaceChild("right_arm", VanillaPartPose.OffsetAndRotation(-5f, 6f, -1f, 0f, MathF.PI, -1f),
             new VanillaCubeDefinition("right_arm", 32, 0, -1f, 0f, -1f, 12f, 2f, 2f, Grow: -0.5f));
         root.AddOrReplaceChild("upper_body", VanillaPartPose.Offset(0f, 13f, 0f),
             new VanillaCubeDefinition("upper_body", 0, 16, -5f, -10f, -5f, 10f, 10f, 10f, Grow: -0.5f));

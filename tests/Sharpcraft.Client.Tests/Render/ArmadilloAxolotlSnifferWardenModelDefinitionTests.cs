@@ -70,26 +70,26 @@ public sealed class ArmadilloAxolotlSnifferWardenModelDefinitionTests
     }
 
     [Fact]
-    public void SnifferPartsMatchLegacyRecords()
+    public void SnifferPartsMatchSourceFrameRecords()
     {
         var expected = new[]
         {
-            LegacyModelPartFactory.FromVanilla("bone", 0f, 5f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("body", "bone", 0f, 0f, 0f, -12.5f, -14f, -20f, 25f, 29f, 40f, 62, 68),
-            LegacyModelPartFactory.FromVanillaChild("body_outer", "body", 0f, 0f, 0f, -12.5f, -14f, -20f, 25f, 24f, 40f, 62, 0, grow: 0.5f),
-            LegacyModelPartFactory.FromVanillaChild("body_bottom", "body", 0f, 0f, 0f, -12.5f, 12f, -20f, 25f, 0f, 40f, 87, 68),
-            LegacyModelPartFactory.FromVanillaChild("right_front_leg", "bone", -7.5f, 10f, -15f, -3.5f, -1f, -4f, 7f, 10f, 8f, 32, 87),
-            LegacyModelPartFactory.FromVanillaChild("right_mid_leg", "bone", -7.5f, 10f, 0f, -3.5f, -1f, -4f, 7f, 10f, 8f, 32, 105),
-            LegacyModelPartFactory.FromVanillaChild("right_hind_leg", "bone", -7.5f, 10f, 15f, -3.5f, -1f, -4f, 7f, 10f, 8f, 32, 123),
-            LegacyModelPartFactory.FromVanillaChild("left_front_leg", "bone", 7.5f, 10f, -15f, -3.5f, -1f, -4f, 7f, 10f, 8f, 0, 87),
-            LegacyModelPartFactory.FromVanillaChild("left_mid_leg", "bone", 7.5f, 10f, 0f, -3.5f, -1f, -4f, 7f, 10f, 8f, 0, 105),
-            LegacyModelPartFactory.FromVanillaChild("left_hind_leg", "bone", 7.5f, 10f, 15f, -3.5f, -1f, -4f, 7f, 10f, 8f, 0, 123),
-            LegacyModelPartFactory.FromVanillaChild("head", "body", 0f, 6.5f, -19.48f, -6.5f, -7.5f, -11.5f, 13f, 18f, 11f, 8, 15),
-            LegacyModelPartFactory.FromVanillaChild("head_flat", "head", 0f, 0f, 0f, -6.5f, 7.5f, -11.5f, 13f, 0f, 11f, 8, 4),
-            LegacyModelPartFactory.FromVanillaChild("left_ear", "head", 6.51f, -7.5f, -4.51f, 0f, 0f, -3f, 1f, 19f, 7f, 2, 0),
-            LegacyModelPartFactory.FromVanillaChild("right_ear", "head", -6.51f, -7.5f, -4.51f, -1f, 0f, -3f, 1f, 19f, 7f, 48, 0),
-            LegacyModelPartFactory.FromVanillaChild("nose", "head", 0f, -4.5f, -11.5f, -6.5f, -2f, -9f, 13f, 2f, 9f, 10, 45),
-            LegacyModelPartFactory.FromVanillaChild("lower_beak", "head", 0f, 2.5f, -12.5f, -6.5f, -7f, -8f, 13f, 12f, 9f, 10, 57)
+            RawModelPartFactory.FromVanilla("bone", 0f, 5f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("body", "bone", 0f, 0f, 0f, -12.5f, -14f, -20f, 25f, 29f, 40f, 62, 68),
+            RawModelPartFactory.FromVanillaChild("body_outer", "body", 0f, 0f, 0f, -12.5f, -14f, -20f, 25f, 24f, 40f, 62, 0, grow: 0.5f),
+            RawModelPartFactory.FromVanillaChild("body_bottom", "body", 0f, 0f, 0f, -12.5f, 12f, -20f, 25f, 0f, 40f, 87, 68),
+            RawModelPartFactory.FromVanillaChild("right_front_leg", "bone", -7.5f, 10f, -15f, -3.5f, -1f, -4f, 7f, 10f, 8f, 32, 87),
+            RawModelPartFactory.FromVanillaChild("right_mid_leg", "bone", -7.5f, 10f, 0f, -3.5f, -1f, -4f, 7f, 10f, 8f, 32, 105),
+            RawModelPartFactory.FromVanillaChild("right_hind_leg", "bone", -7.5f, 10f, 15f, -3.5f, -1f, -4f, 7f, 10f, 8f, 32, 123),
+            RawModelPartFactory.FromVanillaChild("left_front_leg", "bone", 7.5f, 10f, -15f, -3.5f, -1f, -4f, 7f, 10f, 8f, 0, 87),
+            RawModelPartFactory.FromVanillaChild("left_mid_leg", "bone", 7.5f, 10f, 0f, -3.5f, -1f, -4f, 7f, 10f, 8f, 0, 105),
+            RawModelPartFactory.FromVanillaChild("left_hind_leg", "bone", 7.5f, 10f, 15f, -3.5f, -1f, -4f, 7f, 10f, 8f, 0, 123),
+            RawModelPartFactory.FromVanillaChild("head", "body", 0f, 6.5f, -19.48f, -6.5f, -7.5f, -11.5f, 13f, 18f, 11f, 8, 15),
+            RawModelPartFactory.FromVanillaChild("head_flat", "head", 0f, 0f, 0f, -6.5f, 7.5f, -11.5f, 13f, 0f, 11f, 8, 4),
+            RawModelPartFactory.FromVanillaChild("left_ear", "head", 6.51f, -7.5f, -4.51f, 0f, 0f, -3f, 1f, 19f, 7f, 2, 0),
+            RawModelPartFactory.FromVanillaChild("right_ear", "head", -6.51f, -7.5f, -4.51f, -1f, 0f, -3f, 1f, 19f, 7f, 48, 0),
+            RawModelPartFactory.FromVanillaChild("nose", "head", 0f, -4.5f, -11.5f, -6.5f, -2f, -9f, 13f, 2f, 9f, 10, 45),
+            RawModelPartFactory.FromVanillaChild("lower_beak", "head", 0f, 2.5f, -12.5f, -6.5f, -7f, -8f, 13f, 12f, 9f, 10, 57)
         };
         AssertPartsMatch(expected, SnifferModelDefinition.Definition.Parts);
     }

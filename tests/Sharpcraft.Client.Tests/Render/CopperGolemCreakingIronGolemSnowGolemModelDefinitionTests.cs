@@ -81,15 +81,15 @@ public sealed class CopperGolemCreakingIronGolemSnowGolemModelDefinitionTests
     }
 
     [Fact]
-    public void SnowGolemPartsMatchLegacyRecords()
+    public void SnowGolemPartsMatchSourceFrameRecords()
     {
         var expected = new[]
         {
-            LegacyModelPartFactory.FromVanilla("head", 0f, 4f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0, grow: -0.5f),
-            LegacyModelPartFactory.FromVanilla("left_arm", 5f, 6f, 1f, -1f, 0f, -1f, 12f, 2f, 2f, 32, 0, grow: -0.5f, rotationZ: 1f),
-            LegacyModelPartFactory.FromVanilla("right_arm", -5f, 6f, -1f, -1f, 0f, -1f, 12f, 2f, 2f, 32, 0, grow: -0.5f, rotationY: MathF.PI, rotationZ: 1f),
-            LegacyModelPartFactory.FromVanilla("upper_body", 0f, 13f, 0f, -5f, -10f, -5f, 10f, 10f, 10f, 0, 16, grow: -0.5f),
-            LegacyModelPartFactory.FromVanilla("lower_body", 0f, 24f, 0f, -6f, -12f, -6f, 12f, 12f, 12f, 0, 36, grow: -0.5f)
+            RawModelPartFactory.FromVanilla("head", 0f, 4f, 0f, -4f, -8f, -4f, 8f, 8f, 8f, 0, 0, grow: -0.5f),
+            RawModelPartFactory.FromVanilla("left_arm", 5f, 6f, 1f, -1f, 0f, -1f, 12f, 2f, 2f, 32, 0, grow: -0.5f, rotationZ: 1f),
+            RawModelPartFactory.FromVanilla("right_arm", -5f, 6f, -1f, -1f, 0f, -1f, 12f, 2f, 2f, 32, 0, grow: -0.5f, rotationY: MathF.PI, rotationZ: -1f),
+            RawModelPartFactory.FromVanilla("upper_body", 0f, 13f, 0f, -5f, -10f, -5f, 10f, 10f, 10f, 0, 16, grow: -0.5f),
+            RawModelPartFactory.FromVanilla("lower_body", 0f, 24f, 0f, -6f, -12f, -6f, 12f, 12f, 12f, 0, 36, grow: -0.5f)
         };
         AssertPartsMatch(expected, SnowGolemModelDefinition.Definition.Parts);
     }

@@ -17,21 +17,23 @@ public static class SnifferModelDefinition
     private static readonly VanillaMeshDefinition SnifferMesh = BuildSnifferMesh();
 
     private static readonly CompiledEntityModel SnifferCompiled =
-        VanillaMeshBakery.Build(SnifferMesh, 192, 192);
+        VanillaMeshBakery.Build(SnifferMesh, 192, 192, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Definition = new(
         "sniffer",
         192,
         192,
         BuildParts(),
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/sniffer/sniffer",
-        compiled: SnifferCompiled);
+        compiled: SnifferCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     private static EntityModelPart[] BuildParts()
     {
         var byName = new Dictionary<string, EntityModelPart>(StringComparer.Ordinal);
-        foreach (var part in VanillaMeshBake.Bake(SnifferMesh, 0, 0))
+        foreach (var part in VanillaMeshBake.Bake(SnifferMesh, 0, 0, rawSourceFrame: true))
         {
             byName[part.Name] = part;
         }
