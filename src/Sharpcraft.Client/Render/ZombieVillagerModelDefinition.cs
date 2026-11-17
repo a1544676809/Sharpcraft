@@ -17,16 +17,18 @@ public static class ZombieVillagerModelDefinition
     private static readonly VanillaMeshDefinition ZombieVillagerMesh = BuildZombieVillagerMesh();
 
     private static readonly CompiledEntityModel ZombieVillagerCompiled =
-        VanillaMeshBakery.Build(ZombieVillagerMesh, 64, 64);
+        VanillaMeshBakery.Build(ZombieVillagerMesh, 64, 64, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Definition = new(
         "zombie_villager",
         64,
         64,
-        [.. VanillaMeshBake.Bake(ZombieVillagerMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
+        [.. VanillaMeshBake.Bake(ZombieVillagerMesh, 0, 0, rawSourceFrame: true)],
+        faceTransforms: null,
         "entity/zombie_villager/zombie_villager",
-        compiled: ZombieVillagerCompiled);
+        compiled: ZombieVillagerCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     public static readonly IReadOnlyDictionary<string, EntityModelDefinition> Variants =
         VillagerModelDefinition.VariantMap(
@@ -40,8 +42,14 @@ public static class ZombieVillagerModelDefinition
     private static VanillaMeshDefinition BuildZombieVillagerMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        root.AddOrReplaceChild("head", VanillaPartPose.Zero,
-            new VanillaCubeDefinition("head", 0, 0, -4f, -10f, -4f, 8f, 10f, 8f, Overlays: [new("hat", 0.5f, 32, 0)]));
+        // Source ZombieVillagerModel.createBodyLayer: head has 2 cubes (head + nose); hat is a child
+        // with 0.5 grow, hat_rim a child rotated -PI/2. Flattened to independent parts like Villager.
+        var head = root.AddOrReplaceChild("head", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("head", 0, 0, -4f, -10f, -4f, 8f, 10f, 8f));
+        var hat = head.AddOrReplaceChild("hat", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("hat", 32, 0, -4f, -10f, -4f, 8f, 10f, 8f, Grow: 0.5f));
+        hat.AddOrReplaceChild("hat_rim", VanillaPartPose.OffsetAndRotation(0f, 0f, 0f, -MathF.PI / 2f, 0f, 0f),
+            new VanillaCubeDefinition("hat_rim", 30, 47, -8f, -8f, -6f, 16f, 16f, 1f));
         root.AddOrReplaceChild("nose", VanillaPartPose.Zero,
             new VanillaCubeDefinition("nose", 24, 0, -1f, -3f, -6f, 2f, 4f, 2f));
         root.AddOrReplaceChild("body", VanillaPartPose.Zero,
@@ -53,7 +61,7 @@ public static class ZombieVillagerModelDefinition
         root.AddOrReplaceChild("right_arm", VanillaPartPose.Offset(-5f, 2f, 0f),
             new VanillaCubeDefinition("right_arm", 44, 22, -3f, -2f, -2f, 4f, 12f, 4f));
         root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(2f, 12f, 0f),
-            new VanillaCubeDefinition("left_leg", 0, 22, -2f, 0f, -2f, 4f, 12f, 4f));
+            new VanillaCubeDefinition("left_leg", 0, 22, -2f, 0f, -2f, 4f, 12f, 4f, Mirror: true));
         root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-2f, 12f, 0f),
             new VanillaCubeDefinition("right_leg", 0, 22, -2f, 0f, -2f, 4f, 12f, 4f));
         return new VanillaMeshDefinition(root);

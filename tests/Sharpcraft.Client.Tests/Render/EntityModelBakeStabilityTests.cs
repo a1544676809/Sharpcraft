@@ -57,8 +57,9 @@ public sealed class EntityModelBakeStabilityTests
         // Refreshed for the EnderDragon raw migration (task-160) on the ebc2646c baseline.
         // Refreshed for the SnowGolem/Strider/Sniffer (task-165) + Vex/Nautilus/ZombieNautilus (task-166) raw migrations.
         // Refreshed for the SnowGolem/Strider/Sniffer (task-165) + Vex/Nautilus/ZombieNautilus (task-166) raw migrations.
-        Assert.Equal("ecf3f7de9cf9891cbac0ae9e85be46604686335de0e33b80a51768abd1974a49", Hash(flat));
-        Assert.Equal("0dbbabfcf1aecc8cb6bd021afc57a60c7b587870a24777a5d83aeba4508a86bf", Hash(tree));
+        // Refreshed for the ZombieVillager raw migration (task-173).
+        Assert.Equal("3169b48db8be68f6c1fb1fc135f634455ca95367527289a23b348ca678c71b39", Hash(flat));
+        Assert.Equal("d76e5c6b8c4b6d2490608d2b8217c80e148fde8fadb2d04454417109601b7658", Hash(tree));
     }
 
     private static void AppendPart(StringBuilder builder, EntityModelPart part)

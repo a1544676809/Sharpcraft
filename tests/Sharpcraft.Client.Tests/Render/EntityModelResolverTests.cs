@@ -119,7 +119,8 @@ public sealed class EntityModelResolverTests
 
         Assert.NotNull(definition);
         Assert.Equal("zombie_villager", definition.Name);
-        Assert.Equal(8, definition.Parts.Count(p => !p.Name.StartsWith("equipment_")));
+        // task-173: hat/hat_rim are now independent parts (source has 10 flattened parts).
+        Assert.Equal(10, definition.Parts.Count(p => !p.Name.StartsWith("equipment_")));
     }
 
     [Fact]
