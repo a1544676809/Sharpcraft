@@ -49,7 +49,7 @@ public sealed class RawFaceOrderTests
 
         var expected = LoadSample("/" + partName);
         Assert.Equal(24, expected.Length);
-        Assert.True(geometry.VertexFloats / ChunkMesher.FloatsPerVertex >= expected.Length);
+        Assert.Equal(24, geometry.VertexFloats / ChunkMesher.FloatsPerVertex);
         for (var i = 0; i < expected.Length; i++)
         {
             var (poly, vertex, sx, sy, sz, su, sv) = expected[i];

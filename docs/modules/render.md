@@ -749,7 +749,7 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 ### SIM-ENTITY-RAW-MIRROR：raw mirror 语义（task-130 / #121/#156 已解决）
 - **结论**：源 `CubeListBuilder.mirror()` 在 `ModelPart.Cube` 内交换 `minX/maxX`（把立方体关于自身中心反射），随后 `Polygon` 构造函数把四个顶点顺序反转；UV 始终绑定在顶点上，所以镜像面是“反射后的四边形 + 顶点序反转”，不是单纯 U 翻转。此前 raw 只做 FlipH/WEST-EAST UV 交换，导致 DOWN 等面出现 `[t0,t1,l1,l0]` vs `[l1,l0,t0,t1]` 的角点配对错误。
 - **修法（仅 raw 路径，legacy 不动）**：raw 面发射现在先按源反射后的 `minX/maxX` 取四角（镜像时交换 X 边界），再用源 `ModelPart.Cube` 的六面顺序发射；mirror 部件把四个顶点和对应 UV 一起反序。非 mirror 面保持源顺序，位置/UV 均不变。
-- **验收证据**：`RawFaceOrderTests` 对 sheep 四条腿（源 `QuadrupedModel.createLegs`，右腿 mirror=true、左腿 mirror=false）按源 `part|polygon|vertex` 身份严格比较 24/24 顶点的位置与 UV（half 量化后 1e-5），共 4/4；`RawMirrorSourceTests` spider 4 个真实 Mirror 左腿 4/4 仍通过；`LivingRawReferenceSampleTests` 现有非 mirror 样本全绿。
+- **验收证据**：`RawFaceOrderTests` 对 sheep 四条腿（源 `QuadrupedModel.createLegs`，右腿 mirror=true、左腿 mirror=false）先断言每腿**恰好 24 顶点**（无额外/重复面），再按源 `part|polygon|vertex` 身份严格比较 24/24 顶点的位置与 UV（half 量化后 1e-5），共 4/4；`RawMirrorSourceTests` spider 4 个真实 Mirror 左腿 4/4 仍通过；`LivingRawReferenceSampleTests` 现有非 mirror 样本全绿。
 - **状态**：`已解决`（风险 R-027、Issue #121/#156）。
 <!-- simplification:SIM-ENTITY-RAW-MIRROR task:T-41 -->
 
