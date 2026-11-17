@@ -80,18 +80,18 @@ public sealed class ParrotTurtleZombieNautilusModelDefinitionTests
     {
         var parts = new List<EntityModelPart>
         {
-            LegacyModelPartFactory.FromVanillaChild("corals", "shell", 8f, 4.5f, -8f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("yellow_coral", "corals", 0f, -11f, 11f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("yellow_coral_second", "yellow_coral", 0f, 0f, 2f, -4.5f, -3.5f, 0f, 6f, 8f, 0f, 0, 85, rotationY: -0.7854f),
-            LegacyModelPartFactory.FromVanillaChild("yellow_coral_first", "yellow_coral", 0f, 0f, 0f, -4.5f, -3.5f, 0f, 6f, 8f, 0f, 0, 85, rotationY: 0.7854f),
-            LegacyModelPartFactory.FromVanillaChild("pink_coral", "corals", -12.5f, -18f, 11f, -4.5f, 4.5f, 0f, 6f, 0f, 8f, -8, 94),
-            LegacyModelPartFactory.FromVanillaChild("pink_coral_second", "pink_coral", -1.5f, 4.5f, 4f, -3f, 0f, -4f, 6f, 0f, 8f, -8, 94, rotationZ: 1.5708f),
-            LegacyModelPartFactory.FromVanillaChild("blue_coral", "corals", -14f, 0f, 5.5f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("blue_second", "blue_coral", 0f, 0f, -2f, -3.5f, -5.5f, 0f, 5f, 10f, 0f, 0, 102, rotationY: 0.7854f),
-            LegacyModelPartFactory.FromVanillaChild("blue_first", "blue_coral", 0f, 0f, 0f, -3.5f, -5.5f, 0f, 5f, 10f, 0f, 0, 102, rotationY: -0.7854f),
-            LegacyModelPartFactory.FromVanillaChild("red_coral", "corals", 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("red_coral_second", "red_coral", -0.5f, -1f, 1.5f, -2.5f, -5.5f, 0f, 4f, 10f, 0f, 0, 112, rotationY: -0.829f),
-            LegacyModelPartFactory.FromVanillaChild("red_coral_first", "red_coral", 0f, 0f, 0f, -4.5f, -5.5f, 0f, 6f, 10f, 0f, 0, 112, rotationY: 0.7854f)
+            RawModelPartFactory.FromVanillaChild("corals", "shell", 8f, 4.5f, -8f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("yellow_coral", "corals", 0f, -11f, 11f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("yellow_coral_second", "yellow_coral", 0f, 0f, 2f, -4.5f, -3.5f, 0f, 6f, 8f, 0f, 0, 85, rotationY: -0.7854f),
+            RawModelPartFactory.FromVanillaChild("yellow_coral_first", "yellow_coral", 0f, 0f, 0f, -4.5f, -3.5f, 0f, 6f, 8f, 0f, 0, 85, rotationY: 0.7854f),
+            RawModelPartFactory.FromVanillaChild("pink_coral", "corals", -12.5f, -18f, 11f, -4.5f, 4.5f, 0f, 6f, 0f, 8f, -8, 94),
+            RawModelPartFactory.FromVanillaChild("pink_coral_second", "pink_coral", -1.5f, 4.5f, 4f, -3f, 0f, -4f, 6f, 0f, 8f, -8, 94, rotationZ: 1.5708f),
+            RawModelPartFactory.FromVanillaChild("blue_coral", "corals", -14f, 0f, 5.5f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("blue_second", "blue_coral", 0f, 0f, -2f, -3.5f, -5.5f, 0f, 5f, 10f, 0f, 0, 102, rotationY: 0.7854f),
+            RawModelPartFactory.FromVanillaChild("blue_first", "blue_coral", 0f, 0f, 0f, -3.5f, -5.5f, 0f, 5f, 10f, 0f, 0, 102, rotationY: -0.7854f),
+            RawModelPartFactory.FromVanillaChild("red_coral", "corals", 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("red_coral_second", "red_coral", -0.5f, -1f, 1.5f, -2.5f, -5.5f, 0f, 4f, 10f, 0f, 0, 112, rotationY: -0.829f),
+            RawModelPartFactory.FromVanillaChild("red_coral_first", "red_coral", 0f, 0f, 0f, -4.5f, -5.5f, 0f, 6f, 10f, 0f, 0, 112, rotationY: 0.7854f)
         };
         for (var i = 0; i < parts.Count; i++)
         {

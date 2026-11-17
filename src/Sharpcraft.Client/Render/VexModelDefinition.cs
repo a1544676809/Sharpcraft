@@ -20,10 +20,10 @@ public static class VexModelDefinition
         32,
         32,
         VexMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/illager/vex",
+        faceTransforms: null,
+        texturePath: "entity/illager/vex",
         textureSelector: state => state.IsCharging ? "entity/illager/vex_charging" : "entity/illager/vex",
-        additionalTexturePaths: ["entity/illager/vex_charging"]);
+        additionalTexturePaths: ["entity/illager/vex_charging"], baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildVexMesh()
     {

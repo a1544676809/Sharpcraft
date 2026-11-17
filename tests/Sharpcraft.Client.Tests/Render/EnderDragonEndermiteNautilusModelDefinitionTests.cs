@@ -37,15 +37,15 @@ public sealed class EnderDragonEndermiteNautilusModelDefinitionTests
     {
         var expected = new[]
         {
-            LegacyModelPartFactory.FromVanilla("root", 0f, 29f, -6f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("shell", "root", 0f, -13f, 5f, -7f, -10f, -7f, 14f, 10f, 16f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("shell_mid", "shell", 0f, 0f, 0f, -7f, 0f, -7f, 14f, 8f, 20f, 0, 26),
-            LegacyModelPartFactory.FromVanillaChild("shell_back", "shell", 0f, 0f, 0f, -7f, 0f, 6f, 14f, 8f, 0f, 48, 26),
-            LegacyModelPartFactory.FromVanillaChild("body", "root", 0f, -8.5f, 12.3f, -5f, -4.51f, -3f, 10f, 8f, 14f, 0, 54),
-            LegacyModelPartFactory.FromVanillaChild("body_back", "body", 0f, 0f, 0f, -5f, -4.51f, 7f, 10f, 8f, 0f, 0, 76),
-            LegacyModelPartFactory.FromVanillaChild("upper_mouth", "body", 0f, -2.51f, 7f, -5f, -2f, 0f, 10f, 4f, 4f, 54, 54, grow: -0.001f),
-            LegacyModelPartFactory.FromVanillaChild("inner_mouth", "body", 0f, -0.51f, 7.5f, -3f, -2f, -0.5f, 6f, 4f, 4f, 54, 70),
-            LegacyModelPartFactory.FromVanillaChild("lower_mouth", "body", 0f, 1.49f, 7f, -5f, -1.98f, 0f, 10f, 4f, 4f, 54, 62, grow: -0.001f)
+            RawModelPartFactory.FromVanilla("root", 0f, 29f, -6f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("shell", "root", 0f, -13f, 5f, -7f, -10f, -7f, 14f, 10f, 16f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("shell_mid", "shell", 0f, 0f, 0f, -7f, 0f, -7f, 14f, 8f, 20f, 0, 26),
+            RawModelPartFactory.FromVanillaChild("shell_back", "shell", 0f, 0f, 0f, -7f, 0f, 6f, 14f, 8f, 0f, 48, 26),
+            RawModelPartFactory.FromVanillaChild("body", "root", 0f, -8.5f, 12.3f, -5f, -4.51f, -3f, 10f, 8f, 14f, 0, 54),
+            RawModelPartFactory.FromVanillaChild("body_back", "body", 0f, 0f, 0f, -5f, -4.51f, 7f, 10f, 8f, 0f, 0, 76),
+            RawModelPartFactory.FromVanillaChild("upper_mouth", "body", 0f, -2.51f, 7f, -5f, -2f, 0f, 10f, 4f, 4f, 54, 54, grow: -0.001f),
+            RawModelPartFactory.FromVanillaChild("inner_mouth", "body", 0f, -0.51f, 7.5f, -3f, -2f, -0.5f, 6f, 4f, 4f, 54, 70),
+            RawModelPartFactory.FromVanillaChild("lower_mouth", "body", 0f, 1.49f, 7f, -5f, -1.98f, 0f, 10f, 4f, 4f, 54, 62, grow: -0.001f)
         };
         AssertPartsMatch(expected, NautilusModelDefinition.Definition.Parts);
     }

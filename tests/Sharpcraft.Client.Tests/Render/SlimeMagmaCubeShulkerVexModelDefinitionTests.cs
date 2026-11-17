@@ -71,14 +71,14 @@ public sealed class SlimeMagmaCubeShulkerVexModelDefinitionTests
     {
         var expected = new[]
         {
-            LegacyModelPartFactory.FromVanilla("root", 0f, -2.5f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("head", "root", 0f, 20f, 0f, -2.5f, -5f, -2.5f, 5f, 5f, 5f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("body", "root", 0f, 20f, 0f, -1.5f, 0f, -1f, 3f, 4f, 2f, 0, 10),
-            LegacyModelPartFactory.FromVanillaChild("body_inner", "body", 0f, 0f, 0f, -1.5f, 1f, -1f, 3f, 5f, 2f, 0, 16, grow: -0.2f),
-            LegacyModelPartFactory.FromVanillaChild("right_arm", "body", -1.75f, 0.25f, 0f, -1.25f, -0.5f, -1f, 2f, 4f, 2f, 23, 0, grow: -0.1f),
-            LegacyModelPartFactory.FromVanillaChild("left_arm", "body", 1.75f, 0.25f, 0f, -0.75f, -0.5f, -1f, 2f, 4f, 2f, 23, 6, grow: -0.1f),
-            LegacyModelPartFactory.FromVanillaChild("left_wing", "body", 0.5f, 1f, 1f, 0f, 0f, 0f, 0f, 5f, 8f, 16, 14, mirror: true),
-            LegacyModelPartFactory.FromVanillaChild("right_wing", "body", -0.5f, 1f, 1f, 0f, 0f, 0f, 0f, 5f, 8f, 16, 14)
+            RawModelPartFactory.FromVanilla("root", 0f, -2.5f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("head", "root", 0f, 20f, 0f, -2.5f, -5f, -2.5f, 5f, 5f, 5f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("body", "root", 0f, 20f, 0f, -1.5f, 0f, -1f, 3f, 4f, 2f, 0, 10),
+            RawModelPartFactory.FromVanillaChild("body_inner", "body", 0f, 0f, 0f, -1.5f, 1f, -1f, 3f, 5f, 2f, 0, 16, grow: -0.2f),
+            RawModelPartFactory.FromVanillaChild("right_arm", "body", -1.75f, 0.25f, 0f, -1.25f, -0.5f, -1f, 2f, 4f, 2f, 23, 0, grow: -0.1f),
+            RawModelPartFactory.FromVanillaChild("left_arm", "body", 1.75f, 0.25f, 0f, -0.75f, -0.5f, -1f, 2f, 4f, 2f, 23, 6, grow: -0.1f),
+            RawModelPartFactory.FromVanillaChild("left_wing", "body", 0.5f, 1f, 1f, 0f, 0f, 0f, 0f, 5f, 8f, 16, 14, mirror: true),
+            RawModelPartFactory.FromVanillaChild("right_wing", "body", -0.5f, 1f, 1f, 0f, 0f, 0f, 0f, 5f, 8f, 16, 14)
         };
         for (var i = 0; i < expected.Length; i++)
         {
