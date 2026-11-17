@@ -67,12 +67,13 @@ public sealed class SpearStabOffsetTests
 
     private static Matrix4x4 Display() => Generated.ToMatrix();
 
-    private static Matrix4x4 Hand() =>
-        EntityModelMesher.PartWorldMatrix(
-            EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId),
-            Entity(),
-            "right_arm",
-            null);
+    private static Matrix4x4 Hand()
+    {
+        var definition = EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId);
+        return definition.RawSourceFrame
+            ? EntityModelMesher.LegacyHandWorldMatrix(definition, Entity(), "right_arm")
+            : EntityModelMesher.PartWorldMatrix(definition, Entity(), "right_arm");
+    }
 
     private static EntityRenderState Entity() =>
         new(1, HumanoidMobModelDefinition.ZombieEntityTypeId, 0f, 0f, 0f, 0f, 0f);

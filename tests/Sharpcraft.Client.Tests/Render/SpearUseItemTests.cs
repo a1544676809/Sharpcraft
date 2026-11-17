@@ -58,11 +58,15 @@ public sealed class SpearUseItemTests
 
         var display = new ItemDisplayTransform(Vector3.Zero, new Vector3(0f, 3f / 16f, 1f / 16f), new Vector3(0.55f)).ToMatrix();
         var anchor = ReferenceFrame.HeldItemAnchor(ReferenceFrame.AdultOffset, 0.9f);
-        var hand = EntityModelMesher.PartWorldMatrix(
-            EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId),
-            new EntityRenderState(1, HumanoidMobModelDefinition.ZombieEntityTypeId, 0f, 0f, 0f, 0f, 0f),
-            "right_arm",
-            null);
+        var definition = EntityModelResolver.Resolve(HumanoidMobModelDefinition.ZombieEntityTypeId);
+        var hand = definition.RawSourceFrame
+            ? EntityModelMesher.LegacyHandWorldMatrix(definition,
+                new EntityRenderState(1, HumanoidMobModelDefinition.ZombieEntityTypeId, 0f, 0f, 0f, 0f, 0f),
+                "right_arm")
+            : EntityModelMesher.PartWorldMatrix(definition,
+                new EntityRenderState(1, HumanoidMobModelDefinition.ZombieEntityTypeId, 0f, 0f, 0f, 0f, 0f),
+                "right_arm",
+                null);
 
         var world = display * useItem * anchor * hand;
         var expected = Reference * ReferenceFrame.Frame(0.9f);

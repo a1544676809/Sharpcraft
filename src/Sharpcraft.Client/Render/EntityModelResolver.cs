@@ -306,7 +306,7 @@ public static partial class EntityModelResolver
                     definition.TextureWidth,
                     definition.TextureHeight,
                     [],
-                    definition.FaceTransforms,
+                    PlayerModelDefinition.DefaultFaceTransforms,
                     layerTexture,
                     definition.Scale,
                     textureSelector: selector,
@@ -314,9 +314,9 @@ public static partial class EntityModelResolver
                     compiled: EntityModelLayerHelpers.WithTint(
                         equipmentTree,
                         state => EntityModelResolver.ResolveEquipmentTint(state, effectiveKind, slot)),
-                    baselinePx: definition.BaselinePx,
-                    rawSourceFrame: definition.RawSourceFrame,
-                    sourceFrameBaselinePx: definition.SourceFrameBaselinePx);
+                    baselinePx: 24f,
+                    rawSourceFrame: false,
+                    sourceFrameBaselinePx: 24f);
                 customLayers.Add(new EntityRenderLayerDefinition(
                     layerName,
                     EntityGeometryLayerKind.Elytra,
@@ -342,14 +342,14 @@ public static partial class EntityModelResolver
                         definition.TextureWidth,
                         definition.TextureHeight,
                         [],
-                        definition.FaceTransforms,
+                        PlayerModelDefinition.DefaultFaceTransforms,
                         texturePath: null,
                         definition.Scale,
                         textureSelector: trimSelector,
                         compiled: equipmentTree,
-                        baselinePx: definition.BaselinePx,
-                        rawSourceFrame: definition.RawSourceFrame,
-                        sourceFrameBaselinePx: definition.SourceFrameBaselinePx);
+                        baselinePx: 24f,
+                        rawSourceFrame: false,
+                        sourceFrameBaselinePx: 24f);
                     customLayers.Add(new EntityRenderLayerDefinition(
                         trimName,
                         EntityGeometryLayerKind.Elytra,
@@ -367,16 +367,16 @@ public static partial class EntityModelResolver
                     definition.TextureWidth,
                     definition.TextureHeight,
                     [],
-                    definition.FaceTransforms,
+                    PlayerModelDefinition.DefaultFaceTransforms,
                     glintTexture,
                     definition.Scale,
                     emissiveTexturePath: glintTexture,
                     textureSelector: state => ResolveEquipmentFoil(state, slot) ? glintTexture : null,
                     additionalTexturePaths: [glintTexture],
                     compiled: EntityModelLayerHelpers.WithEmissiveTexture(equipmentTree, glintTexture),
-                    baselinePx: definition.BaselinePx,
-                    rawSourceFrame: definition.RawSourceFrame,
-                    sourceFrameBaselinePx: definition.SourceFrameBaselinePx);
+                    baselinePx: 24f,
+                    rawSourceFrame: false,
+                    sourceFrameBaselinePx: 24f);
                 customLayers.Add(new EntityRenderLayerDefinition(
                     "glint_" + effectiveKind + "_" + slot,
                     EntityGeometryLayerKind.Glint,
@@ -402,7 +402,7 @@ public static partial class EntityModelResolver
                     definition.TextureWidth,
                     definition.TextureHeight,
                     [],
-                    definition.FaceTransforms,
+                    PlayerModelDefinition.DefaultFaceTransforms,
                     "entity/wolf/wolf_armor_crackiness_low",
                     definition.Scale,
                     textureSelector: crackSelector,
@@ -413,9 +413,9 @@ public static partial class EntityModelResolver
                         "entity/wolf/wolf_armor_crackiness_high"
                     ],
                     compiled: wolfArmor,
-                    baselinePx: definition.BaselinePx,
-                    rawSourceFrame: definition.RawSourceFrame,
-                    sourceFrameBaselinePx: definition.SourceFrameBaselinePx);
+                    baselinePx: 24f,
+                    rawSourceFrame: false,
+                    sourceFrameBaselinePx: 24f);
                 customLayers.Add(new EntityRenderLayerDefinition(
                     "crackiness",
                     EntityGeometryLayerKind.Elytra,
@@ -435,15 +435,15 @@ public static partial class EntityModelResolver
                     definition.TextureWidth,
                     definition.TextureHeight,
                     [],
-                    definition.FaceTransforms,
+                    PlayerModelDefinition.DefaultFaceTransforms,
                     "entity/equipment/wings/elytra",
                     definition.Scale,
                     textureSelector: state => EntityModelResolver.ResolveEquipmentTexture(state, EquipmentAssetKind.Elytra, 4),
                     additionalTexturePaths: ["entity/equipment/wings/elytra"],
                     compiled: elytraCompiled,
-                    baselinePx: definition.BaselinePx,
-                    rawSourceFrame: definition.RawSourceFrame,
-                    sourceFrameBaselinePx: definition.SourceFrameBaselinePx);
+                    baselinePx: 24f,
+                    rawSourceFrame: false,
+                    sourceFrameBaselinePx: 24f);
                 customLayers.Add(new EntityRenderLayerDefinition(
                     "elytra",
                     EntityGeometryLayerKind.Elytra,
