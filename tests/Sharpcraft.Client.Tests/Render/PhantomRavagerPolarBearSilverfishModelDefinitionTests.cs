@@ -31,22 +31,22 @@ public sealed class PhantomRavagerPolarBearSilverfishModelDefinitionTests
     }
 
     [Fact]
-    public void RavagerPartsMatchLegacyRecords()
+    public void RavagerPartsMatchSourceFrameRecords()
     {
         var expected = new[]
         {
-            LegacyModelPartFactory.FromVanilla("neck", 0f, -7f, 5.5f, -5f, -1f, -18f, 10f, 10f, 18f, 68, 73),
-            LegacyModelPartFactory.FromVanillaChild("head", "neck", 0f, 16f, -17f, -8f, -20f, -14f, 16f, 20f, 16f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("head_snout", "head", 0f, 0f, 0f, -2f, -6f, -18f, 4f, 8f, 4f, 0, 0),
-            LegacyModelPartFactory.FromVanillaChild("right_horn", "head", -10f, -14f, -8f, 0f, -14f, -2f, 2f, 14f, 4f, 74, 55, rotationX: 1.0995574f),
-            LegacyModelPartFactory.FromVanillaChild("left_horn", "head", 8f, -14f, -8f, 0f, -14f, -2f, 2f, 14f, 4f, 74, 55, mirror: true, rotationX: 1.0995574f),
-            LegacyModelPartFactory.FromVanillaChild("mouth", "head", 0f, -2f, 2f, -8f, 0f, -16f, 16f, 3f, 16f, 0, 36),
-            LegacyModelPartFactory.FromVanilla("body", 0f, 1f, 2f, -7f, -10f, -7f, 14f, 16f, 20f, 0, 55, rotationX: -MathF.PI / 2f),
-            LegacyModelPartFactory.FromVanillaChild("body_lower", "body", 0f, 0f, 0f, -6f, 6f, -7f, 12f, 13f, 18f, 0, 91),
-            LegacyModelPartFactory.FromVanilla("right_hind_leg", -8f, -13f, 18f, -4f, 0f, -4f, 8f, 37f, 8f, 96, 0),
-            LegacyModelPartFactory.FromVanilla("left_hind_leg", 8f, -13f, 18f, -4f, 0f, -4f, 8f, 37f, 8f, 96, 0, mirror: true),
-            LegacyModelPartFactory.FromVanilla("right_front_leg", -8f, -13f, -5f, -4f, 0f, -4f, 8f, 37f, 8f, 64, 0),
-            LegacyModelPartFactory.FromVanilla("left_front_leg", 8f, -13f, -5f, -4f, 0f, -4f, 8f, 37f, 8f, 64, 0, mirror: true)
+            RawModelPartFactory.FromVanilla("neck", 0f, -7f, 5.5f, -5f, -1f, -18f, 10f, 10f, 18f, 68, 73),
+            RawModelPartFactory.FromVanillaChild("head", "neck", 0f, 16f, -17f, -8f, -20f, -14f, 16f, 20f, 16f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("head_snout", "head", 0f, 0f, 0f, -2f, -6f, -18f, 4f, 8f, 4f, 0, 0),
+            RawModelPartFactory.FromVanillaChild("right_horn", "head", -10f, -14f, -8f, 0f, -14f, -2f, 2f, 14f, 4f, 74, 55, rotationX: 1.0995574f),
+            RawModelPartFactory.FromVanillaChild("left_horn", "head", 8f, -14f, -8f, 0f, -14f, -2f, 2f, 14f, 4f, 74, 55, mirror: true, rotationX: 1.0995574f),
+            RawModelPartFactory.FromVanillaChild("mouth", "head", 0f, -2f, 2f, -8f, 0f, -16f, 16f, 3f, 16f, 0, 36),
+            RawModelPartFactory.FromVanilla("body", 0f, 1f, 2f, -7f, -10f, -7f, 14f, 16f, 20f, 0, 55, rotationX: MathF.PI / 2f),
+            RawModelPartFactory.FromVanillaChild("body_lower", "body", 0f, 0f, 0f, -6f, 6f, -7f, 12f, 13f, 18f, 0, 91),
+            RawModelPartFactory.FromVanilla("right_hind_leg", -8f, -13f, 18f, -4f, 0f, -4f, 8f, 37f, 8f, 96, 0),
+            RawModelPartFactory.FromVanilla("left_hind_leg", 8f, -13f, 18f, -4f, 0f, -4f, 8f, 37f, 8f, 96, 0, mirror: true),
+            RawModelPartFactory.FromVanilla("right_front_leg", -8f, -13f, -5f, -4f, 0f, -4f, 8f, 37f, 8f, 64, 0),
+            RawModelPartFactory.FromVanilla("left_front_leg", 8f, -13f, -5f, -4f, 0f, -4f, 8f, 37f, 8f, 64, 0, mirror: true)
         };
         AssertPartsMatch(expected, RavagerModelDefinition.Definition.Parts);
     }

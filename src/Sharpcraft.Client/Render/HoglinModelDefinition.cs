@@ -19,28 +19,32 @@ public static class HoglinModelDefinition
     /// <summary>Declarative DSL tree for the eleven hoglin parts (T-681).</summary>
     private static readonly VanillaMeshDefinition HoglinMesh = BuildHoglinMesh();
 
-    private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(HoglinMesh, 0, 0)];
+    private static readonly EntityModelPart[] Parts = [.. VanillaMeshBake.Bake(HoglinMesh, 0, 0, rawSourceFrame: true)];
 
     private static readonly CompiledEntityModel HoglinCompiled =
-        VanillaMeshBakery.Build(HoglinMesh, 128, 64);
+        VanillaMeshBakery.Build(HoglinMesh, 128, 64, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Definition = new(
         "hoglin",
         128,
         64,
         Parts,
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/hoglin/hoglin",
-        compiled: HoglinCompiled);
+        compiled: HoglinCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Zoglin = new(
         "zoglin",
         128,
         64,
         Parts,
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/hoglin/zoglin",
-        compiled: HoglinCompiled);
+        compiled: HoglinCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildHoglinMesh()
     {
@@ -49,11 +53,13 @@ public static class HoglinModelDefinition
             new VanillaCubeDefinition("body", 1, 1, -8f, -7f, -13f, 16f, 14f, 26f));
         body.AddOrReplaceChild("mane", VanillaPartPose.Offset(0f, -14f, -7f),
             new VanillaCubeDefinition("mane", 90, 33, 0f, 0f, -9f, 0f, 10f, 19f, Grow: 0.001f));
-        var head = root.AddOrReplaceChild("head", VanillaPartPose.OffsetAndRotation(0f, 2f, -12f, -0.87266463f, 0f, 0f),
+        // Source HoglinModel.createBodyLayer: head xRot +0.87266463F, right_ear zRot -2PI/9,
+        // left_ear zRot +2PI/9 (source literals).
+        var head = root.AddOrReplaceChild("head", VanillaPartPose.OffsetAndRotation(0f, 2f, -12f, 0.87266463f, 0f, 0f),
             new VanillaCubeDefinition("head", 61, 1, -7f, -3f, -19f, 14f, 6f, 19f));
-        head.AddOrReplaceChild("right_ear", VanillaPartPose.OffsetAndRotation(-6f, -2f, -3f, 0f, 0f, -MathF.PI * 2f / 9f),
+        head.AddOrReplaceChild("right_ear", VanillaPartPose.OffsetAndRotation(-6f, -2f, -3f, 0f, 0f, -(2f * MathF.PI / 9f)),
             new VanillaCubeDefinition("right_ear", 1, 1, -6f, -1f, -2f, 6f, 1f, 4f));
-        head.AddOrReplaceChild("left_ear", VanillaPartPose.OffsetAndRotation(6f, -2f, -3f, 0f, 0f, MathF.PI * 2f / 9f),
+        head.AddOrReplaceChild("left_ear", VanillaPartPose.OffsetAndRotation(6f, -2f, -3f, 0f, 0f, 2f * MathF.PI / 9f),
             new VanillaCubeDefinition("left_ear", 1, 6, 0f, -1f, -2f, 6f, 1f, 4f));
         head.AddOrReplaceChild("right_horn", VanillaPartPose.Offset(-7f, 2f, -12f),
             new VanillaCubeDefinition("right_horn", 10, 13, -1f, -11f, -1f, 2f, 11f, 2f));

@@ -16,16 +16,18 @@ public static class LlamaModelDefinition
     private static readonly VanillaMeshDefinition LlamaMesh = BuildBodyMesh(0f);
 
     private static readonly CompiledEntityModel LlamaCompiled =
-        VanillaMeshBakery.Build(LlamaMesh, 128, 64);
+        VanillaMeshBakery.Build(LlamaMesh, 128, 64, rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Definition = new(
         "llama",
         128,
         64,
-        [.. VanillaMeshBake.Bake(LlamaMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
+        [.. VanillaMeshBake.Bake(LlamaMesh, 0, 0, rawSourceFrame: true)],
+        faceTransforms: null,
         "entity/llama/llama_brown",
-        compiled: LlamaCompiled);
+        compiled: LlamaCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     /// <summary>Llama coat ids, in the <c>Llama.Variant</c> enum order used on the wire.</summary>
     public static readonly IReadOnlyList<string> VariantKeys = ["creamy", "white", "brown", "gray"];
@@ -52,9 +54,11 @@ public static class LlamaModelDefinition
                 128,
                 64,
                 Definition.Parts,
-                PlayerModelDefinition.DefaultFaceTransforms,
+                faceTransforms: null,
                 "entity/llama/llama_" + key,
-                compiled: LlamaCompiled);
+                compiled: LlamaCompiled,
+                baselinePx: 0f,
+                rawSourceFrame: true);
         }
 
         return variants;
@@ -72,12 +76,13 @@ public static class LlamaModelDefinition
             new VanillaCubeDefinition("neck", 0, 14, -4f, -16f, -6f, 8f, 18f, 6f, Grow: addedGrow),
             new VanillaCubeDefinition("left_ear", 17, 0, -4f, -19f, -4f, 3f, 3f, 2f, Grow: addedGrow),
             new VanillaCubeDefinition("right_ear", 17, 0, 1f, -19f, -4f, 3f, 3f, 2f, Grow: addedGrow));
-        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 5f, 2f, -MathF.PI / 2f, 0f, 0f),
+        // Source LlamaModel.createBodyLayer: body xRot +PI/2, chest yRot +PI/2 (source literals).
+        root.AddOrReplaceChild("body", VanillaPartPose.OffsetAndRotation(0f, 5f, 2f, MathF.PI / 2f, 0f, 0f),
             new VanillaCubeDefinition("body", 29, 0, -6f, -10f, -7f, 12f, 18f, 10f, Grow: addedGrow));
-        root.AddOrReplaceChild("right_chest", VanillaPartPose.OffsetAndRotation(-8.5f, 3f, 3f, 0f, -MathF.PI / 2f, 0f),
+        root.AddOrReplaceChild("right_chest", VanillaPartPose.OffsetAndRotation(-8.5f, 3f, 3f, 0f, MathF.PI / 2f, 0f),
             new VanillaCubeDefinition("right_chest", 45, 28, -3f, 0f, 0f, 8f, 8f, 3f, Grow: addedGrow,
                 VisibleWhen: static state => state.HasChest));
-        root.AddOrReplaceChild("left_chest", VanillaPartPose.OffsetAndRotation(5.5f, 3f, 3f, 0f, -MathF.PI / 2f, 0f),
+        root.AddOrReplaceChild("left_chest", VanillaPartPose.OffsetAndRotation(5.5f, 3f, 3f, 0f, MathF.PI / 2f, 0f),
             new VanillaCubeDefinition("left_chest", 45, 41, -3f, 0f, 0f, 8f, 8f, 3f, Grow: addedGrow,
                 VisibleWhen: static state => state.HasChest));
         root.AddOrReplaceChild("right_hind_leg", VanillaPartPose.Offset(-3.5f, 10f, 6f),
