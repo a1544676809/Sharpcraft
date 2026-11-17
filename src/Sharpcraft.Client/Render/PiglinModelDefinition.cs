@@ -45,25 +45,38 @@ public static class PiglinModelDefinition
     };
 
     /// <summary>
-    /// Standalone legacy-frame body DSL for the piglin family. Mirrors the source AdultPiglinModel body
-    /// parts (derived from PlayerModel.createMesh) with literals, WITHOUT the player's hat/jacket/sleeve/
-    /// pants overlay children: the existing piglin legacy model models only the 5 body parts. This keeps
-    /// piglin independent of the player's DSL/bake so a player raw migration cannot change its frame.
-    /// Source piglin overlays remain a known structural simplification (#150).
+    /// Independent source-frame raw DSL for the piglin body (task-185). Mirrors source AdultPiglinModel body
+    /// parts derived from PlayerModel.createMesh(NONE, false): body/arms/legs plus the full jacket/left_sleeve/
+    /// right_sleeve/left_pants/right_pants overlays (Grow 0.25); hat is cleared by the piglin layer. Declared
+    /// with literals independent of the player's DSL/bake. Together with the 4-cube head + 2 ears the model has
+    /// 16 parts. Source: ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/piglin/AdultPiglinModel.java:17-24,
+    /// ref://.../player/PlayerModel.java:43-87.
     /// </summary>
     private static VanillaMeshDefinition BuildPiglinBodyMesh()
     {
         var root = new VanillaPartDefinition("root", VanillaPartPose.Zero);
-        root.AddOrReplaceChild("body", VanillaPartPose.Offset(0f, 0f, 0f),
+        // Source AdultPiglinModel.createBodyLayer = PlayerModel.createMesh(NONE, false) body/arms/legs +
+        // jacket/sleeve/pants overlays (scale.extend(0.25) => Grow 0.25); hat cleared by Piglin.
+        var body = root.AddOrReplaceChild("body", VanillaPartPose.Zero,
             new VanillaCubeDefinition("body", 16, 16, -4f, 0f, -2f, 8f, 12f, 4f));
-        root.AddOrReplaceChild("left_arm", VanillaPartPose.Offset(5f, 2f, 0f),
+        body.AddOrReplaceChild("jacket", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("jacket", 16, 32, -4f, 0f, -2f, 8f, 12f, 4f, Grow: 0.25f));
+        var leftArm = root.AddOrReplaceChild("left_arm", VanillaPartPose.Offset(5f, 2f, 0f),
             new VanillaCubeDefinition("left_arm", 32, 48, -1f, -2f, -2f, 4f, 12f, 4f));
-        root.AddOrReplaceChild("right_arm", VanillaPartPose.Offset(-5f, 2f, 0f),
+        leftArm.AddOrReplaceChild("left_sleeve", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("left_sleeve", 48, 48, -1f, -2f, -2f, 4f, 12f, 4f, Grow: 0.25f));
+        var rightArm = root.AddOrReplaceChild("right_arm", VanillaPartPose.Offset(-5f, 2f, 0f),
             new VanillaCubeDefinition("right_arm", 40, 16, -3f, -2f, -2f, 4f, 12f, 4f));
-        root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(1.9f, 12f, 0f),
+        rightArm.AddOrReplaceChild("right_sleeve", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("right_sleeve", 40, 32, -3f, -2f, -2f, 4f, 12f, 4f, Grow: 0.25f));
+        var leftLeg = root.AddOrReplaceChild("left_leg", VanillaPartPose.Offset(1.9f, 12f, 0f),
             new VanillaCubeDefinition("left_leg", 16, 48, -2f, 0f, -2f, 4f, 12f, 4f));
-        root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-1.9f, 12f, 0f),
+        leftLeg.AddOrReplaceChild("left_pants", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("left_pants", 0, 48, -2f, 0f, -2f, 4f, 12f, 4f, Grow: 0.25f));
+        var rightLeg = root.AddOrReplaceChild("right_leg", VanillaPartPose.Offset(-1.9f, 12f, 0f),
             new VanillaCubeDefinition("right_leg", 0, 16, -2f, 0f, -2f, 4f, 12f, 4f));
+        rightLeg.AddOrReplaceChild("right_pants", VanillaPartPose.Zero,
+            new VanillaCubeDefinition("right_pants", 0, 32, -2f, 0f, -2f, 4f, 12f, 4f, Grow: 0.25f));
         return new VanillaMeshDefinition(root);
     }
 
@@ -71,16 +84,16 @@ public static class PiglinModelDefinition
 
     private static EntityModelPart[] BuildParts()
     {
-        // Independent legacy-frame body bake (no player DSL/parts reference), then the piglin head.
-        var parts = new List<EntityModelPart>(VanillaMeshBake.Bake(PiglinBodyMesh, 0, 0));
-        parts.AddRange(VanillaMeshBake.Bake(PiglinHeadMesh, 0, 0));
+        // Independent source-frame body bake (no player DSL/parts reference), then the piglin head.
+        var parts = new List<EntityModelPart>(VanillaMeshBake.Bake(PiglinBodyMesh, 0, 0, rawSourceFrame: true));
+        parts.AddRange(VanillaMeshBake.Bake(PiglinHeadMesh, 0, 0, rawSourceFrame: true));
         return [.. parts];
     }
 
     private static readonly VanillaMeshDefinition PiglinMesh = BuildPiglinMesh();
 
     private static readonly CompiledEntityModel PiglinCompiled =
-        VanillaMeshBakery.Build(PiglinMesh, 64, 64);
+        VanillaMeshBakery.Build(PiglinMesh, 64, 64, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildPiglinMesh()
     {
@@ -113,25 +126,31 @@ public static class PiglinModelDefinition
         64,
         64,
         BuildParts(),
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/piglin/piglin",
-        compiled: PiglinCompiled);
+        compiled: PiglinCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Brute = new(
         "piglin_brute",
         64,
         64,
         BuildParts(),
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/piglin/piglin_brute",
-        compiled: PiglinCompiled);
+        compiled: PiglinCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     public static readonly EntityModelDefinition Zombified = new(
         "zombified_piglin",
         64,
         64,
         BuildParts(),
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/piglin/zombified_piglin",
-        compiled: PiglinCompiled);
+        compiled: PiglinCompiled,
+        baselinePx: 0f,
+        rawSourceFrame: true);
 }

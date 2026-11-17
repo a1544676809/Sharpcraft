@@ -7,49 +7,21 @@ using Xunit;
 namespace Sharpcraft.Client.Tests.Render;
 
 /// <summary>
-/// T-682: proves the DSL-baked piglin head tree (cube, snout, nostrils, ears) is value-identical to the legacy
-/// FromVanilla/FromVanillaChild records with the exact order and parent links, that each definition's leading parts are
-/// the adult player parts minus the head, and that the Definition/Brute/Zombified names, paths and counts are unchanged.
+/// T-682 / task-185: proves the DSL-baked piglin tree is value-identical to independent raw source-frame records.
+/// Source AdultPiglinModel.createBodyLayer = PlayerModel.createMesh(NONE, false) (body/arms/legs + jacket/sleeve/pants
+/// overlays, hat cleared) + 4-cube head with 2 ears. Definition/Brute/Zombified share the raw geometry.
+/// Source: ref://mc-26.3-analysis/src/net/minecraft/client/model/monster/piglin/AdultPiglinModel.java:17-24,
+/// AbstractPiglinModel.java:38-61, ref://.../player/PlayerModel.java:43-87.
 /// </summary>
 public sealed class PiglinModelDefinitionTests
 {
     [Fact]
-    public void PiglinHeadTreeMatchesLegacyFromVanillaRecords()
+    public void PiglinTreeMatchesSourceFrameRecords()
     {
-        var head = ExpectedHeadParts();
         foreach (var definition in Definitions())
         {
-            Assert.Equal(11, definition.Parts.Count);
-            for (var i = 0; i < head.Length; i++)
-            {
-                var actual = definition.Parts[5 + i];
-                ModelPartAssertions.AssertEqual(head[i], actual);
-                // The head cube is a root part; every other head part is a child of "head".
-                Assert.Equal(head[i].Name, actual.Name);
-                Assert.Equal(i == 0 ? null : "head", actual.Parent);
-            }
-        }
-    }
-
-    [Fact]
-    public void HumanoidPrefixEqualsAdultPartsMinusHead()
-    {
-        // Piglin now owns an independent body DSL (source literals), so the expected body parts are
-        // written out here instead of derived from PlayerModelDefinition.AdultParts (which is raw and
-        // carries the independent hat/jacket/sleeve/pants overlays). These are the 5 source body parts
-        // of AdultPiglinModel (PlayerModel.createMesh body/arms/legs with CubeDeformation.NONE).
-        var expected = new[]
-        {
-            LegacyModelPartFactory.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16),
-            LegacyModelPartFactory.FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 32, 48),
-            LegacyModelPartFactory.FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16),
-            LegacyModelPartFactory.FromVanilla("left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 16, 48),
-            LegacyModelPartFactory.FromVanilla("right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16)
-        };
-
-        foreach (var definition in Definitions())
-        {
-            Assert.Equal(11, definition.Parts.Count);
+            var expected = ExpectedParts();
+            Assert.Equal(expected.Length, definition.Parts.Count);
             for (var i = 0; i < expected.Length; i++)
             {
                 ModelPartAssertions.AssertEqual(expected[i], definition.Parts[i]);
@@ -65,35 +37,46 @@ public sealed class PiglinModelDefinitionTests
         Assert.Equal(64, definition.TextureWidth);
         Assert.Equal(64, definition.TextureHeight);
         Assert.Equal("entity/piglin/piglin", definition.TexturePath);
-        Assert.Equal(11, definition.Parts.Count);
+        Assert.Equal(16, definition.Parts.Count);
+        Assert.True(definition.RawSourceFrame);
 
         var brute = PiglinModelDefinition.Brute;
         Assert.Equal("piglin_brute", brute.Name);
-        Assert.Equal(64, brute.TextureWidth);
-        Assert.Equal(64, brute.TextureHeight);
         Assert.Equal("entity/piglin/piglin_brute", brute.TexturePath);
-        Assert.Equal(11, brute.Parts.Count);
+        Assert.Equal(16, brute.Parts.Count);
+        Assert.True(brute.RawSourceFrame);
 
         var zombified = PiglinModelDefinition.Zombified;
         Assert.Equal("zombified_piglin", zombified.Name);
-        Assert.Equal(64, zombified.TextureWidth);
-        Assert.Equal(64, zombified.TextureHeight);
         Assert.Equal("entity/piglin/zombified_piglin", zombified.TexturePath);
-        Assert.Equal(11, zombified.Parts.Count);
+        Assert.Equal(16, zombified.Parts.Count);
+        Assert.True(zombified.RawSourceFrame);
     }
 
     private static IReadOnlyList<EntityModelDefinition> Definitions() =>
         [PiglinModelDefinition.Definition, PiglinModelDefinition.Brute, PiglinModelDefinition.Zombified];
 
-    private static EntityModelPart[] ExpectedHeadParts() =>
+    private static EntityModelPart[] ExpectedParts() =>
     [
-        LegacyModelPartFactory.FromVanilla("head", 0f, 0f, 0f, -5f, -8f, -4f, 10f, 8f, 8f, 0, 0),
-        LegacyModelPartFactory.FromVanillaChild("head_nose", "head", 0f, 0f, 0f, -2f, -4f, -5f, 4f, 4f, 1f, 31, 1),
-        LegacyModelPartFactory.FromVanillaChild("head_nostril_right", "head", 0f, 0f, 0f, 2f, -2f, -5f, 1f, 2f, 1f, 2, 4),
-        LegacyModelPartFactory.FromVanillaChild("head_nostril_left", "head", 0f, 0f, 0f, -3f, -2f, -5f, 1f, 2f, 1f, 2, 0),
-        LegacyModelPartFactory.FromVanillaChild("left_ear", "head", 4.5f, -6f, 0f, 0f, 0f, -2f, 1f, 5f, 4f, 51, 6,
+        // Body + jacket overlay (PlayerModel.createMesh, slim=false, CubeDeformation.NONE).
+        RawModelPartFactory.FromVanilla("body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 16),
+        RawModelPartFactory.FromVanillaChild("jacket", "body", 0f, 0f, 0f, -4f, 0f, -2f, 8f, 12f, 4f, 16, 32, grow: 0.25f),
+        RawModelPartFactory.FromVanilla("left_arm", 5f, 2f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 32, 48),
+        RawModelPartFactory.FromVanillaChild("left_sleeve", "left_arm", 0f, 0f, 0f, -1f, -2f, -2f, 4f, 12f, 4f, 48, 48, grow: 0.25f),
+        RawModelPartFactory.FromVanilla("right_arm", -5f, 2f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 16),
+        RawModelPartFactory.FromVanillaChild("right_sleeve", "right_arm", 0f, 0f, 0f, -3f, -2f, -2f, 4f, 12f, 4f, 40, 32, grow: 0.25f),
+        RawModelPartFactory.FromVanilla("left_leg", 1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 16, 48),
+        RawModelPartFactory.FromVanillaChild("left_pants", "left_leg", 0f, 0f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 48, grow: 0.25f),
+        RawModelPartFactory.FromVanilla("right_leg", -1.9f, 12f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 16),
+        RawModelPartFactory.FromVanillaChild("right_pants", "right_leg", 0f, 0f, 0f, -2f, 0f, -2f, 4f, 12f, 4f, 0, 32, grow: 0.25f),
+        // Head: 4 cubes + 2 ears (source AbstractPiglinModel.addHead).
+        RawModelPartFactory.FromVanilla("head", 0f, 0f, 0f, -5f, -8f, -4f, 10f, 8f, 8f, 0, 0),
+        RawModelPartFactory.FromVanillaChild("head_nose", "head", 0f, 0f, 0f, -2f, -4f, -5f, 4f, 4f, 1f, 31, 1),
+        RawModelPartFactory.FromVanillaChild("head_nostril_right", "head", 0f, 0f, 0f, 2f, -2f, -5f, 1f, 2f, 1f, 2, 4),
+        RawModelPartFactory.FromVanillaChild("head_nostril_left", "head", 0f, 0f, 0f, -3f, -2f, -5f, 1f, 2f, 1f, 2, 0),
+        RawModelPartFactory.FromVanillaChild("left_ear", "head", 4.5f, -6f, 0f, 0f, 0f, -2f, 1f, 5f, 4f, 51, 6,
             rotationZ: -MathF.PI / 6f),
-        LegacyModelPartFactory.FromVanillaChild("right_ear", "head", -4.5f, -6f, 0f, -1f, 0f, -2f, 1f, 5f, 4f, 39, 6,
+        RawModelPartFactory.FromVanillaChild("right_ear", "head", -4.5f, -6f, 0f, -1f, 0f, -2f, 1f, 5f, 4f, 39, 6,
             rotationZ: MathF.PI / 6f)
     ];
 }

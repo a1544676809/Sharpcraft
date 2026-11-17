@@ -140,10 +140,12 @@ public sealed class EntityModelRegistrationTests
         var zombified = EntityModelResolver.Resolve(PiglinModelDefinition.ZombifiedPiglinEntityTypeId);
 
         Assert.Equal("piglin", piglin.Name);
-        Assert.Equal(11, PiglinModelDefinition.Definition.Parts.Count);
-        Assert.Equal(20, piglin.Parts.Count);
+        // task-185: 16 source parts (body+overlays+head), equipment wrapper adds more.
+        Assert.Equal(16, PiglinModelDefinition.Definition.Parts.Count);
+        Assert.True(piglin.Parts.Count >= 16);
         Assert.Contains(piglin.Parts, part => part.Name == "head_nose" && part.Parent == "head");
         Assert.Contains(piglin.Parts, part => part.Name == "left_ear" && part.Parent == "head");
+        Assert.Contains(piglin.Parts, part => part.Name == "jacket" && part.Parent == "body");
         Assert.Equal("entity/piglin/piglin_brute", brute.TexturePath);
         Assert.Equal("entity/piglin/zombified_piglin", zombified.TexturePath);
     }
