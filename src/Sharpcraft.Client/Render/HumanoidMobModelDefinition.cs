@@ -178,16 +178,54 @@ public static class HumanoidMobModelDefinition
 
     public static readonly EntityModelDefinition Stray = WithClothing("stray", "entity/skeleton/stray", "entity/skeleton/stray_overlay", 0.25f);
 
-    public static readonly EntityModelDefinition Bogged = WithClothing("bogged", "entity/skeleton/bogged", "entity/skeleton/bogged_overlay", 0.2f);
+    private static readonly VanillaMeshDefinition BoggedMesh = BuildBoggedMesh();
+    private static readonly EntityModelPart[] BoggedParts =
+        [.. VanillaMeshBake.Bake(BoggedMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)];
+    private static readonly CompiledEntityModel BoggedCompiled =
+        VanillaMeshBakery.Build(BoggedMesh, 64, 32, modelHeight: 0f, rawSourceFrame: true);
 
-    private static EntityModelDefinition WithClothing(string name, string texturePath, string overlayPath, float grow)
+    public static readonly EntityModelDefinition Bogged = WithClothing("bogged", "entity/skeleton/bogged", "entity/skeleton/bogged_overlay", 0.2f,
+        BoggedMesh, BoggedParts, BoggedCompiled);
+
+    private static VanillaMeshDefinition BuildBoggedMesh()
     {
-        var parts = new List<EntityModelPart>(Skeleton.Parts);
+        var mesh = BuildSkeletonMesh();
+        var head = mesh.Root!.Children.Single(child => child.Name == "head");
+        var mushrooms = head.AddOrReplaceChild("mushrooms", VanillaPartPose.Zero);
+        AddMushroom(mushrooms, "red_mushroom_1", 50, 16, 3f, -8f, 3f, MathF.PI / 4f);
+        AddMushroom(mushrooms, "red_mushroom_2", 50, 16, 3f, -8f, 3f, MathF.PI * 3f / 4f);
+        AddMushroom(mushrooms, "brown_mushroom_1", 50, 22, -3f, -8f, -3f, MathF.PI / 4f);
+        AddMushroom(mushrooms, "brown_mushroom_2", 50, 22, -3f, -8f, -3f, MathF.PI * 3f / 4f);
+        AddMushroom(mushrooms, "brown_mushroom_3", 50, 28, -2f, -1f, 4f, 0f, tiltX: -MathF.PI / 2f, rotationZ: MathF.PI / 4f);
+        AddMushroom(mushrooms, "brown_mushroom_4", 50, 28, -2f, -1f, 4f, 0f, tiltX: -MathF.PI / 2f, rotationZ: MathF.PI * 3f / 4f);
+        return mesh;
+    }
+
+    private static void AddMushroom(
+        VanillaPartDefinition mushrooms, string name, int textureX, int textureY,
+        float pivotX, float pivotY, float pivotZ, float rotationY, float tiltX = 0f, float rotationZ = 0f)
+    {
+        var minY = tiltX == 0f ? -3f : -4f;
+        mushrooms.AddOrReplaceChild(name,
+            VanillaPartPose.OffsetAndRotation(pivotX, pivotY, pivotZ, tiltX, rotationY, rotationZ),
+            new VanillaCubeDefinition(name, textureX, textureY, -3f, minY, 0f, 6f, 4f, 0f));
+    }
+
+    private static EntityModelDefinition WithClothing(
+        string name,
+        string texturePath,
+        string overlayPath,
+        float grow,
+        VanillaMeshDefinition? baseMesh = null,
+        EntityModelPart[]? baseParts = null,
+        CompiledEntityModel? baseCompiled = null)
+    {
+        var parts = new List<EntityModelPart>(baseParts ?? Skeleton.Parts);
         var clothingMesh = BuildClothingMesh(overlayPath, grow);
         parts.AddRange(VanillaMeshBake.Bake(clothingMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true));
         var clothingCompiled = VanillaMeshBakery.Build(clothingMesh, 64, 32, modelHeight: 0f, rawSourceFrame: true);
         var compiled = EntityModelLayerHelpers.WithModelLayer(
-            SkeletonCompiled,
+            baseCompiled ?? SkeletonCompiled,
             clothingCompiled,
             "outer_",
             _ => overlayPath,

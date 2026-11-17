@@ -839,7 +839,7 @@ Player/player-slim 切 raw：hat/jacket/sleeve/pants 转为独立 inflated child
 ### task-144 剩余 humanoid 6 族：逐族源 probe 结论（#102 / #150）
 
 task-144 用 jar `HeadTree` probe 逐族分析 Bogged/Witch/ZombieVillager/Piglin×3，全部保持 legacy，不半迁移：
-- **Bogged**：源 head 下有 6 个零深度 mushroom 子 part（6×4×0 平面，pivot 已 probe），仓内 DSL 未建模，样本 `/head/mushrooms/*` 无对应 part；零深度面 emit 需专门处理。
+- **Bogged（task-178 已解决）**：源 head 下 6 个零深度 mushroom 子 part（6×4×0 平面，pivot/rotation 源字面），已加入 Bogged DSL（hat 独立 cube 保留）；312 源行 strict 1e-5 + UV half 全通过，零深度 24 顶点由 task-145 raw 支持发射；R-035 仅剩 Witch/Piglin×3。
 - **Witch**：head cube UV 不符（`/head cube=0 poly=0 v=2` 源 v=0.0625 vs 本地 0.125），需逐面 probe 求源 UV 校准；hat→hat_rim/hat2→hat3→hat4 多 cube。
 - **ZombieVillager**：nose cube（`/head cube=1`）pose 换算差：源 (0.0625,-0.1875,-0.25) vs 本地 (0.25,-0.625,0.25)，多 cube head 拆 flat 的 pose 换算。
 - **Piglin×3**：源含 jacket/sleeve/pants overlay 子 part，legacy 11-part 为既有结构简化（task-128 已登记）；补齐会破坏 legacy 行为，故不源正确、不迁移。
