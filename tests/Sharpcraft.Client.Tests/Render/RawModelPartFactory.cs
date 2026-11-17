@@ -44,8 +44,8 @@ internal static class RawModelPartFactory
         // Root raw formula: centre = pivot + min + halfSize, bottom = pivotY + minY.
         return new EntityModelPart(
             name,
-            MathF.Round(pivotX + minX + (width * 0.5f), 4),
-            MathF.Round(pivotY + minY, 4),
+            pivotX + minX + (width * 0.5f),
+            pivotY + minY,
             width,
             height,
             depth,
@@ -53,7 +53,7 @@ internal static class RawModelPartFactory
             textureY,
             mirror,
             overlays,
-            CentreZ: MathF.Round(pivotZ + minZ + (depth * 0.5f), 4),
+            CentreZ: pivotZ + minZ + (depth * 0.5f),
             PivotX: pivotX,
             PivotY: pivotY,
             PivotZ: pivotZ,
@@ -91,8 +91,8 @@ internal static class RawModelPartFactory
         // Child raw formula: centre = min + halfSize (parent-local), bottom = minY. Pivots/rotations literal.
         return new EntityModelPart(
             name,
-            MathF.Round(minX + (width * 0.5f), 4),
-            MathF.Round(minY, 4),
+            minX + (width * 0.5f),
+            minY,
             width,
             height,
             depth,
@@ -100,9 +100,9 @@ internal static class RawModelPartFactory
             textureY,
             mirror,
             overlays,
-            CentreZ: MathF.Round(minZ + (depth * 0.5f), 4),
-            PivotX: MathF.Round(pivotX, 4),
-            PivotY: MathF.Round(pivotY, 4),
+            CentreZ: minZ + (depth * 0.5f),
+            PivotX: pivotX,
+            PivotY: pivotY,
             PivotZ: pivotZ,
             RotationX: rotationX,
             RotationY: rotationY,

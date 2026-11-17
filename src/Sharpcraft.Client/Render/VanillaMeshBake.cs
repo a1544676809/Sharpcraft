@@ -179,8 +179,8 @@ public static partial class VanillaMeshBake
         {
             return new EntityModelPart(
                 name,
-                MathF.Round(pivotX + minX + (width * 0.5f), 4),
-                MathF.Round(pivotY + minY, 4),
+                pivotX + minX + (width * 0.5f),
+                pivotY + minY,
                 width,
                 height,
                 depth,
@@ -188,7 +188,7 @@ public static partial class VanillaMeshBake
                 textureY,
                 mirror,
                 overlays,
-                CentreZ: MathF.Round(pivotZ + minZ + (depth * 0.5f), 4),
+                CentreZ: pivotZ + minZ + (depth * 0.5f),
                 PivotX: pivotX,
                 PivotY: pivotY,
                 PivotZ: pivotZ,
@@ -262,8 +262,8 @@ public static partial class VanillaMeshBake
         {
             return new EntityModelPart(
                 name,
-                MathF.Round(minX + (width * 0.5f), 4),
-                MathF.Round(minY, 4),
+                minX + (width * 0.5f),
+                minY,
                 width,
                 height,
                 depth,
@@ -271,9 +271,9 @@ public static partial class VanillaMeshBake
                 textureY,
                 mirror,
                 overlays,
-                CentreZ: MathF.Round(minZ + (depth * 0.5f), 4),
-                PivotX: MathF.Round(pivotX, 4),
-                PivotY: MathF.Round(pivotY, 4),
+                CentreZ: minZ + (depth * 0.5f),
+                PivotX: pivotX,
+                PivotY: pivotY,
                 PivotZ: pivotZ,
                 RotationX: rotationX,
                 RotationY: rotationY,
