@@ -14,7 +14,7 @@
 | Banner | `BannerRenderer` / `BannerModelDefinition` | 已 raw；#111 静止倾角修正 |
 | Skull | `SkullRenderer` / `SkullModelDefinition` | 已 raw（mob 四型 + player head）；Piglin/Dragon 属 entity/scale bake，未改 |
 | Book/Lectern/Enchant | `LecternRenderer` / `EnchantTableRenderer` / `BookModelDefinition` | 已 raw（#119 解除：UV 口径=源字面 14/64，unit-normalized 样本 5 组严格） |
-| Statue | `CopperGolemStatueMesher` / `CopperGolemStatueModelDefinition` | 与 entity 模型跨族约束，最后处理 |
+| Statue | `CopperGolemStatueMesher` / `CopperGolemStatueModelDefinition` | 规格已解（#125 comment 759）：raw + 源 root zRot=π 正确，待单独实现 + 跨族 equality |
 | Chest/ShulkerBox/Bell/Pot/Placeholder | 直接网格几何（`EntityPlaceholderMesher.AppendBox` 等） | N/A（不走 entity model bake，见下） |
 | Shelf/Campfire/Brushable/Vault | item mesher（`BlockEntityItemMesher`） | N/A（不走 entity model bake，见下） |
 
@@ -50,6 +50,7 @@
 ## 已知刻意的简化与阻塞（续）
 
 - **Book/Lectern/Enchant UV 口径（Issue #119）——已解决**：单 cube jar 探针 `BookSeamProbe` 确认 seam polygon0/vertex0 源字面 UV=(0.218828,0)=14/64（BookModel.java:45 texOffs(12,0)），旧内联 `u=6/64=0.09375` / vertex1 `12/64` 是 legacy face 校准伪影（Skull 0.375 / Banner #111 同类）。探针按 #128 归一化到源渲染单位（顶点用 `worldX/Y/Z=v/16`、part 位移 `x/16`，ModelPart.java:129-138,163-167,384-394），避免"像素顶点 + 块位移"混合单位。`BookRawReferenceTests` 用 `book-raw-vectors.golden.txt`（5 组×168，part|cube|polygon|vertex keyed，位置+UV 严格）验证通过。状态：**已解决**（refactor/raw-book）。
+- **Statue #125 规格已解（可执行，待单独实现）**：legacy bake（baseline 0）的 X-mirror+Y-flip 正是 Rz(π) 共轭；源 `CopperGolemStatueModel.setupAnim` 的 `root.zRot=π` 施加在 raw 源帧上等价。jar 探针 `StatueSourceProbe`（真实 setupAnim，归一化 v/16）输出 216 顶点，raw+root zRot=π 引擎输出与其逐点匹配（unmatched=0，maxDelta=0）；该值 + `T(0.5,0,0.5)` 与 golden `standing/north` 逐值相同。旧"不等价"是模型空间 vs 世界空间 + 混合单位/负零的比较伪影。实现规格见 Issue #125 comment 759。状态：**规格就绪**（未改生产代码）。
 - **直接网格 / item mesher 渲染器不适用 raw（N/A）**：`ChestMesher`、`ShulkerBoxMesher`、`BellMesher`、`DecoratedPotMesher`、`BlockEntityPlaceholderMesher` 用 `EntityPlaceholderMesher.AppendBox` 直接构造盒子（`grep AppendBox <file>` 可证）；`ShelfRenderer`、`CampfireRenderer`、`BrushableRenderer`、`VaultRenderer` 用 `BlockEntityItemMesher.AppendSlot` 直接构造物品几何。它们不消费 `EntityModelDefinition`/`BuildModel`，不存在 frame 烘焙补偿，故 raw 迁移不适用（非阻塞）。`ChestAtlas` 仅做纹理装载，不涉及模型帧。
 
 ## 实现说明：Skull raw 迁移
@@ -67,3 +68,4 @@
 - 2026-11-17（审阅修正 task-52）：Banner 样本改为稳定 key + 源声明顶点顺序（pole→bar），`BannerGoldenTests` 去掉排序/舍入集合改按下标逐顶点位置+UV 严格比较；新增 `BannerSourceFormulaConsistencyTests`，从 4 个 jar 锚点用独立源公式重算全部 36 组逐 key 逐值校验（含 wall flag pivot (0,-20.5,10.5)）；header 补锚点映射与双 pivot 公式；全量 3,406 / 三门禁通过。
 - 2026-11-17（task-63 / #119）：Book/Lectern/Enchant 切 raw（源字面 setupAnim pose，无 legacy 补偿）；UV 口径按 #128 归一化解决；新增 `book-raw-vectors.golden.txt`（5 组×168 keyed 位置+UV 严格）；旧内联 legacy UV / pose 角度按源值更新；全量 3,431 / 三门禁通过。
 - 2026-11-17（审阅修正 task-70 / comment 722）：R-024 更新为已解决（含证据入口）；`book-raw-vectors.golden.txt` 删重复/矛盾的旧混合单位 header，仅保留 #128 归一化口径；`BookRawReferenceTests` 容差从 0.002 收紧到 1e-5（UV 按 half-float 表示量化后比较，非放宽容差）；全量 3,431 / 三门禁通过。
+- 2026-11-17（task-80 / #125 规格求解）：jar 探针 `StatueSourceProbe`（真实 setupAnim + 归一化 v/16）+ 引擎 raw+root zRot=π 对照证明源 transform 可正确复现（216/216 匹配）；旧"不等价"是模型空间/世界空间+负零比较伪影；实现规格写入 Issue #125 comment 759。本任务只交规格，未改生产代码/sample/容差。
