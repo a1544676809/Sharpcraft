@@ -104,7 +104,13 @@ public sealed class LivingRawReferenceSampleTests
         { "illusioner-raw-vectors.reference.txt", IllagerModelDefinition.Illusioner, 64, 64, "entity/illager/illusioner", 288, 72, 216, 0 },
         // task-95: villager + wandering trader (hat/hat_rim already independent; raw + scale 0.9375).
         { "villager-raw-vectors.reference.txt", VillagerModelDefinition.Definition, 64, 64, "entity/villager/villager", 264, 48, 216, 0 },
-        { "wandering-trader-raw-vectors.reference.txt", VillagerModelDefinition.WanderingTrader, 64, 64, "entity/wandering_trader/wandering_trader", 264, 48, 216, 0 }
+        { "wandering-trader-raw-vectors.reference.txt", VillagerModelDefinition.WanderingTrader, 64, 64, "entity/wandering_trader/wandering_trader", 264, 48, 216, 0 },
+        // task-108 humanoid batch (total, mirror, checked, degenerate).
+        // player BLOCKED (Player legacy to avoid Piglin parts-reuse coupling, task-108)
+        // player-slim BLOCKED (Player legacy to avoid Piglin parts-reuse coupling, task-108)
+        // task-108 blockers (multi-cube head / zero-depth mushroom / overlay parts DSL gaps).
+        // bogged BLOCKED (head mushrooms) / witch BLOCKED / zombie-villager BLOCKED /
+        // piglin, piglin-brute, zombified-piglin BLOCKED (ears + clothing overlays).
     };
 
     /// <summary>
