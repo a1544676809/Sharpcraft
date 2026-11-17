@@ -19,8 +19,10 @@ public static class IronGolemModelDefinition
         128,
         128,
         IronGolemMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/iron_golem/iron_golem");
+        faceTransforms: null,
+        "entity/iron_golem/iron_golem",
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildIronGolemMesh()
     {

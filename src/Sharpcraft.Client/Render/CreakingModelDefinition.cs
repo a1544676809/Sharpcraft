@@ -20,9 +20,11 @@ public static class CreakingModelDefinition
         64,
         64,
         CreakingMesh,
-        PlayerModelDefinition.DefaultFaceTransforms,
+        faceTransforms: null,
         "entity/creaking/creaking",
-        emissiveTexturePath: "entity/creaking/creaking_eyes");
+        emissiveTexturePath: "entity/creaking/creaking_eyes",
+        baselinePx: 0f,
+        rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildCreakingMesh()
     {
