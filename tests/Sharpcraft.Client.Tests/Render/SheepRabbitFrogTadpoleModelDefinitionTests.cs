@@ -211,4 +211,3 @@ public sealed class SheepRabbitFrogTadpoleModelDefinitionTests
         }
     }
 }
-

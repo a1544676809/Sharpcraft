@@ -248,4 +248,3 @@ public sealed class CamelHorseLlamaGoatModelDefinitionTests
         }
     }
 }
-
