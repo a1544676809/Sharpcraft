@@ -117,6 +117,8 @@ public sealed class LivingRawReferenceSampleTests
         { "enderman-raw-vectors.reference.txt", HumanoidMobModelDefinition.Enderman, 64, 32, "entity/enderman/enderman", 168, 48, 120, 0 },
         { "zombie-raw-vectors.reference.txt", HumanoidMobModelDefinition.Zombie, 64, 64, "entity/zombie/zombie", 168, 48, 120, 0 },
         // task-108 humanoid batch (total, mirror, checked, degenerate).
+        // task-137: Horse raw (scale 1.1 #141, source rotations, mirror legs).
+        { "horse-raw-vectors.reference.txt", HorseModelDefinition.Definition, 64, 64, "entity/horse/horse_brown", 288, 48, 240, 0 },
         // task-137: Cat raw (scale 0.8 #141, multi-cube head, source rotations).
         { "cat-raw-vectors.reference.txt", CatModelDefinition.Definition, 64, 32, "entity/cat/cat_tabby", 264, 0, 264, 0 },
         // task-137: Wolf raw (multi-cube head, source rotations, right-leg Mirror).
