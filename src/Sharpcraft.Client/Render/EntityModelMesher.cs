@@ -554,13 +554,13 @@ public sealed partial class EntityModelMesher
                 {
                     AddFace(d, c, b, a, du, dv, cu, cv, bu, bv, au, av,
                         skin, skinWidth, skinHeight, ref rawVertexFloats, ref rawIndexCount,
-                        FaceUvTransform.Identity, partTint, target);
+                        FaceUvTransform.Identity, partTint, target, rawUv: true);
                     return;
                 }
 
                 AddFace(a, b, c, d, au, av, bu, bv, cu, cv, du, dv,
                     skin, skinWidth, skinHeight, ref rawVertexFloats, ref rawIndexCount,
-                    FaceUvTransform.Identity, partTint, target);
+                    FaceUvTransform.Identity, partTint, target, rawUv: true);
             }
 
             EmitRawFace(rl1, rl0, rt0, rt1, u2, v0, u1, v0, u1, v1, u2, v1);
