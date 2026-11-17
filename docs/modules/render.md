@@ -836,3 +836,12 @@ task-121 用 jar 源 probe（`HumanoidAnimProbe`，源 `head.xRot=state.xRot*PI/
 Player/player-slim 切 raw：hat/jacket/sleeve/pants 转为独立 inflated child cube（源 `PlayerModel.createMesh` 结构），严格 1e-5 样本 55/55，held/attack/elytra 回归由 core PR #147/#148/#149 覆盖。Piglin 改用独立 legacy 身体 DSL（5 身体 part 源字面，不引用 Player DSL/baked parts），保持现有 11-part legacy 结构与行为不变。
 
 **已知简化**：源 `AdultPiglinModel.createBodyLayer`（jar probe）含 jacket/sleeve/pants overlay 子 part，legacy Piglin 未建模——既有结构简化，登记 R-035 / #150，本次不改（改会破坏 legacy 行为）。Bogged/Witch/ZombieVillager/Piglin×3 仍 legacy blocker，不声称源正确。
+### task-144 剩余 humanoid 6 族：逐族源 probe 结论（#102 / #150）
+
+task-144 用 jar `HeadTree` probe 逐族分析 Bogged/Witch/ZombieVillager/Piglin×3，全部保持 legacy，不半迁移：
+- **Bogged**：源 head 下有 6 个零深度 mushroom 子 part（6×4×0 平面，pivot 已 probe），仓内 DSL 未建模，样本 `/head/mushrooms/*` 无对应 part；零深度面 emit 需专门处理。
+- **Witch**：head cube UV 不符（`/head cube=0 poly=0 v=2` 源 v=0.0625 vs 本地 0.125），需逐面 probe 求源 UV 校准；hat→hat_rim/hat2→hat3→hat4 多 cube。
+- **ZombieVillager**：nose cube（`/head cube=1`）pose 换算差：源 (0.0625,-0.1875,-0.25) vs 本地 (0.25,-0.625,0.25)，多 cube head 拆 flat 的 pose 换算。
+- **Piglin×3**：源含 jacket/sleeve/pants overlay 子 part，legacy 11-part 为既有结构简化（task-128 已登记）；补齐会破坏 legacy 行为，故不源正确、不迁移。
+
+28 个 #128 样本 + jar probe 保留作验收真值；不放宽容差、不拟合、不排除顶点。R-035 / Issue #150 同步。
