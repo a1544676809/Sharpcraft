@@ -54,14 +54,14 @@ public sealed class LivingRawReferenceSampleTests
         // hidden groups remain explicitly excluded (R-029/#126), not silently passed.
         { "chicken-baby-raw-vectors.reference.txt", BabyModelDefinitions.Chicken, 16, 16, "entity/chicken/chicken_temperate_baby", 192, 0, 192, 0 },
         // task-62 aquatic/flying batch. Counts = (total, mirror, checked, degenerate) from jar probe.
-        { "cod-raw-vectors.reference.txt", CodModelDefinition.Definition, 32, 32, "entity/fish/cod", 168, 0, 72, 96 },
+        { "cod-raw-vectors.reference.txt", CodModelDefinition.Definition, 32, 32, "entity/fish/cod", 168, 0, 168, 0 },
         { "salmon-raw-vectors.reference.txt", SalmonModelDefinition.Definition, 32, 32, "entity/fish/salmon", 192, 0, 72, 120 },
-        { "tropical-fish-small-raw-vectors.reference.txt", TropicalFishModelDefinition.Definition, 32, 32, "entity/fish/tropical_a", 120, 0, 24, 96 },
-        { "tropical-fish-large-raw-vectors.reference.txt", TropicalFishModelDefinition.Variants["flopper"], 32, 32, "entity/fish/tropical_b", 144, 0, 24, 120 },
-        { "pufferfish-small-raw-vectors.reference.txt", PufferfishModelDefinition.Definition, 32, 32, "entity/fish/pufferfish", 144, 0, 72, 72 },
-        { "pufferfish-medium-raw-vectors.reference.txt", PufferfishModelDefinition.Variants["medium"], 32, 32, "entity/fish/pufferfish", 264, 0, 48, 216 },
-        { "pufferfish-large-raw-vectors.reference.txt", PufferfishModelDefinition.Variants["large"], 32, 32, "entity/fish/pufferfish", 312, 0, 96, 216 },
-        { "tadpole-raw-vectors.reference.txt", TadpoleModelDefinition.Definition, 16, 16, "entity/tadpole/tadpole", 48, 0, 24, 24 },
+        { "tropical-fish-small-raw-vectors.reference.txt", TropicalFishModelDefinition.Definition, 32, 32, "entity/fish/tropical_a", 120, 0, 120, 0 },
+        { "tropical-fish-large-raw-vectors.reference.txt", TropicalFishModelDefinition.Variants["flopper"], 32, 32, "entity/fish/tropical_b", 144, 0, 144, 0 },
+        { "pufferfish-small-raw-vectors.reference.txt", PufferfishModelDefinition.Definition, 32, 32, "entity/fish/pufferfish", 144, 0, 144, 0 },
+        { "pufferfish-medium-raw-vectors.reference.txt", PufferfishModelDefinition.Variants["medium"], 32, 32, "entity/fish/pufferfish", 264, 0, 264, 0 },
+        { "pufferfish-large-raw-vectors.reference.txt", PufferfishModelDefinition.Variants["large"], 32, 32, "entity/fish/pufferfish", 312, 0, 312, 0 },
+        { "tadpole-raw-vectors.reference.txt", TadpoleModelDefinition.Definition, 16, 16, "entity/tadpole/tadpole", 48, 0, 48, 0 },
         { "squid-raw-vectors.reference.txt", SquidModelDefinition.Definition, 64, 32, "entity/squid/squid", 216, 0, 216, 0 },
         { "glow-squid-raw-vectors.reference.txt", SquidModelDefinition.GlowSquid, 64, 32, "entity/squid/glow_squid", 216, 0, 216, 0 },
         { "dolphin-raw-vectors.reference.txt", DolphinModelDefinition.Definition, 64, 64, "entity/dolphin/dolphin", 192, 24, 168, 0 },
@@ -71,10 +71,10 @@ public sealed class LivingRawReferenceSampleTests
         { "turtle-baby-raw-vectors.reference.txt", BabyModelDefinitionsMisc.Turtle, 16, 16, "entity/turtle/turtle_baby", 144, 0, 48, 96 },
         { "frog-raw-vectors.reference.txt", FrogModelDefinition.Definition, 48, 48, "entity/frog/frog_temperate", 384, 0, 216, 168 },
         { "bat-raw-vectors.reference.txt", BatModelDefinition.Definition, 32, 32, "entity/bat/bat", 216, 0, 48, 168 },
-        { "bee-raw-vectors.reference.txt", BeeModelDefinition.Definition, 64, 64, "entity/bee/bee", 216, 0, 72, 144 },
-        { "bee-baby-raw-vectors.reference.txt", BabyModelDefinitionsAquatic.Bee, 32, 32, "entity/bee/bee_baby", 216, 0, 72, 144 },
-        { "parrot-raw-vectors.reference.txt", ParrotModelDefinition.Definition, 32, 32, "entity/parrot/parrot", 264, 0, 240, 24 },
-        { "allay-raw-vectors.reference.txt", AllayModelDefinition.Definition, 32, 32, "entity/allay/allay", 168, 0, 120, 48 },
+        { "bee-raw-vectors.reference.txt", BeeModelDefinition.Definition, 64, 64, "entity/bee/bee", 216, 24, 192, 0 },
+        { "bee-baby-raw-vectors.reference.txt", BabyModelDefinitionsAquatic.Bee, 32, 32, "entity/bee/bee_baby", 216, 24, 192, 0 },
+        { "parrot-raw-vectors.reference.txt", ParrotModelDefinition.Definition, 32, 32, "entity/parrot/parrot", 264, 0, 264, 0 },
+        { "allay-raw-vectors.reference.txt", AllayModelDefinition.Definition, 32, 32, "entity/allay/allay", 168, 0, 168, 0 },
         // task-81: CopperGolem entity raw, nested part paths resolved via full parent chain.
         // Counts = (total, mirror, checked, degenerate) from jar probe: 216 rows, no mirrors/degenerate.
         { "copper-golem-raw-vectors.reference.txt", CopperGolemModelDefinition.Definition, 64, 64, "entity/copper_golem/copper_golem", 216, 0, 216, 0 },
@@ -226,7 +226,18 @@ public sealed class LivingRawReferenceSampleTests
             // Mirror exclusion is determined by the REAL baked part's Mirror flag (R-027), never by name.
             EntityModelPart[] sourceParts = FlatPartsForSampleCube(definition, part, cube);
             Assert.NotEmpty(sourceParts);
-            var includeRawDegenerate = definition.Name == "baby_chicken";
+            // task-174: zero-area fish/bee groups are source-emitted (ModelPart.Cube always emits 6 faces);
+            // include them in strict comparison instead of culling by dimensions.
+            // Salmon is excluded: its source right_fin has texOffs -4, whose out-of-range UVs are emitted
+            // differently by the mesh/probe path; kept as an explicit R-029/#126 blocker rather than fitted.
+            var includeRawDegenerate = sampleFile.StartsWith("chicken-baby-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("cod-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("tropical-fish-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("pufferfish-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("tadpole-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("bee-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("parrot-", StringComparison.Ordinal)
+                || sampleFile.StartsWith("allay-", StringComparison.Ordinal);
             if ((!includeRawDegenerate && (sourceParts[0].Width == 0f || sourceParts[0].Height == 0f || sourceParts[0].Depth == 0f))
                 || EmittedVertCount(sourceParts[0], width, height, atlas, texturePath) == 0)
             {

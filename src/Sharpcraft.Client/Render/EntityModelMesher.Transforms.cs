@@ -620,16 +620,20 @@ public sealed partial class EntityModelMesher
         ref int vertexFloats, ref int indexCount,
         FaceUvTransform transform,
         Vector3 tint,
-        DynamicGeometry target)
+        DynamicGeometry target,
+        bool rawUv = false)
     {
         var uMin = MathF.Min(MathF.Min(au, bu), MathF.Min(cu, du));
         var uMax = MathF.Max(MathF.Max(au, bu), MathF.Max(cu, du));
         var vMin = MathF.Min(MathF.Min(av, bv), MathF.Min(cv, dv));
         var vMax = MathF.Max(MathF.Max(av, bv), MathF.Max(cv, dv));
-        (au, av) = TransformUv(au, av, uMin, uMax, vMin, vMax, transform);
-        (bu, bv) = TransformUv(bu, bv, uMin, uMax, vMin, vMax, transform);
-        (cu, cv) = TransformUv(cu, cv, uMin, uMax, vMin, vMax, transform);
-        (du, dv) = TransformUv(du, dv, uMin, uMax, vMin, vMax, transform);
+        if (!rawUv)
+        {
+            (au, av) = TransformUv(au, av, uMin, uMax, vMin, vMax, transform);
+            (bu, bv) = TransformUv(bu, bv, uMin, uMax, vMin, vMax, transform);
+            (cu, cv) = TransformUv(cu, cv, uMin, uMax, vMin, vMax, transform);
+            (du, dv) = TransformUv(du, dv, uMin, uMax, vMin, vMax, transform);
+        }
         var first = (uint)(vertexFloats / ChunkMesher.FloatsPerVertex);
         WriteVertex(target.Vertices, ref vertexFloats, a, au / skinWidth, av / skinHeight, skin, tint);
         WriteVertex(target.Vertices, ref vertexFloats, b, bu / skinWidth, bv / skinHeight, skin, tint);
@@ -644,6 +648,7 @@ public sealed partial class EntityModelMesher
         target.Indices[indexCount++] = first + 3;
     }
 
+    private static float ClampUv(float value, bool clamp) => clamp ? Math.Clamp(value, 0f, 1f) : value;
     private static (float U, float V) TransformUv(float u, float v, float uMin, float uMax, float vMin, float vMax, FaceUvTransform t)
     {
         var nu = (u - uMin) / MathF.Max(uMax - uMin, 1e-6f);

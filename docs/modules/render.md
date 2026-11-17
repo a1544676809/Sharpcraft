@@ -760,12 +760,13 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **状态**：核心 raw scale 已实现并有源证据；生产族迁移仍 open（R-028 / Issue #122）。
 <!-- simplification:SIM-ENTITY-RAW-SCALE task:T-41 -->
 
-### SIM-ENTITY-RAW-DEGENERATE：raw 零面积部件退化面（task-145 chicken-baby 已解决，余族登记）
-- **修复（task-145 / raw only）**：raw 路径遇到零 depth/height 的 cube 不再走 legacy 的 8 顶点 flat quad，而是按源 `ModelPart.Cube` 六面发射 24 顶点；位置/UV 与源 polygon 顺序一致，legacy 路径不变。
-- **chicken-baby 验收**：源样本 192 顶点现在全部纳入 `LivingRawReferenceSampleTests` 严格逐点比较（位置+UV half 量化 1e-5），即原 144 个退化面顶点不再排除；常量改为 `192/0/192/0`。
-- **余族**：部分族仍包含 emissive/hidden 或负 texOffs 退化组（fish/bees 等），这些组继续按 `EmittedVertCount==0` 显式排除，登记在 R-029/#126，不静默通过。
-- **状态**：`chicken-baby 已解决`；余族保留 R-029 登记。
-- **验收证据**：`LivingRawReferenceSampleTests` chicken-baby 192/0/192/0 + 三门禁。
+### SIM-ENTITY-RAW-DEGENERATE：raw 零面积部件退化面（task-145 chicken-baby + task-174 fish/bee 已解决，salmon 余项）
+- **修复（task-145/174 / raw only）**：raw 路径遇到零 depth/height 或零宽度的 cube 不再走 legacy flat/cull，按源 `ModelPart.Cube` 六面发射 24 顶点；位置/UV 与源 polygon 顺序一致，legacy 路径不变。
+- **chicken-baby 验收**：源样本 192 顶点全部纳入 `LivingRawReferenceSampleTests` 严格逐点比较（位置+UV half 1e-5），常量 `192/0/192/0`。
+- **task-174 fish/bee 验收**：`includeRawDegenerate` 不再按维度排除，零面积组全部按源 24 顶点发射并纳入 strict：cod/salmon(excluded)/tropical/pufferfish/tadpole/bee/bee-baby/parrot/allay；常量更新为全源覆盖（bee 含 mirror 24）。raw UV 对源负值/超范围值改为源直通（不做 UV 归一化），修复鱼鳍类 out-of-range texOffs。
+- **salmon 余项**：`right_fin` 源 texOffs -4，源样本 UV 0/负值 vs 当前 raw 输出 1/0；保留 salmon 的维度排除（`72/120`），登记 R-029/#126，不拟合。
+- **状态**：`chicken-baby + fish/bee 已解决；salmon right_fin UV 余项登记`。
+- **验收证据**：`LivingRawReferenceSampleTests` + full 3,544 + 三门禁。
 <!-- simplification:SIM-ENTITY-RAW-DEGENERATE task:T-41 -->
 
 ### 实体 raw 切片的登记口径（docs-only 限制 / baby N/A / ribcage flatten）
