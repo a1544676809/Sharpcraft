@@ -23,9 +23,9 @@ public static class VanillaMeshBakery
         bool rawSourceFrame = false)
     {
         ArgumentNullException.ThrowIfNull(mesh);
-        if (VanillaMeshBake.HasNonUnitScale(mesh))
+        if (!rawSourceFrame && VanillaMeshBake.HasNonUnitScale(mesh))
         {
-            throw new NotSupportedException("Non-unit PartPose scale is only supported by VanillaMeshBake.Bake for the static Dragon skull; VanillaMeshBakery.Build requires scale 1.");
+            throw new NotSupportedException("Non-unit PartPose scale is only supported by VanillaMeshBake.Bake for the static Dragon skull; VanillaMeshBakery.Build requires scale 1 for legacy models.");
         }
 
         var root = mesh.Root
@@ -107,7 +107,10 @@ public static class VanillaMeshBakery
             children,
             firstCube?.VisibleWhen,
             poseSource: firstCube?.PoseSource,
-            tintSelector: firstCube?.TintSelector);
+            tintSelector: firstCube?.TintSelector,
+            scaleX: part.Pose.ScaleX,
+            scaleY: part.Pose.ScaleY,
+            scaleZ: part.Pose.ScaleZ);
     }
 
     private static EntityModelPart BakeCube(

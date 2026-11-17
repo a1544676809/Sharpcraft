@@ -753,12 +753,11 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - **状态**：`已解决`（风险 R-027、Issue #121/#156）。
 <!-- simplification:SIM-ENTITY-RAW-MIRROR task:T-41 -->
 
-### SIM-ENTITY-RAW-SCALE：raw 不支持 non-unit PartPose scale
-- **简化了什么**：`EntityModelDefinition.FromTree` 对 raw + 非单位 scale 抛 `NotSupportedException`；EnderDragon 等带 scale 的模型无法切 raw。
-- **为什么**：raw 烘焙路径尚未实现 `MeshTransformer.scaling` 的 y-down 语义。
-- **对可观测行为的影响**：相关模型继续走 legacy 路径，行为不退化。
-- **状态**：`进行中`，审计任务见风险 R-028 与独立 Issue #122。
-- **验收证据**：待 raw scale 语义实现并有源样本验证后再迁移相关模型。
+### SIM-ENTITY-RAW-SCALE：raw non-unit PartPose scale（task-152 核心已实现）
+- **规格**：源 `PartPose.scaled(factor)` 把 pivot offset 和 bind scale 同乘 factor；`ModelPart.translateAndRotate` 顺序为 translate(pivot) → rotate → scale(bind)。raw compiled tree 的 `EntityModelPartNode` 保存 `ScaleX/Y/Z`，`NodeFrame` 在源旋转/平移语义中应用 bind scale。
+- **实现**：`EntityModelDefinition.FromTree` 不再对 raw + non-unit scale 抛异常；`VanillaMeshBakery.Build` 允许 raw，legacy 仍拒绝；raw scaled 使用 compiled tree。源证据 `RawNonUnitScaleTests`：synthetic `PartPose.Offset(1,2,3).Scaled(0.5)` 24/24 顶点；以及非零 xRot/yRot/zRot 的 scaled parent + child，按源 `pivot + R*(cube*factor)`（child 含 parent scale）48/48 顶点 1e-5，并用 `PartWorldMatrix(child)` 验证 parent/child 帧。
+- **限制/blocker**：raw scaled 的 legacy flattened `Parts` 暂为空（`FromTree` 仅 compiled tree 承载），依赖 `Parts` 的旧消费方需迁移；EnderDragon/elytra 等生产定义尚未切 raw，待各自逐族迁移。legacy scaled 路径保持原受限实现。
+- **状态**：核心 raw scale 已实现并有源证据；生产族迁移仍 open（R-028 / Issue #122）。
 <!-- simplification:SIM-ENTITY-RAW-SCALE task:T-41 -->
 
 ### SIM-ENTITY-RAW-DEGENERATE：raw 零面积部件退化面（task-145 chicken-baby 已解决，余族登记）

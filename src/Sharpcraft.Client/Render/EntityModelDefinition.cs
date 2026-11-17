@@ -152,12 +152,11 @@ public sealed class EntityModelDefinition
         float sourceFrameBaselinePx = 24f)
     {
         ArgumentNullException.ThrowIfNull(mesh);
-        if (rawSourceFrame && VanillaMeshBake.HasNonUnitScale(mesh))
-        {
-            throw new NotSupportedException("Raw source-frame models do not support non-unit PartPose scale yet; use the legacy path or migrate the scaled model separately.");
-        }
-
-        var parts = VanillaMeshBake.Bake(mesh, 0, 0, baselinePx, rawSourceFrame: rawSourceFrame);
+        // Raw scaled models use the structurally-preserving compiled tree, whose NodeFrame owns the
+        // PartPose scale. The legacy flattened bake has only the restricted static scaled-subtree path.
+        var parts = rawSourceFrame && VanillaMeshBake.HasNonUnitScale(mesh)
+            ? []
+            : VanillaMeshBake.Bake(mesh, 0, 0, baselinePx, rawSourceFrame: rawSourceFrame);
         var compiled = VanillaMeshBakery.Build(mesh, textureWidth, textureHeight, baselinePx, texturePath: texturePath, rawSourceFrame: rawSourceFrame);
         return new EntityModelDefinition(
             name,
