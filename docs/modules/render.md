@@ -798,12 +798,12 @@ let atlasUv = rectMin + (input.uv - floor(input.uv)) * (rectMax - rectMin);
 - 已生成 27 个 #128 归一化 jar 样本（render-unit，1e-5）落盘 `tests/.../Repro/Data/` 作为验收真值；不放宽容差、不按样本拟合、不排除顶点。
 ### task-94 special/large 第一组（#102 / #140）
 
-10 族试迁移结果：**Shulker/Blaze/Endermite 3 族源正确并切 raw**；HappyGhast（Scale=4）因 layer-scale root yOffset 的 living 路径缺口归 **#141 / R-034**，保持 legacy；Breeze/Creaking/Ghast/Giant/Guardian/IronGolem 6 族因 DSL 几何与 jar 源真值在 1e-5 下系统性不符（multi-cube head、layer-scale pivot、真实 Mirror）保持 legacy，归 **#140 / R-033**。即 **共 7 族 legacy blocker**（6 族归 #140 + HappyGhast 归 #141）。10 个 #128 归一化 jar 样本落盘 `Repro/Data/` 作为验收真值；不放宽容差、不拟合、不排除顶点。
+10 族试迁移最终结果：**Shulker/Blaze/Endermite/HappyGhast 4 族源正确并切 raw**（HappyGhast Scale=4 在 #141 解锁 layer-scale root offset 后由 task-104 迁移，含 production 定义 live world 回归）；Breeze/Creaking/Ghast/Giant/Guardian/IronGolem 6 族因 DSL 几何与 jar 源真值在 1e-5 下系统性不符（multi-cube head、layer-scale pivot、真实 Mirror）保持 legacy，归 **#140 / R-033**。10 个 #128 归一化 jar 样本落盘 `Repro/Data/` 作为验收真值；不放宽容差、不拟合、不排除顶点。
 ### task-97/98 layer-scale root offset 拆分（#102 / #141）
 
 Blaze production definition 补齐 `rawSourceFrame:true`/`baselinePx:0`（此前只在 bake 调用上有，真实 living 渲染仍走 legacy）；新增测试 `Task94MigratedProductionDefinitionsCarryRawSourceFrameFlags` 防止隔离定义误绿。
 
-HappyGhast（Scale=4）**保持 legacy**：其 layer-scale root yOffset 的 living 路径缺口已由 #141/R-034 的规格与 raw living 实现解决（见下节）；HappyGhast 本身仍因 #140 的几何/迁移批次保持 legacy。10 个 #128 jar 样本保留作验收真值，不放宽容差。
+HappyGhast（Scale=4）在 #141/R-034 规格与 raw living 实现落地后，由 task-104 完成 raw 迁移：production definition 带 `rawSourceFrame:true`/`baselinePx:0`/Scale=4，严格 1e-5 样本 + production 定义 live world（全 240 顶点）均通过。此拆分仅为过程记录；当前状态以 task-94 段为准。
 
 ### raw layer-scale root offset 规格（#141 / R-034）— 已解决
 

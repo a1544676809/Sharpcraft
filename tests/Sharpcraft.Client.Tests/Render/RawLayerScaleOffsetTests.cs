@@ -29,6 +29,27 @@ public sealed class RawLayerScaleOffsetTests
     }
 
     [Fact]
+    public void HappyGhastProductionDefinitionLiveWorldMatchesSourceVertices()
+    {
+        // task-104: exercise the REAL production definition through the living path (no isolated test def),
+        // so a production definition missing raw flags/Scale cannot pass via a reconstructed twin. The
+        // layer-scale root offset (24.016*(1-4) px) must be applied on this path too.
+        var definition = HappyGhastModelDefinition.Definition;
+        Assert.True(definition.RawSourceFrame);
+        Assert.Equal(0f, definition.BaselinePx);
+        Assert.Equal(4f, definition.Scale);
+
+        var expected = LoadRows("happy-ghast-raw-vectors.reference.txt", "HAPPY_GHAST")
+            .Select(row => new Vector3(
+                -float.Parse(row[5], CultureInfo.InvariantCulture),
+                BaselineBlocks - float.Parse(row[6], CultureInfo.InvariantCulture),
+                float.Parse(row[7], CultureInfo.InvariantCulture)))
+            .OrderBy(p => p.X).ThenBy(p => p.Y).ThenBy(p => p.Z).ToArray();
+        var geometry = BuildLive(definition, 64, 64, "entity/ghast/happy_ghast");
+        AssertFull(geometry, expected, "HAPPY_GHAST/production-live");
+    }
+
+    [Fact]
     public void HumanoidHatsLayerScaleLiveRootVertexMatchesSource()
     {
         // The hat-rim geometry is a separate known DSL gap (#134/R-033); this regression pins the layer-scale

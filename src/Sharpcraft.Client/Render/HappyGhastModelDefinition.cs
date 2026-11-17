@@ -33,7 +33,7 @@ public static class HappyGhastModelDefinition
     private static readonly VanillaMeshDefinition HappyGhastMesh = BuildHappyGhastMesh();
 
     private static readonly CompiledEntityModel HappyGhastCompiled =
-        VanillaMeshBakery.Build(HappyGhastMesh, 64, 64);
+        VanillaMeshBakery.Build(HappyGhastMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildHappyGhastMesh()
     {
@@ -55,43 +55,43 @@ public static class HappyGhastModelDefinition
         "happy_ghast",
         64,
         64,
-        [.. VanillaMeshBake.Bake(HappyGhastMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
-        "entity/ghast/happy_ghast",
+        [.. VanillaMeshBake.Bake(HappyGhastMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
+        faceTransforms: null,
+        texturePath: "entity/ghast/happy_ghast",
         4f,
         additionalTexturePaths: [RopesTexture],
-        compiled: HappyGhastCompiled);
+        compiled: HappyGhastCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static readonly VanillaMeshDefinition AdultRopesMesh = BuildRopesMesh(baby: false);
     private static readonly VanillaMeshDefinition BabyRopesMesh = BuildRopesMesh(baby: true);
     private static readonly CompiledEntityModel AdultRopesCompiled =
-        VanillaMeshBakery.Build(AdultRopesMesh, 64, 64);
+        VanillaMeshBakery.Build(AdultRopesMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
     private static readonly CompiledEntityModel BabyRopesCompiled =
-        VanillaMeshBakery.Build(BabyRopesMesh, 64, 64);
+        VanillaMeshBakery.Build(BabyRopesMesh, 64, 64, modelHeight: 0f, rawSourceFrame: true);
 
     /// <summary>Adult rope pass: the HappyGhast body/tentacles inflated by 0.2 model pixels.</summary>
     public static readonly EntityModelDefinition RopesDefinition = new(
         "happy_ghast_ropes",
         64,
         64,
-        [.. VanillaMeshBake.Bake(AdultRopesMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
-        RopesTexture,
+        [.. VanillaMeshBake.Bake(AdultRopesMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
+        faceTransforms: null,
+        texturePath: RopesTexture,
         4f,
         additionalTexturePaths: [RopesTexture],
-        compiled: AdultRopesCompiled);
+        compiled: AdultRopesCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     /// <summary>Baby rope pass: the baby body/tentacles inflated by 0.2 model pixels, 0.2375×4 scale.</summary>
     public static readonly EntityModelDefinition RopesBabyDefinition = new(
         "happy_ghast_baby_ropes",
         64,
         64,
-        [.. VanillaMeshBake.Bake(BabyRopesMesh, 0, 0)],
-        PlayerModelDefinition.DefaultFaceTransforms,
-        RopesTexture,
+        [.. VanillaMeshBake.Bake(BabyRopesMesh, 0, 0, modelHeight: 0f, rawSourceFrame: true)],
+        faceTransforms: null,
+        texturePath: RopesTexture,
         0.95f,
         additionalTexturePaths: [RopesTexture],
-        compiled: BabyRopesCompiled);
+        compiled: BabyRopesCompiled, baselinePx: 0f, rawSourceFrame: true);
 
     private static VanillaMeshDefinition BuildRopesMesh(bool baby)
     {
