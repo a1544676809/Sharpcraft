@@ -59,8 +59,9 @@ public sealed class EntityModelBakeStabilityTests
         // Refreshed for the SnowGolem/Strider/Sniffer (task-165) + Vex/Nautilus/ZombieNautilus (task-166) raw migrations.
         // Refreshed for the ZombieVillager raw migration (task-173).
         // Refreshed for the Bogged raw mushroom geometry (task-178).
-        Assert.Equal("6e196e78cf7c0b8a18e3a795b4383fbe67301583750bc606d72672e544ef3177", Hash(flat));
-        Assert.Equal("5b5e8b1df3437f298c7e2ebfee9956a719e0be51e87dfe04bc1814292383c9b7", Hash(tree));
+        // Refreshed for Salmon right_fin negative texOffs UV fix (task-181).
+        Assert.Equal("bab126a792e460f1ec87e2baff6cea66f33f52494a57c967de4712cddbf85523", Hash(flat));
+        Assert.Equal("25f0d98616a41ab9d952ef7ed8420157a55b3dd95117375b18e5c09ad359341c", Hash(tree));
     }
 
     private static void AppendPart(StringBuilder builder, EntityModelPart part)

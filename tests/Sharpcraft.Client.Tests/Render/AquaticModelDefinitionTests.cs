@@ -161,7 +161,7 @@ public sealed class AquaticModelDefinitionTests
         RawModelPartFactory.FromVanillaChild("back_fin", "body_back", 0f, 0f, 8f, 0f, -2.5f, 0f, 0f, 5f, 6f, 20, 10),
         RawModelPartFactory.FromVanillaChild("top_front_fin", "body_front", 0f, -4.5f, 5f, 0f, 0f, 0f, 0f, 2f, 3f, 2, 1),
         RawModelPartFactory.FromVanillaChild("top_back_fin", "body_back", 0f, -4.5f, -1f, 0f, 0f, 0f, 0f, 2f, 4f, 0, 2),
-        RawModelPartFactory.FromVanilla("right_fin", -1.5f, 21.5f, -7.2f, -2f, 0f, 0f, 2f, 0f, 2f, 28, 0,
+        RawModelPartFactory.FromVanilla("right_fin", -1.5f, 21.5f, -7.2f, -2f, 0f, 0f, 2f, 0f, 2f, -4, 0,
             rotationZ: -MathF.PI / 4f),
         RawModelPartFactory.FromVanilla("left_fin", 1.5f, 21.5f, -7.2f, 0f, 0f, 0f, 2f, 0f, 2f, 0, 0,
             rotationZ: MathF.PI / 4f)
