@@ -60,4 +60,31 @@ public sealed class ResolverRawFlagTests
         Assert.Equal(baseDefinition.BaselinePx, resolved.BaselinePx);
         Assert.Equal(baseDefinition.SourceFrameBaselinePx, resolved.SourceFrameBaselinePx);
     }
+
+    [Theory]
+    [InlineData(HumanoidMobModelDefinition.ZombieEntityTypeId, "ZombieMesh")]
+    [InlineData(HumanoidMobModelDefinition.SkeletonEntityTypeId, "SkeletonMesh")]
+    public void RawHumanoidDecorationKeepsRawFrameForProductionResolver(int typeId, string meshField)
+    {
+        // The current main branch still carries legacy HumanoidMob definitions; this feeds a raw
+        // definition through the real private production Decorate path so the assertion is not
+        // vacuous while the raw-humanoid migration branch is being prepared.
+        var mesh = (VanillaMeshDefinition)typeof(HumanoidMobModelDefinition)
+            .GetField(meshField, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
+            .GetValue(null)!;
+        var raw = EntityModelDefinition.FromTree(
+            "raw_decoration", 64, 64, mesh, texturePath: "probe/raw_decoration", baselinePx: 0f, rawSourceFrame: true);
+        var decorate = typeof(EntityModelResolver).GetMethod(
+            "Decorate", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        var decorated = (EntityModelDefinition)decorate.Invoke(null, [typeId, false, raw])!;
+
+        Assert.True(decorated.RawSourceFrame);
+        Assert.Equal(0f, decorated.BaselinePx);
+        Assert.Equal(raw.SourceFrameBaselinePx, decorated.SourceFrameBaselinePx);
+        var hand = EntityModelMesher.LegacyHandWorldMatrix(
+            decorated,
+            new Sharpcraft.Client.World.EntityRenderState(1, typeId, 0f, 0f, 0f, 0f, 0f),
+            "right_arm");
+        Assert.NotEqual(default(System.Numerics.Matrix4x4), hand);
+    }
 }
