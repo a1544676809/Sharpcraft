@@ -272,7 +272,8 @@ public sealed class EntityModelTreeBakeryTests
         Assert.Equal(5, SlimeModelDefinition.Definition.Compiled!.Parts.Count);
         Assert.Equal(9, StriderModelDefinition.Definition.Compiled!.Parts.Count);
         Assert.Equal(16, SnifferModelDefinition.Definition.Compiled!.Parts.Count);
-        Assert.Equal(6, GiantModelDefinition.Definition.Compiled!.Parts.Count);
+        // Giant reuses Zombie parts; the source hat is now an independent child part (6 + 1).
+        Assert.Equal(7, GiantModelDefinition.Definition.Compiled!.Parts.Count);
     }
 
     [Fact]

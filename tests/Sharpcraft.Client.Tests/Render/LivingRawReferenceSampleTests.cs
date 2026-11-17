@@ -105,6 +105,14 @@ public sealed class LivingRawReferenceSampleTests
         // task-95: villager + wandering trader (hat/hat_rim already independent; raw + scale 0.9375).
         { "villager-raw-vectors.reference.txt", VillagerModelDefinition.Definition, 64, 64, "entity/villager/villager", 264, 48, 216, 0 },
         { "wandering-trader-raw-vectors.reference.txt", VillagerModelDefinition.WanderingTrader, 64, 64, "entity/wandering_trader/wandering_trader", 264, 48, 216, 0 },
+        // task-121 humanoid subset (total, mirror, checked, degenerate).
+        { "skeleton-raw-vectors.reference.txt", HumanoidMobModelDefinition.Skeleton, 64, 32, "entity/skeleton/skeleton", 168, 48, 120, 0 },
+        { "stray-raw-vectors.reference.txt", HumanoidMobModelDefinition.Stray, 64, 32, "entity/skeleton/stray", 168, 48, 120, 0 },
+        { "wither-skeleton-raw-vectors.reference.txt", HumanoidMobModelDefinition.WitherSkeleton, 64, 32, "entity/skeleton/wither_skeleton", 168, 48, 120, 0 },
+        { "husk-raw-vectors.reference.txt", HumanoidMobModelDefinition.Husk, 64, 64, "entity/zombie/husk", 168, 48, 120, 0 },
+        { "drowned-raw-vectors.reference.txt", HumanoidMobModelDefinition.Drowned, 64, 64, "entity/zombie/drowned", 168, 0, 168, 0 },
+        { "enderman-raw-vectors.reference.txt", HumanoidMobModelDefinition.Enderman, 64, 32, "entity/enderman/enderman", 168, 48, 120, 0 },
+        { "zombie-raw-vectors.reference.txt", HumanoidMobModelDefinition.Zombie, 64, 64, "entity/zombie/zombie", 168, 48, 120, 0 },
         // task-108 humanoid batch (total, mirror, checked, degenerate).
         // player BLOCKED (Player legacy to avoid Piglin parts-reuse coupling, task-108)
         // player-slim BLOCKED (Player legacy to avoid Piglin parts-reuse coupling, task-108)
